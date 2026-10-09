@@ -1,20 +1,12 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
 // Purpose: Defines a group of app systems that all have the same lifetime
 // that need to be connected/initialized, etc. in a well-defined order
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef DEDICATED_H
-#define DEDICATED_H
-
 
 #include "appframework/tier3app.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations 
@@ -29,11 +21,11 @@ extern IDedicatedServerAPI *engine;
 
 
 //-----------------------------------------------------------------------------
-// Inner loop: initialize, shutdown main systems, load steam to 
+// Inner loop: initialize, shutdown main systems, load the file system
 //-----------------------------------------------------------------------------
-class CDedicatedAppSystemGroup : public CTier2SteamApp
+class CDedicatedAppSystemGroup : public CTier2FSApp
 {
-	typedef CTier2SteamApp BaseClass;
+	typedef CTier2FSApp BaseClass;
 
 public:
 	// Methods of IApplication
@@ -46,18 +38,18 @@ public:
 	// Used to chain to base class
 	AppModule_t LoadModule( CreateInterfaceFn factory )
 	{
-		return CSteamAppSystemGroup::LoadModule( factory );
+		return CFSAppSystemGroup::LoadModule( factory );
 	}
 
 	// Method to add various global singleton systems 
 	bool AddSystems( AppSystemInfo_t *pSystems )
 	{
-		return CSteamAppSystemGroup::AddSystems( pSystems );
+		return CFSAppSystemGroup::AddSystems( pSystems );
 	}
 
 	void *FindSystem( const char *pInterfaceName )
 	{
-		return CSteamAppSystemGroup::FindSystem( pInterfaceName );
+		return CFSAppSystemGroup::FindSystem( pInterfaceName );
 	}
 };
 
@@ -73,5 +65,3 @@ void PerformCommandLineSubstitutions( int nIndex );
 
 // forked subprocess index. 0 for master or not forked mode
 extern int g_nSubProcessId;
-
-#endif // DEDICATED_H

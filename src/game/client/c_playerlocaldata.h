@@ -1,17 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Defines the player specific data that is sent only to the player
 //			to whom it belongs.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef C_PLAYERLOCALDATA_H
-#define C_PLAYERLOCALDATA_H
-
-#include "basetypes.h"
-#include "mathlib/vector.h"
+import std;
+import ks.tier1;
 #include "playernet_vars.h"
+#include "reflect_annotations.h"
+#include "dt_recv.h"
+#include "predictable_entity.h"
 
 #ifdef CLIENT_DLL
 #define CPostProcessController C_PostProcessController
@@ -60,7 +59,7 @@ public:
 		m_iv_aimPunchAngle( "CPlayerLocalData::m_iv_aimPunchAngle" ),
 		m_iv_aimPunchAngleVel( "CPlayerLocalData::m_iv_aimPunchAngleVel" )
 	{
-		memset( m_chAreaBits, 0, sizeof( m_chAreaBits ) );
+		std::memset( m_chAreaBits, 0, sizeof( m_chAreaBits ) );
 		memset( m_chAreaPortalBits, 0, sizeof( m_chAreaPortalBits ) );
 
 		m_nStepside = 0;
@@ -163,5 +162,3 @@ public:
 	float					m_fTBeamEndTime;
 
 };
-
-#endif // C_PLAYERLOCALDATA_H

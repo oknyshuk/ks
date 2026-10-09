@@ -1,17 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ENGINE_HLDS_API_H
-#define ENGINE_HLDS_API_H
+import std;
+import ks.tier1;
+#include "appframework/IAppSystemGroup.h"
 
-#include "interface.h"
-#include "appframework/iappsystem.h"
-
-
-#define VENGINE_HLDS_API_VERSION "VENGINE_HLDS_API_VERSION002"
+inline constexpr const char *VENGINE_HLDS_API_VERSION = "VENGINE_HLDS_API_VERSION002";
 
 
 struct ModInfo_t
@@ -47,8 +42,6 @@ public:
 	virtual void		UpdateHostname(char *pszHostname, int maxlen) = 0;
 
 	// for the multi-processed fork() server, set the server instance number (1..)
-	virtual void        SetSubProcessID( int nID, int nSocketHandle ) = 0;
+	virtual void        SetSubProcessID( int nID, ks::platform::socket *pSocketToParent ) = 0;
 
 };
-
-#endif // ENGINE_HLDS_API_H

@@ -1,24 +1,27 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "npcevent.h"
 #include "reflect_recvtable.h"
 #include "reflect_predmap.h"
 #include "reflect_annotations.h"
 #include "c_baseanimatingoverlay.h"
 #include "animation.h"
 #include "bone_setup.h"
-#include "tier0/vprof.h"
-#include "engine/ivdebugoverlay.h"
 #include "datacache/imdlcache.h"
 #include "eventlist.h"
 #include "toolframework_client.h"
 
-#include "dt_utlvector_recv.h"
 
 extern ConVar r_sequence_debug;
 
@@ -196,9 +199,9 @@ void ResizeAnimationLayerCallback( void *pStruct, int offsetToUtlVector, int len
 	std::vector< CAnimationLayer > &layers = pEnt->m_AnimOverlay;
 	std::vector< CInterpolatedVar< CAnimationLayer > > *pVecIV = &pEnt->m_iv_AnimOverlay;
 	
-	Assert( (char*)&layers - (char*)pEnt == offsetToUtlVector );
-	Assert( std::ssize( layers ) == std::ssize( *pVecIV ) || std::ssize( *pVecIV ) == 0 );
-	Assert( len >= 0 && len <= C_BaseAnimatingOverlay::MAX_OVERLAYS );	// RecvProxy_UtlVectorLength clamps
+	contract_assert( (char*)&layers - (char*)pEnt == offsetToUtlVector );
+	contract_assert( std::ssize( layers ) == std::ssize( *pVecIV ) || std::ssize( *pVecIV ) == 0 );
+	contract_assert( len >= 0 && len <= C_BaseAnimatingOverlay::MAX_OVERLAYS );	// RecvProxy_UtlVectorLength clamps
 
 	int diff = len - std::ssize( layers );
 	if ( diff != 0 )
@@ -242,7 +245,7 @@ IMPLEMENT_REFLECT_PREDMAP( C_BaseAnimatingOverlay );
 
 CAnimationLayer* C_BaseAnimatingOverlay::GetAnimOverlay( int i, bool bUseOrder )
 {
-	Assert( i >= 0 && i < MAX_OVERLAYS );
+	contract_assert( i >= 0 && i < MAX_OVERLAYS );
 
 	if ( m_AnimOverlay.empty() )
 		return nullptr;
@@ -423,9 +426,6 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, BoneVector
 		i = layer[ j ];
 		if ( i >= std::ssize( m_AnimOverlay ) )
 		{
-#if defined( DEBUG_TF2_OVERLAYS )
-			engine->Con_NPrintf( 10 + j, "%30s %6.2f : %6.2f : %1d", "            ", 0.f, 0.f, i );
-#endif
 			continue;
 		}
 
@@ -446,9 +446,6 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, BoneVector
 		float fWeight = m_AnimOverlay[i].m_flWeight;
 		if ( fWeight <= 0.0f )
 		{
-#if defined( DEBUG_TF2_OVERLAYS )
-			engine->Con_NPrintf( 10 + j, "%30s %6.2f : %6.2f : %1d", "            ", 0.f, 0.f, i );
-#endif
 			continue;
 		}
 
@@ -461,7 +458,7 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, BoneVector
 
 		if ( !IsFinite( fCycle ) )
 		{
-			AssertMsg( false, "fCycle is nan!" );
+			contract_assert( false && "fCycle is nan!" );
 			fCycle = 0;
 		}
 
@@ -471,10 +468,6 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, BoneVector
 		}
 
 		boneSetup.AccumulatePose( pos, q, m_AnimOverlay[i].m_nSequence, fCycle, fWeight, currentTime, m_pIk );
-
-#if defined( DEBUG_TF2_OVERLAYS )
-		engine->Con_NPrintf( 10 + j, "%30s %6.2f : %6.2f : %1d", boneSetup.GetStudioHdr()->pSeqdesc( m_AnimOverlay[i].m_nSequence ).pszLabel(), fCycle, fWeight, i );
-#endif
 
 		if (r_sequence_debug.GetInt() == entindex())
 		{
@@ -749,7 +742,7 @@ void C_BaseAnimatingOverlay::DoAnimationEvents( CStudioHdr *pStudioHdr )
 
 	BaseClass::DoAnimationEvents( pStudioHdr );
 
-	bool watch = false; // Q_strstr( hdr->name, "rifle" ) ? true : false;
+	bool watch = false; // V_strstr( hdr->name, "rifle" ) ? true : false;
 
 	CheckForLayerChanges( pStudioHdr, gpGlobals->curtime ); // !!!
 

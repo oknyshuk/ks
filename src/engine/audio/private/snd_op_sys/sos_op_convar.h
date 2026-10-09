@@ -1,14 +1,10 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef SOS_OP_CONVAR_H
-#define SOS_OP_CONVAR_H
-
+import ks.tier1;
 #include "sos_op.h"
-#include "tier1/convar.h"
+import std;
 
 //-----------------------------------------------------------------------------
 // simple operator for getting a convar value
@@ -56,6 +52,3 @@ class CSosOperatorSetConvar : public CSosOperator
 	SOS_HEADER_DESC( CSosOperatorSetConvar )
 
 };
-
-
-#endif // SOS_OP_CONVAR_H

@@ -1,31 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
-#ifndef CACHED_FILE_DATA_H
-#define CACHED_FILE_DATA_H
-
+import ks.tier1;
 #include "filesystem.h" // FileNameHandle_t
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier1/text_writer.h"
-#include "tier1/strtools.h"
-#include "tier1/vector_ops.h"
-#include <algorithm>
-#include <map>
-#include <vector>
+import std;
 
 // If you change to serialization protocols, this must be bumped...
-#define UTL_CACHE_SYSTEM_VERSION		2
+inline constexpr auto UTL_CACHE_SYSTEM_VERSION = 2;
 
-#define CACHED_FILE_DATA_UNDEFINED_DISKINFO	(int)-2
+inline constexpr auto CACHED_FILE_DATA_UNDEFINED_DISKINFO = (int)-2;
 
 // Cacheable types must derive from this and implement the appropriate methods...
-abstract_class IBaseCacheInfo
+class IBaseCacheInfo
 {
 public:
 	virtual void Save( ks::byte_writer &buf ) = 0;
@@ -67,7 +55,7 @@ public:
 		m_bReadOnly( readonly ),
 		m_bSaveManifest( savemanifest )
 	{
-		Assert( !m_sRepositoryFileName.empty() );
+		contract_assert( !m_sRepositoryFileName.empty() );
 	}
 
 	virtual ~CCachedFileData()
@@ -114,11 +102,11 @@ public:
 
 		ks::byte_writer buf;
 
-		Assert( e.dataIndex != -1 );
+		contract_assert( e.dataIndex != -1 );
 
 		T *dest = m_Data[ e.dataIndex ];
 
-		Assert( dest );
+		contract_assert( dest );
 
 		// I suppose we could do an assignment operator, but this should save/restore the data element just fine for
 		//  tool purposes
@@ -289,11 +277,11 @@ T* CCachedFileData<T>::Get( char const *filename )
 		}
 	}
 
-	Assert( e.dataIndex != -1 );
+	contract_assert( e.dataIndex != -1 );
 
 	T *data = m_Data[ e.dataIndex ];
 
-	Assert( data );
+	contract_assert( data );
 
 	// Compare fileinfo to disk fileinfo and rebuild cache if out of date or not correct...
 	if ( cachefileinfo != e.diskfileinfo )
@@ -343,7 +331,7 @@ template <class T>
 bool CCachedFileData<T>::IsUpToDate()
 {
 	// Don't call Init/Shutdown if using this method!!!
-	Assert( !m_bInitialized );
+	contract_assert( !m_bInitialized );
 
 	if ( !std::ssize( m_sRepositoryFileName ) )
 	{
@@ -372,7 +360,7 @@ bool CCachedFileData<T>::IsUpToDate()
 	if ( UTL_CACHE_SYSTEM_VERSION != cacheversion )
 	{
 		DevMsg( "Discarding repository '%s' due to cache system version change\n", m_sRepositoryFileName.c_str() );
-		Assert( !m_bReadOnly );
+		contract_assert( !m_bReadOnly );
 		if ( !m_bReadOnly )
 		{
 			g_pFullFileSystem->RemoveFile( m_sRepositoryFileName.c_str(), "MOD" );
@@ -385,7 +373,7 @@ bool CCachedFileData<T>::IsUpToDate()
 	if ( version != m_nVersion )
 	{
 		DevMsg( "Discarding repository '%s' due to version change\n", m_sRepositoryFileName.c_str() );
-		Assert( !m_bReadOnly );
+		contract_assert( !m_bReadOnly );
 		if ( !m_bReadOnly )
 		{
 			g_pFullFileSystem->RemoveFile( m_sRepositoryFileName.c_str(), "MOD" );
@@ -401,7 +389,7 @@ bool CCachedFileData<T>::IsUpToDate()
 		if ( cache_meta_checksum != m_uCurrentMetaChecksum )
 		{
 			DevMsg( "Discarding repository '%s' due to meta checksum change\n", m_sRepositoryFileName.c_str() );
-			Assert( !m_bReadOnly );
+			contract_assert( !m_bReadOnly );
 			if ( !m_bReadOnly )
 			{
 				g_pFullFileSystem->RemoveFile( m_sRepositoryFileName.c_str(), "MOD" );
@@ -446,12 +434,12 @@ void CCachedFileData<T>::InitSmallBuffer( FileHandle_t& fh, int fileSize, bool& 
 			{
 				int count = loadBuf.read< int >();
 				
-				Assert( count < 2000000 );
+				contract_assert( count < 2000000 );
 
 				for ( int i = 0 ; i < count; ++i )
 				{
 					int bufsize = loadBuf.read< int >();
-					Assert( bufsize < 1000000 );
+					contract_assert( bufsize < 1000000 );
 
 					ks::byte_reader buf( loadBuf.read_span( std::max( bufsize, 0 ) ) );
 
@@ -462,7 +450,7 @@ void CCachedFileData<T>::InitSmallBuffer( FileHandle_t& fh, int fileSize, bool& 
 					// Now read the element
 					int slot = GetIndex( elementFileName );
 
-					Assert( slot >= 0 );
+					contract_assert( slot >= 0 );
 
 					ElementType_t& element = m_Elements[ slot ];
 
@@ -473,11 +461,11 @@ void CCachedFileData<T>::InitSmallBuffer( FileHandle_t& fh, int fileSize, bool& 
 						element.fileinfo = 0;
 					}
 
-					Assert( element.dataIndex != -1 );
+					contract_assert( element.dataIndex != -1 );
 
 					T *data = m_Data[ element.dataIndex ];
 
-					Assert( data );
+					contract_assert( data );
 
 					((IBaseCacheInfo *)data)->Restore( buf );
 				}
@@ -530,7 +518,7 @@ void CCachedFileData<T>::InitLargeBuffer( FileHandle_t& fh, bool& deleteFile )
 				
 				g_pFullFileSystem->Read( &count, sizeof( count ), fh );
 
-				Assert( count < 2000000 );
+				contract_assert( count < 2000000 );
 
 				std::vector< std::byte > bufData;
 
@@ -539,7 +527,7 @@ void CCachedFileData<T>::InitLargeBuffer( FileHandle_t& fh, bool& deleteFile )
 					int bufsize = 0;
 					g_pFullFileSystem->Read( &bufsize, sizeof( bufsize ), fh );
 
-					Assert( bufsize < 1000000 );
+					contract_assert( bufsize < 1000000 );
 					if ( bufsize > 1000000 )
 					{
 						Msg( "Discarding repository '%s' due to corruption\n", m_sRepositoryFileName.c_str() );
@@ -560,7 +548,7 @@ void CCachedFileData<T>::InitLargeBuffer( FileHandle_t& fh, bool& deleteFile )
 					// Now read the element
 					int slot = GetIndex( elementFileName );
 
-					Assert( slot >= 0 );
+					contract_assert( slot >= 0 );
 
 					ElementType_t& element = m_Elements[ slot ];
 
@@ -571,11 +559,11 @@ void CCachedFileData<T>::InitLargeBuffer( FileHandle_t& fh, bool& deleteFile )
 						element.fileinfo = 0;
 					}
 
-					Assert( element.dataIndex != -1 );
+					contract_assert( element.dataIndex != -1 );
 
 					T *data = m_Data[ element.dataIndex ];
 
-					Assert( data );
+					contract_assert( data );
 
 					((IBaseCacheInfo *)data)->Restore( buf );
 				}
@@ -648,7 +636,7 @@ bool CCachedFileData<T>::Init()
 
 	if ( deletefile )
 	{
-		Assert( !m_bReadOnly );
+		contract_assert( !m_bReadOnly );
 		if ( !m_bReadOnly )
 		{
 			g_pFullFileSystem->RemoveFile( m_sRepositoryFileName.c_str(), "MOD" );
@@ -671,7 +659,7 @@ public:
 		char name1[ 512 ];
 		g_pFullFileSystem->String( file0.handle, name0, sizeof( name0 ) );
 		g_pFullFileSystem->String( file1.handle, name1, sizeof( name1 ) );
-		return Q_stricmp( name0, name1 ) < 0 ? true : false;
+		return V_stricmp( name0, name1 ) < 0 ? true : false;
 	}
 };
 
@@ -679,8 +667,8 @@ template <class T>
 void CCachedFileData<T>::Save()
 {
 	char path[ 512 ];
-	Q_strncpy( path, m_sRepositoryFileName.c_str(), sizeof( path ) );
-	Q_StripFilename( path );
+	V_strncpy( path, m_sRepositoryFileName.c_str(), sizeof( path ) );
+	V_StripFilename( path );
 
 	g_pFullFileSystem->CreateDirHierarchy( path, "MOD" );
 
@@ -735,11 +723,11 @@ void CCachedFileData<T>::Save()
 			buf.write_cstring( fn );
 			buf.write< int >( element.fileinfo );
 
-			Assert( element.dataIndex != -1 );
+			contract_assert( element.dataIndex != -1 );
 
 			T *data = m_Data[ element.dataIndex ];
 
-			Assert( data );
+			contract_assert( data );
 
 			((IBaseCacheInfo *)data)->Save( buf );
 
@@ -783,8 +771,8 @@ template <class T>
 bool CCachedFileData<T>::ManifestExists()
 {
 	char manifest_name[ 512 ];
-	Q_strncpy( manifest_name, m_sRepositoryFileName.c_str(), sizeof( manifest_name ) );
-	Q_SetExtension( manifest_name, ".manifest", sizeof( manifest_name ) );
+	V_strncpy( manifest_name, m_sRepositoryFileName.c_str(), sizeof( manifest_name ) );
+	V_SetExtension( manifest_name, ".manifest", sizeof( manifest_name ) );
 	return g_pFullFileSystem->FileExists( manifest_name, "MOD" );
 }
 
@@ -813,15 +801,15 @@ void CCachedFileData<T>::SaveManifest()
 	}
 
 	char path[ 512 ];
-	Q_strncpy( path, m_sRepositoryFileName.c_str(), sizeof( path ) );
-	Q_StripFilename( path );
+	V_strncpy( path, m_sRepositoryFileName.c_str(), sizeof( path ) );
+	V_StripFilename( path );
 
 	g_pFullFileSystem->CreateDirHierarchy( path, "MOD" );
 
 	char manifest_name[ 512 ];
-	Q_strncpy( manifest_name, m_sRepositoryFileName.c_str(), sizeof( manifest_name ) );
+	V_strncpy( manifest_name, m_sRepositoryFileName.c_str(), sizeof( manifest_name ) );
 
-	Q_SetExtension( manifest_name, ".manifest", sizeof( manifest_name ) );
+	V_SetExtension( manifest_name, ".manifest", sizeof( manifest_name ) );
 
 	if ( g_pFullFileSystem->FileExists( manifest_name, "MOD" ) && 
 		!g_pFullFileSystem->IsFileWritable( manifest_name, "MOD" ) )
@@ -872,11 +860,11 @@ void CCachedFileData<T>::RecheckItem( char const *filename )
 		}
 	}
 
-	Assert( e.dataIndex != -1 );
+	contract_assert( e.dataIndex != -1 );
 
 	T *data = m_Data[ e.dataIndex ];
 
-	Assert( data );
+	contract_assert( data );
 
 	// Compare fileinfo to disk fileinfo and rebuild cache if out of date or not correct...
 	if ( cachefileinfo != e.diskfileinfo )
@@ -923,11 +911,11 @@ T *CCachedFileData<T>::RebuildItem( const char *filename )
 		}
 	}
 
-	Assert( e.dataIndex != -1 );
+	contract_assert( e.dataIndex != -1 );
 
 	T *data = m_Data[ e.dataIndex ];
 
-	Assert( data );
+	contract_assert( data );
 
 	// Compare fileinfo to disk fileinfo and rebuild cache if out of date or not correct...
 	if ( !m_bReadOnly )
@@ -942,7 +930,7 @@ T *CCachedFileData<T>::RebuildItem( const char *filename )
 template <class T>
 void CCachedFileData<T>::RebuildCache( char const *filename, T *data )
 {
-	Assert( !m_bReadOnly );
+	contract_assert( !m_bReadOnly );
 
 	// Recache item, mark self as dirty
 	SetDirty( true );
@@ -993,8 +981,6 @@ void	CCachedFileData<T>::CheckDiskInfo( bool forcerebuild, int cacheFileTime )
 
 	// Actually sorting by filename here doesn't appear to be a win since FileNameHandle_t is basically sorted by Path anyway (path is stored in the high part of the DWORD)
 
-	bool bSteam = g_pFullFileSystem->IsSteam();
-
 	for ( int listStart = 0, listEnd = 0; listStart < std::ssize( list ); listStart = listEnd+1 )
 	{
 		int pathIndex = g_pFullFileSystem->GetPathIndex( m_Elements[list[listStart].index].handle );
@@ -1007,15 +993,10 @@ void	CCachedFileData<T>::CheckDiskInfo( bool forcerebuild, int cacheFileTime )
 				break;
 		}
 		g_pFullFileSystem->String( m_Elements[list[listStart].index].handle, fn, sizeof( fn ) );
-		Q_StripFilename( fn );
+		V_StripFilename( fn );
 
-		bool bCheck = true;
-		
-		if ( !bSteam )
-		{
-			int pathTime = g_pFullFileSystem->GetPathTime( fn, "GAME" );
-			bCheck = (pathTime > cacheFileTime) ? true : false;
-		}
+		int pathTime = g_pFullFileSystem->GetPathTime( fn, "GAME" );
+		bool bCheck = (pathTime > cacheFileTime) ? true : false;
 
 		for ( i = listStart; i < listEnd; i++ )
 		{
@@ -1055,5 +1036,3 @@ void CCachedFileData<T>::SetNeverCheckDisk( bool bNeverCheckDisk )
 {
 	m_bNeverCheckDisk = bNeverCheckDisk;
 }
-
-#endif // CACHED_FILE_DATA_H

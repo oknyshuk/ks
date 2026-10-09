@@ -1,9 +1,7 @@
-//========= Copyright (c) 1996-2010, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2010 Valve Corporation
+
 // Purpose: Core types for the response rules -- criteria, responses, rules, and matchers.
-//
-// $NoKeywords: $
-//=============================================================================//
 
 #include "rrbase.h"
 
@@ -51,19 +49,19 @@ void Matcher::Describe( void )
 	int minmaxcount = 0;
 	if ( usemin )
 	{
-		Q_snprintf( sz, sizeof( sz ), ">%s%.3f", minequals ? "=" : "", minval );
+		V_snprintf( sz, sizeof( sz ), ">%s%.3f", minequals ? "=" : "", minval );
 		minmaxcount++;
 	}
 	if ( usemax )
 	{
 		char sz2[ 128 ];
-		Q_snprintf( sz2, sizeof( sz2 ), "<%s%.3f", maxequals ? "=" : "", maxval );
+		V_snprintf( sz2, sizeof( sz2 ), "<%s%.3f", maxequals ? "=" : "", maxval );
 
 		if ( minmaxcount > 0 )
 		{
-			Q_strncat( sz, " and ", sizeof( sz ), COPY_ALL_CHARACTERS );
+			V_strncat( sz, " and ", sizeof( sz ), COPY_ALL_CHARACTERS );
 		}
-		Q_strncat( sz, sz2, sizeof( sz ), COPY_ALL_CHARACTERS );
+		V_strncat( sz, sz2, sizeof( sz ), COPY_ALL_CHARACTERS );
 		minmaxcount++;
 	}
 
@@ -226,5 +224,3 @@ void Rule::SetContext( const char *context )
 	// we don't own the data we point to, so just update pointer
 	m_szContext = ResponseCopyString( context );
 }
-
-

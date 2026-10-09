@@ -1,23 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef RIFF_H
-#define RIFF_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.core;
 #include "filesystem.h"
-#include "commonmacros.h"
-
+import std;
 
 //-----------------------------------------------------------------------------
 // Purpose: This is a simple abstraction that the RIFF classes use to read from
@@ -197,7 +184,7 @@ private:
 #ifndef WAVE_FORMAT_ADPCM
 #define WAVE_FORMAT_ADPCM		0x0002
 #endif
-#define WAVE_FORMAT_XBOX_ADPCM	0x0069
+inline constexpr auto WAVE_FORMAT_XBOX_ADPCM = 0x0069;
 #ifndef WAVE_FORMAT_XMA
 #define WAVE_FORMAT_XMA			0x0165
 #endif
@@ -208,5 +195,3 @@ private:
 #ifndef WAVE_FORMAT_TEMP
 #define WAVE_FORMAT_TEMP		0x0004
 #endif
-
-#endif // RIFF_H

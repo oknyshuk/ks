@@ -1,19 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SND_WAVE_SOURCE_H
-#define SND_WAVE_SOURCE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "snd_audio_source.h"
 class IterateRIFF;
@@ -65,14 +52,14 @@ public:
 	virtual void			ReferenceRemove( CAudioMixer *pMixer );
 	virtual bool			CanDelete( void );
 	virtual CSentence		*GetSentence( void );
-	const char				*GetName(char *pBuf, size_t bufLen );
+	const char				*GetName(char *pBuf, std::size_t bufLen );
 	virtual int				GetQuality( void );
 
 	virtual bool			IsAsyncLoad();
 
 	virtual void			CheckAudioSourceCache();
 
-	virtual char const		*GetFileName( char *pOutBuffer, size_t bufLen );
+	virtual char const		*GetFileName( char *pOutBuffer, std::size_t bufLen );
 
 	// 360 uses alternate play once semantics
 	virtual void			SetPlayOnce( bool bIsPlayOnce ) { m_bIsPlayOnce = true ? bIsPlayOnce : false; }
@@ -103,12 +90,12 @@ protected:
 	//-----------------------------------------------------------------------------
 	inline byte *GetCachedDataPointer()
 	{
-		VPROF("CAudioSourceWave::GetCachedDataPointer");
+		CVProfScope _( "CAudioSourceWave::GetCachedDataPointer", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		CAudioSourceCachedInfo *info = m_AudioCacheHandle.Get( CAudioSource::AUDIO_SOURCE_WAV, m_pSfx->IsPrecachedSound(), m_pSfx, &m_nCachedDataSize );
 		if ( !info )
 		{
-			Assert( !"CAudioSourceWave::GetCachedDataPointer info == NULL" );
+			contract_assert( !"CAudioSourceWave::GetCachedDataPointer info == NULL" );
 			return nullptr;
 		}
 
@@ -163,5 +150,3 @@ private:
 };
 
 PathTypeFilter_t GetAudioPathFilter();
-
-#endif // SND_WAVE_SOURCE_H

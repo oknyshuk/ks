@@ -1,9 +1,9 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#ifndef PROTO_ICE_HELPER_H
-#define PROTO_ICE_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -18,7 +18,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct ProtoIceVars_t
 {
-	ProtoIceVars_t() { memset( this, 0xFF, sizeof(ProtoIceVars_t) ); }
+	ProtoIceVars_t() { std::memset( this, 0xFF, sizeof(ProtoIceVars_t) ); }
 
 	int m_nBaseTexture;
 	int m_nBaseTextureFrame;
@@ -33,5 +33,3 @@ void InitParamsProtoIce( CBaseVSShader *pShader, IMaterialVar** params, const ch
 void InitProtoIce( CBaseVSShader *pShader, IMaterialVar** params, ProtoIceVars_t &info );
 void DrawProtoIce( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 					IShaderShadow* pShaderShadow, ProtoIceVars_t &info, VertexCompressionType_t vertexCompression );
-
-#endif // PROTO_ICE_HELPER_H

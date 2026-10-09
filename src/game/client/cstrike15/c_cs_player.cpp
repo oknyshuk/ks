@@ -1,10 +1,22 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+#include "const.h"
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "npcevent.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "reflect_predmap.h"
@@ -20,12 +32,9 @@
 #include "c_basetempentity.h"
 #include "hud_macros.h"	//HOOK_COMMAND
 #include "engine/ivdebugoverlay.h"
-#include "smoke_fog_overlay.h"
 #include "bone_setup.h"
-#include "in_buttons.h"
 #include "r_efx.h"
 #include "dlight.h"
-#include "shake.h"
 #include "cl_animevent.h"
 #include "c_physicsprop.h"
 #include "props_shared.h"
@@ -37,7 +46,6 @@
 
 #include "effect_dispatch_data.h"	//for water ripple / splash effect
 #include "c_te_effect_dispatch.h"	//ditto
-#include "c_te_legacytempents.h"
 #include "cs_gamerules.h"
 #include "fx_cs_blood.h"
 #include "c_cs_playerresource.h"
@@ -51,13 +59,10 @@
 #include "engineinterface.h"
 #include "hltvcamera.h"
 
-#include "steam/steam_api.h"
 
 #include "uicenterprint.h"
-#include "xlast_csgo/csgo.spa.h"
 
 #include "weapon_basecsgrenade.h"
-
 
 #include "cs_player_rank_mgr.h"
 #include "cs_item_inventory.h"
@@ -65,25 +70,21 @@
 #include "cam_thirdperson.h"
 #include "inputsystem/iinputsystem.h"
 #include <localize/ilocalize.h>
-#include "interfaces/interfaces.h"
 
-#include "gametypes.h"
 #include "GameStats.h"
 #include "c_cs_team.h"
 
 #include <engine/IEngineSound.h>
+import ks.vstdlib;
+import std;
 
 #include "cs_shareddefs.h"
 
 #include "hltvreplaysystem.h"
 
-#include "cs_custom_material_swap.h"
 #include "materialsystem/icustommaterial.h"
 
 // Comment this back in if you want the cl_minmodels convar to operate as normal.
-#define CS_ALLOW_CL_MINMODELS 0
-
-
 
 #if defined( CCSPlayer )
 	#undef CCSPlayer
@@ -96,18 +97,14 @@
 
 #include "iviewrender_beams.h"			// flashlight beam
 
-#include "materialsystem/icustommaterialmanager.h"
-#include "materialsystem/icompositetexturegenerator.h"
 #include "cs_custom_clothing_visualsdata_processor.h"
 #include "cs_custom_epidermis_visualsdata_processor.h"
-#include "model_combiner.h"
 
 #include "physpropclientside.h"			// for dropping physics mags
 
 #include "csgo_playeranimstate.h"
 
 #include "c_props.h"
-#include "model_types.h"
 
 static Vector WALL_MIN(-WALL_OFFSET,-WALL_OFFSET,-WALL_OFFSET );
 static Vector WALL_MAX(WALL_OFFSET,WALL_OFFSET,WALL_OFFSET );
@@ -211,11 +208,11 @@ extern ConVar mp_playerid_hold;
 
 ConVar cl_camera_height_restriction_debug( "cl_camera_height_restriction_debug", "0", FCVAR_CHEAT | FCVAR_REPLICATED, "" );
 
-#define FREEZECAM_LONGCAM_DIST	320  // over this amount, the camera will zoom close on target
+constexpr auto FREEZECAM_LONGCAM_DIST = 320; // over this amount, the camera will zoom close on target
 
-#define sv_magazine_drop_physics 1
-#define sv_magazine_drop_time 15
-#define sv_magazine_drop_debug 0
+constexpr auto sv_magazine_drop_physics = 1;
+constexpr auto sv_magazine_drop_time = 15;
+constexpr auto sv_magazine_drop_debug = 0;
 
 //ConVar sv_magazine_drop_physics( "sv_magazine_drop_physics", "1", FCVAR_REPLICATED | FCVAR_RELEASE, "Players drop physical weapon magazines when reloading." );
 //ConVar sv_magazine_drop_time( "sv_magazine_drop_time", "15", FCVAR_REPLICATED | FCVAR_RELEASE, "Duration physical magazines stay in the world.", true, 2.0f, true, 20.0f );
@@ -257,7 +254,7 @@ CAddonInfo g_ClientSideAddons[] =
 	{ "facemask",	0,						"models/player/holiday/facemasks/facemask_battlemask.mdl", 0 },
 };
 
-#define SMOKEGRENADE_LIFETIME 17.5f
+constexpr auto SMOKEGRENADE_LIFETIME = 17.5f;
 
 std::vector< EHANDLE > g_SmokeGrenadeHandles;
 std::vector< clientSmokeGrenadeRecord_t > g_SmokeGrenades;
@@ -399,80 +396,11 @@ void TruncatePlayerName( wchar_t *pCleanedHTMLName, int destLen, int nTruncateAt
         }
 	    else
 	    {
-		    AssertMsg( false, "Destination buffer of insufficient size." );
+		    contract_assert( false && "Destination buffer of insufficient size." );
 	    }
     }
 
 }
-
-#if CS_ALLOW_CL_MINMODELS
-
-// Return the first class id that has a legitimate model based on cl_minmodels.
-static int FilterModelUsingCL_MinModels( int iClass )
-{
-
-	AssertMsg(false, "This needs to be updated to use the PlayerModelInfo class" );
-	return 0;
-
-/*
-	int rModel = 0;
-	int team = GetTeamFromClass( iClass );
-
-	if ( cl_minmodels.GetInt() == 1 )
-	{
-		if ( team == TEAM_TERRORIST )
-		{
-			int index = cl_min_t.GetInt() - 1;
-			if ( index < 0 || index >= TerroristPlayerModels.Count() )
-			{
-				index = 0;
-			}
-			rModel = modelinfo->GetModelIndex(TerroristPlayerModels[index] );
-		}
-		else
-		{
-			int index = cl_min_ct.GetInt() - 1;
-			if ( index < 0 || index >= CTPlayerModels.Count() )
-			{
-				index = 0;
-			}
-			rModel = modelinfo->GetModelIndex( CTPlayerModels[index] );
-		}
-	}	
-	else if ( cl_minmodels.GetInt() == 0 && !s_approvedModels[iClass] )
-	{
-		// Only pull players from the approved list.
-		if ( team == TEAM_TERRORIST )
-		{
-			// Pick the defalut T model.
-			int bestClass = FindFirstUsableModel( FIRST_T_CLASS, LAST_T_CLASS+1,  CS_CLASS_PROFESSIONAL_MALE );
-			rModel = modelinfo->GetModelIndex( TerroristPlayerModels[ bestClass - FIRST_T_CLASS ] );
-		}
-		else
-		{
-			// Pick the defalut CT model.
-			int bestClass = FindFirstUsableModel( FIRST_CT_CLASS, LAST_CT_CLASS+1,  CS_CLASS_ST6_MALE );
-			rModel = modelinfo->GetModelIndex( CTPlayerModels[ bestClass - FIRST_CT_CLASS ] );
-		}
-
-	}
-	else
-	{
-		// Make sure we restore the proper model based on class.
-		if ( team == TEAM_TERRORIST )
-		{
-			rModel = modelinfo->GetModelIndex( TerroristPlayerModels[ iClass - FIRST_T_CLASS ] );
-		}
-		else
-		{
-			rModel = modelinfo->GetModelIndex( CTPlayerModels[ iClass - FIRST_CT_CLASS ] );
-		}
-	}
-	return rModel;
-*/
-}
-
-#endif // CS_ALLOW_CL_MINMODELS
 
 // -------------------------------------------------------------------------------- //
 // Player animation event. Sent to the client when a player fires, jumps, reloads, etc..
@@ -572,7 +500,7 @@ void C_CSRagdoll::GetRagdollInitBoneArraysYawMode( matrix3x4a_t *pDeltaBones0, m
 	// populate bone arrays for current positions and starting velocity positions
 	InvalidateBoneCache();
 	SetupBones( pCurrentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
-	Plat_FastMemcpy( pDeltaBones0, pCurrentBones, sizeof( matrix3x4a_t ) * MAXSTUDIOBONES );
+	memcpy( pDeltaBones0, pCurrentBones, sizeof( matrix3x4a_t ) * MAXSTUDIOBONES );
 
 	// set death anim
 	CBaseAnimatingOverlay *pRagdollOverlay = GetBaseAnimatingOverlay();
@@ -633,7 +561,7 @@ void C_CSRagdoll::Interp_Copy( C_BaseAnimatingOverlay *pSourceEntity )
 		for ( int j=0; j < std::ssize( pSrc->m_Entries ); j++ )
 		{
 			VarMapEntry_t *pSrcEntry = &pSrc->m_Entries[j];
-			if ( !Q_strcmp( pSrcEntry->watcher->GetDebugName(),
+			if ( !V_strcmp( pSrcEntry->watcher->GetDebugName(),
 				pDestEntry->watcher->GetDebugName() ) )
 			{
 				pDestEntry->watcher->Copy( pSrcEntry->watcher );
@@ -681,7 +609,7 @@ void C_CSRagdoll::ApplyRandomTaserForce( void )
 	if( boneID < 0 )
 	{
 		// error, couldn't find a bone matching this name, early out
-		AssertMsg( false, "couldn't find a bone matching this name, early out" );
+		contract_assert( false && "couldn't find a bone matching this name, early out" );
 		return;
 	}
 	
@@ -752,17 +680,6 @@ void C_CSRagdoll::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCu
 void C_CSRagdoll::ValidateModelIndex( void )
 {
 
-#if CS_ALLOW_CL_MINMODELS
-
-	C_CSPlayer *pPlayer = dynamic_cast< C_CSPlayer* >( m_hPlayer.Get() );
-	if ( pPlayer )
-	{
-		int iClass = pPlayer->PlayerClass();
-		m_nModelIndex = FilterModelUsingCL_MinModels(iClass );
-	}
-
-#endif
-
 	BaseClass::ValidateModelIndex();
 }
 
@@ -775,7 +692,7 @@ void C_CSRagdoll::CreateLowViolenceRagdoll( void )
 	for ( int iAnim=1; iAnim < 100; iAnim++ )
 	{
 		char str[512];
-		Q_snprintf( str, sizeof( str ), "death%d", iAnim );
+		V_snprintf( str, sizeof( str ), "death%d", iAnim );
 		if ( LookupSequence( str ) == -1 )
 			break;
 		
@@ -816,7 +733,7 @@ void C_CSRagdoll::CreateLowViolenceRagdoll( void )
 
 	int iDeathAnim = RandomInt( iMinDeathAnim, iMaxDeathAnim );
 	char str[512];
-	Q_snprintf( str, sizeof( str ), "death%d", iDeathAnim );
+	V_snprintf( str, sizeof( str ), "death%d", iDeathAnim );
 	SetSequence( LookupSequence( str ) );
 	ForceClientSideAnimationOn();
 
@@ -830,7 +747,7 @@ void C_CSPlayer::SetSequence( int nSequence )
 {
 	if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
 	{
-		AssertMsg( nSequence == 0, "Warning: Player attempted to set non-zero default sequence.\n" );
+		contract_assert( ( nSequence == 0 ) && "Warning: Player attempted to set non-zero default sequence.\n" );
 		BaseClass::SetSequence( 0 );
 	}
 	else
@@ -1004,7 +921,7 @@ void C_CSRagdoll::CreateCSRagdoll()
 				// The player isn't even visible right now, so we don't need to run the complicated and hacky logic to make ragdoll transition seamless. That logic would teleport the ragdoll to the last known position of the now-dormant player
 
 				SetupBones( currentBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
-				// Plat_FastMemcpy( boneDelta0, m_CachedBoneData.Base(), sizeof( matrix3x4a_t ) * m_CachedBoneData.Count() );
+				// memcpy( boneDelta0, m_CachedBoneData.Base(), sizeof( matrix3x4a_t ) * m_CachedBoneData.Count() );
 				InitAsClientRagdoll( currentBones, currentBones, currentBones, boneDt, bleedOut );
 			}
 			else
@@ -1379,14 +1296,6 @@ IMPLEMENT_REFLECT_TABLE_IN( C_CSPlayer, DT_CSNonLocalPlayerExclusive );
 
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_CSPlayer, DT_CSPlayer, CCSPlayer )
-#ifdef CS_SHIELD_ENABLED
-#endif
-#if CS_CONTROLLABLE_BOTS_ENABLED
-#endif
-#if defined( PLAYER_TAUNT_SHIPPING_FEATURE )
-#endif
-#if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
-#endif
 
 bool C_CSPlayer::s_bPlayingFreezeCamSound = false;
 
@@ -2113,7 +2022,7 @@ float *	C_CSPlayer::GetRenderClipPlane( void )
 				// Something is catastrophically wrong for the plane to be this far away.
 				if ( flDistFromPlane > 128 )
 				{
-					Assert( false );
+					contract_assert( false );
 					m_bCachedPlaneIsValid = false;
 					return nullptr;
 				}
@@ -2212,12 +2121,12 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 	//int LocalPlayerID = ( pLocalPlayer != NULL ) ? pLocalPlayer->GetUserID() : -2;
 	int PlayerUserID = GetUserID();
 
-	if ( Q_strcmp( name, "round_freeze_end" ) == 0 )
+	if ( V_strcmp( name, "round_freeze_end" ) == 0 )
 	{
 		m_bShouldAutobuyNow = false;
 		m_bShouldAutobuyDMWeapons = false;
 	}
-	else if ( Q_strcmp( name, "cs_pre_restart" ) == 0 )
+	else if ( V_strcmp( name, "cs_pre_restart" ) == 0 )
 	{
 
 		// this is a hack because GetHudPlayer seems to return the previously spectated player instead of the newly spawned 
@@ -2247,7 +2156,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			SetCurrentMusic( CSMUSIC_START );
 		}
 	}
-	else if ( (Q_strcmp( "bot_takeover", name ) == 0 || Q_strcmp( "spec_target_updated", name ) == 0) && PlayerUserID == EventUserID )
+	else if ( (V_strcmp( "bot_takeover", name ) == 0 || V_strcmp( "spec_target_updated", name ) == 0) && PlayerUserID == EventUserID )
 	{
 		UpdateGlowsForAllPlayers();
 
@@ -2270,7 +2179,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-	else if ( Q_strcmp( "gg_reset_round_start_sounds", name ) == 0 )
+	else if ( V_strcmp( "gg_reset_round_start_sounds", name ) == 0 )
 	{
 		if ( PlayerUserID == EventUserID )
 		{
@@ -2278,7 +2187,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_StartOfRoundSoundEvents.ClearSounds();
 		}
 	}
-	else if ( Q_strcmp( "ggtr_player_levelup", name ) == 0 )
+	else if ( V_strcmp( "ggtr_player_levelup", name ) == 0 )
 	{
 		// commenting all of this out because the level up sound is associated with killing a player instead of actually leveling up
 		// playing the ding when it's not associated with killing someone is causing a bunch of confusion and is percieved as a bug
@@ -2298,14 +2207,14 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 // 			if ( pWeaponName )
 // 			{
 // 				char weaponSoundName[64];
-// 				Q_snprintf( weaponSoundName, 64, "GunGameWeapon.%s", pWeaponName );
+// 				V_snprintf( weaponSoundName, 64, "GunGameWeapon.%s", pWeaponName );
 // 
 // 				m_StartOfRoundSoundEvents.AddSound( this, weaponSoundName, 2.0f );
 // 			}
 		}
 		*/
 	}
-	else if ( Q_strcmp( "ggprogressive_player_levelup", name ) == 0 )
+	else if ( V_strcmp( "ggprogressive_player_levelup", name ) == 0 )
 	{
 		// Let the local player know he leveled up
 		if ( PlayerUserID == EventUserID )
@@ -2321,13 +2230,13 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 // 			if ( pWeaponName )
 // 			{
 // 				char weaponSoundName[64];
-// 				Q_snprintf( weaponSoundName, 64, "GunGameWeapon.%s", pWeaponName );
+// 				V_snprintf( weaponSoundName, 64, "GunGameWeapon.%s", pWeaponName );
 // 
 // 				EmitSound( weaponSoundName );
 // 			}
 		}
 	}
-	else if ( Q_strcmp( "gg_player_impending_upgrade", name ) == 0 )
+	else if ( V_strcmp( "gg_player_impending_upgrade", name ) == 0 )
 	{
 		// Let the local player know a level-up is impending
 		if ( PlayerUserID == EventUserID )
@@ -2338,7 +2247,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			C_BaseEntity::EmitSound( filter, entindex(), "GunGameWeapon.ImpendingLevelUp" );
 		}
 	}
-	else if ( Q_strcmp( "gg_killed_enemy", name ) == 0 )
+	else if ( V_strcmp( "gg_killed_enemy", name ) == 0 )
 	{
 		if ( CSGameRules()->IsPlayingGunGame() )
 		{
@@ -2386,7 +2295,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 // 			}
 		}
 	}
-	else if ( Q_strcmp( "gg_final_weapon_achieved", name ) == 0 )
+	else if ( V_strcmp( "gg_final_weapon_achieved", name ) == 0 )
 	{
 		int nGoldKnifeUserID = event->GetInt( "playerid", -1 );
 		if ( CSGameRules()->IsPlayingGunGameProgressive() && nGoldKnifeUserID == pLocalPlayer->GetUserID() )
@@ -2410,7 +2319,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-	else if ( Q_strcmp( "gg_bonus_grenade_achieved", name ) == 0 )
+	else if ( V_strcmp( "gg_bonus_grenade_achieved", name ) == 0 )
 	{
 		if ( CSGameRules()->IsPlayingGunGameTRBomb() )
 		{
@@ -2421,7 +2330,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-	else if ( Q_strcmp( "player_given_c4", name ) == 0 )
+	else if ( V_strcmp( "player_given_c4", name ) == 0 )
 	{
 		FirePerfStatsEvent( PERF_STATS_PLAYER );
 		if ( PlayerUserID == EventUserID )
@@ -2429,10 +2338,10 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			// Play the voiceover for receiving the c4
 		}
 	}
-	else if ( Q_strcmp( "item_pickup", name ) == 0 )
+	else if ( V_strcmp( "item_pickup", name ) == 0 )
 	{
 		FirePerfStatsEvent( PERF_STATS_PLAYER );
-		if ( /*Q_strcmp( event->GetString( "item" ), "c4" ) == 0 &&*/
+		if ( /*V_strcmp( event->GetString( "item" ), "c4" ) == 0 &&*/
 			( pLocalPlayer && pLocalPlayer->GetUserID() == EventUserID ) )
 		{
 			// if we aren't playing the sound on the server, play a "silent" version on the client
@@ -2440,11 +2349,11 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 				EmitSound( "Player.PickupWeaponSilent" );
 		}
 	}
-	else if ( Q_strcmp( "ammo_pickup", name ) == 0 )
+	else if ( V_strcmp( "ammo_pickup", name ) == 0 )
 	{
 		FirePerfStatsEvent( PERF_STATS_PLAYER );
 	}
-	else if ( Q_strcmp( "gg_leader", name ) == 0 )
+	else if ( V_strcmp( "gg_leader", name ) == 0 )
 	{
 		if ( CSGameRules()->IsPlayingGunGameProgressive() || CSGameRules()->IsPlayingGunGameDeathmatch() )
 		{	
@@ -2475,7 +2384,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			UpdateGlows();
 		}
 	}
-	else if ( Q_strcmp( "gg_team_leader", name ) == 0 )
+	else if ( V_strcmp( "gg_team_leader", name ) == 0 )
 	{
 		if ( CSGameRules()->IsPlayingGunGameProgressive() )
 		{
@@ -2486,7 +2395,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			UpdateGlows();
 		}
 	}
-	else if ( Q_strcmp( "round_start", name ) == 0 )
+	else if ( V_strcmp( "round_start", name ) == 0 )
 	{
 		//m_isCurrentGunGameLeader = false;
 		//m_isCurrentGunGameTeamLeader = false;
@@ -2509,7 +2418,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 		m_totalHitsOnClient = 0;
 		m_isCurrentGunGameTeamLeader = false;
 	}
-	else if ( Q_strcmp( "round_end", name ) == 0 )
+	else if ( V_strcmp( "round_end", name ) == 0 )
 	{
 		if ( IsLocalPlayer() )
 		{
@@ -2523,7 +2432,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 				RecordAmmoForRound();
 		}
 	}
-	else if ( Q_strcmp( "player_death", name ) == 0 )
+	else if ( V_strcmp( "player_death", name ) == 0 )
 	{
 		FirePerfStatsEvent( PERF_STATS_PLAYER, 1 ); // don't look ahead: after the player is dead, framerate doesn't matter
 		C_BasePlayer *pPlayer = UTIL_PlayerByUserId( event->GetInt( "userid" ) );
@@ -2558,7 +2467,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 		UpdateGlowsForAllPlayers();
 	}
 
-	else if ( Q_strcmp( "player_spawn", name ) == 0 )
+	else if ( V_strcmp( "player_spawn", name ) == 0 )
 	{
 		FirePerfStatsEvent( PERF_STATS_PLAYER, 16, 1 );// look ahead, but not back
 		if ( PlayerUserID == EventUserID )
@@ -2628,7 +2537,7 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 		}
 
 	}
-	else if ( Q_strcmp( "weapon_fire", name ) == 0 )
+	else if ( V_strcmp( "weapon_fire", name ) == 0 )
 	{
 		if ( PlayerUserID == EventUserID )
 		{
@@ -2636,10 +2545,10 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			m_flLastFiredWeaponTime = gpGlobals->curtime;
 		}
 	}
-	else if ( Q_strcmp( "assassination_target_killed", name ) == 0 )
+	else if ( V_strcmp( "assassination_target_killed", name ) == 0 )
 	{
 	}
-	else if ( Q_strcmp( "add_bullet_hit_marker", name ) == 0 )
+	else if ( V_strcmp( "add_bullet_hit_marker", name ) == 0 )
 	{
 		//FirePerfStatsEvent( PERF_STATS_BULLET );
 		if ( PlayerUserID == EventUserID )
@@ -2696,24 +2605,6 @@ USER_MESSAGE_REGISTER( ReportHit );
 
 void C_CSPlayer::CompareClientServerBulletHits( void )
 {
-	bool bAllowVisDebug = false;
-
-	AccountID_t uiLocalAccountID = 0;
-	if ( steamapicontext && steamapicontext->SteamUser() )
-		uiLocalAccountID = steamapicontext->SteamUser()->GetSteamID().GetAccountID();
-
-	switch( uiLocalAccountID )
-	{
-	case 8186565:	// mattw
-	case 158213:	// ido
-	case 24715681:	// vitaliy
-	case 101804581:	// will
-	case 11134320:	// brianlev
-
-		bAllowVisDebug = true;
-	}
-
-	
 	// remove server hits that have matching hits on client
 	for ( int s = (int)std::ssize( m_vecBulletVerifyListServer ) - 1; s >= 0; s-- )
 	{
@@ -2758,23 +2649,29 @@ static void ClientBuyHelperForwardToServer( char const *szCommand, char const *s
 	{
 		// forward the command with parameter
 		char command[ 256 ] = {};
-		Q_snprintf( command, sizeof( command ), "%s \"%s\"", szCommand, szParam );
+		V_snprintf( command, sizeof( command ), "%s \"%s\"", szCommand, szParam );
 		engine->ServerCmd( command );
 	}
 }
 
-CON_COMMAND_F( autobuy, "Attempt to purchase items with the order listed in cl_autobuy", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void autobuy( const CCommand &args );
+static ConCommand autobuy_command( "autobuy", autobuy, "Attempt to purchase items with the order listed in cl_autobuy", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void autobuy( const CCommand &args )
 {
 	extern ConVar cl_autobuy;
 	ClientBuyHelperForwardToServer( "autobuy", cl_autobuy.GetString() );
 }
-CON_COMMAND_F( rebuy, "Attempt to repurchase items with the order listed in cl_rebuy", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void rebuy( const CCommand &args );
+static ConCommand rebuy_command( "rebuy", rebuy, "Attempt to repurchase items with the order listed in cl_rebuy", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void rebuy( const CCommand &args )
 {
 	extern ConVar cl_rebuy;
 	ClientBuyHelperForwardToServer( "rebuy", cl_rebuy.GetString() );
 }
 
-CON_COMMAND_F( dm_togglerandomweapons, "Turns random weapons in deathmatch on/off", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_SERVER_CAN_EXECUTE )
+static void dm_togglerandomweapons( const CCommand &args );
+static ConCommand dm_togglerandomweapons_command( "dm_togglerandomweapons", dm_togglerandomweapons, "Turns random weapons in deathmatch on/off", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_SERVER_CAN_EXECUTE );
+static void dm_togglerandomweapons( const CCommand &args )
 {
 	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
 	C_CSPlayer* pPlayer = ToCSPlayer(pLocalPlayer);
@@ -2847,12 +2744,14 @@ static void ForwardEndMatchVoteNextMapToServer( const CCommand &args )
 	{
 		// forward the command with parameter
 		char command[128];
-		Q_snprintf( command, sizeof(command), "%s \"%s\"", args[ 0 ], args[ 1 ] );
+		V_snprintf( command, sizeof(command), "%s \"%s\"", args[ 0 ], args[ 1 ] );
 		engine->ServerCmd( command );
 	}
 }
 
-CON_COMMAND_F( endmatch_votenextmap, "Votes for the next map at the end of the match", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void endmatch_votenextmap( const CCommand &args );
+static ConCommand endmatch_votenextmap_command( "endmatch_votenextmap", endmatch_votenextmap, "Votes for the next map at the end of the match", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void endmatch_votenextmap( const CCommand &args )
 {
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( !pPlayer || g_bEngineIsHLTV || pPlayer->GetTeamNumber() == TEAM_SPECTATOR )
@@ -3309,10 +3208,6 @@ void C_CSPlayer::Spawn( void )
 {
 	m_flLastSpawnTimeIndex = gpGlobals->curtime;
 
-#if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
-	m_AttributeManager.SetPlayer( this );
-	m_AttributeList.SetManager( &m_AttributeManager );
-#endif
 	BaseClass::Spawn();
 
 	if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
@@ -3773,7 +3668,7 @@ const char *C_CSPlayer::GetHalloweenMaskModelAddon( C_CSPlayer *pPlayer )
 
 	bool bShowColor = ( CCSGameRules::GetMaxPlayers() <= 10 ) && CSGameRules() && CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset();
 	C_CS_PlayerResource* pCSPR = ( C_CS_PlayerResource* )g_PR;
-	int nMainArraySize = ARRAYSIZE( s_HalloweenMaskModels );
+	int nMainArraySize = std::size( s_HalloweenMaskModels );
 	if ( bShowColor && pCSPR )
 	{
 		int playerIndex = 0;
@@ -3795,7 +3690,7 @@ const char *C_CSPlayer::GetHalloweenMaskModelAddon( C_CSPlayer *pPlayer )
 		else
 			nMaskIndex = nColor;
 
-		return s_HalloweenMaskModelsCompetitive[nMaskIndex % ARRAYSIZE( s_HalloweenMaskModelsCompetitive )].model;
+		return s_HalloweenMaskModelsCompetitive[nMaskIndex % std::size( s_HalloweenMaskModelsCompetitive )].model;
 	}
 	else
 	{
@@ -3803,10 +3698,10 @@ const char *C_CSPlayer::GetHalloweenMaskModelAddon( C_CSPlayer *pPlayer )
 		nMaskIndex = (pPlayer->entindex()+nSeed) % nMainArraySize;
 	}
 
-	if ( Q_strcmp( s_HalloweenMaskModels[nMaskIndex].model, "tf2" ) == 0 )
+	if ( V_strcmp( s_HalloweenMaskModels[nMaskIndex].model, "tf2" ) == 0 )
 	{
 		nMaskIndex += RandomInt( 0, 6 );
-		nMaskIndex = nMaskIndex % ARRAYSIZE( s_HalloweenMaskModelsTF2 );
+		nMaskIndex = nMaskIndex % std::size( s_HalloweenMaskModelsTF2 );
 		return s_HalloweenMaskModelsTF2[nMaskIndex].model;
 	}
 
@@ -3914,17 +3809,17 @@ void C_CSPlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, f
 	}
 #endif //IRONSIGHT}
 
-	Assert( eyeAngles.IsValid() && eyeOrigin.IsValid() );
+	contract_assert( eyeAngles.IsValid() && eyeOrigin.IsValid() );
 }
 
-#define	MP_TAUNT_PITCH	0
-#define MP_TAUNT_YAW	1
-#define MP_TAUNT_DIST	2
+inline constexpr int MP_TAUNT_PITCH = 0;
+inline constexpr int MP_TAUNT_YAW = 1;
+inline constexpr int MP_TAUNT_DIST = 2;
 
-#define MP_TAUNT_MAXYAW		135
-#define MP_TAUNT_MINYAW		-135
-#define MP_TAUNT_MAXPITCH	90
-#define MP_TAUNT_MINPITCH	0
+inline constexpr int MP_TAUNT_MAXYAW = 135;
+inline constexpr int MP_TAUNT_MINYAW = -135;
+inline constexpr int MP_TAUNT_MAXPITCH = 90;
+inline constexpr int MP_TAUNT_MINPITCH = 0;
 #define MP_TAUNT_IDEALLAG	4.0f
 
 static Vector MP_TAUNTCAM_HULL_MIN( -9.0f, -9.0f, -9.0f );
@@ -3946,7 +3841,7 @@ void C_CSPlayer::UpdateHostageCarryModels()
 			}
 		}
 
-		C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( 1 ) );
+		C_BaseViewModel *pViewModel = static_cast<C_BaseViewModel *>( GetViewModel( 1 ) );
 		if ( pViewModel )
 		{
 			pViewModel->UpdateVisibility();
@@ -3959,7 +3854,7 @@ void C_CSPlayer::UpdateHostageCarryModels()
 
 void C_CSPlayer::UpdateAddonModels( bool bForce )
 {
-	COMPILE_TIME_ASSERT( NUM_ADDON_BITS + NUM_CLIENTSIDE_ADDON_BITS < 32 );
+	static_assert( NUM_ADDON_BITS + NUM_CLIENTSIDE_ADDON_BITS < 32 );
 	int iCurAddonBits = m_iAddonBits;
 
 	if ( m_hC4AddonLED && ( IsAnimLODflagSet(ANIMLODFLAG_OUTSIDEVIEWFRUSTUM) || IsDormant() ) )
@@ -4274,12 +4169,6 @@ void C_CSPlayer::UpdateSoundEvents()
 void C_CSPlayer::UpdateMinModels( void )
 {
 	int modelIndex = m_nModelIndex;
-
-#if CS_ALLOW_CL_MINMODELS
-
-	modelIndex = FilterModelUsingCL_MinModels( PlayerClass() );
-
-#endif
 
 	SetModelByIndex( modelIndex );
 }
@@ -4933,12 +4822,12 @@ void C_CSPlayer::SetModelPointer( const model_t *pModel )
 
 	if ( bModelPointerIsChanged )
 	{
-		m_bUseNewAnimstate = ( Q_stristr( modelinfo->GetModelName(GetModel()), "custom_player" ) != 0 );
+		m_bUseNewAnimstate = ( V_stristr( modelinfo->GetModelName(GetModel()), "custom_player" ) != 0 );
 		m_bAddonModelsAreOutOfDate = true; // next time we update addon models, do a complete refresh
 
 		// apply BONE_ALWAYS_SETUP flag to certain hardcoded bone names, in case they're missing the flags in content
 		CStudioHdr *pHdr = GetModelPtr();
-		Assert( pHdr );
+		contract_assert( pHdr );
 		if ( pHdr )
 		{
 			for ( int i=0; i<pHdr->numbones(); i++ )
@@ -5073,13 +4962,15 @@ C_CSPlayer* GetHudPlayer( void )
 // 	char splitScreenCommand[1024] = {0};
 // 
 // 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( 1 );
-// 	Q_snprintf(splitScreenCommand, sizeof( splitScreenCommand ), "jointeam 3\njoinclass\n" );
+// 	V_snprintf(splitScreenCommand, sizeof( splitScreenCommand ), "jointeam 3\njoinclass\n" );
 // 	//engine->ClientCmd_Unrestricted(splitScreenCommand );  // ClientCmd_Unrestricted uses in_forceuser so use ClientCmd which uses GET_ACTIVE_SPLITSCREEN_PLAYER
 // 	engine->ClientCmd(splitScreenCommand );
 // }
 
 
-CON_COMMAND_F( rangefinder, "rangefinder", FCVAR_CHEAT )
+static void rangefinder( const CCommand &args );
+static ConCommand rangefinder_command( "rangefinder", rangefinder, "rangefinder", FCVAR_CHEAT );
+static void rangefinder( const CCommand &args )
 {
 
 	CBasePlayer *pPlayer = ToBasePlayer( C_CSPlayer::GetLocalCSPlayer() );
@@ -5311,7 +5202,7 @@ void C_CSPlayer::SetBuyMenuOpen( bool bOpen )
 
 CWeaponCSBase* C_CSPlayer::GetActiveCSWeapon() const
 {
-	return assert_cast< CWeaponCSBase* >( GetActiveWeapon() );
+	return static_cast< CWeaponCSBase* >( GetActiveWeapon() );
 }
 
 CWeaponCSBase* C_CSPlayer::GetCSWeapon( CSWeaponID id ) const
@@ -5321,7 +5212,7 @@ CWeaponCSBase* C_CSPlayer::GetCSWeapon( CSWeaponID id ) const
 		CBaseCombatWeapon *weapon = GetWeapon( i );
 		if ( weapon )
 		{
-			CWeaponCSBase *csWeapon = assert_cast< CWeaponCSBase * >( weapon );
+			CWeaponCSBase *csWeapon = static_cast< CWeaponCSBase * >( weapon );
 			if ( csWeapon )
 			{
 				if ( id == csWeapon->GetCSWeaponID() )
@@ -5547,7 +5438,7 @@ void C_CSPlayer::UpdateClientSideAnimation()
 		CWeaponCSBase *pWeapon = GetActiveCSWeapon();
 		if ( pWeapon )
 		{
-			C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( pWeapon->m_nViewModelIndex ) );
+			C_BaseViewModel *pViewModel = static_cast<C_BaseViewModel *>( GetViewModel( pWeapon->m_nViewModelIndex ) );
 			if ( pViewModel )
 			{
 				pViewModel->UpdateAllViewmodelAddons();
@@ -5558,7 +5449,7 @@ void C_CSPlayer::UpdateClientSideAnimation()
 			//We have a null weapon so remove the add ons for all the view models for this player.
 			for ( int i=0; i<MAX_VIEWMODELS; ++i )
 			{
-				C_BaseViewModel *pViewModel = assert_cast<C_BaseViewModel *>( GetViewModel( i ) );
+				C_BaseViewModel *pViewModel = static_cast<C_BaseViewModel *>( GetViewModel( i ) );
 				if ( pViewModel )
 				{
 					pViewModel->RemoveViewmodelArmModels();
@@ -5621,7 +5512,7 @@ void C_CSPlayer::ProcessMuzzleFlashEvent()
 	if ( !pWeaponWorldModel )
 		return;
 
-	if ( pszEffect && Q_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() && pWeaponWorldModel->IsVisible() && !pWeaponWorldModel->HasDormantOwner() )
+	if ( pszEffect && V_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() && pWeaponWorldModel->IsVisible() && !pWeaponWorldModel->HasDormantOwner() )
 	{
 		pWeaponWorldModel->GetAttachment( iAttachmentIndex, m_vecLastMuzzleFlashPos, m_angLastMuzzleFlashAngle );
 		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeaponWorldModel, iAttachmentIndex, false, splitScreenRenderFlags );
@@ -5630,7 +5521,7 @@ void C_CSPlayer::ProcessMuzzleFlashEvent()
 	// Brass Eject Effect.
 	iAttachmentIndex = pWeapon->GetEjectBrassAttachmentIndex_3rdPerson();
 	pszEffect = pWeapon->GetEjectBrassEffectName();
-	if ( pszEffect && Q_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() && pWeaponWorldModel->IsVisible() && !pWeaponWorldModel->HasDormantOwner() )
+	if ( pszEffect && V_strlen(pszEffect ) > 0 && iAttachmentIndex >= 0 && pWeaponWorldModel && pWeaponWorldModel->ShouldDraw() && pWeaponWorldModel->IsVisible() && !pWeaponWorldModel->HasDormantOwner() )
 	{
 		DispatchParticleEffect( pszEffect, PATTACH_POINT_FOLLOW, pWeaponWorldModel, iAttachmentIndex, false, splitScreenRenderFlags );
 	}
@@ -5682,7 +5573,7 @@ bool C_CSPlayer::ShouldDraw( void )
 	return BaseClass::ShouldDraw();
 }
 
-#define APPROX_CENTER_PLAYER Vector(0,0,50)
+inline const Vector APPROX_CENTER_PLAYER = Vector(0,0,50);
 
 bool C_CSPlayer::GetAttachment( int number, matrix3x4_t &matrix )
 {
@@ -6070,7 +5961,7 @@ void CBoneSnapshot::InitWeightList( void )
 	for ( int i=0; i<MAXSTUDIOBONES; i++ )
 		m_Weightlist[i] = 1;
 
-	FOR_EACH_SUBKEY( pModelKV, pBoneWeightKV )
+	for ( KeyValues *pBoneWeightKV = pModelKV->GetFirstSubKey(); pBoneWeightKV != nullptr; pBoneWeightKV = pBoneWeightKV->GetNextKey() )
 	{
 		int nBoneIdx = m_pEnt->LookupBone( pBoneWeightKV->GetName() );
 		if ( nBoneIdx >= 0 && nBoneIdx < MAXSTUDIOBONES )
@@ -6107,7 +5998,7 @@ void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, BoneVector pos[]
 	int nRightFootBoneIndex = LookupBone( "ankle_R" );
 	int nLeftHandBoneIndex = LookupBone( "hand_L" );
 
-	Assert( nLeftFootBoneIndex != -1 && nRightFootBoneIndex != -1 && nLeftHandBoneIndex != -1 );
+	contract_assert( nLeftFootBoneIndex != -1 && nRightFootBoneIndex != -1 && nLeftHandBoneIndex != -1 );
 
 	for( int i = 0; i < pStudioHdr->numikchains(); i++ )
 	{
@@ -6129,7 +6020,7 @@ void C_CSPlayer::DoExtraBoneProcessing( CStudioHdr *pStudioHdr, BoneVector pos[]
 			break;
 	}
 	
-	Assert( pLeftFootChain && pRightFootChain );
+	contract_assert( pLeftFootChain && pRightFootChain );
 	
 	Vector vecAnimatedLeftFootPos = boneToWorld[nLeftFootBoneIndex].GetOrigin();
 	Vector vecAnimatedRightFootPos = boneToWorld[nRightFootBoneIndex].GetOrigin();
@@ -6324,7 +6215,6 @@ IRagdoll* C_CSPlayer::GetRepresentativeRagdoll() const
 	}
 }
 
-// Update the rich presence for this player when they change teams
 void C_CSPlayer::TeamChange( int iNewTeam )
 {
 	C_BasePlayer::TeamChange( iNewTeam );
@@ -6349,7 +6239,6 @@ void C_CSPlayer::PlayReloadEffect( int iActAnimID, const Vector *pOrigin )
 	// Only play the effect for other players.
 	if ( this == C_CSPlayer::GetLocalCSPlayer() )
 	{
-		Assert( g_HltvReplaySystem.GetHltvReplayDelay() ); // We shouldn't have been sent this message - except during replay
 		return;
 	}
 	
@@ -7017,7 +6906,7 @@ extern ConVar sv_disable_observer_interpolation;
 
 void C_CSPlayer::InterpolateObserverView( Vector& vOutOrigin, QAngle& vOutAngles )
 {
-	Assert( vOutAngles.IsValid() && vOutOrigin.IsValid() );
+	contract_assert( vOutAngles.IsValid() && vOutOrigin.IsValid() );
 	// Interpolate the view between observer target changes
 	if ( m_obsInterpState != OBSERVER_INTERP_NONE && ShouldInterpolateObserverChanges() )
 	{
@@ -7097,7 +6986,7 @@ void C_CSPlayer::InterpolateObserverView( Vector& vOutOrigin, QAngle& vOutAngles
 		QuaternionSlerp( q1, q2, t, qOut );
 		QuaternionAngles( qOut, vOutAngles );
 
-		Assert( cl_obs_interp_snap_dist.GetFloat() < cl_obs_interp_settle_dist.GetFloat() );
+		contract_assert( cl_obs_interp_snap_dist.GetFloat() < cl_obs_interp_settle_dist.GetFloat() );
 		// At a close enough dist snap to final and stop interpolating
 		if ( m_vecObserverInterpolateOffset.LengthSqr() < cl_obs_interp_snap_dist.GetFloat()*cl_obs_interp_snap_dist.GetFloat() )
 		{
@@ -7110,7 +6999,7 @@ void C_CSPlayer::InterpolateObserverView( Vector& vOutOrigin, QAngle& vOutAngles
 			UpdateObserverTargetVisibility();
 		}
 	}
-	Assert( vOutAngles.IsValid() && vOutOrigin.IsValid() );
+	contract_assert( vOutAngles.IsValid() && vOutOrigin.IsValid() );
 }
 
 
@@ -7228,28 +7117,10 @@ void C_CSPlayer::SetObserverTarget( EHANDLE hTarget )
 	}
 }
 
-// [tj] checks if this player has another given player on their Steam friends list.
+// [tj] checks if this player has another given player as a friend.
 bool C_CSPlayer::HasPlayerAsFriend( C_CSPlayer* player )
 {
-	if ( !steamapicontext || !steamapicontext->SteamFriends() || !steamapicontext->SteamUtils() || !player )
-	{
-		return false;
-	}
-
-	player_info_t pi;
-	if ( !engine->GetPlayerInfo( player->entindex(), &pi ) )
-	{
-		return false;
-	}
-
-	if ( !pi.friendsID )
-	{
-		return false;
-	}
-
-	// check and see if they're on the local player's friends list
-	CSteamID steamID( pi.friendsID, 1, steamapicontext->SteamUtils()->GetConnectedUniverse(), k_EAccountTypeIndividual );
-	return steamapicontext->SteamFriends()->HasFriend( steamID, k_EFriendFlagImmediate );
+	return false;
 }
 
 // [menglish] Returns whether this player is dominating or is being dominated by the specified player
@@ -7921,7 +7792,7 @@ bool C_BulletHitModel::UpdatePosition( void )
 	else
 	{
 		float flDurationToColor = RemapValClamped( flDuration, 0, 0.8, 255, 0 );
-		if ( fmod( gpGlobals->curtime, 0.25 ) < 0.125 )
+		if ( std::fmod( gpGlobals->curtime, 0.25 ) < 0.125 )
 			flDurationToColor = 0;
 		flDurationToColor = std::max<std::common_type_t<float, int>>( flDurationToColor, 100 );
 		SetRenderColor( flDurationToColor, flDurationToColor, flDurationToColor );
@@ -7940,30 +7811,6 @@ int C_BulletHitModel::DrawModel( int flags, const RenderableInstance_t &instance
 	return 0;
 }
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
-
-#if defined ENABLE_CLIENT_INVENTORIES_FOR_OTHER_PLAYERS
-CCSPlayerInventory *C_CSPlayer::Inventory( void )
-{
-	static CCSPlayerInventory dummy;
-	if ( IsLocalPlayer() )
-		return dynamic_cast< CCSPlayerInventory* >( CSInventoryManager()->GetLocalInventory() );
-	if ( !g_PR )
-		return &dummy;
-	
-	static XUID s_myXuid = steamapicontext->SteamUser()->GetSteamID().ConvertToUint64();
-	XUID thisXuid = g_PR->GetXuid( entindex() );
-	if ( thisXuid == INVALID_XUID )
-		return &dummy;
-	if ( thisXuid == s_myXuid )
-		return dynamic_cast< CCSPlayerInventory* >( CSInventoryManager()->GetLocalInventory() );
-
-	return static_cast< C_CS_PlayerResource * >( g_PR )->GetInventory( entindex() );
-}
-
-#endif
-
-#endif //!defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 
 
 // Adds a sound event to be played at the next round restart
@@ -7972,20 +7819,20 @@ void CStartOfRoundAudioPlayback::AddSound( CBaseEntity* pEntityPlayingSound, con
 	// Ensure that the sound is not already in the playback list
 	for ( int i = 0; i < std::ssize( m_SoundEvents ); ++i )
 	{
-		if ( Q_strcmp( pName, m_SoundEvents[i].m_SoundName ) == 0 )
+		if ( V_strcmp( pName, m_SoundEvents[i].m_SoundName ) == 0 )
 		{
 			// Found a match, so skip adding this sound
 			return;
 		}
 	}
 
-	if ( pEntityPlayingSound && pName && ( Q_strlen ( pName ) > 0 ) && ( fPlaybackDuration > 0.0f ) )
+	if ( pEntityPlayingSound && pName && ( V_strlen ( pName ) > 0 ) && ( fPlaybackDuration > 0.0f ) )
 	{
 		RoundStartSoundPlaybackData	playbackData;
 
 		playbackData.m_pEntityPlayingSound = pEntityPlayingSound;
 
-		Q_snprintf( playbackData.m_SoundName, sizeof( playbackData.m_SoundName ), "%s", pName );
+		V_snprintf( playbackData.m_SoundName, sizeof( playbackData.m_SoundName ), "%s", pName );
 		playbackData.m_fPlaybackTime = m_NextAvailableTime;
 		m_NextAvailableTime += fPlaybackDuration;
 

@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
@@ -11,7 +12,7 @@ private:
 public:
 	void SetMODEL( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nMODEL = i;
 #ifdef _DEBUG
 		m_bMODEL = true;
@@ -19,7 +20,7 @@ public:
 	}
 	void SetMODEL( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMODEL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMODEL = true;
@@ -33,7 +34,7 @@ private:
 public:
 	void SetPORTALGHOSTOVERLAY( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nPORTALGHOSTOVERLAY = i;
 #ifdef _DEBUG
 		m_bPORTALGHOSTOVERLAY = true;
@@ -41,7 +42,7 @@ public:
 	}
 	void SetPORTALGHOSTOVERLAY( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nPORTALGHOSTOVERLAY = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPORTALGHOSTOVERLAY = true;
@@ -66,7 +67,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bMODEL && m_bPORTALGHOSTOVERLAY;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 2 * m_nMODEL ) + ( 4 * m_nPORTALGHOSTOVERLAY ) + 0;
 	}
@@ -82,7 +83,7 @@ private:
 public:
 	void SetSKINNING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSKINNING = i;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -90,7 +91,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -111,7 +112,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bSKINNING;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nSKINNING ) + 0;
 	}

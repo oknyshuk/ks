@@ -1,9 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Engine specific CRC functions
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Engine specific CRC functions
 
 #include "checksum_engine.h"
 #include "bspfile.h"
@@ -42,7 +40,7 @@ byte COM_BlockSequenceCRCByte( byte *base, int length, int sequence )
 		length = 60;
 	}
 	
-	memcpy (chkb, base, length);
+	std::memcpy (chkb, base, length);
 
 	chkb[length+0] = p[0];
 	chkb[length+1] = p[1];
@@ -85,7 +83,7 @@ bool CRC_File(CRC32_t *crcvalue, const char *pszFileName)
 
 	nSize = COM_OpenFile(pszFileName, &fp);
 	if ( !fp || ( nSize == -1 ) )
-		return FALSE;
+		return false;
 
 	// Now read in chunks
 	while (nSize > 0)
@@ -114,13 +112,13 @@ bool CRC_File(CRC32_t *crcvalue, const char *pszFileName)
 		{
 			if ( fp )
 				g_pFileSystem->Close(fp);
-			return FALSE;
+			return false;
 		}
 	}	
 
 	if ( fp )
 		g_pFileSystem->Close(fp);
-	return TRUE;
+	return true;
 }
 
 static BSPHeader_t *g_pMapHeader = nullptr;
@@ -181,7 +179,7 @@ bool CRC_MapFile(CRC32_t *crcvalue, const char *pszFileName)
 
 
 	static char gamedir[MAX_OSPATH];
-	Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
+	V_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
 
 	g_pMapHeader = &header;
 	int lumpList[HEADER_LUMPS];
@@ -189,7 +187,7 @@ bool CRC_MapFile(CRC32_t *crcvalue, const char *pszFileName)
 	{
 		lumpList[i] = i;
 	}
-	qsort( lumpList, HEADER_LUMPS, sizeof(lumpList[0]), LumpCompare );
+	std::qsort( lumpList, HEADER_LUMPS, sizeof(lumpList[0]), LumpCompare );
 
 	CRC32_t lumpCRC;
 	
@@ -203,7 +201,7 @@ bool CRC_MapFile(CRC32_t *crcvalue, const char *pszFileName)
 		CRC32_Init(&lumpCRC);
 
 		// INFESTED_DLL - Alien Swarm wants a more relaxed CRC check so each client can compile the map themselves
-		if ( !Q_stricmp( gamedir, "infested" ) )
+		if ( !V_stricmp( gamedir, "infested" ) )
 		{
 			if ( l == LUMP_LIGHTING ||
 				l == LUMP_DISPINFO ||
@@ -294,7 +292,7 @@ bool MD5_Hash_File(unsigned char digest[16], char *pszFileName, bool bSeed /* = 
 	if ( !fp || ( nSize == -1 ) )
 		return false;
 
-	memset(&ctx, 0, sizeof(MD5Context_t));
+	std::memset(&ctx, 0, sizeof(MD5Context_t));
 
 	MD5Init(&ctx);
 
@@ -331,7 +329,7 @@ bool MD5_Hash_File(unsigned char digest[16], char *pszFileName, bool bSeed /* = 
 		{
 			if ( fp )
 				g_pFileSystem->Close(fp);
-			return FALSE;
+			return false;
 		}
 	}	
 
@@ -340,6 +338,5 @@ bool MD5_Hash_File(unsigned char digest[16], char *pszFileName, bool bSeed /* = 
 
 	MD5Final(digest, &ctx);
 
-	return TRUE;
+	return true;
 }
-

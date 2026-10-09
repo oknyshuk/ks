@@ -1,8 +1,7 @@
-//=========== Copyright (c) Valve Corporation, All rights reserved. ===========//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Create embroidery effect textures from arbitrary images
-//
-//===========================================================================//
 
 #include "BaseVSShader.h"
 #include "embroider_vs30.inc"
@@ -11,7 +10,7 @@
 #include "../materialsystem_global.h"
 
 BEGIN_VS_SHADER( Embroider, "Help for Embroider" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( BASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Original image" )
 		SHADER_PARAM( STITCHTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Stitching pattern with normal and alpha" )
 		SHADER_PARAM( BACKINGTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Backing pattern with normal and ao in alpha" )
@@ -138,5 +137,3 @@ BEGIN_VS_SHADER( Embroider, "Help for Embroider" )
 	}
 
 END_SHADER
-
-

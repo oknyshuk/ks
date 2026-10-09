@@ -1,9 +1,9 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#ifndef FLESH_INTERIOR_BLENDED_PASS_HELPER_H
-#define FLESH_INTERIOR_BLENDED_PASS_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -18,7 +18,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct FleshInteriorBlendedPassVars_t
 {
-	FleshInteriorBlendedPassVars_t() { memset( this, 0xFF, sizeof(FleshInteriorBlendedPassVars_t) ); }
+	FleshInteriorBlendedPassVars_t() { std::memset( this, 0xFF, sizeof(FleshInteriorBlendedPassVars_t) ); }
 
 	int m_nFleshTexture;
 	int m_nFleshNoiseTexture;
@@ -61,5 +61,3 @@ void InitParamsFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** 
 void InitFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** params, FleshInteriorBlendedPassVars_t &info );
 void DrawFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 								   IShaderShadow* pShaderShadow, FleshInteriorBlendedPassVars_t &info, VertexCompressionType_t vertexCompression );
-
-#endif // FLESH_INTERIOR_BLENDED_PASS_HELPER_H

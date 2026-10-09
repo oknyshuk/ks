@@ -1,25 +1,31 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SMOOTH_AVERAGE_H
-#define SMOOTH_AVERAGE_H
+import std;
 
-
-#include "tier1/map_ops.h"
-
-
+import ks.tier1;
 
 // Use this macro around any value, and it'll queue up the results given to it nTimes and 
 // provide a running average.
-#define SMOOTH_AVERAGE( value, nCount ) CalcSmoothAverage( value, nCount, __FILE__, __LINE__ )
+template <typename T1, typename T2>
+inline auto SMOOTH_AVERAGE( T1 value, T2 nCount, std::source_location loc = std::source_location::current() )
+{
+	return CalcSmoothAverage( value, nCount, loc.file_name(), static_cast<int>( loc.line() ) );
+}
 
 
 // Same as their counterpart functions but they return more info in a CTimingInfo structure.
-#define SMOOTH_AVERAGE_STRUCT( value, nCount )				CalcSmoothAverage_Struct( value, nCount, __FILE__, __LINE__ )
-#define SUM_OVER_TIME_INTERVAL_STRUCT( value, nSeconds )	SumOverTimeInterval_Struct( value, nSeconds, __FILE__, __LINE__ )
+template <typename T1, typename T2>
+inline auto SMOOTH_AVERAGE_STRUCT( T1 value, T2 nCount, std::source_location loc = std::source_location::current() )
+{
+	return CalcSmoothAverage_Struct( value, nCount, loc.file_name(), static_cast<int>( loc.line() ) );
+}
+template <typename T1, typename T2>
+inline auto SUM_OVER_TIME_INTERVAL_STRUCT( T1 value, T2 nSeconds, std::source_location loc = std::source_location::current() )
+{
+	return SumOverTimeInterval_Struct( value, nSeconds, loc.file_name(), static_cast<int>( loc.line() ) );
+}
 
 
 template< class T >
@@ -86,7 +92,7 @@ inline CTimingInfo< T > SumOverTimeInterval_Struct( const T &value, float nSecon
 	static ks::idict< CAveragesInfo_TimeBased< T >* > s_SmoothAverages;
 
 	char fullStr[1024];
-	Q_snprintf( fullStr, sizeof( fullStr ), "%s_%i", pFilename, iLine );
+	V_snprintf( fullStr, sizeof( fullStr ), "%s_%i", pFilename, iLine );
 	
 	CAveragesInfo_TimeBased<T> *&pInfo = s_SmoothAverages[fullStr];
 	if ( !pInfo )
@@ -142,7 +148,3 @@ inline CTimingInfo< T > SumOverTimeInterval( const T &value, float nSeconds, con
 	CTimingInfo< T > info = SumOverTimeInterval_Struct( value, nSeconds, pFilename, iLine );
 	return info.m_AverageValue;
 }
-
-
-#endif // SMOOTH_AVERAGE_H
-

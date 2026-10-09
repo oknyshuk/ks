@@ -1,26 +1,20 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IINPUTSYSTEM_H
-#define IINPUTSYSTEM_H
-
-#include "tier0/platform.h"
-#include "tier0/platwindow.h"
-#include "appframework/iappsystem.h"
+import ks.tier1;
 #include "inputsystem/InputEnums.h"
 #include "inputsystem/ButtonCode.h"
 #include "inputsystem/AnalogCode.h"
-#include <mathlib/vector.h>
+import std;
 #include "input_device.h"
 
 ///-----------------------------------------------------------------------------
 /// A handle to a cursor icon
 ///-----------------------------------------------------------------------------
-DECLARE_POINTER_HANDLE( InputCursorHandle_t );
-#define INPUT_CURSOR_HANDLE_INVALID ( (InputCursorHandle_t)0 )
+struct InputCursorHandle_t__ { int unused; };
+using InputCursorHandle_t = InputCursorHandle_t__ *;
+inline constexpr auto INPUT_CURSOR_HANDLE_INVALID = ( (InputCursorHandle_t)0 );
 
 
 ///-----------------------------------------------------------------------------
@@ -54,7 +48,7 @@ enum InputStandardCursor_t
 /// the last call to PollInputState. It also contains facilities for cursor
 /// control and creation.
 ///-----------------------------------------------------------------------------
-abstract_class IInputSystem : public IAppSystem
+class IInputSystem : public IAppSystem
 {
 public:
 	/// Attach, detach input system from a particular window
@@ -236,13 +230,6 @@ public:
 
 	virtual void SampleInputToFindCurrentDevice( bool ) = 0;  // looks for the next 'significant' button press to determine and set the current input device
 	virtual bool IsSamplingForCurrentDevice( void ) = 0;
-
-	virtual bool IsSteamControllerActive() const = 0;
-	virtual void SetSteamControllerMode( const char *pMode, const void *obj=nullptr ) = 0;
-
 };
 
-DECLARE_TIER2_INTERFACE( IInputSystem, g_pInputSystem );
-
-
-#endif // IINPUTSYSTEM_H
+extern IInputSystem *g_pInputSystem;;

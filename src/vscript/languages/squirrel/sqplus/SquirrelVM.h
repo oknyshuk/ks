@@ -18,12 +18,12 @@ class SquirrelVM
 	friend struct SquirrelError;
 public:
 	static void Init();
-	static BOOL IsInitialized(){return _VM == nullptr?FALSE:TRUE;}
+	static BOOL IsInitialized(){return _VM == nullptr?false:true;}
 	static void Shutdown();
 	static void Cleanup();
 	static BOOL Update(); //debugger and maybe GC later
 	static SquirrelObject CompileScript(const SQChar *s);
-	static SquirrelObject CompileBuffer(const SQChar *s,const SQChar * debugInfo=_T("console_buffer"));
+	static SquirrelObject CompileBuffer(const SQChar *s,const SQChar * debugInfo="console_buffer");
 	static SquirrelObject RunScript(const SquirrelObject &o,SquirrelObject *_this = nullptr);
 	static void PrintFunc(HSQUIRRELVM v,const SQChar* s,...);
 	static BOOL BeginCall(const SquirrelObject &func);

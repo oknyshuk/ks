@@ -1,14 +1,9 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
-#include "common_hlsl_cpp_consts.h" // hack hack hack!
-#include "convar.h"
+import std;
 
 #include "character_ssao_vs20.inc"
 #include "character_ssao_ps20.inc"
@@ -18,16 +13,10 @@
 
 // this shader processes a screen-space normal + depth prepass into screen-space AO for later reference
 
-#define NOISE_SAMPLE 0
-
 BEGIN_VS_SHADER( CharacterSSAO, "Help for CharacterSSAO" )
 
-	BEGIN_SHADER_PARAMS
+	
 		
-		#ifdef NOISE_SAMPLE
-			SHADER_PARAM( NOISEMAP, SHADER_PARAM_TYPE_TEXTURE, "", "" )
-		#endif
-
 	END_SHADER_PARAMS
 
 	SHADER_INIT_PARAMS()
@@ -46,12 +35,6 @@ BEGIN_VS_SHADER( CharacterSSAO, "Help for CharacterSSAO" )
 		{
 			LoadTexture( BASETEXTURE, 0 );
 		}
-		#ifdef NOISE_SAMPLE
-			if( params[NOISEMAP]->IsDefined() )
-			{
-				LoadTexture( NOISEMAP, 0 );
-			}
-		#endif
 	}
 
 	inline void DrawCharacterSSAO( IMaterialVar **params, IShaderShadow* pShaderShadow, IShaderDynamicAPI* pShaderAPI, int vertexCompression )
@@ -64,13 +47,6 @@ BEGIN_VS_SHADER( CharacterSSAO, "Help for CharacterSSAO" )
 			{
 				pShaderShadow->EnableTexture( SHADER_SAMPLER0, true );
 			}
-
-			#ifdef NOISE_SAMPLE
-				if( params[NOISEMAP]->IsDefined() )
-				{
-					pShaderShadow->EnableTexture( SHADER_SAMPLER1, true );
-				}
-			#endif
 
 			unsigned int flags = VERTEX_POSITION;
 			int nTexCoordCount = 1;
@@ -103,12 +79,7 @@ BEGIN_VS_SHADER( CharacterSSAO, "Help for CharacterSSAO" )
 			pShaderShadow->EnableDepthWrites( false );
 			pShaderShadow->EnableSRGBWrite( false );
 
-			#ifdef NOISE_SAMPLE
-				EnableAlphaBlending( SHADER_BLEND_SRC_ALPHA, SHADER_BLEND_ONE_MINUS_SRC_ALPHA );
-				pShaderShadow->EnableBlending( true );
-			#else
 				pShaderShadow->EnableBlending( false );
-			#endif
 
 		}
 		DYNAMIC_STATE
@@ -120,20 +91,8 @@ BEGIN_VS_SHADER( CharacterSSAO, "Help for CharacterSSAO" )
 				BindTexture( SHADER_SAMPLER0, TEXTURE_BINDFLAGS_NONE, BASETEXTURE, -1 );
 			}
 
-			#ifdef NOISE_SAMPLE
-				if( params[NOISEMAP]->IsDefined() )
-				{
-					BindTexture( SHADER_SAMPLER1, TEXTURE_BINDFLAGS_NONE, NOISEMAP, -1 );
-				}
-			#endif
-
 			SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, BASETEXTURETRANSFORM );
 			
-			#ifdef NOISE_SAMPLE
-				float c0[4] = {	fmod( pShaderAPI->CurrentTime(), 1.0f ) * 14.54321f, fmod( pShaderAPI->CurrentTime(), 1.0f ) * 16.12345f, 0, 0 };
-				pShaderAPI->SetPixelShaderConstant( 0, c0, 1 );
-			#endif
-
 			DECLARE_DYNAMIC_VERTEX_SHADER( character_ssao_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER( character_ssao_vs20 );
 
@@ -156,5 +115,3 @@ BEGIN_VS_SHADER( CharacterSSAO, "Help for CharacterSSAO" )
 		DrawCharacterSSAO( params, pShaderShadow, pShaderAPI, vertexCompression );
 	}
 END_SHADER
-
-

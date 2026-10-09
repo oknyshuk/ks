@@ -1,16 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+import ks.tier1;
+import ks.vstdlib;
 #include "quakedef.h"						 
-#include <mutex>
-#include "zone.h"
+import std;
 #include "demo.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
@@ -19,22 +13,15 @@
 #include "sys.h"
 #include "cl_splitscreen.h"
 #include "baseautocompletefilelist.h"
-#include "tier0/icommandline.h"
-#include "tier1/text_writer.h"
 #include "gl_cvars.h"
-#include "tier0/memalloc.h"
 #include "netmessages.h"
 #include "client.h"
 #include "sv_plugin.h"
-#include "tier1/commandbuffer.h"
 #include "cvar.h"
-#include "vstdlib/random.h"
-#include "tier0/etwprof.h"
-#include "tier0/vprof.h"
 
 
 // This denotes an execution marker in the command stream.
-#define CMDSTR_ADD_EXECUTION_MARKER "[$&*,`]"
+inline constexpr const char *CMDSTR_ADD_EXECUTION_MARKER = "[$&*,`]";
 
 
 #ifdef _DEBUG
@@ -45,7 +32,7 @@ ConVar cl_debug_respect_cheat_vars( "cl_debug_respect_cheat_vars", "0", 0, "(deb
 extern ConVar sv_allow_wait_command;
 
 
-#define	MAX_ALIAS_NAME	32
+constexpr auto MAX_ALIAS_NAME = 32;
 #define MAX_COMMAND_LENGTH 1024
 
 struct cmdalias_t
@@ -130,7 +117,9 @@ bool Cmd_IsRptActive()
 //-----------------------------------------------------------------------------
 // Just translates BindToggle <key> <cvar> into: bind <key> "increment var <cvar> 0 1 1"
 //-----------------------------------------------------------------------------
-CON_COMMAND( BindToggle, "Performs a bind <key> \"increment var <cvar> 0 1 1\"" )
+static void BindToggle( const CCommand &args );
+static ConCommand BindToggle_command( "BindToggle", BindToggle, "Performs a bind <key> \"increment var <cvar> 0 1 1\"" );
+static void BindToggle( const CCommand &args )
 {
 	if( args.ArgC() <= 2 )
 	{
@@ -139,7 +128,7 @@ CON_COMMAND( BindToggle, "Performs a bind <key> \"increment var <cvar> 0 1 1\"" 
 	}
 
 	char newCmd[MAX_COMMAND_LENGTH];
-	Q_snprintf( newCmd, sizeof(newCmd), "bind %s \"incrementvar %s 0 1 1\"\n", args[1], args[2] );
+	V_snprintf( newCmd, sizeof(newCmd), "bind %s \"incrementvar %s 0 1 1\"\n", args[1], args[2] );
 
 	Cbuf_InsertText( Cbuf_GetCurrentPlayer(), newCmd, args.Source() );
 }
@@ -198,7 +187,6 @@ void Cbuf_InsertText( ECommandTarget_t eTarget, const char *pText, cmd_source_t 
 	// is in the middle of processing. If this assertion never triggers,
 	// it's safe to eliminate Cbuf_InsertText altogether.
 	// Otherwise, I have to add a feature to CCommandBuffer
-	Assert( s_CommandBuffer[ eTarget ].IsProcessingCommands() );
 	Cbuf_AddText( eTarget, pText, cmdSource, nTickDelay );
 }
 
@@ -216,7 +204,7 @@ void Cbuf_AddExecutionMarker( ECommandTarget_t eTarget, ECmdExecutionMarker mark
 	// (char)marker tells it what to turn on
 	// iRandomCode is for security, so only our code can stuff this command into the buffer.
 	char str[512];
-	Q_snprintf( str, sizeof( str ), ";%s %c %d;", CMDSTR_ADD_EXECUTION_MARKER, (char)marker, iMarkerCode );
+	V_snprintf( str, sizeof( str ), ";%s %c %d;", CMDSTR_ADD_EXECUTION_MARKER, (char)marker, iMarkerCode );
 	
 	Cbuf_AddText( eTarget, str, kCommandSrcCode );
 }
@@ -247,20 +235,15 @@ static void Cbuf_ExecuteCommand( ECommandTarget_t eTarget, const CCommand &args 
 //-----------------------------------------------------------------------------
 void Cbuf_Execute()
 {
-	VPROF("Cbuf_Execute");
+	CVProfScope _( "Cbuf_Execute", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( !ThreadInMainThread() )
 	{
 		Warning( "Executing command outside main loop thread\n" );
-		ExecuteOnce( DebuggerBreakIfDebugging() );
+		ExecuteOnce( [&]{ DebuggerBreakIfDebugging(); } );
 	}
 
 	std::scoped_lock lock( s_CommandBufferMutex );
-
-#if !defined( SPLIT_SCREEN_STUBS )
-	int nSaveIndex = GET_ACTIVE_SPLITSCREEN_SLOT();
-	bool bSaveResolvable = SET_LOCAL_PLAYER_RESOLVABLE( __FILE__, __LINE__, false );
-#endif
 
 	for ( int i = 0; i < CBUF_COUNT; ++i )
 	{
@@ -279,7 +262,7 @@ void Cbuf_Execute()
 		else
 		{
 			SET_ACTIVE_SPLIT_SCREEN_PLAYER_SLOT( 0 );
-			SET_LOCAL_PLAYER_RESOLVABLE( __FILE__, __LINE__, bSaveResolvable );
+			SET_LOCAL_PLAYER_RESOLVABLE( __FILE__, __LINE__, true );
 		}
 
 		// NOTE: The command buffer knows about execution time related to commands,
@@ -296,7 +279,7 @@ void Cbuf_Execute()
 	}
 
 	SET_ACTIVE_SPLIT_SCREEN_PLAYER_SLOT( nSaveIndex );
-	SET_LOCAL_PLAYER_RESOLVABLE( __FILE__, __LINE__, bSaveResolvable );
+	SET_LOCAL_PLAYER_RESOLVABLE( __FILE__, __LINE__, true );
 }
 
 
@@ -312,27 +295,27 @@ static char const *Cmd_TranslateFileAssociation(char const *param )
 
 	char temp[ 512 ];
 	V_strcpy_safe( temp, param );
-	Q_FixSlashes( temp );
-	Q_strlower( temp );
+	V_FixSlashes( temp );
+	V_strlower( temp );
 
 	const char *extension = V_GetFileExtension(temp);
 	// must have an extension to map
 	if (!extension)
 		return retval;
 
-	int c = ARRAYSIZE( g_FileAssociations );
+	int c = std::size( g_FileAssociations );
 	for ( int i = 0; i < c; i++ )
 	{
 		FileAssociationInfo& info = g_FileAssociations[ i ];
 		
-		if ( ! Q_strcmp( extension, info.extension+1 ) && 
+		if ( ! V_strcmp( extension, info.extension+1 ) && 
 			 ! CommandLine()->FindParm(va( "+%s", info.command_to_issue ) ) )
 		{
 			// Translate if haven't already got one of these commands			
 			V_strcpy_safe( sz, temp );
-			Q_FileBase( sz, temp, sizeof( sz ) );
+			V_FileBase( sz, temp, sizeof( sz ) );
 
-			Q_snprintf( sz, sizeof( sz ), "%s %s", info.command_to_issue, temp );
+			V_snprintf( sz, sizeof( sz ), "%s %s", info.command_to_issue, temp );
 			retval = sz;
 			break;
 		}		
@@ -350,7 +333,9 @@ static char const *Cmd_TranslateFileAssociation(char const *param )
 // hl2 -nosound +cmd amlev1
 // Output : void Cmd_StuffCmds_f
 //-----------------------------------------------------------------------------
-CON_COMMAND( stuffcmds, "Parses and stuffs command line + commands to command buffer." )
+static void stuffcmds( const CCommand &args );
+static ConCommand stuffcmds_command( "stuffcmds", stuffcmds, "Parses and stuffs command line + commands to command buffer." );
+static void stuffcmds( const CCommand &args )
 {		
 	if ( args.ArgC() != 1 )
 	{
@@ -358,7 +343,6 @@ CON_COMMAND( stuffcmds, "Parses and stuffs command line + commands to command bu
 		return;
 	}
 
-	MEM_ALLOC_CREDIT();
 
 	ks::text_writer build;
 
@@ -383,7 +367,7 @@ CON_COMMAND( stuffcmds, "Parses and stuffs command line + commands to command bu
 			{
 				// Special case for +map parameter on the command line to support a second argument
 				char const *szSecondParameterUsed = nullptr;
-				if ( !Q_stricmp( "+map", szParm ) &&
+				if ( !V_stricmp( "+map", szParm ) &&
 					( CommandLine()->ParmCount() > ( i + 2 ) ) &&
 					CommandLine()->GetParm( i + 2 ) )
 				{
@@ -437,15 +421,15 @@ bool IsValidFileExtension( const char *pszFilename )
 		return false;
 	}
 
-	if ( Q_strstr( pszFilename, ".exe" ) ||
-		 Q_strstr( pszFilename, ".vbs" ) ||
-		 Q_strstr( pszFilename, ".com" ) ||
-		 Q_strstr( pszFilename, ".bat" ) ||
-		 Q_strstr( pszFilename, ".dll" ) ||
-		 Q_strstr( pszFilename, ".ini" ) ||
-		 Q_strstr( pszFilename, ".gcf" ) ||
-		 Q_strstr( pszFilename, ".sys" ) ||
-		 Q_strstr( pszFilename, ".blob" ) )
+	if ( V_strstr( pszFilename, ".exe" ) ||
+		 V_strstr( pszFilename, ".vbs" ) ||
+		 V_strstr( pszFilename, ".com" ) ||
+		 V_strstr( pszFilename, ".bat" ) ||
+		 V_strstr( pszFilename, ".dll" ) ||
+		 V_strstr( pszFilename, ".ini" ) ||
+		 V_strstr( pszFilename, ".gcf" ) ||
+		 V_strstr( pszFilename, ".sys" ) ||
+		 V_strstr( pszFilename, ".blob" ) )
 	{
 		return false;
 	}
@@ -476,7 +460,7 @@ bool IsWhiteListedCmd( const char *pszCmd )
 
 	for ( int i = 0; i < std::ssize( m_WhitelistedConvars ); ++i )
 	{
-		if ( !Q_stricmp(m_WhitelistedConvars[i].c_str(), pszCmd) )
+		if ( !V_stricmp(m_WhitelistedConvars[i].c_str(), pszCmd) )
 		{
 			return true;
 		}
@@ -519,16 +503,16 @@ void _Cmd_Exec_f( const CCommand &args, bool bOnlyIfExists, bool bUseWhitelist =
 		pPathID = "*";
 	}
 
-	if ( !Q_stricmp( pPathID, "T" ) )
+	if ( !V_stricmp( pPathID, "T" ) )
 	{
 		// Has an extension already?
-		Q_snprintf( fileName, sizeof( fileName ), "T:/cfg/%s", s );
+		V_snprintf( fileName, sizeof( fileName ), "T:/cfg/%s", s );
 	}
 	else
 	{
 		// Ensure it has an extension
-		Q_snprintf( fileName, sizeof( fileName ), "//%s/cfg/%s", pPathID, s );
-		Q_DefaultExtension( fileName, ".cfg", sizeof( fileName ) );
+		V_snprintf( fileName, sizeof( fileName ), "//%s/cfg/%s", pPathID, s );
+		V_DefaultExtension( fileName, ".cfg", sizeof( fileName ) );
 		
 		// check path validity
 		if ( !COM_IsValidPath( fileName ) )
@@ -604,7 +588,7 @@ void _Cmd_Exec_f( const CCommand &args, bool bOnlyIfExists, bool bUseWhitelist =
 		pszDataPtr = COM_ParseLine( pszDataPtr );
 
 		// no more tokens
-		if ( Q_strlen( com_token ) <= 0 )
+		if ( V_strlen( com_token ) <= 0 )
 			continue;
 
 		Cbuf_InsertText( eTarget, com_token, args.Source() );
@@ -627,7 +611,7 @@ void _Cmd_Exec_f( const CCommand &args, bool bOnlyIfExists, bool bUseWhitelist =
 			}
 			else
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				break;
 			}
 		}
@@ -672,7 +656,9 @@ Cmd_Echo_f
 Just prints the rest of the line to the console
 ===============
 */
-CON_COMMAND_F( echo, "Echo text to console.", FCVAR_SERVER_CAN_EXECUTE )
+static void echo( const CCommand &args );
+static ConCommand echo_command( "echo", echo, "Echo text to console.", FCVAR_SERVER_CAN_EXECUTE );
+static void echo( const CCommand &args )
 {
 	int argc = args.ArgC();
 	for ( int i=1; i<argc; i++ )
@@ -689,7 +675,9 @@ Cmd_Alias_f
 Creates a new command that executes a command string (possibly ; seperated)
 ===============
 */
-CON_COMMAND( alias, "Alias a command." )
+static void alias( const CCommand &args );
+static ConCommand alias_command( "alias", alias, "Alias a command." );
+static void alias( const CCommand &args )
 {
 	cmdalias_t	*a;
 	char		cmd[MAX_COMMAND_LENGTH];
@@ -708,7 +696,7 @@ CON_COMMAND( alias, "Alias a command." )
 	}
 
 	s = args[1];
-	if ( Q_strlen(s) >= MAX_ALIAS_NAME )
+	if ( V_strlen(s) >= MAX_ALIAS_NAME )
 	{
 		ConMsg ("Alias name is too long\n");
 		return;
@@ -730,9 +718,9 @@ CON_COMMAND( alias, "Alias a command." )
 	// if the alias already exists, reuse it
 	for (a = cmd_alias ; a ; a=a->next)
 	{
-		if (!Q_strcmp(s, a->name))
+		if (!V_strcmp(s, a->name))
 		{
-			if ( !Q_strcmp( a->value, cmd ) )		// Re-alias the same thing
+			if ( !V_strcmp( a->value, cmd ) )		// Re-alias the same thing
 				return;
 
 			delete[] a->value;
@@ -763,7 +751,9 @@ CON_COMMAND( alias, "Alias a command." )
 Runs a command only if that command exits in the bspwhitelist
 ===============
 */
-CON_COMMAND( whitelistcmd, "Runs a whitelisted command." )
+static void whitelistcmd( const CCommand &args );
+static ConCommand whitelistcmd_command( "whitelistcmd", whitelistcmd, "Runs a whitelisted command." );
+static void whitelistcmd( const CCommand &args )
 {
 	Cmd_ForwardToServerWithWhitelist( args );
 }
@@ -783,21 +773,38 @@ int				cmd_clientslot = -1;
 // Purpose: 
 // Output : void Cmd_Init
 //-----------------------------------------------------------------------------
-CON_COMMAND( cmd, "Forward command to server." )
+static void cmd( const CCommand &args );
+static ConCommand cmd_command( "cmd", cmd, "Forward command to server." );
+static void cmd( const CCommand &args )
 {
 	Cmd_ForwardToServer( args );
 }
 
-CON_COMMAND_AUTOCOMPLETEFILE( exec, Cmd_Exec_f, "Execute script file.", "cfg", cfg );
-CON_COMMAND_AUTOCOMPLETEFILE( execifexists, Cmd_ExecIfExists_f, "Execute script file if file exists.", "cfg", cfg );
-CON_COMMAND_AUTOCOMPLETEFILE( execwithwhitelist, Cmd_ExecWithWhiteList_f, "Execute script file, only execing convars on a whitelist.", "cfg", cfg );
+static int g_exec_CompletionFunc( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
+{
+	static CBaseAutoCompleteFileList execComplete( "exec", "cfg", "cfg" );
+	return execComplete.AutoCompletionFunc( partial, commands );
+}
+static ConCommand exec_command( "exec", Cmd_Exec_f, "Execute script file.", 0, g_exec_CompletionFunc );
+static int g_execifexists_CompletionFunc( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
+{
+	static CBaseAutoCompleteFileList execifexistsComplete( "execifexists", "cfg", "cfg" );
+	return execifexistsComplete.AutoCompletionFunc( partial, commands );
+}
+static ConCommand execifexists_command( "execifexists", Cmd_ExecIfExists_f, "Execute script file if file exists.", 0, g_execifexists_CompletionFunc );
+static int g_execwithwhitelist_CompletionFunc( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
+{
+	static CBaseAutoCompleteFileList execwithwhitelistComplete( "execwithwhitelist", "cfg", "cfg" );
+	return execwithwhitelistComplete.AutoCompletionFunc( partial, commands );
+}
+static ConCommand execwithwhitelist_command( "execwithwhitelist", Cmd_ExecWithWhiteList_f, "Execute script file, only execing convars on a whitelist.", 0, g_execwithwhitelist_CompletionFunc );
 
 
 
 
 void Cmd_Init( void )
 {
-	Sys_CreateFileAssociations( ARRAYSIZE( g_FileAssociations ), g_FileAssociations );
+	Sys_CreateFileAssociations( std::size( g_FileAssociations ), g_FileAssociations );
 }
 
 //-----------------------------------------------------------------------------
@@ -828,7 +835,7 @@ void Cmd_Dispatch( const ConCommandBase *pCommand, const CCommand &command )
 
 static void HandleExecutionMarker( const char *pCommand, const char *pMarkerCode )
 {
-	int iMarkerCode = atoi( pMarkerCode );
+	int iMarkerCode = std::atoi( pMarkerCode );
 	
 	// Validate..
 	if ( FindAndRemoveExecutionMarker( iMarkerCode ) )
@@ -920,7 +927,7 @@ const ConCommandBase *Cmd_ExecuteCommand( ECommandTarget_t eTarget, const CComma
 		return nullptr;		// no tokens
 	
 	// First, check for execution markers.
-	if ( Q_strcmp( command[0], CMDSTR_ADD_EXECUTION_MARKER ) == 0 )
+	if ( V_strcmp( command[0], CMDSTR_ADD_EXECUTION_MARKER ) == 0 )
 	{
 		if ( command.ArgC() == 3 )
 		{
@@ -938,7 +945,7 @@ const ConCommandBase *Cmd_ExecuteCommand( ECommandTarget_t eTarget, const CComma
 	cmdalias_t *a;
 	for ( a=cmd_alias; a; a=a->next )
 	{
-		if ( !Q_strcasecmp( command[0], a->name ) )
+		if ( !V_strcasecmp( command[0], a->name ) )
 		{
 			Cbuf_InsertText( Cbuf_GetCurrentPlayer(), a->value, command.Source() );
 			return nullptr;
@@ -1077,7 +1084,7 @@ const char* Cmd_AliasToCommandString( const char* szAliasName )
 
 	for ( cmdalias_t* a = cmd_alias; a; a = a->next )
 	{
-		if ( !Q_strcasecmp( szAliasName, a->name ) )
+		if ( !V_strcasecmp( szAliasName, a->name ) )
 		{
 			return a->value;
 		}
@@ -1101,7 +1108,7 @@ void Cmd_ForwardToServer( const CCommand &args, bool bReliable )
 
 	// Special case: "cmd whatever args..." is forwarded as "whatever args...";
 	// in this case we strip "cmd" from the input.
-	if ( Q_strcasecmp( args[0], "cmd" ) == 0 )
+	if ( V_strcasecmp( args[0], "cmd" ) == 0 )
 		V_strcpy_safe( str, args.ArgS() );
 	else
 		V_strcpy_safe( str, args.GetCommandString() );

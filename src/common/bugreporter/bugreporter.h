@@ -1,15 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BUGREPORTER_H
-#define BUGREPORTER_H
+import std;
+import ks.tier1;
 
-#include "interface.h"
-
-abstract_class IBugReporter : public IBaseInterface
+class IBugReporter : public IBaseInterface
 {
 public:
 	// Initialize and login with default username/password for this computer (from resource/bugreporter.res)
@@ -101,19 +97,15 @@ public:
 	virtual void		SetDXVersion( unsigned int high, unsigned int low, unsigned int vendor, unsigned int device ) = 0;
 	virtual void		SetOSVersion( char const *osversion ) = 0;
 
-	virtual void		SetSteamUserID( void *steamid, int idsize ) = 0;
-
 	virtual void		SetConsoleHistory( char const *pchText ) = 0;
 };
 
-#define INTERFACEVERSION_BUGREPORTER		"BugReporter005"
+inline constexpr const char *INTERFACEVERSION_BUGREPORTER = "BugReporter005";
 
-abstract_class IBugReporterDefaultUsername
+class IBugReporterDefaultUsername
 {
 public:
 	virtual char const	*GetDefaultUsername() const = 0; // returns value of engine bugreporter_username convar since bugreporter .dlls don't have convars for now
 };
 
-#define INTERFACEVERSION_BUGREPORTER_DEFAULT_USER_NAME "BugReporterUserName001"
-
-#endif // BUGREPORTER_H
+inline constexpr const char *INTERFACEVERSION_BUGREPORTER_DEFAULT_USER_NAME = "BugReporterUserName001";

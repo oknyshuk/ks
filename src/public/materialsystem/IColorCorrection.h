@@ -1,21 +1,15 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =====//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ICOLORCORRECTION_H
-#define ICOLORCORRECTION_H
-
-
-#include "tier1/interface.h"
-#include "tier0/basetypes.h"
+import ks.tier1;
+import std;
 #include "bitmap/imageformat.h"
 
-typedef uintptr_t ColorCorrectionHandle_t;
+typedef std::uintptr_t ColorCorrectionHandle_t;
 struct ShaderColorCorrectionInfo_t;
 
-abstract_class IColorCorrectionSystem
+class IColorCorrectionSystem
 {
 public:
 	virtual void Init() = 0;
@@ -69,6 +63,3 @@ public:
 
 	virtual ColorCorrectionHandle_t FindLookup( const char *pName ) = 0;
 };
-
-#endif
-

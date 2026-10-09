@@ -1,24 +1,14 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef TRANSITION_TABLE_H
-#define TRANSITION_TABLE_H
-
-
-#include "utlvector.h"
+import ks.tier1;
 #include "shadershadowdx8.h"
-#include <flat_set>
-#include "checksum_crc.h"
+import std;
 #include "shaderapi/ishaderapi.h"
 
 // Required for DEBUG_BOARD_STATE
 #include "shaderapidx8_global.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -304,13 +294,13 @@ private:
 //-----------------------------------------------------------------------------
 inline const ShadowState_t &CTransitionTable::GetSnapshot( StateSnapshot_t snapshotId ) const
 {
-	Assert( (snapshotId >= 0) && (snapshotId < std::ssize( m_SnapshotList )) );
+	contract_assert( (snapshotId >= 0) && (snapshotId < std::ssize( m_SnapshotList )) );
 	return m_ShadowStateList[m_SnapshotList[snapshotId].m_ShadowStateId];
 }
 
 inline const ShadowShaderState_t &CTransitionTable::GetSnapshotShader( StateSnapshot_t snapshotId ) const
 {
-	Assert( (snapshotId >= 0) && (snapshotId < std::ssize( m_SnapshotList )) );
+	contract_assert( (snapshotId >= 0) && (snapshotId < std::ssize( m_SnapshotList )) );
 	return m_SnapshotList[snapshotId].m_ShaderState;
 }
 
@@ -319,7 +309,7 @@ inline const ShadowState_t *CTransitionTable::CurrentShadowState() const
 	if ( m_CurrentShadowId == -1 )
 		return nullptr;
 
-	Assert( (m_CurrentShadowId >= 0) && (m_CurrentShadowId < std::ssize( m_ShadowStateList )) );
+	contract_assert( (m_CurrentShadowId >= 0) && (m_CurrentShadowId < std::ssize( m_ShadowStateList )) );
 	return &m_ShadowStateList[m_CurrentShadowId];
 }
 
@@ -328,9 +318,6 @@ inline const ShadowShaderState_t *CTransitionTable::CurrentShadowShaderState() c
 	if ( m_CurrentShadowId == -1 )
 		return nullptr;
 
-	Assert( (m_CurrentShadowId >= 0) && (m_CurrentShadowId < std::ssize( m_ShadowStateList )) );
+	contract_assert( (m_CurrentShadowId >= 0) && (m_CurrentShadowId < std::ssize( m_ShadowStateList )) );
 	return &m_SnapshotList[m_CurrentShadowId].m_ShaderState;
 }
-
-
-#endif // TRANSITION_TABLE_H

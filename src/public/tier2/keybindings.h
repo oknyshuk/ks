@@ -1,19 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-	   
-#ifndef KEYBINDINGS_H
-#define KEYBINDINGS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "tier1/utlstring.h"
+import std;
+import ks.tier1;
 #include "inputsystem/ButtonCode.h"
-#include "tier1/text_writer.h"
-
 
 class CKeyBindings
 {
@@ -33,6 +24,3 @@ public:
 private:
 	std::string m_KeyInfo[ BUTTON_CODE_LAST ];
 };
-
-
-#endif // KEYBINDINGS_H

@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ISCRATCHPAD3D_H
-#define ISCRATCHPAD3D_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // IScratchPad3D will store drawing commands in a file to be viewed by ScratchPad3DViewer.
 // It can be used while stepping through geometry code to visualize what is going on as
@@ -17,10 +10,8 @@
 // ScratchPad3DViewer initially orbits 100 inches from the origin, so it can be useful
 // to call SetMapping to map what you're drawing input into this cube.
 
-
-#include "mathlib/vector.h"
-#include "mathlib/vector2d.h"
-#include "utlvector.h"
+import std;
+import ks.tier1;
 
 class IFileSystem;
 
@@ -111,7 +102,7 @@ public:
 };
 
 
-abstract_class IScratchPad3D
+class IScratchPad3D
 {
 protected:
 
@@ -318,6 +309,3 @@ inline CSPVertList::CSPVertList(
 	m_Verts[1].Init( vert2, color2 );
 	m_Verts[2].Init( vert3, color3 );
 }
-
-
-#endif // ISCRATCHPAD3D_H

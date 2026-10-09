@@ -1,17 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( MOUTHINFO_H )
-#define MOUTHINFO_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.core;
 
 class CAudioSource;
 
@@ -58,7 +50,7 @@ private:
 	bool					m_bIgnorePhonemes;
 };
 
-#define UNKNOWN_VOICE_SOURCE -1
+inline constexpr int UNKNOWN_VOICE_SOURCE = -1;
 
 //-----------------------------------------------------------------------------
 // Purpose: Describes position of mouth for lip syncing
@@ -194,5 +186,3 @@ inline CVoiceData *CMouthInfo::AddSource( CAudioSource *source, bool bIgnorePhon
 	data->SetElapsedTime( 0.0f );
 	return data;
 }
-
-#endif // MOUTHINFO_H

@@ -1,25 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef ICLIENTVEHICLE_H
-#define ICLIENTVEHICLE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
 
 #include "IVehicle.h"
 
 class C_BasePlayer;
-class Vector;
-class QAngle;
 class C_BaseEntity;
 
 
 //-----------------------------------------------------------------------------
 // Purpose: All client vehicles must implement this interface.
 //-----------------------------------------------------------------------------
-abstract_class IClientVehicle : public IVehicle
+class IClientVehicle : public IVehicle
 {
 public:
 	// When a player is in a vehicle, here's where the camera will be
@@ -44,6 +37,3 @@ public:
 	virtual int GetJoystickResponseCurve() const = 0;
 
 };
-
-
-#endif // ICLIENTVEHICLE_H

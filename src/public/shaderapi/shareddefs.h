@@ -1,18 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: NOTE: This file is for backward compat!
 // We'll get rid of it soon. Most of the contents of this file were moved
 // into shaderpi/ishadershadow.h, shaderapi/ishaderdynamic.h, or
 // shaderapi/shareddefs.h
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef SHADERAPI_SHAREDDEFS_H
-#define SHADERAPI_SHAREDDEFS_H
-
-
 
 //-----------------------------------------------------------------------------
 // Important enumerations
@@ -95,7 +88,7 @@ enum TextureBindFlags_t
 	TEXTURE_BINDFLAGS_NONE = 0,
 };
 
-#define TEXTURE_BINDFLAGS_VALID_MASK ( TEXTURE_BINDFLAGS_SRGBREAD | TEXTURE_BINDFLAGS_SHADOWDEPTH | TEXTURE_BINDFLAGS_NOMIP )
+inline constexpr auto TEXTURE_BINDFLAGS_VALID_MASK = ( TEXTURE_BINDFLAGS_SRGBREAD | TEXTURE_BINDFLAGS_SHADOWDEPTH | TEXTURE_BINDFLAGS_NOMIP );
 
 // return the appropriate bindflags based upon a bool which reflects whether srgbread is desired.
 static inline TextureBindFlags_t SRGBReadMask( bool bSRGBRead )
@@ -116,12 +109,4 @@ enum VertexTextureSampler_t
 
 
 
-#if defined( REVERSE_DEPTH_ON_X360 )
-#define ReverseDepthOnX360() true
-#else
-#define ReverseDepthOnX360() false
-#endif
-
-
-
-#endif // SHADERAPI_SHAREDDEFS_H
+[[gnu::always_inline]] inline constexpr auto ReverseDepthOnX360() { return false; }

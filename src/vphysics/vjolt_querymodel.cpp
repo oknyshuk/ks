@@ -2,7 +2,26 @@
 // Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
 
 
-#include "cbase.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/Core/JobSystemWithBarrier.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Skeleton/Skeleton.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/PhysicsScene.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
+import std;
+import ks.core;
+#include "cmodel.h"
+#include "vphysics_interface.h"
+#include "vjolt_util.h"
 
 #include "vjolt_querymodel.h"
 
@@ -77,20 +96,17 @@ void JoltCollisionQuery::GetTriangleVerts( int convexIndex, int triangleIndex, V
 
 void JoltCollisionQuery::SetTriangleVerts( int convexIndex, int triangleIndex, const Vector *verts )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 //-------------------------------------------------------------------------------------------------
 
 int JoltCollisionQuery::GetTriangleMaterialIndex( int convexIndex, int triangleIndex )
 {
-	Log_Stub( LOG_VJolt );
 	return 0;
 }
 
 void JoltCollisionQuery::SetTriangleMaterialIndex( int convexIndex, int triangleIndex, int index7bits )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 //-------------------------------------------------------------------------------------------------

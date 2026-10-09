@@ -31,9 +31,11 @@ to the following restrictions:
 #ifndef _SQUIRREL_H_
 #define _SQUIRREL_H_
 
+#include <string.h>
+
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "platform.h"
-#include "dbg.h"
+import std;
+import ks.core;
 #if defined(VSQUIRREL_TEST)
 #define printf( fmt, ...)  Msg( fmt, ##__VA_ARGS__ );
 #else
@@ -129,7 +131,7 @@ typedef wchar_t SQChar;
 typedef char SQChar;
 #define _SC(a) a
 #define	scstrcmp	strcmp
-#define scsprintf	sprintf
+#define scsprintf	std::sprintf
 #define scstrlen	strlen
 #define scstrtod	strtod
 #define scstrtol	strtol
@@ -401,9 +403,9 @@ SQUIRREL_API SQRESULT sq_writeclosure(HSQUIRRELVM vm,SQWRITEFUNC writef,SQUserPo
 SQUIRREL_API SQRESULT sq_readclosure(HSQUIRRELVM vm,SQREADFUNC readf,SQUserPointer up);
 
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#define sq_malloc malloc
-#define sq_realloc(p,oldsize,size) realloc(p, size)
-#define sq_free(p,size) free(p)
+#define sq_malloc std::malloc
+#define sq_realloc(p,oldsize,size) std::realloc(p, size)
+#define sq_free(p,size) std::free(p)
 #else
 /*mem allocation*/
 SQUIRREL_API void *sq_malloc(SQUnsignedInteger size);

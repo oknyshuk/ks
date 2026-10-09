@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 oknyshuk
+
 add_library(shaderapidx9 OBJECT
     colorformatdx8.cpp
     d3d_async.cpp
@@ -16,6 +19,6 @@ add_library(shaderapidx9 OBJECT
     vertexshaderdx8.cpp
     winutils.cpp
 )
-target_link_libraries(shaderapidx9 PRIVATE ks_common PkgConfig::SDL3 tier0 memoverride public_common bitmap tier1 tier2 interfaces vstdlib videocfg mathlib d3d9 d3dx shaderlib vtf appframework bzip2)
+target_link_libraries(shaderapidx9 PRIVATE ks_common ks_desktop tier0 memoverride public_common bitmap tier1 tier2 interfaces vstdlib videocfg mathlib d3d9 d3dx shaderlib vtf appframework bzip2)
 target_include_directories(shaderapidx9 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/..")
 target_compile_definitions(shaderapidx9 PRIVATE SHADERAPIDX9=1 SHADER_DLL_EXPORT=1)

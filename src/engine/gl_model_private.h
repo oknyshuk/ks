@@ -1,19 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef GL_MODEL_PRIVATE_H
-#define GL_MODEL_PRIVATE_H
-
-
-#include "mathlib/vector4d.h"
-#include "tier0/dbg.h"
-#include "tier1/filename_table.h"
+import std;
+import ks.tier1;
 #include "idispinfo.h"
 #include "shadowmgr.h"
 #include "vcollide.h"
@@ -26,10 +16,8 @@
 #include "Overlay.h"
 //#include "datamap.h"
 #include "surfacehandle.h"
-#include "mathlib/compressed_light_cube.h"
 #include "datacache/imdlcache.h"
 #include "bitmap/cubemap.h"
-#include "memstack.h"
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -60,7 +48,7 @@ class IMaterialVar;
 
 // This is here for b/w compatibility with world surfaces that use
 // WorldVertexTransition. We can get rid of it when we rev the engine.
-#define TEXINFO_USING_BASETEXTURE2	0x0001
+inline constexpr auto TEXINFO_USING_BASETEXTURE2 = 0x0001;
 
 struct mtexinfo_t
 {
@@ -76,7 +64,7 @@ struct mtexinfo_t
 	mtexinfo_t( mtexinfo_t const& src )
 	{
 		// copy constructor needed since Vector4D has no copy constructor
-		memcpy( this, &src, sizeof(mtexinfo_t) );
+		std::memcpy( this, &src, sizeof(mtexinfo_t) );
 	}
 };
 
@@ -205,27 +193,27 @@ struct LightShadowZBufferSample_t
 	float m_flHitDistance;									// where we hit
 };
 
-#define SHADOW_ZBUF_RES 8									// 6 * 64 * 2 * 4 = 3k bytes per light
+inline constexpr auto SHADOW_ZBUF_RES = 8; // 6 * 64 * 2 * 4 = 3k bytes per light
 
 typedef CCubeMap< LightShadowZBufferSample_t, SHADOW_ZBUF_RES> lightzbuffer_t;
 
 #include "model_types.h"
 
-#define MODELFLAG_MATERIALPROXY					0x0001	// we've got a material proxy
-#define MODELFLAG_TRANSLUCENT					0x0002	// we've got a translucent model
-#define MODELFLAG_VERTEXLIT						0x0004	// we've got a vertex-lit model
-#define MODELFLAG_TRANSLUCENT_TWOPASS			0x0008	// render opaque part in opaque pass
-#define MODELFLAG_FRAMEBUFFER_TEXTURE			0x0010	// we need the framebuffer as a texture
-#define MODELFLAG_HAS_DLIGHT					0x0020	// need to check dlights
-#define MODELFLAG_VIEW_WEAPON_MODEL				0x0040	// monitored by weapon model cache
-#define MODELFLAG_RENDER_DISABLED				0x0080	// excluded for compliance with government regulations
-#define MODELFLAG_STUDIOHDR_USES_FB_TEXTURE		0x0100	// persisted from studiohdr
-#define MODELFLAG_STUDIOHDR_USES_BUMPMAPPING	0x0200	// persisted from studiohdr
-#define MODELFLAG_STUDIOHDR_USES_ENV_CUBEMAP	0x0400	// persisted from studiohdr
-#define MODELFLAG_STUDIOHDR_AMBIENT_BOOST		0x0800	// persisted from studiohdr
-#define MODELFLAG_STUDIOHDR_DO_NOT_CAST_SHADOWS	0x1000	// persisted from studiohdr
-#define MODELFLAG_STUDIOHDR_IS_STATIC_PROP		0x2000	// persisted from studiohdr
-#define MODELFLAG_STUDIOHDR_BAKED_VERTEX_LIGHTING_IS_INDIRECT_ONLY	0x4000	// persisted from studiohdr
+inline constexpr auto MODELFLAG_MATERIALPROXY = 0x0001; // we've got a material proxy
+inline constexpr auto MODELFLAG_TRANSLUCENT = 0x0002; // we've got a translucent model
+inline constexpr auto MODELFLAG_VERTEXLIT = 0x0004; // we've got a vertex-lit model
+inline constexpr auto MODELFLAG_TRANSLUCENT_TWOPASS = 0x0008; // render opaque part in opaque pass
+inline constexpr auto MODELFLAG_FRAMEBUFFER_TEXTURE = 0x0010; // we need the framebuffer as a texture
+inline constexpr auto MODELFLAG_HAS_DLIGHT = 0x0020; // need to check dlights
+inline constexpr auto MODELFLAG_VIEW_WEAPON_MODEL = 0x0040; // monitored by weapon model cache
+inline constexpr auto MODELFLAG_RENDER_DISABLED = 0x0080; // excluded for compliance with government regulations
+inline constexpr auto MODELFLAG_STUDIOHDR_USES_FB_TEXTURE = 0x0100; // persisted from studiohdr
+inline constexpr auto MODELFLAG_STUDIOHDR_USES_BUMPMAPPING = 0x0200; // persisted from studiohdr
+inline constexpr auto MODELFLAG_STUDIOHDR_USES_ENV_CUBEMAP = 0x0400; // persisted from studiohdr
+inline constexpr auto MODELFLAG_STUDIOHDR_AMBIENT_BOOST = 0x0800; // persisted from studiohdr
+inline constexpr auto MODELFLAG_STUDIOHDR_DO_NOT_CAST_SHADOWS = 0x1000; // persisted from studiohdr
+inline constexpr auto MODELFLAG_STUDIOHDR_IS_STATIC_PROP = 0x2000; // persisted from studiohdr
+inline constexpr auto MODELFLAG_STUDIOHDR_BAKED_VERTEX_LIGHTING_IS_INDIRECT_ONLY = 0x4000; // persisted from studiohdr
 
 
 
@@ -412,45 +400,43 @@ struct decallist_t
 
 inline class IDispInfo *MLeaf_Disaplcement( mleaf_t *pLeaf, int index, worldbrushdata_t *pData = host_state.worldbrush )
 {
-	Assert(index<pLeaf->dispCount);
+	contract_assert( index<pLeaf->dispCount );
 	int dispIndex = pData->m_pDispInfoReferences[pLeaf->dispListStart+index];
 	return DispInfo_IndexArray( pData->hDispInfos, dispIndex );
 }
 
-#define	MAXLIGHTMAPS	4
-
 // drawing surface flags
-#define SURFDRAW_NOLIGHT		0x00000001		// no lightmap
-#define	SURFDRAW_NODE			0x00000002		// This surface is on a node
-#define	SURFDRAW_SKY			0x00000004		// portal to sky
-#define SURFDRAW_BUMPLIGHT		0x00000008		// Has multiple lightmaps for bump-mapping
-#define SURFDRAW_NODRAW			0x00000010		// don't draw this surface, not really visible
-#define SURFDRAW_TRANS			0x00000020		// sort this surface from back to front
-#define SURFDRAW_PLANEBACK		0x00000040		// faces away from plane of the node that stores this face
-#define SURFDRAW_DYNAMIC		0x00000080		// Don't use a static buffer for this face
-#define SURFDRAW_TANGENTSPACE	0x00000100		// This surface needs a tangent space
-#define SURFDRAW_NOCULL			0x00000200		// Don't bother backface culling these
-#define SURFDRAW_HASLIGHTSYTLES 0x00000400		// has a lightstyle other than 0
-#define SURFDRAW_HAS_DISP		0x00000800		// has a dispinfo
-#define SURFDRAW_ALPHATEST		0x00001000		// Is alphstested
-#define SURFDRAW_NOSHADOWS		0x00002000		// No shadows baby
-#define SURFDRAW_NODECALS		0x00004000		// No decals baby
-#define SURFDRAW_HAS_PRIMS		0x00008000		// has a list of prims
-#define SURFDRAW_WATERSURFACE	0x00010000	// This is a water surface
-#define SURFDRAW_UNDERWATER		0x00020000
-#define SURFDRAW_ABOVEWATER		0x00040000
-#define SURFDRAW_HASDLIGHT		0x00080000	// Has some kind of dynamic light that must be checked
+inline constexpr auto SURFDRAW_NOLIGHT = 0x00000001; // no lightmap
+inline constexpr auto SURFDRAW_NODE = 0x00000002; // This surface is on a node
+inline constexpr auto SURFDRAW_SKY = 0x00000004; // portal to sky
+inline constexpr auto SURFDRAW_BUMPLIGHT = 0x00000008; // Has multiple lightmaps for bump-mapping
+inline constexpr auto SURFDRAW_NODRAW = 0x00000010; // don't draw this surface, not really visible
+inline constexpr auto SURFDRAW_TRANS = 0x00000020; // sort this surface from back to front
+inline constexpr auto SURFDRAW_PLANEBACK = 0x00000040; // faces away from plane of the node that stores this face
+inline constexpr auto SURFDRAW_DYNAMIC = 0x00000080; // Don't use a static buffer for this face
+inline constexpr auto SURFDRAW_TANGENTSPACE = 0x00000100; // This surface needs a tangent space
+inline constexpr auto SURFDRAW_NOCULL = 0x00000200; // Don't bother backface culling these
+inline constexpr auto SURFDRAW_HASLIGHTSYTLES = 0x00000400; // has a lightstyle other than 0
+inline constexpr auto SURFDRAW_HAS_DISP = 0x00000800; // has a dispinfo
+inline constexpr auto SURFDRAW_ALPHATEST = 0x00001000; // Is alphstested
+inline constexpr auto SURFDRAW_NOSHADOWS = 0x00002000; // No shadows baby
+inline constexpr auto SURFDRAW_NODECALS = 0x00004000; // No decals baby
+inline constexpr auto SURFDRAW_HAS_PRIMS = 0x00008000; // has a list of prims
+inline constexpr auto SURFDRAW_WATERSURFACE = 0x00010000; // This is a water surface
+inline constexpr auto SURFDRAW_UNDERWATER = 0x00020000;
+inline constexpr auto SURFDRAW_ABOVEWATER = 0x00040000;
+inline constexpr auto SURFDRAW_HASDLIGHT = 0x00080000; // Has some kind of dynamic light that must be checked
 
 // BEGIN HACK PORTAL2
-#define SURFDRAW_NOPAINT		0x00100000	// nopaint
-#define SURFDRAW_PAINTED		0x00200000	// painted surface
+inline constexpr auto SURFDRAW_NOPAINT = 0x00100000; // nopaint
+inline constexpr auto SURFDRAW_PAINTED = 0x00200000; // painted surface
 // END HACK PORTAL2
 
-#define SURFDRAW_VERTCOUNT_MASK	0xFF000000	// 8 bits of vertex count
-#define SURFDRAW_SORTGROUP_MASK	0x00C00000	// 2 bits of sortgroup
+inline constexpr auto SURFDRAW_VERTCOUNT_MASK = 0xFF000000; // 8 bits of vertex count
+inline constexpr auto SURFDRAW_SORTGROUP_MASK = 0x00C00000; // 2 bits of sortgroup
 
-#define SURFDRAW_VERTCOUNT_SHIFT	24
-#define SURFDRAW_SORTGROUP_SHIFT	22
+inline constexpr auto SURFDRAW_VERTCOUNT_SHIFT = 24;
+inline constexpr auto SURFDRAW_SORTGROUP_SHIFT = 22;
 
 // NOTE: 16-bytes, preserve size/alignment - we index this alot
 struct msurface1_t
@@ -537,7 +523,7 @@ inline unsigned short MSurf_AreDynamicShadowsEnabled( SurfaceHandle_t surfID )
 inline int MSurf_Index( SurfaceHandle_t surfID, worldbrushdata_t *pData = host_state.worldbrush )
 {
 	int surfaceIndex = surfID - pData->surfaces2;
-	Assert(surfaceIndex >= 0 && surfaceIndex < pData->numsurfaces);
+	contract_assert( surfaceIndex >= 0 && surfaceIndex < pData->numsurfaces );
 	return surfaceIndex;
 }
 
@@ -600,7 +586,7 @@ inline int& MSurf_DLightBits( SurfaceHandle_t surfID, worldbrushdata_t *pData = 
 {
 	int surfaceIndex = MSurf_Index(surfID,pData);
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
+	contract_assert( pData );
 	return pData->surfacelighting[surfaceIndex].m_fDLightBits;
 }
 
@@ -629,7 +615,7 @@ inline int *MSurf_TextureMins( SurfaceHandle_t surfID, worldbrushdata_t *pData =
 {
 	int surfaceIndex = MSurf_Index(surfID,pData);
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
+	contract_assert( pData );
 	return pData->surfaces1[surfaceIndex].textureMins;
 }
 
@@ -637,7 +623,7 @@ inline short *MSurf_TextureExtents( SurfaceHandle_t surfID, worldbrushdata_t *pD
 {
 	int surfaceIndex = MSurf_Index(surfID,pData);
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
+	contract_assert( pData );
 	return pData->surfaces1[surfaceIndex].textureExtents;
 }
 
@@ -645,7 +631,7 @@ inline short *MSurf_LightmapMins( SurfaceHandle_t surfID, worldbrushdata_t *pDat
 {
 	int surfaceIndex = MSurf_Index(surfID,pData);
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
+	contract_assert( pData );
 	return pData->surfacelighting[surfaceIndex].m_LightmapMins;
 }
 
@@ -653,7 +639,7 @@ inline short *MSurf_LightmapExtents( SurfaceHandle_t surfID, worldbrushdata_t *p
 {
 	int surfaceIndex = MSurf_Index(surfID,pData);
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
+	contract_assert( pData );
 	return pData->surfacelighting[surfaceIndex].m_LightmapExtents;
 }
 
@@ -694,7 +680,7 @@ inline ColorRGBExp32 *MSurf_AvgLightColor( SurfaceHandle_t surfID, int nIndex, w
 {
 	int surfaceIndex = MSurf_Index(surfID,pData);
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
+	contract_assert( pData );
 	return pData->surfacelighting[surfaceIndex].AvgLightColor(nIndex);
 }
 
@@ -702,7 +688,7 @@ inline byte *MSurf_Styles( SurfaceHandle_t surfID, worldbrushdata_t *pData = hos
 {
 	int surfaceIndex = MSurf_Index(surfID,pData);
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
+	contract_assert( pData );
 	return pData->surfacelighting[surfaceIndex].m_nStyles;
 }
 
@@ -729,7 +715,7 @@ inline unsigned short MSurf_NumPrims( SurfaceHandle_t surfID, worldbrushdata_t *
 
 	int surfaceIndex = MSurf_Index(surfID,pData);
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
+	contract_assert( pData );
 	return pData->surfaces1[surfaceIndex].prims.numPrims;
 }
 
@@ -739,7 +725,7 @@ inline unsigned short MSurf_FirstPrimID( SurfaceHandle_t surfID, worldbrushdata_
 		return 0;
 	int surfaceIndex = MSurf_Index(surfID,pData);
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
+	contract_assert( pData );
 	return pData->surfaces1[surfaceIndex].prims.firstPrimID;
 }
 
@@ -747,7 +733,7 @@ inline ColorRGBExp32 *MSurf_Samples( SurfaceHandle_t surfID, worldbrushdata_t *p
 {
 	int surfaceIndex = MSurf_Index(surfID,pData);
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
+	contract_assert( pData );
 	return pData->surfacelighting[surfaceIndex].m_pSamples;
 }
 
@@ -761,8 +747,8 @@ inline unsigned int &MSurf_FirstVertNormal( SurfaceHandle_t surfID, worldbrushda
 {
 	int surfaceIndex = MSurf_Index(surfID,pData);
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
-	Assert( pData->surfacenormals[surfaceIndex].firstvertnormal < MAX_MAP_VERTNORMALINDICES );
+	contract_assert( pData );
+	contract_assert( pData->surfacenormals[surfaceIndex].firstvertnormal < MAX_MAP_VERTNORMALINDICES );
 	return pData->surfacenormals[surfaceIndex].firstvertnormal;
 }
 
@@ -780,14 +766,14 @@ inline short *MSurf_OffsetIntoLightmapPage( SurfaceHandle_t surfID, worldbrushda
 {
 	int surfaceIndex = MSurf_Index(surfID,pData);
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
+	contract_assert( pData );
 	return pData->surfacelighting[surfaceIndex].m_OffsetIntoLightmapPage;
 }
 
 inline VPlane MSurf_GetForwardFacingPlane( SurfaceHandle_t surfID, worldbrushdata_t *pData = host_state.worldbrush )
 {
 //	ASSERT_SURF_VALID( surfID );
-	Assert( pData );
+	contract_assert( pData );
 	return VPlane( MSurf_Plane( surfID).normal, MSurf_Plane( surfID ).dist );
 }
 
@@ -800,8 +786,6 @@ inline OverlayFragmentHandle_t &MSurf_OverlayFragmentList( SurfaceHandle_t surfI
 inline msurfacelighting_t *SurfaceLighting( SurfaceHandle_t surfID, worldbrushdata_t *pData = host_state.worldbrush )
 {
 	int surfaceIndex = MSurf_Index(surfID,pData);
-	Assert( pData );
+	contract_assert( pData );
 	return &pData->surfacelighting[surfaceIndex];
 }
-
-#endif // GL_MODEL_PRIVATE_H

@@ -1,14 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+#if defined(CLIENT_DLL)
+#endif
+import std;
+#if defined(CLIENT_DLL)
+#endif
+import ks.math;
 #include "dt_recv.h"
-#include "mathlib/vector.h"
-#include "tier1/strtools.h"
 #include "dt_utlvector_common.h"
-
 
 const char *s_ClientElementNames[MAX_ARRAY_ELEMENTS] =
 {
@@ -199,7 +199,7 @@ RecvProp RecvPropFloat(
 #ifdef _DEBUG
 	if ( varProxy == RecvProxy_FloatToFloat )
 	{
-		Assert( sizeofVar == 0 || sizeofVar == 4 );
+		contract_assert( sizeofVar == 0 || sizeofVar == 4 );
 	}
 #endif
 
@@ -225,7 +225,7 @@ RecvProp RecvPropVector(
 #ifdef _DEBUG
 	if ( varProxy == RecvProxy_VectorToVector )
 	{
-		Assert( sizeofVar == sizeof( Vector ) );
+		contract_assert( sizeofVar == sizeof( Vector ) );
 	}
 #endif
 
@@ -251,7 +251,7 @@ RecvProp RecvPropVectorXY(
 #ifdef _DEBUG
 	if ( varProxy == RecvProxy_VectorToVector )
 	{
-		Assert( sizeofVar == sizeof( Vector ) );
+		contract_assert( sizeofVar == sizeof( Vector ) );
 	}
 #endif
 
@@ -324,7 +324,7 @@ RecvProp RecvPropInt(
 		}
 		else
 		{
-			Assert(!"RecvPropInt var has invalid size");
+			contract_assert( !"RecvPropInt var has invalid size" );
 			varProxy = RecvProxy_Int32ToInt8;	// safest one...
 		}
 	}
@@ -389,7 +389,7 @@ RecvProp RecvPropArray3(
 {
 	RecvProp ret;
 
-	Assert( elements <= MAX_ARRAY_ELEMENTS );
+	contract_assert( elements <= MAX_ARRAY_ELEMENTS );
 
 	ret.m_pVarName = pVarName;
 	ret.SetOffset( offset );
@@ -438,7 +438,7 @@ RecvProp InternalRecvPropArray(
 
 void RecvProxy_FloatToFloat( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
-	Assert( IsFinite( pData->m_Value.m_Float ) );
+	contract_assert( IsFinite( pData->m_Value.m_Float ) );
 	*((float*)pOut) = pData->m_Value.m_Float;
 }
 
@@ -446,7 +446,7 @@ void RecvProxy_VectorToVector( const CRecvProxyData *pData, void *pStruct, void 
 {
 	const float *v = pData->m_Value.m_Vector;
 	
-	Assert( IsFinite( v[0] ) && IsFinite( v[1] ) && IsFinite( v[2] ) );
+	contract_assert( IsFinite( v[0] ) && IsFinite( v[1] ) && IsFinite( v[2] ) );
 	((float*)pOut)[0] = v[0];
 	((float*)pOut)[1] = v[1];
 	((float*)pOut)[2] = v[2];
@@ -456,7 +456,7 @@ void RecvProxy_VectorXYToVectorXY( const CRecvProxyData *pData, void *pStruct, v
 {
 	const float *v = pData->m_Value.m_Vector;
 	
-	Assert( IsFinite( v[0] ) && IsFinite( v[1] ) );
+	contract_assert( IsFinite( v[0] ) && IsFinite( v[1] ) );
 	((float*)pOut)[0] = v[0];
 	((float*)pOut)[1] = v[1];
 }
@@ -465,7 +465,7 @@ void RecvProxy_QuaternionToQuaternion( const CRecvProxyData *pData, void *pStruc
 {
 	const float *v = pData->m_Value.m_Vector;
 	
-	Assert( IsFinite( v[0] ) && IsFinite( v[1] ) && IsFinite( v[2] ) && IsFinite( v[3] ) );
+	contract_assert( IsFinite( v[0] ) && IsFinite( v[1] ) && IsFinite( v[2] ) && IsFinite( v[3] ) );
 	((float*)pOut)[0] = v[0];
 	((float*)pOut)[1] = v[1];
 	((float*)pOut)[2] = v[2];
@@ -490,7 +490,7 @@ void RecvProxy_Int32ToInt32( const CRecvProxyData *pData, void *pStruct, void *p
 void RecvProxy_Int32ToColor32( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	//Always send/receive as little endian to preserve byte order across network byte swaps
-	*((uint32*)pOut) = LittleDWord((uint32)pData->m_Value.m_Int);
+	*((uint32*)pOut) = ((uint32)pData->m_Value.m_Int);
 }
 
 void RecvProxy_Int64ToInt64( const CRecvProxyData *pData, void *pStruct, void *pOut )
@@ -525,4 +525,3 @@ void DataTableRecvProxy_PointerDataTable( const RecvProp *pProp, void **pOut, vo
 {
 	*pOut = *((void**)pData);
 }
-

@@ -1,17 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A Scene Image file aggregates all the compiled binary VCD files into
 // a single file.
-//
-//=====================================================================================//
-#ifndef SCENE_IMAGE_FILE_H
-#define SCENE_IMAGE_FILE_H
 
-#include "commonmacros.h"
-#include "tier1/checksum_crc.h"
+import std;
+import ks.tier1;
 
 #define SCENE_IMAGE_ID			MAKEID( 'V','S','I','F' )
-#define SCENE_IMAGE_VERSION		3
+inline constexpr auto SCENE_IMAGE_VERSION = 3;
 
 // scene summary: cached calcs for commmon startup queries, variable sized
 // note: if you want to add a member to this struct, one way to do it and 
@@ -53,7 +51,7 @@ struct SceneImageHeader_t
 	{
 		if ( iString < 0 || iString >= nNumStrings )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			return nullptr;
 		}
 
@@ -62,5 +60,3 @@ struct SceneImageHeader_t
 		return (char *)this + pTable[iString];
 	}
 };
-
-#endif // SCENE_IMAGE_FILE_H

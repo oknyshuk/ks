@@ -1,16 +1,28 @@
-//========= Copyright (c) 1996-2012, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Client side interactive, shootable chicken
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2012 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Client side interactive, shootable chicken
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "c_chicken.h"
 #include "c_breakableprop.h"
 #include "c_cs_player.h"
 #include "reflect_recvtable.h"
-#include "reflect_annotations.h"
 
 #undef CChicken
 
@@ -72,27 +84,6 @@ void C_CChicken::ClientThink()
 
 	bool bEnableHolidayHat = false;
 	
-#if CSGO_CLIENT_CHICKEN_ANTLERS_IN_FREEZE_CAM
-	//
-	// This code was enabling chicken antlers in freezecam
-	//
-
-	// Client-side only addons are required for the duration of the freeze shot
-	{
-		static ConVarRef ref_cl_disablefreezecam( "cl_disablefreezecam" );
-		static ConVarRef ref_sv_disablefreezecam( "sv_disablefreezecam" );
-		extern bool IsTakingAFreezecamScreenshot( void );
-		if ( IsTakingAFreezecamScreenshot() && !ref_cl_disablefreezecam.GetBool() && !ref_sv_disablefreezecam.GetBool() )
-		{
-			C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
-			if ( pLocalPlayer && pLocalPlayer->GetObserverTarget() && ( pLocalPlayer->GetObserverTarget() != pLocalPlayer ) )
-			{
-				bEnableHolidayHat = true;
-			}
-		}
-	}
-#endif
-
 	SetClientSideHolidayHatAddon( bEnableHolidayHat );
 }
 

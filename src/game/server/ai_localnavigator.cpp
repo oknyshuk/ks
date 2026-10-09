@@ -1,10 +1,30 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "ndebugoverlay.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 
@@ -31,7 +51,7 @@ CAI_LocalNavigator::CAI_LocalNavigator(CAI_BaseNPC *pOuter) : CAI_Component( pOu
 	m_pPlaneSolver = new CAI_PlaneSolver( pOuter );
 
 	m_fLastWasClear = false;
-	memset( &m_LastMoveGoal, 0, sizeof(m_LastMoveGoal) );
+	std::memset( &m_LastMoveGoal, 0, sizeof(m_LastMoveGoal) );
 }
 
 //-------------------------------------
@@ -96,7 +116,6 @@ bool CAI_LocalNavigator::IsSegmentBlockedByGlobalObstacles( const Vector &vecSta
 
 bool CAI_LocalNavigator::MoveCalcDirect( AILocalMoveGoal_t *pMoveGoal, bool bOnlyCurThink, float *pDistClear, AIMoveResult_t *pResult )
 {
-	AI_PROFILE_SCOPE(CAI_LocalNavigator_MoveCalcDirect);
 
 	bool bRetVal = false;
 	
@@ -271,7 +290,6 @@ bool CAI_LocalNavigator::MoveCalcSteer( AILocalMoveGoal_t *pMoveGoal, float dist
 	if ( GetOuter()->IsFlaggedEfficient() )
 		return false;
 
-	AI_PROFILE_SCOPE(CAI_Motor_MoveCalcSteer);
 	Vector moveSolution;
 	if ( m_pPlaneSolver->Solve( *pMoveGoal, distClear, &moveSolution ) )
 	{
@@ -309,7 +327,6 @@ bool CAI_LocalNavigator::MoveCalcStop( AILocalMoveGoal_t *pMoveGoal, float distC
 	{
 		if ( distClear < 0.1 )
 		{
-			DebugNoteMovementFailure();
 			*pResult = AIMR_ILLEGAL;
 		}
 		else
@@ -335,7 +352,6 @@ bool CAI_LocalNavigator::MoveCalcStop( AILocalMoveGoal_t *pMoveGoal, float distC
 
 AIMoveResult_t CAI_LocalNavigator::MoveCalcRaw( AILocalMoveGoal_t *pMoveGoal, bool bOnlyCurThink )
 {
-	AI_PROFILE_SCOPE(CAI_Motor_MoveCalc);
 	
 	AIMoveResult_t result = AIMR_OK; // Assume success
 	AIMoveTrace_t  directTrace;
@@ -416,7 +432,6 @@ AIMoveResult_t CAI_LocalNavigator::MoveCalcRaw( AILocalMoveGoal_t *pMoveGoal, bo
 
 	// --------------------------------------------------
 
-	DebugNoteMovementFailure();
 	SetSolveCookie();
 	return DbgResult( IsMoveBlocked( pMoveGoal->directTrace.fStatus ) ? pMoveGoal->directTrace.fStatus : AIMR_ILLEGAL );
 }

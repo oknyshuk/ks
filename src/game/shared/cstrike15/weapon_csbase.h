@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef WEAPON_CSBASE_H
-#define WEAPON_CSBASE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "basecombatweapon_shared.h"
 
 #include "cs_playeranimstate.h"
 #include "cs_weapon_parse.h"
@@ -35,37 +31,37 @@ extern bool IsGrenadeWeapon( CSWeaponID id );
 extern bool IsArmor( CSWeaponID id );
 extern int GetShellForAmmoType( const char *ammoname );
 
-#define SHIELD_VIEW_MODEL "models/weapons/v_shield.mdl"
-#define SHIELD_WORLD_MODEL "models/weapons/w_shield.mdl"
+inline constexpr const char *SHIELD_VIEW_MODEL = "models/weapons/v_shield.mdl";
+inline constexpr const char *SHIELD_WORLD_MODEL = "models/weapons/w_shield.mdl";
 
 class CCSPlayer;
 
 // These are the names of the ammo types that go in the CAmmoDefs and that the 
 // weapon script files reference.
-#define BULLET_PLAYER_50AE		"BULLET_PLAYER_50AE"
-#define BULLET_PLAYER_762MM		"BULLET_PLAYER_762MM"
-#define BULLET_PLAYER_556MM		"BULLET_PLAYER_556MM"
-#define BULLET_PLAYER_556MM_SMALL "BULLET_PLAYER_556MM_SMALL"
-#define BULLET_PLAYER_556MM_BOX	"BULLET_PLAYER_556MM_BOX"
-#define BULLET_PLAYER_338MAG	"BULLET_PLAYER_338MAG"
-#define BULLET_PLAYER_9MM		"BULLET_PLAYER_9MM"
-#define BULLET_PLAYER_BUCKSHOT	"BULLET_PLAYER_BUCKSHOT"
-#define BULLET_PLAYER_45ACP		"BULLET_PLAYER_45ACP"
-#define BULLET_PLAYER_357SIG	"BULLET_PLAYER_357SIG"
-#define BULLET_PLAYER_357SIG_P250	"BULLET_PLAYER_357SIG_P250"
-#define BULLET_PLAYER_357SIG_SMALL	"BULLET_PLAYER_357SIG_SMALL"
-#define BULLET_PLAYER_357SIG_MIN	"BULLET_PLAYER_357SIG_MIN"
-#define BULLET_PLAYER_57MM		"BULLET_PLAYER_57MM"
-#define AMMO_TYPE_HEGRENADE		"AMMO_TYPE_HEGRENADE"
-#define AMMO_TYPE_FLASHBANG		"AMMO_TYPE_FLASHBANG"
-#define AMMO_TYPE_SMOKEGRENADE	"AMMO_TYPE_SMOKEGRENADE"
-#define AMMO_TYPE_DECOY			"AMMO_TYPE_DECOY"
-#define AMMO_TYPE_MOLOTOV		"AMMO_TYPE_MOLOTOV"
-#define AMMO_TYPE_TASERCHARGE	"AMMO_TYPE_TASERCHARGE"
-#define AMMO_TYPE_HEALTHSHOT	"AMMO_TYPE_HEALTHSHOT"
-#define AMMO_TYPE_TAGRENADE	"AMMO_TYPE_TAGRENADE"
+inline constexpr const char *BULLET_PLAYER_50AE = "BULLET_PLAYER_50AE";
+inline constexpr const char *BULLET_PLAYER_762MM = "BULLET_PLAYER_762MM";
+inline constexpr const char *BULLET_PLAYER_556MM = "BULLET_PLAYER_556MM";
+inline constexpr const char *BULLET_PLAYER_556MM_SMALL = "BULLET_PLAYER_556MM_SMALL";
+inline constexpr const char *BULLET_PLAYER_556MM_BOX = "BULLET_PLAYER_556MM_BOX";
+inline constexpr const char *BULLET_PLAYER_338MAG = "BULLET_PLAYER_338MAG";
+inline constexpr const char *BULLET_PLAYER_9MM = "BULLET_PLAYER_9MM";
+inline constexpr const char *BULLET_PLAYER_BUCKSHOT = "BULLET_PLAYER_BUCKSHOT";
+inline constexpr const char *BULLET_PLAYER_45ACP = "BULLET_PLAYER_45ACP";
+inline constexpr const char *BULLET_PLAYER_357SIG = "BULLET_PLAYER_357SIG";
+inline constexpr const char *BULLET_PLAYER_357SIG_P250 = "BULLET_PLAYER_357SIG_P250";
+inline constexpr const char *BULLET_PLAYER_357SIG_SMALL = "BULLET_PLAYER_357SIG_SMALL";
+inline constexpr const char *BULLET_PLAYER_357SIG_MIN = "BULLET_PLAYER_357SIG_MIN";
+inline constexpr const char *BULLET_PLAYER_57MM = "BULLET_PLAYER_57MM";
+inline constexpr const char *AMMO_TYPE_HEGRENADE = "AMMO_TYPE_HEGRENADE";
+inline constexpr const char *AMMO_TYPE_FLASHBANG = "AMMO_TYPE_FLASHBANG";
+inline constexpr const char *AMMO_TYPE_SMOKEGRENADE = "AMMO_TYPE_SMOKEGRENADE";
+inline constexpr const char *AMMO_TYPE_DECOY = "AMMO_TYPE_DECOY";
+inline constexpr const char *AMMO_TYPE_MOLOTOV = "AMMO_TYPE_MOLOTOV";
+inline constexpr const char *AMMO_TYPE_TASERCHARGE = "AMMO_TYPE_TASERCHARGE";
+inline constexpr const char *AMMO_TYPE_HEALTHSHOT = "AMMO_TYPE_HEALTHSHOT";
+inline constexpr const char *AMMO_TYPE_TAGRENADE = "AMMO_TYPE_TAGRENADE";
 
-#define CROSSHAIR_CONTRACT_PIXELS_PER_SECOND	7.0f
+inline constexpr auto CROSSHAIR_CONTRACT_PIXELS_PER_SECOND = 7.0f;
 
 // Given an ammo type (like from a weapon's GetPrimaryAmmoType()), this compares it
 // against the ammo name you specify.
@@ -203,8 +199,8 @@ public:
 	virtual CSWeaponType GetWeaponType( void ) const { return GetCSWpnData().GetWeaponType( GetEconItemView() ); }
 	virtual const char	*GetDefinitionName( void ) const { return GetEconItemView()->GetStaticData()->GetDefinitionName(); }
 
-	virtual const CEconItemView* GetEconItemView( void ) const OVERRIDE { return &m_EconItemView; }
-	virtual CEconItemView* GetEconItemView( void ) OVERRIDE { return &m_EconItemView; }
+	virtual const CEconItemView* GetEconItemView( void ) const override { return &m_EconItemView; }
+	virtual CEconItemView* GetEconItemView( void ) override { return &m_EconItemView; }
 	void InitializeEconItemView( const char *pszItemName );
 	void SetEconItemDefinition( CEconItemDefinition *pDef );
 
@@ -341,18 +337,11 @@ public:
 	CNetworkVar( CSWeaponMode, m_weaponMode, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
 
 	virtual float GetInaccuracy() const;
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-	virtual float GetAccuracyFishtail() const { return m_fAccuracyFishtail; }
-	virtual void SetAccuracyFishtail( float fFishtail ) { m_fAccuracyFishtail = fFishtail; }
-#endif
 	virtual float GetSpread() const { return GetCSWpnData().GetSpread( GetEconItemView(), m_weaponMode.Get() ); }
 
 	virtual void UpdateAccuracyPenalty();
 
 	CNetworkVar( float, m_fAccuracyPenalty, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_CHANGES_OFTEN } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE, .tolerance = TD_MSECTOLERANCE } ]] );
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-	CNetworkVar( float, m_fAccuracyFishtail );
-#endif
 	float m_fAccuracySmoothedForZoom;
 	float m_fScopeZoomEndTime;
 	CNetworkVar( int, m_iRecoilIndex, [[= ks::reflect::Net{ .side = ks::reflect::WireSide::Recv } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );	// DEPRECATED. Kept for old demo compatibility.
@@ -360,7 +349,7 @@ public:
 	CNetworkVar( bool, m_bBurstMode, [[= ks::reflect::Net{} ]] );
 
 	CNetworkVar( float, m_flPostponeFireReadyTime, [[= ks::reflect::Net{} ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_OVERRIDE | FTYPEDESC_NOERRORCHECK } ]] );
-	void ResetPostponeFireReadyTime( void ) { m_flPostponeFireReadyTime = FLT_MAX; }
+	void ResetPostponeFireReadyTime( void ) { m_flPostponeFireReadyTime = std::numeric_limits<float>::max(); }
 	void SetPostponeFireReadyTime( float flFutureTime ) { m_flPostponeFireReadyTime = flFutureTime; }
 	bool IsPostponFireReadyTimeElapsed( void ) { return (m_flPostponeFireReadyTime < gpGlobals->curtime); }
 
@@ -393,8 +382,8 @@ public:
 	CCSPlayer * GetOriginalOwner();
 
 	// Xuid methods stub (econ removed)
-	virtual uint64 GetOriginalOwnerXuid() const OVERRIDE { return 0; }
-	virtual void SetOriginalOwnerXuid( uint32, uint32 ) OVERRIDE {}
+	virtual uint64 GetOriginalOwnerXuid() const override { return 0; }
+	virtual void SetOriginalOwnerXuid( uint32, uint32 ) override {}
 
 	CNetworkVar( int, m_iOriginalTeamNumber, [[= ks::reflect::Net{ .bits = -1 } ]] );
 
@@ -495,6 +484,3 @@ extern ConVar weapon_recoil_vel_decay;
 extern ConVar weapon_recoil_extra;
 extern ConVar weapon_recoil_scale;
 extern ConVar weapon_recoil_scale_motion_controller;
-
-
-#endif // WEAPON_CSBASE_H

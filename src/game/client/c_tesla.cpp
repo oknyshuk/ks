@@ -1,15 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
-#include "reflect_annotations.h"
 #include "c_tesla.h"
 #include "fx.h"
-#include <bitbuf.h>
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_Tesla, DT_Tesla, CTesla )
 
@@ -57,5 +59,3 @@ void C_Tesla::ClientThink()
 	m_QueuedCommands.clear();
 	SetNextClientThink( CLIENT_THINK_NEVER );
 }
-
-

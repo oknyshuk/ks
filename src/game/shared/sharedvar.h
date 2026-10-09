@@ -1,19 +1,27 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SHAREDVAR_H
-#define SHAREDVAR_H
-
-
-#include "convar.h"
+import std;
+import ks.tier1;
 #include "ispsharedmemory.h"
 #include "basehandle.h"
+#include "ehandle.h"
+#include "networkvar.h"
 
+#if defined( CLIENT_DLL )
+#include "cdll_client_int.h"
+#else
+#include "enginecallback.h"
+#endif
 
-
+#if defined( CLIENT_DLL )
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
+#else
+class CBaseEntity;
+typedef CHandle<CBaseEntity> EHANDLE;
+#endif
 
 #if defined( GAME_DLL )
 	static int Server_EHandleToInt( const EHANDLE &hIn )
@@ -72,7 +80,7 @@ public:
 
 	void Initialize( char *pchName, int iEntNum )
 	{
-		Assert( !m_pSharedMemory && !m_pValue );
+		contract_assert( !m_pSharedMemory && !m_pValue );
 
 		m_pSharedMemory = engine->GetSinglePlayerSharedMemorySpace( pchName, iEntNum );
 		m_pSharedMemory->Init( sizeof( Type ) );
@@ -504,7 +512,7 @@ public:
 
 	void Initialize( char *pchName, int iEntNum )
 	{
-		Assert( !this->m_pSharedMemory && !this->m_pValue );
+		contract_assert( !this->m_pSharedMemory && !this->m_pValue );
 
 		this->m_pSharedMemory = engine->GetSinglePlayerSharedMemorySpace( pchName, iEntNum );
 		this->m_pSharedMemory->Init( sizeof( EHANDLE ) + sizeof( int ) );		// Also allocate memory for the int that converts to a Client handle
@@ -600,7 +608,7 @@ public:
 
 	void Initialize( char *pchName, int iEntNum, int iCount )
 	{
-		Assert( !this->m_pSharedMemory && !(CSharedArrayBase<Type,Changer>::m_pValue) && iCount > 0 );
+		contract_assert( !this->m_pSharedMemory && !(CSharedArrayBase<Type,Changer>::m_pValue) && iCount > 0 );
 
 		m_iCount = iCount;
 		this->m_pSharedMemory = engine->GetSinglePlayerSharedMemorySpace( pchName, iEntNum );
@@ -620,7 +628,7 @@ public:
 
 	const Type& Get( int i ) const
 	{
-		Assert( i >= 0 && i < m_iCount );
+		contract_assert( i >= 0 && i < m_iCount );
 		return CSharedArrayBase<Type,Changer>::m_pValue[i];
 	}
 
@@ -638,13 +646,13 @@ public:
 
 		Type& GetForModify( int i )
 		{
-			Assert( i >= 0 && i < m_iCount );
+			contract_assert( i >= 0 && i < m_iCount );
 			return CSharedArrayBase<Type,Changer>::m_pValue[i];
 		}
 
 		void Set( int i, const Type &val )
 		{
-			Assert( i >= 0 && i < m_iCount );
+			contract_assert( i >= 0 && i < m_iCount );
 			CSharedArrayBase<Type,Changer>::m_pValue[i] = val;
 		}
 	#endif
@@ -664,7 +672,7 @@ public:
 
 	void Initialize( char *pchName, int iEntNum, int iCount )
 	{
-		Assert( !this->m_pSharedMemory && !(CSharedHandleArrayBase<Type,Changer>::m_pValue) && iCount > 0 );
+		contract_assert( !this->m_pSharedMemory && !(CSharedHandleArrayBase<Type,Changer>::m_pValue) && iCount > 0 );
 
 		this->m_iCount = iCount;
 		this->m_pSharedMemory = engine->GetSinglePlayerSharedMemorySpace( pchName, iEntNum );
@@ -680,7 +688,7 @@ public:
 
 	const Type& Get( int i ) const
 	{
-		Assert( i >= 0 && i < this->m_iCount );
+		contract_assert( i >= 0 && i < this->m_iCount );
 		return Get_Internal( i );
 	}
 
@@ -693,7 +701,7 @@ public:
 		// Data can only be set on the server
 		const Type* Set( int i, const Type *val )
 		{
-			Assert( i >= 0 && i < this->m_iCount );
+			contract_assert( i >= 0 && i < this->m_iCount );
 			CSharedHandleArrayBase<Type,Changer>::m_pValue[i] = val;
 
 			// Store the int that we'll need to translate to the EHandle on the client
@@ -762,7 +770,7 @@ class CSharedUtlVectorBase : public CSharedVarBase< std::vector< Type >, Changer
 public:
 	void Initialize( char *pchName, int iEntNum )
 	{
-		Assert( !this->m_pSharedMemory && !(CSharedUtlVectorBase<Type,Changer>::m_pValue) );
+		contract_assert( !this->m_pSharedMemory && !(CSharedUtlVectorBase<Type,Changer>::m_pValue) );
 
 		this->m_pSharedMemory = engine->GetSinglePlayerSharedMemorySpace( pchName, iEntNum );
 		this->m_pSharedMemory->Init( sizeof( std::vector< Type > ) );
@@ -793,13 +801,13 @@ public:
 
 	Type& GetForModify( int i )
 	{
-		Assert( i >= 0 && i < (CSharedUtlVectorBase<Type,Changer>::m_pValue)->Count() );
+		contract_assert( i >= 0 && i < (CSharedUtlVectorBase<Type,Changer>::m_pValue)->Count() );
 		return (*CSharedUtlVectorBase<Type,Changer>::m_pValue)[i];
 	}
 
 	void Set( int i, const Type &val )
 	{
-		Assert( i >= 0 && i < (CSharedUtlVectorBase<Type,Changer>::m_pValue)->Count() );
+		contract_assert( i >= 0 && i < (CSharedUtlVectorBase<Type,Changer>::m_pValue)->Count() );
 		(*CSharedUtlVectorBase<Type,Changer>::m_pValue)[i] = val;
 	}
 #endif
@@ -826,7 +834,7 @@ public:
 
 	const Type& Get( int i ) const
 	{
-		Assert( i >= 0 && i < (CSharedUtlVectorBase<Type,Changer>::m_pValue)->Count() );
+		contract_assert( i >= 0 && i < (CSharedUtlVectorBase<Type,Changer>::m_pValue)->Count() );
 		return (*CSharedUtlVectorBase<Type,Changer>::m_pValue)[i];
 	}
 
@@ -918,6 +926,3 @@ private:
 
 #define SharedPropArray( var ) \
 	var.Initialize( "SharedVar_"#var, entindex(), m_SharedArray_count_##var );
-
-
-#endif // SHAREDVAR_H

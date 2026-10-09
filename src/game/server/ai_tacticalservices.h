@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ====
-//
-//=============================================================================
-
-#ifndef AI_TACTICALSERVICES_H
-#define AI_TACTICALSERVICES_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ai_component.h"
-
 
 class CAI_Network;
 class CAI_Pathfinder;
@@ -73,5 +69,3 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_TACTICALSERVICES_H

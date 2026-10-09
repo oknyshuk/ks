@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef SMOKEGRENADE_PROJECTILE_H
-#define SMOKEGRENADE_PROJECTILE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -25,8 +20,8 @@ class [[= ks::reflect::NetTable{ .name = "DT_SmokeGrenadeProjectile" } ]]
 	C_SmokeGrenadeProjectile() {}
 	virtual ~C_SmokeGrenadeProjectile();
 
-	virtual void PostDataUpdate( DataUpdateType_t updateType ) OVERRIDE;
-	virtual void OnDataChanged( DataUpdateType_t updateType ) OVERRIDE;
+	virtual void PostDataUpdate( DataUpdateType_t updateType ) override;
+	virtual void OnDataChanged( DataUpdateType_t updateType ) override;
 
 	virtual GrenadeType_t GetGrenadeType( void ) { return GRENADE_TYPE_SMOKE; }
 	void SpawnSmokeEffect();
@@ -84,5 +79,3 @@ public:
 	float m_flLastBounce;
 };
 #endif // GAME_DLL
-
-#endif // SMOKEGRENADE_PROJECTILE_H

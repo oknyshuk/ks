@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
@@ -17,7 +18,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_particlesphere_vs20 0
+inline constexpr int shaderStaticTest_particlesphere_vs20 = 0;
 class particlesphere_vs20_Dynamic_Index
 {
 private:
@@ -28,7 +29,7 @@ private:
 public:
 	void SetFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFOGTYPE = i;
 #ifdef _DEBUG
 		m_bFOGTYPE = true;
@@ -36,7 +37,7 @@ public:
 	}
 	void SetFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFOGTYPE = true;
@@ -57,7 +58,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nFOGTYPE ) + 0;
 	}
@@ -70,7 +71,7 @@ static const ShaderComboInformation_t s_DynamicComboArray_particlesphere_vs20[1]
 };
 static const ShaderComboSemantics_t particlesphere_vs20_combos =
 {
-	"particlesphere_vs20", s_DynamicComboArray_particlesphere_vs20, 1, NULL, 0 
+	"particlesphere_vs20", s_DynamicComboArray_particlesphere_vs20, 1, nullptr, 0 
 };
 
 class ConstructMe_particlesphere_vs20

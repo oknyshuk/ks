@@ -1,9 +1,9 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#ifndef PORTALREFRACT_HELPER_H
-#define PORTALREFRACT_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -18,7 +18,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct PortalRefractVars_t
 {
-	PortalRefractVars_t() { memset( this, 0xFF, sizeof(PortalRefractVars_t) ); }
+	PortalRefractVars_t() { std::memset( this, 0xFF, sizeof(PortalRefractVars_t) ); }
 
 	int m_nStage;
 	int m_nPortalOpenAmount;
@@ -44,5 +44,3 @@ void InitParamsPortalRefract( CBaseVSShader *pShader, IMaterialVar** params, con
 void InitPortalRefract( CBaseVSShader *pShader, IMaterialVar** params, PortalRefractVars_t &info );
 void DrawPortalRefract( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 						   IShaderShadow* pShaderShadow, PortalRefractVars_t &info, VertexCompressionType_t vertexCompression );
-
-#endif // PortalRefract_HELPER_H

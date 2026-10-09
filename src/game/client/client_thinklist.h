@@ -1,22 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CLIENT_THINKLIST_H
-#define CLIENT_THINKLIST_H
-
-
+import ks.tier1;
 #include "igamesystem.h"
-#include "tier1/slot_pool.h"
+import std;
 #include "cliententitylist.h"
 #include "iclientthinkable.h"
 
-
-#define CLIENT_THINK_ALWAYS	-1293
-#define CLIENT_THINK_NEVER	-1
+inline constexpr auto CLIENT_THINK_ALWAYS = -1293;
+inline constexpr auto CLIENT_THINK_NEVER = -1;
 
 
 #define INVALID_THINK_HANDLE ClientThinkList()->GetInvalidThinkHandle()
@@ -127,6 +120,3 @@ inline CClientThinkList* ClientThinkList()
 	extern CClientThinkList g_ClientThinkList;
 	return &g_ClientThinkList;
 }
-
-
-#endif // CLIENT_THINKLIST_H

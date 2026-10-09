@@ -1,11 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: APIs for player pickup of physics objects
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PLAYER_PICKUP_H
-#define PLAYER_PICKUP_H
+// Purpose: APIs for player pickup of physics objects
+
+import ks.math;
+#include "shared_classnames.h"
+import std;
+
+class CBaseEntity;
+class CBasePlayer;
 
 // Reasons behind a pickup
 enum PhysGunPickup_t
@@ -47,7 +51,7 @@ Vector Pickup_PhysGunLaunchVelocity( CBaseEntity *pObject, const Vector &vecForw
 
 CBaseEntity	*Pickup_OnFailedPhysGunPickup( CBaseEntity *pPickedUpObject, Vector vPhysgunPos );
 
-abstract_class IPlayerPickupVPhysics
+class IPlayerPickupVPhysics
 {
 public:
 	// Callbacks for the physgun/cannon picking up an entity
@@ -80,5 +84,3 @@ public:
 		return Pickup_DefaultPhysGunLaunchVelocity( vecForward, flMass );
 	}
 };
-
-#endif // PLAYER_PICKUP_H

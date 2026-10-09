@@ -1,17 +1,12 @@
-//=========== Copyright (c) Valve Corporation, All rights reserved. =============//
-//
-// Purpose: Stub - clothing skin visualization removed with econ
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef CS_CUSTOM_CHARACTER_VISUALSDATA_PROCESSOR_H
-#define CS_CUSTOM_CHARACTER_VISUALSDATA_PROCESSOR_H
+// Purpose: Stub - clothing skin visualization removed with econ
 
 #include "cs_shareddefs.h"
 #include "materialsystem/base_visuals_data_processor.h"
 #include "materialsystem/icustommaterialmanager.h"
-
 
 struct CCSClothingData_t
 {
@@ -95,5 +90,3 @@ private:
 
 	char *m_szCompositingShaderName;
 };
-
-#endif // CS_CUSTOM_CLOTHING_VISUALSDATA_PROCESSOR_H

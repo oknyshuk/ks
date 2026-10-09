@@ -1,10 +1,40 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Point entity used to create templates out of other entities or groups of entities
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Point entity used to create templates out of other entities or groups of entities
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "entityinput.h"
@@ -12,7 +42,6 @@
 #include "TemplateEntities.h"
 #include "point_template.h"
 #include "mapentities.h"
-#include "tier0/icommandline.h"
 #include "mapentities_shared.h"
 //lwss - hardcode .nut file here instead of generating it. I don't think it will change as of right now.
 //Generated with: `perl texttoarray.pl ../../game/server/spawn_helper.nut g_Script_spawn_helper > /tmp/file.h`
@@ -147,12 +176,12 @@ function __FinishSpawn()
 */
 //lwss end
 
-#define SF_POINTTEMPLATE_DONTREMOVETEMPLATEENTITIES		0x0001
+constexpr auto SF_POINTTEMPLATE_DONTREMOVETEMPLATEENTITIES = 0x0001;
 
 // Level designers can suppress the uniquification of the spawned entity
 // names with a spawnflag, provided they guarantee that only one instance
 // of the entities will ever be spawned at a time.
-#define	SF_POINTTEMPLATE_PRESERVE_NAMES					0x0002
+constexpr auto SF_POINTTEMPLATE_PRESERVE_NAMES = 0x0002;
 
 
 LINK_ENTITY_TO_CLASS(point_template, CPointTemplate);
@@ -332,7 +361,7 @@ int	CPointTemplate::GetNumTemplates( void )
 //-----------------------------------------------------------------------------
 int	CPointTemplate::GetTemplateIndexForTemplate( int iTemplate )
 {
-	Assert( iTemplate < std::ssize( m_hTemplates ) );
+	contract_assert( iTemplate < std::ssize( m_hTemplates ) );
 	return m_hTemplates[iTemplate].iTemplateIndex;
 }
 
@@ -349,7 +378,7 @@ int CPointTemplate::GetNumTemplateEntities( void )
 //-----------------------------------------------------------------------------
 CBaseEntity	*CPointTemplate::GetTemplateEntity( int iTemplateNumber )
 {
-	Assert( iTemplateNumber < std::ssize( m_hTemplateEntities ) );
+	contract_assert( iTemplateNumber < std::ssize( m_hTemplateEntities ) );
 
 	return m_hTemplateEntities[iTemplateNumber];
 }
@@ -414,6 +443,7 @@ void CPointTemplate::PerformPrecache()
 //-----------------------------------------------------------------------------
 bool CPointTemplate::CreateInstance( const Vector &vecOrigin, const QAngle &vecAngles, std::vector< CBaseEntity* > *pEntities, CBaseEntity *pEntityMaker, bool bCreateTime )
 {
+	ks::ScratchArena<> scratch;
 	// Go through all our templated map data and spawn all the entities in it
 	int iTemplates = std::ssize( m_hTemplates );
 	if ( !iTemplates )
@@ -425,7 +455,7 @@ bool CPointTemplate::CreateInstance( const Vector &vecOrigin, const QAngle &vecA
 	// Tell the template system we're about to start a new template
 	Templates_StartUniqueInstance();
 
-	HierarchicalSpawn_t *pSpawnList = (HierarchicalSpawn_t*)stackalloc( iTemplates * sizeof(HierarchicalSpawn_t) );
+	HierarchicalSpawn_t *pSpawnList = scratch.Alloc<HierarchicalSpawn_t>( iTemplates );
 
 	int i;
 	for ( i = 0; i < iTemplates; i++ )
@@ -495,16 +525,6 @@ bool CPointTemplate::CreateInstance( const Vector &vecOrigin, const QAngle &vecA
 	// Set the time of creation for these entities.
 	if ( bCreateTime )
 	{
-#if defined(ENABLE_CREATE_TIME)
-		float flCreateTime = gpGlobals->curtime;
-		for ( i = 0; i < iTemplates; ++i )
-		{
-			if ( pSpawnList[i].m_pEntity )
-			{
-				pSpawnList[i].m_pEntity->SetCreateTime( flCreateTime );
-			}
-		}
-#endif
 	}
 
 	for ( i = 0; i < iTemplates; ++i )
@@ -606,7 +626,7 @@ void ScriptPostSpawn( CScriptScope *pScriptScope, CBaseEntity **ppEntities, int 
 			char szEntName[256];
 			for ( int i = 0; i < nEntities; i++ )
 			{
-				V_strncpy( szEntName, ppEntities[i]->GetEntityNameAsCStr(), ARRAYSIZE(szEntName) );
+				V_strncpy( szEntName, ppEntities[i]->GetEntityNameAsCStr(), std::size( szEntName ) );
 				char *pAmpersand = V_strrchr( szEntName, '&' );
 				if ( pAmpersand )
 					*pAmpersand = 0;

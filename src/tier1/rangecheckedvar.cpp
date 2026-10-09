@@ -1,10 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "rangecheckedvar.h"
+import std;
+import ks.tier1;
 
 bool g_bDoRangeChecks = true;
 
@@ -25,14 +23,10 @@ CDisableRangeChecks::~CDisableRangeChecks()
 {
 	if ( !ThreadInMainThread() )
 		return;
-	Assert( g_nDisables > 0 );
+	contract_assert( g_nDisables > 0 );
 	--g_nDisables;
 	if ( g_nDisables == 0 )
 	{
 		g_bDoRangeChecks = true;
 	}
 }
-
-
-
-

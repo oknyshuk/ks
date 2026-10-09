@@ -1,20 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_BASENPC_PHYSICSFLYER_H
-#define AI_BASENPC_PHYSICSFLYER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ai_basenpc.h"
 #include "ai_navigator.h"
+#include "vphysics_interface.h"
 
 //-----------------------------------------------------------------------------
 // The combot.
 //-----------------------------------------------------------------------------
-abstract_class CAI_BasePhysicsFlyingBot : public CAI_BaseNPC, public IMotionEvent
+class CAI_BasePhysicsFlyingBot : public CAI_BaseNPC, public IMotionEvent
 {
 	DECLARE_CLASS( CAI_BasePhysicsFlyingBot, CAI_BaseNPC );
 public:
@@ -69,17 +64,17 @@ protected:
 	{
 		if( m_vNoiseMod.x )
 		{
-			m_vCurrentVelocity.x += noiseScale*sin(m_vNoiseMod.x * gpGlobals->curtime + m_vNoiseMod.x);
+			m_vCurrentVelocity.x += noiseScale*std::sin(m_vNoiseMod.x * gpGlobals->curtime + m_vNoiseMod.x);
 		}
 
 		if( m_vNoiseMod.y )
 		{
-			m_vCurrentVelocity.y += noiseScale*cos(m_vNoiseMod.y * gpGlobals->curtime + m_vNoiseMod.y);
+			m_vCurrentVelocity.y += noiseScale*std::cos(m_vNoiseMod.y * gpGlobals->curtime + m_vNoiseMod.y);
 		}
 
 		if( m_vNoiseMod.z )
 		{
-			m_vCurrentVelocity.z -= noiseScale*cos(m_vNoiseMod.z * gpGlobals->curtime + m_vNoiseMod.z);
+			m_vCurrentVelocity.z -= noiseScale*std::cos(m_vNoiseMod.z * gpGlobals->curtime + m_vNoiseMod.z);
 		}
 	}
 
@@ -142,5 +137,3 @@ protected:
 	Vector			m_vLastPatrolDir;
 	IPhysicsMotionController	*m_pMotionController;
 };
-
-#endif // AI_BASENPC_PHYSICSFLYER_H

@@ -1,12 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import std;
+import ks.math;
 
-#ifndef GAMECONTROLS_MISCUTILS_H
-#define GAMECONTROLS_MISCUTILS_H
-
-
-
-abstract_class IGameUIMiscUtils
+class IGameUIMiscUtils
 {
 public:
 	virtual bool PointTriangleHitTest( Vector2D tringleVert0, Vector2D tringleVert1, Vector2D tringleVert2, Vector2D point ) = 0;
@@ -21,8 +20,3 @@ enum SublayerTypes_t
 	SUBLAYER_FONT,
 	SUBLAYER_MAX,
 };
-
-
-
-
-#endif // GAMECONTROLS_MISCUTILS_H

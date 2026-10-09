@@ -1,21 +1,18 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ICLIENTSHADOWMGR_H
-#define ICLIENTSHADOWMGR_H
-
-
-#include <bitset>
+import std;
 #include "igamesystem.h"
 #include "icliententityinternal.h"
 #include "engine/ishadowmgr.h"
 #include "ivrenderview.h"
 #include "toolframework/itoolentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
 
 //-----------------------------------------------------------------------------
 // Forward decls
@@ -37,7 +34,7 @@ enum ShadowReceiver_t
 //-----------------------------------------------------------------------------
 // The class responsible for dealing with shadows on the client side
 //-----------------------------------------------------------------------------
-abstract_class IClientShadowMgr : public IGameSystemPerFrame
+class IClientShadowMgr : public IGameSystemPerFrame
 {
 public:
 	// Create, destroy shadows
@@ -128,5 +125,3 @@ public:
 // Singleton
 //-----------------------------------------------------------------------------
 extern IClientShadowMgr* g_pClientShadowMgr;
-
-#endif // ICLIENTSHADOWMGR_H

@@ -1,11 +1,6 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef FX_WATER_H
-#define FX_WATER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "particles_simple.h"
 #include "fx.h"
@@ -92,5 +87,3 @@ inline void FX_GetSplashLighting( Vector position, Vector *color, float *luminos
 		(*color) = ( (*color) * 0.25f ) + Vector( 0.75f, 0.75f, 0.75f );
 	}
 }
-
-#endif // FX_WATER_H

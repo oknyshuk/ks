@@ -1,4 +1,5 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "eye_refract_helper.h"
@@ -7,7 +8,7 @@
 
 DEFINE_FALLBACK_SHADER( EyeRefract, EyeRefract_dx9 )
 BEGIN_VS_SHADER( EyeRefract_dx9, "Help for Eyes" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( IRIS, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "iris texture" )
 		SHADER_PARAM( IRISFRAME, SHADER_PARAM_TYPE_INTEGER, "0", "frame for the iris texture" )
 		SHADER_PARAM( CORNEATEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "cornea texture" )

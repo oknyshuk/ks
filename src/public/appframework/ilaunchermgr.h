@@ -1,32 +1,23 @@
- //================ Copyright (c) 1996-2009 Valve Corporation. All Rights Reserved. =================
-//
-//	ilaunchermgr.h
-//
-//==================================================================================================
-#ifndef ILAUNCHERMGR_H
-#define ILAUNCHERMGR_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 // Purpose: The overlay doesn't properly work on OS X 64-bit because a bunch of 
 // Cocoa functions that we hook were never ported to 64-bit. Until that is fixed,
 // we basically have to work around this by making sure the cursor is visible 
 // and set to something that is reasonable for usage in the overlay. 
-#define WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND 1
 
-#include "tier0/threadtools.h"
-#include "appframework/iappsystem.h"
+import std;
+import ks.tier1;
+import ks.desktop;
 #include "inputsystem/iinputsystem.h"
 
-#include <SDL3/SDL_events.h>
 
 // if you rev this version also update materialsystem/cmaterialsystem.cpp CMaterialSystem::Connect as it defines the string directly
-    #define  SDLMGR_INTERFACE_VERSION "SDLMgrInterface002"
+inline constexpr const char *SDLMGR_INTERFACE_VERSION = "SDLMgrInterface002";
 
 
 class GLMDisplayDB;
-
-typedef struct SDL_Cursor SDL_Cursor;
 
 class ILauncherMgr : public IAppSystem
 {
@@ -43,10 +34,10 @@ public:
 	// Create the window.
 	virtual bool CreateGameWindow( const char *pTitle, bool bWindowed, int width, int height, bool bDesktopFriendlyFullscreen ) = 0;
 	
-	// Get the next N buffered SDL events. Returns how many were written.
-	// These are raw SDL events: nothing re-encodes or reinterprets input on the way
-	// through, CInputSystem translates them straight into Source input events.
-	virtual int GetEvents( SDL_Event *pEvents, int nMaxEventsToReturn ) = 0;
+	// Get the next N buffered window-system events. Returns how many were written.
+	// The events are the backend's own records, passed through untouched: only the
+	// input system, which shares that backend, looks inside them.
+	virtual int GetEvents( ks::desktop::event *pEvents, int nMaxEventsToReturn ) = 0;
 
 	// Map SDL window coordinates into engine screen space (the backbuffer).
 	virtual void WindowToEngineCoords( float wx, float wy, int &ex, int &ey ) = 0;
@@ -63,18 +54,12 @@ public:
 	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false ) = 0;
 
 	virtual void SetMouseVisible( bool bState ) = 0;
-	virtual void SetMouseCursor( SDL_Cursor *hCursor ) = 0;
+	virtual void SetMouseCursor( ks::desktop::cursor *hCursor ) = 0;
 	virtual void SetForbidMouseGrab( bool bForbidMouseGrab ) = 0;
 	virtual void OnFrameRendered() = 0;
 
-#if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 	virtual void ForceSystemCursorVisible() = 0;
 	virtual void UnforceSystemCursorVisible() = 0;
-#endif
 };
 
 extern ILauncherMgr *g_pLauncherMgr;
-
-
-#endif // ILAUNCHERMGR_H
-

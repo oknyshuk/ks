@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef EXPRESSIONSAMPLE_H
-#define EXPRESSIONSAMPLE_H
-
+import std;
 #include "interpolatortypes.h"
 
 namespace ks { class byte_reader; class byte_writer; class text_writer; }
@@ -133,6 +128,3 @@ private:
 	void	UpdateIntensityArea( ICurveDataAccessor *data );
 	std::vector< float > m_RampAccumulator;
 };
-
-
-#endif // EXPRESSIONSAMPLE_H

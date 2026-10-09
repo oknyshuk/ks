@@ -1,36 +1,23 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DATATABLE_COMMON_H
-#define DATATABLE_COMMON_H
-
-
-#include "basetypes.h"
-#include "tier0/dbg.h"
-#include "tier1/strtools.h"
-#include <stddef.h>
-
-#undef offsetof
-#define offsetof(s,m)	(size_t)&(((s *)0)->m)
+import std;
+import ks.tier1;
 
 // Max number of properties in a datatable and its children.
 inline constexpr int kMaxDatatables = 1024;   // must be a power of 2.
-#define MAX_DATATABLE_PROPS	4096
+inline constexpr auto MAX_DATATABLE_PROPS = 4096;
 
-#define MAX_ARRAY_ELEMENTS	2048		// a network array should have more that 1024 elements
+inline constexpr auto MAX_ARRAY_ELEMENTS = 2048; // a network array should have more that 1024 elements
 
 inline constexpr float kHighDefault = -121121.121121f;
 
-#define BITS_FULLRES	-1	// Use the full resolution of the type being encoded.
-#define BITS_WORLDCOORD	-2	// Encode as a world coordinate.
+inline constexpr auto BITS_FULLRES = -1; // Use the full resolution of the type being encoded.
+inline constexpr auto BITS_WORLDCOORD = -2; // Encode as a world coordinate.
 
-#define DT_MAX_STRING_BITS			9
-#define DT_MAX_STRING_BUFFERSIZE	(1<<DT_MAX_STRING_BITS)	// Maximum length of a string that can be sent.
+inline constexpr auto DT_MAX_STRING_BITS = 9;
+inline constexpr auto DT_MAX_STRING_BUFFERSIZE = (1<<DT_MAX_STRING_BITS); // Maximum length of a string that can be sent.
 
 #define STRINGBUFSIZE(className, varName)	sizeof( ((className*)0)->varName )
 
@@ -39,56 +26,56 @@ inline constexpr float kHighDefault = -121121.121121f;
 
 
 // SendProp::m_Flags.
-#define SPROP_UNSIGNED			(1<<0)	// Unsigned integer data.
+inline constexpr auto SPROP_UNSIGNED = (1<<0); // Unsigned integer data.
 
-#define SPROP_COORD				(1<<1)	// If this is set, the float/vector is treated like a world coordinate.
+inline constexpr auto SPROP_COORD = (1<<1); // If this is set, the float/vector is treated like a world coordinate.
 										// Note that the bit count is ignored in this case.
 
-#define SPROP_NOSCALE			(1<<2)	// For floating point, don't scale into range, just take value as is.
+inline constexpr auto SPROP_NOSCALE = (1<<2); // For floating point, don't scale into range, just take value as is.
 
-#define SPROP_ROUNDDOWN			(1<<3)	// For floating point, limit high value to range minus one bit unit
+inline constexpr auto SPROP_ROUNDDOWN = (1<<3); // For floating point, limit high value to range minus one bit unit
 
-#define SPROP_ROUNDUP			(1<<4)	// For floating point, limit low value to range minus one bit unit
+inline constexpr auto SPROP_ROUNDUP = (1<<4); // For floating point, limit low value to range minus one bit unit
 
-#define SPROP_NORMAL			(1<<5)	// If this is set, the vector is treated like a normal (only valid for vectors)
+inline constexpr auto SPROP_NORMAL = (1<<5); // If this is set, the vector is treated like a normal (only valid for vectors)
 							
-#define SPROP_EXCLUDE			(1<<6)	// This is an exclude prop (not excludED, but it points at another prop to be excluded).
+inline constexpr auto SPROP_EXCLUDE = (1<<6); // This is an exclude prop (not excludED, but it points at another prop to be excluded).
 
-#define SPROP_XYZE				(1<<7)	// Use XYZ/Exponent encoding for vectors.
+inline constexpr auto SPROP_XYZE = (1<<7); // Use XYZ/Exponent encoding for vectors.
 
-#define SPROP_INSIDEARRAY		(1<<8)	// This tells us that the property is inside an array, so it shouldn't be put into the
+inline constexpr auto SPROP_INSIDEARRAY = (1<<8); // This tells us that the property is inside an array, so it shouldn't be put into the
 										// flattened property list. Its array will point at it when it needs to.
 
-#define SPROP_PROXY_ALWAYS_YES	(1<<9)	// Set for datatable props using one of the default datatable proxies like
+inline constexpr auto SPROP_PROXY_ALWAYS_YES = (1<<9); // Set for datatable props using one of the default datatable proxies like
 										// SendProxy_DataTableToDataTable that always send the data to all clients.
 
-#define SPROP_IS_A_VECTOR_ELEM	(1<<10)	// Set automatically if SPROP_VECTORELEM is used.
+inline constexpr auto SPROP_IS_A_VECTOR_ELEM = (1<<10); // Set automatically if SPROP_VECTORELEM is used.
 
-#define SPROP_COLLAPSIBLE		(1<<11)	// Set automatically if it's a datatable with an offset of 0 that doesn't change the pointer
+inline constexpr auto SPROP_COLLAPSIBLE = (1<<11); // Set automatically if it's a datatable with an offset of 0 that doesn't change the pointer
 										// (ie: for all automatically-chained base classes).
 										// In this case, it can get rid of this SendPropDataTable altogether and spare the
 										// trouble of walking the hierarchy more than necessary.
 
-#define SPROP_COORD_MP					(1<<12) // Like SPROP_COORD, but special handling for multiplayer games
-#define SPROP_COORD_MP_LOWPRECISION 	(1<<13) // Like SPROP_COORD, but special handling for multiplayer games where the fractional component only gets a 3 bits instead of 5
-#define SPROP_COORD_MP_INTEGRAL			(1<<14) // SPROP_COORD_MP, but coordinates are rounded to integral boundaries
-#define SPROP_CELL_COORD				(1<<15) // Like SPROP_COORD, but special encoding for cell coordinates that can't be negative, bit count indicate maximum value
-#define SPROP_CELL_COORD_LOWPRECISION 	(1<<16) // Like SPROP_CELL_COORD, but special handling where the fractional component only gets a 3 bits instead of 5
-#define SPROP_CELL_COORD_INTEGRAL		(1<<17) // SPROP_CELL_COORD, but coordinates are rounded to integral boundaries
+inline constexpr auto SPROP_COORD_MP = (1<<12); // Like SPROP_COORD, but special handling for multiplayer games
+inline constexpr auto SPROP_COORD_MP_LOWPRECISION = (1<<13); // Like SPROP_COORD, but special handling for multiplayer games where the fractional component only gets a 3 bits instead of 5
+inline constexpr auto SPROP_COORD_MP_INTEGRAL = (1<<14); // SPROP_COORD_MP, but coordinates are rounded to integral boundaries
+inline constexpr auto SPROP_CELL_COORD = (1<<15); // Like SPROP_COORD, but special encoding for cell coordinates that can't be negative, bit count indicate maximum value
+inline constexpr auto SPROP_CELL_COORD_LOWPRECISION = (1<<16); // Like SPROP_CELL_COORD, but special handling where the fractional component only gets a 3 bits instead of 5
+inline constexpr auto SPROP_CELL_COORD_INTEGRAL = (1<<17); // SPROP_CELL_COORD, but coordinates are rounded to integral boundaries
 
-#define SPROP_CHANGES_OFTEN				(1<<18)	// this is an often changed field, moved to head of sendtable so it gets a small index
+inline constexpr auto SPROP_CHANGES_OFTEN = (1<<18); // this is an often changed field, moved to head of sendtable so it gets a small index
 
-#define SPROP_VARINT					(1<<19)	// use var int encoded (google protobuf style), note you want to include SPROP_UNSIGNED if needed, its more efficient
+inline constexpr auto SPROP_VARINT = (1<<19); // use var int encoded (google protobuf style), note you want to include SPROP_UNSIGNED if needed, its more efficient
 
-#define SPROP_NUMFLAGBITS_NETWORKED		20
+inline constexpr auto SPROP_NUMFLAGBITS_NETWORKED = 20;
 
 
 // This is server side only, it's used to mark properties whose SendProxy_* functions encode against gpGlobals->tickcount (the only ones that currently do this are
 //  m_flAnimTime and m_flSimulationTime.  MODs shouldn't need to mess with this probably
-#define SPROP_ENCODED_AGAINST_TICKCOUNT	(1<<20)
+inline constexpr auto SPROP_ENCODED_AGAINST_TICKCOUNT = (1<<20);
 
 // See SPROP_NUMFLAGBITS_NETWORKED for the ones which are networked
-#define SPROP_NUMFLAGBITS				21
+inline constexpr auto SPROP_NUMFLAGBITS = 21;
 
 // Used by the SendProp and RecvProp functions to disable debug checks on type sizes.
 inline constexpr int kSizeofIgnore = -1;
@@ -132,17 +119,17 @@ public:
 		switch ( m_Type )
 		{
 			case DPT_Int : 
-				Q_snprintf( text, sizeof(text), "%i", (int)m_Int );
+				V_snprintf( text, sizeof(text), "%i", (int)m_Int );
 				break;
 			case DPT_Float :
-				Q_snprintf( text, sizeof(text), "%.3f", m_Float );
+				V_snprintf( text, sizeof(text), "%.3f", m_Float );
 				break;
 			case DPT_Vector :
-				Q_snprintf( text, sizeof(text), "(%.3f,%.3f,%.3f)", 
+				V_snprintf( text, sizeof(text), "(%.3f,%.3f,%.3f)", 
 							m_Vector[0], m_Vector[1], m_Vector[2] );
 				break;
 			case DPT_VectorXY :
-				Q_snprintf( text, sizeof(text), "(%.3f,%.3f)", 
+				V_snprintf( text, sizeof(text), "(%.3f,%.3f)", 
 							m_Vector[0], m_Vector[1] );
 				break;
 			case DPT_String : 
@@ -152,16 +139,16 @@ public:
 					return "NULL";
 				break;
 			case DPT_Array :
-				Q_snprintf( text, sizeof(text), "Array" ); 
+				V_snprintf( text, sizeof(text), "Array" ); 
 				break;
 			case DPT_DataTable :
-				Q_snprintf( text, sizeof(text), "DataTable" ); 
+				V_snprintf( text, sizeof(text), "DataTable" ); 
 				break;
 			case DPT_Int64:
-				Q_snprintf( text, sizeof(text), "%lld", m_Int64 );
+				V_snprintf( text, sizeof(text), "%lld", m_Int64 );
 				break;
 			default :
-				Q_snprintf( text, sizeof(text), "DVariant type %i unknown", m_Type ); 
+				V_snprintf( text, sizeof(text), "DVariant type %i unknown", m_Type ); 
 				break;
 		}
 
@@ -192,6 +179,3 @@ constexpr int NumBitsForCount( int nMaxElements )
 	}
 	return nBits;
 }
-
-
-#endif // DATATABLE_COMMON_H

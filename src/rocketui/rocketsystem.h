@@ -1,15 +1,16 @@
-#ifndef ROCKETSYSTEM_H
-#define ROCKETSYSTEM_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
 
 #include <rocketui/rmlui.h>
 
-#include <SDL3/SDL.h>
+import ks.desktop;
 
 class RocketSystem : public Rml::SystemInterface {
 public:
   static RocketSystem m_Instance;
 
-  SDL_Cursor *m_pCursors[SDL_SYSTEM_CURSOR_COUNT];
+  ks::desktop::cursor *m_pCursors[ks::desktop::cursor_kind_count];
 
   // Get the number of seconds elapsed since the start of the application
   double GetElapsedTime() override;
@@ -31,5 +32,3 @@ public:
   // Get clipboard text
   void GetClipboardText(Rml::String &text) override;
 };
-
-#endif // ROCKETSYSTEM_H

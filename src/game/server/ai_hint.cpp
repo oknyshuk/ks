@@ -1,13 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Hint node utilities and functions
-//
-// $NoKeywords: $
-//=============================================================================//
 
 // @TODO (toml 03-04-03): there is far too much duplicate code in here
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "ai_hint.h"
@@ -17,8 +42,6 @@
 #include "ai_networkmanager.h"
 #include "ndebugoverlay.h"
 #include "animation.h"
-#include "tier1/strtools.h"
-#include "tier1/map_ops.h"
 #include "mapentities_shared.h"
 
 #define REPORTFAILURE(text) if ( hintCriteria.HasFlag( bits_HINT_NODE_REPORT_FAILURES ) ) \
@@ -299,7 +322,7 @@ CAI_Hint *CAI_HintManager::GetLastFoundHint()
 
 void CAI_HintManager::ResetFoundHints()
 {
-	Q_memset( gm_pLastFoundHints, 0, sizeof( gm_pLastFoundHints ) );
+	V_memset( gm_pLastFoundHints, 0, sizeof( gm_pLastFoundHints ) );
 	CAI_HintManager::gm_nFoundHintIndex = 0;
 }
 
@@ -330,7 +353,7 @@ int CAI_HintManager::FindAllHints( CAI_BaseNPC *pNPC, const Vector &position, co
 	for ( int i = 0; i < c; ++i )
 	{
 		pTestHint = CAI_HintManager::gm_AllHints[ i ];
-		Assert( pTestHint );
+		contract_assert( pTestHint );
 		if ( pTestHint->HintMatchesCriteria( pNPC, hintCriteria, position, nullptr ) )
 			pResult->push_back( pTestHint );
 	}
@@ -366,15 +389,6 @@ CAI_Hint *CAI_HintManager::FindHintRandom( CAI_BaseNPC *pNPC, const Vector &posi
 }
 
 // #define HINT_PROFILING 1
-#if defined( HINT_PROFILING )
-static void AppendTimer( int idx, char *buf, size_t bufsize, CFastTimer& timer )
-{
-	char s[ 32 ];
-	Q_snprintf( s, sizeof( s ), "%d %6.3f ms", idx, timer.GetDuration().GetMillisecondsF() );
-
-	Q_strncat( buf, s, bufsize );
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -383,10 +397,6 @@ static void AppendTimer( int idx, char *buf, size_t bufsize, CFastTimer& timer )
 //-----------------------------------------------------------------------------
 CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria )
 {
-#if defined( HINT_PROFILING )
-	CFastTimer timer;
-	timer.Start();
-#endif
 	bool singleType = hintCriteria.MatchesSingleHintType();
 	bool lookingForNearest = hintCriteria.HasFlag( bits_HINT_NODE_NEAREST );
 	bool bIgnoreHintType = true;
@@ -445,13 +455,10 @@ CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const Vector &position, 
 			pTestHint = CAI_HintManager::GetFoundHint( i );
 			if ( pTestHint )
 			{
-				Assert( dynamic_cast<CAI_Hint *>(pTestHint) != nullptr );
+				contract_assert( dynamic_cast<CAI_Hint *>(pTestHint) != nullptr );
 				++visited;
 				if ( pTestHint->HintMatchesCriteria( pNPC, hintCriteria, position, &flBestDistance ) )
 				{
-#if defined( HINT_PROFILING )
-					Msg( "fast result visited %d\n", visited );
-#endif
 					return pTestHint;
 				}
 			}
@@ -475,11 +482,11 @@ CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const Vector &position, 
 		for ( i = 0 ; i < count; ++i )
 		{
 			pTestHint = (*list)[ i ];
-			Assert( pTestHint );
+			contract_assert( pTestHint );
 
 			++visited;
 
-			Assert( dynamic_cast<CAI_Hint *>(pTestHint) != nullptr );
+			contract_assert( dynamic_cast<CAI_Hint *>(pTestHint) != nullptr );
 			if ( pTestHint->HintMatchesCriteria( pNPC, hintCriteria, position, &flBestDistance, false, bIgnoreHintType ) )
 			{
 				// If we were searching for the nearest, just note that this is now the nearest node
@@ -491,9 +498,6 @@ CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const Vector &position, 
 				{
 					// If we're not looking for the nearest, we're done
 					CAI_HintManager::AddFoundHint( pTestHint );
-#if defined( HINT_PROFILING )
-					Msg( "visited %d\n", visited );
-#endif
 					return pTestHint;
 				}
 			}
@@ -505,20 +509,6 @@ CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const Vector &position, 
 		CAI_HintManager::AddFoundHint( pBestHint );
 	}
 	
-#if defined( HINT_PROFILING )
-	timer.End();
-
-	Msg( "visited %d\n", visited );
-	if ( !pBestHint )
-	{
-		Msg( "%i search failed for [%d] at pos %.3f %.3f %.3f [%.4f msec ~ %.4f msec per node]\n",
-			gpGlobals->tickcount,
-			pNPC ? pNPC->entindex() : -1,
-			position.x, position.y, position.z,
-			timer.GetDuration().GetMillisecondsF(),
-			timer.GetDuration().GetMillisecondsF()/std::max( (float)visited, 1.0f ) );
-	}
-#endif
 	return pBestHint;
 }
 
@@ -538,7 +528,7 @@ CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const Vector &position, 
 //-----------------------------------------------------------------------------
 CAI_Hint* CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, Hint_e nHintType, int nFlags, float flMaxDist, const Vector *pMaxDistFrom )
 {
-	assert( pNPC != nullptr );
+	contract_assert( pNPC != nullptr );
 	if ( pNPC == nullptr )
 		return nullptr;
 
@@ -578,7 +568,7 @@ CAI_Hint *CAI_HintManager::FindHint( const Vector &position, const CHintCriteria
 //-----------------------------------------------------------------------------
 CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const CHintCriteria &hintCriteria )
 {
-	assert( pNPC != nullptr );
+	contract_assert( pNPC != nullptr );
 	if ( pNPC == nullptr )
 		return nullptr;
 
@@ -610,7 +600,7 @@ CAI_Hint* CAI_HintManager::CreateHint( HintNodeData *pNodeData, const char *pMap
 
 		pHint->SetName( pNodeData->strEntityName );
 		pHint->SetAbsOrigin( pNodeData->vecPosition );
-		memcpy( &(pHint->m_NodeData), pNodeData, sizeof(HintNodeData) );
+		std::memcpy( &(pHint->m_NodeData), pNodeData, sizeof(HintNodeData) );
 		DispatchSpawn( pHint );
 
 		return pHint;
@@ -676,34 +666,34 @@ void CAI_HintManager::RemoveHint( CAI_Hint *pHintToRemove )
 //-----------------------------------------------------------------------------
 int CAI_HintManager::GetFlags( const char *token )
 {
-	int len = strlen( token );
+	int len = std::strlen( token );
 	if ( len <= 0 )
 	{
 		return bits_HINT_NODE_NONE;
 	}
 
-	char *lowercase = (char *)_alloca( len + 1 );
-	Q_strncpy( lowercase, token, len+1 );
+	char *lowercase = (char *)__builtin_alloca( len + 1 );
+	V_strncpy( lowercase, token, len+1 );
 	strlwr( lowercase );
 
-	if ( strstr( "none", lowercase ) )
+	if ( std::strstr( "none", lowercase ) )
 	{
 		return bits_HINT_NODE_NONE;
 	}
 
 	int bits = 0;
 
-	if ( strstr( "visible", lowercase ) )
+	if ( std::strstr( "visible", lowercase ) )
 	{
 		bits |= bits_HINT_NODE_VISIBLE;
 	}
 
-	if ( strstr( "nearest", lowercase ) )
+	if ( std::strstr( "nearest", lowercase ) )
 	{
 		bits |= bits_HINT_NODE_NEAREST;
 	}
 
-	if ( strstr( "random", lowercase ) )
+	if ( std::strstr( "random", lowercase ) )
 	{
 		bits |= bits_HINT_NODE_RANDOM;
 	}
@@ -785,7 +775,7 @@ void CAI_HintManager::ValidateHints()
 	int nTyped = 0;
 	for ( CAI_Hint *pAllHint : gm_AllHints )
 	{
-		Assert( dynamic_cast<CAI_Hint *>(pAllHint) != nullptr );
+		contract_assert( dynamic_cast<CAI_Hint *>(pAllHint) != nullptr );
 	}
 
 	for ( auto &[type, hints] : gm_TypedHints )
@@ -793,11 +783,11 @@ void CAI_HintManager::ValidateHints()
 		for ( CAI_Hint *pHint : hints )
 		{
 			nTyped++;
-			Assert( dynamic_cast<CAI_Hint *>(pHint) != nullptr );
+			contract_assert( dynamic_cast<CAI_Hint *>(pHint) != nullptr );
 		}
 	}
 
-	Assert( std::ssize( gm_AllHints ) == nTyped );
+	contract_assert( std::ssize( gm_AllHints ) == nTyped );
 #endif
 }
 
@@ -848,7 +838,7 @@ void CAI_HintManager::DrawHintOverlays(float flDrawDuration)
 			if (pOwner)
 			{
 				char owner[255];
-				Q_strncpy(owner,pOwner->GetDebugName(),sizeof(owner));
+				V_strncpy(owner,pOwner->GetDebugName(),sizeof(owner));
 				Vector loc = vHintPos;
 				loc.x+=6;
 				loc.y+=6;
@@ -867,7 +857,7 @@ void CAI_HintManager::DrawHintOverlays(float flDrawDuration)
 		NDebugOverlay::Box(vHintPos, Vector(-3,-3,-3), Vector(3,3,3), r,g,b,0,flDrawDuration);
 
 		// Draw line in facing direction
-		Vector offsetDir	= 12.0 * Vector(cos(DEG2RAD(pHint->Yaw())),sin(DEG2RAD(pHint->Yaw())),0);
+		Vector offsetDir	= 12.0 * Vector(std::cos(DEG2RAD(pHint->Yaw())),std::sin(DEG2RAD(pHint->Yaw())),0);
 		NDebugOverlay::Line(vHintPos, vHintPos+offsetDir, r,g,b,false,flDrawDuration);
 	}
 }
@@ -910,7 +900,7 @@ void CAI_Hint::Spawn( void )
 	{
 		// As a micro-optimization, leave the FOV at 360 to save us
 		// a dot product later when checking node FOV.
-		m_nodeFOV = cos( DEG2RAD(m_nodeFOV/2) );
+		m_nodeFOV = std::cos( DEG2RAD(m_nodeFOV/2) );
 	}
 
 	SetSolid( SOLID_NONE );
@@ -1138,7 +1128,7 @@ bool CAI_Hint::HintMatchesCriteria( CAI_BaseNPC *pNPC, const CHintCriteria &hint
 		AssertIsValidString( hintCriteria.GetGroup() );
 		if ( GetGroup() == NULL_STRING || GetGroup() != hintCriteria.GetGroup() )
 		{
-			Assert(GetGroup() == NULL_STRING || strcmp( STRING(GetGroup()), STRING(hintCriteria.GetGroup())) != 0 );
+			contract_assert( GetGroup() == NULL_STRING || std::strcmp( STRING(GetGroup()), STRING(hintCriteria.GetGroup())) != 0 );
 			REPORTFAILURE( "Doesn't match NPC hint group." );
 			return false;
 		}
@@ -1189,7 +1179,7 @@ bool CAI_Hint::HintMatchesCriteria( CAI_BaseNPC *pNPC, const CHintCriteria &hint
 	{
 		if ( pNPC == nullptr )
 		{
-			AssertMsg(0,"Hint node attempted to verify NPC in node FOV without NPC!\n");
+			contract_assert( false && "Hint node attempted to verify NPC in node FOV without NPC!\n" );
 		}
 		else
 		{
@@ -1205,7 +1195,7 @@ bool CAI_Hint::HintMatchesCriteria( CAI_BaseNPC *pNPC, const CHintCriteria &hint
 	{
 		if ( pNPC == nullptr )
 		{
-			AssertMsg( 0, "Hint node attempted to find node in aimcone without specifying NPC!\n" );
+			contract_assert( false && "Hint node attempted to find node in aimcone without specifying NPC!\n" );
 		}
 		else
 		{
@@ -1221,7 +1211,7 @@ bool CAI_Hint::HintMatchesCriteria( CAI_BaseNPC *pNPC, const CHintCriteria &hint
 	{
 		if ( pNPC == nullptr )
 		{
-			AssertMsg( 0, "Hint node attempted to find node in viewcone without specifying NPC!\n" );
+			contract_assert( false && "Hint node attempted to find node in viewcone without specifying NPC!\n" );
 		}
 		else
 		{
@@ -1237,7 +1227,7 @@ bool CAI_Hint::HintMatchesCriteria( CAI_BaseNPC *pNPC, const CHintCriteria &hint
 	{
 		if ( pNPC == nullptr )
 		{
-			AssertMsg( 0, "Hint node attempted to find node not close to enemy without specifying NPC!\n" );
+			contract_assert( false && "Hint node attempted to find node not close to enemy without specifying NPC!\n" );
 		}
 		else
 		{
@@ -1255,14 +1245,13 @@ bool CAI_Hint::HintMatchesCriteria( CAI_BaseNPC *pNPC, const CHintCriteria &hint
 	}
 
 	{
-		AI_PROFILE_SCOPE( HINT_FVisible );
 		// See if we're requesting a visible node
 		if ( hintCriteria.HasFlag( bits_HINT_NODE_VISIBLE ) )
 		{
 			if ( pNPC == nullptr )
 			{
 				//NOTENOTE: If you're hitting this, you've asked for a visible node without specifing an NPC!
-				AssertMsg( 0, "Hint node attempted to find visible node without specifying NPC!\n" );
+				contract_assert( false && "Hint node attempted to find visible node without specifying NPC!\n" );
 			}
 			else
 			{
@@ -1298,7 +1287,7 @@ bool CAI_Hint::HintMatchesCriteria( CAI_BaseNPC *pNPC, const CHintCriteria &hint
 		if ( pNPC == nullptr )
 		{
 			//NOTENOTE: If you're hitting this, you've asked for a clear node without specifing an NPC!
-			AssertMsg( 0, "Hint node attempted to find clear node without specifying NPC!\n" );
+			contract_assert( false && "Hint node attempted to find clear node without specifying NPC!\n" );
 		}
 		else
 		{
@@ -1319,7 +1308,7 @@ bool CAI_Hint::HintMatchesCriteria( CAI_BaseNPC *pNPC, const CHintCriteria &hint
 	// See if this is our next, closest node
 	if ( hintCriteria.HasFlag( bits_HINT_NODE_NEAREST ) )
 	{
-		Assert( flNearestDistance );
+		contract_assert( flNearestDistance );
 
 		// Calculate our distance
 		float distance = (GetAbsOrigin() - position).Length();
@@ -1429,16 +1418,16 @@ int CAI_Hint::DrawDebugTextOverlays(void)
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
 		char tempstr[512];
-		Q_snprintf(tempstr,sizeof(tempstr),"%s (%i)", GetHintTypeDescription( HintType() ), HintType());
+		V_snprintf(tempstr,sizeof(tempstr),"%s (%i)", GetHintTypeDescription( HintType() ), HintType());
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
-		Q_snprintf(tempstr,sizeof(tempstr),"delay %f", std::max( 0.0f, m_flNextUseTime - gpGlobals->curtime ) ) ;
+		V_snprintf(tempstr,sizeof(tempstr),"delay %f", std::max( 0.0f, m_flNextUseTime - gpGlobals->curtime ) ) ;
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		if ( m_NodeData.iDisabled )
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"DISABLED" );
+			V_snprintf(tempstr,sizeof(tempstr),"DISABLED" );
 			EntityText(text_offset,tempstr,0);
 			text_offset++;
 		}
@@ -1543,7 +1532,9 @@ void CAI_Hint::NPCStoppedUsing( CAI_BaseNPC *pNPC )
 }
 
 
-CON_COMMAND(ai_dump_hints, "")
+static void ai_dump_hints( const CCommand &args );
+static ConCommand ai_dump_hints_command( "ai_dump_hints", ai_dump_hints, "" );
+static void ai_dump_hints( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1635,7 +1626,7 @@ hinttypedescs_t g_pszHintDescriptions[] =
 //-----------------------------------------------------------------------------
 const char *GetHintTypeDescription( Hint_e iHintType )
 {
-	for ( int i = 0; i < ARRAYSIZE(g_pszHintDescriptions); i++ )
+	for ( int i = 0; i < std::size( g_pszHintDescriptions ); i++ )
 	{
 		if ( g_pszHintDescriptions[i].iType == iHintType )
 			return g_pszHintDescriptions[i].pszDesc;
@@ -1665,7 +1656,7 @@ void CC_ai_drop_hint( const CCommand &args )
 	{
 		Msg("Invalid hint type specified. Format: ai_drop_hint <hint type>\nValid hint types:\n");
 
-		for ( int i = 0; i < ARRAYSIZE(g_pszHintDescriptions); i++ )
+		for ( int i = 0; i < std::size( g_pszHintDescriptions ); i++ )
 		{
 			Msg("%d : %s\n", g_pszHintDescriptions[i].iType, g_pszHintDescriptions[i].pszDesc );
 		}
@@ -1675,7 +1666,7 @@ void CC_ai_drop_hint( const CCommand &args )
 	HintNodeData nodeData;
 	nodeData.strEntityName = MAKE_STRING("ai_drop_hint");
 	nodeData.vecPosition = pPlayer->EyePosition();
-	nodeData.nHintType = atoi( args[1] );
+	nodeData.nHintType = std::atoi( args[1] );
 	nodeData.nNodeID = NO_NODE;
 	nodeData.strGroup = NULL_STRING;
 	nodeData.iDisabled = false;

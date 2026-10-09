@@ -1,12 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
-#include <string.h>
-#include <stdio.h>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
 #include "voice_status.h"
 #include "radio_status.h"
 #include "c_playerresource.h"
@@ -15,12 +20,10 @@
 #include "materialsystem/imesh.h"
 #include "view.h"
 #include "materialsystem/imaterial.h"
-#include "tier0/dbg.h"
 #include "cdll_int.h"
 #include "c_cs_player.h"
 #include "menu.h" // for CHudMenu defs
 #include "cs_gamerules.h"
-
 
 // ---------------------------------------------------------------------- //
 // The radio feedback manager for the client.
@@ -73,7 +76,9 @@ static void radio3_f( const CCommand &args )
 	OpenRadioMenu( 3 );
 }
 
-CON_COMMAND_F( menuselect, "menuselect", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void menuselect( const CCommand &args );
+static ConCommand menuselect_command( "menuselect", menuselect, "menuselect", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void menuselect( const CCommand &args )
 {
 	if ( args.ArgC() < 2 )
 		return;
@@ -205,8 +210,8 @@ CRadioStatus* RadioManager()
 CRadioStatus::CRadioStatus()
 {
 	m_pHeadLabelMaterial = nullptr;
-	Q_memset(m_radioUntil, 0, sizeof(m_radioUntil));
-	Q_memset(m_voiceUntil, 0, sizeof(m_voiceUntil));
+	V_memset(m_radioUntil, 0, sizeof(m_radioUntil));
+	V_memset(m_voiceUntil, 0, sizeof(m_voiceUntil));
 }
 
 bool CRadioStatus::Init()
@@ -235,15 +240,15 @@ void CRadioStatus::Shutdown()
 void CRadioStatus::LevelInitPostEntity()
 {
 	ExpireBotVoice( true );
-	Q_memset(m_radioUntil, 0, sizeof(m_radioUntil));
-	Q_memset(m_voiceUntil, 0, sizeof(m_voiceUntil));
+	V_memset(m_radioUntil, 0, sizeof(m_radioUntil));
+	V_memset(m_voiceUntil, 0, sizeof(m_voiceUntil));
 }
 
 void CRadioStatus::LevelShutdownPreEntity()
 {
 	ExpireBotVoice( true );
-	Q_memset(m_radioUntil, 0, sizeof(m_radioUntil));
-	Q_memset(m_voiceUntil, 0, sizeof(m_voiceUntil));
+	V_memset(m_radioUntil, 0, sizeof(m_radioUntil));
+	V_memset(m_voiceUntil, 0, sizeof(m_voiceUntil));
 }
 
 static float s_flHeadIconSize = 7;
@@ -417,4 +422,3 @@ void CRadioStatus::ExpireBotVoice( bool force )
 		}
 	}
 }
-

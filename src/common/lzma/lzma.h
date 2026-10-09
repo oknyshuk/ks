@@ -1,3 +1,4 @@
+#pragma once
 //========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
 //
 //	Purpose: LZMA Glue. Designed for Tool time Encoding/Decoding.
@@ -24,12 +25,10 @@
 //
 //====================================================================================//
 
-#ifndef LZMA_H
-#define LZMA_H
 
 
 // power of two, 256k
-#define LZMA_DEFAULT_DICTIONARY 18
+inline constexpr auto LZMA_DEFAULT_DICTIONARY = 18;
 
 //-----------------------------------------------------------------------------
 //	These routines are designed for TOOL TIME encoding/decoding on the PC!
@@ -48,7 +47,7 @@ unsigned int	*pOutputSize,
 unsigned int	dictionarySize = LZMA_DEFAULT_DICTIONARY );
 
 //-----------------------------------------------------------------------------
-// Decoding glue. Returns TRUE if succesful.
+// Decoding glue. Returns true if succesful.
 //-----------------------------------------------------------------------------
 bool LZMA_Uncompress( 
 unsigned char	*pInput, 
@@ -56,7 +55,7 @@ unsigned char	**ppOutput,
 unsigned int	*pOutputSize );
 
 //-----------------------------------------------------------------------------
-// Decoding helper, returns TRUE if buffer is LZMA compressed.
+// Decoding helper, returns true if buffer is LZMA compressed.
 //-----------------------------------------------------------------------------
 bool LZMA_IsCompressed( unsigned char *pInput );
 
@@ -65,4 +64,3 @@ bool LZMA_IsCompressed( unsigned char *pInput );
 //-----------------------------------------------------------------------------
 unsigned int LZMA_GetActualSize( unsigned char *pInput );
 
-#endif

@@ -1,13 +1,25 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
 
 
-#include "audio_pch.h"
-#include "snd_mp3_source.h"
+
+import ks.tier1;
+#include "sound.h"
+#include "soundservice.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_mix_buf.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_common.h"
+#include "snd_dev_xaudio.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+
+#include "audio/private/posix_stubs.h"
 #include "vaudio/ivaudio.h"
 
 extern IVAudio *vaudio;
@@ -166,7 +178,7 @@ int CAudioMixerWaveMP3::StreamRequestData( void *pBuffer, int bytesRequested, in
 		// if the source is buffering it, copy it to the MP3 decomp buffer
 		if ( pData != pOutputBuffer )
 		{
-			memcpy( pOutputBuffer, pData, bytesRead );
+			std::memcpy( pOutputBuffer, pData, bytesRead );
 		}
 		totalBytesRead += bytesRead;
 		bytesRequested -= bytesRead;

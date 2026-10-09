@@ -1,15 +1,10 @@
-//====== Copyright 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
+import ks.math;
 #include "dmxloader/dmxelement.h"
 #include "dmxloader/dmxattribute.h"
-#include "mathlib/ssemath.h"
-#include "tier1/serialization.h"
-#include <algorithm>
-
+import std;
 
 //-----------------------------------------------------------------------------
 // globals
@@ -109,7 +104,7 @@ void CDmxElement::Resort( )	const
 				// dropped but not freed: whoever added it may still hold the pointer
 				(void)( *pAttributes )[i].release();
 				pAttributes->erase( pAttributes->begin() + i );
-				Assert( 0 );
+				contract_assert( 0 );
 			}
 		}
 	}
@@ -131,7 +126,7 @@ void CDmxElement::LockForChanges( bool bLock )
 		{
 			Resort();
 		}
-		Assert( m_nLockCount >= 0 );
+		contract_assert( m_nLockCount >= 0 );
 	}
 }
 
@@ -187,7 +182,7 @@ void CDmxElement::RenameAttribute( const char *pAttributeName, const char *pNewN
 	CDmxElementModifyScope modify( this );
 
 	// No change...
-	if ( !Q_stricmp( pAttributeName, pNewName ) )
+	if ( !V_stricmp( pAttributeName, pNewName ) )
 		return;
 
 	int idx = FindAttribute( pAttributeName );
@@ -352,13 +347,13 @@ void CDmxElement::UnpackBitfield( T *pDest, const DmxElementUnpackStructure_t *p
 	if ( bIsSigned )
 	{
 		// signed types need to be larger than 1 in size or else you get sign extension problems
-		Assert( pUnpack->m_nSize > 1 );   
+		contract_assert( pUnpack->m_nSize > 1 );   
 	}
 
 	// Right now the max size bitfield we handle is 32.
-	Assert( pUnpack->m_nSize <= 32 );
-	Assert( pUnpack->m_nSize <= 8*sizeof(T) );
-	Assert( pUnpack->m_nBitOffset + pUnpack->m_nSize <= 8*sizeof(T) );
+	contract_assert( pUnpack->m_nSize <= 32 );
+	contract_assert( pUnpack->m_nSize <= 8*sizeof(T) );
+	contract_assert( pUnpack->m_nBitOffset + pUnpack->m_nSize <= 8*sizeof(T) );
 
 	// Create a mask that covers the bitfield.
 	T mask;
@@ -428,14 +423,14 @@ void CDmxElement::UnpackIntoStructure( void *pData, const DmxElementUnpackStruct
 			// NOTE: This does not work with string/bitfield array data at the moment
 			if ( ( pUnpack->m_AttributeType == AT_STRING_ARRAY ) || ( pUnpack->m_nBitOffset != NO_BIT_OFFSET ) )
 			{
-				AssertMsg( 0, ( "CDmxElement::UnpackIntoStructure: String and bitfield array attribute types not currently supported!\n" ) );
+				contract_assert( 0 );
 				continue;
 			}
 		}
 
 		if ( ( pUnpack->m_AttributeType == AT_VOID ) || ( pUnpack->m_AttributeType == AT_VOID_ARRAY ) )
 		{
-			AssertMsg( 0, ( "CDmxElement::UnpackIntoStructure: Binary blob attribute types not currently supported!\n" ) );
+			contract_assert( 0 );
 			continue;
 		}
 
@@ -470,7 +465,7 @@ void CDmxElement::UnpackIntoStructure( void *pData, const DmxElementUnpackStruct
 			else  // the string is a preallocated char array.
 			{
 				// Strings get special treatment: they are stored as in-line arrays of chars
-				Q_strncpy( pDest, pAttribute->GetValueString(), pUnpack->m_nSize );
+				V_strncpy( pDest, pAttribute->GetValueString(), pUnpack->m_nSize );
 			}
 			continue;
 		}
@@ -488,15 +483,15 @@ void CDmxElement::UnpackIntoStructure( void *pData, const DmxElementUnpackStruct
 				const std::vector< float > &floatVector = pAttribute->GetArray< float >();
 				for ( int i = 0; i < pUnpack->m_nArrayLength; i++ )
 				{
-					for ( int j = 0; j < 4; j++ ) memcpy( pfDest++, &floatVector[ i ], sizeof( float ) );
+					for ( int j = 0; j < 4; j++ ) std::memcpy( pfDest++, &floatVector[ i ], sizeof( float ) );
 				}
 			}
 			else
 			{
-				memcpy( pDest + 0 * sizeof( float ), pAttribute->m_pData, sizeof( float ) );
-				memcpy( pDest + 1 * sizeof( float ), pAttribute->m_pData, sizeof( float ) );
-				memcpy( pDest + 2 * sizeof( float ), pAttribute->m_pData, sizeof( float ) );
-				memcpy( pDest + 3 * sizeof( float ), pAttribute->m_pData, sizeof( float ) );
+				std::memcpy( pDest + 0 * sizeof( float ), pAttribute->m_pData, sizeof( float ) );
+				std::memcpy( pDest + 1 * sizeof( float ), pAttribute->m_pData, sizeof( float ) );
+				std::memcpy( pDest + 2 * sizeof( float ), pAttribute->m_pData, sizeof( float ) );
+				std::memcpy( pDest + 3 * sizeof( float ), pAttribute->m_pData, sizeof( float ) );
 			}
 		}
 		else
@@ -506,14 +501,12 @@ void CDmxElement::UnpackIntoStructure( void *pData, const DmxElementUnpackStruct
 			{
 				if ( pUnpack->m_nBitOffset == NO_BIT_OFFSET ) // This test is not for bitfields
 				{
-					AssertMsg( nDataTypeSize <= CDmxAttribute::AttributeDataSize( basicType ), 
-						( "CDmxElement::UnpackIntoStructure: Incorrect size to unpack data into in attribute \"%s\"!\n", pUnpack->m_pAttributeName ) );
+					contract_assert( nDataTypeSize <= CDmxAttribute::AttributeDataSize( basicType ) );
 				}
 			}
 			else
 			{
-				AssertMsg( nDataTypeSize == CDmxAttribute::AttributeDataSize( basicType ), 
-					( "CDmxElement::UnpackIntoStructure: Incorrect size to unpack data into in attribute \"%s\"!\n", pUnpack->m_pAttributeName ) );
+				contract_assert( nDataTypeSize == CDmxAttribute::AttributeDataSize( basicType ) );
 			}
 
 			if ( IsArrayType( pUnpack->m_AttributeType ) )
@@ -523,7 +516,7 @@ void CDmxElement::UnpackIntoStructure( void *pData, const DmxElementUnpackStruct
 			}
 			else if ( pUnpack->m_nBitOffset == NO_BIT_OFFSET )
 			{
-				memcpy( pDest, pAttribute->m_pData, pUnpack->m_nSize );
+				std::memcpy( pDest, pAttribute->m_pData, pUnpack->m_nSize );
 			}
 			else
 			{
@@ -555,7 +548,7 @@ void CDmxElement::UnpackIntoStructure( void *pData, const DmxElementUnpackStruct
 						UnpackBitfield( (unsigned int *)pDest, pUnpack, pAttribute );
 						break;
 					default:
-						Assert(0);
+						contract_assert( 0 );
 						break;
 					};
 				}
@@ -590,20 +583,20 @@ void CDmxElement::AddAttributesFromStructure( const void *pData, const DmxElemen
 			// NOTE: This does not work with string/bitfield array data at the moment
 			if ( ( pUnpack->m_AttributeType == AT_STRING_ARRAY ) || ( pUnpack->m_nBitOffset != NO_BIT_OFFSET ) )
 			{
-				AssertMsg( 0, ( "CDmxElement::AddAttributesFromStructure: String and bitfield array attribute types not currently supported!\n" ) );
+				contract_assert( 0 );
 				continue;
 			}
 		}
 
 		if ( ( pUnpack->m_AttributeType == AT_VOID ) || ( pUnpack->m_AttributeType == AT_VOID_ARRAY ) )
 		{
-			AssertMsg( 0, ( "CDmxElement::AddAttributesFromStructure: Binary blob attribute types not currently supported!\n" ) );
+			contract_assert( 0 );
 			continue;
 		}
 
 		if ( HasAttribute( pUnpack->m_pAttributeName ) )
 		{
-			AssertMsg( 0, ( "CDmxElement::AddAttributesFromStructure: Attribute %s already exists!\n", pUnpack->m_pAttributeName ) );
+			contract_assert( 0 );
 			continue;
 		}
 
@@ -638,14 +631,12 @@ void CDmxElement::AddAttributesFromStructure( const void *pData, const DmxElemen
 				{
 					if ( pUnpack->m_nBitOffset == NO_BIT_OFFSET ) // This test is not for bitfields.
 					{
-						AssertMsg( nDataTypeSize <= CDmxAttribute::AttributeDataSize( basicType ), 
-							( "CDmxElement::UnpackIntoStructure: Incorrect size to unpack data into %s attribute \"%s\"!\n", CDmxAttribute::s_pAttributeTypeName[ pUnpack->m_AttributeType ], pUnpack->m_pAttributeName ) );
+						contract_assert( nDataTypeSize <= CDmxAttribute::AttributeDataSize( basicType ) );
 					}
 				}
 				else
 				{
-					AssertMsg( nDataTypeSize == CDmxAttribute::AttributeDataSize( basicType ), 
-							( "CDmxElement::UnpackIntoStructure: Incorrect size to unpack data into %s attribute \"%s\"!\n", CDmxAttribute::s_pAttributeTypeName[ pUnpack->m_AttributeType ], pUnpack->m_pAttributeName ) );
+					contract_assert( nDataTypeSize == CDmxAttribute::AttributeDataSize( basicType ) );
 				}
 
 				if ( IsArrayType( pUnpack->m_AttributeType ) )
@@ -662,7 +653,7 @@ void CDmxElement::AddAttributesFromStructure( const void *pData, const DmxElemen
 				{
 					
 					// Right now the max size bitfield we handle is 32.
-					Assert( pUnpack->m_nBitOffset + pUnpack->m_nSize <= 32 );
+					contract_assert( pUnpack->m_nBitOffset + pUnpack->m_nSize <= 32 );
 
 					int mask = 0;
 					if ( pUnpack->m_nSize == 32 )

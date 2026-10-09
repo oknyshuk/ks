@@ -1,23 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef NETWORKSTRINGTABLEDEFS_H
-#define NETWORKSTRINGTABLEDEFS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 typedef int TABLEID;
 
-#define INVALID_STRING_TABLE -1
+inline constexpr auto INVALID_STRING_TABLE = -1;
 const unsigned short INVALID_STRING_INDEX = (unsigned short )-1;
 
 // table index is sent in log2(MAX_TABLES) bits
-#define MAX_TABLES	32  // Table id is 4 bits
+inline constexpr auto MAX_TABLES = 32; // Table id is 4 bits
 
-#define INTERFACENAME_NETWORKSTRINGTABLESERVER "VEngineServerStringTable001"
-#define INTERFACENAME_NETWORKSTRINGTABLECLIENT "VEngineClientStringTable001"
+inline constexpr const char *INTERFACENAME_NETWORKSTRINGTABLESERVER = "VEngineServerStringTable001";
+inline constexpr const char *INTERFACENAME_NETWORKSTRINGTABLECLIENT = "VEngineClientStringTable001";
 
 class INetworkStringTable;
 
@@ -80,5 +74,3 @@ public:
 
 	virtual void				CreateDictionary( char const *pchMapName ) = 0;
 };
-
-#endif // NETWORKSTRINGTABLEDEFS_H

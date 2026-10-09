@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef REPLAYSERVER_H
-#define REPLAYSERVER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "baseserver.h"
 #include "replayclient.h"
@@ -15,16 +10,16 @@
 #include "replayhistorymanager.h"
 #include "dt_recv.h"
 #include <ireplay.h>
-#include <bitset>
-#include <convar.h>
+import ks.tier1;
+import std;
 
-#define REPLAY_BUFFER_DIRECTOR		0	// director commands
-#define	REPLAY_BUFFER_RELIABLE		1	// reliable messages
-#define REPLAY_BUFFER_UNRELIABLE	2	// unreliable messages
-#define REPLAY_BUFFER_VOICE			3	// player voice data
-#define REPLAY_BUFFER_SOUNDS		4	// unreliable sounds
-#define REPLAY_BUFFER_TEMPENTS		5	// temporary/event entities
-#define REPLAY_BUFFER_MAX			6	// end marker
+inline constexpr auto REPLAY_BUFFER_DIRECTOR = 0; // director commands
+inline constexpr auto REPLAY_BUFFER_RELIABLE = 1; // reliable messages
+inline constexpr auto REPLAY_BUFFER_UNRELIABLE = 2; // unreliable messages
+inline constexpr auto REPLAY_BUFFER_VOICE = 3; // player voice data
+inline constexpr auto REPLAY_BUFFER_SOUNDS = 4; // unreliable sounds
+inline constexpr auto REPLAY_BUFFER_TEMPENTS = 5; // temporary/event entities
+inline constexpr auto REPLAY_BUFFER_MAX = 6; // end marker
 
 // proxy dispatch modes
 #define DISPATCH_MODE_OFF			0
@@ -98,20 +93,20 @@ public:
 	virtual ~CReplayServer();
 
 public: // CBaseServer interface:
-	virtual bool	IsMultiplayer() const OVERRIDE { return true; };
-	virtual bool	IsReplay() const OVERRIDE { return true; };
-	virtual void	Init( bool bIsDedicated ) OVERRIDE;
-	virtual void	Clear() OVERRIDE;
-	virtual void	Shutdown() OVERRIDE;
-	virtual void	FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo) OVERRIDE;
-	virtual void	GetNetStats( float &avgIn, float &avgOut ) OVERRIDE;
-	virtual int		GetChallengeType ( const ns_address &adr ) OVERRIDE;
-	virtual const char *GetName() const OVERRIDE;
-	virtual const char *GetPassword() const OVERRIDE;
+	virtual bool	IsMultiplayer() const override { return true; };
+	virtual bool	IsReplay() const override { return true; };
+	virtual void	Init( bool bIsDedicated ) override;
+	virtual void	Clear() override;
+	virtual void	Shutdown() override;
+	virtual void	FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo) override;
+	virtual void	GetNetStats( float &avgIn, float &avgOut ) override;
+	virtual int		GetChallengeType ( const ns_address &adr ) override;
+	virtual const char *GetName() const override;
+	virtual const char *GetPassword() const override;
 	IClient *ConnectClient ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
 		const char *name, const char *password, const char *hashedCDkey, int cdKeyLen,
 		const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
-		const byte *pbEncryptionKey, int nEncryptionKeyIndex ) OVERRIDE;
+		const byte *pbEncryptionKey, int nEncryptionKeyIndex ) override;
 
 public: // IGameEventListener2 interface:
 	void	FireGameEvent( IGameEvent *event );
@@ -150,7 +145,6 @@ public:
 	inline CReplayClient* Client( int i ) { return static_cast<CReplayClient*>(m_Clients[i]); }
 
 protected:
-	virtual bool ShouldUpdateMasterServer();
 	
 private:
 	CBaseClient *CreateNewClient( int slot );
@@ -203,12 +197,9 @@ public:
 	float			m_flPlaybackRateModifier;
 	int				m_nSkipToTick;	// skip to tick ASAP, -1 = off
 
-	// TODO: Index by SteamID
 	std::bitset< 64 >	m_vecClientsDownloading;		// Indexed by client slot - each bit represents whether the given client is currently downloading
 
 	friend class CReplayClientState;
 };
 
 extern CReplayServer *replay;	// The global Replay server/object. NULL on xbox.
-
-#endif // REPLAYSERVER_H

@@ -1,19 +1,24 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
-#include <stdarg.h>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
+#include "physics.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
 #include "hud.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imaterialsystem.h"
-#include "imovehelper.h"
-#include "checksum_crc.h"
-#include "decals.h"
 #include "iefx.h"
 #include "view_scene.h"
 #include "filesystem.h"
@@ -23,14 +28,12 @@
 #include "c_te_effect_dispatch.h"
 #include "localize/ilocalize.h"
 #include "view.h"
-#include <ctype.h>
 #include "clientui.h"
 #include "cdll_client_int.h"
 #include "c_cs_playerresource.h"
 #include "c_cs_player.h"
 #include "cs_gamerules.h"
 #include "weapon_c4.h"
-
 
 //-----------------------------------------------------------------------------
 // ConVars
@@ -54,9 +57,9 @@ char *VarArgs( const char *format, ... )
 	va_list		argptr;
 	static char		string[1024];
 	
-	va_start (argptr, format);
-	Q_vsnprintf (string, sizeof( string ), format,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr, format);
+	V_vsnprintf (string, sizeof( string ), format,argptr);
+	__builtin_va_end (argptr);
 
 	return string;	
 }
@@ -147,8 +150,8 @@ bool CanControlSpectatedTarget( void )
 	if ( !targetIsFakePlayer )
 		return false;
 
-	AssertMsg(pCSPR, "Expected PlayerResources to exsist");
-	AssertMsg(entIndex > 0 && entIndex <= MAX_PLAYERS, "Bad entity index for player");
+	contract_assert( pCSPR && "Expected PlayerResources to exsist" );
+	contract_assert( ( entIndex > 0 && entIndex <= MAX_PLAYERS ) && "Bad entity index for player" );
 
 
 	// need to duplicate some of the checks that CanControlBot already does so they match up....	
@@ -455,55 +458,9 @@ void UTIL_SetOrigin( C_BaseEntity *entity, const Vector &vecOrigin )
 
 //#define PRECACHE_OTHER_ONCE
 // UNDONE: Do we need this to avoid doing too much of this?  Measure startup times and see
-#if PRECACHE_OTHER_ONCE
-
-#include "tier1/intern_pool.h"
-class CPrecacheOtherList : public CAutoServerSystem
-{
-public:
-	virtual void LevelInitPreEntity();
-	virtual void LevelShutdownPostEntity();
-
-	bool AddOrMarkPrecached( const char *pClassname );
-
-private:
-	ks::intern_pool		m_list;
-};
-
-void CPrecacheOtherList::LevelInitPreEntity()
-{
-	m_list.clear();
-}
-
-void CPrecacheOtherList::LevelShutdownPostEntity()
-{
-	m_list.clear();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: mark or add
-// Input  : *pEntity - 
-// Output : Returns true on success, false on failure.
-//-----------------------------------------------------------------------------
-bool CPrecacheOtherList::AddOrMarkPrecached( const char *pClassname )
-{
-	if ( m_list.contains( pClassname ) )
-		return false;
-
-	m_list.intern( pClassname );
-	return true;
-}
-
-CPrecacheOtherList g_PrecacheOtherList;
-#endif
 
 void UTIL_PrecacheOther( const char *szClassname )
 {
-#if PRECACHE_OTHER_ONCE
-	// already done this one?, if not, mark as done
-	if ( !g_PrecacheOtherList.AddOrMarkPrecached( szClassname ) )
-		return;
-#endif
 
 	// Client should only do this once entities are coming down from server!!!
 	// Assert( engine->IsConnected() );
@@ -654,7 +611,7 @@ int	UTIL_RenderablesInBox( C_BaseEntity** pList, int listMax, const Vector &mins
 CEntitySphereQuery::CEntitySphereQuery( const Vector &center, float radius, int flagMask, int partitionMask )
 {
 	m_listIndex = 0;
-	m_listCount = UTIL_EntitiesInSphere( m_pList, ARRAYSIZE(m_pList), center, radius, flagMask, partitionMask );
+	m_listCount = UTIL_EntitiesInSphere( m_pList, std::size( m_pList ), center, radius, flagMask, partitionMask );
 }
 
 CBaseEntity *CEntitySphereQuery::GetCurrentEntity()
@@ -777,12 +734,12 @@ void UTIL_ReplaceKeyBindings( const wchar_t *inbuf, int inbufsizebytes, wchar_t 
 				bool bAddBrackets = false;
 				if ( !key || !key[0] )
 				{
-					Q_snprintf( friendlyName, sizeof(friendlyName), "%s", binding );
+					V_snprintf( friendlyName, sizeof(friendlyName), "%s", binding );
 				}
 				else
 				{
-					Q_snprintf( friendlyName, sizeof(friendlyName), "%s", key );
-					Q_strupr( friendlyName );
+					V_snprintf( friendlyName, sizeof(friendlyName), "%s", key );
+					V_strupr( friendlyName );
 				}
 				
 
@@ -999,14 +956,14 @@ unsigned char UTIL_ComputeEntityFade( C_BaseEntity *pEntity, float flMinDist, fl
 //-----------------------------------------------------------------------------
 void UTIL_BoundToWorldSize( Vector *pVecPos )
 {
-	Assert( pVecPos );
+	contract_assert( pVecPos );
 	for ( int i = 0; i < 3; ++i )
 	{
 		(*pVecPos)[ i ] = clamp( (*pVecPos)[ i ], MIN_COORD_FLOAT, MAX_COORD_FLOAT );
 	}
 }
 
-#define MAP_KEY_FILE_DIR	"media"
+inline constexpr const char *MAP_KEY_FILE_DIR = "media";
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -1075,13 +1032,13 @@ bool UTIL_GetMapLoadCountFileName( int iController, const char *pszFilePrependNa
 {
 
 	{
-		Q_snprintf( pszBuffer, iBuflen, "%s/%s", MAP_KEY_FILE_DIR, pszFilePrependName );
+		V_snprintf( pszBuffer, iBuflen, "%s/%s", MAP_KEY_FILE_DIR, pszFilePrependName );
 	}
 
 	return true;
 }
 
-#define MAP_KEY_FILE "mapkeys.res"
+inline constexpr const char *MAP_KEY_FILE = "mapkeys.res";
 
 void UTIL_IncrementMapKey( const char *pszCustomKey )
 {
@@ -1090,8 +1047,8 @@ void UTIL_IncrementMapKey( const char *pszCustomKey )
 	if ( !pszCustomKey )
 		return;
 
-	char szFilename[ _MAX_PATH ];
-	if ( !UTIL_GetMapLoadCountFileName( iController, MAP_KEY_FILE, szFilename, _MAX_PATH ) )
+	char szFilename[ k_cMaxPath ];
+	if ( !UTIL_GetMapLoadCountFileName( iController, MAP_KEY_FILE, szFilename, k_cMaxPath ) )
 		return;
 
 	int iCount = 1;
@@ -1102,8 +1059,8 @@ void UTIL_IncrementMapKey( const char *pszCustomKey )
 		kvMapLoadFile->LoadFromFile( g_pFullFileSystem, szFilename, "MOD" );
 
 		char mapname[MAX_MAP_NAME];
-		Q_FileBase( engine->GetLevelName(), mapname, sizeof( mapname) );
-		Q_strlower( mapname );
+		V_FileBase( engine->GetLevelName(), mapname, sizeof( mapname) );
+		V_strlower( mapname );
 
 		// Increment existing, or add a new one
 		KeyValues *pMapKey = kvMapLoadFile->FindKey( mapname );
@@ -1143,8 +1100,8 @@ int UTIL_GetMapKeyCount( const char *pszCustomKey )
 	if ( !pszCustomKey )
 		return 0;
 
-	char szFilename[ _MAX_PATH ];
-	if ( !UTIL_GetMapLoadCountFileName( iController, MAP_KEY_FILE, szFilename, _MAX_PATH ) )
+	char szFilename[ k_cMaxPath ];
+	if ( !UTIL_GetMapLoadCountFileName( iController, MAP_KEY_FILE, szFilename, k_cMaxPath ) )
 		return 0;
 
 	int iCount = 0;
@@ -1164,8 +1121,8 @@ int UTIL_GetMapKeyCount( const char *pszCustomKey )
 		kvMapLoadFile->LoadFromFile( g_pFullFileSystem, szFilename, "MOD" );
 
 		char mapname[MAX_MAP_NAME];
-		Q_FileBase( engine->GetLevelName(), mapname, sizeof( mapname) );
-		Q_strlower( mapname );
+		V_FileBase( engine->GetLevelName(), mapname, sizeof( mapname) );
+		V_strlower( mapname );
 
 		KeyValues *pMapKey = kvMapLoadFile->FindKey( mapname );
 		if ( pMapKey )
@@ -1183,8 +1140,8 @@ bool UTIL_HasLoadedAnyMap()
 {
 	int iController = -1;
 
-	char szFilename[ _MAX_PATH ];
-	if ( !UTIL_GetMapLoadCountFileName( iController, MAP_KEY_FILE, szFilename, _MAX_PATH ) )
+	char szFilename[ k_cMaxPath ];
+	if ( !UTIL_GetMapLoadCountFileName( iController, MAP_KEY_FILE, szFilename, k_cMaxPath ) )
 		return false;
 
 	return g_pFullFileSystem->FileExists( szFilename, "MOD" );
@@ -1241,14 +1198,14 @@ void UTIL_GetClientStatusText( char *buffer, int nSize )
 	float g_flReadyToCheckForPCBootInvite = 0.0f;
 	bool bStartupFinished = g_flReadyToCheckForPCBootInvite && ( ( Plat_FloatTime() - g_flReadyToCheckForPCBootInvite ) > 1.5f );
 	if ( bStartupFinished )
-		Q_snprintf( buffer, nSize, "+" );
+		V_snprintf( buffer, nSize, "+" );
 	if ( nSize <= 2 )
 		return;
 
 	C_CS_PlayerResource *pCSPR = ( C_CS_PlayerResource* )GameResources();
 	if (pCSPR)
 	{
-		Q_snprintf( buffer, nSize, "%sPlayers: ", ( bStartupFinished ? "+" : "" ) );
+		V_snprintf( buffer, nSize, "%sPlayers: ", ( bStartupFinished ? "+" : "" ) );
 		for ( int i = 1; i <= MAX_PLAYERS; i++ )
 		{
 			if ( pCSPR->IsConnected(i) )
@@ -1280,4 +1237,3 @@ bool UTIL_IsDedicatedServer( void )
 {
 	return false;
 }
-

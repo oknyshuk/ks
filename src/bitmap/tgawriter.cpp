@@ -1,16 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <stdlib.h>
-#include <stdio.h>
-#include "tier0/dbg.h"
-#include <malloc.h>
+import std;
+import ks.tier1;
 #include "filesystem.h"
 #include "bitmap/tgawriter.h"
-#include "tier1/byte_writer.h"
 #include "bitmap/imageformat.h"
 #include "tier2/tier2.h"
 #include "tier2/fileutils.h"
@@ -36,8 +30,6 @@ struct TGAHeader_t
 };
 #pragma pack()
 
-#define fputc myfputc
-#define fwrite myfwrite
 
 static void fputLittleShort( unsigned short s, ks::byte_writer &buffer )
 {
@@ -120,9 +112,9 @@ bool WriteToBuffer( unsigned char *pImageData, ks::byte_writer &buffer, int widt
 	buffer.write( header.attributes );
 
 	int nSizeInBytes = width * height * ImageLoader::SizeInBytes( dstFormat );
-	const size_t nPut = buffer.tell();
+	const std::size_t nPut = buffer.tell();
 	std::span< std::byte > dst = buffer.claim_span( nSizeInBytes );
-	if ( dst.size() != static_cast< size_t >( nSizeInBytes ) )
+	if ( dst.size() != static_cast< std::size_t >( nSizeInBytes ) )
 		return false;
 
 	if ( !ImageLoader::ConvertImageFormat( pImageData, srcFormat, reinterpret_cast< unsigned char * >( dst.data() ), dstFormat, width, height ) )
@@ -138,7 +130,7 @@ bool WriteDummyFileNoAlloc( const char *fileName, int width, int height, enum Im
 {
 	TGAHeader_t tgaHeader;
 
-	Assert( g_pFullFileSystem );
+	contract_assert( g_pFullFileSystem );
 	if( !g_pFullFileSystem )
 	{
 		return false;
@@ -169,7 +161,7 @@ bool WriteDummyFileNoAlloc( const char *fileName, int width, int height, enum Im
 		break;
 	}
 
-    memset( &tgaHeader, 0, sizeof(tgaHeader) );
+    std::memset( &tgaHeader, 0, sizeof(tgaHeader) );
     tgaHeader.id_length  = 0;
     tgaHeader.image_type = (unsigned char) nImageType;
     tgaHeader.width      = (unsigned short) width;
@@ -230,7 +222,7 @@ bool WriteTGAFile( const char *fileName, int width, int height, enum ImageFormat
 		break;
 	}
 
-    memset( &tgaHeader, 0, sizeof(tgaHeader) );
+    std::memset( &tgaHeader, 0, sizeof(tgaHeader) );
     tgaHeader.id_length  = 0;
     tgaHeader.image_type = (unsigned char) nImageType;
     tgaHeader.width      = (unsigned short) width;
@@ -268,7 +260,7 @@ bool WriteTGAFile( const char *fileName, int width, int height, enum ImageFormat
 // This routine writes into a width x height subrect of an existing file at the offset ( nXOrigin, nYOrigin ) where the target image has a stride of nStride
 bool WriteRectNoAlloc( unsigned char *pImageData, const char *fileName, int nXOrigin, int nYOrigin, int width, int height, int nStride, enum ImageFormat srcFormat )
 {
-	Assert( g_pFullFileSystem );
+	contract_assert( g_pFullFileSystem );
 	if( !g_pFullFileSystem )
 	{
 		return false;
@@ -377,7 +369,7 @@ static float GetSrcWeight( int nFileY, int nFileX, int nFileHeight, int nFileWid
 	}
 
 	float flWeight = flXWeight * flYWeight;
-	Assert( ( flWeight >= 0 ) && ( flWeight <= 1.0f ) );
+	contract_assert( ( flWeight >= 0 ) && ( flWeight <= 1.0f ) );
 	return flWeight;
 }
 
@@ -385,7 +377,7 @@ static float GetSrcWeight( int nFileY, int nFileX, int nFileHeight, int nFileWid
 bool WriteRectNoAllocFeather( unsigned char *pImageData, const char *fileName, int nXOrigin, int nYOrigin, int width, int height,
 							  int nGuardBandWidth, int nGuardBandHeight, int nStride, enum ImageFormat srcFormat )
 {
-	Assert( g_pFullFileSystem );
+	contract_assert( g_pFullFileSystem );
 	if( !g_pFullFileSystem )
 		return false;
 
@@ -470,4 +462,3 @@ bool WriteRectNoAllocFeather( unsigned char *pImageData, const char *fileName, i
 
 
 } // end namespace TGAWriter
-

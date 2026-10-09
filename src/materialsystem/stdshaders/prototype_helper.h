@@ -1,9 +1,9 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#ifndef PROTOTYPE_HELPER_H
-#define PROTOTYPE_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -18,7 +18,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct PrototypeVars_t
 {
-	PrototypeVars_t() { memset( this, 0xFF, sizeof(PrototypeVars_t) ); }
+	PrototypeVars_t() { std::memset( this, 0xFF, sizeof(PrototypeVars_t) ); }
 
 	int m_nBaseTexture;
 	int m_nBaseTextureFrame;
@@ -31,5 +31,3 @@ void InitParamsPrototype( CBaseVSShader *pShader, IMaterialVar** params, const c
 void InitPrototype( CBaseVSShader *pShader, IMaterialVar** params, PrototypeVars_t &info );
 void DrawPrototype( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 					IShaderShadow* pShaderShadow, PrototypeVars_t &info, VertexCompressionType_t vertexCompression );
-
-#endif // PROTOTYPE_HELPER_H

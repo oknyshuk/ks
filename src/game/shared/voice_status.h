@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef VOICE_STATUS_H
-#define VOICE_STATUS_H
 #pragma once
-
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //#include "VGUI_Bitmap.h"
+#include "util_shared.h"
 #include "voice_common.h"
 #include "voice_banmgr.h"
 #include "hudelement.h"
@@ -20,7 +13,7 @@ class CVoiceStatus;
 class IMaterial;
 
 // This is provided by each mod to access data that may not be the same across mods.
-abstract_class IVoiceStatusHelper
+class IVoiceStatusHelper
 {
 public:
 	virtual					~IVoiceStatusHelper()	{}
@@ -177,7 +170,7 @@ private:
 //-----------------------------------------------------------------------------
 // returns true if the player is currently speaking
 //-----------------------------------------------------------------------------
-FORCEINLINE bool CVoiceStatus::IsPlayerSpeaking(int iPlayerIndex)
+[[gnu::always_inline]] inline bool CVoiceStatus::IsPlayerSpeaking(int iPlayerIndex)
 {
 	return m_VoicePlayers[iPlayerIndex-1] != 0;
 }
@@ -187,7 +180,7 @@ FORCEINLINE bool CVoiceStatus::IsPlayerSpeaking(int iPlayerIndex)
 // Input  : playerID - 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-FORCEINLINE bool CVoiceStatus::IsPlayerAudible(int iPlayer)
+[[gnu::always_inline]] inline bool CVoiceStatus::IsPlayerAudible(int iPlayer)
 {
 	return !!m_AudiblePlayers[iPlayer-1];
 }
@@ -195,7 +188,7 @@ FORCEINLINE bool CVoiceStatus::IsPlayerAudible(int iPlayer)
 //-----------------------------------------------------------------------------
 // returns true if the local player is attempting to speak
 //-----------------------------------------------------------------------------
-FORCEINLINE bool CVoiceStatus::IsLocalPlayerSpeaking( int iSsSlot )
+[[gnu::always_inline]] inline bool CVoiceStatus::IsLocalPlayerSpeaking( int iSsSlot )
 {
 	return m_bTalking[ iSsSlot ];
 }
@@ -203,7 +196,7 @@ FORCEINLINE bool CVoiceStatus::IsLocalPlayerSpeaking( int iSsSlot )
 //-----------------------------------------------------------------------------
 // returns true if the local player is attempting to speak, and is above the volume threshold
 //-----------------------------------------------------------------------------
-FORCEINLINE bool CVoiceStatus::IsLocalPlayerSpeakingAboveThreshold( int iSsSlot )
+[[gnu::always_inline]] inline bool CVoiceStatus::IsLocalPlayerSpeakingAboveThreshold( int iSsSlot )
 {
 	return m_bTalking[ iSsSlot ] && !m_bAboveThresholdTimer[ iSsSlot ].IsElapsed();
 }
@@ -214,5 +207,3 @@ void ClientVoiceMgr_Init();
 void ClientVoiceMgr_Shutdown();
 void ClientVoiceMgr_LevelInit();
 void ClientVoiceMgr_LevelShutdown();
-
-#endif // VOICE_STATUS_H

@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef ICLIENTENTITYINTERNAL_H
-#define ICLIENTENTITYINTERNAL_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "icliententity.h"
 #include "clientleafsystem.h"
@@ -23,7 +18,3 @@ class ClientClass;
 
 typedef CBaseHandle ClientEntityHandle_t;
 typedef unsigned short SpatialPartitionHandle_t;
-
-
-
-#endif // ICLIENTENTITYINTERNAL_H

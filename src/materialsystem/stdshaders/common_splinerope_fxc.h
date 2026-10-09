@@ -1,4 +1,6 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #ifdef PIXELSHADER
 	#define VS_OUTPUT PS_INPUT

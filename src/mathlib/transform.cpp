@@ -1,14 +1,8 @@
-//==== Copyright (c) 1996-2011, Valve Corporation, All rights reserved. =====//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2011 Valve Corporation
 
-
-#include "mathlib/transform.h"
-#include "mathlib/mathlib.h"
+import std;
+import ks.math;
 
 const CTransform g_TransformIdentity( Vector( 0.0f, 0.0f, 0.0f ), Quaternion( 0.0f, 0.0f, 0.0f, 1.0f ) );
 
@@ -129,17 +123,11 @@ bool TransformsAreEqual( const CTransform &src1, const CTransform &src2, float f
 // FIXME: optimize this with simd goodness
 void TransformToWorldSpace( int nRootTransformCount, int nTransformCount, const int *pParentIndices, CTransform *pTransforms )
 {
-#ifdef _DEBUG
-	for ( int i = 0; i < nRootTransformCount; ++i )
-	{
-		Assert( pParentIndices[i] < 0 );
-	}
-#endif
 
 	for ( int i = nRootTransformCount; i < nTransformCount; ++i )
 	{	
 		int nParentBone = pParentIndices[i];
-		Assert( nParentBone >= 0 && nParentBone < i );
+		contract_assert( nParentBone >= 0 && nParentBone < i );
 		ConcatTransforms( pTransforms[ nParentBone ], pTransforms[ i ], pTransforms[ i ] );
 	}
 }
@@ -147,16 +135,11 @@ void TransformToWorldSpace( int nRootTransformCount, int nTransformCount, const 
 // FIXME: optimize this with simd goodness
 void TransformToParentSpace( int nRootTransformCount, int nTransformCount, const int *pParentIndices, CTransform *pTransforms )
 {
-#ifdef _DEBUG
-	for ( int i = 0; i < nRootTransformCount; ++i )
-	{
-		Assert( pParentIndices[i] < 0 );
-	}
-#endif
+	ks::ScratchArena<> scratch;
 
-	bool *pComputedParentTransform = (bool*)stackalloc( nTransformCount * sizeof(bool) );
-	memset( pComputedParentTransform, 0, nTransformCount * sizeof(bool) );
-	CTransform *pWorldToParentTransforms = (CTransform*)stackalloc( nTransformCount * sizeof(CTransform) );
+	bool *pComputedParentTransform = scratch.Alloc<bool>( nTransformCount );
+	std::memset( pComputedParentTransform, 0, nTransformCount * sizeof(bool) );
+	CTransform *pWorldToParentTransforms = scratch.Alloc<CTransform>( nTransformCount );
 
 	for ( int b = nTransformCount; --b >= nRootTransformCount; )
 	{
@@ -169,5 +152,3 @@ void TransformToParentSpace( int nRootTransformCount, int nTransformCount, const
 		ConcatTransforms( pWorldToParentTransforms[ nParentBone ], pTransforms[ b ], pTransforms[ b ] );
 	}
 }
-
-

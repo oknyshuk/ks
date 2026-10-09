@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DISP_COMMON_H
-#define DISP_COMMON_H
-
+import ks.tier1;
 #include "disp_vertindex.h"
 #include "bspfile.h"
-#include "utlvector.h"
+import std;
 
 class CPowerInfo;
 class CCoreDispInfo;
@@ -20,7 +15,7 @@ class CCoreDispInfo;
 // ----------------------------------------------------------------------------- //
 
 // This class provides a set of utility functions for displacements that work in the tools and the engine.
-abstract_class CDispUtilsHelper
+class CDispUtilsHelper
 {
 // Derived classes must implement these.
 public:
@@ -255,6 +250,3 @@ void SmoothDispSurfNormals( CCoreDispInfo **ppListBase, int nListSize );
 // ----------------------------------------------------------------------------- //
 
 #include "disp_powerinfo.h"
-
-
-#endif // DISP_COMMON_H

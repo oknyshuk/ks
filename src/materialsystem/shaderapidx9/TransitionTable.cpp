@@ -1,24 +1,18 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #define DISABLE_PROTECTED_THINGS
+import ks.tier1;
 #include "togl/rendermechanism.h"
 #include "TransitionTable.h"
-#include "recording.h"
 #include "shaderapidx8.h"
 #include "shaderapi/ishaderutil.h"
-#include "tier1/convar.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "vertexshaderdx8.h"
-#include "tier0/vprof.h"
+import std;
 #include "shaderdevicedx8.h"
 #include "shaderapi_global.h"
 #include "materialsystem/materialsystem_config.h"
-
 
 enum
 {
@@ -57,7 +51,7 @@ CTransitionTable::CTransitionTable() : m_DefaultStateSnapshot(-1),
 	m_CurrentShadowId(-1), m_CurrentSnapshotId(-1),
 	m_bShadowDepthBiasValuesDirty( false )
 {
-	Assert( !g_pTransitionTable );
+	contract_assert( !g_pTransitionTable );
 	g_pTransitionTable = this;
 
 #ifdef DEBUG_BOARD_STATE
@@ -68,7 +62,7 @@ CTransitionTable::CTransitionTable() : m_DefaultStateSnapshot(-1),
 
 CTransitionTable::~CTransitionTable()
 {
-	Assert( g_pTransitionTable == this );
+	contract_assert( g_pTransitionTable == this );
 	g_pTransitionTable = nullptr;
 }
 
@@ -97,7 +91,7 @@ StateSnapshot_t CTransitionTable::CreateStateSnapshot( ShadowStateId_t shadowSta
 	// Copy our snapshot into the list
 	SnapshotShaderState_t &shaderState = m_SnapshotList[snapshotId];
 	shaderState.m_ShadowStateId = shadowStateId;
-	memcpy( &shaderState.m_ShaderState, &currentShaderState, sizeof(ShadowShaderState_t) );
+	std::memcpy( &shaderState.m_ShaderState, &currentShaderState, sizeof(ShadowShaderState_t) );
 	shaderState.m_nReserved = 0;	// needed to get a good CRC
 	shaderState.m_nReserved2 = 0;
 
@@ -123,7 +117,7 @@ CTransitionTable::ShadowStateId_t CTransitionTable::CreateShadowState( const Sha
 	int newShaderState = std::ssize( m_ShadowStateList ); m_ShadowStateList.emplace_back();
 
 	// Copy our snapshot into the list
-	memcpy( &m_ShadowStateList[newShaderState], &currentState, sizeof(ShadowState_t) );
+	std::memcpy( &m_ShadowStateList[newShaderState], &currentState, sizeof(ShadowState_t) );
 
 	// all existing states must transition to the new state
 	int i;
@@ -138,7 +132,7 @@ CTransitionTable::ShadowStateId_t CTransitionTable::CreateShadowState( const Sha
 	// Add a new vector for this transition
 	int newTransitionElem = std::ssize( m_TransitionTable ); m_TransitionTable.emplace_back();
 	m_TransitionTable[newTransitionElem].reserve( 32 );
-	Assert( newShaderState == newTransitionElem );
+	contract_assert( newShaderState == newTransitionElem );
 
 	for ( i = 0; i <= newShaderState; ++i )
 	{
@@ -179,7 +173,7 @@ CTransitionTable::ShadowStateId_t CTransitionTable::FindShadowState( const Shado
 		const ShadowStateDictEntry_t &entry = *it;
 
 		ShadowStateId_t nShadowState = entry.m_nShadowStateId;
-		if (!memcmp(&m_ShadowStateList[nShadowState], &currentState, sizeof(ShadowState_t) ))
+		if (!std::memcmp(&m_ShadowStateList[nShadowState], &currentState, sizeof(ShadowState_t) ))
 			return nShadowState;
 	}
 
@@ -210,7 +204,7 @@ StateSnapshot_t CTransitionTable::FindStateSnapshot( ShadowStateId_t id, const S
 	{
 		StateSnapshot_t nShapshot = it->m_nSnapshot;
 		if ( (id == m_SnapshotList[nShapshot].m_ShadowStateId) && 
-			!memcmp(&m_SnapshotList[nShapshot].m_ShaderState, &currentState, sizeof(ShadowShaderState_t)) )
+			!std::memcmp(&m_SnapshotList[nShapshot].m_ShaderState, &currentState, sizeof(ShadowShaderState_t)) )
 		{
 			return nShapshot;
 		}
@@ -245,7 +239,7 @@ void CTransitionTable::Reset()
 
 static inline void SetTextureStageState( int stage, D3DTEXTURESTAGESTATETYPE state, DWORD val )
 {
-	Assert( !g_pShaderDeviceDx8->IsDeactivated() );
+	contract_assert( !g_pShaderDeviceDx8->IsDeactivated() );
 	Dx9Device()->SetTextureStageState( stage, state, val );
 }
 
@@ -254,7 +248,7 @@ static inline void SetTextureStageState( int stage, D3DTEXTURESTAGESTATETYPE sta
 	{																		\
 		if ( (_state != D3DSAMP_NOTSUPPORTED) )								\
 		{																	\
-			Assert( !g_pShaderDeviceDx8->IsDeactivated() );					\
+			contract_assert( !g_pShaderDeviceDx8->IsDeactivated() );					\
 			Dx9Device()->SetSamplerState( _stage, _state, _val );			\
 		}																	\
 	}
@@ -264,7 +258,7 @@ static inline void SetTextureStageState( int stage, D3DTEXTURESTAGESTATETYPE sta
 	{														\
 		if ( _state != D3DRS_NOTSUPPORTED )					\
 		{													\
-			Assert( !g_pShaderDeviceDx8->IsDeactivated() ); \
+			contract_assert( !g_pShaderDeviceDx8->IsDeactivated() ); \
 			Dx9Device()->SetRenderState( _state, _val );	\
 		}													\
 	}
@@ -286,7 +280,7 @@ static bool g_SpewTransitions = false;
 		{																\
 			char buf[128];												\
 			sprintf( buf, "Apply %s : %d\n", #_d3dState, shaderState.m_ ## _state ); \
-			Plat_DebugString(buf);										\
+													\
 		}																\
 	}
 
@@ -297,7 +291,7 @@ static bool g_SpewTransitions = false;
 		{																\
 			char buf[128];												\
 			sprintf( buf, "Apply %s : %d\n", #_d3dState, shaderState.m_AlphaTestAndMiscState.m_ ## _state ); \
-			Plat_DebugString(buf);										\
+													\
 		}																\
 	}
 
@@ -308,7 +302,7 @@ static bool g_SpewTransitions = false;
 		{																\
 			char buf[128];												\
 			sprintf( buf, "Apply Tex %s (%d): %d\n", #_d3dState, _stage, shaderState.m_TextureStage[_stage].m_ ## _state ); \
-			Plat_DebugString(buf);										\
+													\
 		}																\
 	}
 
@@ -319,7 +313,7 @@ static bool g_SpewTransitions = false;
 	{																	\
 		char buf[128];													\
 		sprintf( buf, "Apply SamplerSate %s (%d): %d\n", #_d3dState, stage, 0 != (shaderState.m_n ## _state & ( 1 << _stage ) ) ); \
-		Plat_DebugString(buf);											\
+													\
 	}																	\
 }
 
@@ -455,7 +449,6 @@ void CTransitionTable::ApplySRGBWriteEnable( const ShadowState_t& shaderState  )
 	{																
 		char buf[128];												
 		sprintf( buf, "Apply %s : %d\n", "D3DRS_SRGBWRITEENABLE", shaderState.m_FogAndMiscState.m_SRGBWriteEnable );
-		Plat_DebugString(buf);										
 	}																
 #endif
 }
@@ -654,40 +647,11 @@ void ApplyAlphaToCoverage( const ShadowState_t& state, int arg )
 //-----------------------------------------------------------------------------
 // Outputs the fog mode string
 //-----------------------------------------------------------------------------
-#ifdef RECORDING
-const char *ShaderFogModeToString( ShaderFogMode_t fogMode )
-{
-	switch( fogMode )
-	{
-	case SHADER_FOGMODE_DISABLED:
-		return "SHADER_FOGMODE_DISABLED";
-	case SHADER_FOGMODE_OO_OVERBRIGHT:
-		return "SHADER_FOGMODE_OO_OVERBRIGHT";
-	case SHADER_FOGMODE_BLACK:
-		return "SHADER_FOGMODE_BLACK";
-	case SHADER_FOGMODE_GREY:
-		return "SHADER_FOGMODE_GREY";
-	case SHADER_FOGMODE_FOGCOLOR:
-		return "SHADER_FOGMODE_FOGCOLOR";
-	case SHADER_FOGMODE_WHITE:
-		return "SHADER_FOGMODE_WHITE";
-	case SHADER_FOGMODE_NUMFOGMODES:
-		return "SHADER_FOGMODE_NUMFOGMODES";
-	default:
-		return "ERROR";
-	}
-}
-#endif
 
 // Uses GetConfig().overbright and GetSceneFogMode, so 
 // will have to fix up the state manually when those change.
 void ApplyFogMode( const ShadowState_t& state, int arg )
 {
-#ifdef RECORDING
-	char buf[1024];
-	sprintf( buf, "ApplyFogMode( %s )", ShaderFogModeToString( state.m_FogMode ) );
-	RECORD_DEBUG_STRING( buf );
-#endif
 
 	ShaderAPI()->ApplyFogMode( state.m_FogAndMiscState.FogMode(), state.m_FogAndMiscState.m_bVertexFogEnable, state.m_FogAndMiscState.m_SRGBWriteEnable, state.m_FogAndMiscState.m_bDisableFogGammaCorrection );
 
@@ -706,13 +670,13 @@ void ApplyFogMode( const ShadowState_t& state, int arg )
 unsigned int CTransitionTable::FindIdenticalTransitionList( unsigned int firstElem, 
 					unsigned short numOps, unsigned int nFirstTest ) const
 {
-	VPROF("CTransitionTable::FindIdenticalTransitionList");
+	CVProfScope _( "CTransitionTable::FindIdenticalTransitionList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// As it turns out, this works most of the time
 	if ( nFirstTest != INVALID_TRANSITION_OP )
 	{
 		const TransitionOp_t *pCurrOp = &m_TransitionOps[firstElem];
 		const TransitionOp_t *pTestOp = &m_TransitionOps[nFirstTest];
-		if ( !memcmp( pCurrOp, pTestOp, numOps * sizeof(TransitionOp_t) ) )
+		if ( !std::memcmp( pCurrOp, pTestOp, numOps * sizeof(TransitionOp_t) ) )
 			return nFirstTest;	
 	}
 
@@ -748,7 +712,7 @@ unsigned int CTransitionTable::FindIdenticalTransitionList( unsigned int firstEl
 
 		const TransitionOp_t *pCurrOp = &m_TransitionOps[firstElem + 1];
 		const TransitionOp_t *pTestOp = &m_TransitionOps[nPotentialMatch + 1];
-		if ( !memcmp( pCurrOp, pTestOp, (numOps - 1) * sizeof(TransitionOp_t) ) )
+		if ( !std::memcmp( pCurrOp, pTestOp, (numOps - 1) * sizeof(TransitionOp_t) ) )
 			return nPotentialMatch;	
 	}
 	return INVALID_TRANSITION_OP;
@@ -806,7 +770,7 @@ StateSnapshot_t CTransitionTable::TakeSnapshot( )
 //-----------------------------------------------------------------------------
 void CTransitionTable::ApplyShaderState( const ShadowState_t &shadowState, const ShadowShaderState_t &shaderState )
 {
-	VPROF("CTransitionTable::ApplyShaderState");
+	CVProfScope _( "CTransitionTable::ApplyShaderState", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// FIXME: Improve early-binding of vertex shader index
 	ShaderManager()->SetVertexShader( shaderState.m_VertexShader );
@@ -891,7 +855,6 @@ void CTransitionTable::SetBoardStateFromShadowState( ShadowState_t const &shadow
 		{																
 			char buf[128];												
 			sprintf( buf, "Apply %s : %d\n", "D3DRS_SRGBWRITEENABLE", shadowState.m_FogAndMiscState.m_SRGBWriteEnable );
-			Plat_DebugString(buf);										
 		}																
 #endif
 	}
@@ -939,7 +902,7 @@ void CTransitionTable::SetBoardStateFromShadowState( ShadowState_t const &shadow
 //-----------------------------------------------------------------------------
 void CTransitionTable::UseSnapshot( StateSnapshot_t snapshotId, bool bApplyShaderState /*= true*/ )
 {
-	VPROF("CTransitionTable::UseSnapshot");
+	CVProfScope _( "CTransitionTable::UseSnapshot", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	ShadowStateId_t id = m_SnapshotList[snapshotId].m_ShadowStateId;
 	if (m_CurrentSnapshotId != snapshotId)
 	{
@@ -968,7 +931,7 @@ void CTransitionTable::UseSnapshot( StateSnapshot_t snapshotId, bool bApplyShade
 //-----------------------------------------------------------------------------
 void CTransitionTable::UseDefaultState( )
 {
-	VPROF("CTransitionTable::UseDefaultState");
+	CVProfScope _( "CTransitionTable::UseDefaultState", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// Need to blat these out because they are tested during transitions
 	m_CurrentState.m_AlphaBlendState.m_AlphaBlendEnable = false;
 	m_CurrentState.m_AlphaBlendState.m_SrcBlend = D3DBLEND_ONE;
@@ -1074,7 +1037,7 @@ void CTransitionTable::OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable
 		if ( m_CurrentState.m_bOverrideDepthEnable )
 		{
 			SetZEnable( D3DZB_TRUE );
-			SetRenderState( D3DRS_ZWRITEENABLE, m_CurrentState.m_OverrideZWriteEnable ? TRUE : FALSE );
+			SetRenderState( D3DRS_ZWRITEENABLE, m_CurrentState.m_OverrideZWriteEnable ? true : false );
 			if ( !m_CurrentState.m_OverrideZTestEnable )
 			{
 				SetRenderState( D3DRS_ZFUNC, D3DCMP_ALWAYS );
@@ -1180,7 +1143,7 @@ void CTransitionTable::EnableLinearColorSpaceFrameBuffer( bool bEnable )
 //-----------------------------------------------------------------------------
 void CTransitionTable::PerformShadowStateOverrides( )
 {
-	VPROF("CTransitionTable::PerformShadowStateOverrides");
+	CVProfScope _( "CTransitionTable::PerformShadowStateOverrides", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// Deal with funky overrides here, because the state blocks can't...
 
 	if ( m_CurrentState.m_ForceDepthFuncEquals )
@@ -1191,7 +1154,7 @@ void CTransitionTable::PerformShadowStateOverrides( )
 	if ( m_CurrentState.m_bOverrideDepthEnable )
 	{
 		SetZEnable( D3DZB_TRUE );
-		SetRenderState( D3DRS_ZWRITEENABLE, m_CurrentState.m_OverrideZWriteEnable ? TRUE : FALSE );
+		SetRenderState( D3DRS_ZWRITEENABLE, m_CurrentState.m_OverrideZWriteEnable ? true : false );
 		if ( !m_CurrentState.m_OverrideZTestEnable )
 		{
 			SetRenderState( D3DRS_ZFUNC, D3DCMP_ALWAYS );

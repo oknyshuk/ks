@@ -1,17 +1,45 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
-#include "tier1/fmtstr.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "recipientfilter.h"
 #include "cs_gamerules.h"
 #include "cs_bot.h"
-
 
 //--------------------------------------------------------------------------------------------------------------
 ConVar bot_loadout( "bot_loadout", "", FCVAR_CHEAT, "bots are given these items at round start" );
@@ -38,12 +66,12 @@ struct { const ConVar *cv; const char* szName; } g_GrenadeWeights[] =
 // Pick a grenade for bots to buy based on set weights
 const char* Helper_PickBotGrenade()
 {
-	int iNumGrenades = ARRAYSIZE( g_GrenadeWeights );
+	int iNumGrenades = std::size( g_GrenadeWeights );
 	float flGrenadeWeight = 0.0f;
 	for ( int i = 0; i < iNumGrenades; ++i )
 		flGrenadeWeight += g_GrenadeWeights[ i ].cv->GetFloat();
 
-	float flRand = RandomFloat( 0.0f + FLT_EPSILON , flGrenadeWeight );
+	float flRand = RandomFloat( 0.0f + std::numeric_limits<float>::epsilon() , flGrenadeWeight );
 	float flAccumulator = 0.0f;
 	for ( int i = 0; i < iNumGrenades; ++i )
 	{
@@ -66,7 +94,7 @@ void CCSBot::GiveWeapon( const char *weaponAlias )
 	const char *translatedAlias = GetTranslatedWeaponAlias( weaponAlias );
 
 	char wpnName[128];
-	Q_snprintf( wpnName, sizeof( wpnName ), "weapon_%s", translatedAlias );
+	V_snprintf( wpnName, sizeof( wpnName ), "weapon_%s", translatedAlias );
 	WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( wpnName );
 	if ( hWpnInfo == GetInvalidWeaponInfoHandle() )
 	{
@@ -237,8 +265,8 @@ struct BuyInfo
 	const char *buyAlias;   ///< the buy alias for this equipment
 };
 
-#define PRIMARY_WEAPON_BUY_COUNT 16
-#define SECONDARY_WEAPON_BUY_COUNT 3
+constexpr auto PRIMARY_WEAPON_BUY_COUNT = 16;
+constexpr auto SECONDARY_WEAPON_BUY_COUNT = 3;
 
 /**
  * These tables MUST be kept in sync with the CT and T buy aliases
@@ -450,7 +478,7 @@ void BuyState::OnUpdate( CCSBot *me )
 
 			// don't buy it again if we still have one from last round
 			char weaponPreferenceName[32];
-			Q_snprintf( weaponPreferenceName, sizeof(weaponPreferenceName), "weapon_%s", me->GetProfile()->GetWeaponPreferenceAsString( m_prefIndex ) );
+			V_snprintf( weaponPreferenceName, sizeof(weaponPreferenceName), "weapon_%s", me->GetProfile()->GetWeaponPreferenceAsString( m_prefIndex ) );
 			if( me->Weapon_OwnsThisType(weaponPreferenceName) )//Prefs and buyalias use the short version, this uses the long
 			{
 				// done with buying preferred weapon
@@ -497,7 +525,7 @@ void BuyState::OnUpdate( CCSBot *me )
 
 			if (buyAlias)
 			{
-				Q_snprintf( cmdBuffer, 256, "buy %s\n", buyAlias );
+				V_snprintf( cmdBuffer, 256, "buy %s\n", buyAlias );
 
 				CCommand args;
 				args.Tokenize( cmdBuffer );
@@ -583,7 +611,7 @@ void BuyState::OnUpdate( CCSBot *me )
 						which = RandomInt( 0, stockPrimaryCount-1 );
 					}
 
-					Q_snprintf( cmdBuffer, 256, "buy %s\n", stockPrimary[ which ]->buyAlias );
+					V_snprintf( cmdBuffer, 256, "buy %s\n", stockPrimary[ which ]->buyAlias );
 
 					CCommand args;
 					args.Tokenize( cmdBuffer );
@@ -628,7 +656,7 @@ void BuyState::OnUpdate( CCSBot *me )
 					else
 						what = secondaryWeaponBuyInfoCT[ which ].buyAlias;
 
-					Q_snprintf( cmdBuffer, 256, "buy %s\n", what );
+					V_snprintf( cmdBuffer, 256, "buy %s\n", what );
 					args.Tokenize( cmdBuffer );
 					me->ClientCommand( args );
 
@@ -693,4 +721,3 @@ void BuyState::OnExit( CCSBot *me )
 	me->ResetStuckMonitor();
 	me->EquipBestWeapon();
 }
-

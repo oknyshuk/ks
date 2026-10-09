@@ -1,12 +1,9 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
-//
-// hltvclient.cpp: implementation of the CHLTVClient class.
-//
-// $NoKeywords: $
-//
-//==================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include <tier0/vprof.h>
+// Purpose: hltvclient.cpp: implementation of the CHLTVClient class.
+
+import ks.tier1;
 #include "hltvclient.h"
 #include "netmessages.h"
 #include "hltvserver.h"
@@ -14,13 +11,11 @@
 #include "networkstringtable.h"
 #include "dt_send_eng.h"
 #include "GameEventManager.h"
-#include "cmd.h"
 #include "ihltvdirector.h"
 #include "host.h"
-#include "sv_steamauth.h"
-#include "fmtstr.h"
+import std;
 
-static ConVar tv_maxrate( "tv_maxrate", STRINGIFY( DEFAULT_RATE ), FCVAR_RELEASE, "Max GOTV spectator bandwidth rate allowed, 0 == unlimited" );
+static ConVar tv_maxrate( "tv_maxrate", "DEFAULT_RATE", FCVAR_RELEASE, "Max GOTV spectator bandwidth rate allowed, 0 == unlimited" );
 static ConVar tv_relaypassword( "tv_relaypassword", "", FCVAR_NOTIFY | FCVAR_PROTECTED | FCVAR_DONTRECORD | FCVAR_RELEASE, "GOTV password for relay proxies" );
 static ConVar tv_chattimelimit( "tv_chattimelimit", "8", FCVAR_RELEASE, "Limits spectators to chat only every n seconds" );
 static ConVar tv_chatgroupsize( "tv_chatgroupsize", "0", FCVAR_RELEASE, "Set the default chat group size" );
@@ -37,7 +32,7 @@ CHLTVClient::CHLTVClient(int slot, CBaseServer *pServer)
 	m_nClientSlot = slot;
 	m_Server = pServer;
 	m_pHLTV = dynamic_cast<CHLTVServer*>(pServer);
-	Assert( g_pHltvServer[ m_pHLTV->GetInstanceIndex() ] == pServer );
+	contract_assert( g_pHltvServer[ m_pHLTV->GetInstanceIndex() ] == pServer );
 	m_nEntityIndex = slot < 0 ? slot : m_pHLTV->GetHLTVSlot() + 1;
 	m_nLastSendTick = 0;
 	m_fLastSendTime = 0.0f;
@@ -46,11 +41,11 @@ CHLTVClient::CHLTVClient(int slot, CBaseServer *pServer)
 
 	if ( tv_chatgroupsize.GetInt() > 0  )
 	{
-		Q_snprintf( m_szChatGroup, sizeof(m_szChatGroup), "group%d", slot%tv_chatgroupsize.GetInt()  );
+		V_snprintf( m_szChatGroup, sizeof(m_szChatGroup), "group%d", slot%tv_chatgroupsize.GetInt()  );
 	}
 	else
 	{
-		Q_strncpy( m_szChatGroup, "all", sizeof(m_szChatGroup) );
+		V_strncpy( m_szChatGroup, "all", sizeof(m_szChatGroup) );
 	}
 }
 
@@ -196,17 +191,17 @@ bool CHLTVClient::ExecuteStringCommand( const char *pCommandString )
 
 	const char *cmd = args[ 0 ];
 
-	if ( !Q_stricmp( cmd, "spec_next" ) || 
-		 !Q_stricmp( cmd, "spec_prev" ) ||
-		 !Q_stricmp( cmd, "spec_mode" ) ||
-		 !Q_stricmp( cmd, "spec_goto" ) ||
-		 !Q_stricmp( cmd, "spec_lerpto" ) )
+	if ( !V_stricmp( cmd, "spec_next" ) || 
+		 !V_stricmp( cmd, "spec_prev" ) ||
+		 !V_stricmp( cmd, "spec_mode" ) ||
+		 !V_stricmp( cmd, "spec_goto" ) ||
+		 !V_stricmp( cmd, "spec_lerpto" ) )
 	{
 		ClientPrintf("Camera settings can't be changed during a live broadcast.\n");
 		return true;
 	}
 	
-	if ( !Q_stricmp( cmd, "say" ) && args.ArgC() > 1 )
+	if ( !V_stricmp( cmd, "say" ) && args.ArgC() > 1 )
 	{
 		// if tv_chattimelimit = 0, chat is turned off
 		if ( tv_chattimelimit.GetFloat() <= 0 )
@@ -237,11 +232,11 @@ bool CHLTVClient::ExecuteStringCommand( const char *pCommandString )
 		
 		return true;
 	}
-	else if ( !Q_strcmp( cmd, "tv_chatgroup" )  )
+	else if ( !V_strcmp( cmd, "tv_chatgroup" )  )
 	{
 		if (  args.ArgC() > 1 )
 		{
-			Q_strncpy( m_szChatGroup, args[1], sizeof(m_szChatGroup) );
+			V_strncpy( m_szChatGroup, args[1], sizeof(m_szChatGroup) );
 		}
 		else
 		{
@@ -249,11 +244,11 @@ bool CHLTVClient::ExecuteStringCommand( const char *pCommandString )
 		}
 		return true;
 	}
-	else if ( !Q_strcmp( cmd, "status" ) )
+	else if ( !V_strcmp( cmd, "status" ) )
 	{
 		int		slots, proxies,	clients;
 		char	gd[MAX_OSPATH];
-		Q_FileBase( com_gamedir, gd, sizeof( gd ) );
+		V_FileBase( com_gamedir, gd, sizeof( gd ) );
 		
 		if ( m_pHLTV->IsMasterProxy() )
 		{
@@ -294,7 +289,7 @@ bool CHLTVClient::ExecuteStringCommand( const char *pCommandString )
 		if ( slots > 0 )
 		{
 			if ( clients > 0 )
-				ClientPrintf( "Streaming spectators %i, linked to Steam %i\n", slots, clients );
+				ClientPrintf( "Streaming spectators %i, linked %i\n", slots, clients );
 			else
 				ClientPrintf( "Streaming spectators %i\n", slots );
 		}
@@ -408,7 +403,7 @@ bool CHLTVClient::NETMsg_SetConVar(const ks::net::CNETMsg_SetConVar& msg)
 				Msg( "Accepted GOTV relay proxy from whitelisted IP address: %s\n", m_NetChannel->GetAddress() );
 			}
 			// if the connecting client is a TV relay, check the password
-			else if ( !m_pHLTV->CheckHltvPasswordMatch( m_szPassword, m_pHLTV->GetHltvRelayPassword(), CSteamID() ) )
+			else if ( !m_pHLTV->CheckHltvPasswordMatch( m_szPassword, m_pHLTV->GetHltvRelayPassword(), CPlayerId() ) )
 			{
 				Disconnect("Bad relay password");
 				return false;
@@ -446,13 +441,7 @@ bool CHLTVClient::NETMsg_SetConVar(const ks::net::CNETMsg_SetConVar& msg)
 			}
 
 			// if client stays here, check the normal password
-			// additionally if the first variable is client accountid then use that to validate personalized password
-			CSteamID steamUserAccountID;
-			if ( Steam3Server().SteamGameServerUtils() &&
-				( msg.convars->cvars.size() > 1 ) &&
-				!Q_strcmp( NetMsgGetCVarUsingDictionary( msg.convars->cvars[ 0 ] ), "accountid" ) )
-				steamUserAccountID = CSteamID( Q_atoi( msg.convars->cvars[ 0 ].value->c_str() ), Steam3Server().SteamGameServerUtils()->GetConnectedUniverse(), k_EAccountTypeIndividual );
-			
+			CPlayerId steamUserAccountID;
 			if ( !m_pHLTV->CheckHltvPasswordMatch( m_szPassword, m_pHLTV->GetPassword(), steamUserAccountID ) )
 			{
 				Disconnect("Bad spectator password");
@@ -482,7 +471,7 @@ void CHLTVClient::UpdateUserSettings()
 
 bool CHLTVClient::SendSnapshot( CClientFrame * pFrame )
 {
-	VPROF_BUDGET( "CHLTVClient::SendSnapshot", "HLTV" );
+	CVProfScope _( "CHLTVClient::SendSnapshot", 0, "HLTV", false, BUDGETFLAG_OTHER );
 
 	byte		buf[NET_MAX_PAYLOAD];
 	bf_write	msg( "CHLTVClient::SendSnapshot", buf, sizeof(buf) );
@@ -500,7 +489,7 @@ bool CHLTVClient::SendSnapshot( CClientFrame * pFrame )
 	if ( m_nForceWaitForTick > 0 )
 	{
 		// just continue transmitting reliable data
-		Assert( !m_bFakePlayer );	// Should never happen
+		contract_assert( !m_bFakePlayer );	// Should never happen
 		m_NetChannel->Transmit();	
 		return false;
 	}

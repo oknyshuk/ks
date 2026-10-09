@@ -1,294 +1,25 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+import ks.tier1;
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/itexture.h"
-#include "materialsystem/imaterialproxyfactory.h"
-#include <string.h>
+import std;
 #include "materialsystem_global.h"
-#include <stdlib.h>
 #include "shaderapi/ishaderapi.h"
 #include "imaterialinternal.h"
-#include "tier1/map_ops.h"
-#include "tier1/fixed_pool.h"
 #include "itextureinternal.h"
-#include "tier0/dbg.h"
-#include "tier0/vprof.h"
-#include "tier1/callqueue.h"
-#include "mathlib/vmatrix.h"
-#include "tier1/strtools.h"
-#include "tier1/keyvalues.h"
 #include "texturemanager.h"
 #include "cdll_int.h"
-#include <map>
-#include <mutex>
-#include <shared_mutex>
-#include <string_view>
-#include <vector>
 
-#define MATERIALVAR_CHAR_BUF_SIZE 512
+constexpr auto MATERIALVAR_CHAR_BUF_SIZE = 512;
 
 #pragma pack (1)
 
 //-----------------------------------------------------------------------------
 // Material var custom allocator
 //-----------------------------------------------------------------------------
-
-#ifdef USE_MV_POOL
-
-#define SIZEOF_MATVAR 40
-#define MAX_MATVARS ( 256*1024 )
-#define MV_PAGE_SIZE (64*1024)
-#define MV_NUM_PER_PAGE ( (64*1024) / SIZEOF_MATVAR )
-#define MV_SIZE_BUFFER ((MAX_MATVARS/MV_NUM_PER_PAGE)*MV_PAGE_SIZE)
-#define MV_NUM_PAGES ( MV_SIZE_BUFFER/MV_PAGE_SIZE )
-#define MV_NOT_COMMITTED ( (MVFreeBlock_t *)~0 )
-
-byte *g_pMVData = (byte *)VirtualAlloc( nullptr, MV_NUM_PAGES * MV_PAGE_SIZE, VA_RESERVE_FLAGS, PAGE_NOACCESS );
-std::recursive_mutex g_MVDataMutex; // we never normally alloc & free during levels, and there's not much contention, so a mutex is fine
-
-struct MVFreeBlock_t
-{
-	MVFreeBlock_t *pNext;
-	byte pad[SIZEOF_MATVAR - sizeof(MVFreeBlock_t *)];
-};
-
-struct MVFreeHeader_t
-{
-	MVFreeHeader_t() : pHead(MV_NOT_COMMITTED), nBlocks(MV_NUM_PER_PAGE) {}
-	MVFreeBlock_t *pHead;
-	int nBlocks;
-};
-
-MVFreeHeader_t g_MVFreeLists[MV_NUM_PAGES];
-int g_nMVAllocated;
-
-void DumpAllMaterialVars( void );
-
-void MVDumpHeap()
-{
-	std::scoped_lock lock( g_MVDataMutex );
-
-	Msg( "MaterialVar heap:\n" );
-	int sum = 0, pages = 0;
-	for ( int i = 0; i < MV_NUM_PAGES; i++ )
-	{
-		sum += MV_NUM_PER_PAGE - g_MVFreeLists[i].nBlocks;
-		Msg( "    Page %3d: %d vars%s\n", i, MV_NUM_PER_PAGE - g_MVFreeLists[i].nBlocks, ( g_MVFreeLists[i].pHead == MV_NOT_COMMITTED ) ? " (decommitted)" : ""  );
-		if ( g_MVFreeLists[i].pHead != MV_NOT_COMMITTED )
-			pages++;
-	}
-	if ( sum != g_nMVAllocated )
-	{
-		Msg( "\n************************** MaterialVar heap inconsistency! **************************\n\n" );
-	}
-	Msg( "Total of %d materialvars (%d logical bytes, %d actual bytes\n", g_nMVAllocated, g_nMVAllocated * SIZEOF_MATVAR, pages * MV_PAGE_SIZE );
-
-	// Now dump individual materialvars, grouped by owning material:
-	DumpAllMaterialVars();
-}
-
-bool MVInternallyAllocated( void * p )
-{
-	return ( p >= g_pMVData && p < g_pMVData + MV_NUM_PAGES * MV_PAGE_SIZE );
-}
-
-MVFreeBlock_t *MVCommitAlloc( int iPage )
-{
-	MVFreeBlock_t *pCur, *pLimit;
-	MVFreeBlock_t *pBlock = (MVFreeBlock_t *)VirtualAlloc( g_pMVData + ( iPage * MV_PAGE_SIZE ), MV_PAGE_SIZE, VA_COMMIT_FLAGS, PAGE_READWRITE );
-	pCur = g_MVFreeLists[iPage].pHead = pBlock + 1;
-	pLimit = pBlock + ( MV_NUM_PER_PAGE - 1 );
-
-	while ( pCur < pLimit )
-	{
-		pCur->pNext = pCur + 1;
-		pCur++;
-	}
-
-	pLimit->pNext = nullptr;
-	g_MVFreeLists[iPage].nBlocks = ( MV_NUM_PER_PAGE - 1 );
-	g_nMVAllocated++;
-	return pBlock;
-}
-
-int MVFindBestPage()
-{
-	std::scoped_lock lock( g_MVDataMutex );
-	int i;
-	int iFirstUncommitted = -1;
-	int iBestPage = -1;
-#ifdef MV_MOST_FULL
-	// Most full page
-	int nInMostFull = INT_MAX;
-	for ( i = 0; i < MV_NUM_PAGES; i++ )
-	{
-		if ( g_MVFreeLists[i].pHead != MV_NOT_COMMITTED )
-		{
-			if ( g_MVFreeLists[i].nBlocks && g_MVFreeLists[i].nBlocks < nInMostFull )
-			{
-				iBestPage = i;
-				nInMostFull = g_MVFreeLists[i].nBlocks;
-			}
-		}
-		else if ( iFirstUncommitted == -1 )
-		{
-			iFirstUncommitted = i;
-		}
-	}
-#else
-	// Lowest page
-	for ( i = 0; i < MV_NUM_PAGES; i++ )
-	{
-		if ( g_MVFreeLists[i].pHead != MV_NOT_COMMITTED )
-		{
-			if ( g_MVFreeLists[i].nBlocks )
-			{
-				iBestPage = i;
-				break;
-			}
-		}
-		else if ( iFirstUncommitted == -1 )
-		{
-			iFirstUncommitted = i;
-		}
-	}
-#endif
-
-	if ( iBestPage != -1 )
-	{
-		return iBestPage;
-	}
-
-	return iFirstUncommitted;
-}
-
-void *MVAlloc()
-{
-	std::scoped_lock lock( g_MVDataMutex );
-	int iBestPage = MVFindBestPage();
-
-	if ( iBestPage != -1 )
-	{
-		MVFreeBlock_t *pBlock = nullptr;
-		if ( g_MVFreeLists[iBestPage].pHead != MV_NOT_COMMITTED )
-		{
-			pBlock = g_MVFreeLists[iBestPage].pHead;
-			g_MVFreeLists[iBestPage].pHead = pBlock->pNext;
-			g_MVFreeLists[iBestPage].nBlocks--;
-			g_nMVAllocated++;
-		}
-		else
-		{
-			pBlock = MVCommitAlloc( iBestPage );
-		}
-		return pBlock;
-	}
-	return malloc( SIZEOF_MATVAR );
-}
-
-void MVFree( void *p )
-{
-	if ( MVInternallyAllocated( p ) )
-	{
-		std::scoped_lock lock( g_MVDataMutex );
-
-		MVFreeBlock_t *pBlock = (MVFreeBlock_t *)p;
-		int iPage = ( ( (byte *)pBlock - g_pMVData ) / MV_PAGE_SIZE );
-
-		pBlock->pNext = g_MVFreeLists[iPage].pHead;
-		g_MVFreeLists[iPage].pHead = pBlock;
-		g_MVFreeLists[iPage].nBlocks++;
-		g_nMVAllocated--;
-	}
-	else
-	{
-		free( p );
-	}
-}
-
-void *MVRelocate( void *p )
-{
-	std::scoped_lock lock( g_MVDataMutex );
-
-	MVFreeBlock_t *pBlockOld = (MVFreeBlock_t *)p;
-	MVFreeBlock_t *pBlockNew = pBlockOld;
-	int iCurPage = ( ( (byte *)pBlockOld - g_pMVData ) / MV_PAGE_SIZE );
-
-#ifdef MV_MOST_FULL
-	if ( g_MVFreeLists[iCurPage].nBlocks == 0 )
-	{
-		return p;
-	}
-#else
-	if ( iCurPage <= g_nMVAllocated/MV_NUM_PER_PAGE )
-	{
-		return p;
-	}
-#endif
-
-	int iBestPage = MVFindBestPage();
-	bool bMove;
-#ifdef MV_MOST_FULL
-	bMove = ( iBestPage != iCurPage );
-#else
-	bMove = ( iBestPage <= iCurPage  );
-#endif
-	if ( bMove )
-	{
-		if ( g_MVFreeLists[iBestPage].pHead != MV_NOT_COMMITTED )
-		{
-			pBlockNew = g_MVFreeLists[iBestPage].pHead;
-			g_MVFreeLists[iBestPage].pHead = pBlockNew->pNext;
-			g_MVFreeLists[iBestPage].nBlocks--;
-			g_nMVAllocated++;
-		}
-		else
-		{
-			pBlockNew = MVCommitAlloc( iBestPage );
-		}
-	}
-
-	if ( pBlockNew != pBlockOld )
-	{
-		memcpy( pBlockNew, pBlockOld, SIZEOF_MATVAR );
-		MVFree( pBlockOld );
-	}
-
-	return pBlockNew;
-}
-
-void MVDecommitUnusedPages()
-{
-	std::scoped_lock lock( g_MVDataMutex );
-
-	for ( int i = 0; i < MV_NUM_PAGES; i++ )
-	{
-		if ( g_MVFreeLists[i].pHead != MV_NOT_COMMITTED && g_MVFreeLists[i].nBlocks == MV_NUM_PER_PAGE )
-		{
-			VirtualFree( g_pMVData + ( i * MV_PAGE_SIZE ), MV_PAGE_SIZE, MEM_DECOMMIT );
-			g_MVFreeLists[i].pHead = MV_NOT_COMMITTED;
-		}
-	}
-}
-
-CON_COMMAND( mv_decommit, "" )
-{
-	MVDecommitUnusedPages();
-}
-
-CON_COMMAND( mv_status, "" )
-{
-	MVDumpHeap();
-}
-
-
-#else
 
 void *MVRelocate( void *p )
 {
@@ -308,8 +39,6 @@ void MVDumpHeap()
 {
 }
 
-#endif
-
 //-----------------------------------------------------------------------------
 
 struct MaterialVarMatrix_t
@@ -318,7 +47,7 @@ struct MaterialVarMatrix_t
 	bool m_bIsIdent;
 };
 
-class CMaterialVar : public IMaterialVar
+class CMaterialVar : public IMaterialVar, public ks::pooled< CMaterialVar >
 {
 public:
 	// stuff from IMaterialVar
@@ -385,15 +114,9 @@ public:
 
 	virtual IMaterial *		GetOwningMaterial() { return m_pMaterial; }
 
-#ifdef USE_MV_POOL
-	// Fixed-size allocator
-	inline void* operator new( size_t size ) { return MVAlloc(); } 
-	inline void* operator new( size_t size, int nBlockUse, const char *pFileName, int nLine ) { return MVAlloc(); }
-	inline void  operator delete( void* p ) { MVFree(p); }
-	inline void  operator delete( void* p, int nBlockUse, const char *pFileName, int nLine ) { MVFree(p); }
-#else
-	DECLARE_FIXEDSIZE_ALLOCATOR( CMaterialVar );
-#endif
+	private:
+		static ks::fixed_pool s_Allocator;
+		friend class ks::pooled< CMaterialVar >;
 
 private:
 	// Cleans up material var data
@@ -401,9 +124,7 @@ private:
 
 	// NOTE: Dummy vars have no backlink so we have to check the pointer here
 	void VarChanged();
-#ifndef NO_TOOLFRAMEWORK
 	void RecordToolMessage();
-#endif
 
 	// class data
 	static char s_CharBuf[MATERIALVAR_CHAR_BUF_SIZE];
@@ -432,9 +153,7 @@ private:
 
 typedef CMaterialVar *CMaterialVarPtr;
 
-#ifndef USE_MV_POOL
-DEFINE_FIXEDSIZE_ALLOCATOR( CMaterialVar, 1024, ks::fixed_pool::grow::fast );
-#endif
+ks::fixed_pool CMaterialVar::s_Allocator( sizeof(CMaterialVar), 1024, ks::fixed_pool::grow::fast, "CMaterialVar pool", alignof(CMaterialVar) );
 
 // Stores symbols for the material vars. Dense 16-bit ids: they are packed into IMaterialVar and
 // the tokencache_t behind FindVarFast.
@@ -449,7 +168,7 @@ public:
 				return it->second;
 		}
 		std::unique_lock lock( m_Mutex );
-		Assert( m_Names.size() < INVALID_MATERIAL_VAR_SYMBOL );
+		contract_assert( m_Names.size() < INVALID_MATERIAL_VAR_SYMBOL );
 		auto [it, bNew] = m_Ids.try_emplace( std::string( name ), (MaterialVarSym_t)m_Names.size() );
 		if ( bNew )
 			m_Names.push_back( it->first.c_str() );	// map nodes don't move
@@ -489,48 +208,6 @@ static int s_nTempVarsUsed = 0;
 //-----------------------------------------------------------------------------
 // Dump materialvars
 //-----------------------------------------------------------------------------
-#ifdef USE_MV_POOL
-bool MaterialVarLessFunc( IMaterial *const &a, IMaterial *const &b )
-{
-	if ( a == b ) return 0;
-	return ( V_stricmp( (a ? a->GetName() : "[UNKNOWN]"), (b ? b->GetName() : "[UNKNOWN]") ) < 0 );
-}
-struct MaterialVarLess
-{
-	bool operator()( IMaterial *a, IMaterial *b ) const { return MaterialVarLessFunc( a, b ); }
-};
-void DumpAllMaterialVars( void )
-{
-	std::map< IMaterial*, int, MaterialVarLess > matcounts;
-	int numvars = 0;
-	for ( int page = 0; page < MV_NUM_PAGES; page++ )
-	{
-		if ( g_MVFreeLists[page].pHead == MV_NOT_COMMITTED )
-			continue;
-
-		MVFreeBlock_t *block = (MVFreeBlock_t *)(g_pMVData + ( page * MV_PAGE_SIZE ));
-		for ( int i = 0; i < MV_NUM_PER_PAGE; i++ )
-		{
-			if ( block->pNext && !MVInternallyAllocated( block->pNext ) )\
-			{
-				// not in the freelist
-				CMaterialVar *var = (CMaterialVar *)block;
-				IMaterial *mat = var->GetOwningMaterial();
-				//Msg( " -- %40s | %s\n", (mat?mat->GetName():"[UNKNOWN]"), var->GetName() );
-				matcounts[mat]++;
-				numvars++;
-			}
-			block++;
-		}
-	}
-	//Msg("\n ==== Total %d materialvars:\n", numvars );
-	for ( auto &[mat, count] : matcounts )
-	{
-		Msg( " -- %4d %s\n", count, (mat?mat->GetName():"[UNKNOWN]") );
-	}
-	Msg("\n ==== Total %d materialvars in %d materials\n", numvars, (int)matcounts.size() );
-}
-#endif // USE_MV_POOL
 
 
 //-----------------------------------------------------------------------------
@@ -615,8 +292,8 @@ MaterialVarSym_t IMaterialVar::GetSymbol( const char* pName )
 		return INVALID_MATERIAL_VAR_SYMBOL;
 
 	char temp[1024];
-	Q_strncpy( temp, pName, sizeof( temp ) );
-	Q_strlower( temp );
+	V_strncpy( temp, pName, sizeof( temp ) );
+	V_strlower( temp );
 	return s_MaterialVarSymbols.AddString( temp );
 }
 
@@ -630,7 +307,7 @@ MaterialVarSym_t IMaterialVar::FindSymbol( const char* pName )
 
 bool IMaterialVar::SymbolMatches( const char* pName, MaterialVarSym_t symbol )
 {
-	return !Q_stricmp( s_MaterialVarSymbols.String(symbol), pName );
+	return !V_stricmp( s_MaterialVarSymbols.String(symbol), pName );
 }
 
 
@@ -664,24 +341,16 @@ CMaterialVar::CMaterialVar()
 
 CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey, VMatrix const& matrix )
 {
-#ifdef POOL_MATVARS
-	COMPILE_TIME_ASSERT( sizeof(CMaterialVar) == SIZEOF_MATVAR );
-
-	if ( sizeof(CMaterialVar) != SIZEOF_MATVAR )
-	{
-		Error( "( sizeof(CMaterialVar) != SIZEOF_MATVAR )\n" );
-	}
-#endif
 
 	Init();
-	Assert( pKey );
+	contract_assert( pKey );
 
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);
 	m_Name = GetSymbol( pKey );
-	Assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
+	contract_assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
 	m_Type = MATERIAL_VAR_TYPE_MATRIX;
 	m_pMatrix = new MaterialVarMatrix_t;
-	Assert( m_pMatrix );
+	contract_assert( m_pMatrix );
 	MatrixCopy( matrix, m_pMatrix->m_Matrix );
 	m_pMatrix->m_bIsIdent = matrix.IsIdentity();
 	m_intVal = 0;
@@ -692,29 +361,29 @@ CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey, VMatrix cons
 CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey, const char *pVal )
 {
 	Init();
-	Assert( pVal && pKey );
+	contract_assert( pVal && pKey );
 
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);
 	m_Name = GetSymbol( pKey );
-	Assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
-	int len = Q_strlen( pVal ) + 1;
+	contract_assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
+	int len = V_strlen( pVal ) + 1;
 	m_pStringVal = new char[ len ];
-	Q_strncpy( m_pStringVal, pVal, len );
+	V_strncpy( m_pStringVal, pVal, len );
 	m_Type = MATERIAL_VAR_TYPE_STRING;
-	m_VecVal[0] = m_VecVal[1] = m_VecVal[2] = m_VecVal[3] = atof( m_pStringVal );
+	m_VecVal[0] = m_VecVal[1] = m_VecVal[2] = m_VecVal[3] = std::atof( m_pStringVal );
 	m_intVal = int( atof( m_pStringVal ) );
 }
 
 CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey, float* pVal, int numComps )
 {
 	Init();
-	Assert( pVal && pKey && (numComps <= 4) );
+	contract_assert( pVal && pKey && (numComps <= 4) );
 
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);;
 	m_Name = GetSymbol( pKey );
-	Assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
+	contract_assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
 	m_Type = MATERIAL_VAR_TYPE_VECTOR;
-	memcpy( m_VecVal.Base(), pVal, numComps * sizeof(float) );
+	std::memcpy( m_VecVal.Base(), pVal, numComps * sizeof(float) );
 	for (int i = numComps; i < 4; ++i)
 		m_VecVal[i] = 0.0f;
 
@@ -727,7 +396,7 @@ CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey, float val )
 	Init();
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);
 	m_Name = GetSymbol( pKey );
-	Assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
+	contract_assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
 	m_Type = MATERIAL_VAR_TYPE_FLOAT;
 	m_VecVal[0] = m_VecVal[1] = m_VecVal[2] = m_VecVal[3] = val;
 	m_intVal = (int) val;
@@ -739,7 +408,7 @@ CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey, int val )
 	Init();
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);
 	m_Name = GetSymbol( pKey );
-	Assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
+	contract_assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
 	m_Type = MATERIAL_VAR_TYPE_INT;
 	m_VecVal[0] = m_VecVal[1] = m_VecVal[2] = m_VecVal[3] = (float) val;
 	m_intVal = val;
@@ -750,7 +419,7 @@ CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey )
 	Init();
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);
 	m_Name = GetSymbol( pKey );
-	Assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
+	contract_assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
 	m_Type = MATERIAL_VAR_TYPE_UNDEFINED;
 }
 
@@ -902,7 +571,7 @@ void CMaterialVar::GetVecValueInternal( float *val, int numcomps ) const
 		}
 	}
 
-	Assert( ( numcomps >0 ) && ( numcomps <= 4 ) );
+	contract_assert( ( numcomps >0 ) && ( numcomps <= 4 ) );
 	for( int i=0 ; i < numcomps; i++ )
 	{
 		val[i] = m_VecVal[ i ];
@@ -927,7 +596,7 @@ int	CMaterialVar::VectorSizeInternal() const
 }
 
 // Don't want to be grabbing the dummy var and changing it's value.  That usually means badness.
-#define ASSERT_NOT_DUMMY_VAR()	AssertMsg( m_bFakeMaterialVar || ( V_stricmp( GetName(), "$dummyvar" ) != 0 ), "TRYING TO MODIFY $dummyvar, WHICH IS BAD, MMMKAY!" )
+#define ASSERT_NOT_DUMMY_VAR()	contract_assert( ( m_bFakeMaterialVar || ( V_stricmp( GetName(), "$dummyvar" ) != 0 ) ) && "TRYING TO MODIFY $dummyvar, WHICH IS BAD, MMMKAY!" )
 
 //-----------------------------------------------------------------------------
 // float
@@ -953,9 +622,7 @@ void CMaterialVar::SetFloatValue( float val )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_FLOAT) && (m_VecVal[0] == val))
 	{
-#ifndef NO_TOOLFRAMEWORK
 		RecordToolMessage();
-#endif
 		return;
 	}
 
@@ -991,9 +658,7 @@ void CMaterialVar::SetIntValue( int val )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_INT) && (m_intVal == val))
 	{
-#ifndef NO_TOOLFRAMEWORK
 		RecordToolMessage();
-#endif
 		return;
 	}
 
@@ -1028,11 +693,11 @@ const char *CMaterialVar::GetStringValue( void ) const
 		return m_pStringVal;
 
 	case MATERIAL_VAR_TYPE_INT:
-		Q_snprintf( s_CharBuf, sizeof( s_CharBuf ), "%d", m_intVal );
+		V_snprintf( s_CharBuf, sizeof( s_CharBuf ), "%d", m_intVal );
 		return s_CharBuf;
 
 	case MATERIAL_VAR_TYPE_FLOAT:
-		Q_snprintf( s_CharBuf, sizeof( s_CharBuf ), "%f", m_VecVal[0] );
+		V_snprintf( s_CharBuf, sizeof( s_CharBuf ), "%f", m_VecVal[0] );
 		return s_CharBuf;
 
 	case MATERIAL_VAR_TYPE_VECTOR:
@@ -1044,8 +709,8 @@ const char *CMaterialVar::GetStringValue( void ) const
 			{
 				if (len < sizeof( s_CharBuf ))
 				{
-					Q_snprintf( s_CharBuf + len, sizeof( s_CharBuf ) - len, "%f ", m_VecVal[i] );
-					len += strlen( s_CharBuf + len );
+					V_snprintf( s_CharBuf + len, sizeof( s_CharBuf ) - len, "%f ", m_VecVal[i] );
+					len += std::strlen( s_CharBuf + len );
 				}
 			}
 			if (len < sizeof( s_CharBuf ) - 1)
@@ -1070,7 +735,7 @@ const char *CMaterialVar::GetStringValue( void ) const
 				for (int j = 0; j < 4; ++j)
 				{
 					if (len < sizeof( s_CharBuf ))
-						len += Q_snprintf( s_CharBuf + len, sizeof( s_CharBuf ) - len, "%.3f ", m_pMatrix->m_Matrix[j][i] );
+						len += V_snprintf( s_CharBuf + len, sizeof( s_CharBuf ) - len, "%.3f ", m_pMatrix->m_Matrix[j][i] );
 				}
 			}
 			if (len < sizeof( s_CharBuf ) - 1)
@@ -1093,11 +758,11 @@ const char *CMaterialVar::GetStringValue( void ) const
 		}
 		else
 		{
-			Q_snprintf( s_CharBuf, sizeof( s_CharBuf ), "%s", m_pTexture->GetName() );
+			V_snprintf( s_CharBuf, sizeof( s_CharBuf ), "%s", m_pTexture->GetName() );
 			return s_CharBuf;
 		}
 	case MATERIAL_VAR_TYPE_MATERIAL:
-		Q_snprintf( s_CharBuf, sizeof( s_CharBuf ), "%s", m_pMaterialValue->GetName() );
+		V_snprintf( s_CharBuf, sizeof( s_CharBuf ), "%s", m_pMaterialValue->GetName() );
 		return s_CharBuf;
 
 	case MATERIAL_VAR_TYPE_UNDEFINED:
@@ -1128,12 +793,12 @@ void CMaterialVar::SetStringValue( const char *val )
 	}
 
 	CleanUpData();
-	int len = Q_strlen( val ) + 1;
+	int len = V_strlen( val ) + 1;
 	m_pStringVal = new char[len];
-	Q_strncpy( m_pStringVal, val, len );
+	V_strncpy( m_pStringVal, val, len );
 	m_Type = MATERIAL_VAR_TYPE_STRING;
-	m_intVal = atoi( val );
-	m_VecVal[0] = m_VecVal[1] = m_VecVal[2] = m_VecVal[3] = atof( m_pStringVal );
+	m_intVal = std::atoi( val );
+	m_VecVal[0] = m_VecVal[1] = m_VecVal[2] = m_VecVal[3] = std::atof( m_pStringVal );
 	VarChanged();
 }
 
@@ -1158,9 +823,7 @@ void CMaterialVar::SetFourCCValue( FourCC type, void *pData )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_FOURCC) && m_pFourCC->m_FourCC == type && m_pFourCC->m_pFourCCData == pData )
 	{
-#ifndef NO_TOOLFRAMEWORK
 		RecordToolMessage();
-#endif
 		return;
 	}
 
@@ -1325,9 +988,7 @@ void CMaterialVar::SetTextureValue( ITexture *texture )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_TEXTURE) && (m_pTexture == pTexImp))
 	{
-#ifndef NO_TOOLFRAMEWORK
 		RecordToolMessage();
-#endif
 		return;
 	}
 
@@ -1415,9 +1076,7 @@ void CMaterialVar::SetMaterialValue( IMaterial *pMaterial )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_MATERIAL) && (m_pMaterialValue == pMaterialImp))
 	{
-#ifndef NO_TOOLFRAMEWORK
 		RecordToolMessage();
-#endif
 		return;
 	}
 
@@ -1452,7 +1111,7 @@ void CMaterialVar::GetLinearVecValue( float *pVal, int numComps ) const
 			return s_pTempMaterialVar[m_nTempIndex].GetLinearVecValue( pVal, numComps );
 	}
 
-	Assert( numComps <= 4 );
+	contract_assert( numComps <= 4 );
 
 	switch( m_Type )
 	{
@@ -1520,9 +1179,7 @@ void CMaterialVar::SetVecValueInternal( const Vector4D &vec, int nComps )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_VECTOR ) && (m_VecVal == vec ) )
 	{
-#ifndef NO_TOOLFRAMEWORK
 		RecordToolMessage();
-#endif
 		return;
 	}
 
@@ -1531,14 +1188,14 @@ void CMaterialVar::SetVecValueInternal( const Vector4D &vec, int nComps )
 		CleanUpData();
 		m_Type = MATERIAL_VAR_TYPE_VECTOR;
 	}
-	Assert( nComps <= 4 );
+	contract_assert( nComps <= 4 );
 	m_nNumVectorComps = nComps;
-	memcpy( m_VecVal.Base(), vec.Base(), 4 * sizeof(float) );
+	std::memcpy( m_VecVal.Base(), vec.Base(), 4 * sizeof(float) );
 	m_intVal = ( int ) m_VecVal[0];
 
 #ifdef _DEBUG
 	for (int i = m_nNumVectorComps; i < 4; ++i )
-		Assert( m_VecVal[i] == 0.0f );
+		contract_assert( m_VecVal[i] == 0.0f );
 #endif
 	VarChanged();
 }
@@ -1546,7 +1203,7 @@ void CMaterialVar::SetVecValueInternal( const Vector4D &vec, int nComps )
 void CMaterialVar::SetVecValue( const float* pVal, int numComps )
 {
 	Vector4D vec;
-	memcpy( vec.Base(), pVal, numComps * sizeof(float) );
+	std::memcpy( vec.Base(), pVal, numComps * sizeof(float) );
 	for (int i = numComps; i < 4; ++i )
 	{
 		vec[i] = 0.0f;
@@ -1600,9 +1257,7 @@ void CMaterialVar::SetVecComponentValue( float fVal, int nComponent )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_VECTOR ) && (m_VecVal[nComponent] == fVal ) )
 	{
-#ifndef NO_TOOLFRAMEWORK
 		RecordToolMessage();
-#endif
 		return;
 	}
 
@@ -1625,7 +1280,7 @@ void CMaterialVar::SetVecComponentValue( float fVal, int nComponent )
 
 #ifdef _DEBUG
 	for (int i = m_nNumVectorComps; i < 4; ++i )
-		Assert( m_VecVal[i] == 0.0f );
+		contract_assert( m_VecVal[i] == 0.0f );
 #endif
 	VarChanged();
 }
@@ -1794,11 +1449,9 @@ void CMaterialVar::CopyFrom( IMaterialVar *pMaterialVar )
 		break;
 
 	default:
-		Assert(0);
+		contract_assert( 0 );
 	}
 }
-
-#ifndef NO_TOOLFRAMEWORK
 
 // record tool message
 void CMaterialVar::RecordToolMessage()
@@ -1849,7 +1502,7 @@ void CMaterialVar::RecordToolMessage()
 				V_snprintf( str, sizeof( str ), "vector4d: %f %f %f %f", pVal[ 0 ], pVal[ 1 ], pVal[ 2 ], pVal[ 3 ] );
 				break;
 			default:
-				Assert( 0 );
+				contract_assert( 0 );
 				*str = 0;
 			}
 			msg->SetString( GetName(), str );
@@ -1872,7 +1525,7 @@ void CMaterialVar::RecordToolMessage()
 		break;
 
 	case MATERIAL_VAR_TYPE_FOURCC:
-		Assert( 0 ); // JDTODO
+		contract_assert( 0 ); // JDTODO
 		// fall-through intentional (until this case is implemented)
 
 	case MATERIAL_VAR_TYPE_TEXTURE:
@@ -1890,7 +1543,7 @@ void CMaterialVar::RecordToolMessage()
 		// fall-through intentional (until this case is implemented)
 
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		msg->deleteThis();
 		return;
 	}
@@ -1899,8 +1552,6 @@ void CMaterialVar::RecordToolMessage()
 	msg->deleteThis();
 }
 
-#endif
-
 void CMaterialVar::VarChanged()
 {
 	if ( !m_pMaterial )
@@ -1908,9 +1559,7 @@ void CMaterialVar::VarChanged()
 
 	m_pMaterial->ReportVarChanged( this );
 
-#ifndef NO_TOOLFRAMEWORK
 	RecordToolMessage();
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1957,7 +1606,7 @@ static int ParseVectorFromKeyValueString( const char *pString, float vecVal[4] )
 	}
 	else
 	{
-		Assert( *pScan == '[' );
+		contract_assert( *pScan == '[' );
 	}
 	
 	// skip the '['
@@ -1985,7 +1634,7 @@ static int ParseVectorFromKeyValueString( const char *pString, float vecVal[4] )
 
 		char* pEnd;
 
-		vecVal[i] = strtod( pScan, &pEnd );
+		vecVal[i] = std::strtod( pScan, &pEnd );
 		if (pScan == pEnd)
 		{
 			Warning( "error parsing vector element in ParseVectorFromKeyValueString\n" );
@@ -2009,15 +1658,15 @@ static int ParseVectorFromKeyValueString( const char *pString, float vecVal[4] )
 void CMaterialVar::SetValueAutodetectType( const char *val )
 {
 	ASSERT_NOT_DUMMY_VAR();
-	int len = Q_strlen( val );
+	int len = V_strlen( val );
 
 	// Here, let's determine if we got a float or an int....
 	char* pIEnd;	// pos where int scan ended
 	char* pFEnd;	// pos where float scan ended
 	const char* pSEnd = val + len ; // pos where token ends
 
-	int ival = strtol( val, &pIEnd, 10 );
-	float fval = (float)strtod( val, &pFEnd );
+	int ival = std::strtol( val, &pIEnd, 10 );
+	float fval = (float)std::strtod( val, &pFEnd );
 
 	if ( ( pFEnd > pIEnd ) && ( pFEnd == pSEnd ) )
 	{
@@ -2036,7 +1685,7 @@ void CMaterialVar::SetValueAutodetectType( const char *val )
 	// Is it a matrix?
 
 	VMatrix mat;
-	int count = sscanf( val, " [ %f %f %f %f  %f %f %f %f  %f %f %f %f  %f %f %f %f ]",
+	int count = std::sscanf( val, " [ %f %f %f %f  %f %f %f %f  %f %f %f %f  %f %f %f %f ]",
 		&mat.m[0][0], &mat.m[0][1], &mat.m[0][2], &mat.m[0][3],
 		&mat.m[1][0], &mat.m[1][1], &mat.m[1][2], &mat.m[1][3],
 		&mat.m[2][0], &mat.m[2][1], &mat.m[2][2], &mat.m[2][3],
@@ -2120,4 +1769,3 @@ void CompactMaterialVarHeap()
 {
 	MVDecommitUnusedPages();
 }
-

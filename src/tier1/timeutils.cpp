@@ -1,16 +1,9 @@
 
-#include "tier1/timeutils.h"
+import ks.tier1;
 
-#include "tier0/dbg.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier1/text_reader.h"
-#include "tier1/text_writer.h"
-#include "mathlib/mathlib.h"
 
-#include <ctype.h>
+import std;
 
-#include <math.h>
 
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -48,7 +41,7 @@ void DmeFramerate_t::SetFramerate( float flFrameRate )
 	}
 	else
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		SetFramerate( RoundFloatToInt( flFrameRate ) );
 	}
 }
@@ -105,13 +98,13 @@ DmeTime_t::DmeTime_t( int frame, DmeFramerate_t framerate )
 
 DmeTime_t DmeTime_t::operator*=( float f )
 {
-	m_tms = int( floor( m_tms * f + 0.5f ) );
+	m_tms = int( std::floor( m_tms * f + 0.5f ) );
 	return *this;
 }
 
 DmeTime_t DmeTime_t::operator/=( float f )
 {
-	m_tms = int( floor( m_tms / f + 0.5f ) );
+	m_tms = int( std::floor( m_tms / f + 0.5f ) );
 	return *this;
 }
 
@@ -207,12 +200,12 @@ DmeTime_t DmeTime_t::TimeAtPrevFrame( DmeFramerate_t framerate ) const
 
 int DmeTime_t::RoundSecondsToTMS( float sec )
 {
-	return (int)floor( 10000.0f * sec + 0.5f ); // round at half-tms boundary
+	return (int)std::floor( 10000.0f * sec + 0.5f ); // round at half-tms boundary
 }
 
 int DmeTime_t::RoundSecondsToTMS( double sec )
 {
-	return (int)floor( 10000.0 * sec + 0.5 ); // round at half-tms boundary
+	return (int)std::floor( 10000.0 * sec + 0.5 ); // round at half-tms boundary
 }
 
 
@@ -237,10 +230,10 @@ bool Unserialize( ks::text_reader &buf, DmeTime_t &dest )
 
 	double tms = buf.read< double >() * 10000;
 
-	if ( tms < INT_MIN || tms > INT_MAX )
+	if ( tms < std::numeric_limits<int>::min() || tms > std::numeric_limits<int>::max() )
 		return false;
 
-	dest.SetTenthsOfMS( ( int )floor( tms + 0.5 ) );
+	dest.SetTenthsOfMS( ( int )std::floor( tms + 0.5 ) );
 	return true;
 }
 

@@ -1,13 +1,15 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
-#include "c_baseentity.h"
-#include "tier0/vprof.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseentity.h"
 
 //-----------------------------------------------------------------------------
 // helper method for trace hull as used by physics...
@@ -100,7 +102,7 @@ void C_BaseEntity::PhysicsPushEntity( const Vector& push, trace_t *pTrace )
 void C_BaseEntity::PerformCustomPhysics( Vector *pNewPosition, Vector *pNewVelocity, QAngle *pNewAngles, QAngle *pNewAngVelocity )
 {
 	// If you're going to use custom physics, you need to implement this!
-	Assert(0);
+	contract_assert( 0 );
 }
 
 //-----------------------------------------------------------------------------
@@ -126,7 +128,7 @@ void C_BaseEntity::PhysicsCustom()
 	if ( vecNewPosition == vec3_origin )
 	{
 		// Shouldn't be at world origin
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 	Vector vecNewVelocity = m_vecVelocity;

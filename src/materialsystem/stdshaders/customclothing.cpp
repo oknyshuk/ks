@@ -1,14 +1,9 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
-#include "common_hlsl_cpp_consts.h" // hack hack hack!
-#include "convar.h"
+import std;
 
 #include "customclothing_vs20.inc"
 #include "customclothing_vs30.inc"
@@ -22,13 +17,13 @@
 
 static const float kDefaultColor[3] = { 0.5f, 0.5f, 0.5f };
 
-#define MODE_3D_PREVIEW 0
-#define MODE_2D_COMPOSITE 1
-#define MODE_3D_POSTCOMPOSITE 2
+inline constexpr int MODE_3D_PREVIEW = 0;
+constexpr auto MODE_2D_COMPOSITE = 1;
+constexpr auto MODE_3D_POSTCOMPOSITE = 2;
 
 BEGIN_VS_SHADER( CustomClothing, "Help for CustomClothing" )
 
-	BEGIN_SHADER_PARAMS
+	
 
 		//always required
 		SHADER_PARAM( BASETEXTURE,		SHADER_PARAM_TYPE_TEXTURE, "", "" )
@@ -73,7 +68,7 @@ BEGIN_VS_SHADER( CustomClothing, "Help for CustomClothing" )
 		SHADER_PARAM( ENTCENTER,		SHADER_PARAM_TYPE_VEC3, "", "" )
 
 		//sets the behavior of the shader for different purposes
-		SHADER_PARAM( COMPOSITEMODE,	SHADER_PARAM_TYPE_INTEGER, MODE_3D_PREVIEW, "" )
+		SHADER_PARAM( COMPOSITEMODE,	SHADER_PARAM_TYPE_INTEGER, nullptr, "" )
 
 		//override parameter for dynamic combo
 		SHADER_PARAM( AOPASS,			SHADER_PARAM_TYPE_BOOL, 0, "" )
@@ -595,5 +590,3 @@ BEGIN_VS_SHADER( CustomClothing, "Help for CustomClothing" )
 	}
 
 END_SHADER
-
-

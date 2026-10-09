@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IGAMESYSTEM_H
-#define IGAMESYSTEM_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // Game systems are singleton objects in the client + server codebase responsible for
@@ -23,7 +17,7 @@ class CUserCmd;
 // UNDONE: Do these need GameInit/GameShutdown as well?
 // UNDONE: Remove the Pre/Post entity semantics and rely on system ordering?
 // FIXME: Remove all ifdef CLIENT_DLL if we can...
-abstract_class IGameSystem
+class IGameSystem
 {
 public:
 	// GameSystems are expected to implement these methods.
@@ -253,5 +247,3 @@ class IToolFrameworkServer
 public:
 	virtual void PreSetupVisibility() = 0;
 };
-
-#endif // IGAMESYSTEM_H

@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef VOICE_BANMGR_H
-#define VOICE_BANMGR_H
-
+#include "const.h"
 
 // This class manages the (persistent) list of squelched players.
 class CVoiceBanMgr
@@ -46,6 +41,3 @@ protected:
 
 	BannedPlayer	m_PlayerHash[256];
 };
-
-
-#endif // VOICE_BANMGR_H

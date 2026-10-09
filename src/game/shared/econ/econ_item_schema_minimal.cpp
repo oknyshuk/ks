@@ -1,11 +1,48 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Minimal econ item schema implementation
-//          Parses items_game.txt for weapon definitions
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
-#include "cbase.h"
+// Purpose: Minimal econ item schema implementation
+//         Parses items_game.txt for weapon definitions
+
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+#include "cdll_util.h"
+#include "cdll_client_int.h"
+#elif defined(GAME_DLL)
+import ks.tier1;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "ndebugoverlay.h"
+#endif
 #include "econ_item_schema_minimal.h"
 #include "filesystem.h"
 
@@ -65,7 +102,7 @@ int LoadoutSlotFromString( const char *pszSlot )
 	if ( !pszSlot || !*pszSlot )
 		return LOADOUT_POSITION_INVALID;
 
-	for ( int i = 0; i < ARRAYSIZE( s_pszLoadoutSlots ); i++ )
+	for ( int i = 0; i < std::size( s_pszLoadoutSlots ); i++ )
 	{
 		if ( V_stricmp( pszSlot, s_pszLoadoutSlots[i] ) == 0 )
 		{
@@ -385,7 +422,7 @@ bool CEconItemSchema::BInit( const char *pszFilename )
 //-----------------------------------------------------------------------------
 static void RecursiveInheritKeyValues( KeyValues *out_pValues, KeyValues *pInstance )
 {
-	FOR_EACH_SUBKEY( pInstance, pSubKey )
+	for ( KeyValues *pSubKey = pInstance->GetFirstSubKey(); pSubKey != nullptr; pSubKey = pSubKey->GetNextKey() )
 	{
 		KeyValues::types_t eType = pSubKey->GetDataType();
 		switch ( eType )

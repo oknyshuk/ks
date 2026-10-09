@@ -1,12 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "clientsideeffects.h"
 #include "fx_staticline.h"
 #include "materialsystem/imaterial.h"
@@ -18,11 +26,10 @@
 CFXStaticLine
 ==================================================
 */
-
 CFXStaticLine::CFXStaticLine( const char *name, const Vector& start, const Vector& end, float scale, float life, const char *shader, unsigned int flags )
 : CClientSideEffect( name )
 {
-	assert( materials );
+	contract_assert( materials );
 	if ( materials == nullptr )
 		return;
 

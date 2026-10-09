@@ -1,13 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Keyframed animation header
 //			shared between game and tools
-//=============================================================================//
 
-#ifndef KEYFRAME_H
-#define KEYFRAME_H
-#pragma once
-
+import std;
+import ks.math;
 
 class IPositionInterpolator
 {
@@ -37,6 +36,3 @@ int Motion_GetNumberOfRotationInterpolators( void );
 bool Motion_GetRotationInterpolatorDetails( int rotInterpNum, char **outName, int *outMinKeyReq, int *outMaxKeyReq );
 bool Motion_InterpolateRotation( float time, int interpFuncNum, Quaternion &outQuatRotation );
 bool Motion_SetKeyAngles( int keyNum, Quaternion &quatAngles );
-
-
-#endif // KEYFRAME_H

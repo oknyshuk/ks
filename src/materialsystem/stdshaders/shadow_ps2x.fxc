@@ -1,8 +1,10 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "DEFERRED_SHADOWS"	"0..1"	[CONSOLE]
 // STATIC: "DEFERRED_SHADOWS"	"0..0"	[PC]
 // STATIC: "BLOBBY_SHADOWS"		"0..1"
+
 #include "common_fog_ps_fxc.h"
 
 #define HDRTYPE HDR_TYPE_NONE

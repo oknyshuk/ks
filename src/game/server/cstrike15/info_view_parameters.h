@@ -1,14 +1,9 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef INFO_VIEW_PARAMETERS_H
-#define INFO_VIEW_PARAMETERS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
 #include "reflect_annotations.h"
-
+#include "baseentity.h"
 
 class CInfoViewParameters : public CBaseEntity
 {
@@ -18,6 +13,3 @@ public:
 
 	[[= ks::reflect::Key{ .name = "ViewMode" } ]] int m_nViewMode;
 };
-
-
-#endif // INFO_VIEW_PARAMETERS_H

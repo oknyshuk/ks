@@ -1,18 +1,15 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-#ifndef VPHYSICS2_PARAM_TYPES
-#define VPHYSICS2_PARAM_TYPES
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "mathlib/mathlib.h"
-#include "mathlib/eigen.h"
-#include "tier1/utlvector.h"
+import std;
+import ks.tier1;
 #include "rubikon/serializehelpers.h"
 #include "rubikon/constants.h"
-#include "mathlib/transform.h"
 
 struct RnMaterial_t;
 
 
-#define RN_DEPRECATED
 
 
 //-------------------------------------------------------------------------------------------------
@@ -169,7 +166,7 @@ struct Range_t
 	float m_flMin;
 	float m_flMax;
 
-	Range_t( void ) { m_flMin = FLT_MAX; m_flMax = -FLT_MAX; }
+	Range_t( void ) { m_flMin = std::numeric_limits<float>::max(); m_flMax = -std::numeric_limits<float>::max(); }
 	Range_t( float flMin, float flMax ) { m_flMin = flMin; m_flMax = flMax; }
 };
 
@@ -340,7 +337,7 @@ struct RnDistanceQueryResult_t
 	}
 };
 
-#define MAX_SIMPLEX_VERTICES	4
+inline constexpr auto MAX_SIMPLEX_VERTICES = 4;
 
 struct RnSimplexCache_t
 {
@@ -481,7 +478,7 @@ struct RnSweptTransform_t
 
 	CTransform Interpolate( float flAlpha ) const
 	{
-		AssertDbg( IsNormalized() );
+		contract_assert( IsNormalized() );
 
 		CTransform out;
 		out.m_vPosition = ( 1.0f - flAlpha ) * m_vPosition1 + flAlpha * m_vPosition2;
@@ -596,7 +593,7 @@ struct RnInertiaProperties_t
 	Quaternion GetOrientation( )const
 	{
 		Vector inertia;
-		NOTE_UNUSED( inertia );
+		(void)inertia;
 		return Diagonalizer( m_Inertia, inertia );
 	}
 	matrix3x4_t GetPrincipalTransform()const
@@ -639,7 +636,7 @@ public:
 	static RnSupport_t GetDefault() 
 	{
 		RnSupport_t out;
-		out.m_flDistance = -FLT_MAX;
+		out.m_flDistance = -std::numeric_limits<float>::max();
 		out.m_vPoint.Init(0,0,0);
 		return out;
 	}
@@ -771,5 +768,3 @@ struct RnHullSimplificationParams_t
 		return m_flPrecisionDegrees > 0 || m_nMaxVerts > 0 || m_nMaxFaces > 0 || m_nMaxEdges > 0;
 	}
 };
-
-#endif

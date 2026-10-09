@@ -1,21 +1,32 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Local fast collision system for particles
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "particle_collision.h"
-#include "engine/ivdebugoverlay.h"
 
 #define	__DEBUG_PARTICLE_COLLISION_RETEST			1
 #define	__DEBUG_PARTICLE_COLLISION_OVERLAY			0
 #define	__DEBUG_PARTICLE_COLLISION_OVERLAY_LIFETIME	0.1f
 
-#define	NUM_DISCREET_STEPS		8.0f
-#define	NUM_SIMULATION_SECONDS	2.0f
+constexpr auto NUM_DISCREET_STEPS = 8.0f;
+constexpr auto NUM_SIMULATION_SECONDS = 2.0f;
 
-#define	COLLISION_EPSILON		0.01f
+constexpr auto COLLISION_EPSILON = 0.01f;
 
 //-----------------------------------------------------------------------------
 // Purpose: 

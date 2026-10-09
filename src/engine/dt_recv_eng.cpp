@@ -1,27 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+import ks.tier1;
 #include "dt.h"
 #include "dt_recv_eng.h"
 #include "dt_encode.h"
 #include "dt_instrumentation.h"
 #include "dt_stack.h"
-#include <memory>
-#include <vector>
-#include "tier0/dbg.h"
+import std;
 #include "dt_recv_decoder.h"
-#include "tier1/strtools.h"
-#include "tier0/icommandline.h"
 #include "dt_common_eng.h"
-#include "common.h"
 #include "serializedentity.h"
 #include "netmessages.h"
-#include <map>
 
 
 class CClientSendTable;
@@ -109,9 +99,7 @@ bool SetupClientSendTableHierarchy()
 			if ( pProp->m_Type == DPT_DataTable )
 			{
 				const char *pTableName = pClientProp->GetTableName();
-				ErrorIfNot( pTableName,
-					("SetupClientSendTableHierarchy: missing table name for prop '%s'.", pProp->GetName())
-				);
+				if ( !( pTableName ) ) Error("SetupClientSendTableHierarchy: missing table name for prop '%s'.", pProp->GetName());
 
 				CClientSendTable *pChild = FindClientSendTable( pTableName );
 				if ( !pChild )
@@ -135,57 +123,6 @@ static RecvProp* FindRecvProp( RecvTable *pTable, const char *pName )
 	{
 		RecvProp *pProp = pTable->GetProp( i );
 
-#ifdef DBGFLAG_ASSERT
-		// Debug validation to handle that no network fields get created with colliding names to special UTL vector networking fields
-		// because we will have custom receive table remapping below and don't want to mistakenly route bytes into wrong memory
-		// See dt_utlvector_recv.cpp / RecvPropUtlVector for details of this remapping
-		if ( char const *szLength = StringAfterPrefix( pProp->GetName(), "lengthprop" ) )
-		{
-			// *pLengthProp = RecvPropInt( AllocateStringHelper( "lengthprop%d", nMaxElements ), 0, 0, 0, RecvProxy_UtlVectorLength );
-			Assert( pProp->GetType() == DPT_Int );
-			Assert( *szLength );
-			for ( char const *szCheck = szLength; szCheck && *szCheck; ++ szCheck )
-			{
-				Assert( V_isdigit( *szCheck ) ); // assert that the number forms the length of array
-				Assert( szCheck - szLength < 5 ); // arrays are never that large!
-			}
-		}
-		else if ( char const *szLPT = StringAfterPrefix( pProp->GetName(), "_LPT_" ) )
-		{
-			// char *pLengthProxyTableName = AllocateUniqueDataTableName( false, "_LPT_%s_%d", pVarName, nMaxElements );
-			Assert( pProp->GetType() == DPT_DataTable );
-			char const *szLPTsize = strrchr( szLPT, '_' );
-			Assert( szLPTsize );
-			if ( szLPTsize )
-			{
-				++ szLPTsize;
-				Assert( *szLPTsize );
-			}
-			for ( char const *szCheck = szLPTsize; szCheck && *szCheck; ++szCheck )
-			{
-				Assert( V_isdigit( *szCheck ) ); // assert that the number forms the length of array
-				Assert( szCheck - szLength < 5 ); // arrays are never that large!
-			}
-		}
-		else if ( char const *szST = StringAfterPrefix( pProp->GetName(), "_ST_" ) )
-		{
-			// AllocateUniqueDataTableName( false, "_ST_%s_%d", pVarName, nMaxElements )
-			Assert( pProp->GetType() == DPT_DataTable );
-			char const *szSTsize = strrchr( szST, '_' );
-			Assert( szSTsize );
-			if ( szSTsize )
-			{
-				++szSTsize;
-				Assert( *szSTsize );
-			}
-			for ( char const *szCheck = szSTsize; szCheck && *szCheck; ++szCheck )
-			{
-				Assert( V_isdigit( *szCheck ) ); // assert that the number forms the length of array
-				Assert( szCheck - szLength < 5 ); // arrays are never that large!
-			}
-		}
-#endif
-
 		if ( !V_stricmp( pProp->GetName(), pName ) )
 			return pProp;
 
@@ -198,7 +135,7 @@ static RecvProp* FindRecvProp( RecvTable *pTable, const char *pName )
 			// We are being sent a lengthprop##
 			if ( char const *p_RECV_Length = StringAfterPrefix( pProp->GetName(), "lengthprop" ) )
 			{
-				if ( Q_atoi( p_SEND_Length ) <= Q_atoi( p_RECV_Length ) )
+				if ( V_atoi( p_SEND_Length ) <= V_atoi( p_RECV_Length ) )
 					return pProp;
 			}
 		}
@@ -208,12 +145,12 @@ static RecvProp* FindRecvProp( RecvTable *pTable, const char *pName )
 			if ( char const *p_RECV_LPT = StringAfterPrefix( pProp->GetName(), "_LPT_" ) )
 			{
 				// Trim the length from the field
-				char const *p_SEND_LPT_size = strrchr( p_SEND_LPT, '_' );
-				char const *p_RECV_LPT_size = strrchr( p_RECV_LPT, '_' );
+				char const *p_SEND_LPT_size = std::strrchr( p_SEND_LPT, '_' );
+				char const *p_RECV_LPT_size = std::strrchr( p_RECV_LPT, '_' );
 				if ( p_SEND_LPT_size && p_RECV_LPT_size &&
 					( p_SEND_LPT_size - p_SEND_LPT == p_RECV_LPT_size - p_RECV_LPT ) &&
 					!V_strnicmp( p_SEND_LPT, p_RECV_LPT, p_RECV_LPT_size - p_RECV_LPT ) &&
-					( Q_atoi( p_SEND_LPT_size + 1 ) <= Q_atoi( p_RECV_LPT_size + 1 ) ) )
+					( V_atoi( p_SEND_LPT_size + 1 ) <= V_atoi( p_RECV_LPT_size + 1 ) ) )
 					return pProp;
 			}
 		}
@@ -223,12 +160,12 @@ static RecvProp* FindRecvProp( RecvTable *pTable, const char *pName )
 			if ( char const *p_RECV_ST = StringAfterPrefix( pProp->GetName(), "_ST_" ) )
 			{
 				// Trim the length from the field
-				char const *p_SEND_ST_size = strrchr( p_SEND_ST, '_' );
-				char const *p_RECV_ST_size = strrchr( p_RECV_ST, '_' );
+				char const *p_SEND_ST_size = std::strrchr( p_SEND_ST, '_' );
+				char const *p_RECV_ST_size = std::strrchr( p_RECV_ST, '_' );
 				if ( p_SEND_ST_size && p_RECV_ST_size &&
 					( p_SEND_ST_size - p_SEND_ST == p_RECV_ST_size - p_RECV_ST ) &&
 					!V_strnicmp( p_SEND_ST, p_RECV_ST, p_RECV_ST_size - p_RECV_ST ) &&
-					( Q_atoi( p_SEND_ST_size + 1 ) <= Q_atoi( p_RECV_ST_size + 1 ) ) )
+					( V_atoi( p_SEND_ST_size + 1 ) <= V_atoi( p_RECV_ST_size + 1 ) ) )
 					return pProp;
 			}
 		}
@@ -255,9 +192,7 @@ bool CompareRecvPropToSendProp( const RecvProp *pRecvProp, const SendProp *pSend
 {
 	while ( 1 )
 	{
-		ErrorIfNot( pRecvProp && pSendProp,
-			("CompareRecvPropToSendProp: missing a property.")
-		);
+		if ( !( pRecvProp && pSendProp ) ) Error("CompareRecvPropToSendProp: missing a property.");
 
 		if ( pRecvProp->GetType() != pSendProp->GetType() || pRecvProp->IsInsideArray() != pSendProp->IsInsideArray() )
 		{
@@ -401,8 +336,7 @@ bool RecvTable_Init( RecvTable **pTables, int nTables )
 					return;
 				
 				// Shouldn't have a decoder yet.
-				ErrorIfNot( !pTable->m_pDecoder,
-					("RecvTable_Init: table '%s' has a decoder already.", pTable->GetName()));
+				if ( !( !pTable->m_pDecoder ) ) Error("RecvTable_Init: table '%s' has a decoder already.", pTable->GetName());
 				
 				pTable->SetInMainList( true );
 				g_RecvTables.push_back( pTable );
@@ -466,7 +400,7 @@ void RecvTable_FreeSendTable( SendTable *pTable )
 
 static char* AllocString( const char *pStr )
 {
-	int allocLen = strlen( pStr ) + 1;
+	int allocLen = std::strlen( pStr ) + 1;
 
 	char *pOut = new char[allocLen];
 	V_strncpy( pOut, pStr, allocLen );
@@ -573,7 +507,7 @@ bool RecvTable_CreateDecoders( const CStandardSendProxies *pSendProxies, bool bA
 
 
 		// It should already have been linked to its ClientSendTable.
-		Assert( pDecoder->m_pClientSendTable );
+		contract_assert( pDecoder->m_pClientSendTable );
 		if ( !pDecoder->m_pClientSendTable )
 			return false;
 
@@ -643,12 +577,10 @@ bool RecvTable_Decode(
 	)
 {
 	CRecvDecoder *pDecoder = pTable->m_pDecoder;
-	ErrorIfNot( pDecoder,
-		("RecvTable_Decode: table '%s' missing a decoder.", pTable->GetName())
-		);
+	if ( !( pDecoder ) ) Error("RecvTable_Decode: table '%s' missing a decoder.", pTable->GetName());
 
 	CSerializedEntity *pEntity = reinterpret_cast< CSerializedEntity * >( dest );
-	Assert( pEntity );
+	contract_assert( pEntity );
 
 	CClientDatatableStack theStack( pDecoder, (unsigned char*)pStruct, objectID );
 	theStack.Init( true, false );
@@ -674,9 +606,7 @@ bool RecvTable_Decode(
 void RecvTable_DecodeZeros( RecvTable *pTable, void *pStruct, int objectID )
 {
 	CRecvDecoder *pDecoder = pTable->m_pDecoder;
-	ErrorIfNot( pDecoder,
-		("RecvTable_DecodeZeros: table '%s' missing a decoder.", pTable->GetName())
-	);
+	if ( !( pDecoder ) ) Error("RecvTable_DecodeZeros: table '%s' missing a decoder.", pTable->GetName());
 
 	CClientDatatableStack theStack( pDecoder, (unsigned char*)pStruct, objectID );
 	theStack.Init( true, false );
@@ -743,22 +673,21 @@ bool RecvTable_MergeDeltas(
 	std::vector< int > *pVecChanges 
 	)
 {
-	Assert( SERIALIZED_ENTITY_HANDLE_INVALID != newState );
-	Assert( SERIALIZED_ENTITY_HANDLE_INVALID != mergedState );
+	contract_assert( SERIALIZED_ENTITY_HANDLE_INVALID != newState );
+	contract_assert( SERIALIZED_ENTITY_HANDLE_INVALID != mergedState );
 
 	CSerializedEntity *pOldState = oldState != SERIALIZED_ENTITY_HANDLE_INVALID ? reinterpret_cast< CSerializedEntity * >( oldState ) : nullptr;
 
 	CSerializedEntity *pNewState = reinterpret_cast< CSerializedEntity * >( newState );
-	Assert( pNewState );
+	contract_assert( pNewState );
 
 	CSerializedEntity *pMergedState = reinterpret_cast< CSerializedEntity * >( mergedState );
-	Assert( pMergedState );
+	contract_assert( pMergedState );
 
-	ErrorIfNot( pTable && pNewState && pMergedState, ("RecvTable_MergeDeltas: invalid parameters passed.")
-	);
+	if ( !( pTable && pNewState && pMergedState ) ) Error("RecvTable_MergeDeltas: invalid parameters passed.");
 
 	CRecvDecoder *pDecoder = pTable->m_pDecoder;
-	ErrorIfNot( pDecoder, ("RecvTable_MergeDeltas: table '%s' is missing its decoder.", pTable->GetName()) );
+	if ( !( pDecoder ) ) Error("RecvTable_MergeDeltas: table '%s' is missing its decoder.", pTable->GetName());
 
 	CSerializedEntityFieldIterator oldIterator( pOldState );
 	CSerializedEntityFieldIterator newIterator( pNewState );
@@ -819,7 +748,7 @@ bool RecvTable_MergeDeltas(
 
 	pMergedState->PackWithFieldData( packedData, fieldDataBuf.GetNumBitsWritten() );
 
-	ErrorIfNot( !fieldDataBuf.IsOverflowed(), ("RecvTable_MergeDeltas: overflowed in RecvTable '%s'.", pTable->GetName() ) );
+	if ( !( !fieldDataBuf.IsOverflowed() ) ) Error("RecvTable_MergeDeltas: overflowed in RecvTable '%s'.", pTable->GetName() );
 
 	return true;
 }
@@ -834,19 +763,19 @@ bool RecvTable_ReadFieldList_Guts(
 	)
 {
 	CSerializedEntity *pEntity = reinterpret_cast< CSerializedEntity * >( dest );
-	Assert( pEntity );
+	contract_assert( pEntity );
 
 	pEntity->Clear();
 
 	std::vector< int > fieldBits;
 	pEntity->ReadFieldPaths( &buf, bDTIEnabled ? &fieldBits : nullptr );
 
-	ErrorIfNot( pTable, ("RecvTable_ReadFieldListt: Missing RecvTable for class\n" ) );
+	if ( !( pTable ) ) Error("RecvTable_ReadFieldListt: Missing RecvTable for class\n" );
 	if ( !pTable )
 		return false;
 
 	CRecvDecoder *pDecoder = pTable->m_pDecoder;
-	ErrorIfNot( pDecoder, ("RecvTable_ReadFieldList: table '%s' missing a decoder.", pTable->GetName()) );
+	if ( !( pDecoder ) ) Error("RecvTable_ReadFieldList: table '%s' missing a decoder.", pTable->GetName());
 
 	// Remember where the "data" payload started
 	int nStartBit = buf.GetNumBitsRead();
@@ -897,4 +826,3 @@ bool RecvTable_ReadFieldList(
 
 	return RecvTable_ReadFieldList_Guts< false >( pTable, buf, dest, nObjectId );
 }
-

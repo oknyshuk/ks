@@ -1,28 +1,55 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// 4-23-98  
-// JOHN:  implementation of interface between client-side DLL and game engine.
-//  The cdll shouldn't have to know anything about networking or file formats.
-//  This file is Win32-dependant
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "client_pch.h"
+// Purpose: 4-23-98
+// JOHN:  implementation of interface between client-side DLL and game engine.
+// The cdll shouldn't have to know anything about networking or file formats.
+// This file is Win32-dependant
+
+// main precompiled header for client files
+
+import std;
+import ks.tier1;
+
+#include "common.h"
+#include "qlimits.h"
+#include "iprediction.h"
+#include "icliententitylist.h"
+
+#include "sysexternal.h"
+#include "cmd.h"
+#include "render.h"
+
+
+#include "screen.h"
+
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+
+#include "con_nprint.h"
+#include "demo.h"
+#include "host_state.h"
+#include "host.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "getintersectingsurfaces_struct.h"
 #include "gl_model_private.h"
 #include "surfinfo.h"
-#include "vstdlib/random.h"
 #include "cdll_int.h"
 #include "cmodel_engine.h"
 #include "tmessage.h"
 #include "console.h"
 #include "snd_audio_source.h"
-#include "iengine.h"
 #include "keys.h"
 #include "con_nprint.h"
-#include "tier0/vprof.h"
 #include "sound.h"
 #include "gl_rmain.h"
 #include "client_class.h"
@@ -35,7 +62,6 @@
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "materialsystem/materialsystem_config.h"
 #include "materialsystem/imaterial.h"
-#include "materialsystem/imaterialvar.h"
 #include "materialsystem/itexture.h"
 #include "istudiorender.h"
 #include "l_studio.h"
@@ -55,40 +81,31 @@
 #include "materialsystem/imesh.h"
 #include "IOcclusionSystem.h"
 #include "filesystem_engine.h"
-#include "tier0/icommandline.h"
 #include "client_textmessage.h"
 #include "cl_main.h"
 #include "demo.h"
 #include "engineui.h"
 #include "LocalNetworkBackdoor.h"
 #include "lightcache.h"
-#include "Steam.h"
 #include "ivideomode.h"
 #include "icolorcorrectiontools.h"
 #include "toolframework/itoolframework.h"
-#include "engine/view_sharedv1.h"
-#include "view.h"
 #include "game/client/iclientrendertargets.h"
-#include "tier2/tier2.h"
-#include "inputsystem/iinputsystem.h"
 #include "iachievementmgr.h"
 #include "profile.h"
 #include "singleplayersharedmemory.h"
 #include "cl_demo.h"
 #include "MapReslistGenerator.h"
 #include "iclientalphaproperty.h"
-#include "cl_steamauth.h"
 #include "enginebugreporter.h"
 #include "world.h"
 #include "staticpropmgr.h"
-#include "sv_uploadgamestats.h"
 #include "host_cmd.h"
 #include "matchmaking/imatchframework.h"
 #include "appframework/ilaunchermgr.h"
 #include "paint.h"
 #include "igame.h"
 #include "sys_mainwind.h"
-#include "dbginput.h"
 
 
 //-----------------------------------------------------------------------------
@@ -441,10 +458,8 @@ public:
 	//			returns 0 if no player found with that ID
 	//-----------------------------------------------------------------------------
 	virtual int	GetPlayerForUserID(int userID);
-#if !defined( NO_VOICE )
 	virtual struct IVoiceTweak_s *GetVoiceTweakAPI( void );
 	virtual void SetVoiceCasterID( uint32 casterID );
-#endif
 	virtual void EngineStats_BeginFrame( void );
 	virtual void EngineStats_EndFrame( void );
 	virtual void FireEvents();
@@ -486,11 +501,11 @@ public:
 	virtual int  GetDemoPlaybackStartTick( void );
 	virtual float GetDemoPlaybackTimeScale( void );
 	virtual int  GetDemoPlaybackTotalTicks( void );
-	virtual CDemoPlaybackParameters_t const * GetDemoPlaybackParameters() OVERRIDE;
-	virtual bool IsDemoSkipping( void ) OVERRIDE;
-	virtual int GetConnectionDataProtocol() const OVERRIDE;
-	virtual bool EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt ) OVERRIDE;
-	virtual void SetDemoImportantEventData( const KeyValues *pData ) OVERRIDE;
+	virtual CDemoPlaybackParameters_t const * GetDemoPlaybackParameters() override;
+	virtual bool IsDemoSkipping( void ) override;
+	virtual int GetConnectionDataProtocol() const override;
+	virtual bool EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt ) override;
+	virtual void SetDemoImportantEventData( const KeyValues *pData ) override;
 	virtual bool IsPaused( void );
 	virtual float GetTimescale( void ) const;
 	virtual bool IsTakingScreenshot( void );
@@ -543,8 +558,6 @@ public:
 
 	virtual void				ResetDemoInterpolation( void );
 
-	virtual bool		REMOVED_SteamRefreshLogin( const char *password, bool isSecure ) { return false; }
-	virtual bool		REMOVED_SteamProcessCall( bool & finished ) { return false; }
 
 // For non-split screen games this will always be zero
 	virtual int				GetActiveSplitScreenPlayerSlot();
@@ -565,7 +578,7 @@ public:
 
 	//All callbacks have to be registered before demo recording begins. TODO: Macro'ize a way to do it at startup
 	virtual void RegisterDemoCustomDataCallback( string_t szCallbackSaveID, pfnDemoCustomDataCallback pCallback );
-	virtual void RecordDemoCustomData( pfnDemoCustomDataCallback pCallback, const void *pData, size_t iDataLength );
+	virtual void RecordDemoCustomData( pfnDemoCustomDataCallback pCallback, const void *pData, std::size_t iDataLength );
 
 	virtual void SetLeafFlag( int nLeafIndex, int nFlagBits );
 
@@ -612,11 +625,9 @@ public:
 	virtual void	SearchPathsChangedAfterInstall();
 	virtual void ConfigureSystemLevel( int nCPULevel, int nGPULevel );
 	virtual void SetConnectionPassword( char const *pchCurrentPW );
-	virtual CSteamAPIContext* GetSteamAPIContext();
-	virtual void SubmitStatRecord( char const *szMapName, uint uiBlobVersion, uint uiBlobSize, const void *pvBlob );
 
 	virtual void ServerCmdKeyValues( KeyValues *pKeyValues );
-	virtual void SendMessageToServer( INetMessage *pMessage, bool bForceReliable, bool bVoice ) OVERRIDE;
+	virtual void SendMessageToServer( INetMessage *pMessage, bool bForceReliable, bool bVoice ) override;
 
 	// global sound pitch scaling
 	virtual void SetPitchScale( float flPitchScale );
@@ -673,16 +684,14 @@ public:
 	virtual bool SOSGetOpvarFloat( const char *pOpVarName, float &flValue );
 
 
-	virtual bool IsSubscribedMap( const char *pchMapName, bool bOnlyOnDisk );
-	virtual bool IsFeaturedMap( const char *pchMapName, bool bOnlyOnDisk );
 
 	virtual int GetClientVersion() const;
 
 	virtual float GetSafeZoneXMin( void ) const;
 
-	virtual bool IsVoiceRecording() const OVERRIDE;
-	virtual void ForceVoiceRecordOn() const OVERRIDE;
-	virtual const char* AliasToCommandString( const char* szAliasName ) OVERRIDE;
+	virtual bool IsVoiceRecording() const override;
+	virtual void ForceVoiceRecordOn() const override;
+	virtual const char* AliasToCommandString( const char* szAliasName ) override;
 };
 
 
@@ -691,7 +700,7 @@ public:
 //-----------------------------------------------------------------------------
 static CEngineClient s_VEngineClient;
 IVEngineClient *engineClient = &s_VEngineClient;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CEngineClient, IVEngineClient, VENGINE_CLIENT_INTERFACE_VERSION, s_VEngineClient );
+static InterfaceReg s_Reg_CEngineClient_IVEngineClient( []() -> void * { return static_cast<IVEngineClient *>( &s_VEngineClient ); }, VENGINE_CLIENT_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -793,7 +802,7 @@ void CEngineClient::ServerCmd( const char *szCmdString, bool bReliable )
 {
 	// info handling
 	char buf[255];
-	Q_snprintf( buf, sizeof( buf ), "cmd %s", szCmdString );
+	V_snprintf( buf, sizeof( buf ), "cmd %s", szCmdString );
 
 	CCommand args;
 	args.Tokenize( buf );
@@ -872,21 +881,21 @@ bool CEngineClient::GetPlayerInfo( int ent_num, player_info_t *pinfo )
 
 	if ( ent_num >= GetBaseLocalClient().m_nMaxClients || ent_num < 0 )
 	{
-		Q_memset( pinfo, 0, sizeof( player_info_t ) );
+		V_memset( pinfo, 0, sizeof( player_info_t ) );
 		return false;
 	}
 
-	Assert( GetBaseLocalClient().m_pUserInfoTable );
+	contract_assert( GetBaseLocalClient().m_pUserInfoTable );
 	if ( !GetBaseLocalClient().m_pUserInfoTable )
 	{
-		Q_memset( pinfo, 0, sizeof( player_info_t ) );
+		V_memset( pinfo, 0, sizeof( player_info_t ) );
 		return false;
 	}
 
-	Assert( ent_num < GetBaseLocalClient().m_pUserInfoTable->GetNumStrings() );
+	contract_assert( ent_num < GetBaseLocalClient().m_pUserInfoTable->GetNumStrings() );
 	if ( ent_num >= GetBaseLocalClient().m_pUserInfoTable->GetNumStrings() )
 	{
-		Q_memset( pinfo, 0, sizeof( player_info_t ) );
+		V_memset( pinfo, 0, sizeof( player_info_t ) );
 		return false;
 	}
 
@@ -894,7 +903,7 @@ bool CEngineClient::GetPlayerInfo( int ent_num, player_info_t *pinfo )
 
 	if ( !pi )
 	{
-		Q_memset( pinfo, 0, sizeof( player_info_t ) );
+		V_memset( pinfo, 0, sizeof( player_info_t ) );
 		return false;
 	}
 
@@ -905,20 +914,20 @@ bool CEngineClient::GetPlayerInfo( int ent_num, player_info_t *pinfo )
 		// This is "old version 1"
 		player_info_t_version_1 * pi_old_version_1 = reinterpret_cast< player_info_t_version_1 * >( pi );
 		pinfo->version = CDLL_PLAYER_INFO_S_VERSION_CURRENT;
-		Q_memcpy( &pinfo->xuid, &pi_old_version_1->xuid, sizeof( pi_old_version_1->xuid ) );
-		Q_memcpy( pinfo->name, pi_old_version_1->name, sizeof( pi_old_version_1->name ) );
-		Q_memcpy( &pinfo->userID, &pi_old_version_1->userID, sizeof( pi_old_version_1->userID ) );
-		Q_memcpy( pinfo->guid, pi_old_version_1->guid, sizeof( pi_old_version_1->guid ) );
-		Q_memcpy( &pinfo->friendsID, &pi_old_version_1->friendsID, sizeof( pi_old_version_1->friendsID ) );
-		Q_memcpy( pinfo->friendsName, pi_old_version_1->friendsName, sizeof( pi_old_version_1->friendsName ) );
-		Q_memcpy( &pinfo->fakeplayer, &pi_old_version_1->fakeplayer, sizeof( pi_old_version_1->fakeplayer ) );
-		Q_memcpy( &pinfo->ishltv, &pi_old_version_1->ishltv, sizeof( pi_old_version_1->ishltv ) );
-		Q_memcpy( pinfo->customFiles, pi_old_version_1->customFiles, sizeof( pi_old_version_1->customFiles ) );
-		Q_memcpy( &pinfo->filesDownloaded, &pi_old_version_1->filesDownloaded, sizeof( pi_old_version_1->filesDownloaded ) );
+		V_memcpy( &pinfo->xuid, &pi_old_version_1->xuid, sizeof( pi_old_version_1->xuid ) );
+		V_memcpy( pinfo->name, pi_old_version_1->name, sizeof( pi_old_version_1->name ) );
+		V_memcpy( &pinfo->userID, &pi_old_version_1->userID, sizeof( pi_old_version_1->userID ) );
+		V_memcpy( pinfo->guid, pi_old_version_1->guid, sizeof( pi_old_version_1->guid ) );
+		V_memcpy( &pinfo->friendsID, &pi_old_version_1->friendsID, sizeof( pi_old_version_1->friendsID ) );
+		V_memcpy( pinfo->friendsName, pi_old_version_1->friendsName, sizeof( pi_old_version_1->friendsName ) );
+		V_memcpy( &pinfo->fakeplayer, &pi_old_version_1->fakeplayer, sizeof( pi_old_version_1->fakeplayer ) );
+		V_memcpy( &pinfo->ishltv, &pi_old_version_1->ishltv, sizeof( pi_old_version_1->ishltv ) );
+		V_memcpy( pinfo->customFiles, pi_old_version_1->customFiles, sizeof( pi_old_version_1->customFiles ) );
+		V_memcpy( &pinfo->filesDownloaded, &pi_old_version_1->filesDownloaded, sizeof( pi_old_version_1->filesDownloaded ) );
 	}
 	else
 	{
-		Q_memcpy( pinfo, pi, sizeof( player_info_t ) );
+		V_memcpy( pinfo, pi, sizeof( player_info_t ) );
 	}
 
 	return true;
@@ -1007,7 +1016,7 @@ void CEngineClient::SetViewAngles( QAngle& va )
 {
 	if ( !va.IsValid() )
 	{
-		Warning( "CEngineClient::SetViewAngles:  rejecting invalid value [%f %f %f]\n", VectorExpand( va ) );
+		Warning( "CEngineClient::SetViewAngles:  rejecting invalid value [%f %f %f]\n", va.x, va.y, va.z );
 		// Just zero it out
 		GetLocalClient().viewangles = vec3_angle;
 		return;
@@ -1101,22 +1110,22 @@ void CEngineClient::HideLoadingPlaque( void )
 
 void CEngineClient::Con_NPrintf( int pos, const char *fmt, ... )
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		text[4096];
-	va_start (argptr, fmt);
-	Q_vsnprintf(text, sizeof( text ), fmt, argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr, fmt);
+	V_vsnprintf(text, sizeof( text ), fmt, argptr);
+	__builtin_va_end (argptr);
 
 	::Con_NPrintf( pos, "%s", text );
 }
 
 void CEngineClient::Con_NXPrintf( const struct con_nprint_s *info, const char *fmt, ... )
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		text[4096];
-	va_start (argptr, fmt);
-	Q_vsnprintf(text, sizeof( text ), fmt, argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr, fmt);
+	V_vsnprintf(text, sizeof( text ), fmt, argptr);
+	__builtin_va_end (argptr);
 
 	::Con_NXPrintf( info, "%s", text );
 }
@@ -1217,7 +1226,7 @@ static void SetNodeFlagBits( mnode_t *node )
 
 void CEngineClient::SetLeafFlag( int nLeafIndex, int nFlagBits )
 {
-	assert( nLeafIndex < host_state.worldbrush->numleafs );
+	contract_assert( nLeafIndex < host_state.worldbrush->numleafs );
 	host_state.worldbrush->leafs[nLeafIndex].flags |= nFlagBits;
 }
 
@@ -1397,7 +1406,6 @@ int	CEngineClient::GetPlayerForUserID(int userID)
 	return 0;
 }
 
-#if !defined( NO_VOICE )
 struct IVoiceTweak_s *CEngineClient::GetVoiceTweakAPI( void )
 {
 	return &g_VoiceTweakAPI;
@@ -1406,7 +1414,6 @@ void CEngineClient::SetVoiceCasterID( uint32 casterID )
 {
 	Voice_SetCaster( casterID );
 }
-#endif
 
 void CEngineClient::EngineStats_BeginFrame( void )
 {
@@ -1652,11 +1659,7 @@ bool CEngineClient::IsHLTV( void )
 
 bool CEngineClient::IsReplay( void )
 {
-#if defined( REPLAY_ENABLED )
-	return GetBaseLocalClient().isreplay;
-#else
 	return false;
-#endif
 }
 
 void CEngineClient::GetUILanguage( char *dest, int destlen )
@@ -1706,7 +1709,7 @@ float CEngineClient::GetScreenAspectRatio( int viewportWidth, int viewportHeight
 
 int CEngineClient::GetAppID()
 {
-	return GetSteamAppID();
+	return GetGameAppID();
 }
 
 void CEngineClient::SetOverlayBindProxy( int iOverlayID, void *pBindProxy )
@@ -1720,7 +1723,7 @@ void CEngineClient::SetOverlayBindProxy( int iOverlayID, void *pBindProxy )
 bool CEngineClient::CopyFrameBufferToMaterial( const char *pMaterialName )
 {
 	// not for PC
-	Assert( 0 );
+	contract_assert( 0 );
 	return false;
 }
 
@@ -1871,7 +1874,7 @@ void CEngineClient::RegisterDemoCustomDataCallback( string_t szCallbackSaveID, p
 	if( demorecorder->IsRecording() )
 	{
 		Warning( "Late registration of demo custom data callback.\n" );
-		AssertMsg( false, "Late registration of demo custom data callback." );
+		contract_assert( false && "Late registration of demo custom data callback." );
 	}
 
 	//binary search for the callback address. Couldn't directly use UtlSortVector because of the need to pair data and sort by only the callback
@@ -1892,7 +1895,7 @@ void CEngineClient::RegisterDemoCustomDataCallback( string_t szCallbackSaveID, p
 		{
 			//found the entry already
 			Warning( "Double registration of demo custom data callback.\n" );
-			AssertMsg( false, "Double registration of demo custom data callback." );
+			contract_assert( false && "Double registration of demo custom data callback." );
 			return;
 		}
 	}
@@ -1904,13 +1907,13 @@ void CEngineClient::RegisterDemoCustomDataCallback( string_t szCallbackSaveID, p
 }
 
 
-void CEngineClient::RecordDemoCustomData( pfnDemoCustomDataCallback pCallback, const void *pData, size_t iDataLength )
+void CEngineClient::RecordDemoCustomData( pfnDemoCustomDataCallback pCallback, const void *pData, std::size_t iDataLength )
 {
-	Assert( demorecorder->IsRecording() );
+	contract_assert( demorecorder->IsRecording() );
 	if( !demorecorder->IsRecording() )
 	{
 		Warning( "IEngineClient::RecordDemoCustomData(): Not recording a demo.\n" );
-		AssertMsg( false, "IEngineClient::RecordDemoCustomData(): Not recording a demo." );
+		contract_assert( false && "IEngineClient::RecordDemoCustomData(): Not recording a demo." );
 	}
 
 	//binary search for the callback address. Couldn't directly use UtlSortVector because of the need to pair data and sort by only the callback
@@ -1936,7 +1939,7 @@ void CEngineClient::RecordDemoCustomData( pfnDemoCustomDataCallback pCallback, c
 	}
 
 	Warning( "Demo recording custom data for unregistered callback.\n" );
-	AssertMsg( false, "Demo recording custom data for unregistered callback." );
+	contract_assert( false && "Demo recording custom data for unregistered callback." );
 }
 
 void CEngineClient::SetTimescale( float flTimescale )
@@ -2027,16 +2030,6 @@ bool CEngineClient::SOSGetOpvarFloat( const char *pOpVarName, float &flValue )
 	return S_SOSGetOpvarFloat( pOpVarName, flValue );
 }
 
-bool CEngineClient::IsSubscribedMap( const char *pchMapName, bool bOnlyOnDisk )
-{
-	return g_ClientDLL->IsSubscribedMap( pchMapName, bOnlyOnDisk );
-}
-
-bool CEngineClient::IsFeaturedMap( const char *pchMapName, bool bOnlyOnDisk )
-{
-	return g_ClientDLL->IsFeaturedMap( pchMapName, bOnlyOnDisk );
-}
-
 // --------------------------------------------------------------------
 // 
 // --------------------------------------------------------------------
@@ -2125,16 +2118,6 @@ void CEngineClient::ConfigureSystemLevel( int nCPULevel, int nGPULevel )
 void CEngineClient::SetConnectionPassword( char const *pchCurrentPW )
 {
 	GetBaseLocalClient().SetConnectionPassword( pchCurrentPW );
-}
-
-CSteamAPIContext* CEngineClient::GetSteamAPIContext()
-{
-	return &Steam3Client();
-}
-
-void CEngineClient::SubmitStatRecord( char const *szMapName, uint uiBlobVersion, uint uiBlobSize, const void *pvBlob )
-{
-	AsyncUpload_QueueData( szMapName, uiBlobVersion, uiBlobSize, pvBlob );
 }
 
 void CEngineClient::ServerCmdKeyValues( KeyValues *pKeyValues )
@@ -2242,12 +2225,12 @@ InputContextHandle_t CEngineClient::GetInputContext( EngineInputContextId_t id )
 	return INPUT_CONTEXT_HANDLE_INVALID;
 }
 
-#define MAX_GENERIC_MEMORY_STATS 64
+constexpr auto MAX_GENERIC_MEMORY_STATS = 64;
 GenericMemoryStat_t g_EngineMemStats[MAX_GENERIC_MEMORY_STATS];
 int g_nEngineMemStats = 0;
 static inline int AddGenericMemoryStat( const char *name, int value )
 {
-	Assert( g_nEngineMemStats < MAX_GENERIC_MEMORY_STATS );
+	contract_assert( g_nEngineMemStats < MAX_GENERIC_MEMORY_STATS );
 	if ( g_nEngineMemStats < MAX_GENERIC_MEMORY_STATS )
 	{
 		g_EngineMemStats[ g_nEngineMemStats ].name  = name;
@@ -2312,7 +2295,6 @@ bool CEngineClient::IsVoiceRecording() const
 
 void CEngineClient::ForceVoiceRecordOn() const
 {
-#if !defined( NO_VOICE )
 	if ( GetBaseLocalClient().IsActive() && Voice_IsRecording() == false )
 	{
 		const char *pUncompressedFile = nullptr;
@@ -2332,7 +2314,6 @@ void CEngineClient::ForceVoiceRecordOn() const
 
 		Voice_RecordStart( pUncompressedFile, pDecompressedFile, pInputFile );
 	}
-#endif
 }
 
 const char* CEngineClient::AliasToCommandString( const char* szAliasName )
@@ -2366,10 +2347,7 @@ static void ClientDLL_InitRecvTableMgr()
 	int nRecvTables = 0;
 	for ( ClientClass *pCur = ClientDLL_GetAllClasses(); pCur; pCur=pCur->m_pNext )
 	{
-		ErrorIfNot( 
-			nRecvTables < ARRAYSIZE( pRecvTables ), 
-			("ClientDLL_InitRecvTableMgr: overflowed kMaxDatatables")
-			);
+		if ( !( nRecvTables < std::size( pRecvTables ) ) ) Error("ClientDLL_InitRecvTableMgr: overflowed kMaxDatatables");
 		
 		pRecvTables[nRecvTables] = pCur->m_pRecvTable;
 		++nRecvTables;
@@ -2395,20 +2373,9 @@ CreateInterfaceFn ClientDLL_GetFactory( void )
 //-----------------------------------------------------------------------------
 bool ClientDLL_Load()
 {
-	Assert ( !g_ClientDLLModule );
+	contract_assert( !g_ClientDLLModule );
 
-	// Check the signature on the client dll.  If this fails we load it anyway but put this client
-	// into insecure mode so it won't connect to secure servers and get VAC banned
-	// #if 0 the following block and rebuild engine.dll if you want to build your own noCEG client.dll and run on Steam Public in secure mode!
-	if ( !Host_AllowLoadModule( "client" DLL_EXT_STRING, "GAMEBIN", false ) )
-	{
-		// not supposed to load this but we will anyway
-		Host_DisallowSecureServers();
-	}
-
-	// loads the client.dll, but ensures that the client dll is running under Steam
-	// this will have to be undone when we want mods to be able to run
-	g_ClientDLLModule = g_pFileSystem->LoadModule( "client" DLL_EXT_STRING, "GAMEBIN", false );
+	g_ClientDLLModule = g_pFileSystem->LoadModule( "client.so", "GAMEBIN", false );
 	if ( g_ClientDLLModule )
 	{
 		g_ClientFactory = Sys_GetFactory( g_ClientDLLModule );
@@ -2484,14 +2451,14 @@ void ClientDLL_Disconnect()
 //-----------------------------------------------------------------------------
 void ClientDLL_Init( void )
 {
-	extern void CL_SetSteamCrashComment();
+	extern void CL_SetCrashComment();
 
 	// Assert ClientDLL_Load successfully created these interfaces, as we need them to init properly
-	Assert ( g_ClientDLL );
-	Assert ( g_ClientFactory );
+	contract_assert( g_ClientDLL );
+	contract_assert( g_ClientFactory );
 
 	// this will get updated after we load a map, but this gets video info if we sys_error() prior to loading a map
-	CL_SetSteamCrashComment();
+	CL_SetCrashComment();
 
 	if ( g_ClientDLL )
 	{
@@ -2553,16 +2520,7 @@ void ClientDLL_Init( void )
 				bFailed = true;
 			}
 
-			// Allow the user to disable this check when testing internally (but not on steam public), typically when using remote desktop.
-			// FIXME: Don't ship this
-			//if ( ( GetSteamUniverse() != k_EUniversePublic ) && ( CommandLine()->CheckParm( "-nodevicechecks" ) ) )
-			/*
-			if ( CommandLine()->CheckParm( "-nodevicechecks" ) )
-			{
-				bFailed = false;
-			}
-			*/
-						
+			
 			if ( bFailed )
 			{
 				Sys_Error( "%s", pMessage );
@@ -2608,7 +2566,7 @@ void ClientDLL_Shutdown( void )
 	ClientDLL_ShutdownRecvTableMgr();
 
 	{
-		FORCE_DEFAULT_SPLITSCREEN_PLAYER_GUARD;
+		;
 		materials->UncacheAllMaterials();
 	}
 
@@ -2660,12 +2618,11 @@ void ClientDLL_HudVidInit( void )
 
 void ClientDLL_ProcessInput( void )
 {
-	SNPROF("ClientDLL_ProcessInput");
 
 	if ( !g_ClientDLL )
 		return;
 
-	VPROF("ClientDLL_ProcessInput");
+	CVProfScope _( "ClientDLL_ProcessInput", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( i )
 	{
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( i );
@@ -2743,5 +2700,3 @@ int  ClientDLL_GetSpectatorTarget( ClientDLLObserverMode_t *pObserverMode )
 	}
 	return -1;
 }
-
-

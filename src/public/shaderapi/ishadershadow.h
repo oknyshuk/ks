@@ -1,25 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef ISHADERSHADOW_H
-#define ISHADERSHADOW_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "shaderapi/shareddefs.h"
 #include <materialsystem/imaterial.h>
-
+import ks.math;
 
 //-----------------------------------------------------------------------------
 // forward declarations
 //-----------------------------------------------------------------------------
 class CMeshBuilder;
 class IMaterialVar;
-struct LightDesc_t; 
 
 
 //-----------------------------------------------------------------------------
@@ -119,13 +110,13 @@ enum PolygonOffsetMode_t
 //-----------------------------------------------------------------------------
 // The Shader interface versions
 //-----------------------------------------------------------------------------
-#define SHADERSHADOW_INTERFACE_VERSION	"ShaderShadow010"
+inline constexpr const char *SHADERSHADOW_INTERFACE_VERSION = "ShaderShadow010";
 
 
 //-----------------------------------------------------------------------------
 // the shader API interface (methods called from shaders)
 //-----------------------------------------------------------------------------
-abstract_class IShaderShadow
+class IShaderShadow
 {
 public:
 	// Sets the default *shadow* state
@@ -199,7 +190,3 @@ public:
 	virtual float GetLightMapScaleFactor( void ) const = 0;
 };
 // end class IShaderShadow
-
-
-
-#endif // ISHADERSHADOW_H

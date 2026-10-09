@@ -1,13 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "tier0/platform.h"
-#include "ivoicerecord.h"
+import ks.core;
 #include "voice_mixer_controls.h"
 
 
@@ -40,4 +34,3 @@ void ShutdownMixerControls()
 	delete g_pMixerControls;
 	g_pMixerControls = nullptr;
 }
-

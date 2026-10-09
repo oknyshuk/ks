@@ -1,16 +1,14 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
+
 // Purpose: common routines to operate on matchmaking sessions and members
 // Assumptions: caller should include all required headers before including mm_helpers.h
-//
-//===========================================================================//
 
-#ifndef __COMMON__MM_HELPERS_H_
-#define __COMMON__MM_HELPERS_H_
-
-#include "tier1/keyvalues.h"
-#include "tier1/fmtstr.h"
-
+import std;
+import ks.tier1;
+#include "matchmaking/imatchtitle.h"
+#include "matchmaking/iplayer.h"
 
 //
 // Contains inline functions to deal with common tasks involving matchmaking and sessions
@@ -67,7 +65,7 @@ inline TitleDataFieldsDescription_t const * TitleDataFieldsDescriptionFindByStri
 		return nullptr;
 	for ( ; fields && fields->m_szFieldName; ++ fields )
 	{
-		if ( !Q_stricmp( fields->m_szFieldName, szString ) )
+		if ( !V_stricmp( fields->m_szFieldName, szString ) )
 			return fields;
 	}
 	return nullptr;
@@ -75,17 +73,17 @@ inline TitleDataFieldsDescription_t const * TitleDataFieldsDescriptionFindByStri
 
 inline bool TitleDataFieldsDescriptionGetBit( TitleDataFieldsDescription_t const *fdKey, IPlayerLocal *pPlayer )
 {
-	Assert( pPlayer );
-	Assert( fdKey );
-	Assert( fdKey->m_eDataType == TitleDataFieldsDescription_t::DT_BITFIELD );
+	contract_assert( pPlayer );
+	contract_assert( fdKey );
+	contract_assert( fdKey->m_eDataType == TitleDataFieldsDescription_t::DT_BITFIELD );
 	return !!( ( *( const uint8 * )( ( ( const char * )pPlayer->GetPlayerTitleData( fdKey->m_iTitleDataBlock ) ) + (fdKey->m_numBytesOffset/8) ) ) & ( 1 << ( fdKey->m_numBytesOffset%8 ) ) );
 }
 
 inline void TitleDataFieldsDescriptionSetBit( TitleDataFieldsDescription_t const *fdKey, IPlayerLocal *pPlayer, bool bBitValue )
 {
-	Assert( pPlayer );
-	Assert( fdKey );
-	Assert( fdKey->m_eDataType == TitleDataFieldsDescription_t::DT_BITFIELD );
+	contract_assert( pPlayer );
+	contract_assert( fdKey );
+	contract_assert( fdKey->m_eDataType == TitleDataFieldsDescription_t::DT_BITFIELD );
 	uint8 uiValue = static_cast< uint8 >( bBitValue ? (~0u) : 0u );
 	pPlayer->UpdatePlayerTitleData( fdKey, &uiValue, sizeof( uiValue ) );
 }
@@ -93,21 +91,17 @@ inline void TitleDataFieldsDescriptionSetBit( TitleDataFieldsDescription_t const
 template < typename T >
 inline T TitleDataFieldsDescriptionGetValue( TitleDataFieldsDescription_t const *fdKey, IPlayerLocal *pPlayer )
 {
-	Assert( pPlayer );
-	Assert( fdKey );
-	Assert( ( fdKey->m_eDataType != TitleDataFieldsDescription_t::DT_BITFIELD ) && ( fdKey->m_eDataType != TitleDataFieldsDescription_t::DT_0 ) );
+	contract_assert( pPlayer );
+	contract_assert( fdKey );
+	contract_assert( ( fdKey->m_eDataType != TitleDataFieldsDescription_t::DT_BITFIELD ) && ( fdKey->m_eDataType != TitleDataFieldsDescription_t::DT_0 ) );
 	return *( T const * )(&( (char const*) pPlayer->GetPlayerTitleData( fdKey->m_iTitleDataBlock ) )[(fdKey->m_numBytesOffset)]);
 }
 
 template < typename T > // T is primitive type, passing by value instead of constref to avoid compiler troubles when passing temporaries
 inline void TitleDataFieldsDescriptionSetValue( TitleDataFieldsDescription_t const *fdKey, IPlayerLocal *pPlayer, T val )
 {
-	Assert( pPlayer );
-	Assert( fdKey );
-	Assert( ( fdKey->m_eDataType != TitleDataFieldsDescription_t::DT_BITFIELD ) && ( fdKey->m_eDataType != TitleDataFieldsDescription_t::DT_0 ) );
+	contract_assert( pPlayer );
+	contract_assert( fdKey );
+	contract_assert( ( fdKey->m_eDataType != TitleDataFieldsDescription_t::DT_BITFIELD ) && ( fdKey->m_eDataType != TitleDataFieldsDescription_t::DT_0 ) );
 	pPlayer->UpdatePlayerTitleData( fdKey, &val, sizeof( T ) );
 }
-
-
-#endif // __COMMON__MM_HELPERS_H_
-

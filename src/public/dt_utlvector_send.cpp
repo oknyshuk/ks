@@ -1,13 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "dt_utlvector_send.h"
-
 
 extern char const *s_ElementNames[MAX_ARRAY_ELEMENTS];
 
@@ -33,7 +27,7 @@ void SendProxy_UtlVectorElement(
 	int objectID )
 {
 	CSendPropExtra_UtlVector *pExtra = (CSendPropExtra_UtlVector*)pProp->GetExtraData();
-	Assert( pExtra );
+	contract_assert( pExtra );
 
 	// Kind of lame overloading element stride to hold the element index,
 	// but we can easily move it into its SetExtraData stuff if we need to.
@@ -42,7 +36,7 @@ void SendProxy_UtlVectorElement(
 	// Shares the vector table's base, so it can't be absent; zero past the end.
 	if ( iElement >= pExtra->m_Ops.count( pStruct, pExtra->m_Offset ) )
 	{
-		memset( pOut, 0, sizeof( *pOut ) );
+		std::memset( pOut, 0, sizeof( *pOut ) );
 	}
 	else
 	{
@@ -61,7 +55,7 @@ void* SendProxy_UtlVectorElement_DataTable(
 	CSendPropExtra_UtlVector *pExtra = (CSendPropExtra_UtlVector*)pProp->GetExtraData();
 
 	int iElement = pProp->m_ElementStride;
-	Assert( iElement < pExtra->m_nMaxElements );
+	contract_assert( iElement < pExtra->m_nMaxElements );
 
 	// Null past the end: the encoder omits the slot.
 	if ( iElement >= pExtra->m_Ops.count( pStructBase, pExtra->m_Offset ) )
@@ -85,7 +79,7 @@ void SendProxy_UtlVectorLength(
 	pOut->m_Int = pExtra->m_Ops.count( pStruct, pExtra->m_Offset );
 	if ( pOut->m_Int > pExtra->m_nMaxElements )
 	{
-		Assert( false );
+		contract_assert( false );
 		pOut->m_Int = pExtra->m_nMaxElements;
 	}
 }
@@ -116,8 +110,8 @@ SendProp SendPropUtlVector(
 {
 	SendProp ret;
 
-	Assert( nMaxElements <= MAX_ARRAY_ELEMENTS );
-	Assert( ops.base && ops.count );
+	contract_assert( nMaxElements <= MAX_ARRAY_ELEMENTS );
+	contract_assert( ops.base && ops.count );
 
 	ret.m_Type = DPT_DataTable;
 	ret.m_pVarName = pVarName;

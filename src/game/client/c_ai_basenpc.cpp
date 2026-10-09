@@ -1,19 +1,24 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
-#include "reflect_recvtable.h"
-#include "reflect_annotations.h"
-#include "c_ai_basenpc.h"
-#include "engine/ivdebugoverlay.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "physics.h"
+#include "reflect_recvtable.h"
+#include "c_ai_basenpc.h"
 
 #include "death_pose.h"
 
-#define PING_MAX_TIME	2.0
+constexpr auto PING_MAX_TIME = 2.0;
 
 //
 // Global accessors for GLaDOS for lighted mouth proxy

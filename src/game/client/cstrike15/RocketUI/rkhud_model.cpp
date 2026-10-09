@@ -1,13 +1,23 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 
 #include "rkhud_model.h"
 
 #include <rocketui/rocketui.h>
+import ks.core;
+import std;
 
-#include <vector>
 
 // Function-local so registration works whatever order the translation units
 // initialise in.

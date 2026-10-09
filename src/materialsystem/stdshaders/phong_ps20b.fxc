@@ -1,9 +1,9 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "SFM"						"0..0" [ps20b] [PC]
 // STATIC: "SFM"						"0..1" [ps30] [PC]
 // STATIC: "SFM"						"0..0" [CONSOLE]
-
 // STATIC: "CUBEMAP"					"0..1"
 // STATIC: "SELFILLUM"					"0..1"
 // STATIC: "SELFILLUMFRESNEL"			"0..1"
@@ -24,22 +24,18 @@
 // STATIC: "WORLD_NORMAL"				"0..1"	[ps30]	[PC]
 // STATIC: "WORLD_NORMAL"				"0..0"	[CONSOLE]
 // STATIC: "PHONG_HALFLAMBERT"          "0..0"
-
 // STATIC: "CASCADED_SHADOW_MAPPING"	"0..1"	[CONSOLE]
 // STATIC: "CASCADED_SHADOW_MAPPING"	"0..0"	[ps20] [PC]
 // STATIC: "CASCADED_SHADOW_MAPPING"	"0..1"	[ps20b] [ps30] [PC]
 // STATIC: "CSM_MODE"					"0..0"	[CONSOLE]
 // STATIC: "CSM_MODE"					"0..0"	[ps20] [ps20b] [PC]
 // STATIC: "CSM_MODE"					"0..3"	[ps30] [PC]
-
 // STATIC: "DECAL_BLEND_MODE"           "0..2"
-
 // STATIC: "TINTMASKTEXTURE"			"0..1"	[ps30]
 // STATIC: "TINTMASKTEXTURE"			"0..0"	[ps20] [ps20b]
 // STATIC: "TINTMASKTEXTURE"			"0..0"	[CONSOLE]
-
-
 // DYNAMIC: "WRITEWATERFOGTODESTALPHA"  "0..1"
+
 #include "common_fog_ps_fxc.h"
 // DYNAMIC: "NUM_LIGHTS"				"0..4"	[CONSOLE]
 // DYNAMIC: "NUM_LIGHTS"				"0..2"	[ps20b] [PC]

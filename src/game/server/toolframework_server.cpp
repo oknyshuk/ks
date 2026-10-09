@@ -1,16 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "shareddefs.h"
+#include "util.h"
 #include "igamesystem.h"
 #include "toolframework/iserverenginetools.h"
 #include "init_factory.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: This is an autogame system which is used to call back into the engine at appropriate points
@@ -42,14 +39,10 @@ public:
 static CToolFrameworkServer g_ToolFrameworkServer;
 IToolFrameworkServer *g_pToolFrameworkServer = &g_ToolFrameworkServer;
 
-#ifndef NO_TOOLFRAMEWORK
-
 bool ToolsEnabled()
 {
 	return g_ToolFrameworkServer.m_pTools && g_ToolFrameworkServer.m_pTools->InToolMode() && !engine->IsDedicatedServer();
 }
-
-#endif
 
 bool CToolFrameworkServer::Init()
 {

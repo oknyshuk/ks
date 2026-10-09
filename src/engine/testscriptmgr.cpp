@@ -1,24 +1,15 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "tier0/platform.h"
+import ks.vstdlib;
 #include "sys.h"
 #include "testscriptmgr.h"
-#include "tier0/dbg.h"
 #include "filesystem_engine.h"
-#include "tier1/strtools.h"
 #include "cmd.h"
-#include "convar.h"
-#include "vstdlib/random.h"
 #include "host.h"
-#include <stdlib.h>
+import std;
 
-#define TESTSCRIPT_COLOR	Color( 0, 255, 255 )
+inline const Color TESTSCRIPT_COLOR = Color( 0, 255, 255 );
 
 CTestScriptMgr g_TestScriptMgr;
 
@@ -29,7 +20,9 @@ ConVar testscript_running( "testscript_running", "0", 0, "Set to true when test 
 // --------------------------------------------------------------------------------------------------- //
 // Global console commands the test script manager implements.
 // --------------------------------------------------------------------------------------------------- //
-CON_COMMAND_EXTERN_F( Test_Wait, Test_Wait, "", FCVAR_CHEAT )
+void Test_Wait( const CCommand &args );
+static ConCommand Test_Wait_command( "Test_Wait", Test_Wait, "", FCVAR_CHEAT );
+void Test_Wait( const CCommand &args )
 {
 	if ( !CommandLine()->FindParm("-insecure") )
 	{
@@ -43,11 +36,13 @@ CON_COMMAND_EXTERN_F( Test_Wait, Test_Wait, "", FCVAR_CHEAT )
 		return;
 	}
 
-	float flSeconds = atof( args[ 1 ] );
+	float flSeconds = std::atof( args[ 1 ] );
 	GetTestScriptMgr()->SetWaitTime( flSeconds );
 }
 
-CON_COMMAND_EXTERN_F( Test_RunFrame, Test_RunFrame, "", FCVAR_CHEAT )
+void Test_RunFrame( const CCommand &args );
+static ConCommand Test_RunFrame_command( "Test_RunFrame", Test_RunFrame, "", FCVAR_CHEAT );
+void Test_RunFrame( const CCommand &args )
 {
 	if ( !CommandLine()->FindParm( "-insecure" ) )
 	{
@@ -58,7 +53,9 @@ CON_COMMAND_EXTERN_F( Test_RunFrame, Test_RunFrame, "", FCVAR_CHEAT )
 	GetTestScriptMgr()->SetWaitCheckPoint( "frame_end" );
 }
 
-CON_COMMAND_EXTERN_F( Test_WaitForCheckPoint, Test_WaitForCheckPoint, "", FCVAR_CHEAT )
+void Test_WaitForCheckPoint( const CCommand &args );
+static ConCommand Test_WaitForCheckPoint_command( "Test_WaitForCheckPoint", Test_WaitForCheckPoint, "", FCVAR_CHEAT );
+void Test_WaitForCheckPoint( const CCommand &args )
 {
 	if ( !CommandLine()->FindParm( "-insecure" ) )
 	{
@@ -72,11 +69,13 @@ CON_COMMAND_EXTERN_F( Test_WaitForCheckPoint, Test_WaitForCheckPoint, "", FCVAR_
 		return;
 	}
 
-	bool bOnce = ( args.ArgC() >= 3 && Q_stricmp( args[2], "once" ) == 0 );
+	bool bOnce = ( args.ArgC() >= 3 && V_stricmp( args[2], "once" ) == 0 );
 	GetTestScriptMgr()->SetWaitCheckPoint( args[ 1 ], bOnce );
 }
 
-CON_COMMAND_EXTERN_F( Test_StartLoop, Test_StartLoop, "Test_StartLoop <loop name> - Denote the start of a loop. Really just defines a named point you can jump to.", FCVAR_CHEAT )
+void Test_StartLoop( const CCommand &args );
+static ConCommand Test_StartLoop_command( "Test_StartLoop", Test_StartLoop, "Test_StartLoop <loop name> - Denote the start of a loop. Really just defines a named point you can jump to.", FCVAR_CHEAT );
+void Test_StartLoop( const CCommand &args )
 {
 	if ( !CommandLine()->FindParm( "-insecure" ) )
 	{
@@ -93,7 +92,9 @@ CON_COMMAND_EXTERN_F( Test_StartLoop, Test_StartLoop, "Test_StartLoop <loop name
 	GetTestScriptMgr()->StartLoop( args[ 1 ] );
 }
 
-CON_COMMAND_EXTERN_F( Test_LoopCount, Test_LoopCount, "Test_LoopCount <loop name> <count> - loop back to the specified loop start point the specified # of times.", FCVAR_CHEAT )
+void Test_LoopCount( const CCommand &args );
+static ConCommand Test_LoopCount_command( "Test_LoopCount", Test_LoopCount, "Test_LoopCount <loop name> <count> - loop back to the specified loop start point the specified # of times.", FCVAR_CHEAT );
+void Test_LoopCount( const CCommand &args )
 {
 	if ( !CommandLine()->FindParm( "-insecure" ) )
 	{
@@ -107,10 +108,12 @@ CON_COMMAND_EXTERN_F( Test_LoopCount, Test_LoopCount, "Test_LoopCount <loop name
 		return;
 	}
 
-	GetTestScriptMgr()->LoopCount( args[ 1 ], atoi( args[ 2 ] ) );
+	GetTestScriptMgr()->LoopCount( args[ 1 ], std::atoi( args[ 2 ] ) );
 }
 
-CON_COMMAND_EXTERN_F( Test_Loop, Test_Loop, "Test_Loop <loop name> - loop back to the specified loop start point unconditionally.", FCVAR_CHEAT )
+void Test_Loop( const CCommand &args );
+static ConCommand Test_Loop_command( "Test_Loop", Test_Loop, "Test_Loop <loop name> - loop back to the specified loop start point unconditionally.", FCVAR_CHEAT );
+void Test_Loop( const CCommand &args )
 {
 	if ( !CommandLine()->FindParm( "-insecure" ) )
 	{
@@ -127,7 +130,9 @@ CON_COMMAND_EXTERN_F( Test_Loop, Test_Loop, "Test_Loop <loop name> - loop back t
 	GetTestScriptMgr()->LoopCount( args[ 1 ], -1 );
 }
 
-CON_COMMAND_EXTERN_F( Test_LoopForNumSeconds, Test_LoopForNumSeconds, "Test_LoopForNumSeconds <loop name> <time> - loop back to the specified start point for the specified # of seconds.", FCVAR_CHEAT )
+void Test_LoopForNumSeconds( const CCommand &args );
+static ConCommand Test_LoopForNumSeconds_command( "Test_LoopForNumSeconds", Test_LoopForNumSeconds, "Test_LoopForNumSeconds <loop name> <time> - loop back to the specified start point for the specified # of seconds.", FCVAR_CHEAT );
+void Test_LoopForNumSeconds( const CCommand &args )
 {
 	if ( !CommandLine()->FindParm( "-insecure" ) )
 	{
@@ -141,10 +146,12 @@ CON_COMMAND_EXTERN_F( Test_LoopForNumSeconds, Test_LoopForNumSeconds, "Test_Loop
 		return;
 	}
 
-	GetTestScriptMgr()->LoopForNumSeconds( args[ 1 ], atof( args[ 2 ] ) );
+	GetTestScriptMgr()->LoopForNumSeconds( args[ 1 ], std::atof( args[ 2 ] ) );
 }
 
-CON_COMMAND_F( Test_RandomChance, "Test_RandomChance <percent chance, 0-100> <token1> <token2...> - Roll the dice and maybe run the command following the percentage chance.", FCVAR_CHEAT )
+static void Test_RandomChance( const CCommand &args );
+static ConCommand Test_RandomChance_command( "Test_RandomChance", Test_RandomChance, "Test_RandomChance <percent chance, 0-100> <token1> <token2...> - Roll the dice and maybe run the command following the percentage chance.", FCVAR_CHEAT );
+static void Test_RandomChance( const CCommand &args )
 {
 	if ( !CommandLine()->FindParm( "-insecure" ) )
 	{
@@ -158,7 +165,7 @@ CON_COMMAND_F( Test_RandomChance, "Test_RandomChance <percent chance, 0-100> <to
 		return;
 	}
 
-	float flPercent = atof( args[ 1 ] );
+	float flPercent = std::atof( args[ 1 ] );
 	if ( RandomFloat( 0, 100 ) < flPercent )
 	{
 		char newString[1024];
@@ -166,8 +173,8 @@ CON_COMMAND_F( Test_RandomChance, "Test_RandomChance <percent chance, 0-100> <to
 
 		for ( int i=2; i < args.ArgC(); i++ )
 		{
-			Q_strncat( newString, args[ i ], sizeof( newString ), COPY_ALL_CHARACTERS );
-			Q_strncat( newString, " ", sizeof( newString ), COPY_ALL_CHARACTERS );
+			V_strncat( newString, args[ i ], sizeof( newString ), COPY_ALL_CHARACTERS );
+			V_strncat( newString, " ", sizeof( newString ), COPY_ALL_CHARACTERS );
 		}
 
 		Cbuf_InsertText( Cbuf_GetCurrentPlayer(), newString, args.Source() );
@@ -175,7 +182,9 @@ CON_COMMAND_F( Test_RandomChance, "Test_RandomChance <percent chance, 0-100> <to
 }
 
 
-CON_COMMAND_F( Test_SendKey, "", FCVAR_CHEAT )
+static void Test_SendKey( const CCommand &args );
+static ConCommand Test_SendKey_command( "Test_SendKey", Test_SendKey, "", FCVAR_CHEAT );
+static void Test_SendKey( const CCommand &args )
 {
 	if ( !CommandLine()->FindParm( "-insecure" ) )
 	{
@@ -192,7 +201,9 @@ CON_COMMAND_F( Test_SendKey, "", FCVAR_CHEAT )
 	Sys_TestSendKey( args[1] );
 }
 
-CON_COMMAND_F( Test_StartScript, "Start a test script running..", FCVAR_CHEAT )
+static void Test_StartScript( const CCommand &args );
+static ConCommand Test_StartScript_command( "Test_StartScript", Test_StartScript, "Start a test script running..", FCVAR_CHEAT );
+static void Test_StartScript( const CCommand &args )
 {
 	if ( !CommandLine()->FindParm( "-insecure" ) )
 	{
@@ -217,7 +228,7 @@ CTestScriptMgr::CTestScriptMgr()
 {
 	m_hFile = FILESYSTEM_INVALID_HANDLE;
 	m_NextCheckPoint[0] = 0;
-	m_WaitUntil = Sys_FloatTime();
+	m_WaitUntil = Plat_FloatTime();
 }
 
 
@@ -232,7 +243,7 @@ bool CTestScriptMgr::StartTestScript( const char *pFilename )
 	StopTestScript();
 
 	char fullName[MAX_PATH];
- 	Q_snprintf( fullName, sizeof( fullName ), "testscripts\\%s", pFilename );	 
+ 	V_snprintf( fullName, sizeof( fullName ), "testscripts\\%s", pFilename );	 
 	V_DefaultExtension( fullName, ".vtest", sizeof( fullName ) );
 
 	m_hFile = g_pFileSystem->Open( fullName, "rt", "GAME" ); 
@@ -276,7 +287,6 @@ void CTestScriptMgr::CheckPoint( const char *pName )
 	if ( !IsInitted() || IsTimerWaiting() )
 		return;
 
-	MEM_ALLOC_CREDIT();
 	if ( testscript_debug.GetInt() )
 	{
 		if ( stricmp( pName, "frame_end" ) != 0 )
@@ -289,7 +299,7 @@ void CTestScriptMgr::CheckPoint( const char *pName )
 
 	if ( m_NextCheckPoint[0] )
 	{
-		if ( Q_stricmp( m_NextCheckPoint, pName ) != 0 )
+		if ( V_stricmp( m_NextCheckPoint, pName ) != 0 )
 		{
 			// This isn't the checkpoint you're looking for.
 			return;
@@ -304,7 +314,7 @@ void CTestScriptMgr::CheckPoint( const char *pName )
 
 void CTestScriptMgr::RunCommands()
 {
-	Assert( IsInitted() );
+	contract_assert( IsInitted() );
 
 	if ( Cbuf_IsProcessingCommands( Cbuf_GetCurrentPlayer() ) )
 	{
@@ -388,7 +398,7 @@ void CTestScriptMgr::RunCommands()
 
 bool CTestScriptMgr::IsTimerWaiting() const
 {
-	if ( Sys_FloatTime() < m_WaitUntil )
+	if ( Plat_FloatTime() < m_WaitUntil )
 	{
 		return true;
 	}
@@ -407,7 +417,7 @@ bool CTestScriptMgr::IsCheckPointWaiting() const
 
 void CTestScriptMgr::SetWaitTime( float flSeconds )
 {
-	m_WaitUntil = Sys_FloatTime() + flSeconds;
+	m_WaitUntil = Plat_FloatTime() + flSeconds;
 }
 
 
@@ -415,7 +425,7 @@ CLoopInfo* CTestScriptMgr::FindLoop( const char *pLoopName )
 {
 	for ( auto &pLoop : m_Loops )
 	{
-		if ( Q_stricmp( pLoopName, pLoop->m_Name ) == 0 )
+		if ( V_stricmp( pLoopName, pLoop->m_Name ) == 0 )
 			return pLoop.get();
 	}
 	return nullptr;
@@ -432,9 +442,9 @@ void CTestScriptMgr::StartLoop( const char *pLoopName )
 	}
 
 	CLoopInfo *pLoop = m_Loops.emplace_back( std::make_unique< CLoopInfo >() ).get();
-	Q_strncpy( pLoop->m_Name, pLoopName, sizeof( pLoop->m_Name ) );
+	V_strncpy( pLoop->m_Name, pLoopName, sizeof( pLoop->m_Name ) );
 	pLoop->m_nCount = 0;
-	pLoop->m_flStartTime = Sys_FloatTime();
+	pLoop->m_flStartTime = Plat_FloatTime();
 	pLoop->m_iNextCommandPos = g_pFileSystem->Tell( m_hFile );
 }
 
@@ -475,7 +485,7 @@ void CTestScriptMgr::LoopForNumSeconds( const char *pLoopName, double nSeconds )
 		Error( "CTestScriptMgr::LoopForNumSeconds( %s ): no loop with this name exists.", pLoopName );
 	}
 
-	if ( Sys_FloatTime() - pLoop->m_flStartTime < nSeconds )
+	if ( Plat_FloatTime() - pLoop->m_flStartTime < nSeconds )
 	{
 		ConColorMsg( TESTSCRIPT_COLOR, "***************************************************\n" );
 		ConColorMsg( TESTSCRIPT_COLOR, "TESTSCRIPT: Performing loop to %s\n", pLoopName );
@@ -512,7 +522,5 @@ void CTestScriptMgr::SetWaitCheckPoint( const char *pCheckPointName, bool bOnce 
 	if ( bOnce && m_CheckPointsHit.contains( pCheckPointName ) )
 		return;
 
-	Q_strncpy( m_NextCheckPoint, pCheckPointName, sizeof( m_NextCheckPoint ) );
+	V_strncpy( m_NextCheckPoint, pCheckPointName, sizeof( m_NextCheckPoint ) );
 }
-
-

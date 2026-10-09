@@ -1,17 +1,15 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Shader for decals on weapon models
-//
-//==========================================================================//
 
 #include "BaseVSShader.h"
 #include "weapondecal_dx9_helper.h"
-#include "cpp_shader_constant_register_map.h"
 
 DEFINE_FALLBACK_SHADER( WeaponDecal, WeaponDecal_dx9 )
 
 	BEGIN_VS_SHADER( WeaponDecal_dx9, "WeaponDecal" )
-	BEGIN_SHADER_PARAMS
+	
 	
 	SHADER_PARAM( THIRDPERSON, SHADER_PARAM_TYPE_BOOL, "0", "Third-person mode" )
 	SHADER_PARAM( AOTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shader/AOTexture", "R: cavity, G: AO, B: mig shading" )

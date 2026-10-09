@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -21,7 +22,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_particlesphere_ps20 0
+inline constexpr int shaderStaticTest_particlesphere_ps20 = 0;
 class particlesphere_ps20_Dynamic_Index
 {
 private:
@@ -32,7 +33,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -40,7 +41,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -61,12 +62,12 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nPIXELFOGTYPE ) + 0;
 	}
 };
-#define shaderDynamicTest_particlesphere_ps20 0
+inline constexpr int shaderDynamicTest_particlesphere_ps20 = 0;
 
 static const ShaderComboInformation_t s_DynamicComboArray_particlesphere_ps20[1] = 
 {
@@ -74,7 +75,7 @@ static const ShaderComboInformation_t s_DynamicComboArray_particlesphere_ps20[1]
 };
 static const ShaderComboSemantics_t particlesphere_ps20_combos =
 {
-	"particlesphere_ps20", s_DynamicComboArray_particlesphere_ps20, 1, NULL, 0 
+	"particlesphere_ps20", s_DynamicComboArray_particlesphere_ps20, 1, nullptr, 0 
 };
 
 class ConstructMe_particlesphere_ps20

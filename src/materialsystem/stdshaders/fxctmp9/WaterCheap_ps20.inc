@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -20,7 +21,7 @@ private:
 public:
 	void SetMULTITEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nMULTITEXTURE = i;
 #ifdef _DEBUG
 		m_bMULTITEXTURE = true;
@@ -28,7 +29,7 @@ public:
 	}
 	void SetMULTITEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMULTITEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMULTITEXTURE = true;
@@ -42,7 +43,7 @@ private:
 public:
 	void SetFRESNEL( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFRESNEL = i;
 #ifdef _DEBUG
 		m_bFRESNEL = true;
@@ -50,7 +51,7 @@ public:
 	}
 	void SetFRESNEL( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFRESNEL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFRESNEL = true;
@@ -64,7 +65,7 @@ private:
 public:
 	void SetBLEND( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBLEND = i;
 #ifdef _DEBUG
 		m_bBLEND = true;
@@ -72,7 +73,7 @@ public:
 	}
 	void SetBLEND( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBLEND = true;
@@ -86,7 +87,7 @@ private:
 public:
 	void SetREFRACTALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nREFRACTALPHA = i;
 #ifdef _DEBUG
 		m_bREFRACTALPHA = true;
@@ -94,7 +95,7 @@ public:
 	}
 	void SetREFRACTALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nREFRACTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bREFRACTALPHA = true;
@@ -108,7 +109,7 @@ private:
 public:
 	void SetHDRTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nHDRTYPE = i;
 #ifdef _DEBUG
 		m_bHDRTYPE = true;
@@ -116,7 +117,7 @@ public:
 	}
 	void SetHDRTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nHDRTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHDRTYPE = true;
@@ -130,7 +131,7 @@ private:
 public:
 	void SetFLOWMAP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLOWMAP = i;
 #ifdef _DEBUG
 		m_bFLOWMAP = true;
@@ -138,7 +139,7 @@ public:
 	}
 	void SetFLOWMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLOWMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLOWMAP = true;
@@ -152,7 +153,7 @@ private:
 public:
 	void SetFLOW_DEBUG( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLOW_DEBUG = i;
 #ifdef _DEBUG
 		m_bFLOW_DEBUG = true;
@@ -160,7 +161,7 @@ public:
 	}
 	void SetFLOW_DEBUG( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLOW_DEBUG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLOW_DEBUG = true;
@@ -205,7 +206,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bMULTITEXTURE && m_bFRESNEL && m_bBLEND && m_bREFRACTALPHA && m_bHDRTYPE && m_bFLOWMAP && m_bFLOW_DEBUG;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 4 * m_nMULTITEXTURE ) + ( 8 * m_nFRESNEL ) + ( 16 * m_nBLEND ) + ( 32 * m_nREFRACTALPHA ) + ( 64 * m_nHDRTYPE ) + ( 192 * m_nFLOWMAP ) + ( 384 * m_nFLOW_DEBUG ) + 0;
 	}
@@ -221,7 +222,7 @@ private:
 public:
 	void SetHDRENABLED( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nHDRENABLED = i;
 #ifdef _DEBUG
 		m_bHDRENABLED = true;
@@ -229,7 +230,7 @@ public:
 	}
 	void SetHDRENABLED( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHDRENABLED = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHDRENABLED = true;
@@ -243,7 +244,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -251,7 +252,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -276,7 +277,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bHDRENABLED && m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nHDRENABLED ) + ( 2 * m_nPIXELFOGTYPE ) + 0;
 	}

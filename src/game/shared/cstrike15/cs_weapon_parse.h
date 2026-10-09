@@ -1,21 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef CS_WEAPON_PARSE_H
-#define CS_WEAPON_PARSE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #ifdef CLIENT_DLL
 	#define CWeaponCSBase C_WeaponCSBase
 #endif
 
+#include "networkvar.h"
 #include "weapon_parse.h"
 #include "cs_shareddefs.h"
-#include <map>
-#include <memory>
+import std;
 
 class CWeaponCSBase;
 
@@ -122,7 +116,7 @@ enum CSWeaponID
 	WEAPON_MAX = EQUIPMENT_MAX,		// number of weapons weapon index
 };
 
-#define MAX_EQUIPMENT (EQUIPMENT_MAX - EQUIPMENT_FIRST)
+inline constexpr auto MAX_EQUIPMENT = (EQUIPMENT_MAX - EQUIPMENT_FIRST);
 
 enum
 {
@@ -431,5 +425,3 @@ const char *WeaponIDToAlias( int id );
 CSWeaponID AliasToWeaponID( const char *szAlias );
 const CCSWeaponInfo* GetWeaponInfo( CSWeaponID weaponID );
 bool IsGunWeapon( CSWeaponType weaponType );
-
-#endif // CS_WEAPON_PARSE_H

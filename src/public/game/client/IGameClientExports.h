@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IGAMECLIENTEXPORTS_H
-#define IGAMECLIENTEXPORTS_H
-
-#include "interface.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Purpose: Exports a set of functions for the GameUI interface to interact with the game client
 //-----------------------------------------------------------------------------
-abstract_class IGameClientExports : public IBaseInterface
+class IGameClientExports : public IBaseInterface
 {
 public:
 	// ingame voice manipulation
@@ -33,7 +28,4 @@ public:
 	virtual bool ClientWantsBlurEffect( void ) = 0;
 };
 
-#define GAMECLIENTEXPORTS_INTERFACE_VERSION "GameClientExports001"
-
-
-#endif // IGAMECLIENTEXPORTS_H
+inline constexpr const char *GAMECLIENTEXPORTS_INTERFACE_VERSION = "GameClientExports001";

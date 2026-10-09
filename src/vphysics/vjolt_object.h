@@ -9,6 +9,15 @@
 
 #pragma once
 
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/StateRecorder.h>
+import ks.math;
+#include "vphysics_interface.h"
+import std;
+#include "bspflags.h"
+
 class IPredictedPhysicsObject;
 
 class IJoltObjectListener;
@@ -60,8 +69,8 @@ public:
 	void			Wake() override;
 	void			Sleep() override;
 	void			RecheckCollisionFilter() override;
-	void			RecheckContactPoints( bool bSearchForNewContacts ) override_portal2;
-	void			RecheckContactPoints() override_not_portal2 { RecheckContactPoints( false ); }
+	void			RecheckContactPoints( bool bSearchForNewContacts ) ;
+	void			RecheckContactPoints()  { RecheckContactPoints( false ); }
 
 	void			SetMass( float mass ) override;
 	float			GetMass() const override;
@@ -83,7 +92,7 @@ public:
 	void			SetContents( unsigned int contents ) override;
 
 	float			GetSphereRadius() const override;
-	void			SetSphereRadius( float radius ) override_asw;
+	void			SetSphereRadius( float radius ) ;
 	float			GetEnergy() const override;
 	Vector			GetMassCenterLocalSpace() const override;
 
@@ -141,21 +150,15 @@ public:
 
 	void			OutputDebugInfo() const override;
 
-#if OBJECT_WELDING
-	void			WeldToObject( IPhysicsObject *pParent ) override;
-	void			RemoveWeld( IPhysicsObject *pOther ) override;
-	void			RemoveAllWelds() override;
-#endif
+	void			SetUseAlternateGravity( bool bSet ) ;
+	void			SetCollisionHints( uint32 collisionHints ) ;
+	uint32			GetCollisionHints() const ;
 
-	void			SetUseAlternateGravity( bool bSet ) override_asw;
-	void			SetCollisionHints( uint32 collisionHints ) override_asw;
-	uint32			GetCollisionHints() const override_asw;
+	IPredictedPhysicsObject *	GetPredictedInterface() const ;
+	void						SyncWith( IPhysicsObject *pOther ) ;
 
-	IPredictedPhysicsObject *	GetPredictedInterface() const override_csgo;
-	void						SyncWith( IPhysicsObject *pOther ) override_csgo;
-
-	void SetErrorDelta_Position( const Vector& vPosition ) override_csgo {}
-	void SetErrorDelta_Velocity( const Vector& vVelocity ) override_csgo {}
+	void SetErrorDelta_Position( const Vector& vPosition )  {}
+	void SetErrorDelta_Velocity( const Vector& vVelocity )  {}
 
 public:
 	JoltPhysicsEnvironment *GetEnvironment() { return m_pEnvironment; }

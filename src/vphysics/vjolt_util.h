@@ -9,6 +9,17 @@
 
 #pragma once
 
+#include <Jolt/Jolt.h>
+#include <Jolt/Geometry/AABox.h>
+#include <Jolt/Core/Color.h>
+#include <Jolt/Core/Reference.h>
+#include <Jolt/Physics/Collision/Shape/Shape.h>
+#include <Jolt/Physics/Collision/Shape/DecoratedShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+import std;
+import ks.math;
+#include "gametrace.h"
+
 inline constexpr float InchesToMetres = 0.0254f;
 inline constexpr float MetresToInches = 1.0f / 0.0254f;
 

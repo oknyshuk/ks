@@ -1,13 +1,13 @@
-//========= Copyright (c) 1996-2013, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2013 Valve Corporation
+
 // Purpose: Interface to composite texture objects
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef I_COMPOSITETEXTURE_H
-#define I_COMPOSITETEXTURE_H
 
+
+
+class IVTFTexture;
 class ICompositeTexture
 {
 public:
@@ -16,5 +16,3 @@ public:
 	virtual IVTFTexture *GetResultVTF() = 0;
 	virtual	const char *GetName() = 0;
 };
-
-#endif // I_COMPOSITETEXTURE_H

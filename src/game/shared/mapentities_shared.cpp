@@ -1,13 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Controls the loading, parsing and creation of the entities from the BSP.
-//
-//=============================================================================//
 
-
-#include "cbase.h"
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "cdll_util.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "shareddefs.h"
+#include "util.h"
+#endif
 #include "mapentities_shared.h"
-
 
 static const char *s_BraceChars = "{}()\'";
 static bool s_BraceCharacters[256];
@@ -25,10 +31,10 @@ bool MapEntity_ExtractValue( const char *pEntData, const char *keyName, char Val
 			break;												// must not have seen the classname
 
 		// is this the right key?
-		if ( !strcmp(token, keyName) )
+		if ( !std::strcmp(token, keyName) )
 		{
 			inputData = MapEntity_ParseToken( inputData, token );	// get value and return it
-			Q_strncpy( Value, token, MAPKEY_MAXLENGTH );
+			V_strncpy( Value, token, MAPKEY_MAXLENGTH );
 			return true;
 		}
 
@@ -117,7 +123,7 @@ const char *MapEntity_ParseToken( const char *data, char *newToken )
 	{
 		s_BuildReverseMap = false; 
 
-		Q_memset( s_BraceCharacters, 0, sizeof(s_BraceCharacters) );
+		V_memset( s_BraceCharacters, 0, sizeof(s_BraceCharacters) );
 
 		for ( const char *c = s_BraceChars; *c; c++ )
 		{
@@ -233,14 +239,14 @@ bool CEntityMapData::GetNextKey( char *keyName, char *value )
 	if ( !m_pCurrentKey )
 	{
 		Warning( "CEntityMapData::GetNextKey: EOF without closing brace\n" );
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	
-	Q_strncpy( keyName, token, MAPKEY_MAXLENGTH );
+	V_strncpy( keyName, token, MAPKEY_MAXLENGTH );
 
 	// fix up keynames with trailing spaces
-	int n = strlen(keyName);
+	int n = std::strlen(keyName);
 	while (n && keyName[n-1] == ' ')
 	{
 		keyName[n-1] = 0;
@@ -252,18 +258,18 @@ bool CEntityMapData::GetNextKey( char *keyName, char *value )
 	if ( !m_pCurrentKey )
 	{
 		Warning( "CEntityMapData::GetNextKey: EOF without closing brace\n" );
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	if ( token[0] == '}' )
 	{
 		Warning( "CEntityMapData::GetNextKey: closing brace without data\n" );
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 
 	// value successfully found
-	Q_strncpy( value, token, MAPKEY_MAXLENGTH );
+	V_strncpy( value, token, MAPKEY_MAXLENGTH );
 	return true;
 }
 
@@ -273,7 +279,7 @@ bool CEntityMapData::GetNextKey( char *keyName, char *value )
 bool CEntityMapData::SetValue( const char *keyName, char *NewValue, int nKeyInstance )
 {
 	// If this is -1, the size of the string is unknown and cannot be safely modified!
-	Assert( m_nEntDataSize != -1 );
+	contract_assert( m_nEntDataSize != -1 );
 	if ( m_nEntDataSize == -1 )
 		return false;
 
@@ -291,35 +297,35 @@ bool CEntityMapData::SetValue( const char *keyName, char *NewValue, int nKeyInst
 			break;												// must not have seen the classname
 
 		// is this the right key?
-		if ( !strcmp(token, keyName) )
+		if ( !std::strcmp(token, keyName) )
 		{
 			++nCurrKeyInstance;
 			if ( nCurrKeyInstance > nKeyInstance )
 			{
 				// Find the start & end of the token we're going to replace
-				int entLen = strlen(m_pEntData);
+				int entLen = std::strlen(m_pEntData);
 				char *postData = new char[entLen];
 				prevData = inputData;
 				inputData = (char*)MapEntity_ParseToken( inputData, token );	// get keyname
-				Q_strncpy( postData, inputData, entLen );
+				V_strncpy( postData, inputData, entLen );
 
 				// Insert quotes if caller didn't
 				if ( NewValue[0] != '\"' )
 				{
-					Q_snprintf( newvaluebuf, sizeof( newvaluebuf ), "\"%s\"", NewValue );
+					V_snprintf( newvaluebuf, sizeof( newvaluebuf ), "\"%s\"", NewValue );
 				}
 				else
 				{
-					Q_strncpy( newvaluebuf, NewValue, sizeof( newvaluebuf ) );
+					V_strncpy( newvaluebuf, NewValue, sizeof( newvaluebuf ) );
 				}
 
-				int iNewValueLen = Q_strlen(newvaluebuf);
-				int iPadding = iNewValueLen - Q_strlen( token ) - 2;	// -2 for the quotes (token doesn't have them)
+				int iNewValueLen = V_strlen(newvaluebuf);
+				int iPadding = iNewValueLen - V_strlen( token ) - 2;	// -2 for the quotes (token doesn't have them)
 
 				// prevData has a space at the start, seperating the value from the key.
 				// Add 1 to prevData when pasting in the new Value, to account for the space.
-				Q_strncpy( prevData+1, newvaluebuf, iNewValueLen+1 );	// +1 for the null terminator
-				Q_strcat( prevData, postData, m_nEntDataSize - ((prevData-m_pEntData)+1) );
+				V_strncpy( prevData+1, newvaluebuf, iNewValueLen+1 );	// +1 for the null terminator
+				V_strcat( prevData, postData, m_nEntDataSize - ((prevData-m_pEntData)+1) );
 
 				m_pCurrentKey += iPadding;
 				delete [] postData;

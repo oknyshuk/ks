@@ -1,16 +1,11 @@
-//========== Copyright (c) 2008, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2008 Valve Corporation
 
-#ifndef VSCRIPT_SERVER_H
-#define VSCRIPT_SERVER_H
-
+import ks.tier1;
 #include "vscript/ivscript.h"
-#include "tier1/keyvalues.h"
+import std;
 #include "vscript_shared.h"
-
 
 bool VScriptServerReplaceClosures( const char *pszScriptName, HSCRIPT hScope, bool bWarnMissing = false );
 
@@ -47,5 +42,3 @@ public:
 
 	KeyValues *m_pKeyValues;	// actual KeyValue entity
 };
-
-#endif // VSCRIPT_SERVER_H

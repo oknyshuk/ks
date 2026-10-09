@@ -1,28 +1,20 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+import ks.tier1;
 #include "softbody.h"
-#include "tier0/memalloc.h"
-#include "vstdlib/jobthread.h"
-#include "tier1/fmtstr.h"
-#include "tier1/text_reader.h"
-#include "tier1/buffer_strider.h"
 #include "mathlib/femodel.h"
 #include "mathlib/femodel.inl"
-#include "tier1/fmtstr.h"
 #include "modellib/clothhelpers.h"
 #include "mathlib/femodeldesc.h"
 #include "mathlib/softbodyenvironment.h"
-#include "tier0/miniprofiler.h"
-#include <vector>
+import std;
 #include "filesystem.h"
 #include "mathlib/dynamictree.h"
 #include "engine/ivdebugoverlay.h"
-#include "mathlib/vertexcolor.h"
 #include "rubikon/param_types.h"
 #include "materialsystem/imesh.h"
 #include "mathlib/softbody.inl"
-#include "tier1/map_ops.h"
-#include <unordered_map>
-#include <unordered_set>
 
 // #include "rnthread.h"
 // #include "rnsimd.h"
@@ -35,7 +27,7 @@
 // #include "meshshape.h"
 
 extern const CPUInformation &cpuInfo;
-DECLARE_LOGGING_CHANNEL( LOG_PHYSICS );
+extern LoggingChannelID_t LOG_PHYSICS;;
 
 enum ClothDebugFlagEnum_t
 {
@@ -63,68 +55,8 @@ static const float	g_flRopeSize = 20.0f;
 static const float	g_flTeleportDeltaSq = ( 200.0f * 200.0f );
 static const float	g_flNoTeleportDeltaSq = ( 100.0f * 100.0f );
 
-MPROF_NODE( SoftbodyFilterTransforms, "Softbody:FilterTransforms", "Physics" );
-MPROF_NODE( SoftbodyDraw, "Softbody:Draw", "Physics" );
-MPROF_NODE( SoftbodyStep, "Softbody:Step", "Physics" );
-MPROF_NODE( SoftbodyStepIntegrate, "Softbody:Step/Integrate", "Physics" )
-MPROF_NODE( SoftbodyStepPredict, "Softbody:Step/Predict", "Physics" )
-MPROF_NODE( SoftbodyStepCollide, "Softbody:Step/Collide", "Physics" )
-MPROF_NODE( SoftbodyStepIterate, "Softbody:Step/Iterate", "Physics" )
-MPROF_NODE( SoftbodyStepPost, "Softbody:Step/Post", "Physics" )
-MPROF_NODE( FeRelaxRods, "Softbody:FeRelaxRods", "Physics" );
-MPROF_NODE( FeRelaxQuads, "Softbody:FeRelaxQuads", "Physics" );
-MPROF_NODE( SoftbodyStepCollideCompute, "Softbody:Step/Collide/Compute", "Physics" );
-MPROF_NODE( SoftbodyStepCollideComputeOuter, "Softbody:Step/Collide/ComputeOuter", "Physics" );
-//MPROF_NODE( SoftbodyTreeBounds, "Softbody:ComputeTreeBounds", "Physics" );
 
 
-
-
-float g_flClothGuardThreshold = 1000;
-int g_nClothWatch = 1;
-
-class CRnSoftbodyChangeGuard
-{
-	const CSoftbody *m_pSoftbody;
-	const char *m_pName;
-	AABB_t m_Box0, m_Box1;
-public:
-	static float Difference( const AABB_t &a, const AABB_t &b )
-	{
-		return ( a.m_vMinBounds - b.m_vMinBounds ).Length() + ( a.m_vMaxBounds - b.m_vMaxBounds ).Length();
-	}
-
-	CRnSoftbodyChangeGuard( const CSoftbody *pSoftbody, const char *pName )
-	{
-		m_pSoftbody = pSoftbody;
-		m_pName = pName;
-		m_Box0 = GetAabb( pSoftbody->GetNodePositions( 0 ), pSoftbody->GetNodeCount() );
-		m_Box1 = GetAabb( pSoftbody->GetNodePositions( 1 ), pSoftbody->GetNodeCount() );
-	}
-
-	~CRnSoftbodyChangeGuard()
-	{
-		AABB_t box0 = GetAabb( m_pSoftbody->GetNodePositions( 0 ), m_pSoftbody->GetNodeCount() );
-		AABB_t box1 = GetAabb( m_pSoftbody->GetNodePositions( 1 ), m_pSoftbody->GetNodeCount() );
-		float flMove = Difference( m_Box0, box0 ) + Difference( m_Box1, box1 );
-		if ( flMove > g_flClothGuardThreshold )
-		{
-			if ( m_pSoftbody->GetIndexInWorld() == g_nClothWatch )
-			{
-				Log_Msg( LOG_PHYSICS, "Cloth %d %s in %s changed %g: from {%.0f,%.0f}\xB1{%.0f,%.0f} to {%.0f,%.0f}\xB1{%.0f,%.0f}\n", m_pSoftbody->m_nIndexInWorld, m_pSoftbody->m_DebugName.GetSafe(), m_pName, flMove,
-					box0.GetCenter().x, box0.GetCenter().y, box0.GetSize().x, box0.GetSize().y,
-					box1.GetCenter().x, box1.GetCenter().y, box1.GetSize().x, box1.GetSize().y
-				);
-			}
-		}
-	}
-};
-
-#if defined(_DEBUG)
-#define CHANGE_GUARD() //CRnSoftbodyChangeGuard changeGuard( this, __FUNCTION__)
-#else
-#define CHANGE_GUARD() 
-#endif
 
 CSoftbody::CSoftbody( void )
 {
@@ -338,9 +270,9 @@ void CSoftbody::InitFeModel( int numModelBones )
 		nMemSize += numModelBones * sizeof( *m_pModelBoneToCtrl ) + m_pFeModel->m_nCtrlCount * sizeof( *m_pCtrlToModelBone );
 	}
 
-	CBufferStrider buffer( MemAlloc_AllocAligned( nMemSize, 16 ) );
+	CBufferStrider buffer( MemAlloc_AllocAlignedUnattributed( nMemSize, 16 ) );
 	V_memset( buffer.Get( ), 0, nMemSize );
-	uint8 *pMemEnd = buffer.Get( ) + nMemSize; NOTE_UNUSED( pMemEnd );
+	uint8 *pMemEnd = buffer.Get( ) + nMemSize; (void)pMemEnd;
 
 	m_pParticles = buffer.Stride< matrix3x4a_t >( GetParticleArrayCount( ) );
 	m_pPos0 = buffer.Stride< VectorAligned >( m_nNodeCount );
@@ -382,7 +314,7 @@ void CSoftbody::InitFeModel( int numModelBones )
 	{
 
 
-		AssertDbg( m_pFeModel->m_nCtrlCount == m_pFeModel->m_nNodeCount );
+		contract_assert( m_pFeModel->m_nCtrlCount == m_pFeModel->m_nNodeCount );
 		for ( int nNode = 0; nNode < m_nNodeCount; ++nNode )
 		{
 			m_pPos0[ nNode ] = m_pPos1[ nNode ] = m_pFeModel->m_pInitPose[ nNode ].GetOrigin( );
@@ -400,7 +332,7 @@ void CSoftbody::InitFeModel( int numModelBones )
 		}
 	}
 
-	AssertDbg( pMemEnd == buffer.Get( ) );
+	contract_assert( pMemEnd == buffer.Get( ) );
 
 	m_nSimFlags = m_pEnvironment->GetSoftbodySimulationFlags();
 }
@@ -466,13 +398,13 @@ void CSoftbody::Validate()
 {
 	if ( IsDebug( ) )
 	{
-		const matrix3x4a_t *pSim = m_pParticles + m_nParticleCount; NOTE_UNUSED( pSim );
+		const matrix3x4a_t *pSim = m_pParticles + m_nParticleCount; (void)pSim;
 		for ( int nCtrl = 0; nCtrl < m_nParticleCount; ++nCtrl )
 		{
-			uint nNode = m_pFeModel->CtrlToNode( nCtrl );													NOTE_UNUSED( nNode );
-			bool bIsSimulated = ( nNode < m_nParticleCount && nNode > m_pFeModel->m_nStaticNodes );	NOTE_UNUSED( bIsSimulated );
-			AssertDbg( IsGoodWorldTransform( pSim[ nCtrl ] ) );
-			AssertDbg( IsGoodWorldTransform( Descale( m_pParticles[ nCtrl ] ) ) );
+			uint nNode = m_pFeModel->CtrlToNode( nCtrl );													(void)nNode;
+			bool bIsSimulated = ( nNode < m_nParticleCount && nNode > m_pFeModel->m_nStaticNodes );	(void)bIsSimulated;
+			contract_assert( IsGoodWorldTransform( pSim[ nCtrl ] ) );
+			contract_assert( IsGoodWorldTransform( Descale( m_pParticles[ nCtrl ] ) ) );
 		}
 	}
 }
@@ -482,7 +414,6 @@ void CSoftbody::Validate()
 
 void CSoftbody::SetPose( const CTransform *pPose )
 {
-	CHANGE_GUARD();
 	for ( int nParticle = 0; nParticle < m_nParticleCount; ++nParticle )
 	{
 		SetCtrl( nParticle, pPose[ nParticle ] );
@@ -497,8 +428,7 @@ void CSoftbody::SetPose( const CTransform *pPose )
 
 void CSoftbody::SetPose( const CTransform &tm, const CTransform *pPose )
 {
-	CHANGE_GUARD();
-	AssertDbg( FloatsAreEqual( QuaternionLength( tm.m_orientation ), 1.0f, 1e-5f ) );
+	contract_assert( FloatsAreEqual( QuaternionLength( tm.m_orientation ), 1.0f, 1e-5f ) );
 	for ( int nParticle = 0; nParticle < m_nParticleCount; ++nParticle )
 	{
 		CTransform pose = ConcatTransforms( tm, pPose[ nParticle ] );
@@ -513,7 +443,6 @@ void CSoftbody::SetPose( const CTransform &tm, const CTransform *pPose )
 
 void CSoftbody::SetCtrl( int nParticle, const CTransform &pose )
 {
-	CHANGE_GUARD();
 	matrix3x4a_t tmPose = TransformMatrix( pose );
 	GetAnim( nParticle ) = tmPose;
 
@@ -545,7 +474,6 @@ void CSoftbody::SetCtrl( int nParticle, const CTransform &pose )
 
 void CSoftbody::SetPoseFromBones( const int16 *pCtrlToBone, const matrix3x4a_t *pBones, float flScale )
 {
-	CHANGE_GUARD();
 	if ( m_pFeModel->m_pCtrlToNode )
 	{
 		for ( int nParticle = 0; nParticle < m_nParticleCount; ++nParticle )
@@ -553,7 +481,7 @@ void CSoftbody::SetPoseFromBones( const int16 *pCtrlToBone, const matrix3x4a_t *
 			if ( pCtrlToBone[ nParticle ] < 0 )
 				continue;
 			const matrix3x4a_t &pose = pBones[ pCtrlToBone[ nParticle ] ];
-			AssertDbg( IsGoodWorldTransform( pose, flScale ) );
+			contract_assert( IsGoodWorldTransform( pose, flScale ) );
 			GetSim( nParticle ) = GetAnim( nParticle ) = ScaleMatrix3x3( pose, flScale ) ;
 			uint nNode = m_pFeModel->m_pCtrlToNode[ nParticle ];
 			if ( nNode < m_nNodeCount )
@@ -570,7 +498,7 @@ void CSoftbody::SetPoseFromBones( const int16 *pCtrlToBone, const matrix3x4a_t *
 				continue;
 			const matrix3x4a_t &pose = pBones[ pCtrlToBone[ nParticle ] ];
 			const matrix3x4a_t poseNoScale = ScaleMatrix3x3( pose, flScale );
-			AssertDbg( IsGoodWorldTransform( poseNoScale, 1.0f ) );
+			contract_assert( IsGoodWorldTransform( poseNoScale, 1.0f ) );
 			GetSim( nParticle ) = GetAnim( nParticle ) = poseNoScale;
 			uint nNode = nParticle;
 			m_pPos0[ nNode ] = m_pPos1[ nNode ] = pose.GetOrigin( );
@@ -598,23 +526,6 @@ const int g_nClothCompatibility = 1;
 
 void CSoftbody::DebugPreStep(float flTimeStep )
 {
-#ifdef _DEBUG
-	static bool s_bRead = false;
-	std::string buf; NOTE_UNUSED( buf );
-	if ( g_nClothDebug )
-	{
-		buf = PrintParticleState();
-	}
-	if ( s_bRead )
-	{
-		if ( auto data = g_pFullFileSystem->ReadFile( "cloth.txt", nullptr ) )
-		{
-			ks::text_reader reader( ks::text_view( *data ) );
-			ParseParticleState( reader, flTimeStep );
-		}
-		s_bRead = false;
-	}
-#endif
 }
 
 
@@ -623,9 +534,6 @@ uint CSoftbody::Step( int nIterations, float flTimeStep )
 {
 	if ( m_bFrozen )
 		return 0;
-	CHANGE_GUARD();
-
-	MPROF_AUTO_FAST( SoftbodyStep );
 
 	flTimeStep *= g_flClothStep;
 	if ( m_nActivityState == STATE_ACTIVE && flTimeStep > 1e-5f )
@@ -700,8 +608,8 @@ void CSoftbody::ValidatingSimulate( int nIterations, float flTimeStep )
 		// check that the initial results equal to repeat results
 		for ( int n = 0; n < nNodes; ++n )
 		{
-			Assert( res0[ n ] == rep0[ n ] );
-			Assert( res1[ n ] == rep1[ n ] );
+			contract_assert( res0[ n ] == rep0[ n ] );
+			contract_assert( res1[ n ] == rep1[ n ] );
 		}
 
 		if ( !bRepeat )
@@ -743,7 +651,7 @@ void CSoftbody::ParseParticleState( ks::text_reader &buf, float flTimeStep )
 {
 	char szName[ 300 ];
 	Vector vOrigin, vAnimTarget, vVelocity;
-	uint nTotalFound = 0; NOTE_UNUSED( nTotalFound );
+	uint nTotalFound = 0; (void)nTotalFound;
 	while ( 10 == buf.scanf( "%s %f %f %f %f %f %f %f %f %f\n", szName, &vOrigin.x, &vOrigin.y, &vOrigin.z, &vAnimTarget.x, &vAnimTarget.y, &vAnimTarget.z, &vVelocity.x, &vVelocity.y, &vVelocity.z ) )
 	{
 		// find this bone
@@ -808,7 +716,7 @@ void CSoftbody::Integrate_S1( float flTimeStep )
 			for ( uint nStaticNode = 0; nStaticNode < nStaticNodes; ++nStaticNode )
 			{
 				uint nCtrl = m_pFeModel->NodeToCtrl( nStaticNode );
-				Assert( nCtrl < m_nParticleCount );
+				contract_assert( nCtrl < m_nParticleCount );
 				pPos0[ nStaticNode ] = pPos1[ nStaticNode ];
 				pPos1[ nStaticNode ] = GetAnim( nCtrl ).GetOrigin();
 			}
@@ -836,7 +744,7 @@ void CSoftbody::Integrate_S1( float flTimeStep )
 
 	Vector vGravity( 0, 0, -( m_bGravityDisabled ? 0 : m_flGravityScale ) );
 
-	AssertDbg( !m_pFeModel->m_pCtrlToNode ); // it should be safe to assume we have no node-to-ctrl mapping on Source1-imported content
+	contract_assert( !m_pFeModel->m_pCtrlToNode ); // it should be safe to assume we have no node-to-ctrl mapping on Source1-imported content
 	for ( uint nDynNode = nStaticNodes; nDynNode < m_nNodeCount; ++nDynNode )
 	{
 		// CClothParticleState::InitialForces()
@@ -923,11 +831,10 @@ void CSoftbody::ResolveStretch_S1( float flTimeStep )
 		}
 	}
 	// the rest is forward compatibility stuff
-	float flRodStiffness = expf( -m_flThreadStretch );
+	float flRodStiffness = std::expf( -m_flThreadStretch );
 	float flSurfaceStiffness = expf( -m_flSurfaceStretch );
 	m_pFeModel->RelaxBend( pPos, flRodStiffness );
 	{
-		MPROF_AUTO_FAST( FeRelaxQuads );
 		if ( m_bEnableSimd )
 		{
 			m_pFeModel->RelaxSimdQuads( pPos, flSurfaceStiffness, flConstraintScale, m_nSimFlags & SOFTBODY_SIM_EXPERIMENTAL_1 );
@@ -945,7 +852,7 @@ void CSoftbody::ResolveStretch_S1( float flTimeStep )
 void CSoftbody::ResolveAnimAttraction_S1( float flTimeStep )
 {
 	VectorAligned *pPos = m_pPos1;
-	AssertDbg( !m_pFeModel->m_pNodeToCtrl );
+	contract_assert( !m_pFeModel->m_pNodeToCtrl );
 	if ( const FeNodeIntegrator_t *pIntegrator = m_pFeModel->m_pNodeIntegrator )
 	{
 		for ( uint nDynNode = m_pFeModel->m_nStaticNodes; nDynNode < m_nNodeCount; ++nDynNode )
@@ -971,7 +878,7 @@ void CSoftbody::ResolveAnimAttraction_S1( float flTimeStep )
 
 
 //-------------------------------------------------------------------------------------------------
-FORCEINLINE AABB_t AsBounds3( const FeAabb_t &bbox )
+[[gnu::always_inline]] inline AABB_t AsBounds3( const FeAabb_t &bbox )
 {
 	AABB_t out;
 	out.m_vMinBounds = AsVector( bbox.m_vMinBounds );
@@ -986,12 +893,9 @@ void CSoftbody::Collide()
 {
 	if ( !m_pAabb )
 		return; // no memory preallocated to compute AABBs, presumably because we don't have anything to collide with
-	CHANGE_GUARD();
 
 	//if ( !( ( m_nEnableWorldShapeCollision && m_pEnvironment ) | m_pFeModel->m_nTaperedCapsuleStretchCount | m_pFeModel->m_nTaperedCapsuleRigidCount | m_pFeModel->m_nSphereRigidCount ) )
 	//	return; // nothing to collide with, let's not recompute AABBs
-	
-	MPROF_AUTO_FAST( SoftbodyStepCollide );
 	m_pFeModel->ComputeCollisionTreeBounds( m_pPos1 + m_pFeModel->m_nStaticNodes, m_pAabb );
 
 	CollideWithRigidsInternal();
@@ -1016,7 +920,7 @@ void ProjectParticleOutOfSphere( VectorAligned &refParticle, const Vector &vSphe
 	{
 		if ( flDistSqr < Sqr( flSumRadius ) )
 		{
-			Vector vRenormalized = vDist * flSumRadius / sqrtf( flDistSqr );
+			Vector vRenormalized = vDist * flSumRadius / std::sqrtf( flDistSqr );
 			refParticle = vSphereCenter + vRenormalized;
 		}
 	}
@@ -1035,13 +939,13 @@ float ProjectParticleOutOfSphere_Sticky( VectorAligned &refParticle, const Vecto
 	}
 	else if ( flDistSqr < Sqr( flSumRadius ) )
 	{
-		Vector vRenormalized = vDist * flSumRadius / sqrtf( flDistSqr );
+		Vector vRenormalized = vDist * flSumRadius / std::sqrtf( flDistSqr );
 		refParticle = vSphereCenter + vRenormalized;
 		return flStickiness; // full stickiness
 	}
 	else if ( flDistSqr < Sqr( flSumRadius + g_flStickyDist ) )
 	{
-		return flStickiness * ( flSumRadius + g_flStickyDist - sqrtf( flDistSqr ) );
+		return flStickiness * ( flSumRadius + g_flStickyDist - std::sqrtf( flDistSqr ) );
 	}
 
 	return 0.0f;//too far for any stickiness
@@ -1331,267 +1235,6 @@ public:
 
 
 
-#ifdef SOURCE2_SUPPORT
-bool SoftbodyGjk( Vector &refOut, const Vector &vParticle, const CGJKHull& proxy2, int nIterationCount = 16 )
-{
-	// Build initial simplex  
-	CRnSimplex simplex, last_simplex;
-	simplex.Init( vParticle, proxy2.GetVertex( 0 ) );
-
-	// Compute initial distance
-	float d2 = FLT_MAX;
-	bool bOverlap = false; NOTE_UNUSED( bOverlap );
-
-	// Run GJK
-	for ( int nIteration = 0; nIteration < nIterationCount; ++nIteration )
-	{
-		// Solve simplex and check if associated tetrahedron contains the origin
-		simplex.Solve();
-
-		if ( simplex.VertexCount() == MAX_SIMPLEX_VERTICES )
-		{
-			// Overlap
-			bOverlap = true;
-			break;
-		}
-
-		// Test distance progression
-		float d2_old = d2;
-		Vector cp = simplex.GetClosestPoint();
-		d2 = Dot( cp, cp );
-
-		if ( d2 >= d2_old )
-		{
-			// Reconstruct last simplex
-			AssertDbg( !last_simplex.IsEmpty() );
-			simplex = last_simplex;
-			break;
-		}
-
-		// Build a new tentative support vertex
-		Vector v = simplex.GetSearchDirection();
-		if ( LengthSq( v ) < 1000.0f * FLT_MIN )
-		{
-			// The origin is probably contained by a line segment
-			// or triangle. Thus the shapes are overlapped.
-
-			// We should return zero here because there may be overlap.
-			// In case the simplex is a point, segment, or triangle it is difficult
-			// to determine if the origin is contained in the CSO or very close to it.
-			// We'll use SAT outside to resolve this - when Distance is exactly 0.0, we should run SAT as it may mean negative distance (penetration) in reality, and GJK doesn not compute penetration distance.
-			bOverlap = true;
-			break;
-		}
-
-		const Vector &w1 = vParticle;
-		int nIndex2 = proxy2.GetSupport( v );
-		Vector w2 = proxy2.GetVertex( nIndex2 );
-
-		last_simplex = simplex;
-		if ( !simplex.AddVertex( 0, w1, nIndex2, w2 ) )
-		{
-			// cache hit; we may start infinitely cycling - break the cycle
-			break;
-		}
-	}
-
-	Vector vPoint1, vPoint2;
-	simplex.BuildWitnessPoints( vPoint1, vPoint2 );
-
-	Assert( !bOverlap || Distance( vPoint1, vPoint2 ) < FLT_EPSILON );
-
-	refOut = vPoint2;
-	return !bOverlap;
-}
-
-
-class CRnHullColliderFunctor : public CGJKHull
-{
-	const Transform &m_Xform;
-	VectorAligned *m_pDynPos1;
-	const float *m_pNodeCollisionRadii;
-	float m_flRadiusScale;
-	float m_flAddRadius;
-public:
-	CRnHullColliderFunctor( const RnHull_t *pHull, float flHullScale, const Transform &xform, float flAddRadius, VectorAligned *pDynPos1, const float *pNodeCollisionRadii, float flRadiusScale ) :
-		CGJKHull( pHull, flHullScale ),
-		m_Xform( xform ),
-		m_flAddRadius( flAddRadius ),
-		m_flRadiusScale( flRadiusScale ),
-		m_pDynPos1( pDynPos1 ),
-		m_pNodeCollisionRadii( pNodeCollisionRadii )
-	{
-	}
-
-	static float Distance( const RnPlane_t &plane, float flScale, const Vector &vParticle )
-	{
-		return DotProduct( plane.m_vNormal, vParticle ) - flScale * plane.m_flOffset;
-	}
-
-	AABB_t GetAabb()
-	{
-		AABB_t aabb;
-		aabb.MakeInvalid();
-		for ( int nVertex = 0; nVertex < m_pHull->GetVertexCount(); ++nVertex )
-		{
-			aabb |= Mul( m_Xform, GetVertex( nVertex ) );	// GetVertex takes the scale into account
-		}
-		aabb.Expand( m_flAddRadius );
-		return aabb;
-	}
-
-	void operator()( uint nDynNode ) const
-	{
-		VectorAligned &refParticle = m_pDynPos1[ nDynNode ];
-		Vector vLocalParticle = TMul( m_Xform, refParticle );
-		RnDistanceQueryResult_t result;
-		Vector vPointOnHull;
-		float flSumNodeRadius = m_pNodeCollisionRadii ? m_pNodeCollisionRadii[ nDynNode ] * m_flRadiusScale + m_flAddRadius : m_flAddRadius;
-		if ( SoftbodyGjk( vPointOnHull, vLocalParticle, *this ) )
-		{
-			// GJK succeeded
-			Vector vNormal = vLocalParticle - vPointOnHull;
-			float flDistance = vNormal.Length();
-			if ( flDistance < flSumNodeRadius )
-			{
-				AssertDbg( flDistance > FLT_EPSILON );
-				refParticle += Mul( m_Xform.R, vNormal ) * ( flSumNodeRadius / flDistance - 1 );
-			}
-		}
-		else
-		{
-			// GJK failed; run SAT
-			const RnPlane_t *pPlanes = m_pHull->m_Planes.Base();
-			int nPlaneCount = m_pHull->GetPlaneCount();
-			float flScale = m_flScale;
-			int nBestPlane = 0;
-			float flMaxDist = Distance( pPlanes[0], flScale, vLocalParticle );
-			for ( int nPlane = 1; nPlane < nPlaneCount; ++nPlane )
-			{
-				const RnPlane_t &plane = pPlanes[ nPlane ];
-				float flDistance = Distance( plane, flScale, vLocalParticle );
-				if ( flDistance > flMaxDist )
-				{
-					flMaxDist = flDistance;
-					nBestPlane = nPlane;
-				}
-			}
-			AssertDbg( flMaxDist < FLT_EPSILON );
-			if ( flMaxDist < flSumNodeRadius )
-			{
-				refParticle += ( flSumNodeRadius - flMaxDist ) * Mul( m_Xform.R, pPlanes[ nBestPlane ].m_vNormal );
-			}
-		}
-	}
-};
-
-
-class CRnTriColliderFunctor
-{
-	CFeModel::Aabb_t m_Aabb;
-	VectorAligned *m_pDynPos1;
-	const float *m_pNodeCollisionRadii;
-	float m_flRadiusScale;
-	float m_flAddRadius;
-public:
-	Vector m_v0;
-	Vector m_vNormal;
-	Vector m_d1;
-	Vector m_d2;
-	float m_flD1x; // the edge 0-1 goes from (0,0) to ( D1x, 0)
-	Vector2D m_D2; // the edge 0-2 goes from (0,0) to ( D2x, D2y )
-	Vector2D m_n12;// 2D normal to edge 1-2, pointing inside triangle, is -D2y, D2x-D1x
-	Vector2D m_n20;// 2D normal to edge 2-0, pointing inside triangle, is D2y, -D2x
-
-	mutable int m_nProbedNodes;
-// 	mutable int m_nMovedNodes;
-public:
-	CRnTriColliderFunctor( float flAddRadius, VectorAligned *pDynPos1, const float *pNodeCollisionRadii, float flRadiusScale ) :
-		m_flAddRadius( flAddRadius ),
-		m_flRadiusScale( flRadiusScale ),
-		m_pDynPos1( pDynPos1 ),
-		m_pNodeCollisionRadii( pNodeCollisionRadii )
-	{
- 		m_nProbedNodes = 0;
-// 		m_nMovedNodes = 0;
-	}
-
-	void PrepareTriangle( CRnMeshShape *pMesh, uint nTri, const Transform &bodyTransform )
-	{
-		VectorAligned v0, v1, v2;
-		pMesh->GetTriangle( nTri, v0, v1, v2 );
-		m_Aabb.m_vMaxBounds = m_Aabb.m_vMinBounds = LoadAlignedSIMD( &v0 );
-		m_Aabb |= LoadAlignedSIMD( &v1 );
-		m_Aabb |= LoadAlignedSIMD( &v2 );
-
-		m_v0 = bodyTransform * v0;
-		Vector d1 = bodyTransform.R * ( v1 - v0 );
-		m_flD1x = d1.Length();
-		m_d1 = d1 / m_flD1x;
-		Vector d2 = bodyTransform.R * ( v2 - v0 );
-		m_D2.x = DotProduct( m_d1, d2 );
-		m_d2 = d2 - m_d1 * m_D2.x;
-		m_D2.y = m_d2.Length();
-		m_d2 /= m_D2.y;
-		m_n12 = Vector2D( -m_D2.y, m_D2.x - m_flD1x );
-		m_n12.NormalizeInPlace();
-		m_n20 = Vector2D( m_D2.y, -m_D2.x );
-		m_n20.NormalizeInPlace();
-
-		m_vNormal = CrossProduct( m_d1, m_d2 );
-		AssertDbg( fabsf( m_vNormal.Length() - 1 ) < 0.001f );
-	}
-
-	const CFeModel::Aabb_t &GetAabb()const
-	{
-		return m_Aabb;
-	}
-
-	void operator()( uint nDynNode )const 
-	{
-		m_nProbedNodes++;
-		VectorAligned &refParticle = m_pDynPos1[ nDynNode ];
-		float flSumNodeRadius = m_pNodeCollisionRadii ? m_pNodeCollisionRadii[ nDynNode ] * m_flRadiusScale + m_flAddRadius : m_flAddRadius;
-		Vector d = refParticle - m_v0;
-		float flDistNormal = DotProduct( m_vNormal, d );
-		if ( fabsf( flDistNormal ) > flSumNodeRadius )
-			return;
-		float x = DotProduct( m_d1, d ), y = DotProduct( m_d2, d ); // x, y of the projection of the point onto the plane
-		// 2D SAT: go through all edges, find the best separating axis (min edge penetration )
-		float flPenetration01 = y;
-		float flPenetration12 = m_n12.x * ( x - m_flD1x ) + m_n12.y * y;
-		float flPenetration20 = m_n20.x * x + m_n20.y * y;
-		float flEdgePenetration = Min( flPenetration01, Min( flPenetration12, flPenetration20 ) );
-		if ( flEdgePenetration >= 0 )
-		{
-			// the point projects inside the triangle
-			refParticle += ( flSumNodeRadius - flDistNormal ) * m_vNormal;
-			//++m_nMovedNodes;
-		}
-		else if ( flDistNormal > 0 )
-		{
-			// the point is outside the triangle. Find the closest point and see if it's farther than the edge
-			float flDistSqr0 = Sqr( x ) + Sqr( y );
-			float flDistSqr1 = Sqr( x  - m_flD1x ) + Sqr( y );
-			float flDistSqr2 = Sqr( x - m_D2.x ) + Sqr( y - m_D2.y );
-			float flVertDistSqr = Min( flDistSqr0 , Min( flDistSqr1, flDistSqr2 ) ); // closest-vertex distance sqr
-			float flDistEdgeSqr = flEdgePenetration * flEdgePenetration; // note: edge penetration = -distance; square removes the sign
-			float flDistXYSqr = Max( flVertDistSqr, flDistEdgeSqr );
-			float flDist = sqrtf( flDistXYSqr + Sqr( flDistNormal ) );
-			if ( flDist < flSumNodeRadius )
-			{
-				refParticle += ( flSumNodeRadius - flDist ) * m_vNormal;
-				//++m_nMovedNodes;
-			}
-		}
-		else
-		{
-			// from behind the triangle, we'll just ignore the particle
-		}
-	}
-};
-#endif
-
 void CSoftbody::CollideWithRigidsInternal()
 {
 	for ( uint nTapCap = m_pFeModel->m_nTaperedCapsuleStretchCount; nTapCap-- > 0; )
@@ -1599,7 +1242,7 @@ void CSoftbody::CollideWithRigidsInternal()
 		const FeTaperedCapsuleStretch_t &tc = m_pFeModel->m_pTaperedCapsuleStretches[ nTapCap ];
 
 		const VectorAligned &vCenter1 = m_pPos1[ tc.nNode[ 1 ] ];
-		AssertDbg( tc.flRadius[ 0 ] <= tc.flRadius[ 1 ] );
+		contract_assert( tc.flRadius[ 0 ] <= tc.flRadius[ 1 ] );
 		if ( tc.nNode[ 0 ] == tc.nNode[ 1 ] )
 		{
 			CSphereColliderFunctor sphere( this, vCenter1, tc.flRadius[ 1 ] * m_flModelScale, tc.flStickiness, tc.nNode[ 1 ] );
@@ -1634,9 +1277,6 @@ void CSoftbody::SetCollisionAttributes( const RnCollisionAttr_t &attr )
 {
 	m_CollisionAttributes = attr;
 }
-
-
-//MPROF_NODE( NodeMeshProbes, "Softbody:Node-Tris", "Physics" );
 
 void CSoftbody::CollideWithWorldInternal()
 {
@@ -1698,42 +1338,6 @@ void CSoftbody::CollideWithWorldInternal()
 					pFeModel->CastBox< CRnCapsuleColliderFunctor, true >( 0, shapeAabb, m_pAabb, collider );
 				}
 				break;
-#ifdef SOURCE2
-				case SHAPE_HULL:
-				{
-					CRnHullShape *pHull = static_cast< CRnHullShape* >( pShape );
-					CRnHullColliderFunctor collider( pHull->GetHull(), pHull->GetScale(), pBody->GetTransform(), pFeModel->m_flAddWorldCollisionRadius * m_flModelScale, m_pPos1 + pFeModel->m_nStaticNodes, pFeModel->m_pNodeCollisionRadii, m_flModelScale );
-
-					pFeModel->CastBox< CRnHullColliderFunctor, true >( 0, CFeModel::Aabb_t( collider.GetAabb() ), m_pAabb, collider );
-				}
-				break;
-
-				case SHAPE_MESH:
-				{
-
-					CRnMeshShape *pMesh = static_cast< CRnMeshShape* >( pShape );
-					// cheap test version
-					CTriangleVector tris;
-					float flAddRadius = pFeModel->m_flAddWorldCollisionRadius * m_flModelScale;
-					CRnTriColliderFunctor collider( flAddRadius, m_pPos1 + pFeModel->m_nStaticNodes, pFeModel->m_pNodeCollisionRadii, m_flModelScale );
-					Transform bodyTransform = pBody->GetTransform();
-					FeAabb_t bboxClothForMesh = bbox; // blow up the cloth for mesh query
-					fltx4 f4AddWorldCollisionRadius = ReplicateX4( flAddRadius );
-					bboxClothForMesh.AddExtents( f4AddWorldCollisionRadius );
-					pMesh->Query( tris, TMul( bodyTransform, AsBounds3( bboxClothForMesh ) ) );
-					//MPROF_AUTO_FAST( NodeMeshProbes );
-					for ( uint32 nTri : tris )// for ( int nTri = 0; nTri < pMesh->GetMesh()->m_Triangles.Count(); ++nTri )
-					{
-						// float flTransientError = pFeModel->ComputeCollisionTreeBoundsError( m_pPos1 + pFeModel->m_nStaticNodes, m_pAabb ); // we move nodes around, so they'll be slightly outside of their respective parents' bboxes, but hopefully that's ok. Updating bboxes is possible, but adds a factor of logN to the complexity, or an extra linear search at the end of the overlap query
-						collider.PrepareTriangle( pMesh, nTri, bodyTransform );
-						CFeModel::Aabb_t bboxCollider = collider.GetAabb();
-						bboxCollider.AddExtents( f4AddWorldCollisionRadius ); // triangle is thin, particles are thin, we need to add some thickness to one or the other. Can't add it to the particle tree without increasing complexity of the query, so I will have to add it to triangle
-						pFeModel->CastBox< CRnTriColliderFunctor, true >( 0, bboxCollider, m_pAabb, collider ); // for ( uint nDynNode = 0; nDynNode < pFeModel->GetDynamicNodeCount(); ++nDynNode ) collider( nDynNode );
-					}
-					//MPROF_SET_COUNT( NodeMeshProbes, collider.m_nProbedNodes );
-				}
-				break;
-#endif
 			}
 		}
 	}
@@ -1785,7 +1389,7 @@ CSoftbody::CConstraintIterator::~CConstraintIterator()
 
 		if ( const float *pLegacyStretchForce = m_pSoftbody->m_pFeModel->m_pLegacyStretchForce )
 		{
-			AssertDbg( pFeModel->m_nDynamicNodeFlags & FE_FLAG_UNINERTIAL_CONSTRAINTS );
+			contract_assert( pFeModel->m_nDynamicNodeFlags & FE_FLAG_UNINERTIAL_CONSTRAINTS );
 			float dt = m_pSoftbody->m_flLastTimestep;
 			for ( uint nNode = pFeModel->m_nStaticNodes, nNodeCount = pFeModel->m_nNodeCount; nNode < nNodeCount; ++nNode )
 			{
@@ -1796,7 +1400,7 @@ CSoftbody::CConstraintIterator::~CConstraintIterator()
 		}
 		else
 		{
-			AssertDbg( pFeModel->m_nDynamicNodeFlags & FE_FLAG_UNINERTIAL_CONSTRAINTS ); // the only other useful case
+			contract_assert( pFeModel->m_nDynamicNodeFlags & FE_FLAG_UNINERTIAL_CONSTRAINTS ); // the only other useful case
 			for ( uint nNode = pFeModel->m_nStaticNodes, nNodeCount = pFeModel->m_nNodeCount; nNode < nNodeCount; ++nNode )
 			{
 				pPos0[ nNode ] += ( pPos1[ nNode ] - m_PosBeforeCorrect[ nNode ] );
@@ -1813,7 +1417,7 @@ void CSoftbody::CConstraintIterator::Iterate( int nIterations )
 	VectorAligned /*pPos0 = m_pSoftbody->m_pPos0, */*pPos1 = m_pSoftbody->m_pPos1;
 	const CFeModel *pFeModel = m_pSoftbody->m_pFeModel;
 
-	float flRodStiffness = expf( -m_pSoftbody->m_flThreadStretch / nIterations );
+	float flRodStiffness = std::expf( -m_pSoftbody->m_flThreadStretch / nIterations );
 	float flSurfaceStiffness = expf( -m_pSoftbody->m_flSurfaceStretch / nIterations );
 	float flConstraintScale = m_pSoftbody->m_flModelScale * m_pSoftbody->m_flClothScale;
 	bool bEnableSimd = m_pSoftbody->m_bEnableSimd;
@@ -1821,7 +1425,6 @@ void CSoftbody::CConstraintIterator::Iterate( int nIterations )
 	{
 		if ( flRodStiffness > 0.01f )
 		{
-			MPROF_AUTO_FAST( FeRelaxRods );
 			if ( m_pSoftbody->m_bEnableFtlPass && nIteration + 1 == nIterations )
 			{
 				if ( bEnableSimd )
@@ -1847,7 +1450,6 @@ void CSoftbody::CConstraintIterator::Iterate( int nIterations )
 		}
 		pFeModel->RelaxBend( pPos1, flRodStiffness );
 		{
-			MPROF_AUTO_FAST_COUNT( FeRelaxQuads, bEnableSimd ? pFeModel->m_nSimdQuadCount[ 0 ] * 4 : pFeModel->m_nQuadCount[ 0 ] );
 			if ( bEnableSimd )
 			{
 				pFeModel->RelaxSimdQuads( pPos1, flSurfaceStiffness, flConstraintScale, m_pSoftbody->m_nSimFlags & SOFTBODY_SIM_EXPERIMENTAL_1 );
@@ -1893,12 +1495,11 @@ AABB_t CSoftbody::BuildBounds( )const
 
 Quaternion PartialRotation( const Quaternion &q, float f )
 {
-	Assert( q.w >= 0 );
 	Quaternion p = q;
 	p.x *= f;
 	p.y *= f;
 	p.z *= f;
-	p.w = sqrtf( Max( 0.0f, 1.0f - Sqr( q.x ) + Sqr( q.y ) + Sqr( q.z ) ) );
+	p.w = std::sqrtf( Max( 0.0f, 1.0f - Sqr( q.x ) + Sqr( q.y ) + Sqr( q.z ) ) );
 	return p;
 }
 
@@ -1907,7 +1508,6 @@ void CSoftbody::SetAbsAngles( const QAngle &vNewAngles, bool bTeleport )
 {
 	if ( m_vSimAngles == vNewAngles )
 		return;
-	CHANGE_GUARD();
 
 	float flLocalSpaceCloth = ( m_nAnimSpace == SOFTBODY_ANIM_SPACE_LOCAL ) ? 1.0f : 0.0f;
 	if ( m_pFeModel->m_pLocalRotation && !bTeleport )
@@ -1996,7 +1596,7 @@ void CSoftbody::ComputeInterpolatedNodePositions( float flFactor, VectorAligned 
 void CSoftbody::DebugTraceMove( const char *pMsg )
 {
 	Vector d = m_pPos1[ 0 ] - m_vSimOrigin;
-	Msg( "%s a1 :{r=%.1f,a=%.1f}\n", pMsg, sqrtf( d.x * d.x + d.y * d.y ), RAD2DEG( atan2f( d.y, d.x ) ) - m_vSimAngles.y );
+	Msg( "%s a1 :{r=%.1f,a=%.1f}\n", pMsg, std::sqrtf( d.x * d.x + d.y * d.y ), RAD2DEG( std::atan2f( d.y, d.x ) ) - m_vSimAngles.y );
 	//Msg( "%s d1 {%.1f,%.1f}\n", pMsg, d.x, d.y );
 }
 
@@ -2016,7 +1616,6 @@ void CSoftbody::SetAbsOrigin( const Vector &vNewOrigin, bool bTeleport )
 */
 	if ( m_vSimOrigin == vNewOrigin )
 		return;
-	CHANGE_GUARD();
 
 	Vector vDelta = vNewOrigin - m_vSimOrigin;
 	float flLocalSpaceCloth = ( m_nAnimSpace == SOFTBODY_ANIM_SPACE_LOCAL ) ? 1.0f : 0.0f;
@@ -2034,7 +1633,7 @@ void CSoftbody::SetAbsOrigin( const Vector &vNewOrigin, bool bTeleport )
 		float flDeltaLenSq = vDelta.LengthSqr( );
 		
 		// which fraction of this delta should we move the particles? If it's 200 inches, source1 assumes teleportation
-		AssertDbg( g_flNoTeleportDeltaSq < g_flTeleportDeltaSq );
+		contract_assert( g_flNoTeleportDeltaSq < g_flTeleportDeltaSq );
 		
 		flIsFullTeleport = ( flDeltaLenSq - g_flNoTeleportDeltaSq ) * ( 1.0f / ( g_flTeleportDeltaSq - g_flNoTeleportDeltaSq ) );
 
@@ -2049,7 +1648,7 @@ void CSoftbody::SetAbsOrigin( const Vector &vNewOrigin, bool bTeleport )
 		Vector vPartialDelta = vDelta * flFractionTeleport;
 		if ( m_pFeModel->m_pLocalForce && flFractionTeleport < 1.0f )
 		{
-			AssertDbg( m_pFeModel->m_flLocalForce > 0.0f );
+			contract_assert( m_pFeModel->m_flLocalForce > 0.0f );
 			uint nStaticNodes = m_pFeModel->m_nStaticNodes;
 			for ( int nNode = 0; nNode < nStaticNodes; ++nNode )
 			{
@@ -2081,23 +1680,6 @@ void CSoftbody::SetAbsOrigin( const Vector &vNewOrigin, bool bTeleport )
 		 && Sqr( m_vGround.x - vNewOrigin.x ) + Sqr( m_vGround.y - vNewOrigin.y ) > 16 * 16 // no need to retrace the ground plane until we move away at least 1 ft
 	)
 	{
-#ifdef SOURCE2_SUPPORT
-		// we have world collision nodes, let's update the ground plane
-		PhysicsTrace_t trace;
-		Vector vRayStart = vNewOrigin + Vector( 0,0, m_pEnvironment->GetSoftbodyGroundTraceRaise() ), vRayDelta( 0, 0, -200 );
-		RnQueryAttr_t attr;
-		m_pEnvironment->CastRaySingle( trace, vRayStart, vRayDelta, SELECT_STATIC, attr );
-		if ( trace.DidHit( ) )
-		{
-			m_vGround.z = trace.m_vHitPoint.z + g_flClothGroundPlaneThickness.GetFloat();
-		}
-		else
-		{
-			m_vGround.z = vRayStart.z + vRayDelta.z;
-		}
-		m_vGround.x = m_vSimOrigin.x;
-		m_vGround.y = m_vSimOrigin.y;
-#endif
 	}
 	DebugDump();
 }
@@ -2113,7 +1695,6 @@ bool CSoftbody::SetupCtrl( uint nCtrl, matrix3x4a_t &writeBone )
 {
 	if ( !BeforeFilterTransforms() )
 		return false;
-	MPROF_AUTO_FAST( SoftbodyFilterTransforms );
 	GetAnim( nCtrl ) = writeBone;
 	// just a marker to let the next simulation step know we need to update static particles
 	m_bAnimTransformChanged = true;
@@ -2161,8 +1742,6 @@ void CSoftbody::FilterTransforms( const FilterTransformsParams_t &params )
 	if ( !BeforeFilterTransforms() )
 		return;
 
-	MPROF_AUTO_FAST( SoftbodyFilterTransforms );
-
 	///////
 	// just a marker to let the next simulation step know we need to update static particles
 	m_bAnimTransformChanged = true; 
@@ -2178,7 +1757,7 @@ void CSoftbody::FilterTransforms( const FilterTransformsParams_t &params )
 			int nBone = params.pCtrlToBone[ nCtrl ];
 			if ( nBone >= 0 )
 			{
-				AssertDbg( !params.pValidTransforms || ( params.pValidTransforms[ nBone >> 5 ] & ( 1u << ( nBone & 31 ) ) ) != 0 );
+				contract_assert( !params.pValidTransforms || ( params.pValidTransforms[ nBone >> 5 ] & ( 1u << ( nBone & 31 ) ) ) != 0 );
 				GetSim( nCtrl ) = ScaleMatrix3x3( params.pOutputWorldTransforms[ nBone ], flInvScale );
 			}
 		}
@@ -2195,12 +1774,12 @@ void CSoftbody::FilterTransforms( const FilterTransformsParams_t &params )
 	// we cannot do that in the same loop with the parent transforms because the order of controls (sim order) is independent of the animation bone order, so parent-to-child ordering is not preserved
 	for ( uint nNode = m_pFeModel->m_nRotLockStaticNodes; nNode < nNodeCount; ++nNode )
 	{
-		uint nCtrl = m_pFeModel->NodeToCtrl( nNode ); AssertDbg( nCtrl < m_nParticleCount );
+		uint nCtrl = m_pFeModel->NodeToCtrl( nNode ); contract_assert( nCtrl < m_nParticleCount );
 		int nBone = params.pCtrlToBone[ nCtrl ];
 		if ( nBone >= 0 )
 		{
 			matrix3x4_t &refWorldBone = params.pOutputWorldTransforms[ nBone ];
-			AssertDbg( /*nNode > nNodeCount - m_pFeModel->m_nFitMatrixCount || */IsGoodWorldTransform( pSim[ nCtrl ] ) ); // the last N nodes are FitMatrices, which may have non-uniform scale at some point
+			contract_assert( /*nNode > nNodeCount - m_pFeModel->m_nFitMatrixCount || */IsGoodWorldTransform( pSim[ nCtrl ] ) ); // the last N nodes are FitMatrices, which may have non-uniform scale at some point
 			refWorldBone = ScaleMatrix3x3( pSim[ nCtrl ], flMatrixScale );
 		}
 	}
@@ -2217,7 +1796,7 @@ void CSoftbody::FilterTransforms( const FilterTransformsParams_t &params )
 		if ( nBone < 0 )
 			continue; // this is a virtual node (does not have a corresponding bone)
 
-		AssertDbg( m_pFeModel->CtrlToNode( nCtrl ) < m_nNodeCount );
+		contract_assert( m_pFeModel->CtrlToNode( nCtrl ) < m_nNodeCount );
 		matrix3x4a_t &outWorldBone = params.pOutputWorldTransforms[ nBone ];
 		outWorldBone = ScaleMatrix3x3( pSim[ nCtrl ], flMatrixScale );
 	}
@@ -2228,8 +1807,6 @@ void CSoftbody::FilterTransforms( matrix3x4a_t *pModelBones )
 {
 	if ( !BeforeFilterTransforms() )
 		return;
-
-	MPROF_AUTO_FAST( SoftbodyFilterTransforms );
 
 	///////
 	// just a marker to let the next simulation step know we need to update static particles
@@ -2262,12 +1839,12 @@ void CSoftbody::FilterTransforms( matrix3x4a_t *pModelBones )
 	// we cannot do that in the same loop with the parent transforms because the order of controls (sim order) is independent of the animation bone order, so parent-to-child ordering is not preserved
 	for ( uint nNode = m_pFeModel->m_nRotLockStaticNodes; nNode < nNodeCount; ++nNode )
 	{
-		uint nCtrl = m_pFeModel->NodeToCtrl( nNode ); AssertDbg( nCtrl < m_nParticleCount );
+		uint nCtrl = m_pFeModel->NodeToCtrl( nNode ); contract_assert( nCtrl < m_nParticleCount );
 		int nBone = m_pCtrlToModelBone[ nCtrl ];
 		if ( nBone >= 0 )
 		{
 			matrix3x4_t &refWorldBone = pModelBones[ nBone ];
-			AssertDbg( /*nNode > nNodeCount - m_pFeModel->m_nFitMatrixCount || */IsGoodWorldTransform( pSim[ nCtrl ] ) ); // the last N nodes are FitMatrices, which may have non-uniform scale at some point
+			contract_assert( /*nNode > nNodeCount - m_pFeModel->m_nFitMatrixCount || */IsGoodWorldTransform( pSim[ nCtrl ] ) ); // the last N nodes are FitMatrices, which may have non-uniform scale at some point
 			refWorldBone = ScaleMatrix3x3( pSim[ nCtrl ], flMatrixScale );
 		}
 	}
@@ -2375,29 +1952,28 @@ void CSoftbody::Integrate( float flTimeStep )
 {
 	if ( m_bEnableSprings )
 	{
-		MPROF_AUTO_FAST( SoftbodyStepIntegrate );
 		m_pFeModel->IntegrateSprings( m_pPos0, m_pPos1, flTimeStep, m_flModelScale );
 	}
 
 	
 	IntegrateWind( m_pPos1, flTimeStep );
 
-	AssertDbg( m_flExpAirDrag >= 0 && m_flVelAirDrag >= 0 );
+	contract_assert( m_flExpAirDrag >= 0 && m_flVelAirDrag >= 0 );
 	if ( m_flExpAirDrag + m_flVelAirDrag != 0 )
 	{
-		m_pFeModel->ApplyAirDrag( m_pPos0, m_pPos1, 1.0f - expf( -m_flExpAirDrag * flTimeStep ), m_flVelAirDrag );
+		m_pFeModel->ApplyAirDrag( m_pPos0, m_pPos1, 1.0f - std::expf( -m_flExpAirDrag * flTimeStep ), m_flVelAirDrag );
 	}
 
-	AssertDbg( m_flExpQuadAirDrag >= 0 && m_flVelQuadAirDrag >= 0 );
+	contract_assert( m_flExpQuadAirDrag >= 0 && m_flVelQuadAirDrag >= 0 );
 	if ( m_flExpQuadAirDrag + m_flVelQuadAirDrag != 0 )
 	{
-		m_pFeModel->ApplyQuadAirDrag( ( fltx4* )m_pPos0, ( const fltx4* )m_pPos1, 1.0f - expf( -m_flExpQuadAirDrag * flTimeStep ), m_flVelQuadAirDrag );
+		m_pFeModel->ApplyQuadAirDrag( ( fltx4* )m_pPos0, ( const fltx4* )m_pPos1, 1.0f - std::expf( -m_flExpQuadAirDrag * flTimeStep ), m_flVelQuadAirDrag );
 	}
 
-	AssertDbg( m_flExpRodAirDrag >= 0 && m_flVelRodAirDrag >= 0 );
+	contract_assert( m_flExpRodAirDrag >= 0 && m_flVelRodAirDrag >= 0 );
 	if ( m_flExpRodAirDrag + m_flVelRodAirDrag != 0 )
 	{
-		m_pFeModel->ApplyRodAirDrag( ( fltx4* )m_pPos0, ( const fltx4* )m_pPos1, 1.0f - expf( -m_flExpRodAirDrag * flTimeStep ), m_flVelRodAirDrag );
+		m_pFeModel->ApplyRodAirDrag( ( fltx4* )m_pPos0, ( const fltx4* )m_pPos1, 1.0f - std::expf( -m_flExpRodAirDrag * flTimeStep ), m_flVelRodAirDrag );
 	}
 
 	float flQuadVelocitySmoothRate = m_flQuadVelocitySmoothRate;
@@ -2424,7 +2000,7 @@ void CSoftbody::Integrate( float flTimeStep )
 inline fltx4 LoadOriginAligned( const matrix3x4a_t &tm )
 {
 	const fltx4 &x = tm.SIMDRow( 0 ), &y = tm.SIMDRow( 1 ), &z = tm.SIMDRow( 2 );
-	fltx4 nnxy = _mm_unpackhi_ps( x, y ), xyzz = _mm_shuffle_ps( nnxy, z, MM_SHUFFLE_REV( 2, 3, 3, 3 ) );
+	fltx4 nnxy = _mm_unpackhi_ps( x, y ), xyzz = ks::simd::shuffle<2,3,3,3>( nnxy, z );
 	return xyzz;
 }
 
@@ -2511,7 +2087,7 @@ public:
 		fltx4 vDelta = m_pPos1[ glue.m_nParentNode[ 0 ] ] - m_pPos0[ glue.m_nParentNode[ 0 ] ];
 		if ( glue.m_flWeight1 > 0.0f )
 		{
-			AssertDbg( glue.m_flWeight1 <= 1.0f );
+			contract_assert( glue.m_flWeight1 <= 1.0f );
 			fltx4 vDelta1 = m_pPos1[ glue.m_nParentNode[ 1 ] ] - m_pPos0[ glue.m_nParentNode[ 1 ] ];
 			fltx4 f4Weight1 = ReplicateX4( glue.m_flWeight1 );
 			vDelta = vDelta * ( Four_Ones - f4Weight1 ) + vDelta1 * f4Weight1;
@@ -2525,7 +2101,6 @@ public:
 
 void CSoftbody::Predict( float flTimeStep )
 {
-	MPROF_AUTO_FAST( SoftbodyStepPredict );
 	const uint nStaticNodes = m_pFeModel->m_nStaticNodes;
 	const FeNodeIntegrator_t *pNodeIntegrator = m_pFeModel->m_pNodeIntegrator;
 
@@ -2543,7 +2118,7 @@ void CSoftbody::Predict( float flTimeStep )
 			float flLenSqr = vDelta.LengthSqr();
 			if ( flLenSqr > flVelLimSqr )
 			{
-				m_pPos0[ nNode ] += ( 1.0f - sqrtf( flVelLimSqr / flLenSqr ) ) * vDelta;
+				m_pPos0[ nNode ] += ( 1.0f - std::sqrtf( flVelLimSqr / flLenSqr ) ) * vDelta;
 			}
 		}
 	}
@@ -2570,7 +2145,7 @@ void CSoftbody::Predict( float flTimeStep )
 			for ( uint nStaticNode = 0; nStaticNode < nStaticNodes; ++nStaticNode )
 			{
 				uint nCtrl = m_pFeModel->NodeToCtrl( nStaticNode );
-				Assert( nCtrl < m_nParticleCount );
+				contract_assert( nCtrl < m_nParticleCount );
 				fltx4 vTarget = LoadOriginAligned( GetAnim( nCtrl ) );
 				pPos0[ nStaticNode ] = vTarget;
 			}
@@ -2664,19 +2239,18 @@ inline float EllipsoidIsoParm( const Vector &vLocalPos, const Vector &vInvRadius
 
 void CSoftbody::Post( )
 {
-	MPROF_AUTO_FAST( SoftbodyStepPost );
 	if ( IsDebug( ) )
 	{
 		for ( uint nNode = 0; nNode < m_nNodeCount; ++nNode )
 		{
-			AssertDbg( m_pPos1[ nNode ].IsValid( ) );
+			contract_assert( m_pPos1[ nNode ].IsValid( ) );
 		}
 	}
 
 	// modify pos1
 	if ( m_flOverPredict != 0 || m_flStepUnderRelax != 0 )
 	{
-		float w1 = expf( -m_flStepUnderRelax ) / ( 1 + m_flOverPredict );
+		float w1 = std::expf( -m_flStepUnderRelax ) / ( 1 + m_flOverPredict );
 		fltx4 f4Weight1 = ReplicateX4( w1 ); // 0: just take pos0; 1: just leave pos1
 		fltx4 f4Weight0 = Four_Ones - f4Weight1;
 		for ( uint nDynNode = m_pFeModel->m_nStaticNodes; nDynNode < m_nNodeCount; ++nDynNode )
@@ -2709,7 +2283,7 @@ void CSoftbody::Post( )
 			{
 				//<sergiy> This is not a true projection onto ellipsoid, although it is if the ellipsoid is a sphere.
 				//         I hope this clamping will be enough for our purposes, and it's much cheaper than true projection
-				pos = VectorTransform( vLocalPos / sqrtf( flIsoParm ) + fce.m_vOrigin, anim );
+				pos = VectorTransform( vLocalPos / std::sqrtf( flIsoParm ) + fce.m_vOrigin, anim );
 			}
 		}
 	}
@@ -2734,7 +2308,7 @@ void CSoftbody::Post( )
 				}
 				else
 				{
-					vSurface = vLocalPos * ( fce.m_flRFactor / sqrtf( flDistSqr ) );
+					vSurface = vLocalPos * ( fce.m_flRFactor / std::sqrtf( flDistSqr ) );
 				}
 
 				pos = VectorTransform( vSurface + fce.m_vOrigin, anim );
@@ -2808,17 +2382,14 @@ void CSoftbody::ResetVelocities( )
 	V_memcpy( m_pPos0, m_pPos1, sizeof( *m_pPos0 ) * m_nNodeCount );
 }
 
-
-MPROF_NODE( SoftbodyParticleTransforms_Bases, "Softbody:ParticleTransforms:Bases", "Softbody" );
-
 matrix3x4a_t* CSoftbody::GetParticleTransforms( const VectorAligned *pInputNodePos, uint nFlags )
 {
-	AssertDbg( !IsDormant( ) ); // sanity check: if the cloth is dormant, why is someone asking for the cloth transforms?
+	contract_assert( !IsDormant( ) ); // sanity check: if the cloth is dormant, why is someone asking for the cloth transforms?
 	matrix3x4a_t *pSim = m_pParticles + m_nParticleCount;
 
 	Validate( );
 
-	Assert( !pInputNodePos ); // I don't need this for interpolation anymore
+	contract_assert( !pInputNodePos ); // I don't need this for interpolation anymore
 	VectorAligned *pNodePos = /*pInputNodePos ? pInputNodePos : */m_pPos1;
 
 	if ( m_bSimTransformsOutdated )
@@ -2831,7 +2402,7 @@ matrix3x4a_t* CSoftbody::GetParticleTransforms( const VectorAligned *pInputNodeP
 			GetSim( nCtrl ).SetOrigin( pNodePos[ nDynNode ] );
 		}*/
 
-		uint nStaticNodeCount = m_pFeModel->m_nStaticNodes, nRotLockNodeCount = m_pFeModel->m_nRotLockStaticNodes; NOTE_UNUSED( nStaticNodeCount ); NOTE_UNUSED( nRotLockNodeCount );
+		uint nStaticNodeCount = m_pFeModel->m_nStaticNodes, nRotLockNodeCount = m_pFeModel->m_nRotLockStaticNodes; (void)nStaticNodeCount; (void)nRotLockNodeCount;
 
 		if ( nFlags & SOFTBODY_SIM_TRANSFORMS_INCLUDE_STATIC )
 		{
@@ -2851,7 +2422,6 @@ matrix3x4a_t* CSoftbody::GetParticleTransforms( const VectorAligned *pInputNodeP
 		}
 		
 		{
-			MPROF_AUTO_FAST_COUNT( SoftbodyParticleTransforms_Bases, m_pFeModel->m_nNodeBaseCount );
 			for ( uint nBase = 0; nBase < m_pFeModel->m_nNodeBaseCount; ++nBase )
 			{
 				const FeNodeBase_t &basis = m_pFeModel->m_pNodeBases[ nBase ];
@@ -2872,7 +2442,7 @@ matrix3x4a_t* CSoftbody::GetParticleTransforms( const VectorAligned *pInputNodeP
 
 				matrix3x4a_t tmPredicted;
 				tmPredicted.InitXYZ( vAxisX, vAxisY, CrossProduct( vAxisX, vAxisY ), pNodePos[ basis.nNode ] ); // in source1 it's down(-up), forward, right. Forward computed first and the others are going from it
-				AssertDbg( IsGoodWorldTransform( tmPredicted, 1, 0.01f ) );
+				contract_assert( IsGoodWorldTransform( tmPredicted, 1, 0.01f ) );
 
 				matrix3x4a_t &tmNode = GetSim( m_pFeModel->NodeToCtrl( basis.nNode ) );
 				if ( basis.qAdjust.w == 1.0f )
@@ -2884,8 +2454,8 @@ matrix3x4a_t* CSoftbody::GetParticleTransforms( const VectorAligned *pInputNodeP
 					tmNode = ConcatTransforms( tmPredicted, QuaternionMatrix( basis.qAdjust ) );
 				}
 
-				AssertDbg( IsGoodWorldTransform( tmNode, 1, 0.01f ) );
-				AssertDbg( tmNode.GetOrigin() == pNodePos[ basis.nNode ] );
+				contract_assert( IsGoodWorldTransform( tmNode, 1, 0.01f ) );
+				contract_assert( tmNode.GetOrigin() == pNodePos[ basis.nNode ] );
 			}
 		}
 
@@ -2902,19 +2472,19 @@ matrix3x4a_t* CSoftbody::GetParticleTransforms( const VectorAligned *pInputNodeP
 			}
 			else
 			{
-				AssertDbg( nRopeEnd - nRopeBegin > 2 );
+				contract_assert( nRopeEnd - nRopeBegin > 2 );
 				for ( uint nNextLinkIndex = nRopeBegin + 2; ; )
 				{
 					uint nNode = pRopes[ nNextLinkIndex - 1 ], nCtrl = m_pFeModel->NodeToCtrl( nNode ), nNextNode = pRopes[ nNextLinkIndex ];
-					AssertDbg( IsGoodWorldTransform( GetAnim( nCtrl ) ) );
+					contract_assert( IsGoodWorldTransform( GetAnim( nCtrl ) ) );
 					matrix3x4a_t tmAligned = AlignX( GetAnim( nCtrl ), pNodePos[ nNextNode ] - pNodePos[ nNode ], pNodePos[ nNode ] );
-					AssertDbg( IsGoodWorldTransform( tmAligned, 1.0f, 0.0005f ) );
+					contract_assert( IsGoodWorldTransform( tmAligned, 1.0f, 0.0005f ) );
 					GetSim( nCtrl ) = tmAligned;
 
 					++nNextLinkIndex;
 					if ( nNextLinkIndex >= nRopeEnd )
 					{
-						Assert( nNextLinkIndex == nRopeEnd );
+						contract_assert( nNextLinkIndex == nRopeEnd );
 						Set3x3( GetSim( nEndCtrl ), tmAligned, pNodePos[ nEndNode ] );
 						break;
 					}
@@ -2960,7 +2530,7 @@ matrix3x4a_t* CSoftbody::GetParticleTransforms( const VectorAligned *pInputNodeP
 			}
 		}
 
-		AssertDbg( nRopeBegin == m_pFeModel->m_nRopeIndexCount );
+		contract_assert( nRopeBegin == m_pFeModel->m_nRopeIndexCount );
 		m_bSimTransformsOutdated = false;
 		Validate();
 	}
@@ -3002,7 +2572,7 @@ void CSoftbody::SetAnimatedTransforms( const matrix3x4a_t *pSimulationWorldTrans
 {
 	float flInvScale = 1.0f / m_flModelScale;
 
-	AssertDbg( IsBoneMapUnique( m_pCtrlToModelBone, m_nParticleCount ) );
+	contract_assert( IsBoneMapUnique( m_pCtrlToModelBone, m_nParticleCount ) );
 	for( int nParticle = 0; nParticle < m_nParticleCount; ++nParticle )
 	{
 		int nBone = m_pCtrlToModelBone[ nParticle ];
@@ -3011,7 +2581,7 @@ void CSoftbody::SetAnimatedTransforms( const matrix3x4a_t *pSimulationWorldTrans
 			const matrix3x4a_t &tm = pSimulationWorldTransforms[ nBone ];
 			// AssertDbg( ( tm.GetOrigin() - m_vSimOrigin ).LengthSqr() < 500 * 500 ); // we shouldn't set bones far away from sim origin, or we won't be able to detect teleportation and adjust in time
 			matrix3x4a_t tmUnscaled = ScaleMatrix3x3( tm, flInvScale );
-			AssertDbg( IsGoodWorldTransform( tmUnscaled ) );
+			contract_assert( IsGoodWorldTransform( tmUnscaled ) );
 			GetAnim( nParticle ) = tmUnscaled;
 		}
 	}
@@ -3022,14 +2592,14 @@ void CSoftbody::SetAnimatedTransforms( const matrix3x4a_t *pSimulationWorldTrans
 
 void CSoftbody::SetAnimatedTransformsNoScale( const matrix3x4a_t *pSimulationWorldTransforms )
 {
-	AssertDbg( IsBoneMapUnique( m_pCtrlToModelBone, m_nParticleCount ) );
+	contract_assert( IsBoneMapUnique( m_pCtrlToModelBone, m_nParticleCount ) );
 	for ( int nParticle = 0; nParticle < m_nParticleCount; ++nParticle )
 	{
 		int nBone = m_pCtrlToModelBone[ nParticle ];
 		if ( nBone >= 0 )
 		{
 			const matrix3x4a_t &tm = pSimulationWorldTransforms[ nBone ];
-			AssertDbg( IsGoodWorldTransform( tm ) );
+			contract_assert( IsGoodWorldTransform( tm ) );
 			GetAnim( nParticle ) = tm;
 		}
 	}
@@ -3076,7 +2646,7 @@ void CSoftbody::UpdateCtrlOffsets( bool bOverridePose )
 
 void CSoftbody::InitializeTransforms( const int16 *pCtrlToBone, const matrix3x4a_t *pSimulationWorldTransforms )
 {
-	float flInvScale = 1.0f / m_flModelScale; NOTE_UNUSED( flInvScale );
+	float flInvScale = 1.0f / m_flModelScale; (void)flInvScale;
 	for ( uint nParticle = 0; nParticle < m_nParticleCount; ++nParticle )
 	{
 		int nBone = pCtrlToBone[ nParticle ];
@@ -3087,7 +2657,7 @@ void CSoftbody::InitializeTransforms( const int16 *pCtrlToBone, const matrix3x4a
 			//AssertDbg( IsGoodWorldTransform( tm, m_flModelScale ) );
 			//tm.ScaleUpper3x3Matrix( flInvScale );
 			GetAnim( nParticle ) = GetSim( nParticle ) = tm;
-			AssertDbg( IsGoodWorldTransform( tm ) );
+			contract_assert( IsGoodWorldTransform( tm ) );
 			uint nNode = m_pFeModel->CtrlToNode( nParticle );
 			m_pPos0[ nNode ] = m_pPos1[ nNode ] = tm.GetOrigin( );
 		}
@@ -3096,7 +2666,7 @@ void CSoftbody::InitializeTransforms( const int16 *pCtrlToBone, const matrix3x4a
 			//GetAnim( nParticle ) = GetSim( nParticle ) = g_MatrixIdentity;
 			//m_pPos0[ nNode ] = m_pPos1[ nNode ] = vec3_origin;
 			// this means some nodes will not be set by animation, which will cause trouble esp. when they're static nodes that need to be animated
-			AssertDbg( !g_nClothDebug || m_pFeModel->FindCtrlOffsetByChild( nParticle ) || m_pFeModel->FindCtrlOsOffsetByChild( nParticle ) );
+			contract_assert( !g_nClothDebug || m_pFeModel->FindCtrlOffsetByChild( nParticle ) || m_pFeModel->FindCtrlOsOffsetByChild( nParticle ) );
 		}
 	}
 	//
@@ -3129,9 +2699,9 @@ void DrawTaperedCapsule( IVDebugOverlay* pDebugOverlay, Vector v0, Vector v1, fl
 	}
 	else
 	{
-		flSlope = asinf( ( r1 - r0 ) / flAxisLen );
+		flSlope = std::asinf( ( r1 - r0 ) / flAxisLen );
 		vAxis /= flAxisLen;
-		nStacks0 = Min( nStacks - 1, Max( 1, int( ceil( ( M_PI / 2 - flSlope ) / ( M_PI / nStacks ) + .5f) ) ) );
+		nStacks0 = Min( nStacks - 1, Max( 1, int( std::ceil( ( std::numbers::pi / 2 - flSlope ) / ( std::numbers::pi / nStacks ) + .5f) ) ) );
 	}
 	int nSegments = 8;
 	std::vector< Vector > verts;
@@ -3143,22 +2713,22 @@ void DrawTaperedCapsule( IVDebugOverlay* pDebugOverlay, Vector v0, Vector v1, fl
 
 	for ( int nStack = 0; nStack < nStacks0; ++nStack )
 	{
-		float flStackAngle = ( nStack + 1 ) * ( M_PI / 2 - flSlope ) / nStacks0;
-		float csr0 = cosf( flStackAngle ) * r0, ssr0 = sinf( flStackAngle ) * r0;
+		float flStackAngle = ( nStack + 1 ) * ( std::numbers::pi / 2 - flSlope ) / nStacks0;
+		float csr0 = std::cosf( flStackAngle ) * r0, ssr0 = sinf( flStackAngle ) * r0;
 		for ( int nSeg = 0; nSeg < nSegments; ++nSeg )
 		{
-			float flPsi = 2 * nSeg * M_PI / nSegments;
-			verts[ 1 + nStack * nSegments + nSeg ] = v0 - csr0 * vAxis + cosf( flPsi ) * ssr0 * vNormal0 + sinf( flPsi ) * ssr0 * vNormal1;
+			float flPsi = 2 * nSeg * std::numbers::pi / nSegments;
+			verts[ 1 + nStack * nSegments + nSeg ] = v0 - csr0 * vAxis + cosf( flPsi ) * ssr0 * vNormal0 + std::sinf( flPsi ) * ssr0 * vNormal1;
 		}
 	}
 	for ( int nStack = nStacks0; nStack < nStacks; ++nStack )
 	{
-		float flStackAngle = ( M_PI / 2 - flSlope ) + ( nStack - nStacks0 ) * ( M_PI / 2 + flSlope ) / ( nStacks - nStacks0 );
-		float csr1 = cosf( flStackAngle ) * r1, ssr1 = sinf( flStackAngle ) * r1;
+		float flStackAngle = ( std::numbers::pi / 2 - flSlope ) + ( nStack - nStacks0 ) * ( std::numbers::pi / 2 + flSlope ) / ( nStacks - nStacks0 );
+		float csr1 = std::cosf( flStackAngle ) * r1, ssr1 = sinf( flStackAngle ) * r1;
 		for ( int nSeg = 0; nSeg < nSegments; ++nSeg )
 		{
-			float flPsi = 2 * nSeg * M_PI / nSegments;
-			verts[ 1 + nStack * nSegments + nSeg ] = v1 - csr1 * vAxis + cosf( flPsi ) * ssr1 * vNormal0 + sinf( flPsi ) * ssr1 * vNormal1;
+			float flPsi = 2 * nSeg * std::numbers::pi / nSegments;
+			verts[ 1 + nStack * nSegments + nSeg ] = v1 - csr1 * vAxis + cosf( flPsi ) * ssr1 * vNormal0 + std::sinf( flPsi ) * ssr1 * vNormal1;
 		}
 	}
 	verts.back() = v1 + vAxis * r1;
@@ -3388,7 +2958,6 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 		return;
 
 	uint nDebugLayers = options.m_nLayers;
-	MPROF_AUTO_FAST( SoftbodyDraw );
 
 	VectorAligned *pPos0 = m_pPos0, *pPos1 = m_pPos1;
 	std::vector< VectorAligned > posBuffer;
@@ -3462,7 +3031,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 				levels[ nDynCount + nDynNode ] = nDynNode + 1;
 			}
 		}
-		Assert( levels[ 2 * nDynCount - 1 ] == 0xABCD );
+		contract_assert( levels[ 2 * nDynCount - 1 ] == 0xABCD );
 		//int nStep = m_nDebugDrawTreeBeginLevel < m_nDebugDrawTreeEndLevel ? 1 : -1;
 		//int nColorStep = ( nStep * 200 ) / ( m_nDebugDrawTreeEndLevel - m_nDebugDrawTreeBeginLevel );
 		//int nColor = 255;
@@ -3473,9 +3042,9 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 			if ( ( nLevel >= m_nDebugDrawTreeBeginLevel && nLevel < m_nDebugDrawTreeEndLevel ) || ( nLevel <= m_nDebugDrawTreeBeginLevel && nLevel > m_nDebugDrawTreeEndLevel ) )
 			{
 				FeAabb_t &box = boxes[ nDynNode ];
-				NOTE_UNUSED( box );
+				(void)box;
 				int nColor = 180 - ( 80 * ( nLevel - m_nDebugDrawTreeBeginLevel ) ) / ( m_nDebugDrawTreeEndLevel - m_nDebugDrawTreeBeginLevel );
-				NOTE_UNUSED( nColor );
+				(void)nColor;
 
 				//pDebugOverlay->AddBoxOverlay( AsVector( box.m_vMinBounds ), AsVector( box.m_vMaxBounds ), nColor, nColor, nColor, nColor );
 // 				pDebugOverlay->AddLineOverlay( Vector( a.x, a.y, a.z ), Vector( b.x, a.y, a.z ), nColor, nColor, nColor, nColor );
@@ -3502,7 +3071,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 	{
 		const FeQuad_t &quad = m_pFeModel->m_pQuads[ nQuad ];
 		VectorAligned p0 = pPos1[ quad.nNode[ 0 ] ], p1 = pPos1[ quad.nNode[ 1 ] ], p2 = pPos1[ quad.nNode[ 2 ] ], p3 = pPos1[ quad.nNode[ 3 ] ];
-		float flError = m_pFeModel->RelaxQuad2( 1.0f, flConstraintScale, quad, p0, p1, p2, p3 ); NOTE_UNUSED( flError );
+		float flError = m_pFeModel->RelaxQuad2( 1.0f, flConstraintScale, quad, p0, p1, p2, p3 ); (void)flError;
 		int nRelError = int ( 64 * Clamp< float >( flError / Sqr( .125f * Perimeter( quad ) ), 0, 1 ) );
 		pDebugOverlay->AddTriangleOverlay( p0, p1, p2, 192 + nRelError, 255 - nRelError, 255, 64, false, 0 );
 		pDebugOverlay->AddTriangleOverlay( p0, p2, p3, 192 + nRelError, 255 - nRelError, 245, 64, false, 0 );
@@ -3511,7 +3080,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 	{
 		const FeQuad_t &quad = m_pFeModel->m_pQuads[ nQuad ];
 		VectorAligned p0 = pPos1[ quad.nNode[ 0 ] ], p1 = pPos1[ quad.nNode[ 1 ] ], p2 = pPos1[ quad.nNode[ 2 ] ], p3 = pPos1[ quad.nNode[ 3 ] ];
-		float flError = m_pFeModel->RelaxQuad1( 1.0f, flConstraintScale, quad, p0, p1, p2, p3 ); NOTE_UNUSED( flError );
+		float flError = m_pFeModel->RelaxQuad1( 1.0f, flConstraintScale, quad, p0, p1, p2, p3 ); (void)flError;
 		int nRelError = int( 64 * Clamp< float >( flError / Sqr( .125f * Perimeter( quad ) ), 0, 1 ) );
 		pDebugOverlay->AddTriangleOverlay( p0, p1, p2, 192 + nRelError, 255 - nRelError, 255, 64, false, 0 );
 		pDebugOverlay->AddTriangleOverlay( p0, p2, p3, 192 + nRelError, 255 - nRelError, 245, 64, false, 0 );
@@ -3520,7 +3089,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 	{
 		const FeQuad_t &quad = m_pFeModel->m_pQuads[ nQuad ];
 		VectorAligned p0 = pPos1[ quad.nNode[ 0 ] ], p1 = pPos1[ quad.nNode[ 1 ] ], p2 = pPos1[ quad.nNode[ 2 ] ], p3 = pPos1[ quad.nNode[ 3 ] ];
-		float flError = m_pFeModel->RelaxQuad0( 1.0f, flConstraintScale, quad, p0, p1, p2, p3 ); NOTE_UNUSED( flError );
+		float flError = m_pFeModel->RelaxQuad0( 1.0f, flConstraintScale, quad, p0, p1, p2, p3 ); (void)flError;
 		int nRelError = int( 64 * Clamp< float >( flError / Sqr( .125f * Perimeter( quad ) ), 0, 1 ) );
 		pDebugOverlay->AddTriangleOverlay( p0, p1, p2, 192 + nRelError, 255 - nRelError, 255, 64, false, 0 );
 		pDebugOverlay->AddTriangleOverlay( p0, p2, p3, 192 + nRelError, 255 - nRelError, 245, 64, false, 0 );
@@ -3530,7 +3099,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 	{
 		const FeTri_t &tri = m_pFeModel->m_pTris[ nTri ];
 		VectorAligned p0 = pPos1[ tri.nNode[ 0 ] ], p1 = pPos1[ tri.nNode[ 1 ] ], p2 = pPos1[ tri.nNode[ 2 ] ];
-		float flError = m_pFeModel->RelaxTri2( 1.0f, flConstraintScale, tri, p0, p1, p2 ); NOTE_UNUSED( flError );
+		float flError = m_pFeModel->RelaxTri2( 1.0f, flConstraintScale, tri, p0, p1, p2 ); (void)flError;
 		int nRelError = int( 64 * Clamp< float >( flError / Sqr( .125f * Perimeter( tri ) ), 0, 1 ) );
 		pDebugOverlay->AddTriangleOverlay( p0, p1, p2, 192 + nRelError, 255 - nRelError, 255, 64, false, 0 );
 	}
@@ -3538,7 +3107,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 	{
 		const FeTri_t &tri = m_pFeModel->m_pTris[ nTri ];
 		VectorAligned p0 = pPos1[ tri.nNode[ 0 ] ], p1 = pPos1[ tri.nNode[ 1 ] ], p2 = pPos1[ tri.nNode[ 2 ] ];
-		float flError = m_pFeModel->RelaxTri1( 1.0f, flConstraintScale, tri, p0, p1, p2 ); NOTE_UNUSED( flError );
+		float flError = m_pFeModel->RelaxTri1( 1.0f, flConstraintScale, tri, p0, p1, p2 ); (void)flError;
 		int nRelError = int( 64 * Clamp< float >( flError / Sqr( .125f * Perimeter( tri ) ), 0, 1 ) );
 		pDebugOverlay->AddTriangleOverlay( p0, p1, p2, 192 + nRelError, 255 - nRelError, 255, 64, false, 0 );
 	}
@@ -3546,7 +3115,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 	{
 		const FeTri_t &tri = m_pFeModel->m_pTris[ nTri ];
 		VectorAligned p0 = pPos1[ tri.nNode[ 0 ] ], p1 = pPos1[ tri.nNode[ 1 ] ], p2 = pPos1[ tri.nNode[ 2 ] ];
-		float flError = m_pFeModel->RelaxTri0( 1.0f, flConstraintScale, tri, p0, p1, p2 ); NOTE_UNUSED( flError );
+		float flError = m_pFeModel->RelaxTri0( 1.0f, flConstraintScale, tri, p0, p1, p2 ); (void)flError;
 		int nRelError = int( 64 * Clamp< float >( flError / Sqr( .125f * Perimeter( tri ) ), 0, 1 ) );
 		pDebugOverlay->AddTriangleOverlay( p0, p1, p2, 192 + nRelError, 255 - nRelError, 255, 64, false, 0 );
 	}
@@ -3837,7 +3406,7 @@ void CSoftbody::SetDebugSelection( int nSel )
 
 int CSoftbody::CastCone( const Vector &vStart, const Vector &vDir, float flConePitch )
 {
-	float flClosest = FLT_MAX, flPrecision = FLT_MAX;
+	float flClosest = std::numeric_limits<float>::max(), flPrecision = std::numeric_limits<float>::max();
 	int nClosest = 0;
 	float flDir = vDir.LengthSqr();
 	Vector vNormalizedDir = vDir / flDir;
@@ -3861,7 +3430,7 @@ int CSoftbody::CastCone( const Vector &vStart, const Vector &vDir, float flConeP
 
 void CSoftbody::SetUserData( uint nIndex, void *pData )
 {
-	if ( nIndex < ARRAYSIZE( m_pUserData ) )
+	if ( nIndex < std::size( m_pUserData ) )
 	{
 		m_pUserData[ nIndex ] = ( uintp ) pData;
 	}
@@ -3869,7 +3438,7 @@ void CSoftbody::SetUserData( uint nIndex, void *pData )
 
 void* CSoftbody::GetUserData( uint nIndex )
 {
-	return ( nIndex < ARRAYSIZE( m_pUserData ) ) ? ( void* )( m_pUserData[ nIndex ] ): nullptr;
+	return ( nIndex < std::size( m_pUserData ) ) ? ( void* )( m_pUserData[ nIndex ] ): nullptr;
 }
 
 
@@ -3969,7 +3538,6 @@ void CSoftbody::EnableDebugRendering( bool bEnable )
 
 void CSoftbody::SetNodePositions( SetNodePositionsParams_t &params )
 {
-	CHANGE_GUARD();
 	SetAbsOrigin( params.vAbsOrigin, true );
 	SetAbsAngles( params.vAbsAngles, true );
 	V_memcpy( GetNodePositions( params.nFrame ), params.pPos, sizeof( *params.pPos ) * Min<uint>( params.nCount, m_nNodeCount ) );
@@ -3977,7 +3545,6 @@ void CSoftbody::SetNodePositions( SetNodePositionsParams_t &params )
 }
 void CSoftbody::SetNodePositions( const Vector *pPos, int nCount, int nFrame )
 {
-	CHANGE_GUARD();
 	VectorAligned *pInternalPos = GetNodePositions( nFrame );
 	uint nUsefulNodeCount = Min<uint>( nCount, m_nNodeCount );
 	for ( uint nNode = 0; nNode < nUsefulNodeCount; ++nNode )
@@ -3986,4 +3553,3 @@ void CSoftbody::SetNodePositions( const Vector *pPos, int nCount, int nFrame )
 	}
 	m_bSimTransformsOutdated = true;
 }
-

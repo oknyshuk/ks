@@ -1,5 +1,16 @@
+#pragma once
 #if !defined CS_PLAYER_SHARED_H
 #define CS_PLAYER_SHARED_H
+
+#include "shared_classnames.h"
+import std;
+import ks.math;
+
+class CBaseEntity;
+#if defined( CLIENT_DLL )
+#define CCSPlayer C_CSPlayer
+#endif
+class CCSPlayer;
 
 // 
 // Configuration for using high priority entities by CS players

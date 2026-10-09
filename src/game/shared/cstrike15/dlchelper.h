@@ -1,19 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef _DLC_HELPER_H
-#define _DLC_HELPER_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "platform.h"
-#include "keyvalues.h"
+import std;
+import ks.tier1;
 #include "filesystem.h"
 
-class KeyValues;
 
 // Helper methods for DLC
 class DLCHelper
@@ -124,6 +116,3 @@ void DLCHelper::AppendDLCKeyValues( KeyValues* pKeyValues, const char* fileName,
 		}
 	}
 }
-
-
-#endif // _DLC_HELPER_H

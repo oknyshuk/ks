@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Namespace for functions dealing with Debug Overlays
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef NDEBUGOVERLAY_H
-#define NDEBUGOVERLAY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Namespace for functions dealing with Debug Overlays
 
 #include "debugoverlay_shared.h"
 
@@ -27,5 +23,3 @@ extern void	UTIL_DrawPositioningOverlay( float flCrossDistance );
 extern void UTIL_DrawOverlayLines( void );
 
 extern void DebugDrawLine( const Vector& vecAbsStart, const Vector& vecAbsEnd, int r, int g, int b, bool test, float duration );
-
-#endif // NDEBUGOVERLAY_H

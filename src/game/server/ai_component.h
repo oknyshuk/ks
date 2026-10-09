@@ -1,13 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_COMPONENT_H
-#define AI_COMPONENT_H
-
+import ks.math;
+#include "networkvar.h"
+import std;
+#include "edict.h"
+#include "const.h"
+#include "ai_hull.h"
+#include "ai_activity.h"
 
 class CAI_BaseNPC;
 class CAI_Enemies;
@@ -119,19 +120,17 @@ public:
 #error
 #endif
 
-	void *operator new( size_t nBytes )
+	void *operator new( std::size_t nBytes )
 	{
-		MEM_ALLOC_CREDIT();
 		void *pResult = MemAlloc_Alloc( nBytes );
-		memset( pResult, 0, nBytes );
+		std::memset( pResult, 0, nBytes );
 		return pResult;
 	};
 
-	void *operator new( size_t nBytes, int nBlockUse, const char *pFileName, int nLine )
+	void *operator new( std::size_t nBytes, int nBlockUse, const char *pFileName, int nLine )
 	{
-		MEM_ALLOC_CREDIT();
 		void *pResult = MemAlloc_Alloc( nBytes, pFileName, nLine );
-		memset( pResult, 0, nBytes );
+		std::memset( pResult, 0, nBytes );
 		return pResult;
 	}
 
@@ -165,5 +164,3 @@ public:
 	const NPC_CLASS *	GetOuter() const 	{ return (NPC_CLASS *)(CAI_Component::GetOuter()); }
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_COMPONENT_H

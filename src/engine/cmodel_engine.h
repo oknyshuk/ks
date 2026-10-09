@@ -1,20 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CMODEL_ENGINE_H
-#define CMODEL_ENGINE_H
-
-
+import ks.math;
 #include "cmodel.h"
 #include "cmodel_private.h"
-#include "mathlib/vplane.h"
+import std;
 #include "bspfile.h"
 
 class ICollideable;
-struct AABB_t;
 
 cmodel_t	*CM_LoadMap( const char *pPathName, bool allowReusePrevious, texinfo_t *pTexinfo, int texInfoCount, unsigned *checksum );
 void		CM_FreeMap( void );
@@ -116,6 +110,3 @@ private:
 	Vector m_vCachedPos;
 	float m_flDistToExitLeafSqr;
 };
-
-
-#endif // CMODEL_ENGINE_H

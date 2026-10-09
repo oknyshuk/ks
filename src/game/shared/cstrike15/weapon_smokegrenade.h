@@ -1,25 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef WEAPON_SMOKEGRENADE_H
-#define WEAPON_SMOKEGRENADE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "weapon_basecsgrenade.h"
-
 
 #ifdef CLIENT_DLL
 	
 	#define CSmokeGrenade C_SmokeGrenade
 
 #endif
-
 
 //-----------------------------------------------------------------------------
 // Smoke grenades
@@ -46,6 +37,3 @@ public:
 
 	CSmokeGrenade( const CSmokeGrenade & ) {}
 };
-
-
-#endif // WEAPON_SMOKEGRENADE_H

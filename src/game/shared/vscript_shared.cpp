@@ -1,40 +1,68 @@
-//========== Copyright (c) 2008, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2008 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
+#include "recipientfilter.h"
+#endif
 #include "vscript_shared.h"
-#include "icommandline.h"
-#include "tier1/fmtstr.h"
-#include "tier1/byte_reader.h"
-#include <string>
 #include "filesystem.h"
-#include "characterset.h"
 #include "gamerules.h"
 
 IScriptVM * g_pScriptVM;
 extern ScriptClassDesc_t * GetScriptDesc( CBaseEntity * );
 
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_VScript, "VScript", LCF_CONSOLE_ONLY, LS_WARNING );
-
-// #define VMPROFILE 1
-
-#ifdef VMPROFILE
-
-#define VMPROF_START double debugStartTime = Plat_FloatTime();
-#define VMPROF_SHOW( funcname, funcdesc  ) DevMsg("***VSCRIPT PROFILE***: %s %s: %6.4f milliseconds\n", (##funcname), (##funcdesc), (Plat_FloatTime() - debugStartTime)*1000.0 );
-
-#else // !VMPROFILE
-
-#define VMPROF_START
-#define VMPROF_SHOW
-
-#endif // VMPROFILE
-
-
-
+LoggingChannelID_t LOG_VScript = LoggingSystem_RegisterLoggingChannel( "VScript", nullptr, LCF_CONSOLE_ONLY, LS_WARNING );;
 HSCRIPT VScriptCompileScript( const char *pszScriptName, bool bWarnMissing )
 {
 	if ( !g_pScriptVM )
@@ -84,7 +112,7 @@ HSCRIPT VScriptCompileScript( const char *pszScriptName, bool bWarnMissing )
 		if( !scriptData )
 		{
 			Log_Warning( LOG_VScript, "Script not found (%s) \n", scriptPath.operator const char *() );
-			Assert( "Error running script" );
+			contract_assert( "Error running script" );
 		}
 
 		if ( scriptData )
@@ -106,7 +134,7 @@ HSCRIPT VScriptCompileScript( const char *pszScriptName, bool bWarnMissing )
 	if ( !hScript )
 	{
 		Log_Warning( LOG_VScript, "FAILED to compile and execute script file named %s\n", scriptPath.operator const char *() );
-		Assert( "Error running script" );
+		contract_assert( "Error running script" );
 	}
 	return hScript;
 }
@@ -152,7 +180,7 @@ bool VScriptRunScript( const char *pszScriptName, HSCRIPT hScope, bool bWarnMiss
 		if ( !bSuccess )
 		{
 			Log_Warning( LOG_VScript, "Error running script named %s\n", pszScriptName );
-			Assert( "Error running script" );
+			contract_assert( "Error running script" );
 		}
 	}
 	g_ScriptServerRunScriptDepth--;
@@ -160,9 +188,13 @@ bool VScriptRunScript( const char *pszScriptName, HSCRIPT hScope, bool bWarnMiss
 }
 
 #ifdef CLIENT_DLL
-CON_COMMAND( script_client, "Run the text as a script" )
+static void script_client( const CCommand &args );
+static ConCommand script_client_command( "script_client", script_client, "Run the text as a script" );
+static void script_client( const CCommand &args )
 #else
-CON_COMMAND( script, "Run the text as a script" )
+static void script( const CCommand &args );
+static ConCommand script_command( "script", script, "Run the text as a script" );
+static void script( const CCommand &args )
 #endif
 {
 #ifdef CLIENT_DLL
@@ -228,9 +260,13 @@ CON_COMMAND( script, "Run the text as a script" )
 
 
 #ifdef CLIENT_DLL
-CON_COMMAND( script_execute_client, "Run a vscript file" )
+static void script_execute_client( const CCommand &args );
+static ConCommand script_execute_client_command( "script_execute_client", script_execute_client, "Run a vscript file" );
+static void script_execute_client( const CCommand &args )
 #else
-CON_COMMAND( script_execute, "Run a vscript file" )
+static void script_execute( const CCommand &args );
+static ConCommand script_execute_command( "script_execute", script_execute, "Run a vscript file" );
+static void script_execute( const CCommand &args )
 #endif
 {
 #ifdef CLIENT_DLL
@@ -257,9 +293,13 @@ CON_COMMAND( script_execute, "Run a vscript file" )
 }
 
 #ifdef CLIENT_DLL
-CON_COMMAND( script_debug_client, "Connect the vscript VM to the script debugger" )
+static void script_debug_client( const CCommand &args );
+static ConCommand script_debug_client_command( "script_debug_client", script_debug_client, "Connect the vscript VM to the script debugger" );
+static void script_debug_client( const CCommand &args )
 #else
-CON_COMMAND( script_debug, "Connect the vscript VM to the script debugger" )
+static void script_debug( const CCommand &args );
+static ConCommand script_debug_command( "script_debug", script_debug, "Connect the vscript VM to the script debugger" );
+static void script_debug( const CCommand &args )
 #endif
 {
 #ifdef CLIENT_DLL
@@ -279,9 +319,13 @@ CON_COMMAND( script_debug, "Connect the vscript VM to the script debugger" )
 }
 
 #ifdef CLIENT_DLL
-CON_COMMAND( script_help_client, "Output help for script functions, optionally with a search string" )
+static void script_help_client( const CCommand &args );
+static ConCommand script_help_client_command( "script_help_client", script_help_client, "Output help for script functions, optionally with a search string" );
+static void script_help_client( const CCommand &args )
 #else
-CON_COMMAND( script_help, "Output help for script functions, optionally with a search string" )
+static void script_help( const CCommand &args );
+static ConCommand script_help_command( "script_help", script_help, "Output help for script functions, optionally with a search string" );
+static void script_help( const CCommand &args )
 #endif
 {
 #ifdef CLIENT_DLL
@@ -307,9 +351,13 @@ CON_COMMAND( script_help, "Output help for script functions, optionally with a s
 }
 
 #ifdef CLIENT_DLL
-CON_COMMAND( script_dump_all_client, "Dump the state of the VM to the console" )
+static void script_dump_all_client( const CCommand &args );
+static ConCommand script_dump_all_client_command( "script_dump_all_client", script_dump_all_client, "Dump the state of the VM to the console" );
+static void script_dump_all_client( const CCommand &args )
 #else
-CON_COMMAND( script_dump_all, "Dump the state of the VM to the console" )
+static void script_dump_all( const CCommand &args );
+static ConCommand script_dump_all_command( "script_dump_all", script_dump_all, "Dump the state of the VM to the console" );
+static void script_dump_all( const CCommand &args )
 #endif
 {
 #ifdef CLIENT_DLL

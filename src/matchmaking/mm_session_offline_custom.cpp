@@ -1,12 +1,10 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
+import ks.tier1;
 #include "mm_framework.h"
 
-#include "fmtstr.h"
+import std;
 #include "netmessages_signon.h"
 
 //
@@ -59,7 +57,7 @@ void CMatchSessionOfflineCustom::Command( KeyValues *pCommand )
 {
 	char const *szCommand = pCommand->GetName();
 
-	if ( !Q_stricmp( "Start", szCommand ) && m_eState < STATE_RUNNING )
+	if ( !V_stricmp( "Start", szCommand ) && m_eState < STATE_RUNNING )
 	{
 		m_eState = STATE_RUNNING;
 
@@ -83,18 +81,18 @@ void CMatchSessionOfflineCustom::Command( KeyValues *pCommand )
 		{
 			Warning( "Failed to start server map!\n" );
 			KeyValuesDumpAsDevMsg( m_pSettings, 1 );
-			Assert( 0 );
+			contract_assert( 0 );
 			g_pMatchEventsSubscription->BroadcastEvent( new KeyValues( "OnMatchSessionUpdate", "state", "error", "error", "nomap" ) );
 		}
 		Msg( "Succeeded in starting server map!\n" );
 		return;
 	}
-	if ( !Q_stricmp( "QueueConnect", szCommand ) )
+	if ( !V_stricmp( "QueueConnect", szCommand ) )
 	{
 		char const *szConnectAddress = pCommand->GetString( "adronline", "0.0.0.0" );
 		uint64 uiReservationId = pCommand->GetUint64( "reservationid" );
 		bool bAutoCloseSession = pCommand->GetBool( "auto_close_session" );
-		Assert( bAutoCloseSession );
+		contract_assert( bAutoCloseSession );
 		if ( bAutoCloseSession )
 		{
 			// Switch the state
@@ -121,7 +119,7 @@ void CMatchSessionOfflineCustom::Command( KeyValues *pCommand )
 	//
 	std::vector< KeyValues * > arrPlayersUpdated;
 	arrPlayersUpdated.assign( m_pSettings->GetInt( "members/numPlayers", 0 ), {} );
-	memset( arrPlayersUpdated.data(), 0, std::ssize( arrPlayersUpdated ) * sizeof( KeyValues * ) );
+	std::memset( arrPlayersUpdated.data(), 0, std::ssize( arrPlayersUpdated ) * sizeof( KeyValues * ) );
 
 	g_pMMF->GetMatchTitleGameSettingsMgr()->ExecuteCommand( pCommand, GetSessionSystemData(), m_pSettings, arrPlayersUpdated.data() );
 
@@ -187,7 +185,7 @@ void CMatchSessionOfflineCustom::OnEvent( KeyValues *pEvent )
 {
 	char const *szEvent = pEvent->GetName();
 
-	if ( !Q_stricmp( "OnEngineClientSignonStateChange", szEvent ) )
+	if ( !V_stricmp( "OnEngineClientSignonStateChange", szEvent ) )
 	{
 		int iOldState = pEvent->GetInt( "old", 0 );
 		int iNewState = pEvent->GetInt( "new", 0 );
@@ -207,27 +205,27 @@ void CMatchSessionOfflineCustom::OnEvent( KeyValues *pEvent )
 			return;
 		}
 	}
-	else if ( !Q_stricmp( "OnEngineClientSignonStatePrepareChange", szEvent ) )
+	else if ( !V_stricmp( "OnEngineClientSignonStatePrepareChange", szEvent ) )
 	{
 		char const *szReason = pEvent->GetString( "reason" );
-		if ( !Q_stricmp( "reload", szReason ) )
+		if ( !V_stricmp( "reload", szReason ) )
 		{
-			Assert( !m_bExpectingServerReload );
+			contract_assert( !m_bExpectingServerReload );
 			m_bExpectingServerReload = true;
 			return;
 		}
-		else if ( !Q_stricmp( "load", szReason ) )
+		else if ( !V_stricmp( "load", szReason ) )
 		{
 			char const *szLevelName = g_pMatchExtensions->GetIVEngineClient()->GetLevelName();
 			if ( szLevelName && szLevelName[0] && g_pMatchExtensions->GetIVEngineClient()->IsConnected() )
 			{
-				Assert( !m_bExpectingServerReload );
+				contract_assert( !m_bExpectingServerReload );
 				m_bExpectingServerReload = true;
 				return;
 			}
 		}
 	}
-	else if ( !Q_stricmp( "OnEngineEndGame", szEvent ) )
+	else if ( !V_stricmp( "OnEngineEndGame", szEvent ) )
 	{
 		DevMsg( "OnEngineEndGame\n" );
 		
@@ -304,7 +302,7 @@ void CMatchSessionOfflineCustom::OnGamePrepareLobbyForGame()
 	// Remember which players will get updated
 	std::vector< KeyValues * > arrPlayersUpdated;
 	arrPlayersUpdated.assign( m_pSettings->GetInt( "members/numPlayers", 0 ), {} );
-	memset( arrPlayersUpdated.data(), 0, std::ssize( arrPlayersUpdated ) * sizeof( KeyValues * ) );
+	std::memset( arrPlayersUpdated.data(), 0, std::ssize( arrPlayersUpdated ) * sizeof( KeyValues * ) );
 
 	g_pMMF->GetMatchTitleGameSettingsMgr()->PrepareLobbyForGame( m_pSettings, arrPlayersUpdated.data() );
 

@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SND_MP3_SOURCE_H
-#define SND_MP3_SOURCE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "snd_audio_source.h"
 #include "snd_wave_data.h"
@@ -15,7 +9,7 @@
 class IWaveData;
 class CAudioMixer;
 
-abstract_class CAudioSourceMP3 : public CAudioSource
+class CAudioSourceMP3 : public CAudioSource
 {
 public:
 
@@ -71,7 +65,7 @@ public:
 
 	virtual void				CheckAudioSourceCache();
 
-	virtual char const			*GetFileName( char *pOutBuf, size_t bufLen );
+	virtual char const			*GetFileName( char *pOutBuf, std::size_t bufLen );
 
 	virtual void				SetPlayOnce( bool isPlayOnce ) { m_bIsPlayOnce = isPlayOnce; }
 	virtual bool				IsPlayOnce() { return m_bIsPlayOnce; }
@@ -90,12 +84,12 @@ protected:
 	//-----------------------------------------------------------------------------
 	inline byte *GetCachedDataPointer()
 	{
-		VPROF("CAudioSourceMP3::GetCachedDataPointer");
+		CVProfScope _( "CAudioSourceMP3::GetCachedDataPointer", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		CAudioSourceCachedInfo *info = m_AudioCacheHandle.Get( CAudioSource::AUDIO_SOURCE_MP3, m_pSfx->IsPrecachedSound(), m_pSfx, &m_nCachedDataSize );
 		if ( !info )
 		{
-			Assert( !"CAudioSourceMP3::GetCachedDataPointer info == NULL" );
+			contract_assert( !"CAudioSourceMP3::GetCachedDataPointer info == NULL" );
 			return nullptr;
 		}
 
@@ -178,5 +172,3 @@ bool Audio_IsMP3( const char *pName );
 CAudioSource *Audio_CreateStreamedMP3( CSfxTable *pSfx );
 CAudioSource *Audio_CreateMemoryMP3( CSfxTable *pSfx );
 CAudioMixer *CreateMP3Mixer( IWaveData *data, int *pSampleRate );
-
-#endif // SND_MP3_SOURCE_H

@@ -1,18 +1,22 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//===============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#ifndef IMATRENDERCONTEXTINTERNAL_H
-#define IMATRENDERCONTEXTINTERNAL_H
+import std;
+import ks.tier1;
+#include "materialsystem/imaterialsystem.h"
+#include "materialsystem/imesh.h"
+#include "shaderapi/shareddefs.h"
+#include "shaderapi/ishaderdynamic.h"
+#include "imaterialsysteminternal.h"
 
+class IMaterialInternal;
 
 // typedefs to allow use of delegation macros
 typedef Vector4D LightCube_t[6];
 
 
-abstract_class IMatRenderContextInternal : public IMatRenderContext
+class IMatRenderContextInternal : public IMatRenderContext
 {
 	// For now, stuck implementing these until IMaterialSystem is reworked
 	bool Connect(CreateInterfaceFn) { return true; }
@@ -68,5 +72,3 @@ public:
 	virtual ShaderAPITextureHandle_t GetPaintmapTexture( int nLightmapPage ) = 0;
 	
 };
-
-#endif // IMATRENDERCONTEXTINTERNAL_H

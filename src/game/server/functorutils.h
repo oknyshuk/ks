@@ -1,16 +1,13 @@
+#pragma once
+
+#include "util.h"
+#include "player.h"
 // FunctorUtils.h
 // Useful functors
 // Author: Michael Booth, August 2005, Copyright 2005 Turtle Rock Studios, Inc.
 
-#ifndef _FUNCTOR_UTILS_H_
-#define _FUNCTOR_UTILS_H_
 
-#ifdef SERVER_NEXT_BOTS
-#include "NextBotInterface.h"
-#include "NextBotManager.h"
-#else
 class INextBot;
-#endif
 
 //--------------------------------------------------------------------------------------------------------
 /**
@@ -325,27 +322,13 @@ inline bool ForEachActor( Functor &func )
 		if ( !player->IsConnected() )
 			continue;
 
-#ifdef SERVER_NEXT_BOTS
-		// skip bots - ForEachCombatCharacter will catch them
-		INextBot *bot = player->MyNextBotPointer();
-		if ( bot )
-		{
-			continue;
-		}
-#endif
-
 		if ( func( player ) == false )
 		{
 			return false;
 		}
 	}
 
-#ifdef SERVER_NEXT_BOTS
-	// iterate all NextBots
-	return TheNextBots().ForEachCombatCharacter( func );
-#else
 	return true;
-#endif
 }
 
 
@@ -395,29 +378,12 @@ inline bool ForEachActor( IActorFunctor &func )
 		if ( !player->IsConnected() )
 			continue;
 
-#ifdef SERVER_NEXT_BOTS
-		// skip bots - ForEachCombatCharacter will catch them
-		INextBot *bot = dynamic_cast< INextBot * >( player );
-		if ( bot )
-		{
-			continue;
-		}
-#endif
-
 		if ( func( player ) == false )
 		{
 			isComplete = false;
 			break;
 		}
 	}
-
-#ifdef SERVER_NEXT_BOTS
-	if ( !isComplete )
-	{
-		// iterate all NextBots
-		isComplete = TheNextBots().ForEachCombatCharacter( func );
-	}
-#endif
 
 	func.OnEndIteration( isComplete );
 
@@ -449,4 +415,3 @@ private:
 };
 
 
-#endif // _FUNCTOR_UTILS_H_

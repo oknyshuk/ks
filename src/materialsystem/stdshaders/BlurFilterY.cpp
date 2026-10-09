@@ -1,8 +1,5 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "BlurFilter_vs20.inc"
@@ -10,7 +7,7 @@
 #include "BlurFilter_ps20b.inc"
 
 BEGIN_VS_SHADER_FLAGS( BlurFilterY, "Help for BlurFilterY", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
         SHADER_PARAM( BLOOMAMOUNT, SHADER_PARAM_TYPE_FLOAT, "1.0", "" )
 		SHADER_PARAM( FRAMETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "_rt_SmallHDR0", "" )
 		SHADER_PARAM( KERNEL, SHADER_PARAM_TYPE_INTEGER, "0", "Kernel type" )

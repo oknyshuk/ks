@@ -1,19 +1,44 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "player.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "player.h"
 #include "usercmd.h"
 #include "igamemovement.h"
-#include "mathlib/mathlib.h"
 #include "client.h"
 #include "player_command.h"
 #include "movehelper_server.h"
 #include "iservervehicle.h"
-#include "tier0/vprof.h"
 
 extern IGameMovement *g_pGameMovement;
 extern CMoveData *g_pMoveData;	// This is a global because it is subclassed by each game.
@@ -37,11 +62,7 @@ CPlayerMove::CPlayerMove( void )
 //-----------------------------------------------------------------------------
 void CPlayerMove::StartCommand( CBasePlayer *player, CUserCmd *cmd )
 {
-	VPROF( "CPlayerMove::StartCommand" );
-
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-	CPredictableId::ResetInstanceCounters();
-#endif
+	CVProfScope _( "CPlayerMove::StartCommand", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	player->m_pCurrentCommand = cmd;
 	CBaseEntity::SetPredictionRandomSeed( cmd );
@@ -55,7 +76,7 @@ void CPlayerMove::StartCommand( CBasePlayer *player, CUserCmd *cmd )
 //-----------------------------------------------------------------------------
 void CPlayerMove::FinishCommand( CBasePlayer *player )
 {
-	VPROF( "CPlayerMove::FinishCommand" );
+	CVProfScope _( "CPlayerMove::FinishCommand", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	player->m_pCurrentCommand = nullptr;
 	CBaseEntity::SetPredictionRandomSeed( nullptr );
@@ -70,7 +91,7 @@ void CPlayerMove::FinishCommand( CBasePlayer *player )
 //-----------------------------------------------------------------------------
 void CPlayerMove::CheckMovingGround( CBasePlayer *player, double frametime )
 {
-	VPROF( "CPlayerMove::CheckMovingGround()" );
+	CVProfScope _( "CPlayerMove::CheckMovingGround()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CBaseEntity	    *groundentity;
 
@@ -110,7 +131,7 @@ void CPlayerMove::CheckMovingGround( CBasePlayer *player, double frametime )
 //-----------------------------------------------------------------------------
 void CPlayerMove::SetupMove( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper *pHelper, CMoveData *move )
 {
-	VPROF( "CPlayerMove::SetupMove" );
+	CVProfScope _( "CPlayerMove::SetupMove", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Allow sound, etc. to be created by movement code
 	move->m_bFirstRunOfFunctions = true;
@@ -186,7 +207,7 @@ void CPlayerMove::SetupMove( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper *p
 //-----------------------------------------------------------------------------
 void CPlayerMove::FinishMove( CBasePlayer *player, CUserCmd *ucmd, CMoveData *move )
 {
-	VPROF( "CPlayerMove::FinishMove" );
+	CVProfScope _( "CPlayerMove::FinishMove", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	player->m_flMaxspeed			= move->m_flClientMaxSpeed;
 	player->SetAbsOrigin( move->GetAbsOrigin() );
@@ -211,13 +232,13 @@ void CPlayerMove::FinishMove( CBasePlayer *player, CUserCmd *ucmd, CMoveData *mo
 
 	// The class had better not have changed during the move!!
 	if ( player->m_hConstraintEntity )
-		Assert( move->m_vecConstraintCenter == player->m_hConstraintEntity.Get()->GetAbsOrigin() );
+		contract_assert( move->m_vecConstraintCenter == player->m_hConstraintEntity.Get()->GetAbsOrigin() );
 	else
-		Assert( move->m_vecConstraintCenter == player->m_vecConstraintCenter );
-	Assert( move->m_flConstraintRadius == player->m_flConstraintRadius );
-	Assert( move->m_flConstraintWidth == player->m_flConstraintWidth );
-	Assert( move->m_flConstraintSpeedFactor == player->m_flConstraintSpeedFactor );
-	Assert( move->m_bConstraintPastRadius == player->m_bConstraintPastRadius );
+		contract_assert( move->m_vecConstraintCenter == player->m_vecConstraintCenter );
+	contract_assert( move->m_flConstraintRadius == player->m_flConstraintRadius );
+	contract_assert( move->m_flConstraintWidth == player->m_flConstraintWidth );
+	contract_assert( move->m_flConstraintSpeedFactor == player->m_flConstraintSpeedFactor );
+	contract_assert( move->m_bConstraintPastRadius == player->m_bConstraintPastRadius );
 }
 
 //-----------------------------------------------------------------------------
@@ -227,22 +248,22 @@ void CPlayerMove::FinishMove( CBasePlayer *player, CUserCmd *ucmd, CMoveData *mo
 //-----------------------------------------------------------------------------
 void CPlayerMove::RunPreThink( CBasePlayer *player )
 {
-	VPROF( "CPlayerMove::RunPreThink" );
+	CVProfScope _( "CPlayerMove::RunPreThink", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Run think functions on the player
-	VPROF_SCOPE_BEGIN( "player->PhysicsRunThink()" );
+	{ CVProfScope _( "player->PhysicsRunThink()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( !player->PhysicsRunThink() )
 		return;
-	VPROF_SCOPE_END();
+	};
 
-	VPROF_SCOPE_BEGIN( "g_pGameRules->PlayerThink( player )" );
+	{ CVProfScope _( "g_pGameRules->PlayerThink( player )", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// Called every frame to let game rules do any specific think logic for the player
 	g_pGameRules->PlayerThink( player );
-	VPROF_SCOPE_END();
+	};
 
-	VPROF_SCOPE_BEGIN( "player->PreThink()" );
+	{ CVProfScope _( "player->PreThink()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	player->PreThink();
-	VPROF_SCOPE_END();
+	};
 }
 
 //-----------------------------------------------------------------------------
@@ -257,7 +278,7 @@ void CPlayerMove::RunPreThink( CBasePlayer *player )
 //-----------------------------------------------------------------------------
 void CPlayerMove::RunThink (CBasePlayer *player, double frametime )
 {
-	VPROF( "CPlayerMove::RunThink" );
+	CVProfScope _( "CPlayerMove::RunThink", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	int thinktick = player->GetNextThinkTick();
 
 	if ( thinktick <= 0 || thinktick > player->m_nTickBase )
@@ -278,7 +299,7 @@ void CPlayerMove::RunThink (CBasePlayer *player, double frametime )
 //-----------------------------------------------------------------------------
 void CPlayerMove::RunPostThink( CBasePlayer *player )
 {
-	VPROF( "CPlayerMove::RunPostThink" );
+	CVProfScope _( "CPlayerMove::RunPostThink", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Run post-think
 	player->PostThink();
@@ -354,7 +375,7 @@ void CPlayerMove::RunCommand ( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 		CBaseCombatWeapon *weapon = dynamic_cast< CBaseCombatWeapon * >( CBaseEntity::Instance( ucmd->weaponselect ) );
 		if ( weapon )
 		{
-			VPROF( "player->SelectItem()" );
+			CVProfScope _( "player->SelectItem()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			player->SelectItem( weapon->GetName(), ucmd->weaponsubtype );
 		}
 	}
@@ -373,9 +394,9 @@ void CPlayerMove::RunCommand ( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 	}
 
 	// Update player input button states
-	VPROF_SCOPE_BEGIN( "player->UpdateButtonState" );
+	{ CVProfScope _( "player->UpdateButtonState", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	player->UpdateButtonState( ucmd->buttons );
-	VPROF_SCOPE_END();
+	};
 
 	CheckMovingGround( player, TICK_INTERVAL );
 
@@ -410,13 +431,13 @@ void CPlayerMove::RunCommand ( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 	// Let the game do the movement.
 	if ( !pVehicle )
 	{
-		VPROF( "g_pGameMovement->ProcessMovement()" );
-		Assert( g_pGameMovement );
+		CVProfScope _( "g_pGameMovement->ProcessMovement()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+		contract_assert( g_pGameMovement );
 		g_pGameMovement->ProcessMovement( player, g_pMoveData );
 	}
 	else
 	{
-		VPROF( "pVehicle->ProcessMovement()" );
+		CVProfScope _( "pVehicle->ProcessMovement()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		pVehicle->ProcessMovement( player, g_pMoveData );
 	}
 			
@@ -435,9 +456,9 @@ void CPlayerMove::RunCommand ( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 	gpGlobals->curtime = serverCurTime;
 	gpGlobals->frametime = serverFrameTime;
 	// Let server invoke any needed impact functions
-	VPROF_SCOPE_BEGIN( "moveHelper->ProcessImpacts" );
+	{ CVProfScope _( "moveHelper->ProcessImpacts", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	moveHelper->ProcessImpacts();
-	VPROF_SCOPE_END();
+	};
 	gpGlobals->curtime = playerCurTime;
 	gpGlobals->frametime = playerFrameTime;
 

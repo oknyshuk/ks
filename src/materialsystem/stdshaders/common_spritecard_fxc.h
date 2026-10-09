@@ -1,3 +1,4 @@
+#pragma once
 #ifdef PIXELSHADER
 	#define VS_OUTPUT PS_INPUT
 #endif

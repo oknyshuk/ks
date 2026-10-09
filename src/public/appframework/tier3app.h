@@ -1,31 +1,18 @@
-//=========== (C) Copyright 1999 Valve, L.L.C. All rights reserved. ===========
-//
-// The copyright to the contents herein is the property of Valve, L.L.C.
-// The contents may be used and/or copied only with the written permission of
-// Valve, L.L.C., or in accordance with the terms and conditions stipulated in
-// the agreement/contract under which the contents have been supplied.
-//
-// $Header: $
-// $NoKeywords: $
-//
-// The application objects for apps that use tier3
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1999 Valve Corporation
 
-#ifndef TIER3APP_H
-#define TIER3APP_H
-
-
+// Purpose: The application objects for apps that use tier3
 
 #include "appframework/tier2app.h"
 #include "tier3/tier3.h"
 
-
 //-----------------------------------------------------------------------------
 // The application object for apps that use tier3
 //-----------------------------------------------------------------------------
-class CTier3SteamApp : public CTier2SteamApp
+class CTier3FSApp : public CTier2FSApp
 {
-	typedef CTier2SteamApp BaseClass;
+	typedef CTier2FSApp BaseClass;
 
 public:
 	// Methods of IApplication
@@ -50,9 +37,9 @@ public:
 //-----------------------------------------------------------------------------
 // The application object for apps that use tier3
 //-----------------------------------------------------------------------------
-class CTier3DmSteamApp : public CTier2DmSteamApp
+class CTier3DmFSApp : public CTier2DmFSApp
 {
-	typedef CTier2DmSteamApp BaseClass;
+	typedef CTier2DmFSApp BaseClass;
 
 public:
 	// Methods of IApplication
@@ -72,6 +59,3 @@ public:
 		BaseClass::PostShutdown();
 	}
 };
-
-
-#endif // TIER3APP_H

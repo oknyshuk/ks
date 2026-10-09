@@ -1,23 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef EVENTLIST_H
-#define EVENTLIST_H
+inline constexpr auto AE_TYPE_SERVER = ( 1 << 0 );
+inline constexpr auto AE_TYPE_SCRIPTED = ( 1 << 1 ); // see scriptevent.h
+inline constexpr auto AE_TYPE_SHARED = ( 1 << 2 );
+inline constexpr auto AE_TYPE_WEAPON = ( 1 << 3 );
+inline constexpr auto AE_TYPE_CLIENT = ( 1 << 4 );
+inline constexpr auto AE_TYPE_FACEPOSER = ( 1 << 5 );
 
-#define AE_TYPE_SERVER			( 1 << 0 )
-#define AE_TYPE_SCRIPTED		( 1 << 1 )		// see scriptevent.h
-#define AE_TYPE_SHARED			( 1 << 2 )
-#define AE_TYPE_WEAPON			( 1 << 3 )
-#define AE_TYPE_CLIENT			( 1 << 4 )
-#define AE_TYPE_FACEPOSER		( 1 << 5 )
+inline constexpr auto AE_TYPE_NEWEVENTSYSTEM = ( 1 << 10 ); //Temporary flag.
 
-#define AE_TYPE_NEWEVENTSYSTEM  ( 1 << 10 ) //Temporary flag.
-
-#define AE_NOT_AVAILABLE		-1
+inline constexpr auto AE_NOT_AVAILABLE = -1;
 
 typedef enum
 {
@@ -155,7 +149,3 @@ Animevent EventList_RegisterPrivateEvent( const char *pszEventName );
 // Implemented in shared code
 extern void EventList_RegisterSharedEvents( void );
 extern int EventList_GetEventType( int eventIndex );
-
-
-
-#endif // EVENTLIST_H

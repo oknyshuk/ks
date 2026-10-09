@@ -1,26 +1,20 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef HUD_BASECHAT_H
-#define HUD_BASECHAT_H
-
+import ks.core;
 #include "hudelement.h"
-#include <color.h>
+import std;
 
-
-#define CHATLINE_NUM_FLASHES 8.0f
-#define CHATLINE_FLASH_TIME 5.0f
-#define CHATLINE_FADE_TIME 1.0f
+inline constexpr auto CHATLINE_NUM_FLASHES = 8.0f;
+inline constexpr auto CHATLINE_FLASH_TIME = 5.0f;
+inline constexpr auto CHATLINE_FADE_TIME = 1.0f;
 
 #define CHAT_HISTORY_ONE_OVER_FADE_TIME 4.0f;
-#define CHAT_HISTORY_FADE_TIME 0.25f
-#define CHAT_HISTORY_IDLE_TIME 15.0f
-#define CHAT_HISTORY_IDLE_FADE_TIME 2.5f
-#define CHAT_HISTORY_ALPHA 127
+inline constexpr auto CHAT_HISTORY_FADE_TIME = 0.25f;
+inline constexpr auto CHAT_HISTORY_IDLE_TIME = 15.0f;
+inline constexpr auto CHAT_HISTORY_IDLE_FADE_TIME = 2.5f;
+inline constexpr auto CHAT_HISTORY_ALPHA = 127;
 
 extern Color g_ColorBlue;
 extern Color g_ColorRed;
@@ -83,8 +77,8 @@ void StripEndNewlineFromString( wchar_t *str );
 
 char* ConvertCRtoNL( char *str );
 wchar_t* ConvertCRtoNL( wchar_t *str );
-wchar_t* ReadLocalizedString( const char *szString, OUT_Z_BYTECAP(outSizeInBytes) wchar_t *pOut, int outSizeInBytes, bool bStripNewline, char *originalString = nullptr, int originalSize = 0 );
-wchar_t* ReadChatTextString( const char *szString, OUT_Z_BYTECAP(outSizeInBytes) wchar_t *pOut, int outSizeInBytes, bool stripBugData = false );
+wchar_t* ReadLocalizedString( const char *szString, wchar_t *pOut, int outSizeInBytes, bool bStripNewline, char *originalString = nullptr, int originalSize = 0 );
+wchar_t* ReadChatTextString( const char *szString, wchar_t *pOut, int outSizeInBytes, bool stripBugData = false );
 char* RemoveColorMarkup( char *str );
 
 //--------------------------------------------------------------------------------------------------------
@@ -152,8 +146,8 @@ public:
 
 	void			MsgFunc_TextMsg(const char *pszName, int iSize, void *pbuf);
 	
-	virtual void	Printf( int iFilter, PRINTF_FORMAT_STRING const char *fmt, ... );
-	virtual void	ChatPrintf( int iPlayerIndex, int iFilter, PRINTF_FORMAT_STRING const char *fmt, ... ) FMTFUNCTION( 4, 5 );
+	virtual void	Printf( int iFilter, const char *fmt, ... );
+	[[gnu::format(printf, 4, 5)]] virtual void	ChatPrintf( int iPlayerIndex, int iFilter, const char *fmt, ... );
 	virtual void	ChatPrintfW( int iPlayerIndex, int iFilter, const wchar_t *wszNotice );
 	
 	virtual void	StartMessageMode( int iMessageModeType );
@@ -221,5 +215,3 @@ private:
 	int				m_iFilterFlags;
 	bool			m_bEnteringVoice;
 };
-
-#endif // HUD_BASECHAT_H

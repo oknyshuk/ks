@@ -1,17 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ICLASSMAP_H
-#define ICLASSMAP_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class C_BaseEntity;
 typedef C_BaseEntity* (*DISPATCHFUNCTION)( void );
 
-abstract_class IClassMap
+class IClassMap
 {
 public:
 	virtual					~IClassMap() {}
@@ -23,6 +17,3 @@ public:
 };
 
 extern IClassMap& GetClassMap();
-
-
-#endif // ICLASSMAP_H

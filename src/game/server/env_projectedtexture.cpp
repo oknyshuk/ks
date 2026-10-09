@@ -1,10 +1,43 @@
-//====== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. =======
-//
-// Purpose: Projects a texture into the world (like the flashlight)
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Projects a texture into the world (like the flashlight)
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -32,8 +65,8 @@ CEnvProjectedTexture::CEnvProjectedTexture( void )
 	m_bLightWorld = true;
 	m_bCameraSpace = false;
 
-	Q_strcpy( m_SpotlightTextureName.GetForModify(), "effects/flashlight_border" );
-	Q_strcpy( m_SpotlightTextureName.GetForModify(), "effects/flashlight001" );
+	V_strcpy( m_SpotlightTextureName.GetForModify(), "effects/flashlight_border" );
+	V_strcpy( m_SpotlightTextureName.GetForModify(), "effects/flashlight001" );
 
 	m_nSpotlightTextureFrame = 0;
 	m_flBrightnessScale = 1.0f;
@@ -75,7 +108,7 @@ bool CEnvProjectedTexture::KeyValue( const char *szKeyName, const char *szValue 
 	}
 	else if ( FStrEq( szKeyName, "texturename" ) )
 	{
-		Q_strcpy( m_SpotlightTextureName.GetForModify(), szValue );
+		V_strcpy( m_SpotlightTextureName.GetForModify(), szValue );
 	}
 	else
 	{
@@ -89,12 +122,12 @@ bool CEnvProjectedTexture::GetKeyValue( const char *szKeyName, char *szValue, in
 {
 	if ( FStrEq( szKeyName, "lightcolor" ) )
 	{
-		Q_snprintf( szValue, iMaxLen, "%d %d %d %d", m_LightColor.GetR(), m_LightColor.GetG(), m_LightColor.GetB(), m_LightColor.GetA() );
+		V_snprintf( szValue, iMaxLen, "%d %d %d %d", m_LightColor.GetR(), m_LightColor.GetG(), m_LightColor.GetB(), m_LightColor.GetA() );
 		return true;
 	}
 	else if ( FStrEq( szKeyName, "texturename" ) )
 	{
-		Q_snprintf( szValue, iMaxLen, "%s", m_SpotlightTextureName.Get() );
+		V_snprintf( szValue, iMaxLen, "%s", m_SpotlightTextureName.Get() );
 		return true;
 	}
 	return BaseClass::GetKeyValue( szKeyName, szValue, iMaxLen );
@@ -186,9 +219,9 @@ void CEnvProjectedTexture::InputSetFarZ( inputdata_t &inputdata )
 
 void CEnvProjectedTexture::InputSetSpotlightTexture( inputdata_t &inputdata )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 	Warning( "SetSpotlightTexture is disabled. If you need this feature reimplemented, tell a programmer.\n" );
-	//Q_strcpy( m_SpotlightTextureName.GetForModify(), inputdata.value.String() );
+	//V_strcpy( m_SpotlightTextureName.GetForModify(), inputdata.value.String() );
 }
 
 void CEnvProjectedTexture::Spawn( void )

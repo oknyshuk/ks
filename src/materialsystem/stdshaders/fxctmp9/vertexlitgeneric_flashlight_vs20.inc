@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $DOWATERFOG == 0 ) && ( $DOPIXELFOG && $HARDWAREFOGBLEND )
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
@@ -12,7 +13,7 @@ private:
 public:
 	void SetTEETH( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nTEETH = i;
 #ifdef _DEBUG
 		m_bTEETH = true;
@@ -20,7 +21,7 @@ public:
 	}
 	void SetTEETH( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTEETH = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTEETH = true;
@@ -34,7 +35,7 @@ private:
 public:
 	void SetDOPIXELFOG( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDOPIXELFOG = i;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -42,7 +43,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -56,7 +57,7 @@ private:
 public:
 	void SetHARDWAREFOGBLEND( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nHARDWAREFOGBLEND = i;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -64,7 +65,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -93,7 +94,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bTEETH && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 4 * m_nTEETH ) + ( 8 * m_nDOPIXELFOG ) + ( 16 * m_nHARDWAREFOGBLEND ) + 0;
 	}
@@ -109,7 +110,7 @@ private:
 public:
 	void SetSKINNING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSKINNING = i;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -117,7 +118,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -131,7 +132,7 @@ private:
 public:
 	void SetDOWATERFOG( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDOWATERFOG = i;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -139,7 +140,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -164,7 +165,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bSKINNING && m_bDOWATERFOG;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nSKINNING ) + ( 2 * m_nDOWATERFOG ) + 0;
 	}

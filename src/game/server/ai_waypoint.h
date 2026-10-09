@@ -1,15 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_WAYPOINT_H
-#define AI_WAYPOINT_H
-
-
-#include "tier1/fixed_pool.h"
+import ks.tier1;
+#include "ai_navtype.h"
+import std;
+#include "entitylist.h"
+#include "datamap.h"
 
 // ----------------------------------------------------------------------------
 // Forward declarations
@@ -35,21 +32,21 @@ enum WaypointFlags_t
 // ----------------------------------------------------------------------------
 // Purpose: Waypoints that make up an NPC's route. 
 // ----------------------------------------------------------------------------
-struct AI_Waypoint_t
+struct AI_Waypoint_t : public ks::pooled< AI_Waypoint_t >
 {
 public:
 	AI_Waypoint_t();
 	AI_Waypoint_t( const Vector &vecPosition, float flYaw, Navigation_t navType, int fWaypointFlags, int nNodeID );
 	AI_Waypoint_t( const AI_Waypoint_t &from )
 	{
-		memcpy( this, &from, sizeof(*this) );
+		std::memcpy( this, &from, sizeof(*this) );
 		flPathDistGoal = -1;
 		pNext = pPrev = nullptr;
 	}
 
 	AI_Waypoint_t &operator=( const AI_Waypoint_t &from )
 	{
-		memcpy( this, &from, sizeof(*this) );
+		std::memcpy( this, &from, sizeof(*this) );
 		flPathDistGoal = -1;
 		pNext = pPrev = nullptr;
 		return *this;
@@ -75,8 +72,8 @@ public:
 	void AssertValid() const
 	{
 #ifdef DEBUG
-		Assert( !pNext || pNext->pPrev == this );
-		Assert( !pPrev || pPrev->pNext == this );
+		contract_assert( !pNext || pNext->pPrev == this );
+		contract_assert( !pPrev || pPrev->pNext == this );
 #endif
 	}
 
@@ -144,7 +141,9 @@ private:
 	AI_Waypoint_t *pNext;
 	AI_Waypoint_t *pPrev;
 
-	DECLARE_FIXEDSIZE_ALLOCATOR(AI_Waypoint_t);
+	private:
+		static ks::fixed_pool s_Allocator;
+		friend class ks::pooled< AI_Waypoint_t >;
 
 public:
 	DECLARE_SIMPLE_DATADESC();
@@ -249,7 +248,6 @@ private:
 #ifdef DEBUG
 void AssertRouteValid( AI_Waypoint_t* route );
 #else
-#define AssertRouteValid( route ) ((void)0)
 #endif
 
 // ----------------------------------------------------------------------------
@@ -270,7 +268,3 @@ inline void DeleteAll( AI_Waypoint_t **ppWaypointList )
 void AddWaypointLists(AI_Waypoint_t *pLeft, AI_Waypoint_t *pRight);
 
 // ----------------------------------------------------------------------------
-
-
-
-#endif // AI_WAYPOINT_H

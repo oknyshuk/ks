@@ -1,20 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Team management class. Contains all the details for a specific team
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef CS_TEAM_H
-#define CS_TEAM_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
 
-
-
-#include "utlvector.h"
+import std;
 #include "team.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Team Manager
@@ -58,6 +52,3 @@ private:
 
 
 extern CCSTeam *GetGlobalCSTeam( int iIndex );
-
-
-#endif // TF_TEAM_H

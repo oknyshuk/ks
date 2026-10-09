@@ -1,14 +1,9 @@
-//================ Copyright (c) 1996-2009 Valve Corporation. All Rights Reserved. =================
-//
-//
-//
-//==================================================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef POSIX_WIN32STUBS_H
-#define POSIX_WIN32STUBS_H
-
-#include "tier0/basetypes.h"
-#include "tier0/platform.h"
+import std;
+import ks.core;
 
 typedef int32 LRESULT;
 typedef void* HWND;
@@ -26,7 +21,7 @@ typedef void* HANDLE;
 
 #define XUSER_MAX_COUNT 2
 
-#define XK_MAX_KEYS 20
+inline constexpr auto XK_MAX_KEYS = 20;
 
 typedef struct joyinfoex_tag 
 { 
@@ -68,6 +63,3 @@ typedef struct _XINPUT_VIBRATION
     WORD                                wLeftMotorSpeed;
     WORD                                wRightMotorSpeed;
 } XINPUT_VIBRATION, *PXINPUT_VIBRATION;
-
-
-#endif // POSIX_WIN32STUBS_H

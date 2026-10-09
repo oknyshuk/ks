@@ -1,26 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Revision: $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ISPATIALPARTITION_H
-#define ISPATIALPARTITION_H
-
-#include "interface.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // forward declarations
 //-----------------------------------------------------------------------------
 
-class Vector;
 struct Ray_t;
 class IHandleEntity;
 
 
-#define INTERFACEVERSION_SPATIALPARTITION	"SpatialPartition001"
+inline constexpr const char *INTERFACEVERSION_SPATIALPARTITION = "SpatialPartition001";
 
 //-----------------------------------------------------------------------------
 // These are the various partition lists. Note some are server only, some
@@ -43,19 +36,13 @@ enum
 };
 
 // Use this to look for all client edicts.
-#define PARTITION_ALL_CLIENT_EDICTS	(		\
-	PARTITION_CLIENT_NON_STATIC_EDICTS |	\
-	PARTITION_CLIENT_STATIC_PROPS |			\
-	PARTITION_CLIENT_RESPONSIVE_EDICTS |	\
-	PARTITION_CLIENT_SOLID_EDICTS |			\
-	PARTITION_CLIENT_TRIGGER_ENTITIES \
-	)
+inline constexpr auto PARTITION_ALL_CLIENT_EDICTS = (		 	PARTITION_CLIENT_NON_STATIC_EDICTS |	 	PARTITION_CLIENT_STATIC_PROPS |			 	PARTITION_CLIENT_RESPONSIVE_EDICTS |	 	PARTITION_CLIENT_SOLID_EDICTS |			 	PARTITION_CLIENT_TRIGGER_ENTITIES  	);
 
 
 // These are the only handles in the spatial partition that the game is controlling (everything but static props)
 // These masks are used to handle updating the dirty spatial partition list in each game DLL
-#define PARTITION_CLIENT_GAME_EDICTS (PARTITION_ALL_CLIENT_EDICTS & ~PARTITION_CLIENT_STATIC_PROPS)
-#define PARTITION_SERVER_GAME_EDICTS (PARTITION_ENGINE_SOLID_EDICTS|PARTITION_ENGINE_TRIGGER_EDICTS|PARTITION_ENGINE_NON_STATIC_EDICTS)
+inline constexpr auto PARTITION_CLIENT_GAME_EDICTS = (PARTITION_ALL_CLIENT_EDICTS & ~PARTITION_CLIENT_STATIC_PROPS);
+inline constexpr auto PARTITION_SERVER_GAME_EDICTS = (PARTITION_ENGINE_SOLID_EDICTS|PARTITION_ENGINE_TRIGGER_EDICTS|PARTITION_ENGINE_NON_STATIC_EDICTS);
 
 //-----------------------------------------------------------------------------
 // Clients that want to know about all elements within a particular
@@ -110,7 +97,7 @@ enum
 };
 
 
-abstract_class ISpatialPartition
+class ISpatialPartition
 {
 public:
 	// Create/destroy a handle for this dude in our system. Destroy
@@ -205,8 +192,3 @@ public:
 
 	virtual void ReportStats( const char *pFileName ) = 0;
 };
-
-#endif
-
-
-

@@ -1,16 +1,8 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
-#ifndef DMXSERIALIZATIONDICTIONARY_H
-#define DMXSERIALIZATIONDICTIONARY_H
-
-
-#include <unordered_map>
-#include <vector>
-
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -69,6 +61,3 @@ private:
 	std::vector< DmxElementInfo_t > m_Dict;
 	std::unordered_map< CDmxElement *, DmxSerializationHandle_t > m_Handles;
 };
-
-
-#endif // DMXSERIALIZATIONDICTIONARY_H

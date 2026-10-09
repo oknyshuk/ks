@@ -1,10 +1,24 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Sentence Mixing
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "audio_pch.h"
+// Purpose: Sentence Mixing
+
+
+
+
+import ks.tier1;
+#include "sound.h"
+import std;
+#include "soundservice.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+
+#include "audio/private/posix_stubs.h"
 #include "vox_private.h"
 
 //-----------------------------------------------------------------------------
@@ -76,7 +90,7 @@ CSentenceMixer::CSentenceMixer( voxword_t *pWords )
 	{
 		// get a private copy of the words
 		m_VoxWords[m_nNumWords] = pWords[m_nNumWords++];
-		if ( m_nNumWords >= ARRAYSIZE( m_VoxWords ) )
+		if ( m_nNumWords >= std::size( m_VoxWords ) )
 		{
 			// very long sentence, prevent overflow
 			break;
@@ -91,7 +105,7 @@ CSentenceMixer::CSentenceMixer( voxword_t *pWords )
 		// the sentence will skip these words
 		m_pWordMixers[nWord] = LoadWord( nWord );
 	}
-	Assert( m_nNumWords < ARRAYSIZE( m_pWordMixers ) );
+	contract_assert( m_nNumWords < std::size( m_pWordMixers ) );
 
 	// find first valid word mixer
 	m_currentWordIndex = 0;
@@ -308,7 +322,7 @@ float CSentenceMixer::GetVolumeScale( void )
 
 int  CSentenceMixer::SkipSamples( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 	return 0;
 }
 

@@ -1,15 +1,27 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Console GPU alignment stub (not used on PC)
+#include "rocketui/rmlui.h"
+import ks.tier1;
 #ifndef GPU_RESOLVE_ALIGNMENT
 #define GPU_RESOLVE_ALIGNMENT 1
 #endif
 
-#include "cbase.h"
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "view.h"
 #include "iviewrender.h"
 #include "iviewrender_beams.h"
@@ -21,35 +33,18 @@
 #include "viewrender.h"
 #include "c_te_legacytempents.h"
 #include "cl_mat_stub.h"
-#include "tier0/vprof.h"
 #include "iclientvehicle.h"
-#include "engine/IEngineTrace.h"
-#include "mathlib/vmatrix.h"
-#include "rendertexture.h"
 #include "c_world.h"
-#include <keyvalues.h>
-#include "igameevents.h"
-#include "smoke_fog_overlay.h"
 #include "bitmap/tgawriter.h"
 #include "hltvcamera.h"
-#if defined( REPLAY_ENABLED )
-#include "replaycamera.h"
-#endif
 #include "input.h"
 #include "filesystem.h"
 #include "materialsystem/itexture.h"
 #include "toolframework_client.h"
-#include "tier0/icommandline.h"
-#include "iengineui.h"
 #include "ScreenSpaceEffects.h"
 #include "clientui.h"
 #include "engine/SndInfo.h"
 #include "c_cs_player.h"
-#ifdef GAMEUI_UISYSTEM2_ENABLED
-#include "gameui.h"
-#endif
-#ifdef GAMEUI_EMBEDDED
-#endif
 
 #if defined( HL2_CLIENT_DLL ) || defined( CSTRIKE_DLL ) || defined( INFESTED_DLL )
 #define USE_MONITORS
@@ -57,7 +52,6 @@
 
 
 	
-#include "tier0/memalloc.h"
 void ToolFramework_AdjustEngineViewport( int& x, int& y, int& width, int& height );
 bool ToolFramework_SetupEngineView( Vector &origin, QAngle &angles, float &fov );
 bool ToolFramework_SetupEngineMicrophone( Vector &origin, QAngle &angles );
@@ -66,8 +60,8 @@ bool ToolFramework_SetupEngineMicrophone( Vector &origin, QAngle &angles );
 extern ConVar default_fov;
 extern bool g_bRenderingScreenshot;
 
-#define SAVEGAME_SCREENSHOT_WIDTH	256
-#define SAVEGAME_SCREENSHOT_HEIGHT	256
+inline constexpr int SAVEGAME_SCREENSHOT_WIDTH = 256;
+inline constexpr int SAVEGAME_SCREENSHOT_HEIGHT = 256;
 
 extern ConVar sensitivity;
 
@@ -111,11 +105,7 @@ Vector g_cameraFollowPos;
 
 // UNDONE: Delete this or move to the material system?
 ConVar	gl_clear( "gl_clear", "0",
-#if defined( ALLOW_TEXT_MODE )
-	FCVAR_RELEASE
-#else
 	0
-#endif
 );
 ConVar	gl_clear_randomcolor( "gl_clear_randomcolor", "0", FCVAR_CHEAT, "Clear the back buffer to random colors every frame. Helps spot open seams in geometry." );
 
@@ -155,7 +145,7 @@ static void CalcDemoViewOverride( Vector &origin, QAngle &angles )
 
 CViewSetup &CViewRender::GetView(int nSlot /*= -1*/)
 {
-	Assert( m_bAllowViewAccess );
+	contract_assert( m_bAllowViewAccess );
 	if ( nSlot == -1 )
 	{
 		ASSERT_LOCAL_PLAYER_RESOLVABLE();
@@ -166,7 +156,7 @@ CViewSetup &CViewRender::GetView(int nSlot /*= -1*/)
 
 const CViewSetup &CViewRender::GetView(int nSlot /*= -1*/) const
 {
-	Assert( m_bAllowViewAccess );
+	contract_assert( m_bAllowViewAccess );
 	if ( nSlot == -1 )
 	{
 		ASSERT_LOCAL_PLAYER_RESOLVABLE();
@@ -407,11 +397,7 @@ void CViewRender::DriftPitch (void)
 	if ( !player )
 		return;
 
-#if defined( REPLAY_ENABLED )
-	if ( g_bEngineIsHLTV || engine->IsReplay() || ( player->GetGroundEntity() == nullptr ) || engine->IsPlayingDemo() )
-#else
 	if ( g_bEngineIsHLTV || ( player->GetGroundEntity() == nullptr ) || engine->IsPlayingDemo() )
-#endif
 	{
 		m_PitchDrift.driftmove = 0;
 		m_PitchDrift.pitchvel = 0;
@@ -475,7 +461,7 @@ void CViewRender::DriftPitch (void)
 // simulation so entities can access attachment points on view models during simulation.
 void CViewRender::OnRenderStart()
 {
-	VPROF_("CViewRender::OnRenderStart", 2, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0);
+	CVProfScope _( "CViewRender::OnRenderStart", 2, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	IterateRemoteSplitScreenViewSlots_Push( true );
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 	{
@@ -528,7 +514,7 @@ void CViewRender::OnRenderStart()
 					//  by a separate compensating factor
 					if ( iDefaultFOV == 0 )
 					{
-						Assert(0); // would divide by zero, something is broken with iDefatulFOV
+						contract_assert( 0 ); // would divide by zero, something is broken with iDefatulFOV
 						iDefaultFOV = 1;
 					}
 					float zoomSensitivity = zoom_sensitivity_ratio_mouse.GetFloat();
@@ -592,11 +578,6 @@ void CViewRender::DisableVis( void )
 	m_bForceNoVis = true;
 }
 
-#ifdef DBGFLAG_ASSERT
-static Vector s_DbgSetupOrigin[ MAX_SPLITSCREEN_PLAYERS ];
-static QAngle s_DbgSetupAngles[ MAX_SPLITSCREEN_PLAYERS ];
-#endif
-
 //-----------------------------------------------------------------------------
 // Gets znear + zfar
 //-----------------------------------------------------------------------------
@@ -654,7 +635,7 @@ void CViewRender::SetUpView()
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 
 	m_bAllowViewAccess = true;
-	VPROF("CViewRender::SetUpView");
+	CVProfScope _( "CViewRender::SetUpView", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// Initialize view structure with default values
 	float farZ = GetZFar();
 
@@ -686,12 +667,6 @@ void CViewRender::SetUpView()
 	{
 		HLTVCamera()->CalcView( &view );
 	}
-#if defined( REPLAY_ENABLED )
-	else if ( engine->IsReplay() )
-	{
-		ReplayCamera()->CalcView( view.origin, view.angles, view.fov );
-	}
-#endif
 	else
 	{
 		// FIXME: Are there multiple views? If so, then what?
@@ -789,11 +764,6 @@ void CViewRender::SetUpView()
 	g_vecRenderOrigin[ nSlot ] = view.origin;
 	g_vecRenderAngles[ nSlot ] = view.angles;
 
-#ifdef DBGFLAG_ASSERT
-	s_DbgSetupOrigin[ nSlot ] = view.origin;
-	s_DbgSetupAngles[ nSlot ] = view.angles;
-#endif
-
 	m_bAllowViewAccess = false;
 }
 
@@ -880,8 +850,8 @@ void CViewRender::WriteSaveGameScreenshotOfSize( const char *pFilename, int widt
 	g_pMemAlloc->Free( pImage );
 
 	// async write to disk (this will take ownership of the memory)
-	char szPathedFileName[_MAX_PATH];
-	Q_snprintf( szPathedFileName, sizeof(szPathedFileName), "//MOD/%s", pFilename );
+	char szPathedFileName[k_cMaxPath];
+	V_snprintf( szPathedFileName, sizeof(szPathedFileName), "//MOD/%s", pFilename );
 
 	filesystem->AsyncWrite( szPathedFileName, buffer.data(), buffer.size(), true );
 
@@ -900,10 +870,10 @@ void CViewRender::WriteSaveGameScreenshot( const char *pFilename )
 
 float ScaleFOVByWidthRatio( float fovDegrees, float ratio )
 {
-	float halfAngleRadians = fovDegrees * ( 0.5f * M_PI / 180.0f );
-	float t = tan( halfAngleRadians );
+	float halfAngleRadians = fovDegrees * ( 0.5f * std::numbers::pi / 180.0f );
+	float t = std::tan( halfAngleRadians );
 	t *= ratio;
-	float retDegrees = ( 180.0f / M_PI ) * atan( t );
+	float retDegrees = ( 180.0f / std::numbers::pi ) * std::atan( t );
 	return retDegrees * 2.0f;
 }
 
@@ -1021,7 +991,7 @@ void CViewRender::SetUpChaseOverview()
 ConVar ss_debug_draw_player( "ss_debug_draw_player", "-1", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
 void CViewRender::Render( vrect_t *rect )
 {
-	VPROF_BUDGET( "CViewRender::Render", "CViewRender::Render" );
+	CVProfScope _( "CViewRender::Render", 0, "CViewRender::Render", false, BUDGETFLAG_OTHER );
 
 	m_bAllowViewAccess = true;
 
@@ -1048,8 +1018,6 @@ void CViewRender::Render( vrect_t *rect )
 
 		float engineAspectRatio = engine->GetScreenAspectRatio( view.width, view.height );
 
-		Assert( s_DbgSetupOrigin[ hh ] == view.origin );
-		Assert( s_DbgSetupAngles[ hh ] == view.angles );
 
 		// Using this API gives us a chance to "inset" the 3d views as needed for splitscreen
 		int insetX, insetY;
@@ -1150,7 +1118,7 @@ void CViewRender::Render( vrect_t *rect )
 			CMatRenderContextPtr pRenderContext( materials );
 #if PIX_ENABLE
 			{
-				PIXEVENT( pRenderContext, "VGui UI" );
+				( pRenderContext, "VGui UI" );
 			}
 #endif
 
@@ -1189,7 +1157,9 @@ static void GetPos( const CCommand &args, Vector &vecOrigin, QAngle &angles )
 	}
 }
 
-CON_COMMAND( spec_pos, "dump position and angles to the console" )
+static void spec_pos( const CCommand &args );
+static ConCommand spec_pos_command( "spec_pos", spec_pos, "dump position and angles to the console" );
+static void spec_pos( const CCommand &args )
 {
 	Vector vecOrigin;
 	QAngle angles;
@@ -1198,7 +1168,9 @@ CON_COMMAND( spec_pos, "dump position and angles to the console" )
 		vecOrigin.z, angles.x, angles.y );
 }
 
-CON_COMMAND( getpos, "dump position and angles to the console" )
+static void getpos( const CCommand &args );
+static ConCommand getpos_command( "getpos", getpos, "dump position and angles to the console" );
+static void getpos( const CCommand &args )
 {
 	Vector vecOrigin;
 	QAngle angles;

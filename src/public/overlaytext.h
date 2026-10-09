@@ -1,19 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( OVERLAYTEXT_H )
-#define OVERLAYTEXT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "mathlib/vector.h"
+import std;
+import ks.math;
 
 class  OverlayText_t
 {
@@ -51,5 +41,3 @@ public:
 	int				a;
 	OverlayText_t	*nextOverlayText;
 };
-
-#endif // OVERLAYTEXT_H

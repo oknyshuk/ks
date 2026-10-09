@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef MOVEVARS_SHARED_H
-#define MOVEVARS_SHARED_H
-
-#include "convar.h"
+import std;
+import ks.tier1;
 
 extern ConVar sv_gravity;
 extern ConVar sv_stopspeed;
@@ -44,5 +40,3 @@ extern ConVar r_JeepViewZHeight;
 extern ConVar r_AirboatViewDampenFreq;
 extern ConVar r_AirboatViewDampenDamp;
 extern ConVar r_AirboatViewZHeight;
-
-#endif // MOVEVARS_SHARED_H

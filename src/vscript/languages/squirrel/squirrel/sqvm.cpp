@@ -1,9 +1,16 @@
 /*
+
 	see copyright notice in squirrel.h
 */
-#include "sqpcheader.h"
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+
+#include <squirrel.h>
+#include "sqobject.h"
+#include "sqstate.h"
 #include "sqopcodes.h"
 #include "sqfuncproto.h"
 #include "sqvm.h"
@@ -13,8 +20,6 @@
 #include "squserdata.h"
 #include "sqarray.h"
 #include "sqclass.h"
-#if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#endif
 
 #define TOP() (_stack._vals[_top-1])
 
@@ -150,7 +155,7 @@ bool SQVM::ArithMetaMethod(SQInteger op,const SQObjectPtr &o1,const SQObjectPtr 
 		case _SC('/'): mm=MT_DIV; break;
 		case _SC('*'): mm=MT_MUL; break;
 		case _SC('%'): mm=MT_MODULO; break;
-		default: mm = MT_ADD; Assert(0); break; //shutup compiler
+		default: mm = MT_ADD; contract_assert( 0 ); break; //shutup compiler
 	}
 	if(is_delegable(o1) && _delegable(o1)->_delegate) {
 		Push(o1);Push(o2);
@@ -231,7 +236,7 @@ bool SQVM::ObjCmp(const SQObjectPtr &o1,const SQObjectPtr &o2,SQInteger &result)
 		else { Raise_CompareError(o1,o2); return false; }
 		
 	}
-	Assert(0);
+	contract_assert( 0 );
 	_RET_SUCCEED(0); //cannot happen
 }
 
@@ -246,7 +251,7 @@ bool SQVM::CMP_OP(CmpOP op, const SQObjectPtr &o1,const SQObjectPtr &o2,SQObject
 			case CMP_LE: res = (r <= 0)?_true_:_false_; return true;
 			
 		}
-		Assert(0);
+		contract_assert( 0 );
 	}
 	return false;
 }
@@ -441,7 +446,7 @@ bool SQVM::Return(SQInteger _arg0, SQInteger _arg1, SQObjectPtr &retval)
 	}
 
 	CLEARSTACK(last_top);
-	Assert(oldstackbase >= _stackbase); 
+	contract_assert( oldstackbase >= _stackbase ); 
 	return broot?true:false;
 }
 
@@ -897,7 +902,7 @@ common_call:
 					ci->_generator->Kill();
 				}
 				if(Return(arg0, arg1, temp_reg)){
-					Assert(traps==0);
+					contract_assert( traps==0 );
 					outres = temp_reg;
 					return true;
 				}
@@ -992,7 +997,7 @@ query_suspend:
 				}
 				else { Raise_Error(_SC("trying to yield a '%s',only genenerator can be yielded"), GetTypeName(ci->_generator)); SQ_THROW();}
 				if(Return(arg0, arg1, temp_reg)){
-					Assert(traps == 0);
+					contract_assert( traps == 0 );
 					outres = temp_reg;
 					return true;
 				}
@@ -1009,7 +1014,7 @@ query_suspend:
 				ci->_ip += tojump; }
 				continue;
 			case _OP_POSTFOREACH:
-				Assert(type(STK(arg0)) == OT_GENERATOR);
+				contract_assert( type(STK(arg0)) == OT_GENERATOR );
 				if(_generator(STK(arg0))->_state == SQGenerator::eDead) 
 					ci->_ip += (sarg1 - 1);
 				continue;
@@ -1107,7 +1112,7 @@ exception_trap:
 		_lasterror = currerror;
 		return false;
 	}
-	Assert(0);
+	contract_assert( 0 );
 	return false;
 }
 
@@ -1482,7 +1487,7 @@ SQInteger prevstackbase = _stackbase;
 	}
 #ifdef _DEBUG
 	if(!_suspended) {
-		Assert(_stackbase == prevstackbase);
+		contract_assert( _stackbase == prevstackbase );
 	}
 #endif
 	return true;
@@ -1558,7 +1563,7 @@ void SQVM::dumpstack(SQInteger stackbase,bool dumpall)
 		case OT_INSTANCE:		scprintf(_SC("INSTANCE %p"),_instance(obj));break;
 		case OT_WEAKREF:		scprintf(_SC("WEAKERF %p"),_weakref(obj));break;
 		default:
-			Assert(0);
+			contract_assert( 0 );
 			break;
 		};
 		scprintf(_SC("\n"));

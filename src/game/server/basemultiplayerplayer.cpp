@@ -1,11 +1,31 @@
-//========= Copyright (c) 1996-2001, Valve LLC, All rights reserved. ============
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2001 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "edict.h"
+#include "eiface.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "mp_shareddefs.h"
 #include "basemultiplayerplayer.h"
 #include "cdll_int.h"
@@ -73,7 +93,7 @@ void CBaseMultiplayerPlayer::ModifyOrAppendCriteria( AI_CriteriaSet& criteriaSet
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-bool CBaseMultiplayerPlayer::SpeakIfAllowed( AIConcept_t conc, SpeechPriorityType priority, const char *modifiers, char *pszOutResponseChosen, size_t bufsize, IRecipientFilter *filter )
+bool CBaseMultiplayerPlayer::SpeakIfAllowed( AIConcept_t conc, SpeechPriorityType priority, const char *modifiers, char *pszOutResponseChosen, std::size_t bufsize, IRecipientFilter *filter )
 {
 	if ( !IsAlive() )
 		return false;
@@ -96,7 +116,7 @@ void CBaseMultiplayerPlayer::SpeakConcept( AI_Response &outResponse, int iConcep
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-bool CBaseMultiplayerPlayer::SpeakConceptIfAllowed( int iConcept, const char *modifiers, char *pszOutResponseChosen, size_t bufsize, IRecipientFilter *filter )
+bool CBaseMultiplayerPlayer::SpeakConceptIfAllowed( int iConcept, const char *modifiers, char *pszOutResponseChosen, std::size_t bufsize, IRecipientFilter *filter )
 {
 	// Save the current concept.
 	m_iCurrentConcept = iConcept;
@@ -189,7 +209,7 @@ void CBaseMultiplayerPlayer::Spawn( void )
 
 void CBaseMultiplayerPlayer::AwardAchievement( int iAchievement, int iCount )
 {
-	Assert( iAchievement >= 0 && iAchievement < 0xFFFF );		// must fit in short
+	contract_assert( iAchievement >= 0 && iAchievement < 0xFFFF );		// must fit in short
 
 	CSingleUserRecipientFilter filter( this );
 
@@ -204,7 +224,6 @@ void CBaseMultiplayerPlayer::AwardAchievement( int iAchievement, int iCount )
 
 #ifdef _DEBUG
 
-	#include "tier1/text_writer.h"
 
 	void DumpAchievementCounters( const CCommand &args )
 	{
@@ -248,8 +267,8 @@ void CBaseMultiplayerPlayer::ResetPerLifeCounters( void )
 ConVar tf_escort_score_rate( "tf_escort_score_rate", "1", FCVAR_CHEAT, "Score for escorting the train, in points per second" );
 #endif
 
-#define ESCORT_SCORE_CONTEXT		"AreaScoreContext"
-#define ESCORT_SCORE_INTERVAL		0.1
+inline constexpr const char *ESCORT_SCORE_CONTEXT = "AreaScoreContext";
+constexpr auto ESCORT_SCORE_INTERVAL = 0.1;
 
 //-----------------------------------------------------------------------------
 // Purpose: think to accumulate and award points for escorting the train
@@ -290,7 +309,7 @@ void CBaseMultiplayerPlayer::EscortScoringThink( void )
 //-----------------------------------------------------------------------------
 void CBaseMultiplayerPlayer::StartScoringEscortPoints( float flRate )
 {
-	Assert( flRate > 0.0f );
+	contract_assert( flRate > 0.0f );
 	m_flCapPointScoreRate = flRate;
 	SetContextThink( &CBaseMultiplayerPlayer::EscortScoringThink, gpGlobals->curtime + ESCORT_SCORE_INTERVAL, ESCORT_SCORE_CONTEXT );
 }
@@ -306,9 +325,9 @@ void CBaseMultiplayerPlayer::StopScoringEscortPoints( void )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-bool CBaseMultiplayerPlayer::GetSteamID( CSteamID *pID ) const
+bool CBaseMultiplayerPlayer::GetPlayerID( CPlayerId *pID ) const
 {
-	const CSteamID *pClientID = engine->GetClientSteamID( edict() );
+	const CPlayerId *pClientID = engine->GetClientPlayerID( edict() );
 	if ( pClientID )
 	{
 		*pID = *pClientID;
@@ -321,10 +340,10 @@ bool CBaseMultiplayerPlayer::GetSteamID( CSteamID *pID ) const
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-uint64 CBaseMultiplayerPlayer::GetSteamIDAsUInt64( void ) const
+uint64 CBaseMultiplayerPlayer::GetPlayerIDAsUInt64( void ) const
 {
-	CSteamID steamIDForPlayer;
-	if ( GetSteamID( &steamIDForPlayer ) )
-		return steamIDForPlayer.ConvertToUint64();
+	CPlayerId playerIDForPlayer;
+	if ( GetPlayerID( &playerIDForPlayer ) )
+		return playerIDForPlayer.ConvertToUint64();
 	return 0;
 }

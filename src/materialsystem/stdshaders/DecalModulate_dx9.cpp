@@ -1,13 +1,7 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
-#include "cpp_shader_constant_register_map.h"
 
 #include "decalmodulate_vs20.inc"
 #include "decalmodulate_ps20.inc"
@@ -21,7 +15,7 @@ DEFINE_FALLBACK_SHADER( DecalModulate, DecalModulate_DX9 )
 BEGIN_VS_SHADER( DecalModulate_dx9, 
 			  "Help for DecalModulate_dx9" )
 			  
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( FOGEXPONENT, SHADER_PARAM_TYPE_FLOAT, "0.4", "exponent to tweak fog fade" )
 		SHADER_PARAM( FOGSCALE, SHADER_PARAM_TYPE_FLOAT, "1.0", "scale to tweak fog fade" )
         SHADER_PARAM( FOGFADESTART, SHADER_PARAM_TYPE_FLOAT, "0", "fog amount at which to start fading decal" )

@@ -1,15 +1,31 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include <stdarg.h>
+import std;
+import ks.math;
+#include "string_t.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "recipientfilter.h"
 #include "gamerules.h"
 #include "player.h"
-#include "model_types.h"
 #include "imovehelper.h"
 #include "shake.h"				// For screen fade constants
 #include "engine/IEngineSound.h"
@@ -168,7 +184,7 @@ void CMoveHelperServer::ResetTouchList( void )
 
 bool CMoveHelperServer::AddToTouched( const trace_t &tr, const Vector& impactvelocity )
 {
-	Assert( m_pHost );
+	contract_assert( m_pHost );
 
 	// Trace missed
 	if ( !tr.Ent<CBaseEntity>() )
@@ -176,7 +192,7 @@ bool CMoveHelperServer::AddToTouched( const trace_t &tr, const Vector& impactvel
 
 	if ( tr.Ent<CBaseEntity>() == m_pHost )
 	{
-		Assert( !"CMoveHelperServer::AddToTouched:  Tried to add self to touchlist!!!" );
+		contract_assert( !"CMoveHelperServer::AddToTouched:  Tried to add self to touchlist!!!" );
 		return false;
 	}
 
@@ -215,7 +231,7 @@ void CMoveHelperServer::SetGroundNormal( const Vector& groundNormal )
 //-----------------------------------------------------------------------------
 void CMoveHelperServer::ProcessImpacts( void )
 {
-	Assert( m_pHost );
+	contract_assert( m_pHost );
 
 	m_pHost->PhysicsTouchTriggers();
 
@@ -232,7 +248,7 @@ void CMoveHelperServer::ProcessImpacts( void )
 		CBaseHandle entindex = m_TouchList[i].trace.Ent<CBaseEntity>()->GetRefEHandle();
 
 		// We should have culled negative indices by now
-		Assert( entindex.IsValid() );
+		contract_assert( entindex.IsValid() );
 
 		edict_t* ent = GetEdict( entindex );
 		if (!ent)
@@ -243,7 +259,7 @@ void CMoveHelperServer::ProcessImpacts( void )
 		if ( !entity )
 			continue;
 
-		Assert( entity != m_pHost );
+		contract_assert( entity != m_pHost );
 		// Don't ever collide with self!!!!
 		if ( entity == m_pHost )
 			continue;
@@ -264,7 +280,7 @@ void CMoveHelperServer::ProcessImpacts( void )
 	if ( m_pHost && m_pHost->IsPlayer() )
 	{
 		CBasePlayer *pPlayerHost = static_cast< CBasePlayer * >( m_pHost );
-		Assert( pPlayerHost );
+		contract_assert( pPlayerHost );
 		if ( !m_collisionNormal.IsZero() )
 		{
 			m_collisionNormal.NormalizeInPlace();
@@ -361,12 +377,12 @@ IPhysicsSurfaceProps *CMoveHelperServer::GetSurfaceProps( void )
 //-----------------------------------------------------------------------------
 void CMoveHelperServer::Con_NPrintf( int idx, char const* pFormat, ...)
 {
-	va_list marker;
+	std::va_list marker;
 	char msg[8192];
 
-	va_start(marker, pFormat);
-	Q_vsnprintf(msg, sizeof( msg ), pFormat, marker);
-	va_end(marker);
+	__builtin_va_start(marker, pFormat);
+	V_vsnprintf(msg, sizeof( msg ), pFormat, marker);
+	__builtin_va_end(marker);
 	
 	engine->Con_NPrintf( idx, msg );
 }

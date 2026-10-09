@@ -1,32 +1,24 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#if !defined( NO_ENTITY_PREDICTION )
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 
-#include "igamesystem.h"
-#include <typeinfo>
-#include "cdll_int.h"
-#include <memory.h>
-#include <stdarg.h>
-#include "tier0/dbg.h"
-#include "tier1/strtools.h"
 #include "predictioncopy.h"
 #include "engine/ivmodelinfo.h"
-#include "tier1/fmtstr.h"
-#include "utlvector.h"
 
 CValueChangeTracker::CValueChangeTracker() :
 	m_bActive( false ),
 	m_bTracking( false ),
 	m_pTrackField( nullptr )
 {
-	Q_memset( m_OrigValueBuf, 0, sizeof( m_OrigValueBuf ) );
+	V_memset( m_OrigValueBuf, 0, sizeof( m_OrigValueBuf ) );
 }
 
 C_BaseEntity *CValueChangeTracker::GetEntity()
@@ -38,7 +30,7 @@ void CValueChangeTracker::GetValue( char *buf, size_t bufsize )
 {
 	buf[ 0 ] = 0;
 
-	Assert( IsActive() );
+	contract_assert( IsActive() );
 
 	if ( !m_hEntityToTrack.Get() )
 		return;
@@ -65,55 +57,55 @@ void CValueChangeTracker::GetValue( char *buf, size_t bufsize )
 	case FIELD_VOID:
 	case FIELD_FUNCTION:
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 		break;
 	case FIELD_FLOAT:
 	case FIELD_TIME:
-		Q_snprintf( buf, bufsize, "%f", *(float const *)pInputData );
+		V_snprintf( buf, bufsize, "%f", *(float const *)pInputData );
 		break;
 	case FIELD_STRING:
-		Q_snprintf( buf, bufsize, "%s", (char const*)pInputData );
+		V_snprintf( buf, bufsize, "%s", (char const*)pInputData );
 		break;
 	case FIELD_VECTOR:
 		{
 			const Vector *pVec = (const Vector *)pInputData;
-			Q_snprintf( buf, bufsize, "%f %f %f", pVec->x, pVec->y, pVec->z );
+			V_snprintf( buf, bufsize, "%f %f %f", pVec->x, pVec->y, pVec->z );
 		}
 		break;
 	case FIELD_QUATERNION:
 		{
 			const Quaternion *p = ( const Quaternion * )pInputData;
-			Q_snprintf( buf, bufsize, "%f %f %f %f", p->x, p->y, p->z, p->w );
+			V_snprintf( buf, bufsize, "%f %f %f %f", p->x, p->y, p->z, p->w );
 		}
 		break;
 
 	case FIELD_COLOR32:
 		{
 			const Color *color = ( const Color * )pInputData;
-			Q_snprintf( buf, bufsize, "%d %d %d %d", color->r(), color->g(), color->b(), color->a() );
+			V_snprintf( buf, bufsize, "%d %d %d %d", color->r(), color->g(), color->b(), color->a() );
 		}
 		break;
 
 	case FIELD_BOOLEAN:
-		Q_snprintf( buf, bufsize, "%s", (*(const bool *)pInputData) ? "true" : "false" );
+		V_snprintf( buf, bufsize, "%s", (*(const bool *)pInputData) ? "true" : "false" );
 		break;
 	case FIELD_INTEGER:
 	case FIELD_TICK:
 	case FIELD_MODELINDEX:
-		Q_snprintf( buf, bufsize, "%i", *(const int*)pInputData );
+		V_snprintf( buf, bufsize, "%i", *(const int*)pInputData );
 		break;
 
 	case FIELD_SHORT:
-		Q_snprintf( buf, bufsize, "%i", (int)*(const short*)pInputData );
+		V_snprintf( buf, bufsize, "%i", (int)*(const short*)pInputData );
 		break;
 
 	case FIELD_CHARACTER:
-		Q_snprintf( buf, bufsize, "%c", *(const char *)pInputData );
+		V_snprintf( buf, bufsize, "%c", *(const char *)pInputData );
 		break;
 
 	case FIELD_EHANDLE:
-		Q_snprintf( buf, bufsize, "eh 0x%p", (void const *)((const EHANDLE *)pInputData)->Get() );
+		V_snprintf( buf, bufsize, "eh 0x%p", (void const *)((const EHANDLE *)pInputData)->Get() );
 		break;
 	}
 }
@@ -144,7 +136,7 @@ void CValueChangeTracker::EndTrack()
 	GetValue( final, sizeof( final ) );
 
 	std::string *history = &m_History.emplace_back();
-	if ( Q_stricmp( final, m_OrigValueBuf ) )
+	if ( V_stricmp( final, m_OrigValueBuf ) )
 	{
 		history->assign( ks::nz( CFmtStr( "+++ %-20.20s:  %s (was %s)", m_strContext.c_str(), final, m_OrigValueBuf ) ) );
 	}
@@ -218,7 +210,9 @@ void CValueChangeTracker::Spew()
 static CValueChangeTracker g_ChangeTracker;
 CValueChangeTracker *g_pChangeTracker = &g_ChangeTracker;
 
-CON_COMMAND_F( cl_pred_track, "<entindex> <fieldname>:  Track changes to entity index entindex, for field fieldname.", 0 )
+static void cl_pred_track( const CCommand &args );
+static ConCommand cl_pred_track_command( "cl_pred_track", cl_pred_track, "<entindex> <fieldname>:  Track changes to entity index entindex, for field fieldname.", 0 );
+static void cl_pred_track( const CCommand &args )
 {
 	g_pChangeTracker->ClearTracking();
 
@@ -228,7 +222,7 @@ CON_COMMAND_F( cl_pred_track, "<entindex> <fieldname>:  Track changes to entity 
 		return;
 	}
 
-	int iEntIndex = Q_atoi( args[1] );
+	int iEntIndex = V_atoi( args[1] );
 
 	C_BaseEntity *ent = cl_entitylist->GetBaseEntity( iEntIndex );
 	if ( !ent )
@@ -239,5 +233,3 @@ CON_COMMAND_F( cl_pred_track, "<entindex> <fieldname>:  Track changes to entity 
 
 	g_pChangeTracker->SetupTracking( ent, args[2] );
 }
-
-#endif // NO_ENTITY_PREDICTION

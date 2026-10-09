@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 #include "shaderlib/cshader.h"
 class gamecontrols_ps20_Static_Index
@@ -16,7 +17,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_gamecontrols_ps20 0
+inline constexpr int shaderStaticTest_gamecontrols_ps20 = 0;
 class gamecontrols_ps20_Dynamic_Index
 {
 public:
@@ -33,10 +34,10 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_gamecontrols_ps20 0
+inline constexpr int shaderDynamicTest_gamecontrols_ps20 = 0;
 static const ShaderComboSemantics_t gamecontrols_ps20_combos =
 {
-	"gamecontrols_ps20", NULL, 0, NULL, 0 
+	"gamecontrols_ps20", nullptr, 0, nullptr, 0 
 };
 
 class ConstructMe_gamecontrols_ps20

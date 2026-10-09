@@ -1,18 +1,13 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
+import ks.tier1;
 #include "BaseVSShader.h"
 #include "phong_dx9_helper.h"
-#include "convar.h"
-#include "cpp_shader_constant_register_map.h"
+import std;
 #include "phong_vs20.inc"
 #include "phong_ps20b.inc"
 #include "shaderlib/commandbuilder.h"
-#include "tier0/vprof.h"
 
 #include "phong_vs30.inc"
 #include "phong_ps30.inc"
@@ -55,7 +50,7 @@ static ConVar r_csm_viewmodelquality( "r_csm_viewmodelquality", "1", FCVAR_MATER
 void InitParamsPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, VertexLitGeneric_DX9_Vars_t &info )
 {	
 	// FLASHLIGHTFIXME: Do ShaderAPI::BindFlashlightTexture
-	Assert( info.m_nFlashlightTexture >= 0 );
+	contract_assert( info.m_nFlashlightTexture >= 0 );
 
 	params[FLASHLIGHTTEXTURE]->SetStringValue( GetFlashlightTextureFilename() );
 
@@ -119,7 +114,7 @@ void InitParamsPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, const c
 //-----------------------------------------------------------------------------
 void InitPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, VertexLitGeneric_DX9_Vars_t &info )
 {
-	Assert( info.m_nFlashlightTexture >= 0 );
+	contract_assert( info.m_nFlashlightTexture >= 0 );
 	pShader->LoadTexture( info.m_nFlashlightTexture, TEXTUREFLAGS_SRGB );
 
 
@@ -993,7 +988,7 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 			// Disable for CS:GO
 			//bWriteDepthToAlpha = ShaderApiFast( pShaderAPI )->ShouldWriteDepthToDestAlpha();
 			bWriteWaterFogToAlpha = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z);
-			AssertMsg( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha), "Can't write two values to alpha at the same time." );
+			contract_assert( ( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha) ) && "Can't write two values to alpha at the same time." );
 		}
 
 		LightState_t lightState = { 0, false, false };
@@ -1087,9 +1082,9 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 				}
 
 				// Currently, tessellation is mutually exclusive with any kind of GPU-side skinning, morphing or vertex compression
-				Assert( !ShaderApiFast( pShaderAPI )->IsHWMorphingEnabled() );
-				Assert( numBones == 0 );
-				Assert( vertexCompression == 0);
+				contract_assert( !ShaderApiFast( pShaderAPI )->IsHWMorphingEnabled() );
+				contract_assert( numBones == 0 );
+				contract_assert( vertexCompression == 0 );
 			}
 
 			if ( bCSMEnabled )
@@ -1229,7 +1224,7 @@ void DrawPhong_DX9_ExecuteFastPath( int *vsDynIndex, int *psDynIndex,
 	SET_DYNAMIC_PIXEL_SHADER_COMBO( STATICLIGHT3, lightState.m_bStaticLight && bStaticLight3Streams );
 	SET_DYNAMIC_PIXEL_SHADER( phong_ps30 );
 
-	bool bUnusedTexCoords[3] = { false, false, TRUE };
+	bool bUnusedTexCoords[3] = { false, false, true };
 	ShaderApiFast( pShaderAPI )->MarkUnusedVertexFields( 0, 3, bUnusedTexCoords );
 
 	// Set constant to enable translation of VPOS to render target coordinates in ps_3_0

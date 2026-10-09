@@ -1,11 +1,34 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 
@@ -15,7 +38,7 @@
 #include "ai_basenpc.h"
 #include "ai_scriptconditions.h"
 
-#define SF_ACTOR_AS_ACTIVATOR	( 1 << 0 )
+constexpr auto SF_ACTOR_AS_ACTIVATOR = ( 1 << 0 );
 
 ConVar debugscriptconditions( "ai_debugscriptconditions", "0" );
 
@@ -326,7 +349,7 @@ bool CAI_ScriptConditions::EvalActorInVehicle( const EvalArgs_t &args )
 
 void CAI_ScriptConditions::Spawn()
 {
-	Assert( ( m_fMinState == NPC_STATE_IDLE || m_fMinState == NPC_STATE_COMBAT || m_fMinState == NPC_STATE_ALERT ) &&
+	contract_assert( ( m_fMinState == NPC_STATE_IDLE || m_fMinState == NPC_STATE_COMBAT || m_fMinState == NPC_STATE_ALERT ) &&
 		( m_fMaxState == NPC_STATE_IDLE || m_fMaxState == NPC_STATE_COMBAT || m_fMaxState == NPC_STATE_ALERT ) );
 
 	m_PlayerActorProxTester.Init( m_flPlayerActorProximity );
@@ -384,7 +407,7 @@ void CAI_ScriptConditions::EvaluationThink()
 		CBaseEntity *pActivator = this;
 
 
-		AssertMsg( !m_fDisabled, ("Violated invariant between CAI_ScriptConditions disabled state and think func setting") );
+		contract_assert( !m_fDisabled );
 
 		if ( m_Actor != NULL_STRING && !pActor )
 		{
@@ -572,7 +595,7 @@ bool CAI_ScriptConditions::IsInFOV( CBaseEntity *pViewer, CBaseEntity *pViewed, 
 
 		// Halve the fov. As expressed here, fov is the full size of the viewcone.
 		float flFovDotResult;
-		flFovDotResult = cos( DEG2RAD( fov / 2 ) );
+		flFovDotResult = std::cos( DEG2RAD( fov / 2 ) );
 		float fDotPr = 1;
 
 		if( bTrueCone )

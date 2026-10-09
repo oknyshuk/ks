@@ -1,47 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import ks.tier1;
 #include "host.h"
 #include "sysexternal.h"
 #include "networkstringtable.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "bitbuf.h"
 #include "netmessages.h"
 #include "net.h"
 #include "filesystem_engine.h"
 #include "baseclient.h"
-#include "vprof.h"
-#include <deque>
-#include <map>
+import std;
 #include "checksum_engine.h"
 #include "MapReslistGenerator.h"
-#include "lzma/lzma.h"
 #include "../utils/common/bsplib.h"
 #include "ibsppack.h"
-#include "tier0/icommandline.h"
-#include "tier1/lzmaDecoder.h"
 #include "server.h"
 #include "eiface.h"
 #include "cdll_engine_int.h"
-#include <map>
 
 ConVar sv_dumpstringtables( "sv_dumpstringtables", "0", FCVAR_CHEAT );
 
-#define BSPPACK_STRINGTABLE_DICTIONARY "stringtable_dictionary.dct"
-#define BSPPACK_STRINGTABLE_DICTIONARY_FALLBACK "stringtable_dictionary_fallback.dct"
+inline constexpr const char *BSPPACK_STRINGTABLE_DICTIONARY = "stringtable_dictionary.dct";
+inline constexpr const char *BSPPACK_STRINGTABLE_DICTIONARY_FALLBACK = "stringtable_dictionary_fallback.dct";
 // These are automatically added by vbsp.  Should be removed when adding the real files here
 // These must match what is used in utils\vbsp\vbsp.cpp!!!
-#define BSPPACK_STRINGTABLE_DICTIONARY_GAMECONSOLE "stringtable_dictionary_xbox.dct"
-#define BSPPACK_STRINGTABLE_DICTIONARY_GAMECONSOLE_FALLBACK "stringtable_dictionary_fallback_xbox.dct"
+inline constexpr const char *BSPPACK_STRINGTABLE_DICTIONARY_GAMECONSOLE = "stringtable_dictionary_xbox.dct";
+inline constexpr const char *BSPPACK_STRINGTABLE_DICTIONARY_GAMECONSOLE_FALLBACK = "stringtable_dictionary_fallback_xbox.dct";
 
-#define RESLISTS_FOLDER			"reslists"
-#define RESLISTS_FOLDER_X360	"reslists_xbox"
+inline constexpr const char *RESLISTS_FOLDER = "reslists";
+inline constexpr const char *RESLISTS_FOLDER_X360 = "reslists_xbox";
 
-#define SUBSTRING_BITS	5
+constexpr auto SUBSTRING_BITS = 5;
 struct StringHistoryEntry
 {
 	char string[ (1<<SUBSTRING_BITS) ];
@@ -131,11 +120,12 @@ private:
 			pString = "";
 		}
 
-		int len = Q_strlen( pString ) + 1;
-		char *name = (char *)stackalloc( len );
-		Q_strncpy( name, pString, len );
-		Q_FixSlashes( name );
-		Q_strlower( name );
+		int len = V_strlen( pString ) + 1;
+		ks::ScratchArena<> scratch;
+		char *name = (char *)scratch.AllocBytes( len );
+		V_strncpy( name, pString, len );
+		V_FixSlashes( name );
+		V_strlower( name );
 
 		return CRC32_ProcessSingleBuffer( (const void *)name, len );
 	}
@@ -220,8 +210,8 @@ bool CNetworkStringTableDictionaryManager::OnLevelLoadStart( char const *pchMapN
 
 	// INFESTED_DLL	 - disable string dictionaries for Alien Swarm random maps.  TODO: Move a check for this into the game interface
 	static char gamedir[MAX_OSPATH];
-	Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
-	if ( !Q_stricmp( gamedir, "infested" ) )
+	V_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
+	if ( !V_stricmp( gamedir, "infested" ) )
 	{
 		return true;
 	}
@@ -242,8 +232,8 @@ bool CNetworkStringTableDictionaryManager::ShouldRecreateDictionary( char const 
 {
 	// INFESTED_DLL	 - disable string dictionaries for Alien Swarm random maps.  TODO: Move a check for this into the game interface
 	static char gamedir[MAX_OSPATH];
-	Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
-	if ( !Q_stricmp( gamedir, "infested" ) )
+	V_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
+	if ( !V_stricmp( gamedir, "infested" ) )
 	{
 		return false;
 	}
@@ -297,7 +287,7 @@ std::optional< std::vector< std::byte > > CNetworkStringTableDictionaryManager::
 
 	// Try fallback file
 	char szFallback[ 256 ];
-	Q_snprintf( szFallback, sizeof( szFallback ), "reslists/%s.dict", pchMapName );
+	V_snprintf( szFallback, sizeof( szFallback ), "reslists/%s.dict", pchMapName );
 	if ( auto buf = g_pFileSystem->ReadFile( szFallback, "GAME" ) )
 	{
 		Warning( "#######################################\n" );
@@ -330,7 +320,6 @@ void CNetworkStringTableDictionaryManager::ProcessBuffer( ks::byte_reader &buf )
 		if ( !line[ 0 ] )
 			continue;
 
-		MEM_ALLOC_CREDIT();
 		std::string str;
 		str = line;
 		int index = std::ssize( m_Strings ); m_Strings.push_back( str );
@@ -354,7 +343,7 @@ void CNetworkStringTableDictionaryManager::LoadMapStrings( char const *pchMapNam
 	// It's added on the server in CGameServer::SpawnServer
 	char szModelName[MAX_PATH];
 	char szNameOnDisk[MAX_PATH];
-	Q_snprintf( szModelName, sizeof( szModelName ), "maps/%s.bsp", pchMapName );
+	V_snprintf( szModelName, sizeof( szModelName ), "maps/%s.bsp", pchMapName );
 	GetMapPathNameOnDisk( szNameOnDisk, szModelName, sizeof( szNameOnDisk ) );
 
 	if ( !bServer )
@@ -403,7 +392,7 @@ char const *CNetworkStringTableDictionaryManager::Lookup( int index ) const
 {
 	if ( index < 0 || index >= std::ssize( m_Strings ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return "";
 	}
 	const std::string &string = m_Strings[ index ];
@@ -421,7 +410,7 @@ void CNetworkStringTableDictionaryManager::OnBSPFullyUnloaded()
 bool CNetworkStringTableDictionaryManager::WriteDictionaryToBSP( char const *pchMapName, std::span< const std::byte > buf, bool bCreatingFor360 )
 {
 	char mapPath[ MAX_PATH ];
-	Q_snprintf( mapPath, sizeof( mapPath ), "maps/%s.bsp", pchMapName );
+	V_snprintf( mapPath, sizeof( mapPath ), "maps/%s.bsp", pchMapName );
 
 	// We shouldn't ever fail here since we don't queue this up if it might fail
 	// Make sure that the file is writable before building stringtable dictionary.
@@ -606,11 +595,12 @@ private:
 		{
 			char const *pName = GetName();
 
-			int len = Q_strlen( pName ) + 1;
-			char *name = (char *)stackalloc( len );
-			Q_strncpy( name, pName, len );
-			Q_FixSlashes( name );
-			Q_strlower( name );
+			int len = V_strlen( pName ) + 1;
+			ks::ScratchArena<> scratch;
+			char *name = (char *)scratch.AllocBytes( len );
+			V_strncpy( name, pName, len );
+			V_FixSlashes( name );
+			V_strlower( name );
 
 			m_StringHash = CRC32_ProcessSingleBuffer( (const void *)name, len );
 		}
@@ -651,11 +641,11 @@ CNetworkStringTable::CNetworkStringTable( TABLEID id, const char *tableName, int
 	}
 
 	m_id = id;
-	int len = strlen( tableName ) + 1;
+	int len = std::strlen( tableName ) + 1;
 	m_pszTableName = new char[ len ];
-	Assert( m_pszTableName );
-	Assert( tableName );
-	Q_strncpy( m_pszTableName, tableName, len );
+	contract_assert( m_pszTableName );
+	contract_assert( tableName );
+	V_strncpy( m_pszTableName, tableName, len );
 
 	m_changeFunc = nullptr;
 	m_pObject = nullptr;
@@ -785,7 +775,7 @@ CNetworkStringTableItem *CNetworkStringTable::GetItem( int i )
 		return &m_pItems->Element( i );		
 	}
 
-	Assert( m_pItemsClientSide );
+	contract_assert( m_pItemsClientSide );
 	return &m_pItemsClientSide->Element( -i );
 }
 
@@ -828,7 +818,7 @@ int CNetworkStringTable::GetEntryBits( void ) const
 
 void CNetworkStringTable::SetTick(int tick_count)
 {
-	Assert( tick_count >= m_nTickCount );
+	contract_assert( tick_count >= m_nTickCount );
 	m_nTickCount = tick_count;
 }
 
@@ -844,21 +834,19 @@ pfnStringChanged CNetworkStringTable::GetCallback()
 	return m_changeFunc; 
 }
 
-#ifndef SHARED_NET_STRING_TABLES
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void CNetworkStringTable::EnableRollback()
 {
 	// stringtable must be empty 
-	Assert( m_pItems->Count() == 0);
+	contract_assert( m_pItems->Count() == 0 );
 	m_bChangeHistoryEnabled = true;
 }
 
 void CNetworkStringTable::SetMirrorTable(uint nIndex, INetworkStringTable *table)
 {
-	Assert( nIndex < MIRROR_TABLE_MAX_COUNT );
+	contract_assert( nIndex < MIRROR_TABLE_MAX_COUNT );
 	m_pMirrorTable[ nIndex ] = table;
 }
 
@@ -921,7 +909,7 @@ void CNetworkStringTable::UpdateMirrorTable( int tick_ack  )
 			else
 			{
 				// Grow the table (entryindex must be the next empty slot)
-				Assert( i == m_pMirrorTable[ nMirrorTableIndex ]->GetNumStrings() );
+				contract_assert( i == m_pMirrorTable[ nMirrorTableIndex ]->GetNumStrings() );
 				char const *pName = m_pItems->String( i );
 				m_pMirrorTable[ nMirrorTableIndex ]->AddString( true, pName, nBytes, pUserData );
 			}
@@ -942,14 +930,14 @@ int CNetworkStringTable::WriteUpdate( CBaseClient *client, bf_write &buf, int ti
 
 	// INFESTED_DLL	 - disable string dictionaries for Alien Swarm random maps.  TODO: Move a check for this into the game interface
 	static char gamedir[MAX_OSPATH];
-	Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
-	if ( !Q_stricmp( gamedir, "infested" ) )
+	V_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
+	if ( !V_stricmp( gamedir, "infested" ) )
 	{
 		bEncodeUsingDictionaries = false;
 	}
 	// CSGO_DLL - disable string dictionaries for CS:GO community servers to allow for map downloading,
 	// keep it enabled on Valve official servers since clients always have all maps or on listen servers
-	if ( bEncodeUsingDictionaries && !Q_stricmp( gamedir, "csgo" ) )
+	if ( bEncodeUsingDictionaries && !V_stricmp( gamedir, "csgo" ) )
 	{
 		bEncodeUsingDictionaries = false;
 	}
@@ -1067,7 +1055,7 @@ int CNetworkStringTable::WriteUpdate( CBaseClient *client, bf_write &buf, int ti
 
 		// add string to string history
 		StringHistoryEntry she;
-		Q_strncpy( she.string, pEntry, sizeof( she.string ) );
+		V_strncpy( she.string, pEntry, sizeof( she.string ) );
 		history.push_back( she );
 
 		entriesUpdated++;
@@ -1143,7 +1131,7 @@ void CNetworkStringTable::ParseUpdate( bf_read &buf, int entries )
 				}
 
 				char const *lookup = g_StringTableDictionary.Lookup( lastDictionaryIndex );
-				Q_strncpy( entry, lookup, sizeof( entry ) );
+				V_strncpy( entry, lookup, sizeof( entry ) );
 			}
 			else
 			{
@@ -1153,9 +1141,9 @@ void CNetworkStringTable::ParseUpdate( bf_read &buf, int entries )
 				{
 					int index = buf.ReadUBitLong( 5 );
 					int bytestocopy = buf.ReadUBitLong( SUBSTRING_BITS );
-					Q_strncpy( entry, history[ index ].string, bytestocopy + 1 );
+					V_strncpy( entry, history[ index ].string, bytestocopy + 1 );
 					buf.ReadString( substr, sizeof(substr) );
-					Q_strncat( entry, substr, sizeof(entry), COPY_ALL_CHARACTERS );
+					V_strncat( entry, substr, sizeof(entry), COPY_ALL_CHARACTERS );
 				}
 				else
 				{
@@ -1168,7 +1156,7 @@ void CNetworkStringTable::ParseUpdate( bf_read &buf, int entries )
 		
 		// Read in the user data.
 		unsigned char tempbuf[ CNetworkStringTableItem::MAX_USERDATA_SIZE ];
-		memset( tempbuf, 0, sizeof( tempbuf ) );
+		std::memset( tempbuf, 0, sizeof( tempbuf ) );
 		const void *pUserData = nullptr;
 		int nBytes = 0;
 
@@ -1178,16 +1166,14 @@ void CNetworkStringTable::ParseUpdate( bf_read &buf, int entries )
 			{
 				// Don't need to read length, it's fixed length and the length was networked down already.
 				nBytes = GetUserDataSize();
-				Assert( nBytes > 0 );
+				contract_assert( nBytes > 0 );
 				tempbuf[nBytes-1] = 0; // be safe, clear last byte
 				buf.ReadBits( tempbuf, GetUserDataSizeBits() );
 			}
 			else
 			{
 				nBytes = buf.ReadUBitLong( CNetworkStringTableItem::MAX_USERDATA_BITS );
-				ErrorIfNot( nBytes <= sizeof( tempbuf ),
-					("CNetworkStringTableClient::ParseUpdate: message too large (%d bytes).", nBytes)
-				);
+				if ( !( nBytes <= sizeof( tempbuf ) ) ) Error("CNetworkStringTableClient::ParseUpdate: message too large (%d bytes).", nBytes);
 
 				buf.ReadBytes( tempbuf, nBytes );
 			}
@@ -1202,7 +1188,7 @@ void CNetworkStringTable::ParseUpdate( bf_read &buf, int entries )
 #ifdef _DEBUG
 			if ( pEntry )
 			{
-				Assert( !Q_strcmp( pEntry, GetString( entryIndex ) ) ); // make sure string didn't change
+				contract_assert( !V_strcmp( pEntry, GetString( entryIndex ) ) ); // make sure string didn't change
 			}
 #endif
 			pEntry = GetString( entryIndex ); // string didn't change
@@ -1210,7 +1196,7 @@ void CNetworkStringTable::ParseUpdate( bf_read &buf, int entries )
 		else
 		{
 			// Grow the table (entryindex must be the next empty slot)
-			Assert( (entryIndex == GetNumStrings()) && (pEntry != nullptr) );
+			contract_assert( (entryIndex == GetNumStrings()) && (pEntry != nullptr) );
 				
 			if ( pEntry == nullptr )
 			{
@@ -1227,14 +1213,14 @@ void CNetworkStringTable::ParseUpdate( bf_read &buf, int entries )
 		}
 
 		StringHistoryEntry she;
-		Q_strncpy( she.string, pEntry, sizeof( she.string ) );
+		V_strncpy( she.string, pEntry, sizeof( she.string ) );
 		history.push_back( she );
 	}
 }
 
 void CNetworkStringTable::CopyStringTable(CNetworkStringTable * table)
 {
-	Assert (m_pItems->Count() == 0); // table must be empty before coping
+	contract_assert( m_pItems->Count() == 0 ); // table must be empty before coping
 
 	for ( unsigned int i = 0; i < table->m_pItems->Count() ; ++i )
 	{
@@ -1245,8 +1231,6 @@ void CNetworkStringTable::CopyStringTable(CNetworkStringTable * table)
 		AddString( true, table->GetString( i ), item->m_nUserDataLength, item->m_pUserData );
 	}
 }
-
-#endif
 
 void CNetworkStringTable::TriggerCallbacks( int tick_ack )
 {
@@ -1306,7 +1290,7 @@ int CNetworkStringTable::AddString( bool bIsServer, const char *string, int leng
 	
 	if ( !string )
 	{
-		Assert( string );
+		contract_assert( string );
 		ConMsg( "Warning:  Can't add NULL string to table %s\n", GetTableName() );
 		return INVALID_STRING_INDEX;
 	}
@@ -1352,7 +1336,6 @@ int CNetworkStringTable::AddString( bool bIsServer, const char *string, int leng
 
 			// create new item
 			{
-			MEM_ALLOC_CREDIT();
 			i = m_pItemsClientSide->Insert( string );
 			}
 
@@ -1362,14 +1345,12 @@ int CNetworkStringTable::AddString( bool bIsServer, const char *string, int leng
 
 			item->m_nTickChanged = m_nTickCount;
 
-	#ifndef	SHARED_NET_STRING_TABLES
 			item->m_nTickCreated = m_nTickCount;
 
 			if ( m_bChangeHistoryEnabled )
 			{
 				item->EnableChangeHistory();
 			}
-	#endif
 
 			bHasChanged = true;
 		}
@@ -1410,7 +1391,6 @@ int CNetworkStringTable::AddString( bool bIsServer, const char *string, int leng
 
 			// create new item
 			{
-			MEM_ALLOC_CREDIT();
 			i = m_pItems->Insert( string );
 			}
 
@@ -1419,14 +1399,12 @@ int CNetworkStringTable::AddString( bool bIsServer, const char *string, int leng
 			// set changed ticks
 			item->m_nTickChanged = m_nTickCount;
 
-	#ifndef	SHARED_NET_STRING_TABLES
 			item->m_nTickCreated = m_nTickCount;
 
 			if ( m_bChangeHistoryEnabled )
 			{
 				item->EnableChangeHistory();
 			}
-	#endif
 
 			bHasChanged = true;
 		}
@@ -1468,7 +1446,7 @@ const char *CNetworkStringTable::GetString( int stringNumber ) const
 		stringNumber = -stringNumber;
 	}
 
-	Assert( dict->IsValidIndex( stringNumber ) );
+	contract_assert( dict->IsValidIndex( stringNumber ) );
 
 	if ( dict->IsValidIndex( stringNumber ) )
 	{
@@ -1500,10 +1478,10 @@ void CNetworkStringTable::SetStringUserData( int stringNumber, int length /*=0*/
 		stringNumber = -stringNumber;
 	}
 
-	Assert( (length == 0 && userdata == nullptr) || ( length > 0 && userdata != nullptr) );
-	Assert( dict->IsValidIndex( stringNumber ) );
+	contract_assert( (length == 0 && userdata == nullptr) || ( length > 0 && userdata != nullptr) );
+	contract_assert( dict->IsValidIndex( stringNumber ) );
 	CNetworkStringTableItem *p = &dict->Element( stringNumber );
-	Assert( p );
+	contract_assert( p );
 
 	if ( p->SetUserData( m_nTickCount, length, userdata ) )
 	{
@@ -1518,7 +1496,7 @@ void CNetworkStringTable::SetStringUserData( int stringNumber, int length /*=0*/
 //-----------------------------------------------------------------------------
 void CNetworkStringTable::DataChanged( int stringNumber, CNetworkStringTableItem *item )
 {
-	Assert( item );
+	contract_assert( item );
 
 	if ( !item )
 		return;
@@ -1528,8 +1506,6 @@ void CNetworkStringTable::DataChanged( int stringNumber, CNetworkStringTableItem
 	
 	// Invoke callback if one was installed
 	
-#ifndef SHARED_NET_STRING_TABLES // but not if client & server share the same containers, we trigger that later
-
 	if ( m_changeFunc != nullptr )
 	{
 		int userDataSize;
@@ -1537,10 +1513,7 @@ void CNetworkStringTable::DataChanged( int stringNumber, CNetworkStringTableItem
 		( *m_changeFunc )( m_pObject, this, stringNumber, GetString( stringNumber ), pUserData );
 	}
 
-#endif
 }
-
-#ifndef SHARED_NET_STRING_TABLES
 
 void CNetworkStringTable::WriteStringTable( bf_write& buf )
 {
@@ -1604,14 +1577,14 @@ bool CNetworkStringTable::ReadStringTable( bf_read& buf )
 		
 		buf.ReadString( stringname, sizeof( stringname ) );
 
-		Assert( V_strlen( stringname ) < 100 );
+		contract_assert( V_strlen( stringname ) < 100 );
 
 		if ( buf.ReadOneBit() == 1 )
 		{
 			int userDataSize = (int)buf.ReadWord();
-			Assert( userDataSize > 0 );
+			contract_assert( userDataSize > 0 );
 			byte *data = new byte[ userDataSize + 4 ];
-			Assert( data );
+			contract_assert( data );
 
 			buf.ReadBytes( data, userDataSize );
 
@@ -1620,7 +1593,7 @@ bool CNetworkStringTable::ReadStringTable( bf_read& buf )
 
 			delete[] data;
 
-			Assert( buf.GetNumBytesLeft() > 10 );
+			contract_assert( buf.GetNumBytesLeft() > 10 );
 			
 		}
 		else
@@ -1642,9 +1615,9 @@ bool CNetworkStringTable::ReadStringTable( bf_read& buf )
 			if ( buf.ReadOneBit() == 1 )
 			{
 				int userDataSize = (int)buf.ReadWord();
-				Assert( userDataSize > 0 );
+				contract_assert( userDataSize > 0 );
 				byte *data = new byte[ userDataSize + 4 ];
-				Assert( data );
+				contract_assert( data );
 
 				buf.ReadBytes( data, userDataSize );
 
@@ -1669,8 +1642,6 @@ bool CNetworkStringTable::ReadStringTable( bf_read& buf )
 	return true;
 }
 
-#endif
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : stringNumber - 
@@ -1688,9 +1659,9 @@ const void *CNetworkStringTable::GetStringUserData( int stringNumber, int *lengt
 
 	CNetworkStringTableItem *p;
 
-	Assert( dict->IsValidIndex( stringNumber ) );
+	contract_assert( dict->IsValidIndex( stringNumber ) );
 	p = &dict->Element( stringNumber );
-	Assert( p );
+	contract_assert( p );
 	return p->GetUserData( length );
 }
 
@@ -1777,8 +1748,6 @@ void CNetworkStringTable::Dump( void )
 	ConMsg( "\n" );
 }
 
-#ifndef SHARED_NET_STRING_TABLES
-
 static ConVar sv_temp_baseline_string_table_buffer_size( "sv_temp_baseline_string_table_buffer_size", "131072", 0, "Buffer size for writing string table baselines" );
 
 bool CNetworkStringTable::WriteBaselines( CSVCMsg_CreateStringTable_t &msg )
@@ -1805,8 +1774,6 @@ bool CNetworkStringTable::WriteBaselines( CSVCMsg_CreateStringTable_t &msg )
 
 	return entries == msg.num_entries;
 }
-
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -1897,14 +1864,12 @@ INetworkStringTable *CNetworkStringTableContainer::CreateStringTable( const char
 
 	pTable = new CNetworkStringTable( id, tableName, maxentries, userdatafixedsize, userdatanetworkbits, flags );
 
-	Assert( pTable );
+	contract_assert( pTable );
 
-#ifndef SHARED_NET_STRING_TABLES
 	if ( m_bEnableRollback )
 	{
 		pTable->EnableRollback();
 	}
-#endif
 
 	pTable->SetTick( m_nTickCount );
 
@@ -1921,7 +1886,7 @@ INetworkStringTable *CNetworkStringTableContainer::FindTable( const char *tableN
 {
 	for ( int i = 0; i < std::ssize( m_Tables ); i++ )
 	{
-		if ( !Q_stricmp( tableName, m_Tables[ i ]->GetTableName() ) )
+		if ( !V_stricmp( tableName, m_Tables[ i ]->GetTableName() ) )
 			return m_Tables[i];
 	}
 
@@ -1946,8 +1911,6 @@ int CNetworkStringTableContainer::GetNumTables( void ) const
 {
 	return std::ssize( m_Tables );
 }
-
-#ifndef SHARED_NET_STRING_TABLES
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -2007,7 +1970,7 @@ bool CNetworkStringTableContainer::ReadStringTables( bf_read& buf )
 
 		// Find this table by name
 		CNetworkStringTable *table = (CNetworkStringTable*)FindTable( tablename );
-		Assert( table );
+		contract_assert( table );
 
 		// Now read the data for the table
 		if ( !table->ReadStringTable( buf ) )
@@ -2026,12 +1989,12 @@ bool CNetworkStringTableContainer::ReadStringTables( bf_read& buf )
 //-----------------------------------------------------------------------------
 void CNetworkStringTableContainer::WriteUpdateMessage( CBaseClient *client, int tick_ack, bf_write &buf )
 {
-	VPROF_BUDGET( "CNetworkStringTableContainer::WriteUpdateMessage", VPROF_BUDGETGROUP_OTHER_NETWORKING );
+	CVProfScope _( "CNetworkStringTableContainer::WriteUpdateMessage", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
 	//a working buffer to build our string tables into. Note that this is on the stack, so sanity check that the size doesn't get too large (hence the compile assert below).
 	//If it does, a heap allocated solution will be needed
 	uint8 StringTableBuff[ NET_MAX_PAYLOAD ];
-	COMPILE_TIME_ASSERT( sizeof( StringTableBuff ) < 300 * 1024 );
+	static_assert( sizeof( StringTableBuff ) < 300 * 1024 );
 
 	// Determine if an update is needed
 	for ( int i = 0; i < std::ssize( m_Tables ); i++ )
@@ -2056,7 +2019,7 @@ void CNetworkStringTableContainer::WriteUpdateMessage( CBaseClient *client, int 
 		if( string_data_buf.IsOverflowed() )
 			return;
 
-		Assert( msg.num_changed_entries > 0 ); // don't send unnecessary empty updates
+		contract_assert( msg.num_changed_entries > 0 ); // don't send unnecessary empty updates
 
 		//copy over the data we wrote into the actual message
 		msg.string_data.mut().assign( StringTableBuff, StringTableBuff + Bits2Bytes( string_data_buf.GetNumBitsWritten() ) );
@@ -2079,14 +2042,14 @@ void CNetworkStringTableContainer::WriteUpdateMessage( CBaseClient *client, int 
 //-----------------------------------------------------------------------------
 void CNetworkStringTableContainer::DirectUpdate( int tick_ack )
 {
-	VPROF_BUDGET( "CNetworkStringTableContainer::DirectUpdate", VPROF_BUDGETGROUP_OTHER_NETWORKING );
+	CVProfScope _( "CNetworkStringTableContainer::DirectUpdate", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
 	// Determine if an update is needed
 	for ( int i = 0; i < std::ssize( m_Tables ); i++ )
 	{
 		CNetworkStringTable *table = (CNetworkStringTable*) GetTable( i );
 
-		Assert( table );
+		contract_assert( table );
 		
 		if ( !table->ChangedSinceTick( tick_ack ) )
 			continue;
@@ -2098,7 +2061,7 @@ void CNetworkStringTableContainer::DirectUpdate( int tick_ack )
 void CNetworkStringTableContainer::EnableRollback( bool bState )
 {
 	// we can't dis/enable rollback if we already created tabled
-	Assert( std::ssize( m_Tables ) == 0 );
+	contract_assert( std::ssize( m_Tables ) == 0 );
 
 	m_bEnableRollback = bState;
 }
@@ -2110,13 +2073,11 @@ void CNetworkStringTableContainer::RestoreTick( int tick )
 	{
 		CNetworkStringTable *table = (CNetworkStringTable*) GetTable( i );
 
-		Assert( table );
+		contract_assert( table );
 
 		table->RestoreTick( tick );
 	}
 }
-
-#endif
 
 void CNetworkStringTableContainer::TriggerCallbacks( int tick_ack )
 {
@@ -2125,7 +2086,7 @@ void CNetworkStringTableContainer::TriggerCallbacks( int tick_ack )
 	{
 		CNetworkStringTable *table = (CNetworkStringTable*) GetTable( i );
 
-		Assert( table );
+		contract_assert( table );
 
 		if ( !table->ChangedSinceTick( tick_ack ) )
 			continue;
@@ -2145,7 +2106,7 @@ void CNetworkStringTableContainer::SetTick( int tick_count)
 	{
 		CNetworkStringTable *table = (CNetworkStringTable*) GetTable( i );
 
-		Assert( table );
+		contract_assert( table );
 
 		table->SetTick( tick_count );
 	}
@@ -2180,7 +2141,7 @@ void CNetworkStringTableContainer::CreateDictionary( char const *pchMapName )
 	// Don't do this on Game Consoles!!!
 
 	char mapPath[ MAX_PATH ];
-	Q_snprintf( mapPath, sizeof( mapPath ), "maps/%s.bsp", pchMapName );
+	V_snprintf( mapPath, sizeof( mapPath ), "maps/%s.bsp", pchMapName );
 
 	// Make sure that the file is writable before building stringtable dictionary.
 	if( !g_pFileSystem->IsFileWritable( mapPath, "GAME" ) )
@@ -2233,4 +2194,3 @@ void CNetworkStringTableContainer::UpdateDictionaryStrings()
 		}
 	}
 }
-

@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef TE_PARTICLESYSTEM_H
-#define TE_PARTICLESYSTEM_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "basetempentity.h"
-
 
 class [[= ks::reflect::NetTable{ .name = "DT_TEParticleSystem" } ]]
       CTEParticleSystem : public CBaseTempEntity
@@ -28,6 +20,3 @@ public:
 
 	CNetworkVectorXYZ( m_vecOrigin, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .index = 2 } ]]  [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .index = 1 } ]]  [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD, .index = 0 } ]] );
 };
-
-
-#endif // TE_PARTICLESYSTEM_H

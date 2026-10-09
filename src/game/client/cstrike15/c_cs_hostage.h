@@ -1,21 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Client side CHostage class
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef C_CHOSTAGE_H
-#define C_CHOSTAGE_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
 
 #include "c_ai_basenpc.h"
-#include "utlvector.h"
+import std;
 #include "util_shared.h"
 #include "cs_playeranimstate.h"
 #include "c_cs_player.h"
-
 
 // for shared code
 #define CHostage C_CHostage
@@ -167,6 +163,3 @@ inline C_CSPlayer *C_CHostage::GetLeader( void ) const
 
 extern std::vector< C_CHostage* > g_Hostages;
 extern std::vector< CHandle<C_BaseAnimating> > g_HostageRagdolls;
-
-
-#endif // C_CHOSTAGE_H

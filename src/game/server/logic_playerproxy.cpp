@@ -1,16 +1,38 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ====
-//
-// Purpose:		Player for HL2.
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Player for HL2.
+
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
 #include "reflect_datamap.h"
-#include "reflect_annotations.h"
 #include "logic_playerproxy.h"
 #include "filters.h"
-
-
 
 LINK_ENTITY_TO_CLASS( logic_playerproxy, CLogicPlayerProxy);
 
@@ -53,5 +75,3 @@ void CLogicPlayerProxy::InputRequestPlayerHealth( inputdata_t &inputdata )
 
 	m_RequestedPlayerHealth.Set( m_hPlayer->GetHealth(), inputdata.pActivator, inputdata.pCaller );
 }
-
-

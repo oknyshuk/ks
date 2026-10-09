@@ -1,17 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( CLIENTUI_H )
-#define CLIENTUI_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
-#include "interface.h"
+import std;
+import ks.tier1;
 
-
-
-struct vrect_t;
 
 bool UI_Startup( CreateInterfaceFn appSystemFactory );
 void UI_Shutdown( void );
@@ -31,5 +25,3 @@ bool UI_IsSplitScreenPIP();
 bool IsWidescreen( void );
 
 void UI_OnSplitScreenStateChanged();
-
-#endif // CLIENTUI_H

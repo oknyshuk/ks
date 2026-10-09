@@ -1,3 +1,13 @@
+#include <string.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <wctype.h>
+#include <time.h>
+#include <stdarg.h>
+
+#include <string>
+#include <unordered_map>
+
  //========== Copyright (c) Valve Corporation, All rights reserved. ========
 //
 // Purpose:
@@ -7,10 +17,6 @@
 //-------------------------------------
 //-------------------------------------
 
-#include "tier0/memalloc.h"
-#include <stdio.h>
-#include <ctype.h>
-#include <wctype.h>
 #undef _STD_USING
 
 #ifdef _HAS_EXCEPTIONS
@@ -18,21 +24,11 @@
 #endif
 
 #define _HAS_EXCEPTIONS 0
-#include <string>
-#include <unordered_map>
 
-#include "platform.h"
 
-#include "tier1/map_ops.h"
+import ks.vstdlib;
 #include "datamap.h"
-#include "tier1/functors.h"
-#include "tier1/utlvector.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier1/fmtstr.h"
-#include "tier1/convar.h"
-#include "mathlib/vector.h"
-#include "vstdlib/random.h"
+import std;
 
 #include "squirrel.h"
 #include "sqstdaux.h"
@@ -53,7 +49,6 @@
 #include "sqdbgserver.h"
 
 #include "vscript/ivscript.h"
-#include "tier0/vprof.h"
 
 #include "init_nut.h"
 
@@ -509,7 +504,7 @@ bool RegisterVector( HSQUIRRELVM hVM )
 	sq_createslot(hVM,-3);
 
 	sq_pushobject( hVM, hClass );
-	for ( int i = 0; i < ARRAYSIZE(g_VectorFuncs); i++ )
+	for ( int i = 0; i < std::size( g_VectorFuncs ); i++ )
 	{
 		sq_pushstring(hVM,g_VectorFuncs[i].name,-1);
 		sq_newclosure(hVM,g_VectorFuncs[i].f,0);
@@ -531,7 +526,7 @@ bool RegisterVector( HSQUIRRELVM hVM )
 
 const HSQOBJECT INVALID_HSQOBJECT = { (SQObjectType)-1, (SQTable *)-1 };
 
-inline bool operator==( const HSQOBJECT &lhs, const HSQOBJECT &rhs ) { COMPILE_TIME_ASSERT( sizeof(lhs._unVal) == sizeof(lhs._unVal.pTable) ); return ( lhs._type == rhs._type && lhs._unVal.pTable == rhs._unVal.pTable ); }
+inline bool operator==( const HSQOBJECT &lhs, const HSQOBJECT &rhs ) { static_assert( sizeof(lhs._unVal) == sizeof(lhs._unVal.pTable) ); return ( lhs._type == rhs._type && lhs._unVal.pTable == rhs._unVal.pTable ); }
 inline bool operator!=( const HSQOBJECT &lhs, const HSQOBJECT &rhs ) { return !operator==( lhs, rhs ); }
 
 class CSquirrelVM : public IScriptVM
@@ -711,7 +706,7 @@ public:
 	//-------------------------------------------------------------
 	ScriptStatus_t Run( const char *pszScript, bool bWait = true )
 	{
-		Assert( bWait );
+		contract_assert( bWait );
 		if(SQ_SUCCEEDED(sq_compilebuffer(m_hVM,pszScript,(int)V_strlen(pszScript)*sizeof(SQChar),"unnamed",1))) 
 		{
 			HSQOBJECT hScript;
@@ -771,7 +766,7 @@ public:
 	//-------------------------------------------------------------
 	ScriptStatus_t Run( HSCRIPT hScript, bool bWait )
 	{
-		Assert( bWait );
+		contract_assert( bWait );
 		return CSquirrelVM::Run( hScript, (HSCRIPT)nullptr, bWait );
 	}
 
@@ -904,12 +899,12 @@ public:
 			}
 		}
 
-		Assert( bWait );
+		contract_assert( bWait );
 		if ( hFunction )
 		{
 			SQInteger initialTop = m_hVM->_top;
 			HSQOBJECT &o = *((HSQOBJECT *)hFunction);
-			Assert( bWait );
+			contract_assert( bWait );
 
 			sq_pushobject( m_hVM, o);
 			if ( hScope ) 
@@ -953,7 +948,7 @@ public:
 				if ( m_hVM->_top != initialTop )
 				{
 					Warning( "Callstack mismatch in VScript/Squirrel!\n" );
-					Assert( m_hVM->_top == initialTop );
+					contract_assert( m_hVM->_top == initialTop );
 				}
 				if ( !sq_isnull( m_ErrorString ) )
 				{
@@ -1068,7 +1063,7 @@ public:
 			return false;
 		}
 		sq_setreleasehook(m_hVM,-1,hook);
-		return TRUE;
+		return true;
 	}
 
 	//-------------------------------------------------------------
@@ -1109,11 +1104,11 @@ public:
 	{
 		if ( !hInstance )
 		{
-			ExecuteOnce( DevMsg( "NULL instance passed to vscript!\n" ) );
+			ExecuteOnce( [&]{ DevMsg( "NULL instance passed to vscript!\n" ); } );
 			return;
 		}
 		HSQOBJECT *pInstance = (HSQOBJECT *)hInstance;
-		Assert( pInstance->_type == OT_INSTANCE );
+		contract_assert( pInstance->_type == OT_INSTANCE );
 		if ( pInstance->_type == OT_INSTANCE )
 			((InstanceContext_t *)(pInstance->_unVal.pInstance->_userpointer))->name = SQString::Create( _ss(m_hVM), pszId );
 	}
@@ -1125,11 +1120,11 @@ public:
 	{
 		if ( !hInstance )
 		{
-			ExecuteOnce( DevMsg( "NULL instance passed to vscript!\n" ) );
+			ExecuteOnce( [&]{ DevMsg( "NULL instance passed to vscript!\n" ); } );
 			return;
 		}
 		HSQOBJECT *pInstance = (HSQOBJECT *)hInstance;
-		Assert( pInstance->_type == OT_INSTANCE );
+		contract_assert( pInstance->_type == OT_INSTANCE );
 		if ( pInstance->_type == OT_INSTANCE )
 			((InstanceContext_t *)(pInstance->_unVal.pInstance->_userpointer))->pInstance = nullptr;
 		ReleaseScriptObject( hInstance );
@@ -1142,7 +1137,7 @@ public:
 	{
 		if ( !hInstance )
 		{
-			ExecuteOnce( DevMsg( "NULL instance passed to vscript!\n" ) );
+			ExecuteOnce( [&]{ DevMsg( "NULL instance passed to vscript!\n" ); } );
 			return nullptr;
 		}
 		HSQOBJECT *pInstance = (HSQOBJECT *)hInstance;
@@ -1177,10 +1172,10 @@ public:
 	//-------------------------------------------------------------
 	bool GenerateUniqueKey( const char *pszRoot, char *pBuf, int nBufSize )
 	{
-		Assert( V_strlen(pszRoot) + 40 + 1 <= nBufSize );
+		contract_assert( V_strlen(pszRoot) + 40 + 1 <= nBufSize );
 		if ( V_strlen(pszRoot) + 40 + 1 <= nBufSize )
 		{
-			Q_snprintf( pBuf, nBufSize, "%x%x%llx_%s", RandomInt(0, 0xfff), Plat_MSTime(), m_iUniqueIdSerialNumber++, pszRoot ); // random to limit key compare when serial number gets large
+			V_snprintf( pBuf, nBufSize, "%x%x%llx_%s", RandomInt(0, 0xfff), Plat_MSTime(), m_iUniqueIdSerialNumber++, pszRoot ); // random to limit key compare when serial number gets large
 			return true;
 		}
 		Error( "GenerateUniqueKey: buffer too small" );
@@ -1560,7 +1555,7 @@ public:
 		m_pReader = pBuffer;
 		uint64 uniqueIdSerialNumber = (uint64)m_pReader->read< int64 >();
 		m_iUniqueIdSerialNumber = max( m_iUniqueIdSerialNumber, uniqueIdSerialNumber );
-		Verify( pBuffer->read< int >() == OT_THREAD );
+		( pBuffer->read< int >() == OT_THREAD );
 		m_PtrMap.emplace( ReadPtr(), m_hVM );
 		ReadVM( m_hVM );
 		m_pReader = nullptr;
@@ -1613,7 +1608,7 @@ private:
 		char string[2048];
 		va_list		argptr;
 		va_start (argptr,s);
-		Q_vsnprintf (string,sizeof(string),s,argptr);
+		V_vsnprintf (string,sizeof(string),s,argptr);
 		va_end (argptr);
 		
 		Msg( "%s", string );
@@ -1804,7 +1799,7 @@ private:
 #ifdef _DEBUG
 		for ( ; i < nFormalParams; i++ )
 		{
-			Assert( params[i].IsNull() );
+			contract_assert( params[i].IsNull() );
 		}
 #endif
 
@@ -1864,7 +1859,7 @@ private:
 				}
 			case FIELD_INTEGER:		sa.Return( (int)returnValue ); break;
 			case FIELD_BOOLEAN:		sa.Return( (bool)returnValue ); break;
-			case FIELD_CHARACTER:	Assert( 0 ); sq_pushnull( hVM ); break;
+			case FIELD_CHARACTER:	contract_assert( 0 ); sq_pushnull( hVM ); break;
 			case FIELD_HSCRIPT:
 				{
 					if ( returnValue.m_hScript )
@@ -1932,7 +1927,7 @@ private:
 		InstanceContext_t *pContext = (InstanceContext_t *)sa.GetInstanceUp(1,0);
 		char szBuf[64];
 
-		if ( pContext && pContext->pInstance && pContext->pClassDesc->pHelper && pContext->pClassDesc->pHelper->ToString( pContext->pInstance, szBuf, ARRAYSIZE(szBuf) ) )
+		if ( pContext && pContext->pInstance && pContext->pClassDesc->pHelper && pContext->pClassDesc->pHelper->ToString( pContext->pInstance, szBuf, std::size( szBuf ) ) )
 		{
 			sa.Return( szBuf );
 		}
@@ -1996,9 +1991,9 @@ private:
 	{
 		char szTypeMask[64];
 
-		if ( std::ssize( pScriptFunction->m_desc.m_Parameters ) > ARRAYSIZE(szTypeMask) - 1 )
+		if ( std::ssize( pScriptFunction->m_desc.m_Parameters ) > std::size( szTypeMask ) - 1 )
 		{
-			AssertMsg1( 0, "Too many agruments for script function %s\n", pScriptFunction->m_desc.m_pszFunction );
+			contract_assert( false && "Too many agruments for script function %s\n" );
 			return;
 		}
 
@@ -2030,11 +2025,11 @@ private:
 			case FIELD_CHARACTER:
 			default:
 				*pCurrent = FIELD_VOID;
-				AssertMsg( 0 , "Not supported" );
+				contract_assert( false && "Not supported" );
 				break;
 			}
 		}
-		Assert( pCurrent - szTypeMask < ARRAYSIZE(szTypeMask) - 1 );
+		contract_assert( pCurrent - szTypeMask < std::size( szTypeMask ) - 1 );
 		*pCurrent = 0;
 		sq_pushstring( m_hVM, pScriptFunction->m_desc.m_pszScriptName, -1 );
 		ScriptFunctionBinding_t **pVMScriptFunction = (ScriptFunctionBinding_t **)sq_newuserdata(m_hVM, sizeof(ScriptFunctionBinding_t *));
@@ -2202,12 +2197,12 @@ private:
 
 	void WritePtr( const void *p )
 	{
-		m_pWriter->write< uint64 >( reinterpret_cast< uintptr_t >( p ) );
+		m_pWriter->write< uint64 >( reinterpret_cast< std::uintptr_t >( p ) );
 	}
 
 	void *ReadPtr()
 	{
-		return reinterpret_cast< void * >( static_cast< uintptr_t >( m_pReader->read< uint64 >() ) );
+		return reinterpret_cast< void * >( static_cast< std::uintptr_t >( m_pReader->read< uint64 >() ) );
 	}
 
 	void WriteObject( const SQObjectPtr &object )
@@ -2246,7 +2241,7 @@ private:
 			case OT_CLASS:			WriteClass( object._unVal.pClass );					break;
 			case OT_INSTANCE:		WriteInstance( object._unVal.pInstance );			break;
 			case OT_WEAKREF:		WriteWeakRef( object._unVal.pWeakRef );				break;
-			default:				Assert( 0 ); break;
+			default:				contract_assert( 0 ); break;
 		}
 
 #ifdef VSQUIRREL_DEBUG_SERIALIZATION
@@ -2408,7 +2403,7 @@ private:
 				}
 				else
 				{
-					Assert( 0 );
+					contract_assert( 0 );
 					m_pWriter->write_cstring( "" );
 				}
 			}
@@ -2465,7 +2460,7 @@ private:
 	//-------------------------------------------------------------
 	void WriteGenerator( SQGenerator *pGenerator )
 	{
-		ExecuteOnce( Msg( "Save load of generators not well tested. caveat emptor\n" ) );
+		ExecuteOnce( [&]{ Msg( "Save load of generators not well tested. caveat emptor\n" ); } );
 		WriteObject(pGenerator->_closure);
 
 		m_pWriter->write< int >(  OT_GENERATOR  );
@@ -2598,7 +2593,7 @@ private:
 	//-------------------------------------------------------------
 	void MapPtr( void *pOld, void *pNew )
 	{
-		Assert( !m_PtrMap.contains( pOld ) );
+		contract_assert( !m_PtrMap.contains( pOld ) );
 		m_PtrMap.emplace( pOld, pNew );
 	}
 
@@ -2629,14 +2624,15 @@ private:
 			case OT_STRING:
 				{
 					int len = m_pReader->read< int >();
-					char *pString = (char *)stackalloc( len + 1 );
+					ks::ScratchArena<> scratch;
+					char *pString = (char *)scratch.AllocBytes( len + 1 );
 					m_pReader->read_cstring( pString, len + 1 );
 					pString[len] = 0;
 					object._unVal.pString = SQString::Create( m_hVM->_sharedstate, pString, len );
 					break;
 				}
 			default:
-				Assert( 0 );
+				contract_assert( 0 );
 				break;
 			}
 		}
@@ -2716,7 +2712,7 @@ private:
 			default:				
 				{
 					object._unVal.pUserPointer = nullptr;
-					Assert( 0 );
+					contract_assert( 0 );
 				}
 			}
 			if ( !object._unVal.pUserPointer )
@@ -2917,7 +2913,8 @@ private:
 		}
 		else
 		{
-			char *pszName = (char *)stackalloc( 1024 );
+			ks::ScratchArena<> scratch;
+			char *pszName = (char *)scratch.AllocBytes( 1024 );
 			m_pReader->read_cstring( pszName, 1024 );
 			pszName[1023] = 0;
 
@@ -3016,9 +3013,9 @@ private:
 			}
 			else 
 			{
-				Verify( m_pReader->read< int >() == OT_USERPOINTER );
+				( m_pReader->read< int >() == OT_USERPOINTER );
 				pInstance->_userpointer = ReadUserPointer();
-				Assert( pInstance->_userpointer == nullptr );
+				contract_assert( pInstance->_userpointer == nullptr );
 			}
 
 			MapPtr( pOld, pInstance );
@@ -3051,7 +3048,7 @@ private:
 			}
 			else 
 			{
-				Verify( m_pReader->read< int >() == OT_USERPOINTER );
+				( m_pReader->read< int >() == OT_USERPOINTER );
 				ReadUserPointer();
 			}
 			pInstance = nullptr;
@@ -3219,7 +3216,7 @@ private:
 		}
 
 		// Need to up ref count if read order has weak ref loading first
-		Assert( ISREFCOUNTED(obj._type) );
+		contract_assert( ISREFCOUNTED(obj._type) );
 		SQRefCounted *pRefCounted = obj._unVal.pRefCounted;
 		SQ_VALIDATE_REF_COUNT( pRefCounted );
 		pRefCounted->_uiRef++;
@@ -3296,7 +3293,7 @@ IScriptVM *ScriptCreateSquirrelVM()
 
 void ScriptDestroySquirrelVM( IScriptVM *pVM )
 {
-	CSquirrelVM *pSquirrelVM = assert_cast<CSquirrelVM *>( pVM );
+	CSquirrelVM *pSquirrelVM = static_cast<CSquirrelVM *>( pVM );
 	delete pSquirrelVM;
 }
 
@@ -3308,7 +3305,6 @@ void ScriptDestroySquirrelVM( IScriptVM *pVM )
 
 #ifdef VSQUIRREL_TEST
 
-#include "fasttimer.h"
 
 CSquirrelVM g_SquirrelVM;
 IScriptVM *g_pScriptVM = &g_SquirrelVM;
@@ -3322,8 +3318,6 @@ IScriptVM *g_pScriptVM = &g_SquirrelVM;
 // 
 //-----------------------------------------------------------------------------
 
-#include <time.h>
-#include "fasttimer.h"
 
 static void FromScript_AddBehavior( const char *pBehaviorName, HSCRIPT hTable )
 {

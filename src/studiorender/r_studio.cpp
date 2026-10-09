@@ -1,27 +1,23 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// r_studio.cpp: routines for setting up to draw 3DStudio models 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: r_studio.cpp: routines for setting up to draw 3DStudio models
 
+import ks.core;
 #include "studio.h"
 #include "studiorender.h"
 #include "studiorendercontext.h"
 #include "optimize.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
-#include "tier0/vprof.h"
+import std;
 #include "tier3/tier3.h"
 #include "datacache/imdlcache.h"
 
 //-----------------------------------------------------------------------------
 // Figures out what kind of lighting we're gonna want
 //-----------------------------------------------------------------------------
-FORCEINLINE StudioModelLighting_t CStudioRender::R_StudioComputeLighting( IMaterial *pMaterial, int materialFlags, ColorMeshInfo_t *pColorMeshes )
+[[gnu::always_inline]] inline StudioModelLighting_t CStudioRender::R_StudioComputeLighting( IMaterial *pMaterial, int materialFlags, ColorMeshInfo_t *pColorMeshes )
 {
 	// Here, we only do software lighting when the following conditions are met.
 	// 1) The material is vertex lit and we don't have hardware lighting
@@ -31,7 +27,7 @@ FORCEINLINE StudioModelLighting_t CStudioRender::R_StudioComputeLighting( IMater
 	// FIXME: When we move software lighting into the material system, only need to
 	// test if it's vertex lit
 
-	Assert( pMaterial );
+	contract_assert( pMaterial );
 	bool doMouthLighting = materialFlags && (m_pStudioHdr->nummouths >= 1);
 
 
@@ -51,7 +47,7 @@ FORCEINLINE StudioModelLighting_t CStudioRender::R_StudioComputeLighting( IMater
 IMaterial* CStudioRender::R_StudioSetupSkinAndLighting( IMatRenderContext *pRenderContext, int index, IMaterial **ppMaterials, int materialFlags,  
 	void /*IClientRenderable*/ *pClientRenderable, ColorMeshInfo_t *pColorMeshes, StudioModelLighting_t &lighting )
 {
-	VPROF( "R_StudioSetupSkin" );
+	CVProfScope _( "R_StudioSetupSkin", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	IMaterial *pMaterial = nullptr;
 	bool bCheckForConVarDrawTranslucentSubModels = false;
 	bool translucent;
@@ -102,7 +98,7 @@ IMaterial* CStudioRender::R_StudioSetupSkinAndLighting( IMatRenderContext *pRend
 			}
 			if ( !pMaterial )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				return 0;
 			}
 
@@ -118,7 +114,7 @@ IMaterial* CStudioRender::R_StudioSetupSkinAndLighting( IMatRenderContext *pRend
 				// Also bind the original material so its proxies are in the correct state
 				static unsigned int translucentCache = 0;
 				IMaterialVar* pOriginalMaterialVar = pMaterial->FindVarFast( "$translucent_material", &translucentCache );
-				Assert( pOriginalMaterialVar );
+				contract_assert( pOriginalMaterialVar );
 				IMaterial *pOriginalMaterial = ppMaterials[index];
 				if ( pOriginalMaterial )
 				{
@@ -227,7 +223,7 @@ int R_StudioSetupModel( int bodypart, int entity_body, mstudiomodel_t **ppSubMod
 	index = entity_body / pbodypart->base;
 	index = index % pbodypart->nummodels;
 
-	Assert( ppSubModel );
+	contract_assert( ppSubModel );
 	*ppSubModel = pbodypart->pModel( index );
 	return index;
 }
@@ -260,7 +256,7 @@ static void ScreenAlignBone( matrix3x4_t *pPoseToWorld, mstudiobone_t *pCurBone,
 	} 
 	else
 	{
-		Assert( pCurBone->flags & BONE_SCREEN_ALIGN_CYLINDER );
+		contract_assert( pCurBone->flags & BONE_SCREEN_ALIGN_CYLINDER );
 		vX.Init( boneToWorld[0][0], boneToWorld[1][0], boneToWorld[2][0] );
 		vZ = vecViewOrigin - vT;			
 		VectorNormalize(vZ);

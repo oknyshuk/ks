@@ -1,10 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.core;
+#include "edict.h"
+#include "predictable_entity.h"
 #include "base_transmit_proxy.h"
 
 CBaseTransmitProxy::CBaseTransmitProxy( CBaseEntity *pEnt )
@@ -28,7 +28,7 @@ CBaseTransmitProxy::~CBaseTransmitProxy()
 int CBaseTransmitProxy::ShouldTransmit( const CCheckTransmitInfo *pInfo, int nPrevShouldTransmitResult )
 {
 	// Anyone implementing a transmit proxy should override this since that's the point!!
-	Assert( false );
+	contract_assert( false );
 	return FL_EDICT_DONTSEND;
 }
 
@@ -54,4 +54,3 @@ void CBaseTransmitProxy::Release()
 		--m_refCount;
 	}
 }
-

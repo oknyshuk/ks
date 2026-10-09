@@ -1,27 +1,21 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "keys.h"
 #include "cdll_engine_int.h"
 #include "cmd.h"
 #include "toolframework/itoolframework.h"
 #include "toolframework/itoolsystem.h"
-#include "tier1/text_writer.h"
+import std;
 #include "engineui.h"
 #include "tier2/tier2.h"
 #include "inputsystem/iinputsystem.h"
-#include "keyvalues.h"
 #include "host.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
 #include "cheatcodes.h"
 #include "baseclientstate.h" // splitscreen interface
-#include "tier1/fmtstr.h"
 #include "EngineSoundInternal.h"
 #ifndef DEDICATED
 #include "cl_splitscreen.h"
@@ -62,9 +56,9 @@ struct KeyContext_t
 	{
 		// NOTE: If this compile-time assert fails, modify the bit count
 		// in KeyInfo_t::m_nKeyUpTarget
-		COMPILE_TIME_ASSERT( KEY_UP_TARGET_COUNT < 16 );
+		static_assert( KEY_UP_TARGET_COUNT < 16 );
 
-		Q_memset( m_pKeyInfo, 0, sizeof( m_pKeyInfo ) );
+		V_memset( m_pKeyInfo, 0, sizeof( m_pKeyInfo ) );
 		m_bTrapMode = false;
 		m_bDoneTrapping = false;
 		m_nTrapKeyUp = BUTTON_CODE_INVALID;
@@ -98,7 +92,7 @@ ButtonCode_t GetSplitPlayerJoystickCode( ButtonCode_t bc )
 #ifdef DEDICATED
 	return bc;
 #else
-	if ( !IsJoystickCode( bc ) && !IsSteamControllerCode( bc ) )
+	if ( !IsJoystickCode( bc ) )
 		return bc;
 
 	int nJoystick = GET_ACTIVE_SPLITSCREEN_SLOT();
@@ -120,7 +114,7 @@ void Key_SetBinding( ButtonCode_t keynum, const char *pBinding )
 	if ( s_KeyContext.m_pKeyInfo[keynum].m_pKeyBinding )
 	{
 		// Exactly the same, don't re-bind and fragment memory
-		if ( !Q_strcmp( s_KeyContext.m_pKeyInfo[keynum].m_pKeyBinding, pBinding ) )
+		if ( !V_strcmp( s_KeyContext.m_pKeyInfo[keynum].m_pKeyBinding, pBinding ) )
 			return;
 
 		delete[] s_KeyContext.m_pKeyInfo[keynum].m_pKeyBinding;
@@ -128,9 +122,9 @@ void Key_SetBinding( ButtonCode_t keynum, const char *pBinding )
 	}
 			
 	// allocate memory for new binding
-	l = Q_strlen( pBinding );	
+	l = V_strlen( pBinding );	
 	pNewBinding = (char *)new char[ l+1 ];
-	Q_strncpy( pNewBinding, pBinding, l + 1 );
+	V_strncpy( pNewBinding, pBinding, l + 1 );
 	pNewBinding[l] = 0;
 	s_KeyContext.m_pKeyInfo[keynum].m_pKeyBinding = pNewBinding;	
 
@@ -148,7 +142,9 @@ void Key_SetBinding( ButtonCode_t keynum, const char *pBinding )
 Key_Unbind_f
 ===================
 */
-CON_COMMAND( unbind, "Unbind a key." )
+static void unbind( const CCommand &args );
+static ConCommand unbind_command( "unbind", unbind, "Unbind a key." );
+static void unbind( const CCommand &args )
 {
 	ButtonCode_t b;
 
@@ -174,7 +170,9 @@ CON_COMMAND( unbind, "Unbind a key." )
 	Key_SetBinding( b, "" );
 }
 
-CON_COMMAND( unbindall, "Unbind all keys." )
+static void unbindall( const CCommand &args );
+static ConCommand unbindall_command( "unbindall", unbindall, "Unbind all keys." );
+static void unbindall( const CCommand &args )
 {
 	int		i;
 	
@@ -194,7 +192,9 @@ CON_COMMAND( unbindall, "Unbind all keys." )
 	}
 }
 
-CON_COMMAND( unbindalljoystick, "Unbind all joystick keys." )
+static void unbindalljoystick( const CCommand &args );
+static ConCommand unbindalljoystick_command( "unbindalljoystick", unbindalljoystick, "Unbind all joystick keys." );
+static void unbindalljoystick( const CCommand &args )
 {
 	int		i;
 
@@ -217,7 +217,9 @@ CON_COMMAND( unbindalljoystick, "Unbind all joystick keys." )
 	}
 }
 
-CON_COMMAND( unbindallmousekeyboard, "Unbind all mouse / keyboard keys." )
+static void unbindallmousekeyboard( const CCommand &args );
+static ConCommand unbindallmousekeyboard_command( "unbindallmousekeyboard", unbindallmousekeyboard, "Unbind all mouse / keyboard keys." );
+static void unbindallmousekeyboard( const CCommand &args )
 {
 	int		i;
 
@@ -242,7 +244,9 @@ CON_COMMAND( unbindallmousekeyboard, "Unbind all mouse / keyboard keys." )
 
 
 #ifndef DEDICATED
-CON_COMMAND_F( escape, "Escape key pressed.", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void escape( const CCommand &args );
+static ConCommand escape_command( "escape", escape, "Escape key pressed.", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void escape( const CCommand &args )
 {
 	EngineUI()->HideGameUI();
 }
@@ -293,7 +297,7 @@ static void BindHelper( const CCommand &args )
 
 	if ( b == KEY_ESCAPE )
 	{
-		Q_strncpy( cmd, "cancelselect", sizeof( cmd ) );
+		V_strncpy( cmd, "cancelselect", sizeof( cmd ) );
 	}
 	else
 	{	
@@ -303,20 +307,24 @@ static void BindHelper( const CCommand &args )
 		{
 			if (i > 2)
 			{
-				Q_strncat( cmd, " ", sizeof( cmd ), COPY_ALL_CHARACTERS );
+				V_strncat( cmd, " ", sizeof( cmd ), COPY_ALL_CHARACTERS );
 			}
-			Q_strncat( cmd, args[i], sizeof( cmd ), COPY_ALL_CHARACTERS );
+			V_strncat( cmd, args[i], sizeof( cmd ), COPY_ALL_CHARACTERS );
 		}
 	}
 	Key_SetBinding( b, cmd );
 }
 
-CON_COMMAND( bind, "Bind a key." )
+static void bind( const CCommand &args );
+static ConCommand bind_command( "bind", bind, "Bind a key." );
+static void bind( const CCommand &args )
 {
 	BindHelper( args );
 }
 
-CON_COMMAND( bind_osx, "Bind a key for OSX only." )
+static void bind_osx( const CCommand &args );
+static ConCommand bind_osx_command( "bind_osx", bind_osx, "Bind a key for OSX only." );
+static void bind_osx( const CCommand &args )
 {
 }
 
@@ -334,12 +342,12 @@ KeyValues *GetDefaultKeyBindings( void )
 	KeyValues *defaults = new KeyValues( "defaults" );
 
 	FileHandle_t f;
-	char szFileName[ _MAX_PATH ];
+	char szFileName[ k_cMaxPath ];
 	char token[ 1024 ];
 	char szKeyName[ 256 ];
 
 	// read kb_def file to get default key binds
-	Q_snprintf( szFileName, sizeof( szFileName ), "%skb_def" PLATFORM_EXT ".lst", SCRIPT_DIR );
+	V_snprintf( szFileName, sizeof( szFileName ), "%skb_def"".lst", SCRIPT_DIR );
 	f = g_pFileSystem->Open( szFileName, "r");
 	if ( !f )
 	{
@@ -358,12 +366,12 @@ KeyValues *GetDefaultKeyBindings( void )
 	while ( 1 )
 	{
 		buf = COM_ParseFile( buf, token, sizeof( token ) );
-		if ( strlen( token ) <= 0 )
+		if ( std::strlen( token ) <= 0 )
 			break;
-		Q_strncpy ( szKeyName, token, sizeof( szKeyName ) );
+		V_strncpy ( szKeyName, token, sizeof( szKeyName ) );
 
 		buf = COM_ParseFile( buf, token, sizeof( token ) );
-		if ( strlen( token ) <= 0 )  // Error
+		if ( std::strlen( token ) <= 0 )  // Error
 			break;
 
 		defaults->SetString( token, szKeyName );
@@ -579,7 +587,7 @@ static bool IsKeyBoundedToBinding( int i, const char* pBind )
 
 	if ( pszBinding && *pszBinding )
 	{
-		if ( !strchr( pszBinding, ';' ) )
+		if ( !std::strchr( pszBinding, ';' ) )
 		{
 			// Not a list of commands, do it the easy way
 			if ( pszBinding[ 0 ] == '+' )
@@ -587,7 +595,7 @@ static bool IsKeyBoundedToBinding( int i, const char* pBind )
 				++pszBinding;
 			}
 
-			if ( !Q_strcasecmp( pszBinding, (char *)pBind ) )
+			if ( !V_strcasecmp( pszBinding, (char *)pBind ) )
 			{
 				return true;
 			}
@@ -596,9 +604,9 @@ static bool IsKeyBoundedToBinding( int i, const char* pBind )
 		{
 			// Tokenize the binding name (could be more than one binding)
 			char szBinding[ 256 ];
-			Q_strncpy( szBinding, pszBinding, sizeof( szBinding ) );
+			V_strncpy( szBinding, pszBinding, sizeof( szBinding ) );
 
-			pszBinding = strtok( szBinding, ";" );
+			pszBinding = std::strtok( szBinding, ";" );
 
 			while ( pszBinding )
 			{
@@ -607,7 +615,7 @@ static bool IsKeyBoundedToBinding( int i, const char* pBind )
 					++pszBinding;
 				}
 
-				if ( !Q_strcasecmp( pszBinding, (char *)pBind ) )
+				if ( !V_strcasecmp( pszBinding, (char *)pBind ) )
 				{
 					return true;
 				}
@@ -669,8 +677,7 @@ int Key_CodeForBinding( const char *pBinding, int userId, int iStartCount, Bindi
 			if( IsKeyBoundedToBinding( i, pBind ) )
 			{
 				if ( nFlags == BINDINGLOOKUP_ALL ||
-					( nFlags == BINDINGLOOKUP_STEAMCONTROLLER_ONLY && ( i >= STEAMCONTROLLER_FIRST && i <= STEAMCONTROLLER_LAST ) ) ||
-					 ( nFlags == BINDINGLOOKUP_KEYBOARD_ONLY && ( i < JOYSTICK_FIRST || i > JOYSTICK_LAST ) && ( i < STEAMCONTROLLER_FIRST || i > STEAMCONTROLLER_LAST ) ) || 
+					 ( nFlags == BINDINGLOOKUP_KEYBOARD_ONLY && ( i < JOYSTICK_FIRST || i > JOYSTICK_LAST ) ) ||
 					 ( nFlags == BINDINGLOOKUP_JOYSTICK_ONLY && ( i >= JOYSTICK_FIRST && i <= JOYSTICK_LAST ) ) )
 				{
 					if ( iCount == iStartCount )
@@ -685,10 +692,10 @@ int Key_CodeForBinding( const char *pBinding, int userId, int iStartCount, Bindi
 			}
 		}
 		// Xbox 360 controller: Handle the dual bindings for duck and zoom
-		if ( !Q_stricmp( "duck", pBind ) )
+		if ( !V_stricmp( "duck", pBind ) )
 			return Key_CodeForBinding( "toggle_duck", userId, iCount );
 
-		if ( !Q_stricmp( "zoom", pBind ) )
+		if ( !V_stricmp( "zoom", pBind ) )
 			return Key_CodeForBinding( "toggle_zoom", userId, iCount );
 
 	}
@@ -703,7 +710,9 @@ const char *Key_BindingForKey( ButtonCode_t code )
 	return s_KeyContext.m_pKeyInfo[ code ].m_pKeyBinding;
 }
 
-CON_COMMAND( key_listboundkeys, "List bound keys with bindings." )
+static void key_listboundkeys( const CCommand &args );
+static ConCommand key_listboundkeys_command( "key_listboundkeys", key_listboundkeys, "List bound keys with bindings." );
+static void key_listboundkeys( const CCommand &args )
 {
 	int i;
 
@@ -713,7 +722,7 @@ CON_COMMAND( key_listboundkeys, "List bound keys with bindings." )
 		if ( !pBinding || !pBinding[0] )
 			continue;
 
-		if ( !IsJoystickCode( (ButtonCode_t)i ) && !IsSteamControllerCode( (ButtonCode_t)i ) )
+		if ( !IsJoystickCode( (ButtonCode_t)i ) )
 		{
 			ConMsg( "\"%s\" = \"%s\"\n", g_pInputSystem->ButtonCodeToString( (ButtonCode_t)i ), pBinding );
 		}
@@ -725,7 +734,9 @@ CON_COMMAND( key_listboundkeys, "List bound keys with bindings." )
 	}
 }
 
-CON_COMMAND( key_findbinding, "Find key bound to specified command string." )
+static void key_findbinding( const CCommand &args );
+static ConCommand key_findbinding_command( "key_findbinding", key_findbinding, "Find key bound to specified command string." );
+static void key_findbinding( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -748,7 +759,7 @@ CON_COMMAND( key_findbinding, "Find key bound to specified command string." )
 		if ( !pBinding || !pBinding[0] )
 			continue;
 
-		if ( Q_strstr( pBinding, substring ) )
+		if ( V_strstr( pBinding, substring ) )
 		{
 			if ( !IsJoystickCode( (ButtonCode_t)i ) )
 			{
@@ -777,7 +788,7 @@ void Key_Init (void)
 
 void Key_Shutdown( void )
 {
-	for ( int i = 0; i < ARRAYSIZE( s_KeyContext.m_pKeyInfo ); ++i )
+	for ( int i = 0; i < std::size( s_KeyContext.m_pKeyInfo ); ++i )
 	{
 		delete[] s_KeyContext.m_pKeyInfo[ i ].m_pKeyBinding;
 		s_KeyContext.m_pKeyInfo[ i ].m_pKeyBinding = nullptr;
@@ -795,7 +806,7 @@ void Key_StartTrapMode( void )
 	if ( s_KeyContext.m_bTrapMode )
 		return;
 
-	Assert( !s_KeyContext.m_bDoneTrapping && s_KeyContext.m_nTrapKeyUp == BUTTON_CODE_INVALID );
+	contract_assert( !s_KeyContext.m_bDoneTrapping && s_KeyContext.m_nTrapKeyUp == BUTTON_CODE_INVALID );
 
 	s_KeyContext.m_bDoneTrapping = false;
 	s_KeyContext.m_bTrapMode = true;
@@ -949,7 +960,7 @@ static bool HandleEngineKey( const InputEvent_t &event )
 
 #if !defined( DEDICATED )
 	// Prevent keybindings from doing funky stuff unless in game (except toggleconsole)
-	if ( Q_stricmp( kb, "toggleconsole" ) )
+	if ( V_stricmp( kb, "toggleconsole" ) )
 	{
 		extern IVEngineClient *engineClient;
 		if ( engineClient && !engineClient->IsConnected() )
@@ -962,7 +973,7 @@ static bool HandleEngineKey( const InputEvent_t &event )
 	{
 		if ( kb[0] == '+' )
 		{
-			Q_snprintf( cmd, sizeof( cmd ), "-%s %i\n", kb+1, code );
+			V_snprintf( cmd, sizeof( cmd ), "-%s %i\n", kb+1, code );
 			Cbuf_AddText( Cbuf_GetCurrentPlayer(), cmd, kCommandSrcUserInput );
 			return true;
 		}
@@ -974,13 +985,13 @@ static bool HandleEngineKey( const InputEvent_t &event )
 	if (kb[0] == '+')
 	{
 		// button commands add keynum as a parm
-		Q_snprintf( cmd, sizeof( cmd ), "%s %i\n", kb, code );
+		V_snprintf( cmd, sizeof( cmd ), "%s %i\n", kb, code );
 		Cbuf_AddText( Cbuf_GetCurrentPlayer(), cmd, kCommandSrcUserInput );
 		return true;
 	}
 
 	// Swallow console toggle if any modifier keys are down if it's bound to toggleconsole (the default)
-	if ( !Q_stricmp( kb, "toggleconsole" ) )
+	if ( !V_stricmp( kb, "toggleconsole" ) )
 	{
 		if ( s_KeyContext.m_pKeyInfo[KEY_LALT].m_bKeyDown || s_KeyContext.m_pKeyInfo[KEY_LSHIFT].m_bKeyDown || s_KeyContext.m_pKeyInfo[KEY_LCONTROL].m_bKeyDown ||
 			s_KeyContext.m_pKeyInfo[KEY_RALT].m_bKeyDown || s_KeyContext.m_pKeyInfo[KEY_RSHIFT].m_bKeyDown || s_KeyContext.m_pKeyInfo[KEY_RCONTROL].m_bKeyDown )
@@ -1015,7 +1026,7 @@ static bool FilterKey( const InputEvent_t &event, KeyUpTarget_t target, FilterKe
 	{
 		if ( bFiltered )
 		{
-			Assert( s_KeyContext.m_pKeyInfo[code].m_nKeyUpTarget == KEY_UP_ANYTARGET );
+			contract_assert( s_KeyContext.m_pKeyInfo[code].m_nKeyUpTarget == KEY_UP_ANYTARGET );
 			s_KeyContext.m_pKeyInfo[code].m_nKeyUpTarget = target;
 		}
 	}
@@ -1029,7 +1040,7 @@ static bool FilterKey( const InputEvent_t &event, KeyUpTarget_t target, FilterKe
 		else
 		{
 			// NOTE: It is illegal to trap up key events. The system will do it for us
-			Assert( !bFiltered );
+			contract_assert( !bFiltered );
 		}
 	}
 
@@ -1066,12 +1077,12 @@ void Key_Event( const InputEvent_t &event )
 #ifdef DEDICATED
 	return;
 #else
-	ASSERT_NO_REENTRY();
+	;
 
 	ButtonCode_t code = (ButtonCode_t)event.m_nData;
 
 	int nSplitScreenPlayerSlot = 0;
-	if ( !IsJoystickCode( code ) && !IsSteamControllerCode( code ) )
+	if ( !IsJoystickCode( code ) )
 	{
 		if ( splitscreen->IsValidSplitScreenSlot( in_forceuser.GetInt() ) )
 		{
@@ -1093,7 +1104,7 @@ void Key_Event( const InputEvent_t &event )
 	if ( ( event.m_nType != IE_KeyCodeTyped ) && ( event.m_nType != IE_KeyTyped ) )
 	{
 		bool bDown = ( event.m_nType == IE_ButtonPressed ) || ( event.m_nType == IE_ButtonDoubleClicked );
-		Assert( s_KeyContext.m_pKeyInfo[code].m_bKeyDown != bDown );
+		contract_assert( s_KeyContext.m_pKeyInfo[code].m_bKeyDown != bDown );
 		if ( s_KeyContext.m_pKeyInfo[code].m_bKeyDown == bDown )
 			return;
 
@@ -1168,5 +1179,3 @@ void Key_Event( const InputEvent_t &event )
 	FilterKey( event, KEY_UP_ENGINE, HandleEngineKey );
 #endif
 }
-
-

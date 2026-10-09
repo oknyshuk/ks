@@ -1,32 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
- 
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import ks.tier1;
 #include "imaterialinternal.h"
 #include "bitmap/tgaloader.h"
 #include "colorspace.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/itexture.h"
-#include <string.h>
+import std;
 #include "materialsystem_global.h"
 #include "shaderapi/ishaderapi.h"
 #include "materialsystem/imaterialproxy.h"							   
 #include "shadersystem.h"
-#include "materialsystem/imaterialproxyfactory.h"
 #include "IHardwareConfigInternal.h"
-#include "tier1/intern_pool.h"
-#include "tier1/string_ops.h"
-#include <malloc.h>
 #include "filesystem.h"
-#include <keyvalues.h>
-#include "tier1/fixed_pool.h"
 #include "shaderapi/ishaderutil.h"
 #include "vtf/vtf.h"
-#include "tier1/strtools.h"
-#include <ctype.h>
-#include "mathlib/vmatrix.h"
 #include "texturemanager.h"
 #include "itextureinternal.h"
 #include "cmaterial_queuefriendly.h"
@@ -36,7 +25,7 @@ static IMaterialVar *CreateMaterialVarFromKeyValue( IMaterial* pMaterial, KeyVal
 //-----------------------------------------------------------------------------
 // Material SubRect implementation
 //-----------------------------------------------------------------------------
-class CMaterialSubRect : public IMaterialInternal
+class CMaterialSubRect : public IMaterialInternal, public ks::pooled< CMaterialSubRect >
 {
 public:
 
@@ -226,7 +215,7 @@ public:
 
 	virtual void CompactMaterialVars()									{ ::CompactMaterialVars( m_aMaterialVars.data(), std::ssize( m_aMaterialVars ) ); }
 
-	virtual bool HasQueueFriendlyProxies() const OVERRIDE				{ return m_pMaterialPage->HasQueueFriendlyProxies(); }
+	virtual bool HasQueueFriendlyProxies() const override				{ return m_pMaterialPage->HasQueueFriendlyProxies(); }
 
 	virtual bool SetTempExcluded( bool bSet, int nExcludedDimensionLimit )	{ return false; }
 
@@ -253,7 +242,9 @@ private:
 	};
 
 	// Fixed-size allocator
-	DECLARE_FIXEDSIZE_ALLOCATOR( CMaterialSubRect );
+	private:
+		static ks::fixed_pool s_Allocator;
+		friend class ks::pooled< CMaterialSubRect >;
 
 	IMaterialInternal			*m_pMaterialPage;
 	IMaterialInternal			*m_pModelMaterialPage;
@@ -287,7 +278,7 @@ private:
 
 // NOTE: This must be the last file included
 
-DEFINE_FIXEDSIZE_ALLOCATOR( CMaterialSubRect, 256, ks::fixed_pool::grow::fast );
+ks::fixed_pool CMaterialSubRect::s_Allocator( sizeof(CMaterialSubRect), 256, ks::fixed_pool::grow::fast, "CMaterialSubRect pool", alignof(CMaterialSubRect) );
 
 //-----------------------------------------------------------------------------
 // Purpose: Static create method for material subrect.
@@ -316,19 +307,20 @@ void IMaterialInternal::DestroyMaterialSubRect( IMaterialInternal* pMaterial )
 CMaterialSubRect::CMaterialSubRect( const char *pMaterialName, const char *pTextureGroupName,
 								    KeyValues *pVMTKeyValues, KeyValues *pPatchKeyValues, bool bAssumeCreateFromFile )
 {
+	ks::ScratchArena<> scratch;
 	m_QueueFriendlyVersion.SetRealTimeVersion( this );
 
 	// Name with extension stripped off.
-	int len = Q_strlen( pMaterialName );
-	char* pTemp = ( char* ) stackalloc( len + 1 );
-	Q_strncpy( pTemp, pMaterialName, len + 1 );
-	Q_strlower( pTemp );
+	int len = V_strlen( pMaterialName );
+	char* pTemp = ( char* ) scratch.AllocBytes( len + 1 );
+	V_strncpy( pTemp, pMaterialName, len + 1 );
+	V_strlower( pTemp );
 	pTemp[ len - 4 ] = '\0';
 	m_symName = ks::global_symbols().intern( pTemp );
 
 #ifdef _DEBUG
-	m_pDebugName = new char[Q_strlen( pTemp ) + 1];
-	Q_strncpy( m_pDebugName, pTemp, Q_strlen( pTemp ) + 1 );
+	m_pDebugName = new char[V_strlen( pTemp ) + 1];
+	V_strncpy( m_pDebugName, pTemp, V_strlen( pTemp ) + 1 );
 #endif
 
 	m_pMaterialPage = nullptr;
@@ -363,7 +355,7 @@ CMaterialSubRect::CMaterialSubRect( const char *pMaterialName, const char *pText
 		Precache();
 	}
 
-	Assert( m_pMaterialPage );
+	contract_assert( m_pMaterialPage );
 
 	// Increment the material page usage counter.
 	m_pMaterialPage->IncrementReferenceCount();
@@ -380,11 +372,7 @@ CMaterialSubRect::~CMaterialSubRect()
 {
 	Uncache( );
 
-#if defined( DEVELOPMENT_ONLY ) || defined( ALLOW_TEXT_MODE )
-	static bool s_bTextMode = CommandLine()->HasParm( "-textmode" );
-#else
 	const bool s_bTextMode = false;
-#endif
 
 	if( m_nRefCount != 0 && !s_bTextMode )
 	{
@@ -582,7 +570,7 @@ bool CMaterialSubRect::PrecacheVars( KeyValues *pVMTKeyValues, KeyValues *pPatch
 {
 	// FIXME:  Should call through to the parent material for all of this???
 	// We should get both parameters or neither
-	Assert( ( pVMTKeyValues == nullptr ) ? ( pPatchKeyValues == nullptr ) : ( pPatchKeyValues != nullptr ) );
+	contract_assert( ( pVMTKeyValues == nullptr ) ? ( pPatchKeyValues == nullptr ) : ( pPatchKeyValues != nullptr ) );
 
 	// Are we already precached?
 	if( IsPrecachedVars() )
@@ -599,7 +587,7 @@ bool CMaterialSubRect::PrecacheVars( KeyValues *pVMTKeyValues, KeyValues *pPatch
 		patchKeyValues = new KeyValues( "vmt_patches" );
 
 		// The caller should not be passing in KeyValues if we have procedural ones
-		Assert( ( pVMTKeyValues == nullptr ) && ( pPatchKeyValues == nullptr ) );
+		contract_assert( ( pVMTKeyValues == nullptr ) && ( pPatchKeyValues == nullptr ) );
 	}
 	else if ( pVMTKeyValues )
 	{
@@ -655,31 +643,31 @@ void CMaterialSubRect::ParseMaterialVars( KeyValues &keyValues )
 	if ( !pShaderName )
 	{
 		DevWarning( 1, "CMaterialSubRect::InitializeShader: Shader not specified in material %s.\n", GetName() );
-		Assert( 0 );
+		contract_assert( 0 );
 		pShaderName = true ? "Wireframe_DX6" : "Wireframe_DX9";
 	}
 
 	// Verify we have the correct "shader."  There is only one type.
 	// Needs to be case insensitive because we can't guarantee case specified in VMTs
-	if ( !Q_stricmp( pShaderName, "subrect" ) )
+	if ( !V_stricmp( pShaderName, "subrect" ) )
 	{
 		KeyValues *pVar = pKeyValues->GetFirstSubKey();
 		while ( pVar )
 		{
-			if ( !Q_stricmp( pVar->GetName(), "$Pos" ) )
+			if ( !V_stricmp( pVar->GetName(), "$Pos" ) )
 			{
-				sscanf( pVar->GetString(), "%f %f", &m_vecOffset.x, &m_vecOffset.y );
+				std::sscanf( pVar->GetString(), "%f %f", &m_vecOffset.x, &m_vecOffset.y );
 			}
-			else if ( !Q_stricmp( pVar->GetName(), "$Size" ) )
+			else if ( !V_stricmp( pVar->GetName(), "$Size" ) )
 			{
-				sscanf( pVar->GetString(), "%f %f", &m_vecSize.x, &m_vecSize.y );
+				std::sscanf( pVar->GetString(), "%f %f", &m_vecSize.x, &m_vecSize.y );
 			}
-			else if ( !Q_stricmp( pVar->GetName(), "$Material" ) )
+			else if ( !V_stricmp( pVar->GetName(), "$Material" ) )
 			{
 				m_pMaterialPage = static_cast<IMaterialInternal*>( MaterialSystem()->FindMaterial( pVar->GetString(), TEXTURE_GROUP_DECAL ) );
 				m_pMaterialPage = m_pMaterialPage->GetRealTimeVersion(); //always work with the realtime material internally
 			}
-			else if ( !Q_stricmp( pVar->GetName(), "$ModelMaterial" ) )
+			else if ( !V_stricmp( pVar->GetName(), "$ModelMaterial" ) )
 			{
 				IMaterialInternal *pMaterial = static_cast<IMaterialInternal*>( MaterialSystem()->FindMaterial( pVar->GetString(), TEXTURE_GROUP_DECAL ) );
 				pMaterial = pMaterial->GetRealTimeVersion(); //always work with the realtime material internally
@@ -688,7 +676,7 @@ void CMaterialSubRect::ParseMaterialVars( KeyValues &keyValues )
 					m_pModelMaterialPage = pMaterial;
 				}
 			}
-//			else if ( !Q_stricmp( pVar->GetName(), "$decalscale" ) )
+//			else if ( !V_stricmp( pVar->GetName(), "$decalscale" ) )
 //			{
 //				m_flDecalScale = pVar->GetFloat();
 //			}
@@ -799,7 +787,7 @@ IMaterialVar *CMaterialSubRect::FindVarFast( char const *pVarName, unsigned int 
 	if ( pVar )
 		return pVar;
 
-	Assert( pToken->cached );
+	contract_assert( pToken->cached );
 
 	if ( pToken->symbol != INVALID_MATERIAL_VAR_SYMBOL )
 	{
@@ -968,7 +956,7 @@ static IMaterialVar* CreateVectorMaterialVarFromKeyValue( IMaterial* pMaterial, 
 	}
 	else
 	{
-		Assert( *pScan == '[' );
+		contract_assert( *pScan == '[' );
 	}
 	
 	// skip the '['
@@ -997,7 +985,7 @@ static IMaterialVar* CreateVectorMaterialVarFromKeyValue( IMaterial* pMaterial, 
 
 		char* pEnd;
 
-		vecVal[i] = strtod( pScan, &pEnd );
+		vecVal[i] = std::strtod( pScan, &pEnd );
 		if (pScan == pEnd)
 		{
 			Warning( "Error in .VMT file: error parsing vector element \"%s\" in \"%s\"\n", pKeyValue->GetName(), pMaterial->GetName() );
@@ -1032,7 +1020,7 @@ static IMaterialVar* CreateMatrixMaterialVarFromKeyValue( IMaterial* pMaterial, 
 	// center # # scale # # rotate # translate # #
 
 	VMatrix mat;
-	int count = sscanf( pScan, " [ %f %f %f %f  %f %f %f %f  %f %f %f %f  %f %f %f %f ]",
+	int count = std::sscanf( pScan, " [ %f %f %f %f  %f %f %f %f  %f %f %f %f  %f %f %f %f ]",
 		&mat.m[0][0], &mat.m[0][1], &mat.m[0][2], &mat.m[0][3],
 		&mat.m[1][0], &mat.m[1][1], &mat.m[1][2], &mat.m[1][3],
 		&mat.m[2][0], &mat.m[2][1], &mat.m[2][2], &mat.m[2][3],

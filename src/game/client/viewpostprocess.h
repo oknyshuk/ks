@@ -1,14 +1,11 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
-
-#ifndef VIEWPOSTPROCESS_H
-#define VIEWPOSTPROCESS_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
 #include "postprocess_shared.h"
+#include "iclientrenderable.h"
+
+class CViewSetup;
 
 struct RenderableInstance_t;
 
@@ -35,5 +32,3 @@ void SetViewFadeParams( byte r, byte g, byte b, byte a, bool bModulate );
 #ifdef IRONSIGHT
 bool ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *viewSetup, bool bPreparationStage );
 #endif
-
-#endif // VIEWPOSTPROCESS_H

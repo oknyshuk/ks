@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef R_DECAL_H
-#define R_DECAL_H
-
+import ks.core;
 #include "decal_private.h"
 #include "decal_clip.h"
-#include <set>
-#include <vector>
+import std;
 
-#include "tier0/platform.h"
-#include <memory>
+#include "ivrenderview.h"
 
 // Initialize and shutdown the decal stuff.
 // R_DecalTerm unlinks all the active decals (which frees their counterparts in displacements).
@@ -151,5 +145,3 @@ void R_DecalReSortMaterials( void );
 void R_DecalFlushDestroyList( bool bImmediateCleanup = false );
 
 extern VMatrix g_BrushToWorldMatrix;
-
-#endif // R_DECAL_H

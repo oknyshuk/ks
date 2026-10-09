@@ -1,12 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PHYSICS_IMPACT_DAMAGE_H
-#define PHYSICS_IMPACT_DAMAGE_H
+#include "vphysics_interface.h"
+class CBaseEntity;
 
+struct gamevcollisionevent_t;
+#include "string_t.h"
 
 struct impactentry_t
 {
@@ -59,5 +59,3 @@ struct vphysics_objectstress_t
 };
 
 float CalculateObjectStress( IPhysicsObject *pObject, CBaseEntity *pOwnerEntity, vphysics_objectstress_t *pOutput );
-
-#endif // PHYSICS_IMPACT_DAMAGE_H

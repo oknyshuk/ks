@@ -1,10 +1,34 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "client_pch.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// main precompiled header for client files
+
+import std;
+import ks.tier1;
+
+#include "common.h"
+
+#include "cmd.h"
+#include "render.h"
+
+
+
+#include "gl_shader.h"
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+
+#include "con_nprint.h"
+#include "demo.h"
+#include "host.h"
+#include "filesystem.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "dt_recv_eng.h"
 #include "client_class.h"
 #include "serializedentity.h"
@@ -53,7 +77,7 @@ void CL_DescribeEvent( int slot, CEventInfo *event, const char *eventname )
 void CL_DecodeEventDelta( SerializedEntityHandle_t handle, void *pToData, RecvTable *pRecvTable )
 {
 	// Make sure we have a decoder
-	Assert(pRecvTable->m_pDecoder);
+	contract_assert( pRecvTable->m_pDecoder );
 
 	// First, decode all properties as zeros since temp ents are delta'd from zeros.
 	RecvTable_DecodeZeros( pRecvTable, pToData, -1 );
@@ -67,7 +91,7 @@ void CL_DecodeEventDelta( SerializedEntityHandle_t handle, void *pToData, RecvTa
 //-----------------------------------------------------------------------------
 void CL_FireEvents( void )
 {
-	VPROF("CL_FireEvents");
+	CVProfScope _( "CL_FireEvents", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	CClientState &cl = GetBaseLocalClient();
 
 	if ( !cl.IsActive() )
@@ -97,7 +121,7 @@ void CL_FireEvents( void )
 		bool success = false;
 
 		// Get the receive table if it exists
-		Assert( ei->pClientClass );
+		contract_assert( ei->pClientClass );
 				
 		// Get pointer to the event.
 		if( ei->pClientClass->m_pCreateEventFn )
@@ -129,5 +153,3 @@ void CL_FireEvents( void )
 		it = cl.events.erase( it );
 	}
 }
-
-

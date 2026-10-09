@@ -1,10 +1,7 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import ks.tier1;
 #include "sceneimage.h"
 #include "choreoscene.h"
 #include "iscenetokenprocessor.h"
@@ -12,16 +9,11 @@
 
 #include "lzma/lzma.h"
 
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier1/intern_pool.h"
-#include "tier1/map_ops.h"
-#include "tier1/utlvector.h"
 
 #include "scriplib.h"
 #include "cmdlib.h"
 
-#include "tier0/memalloc.h"
+import std;
 class CSceneImage : public ISceneImage
 {
 public:
@@ -87,13 +79,13 @@ public:
 	void Error( const char *fmt, ... )
 	{
 		char string[2048];
-		va_list argptr;
-		va_start( argptr, fmt );
-		Q_vsnprintf( string, sizeof(string), fmt, argptr );
-		va_end( argptr );
+		std::va_list argptr;
+		__builtin_va_start( argptr, fmt );
+		V_vsnprintf( string, sizeof(string), fmt, argptr );
+		__builtin_va_end( argptr );
 
 		Warning( "%s: %s", m_Filename.data(), string );
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 private:
@@ -124,10 +116,10 @@ public:
 
 		m_Strings.push_back( pString );
 		// advance by string and null
-		m_nOffset += strlen( pString ) + 1;
+		m_nOffset += std::strlen( pString ) + 1;
 
 		int stringId = it->second;
-		Assert( stringId >= 0 && stringId <= 32767 );
+		contract_assert( stringId >= 0 && stringId <= 32767 );
 
 		return stringId;
 	}
@@ -170,9 +162,9 @@ public:
 			const char *pString = m_Strings[i].c_str();
 			buffer.write_cstring( pString );
 
-			currentOffset += strlen( pString ) + 1;
+			currentOffset += std::strlen( pString ) + 1;
 		}
-		Assert( currentOffset == m_nOffset );
+		contract_assert( currentOffset == m_nOffset );
 
 		// align string pool to end on dword boundary
 		while ( buffer.tell() & 0x03 )
@@ -260,9 +252,7 @@ bool UpdateTargetFile_VCD( SceneFile_t *pEntry, const char *pSourceName, const c
 	g_SceneTokenProcessor.SetFilename( pSourceName );
 
 	void (*pfnMsgLoad)( const char *fmt, ... ) = ChoreScene_MsgDummy;
-#ifndef DBGFLAG_STRINGS_STRIP
 	pfnMsgLoad = Msg;
-#endif
 	CChoreoScene *pChoreoScene = ChoreoLoadScene( pSourceName, nullptr, &g_SceneTokenProcessor, pfnMsgLoad );
 	if ( !pChoreoScene )
 	{
@@ -344,7 +334,7 @@ bool CSceneImage::CreateSceneImageFile( ks::byte_writer &targetBuffer, char cons
 	// get all the VCD files according to the seacrh paths
 	char searchPaths[512];
 	g_pFullFileSystem->GetSearchPath( "GAME", false, searchPaths, sizeof( searchPaths ) );
-	char *pPath = strtok( searchPaths, ";" );
+	char *pPath = std::strtok( searchPaths, ";" );
 	while ( pPath )
 	{
 		int currentCount;
@@ -356,7 +346,7 @@ bool CSceneImage::CreateSceneImageFile( ks::byte_writer &targetBuffer, char cons
 		currentCount = std::ssize( vcdFileList );
 		Msg( "Scenes: Searching '%s' - Found %d scenes.\n", szPath, (int)std::ssize( vcdFileList ) - currentCount );
 
-		pPath = strtok( nullptr, ";" );
+		pPath = std::strtok( nullptr, ";" );
 	}
 
 	if ( vcdFileList.empty() )
@@ -438,11 +428,11 @@ bool CSceneImage::WriteSceneImageFile( ks::byte_writer &targetBuffer, bool bLitt
 	imageHeader.nSceneEntryOffset = sceneEntryStart;
 	if ( !bLittleEndian )
 	{
-		imageHeader.nId = BigLong( imageHeader.nId );
-		imageHeader.nVersion = BigLong( imageHeader.nVersion );
-		imageHeader.nNumScenes = BigLong( imageHeader.nNumScenes );
-		imageHeader.nNumStrings = BigLong( imageHeader.nNumStrings );
-		imageHeader.nSceneEntryOffset = BigLong( imageHeader.nSceneEntryOffset );
+		imageHeader.nId = DWordSwapC( imageHeader.nId );
+		imageHeader.nVersion = DWordSwapC( imageHeader.nVersion );
+		imageHeader.nNumScenes = DWordSwapC( imageHeader.nNumScenes );
+		imageHeader.nNumStrings = DWordSwapC( imageHeader.nNumStrings );
+		imageHeader.nSceneEntryOffset = DWordSwapC( imageHeader.nSceneEntryOffset );
 	}
 	targetBuffer.write_bytes( &imageHeader, sizeof( imageHeader ) );
 
@@ -452,11 +442,10 @@ bool CSceneImage::WriteSceneImageFile( ks::byte_writer &targetBuffer, bool bLitt
 		unsigned int offset = stringPoolStart + stringOffsets[i];
 		if ( !bLittleEndian )
 		{
-			offset = BigLong( offset );
+			offset = DWordSwapC( offset );
 		}
 		targetBuffer.write< int >( offset );
 	}
-	Assert( stringPoolStart == (int)targetBuffer.tell() );
 	targetBuffer.write_bytes( stringPool.bytes() );
 
 	// construct directory
@@ -473,7 +462,7 @@ bool CSceneImage::WriteSceneImageFile( ks::byte_writer &targetBuffer, bool bLitt
 		CRC32_t crcFilename = g_SceneFiles[ i ].crcFileName;
 		if ( crcFilename == 0 )
 		{
-			Assert( !g_SceneFiles[i].fileName.empty() );
+			contract_assert( !g_SceneFiles[i].fileName.empty() );
 
 			// name needs to be normalized for determinstic later CRC name calc
 			// calc crc based on scenes\anydir\anyscene.vcd
@@ -488,7 +477,7 @@ bool CSceneImage::WriteSceneImageFile( ks::byte_writer &targetBuffer, bool bLitt
 				Error( "CreateSceneImageFile: Unexpected lack of scenes prefix on %s\n", g_SceneFiles[i].fileName.c_str() );
 			}
 
-			crcFilename = CRC32_ProcessSingleBuffer( pName, strlen( pName ) );
+			crcFilename = CRC32_ProcessSingleBuffer( pName, std::strlen( pName ) );
 		}
 
 		imageEntry.crcFilename = crcFilename;
@@ -520,7 +509,7 @@ bool CSceneImage::WriteSceneImageFile( ks::byte_writer &targetBuffer, bool bLitt
 	}
 
 	// finalize and write directory
-	Assert( sceneEntryStart == (int)targetBuffer.tell() );
+	contract_assert( sceneEntryStart == (int)targetBuffer.tell() );
 	int nSummaryOffset = sceneSummaryStart;
 	int nDataOffset = sceneDataStart;
 	for ( int i = 0; i < std::ssize( imageDirectory ); i++ )
@@ -532,10 +521,10 @@ bool CSceneImage::WriteSceneImageFile( ks::byte_writer &targetBuffer, bool bLitt
 		imageDirectory[i].nSceneSummaryOffset = nSummaryOffset;
 		if ( !bLittleEndian )
 		{
-			imageDirectory[i].crcFilename = BigLong( imageDirectory[i].crcFilename );
-			imageDirectory[i].nDataOffset = BigLong( imageDirectory[i].nDataOffset );
-			imageDirectory[i].nDataLength = BigLong( imageDirectory[i].nDataLength );
-			imageDirectory[i].nSceneSummaryOffset = BigLong( imageDirectory[i].nSceneSummaryOffset );
+			imageDirectory[i].crcFilename = DWordSwapC( imageDirectory[i].crcFilename );
+			imageDirectory[i].nDataOffset = DWordSwapC( imageDirectory[i].nDataOffset );
+			imageDirectory[i].nDataLength = DWordSwapC( imageDirectory[i].nDataLength );
+			imageDirectory[i].nSceneSummaryOffset = DWordSwapC( imageDirectory[i].nSceneSummaryOffset );
 		}
 		targetBuffer.write_bytes( &imageDirectory[i], sizeof( SceneImageEntry_t ) );
 
@@ -546,19 +535,19 @@ bool CSceneImage::WriteSceneImageFile( ks::byte_writer &targetBuffer, bool bLitt
 	}
 
 	// finalize and write summaries
-	Assert( sceneSummaryStart == (int)targetBuffer.tell() );
+	contract_assert( sceneSummaryStart == (int)targetBuffer.tell() );
 	for ( int i = 0; i < std::ssize( imageDirectory ); i++ )
 	{
 		int iScene = writeOrder[i];
 		int msecs = g_SceneFiles[iScene].msecs;
 		int soundCount = std::ssize( g_SceneFiles[iScene].soundList );
 		unsigned int lastspeak = g_SceneFiles[iScene].lastspeak_msecs;
-		Assert( lastspeak < msecs );
+		contract_assert( lastspeak < msecs );
 		if ( !bLittleEndian )
 		{
-			msecs = BigLong( msecs );
-			soundCount = BigLong( soundCount );
-			lastspeak = BigLong( lastspeak );
+			msecs = DWordSwapC( msecs );
+			soundCount = DWordSwapC( soundCount );
+			lastspeak = DWordSwapC( lastspeak );
 		}
 		targetBuffer.write< int >( msecs );
 		targetBuffer.write< int >( lastspeak );
@@ -568,14 +557,14 @@ bool CSceneImage::WriteSceneImageFile( ks::byte_writer &targetBuffer, bool bLitt
 			int soundId = g_SceneFiles[iScene].soundList[j];
 			if ( !bLittleEndian )
 			{
-				soundId = BigLong( soundId );
+				soundId = DWordSwapC( soundId );
 			}
 			targetBuffer.write< int >( soundId );
 		}
 	}
 
 	// finalize and write data
-	Assert( sceneDataStart == (int)targetBuffer.tell() );
+	contract_assert( sceneDataStart == (int)targetBuffer.tell() );
 	for ( int i = 0; i < std::ssize( imageDirectory ); i++ )
 	{	
 		int iScene = writeOrder[i];
@@ -651,11 +640,11 @@ bool CSceneImage::UpdateSceneImageFile( ks::byte_writer &targetBuffer, char cons
 	existing.read_bytes( &imageHeader, sizeof( imageHeader ) );
 	if ( !bLittleEndian )
 	{
-		imageHeader.nId = BigLong( imageHeader.nId );
-		imageHeader.nVersion = BigLong( imageHeader.nVersion );
-		imageHeader.nNumScenes = BigLong( imageHeader.nNumScenes );
-		imageHeader.nNumStrings = BigLong( imageHeader.nNumStrings );
-		imageHeader.nSceneEntryOffset = BigLong( imageHeader.nSceneEntryOffset );
+		imageHeader.nId = DWordSwapC( imageHeader.nId );
+		imageHeader.nVersion = DWordSwapC( imageHeader.nVersion );
+		imageHeader.nNumScenes = DWordSwapC( imageHeader.nNumScenes );
+		imageHeader.nNumStrings = DWordSwapC( imageHeader.nNumStrings );
+		imageHeader.nSceneEntryOffset = DWordSwapC( imageHeader.nSceneEntryOffset );
 	}
 
 	if ( imageHeader.nId != SCENE_IMAGE_ID )
@@ -694,10 +683,10 @@ bool CSceneImage::UpdateSceneImageFile( ks::byte_writer &targetBuffer, char cons
 			SceneImageEntry_t *pEntry = &entry;
 			if ( !bLittleEndian )
 			{
-				pEntry->crcFilename = BigLong( pEntry->crcFilename );
-				pEntry->nDataOffset = BigLong( pEntry->nDataOffset );
-				pEntry->nDataLength = BigLong( pEntry->nDataLength );
-				pEntry->nSceneSummaryOffset = BigLong( pEntry->nSceneSummaryOffset );
+				pEntry->crcFilename = DWordSwapC( pEntry->crcFilename );
+				pEntry->nDataOffset = DWordSwapC( pEntry->nDataOffset );
+				pEntry->nDataLength = DWordSwapC( pEntry->nDataLength );
+				pEntry->nSceneSummaryOffset = DWordSwapC( pEntry->nSceneSummaryOffset );
 			}
 
 			existing.seek( pEntry->nSceneSummaryOffset );
@@ -717,7 +706,7 @@ bool CSceneImage::UpdateSceneImageFile( ks::byte_writer &targetBuffer, char cons
 			scene.msecs = summaryMsecs;
 			scene.lastspeak_msecs = summaryLastSpeech;
 			// Load sounds
-			existing.seek( pEntry->nSceneSummaryOffset + offsetof( SceneImageSummary_t, soundStrings ) );
+			existing.seek( pEntry->nSceneSummaryOffset + __builtin_offsetof( SceneImageSummary_t, soundStrings ) );
 			for ( int j = 0 ; j < summaryNumSounds; ++j )
 			{
 				scene.soundList.push_back( existing.read< int >() );
@@ -725,14 +714,13 @@ bool CSceneImage::UpdateSceneImageFile( ks::byte_writer &targetBuffer, char cons
 		}
 	}
 
-	Assert( std::ssize( g_SceneFiles ) == imageHeader.nNumScenes );
 
 	// Now validate that the scenes list is sorted correctly
 	CRC32_t current = (CRC32_t)0;
 	for ( int i = 0 ; i < std::ssize( g_SceneFiles ); ++i )
 	{
 		CRC32_t crc = g_SceneFiles[ i ].crcFileName;
-		Assert( crc != (CRC32_t)0 );
+		contract_assert( crc != (CRC32_t)0 );
 		if ( crc <= current )
 		{
 			Error( "UpdateSceneImageFile:  Scene Files not in CRC order\n" );
@@ -769,7 +757,7 @@ bool CSceneImage::UpdateSceneImageFile( ks::byte_writer &targetBuffer, char cons
 			Error( "UpdateSceneImageFile: Unexpected lack of scenes prefix on %s\n", pFilename );
 		}
 
-		CRC32_t crcFilename = CRC32_ProcessSingleBuffer( pName, strlen( pName ) );
+		CRC32_t crcFilename = CRC32_ProcessSingleBuffer( pName, std::strlen( pName ) );
 
 		pStatus->UpdateStatus( pFilename, bQuiet, i, nUpdateCount );
 
@@ -796,4 +784,3 @@ bool CSceneImage::UpdateSceneImageFile( ks::byte_writer &targetBuffer, char cons
 	targetBuffer.clear();
 	return WriteSceneImageFile( targetBuffer, bLittleEndian, bQuiet, pStatus );
 }
-

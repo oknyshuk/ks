@@ -1,23 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Base combat character with no AI
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_NODE_H
-#define AI_NODE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Base combat character with no AI
+
+import ks.tier1;
 #include "ai_hull.h"
 #include "bitstring.h"
-#include "utlvector.h"
+import std;
+#include "util.h"
 
 enum AI_ZoneIds_t
 {
@@ -32,21 +23,21 @@ class	CAI_Link;
 class	CAI_Hint;
 class	CAI_BaseNPC;
 
-#define NOT_CACHED			-2			// Returned if data not in cache
-#define	NO_NODE				-1			// Returned when no node meets the qualification
+inline constexpr auto NOT_CACHED = -2; // Returned if data not in cache
+inline constexpr auto NO_NODE = -1; // Returned when no node meets the qualification
 
-#define	MAX_NODE_LINK_DIST			60*12		// Maximum connection length between nodes as well as furthest
+inline constexpr auto MAX_NODE_LINK_DIST = 60*12; // Maximum connection length between nodes as well as furthest
 #define	MAX_NODE_LINK_DIST_SQ		(MAX_NODE_LINK_DIST*MAX_NODE_LINK_DIST)	//   distance allowed to travel to node via local moves
 
-#define	MAX_AIR_NODE_LINK_DIST		120*12	// Maximum connection length between air nodes as well as furthest
+inline constexpr auto MAX_AIR_NODE_LINK_DIST = 120*12; // Maximum connection length between air nodes as well as furthest
 #define	MAX_AIR_NODE_LINK_DIST_SQ   (MAX_AIR_NODE_LINK_DIST*MAX_AIR_NODE_LINK_DIST)	//   distance allowed to travel to node via local moves
 
 
 	
-#define	NODE_HEIGHT			8	// how high to lift nodes off the ground after we drop them all (make stair/ramp mapping easier)
-#define NODE_CLIMB_OFFSET	8
+inline constexpr auto NODE_HEIGHT = 8; // how high to lift nodes off the ground after we drop them all (make stair/ramp mapping easier)
+inline constexpr auto NODE_CLIMB_OFFSET = 8;
 
-#define	HULL_TEST_STEP_SIZE 16  // how far the test hull moves on each step
+inline constexpr auto HULL_TEST_STEP_SIZE = 16; // how far the test hull moves on each step
 
 //=========================================================
 //	The type of node
@@ -172,5 +163,3 @@ public:
 
 extern float	GetFloorZ(const Vector &origin);
 extern float	GetFloorDistance(const Vector &origin);
-
-#endif // AI_NODE_H

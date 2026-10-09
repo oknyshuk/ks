@@ -1,11 +1,32 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -64,7 +85,7 @@ void CFuncSmokeVolume::SetDensity( float density )
 
 void CFuncSmokeVolume::Spawn()
 {
-	memset( m_MaterialName.GetForModify(), 0, sizeof( m_MaterialName ) );
+	std::memset( m_MaterialName.GetForModify(), 0, sizeof( m_MaterialName ) );
 
 	// Bind to our bmodel.
 	SetModel( STRING( GetModelName() ) );
@@ -75,6 +96,5 @@ void CFuncSmokeVolume::Spawn()
 void CFuncSmokeVolume::Activate( void )
 {
 	BaseClass::Activate();
-	Q_strncpy( m_MaterialName.GetForModify(), STRING( m_String_tMaterialName ), 255 );
+	V_strncpy( m_MaterialName.GetForModify(), STRING( m_String_tMaterialName ), 255 );
 }
-

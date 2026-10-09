@@ -1,21 +1,41 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "voice_gamemgr.h"
-#include <string.h>
-#include <stdarg.h>
-#include <assert.h>
 #include "player.h"
 #include "ivoiceserver.h"
 #include "usermessages.h"
-#include "tier1/bit_ops.h"
 
-#define UPDATE_INTERVAL	0.3
+constexpr auto UPDATE_INTERVAL = 0.3;
 
 
 // These are stored off as CVoiceGameMgr is created and deleted.
@@ -66,14 +86,14 @@ static CBasePlayer* FindPlayerByName(const char *pTestName)
 static void VoiceServerDebug( const char *pFmt, ... )
 {
 	char msg[4096];
-	va_list marker;
+	std::va_list marker;
 
 	if( !voice_serverdebug.GetInt() )
 		return;
 
-	va_start( marker, pFmt );
-	_vsnprintf( msg, sizeof(msg), pFmt, marker );
-	va_end( marker );
+	__builtin_va_start( marker, pFmt );
+	std::vsnprintf( msg, sizeof(msg), pFmt, marker );
+	__builtin_va_end( marker );
 
 	Msg( "%s", msg );
 }
@@ -156,7 +176,7 @@ bool CVoiceGameMgr::ClientCommand( CBasePlayer *pPlayer, const CCommand &args )
 		for(int i=1; i < args.ArgC(); i++)
 		{
 			unsigned int mask = 0;
-			sscanf( args[i], "%x", &mask);
+			std::sscanf( args[i], "%x", &mask);
 
 			if( i <= VOICE_MAX_PLAYERS_DW )
 			{
@@ -175,7 +195,7 @@ bool CVoiceGameMgr::ClientCommand( CBasePlayer *pPlayer, const CCommand &args )
 	}
 	else if(stricmp( args[0], "VModEnable") == 0 && args.ArgC() >= 2)
 	{
-		VoiceServerDebug( "CVoiceGameMgr::ClientCommand: VModEnable (%d)\n", !!atoi( args[1] ) );
+		VoiceServerDebug( "CVoiceGameMgr::ClientCommand: VModEnable (%d)\n", !!std::atoi( args[1] ) );
 		g_PlayerModEnable[playerClientIndex] = !!atoi( args[1] );
 		g_bWantModEnable[playerClientIndex] = false;
 		//UpdateMasks();		
@@ -224,7 +244,7 @@ void CVoiceGameMgr::UpdateMasks()
 			{
 				CBaseEntity *pEnt = UTIL_PlayerByIndex(iOtherClient+1);
 				if ( pEnt && pEnt->IsPlayer() && 
-					 m_pHelper->CanPlayerHearPlayer( pPlayer, assert_cast<CBasePlayer*>( pEnt ), bProximity ) )
+					 m_pHelper->CanPlayerHearPlayer( pPlayer, static_cast<CBasePlayer*>( pEnt ), bProximity ) )
 				{
 					gameRulesMask[iOtherClient] = true;
 					ProximityMask[iOtherClient] = bProximity;

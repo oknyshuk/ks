@@ -1,44 +1,29 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//						ZONE MEMORY ALLOCATION
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: 						ZONE MEMORY ALLOCATION
 // There is never any space between memblocks, and there will never be two
 // contiguous free memblocks.
-//
 // The rover can be left pointing at a non-empty block
-//
 // The zone calls are pretty much only used for small strings and structures,
 // all big things are allocated on the hunk.
-//===========================================================================//
 
-#include "basetypes.h"
+import ks.tier1;
 #include "zone.h"
 #include "host.h"
-#include "tier1/strtools.h"
-#include "tier1/map_ops.h"
-#include "tier0/icommandline.h"
-#include "memstack.h"
+import std;
 #include "datacache/idatacache.h"
-#include "sys_dll.h"
 #include "tier3/tier3.h"
-#include "tier0/memalloc.h"
 
-#define KB (1024)
+constexpr auto KB = (1024);
 #define MB (1024*1024)
 
-#define MINIMUM_WIN_MEMORY			(48*MB)	// FIXME: copy from sys_dll.cpp, find a common header at some point
+constexpr auto MINIMUM_WIN_MEMORY = (48*MB); // FIXME: copy from sys_dll.cpp, find a common header at some point
 
 // PORTAL 2 SHIPPING CHANGE
 // We're sacrificing a little perf (~1% in pathological case) for 12 MB of memory back
 
 CMemoryStack g_HunkMemoryStack;
-#ifdef HUNK_USE_16MB_PAGE
-CMemoryStack g_HunkOverflow;
-static bool g_bWarnedOverflow;
-#define SIZE_PHYSICAL_HUNK (16*MB)
-#endif
 
 const int HUNK_COMMIT_FLOOR = ( 40 )*MB;
 
@@ -51,7 +36,9 @@ int HunkAllocSortFunc( const void *a, const void *b )
 	const hunkalloc_t *A = (const hunkalloc_t *)a, *B = (const hunkalloc_t *)b;
 	return ( A->size > B->size ) ? -1 : +1;
 }
-CON_COMMAND_F( hunk_print_allocations, "", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void hunk_print_allocations( const CCommand &args );
+static ConCommand hunk_print_allocations_command( "hunk_print_allocations", hunk_print_allocations, "", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void hunk_print_allocations( const CCommand &args )
 {
 	Msg( "Hunk allocations:\n");
 	hunkalloc_t *items = new hunkalloc_t[ g_HunkAllocationsByName.size() ];
@@ -64,7 +51,7 @@ CON_COMMAND_F( hunk_print_allocations, "", FCVAR_CLIENTCMD_CAN_EXECUTE )
 		items[numItems++] = item;
 		total += item.size;
 	}
-	qsort( items, numItems, sizeof( hunkalloc_t ), HunkAllocSortFunc );
+	std::qsort( items, numItems, sizeof( hunkalloc_t ), HunkAllocSortFunc );
 	Msg( "    %55s:%10d\n", "TOTAL:", total );
 	for ( int i = 0; i < numItems; i++ )
 	{
@@ -96,7 +83,6 @@ void *Hunk_AllocName(int size, const char *name, bool bClear)
 {
 	if ( hunk_track_allocation_types.GetBool() )
 	{
-		MEM_ALLOC_CREDIT();
 		if ( !name )
 		{
 			name = "unknown";
@@ -115,17 +101,6 @@ void *Hunk_AllocName(int size, const char *name, bool bClear)
 	void *p = g_HunkMemoryStack.Alloc( size, bClear );
 	if ( p )
 		return p;
-#ifdef HUNK_USE_16MB_PAGE
-	if ( !g_bWarnedOverflow )
-	{
-		g_bWarnedOverflow = true;
-		DevMsg( "Note: Hunk base page exhausted\n" );
-	}
-
-	p = g_HunkOverflow.Alloc( size, bClear );
-	if ( p )
-		return p;
-#endif
 	Error( "Engine hunk overflow!\n" );
 	return nullptr;
 }
@@ -143,42 +118,25 @@ int	Hunk_LowMark(void)
 
 void Hunk_FreeToLowMark(int mark)
 {
-	Assert( mark < g_HunkMemoryStack.GetSize() );
-#ifdef HUNK_USE_16MB_PAGE
-	g_HunkOverflow.FreeAll( false );
-	g_bWarnedOverflow = false;
-#endif
+	contract_assert( mark < g_HunkMemoryStack.GetSize() );
 	g_HunkMemoryStack.FreeToAllocPoint( mark, false );
 	g_HunkAllocationsByName.clear();
 }
 
 int Hunk_MallocSize()
 {
-#ifdef HUNK_USE_16MB_PAGE
-	return g_HunkMemoryStack.GetSize() + g_HunkOverflow.GetSize();
-#else
 	return g_HunkMemoryStack.GetSize();
-#endif
 }
 
 int Hunk_Size()
 {
-#ifdef HUNK_USE_16MB_PAGE
-	return g_HunkMemoryStack.GetUsed() + g_HunkOverflow.GetUsed();
-#else
 	return g_HunkMemoryStack.GetUsed();
-#endif
 }
 
 void Hunk_Print()
 {
-#ifdef HUNK_USE_16MB_PAGE
-	Msg( "Total used memory:      %d (%d/%d)\n", Hunk_Size(), g_HunkMemoryStack.GetUsed(), g_HunkOverflow.GetUsed() );
-	Msg( "Total committed memory: %d (%d/%d)\n", Hunk_MallocSize(), g_HunkMemoryStack.GetSize(), g_HunkOverflow.GetSize() );
-#else
 	Msg( "Total used memory:      %d\n", Hunk_Size() );
 	Msg( "Total committed memory: %d\n", Hunk_MallocSize() );
-#endif
 }
 
 
@@ -187,12 +145,7 @@ void Hunk_OnMapStart( int nEstimatedBytes )
 {
 	int nToCommit = std::max( nEstimatedBytes, HUNK_COMMIT_FLOOR );
 
-#ifndef HUNK_USE_16MB_PAGE
 	CMemoryStack *pStack = &g_HunkMemoryStack;
-#else
-	CMemoryStack *pStack = &g_HunkOverflow;
-	nToCommit -= SIZE_PHYSICAL_HUNK;
-#endif
 
 	if ( developer.GetBool() )
 	{
@@ -210,10 +163,8 @@ void Hunk_OnMapStart( int nEstimatedBytes )
 //-----------------------------------------------------------------------------
 void Memory_Init( void )
 {
-	MEM_ALLOC_CREDIT();
 	int nMaxBytes = 128*MB;
 	const int commitIncrement = 64*KB;
-#ifndef HUNK_USE_16MB_PAGE
 	const int nInitialCommit = std::min( HUNK_COMMIT_FLOOR, nMaxBytes );
 	while ( !g_HunkMemoryStack.Init( "g_HunkMemoryStack", nMaxBytes, commitIncrement, nInitialCommit ) )	 
 	{
@@ -224,13 +175,6 @@ void Memory_Init( void )
 			Error( "Failed to allocate minimum memory requirement for game (%d MB)\n", MINIMUM_WIN_MEMORY/MB);
 		}
 	}
-#else
-	if ( !g_HunkMemoryStack.InitPhysical( "g_HunkMemoryStack", SIZE_PHYSICAL_HUNK, 4096 ) || !g_HunkOverflow.Init( "g_HunkOverflow", nMaxBytes - SIZE_PHYSICAL_HUNK, commitIncrement, (SIZE_PHYSICAL_HUNK < HUNK_COMMIT_FLOOR ) ? HUNK_COMMIT_FLOOR - SIZE_PHYSICAL_HUNK : 0 ) )
-	{
-		Error( "Failed to allocate minimum memory requirement for game (%d MB)\n", nMaxBytes );
-	}
-
-#endif
 	g_pDataCache->SetSize( GetTargetCacheSize() );
 }
 

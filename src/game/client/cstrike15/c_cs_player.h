@@ -1,14 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef C_CS_PLAYER_H
-#define C_CS_PLAYER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-
 
 #include "cs_playeranimstate.h"
 #include "c_baseplayer.h"
@@ -32,9 +26,10 @@
 #include "cs_gamerules.h"
 
 #include "basecsgrenade_projectile.h"
+#include "util_shared.h"
 
-#define SPEECH_VOIP_PARTICLE_EFFECT_NAME "speech_voice"
-#define RADIO_VOICE_PARTICLE_EFFECT_NAME "radio_voice"
+inline constexpr const char *SPEECH_VOIP_PARTICLE_EFFECT_NAME = "speech_voice";
+inline constexpr const char *RADIO_VOICE_PARTICLE_EFFECT_NAME = "radio_voice";
 
 enum CStrikeScreenSpaceEffect
 {
@@ -99,11 +94,11 @@ private:
 };
 
 
-#define BONESNAPSHOT_ENTIRE_BODY 0
-#define BONESNAPSHOT_UPPER_BODY 1
+inline constexpr auto BONESNAPSHOT_ENTIRE_BODY = 0;
+inline constexpr auto BONESNAPSHOT_UPPER_BODY = 1;
 
-#define BONESNAPSHOT_DECAYDURATION_MIN 0
-#define BONESNAPSHOT_DECAYDURATION_MAX 0.4f
+inline constexpr auto BONESNAPSHOT_DECAYDURATION_MIN = 0;
+inline constexpr auto BONESNAPSHOT_DECAYDURATION_MAX = 0.4f;
 
 class CBoneSnapshot
 {
@@ -134,7 +129,7 @@ public:
 	{
 		m_pEnt = nullptr;
 		m_flWeight = 0;
-		memset( m_Weightlist, 0, ARRAYSIZE(m_Weightlist) );
+		memset( m_Weightlist, 0, std::size( m_Weightlist ) );
 		m_bWeightlistInitialized = false;
 		m_bEnabled = false;
 		m_bCapturePending = false;
@@ -274,15 +269,11 @@ class
       [[= ks::reflect::From<"m_angEyeAngles", ks::reflect::Net{ .index = 0 }>{} ]]
       [[= ks::reflect::From<"m_angEyeAngles", ks::reflect::Net{ .index = 1 }>{} ]]
       C_CSPlayer : public C_BasePlayer, public CGameEventListener, public ICSPlayerAnimStateHelpers
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
-	, public IHasAttributes
-#endif
 {
 public:
 	DECLARE_CLASS( C_CSPlayer, C_BasePlayer );
 	DECLARE_CLIENTCLASS();
 	DECLARE_PREDICTABLE();
-	DECLARE_INTERPOLATION();
 
 	C_CSPlayer();
 	~C_CSPlayer();
@@ -297,7 +288,7 @@ public:
 	bool	m_bCachedPlaneIsValid;
 	CBaseWeaponWorldModel *m_pClippingWeaponWorldModel;
 
-	virtual void SetSequence(int nSequence) OVERRIDE;
+	virtual void SetSequence(int nSequence) override;
 
 	virtual bool Simulate();
 	virtual	void Spawn( void );
@@ -368,7 +359,7 @@ public:
 
 	virtual void NotifyShouldTransmit( ShouldTransmitState_t state );
 	virtual void ClientThink();
-	virtual void OnTimeJump() OVERRIDE;
+	virtual void OnTimeJump() override;
 	
 	virtual void OnDataChanged( DataUpdateType_t type );
 	virtual void PostDataUpdate( DataUpdateType_t updateType );
@@ -398,13 +389,13 @@ public:
 	std::vector< C_BaseParticleEntity* > m_SmokeGrenades;
 
 	virtual bool ShouldDraw( void );
-	virtual bool UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence ) OVERRIDE;
+	virtual bool UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence ) override;
 	virtual void AccumulateLayers( IBoneSetup &boneSetup, BoneVector pos[], BoneQuaternion q[], float currentTime );
 	bool UpdateLayerWeaponDispatch( C_AnimationLayer *pLayer, int iSequence );
 	virtual float GetLayerSequenceCycleRate( C_AnimationLayer *pLayer, int iSequence );
 	virtual void BuildTransformations( CStudioHdr *pStudioHdr, BoneVector *pos, BoneQuaternion q[], const matrix3x4_t& cameraTransform, int boneMask, CBoneBitList &boneComputed );
 
-	virtual void DoExtraBoneProcessing( CStudioHdr *pStudioHdr, BoneVector pos[], BoneQuaternion q[], matrix3x4a_t boneToWorld[], CBoneBitList &boneComputed, CIKContext *pIKContext ) OVERRIDE;
+	virtual void DoExtraBoneProcessing( CStudioHdr *pStudioHdr, BoneVector pos[], BoneQuaternion q[], matrix3x4a_t boneToWorld[], CBoneBitList &boneComputed, CIKContext *pIKContext ) override;
 	
 	virtual bool SetupBones( matrix3x4a_t *pBoneToWorldOut, int nMaxBones, int boneMask, float currentTime );
 
@@ -422,7 +413,7 @@ public:
 
 	virtual void FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options );
 
-	virtual void DropPhysicsMag( const char *options ) OVERRIDE;
+	virtual void DropPhysicsMag( const char *options ) override;
 
 	bool		 HasC4( void );
 	bool HasWeaponOfType( int nWeaponID ) const;
@@ -688,9 +679,9 @@ public:
 
 	float m_flLastSpawnTimeIndex;
 
-	virtual void NotifyOnLayerChangeSequence( const CAnimationLayer* pLayer, const int nNewSequence ) OVERRIDE;
-	virtual void NotifyOnLayerChangeWeight( const CAnimationLayer* pLayer, const float flNewWeight ) OVERRIDE;
-	virtual void NotifyOnLayerChangeCycle( const CAnimationLayer* pLayer, const float flNewCycle ) OVERRIDE;
+	virtual void NotifyOnLayerChangeSequence( const CAnimationLayer* pLayer, const int nNewSequence ) override;
+	virtual void NotifyOnLayerChangeWeight( const CAnimationLayer* pLayer, const float flNewWeight ) override;
+	virtual void NotifyOnLayerChangeCycle( const CAnimationLayer* pLayer, const float flNewCycle ) override;
 
 	bool IsInHostageRescueZone( void );
 
@@ -739,15 +730,9 @@ public:
 
 	virtual ShadowType_t		ShadowCastType();
 
-#ifdef CS_SHIELD_ENABLED
-	bool HasShield( void ) { return m_bHasShield; }
-	bool IsShieldDrawn( void ) { return m_bShieldDrawn;	}
-	void SetShieldDrawnState( bool bState ) { m_bShieldDrawn = bState; }
-#else
 	bool HasShield( void ) { return false; }
 	bool IsShieldDrawn( void ) { return false; }
 	void SetShieldDrawnState( bool bState ) {}
-#endif
 	
 	bool IsMiniScoreHidden( void ) { return m_bHud_MiniScoreHidden; }
 	bool IsRadarHidden( void ) { return m_bHud_RadarHidden; }
@@ -789,7 +774,7 @@ public:
 	void SurpressLadderChecks( const Vector& pos, const Vector& normal );
 	bool CanGrabLadder( const Vector& pos, const Vector& normal );
 
-	// [tj] checks if this player has another given player on their Steam friends list.
+	// [tj] checks if this player has another given player as a friend.
 	bool HasPlayerAsFriend( C_CSPlayer* player );
 
 	bool MadeFinalGunGameProgressiveKill( void ) { return m_bMadeFinalGunGameProgressiveKill; }
@@ -945,11 +930,6 @@ private:
 	// HPE_END
 	//=============================================================================
 
-#ifdef CS_SHIELD_ENABLED
-	bool	m_bHasShield;
-	bool	m_bShieldDrawn;
-#endif
-
 	[[= ks::reflect::Net{} ]] bool	m_bHud_MiniScoreHidden;
 	[[= ks::reflect::Net{} ]] bool	m_bHud_RadarHidden;
 
@@ -1050,9 +1030,9 @@ protected:
 public:
 	bool								ShouldInterpolateObserverChanges() const;
 	void								StartObserverInterpolation( const QAngle &startAngles );
-	virtual eObserverInterpState		GetObserverInterpState( void ) const OVERRIDE;
-	virtual bool						IsInObserverInterpolation( void ) const OVERRIDE { return ShouldInterpolateObserverChanges() && m_obsInterpState != OBSERVER_INTERP_NONE; }
-	virtual void						SetObserverTarget( EHANDLE hObserverTarget ) OVERRIDE;
+	virtual eObserverInterpState		GetObserverInterpState( void ) const override;
+	virtual bool						IsInObserverInterpolation( void ) const override { return ShouldInterpolateObserverChanges() && m_obsInterpState != OBSERVER_INTERP_NONE; }
+	virtual void						SetObserverTarget( EHANDLE hObserverTarget ) override;
 	void								InterpolateObserverView( Vector& vOrigin, QAngle& vAngles );
 	Vector								GetObserverInterpolatedOffsetVector( void ) { return m_vecObserverInterpolateOffset; }
 
@@ -1060,8 +1040,6 @@ public:
 
 private:
 	CNetworkVar( bool, m_bIsAssassinationTarget, [[= ks::reflect::Net{} ]] );	// This player is an assassination target for an active mission
-
-#if CS_CONTROLLABLE_BOTS_ENABLED
 
 public: 
 	bool IsControllingBot()							const { return m_bIsControllingBot; }
@@ -1075,7 +1053,7 @@ public:
 
 private:
 	[[= ks::reflect::Net{} ]] bool		m_bIsControllingBot;	// Are we controlling a bot? 
-	// Note that this can be TRUE even if GetControlledPlayer() returns NULL, IFF we started controlling a bot and then the bot was deleted for some reason. 
+	// Note that this can be true even if GetControlledPlayer() returns NULL, IFF we started controlling a bot and then the bot was deleted for some reason. 
 	[[= ks::reflect::Net{} ]] bool		m_bCanControlObservedBot;	// True if the player can control the bot s/he is observing
 	[[= ks::reflect::Net{} ]] int			m_iControlledBotEntIndex;
 
@@ -1086,54 +1064,9 @@ private:
 	int			m_nLastMagDropAttachmentIndex;
 	CNetworkVar( bool, m_bHasControlledBotThisRound, [[= ks::reflect::Net{} ]] );
 
-#endif
-
 public: 
 	int GetEloBracket( void ) const;
 	void SetEloBracket ( int bracket );
-
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
-
-public:
-	// IHasAttributes
-	CAttributeManager		*GetAttributeManager( void ) {
-#if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
-		return &m_AttributeManager;
-#else
-		return nullptr;
-#endif
-	}
-	CAttributeContainer		*GetAttributeContainer( void ) { return nullptr; }
-	CBaseEntity				*GetAttributeOwner( void ) { return nullptr; }
-	CAttributeList			*GetAttributeList( void ) {
-#if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
-		return &m_AttributeList;
-#else
-		return nullptr;
-#endif
-	}
-	virtual void			ReapplyProvision( void ) { return; }
-
-#if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
-protected:
-	CNetworkVarEmbedded(	CAttributeContainerPlayer, m_AttributeManager );
-#endif
-
-	//----------------------------
-	// INVENTORY MANAGEMENT
-public:
-	// Inventory access
-#if defined ENABLE_CLIENT_INVENTORIES_FOR_OTHER_PLAYERS
-	CCSPlayerInventory	*Inventory( void );
-	CEconItemView *GetEquippedItemInLoadoutSlot( int iLoadoutSlot ) { return Inventory()->GetInventoryItemByItemID( m_EquippedLoadoutItemIndices[iLoadoutSlot] ); }
-	CEconItemView *GetEquippedItemInLoadoutSlotOrBaseItem( int iLoadoutSlot );
-#endif
-
-private:
-	// Items that have been equipped on this player instance (the inventory loadout may have changed)
-	itemid_t				m_EquippedLoadoutItemIndices[LOADOUT_POSITION_COUNT];
-
-#endif //!defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 
 public:
 	void	ClearAllBulletHitModels( void );
@@ -1199,7 +1132,7 @@ inline C_CSPlayer *ToCSPlayer( CBaseEntity *pEntity )
 	if ( !pEntity || !pEntity->IsPlayer() )
 		return nullptr;
 
-	return assert_cast<C_CSPlayer*>( pEntity );
+	return static_cast<C_CSPlayer*>( pEntity );
 }
 
 
@@ -1278,6 +1211,3 @@ private:
 
 	int m_nGlowObjectHandle;
 };
-
-
-#endif // C_CS_PLAYER_H

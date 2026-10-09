@@ -1,26 +1,33 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Color correction entity.
-//
- // $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "reflect_recvtable.h"
 #include "reflect_predmap.h"
 #include "reflect_annotations.h"
 
-#include "filesystem.h"
 #include "cdll_client_int.h"
 #include "materialsystem/MaterialSystemUtil.h"
 #include "colorcorrectionmgr.h"
 #include "c_triggers.h"
 
-
-
 //------------------------------------------------------------------------------
 // FIXME: This really should inherit from something	more lightweight
 //------------------------------------------------------------------------------
-
 
 //------------------------------------------------------------------------------
 // Purpose : Shadow control entity
@@ -95,7 +102,7 @@ void C_ColorCorrectionVolume::OnDataChanged(DataUpdateType_t updateType)
 			char cleanName[MAX_PATH];
 			V_StripExtension( m_lookupFilename, cleanName, sizeof( cleanName ) );
 			char name[MAX_PATH];
-			Q_snprintf( name, MAX_PATH, "%s_%d", cleanName, entindex() );
+			V_snprintf( name, MAX_PATH, "%s_%d", cleanName, entindex() );
 
 			m_CCHandle = g_pColorCorrectionMgr->AddColorCorrectionVolume( this, name, m_lookupFilename );
 

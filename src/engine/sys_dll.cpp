@@ -1,24 +1,12 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 
-#include <unistd.h>
-#include <fcntl.h>
-#include <mutex>
 #if !defined(DEDICATED)
-#include <SDL3/SDL.h>
 #endif
 
 #include "quakedef.h"
-#include "igame.h"
-#include "errno.h"
 #include "host.h"
-#include "profiling.h"
 #include "server.h"
 #include "vengineserver_impl.h"
 #include "filesystem_engine.h"
@@ -26,33 +14,29 @@
 #include "sys_dll.h"
 #include "ivideomode.h"
 #include "host_cmd.h"
-#include "crtmemdebug.h"
 #include "sv_log.h"
 #include "sv_main.h"
 #include "traceinit.h"
 #include "keys.h"
 #include "gl_matsysiface.h"
-#include "tier0/icommandline.h"
-#include "tier0/stacktools.h"
 #include "cmd.h"
 #include <ihltvdirector.h>
 #include <ireplaydirector.h>
+import std;
+import ks.core;
+import ks.desktop;
 #include "MapReslistGenerator.h"
 #include "DevShotGenerator.h"
 #include "cdll_engine_int.h"
 #include "dt_send.h"
 #include "idedicatedexports.h"
 #include "cvar.h"
-#include "cl_steamauth.h"
-#include "status.h"
-#include "tier0/logging.h"
 #include "tier2/tier2_logging.h"
 
 #include "engineui.h"
-#include "tier0/systeminformation.h"
 #include "toolframework/itoolframework.h"
 
-#define ONE_HUNDRED_TWENTY_EIGHT_MB	(128 * 1024 * 1024)
+constexpr auto ONE_HUNDRED_TWENTY_EIGHT_MB = (128 * 1024 * 1024);
 
 ConVar mem_min_heapsize( "mem_min_heapsize", "48", 0, "Minimum amount of memory to dedicate to engine hunk and datacache (in mb)" );
 ConVar mem_max_heapsize( "mem_max_heapsize", "512", 0, "Maximum amount of memory to dedicate to engine hunk and datacache (in mb)" );
@@ -60,9 +44,9 @@ ConVar mem_max_heapsize_dedicated( "mem_max_heapsize_dedicated", "64", 0, "Maxim
 
 #define MINIMUM_WIN_MEMORY			(unsigned)(mem_min_heapsize.GetInt()*1024*1024)
 #define MAXIMUM_WIN_MEMORY			std::max( (unsigned)(mem_max_heapsize.GetInt()*1024*1024), MINIMUM_WIN_MEMORY )
-#define MAXIMUM_DEDICATED_MEMORY	(unsigned)(mem_max_heapsize_dedicated.GetInt()*1024*1024)
+inline unsigned MAXIMUM_DEDICATED_MEMORY() { return (unsigned)(mem_max_heapsize_dedicated.GetInt()*1024*1024); }
 
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_SERVER_LOG, "ServerLog", LCF_DO_NOT_ECHO );
+LoggingChannelID_t LOG_SERVER_LOG = LoggingSystem_RegisterLoggingChannel( "ServerLog", nullptr, LCF_DO_NOT_ECHO );;
 
 char *CheckParm(const char *psz, char **ppszValue = nullptr);
 void SeedRandomNumberGenerator( bool random_invariant );
@@ -77,8 +61,6 @@ extern HWND			*pmainwindow;
 char				gszDisconnectReason[256];
 char				gszExtendedDisconnectReason[256];
 bool				gfExtendedError = false;
-uint8				g_eSteamLoginFailure = 0;
-bool				g_bV3SteamInterface = false;
 CreateInterfaceFn	g_AppSystemFactory = nullptr;
 
 static bool			s_bIsDedicated = false;
@@ -97,7 +79,7 @@ static FileFindHandle_t	g_hfind = FILESYSTEM_INVALID_FIND_HANDLE;
 CSysModule *g_GameDLL = nullptr;
 
 // Prototype of an global method function
-typedef void (DLLEXPORT * PFN_GlobalMethod)( edict_t *pEntity );
+typedef void ( * PFN_GlobalMethod)( edict_t *pEntity );
 
 IServerGameDLL	*serverGameDLL = nullptr;
 bool g_bServerGameDLLGreaterThanV5;
@@ -156,8 +138,8 @@ void Sys_mkdir( const char *path, const char *pPathID /*= 0*/ )
 	char testpath[ MAX_OSPATH ];
 
 	// Remove any terminal backslash or /
-	Q_strncpy( testpath, path, sizeof( testpath ) );
-	int nLen = Q_strlen( testpath );
+	V_strncpy( testpath, path, sizeof( testpath ) );
+	int nLen = V_strlen( testpath );
 	if ( (nLen > 0) && IsSlash( testpath[ nLen - 1 ] ) )
 	{
 		testpath[ nLen - 1 ] = 0;
@@ -174,7 +156,7 @@ void Sys_mkdir( const char *path, const char *pPathID /*= 0*/ )
 		pPathID = nullptr;
 	}
 
-	Q_FixSlashes( testpath );
+	V_FixSlashes( testpath );
 
 	if ( g_pFileSystem->FileExists( testpath, pPathID ) )
 	{
@@ -206,7 +188,7 @@ const char *Sys_FindFirst(const char *path, char *basename, int namelength )
 	const char* psz = g_pFileSystem->FindFirst(path, &g_hfind);
 	if (basename && psz)
 	{
-		Q_FileBase(psz, basename, namelength );
+		V_FileBase(psz, basename, namelength );
 	}
 
 	return psz;
@@ -226,7 +208,7 @@ const char *Sys_FindFirstEx( const char *pWildcard, const char *pPathID, char *b
 	const char* psz = g_pFileSystem->FindFirstEx( pWildcard, pPathID, &g_hfind);
 	if (basename && psz)
 	{
-		Q_FileBase(psz, basename, namelength );
+		V_FileBase(psz, basename, namelength );
 	}
 
 	return psz;
@@ -242,7 +224,7 @@ const char* Sys_FindNext(char *basename, int namelength)
 	const char *psz = g_pFileSystem->FindNext(g_hfind);
 	if ( basename && psz )
 	{
-		Q_FileBase(psz, basename, namelength );
+		V_FileBase(psz, basename, namelength );
 	}
 
 	return psz;
@@ -289,21 +271,21 @@ void Sys_Shutdown( void )
 //-----------------------------------------------------------------------------
 void Sys_Printf(const char *fmt, ...)
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		text[1024];
 
-	va_start (argptr,fmt);
-	Q_vsnprintf (text, sizeof( text ), fmt, argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,fmt);
+	V_vsnprintf (text, sizeof( text ), fmt, argptr);
+	__builtin_va_end (argptr);
 		
 	if ( developer.GetInt() )
 	{
-		fprintf( stderr, "%s", text );
+		std::fprintf( stderr, "%s", text );
 	}
 
 	if ( s_bIsDedicated )
 	{
-		printf( "%s", text );
+		std::printf( "%s", text );
 	}
 }
 
@@ -312,22 +294,10 @@ bool Sys_MessageBox(const char *title, const char *info, bool bShowOkAndCancel)
 {
 #if   defined( LINUX ) && !defined( DEDICATED )
 
-	int buttonid = 0;
-	SDL_MessageBoxData messageboxdata = { 0 };
-	SDL_MessageBoxButtonData buttondata[] =
-	{
-		{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT,	1,	"OK"		},
-		{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT,	0,	"Cancel"	},
-	};
-
-	messageboxdata.window = GetAssertDialogParent();
-	messageboxdata.title = title;
-	messageboxdata.message = info;
-	messageboxdata.numbuttons = bShowOkAndCancel ? 2 : 1;
-	messageboxdata.buttons = buttondata;
-
-	SDL_ShowMessageBox( &messageboxdata, &buttonid );
-	return ( buttonid == 1 );
+	static const char *const labels[] = { "OK", "Cancel" };
+	const int chosen = ks::desktop::message_box( ks::desktop::game_window(), title, info,
+		labels, bShowOkAndCancel ? 2 : 1, 0, bShowOkAndCancel ? 1 : -1 );
+	return ( chosen == 0 );
 
 #else
 
@@ -346,16 +316,16 @@ bool g_bUpdateMinidumpComment = true;
 //			... - 
 // Output : void Sys_Error
 //-----------------------------------------------------------------------------
-void Sys_Error_Internal( bool bMinidump, const char *error, va_list argsList )
+void Sys_Error_Internal( bool bMinidump, const char *error, std::va_list argsList )
 {
 	char		text[1024];
 	static      bool bReentry = false; // Don't meltdown
 
-	Q_vsnprintf( text, sizeof( text ), error, argsList );
+	V_vsnprintf( text, sizeof( text ), error, argsList );
 
 	if ( bReentry )
 	{
-		fprintf( stderr, "%s\n", text );
+		std::fprintf( stderr, "%s\n", text );
 		return;
 	}
 
@@ -363,7 +333,7 @@ void Sys_Error_Internal( bool bMinidump, const char *error, va_list argsList )
 
 	if ( s_bIsDedicated )
 	{
-		printf( "%s\n", text );
+		std::printf( "%s\n", text );
 	}
 	else
 	{
@@ -389,9 +359,6 @@ void Sys_Error_Internal( bool bMinidump, const char *error, va_list argsList )
 
 	if ( bMinidump && !Plat_IsInDebugSession() && !CommandLine()->FindParm( "-nominidumps") )
 	{
-	// Doing this doesn't quite work the way we want because there is no "crashing" thread
-	// and we see "No thread was identified as the cause of the crash; No signature could be created because we do not know which thread crashed" on the back end
-	//SteamAPI_WriteMiniDump( 0, NULL, build_number() );
 	int *p = 0;
 	*p = 0xdeadbeef;
 	}
@@ -409,11 +376,11 @@ void Sys_Error_Internal( bool bMinidump, const char *error, va_list argsList )
 //-----------------------------------------------------------------------------
 void Sys_Error(const char *error, ...)
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	
-	va_start( argptr, error );
+	__builtin_va_start( argptr, error );
 	Sys_Error_Internal( true, error, argptr );
-	va_end( argptr );
+	__builtin_va_end( argptr );
 	
 }
 
@@ -426,11 +393,11 @@ void Sys_Error(const char *error, ...)
 //-----------------------------------------------------------------------------
 void Sys_Exit(const char *error, ...)
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	
-	va_start( argptr, error );
+	__builtin_va_start( argptr, error );
 	Sys_Error_Internal( false, error, argptr );
-	va_end( argptr );
+	__builtin_va_end( argptr );
 	
 }
 
@@ -476,23 +443,24 @@ void Sys_InitMemory( void )
 
 #if   defined ( DEDICATED )
 	// hard code 32 mb for dedicated servers
-	host_parms.memsize = MAXIMUM_DEDICATED_MEMORY;
+	host_parms.memsize = MAXIMUM_DEDICATED_MEMORY();
 
 #else
-	uint64_t memsize = ONE_HUNDRED_TWENTY_EIGHT_MB;
+	std::uint64_t memsize = ONE_HUNDRED_TWENTY_EIGHT_MB;
 
-	const int fd = open("/proc/meminfo", O_RDONLY);
-	if (fd < 0)
+	ks::platform::file_error fileError = ks::platform::file_error::none;
+	ks::platform::file *fd = ks::platform::open_file( "/proc/meminfo", ks::platform::file_mode::read, &fileError );
+	if ( fd == nullptr )
 	{
-		Sys_Error( "Can't open /proc/meminfo (%s)!\n", strerror(errno) );
+		Sys_Error( "Can't open /proc/meminfo!\n" );
 	}
 
 	char buf[1024 * 16];
-	const ssize_t br = read(fd, buf, sizeof (buf));
-	close(fd);
-	if (br < 0)
+	const long br = ks::platform::read_file( fd, buf, sizeof (buf), &fileError );
+	ks::platform::close_file( fd );
+	if ( br < 0 )
 	{
-		Sys_Error( "Can't read /proc/meminfo (%s)!\n", strerror(errno) );
+		Sys_Error( "Can't read /proc/meminfo!\n" );
 	}
 	buf[br] = '\0';
 
@@ -505,7 +473,7 @@ void Sys_InitMemory( void )
 			// we've got a complete line.
 			*ptr = '\0';
 			unsigned long long ull = 0;
-			if (sscanf(line, "MemTotal: %llu kB", &ull) == 1)
+			if (std::sscanf(line, "MemTotal: %llu kB", &ull) == 1)
 			{
 				// found it!
 				memsize = ((uint64_t) ull) * 1024;
@@ -537,9 +505,9 @@ void Sys_InitMemory( void )
 		// Apply cap of 64MB for 512MB systems
 		// this keeps the code the same as HL2 gold
 		// but allows us to use more memory on 1GB+ systems
-		if (host_parms.memsize > MAXIMUM_DEDICATED_MEMORY)
+		if (host_parms.memsize > MAXIMUM_DEDICATED_MEMORY())
 		{
-			host_parms.memsize = MAXIMUM_DEDICATED_MEMORY;
+			host_parms.memsize = MAXIMUM_DEDICATED_MEMORY();
 		}
 	}
 	else
@@ -591,11 +559,8 @@ void Sys_ShutdownAuthentication( void )
 //-----------------------------------------------------------------------------
 // Debug library spew output
 //-----------------------------------------------------------------------------
-CTHREADLOCALINT g_bInSpew;
+thread_local int g_bInSpew;
 
-#include "tier1/fmtstr.h"
-#include <deque>
-#include <ranges>
 
 static ConVar sys_minidumpspewlines( "sys_minidumpspewlines", "500", FCVAR_RELEASE, "Lines of crash dump console spew to keep." );
 
@@ -621,7 +586,7 @@ static void AddSpewRecord( char const *pMsg )
 #endif
 }
 
-void GetSpew( char *buf, size_t buflen )
+void GetSpew( char *buf, std::size_t buflen )
 {
 	std::scoped_lock lock( g_SpewMutex );
 
@@ -638,7 +603,7 @@ void GetSpew( char *buf, size_t buflen )
 		if ( tocopy <= 0 )
 			break;
 		
-		Q_memcpy( pcur, rec.c_str(), tocopy );
+		V_memcpy( pcur, rec.c_str(), tocopy );
 		remainder -= tocopy;
 		pcur += tocopy;
 
@@ -692,7 +657,7 @@ public:
 
 			if ( g_bTextMode )
 			{
-				printf( "%s", pMessage );
+				std::printf( "%s", pMessage );
 			}
 			Color spewColor = pContext->m_Color;
 			switch ( pContext->m_Severity )
@@ -730,7 +695,7 @@ public:
 
 static CEngineConsoleLoggingListener s_EngineLoggingListener;
 static CFileLoggingListener s_FileLoggingListener;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CFileLoggingListener, IFileLoggingListener, FILELOGGINGLISTENER_INTERFACE_VERSION, s_FileLoggingListener );
+static InterfaceReg s_Reg_CFileLoggingListener_IFileLoggingListener( []() -> void * { return static_cast<IFileLoggingListener *>( &s_FileLoggingListener ); }, FILELOGGINGLISTENER_INTERFACE_VERSION );;
 
 void DeveloperChangeCallback( IConVar *pConVar, const char *pOldString, float flOldValue )
 {
@@ -780,12 +745,6 @@ void *GameFactory( const char *pName, int *pReturnCode )
 	// server dll factory access would go here when needed
 	
 	// ask vjobs
-#ifdef ENGINE_MANAGES_VJOBS
-	extern CreateInterfaceFn g_pfnVjobsFactory;
-	pRetVal = g_pfnVjobsFactory( pName, pReturnCode );
-	if( pRetVal )
-		return pRetVal;
-#endif
 
 	return nullptr;
 }
@@ -806,12 +765,6 @@ CreateInterfaceFn g_GameSystemFactory = GameFactory;
 //-----------------------------------------------------------------------------
 int Sys_InitGame( CreateInterfaceFn appSystemFactory, const char* pBaseDir, void *pwnd, int bIsDedicated )
 {
-#ifdef BENCHMARK
-	if ( bIsDedicated )
-	{
-		Error( "Dedicated server isn't supported by this benchmark!" );
-	}
-#endif
 
 	extern void InitMathlib( void );
 	InitMathlib();
@@ -836,12 +789,12 @@ int Sys_InitGame( CreateInterfaceFn appSystemFactory, const char* pBaseDir, void
 	// Remember that this is a dedicated server
 	s_bIsDedicated = bIsDedicated ? true : false;
 
-	memset( &gmodinfo, 0, sizeof( modinfo_t ) );
+	std::memset( &gmodinfo, 0, sizeof( modinfo_t ) );
 
 	static char s_pBaseDir[256];
-	Q_strncpy( s_pBaseDir, pBaseDir, sizeof( s_pBaseDir ) );
-	Q_strlower( s_pBaseDir );
-	Q_FixSlashes( s_pBaseDir );
+	V_strncpy( s_pBaseDir, pBaseDir, sizeof( s_pBaseDir ) );
+	V_strlower( s_pBaseDir );
+	V_FixSlashes( s_pBaseDir );
 	host_parms.basedir = s_pBaseDir;
 
 	if ( CommandLine()->FindParm ( "-pidfile" ) )
@@ -849,9 +802,7 @@ int Sys_InitGame( CreateInterfaceFn appSystemFactory, const char* pBaseDir, void
 		FileHandle_t pidFile = g_pFileSystem->Open( CommandLine()->ParmValue ( "-pidfile", "srcds.pid" ), "w+" );
 		if ( pidFile )
 		{
-			char dir[MAX_PATH];
-			getcwd( dir, sizeof(dir) );
-			g_pFileSystem->FPrintf( pidFile, "%i\n", getpid() );
+			g_pFileSystem->FPrintf( pidFile, "%i\n", (int)ks::platform::process_id() );
 			g_pFileSystem->Close(pidFile);
 		}
 		else
@@ -917,16 +868,7 @@ static bool LoadThisDll( char *szDllFilename, bool bServerOnly )
 {
 	CSysModule *pDLL = nullptr;
 
-	// check signature, don't let users with modified binaries connect to secure servers, they will get VAC banned
-	if ( !bServerOnly && !Host_AllowLoadModule( szDllFilename, "GAMEBIN", false ) )
-	{
-		// not supposed to load this but we will anyway
-		Host_DisallowSecureServers();
-	}
-
 	// Load DLL, ignore if cannot
-	// ensures that the game.dll is running under Steam
-	// this will have to be undone when we want mods to be able to run
 	if ((pDLL = g_pFileSystem->LoadModule(szDllFilename, "GAMEBIN", false)) == nullptr)
 	{
 		ConMsg("Failed to load %s\n", szDllFilename);
@@ -941,12 +883,6 @@ static bool LoadThisDll( char *szDllFilename, bool bServerOnly )
 		serverGameDLL = (IServerGameDLL*)g_ServerFactory(INTERFACEVERSION_SERVERGAMEDLL, nullptr);
 		if ( !serverGameDLL )
 		{
-#ifdef REL_TO_STAGING_MERGE_TODO
-			// Need to merge eiface for this.
-			// g_bServerGameDLLGreaterThanV5 is true, so we get better stringtables
-			g_bServerGameDLLGreaterThanV5 = true;
-			serverGameDLL = (IServerGameDLL*)g_ServerFactory(INTERFACEVERSION_SERVERGAMEDLL_VERSION_5, nullptr);
-#endif			
 			if ( !serverGameDLL )
 			{
 				Msg( "Could not get IServerGameDLL interface from library %s", szDllFilename );
@@ -1024,7 +960,7 @@ IgnoreThisDLL:
 //
 void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 {
-	memset( &gmodinfo, 0, sizeof( modinfo_t ) );
+	std::memset( &gmodinfo, 0, sizeof( modinfo_t ) );
 	gmodinfo.version = 1;
 	gmodinfo.svonly  = true;
 
@@ -1036,13 +972,13 @@ void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 	KeyValues *modinfo = new KeyValues("modinfo");
 	if (modinfo->LoadFromFile(g_pFileSystem, "gameinfo.txt"))
 	{
-		Q_strncpy( gmodinfo.szInfo, modinfo->GetString("url_info"), sizeof( gmodinfo.szInfo ) );
-		Q_strncpy( gmodinfo.szDL, modinfo->GetString("url_dl"), sizeof( gmodinfo.szDL ) );
+		V_strncpy( gmodinfo.szInfo, modinfo->GetString("url_info"), sizeof( gmodinfo.szInfo ) );
+		V_strncpy( gmodinfo.szDL, modinfo->GetString("url_dl"), sizeof( gmodinfo.szDL ) );
 		gmodinfo.version = modinfo->GetInt("version");
 		gmodinfo.size = modinfo->GetInt("size");
 		gmodinfo.svonly = modinfo->GetBool("svonly");
 		gmodinfo.cldll = modinfo->GetBool("cldll");
-		Q_strncpy( gmodinfo.szHLVersion, modinfo->GetString("hlversion"), sizeof( gmodinfo.szHLVersion ) );
+		V_strncpy( gmodinfo.szHLVersion, modinfo->GetString("hlversion"), sizeof( gmodinfo.szHLVersion ) );
 	}
 	modinfo->deleteThis();
 	
@@ -1051,12 +987,12 @@ void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 
 	if ( s_bIsDedicatedServer && !CommandLine()->FindParm( "-novalveds" ) )
 	{
-		Q_snprintf( szDllFilename, sizeof( szDllFilename ), "server_valve" );
+		V_snprintf( szDllFilename, sizeof( szDllFilename ), "server_valve" );
 		LoadThisDll( szDllFilename, bServerOnly );
 	}
 	if ( !serverGameDLL )
 	{
-		Q_snprintf( szDllFilename, sizeof( szDllFilename ), "server"  );
+		V_snprintf( szDllFilename, sizeof( szDllFilename ), "server"  );
 		LoadThisDll( szDllFilename, bServerOnly );
 	}
 
@@ -1074,7 +1010,7 @@ void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 void Sys_GetRegKeyValue( char *pszSubKey, const char *pszElement, char *pszReturnString, int nReturnLength, char *pszDefaultValue )
 {
 	//hushed Assert( !"Impl me" );
-	Q_strncpy( pszReturnString, pszDefaultValue, nReturnLength );
+	V_strncpy( pszReturnString, pszDefaultValue, nReturnLength );
 }
 
 void Sys_GetRegKeyValueInt( char *pszSubKey, char *pszElement, long *plReturnValue, long lDefaultValue)
@@ -1088,7 +1024,7 @@ void Sys_SetRegKeyValue( const char *pszSubKey, const char *pszElement,	const ch
 	//hushed Assert( !"Impl me" );
 }
 
-#define SOURCE_ENGINE_APP_CLASS "Valve.Source"
+inline constexpr const char *SOURCE_ENGINE_APP_CLASS = "Valve.Source";
 
 void Sys_CreateFileAssociations( int count, FileAssociationInfo *list )
 {
@@ -1104,7 +1040,6 @@ void Sys_TestSendKey( const char *pKey )
 
 void Sys_OutputDebugString(const char *msg)
 {
-	Plat_DebugString( msg );
 }
 
 
@@ -1125,43 +1060,13 @@ void UnloadEntityDLLs( void )
 	sv_noclipduringpause = nullptr;
 }
 
-CON_COMMAND( star_memory, "Dump memory stats" )
+static void star_memory( const CCommand &args );
+static ConCommand star_memory_command( "star_memory", star_memory, "Dump memory stats" );
+static void star_memory( const CCommand &args )
 {
 	// get a current stat of available memory
 	// 32 MB is reserved and fixed by OS, so not reporting to allow memory loggers sync
-	struct mallinfo memstats = mallinfo( );
-	Msg( "sbrk size: %.2f MB, Used: %.2f MB, #mallocs = %d\n",
-		 memstats.arena / ( 1024.0 * 1024.0), memstats.uordblks / ( 1024.0 * 1024.0 ), memstats.hblks );
+	const ks::platform::heap_info memstats = ks::platform::heap_usage();
+	Msg( "sbrk size: %.2f MB, Used: %.2f MB, #mallocs = %lu\n",
+		 memstats.arena / ( 1024.0 * 1024.0), memstats.in_use / ( 1024.0 * 1024.0 ), memstats.mapped_blocks );
 }
-
-#if defined( ENABLE_RUNTIME_STACK_TRANSLATION )
-//NOTE: These convars are here because they can't be directly in tier0.
-//	They're more like one-way convars in that they send off the changes, but might not have the same starting value as the actual value
-//	So if you change the defaults, change the defaults in tier0/dbg.cpp to match.
-//	I considered adding some callback functionality to reinforce the bond a bit better. But that seems hairy.
-static void warningcallstacks_enable_callback( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	_Warning_AlwaysSpewCallStack_Enable( ((ConVar *)var)->GetBool() );
-}
-ConVar warningcallstacks_enable( "warningcallstacks_enable", "0", FCVAR_DEVELOPMENTONLY, "All Warning()/DevWarning()/... calls will attach a callstack", warningcallstacks_enable_callback );
-
-static void warningcallstacks_length_callback( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	_Warning_AlwaysSpewCallStack_Length( ((ConVar *)var)->GetInt() );
-}
-ConVar warningcallstacks_length( "warningcallstacks_length", "5", FCVAR_DEVELOPMENTONLY, "Length of automatic warning callstacks", warningcallstacks_length_callback );
-
-static void errorcallstacks_enable_callback( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	_Error_AlwaysSpewCallStack_Enable( ((ConVar *)var)->GetBool() );
-}
-ConVar errorcallstacks_enable( "errorcallstacks_enable", "0", FCVAR_DEVELOPMENTONLY, "All Error() calls will attach a callstack", errorcallstacks_enable_callback );
-
-static void errorcallstacks_length_callback( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	_Error_AlwaysSpewCallStack_Length( ((ConVar *)var)->GetInt() );
-}
-ConVar errorcallstacks_length( "errorcallstacks_length", "20", FCVAR_DEVELOPMENTONLY, "Length of automatic error callstacks", errorcallstacks_length_callback );
-#endif //#if defined( ENABLE_RUNTIME_STACK_TRANSLATION )
-
-

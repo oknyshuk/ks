@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 oknyshuk
+
 add_library(vscript OBJECT
     vscript.cpp
     languages/squirrel/vsquirrel/vsquirrel.cpp

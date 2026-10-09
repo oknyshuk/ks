@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CSLOADOUT_H
-#define CSLOADOUT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "cs_item_inventory.h"
+#include "cs_weapon_parse.h"
 
 // Stub for econ combined item ID check
 inline bool CombinedItemIdIsDefIndexAndPaint( uint64 itemID ) { return false; }
@@ -323,7 +318,7 @@ public:
 
 	void ClearLoadout( void )
 	{
-		for ( int i = 0; i < ARRAYSIZE( m_WeaponID ); i++ )
+		for ( int i = 0; i < std::size( m_WeaponID ); i++ )
 		{
 			m_WeaponID[ i ] = WEAPON_NONE;
 		}
@@ -331,7 +326,7 @@ public:
 
 	CCSBuyMenuLoadout& operator=( const CCSBuyMenuLoadout& in_rhs )
 	{
-		for ( int i = 0; i < ARRAYSIZE( m_WeaponID ); i++ )
+		for ( int i = 0; i < std::size( m_WeaponID ); i++ )
 		{
 			m_WeaponID[ i ] = in_rhs.m_WeaponID[ i ];
 		}
@@ -341,7 +336,7 @@ public:
 
 	bool operator==( const CCSBuyMenuLoadout& in_rhs ) const
 	{
-		for ( int i = 0; i < ARRAYSIZE( m_WeaponID ); i++ )
+		for ( int i = 0; i < std::size( m_WeaponID ); i++ )
 		{
 			if ( m_WeaponID[ i ] != in_rhs.m_WeaponID[ i ] )
 			{
@@ -396,5 +391,3 @@ inline CEconItemView * CCSBuyMenuLoadout::GetWeaponView( loadout_positions_t pos
 }
 
 extern CCSLoadout* GetBuyMenuLoadoutData( int in_teamID );
-
-#endif //CSLOADOUT_H

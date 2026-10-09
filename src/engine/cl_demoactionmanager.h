@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CL_DEMOACTIONMANAGER_H
-#define CL_DEMOACTIONMANAGER_H
-
-#include "tier1/text_writer.h"
-
+import std;
+import ks.tier1;
 
 class CBaseDemoAction;
 struct democmdinfo_t;
@@ -17,7 +11,7 @@ struct democmdinfo_t;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-abstract_class IDemoActionManager
+class IDemoActionManager
 {
 public:
 	virtual				~IDemoActionManager( void ) {}
@@ -52,5 +46,3 @@ public:
 };
 
 extern IDemoActionManager *demoaction;
-
-#endif // CL_DEMOACTIONMANAGER_H

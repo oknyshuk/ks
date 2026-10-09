@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef PHYFILE_H
-#define PHYFILE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "datamap.h"
 
@@ -18,5 +11,3 @@ typedef struct phyheader_s
 	int		solidCount;
 	int		checkSum;	// checksum of source .mdl file
 } phyheader_t;
-
-#endif // PHYFILE_H

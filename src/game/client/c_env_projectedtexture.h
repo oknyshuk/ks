@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_ENVPROJECTED_TEXTURE_H
-#define C_ENVPROJECTED_TEXTURE_H
-
+import ks.core;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 
 #include "c_baseentity.h"
-#include "basetypes.h"
-
+import std;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -97,5 +91,3 @@ bool C_EnvProjectedTexture::IsBBoxVisible( void )
 {
 	return IsBBoxVisible( GetAbsOrigin() + m_vecExtentsMin, GetAbsOrigin() + m_vecExtentsMax );
 }
-
-#endif // C_ENV_PROJECTED_TEXTURE_H

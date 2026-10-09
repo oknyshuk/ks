@@ -1,14 +1,25 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// main precompiled header for client rendering code
 
-#include "render_pch.h"
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+import std;
+#include "gl_model.h"
+#include "r_local.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_lightmap.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
 #include "gl_matsysiface.h"
 #include "gl_cvars.h"
 #include "enginetrace.h"
@@ -38,7 +49,7 @@ bool ActivateLightSprites( bool bActive )
 }
 
 
-#define LIGHT_MIN_LIGHT_VALUE 0.03f
+constexpr auto LIGHT_MIN_LIGHT_VALUE = 0.03f;
 
 float ComputeLightRadius( dworldlight_t *pLight, bool bIsHDR )
 {
@@ -50,7 +61,7 @@ float ComputeLightRadius( dworldlight_t *pLight, bool bIsHDR )
 		float minLightValue = bIsHDR ? (LIGHT_MIN_LIGHT_VALUE * 0.5f) : LIGHT_MIN_LIGHT_VALUE;
 
 		// Compute the light range based on attenuation factors
-		float flIntensity = sqrtf( DotProduct( pLight->intensity, pLight->intensity ) );
+		float flIntensity = std::sqrtf( DotProduct( pLight->intensity, pLight->intensity ) );
 		if (pLight->quadratic_attn == 0.0f)
 		{
 			if (pLight->linear_attn == 0.0f)
@@ -119,7 +130,7 @@ static void DrawLightSprite( dworldlight_t *pLight, float angleAttenFactor )
 	VectorNormalize( color );
 	color *= angleAttenFactor;
 
-	color[0] = pow( color[0], 1.0f / 2.2f );
+	color[0] = std::pow( color[0], 1.0f / 2.2f );
 	color[1] = pow( color[1], 1.0f / 2.2f );
 	color[2] = pow( color[2], 1.0f / 2.2f );
 	
@@ -163,8 +174,8 @@ static void DrawLightSprite( dworldlight_t *pLight, float angleAttenFactor )
 	pMesh->Draw();
 }
 
-#define POINT_THETA_GRID 8
-#define POINT_PHI_GRID 8
+constexpr auto POINT_THETA_GRID = 8;
+constexpr auto POINT_PHI_GRID = 8;
 
 static void DrawPointLight( const Vector &vecOrigin, float flLightRadius )
 {
@@ -174,9 +185,9 @@ static void DrawPointLight( const Vector &vecOrigin, float flLightRadius )
 //-----------------------------------------------------------------------------
 // Draws the spot light
 //-----------------------------------------------------------------------------
-#define SPOT_GRID_LINE_COUNT 20
-#define SPOT_GRID_LINE_DISTANCE 50
-#define SPOT_RADIAL_GRID 8
+constexpr auto SPOT_GRID_LINE_COUNT = 20;
+constexpr auto SPOT_GRID_LINE_DISTANCE = 50;
+constexpr auto SPOT_RADIAL_GRID = 8;
 
 void DrawSpotLight( dworldlight_t *pLight )
 {
@@ -212,8 +223,8 @@ void DrawSpotLight( dworldlight_t *pLight )
 	CMeshBuilder meshBuilder;
 	meshBuilder.Begin( pMesh, MATERIAL_LINES, nVertCount, nIndexCount );
 
-	float flAngle = acos(pLight->stopdot2);
-	float flTanAngle = tan(flAngle);
+	float flAngle = std::acos(pLight->stopdot2);
+	float flTanAngle = std::tan(flAngle);
 	float dTheta = 360.0f / SPOT_RADIAL_GRID;
 	float flDist = 0.0f;
 
@@ -228,8 +239,8 @@ void DrawSpotLight( dworldlight_t *pLight )
 		float flAngle = 0;
 		for ( int j = 0; j < SPOT_RADIAL_GRID; ++j )
 		{
-			float flSin = sin(DEG2RAD(flAngle));
-			float flCos = cos(DEG2RAD(flAngle));
+			float flSin = std::sin(DEG2RAD(flAngle));
+			float flCos = std::cos(DEG2RAD(flAngle));
 			VectorMA( vecCenter, flRadius * flCos, xaxis, pt );
 			VectorMA( pt, flRadius * flSin, yaxis, pt );
 
@@ -321,7 +332,7 @@ void DrawLightSprites( void )
 		case emit_skyambient:
 			continue;
 		default:
-			assert( 0 );
+			contract_assert( 0 );
 			continue;
 		}
 		DrawLightSprite( pLight, angleAttenFactor );
@@ -347,9 +358,9 @@ void DrawLightDebuggingInfo( void )
 			dworldlight_t *pLight = &host_state.worldbrush->worldlights[i];
 
 			lineOffset = 0;
-			Q_snprintf( buf, sizeof( buf ), "light:  %d\n", i+1 );
+			V_snprintf( buf, sizeof( buf ), "light:  %d\n", i+1 );
 			CDebugOverlay::AddTextOverlay( pLight->origin, lineOffset++, 0, buf );	
-			Q_snprintf( buf, sizeof( buf ), "origin: <%d, %d, %d>\n", (int)pLight->origin[0], (int)pLight->origin[1], (int)pLight->origin[2] );
+			V_snprintf( buf, sizeof( buf ), "origin: <%d, %d, %d>\n", (int)pLight->origin[0], (int)pLight->origin[1], (int)pLight->origin[2] );
 			CDebugOverlay::AddTextOverlay( pLight->origin, lineOffset++, 0, buf );	
 
 			if (!nLight)
@@ -394,7 +405,7 @@ void DrawLightDebuggingInfo( void )
 		case emit_skyambient:
 			continue;
 		default:
-			assert( 0 );
+			contract_assert( 0 );
 			continue;
 		}
 		DrawLightSprite( pLight, angleAttenFactor );

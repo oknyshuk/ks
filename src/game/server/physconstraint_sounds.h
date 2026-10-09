@@ -1,17 +1,13 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
+
 // Purpose: Data types used inside constraints for the purpose of playing sounds
 //			during movement.
-//
-//=============================================================================//
 
-#ifndef PHYSCONSTRAINT_SOUNDS_H
-#define PHYSCONSTRAINT_SOUNDS_H
-
-
-#include <mathlib/ssemath.h>
+import std;
+import ks.math;
 #include "soundenvelope.h"
-
 
 /** \brief Class to store a sampled history of velocity for an object -- used for certain sound calculations
 
@@ -202,7 +198,7 @@ Vector VelocitySampler::GetRelativeVelocity( IPhysicsObject *pObj, IPhysicsObjec
 
 Vector VelocitySampler::GetRelativeAngularVelocity( IPhysicsObject *pObj, IPhysicsObject *pReferenceFrame )
 {
-	Assert(pObj);
+	contract_assert( pObj );
 
 	if ( pReferenceFrame )
 	{
@@ -289,6 +285,3 @@ ConstraintSoundProfile::SoundInfoTuple(24,0,0,0,0),
 
 };
 */
-
-
-#endif

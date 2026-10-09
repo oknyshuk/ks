@@ -1,51 +1,57 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Logging system definitions.
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "pch_tier0.h"
-#include "logging.h"
+// Purpose: Logging system definitions.
 
-#include <string.h>
-#include "dbg.h"
-#include "threadtools.h"
-#include "tier0_strtools.h" // this is from tier1, but only included for inline definition of V_isspace
+import ks.core;
 
-#define DBG_SPEW_ALL_WARNINGS_AND_ERRORS_ASSERT false
+// First include standard libraries
+import std;
 
 
 //////////////////////////////////////////////////////////////////////////
 // Define commonly used channels here
 //////////////////////////////////////////////////////////////////////////
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_GENERAL, "General" );
+LoggingChannelID_t LOG_GENERAL = LoggingSystem_RegisterLoggingChannel( "General", nullptr );;
 
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_ASSERT, "Assert" );
+LoggingChannelID_t LOG_ASSERT = LoggingSystem_RegisterLoggingChannel( "Assert", nullptr );;
 
 // Corresponds to ConMsg/ConWarning/etc. with a level <= 1.
 // Only errors are spewed by default.
-BEGIN_DEFINE_LOGGING_CHANNEL( LOG_CONSOLE, "Console", LCF_CONSOLE_ONLY, LS_ERROR );
-ADD_LOGGING_CHANNEL_TAG( "Console" );
-END_DEFINE_LOGGING_CHANNEL();
+static void Register_LOG_CONSOLE_Tags();
+LoggingChannelID_t LOG_CONSOLE = LoggingSystem_RegisterLoggingChannel( "Console", Register_LOG_CONSOLE_Tags, LCF_CONSOLE_ONLY, LS_ERROR );
+void Register_LOG_CONSOLE_Tags()
+{
+LoggingSystem_AddTagToCurrentChannel( "Console" );
+};
 
 // Corresponds to DevMsg/DevWarning/etc. with a level <= 1.
 // Only errors are spewed by default.
-BEGIN_DEFINE_LOGGING_CHANNEL( LOG_DEVELOPER, "Developer", LCF_CONSOLE_ONLY, LS_ERROR );
-ADD_LOGGING_CHANNEL_TAG( "Developer" );
-END_DEFINE_LOGGING_CHANNEL();
+static void Register_LOG_DEVELOPER_Tags();
+LoggingChannelID_t LOG_DEVELOPER = LoggingSystem_RegisterLoggingChannel( "Developer", Register_LOG_DEVELOPER_Tags, LCF_CONSOLE_ONLY, LS_ERROR );
+void Register_LOG_DEVELOPER_Tags()
+{
+LoggingSystem_AddTagToCurrentChannel( "Developer" );
+};
 
 // Corresponds to ConMsg/ConWarning/etc. with a level >= 2.
 // Only errors are spewed by default.
-BEGIN_DEFINE_LOGGING_CHANNEL( LOG_DEVELOPER_CONSOLE, "DeveloperConsole", LCF_CONSOLE_ONLY, LS_ERROR );
-ADD_LOGGING_CHANNEL_TAG( "DeveloperVerbose" );
-ADD_LOGGING_CHANNEL_TAG( "Console" );
-END_DEFINE_LOGGING_CHANNEL();
+static void Register_LOG_DEVELOPER_CONSOLE_Tags();
+LoggingChannelID_t LOG_DEVELOPER_CONSOLE = LoggingSystem_RegisterLoggingChannel( "DeveloperConsole", Register_LOG_DEVELOPER_CONSOLE_Tags, LCF_CONSOLE_ONLY, LS_ERROR );
+void Register_LOG_DEVELOPER_CONSOLE_Tags()
+{
+LoggingSystem_AddTagToCurrentChannel( "DeveloperVerbose" );
+LoggingSystem_AddTagToCurrentChannel( "Console" );
+};
 
 // Corresponds to DevMsg/DevWarning/etc, with a level >= 2.
 // Only errors are spewed by default.
-BEGIN_DEFINE_LOGGING_CHANNEL( LOG_DEVELOPER_VERBOSE, "DeveloperVerbose", LCF_CONSOLE_ONLY, LS_ERROR, Color( 192, 128, 192, 255 ) );
-ADD_LOGGING_CHANNEL_TAG( "DeveloperVerbose" );
-END_DEFINE_LOGGING_CHANNEL();
+static void Register_LOG_DEVELOPER_VERBOSE_Tags();
+LoggingChannelID_t LOG_DEVELOPER_VERBOSE = LoggingSystem_RegisterLoggingChannel( "DeveloperVerbose", Register_LOG_DEVELOPER_VERBOSE_Tags, LCF_CONSOLE_ONLY, LS_ERROR, Color( 192, 128, 192, 255 ) );
+void Register_LOG_DEVELOPER_VERBOSE_Tags()
+{
+LoggingSystem_AddTagToCurrentChannel( "DeveloperVerbose" );
+};
 
 //////////////////////////////////////////////////////////////////////////
 // Globals
@@ -64,7 +70,7 @@ END_DEFINE_LOGGING_CHANNEL();
 // for the fact that there's no reason to have more than one in existence.
 bool g_bEnforceLoggingSystemSingleton = false;
 
-CTHREADLOCALINT g_nThreadLocalStateIndex CONSTRUCT_EARLY;
+thread_local int g_nThreadLocalStateIndex;
 
 //////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -92,7 +98,7 @@ m_nChannelTagCount( 0 ),
 m_nTagNamePoolIndex( 0 ),
 m_nGlobalStateIndex( 0 )
 { 
-	Assert( !g_bEnforceLoggingSystemSingleton );
+	contract_assert( !g_bEnforceLoggingSystemSingleton );
 	g_bEnforceLoggingSystemSingleton = true;
 	// Due to uncertain constructor ordering (g_nThreadLocalStateIndex
 	// may not be constructed yet so TLS index may not be available yet)
@@ -128,7 +134,7 @@ LoggingChannelID_t CLoggingSystem::RegisterLoggingChannel( const char *pChannelN
 	{
 		// Out of logging channels... catastrophic fail!
 		Log_Error( LOG_GENERAL, "Out of logging channels.\n" );
-		Assert( 0 );
+		contract_assert( 0 );
 		return INVALID_LOGGING_CHANNEL_ID;
 	}
 	else
@@ -154,9 +160,9 @@ LoggingChannelID_t CLoggingSystem::RegisterLoggingChannel( const char *pChannelN
 				}
 				else
 				{
-					AssertMsg( flags == 0 || flags == m_RegisteredChannels[i].m_Flags, "Non-zero or mismatched flags specified in logging channel re-registration!" );
-					AssertMsg( severity == LS_MESSAGE || severity == m_RegisteredChannels[i].m_MinimumSeverity, "Non-default or mismatched severity specified in logging channel re-registration!" );
-					AssertMsg( spewColor == UNSPECIFIED_LOGGING_COLOR || spewColor == m_RegisteredChannels[i].m_SpewColor, "Non-default or mismatched color specified in logging channel re-registration!" );
+					contract_assert( ( flags == 0 || flags == m_RegisteredChannels[i].m_Flags ) && "Non-zero or mismatched flags specified in logging channel re-registration!" );
+					contract_assert( ( severity == LS_MESSAGE || severity == m_RegisteredChannels[i].m_MinimumSeverity ) && "Non-default or mismatched severity specified in logging channel re-registration!" );
+					contract_assert( ( spewColor == UNSPECIFIED_LOGGING_COLOR || spewColor == m_RegisteredChannels[i].m_SpewColor ) && "Non-default or mismatched color specified in logging channel re-registration!" );
 				}
 
 				return m_RegisteredChannels[i].m_ID;
@@ -167,7 +173,7 @@ LoggingChannelID_t CLoggingSystem::RegisterLoggingChannel( const char *pChannelN
 		m_RegisteredChannels[m_nChannelCount].m_Flags = ( LoggingChannelFlags_t )flags;
 		m_RegisteredChannels[m_nChannelCount].m_MinimumSeverity = severity;
 		m_RegisteredChannels[m_nChannelCount].m_SpewColor = spewColor;
-		strncpy( m_RegisteredChannels[m_nChannelCount].m_Name, pChannelName, MAX_LOGGING_IDENTIFIER_LENGTH );
+		std::strncpy( m_RegisteredChannels[m_nChannelCount].m_Name, pChannelName, MAX_LOGGING_IDENTIFIER_LENGTH );
 		
 		if ( registerTagsFunc != nullptr ) 
 		{
@@ -251,7 +257,7 @@ void CLoggingSystem::PushLoggingState( bool bThreadLocal, bool bClearState )
 	
 	int nNewState = FindUnusedStateIndex();
 	// Ensure we're not out of state blocks.
-	Assert( nNewState != -1 );
+	contract_assert( nNewState != -1 );
 
 	int nCurrentState = bThreadLocal ? (int)g_nThreadLocalStateIndex : m_nGlobalStateIndex;
 
@@ -289,7 +295,7 @@ void CLoggingSystem::PopLoggingState( bool bThreadLocal )
 	int nCurrentState = bThreadLocal ? (int)g_nThreadLocalStateIndex : m_nGlobalStateIndex;
 	
 	// Shouldn't be less than 0 (implies error during Push()) or 0 (implies that Push() was never called)
-	Assert( nCurrentState > 0 );
+	contract_assert( nCurrentState > 0 );
 
 	// Mark the current state as unused.
 	m_LoggingStates[nCurrentState].m_nListenerCount = -1;
@@ -313,10 +319,10 @@ void CLoggingSystem::RegisterLoggingListener( ILoggingListener *pListener )
 
 	m_pStateMutex->lock();
 	LoggingState_t *pState = GetCurrentState();
-	if ( pState->m_nListenerCount >= ARRAYSIZE(pState->m_RegisteredListeners) )
+	if ( pState->m_nListenerCount >= std::size( pState->m_RegisteredListeners ) )
 	{
 		// Out of logging listener slots... catastrophic fail!
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 	else
 	{
@@ -378,7 +384,7 @@ void CLoggingSystem::SetLoggingResponsePolicy( ILoggingResponsePolicy *pLoggingR
 
 LoggingResponse_t CLoggingSystem::LogDirect( LoggingChannelID_t channelID, LoggingSeverity_t severity, Color color, const tchar *pMessage )
 {
-	Assert( IsValidChannelID( channelID ) );
+	contract_assert( IsValidChannelID( channelID ) );
 	if ( !IsValidChannelID( channelID ) )
 		return LR_CONTINUE;
 
@@ -403,7 +409,7 @@ LoggingResponse_t CLoggingSystem::LogDirect( LoggingChannelID_t channelID, Loggi
 
 	LoggingResponse_t response = pState->m_pLoggingResponse->OnLog( &context );
 
-	if ( DBG_SPEW_ALL_WARNINGS_AND_ERRORS_ASSERT && severity != LS_MESSAGE )
+	if ( false && severity != LS_MESSAGE )
 	{
 		response = LR_DEBUGGER;
 	}
@@ -422,7 +428,7 @@ LoggingResponse_t CLoggingSystem::LogDirect( LoggingChannelID_t channelID, Loggi
 
 	case LR_ABORT:
 		Log_Msg( LOG_DEVELOPER_VERBOSE, "Exiting due to logging LR_ABORT request.\n" );
-		Plat_ExitProcess( EXIT_FAILURE );
+		Plat_ExitProcess( 1 );
 		break;
 	}
 
@@ -431,13 +437,13 @@ LoggingResponse_t CLoggingSystem::LogDirect( LoggingChannelID_t channelID, Loggi
 
 CLoggingSystem::LoggingChannel_t *CLoggingSystem::GetChannel( LoggingChannelID_t channelID )
 {
-	Assert( IsValidChannelID( channelID ) );
+	contract_assert( IsValidChannelID( channelID ) );
 	return &m_RegisteredChannels[channelID];
 }
 
 const CLoggingSystem::LoggingChannel_t *CLoggingSystem::GetChannel( LoggingChannelID_t channelID ) const
 {
-	Assert( IsValidChannelID( channelID ) );
+	contract_assert( IsValidChannelID( channelID ) );
 	return &m_RegisteredChannels[channelID];
 }
 
@@ -447,12 +453,12 @@ CLoggingSystem::LoggingState_t *CLoggingSystem::GetCurrentState()
 	int nState = g_nThreadLocalStateIndex;
 	if ( nState != 0 )
 	{
-		Assert( nState > 0 && nState < MAX_LOGGING_STATE_COUNT );
+		contract_assert( nState > 0 && nState < MAX_LOGGING_STATE_COUNT );
 		return &m_LoggingStates[nState];
 	}
 	else
 	{
-		Assert( m_nGlobalStateIndex >= 0 && m_nGlobalStateIndex < MAX_LOGGING_STATE_COUNT );
+		contract_assert( m_nGlobalStateIndex >= 0 && m_nGlobalStateIndex < MAX_LOGGING_STATE_COUNT );
 		return &m_LoggingStates[m_nGlobalStateIndex];
 	}
 }
@@ -463,12 +469,12 @@ const CLoggingSystem::LoggingState_t *CLoggingSystem::GetCurrentState() const
 	int nState = g_nThreadLocalStateIndex;
 	if ( nState != 0 )
 	{
-		Assert( nState > 0 && nState < MAX_LOGGING_STATE_COUNT );
+		contract_assert( nState > 0 && nState < MAX_LOGGING_STATE_COUNT );
 		return &m_LoggingStates[nState];
 	}
 	else
 	{
-		Assert( m_nGlobalStateIndex >= 0 && m_nGlobalStateIndex < MAX_LOGGING_STATE_COUNT );
+		contract_assert( m_nGlobalStateIndex >= 0 && m_nGlobalStateIndex < MAX_LOGGING_STATE_COUNT );
 		return &m_LoggingStates[m_nGlobalStateIndex];
 	}
 }
@@ -487,16 +493,16 @@ int CLoggingSystem::FindUnusedStateIndex()
 
 CLoggingSystem::LoggingTag_t *CLoggingSystem::AllocTag( const char *pTagName )
 {
-	Assert( m_nChannelTagCount < MAX_LOGGING_TAG_COUNT );
+	contract_assert( m_nChannelTagCount < MAX_LOGGING_TAG_COUNT );
 	LoggingTag_t *pTag = &m_ChannelTags[m_nChannelTagCount ++];
 	
 	pTag->m_pNextTag = nullptr;
 	pTag->m_pTagName = m_TagNamePool + m_nTagNamePoolIndex;
 	
 	// Copy string into pool.
-	size_t nTagLength = strlen( pTagName );
-	Assert( m_nTagNamePoolIndex + nTagLength + 1 <= MAX_LOGGING_TAG_CHARACTER_COUNT );
-	strcpy( m_TagNamePool + m_nTagNamePoolIndex, pTagName );
+	std::size_t nTagLength = std::strlen( pTagName );
+	contract_assert( m_nTagNamePoolIndex + nTagLength + 1 <= MAX_LOGGING_TAG_CHARACTER_COUNT );
+	std::strcpy( m_TagNamePool + m_nTagNamePoolIndex, pTagName );
 	m_nTagNamePoolIndex += ( int )nTagLength + 1;
 
 	return pTag;
@@ -627,10 +633,10 @@ LoggingResponse_t LoggingSystem_Log( LoggingChannelID_t channelID, LoggingSeveri
 
 	tchar formattedMessage[MAX_LOGGING_MESSAGE_LENGTH];
 
-	va_list args;
-	va_start( args, pMessageFormat );
-	Tier0Internal_vsntprintf( formattedMessage, MAX_LOGGING_MESSAGE_LENGTH, pMessageFormat, args );
-	va_end( args );
+	std::va_list args;
+	__builtin_va_start( args, pMessageFormat );
+	std::vsnprintf( formattedMessage, MAX_LOGGING_MESSAGE_LENGTH, pMessageFormat, args );
+	__builtin_va_end( args );
 
 	return GetGlobalLoggingSystem()->LogDirect( channelID, severity, UNSPECIFIED_LOGGING_COLOR, formattedMessage );
 }
@@ -642,10 +648,10 @@ LoggingResponse_t LoggingSystem_Log( LoggingChannelID_t channelID, LoggingSeveri
 
 	tchar formattedMessage[MAX_LOGGING_MESSAGE_LENGTH];
 
-	va_list args;
-	va_start( args, pMessageFormat );
-	Tier0Internal_vsntprintf( formattedMessage, MAX_LOGGING_MESSAGE_LENGTH, pMessageFormat, args );
-	va_end( args );
+	std::va_list args;
+	__builtin_va_start( args, pMessageFormat );
+	std::vsnprintf( formattedMessage, MAX_LOGGING_MESSAGE_LENGTH, pMessageFormat, args );
+	__builtin_va_end( args );
 
 	return GetGlobalLoggingSystem()->LogDirect( channelID, severity, spewColor, formattedMessage );
 }
@@ -664,10 +670,10 @@ LoggingResponse_t LoggingSystem_LogAssert( const char *pMessageFormat, ... )
 
 	tchar formattedMessage[MAX_LOGGING_MESSAGE_LENGTH];
 
-	va_list args;
-	va_start( args, pMessageFormat );
-	Tier0Internal_vsntprintf( formattedMessage, MAX_LOGGING_MESSAGE_LENGTH, pMessageFormat, args );
-	va_end( args );
+	std::va_list args;
+	__builtin_va_start( args, pMessageFormat );
+	std::vsnprintf( formattedMessage, MAX_LOGGING_MESSAGE_LENGTH, pMessageFormat, args );
+	__builtin_va_end( args );
 
 	return GetGlobalLoggingSystem()->LogDirect( LOG_ASSERT, LS_ASSERT, UNSPECIFIED_LOGGING_COLOR, formattedMessage );
 }

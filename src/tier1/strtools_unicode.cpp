@@ -1,14 +1,8 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "tier0/dbg.h"
-#include "tier1/strtools.h"
-
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Purpose: determine if a uchar32 represents a valid Unicode code point
@@ -25,7 +19,7 @@ bool Q_IsValidUChar32( uchar32 uVal )
 //-----------------------------------------------------------------------------
 int Q_UChar32ToUTF8Len( uchar32 uVal )
 {
-	DbgAssert( Q_IsValidUChar32( uVal ) );
+	contract_assert( Q_IsValidUChar32( uVal ) );
 	if ( uVal <= 0x7F )
 		return 1;
 	if ( uVal <= 0x7FF )
@@ -41,7 +35,7 @@ int Q_UChar32ToUTF8Len( uchar32 uVal )
 //-----------------------------------------------------------------------------
 int Q_UChar32ToUTF16Len( uchar32 uVal )
 {
-	DbgAssert( Q_IsValidUChar32( uVal ) );
+	contract_assert( Q_IsValidUChar32( uVal ) );
 	if ( uVal <= 0xFFFF )
 		return 1;
 	return 2;
@@ -53,7 +47,7 @@ int Q_UChar32ToUTF16Len( uchar32 uVal )
 //-----------------------------------------------------------------------------
 int Q_UChar32ToUTF8( uchar32 uVal, char *pUTF8Out )
 {
-	DbgAssert( Q_IsValidUChar32( uVal ) );
+	contract_assert( Q_IsValidUChar32( uVal ) );
 	if ( uVal <= 0x7F )
 	{
 		pUTF8Out[0] = (unsigned char) uVal;
@@ -84,7 +78,7 @@ int Q_UChar32ToUTF8( uchar32 uVal, char *pUTF8Out )
 //-----------------------------------------------------------------------------
 int Q_UChar32ToUTF16( uchar32 uVal, uchar16 *pUTF16Out )
 {
-	DbgAssert( Q_IsValidUChar32( uVal ) );
+	contract_assert( Q_IsValidUChar32( uVal ) );
 	if ( uVal <= 0xFFFF )
 	{
 		pUTF16Out[0] = (uchar16) uVal;
@@ -242,9 +236,6 @@ namespace // internal use only
 				nOut += EncodeDstLen( uVal );
 				if ( bErr )
 				{
-#ifdef _DEBUG
-					AssertMsg( !(ePolicy & _STRINGCONVERTFLAG_ASSERT), "invalid Unicode byte sequence" );
-#endif
 					if ( ePolicy & _STRINGCONVERTFLAG_SKIP )
 					{
 						nOut -= EncodeDstLen( uVal );
@@ -275,9 +266,6 @@ namespace // internal use only
 				nOut += EncodeDst( uVal, pOut + nOut );
 				if ( bErr )
 				{
-#ifdef _DEBUG
-					AssertMsg( !(ePolicy & _STRINGCONVERTFLAG_ASSERT), "invalid Unicode byte sequence" );
-#endif
 					if ( ePolicy & _STRINGCONVERTFLAG_SKIP )
 					{
 						nOut -= EncodeDstLen( uVal );
@@ -540,7 +528,7 @@ int Q_UTF32CharsToUTF16( const uchar32 *pUTF32, int nElements, uchar16 *pUTF16, 
 //-----------------------------------------------------------------------------
 int Q_UnicodeRepair( char *pUTF8, EStringConvertErrorPolicy ePolicy )
 {
-	return Q_UnicodeConvertT< char, char, true, Q_UTF8ToUChar32, Q_UChar32ToUTF8Len, Q_UChar32ToUTF8 >( pUTF8, 0, pUTF8, INT_MAX, ePolicy );
+	return Q_UnicodeConvertT< char, char, true, Q_UTF8ToUChar32, Q_UChar32ToUTF8Len, Q_UChar32ToUTF8 >( pUTF8, 0, pUTF8, std::numeric_limits<int>::max(), ePolicy );
 }
 
 //-----------------------------------------------------------------------------
@@ -548,7 +536,7 @@ int Q_UnicodeRepair( char *pUTF8, EStringConvertErrorPolicy ePolicy )
 //-----------------------------------------------------------------------------
 int Q_UnicodeRepair( uchar16 *pUTF16, EStringConvertErrorPolicy ePolicy )
 {
-	return Q_UnicodeConvertT< uchar16, uchar16, true, Q_UTF16ToUChar32, Q_UChar32ToUTF16Len, Q_UChar32ToUTF16 >( pUTF16, 0, pUTF16, INT_MAX/sizeof(uchar16), ePolicy );
+	return Q_UnicodeConvertT< uchar16, uchar16, true, Q_UTF16ToUChar32, Q_UChar32ToUTF16Len, Q_UChar32ToUTF16 >( pUTF16, 0, pUTF16, std::numeric_limits<int>::max()/sizeof(uchar16), ePolicy );
 }
 	
 //-----------------------------------------------------------------------------
@@ -556,6 +544,5 @@ int Q_UnicodeRepair( uchar16 *pUTF16, EStringConvertErrorPolicy ePolicy )
 //-----------------------------------------------------------------------------
 int Q_UnicodeRepair( uchar32 *pUTF32, EStringConvertErrorPolicy ePolicy )
 {
-	return Q_UnicodeConvertT< uchar32, uchar32, true, Q_UTF32ToUChar32, Q_UChar32ToUTF32Len, Q_UChar32ToUTF32 >( pUTF32, 0, pUTF32, INT_MAX/sizeof(uchar32), ePolicy );
+	return Q_UnicodeConvertT< uchar32, uchar32, true, Q_UTF32ToUChar32, Q_UChar32ToUTF32Len, Q_UChar32ToUTF32 >( pUTF32, 0, pUTF32, std::numeric_limits<int>::max()/sizeof(uchar32), ePolicy );
 }
-

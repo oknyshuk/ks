@@ -1,15 +1,19 @@
 /*
 	see copyright notice in squirrel.h
 */
-#include "sqpcheader.h"
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
 #include <ctype.h>
 #include <stdlib.h>
+
+#include <squirrel.h>
+#include "sqobject.h"
+#include "sqstate.h"
 #include "sqtable.h"
 #include "sqstring.h"
 #include "sqcompiler.h"
 #include "sqlexer.h"
-#if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#endif
 
 #define CUR_CHAR (_currdata)
 #define RETURN_TOKEN(t) { _prevtoken = _curtoken; _curtoken = t; return t;}
@@ -363,7 +367,7 @@ void LexHexadecimal(const SQChar *s,SQUnsignedInteger *res)
 	{
 		if(scisdigit(*s)) *res = (*res)*16+((*s++)-'0');
 		else if(scisxdigit(*s)) *res = (*res)*16+(toupper(*s++)-'A'+10);
-		else { Assert(0); }
+		else { contract_assert( 0 ); }
 	}
 }
 

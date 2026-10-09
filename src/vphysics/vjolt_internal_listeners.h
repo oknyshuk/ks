@@ -6,7 +6,7 @@
 
 class JoltPhysicsObject;
 
-abstract_class IJoltPhysicsController
+class IJoltPhysicsController
 {
 public:
 	virtual ~IJoltPhysicsController() {}
@@ -20,7 +20,7 @@ public:
 // Implemented by anything holding on to a JoltPhysicsObject that needs to hear about the
 // changes it cannot see by polling: the object going away, and the object being moved in a
 // way the simulation could not have predicted.
-abstract_class IJoltObjectListener
+class IJoltObjectListener
 {
 public:
 	virtual ~IJoltObjectListener() {}

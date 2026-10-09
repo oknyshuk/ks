@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef CLIENT_RENDER_HANDLE_H
-#define CLIENT_RENDER_HANDLE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // Foward declarations
@@ -23,6 +17,3 @@ enum
 {
 	INVALID_CLIENT_RENDER_HANDLE = (ClientRenderHandle_t)0xffff,
 };
-
-
-#endif // CLIENT_RENDER_HANDLE_H

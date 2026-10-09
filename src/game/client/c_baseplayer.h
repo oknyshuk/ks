@@ -1,21 +1,19 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Client-side CBasePlayer.
-//
 //			- Manages the player's flashlight effect.
-//
-//==================================================================//
 
-#ifndef C_BASEPLAYER_H
-#define C_BASEPLAYER_H
-
+import ks.tier1;
+#include "baseplayer_shared.h"
 #include "c_playerlocaldata.h"
 #include "c_basecombatcharacter.h"
 #include "PlayerState.h"
 #include "usercmd.h"
 #include "shareddefs.h"
 #include "timedevent.h"
-#include "tier1/intrusive_ptr.h"
+import std;
 #include "fx_water.h"
 #include "hintsystem.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
@@ -23,7 +21,6 @@
 #include "c_postprocesscontroller.h"
 #include "c_colorcorrection.h"
 #include "usermessages.h"
-
 
 class C_BaseCombatWeapon;
 class C_BaseViewModel;
@@ -117,14 +114,13 @@ public:
 	DECLARE_CLASS( C_BasePlayer, C_BaseCombatCharacter );
 	DECLARE_CLIENTCLASS();
 	DECLARE_PREDICTABLE();
-	DECLARE_INTERPOLATION();
 
 	C_BasePlayer();
 	virtual			~C_BasePlayer();
 
 	virtual void	Spawn( void );
 	virtual void	SharedSpawn(); // Shared between client and server.
-	virtual bool	GetSteamID( CSteamID *pID );
+	virtual bool	GetPlayerID( CPlayerId *pID );
 	virtual void	UpdateOnRemove( void );
 	Class_T		Classify( void ) { return CLASS_PLAYER; }
 
@@ -137,7 +133,7 @@ public:
 	virtual void	OnTimeJump();
 	static void OnTimeJumpAllPlayers();
 	
-	virtual void	ClientThink( ) OVERRIDE;
+	virtual void	ClientThink( ) override;
 
 	virtual void	ReceiveMessage( int classID, bf_read &msg );
 
@@ -210,9 +206,6 @@ public:
 	bool IsCameraMan() const;
 	bool IsActiveCameraMan() const { return m_bActiveCameraMan; }
 	bool IsHLTV() const;
-#if defined( REPLAY_ENABLED )
-	bool IsReplay() const;
-#endif
 	void ResetObserverMode();
 	bool IsBot( void ) const; 
 
@@ -324,12 +317,10 @@ public:
 
 	virtual int					GetLastKillerIndex() { return 0; }
 
-#if !defined( NO_ENTITY_PREDICTION )
 	void						AddToPlayerSimulationList( C_BaseEntity *other );
 	void						SimulatePlayerSimulatedEntities( void );
 	void						RemoveFromPlayerSimulationList( C_BaseEntity *ent );
 	void						ClearPlayerSimulationList( void );
-#endif
 
 	virtual void				PhysicsSimulate( void );
 	virtual void				VPhysicsShadowUpdate( IPhysicsObject *pPhysics );
@@ -792,9 +783,7 @@ private:
 	// Player flashlight dynamic light pointers
 	bool			m_bFlashlightEnabled[ MAX_SPLITSCREEN_PLAYERS ];
 
-#if !defined( NO_ENTITY_PREDICTION )
 	std::vector< CHandle< C_BaseEntity > > m_SimulatedByThisPlayer;
-#endif
 	
 	float					m_flOldPlayerZ;
 	float					m_flOldPlayerViewOffsetZ;
@@ -918,12 +907,6 @@ private:
 
 	// fog params
 	fogplayerparams_t		m_PlayerFog;
-#if defined( DEBUG_MOTION_CONTROLLERS )
-public:
-	Vector					m_Debug_vPhysPosition;
-	Vector					m_Debug_vPhysVelocity;
-	Vector					m_Debug_LinearAccel;
-#endif
 
 	float m_flTimeLastTouchedGround;
 
@@ -958,7 +941,7 @@ inline C_BasePlayer *ToBasePlayer( C_BaseEntity *pEntity )
 		return nullptr;
 
 #if _DEBUG
-	Assert( dynamic_cast<C_BasePlayer *>( pEntity ) != nullptr );
+	contract_assert( dynamic_cast<C_BasePlayer *>( pEntity ) != nullptr );
 #endif
 
 	return static_cast<C_BasePlayer *>( pEntity );
@@ -970,7 +953,7 @@ inline const C_BasePlayer *ToBasePlayer( const C_BaseEntity *pEntity )
 		return nullptr;
 
 #if _DEBUG
-	Assert( dynamic_cast<const C_BasePlayer *>( pEntity ) != nullptr );
+	contract_assert( dynamic_cast<const C_BasePlayer *>( pEntity ) != nullptr );
 #endif
 
 	return static_cast<const C_BasePlayer *>( pEntity );
@@ -1003,7 +986,7 @@ inline C_CommandContext* C_BasePlayer::GetCommandContext()
 
 inline int CBasePlayer::CurrentCommandNumber() const
 {
-	Assert( m_pCurrentCommand );
+	contract_assert( m_pCurrentCommand );
 	if ( !m_pCurrentCommand )
 		return 0;
 	return m_pCurrentCommand->command_number;
@@ -1011,7 +994,7 @@ inline int CBasePlayer::CurrentCommandNumber() const
 
 inline const CUserCmd *CBasePlayer::GetCurrentUserCommand() const
 {
-	Assert( m_pCurrentCommand );
+	contract_assert( m_pCurrentCommand );
 	return m_pCurrentCommand;
 }
 
@@ -1041,6 +1024,3 @@ inline CUserCmd const *C_BasePlayer::GetLastUserCommand( void )
 {
 	return &m_LastCmd;
 }
-
-
-#endif // C_BASEPLAYER_H

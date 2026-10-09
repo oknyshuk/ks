@@ -1,13 +1,40 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: implements various common send proxies
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: implements various common send proxies
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "sendproxy.h"
-#include "basetypes.h"
 #include "baseentity.h"
 #include "team.h"
 #include "player.h"
@@ -52,7 +79,7 @@ SendProp SendPropBool(
 	int offset,
 	int sizeofVar )
 {
-	Assert( sizeofVar == sizeof( bool ) );
+	contract_assert( sizeofVar == sizeof( bool ) );
 	return SendPropInt( pVarName, offset, sizeofVar, 1, SPROP_UNSIGNED );
 }
 
@@ -100,12 +127,12 @@ void* SendProxy_OnlyToTeam( const SendProp *pProp, const void *pStruct, const vo
 }
 REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_OnlyToTeam );
 
-#define TIME_BITS 24
+constexpr auto TIME_BITS = 24;
 
 // This table encodes edict data.
 static void SendProxy_Time( const SendProp *pProp, const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID )
 {
-	float clock_base = floor( gpGlobals->curtime );
+	float clock_base = std::floor( gpGlobals->curtime );
 	float t = *( float * )pVarData;
 	float dt = t - clock_base;
 	int addt = Floor2Int( 1000.0f * dt + 0.5f );
@@ -135,48 +162,6 @@ SendProp SendPropTime(
 	return SendPropFloat( pVarName, offset, sizeofVar, -1, SPROP_NOSCALE );
 }
 
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-#define PREDICTABLE_ID_BITS 31
-
-//-----------------------------------------------------------------------------
-// Purpose: Converts a predictable Id to an integer
-// Input  : *pStruct - 
-//			*pVarData - 
-//			*pOut - 
-//			iElement - 
-//			objectID - 
-//-----------------------------------------------------------------------------
-static void SendProxy_PredictableIdToInt( const SendProp *pProp, const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID )
-{
-	CPredictableId* pId = ( CPredictableId * )pVarData;
-	if ( pId )
-	{
-		pOut->m_Int = pId->GetRaw();
-	}
-	else
-	{
-		pOut->m_Int = 0;
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *pVarName - 
-//			sizeofVar - 
-//			flags - 
-//			pId - 
-// Output : SendProp
-//-----------------------------------------------------------------------------
-SendProp SendPropPredictableId(
-	char *pVarName,
-	int offset,
-	int sizeofVar )
-{
-	return SendPropInt( pVarName, offset, sizeofVar, PREDICTABLE_ID_BITS, SPROP_UNSIGNED, SendProxy_PredictableIdToInt );
-}
-
-#endif
-
 void SendProxy_StringT_To_String( const SendProp *pProp, const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID )
 {
 	string_t &str = *((string_t*)pVarData);
@@ -187,7 +172,7 @@ void SendProxy_StringT_To_String( const SendProp *pProp, const void *pStruct, co
 SendProp SendPropStringT( const char *pVarName, int offset, int sizeofVar )
 {
 	// Make sure it's the right type.
-	Assert( sizeofVar == sizeof( string_t ) );
+	contract_assert( sizeofVar == sizeof( string_t ) );
 
 	return SendPropString( pVarName, offset, DT_MAX_STRING_BUFFERSIZE, 0, SendProxy_StringT_To_String );
 }
@@ -220,7 +205,7 @@ void CSendProxyRecipients::SetOnly( int iClient )
 			}
 			else
 			{
-				AssertOnce( !"CSendProxyRecipients::SetOnly:  NULL pPlayer->GetSplitScreenPlayerOwner()" );
+				contract_assert( !"CSendProxyRecipients::SetOnly:  NULL pPlayer->GetSplitScreenPlayerOwner()" );
 			}
 		}
 		else

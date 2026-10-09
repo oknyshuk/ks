@@ -1,13 +1,45 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Implements a screen shake effect that can also shake physics objects.
-//
-// NOTE: UTIL_ScreenShake() will only shake players who are on the ground
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Implements a screen shake effect that can also shake physics objects.
+// NOTE: UTIL_ScreenShake() will only shake players who are on the ground
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "physics.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "shake.h"
@@ -90,13 +122,13 @@ IMPLEMENT_REFLECT_DATAMAP( CEnvShake )
 
 
 
-#define SF_SHAKE_EVERYONE	0x0001		// Don't check radius
-#define SF_SHAKE_INAIR		0x0004		// Shake players in air
-#define SF_SHAKE_PHYSICS	0x0008		// Shake physically (not just camera)
-#define SF_SHAKE_ROPES		0x0010		// Shake ropes too.
-#define SF_SHAKE_NO_VIEW	0x0020		// DON'T shake the view (only ropes and/or physics objects)
-#define SF_SHAKE_NO_RUMBLE	0x0040		// DON'T Rumble the XBox Controller
-#define SF_TILT_EASE_INOUT	0x0080		// Ease in and out of the tilt
+constexpr auto SF_SHAKE_EVERYONE = 0x0001; // Don't check radius
+constexpr auto SF_SHAKE_INAIR = 0x0004; // Shake players in air
+constexpr auto SF_SHAKE_PHYSICS = 0x0008; // Shake physically (not just camera)
+constexpr auto SF_SHAKE_ROPES = 0x0010; // Shake ropes too.
+constexpr auto SF_SHAKE_NO_VIEW = 0x0020; // DON'T shake the view (only ropes and/or physics objects)
+constexpr auto SF_SHAKE_NO_RUMBLE = 0x0040; // DON'T Rumble the XBox Controller
+constexpr auto SF_TILT_EASE_INOUT = 0x0080; // Ease in and out of the tilt
 
 
 //-----------------------------------------------------------------------------
@@ -331,7 +363,7 @@ void CEnvShake::Think( void )
 	fraction *= fraction;
 
 	// Sine wave that slowly settles to zero
-	fraction = fraction * sin( gpGlobals->curtime * freq );
+	fraction = fraction * std::sin( gpGlobals->curtime * freq );
 
 	// Add to view origin
 	for ( i = 0; i < 3; i++ )
@@ -372,22 +404,22 @@ int CEnvShake::DrawDebugTextOverlays( void )
 		char tempstr[512];
 
 		// print amplitude
-		Q_snprintf(tempstr,sizeof(tempstr),"    magnitude: %f", m_Amplitude);
+		V_snprintf(tempstr,sizeof(tempstr),"    magnitude: %f", m_Amplitude);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		// print frequency
-		Q_snprintf(tempstr,sizeof(tempstr),"    frequency: %f", m_Frequency);
+		V_snprintf(tempstr,sizeof(tempstr),"    frequency: %f", m_Frequency);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		// print duration
-		Q_snprintf(tempstr,sizeof(tempstr),"    duration: %f", m_Duration);
+		V_snprintf(tempstr,sizeof(tempstr),"    duration: %f", m_Duration);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		// print radius
-		Q_snprintf(tempstr,sizeof(tempstr),"    radius: %f", m_Radius);
+		V_snprintf(tempstr,sizeof(tempstr),"    radius: %f", m_Radius);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
@@ -535,12 +567,12 @@ int CEnvTilt::DrawDebugTextOverlays( void )
 		char tempstr[512];
 
 		// print duration
-		Q_snprintf(tempstr,sizeof(tempstr),"    duration: %f", m_Duration);
+		V_snprintf(tempstr,sizeof(tempstr),"    duration: %f", m_Duration);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		// print radius
-		Q_snprintf(tempstr,sizeof(tempstr),"    radius: %f", m_Radius);
+		V_snprintf(tempstr,sizeof(tempstr),"    radius: %f", m_Radius);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 

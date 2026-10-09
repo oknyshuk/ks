@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_SCRIPTCONDITIONS_H
-#define AI_SCRIPTCONDITIONS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "baseentity.h"
 #include "entityoutput.h"
 #include "simtimer.h"
 #include "ai_npcstate.h"
 #include "reflect_annotations.h"
-
 
 //-----------------------------------------------------------------------------
 
@@ -244,5 +237,3 @@ private:
 };
 
 //=============================================================================
-
-#endif // AI_SCRIPTCONDITIONS_H

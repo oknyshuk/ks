@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -20,7 +21,7 @@ private:
 public:
 	void SetHASALPHAMASK( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nHASALPHAMASK = i;
 #ifdef _DEBUG
 		m_bHASALPHAMASK = true;
@@ -28,7 +29,7 @@ public:
 	}
 	void SetHASALPHAMASK( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHASALPHAMASK = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHASALPHAMASK = true;
@@ -42,7 +43,7 @@ private:
 public:
 	void SetHASSTATICTEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nHASSTATICTEXTURE = i;
 #ifdef _DEBUG
 		m_bHASSTATICTEXTURE = true;
@@ -50,7 +51,7 @@ public:
 	}
 	void SetHASSTATICTEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHASSTATICTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHASSTATICTEXTURE = true;
@@ -75,7 +76,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bHASALPHAMASK && m_bHASSTATICTEXTURE;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 4 * m_nHASALPHAMASK ) + ( 8 * m_nHASSTATICTEXTURE ) + 0;
 	}
@@ -91,7 +92,7 @@ private:
 public:
 	void SetADDSTATIC( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nADDSTATIC = i;
 #ifdef _DEBUG
 		m_bADDSTATIC = true;
@@ -99,7 +100,7 @@ public:
 	}
 	void SetADDSTATIC( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nADDSTATIC = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bADDSTATIC = true;
@@ -113,7 +114,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -121,7 +122,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -146,7 +147,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bADDSTATIC && m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nADDSTATIC ) + ( 2 * m_nPIXELFOGTYPE ) + 0;
 	}

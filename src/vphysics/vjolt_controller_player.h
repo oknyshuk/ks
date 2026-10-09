@@ -6,6 +6,7 @@
 
 #include "vjolt_object.h"
 #include "vjolt_environment.h"
+#include "vphysics/player_controller.h"
 
 class JoltPhysicsPlayerController : public IPhysicsPlayerController, public IJoltObjectListener, public IJoltPhysicsController
 {
@@ -35,7 +36,7 @@ public:
 
 	bool WasFrozen() override;
 
-	uint32 GetContactState( uint16 nGameFlags ) override_portal2;
+	uint32 GetContactState( uint16 nGameFlags ) ;
 
 	// IJoltObjectListener
 	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject ) override;
@@ -55,7 +56,7 @@ private:
 
 	JPH::Vec3 m_targetPosition = JPH::Vec3::sZero();			// Where we want to be
 	JPH::Vec3 m_targetVelocity = JPH::Vec3::sZero();			// How we want to be
-	float m_secondsToArrival = FLT_EPSILON;						// When we want to be
+	float m_secondsToArrival = std::numeric_limits<float>::epsilon();						// When we want to be
 
 	float m_maxSpeed = 0.0f;
 	float m_maxDampSpeed = 0.0f;

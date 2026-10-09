@@ -1,13 +1,12 @@
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Controls the pose parameters of a model
 
 #include "reflect_annotations.h"
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Controls the pose parameters of a model
-//
-//===========================================================================//
 
-
-#define MAX_POSE_CONTROLLED_PROPS 4		// Number of entities by the same name that can be controlled
+inline constexpr auto MAX_POSE_CONTROLLED_PROPS = 4; // Number of entities by the same name that can be controlled
 
 
 // Type of frequency modulations

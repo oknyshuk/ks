@@ -1,10 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_mesh.h
 // The Navigation Mesh interface
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
@@ -16,21 +13,16 @@
 // auto-generate documentation.  Visit www.doxygen.org to download the system for free.
 //
 
-#ifndef _NAV_MESH_H_
-#define _NAV_MESH_H_
+import std;
 
-#include <unordered_set>
-
-#include "tier1/generichash.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
+import ks.tier1;
 #include "filesystem.h"
 #include "GameEventListener.h"
 
 #include "nav.h"
 #include "nav_area.h"
 #include "nav_colors.h"
-
+#include "basecombatcharacter.h"
 
 class CNavArea;
 class CBaseEntity; 
@@ -154,7 +146,7 @@ public:
 };
 
 //--------------------------------------------------------------------------------------------------------
-abstract_class INavAvoidanceObstacle
+class INavAvoidanceObstacle
 {
 public:
 	virtual bool IsPotentiallyAbleToObstructNavAreas( void ) const = 0;	// could we at some future time obstruct nav?
@@ -194,9 +186,9 @@ struct NavVisPair_t
 // for nav mesh visibilty computation
 struct CVisPairHashFuncs
 {
-	size_t operator()( const NavVisPair_t &item ) const
+	std::size_t operator()( const NavVisPair_t &item ) const
 	{
-		COMPILE_TIME_ASSERT( sizeof(CNavArea *) == sizeof( intp ) );
+		static_assert( sizeof(CNavArea *) == sizeof( intp ) );
 		intp key[2] = { (intp)item.pAreas[0] + item.pAreas[1]->GetID(), (intp)item.pAreas[1] + item.pAreas[0]->GetID() };
 		if ( sizeof( key ) >= 16 )
 		{
@@ -551,7 +543,7 @@ public:
 	template < typename Functor >
 	bool ForAllAreasOverlappingExtent( Functor &func, const Extent &extent )
 	{
-		VPROF_BUDGET( "CNavMesh::ForAllAreasOverlappingExtent", "NextBot" );
+		CVProfScope _( "CNavMesh::ForAllAreasOverlappingExtent", 0, "NextBot", false, BUDGETFLAG_OTHER );
 
 		if ( m_grid.empty() )
 		{
@@ -581,7 +573,7 @@ public:
 				int iGrid = x + y*m_gridSizeX;
 				if ( iGrid >= std::ssize( m_grid ) )
 				{
-					ExecuteNTimes( 10, Warning( "** Walked off of the CNavMesh::m_grid in ForAllAreasOverlappingExtent()\n" ) );
+					ExecuteNTimes( 10, [&]{ Warning( "** Walked off of the CNavMesh::m_grid in ForAllAreasOverlappingExtent()\n" ); } );
 					return true;
 				}
 
@@ -626,7 +618,7 @@ public:
 		// get list in cell that contains position
 		int originX = WorldToGridX( pos.x );
 		int originY = WorldToGridY( pos.y );
-		int shiftLimit = ceil( radius / m_gridCellSize );
+		int shiftLimit = std::ceil( radius / m_gridCellSize );
 		float radiusSq = radius * radius;
 		if ( radius == 0.0f )
 		{
@@ -1053,5 +1045,3 @@ inline unsigned int CNavMesh::GetGenerationTraceMask( void ) const
 extern void ApproachAreaAnalysisPrep( void );
 extern void CleanupApproachAreaAnalysisPrep( void );
 extern bool IsHeightDifferenceValid( float test, float other1, float other2, float other3 );
-
-#endif // _NAV_MESH_H_

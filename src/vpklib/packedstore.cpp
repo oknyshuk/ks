@@ -1,31 +1,16 @@
-//===== Copyright (c), Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+import ks.tier1;
 #include "vpklib/packedstore.h"
 #include "packedstore_internal.h"
-#include "tier1/generichash.h"
-#include "tier1/checksum_crc.h"
-#include "tier1/checksum_md5.h"
-#include "tier1/map_ops.h"
 #include "tier2/fileutils.h"
-#include "tier1/byte_writer.h"
-#include <algorithm>
-#include <functional>
-
-#ifdef VPK_ENABLE_SIGNING
-	#include "crypto.h"
-#endif
+import std;
 
 
-#include "keyvalues.h"
-
-#include "tier0/memalloc.h"
 
 typedef uint16 PackFileIndex_t;
-#define PACKFILEINDEX_END 0xffff
+constexpr auto PACKFILEINDEX_END = 0xffff;
 
 
 #pragma pack(1)
@@ -43,18 +28,18 @@ struct CFileHeaderFixedData
 	uint16 m_nMetaDataSize;
 	CFilePartDescr m_PartDescriptors[1];					// variable length
 
-	FORCEINLINE const void *MetaData( void ) const;
+	[[gnu::always_inline]] inline const void *MetaData( void ) const;
 	
-	FORCEINLINE const CFilePartDescr *FileData( int nPart = 0 ) const;
+	[[gnu::always_inline]] inline const CFilePartDescr *FileData( int nPart = 0 ) const;
 
 	uint32 TotalDataSize( void ) const
 	{
 		return m_nMetaDataSize + m_PartDescriptors[0].m_nFileDataSize;
 	}
 
-	size_t HeaderSizeIncludingMetaData( void ) const
+	std::size_t HeaderSizeIncludingMetaData( void ) const
 	{
-		size_t nRet = sizeof( *this ) - sizeof( m_PartDescriptors ) + m_nMetaDataSize;
+		std::size_t nRet = sizeof( *this ) - sizeof( m_PartDescriptors ) + m_nMetaDataSize;
 		// see how many parts we have and count the size of their descriptors
 		CFilePartDescr const *pPart = m_PartDescriptors;
 		while( pPart->m_nFileNumber != PACKFILEINDEX_END )
@@ -72,7 +57,7 @@ struct CFileHeaderFixedData
 
 static int s_FileHeaderSize( char const *pName, int nNumDataParts, int nNumMetaDataBytes )
 {
-	return 1 + strlen( pName ) + 							// name plus nul
+	return 1 + std::strlen( pName ) + 							// name plus nul
 		sizeof( uint32 ) +									// file crc
 		sizeof( uint16 ) + 									// meta data size
 		nNumMetaDataBytes +									// metadata
@@ -103,7 +88,7 @@ static int SkipFile( char const * &pData )					// returns highest file index
 static inline int SkipAllFilesInDir( char const * & pData )
 {
 	int nHighestChunkIndex = -1;
-	pData += 1 + strlen( pData );					// skip dir name
+	pData += 1 + std::strlen( pData );					// skip dir name
 	// now, march through all the files
 	while( *pData )									// until we're out of files to look at
 	{
@@ -133,7 +118,7 @@ CFileHeaderFixedData *CPackedStore::FindFileEntry( char const *pDirname, char co
 			// we found the right directory. now, sequential search. data is heavily packed, so
 			// this is a little awkward. See fileformat.txt
 			char const *pData = itDir->data();
-			pData += 1 + strlen( pData );					// skip dir name
+			pData += 1 + std::strlen( pData );					// skip dir name
 			// now, march through all the files
 			while( *pData )									// until we're out of files to look at
 			{
@@ -194,7 +179,7 @@ void CPackedStore::BuildHashTables( void )
 		// for each extension
 		auto &dirs = m_DirsByExtension[pData];
 		// now, iterate over all directories associated with this extension
-		pData += 1 + strlen( pData );
+		pData += 1 + std::strlen( pData );
 		while( *pData )
 		{
 			dirs.insert( pData );
@@ -235,7 +220,7 @@ CPackedStore::CPackedStore( char const *pFileBasename, char *pszFName, IBaseFile
 		V_strcpy( m_pszFileBaseName, pFileBasename );
 		StripTrailingString( m_pszFileBaseName, ".vpk" );
 		StripTrailingString( m_pszFileBaseName, "_dir" );
-		sprintf( pszFName, "%s_dir.vpk", m_pszFileBaseName );
+		std::sprintf( pszFName, "%s_dir.vpk", m_pszFileBaseName );
 		CInputFile dirFile( pszFName );
 
 		// Try to load the VPK as a standalone (probably an addon) even if the standard _dir name is not present
@@ -246,7 +231,7 @@ CPackedStore::CPackedStore( char const *pFileBasename, char *pszFName, IBaseFile
 		else
 		{
 			m_bUseDirFile = false;
-			sprintf( pszFName, "%s.vpk", m_pszFileBaseName );
+			std::sprintf( pszFName, "%s.vpk", m_pszFileBaseName );
 			dirFile.Open( pszFName );
 		}
 
@@ -326,7 +311,7 @@ CPackedStore::CPackedStore( char const *pFileBasename, char *pszFName, IBaseFile
 			ks::ensure_size( m_vecChunkHashFraction, ctHashes );
 			dirFile.MustRead( m_vecChunkHashFraction.data(), cbVecHashes );
 			// strictly increasing: sorted, no duplicates
-			Assert( std::ranges::adjacent_find( m_vecChunkHashFraction, std::not_fn( ChunkHashFractionLess_t() ) ) == m_vecChunkHashFraction.end() );
+			contract_assert( std::ranges::adjacent_find( m_vecChunkHashFraction, std::not_fn( ChunkHashFractionLess_t() ) ) == m_vecChunkHashFraction.end() );
 
 			// now read the self hashes
 			V_memset( m_DirectoryMD5.bits, 0, sizeof(m_DirectoryMD5.bits) );
@@ -370,10 +355,10 @@ CPackedStore::CPackedStore( char const *pFileBasename, char *pszFName, IBaseFile
 				dirFile.MustRead( m_Signature.data(), cubSignature );
 			}
 		}
-		Q_MakeAbsolutePath( m_pszFullPathName, sizeof( m_pszFullPathName ), m_pszFileBaseName );
+		V_MakeAbsolutePath( m_pszFullPathName, sizeof( m_pszFullPathName ), m_pszFileBaseName );
 		V_strcat_safe( m_pszFullPathName, ".vpk" );
-		//Q_strlower( m_pszFullPathName ); // NO!  this screws up linux.
-		Q_FixSlashes( m_pszFullPathName );
+		//V_strlower( m_pszFullPathName ); // NO!  this screws up linux.
+		V_FixSlashes( m_pszFullPathName );
 	}
 	BuildHashTables();
 }
@@ -401,7 +386,7 @@ void CPackedStore::GetDataFileName( char *pchFileNameOut, int cchFileNameOut, in
 
 CPackedStore::~CPackedStore( void )
 {
-	for (int i = 0; i < ARRAYSIZE( m_FileHandles ); i++ )
+	for (int i = 0; i < std::size( m_FileHandles ); i++ )
 	{
 		if ( m_FileHandles[i].m_nFileNumber != -1 )
 		{
@@ -433,9 +418,9 @@ void SplitFileComponents( char const *pFileName, char *pDirOut, char *pBaseOut, 
 	*( pOutDirPtr ) = 0;									// null terminate
 
 	if ( !pDirOut[0] )
-		strcpy( pDirOut, " " );								// blank dir name
+		std::strcpy( pDirOut, " " );								// blank dir name
 	V_strcpy( pBaseOut, V_UnqualifiedFileName( pFileName ) );
-	char *pDot = strrchr( pBaseOut, '.' );
+	char *pDot = std::strrchr( pBaseOut, '.' );
 	if ( pDot )
 	{
 		*pDot = 0;
@@ -484,7 +469,7 @@ void SplitFileComponents( char const *pFileName, char *pDirOut, char *pBaseOut, 
 	}
 
 	
-	char *pLastDirChar = pDirOut + strlen( pDirOut ) - 1;
+	char *pLastDirChar = pDirOut + std::strlen( pDirOut ) - 1;
 	if ( ( pLastDirChar[0] == '/' ) || ( pLastDirChar[0] == '\\' ) )
 		*pLastDirChar = 0;									// kill trailing slash
 	V_strlower( pBaseOut );
@@ -566,17 +551,9 @@ void CPackedStore::Write( void )
 
 	// Do we plan on signing this thing and writing a signature?
 	m_Signature.clear(); m_Signature.shrink_to_fit();
-	#ifdef VPK_ENABLE_SIGNING
-		uint32 nExpectedSignatureSize = 0;
-	#endif
 	if ( !m_SignaturePrivateKey.empty() && std::ssize( m_SignaturePublicKey ) > 0 )
 	{
-		#ifdef VPK_ENABLE_SIGNING
-			nExpectedSignatureSize = k_cubRSASignature;
-			headerOut.m_nSignatureSize = sizeof(uint32) + m_SignaturePublicKey.Count() + sizeof(uint32) + nExpectedSignatureSize;
-		#else
 			Error( "VPK signing not implemented" );
-		#endif
 	}
 
 	bufDirFile.write_bytes( &headerOut, sizeof( headerOut ) );
@@ -619,57 +596,6 @@ void CPackedStore::Write( void )
 
 	// Should we sign all this stuff?
 	m_nSizeOfSignedData = 0;
-	#ifdef VPK_ENABLE_SIGNING
-		if ( headerOut.m_nSignatureSize > 0 )
-		{
-
-			m_nSizeOfSignedData = bufDirFile.size();
-			uint32 nExpectedSignedSize = sizeof(headerOut) + headerOut.ComputeSizeofSignedDataAfterHeader();
-			if ( m_nSizeOfSignedData != nExpectedSignedSize )
-			{
-				Error( "Size mismatch determining size of signed data block (%d vs %d)", m_nSizeOfSignedData, nExpectedSignedSize );
-			}
-
-			// Allocate more than enough space to hold the signature
-			m_Signature.SetCount( nExpectedSignatureSize + 1024 );
-
-			// Calcuate the signature
-			uint32 cubSignature = m_Signature.Count();
-			if ( !CCrypto::RSASignSHA256( (const uint8 *)bufDirFile.data(), bufDirFile.size(), 
-				(uint8 *)m_Signature.Base(), &cubSignature, 
-				(const uint8 *)m_SignaturePrivateKey.Base(), m_SignaturePrivateKey.Count() ) )
-			{
-				Error( "VPK signing failed.  Private key may be corrupt or invalid" );
-			}
-
-			// Confirm that the size was what we expected
-			if ( cubSignature != nExpectedSignatureSize )
-			{
-				Error( "VPK signing produced %d byte signature.  Expected size was %d bytes", cubSignature, nExpectedSignatureSize );
-			}
-
-			// Shrink signature to fit
-			m_Signature.SetCountNonDestructively( cubSignature );
-
-			// Now re-check the signature, using the public key that we are about
-			// to burn into the file, to make sure there's no mismatch.
-			if ( !CCrypto::RSAVerifySignatureSHA256( (const uint8 *)bufDirFile.data(), bufDirFile.size(), 
-				(const uint8 *)m_Signature.Base(), cubSignature, 
-				(const uint8 *)m_SignaturePublicKey.Base(), m_SignaturePublicKey.Count() ) )
-			{
-				Error( "VPK signature verification failed immediately after signing.  The public key might be invalid, or might not match the private key used to generate the signature." );
-			}
-
-			// Write public key which should be used
-			uint32 cubPublicKey = m_SignaturePublicKey.Count();
-			bufDirFile.write_bytes( &cubPublicKey, sizeof(cubPublicKey) );
-			bufDirFile.write_bytes( m_SignaturePublicKey.Base(), cubPublicKey );
-
-			// Write signature
-			bufDirFile.write_bytes( &cubSignature, sizeof(cubSignature) );
-			bufDirFile.write_bytes( m_Signature.Base(), cubSignature );
-		}
-	#endif
 
 	char szOutFileName[MAX_PATH];
 
@@ -695,62 +621,6 @@ void CPackedStore::Write( void )
 	dirFile.Write( bufDirFile.data(), bufDirFile.size() );
 	dirFile.Close();
 }
-
-#ifdef VPK_ENABLE_SIGNING
-
-void CPackedStore::SetKeysForSigning( int nPrivateKeySize, const void *pPrivateKeyData, int nPublicKeySize, const void *pPublicKeyData )
-{
-	m_SignaturePrivateKey.SetSize( nPrivateKeySize );
-	V_memcpy( m_SignaturePrivateKey.Base(), pPrivateKeyData, nPrivateKeySize );
-
-	m_SignaturePublicKey.SetSize( nPublicKeySize );
-	V_memcpy( m_SignaturePublicKey.Base(), pPublicKeyData, nPublicKeySize );
-
-	// Discard any existing signature
-	m_Signature.Purge();
-}
-
-CPackedStore::ESignatureCheckResult CPackedStore::CheckSignature( int nSignatureSize, const void *pSignature ) const
-{
-	if ( m_Signature.Count() == 0 )
-		return eSignatureCheckResult_NotSigned;
-
-	Assert( m_nSizeOfSignedData > 0 );
-
-	// Confirm correct public key, if they specified one.
-	if ( nSignatureSize > 0 && pSignature != nullptr )
-	{
-		if ( m_SignaturePublicKey.Count() != nSignatureSize || V_memcmp( pSignature, m_SignaturePublicKey.Base(), nSignatureSize ) != 0 )
-		{
-			return eSignatureCheckResult_WrongKey;
-		}
-	}
-
-	char szFilename[ MAX_PATH ];
-	GetDataFileName( szFilename, sizeof( szFilename ), VPKFILENUMBER_EMBEDDED_IN_DIR_FILE );
-
-	// Read the data
-	auto bufSignedData = g_pFullFileSystem->ReadFile( szFilename, nullptr, m_nSizeOfSignedData );
-	if ( !bufSignedData )
-		return eSignatureCheckResult_Failed;
-	if ( bufSignedData->size() < (size_t)m_nSizeOfSignedData )
-	{
-		Assert( false ); // ?
-		return eSignatureCheckResult_Failed;
-	}
-
-	// Check the signature
-	if ( !CCrypto::RSAVerifySignatureSHA256( (const uint8 *)bufSignedData->data(), m_nSizeOfSignedData, 
-		(const uint8 *)m_Signature.Base(), m_Signature.Count(), 
-		(const uint8 *)m_SignaturePublicKey.Base(), m_SignaturePublicKey.Count() ) )
-	{
-		return eSignatureCheckResult_InvalidSignature;
-	}
-
-	return eSignatureCheckResult_ValidSignature;
-}
-
-#endif
 
 CPackedStoreReadCache::CPackedStoreReadCache( IBaseFileSystem *pFS )
 {
@@ -827,15 +697,15 @@ bool CPackedStoreReadCache::CheckMd5Result( CachedVPKRead_t &cachedVPKRead, MD5V
 
 	if ( cachedVPKRead.m_cFailedHashes > 0 )
 	{
-		if ( Q_memcmp( &md5Value, &cachedVPKRead.m_md5Value, sizeof( MD5Value_t ) ) != 0 )
+		if ( V_memcmp( &md5Value, &cachedVPKRead.m_md5Value, sizeof( MD5Value_t ) ) != 0 )
 			m_cFileResultsDifferent++;
 	}
 	if ( cachedVPKRead.m_cFailedHashes == 0 )
-		Q_memcpy( &cachedVPKRead.m_md5Value, &md5Value, sizeof( MD5Value_t ) );
+		V_memcpy( &cachedVPKRead.m_md5Value, &md5Value, sizeof( MD5Value_t ) );
 	else
-		Q_memcpy( &cachedVPKRead.m_md5ValueRetry, &md5Value, sizeof( MD5Value_t ) );
+		V_memcpy( &cachedVPKRead.m_md5ValueRetry, &md5Value, sizeof( MD5Value_t ) );
 
-	if ( Q_memcmp( &md5Value, &chunkHashFraction.m_md5contents, sizeof( MD5Value_t ) ) != 0	)
+	if ( V_memcmp( &md5Value, &chunkHashFraction.m_md5contents, sizeof( MD5Value_t ) ) != 0	)
 	{
 		// we got an error reading this chunk, record the error
 		m_cFileErrors++;
@@ -971,7 +841,7 @@ bool CPackedStoreReadCache::BCanSatisfyFromReadCacheInternal( uint8 *pOutData, C
 	if ( cachedVPKRead.m_pubBuffer != nullptr && cachedVPKRead.m_cubBuffer + cachedVPKRead.m_nFileFraction >= nDesiredPos+nNumBytes )
 	{
 		int nOffset = nDesiredPos - cachedVPKRead.m_nFileFraction;
-		memcpy( pOutData, (uint8 *)&cachedVPKRead.m_pubBuffer[nOffset], nNumBytes );
+		std::memcpy( pOutData, (uint8 *)&cachedVPKRead.m_pubBuffer[nOffset], nNumBytes );
 		nRead = nNumBytes;
 		bSuccess = true;
 	}
@@ -1045,14 +915,14 @@ void CPackedStore::GetPackFileLoadErrorSummary( std::string &sErrors )
 		sErrors += sTemp ;
 		
 		char hex[sizeof(MD5Value_t)*2 + 1 ];
-		Q_binarytohex( failed.m_md5Value.bits, 
+		V_binarytohex( failed.m_md5Value.bits, 
 					sizeof(MD5Value_t),	hex, sizeof( hex ) );
 
 		ChunkHashFraction_t chunkHashFraction;
 		FindFileHashFraction( failed.m_nPackFileNumber, failed.m_nFileFraction, chunkHashFraction );
 
 		char hex2[sizeof(MD5Value_t)*2 + 1 ];
-		Q_binarytohex( static_cast< byte* >( chunkHashFraction.m_md5contents.bits ), 
+		V_binarytohex( static_cast< byte* >( chunkHashFraction.m_md5contents.bits ), 
 			sizeof(MD5Value_t),	hex2, sizeof( hex2 ) );
 		sTemp = ks::format_printf( "Last Md5 Value %s Should be %s \n", hex, hex2 );
 
@@ -1084,16 +954,16 @@ void CPackedStore::GetPackFileLoadErrorSummaryKV( KeyValues *pKV )
 		pKV1->SetInt( "FileFraction", failed.m_nFileFraction );
 
 		char hex[sizeof(MD5Value_t)*2 + 1 ];
-		Q_binarytohex( failed.m_md5Value.bits, sizeof(MD5Value_t), hex, sizeof( hex ) );
+		V_binarytohex( failed.m_md5Value.bits, sizeof(MD5Value_t), hex, sizeof( hex ) );
 
 		ChunkHashFraction_t chunkHashFraction;
 		FindFileHashFraction( failed.m_nPackFileNumber, failed.m_nFileFraction, chunkHashFraction );
 
 		char hex2[sizeof(MD5Value_t)*2 + 1 ];
-		Q_binarytohex( chunkHashFraction.m_md5contents.bits, sizeof(MD5Value_t), hex2, sizeof( hex2 ) );
+		V_binarytohex( chunkHashFraction.m_md5contents.bits, sizeof(MD5Value_t), hex2, sizeof( hex2 ) );
 
 		char hex3[sizeof(MD5Value_t)*2 + 1 ];
-		Q_binarytohex( failed.m_md5ValueRetry.bits, sizeof(MD5Value_t), hex3, sizeof( hex3 ) );
+		V_binarytohex( failed.m_md5ValueRetry.bits, sizeof(MD5Value_t), hex3, sizeof( hex3 ) );
 
 		pKV1->SetString( "ChunkMd5Master", hex2 );
 		pKV1->SetString( "ChunkMd5First", hex );
@@ -1114,7 +984,7 @@ int CPackedStore::ReadData( CPackedStoreFileHandle &handle, void *pOutData, int 
 		int nNumMetaDataBytes = std::min( nNumBytes, handle.m_nMetaDataSize - handle.m_nCurrentFileOffset );
 		if ( nNumMetaDataBytes > 0 )
 		{
-			memcpy( pOutData, reinterpret_cast<uint8 const *>( handle.m_pMetaData )
+			std::memcpy( pOutData, reinterpret_cast<uint8 const *>( handle.m_pMetaData )
 					+ handle.m_nCurrentFileOffset, nNumMetaDataBytes );
 			nRet += nNumMetaDataBytes;
 			pOutData = reinterpret_cast<uint8 *>( pOutData ) + nNumMetaDataBytes;
@@ -1145,7 +1015,7 @@ int CPackedStore::ReadData( CPackedStoreFileHandle &handle, void *pOutData, int 
 				handle.m_nCurrentFileOffset += nRead;
 				fHandle.m_nCurOfs = nRead + nDesiredPos;
 			}
-			Assert( nRead == nNumBytes );
+			contract_assert( nRead == nNumBytes );
 			nRet += nRead;
 			fHandle.m_Mutex.unlock();
 		}
@@ -1156,13 +1026,8 @@ int CPackedStore::ReadData( CPackedStoreFileHandle &handle, void *pOutData, int 
 
 bool CPackedStore::HashEntirePackFile( CPackedStoreFileHandle &handle, int64 &nFileSize, int nFileFraction, int nFractionSize, FileHash_t &fileHash )
 {
-#define	CRC_CHUNK_SIZE	(32*1024)
+constexpr auto CRC_CHUNK_SIZE = (32*1024);
 	unsigned char tempBuf[CRC_CHUNK_SIZE];
-
-#ifdef COMPUTE_HASH_TIMES
-	CFastTimer timer;
-	timer.Start();
-#endif
 
 	FileHandleTracker_t &fHandle = GetFileHandle( handle.m_nFileNumber );
 	fHandle.m_Mutex.lock();
@@ -1170,7 +1035,7 @@ bool CPackedStore::HashEntirePackFile( CPackedStoreFileHandle &handle, int64 &nF
 	unsigned int fileLength = m_pFileSystem->Size( fHandle.m_hFileHandle );
 	nFileSize = fileLength;
 	MD5Context_t ctx;
-	memset(&ctx, 0, sizeof(MD5Context_t));
+	std::memset(&ctx, 0, sizeof(MD5Context_t));
 	MD5Init(&ctx);
 
 	int nDesiredPos = nFileFraction;
@@ -1205,13 +1070,6 @@ bool CPackedStore::HashEntirePackFile( CPackedStoreFileHandle &handle, int64 &nF
 	m_pFileSystem->Seek( fHandle.m_hFileHandle, fHandle.m_nCurOfs, FILESYSTEM_SEEK_HEAD );
 	fHandle.m_Mutex.unlock();
 
-#ifdef COMPUTE_HASH_TIMES
-	timer.End();
-	int nMicroSec = timer.GetDuration().GetMicroseconds();
-	char rgch[256];
-	Q_snprintf( rgch, 256, "MD5 Pack File %d %d \n", handle.m_nFileNumber, nMicroSec );
-	Plat_DebugString( rgch );
-#endif
 	return true;
 }
 
@@ -1248,7 +1106,7 @@ void CPackedStore::HashChunkFile( int iChunkFileIndex )
 		fileHashFraction.m_cbChunkLen = filehash.m_cbFileLen;
 		fileHashFraction.m_nPackFileNumber = VPKHandle.m_nFileNumber;
 		fileHashFraction.m_nFileFraction = nFileFraction;
-		Q_memcpy( fileHashFraction.m_md5contents.bits, filehash.m_md5contents.bits, sizeof(fileHashFraction.m_md5contents) );
+		V_memcpy( fileHashFraction.m_md5contents.bits, filehash.m_md5contents.bits, sizeof(fileHashFraction.m_md5contents) );
 		m_vecChunkHashFraction.insert( std::ranges::upper_bound( m_vecChunkHashFraction, fileHashFraction, ChunkHashFractionLess_t() ), fileHashFraction );
 		// move to next section
 		nFileFraction += k_nFileFractionSize;
@@ -1275,7 +1133,7 @@ void CPackedStore::HashAllChunkFiles()
 void CPackedStore::ComputeDirectoryHash( MD5Value_t &md5Directory )
 {
 	MD5Context_t ctx;
-	memset(&ctx, 0, sizeof(MD5Context_t));
+	std::memset(&ctx, 0, sizeof(MD5Context_t));
 	MD5Init(&ctx);
 	MD5Update(&ctx, m_DirectoryData.data(), std::ssize( m_DirectoryData ) );
 	MD5Final( md5Directory.bits, &ctx);
@@ -1285,7 +1143,7 @@ void CPackedStore::ComputeDirectoryHash( MD5Value_t &md5Directory )
 void CPackedStore::ComputeChunkHash( MD5Value_t &md5ChunkHashes )
 {
 	MD5Context_t ctx;
-	memset(&ctx, 0, sizeof(MD5Context_t));
+	std::memset(&ctx, 0, sizeof(MD5Context_t));
 	MD5Init(&ctx);
 	MD5Update(&ctx, (uint8 *)m_vecChunkHashFraction.data(), std::ssize( m_vecChunkHashFraction )*sizeof(m_vecChunkHashFraction[0]) );
 	MD5Final( md5ChunkHashes.bits, &ctx);
@@ -1298,7 +1156,7 @@ bool CPackedStore::BTestDirectoryHash()
 		return true;
 	MD5Value_t md5Directory;
 	ComputeDirectoryHash( md5Directory );
-	return Q_memcmp( m_DirectoryMD5.bits, md5Directory.bits, sizeof( md5Directory.bits ) ) == 0;
+	return V_memcmp( m_DirectoryMD5.bits, md5Directory.bits, sizeof( md5Directory.bits ) ) == 0;
 }
 
 
@@ -1308,7 +1166,7 @@ bool CPackedStore::BTestMasterChunkHash()
 		return true;
 	MD5Value_t md5ChunkHashes;
 	ComputeChunkHash( md5ChunkHashes );
-	return Q_memcmp( m_ChunkHashesMD5.bits, md5ChunkHashes.bits, sizeof( md5ChunkHashes.bits ) ) == 0;
+	return V_memcmp( m_ChunkHashesMD5.bits, md5ChunkHashes.bits, sizeof( md5ChunkHashes.bits ) ) == 0;
 }
 
 
@@ -1334,7 +1192,7 @@ bool CPackedStore::FindFileHashFraction( int nPackFileNumber, int nFileFraction,
 	auto it = std::ranges::lower_bound( m_vecChunkHashFraction, fileHashFractionFind, ChunkHashFractionLess_t() );
 	if ( it == m_vecChunkHashFraction.end() || ChunkHashFractionLess_t()( fileHashFractionFind, *it ) )
 	{
-		Assert( false );
+		contract_assert( false );
 		return false;
 	}
 	fileHashFraction = *it;
@@ -1349,7 +1207,7 @@ void CPackedStore::GetPackFileName( CPackedStoreFileHandle &handle, char *pchFil
 FileHandleTracker_t & CPackedStore::GetFileHandle( int nFileNumber )
 {
 	std::scoped_lock lock( m_Mutex );
-	int nFileHandleIdx = nFileNumber % ARRAYSIZE( m_FileHandles );
+	int nFileHandleIdx = nFileNumber % std::size( m_FileHandles );
 
 	if ( m_FileHandles[nFileHandleIdx].m_nFileNumber == nFileNumber )
 	{
@@ -1400,6 +1258,7 @@ bool CPackedStore::InternalRemoveFileFromDirectory( const char *pszName )
 
 void CPackedStore::AddFileToDirectory( const VPKContentFileInfo_t &info )
 {
+	ks::ScratchArena<> scratch;
 	// this method is fairly complicated because it has to do inserts into the packed directory
 	// data Our strategy is to build out the whole ext _ dir _ file record. if none of this is
 	// already present, we will just insert it in the head of the file. If the extension is
@@ -1418,25 +1277,25 @@ void CPackedStore::AddFileToDirectory( const VPKContentFileInfo_t &info )
 	SplitFileComponents( info.m_sName.c_str(), pszDir, pszBase, pszExt );
 	int nNumDataParts = 1;
 	int nFileDataSize = s_FileHeaderSize( pszBase, nNumDataParts, info.m_iPreloadSize );
-	int nTotalHeaderSize = ( int )( nFileDataSize + ( 2 + strlen( pszExt ) ) + ( 2 + strlen( pszDir ) ) );
-	char *pBuf = ( char * ) stackalloc( nTotalHeaderSize );
+	int nTotalHeaderSize = ( int )( nFileDataSize + ( 2 + std::strlen( pszExt ) ) + ( 2 + std::strlen( pszDir ) ) );
+	char *pBuf = ( char * ) scratch.AllocBytes( nTotalHeaderSize );
 	char *pOut = pBuf;
-	strcpy( pOut, pszExt );
-	pOut += strlen( pszExt );
+	std::strcpy( pOut, pszExt );
+	pOut += std::strlen( pszExt );
 	*( pOut++ ) = 0;										// null on ext name
-	strcpy( pOut, pszDir );
-	pOut += strlen( pszDir );
+	std::strcpy( pOut, pszDir );
+	pOut += std::strlen( pszDir );
 	*( pOut++ ) = 0;									// null at end of dir name
-	strcpy( pOut, pszBase );
-	pOut += strlen( pszBase );
+	std::strcpy( pOut, pszBase );
+	pOut += std::strlen( pszBase );
 	*( pOut++ ) = 0;
 	uint32 nCRC = info.m_crc;
-	memcpy( pOut, &nCRC, sizeof( nCRC ) );
+	std::memcpy( pOut, &nCRC, sizeof( nCRC ) );
 	pOut += sizeof( int );
 	if ( info.m_iPreloadSize > 0xffff )
 		Error( "Preload size for '%s' is too big", info.m_sName.c_str() );
 	uint16 nMetaDataSize = (uint16)info.m_iPreloadSize;
-	memcpy( pOut, &nMetaDataSize, sizeof( uint16 ) );
+	std::memcpy( pOut, &nMetaDataSize, sizeof( uint16 ) );
 	pOut += sizeof( uint16 );
 
 	// now, build file parts.
@@ -1445,21 +1304,21 @@ void CPackedStore::AddFileToDirectory( const VPKContentFileInfo_t &info )
 	newPart.m_nFileNumber = ( info.m_idxChunk < 0 ) ? VPKFILENUMBER_EMBEDDED_IN_DIR_FILE : info.m_idxChunk;
 	newPart.m_nFileDataOffset = info.m_iOffsetInChunk;
 
-	memcpy( pOut, &newPart, sizeof( newPart ) );
+	std::memcpy( pOut, &newPart, sizeof( newPart ) );
 	pOut += sizeof( newPart );
 
 	PackFileIndex_t endOfPartMarker = PACKFILEINDEX_END;
-	memcpy( pOut, &endOfPartMarker, sizeof( endOfPartMarker ) );
+	std::memcpy( pOut, &endOfPartMarker, sizeof( endOfPartMarker ) );
 	pOut += sizeof( PackFileIndex_t );
 	if ( nMetaDataSize )
 	{
-		Assert( info.m_pPreloadData );
-		memcpy( pOut, info.m_pPreloadData, nMetaDataSize );
+		contract_assert( info.m_pPreloadData );
+		std::memcpy( pOut, info.m_pPreloadData, nMetaDataSize );
 		pOut += nMetaDataSize;
 	}
 	*( pOut++ ) = 0;									// mark no more files in dir
 	*( pOut++ ) = 0;									// mark no more dirs in extension
-	Assert( pOut - pBuf == nTotalHeaderSize );
+	contract_assert( pOut - pBuf == nTotalHeaderSize );
 
 	// now, we need to insert our header, figuring out how many of the fields are already there
 	int nInsertOffset = 0;
@@ -1469,15 +1328,15 @@ void CPackedStore::AddFileToDirectory( const VPKContentFileInfo_t &info )
 	if ( itExt != m_DirsByExtension.end() )
 	{
 		// this is not a new extension. we should not insert the extension record
-		nTotalHeaderSize -= 2 + strlen( pszExt );		// null + end of dir list marker
-		pHeaderInsertPtr += 1 + strlen( pszExt );					// don't insert the name + null
+		nTotalHeaderSize -= 2 + std::strlen( pszExt );		// null + end of dir list marker
+		pHeaderInsertPtr += 1 + std::strlen( pszExt );					// don't insert the name + null
 		// now, look for the directory
 		auto itDir = itExt->second.find( pszDir );
 		if ( itDir != itExt->second.end() )
 		{
 			// dir and extension found. all we need to do is insert the file data itself
-			nTotalHeaderSize -= 2 + strlen( pszDir );	// null + end of file list marker
-			pHeaderInsertPtr += 1 + strlen( pszDir );
+			nTotalHeaderSize -= 2 + std::strlen( pszDir );	// null + end of file list marker
+			pHeaderInsertPtr += 1 + std::strlen( pszDir );
 			char const *pStartOfDirFileData = itDir->data() + 1 + itDir->size();
 			nInsertOffset = pStartOfDirFileData - ( char const * ) ( m_DirectoryData.data() );
 		}
@@ -1488,7 +1347,7 @@ void CPackedStore::AddFileToDirectory( const VPKContentFileInfo_t &info )
 		}
 	}
 	m_DirectoryData.insert( m_DirectoryData.begin() + nInsertOffset, nTotalHeaderSize, {} );
-	memcpy( &m_DirectoryData[nInsertOffset], pHeaderInsertPtr, nTotalHeaderSize );
+	std::memcpy( &m_DirectoryData[nInsertOffset], pHeaderInsertPtr, nTotalHeaderSize );
 	BuildHashTables();
 }
 
@@ -1621,9 +1480,9 @@ int CPackedStore::GetFileList( const char *pWildCard, std::vector< std::string >
 		V_ExtractFileExtension( pWildCard, szWildCardExt, sizeof( szWildCardExt ) );
 
 		// Remove '*' from the base and extension strings so that the string comparison calls will match
-		char *pcStar = strchr( szWildCardBase, '*' );
+		char *pcStar = std::strchr( szWildCardBase, '*' );
 		pcStar ? *pcStar = 0 : bNoBaseWildcard = true;
-		pcStar = strchr( szWildCardExt, '*' );
+		pcStar = std::strchr( szWildCardExt, '*' );
 		pcStar ? *pcStar = 0 : bNoExtWildcard = true;
 	}
 
@@ -1633,31 +1492,31 @@ int CPackedStore::GetFileList( const char *pWildCard, std::vector< std::string >
 		// for each extension
 		char pszCurExtension[MAX_PATH];
 		if ( pData[0] != ' ' )
-			sprintf( pszCurExtension, ".%s", pData );
+			std::sprintf( pszCurExtension, ".%s", pData );
 		else
 			pszCurExtension[0] = 0;
 		// now, iterate over all directories associated with this extension
-		pData += 1 + strlen( pData );
+		pData += 1 + std::strlen( pData );
 		while( *pData )
 		{
 			char pszCurDir[MAX_PATH];
 			if ( pData[0] != ' ' )
-				sprintf( pszCurDir, "%s/", pData );
+				std::sprintf( pszCurDir, "%s/", pData );
 			else
 				pszCurDir[0] = 0;
-			pData += 1 + strlen( pData );					// skip dir name
+			pData += 1 + std::strlen( pData );					// skip dir name
 			// now, march through all the files
 			while( *pData )									// until we're out of files to look at
 			{
 				char pszFNameOut[MAX_PATH*2];
 				if ( bFormattedOutput )
 				{
-					CFileHeaderFixedData const *pHeader = reinterpret_cast< CFileHeaderFixedData const *>( pData + 1 + strlen( pData ) );
-					sprintf( pszFNameOut, "%s%s%s crc=0x%x metadatasz=%d", pszCurDir, pData, pszCurExtension, pHeader->m_nFileCRC, pHeader->m_nMetaDataSize );
+					CFileHeaderFixedData const *pHeader = reinterpret_cast< CFileHeaderFixedData const *>( pData + 1 + std::strlen( pData ) );
+					std::sprintf( pszFNameOut, "%s%s%s crc=0x%x metadatasz=%d", pszCurDir, pData, pszCurExtension, pHeader->m_nFileCRC, pHeader->m_nMetaDataSize );
 					CFilePartDescr const *pPart = &( pHeader->m_PartDescriptors[0] );
 					while( pPart->m_nFileNumber != PACKFILEINDEX_END )
 					{
-						sprintf( pszFNameOut + strlen( pszFNameOut )," fnumber=%d ofs=0x%x sz=%d",
+						std::sprintf( pszFNameOut + std::strlen( pszFNameOut )," fnumber=%d ofs=0x%x sz=%d",
 								 pPart->m_nFileNumber, pPart->m_nFileDataOffset, pPart->m_nFileDataSize );
 						pPart++;
 					}
@@ -1684,15 +1543,15 @@ int CPackedStore::GetFileList( const char *pWildCard, std::vector< std::string >
 					V_ExtractFileExtension( pszFNameOut, szFNameOutExt, sizeof( szFNameOutExt ) );
 
 					matches =  !V_strnicmp( szFNameOutPath, szWildCardPath, sizeof( szWildCardPath ) );
-					matches = matches && ( !V_strlen( szWildCardExt ) || bNoExtWildcard ? 0 == V_strnicmp( szFNameOutExt, szWildCardExt, strlen( szWildCardExt ) ) : 0 != V_stristr(szFNameOutExt, szWildCardExt ) );
-					matches = matches && ( !V_strlen( szWildCardBase ) || bNoBaseWildcard ? 0 == V_strnicmp( szFNameOutBase, szWildCardBase, strlen( szWildCardBase ) ) : 0 != V_stristr(szFNameOutBase, szWildCardBase ) );
+					matches = matches && ( !V_strlen( szWildCardExt ) || bNoExtWildcard ? 0 == V_strnicmp( szFNameOutExt, szWildCardExt, std::strlen( szWildCardExt ) ) : 0 != V_stristr(szFNameOutExt, szWildCardExt ) );
+					matches = matches && ( !V_strlen( szWildCardBase ) || bNoBaseWildcard ? 0 == V_strnicmp( szFNameOutBase, szWildCardBase, std::strlen( szWildCardBase ) ) : 0 != V_stristr(szFNameOutBase, szWildCardBase ) );
 				}
 
 				// Add the file to the output list
 				if ( matches )
 				{
-					char *pFName = new char[1 + strlen( pszFNameOut ) ];
-					strcpy( pFName, pszFNameOut );
+					char *pFName = new char[1 + std::strlen( pszFNameOut ) ];
+					std::strcpy( pFName, pszFNameOut );
 					outFilenames.push_back( pFName );
 				}
 			}
@@ -1757,7 +1616,7 @@ void CPackedStore::BuildFindFirstCache()
 		char szFilePath[MAX_PATH];
 
 		V_ExtractFilePath( sVPKFile.c_str(), szFilePath, sizeof( szFilePath ) );
-		Q_StripTrailingSlash( szFilePath );
+		V_StripTrailingSlash( szFilePath );
 		
 		// New directory
 		if ( V_strnicmp( szFilePath, szLastDirFound, sizeof( szLastDirFound ) ) )
@@ -1782,13 +1641,6 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, std::vector< std::s
 	if ( m_directoryList.empty() )
 	{
 		BuildFindFirstCache();
-#ifdef NEVER
-		printf("CPackedStore::GetFileAndDirLists - list of directories in VPK files\n");
-		for ( int i = 0; i < std::ssize( m_directoryList ); i++ )
-		{
-			printf("\t%d : %s\n", i, m_directoryList[i] );
-		}
-#endif // NEVER
 	}
 
 	// printf("CPackedStore::GetFileAndDirLists - Searching for %s\n", pWildCard? pWildCard: "NULL");
@@ -1822,10 +1674,10 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, std::vector< std::s
 		// extension.
 
 		// Remove '*' from the base and extension strings so that the string comparison calls will match
-		char *pcStar = strchr( szWildCardBase, '*' );
+		char *pcStar = std::strchr( szWildCardBase, '*' );
 		pcStar ? *pcStar = 0 : bBaseWildcard = false;
 
-		pcStar = strchr( szWildCardExt, '*' );
+		pcStar = std::strchr( szWildCardExt, '*' );
 		pcStar ? *pcStar = 0 : bExtWildcard = false;
 
 		nLenWildcardPath = V_strlen( szWildCardPath );
@@ -1854,10 +1706,10 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, std::vector< std::s
 				V_strncpy( szSubDir, &sDirectory[nLenWildcardPath], sizeof( szSubDir ) );
 
 				// Set the next / to NULL and we have our subdirectory
-				char *pSlash = strchr( szSubDir, '/' );
+				char *pSlash = std::strchr( szSubDir, '/' );
 				pSlash ? *pSlash = 0 : 0;
 
-				szSubDirExtension = strchr( szSubDir, '.' );
+				szSubDirExtension = std::strchr( szSubDir, '.' );
 				if ( szSubDirExtension )
 				{
 					// Null out the . and move the szSubDirExtension to point to the extension
@@ -1901,7 +1753,7 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, std::vector< std::s
 		for ( int i = 0; i < std::ssize( m_directoryList ); i++ )
 		{
 			// We no longer want the trailing slash
-			Q_StripTrailingSlash( szWildCardPath );
+			V_StripTrailingSlash( szWildCardPath );
 
 			// Find the directory that matches the wildcard path
 			if ( !V_strnicmp( szWildCardPath, m_directoryList[i].c_str(), sizeof( szWildCardPath ) ) )
@@ -1978,4 +1830,3 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, std::vector< std::s
 
 	return std::ssize( outDirnames );
 }
-

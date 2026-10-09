@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -15,7 +16,7 @@ private:
 public:
 	void SetVERTEXCOLOR( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nVERTEXCOLOR = i;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -23,7 +24,7 @@ public:
 	}
 	void SetVERTEXCOLOR( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nVERTEXCOLOR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -37,7 +38,7 @@ private:
 public:
 	void SetBUMPMAP( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nBUMPMAP = i;
 #ifdef _DEBUG
 		m_bBUMPMAP = true;
@@ -45,7 +46,7 @@ public:
 	}
 	void SetBUMPMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nBUMPMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBUMPMAP = true;
@@ -70,7 +71,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bVERTEXCOLOR && m_bBUMPMAP;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 10 * m_nVERTEXCOLOR ) + ( 20 * m_nBUMPMAP ) + 0;
 	}
@@ -86,7 +87,7 @@ private:
 public:
 	void SetNUM_LIGHTS( int i )
 	{
-		Assert( i >= 0 && i <= 4 );
+		contract_assert( i >= 0 && i <= 4 );
 		m_nNUM_LIGHTS = i;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -94,7 +95,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -108,7 +109,7 @@ private:
 public:
 	void SetAMBIENT_LIGHT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nAMBIENT_LIGHT = i;
 #ifdef _DEBUG
 		m_bAMBIENT_LIGHT = true;
@@ -116,7 +117,7 @@ public:
 	}
 	void SetAMBIENT_LIGHT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nAMBIENT_LIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bAMBIENT_LIGHT = true;
@@ -141,7 +142,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bNUM_LIGHTS && m_bAMBIENT_LIGHT;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nNUM_LIGHTS ) + ( 5 * m_nAMBIENT_LIGHT ) + 0;
 	}

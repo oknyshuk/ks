@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Healthshot, it makes you go
-//
-// $NoKeywords: $
-//=====================================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef _ITEM_HEALTHSHOT_H_
-#define _ITEM_HEALTHSHOT_H_
+// Purpose: Healthshot, it makes you go
 
 #include "reflect_annotations.h"
-
 
 #include "weapon_baseitem.h"
 #include "util_shared.h"
@@ -56,5 +51,3 @@ public:
 private:
 	CItem_Healthshot( const CItem_Healthshot & ) {}
 };
-
-#endif // _ITEM_HEALTHSHOT_H_

@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
+
 // Purpose: Utility functions for cell coordinate calculations
 // to reduce bandwidth usage
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef CELLCOORD_H
-#define CELLCOORD_H
-
+import ks.math;
 #include "worldsize.h"
+import std;
 
 // Given a world coord, return the cell it should be in
 inline int CellFromCoord( int cellwidth, float f )
@@ -55,6 +53,3 @@ inline float CoordFromCell( int cellwidth, int cell, float f )
 	float r = ( cellPos - MAX_COORD_INTEGER ) + f;
 	return r;
 }
-
-#endif //CELLCOORDCONVERTER_H
-

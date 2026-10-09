@@ -1,12 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Entities that capture the player's UI and move it into game design
 //			as outputs.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "entitylist.h"
@@ -21,10 +44,10 @@
 //----------------------------------------------------------------
 // Spawn flags
 //----------------------------------------------------------------
-#define  SF_GAMEUI_FREEZE_PLAYER		32	
-#define  SF_GAMEUI_HIDE_WEAPON			64	
-#define  SF_GAMEUI_USE_DEACTIVATES		128
-#define  SF_GAMEUI_JUMP_DEACTIVATES		256
+constexpr auto SF_GAMEUI_FREEZE_PLAYER = 32;
+constexpr auto SF_GAMEUI_HIDE_WEAPON = 64;
+constexpr auto SF_GAMEUI_USE_DEACTIVATES = 128;
+constexpr auto SF_GAMEUI_JUMP_DEACTIVATES = 256;
 
 
 class CGameUI : public CBaseEntity
@@ -95,7 +118,7 @@ void CGameUI::Deactivate( CBaseEntity *pActivator )
 {
 	CBasePlayer *pPlayer = m_player;
 
-	AssertMsg(pPlayer, "CGameUI deactivated without a player!");
+	contract_assert( pPlayer && "CGameUI deactivated without a player!" );
 
 	if (pPlayer)
 	{

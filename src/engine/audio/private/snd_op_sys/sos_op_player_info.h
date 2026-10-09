@@ -1,11 +1,6 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
-
-#ifndef SOS_OP_PLAYER_INFO_H
-#define SOS_OP_PLAYER_INFO_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "sos_op.h"
 
@@ -43,5 +38,3 @@ class CSosOperatorViewInfo : public CSosOperator
 {
 	SOS_HEADER_DESC( CSosOperatorViewInfo )
 };
-
-#endif // SOS_OP_PLAYER_INFO_H

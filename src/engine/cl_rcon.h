@@ -1,28 +1,20 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-#ifndef CL_RCON_H
-#define CL_RCON_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-
+import ks.tier1;
 #include "sv_main.h"
 #include "netmessages.h"
 #include "net.h"
 #include "client.h"
-#include "utlvector.h"
-#include "tier1/byte_writer.h"
-#include <vector>
-#include "netadr.h"
+import std;
 #include "sv_remoteaccess.h"
 #include "sv_rcon.h"
 #include "tier2/socketcreator.h"
 #include "igameserverdata.h"
 #include "ivprofexport.h"
 
-abstract_class IVProfData
+class IVProfData
 {
 public:
 	virtual void OnRemoteGroupData( const void *data, int len ) = 0;
@@ -133,9 +125,3 @@ inline SocketHandle_t CRConClient::GetSocketHandle() const
 }
 
 CRConClient & RCONClient();
-#ifdef ENABLE_RPT
-CRConClient & RPTClient();		// used in remote perf testing
-#endif // ENABLE_RPT
-
-#endif // CL_RCON_H
-

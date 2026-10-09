@@ -1,14 +1,9 @@
-//========= Copyright c 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
+import ks.tier1;
 #include "datalinker.h"
-#include "dbg.h"
-#include "tier1/strtools.h"
-#include "memalloc.h"
+import std;
 
 namespace DataLinker
 {
@@ -29,8 +24,8 @@ Chunk::Chunk( uint reserve, uint offset )
 	m_capacity = reserve;
 	m_size = 0;
 	m_recentSize = 0;
-	m_data = ( byte* )MemAlloc_AllocAligned( reserve, 16 );
-	memset( m_data, g_cFillChar, reserve );
+	m_data = ( byte* )MemAlloc_AllocAlignedUnattributed( reserve, 16 );
+	std::memset( m_data, g_cFillChar, reserve );
 }
 
 void Chunk::Free()
@@ -49,7 +44,7 @@ void* Stream::WriteBytes( uint numBytes )
 	EnsureAvailable( numBytes );
 	Chunk &chunk = m_data.back();
 	byte *p = chunk.m_data + chunk.m_size;
-	memset( p, 0, numBytes );
+	std::memset( p, 0, numBytes );
 	chunk.m_recentSize = m_size;
 	chunk.m_size += numBytes;
 	m_size += numBytes;
@@ -59,7 +54,7 @@ void* Stream::WriteBytes( uint numBytes )
 
 void Stream::EnsureAvailable( uint addCapacity )
 {
-	Assert( addCapacity < 0x10000000 ); // we don't support >1Gb of data yet
+	contract_assert( addCapacity < 0x10000000 ); // we don't support >1Gb of data yet
 	if ( m_data.empty() )
 	{
 		// first allocation
@@ -90,11 +85,11 @@ bool Stream::Compile( void *pBuffer )
 		uint offset = 0;
 		for ( std::vector<Chunk>::const_iterator it = m_data.begin(); it != m_data.end(); ++it )
 		{
-			Assert( it->m_offset == offset );
-			memcpy( p + offset, it->m_data, it->m_size );
+			contract_assert( it->m_offset == offset );
+			std::memcpy( p + offset, it->m_data, it->m_size );
 			offset += it->m_size;
 		}
-		Assert( m_size == offset );
+		contract_assert( m_size == offset );
 	}
 
 	byte *data = ( byte* )pBuffer;
@@ -105,7 +100,7 @@ bool Stream::Compile( void *pBuffer )
 	{
 		const LinkSourceDesc_t &source = it->second;
 		int offsetOfSource = it->first;
-		Assert( uint( offsetOfSource ) < m_size ); // check alignment?
+		contract_assert( uint( offsetOfSource ) < m_size ); // check alignment?
 
 		int* pOffset = ( int* )( data + offsetOfSource );
 		if ( source.m_targetId == kSpecialTargetNull )
@@ -197,7 +192,7 @@ void Stream::Link( LinkSource_t linkSource, LinkTarget_t linkTarget, const char 
 
 	itFind->second.m_targetId = linkTarget.m_id;
 	itFind->second.m_defaultTarget.m_type = kTargetUnresolved; // un-set default target for validation; we are not referring to it any more
-	Assert( linkTarget.m_id != kSpecialTargetDefault );
+	contract_assert( linkTarget.m_id != kSpecialTargetDefault );
 }
 
 
@@ -267,7 +262,7 @@ LinkSource_t Stream::NewOffset( int *pOffset, const char *szDescription )
 
 LinkSource_t Stream::NewLinkSource( int offsetToOffset, OffsetTypeEnum type, int linkTargetId, const char *szDescription )
 {
-	Assert( !( offsetToOffset & 3 ) );
+	contract_assert( !( offsetToOffset & 3 ) );
 	if ( offsetToOffset < 0 && offsetToOffset + sizeof( int ) > m_size )
 	{
 		Error( "Wrong offset spec. Most probably you called an extra Write() before calling WriteOffset() - %s\n", szDescription );
@@ -446,14 +441,14 @@ const char* Stream::WriteAndLinkString( Offset_t<char> *pOffset, const char *pSt
 		StringTableElement_t &ste = m_stringTable[pString];
 		if ( !ste.m_pString )
 		{
-			int nLen = Q_strlen( pString );
+			int nLen = V_strlen( pString );
 
 			ste.m_nOffset = Tell();
 			ste.m_pString = ( char* )this->WriteBytes( nLen + 1 );
 
-			Q_memcpy( ste.m_pString, pString, nLen + 1 );
+			V_memcpy( ste.m_pString, pString, nLen + 1 );
 		}
-		Assert( !Q_strcmp( ste.m_pString, pString ) );
+		contract_assert( !V_strcmp( ste.m_pString, pString ) );
 
 		int offsetToOffset = GetOffsetTo( pOffset );
 		pOffset->offset = ste.m_nOffset - offsetToOffset;

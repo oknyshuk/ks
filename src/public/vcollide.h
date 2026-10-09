@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef VCOLLIDE_H
-#define VCOLLIDE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class CPhysCollide;
 
@@ -20,5 +14,3 @@ struct vcollide_t
 	char			*pKeyValues;
 	void			*pUserData;
 };
-
-#endif // VCOLLIDE_H

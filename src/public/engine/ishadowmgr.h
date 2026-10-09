@@ -1,26 +1,15 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =====//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ISHADOWMGR_H
-#define ISHADOWMGR_H
-
-
-#include "tier1/interface.h"
-#include "mathlib/vmatrix.h"
-
+import ks.tier1;
+import std;
 
 //-----------------------------------------------------------------------------
 // forward declarations
 //-----------------------------------------------------------------------------
 
 class IMaterial;
-class Vector;
-class Vector2D;
 struct model_t;
 typedef unsigned short ModelInstanceHandle_t;
 class IClientRenderable;
@@ -29,7 +18,7 @@ struct FlashlightInstance_t;
 struct FlashlightState_t;
 
 // change this when the new version is incompatable with the old
-#define ENGINE_SHADOWMGR_INTERFACE_VERSION	"VEngineShadowMgr002"
+inline constexpr const char *ENGINE_SHADOWMGR_INTERFACE_VERSION = "VEngineShadowMgr002";
 
 
 //-----------------------------------------------------------------------------
@@ -45,7 +34,7 @@ enum ShadowFlags_t
 	SHADOW_FLAGS_LAST_FLAG				= SHADOW_FLAGS_SIMPLE_PROJECTION
 };
 
-#define SHADOW_FLAGS_PROJECTED_TEXTURE_TYPE_MASK ( SHADOW_FLAGS_FLASHLIGHT | SHADOW_FLAGS_SHADOW | SHADOW_FLAGS_SIMPLE_PROJECTION )
+inline constexpr auto SHADOW_FLAGS_PROJECTED_TEXTURE_TYPE_MASK = ( SHADOW_FLAGS_FLASHLIGHT | SHADOW_FLAGS_SHADOW | SHADOW_FLAGS_SIMPLE_PROJECTION );
 
 
 //-----------------------------------------------------------------------------
@@ -100,12 +89,10 @@ struct ShadowInfo_t
 
 typedef void (*ShadowDrawCallbackFn_t)( void * );
 
-typedef void (*ShadowDrawCallbackFn_t)( void * );
-
 //-----------------------------------------------------------------------------
 // The engine's interface to the shadow manager
 //-----------------------------------------------------------------------------
-abstract_class IShadowMgr
+class IShadowMgr
 {
 public:
 	// Create, destroy shadows (see ShadowCreateFlags_t for creationFlags)
@@ -226,6 +213,3 @@ public:
 	// Disables projected shadows
 	virtual void DisableDropShadows() = 0;
 };
-
-
-#endif

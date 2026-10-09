@@ -1,15 +1,12 @@
-//========= Copyright c 1996-2008, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
 
-#include "mathlib/mathlib.h"
-#include "mathlib/noise.h"
-#include "mathlib/vector.h"
+import ks.math;
 
 #include "mathlib/expressioncalculator.h"
 
-#include <ctype.h>
+import std;
 
 
 
@@ -19,7 +16,7 @@
 bool ParseLiteral( const char *&expr, float &value )
 {
 	const char *startExpr = expr;
-	value = ( float )strtod( startExpr, const_cast< char** >( &expr ) );
+	value = ( float )std::strtod( startExpr, const_cast< char** >( &expr ) );
 	return ( startExpr != expr );
 }
 
@@ -62,7 +59,7 @@ int FindString( const std::vector< std::string > &strings, const char *str )
 	uint sn = std::ssize( strings );
 	for ( uint si = 0; si < sn; ++si )
 	{
-		if ( !Q_strcmp( str, strings[ si ].c_str() ) )
+		if ( !V_strcmp( str, strings[ si ].c_str() ) )
 			return si;
 	}
 	return -1;
@@ -75,7 +72,7 @@ public:
 		: m_stacksize( std::ssize( stack ) ), m_startingExpr( expr ) {}
 	void Reset( std::vector<float> &stack, const char *&expr )
 	{
-		Assert( m_stacksize <= std::ssize( stack ) );
+		contract_assert( m_stacksize <= std::ssize( stack ) );
 		stack.resize( m_stacksize );
 		expr = m_startingExpr;
 	}
@@ -397,7 +394,7 @@ bool CExpressionCalculator::ParseDivMul( const char *&expr )
 			m_stack.push_back( f1 / f2 );
 			break;
 		case 2: // %
-			m_stack.push_back( fmod( f1, f2 ) );
+			m_stack.push_back( std::fmod( f1, f2 ) );
 			break;
 		}
 		return true; // divmul matched
@@ -443,6 +440,7 @@ bool CExpressionCalculator::ParseUnary( const char *&expr )
 
 bool CExpressionCalculator::ParsePrimary( const char *&expr )
 {
+	ks::ScratchArena<> scratch;
 	ParseState_t ps( m_stack, expr );
 
 	float value = 0.0f;
@@ -492,9 +490,9 @@ bool CExpressionCalculator::ParsePrimary( const char *&expr )
 		++expr;
 	}
 
-	size_t nLen = (size_t)expr - (size_t)pStart;
-	char *pVariableName = (char*)stackalloc( nLen+1 );
-	memcpy( pVariableName, pStart, nLen );
+	std::size_t nLen = (std::size_t)expr - (std::size_t)pStart;
+	char *pVariableName = (char*)scratch.AllocBytes( nLen+1 );
+	std::memcpy( pVariableName, pStart, nLen );
 	pVariableName[nLen] = 0;
 
 	SetVariable( pVariableName, 0.0f );
@@ -544,34 +542,34 @@ bool CExpressionCalculator::Parse1ArgFunc( const char *&expr )
 		switch ( nFunc )
 		{
 		case 0: // abs
-			m_stack.push_back( fabs( f1 ) );
+			m_stack.push_back( std::fabs( f1 ) );
 			break;
 		case 1: // sqr
 			m_stack.push_back( f1 * f1 );
 			break;
 		case 2: // sqrt
-			m_stack.push_back( sqrt( f1 ) );
+			m_stack.push_back( std::sqrt( f1 ) );
 			break;
 		case 3: // sin
-			m_stack.push_back( sin( f1 ) );
+			m_stack.push_back( std::sin( f1 ) );
 			break;
 		case 4: // asin
-			m_stack.push_back( asin( f1 ) );
+			m_stack.push_back( std::asin( f1 ) );
 			break;
 		case 5: // cos
-			m_stack.push_back( cos( f1 ) );
+			m_stack.push_back( std::cos( f1 ) );
 			break;
 		case 6: // acos
-			m_stack.push_back( acos( f1 ) );
+			m_stack.push_back( std::acos( f1 ) );
 			break;
 		case 7: // tan
-			m_stack.push_back( tan( f1 ) );
+			m_stack.push_back( std::tan( f1 ) );
 			break;
 		case 8: // exp
-			m_stack.push_back( exp( f1 ) );
+			m_stack.push_back( std::exp( f1 ) );
 			break;
 		case 9: // log
-			m_stack.push_back( log( f1 ) );
+			m_stack.push_back( std::log( f1 ) );
 			break;
 		case 10: // dtor
 			m_stack.push_back( DEG2RAD( f1 ) );
@@ -580,13 +578,13 @@ bool CExpressionCalculator::Parse1ArgFunc( const char *&expr )
 			m_stack.push_back( RAD2DEG( f1 ) );
 			break;
 		case 12: // floor
-			m_stack.push_back( floor( f1 ) );
+			m_stack.push_back( std::floor( f1 ) );
 			break;
 		case 13: // ceiling
-			m_stack.push_back( ceil( f1 ) );
+			m_stack.push_back( std::ceil( f1 ) );
 			break;
 		case 14: // round
-			m_stack.push_back( floor( f1 + 0.5f ) );
+			m_stack.push_back( std::floor( f1 + 0.5f ) );
 			break;
 		case 15: // sign
 			m_stack.push_back( f1 >= 0.0f ? 1.0f : -1.0f );
@@ -630,10 +628,10 @@ bool CExpressionCalculator::Parse2ArgFunc( const char *&expr )
 			m_stack.push_back( std::max( f1, f2 ) );
 			break;
 		case 2: // atan2
-			m_stack.push_back( atan2( f1, f2 ) );
+			m_stack.push_back( std::atan2( f1, f2 ) );
 			break;
 		case 3: // pow
-			m_stack.push_back( pow( f1, f2 ) );
+			m_stack.push_back( std::pow( f1, f2 ) );
 			break;
 		}
 		return true;
@@ -666,7 +664,6 @@ float V_lerp( float x, float a, float b )
 {
 	return a + x * ( b - a );
 }
-#define lerp( x, a, b ) V_lerp( x, a, b )
 
 float smoothstep( float x )
 {
@@ -707,16 +704,16 @@ bool CExpressionCalculator::Parse3ArgFunc( const char *&expr )
 			m_stack.push_back( ramp( f1, f2, f3 ) );
 			break;
 		case 3: // lerp
-			m_stack.push_back( lerp( f1, f2, f3 ) );
+			m_stack.push_back( V_lerp( f1, f2, f3 ) );
 			break;
 		case 4: // cramp
 			m_stack.push_back( clamp( ramp( f1, f2, f3 ), 0, 1 ) );
 			break;
 		case 5: // clerp
-			m_stack.push_back( clamp( lerp( f1, f2, f3 ), f2, f3 ) );
+			m_stack.push_back( clamp( V_lerp( f1, f2, f3 ), f2, f3 ) );
 			break;
 		case 6: // elerp
-			m_stack.push_back( lerp( smoothstep( f1 ), f2, f3 ) );
+			m_stack.push_back( V_lerp( smoothstep( f1 ), f2, f3 ) );
 			break;
 		case 7: // noise
 			m_stack.push_back( ImprovedPerlinNoise( Vector( f1, f2, f3 ) ) );
@@ -735,7 +732,7 @@ crescale(X,Xa,Xb,Ya,Yb) : clamp(rescale(X,Xa,Xb,Ya,Yb),Ya,Yb)
 */
 float rescale( float x, float a, float b, float c, float d )
 {
-	return lerp( ramp( x, a, b ), c, d );
+	return V_lerp( ramp( x, a, b ), c, d );
 }
 
 bool CExpressionCalculator::Parse5ArgFunc( const char *&expr )

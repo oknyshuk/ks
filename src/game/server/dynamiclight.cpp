@@ -1,20 +1,51 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Dynamic light.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Dynamic light.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "dlight.h"
 
-
-#define NUM_DL_EXPONENT_BITS	8
-#define MIN_DL_EXPONENT_VALUE	-((1 << (NUM_DL_EXPONENT_BITS-1)) - 1)
-#define MAX_DL_EXPONENT_VALUE	((1 << (NUM_DL_EXPONENT_BITS-1)) - 1)
+constexpr auto NUM_DL_EXPONENT_BITS = 8;
+constexpr auto MIN_DL_EXPONENT_VALUE = -((1 << (NUM_DL_EXPONENT_BITS-1)) - 1);
+constexpr auto MAX_DL_EXPONENT_VALUE = ((1 << (NUM_DL_EXPONENT_BITS-1)) - 1);
 
 
 class [[= ks::reflect::NetTable{ .name = "DT_DynamicLight" } ]]
@@ -67,7 +98,7 @@ bool CDynamicLight::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else if ( FStrEq( szKeyName, "pitch" ) )
 	{
-		float angle = atof(szValue);
+		float angle = std::atof(szValue);
 		if ( angle )
 		{
 			QAngle angles = GetAbsAngles();
@@ -77,7 +108,7 @@ bool CDynamicLight::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else if ( FStrEq( szKeyName, "spawnflags" ) )
 	{
-		m_ActualFlags = m_Flags = atoi(szValue);
+		m_ActualFlags = m_Flags = std::atoi(szValue);
 	}
 	else
 	{

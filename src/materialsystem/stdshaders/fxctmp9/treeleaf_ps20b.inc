@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -21,7 +22,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_treeleaf_ps20b 0
+inline constexpr int shaderStaticTest_treeleaf_ps20b = 0;
 class treeleaf_ps20b_Dynamic_Index
 {
 public:
@@ -38,10 +39,10 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_treeleaf_ps20b 0
+inline constexpr int shaderDynamicTest_treeleaf_ps20b = 0;
 static const ShaderComboSemantics_t TreeLeaf_ps20b_combos =
 {
-	"TreeLeaf_ps20b", NULL, 0, NULL, 0 
+	"TreeLeaf_ps20b", nullptr, 0, nullptr, 0 
 };
 
 class ConstructMe_TreeLeaf_ps20b

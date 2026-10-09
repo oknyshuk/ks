@@ -1,8 +1,5 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "mm_events.h"
 
@@ -33,8 +30,8 @@ void CMatchEventsSubscription::Subscribe( IMatchEventsSink *pSink )
 	int idx = ks::find_index( m_arrSinks, pSink );
 	if ( ks::is_valid_index( m_arrSinks, idx ) )
 	{
-		Assert( ks::is_valid_index( m_arrRefCount, idx ) );
-		Assert( m_arrRefCount[ idx ] > 0 );
+		contract_assert( ks::is_valid_index( m_arrRefCount, idx ) );
+		contract_assert( m_arrRefCount[ idx ] > 0 );
 		
 		++ m_arrRefCount[ idx ];
 	}
@@ -43,7 +40,7 @@ void CMatchEventsSubscription::Subscribe( IMatchEventsSink *pSink )
 		m_arrSinks.push_back( pSink );
 		m_arrRefCount.push_back( 1 );
 		
-		Assert( std::ssize( m_arrSinks ) == std::ssize( m_arrRefCount ) );
+		contract_assert( std::ssize( m_arrSinks ) == std::ssize( m_arrRefCount ) );
 	}
 }
 
@@ -53,12 +50,12 @@ void CMatchEventsSubscription::Unsubscribe( IMatchEventsSink *pSink )
 		return;
 
 	int idx = ks::find_index( m_arrSinks, pSink );
-	Assert( ks::is_valid_index( m_arrSinks, idx ) );
+	contract_assert( ks::is_valid_index( m_arrSinks, idx ) );
 	if ( !ks::is_valid_index( m_arrSinks, idx ) )
 		return;
 
-	Assert( ks::is_valid_index( m_arrRefCount, idx ) );
-	Assert( m_arrRefCount[ idx ] > 0 );
+	contract_assert( ks::is_valid_index( m_arrRefCount, idx ) );
+	contract_assert( m_arrRefCount[ idx ] > 0 );
 
 	-- m_arrRefCount[ idx ];
 	if ( m_arrRefCount[ idx ] <= 0 )
@@ -66,7 +63,7 @@ void CMatchEventsSubscription::Unsubscribe( IMatchEventsSink *pSink )
 		m_arrSinks.erase( m_arrSinks.begin() + idx );
 		m_arrRefCount.erase( m_arrRefCount.begin() + idx );
 
-		Assert( std::ssize( m_arrSinks ) == std::ssize( m_arrRefCount ) );
+		contract_assert( std::ssize( m_arrSinks ) == std::ssize( m_arrRefCount ) );
 
 		// Update outstanding iterators that are beyond removal point
 		for ( int k = 0; k < std::ssize( m_arrIteratorsOutstanding ); ++ k )
@@ -87,7 +84,7 @@ void CMatchEventsSubscription::BroadcastEvent( KeyValues *pEvent )
 	//
 	// Network raw packet decryption
 	//
-	if ( !Q_stricmp( "OnNetLanConnectionlessPacket", pEvent->GetName() ) )
+	if ( !V_stricmp( "OnNetLanConnectionlessPacket", pEvent->GetName() ) )
 	{
 		if ( void * pRawPacket = pEvent->GetPtr( "rawpkt" ) )
 		{
@@ -134,9 +131,9 @@ void CMatchEventsSubscription::BroadcastEvent( KeyValues *pEvent )
 		int i = m_arrIteratorsOutstanding.back();
 		IMatchEventsSink *pSink = m_arrSinks[ i ];
 		
-		Assert( ks::is_valid_index( m_arrRefCount, i ) );
-		Assert( m_arrRefCount[i] > 0 );
-		Assert( pSink );
+		contract_assert( ks::is_valid_index( m_arrRefCount, i ) );
+		contract_assert( m_arrRefCount[i] > 0 );
+		contract_assert( pSink );
 
 		pSink->OnEvent( pEvent );
 	}
@@ -169,21 +166,21 @@ void CMatchEventsSubscription::BroadcastEvent( KeyValues *pEvent )
 
 void CMatchEventsSubscription::RegisterEventData( KeyValues *pEventData )
 {
-	Assert( pEventData );
+	contract_assert( pEventData );
 	if ( !pEventData )
 		return;
 
-	Assert( m_bBroadcasting );
+	contract_assert( m_bBroadcasting );
 
 	char const *szEventDataKey = pEventData->GetName();
-	Assert( szEventDataKey && *szEventDataKey );
+	contract_assert( szEventDataKey && *szEventDataKey );
 	if ( !szEventDataKey || !*szEventDataKey )
 		return;
 
 	for ( int k = 0; k < std::ssize( m_arrEventData ); ++ k )
 	{
 		KeyValues *&pRegistered = m_arrEventData[k];
-		if ( !Q_stricmp( szEventDataKey, pRegistered->GetName() ) )
+		if ( !V_stricmp( szEventDataKey, pRegistered->GetName() ) )
 		{
 			pRegistered->deleteThis();
 			pRegistered = pEventData;
@@ -196,23 +193,21 @@ void CMatchEventsSubscription::RegisterEventData( KeyValues *pEventData )
 
 KeyValues * CMatchEventsSubscription::GetEventData( char const *szEventDataKey )
 {
-	Assert( m_bBroadcasting );
+	contract_assert( m_bBroadcasting );
 
 	for ( int k = 0; k < std::ssize( m_arrEventData ); ++ k )
 	{
 		KeyValues *pRegistered = m_arrEventData[k];
-		if ( !Q_stricmp( szEventDataKey, pRegistered->GetName() ) )
+		if ( !V_stricmp( szEventDataKey, pRegistered->GetName() ) )
 			return pRegistered;
 	}
 
 	for ( int k = 0; k < std::ssize( m_arrSentEvents ); ++ k )
 	{
 		KeyValues *pRegistered = m_arrSentEvents[k];
-		if ( !Q_stricmp( szEventDataKey, pRegistered->GetName() ) )
+		if ( !V_stricmp( szEventDataKey, pRegistered->GetName() ) )
 			return pRegistered;
 	}
 
 	return nullptr;
 }
-
-

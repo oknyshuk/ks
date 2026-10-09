@@ -1,24 +1,16 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: A set of utilities to render standard shapes
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
+// Purpose: A set of utilities to render standard shapes
+
+import ks.vstdlib;
 #include "tier2/renderutils.h"
-#include <mutex>
+import std;
 #include "tier2/tier2.h"
-#include "tier1/keyvalues.h"
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
-#include "tier1/callqueue.h"
-#include "tier0/vprof.h"
-#include "tier0/basetypes.h"
 #include "togl/rendermechanism.h"
-
-#if !defined(M_PI)
-	#define M_PI			3.14159265358979323846
-#endif
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -131,10 +123,10 @@ void RenderWireframeSphere( const Vector &vCenter, float flRadius, int nTheta, i
 		{
 			float u = j / ( float )( nTheta - 1 );
 			float v = i / ( float )( nPhi - 1 );
-			float theta = 2.0f * M_PI * u;
-			float phi = M_PI * v;
+			float theta = 2.0f * std::numbers::pi * u;
+			float phi = std::numbers::pi * v;
 
-			meshBuilder.Position3f( vCenter.x + ( flRadius * sin(phi) * cos(theta) ),
+			meshBuilder.Position3f( vCenter.x + ( flRadius * std::sin(phi) * std::cos(theta) ),
 				vCenter.y + ( flRadius * sin(phi) * sin(theta) ), 
 				vCenter.z + ( flRadius * cos(phi) ) );
 			meshBuilder.Color4ub( chRed, chGreen, chBlue, chAlpha );
@@ -210,11 +202,11 @@ void RenderSphereInternal( const Vector &vCenter, float flRadius, int nTheta, in
 		{
 			float u = j / ( float )( nTheta - 1 );
 			float v = i / ( float )( nPhi - 1 );
-			float theta = 2.0f * M_PI * u;
-			float phi = M_PI * v;
+			float theta = 2.0f * std::numbers::pi * u;
+			float phi = std::numbers::pi * v;
 
 			Vector vecPos;
-			vecPos.x = flRadius * sin(phi) * cos(theta);
+			vecPos.x = flRadius * std::sin(phi) * std::cos(theta);
 			vecPos.y = flRadius * sin(phi) * sin(theta); 
 			vecPos.z = flRadius * cos(phi);
 
@@ -624,8 +616,8 @@ void RenderLine( const Vector& v1, const Vector& v2, Color c, bool bZBuffer )
 }
 
 // todo: draw a capsule procedurally instead of using these baked-in unit capsule verts
-#define CAPSULE_VERTS 74
-#define CAPSULE_LINES 117
+constexpr auto CAPSULE_VERTS = 74;
+constexpr auto CAPSULE_LINES = 117;
 
 float g_capsuleVertPositions[CAPSULE_VERTS][3] = {
 	{ -0.01, -0.01, 1.0 },	{ 0.51, 0.0, 0.86 },	{ 0.44, 0.25, 0.86 },	{ 0.25, 0.44, 0.86 },	{ -0.01, 0.51, 0.86 },	{ -0.26, 0.44, 0.86 },	{ -0.45, 0.25, 0.86 },	{ -0.51, 0.0, 0.86 },	{ -0.45, -0.26, 0.86 },
@@ -1162,4 +1154,3 @@ void DrawNDCSpaceUntexturedPolygon( IMaterial *pMaterial, int nVertexCount, Vect
 	pRenderContext->MatrixMode( MATERIAL_PROJECTION );
 	pRenderContext->PopMatrix();
 }
-

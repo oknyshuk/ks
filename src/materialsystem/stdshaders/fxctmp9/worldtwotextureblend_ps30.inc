@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // $DETAILTEXTURE && ( $BUMPMAP && !$DETAIL_ALPHA_MASK_BASE_TEXTURE )
 // $VERTEXCOLOR && $BUMPMAP
@@ -32,7 +33,7 @@ private:
 public:
 	void SetDETAILTEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDETAILTEXTURE = i;
 #ifdef _DEBUG
 		m_bDETAILTEXTURE = true;
@@ -40,7 +41,7 @@ public:
 	}
 	void SetDETAILTEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDETAILTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAILTEXTURE = true;
@@ -54,7 +55,7 @@ private:
 public:
 	void SetBUMPMAP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBUMPMAP = i;
 #ifdef _DEBUG
 		m_bBUMPMAP = true;
@@ -62,7 +63,7 @@ public:
 	}
 	void SetBUMPMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBUMPMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBUMPMAP = true;
@@ -76,7 +77,7 @@ private:
 public:
 	void SetVERTEXCOLOR( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nVERTEXCOLOR = i;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -84,7 +85,7 @@ public:
 	}
 	void SetVERTEXCOLOR( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nVERTEXCOLOR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -98,7 +99,7 @@ private:
 public:
 	void SetSELFILLUM( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSELFILLUM = i;
 #ifdef _DEBUG
 		m_bSELFILLUM = true;
@@ -106,7 +107,7 @@ public:
 	}
 	void SetSELFILLUM( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSELFILLUM = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSELFILLUM = true;
@@ -120,7 +121,7 @@ private:
 public:
 	void SetDETAIL_ALPHA_MASK_BASE_TEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDETAIL_ALPHA_MASK_BASE_TEXTURE = i;
 #ifdef _DEBUG
 		m_bDETAIL_ALPHA_MASK_BASE_TEXTURE = true;
@@ -128,7 +129,7 @@ public:
 	}
 	void SetDETAIL_ALPHA_MASK_BASE_TEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDETAIL_ALPHA_MASK_BASE_TEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAIL_ALPHA_MASK_BASE_TEXTURE = true;
@@ -142,7 +143,7 @@ private:
 public:
 	void SetFLASHLIGHT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLASHLIGHT = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -150,7 +151,7 @@ public:
 	}
 	void SetFLASHLIGHT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -164,7 +165,7 @@ private:
 public:
 	void SetSEAMLESS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSEAMLESS = i;
 #ifdef _DEBUG
 		m_bSEAMLESS = true;
@@ -172,7 +173,7 @@ public:
 	}
 	void SetSEAMLESS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSEAMLESS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSEAMLESS = true;
@@ -186,7 +187,7 @@ private:
 public:
 	void SetFLASHLIGHTDEPTHFILTERMODE( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -194,7 +195,7 @@ public:
 	}
 	void SetFLASHLIGHTDEPTHFILTERMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -208,7 +209,7 @@ private:
 public:
 	void SetSHADER_SRGB_READ( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nSHADER_SRGB_READ = i;
 #ifdef _DEBUG
 		m_bSHADER_SRGB_READ = true;
@@ -216,7 +217,7 @@ public:
 	}
 	void SetSHADER_SRGB_READ( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nSHADER_SRGB_READ = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSHADER_SRGB_READ = true;
@@ -269,7 +270,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bDETAILTEXTURE && m_bBUMPMAP && m_bVERTEXCOLOR && m_bSELFILLUM && m_bDETAIL_ALPHA_MASK_BASE_TEXTURE && m_bFLASHLIGHT && m_bSEAMLESS && m_bFLASHLIGHTDEPTHFILTERMODE && m_bSHADER_SRGB_READ;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 32 * m_nDETAILTEXTURE ) + ( 64 * m_nBUMPMAP ) + ( 128 * m_nVERTEXCOLOR ) + ( 256 * m_nSELFILLUM ) + ( 512 * m_nDETAIL_ALPHA_MASK_BASE_TEXTURE ) + ( 1024 * m_nFLASHLIGHT ) + ( 2048 * m_nSEAMLESS ) + ( 4096 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 12288 * m_nSHADER_SRGB_READ ) + 0;
 	}
@@ -285,7 +286,7 @@ private:
 public:
 	void SetWRITEWATERFOGTODESTALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nWRITEWATERFOGTODESTALPHA = i;
 #ifdef _DEBUG
 		m_bWRITEWATERFOGTODESTALPHA = true;
@@ -293,7 +294,7 @@ public:
 	}
 	void SetWRITEWATERFOGTODESTALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWRITEWATERFOGTODESTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWRITEWATERFOGTODESTALPHA = true;
@@ -307,7 +308,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -315,7 +316,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -329,7 +330,7 @@ private:
 public:
 	void SetWRITE_DEPTH_TO_DESTALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nWRITE_DEPTH_TO_DESTALPHA = i;
 #ifdef _DEBUG
 		m_bWRITE_DEPTH_TO_DESTALPHA = true;
@@ -337,7 +338,7 @@ public:
 	}
 	void SetWRITE_DEPTH_TO_DESTALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWRITE_DEPTH_TO_DESTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWRITE_DEPTH_TO_DESTALPHA = true;
@@ -351,7 +352,7 @@ private:
 public:
 	void SetFLASHLIGHTSHADOWS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLASHLIGHTSHADOWS = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = true;
@@ -359,7 +360,7 @@ public:
 	}
 	void SetFLASHLIGHTSHADOWS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHTSHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = true;
@@ -373,7 +374,7 @@ private:
 public:
 	void SetUBERLIGHT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nUBERLIGHT = i;
 #ifdef _DEBUG
 		m_bUBERLIGHT = true;
@@ -381,7 +382,7 @@ public:
 	}
 	void SetUBERLIGHT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUBERLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUBERLIGHT = true;
@@ -418,7 +419,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bWRITEWATERFOGTODESTALPHA && m_bPIXELFOGTYPE && m_bWRITE_DEPTH_TO_DESTALPHA && m_bFLASHLIGHTSHADOWS && m_bUBERLIGHT;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nWRITEWATERFOGTODESTALPHA ) + ( 2 * m_nPIXELFOGTYPE ) + ( 4 * m_nWRITE_DEPTH_TO_DESTALPHA ) + ( 8 * m_nFLASHLIGHTSHADOWS ) + ( 16 * m_nUBERLIGHT ) + 0;
 	}

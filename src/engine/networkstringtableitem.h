@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef NETWORKSTRINGTABLEITEM_H
-#define NETWORKSTRINGTABLEITEM_H
-
-#include "utlvector.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -32,12 +27,10 @@ public:
 	CNetworkStringTableItem( void );
 	~CNetworkStringTableItem( void );
 
-#ifndef SHARED_NET_STRING_TABLES
 	void			EnableChangeHistory( void );
 	void 			UpdateChangeList( int tick, int length, const void *userData );
 	int				RestoreTick( int tick );
 	inline int		GetTickCreated( void ) const { return m_nTickCreated; }
-#endif
 	
 	bool			SetUserData( int tick, int length, const void *userdata );
 	const void		*GetUserData( int *length=0 );
@@ -52,10 +45,6 @@ public:
 	int				m_nUserDataLength;
 	int				m_nTickChanged;
 
-#ifndef SHARED_NET_STRING_TABLES
 	int				m_nTickCreated;
 	std::vector< itemchange_s > *m_pChangeList;	
-#endif
 };
-
-#endif // NETWORKSTRINGTABLEITEM_H

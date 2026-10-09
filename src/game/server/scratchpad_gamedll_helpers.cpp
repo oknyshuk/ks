@@ -1,10 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "scratchpad_gamedll_helpers.h"
 #include "iscratchpad3d.h"
 #include "player.h"
@@ -65,18 +90,18 @@ void ScratchPad_DrawEntityToScratchPad(
 	if ( flags & SPDRAWWORLD_DRAW_EDICT_INDICES )
 	{
 		char tempStr[512];
-		Q_snprintf( tempStr, sizeof( tempStr ), "edict: %d", pEnt->entindex() );
-		Q_strncat( str, tempStr, sizeof( str ), COPY_ALL_CHARACTERS );
+		V_snprintf( tempStr, sizeof( tempStr ), "edict: %d", pEnt->entindex() );
+		V_strncat( str, tempStr, sizeof( str ), COPY_ALL_CHARACTERS );
 	}
 
 	if ( flags & SPDRAWWORLD_DRAW_ENTITY_CLASSNAMES )
 	{
 		if ( str[0] != 0 )
-			Q_strncat( str, ", ", sizeof( str ), COPY_ALL_CHARACTERS );
+			V_strncat( str, ", ", sizeof( str ), COPY_ALL_CHARACTERS );
 
 		char tempStr[512];
-		Q_snprintf( tempStr, sizeof( tempStr ), "class: %s", pEnt->GetClassname() );
-		Q_strncat( str, tempStr, sizeof( str ), COPY_ALL_CHARACTERS );
+		V_snprintf( tempStr, sizeof( tempStr ), "class: %s", pEnt->GetClassname() );
+		V_strncat( str, tempStr, sizeof( str ), COPY_ALL_CHARACTERS );
 	}
 
 	if ( str[0] != 0 )
@@ -88,5 +113,3 @@ void ScratchPad_DrawEntityToScratchPad(
 		pPad->DrawText( str, params );
 	}
 }
-
-

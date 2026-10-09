@@ -1,20 +1,27 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
-#include "reflect_annotations.h"
-#include "model_types.h"
-#include "vcollide.h"
 #include "vcollide_parse.h"
-#include "solidsetdefaults.h"
 #include "bone_setup.h"
 #include "engine/ivmodelinfo.h"
 #include "physics.h"
 #include "c_breakableprop.h"
-#include "view.h"
 
 void RecvProxy_UnmodifiedQAngles( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
@@ -58,12 +65,12 @@ void C_BreakableProp::OnDataChanged( DataUpdateType_t type )
 //IPlayerPickupVPhysics
 bool C_BreakableProp::HasPreferredCarryAnglesForPlayer( CBasePlayer *pPlayer )
 {
-	return (m_qPreferredPlayerCarryAngles.x < FLT_MAX);
+	return (m_qPreferredPlayerCarryAngles.x < std::numeric_limits<float>::max());
 }
 
 QAngle C_BreakableProp::PreferredCarryAngles( void )
 {
-	return (m_qPreferredPlayerCarryAngles.x < FLT_MAX) ? m_qPreferredPlayerCarryAngles : vec3_angle;
+	return (m_qPreferredPlayerCarryAngles.x < std::numeric_limits<float>::max()) ? m_qPreferredPlayerCarryAngles : vec3_angle;
 }
 
 
@@ -76,4 +83,3 @@ C_BasePlayer *C_BreakableProp::GetPredictionOwner( void )
 {
 	return nullptr;
 }
-

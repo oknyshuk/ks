@@ -1,10 +1,44 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Contains entities for implementing/changing game rules dynamically within each BSP.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Contains entities for implementing/changing game rules dynamically within each BSP.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "datamap.h"
@@ -85,8 +119,8 @@ void CRuleBrushEntity::Spawn( void )
 //	Flag: Allow negative scores					SF_SCORE_NEGATIVE
 //	Flag: Award points to team in teamplay		SF_SCORE_TEAM
 
-#define SF_SCORE_NEGATIVE			0x0001
-#define SF_SCORE_TEAM				0x0002
+constexpr auto SF_SCORE_NEGATIVE = 0x0001;
+constexpr auto SF_SCORE_TEAM = 0x0002;
 
 class CGameScore : public CRulePointEntity
 {
@@ -127,7 +161,7 @@ bool CGameScore::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "points"))
 	{
-		SetPoints( atoi(szValue) );
+		SetPoints( std::atoi(szValue) );
 	}
 	else
 		return BaseClass::KeyValue( szKeyName, szValue );
@@ -427,7 +461,7 @@ void CGameRoundEnd::FireGameEvent( IGameEvent *event )
 {
 	const char *name = event->GetName();
 
-	if ( Q_strcmp( name, "round_end" ) == 0 )
+	if ( V_strcmp( name, "round_end" ) == 0 )
 	{
 		m_OnRoundEnded.FireOutput( nullptr, nullptr );
 	}
@@ -455,7 +489,7 @@ void CGameRoundEnd::InputEndRound_CounterTerroristsWin( inputdata_t &inputdata )
 // CGameText / game_text	-- NON-Localized HUD Message (use env_message to display a titles.txt message)
 //	Flag: All players					SF_ENVTEXT_ALLPLAYERS
 //
-#define SF_ENVTEXT_ALLPLAYERS			0x0001
+constexpr auto SF_ENVTEXT_ALLPLAYERS = 0x0001;
 
 
 class
@@ -631,8 +665,8 @@ void CGameText::SetTextColor2( color32 color )
 // Flag: Fire once
 // Flag: Clear team				-- Sets the team to "NONE" instead of activator
 
-#define SF_TEAMSET_FIREONCE			0x0001
-#define SF_TEAMSET_CLEARTEAM		0x0002
+constexpr auto SF_TEAMSET_FIREONCE = 0x0001;
+constexpr auto SF_TEAMSET_CLEARTEAM = 0x0002;
 
 class CGameTeamSet : public CRulePointEntity
 {
@@ -755,7 +789,7 @@ void CGamePlayerZone::InputCountPlayersInZone( inputdata_t &inputdata )
 // CGamePlayerHurt / game_player_hurt	-- Damages the player who fires it
 // Flag: Fire once
 
-#define SF_PKILL_FIREONCE			0x0001
+constexpr auto SF_PKILL_FIREONCE = 0x0001;
 class CGamePlayerHurt : public CRulePointEntity
 {
 public:
@@ -844,7 +878,7 @@ bool CGamePlayerEquip::KeyValue( const char *szKeyName, const char *szValue )
 				UTIL_StripToken( szKeyName, tmp );
 
 				m_weaponNames[i] = AllocPooledString(tmp);
-				m_weaponCount[i] = atoi(szValue);
+				m_weaponCount[i] = std::atoi(szValue);
 				m_weaponCount[i] = std::max(0,m_weaponCount[i]);
 				return true;
 			}
@@ -1001,9 +1035,9 @@ void CGamePlayerEquip::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_T
 // Flag: Kill Player
 // Flag: Gib Player
 
-#define SF_PTEAM_FIREONCE			0x0001
-#define SF_PTEAM_KILL    			0x0002
-#define SF_PTEAM_GIB     			0x0004
+constexpr auto SF_PTEAM_FIREONCE = 0x0001;
+constexpr auto SF_PTEAM_KILL = 0x0002;
+constexpr auto SF_PTEAM_GIB = 0x0004;
 
 class CGamePlayerTeam : public CRulePointEntity
 {
@@ -1058,5 +1092,3 @@ void CGamePlayerTeam::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 		UTIL_Remove( this );
 	}
 }
-
-

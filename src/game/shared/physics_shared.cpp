@@ -1,12 +1,65 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Game & Client shared functions moved from physics.cpp
-//
-//=============================================================================//
-#include "cbase.h"
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.tier1;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "vcollide_parse.h"
 #include "filesystem.h"
-#include "movevars_shared.h"
 #include "engine/ivmodelinfo.h"
 #include "physics_shared.h"
 #include "solidsetdefaults.h"
@@ -14,13 +67,10 @@
 #include "bone_setup.h"
 #include "vphysics/object_hash.h"
 #include "vphysics/friction.h"
-#include "coordsize.h"
-#include <keyvalues.h>
 #include "decals.h"
 #include "IEffects.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "particle_parse.h"
-
 
 //
 IPhysics			*physics = nullptr;
@@ -112,7 +162,7 @@ IPhysicsObject *PhysModelCreateBox( CBaseEntity *pEntity, const Vector &mins, co
 			}
 		}
 	}
-	Q_strncpy( solid.surfaceprop, pSurfaceProps, sizeof( solid.surfaceprop ) );
+	V_strncpy( solid.surfaceprop, pSurfaceProps, sizeof( solid.surfaceprop ) );
 
 	CPhysCollide *pCollide = PhysCreateBbox( mins, maxs );
 	if ( !pCollide )
@@ -152,7 +202,7 @@ IPhysicsObject *PhysModelCreateOBB( CBaseEntity *pEntity, const Vector &mins, co
 			}
 		}
 	}
-	Q_strncpy( solid.surfaceprop, pSurfaceProps, sizeof( solid.surfaceprop ) );
+	V_strncpy( solid.surfaceprop, pSurfaceProps, sizeof( solid.surfaceprop ) );
 
 	CPhysCollide *pCollide = PhysCreateBbox( mins, maxs );
 	if ( !pCollide )
@@ -178,7 +228,7 @@ bool PhysModelParseSolidByIndex( solid_t &solid, CBaseEntity *pEntity, int model
 
 	bool parsed = false;
 
-	memset( &solid, 0, sizeof(solid) );
+	std::memset( &solid, 0, sizeof(solid) );
 	solid.params = g_PhysDefaultObjectParams;
 
 	IVPhysicsKeyParser *pParse = physcollision->VPhysicsKeyParserCreate( pCollide );
@@ -198,7 +248,7 @@ bool PhysModelParseSolidByIndex( solid_t &solid, CBaseEntity *pEntity, int model
 				parsed = true;
 				solid = tmpSolid;
 				// just to be sure we aren't ever getting a non-zero solid by accident
-				Assert( solidIndex >= 0 || solid.index == 0 );
+				contract_assert( solidIndex >= 0 || solid.index == 0 );
 				break;
 			}
 		}
@@ -241,7 +291,7 @@ bool PhysModelParseSolidByIndex( solid_t &solid, CBaseEntity *pEntity, vcollide_
 {
 	bool parsed = false;
 
-	memset( &solid, 0, sizeof(solid) );
+	std::memset( &solid, 0, sizeof(solid) );
 	solid.params = g_PhysDefaultObjectParams;
 
 	IVPhysicsKeyParser *pParse = physcollision->VPhysicsKeyParserCreate( pCollide );
@@ -261,7 +311,7 @@ bool PhysModelParseSolidByIndex( solid_t &solid, CBaseEntity *pEntity, vcollide_
 				parsed = true;
 				solid = tmpSolid;
 				// just to be sure we aren't ever getting a non-zero solid by accident
-				Assert( solidIndex >= 0 || solid.index == 0 );
+				contract_assert( solidIndex >= 0 || solid.index == 0 );
 				break;
 			}
 		}
@@ -319,7 +369,7 @@ IPhysicsObject *PhysModelCreate( CBaseEntity *pEntity, int modelIndex, const Vec
 		if ( modelinfo->GetModelType(modelinfo->GetModel(modelIndex)) == mod_brush )
 		{
 			unsigned int contents = modelinfo->GetModelContents( modelIndex );
-			Assert(contents!=0);
+			contract_assert( contents!=0 );
 			// HACKHACK: contents is used to filter collisions
 			// HACKHACK: So keep solid on for water brushes since they should pass collision rules (as triggers)
 			if ( contents & MASK_WATER )
@@ -378,7 +428,7 @@ IPhysicsObject *PhysModelCreateUnmoveable( CBaseEntity *pEntity, int modelIndex,
 		if ( modelinfo->GetModelType(modelinfo->GetModel(modelIndex)) == mod_brush )
 		{
 			unsigned int contents = modelinfo->GetModelContents( modelIndex );
-			Assert(contents!=0);
+			contract_assert( contents!=0 );
 			if ( contents != pObject->GetContents() && contents != 0 )
 			{
 				pObject->SetContents( contents );
@@ -463,7 +513,7 @@ void PhysGetDefaultAABBSolid( solid_t &solid )
 	solid.params = g_PhysDefaultObjectParams;
 	solid.params.mass = 85.0f;
 	solid.params.inertia = 1e24f;
-	Q_strncpy( solid.surfaceprop, "default", sizeof( solid.surfaceprop ) );
+	V_strncpy( solid.surfaceprop, "default", sizeof( solid.surfaceprop ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -491,6 +541,7 @@ void PhysDestroyObject( IPhysicsObject *pObject, CBaseEntity *pEntity )
 
 void AddSurfacepropFile( const char *pFileName, IPhysicsSurfaceProps *pProps, IFileSystem *pFileSystem )
 {
+	ks::ScratchArena<> scratch;
 	// Load file into memory
 	FileHandle_t file = pFileSystem->Open( pFileName, "rb", "GAME" );
 
@@ -500,7 +551,7 @@ void AddSurfacepropFile( const char *pFileName, IPhysicsSurfaceProps *pProps, IF
 
 		// read the file
 		int nBufSize = len+1;
-		char *buffer = (char *)stackalloc( nBufSize );
+		char *buffer = (char *)scratch.AllocBytes( nBufSize );
 		pFileSystem->ReadEx( buffer, nBufSize, len, file );
 		pFileSystem->Close( file );
 		buffer[len] = 0;
@@ -520,7 +571,7 @@ void PhysParseSurfaceData( IPhysicsSurfaceProps *pProps, IFileSystem *pFileSyste
 	{
 		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != nullptr; sub = sub->GetNextKey() )
 		{
-			if ( !Q_stricmp( sub->GetName(), "file" ) )
+			if ( !V_stricmp( sub->GetName(), "file" ) )
 			{
 				// Add
 				AddSurfacepropFile( sub->GetString(), pProps, pFileSystem );
@@ -554,7 +605,7 @@ void PhysCreateVirtualTerrain( CBaseEntity *pWorld, const objectparams_t &defaul
 			solid.params = defaultParams;
 			solid.params.enableCollisions = true;
 			solid.params.pGameData = static_cast<void *>(pWorld);
-			Q_snprintf(nameBuf, sizeof(nameBuf), "vdisp_%04d", i );
+			V_snprintf(nameBuf, sizeof(nameBuf), "vdisp_%04d", i );
 			solid.params.pName = nameBuf;
 			int surfaceData = physprops->GetSurfaceIndex( "default" );
 			// create this as part of the world
@@ -622,7 +673,7 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 				continue;
 
 			pObject->SetCallbackFlags( pObject->GetCallbackFlags() | CALLBACK_NEVER_DELETED );
-			Assert( solid.contents != 0 );
+			contract_assert( solid.contents != 0 );
 			pObject->SetContents( solid.contents );
 			if ( solid.contents & CONTENTS_SOLID )
 			{
@@ -658,7 +709,7 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 		else if ( !strcmpi( pBlock, "materialtable" ) )
 		{
 			int surfaceTable[128];
-			memset( surfaceTable, 0, sizeof(surfaceTable) );
+			std::memset( surfaceTable, 0, sizeof(surfaceTable) );
 
 			pParse->ParseSurfaceTable( surfaceTable, nullptr );
 			physprops->SetWorldMaterialIndexTable( surfaceTable, 128 );
@@ -1001,7 +1052,7 @@ void PrecachePhysicsSounds()
 	for ( int i = 0; i < physprops->SurfacePropCount(); i++ )
 	{
 		surfacedata_t *pprop = physprops->GetSurfaceData( i );
-		Assert( pprop );
+		contract_assert( pprop );
 
 		pprop->soundhandles.walkStepLeft = PrecachePhysicsSoundByStringIndex( pprop->sounds.walkStepLeft );
 		pprop->soundhandles.walkStepRight = PrecachePhysicsSoundByStringIndex( pprop->sounds.walkStepRight );
@@ -1021,7 +1072,7 @@ void PrecachePhysicsSounds()
 float PhysGetEntityMass( CBaseEntity *pEntity )
 {
 	IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-	int physCount = pEntity->VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+	int physCount = pEntity->VPhysicsGetObjectList( pList, std::size( pList ) );
 	float otherMass = 0;
 	for ( int i = 0; i < physCount; i++ )
 	{

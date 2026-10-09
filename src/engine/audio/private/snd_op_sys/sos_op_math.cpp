@@ -1,61 +1,69 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "audio_pch.h"
+
+
+import ks.tier1;
+
+#include "sound.h"
+#include "soundservice.h"
+#include "filesystem.h"
+
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+
+#include "audio/private/posix_stubs.h"
 #include "tier2/interval.h"
-#include "math.h"
+import std;
 #include "sos_op.h"
 #include "sos_op_math.h"
-
 
 #include "snd_dma.h"
 #include "../../cl_splitscreen.h"
 
 // ------------------------------------------------------------------------
 // GOOD OLD MACROS
-#define SOS_DtoR 0.01745329251994329500
-#define RtoD 57.29577951308232300000
+constexpr auto SOS_DtoR = 0.01745329251994329500;
+constexpr auto RtoD = 57.29577951308232300000;
 
-#define SOS_DEG2RAD(d) ((float)(d) * DtoR)
-#define SOS_RAD2DEG(r) ((float)(r) * RtoD) 
+[[gnu::always_inline]] inline float SOS_DEG2RAD( float d ) { return d * SOS_DtoR; }
+[[gnu::always_inline]] inline float SOS_RAD2DEG( float r ) { return r * RtoD; }
 
-#define SOS_RADIANS(deg) ((deg)*DtoR)
-#define SOS_DEGREES(rad) ((rad)*RtoD)
+[[gnu::always_inline]] inline float SOS_RADIANS( float deg ) { return deg * SOS_DtoR; }
+[[gnu::always_inline]] inline float SOS_DEGREES( float rad ) { return rad * RtoD; }
 
 //-----------------------------------------------------------------------------
 
-#define SOS_MIN(a,b)   (((a) < (b)) ? (a) : (b))
-#define SOS_MAX(a,b)   (((a) > (b)) ? (a) : (b))
-#define SOS_ABS(a)     (((a) < 0) ? -(a) : (a))
-#define SOS_FLOOR(a)   ((a) > 0 ? (int)(a) : -(int)(-a))
-#define SOS_CEILING(a) ((a)==(int)(a) ? (a) : (a)>0 ? 1+(int)(a) : -(1+(int)(-a)))
-#define SOS_ROUND(a)   ((a)>0 ? (int)(a+0.5) : -(int)(0.5-a))
-#define SOS_SGN(a)     (((a)<0) ? -1 : 1)
-#define SOS_SQR(a)     ((a)*(a))
-#define SOS_MOD(a,b)   (a)%(b)
+// DSP math helpers. As inline function templates they keep the mixed-type behaviour of the macros
+// (which is why the parameters are separate types) and inlining is forced because these sit in the
+// mixer's inner loops.
+template <typename T, typename U> [[gnu::always_inline]] inline constexpr auto SOS_MIN( T a, U b ) { return ( a < b ) ? a : b; }
+template <typename T, typename U> [[gnu::always_inline]] inline constexpr auto SOS_MAX( T a, U b ) { return ( a > b ) ? a : b; }
+template <typename T> [[gnu::always_inline]] inline constexpr T SOS_ABS( T a ) { return ( a < 0 ) ? -a : a; }
+template <typename T> [[gnu::always_inline]] inline constexpr int SOS_FLOOR( T a ) { return ( a > 0 ) ? (int)a : -(int)( -a ); }
+template <typename T> [[gnu::always_inline]] inline constexpr auto SOS_CEILING( T a ) { return ( a == (int)a ) ? a : ( a > 0 ? 1 + (int)a : -( 1 + (int)( -a ) ) ); }
+template <typename T> [[gnu::always_inline]] inline constexpr int SOS_ROUND( T a ) { return ( a > 0 ) ? (int)( a + 0.5 ) : -(int)( 0.5 - a ); }
+template <typename T> [[gnu::always_inline]] inline constexpr int SOS_SGN( T a ) { return ( a < 0 ) ? -1 : 1; }
+template <typename T> [[gnu::always_inline]] inline constexpr T SOS_SQR( T a ) { return a * a; }
+template <typename T, typename U> [[gnu::always_inline]] inline constexpr auto SOS_MOD( T a, U b ) { return a % b; }
+template <typename T, typename U, typename V> [[gnu::always_inline]] inline constexpr float SOS_RAMP( T value, U a, V b ) { return ( a - (float)value ) / ( a - b ); }
+template <typename F, typename A, typename B> [[gnu::always_inline]] inline constexpr auto SOS_LERP( F factor, A a, B b ) { return a + ( ( b - a ) * factor ); }
+template <typename X, typename XA, typename XB, typename YA, typename YB>
+[[gnu::always_inline]] inline constexpr auto SOS_RESCALE( X v, XA xa, XB xb, YA ya, YB yb ) { return SOS_LERP( SOS_RAMP( v, xa, xb ), ya, yb ); }
+template <typename X, typename A, typename B> [[gnu::always_inline]] inline constexpr bool SOS_INRANGE( X x, A a, B b ) { return ( x >= SOS_MIN( a, b ) ) && ( x <= SOS_MAX( a, b ) ); }
+template <typename X, typename A, typename B>
+[[gnu::always_inline]] inline constexpr auto SOS_CLAMP( X x, A a, B b ) { return ( x < SOS_MIN( a, b ) ) ? SOS_MIN( a, b ) : ( ( x > SOS_MAX( a, b ) ) ? SOS_MAX( a, b ) : x ); }
+template <typename T, typename A, typename B> [[gnu::always_inline]] inline constexpr float SOS_CRAMP( T value, A a, B b ) { return SOS_CLAMP( SOS_RAMP( value, a, b ), 0, 1 ); }
+template <typename F, typename A, typename B> [[gnu::always_inline]] inline constexpr auto SOS_CLERP( F factor, A a, B b ) { return SOS_CLAMP( SOS_LERP( factor, a, b ), a, b ); }
+template <typename X, typename XA, typename XB, typename YA, typename YB>
+[[gnu::always_inline]] inline constexpr auto SOS_CRESCALE( X x, XA xa, XB xb, YA ya, YB yb ) { return SOS_CLAMP( SOS_RESCALE( x, xa, xb, ya, yb ), ya, yb ); }
+template <typename T> [[gnu::always_inline]] inline float SOS_SIND( T deg ) { return sin( SOS_RADIANS( deg ) ); }
+template <typename T> [[gnu::always_inline]] inline float SOS_COSD( T deg ) { return cos( SOS_RADIANS( deg ) ); }
+template <typename T> [[gnu::always_inline]] inline float SOS_TAND( T deg ) { return tan( SOS_RADIANS( deg ) ); }
+template <typename T> [[gnu::always_inline]] inline float SOS_UNITSINUSOID( T x ) { return SOS_LERP( SOS_SIND( SOS_CLERP( x, -90, 90 ) ), 0.5, 1.0 ); }
+template <typename F, typename A, typename B> [[gnu::always_inline]] inline auto SOS_ELERP( F factor, A a, B b ) { return SOS_LERP( SOS_UNITSINUSOID( factor ), a, b ); }
 
-// ----------------------------------------------------------------------------
-
-#define SOS_RAMP(value,a,b) (((a) - (float)(value)) / ((a) - (b)))
-#define SOS_LERP(factor,a,b) ((a) + (((b) - (a)) * (factor)))
-#define SOS_RESCALE(X,Xa,Xb,Ya,Yb) SOS_LERP(SOS_RAMP(X,Xa,Xb),Ya,Yb)
-
-#define SOS_INRANGE(x,a,b) (((x) >= SOS_MIN(a,b)) && ((x) <= SOS_MAX(a,b)))
-#define SOS_CLAMP(x,a,b) ((x)<SOS_MIN(a,b)?SOS_MIN(a,b):(x)>std::max(a,b)?SOS_MAX(a,b):(x))
-
-#define SOS_CRAMP(value,a,b) SOS_CLAMP(SOS_RAMP(value,a,b),0,1)
-#define SOS_CLERP(factor,a,b) SOS_CLAMP(SOS_LERP(factor,a,b),a,b)
-#define SOS_CRESCALE(X,Xa,Xb,Ya,Yb) SOS_CLAMP(SOS_RESCALE(X,Xa,Xb,Ya,Yb),Ya,Yb)
-
-#define SOS_SIND(deg) sin(SOS_RADIANS(deg))
-#define SOS_COSD(deg) cos(SOS_RADIANS(deg))
-#define SOS_TAND(deg) tan(SOS_RADIANS(deg))
-#define SOS_ATAN2(a,b) atan2(a,b)
-
-#define SOS_UNITSINUSOID(x) SOS_LERP(SOS_SIND(SOS_CLERP(x,-90,90)),0.5,1.0)
-#define SOS_ELERP(factor,a,b) SOS_LERP(SOS_UNITSINUSOID(factor),a,b)
 
 //-----------------------------------------------------------
 
@@ -510,43 +518,43 @@ void CSosOperatorFunc1::Execute( void *pVoidMem, channel_t *pChannel, CScratchPa
 	case SO_OP_NONE:
 		break;
 	case SO_FUNC1_SIN:
-		flResult = sin( pStructMem->m_flInput1[0] );
+		flResult = std::sin( pStructMem->m_flInput1[0] );
 		break;
 	case SO_FUNC1_ASIN:
-		flResult = asin( pStructMem->m_flInput1[0] );
+		flResult = std::asin( pStructMem->m_flInput1[0] );
 		break;
 	case SO_FUNC1_COS:
-		flResult = cos( pStructMem->m_flInput1[0] );
+		flResult = std::cos( pStructMem->m_flInput1[0] );
 		break;
 	case SO_FUNC1_ACOS:
-		flResult = acos( pStructMem->m_flInput1[0] );
+		flResult = std::acos( pStructMem->m_flInput1[0] );
 		break;
 	case SO_FUNC1_TAN:
-		flResult = tan( pStructMem->m_flInput1[0] );
+		flResult = std::tan( pStructMem->m_flInput1[0] );
 		break;
 	case SO_FUNC1_ATAN:
-		flResult = atan( pStructMem->m_flInput1[0] );
+		flResult = std::atan( pStructMem->m_flInput1[0] );
 		break;
 	case SO_FUNC1_SINH:
-		flResult = sinh( pStructMem->m_flInput1[0] );
+		flResult = std::sinh( pStructMem->m_flInput1[0] );
 		break;
 // 	case SO_FUNC1_ASINH:
 // 		flResult = asinh( pStructMem->m_flInput1[0] );
 // 		break;
 	case SO_FUNC1_COSH:
-		flResult = cosh( pStructMem->m_flInput1[0] );
+		flResult = std::cosh( pStructMem->m_flInput1[0] );
 		break;
 // 	case SO_FUNC1_ACOSH:
 // 		flResult = acosh( pStructMem->m_flInput1[0] );
 // 		break;
 	case SO_FUNC1_TANH:
-		flResult = tanh( pStructMem->m_flInput1[0] );
+		flResult = std::tanh( pStructMem->m_flInput1[0] );
 		break;
 // 	case SO_FUNC1_ATANH:
 // 		flResult = atanh( pStructMem->m_flInput1[0] );
 // 		break;
 	case SO_FUNC1_EXP:
-		flResult = exp( pStructMem->m_flInput1[0] );
+		flResult = std::exp( pStructMem->m_flInput1[0] );
 		break;
 // 	case SO_FUNC1_EXPM1:
 // 		flResult = expm1( pStructMem->m_flInput1[0] );
@@ -555,7 +563,7 @@ void CSosOperatorFunc1::Execute( void *pVoidMem, channel_t *pChannel, CScratchPa
 // 		flResult = exp2( pStructMem->m_flInput1[0] );
 // 		break;
 	case SO_FUNC1_LOG:
-		flResult = log( pStructMem->m_flInput1[0] );
+		flResult = std::log( pStructMem->m_flInput1[0] );
 		break;
 // 	case SO_FUNC1_LOG2:
 // 		flResult = log2( pStructMem->m_flInput1[0] );
@@ -564,7 +572,7 @@ void CSosOperatorFunc1::Execute( void *pVoidMem, channel_t *pChannel, CScratchPa
 // 		flResult = log1p( pStructMem->m_flInput1[0] );
 // 		break;
 	case SO_FUNC1_LOG10:
-		flResult = log10( pStructMem->m_flInput1[0] );
+		flResult = std::log10( pStructMem->m_flInput1[0] );
 		break;
 // 	case SO_FUNC1_LOGB:
 // 		flResult = logb( pStructMem->m_flInput1[0] );
@@ -573,7 +581,7 @@ void CSosOperatorFunc1::Execute( void *pVoidMem, channel_t *pChannel, CScratchPa
 		flResult = fabs( pStructMem->m_flInput1[0] );
 		break;
 	case SO_FUNC1_SQRT:
-		flResult = sqrt( pStructMem->m_flInput1[0] );
+		flResult = std::sqrt( pStructMem->m_flInput1[0] );
 		break;
 // 	case SO_FUNC1_ERF:
 // 		flResult = erf( pStructMem->m_flInput1[0] );
@@ -588,10 +596,10 @@ void CSosOperatorFunc1::Execute( void *pVoidMem, channel_t *pChannel, CScratchPa
 // 		flResult = lgamma( pStructMem->m_flInput1[0] );
 // 		break;
 	case SO_FUNC1_CEIL:
-		flResult = ceil( pStructMem->m_flInput1[0] );
+		flResult = std::ceil( pStructMem->m_flInput1[0] );
 		break;
 	case SO_FUNC1_FLOOR:
-		flResult = floor( pStructMem->m_flInput1[0] );
+		flResult = std::floor( pStructMem->m_flInput1[0] );
 		break;
 // 	case SO_FUNC1_RINT:
 // 		flResult = rint( pStructMem->m_flInput1[0] );
@@ -730,7 +738,7 @@ void CSosOperatorFloat::Execute( void *pVoidMem, channel_t *pChannel, CScratchPa
 	case SO_OP_MOD:
 		if ( pStructMem->m_flInput2[0] > 0.0 )
 		{
-			flResult = fmodf( pStructMem->m_flInput1[0], pStructMem->m_flInput2[0] );
+			flResult = std::fmodf( pStructMem->m_flInput1[0], pStructMem->m_flInput2[0] );
 		}
 		break;
 	case SO_OP_MAX:
@@ -867,7 +875,7 @@ void CSosOperatorVec3::Execute( void *pVoidMem, channel_t *pChannel, CScratchPad
 		case SO_OP_MOD:
 			if ( pStructMem->m_flInput2[i] > 0.0 )
 			{
-				pStructMem->m_flOutput[i] = fmodf( pStructMem->m_flInput1[i], pStructMem->m_flInput2[i] );
+				pStructMem->m_flOutput[i] = std::fmodf( pStructMem->m_flInput1[i], pStructMem->m_flInput2[i] );
 			}
 			break;
 		case SO_OP_MAX:
@@ -998,7 +1006,7 @@ void CSosOperatorSpeakers::Execute( void *pVoidMem, channel_t *pChannel, CScratc
 		case SO_OP_MOD:
 			if ( pStructMem->m_flInput2[i] > 0.0 )
 			{
-				pStructMem->m_flOutput[i] = fmodf( pStructMem->m_flInput1[i], pStructMem->m_flInput2[i] );
+				pStructMem->m_flOutput[i] = std::fmodf( pStructMem->m_flInput1[i], pStructMem->m_flInput2[i] );
 			}
 			break;
 		case SO_OP_MAX:
@@ -1271,7 +1279,7 @@ void CSosOperatorSourceDistance::Execute( void *pVoidMem, channel_t *pChannel, C
 {
 	CSosOperatorSourceDistance_t *pStructMem = (CSosOperatorSourceDistance_t *)pVoidMem;
 
-	pStructMem->m_flOutput[0] = FLT_MAX;
+	pStructMem->m_flOutput[0] = std::numeric_limits<float>::max();
 	// calculate the distance to the nearest ss player
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 	{

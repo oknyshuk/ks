@@ -1,20 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: The CS game stats header
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef CS_GAMESTATS_H
-#define CS_GAMESTATS_H
-
+import ks.tier1;
 #include "cs_blackmarket.h"
 #include "GameStats.h"
 #include "cs_gamestats_shared.h"
 #include "GameEventListener.h"
 #include "weapon_csbase.h"
-#include "steamworks_gamestats_server.h"
-#include "tier1/map_ops.h"
+import std;
 
 // forward declares
 class CBreakableProp;
@@ -22,28 +18,7 @@ class CBreakableProp;
 const float cDisseminationTimeHigh = 0.25f;		// Time interval for high priority stats sent to the player
 const float cDisseminationTimeLow = 2.5f;	// Time interval for medium priority stats sent to the player
 
-#define		BULLET_SUB_GROUP_MASK	0xF0000000
-#define		BULLET_ID_GROUP_MASK	0x000FFFFF
-#define		BULLET_RECOIL_MASK		0x0FF00000
-#define		RECOIL_BIT_SHIFT(val) (val<<20)
-#define		SUB_BULLET_BIT_SHIFT(val) 	(val << 28 )
-
-//Helper enum table and conversion function to simplify bomb data recording. Update whenever new bomb-related events become relevant
-enum CSBombEventName
-{
-	BOMB_EVENT_NAME_NONE = 0,						// 0 is an unknown event
-
-	BOMB_EVENT_NAME_FIRST,
-	BOMB_EVENT_NAME_PLANTED = BOMB_EVENT_NAME_FIRST,
-	BOMB_EVENT_NAME_DEFUSED,
-
-	BOMB_EVENT_NAME_MAX = BOMB_EVENT_NAME_DEFUSED,	// number of BOMB_EVENT_NAMES
-};
-CSBombEventName BombEventNameFromString( const char* pEventName );
-
 int GetCSLevelIndex( const char *pLevelName );
-
-uint32 GetPlayerID( CCSPlayer *pPlayer );
 
 typedef struct
 {
@@ -86,308 +61,11 @@ struct WeaponStats
 	int damage;
 };
 
-static byte PackVelocityComponent( float f )
-{
-	// Gets velocity components and sticks fits them into a byte by scaling them
-	// and clamping them
-	f = f / 2.0f;
-	if ( f > 127 ) f = 127;
-	if ( f < -128 ) f = -128;
-	return (byte) f;
-}
-
-static byte PackMovementComponent( bool bDucking, bool bInAir)
-{
-	return (((byte)bDucking) << 1) | (byte)bInAir;
-}
-
-static uint32 PackMovementStatInternal( Vector vVelocity, bool bDucking, bool bInAir )
-{
-	return ( (uint32)PackVelocityComponent( vVelocity.x ) << 24 ) |
-		( (uint32)PackVelocityComponent( vVelocity.y ) << 16 ) |
-		( (uint32)PackVelocityComponent( vVelocity.z ) << 8 ) |
-		( (uint32)PackMovementComponent( bDucking, bInAir ) );
-}
-
-static uint32 PackPlayerMovementStat( CCSPlayer *pPlayer )
-{
-	Vector vAttackerVelocity;
-	pPlayer->GetVelocity( &vAttackerVelocity, nullptr );
-	bool bInAir = FBitSet( pPlayer->GetFlags(), FL_ONGROUND ) ? false : true;
-	bool bDucking = FBitSet( pPlayer->GetFlags(), FL_DUCKING ) ? true : false;
-	return PackMovementStatInternal( vAttackerVelocity, bDucking, bInAir );
-}
-
-// Pack and convert Target Aim Angle component into 32bits
-// OGS
-static uint8 PackAimAngleComponent( float f )
-{
-	// Pack component of QAngle into Byte. Angle is -180 -> 180, so there's no space for the full range. 
-
-	// Make sure we're not getting weird values, rather have dumb data than broken game
-	if ( f > 180 ) f = 180;
-	if ( f < -180 ) f = -180;
-
-	// The greatest granularity comes from packing angle into ( 2 * Pi )/255 units. 
-	// Effectively that's just a shift and stretch of the range: ( ( f + 180 )/ 360 ) * 255;
-	return (uint8) ( ( ( f + 180 ) / 360 ) * 255 );
-}
-
-static uint32 PackAimAngleStat( CCSPlayer *pPlayer )
-{
-	QAngle vPlayerAimAngle = pPlayer->GetFinalAimAngle();
-	return ( (uint32)PackAimAngleComponent( (float)vPlayerAimAngle.z ) << 16 |
-		     (uint32)PackAimAngleComponent( (float)vPlayerAimAngle.y ) << 8  |
-			 (uint32)PackAimAngleComponent( (float)vPlayerAimAngle.x ) 
-		   );	   
-}
-
-
-//=============================================================================
-//
-// OGS Gamestats
-//
-struct SWeaponShotData : public BaseStatData 
-{
-	SWeaponShotData( CCSPlayer *pPlayer, CWeaponCSBase* pWeapon, uint8 subBullet, uint8 round, uint8 iRecoilIndex )
-	{
-		Clear();
-
-		if ( pWeapon )
-		{			
-			m_ui8WeaponID = (uint8)pWeapon->GetEconItemView()->GetItemIndex();
-		}
-
-		if ( pPlayer )
-		{
-			m_iUserID = GetPlayerID( pPlayer );
-			m_uiBulletID = pPlayer->GetBulletGroup();
-			m_vAttackerPos = pPlayer->GetAbsOrigin();
-			m_uAttackerMovement = PackPlayerMovementStat( pPlayer );
-		}
-
-		m_uiSubBulletID = subBullet;
-		m_RoundID = round;
-		m_uiRecoilIndex = iRecoilIndex;
-	}
-
-	void Clear()
-	{
-		m_iUserID = 0;
-		m_WeaponID = WEAPON_NONE;
-		m_ui8WeaponID = 0;
-		m_uiBulletID = 0;
-		m_uiSubBulletID = 0;
-		m_vAttackerPos.Init();		
-		m_uAttackerMovement = 0;
-		m_RoundID = 0;
-		m_uiRecoilIndex = 0;
-	}
-
-	int			m_iUserID;
-	CSWeaponID	m_WeaponID;
-	uint8       m_ui8WeaponID;
-	uint32		m_uiBulletID;
-	uint8		m_uiSubBulletID;
-	uint8		m_uiRecoilIndex;
-	Vector		m_vAttackerPos;
-	uint32		m_uAttackerMovement;
-	uint8		m_RoundID;
-};
-
-struct SWeaponHitData : public BaseStatData 
-{
-	SWeaponHitData( CCSPlayer *pCSTarget, const CTakeDamageInfo &info, uint8 subBullet, uint8 round, uint8 iRecoilIndex );
-
-	SWeaponHitData()
-	{
-		Clear();
-	}
-
-	// When any grenade explodes-- this is separate from any damage it may deal, which are also recorded as hits.
-	// Can fail! check the return!
-	bool InitAsGrenadeDetonation( class CBaseCSGrenadeProjectile *pGrenade, uint32 unBulletGroup );
-	
-	// When a bomb is planted or defused, we want to collect data from each alive player, reporting their locations
-	bool InitAsBombEvent( CCSPlayer *pCSPlayer, class CPlantedC4 *pPlantedC4, uint32 unBulletGroup, uint8 nBombsite, CSBombEventName nBombEventName );
-	
-	void Clear()
-	{
-		m_uiBulletID = 0;
-		m_uiSubBulletID = 0;
-		m_vAttackerPos.Init();
-		m_vTargetPos.Init();
-		m_uiDamage = 0;
-		m_HitRegion = 0;
-		m_RoundID = 0;
-		m_ui8WeaponID = 0;
-		m_ui64TargertID = 0;
-		m_ui64AttackerID = 0;
-		m_ui8Health = 0;
-		m_uAttackerMovement = 0;
-		m_uiRecoilIndex = 0;
-	}
-
-	void CompactBulletID()
-	{
-		m_uiBulletID = (m_uiBulletID & BULLET_ID_GROUP_MASK) | (SUB_BULLET_BIT_SHIFT(m_uiSubBulletID) & BULLET_SUB_GROUP_MASK) | (RECOIL_BIT_SHIFT( ( std::min<std::common_type_t<uint8, int>>(m_uiRecoilIndex, 255) ) ) & BULLET_RECOIL_MASK);
-	}
-
-	// Data that gets sent to OGS
-	uint32	m_uiBulletID;
-	uint8	m_uiSubBulletID;
-	uint8	m_uiRecoilIndex;
-	Vector	m_vAttackerPos;
-	Vector	m_vTargetPos;
-	uint16	m_uiDamage;
-	uint8	m_HitRegion;
-	uint8	m_RoundID;
-	
-	uint8	m_ui8Health;
-	uint8	m_ui8WeaponID;
-	uint32	m_ui64AttackerID;
-	uint32	m_ui64TargertID;
-	uint32  m_uAttackerMovement;
-
-	BEGIN_STAT_TABLE( "CSGOWeaponHitData" )
-		REGISTER_STAT_NAMED( m_ui8WeaponID, "WeaponID" )
-		REGISTER_STAT_NAMED( m_uiBulletID, "BulletID" )
-		REGISTER_STAT_NAMED( m_ui64AttackerID, "AttackerID" )
-		REGISTER_STAT_NAMED( (int)m_vAttackerPos.x, "AttackerX" )
-		REGISTER_STAT_NAMED( (int)m_vAttackerPos.y, "AttackerY" )
-		REGISTER_STAT_NAMED( (int)m_vAttackerPos.z, "AttackerZ" )
-		REGISTER_STAT_NAMED( (int)m_uAttackerMovement, "AttackerMovement" )
-		REGISTER_STAT_NAMED( m_ui64TargertID, "TargetID" )
-		REGISTER_STAT_NAMED( (int)m_vTargetPos.x, "TargetX" )
-		REGISTER_STAT_NAMED( (int)m_vTargetPos.y, "TargetY" )
-		REGISTER_STAT_NAMED( (int)m_vTargetPos.z, "TargetZ" )
-		REGISTER_STAT_NAMED( m_ui8Health, "Health" )
-		REGISTER_STAT_NAMED( m_uiDamage, "Damage" )
-		REGISTER_STAT_NAMED( m_HitRegion, "HitRegion" )
-		REGISTER_STAT_NAMED( m_RoundID, "Round" )
-	END_STAT_TABLE()
-
-};
-
-struct SWeaponMissData : public BaseStatData 
-{
-	SWeaponMissData( SWeaponShotData *data ) 
-	{
-		Clear();
-
-		if ( data )
-		{
-			m_ui64AttackerID = data->m_iUserID;
-			m_ui8WeaponID = data->m_ui8WeaponID;//data->m_WeaponID;
-			m_uiBulletID = data->m_uiBulletID;
-			m_uiRecoilIndex = data->m_uiRecoilIndex;
-			m_uiSubBulletID = data->m_uiSubBulletID;
-			m_vAttackerPos = data->m_vAttackerPos;
-			m_uAttackerMovement = data->m_uAttackerMovement;
-			m_RoundID = data->m_RoundID;
-
-			TimeSubmitted = data->TimeSubmitted;
-		}
-	}
-
-	void Clear()
-	{
-		m_ui8WeaponID = 0;
-		m_uiBulletID = 0;
-		m_uiSubBulletID = 0;
-		m_uiRecoilIndex = 0;
-		m_ui64AttackerID = 0;
-		m_vAttackerPos.Init();
-		m_uAttackerMovement = 0;
-		m_RoundID = 0;		
-	}
-
-	void CompactBulletID()
-	{
-		m_uiBulletID = (m_uiBulletID & BULLET_ID_GROUP_MASK) | (SUB_BULLET_BIT_SHIFT(m_uiSubBulletID) & BULLET_SUB_GROUP_MASK) | (RECOIL_BIT_SHIFT( ( std::min<std::common_type_t<uint8, int>>(m_uiRecoilIndex, 255) ) ) & BULLET_RECOIL_MASK);
-	}
-
-	uint8	m_ui8WeaponID;
-	uint32	m_uiBulletID;
-	uint8	m_uiSubBulletID;
-	uint8	m_uiRecoilIndex;
-	uint32	m_ui64AttackerID;
-	Vector	m_vAttackerPos;
-	uint32	m_uAttackerMovement;
-	uint8	m_RoundID;
-
-
-	BEGIN_STAT_TABLE( "CSGOWeaponMissData" )
-		REGISTER_STAT_NAMED( m_ui8WeaponID, "WeaponID" )
-		REGISTER_STAT_NAMED( m_uiBulletID, "BulletID" )
-		REGISTER_STAT_NAMED( m_ui64AttackerID, "AttackerID" )
-		REGISTER_STAT_NAMED( (int)m_vAttackerPos.x, "AttackerX" )
-		REGISTER_STAT_NAMED( (int)m_vAttackerPos.y, "AttackerY" )
-		REGISTER_STAT_NAMED( (int)m_vAttackerPos.z, "AttackerZ" )
-		REGISTER_STAT_NAMED( (int)m_uAttackerMovement, "AttackerMovement" )
-		REGISTER_STAT_NAMED( m_RoundID, "Round" )
-	END_STAT_TABLE()
-
-};
-
-struct SMarketPurchases : public BaseStatData 
-{
-	SMarketPurchases( uint64 ulPlayerID, int iPrice, const char *pName, int round ) : ItemCost(iPrice)
-	{
-		m_nPlayerID = ulPlayerID;
-		
-		if ( pName )
-		{
-			//Can we find a valid Item Definition?
-			if ( GetItemSchema()->GetItemDefinitionByName( pName ) )
-			{				
-				ItemID = (uint)GetItemSchema()->GetItemDefinitionByName( pName )->GetDefinitionIndex();				
-			}
-			else
-			{
-				//We don't know about you, you're probably equipment (armor, defuse kit)
-				//Use CSWeaponID instead (works for all equipment)
-				ItemID = WeaponIdFromString( pName ); 	 //Returns WEAPON_NONE on failure to find string pName
-			}			
-		}
-		else
-		{
-			   ItemID = WEAPON_NONE;
-		}
-
-		// Can't buy 'none'. Investigate why we can't get a weapon ID from the given string. 
-		Assert( ItemID != WEAPON_NONE );
-
-		m_iPurchaseCnt = 1;
-		m_niRound = round;
-	}
-	uint32	m_nPlayerID;
-	int		ItemCost;
-	uint	ItemID;
-	char	m_iPurchaseCnt;
-	int		m_niRound;
-
-	BEGIN_STAT_TABLE( "CSGOMarketPurchase" )
-		REGISTER_STAT_NAMED( m_nPlayerID, "AccountID" )
-		REGISTER_STAT( ItemCost )
-		REGISTER_STAT_NAMED( m_iPurchaseCnt, "PurchaseCount" )
-		REGISTER_STAT_NAMED( ItemID, "WeaponID" )
-		REGISTER_STAT_NAMED( m_niRound, "Round" )
-		END_STAT_TABLE()
-};
-
-typedef std::vector< std::unique_ptr< SWeaponHitData > > CSGOWeaponHitData;
-typedef std::vector< std::unique_ptr< SWeaponMissData > > CSGOWeaponMissData;
-typedef std::vector< std::unique_ptr< SWeaponShotData > > CSGOWeaponShotsData;
-typedef std::vector< std::unique_ptr< SMarketPurchases > > CSGOMarketPurchaseData;
-
-
 //=============================================================================
 //
 // CS Game Stats Class
 //
 class CCSGameStats : public CBaseGameStats, public CGameEventListener, public CAutoGameSystemPerFrame
-, public IGameStatTracker
 {
 public:
 
@@ -429,14 +107,6 @@ public:
 	void Event_MVPEarned( CCSPlayer* pPlayer );	
 	void Event_KnifeUse( CCSPlayer* pPlayer, bool bStab, int iDamage );
 
-	void RecordWeaponHit( std::unique_ptr< SWeaponHitData > pHitData );
-	
-	// Steamworks Gamestats
-	void UploadRoundStats( void );
-	virtual void SubmitGameStats( KeyValues *pKV );
-	virtual StatContainerList_t* GetStatContainerList( void );
-	bool AnyOGSDataToSubmit( void );
-
 	virtual void FireGameEvent( IGameEvent *event );
 
 	void UpdatePlayerRoundStats(int winner);
@@ -447,7 +117,6 @@ public:
 	void						ResetKillHistory( CBasePlayer *pPlayer );
 	void						ResetRoundStats();
 	void						ResetPlayerClassMatchStats();
-	void						ClearOGSRoundStats();
 
 	const StatsCollection_t&	GetTeamStats( int iTeamIndex ) const;
 	void						ResetAllTeamStats();
@@ -461,7 +130,6 @@ public:
 	void						IncrementStat( CCSPlayer* pPlayer, CSStatType_t statId, int iValue, bool bPlayerOnly = false, bool bIncludeBotController = false );
 
 	void						SendStatsToPlayer( CCSPlayer * pPlayer, int iMinStatPriority );
-	void						CreateNewGameStatsSession( void );
 
 protected:	
 	void						SetStat( CCSPlayer *pPlayer, CSStatType_t statId, int iValue );
@@ -481,17 +149,6 @@ private:
 	ks::idict< CSStatType_t >	m_PropStatTable;
 
 	WeaponStats					m_weaponStats[WEAPON_MAX][WeaponMode_MAX];
-
-	// Steamworks Gamestats
-	CSGOWeaponHitData			m_WeaponHitData;
-	CSGOWeaponMissData			m_WeaponMissData;
-	CSGOWeaponShotsData			m_WeaponShotData;
-	CSGOMarketPurchaseData		m_MarketPurchases;
-
-	// A static list of all the stat containers, one for each data structure being tracked
-	static StatContainerList_t * s_StatLists;
 };
 
 extern CCSGameStats CCS_GameStats;
-
-#endif // CS_GAMESTATS_H

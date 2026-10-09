@@ -1,14 +1,9 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ISCENEFILECACHE_H
-#define ISCENEFILECACHE_H
-
-#include "interface.h"
-#include "appframework/iappsystem.h"
+import ks.tier1;
+import std;
 
 // the file cache can support persisting some calcs
 struct SceneCachedData_t
@@ -24,8 +19,8 @@ class ISceneFileCache : public IAppSystem
 public:
 
 	// async implemenation
-	virtual size_t		GetSceneBufferSize( char const *filename ) = 0;
-	virtual bool		GetSceneData( char const *filename, byte *buf, size_t bufsize ) = 0;
+	virtual std::size_t		GetSceneBufferSize( char const *filename ) = 0;
+	virtual bool		GetSceneData( char const *filename, byte *buf, std::size_t bufsize ) = 0;
 
 	// persisted scene data, returns true if valid, false otherwise
 	virtual bool		GetSceneCachedData( char const *pFilename, SceneCachedData_t *pData ) = 0;
@@ -36,6 +31,4 @@ public:
 	virtual void		Reload() = 0;
 };
 
-#define SCENE_FILE_CACHE_INTERFACE_VERSION "SceneFileCache002"
-
-#endif // ISCENEFILECACHE_H
+inline constexpr const char *SCENE_FILE_CACHE_INTERFACE_VERSION = "SceneFileCache002";

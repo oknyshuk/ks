@@ -1,18 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IMATERIALSYSTEMHARDWARECONFIG_H
-#define IMATERIALSYSTEMHARDWARECONFIG_H
+[[gnu::always_inline]] inline constexpr auto IsPlatformOpenGL() { return false; }
 
-
-#define IsPlatformOpenGL() false
-
-#include "tier1/interface.h"
+import std;
+import ks.tier1;
 //#include "tier2/tier2.h"
 #include "bitmap/imageformat.h"
 #include "imaterialsystem.h"
@@ -20,7 +13,7 @@
 // Material system interface version
 //-----------------------------------------------------------------------------
 
-FORCEINLINE bool IsOpenGL( void )
+[[gnu::always_inline]] inline bool IsOpenGL( void )
 {
 	return IsPlatformOpenGL();
 }
@@ -233,5 +226,3 @@ public:
 	inline bool ShouldAlwaysUseShaderModel2bShaders() const { return IsOpenGL(); }
 	inline bool PlatformRequiresNonNullPixelShaders() const { return true; }
 };
-
-#endif // IMATERIALSYSTEMHARDWARECONFIG_H

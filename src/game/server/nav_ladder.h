@@ -1,19 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Navigation ladders
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-#ifndef _NAV_LADDER_H_
-#define _NAV_LADDER_H_
-
+import ks.tier1;
 #include "nav.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
+import std;
 
 class CNavArea;
 
@@ -151,6 +145,3 @@ inline const Vector &CNavLadder::GetNormal( void ) const
 {
 	return m_normal;
 }
-
-
-#endif // _NAV_LADDER_H_

@@ -1,22 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IMATERIALPROXY_H
-#define IMATERIALPROXY_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "interface.h"
+import std;
+import ks.tier1;
 
-#define IMATERIAL_PROXY_INTERFACE_VERSION "_IMaterialProxy003"
+inline constexpr const char *IMATERIAL_PROXY_INTERFACE_VERSION = "_IMaterialProxy003";
 
 class IMaterial;
-class KeyValues;
 
-abstract_class IMaterialProxy
+class IMaterialProxy
 {
 public:
 	virtual bool Init( IMaterial* pMaterial, KeyValues *pKeyValues ) = 0;
@@ -34,5 +27,3 @@ protected:
 	// no one should call this directly
 	virtual ~IMaterialProxy() {}
 };
-
-#endif // IMATERIALPROXY_H

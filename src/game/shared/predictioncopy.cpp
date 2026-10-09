@@ -1,27 +1,18 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#if !defined( NO_ENTITY_PREDICTION )
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 
-#include "igamesystem.h"
-#include <typeinfo>
 #include "cdll_int.h"
-#include <memory.h>
-#include <stdarg.h>
-#include "tier0/dbg.h"
-#include "tier1/strtools.h"
 #include "predictioncopy.h"
 #include "engine/ivmodelinfo.h"
-#include "tier1/fmtstr.h"
-#include "utlvector.h"
-#include "tier0/vprof.h"
-#include "tier1/tokenset.h"
 
 ks::object_pool< optimized_datamap_t >	g_OptimizedDataMapPool( 20, ks::fixed_pool::grow::slow );
 
@@ -207,13 +198,13 @@ inline void CPredictionCopy::CopyField( difftype_t difftype, T *outvalue, const 
 template<>
 inline void CPredictionCopy::CopyField( difftype_t difftype, char *outvalue, const char *invalue, int count )
 {
-	Q_strcpy( outvalue, invalue );
+	V_strcpy( outvalue, invalue );
 }
 
 template< class T >
 inline void CPredictionCopy::WatchField( const typedescription_t *pField, const T *outvalue, int count )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 }
 
 // Short
@@ -237,7 +228,7 @@ inline void CPredictionCopy::WatchField( const typedescription_t *pField, const 
 			described = true;
 			char shortfile[ 512 ];
 			shortfile[ 0 ] = 0;
-			Q_FileBase( modelinfo->GetModelName( m ), shortfile, sizeof( shortfile ) );
+			V_FileBase( modelinfo->GetModelName( m ), shortfile, sizeof( shortfile ) );
 
 			WatchMsg( pField, "integer (%i->%s)", outvalue[0], shortfile );
 		}
@@ -374,7 +365,7 @@ inline CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedesc
 	difftype_t retval = IDENTICAL;
 
 	float tolerance = pField->fieldTolerance;
-	Assert( tolerance >= 0.0f );
+	contract_assert( tolerance >= 0.0f );
 	bool usetolerance = tolerance > 0.0f;
 
 	if ( usetolerance )
@@ -410,7 +401,7 @@ inline CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedesc
 	difftype_t retval = IDENTICAL;
 
 	float tolerance = pField->fieldTolerance;
-	Assert( tolerance >= 0.0f );
+	contract_assert( tolerance >= 0.0f );
 	bool usetolerance = tolerance > 0.0f;
 
 	if ( usetolerance )
@@ -450,7 +441,7 @@ inline CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedesc
 
 	
 	float tolerance = pField->fieldTolerance;
-	Assert( tolerance >= 0.0f );
+	contract_assert( tolerance >= 0.0f );
 	bool usetolerance = tolerance > 0.0f;
 
 	if ( usetolerance )
@@ -491,7 +482,7 @@ inline CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedesc
 template<>
 inline CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const char *outvalue, const char *invalue, int count )
 {
-	if ( Q_strcmp( outvalue, invalue ) )
+	if ( V_strcmp( outvalue, invalue ) )
 	{
 		return DIFFERS;
 	}
@@ -526,7 +517,7 @@ inline CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedesc
 template< class T >
 inline void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const T *outvalue, const T *invalue, int count )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 }
 
 // short
@@ -562,7 +553,7 @@ inline void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const 
 			described = true;
 			char shortfile[ 512 ];
 			shortfile[ 0 ] = 0;
-			Q_FileBase( modelinfo->GetModelName( m ), shortfile, sizeof( shortfile ) );
+			V_FileBase( modelinfo->GetModelName( m ), shortfile, sizeof( shortfile ) );
 
 			OutputFieldDescription( pCurrentMap, pField, difftype, "integer (%i->%s)\n", outvalue[0], shortfile );
 		}
@@ -735,9 +726,9 @@ void CPredictionCopy::ReportFieldsDiffer( const datamap_t *pCurrentMap, const ty
 	va_list argptr;
 	char data[ 4096 ];
 	int len;
-	va_start(argptr, fmt);
-	len = Q_vsnprintf(data, sizeof( data ), fmt, argptr);
-	va_end(argptr);
+	__builtin_va_start(argptr, fmt);
+	len = V_vsnprintf(data, sizeof( data ), fmt, argptr);
+	__builtin_va_end(argptr);
 
 	Msg( "%2d (%d)%s::%s - %s",
 		m_nErrorCount,
@@ -771,9 +762,9 @@ void CPredictionCopy::OutputFieldDescription( const datamap_t *pCurrentMap, cons
 	va_list argptr;
 	char data[ 4096 ];
 	int len;
-	va_start(argptr, fmt);
-	len = Q_vsnprintf(data, sizeof( data ), fmt, argptr);
-	va_end(argptr);
+	__builtin_va_start(argptr, fmt);
+	len = V_vsnprintf(data, sizeof( data ), fmt, argptr);
+	__builtin_va_end(argptr);
 
 	bool isnetworked = ( flags & FTYPEDESC_INSENDTABLE ) ? true : false;
 	bool isnoterrorchecked = ( flags & FTYPEDESC_NOERRORCHECK ) ? true : false;
@@ -800,16 +791,15 @@ void CPredictionCopy::DescribeFields( const std::vector< const datamap_t * > &ve
 
 	const flattenedoffsets_t &flat = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
 	int fieldCount = std::ssize( flat.m_Flattened );
-	const typedescription_t * RESTRICT pField = &flat.m_Flattened[ 0 ];
-	PREFETCH360(pField, 0);
+	const typedescription_t * __restrict__ pField = &flat.m_Flattened[ 0 ];
 
 	for ( i = 0; i < fieldCount; ++i, pField++ )
 	{
 		flags = pField->flags;
 		int nFieldType = pField->fieldType;
 
-		const byte * RESTRICT pOutputData;
-		const byte * RESTRICT pInputData;
+		const byte * __restrict__ pOutputData;
+		const byte * __restrict__ pInputData;
 
 		fieldOffsetDest = pField->flatOffset[ m_nSrcOffsetIndex ];
 		fieldOffsetSrc	= pField->flatOffset[ m_nDestOffsetIndex ];
@@ -847,7 +837,7 @@ const typedescription_t *CPredictionCopy::FindFlatFieldByName( const char *field
 		for ( int j = 0; j < c; ++j )
 		{
 			const typedescription_t *td = &flat.m_Flattened[ j ];
-			if ( !Q_stricmp( td->fieldName, fieldname ) )
+			if ( !V_stricmp( td->fieldName, fieldname ) )
 			{
 				return td;
 			}
@@ -866,15 +856,15 @@ static ConVar pwatchvar( "pwatchvar", "", FCVAR_CHEAT, "Entity variable to watch
 //-----------------------------------------------------------------------------
 void CPredictionCopy::WatchMsg( const typedescription_t *pField, const char *fmt, ... )
 {
-	Assert( pField );
-	Assert( m_pOperation );
+	contract_assert( pField );
+	contract_assert( m_pOperation );
 
 	va_list argptr;
 	char data[ 4096 ];
 	int len;
-	va_start(argptr, fmt);
-	len = Q_vsnprintf(data, sizeof( data ), fmt, argptr);
-	va_end(argptr);
+	__builtin_va_start(argptr, fmt);
+	len = V_vsnprintf(data, sizeof( data ), fmt, argptr);
+	__builtin_va_end(argptr);
 
 	Msg( "%i %s %s : %s\n", gpGlobals->tickcount, m_pOperation, pField->fieldName, data );
 }
@@ -915,7 +905,7 @@ static void RemoveFieldsByName( char const *pchFieldName, std::vector< typedescr
 		if ( build[ i ].fieldType == FIELD_EMBEDDED )
 			continue;
 
-		if ( !Q_stricmp( build[ i ].fieldName, pchFieldName ) )
+		if ( !V_stricmp( build[ i ].fieldName, pchFieldName ) )
 		{
 			// Msg( "Removing %s %d due to override\n", build[ i ]->fieldName, build[ i ]->flatOffset[ TD_OFFSET_NORMAL ] );
 			build.erase( build.begin() + i );
@@ -1001,7 +991,7 @@ static void BuildFlattenedChains_R(
 
 		if ( pField->fieldType == FIELD_EMBEDDED )
 		{
-			AssertFatalMsg( !(pField->flags & FTYPEDESC_PTR ), ( "Prediction copy does not support FTYPEDESC_PTR(%d)", pField->fieldName ) );
+			contract_assert( !(pField->flags & FTYPEDESC_PTR ) );
 			BuildFlattenedChains_R( nPredictionCopyType, nMaxGroupSeen, nGroup, pField->td, build, pField->flatOffset[ TD_OFFSET_NORMAL ] );
 		}
 
@@ -1050,7 +1040,7 @@ static int BuildPackedFlattenedOffsets( int nStartOffset, flattenedoffsets_t &fl
 		case FIELD_EDICT:
 		case FIELD_POSITION_VECTOR:
 		case FIELD_FUNCTION:
-			Assert( 0 );
+			contract_assert( 0 );
 			break;
 
 		case FIELD_EMBEDDED:
@@ -1113,7 +1103,7 @@ static void BuildDataRuns( datamap_t *dmap )
 		datamapinfo_t &info = dmap->m_pOptimizedDataMap->m_Info[ pc ];
 		datacopyruns_t *runs = &info.m_CopyRuns;
 
-		Assert( !std::ssize( info.m_CopyRuns.m_vecRuns ) );
+		contract_assert( !std::ssize( info.m_CopyRuns.m_vecRuns ) );
 
 		const flattenedoffsets_t &flat = info.m_Flat;
 
@@ -1137,7 +1127,7 @@ static void BuildDataRuns( datamap_t *dmap )
 
 			if ( td->fieldType == FIELD_EMBEDDED )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				continue;
 			}
 
@@ -1146,7 +1136,7 @@ static void BuildDataRuns( datamap_t *dmap )
 				datarun_t run;
 				run.m_nStartFlatField = nRunStartField;
 				run.m_nEndFlatField = i - 1;
-				Assert( nCurrentRunStartOffset == flat.m_Flattened[ nRunStartField ].flatOffset[ TD_OFFSET_NORMAL ] );
+				contract_assert( nCurrentRunStartOffset == flat.m_Flattened[ nRunStartField ].flatOffset[ TD_OFFSET_NORMAL ] );
 				run.m_nStartOffset[ TD_OFFSET_NORMAL ] = nCurrentRunStartOffset;
 				run.m_nStartOffset[ TD_OFFSET_PACKED ] = flat.m_Flattened[ nRunStartField ].flatOffset[ TD_OFFSET_PACKED ];
 				run.m_nLength = nLastFieldEndOffset - nCurrentRunStartOffset;
@@ -1165,7 +1155,7 @@ static void BuildDataRuns( datamap_t *dmap )
 			datarun_t run;
 			run.m_nStartFlatField = nRunStartField;
 			run.m_nEndFlatField = i - 1;
-			Assert( nCurrentRunStartOffset == flat.m_Flattened[ nRunStartField ].flatOffset[ TD_OFFSET_NORMAL ] );
+			contract_assert( nCurrentRunStartOffset == flat.m_Flattened[ nRunStartField ].flatOffset[ TD_OFFSET_NORMAL ] );
 			run.m_nStartOffset[ TD_OFFSET_NORMAL ] = nCurrentRunStartOffset;
 			run.m_nStartOffset[ TD_OFFSET_PACKED ] = flat.m_Flattened[ nRunStartField ].flatOffset[ TD_OFFSET_PACKED ];
 			run.m_nLength = nLastFieldEndOffset - nCurrentRunStartOffset;
@@ -1324,27 +1314,25 @@ void CPredictionCopy::CopyFlatFieldsUsingRuns( const datamap_t *pCurrentMap, int
 {
 	int				fieldOffsetSrc;
 	int				fieldOffsetDest;
-	byte			* RESTRICT pOutputData;
-	const byte		* RESTRICT pInputData;
+	byte			* __restrict__ pOutputData;
+	const byte		* __restrict__ pInputData;
 
 	const datacopyruns_t &runs = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_CopyRuns;
 
-	byte * RESTRICT pDest = ( byte * RESTRICT )m_pDest;
-	const byte * RESTRICT pSrc = (const byte * RESTRICT)m_pSrc;
+	byte * __restrict__ pDest = ( byte * __restrict__ )m_pDest;
+	const byte * __restrict__ pSrc = (const byte * __restrict__)m_pSrc;
 
-	PREFETCH360( pSrc, 0 );
-	PREFETCH360( pDest, 0 );
 
 	int c = std::ssize( runs.m_vecRuns );
 	for ( int i = 0; i < c; ++i )
 	{
-		const datarun_t * RESTRICT run = &runs.m_vecRuns[ i ];
+		const datarun_t * __restrict__ run = &runs.m_vecRuns[ i ];
 		fieldOffsetDest = run->m_nStartOffset[ m_nDestOffsetIndex ];
 		fieldOffsetSrc	= run->m_nStartOffset[ m_nSrcOffsetIndex ];
 		pOutputData = pDest + fieldOffsetDest;
 		pInputData = pSrc + fieldOffsetSrc;
 
-		Q_memcpy( pOutputData, pInputData, run->m_nLength );
+		V_memcpy( pOutputData, pInputData, run->m_nLength );
 	}
 }
 
@@ -1352,14 +1340,12 @@ void CPredictionCopy::CopyFlatFields( const datamap_t *pCurrentMap, int nPredict
 {
 	int				fieldOffsetSrc;
 	int				fieldOffsetDest;
-	byte			* RESTRICT pOutputData;
-	const byte		* RESTRICT pInputData;
+	byte			* __restrict__ pOutputData;
+	const byte		* __restrict__ pInputData;
 
-	byte * RESTRICT pDest = (byte * RESTRICT)m_pDest;
-	const byte * RESTRICT pSrc = (const byte * RESTRICT)m_pSrc;
+	byte * __restrict__ pDest = (byte * __restrict__)m_pDest;
+	const byte * __restrict__ pSrc = (const byte * __restrict__)m_pSrc;
 
-	PREFETCH360( pSrc, 0 );
-	PREFETCH360( pDest, 0 );
 
 	const flattenedoffsets_t &flat = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
 
@@ -1371,11 +1357,9 @@ void CPredictionCopy::CopyFlatFields( const datamap_t *pCurrentMap, int nPredict
 		fieldOffsetDest = pField->flatOffset[ m_nDestOffsetIndex ];
 		fieldOffsetSrc	= pField->flatOffset[ m_nSrcOffsetIndex ];
 		pOutputData = pDest + fieldOffsetDest;
-		PREFETCH360( pOutputData, 0 );
 		pInputData = pSrc + fieldOffsetSrc;
-		PREFETCH360( pInputData, 0 );
 
-		Q_memcpy( pOutputData, pInputData, pField->fieldSizeInBytes );
+		V_memcpy( pOutputData, pInputData, pField->fieldSizeInBytes );
 	}
 }
 
@@ -1389,21 +1373,18 @@ void CPredictionCopy::ErrorCheckFlatFields_NoSpew( const datamap_t *pCurrentMap,
 
 	const flattenedoffsets_t &flat = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
 	const typedescription_t *pBase = &flat.m_Flattened[ 0 ];
-	PREFETCH360( pBase, 0 );
 	int fieldCount = std::ssize( flat.m_Flattened );
 
-	const byte * RESTRICT pDest = (const byte * RESTRICT)m_pDest;
-	const byte * RESTRICT pSrc = (const byte * RESTRICT)m_pSrc;
+	const byte * __restrict__ pDest = (const byte * __restrict__)m_pDest;
+	const byte * __restrict__ pSrc = (const byte * __restrict__)m_pSrc;
 	
 	const byte *pOutputData;
 	const byte *pInputData;
 
-	PREFETCH360( pSrc, 0 );
-	PREFETCH360( pDest, 0 );
 
 	for ( i = 0; i < fieldCount && !m_nErrorCount; ++i )
 	{
-		const typedescription_t * RESTRICT pField = &pBase[ i ];
+		const typedescription_t * __restrict__ pField = &pBase[ i ];
 
 		flags = pField->flags;
 		if ( flags & FTYPEDESC_NOERRORCHECK )
@@ -1432,21 +1413,18 @@ void CPredictionCopy::ErrorCheckFlatFields_Spew( const datamap_t *pCurrentMap, i
 
 	const flattenedoffsets_t &flat = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
 	const typedescription_t *pBase = &flat.m_Flattened[ 0 ];
-	PREFETCH360( pBase, 0 );
 	int fieldCount = std::ssize( flat.m_Flattened );
 
-	const byte * RESTRICT pDest = m_pDest;
-	const byte * RESTRICT pSrc = m_pSrc;
+	const byte * __restrict__ pDest = m_pDest;
+	const byte * __restrict__ pSrc = m_pSrc;
 
 	const byte *pOutputData;
 	const byte *pInputData;
 
-	PREFETCH360( pSrc, 0 );
-	PREFETCH360( pDest, 0 );
 
 	for ( i = 0; i < fieldCount ; ++i )
 	{
-		const typedescription_t * RESTRICT pField = &pBase[ i ];
+		const typedescription_t * __restrict__ pField = &pBase[ i ];
 
 		flags = pField->flags;
 		if ( flags & FTYPEDESC_NOERRORCHECK )
@@ -1479,14 +1457,16 @@ bool CPredictionCopy::PrepareDataMap( datamap_t *dmap )
 	return bPerformedPrepare;
 }
 
-CON_COMMAND( cl_predictioncopy_describe, "Describe datamap_t for entindex" )
+static void cl_predictioncopy_describe( const CCommand &args );
+static ConCommand cl_predictioncopy_describe_command( "cl_predictioncopy_describe", cl_predictioncopy_describe, "Describe datamap_t for entindex" );
+static void cl_predictioncopy_describe( const CCommand &args )
 {
 	if ( args.ArgC() <= 1 )
 	{
 		Msg( "Usage:  %s <entindex>", args[ 0 ] );
 		return;
 	}
-	int entindex = Q_atoi( args[ 1 ] );
+	int entindex = V_atoi( args[ 1 ] );
 	C_BaseEntity *ent = C_BaseEntity::Instance( entindex );
 	if ( !ent )
 	{
@@ -1514,7 +1494,7 @@ CON_COMMAND( cl_predictioncopy_describe, "Describe datamap_t for entindex" )
 // 1 PC_NETWORKED_ONLY = (1<<1) or (2)
 // 2 PC_EVERYTHING = ( PC_NON_NETWORKED_ONLY | PC_NETWORKED_ONLY ) or 3
 // So for these three options, we just take the type and add one!!!
-FORCEINLINE int ComputeTypeMask( int nType )
+[[gnu::always_inline]] inline int ComputeTypeMask( int nType )
 {
 	return nType + 1;
 }
@@ -1581,7 +1561,7 @@ int CPredictionCopy::TransferData( const char *operation, int entindex, datamap_
 	switch ( m_OpType )
 	{
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 	case TRANSFERDATA_COPYONLY:  // Data copying only (uses runs)
 		{
 			// Watch is based on "destination" of any write operation
@@ -1614,8 +1594,3 @@ int CPredictionCopy::TransferData( const char *operation, int entindex, datamap_
 
 	return m_nErrorCount;
 }
-
-#endif
-
-
-

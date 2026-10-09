@@ -1,13 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+#if defined(CLIENT_DLL)
+#endif
+#if defined(CLIENT_DLL)
+import std;
+import ks.core;
+#endif
 #include "dt_utlvector_recv.h"
-
 
 extern char const *s_ClientElementNames[MAX_ARRAY_ELEMENTS];
 
@@ -32,7 +32,7 @@ void RecvProxy_UtlVectorLength( const CRecvProxyData *pData, void *pStruct, void
 	int len = pData->m_Value.m_Int;
 	if ( len < 0 || len > pExtra->m_nMaxElements )
 	{
-		Assert( false );
+		contract_assert( false );
 		len = len < 0 ? 0 : pExtra->m_nMaxElements;
 	}
 
@@ -60,7 +60,7 @@ void RecvProxy_UtlVectorElement_DataTable( const RecvProp *pProp, void **pOut, v
 	CRecvPropExtra_UtlVector *pExtra = (CRecvPropExtra_UtlVector*)pProp->GetExtraData();
 
 	int iElement = pProp->GetElementStride();
-	Assert( iElement < pExtra->m_nMaxElements );
+	contract_assert( iElement < pExtra->m_nMaxElements );
 
 	// Null past the end: the decoder skips the slot (stale slots persist in merged states).
 	if ( iElement >= pExtra->m_Ops.count( pData, pExtra->m_Offset ) )
@@ -91,8 +91,8 @@ RecvProp RecvPropUtlVector(
 {
 	RecvProp ret;
 
-	Assert( nMaxElements <= MAX_ARRAY_ELEMENTS );
-	Assert( ops.resize && ops.base && ops.count );
+	contract_assert( nMaxElements <= MAX_ARRAY_ELEMENTS );
+	contract_assert( ops.resize && ops.base && ops.count );
 
 	ret.m_RecvType = DPT_DataTable;
 	ret.m_pVarName = pVarName;

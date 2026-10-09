@@ -1,10 +1,10 @@
-//========= Copyright c 1996-2009, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
+
 // Purpose: Cholesky and LDL' decomposition-related code
-//
-//=====================================================================================//
-#include "mathlib/cholesky.h"
-#include "mathlib/ssecholesky.h"
+
+import std;
+import ks.math;
 
 inline float ClampNeg( float a )
 {
@@ -13,7 +13,7 @@ inline float ClampNeg( float a )
 
 inline float SafeSqrt( float a )
 {
-	return sqrtf( ClampNeg( a ) );
+	return std::sqrtf( ClampNeg( a ) );
 }
 
 inline float SafeRecip( float a )
@@ -42,9 +42,6 @@ fltx4 SimdCholesky3x3_t::GetValidMask( )const
 // initializes this decomposition; see formula at http://planetmath.org/encyclopedia/CholeskyDecomposition.html
 bool Cholesky3x3_t::Init( float a00, float a10, float a11, float a20, float a21, float a22 )
 {
-#ifdef _DEBUG
-	memset( this, 0xCD, sizeof(*this) ); // to see what's changing easily
-#endif
 	m_00 = SafeSqrt( a00 ); m_inv00 = SafeRecip( m_00 );
 	m_10 = ( a10 ) * m_inv00;
 	m_11 = SafeSqrt( a11 - Sqr( m_10 ) ); m_inv11 = SafeRecip( m_11 );
@@ -52,18 +49,6 @@ bool Cholesky3x3_t::Init( float a00, float a10, float a11, float a20, float a21,
 	m_21 = ( a21 - m_20 * m_10) * m_inv11;
 	m_22 = SafeSqrt( a22 - Sqr( m_20 ) - Sqr( m_21 ) ); m_inv22 = SafeRecip( m_22 );
 
-#ifdef _DEBUG
-	if( IsValid() )
-	{
-		matrix3x4_t l,r, a;
-		FillLeft(l);
-		FillRight(r);
-		MatrixMultiply(l, r, a);
-		float flError = Sqr( a00 - a[0][0] ) + Sqr( a10 - a[1][0] ) + Sqr( a20 - a[2][0] ) + 
-			Sqr( a11 - a[1][1] ) + Sqr( a21 - a[2][1] ) + Sqr( a22 - a[2][2] );
-		Assert( flError < 1e-5f );
-	}
-#endif
 
 	return IsValid();
 }

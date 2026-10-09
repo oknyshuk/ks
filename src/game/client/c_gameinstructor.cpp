@@ -1,17 +1,28 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Client handler implementations for instruction players how to play
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Client handler implementations for instruction players how to play
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
 
 #include "c_gameinstructor.h"
 #include "c_baselesson.h"
 #include "c_keyvalue_saver.h"
 #include "filesystem.h"
-#include "vprof.h"
-#include "tier0/icommandline.h"
 #include "iclientmode.h"
 
 #include "matchmaking/imatchframework.h"
@@ -29,10 +40,10 @@ PRECACHE_REGISTER_END()
 
 #define MOD_DIR "MOD"
 
-#define GAMEINSTRUCTOR_SCRIPT_FILE "scripts/instructor_lessons.txt"
-#define GAMEINSTRUCTOR_MOD_SCRIPT_FILE "scripts/mod_lessons.txt"
+inline constexpr const char *GAMEINSTRUCTOR_SCRIPT_FILE = "scripts/instructor_lessons.txt";
+inline constexpr const char *GAMEINSTRUCTOR_MOD_SCRIPT_FILE = "scripts/mod_lessons.txt";
 
-#define GAMEINSTRUCTOR_SAVE_FILE "game_instructor_counts.txt"
+inline constexpr const char *GAMEINSTRUCTOR_SAVE_FILE = "game_instructor_counts.txt";
 
 
 // Game instructor auto game system instantiation
@@ -169,11 +180,11 @@ void CGameInstructorUserNotificationsListener::OnEvent( KeyValues *pEvent )
 {
 	char const *szEvent = pEvent->GetName();
 
-	if ( !Q_stricmp( szEvent, "OnProfileDataLoaded" ) )
+	if ( !V_stricmp( szEvent, "OnProfileDataLoaded" ) )
 	{
 		OnStorageDeviceAvailable( pEvent->GetInt( "iController" ) );
 	}
-	else if ( !Q_stricmp( szEvent, "OnProfilesChanged" ) )
+	else if ( !V_stricmp( szEvent, "OnProfilesChanged" ) )
 	{
 		OnGameUsersChanged();
 	}
@@ -190,9 +201,6 @@ void CGameInstructorUserNotificationsListener::OnGameUsersChanged()
 
 void CGameInstructorUserNotificationsListener::OnStorageDeviceAvailable( int iCtrlr )
 {
-#if   !defined( SPLIT_SCREEN_STUBS )
-	int iSlot = iCtrlr;
-#endif
 
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( iSlot );
 	GetGameInstructor().RefreshDisplaysAndSuccesses();
@@ -342,7 +350,7 @@ void C_GameInstructor::Update( float frametime )
 {
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( m_nSplitScreenSlot );
 
-	VPROF_BUDGET( "C_GameInstructor::Update", "GameInstructor" );
+	CVProfScope _( "C_GameInstructor::Update", 0, "GameInstructor", false, BUDGETFLAG_OTHER );
 
 	UpdateHiddenByOtherElements();
 
@@ -455,11 +463,11 @@ void C_GameInstructor::FireGameEvent( IGameEvent *event )
 {
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( m_nSplitScreenSlot );
 
-	VPROF_BUDGET( "C_GameInstructor::FireGameEvent", "GameInstructor" );
+	CVProfScope _( "C_GameInstructor::FireGameEvent", 0, "GameInstructor", false, BUDGETFLAG_OTHER );
 
 	const char *name = event->GetName();
 
-	if ( Q_strcmp( name, "gameinstructor_draw" ) == 0 )
+	if ( V_strcmp( name, "gameinstructor_draw" ) == 0 )
 	{
 		if ( m_bNoDraw )
 		{
@@ -472,7 +480,7 @@ void C_GameInstructor::FireGameEvent( IGameEvent *event )
 			m_bNoDraw = false;
 		}
 	}
-	else if ( Q_strcmp( name, "gameinstructor_nodraw" ) == 0 )
+	else if ( V_strcmp( name, "gameinstructor_nodraw" ) == 0 )
 	{
 		if ( !m_bNoDraw )
 		{
@@ -486,7 +494,7 @@ void C_GameInstructor::FireGameEvent( IGameEvent *event )
 			StopAllLessons();
 		}
 	}
-	else if ( Q_strcmp( name, "round_end" ) == 0 )
+	else if ( V_strcmp( name, "round_end" ) == 0 )
 	{
 		if ( gameinstructor_verbose.GetInt() > 0 )
 		{
@@ -496,7 +504,7 @@ void C_GameInstructor::FireGameEvent( IGameEvent *event )
 
 		CloseAllOpenOpportunities();
 	}
-	else if ( Q_strcmp( name, "round_start" ) == 0 )
+	else if ( V_strcmp( name, "round_start" ) == 0 )
 	{
 		if ( gameinstructor_verbose.GetInt() > 0 )
 		{
@@ -508,7 +516,7 @@ void C_GameInstructor::FireGameEvent( IGameEvent *event )
 
 		EvaluateLessonsForGameRules();
 	}
-	else if ( Q_strcmp( name, "player_death" ) == 0 )
+	else if ( V_strcmp( name, "player_death" ) == 0 )
 	{
 		C_BasePlayer *pLocalPlayer = GetLocalPlayer();
 		if ( pLocalPlayer && pLocalPlayer == UTIL_PlayerByUserId( event->GetInt( "userid" ) ) )
@@ -530,7 +538,7 @@ void C_GameInstructor::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-	else if ( Q_strcmp( name, "player_team" ) == 0 )
+	else if ( V_strcmp( name, "player_team" ) == 0 )
 	{
 		C_BasePlayer *pLocalPlayer = GetLocalPlayer();
 		if ( pLocalPlayer && pLocalPlayer == UTIL_PlayerByUserId( event->GetInt( "userid" ) ) && 
@@ -547,7 +555,7 @@ void C_GameInstructor::FireGameEvent( IGameEvent *event )
 
 		EvaluateLessonsForGameRules();
 	}
-	else if ( Q_strcmp( name, "player_disconnect" ) == 0 )
+	else if ( V_strcmp( name, "player_disconnect" ) == 0 )
 	{
 		C_BasePlayer *pLocalPlayer = GetLocalPlayer();
 		if ( pLocalPlayer && pLocalPlayer == UTIL_PlayerByUserId( event->GetInt( "userid" ) ) )
@@ -561,7 +569,7 @@ void C_GameInstructor::FireGameEvent( IGameEvent *event )
 			CloseAllOpenOpportunities();
 		}
 	}
-	else if ( Q_strcmp( name, "map_transition" ) == 0 )
+	else if ( V_strcmp( name, "map_transition" ) == 0 )
 	{
 		if ( gameinstructor_verbose.GetInt() > 0 )
 		{
@@ -582,7 +590,7 @@ void C_GameInstructor::FireGameEvent( IGameEvent *event )
 			m_bNoDraw = false;
 		}
 	}
-	else if ( Q_strcmp( name, "game_newmap" ) == 0 )
+	else if ( V_strcmp( name, "game_newmap" ) == 0 )
 	{
 		if ( gameinstructor_verbose.GetInt() > 0 )
 		{
@@ -603,7 +611,7 @@ void C_GameInstructor::FireGameEvent( IGameEvent *event )
 			m_bNoDraw = false;
 		}
 	}
-	else if ( Q_strcmp( name, "set_instructor_group_enabled" ) == 0 )
+	else if ( V_strcmp( name, "set_instructor_group_enabled" ) == 0 )
 	{
 		const char *pszGroup = event->GetString( "group" );
 		bool bEnabled = event->GetInt( "enabled" ) != 0;
@@ -699,7 +707,7 @@ bool C_GameInstructor::ReadSaveData( void )
 		pLesson->SetDisplayCount( li.display );
 		pLesson->SetSuccessCount( li.success );
 
-		if ( Q_strcmp( pLesson->GetName(), "version number" ) == 0 )
+		if ( V_strcmp( pLesson->GetName(), "version number" ) == 0 )
 		{
 			nVersion = pLesson->GetSuccessCount();
 		}
@@ -828,7 +836,7 @@ void C_GameInstructor::PlaySound( const char *pchSoundName )
 	if ( pLocalPlayer )
 	{
 		// Local player exists
-		if ( pchSoundName[ 0 ] != '\0' && Q_strcmp( m_szPreviousStartSound, pchSoundName ) != 0 )
+		if ( pchSoundName[ 0 ] != '\0' && V_strcmp( m_szPreviousStartSound, pchSoundName ) != 0 )
 		{
 			V_strcpy_safe( m_szPreviousStartSound, pchSoundName );
 			m_fNextStartSoundTime = 0.0f;
@@ -1081,7 +1089,7 @@ void C_GameInstructor::SetLessonGroupEnabled( const char *pszGroup, bool bEnable
 {
 	for ( int i = 0; i < std::ssize( m_Lessons ); ++i )
 	{
-		if ( !Q_stricmp(pszGroup, m_Lessons[i]->GetGroup()) )
+		if ( !V_stricmp(pszGroup, m_Lessons[i]->GetGroup()) )
 		{
 			m_Lessons[ i ]->SetEnabled( bEnabled );
 		}
@@ -1138,7 +1146,7 @@ bool C_GameInstructor::UpdateActiveLesson( CBaseLesson *pLesson, const CBaseLess
 {
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( m_nSplitScreenSlot );
 
-	VPROF_BUDGET( "C_GameInstructor::UpdateActiveLesson", "GameInstructor" );
+	CVProfScope _( "C_GameInstructor::UpdateActiveLesson", 0, "GameInstructor", false, BUDGETFLAG_OTHER );
 
 	bool bIsOpen = pLesson->IsInstructing();
 
@@ -1185,7 +1193,7 @@ void C_GameInstructor::UpdateInactiveLesson( CBaseLesson *pLesson )
 {
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( m_nSplitScreenSlot );
 
-	VPROF_BUDGET( "C_GameInstructor::UpdateInactiveLesson", "GameInstructor" );
+	CVProfScope _( "C_GameInstructor::UpdateInactiveLesson", 0, "GameInstructor", false, BUDGETFLAG_OTHER );
 
 	if ( pLesson->IsInstructing() )
 	{
@@ -1211,7 +1219,7 @@ CBaseLesson * C_GameInstructor::GetLesson_Internal( const char *pchLessonName )
 	{
 		CBaseLesson *pLesson = m_Lessons[ i ];
 
-		if ( Q_strcmp( pLesson->GetName(), pchLessonName ) == 0 )
+		if ( V_strcmp( pLesson->GetName(), pchLessonName ) == 0 )
 		{
 			return pLesson;
 		}
@@ -1241,7 +1249,7 @@ void C_GameInstructor::CloseAllOpenOpportunities( void )
 		CloseOpportunity( pLesson );
 	}
 
-	Assert( std::ssize( m_OpenOpportunities ) == 0 );
+	contract_assert( std::ssize( m_OpenOpportunities ) == 0 );
 }
 
 void C_GameInstructor::CloseOpportunity( CBaseLesson *pLesson )
@@ -1274,7 +1282,6 @@ void C_GameInstructor::ReadLessonsFromFile( const char *pchFileName )
 	// Static init function
 	CScriptedIconLesson::PreReadLessonsFromFile();
 
-	MEM_ALLOC_CREDIT();
 	
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( m_nSplitScreenSlot );
 	KeyValues *pLessonKeys = new KeyValues( "instructor_lessons" );
@@ -1283,7 +1290,7 @@ void C_GameInstructor::ReadLessonsFromFile( const char *pchFileName )
 
 	for ( m_pScriptKeys = pLessonKeys->GetFirstTrueSubKey(); m_pScriptKeys; m_pScriptKeys = m_pScriptKeys->GetNextTrueSubKey() )
 	{
-		if ( Q_stricmp( m_pScriptKeys->GetName(), "GroupConVarToggle" ) == 0 )
+		if ( V_stricmp( m_pScriptKeys->GetName(), "GroupConVarToggle" ) == 0 )
 		{
 			// Add convar group toggler to the list
 			int nLessonGroupConVarToggle = std::ssize( m_LessonGroupConVarToggles ); m_LessonGroupConVarToggles.push_back( LessonGroupConVarToggle_t( m_pScriptKeys->GetString( "convar" ) ) );
@@ -1325,7 +1332,9 @@ static short GAMEINSTRUCTOR_SAVE_RESTORE_VERSION = 1;
 
 
 
-CON_COMMAND_F( gameinstructor_reload_lessons, "Shuts down all open lessons and reloads them from the script file.", FCVAR_CHEAT )
+static void gameinstructor_reload_lessons( const CCommand &args );
+static ConCommand gameinstructor_reload_lessons_command( "gameinstructor_reload_lessons", gameinstructor_reload_lessons, "Shuts down all open lessons and reloads them from the script file.", FCVAR_CHEAT );
+static void gameinstructor_reload_lessons( const CCommand &args )
 {
 	for ( int i = 0 ; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
@@ -1335,7 +1344,9 @@ CON_COMMAND_F( gameinstructor_reload_lessons, "Shuts down all open lessons and r
 	}
 }
 
-CON_COMMAND_F( gameinstructor_reset_counts, "Resets all display and success counts to zero.", FCVAR_NONE )
+static void gameinstructor_reset_counts( const CCommand &args );
+static ConCommand gameinstructor_reset_counts_command( "gameinstructor_reset_counts", gameinstructor_reset_counts, "Resets all display and success counts to zero.", FCVAR_NONE );
+static void gameinstructor_reset_counts( const CCommand &args )
 {
 	for ( int i = 0 ; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
@@ -1344,7 +1355,9 @@ CON_COMMAND_F( gameinstructor_reset_counts, "Resets all display and success coun
 	}
 }
 
-CON_COMMAND_F( gameinstructor_dump_open_lessons, "Gives a list of all currently open lessons.", FCVAR_CHEAT )
+static void gameinstructor_dump_open_lessons( const CCommand &args );
+static ConCommand gameinstructor_dump_open_lessons_command( "gameinstructor_dump_open_lessons", gameinstructor_dump_open_lessons, "Gives a list of all currently open lessons.", FCVAR_CHEAT );
+static void gameinstructor_dump_open_lessons( const CCommand &args )
 {
 	for ( int i = 0 ; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{

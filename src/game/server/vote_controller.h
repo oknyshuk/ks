@@ -1,37 +1,33 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Player-driven Voting System for Multiplayer Source games (currently implemented for TF2)
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef VOTE_CONTROLLER_H
-#define VOTE_CONTROLLER_H
+// Purpose: Player-driven Voting System for Multiplayer Source games (currently implemented for TF2)
 
 #include "reflect_annotations.h"
 
-
 #include "shareddefs.h"
+#include "baseentity.h"
 
 #define MAX_COMMAND_LENGTH 64
-#define MAX_CREATE_ERROR_STRING 96
+inline constexpr auto MAX_CREATE_ERROR_STRING = 96;
 
 // TODO: look into doing enum instead of string compares here - mtw
-#define	VOTEISSUE_NAME_KICK					"Kick"
-#define	VOTEISSUE_NAME_CHANGELEVEL		"ChangeLevel"
-#define	VOTEISSUE_NAME_NEXTLEVEL		"NextLevel"
-#define	VOTEISSUE_NAME_SWAPTEAMS		"SwapTeams"
-#define	VOTEISSUE_NAME_SCRAMBLE			"ScrambleTeams"
-#define	VOTEISSUE_NAME_RESTARTGAME		"RestartGame"
-#define	VOTEISSUE_NAME_SURRENDER		"Surrender"
-#define	VOTEISSUE_NAME_REMATCH			"Rematch"
-#define	VOTEISSUE_NAME_CONTINUE			"ContinueGame"
-#define	VOTEISSUE_NAME_PAUSEMATCH		"PauseMatch"
-#define VOTEISSUE_NAME_UNPAUSEMATCH		"UnpauseMatch"
-#define VOTEISSUE_NAME_LOADBACKUP		"LoadBackup"
-#define VOTEISSUE_NAME_READYFORMATCH	"ReadyForMatch"
-#define VOTEISSUE_NAME_NOTREADYFORMATCH	"NotReadyForMatch"
-#define VOTEISSUE_NAME_STARTTIMEOUT		"StartTimeOut"
+inline constexpr const char *VOTEISSUE_NAME_KICK = "Kick";
+inline constexpr const char *VOTEISSUE_NAME_CHANGELEVEL = "ChangeLevel";
+inline constexpr const char *VOTEISSUE_NAME_NEXTLEVEL = "NextLevel";
+inline constexpr const char *VOTEISSUE_NAME_SWAPTEAMS = "SwapTeams";
+inline constexpr const char *VOTEISSUE_NAME_SCRAMBLE = "ScrambleTeams";
+inline constexpr const char *VOTEISSUE_NAME_RESTARTGAME = "RestartGame";
+inline constexpr const char *VOTEISSUE_NAME_SURRENDER = "Surrender";
+inline constexpr const char *VOTEISSUE_NAME_REMATCH = "Rematch";
+inline constexpr const char *VOTEISSUE_NAME_CONTINUE = "ContinueGame";
+inline constexpr const char *VOTEISSUE_NAME_PAUSEMATCH = "PauseMatch";
+inline constexpr const char *VOTEISSUE_NAME_UNPAUSEMATCH = "UnpauseMatch";
+inline constexpr const char *VOTEISSUE_NAME_LOADBACKUP = "LoadBackup";
+inline constexpr const char *VOTEISSUE_NAME_READYFORMATCH = "ReadyForMatch";
+inline constexpr const char *VOTEISSUE_NAME_NOTREADYFORMATCH = "NotReadyForMatch";
+inline constexpr const char *VOTEISSUE_NAME_STARTTIMEOUT = "StartTimeOut";
 
 class CVoteController;
 
@@ -165,6 +161,3 @@ protected:
 	std::vector< CBaseIssue * > m_potentialIssues;
 	std::vector< const char * > m_VoteOptions;
 };
-
-
-#endif // VOTE_CONTROLLER_H

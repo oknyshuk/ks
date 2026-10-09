@@ -1,10 +1,16 @@
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 
-#include "keyvalues.h"
 #include "cdll_client_int.h"
 #include "view_scene.h"
 #include "viewrender.h"
-#include "tier0/icommandline.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
@@ -102,7 +108,7 @@ IScreenSpaceEffect *CScreenSpaceEffectManager::GetScreenSpaceEffect( const char 
 {
 	for( CScreenSpaceEffectRegistration *pReg=CScreenSpaceEffectRegistration::s_pHead; pReg!=nullptr; pReg=pReg->m_pNext )
 	{
-		if( !Q_stricmp( pReg->m_pEffectName, pEffectName ) )
+		if( !V_stricmp( pReg->m_pEffectName, pEffectName ) )
 		{
 			IScreenSpaceEffect *pEffect = pReg->m_pEffect;
 			return pEffect;

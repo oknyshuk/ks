@@ -1,23 +1,16 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-// 
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
+import ks.tier1;
 #include "blackbox.h"
-#include "tier0/basetypes.h"
 #include "cmd.h"
-#include "tier1/convar.h"
-#include "tier1/fmtstr.h"
-#include "tier1/interface.h"
-#include <deque>
-#include <string>
+import std;
 
 // development only, off by default for 360
 ConVar blackbox( "blackbox", "1" );
 
-#define MAX_MESSAGE_SIZE 1024
-#define DEFAULT_RECORD_LIMIT 16
+constexpr auto MAX_MESSAGE_SIZE = 1024;
+constexpr auto DEFAULT_RECORD_LIMIT = 16;
 
 static const char* gTypeMap[] = 
 {
@@ -81,7 +74,7 @@ private:
 CBlackBox gCBlackBox;
 IBlackBox *gBlackBox = &gCBlackBox;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CBlackBox, IBlackBox, BLACKBOX_INTERFACE_VERSION, gCBlackBox );
+static InterfaceReg s_Reg_CBlackBox_IBlackBox( []() -> void * { return static_cast<IBlackBox *>( &gCBlackBox ); }, BLACKBOX_INTERFACE_VERSION );;
 
 CBlackBox::CBlackBox()
 {
@@ -157,7 +150,9 @@ void CBlackBox::Flush( int type )
 	m_records[type].clear();
 }
 
-CON_COMMAND_F( blackbox_record, "Record an entry into the blackbox", FCVAR_DONTRECORD )
+static void blackbox_record( const CCommand &args );
+static ConCommand blackbox_record_command( "blackbox_record", blackbox_record, "Record an entry into the blackbox", FCVAR_DONTRECORD );
+static void blackbox_record( const CCommand &args )
 {
 	if ( !blackbox.GetBool() )
 		return;
@@ -171,7 +166,9 @@ CON_COMMAND_F( blackbox_record, "Record an entry into the blackbox", FCVAR_DONTR
 	BlackBox_Record( args[1], args[2] );
 }
 
-CON_COMMAND_F( blackbox_dump, "Dump the contents of the blackbox", FCVAR_DONTRECORD )
+static void blackbox_dump( const CCommand &args );
+static ConCommand blackbox_dump_command( "blackbox_dump", blackbox_dump, "Dump the contents of the blackbox", FCVAR_DONTRECORD );
+static void blackbox_dump( const CCommand &args )
 {
 
 	for ( int type = 0; type < gBlackBox->GetTypeCount(); type++ )
@@ -202,11 +199,11 @@ void BlackBox_Record( const char *type, const char *pFormat, ... )
 	}
 
 	char szMessage[1024];	
-	va_list marker;
+	std::va_list marker;
 
-	va_start( marker, pFormat);
-	Q_vsnprintf( szMessage, sizeof( szMessage ), pFormat, marker);
-	va_end( marker );	
+	__builtin_va_start( marker, pFormat);
+	V_vsnprintf( szMessage, sizeof( szMessage ), pFormat, marker);
+	__builtin_va_end( marker );	
 
 	//Msg( "Record: %s: %s\n", type, szMessage );
 	gBlackBox->Record( type_num, szMessage );

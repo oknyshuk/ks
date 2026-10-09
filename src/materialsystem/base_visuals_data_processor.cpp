@@ -1,9 +1,5 @@
-//========= Copyright (c) 1996-2013, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2013 Valve Corporation
 
 #include "materialsystem/ivisualsdataprocessor.h"
 #include "materialsystem/base_visuals_data_processor.h"

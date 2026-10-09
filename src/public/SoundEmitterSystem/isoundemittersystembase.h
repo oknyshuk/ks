@@ -1,28 +1,19 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ISOUNDEMITTERSYSTEMBASE_H
-#define ISOUNDEMITTERSYSTEMBASE_H
-
-
+import ks.vstdlib;
 #include "soundflags.h"
-#include "mathlib/compressed_vector.h"
-#include "appframework/iappsystem.h"
+import std;
 #include "tier3/tier3.h"
 
+extern LoggingChannelID_t LOG_SND_EMITTERSYSTEM;;
 
-DECLARE_LOGGING_CHANNEL( LOG_SND_EMITTERSYSTEM );
+inline constexpr const char *SOUNDGENDER_MACRO = "$gender";
+inline constexpr auto SOUNDGENDER_MACRO_LENGTH = 7; // Length of above including $
 
-#define SOUNDGENDER_MACRO "$gender"
-#define SOUNDGENDER_MACRO_LENGTH 7		// Length of above including $
-
-class KeyValues;
 typedef unsigned int HSOUNDSCRIPTHASH;
-#define SOUNDEMITTER_INVALID_HASH	(HSOUNDSCRIPTHASH)-1
+inline constexpr auto SOUNDEMITTER_INVALID_HASH = (HSOUNDSCRIPTHASH)-1;
 
 
 //-----------------------------------------------------------------------------
@@ -104,7 +95,7 @@ struct SoundFile
 		symbol = WAVENAME_INVALID;
 		gender = GENDER_NONE;
 		available = true;
-		COMPILE_TIME_ASSERT( sizeof(SoundFile) == 4 );
+		static_assert( sizeof(SoundFile) == 4 );
 	}
 
 	WaveNameId_t	symbol;
@@ -237,7 +228,7 @@ private:
 //-----------------------------------------------------------------------------
 // Purpose: Base class for sound emitter system handling (can be used by tools)
 //-----------------------------------------------------------------------------
-abstract_class ISoundEmitterSystemBase : public IAppSystem
+class ISoundEmitterSystemBase : public IAppSystem
 {
 public:
 	// Unused, left in the interface so I don't have to rebuild all
@@ -307,5 +298,3 @@ public:
 	virtual void			AddSoundsFromFile( const char *filename, bool bPreload, bool bAutoCache, bool bIsOverride = false ) = 0;
 
 };
-
-#endif // ISOUNDEMITTERSYSTEMBASE_H

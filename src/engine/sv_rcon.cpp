@@ -1,57 +1,15 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:  implementation of the rcon server 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: implementation of the rcon server
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <errno.h>
-#include <sys/ioctl.h>
-#define closesocket close
-#define WSAGetLastError() errno
-#define ioctlsocket ioctl
-#include <tier0/dbg.h>
-#include "tier1/byte_writer.h"
-#include "tier1/string_ops.h"
+import std;
+import ks.tier1;
 #include "server.h"
 #include "sv_rcon.h"
 #include "proto_oob.h" // PORT_RCON define
 #include "sv_remoteaccess.h"
 #include "cl_rcon.h"
-
-
-#ifdef ENABLE_RPT
-class CRPTServer : public CRConServer
-{
-	typedef CRConServer BaseClass;
-
-public:
-	virtual void OnSocketAccepted( SocketHandle_t hSocket, const netadr_t & netAdr, void** ppData )
-	{
-		BaseClass::OnSocketAccepted( hSocket, netAdr, ppData );
-
-		// Enable cheats on this client only
-		Cmd_SetRptActive( true );
-	}
-
-	virtual void OnSocketClosed( SocketHandle_t hSocket, const netadr_t & netAdr, void* pData )
-	{
-		Cmd_SetRptActive( false );
-		BaseClass::OnSocketClosed( hSocket, netAdr, pData );
-	}
-};
-
-
-static CRPTServer g_RPTServer;
-CRConServer & RPTServer()
-{
-	return g_RPTServer;
-}
-#endif // ENABLE_RPT
 
 static CRConServer g_RCONServer;
 CRConServer & RCONServer()
@@ -136,7 +94,7 @@ bool CRConServer::IsPassword( const char *pPassword ) const
 		return false;
 
 	// If the pw does not match, then not authed
-	return ( Q_strcmp( pPassword, m_Password.c_str() ) == 0 );
+	return ( V_strcmp( pPassword, m_Password.c_str() ) == 0 );
 }
 
 
@@ -189,6 +147,7 @@ void CRConServer::OnSocketClosed( SocketHandle_t hSocket, const netadr_t &netAdr
 //-----------------------------------------------------------------------------
 void CRConServer::RunFrame()
 {
+	ks::ScratchArena<> scratch;
 	m_Socket.RunFrame();
 	m_bSocketDeleted = false;
 
@@ -226,7 +185,7 @@ void CRConServer::RunFrame()
 			{
 				pBuf = new char[sendLen + sizeof(int)];
 			}
-			memcpy( pBuf, &sendLen, sizeof(sendLen) ); // copy the size of the packet in
+			std::memcpy( pBuf, &sendLen, sizeof(sendLen) ); // copy the size of the packet in
 			g_ServerRemoteAccess.ReadDataResponse( pData->listenerID, pBuf + sizeof(int), sendLen );
 			SendRCONResponse( i, pBuf, sendLen + sizeof(int) );
 			if ( bAllocate )
@@ -239,8 +198,9 @@ void CRConServer::RunFrame()
 		int pendingLen = 0;
 		unsigned long readLen = 0;
 		char ch;
-		pendingLen = recv( hSocket, &ch, sizeof(ch), MSG_PEEK );
-		if ( pendingLen == -1 && SocketWouldBlock() )
+		ks::platform::socket_error error = ks::platform::socket_error::none;
+		pendingLen = (int)ks::platform::peek_bytes( hSocket, &ch, sizeof(ch), &error );
+		if ( pendingLen == -1 && error == ks::platform::socket_error::again )
 			continue;
 
 		if ( pendingLen == 0 )
@@ -257,17 +217,17 @@ void CRConServer::RunFrame()
 		}
 
 		// find out how much we have to read
-		ioctlsocket( hSocket, FIONREAD, &readLen );
+		readLen = ks::platform::bytes_available( hSocket );
 		if ( readLen > sizeof(int) ) // we have a command to process
 		{
 			std::vector< std::byte > &response = pData->packetbuffer;
 			response.reserve( response.size() + readLen );
 			bool bClosed = false;
-			char *recvBuf = (char *)stackalloc( ( std::min<std::common_type_t<int, long unsigned int>>( 1024, readLen ) ) ); // a buffer used for recv()
+			char *recvBuf = (char *)scratch.AllocBytes( ( std::min<std::common_type_t<int, long unsigned int>>( 1024, readLen ) ) ); // a buffer used for recv()
 			unsigned int len = 0;
 			while ( len < readLen )
 			{
-				int recvLen = recv( hSocket, recvBuf , std::min<std::common_type_t<int, long unsigned int>>(1024, readLen - len) , 0 );
+				int recvLen = (int)ks::platform::receive_bytes( hSocket, recvBuf , std::min<std::common_type_t<int, long unsigned int>>(1024, readLen - len) , &error );
 				if ( recvLen == 0 ) // socket was closed
 				{
 					m_Socket.CloseAcceptedSocket( i );
@@ -275,9 +235,9 @@ void CRConServer::RunFrame()
 					break;
 				}
 				
-				if ( recvLen < 0 && !SocketWouldBlock() )
+				if ( recvLen < 0 && error != ks::platform::socket_error::again )
 				{
-					Warning( "RCON Cmd: recv error (%s)\n", NET_ErrorString( WSAGetLastError() ) );
+					Warning( "RCON Cmd: recv error (%s)\n", NET_ErrorString( error ) );
 					break;
 				}
 
@@ -303,7 +263,7 @@ void CRConServer::RunFrame()
 				continue;
 			}
 			
-			while ( size > 0 && size_t( size ) <= reader.remaining() )
+			while ( size > 0 && std::size_t( size ) <= reader.remaining() )
 			{
 				SV_RedirectStart( RD_SOCKET, &socketAdr );
 				g_ServerRemoteAccess.WriteDataRequest( this, pData->listenerID, reader.rest().data(), size );
@@ -375,8 +335,8 @@ void CRConServer::FinishRedirect( const char *msg, const netadr_t &adr )
 		response.write<int>(size); // the size
 
 		
-//		OutputDebugString( va("RCON: String is %i long\n", Q_strlen(msg)) ); // can't use DevMsg(), we are potentially inside the RedirectFlush() function
-//		printf("RCON: String is %i long, packet size %i\n", Q_strlen(msg), size );
+//		OutputDebugString( va("RCON: String is %i long\n", V_strlen(msg)) ); // can't use DevMsg(), we are potentially inside the RedirectFlush() function
+//		printf("RCON: String is %i long, packet size %i\n", V_strlen(msg), size );
 
 		SendRCONResponse( i, response.data(), response.size() );
 	}
@@ -405,7 +365,7 @@ void CRConServer::SetRequestID( ra_listener_id listener, int iRequestID )
 bool CRConServer::SendRCONResponse( int nIndex, const void *data, int len, bool fromQueue )
 {
 	SocketHandle_t hSocket = m_Socket.GetAcceptedSocketHandle( nIndex );
-	if ( hSocket < 0 )
+	if ( hSocket == nullptr )
 		return false;
 
 	ConnectedRConSocket_t *pSocketData = GetSocketData( nIndex );
@@ -424,17 +384,18 @@ bool CRConServer::SendRCONResponse( int nIndex, const void *data, int len, bool 
 		return true;
 	}
 
-	Assert( !( fromQueue && data != (pSocketData->m_OutstandingSends.front().Remaining().data())));
+	contract_assert( !( fromQueue && data != (pSocketData->m_OutstandingSends.front().Remaining().data())) );
 
 	int sendLen = 0;
 	while ( sendLen < len )
 	{
-		int ret = send( hSocket, (const char *)data + sendLen, len - sendLen, MSG_NOSIGNAL );
+		ks::platform::socket_error error = ks::platform::socket_error::none;
+		int ret = (int)ks::platform::send_bytes( hSocket, (const char *)data + sendLen, len - sendLen, &error );
 		if ( ret == -1 )
 		{
 			// can't finish sending this right now, push it back
 			// on the TOP of the queue to be sent next time around
-			if ( !SocketWouldBlock() )
+			if ( error != ks::platform::socket_error::again )
 			{
 				m_Socket.CloseAcceptedSocket( nIndex );
 				return false;

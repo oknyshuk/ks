@@ -1,20 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Implements visual effects entities: sprites, beams, bubbles, etc.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef ENV_WIND_SHARED_H
-#define ENV_WIND_SHARED_H
-
+import ks.vstdlib;
 #include "reflect_annotations.h"
+#include "networkvar.h"
 
-#include "vstdlib/random.h"
-#include "tier0/dbg.h"
-#include "mathlib/vector.h"
-#include <float.h>
-
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -150,7 +144,3 @@ void GetWindspeedAtTime( float flTime, Vector &vecVelocity );
 // Method to reset wind speed..
 //-----------------------------------------------------------------------------
 void ResetWindspeed();
-
-
-#endif // ENV_WIND_SHARED_H
-

@@ -1,20 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef FILETRANSFERMGR_H
-#define FILETRANSFERMGR_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "inetchannel.h"
-
 
 typedef int FileTransferID_t;
 
 
-abstract_class CFileTransferMgr
+class CFileTransferMgr
 {
 public:
 
@@ -70,6 +63,3 @@ public:
 		const char *pFileData, 
 		int fileLength ) = 0;
 };
-
-
-#endif // FILETRANSFERMGR_H

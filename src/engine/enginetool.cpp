@@ -1,9 +1,8 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Implmentation of IEngineTool callback interface
-//  Tool .dlls can call back through this interface to talk to the engine
-//
-//=============================================================================
+// Tool .dlls can call back through this interface to talk to the engine
 
 #include "ienginetoolinternal.h"
 #include "EngineSoundInternal.h"
@@ -15,7 +14,6 @@
 #include "con_nprint.h"
 #include "toolframework/itoolframework.h"
 #include "sound.h"
-#include "screen.h"
 #include "render.h"
 #include "gl_matsysiface.h"
 #include "cl_main.h"
@@ -29,7 +27,6 @@
 #include "r_local.h"
 #include "lightcache.h"
 #include "ispatialpartitioninternal.h"
-#include "networkstringtableserver.h"
 #include "networkstringtable.h"
 #include "igame.h"
 #include "gl_rmain.h"
@@ -37,7 +34,6 @@
 #ifndef DEDICATED
 #include "engineui.h"
 #endif
-
 
 // External variables and APIs needed
 extern CSysModule *g_GameDLL;
@@ -314,12 +310,12 @@ CEngineTool::CEngineTool()
 //-----------------------------------------------------------------------------
 void CEngineTool::ShowCursor( bool show )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 }
 
 bool CEngineTool::IsCursorVisible() const
 {
-	Assert( 0 );
+	contract_assert( 0 );
 	return true;
 }
 
@@ -340,8 +336,8 @@ int CEngineTool::GetLightingConditions( const Vector &vecLightingOrigin, Vector 
 	LightcacheGetDynamic_Stats stats;
 	LightingState_t state;
 	LightcacheGetDynamic( vecLightingOrigin, state, stats, nullptr );
-	Assert( state.numlights >= 0 && state.numlights < MAXLOCALLIGHTS );
-	memcpy( pColors, state.r_boxcolor, sizeof(state.r_boxcolor) );
+	contract_assert( state.numlights >= 0 && state.numlights < MAXLOCALLIGHTS );
+	std::memcpy( pColors, state.r_boxcolor, sizeof(state.r_boxcolor) );
 
 	int nLightCount = 0;
 	for ( int i = 0; i < state.numlights; ++i )
@@ -552,23 +548,23 @@ void CEngineTool::ForceUpdateDuringPause()
 
 model_t *CEngineTool::GetModel( HTOOLHANDLE hEntity )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 	return nullptr;
 }
 
 studiohdr_t *CEngineTool::GetStudioModel( HTOOLHANDLE hEntity )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 	return nullptr;
 }
 
 void CEngineTool::Con_NPrintf( int pos, const char *fmt, ... )
 {
 	char buf[ 1024 ];
-	va_list argptr;
-	va_start( argptr, fmt );
-	_vsnprintf( buf, sizeof( buf ) - 1, fmt, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, fmt );
+	std::vsnprintf( buf, sizeof( buf ) - 1, fmt, argptr );
+	__builtin_va_end( argptr );
 
 	return ::Con_NPrintf( pos, "%s", buf );
 }
@@ -576,17 +572,17 @@ void CEngineTool::Con_NPrintf( int pos, const char *fmt, ... )
 void CEngineTool::Con_NXPrintf( const struct con_nprint_s *info, const char *fmt, ... )
 {
 	char buf[ 1024 ];
-	va_list argptr;
-	va_start( argptr, fmt );
-	_vsnprintf( buf, sizeof( buf ) - 1, fmt, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, fmt );
+	std::vsnprintf( buf, sizeof( buf ) - 1, fmt, argptr );
+	__builtin_va_end( argptr );
 
 	::Con_NXPrintf( info, "%s", buf );
 }
 
 void CEngineTool::GetGameDir( char *szGetGameDir, int maxlength )
 {
-	Q_strncpy( szGetGameDir, com_gamedir, maxlength );
+	V_strncpy( szGetGameDir, com_gamedir, maxlength );
 }
 
 void CEngineTool::GetScreenSize( int& width, int &height )
@@ -755,7 +751,7 @@ void CEngineTool::TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter *
 
 	g_pEngineTraceClient->TraceRay( ray, fMask, pTraceFilter, &tempTrace );
 
-	memcpy( pTrace, &tempTrace, sizeof ( CBaseTrace ) );
+	std::memcpy( pTrace, &tempTrace, sizeof ( CBaseTrace ) );
 }
 
 
@@ -765,7 +761,7 @@ void CEngineTool::TraceRayServer( const Ray_t &ray, unsigned int fMask, ITraceFi
 
 	g_pEngineTraceServer->TraceRay( ray, fMask, pTraceFilter, &tempTrace );
 
-	memcpy( pTrace, &tempTrace, sizeof ( CBaseTrace ) );
+	std::memcpy( pTrace, &tempTrace, sizeof ( CBaseTrace ) );
 }
 
 
@@ -783,10 +779,10 @@ void CEngineTool::SetMainView( const Vector &vecOrigin, const QAngle &angles )
 
 static float ScaleFOVByWidthRatio( float fovDegrees, float ratio )
 {
-	float halfAngleRadians = fovDegrees * ( 0.5f * M_PI / 180.0f );
-	float t = tan( halfAngleRadians );
+	float halfAngleRadians = fovDegrees * ( 0.5f * std::numbers::pi / 180.0f );
+	float t = std::tan( halfAngleRadians );
 	t *= ratio;
-	float retDegrees = ( 180.0f / M_PI ) * atan( t );
+	float retDegrees = ( 180.0f / std::numbers::pi ) * std::atan( t );
 	return retDegrees * 2.0f;
 }
 
@@ -901,7 +897,7 @@ bool CEngineTool::PrecacheModel( const char *pName, bool bPreload )
 
 void CEngineTool::TakeTGAScreenShot( const char *filename, int width, int height )
 {
-	Q_strncpy( m_szScreenshotFile, filename, sizeof( m_szScreenshotFile ) );
+	V_strncpy( m_szScreenshotFile, filename, sizeof( m_szScreenshotFile ) );
 
 	m_nScreenshotWidth = width;
 	m_nScreenshotHeight = height;
@@ -932,7 +928,7 @@ bool CEngineTool::IsRecordingMovie()
 {
 	if ( m_bRecordingMovie )
 	{
-		Assert( CL_IsRecordingMovie() );
+		contract_assert( CL_IsRecordingMovie() );
 		return true;
 	}
 	return false;
@@ -1034,7 +1030,6 @@ void CEngineTool::StartRecordingVoiceToFile( const char *filename, const char *p
 
 	g_pFileSystem->RemoveFile( filename, pPathID );
 
-#if !defined( NO_VOICE )
 	if ( IsVoiceRecording() )
 	{
 		Voice_RecordStop();
@@ -1043,15 +1038,12 @@ void CEngineTool::StartRecordingVoiceToFile( const char *filename, const char *p
 
 	Voice_ForceInit();
 	Voice_RecordStart( m_szVoiceoverFile, nullptr, nullptr);
-#endif
 }
 
 void CEngineTool::StopRecordingVoiceToFile()
 {
-#if !defined( NO_VOICE )
 	Voice_RecordStop();
 	m_bSuppressDeInit = false;
-#endif
 }
 
 float CEngineTool::GetMono16Samples( const char *pszName, std::vector< short >& sampleList )
@@ -1093,11 +1085,7 @@ void CEngineTool::ElementMoved( SpatialPartitionHandle_t handle, const Vector& m
 
 bool CEngineTool::IsVoiceRecording()
 {
-#if !defined( NO_VOICE )
 	return Voice_IsRecording();
-#else
-	return false;
-#endif
 }
 
 void CEngineTool::OnModeChanged( bool bGameMode )

@@ -1,16 +1,13 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Client handler for instruction players how to play
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef _C_KEYVALUE_SAVER_H_
-#define _C_KEYVALUE_SAVER_H_
+// Purpose: Client handler for instruction players how to play
 
-
+import ks.tier1;
 #include "GameEventListener.h"
-#include "keyvalues.h"
-
+import std;
+#include "igamesystem.h"
 
 typedef void (*KeyValueBuilder)( KeyValues* );
 
@@ -68,6 +65,3 @@ C_KeyValueSaver &KeyValueSaver();
 // Merged from L4D but waiting on other code to be merged before this can compile 
 void GameInstructor_Init();
 void GameInstructor_Shutdown();
-
-
-#endif // _C_KEYVALUE_SAVER_H_

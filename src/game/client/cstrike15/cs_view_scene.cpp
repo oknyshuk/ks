@@ -1,17 +1,27 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Responsible for drawing the scene
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Responsible for drawing the scene
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "view.h"
 #include "iviewrender.h"
 #include "view_shared.h"
-#include "ivieweffects.h"
-#include "iinput.h"
-#include "model_types.h"
 #include "clientsideeffects.h"
 #include "particlemgr.h"
 #include "viewrender.h"
@@ -25,21 +35,16 @@
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "detailobjectsystem.h"
-#include "tier0/vprof.h"
-#include "engine/IEngineTrace.h"
 #include "engine/ivmodelinfo.h"
 #include "view_scene.h"
 #include "particles_ez.h"
-#include "engine/IStaticPropMgr.h"
 #include "engine/ivdebugoverlay.h"
 #include "cs_view_scene.h"
 #include "c_cs_player.h"
 #include "cs_gamerules.h"
-#include "shake.h"
 #include "precache_register.h"
 #include "engine/IEngineSound.h"
 #include "hltvreplaysystem.h"
-
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheCSViewScene )
 PRECACHE( MATERIAL, "effects/overlaysmoke" )
@@ -273,7 +278,7 @@ void CCSViewRender::PerformFlashbangEffect( const CViewSetup &view )
 #endif
 
 //If your eyes are less than this distance from the center of the visible smoke torus, we should check exact distance and may need to apply the screen overlay.
-#define cl_smoke_must_be_at_least_this_close_to_have_any_effect (cl_smoke_torus_ring_radius + cl_smoke_torus_ring_subradius)
+inline constexpr auto cl_smoke_must_be_at_least_this_close_to_have_any_effect = (cl_smoke_torus_ring_radius + cl_smoke_torus_ring_subradius);
 
 void DrawCappedTorus( Vector vecOrigin, float flRadiusA, float flRadiusB, Color colWireColor, float flDuration )
 {
@@ -297,8 +302,8 @@ void DrawCappedTorus( Vector vecOrigin, float flRadiusA, float flRadiusB, Color 
 		float theta = j * 6.28318f / 20.0f;
 	
 		Vector vecTorusNode;
-		vecTorusNode.Init(	cos(phi) * ( flRadiusA + cos(theta) * flRadiusB ),
-							sin(phi) * ( flRadiusA + cos(theta) * flRadiusB ),
+		vecTorusNode.Init(	std::cos(phi) * ( flRadiusA + cos(theta) * flRadiusB ),
+							std::sin(phi) * ( flRadiusA + cos(theta) * flRadiusB ),
 							sin(theta) * flRadiusB );
 
 		vecTorusNode += vecOrigin;
@@ -582,4 +587,3 @@ void CCSViewRender::RenderPlayerSprites()
 	CViewRender::RenderPlayerSprites();
 	RadioManager()->DrawHeadLabels();
 }
-

@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef HUD_CHAT_H
-#define HUD_CHAT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <hud_basechat.h>
 
@@ -23,5 +17,3 @@ public:
 	void			MsgFunc_SayText2( bf_read &msg );
 	void			MsgFunc_TextMsg(bf_read &msg);
 };
-
-#endif	//HUD_CHAT_H

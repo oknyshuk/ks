@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CMODEL_H
-#define CMODEL_H
-
+import ks.core;
 #include "trace.h"
-#include "tier0/dbg.h"
+import std;
 #include "basehandle.h"
 
 struct edict_t;
@@ -30,8 +23,8 @@ COLLISION DETECTION
 
 // gi.BoxEdicts() can return a list of either solid or trigger entities
 // FIXME: eliminate AREA_ distinction?
-#define	AREA_SOLID		1
-#define	AREA_TRIGGERS	2
+inline constexpr auto AREA_SOLID = 1;
+inline constexpr auto AREA_TRIGGERS = 2;
 
 #include "vcollide.h"
 
@@ -68,7 +61,7 @@ struct Ray_t
 
 	void Init( Vector const& start, Vector const& end )
 	{
-		Assert( &end );
+		contract_assert( &end );
 		VectorSubtract( end, start, m_Delta );
 
 		m_IsSwept = (m_Delta.LengthSqr() != 0);
@@ -84,7 +77,7 @@ struct Ray_t
 
 	void Init( Vector const& start, Vector const& end, Vector const& mins, Vector const& maxs )
 	{
-		Assert( &end );
+		contract_assert( &end );
 		VectorSubtract( end, start, m_Delta );
 
 		m_pWorldAxisTransform = nullptr;
@@ -94,7 +87,7 @@ struct Ray_t
 		m_Extents *= 0.5f;
 		m_IsRay = (m_Extents.LengthSqr() < 1e-6);
 
-		Assert(m_Extents.x >=0 && m_Extents.y >= 0 && m_Extents.z >= 0);
+		contract_assert( m_Extents.x >=0 && m_Extents.y >= 0 && m_Extents.z >= 0 );
 		// Offset m_Start to be in the center of the box...
 		VectorAdd( mins, maxs, m_StartOffset );
 		m_StartOffset *= 0.5f;
@@ -114,7 +107,7 @@ struct Ray_t
 			}
 			else
 			{
-				vecInvDelta[iAxis] = FLT_MAX;
+				vecInvDelta[iAxis] = std::numeric_limits<float>::max();
 			}
 		}
 		return vecInvDelta;
@@ -124,8 +117,6 @@ private:
 };
 
 
-#endif // CMODEL_H
 
 	
 #include "gametrace.h"
-

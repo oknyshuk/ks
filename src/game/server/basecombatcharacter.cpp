@@ -1,11 +1,40 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Base combat character with no AI
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include <map>
+// Purpose: Base combat character with no AI
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -22,7 +51,6 @@
 #include "player.h"
 #include "physics.h"
 #include "engine/IEngineSound.h"
-#include "tier1/strtools.h"
 #include "sendproxy.h"
 #include "EntityFlame.h"
 #include "CRagdollMagnet.h"
@@ -40,9 +68,6 @@
 #include "RagdollBoogie.h"
 #include "rumble_shared.h"
 #include "nav_mesh.h"
-
-
-
 
 extern ConVar weapon_showproficiency;
 
@@ -188,14 +213,6 @@ int	CBaseCombatCharacter::GetInteractionID(void)
 // ============================================================================
 bool CBaseCombatCharacter::HasHumanGibs( void )
 {
-#if   defined( CSPORT_DLL )
-	Class_T myClass = Classify();
-	if (	 myClass == CLASS_PLAYER )	
-	{
-		return true;
-	}
-
-#endif
 
 	return false;
 }
@@ -232,12 +249,12 @@ struct VisibilityCacheEntry_t
 // Keyed by the entity pair, lower pointer first.
 static std::map<std::pair<CBaseEntity *, CBaseEntity *>, VisibilityCacheEntry_t> g_VisibilityCache;
 // Legacy tree used unsigned short indices; keep its capacity limit.
-const size_t VIS_CACHE_MAX_ENTRIES = 0xFFFF;
+const std::size_t VIS_CACHE_MAX_ENTRIES = 0xFFFF;
 const float VIS_CACHE_ENTRY_LIFE = .090;
 
 bool CBaseCombatCharacter::FVisible( CBaseEntity *pEntity, int traceMask, CBaseEntity **ppBlocker )
 {
-	VPROF( "CBaseCombatCharacter::FVisible" );
+	CVProfScope _( "CBaseCombatCharacter::FVisible", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( traceMask != MASK_BLOCKLOS || !ShouldUseVisibilityCache() || pEntity == this
 		 )
@@ -321,7 +338,7 @@ bool CBaseCombatCharacter::FVisible( CBaseEntity *pEntity, int traceMask, CBaseE
 
 void CBaseCombatCharacter::ResetVisibilityCache( CBaseCombatCharacter *pBCC )
 {
-	VPROF( "CBaseCombatCharacter::ResetVisibilityCache" );
+	CVProfScope _( "CBaseCombatCharacter::ResetVisibilityCache", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( !pBCC )
 	{
 		g_VisibilityCache.clear();
@@ -504,7 +521,7 @@ void CBaseCombatCharacter::Spawn( void )
 //-----------------------------------------------------------------------------
 void CBaseCombatCharacter::Precache()
 {
-	VPROF( "CBaseCombatCharacter::Precache" );
+	CVProfScope _( "CBaseCombatCharacter::Precache", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	BaseClass::Precache();
 
@@ -1107,7 +1124,6 @@ void CBaseCombatCharacter::FixupBurningServerRagdoll( CBaseEntity *pRagdoll )
 
 bool CBaseCombatCharacter::BecomeRagdollBoogie( CBaseEntity *pKiller, const Vector &forceVector, float duration, int flags )
 {
-	Assert( CanBecomeRagdoll() );
 
 	CTakeDamageInfo info( pKiller, pKiller, 1.0f, DMG_GENERIC );
 
@@ -1267,7 +1283,7 @@ bool CBaseCombatCharacter::Weapon_Detach( CBaseCombatWeapon *pWeapon )
 			m_hMyWeapons.Set( i, INVALID_EHANDLE );
 
 			int slotID = (i+1);
-			for (int j = 0; j < ARRAYSIZE(m_weaponIDToIndex); j++ )
+			for (int j = 0; j < std::size( m_weaponIDToIndex ); j++ )
 			{
 				if ( m_weaponIDToIndex[j] == slotID )
 				{
@@ -1404,7 +1420,7 @@ void CBaseCombatCharacter::Weapon_DropAll( bool bDisallowWeaponPickup )
 	Vector vecForward;
 	AngleVectors( gunAngles, &vecForward, nullptr, nullptr );
 
-	float flDiameter = sqrt( CollisionProp()->OBBSize().x * CollisionProp()->OBBSize().x +
+	float flDiameter = std::sqrt( CollisionProp()->OBBSize().x * CollisionProp()->OBBSize().x +
 		CollisionProp()->OBBSize().y * CollisionProp()->OBBSize().y );
 
 	CBaseCombatWeapon *pActiveWeapon = GetActiveWeapon();
@@ -1978,7 +1994,7 @@ int CBaseCombatCharacter::OnTakeDamage( const CTakeDamageInfo &info )
 
 	if( IsPlayer() )
 	{
-		CBasePlayer *pPlayer = assert_cast<CBasePlayer *>(this);
+		CBasePlayer *pPlayer = static_cast<CBasePlayer *>(this);
 		pPlayer->RumbleEffect( RUMBLE_DMG_LOW, 0, RUMBLE_FLAG_RESTART ); 
 	}
 
@@ -2129,7 +2145,7 @@ int CBaseCombatCharacter::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 	if ( m_takedamage != DAMAGE_EVENTS_ONLY )
 	{
 		// Separate the fractional amount of damage from the whole
-		float flFractionalDamage = info.GetDamage() - floor( info.GetDamage() );
+		float flFractionalDamage = info.GetDamage() - std::floor( info.GetDamage() );
 		float flIntegerDamage = info.GetDamage() - flFractionalDamage;
 
 		// Add fractional damage to the accumulator
@@ -2168,7 +2184,7 @@ int CBaseCombatCharacter::OnTakeDamage_Dead( const CTakeDamageInfo &info )
 
 	if( IsPlayer() )
 	{
-		CBasePlayer *pPlayer = assert_cast<CBasePlayer *>(this);
+		CBasePlayer *pPlayer = static_cast<CBasePlayer *>(this);
 		pPlayer->RumbleEffect( RUMBLE_DMG_HIGH, 0, RUMBLE_FLAG_RESTART ); 
 	}
 
@@ -2250,7 +2266,7 @@ void CBaseCombatCharacter::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways 
 //-----------------------------------------------------------------------------
 Disposition_t CBaseCombatCharacter::GetFactionRelationshipDisposition( int nFaction )
 {
-	Assert( m_FactionRelationship != nullptr );
+	contract_assert( m_FactionRelationship != nullptr );
 
 	return m_FactionRelationship[ GetFaction() ][ nFaction ].disposition;
 }
@@ -2509,7 +2525,7 @@ void CBaseCombatCharacter::SetDefaultFactionRelationship(int nFaction, int nFact
 //-----------------------------------------------------------------------------
 Disposition_t CBaseCombatCharacter::GetDefaultRelationshipDisposition( Class_T nClassTarget )
 {
-	Assert( m_DefaultRelationship != nullptr );
+	contract_assert( m_DefaultRelationship != nullptr );
 
 	return m_DefaultRelationship[Classify()][nClassTarget].disposition;
 }
@@ -2678,7 +2694,7 @@ CBaseEntity *CBaseCombatCharacter::Weapon_FindUsable( const Vector &range )
 
 	Vector mins = GetAbsOrigin() - range;
 	Vector maxs = GetAbsOrigin() + range;
-	int listCount = CBaseCombatWeapon::GetAvailableWeaponsInBox( weaponList, ARRAYSIZE(weaponList), mins, maxs );
+	int listCount = CBaseCombatWeapon::GetAvailableWeaponsInBox( weaponList, std::size( weaponList ), mins, maxs );
 
 	float fBestDist = 1e6;
 
@@ -2688,7 +2704,7 @@ CBaseEntity *CBaseCombatCharacter::Weapon_FindUsable( const Vector &range )
 		Vector velocity;
 
 		CBaseCombatWeapon *pWeapon = weaponList[i];
-		Assert(pWeapon);
+		contract_assert( pWeapon );
 		pWeapon->GetVelocity( &velocity, nullptr );
 
 		if ( pWeapon->CanBePickedUpByNPCs() == false )
@@ -2952,7 +2968,7 @@ void CBaseCombatCharacter::VPhysicsShadowCollision( int index, gamevcollisioneve
 
 			if ( pPassenger->IsPlayer() )
 			{
-				CBasePlayer *pPlayer = assert_cast<CBasePlayer *>(pPassenger);
+				CBasePlayer *pPlayer = static_cast<CBasePlayer *>(pPassenger);
 				if( damage >= GetMaxHealth() )
 				{
 					pPlayer->RumbleEffect( RUMBLE_357, 0, RUMBLE_FLAG_RESTART );
@@ -3053,7 +3069,7 @@ WeaponProficiency_t CBaseCombatCharacter::CalcWeaponProficiency( CBaseCombatWeap
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-#define MAX_MISS_CANDIDATES 16
+constexpr auto MAX_MISS_CANDIDATES = 16;
 CBaseEntity *CBaseCombatCharacter::FindMissTarget( void )
 {
 	CBaseEntity *pMissCandidates[ MAX_MISS_CANDIDATES ];
@@ -3266,7 +3282,7 @@ bool CBaseCombatCharacter::GetFogParams( fogparams_t *fog ) const
 void CBaseCombatCharacter::UpdateLastKnownArea( void )
 {
 #if !defined(CSTRIKE_DLL)
-	VPROF_BUDGET( "CBaseCombatCharacter::UpdateLastKnownArea", "NextBot" );
+	CVProfScope _( "CBaseCombatCharacter::UpdateLastKnownArea", 0, "NextBot", false, BUDGETFLAG_OTHER );
 
 	if ( TheNavMesh->IsGenerating() )
 	{
@@ -3432,4 +3448,3 @@ float CBaseCombatCharacter::GetTimeSinceLastInjury( int team /*= TEAM_ANY */ ) c
 
 	return never;
 }
-

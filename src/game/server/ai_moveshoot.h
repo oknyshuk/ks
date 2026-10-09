@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
-
-#ifndef AI_MOVESHOOT_H
-#define AI_MOVESHOOT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ai_component.h"
-
+#include "util.h"
 
 //-----------------------------------------------------------------------------
 // @TODO (toml 07-09-03): probably want to fold this into base NPC. evaluate when
@@ -47,5 +42,3 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_MOVESHOOT_H

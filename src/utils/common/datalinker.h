@@ -1,18 +1,10 @@
-//========= Copyright c 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef DATA_LINKER_H
-#define DATA_LINKER_H
-
+import ks.tier1;
 #include "datalinker_interface.h"
-#include <map>
-#include <vector>
-#include <string>
-#include "tier1/map_ops.h"
+import std;
 
 namespace DataLinker
 {
@@ -84,10 +76,6 @@ public:
 
 	void Link( LinkSource_t, LinkTarget_t, const char *szDescription );
 	void Align( uint nAlignment, int nOffset = 0 );
-	long Tell()
-	{
-		return m_size;
-	}
 
 	LinkSource_t WriteOffset( const char *szDescription );
 	LinkSource_t WriteOffset( LinkTarget_t linkTarget, const char *szDescription );
@@ -176,5 +164,3 @@ protected:
 
 
 }
-
-#endif

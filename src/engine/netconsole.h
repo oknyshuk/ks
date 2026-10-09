@@ -1,21 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef NETCONSOLE_H
-#define NETCONSOLE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #define SUPPORT_NET_CONSOLE 1
 
 #if SUPPORT_NET_CONSOLE
 #include "tier2/socketcreator.h"
-
-
 
 #define MAX_NETCONSOLE_INPUT_LEN 2048
 
@@ -28,7 +18,7 @@ public:
 	bool m_bAuthorized;										// for password protection
 	bool m_bInputOnly;										// if set, don't send spew to this netconsole
 
-	CConnectedNetConsoleData( SocketHandle_t hSocket = -1 )
+	CConnectedNetConsoleData( SocketHandle_t hSocket = nullptr )
 	{
 		m_nCharsInCommandBuffer = 0;
 		m_bAuthorized = false;
@@ -76,7 +66,7 @@ class CNetConsoleMgr : public ISocketCreatorListener
 	int NumConnectedSockets( void )
 	{
 		int nRet = m_Socket.GetAcceptedSocketCount();
-		if ( m_ParentConnection.m_hSocket != -1 )
+		if ( m_ParentConnection.m_hSocket != nullptr )
 		{
 			++nRet;
 		}
@@ -85,7 +75,7 @@ class CNetConsoleMgr : public ISocketCreatorListener
 
 	CConnectedNetConsoleData *GetConnection( int nIdx )
 	{
-		if ( m_ParentConnection.m_hSocket != -1 )
+		if ( m_ParentConnection.m_hSocket != nullptr )
 		{
 			if ( nIdx == 0 )
 			{
@@ -100,7 +90,7 @@ class CNetConsoleMgr : public ISocketCreatorListener
 
 	void CloseConnection( int nIdx )
 	{
-		if ( m_ParentConnection.m_hSocket != -1 )
+		if ( m_ParentConnection.m_hSocket != nullptr )
 		{
 			if ( nIdx == 0 )
 			{
@@ -129,7 +119,7 @@ extern CNetConsoleMgr *g_pNetConsoleMgr;
 #endif // support_netconsole
 
 
-FORCEINLINE void SendStringToNetConsoles( char const *pMsg )
+[[gnu::always_inline]] inline void SendStringToNetConsoles( char const *pMsg )
 {
 #if SUPPORT_NET_CONSOLE
 	if ( g_pNetConsoleMgr )
@@ -140,11 +130,7 @@ FORCEINLINE void SendStringToNetConsoles( char const *pMsg )
 #if SUPPORT_NET_CONSOLE
 void InitNetConsole( void );
 #else
-FORCEINLINE void InitNetConsole( void )
+[[gnu::always_inline]] inline void InitNetConsole( void )
 {
 }
 #endif
-
-
-
-#endif // if NETCONSOLE

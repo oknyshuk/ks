@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( ( $COMPOSITEMODE == 1 ) && ( $CASCADED_SHADOW_MAPPING != 0 ) )
 // ( ( $COMPOSITEMODE == 1 ) && ( $NUM_LIGHTS != 0 ) )
@@ -36,7 +37,7 @@ private:
 public:
 	void SetCOMPOSITEMODE( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nCOMPOSITEMODE = i;
 #ifdef _DEBUG
 		m_bCOMPOSITEMODE = true;
@@ -44,7 +45,7 @@ public:
 	}
 	void SetCOMPOSITEMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nCOMPOSITEMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPOSITEMODE = true;
@@ -58,7 +59,7 @@ private:
 public:
 	void SetCASCADED_SHADOW_MAPPING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCASCADED_SHADOW_MAPPING = i;
 #ifdef _DEBUG
 		m_bCASCADED_SHADOW_MAPPING = true;
@@ -66,7 +67,7 @@ public:
 	}
 	void SetCASCADED_SHADOW_MAPPING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCASCADED_SHADOW_MAPPING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCASCADED_SHADOW_MAPPING = true;
@@ -80,7 +81,7 @@ private:
 public:
 	void SetCSM_MODE( int i )
 	{
-		Assert( i >= 0 && i <= 3 );
+		contract_assert( i >= 0 && i <= 3 );
 		m_nCSM_MODE = i;
 #ifdef _DEBUG
 		m_bCSM_MODE = true;
@@ -88,7 +89,7 @@ public:
 	}
 	void SetCSM_MODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
 		m_nCSM_MODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCSM_MODE = true;
@@ -102,7 +103,7 @@ private:
 public:
 	void SetUSE_PATTERN1( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nUSE_PATTERN1 = i;
 #ifdef _DEBUG
 		m_bUSE_PATTERN1 = true;
@@ -110,7 +111,7 @@ public:
 	}
 	void SetUSE_PATTERN1( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUSE_PATTERN1 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUSE_PATTERN1 = true;
@@ -124,7 +125,7 @@ private:
 public:
 	void SetUSE_PATTERN2( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nUSE_PATTERN2 = i;
 #ifdef _DEBUG
 		m_bUSE_PATTERN2 = true;
@@ -132,7 +133,7 @@ public:
 	}
 	void SetUSE_PATTERN2( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUSE_PATTERN2 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUSE_PATTERN2 = true;
@@ -146,7 +147,7 @@ private:
 public:
 	void SetUSE_PATTERN_OFFSET( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nUSE_PATTERN_OFFSET = i;
 #ifdef _DEBUG
 		m_bUSE_PATTERN_OFFSET = true;
@@ -154,7 +155,7 @@ public:
 	}
 	void SetUSE_PATTERN_OFFSET( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUSE_PATTERN_OFFSET = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUSE_PATTERN_OFFSET = true;
@@ -168,7 +169,7 @@ private:
 public:
 	void SetUSE_LOGO1( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nUSE_LOGO1 = i;
 #ifdef _DEBUG
 		m_bUSE_LOGO1 = true;
@@ -176,7 +177,7 @@ public:
 	}
 	void SetUSE_LOGO1( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUSE_LOGO1 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUSE_LOGO1 = true;
@@ -190,7 +191,7 @@ private:
 public:
 	void SetUSE_LOGO2( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nUSE_LOGO2 = i;
 #ifdef _DEBUG
 		m_bUSE_LOGO2 = true;
@@ -198,7 +199,7 @@ public:
 	}
 	void SetUSE_LOGO2( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUSE_LOGO2 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUSE_LOGO2 = true;
@@ -212,7 +213,7 @@ private:
 public:
 	void SetSWAP_PATTERN_MASKS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSWAP_PATTERN_MASKS = i;
 #ifdef _DEBUG
 		m_bSWAP_PATTERN_MASKS = true;
@@ -220,7 +221,7 @@ public:
 	}
 	void SetSWAP_PATTERN_MASKS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSWAP_PATTERN_MASKS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSWAP_PATTERN_MASKS = true;
@@ -273,7 +274,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bCOMPOSITEMODE && m_bCASCADED_SHADOW_MAPPING && m_bCSM_MODE && m_bUSE_PATTERN1 && m_bUSE_PATTERN2 && m_bUSE_PATTERN_OFFSET && m_bUSE_LOGO1 && m_bUSE_LOGO2 && m_bSWAP_PATTERN_MASKS;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 20 * m_nCOMPOSITEMODE ) + ( 60 * m_nCASCADED_SHADOW_MAPPING ) + ( 120 * m_nCSM_MODE ) + ( 480 * m_nUSE_PATTERN1 ) + ( 960 * m_nUSE_PATTERN2 ) + ( 1920 * m_nUSE_PATTERN_OFFSET ) + ( 3840 * m_nUSE_LOGO1 ) + ( 7680 * m_nUSE_LOGO2 ) + ( 15360 * m_nSWAP_PATTERN_MASKS ) + 0;
 	}
@@ -289,7 +290,7 @@ private:
 public:
 	void SetNUM_LIGHTS( int i )
 	{
-		Assert( i >= 0 && i <= 4 );
+		contract_assert( i >= 0 && i <= 4 );
 		m_nNUM_LIGHTS = i;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -297,7 +298,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -311,7 +312,7 @@ private:
 public:
 	void SetDYN_CSM_ENABLED( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDYN_CSM_ENABLED = i;
 #ifdef _DEBUG
 		m_bDYN_CSM_ENABLED = true;
@@ -319,7 +320,7 @@ public:
 	}
 	void SetDYN_CSM_ENABLED( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDYN_CSM_ENABLED = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDYN_CSM_ENABLED = true;
@@ -333,7 +334,7 @@ private:
 public:
 	void SetAO_MODE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nAO_MODE = i;
 #ifdef _DEBUG
 		m_bAO_MODE = true;
@@ -341,7 +342,7 @@ public:
 	}
 	void SetAO_MODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nAO_MODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bAO_MODE = true;
@@ -370,7 +371,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bNUM_LIGHTS && m_bDYN_CSM_ENABLED && m_bAO_MODE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nNUM_LIGHTS ) + ( 5 * m_nDYN_CSM_ENABLED ) + ( 10 * m_nAO_MODE ) + 0;
 	}

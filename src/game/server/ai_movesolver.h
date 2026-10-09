@@ -1,21 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: "Force-field" obstacle avoidance & steering
-//
 // @Note (toml 06-18-02): Currently only controls direction. Ultimately could
 // also incorporate body facing (yaw), speed, and translational/rotational
 // acceleration.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef AI_MOVESOLVER_H
-#define AI_MOVESOLVER_H
-
-
-#include "utlvector.h"
+import ks.tier1;
 #include "ai_obstacle_type.h"
+#include "entitylist.h"
+import std;
 
+class CBaseEntity;
 
 //-----------------------------------------------------------------------------
 
@@ -305,5 +302,3 @@ inline bool CAI_MoveSolver::Solve( const AI_MoveSuggestion_t &suggestion, AI_Mov
 }
 
 //=============================================================================
-
-#endif // AI_MOVESOLVER_H

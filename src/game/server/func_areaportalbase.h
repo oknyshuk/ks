@@ -1,19 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef FUNC_AREAPORTALBASE_H
-#define FUNC_AREAPORTALBASE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "baseentity.h"
-#include <vector>
-
+import std;
 
 // Shared stuff between door portals and window portals.
 class CFuncAreaPortalBase : public CBaseEntity
@@ -106,7 +98,3 @@ public:
 
 
 extern std::vector<CFuncAreaPortalBase*> g_AreaPortals;
-
-
-
-#endif // FUNC_AREAPORTALBASE_H

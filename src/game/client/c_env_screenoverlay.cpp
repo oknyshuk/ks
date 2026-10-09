@@ -1,21 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "shareddefs.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
-#include "view.h"
 #include "iviewrender.h"
 #include "view_shared.h"
 #include "texture_group_names.h"
-#include "tier0/icommandline.h"
-#include "keyvalues.h"
 #include "ScreenSpaceEffects.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 

@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef PHYSPROPCLIENTSIDE_H
-#define PHYSPROPCLIENTSIDE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "c_breakableprop.h"
 #include "props_shared.h"
@@ -123,5 +118,3 @@ protected:
 	bool			m_bBlockLOSSetByPropData;
 	bool			m_bIsWalkableSetByPropData;
 };
-
-#endif // PHYSPROPCLIENTSIDE_H

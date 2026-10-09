@@ -1,26 +1,19 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.core;
 #include "quakedef.h"
-#include <assert.h>
 #include "engine_launcher_api.h"
 #include "iengine.h"
 #include "ivideomode.h"
 #include "igame.h"
-#include "vmodes.h"
-#include "modes.h"
-#include "sys.h"
 #include "host.h"
 #include "keys.h"
 #include "cdll_int.h"
 #include "host_state.h"
 #include "cdll_engine_int.h"
 #include "sys_dll.h"
-#include "tier0/vprof.h"
-#include "profile.h"
+import std;
 #include "gl_matsysiface.h"
 #include "vprof_engine.h"
 #include "server.h"
@@ -30,14 +23,10 @@
 #include "inputsystem/iinputsystem.h"
 #include "gl_cvars.h"
 #include "filesystem_engine.h"
-#include "tier0/cpumonitoring.h"
 #ifndef DEDICATED
 #include "engineui.h"
 #endif
-#include "tier0/etwprof.h"
 
-#include "steam/steam_api.h"
-#include "appframework/ilaunchermgr.h"
 
 
 //-----------------------------------------------------------------------------
@@ -70,20 +59,22 @@ extern float host_nexttick;
 ConVar sleep_when_meeting_framerate( "sleep_when_meeting_framerate", "1", FCVAR_NONE, "Sleep instead of spinning when meeting the dedicated server tick rate." );
 
 static ConVar async_serialize( "async_serialize", "0", 0, "Force async reads to serialize for profiling" );
-#define ShouldSerializeAsync() async_serialize.GetBool()
+[[gnu::always_inline]] inline auto ShouldSerializeAsync() { return async_serialize.GetBool(); }
 
 static ConVar vx_do_not_throttle_events( "vx_do_not_throttle_events", "0", 0, "Force VXConsole updates every frame; smoother vprof data on PS3 but at a slight (~0.2ms) perf cost." );
 
 
 float		host_filtered_time_history[128] = { 0 };
 unsigned int host_filtered_time_history_pos = 0;
-CON_COMMAND( host_filtered_time_report, "Dumps time spent idle in previous frames in ms(dedicated only)." )
+static void host_filtered_time_report( const CCommand &args );
+static ConCommand host_filtered_time_report_command( "host_filtered_time_report", host_filtered_time_report, "Dumps time spent idle in previous frames in ms(dedicated only)." );
+static void host_filtered_time_report( const CCommand &args )
 {
 	if ( sv.IsDedicated() )
 	{
-		for (int i = 1; i <= ARRAYSIZE( host_filtered_time_history ); ++i)
+		for (int i = 1; i <= std::size( host_filtered_time_history ); ++i)
 		{
-			unsigned int slot = ( i + host_filtered_time_history_pos) % ARRAYSIZE( host_filtered_time_history );
+			unsigned int slot = ( i + host_filtered_time_history_pos) % std::size( host_filtered_time_history );
 			Msg( "%.4f\n", ( host_filtered_time_history[ slot ] * 1000 ) );
 		}
 	}
@@ -133,10 +124,6 @@ private:
 	float			m_flFilteredTime;
 	float			m_flMinFrameTime; // Expected duration of a frame, or zero if it is unlimited.
 
-#if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
-	STEAM_CALLBACK( CEngine, OnGameOverlayActivated, GameOverlayActivated_t, m_CallbackGameOverlayActivated );
-#endif
-
 };
 
 static CEngine g_Engine;
@@ -149,9 +136,6 @@ IEngine *eng = ( IEngine * )&g_Engine;
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
 CEngine::CEngine( void )
-#if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
-: m_CallbackGameOverlayActivated( this, &CEngine::OnGameOverlayActivated )
-#endif
 {
 	m_nDLLState			= DLL_INACTIVE;
 	m_nNextDLLState		= DLL_INACTIVE;
@@ -255,7 +239,7 @@ void CEngine::Frame( void )
 	// lwss end
 
 	// Get current time
-	m_flCurrentTime	= Sys_FloatTime();
+	m_flCurrentTime	= Plat_FloatTime();
 
 	// Watch for data from the CPU frequency monitoring system and print it to the console.
 	const CPUFrequencyResults frequency = GetCPUFrequencyResults();
@@ -294,17 +278,15 @@ void CEngine::Frame( void )
 	if ( !FilterTime( m_flFrameTime ) )
 	{
 		double fSleepNS = ( m_flMinFrameTime - m_flFrameTime ) * 1000000000.0;
-		unsigned nSleepNS = (unsigned)floor( fSleepNS );
+		unsigned nSleepNS = (unsigned)std::floor( fSleepNS );
 		if ( nSleepNS && sleep_when_meeting_framerate.GetInt() )
 		{
-			TM_ZONE( TELEMETRY_LEVEL0, TMZF_NONE, "Engine Nano Sleep" );
 			ThreadNanoSleep( nSleepNS );
 		}
 		m_flFilteredTime += dt;
 		return;
 	}
 
-    TM_ZONE( TELEMETRY_LEVEL0, TMZF_NONE, __PRETTY_FUNCTION__ );
 
 	if ( ShouldSerializeAsync() )
 	{
@@ -323,13 +305,11 @@ void CEngine::Frame( void )
 		}
 	}
 
-#ifdef VPROF_ENABLED
 	PreUpdateProfile( m_flFilteredTime );
-#endif
 
 	// Record previous swallowed time counts.
 	host_filtered_time_history[ host_filtered_time_history_pos ] = m_flFilteredTime;
-	host_filtered_time_history_pos = ( host_filtered_time_history_pos + 1 ) % ARRAYSIZE(host_filtered_time_history);
+	host_filtered_time_history_pos = ( host_filtered_time_history_pos + 1 ) % std::size( host_filtered_time_history );
 	// Reset swallowed time...
 	m_flFilteredTime = 0.0f;
 
@@ -340,22 +320,13 @@ void CEngine::Frame( void )
 	}
 #endif
 
-#ifdef VPROF_ENABLED
 	PostUpdateProfile();
-#endif
-
-#ifdef RAD_TELEMETRY_ENABLED
-	TelemetryTick();
-#endif
 
 	ETWRenderFrameMark( sv.IsDedicated() );
 
 	{ // profile scope
 
-	VPROF_BUDGET( "CEngine::Frame", VPROF_BUDGETGROUP_OTHER_UNACCOUNTED );
-#ifdef RAD_TELEMETRY_ENABLED
-	TmU64 time0 = tmFastTime();
-#endif
+	CVProfScope _( "CEngine::Frame", 0, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, BUDGETFLAG_OTHER );
 
 	switch( m_nDLLState )
 	{
@@ -388,27 +359,12 @@ void CEngine::Frame( void )
 		}
 	}
 
-#ifdef RAD_TELEMETRY_ENABLED
-	float time = ( tmFastTime() - time0 ) * g_Telemetry.flRDTSCToMilliSeconds;
-	if( time > 0.5f )
-	{
-		tmPlot( TELEMETRY_LEVEL0, TMPT_TIME_MS, 0, time, "CEngine::Frame(ms)" );
-	}
-#endif
-
 	} // profile scope
 
 	// Reset for next frame
 	m_flFrameTime = 0.0f;
 
-#if defined( VPROF_ENABLED ) && defined( VPROF_VXCONSOLE_EXISTS )
-	UpdateVXConsoleProfile();
-#endif
 	// reload dlls that are marked for reload; currently for debug purposes only
-#ifdef ENGINE_MANAGES_VJOBS
-	extern void ReloadDlls();
-	ReloadDlls();
-#endif
 }
 
 
@@ -466,19 +422,3 @@ int CEngine::GetQuitting( void )
 	return m_nQuitting;
 }
 
-#if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
-//-----------------------------------------------------------------------------
-// Purpose: The overlay doesn't properly work on OS X 64-bit because a bunch of
-// Cocoa functions that we hook were never ported to 64-bit. Until that is fixed,
-// we basically have to work around this by making sure the cursor is visible
-// and set to something that is reasonable for usage in the overlay.
-//-----------------------------------------------------------------------------
-void CEngine::OnGameOverlayActivated( GameOverlayActivated_t *pGameOverlayActivated )
-{
-	Assert( pGameOverlayActivated );
-	if ( pGameOverlayActivated->m_bActive )
-		g_pLauncherMgr->ForceSystemCursorVisible();
-	else
-		g_pLauncherMgr->UnforceSystemCursorVisible();
-}
-#endif // WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND

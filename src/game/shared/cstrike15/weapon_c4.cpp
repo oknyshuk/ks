@@ -1,10 +1,57 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "te.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_predmap.h"
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
@@ -18,13 +65,10 @@
 #include "weapon_c4.h"
 #include "in_buttons.h"
 #include "cs_gamerules.h"
-#include "decals.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "keyvalues.h"
 #include "fx_cs_shared.h"
 #include "obstacle_pushaway.h"
 #include "particle_parse.h"
-#include "mathlib/vector.h"
 
 #if defined( CLIENT_DLL )
 	#include "c_cs_player.h"
@@ -45,12 +89,11 @@
 
 #endif
 
+constexpr auto BLINK_INTERVAL = 2.5;
+inline constexpr const char *PLANTED_C4_MODEL = "models/weapons/w_ied_dropped.mdl";
+constexpr auto HEIST_MODE_C4_TIME = 25;
 
-#define BLINK_INTERVAL 2.5
-#define PLANTED_C4_MODEL "models/weapons/w_ied_dropped.mdl"
-#define HEIST_MODE_C4_TIME 25
-
-#define WEAPON_C4_ARM_TIME	3.0
+constexpr auto WEAPON_C4_ARM_TIME = 3.0;
 
 #ifndef CLIENT_DLL
 
@@ -65,7 +108,9 @@ const float C4_DEFUSE_LOCKIN_PERIOD = 0.05f;
 extern ConVar mp_anyone_can_pickup_c4;
 extern ConVar mp_c4_cannot_be_defused;
 
-CON_COMMAND_F( clear_bombs, "", FCVAR_CHEAT )
+static void clear_bombs( const CCommand &args );
+static ConCommand clear_bombs_command( "clear_bombs", clear_bombs, "", FCVAR_CHEAT );
+static void clear_bombs( const CCommand &args )
 {
 	for ( CPlantedC4 *pC4 : g_PlantedC4s )
 	{
@@ -606,7 +651,7 @@ IMPLEMENT_REFLECT_PREDMAP( CPlantedC4 );
 				class CPlantedC4DefusedMVP : public CCSGameRules::ICalculateEndOfRoundMVPHook_t
 				{
 				public:
-					virtual CCSPlayer* CalculateEndOfRoundMVP() OVERRIDE
+					virtual CCSPlayer* CalculateEndOfRoundMVP() override
 					{
 						if( m_pBombDefuser->HasControlledBotThisRound() )
 						{ 
@@ -709,7 +754,7 @@ IMPLEMENT_REFLECT_PREDMAP( CPlantedC4 );
 		class CPlantedC4ExplodedMVP : public CCSGameRules::ICalculateEndOfRoundMVPHook_t
 		{
 		public:
-			virtual CCSPlayer* CalculateEndOfRoundMVP() OVERRIDE
+			virtual CCSPlayer* CalculateEndOfRoundMVP() override
 			{
 				// All alive Terrorists also get credit for bomb exploding,
 				// this intentionally may include the original planter.
@@ -878,7 +923,7 @@ IMPLEMENT_REFLECT_PREDMAP( CPlantedC4 );
 				Vector( -5, -5,  5 ),
 				Vector(  0,  0,  5 )
 			};
-			int nNumLOSpts = ARRAYSIZE( vecLineOfSightPoints );
+			int nNumLOSpts = std::size( vecLineOfSightPoints );
 
 			for ( int i=0; i<nNumLOSpts; i++ )
 			{
@@ -961,7 +1006,7 @@ IMPLEMENT_REFLECT_PREDMAP( CPlantedC4 );
 			}
 
 			m_pBombDefuser = player;
-			m_bBeingDefused = TRUE;
+			m_bBeingDefused = true;
 			player->m_bIsDefusing = true;
 			
 			m_fLastDefuseTime = gpGlobals->curtime;
@@ -1191,7 +1236,7 @@ void CC4::WeaponReset( void )
 				|| GetEconItemView()->GetCustomDesc() == NULL
 				)
 			{
-				Q_strncpy( m_szScreenText, options, 16 );
+				V_strncpy( m_szScreenText, options, 16 );
 			}
 			else
 			{
@@ -1202,18 +1247,18 @@ void CC4::WeaponReset( void )
 					if ( strlen(m_szScreenText) >= 7 )
 					{
 						//if the 7-char code is full, replace it with asterisks (this will happen at the end of the plant animation anyway)
-						Q_strncpy( m_szScreenText, "*******\0", 8 );
+						V_strncpy( m_szScreenText, "*******\0", 8 );
 					}
 					else
 					{
 						//we're still under 7 chars, so add an additional char of the custom code
-						Q_strncpy( m_szScreenText, pItem->GetCustomDesc(), strlen(m_szScreenText)+2 );
+						V_strncpy( m_szScreenText, pItem->GetCustomDesc(), strlen(m_szScreenText)+2 );
 					}
 				}
 			}*/
 
 			//set the screen text to the string in 'options'
-			Q_strncpy( m_szScreenText, options, 16 );
+			V_strncpy( m_szScreenText, options, 16 );
 
 			return true;
 		}
@@ -1246,7 +1291,7 @@ void CC4::PhysicsTouchTriggers(const Vector *pPrevAbsOrigin)
 
 	if (pEntity && !IsWorld())
 	{
-		Assert(CollisionProp());
+		contract_assert( CollisionProp() );
 
 		//Dropped bombs are both solid and have no owner. In this state, unlike other weapons, they can  
 		//now touch triggers so long they haven't had their position reset by a bomb reset trigger.
@@ -1546,10 +1591,6 @@ void CC4::PrimaryAttack()
 
 				SendWeaponAnim( ACT_VM_SECONDARYATTACK );
 				
-#if !defined( CLIENT_DLL )
-				// player "place" animation
-				//pPlayer->SetAnimation( PLAYER_HOLDBOMB );
-#endif
 			}
 		}
 	}
@@ -1895,7 +1936,7 @@ void CC4::Drop( const Vector &vecVelocity )
 		CSGameRules()->m_bBombDropped = true;
 
 		CBasePlayer *pPlayer = dynamic_cast<CBasePlayer *>(GetOwnerEntity());
-		Assert( pPlayer );
+		contract_assert( pPlayer );
 		if ( pPlayer )
 		{
 			CCSPlayer *pCCSPlayer = dynamic_cast<CCSPlayer *>( pPlayer );

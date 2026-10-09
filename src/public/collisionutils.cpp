@@ -1,22 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Common collision utility methods
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
 
-
+import ks.math;
 #include "collisionutils.h"
 #include "cmodel.h"
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include "tier0/dbg.h"
-#include <float.h>
-#include "mathlib/vector4d.h"
+import std;
 #include "trace.h"
 
-#define UNINIT		-99999.0
+constexpr auto UNINIT = -99999.0;
 
 //-----------------------------------------------------------------------------
 // Clears the trace
@@ -230,7 +223,7 @@ int IntersectTriangleWithPlaneBarycentric( const Vector& org, const Vector& edge
 			++ptIdx;
 	}
 
-	Assert( ptIdx < 3 );
+	contract_assert( ptIdx < 3 );
 	return ptIdx;
 }
 
@@ -381,7 +374,7 @@ bool IsRayIntersectingSphere( const Vector &vecRayOrigin, const Vector &vecRayDe
 	// t = (C - O) dot D / D dot D
 	// Clamp t to (0,1)
 	// Find distance of the point on the ray to the sphere center.
-	Assert( flTolerance >= 0.0f );
+	contract_assert( flTolerance >= 0.0f );
 	flRadius += flTolerance;
 
 	Vector vecRayToSphere;
@@ -471,7 +464,7 @@ bool IntersectInfiniteRayWithSphere( const Vector &vecRayOrigin, const Vector &v
 	if ( flDiscrim < 0.0f )
 		return false;
 
-	flDiscrim = sqrt( flDiscrim );
+	flDiscrim = std::sqrt( flDiscrim );
 	float oo2a = 0.5f / a;
 	*pT1 = ( - b - flDiscrim ) * oo2a;
 	*pT2 = ( - b + flDiscrim ) * oo2a;
@@ -534,9 +527,9 @@ bool IsSphereIntersectingCone( const Vector &sphereCenter, float sphereRadius, c
 //-----------------------------------------------------------------------------
 bool IsPointInBox( const Vector& pt, const Vector& boxMin, const Vector& boxMax )
 {
-	Assert( boxMin[0] <= boxMax[0] );
-	Assert( boxMin[1] <= boxMax[1] );
-	Assert( boxMin[2] <= boxMax[2] );
+	contract_assert( boxMin[0] <= boxMax[0] );
+	contract_assert( boxMin[1] <= boxMax[1] );
+	contract_assert( boxMin[2] <= boxMax[2] );
 
 	// on x360/PS3, force use of SIMD version.
 
@@ -570,12 +563,12 @@ bool IsPointInCone( const Vector &pt, const Vector &origin, const Vector &axis, 
 bool IsBoxIntersectingBox( const Vector& boxMin1, const Vector& boxMax1, 
 						const Vector& boxMin2, const Vector& boxMax2 )
 {
-	Assert( boxMin1[0] <= boxMax1[0] );
-	Assert( boxMin1[1] <= boxMax1[1] );
-	Assert( boxMin1[2] <= boxMax1[2] );
-	Assert( boxMin2[0] <= boxMax2[0] );
-	Assert( boxMin2[1] <= boxMax2[1] );
-	Assert( boxMin2[2] <= boxMax2[2] );
+	contract_assert( boxMin1[0] <= boxMax1[0] );
+	contract_assert( boxMin1[1] <= boxMax1[1] );
+	contract_assert( boxMin1[2] <= boxMax1[2] );
+	contract_assert( boxMin2[0] <= boxMax2[0] );
+	contract_assert( boxMin2[1] <= boxMax2[1] );
+	contract_assert( boxMin2[2] <= boxMax2[2] );
 
 	if ( (boxMin1[0] > boxMax2[0]) || (boxMax1[0] < boxMin2[0]) )
 		return false;
@@ -627,16 +620,14 @@ bool IsOBBIntersectingOBB( const Vector &vecOrigin1, const QAngle &vecAngles1, c
 }
 
 // NOTE: This is only very slightly faster on high end PCs and x360
-#define USE_SIMD_RAY_CHECKS 1
 
 //-----------------------------------------------------------------------------
 // returns true if there's an intersection between box and ray
 //-----------------------------------------------------------------------------
-bool FASTCALL IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, 
+bool IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, 
 									const Vector& origin, const Vector& vecDelta, float flTolerance )
 {
 	
-#if USE_SIMD_RAY_CHECKS
 	// Load the unaligned ray/box parameters into SIMD registers
 	fltx4 start = LoadVector3SIMD(origin);
 	fltx4 delta = LoadVector3SIMD(vecDelta);
@@ -686,70 +677,15 @@ bool FASTCALL IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax,
 	bi32x4 separation = CmpGtSIMD(lastIn, firstOut);
 
 	return IsAllZeros(separation);
-#else
-	// On the x360/ps3, we force use of the SIMD functions.
-	Assert( boxMin[0] <= boxMax[0] );
-	Assert( boxMin[1] <= boxMax[1] );
-	Assert( boxMin[2] <= boxMax[2] );
-
-	// FIXME: Surely there's a faster way
-	float tmin = -FLT_MAX;
-	float tmax = FLT_MAX;
-
-	for (int i = 0; i < 3; ++i)
-	{
-		// Parallel case...
-		if (FloatMakePositive(vecDelta[i]) < 1e-8)
-		{
-			// Check that origin is in the box
-			// if not, then it doesn't intersect..
-			if ( (origin[i] < boxMin[i] - flTolerance) || (origin[i] > boxMax[i] + flTolerance) )
-				return false;
-
-			continue;
-		}
-
-		// non-parallel case
-		// Find the t's corresponding to the entry and exit of
-		// the ray along x, y, and z. The find the furthest entry
-		// point, and the closest exit point. Once that is done,
-		// we know we don't collide if the closest exit point
-		// is behind the starting location. We also don't collide if
-		// the closest exit point is in front of the furthest entry point
-
-		float invDelta = 1.0f / vecDelta[i];
-		float t1 = (boxMin[i] - flTolerance - origin[i]) * invDelta;
-		float t2 = (boxMax[i] + flTolerance - origin[i]) * invDelta;
-		if (t1 > t2)
-		{
-			float temp = t1;
-			t1 = t2;
-			t2 = temp;
-		}
-		if (t1 > tmin)
-			tmin = t1;
-		if (t2 < tmax)
-			tmax = t2;
-		if (tmin > tmax)
-			return false;
-		if (tmax < 0)
-			return false;
-		if (tmin > 1)
-			return false;
-	}
-
-	return true;
-#endif
 }
 
 //-----------------------------------------------------------------------------
 // returns true if there's an intersection between box and ray
 //-----------------------------------------------------------------------------
-bool FASTCALL IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, 
+bool IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, 
 									const Vector& origin, const Vector& vecDelta,
 									const Vector& vecInvDelta, float flTolerance )
 {	
-#if USE_SIMD_RAY_CHECKS
 	// Load the unaligned ray/box parameters into SIMD registers
 	fltx4 start = LoadVector3SIMD(origin);
 	fltx4 delta = LoadVector3SIMD(vecDelta);
@@ -800,69 +736,12 @@ bool FASTCALL IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax,
 	bi32x4 separation = CmpGtSIMD(lastIn, firstOut);
 
 	return IsAllZeros(separation);
-#else
-	// On the x360/ps3, we force use of the SIMD functions.
-
-	Assert( boxMin[0] <= boxMax[0] );
-	Assert( boxMin[1] <= boxMax[1] );
-	Assert( boxMin[2] <= boxMax[2] );
-
-	// FIXME: Surely there's a faster way
-	float tmin = -FLT_MAX;
-	float tmax = FLT_MAX;
-
-	for ( int i = 0; i < 3; ++i )
-	{
-		// Parallel case...
-		if ( FloatMakePositive( vecDelta[i] ) < 1e-8 )
-		{
-			// Check that origin is in the box, if not, then it doesn't intersect..
-			if ( ( origin[i] < boxMin[i] - flTolerance ) || ( origin[i] > boxMax[i] + flTolerance ) )
-				return false;
-
-			continue;
-		}
-
-		// Non-parallel case
-		// Find the t's corresponding to the entry and exit of
-		// the ray along x, y, and z. The find the furthest entry
-		// point, and the closest exit point. Once that is done,
-		// we know we don't collide if the closest exit point
-		// is behind the starting location. We also don't collide if
-		// the closest exit point is in front of the furthest entry point
-		float t1 = ( boxMin[i] - flTolerance - origin[i] ) * vecInvDelta[i];
-		float t2 = ( boxMax[i] + flTolerance - origin[i] ) * vecInvDelta[i];
-		if ( t1 > t2 )
-		{
-			float temp = t1;
-			t1 = t2;
-			t2 = temp;
-		}
-
-		if (t1 > tmin)
-			tmin = t1;
-
-		if (t2 < tmax)
-			tmax = t2;
-
-		if (tmin > tmax)
-			return false;
-
-		if (tmax < 0)
-			return false;
-
-		if (tmin > 1)
-			return false;
-	}
-
-	return true;
-#endif
 }
 
 //-----------------------------------------------------------------------------
 // Intersects a ray with a aabb, return true if they intersect
 //-----------------------------------------------------------------------------
-bool FASTCALL IsBoxIntersectingRay( const Vector& vecBoxMin, const Vector& vecBoxMax, const Ray_t& ray, float flTolerance )
+bool IsBoxIntersectingRay( const Vector& vecBoxMin, const Vector& vecBoxMax, const Ray_t& ray, float flTolerance )
 {
 	// On the x360/PS3, we force use of the SIMD functions.
 
@@ -891,7 +770,7 @@ bool FASTCALL IsBoxIntersectingRay( const Vector& vecBoxMin, const Vector& vecBo
 //-----------------------------------------------------------------------------
 
 
-bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
+bool IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
 								    fltx4 origin, fltx4 delta, fltx4 invDelta, // ray parameters
 									fltx4 vTolerance ///< eg from ReplicateX4(flTolerance)
 									)
@@ -934,7 +813,7 @@ bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
 	return IsAllZeros(separation);
 }
 
-bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
+bool IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
 								   const Ray_t& ray, fltx4 fl4Tolerance )
 {
 	fltx4 rayStart = LoadAlignedSIMD(ray.m_Start);
@@ -972,7 +851,7 @@ bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
 //-----------------------------------------------------------------------------
 bool IntersectRayWithRay( const Ray_t &ray0, const Ray_t &ray1, float &t, float &s )
 {
-	Assert( ray0.m_IsRay && ray1.m_IsRay );
+	contract_assert( ray0.m_IsRay && ray1.m_IsRay );
 
 	//
 	// r0 = p0 + v0t
@@ -1255,7 +1134,7 @@ bool IntersectRayWithOBB( const Vector &vecRayStart, const Vector &vecRayDelta,
 	Collision_ClearTrace( vecRayStart, vecRayDelta, pTrace );
 
 	// FIXME: Make it work with tolerance
-	Assert( flTolerance == 0.0f );
+	contract_assert( flTolerance == 0.0f );
 
 	// OPTIMIZE: Store this in the box instead of computing it here
 	// compute center in local space
@@ -1281,9 +1160,9 @@ bool IntersectRayWithOBB( const Vector &vecRayStart, const Vector &vecRayDelta,
 	for ( int j = 0; j < 3; j++ )
 	{
 		extent[j] = vecRayDelta.x * matOBBToWorld[0][j] + vecRayDelta.y * matOBBToWorld[1][j] +	vecRayDelta.z * matOBBToWorld[2][j];
-		uextent[j] = fabsf(extent[j]);
+		uextent[j] = std::fabsf(extent[j]);
 		float coord = segmentCenter.x * matOBBToWorld[0][j] + segmentCenter.y * matOBBToWorld[1][j] +	segmentCenter.z * matOBBToWorld[2][j];
-		coord = fabsf(coord);
+		coord = std::fabsf(coord);
 
 		if ( coord > (vecBoxExtents[j] + uextent[j]) )
 			return false;
@@ -1293,19 +1172,19 @@ bool IntersectRayWithOBB( const Vector &vecRayStart, const Vector &vecRayDelta,
 	float tmp, cextent;
 	Vector cross = vecRayDelta.Cross( segmentCenter );
 	cextent = cross.x * matOBBToWorld[0][0] + cross.y * matOBBToWorld[1][0] + cross.z * matOBBToWorld[2][0];
-	cextent = fabsf(cextent);
+	cextent = std::fabsf(cextent);
 	tmp = vecBoxExtents[1]*uextent[2] + vecBoxExtents[2]*uextent[1];
 	if ( cextent > tmp )
 		return false;
 
 	cextent = cross.x * matOBBToWorld[0][1] + cross.y * matOBBToWorld[1][1] + cross.z * matOBBToWorld[2][1];
-	cextent = fabsf(cextent);
+	cextent = std::fabsf(cextent);
 	tmp = vecBoxExtents[0]*uextent[2] + vecBoxExtents[2]*uextent[0];
 	if ( cextent > tmp )
 		return false;
 
 	cextent = cross.x * matOBBToWorld[0][2] + cross.y * matOBBToWorld[1][2] + cross.z * matOBBToWorld[2][2];
-	cextent = fabsf(cextent);
+	cextent = std::fabsf(cextent);
 	tmp = vecBoxExtents[0]*uextent[1] + vecBoxExtents[1]*uextent[0];
 	if ( cextent > tmp )
 		return false;
@@ -1813,7 +1692,7 @@ QuadBarycentricRetval_t PointInQuadToBarycentric( const Vector &v1, const Vector
 {
 #define PIQ_TEXTURE_EPSILON		0.001
 #define PIQ_PLANE_EPSILON		0.1
-#define PIQ_DOT_EPSILON			0.99f
+constexpr auto PIQ_DOT_EPSILON = 0.99f;
 
 	//
 	// Think of a quad with points v1, v2, v3, v4 and u, v line segments
@@ -1949,7 +1828,7 @@ QuadBarycentricRetval_t PointInQuadToBarycentric( const Vector &v1, const Vector
 			return BARY_QUADRATIC_NEGATIVE_DISCRIMINANT;
 		}
 
-		double quad = sqrt( discriminant );
+		double quad = std::sqrt( discriminant );
 		double QPlus = ( negB + quad ) / ( 2.0f * A );
 		double QMinus = ( negB - quad ) / ( 2.0f * A );
 
@@ -2076,15 +1955,15 @@ static void ComputeCenterIMatrix( const Vector& origin, const QAngle& angles,
 //-----------------------------------------------------------------------------
 static inline void ComputeAbsMatrix( const matrix3x4_t& in, matrix3x4_t& out )
 {
-	(out[0][0]) = fabsf(in[0][0]);
-	(out[0][1]) = fabsf(in[0][1]);
-	(out[0][2]) = fabsf(in[0][2]);
-	(out[1][0]) = fabsf(in[1][0]);
-	(out[1][1]) = fabsf(in[1][1]);
-	(out[1][2]) = fabsf(in[1][2]);
-	(out[2][0]) = fabsf(in[2][0]);
-	(out[2][1]) = fabsf(in[2][1]);
-	(out[2][2]) = fabsf(in[2][2]);
+	(out[0][0]) = std::fabsf(in[0][0]);
+	(out[0][1]) = std::fabsf(in[0][1]);
+	(out[0][2]) = std::fabsf(in[0][2]);
+	(out[1][0]) = std::fabsf(in[1][0]);
+	(out[1][1]) = std::fabsf(in[1][1]);
+	(out[1][2]) = std::fabsf(in[1][2]);
+	(out[2][0]) = std::fabsf(in[2][0]);
+	(out[2][1]) = std::fabsf(in[2][1]);
+	(out[2][2]) = std::fabsf(in[2][2]);
 }
 
 
@@ -2901,7 +2780,7 @@ bool OBBHasFullyContainedIntersectionWithQuad( const Vector &vOBBExtent1_Scaled,
 					float fTotalDist = fDists[iAxisCrossings[j]] - fDists[i]; //remember that fDists[i] is a negative value
 					ptPlaneIntersections[iPlaneIntersectionsCount] = (ptOBB[iAxisCrossings[j]] * (-fDists[i]/fTotalDist)) + (ptOBB[i] * (fDists[iAxisCrossings[j]]/fTotalDist));
 
-					Assert( fabs( ptPlaneIntersections[iPlaneIntersectionsCount].Dot( vQuadNormal ) - fQuadPlaneDist ) < 0.1f ); //intersection point is on plane
+					contract_assert( std::fabs( ptPlaneIntersections[iPlaneIntersectionsCount].Dot( vQuadNormal ) - fQuadPlaneDist ) < 0.1f ); //intersection point is on plane
 
 					++iPlaneIntersectionsCount;
 				}
@@ -2909,7 +2788,7 @@ bool OBBHasFullyContainedIntersectionWithQuad( const Vector &vOBBExtent1_Scaled,
 		}
 	}
 
-	Assert( iPlaneIntersectionsCount != 0 );
+	contract_assert( iPlaneIntersectionsCount != 0 );
 
 	for( int i = 0; i != iPlaneIntersectionsCount; ++i )
 	{
@@ -2917,13 +2796,13 @@ bool OBBHasFullyContainedIntersectionWithQuad( const Vector &vOBBExtent1_Scaled,
 		Vector vToPointFromQuadCenter = ptPlaneIntersections[i] - ptQuadCenter;
 
 		float fExt1Dist = vQuadExtent1_Normalized.Dot( vToPointFromQuadCenter );
-		if( fabs( fExt1Dist ) > fQuadExtent1Length )
+		if( std::fabs( fExt1Dist ) > fQuadExtent1Length )
 			return false; //point is outside boundaries
 
 		//vToPointFromQuadCenter -= vQuadExtent1_Normalized * fExt1Dist; //to handle diamond shaped quads
 
 		float fExt2Dist = vQuadExtent2_Normalized.Dot( vToPointFromQuadCenter );
-		if( fabs( fExt2Dist ) > fQuadExtent2Length )
+		if( std::fabs( fExt2Dist ) > fQuadExtent2Length )
 			return false; //point is outside boundaries
 	}
 
@@ -2970,7 +2849,7 @@ bool RayHasFullyContainedIntersectionWithQuad( const Ray_t &ray,
 					{
 						float fInvTotalDist = 1.0f / (fDists[j] - fDists[i]); //fDists[i] <= 0, ray is swept so no chance that the denom was 0
 						ptPlaneIntersections[0] = (ptEndPoints[i] * (fDists[j] * fInvTotalDist)) - (ptEndPoints[j] * (fDists[i] * fInvTotalDist)); //fDists[i] <= 0 
-						Assert( fabs( ptPlaneIntersections[iPlaneIntersectionsCount].Dot( vQuadNormal ) - fQuadPlaneDist ) < 0.1f ); //intersection point is on plane
+						contract_assert( std::fabs( ptPlaneIntersections[iPlaneIntersectionsCount].Dot( vQuadNormal ) - fQuadPlaneDist ) < 0.1f ); //intersection point is on plane
 						iPlaneIntersectionsCount = 1;
 					}
 					else 
@@ -2986,7 +2865,7 @@ bool RayHasFullyContainedIntersectionWithQuad( const Ray_t &ray,
 		}
 		else //not swept, so this is actually a point on quad question
 		{
-			if( fabs( vQuadNormal.Dot( ray.m_Start ) - fQuadPlaneDist ) < 1e-6 )
+			if( std::fabs( vQuadNormal.Dot( ray.m_Start ) - fQuadPlaneDist ) < 1e-6 )
 			{
 				ptPlaneIntersections[0] = ray.m_Start;
 				iPlaneIntersectionsCount = 1;
@@ -3078,7 +2957,7 @@ bool RayHasFullyContainedIntersectionWithQuad( const Ray_t &ray,
 								float fInvTotalDist = 1.0f / (fDists[k][iAxisCrossings[j]] - fDists[k][i]); //remember that fDists[k][i] is a negative value
 								ptPlaneIntersections[iPlaneIntersectionsCount] = (ptEndPoints[k][iAxisCrossings[j]] * (-fDists[k][i] * fInvTotalDist)) + (ptEndPoints[k][i] * (fDists[k][iAxisCrossings[j]] * fInvTotalDist));
 
-								Assert( fabs( ptPlaneIntersections[iPlaneIntersectionsCount].Dot( vQuadNormal ) - fQuadPlaneDist ) < 0.1f ); //intersection point is on plane
+								contract_assert( std::fabs( ptPlaneIntersections[iPlaneIntersectionsCount].Dot( vQuadNormal ) - fQuadPlaneDist ) < 0.1f ); //intersection point is on plane
 
 								++iPlaneIntersectionsCount;
 							}
@@ -3106,12 +2985,12 @@ bool RayHasFullyContainedIntersectionWithQuad( const Ray_t &ray,
 						iNegSide = 0;
 					}
 
-					Assert( (fDists[iPosSide][i] >= 0.0f) && (fDists[iNegSide][i] <= 0.0f) );
+					contract_assert( (fDists[iPosSide][i] >= 0.0f) && (fDists[iNegSide][i] <= 0.0f) );
 
 					float fInvTotalDist = 1.0f / (fDists[iPosSide][i] - fDists[iNegSide][i]); //remember that fDists[iNegSide][i] is a negative value
 					ptPlaneIntersections[iPlaneIntersectionsCount] = (ptEndPoints[iPosSide][i] * (-fDists[iNegSide][i] * fInvTotalDist)) + (ptEndPoints[iNegSide][i] * (fDists[iPosSide][i] * fInvTotalDist));
 
-					Assert( fabs( ptPlaneIntersections[iPlaneIntersectionsCount].Dot( vQuadNormal ) - fQuadPlaneDist ) < 0.1f ); //intersection point is on plane
+					contract_assert( std::fabs( ptPlaneIntersections[iPlaneIntersectionsCount].Dot( vQuadNormal ) - fQuadPlaneDist ) < 0.1f ); //intersection point is on plane
 
 					++iPlaneIntersectionsCount;
 				}
@@ -3120,7 +2999,7 @@ bool RayHasFullyContainedIntersectionWithQuad( const Ray_t &ray,
 	}
 
 	//down here, we should simply have a collection of plane intersections, now we see if they reside within the quad
-	Assert( iPlaneIntersectionsCount != 0 );
+	contract_assert( iPlaneIntersectionsCount != 0 );
 
 	for( int i = 0; i != iPlaneIntersectionsCount; ++i )
 	{
@@ -3128,13 +3007,13 @@ bool RayHasFullyContainedIntersectionWithQuad( const Ray_t &ray,
 		Vector vToPointFromQuadCenter = ptPlaneIntersections[i] - ptQuadCenter;
 
 		float fExt1Dist = vQuadExtent1_Normalized.Dot( vToPointFromQuadCenter );
-		if( fabs( fExt1Dist ) > fQuadExtent1Length )
+		if( std::fabs( fExt1Dist ) > fQuadExtent1Length )
 			return false; //point is outside boundaries
 
 		//vToPointFromQuadCenter -= vQuadExtent1_Normalized * fExt1Dist; //to handle diamond shaped quads
 
 		float fExt2Dist = vQuadExtent2_Normalized.Dot( vToPointFromQuadCenter );
-		if( fabs( fExt2Dist ) > fQuadExtent2Length )
+		if( std::fabs( fExt2Dist ) > fQuadExtent2Length )
 			return false; //point is outside boundaries
 	}
 
@@ -3190,7 +3069,7 @@ bool LineCircleIntersection(const Vector2D &center,
 			// it for this case and say it intersects at the origin of the line.
 			// Otherwise, the result is the smallest positive result
 			*fIntersection1 = *fIntersection2 = ( a == 0.0f ) ? 0.0f : ( t0 < 0 ? t1 : t0 );
-			Assert( !IS_NAN(*fIntersection1) );
+			contract_assert( !IS_NAN(*fIntersection1) );
 
 			// Started inside of the sphere (the only way we get one solution, unless
 			// the ray direction is the zero vector)
@@ -3210,7 +3089,7 @@ bool LineCircleIntersection(const Vector2D &center,
 bool IntersectRayWithAACylinder( const Ray_t &ray, 
 								const Vector &center, float radius, float height, CBaseTrace *pTrace )
 {
-	Assert( ray.m_IsRay );
+	contract_assert( ray.m_IsRay );
 	Collision_ClearTrace( ray.m_Start, ray.m_Delta, pTrace );
 
 	// First intersect the ray with the top + bottom planes
@@ -3256,7 +3135,7 @@ bool IntersectRayWithAACylinder( const Ray_t &ray,
 		return false; // no hit
 	}
 
-	Assert( flCircleEnterFrac <= flCircleLeaveFrac );
+	contract_assert( flCircleEnterFrac <= flCircleLeaveFrac );
 	if ( flCircleLeaveFrac < 0 || flCircleEnterFrac > 1)
 	{
 		return false;
@@ -3284,4 +3163,3 @@ bool IntersectRayWithAACylinder( const Ray_t &ray,
 
 	return true;
 }
-

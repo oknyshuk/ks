@@ -1,24 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
-#include "cpp_shader_constant_register_map.h"
 
 #include "windowimposter_vs20.inc"
 #include "windowimposter_ps20.inc"
 #include "windowimposter_ps20b.inc"
-
-
 
 DEFINE_FALLBACK_SHADER( WindowImposter, WindowImposter_DX90 )
 
 BEGIN_VS_SHADER( WindowImposter_DX90,
 			  "Help for WindowImposter_DX90" )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( ENVMAP, SHADER_PARAM_TYPE_TEXTURE, "shadertest/shadertest_env", "envmap" )
 	END_SHADER_PARAMS
 

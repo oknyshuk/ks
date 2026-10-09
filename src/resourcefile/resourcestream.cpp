@@ -1,15 +1,11 @@
-//===== Copyright c 1996-2008, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
 // Purpose: Implementation of various variants of resource stream
-//
-// $NoKeywords: $
-//===========================================================================//
 
-#include <sys/mman.h>
+import ks.core;
 #include "resourcefile/resourcestream.h"
-#include "dbg.h"
-#include "memalloc.h"
-
+import std;
 
 CResourceStream::CResourceStream(  )
 {
@@ -45,7 +41,7 @@ CResourceStreamFixed::CResourceStreamFixed( void *pPreallocatedData, uint nPreal
 	m_pData = ( uint8* )pPreallocatedData;
 	m_nCommitted = nPreallocatedDataSize;
 	// pre-initialized stream; the memory passed to this function may not be initialized to zero, and resource stream assumes it to be, so clear it
-	Assert( pPreallocatedData == m_pData );
+	contract_assert( pPreallocatedData == m_pData );
 	V_memset( pPreallocatedData, 0, nPreallocatedDataSize );
 }
 
@@ -95,7 +91,7 @@ void CResourceStreamGrowable::Commit( uint nNewCommit )
 		uint nPaddedCommit = ( nNewCommit * 2 + 63 ) & ~63;
 		uint8 *pNewData = new uint8[ nPaddedCommit ];
 		V_memcpy( pNewData, m_pData, m_nUsed );
-		AssertDbg( !( ( ( uintp ) pNewData ) & 0xF ) );
+		contract_assert( !( ( ( uintp ) pNewData ) & 0xF ) );
 		delete[]m_pData;
 		m_pData = pNewData;
 		m_nCommitted = nPaddedCommit;
@@ -106,24 +102,24 @@ void CResourceStreamGrowable::Commit( uint nNewCommit )
 
 void CResourceStreamVM::ReserveVirtualMemory( uint nAddressSize )
 {
-	Assert ( m_pData == nullptr );
+	contract_assert( m_pData == nullptr );
 
 	nAddressSize = ( nAddressSize + COMMIT_STEP - 1 ) & ~( COMMIT_STEP - 1 );
 	m_nReserved = std::max<int>( nAddressSize, COMMIT_STEP );
 	for ( ;; )
 	{
-		int nFlags = MAP_ANONYMOUS | MAP_PRIVATE;
-		m_pData = ( uint8* )::mmap( nullptr, m_nReserved, PROT_WRITE | PROT_READ, nFlags, -1, 0 );
-		if ( !m_pData )
+		m_pMapping = ks::platform::reserve_virtual( m_nReserved );
+		if ( m_pMapping == nullptr )
 		{
 			m_nReserved /= 2;
 			if ( m_nReserved < COMMIT_STEP )
 			{
-				Plat_FatalError( "Cannot allocate virtual address space in CResourceStreamVM::ReserveVirtualMemory, error %u\n", errno );
+				Plat_FatalError( "Cannot allocate virtual address space in CResourceStreamVM::ReserveVirtualMemory\n" );
 			}
 		}
 		else
 		{
+			m_pData = ( uint8* )ks::platform::virtual_base( m_pMapping );
 			return;
 		}
 	}
@@ -132,9 +128,10 @@ void CResourceStreamVM::ReserveVirtualMemory( uint nAddressSize )
 
 void CResourceStreamVM::ReleaseVirtualMemory()
 {
-	if ( m_pData != nullptr )
+	if ( m_pMapping != nullptr )
 	{
-		munmap( m_pData, m_nReserved );
+		ks::platform::release_virtual( m_pMapping );
+		m_pMapping = nullptr;
 	}
 
 	m_pData = nullptr;	
@@ -156,14 +153,14 @@ void CResourceStreamVM::CloneStream( CResourceStreamVM& copyFromStream )
 	{
 		if ( m_nUsed > 0) 
 		{
-			memset( m_pData, 0, m_nUsed );
+			std::memset( m_pData, 0, m_nUsed );
 		}
 		m_nUsed = 0;	
 	}
 	
-	Assert ( m_nReserved >= copyFromStream.m_nUsed );
+	contract_assert( m_nReserved >= copyFromStream.m_nUsed );
 	
-	memcpy ( AllocateBytes( copyFromStream.m_nUsed ), copyFromStream.m_pData, copyFromStream.m_nUsed );
+	std::memcpy ( AllocateBytes( copyFromStream.m_nUsed ), copyFromStream.m_pData, copyFromStream.m_nUsed );
 	
 	m_nAlignBits = copyFromStream.m_nAlignBits;
 	m_nMaxAlignment = copyFromStream.m_nMaxAlignment;
@@ -199,7 +196,7 @@ void CResourceStreamVM::Commit( uint nNewCommit )
 	{
 		nNewCommit = ( nNewCommit + COMMIT_STEP - 1 ) & ~( COMMIT_STEP - 1 );
 		// expensive call. Not to be called frequently
-		mprotect( m_pData + m_nCommitted, nNewCommit - m_nCommitted, PROT_READ|PROT_WRITE );
+		ks::platform::commit_virtual( m_pMapping, m_nCommitted, nNewCommit - m_nCommitted );
 		m_nCommitted = nNewCommit;
 	}
 }
@@ -242,4 +239,3 @@ void CResourceStream::PrintStats()
 void CResourceStream::ClearStats()
 {
 }
-

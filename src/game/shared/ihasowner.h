@@ -1,11 +1,6 @@
-//========= Copyright (c) Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef IHASOWNER_H
-#define IHASOWNER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 class CBaseEntity;
 
@@ -17,5 +12,3 @@ class IHasOwner
 public:
 	virtual CBaseEntity			*GetOwnerViaInterface( void ) = 0;
 };
-
-#endif // IHASOWNER_H

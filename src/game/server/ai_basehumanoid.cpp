@@ -1,10 +1,30 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 
 #include "BasePropDoor.h"
 
@@ -12,8 +32,6 @@
 #include "ai_blended_movement.h"
 #include "ai_navigator.h"
 #include "ai_memory.h"
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose:  This is a generic function (to be implemented by sub-classes) to
@@ -133,7 +151,7 @@ bool CAI_BaseHumanoid::OnMoveBlocked( AIMoveResult_t *pResult )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-#define SNEAK_ATTACK_DIST	360.0f // 30 feet
+constexpr auto SNEAK_ATTACK_DIST = 360.0f; // 30 feet
 void CAI_BaseHumanoid::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	bool bSneakAttacked = false;

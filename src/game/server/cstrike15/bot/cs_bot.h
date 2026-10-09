@@ -1,9 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
@@ -11,10 +8,6 @@
 // NOTE: The CS Bot code uses Doxygen-style comments. If you run Doxygen over this code, it will 
 // auto-generate documentation.  Visit www.doxygen.org to download the system for free.
 //
-
-#ifndef _CS_BOT_H_
-#define _CS_BOT_H_
-
 
 #include "bot/bot.h"
 #include "bot/cs_bot_manager.h"
@@ -623,8 +616,8 @@ public:
 	const char *GetTaskName( void ) const;						///< return string describing current task
 
 	// You probably never want to call these on CS bots. 
-	virtual CBaseEntity		*GetEnemy( void ) OVERRIDE { Assert( 0 ); return nullptr; }
-	virtual CBaseEntity		*GetEnemy( void ) const OVERRIDE { Assert( 0 ); return nullptr; }
+	virtual CBaseEntity		*GetEnemy( void ) override { contract_assert( 0 ); return nullptr; }
+	virtual CBaseEntity		*GetEnemy( void ) const override { contract_assert( 0 ); return nullptr; }
 
 	//- behavior modifiers ------------------------------------------------------------------------------------------
 	enum DispositionType
@@ -1344,15 +1337,6 @@ private:
 
 	int ObjectCaps( void ) { return ( BaseClass::ObjectCaps() | FCAP_IMPULSE_USE ); } //allow +use
 
-#ifdef OPT_VIS_CSGO
-	//--------------------------------------------------------------------------------------------------
-	// PS3 vis cache
-	//--------------------------------------------------------------------------------------------------
-
-	bool m_bVis[5];
-	char m_aVisParts[5];
-#endif
-
 };
 
 
@@ -1830,7 +1814,7 @@ inline bool CCSBot::HasLookAtTarget( void ) const
 
 inline bool CCSBot::IsEnemyPartVisible( VisiblePartType part ) const
 { 
-	VPROF_BUDGET( "CCSBot::IsEnemyPartVisible", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CCSBot::IsEnemyPartVisible", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	if (!IsEnemyVisible())
 		return false;
@@ -2094,7 +2078,7 @@ public:
 			// but keep the same route for a period in case of repaths
 			int timeMod = (int)( gpGlobals->curtime / 10.0f ) + 1;
 			
-			int uniqueID = ((size_t)area) >> 7; // areas are 128-byte aligned, so shift address over
+			int uniqueID = ((std::size_t)area) >> 7; // areas are 128-byte aligned, so shift address over
 			// We just need a unique number approximately between 1 and 300, so take the mod 293 because it's prime
 			unsigned int nRandomCost = ( unsigned int )( m_bot->entindex() * uniqueID * timeMod ) % 293;
 			cost += 1.0f + (float)nRandomCost;
@@ -2142,7 +2126,3 @@ inline CCSBot *ToCSBot( CBaseEntity *pEntity )
 extern int GetBotFollowCount( CCSPlayer *leader );
 extern const Vector *FindNearbyRetreatSpot( CCSBot *me, float maxRange = 250.0f );
 extern const HidingSpot *FindInitialEncounterSpot( CBaseEntity *me, const Vector &searchOrigin, float enemyArriveTime, float maxRange, bool isSniper );
-
-
-#endif	// _CS_BOT_H_
-

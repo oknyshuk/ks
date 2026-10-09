@@ -1,31 +1,29 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "particlemgr.h"
 #include "particledraw.h"
 #include "materialsystem/imesh.h"
-#include "materialsystem/imaterialvar.h"
 #include "iclientmode.h"
 #include "view_scene.h"
-#include "tier0/vprof.h"
 #include "engine/ivdebugoverlay.h"
 #include "view.h"
-#include "keyvalues.h"
 #include "particles/particles.h"							// get new particle system access
 #include "particles_new.h"
-#include "vstdlib/jobthread.h"
-#include "filesystem.h"
 #include "particle_parse.h"
 #include "model_types.h"
-#include "tier0/icommandline.h"
-#include "tier0/memalloc.h"
 
 extern IParticleSystemQuery *g_pParticleSystemQuery;
 
@@ -45,8 +43,8 @@ static ConVar cl_particle_sim_fallback_threshold_ms( "cl_particle_sim_fallback_t
 // Don't fallback as fast on the PC since the rest of the frame doesn't take as long
 static ConVar cl_particle_sim_fallback_base_multiplier( "cl_particle_sim_fallback_base_multiplier", "5", FCVAR_NONE, "How aggressive the switch to fallbacks will be depending on how far over the cl_particle_sim_fallback_threshold_ms the sim time is.  Higher numbers are more aggressive." );
 
-#define BUCKET_SORT_EVERY_N		8			// It does a bucket sort for each material approximately every N times.
-#define BBOX_UPDATE_EVERY_N		8			// It does a full bbox update (checks all particles instead of every eighth one).
+constexpr auto BUCKET_SORT_EVERY_N = 8; // It does a bucket sort for each material approximately every N times.
+constexpr auto BBOX_UPDATE_EVERY_N = 8; // It does a full bbox update (checks all particles instead of every eighth one).
 
 //-----------------------------------------------------------------------------
 //
@@ -54,7 +52,7 @@ static ConVar cl_particle_sim_fallback_base_multiplier( "cl_particle_sim_fallbac
 //
 //-----------------------------------------------------------------------------
 
-#define PARTICLE_SIZE	96
+constexpr auto PARTICLE_SIZE = 96;
 
 CParticleMgr *ParticleMgr()
 {
@@ -236,8 +234,8 @@ void CParticleEffectBinding::BBoxCalcStart( Vector &bbMin, Vector &bbMax )
 		return;
 
 	// We're going to fully recompute the bbox.
-	bbMin.Init( FLT_MAX, FLT_MAX, FLT_MAX );
-	bbMax.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
+	bbMin.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+	bbMax.Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 }
 
 
@@ -274,13 +272,11 @@ void CParticleEffectBinding::BBoxCalcEnd( bool bboxSet, Vector &bbMin, Vector &b
 
 int CParticleEffectBinding::DrawModel( int flags, const RenderableInstance_t &instance )
 {
-	VPROF_BUDGET( "CParticleEffectBinding::DrawModel", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
-#ifndef PARTICLEPROTOTYPE_APP
+	CVProfScope _( "CParticleEffectBinding::DrawModel", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	if ( !r_DrawParticles.GetInt() )
 		return 0;
-#endif
 
-	Assert( flags != 0 );
+	contract_assert( flags != 0 );
 
 	// If we're in commander mode and it's trying to draw the effect,
 	// exit out. If the effect has FLAGS_ALWAYSSIMULATE set, then it'll come back
@@ -407,7 +403,7 @@ Particle* CParticleEffectBinding::AddParticle( int sizeInBytes, PMaterialHandle 
 	// widely varying size
 	if ( sizeInBytes > PARTICLE_SIZE )
 	{
-		Assert( sizeInBytes <= PARTICLE_SIZE );
+		contract_assert( sizeInBytes <= PARTICLE_SIZE );
 		return nullptr;
 	}
 
@@ -604,7 +600,7 @@ void CParticleEffectBinding::SetDrawThruLeafSystem( int bDraw )
 	{
 		// If SetDrawBeforeViewModel was called, then they shouldn't be telling it to draw through
 		// the leaf system too.
-		Assert( !( m_Flags & FLAGS_DRAW_BEFORE_VIEW_MODEL) );
+		contract_assert( !( m_Flags & FLAGS_DRAW_BEFORE_VIEW_MODEL) );
 	}
 
 	SetFlag( FLAGS_DRAW_THRU_LEAF_SYSTEM, bDraw ); 
@@ -755,7 +751,7 @@ void CParticleEffectBinding::RenderEnd( VMatrix &tempModel, VMatrix &tempView )
 void CParticleEffectBinding::DoBucketSort( CEffectMaterial *pMaterial, float *zCoords, int nZCoords, float minZ, float maxZ )
 {
 	// Do an O(N) bucket sort. This helps the sort when there are lots of particles.
-	#define NUM_BUCKETS	32
+	constexpr auto NUM_BUCKETS = 32;
 	Particle buckets[NUM_BUCKETS];
 	for( int iBucket=0; iBucket < NUM_BUCKETS; iBucket++ )
 	{
@@ -783,7 +779,7 @@ void CParticleEffectBinding::DoBucketSort( CEffectMaterial *pMaterial, float *zC
 
 		int iAddBucket = (int)( flPercent * (NUM_BUCKETS - 0.0001f) );
 		iAddBucket = NUM_BUCKETS - iAddBucket - 1;
-		Assert( iAddBucket >= 0 && iAddBucket < NUM_BUCKETS );
+		contract_assert( iAddBucket >= 0 && iAddBucket < NUM_BUCKETS );
 
 		InsertParticleAfter( pCur, &buckets[iAddBucket] );
 
@@ -802,14 +798,14 @@ void CParticleEffectBinding::DoBucketSort( CEffectMaterial *pMaterial, float *zC
 		}
 	}
 
-	Assert(iCurParticle==0);
+	contract_assert( iCurParticle==0 );
 }
 
 
 void CParticleEffectBinding::Init( CParticleMgr *pMgr, IParticleEffect *pSim )
 {
 	// Must Term before reinitializing.
-	Assert( !m_pSim && !m_pParticleMgr );
+	contract_assert( !m_pSim && !m_pParticleMgr );
 
 	m_pSim = pSim;
 	m_pParticleMgr = pMgr;
@@ -847,7 +843,7 @@ void CParticleEffectBinding::RemoveParticle( Particle *pParticle )
 	
 	// Important that this is updated BEFORE NotifyDestroyParticle is called.
 	--m_nActiveParticles;
-	Assert( m_nActiveParticles >= 0 );
+	contract_assert( m_nActiveParticles >= 0 );
 
 	// Let the effect do any necessary cleanup
 	m_pSim->NotifyDestroyParticle(pParticle);
@@ -1015,7 +1011,7 @@ void CParticleMgr::Term(bool bCanReferenceOtherStaticObjects)
 		m_pThreadPool[1] = nullptr;
 	}
 
-	Assert( m_nCurrentParticlesAllocated == 0 );
+	contract_assert( m_nCurrentParticlesAllocated == 0 );
 }
 
 
@@ -1040,7 +1036,7 @@ Particle *CParticleMgr::AllocParticle( int size )
 
 void CParticleMgr::FreeParticle( Particle *pParticle )
 {
-	Assert( m_nCurrentParticlesAllocated > 0 );
+	contract_assert( m_nCurrentParticlesAllocated > 0 );
 	if ( pParticle )
 		--m_nCurrentParticlesAllocated;
 	
@@ -1091,7 +1087,7 @@ void CParticleMgr::RemoveEffectListener( IClientParticleListener *pListener )
 
 void CParticleMgr::RegisterEffect( const char *pEffectType, CreateParticleEffectFN func )
 {
-	Assert( !m_effectFactories.contains( pEffectType ) );
+	contract_assert( !m_effectFactories.contains( pEffectType ) );
 
 	m_effectFactories.emplace( pEffectType, func );
 }
@@ -1125,7 +1121,6 @@ void CParticleMgr::AddEffect( CNewParticleEffect *pEffect )
 
 	if ( pEffect->IsValid() && pEffect->m_pDef->IsDrawnThroughLeafSystem() )
 	{
-#if !defined( PARTICLEPROTOTYPE_APP )
 		RenderableTranslucencyType_t nType;
 		if ( pEffect->IsTranslucent() )
 		{
@@ -1140,7 +1135,6 @@ void CParticleMgr::AddEffect( CNewParticleEffect *pEffect )
 
 		CBaseEntity *pOwner = pEffect->GetOwner();
 		ClientLeafSystem()->RenderInFastReflections( pEffect->RenderHandle(), pOwner ? pOwner->IsRenderingInFastReflections() : false );
-#endif
 	}
 }
 
@@ -1152,7 +1146,7 @@ bool CParticleMgr::AddEffect( CParticleEffectBinding *pEffect, IParticleEffect *
 	{
 		if( pExisting->m_pSim == pSim )
 		{
-			Assert( !"CParticleMgr::AddEffect: added same effect twice" );
+			contract_assert( !"CParticleMgr::AddEffect: added same effect twice" );
 			return false;
 		}
 	}
@@ -1160,10 +1154,8 @@ bool CParticleMgr::AddEffect( CParticleEffectBinding *pEffect, IParticleEffect *
 	pEffect->Init( this, pSim );
 
 	// Add it to the leaf system.
-#if !defined( PARTICLEPROTOTYPE_APP )
 	ClientLeafSystem()->CreateRenderableHandle( pEffect, false, RENDERABLE_IS_TRANSLUCENT, RENDERABLE_MODEL_ENTITY );
 	ClientLeafSystem()->EnableBloatedBounds( pEffect->RenderHandle(), true );
-#endif
 
 	pEffect->m_ListIndex = m_Effects.insert( m_Effects.end(), pEffect );
 
@@ -1183,14 +1175,14 @@ void CParticleMgr::RemoveEffect( CParticleEffectBinding *pEffect )
 	// This prevents certain recursive situations where a NotifyRemove
 	// call can wind up triggering another one, usually in an effect's
 	// destructor.
-	Assert( pEffect );
+	contract_assert( pEffect );
 	if( !pEffect || pEffect->GetRemovalInProgressFlag() )
 		return;
 	pEffect->SetRemovalInProgressFlag();
 
 	// Don't call RemoveEffect while inside an IParticleEffect's Update() function.
 	// Return false from the Update function instead.
-	Assert( !m_bUpdatingEffects );
+	contract_assert( !m_bUpdatingEffects );
 
 	// notify listeners
 	int nListeners = std::ssize( m_effectListeners );
@@ -1213,24 +1205,22 @@ void CParticleMgr::RemoveEffect( CParticleEffectBinding *pEffect )
 	}
 	else
 	{
-		Assert( !listIndex );
+		contract_assert( !listIndex );
 	}
 }
 
 void CParticleMgr::RemoveEffect( CNewParticleEffect *pEffect )
 {
-	Assert( pEffect );
+	contract_assert( pEffect );
 	if ( !pEffect )
 		return;
 
 	// Don't call RemoveEffect while inside an IParticleEffect's Update() function.
 	// Return false from the Update function instead.
-	Assert( !m_bUpdatingEffects );
+	contract_assert( !m_bUpdatingEffects );
 
-#if !defined( PARTICLEPROTOTYPE_APP )
 	// Take it out of the leaf system.
 	ClientLeafSystem()->RemoveRenderable( pEffect->m_hRenderHandle );
-#endif
 
 	m_NewEffects.erase( pEffect );
 	pEffect->NotifyRemove();
@@ -1297,7 +1287,7 @@ CNewParticleEffect *CParticleMgr::NextNewEffect( CNewParticleEffect *pEffect )
 
 void CParticleMgr::IncrementFrameCode()
 {
-	VPROF( "CParticleMgr::IncrementFrameCode()" );
+	CVProfScope _( "CParticleMgr::IncrementFrameCode()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	++m_FrameCode;
 	if ( m_FrameCode == 0 )
@@ -1323,7 +1313,7 @@ void CParticleMgr::Simulate( float flTimeDelta )
 
 	if(!m_pMaterialSystem)
 	{
-		Assert(false);
+		contract_assert( false );
 		return;
 	}
 
@@ -1347,7 +1337,7 @@ int GetParticlePerformance()
 
 void CParticleMgr::PostRender()
 {
-	VPROF("CParticleMgr::SimulateUndrawnEffects");
+	CVProfScope _( "CParticleMgr::SimulateUndrawnEffects", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Simulate all effects that weren't drawn (if they have their 'always simulate' flag set).
 	for ( CParticleEffectBinding *pEffect : m_Effects )
@@ -1369,7 +1359,7 @@ void CParticleMgr::DrawBeforeViewModelEffects()
 	{
 		if ( pEffect->GetFlag( CParticleEffectBinding::FLAGS_DRAW_BEFORE_VIEW_MODEL ) )
 		{
-			Assert( !pEffect->WasDrawn() );
+			contract_assert( !pEffect->WasDrawn() );
 			pEffect->DrawModel( STUDIO_RENDER, instance );
 		}
 	}
@@ -1476,10 +1466,6 @@ int CParticleMgr::ComputeParticleDefScreenArea( int nInfoCount, RetireInfo_t *pI
 	float flCullRadiusSqr = flCullRadius * flCullRadius;
 	*pTotalArea = 0.0f;
 
-#ifdef DBGFLAG_ASSERT
-	float flMaxPixels = view.width * view.height;
-#endif
-
 	CParticleCollection *pCollection = pDef->FirstCollection();
 	for ( ; pCollection; pCollection = pCollection->GetNextCollectionUsingSameDef() )
 	{
@@ -1488,8 +1474,8 @@ int CParticleMgr::ComputeParticleDefScreenArea( int nInfoCount, RetireInfo_t *pI
 			continue;
 
 		// Don't count parents
-		Assert( !pCollection->m_pParent );
-		Assert( nCollection < nInfoCount && pDef == pCollection->m_pDef );
+		contract_assert( !pCollection->m_pParent );
+		contract_assert( nCollection < nInfoCount && pDef == pCollection->m_pDef );
 
 		pInfo[nCollection].m_flScreenArea = 0.0f;
 		pInfo[nCollection].m_pCollection = pCollection;
@@ -1501,7 +1487,7 @@ int CParticleMgr::ComputeParticleDefScreenArea( int nInfoCount, RetireInfo_t *pI
 		Vector3DMultiplyPositionProjective( worldToPixels, vecCenter, vecScreenCenter );
 		float lSqr = vecCenter.DistToSqr( view.origin );
 
-		float flProjRadius = ( lSqr > flCullRadiusSqr ) ? 0.5f * flFocalDist * flCullRadius / sqrt( lSqr - flCullRadiusSqr ) : 1.0f;
+		float flProjRadius = ( lSqr > flCullRadiusSqr ) ? 0.5f * flFocalDist * flCullRadius / std::sqrt( lSqr - flCullRadiusSqr ) : 1.0f;
 		flProjRadius *= view.width;
 
 		float flMinX = std::max<std::common_type_t<int, vec_t>>( view.x, vecScreenCenter.x - flProjRadius );
@@ -1517,7 +1503,6 @@ int CParticleMgr::ComputeParticleDefScreenArea( int nInfoCount, RetireInfo_t *pI
 		flMaxY = clamp( flMaxY, view.y, view.height );
 
 		float flArea = ( flMaxX - flMinX ) * ( flMaxY - flMinY );
-		Assert( flArea <= flMaxPixels );
 		flArea *= flCullCost;
 		*pTotalArea += flArea; 
 
@@ -1580,6 +1565,7 @@ static ConVar cl_particle_retire_cost( "cl_particle_retire_cost", "0", FCVAR_CHE
 
 bool CParticleMgr::EarlyRetireParticleSystems( int nCount, CNewParticleEffect **ppEffects )
 {
+	ks::ScratchArena<> scratch;
 	// NOTE: Doing a cheap and hacky estimate of worst-case fillrate
 	const CViewSetup *pViewSetup[ MAX_SPLITSCREEN_PLAYERS ];
 	VMatrix worldToScreen[ MAX_SPLITSCREEN_PLAYERS ];
@@ -1595,7 +1581,7 @@ bool CParticleMgr::EarlyRetireParticleSystems( int nCount, CNewParticleEffect **
 		return false;
 
 	int nDefCount = 0;
-	CParticleSystemDefinition **ppDefs = (CParticleSystemDefinition**)stackalloc( nCount * sizeof(CParticleSystemDefinition*) );
+	CParticleSystemDefinition **ppDefs = scratch.Alloc<CParticleSystemDefinition*>( nCount );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		CParticleSystemDefinition *pDef = ppEffects[i]->m_pDef;
@@ -1630,13 +1616,13 @@ bool CParticleMgr::EarlyRetireParticleSystems( int nCount, CNewParticleEffect **
 	{
 		VMatrix dummy1, dummy2, dummy3;
 		render->GetMatricesForView( *pViewSetup[ ii ], &dummy1, &dummy2, &dummy3, &worldToScreen[ ii ] );
-		flFocalDist[ ii ] = tan( DEG2RAD( pViewSetup[ ii ]->fov * 0.5f ) );
+		flFocalDist[ ii ] = std::tan( DEG2RAD( pViewSetup[ ii ]->fov * 0.5f ) );
 	}
 
 	bool bRetiredCollections = true;
 	float flScreenArea;
 	int nSize = nCount * sizeof(RetireInfo_t);
-	RetireInfo_t *pInfo = (RetireInfo_t*)stackalloc( nSize );
+	RetireInfo_t *pInfo = (RetireInfo_t*)scratch.AllocBytes( nSize );
 	for ( int i = 0; i < nDefCount; ++i )
 	{
 		CParticleSystemDefinition* pDef = ppDefs[i];
@@ -1737,7 +1723,7 @@ void CParticleMgr::UpdateNewEffects( float flTimeDelta )
 // 	g_bDontMakeSkipToTimeTakeForever = true;
 // #endif
 	flTimeDelta *= r_particle_timescale.GetFloat();
-	VPROF_BUDGET( "CParticleMSG::UpdateNewEffects", "Particle Simulation" );
+	CVProfScope _( "CParticleMSG::UpdateNewEffects", 0, "Particle Simulation", false, BUDGETFLAG_OTHER );
 
 	g_pParticleSystemMgr->SetLastSimulationTime( gpGlobals->curtime );
 
@@ -1796,7 +1782,7 @@ void CParticleMgr::UpdateNewEffects( float flTimeDelta )
 				}
 				CParallelProcessor<CNewParticleEffect*, CFuncJobItemProcessor<CNewParticleEffect*>, 3 > processor;
 				processor.m_ItemProcessor.Init( ProcessPSystem, PreProcessPSystem, PostProcessPSystem );
-				processor.Run( particlesToSimulate.data(), nCount, 1, INT_MAX, m_pThreadPool[nAltCore-1] );
+				processor.Run( particlesToSimulate.data(), nCount, 1, std::numeric_limits<int>::max(), m_pThreadPool[nAltCore-1] );
 			}
 		}
 	}
@@ -1961,7 +1947,7 @@ PMaterialHandle CParticleMgr::GetPMaterial( const char *pMaterialName )
 {
 	if( !m_pMaterialSystem )
 	{
-		Assert(false);
+		contract_assert( false );
 		return nullptr;
 	}
 
@@ -2048,7 +2034,7 @@ void CParticleMgr::RepairPMaterial( PMaterialHandle hMaterial )
 			break;
 		}
 	}
-	Assert( pMaterialName != nullptr );
+	contract_assert( pMaterialName != nullptr );
 
 	IMaterial *pIMaterial = m_pMaterialSystem->FindMaterial( pMaterialName, TEXTURE_GROUP_PARTICLE );
 	hMaterial->m_pMaterial = pIMaterial;
@@ -2130,7 +2116,9 @@ void CParticleMgr::SpewInfo( bool bDetail )
 		DevMsg( "%3d: NumActive: %3d, AutoBBox: %3s \"%s\" \n", i++, (int)pEffect->m_nActiveParticles, pEffect->GetAutoUpdateBBox() ? "on" : "off", pEffectName );
 	}
 }
-CON_COMMAND( cl_particles_dump_effects, "" )
+static void cl_particles_dump_effects( const CCommand &args );
+static ConCommand cl_particles_dump_effects_command( "cl_particles_dump_effects", cl_particles_dump_effects, "" );
+static void cl_particles_dump_effects( const CCommand &args )
 {
 	ParticleMgr()->SpewInfo( true );
 }
@@ -2139,54 +2127,23 @@ CON_COMMAND( cl_particles_dump_effects, "" )
 // ------------------------------------------------------------------------------------ //
 float Helper_GetTime()
 {
-#if defined( PARTICLEPROTOTYPE_APP )
-	static bool bStarted = false;
-	static CCycleCount startTimer;
-	if( !bStarted )
-	{
-		bStarted = true;
-		startTimer.Sample();
-	}
-
-	CCycleCount curCount;
-	curCount.Sample();
-
-	CCycleCount elapsed;
-	CCycleCount::Sub( curCount, startTimer, elapsed );
-
-	return (float)elapsed.GetSeconds();
-#else
 	return gpGlobals->curtime;
-#endif
 }
 
 
 float Helper_RandomFloat( float minVal, float maxVal )
 {
-#if defined( PARTICLEPROTOTYPE_APP )
-	return Lerp( (float)rand() / VALVE_RAND_MAX, minVal, maxVal );
-#else
 	return random->RandomFloat( minVal, maxVal );
-#endif
 }
 
 
 int Helper_RandomInt( int minVal, int maxVal )
 {
-#if defined( PARTICLEPROTOTYPE_APP )
-	return minVal + (rand() * (maxVal - minVal)) / VALVE_RAND_MAX;
-#else
 	return random->RandomInt( minVal, maxVal );
-#endif
 }
 
 
 float Helper_GetFrameTime()
 {
-#if defined( PARTICLEPROTOTYPE_APP )
-	extern float g_ParticleAppFrameTime;
-	return g_ParticleAppFrameTime;
-#else
 	return gpGlobals->frametime;
-#endif
 }

@@ -1,39 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "crtmemdebug.h"
-#ifdef USECRTMEMDEBUG
-#include <crtdbg.h>
+#if defined(CLIENT_DLL)
 #endif
+#if defined(CLIENT_DLL)
+import std;
+import ks.core;
+#endif
+#include "crtmemdebug.h"
 
 void CheckHeap( void )
 {
-#ifdef USECRTMEMDEBUG
-	_CrtCheckMemory();
-#endif
 }
 
 // undone: this needs to be somehow made to construct before everything else.
 // see http://msdn.microsoft.com/library/periodic/period97/dembugs.htm for info
 void InitCRTMemDebug( void )
 {
-#ifdef USECRTMEMDEBUG
-	_CrtSetDbgFlag( 
-//	_CRTDBG_ALLOC_MEM_DF  | 
-	_CRTDBG_CHECK_ALWAYS_DF |
-	_CRTDBG_CHECK_CRT_DF | 
-	_CRTDBG_DELAY_FREE_MEM_DF );
-#endif
 }
-

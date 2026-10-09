@@ -2,10 +2,31 @@
 // Save/merge for partial nav meshes
 // Copyright 2005 Turtle Rock Studios, Inc.
 
-#include "cbase.h"
-#include "fmtstr.h"
-#include "tier0/vprof.h"
-#include "tier1/map_ops.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "player.h"
 
 #include "nav_mesh.h"
 
@@ -157,7 +178,9 @@ void CNavMesh::CommandNavSaveSelected( const CCommand &args )
 
 
 //--------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_save_selected, "Writes the selected set to disk for merging into another mesh via nav_merge_mesh.", FCVAR_GAMEDLL | FCVAR_CHEAT )
+static void nav_save_selected( const CCommand &args );
+static ConCommand nav_save_selected_command( "nav_save_selected", nav_save_selected, "Writes the selected set to disk for merging into another mesh via nav_merge_mesh.", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static void nav_save_selected( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -188,7 +211,7 @@ void ReconnectMergedArea( ks::idict< CNavArea * > &newAreas, KeyValues *areaKey,
 	CNavArea **ppArea = ks::find_ptr( newAreas, areaKey->GetName() );
 	if ( !ppArea )
 	{
-		Assert( false );
+		contract_assert( false );
 		return;
 	}
 
@@ -202,7 +225,7 @@ void ReconnectMergedArea( ks::idict< CNavArea * > &newAreas, KeyValues *areaKey,
 		{
 			const char *otherID = connection->GetString();
 			CNavArea **ppOther = ks::find_ptr( newAreas, otherID );
-			Assert( ppOther );
+			contract_assert( ppOther );
 			if ( ppOther )
 			{
 				CNavArea *other = *ppOther;
@@ -265,7 +288,7 @@ void CNavMesh::CommandNavMergeMesh( const CCommand &args )
 
 			// save the new ID for connections
 			[[maybe_unused]] bool bInserted = newAreas.emplace( areaKey->GetName(), newArea ).second;
-			Assert( bInserted );
+			contract_assert( bInserted );
 
 			// Restore additional data
 			newArea->RestoreFromSelectedSet( areaKey );
@@ -298,19 +321,19 @@ int NavMeshMergeAutocomplete( char const *partial, char commands[ COMMAND_COMPLE
 {
 	const char *commandName = "nav_merge_mesh";
 	int numMatches = 0;
-	partial += Q_strlen( commandName ) + 1;
-	int partialLength = Q_strlen( partial );
+	partial += V_strlen( commandName ) + 1;
+	int partialLength = V_strlen( partial );
 
 	FileFindHandle_t findHandle;
 	char txtFilenameNoExtension[ MAX_PATH ];
 	const char *txtFilename = filesystem->FindFirstEx( "maps/*_selected_*.txt", "MOD", &findHandle );
 	while ( txtFilename )
 	{
-		Q_FileBase( txtFilename, txtFilenameNoExtension, sizeof( txtFilenameNoExtension ) );
-		if ( !Q_strnicmp( txtFilenameNoExtension, partial, partialLength ) && V_stristr( txtFilenameNoExtension, "_selected_" ) )
+		V_FileBase( txtFilename, txtFilenameNoExtension, sizeof( txtFilenameNoExtension ) );
+		if ( !V_strnicmp( txtFilenameNoExtension, partial, partialLength ) && V_stristr( txtFilenameNoExtension, "_selected_" ) )
 		{
 			// Add the place name to the autocomplete array
-			Q_snprintf( commands[ numMatches++ ], COMMAND_COMPLETION_ITEM_LENGTH, "%s %s", commandName, txtFilenameNoExtension );
+			V_snprintf( commands[ numMatches++ ], COMMAND_COMPLETION_ITEM_LENGTH, "%s %s", commandName, txtFilenameNoExtension );
 
 			// Make sure we don't try to return too many place names
 			if ( numMatches == COMMAND_COMPLETION_MAXITEMS )
@@ -326,7 +349,9 @@ int NavMeshMergeAutocomplete( char const *partial, char commands[ COMMAND_COMPLE
 
 
 //--------------------------------------------------------------------------------------------------------
-CON_COMMAND_F_COMPLETION( nav_merge_mesh, "Merges a saved selected set into the current mesh.", FCVAR_GAMEDLL | FCVAR_CHEAT, NavMeshMergeAutocomplete )
+static void nav_merge_mesh( const CCommand &args );
+static ConCommand nav_merge_mesh_command( "nav_merge_mesh", nav_merge_mesh, "Merges a saved selected set into the current mesh.", FCVAR_GAMEDLL | FCVAR_CHEAT, NavMeshMergeAutocomplete );
+static void nav_merge_mesh( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;

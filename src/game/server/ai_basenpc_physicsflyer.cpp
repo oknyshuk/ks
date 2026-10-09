@@ -1,17 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Base class for many flying NPCs
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Base class for many flying NPCs
+
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "ai_basenpc_physicsflyer.h"
 #include "ai_route.h"
 #include "ai_navigator.h"
-#include "ai_motor.h"
 
 IMPLEMENT_REFLECT_DATAMAP( CAI_BasePhysicsFlyingBot )
 
@@ -23,7 +41,7 @@ IMPLEMENT_REFLECT_DATAMAP( CAI_BasePhysicsFlyingBot )
 //------------------------------------------------------------------------------
 void CAI_BasePhysicsFlyingBot::GetVelocity(Vector *vVelocity, AngularImpulse *vAngVelocity)
 {
-	Assert( GetMoveType() == MOVETYPE_VPHYSICS );
+	contract_assert( GetMoveType() == MOVETYPE_VPHYSICS );
 	if ( VPhysicsGetObject() )
 	{
 		VPhysicsGetObject()->GetVelocity( vVelocity, vAngVelocity );
@@ -176,7 +194,7 @@ void CAI_BasePhysicsFlyingBot::StartTask( const Task_t *pTask )
 
 void CAI_BasePhysicsFlyingBot::MoveToTarget(float flInterval, const Vector &MoveTarget)
 {
-	Assert(0);	// This must be overridden in the leaf classes
+	contract_assert( 0 );	// This must be overridden in the leaf classes
 }
 
 //------------------------------------------------------------------------------
@@ -212,7 +230,7 @@ AI_NavPathProgress_t CAI_BasePhysicsFlyingBot::ProgressFlyPath(
 		case AINPP_BLOCKED: // function is not supposed to test blocking, just simple path progression
 		default:
 		{
-			AssertMsg( 0, ( "Unexpected result" ) );
+			contract_assert( 0 );
 			break;
 		}
 	}
@@ -266,7 +284,7 @@ bool CAI_BasePhysicsFlyingBot::CreateVPhysics( void )
 //-----------------------------------------------------------------------------
 void CAI_BasePhysicsFlyingBot::TranslateNavGoal( CBaseEntity *pTarget, Vector &chasePosition )
 {
-	Assert( pTarget != nullptr );
+	contract_assert( pTarget != nullptr );
 
 	if ( pTarget == nullptr )
 	{
@@ -332,4 +350,3 @@ IMotionEvent::simresult_e CAI_BasePhysicsFlyingBot::Simulate( IPhysicsMotionCont
 
 	return SIM_GLOBAL_ACCELERATION; // on my local axis.   SIM_GLOBAL_ACCELERATION
 }
-

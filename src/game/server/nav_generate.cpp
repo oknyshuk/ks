@@ -1,25 +1,52 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_generate.cpp
 // Auto-generate a Navigation Mesh by sampling the current map
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "util_shared.h"
 #include "nav_mesh.h"
 #include "nav_node.h"
 #include "nav_pathfind.h"
 #include "viewport_panel_names.h"
 //#include "terror/TerrorShared.h"
-#include "fmtstr.h"
 #include "usermessages.h"
-
-
 
 enum { MAX_BLOCKED_AREAS = 256 };
 static unsigned int blockedID[ MAX_BLOCKED_AREAS ];
@@ -713,8 +740,8 @@ void CNavMesh::RaiseAreasWithInternalObstacles()
 		if ( ( area->GetSizeX() != GenerationStepSize ) || (area->GetSizeY() != GenerationStepSize ) )
 			continue;
 
-		float obstacleZ[2] = { -FLT_MAX, -FLT_MAX };
-		float obstacleZMax = -FLT_MAX;
+		float obstacleZ[2] = { -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() };
+		float obstacleZMax = -std::numeric_limits<float>::max();
 		NavDirType obstacleDir = NORTH;
 		float obstacleStartDist = GenerationStepSize;
 		float obstacleEndDist = 0;
@@ -733,7 +760,7 @@ void CNavMesh::RaiseAreasWithInternalObstacles()
 			int iEdgesBlocked = 0;
 			corner[0] = (NavCornerType) ( ( i + 3 ) % NUM_CORNERS );					// lower left-hand corner relative to current direction
 			corner[1] = (NavCornerType) ( ( i + 2 ) % NUM_CORNERS );				// lower right-hand corner relative to current direction			
-			float obstacleZThisDir[2] = { -FLT_MAX, -FLT_MAX };						// absolute Z pos of obstacle for left and right edge in this direction
+			float obstacleZThisDir[2] = { -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() };						// absolute Z pos of obstacle for left and right edge in this direction
 			float obstacleStartDistThisDir = GenerationStepSize;					// closest obstacle start distance in this direction
 			float obstacleEndDistThisDir = 0;										// farthest obstacle end distance in this direction
 
@@ -791,18 +818,18 @@ void CNavMesh::RaiseAreasWithInternalObstacles()
 			}
 		}
 
-		if ( isStairNeighbor && obstacleZMax > -FLT_MAX )
+		if ( isStairNeighbor && obstacleZMax > -std::numeric_limits<float>::max() )
 		{
 			areasToDelete.push_back( area );
 			continue;
 		}
 
 		// if we found an obstacle, raise this nav areas and size it to fit
-		if ( obstacleZMax > -FLT_MAX )
+		if ( obstacleZMax > -std::numeric_limits<float>::max() )
 		{
 			// enforce minimum obstacle width so we don't shrink to become a teensy nav area
 			AdjustObstacleDistances( &obstacleStartDist, &obstacleEndDist, GenerationStepSize );
-			Assert( obstacleEndDist - obstacleStartDist >= MinObstacleAreaWidth );
+			contract_assert( obstacleEndDist - obstacleStartDist >= MinObstacleAreaWidth );
 
 			// get current corner coords
 			Vector corner[4];
@@ -849,7 +876,7 @@ void CNavMesh::RaiseAreasWithInternalObstacles()
 			
 			// move the area
 			area->Build( corner[NORTH_WEST], corner[NORTH_EAST], corner[SOUTH_EAST], corner[SOUTH_WEST] );
-			Assert( !area->IsDegenerate() );
+			contract_assert( !area->IsDegenerate() );
 //			AddToSelectedSet( area );
 			// remove side-to-side connections if there are any so AI does try to do things like run along fencetops
 			area->RemoveOrthogonalConnections( obstacleDir );
@@ -922,7 +949,7 @@ void CNavMesh::CreateObstacleTopAreas()
 */
 bool CNavMesh::CreateObstacleTopAreaIfNecessary( CNavArea *area, CNavArea *areaOther, NavDirType dir, bool bMultiNode )
 {
-	float obstacleHeightMin = FLT_MAX;
+	float obstacleHeightMin = std::numeric_limits<float>::max();
 	float obstacleHeightMax = 0; 
 	float obstacleHeightStart = 0; 
 	float obstacleHeightEnd = 0;
@@ -942,7 +969,7 @@ bool CNavMesh::CreateObstacleTopAreaIfNecessary( CNavArea *area, CNavArea *areaO
 		CNavNode *node = area->m_node[cornerStart];
 		CNavNode *nodeEnd = area->m_node[cornerEnd];
 		NavDirType dirEdge = (NavDirType) ( ( dir + 1 ) % NUM_DIRECTIONS );
-		obstacleHeightMin = FLT_MAX;
+		obstacleHeightMin = std::numeric_limits<float>::max();
 		float zStart = 0, zEnd = 0;
 		// along the edge of this area that faces the other area, look at every node that's in the portal between the two
 		while ( node )
@@ -1054,10 +1081,10 @@ bool CNavMesh::CreateObstacleTopAreaIfNecessary( CNavArea *area, CNavArea *areaO
 
 			// Enforce min area width for new area
 			AdjustObstacleDistances( &obstacleDistMin, &obstacleDistMax, bMultiNode ? GenerationStepSize * 2 : GenerationStepSize );
-			Assert( obstacleDistMin < obstacleDistMax );
-			Assert( obstacleDistMax - obstacleDistMin >= MinObstacleAreaWidth );
+			contract_assert( obstacleDistMin < obstacleDistMax );
+			contract_assert( obstacleDistMax - obstacleDistMin >= MinObstacleAreaWidth );
 			float newAreaWidth = obstacleDistMax - obstacleDistMin;
-			Assert( newAreaWidth > 0 );			
+			contract_assert( newAreaWidth > 0 );			
 
 			// Calculate new area coordinates
 			AddDirectionVector( &center, dir, obstacleDistMin + (newAreaWidth/2) );
@@ -1088,7 +1115,7 @@ bool CNavMesh::CreateObstacleTopAreaIfNecessary( CNavArea *area, CNavArea *areaO
 			TheNavAreas.push_back( areaNew );
 			AddNavArea( areaNew );
 
-			Assert( !areaNew->IsDegenerate() );
+			contract_assert( !areaNew->IsDegenerate() );
 
 			Msg( "Created new fencetop area %d(%x) between %d(%x) and %d(%x)\n", areaNew->GetID(), areaNew->GetDebugID(), area->GetID(), area->GetDebugID(), areaOther->GetID(), areaOther->GetDebugID() );
 
@@ -1228,7 +1255,7 @@ StairTestType IsStairs( const Vector &start, const Vector &end, StairTestType re
 	const float inc = 5.0f;
 
 	// the minimum height change each step to be a step and not a slope
-	const float minStepZ = inc * tan( acos( nav_slope_limit.GetFloat() ) );
+	const float minStepZ = inc * std::tan( std::acos( nav_slope_limit.GetFloat() ) );
 	const float MinStairNormal = 0.97f; // we don't care about ramps, just actual flat steps
 
 	float t;
@@ -1405,7 +1432,9 @@ bool CNavArea::TestStairs( void )
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_test_stairs, "Test the selected set for being on stairs", FCVAR_CHEAT )
+static void nav_test_stairs( const CCommand &args );
+static ConCommand nav_test_stairs_command( "nav_test_stairs", nav_test_stairs, "Test the selected set for being on stairs", FCVAR_CHEAT );
+static void nav_test_stairs( const CCommand &args )
 {
 	int count = 0;
 
@@ -2365,7 +2394,7 @@ void CNavMesh::FixCornerOnCornerAreas( void )
 			NavDirType dirsAlongOurEdge[2] = { dirToLeftTwice, dirToRightTwice };
 
 			// consider 2 potential new nav areas, to left and right of the corner we're considering
-			for ( int iDir = 0; iDir < ARRAYSIZE( dirsAlongOtherEdge ); iDir++ )
+			for ( int iDir = 0; iDir < std::size( dirsAlongOtherEdge ); iDir++ )
 			{
 				NavDirType dirAlongOtherEdge = dirsAlongOtherEdge[iDir];
 				NavDirType dirAlongOurEdge = dirsAlongOurEdge[iDir];
@@ -2379,7 +2408,7 @@ void CNavMesh::FixCornerOnCornerAreas( void )
 
 				// see if there is a nav area at that location
 				CNavArea *areaOther = GetNavArea( vecOtherEdgePos );
-				Assert( areaOther != area );
+				contract_assert( areaOther != area );
 				if ( !areaOther )
 					continue;		// no other area in that location, we're not touching on corner
 
@@ -2417,7 +2446,7 @@ void CNavMesh::FixCornerOnCornerAreas( void )
 
 				// as sanity check, make sure there's not already a nav area there, shouldn't be
 				CNavArea *areaTest = GetNavArea( vecCorner[0] );
-				Assert ( !areaTest );
+				contract_assert( !areaTest );
 				if ( areaTest )
 					continue;
 
@@ -2543,8 +2572,8 @@ void CNavMesh::SplitAreasUnderOverhangs( void )
 								splitLen = extentBelow.hi.y - splitCoord;
 							}
 						}
-						Assert( splitLen >= 0 );
-						Assert( splitEdgeSize > 0 );
+						contract_assert( splitLen >= 0 );
+						contract_assert( splitEdgeSize > 0 );
 
 						// if we split the lower nav area right where it's in shadow of the upper nav area, will it create a really tiny strip?
 						if ( splitLen < GenerationStepSize )
@@ -3137,8 +3166,8 @@ int CNavMesh::BuildArea( CNavNode *node, int width, int height )
 		 seNode->m_obstacleHeight[NORTH] > MaxTraversableHeight || seNode->m_obstacleHeight[WEST] > MaxTraversableHeight ||
 		 swNode->m_obstacleHeight[EAST] > MaxTraversableHeight || swNode->m_obstacleHeight[NORTH] > MaxTraversableHeight  )
 	{		
-		Assert( width == 1 );		// We should only ever try to build a 1x1 area out of any two nodes that have an obstruction between them
-		Assert( height == 1 );
+		contract_assert( width == 1 );		// We should only ever try to build a 1x1 area out of any two nodes that have an obstruction between them
+		contract_assert( height == 1 );
 
 		area->SetAttributes( area->GetAttributes() | NAV_MESH_NO_MERGE );
 	}
@@ -3693,11 +3722,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 
 			Msg( "Finding earliest occupy times...DONE\n" );
 
-#ifdef NAV_ANALYZE_LIGHT_INTENSITY
-			bool shouldSkipLightComputation = ( m_generationMode == GENERATE_INCREMENTAL || engine->IsDedicatedServer() );
-#else
 			bool shouldSkipLightComputation = true;
-#endif
 
 			if ( shouldSkipLightComputation )
 			{
@@ -3921,8 +3946,8 @@ void CNavMesh::SetPlayerSpawnName( const char *name )
 		delete [] m_spawnName;
 	}
 
-	m_spawnName = new char [ strlen(name) + 1 ];
-	strcpy( m_spawnName, name );
+	m_spawnName = new char [ std::strlen(name) + 1 ];
+	std::strcpy( m_spawnName, name );
 }
 
 
@@ -3970,7 +3995,7 @@ CNavNode *CNavMesh::AddNode( const Vector &destPos, const Vector &normal, NavDir
 		if ( obstacleHeight > 0 )
 		{
 			obstacleHeight = std::max<std::common_type_t<float, int>>( obstacleHeight + deltaZ, 0 );
-			Assert( obstacleHeight > 0 );
+			contract_assert( obstacleHeight > 0 );
 		}
 		node->ConnectTo( source, OppositeDirection( dir ), obstacleHeight, GenerationStepSize - obstacleEndDist, GenerationStepSize - obstacleStartDist );
 		node->MarkAsVisited( OppositeDirection( dir ) );
@@ -4367,7 +4392,7 @@ bool CNavMesh::SampleStep( void )
 							// Could not trace from node to node at this height, something is in the way.
 							// Trace in the other direction to see if we hit something
 							Vector vecToObstacleStart = tr.endpos - start;
-							Assert( vecToObstacleStart.LengthSqr() <= Square( GenerationStepSize ) );
+							contract_assert( vecToObstacleStart.LengthSqr() <= Square( GenerationStepSize ) );
 							if ( vecToObstacleStart.LengthSqr() <= Square( GenerationStepSize ) )
 							{
 								UTIL_TraceHull( end, start, NavTraceMins, NavTraceMaxs, GetGenerationTraceMask(), &filter, &tr );
@@ -4375,7 +4400,7 @@ bool CNavMesh::SampleStep( void )
 								{
 									// We hit something going the other direction.  There is some obstacle between the two nodes.
 									Vector vecToObstacleEnd = tr.endpos - start;
-									Assert( vecToObstacleEnd.LengthSqr() <= Square( GenerationStepSize ) );
+									contract_assert( vecToObstacleEnd.LengthSqr() <= Square( GenerationStepSize ) );
 									if ( vecToObstacleEnd.LengthSqr() <= Square( GenerationStepSize )  )
 									{
 										// Remember the distances to start and end of the obstacle (with respect to the "from" node).
@@ -4680,14 +4705,16 @@ void CNavMesh::CommandNavSubdivide( const CCommand &args )
 	
 	if (args.ArgC() == 2)
 	{
-		depth = atoi( args[1] );
+		depth = std::atoi( args[1] );
 	}
 
 	Subdivider chop( depth );
 	TheNavMesh->ForAllSelectedAreas( chop );
 }
 
-CON_COMMAND_F( nav_subdivide, "Subdivides all selected areas.", FCVAR_GAMEDLL | FCVAR_CHEAT )
+static void nav_subdivide( const CCommand &args );
+static ConCommand nav_subdivide_command( "nav_subdivide", nav_subdivide, "Subdivides all selected areas.", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static void nav_subdivide( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -4721,7 +4748,7 @@ void CNavMesh::ValidateNavAreaConnections( void )
 				if ( ks::find_index( *pIncoming, connect ) != -1 )
 				{
 					Msg( "Area %d has area %d on both 2-way and incoming list, should only be on one\n", area->GetID(), areaOther->GetID() );
-					Assert( false );
+					contract_assert( false );
 				}
 
 				// make sure there are no duplicate connections on the list
@@ -4731,7 +4758,7 @@ void CNavMesh::ValidateNavAreaConnections( void )
 					if ( areaOther == areaCheck )
 					{
 						Msg( "Area %d has multiple outgoing connections to area %d in direction %d\n", area->GetID(), areaOther->GetID(), dir );
-						Assert( false );
+						contract_assert( false );
 					}
 				}
 
@@ -4763,7 +4790,7 @@ void CNavMesh::ValidateNavAreaConnections( void )
 					if ( areaOther == areaCheck )
 					{
 						Msg( "Area %d has multiple incoming connections to area %d in direction %d\n", area->GetID(), areaOther->GetID(), dir );
-						Assert( false );
+						contract_assert( false );
 					}
 				}
 
@@ -4773,7 +4800,7 @@ void CNavMesh::ValidateNavAreaConnections( void )
 				if ( !bOnOthersOutgoingList )
 				{
 					Msg( "Area %d has incoming connection from area %d but does not appear on latter's outgoing connection list\n", area->GetID(), areaOther->GetID() );
-					Assert( false );
+					contract_assert( false );
 				}
 			}
 		}
@@ -4824,7 +4851,9 @@ void CNavMesh::PostProcessCliffAreas()
 	}
 }
 
-CON_COMMAND_F( nav_gen_cliffs_approx, "Mark cliff areas, post-processing approximation", FCVAR_CHEAT )
+static void nav_gen_cliffs_approx( const CCommand &args );
+static ConCommand nav_gen_cliffs_approx_command( "nav_gen_cliffs_approx", nav_gen_cliffs_approx, "Mark cliff areas, post-processing approximation", FCVAR_CHEAT );
+static void nav_gen_cliffs_approx( const CCommand &args )
 {
 	TheNavMesh->PostProcessCliffAreas();
 }

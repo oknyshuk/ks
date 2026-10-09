@@ -1,23 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef PREDICTABLE_ENTITY_H
-#define PREDICTABLE_ENTITY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // For introspection
-#include "tier0/platform.h"
+import ks.core;
 #include "predictioncopy.h"
 #include "shared_classnames.h"
 
-#ifndef NO_ENTITY_PREDICTION
-#define UsePrediction() 1
-#else
-#define UsePrediction() 0
-#endif
+[[gnu::always_inline]] inline constexpr auto UsePrediction() { return 1; }
 
 // CLIENT DLL includes
 #if defined( CLIENT_DLL ) || defined( TOOL_DLL )
@@ -54,16 +44,12 @@ class SendTable;
 
 #if defined( CLIENT_DLL )
 
-#ifndef NO_ENTITY_PREDICTION
 #define DECLARE_PREDICTABLE()											\
 	public:																\
 		static typedescription_t m_PredDesc[];							\
 		static datamap_t m_PredMap;										\
 		virtual datamap_t *GetPredDescMap( void );						\
 		template <typename T> friend datamap_t *PredMapInit(T *)
-#else
-#define DECLARE_PREDICTABLE()	template <typename T> friend datamap_t *PredMapInit(T *)
-#endif
 
 // The prediction descriptor DSL is gone: prediction maps are generated from Pred and PredFrom
 // annotations by game/shared/reflect_predmap.h, and every one of the 53 in the tree was proven
@@ -171,5 +157,3 @@ class SendTable;
 	LINK_ENTITY_TO_CLASS_ALIASED( entity_name, classNameDerived )
 
 #endif																	
-
-#endif // PREDICTABLE_ENTITY_H

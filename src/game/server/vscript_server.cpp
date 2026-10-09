@@ -1,16 +1,45 @@
-//========== Copyright (c) 2008, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2008 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "vscript_server.h"
-#include "icommandline.h"
-#include "tier1/fmtstr.h"
 #include "filesystem.h"
 #include "eventqueue.h"
-#include "characterset.h"
 #include "sceneentity.h"		// for exposing scene precache function
 #include "gamerules.h"
 #include "particle_parse.h"
@@ -309,21 +338,6 @@ function __DumpScope( depth, table )
 
 
 extern ScriptClassDesc_t * GetScriptDesc( CBaseEntity * );
-
-// #define VMPROFILE 1
-
-#ifdef VMPROFILE
-
-#define VMPROF_START float debugStartTime = Plat_FloatTime();
-#define VMPROF_SHOW( funcname, funcdesc  ) DevMsg("***VSCRIPT PROFILE***: %s %s: %6.4f milliseconds\n", (##funcname), (##funcdesc), (Plat_FloatTime() - debugStartTime)*1000.0 );
-
-#else // !VMPROFILE
-
-#define VMPROF_START
-#define VMPROF_SHOW
-
-#endif // VMPROFILE
-
 ConVar script_connect_debugger_on_mapspawn( "script_connect_debugger_on_mapspawn", "0" );
 
 //-----------------------------------------------------------------------------
@@ -549,7 +563,7 @@ static void SendToConsoleServer( const char *pszCommand )
 	// Parse the text into distinct commands
 	const char *pCurrentCommand = pszCommand;
 	int nOffsetToNextCommand;
-	int	nLen = Q_strlen( pszCommand );
+	int	nLen = V_strlen( pszCommand );
 	for( ; nLen > 0; nLen -= nOffsetToNextCommand+1, pCurrentCommand += nOffsetToNextCommand+1 )
 	{
 		// find a \n or ; line break
@@ -577,7 +591,7 @@ static bool LoopSinglePlayerMaps()
 static const char *DoUniqueString( const char *pszBase )
 {
 	static char szBuf[512];
-	g_pScriptVM->GenerateUniqueKey( pszBase, szBuf, ARRAYSIZE(szBuf) );
+	g_pScriptVM->GenerateUniqueKey( pszBase, szBuf, std::size( szBuf ) );
 	return szBuf;
 }
 
@@ -725,8 +739,6 @@ static float ScriptTraceLine( const Vector &vecStart, const Vector &vecEnd, HSCR
 
 bool VScriptServerInit()
 {
-	VMPROF_START
-
 	if( scriptmanager != nullptr )
 	{
 		ScriptLanguage_t scriptLanguage = SL_DEFAULT;
@@ -734,15 +746,15 @@ bool VScriptServerInit()
 		char const *pszScriptLanguage;
 		if ( CommandLine()->CheckParm( "-scriptlang", &pszScriptLanguage ) )
 		{
-			if( !Q_stricmp(pszScriptLanguage, "gamemonkey") )
+			if( !V_stricmp(pszScriptLanguage, "gamemonkey") )
 			{
 				scriptLanguage = SL_GAMEMONKEY;
 			}
-			else if( !Q_stricmp(pszScriptLanguage, "squirrel") )
+			else if( !V_stricmp(pszScriptLanguage, "squirrel") )
 			{
 				scriptLanguage = SL_SQUIRREL;
 			}
-			else if( !Q_stricmp(pszScriptLanguage, "python") )
+			else if( !V_stricmp(pszScriptLanguage, "python") )
 			{
 				scriptLanguage = SL_PYTHON;
 			}
@@ -804,9 +816,6 @@ bool VScriptServerInit()
 				{
 					g_pScriptVM->ConnectDebugger();
 				}
-
-				VMPROF_SHOW( pszScriptLanguage, "virtual machine startup" );
-
 				return true;
 			}
 			else
@@ -861,7 +870,9 @@ bool VScriptServerReplaceClosures( const char *pszScriptName, HSCRIPT hScope, bo
 	return true;
 }
 
-CON_COMMAND( script_reload_code, "Execute a vscript file, replacing existing functions with the functions in the run script" )
+static void script_reload_code( const CCommand &args );
+static ConCommand script_reload_code_command( "script_reload_code", script_reload_code, "Execute a vscript file, replacing existing functions with the functions in the run script" );
+static void script_reload_code( const CCommand &args )
 {
 	if ( !*args[1] )
 	{
@@ -878,7 +889,9 @@ CON_COMMAND( script_reload_code, "Execute a vscript file, replacing existing fun
 	VScriptServerReplaceClosures( args[1], nullptr, true );
 }
 
-CON_COMMAND( script_reload_entity_code, "Execute all of this entity's VScripts, replacing existing functions with the functions in the run scripts" )
+static void script_reload_entity_code( const CCommand &args );
+static ConCommand script_reload_entity_code_command( "script_reload_entity_code", script_reload_entity_code, "Execute all of this entity's VScripts, replacing existing functions with the functions in the run scripts" );
+static void script_reload_entity_code( const CCommand &args )
 {
 	extern CBaseEntity *GetNextCommandEntity( CBasePlayer *pPlayer, const char *name, CBaseEntity *ent );
 
@@ -916,7 +929,9 @@ CON_COMMAND( script_reload_entity_code, "Execute all of this entity's VScripts, 
 	}
 }
 
-CON_COMMAND( script_reload_think, "Execute an activation script, replacing existing functions with the functions in the run script" )
+static void script_reload_think( const CCommand &args );
+static ConCommand script_reload_think_command( "script_reload_think", script_reload_think, "Execute an activation script, replacing existing functions with the functions in the run script" );
+static void script_reload_think( const CCommand &args )
 {
 	extern CBaseEntity *GetNextCommandEntity( CBasePlayer *pPlayer, const char *name, CBaseEntity *ent );
 
@@ -1022,5 +1037,3 @@ void *CBaseEntityScriptInstanceHelper::BindOnRead( HSCRIPT hInstance, void *pOld
 
 
 CBaseEntityScriptInstanceHelper g_BaseEntityScriptInstanceHelper;
-
-

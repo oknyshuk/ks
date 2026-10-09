@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef INIT_FACTORY_H
-#define INIT_FACTORY_H
-
-
-#include "interface.h"
+import std;
+import ks.tier1;
 
 struct factorylist_t
 {
@@ -23,5 +17,3 @@ void FactoryList_Store( const factorylist_t &sourceData );
 
 // retrieve the stored factories
 void FactoryList_Retrieve( factorylist_t &destData );
-
-#endif // INIT_FACTORY_H

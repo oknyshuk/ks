@@ -1,12 +1,8 @@
-//===== Copyright c 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef IMATCHNETWORKMSG_H
-#define IMATCHNETWORKMSG_H
+import ks.tier1;
 
 namespace ks { class byte_writer; }
 
@@ -27,7 +23,7 @@ struct MM_GameDetails_QOS_t
 	int m_nPing;	// Average ping in ms
 };
 
-abstract_class IMatchNetworkMsgController
+class IMatchNetworkMsgController
 {
 public:
 	// To determine host Quality-of-Service
@@ -36,11 +32,8 @@ public:
 	virtual KeyValues * GetActiveServerGameDetails( KeyValues *pRequest ) = 0;
 
 	virtual KeyValues * UnpackGameDetailsFromQOS( MM_GameDetails_QOS_t const *pvQosReply ) = 0;
-	virtual KeyValues * UnpackGameDetailsFromSteamLobby( uint64 uiLobbyID ) = 0;
 
 	virtual void PackageGameDetailsForQOS( KeyValues *pSettings, ks::byte_writer &buf ) = 0;
 
 	virtual KeyValues * PackageGameDetailsForReservation( KeyValues *pSettings ) = 0;
 };
-
-#endif // IMATCHNETWORKMSG_H

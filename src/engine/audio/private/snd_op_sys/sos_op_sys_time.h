@@ -1,14 +1,8 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
-
-#ifndef SOS_OP_SYS_TIME_H
-#define SOS_OP_SYS_TIME_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "sos_op.h"
-
 
 //-----------------------------------------------------------------------------
 // get elapsed time
@@ -25,6 +19,3 @@ class CSosOperatorSysTime : public CSosOperator
 	SOS_HEADER_DESC( CSosOperatorSysTime )
 
 };
-
-
-#endif // SOS_OP_SYS_TIME_H

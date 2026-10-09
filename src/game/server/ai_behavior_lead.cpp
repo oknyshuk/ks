@@ -1,10 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "ai_behavior_lead.h"
@@ -18,9 +43,9 @@
 #include "sceneentity.h"
 
 // Minimum time between leader nags
-#define LEAD_NAG_TIME		3.0
+constexpr auto LEAD_NAG_TIME = 3.0;
 
-#define LEAD_MIN_RETRIEVEDIST_OFFSET		24
+constexpr auto LEAD_MIN_RETRIEVEDIST_OFFSET = 24;
 
 //-----------------------------------------------------------------------------
 // class CAI_LeadBehavior
@@ -66,13 +91,13 @@ int CAI_LeadBehavior::DrawDebugTextOverlays( int text_offset )
 	{	
 		if ( HasGoal() )
 		{
-			Q_snprintf( tempstr, sizeof(tempstr), "Goal: %s %s", m_args.pszGoal, VecToString( m_goal ) );
+			V_snprintf( tempstr, sizeof(tempstr), "Goal: %s %s", m_args.pszGoal, VecToString(m_goal).c_str() );
 			GetOuter()->EntityText( offset, tempstr, 0 );
 			offset++;
 		}
 		else 
 		{
-			Q_snprintf( tempstr, sizeof(tempstr), "Goal: None" );
+			V_snprintf( tempstr, sizeof(tempstr), "Goal: None" );
 			GetOuter()->EntityText( offset, tempstr, 0 );
 			offset++;
 		}
@@ -1014,7 +1039,7 @@ bool CAI_LeadBehavior::Connect( CAI_LeadBehaviorHandler *pSink )
 
 bool CAI_LeadBehavior::Disconnect( CAI_LeadBehaviorHandler *pSink )
 {
-	Assert( pSink == m_pSink );
+	contract_assert( pSink == m_pSink );
 	m_pSink = nullptr;
 	m_hSinkImplementor = nullptr;
 	return true;
@@ -1500,28 +1525,28 @@ void CAI_LeadGoal::OnEvent( int event )
 
 const char *CAI_LeadGoal::GetConceptModifiers( const char *pszConcept )	
 { 
-	if ( m_iszStartConceptModifier != NULL_STRING && *STRING(m_iszStartConceptModifier) && strcmp( pszConcept, TLK_LEAD_START) == 0 )
+	if ( m_iszStartConceptModifier != NULL_STRING && *STRING(m_iszStartConceptModifier) && std::strcmp( pszConcept, TLK_LEAD_START) == 0 )
 		return STRING( m_iszStartConceptModifier );
 
-	if ( m_iszAttractPlayerConceptModifier != NULL_STRING && *STRING(m_iszAttractPlayerConceptModifier) && strcmp( pszConcept, TLK_LEAD_ATTRACTPLAYER) == 0 )
+	if ( m_iszAttractPlayerConceptModifier != NULL_STRING && *STRING(m_iszAttractPlayerConceptModifier) && std::strcmp( pszConcept, TLK_LEAD_ATTRACTPLAYER) == 0 )
 		return STRING( m_iszAttractPlayerConceptModifier );
 
-	if ( m_iszWaitOverConceptModifier != NULL_STRING && *STRING(m_iszWaitOverConceptModifier) && strcmp( pszConcept, TLK_LEAD_WAITOVER) == 0 )
+	if ( m_iszWaitOverConceptModifier != NULL_STRING && *STRING(m_iszWaitOverConceptModifier) && std::strcmp( pszConcept, TLK_LEAD_WAITOVER) == 0 )
 		return STRING( m_iszWaitOverConceptModifier );
 
-	if ( m_iszArrivalConceptModifier != NULL_STRING && *STRING(m_iszArrivalConceptModifier) && strcmp( pszConcept, TLK_LEAD_ARRIVAL) == 0 )
+	if ( m_iszArrivalConceptModifier != NULL_STRING && *STRING(m_iszArrivalConceptModifier) && std::strcmp( pszConcept, TLK_LEAD_ARRIVAL) == 0 )
 		return STRING( m_iszArrivalConceptModifier );
 		
-	if ( m_iszSuccessConceptModifier != NULL_STRING && *STRING(m_iszSuccessConceptModifier) && strcmp( pszConcept, TLK_LEAD_SUCCESS) == 0 )
+	if ( m_iszSuccessConceptModifier != NULL_STRING && *STRING(m_iszSuccessConceptModifier) && std::strcmp( pszConcept, TLK_LEAD_SUCCESS) == 0 )
 		return STRING( m_iszSuccessConceptModifier );
 		
-	if (m_iszFailureConceptModifier != NULL_STRING && *STRING(m_iszFailureConceptModifier) && strcmp( pszConcept, TLK_LEAD_FAILURE) == 0 )
+	if (m_iszFailureConceptModifier != NULL_STRING && *STRING(m_iszFailureConceptModifier) && std::strcmp( pszConcept, TLK_LEAD_FAILURE) == 0 )
 		return STRING( m_iszFailureConceptModifier );
 	
-	if (m_iszRetrieveConceptModifier != NULL_STRING && *STRING(m_iszRetrieveConceptModifier) && strcmp( pszConcept, TLK_LEAD_RETRIEVE) == 0 )
+	if (m_iszRetrieveConceptModifier != NULL_STRING && *STRING(m_iszRetrieveConceptModifier) && std::strcmp( pszConcept, TLK_LEAD_RETRIEVE) == 0 )
 		return STRING( m_iszRetrieveConceptModifier );
 
-	if (m_iszComingBackConceptModifier != NULL_STRING && *STRING(m_iszComingBackConceptModifier) && strcmp( pszConcept, TLK_LEAD_COMINGBACK) == 0 )
+	if (m_iszComingBackConceptModifier != NULL_STRING && *STRING(m_iszComingBackConceptModifier) && std::strcmp( pszConcept, TLK_LEAD_COMINGBACK) == 0 )
 		return STRING( m_iszComingBackConceptModifier );
 
 	if ( m_fArrived && m_iszPostArrivalConceptModifier != NULL_STRING && *STRING(m_iszPostArrivalConceptModifier) )
@@ -1566,7 +1591,7 @@ IMPLEMENT_REFLECT_DATAMAP( CAI_LeadGoal_Weapon )
 
 const char *CAI_LeadGoal_Weapon::GetConceptModifiers( const char *pszConcept )	
 { 
-	if ( m_iszMissingWeaponConceptModifier != NULL_STRING && *STRING(m_iszMissingWeaponConceptModifier) && strcmp( pszConcept, TLK_LEAD_MISSINGWEAPON) == 0 )
+	if ( m_iszMissingWeaponConceptModifier != NULL_STRING && *STRING(m_iszMissingWeaponConceptModifier) && std::strcmp( pszConcept, TLK_LEAD_MISSINGWEAPON) == 0 )
 		return STRING( m_iszMissingWeaponConceptModifier );
 
 	return BaseClass::GetConceptModifiers( pszConcept ); 

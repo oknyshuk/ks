@@ -1,13 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef BUTTONCODE_H
-#define BUTTONCODE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "inputsystem/InputEnums.h"
 
@@ -21,29 +14,12 @@ enum
 	JOYSTICK_AXIS_BUTTON_COUNT = MAX_JOYSTICK_AXES * 2,
 };
 
-#define JOYSTICK_BUTTON_INTERNAL( _joystick, _button ) ( JOYSTICK_FIRST_BUTTON + ((_joystick) * JOYSTICK_MAX_BUTTON_COUNT) + (_button) )
-#define JOYSTICK_POV_BUTTON_INTERNAL( _joystick, _button ) ( JOYSTICK_FIRST_POV_BUTTON + ((_joystick) * JOYSTICK_POV_BUTTON_COUNT) + (_button) )
-#define JOYSTICK_AXIS_BUTTON_INTERNAL( _joystick, _button ) ( JOYSTICK_FIRST_AXIS_BUTTON + ((_joystick) * JOYSTICK_AXIS_BUTTON_COUNT) + (_button) )
-
-#define JOYSTICK_BUTTON( _joystick, _button ) ( (ButtonCode_t)JOYSTICK_BUTTON_INTERNAL( _joystick, _button ) )
-#define JOYSTICK_POV_BUTTON( _joystick, _button ) ( (ButtonCode_t)JOYSTICK_POV_BUTTON_INTERNAL( _joystick, _button ) )
-#define JOYSTICK_AXIS_BUTTON( _joystick, _button ) ( (ButtonCode_t)JOYSTICK_AXIS_BUTTON_INTERNAL( _joystick, _button ) )
-
-
-//-----------------------------------------------------------------------------
-// Button enum. "Buttons" are binary-state input devices (mouse buttons, keyboard keys)
-//-----------------------------------------------------------------------------
-enum
+// Computes the button code of a multi-controller button:
+//		nFirst + controller * nCount + button
+inline constexpr int MultiControllerButtonCode( int nFirst, int nCount, int nJoystick, int nButton )
 {
-	STEAMCONTROLLER_MAX_BUTTON_COUNT = SK_MAX_KEYS - 1,
-	STEAMCONTROLLER_AXIS_BUTTON_COUNT = MAX_STEAMPADAXIS * 2,
-};
-
-#define STEAMCONTROLLER_BUTTON_INTERNAL( _joystick, _button ) ( STEAMCONTROLLER_FIRST_BUTTON + ((_joystick) * STEAMCONTROLLER_MAX_BUTTON_COUNT) + (_button) )
-#define STEAMCONTROLLER_AXIS_BUTTON_INTERNAL( _joystick, _button ) ( STEAMCONTROLLER_FIRST_AXIS_BUTTON + ((_joystick) * STEAMCONTROLLER_AXIS_BUTTON_COUNT) + (_button) )
-
-#define STEAMCONTROLLER_BUTTON( _joystick, _button ) ( (ButtonCode_t)STEAMCONTROLLER_BUTTON_INTERNAL( _joystick, _button ) )
-#define STEAMCONTROLLER_AXIS_BUTTON( _joystick, _button ) ( (ButtonCode_t)STEAMCONTROLLER_AXIS_BUTTON_INTERNAL( _joystick, _button ) )
+	return nFirst + ( nJoystick * nCount ) + nButton;
+}
 
 
 enum ButtonCode_t
@@ -182,23 +158,13 @@ enum ButtonCode_t
 	JOYSTICK_FIRST = MOUSE_LAST + 1,
 
 	JOYSTICK_FIRST_BUTTON = JOYSTICK_FIRST,
-	JOYSTICK_LAST_BUTTON = JOYSTICK_BUTTON_INTERNAL( MAX_JOYSTICKS-1, JOYSTICK_MAX_BUTTON_COUNT-1 ),
+	JOYSTICK_LAST_BUTTON = MultiControllerButtonCode( JOYSTICK_FIRST_BUTTON, JOYSTICK_MAX_BUTTON_COUNT, MAX_JOYSTICKS-1, JOYSTICK_MAX_BUTTON_COUNT-1 ),
 	JOYSTICK_FIRST_POV_BUTTON,
-	JOYSTICK_LAST_POV_BUTTON = JOYSTICK_POV_BUTTON_INTERNAL( MAX_JOYSTICKS-1, JOYSTICK_POV_BUTTON_COUNT-1 ),
+	JOYSTICK_LAST_POV_BUTTON = MultiControllerButtonCode( JOYSTICK_FIRST_POV_BUTTON, JOYSTICK_POV_BUTTON_COUNT, MAX_JOYSTICKS-1, JOYSTICK_POV_BUTTON_COUNT-1 ),
 	JOYSTICK_FIRST_AXIS_BUTTON,
-	JOYSTICK_LAST_AXIS_BUTTON = JOYSTICK_AXIS_BUTTON_INTERNAL( MAX_JOYSTICKS-1, JOYSTICK_AXIS_BUTTON_COUNT-1 ),
+	JOYSTICK_LAST_AXIS_BUTTON = MultiControllerButtonCode( JOYSTICK_FIRST_AXIS_BUTTON, JOYSTICK_AXIS_BUTTON_COUNT, MAX_JOYSTICKS-1, JOYSTICK_AXIS_BUTTON_COUNT-1 ),
 
 	JOYSTICK_LAST = JOYSTICK_LAST_AXIS_BUTTON,
-
-	STEAMCONTROLLER_FIRST = JOYSTICK_LAST + 1,
-
-	STEAMCONTROLLER_FIRST_BUTTON = STEAMCONTROLLER_FIRST,
-	STEAMCONTROLLER_LAST_BUTTON = STEAMCONTROLLER_BUTTON_INTERNAL( MAX_STEAM_CONTROLLERS-1, STEAMCONTROLLER_MAX_BUTTON_COUNT-1 ),
-	STEAMCONTROLLER_FIRST_AXIS_BUTTON,
-	STEAMCONTROLLER_LAST_AXIS_BUTTON = STEAMCONTROLLER_AXIS_BUTTON_INTERNAL( MAX_STEAM_CONTROLLERS-1, STEAMCONTROLLER_AXIS_BUTTON_COUNT-1 ),
-
-	STEAMCONTROLLER_LAST = STEAMCONTROLLER_LAST_AXIS_BUTTON,
-
 
 	BUTTON_CODE_LAST,
 	BUTTON_CODE_COUNT = BUTTON_CODE_LAST - KEY_FIRST + 1,
@@ -239,39 +205,26 @@ enum ButtonCode_t
 	KEY_XSTICK2_LEFT,							// UAXIS NEGATIVE
 	KEY_XSTICK2_DOWN,							// VAXIS POSITIVE
 	KEY_XSTICK2_UP,								// VAXIS NEGATIVE
-
-	// Helpers for Steam Controller
-	STEAMCONTROLLER_A = STEAMCONTROLLER_FIRST_BUTTON,
-	STEAMCONTROLLER_B,
-	STEAMCONTROLLER_X,
-	STEAMCONTROLLER_Y,
-	STEAMCONTROLLER_DPAD_UP,
-	STEAMCONTROLLER_DPAD_RIGHT,
-	STEAMCONTROLLER_DPAD_DOWN,
-	STEAMCONTROLLER_DPAD_LEFT,
-	STEAMCONTROLLER_LEFT_BUMPER,
-	STEAMCONTROLLER_RIGHT_BUMPER,
-	STEAMCONTROLLER_LEFT_TRIGGER,
-	STEAMCONTROLLER_RIGHT_TRIGGER,
-	STEAMCONTROLLER_LEFT_GRIP,
-	STEAMCONTROLLER_RIGHT_GRIP,
-	STEAMCONTROLLER_LEFT_PAD_FINGERDOWN,
-	STEAMCONTROLLER_RIGHT_PAD_FINGERDOWN,
-	STEAMCONTROLLER_LEFT_PAD_CLICK,
-	STEAMCONTROLLER_RIGHT_PAD_CLICK,
-	STEAMCONTROLLER_LEFT_PAD_UP,
-	STEAMCONTROLLER_LEFT_PAD_RIGHT,
-	STEAMCONTROLLER_LEFT_PAD_DOWN,
-	STEAMCONTROLLER_LEFT_PAD_LEFT,
-	STEAMCONTROLLER_RIGHT_PAD_UP,
-	STEAMCONTROLLER_RIGHT_PAD_RIGHT,
-	STEAMCONTROLLER_RIGHT_PAD_DOWN,
-	STEAMCONTROLLER_RIGHT_PAD_LEFT,
-	STEAMCONTROLLER_SELECT,
-	STEAMCONTROLLER_START,
-	STEAMCONTROLLER_STEAM,
-	STEAMCONTROLLER_INACTIVE_START,
 };
+
+//-----------------------------------------------------------------------------
+// Button codes for the multi-controller ("joystick") buttons
+//-----------------------------------------------------------------------------
+inline constexpr ButtonCode_t JOYSTICK_BUTTON( int joystick, int button )
+{
+	return (ButtonCode_t)MultiControllerButtonCode( JOYSTICK_FIRST_BUTTON, JOYSTICK_MAX_BUTTON_COUNT, joystick, button );
+}
+
+inline constexpr ButtonCode_t JOYSTICK_POV_BUTTON( int joystick, int button )
+{
+	return (ButtonCode_t)MultiControllerButtonCode( JOYSTICK_FIRST_POV_BUTTON, JOYSTICK_POV_BUTTON_COUNT, joystick, button );
+}
+
+inline constexpr ButtonCode_t JOYSTICK_AXIS_BUTTON( int joystick, int button )
+{
+	return (ButtonCode_t)MultiControllerButtonCode( JOYSTICK_FIRST_AXIS_BUTTON, JOYSTICK_AXIS_BUTTON_COUNT, joystick, button );
+}
+
 
 inline bool IsAlpha( ButtonCode_t code )
 {
@@ -310,8 +263,7 @@ inline bool IsMouseCode( ButtonCode_t code )
 
 inline bool IsJoystickCode( ButtonCode_t code )
 {
-	return ( ( code >= JOYSTICK_FIRST ) && ( code <= JOYSTICK_LAST ) ) ||
-	       ( ( code >= STEAMCONTROLLER_FIRST ) && ( code <= STEAMCONTROLLER_LAST ) );
+	return ( code >= JOYSTICK_FIRST ) && ( code <= JOYSTICK_LAST );
 }
 
 inline bool IsJoystickButtonCode( ButtonCode_t code )
@@ -327,21 +279,6 @@ inline bool IsJoystickPOVCode( ButtonCode_t code )
 inline bool IsJoystickAxisCode( ButtonCode_t code )
 {
 	return ( code >= JOYSTICK_FIRST_AXIS_BUTTON ) && ( code <= JOYSTICK_LAST_AXIS_BUTTON );
-}
-
-inline bool IsSteamControllerCode( ButtonCode_t code )
-{
-	return ( ( code >= STEAMCONTROLLER_FIRST ) && ( code <= STEAMCONTROLLER_LAST ) );
-}
-
-inline bool IsSteamControllerButtonCode( ButtonCode_t code )
-{
-	return ( code >= STEAMCONTROLLER_FIRST_BUTTON ) && ( code <= STEAMCONTROLLER_LAST_BUTTON );
-}
-
-inline bool IsSteamControllerAxisCode( ButtonCode_t code )
-{
-	return ( code >= STEAMCONTROLLER_FIRST_AXIS_BUTTON ) && ( code <= STEAMCONTROLLER_LAST_AXIS_BUTTON );
 }
 
 inline ButtonCode_t GetBaseButtonCode( ButtonCode_t code )
@@ -362,18 +299,6 @@ inline ButtonCode_t GetBaseButtonCode( ButtonCode_t code )
 	{
 		int offset = ( code - JOYSTICK_FIRST_AXIS_BUTTON ) % JOYSTICK_AXIS_BUTTON_COUNT;
 		return (ButtonCode_t)( JOYSTICK_FIRST_AXIS_BUTTON + offset );
-	}
-
-	if ( IsSteamControllerButtonCode( code ) )
-	{
-		int offset = ( code - STEAMCONTROLLER_FIRST_BUTTON ) % STEAMCONTROLLER_MAX_BUTTON_COUNT;
-		return (ButtonCode_t)( STEAMCONTROLLER_FIRST_BUTTON + offset );
-	}
-
-	if ( IsSteamControllerAxisCode( code ) )
-	{
-		int offset = ( code - STEAMCONTROLLER_FIRST_AXIS_BUTTON ) % STEAMCONTROLLER_AXIS_BUTTON_COUNT;
-		return (ButtonCode_t)( STEAMCONTROLLER_FIRST_AXIS_BUTTON + offset );
 	}
 
 	return code;
@@ -397,16 +322,6 @@ inline int GetJoystickForCode( ButtonCode_t code )
 	if ( IsJoystickAxisCode( code ) )
 	{
 		int offset = ( code - JOYSTICK_FIRST_AXIS_BUTTON ) / JOYSTICK_AXIS_BUTTON_COUNT;
-		return offset;
-	}
-	if ( IsSteamControllerButtonCode( code ) )
-	{
-		int offset = ( code - STEAMCONTROLLER_FIRST_BUTTON ) / STEAMCONTROLLER_MAX_BUTTON_COUNT;
-		return offset;
-	}
-	if ( IsSteamControllerAxisCode( code ) )
-	{
-		int offset = ( code - STEAMCONTROLLER_FIRST_AXIS_BUTTON ) / STEAMCONTROLLER_AXIS_BUTTON_COUNT;
 		return offset;
 	}
 
@@ -441,19 +356,5 @@ inline ButtonCode_t ButtonCodeToJoystickButtonCode( ButtonCode_t code, int nDesi
 		return JOYSTICK_AXIS_BUTTON( nDesiredJoystick, nOffset );
 	}
 
-	if ( IsSteamControllerButtonCode( code ) )
-	{
-		int nOffset = code - STEAMCONTROLLER_FIRST_BUTTON;
-		return STEAMCONTROLLER_BUTTON( nDesiredJoystick, nOffset );
-	}
-
-	if ( IsJoystickAxisCode( code ) )
-	{
-		int nOffset = code - STEAMCONTROLLER_FIRST_AXIS_BUTTON;
-		return STEAMCONTROLLER_AXIS_BUTTON( nDesiredJoystick, nOffset );
-	}
-
 	return code;
 }
-
-#endif // BUTTONCODE_H

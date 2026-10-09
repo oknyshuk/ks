@@ -1,10 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "vphysics_interface.h"
 #include "simple_keys.h"
 
 //-----------------------------------------------------------------------------
@@ -34,7 +35,7 @@ void CSimpleKeyInterp::Interp( Vector &out, float t, const CSimpleKeyInterp &sta
 		unitT *= unitT;
 		break;
 	case KEY_DECELERATE:
-		unitT = sqrt(unitT);
+		unitT = std::sqrt(unitT);
 		break;
 	default:
 	case KEY_LINEAR:

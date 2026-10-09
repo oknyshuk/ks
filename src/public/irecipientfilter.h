@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IRECIPIENTFILTER_H
-#define IRECIPIENTFILTER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // Purpose: Generic interface for routing messages to users
@@ -22,5 +16,3 @@ public:
 	virtual int		GetRecipientCount( void ) const = 0;
 	virtual int		GetRecipientIndex( int slot ) const = 0;
 };
-
-#endif // IRECIPIENTFILTER_H

@@ -1,10 +1,42 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-//  Purpose: Plays a movie and reports on finish
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Plays a movie and reports on finish
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 
@@ -92,7 +124,7 @@ void CLogicPlayMovie::InputPlayMovie( inputdata_t &data )
 	// Build the hacked string
 
 	char szClientCmd[256];
-	Q_snprintf( szClientCmd, sizeof(szClientCmd), 
+	V_snprintf( szClientCmd, sizeof(szClientCmd), 
 		"%s %s end_movie %s\n", 
 		szVideoCommand,
 		STRING(m_strMovieFilename), 
@@ -114,7 +146,7 @@ void CLogicPlayMovie::InputPlayMovieForAllPlayers( inputdata_t &data )
 	// Build the hacked string
 
 	char szClientCmd[256];
-	Q_snprintf( szClientCmd, sizeof(szClientCmd), 
+	V_snprintf( szClientCmd, sizeof(szClientCmd), 
 		"%s %s end_movie %s\n", 
 		szVideoCommand,
 		STRING(m_strMovieFilename), 
@@ -163,7 +195,7 @@ void CLogicPlayMovie::InputPlayLevelTransitionMovie( inputdata_t &data )
 	m_bFadeInTime = std::max( 0.1f, m_bFadeInTime );
 
 	char szClientCmd[256];
-	Q_snprintf( szClientCmd, sizeof(szClientCmd), 
+	V_snprintf( szClientCmd, sizeof(szClientCmd), 
 		"%s %s %f\n", 
 		szVideoCommand,
 		STRING(m_strMovieFilename), 
@@ -189,7 +221,7 @@ void CLogicPlayMovie::InputFadeAllMovies( inputdata_t &data )
 	const char *szVideoCommand = "stopvideos_fadeout";
 
 	char szClientCmd[256];
-	Q_snprintf( szClientCmd, sizeof(szClientCmd), 
+	V_snprintf( szClientCmd, sizeof(szClientCmd), 
 		"%s %f\n", 
 		szVideoCommand,
 		1.0f );

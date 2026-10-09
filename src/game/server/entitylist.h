@@ -1,19 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ENTITYLIST_H
-#define ENTITYLIST_H
-
+import std;
+import ks.math;
+#include "entitylist_base.h"
+#include "iservernetworkable.h"
+#include "edict.h"
+#include "ehandle.h"
+#include "string_t.h"
 
 class CBaseEntity;
+typedef CHandle<CBaseEntity> EHANDLE;
 class IEntityListener;
 
-abstract_class CBaseEntityClassList
+class CBaseEntityClassList
 {
 public:
 	CBaseEntityClassList();
@@ -55,7 +56,7 @@ public:
 };
 
 // Derive a class from this if you want to filter entity list searches
-abstract_class IEntityFindFilter
+class IEntityFindFilter
 {
 public:
 	virtual bool ShouldFindEntity( CBaseEntity *pEntity ) = 0;
@@ -250,8 +251,8 @@ struct entitem_t
 	struct entitem_t *pNext;
 
 	// uses pool memory
-	static void* operator new( size_t stAllocateBlock );
-	static void *operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
+	static void* operator new( std::size_t stAllocateBlock );
+	static void *operator new( std::size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
 	static void operator delete( void *pMem );
 	static void operator delete( void *pMem, int nBlockUse, const char *pFileName, int nLine ) { operator delete( pMem ); }
 };
@@ -298,7 +299,7 @@ struct notify_system_event_params_t
 };
 
 
-abstract_class INotify
+class INotify
 {
 public:
 	// Add notification for an entity
@@ -354,5 +355,3 @@ void AimTarget_ForceRepopulateList();
 void SimThink_EntityChanged( CBaseEntity *pEntity );
 int SimThink_ListCount();
 int SimThink_ListCopy( CBaseEntity *pList[], int listMax );
-
-#endif // ENTITYLIST_H

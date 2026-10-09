@@ -6,6 +6,11 @@
 
 // This function fixes up the base object
 // after loading a single KV value.
+import ks.tier1;
+import std;
+#include "vcollide_parse.h"
+
+
 using JoltKVSchemaFixupFunc_t = void (*)( void *pBaseObject );
 
 struct JoltKVSchemaFunc_t
@@ -46,10 +51,10 @@ extern const JoltKVSchemaFunc_t FillSurfaceProp;
 extern const JoltKVSchemaFunc_t FillSoundProp;
 
 #define KVSCHEMA_DESC_ARRAY( type, x, len ) \
-	offsetof( type, x ), sizeof( *type::x ), offsetof( type, len )
+	__builtin_offsetof( type, x ), sizeof( *type::x ), __builtin_offsetof( type, len )
 
 #define KVSCHEMA_DESC( type, x ) \
-	offsetof( type, x ), sizeof( type::x ), static_cast<size_t>(~0llu)
+	__builtin_offsetof( type, x ), sizeof( type::x ), static_cast<size_t>(~0llu)
 
 #define KVSCHEMA_DESC_NO_OFFSET( type ) \
 	0, sizeof( type ), static_cast<size_t>(~0llu)

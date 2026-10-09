@@ -1,20 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DATATABLE_SEND_H
-#define DATATABLE_SEND_H
-
-
+import ks.core;
 #include "dt_common.h"
-#include "tier0/dbg.h"
 #include "const.h"
-#include <bitset>
-
+import std;
 
 // ------------------------------------------------------------------------ //
 // Send proxies can be used to convert a variable into a networkable type 
@@ -100,7 +91,7 @@ extern CStandardSendProxies g_StandardSendProxies;
 
 
 // Max # of datatable send proxies you can have in a tree.
-#define MAX_DATATABLE_PROXIES	32
+inline constexpr auto MAX_DATATABLE_PROXIES = 32;
 
 // ------------------------------------------------------------------------ //
 // Datatable send proxies are used to tell the engine where the datatable's 
@@ -160,16 +151,16 @@ class CSendTablePrecalc;
 
 // If SendProp::GetDataTableProxyIndex() returns this, then the proxy is one that always sends
 // the data to all clients, so we don't need to store the results.
-#define DATATABLE_PROXY_INDEX_NOPROXY	255
-#define DATATABLE_PROXY_INDEX_INVALID	254
+inline constexpr auto DATATABLE_PROXY_INDEX_NOPROXY = 255;
+inline constexpr auto DATATABLE_PROXY_INDEX_INVALID = 254;
 
-#define SENDPROP_DEFAULT_PRIORITY ((byte)128)
-#define SENDPROP_CHANGES_OFTEN_PRIORITY ((byte)64)
+inline constexpr auto SENDPROP_DEFAULT_PRIORITY = ((byte)128);
+inline constexpr auto SENDPROP_CHANGES_OFTEN_PRIORITY = ((byte)64);
 
 
 // This adds in all the flags that we OR into the var's offset.
-#define SENDPROP_NETWORKVAR_FLAGS_SHIFT 20	// We store the networkvar flags in SendProp::m_Offset and this is what we shift it by.
-#define SENDPROP_OFFSET_MASK			( ( 1 << SENDPROP_NETWORKVAR_FLAGS_SHIFT ) - 1 )
+inline constexpr auto SENDPROP_NETWORKVAR_FLAGS_SHIFT = 20; // We store the networkvar flags in SendProp::m_Offset and this is what we shift it by.
+inline constexpr auto SENDPROP_OFFSET_MASK = ( ( 1 << SENDPROP_NETWORKVAR_FLAGS_SHIFT ) - 1 );
 
 #define NETWORKVAR_OFFSET_FLAGS( className, varName ) \
 	( className::NetworkVarType_##varName::GetNetworkVarFlags() << SENDPROP_NETWORKVAR_FLAGS_SHIFT )
@@ -296,7 +287,7 @@ inline int SendProp::GetOffset() const
 
 inline void SendProp::SetOffset( int nOffset )
 {
-	Assert( !( nOffset & ~SENDPROP_OFFSET_MASK ) );
+	contract_assert( !( nOffset & ~SENDPROP_OFFSET_MASK ) );
 	m_Offset = nOffset;
 }
 
@@ -317,7 +308,7 @@ inline bool SendProp::AreNetworkVarFlagsSet( int nFlags ) const
 
 inline SendVarProxyFn SendProp::GetProxyFn() const
 {
-	Assert( m_Type != DPT_DataTable );
+	contract_assert( m_Type != DPT_DataTable );
 	return m_ProxyFn; 
 }
 
@@ -328,7 +319,7 @@ inline void SendProp::SetProxyFn( SendVarProxyFn f )
 
 inline SendTableProxyFn SendProp::GetDataTableProxyFn() const
 {
-	Assert( m_Type == DPT_DataTable );
+	contract_assert( m_Type == DPT_DataTable );
 	return m_DataTableProxyFn; 
 }
 
@@ -359,7 +350,7 @@ inline const char* SendProp::GetParentArrayPropName() const
 
 inline void	SendProp::SetParentArrayPropName( const char *pArrayPropName )
 {
-	Assert( !m_pParentArrayPropName );
+	contract_assert( !m_pParentArrayPropName );
 	m_pParentArrayPropName = pArrayPropName;
 }
 
@@ -437,7 +428,7 @@ inline int SendProp::GetFlags() const
 inline void SendProp::SetFlags( int flags )
 {
 	// Make sure they're using something from the valid set of flags.
-	Assert( !( flags & ~((1 << SPROP_NUMFLAGBITS) - 1) ) );
+	contract_assert( !( flags & ~((1 << SPROP_NUMFLAGBITS) - 1) ) );
 	m_Flags = flags;
 }
 
@@ -525,7 +516,7 @@ inline int SendTable::GetNumProps() const
 
 inline SendProp* SendTable::GetProp( int i )
 {
-	Assert( i >= 0 && i < m_nProps );
+	contract_assert( i >= 0 && i < m_nProps );
 	return &m_pProps[i];
 }
 
@@ -735,8 +726,7 @@ SendProp SendPropArray3(
 //
 //     GenerateSendPropsForArrayElements( m_Array, SendPropInt( SENDINFO_ARRAY( m_Array ) )
 //
-#define SendPropArray_UniqueElements( arrayName, propDefinition ) \
-	SendPropArray3( SENDINFO_ARRAY3( arrayName ), propDefinition )
+template <typename T1, typename T2> [[gnu::always_inline]] inline auto SendPropArray_UniqueElements( T1 arrayName, T2 propDefinition ) { return SendPropArray3( SENDINFO_ARRAY3( arrayName ), propDefinition ); }
 
 
 
@@ -801,6 +791,3 @@ SendProp SendPropExclude(
 	const char *pDataTableName,	// Data table name (given to BEGIN_SEND_TABLE and BEGIN_RECV_TABLE).
 	const char *pPropName		// Name of the property to exclude.
 	);
-
-
-#endif // DATATABLE_SEND_H

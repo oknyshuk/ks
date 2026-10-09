@@ -1,8 +1,7 @@
-//====== Copyright 2011, Valve Corporation, All rights reserved. =======
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2011 Valve Corporation
+
 // Purpose: The file defines the enum and messages for network connection status
-//
-//=============================================================================
 
 // Note about encoding:
 //	http://code.google.com/apis/protocolbuffers/docs/encoding.html
@@ -16,7 +15,6 @@
 // very large unsigned integer.  If you use one of the signed types, the resulting
 // varint uses ZigZag encoding, which is much more efficient.
 
-
 // Commenting this out allows it to be compiled for SPEED or LITE_RUNTIME.
 // option optimize_for = SPEED;
 
@@ -29,14 +27,14 @@ option cc_generic_services = false;
 //
 // Use CamelCase CMsgMyMessageName style names for messages.
 // 
-// Use lowercase _ delimited names like my_steam_id for field names, this is non-standard for Steam,
-// but plays nice with the Google formatted code generation.  
+// Use lowercase _ delimited names like my_player_id for field names, which
+// plays nice with the Google formatted code generation.  
 // 
 // Try not to use required fields ever. Only do so if you are really really sure you'll never want them removed. 
 // Optional should be preffered as it will make versioning easier and cleaner in the future if someone refactors
 // your message and wants to remove or rename fields.
 //
-// Use fixed64 for JobId_t, GID_t, or SteamID.  This is appropriate for any field that is normally
+// Use fixed64 for JobId_t, GID_t, or player ids.  This is appropriate for any field that is normally
 // going to be larger than 2^56.  Otherwise use int64 for 64 bit values that are frequently smaller
 // than 2^56 as it will safe space on the wire in those cases.
 //
@@ -60,18 +58,6 @@ enum ENetworkDisconnectionReason
 	NETWORK_DISCONNECT_DISCONNECT_BY_SERVER			=  3  [(network_connection_token) = "#GameUI_Disconnect_Server" ];
 	NETWORK_DISCONNECT_LOST							=  4  [(network_connection_token) = "#GameUI_Disconnect_ConnectionLost" ];
 	NETWORK_DISCONNECT_OVERFLOW						=  5  [(network_connection_token) = "#GameUI_Disconnect_ConnectionOverflow" ];
-	NETWORK_DISCONNECT_STEAM_BANNED					=  6  [(network_connection_token) = "#GameUI_Disconnect_SteamIDBanned" ];
-	NETWORK_DISCONNECT_STEAM_INUSE					=  7  [(network_connection_token) = "#GameUI_Disconnect_SteamIDInUse" ];
-	NETWORK_DISCONNECT_STEAM_TICKET					=  8  [(network_connection_token) = "#GameUI_Disconnect_SteamTicket" ];
-	NETWORK_DISCONNECT_STEAM_LOGON 					=  9  [(network_connection_token) = "#GameUI_Disconnect_SteamLogon" ];
-	NETWORK_DISCONNECT_STEAM_AUTHCANCELLED			=  10 [(network_connection_token) = "#GameUI_Disconnect_SteamLogon" ];
-	NETWORK_DISCONNECT_STEAM_AUTHALREADYUSED		=  11 [(network_connection_token) = "#GameUI_Disconnect_SteamLogon" ];
-	NETWORK_DISCONNECT_STEAM_AUTHINVALID			=  12 [(network_connection_token) = "#GameUI_Disconnect_SteamLogon" ];
-	NETWORK_DISCONNECT_STEAM_VACBANSTATE			=  13 [(network_connection_token) = "#GameUI_Disconnect_SteamVAC" ];
-	NETWORK_DISCONNECT_STEAM_LOGGED_IN_ELSEWHERE	=  14 [(network_connection_token) = "#GameUI_Disconnect_SteamInUse" ];
-	NETWORK_DISCONNECT_STEAM_VAC_CHECK_TIMEDOUT		=  15 [(network_connection_token) = "#GameUI_Disconnect_SteamTimeOut" ];
-	NETWORK_DISCONNECT_STEAM_DROPPED				=  16 [(network_connection_token) = "#GameUI_Disconnect_SteamDropped" ];
-	NETWORK_DISCONNECT_STEAM_OWNERSHIP				=  17 [(network_connection_token) = "#GameUI_Disconnect_SteamOwnership" ];
 	NETWORK_DISCONNECT_SERVERINFO_OVERFLOW			=  18 [(network_connection_token) = "#GameUI_Disconnect_ServerInfoOverflow" ];
 	NETWORK_DISCONNECT_TICKMSG_OVERFLOW				=  19 [(network_connection_token) = "#GameUI_Disconnect_TickMessage" ];
 	NETWORK_DISCONNECT_STRINGTABLEMSG_OVERFLOW		=  20 [(network_connection_token) = "#GameUI_Disconnect_StringTableMessage" ];
@@ -118,4 +104,3 @@ enum ENetworkDisconnectionReason
 }
 
 // Do not remove this comment due to a bug on the Mac OS X protobuf compiler
-

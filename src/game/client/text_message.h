@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( TEXT_MESSAGE_H )
-#define TEXT_MESSAGE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-abstract_class IHudTextMessage
+class IHudTextMessage
 {
 public:
 	virtual char *LocaliseTextString( const char *msg, char *dst_buffer, int buffer_size ) = 0;
@@ -16,4 +11,3 @@ public:
 };
 
 extern IHudTextMessage *hudtextmessage;
-#endif // TEXT_MESSAGE_H

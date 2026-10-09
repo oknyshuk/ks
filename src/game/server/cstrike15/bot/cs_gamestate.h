@@ -1,18 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#ifndef _GAME_STATE_H_
-#define _GAME_STATE_H_
-
-
 #include "bot_util.h"
-
+#include "cs_bot_manager.h"
+#include "cs_shareddefs.h"
+#include "igameevents.h"
 
 class CHostage;
 class CCSBot;
@@ -147,5 +142,3 @@ private:
 	bool m_allHostagesRescued;
 	bool m_haveSomeHostagesBeenTaken;							///< true if a hostage has been moved by a CT (and we've seen it)
 };
-
-#endif // _GAME_STATE_

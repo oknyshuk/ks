@@ -1,11 +1,11 @@
-#ifndef ROCKETUI_H
-#define ROCKETUI_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
 
-#include "appframework/iappsystem.h"
+import std;
+import ks.tier1;
 #include "shaderapi/IShaderDevice.h"
 #include "inputsystem/InputEnums.h"
-
-#define ROCKETUI_INTERFACE_VERSION "RocketUI001"
 
 // Forward declare IRocketUI before using it
 class IRocketUI;
@@ -94,5 +94,3 @@ public:
     // the render thread, so NO external locking is needed to touch RmlUi
     // elements from the main thread.
 };
-
-#endif // ROCKETUI_H

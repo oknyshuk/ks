@@ -1,15 +1,17 @@
-//====== Copyright (c) Valve Corporation, All rights reserved. =================
-//
-// Purpose:
-//
-//=============================================================================
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "cs_gameplay_hints.h"
-#include "keyvalues.h"
-#include "fmtstr.h"
 #include "filesystem.h"
 #include "localize/ilocalize.h"
-#include "gametypes/igametypes.h"
 #include "cs_gamerules.h"
 
 struct CSGameplayHint_t
@@ -65,7 +67,7 @@ uint32 ContextEntryToBitFlag( const char* szName )
 	else
 	{
 		Warning( "HintConfig.txt contains invalid context setting: %s\n", szName );
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 	// Show it as a failsafe.
@@ -102,7 +104,7 @@ void CCSGameplayHints::PostInit()
 				if ( szLocToken )
 				{
 					const wchar_t *wszText = g_pLocalize->Find( szLocToken );
-					Assert( wszText );
+					contract_assert( wszText );
 					// Sanity check length here
 					if ( wszText )
 					{
@@ -118,7 +120,7 @@ void CCSGameplayHints::PostInit()
 		}
 	}
 	
-	Assert( std::ssize( m_HintList ) > 0 );
+	contract_assert( std::ssize( m_HintList ) > 0 );
  }
 
 void CCSGameplayHints::Cleanup( void )
@@ -172,7 +174,9 @@ const char* CCSGameplayHints::GetRandomLeastPlayedHint( void )
 	return hint->m_pszLocToken;
 }
 /*
-CON_COMMAND( pick_hint, "" )
+static void pick_hint( const CCommand &args );
+static ConCommand pick_hint_command( "pick_hint", pick_hint, "" );
+static void pick_hint( const CCommand &args )
 {
 	Msg( "Hint: '%s'\n", g_CSGameplayHints.GetRandomLeastPlayedHint() );
 }

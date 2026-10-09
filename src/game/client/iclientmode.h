@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Revision: $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ICLIENTMODE_H
-#define ICLIENTMODE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <inputsystem/ButtonCode.h>
 #include "noopanimcontroller.h"
@@ -27,7 +20,7 @@ enum
 	MM_SAY_TEAM,
 };
 
-abstract_class IClientMode
+class IClientMode
 {
 // Misc.
 public:
@@ -131,5 +124,3 @@ public:
 
 extern IClientMode *GetClientMode();
 extern IClientMode *GetFullscreenClientMode();
-
-#endif

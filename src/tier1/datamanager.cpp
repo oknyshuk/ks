@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "basetypes.h"
-#include "datamanager.h"
+import std;
+import ks.tier1;
 
-
-DECLARE_POINTER_HANDLE( memhandle_t );
+struct memhandle_t__ { int unused; };
+using memhandle_t = memhandle_t__ *;
 
 CDataManagerBase::CDataManagerBase( unsigned int maxSize )
 {
@@ -22,7 +17,7 @@ CDataManagerBase::CDataManagerBase( unsigned int maxSize )
 
 CDataManagerBase::~CDataManagerBase() 
 {
-	Assert( !m_freeOnDestruct || m_listsAreFreed );
+	contract_assert( !m_freeOnDestruct || m_listsAreFreed );
 }
 
 void CDataManagerBase::NotifySizeChanged( memhandle_t handle, unsigned int oldSize, unsigned int newSize )
@@ -136,7 +131,7 @@ void CDataManagerBase::DestroyResource( memhandle_t handle )
 		return;
 	}
 	
-	Assert( m_memoryLists[index].lockCount == 0  );
+	contract_assert( m_memoryLists[index].lockCount == 0 );
 	if ( m_memoryLists[index].lockCount )
 		BreakLock( handle );
 	m_memoryLists.Unlink( m_lruList, index );
@@ -158,7 +153,7 @@ void *CDataManagerBase::LockResource( memhandle_t handle )
 			m_memoryLists.Unlink( m_lruList, memoryIndex );
 			m_memoryLists.LinkToTail( m_lockList, memoryIndex );
 		}
-		Assert(m_memoryLists[memoryIndex].lockCount != (unsigned short)-1);
+		contract_assert( m_memoryLists[memoryIndex].lockCount != (unsigned short)-1 );
 		m_memoryLists[memoryIndex].lockCount++;
 		return m_memoryLists[memoryIndex].pStore;
 	}
@@ -177,7 +172,7 @@ void *CDataManagerBase::LockResourceReturnCount( int *pCount, memhandle_t handle
 			m_memoryLists.Unlink( m_lruList, memoryIndex );
 			m_memoryLists.LinkToTail( m_lockList, memoryIndex );
 		}
-		Assert(m_memoryLists[memoryIndex].lockCount != (unsigned short)-1);
+		contract_assert( m_memoryLists[memoryIndex].lockCount != (unsigned short)-1 );
 		*pCount = ++m_memoryLists[memoryIndex].lockCount;
 		return m_memoryLists[memoryIndex].pStore;
 	}
@@ -192,7 +187,7 @@ int CDataManagerBase::UnlockResource( memhandle_t handle )
 	unsigned short memoryIndex = FromHandle(handle);
 	if ( memoryIndex != m_memoryLists.InvalidIndex() )
 	{
-		Assert( m_memoryLists[memoryIndex].lockCount > 0 );
+		contract_assert( m_memoryLists[memoryIndex].lockCount > 0 );
 		if ( m_memoryLists[memoryIndex].lockCount > 0 )
 		{
 			m_memoryLists[memoryIndex].lockCount--;
@@ -385,13 +380,13 @@ void *CDataManagerBase::GetForFreeByIndex( unsigned short memoryIndex )
 	void *p = nullptr;
 	if ( memoryIndex != m_memoryLists.InvalidIndex() )
 	{
-		Assert( m_memoryLists[memoryIndex].lockCount == 0 );
+		contract_assert( m_memoryLists[memoryIndex].lockCount == 0 );
 
 		resource_lru_element_t &mem = m_memoryLists[memoryIndex];
 		unsigned size = GetRealSize( mem.pStore );
 		if ( size > m_memUsed )
 		{
-			ExecuteOnce( Warning( "Data manager 'used' memory incorrect\n" ) );
+			ExecuteOnce( [&]{ Warning( "Data manager 'used' memory incorrect\n" ); } );
 			size = m_memUsed;
 		}
 		m_memUsed -= size;
@@ -424,4 +419,3 @@ void CDataManagerBase::GetLockHandleList( std::vector< memhandle_t >& list )
 		list.push_back( ToHandle( node ) );
 	}
 }
-

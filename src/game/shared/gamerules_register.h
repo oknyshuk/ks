@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef GAMERULES_REGISTER_H
-#define GAMERULES_REGISTER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Each game rules class must register using this in it's .cpp file.
 #define REGISTER_GAMERULES_CLASS( className ) \
@@ -52,6 +46,3 @@ private:
 	void CreateGameRulesObject( const char *pClassName );
 
 #endif
-
-
-#endif // GAMERULES_REGISTER_H

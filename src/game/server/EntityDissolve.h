@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef ENTITYDISSOLVE_H
-#define ENTITYDISSOLVE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 class [[= ks::reflect::NetTable{ .name = "DT_EntityDissolve" } ]] CEntityDissolve : public CBaseEntity 
 {
@@ -58,5 +53,3 @@ protected:
 	CNetworkVector( m_vDissolverOrigin, [[= ks::reflect::Net{ .flags = SPROP_NOSCALE } ]] );
 	CNetworkVar( int, m_nMagnitude, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "magnitude" } ]] );
 };
-
-#endif // ENTITYDISSOLVE_H

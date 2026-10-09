@@ -1,11 +1,12 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "prototype_helper.h"
 
 DEFINE_FALLBACK_SHADER( Prototype, Prototype_dx9 )
 BEGIN_VS_SHADER( Prototype_dx9, "Prototype" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( BUMPMAP, SHADER_PARAM_TYPE_TEXTURE, "", "Normal map" )
 		SHADER_PARAM( BUMPFRAME, SHADER_PARAM_TYPE_INTEGER, "0", "Frame number for $bumpmap" )
 	END_SHADER_PARAMS

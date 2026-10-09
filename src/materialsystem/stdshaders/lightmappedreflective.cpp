@@ -1,8 +1,7 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
-#include "common_hlsl_cpp_consts.h" // hack hack hack!
 
 #include "lightmappedreflective_vs20.inc"
 #include "lightmappedreflective_ps20.inc"
@@ -12,7 +11,7 @@ DEFINE_FALLBACK_SHADER( LightmappedReflective, LightmappedReflective_DX90 )
 
 BEGIN_VS_SHADER( LightmappedReflective_DX90, "Help for Lightmapped Reflective" )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( REFRACTTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "_rt_WaterRefraction", "" )
 		SHADER_PARAM( REFLECTTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "_rt_WaterReflection", "" )
 		SHADER_PARAM( REFRACTAMOUNT, SHADER_PARAM_TYPE_FLOAT, "0", "" )

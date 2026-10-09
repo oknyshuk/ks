@@ -1,37 +1,30 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Revision: $
-// $NoKeywords: $
-//
-// This file contains a little interface to deal with static prop collisions
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef STATICPROPMGR_H
-#define STATICPROPMGR_H
+// Purpose: This file contains a little interface to deal with static prop collisions
 
-#include "mathlib/vector.h"
+import std;
+import ks.math;
 #include "engine/IStaticPropMgr.h"
 
 // FIXME: Remove! Only here for the test against old code
 #include "enginetrace.h"
 
-
 //-----------------------------------------------------------------------------
 // foward declarations
 //-----------------------------------------------------------------------------
 class ICollideable;
-FORWARD_DECLARE_HANDLE( LightCacheHandle_t );
+struct LightCacheHandle_t__;
+using LightCacheHandle_t = LightCacheHandle_t__ *;
 class IPooledVBAllocator;
 
-DECLARE_LOGGING_CHANNEL( LOG_StaticPropManager );
+extern LoggingChannelID_t LOG_StaticPropManager;;
 
 //-----------------------------------------------------------------------------
 // The engine's static prop manager
 //-----------------------------------------------------------------------------
-abstract_class IStaticPropMgrEngine
+class IStaticPropMgrEngine
 {
 public:
 	virtual bool Init() = 0;
@@ -82,6 +75,3 @@ public:
 // Singleton access
 //-----------------------------------------------------------------------------
 IStaticPropMgrEngine* StaticPropMgr();
-
-
-#endif	// STATICPROPMGR_H

@@ -1,9 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #include "quakedef.h"
 #include "networkstringtableitem.h"
 
@@ -16,10 +13,8 @@ CNetworkStringTableItem::CNetworkStringTableItem( void )
 	m_nUserDataLength = 0;
 	m_nTickChanged = 0;
 
-#ifndef SHARED_NET_STRING_TABLES
 	m_nTickCreated = 0;
 	m_pChangeList = nullptr;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -27,7 +22,6 @@ CNetworkStringTableItem::CNetworkStringTableItem( void )
 //-----------------------------------------------------------------------------
 CNetworkStringTableItem::~CNetworkStringTableItem( void )
 {
-#ifndef SHARED_NET_STRING_TABLES
 	if ( m_pChangeList )
 	{
 		// free changelist and elements
@@ -44,7 +38,6 @@ CNetworkStringTableItem::~CNetworkStringTableItem( void )
 
 		m_pUserData = nullptr;
 	}
-#endif
 		
 	if ( m_pUserData )
 	{
@@ -52,7 +45,6 @@ CNetworkStringTableItem::~CNetworkStringTableItem( void )
 	}
 }
 
-#ifndef SHARED_NET_STRING_TABLES
 void CNetworkStringTableItem::EnableChangeHistory( void )
 {
 	if ( m_pChangeList )
@@ -60,7 +52,7 @@ void CNetworkStringTableItem::EnableChangeHistory( void )
 
 	m_pChangeList = new std::vector< itemchange_s >;
 
-	Assert ( m_pChangeList );
+	contract_assert( m_pChangeList );
 }
 
 void CNetworkStringTableItem::UpdateChangeList( int tick, int length, const void *userData )
@@ -80,7 +72,7 @@ void CNetworkStringTableItem::UpdateChangeList( int tick, int length, const void
 		{
 			if ( item.data && userData )
 			{
-				if ( Q_memcmp( (void*)userData, (void*)item.data, length ) == 0 )
+				if ( V_memcmp( (void*)userData, (void*)item.data, length ) == 0 )
 				{
 					return; // no data or size change
 				}
@@ -108,7 +100,7 @@ void CNetworkStringTableItem::UpdateChangeList( int tick, int length, const void
 	{
 		item.data = new unsigned char[length];
 		item.length = length;
-		Q_memcpy( item.data, userData, length );
+		V_memcpy( item.data, userData, length );
 	}
 	else
 	{
@@ -121,7 +113,7 @@ void CNetworkStringTableItem::UpdateChangeList( int tick, int length, const void
 
 int CNetworkStringTableItem::RestoreTick( int tick )
 {
-	Assert( std::ssize( *m_pChangeList )>0 );
+	contract_assert( std::ssize( *m_pChangeList )>0 );
 
 	int index = 1;
 
@@ -157,7 +149,6 @@ int CNetworkStringTableItem::RestoreTick( int tick )
 
 	return m_nTickChanged;
 }
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -166,17 +157,15 @@ int CNetworkStringTableItem::RestoreTick( int tick )
 bool CNetworkStringTableItem::SetUserData( int tick, int length, const void *userData )
 {
 
-#ifndef SHARED_NET_STRING_TABLES
 	if ( m_pChangeList )
 	{
 		UpdateChangeList( tick, length, userData );
 		return false;
 	}
-	Assert ( m_nTickCreated > 0 && m_nTickCreated <= tick );
-#endif
+	contract_assert( m_nTickCreated > 0 && m_nTickCreated <= tick );
 
-	Assert ( m_nTickChanged > 0 && m_nTickChanged <= tick );
-	Assert ( length < CNetworkStringTableItem::MAX_USERDATA_SIZE );
+	contract_assert( m_nTickChanged > 0 && m_nTickChanged <= tick );
+	contract_assert( length < CNetworkStringTableItem::MAX_USERDATA_SIZE );
 
 	// no old or new data
 	if ( !userData && !m_pUserData )
@@ -184,7 +173,7 @@ bool CNetworkStringTableItem::SetUserData( int tick, int length, const void *use
 
 	if ( m_pUserData && 
 		length == m_nUserDataLength &&
-		!Q_memcmp( m_pUserData, (void*)userData, length ) )
+		!V_memcmp( m_pUserData, (void*)userData, length ) )
 	{
 		return false; // old & new data are equal
 	}
@@ -197,7 +186,7 @@ bool CNetworkStringTableItem::SetUserData( int tick, int length, const void *use
 	if ( length > 0 )
 	{
 		m_pUserData = new unsigned char[ length ];
-		Q_memcpy( m_pUserData, userData, length );
+		V_memcpy( m_pUserData, userData, length );
 	}
 	else
 	{
@@ -221,9 +210,3 @@ const void *CNetworkStringTableItem::GetUserData( int *length )
 
 	return ( const void * )m_pUserData;
 }
-
-
-
-
-
-

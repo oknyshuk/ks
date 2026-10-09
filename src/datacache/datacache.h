@@ -1,21 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DATACACHE_H
-#define DATACACHE_H
-
-
-#include "datamanager.h"
-#include <unordered_map>
-#include <atomic>
-#include <mutex>
-#include "tier1/fixed_pool.h"
-#include "tier0/tslist.h"
+import ks.tier1;
+import std;
 #include "datacache_common.h"
 #include "tier3/tier3.h"
+#include "datacache/idatacache.h"
 
 //-----------------------------------------------------------------------------
 //
@@ -37,17 +28,16 @@ struct DataCacheItemData_t
 
 //-------------------------------------
 
-#define DC_NO_NEXT_LOCKED ((DataCacheItem_t *)-1)
-#define DC_MAX_THREADS_FRAMELOCKED 6
+inline constexpr auto DC_MAX_THREADS_FRAMELOCKED = 6;
 
 
-struct DataCacheItem_t : DataCacheItemData_t
+struct DataCacheItem_t : DataCacheItemData_t, public ks::pooled< DataCacheItem_t >
 {
 	DataCacheItem_t( const DataCacheItemData_t &data ) 
 	  : DataCacheItemData_t( data ),
 		hLRU( INVALID_MEMHANDLE )
 	{
-		memset( pNextFrameLocked, 0xff, sizeof(pNextFrameLocked) );
+		std::memset( pNextFrameLocked, 0xff, sizeof(pNextFrameLocked) );
 	}
 
 	static DataCacheItem_t *CreateResource( const DataCacheItemData_t &data )	{ return new DataCacheItem_t(data); }
@@ -59,8 +49,12 @@ struct DataCacheItem_t : DataCacheItemData_t
 	memhandle_t		 hLRU;
 	DataCacheItem_t *pNextFrameLocked[DC_MAX_THREADS_FRAMELOCKED];
 
-	DECLARE_FIXEDSIZE_ALLOCATOR_MT(DataCacheItem_t);
+	private:
+		static ks::fixed_pool_mt s_Allocator;
+		friend class ks::pooled< DataCacheItem_t >;
 };
+inline DataCacheItem_t *const DC_NO_NEXT_LOCKED = reinterpret_cast<DataCacheItem_t *>( static_cast<std::intptr_t>( -1 ) );
+
 
 //-------------------------------------
 
@@ -386,5 +380,3 @@ inline void CDataCacheSection::NoteUnlock( int size )
 }
 
 //-----------------------------------------------------------------------------
-
-#endif // DATACACHE_H

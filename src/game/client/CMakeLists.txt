@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 oknyshuk
+
 add_library(client SHARED
     ../../common/netmessages_codec.cpp
     hl2/C_Func_Monitor.cpp
@@ -131,7 +134,6 @@ add_library(client SHARED
     clientshadowmgr.cpp
     clientsideeffects.cpp
     clientsideeffects_test.cpp
-    clientsteamcontext.cpp
     colorcorrectionmgr.cpp
     ../shared/collisionproperty.cpp
     convarproxy.cpp
@@ -190,7 +192,7 @@ add_library(client SHARED
     in_joystick.cpp
     in_main.cpp
     initializer.cpp
-    ../../public/tier1/interpolatedvar.cpp
+    interpolatedvar.cpp
     IsNPCProxy.cpp
     lampbeamproxy.cpp
     lamphaloproxy.cpp
@@ -261,7 +263,6 @@ add_library(client SHARED
     ../shared/Sprite.cpp
     spritemodel.cpp
     ../shared/SpriteTrail.cpp
-    ../shared/steamworks_gamestats.cpp
     ../shared/studio_shared.cpp
     ../shared/takedamageinfo.cpp
     ../shared/teamplay_gamerules.cpp
@@ -316,7 +317,6 @@ add_library(client SHARED
     ../../public/jigglebones.cpp
     ../../public/phonemeconverter.cpp
     in_mouse.cpp
-    in_steamcontroller.cpp
     mumble.cpp
     rendertexture.cpp
     render_to_rt_helper.cpp
@@ -430,7 +430,6 @@ add_library(client SHARED
     ../shared/cstrike15/cs_shareddefs.cpp
     ../shared/econ/econ_item_schema_minimal.cpp
     cstrike15/cs_client_gamestats.cpp
-    steamworks_gamestats_client.cpp
     cstrike15/cs_view_scene.cpp
     ../shared/cs_custom_material_swap.cpp
     cstrike15/cs_custom_clothing_visualsdata_processor.cpp
@@ -512,11 +511,12 @@ add_library(client SHARED
     cstrike15/RocketUI/rkpanel_options.cpp
     cstrike15/RocketUI/rkpanel_play.cpp
     cstrike15/RocketUI/rkpanel_popup.cpp
-    ../../filesystem/linux_support.cpp
+    ${CMAKE_SOURCE_DIR}/platform/linux/linux_support.cpp
 )
-target_link_libraries(client PRIVATE ks_common PkgConfig::JPEG PkgConfig::PNG PkgConfig::ZLIB rmlui engine memoverride public_common bonesetup particles raytrace mathlib_extended resourcefile choreoobjects bitmap dmxloader tier1 tier2 tier3 interfaces mathlib vtf videocfg bzip2 RmlCore)
+target_link_libraries(client PRIVATE ks_common ks_jpeg rmlui engine memoverride public_common bonesetup particles raytrace mathlib_extended resourcefile choreoobjects bitmap dmxloader tier1 tier2 tier3 interfaces mathlib vtf videocfg bzip2 RmlCore)
 target_include_directories(client PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/." "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/gameui" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/VGUI" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/RocketUI" "${CMAKE_CURRENT_SOURCE_DIR}/game_controls" "${CMAKE_CURRENT_SOURCE_DIR}/../shared" "${CMAKE_CURRENT_SOURCE_DIR}/../shared/cstrike15" "${CMAKE_CURRENT_SOURCE_DIR}/../shared/cstrike15/control" "${CMAKE_CURRENT_SOURCE_DIR}/../../public/rocketui")
-target_compile_definitions(client PRIVATE NO_STRING_T=1 CLIENT_DLL=1 VECTOR=1 ENABLE_STUDIO_SOFTBODY=1 CSTRIKE_CLIENT_DLL=1 CSTRIKE_DLL=1 GAMEUI_EMBEDDED=1 GAMEUI_EXPORTS=1 NO_STEAM_GAMECOORDINATOR=1)
+target_compile_definitions(client PRIVATE NO_STRING_T=1 CLIENT_DLL=1 VECTOR=1 ENABLE_STUDIO_SOFTBODY=1 CSTRIKE_CLIENT_DLL=1 CSTRIKE_DLL=1 GAMEUI_EMBEDDED=1 GAMEUI_EXPORTS=1)
 set_target_properties(client PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+target_link_options(client PRIVATE LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/client.map)
+set_property(TARGET client APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/client.map")
 
-target_precompile_headers(client PRIVATE cbase.h)

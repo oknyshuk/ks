@@ -1,23 +1,19 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
 // Purpose: Definition of the info_remarkable entity.
-//			This entity is a quick and dirty hack to provide writers 
+//			This entity is a quick and dirty hack to provide writers
 //			with some kind of object that characters can remark upon.
 //			It is not performant, because it relies upon each character
 //			polling over each of these for visibility.  A better approach
 //			will be an object that is notified by the engine when it is within
 //			a character's view.
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef INFOREMARKABLE_H
-#define INFOREMARKABLE_H
 
 #include "reflect_annotations.h"
 
 #include "baseentity.h"
-#include <vector>
+import std;
 
 class CInfoRemarkable : public CPointEntity
 {
@@ -39,5 +35,3 @@ public:
 //FIX protected:
 	[[= ks::reflect::Key{ .name = "contextsubject" } ]] string_t	m_szRemarkContext;
 };
-
-#endif

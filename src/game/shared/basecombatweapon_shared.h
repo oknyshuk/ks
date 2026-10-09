@@ -1,11 +1,7 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef COMBATWEAPON_SHARED_H
-#define COMBATWEAPON_SHARED_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.core;
 
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
@@ -69,16 +65,16 @@ class IPhysicsConstraint;
 class CUserCmd;
 
 // How many times to display altfire hud hints (per weapon)
-#define WEAPON_ALTFIRE_HUD_HINT_COUNT	1
-#define WEAPON_RELOAD_HUD_HINT_COUNT	1
+inline constexpr auto WEAPON_ALTFIRE_HUD_HINT_COUNT = 1;
+inline constexpr auto WEAPON_RELOAD_HUD_HINT_COUNT = 1;
 
 //Start with a constraint in place (don't drop to floor)
-#define	SF_WEAPON_START_CONSTRAINED	(1<<0)	
-#define SF_WEAPON_NO_PLAYER_PICKUP	(1<<1)
-#define SF_WEAPON_NO_PHYSCANNON_PUNT (1<<2)
+inline constexpr auto SF_WEAPON_START_CONSTRAINED = (1<<0);
+inline constexpr auto SF_WEAPON_NO_PLAYER_PICKUP = (1<<1);
+inline constexpr auto SF_WEAPON_NO_PHYSCANNON_PUNT = (1<<2);
 
 //Percent
-#define	CLIP_PERC_THRESHOLD		0.75f	
+inline constexpr auto CLIP_PERC_THRESHOLD = 0.75f;
 
 // Put this in your derived class definition to declare it's activity table
 // UNDONE: Cascade these?
@@ -90,7 +86,7 @@ class CUserCmd;
 // e.g.
 //	acttable_t	CWeaponStunstick::m_acttable[] = 
 //	{
-//		{ ACT_MELEE_ATTACK1, ACT_MELEE_ATTACK_SWING, TRUE },
+//		{ ACT_MELEE_ATTACK1, ACT_MELEE_ATTACK_SWING, true },
 //	};
 //
 // The stunstick overrides the ACT_MELEE_ATTACK1 activity, replacing it with ACT_MELEE_ATTACK_SWING.
@@ -102,7 +98,7 @@ class CUserCmd;
 // UNDONE: Cascade these?
 #define IMPLEMENT_ACTTABLE(className) \
 	acttable_t *className::ActivityList( void ) { return m_acttable; } \
-	int className::ActivityListCount( void ) { return ARRAYSIZE(m_acttable); } \
+	int className::ActivityListCount( void ) { return std::size( m_acttable ); } \
 
 typedef struct
 {
@@ -112,11 +108,10 @@ typedef struct
 } acttable_t;
 
 class CHudTexture;
-class Color;
 
 
-#define MWHEEL_UP		 1
-#define MWHEEL_DOWN		-1
+inline constexpr auto MWHEEL_UP = 1;
+inline constexpr auto MWHEEL_DOWN = -1;
 
 
 // -----------------------------------------
@@ -130,29 +125,30 @@ class Color;
 
 // NOTE: The way these are calculated is that each component == sin (degrees/2)
 #define VECTOR_CONE_PRECALCULATED	vec3_origin
-#define VECTOR_CONE_1DEGREES		Vector( 0.00873, 0.00873, 0.00873 )
-#define VECTOR_CONE_2DEGREES		Vector( 0.01745, 0.01745, 0.01745 )
-#define VECTOR_CONE_3DEGREES		Vector( 0.02618, 0.02618, 0.02618 )
-#define VECTOR_CONE_4DEGREES		Vector( 0.03490, 0.03490, 0.03490 )
-#define VECTOR_CONE_5DEGREES		Vector( 0.04362, 0.04362, 0.04362 )
-#define VECTOR_CONE_6DEGREES		Vector( 0.05234, 0.05234, 0.05234 )
-#define VECTOR_CONE_7DEGREES		Vector( 0.06105, 0.06105, 0.06105 )
+inline const auto VECTOR_CONE_1DEGREES = Vector( 0.00873, 0.00873, 0.00873 );
+inline const auto VECTOR_CONE_2DEGREES = Vector( 0.01745, 0.01745, 0.01745 );
+inline const auto VECTOR_CONE_3DEGREES = Vector( 0.02618, 0.02618, 0.02618 );
+inline const auto VECTOR_CONE_4DEGREES = Vector( 0.03490, 0.03490, 0.03490 );
+inline const auto VECTOR_CONE_5DEGREES = Vector( 0.04362, 0.04362, 0.04362 );
+inline const auto VECTOR_CONE_6DEGREES = Vector( 0.05234, 0.05234, 0.05234 );
+inline const auto VECTOR_CONE_7DEGREES = Vector( 0.06105, 0.06105, 0.06105 );
 #define VECTOR_CONE_8DEGREES		Vector( 0.06976, 0.06976, 0.06976 )
-#define VECTOR_CONE_9DEGREES		Vector( 0.07846, 0.07846, 0.07846 )
-#define VECTOR_CONE_10DEGREES		Vector( 0.08716, 0.08716, 0.08716 )
+inline const auto VECTOR_CONE_9DEGREES = Vector( 0.07846, 0.07846, 0.07846 );
+inline const auto VECTOR_CONE_10DEGREES = Vector( 0.08716, 0.08716, 0.08716 );
 #define VECTOR_CONE_15DEGREES		Vector( 0.13053, 0.13053, 0.13053 )
-#define VECTOR_CONE_20DEGREES		Vector( 0.17365, 0.17365, 0.17365 )
+inline const auto VECTOR_CONE_20DEGREES = Vector( 0.17365, 0.17365, 0.17365 );
 
 //-----------------------------------------------------------------------------
 // Purpose: Base weapon class, shared on client and server
 //-----------------------------------------------------------------------------
 
-#define BASECOMBATWEAPON_DERIVED_FROM		CBaseAnimating
+
+using BASECOMBATWEAPON_DERIVED_FROM = CBaseAnimating;
 
 // temp states for modular weapon body groups
-#define MODULAR_BODYGROUPS_DEFAULT_NONE_SET		0
-#define MODULAR_BODYGROUPS_NONE_AVAILABLE		1
-#define MODULAR_BODYGROUPS_RANDOMIZED			2
+inline constexpr auto MODULAR_BODYGROUPS_DEFAULT_NONE_SET = 0;
+inline constexpr auto MODULAR_BODYGROUPS_NONE_AVAILABLE = 1;
+inline constexpr auto MODULAR_BODYGROUPS_RANDOMIZED = 2;
 
 enum WeaponHoldsPlayerAnimCapability_t
 {
@@ -187,8 +183,6 @@ class [[= ks::reflect::NetTable{ .name = "DT_BaseWeaponWorldModel", .base = fals
 	DECLARE_NETWORKCLASS();
 	DECLARE_PREDICTABLE();
 
-#ifndef CLIENT_DLL
-#endif
 
 public:
 	CBaseWeaponWorldModel();
@@ -200,7 +194,7 @@ public:
 #ifdef CLIENT_DLL
 	void ApplyCustomMaterialsAndStickers( void );
 	virtual void	FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options );
-	virtual bool	ShouldDraw( void ) OVERRIDE;
+	virtual bool	ShouldDraw( void ) override;
 	virtual void	OnDataChanged( DataUpdateType_t updateType );
 
 	float * GetRenderClipPlane( void );
@@ -212,8 +206,8 @@ public:
 
 #else
 	virtual void HandleAnimEvent( animevent_t *pEvent );
-	virtual int  ShouldTransmit( const CCheckTransmitInfo *pInfo ) OVERRIDE;
-	virtual int	UpdateTransmitState() OVERRIDE;
+	virtual int  ShouldTransmit( const CCheckTransmitInfo *pInfo ) override;
+	virtual int	UpdateTransmitState() override;
 #endif
 
 	virtual bool	IsWeaponWorldModel( void ) const { return true; };
@@ -350,7 +344,7 @@ public:
 	bool					UsesSecondaryAmmo( void );					// returns true if the weapon actually uses secondary ammo
 	void					GiveDefaultAmmo( void );
 	
-	virtual bool			CanHolster( void ) { return TRUE; };		// returns true if the weapon can be holstered
+	virtual bool			CanHolster( void ) { return true; };		// returns true if the weapon can be holstered
 	virtual bool			DefaultDeploy( char *szViewModel, char *szWeaponModel, int iActivity, char *szAnimExt );
 	virtual bool			CanDeploy( void ) { return true; }			// return true if the weapon's allowed to deploy
 	virtual bool			Deploy( void );								// returns true is deploy was successful
@@ -773,7 +767,7 @@ public:
 
 	IPhysicsConstraint		*GetConstraint() { return m_pConstraint; }
 
-	virtual CStudioHdr			*OnNewModel() OVERRIDE;
+	virtual CStudioHdr			*OnNewModel() override;
 	void						ClassifyWeaponModel( void );
 	WeaponModelClassification_t	GetWeaponModelClassification( void );
 	void						VerifyAndSetContextSensitiveWeaponModel( void );
@@ -823,6 +817,3 @@ inline CBaseCombatWeapon *ToBaseCombatWeapon( CBaseEntity *pEntity )
 		return nullptr;
 	return pEntity->MyCombatWeaponPointer();
 }
-
-
-#endif // COMBATWEAPON_SHARED_H

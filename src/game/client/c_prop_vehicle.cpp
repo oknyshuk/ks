@@ -1,22 +1,24 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_datamap.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_prop_vehicle.h"
 #include "hud.h"		
-#include <color.h>
-#include "view.h"
-#include "engine/ivdebugoverlay.h"
-#include "movevars_shared.h"
-#include "iviewrender.h"
 
 int ScreenTransform( const Vector& point, Vector& screen );
 
@@ -212,7 +214,6 @@ int GetFlashColorIntensity( int LowIntensity, int HighIntensity, bool Dimming, i
 		return ( LowIntensity + Timer * Increment );
 }
 
-#define	TRIANGULATED_CROSSHAIR 1
 
 void C_PropVehicleDriveable::DrawHudElements( )
 {
@@ -232,11 +233,9 @@ void C_PropVehicleDriveable::DrawHudElements( )
 			x = ScreenWidth()/2;
 			y = ScreenHeight()/2;
 
-		#if TRIANGULATED_CROSSHAIR
 			ScreenTransform( m_vecGunCrosshair, screen );
 			x += 0.5 * screen[0] * ScreenWidth() + 0.5;
 			y -= 0.5 * screen[1] * ScreenHeight() + 0.5;
-		#endif
 
 			x -= pIcon->Width() / 2; 
 			y -= pIcon->Height() / 2; 
@@ -358,4 +357,3 @@ void C_PropVehicleDriveable::OnEnteredVehicle( C_BaseCombatCharacter *pPassenger
 void C_PropVehicleDriveable::OnExitedVehicle( C_BaseCombatCharacter *pPassenger )
 {
 }
-

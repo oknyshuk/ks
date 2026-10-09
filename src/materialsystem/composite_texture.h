@@ -1,21 +1,13 @@
-//========= Copyright (c) 1996-2013, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Provide custom texture generation (compositing) 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2013 Valve Corporation
 
-#ifndef COMPOSITE_TEXTURE_H
-#define COMPOSITE_TEXTURE_H
+// Purpose: Provide custom texture generation (compositing)
 
-#include <mutex>
+import std;
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/icompositetexturegenerator.h"
-#include <deque>
-#include <cstddef>
-#include <span>
-#include <vector>
 
 class IVisualsDataProcessor;
 class ITextureInternal;
@@ -72,7 +64,7 @@ enum CompositeTextureStages_t
 	COMPOSITE_TEXTURE_STATE_COMPLETE
 };
 
-#define NUM_PRELOAD_TEXTURES 20
+inline constexpr auto NUM_PRELOAD_TEXTURES = 20;
 
 class CCompositeTexture;
 
@@ -232,5 +224,3 @@ private:
 	ITextureInternal* m_pGunGrimeTexture;
 	ITextureInternal* m_pPaintWearTexture;
 };
-
-#endif // COMPOSITE_TEXTURE_H

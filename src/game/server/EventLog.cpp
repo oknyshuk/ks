@@ -1,14 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "EventLog.h"
 #include "team.h"
-#include "keyvalues.h"
 #include "nav.h"
 #include "nav_area.h"
 
@@ -112,7 +134,7 @@ bool CEventLog::PrintEvent( IGameEvent *event )
 
 bool CEventLog::PrintGameEvent( IGameEvent *event )
 {
-//	const char * name = event->GetName() + Q_strlen("game_"); // remove prefix
+//	const char * name = event->GetName() + V_strlen("game_"); // remove prefix
 
 	return false;
 }
@@ -266,7 +288,7 @@ bool CEventLog::PrintPlayerEvent( IGameEvent *event )
 
 bool CEventLog::PrintTeamEvent( IGameEvent *event )
 {
-//	const char * name = event->GetName() + Q_strlen("team_"); // remove prefix
+//	const char * name = event->GetName() + V_strlen("team_"); // remove prefix
 
 	return false;
 }

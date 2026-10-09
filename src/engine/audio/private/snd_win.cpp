@@ -1,12 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "audio_pch.h"
 
-#include "snd_dev_sdl.h"
+
+
+import ks.tier1;
+#include "sound.h"
+import std;
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_dev_xaudio.h"
+#include "snd_wave_mixer_private.h"
+
+#include "audio/private/posix_stubs.h"
 
 
 bool snd_firsttime = true;
@@ -15,11 +22,7 @@ bool snd_firsttime = true;
  * Global variables. Must be visible to window-procedure function 
  *  so it can unlock and free the data block after it has been played. 
  */ 
-#if USE_AUDIO_DEVICE_V1
-IAudioDevice *g_AudioDevice = nullptr;
-#else
 IAudioDevice2 *g_AudioDevice = nullptr;
-#endif
 
 /*
 ==================
@@ -52,9 +55,7 @@ void S_UpdateWindowFocus( bool bWindowHasFocus )
 	if ( !g_AudioDevice )
 		return;
 
-#if !USE_AUDIO_DEVICE_V1
 	g_AudioDevice->UpdateFocus( bWindowHasFocus );
-#endif
 }
 
 /*
@@ -65,49 +66,6 @@ Try to find a sound device to mix for.
 Returns a CAudioNULLDevice if nothing is found.
 ==================
 */
-#if USE_AUDIO_DEVICE_V1
-IAudioDevice *IAudioDevice::AutoDetectInit()
-{
-	IAudioDevice *pDevice = nullptr;
-
-	DevMsg( "Trying SDL Audio Interface\n" );
-	pDevice = Audio_CreateSDLAudioDevice();
-
-#ifdef NEVER
-	// Jul 2012. mikesart. E-mail exchange with Ryan Gordon after figuring out that
-	// Audio_CreatePulseAudioDevice() wasn't working on Ubuntu 12.04 (lots of stuttering).
-	//
-	// > I installed libpulse-dev, rebuilt SDL, and now SDL is using pulse
-	// > audio and everything is working great. However I'm wondering if we
-	// > need to fall back to PulseAudio in our codebase if SDL is doing that
-	// > for us. I mean, is it worth me going through and debugging our Pulse
-	// > Audio path or should I just remove it?
-	// 
-	// Remove it...it never worked well, and only remained in case there were
-	// concerns about relying on SDL. The SDL codepath is way easier to read,
-	// simpler to maintain, and handles all sorts of strange audio backends,
-	// including Pulse.
-	if ( !pDevice )
-	{
-		DevMsg( "Trying PulseAudio Interface\n" );
-		pDevice = Audio_CreatePulseAudioDevice(); // fall back to PulseAudio if SDL fails
-	}
-#endif // NEVER
-
-
-	snd_firsttime = false;
-
-	if ( !pDevice )
-	{
-		if ( snd_firsttime )
-			DevMsg( "No sound device initialized\n" );
-
-		return Audio_GetNullDevice();
-	}
-
-	return pDevice;
-}
-#endif
 /*
 ==============
 SNDDMA_Shutdown
@@ -121,4 +79,3 @@ void SNDDMA_Shutdown( void )
 	delete g_AudioDevice;
 	g_AudioDevice = nullptr;
 }
-

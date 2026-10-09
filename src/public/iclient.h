@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ICLIENT_H
-#define ICLIENT_H
-
+import ks.tier1;
 #include "inetmsghandler.h"
-#include "tier0/platform.h"
 #include "userid.h"
-#include "tier1/utlvector.h"
+import std;
 
 class IServer;
 class INetMessage;
@@ -58,7 +53,7 @@ struct HltvReplayParams_t
 	bool m_bAbortCurrentReplay; // even if replay is in progress, restart it - this may cause a stutter on the client, so use with care
 };
 
-abstract_class IClient : public INetChannelHandler
+class IClient : public INetChannelHandler
 {
 public:
 	virtual	~IClient() {}
@@ -117,10 +112,6 @@ public:
 	virtual bool	IsFakeClient( void ) const = 0;
 	// returns true, if client is a HLTV proxy
 	virtual bool	IsHLTV( void ) const = 0;
-#if defined( REPLAY_ENABLED )
-	// returns true, if client is a Replay proxy
-	virtual bool	IsReplay( void ) const = 0;
-#endif
 	// returns true, if client hears this player
 	virtual bool	IsHearingClient(int index) const = 0;
 	// returns true, if client hears this player by proximity
@@ -151,5 +142,3 @@ public:
 	virtual bool CanStartHltvReplay() = 0;
 	virtual void ResetReplayRequestTime() = 0;
 };
-
-#endif // ICLIENT_H

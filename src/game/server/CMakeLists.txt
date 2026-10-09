@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 oknyshuk
+
 add_library(server SHARED
     ../../common/netmessages_codec.cpp
     ../shared/achievementmgr.cpp
@@ -316,7 +319,6 @@ add_library(server SHARED
     spotlightend.cpp
     ../shared/Sprite.cpp
     sprite_perfmonitor.cpp
-    ../shared/steamworks_gamestats.cpp
     ../shared/studio_shared.cpp
     subs.cpp
     sun.cpp
@@ -358,9 +360,6 @@ add_library(server SHARED
     ../shared/mp_shareddefs.cpp
     ../server/vote_controller.cpp
     ../../public/closedcaptions.cpp
-    ../../public/dt_send.cpp
-    ../../public/dt_utlvector_send.cpp
-    ../../public/editor_sendcommand.cpp
     gamehandle.cpp
     h_export.cpp
     init_factory.cpp
@@ -446,7 +445,6 @@ add_library(server SHARED
     ../shared/predicted_viewmodel.cpp
     team_objectiveresource.cpp
     team_spawnpoint.cpp
-    server_log_http_dispatcher.cpp
     ../shared/teamplayroundbased_gamerules.cpp
     ../shared/cstrike15/achievements_cs.cpp
     ../shared/cstrike15/basecsgrenade_projectile.cpp
@@ -460,7 +458,6 @@ add_library(server SHARED
     ../shared/cstrike15/cs_gamerules.cpp
     cstrike15/cs_gamestats.cpp
     ../shared/cstrike15/cs_gamestats_shared.cpp
-    steamworks_gamestats_server.cpp
     cstrike15/cs_hltvdirector.cpp
     cstrike15/cs_player.cpp
     cstrike15/cs_player_resource.cpp
@@ -574,11 +571,12 @@ add_library(server SHARED
     cstrike15/cs_nav_generate.cpp
     cstrike15/cs_nav_mesh.cpp
     cstrike15/cs_nav_path.cpp
-    ../../filesystem/linux_support.cpp
+    ${CMAKE_SOURCE_DIR}/platform/linux/linux_support.cpp
 )
-target_link_libraries(server PRIVATE ks_common PkgConfig::ZLIB engine memoverride public_common responserules_runtime bonesetup particles mathlib_extended choreoobjects bitmap dmxloader tier1 tier2 tier3 interfaces mathlib)
+target_link_libraries(server PRIVATE ks_common ks_shared engine memoverride public_common responserules_runtime bonesetup particles mathlib_extended choreoobjects bitmap dmxloader tier1 tier2 tier3 interfaces mathlib)
 target_include_directories(server PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/." "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/bot" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/bot/states" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/control" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/hostage" "${CMAKE_CURRENT_SOURCE_DIR}/../shared" "${CMAKE_CURRENT_SOURCE_DIR}/../shared/cstrike15" "${CMAKE_CURRENT_SOURCE_DIR}/../shared/cstrike15/bot" "${CMAKE_CURRENT_SOURCE_DIR}/../../utils/common")
-target_compile_definitions(server PRIVATE GAME_DLL=1 VECTOR=1 BOTS=1 CSTRIKE_DLL=1 NO_STEAM_GAMECOORDINATOR=1)
+target_compile_definitions(server PRIVATE GAME_DLL=1 VECTOR=1 BOTS=1 CSTRIKE_DLL=1)
 set_target_properties(server PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+target_link_options(server PRIVATE LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/server.map)
+set_property(TARGET server APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/server.map")
 
-target_precompile_headers(server PRIVATE cbase.h)

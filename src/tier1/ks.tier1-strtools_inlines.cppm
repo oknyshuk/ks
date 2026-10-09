@@ -1,0 +1,59 @@
+
+// Copyright (c) 2026 oknyshuk
+
+export module ks.tier1:strtools_inlines;
+
+import std;
+import ks.math;
+
+export extern "C++" {
+
+inline int	_V_strlen_inline( const char *str )
+{
+	if ( !str )
+		return 0;
+	return std::strlen( str );
+}
+
+inline char *_V_strrchr_inline( const char *s, char c )
+{
+	int len = _V_strlen_inline(s);
+	s += len;
+	while (len--)
+		if (*--s == c) return (char *)s;
+	return 0;
+}
+
+inline int _V_wcscmp_inline( const wchar_t *s1, const wchar_t *s2 )
+{
+	while (1)
+	{
+		if (*s1 != *s2)
+			return -1;              // strings not equal    
+		if (!*s1)
+			return 0;               // strings are equal
+		s1++;
+		s2++;
+	}
+
+	return -1;
+}
+
+inline int	_V_stricmp_inline( const char *s1, const char *s2 )
+{
+	if ( s1 == nullptr && s2 == nullptr )
+		return 0;
+	if ( s1 == nullptr )
+		return -1;
+	if ( s2 == nullptr )
+		return 1;
+
+	return stricmp( s1, s2 );
+}
+
+inline char *_V_strstr_inline( const char *s1, const char *search )
+{
+	return (char *)std::strstr( s1, search );
+}
+
+}

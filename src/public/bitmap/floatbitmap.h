@@ -1,19 +1,9 @@
-//======= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef FLOATBITMAP_H
-#define FLOATBITMAP_H
-
-
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
-#include "tier1/utlsoacontainer.h"
-#include "mathlib/mathlib.h"
+import ks.tier1;
+import std;
 #include "bitmap/imageformat.h"
 
 class IThreadPool;
@@ -55,11 +45,11 @@ inline PixRGBA8 PixRGBAF_to_8( PixRGBAF const &f )
 	return x;
 }
 
-#define SPFLAGS_MAXGRADIENT 1
+inline constexpr auto SPFLAGS_MAXGRADIENT = 1;
 
 // bit flag options for ComputeSelfShadowedBumpmapFromHeightInAlphaChannel:
-#define SSBUMP_OPTION_NONDIRECTIONAL 1						// generate ambient occlusion only
-#define SSBUMP_MOD2X_DETAIL_TEXTURE 2						// scale so that a flat unshadowed
+inline constexpr auto SSBUMP_OPTION_NONDIRECTIONAL = 1; // generate ambient occlusion only
+inline constexpr auto SSBUMP_MOD2X_DETAIL_TEXTURE = 2; // scale so that a flat unshadowed
                                                             // value is 0.5, and bake rgb luminance
                                                             // in.
 
@@ -133,13 +123,13 @@ public:
 	bool LoadFromPSD( const char *pFilename );				// load from psd file
 	void InitializeWithRandomPixelsFromAnotherFloatBM( const FloatBitMap_t &other );
 	void Clear( float r, float g, float b, float alpha );	// set all pixels to speicifed values (0..1 nominal)
-	void LoadFromBuffer( const void *pBuffer, size_t nBufSize, ImageFormat fmt, float flGamma );	// Assumes dimensions match the bitmap size
+	void LoadFromBuffer( const void *pBuffer, std::size_t nBufSize, ImageFormat fmt, float flGamma );	// Assumes dimensions match the bitmap size
 	void LoadFromFloatBitmap( const FloatBitMap_t *pOrig );
 
 	// Methods to write bitmap data to files
 	bool WriteTGAFile( const char *pFilename ) const;
 	bool WritePFM( const char *pFilename );					// save to floating point pixmap (.pfm) file
-	void WriteToBuffer( void *pBuffer, size_t nBufSize, ImageFormat fmt, float flGamma ) const;	// Assumes dimensions match the bitmap size
+	void WriteToBuffer( void *pBuffer, std::size_t nBufSize, ImageFormat fmt, float flGamma ) const;	// Assumes dimensions match the bitmap size
 
 	// Methods to read + write constant values
 	const float &ConstantValue( int comp ) const;
@@ -347,16 +337,16 @@ inline int FloatBitMap_t::CoordWrap( int nC, int nLimit )
 
 inline float &FloatBitMap_t::Pixel(int x, int y, int z, int comp) const
 {
-	Assert( (x >= 0 ) && (x < NumCols() ) );
-	Assert( (y >= 0) &&  (y < NumRows() ) );
-	Assert( (z >= 0) &&  (z < NumSlices() ) );
+	contract_assert( (x >= 0 ) && (x < NumCols() ) );
+	contract_assert( (y >= 0) &&  (y < NumRows() ) );
+	contract_assert( (z >= 0) &&  (z < NumSlices() ) );
 	float *pData = ElementPointer<float>( comp, x, y, z );
 	return *pData;
 }
 
 inline const float &FloatBitMap_t::ConstantValue( int comp ) const
 {
-	Assert( !HasAllocatedMemory( comp ) );
+	contract_assert( !HasAllocatedMemory( comp ) );
 	return Pixel( 0, 0, 0, comp );
 }
 
@@ -381,17 +371,17 @@ inline float &FloatBitMap_t::PixelClamped(int x, int y, int z, int comp) const
 
 inline float &FloatBitMap_t::Alpha( int x, int y, int z ) const
 {
-	Assert( ( x >= 0 ) && ( x < NumCols() ) );
-	Assert( ( y >= 0 ) && ( y < NumRows() ) );
-	Assert( ( z >= 0 ) && ( z < NumSlices() ) );
+	contract_assert( ( x >= 0 ) && ( x < NumCols() ) );
+	contract_assert( ( y >= 0 ) && ( y < NumRows() ) );
+	contract_assert( ( z >= 0 ) && ( z < NumSlices() ) );
 	return Pixel( x, y, z, FBM_ATTR_ALPHA );
 }
 
 inline PixRGBAF FloatBitMap_t::PixelRGBAF( int x, int y, int z ) const
 {
-	Assert( ( x >= 0 ) && ( x < NumCols() ) );
-	Assert( ( y >= 0 ) && ( y < NumRows() ) );
-	Assert( ( z >= 0 ) && ( z < NumSlices() ) );
+	contract_assert( ( x >= 0 ) && ( x < NumCols() ) );
+	contract_assert( ( y >= 0 ) && ( y < NumRows() ) );
+	contract_assert( ( z >= 0 ) && ( z < NumSlices() ) );
 
 	PixRGBAF RetPix;
 	RetPix.Red = Pixel( x, y, z, FBM_ATTR_RED );
@@ -422,7 +412,7 @@ inline void FloatBitMap_t::WritePixel(int x, int y, int z, int comp, float value
 //-----------------------------------------------------------------------------
 template< class T > void FloatBitMap_t::LoadFromBufferRGBFloat( const T *pBuffer, int nPixelCount )
 {
-	Assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
+	contract_assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
 	for( int z = 0; z < NumSlices(); ++z )
 	{
 		for( int y = 0; y < NumRows(); ++y )
@@ -441,7 +431,7 @@ template< class T > void FloatBitMap_t::LoadFromBufferRGBFloat( const T *pBuffer
 
 template< class T > void FloatBitMap_t::LoadFromBufferRGB( const T *pBuffer, int nPixelCount, const float *pGammaTable )
 {
-	Assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
+	contract_assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
 	for( int z = 0; z < NumSlices(); ++z )
 	{
 		for( int y = 0; y < NumRows(); ++y )
@@ -460,7 +450,7 @@ template< class T > void FloatBitMap_t::LoadFromBufferRGB( const T *pBuffer, int
 
 template< class T > void FloatBitMap_t::LoadFromBufferRGBAFloat( const T *pBuffer, int nPixelCount )
 {
-	Assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
+	contract_assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
 	for( int z = 0; z < NumSlices(); ++z )
 	{
 		for( int y = 0; y < NumRows(); ++y )
@@ -480,7 +470,7 @@ template< class T > void FloatBitMap_t::LoadFromBufferRGBAFloat( const T *pBuffe
 template< class T > void FloatBitMap_t::LoadFromBufferRGBA( const T *pBuffer, int nPixelCount, const float *pGammaTable )
 {
 	float flOO1023 = 1.0f / 1023.0f;
-	Assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
+	contract_assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
 	for( int z = 0; z < NumSlices(); ++z )
 	{
 		for( int y = 0; y < NumRows(); ++y )
@@ -564,7 +554,7 @@ template< class T > void FloatBitMap_t::LoadFromBufferUVLX( const T *pBuffer, in
 //-----------------------------------------------------------------------------
 template< class T > void FloatBitMap_t::WriteToBufferRGBFloat( T *pBuffer, int nPixelCount ) const
 {
-	Assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
+	contract_assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
 	for( int z = 0; z < NumSlices(); ++z )
 	{
 		for( int y = 0; y < NumRows(); ++y )
@@ -583,7 +573,7 @@ template< class T > void FloatBitMap_t::WriteToBufferRGBFloat( T *pBuffer, int n
 template< class T > void FloatBitMap_t::WriteToBufferRGB( T *pBuffer, int nPixelCount, const uint16 *pInvGammaTable ) const
 {
 	int c;
-	Assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
+	contract_assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
 	for( int z = 0; z < NumSlices(); ++z )
 	{
 		for( int y = 0; y < NumRows(); ++y )
@@ -604,7 +594,7 @@ template< class T > void FloatBitMap_t::WriteToBufferRGB( T *pBuffer, int nPixel
 
 template< class T > void FloatBitMap_t::WriteToBufferRGBAFloat( T *pBuffer, int nPixelCount ) const
 {
-	Assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
+	contract_assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
 	for( int z = 0; z < NumSlices(); ++z )
 	{
 		for( int y = 0; y < NumRows(); ++y )
@@ -624,7 +614,7 @@ template< class T > void FloatBitMap_t::WriteToBufferRGBAFloat( T *pBuffer, int 
 template< class T > void FloatBitMap_t::WriteToBufferRGBA( T *pBuffer, int nPixelCount, const uint16 *pInvGammaTable ) const
 {
 	int c;
-	Assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
+	contract_assert( nPixelCount == NumCols() * NumRows() * NumSlices() );
 	for( int z = 0; z < NumSlices(); ++z )
 	{
 		for( int y = 0; y < NumRows(); ++y )
@@ -789,7 +779,7 @@ public:
 
 
 // Image Pyramid class.
-#define MAX_IMAGE_PYRAMID_LEVELS 16							// up to 64kx64k
+inline constexpr auto MAX_IMAGE_PYRAMID_LEVELS = 16; // up to 64kx64k
 
 enum ImagePyramidMode_t 
 {
@@ -805,7 +795,7 @@ public:
 	FloatImagePyramid_t(void)
 	{
 		m_nLevels = 0;
-		memset( m_pLevels, 0, sizeof( m_pLevels ));
+		std::memset( m_pLevels, 0, sizeof( m_pLevels ));
 	}
 
 	// build one. clones data from src for level 0.
@@ -816,7 +806,7 @@ public:
 
 	FloatBitMap_t *Level(int lvl) const
 	{
-		Assert( lvl < m_nLevels );
+		contract_assert( lvl < m_nLevels );
 		return m_pLevels[lvl];
 	}
 	// rebuild all levels above the specified level
@@ -826,5 +816,3 @@ public:
 
 	void WriteTGAs(const char *basename) const;				// outputs name_00.tga, name_01.tga,...
 };
-
-#endif

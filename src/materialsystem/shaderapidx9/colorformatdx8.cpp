@@ -1,23 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #define DISABLE_PROTECTED_THINGS
 #include "togl/rendermechanism.h"
-#include "locald3dtypes.h"
 #include "colorformatdx8.h"
-#include "shaderapidx8_global.h"
 #include "bitmap/imageformat.h"
-#include "shaderapi/ishaderutil.h"
-#include "tier0/dbg.h"
-#include "tier1/strtools.h"
 #include "shaderdevicedx8.h"
-
-
 
 //-----------------------------------------------------------------------------
 // Figures out what texture formats we support
@@ -421,7 +409,7 @@ static inline bool IsDepthFormatCompatible( int nAdapter, ImageFormat displayFor
 D3DFORMAT FindNearestSupportedDepthFormat( int nAdapter, ImageFormat displayFormat, ImageFormat renderTargetFormat, D3DFORMAT depthFormat )
 {
 	// This is the default case, used for rendering to the main render target
-	Assert( displayFormat != IMAGE_FORMAT_UNKNOWN && renderTargetFormat != IMAGE_FORMAT_UNKNOWN );
+	contract_assert( displayFormat != IMAGE_FORMAT_UNKNOWN && renderTargetFormat != IMAGE_FORMAT_UNKNOWN );
 
 	switch (depthFormat)
 	{
@@ -465,7 +453,7 @@ D3DFORMAT FindNearestSupportedDepthFormat( int nAdapter, ImageFormat displayForm
 		break;
 	}
 
-	Assert( 0 );
+	contract_assert( 0 );
 	return D3DFMT_D16;
 }
 
@@ -593,4 +581,3 @@ ImageFormat FindNearestSupportedBackBufferFormat( UINT displayAdapter,
 
 	return IMAGE_FORMAT_UNKNOWN;
 }
-

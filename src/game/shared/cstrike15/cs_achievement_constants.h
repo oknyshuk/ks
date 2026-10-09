@@ -1,3 +1,4 @@
+#pragma once
 //-------------------------------------------------------------
 // File:		cs_achievement_constants.h
 // Desc: 		Declare contants used by achievements (mostly) in one location for simpler tweaking
@@ -6,8 +7,6 @@
 // Copyright:	(c) 2009 Hidden Path Entertainment
 //-------------------------------------------------------------
 
-#ifndef CS_ACHIEVEMENT_CONSTANTS_H
-#define CS_ACHIEVEMENT_CONSTANTS_H
 
 namespace AchievementConsts
 {
@@ -54,4 +53,3 @@ namespace AchievementConsts
 
 }
 
-#endif // CS_ACHIEVEMENT_CONSTANTS_H

@@ -1,6 +1,5 @@
+#pragma once
 
-#ifndef SND_STUBS_H
-#define SND_STUBS_H
 
 #include "engine/ienginevoice.h"
 
@@ -37,8 +36,3 @@ public:
 
 CEngineVoiceStub *Audio_GetEngineVoiceStub();
 
-
-IEngineVoice *Audio_GetEngineVoiceSteam();
-
-
-#endif

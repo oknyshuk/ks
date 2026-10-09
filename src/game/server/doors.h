@@ -1,44 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef DOORS_H
-#define DOORS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-#pragma once
-
 
 #include "locksounds.h"
 #include "entityoutput.h"
+#include "baseentity.h"
+#include "basetoggle.h"
 
 //Since I'm here, might as well explain how these work.  Base.fgd is the file that connects
 //flags to entities.  It is full of lines with this number, a label, and a default value.
 //Voila, dynamicly generated checkboxes on the Flags tab of Entity Properties.
 
 // doors
-#define SF_DOOR_ROTATE_YAW			0		// yaw by default
-#define	SF_DOOR_START_OPEN_OBSOLETE	1
-#define SF_DOOR_ROTATE_BACKWARDS	2
-#define SF_DOOR_NONSOLID_TO_PLAYER	4
-#define SF_DOOR_PASSABLE			8
-#define SF_DOOR_ONEWAY				16
-#define	SF_DOOR_NO_AUTO_RETURN		32
-#define SF_DOOR_ROTATE_ROLL			64
-#define SF_DOOR_ROTATE_PITCH		128
-#define SF_DOOR_PUSE				256	// door can be opened by player's use button.
-#define SF_DOOR_NONPCS				512	// NPC can't open
-#define SF_DOOR_PTOUCH				1024 // player touch opens
-#define SF_DOOR_LOCKED				2048	// Door is initially locked
-#define SF_DOOR_SILENT				4096	// Door plays no audible sound, and does not alert NPCs when opened
-#define	SF_DOOR_USE_CLOSES			8192	// Door can be +used to close before its autoreturn delay has expired.
-#define SF_DOOR_SILENT_TO_NPCS		16384	// Does not alert NPC's when opened.
-#define SF_DOOR_IGNORE_USE			32768	// Completely ignores player +use commands.
-#define SF_DOOR_NEW_USE_RULES		65536	// For func_door entities, behave more like prop_door_rotating with respect to +USE (changelist 242482)
-#define SF_DOOR_START_BREAKABLE		524288
+inline constexpr auto SF_DOOR_ROTATE_YAW = 0; // yaw by default
+inline constexpr auto SF_DOOR_START_OPEN_OBSOLETE = 1;
+inline constexpr auto SF_DOOR_ROTATE_BACKWARDS = 2;
+inline constexpr auto SF_DOOR_NONSOLID_TO_PLAYER = 4;
+inline constexpr auto SF_DOOR_PASSABLE = 8;
+inline constexpr auto SF_DOOR_ONEWAY = 16;
+inline constexpr auto SF_DOOR_NO_AUTO_RETURN = 32;
+inline constexpr auto SF_DOOR_ROTATE_ROLL = 64;
+inline constexpr auto SF_DOOR_ROTATE_PITCH = 128;
+inline constexpr auto SF_DOOR_PUSE = 256; // door can be opened by player's use button.
+inline constexpr auto SF_DOOR_NONPCS = 512; // NPC can't open
+inline constexpr auto SF_DOOR_PTOUCH = 1024; // player touch opens
+inline constexpr auto SF_DOOR_LOCKED = 2048; // Door is initially locked
+inline constexpr auto SF_DOOR_SILENT = 4096; // Door plays no audible sound, and does not alert NPCs when opened
+inline constexpr auto SF_DOOR_USE_CLOSES = 8192; // Door can be +used to close before its autoreturn delay has expired.
+inline constexpr auto SF_DOOR_SILENT_TO_NPCS = 16384; // Does not alert NPC's when opened.
+inline constexpr auto SF_DOOR_IGNORE_USE = 32768; // Completely ignores player +use commands.
+inline constexpr auto SF_DOOR_NEW_USE_RULES = 65536; // For func_door entities, behave more like prop_door_rotating with respect to +USE (changelist 242482)
+inline constexpr auto SF_DOOR_START_BREAKABLE = 524288;
 
 
 enum FuncDoorSpawnPos_t
@@ -158,5 +152,3 @@ private:
 
 	void CloseAreaPortalsThink( void );	///< Delays turning off area portals when closing doors to prevent visual artifacts
 };
-
-#endif // DOORS_H

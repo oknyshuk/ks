@@ -1,19 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Generic CRC functions
-//
-//=============================================================================//
 
-#include "tier0/platform.h"
-#include "commonmacros.h"
-#include "tier1/checksum_crc.h"
+import std;
+import ks.tier1;
 
 
 
-#define CRC32_INIT_VALUE 0xFFFFFFFFUL
-#define CRC32_XOR_VALUE  0xFFFFFFFFUL
+constexpr auto CRC32_INIT_VALUE = 0xFFFFFFFFUL;
+constexpr auto CRC32_XOR_VALUE = 0xFFFFFFFFUL;
 
-#define NUM_BYTES 256
+constexpr auto NUM_BYTES = 256;
 static const CRC32_t pulCRCTable[NUM_BYTES] =
 {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba,
@@ -121,8 +119,8 @@ JustAfew:
         {
             // pBuffer may be arbitrarily aligned, so don't dereference a CRC32_t* here.
             CRC32_t unalignedValue;
-            memcpy( &unalignedValue, pb, sizeof( unalignedValue ) );
-            ulCrc ^= LittleLong( unalignedValue );
+            std::memcpy( &unalignedValue, pb, sizeof( unalignedValue ) );
+            ulCrc ^= ( unalignedValue );
         }
         ulCrc  = pulCRCTable[(unsigned char)ulCrc] ^ (ulCrc >> 8);
         ulCrc  = pulCRCTable[(unsigned char)ulCrc] ^ (ulCrc >> 8);
@@ -166,12 +164,12 @@ JustAfew:
     nMain = nBuffer >> 3;
     while (nMain--)
     {
-        ulCrc ^= LittleLong( *(CRC32_t *)pb );
+        ulCrc ^= ( *(CRC32_t *)pb );
         ulCrc  = pulCRCTable[(unsigned char)ulCrc] ^ (ulCrc >> 8);
         ulCrc  = pulCRCTable[(unsigned char)ulCrc] ^ (ulCrc >> 8);
         ulCrc  = pulCRCTable[(unsigned char)ulCrc] ^ (ulCrc >> 8);
         ulCrc  = pulCRCTable[(unsigned char)ulCrc] ^ (ulCrc >> 8);
-        ulCrc ^= LittleLong( *(CRC32_t *)(pb + 4) );
+        ulCrc ^= ( *(CRC32_t *)(pb + 4) );
         ulCrc  = pulCRCTable[(unsigned char)ulCrc] ^ (ulCrc >> 8);
         ulCrc  = pulCRCTable[(unsigned char)ulCrc] ^ (ulCrc >> 8);
         ulCrc  = pulCRCTable[(unsigned char)ulCrc] ^ (ulCrc >> 8);
@@ -186,10 +184,10 @@ JustAfew:
 //-----------------------------------------------------------------------------
 // CRC64
 //-----------------------------------------------------------------------------
-#define CRC64_INIT_VALUE 0xFFFFFFFFFFFFFFFFULL
-#define CRC64_XOR_VALUE  0xFFFFFFFFFFFFFFFFULL
+constexpr auto CRC64_INIT_VALUE = 0xFFFFFFFFFFFFFFFFULL;
+constexpr auto CRC64_XOR_VALUE = 0xFFFFFFFFFFFFFFFFULL;
 
-#define NUM_CRC64_TABLE_ENTRIES 256
+constexpr auto NUM_CRC64_TABLE_ENTRIES = 256;
 static const CRC64_t pCRC64Table[ NUM_CRC64_TABLE_ENTRIES ] =
 {
 	/*

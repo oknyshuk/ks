@@ -1,14 +1,8 @@
-//====== Copyright  1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "basefilesystem.h"
-#include <mutex>
-#include "tier0/vprof.h"
-
-
+import std;
 
 //-----------------------------------------------------------------------------
 // CFileTracker.
@@ -95,7 +89,7 @@ CRC32_t CFileTracker::CalculateCRCForFile( FileHandle_t fp )
 	unsigned int initialFilePos = m_pFileSystem->Tell( fp );
 	m_pFileSystem->Seek( fp, 0, FILESYSTEM_SEEK_HEAD );
 
-	#define	CRC_CHUNK_SIZE	(32*1024)
+	constexpr auto CRC_CHUNK_SIZE = (32*1024);
 	char tempBuf[CRC_CHUNK_SIZE];
 
 	CRC32_Init( &crc );
@@ -150,36 +144,13 @@ int CFileTracker::GetFileInfos( CFileInfo **ppFileInfos, int nMaxFileInfos, cons
 			}
 			else
 			{
-				Assert( !"CFileTracker::GetFileInfos - overflowed list!" );
+				contract_assert( !"CFileTracker::GetFileInfos - overflowed list!" );
 			}
 		}
 	}
 
 	return nOut;
 }
-
-void CFileTracker::NoteFileLoadedFromSteam( const char *pFilename, const char *pPathID, bool bForcedLoadFromSteam )
-{
-	std::scoped_lock lock( m_Mutex );
-
-	if ( !pPathID )
-		pPathID = "";
-	
-	CPathIDFileList *pPath = GetPathIDFileList( pPathID );
-	CFileInfo *pInfo = pPath->FindFileInfo( pFilename );
-	if ( !pInfo )
-		pInfo = pPath->AddFileInfo( pFilename );
-
-	if ( m_pFileSystem->m_WhitelistSpewFlags & WHITELIST_SPEW_WHILE_LOADING )
-	{
-		Warning( "From Steam: [%s]\\%s\n", pPathID, pFilename );
-	}
-
-	pInfo->m_Flags = k_eFileFlagsLoadedFromSteam;
-	if ( bForcedLoadFromSteam )
-		pInfo->m_Flags |= k_eFileFlagsForcedLoadFromSteam;
-}
-
 
 void CFileTracker::CalculateMissingCRCs( IFileList *pWantCRCList )
 {
@@ -193,7 +164,7 @@ void CFileTracker::CalculateMissingCRCs( IFileList *pWantCRCList )
 		{
 			CFileInfo *pInfo = pOwnedInfo.get();
 			
-			if ( !( pInfo->m_Flags & k_eFileFlagsLoadedFromSteam ) && !( pInfo->m_Flags & k_eFileFlagsHasCRC ) )
+			if ( !( pInfo->m_Flags & k_eFileFlagsHasCRC ) )
 			{
 				// If the new "force match" list doesn't care whether the file has a CRC or not, then don't bother to calculate it.
 				if ( !pWantCRCList->IsFileInList( pInfo->GetFilename() ) )
@@ -216,7 +187,7 @@ void CFileTracker::CalculateMissingCRCs( IFileList *pWantCRCList )
 
 void CFileTracker::CacheFileCRC( const char *pPathID, const char *pRelativeFilename )
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	
 	// Get the file's info. Load the file if necessary.
 	CFileInfo *pInfo = GetFileInfo( pRelativeFilename, pPathID );
@@ -240,7 +211,7 @@ void CFileTracker::CacheFileCRC( const char *pPathID, const char *pRelativeFilen
 
 void CFileTracker::CacheFileCRC_Copy( const char *pPathID, const char *pRelativeFilename, const char *pPathIDToCopyFrom )
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	
 	// Get the file's info. Load the file if necessary.
 	CFileInfo *pSourceInfo = GetFileInfo( pRelativeFilename, pPathIDToCopyFrom );
@@ -269,7 +240,7 @@ void CFileTracker::CacheFileCRC_Copy( const char *pPathID, const char *pRelative
 
 EFileCRCStatus CFileTracker::CheckCachedFileCRC( const char *pPathID, const char *pRelativeFilename, CRC32_t *pCRC )
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	
 	// Get the file's info. Load the file if necessary.
 	CFileInfo *pInfo = GetFileInfo( pRelativeFilename, pPathID );
@@ -298,9 +269,8 @@ void CFileTracker::CalculateMissingCRC( const char *pFilename, const char *pPath
 	//		- Connect to a server using sv_pure 1 and allow_from_disk+check_crc on the hacked file
 	//
 	// What happens is that it comes through here (CalculateMissingCRC) after getting the server's whitelist.
-	// Then it calls FindFileInSearchPaths below and gets the file out of Steam,
-	// ** which marks the file as k_eFileFlagsLoadedFromSteam **, so it doesn't give that file to
-	// the server for the CRC check in GetUnverifiedCRCFiles.
+	// Then it calls FindFileInSearchPaths below, which can modify the flags of the file so that
+	// it doesn't give that file to the server for the CRC check in GetUnverifiedCRCFiles.
 	//
 	// By preserving the flags here and not letting FindFileInSearchPaths modify it, we make sure that
 	// we remember that the hacked file was loaded from disk.
@@ -337,7 +307,7 @@ void CFileTracker::CalculateMissingCRC( const char *pFilename, const char *pPath
 	}
 	else
 	{
-		Assert( false );
+		contract_assert( false );
 	}		
 
 	m_pFileSystem->Close( fh );
@@ -351,14 +321,14 @@ void CFileTracker::MarkAllCRCsUnverified()
 	// First clear the 'needs verification' list.
 	MarkAllCRCsVerified();
 
-	Assert( m_NeedsVerificationList.empty() );
+	contract_assert( m_NeedsVerificationList.empty() );
 	for ( auto &[pathID, pPath] : m_PathIDs )
 	{
 		for ( auto &[filename, pOwnedInfo] : pPath->m_Files )
 		{
 			CFileInfo *pInfo = pOwnedInfo.get();
 			
-			if ( !(pInfo->m_Flags & k_eFileFlagsLoadedFromSteam) && ( pInfo->m_Flags & k_eFileFlagsHasCRC ) )
+			if ( ( pInfo->m_Flags & k_eFileFlagsHasCRC ) )
 			{
 				AddToNeedsVerificationList( pInfo );
 			}
@@ -447,7 +417,7 @@ CPathIDFileList::~CPathIDFileList()
 
 CFileInfo* CPathIDFileList::FindFileInfo( const char *pFilename )
 {
-	Assert( !V_IsAbsolutePath( pFilename ) );
+	contract_assert( !V_IsAbsolutePath( pFilename ) );
 
 	auto i = m_Files.find( pFilename );
 	if ( i == m_Files.end() )
@@ -458,8 +428,8 @@ CFileInfo* CPathIDFileList::FindFileInfo( const char *pFilename )
 
 CFileInfo* CPathIDFileList::AddFileInfo( const char *pFilename )
 {
-	Assert( !V_IsAbsolutePath( pFilename ) );
-	Assert( !m_Files.contains( pFilename ) );
+	contract_assert( !V_IsAbsolutePath( pFilename ) );
+	contract_assert( !m_Files.contains( pFilename ) );
 	
 	auto it = m_Files.emplace( pFilename, std::make_unique< CFileInfo >() ).first;
 	CFileInfo *pFileInfo = it->second.get();
@@ -469,7 +439,6 @@ CFileInfo* CPathIDFileList::AddFileInfo( const char *pFilename )
 }
 
 
-#ifdef SUPPORT_VPK
 uintp ThreadStubProcessMD5Requests( void *pParam )
 {
 	return ((CFileTracker2 *)pParam)->ThreadedProcessMD5Requests();
@@ -487,10 +456,9 @@ unsigned CFileTracker2::ThreadedProcessMD5Requests()
 		StuffToMD5_t stuff;
 		while ( m_PendingJobs.PopItem( &stuff ) )
 		{
-            SNPROF( "ThreadProcessMD5Requests");
 
 			MD5Context_t ctx;
-			memset(&ctx, 0, sizeof(MD5Context_t));
+			std::memset(&ctx, 0, sizeof(MD5Context_t));
 			MD5Init(&ctx);
 			MD5Update(&ctx, stuff.m_pubBuffer, stuff.m_cubBuffer );
 			MD5Final( stuff.m_md5Value.bits, &ctx);
@@ -507,7 +475,7 @@ unsigned CFileTracker2::ThreadedProcessMD5Requests()
 				{
 					TrackedFile_t &trackedfile = m_AllOpenedFiles[itTrackedVPKFile->m_idxAllOpenedFiles];
 
-					memcpy( trackedfile.m_filehashFinal.m_md5contents.bits, stuff.m_md5Value.bits, sizeof( trackedfile.m_filehashFinal.m_md5contents.bits ) );
+					std::memcpy( trackedfile.m_filehashFinal.m_md5contents.bits, stuff.m_md5Value.bits, sizeof( trackedfile.m_filehashFinal.m_md5contents.bits ) );
 					trackedfile.m_filehashFinal.m_crcIOSequence = stuff.m_cubBuffer;
 					trackedfile.m_filehashFinal.m_cbFileLen = stuff.m_cubBuffer;
 					trackedfile.m_filehashFinal.m_eFileHashType = FileHash_t::k_EFileHashTypeEntireFile;
@@ -593,14 +561,14 @@ bool CFileTracker2::IsMD5RequestComplete( int iRequest, MD5Value_t *pMd5ValueOut
 	while ( m_CompletedJobs.PopItem( &stuff ) )
 	{
 		int idxList = stuff.m_idxListSubmittedJobs;
-		Q_memcpy( &m_SubmittedJobs[idxList].m_md5Value, &stuff.m_md5Value, sizeof( MD5Value_t ) );
+		V_memcpy( &m_SubmittedJobs[idxList].m_md5Value, &stuff.m_md5Value, sizeof( MD5Value_t ) );
 		m_SubmittedJobs[idxList].m_bFinished = true;
 	}
 
 	// did the one we wanted finish?
 	if ( m_SubmittedJobs[idxListWaiting].m_bFinished )
 	{
-		Q_memcpy( pMd5ValueOut, &m_SubmittedJobs[idxListWaiting].m_md5Value, sizeof( MD5Value_t ) );
+		V_memcpy( pMd5ValueOut, &m_SubmittedJobs[idxListWaiting].m_md5Value, sizeof( MD5Value_t ) );
 		// you can not ask again, we have removed it from the list
 		m_SubmittedJobs.erase(idxListWaiting);
 		return true;
@@ -626,7 +594,6 @@ bool CFileTracker2::BlockUntilMD5RequestComplete( int iRequest, MD5Value_t *pMd5
 	}
 	return false;
 }
-#endif
 
 
 // CFileTracker2 will replace most of CFileTracker soon
@@ -636,36 +603,29 @@ CFileTracker2::CFileTracker2( CBaseFileSystem *pFileSystem )
 	m_cMissedReads = 0;
 	m_bComputeFileHashes = true;
 
-#ifdef SUPPORT_VPK
 	m_cThreadBlocks = 0;
 	m_bThreadShouldRun = true;
 	m_hWorkThread = nullptr;
-#endif
 }
 
 
 CFileTracker2::~CFileTracker2()
 {
-#ifdef SUPPORT_VPK
-	Assert(!m_bThreadShouldRun);
-	Assert(m_hWorkThread==nullptr);
-#endif
+	contract_assert( !m_bThreadShouldRun );
+	contract_assert( m_hWorkThread==nullptr );
 }
 
 
 void CFileTracker2::InitAsyncThread()
 {
-#ifdef SUPPORT_VPK
-	Assert(  m_hWorkThread == nullptr );
+	contract_assert( m_hWorkThread == nullptr );
 	if ( m_hWorkThread == nullptr )
 		m_hWorkThread = CreateSimpleThread( ThreadStubProcessMD5Requests, this );
-#endif
 }
 
 
 void CFileTracker2::ShutdownAsync()
 {
-#ifdef SUPPORT_VPK
 	m_bThreadShouldRun = false;
 	m_threadEventWorkToDo.Set();
 	if ( m_hWorkThread )
@@ -675,7 +635,6 @@ void CFileTracker2::ShutdownAsync()
 		ReleaseThreadHandle( m_hWorkThread );
 		m_hWorkThread = nullptr;
 	}
-#endif
 }
 
 
@@ -727,7 +686,7 @@ void CFileTracker2::MarkAllCRCsUnverified()
 
 int CFileTracker2::GetUnverifiedFileHashes( CUnverifiedFileHash *pFiles, int nMaxFiles )
 {
-	Assert( nMaxFiles > 0 );
+	contract_assert( nMaxFiles > 0 );
 
 	std::scoped_lock lock( m_Mutex );
 
@@ -777,13 +736,13 @@ int CFileTracker2::GetUnverifiedFileHashes( CUnverifiedFileHash *pFiles, int nMa
 
 EFileCRCStatus CFileTracker2::CheckCachedFileHash( const char *pPathID, const char *pRelativeFilename, int nFileFraction, FileHash_t *pFileHash )
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	std::scoped_lock lock( m_Mutex );
 
 	CRC32_t crcFilename;
 	CRC32_Init( &crcFilename );
-	CRC32_ProcessBuffer( &crcFilename, pRelativeFilename, Q_strlen( pRelativeFilename ) );
-	CRC32_ProcessBuffer( &crcFilename, pPathID, Q_strlen( pPathID ) );
+	CRC32_ProcessBuffer( &crcFilename, pRelativeFilename, V_strlen( pRelativeFilename ) );
+	CRC32_ProcessBuffer( &crcFilename, pPathID, V_strlen( pPathID ) );
 	CRC32_Final( &crcFilename );
 
 	TrackedFile_t trackedfileFind;
@@ -817,7 +776,7 @@ bool TrackedFile_t::GetCRCValues( FileHash_t *pFileHash )
 	if ( m_filehashFinal.m_eFileHashType != FileHash_t::k_EFileHashTypeEntireFile )
 	{
 		MD5Context_t ctx;
-		Q_memcpy( &ctx, &m_md5ctx, sizeof( ctx ));
+		V_memcpy( &ctx, &m_md5ctx, sizeof( ctx ));
 		MD5Final( pFileHash->m_md5contents.bits, &ctx );
 		CRC32_t crcT = m_filehashInProgress.m_crcIOSequence;
 		CRC32_Final( &crcT );
@@ -829,7 +788,7 @@ bool TrackedFile_t::GetCRCValues( FileHash_t *pFileHash )
 	}
 	else
 	{
-		Q_memcpy( pFileHash->m_md5contents.bits, m_filehashFinal.m_md5contents.bits, sizeof(m_filehashFinal.m_md5contents));
+		V_memcpy( pFileHash->m_md5contents.bits, m_filehashFinal.m_md5contents.bits, sizeof(m_filehashFinal.m_md5contents));
 		pFileHash->m_crcIOSequence = m_filehashFinal.m_crcIOSequence;
 		pFileHash->m_eFileHashType = m_filehashFinal.m_eFileHashType;
 		pFileHash->m_cbFileLen = m_filehashFinal.m_cbFileLen;
@@ -839,7 +798,7 @@ bool TrackedFile_t::GetCRCValues( FileHash_t *pFileHash )
 	return true;
 }
 
-void TrackedFile_t::ProcessFileRead( void *dest, size_t nBytesRead )
+void TrackedFile_t::ProcessFileRead( void *dest, std::size_t nBytesRead )
 {
 	if ( m_filehashFinal.m_eFileHashType != FileHash_t::k_EFileHashTypeEntireFile )
 	{
@@ -848,7 +807,7 @@ void TrackedFile_t::ProcessFileRead( void *dest, size_t nBytesRead )
 		// if this single read is the entire file - discard any previous partial checksum
 		if ( m_nFilePos == 0 && nBytesRead == m_nLength )
 		{
-			memset(&m_md5ctx, 0, sizeof(m_md5ctx));
+			std::memset(&m_md5ctx, 0, sizeof(m_md5ctx));
 			MD5Init( &m_md5ctx );
 		}
 
@@ -865,7 +824,7 @@ void TrackedFile_t::ProcessFileRead( void *dest, size_t nBytesRead )
 			// its not a CRC in this case - its the actual length
 			m_filehashInProgress.m_crcIOSequence = m_nLength;
 			m_filehashInProgress.m_eFileHashType = FileHash_t::k_EFileHashTypeEntireFile;
-			Q_memcpy( &m_filehashFinal, &m_filehashInProgress, sizeof( m_filehashFinal ) );
+			V_memcpy( &m_filehashFinal, &m_filehashInProgress, sizeof( m_filehashFinal ) );
 		}
 		else
 		{
@@ -876,7 +835,6 @@ void TrackedFile_t::ProcessFileRead( void *dest, size_t nBytesRead )
 }
 
 
-#ifdef SUPPORT_VPK
 void CFileTracker2::NotePackFileAccess( const char *pFilename, const char *pPathID, CPackedStoreFileHandle &VPKHandle )
 {
 	std::scoped_lock lock( m_Mutex );
@@ -923,18 +881,14 @@ void CFileTracker2::NotePackFileAccess( const char *pFilename, const char *pPath
 		trackedVPKFileFind.m_nFileFraction += k_nFileFractionSize;
 	}
 }
-#endif
 
-#ifdef SUPPORT_VPK
 // MD5 VPK files in 1MB chunks
 void CFileTracker2::NotePackFileRead( CPackedStoreFileHandle &VPKHandle, void *pBuffer, int nReadLength )
 {
 	// This is all a no-op because we are using the VPK SubmitThreadedMD5Request API
 }
-#endif
 
 
-#ifdef SUPPORT_VPK
 // This is used by the dedicated server
 void CFileTracker2::AddFileHashForVPKFile( int nPackFileNumber, int nFileFraction, int cbFileLen, MD5Value_t &md5, CPackedStoreFileHandle &VPKHandle )
 {
@@ -965,9 +919,8 @@ void CFileTracker2::AddFileHashForVPKFile( int nPackFileNumber, int nFileFractio
 	trackedfile.m_filehashFinal.m_nPackFileNumber = nPackFileNumber;
 	trackedfile.m_filehashFinal.m_PackFileID = VPKHandle.m_pOwner->m_PackFileID;
 	trackedfile.m_filehashFinal.m_crcIOSequence = cbFileLen;
-	Q_memcpy( trackedfile.m_filehashFinal.m_md5contents.bits, md5.bits, sizeof( md5.bits) );
+	V_memcpy( trackedfile.m_filehashFinal.m_md5contents.bits, md5.bits, sizeof( md5.bits) );
 }
-#endif
 
 int CFileTracker2::IdxFileFromName( const char *pFilename, const char *pPathID, int nFileFraction, int64 nLength, bool bPackOrVPKFile, bool bRecordInRecentList )
 {
@@ -1005,7 +958,6 @@ int CFileTracker2::IdxFileFromName( const char *pFilename, const char *pPathID, 
 	return idxFile;
 }
 
-#ifdef SUPPORT_VPK
 int CFileTracker2::NotePackFileOpened( const char *pRawFileName, const char *pFilename, const char *pPathID, int64 nLength )
 {
 	std::scoped_lock lock( m_Mutex );
@@ -1028,9 +980,8 @@ int CFileTracker2::NotePackFileOpened( const char *pRawFileName, const char *pFi
 	}
 	return idxFile + 1;
 }
-#endif
 
-void CFileTracker2::NoteFileLoadedFromDisk( const char *pFilename, const char *pPathID, FILE *fp, int64 nLength )
+void CFileTracker2::NoteFileLoadedFromDisk( const char *pFilename, const char *pPathID, std::FILE *fp, int64 nLength )
 {
 	std::scoped_lock lock( m_Mutex );
 
@@ -1038,7 +989,7 @@ void CFileTracker2::NoteFileLoadedFromDisk( const char *pFilename, const char *p
 	m_mapAllOpenFiles.insert_or_assign( fp, idxFile );	// a reused FILE * now refers to this file
 }
 
-void CFileTracker2::RecordFileClose( FILE *fp )
+void CFileTracker2::RecordFileClose( std::FILE *fp )
 {
 	//VPROF_BUDGET("CFileTracker2::RecordFileClose", "PureFileTracker2");
 	std::scoped_lock lock( m_Mutex );
@@ -1058,7 +1009,7 @@ void CFileTracker2::RecordFileClose( FILE *fp )
 	}
 }
 
-void CFileTracker2::RecordFileSeek( FILE *fp, int64 pos, int seekType )
+void CFileTracker2::RecordFileSeek( std::FILE *fp, int64 pos, int seekType )
 {
 	std::scoped_lock lock( m_Mutex );
 	auto idx = m_mapAllOpenFiles.find( fp );
@@ -1086,7 +1037,7 @@ void CFileTracker2::RecordFileSeek( FILE *fp, int64 pos, int seekType )
 }
 
 
-void CFileTracker2::RecordFileRead( void *dest, size_t nBytesRead, size_t nBytesRequested, FILE *fp )
+void CFileTracker2::RecordFileRead( void *dest, std::size_t nBytesRead, std::size_t nBytesRequested, std::FILE *fp )
 {
 
 	//VPROF_BUDGET("CFileTracker2::RecordFileRead", "PureFileTracker2");
@@ -1121,7 +1072,7 @@ int CFileTracker2::ListOpenedFiles( bool bListAll, const char *pchFilenameFind, 
 
 			if ( file.m_PackFileID )
 				cPackFiles++;
-			if ( bListAll || ( pchFilenameFind && Q_stristr( file.m_filename.c_str(), pchFilenameFind ) ) )
+			if ( bListAll || ( pchFilenameFind && V_stristr( file.m_filename.c_str(), pchFilenameFind ) ) )
 			{
 				Msg( "FileTracker %s ( %d, %d, %d ) %d: %d %d\n", 
 					file.m_filename.c_str(), file.m_PackFileID, file.m_nPackFileNumber, 0, 
@@ -1138,7 +1089,7 @@ int CFileTracker2::ListOpenedFiles( bool bListAll, const char *pchFilenameFind, 
 
 			if ( file.m_PackFileID )
 				cPackFiles++;
-			if ( bListAll || ( pchFilenameFind && Q_stristr( file.m_filename.c_str(), pchFilenameFind ) ) )
+			if ( bListAll || ( pchFilenameFind && V_stristr( file.m_filename.c_str(), pchFilenameFind ) ) )
 			{
 				Msg( "FileTracker %s ( %d, %d, %d ) %d: %d %d\n", 
 					file.m_filename.c_str(), file.m_PackFileID, file.m_nPackFileNumber, 0, 
@@ -1150,19 +1101,3 @@ int CFileTracker2::ListOpenedFiles( bool bListAll, const char *pchFilenameFind, 
 	Msg( "FileTracker: %d files %d VPK files\n", (int)m_AllOpenedFiles.size(), cPackFiles );
 	return (int)m_AllOpenedFiles.size();
 }
-
-#ifdef DEBUG_FILETRACKER
-void CC_ListTrackedFiles(const CCommand &args)
-{
-	BaseFileSystem()->m_FileTracker2.ListOpenedFiles( true, nullptr, false );
-}
-
-static ConCommand trackerlistfiles("listtrackedfiles", CC_ListTrackedFiles, "ListTrackedFiles");
-
-void CC_ListRecentFiles(const CCommand &args)
-{
-	BaseFileSystem()->m_FileTracker2.ListOpenedFiles( true, nullptr, true );
-}
-
-static ConCommand trackerlistrecent("listrecentfiles", CC_ListRecentFiles, "ListRecentFiles");
-#endif

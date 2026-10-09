@@ -1,25 +1,30 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
-#include "reflect_annotations.h"
 #include "c_slideshow_display.h"
-#include "c_te_legacytempents.h"
 #include "tempent.h"
 #include "engine/IEngineSound.h"
-#include "dlight.h"
-#include "iefx.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "filesystem.h"
-#include "keyvalues.h"
 
-
-#define SLIDESHOW_LIST_BUFFER_MAX 8192
+constexpr auto SLIDESHOW_LIST_BUFFER_MAX = 8192;
 
 
 enum SlideshowCycleTypes
@@ -187,32 +192,32 @@ void C_SlideshowDisplay::ClientThink( void )
 void C_SlideshowDisplay::BuildSlideShowImagesList( void )
 {
 	FileFindHandle_t matHandle;
-	char szDirectory[_MAX_PATH];
-	char szMatFileName[_MAX_PATH] = {'\0'};
+	char szDirectory[k_cMaxPath];
+	char szMatFileName[k_cMaxPath] = {'\0'};
 	char szFileBuffer[ SLIDESHOW_LIST_BUFFER_MAX ];
 	char *pchCurrentLine = nullptr;
 
 	{
-		Q_snprintf( szDirectory, sizeof( szDirectory ), "materials/vgui/%s/*.vmt", m_szSlideshowDirectory );
+		V_snprintf( szDirectory, sizeof( szDirectory ), "materials/vgui/%s/*.vmt", m_szSlideshowDirectory );
 		const char *pMatFileName = g_pFullFileSystem->FindFirst( szDirectory, &matHandle );
 
 		if ( pMatFileName )
-			Q_strncpy( szMatFileName, pMatFileName, sizeof(szMatFileName) );
+			V_strncpy( szMatFileName, pMatFileName, sizeof(szMatFileName) );
 	}
 
 	int iSlideIndex = 0;
 
 	while ( szMatFileName[ 0 ] )
 	{
-		char szFileName[_MAX_PATH];
-		Q_snprintf( szFileName, sizeof( szFileName ), "vgui/%s/%s", m_szSlideshowDirectory, szMatFileName );
-		szFileName[ Q_strlen( szFileName ) - 4 ] = '\0';
+		char szFileName[k_cMaxPath];
+		V_snprintf( szFileName, sizeof( szFileName ), "vgui/%s/%s", m_szSlideshowDirectory, szMatFileName );
+		szFileName[ V_strlen( szFileName ) - 4 ] = '\0';
 
 		int iMatIndex = ::GetMaterialIndex( szFileName );
 
 		// Get material keywords
-		char szFullFileName[_MAX_PATH];
-		Q_snprintf( szFullFileName, sizeof( szFullFileName ), "materials/vgui/%s/%s", m_szSlideshowDirectory, szMatFileName );
+		char szFullFileName[k_cMaxPath];
+		V_snprintf( szFullFileName, sizeof( szFullFileName ), "materials/vgui/%s/%s", m_szSlideshowDirectory, szMatFileName );
 
 		KeyValues *pMaterialKeys = new KeyValues( "material" );
 		bool bLoaded = pMaterialKeys->LoadFromFile( g_pFullFileSystem, szFullFileName, nullptr );
@@ -244,7 +249,7 @@ void C_SlideshowDisplay::BuildSlideShowImagesList( void )
 				int iList;
 				for ( iList = 0; iList < std::ssize( m_SlideMaterialLists ); ++iList )
 				{
-					if ( Q_strcmp( m_SlideMaterialLists[ iList ]->szSlideKeyword, pchKeyword ) == 0 )
+					if ( V_strcmp( m_SlideMaterialLists[ iList ]->szSlideKeyword, pchKeyword ) == 0 )
 						break;
 				}
 
@@ -269,7 +274,7 @@ void C_SlideshowDisplay::BuildSlideShowImagesList( void )
 		int iList;
 		for ( iList = 0; iList < std::ssize( m_SlideMaterialLists ); ++iList )
 		{
-			if ( Q_strcmp( m_SlideMaterialLists[ iList ]->szSlideKeyword, "" ) == 0 )
+			if ( V_strcmp( m_SlideMaterialLists[ iList ]->szSlideKeyword, "" ) == 0 )
 				break;
 		}
 
@@ -288,7 +293,7 @@ void C_SlideshowDisplay::BuildSlideShowImagesList( void )
 			const char *pMatFileName = g_pFullFileSystem->FindNext( matHandle );
 
 			if ( pMatFileName )
-				Q_strncpy( szMatFileName, pMatFileName, sizeof(szMatFileName) );
+				V_strncpy( szMatFileName, pMatFileName, sizeof(szMatFileName) );
 			else
 				szMatFileName[ 0 ] = '\0';
 		}

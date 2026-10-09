@@ -1,22 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef SINGLEPLAY_GAMERULES_H
-#define SINGLEPLAY_GAMERULES_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "gamerules.h"
-
 
 #ifdef CLIENT_DLL
 
 	#define CSingleplayRules C_SingleplayRules
 
 #endif
-
 
 //=========================================================
 // CSingleplayRules - rules for the single player Half-Life 
@@ -55,7 +47,7 @@ public:
 // GR_Think
 	virtual void Think( void );
 	virtual bool IsAllowedToSpawn( CBaseEntity *pEntity );
-	virtual bool FAllowFlashlight( void ) { return TRUE; };
+	virtual bool FAllowFlashlight( void ) { return true; };
 
 	virtual bool FShouldSwitchWeapon( CBasePlayer *pPlayer, CBaseCombatWeapon *pWeapon );
 	virtual CBaseCombatWeapon *GetNextBestWeapon( CBaseCombatCharacter *pPlayer, CBaseCombatWeapon *pCurrentWeapon );
@@ -123,6 +115,3 @@ public:
 	virtual bool PlayerCanHearChat( CBasePlayer *pListener, CBasePlayer *pSpeaker, bool bTeamOnly );
 #endif
 };
-
-
-#endif // SINGLEPLAY_GAMERULES_H

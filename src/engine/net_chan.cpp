@@ -1,27 +1,24 @@
-//==== Copyright (c) 1996-2010, Valve Corporation, All rights reserved. =====//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2010 Valve Corporation
+
 // Purpose: net_chan.cpp: implementation of the CNetChan_t struct.
-//
-//===========================================================================//
 
 #include "../utils/bzip2/bzlib.h"
+import std;
+import ks.tier1;
 #include "net_chan.h"
-#include "tier1/strtools.h"
 #include "filesystem_engine.h"
 #include "demo.h"
-#include "convar.h"
-#include "mathlib/mathlib.h"
 #include "protocol.h"
 #include "inetmsghandler.h"
 #include "host.h"
 #include "netmessages.h"
-#include "replay.h"
 #include "datacache/imdlcache.h"
-#include "tier0/vprof.h"
 #include "net_ws_headers.h"									// need SOCKET
 #include "net_ws_queued_packet_sender.h"
-#include "download.h"
 #include "filesystem_init.h"
+
+static constexpr auto kMaxRoutablePayload = ks::IntToString<MAX_ROUTABLE_PAYLOAD>();
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -32,7 +29,7 @@ ConVar net_showudp_oob( "net_showudp_oob", "0", FCVAR_RELEASE, "Dump OOB UDP pac
 ConVar net_showudp_remoteonly( "net_showudp_remoteonly", "0", FCVAR_RELEASE, "Dump non-loopback udp only" );
 
 ConVar net_showtcp( "net_showtcp", "0", 0, "Dump TCP stream summary to console" );
-ConVar net_blocksize( "net_maxfragments", NETSTRING( MAX_ROUTABLE_PAYLOAD ), 0, "Max fragment bytes per packet", true, FRAGMENT_SIZE, true, MAX_ROUTABLE_PAYLOAD );
+ConVar net_blocksize( "net_maxfragments", kMaxRoutablePayload.c_str(), 0, "Max fragment bytes per packet", true, FRAGMENT_SIZE, true, MAX_ROUTABLE_PAYLOAD );
 
 static ConVar net_showmsg( "net_showmsg", "0", FCVAR_DEVELOPMENTONLY, "Show incoming message: <0|1|name>" );
 static ConVar net_showfragments( "net_showfragments", "0", 0, "Show netchannel fragments" );
@@ -49,15 +46,15 @@ static ConVar net_droponsendoverflow( "net_droponsendoverflow", "0", FCVAR_RELEA
 
 extern ConVar net_maxroutable;
 
-extern int  NET_ConnectSocket( int nSock, const netadr_t &addr );
-extern void NET_CloseSocket( int hSocket, int sock = -1 );
-extern int  NET_SendStream( int nSock, const char * buf, int len, int flags );
-extern int  NET_ReceiveStream( int nSock, char * buf, int len, int flags );
+extern ks::platform::socket *NET_ConnectSocket( int nSock, const netadr_t &addr );
+extern void NET_CloseSocket( ks::platform::socket *hSocket, int sock = -1 );
+extern int  NET_SendStream( ks::platform::socket *nSock, const char * buf, int len, int flags );
+extern int  NET_ReceiveStream( ks::platform::socket *nSock, char * buf, int len, int flags );
 
 // If the network connection hasn't been active in this many seconds, display some warning text.
-#define CONNECTION_PROBLEM_TIME		4.0f	// assume network problem after this time
+constexpr auto CONNECTION_PROBLEM_TIME = 4.0f; // assume network problem after this time
 
-#define BYTES2FRAGMENTS(i) ((i+FRAGMENT_SIZE-1)/FRAGMENT_SIZE)
+template <typename T1> [[gnu::always_inline]] inline auto BYTES2FRAGMENTS( T1 i ) { return ((i+FRAGMENT_SIZE-1)/FRAGMENT_SIZE); }
 
 #define FLIPBIT(v,b) if (v&b) v &= ~b; else v |= b;
 
@@ -70,7 +67,7 @@ void LogMultiline(bool input, char const *label, const char * data, size_t len) 
 	char hex_line[LINE_SIZE * 9 / 4 + 2], asc_line[LINE_SIZE + 1];
 	while (len > 0) 
 	{
-		memset(asc_line, ' ', sizeof(asc_line));
+		std::memset(asc_line, ' ', sizeof(asc_line));
 		memset(hex_line, ' ', sizeof(hex_line));
 		size_t line_len = std::min(len, LINE_SIZE);
 		for (size_t i=0; i<line_len; ++i) {
@@ -88,9 +85,7 @@ void LogMultiline(bool input, char const *label, const char * data, size_t len) 
 }
 
 // Want this on PC and non-cert builds
-#define NET_PARANOID_DUMPS
 
-#if defined( NET_PARANOID_DUMPS )
 class CNetchanParanoidMode
 {
 public:
@@ -132,7 +127,7 @@ private:
 		{
 			m_szName[ 0 ] = 0;
 			m_szDesc[ 0 ] = 0;
-			Q_memset( m_Message, 0, sizeof( m_Message ) );
+			V_memset( m_Message, 0, sizeof( m_Message ) );
 		}
 
 		void Init( INetMessage *msg, int nStartBit )
@@ -141,8 +136,8 @@ private:
 			m_nMessageSize = msg->GetSize();
 			m_nType = msg->GetType();
 			m_nGroup = msg->GetGroup();
-			Q_strncpy( m_szName, msg->GetName(), sizeof( m_szName ) );
-			//Q_strncpy( m_szDesc, msg->ToString(), sizeof( m_szDesc ) );
+			V_strncpy( m_szName, msg->GetName(), sizeof( m_szName ) );
+			//V_strncpy( m_szDesc, msg->ToString(), sizeof( m_szDesc ) );
 			m_szDesc[ 0 ] = 0; // Don't call ToString until after message parses
 			m_nStartBit = nStartBit;
 			m_nEndBit = -1;
@@ -154,17 +149,17 @@ private:
 			m_nMessageSize = 0;
 			m_nType = nType;
 			m_nGroup = 0;
-			Q_strncpy( m_szName, pchName, sizeof( m_szName ) );
-			Q_strncpy( m_szDesc, pchDesc, sizeof( m_szDesc ) );
+			V_strncpy( m_szName, pchName, sizeof( m_szName ) );
+			V_strncpy( m_szDesc, pchDesc, sizeof( m_szDesc ) );
 			m_nStartBit = nStartBit;
 			m_nEndBit = -1;
 		}
 
 		void UpdateRaw( INetMessage *msg, int nEndBit )
 		{
-			Q_memcpy( m_Message, (const byte *)msg, std::min( msg->GetSize(), sizeof( m_Message ) ) );
+			V_memcpy( m_Message, (const byte *)msg, std::min( msg->GetSize(), sizeof( m_Message ) ) );
 			m_nEndBit = nEndBit;
-			Q_strncpy( m_szDesc, msg->ToString(), sizeof( m_szDesc ) );
+			V_strncpy( m_szDesc, msg->ToString(), sizeof( m_szDesc ) );
 		}
 
 		void Dump()
@@ -256,7 +251,7 @@ void CNetchanParanoidMode::StartPacket( bf_read &fullbuf )
 		return;
 
 	m_nRawDataSize = std::min<std::common_type_t<size_t, int>>( fullbuf.TotalBytesAvailable(), NET_MAX_PAYLOAD );
-	Q_memcpy( m_pRawData, fullbuf.GetBasePointer(), m_nRawDataSize );
+	V_memcpy( m_pRawData, fullbuf.GetBasePointer(), m_nRawDataSize );
 
 	// Reset counter
 	m_nPacketMessageCount = 0;
@@ -335,14 +330,6 @@ void CNetchanParanoidMode::Dump( CNetChan *channel, char const *pchReason )
 	Msg( "Raw\n" );
 	LogMultiline( false, "PKT", (const char *)m_pRawData, m_nRawDataSize );
 }
-#else
-
-void NET_InitParanoidMode()
-{
-	// NOTHING!!!
-}
-
-#endif
 
 // We only need to checksum packets on the PC and only when we're actually sending them over the network.
 bool ShouldChecksumPackets()
@@ -448,7 +435,7 @@ void CNetChan::CompressFragments()
 				DevMsg("Compressing fragments for %s(%s) (%d -> %d bytes)\n", name, address, data->bytes, compressedSize );
 
 				// copy compressed data but dont reallocate memory
-				Q_memcpy( data->buffer, compressedData, compressedSize );
+				V_memcpy( data->buffer, compressedData, compressedSize );
 
 				data->nUncompressedSize = data->bytes;
 				data->bytes = compressedSize;
@@ -460,14 +447,14 @@ void CNetChan::CompressFragments()
 		}
 		else // it's a file
 		{
-			Assert( data->file != FILESYSTEM_INVALID_HANDLE );
+			contract_assert( data->file != FILESYSTEM_INVALID_HANDLE );
 
 			char compressedfilename[ MAX_OSPATH ];
 			int compressedFileSize = -1;
 			FileHandle_t hZipFile = FILESYSTEM_INVALID_HANDLE;
 
 			// check to see if there is a compressed version of the file
-			Q_snprintf( compressedfilename, sizeof(compressedfilename), "%s.ztmp", data->filename);
+			V_snprintf( compressedfilename, sizeof(compressedfilename), "%s.ztmp", data->filename);
 
 			// check the timestamps 
 			int compressedFileTime = g_pFileSystem->GetFileTime( compressedfilename );
@@ -541,7 +528,7 @@ void CNetChan::UncompressFragments( dataFragments_t *data )
 	if ( !data->isCompressed )
 		return;
 
-	VPROF( "UncompressFragments" );
+	CVProfScope _( "UncompressFragments", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// allocate buffer for uncompressed data, align to 4 bytes boundary
 	char *newbuffer = new char[PAD_NUMBER( data->nUncompressedSize, 4 )];
@@ -550,7 +537,7 @@ void CNetChan::UncompressFragments( dataFragments_t *data )
 	// uncompress data
 	NET_BufferToBufferDecompress( newbuffer, &uncompressedSize, data->buffer, data->bytes );
 
-	Assert( uncompressedSize == data->nUncompressedSize );
+	contract_assert( uncompressedSize == data->nUncompressedSize );
 
 	// free old buffer and set new buffer
 	delete [] data->buffer;
@@ -643,7 +630,7 @@ bool CNetChan::EnqueueVeryLargeAsyncTransfer( INetMessage &msg )
 	if ( !bResult )
 	{
 		Warning( "EnqueueVeryLargeAsyncTransfer %s: buffer overflow (maxsize = %d)!\n", GetAddress(), NET_MAX_PAYLOAD );
-		Assert( 0 );
+		contract_assert( 0 );
 
 		if ( net_droponsendoverflow.GetBool() )
 		{
@@ -770,7 +757,7 @@ CNetChan::CNetChan()
 	last_received = 0;
 	connect_time = 0;
 	
-	Q_strncpy( m_Name, "", sizeof(m_Name) ); 
+	V_strncpy( m_Name, "", sizeof(m_Name) ); 
 
 	m_MessageHandler = nullptr;
 	m_DemoRecorder = nullptr;
@@ -827,8 +814,8 @@ called to open a channel to a remote system
 */
 void CNetChan::Setup( int sock, const ns_address &adr, const char * name, INetChannelHandler * handler, const byte *pbEncryptionKey )
 {
-	Assert( name ); 
-	Assert ( handler );
+	contract_assert( name ); 
+	contract_assert( handler );
 
 	m_Socket = sock;
 
@@ -844,13 +831,12 @@ void CNetChan::Setup( int sock, const ns_address &adr, const char * name, INetCh
 	last_received		= net_time;
 	connect_time		= net_time;
 	
-	Q_strncpy( m_Name, name, sizeof(m_Name) ); 
+	V_strncpy( m_Name, name, sizeof(m_Name) ); 
 
 	m_MessageHandler = handler;
 
 	m_DemoRecorder = nullptr;
 
-	MEM_ALLOC_CREDIT();
 
 	SetMaxBufferSize( false, NET_MAX_DATAGRAM_PAYLOAD );
 
@@ -917,11 +903,11 @@ void CNetChan::Setup( int sock, const ns_address &adr, const char * name, INetCh
 
 void CNetChan::ResetStreaming( void )
 {
-	m_SteamType = STREAM_CMD_NONE;
+	m_StreamType = STREAM_CMD_NONE;
 	m_StreamLength = 0;	
 	m_StreamReceived = 0;
 	m_StreamSeqNr = 0;
-	m_SteamFile[0] = 0;	
+	m_StreamFile[0] = 0;	
 }
 
 bool CNetChan::StartStreaming( unsigned int challengeNr )
@@ -946,7 +932,6 @@ bool CNetChan::StartStreaming( unsigned int challengeNr )
 		return false;
 	}
 
-	MEM_ALLOC_CREDIT();
 
 	m_StreamSocket = NET_ConnectSocket( m_Socket, remote_address.AsType<netadr_t>() );
 	ks::grow_to( m_StreamData, NET_MAX_PAYLOAD );
@@ -973,7 +958,7 @@ void CNetChan::GetSequenceData( int &nOutSequenceNr, int &nInSequenceNr, int &nO
 
 void CNetChan::SetSequenceData( int nOutSequenceNr, int nInSequenceNr, int nOutSequenceNrAck )
 {
-	Assert( IsPlayback() );
+	contract_assert( IsPlayback() );
 
 	m_nOutSequenceNr = nOutSequenceNr;
 	m_nInSequenceNr = nInSequenceNr;
@@ -1047,15 +1032,14 @@ void CNetChan::SetMaxBufferSize(bool bReliable, int nBytes, bool bVoice )
 	if ( copybits > 0 )
 	{
 		copybuf = new byte[ copybytes ];
-		Q_memcpy( copybuf, buffer->data(), copybytes );
+		V_memcpy( copybuf, buffer->data(), copybytes );
 	}
 
-	MEM_ALLOC_CREDIT();
 	buffer->assign( nBytes, 0 );
 
 	if ( copybits > 0 )
 	{
-		Q_memcpy( buffer->data(), copybuf, copybytes );
+		V_memcpy( buffer->data(), copybuf, copybytes );
 		delete [] copybuf;
 		copybuf = nullptr;
 	}
@@ -1129,8 +1113,8 @@ bool CNetChan::IsPlayback( void ) const
 
 void CNetChan::FlowReset( void )
 {
-	Q_memset( m_DataFlow, 0, sizeof( m_DataFlow ) );
-	Q_memset( m_MsgStats, 0, sizeof( m_MsgStats ) );
+	V_memset( m_DataFlow, 0, sizeof( m_DataFlow ) );
+	V_memset( m_MsgStats, 0, sizeof( m_MsgStats ) );
 }
 
 void CNetChan::FlowNewPacket(int flow, int seqnr, int acknr, int nChoked, int nDropped, int nSize )
@@ -1167,7 +1151,7 @@ void CNetChan::FlowNewPacket(int flow, int seqnr, int acknr, int nChoked, int nD
 			pframeheader->choked = 0; // not acknowledged yet
 			pframe->dropped = 0;
 			pframe->m_flInterpolationAmount = 0.0f;
-			Q_memset( &pframe->msggroups, 0, sizeof(pframe->msggroups) );
+			V_memset( &pframe->msggroups, 0, sizeof(pframe->msggroups) );
 
 			if ( nBackTrack < ( nChoked + nDropped ) )
 			{
@@ -1192,9 +1176,9 @@ void CNetChan::FlowNewPacket(int flow, int seqnr, int acknr, int nChoked, int nD
 	else
 	{
 #ifdef DEDICATED
-		Assert( seqnr > pflow->currentindex );
+		contract_assert( seqnr > pflow->currentindex );
 #else
-		Assert( demoplayer->IsPlayingBack() || seqnr > pflow->currentindex );
+		contract_assert( demoplayer->IsPlayingBack() || seqnr > pflow->currentindex );
 #endif
 	}
 
@@ -1240,7 +1224,7 @@ void CNetChan::FlowUpdate(int flow, int addbytes)
 	int		totallatencycount = 0;
 	int		totalchoked = 0;
 
-	float   starttime = FLT_MAX;
+	float   starttime = std::numeric_limits<float>::max();
 	float	endtime = 0.0f;
 	netframe_header_t * pcurr;
 
@@ -1338,7 +1322,7 @@ bool CNetChan::IsFileInWaitingList( const char *filename )
 		{
 			dataFragments_t * data = m_WaitingList[stream][i]; 
 
-			if ( !Q_strcmp( data->filename, filename ) )
+			if ( !V_strcmp( data->filename, filename ) )
 				return true; // alread in list
 		}
 	}
@@ -1348,7 +1332,7 @@ bool CNetChan::IsFileInWaitingList( const char *filename )
 
 void CNetChan::RemoveHeadInWaitingList( int nList )
 {
-	Assert( std::ssize( m_WaitingList[nList] ) );
+	contract_assert( std::ssize( m_WaitingList[nList] ) );
 
 	dataFragments_t * data = m_WaitingList[nList][0]; // get head
 
@@ -1394,7 +1378,7 @@ bool CNetChan::CreateFragmentsFromBuffer( bf_write *buffer, int stream )
 			// we have enough space for it, create new larger mem buffer
 			char *newBuf = new char[totalBytes];
 
-			Q_memcpy( newBuf, data->buffer, data->bytes );
+			V_memcpy( newBuf, data->buffer, data->bytes );
 
 			delete [] data->buffer; // free old buffer
 
@@ -1500,7 +1484,7 @@ bool CNetChan::CreateFragmentsFromFile( const char *filename, int stream, unsign
 	}
 
 	data->transferID = transferID;
-	Q_strncpy( data->filename, filename, sizeof(data->filename) );
+	V_strncpy( data->filename, filename, sizeof(data->filename) );
 		
 	m_WaitingList[stream].push_back( data );	// that's it for now
 
@@ -1588,9 +1572,9 @@ bool CNetChan::SendSubChannelData( bf_write &buf )
 
 		if ( bSingleBlock )
 		{	
-			Assert( length == data->bytes );
-			Assert( length < NET_MAX_PAYLOAD );
-			Assert( offset == 0 );
+			contract_assert( length == data->bytes );
+			contract_assert( length < NET_MAX_PAYLOAD );
+			contract_assert( offset == 0 );
 
 			buf.WriteOneBit( 0 );	// single block bit
 
@@ -1655,14 +1639,14 @@ bool CNetChan::SendSubChannelData( bf_write &buf )
 		// write fragments to buffer
 		if ( data->buffer )
 		{
-			Assert( data->file == FILESYSTEM_INVALID_HANDLE );
+			contract_assert( data->file == FILESYSTEM_INVALID_HANDLE );
 			// send from memory block
 			buf.WriteBytes( data->buffer+offset, length );
 		}
 		else // if ( data->file != FILESYSTEM_INVALID_HANDLE )
 		{
 			// send from file
-			Assert( data->file != FILESYSTEM_INVALID_HANDLE );
+			contract_assert( data->file != FILESYSTEM_INVALID_HANDLE );
 			char *tmpbuf = new char[ std::max<std::common_type_t<unsigned int, int>>( length, 1 ) ]; // alloc on stack
 			g_pFileSystem->Seek( data->file, offset, FILESYSTEM_SEEK_HEAD );
 			g_pFileSystem->Read( tmpbuf, length, data->file );
@@ -1818,7 +1802,7 @@ bool CNetChan::ReadSubChannelData( bf_read &buf, int stream  )
 		return false;
 	}
 
-	Assert ( (offset + length) <= data->bytes );
+	contract_assert( (offset + length) <= data->bytes );
 
 	buf.ReadBytes( data->buffer + offset, length ); // read data
 
@@ -1854,7 +1838,7 @@ void CNetChan::UpdateSubChannels()
 
 		int nSentFragments = data->ackedFragments + data->pendingFragments;
 
-		Assert( nSentFragments <= data->numFragments );
+		contract_assert( nSentFragments <= data->numFragments );
 
 		if ( nSentFragments == data->numFragments )
 			continue; // all fragments already send
@@ -1906,11 +1890,8 @@ unsigned short BufferToShortChecksum( const void *pvData, size_t nLength )
 }
 
 
-#define MIN_ROUTABLE_TESTING
 
-#if defined( _DEBUG ) || defined( MIN_ROUTABLE_TESTING )
 static ConVar net_minroutable( "net_minroutable", "16", FCVAR_DEVELOPMENTONLY, "Forces larger payloads." );
-#endif
 
 // XBox live requires appending voice data in the clear after game payload
 static bool ShouldSendVoiceInTheClear()
@@ -1930,7 +1911,7 @@ A 0 length will still generate a packet and deal with the reliable messages.
 */
 int CNetChan::SendDatagram(bf_write *datagram)
 {
-	VPROF( "CNetChan::SendDatagram" );
+	CVProfScope _( "CNetChan::SendDatagram", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	byte		send_buf[ NET_MAX_MESSAGE ];
 
 	// Make sure for the client that the max routable payload size is up to date
@@ -1989,7 +1970,7 @@ int CNetChan::SendDatagram(bf_write *datagram)
 	if ( ShouldChecksumPackets() )
 	{
 		send.WriteShort( 0 );  // write correct checksum later
-		Assert( !(send.GetNumBitsWritten() % 8 ) );
+		contract_assert( !(send.GetNumBitsWritten() % 8 ) );
 	}
 
 	// Note, this only matters on the PC
@@ -2047,12 +2028,10 @@ int CNetChan::SendDatagram(bf_write *datagram)
 
 	int nMinRoutablePayload = MIN_ROUTABLE_PAYLOAD;
 
-#if defined( _DEBUG ) || defined( MIN_ROUTABLE_TESTING )
 	if ( m_Socket == NS_SERVER )
 	{
 		nMinRoutablePayload = net_minroutable.GetInt();
 	}
-#endif
 
 	// Deal with packets that are too small for some networks
 	while ( send.GetNumBytesWritten() < nMinRoutablePayload )		
@@ -2113,7 +2092,7 @@ int CNetChan::SendDatagram(bf_write *datagram)
 	if ( ShouldChecksumPackets() )
 	{
 		const void *pvData = send.GetData() + nCheckSumStart;
-		Assert( !(send.GetNumBitsWritten() % 8 ) );
+		contract_assert( !(send.GetNumBitsWritten() % 8 ) );
 		int nCheckSumBytes = send.GetNumBytesWritten() - nCheckSumStart;
 		unsigned short usCheckSum = BufferToShortChecksum( pvData, nCheckSumBytes );
 
@@ -2137,21 +2116,12 @@ int CNetChan::SendDatagram(bf_write *datagram)
 			bytesSent && 
 			( bytesSent < send.GetNumBytesWritten() ) )
 		{
-			Q_snprintf( comp, sizeof( comp ), " compression=%5u [%5.2f %%]", bytesSent, 100.0f * float( bytesSent ) / float( send.GetNumBytesWritten() ) );
+			V_snprintf( comp, sizeof( comp ), " compression=%5u [%5.2f %%]", bytesSent, 100.0f * float( bytesSent ) / float( send.GetNumBytesWritten() ) );
 		}
 	
 		char desc[ 128 ];
-		uint64 steamID = g_pSteamSocketMgr->GetSteamIDForRemote( remote_address );
 		Color clr( 0, 200, 255, 255 );
-		if ( steamID != 0ull )
-		{
-			clr = Color( 255, 255, 100, 255 );
-			Q_snprintf( desc, sizeof( desc ), "%12.12s %21.21s s(%llx)", GetName(), GetAddress(), steamID );
-		}
-		else
-		{
-			Q_snprintf( desc, sizeof( desc ), "%12.12s %21.21s", GetName(), GetAddress() );
-		}
+		V_snprintf( desc, sizeof( desc ), "%12.12s %21.21s", GetName(), GetAddress() );
 
 		ConColorMsg ( clr, "UDP -> %s: sz=%5i seq=%5i ack=%5i rel=%1i tm=%8.3f%s\n"
 			, desc
@@ -2263,10 +2233,8 @@ bool CNetChan::ProcessMessages( bf_read &buf, bool wasReliable  )
 
 bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 {
-	VPROF( "CNetChan::ProcessMessages" );
-#if defined( NET_PARANOID_DUMPS )
+	CVProfScope _( "CNetChan::ProcessMessages", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	CNetchanParanoidMode *pParanoid = &g_NetParanoid;
-#endif
 	m_bStopProcessing = false;
 
 	const char * showmsgname = net_showmsg.GetString();
@@ -2320,7 +2288,7 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 			if ( !netmsg )
 			{
 				Msg( "Netchannel: failed reading message %d from %s.\n", cmd, GetAddress() );
-				Assert ( 0 );
+				contract_assert( 0 );
 				return false;
 			}
 
@@ -2330,7 +2298,7 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 
 			if ( showmsgname )
 			{
-				if ( (*showmsgname == '1') || !Q_stricmp(showmsgname, netmsg->GetName() ) )
+				if ( (*showmsgname == '1') || !V_stricmp(showmsgname, netmsg->GetName() ) )
 				{
 					Msg("Msg from %s: %s\n", GetAddress(), netmsg->GetName() );
 					Msg("%s\n", netmsg->ToString() );
@@ -2339,7 +2307,7 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 
 			if ( blockmsgname )
 			{
-				if ( (*blockmsgname== '1') || !Q_stricmp(blockmsgname, netmsg->GetName() ) )
+				if ( (*blockmsgname== '1') || !V_stricmp(blockmsgname, netmsg->GetName() ) )
 				{
 					Msg("Blocking message %s\n", netmsg->ToString() );
 					continue;
@@ -2372,7 +2340,7 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 				if ( !bRet )
 				{
 					ConDMsg( "Netchannel: failed processing message %s.\n", netmsg->GetName() );
-					Assert ( 0 );
+					contract_assert( 0 );
 					delete netmsg;
 					return false;
 				}
@@ -2392,10 +2360,8 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 		else
 		{
 			ConMsg( "Netchannel: unknown net message (%i) from %s.\n", cmd, GetAddress() );
-			Assert ( 0 );
-#if defined( NET_PARANOID_DUMPS )
+			contract_assert( 0 );
 			pParanoid->Dump( this, "unknown message" );
-#endif
 			return false;
 		}
 	}
@@ -2408,8 +2374,6 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 		m_DemoRecorder->RecordMessages( democopy, buf.GetNumBitsRead() - startbit );
 	}
 #endif
-
-#if defined( NET_PARANOID_DUMPS )
 
 	int level = net_dumptest.GetInt();
 	if ( level > 0 )
@@ -2426,7 +2390,6 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 			pParanoid->Dump( this, "requested from console" );
 		}
 	}
-#endif
 
 	return true; // ok fine
 }
@@ -2434,7 +2397,7 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 bool CNetChan::SetActiveChannel( INetChannel *pNewChannel )
 {
 	m_pActiveChannel = static_cast< CNetChan * >( pNewChannel );
-	Assert( m_pActiveChannel );
+	contract_assert( m_pActiveChannel );
 	return m_pActiveChannel ? true : false;
 }
 
@@ -2488,14 +2451,6 @@ void CNetChan::CheckWaitingList(int nList)
 		// all fragmenst were send successfully
 		if ( net_showfragments.GetBool() )
 			ConMsg("Sending complete: %i fragments, %i bytes.\n", data->numFragments, data->bytes );
-
-#if defined( REPLAY_ENABLED )
-		// if it's a replay demo, notify the replay system
-		if ( data->isReplayDemo )
-		{
-			Replay_OnFileSendComplete( data->filename, data->bytes );
-		}
-#endif
 
 		RemoveHeadInWaitingList( nList );
 
@@ -2638,7 +2593,7 @@ int CNetChan::ProcessPacketHeader( netpacket_t * packet )
 		unsigned short usCheckSum = (unsigned short)packet->message.ReadUBitLong( 16 );
 
 		// Checksum applies to rest of packet
-		Assert( !( packet->message.GetNumBitsRead() % 8 ) );
+		contract_assert( !( packet->message.GetNumBitsRead() % 8 ) );
 		int nOffset = packet->message.GetNumBitsRead() >> 3;
 		int nCheckSumBytes = packet->message.TotalBytesAvailable() - nOffset;
 	
@@ -2707,7 +2662,7 @@ int CNetChan::ProcessPacketHeader( netpacket_t * packet )
 		// data of channel i has been acknowledged
 		subChannel_s * subchan = &m_SubChannels[i];
 
-		Assert( subchan->index == i);
+		contract_assert( subchan->index == i );
 
 		if ( (m_nOutReliableState & bitmask) == (relState & bitmask) )
 		{
@@ -2719,7 +2674,7 @@ int CNetChan::ProcessPacketHeader( netpacket_t * packet )
 			else if ( subchan->sendSeqNr > sequence_ack )
 			{
 				ConMsg ("%s:reliable state invalid (%i).\n"	,GetAddress(), i );
-				Assert( 0 );
+				contract_assert( 0 );
 				return -1;
 			}
 			else if ( subchan->state == SUBCHANNEL_WAITING )
@@ -2729,7 +2684,7 @@ int CNetChan::ProcessPacketHeader( netpacket_t * packet )
 					if ( subchan->numFragments[j] == 0 )
 						continue;
 
-					Assert( std::ssize( m_WaitingList[j] ) > 0 );
+					contract_assert( std::ssize( m_WaitingList[j] ) > 0 );
 					
 					dataFragments_t * data = m_WaitingList[j][0];
 
@@ -2745,7 +2700,7 @@ int CNetChan::ProcessPacketHeader( netpacket_t * packet )
 		{
 			if ( subchan->sendSeqNr <= sequence_ack )
 			{
-				Assert( subchan->state != SUBCHANNEL_FREE );
+				contract_assert( subchan->state != SUBCHANNEL_FREE );
 
 				if ( subchan->state == SUBCHANNEL_WAITING )
 				{
@@ -2794,9 +2749,9 @@ and then the netmessages processed
 */
 void CNetChan::ProcessPacket( netpacket_t * packet, bool bHasHeader )
 {
-	VPROF( "CNetChan::ProcessPacket" );
+	CVProfScope _( "CNetChan::ProcessPacket", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-	Assert( packet );
+	contract_assert( packet );
 
 	bf_read &msg = packet->message;	// handy shortcut
 
@@ -2806,9 +2761,7 @@ void CNetChan::ProcessPacket( netpacket_t * packet, bool bHasHeader )
 	{
 		return;
 	}
-#if defined( NET_PARANOID_DUMPS )
 	g_NetParanoid.StartPacket( msg );
-#endif
 	// Update data flow stats
 	FlowUpdate( FLOW_INCOMING, packet->wiresize + UDP_HEADER_SIZE );
 
@@ -2821,24 +2774,13 @@ void CNetChan::ProcessPacket( netpacket_t * packet, bool bHasHeader )
 
 	if ( flags == -1 )
 		return; // invalid header/packet
-#if defined( NET_PARANOID_DUMPS )
 	g_NetParanoid.NoteHeaderSize( msg, flags );
-#endif
 	if ( net_showudp.GetInt() && net_showudp.GetInt() != 3 &&
 		( !net_showudp_remoteonly.GetBool() || !( remote_address.IsLocalhost() || remote_address.IsLoopback() ) ) )
 	{
 		char desc[ 128 ];
-		uint64 steamID = g_pSteamSocketMgr->GetSteamIDForRemote( remote_address );
 		Color clr( 0, 200, 255, 255 );
-		if ( steamID != 0ull )
-		{
-			clr = Color( 255, 255, 100, 255 );
-			Q_snprintf( desc, sizeof( desc ), "%12.12s %21.21s s(%llx)", GetName(), GetAddress(), steamID );
-		}
-		else
-		{
-			Q_snprintf( desc, sizeof( desc ), "%12.12s %21.21s", GetName(), GetAddress() );
-		}
+		V_snprintf( desc, sizeof( desc ), "%12.12s %21.21s", GetName(), GetAddress() );
 		ConColorMsg( clr, "UDP <- %s: sz=%5i seq=%5i ack=%5i rel=%1i tm=%8.3f wire=%i\n"
 			, desc
 			, packet->size
@@ -2930,7 +2872,7 @@ bool CNetChan::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice )
 	if ( !bResult )
 	{
 		Warning( "SendNetMsg %s: stream[%s] buffer overflow (maxsize = %d)!\n", GetAddress(), pStream->GetDebugName(), (pStream->GetMaxNumBits()+7)/8 );
-		Assert( 0 );
+		contract_assert( 0 );
 
 		if ( net_droponsendoverflow.GetBool() )
 		{
@@ -2959,7 +2901,6 @@ bool CNetChan::RegisterMessage(INetMessageBinder *msg)
 {
 	int Type = msg->GetType();
 
-	Assert( Type <= SVC_Messages_MAX || Type <= CLC_Messages_MAX || Type <= NET_Messages_MAX );
 
 	ks::ensure_size( m_NetMessages, Type + 1 );
 
@@ -3060,12 +3001,12 @@ bool CNetChan::SendReliableAcknowledge(int seqnr)
 bool CNetChan::ProcessStream( void )
 {
 	char		cmd;
-	ALIGN4 char	headerBuf[512] ALIGN4_POST;
+	char	headerBuf[512] [[gnu::aligned(4)]];
 	
 	if ( !m_StreamSocket )
 		return true;
 
-	if ( m_SteamType == STREAM_CMD_NONE )
+	if ( m_StreamType == STREAM_CMD_NONE )
 	{
 		// read command byte
 		int ret = NET_ReceiveStream( m_StreamSocket, &cmd, 1, 0 );
@@ -3083,7 +3024,7 @@ bool CNetChan::ProcessStream( void )
 		
 		ResetStreaming();	// clear all state values
 
-		m_SteamType = cmd;
+		m_StreamType = cmd;
 
 	}
 
@@ -3091,7 +3032,7 @@ bool CNetChan::ProcessStream( void )
 
 	// now check command type
 
-	if ( m_SteamType==STREAM_CMD_AUTH )
+	if ( m_StreamType==STREAM_CMD_AUTH )
 	{
 		// server accpeted connection, send challenge nr
 		m_StreamActive = true;
@@ -3101,7 +3042,7 @@ bool CNetChan::ProcessStream( void )
 		return SendReliableAcknowledge( m_ChallengeNr );
 	}
 
-	if ( (m_SteamType==STREAM_CMD_DATA) && (m_StreamLength==0) )
+	if ( (m_StreamType==STREAM_CMD_DATA) && (m_StreamLength==0) )
 	{
 		int ret = NET_ReceiveStream( m_StreamSocket, (char*)&headerBuf, 6, 0 ) ;
 		
@@ -3126,13 +3067,13 @@ bool CNetChan::ProcessStream( void )
 		}
 	}
 
-	if ( (m_SteamType==STREAM_CMD_FILE) && (m_SteamFile[0]==0) )
+	if ( (m_StreamType==STREAM_CMD_FILE) && (m_StreamFile[0]==0) )
 	{
-		Assert ( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
-	if ( (m_SteamType==STREAM_CMD_ACKN) && (m_StreamSeqNr==0) )
+	if ( (m_StreamType==STREAM_CMD_ACKN) && (m_StreamSeqNr==0) )
 	{
 		int ret = NET_ReceiveStream( m_StreamSocket, (char*)&headerBuf, 4, 0 );
 		
@@ -3158,7 +3099,7 @@ bool CNetChan::ProcessStream( void )
 				ConMsg ("TCP <- %s: ACKN seq=%i\n", GetAddress(), m_StreamSeqNr );
 			}
 
-			Assert( data->pendingFragments == data->numFragments );
+			contract_assert( data->pendingFragments == data->numFragments );
 
 			RemoveHeadInWaitingList( FRAG_NORMAL_STREAM );
 		}
@@ -3464,7 +3405,7 @@ void CNetChan::UpdateMessageStats( int msggroup, int bits)
 	netflow_t * pflow = &m_DataFlow[ FLOW_INCOMING ];
 	netframe_t *pframe = pflow->currentframe;
 
-	Assert( (msggroup >= INetChannelInfo::GENERIC) && (msggroup < INetChannelInfo::TOTAL) );
+	contract_assert( (msggroup >= INetChannelInfo::GENERIC) && (msggroup < INetChannelInfo::TOTAL) );
 
 	m_MsgStats[msggroup] += bits;
 
@@ -3481,7 +3422,7 @@ void CNetChan::IncrementQueuedPackets()
 void CNetChan::DecrementQueuedPackets()
 {
 	--m_nQueuedPackets;
-	Assert( m_nQueuedPackets >= 0 );
+	contract_assert( m_nQueuedPackets >= 0 );
 	if ( m_nQueuedPackets < 0 )
 		m_nQueuedPackets = 0;
 }
@@ -3585,22 +3526,22 @@ bool CNetChan::IsValidFileForTransfer( const char *pszFilename )
 		++pChar;
 	}
 
-	if ( !Q_strcasecmp( extension, ".cfg" ) ||
-		!Q_strcasecmp( extension, ".lst" ) ||
-		!Q_strcasecmp( extension, ".lmp" ) ||
-		!Q_strcasecmp( extension, ".exe" ) ||
-		!Q_strcasecmp( extension, ".vbs" ) ||
-		!Q_strcasecmp( extension, ".com" ) ||
-		!Q_strcasecmp( extension, ".bat" ) ||
-		!Q_strcasecmp( extension, ".dll" ) ||
-		!Q_strcasecmp( extension, ".ini" ) ||
-		!Q_strcasecmp( extension, ".log" ) ||
-		!Q_strcasecmp( extension, ".lua" ) ||
-		!Q_strcasecmp( extension, ".nut" ) ||
-		!Q_strcasecmp( extension, ".vdf" ) ||
-		!Q_strcasecmp( extension, ".smx" ) ||
-		!Q_strcasecmp( extension, ".gcf" ) ||
-		!Q_strcasecmp( extension, ".sys" ) )
+	if ( !V_strcasecmp( extension, ".cfg" ) ||
+		!V_strcasecmp( extension, ".lst" ) ||
+		!V_strcasecmp( extension, ".lmp" ) ||
+		!V_strcasecmp( extension, ".exe" ) ||
+		!V_strcasecmp( extension, ".vbs" ) ||
+		!V_strcasecmp( extension, ".com" ) ||
+		!V_strcasecmp( extension, ".bat" ) ||
+		!V_strcasecmp( extension, ".dll" ) ||
+		!V_strcasecmp( extension, ".ini" ) ||
+		!V_strcasecmp( extension, ".log" ) ||
+		!V_strcasecmp( extension, ".lua" ) ||
+		!V_strcasecmp( extension, ".nut" ) ||
+		!V_strcasecmp( extension, ".vdf" ) ||
+		!V_strcasecmp( extension, ".smx" ) ||
+		!V_strcasecmp( extension, ".gcf" ) ||
+		!V_strcasecmp( extension, ".sys" ) )
 	{
 		return false;
 	}
@@ -3665,7 +3606,7 @@ bf_write &CNetChan::GetBuffer( EBufType eBufType )
 		return m_StreamVoice;
 	}
 
-	Assert( 0 );
+	contract_assert( 0 );
 	return m_StreamReliable;
 }
 
@@ -3683,7 +3624,7 @@ char const *CNetChan::GetBufferDebugName( EBufType eBufType )
 		return "m_StreamVoice";
 	}
 
-	Assert( 0 );
+	contract_assert( 0 );
 	return "???";
 }
 
@@ -3722,14 +3663,5 @@ void CNetChan::SplitUserCombineForSending()
 
 bool CNetChan::IsRemoteDisconnected() const
 {
-	// See if we think remote side is using Steam sockets
-	if ( remote_address.IsValid() &&  // was connected
-		 remote_address.GetPort() == (unsigned short)ISteamSocketMgr::STEAM_CNX_PORT && // was using the "steam" pseudo port #
-		 g_pSteamSocketMgr->GetSteamIDForRemote( remote_address ) == 0ull ) // no longer have an association for the remote side by steamid (socket died)
-	{
-		return true;
-	}
-
-	// Regular case never signals this way.
 	return false;
 }

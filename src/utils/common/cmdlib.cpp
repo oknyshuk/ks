@@ -1,30 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // -----------------------
 // cmdlib.c
 // -----------------------
-#include "tier0/platform.h"
+import std;
+import ks.tier1;
 #include "cmdlib.h"
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "tier1/strtools.h"
-#include "utlvector.h"
 #include "filesystem_helpers.h"
-#include "tier0/icommandline.h"
-#include "keyvalues.h"
 #include "filesystem_tools.h"
-
-#if defined( MPI )
-
-	#include "vmpi.h"
-	#include "vmpi_tools_shared.h"
-
-#endif
 
 
 
@@ -57,7 +41,7 @@ ExpandWildcards
 Mimic unix command line expansion
 ===================
 */
-#define	MAX_EX_ARGC	1024
+constexpr auto MAX_EX_ARGC = 1024;
 int		ex_argc;
 char	*ex_argv[ MAX_EX_ARGC ];
 void ExpandWildcards( int *argc, char ***argv )
@@ -72,19 +56,15 @@ void qprintf( char *format, ... )
 	if ( !verbose )
 		return;
 
-	va_list argptr;
-	va_start( argptr, format );
+	std::va_list argptr;
+	__builtin_va_start( argptr, format );
 
 	char str[ 2048 ];
 	V_vsprintf_safe( str, format, argptr );
 
-#if defined( CMDLIB_NODBGLIB )
-	printf( "%s", str );
-#else
 	Msg( "%s", str );
-#endif
 
-	va_end( argptr );
+	__builtin_va_end( argptr );
 }
 
 
@@ -94,9 +74,9 @@ void qprintf( char *format, ... )
 
 static void CmdLib_getwd( char *out, int outSize )
 {
-	getwd( out );
-	strcat( out, "/" );
-	Q_FixSlashes( out );
+	ks::platform::current_directory( out, (unsigned long)outSize );
+	std::strcat( out, "/" );
+	V_FixSlashes( out );
 }
 
 char *ExpandArg( char *path )
@@ -130,14 +110,14 @@ char *ExpandPath (char *path)
 char *copystring(const char *s)
 {
 	char	*b;
-	b = ( char * )malloc( strlen( s ) + 1 );
+	b = ( char * )std::malloc( std::strlen( s ) + 1 );
 	V_strcpy( b, s );
 	return b;
 }
 
 void Q_mkdir( char *path )
 {
-	if ( mkdir( path, 0777 ) != -1)
+	if ( ks::platform::create_directory( path ) )
 		return;
 //	if (errno != EEXIST)
 	Error( "mkdir failed %s\n", path );
@@ -172,12 +152,7 @@ returns -1 if not present
 */
 int	FileTime( char *path )
 {
-	struct	stat	buf;
-	
-	if ( stat( path, &buf ) == -1 )
-		return -1;
-	
-	return buf.st_mtime;
+	return (int)ks::platform::file_modified_seconds( path );
 }
 
 
@@ -218,7 +193,7 @@ int CheckParm( char *check )
 
 	for ( i = 1; i < myargc; i++ )
 	{
-		if ( !Q_strcasecmp( check, myargv[ i ] ) )
+		if ( !V_strcasecmp( check, myargv[ i ] ) )
 			return i;
 	}
 
@@ -252,7 +227,7 @@ FileHandle_t SafeOpenWrite( const char *filename )
 	return f;
 }
 
-#define MAX_CMDLIB_BASE_PATHS 20
+constexpr auto MAX_CMDLIB_BASE_PATHS = 20;
 static char g_pBasePaths[ MAX_CMDLIB_BASE_PATHS ][ MAX_PATH ];
 static int g_NumBasePaths = 0;
 
@@ -262,12 +237,12 @@ void CmdLib_AddBasePath( const char *pPath )
 	if( g_NumBasePaths < MAX_CMDLIB_BASE_PATHS )
 	{
 		V_strcpy_safe( g_pBasePaths[ g_NumBasePaths ], pPath );
-		Q_FixSlashes( g_pBasePaths[ g_NumBasePaths ] );
+		V_FixSlashes( g_pBasePaths[ g_NumBasePaths ] );
 		g_NumBasePaths++;
 	}
 	else
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 }
 
@@ -292,12 +267,12 @@ void CmdLib_AddNewSearchPath( const char *pPath )
 	if( g_nAdditionalDirectoryCount < MAX_CMDLIB_BASE_PATHS )
 	{
 		V_strcpy_safe( s_addedRelativeDirs[g_nAdditionalDirectoryCount], pPath );
-		Q_FixSlashes( s_addedRelativeDirs[g_nAdditionalDirectoryCount] );
+		V_FixSlashes( s_addedRelativeDirs[g_nAdditionalDirectoryCount] );
 		g_nAdditionalDirectoryCount++;
 	}
 	else
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 	
 	//update the original base paths with the new number
@@ -328,16 +303,17 @@ void CmdLib_AddNewSearchPath( const char *pPath )
 
 bool CmdLib_HasBasePath( const char *pFileName_, int &pathLength )
 {
-	char *pFileName = ( char * )stackalloc( strlen( pFileName_ ) + 1 );
+	ks::ScratchArena<> scratch;
+	char *pFileName = ( char * )scratch.AllocBytes( std::strlen( pFileName_ ) + 1 );
 	V_strcpy( pFileName, pFileName_ );
-	Q_FixSlashes( pFileName );
+	V_FixSlashes( pFileName );
 	pathLength = 0;
 	for( int i = 0; i < g_NumBasePaths; i++ )
 	{
 		// see if we can rip the base off of the filename.
-		if( Q_strncasecmp( g_pBasePaths[ i ], pFileName, Q_strlen( g_pBasePaths[ i ] ) ) == 0 )
+		if( V_strncasecmp( g_pBasePaths[ i ], pFileName, V_strlen( g_pBasePaths[ i ] ) ) == 0 )
 		{
-			pathLength = strlen( g_pBasePaths[ i ] );
+			pathLength = std::strlen( g_pBasePaths[ i ] );
 			return true;
 		}
 	}
@@ -351,7 +327,7 @@ int CmdLib_GetNumBasePaths( void )
 
 const char *CmdLib_GetBasePath( int i )
 {
-	Assert( i >= 0 && i < g_NumBasePaths );
+	contract_assert( i >= 0 && i < g_NumBasePaths );
 	return g_pBasePaths[ i ];
 }
 
@@ -391,7 +367,7 @@ FileHandle_t SafeOpenRead( const char *filename )
 
 void SafeRead( FileHandle_t f, void *buffer, int count)
 {
-	if ( g_pFileSystem->Read( buffer, count, f ) != ( size_t )count )
+	if ( g_pFileSystem->Read( buffer, count, f ) != ( std::size_t )count )
 	{
 		Error( "File read failure" );
 	}
@@ -400,7 +376,7 @@ void SafeRead( FileHandle_t f, void *buffer, int count)
 
 void SafeWrite ( FileHandle_t f, void *buffer, int count)
 {
-	if ( g_pFileSystem->Write( buffer, count, f ) != ( size_t )count )
+	if ( g_pFileSystem->Write( buffer, count, f ) != ( std::size_t )count )
 	{
 		Error( "File write failure" );
 	}
@@ -440,7 +416,7 @@ int    LoadFile( const char *filename, void **bufferptr )
 	if ( FILESYSTEM_INVALID_HANDLE != f )
 	{
 		length = Q_filelength( f );
-		buffer = malloc( length + 1 );
+		buffer = std::malloc( length + 1 );
 		( ( char * )buffer )[ length ] = 0;
 		SafeRead( f, buffer, length );
 		g_pFileSystem->Close( f );
@@ -522,7 +498,7 @@ int ParseNum( char *str )
 		return ParseHex( str + 1 );
 	if ( str[ 0 ] == '0' && str[ 1 ] == 'x' )
 		return ParseHex( str + 2 );
-	return atol( str );
+	return std::atol( str );
 }
 
 /*
@@ -569,8 +545,5 @@ void QCopyFile( char *from, char *to )
 	length = LoadFile( from, &buffer );
 	CreatePath( to );
 	SaveFile( to, buffer, length );
-	free( buffer );
+	std::free( buffer );
 }
-
-
-

@@ -1,21 +1,44 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ====
-//
-// To give an NPC the ability to shoot while moving:
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: To give an NPC the ability to shoot while moving:
 // - In the NPC's Spawn function, add:
 //		CapabilitiesAdd( bits_CAP_MOVE_SHOOT );
-//
 // - The NPC must either have a weapon (return non-NULL from GetActiveWeapon)
 //	  or must have bits_CAP_INNATE_RANGE_ATTACK1 or bits_CAP_INNATE_RANGE_ATTACK2.
-//
 // - Support the activities ACT_WALK_AIM and/or ACT_RUN_AIM in the NPC.
-//
 // - Support the activity ACT_GESTURE_RANGE_ATTACK1 as a gesture that plays
 //	 over ACT_WALK_AIM and ACT_RUN_AIM.
-//
-//=============================================================================
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 
@@ -28,7 +51,7 @@
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_MoveAndShootOverlay )
 
-#define MOVESHOOT_DO_NOT_SUSPEND	-1.0f
+constexpr auto MOVESHOOT_DO_NOT_SUSPEND = -1.0f;
 
 //-------------------------------------
 
@@ -209,7 +232,6 @@ void CAI_MoveAndShootOverlay::RunShootWhileMove()
 		return;
 	}
 
-	Assert( HasAvailableRangeAttack() ); // This should have been caught at task start
 
 	Activity activity;
 	bool bIsReloading = false;
@@ -236,7 +258,7 @@ void CAI_MoveAndShootOverlay::RunShootWhileMove()
 					pOuter->OnRangeAttack1();
 
 					activity = pOuter->TranslateActivity( ACT_GESTURE_RANGE_ATTACK1 );
-					Assert( activity != ACT_INVALID );
+					contract_assert( activity != ACT_INVALID );
 
 					pOuter->RestartGesture( activity );
 

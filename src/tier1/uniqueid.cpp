@@ -1,20 +1,11 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-// Unique ID generation
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
+// Purpose: Unique ID generation
 
-#include "checksum_crc.h"
-#include "tier1/uniqueid.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier1/text_reader.h"
-#include "tier1/text_writer.h"
+
+import std;
+import ks.tier1;
 
 
 
@@ -24,7 +15,7 @@
 void CreateUniqueId( UniqueId_t *pDest )
 {
 	// X360/linux TBD: Need a real UUID Implementation
-	Q_memset( pDest, 0, sizeof( UniqueId_t ) );
+	V_memset( pDest, 0, sizeof( UniqueId_t ) );
 }
 
 
@@ -33,12 +24,13 @@ void CreateUniqueId( UniqueId_t *pDest )
 //-----------------------------------------------------------------------------
 bool UniqueIdFromString( UniqueId_t *pDest, const char *pBuf, int nMaxLen )
 {
+	ks::ScratchArena<> scratch;
 	if ( nMaxLen == 0 )
 	{
-		nMaxLen = Q_strlen( pBuf );
+		nMaxLen = V_strlen( pBuf );
 	}
 
-	char *pTemp = (char*)stackalloc( nMaxLen + 1 );
+	char *pTemp = (char*)scratch.AllocBytes( nMaxLen + 1 );
 	V_strncpy( pTemp, pBuf, nMaxLen + 1 );
 	--nMaxLen;
 	while( (nMaxLen >= 0) && V_isspace( pTemp[nMaxLen] ) )
@@ -54,14 +46,14 @@ bool UniqueIdFromString( UniqueId_t *pDest, const char *pBuf, int nMaxLen )
 
 	// X360TBD: Need a real UUID Implementation
 	// For now, use crc to generate a unique ID from the UUID string.
-	Q_memset( pDest, 0, sizeof( UniqueId_t ) );
+	V_memset( pDest, 0, sizeof( UniqueId_t ) );
 	if ( nMaxLen > 0 )
 	{
 		CRC32_t crc;
 		CRC32_Init( &crc );
 		CRC32_ProcessBuffer( &crc, pBuf, nMaxLen );
 		CRC32_Final( &crc );
-		Q_memcpy( pDest, &crc, sizeof( CRC32_t ) );
+		V_memcpy( pDest, &crc, sizeof( CRC32_t ) );
 	}
 
 	return true;
@@ -72,20 +64,20 @@ bool UniqueIdFromString( UniqueId_t *pDest, const char *pBuf, int nMaxLen )
 //-----------------------------------------------------------------------------
 void InvalidateUniqueId( UniqueId_t *pDest )
 {
-	Assert( pDest );
-	memset( pDest, 0, sizeof( UniqueId_t ) );
+	contract_assert( pDest );
+	std::memset( pDest, 0, sizeof( UniqueId_t ) );
 }
 
 bool IsUniqueIdValid( const UniqueId_t &id )
 {
 	UniqueId_t invalidId;
-	memset( &invalidId, 0, sizeof( UniqueId_t ) );
+	std::memset( &invalidId, 0, sizeof( UniqueId_t ) );
 	return !IsUniqueIdEqual( invalidId, id );
 }
 
 bool IsUniqueIdEqual( const UniqueId_t &id1, const UniqueId_t &id2 )
 {
-	return memcmp( &id1, &id2, sizeof( UniqueId_t ) ) == 0; 
+	return std::memcmp( &id1, &id2, sizeof( UniqueId_t ) ) == 0; 
 }
 
 void UniqueIdToString( const UniqueId_t &id, char *pBuf, int nMaxLen )
@@ -97,7 +89,7 @@ void UniqueIdToString( const UniqueId_t &id, char *pBuf, int nMaxLen )
 
 void CopyUniqueId( const UniqueId_t &src, UniqueId_t *pDest )
 {
-	memcpy( pDest, &src, sizeof( UniqueId_t ) );
+	std::memcpy( pDest, &src, sizeof( UniqueId_t ) );
 }
 
 bool Serialize( ks::byte_writer &buf, const UniqueId_t &src )
@@ -124,6 +116,3 @@ bool Unserialize( ks::text_reader &buf, UniqueId_t &dest )
 	UniqueIdFromString( &dest, text.c_str(), (int)text.size() + 1 );
 	return buf.ok();
 }
-
-
-

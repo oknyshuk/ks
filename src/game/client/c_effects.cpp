@@ -1,11 +1,26 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "npcevent.h"
+#include "debugoverlay_shared.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_effects.h"
@@ -22,12 +37,10 @@
 #include "engine/ivdebugoverlay.h"
 #include "precache_register.h"
 #include "collisionutils.h"
-#include "tier0/vprof.h"
 #include "viewrender.h"
 #include "raytrace.h"
 #include "c_cs_player.h"
 
-#include <memory>
 
 ConVar	cl_winddir			( "cl_winddir", "0", FCVAR_CHEAT, "Weather effects wind direction angle" );
 ConVar	cl_windspeed		( "cl_windspeed", "0", FCVAR_CHEAT, "Weather effects wind speed scalar" );
@@ -418,7 +431,7 @@ inline void CClient_Precipitation::RenderParticle( CPrecipitationParticle* pPart
 
 		if ( pParticle->m_Mass > 1.0f )
 		{
-			SinCos( gpGlobals->curtime * M_PI * (1+pParticle->m_Mass * 0.1f) + 
+			SinCos( gpGlobals->curtime * std::numbers::pi * (1+pParticle->m_Mass * 0.1f) + 
 					pParticle->m_Mass * 5.0f, &s , &c );
 
 			// only spiral particles with a mass > 1, so some fall straight down
@@ -452,7 +465,7 @@ inline void CClient_Precipitation::RenderParticle( CPrecipitationParticle* pPart
 		flAlpha *= flScreenSpaceWidth / MIN_SCREENSPACE_RAIN_WIDTH;
 		flWidth = MIN_SCREENSPACE_RAIN_WIDTH * -start.z / m_flHalfScreenWidth;
 	}
-	flAlpha = pow( flAlpha, r_rainalphapow.GetFloat() );
+	flAlpha = std::pow( flAlpha, r_rainalphapow.GetFloat() );
 
 	float flColor[4] = { 1, 1, 1, flAlpha };
 	Tracer_Draw( &mb, start, delta, flWidth, flColor, 1 );
@@ -579,11 +592,11 @@ CClient_Precipitation::~CClient_Precipitation()
 // Precache data
 //-----------------------------------------------------------------------------
 
-#define SNOW_SPEED	80.0f
-#define RAIN_SPEED	425.0f
+constexpr auto SNOW_SPEED = 80.0f;
+constexpr auto RAIN_SPEED = 425.0f;
 
-#define RAIN_TRACER_WIDTH 0.35f
-#define SNOW_TRACER_WIDTH 0.7f
+constexpr auto RAIN_TRACER_WIDTH = 0.35f;
+constexpr auto SNOW_TRACER_WIDTH = 0.7f;
 
 void CClient_Precipitation::Precache( )
 {
@@ -600,7 +613,7 @@ void CClient_Precipitation::Precache( )
 			break;
 
 		case PRECIPITATION_TYPE_RAIN:
-			Assert( m_nPrecipType == PRECIPITATION_TYPE_RAIN );
+			contract_assert( m_nPrecipType == PRECIPITATION_TYPE_RAIN );
 			m_Speed	= RAIN_SPEED;
 			m_MatHandle = materials->FindMaterial( "particle/rain", TEXTURE_GROUP_CLIENT_EFFECTS );
 			m_InitialRamp = 1.0f;
@@ -747,10 +760,10 @@ AshDebrisEffect* AshDebrisEffect::Create( const char *pDebugName )
 //-----------------------------------------------------------------------------
 float AshDebrisEffect::UpdateAlpha( const SimpleParticle *pParticle )
 {
-	return ( ((float)pParticle->m_uchStartAlpha/255.0f) * sin( M_PI * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
+	return ( ((float)pParticle->m_uchStartAlpha/255.0f) * std::sin( std::numbers::pi * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
 }
 
-#define ASH_PARTICLE_NOISE 0x4
+constexpr auto ASH_PARTICLE_NOISE = 0x4;
 
 float AshDebrisEffect::UpdateRoll( SimpleParticle *pParticle, float timeDelta )
 {
@@ -1011,7 +1024,7 @@ void CClient_Precipitation::UpdateParticlePrecip( C_BasePlayer *pPlayer, int nSl
 	vForward45Right.NormalizeInPlace();
 	vForward45Left.NormalizeInPlace();
 	fltx4 TMax = ReplicateX4( 320.0f );
-	SubFloat( TMax, 3 ) = FLT_MAX;
+	SubFloat( TMax, 3 ) = std::numeric_limits<float>::max();
 	float curTime = gpGlobals->frametime;
 
 	while ( m_tParticlePrecipTraceTimer[nSlot].NextEvent( curTime ) )
@@ -1128,7 +1141,7 @@ void CClient_Precipitation::InitializeParticlePrecip( void )
 		m_flParticleInnerDist = 180.0;
 	}
 
-	Assert( m_pParticleInnerFarDef != nullptr );
+	contract_assert( m_pParticleInnerFarDef != nullptr );
 
 	//We'll want to change this if/when we add more raytrace environments.
 	g_RayTraceEnvironments.clear();
@@ -1951,8 +1964,8 @@ CSnowFallManager::CSnowFallManager( void )
 	m_pSnowFallEmitter = nullptr;
 	m_vecSnowFallEmitOrigin.Init();
 	m_flSnowRadius = 0.0f;
-	m_vecMin.Init( FLT_MAX, FLT_MAX, FLT_MAX );
-	m_vecMax.Init( FLT_MIN, FLT_MIN, FLT_MIN );
+	m_vecMin.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+	m_vecMax.Init( std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min() );
 	m_nActiveSnowCount = 0;
 	m_aSnow.clear(); m_aSnow.shrink_to_fit();
 	m_nSplitScreenPlayerSlot = -1;
@@ -2079,7 +2092,7 @@ void CSnowFallManager::UpdateBounds( const Vector &vecSnowMin, const Vector &vec
 		}
 	}
 
-	Assert( m_pSnowFallEmitter );
+	contract_assert( m_pSnowFallEmitter );
 	m_pSnowFallEmitter->SetBounds( m_vecMin, m_vecMax );
 }
 
@@ -2179,7 +2192,7 @@ void CSnowFallManager::FindSnowVolumes( Vector const &vecCenter, float flRadius,
 //-----------------------------------------------------------------------------
 void CSnowFallManager::CreateSnowFall( void )
 {
-	VPROF_BUDGET( "SnowFall", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "SnowFall", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 	// Check to see if we have a local player before starting the snow around a local player.

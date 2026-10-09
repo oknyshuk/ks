@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "bitbuf.h"
+import ks.tier1;
 #include "bitbuf_errorhandler.h"
-#include "tier0/dbg.h"
-#include "tier0/threadtools.h"
-#include "tier1/intern_pool.h"
+import std;
 
 // Thread-safe so bf_write / bf_read stay thread safe; this error case is expected to happen rarely.
 static ks::intern_pool_mt g_ErrorNames[BITBUFERROR_NUM_ERRORS];
@@ -36,7 +30,7 @@ void EngineBitBufErrorHandler( BitBufErrorType errorType, const char *pDebugName
 		}
 	}
 
-	Assert( 0 );
+	contract_assert( 0 );
 }
 
 
@@ -44,9 +38,3 @@ void InstallBitBufErrorHandler()
 {
 	SetBitBufErrorHandler( EngineBitBufErrorHandler );
 }
-
-
-
-
-
-

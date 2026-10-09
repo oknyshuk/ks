@@ -1,27 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // NavMesh.cpp
 // Implementation of Navigation Mesh interface
 // Author: Michael S. Booth, 2003-2004
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "ndebugoverlay.h"
 #include "filesystem.h"
 #include "nav_mesh.h"
-#include "tier1/text_reader.h"
 #include "nav_node.h"
-#include "fmtstr.h"
-#include "tier0/vprof.h"
 //#include "shared_util.h"
 #include "functorutils.h"
 
-
 #define DrawLine( from, to, duration, red, green, blue )		NDebugOverlay::Line( from, to, red, green, blue, true, 0.1f )
-
 
 /**
  * The singleton for accessing the navigation mesh
@@ -244,7 +255,7 @@ void CNavMesh::DestroyNavigationMesh( bool incremental )
  */
 void CNavMesh::Update( void )
 {
-	VPROF( "CNavMesh::Update" );
+	CVProfScope _( "CNavMesh::Update", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if (IsGenerating())
 	{
@@ -389,7 +400,7 @@ public:
  */
 void CNavMesh::FireGameEvent( IGameEvent *gameEvent )
 {
-	VPROF_BUDGET( "CNavMesh::FireGameEvent", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CNavMesh::FireGameEvent", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	if ( FStrEq( gameEvent->GetName(), "break_prop" ) || FStrEq( gameEvent->GetName(), "break_breakable" ) )
 	{
@@ -623,7 +634,7 @@ inline void CNavMesh::GridToWorld( int gridX, int gridY, Vector *pos ) const
  */
 CNavArea *CNavMesh::GetNavArea( const Vector &pos, float beneathLimit, bool checkLOS ) const
 {
-	VPROF_BUDGET( "CNavMesh::GetNavArea", "NextBot"  );
+	CVProfScope _( "CNavMesh::GetNavArea", 0, "NextBot", false, BUDGETFLAG_OTHER );
 
 	if ( m_grid.empty() )
 		return nullptr;
@@ -690,7 +701,7 @@ CNavArea *CNavMesh::GetNavArea( const Vector &pos, float beneathLimit, bool chec
 //----------------------------------------------------------------------------
 CNavArea *CNavMesh::GetNavArea( CBaseEntity *pEntity, int nFlags, float flBeneathLimit ) const
 {
-	VPROF( "CNavMesh::GetNavArea [ent]" );
+	CVProfScope _( "CNavMesh::GetNavArea [ent]", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( m_grid.empty() )
 		return nullptr;
@@ -773,9 +784,8 @@ CNavArea *CNavMesh::GetNavArea( CBaseEntity *pEntity, int nFlags, float flBeneat
  */
 CNavArea *CNavMesh::GetNearestNavArea( const Vector &pos, bool anyZ, float maxDist, bool checkLOS, bool checkGround ) const
 {
-	SNPROF("GetNearestNavArea");
 	
-	VPROF_BUDGET( "CNavMesh::GetNearestNavArea", "NextBot" );
+	CVProfScope _( "CNavMesh::GetNearestNavArea", 0, "NextBot", false, BUDGETFLAG_OTHER );
 
 	if ( m_grid.empty() )
 		return nullptr;	
@@ -828,7 +838,7 @@ CNavArea *CNavMesh::GetNearestNavArea( const Vector &pos, bool anyZ, float maxDi
 	int originX = WorldToGridX( pos.x );
 	int originY = WorldToGridY( pos.y );
 
-	int shiftLimit = ceil(maxDist / m_gridCellSize);
+	int shiftLimit = std::ceil(maxDist / m_gridCellSize);
 
 	//
 	// Search in increasing rings out from origin, starting with cell
@@ -949,9 +959,8 @@ CNavArea *CNavMesh::GetNearestNavArea( const Vector &pos, bool anyZ, float maxDi
 //----------------------------------------------------------------------------
 CNavArea *CNavMesh::GetNearestNavArea( CBaseEntity *pEntity, int nFlags, float maxDist ) const
 {
-	VPROF( "CNavMesh::GetNearestNavArea [ent]" );
+	CVProfScope _( "CNavMesh::GetNearestNavArea [ent]", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-	SNPROF("CNavMesh::GetNearestNavArea [ent]");
 
 	if ( m_grid.empty() )
 		return nullptr;
@@ -1054,8 +1063,8 @@ void CNavMesh::LoadPlaceDatabase( void )
 		if ( !buf.ok() )
 			break;
 
-		const size_t lineChars = std::min< size_t >( line.size(), maxNameLength - 1 );
-		memcpy( buffer, line.data(), lineChars );
+		const std::size_t lineChars = std::min< size_t >( line.size(), maxNameLength - 1 );
+		std::memcpy( buffer, line.data(), lineChars );
 		buffer[ lineChars ] = 0;
 
 		int len = V_strlen( buffer );
@@ -1124,7 +1133,7 @@ Place CNavMesh::PartialNameToPlace( const char *name ) const
 	bool isAmbiguous = false;
 	for( unsigned int i=0; i<m_placeCount; ++i )
 	{
-		if (!strnicmp( m_placeName[i], name, strlen( name ) ))
+		if (!strnicmp( m_placeName[i], name, std::strlen( name ) ))
 		{
 			// check for exact match in case of subsets of other strings
 			if (!stricmp( m_placeName[i], name ))
@@ -1159,15 +1168,15 @@ Place CNavMesh::PartialNameToPlace( const char *name ) const
 int CNavMesh::PlaceNameAutocomplete( char const *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
 {
 	int numMatches = 0;
-	partial += Q_strlen( "nav_use_place " );
-	int partialLength = Q_strlen( partial );
+	partial += V_strlen( "nav_use_place " );
+	int partialLength = V_strlen( partial );
 
 	for( unsigned int i=0; i<m_placeCount; ++i )
 	{
-		if ( !Q_strnicmp( m_placeName[i], partial, partialLength ) )
+		if ( !V_strnicmp( m_placeName[i], partial, partialLength ) )
 		{
 			// Add the place name to the autocomplete array
-			Q_snprintf( commands[ numMatches++ ], COMMAND_COMPLETION_ITEM_LENGTH, "nav_use_place %s", m_placeName[i] );
+			V_snprintf( commands[ numMatches++ ], COMMAND_COMPLETION_ITEM_LENGTH, "nav_use_place %s", m_placeName[i] );
 
 			// Make sure we don't try to return too many place names
 			if ( numMatches == COMMAND_COMPLETION_MAXITEMS )
@@ -1183,7 +1192,7 @@ int CNavMesh::PlaceNameAutocomplete( char const *partial, char commands[ COMMAND
 typedef const char * SortStringType;
 int StringSort (const SortStringType *s1, const SortStringType *s2)
 {
-	return strcmp( *s1, *s2 );
+	return std::strcmp( *s1, *s2 );
 }
 
 
@@ -1434,7 +1443,9 @@ static ConCommand nav_delete_marked( "nav_delete_marked", CommandNavDeleteMarked
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_flood_select, "Selects the current Area and all Areas connected to it, recursively. To clear a selection, use this command again.", FCVAR_GAMEDLL | FCVAR_CHEAT )
+static void nav_flood_select( const CCommand &args );
+static ConCommand nav_flood_select_command( "nav_flood_select", nav_flood_select, "Selects the current Area and all Areas connected to it, recursively. To clear a selection, use this command again.", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static void nav_flood_select( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1488,7 +1499,9 @@ static ConCommand nav_add_to_selected_set( "nav_add_to_selected_set", CommandNav
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_add_to_selected_set_by_id, "Add specified area id to the selected set.", FCVAR_GAMEDLL | FCVAR_CHEAT )
+static void nav_add_to_selected_set_by_id( const CCommand &args );
+static ConCommand nav_add_to_selected_set_by_id_command( "nav_add_to_selected_set_by_id", nav_add_to_selected_set_by_id, "Add specified area id to the selected set.", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static void nav_add_to_selected_set_by_id( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1685,7 +1698,9 @@ static ConCommand nav_toggle_deselecting( "nav_toggle_deselecting", CommandNavTo
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_select_half_space, "Selects any areas that intersect the given half-space.", FCVAR_GAMEDLL | FCVAR_CHEAT )
+static void nav_select_half_space( const CCommand &args );
+static ConCommand nav_select_half_space_command( "nav_select_half_space", nav_select_half_space, "Selects any areas that intersect the given half-space.", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static void nav_select_half_space( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1728,7 +1743,9 @@ static ConCommand nav_select_invalid_areas( "nav_select_invalid_areas", CommandN
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_select_blocked_areas, "Adds all blocked areas to the selected set", FCVAR_CHEAT )
+static void nav_select_blocked_areas( const CCommand &args );
+static ConCommand nav_select_blocked_areas_command( "nav_select_blocked_areas", nav_select_blocked_areas, "Adds all blocked areas to the selected set", FCVAR_CHEAT );
+static void nav_select_blocked_areas( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1738,7 +1755,9 @@ CON_COMMAND_F( nav_select_blocked_areas, "Adds all blocked areas to the selected
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_select_obstructed_areas, "Adds all obstructed areas to the selected set", FCVAR_CHEAT )
+static void nav_select_obstructed_areas( const CCommand &args );
+static ConCommand nav_select_obstructed_areas_command( "nav_select_obstructed_areas", nav_select_obstructed_areas, "Adds all obstructed areas to the selected set", FCVAR_CHEAT );
+static void nav_select_obstructed_areas( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1748,7 +1767,9 @@ CON_COMMAND_F( nav_select_obstructed_areas, "Adds all obstructed areas to the se
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_select_damaging_areas, "Adds all damaging areas to the selected set", FCVAR_CHEAT )
+static void nav_select_damaging_areas( const CCommand &args );
+static ConCommand nav_select_damaging_areas_command( "nav_select_damaging_areas", nav_select_damaging_areas, "Adds all damaging areas to the selected set", FCVAR_CHEAT );
+static void nav_select_damaging_areas( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1758,7 +1779,9 @@ CON_COMMAND_F( nav_select_damaging_areas, "Adds all damaging areas to the select
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_select_stairs, "Adds all stairway areas to the selected set", FCVAR_CHEAT )
+static void nav_select_stairs( const CCommand &args );
+static ConCommand nav_select_stairs_command( "nav_select_stairs", nav_select_stairs, "Adds all stairway areas to the selected set", FCVAR_CHEAT );
+static void nav_select_stairs( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -2176,7 +2199,7 @@ void CommandNavSetPlaceMode( const CCommand &args )
 	bool on = true;
 	if ( args.ArgC() == 2 )
 	{
-		on = (atoi( args[ 1 ] ) != 0);
+		on = (std::atoi( args[ 1 ] ) != 0);
 	}
 
 	if ( on != TheNavMesh->IsEditMode( CNavMesh::PLACE_PAINTING ) )
@@ -2254,7 +2277,9 @@ static ConCommand nav_corner_select( "nav_corner_select", CommandNavCornerSelect
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_corner_raise, "Raise the selected corner of the currently marked Area.", FCVAR_GAMEDLL | FCVAR_CHEAT )
+static void nav_corner_raise( const CCommand &args );
+static ConCommand nav_corner_raise_command( "nav_corner_raise", nav_corner_raise, "Raise the selected corner of the currently marked Area.", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static void nav_corner_raise( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -2264,7 +2289,9 @@ CON_COMMAND_F( nav_corner_raise, "Raise the selected corner of the currently mar
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_corner_lower, "Lower the selected corner of the currently marked Area.", FCVAR_GAMEDLL | FCVAR_CHEAT )
+static void nav_corner_lower( const CCommand &args );
+static ConCommand nav_corner_lower_command( "nav_corner_lower", nav_corner_lower, "Lower the selected corner of the currently marked Area.", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static void nav_corner_lower( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -2274,7 +2301,9 @@ CON_COMMAND_F( nav_corner_lower, "Lower the selected corner of the currently mar
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_corner_place_on_ground, "Places the selected corner of the currently marked Area on the ground.", FCVAR_GAMEDLL | FCVAR_CHEAT )
+static void nav_corner_place_on_ground( const CCommand &args );
+static ConCommand nav_corner_place_on_ground_command( "nav_corner_place_on_ground", nav_corner_place_on_ground, "Places the selected corner of the currently marked Area on the ground.", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static void nav_corner_place_on_ground( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -2354,7 +2383,7 @@ void CommandNavAnalyzeScripted( const CCommand &args )
 		pszCmd = args[1];
 	}
 
-	bool bForceAnalyze = pszCmd && !Q_stricmp( pszCmd, "force" );
+	bool bForceAnalyze = pszCmd && !V_stricmp( pszCmd, "force" );
 
 	if ( TheNavMesh->IsAnalyzed() && !bForceAnalyze )
 	{
@@ -2513,16 +2542,16 @@ NavAttributeLookup TheNavAttributeTable[] =
  */
 static int NavAttributeAutocomplete( const char *input, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
 {
-	if ( Q_strlen( input ) >= COMMAND_COMPLETION_ITEM_LENGTH )
+	if ( V_strlen( input ) >= COMMAND_COMPLETION_ITEM_LENGTH )
 	{
 		return 0;
 	}
 	
 	char command[ COMMAND_COMPLETION_ITEM_LENGTH+1 ];
-	Q_strncpy( command, input, sizeof( command ) );
+	V_strncpy( command, input, sizeof( command ) );
 	
 	// skip to start of argument
-	char *partialArg = Q_strrchr( command, ' ' );
+	char *partialArg = V_strrchr( command, ' ' );
 	if ( partialArg == nullptr )
 	{
 		return 0;
@@ -2532,15 +2561,15 @@ static int NavAttributeAutocomplete( const char *input, char commands[ COMMAND_C
 	*partialArg = '\000';
 	++partialArg;
 	
-	int partialArgLength = Q_strlen( partialArg );
+	int partialArgLength = V_strlen( partialArg );
 
 	int count = 0;
 	for( unsigned int i=0; TheNavAttributeTable[i].name && count < COMMAND_COMPLETION_MAXITEMS; ++i )
 	{
-		if ( !Q_strnicmp( TheNavAttributeTable[i].name, partialArg, partialArgLength ) )
+		if ( !V_strnicmp( TheNavAttributeTable[i].name, partialArg, partialArgLength ) )
 		{
 			// Add to the autocomplete array
-			Q_snprintf( commands[ count++ ], COMMAND_COMPLETION_ITEM_LENGTH, "%s %s", command, TheNavAttributeTable[i].name );
+			V_snprintf( commands[ count++ ], COMMAND_COMPLETION_ITEM_LENGTH, "%s %s", command, TheNavAttributeTable[i].name );
 		}
 	}
 
@@ -2553,7 +2582,7 @@ NavAttributeType NameToNavAttribute( const char *name )
 {
 	for( unsigned int i=0; TheNavAttributeTable[i].name; ++i )
 	{
-		if ( !Q_stricmp( TheNavAttributeTable[i].name, name ) )
+		if ( !V_stricmp( TheNavAttributeTable[i].name, name ) )
 		{
 			return TheNavAttributeTable[i].attribute;
 		}
@@ -2783,7 +2812,7 @@ NavErrorType HidingSpot::PostLoad( void )
 	if ( !m_area )
 	{
 		DevWarning( "A Hiding Spot is off of the Nav Mesh at setpos %.0f %.0f %.0f\n", m_pos.x, m_pos.y, m_pos.z );
-		AssertMsg(false, "This will cause crashes in the Bot Navigation code!");
+		contract_assert( false && "This will cause crashes in the Bot Navigation code!" );
 	}
 
 	return NAV_OK;
@@ -2830,7 +2859,7 @@ void CNavMesh::OnAreaUnblocked( CNavArea *area )
 //--------------------------------------------------------------------------------------------------------
 void CNavMesh::UpdateBlockedAreas( void )
 {
-	VPROF( "CNavMesh::UpdateBlockedAreas" );
+	CVProfScope _( "CNavMesh::UpdateBlockedAreas", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	for ( int i=0; i<std::ssize( m_blockedAreas ); ++i )
 	{
 		CNavArea *area = m_blockedAreas[i];
@@ -2876,7 +2905,7 @@ void CNavMesh::OnAvoidanceObstacleLeftArea( CNavArea *area )
 //--------------------------------------------------------------------------------------------------------
 void CNavMesh::UpdateAvoidanceObstacleAreas( void )
 {
-	VPROF( "CNavMesh::UpdateAvoidanceObstacleAreas" );
+	CVProfScope _( "CNavMesh::UpdateAvoidanceObstacleAreas", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	for ( int i=0; i<std::ssize( m_avoidanceObstacleAreas ); ++i )
 	{
 		CNavArea *area = m_avoidanceObstacleAreas[i];
@@ -2961,7 +2990,7 @@ void CNavMesh::EndVisibilityComputations( void )
 				{
 					bestDelta = delta;
 					anchor = adjArea;
-					Assert( anchor != area );
+					contract_assert( anchor != area );
 				}
 			}
 		}

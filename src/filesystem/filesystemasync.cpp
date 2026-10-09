@@ -1,22 +1,15 @@
-//========== Copyright (c) 2009, Valve Corporation, All rights reserved. ========
-//
-// file:	filesystem_newasync.cpp
-//
-// Purpose: Upgraded Async I/O system for source 2.0
-//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2009 Valve Corporation
+
+// Purpose: file:	filesystem_newasync.cpp
+// Upgraded Async I/O system for source 2.0
 // System Support (so far): Win32, 360  (see #POSIX usage in filesystem_async.cpp)
-//
-//=============================================================================
 
-
-
+import ks.core;
 #include "basefilesystem.h"
 #include "filesystem.h"
 #include "filesystemasync.h"
-#include "threadtools.h"
-
-#include "tier0/memalloc.h"
+import std;
 
 
 #ifdef _DEBUG
@@ -428,8 +421,8 @@ CAsyncGroupRequest::~CAsyncGroupRequest()
 {
 	// We shouldn't be destroying ourself unless the entire group has released
 	
-	Assert ( std::ssize( m_RequestList ) == 0 );
-	Assert ( m_nNumRequestsOutstanding == 0 );
+	contract_assert( std::ssize( m_RequestList ) == 0 );
+	contract_assert( m_nNumRequestsOutstanding == 0 );
 		
 }
 
@@ -441,11 +434,10 @@ CAsyncGroupRequest::~CAsyncGroupRequest()
 void CAsyncGroupRequest::AddAsyncRequest( IAsyncRequestBase* pRequest )
 {
 	// A bunch of assertions.  we're moving away from error checking in release builds
-	Assert( pRequest != nullptr );	
-	Assert( g_FileSystem_Async.ValidateRequestPtr( pRequest->GetBase() ) );
-	Assert( ks::find_index( m_RequestList, pRequest ) == -1 );
-	Assert( pRequest->GetRequestStatus()  == ASYNC_REQUEST_STATE_COMPOSING );
-	Assert( pRequest->GetBase()->m_pGroup == nullptr );
+	contract_assert( pRequest != nullptr );	
+	contract_assert( ks::find_index( m_RequestList, pRequest ) == -1 );
+	contract_assert( pRequest->GetRequestStatus()  == ASYNC_REQUEST_STATE_COMPOSING );
+	contract_assert( pRequest->GetBase()->m_pGroup == nullptr );
 
 	// Add a valid request to the end of the list
 	m_RequestList.push_back( pRequest );
@@ -463,7 +455,7 @@ IAsyncRequestBase* CAsyncGroupRequest::GetAsyncRequest( int32 nRNum )
 {
 	if ( nRNum < 0 || nRNum >=  std::ssize( m_RequestList ) )
 	{
-		Assert( false );
+		contract_assert( false );
 		return nullptr;	
 	}
 	
@@ -479,7 +471,7 @@ IAsyncFileRequest* CAsyncGroupRequest::GetAsyncFileRequest( int32 nRNum )
 {
 	if ( nRNum < 0 || nRNum >=  std::ssize( m_RequestList ) )
 	{
-		Assert( false );
+		contract_assert( false );
 		return nullptr;	
 	}
 	
@@ -506,7 +498,7 @@ IAsyncSearchRequest* CAsyncGroupRequest::GetAsyncSearchRequest( int32 nRNum )
 {
 	if ( nRNum < 0 || nRNum >=  std::ssize( m_RequestList ) )
 	{
-		Assert( false );
+		contract_assert( false );
 		return nullptr;	
 	}
 	
@@ -656,7 +648,7 @@ void CAsyncFileRequest::SetFileName( const char* pFileName )
 // CAsyncFileRequest::SetUserBuffer
 //		- user supplies buffer to use
 //-----------------------------------------------------------------------------
-void CAsyncFileRequest::SetUserBuffer( void* pDataBuffer, size_t nBufferSize )
+void CAsyncFileRequest::SetUserBuffer( void* pDataBuffer, std::size_t nBufferSize )
 {
 	VALIDATE_REQUEST_MODIFICATION;
 	
@@ -684,7 +676,7 @@ void CAsyncFileRequest::ProvideDataBuffer()
 // CAsyncFileRequest::ReadFileDataAt
 //		Read file data starting at supplied offset, optional max size to read
 //-----------------------------------------------------------------------------
-void CAsyncFileRequest::ReadFileDataAt( int64 nOffset, size_t nReadSize )
+void CAsyncFileRequest::ReadFileDataAt( int64 nOffset, std::size_t nReadSize )
 {
 	VALIDATE_REQUEST_MODIFICATION;
 	
@@ -695,7 +687,7 @@ void CAsyncFileRequest::ReadFileDataAt( int64 nOffset, size_t nReadSize )
 // CAsyncFileRequest::WriteFileDataAt
 //		Write data to file at supplied offset, optional size to write (max size of buffer)
 //-----------------------------------------------------------------------------
-void CAsyncFileRequest::WriteFileDataAt( int64 nOffset, size_t nWriteSize )
+void CAsyncFileRequest::WriteFileDataAt( int64 nOffset, std::size_t nWriteSize )
 {
 	VALIDATE_REQUEST_MODIFICATION;
 	
@@ -844,7 +836,7 @@ void CAsyncSearchRequest::SetSearchFilespec( const char* pFullSearchSpec )
 {
 	VALIDATE_REQUEST_MODIFICATION;
 
-	Assert( pFullSearchSpec != nullptr && strlen( pFullSearchSpec ) < sizeof( m_SearchSpec ) );
+	contract_assert( pFullSearchSpec != nullptr && std::strlen( pFullSearchSpec ) < sizeof( m_SearchSpec ) );
 	
 	V_strcpy( m_SearchSpec, pFullSearchSpec );
 	
@@ -861,10 +853,10 @@ void CAsyncSearchRequest::SetSearchPathAndFileSpec( const char* pPathId, const c
 {
 	VALIDATE_REQUEST_MODIFICATION;
 
-	Assert( pPathId != nullptr && strlen( pPathId ) < sizeof( m_PathID ) );
-	Assert( pRelativeSearchSpec != nullptr && strlen( pRelativeSearchSpec ) < sizeof( m_FileSpec ) );
+	contract_assert( pPathId != nullptr && std::strlen( pPathId ) < sizeof( m_PathID ) );
+	contract_assert( pRelativeSearchSpec != nullptr && std::strlen( pRelativeSearchSpec ) < sizeof( m_FileSpec ) );
 
-	Q_strcpy( m_FileSpec, V_UnqualifiedFileName( pRelativeSearchSpec) );
+	V_strcpy( m_FileSpec, V_UnqualifiedFileName( pRelativeSearchSpec) );
 
 	V_ExtractFilePath (pRelativeSearchSpec, m_SearchPath, sizeof(m_SearchPath) );
 	V_StripTrailingSlash( m_SearchPath );
@@ -873,7 +865,7 @@ void CAsyncSearchRequest::SetSearchPathAndFileSpec( const char* pPathId, const c
 	g_pFullFileSystem->RelativePathToFullPath( m_SearchPath, pPathId, pTempPath, sizeof(pTempPath) );
 	
 	char pFixedupPath[MAX_PATH];
-	Q_FixupPathName( pFixedupPath, sizeof(pFixedupPath), pTempPath );
+	V_FixupPathName( pFixedupPath, sizeof(pFixedupPath), pTempPath );
 	
 	V_ComposeFileName( pFixedupPath, m_FileSpec, m_SearchSpec, sizeof(m_SearchSpec) );
 	
@@ -891,20 +883,20 @@ void CAsyncSearchRequest::SetSearchPathAndFileSpec( const char* pPathId, const c
 {
 	VALIDATE_REQUEST_MODIFICATION;
 
-	Assert( pPathId != nullptr && strlen( pPathId ) < sizeof( m_PathID ) );
-	Assert( pRelativeSearchPath != nullptr && strlen( pRelativeSearchPath ) < sizeof( m_SearchPath ) );
-	Assert( pSearchSpec != nullptr && strlen( pSearchSpec ) < sizeof( m_FileSpec ) );
+	contract_assert( pPathId != nullptr && std::strlen( pPathId ) < sizeof( m_PathID ) );
+	contract_assert( pRelativeSearchPath != nullptr && std::strlen( pRelativeSearchPath ) < sizeof( m_SearchPath ) );
+	contract_assert( pSearchSpec != nullptr && std::strlen( pSearchSpec ) < sizeof( m_FileSpec ) );
 
 
-	Q_strcpy( m_FileSpec, pSearchSpec );
-	Q_strcpy( m_SearchPath, pRelativeSearchPath );
+	V_strcpy( m_FileSpec, pSearchSpec );
+	V_strcpy( m_SearchPath, pRelativeSearchPath );
 	V_StripTrailingSlash( m_SearchPath );
 	
 	char pTempPath[MAX_PATH];
 	g_pFullFileSystem->RelativePathToFullPath( m_SearchPath, pPathId, pTempPath, sizeof(pTempPath) );
 	
 	char pFixedupPath[MAX_PATH];
-	Q_FixupPathName( pFixedupPath, sizeof(pFixedupPath), pTempPath );
+	V_FixupPathName( pFixedupPath, sizeof(pFixedupPath), pTempPath );
 	
 	V_ComposeFileName( pFixedupPath, m_FileSpec, m_SearchSpec, sizeof(m_SearchSpec) );
 	
@@ -935,13 +927,13 @@ CDirectoryEntryInfo_t*	CAsyncSearchRequest::GetResult( int rNum )
 {
 	if ( m_Base.GetRequestState() < ASYNC_REQUEST_STATE_AWATING_FINISH || m_Base.GetRequestState() > ASYNC_REQUEST_STATE_COMPLETED )
 	{
-		Assert( false );
+		contract_assert( false );
 		return nullptr;
 	}
 
 	if ( rNum < 0 || rNum >= m_nNumResults )
 	{
-		Assert( false );
+		contract_assert( false );
 		return nullptr;
 	}
 	
@@ -957,13 +949,13 @@ const char*	CAsyncSearchRequest::GetMatchedFile( int rNum )
 {
 	if ( m_Base.GetRequestState() < ASYNC_REQUEST_STATE_AWATING_FINISH || m_Base.GetRequestState() > ASYNC_REQUEST_STATE_COMPLETED )
 	{
-		Assert( false );
+		contract_assert( false );
 		return nullptr;
 	}
 
 	if ( rNum < 0 || rNum >= m_nNumResults )
 	{
-		Assert( false );
+		contract_assert( false );
 		return nullptr;
 	}
 	
@@ -1114,8 +1106,8 @@ void CAsyncRequestQueue::AddToHead( CAsyncRequestBase* pItem )
 	// Empty queue?
 	if ( m_pHead == nullptr )
 	{
-		Assert( pItem != nullptr );
-		Assert( m_pHead == m_pTail && m_nQueueSize == 0 );
+		contract_assert( pItem != nullptr );
+		contract_assert( m_pHead == m_pTail && m_nQueueSize == 0 );
 		
 		m_pHead = m_pTail = pItem;
 		pItem->m_pPrev = nullptr;
@@ -1145,8 +1137,8 @@ void CAsyncRequestQueue::AddToTail( CAsyncRequestBase* pItem )
 	// Empty queue?
 	if ( m_pTail == nullptr )
 	{
-		Assert( pItem != nullptr );
-		Assert( m_pHead == m_pTail && m_nQueueSize == 0 );
+		contract_assert( pItem != nullptr );
+		contract_assert( m_pHead == m_pTail && m_nQueueSize == 0 );
 		
 		m_pHead = m_pTail = pItem;
 		pItem->m_pPrev = nullptr;
@@ -1284,7 +1276,7 @@ void CAsyncRequestQueue::Remove( CAsyncRequestBase* pItem )
 		// removing head?
 		if ( pItem->m_pPrev == nullptr )
 		{
-			Assert( pItem == m_pHead );
+			contract_assert( pItem == m_pHead );
 			m_pHead = pItem->m_pNext;
 		}
 		else
@@ -1294,7 +1286,7 @@ void CAsyncRequestQueue::Remove( CAsyncRequestBase* pItem )
 		// removing tail?
 		if ( pItem->m_pNext == nullptr )
 		{
-			Assert( pItem == m_pTail );
+			contract_assert( pItem == m_pTail );
 			m_pTail = pItem->m_pPrev;
 		}
 		else
@@ -1373,7 +1365,7 @@ CAsyncFileSystem::~CAsyncFileSystem()
 void *CAsyncFileSystem::QueryInterface( const char *pInterfaceName )
 {
 	// Make sure we are asking for the right version	
-	if ( !Q_strncmp(	pInterfaceName, ASYNCFILESYSTEM_INTERFACE_VERSION, Q_strlen( ASYNCFILESYSTEM_INTERFACE_VERSION ) + 1) )
+	if ( !V_strncmp(	pInterfaceName, ASYNCFILESYSTEM_INTERFACE_VERSION, V_strlen( ASYNCFILESYSTEM_INTERFACE_VERSION ) + 1) )
 	{
 		return ( IAsyncFileSystem* ) this;
 	}
@@ -2100,13 +2092,13 @@ void CAsyncFileSystem::SuspendAllAsyncIO(  bool bWaitForIOCompletion )
 //-----------------------------------------------------------------------------
 void CAsyncFileSystem::ResumeAllAsyncIO()
 {
-	Assert ( m_nSuspendCount > 0 );
+	contract_assert( m_nSuspendCount > 0 );
 	
 	m_nSuspendCount--;
 	
 	if ( m_nSuspendCount <= 0 )
 	{
-		Assert( m_nSuspendCount == 0 );
+		contract_assert( m_nSuspendCount == 0 );
 		m_nSuspendCount = 0;
 		KickOffFileJobs();
 	}
@@ -2194,7 +2186,7 @@ bool CAsyncFileSystem::BlockUntilAsyncIOComplete( const IAsyncRequestBase* pRequ
 	// Can we just add the signaling request?
 	if ( pRequestBase->GetRequestState() < ASYNC_REQUEST_STATE_AWATING_FINISH )
 	{
-		Assert( pRequestBase->m_pSyncThreadEvent);
+		contract_assert( pRequestBase->m_pSyncThreadEvent );
 		pRequestBase->m_pSyncThreadEvent = &syncEvent;
 		waitforIt = true;
 	}
@@ -2231,12 +2223,12 @@ void CAsyncFileSystem::WaitForServincingIOCompletion()
 // CAsyncFileSystem::AllocateBuffer
 //	
 //-----------------------------------------------------------------------------
-void* CAsyncFileSystem::AllocateBuffer( size_t nBufferSize, int nAlignment)
+void* CAsyncFileSystem::AllocateBuffer( std::size_t nBufferSize, int nAlignment)
 {
-	Assert( nAlignment >= 0 );
-	Assert( ValueIsPowerOfTwo( nAlignment ) );
+	contract_assert( nAlignment >= 0 );
+	contract_assert( ValueIsPowerOfTwo( nAlignment ) );
 
-	void* pMem = MemAlloc_AllocAligned( nBufferSize, nAlignment );
+	void* pMem = MemAlloc_AllocAlignedUnattributed( nBufferSize, nAlignment );
  #if defined(_DEBUG)
  	// In debug mode we track allocations so we later can track down leaks, etc
  	m_MemoryTrackMutex.lock();
@@ -2255,12 +2247,12 @@ void* CAsyncFileSystem::AllocateBuffer( size_t nBufferSize, int nAlignment)
 //-----------------------------------------------------------------------------
 void CAsyncFileSystem::ReleaseBuffer( void* pBuffer )
 {
-	Assert ( pBuffer != nullptr );
+	contract_assert( pBuffer != nullptr );
 
 #if defined(_DEBUG)
 	// In debug mode we verify that we had actually allocated this
 	m_MemoryTrackMutex.lock();
-	Assert( ks::swap_erase_first( m_AllocList, pBuffer ) == true );
+	contract_assert( ks::swap_erase_first( m_AllocList, pBuffer ) == true );
 	m_MemoryTrackMutex.unlock();
 #endif
 
@@ -2407,7 +2399,7 @@ AsyncRequestStatus_t ValidateFileName( const char* pFileName )
 	// According to ChrisB, we shouldn't do all this validation as it's a time suck
 	//  and our pack files won't care...
 	
-	int32	theLength = Q_strlen( pFileName );
+	int32	theLength = V_strlen( pFileName );
 	
 	char*	theFilename = const_cast<char*>( pFileName );
 	
@@ -2505,7 +2497,7 @@ AsyncRequestStatus_t ValidateFileName( const char* pFileName )
 	// make sure the path characters are platform correct	
 	if ( lastPathSeparator >= 0 )
 	{
-		Q_FixSlashes( theFilename );		// use the library to correct the path dividers for the OS
+		V_FixSlashes( theFilename );		// use the library to correct the path dividers for the OS
 											// Yes, I know.. not as efficient as we could make it...
 	}
 
@@ -2517,4 +2509,3 @@ AsyncRequestStatus_t ValidateFileName( const char* pFileName )
 	return ASYNC_REQUEST_OK;
 
 }
-

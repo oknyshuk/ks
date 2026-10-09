@@ -1,11 +1,10 @@
-#ifndef FUNFACTMGR_H
-#define FUNFACTMGR_H
+#pragma once
 
 #include "GameEventListener.h"
 #include "funfact_cs.h"
-#include <map>
-#include <memory>
+import std;
 #include "cs_shareddefs.h"
+#include "igamesystem.h"
 
 class FunFactEvaluator;
 
@@ -41,5 +40,4 @@ private:
 	int m_numRounds;
 };
 
-#endif
 

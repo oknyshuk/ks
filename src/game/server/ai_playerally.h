@@ -1,58 +1,52 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
-
-#ifndef AI_PLAYERALLY_H
-#define AI_PLAYERALLY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-#include <map>
+import std;
 #include "simtimer.h"
 #include "ai_criteria.h"
 #include "ai_baseactor.h"
 #include "ai_speechfilter.h"
 #include "stdstring.h"
 
-
 //-----------------------------------------------------------------------------
 
-#define TLK_ANSWER 			"TLK_ANSWER"
-#define TLK_ANSWER_HELLO	"TLK_ANSWER_HELLO"
-#define TLK_QUESTION 		"TLK_QUESTION"
+inline constexpr const char *TLK_ANSWER = "TLK_ANSWER";
+inline constexpr const char *TLK_ANSWER_HELLO = "TLK_ANSWER_HELLO";
+inline constexpr const char *TLK_QUESTION = "TLK_QUESTION";
 #define TLK_IDLE 			"TLK_IDLE"
-#define TLK_STARE 			"TLK_STARE"
+inline constexpr const char *TLK_STARE = "TLK_STARE";
 #define TLK_LOOK 			"TLK_LOOK"	// player looking at player for a second
-#define TLK_USE				"TLK_USE"
-#define TLK_STARTFOLLOW 	"TLK_STARTFOLLOW"
-#define TLK_STOPFOLLOW		"TLK_STOPFOLLOW"
-#define TLK_JOINPLAYER		"TLK_JOINPLAYER"
-#define TLK_STOP 			"TLK_STOP"
-#define TLK_NOSHOOT			"TLK_NOSHOOT"
-#define TLK_HELLO 			"TLK_HELLO"
-#define TLK_PHELLO 			"TLK_PHELLO"
-#define TLK_HELLO_NPC		"TLK_HELLO_NPC"
-#define TLK_PIDLE 			"TLK_PIDLE"
-#define TLK_PQUESTION 		"TLK_PQUESTION"
-#define TLK_PLHURT1 		"TLK_PLHURT1"
-#define TLK_PLHURT2 		"TLK_PLHURT2"
-#define TLK_PLHURT3 		"TLK_PLHURT3"
-#define TLK_PLHURT			"TLK_PLHURT"
-#define TLK_PLPUSH 			"TLK_PLPUSH"
-#define TLK_PLRELOAD		"TLK_PLRELOAD"
-#define TLK_SMELL 			"TLK_SMELL"
-#define TLK_SHOT			"TLK_SHOT"
-#define TLK_WOUND 			"TLK_WOUND"
-#define TLK_MORTAL 			"TLK_MORTAL"
-#define TLK_DANGER			"TLK_DANGER"
-#define TLK_SEE_COMBINE		"TLK_SEE_COMBINE"
-#define TLK_ENEMY_DEAD		"TLK_ENEMY_DEAD"
-#define TLK_ALYX_ENEMY_DEAD "TLK_ALYX_ENEMY_DEAD"
+inline constexpr const char *TLK_USE = "TLK_USE";
+inline constexpr const char *TLK_STARTFOLLOW = "TLK_STARTFOLLOW";
+inline constexpr const char *TLK_STOPFOLLOW = "TLK_STOPFOLLOW";
+inline constexpr const char *TLK_JOINPLAYER = "TLK_JOINPLAYER";
+inline constexpr const char *TLK_STOP = "TLK_STOP";
+inline constexpr const char *TLK_NOSHOOT = "TLK_NOSHOOT";
+inline constexpr const char *TLK_HELLO = "TLK_HELLO";
+inline constexpr const char *TLK_PHELLO = "TLK_PHELLO";
+inline constexpr const char *TLK_HELLO_NPC = "TLK_HELLO_NPC";
+inline constexpr const char *TLK_PIDLE = "TLK_PIDLE";
+inline constexpr const char *TLK_PQUESTION = "TLK_PQUESTION";
+inline constexpr const char *TLK_PLHURT1 = "TLK_PLHURT1";
+inline constexpr const char *TLK_PLHURT2 = "TLK_PLHURT2";
+inline constexpr const char *TLK_PLHURT3 = "TLK_PLHURT3";
+inline constexpr const char *TLK_PLHURT = "TLK_PLHURT";
+inline constexpr const char *TLK_PLPUSH = "TLK_PLPUSH";
+inline constexpr const char *TLK_PLRELOAD = "TLK_PLRELOAD";
+inline constexpr const char *TLK_SMELL = "TLK_SMELL";
+inline constexpr const char *TLK_SHOT = "TLK_SHOT";
+inline constexpr const char *TLK_WOUND = "TLK_WOUND";
+inline constexpr const char *TLK_MORTAL = "TLK_MORTAL";
+inline constexpr const char *TLK_DANGER = "TLK_DANGER";
+inline constexpr const char *TLK_SEE_COMBINE = "TLK_SEE_COMBINE";
+inline constexpr const char *TLK_ENEMY_DEAD = "TLK_ENEMY_DEAD";
+inline constexpr const char *TLK_ALYX_ENEMY_DEAD = "TLK_ALYX_ENEMY_DEAD";
 #define TLK_SELECTED		"TLK_SELECTED"	// selected by player in command mode.
 #define TLK_COMMANDED		"TLK_COMMANDED" // received orders from player in command mode
-#define TLK_COMMAND_FAILED	"TLK_COMMAND_FAILED"
+inline constexpr const char *TLK_COMMAND_FAILED = "TLK_COMMAND_FAILED";
 #define TLK_DENY_COMMAND	"TLK_DENY_COMMAND" // designer has asked this NPC to politely deny player commands to move the squad
 #define TLK_BETRAYED		"TLK_BETRAYED"	// player killed an ally in front of me.
 #define TLK_ALLY_KILLED		"TLK_ALLY_KILLED" // witnessed an ally die some other way.
@@ -62,36 +56,36 @@
 #define TLK_DEATH			"TLK_DEATH"	// Death rattle
 #define TLK_HELP_ME			"TLK_HELP_ME" // call out to the player for help
 #define TLK_PLYR_PHYSATK	"TLK_PLYR_PHYSATK"	// Player's attacked me with a thrown physics object
-#define TLK_NEWWEAPON		"TLK_NEWWEAPON"
-#define TLK_PLDEAD			"TLK_PLDEAD"
-#define TLK_HIDEANDRELOAD	"TLK_HIDEANDRELOAD"
-#define TLK_STARTCOMBAT		"TLK_STARTCOMBAT"
-#define TLK_WATCHOUT		"TLK_WATCHOUT"
-#define TLK_MOBBED			"TLK_MOBBED"
-#define TLK_MANY_ENEMIES	"TLK_MANY_ENEMIES"
-#define TLK_FLASHLIGHT_ILLUM		"TLK_FLASHLIGHT_ILLUM"
+inline constexpr const char *TLK_NEWWEAPON = "TLK_NEWWEAPON";
+inline constexpr const char *TLK_PLDEAD = "TLK_PLDEAD";
+inline constexpr const char *TLK_HIDEANDRELOAD = "TLK_HIDEANDRELOAD";
+inline constexpr const char *TLK_STARTCOMBAT = "TLK_STARTCOMBAT";
+inline constexpr const char *TLK_WATCHOUT = "TLK_WATCHOUT";
+inline constexpr const char *TLK_MOBBED = "TLK_MOBBED";
+inline constexpr const char *TLK_MANY_ENEMIES = "TLK_MANY_ENEMIES";
+inline constexpr const char *TLK_FLASHLIGHT_ILLUM = "TLK_FLASHLIGHT_ILLUM";
 #define TLK_FLASHLIGHT_ON			"TLK_FLASHLIGHT_ON"		// player turned on flashlight
 #define TLK_FLASHLIGHT_OFF			"TLK_FLASHLIGHT_OFF"	// player turned off flashlight
-#define TLK_DARKNESS_LOSTPLAYER		"TLK_DARKNESS_LOSTPLAYER"
-#define TLK_DARKNESS_FOUNDPLAYER	"TLK_DARKNESS_FOUNDPLAYER"
-#define TLK_DARKNESS_UNKNOWN_WOUND	"TLK_DARKNESS_UNKNOWN_WOUND"
-#define TLK_DARKNESS_HEARDSOUND		"TLK_DARKNESS_HEARDSOUND"
-#define TLK_DARKNESS_LOSTENEMY_BY_FLASHLIGHT			"TLK_DARKNESS_LOSTENEMY_BY_FLASHLIGHT"
-#define TLK_DARKNESS_LOSTENEMY_BY_FLASHLIGHT_EXPIRED	"TLK_DARKNESS_LOSTENEMY_BY_FLASHLIGHT_EXPIRED"
-#define TLK_DARKNESS_FOUNDENEMY_BY_FLASHLIGHT			"TLK_DARKNESS_FOUNDENEMY_BY_FLASHLIGHT"
+inline constexpr const char *TLK_DARKNESS_LOSTPLAYER = "TLK_DARKNESS_LOSTPLAYER";
+inline constexpr const char *TLK_DARKNESS_FOUNDPLAYER = "TLK_DARKNESS_FOUNDPLAYER";
+inline constexpr const char *TLK_DARKNESS_UNKNOWN_WOUND = "TLK_DARKNESS_UNKNOWN_WOUND";
+inline constexpr const char *TLK_DARKNESS_HEARDSOUND = "TLK_DARKNESS_HEARDSOUND";
+inline constexpr const char *TLK_DARKNESS_LOSTENEMY_BY_FLASHLIGHT = "TLK_DARKNESS_LOSTENEMY_BY_FLASHLIGHT";
+inline constexpr const char *TLK_DARKNESS_LOSTENEMY_BY_FLASHLIGHT_EXPIRED = "TLK_DARKNESS_LOSTENEMY_BY_FLASHLIGHT_EXPIRED";
+inline constexpr const char *TLK_DARKNESS_FOUNDENEMY_BY_FLASHLIGHT = "TLK_DARKNESS_FOUNDENEMY_BY_FLASHLIGHT";
 #define TLK_DARKNESS_FLASHLIGHT_EXPIRED					"TLK_DARKNESS_FLASHLIGHT_EXPIRED"	// flashlight expired while not in combat
 #define TLK_DARKNESS_ENEMY_IN_DARKNESS					"TLK_DARKNESS_ENEMY_IN_DARKNESS"	// have an enemy, but it's in the darkness
-#define TLK_SPOTTED_INCOMING_HEADCRAB					"TLK_SPOTTED_INCOMING_HEADCRAB"
+inline constexpr const char *TLK_SPOTTED_INCOMING_HEADCRAB = "TLK_SPOTTED_INCOMING_HEADCRAB";
 #define TLK_CANT_INTERACT_NOW				"TLK_CANT_INTERACT_NOW" // to busy to interact with an object the player is holding up to me
 #define TLK_ALLY_IN_BARNACLE				"TLK_ALLY_IN_BARNACLE"	// Barnacle is lifting my buddy!
 #define TLK_SELF_IN_BARNACLE				"TLK_SELF_IN_BARNACLE" // I was grabbed by a barnacle!
-#define TLK_FOUNDPLAYER						"TLK_FOUNDPLAYER"
-#define TLK_PLAYER_KILLED_NPC				"TLK_PLAYER_KILLED_NPC"
-#define TLK_ENEMY_BURNING					"TLK_ENEMY_BURNING"
-#define TLK_SPOTTED_ZOMBIE_WAKEUP			"TLK_SPOTTED_ZOMBIE_WAKEUP"
-#define TLK_SPOTTED_HEADCRAB_LEAVING_ZOMBIE	"TLK_SPOTTED_HEADCRAB_LEAVING_ZOMBIE"
-#define TLK_DANGER_ZOMBINE_GRENADE			"TLK_DANGER_ZOMBINE_GRENADE"
-#define TLK_BALLSOCKETED					"TLK_BALLSOCKETED"
+inline constexpr const char *TLK_FOUNDPLAYER = "TLK_FOUNDPLAYER";
+inline constexpr const char *TLK_PLAYER_KILLED_NPC = "TLK_PLAYER_KILLED_NPC";
+inline constexpr const char *TLK_ENEMY_BURNING = "TLK_ENEMY_BURNING";
+inline constexpr const char *TLK_SPOTTED_ZOMBIE_WAKEUP = "TLK_SPOTTED_ZOMBIE_WAKEUP";
+inline constexpr const char *TLK_SPOTTED_HEADCRAB_LEAVING_ZOMBIE = "TLK_SPOTTED_HEADCRAB_LEAVING_ZOMBIE";
+inline constexpr const char *TLK_DANGER_ZOMBINE_GRENADE = "TLK_DANGER_ZOMBINE_GRENADE";
+inline constexpr const char *TLK_BALLSOCKETED = "TLK_BALLSOCKETED";
 
 // Vehicle passenger
 #define	TLK_PASSENGER_WARN_COLLISION	"TLK_PASSENGER_WARN_COLLISION"	// About to collide with something
@@ -114,26 +108,26 @@
 #define TLK_VORTIGAUNT_DISPEL	"TLK_VORTIGAUNT_DISPEL"	// Dispel attack starting
 
 // resume is "as I was saying..." or "anyhow..."
-#define TLK_RESUME 		"TLK_RESUME"
+inline constexpr const char *TLK_RESUME = "TLK_RESUME";
 
 // tourguide stuff below
-#define TLK_TGSTAYPUT 	"TLK_TGSTAYPUT"
-#define TLK_TGFIND 		"TLK_TGFIND"
-#define TLK_TGSEEK 		"TLK_TGSEEK"
-#define TLK_TGLOSTYOU 	"TLK_TGLOSTYOU"
-#define TLK_TGCATCHUP 	"TLK_TGCATCHUP"
-#define TLK_TGENDTOUR 	"TLK_TGENDTOUR"
+inline constexpr const char *TLK_TGSTAYPUT = "TLK_TGSTAYPUT";
+inline constexpr const char *TLK_TGFIND = "TLK_TGFIND";
+inline constexpr const char *TLK_TGSEEK = "TLK_TGSEEK";
+inline constexpr const char *TLK_TGLOSTYOU = "TLK_TGLOSTYOU";
+inline constexpr const char *TLK_TGCATCHUP = "TLK_TGCATCHUP";
+inline constexpr const char *TLK_TGENDTOUR = "TLK_TGENDTOUR";
 
 //-----------------------------------------------------------------------------
 
-#define TALKRANGE_MIN 500.0				// don't talk to anyone farther away than this
+inline constexpr auto TALKRANGE_MIN = 500.0; // don't talk to anyone farther away than this
 
 //-----------------------------------------------------------------------------
 
-#define TALKER_STARE_DIST	128				// anyone closer than this and looking at me is probably staring at me.
+inline constexpr auto TALKER_STARE_DIST = 128; // anyone closer than this and looking at me is probably staring at me.
 
-#define TALKER_DEFER_IDLE_SPEAK_MIN		10
-#define TALKER_DEFER_IDLE_SPEAK_MAX		20
+inline constexpr auto TALKER_DEFER_IDLE_SPEAK_MIN = 10;
+inline constexpr auto TALKER_DEFER_IDLE_SPEAK_MAX = 20;
 
 //-----------------------------------------------------------------------------
 
@@ -260,7 +254,7 @@ struct AISpeechSelection_t
 	// Use in a specific case where the response has already been set.
 	void Set( AIConcept_t newConcept, CBaseEntity *pTarget  )
 	{
-		Assert( !response.IsEmpty() );
+		contract_assert( !response.IsEmpty() );
 		conc = newConcept;
 		hSpeechTarget = pTarget;
 	}
@@ -377,7 +371,7 @@ public:
 
 	bool		ShouldSpeakRandom( AIConcept_t conc, int iChance );
 	bool		IsAllowedToSpeak( AIConcept_t conc, bool bRespondingToPlayer = false );
-	virtual bool SpeakIfAllowed( AIConcept_t conc, const char *modifiers = nullptr, bool bRespondingToPlayer = false, char *pszOutResponseChosen = nullptr, size_t bufsize = 0 );
+	virtual bool SpeakIfAllowed( AIConcept_t conc, const char *modifiers = nullptr, bool bRespondingToPlayer = false, char *pszOutResponseChosen = nullptr, std::size_t bufsize = 0 );
 	void		ModifyOrAppendCriteria( AI_CriteriaSet& set );
 
 	//---------------------------------
@@ -487,5 +481,3 @@ bool CAI_PlayerAlly::CanSpeakWhileScripting()
 }
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_PLAYERALLY_H

@@ -1,22 +1,17 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: A base class for the client-side representation of entities.
-//
 //			This class encompasses both entities that are created on the server
 //			and networked to the client AND entities that are created on the
 //			client.
-//
-// $NoKeywords: $
-//==================================================================//
 
-#ifndef C_BASEENTITY_H
-#define C_BASEENTITY_H
-
-#include <bitset>
+import std;
+import ks.tier1;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 
-#include "mathlib/vector.h"
 #include "icliententityinternal.h"
 #include "engine/ivmodelrender.h"
 #include "client_class.h"
@@ -24,20 +19,14 @@
 #include "ehandle.h"
 #include "iclientunknown.h"
 #include "client_thinklist.h"
-#if !defined( NO_ENTITY_PREDICTION )
 #include "predictableid.h"
-#endif
 #include "soundflags.h"
 #include "shareddefs.h"
 #include "networkvar.h"
 #include "sharedvar.h"
-#include "tier1/interpolatedvar.h"
 #include "collisionproperty.h"
 #include "particle_property.h"
 #include "toolframework/itoolentity.h"
-#include "tier0/threadtools.h"
-#include <mutex>
-#include <flat_set>
 
 #include "vscript/ivscript.h"
 #include "vscript_shared.h"
@@ -70,7 +59,7 @@ class CCallQueue;
 
 typedef unsigned int			AimEntsListHandle_t;
 
-#define		INVALID_AIMENTS_LIST_HANDLE		(AimEntsListHandle_t)~0
+inline constexpr auto INVALID_AIMENTS_LIST_HANDLE = (AimEntsListHandle_t)~0;
 
 extern void RecvProxy_LocalVelocity( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
@@ -107,11 +96,10 @@ struct VarMapping_t
 
 																	
 
-#define DECLARE_INTERPOLATION()
 
 
 // How many data slots to use when in multiplayer.
-#define MULTIPLAYER_BACKUP			150
+inline constexpr auto MULTIPLAYER_BACKUP = 150;
 
 
 struct serialentity_t;
@@ -126,32 +114,6 @@ typedef C_BaseEntity* (*DISPATCHFUNCTION)( void );
 
 #include "touchlink.h"
 #include "groundlink.h"
-
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-//-----------------------------------------------------------------------------
-// Purpose: For fully client side entities we use this information to determine
-//  authoritatively if the server has acknowledged creating this entity, etc.
-//-----------------------------------------------------------------------------
-struct PredictionContext
-{
-	PredictionContext()
-	{
-		m_bActive					= false;
-		m_nCreationCommandNumber	= -1;
-		m_pszCreationModule			= nullptr;
-		m_nCreationLineNumber		= 0;
-		m_hServerEntity				= nullptr;
-	}
-
-	// The command_number of the usercmd which created this entity
-	bool						m_bActive;
-	int							m_nCreationCommandNumber;
-	char const					*m_pszCreationModule;
-	int							m_nCreationLineNumber;
-	// The entity to whom we are attached
-	CHandle< C_BaseEntity >		m_hServerEntity;
-};
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: think contexts
@@ -170,9 +132,9 @@ struct thinkfunc_t
 
 
 // Entity flags that only exist on the client.
-#define ENTCLIENTFLAG_GETTINGSHADOWRENDERBOUNDS	0x0001		// Tells us if we're getting the real ent render bounds or the shadow render bounds.
-#define ENTCLIENTFLAG_DONTUSEIK					0x0002		// Don't use IK on this entity even if its model has IK.
-#define ENTCLIENTFLAG_ALWAYS_INTERPOLATE		0x0004		// Used by view models.
+inline constexpr auto ENTCLIENTFLAG_GETTINGSHADOWRENDERBOUNDS = 0x0001; // Tells us if we're getting the real ent render bounds or the shadow render bounds.
+inline constexpr auto ENTCLIENTFLAG_DONTUSEIK = 0x0002; // Don't use IK on this entity even if its model has IK.
+inline constexpr auto ENTCLIENTFLAG_ALWAYS_INTERPOLATE = 0x0004; // Used by view models.
 
 enum entity_list_ids_t
 {
@@ -367,7 +329,6 @@ protected:
 
 		while( (pCurrent = this->GetHistoryValue( iCurrent, fTime )) != nullptr )
 		{
-			Assert( (fTime <= fHeadTime) || (iCurrent == iHead) ); //asserting that head is always newest
 
 			if( fTime < fDiscontinuityTime )
 				TransformValue( matTransform, *pCurrent );
@@ -511,10 +472,10 @@ public:
 	void							Term();
 
 	// memory handling, uses calloc so members are zero'd out on instantiation
-    void							*operator new( size_t stAllocateBlock );
-	void							*operator new[]( size_t stAllocateBlock );
-    void							*operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
-	void							*operator new[]( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
+    void							*operator new( std::size_t stAllocateBlock );
+	void							*operator new[]( std::size_t stAllocateBlock );
+    void							*operator new( std::size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
+	void							*operator new[]( std::size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
 	void							operator delete( void *pMem );
 	void							operator delete( void *pMem, int nBlockUse, const char *pFileName, int nLine ) { operator delete( pMem ); }
 
@@ -751,9 +712,9 @@ public:
 
 	virtual const Vector&			GetAbsOrigin( void ) const;
 	virtual const QAngle&			GetAbsAngles( void ) const;  // see also GetVectors()
-	inline Vector					Forward() const RESTRICT; ///< get my forward (+x) vector
-	inline Vector					Left() const RESTRICT;    ///< get my left    (+y) vector
-	inline Vector					Up() const RESTRICT;      ///< get my up      (+z) vector
+	inline Vector					Forward() const __restrict__; ///< get my forward (+x) vector
+	inline Vector					Left() const __restrict__;    ///< get my left    (+y) vector
+	inline Vector					Up() const __restrict__;      ///< get my up      (+z) vector
 
 	const Vector&					GetNetworkOrigin() const;
 	const QAngle&					GetNetworkAngles() const;
@@ -1189,7 +1150,7 @@ public:
 	};
 	virtual void					Think( void )
 	{
-		AssertMsg( m_pfnThink != &C_BaseEntity::Think, "Infinite recursion is infinitely bad." );
+		contract_assert( ( m_pfnThink != &C_BaseEntity::Think ) && "Infinite recursion is infinitely bad." );
 
 		if ( m_pfnThink )
 		{
@@ -1246,13 +1207,11 @@ public:
 	// Determine approximate velocity based on updates from server
 	virtual void			EstimateAbsVelocity( Vector& vel );
 
-#if !defined( NO_ENTITY_PREDICTION )
 	// The player drives simulation of this entity
 	void					SetPlayerSimulated( C_BasePlayer *pOwner );
 	bool					IsPlayerSimulated( void ) const;
 	CBasePlayer				*GetSimulatingPlayer( void );
 	void					UnsetPlayerSimulated( void );
-#endif
 
 	// Sorry folks, here lies TF2-specific stuff that really has no other place to go
 	virtual bool			CanBePoweredUp( void ) { return false; }
@@ -1522,11 +1481,6 @@ public:
 	float	GetSimulationTime() const;
 	void	SetSimulationTime( float st );
 
-#if defined(ENABLE_CREATE_TIME)
-	float	GetCreateTime()										{ return m_flCreateTime; }
-	void	SetCreateTime( float flCreateTime )					{ m_flCreateTime = flCreateTime; }
-#endif
-
 	int		GetCreationTick() const;
 
 #ifdef _DEBUG
@@ -1534,7 +1488,7 @@ public:
 
 	ENTITYFUNCPTR TouchSet( ENTITYFUNCPTR func, char *name ) 
 	{ 
-		//COMPILE_TIME_ASSERT( sizeof(func) == 4 ? 8 );
+		//static_assert( sizeof(func) == 4 ? 8 );
 		m_pfnTouch = func; 
 		//FunctionCheck( reinterpret_cast<inputfunc_t>(m_pfnTouch), name ); 
 		return func;
@@ -1650,7 +1604,7 @@ public:
 	void SetRenderMode( RenderMode_t nRenderMode, bool bForceUpdate = false );
 	RenderMode_t GetRenderMode() const;
 
-	void SetRenderFX( RenderFx_t nRenderFX, float flStartTime = FLT_MAX, float flDuration = 0.0f );
+	void SetRenderFX( RenderFx_t nRenderFX, float flStartTime = std::numeric_limits<float>::max(), float flDuration = 0.0f );
 	RenderFx_t GetRenderFX() const;
 
 	// Returns true if there was a change.
@@ -1775,10 +1729,6 @@ public:
 	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Proxy<RecvProxy_SimulationTime, ks::reflect::WireSide::Recv>{} ]] float							m_flSimulationTime;
 	float							m_flOldSimulationTime;
 	
-#if defined(ENABLE_CREATE_TIME)
-	float							m_flCreateTime;
-#endif
-
 private:
 	unsigned char 					m_nOldRenderMode;
 
@@ -1810,10 +1760,6 @@ public:
 	float							m_flSpeed;
 
 	// Certain entities (projectiles) can be created on the client
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-	CPredictableId					m_PredictableID;
-	PredictionContext				*m_pPredictionContext;
-#endif
 
 	// used so we know when things are no longer touching
 	int								touchStamp;	
@@ -1869,22 +1815,18 @@ protected:
 
 private:
 	// Set by tools if this entity should route "info" to various tools listening to HTOOLENTITIES
-#ifndef NO_TOOLFRAMEWORK
 	bool							m_bEnabledInToolView;
 	bool							m_bToolRecording;
 	HTOOLHANDLE						m_ToolHandle;
 	int								m_nLastRecordedFrame;
 	bool							m_bRecordInTools; // should this entity be recorded in the tools (we exclude some things like models for menus)
-#endif
 
 protected:
 	// pointer to the entity's physics object (vphysics.dll)
 	IPhysicsObject					*m_pPhysicsObject;	
 	float							m_flNonShadowMass;	// cached mass (shadow controllers set mass to VPHYSICS_MAX_MASS, or 50000)
 
-#if !defined( NO_ENTITY_PREDICTION )
 	bool							m_bPredictionEligible;
-#endif
 
 	int								m_nSimulationTick;
 
@@ -1979,13 +1921,11 @@ private:
 
 	[[= ks::reflect::Net{} ]] float							m_flUseLookAtAngle;
 
-#if !defined( NO_ENTITY_PREDICTION )
 	// It's still in the list for "fixup purposes" and simulation, but don't try to render it any more...
 	bool							m_bDormantPredictable;
 
 	// So we can clean it up
 	int								m_nIncomingPacketEntityBecameDormant;
-#endif
 
 	// The spawn time of the entity
 	float							m_flSpawnTime;
@@ -2067,7 +2007,6 @@ private:
 	// used to cull collision tests
 	[[= ks::reflect::Net{} ]] int								m_CollisionGroup;
 
-#if !defined( NO_ENTITY_PREDICTION )
 	// For storing prediction results and pristine network state
 	byte							*m_pIntermediateData[ MULTIPLAYER_BACKUP ] = {};
 	byte							*m_pIntermediateData_FirstPredicted[ MULTIPLAYER_BACKUP + 1 ] = {};
@@ -2078,7 +2017,6 @@ private:
 	bool							m_bEverHadPredictionErrorsForThisCommand = false;
 
 	bool							m_bIsPlayerSimulated = false;
-#endif
 
 	CNetworkVar( bool, m_bSimulatedEveryTick, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Proxy<RecvProxy_InterpolationAmountChanged, ks::reflect::WireSide::Recv>{} ]] );
 	CNetworkVar( bool, m_bAnimatedEveryTick, [[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] [[= ks::reflect::Proxy<RecvProxy_InterpolationAmountChanged, ks::reflect::WireSide::Recv>{} ]] );
@@ -2107,10 +2045,8 @@ private:
 	// OnDataChanged calls in the same frame if the client receives multiple packets.
 	int								m_DataChangeEventRef;
 
-#if !defined( NO_ENTITY_PREDICTION )
 	// Player who is driving my simulation
 	CHandle< CBasePlayer >			m_hPlayerSimulationOwner;
-#endif
 
 
 	[[= ks::reflect::Net{} ]] EHANDLE							m_hEffectEntity;
@@ -2157,8 +2093,8 @@ EXTERN_RECV_TABLE(DT_BaseEntity);
 
 inline bool FClassnameIs( C_BaseEntity *pEntity, const char *szClassname )
 { 
-	Assert( pEntity );
-	return pEntity && !strcmp( pEntity->GetClassname(), szClassname ); 
+	contract_assert( pEntity );
+	return pEntity && !std::strcmp( pEntity->GetClassname(), szClassname ); 
 }
 
 #define SetThink( a ) ThinkSet( static_cast <void (CBaseEntity::*)(void)> (a), 0, nullptr )
@@ -2222,14 +2158,14 @@ inline bool C_BaseEntity::IsServerEntity( void ) const
 //-----------------------------------------------------------------------------
 inline matrix3x4_t &C_BaseEntity::EntityToWorldTransform()
 { 
-	Assert( s_bAbsQueriesValid );
+	contract_assert( s_bAbsQueriesValid );
 	CalcAbsolutePosition();
 	return m_rgflCoordinateFrame; 
 }
 
 inline const matrix3x4_t &C_BaseEntity::EntityToWorldTransform() const
 {
-	Assert( s_bAbsQueriesValid );
+	contract_assert( s_bAbsQueriesValid );
 	const_cast<C_BaseEntity*>(this)->CalcAbsolutePosition();
 	return m_rgflCoordinateFrame; 
 }
@@ -2263,7 +2199,7 @@ inline void C_BaseEntity::WorldToEntitySpace( const Vector &in, Vector *pOut ) c
 
 inline const Vector &C_BaseEntity::GetAbsVelocity( ) const
 {
-	Assert( s_bAbsQueriesValid );
+	contract_assert( s_bAbsQueriesValid );
 	const_cast<C_BaseEntity*>(this)->CalcAbsoluteVelocity();
 	return m_vecAbsVelocity;
 }
@@ -2344,22 +2280,22 @@ inline void C_BaseEntity::SetCollisionBounds( const Vector& mins, const Vector &
 //-----------------------------------------------------------------------------
 inline const Vector& C_BaseEntity::WorldAlignMins( ) const
 {
-	Assert( !CollisionProp()->IsBoundsDefinedInEntitySpace() );
-	Assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
+	contract_assert( !CollisionProp()->IsBoundsDefinedInEntitySpace() );
+	contract_assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
 	return CollisionProp()->OBBMins();
 }
 
 inline const Vector& C_BaseEntity::WorldAlignMaxs( ) const
 {
-	Assert( !CollisionProp()->IsBoundsDefinedInEntitySpace() );
-	Assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
+	contract_assert( !CollisionProp()->IsBoundsDefinedInEntitySpace() );
+	contract_assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
 	return CollisionProp()->OBBMaxs();
 }
 
 inline const Vector& C_BaseEntity::WorldAlignSize( ) const
 {
-	Assert( !CollisionProp()->IsBoundsDefinedInEntitySpace() );
-	Assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
+	contract_assert( !CollisionProp()->IsBoundsDefinedInEntitySpace() );
+	contract_assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
 	return CollisionProp()->OBBSize();
 }
 
@@ -2613,9 +2549,7 @@ inline bool	C_BaseEntity::IsInterpolationEnabled()
 //-----------------------------------------------------------------------------
 inline void C_BaseEntity::SetToolHandle( HTOOLHANDLE handle )
 {
-#ifndef NO_TOOLFRAMEWORK
 	m_ToolHandle = handle;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2625,11 +2559,7 @@ inline void C_BaseEntity::SetToolHandle( HTOOLHANDLE handle )
 //-----------------------------------------------------------------------------
 inline HTOOLHANDLE C_BaseEntity::GetToolHandle() const
 {
-#ifndef NO_TOOLFRAMEWORK
 	return m_ToolHandle;
-#else
-	return (HTOOLHANDLE)0;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2637,11 +2567,7 @@ inline HTOOLHANDLE C_BaseEntity::GetToolHandle() const
 //-----------------------------------------------------------------------------
 inline bool C_BaseEntity::IsEnabledInToolView() const
 {
-#ifndef NO_TOOLFRAMEWORK
 	return m_bEnabledInToolView;
-#else
-	return false;
-#endif
 }
 
 
@@ -2661,11 +2587,7 @@ inline void UTIL_Remove( C_BaseEntity *pEntity )
 //-----------------------------------------------------------------------------
 inline bool C_BaseEntity::ShouldRecordInTools() const
 {
-#ifndef NO_TOOLFRAMEWORK
 	return m_bRecordInTools;
-#else
-	return true;
-#endif
 }
 
 inline bool C_BaseEntity::IsVisible() const
@@ -2715,8 +2637,6 @@ private:
 
 C_BaseEntity *CreateEntityByName( const char *className );
 
-#if !defined( NO_ENTITY_PREDICTION )
-
 struct CEntIndexLessFunc
 {
 	bool operator()( C_BaseEntity *lhs, C_BaseEntity *rhs ) const
@@ -2757,7 +2677,7 @@ private:
 // Input  : slot - 
 // Output : C_BaseEntity
 //-----------------------------------------------------------------------------
-FORCEINLINE C_BaseEntity *CPredictableList::GetPredictable( int slot )
+[[gnu::always_inline]] inline C_BaseEntity *CPredictableList::GetPredictable( int slot )
 {
 	return m_Predictables.begin()[ slot ];
 }
@@ -2766,18 +2686,14 @@ FORCEINLINE C_BaseEntity *CPredictableList::GetPredictable( int slot )
 // Purpose: 
 // Output : int
 //-----------------------------------------------------------------------------
-FORCEINLINE int CPredictableList::GetPredictableCount( void ) const
+[[gnu::always_inline]] inline int CPredictableList::GetPredictableCount( void ) const
 {
 	return std::ssize( m_Predictables );
 }
 
-FORCEINLINE int C_BaseEntity::GetSplitUserPlayerPredictionSlot()
+[[gnu::always_inline]] inline int C_BaseEntity::GetSplitUserPlayerPredictionSlot()
 {
-#if defined( USE_PREDICTABLEID )
-	Assert( m_bPredictable || m_pPredictionContext );
-#else
-	Assert( m_bPredictable );
-#endif
+	contract_assert( m_bPredictable );
 	return m_nSplitUserPlayerPredictionSlot;
 }
 
@@ -2794,6 +2710,3 @@ private:
 	float	m_flSavedTime;
 	bool	m_bActive;
 };
-#endif
-
-#endif // C_BASEENTITY_H

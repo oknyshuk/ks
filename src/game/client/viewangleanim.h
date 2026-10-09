@@ -1,15 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "utlvector.h"
+import ks.tier1;
+import std;
+#include "c_baseentity.h"
 
-#define VIEWANIM_RELATIVE (1<<0)	// angles in keyframe are relative, add anim to current angles
-#define VIEWANIM_IGNORE_X (1<<1)	// ignore the x component of this animation
-#define VIEWANIM_IGNORE_Y (1<<2)	// ditto for y
-#define VIEWANIM_IGNORE_Z (1<<3)	// ditto for z
+inline constexpr auto VIEWANIM_RELATIVE = (1<<0); // angles in keyframe are relative, add anim to current angles
+inline constexpr auto VIEWANIM_IGNORE_X = (1<<1); // ignore the x component of this animation
+inline constexpr auto VIEWANIM_IGNORE_Y = (1<<2); // ditto for y
+inline constexpr auto VIEWANIM_IGNORE_Z = (1<<3); // ditto for z
 
 #define QAngleToVector(a,v) { v[0] = a[0]; v[1] = a[1]; v[2] = a[2]; }
 

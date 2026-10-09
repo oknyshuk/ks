@@ -1,13 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "bitmap/texturepacker.h"
-#include "tier0/dbg.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -58,7 +52,7 @@ int CTexturePacker::AllocNode( int parentIndex )
 void CTexturePacker::FreeLeaf( int nodeIndex )
 {
 	Node_t &node = m_Nodes[nodeIndex];
-	Assert( node.bInTree && node.child[0] < 0 );
+	contract_assert( node.bInTree && node.child[0] < 0 );
 	if ( node.parent >= 0 )
 	{
 		Node_t &parent = m_Nodes[node.parent];
@@ -69,7 +63,7 @@ void CTexturePacker::FreeLeaf( int nodeIndex )
 		}
 		else
 		{
-			Assert( parent.child[1] == nodeIndex );
+			contract_assert( parent.child[1] == nodeIndex );
 			parent.child[1] = -1;
 		}
 	}
@@ -108,7 +102,7 @@ bool CTexturePacker::IsLeaf( int nodeIndex )
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-bool CTexturePacker::IsLeftChild( int nodeIndexParent, int nodeIndexChild )
+bool CTexturePacker::IsLeftChild( int nodeIndexParent, int nodeIndexChild ) const
 {
 	return m_Nodes[nodeIndexParent].child[0] == nodeIndexChild;
 }
@@ -116,7 +110,7 @@ bool CTexturePacker::IsLeftChild( int nodeIndexParent, int nodeIndexChild )
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-bool CTexturePacker::IsRightChild( int nodeIndexParent, int nodeIndexChild )
+bool CTexturePacker::IsRightChild( int nodeIndexParent, int nodeIndexChild ) const
 {
 	return !IsLeftChild( nodeIndexParent, nodeIndexChild );
 }
@@ -131,7 +125,7 @@ int CTexturePacker::InsertRect( const Rect_t& texRect, int nodeIndex )
 	if ( nodeIndex == -1 ) 
 	{
 		nodeIndex = m_Root;
-		Assert( nodeIndex >= 0 );
+		contract_assert( nodeIndex >= 0 );
 	}
 
     if ( !IsLeaf( nodeIndex) ) // not a leaf
@@ -183,7 +177,7 @@ int CTexturePacker::InsertRect( const Rect_t& texRect, int nodeIndex )
         if ( dw > dh )   // split along x
 		{			
 			leftChildIndex = AllocNode( nodeIndex );
-			Assert( IsLeftChild( nodeIndex, leftChildIndex ) );
+			contract_assert( IsLeftChild( nodeIndex, leftChildIndex ) );
 			TreeEntry_t &leftChild =  m_Nodes[leftChildIndex].entry;
 			leftChild.rc.x = m_Nodes[nodeIndex].entry.rc.x;
 			leftChild.rc.y = m_Nodes[nodeIndex].entry.rc.y;
@@ -192,7 +186,7 @@ int CTexturePacker::InsertRect( const Rect_t& texRect, int nodeIndex )
 			leftChild.bInUse = false;
 
 			int rightChildIndex = AllocNode( nodeIndex );
-			Assert( IsRightChild( nodeIndex, rightChildIndex ) );
+			contract_assert( IsRightChild( nodeIndex, rightChildIndex ) );
 			TreeEntry_t &rightChild =  m_Nodes[rightChildIndex].entry;
 			rightChild.rc.x = m_Nodes[nodeIndex].entry.rc.x + texRect.width + m_PixelGap;
 			rightChild.rc.y = m_Nodes[nodeIndex].entry.rc.y;
@@ -200,13 +194,13 @@ int CTexturePacker::InsertRect( const Rect_t& texRect, int nodeIndex )
 			rightChild.rc.height = cacheSlotHeight;
 			rightChild.bInUse = false;
 
-			Assert( m_Nodes[leftChildIndex].parent == m_Nodes[rightChildIndex].parent );
-			Assert( m_Nodes[leftChildIndex].parent == nodeIndex );
+			contract_assert( m_Nodes[leftChildIndex].parent == m_Nodes[rightChildIndex].parent );
+			contract_assert( m_Nodes[leftChildIndex].parent == nodeIndex );
 		}
         else // split along y
 		{			
 			leftChildIndex = AllocNode( nodeIndex );
-			Assert( IsLeftChild( nodeIndex, leftChildIndex ) );
+			contract_assert( IsLeftChild( nodeIndex, leftChildIndex ) );
 			TreeEntry_t &leftChild =  m_Nodes[leftChildIndex].entry;
 			leftChild.rc.x = m_Nodes[nodeIndex].entry.rc.x;
 			leftChild.rc.y = m_Nodes[nodeIndex].entry.rc.y;
@@ -215,7 +209,7 @@ int CTexturePacker::InsertRect( const Rect_t& texRect, int nodeIndex )
 			leftChild.bInUse = false;
 			
 			int rightChildIndex = AllocNode( nodeIndex );
-			Assert( IsRightChild( nodeIndex, rightChildIndex ) );
+			contract_assert( IsRightChild( nodeIndex, rightChildIndex ) );
 			TreeEntry_t &rightChild =  m_Nodes[rightChildIndex].entry;
 			rightChild.rc.x = m_Nodes[nodeIndex].entry.rc.x;
 			rightChild.rc.y = m_Nodes[nodeIndex].entry.rc.y + texRect.height + m_PixelGap;
@@ -223,8 +217,8 @@ int CTexturePacker::InsertRect( const Rect_t& texRect, int nodeIndex )
 			rightChild.rc.height = dh - m_PixelGap;
 			rightChild.bInUse = false;
 
-			Assert( m_Nodes[leftChildIndex].parent == m_Nodes[rightChildIndex].parent );
-			Assert( m_Nodes[leftChildIndex].parent == nodeIndex );
+			contract_assert( m_Nodes[leftChildIndex].parent == m_Nodes[rightChildIndex].parent );
+			contract_assert( m_Nodes[leftChildIndex].parent == nodeIndex );
 		}
         
         // insert into first child we created
@@ -265,7 +259,7 @@ bool CTexturePacker::RemoveRect( int nodeIndex )
 		{
 			// Get the index of the left child
 			int peerIndex = m_Nodes[parentIndex].child[0];
-			Assert( nodeIndex == m_Nodes[parentIndex].child[1] );
+			contract_assert( nodeIndex == m_Nodes[parentIndex].child[1] );
 
 			if ( IsLeaf( peerIndex ) && !m_Nodes[peerIndex].entry.bInUse )
 			{

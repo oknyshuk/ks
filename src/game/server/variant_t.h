@@ -1,16 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef VARIANT_T_H
-#define VARIANT_T_H
-
-
+import ks.math;
 #include "ehandle.h"
-#include "mathlib/vmatrix.h"
+#include "string_t.h"
+#include "datamap.h"
+import std;
 
 class CBaseEntity;
 
@@ -101,6 +97,3 @@ inline const CHandle<CBaseEntity> &variant_t::Entity(void) const
 	static const CHandle<CBaseEntity> hNull(INVALID_EHANDLE);
 	return(hNull);
 }
-
-
-#endif // VARIANT_T_H

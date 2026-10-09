@@ -1,10 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Third-party notice: Info-ZIP; see the original copyright and license below.
+
 // XUnzip.cpp  Version 1.1
 //
 // Authors:      Mark Adler et al. (see below)
@@ -93,48 +91,39 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#if defined( PROTECTED_THINGS_ENABLE )
-#undef PROTECTED_THINGS_ENABLE // from protected_things.h
-#endif
-#include "tier0/platform.h"
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+
+
+import std;
+import ks.tier1;
 #include "zip/XUnzip.h"
 
-#define _tcslen strlen
-#define _tcscpy strcpy
-#define _tcscat strcat
-#define _tcsstr strstr
+#define _tcslen std::strlen
+#define _tcscpy std::strcpy
+#define _tcsstr std::strstr
 #if !defined( _T )
-#define _T( arg ) arg
+#define  arg  arg
 #endif
-#define INVALID_HANDLE_VALUE (void*)-1
-#define CloseHandle( arg ) close( size_cast< int >( (intp) arg ) )
-#define ZeroMemory( ptr, size ) memset( ptr, 0, size )
-#define CreateDirectory( dir, ign ) mkdir( dir, S_IRWXU | S_IRWXG | S_IRWXO )
-#define FILE_CURRENT SEEK_CUR
-#define FILE_BEGIN SEEK_SET
-#define FILE_END SEEK_END
-#define SetFilePointer( handle, pos, ign, dir ) lseek( size_cast<int> ( (intp) handle ), pos, dir )
+#define INVALID_HANDLE_VALUE nullptr
+#define CloseHandle( arg ) ks::platform::close_file( (ks::platform::file *)( arg ) )
+#define ZeroMemory( ptr, size ) std::memset( ptr, 0, size )
+#define CreateDirectory( dir, ign ) ks::platform::create_directory( dir )
+#define FILE_BEGIN k_nSeekSet
+#define FILE_END k_nSeekEnd
+#define SetFilePointer( handle, pos, ign, dir ) ( (long)ks::platform::seek_file( (ks::platform::file *)( handle ), (long long)( pos ), ( dir ), nullptr ) )
 bool ReadFile( void *handle, void *outbuf, unsigned int toread, DWORD *nread, void *ignored )
 {
-	*nread = read( size_cast< int >( (intp) handle ), outbuf, toread );
-	return *nread == toread;
+	long got = ks::platform::read_file( (ks::platform::file *)handle, outbuf, toread, nullptr );
+	*nread = ( got > 0 ) ? (DWORD)got : 0;
+	return (unsigned long)got == toread;
 }
 bool WriteFile( void *handle, void *buf, unsigned int towrite, DWORD *written, void *ignored )
 {
-	*written = write( size_cast< int >( (intp) handle ), buf, towrite );
-	return *written == towrite;
+	long put = ks::platform::write_file( (ks::platform::file *)handle, buf, towrite, nullptr );
+	*written = ( put > 0 ) ? (DWORD)put : 0;
+	return (unsigned long)put == towrite;
 }
 
-#define FILE_ATTRIBUTE_NORMAL	 S_IFREG
-#define FILE_ATTRIBUTE_DIRECTORY S_IFDIR
+#define FILE_ATTRIBUTE_DIRECTORY 0x10
 #define FILE_ATTRIBUTE_ARCHIVE   0
 #define FILE_ATTRIBUTE_HIDDEN    0
 #define FILE_ATTRIBUTE_READONLY	 0
@@ -143,10 +132,7 @@ typedef unsigned char BYTE;
 
 
 
-#include "tier1/strtools.h"
-#include "tier0/dbg.h"
 
-#include "tier0/memalloc.h"
 
 
 // THIS FILE is almost entirely based upon code by Jean-loup Gailly
@@ -1067,7 +1053,7 @@ int inflate_flush(inflate_blocks_statef *s,z_streamp z,int r)
 
   // copy as far as end of window 
   if (n!=0)          // check for n!=0 to avoid waking up CodeGuard
-  { memcpy(p, q, n);
+  { std::memcpy(p, q, n);
     p += n;
     q += n;
   }
@@ -1094,7 +1080,7 @@ int inflate_flush(inflate_blocks_statef *s,z_streamp z,int r)
       z->adler = s->check = (*s->checkfn)(s->check, q, n);
 
     // copy
-    memcpy(p, q, n);
+    std::memcpy(p, q, n);
     p += n;
     q += n;
   }
@@ -1530,7 +1516,7 @@ int inflate_blocks(inflate_blocks_statef *s, z_streamp z, int r)
       t = s->sub.left;
       if (t > n) t = n;
       if (t > m) t = m;
-      memcpy(q, p, t);
+      std::memcpy(q, p, t);
       p += t;  n -= t;
       q += t;  m -= t;
       if ((s->sub.left -= t) != 0)
@@ -2740,8 +2726,8 @@ LUFILE *lufopen(void *z,unsigned int len,DWORD flags,ZRESULT *err)
 		{ 
 			HANDLE hf = z;
 			bool res = false;
-			h = (HANDLE) (intp) dup( size_cast<int>( (intp) hf ) );
-			res = (intp) h >= 0;
+			h = (HANDLE)ks::platform::duplicate_file( (ks::platform::file *)hf );
+			res = h != nullptr;
 			if (!res) 
 			{
 				*err=ZR_NODUPH; 
@@ -2750,16 +2736,14 @@ LUFILE *lufopen(void *z,unsigned int len,DWORD flags,ZRESULT *err)
 		}
 		else
 		{ 
-			h = (void*) (intp) open( (const TCHAR *)z, O_RDONLY );
+			h = (void*)ks::platform::open_file( (const TCHAR *)z, ks::platform::file_mode::read, nullptr );
 			if (h == INVALID_HANDLE_VALUE) 
 			{
 				*err = ZR_NOFILE; 
 				return nullptr;
 			}
 		}
-		struct stat buf;
-		fstat( size_cast< int >( (intp)h ), &buf );
-		canseek = buf.st_mode & S_IFREG;
+		canseek = true;
 	}
 	LUFILE *lf = new LUFILE;
 	if (flags==ZIP_HANDLE||flags==ZIP_FILENAME)
@@ -2770,7 +2754,7 @@ LUFILE *lufopen(void *z,unsigned int len,DWORD flags,ZRESULT *err)
 		lf->initial_offset=0;
 		if (canseek) 
 		{
-			lf->initial_offset = SetFilePointer(h,0,nullptr,FILE_CURRENT);
+			lf->initial_offset = SetFilePointer(h,0,nullptr,k_nSeekCur);
 		}
 	}
 	else
@@ -2788,7 +2772,7 @@ LUFILE *lufopen(void *z,unsigned int len,DWORD flags,ZRESULT *err)
 
 
 int lufclose(LUFILE *stream)
-{ if (stream==nullptr) return EOF;
+{ if (stream==nullptr) return std::char_traits<char>::eof();
   if (stream->is_handle) CloseHandle(stream->h);
   delete stream;
   return 0;
@@ -2800,30 +2784,30 @@ int luferror(LUFILE *stream)
 }
 
 long int luftell(LUFILE *stream)
-{ if (stream->is_handle && stream->canseek) return SetFilePointer(stream->h,0,nullptr,FILE_CURRENT)-stream->initial_offset;
+{ if (stream->is_handle && stream->canseek) return SetFilePointer(stream->h,0,nullptr,k_nSeekCur)-stream->initial_offset;
   else if (stream->is_handle) return 0;
   else return stream->pos;
 }
 
 int lufseek(LUFILE *stream, long offset, int whence)
 { if (stream->is_handle && stream->canseek)
-  { if (whence==SEEK_SET) SetFilePointer(stream->h,stream->initial_offset+offset,0,FILE_BEGIN);
-    else if (whence==SEEK_CUR) SetFilePointer(stream->h,offset,nullptr,FILE_CURRENT);
-    else if (whence==SEEK_END) SetFilePointer(stream->h,offset,nullptr,FILE_END);
+  { if (whence==k_nSeekSet) SetFilePointer(stream->h,stream->initial_offset+offset,0,FILE_BEGIN);
+    else if (whence==k_nSeekCur) SetFilePointer(stream->h,offset,nullptr,k_nSeekCur);
+    else if (whence==k_nSeekEnd) SetFilePointer(stream->h,offset,nullptr,FILE_END);
     else return 19; // EINVAL
     return 0;
   }
   else if (stream->is_handle) return 29; // ESPIPE
   else
-  { if (whence==SEEK_SET) stream->pos=offset;
-    else if (whence==SEEK_CUR) stream->pos+=offset;
-    else if (whence==SEEK_END) stream->pos=stream->len+offset;
+  { if (whence==k_nSeekSet) stream->pos=offset;
+    else if (whence==k_nSeekCur) stream->pos+=offset;
+    else if (whence==k_nSeekEnd) stream->pos=stream->len+offset;
     return 0;
   }
 }
 
 
-size_t lufread(void *ptr,size_t size,size_t n,LUFILE *stream)
+std::size_t lufread(void *ptr,std::size_t size,std::size_t n,LUFILE *stream)
 { unsigned int toread = (unsigned int)(size*n);
   if (stream->is_handle)
   { DWORD red; BOOL res = ReadFile(stream->h,ptr,toread,&red,nullptr);
@@ -2831,7 +2815,7 @@ size_t lufread(void *ptr,size_t size,size_t n,LUFILE *stream)
     return red/size;
   }
   if (stream->pos+toread > stream->len) toread = stream->len-stream->pos;
-  memcpy(ptr, (char*)stream->buf + stream->pos, toread); DWORD red = toread;
+  std::memcpy(ptr, (char*)stream->buf + stream->pos, toread); DWORD red = toread;
   stream->pos += red;
   return red/size;
 }
@@ -3007,7 +2991,7 @@ int strcmpcasenosensitive_internal (const char* fileName1,const char *fileName2)
 // If iCaseSenisivity = 2, comparision is not case sensitivity (like strcmpi or strcasecmp)
 //
 int unzStringFileNameCompare (const char*fileName1,const char*fileName2,int iCaseSensitivity)
-{ if (iCaseSensitivity==1) return strcmp(fileName1,fileName2);
+{ if (iCaseSensitivity==1) return std::strcmp(fileName1,fileName2);
   else return strcmpcasenosensitive_internal(fileName1,fileName2);
 } 
 
@@ -3017,7 +3001,7 @@ int unzStringFileNameCompare (const char*fileName1,const char*fileName2,int iCas
 //  Locate the Central directory of a zipfile (at the end, just before
 // the global comment)
 uLong unzlocal_SearchCentralDir(LUFILE *fin)
-{ if (lufseek(fin,0,SEEK_END) != 0) return 0;
+{ if (lufseek(fin,0,k_nSeekEnd) != 0) return 0;
   uLong uSizeFile = luftell(fin);
 
   uLong uMaxBack=0xffff; // maximum size of global comment
@@ -3035,7 +3019,7 @@ uLong unzlocal_SearchCentralDir(LUFILE *fin)
     else uBackRead+=BUFREADCOMMENT;
     uReadPos = uSizeFile-uBackRead ;
     uReadSize = ((BUFREADCOMMENT+4) < (uSizeFile-uReadPos)) ? (BUFREADCOMMENT+4) : (uSizeFile-uReadPos);
-    if (lufseek(fin,uReadPos,SEEK_SET)!=0) break;
+    if (lufseek(fin,uReadPos,k_nSeekSet)!=0) break;
     if (lufread(buf,(uInt)uReadSize,1,fin)!=1) break;
     for (i=(int)uReadSize-3; (i--)>0;)
     { if (((*(buf+i))==0x50) && ((*(buf+i+1))==0x4b) &&	((*(buf+i+2))==0x05) && ((*(buf+i+3))==0x06))
@@ -3064,7 +3048,7 @@ unzFile unzOpenInternal(LUFILE *fin)
   uLong central_pos,uL;
   central_pos = unzlocal_SearchCentralDir(fin);
   if (central_pos==0) err=UNZ_ERRNO;
-  if (lufseek(fin,central_pos,SEEK_SET)!=0) err=UNZ_ERRNO;
+  if (lufseek(fin,central_pos,k_nSeekSet)!=0) err=UNZ_ERRNO;
   // the signature, already checked
   if (unzlocal_getLong(fin,&uL)!=UNZ_OK) err=UNZ_ERRNO;
   // number of this disk
@@ -3177,7 +3161,7 @@ int unzlocal_GetCurrentFileInfoInternal (unzFile file, unz_file_info *pfile_info
 	if (file==nullptr)
 		return UNZ_PARAMERROR;
 	s=(unz_s*)file;
-	if (lufseek(s->file,s->pos_in_central_dir+s->byte_before_the_zipfile,SEEK_SET)!=0)
+	if (lufseek(s->file,s->pos_in_central_dir+s->byte_before_the_zipfile,k_nSeekSet)!=0)
 		err=UNZ_ERRNO;
 
 
@@ -3263,7 +3247,7 @@ int unzlocal_GetCurrentFileInfoInternal (unzFile file, unz_file_info *pfile_info
 			uSizeRead = extraFieldBufferSize;
 
 		if (lSeek!=0)
-			if (lufseek(s->file,lSeek,SEEK_CUR)==0)
+			if (lufseek(s->file,lSeek,k_nSeekCur)==0)
 				lSeek=0;
 			else
 				err=UNZ_ERRNO;
@@ -3288,7 +3272,7 @@ int unzlocal_GetCurrentFileInfoInternal (unzFile file, unz_file_info *pfile_info
 			uSizeRead = commentBufferSize;
 
 		if (lSeek!=0)
-			if (lufseek(s->file,lSeek,SEEK_CUR)==0)
+			if (lufseek(s->file,lSeek,k_nSeekCur)==0)
 				{} // unused lSeek=0;
 			else
 				err=UNZ_ERRNO;
@@ -3387,7 +3371,7 @@ int unzLocateFile (unzFile file, const TCHAR *szFileName, int iCaseSensitivity)
 
 	char szFileNameA[MAX_PATH];
 
-	strcpy(szFileNameA, szFileName);
+	std::strcpy(szFileNameA, szFileName);
 
 	s=(unz_s*)file;
 	if (!s->current_file_ok)
@@ -3432,7 +3416,7 @@ int unzlocal_CheckCurrentFileCoherencyHeader (unz_s *s,uInt *piSizeVar,
 	*poffset_local_extrafield = 0;
 	*psize_local_extrafield = 0;
 
-	if (lufseek(s->file,s->cur_file_info_internal.offset_curfile + s->byte_before_the_zipfile,SEEK_SET)!=0)
+	if (lufseek(s->file,s->cur_file_info_internal.offset_curfile + s->byte_before_the_zipfile,k_nSeekSet)!=0)
 		return UNZ_ERRNO;
 
 
@@ -3623,7 +3607,7 @@ int unzReadCurrentFile  (unzFile file, voidp buf, unsigned len)
     { uInt uReadThis = UNZ_BUFSIZE;
       if (pfile_in_zip_read_info->rest_read_compressed<uReadThis) uReadThis = (uInt)pfile_in_zip_read_info->rest_read_compressed;
       if (uReadThis == 0) return UNZ_EOF;
-      if (lufseek(pfile_in_zip_read_info->file, pfile_in_zip_read_info->pos_in_zipfile + pfile_in_zip_read_info->byte_before_the_zipfile,SEEK_SET)!=0) return UNZ_ERRNO;
+      if (lufseek(pfile_in_zip_read_info->file, pfile_in_zip_read_info->pos_in_zipfile + pfile_in_zip_read_info->byte_before_the_zipfile,k_nSeekSet)!=0) return UNZ_ERRNO;
       if (lufread(pfile_in_zip_read_info->read_buffer,uReadThis,1,pfile_in_zip_read_info->file)!=1) return UNZ_ERRNO;
       pfile_in_zip_read_info->pos_in_zipfile += uReadThis;
       pfile_in_zip_read_info->rest_read_compressed-=uReadThis;
@@ -3747,7 +3731,7 @@ int unzGetLocalExtrafield (unzFile file,voidp buf,unsigned len)
 	if (read_now==0)
 		return 0;
 
-	if (lufseek(pfile_in_zip_read_info->file, pfile_in_zip_read_info->offset_local_extrafield +  pfile_in_zip_read_info->pos_local_extrafield,SEEK_SET)!=0)
+	if (lufseek(pfile_in_zip_read_info->file, pfile_in_zip_read_info->offset_local_extrafield +  pfile_in_zip_read_info->pos_local_extrafield,k_nSeekSet)!=0)
 		return UNZ_ERRNO;
 
 	if (lufread(buf,(uInt)size_to_read,1,pfile_in_zip_read_info->file)!=1)
@@ -3809,7 +3793,7 @@ int unzGetGlobalComment (unzFile file, char *szComment, uLong uSizeBuf)
   s=(unz_s*)file;
   uReadThis = uSizeBuf;
   if (uReadThis>s->gi.size_comment) uReadThis = s->gi.size_comment;
-  if (lufseek(s->file,s->central_pos+22,SEEK_SET)!=0) return UNZ_ERRNO;
+  if (lufseek(s->file,s->central_pos+22,k_nSeekSet)!=0) return UNZ_ERRNO;
   if (uReadThis>0)
   { *szComment='\0';
     if (lufread(szComment,(uInt)uReadThis,1,s->file)!=1) return UNZ_ERRNO;
@@ -3864,14 +3848,14 @@ ZRESULT TUnzip::Get(int index,ZIPENTRY *ze)
   if (currentfile!=-1) 
 	  unzCloseCurrentFile(uf); 
   currentfile=-1;
-  if (index==czei && index!=-1) {memcpy(ze,&cze,sizeof(ZIPENTRY)); return ZR_OK;}
+  if (index==czei && index!=-1) {std::memcpy(ze,&cze,sizeof(ZIPENTRY)); return ZR_OK;}
   if (index==-1)
   { ze->index = uf->gi.number_entry;
     ze->name[0]=0;
     ze->attr=0;
-	memset( &ze->atime, 0, sizeof( ze->atime ) );
-	memset( &ze->ctime, 0, sizeof( ze->ctime ) );
-	memset( &ze->mtime, 0, sizeof( ze->mtime ) );
+	std::memset( &ze->atime, 0, sizeof( ze->atime ) );
+	std::memset( &ze->ctime, 0, sizeof( ze->ctime ) );
+	std::memset( &ze->mtime, 0, sizeof( ze->mtime ) );
     ze->comp_size=0;
     ze->unc_size=0;
     return ZR_OK;
@@ -3887,12 +3871,12 @@ ZRESULT TUnzip::Get(int index,ZIPENTRY *ze)
   unsigned int extralen,iSizeVar; unsigned long offset;
   int res = unzlocal_CheckCurrentFileCoherencyHeader(uf,&iSizeVar,&offset,&extralen);
   if (res!=UNZ_OK) return ZR_CORRUPT;
-  if (lufseek(uf->file,offset,SEEK_SET)!=0) return ZR_READ;
+  if (lufseek(uf->file,offset,k_nSeekSet)!=0) return ZR_READ;
   char *extra = new char[extralen];
   if (lufread(extra,1,(uInt)extralen,uf->file)!=extralen) {delete[] extra; return ZR_READ;}
   //
   ze->index=uf->num_file;
-  strcpy(ze->name,fn);
+  std::strcpy(ze->name,fn);
   // zip has an 'attribute' 32bit value. Its lower half is windows stuff
   // its upper half is standard unix attr.
   unsigned long a = ufi.external_fa;
@@ -3906,7 +3890,7 @@ ZRESULT TUnzip::Get(int index,ZIPENTRY *ze)
   bool wsystem=    (a&0x00000004)!=0;
   bool wisdir=     (a&0x00000010)!=0;
   bool warchive=   (a&0x00000020)!=0;
-  ze->attr=FILE_ATTRIBUTE_NORMAL;
+  ze->attr=0;
   if (uisdir || wisdir) ze->attr |= FILE_ATTRIBUTE_DIRECTORY;
   if (warchive) ze->attr|=FILE_ATTRIBUTE_ARCHIVE;
   if (whidden) ze->attr|=FILE_ATTRIBUTE_HIDDEN;
@@ -3922,29 +3906,29 @@ ZRESULT TUnzip::Get(int index,ZIPENTRY *ze)
   while (epos+4<extralen)
   { char etype[3]; etype[0]=extra[epos+0]; etype[1]=extra[epos+1]; etype[2]=0;
     int size = extra[epos+2];
-    if (strcmp(etype,"UT")!=0) {epos += 4+size; continue;}
+    if (std::strcmp(etype,"UT")!=0) {epos += 4+size; continue;}
     int flags = extra[epos+4];
     bool hasmtime = (flags&1)!=0;
     bool hasatime = (flags&2)!=0;
     bool hasctime = (flags&4)!=0;
     epos+=5;
     if (hasmtime)
-    { time_t mtime = *(time_t*)(extra+epos); epos+=4;
+    { std::time_t mtime = *(std::time_t*)(extra+epos); epos+=4;
 	  ze->mtime = mtime;
     }
     if (hasatime)
-    { time_t atime = *(time_t*)(extra+epos); epos+=4;
+    { std::time_t atime = *(std::time_t*)(extra+epos); epos+=4;
 	  ze->atime = atime;
     }
     if (hasctime)
-    { time_t ctime = *(time_t*)(extra+epos); 
+    { std::time_t ctime = *(std::time_t*)(extra+epos); 
 	  ze->ctime = ctime;
     }
     break;
   }
   //
   if (extra!=0) delete[] extra;
-  memcpy(&cze,ze,sizeof(ZIPENTRY)); czei=index;
+  std::memcpy(&cze,ze,sizeof(ZIPENTRY)); czei=index;
   return ZR_OK;
 }
 
@@ -3977,19 +3961,19 @@ ZRESULT TUnzip::Find(const TCHAR *name, bool ic, int *index, ZIPENTRY *ze)
 
 void EnsureDirectory(const TCHAR *rootdir, const TCHAR *dir)
 { 
-	if (dir==nullptr || dir[0] == _T('\0')) 
+	if (dir==nullptr || dir[0] == '\0') 
 		return;
 	
 	TCHAR cd[MAX_PATH]; 
 	_tcscpy(cd,rootdir);
-	_tcscat(cd,dir);
+	std::strcat(cd,dir);
 	for ( unsigned int iCD = 0; iCD < _tcslen( cd ); iCD++ )
 	{
-		if ( cd[ iCD ] == _T( '/' ) ||  cd[ iCD ] == _T( '\\' ) )
+		if ( cd[ iCD ] ==  '/'  ||  cd[ iCD ] ==  '\\'  )
 		{
 			cd[ iCD ] = 0;
 			CreateDirectory(cd,nullptr);
-			cd[ iCD ] = _T( '\\' );
+			cd[ iCD ] =  '\\' ;
 		}
 	}
 	CreateDirectory(cd,nullptr);
@@ -4058,7 +4042,7 @@ ZRESULT TUnzip::Unzip(int index,void *dst,unsigned int len,DWORD flags)
 		const TCHAR *c = name;
 		while (*c) 
 		{
-			if (*c == _T('/') || *c == _T('\\')) 
+			if (*c == '/' || *c == '\\') 
 				name = c + 1; 
 			c++;
 		}
@@ -4068,13 +4052,13 @@ ZRESULT TUnzip::Unzip(int index,void *dst,unsigned int len,DWORD flags)
 		{ 
 			TCHAR dir[MAX_PATH]; 
 			_tcscpy(dir,(const TCHAR*)dst); 
-			dir[name-(const TCHAR*)dst-1] = _T('\0');
-			bool isabsolute = (dir[0]==_T('/') || dir[0]==_T('\\') || dir[1]==_T(':'));
-			isabsolute |= (_tcsstr(dir,_T("../"))!=0) | (_tcsstr(dir,_T("..\\"))!=0);
+			dir[name-(const TCHAR*)dst-1] = '\0';
+			bool isabsolute = (dir[0]=='/' || dir[0]=='\\' || dir[1]==':');
+			isabsolute |= (_tcsstr(dir,"../")!=0) | (_tcsstr(dir,"..\\")!=0);
 			if (!isabsolute) 
 				EnsureDirectory(rootdir,dir);
 		}
-		h = (void*) (intp) open( (const TCHAR*)dst, O_WRONLY | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO );
+		h = (void*)ks::platform::open_file( (const TCHAR*)dst, ks::platform::file_mode::write, nullptr );
 	}
 
 	if (h == INVALID_HANDLE_VALUE)  
@@ -4104,18 +4088,11 @@ ZRESULT TUnzip::Unzip(int index,void *dst,unsigned int len,DWORD flags)
 	}
 	bool settime=false;
 
-	struct stat sbuf;
-	fstat( size_cast<int>( (intp)h ), &sbuf );
-	settime = ( sbuf.st_mode & S_IFREG );
+	settime = true;
 
 	if (settime) 
 	{
-		struct timeval tv[2];
-		tv[0].tv_sec = ze.atime;
-		tv[0].tv_usec = 0;
-		tv[1].tv_sec = ze.mtime;
-		tv[1].tv_usec = 0;
-		futimes( size_cast< int >( (intp) h ), tv );
+		ks::platform::set_file_times( (ks::platform::file *)h, ze.atime, ze.mtime );
 	}
 	if (flags!=ZIP_HANDLE) 
 		CloseHandle(h);
@@ -4163,10 +4140,10 @@ unsigned int FormatZipMessageU(ZRESULT code, char *buf,unsigned int len)
     case ZR_NOCHANGE: msg="Zip-bug: tried to change mind, but not allowed"; break;
     case ZR_FLATE: msg="Zip-bug: an internal error during flation"; break;
   }
-  unsigned int mlen=(unsigned int)strlen(msg);
+  unsigned int mlen=(unsigned int)std::strlen(msg);
   if (buf==0 || len==0) return mlen;
   unsigned int n=mlen; if (n+1>len) n=len-1;
-  Q_strncpy(buf,msg,n); buf[n]=0;
+  V_strncpy(buf,msg,n); buf[n]=0;
   return mlen;
 }
 
@@ -4176,7 +4153,7 @@ typedef struct
   TUnzip *unz;
 } TUnzipHandleData;
 
-HZIP OpenZipU(void *z,unsigned int len,DWORD flags)
+HZIP OpenZip(void *z,unsigned int len,DWORD flags)
 { 
 	TUnzip *unz = new TUnzip();
 	lasterrorU = unz->Open(z,len,flags);
@@ -4234,7 +4211,7 @@ ZRESULT GetZipItemW(HZIP hz, int index, ZIPENTRYW *zew)
 		zew->mtime     = ze.mtime;
 		zew->comp_size = ze.comp_size;
 		zew->unc_size  = ze.unc_size;
-		strcpy(zew->name, ze.name);
+		std::strcpy(zew->name, ze.name);
 	}
 	return lasterrorU;
 }
@@ -4282,7 +4259,7 @@ ZRESULT FindZipItemW(HZIP hz, const TCHAR *name, bool ic, int *index, ZIPENTRYW 
 		zew->mtime     = ze.mtime;
 		zew->comp_size = ze.comp_size;
 		zew->unc_size  = ze.unc_size;
-		strcpy(zew->name, ze.name);
+		std::strcpy(zew->name, ze.name);
 	}
 
 	return lasterrorU;
@@ -4341,7 +4318,7 @@ bool SafeUnzipMemory( const void *pvZipped, int cubZipped, void *pvDest, int cub
 			// failed to unzip, try to continue
 			iRes = ZR_CORRUPT;
 		}
-		CloseZip( hZip );
+		CloseZipU( hZip );
 	}
 
 	// check for failure
@@ -4350,4 +4327,3 @@ bool SafeUnzipMemory( const void *pvZipped, int cubZipped, void *pvDest, int cub
 
 	return true;
 }
-

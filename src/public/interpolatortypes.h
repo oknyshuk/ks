@@ -1,13 +1,8 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
 
-#ifndef INTERPOLATORTYPES_H
-#define INTERPOLATORTYPES_H
-
-class Quaternion;
 
 enum
 {
@@ -68,7 +63,6 @@ char const	*Interpolator_NameForInterpolator( int type, bool printname );
 
 void		Interpolator_GetKochanekBartelsParams( int interpolatorType, float& tension, float& bias, float& continuity );
 
-class Vector;
 // Main spline interpolation function, assumes .x holds time and .y holds one dimensional value
 void Interpolator_CurveInterpolate( int interpolationType,
 	const Vector &vPre,
@@ -95,5 +89,3 @@ void Interpolator_CurveInterpolate_NonNormalized( int interpolationType,
 												 const Quaternion &vNext,
 												 float f,
 												 Quaternion &vOut );
-
-#endif // INTERPOLATORTYPES_H

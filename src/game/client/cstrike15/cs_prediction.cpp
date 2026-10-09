@@ -1,15 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
 #include "prediction.h"
 #include "c_cs_player.h"
 #include "igamemovement.h"
-
 
 static CMoveData g_MoveData;
 CMoveData *g_pMoveData = &g_MoveData;
@@ -50,7 +56,6 @@ void CCSPrediction::FinishMove( C_BasePlayer *player, CUserCmd *ucmd, CMoveData 
 // Expose interface to engine
 static CCSPrediction g_Prediction;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CCSPrediction, IPrediction, VCLIENT_PREDICTION_INTERFACE_VERSION, g_Prediction );
+static InterfaceReg s_Reg_CCSPrediction_IPrediction( []() -> void * { return static_cast<IPrediction *>( &g_Prediction ); }, VCLIENT_PREDICTION_INTERFACE_VERSION );;
 
 CPrediction *prediction = &g_Prediction;
-

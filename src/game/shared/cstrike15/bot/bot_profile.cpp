@@ -1,14 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
-
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 
 #define DEFINE_DIFFICULTY_NAMES
 #include "bot_profile.h"
@@ -17,7 +38,6 @@
 #include "bot.h"
 #include "bot_util.h"
 #include "cs_bot.h"		// BOTPORT: Remove this CS dependency
-
 
 BotProfileManager *TheBotProfiles = nullptr;
 
@@ -28,9 +48,9 @@ BotProfileManager *TheBotProfiles = nullptr;
  */
 static const char * GetDecoratedSkinName( const char *name, const char *filename )
 {
-	const int BufLen = _MAX_PATH + 64;
+	const int BufLen = k_cMaxPath + 64;
 	static char buf[BufLen];
-	Q_snprintf( buf, sizeof( buf ), "%s/%s", filename, name );
+	V_snprintf( buf, sizeof( buf ), "%s/%s", filename, name );
 	return buf;
 }
 
@@ -266,7 +286,7 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 				return;
 			}
 			token = SharedGetToken();
-			Q_snprintf( skinName, sizeof( skinName ), "%s", token );
+			V_snprintf( skinName, sizeof( skinName ), "%s", token );
 
 			// get attribute name
 			dataFile = SharedParse( dataFile );
@@ -293,7 +313,7 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 				return;
 			}
 			token = SharedGetToken();
-			if (strcmp( "=", token ))
+			if (std::strcmp( "=", token ))
 			{
                 Msg( "Error parsing %s - expected '='\n", filename );
 				delete [] dataPointer;
@@ -319,8 +339,8 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 
 				// construct the model filename
 				m_skinModelnames[ m_nextSkin ] = CloneString( token );
-				m_skinFilenames[ m_nextSkin ] = new char[ strlen( token )*2 + strlen("models/player//.mdl") + 1 ];
-				Q_snprintf( m_skinFilenames[ m_nextSkin ], sizeof( m_skinFilenames[ m_nextSkin ] ), "models/player/%s/%s.mdl", token, token );
+				m_skinFilenames[ m_nextSkin ] = new char[ std::strlen( token )*2 + strlen("models/player//.mdl") + 1 ];
+				V_snprintf( m_skinFilenames[ m_nextSkin ], sizeof( m_skinFilenames[ m_nextSkin ] ), "models/player/%s/%s.mdl", token, token );
 				++m_nextSkin;
 			}
 
@@ -333,7 +353,7 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 				return;
 			}
 			token = SharedGetToken();
-			if (strcmp( "End", token ))
+			if (std::strcmp( "End", token ))
 			{
 				Msg( "Error parsing %s - expected 'End'\n", filename );
 				delete [] dataPointer;
@@ -366,7 +386,7 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 			// template names are separated by "+"
 			while(true)
 			{
-				char *c = strchr( token, '+' );
+				char *c = std::strchr( token, '+' );
 				if (c)
 					*c = '\000';
 
@@ -442,7 +462,7 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 
 			// found attribute name - keep it
 			char attributeName[64];
-			strcpy( attributeName, token );
+			std::strcpy( attributeName, token );
 
 			// eat '='
 			dataFile = SharedParse( dataFile );
@@ -454,7 +474,7 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 			}
 
 			token = SharedGetToken();
-			if (strcmp( "=", token ))
+			if (std::strcmp( "=", token ))
 			{
 				Msg( "Error parsing %s - expected '='\n", filename );
 				delete [] dataPointer;
@@ -474,15 +494,15 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 			// store value in appropriate attribute
 			if ( !stricmp( "Aggression", attributeName ) )
 			{
-				profile->m_aggression = (float)atof( token ) / 100.0f;
+				profile->m_aggression = (float)std::atof( token ) / 100.0f;
 			}
 			else if ( !stricmp( "Skill", attributeName ) )
 			{
-				profile->m_skill = (float)atof( token ) / 100.0f;
+				profile->m_skill = (float)std::atof( token ) / 100.0f;
 			}
 			else if ( !stricmp( "Skin", attributeName ) )
 			{
-				profile->m_skin = atoi( token );
+				profile->m_skin = std::atoi( token );
 				if ( profile->m_skin == 0 )
 				{
 					// atoi() failed - try to look up a custom skin by name
@@ -491,35 +511,35 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 			}
 			else if ( !stricmp( "Teamwork", attributeName ))
 			{
-				profile->m_teamwork = (float)atof( token ) / 100.0f;
+				profile->m_teamwork = (float)std::atof( token ) / 100.0f;
 			}
 			else if ( !V_stricmp( "AimFocusInitial", attributeName ) )
 			{
-				profile->m_aimFocusInitial = (float)atof( token );
+				profile->m_aimFocusInitial = (float)std::atof( token );
 			}
 			else if ( !V_stricmp( "AimFocusDecay", attributeName ) )
 			{
-				profile->m_aimFocusDecay = (float)atof( token );
+				profile->m_aimFocusDecay = (float)std::atof( token );
 			}
 			else if ( !V_stricmp( "AimFocusOffsetScale", attributeName ) )
 			{
-				profile->m_aimFocusOffsetScale = (float)atof( token );
+				profile->m_aimFocusOffsetScale = (float)std::atof( token );
 			}
 			else if ( !V_stricmp( "AimFocusInterval", attributeName ) )
 			{
-				profile->m_aimFocusInterval = (float)atof( token );
+				profile->m_aimFocusInterval = (float)std::atof( token );
 			}
 			else if ( !stricmp( "Cost", attributeName ) )
 			{
-				profile->m_cost = atoi( token );
+				profile->m_cost = std::atoi( token );
 			}
 			else if ( !stricmp( "Rank", attributeName ) )
 			{
-				profile->m_rank = atoi( token );
+				profile->m_rank = std::atoi( token );
 			}
 			else if ( !stricmp( "VoicePitch", attributeName ) )
 			{
-				profile->m_voicePitch = atoi( token );
+				profile->m_voicePitch = std::atoi( token );
 			}
 			else if ( !stricmp( "VoiceBank", attributeName ) )
 			{
@@ -531,12 +551,12 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 			}
 			else if ( !stricmp( "ReactionTime", attributeName ) )
 			{
-				profile->m_reactionTime = (float)atof( token );
+				profile->m_reactionTime = (float)std::atof( token );
 
 			}
 			else if ( !stricmp( "AttackDelay", attributeName ))
 			{
-				profile->m_attackDelay = (float)atof( token );
+				profile->m_attackDelay = (float)std::atof( token );
 			}
 			else if ( !stricmp( "Difficulty", attributeName ))
 			{
@@ -560,27 +580,27 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 			}
 			else if ( !stricmp( "LookAngleMaxAccelNormal", attributeName ) )
 			{
-				profile->m_lookAngleMaxAccelNormal = atof( token );
+				profile->m_lookAngleMaxAccelNormal = std::atof( token );
 			}
 			else if ( !stricmp( "LookAngleStiffnessNormal", attributeName ) )
 			{
-				profile->m_lookAngleStiffnessNormal = atof( token );
+				profile->m_lookAngleStiffnessNormal = std::atof( token );
 			}
 			else if ( !stricmp( "LookAngleDampingNormal", attributeName ) )
 			{
-				profile->m_lookAngleDampingNormal = atof( token );
+				profile->m_lookAngleDampingNormal = std::atof( token );
 			}
 			else if ( !stricmp( "LookAngleMaxAccelAttacking", attributeName ) )
 			{
-				profile->m_lookAngleMaxAccelAttacking = atof( token );
+				profile->m_lookAngleMaxAccelAttacking = std::atof( token );
 			}
 			else if ( !stricmp( "LookAngleStiffnessAttacking", attributeName ) )
 			{
-				profile->m_lookAngleStiffnessAttacking = atof( token );
+				profile->m_lookAngleStiffnessAttacking = std::atof( token );
 			}
 			else if ( !stricmp( "LookAngleDampingAttacking", attributeName ) )
 			{
-				profile->m_lookAngleDampingAttacking = atof( token );
+				profile->m_lookAngleDampingAttacking = std::atof( token );
 			}
 			else
 			{
@@ -614,7 +634,7 @@ void BotProfileManager::ParseDifficultySetting( unsigned char &difficultyFlags, 
 	// parse bit flags
 	while(true)
 	{
-		char *c = strchr( token, '+' );
+		char *c = std::strchr( token, '+' );
 		if (c)
 		{
 			*c = '\000';
@@ -846,4 +866,3 @@ const BotProfile *BotProfileManager::GetRandomProfile( BotDifficultyType difficu
 	int which = RandomInt( 0, std::ssize( profiles )-1 );
 	return profiles[which];
 }
-

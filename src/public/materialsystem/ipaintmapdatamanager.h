@@ -1,21 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IPaintmapMANIPULATOR_H
-#define IPaintmapMANIPULATOR_H
+import ks.core;
 
-
-#include "tier0/platform.h"
-
-struct Rect_t;
 
 //owned by the client
-abstract_class IPaintmapDataManager
+class IPaintmapDataManager
 {
 public:
 	//called just before the material system initializes the paint textures
@@ -34,13 +25,10 @@ public:
 
 
 //owned by materialsystem
-abstract_class IPaintmapTextureManager
+class IPaintmapTextureManager
 {
 public:
 	virtual void BeginUpdatePaintmaps() = 0;
 	virtual void UpdatePaintmap( int iPaintmapID, BYTE* pPaintData, int numRects, Rect_t* pRects ) = 0;
 	virtual void EndUpdatePaintmaps() = 0;
 };
-
-
-#endif // IPaintmapMANIPULATOR_H

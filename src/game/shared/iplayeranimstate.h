@@ -1,12 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IPLAYERANIMSTATE_H
-#define IPLAYERANIMSTATE_H
-
+import std;
+import ks.math;
 
 typedef enum
 {
@@ -43,7 +40,7 @@ enum PlayerAnimEvent_t
 };
 
 
-abstract_class IPlayerAnimState
+class IPlayerAnimState
 {
 public:
 	virtual void Release() = 0;
@@ -76,6 +73,3 @@ public:
 	virtual bool IsThrowingGrenade() = 0;
 	virtual bool ShouldHideGrenadeDuringThrow() = 0;
 };
-
-
-#endif // IPLAYERANIMSTATE_H

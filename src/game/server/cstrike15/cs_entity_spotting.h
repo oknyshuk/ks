@@ -1,15 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A game system for tracking and updating entity spot state
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef CS_ENTITY_SPOTTING_H
-#define CS_ENTITY_SPOTTING_H
-
-#include <bitset>
+import std;
 #include "igamesystem.h"
+#include "baseentity.h"
 
 class CCSPlayer;
 
@@ -71,5 +68,3 @@ private:
 	byte				m_pSourcePVS[MAX_MAP_LEAFS/8];
 	bool				m_bForceSpot;
 };
-
-#endif // ENTITY_RESOURCE_H

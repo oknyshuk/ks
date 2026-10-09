@@ -1,21 +1,16 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-//=======================================================================================//
-
-#ifndef IREPLAYHISTORYMANAGER_H
-#define IREPLAYHISTORYMANAGER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 //----------------------------------------------------------------------------------------
 
-#include "interface.h"
-#include "timeutils.h"
+import ks.tier1;
 #include "qlimits.h"
-#include "convar.h"
-#include <time.h>
+import std;
 
 //----------------------------------------------------------------------------------------
 
-#define REPLAYHISTORYMANAGER_INTERFACE_VERSION		"VENGINE_REPLAY_HISTORY_MANAGER_001"
+inline constexpr const char *REPLAYHISTORYMANAGER_INTERFACE_VERSION = "VENGINE_REPLAY_HISTORY_MANAGER_001";
 
 //----------------------------------------------------------------------------------------
 
@@ -51,7 +46,7 @@ public:
 class CServerReplayHistoryEntryData : public CBaseReplayHistoryEntryData
 {
 public:
-	uint64		m_uClientSteamId;
+	uint64		m_uClientPlayerId;
 
 	enum EFileStatus
 	{
@@ -84,5 +79,3 @@ public:
 };
 
 //----------------------------------------------------------------------------------------
-
-#endif // IREPLAYHISTORYMANAGER_H

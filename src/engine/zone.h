@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#ifndef ZONE_H
-#define ZONE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/dbg.h"
+import std;
+import ks.core;
 
 void Memory_Init (void);
 void Memory_Shutdown( void );
@@ -27,6 +21,3 @@ int Hunk_MallocSize();
 int Hunk_Size();
 
 void Hunk_Print();
-
-
-#endif // ZONE_H

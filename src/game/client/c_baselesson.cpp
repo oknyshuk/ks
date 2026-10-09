@@ -1,10 +1,22 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Client handler implementations for instruction players how to play
-//
-//============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
+// Purpose: Client handler implementations for instruction players how to play
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "isaverestore.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
@@ -16,18 +28,13 @@
 #include "c_world.h"
 #include "iinput.h"
 #include "ammodef.h"
-#include "vprof.h"
 #include "view.h"
-#include "vstdlib/ikeyvaluessystem.h"
-#include "tier1/intern_pool.h"
 
-
-
-#define LESSON_PRIORITY_MAX 1000
-#define LESSON_PRIORITY_NONE 0
-#define LESSON_MIN_TIME_ON_SCREEN_TO_MARK_DISPLAYED 1.5f
-#define LESSON_MIN_TIME_BEFORE_LOCK_ALLOWED 0.1f
-#define LESSON_DISTANCE_UPDATE_RATE 0.25f
+constexpr auto LESSON_PRIORITY_MAX = 1000;
+constexpr auto LESSON_PRIORITY_NONE = 0;
+constexpr auto LESSON_MIN_TIME_ON_SCREEN_TO_MARK_DISPLAYED = 1.5f;
+constexpr auto LESSON_MIN_TIME_BEFORE_LOCK_ALLOWED = 0.1f;
+constexpr auto LESSON_DISTANCE_UPDATE_RATE = 0.25f;
 
 CGameInstructorSymbol::CGameInstructorSymbol( const char *pStr )
 {
@@ -117,7 +124,7 @@ bool CBaseLesson::ShouldShowSpew( void )
 	if ( gameinstructor_verbose_lesson.GetString()[ 0 ] == '\0' )
 		return false;
 
-	return ( Q_stristr( GetName(), gameinstructor_verbose_lesson.GetString() ) != nullptr );
+	return ( V_stristr( GetName(), gameinstructor_verbose_lesson.GetString() ) != nullptr );
 }
 
 bool CBaseLesson::NoPriority( void ) const
@@ -171,7 +178,7 @@ bool CBaseLesson::PrerequisitesHaveBeenMet( void ) const
 
 bool CBaseLesson::IsTimedOut( void )
 {
-	VPROF_BUDGET( "CBaseLesson::IsTimedOut", "GameInstructor" );
+	CVProfScope _( "CBaseLesson::IsTimedOut", 0, "GameInstructor", false, BUDGETFLAG_OTHER );
 
 	// Check for no timeout
 	if ( m_fTimeout == 0.0f )
@@ -628,7 +635,7 @@ void CIconLesson::UpdateInactive( void )
 
 bool CIconLesson::ShouldDisplay( void ) const
 {
-	VPROF_BUDGET( "CIconLesson::ShouldDisplay", "GameInstructor" );
+	CVProfScope _( "CIconLesson::ShouldDisplay", 0, "GameInstructor", false, BUDGETFLAG_OTHER );
 
 	if ( !DoDelayedPlayerSwaps() )
 	{
@@ -675,7 +682,7 @@ bool CIconLesson::ShouldDisplay( void ) const
 
 bool CIconLesson::IsVisible( void ) const
 {
-	VPROF_BUDGET( "CIconLesson::IsVisible", "GameInstructor" );
+	CVProfScope _( "CIconLesson::IsVisible", 0, "GameInstructor", false, BUDGETFLAG_OTHER );
 
 	if( m_hLocatorTarget == -1 )
 	{
@@ -827,7 +834,7 @@ void CIconLesson::UpdateLocatorTarget( CLocatorTarget *pLocatorTarget, C_BaseEnt
 	const char *pchDisplayParamText = m_szDisplayParamText.String();
 
 	// Check if the parameter is the be the player display name
-	if ( Q_stricmp( pchDisplayParamText, "use_name" ) == 0 )
+	if ( V_stricmp( pchDisplayParamText, "use_name" ) == 0 )
 	{
 		// Fix up the player display name
 		C_BasePlayer *pPlayer = ToBasePlayer( pIconTarget );
@@ -907,61 +914,6 @@ void CIconLesson::UpdateLocatorTarget( CLocatorTarget *pLocatorTarget, C_BaseEnt
 // Linking variables to scriptable entries is done here!
 // The first parameter correlates to the case insensitive string name read from scripts.
 // This macro generates code that passes this consistent variable data in to other macros
-#define LESSON_VARIABLE_FACTORY \
-	LESSON_VARIABLE_MACRO_EHANDLE( VOID, m_hLocalPlayer, EHANDLE )	\
-																	\
-	LESSON_VARIABLE_MACRO_EHANDLE( LOCAL_PLAYER, m_hLocalPlayer, EHANDLE )	\
-	LESSON_VARIABLE_MACRO( OUTPUT, m_fOutput, float )						\
-																			\
-	LESSON_VARIABLE_MACRO_EHANDLE( ENTITY1, m_hEntity1, EHANDLE )				\
-	LESSON_VARIABLE_MACRO_EHANDLE( ENTITY2, m_hEntity2, EHANDLE )				\
-	LESSON_VARIABLE_MACRO_STRING( STRING1, m_szString1, CGameInstructorSymbol )	\
-	LESSON_VARIABLE_MACRO_STRING( STRING2, m_szString2, CGameInstructorSymbol )	\
-	LESSON_VARIABLE_MACRO( INTEGER1, m_iInteger1, int )							\
-	LESSON_VARIABLE_MACRO( INTEGER2, m_iInteger2, int )							\
-	LESSON_VARIABLE_MACRO( FLOAT1, m_fFloat1, float )							\
-	LESSON_VARIABLE_MACRO( FLOAT2, m_fFloat2, float )							\
-																				\
-	LESSON_VARIABLE_MACRO_EHANDLE( ICON_TARGET, m_hIconTarget, EHANDLE )							\
-	LESSON_VARIABLE_MACRO_STRING( UI_TARGET_NAME, m_szUITargetName, CGameInstructorSymbol )		\
-	LESSON_VARIABLE_MACRO_STRING( UI_TARGET_LOOKUP, m_szUITargetLookup, CGameInstructorSymbol )	\
-	LESSON_VARIABLE_MACRO( UI_TARGET_EDGE, m_nUITargetEdge, int )								\
-	LESSON_VARIABLE_MACRO( FIXED_POSITION_X, m_fFixedPositionX, float )								\
-	LESSON_VARIABLE_MACRO( FIXED_POSITION_Y, m_fFixedPositionY, float )								\
-	LESSON_VARIABLE_MACRO_BOOL( FIXED_POSITION, m_bFixedPosition, bool )							\
-	LESSON_VARIABLE_MACRO_BOOL( NO_ICON_TARGET, m_bNoIconTarget, bool )								\
-	LESSON_VARIABLE_MACRO_BOOL( ALLOW_NODRAW_TARGET, m_bAllowNodrawTarget, bool )					\
-	LESSON_VARIABLE_MACRO_BOOL( VISIBLE, m_bVisible, bool )											\
-	LESSON_VARIABLE_MACRO_BOOL( SHOW_WHEN_OCCLUDED, m_bShowWhenOccluded, bool )						\
-	LESSON_VARIABLE_MACRO_BOOL( NO_OFFSCREEN, m_bNoOffscreen, bool )								\
-	LESSON_VARIABLE_MACRO_BOOL( FORCE_CAPTION, m_bForceCaption, bool )								\
-	LESSON_VARIABLE_MACRO_STRING( ONSCREEN_ICON, m_szOnscreenIcon, CGameInstructorSymbol )			\
-	LESSON_VARIABLE_MACRO_STRING( OFFSCREEN_ICON, m_szOffscreenIcon, CGameInstructorSymbol )		\
-	LESSON_VARIABLE_MACRO( ICON_OFFSET, m_flUpOffset, float )										\
-	LESSON_VARIABLE_MACRO( ICON_RELATIVE_OFFSET, m_flRelativeUpOffset, float )						\
-	LESSON_VARIABLE_MACRO( RANGE, m_fRange, float )													\
-																									\
-	LESSON_VARIABLE_MACRO( FLAGS, m_iFlags, int )											\
-	LESSON_VARIABLE_MACRO_STRING( CAPTION_COLOR, m_szCaptionColor, CGameInstructorSymbol )	\
-	LESSON_VARIABLE_MACRO_STRING( GROUP, m_szLessonGroup, CGameInstructorSymbol )			\
-																							\
-	LESSON_VARIABLE_MACRO_STRING( CAPTION, m_szDisplayText, CGameInstructorSymbol )				\
-	LESSON_VARIABLE_MACRO_STRING( CAPTION_PARAM, m_szDisplayParamText, CGameInstructorSymbol )	\
-	LESSON_VARIABLE_MACRO_STRING( BINDING, m_szBinding, CGameInstructorSymbol )					\
-	LESSON_VARIABLE_MACRO_STRING( GAMEPAD_BINDING, m_szGamepadBinding, CGameInstructorSymbol )	\
-																								\
-	LESSON_VARIABLE_MACRO( PRIORITY, m_iPriority, int )										\
-	LESSON_VARIABLE_MACRO_STRING( REPLACE_KEY, m_stringReplaceKey, CGameInstructorSymbol )	\
-																							\
-	LESSON_VARIABLE_MACRO( LOCK_DURATION, m_fLockDuration, float )										\
-	LESSON_VARIABLE_MACRO_BOOL( CAN_OPEN_WHEN_DEAD, m_bCanOpenWhenDead, bool )							\
-	LESSON_VARIABLE_MACRO_BOOL( BUMP_WITH_TIMEOUT_WHEN_LEARNED, m_bBumpWithTimeoutWhenLearned, bool )	\
-	LESSON_VARIABLE_MACRO_BOOL( ONCE_LEARNED_NEVER_OPEN, m_bOnceLearnedNeverOpen, bool )				\
-	LESSON_VARIABLE_MACRO_BOOL( CAN_TIMEOUT_WHILE_INACTIVE, m_bCanTimeoutWhileInactive, bool )			\
-	LESSON_VARIABLE_MACRO_BOOL( USABLE_IN_MIDAIR, m_bUsableInMidair, bool)								\
-	LESSON_VARIABLE_MACRO( TIMEOUT, m_fTimeout, float )													\
-	LESSON_VARIABLE_MACRO( UPDATE_INTERVAL, m_fUpdateInterval, float )									\
-	LESSON_VARIABLE_MACRO_STRING( START_SOUND, m_szStartSound, CGameInstructorSymbol )					\
 
 
 // Create keyvalues name symbol
@@ -981,28 +933,28 @@ void CIconLesson::UpdateLocatorTarget( CLocatorTarget *pLocatorTarget, C_BaseEnt
 #define LESSON_VARIABLE_INIT_INFO( _varEnum, _varName, _varType ) \
 	void Init_##_varEnum( void ) \
 	{ \
-		iOffset = offsetof( CScriptedIconLesson, _varName ); \
+		iOffset = __builtin_offsetof( CScriptedIconLesson, _varName ); \
 		varType = LessonParamTypeFromString( #_varType ); \
 	}
 
 #define LESSON_VARIABLE_INIT_INFO_BOOL( _varEnum, _varName, _varType ) \
 	void Init_##_varEnum( void ) \
 	{ \
-		iOffset = offsetof( CScriptedIconLesson, _varName ); \
+		iOffset = __builtin_offsetof( CScriptedIconLesson, _varName ); \
 		varType = FIELD_BOOLEAN; \
 	}
 
 #define LESSON_VARIABLE_INIT_INFO_EHANDLE( _varEnum, _varName, _varType ) \
 	void Init_##_varEnum( void ) \
 	{ \
-		iOffset = offsetof( CScriptedIconLesson, _varName ); \
+		iOffset = __builtin_offsetof( CScriptedIconLesson, _varName ); \
 		varType = FIELD_EHANDLE; \
 	}
 
 #define LESSON_VARIABLE_INIT_INFO_STRING( _varEnum, _varName, _varType ) \
 	void Init_##_varEnum( void ) \
 	{ \
-		iOffset = offsetof( CScriptedIconLesson, _varName ); \
+		iOffset = __builtin_offsetof( CScriptedIconLesson, _varName ); \
 		varType = FIELD_STRING; \
 	}
 
@@ -1014,7 +966,7 @@ void CIconLesson::UpdateLocatorTarget( CLocatorTarget *pLocatorTarget, C_BaseEnt
 
 // Return the first param if pchName is the same as the second param
 #define LESSON_SCRIPT_STRING( _type, _string ) \
-	if ( Q_stricmp( pchName, _string ) == 0 )\
+	if ( V_stricmp( pchName, _string ) == 0 )\
 	{\
 		return _type;\
 	}
@@ -1042,7 +994,7 @@ void CIconLesson::UpdateLocatorTarget( CLocatorTarget *pLocatorTarget, C_BaseEnt
 		const char *pchParam = pSubKey->GetString(); \
 		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) \
 		{ \
-			ConVarRef tempCVar( pchParam + Q_strlen( "convar " ) ); \
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); \
 			if ( tempCVar.IsValid() ) \
 			{ \
 				_varName = static_cast<_varType>( tempCVar.GetFloat() ); \
@@ -1059,7 +1011,7 @@ void CIconLesson::UpdateLocatorTarget( CLocatorTarget *pLocatorTarget, C_BaseEnt
 	}
 
 #define LESSON_VARIABLE_INIT_BOOL( _varEnum, _varName, _varType ) \
-	else if ( Q_stricmp( #_varEnum, pSubKey->GetName() ) == 0 ) \
+	else if ( V_stricmp( #_varEnum, pSubKey->GetName() ) == 0 ) \
 	{ \
 		_varName = pSubKey->GetBool(); \
 	}
@@ -1076,7 +1028,7 @@ void CIconLesson::UpdateLocatorTarget( CLocatorTarget *pLocatorTarget, C_BaseEnt
 		const char *pchParam = pSubKey->GetString(); \
 		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) \
 		{ \
-			ConVarRef tempCVar( pchParam + Q_strlen( "convar " ) ); \
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); \
 			if ( tempCVar.IsValid() ) \
 			{ \
 				_varName = tempCVar.GetString(); \
@@ -1100,29 +1052,105 @@ void CIconLesson::UpdateLocatorTarget( CLocatorTarget *pLocatorTarget, C_BaseEnt
 enum LessonVariable
 {
 	// Run enum macros on all scriptable variables (see: LESSON_VARIABLE_FACTORY definition)
-#define LESSON_VARIABLE_MACRO			LESSON_VARIABLE_ENUM
-#define LESSON_VARIABLE_MACRO_BOOL		LESSON_VARIABLE_ENUM
-#define LESSON_VARIABLE_MACRO_EHANDLE	LESSON_VARIABLE_ENUM
-#define LESSON_VARIABLE_MACRO_STRING	LESSON_VARIABLE_ENUM
-	LESSON_VARIABLE_FACTORY
-#undef LESSON_VARIABLE_MACRO
-#undef LESSON_VARIABLE_MACRO_BOOL
-#undef LESSON_VARIABLE_MACRO_EHANDLE
-#undef LESSON_VARIABLE_MACRO_STRING
+LESSON_VARIABLE_VOID,
+LESSON_VARIABLE_LOCAL_PLAYER,
+LESSON_VARIABLE_OUTPUT,
+LESSON_VARIABLE_ENTITY1,
+LESSON_VARIABLE_ENTITY2,
+LESSON_VARIABLE_STRING1,
+LESSON_VARIABLE_STRING2,
+LESSON_VARIABLE_INTEGER1,
+LESSON_VARIABLE_INTEGER2,
+LESSON_VARIABLE_FLOAT1,
+LESSON_VARIABLE_FLOAT2,
+LESSON_VARIABLE_ICON_TARGET,
+LESSON_VARIABLE_UI_TARGET_NAME,
+LESSON_VARIABLE_UI_TARGET_LOOKUP,
+LESSON_VARIABLE_UI_TARGET_EDGE,
+LESSON_VARIABLE_FIXED_POSITION_X,
+LESSON_VARIABLE_FIXED_POSITION_Y,
+LESSON_VARIABLE_FIXED_POSITION,
+LESSON_VARIABLE_NO_ICON_TARGET,
+LESSON_VARIABLE_ALLOW_NODRAW_TARGET,
+LESSON_VARIABLE_VISIBLE,
+LESSON_VARIABLE_SHOW_WHEN_OCCLUDED,
+LESSON_VARIABLE_NO_OFFSCREEN,
+LESSON_VARIABLE_FORCE_CAPTION,
+LESSON_VARIABLE_ONSCREEN_ICON,
+LESSON_VARIABLE_OFFSCREEN_ICON,
+LESSON_VARIABLE_ICON_OFFSET,
+LESSON_VARIABLE_ICON_RELATIVE_OFFSET,
+LESSON_VARIABLE_RANGE,
+LESSON_VARIABLE_FLAGS,
+LESSON_VARIABLE_CAPTION_COLOR,
+LESSON_VARIABLE_GROUP,
+LESSON_VARIABLE_CAPTION,
+LESSON_VARIABLE_CAPTION_PARAM,
+LESSON_VARIABLE_BINDING,
+LESSON_VARIABLE_GAMEPAD_BINDING,
+LESSON_VARIABLE_PRIORITY,
+LESSON_VARIABLE_REPLACE_KEY,
+LESSON_VARIABLE_LOCK_DURATION,
+LESSON_VARIABLE_CAN_OPEN_WHEN_DEAD,
+LESSON_VARIABLE_BUMP_WITH_TIMEOUT_WHEN_LEARNED,
+LESSON_VARIABLE_ONCE_LEARNED_NEVER_OPEN,
+LESSON_VARIABLE_CAN_TIMEOUT_WHILE_INACTIVE,
+LESSON_VARIABLE_USABLE_IN_MIDAIR,
+LESSON_VARIABLE_TIMEOUT,
+LESSON_VARIABLE_UPDATE_INTERVAL,
+LESSON_VARIABLE_START_SOUND,
 
 	LESSON_VARIABLE_TOTAL
 };
 
 // Declare the keyvalues symbols for the keynames
-#define LESSON_VARIABLE_MACRO			LESSON_VARIABLE_SYMBOL
-#define LESSON_VARIABLE_MACRO_BOOL		LESSON_VARIABLE_SYMBOL
-#define LESSON_VARIABLE_MACRO_EHANDLE	LESSON_VARIABLE_SYMBOL
-#define LESSON_VARIABLE_MACRO_STRING	LESSON_VARIABLE_SYMBOL
-	LESSON_VARIABLE_FACTORY
-#undef LESSON_VARIABLE_MACRO
-#undef LESSON_VARIABLE_MACRO_BOOL
-#undef LESSON_VARIABLE_MACRO_EHANDLE
-#undef LESSON_VARIABLE_MACRO_STRING
+static int g_nVOIDSymbol;
+static int g_nLOCAL_PLAYERSymbol;
+static int g_nOUTPUTSymbol;
+static int g_nENTITY1Symbol;
+static int g_nENTITY2Symbol;
+static int g_nSTRING1Symbol;
+static int g_nSTRING2Symbol;
+static int g_nINTEGER1Symbol;
+static int g_nINTEGER2Symbol;
+static int g_nFLOAT1Symbol;
+static int g_nFLOAT2Symbol;
+static int g_nICON_TARGETSymbol;
+static int g_nUI_TARGET_NAMESymbol;
+static int g_nUI_TARGET_LOOKUPSymbol;
+static int g_nUI_TARGET_EDGESymbol;
+static int g_nFIXED_POSITION_XSymbol;
+static int g_nFIXED_POSITION_YSymbol;
+static int g_nFIXED_POSITIONSymbol;
+static int g_nNO_ICON_TARGETSymbol;
+static int g_nALLOW_NODRAW_TARGETSymbol;
+static int g_nVISIBLESymbol;
+static int g_nSHOW_WHEN_OCCLUDEDSymbol;
+static int g_nNO_OFFSCREENSymbol;
+static int g_nFORCE_CAPTIONSymbol;
+static int g_nONSCREEN_ICONSymbol;
+static int g_nOFFSCREEN_ICONSymbol;
+static int g_nICON_OFFSETSymbol;
+static int g_nICON_RELATIVE_OFFSETSymbol;
+static int g_nRANGESymbol;
+static int g_nFLAGSSymbol;
+static int g_nCAPTION_COLORSymbol;
+static int g_nGROUPSymbol;
+static int g_nCAPTIONSymbol;
+static int g_nCAPTION_PARAMSymbol;
+static int g_nBINDINGSymbol;
+static int g_nGAMEPAD_BINDINGSymbol;
+static int g_nPRIORITYSymbol;
+static int g_nREPLACE_KEYSymbol;
+static int g_nLOCK_DURATIONSymbol;
+static int g_nCAN_OPEN_WHEN_DEADSymbol;
+static int g_nBUMP_WITH_TIMEOUT_WHEN_LEARNEDSymbol;
+static int g_nONCE_LEARNED_NEVER_OPENSymbol;
+static int g_nCAN_TIMEOUT_WHILE_INACTIVESymbol;
+static int g_nUSABLE_IN_MIDAIRSymbol;
+static int g_nTIMEOUTSymbol;
+static int g_nUPDATE_INTERVALSymbol;
+static int g_nSTART_SOUNDSymbol;
 
 // String lookup prototypes
 LessonVariable LessonVariableFromString( const char *pchName, bool bWarnOnInvalidNames = true );
@@ -1141,15 +1169,288 @@ public:
 	}
 
 	// Run init info macros on all scriptable variables (see: LESSON_VARIABLE_FACTORY definition)
-#define LESSON_VARIABLE_MACRO			LESSON_VARIABLE_INIT_INFO
-#define LESSON_VARIABLE_MACRO_BOOL		LESSON_VARIABLE_INIT_INFO_BOOL
-#define LESSON_VARIABLE_MACRO_EHANDLE	LESSON_VARIABLE_INIT_INFO_EHANDLE
-#define LESSON_VARIABLE_MACRO_STRING	LESSON_VARIABLE_INIT_INFO_STRING
-	LESSON_VARIABLE_FACTORY
-#undef LESSON_VARIABLE_MACRO
-#undef LESSON_VARIABLE_MACRO_BOOL
-#undef LESSON_VARIABLE_MACRO_EHANDLE
-#undef LESSON_VARIABLE_MACRO_STRING
+
+	void Init_VOID( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_hLocalPlayer ); 
+		varType = FIELD_EHANDLE; 
+	}
+
+	void Init_LOCAL_PLAYER( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_hLocalPlayer ); 
+		varType = FIELD_EHANDLE; 
+	}
+
+	void Init_OUTPUT( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_fOutput ); 
+		varType = LessonParamTypeFromString( "float" ); 
+	}
+
+	void Init_ENTITY1( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_hEntity1 ); 
+		varType = FIELD_EHANDLE; 
+	}
+
+	void Init_ENTITY2( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_hEntity2 ); 
+		varType = FIELD_EHANDLE; 
+	}
+
+	void Init_STRING1( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szString1 ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_STRING2( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szString2 ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_INTEGER1( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_iInteger1 ); 
+		varType = LessonParamTypeFromString( "int" ); 
+	}
+
+	void Init_INTEGER2( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_iInteger2 ); 
+		varType = LessonParamTypeFromString( "int" ); 
+	}
+
+	void Init_FLOAT1( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_fFloat1 ); 
+		varType = LessonParamTypeFromString( "float" ); 
+	}
+
+	void Init_FLOAT2( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_fFloat2 ); 
+		varType = LessonParamTypeFromString( "float" ); 
+	}
+
+	void Init_ICON_TARGET( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_hIconTarget ); 
+		varType = FIELD_EHANDLE; 
+	}
+
+	void Init_UI_TARGET_NAME( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szUITargetName ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_UI_TARGET_LOOKUP( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szUITargetLookup ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_UI_TARGET_EDGE( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_nUITargetEdge ); 
+		varType = LessonParamTypeFromString( "int" ); 
+	}
+
+	void Init_FIXED_POSITION_X( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_fFixedPositionX ); 
+		varType = LessonParamTypeFromString( "float" ); 
+	}
+
+	void Init_FIXED_POSITION_Y( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_fFixedPositionY ); 
+		varType = LessonParamTypeFromString( "float" ); 
+	}
+
+	void Init_FIXED_POSITION( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_bFixedPosition ); 
+		varType = FIELD_BOOLEAN; 
+	}
+
+	void Init_NO_ICON_TARGET( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_bNoIconTarget ); 
+		varType = FIELD_BOOLEAN; 
+	}
+
+	void Init_ALLOW_NODRAW_TARGET( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_bAllowNodrawTarget ); 
+		varType = FIELD_BOOLEAN; 
+	}
+
+	void Init_VISIBLE( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_bVisible ); 
+		varType = FIELD_BOOLEAN; 
+	}
+
+	void Init_SHOW_WHEN_OCCLUDED( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_bShowWhenOccluded ); 
+		varType = FIELD_BOOLEAN; 
+	}
+
+	void Init_NO_OFFSCREEN( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_bNoOffscreen ); 
+		varType = FIELD_BOOLEAN; 
+	}
+
+	void Init_FORCE_CAPTION( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_bForceCaption ); 
+		varType = FIELD_BOOLEAN; 
+	}
+
+	void Init_ONSCREEN_ICON( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szOnscreenIcon ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_OFFSCREEN_ICON( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szOffscreenIcon ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_ICON_OFFSET( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_flUpOffset ); 
+		varType = LessonParamTypeFromString( "float" ); 
+	}
+
+	void Init_ICON_RELATIVE_OFFSET( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_flRelativeUpOffset ); 
+		varType = LessonParamTypeFromString( "float" ); 
+	}
+
+	void Init_RANGE( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_fRange ); 
+		varType = LessonParamTypeFromString( "float" ); 
+	}
+
+	void Init_FLAGS( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_iFlags ); 
+		varType = LessonParamTypeFromString( "int" ); 
+	}
+
+	void Init_CAPTION_COLOR( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szCaptionColor ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_GROUP( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szLessonGroup ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_CAPTION( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szDisplayText ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_CAPTION_PARAM( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szDisplayParamText ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_BINDING( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szBinding ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_GAMEPAD_BINDING( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szGamepadBinding ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_PRIORITY( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_iPriority ); 
+		varType = LessonParamTypeFromString( "int" ); 
+	}
+
+	void Init_REPLACE_KEY( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_stringReplaceKey ); 
+		varType = FIELD_STRING; 
+	}
+
+	void Init_LOCK_DURATION( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_fLockDuration ); 
+		varType = LessonParamTypeFromString( "float" ); 
+	}
+
+	void Init_CAN_OPEN_WHEN_DEAD( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_bCanOpenWhenDead ); 
+		varType = FIELD_BOOLEAN; 
+	}
+
+	void Init_BUMP_WITH_TIMEOUT_WHEN_LEARNED( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_bBumpWithTimeoutWhenLearned ); 
+		varType = FIELD_BOOLEAN; 
+	}
+
+	void Init_ONCE_LEARNED_NEVER_OPEN( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_bOnceLearnedNeverOpen ); 
+		varType = FIELD_BOOLEAN; 
+	}
+
+	void Init_CAN_TIMEOUT_WHILE_INACTIVE( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_bCanTimeoutWhileInactive ); 
+		varType = FIELD_BOOLEAN; 
+	}
+
+	void Init_USABLE_IN_MIDAIR( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_bUsableInMidair ); 
+		varType = FIELD_BOOLEAN; 
+	}
+
+	void Init_TIMEOUT( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_fTimeout ); 
+		varType = LessonParamTypeFromString( "float" ); 
+	}
+
+	void Init_UPDATE_INTERVAL( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_fUpdateInterval ); 
+		varType = LessonParamTypeFromString( "float" ); 
+	}
+
+	void Init_START_SOUND( void ) 
+	{ 
+		iOffset = __builtin_offsetof( CScriptedIconLesson, m_szStartSound ); 
+		varType = FIELD_STRING; 
+	}
 
 public:
 
@@ -1162,20 +1463,58 @@ LessonVariableInfo g_pLessonVariableInfo[ LESSON_VARIABLE_TOTAL ];
 
 const LessonVariableInfo *GetLessonVariableInfo( int iLessonVariable )
 {
-	Assert( iLessonVariable >= 0 && iLessonVariable < LESSON_VARIABLE_TOTAL );
+	contract_assert( iLessonVariable >= 0 && iLessonVariable < LESSON_VARIABLE_TOTAL );
 
 	if ( g_pLessonVariableInfo[ 0 ].varType == FIELD_VOID )
 	{
 		// Run init info call macros on all scriptable variables (see: LESSON_VARIABLE_FACTORY definition)
-#define LESSON_VARIABLE_MACRO			LESSON_VARIABLE_INIT_INFO_CALL
-#define LESSON_VARIABLE_MACRO_BOOL		LESSON_VARIABLE_INIT_INFO_CALL
-#define LESSON_VARIABLE_MACRO_EHANDLE	LESSON_VARIABLE_INIT_INFO_CALL
-#define LESSON_VARIABLE_MACRO_STRING	LESSON_VARIABLE_INIT_INFO_CALL
-		LESSON_VARIABLE_FACTORY
-#undef LESSON_VARIABLE_MACRO
-#undef LESSON_VARIABLE_MACRO_BOOL
-#undef LESSON_VARIABLE_MACRO_EHANDLE
-#undef LESSON_VARIABLE_MACRO_STRING
+g_pLessonVariableInfo[ LESSON_VARIABLE_VOID ].Init_VOID();
+g_pLessonVariableInfo[ LESSON_VARIABLE_LOCAL_PLAYER ].Init_LOCAL_PLAYER();
+g_pLessonVariableInfo[ LESSON_VARIABLE_OUTPUT ].Init_OUTPUT();
+g_pLessonVariableInfo[ LESSON_VARIABLE_ENTITY1 ].Init_ENTITY1();
+g_pLessonVariableInfo[ LESSON_VARIABLE_ENTITY2 ].Init_ENTITY2();
+g_pLessonVariableInfo[ LESSON_VARIABLE_STRING1 ].Init_STRING1();
+g_pLessonVariableInfo[ LESSON_VARIABLE_STRING2 ].Init_STRING2();
+g_pLessonVariableInfo[ LESSON_VARIABLE_INTEGER1 ].Init_INTEGER1();
+g_pLessonVariableInfo[ LESSON_VARIABLE_INTEGER2 ].Init_INTEGER2();
+g_pLessonVariableInfo[ LESSON_VARIABLE_FLOAT1 ].Init_FLOAT1();
+g_pLessonVariableInfo[ LESSON_VARIABLE_FLOAT2 ].Init_FLOAT2();
+g_pLessonVariableInfo[ LESSON_VARIABLE_ICON_TARGET ].Init_ICON_TARGET();
+g_pLessonVariableInfo[ LESSON_VARIABLE_UI_TARGET_NAME ].Init_UI_TARGET_NAME();
+g_pLessonVariableInfo[ LESSON_VARIABLE_UI_TARGET_LOOKUP ].Init_UI_TARGET_LOOKUP();
+g_pLessonVariableInfo[ LESSON_VARIABLE_UI_TARGET_EDGE ].Init_UI_TARGET_EDGE();
+g_pLessonVariableInfo[ LESSON_VARIABLE_FIXED_POSITION_X ].Init_FIXED_POSITION_X();
+g_pLessonVariableInfo[ LESSON_VARIABLE_FIXED_POSITION_Y ].Init_FIXED_POSITION_Y();
+g_pLessonVariableInfo[ LESSON_VARIABLE_FIXED_POSITION ].Init_FIXED_POSITION();
+g_pLessonVariableInfo[ LESSON_VARIABLE_NO_ICON_TARGET ].Init_NO_ICON_TARGET();
+g_pLessonVariableInfo[ LESSON_VARIABLE_ALLOW_NODRAW_TARGET ].Init_ALLOW_NODRAW_TARGET();
+g_pLessonVariableInfo[ LESSON_VARIABLE_VISIBLE ].Init_VISIBLE();
+g_pLessonVariableInfo[ LESSON_VARIABLE_SHOW_WHEN_OCCLUDED ].Init_SHOW_WHEN_OCCLUDED();
+g_pLessonVariableInfo[ LESSON_VARIABLE_NO_OFFSCREEN ].Init_NO_OFFSCREEN();
+g_pLessonVariableInfo[ LESSON_VARIABLE_FORCE_CAPTION ].Init_FORCE_CAPTION();
+g_pLessonVariableInfo[ LESSON_VARIABLE_ONSCREEN_ICON ].Init_ONSCREEN_ICON();
+g_pLessonVariableInfo[ LESSON_VARIABLE_OFFSCREEN_ICON ].Init_OFFSCREEN_ICON();
+g_pLessonVariableInfo[ LESSON_VARIABLE_ICON_OFFSET ].Init_ICON_OFFSET();
+g_pLessonVariableInfo[ LESSON_VARIABLE_ICON_RELATIVE_OFFSET ].Init_ICON_RELATIVE_OFFSET();
+g_pLessonVariableInfo[ LESSON_VARIABLE_RANGE ].Init_RANGE();
+g_pLessonVariableInfo[ LESSON_VARIABLE_FLAGS ].Init_FLAGS();
+g_pLessonVariableInfo[ LESSON_VARIABLE_CAPTION_COLOR ].Init_CAPTION_COLOR();
+g_pLessonVariableInfo[ LESSON_VARIABLE_GROUP ].Init_GROUP();
+g_pLessonVariableInfo[ LESSON_VARIABLE_CAPTION ].Init_CAPTION();
+g_pLessonVariableInfo[ LESSON_VARIABLE_CAPTION_PARAM ].Init_CAPTION_PARAM();
+g_pLessonVariableInfo[ LESSON_VARIABLE_BINDING ].Init_BINDING();
+g_pLessonVariableInfo[ LESSON_VARIABLE_GAMEPAD_BINDING ].Init_GAMEPAD_BINDING();
+g_pLessonVariableInfo[ LESSON_VARIABLE_PRIORITY ].Init_PRIORITY();
+g_pLessonVariableInfo[ LESSON_VARIABLE_REPLACE_KEY ].Init_REPLACE_KEY();
+g_pLessonVariableInfo[ LESSON_VARIABLE_LOCK_DURATION ].Init_LOCK_DURATION();
+g_pLessonVariableInfo[ LESSON_VARIABLE_CAN_OPEN_WHEN_DEAD ].Init_CAN_OPEN_WHEN_DEAD();
+g_pLessonVariableInfo[ LESSON_VARIABLE_BUMP_WITH_TIMEOUT_WHEN_LEARNED ].Init_BUMP_WITH_TIMEOUT_WHEN_LEARNED();
+g_pLessonVariableInfo[ LESSON_VARIABLE_ONCE_LEARNED_NEVER_OPEN ].Init_ONCE_LEARNED_NEVER_OPEN();
+g_pLessonVariableInfo[ LESSON_VARIABLE_CAN_TIMEOUT_WHILE_INACTIVE ].Init_CAN_TIMEOUT_WHILE_INACTIVE();
+g_pLessonVariableInfo[ LESSON_VARIABLE_USABLE_IN_MIDAIR ].Init_USABLE_IN_MIDAIR();
+g_pLessonVariableInfo[ LESSON_VARIABLE_TIMEOUT ].Init_TIMEOUT();
+g_pLessonVariableInfo[ LESSON_VARIABLE_UPDATE_INTERVAL ].Init_UPDATE_INTERVAL();
+g_pLessonVariableInfo[ LESSON_VARIABLE_START_SOUND ].Init_START_SOUND();
 	}
 
 	return &(g_pLessonVariableInfo[ iLessonVariable ]);
@@ -1257,15 +1596,53 @@ void CScriptedIconLesson::Init( void )
 			CScriptedIconLesson *pOpenLesson = m_pDefaultHolder;
 
 			// Run copy macros on all default scriptable variables (see: LESSON_VARIABLE_FACTORY definition)
-#define LESSON_VARIABLE_MACRO			LESSON_VARIABLE_COPY
-#define LESSON_VARIABLE_MACRO_BOOL		LESSON_VARIABLE_COPY
-#define LESSON_VARIABLE_MACRO_EHANDLE	LESSON_VARIABLE_COPY
-#define LESSON_VARIABLE_MACRO_STRING	LESSON_VARIABLE_COPY
-			LESSON_VARIABLE_FACTORY
-#undef LESSON_VARIABLE_MACRO
-#undef LESSON_VARIABLE_MACRO_BOOL
-#undef LESSON_VARIABLE_MACRO_EHANDLE
-#undef LESSON_VARIABLE_MACRO_STRING
+( pOpenLesson->m_hLocalPlayer = m_hLocalPlayer );
+( pOpenLesson->m_hLocalPlayer = m_hLocalPlayer );
+( pOpenLesson->m_fOutput = m_fOutput );
+( pOpenLesson->m_hEntity1 = m_hEntity1 );
+( pOpenLesson->m_hEntity2 = m_hEntity2 );
+( pOpenLesson->m_szString1 = m_szString1 );
+( pOpenLesson->m_szString2 = m_szString2 );
+( pOpenLesson->m_iInteger1 = m_iInteger1 );
+( pOpenLesson->m_iInteger2 = m_iInteger2 );
+( pOpenLesson->m_fFloat1 = m_fFloat1 );
+( pOpenLesson->m_fFloat2 = m_fFloat2 );
+( pOpenLesson->m_hIconTarget = m_hIconTarget );
+( pOpenLesson->m_szUITargetName = m_szUITargetName );
+( pOpenLesson->m_szUITargetLookup = m_szUITargetLookup );
+( pOpenLesson->m_nUITargetEdge = m_nUITargetEdge );
+( pOpenLesson->m_fFixedPositionX = m_fFixedPositionX );
+( pOpenLesson->m_fFixedPositionY = m_fFixedPositionY );
+( pOpenLesson->m_bFixedPosition = m_bFixedPosition );
+( pOpenLesson->m_bNoIconTarget = m_bNoIconTarget );
+( pOpenLesson->m_bAllowNodrawTarget = m_bAllowNodrawTarget );
+( pOpenLesson->m_bVisible = m_bVisible );
+( pOpenLesson->m_bShowWhenOccluded = m_bShowWhenOccluded );
+( pOpenLesson->m_bNoOffscreen = m_bNoOffscreen );
+( pOpenLesson->m_bForceCaption = m_bForceCaption );
+( pOpenLesson->m_szOnscreenIcon = m_szOnscreenIcon );
+( pOpenLesson->m_szOffscreenIcon = m_szOffscreenIcon );
+( pOpenLesson->m_flUpOffset = m_flUpOffset );
+( pOpenLesson->m_flRelativeUpOffset = m_flRelativeUpOffset );
+( pOpenLesson->m_fRange = m_fRange );
+( pOpenLesson->m_iFlags = m_iFlags );
+( pOpenLesson->m_szCaptionColor = m_szCaptionColor );
+( pOpenLesson->m_szLessonGroup = m_szLessonGroup );
+( pOpenLesson->m_szDisplayText = m_szDisplayText );
+( pOpenLesson->m_szDisplayParamText = m_szDisplayParamText );
+( pOpenLesson->m_szBinding = m_szBinding );
+( pOpenLesson->m_szGamepadBinding = m_szGamepadBinding );
+( pOpenLesson->m_iPriority = m_iPriority );
+( pOpenLesson->m_stringReplaceKey = m_stringReplaceKey );
+( pOpenLesson->m_fLockDuration = m_fLockDuration );
+( pOpenLesson->m_bCanOpenWhenDead = m_bCanOpenWhenDead );
+( pOpenLesson->m_bBumpWithTimeoutWhenLearned = m_bBumpWithTimeoutWhenLearned );
+( pOpenLesson->m_bOnceLearnedNeverOpen = m_bOnceLearnedNeverOpen );
+( pOpenLesson->m_bCanTimeoutWhileInactive = m_bCanTimeoutWhileInactive );
+( pOpenLesson->m_bUsableInMidair = m_bUsableInMidair );
+( pOpenLesson->m_fTimeout = m_fTimeout );
+( pOpenLesson->m_fUpdateInterval = m_fUpdateInterval );
+( pOpenLesson->m_szStartSound = m_szStartSound );
 
 			// Listen for open events
 			for ( int iLessonEvent = 0; iLessonEvent < std::ssize( m_OpenEvents ); ++iLessonEvent )
@@ -1337,7 +1714,7 @@ void CScriptedIconLesson::InitPrerequisites( void )
 
 void CScriptedIconLesson::OnOpen( void )
 {
-	VPROF_BUDGET( "CScriptedIconLesson::OnOpen", "GameInstructor" );
+	CVProfScope _( "CScriptedIconLesson::OnOpen", 0, "GameInstructor", false, BUDGETFLAG_OTHER );
 
 	if ( !DoDelayedPlayerSwaps() )
 	{
@@ -1367,7 +1744,7 @@ void CScriptedIconLesson::OnOpen( void )
 
 void CScriptedIconLesson::Update( void )
 {
-	VPROF_BUDGET( "CScriptedIconLesson::Update", "GameInstructor" );
+	CVProfScope _( "CScriptedIconLesson::Update", 0, "GameInstructor", false, BUDGETFLAG_OTHER );
 
 	if ( !DoDelayedPlayerSwaps() )
 	{
@@ -1458,7 +1835,7 @@ void CScriptedIconLesson::SwapOutPlayers( int iOldUserID, int iNewUserID )
 
 void CScriptedIconLesson::FireGameEvent( IGameEvent *event )
 {
-	VPROF_BUDGET( "CScriptedIconLesson::FireGameEvent", "GameInstructor" );
+	CVProfScope _( "CScriptedIconLesson::FireGameEvent", 0, "GameInstructor", false, BUDGETFLAG_OTHER );
 
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( GetSplitScreenSlot() );
 
@@ -1528,7 +1905,7 @@ void CScriptedIconLesson::ProcessOpenGameEvents( const CScriptedIconLesson *pRoo
 	{
 		const LessonEvent_t *pLessonEvent = &(pRootLesson->m_OpenEvents[ iLessonEvent ]);
 
-		if ( Q_strcmp( name, pLessonEvent->szEventName.String()) == 0 )
+		if ( V_strcmp( name, pLessonEvent->szEventName.String()) == 0 )
 		{
 			if ( gameinstructor_verbose.GetInt() > 0 && ShouldShowSpew() )
 			{
@@ -1541,15 +1918,53 @@ void CScriptedIconLesson::ProcessOpenGameEvents( const CScriptedIconLesson *pRoo
 			if ( m_pDefaultHolder )
 			{
 				// Run copy from default macros on all scriptable variables (see: LESSON_VARIABLE_FACTORY definition)
-#define LESSON_VARIABLE_MACRO			LESSON_VARIABLE_DEFAULT
-#define LESSON_VARIABLE_MACRO_BOOL		LESSON_VARIABLE_DEFAULT
-#define LESSON_VARIABLE_MACRO_EHANDLE	LESSON_VARIABLE_DEFAULT
-#define LESSON_VARIABLE_MACRO_STRING	LESSON_VARIABLE_DEFAULT
-				LESSON_VARIABLE_FACTORY
-#undef LESSON_VARIABLE_MACRO
-#undef LESSON_VARIABLE_MACRO_BOOL
-#undef LESSON_VARIABLE_MACRO_EHANDLE
-#undef LESSON_VARIABLE_MACRO_STRING
+( m_hLocalPlayer = m_pDefaultHolder->m_hLocalPlayer );
+( m_hLocalPlayer = m_pDefaultHolder->m_hLocalPlayer );
+( m_fOutput = m_pDefaultHolder->m_fOutput );
+( m_hEntity1 = m_pDefaultHolder->m_hEntity1 );
+( m_hEntity2 = m_pDefaultHolder->m_hEntity2 );
+( m_szString1 = m_pDefaultHolder->m_szString1 );
+( m_szString2 = m_pDefaultHolder->m_szString2 );
+( m_iInteger1 = m_pDefaultHolder->m_iInteger1 );
+( m_iInteger2 = m_pDefaultHolder->m_iInteger2 );
+( m_fFloat1 = m_pDefaultHolder->m_fFloat1 );
+( m_fFloat2 = m_pDefaultHolder->m_fFloat2 );
+( m_hIconTarget = m_pDefaultHolder->m_hIconTarget );
+( m_szUITargetName = m_pDefaultHolder->m_szUITargetName );
+( m_szUITargetLookup = m_pDefaultHolder->m_szUITargetLookup );
+( m_nUITargetEdge = m_pDefaultHolder->m_nUITargetEdge );
+( m_fFixedPositionX = m_pDefaultHolder->m_fFixedPositionX );
+( m_fFixedPositionY = m_pDefaultHolder->m_fFixedPositionY );
+( m_bFixedPosition = m_pDefaultHolder->m_bFixedPosition );
+( m_bNoIconTarget = m_pDefaultHolder->m_bNoIconTarget );
+( m_bAllowNodrawTarget = m_pDefaultHolder->m_bAllowNodrawTarget );
+( m_bVisible = m_pDefaultHolder->m_bVisible );
+( m_bShowWhenOccluded = m_pDefaultHolder->m_bShowWhenOccluded );
+( m_bNoOffscreen = m_pDefaultHolder->m_bNoOffscreen );
+( m_bForceCaption = m_pDefaultHolder->m_bForceCaption );
+( m_szOnscreenIcon = m_pDefaultHolder->m_szOnscreenIcon );
+( m_szOffscreenIcon = m_pDefaultHolder->m_szOffscreenIcon );
+( m_flUpOffset = m_pDefaultHolder->m_flUpOffset );
+( m_flRelativeUpOffset = m_pDefaultHolder->m_flRelativeUpOffset );
+( m_fRange = m_pDefaultHolder->m_fRange );
+( m_iFlags = m_pDefaultHolder->m_iFlags );
+( m_szCaptionColor = m_pDefaultHolder->m_szCaptionColor );
+( m_szLessonGroup = m_pDefaultHolder->m_szLessonGroup );
+( m_szDisplayText = m_pDefaultHolder->m_szDisplayText );
+( m_szDisplayParamText = m_pDefaultHolder->m_szDisplayParamText );
+( m_szBinding = m_pDefaultHolder->m_szBinding );
+( m_szGamepadBinding = m_pDefaultHolder->m_szGamepadBinding );
+( m_iPriority = m_pDefaultHolder->m_iPriority );
+( m_stringReplaceKey = m_pDefaultHolder->m_stringReplaceKey );
+( m_fLockDuration = m_pDefaultHolder->m_fLockDuration );
+( m_bCanOpenWhenDead = m_pDefaultHolder->m_bCanOpenWhenDead );
+( m_bBumpWithTimeoutWhenLearned = m_pDefaultHolder->m_bBumpWithTimeoutWhenLearned );
+( m_bOnceLearnedNeverOpen = m_pDefaultHolder->m_bOnceLearnedNeverOpen );
+( m_bCanTimeoutWhileInactive = m_pDefaultHolder->m_bCanTimeoutWhileInactive );
+( m_bUsableInMidair = m_pDefaultHolder->m_bUsableInMidair );
+( m_fTimeout = m_pDefaultHolder->m_fTimeout );
+( m_fUpdateInterval = m_pDefaultHolder->m_fUpdateInterval );
+( m_szStartSound = m_pDefaultHolder->m_szStartSound );
 			}
 
 			if ( ProcessElements( event, &(pLessonEvent->elements) ) )
@@ -1559,19 +1974,56 @@ void CScriptedIconLesson::ProcessOpenGameEvents( const CScriptedIconLesson *pRoo
 					ConColorMsg( CBaseLesson::m_rgbaVerboseOpen, "\tAll elements returned true. Opening!\n" );
 				}
 
-				MEM_ALLOC_CREDIT();
 				CScriptedIconLesson *pOpenLesson = new CScriptedIconLesson( GetName(), false, true, GetSplitScreenSlot() );
 
 				// Run copy macros on all scriptable variables (see: LESSON_VARIABLE_FACTORY definition)
-#define LESSON_VARIABLE_MACRO			LESSON_VARIABLE_COPY
-#define LESSON_VARIABLE_MACRO_BOOL		LESSON_VARIABLE_COPY
-#define LESSON_VARIABLE_MACRO_EHANDLE	LESSON_VARIABLE_COPY
-#define LESSON_VARIABLE_MACRO_STRING	LESSON_VARIABLE_COPY
-				LESSON_VARIABLE_FACTORY
-#undef LESSON_VARIABLE_MACRO
-#undef LESSON_VARIABLE_MACRO_BOOL
-#undef LESSON_VARIABLE_MACRO_EHANDLE
-#undef LESSON_VARIABLE_MACRO_STRING
+( pOpenLesson->m_hLocalPlayer = m_hLocalPlayer );
+( pOpenLesson->m_hLocalPlayer = m_hLocalPlayer );
+( pOpenLesson->m_fOutput = m_fOutput );
+( pOpenLesson->m_hEntity1 = m_hEntity1 );
+( pOpenLesson->m_hEntity2 = m_hEntity2 );
+( pOpenLesson->m_szString1 = m_szString1 );
+( pOpenLesson->m_szString2 = m_szString2 );
+( pOpenLesson->m_iInteger1 = m_iInteger1 );
+( pOpenLesson->m_iInteger2 = m_iInteger2 );
+( pOpenLesson->m_fFloat1 = m_fFloat1 );
+( pOpenLesson->m_fFloat2 = m_fFloat2 );
+( pOpenLesson->m_hIconTarget = m_hIconTarget );
+( pOpenLesson->m_szUITargetName = m_szUITargetName );
+( pOpenLesson->m_szUITargetLookup = m_szUITargetLookup );
+( pOpenLesson->m_nUITargetEdge = m_nUITargetEdge );
+( pOpenLesson->m_fFixedPositionX = m_fFixedPositionX );
+( pOpenLesson->m_fFixedPositionY = m_fFixedPositionY );
+( pOpenLesson->m_bFixedPosition = m_bFixedPosition );
+( pOpenLesson->m_bNoIconTarget = m_bNoIconTarget );
+( pOpenLesson->m_bAllowNodrawTarget = m_bAllowNodrawTarget );
+( pOpenLesson->m_bVisible = m_bVisible );
+( pOpenLesson->m_bShowWhenOccluded = m_bShowWhenOccluded );
+( pOpenLesson->m_bNoOffscreen = m_bNoOffscreen );
+( pOpenLesson->m_bForceCaption = m_bForceCaption );
+( pOpenLesson->m_szOnscreenIcon = m_szOnscreenIcon );
+( pOpenLesson->m_szOffscreenIcon = m_szOffscreenIcon );
+( pOpenLesson->m_flUpOffset = m_flUpOffset );
+( pOpenLesson->m_flRelativeUpOffset = m_flRelativeUpOffset );
+( pOpenLesson->m_fRange = m_fRange );
+( pOpenLesson->m_iFlags = m_iFlags );
+( pOpenLesson->m_szCaptionColor = m_szCaptionColor );
+( pOpenLesson->m_szLessonGroup = m_szLessonGroup );
+( pOpenLesson->m_szDisplayText = m_szDisplayText );
+( pOpenLesson->m_szDisplayParamText = m_szDisplayParamText );
+( pOpenLesson->m_szBinding = m_szBinding );
+( pOpenLesson->m_szGamepadBinding = m_szGamepadBinding );
+( pOpenLesson->m_iPriority = m_iPriority );
+( pOpenLesson->m_stringReplaceKey = m_stringReplaceKey );
+( pOpenLesson->m_fLockDuration = m_fLockDuration );
+( pOpenLesson->m_bCanOpenWhenDead = m_bCanOpenWhenDead );
+( pOpenLesson->m_bBumpWithTimeoutWhenLearned = m_bBumpWithTimeoutWhenLearned );
+( pOpenLesson->m_bOnceLearnedNeverOpen = m_bOnceLearnedNeverOpen );
+( pOpenLesson->m_bCanTimeoutWhileInactive = m_bCanTimeoutWhileInactive );
+( pOpenLesson->m_bUsableInMidair = m_bUsableInMidair );
+( pOpenLesson->m_fTimeout = m_fTimeout );
+( pOpenLesson->m_fUpdateInterval = m_fUpdateInterval );
+( pOpenLesson->m_szStartSound = m_szStartSound );
 
 				if ( GetGameInstructor().OpenOpportunity( pOpenLesson ) )
 				{
@@ -1595,7 +2047,7 @@ void CScriptedIconLesson::ProcessCloseGameEvents( const CScriptedIconLesson *pRo
 	{
 		const LessonEvent_t *pLessonEvent = &(pRootLesson->m_CloseEvents[ iLessonEvent ]);
 
-		if ( Q_strcmp( name, pLessonEvent->szEventName.String()) == 0 )
+		if ( V_strcmp( name, pLessonEvent->szEventName.String()) == 0 )
 		{
 			if ( gameinstructor_verbose.GetInt() > 0 && ShouldShowSpew() )
 			{
@@ -1624,7 +2076,7 @@ void CScriptedIconLesson::ProcessSuccessGameEvents( const CScriptedIconLesson *p
 	{
 		const LessonEvent_t *pLessonEvent = &(pRootLesson->m_SuccessEvents[ iLessonEvent ]);
 
-		if ( Q_strcmp( name, pLessonEvent->szEventName.String()) == 0 )
+		if ( V_strcmp( name, pLessonEvent->szEventName.String()) == 0 )
 		{
 			if ( gameinstructor_verbose.GetInt() > 0 && ShouldShowSpew() )
 			{
@@ -1655,7 +2107,7 @@ LessonVariable LessonVariableFromString( const char *pchName, bool bWarnOnInvali
 
 	if ( bWarnOnInvalidNames )
 	{
-		AssertMsg( 0, "Invalid scripted lesson variable!" );
+		contract_assert( false && "Invalid scripted lesson variable!" );
 		DevWarning( "Invalid scripted lesson variable: %s\n", pchName );
 	}
 	
@@ -1927,21 +2379,727 @@ void CScriptedIconLesson::InitFromKeys( KeyValues *pKey )
 		}
 
 		// Run intialize from key macros on all scriptable variables (see: LESSON_VARIABLE_FACTORY definition)
-#define LESSON_VARIABLE_MACRO			LESSON_VARIABLE_INIT
-#define LESSON_VARIABLE_MACRO_BOOL		LESSON_VARIABLE_INIT_BOOL
-#define LESSON_VARIABLE_MACRO_EHANDLE	LESSON_VARIABLE_INIT_EHANDLE
-#define LESSON_VARIABLE_MACRO_STRING	LESSON_VARIABLE_INIT_STRING
-		LESSON_VARIABLE_FACTORY
-#undef LESSON_VARIABLE_MACRO
-#undef LESSON_VARIABLE_MACRO_BOOL
-#undef LESSON_VARIABLE_MACRO_EHANDLE
-#undef LESSON_VARIABLE_MACRO_STRING
+
+	else if ( g_nVOIDSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		DevWarning( "Can't initialize an EHANDLE from the instructor lesson script." ); 
+	}
+
+	else if ( g_nLOCAL_PLAYERSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		DevWarning( "Can't initialize an EHANDLE from the instructor lesson script." ); 
+	}
+
+	else if ( g_nOUTPUTSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_fOutput = static_cast<float>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_fOutput = static_cast<float>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_fOutput = static_cast<float>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nENTITY1Symbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		DevWarning( "Can't initialize an EHANDLE from the instructor lesson script." ); 
+	}
+
+	else if ( g_nENTITY2Symbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		DevWarning( "Can't initialize an EHANDLE from the instructor lesson script." ); 
+	}
+
+	else if ( g_nSTRING1Symbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szString1 = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szString1 = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szString1 = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nSTRING2Symbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szString2 = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szString2 = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szString2 = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nINTEGER1Symbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_iInteger1 = static_cast<int>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_iInteger1 = static_cast<int>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_iInteger1 = static_cast<int>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nINTEGER2Symbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_iInteger2 = static_cast<int>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_iInteger2 = static_cast<int>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_iInteger2 = static_cast<int>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nFLOAT1Symbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_fFloat1 = static_cast<float>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_fFloat1 = static_cast<float>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_fFloat1 = static_cast<float>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nFLOAT2Symbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_fFloat2 = static_cast<float>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_fFloat2 = static_cast<float>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_fFloat2 = static_cast<float>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nICON_TARGETSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		DevWarning( "Can't initialize an EHANDLE from the instructor lesson script." ); 
+	}
+
+	else if ( g_nUI_TARGET_NAMESymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szUITargetName = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szUITargetName = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szUITargetName = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nUI_TARGET_LOOKUPSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szUITargetLookup = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szUITargetLookup = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szUITargetLookup = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nUI_TARGET_EDGESymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_nUITargetEdge = static_cast<int>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_nUITargetEdge = static_cast<int>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_nUITargetEdge = static_cast<int>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nFIXED_POSITION_XSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_fFixedPositionX = static_cast<float>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_fFixedPositionX = static_cast<float>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_fFixedPositionX = static_cast<float>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nFIXED_POSITION_YSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_fFixedPositionY = static_cast<float>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_fFixedPositionY = static_cast<float>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_fFixedPositionY = static_cast<float>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( V_stricmp( "FIXED_POSITION", pSubKey->GetName() ) == 0 ) 
+	{ 
+		m_bFixedPosition = pSubKey->GetBool(); 
+	}
+
+	else if ( V_stricmp( "NO_ICON_TARGET", pSubKey->GetName() ) == 0 ) 
+	{ 
+		m_bNoIconTarget = pSubKey->GetBool(); 
+	}
+
+	else if ( V_stricmp( "ALLOW_NODRAW_TARGET", pSubKey->GetName() ) == 0 ) 
+	{ 
+		m_bAllowNodrawTarget = pSubKey->GetBool(); 
+	}
+
+	else if ( V_stricmp( "VISIBLE", pSubKey->GetName() ) == 0 ) 
+	{ 
+		m_bVisible = pSubKey->GetBool(); 
+	}
+
+	else if ( V_stricmp( "SHOW_WHEN_OCCLUDED", pSubKey->GetName() ) == 0 ) 
+	{ 
+		m_bShowWhenOccluded = pSubKey->GetBool(); 
+	}
+
+	else if ( V_stricmp( "NO_OFFSCREEN", pSubKey->GetName() ) == 0 ) 
+	{ 
+		m_bNoOffscreen = pSubKey->GetBool(); 
+	}
+
+	else if ( V_stricmp( "FORCE_CAPTION", pSubKey->GetName() ) == 0 ) 
+	{ 
+		m_bForceCaption = pSubKey->GetBool(); 
+	}
+
+	else if ( g_nONSCREEN_ICONSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szOnscreenIcon = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szOnscreenIcon = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szOnscreenIcon = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nOFFSCREEN_ICONSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szOffscreenIcon = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szOffscreenIcon = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szOffscreenIcon = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nICON_OFFSETSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_flUpOffset = static_cast<float>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_flUpOffset = static_cast<float>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_flUpOffset = static_cast<float>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nICON_RELATIVE_OFFSETSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_flRelativeUpOffset = static_cast<float>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_flRelativeUpOffset = static_cast<float>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_flRelativeUpOffset = static_cast<float>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nRANGESymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_fRange = static_cast<float>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_fRange = static_cast<float>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_fRange = static_cast<float>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nFLAGSSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_iFlags = static_cast<int>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_iFlags = static_cast<int>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_iFlags = static_cast<int>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nCAPTION_COLORSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szCaptionColor = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szCaptionColor = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szCaptionColor = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nGROUPSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szLessonGroup = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szLessonGroup = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szLessonGroup = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nCAPTIONSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szDisplayText = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szDisplayText = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szDisplayText = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nCAPTION_PARAMSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szDisplayParamText = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szDisplayParamText = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szDisplayParamText = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nBINDINGSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szBinding = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szBinding = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szBinding = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nGAMEPAD_BINDINGSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szGamepadBinding = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szGamepadBinding = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szGamepadBinding = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nPRIORITYSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_iPriority = static_cast<int>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_iPriority = static_cast<int>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_iPriority = static_cast<int>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nREPLACE_KEYSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_stringReplaceKey = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_stringReplaceKey = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_stringReplaceKey = pSubKey->GetString(); 
+		} 
+	}
+
+	else if ( g_nLOCK_DURATIONSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_fLockDuration = static_cast<float>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_fLockDuration = static_cast<float>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_fLockDuration = static_cast<float>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( V_stricmp( "CAN_OPEN_WHEN_DEAD", pSubKey->GetName() ) == 0 ) 
+	{ 
+		m_bCanOpenWhenDead = pSubKey->GetBool(); 
+	}
+
+	else if ( V_stricmp( "BUMP_WITH_TIMEOUT_WHEN_LEARNED", pSubKey->GetName() ) == 0 ) 
+	{ 
+		m_bBumpWithTimeoutWhenLearned = pSubKey->GetBool(); 
+	}
+
+	else if ( V_stricmp( "ONCE_LEARNED_NEVER_OPEN", pSubKey->GetName() ) == 0 ) 
+	{ 
+		m_bOnceLearnedNeverOpen = pSubKey->GetBool(); 
+	}
+
+	else if ( V_stricmp( "CAN_TIMEOUT_WHILE_INACTIVE", pSubKey->GetName() ) == 0 ) 
+	{ 
+		m_bCanTimeoutWhileInactive = pSubKey->GetBool(); 
+	}
+
+	else if ( V_stricmp( "USABLE_IN_MIDAIR", pSubKey->GetName() ) == 0 ) 
+	{ 
+		m_bUsableInMidair = pSubKey->GetBool(); 
+	}
+
+	else if ( g_nTIMEOUTSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_fTimeout = static_cast<float>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_fTimeout = static_cast<float>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_fTimeout = static_cast<float>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nUPDATE_INTERVALSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_fUpdateInterval = static_cast<float>( tempCVar.GetFloat() ); 
+			} 
+			else 
+			{ 
+				m_fUpdateInterval = static_cast<float>( 0.0f ); 
+			} 
+		} 
+		else 
+		{ 
+			m_fUpdateInterval = static_cast<float>( pSubKey->GetFloat() ); 
+		} 
+	}
+
+	else if ( g_nSTART_SOUNDSymbol == pSubKey->GetNameSymbol() ) 
+	{ 
+		const char *pchParam = pSubKey->GetString(); 
+		if ( pchParam && StringHasPrefix( pchParam, "convar " ) ) 
+		{ 
+			ConVarRef tempCVar( pchParam + V_strlen( "convar " ) ); 
+			if ( tempCVar.IsValid() ) 
+			{ 
+				m_szStartSound = tempCVar.GetString(); 
+			} 
+			else 
+			{ 
+				m_szStartSound = ""; 
+			} 
+		} 
+		else 
+		{ 
+			m_szStartSound = pSubKey->GetString(); 
+		} 
+	}
 	}
 }
 
 bool CScriptedIconLesson::ProcessElements( IGameEvent *event, const std::vector< LessonElement_t > *pElements )
 {
-	VPROF_BUDGET( "CScriptedIconLesson::ProcessElements", "GameInstructor" );
+	CVProfScope _( "CScriptedIconLesson::ProcessElements", 0, "GameInstructor", false, BUDGETFLAG_OTHER );
 
 	m_hLocalPlayer = GetGameInstructor().GetLocalPlayer();
 
@@ -1994,7 +3152,7 @@ bool CScriptedIconLesson::ProcessElement( IGameEvent *event, const LessonElement
 {
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( GetSplitScreenSlot() );
 
-	VPROF_BUDGET( "CScriptedIconLesson::ProcessElement", "GameInstructor" );
+	CVProfScope _( "CScriptedIconLesson::ProcessElement", 0, "GameInstructor", false, BUDGETFLAG_OTHER );
 
 	if ( pLessonElement->iAction == LESSON_ACTION_SCOPE_IN )
 	{
@@ -2157,7 +3315,7 @@ bool CScriptedIconLesson::ProcessElement( IGameEvent *event, const LessonElement
 		else if ( ( pParamName[ 0 ] >= '0' && pParamName[ 0 ] <= '9' ) || pParamName[ 0 ] == '-' || pParamName[ 0 ] == '.' )
 		{
 			// This param doesn't exist, try parsing the string
-			eventParam_float = Q_atof( pParamName );
+			eventParam_float = V_atof( pParamName );
 		}
 		else
 		{
@@ -2204,7 +3362,7 @@ bool CScriptedIconLesson::ProcessElement( IGameEvent *event, const LessonElement
 		else if ( ( pParamName[ 0 ] >= '0' && pParamName[ 0 ] <= '9' ) || pParamName[ 0 ] == '-' )
 		{
 			// This param doesn't exist, try parsing the string
-			eventParam_float = static_cast<float>( Q_atoi( pParamName ) );
+			eventParam_float = static_cast<float>( V_atoi( pParamName ) );
 		}
 		else
 		{
@@ -2222,13 +3380,13 @@ bool CScriptedIconLesson::ProcessElement( IGameEvent *event, const LessonElement
 			switch ( pInfo->varType )
 			{
 			case FIELD_STRING:
-				Q_strncpy( eventParam_string, &LESSON_VARIABLE_GET_FROM_OFFSET( CGameInstructorSymbol, pInfo->iOffset )->String(), sizeof( eventParam_string ) );
+				V_strncpy( eventParam_string, &LESSON_VARIABLE_GET_FROM_OFFSET( CGameInstructorSymbol, pInfo->iOffset )->String(), sizeof( eventParam_string ) );
 				break;
 			case FIELD_FLOAT:
-				Q_snprintf( eventParam_string, sizeof( eventParam_string ), "%f", LESSON_VARIABLE_GET_FROM_OFFSET( float, pInfo->iOffset ) );
+				V_snprintf( eventParam_string, sizeof( eventParam_string ), "%f", LESSON_VARIABLE_GET_FROM_OFFSET( float, pInfo->iOffset ) );
 				break;
 			case FIELD_INTEGER:
-				Q_snprintf( eventParam_string, sizeof( eventParam_string ), "%i", LESSON_VARIABLE_GET_FROM_OFFSET( int, pInfo->iOffset ) );
+				V_snprintf( eventParam_string, sizeof( eventParam_string ), "%i", LESSON_VARIABLE_GET_FROM_OFFSET( int, pInfo->iOffset ) );
 				break;
 			case FIELD_BOOLEAN:
 			case FIELD_EHANDLE:
@@ -2258,7 +3416,7 @@ bool CScriptedIconLesson::ProcessElement( IGameEvent *event, const LessonElement
 			else
 			{
 				// This param doesn't exist, try parsing the string
-				Q_strncpy( eventParam_string, pParamName, sizeof( eventParam_string ) );
+				V_strncpy( eventParam_string, pParamName, sizeof( eventParam_string ) );
 			}
 		}
 		break;
@@ -2299,7 +3457,7 @@ bool CScriptedIconLesson::ProcessElement( IGameEvent *event, const LessonElement
 		else if ( pParamName[ 0 ] == '0' || pParamName[ 0 ] == '1' )
 		{
 			// This param doesn't exist, try parsing the string
-			eventParam_float = ( Q_atof( pParamName ) != 0.0f ) ? 1.0f : 0.0f;
+			eventParam_float = ( V_atof( pParamName ) != 0.0f ) ? 1.0f : 0.0f;
 		}
 		else
 		{
@@ -2365,7 +3523,7 @@ bool CScriptedIconLesson::ProcessElement( IGameEvent *event, const LessonElement
 			// We don't want to interpret this and not finding the param is still ok
 			return true;
 		}
-		else if ( Q_stricmp( pParamName, "null" ) == 0 )
+		else if ( V_stricmp( pParamName, "null" ) == 0 )
 		{
 			// They explicitly want a null pointer
 			eventParam_BaseEntity = nullptr;
@@ -2416,7 +3574,7 @@ bool CScriptedIconLesson::ProcessElement( IGameEvent *event, const LessonElement
 			int iEntID = event->GetInt( pParamName );
 			if ( iEntID >= NUM_ENT_ENTRIES )
 			{
-				AssertMsg( 0, "Invalid entity ID used in game event field!" );
+				contract_assert( false && "Invalid entity ID used in game event field!" );
 				DevWarning( "Invalid entity ID used in game event (%s) for param (%s).", event->GetName(), pParamName );
 				return false;
 			}
@@ -2442,12 +3600,12 @@ bool CScriptedIconLesson::ProcessElement( IGameEvent *event, const LessonElement
 			// We don't want to interpret this and not finding the param is still ok
 			return true;
 		}
-		else if ( Q_stricmp( pParamName, "null" ) == 0 )
+		else if ( V_stricmp( pParamName, "null" ) == 0 )
 		{
 			// They explicitly want a null pointer
 			eventParam_BaseEntity = nullptr;
 		}
-		else if ( Q_stricmp( pParamName, "world" ) == 0 )
+		else if ( V_stricmp( pParamName, "world" ) == 0 )
 		{
 			// They explicitly want the world
 			eventParam_BaseEntity = GetClientWorldEntity();
@@ -2466,7 +3624,7 @@ bool CScriptedIconLesson::ProcessElement( IGameEvent *event, const LessonElement
 			if ( tempCVar.IsValid() )
 			{
 				eventParam_float = tempCVar.GetFloat();
-				Q_strncpy( eventParam_string, tempCVar.GetString(), sizeof( eventParam_string ) );
+				V_strncpy( eventParam_string, tempCVar.GetString(), sizeof( eventParam_string ) );
 			}
 			else
 			{
@@ -2481,15 +3639,147 @@ bool CScriptedIconLesson::ProcessElement( IGameEvent *event, const LessonElement
 	switch ( pLessonElement->iVariable )
 	{
 		// Run process action macros on all scriptable variables (see: LESSON_VARIABLE_FACTORY definition)
-#define LESSON_VARIABLE_MACRO			PROCESS_LESSON_ACTION
-#define LESSON_VARIABLE_MACRO_BOOL		PROCESS_LESSON_ACTION
-#define LESSON_VARIABLE_MACRO_EHANDLE	PROCESS_LESSON_ACTION_EHANDLE
-#define LESSON_VARIABLE_MACRO_STRING	PROCESS_LESSON_ACTION_STRING
-		LESSON_VARIABLE_FACTORY;
-#undef LESSON_VARIABLE_MACRO
-#undef LESSON_VARIABLE_MACRO_BOOL
-#undef LESSON_VARIABLE_MACRO_EHANDLE
-#undef LESSON_VARIABLE_MACRO_STRING
+
+	case LESSON_VARIABLE_VOID:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_hLocalPlayer", m_hLocalPlayer, &pLessonElement->szParam, eventParam_float, eventParam_BaseEntity, eventParam_string );
+
+	case LESSON_VARIABLE_LOCAL_PLAYER:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_hLocalPlayer", m_hLocalPlayer, &pLessonElement->szParam, eventParam_float, eventParam_BaseEntity, eventParam_string );
+
+	case LESSON_VARIABLE_OUTPUT:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_fOutput", m_fOutput, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_ENTITY1:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_hEntity1", m_hEntity1, &pLessonElement->szParam, eventParam_float, eventParam_BaseEntity, eventParam_string );
+
+	case LESSON_VARIABLE_ENTITY2:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_hEntity2", m_hEntity2, &pLessonElement->szParam, eventParam_float, eventParam_BaseEntity, eventParam_string );
+
+	case LESSON_VARIABLE_STRING1:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szString1", &m_szString1, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_STRING2:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szString2", &m_szString2, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_INTEGER1:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_iInteger1", m_iInteger1, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_INTEGER2:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_iInteger2", m_iInteger2, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_FLOAT1:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_fFloat1", m_fFloat1, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_FLOAT2:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_fFloat2", m_fFloat2, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_ICON_TARGET:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_hIconTarget", m_hIconTarget, &pLessonElement->szParam, eventParam_float, eventParam_BaseEntity, eventParam_string );
+
+	case LESSON_VARIABLE_UI_TARGET_NAME:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szUITargetName", &m_szUITargetName, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_UI_TARGET_LOOKUP:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szUITargetLookup", &m_szUITargetLookup, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_UI_TARGET_EDGE:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_nUITargetEdge", m_nUITargetEdge, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_FIXED_POSITION_X:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_fFixedPositionX", m_fFixedPositionX, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_FIXED_POSITION_Y:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_fFixedPositionY", m_fFixedPositionY, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_FIXED_POSITION:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_bFixedPosition", m_bFixedPosition, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_NO_ICON_TARGET:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_bNoIconTarget", m_bNoIconTarget, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_ALLOW_NODRAW_TARGET:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_bAllowNodrawTarget", m_bAllowNodrawTarget, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_VISIBLE:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_bVisible", m_bVisible, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_SHOW_WHEN_OCCLUDED:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_bShowWhenOccluded", m_bShowWhenOccluded, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_NO_OFFSCREEN:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_bNoOffscreen", m_bNoOffscreen, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_FORCE_CAPTION:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_bForceCaption", m_bForceCaption, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_ONSCREEN_ICON:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szOnscreenIcon", &m_szOnscreenIcon, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_OFFSCREEN_ICON:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szOffscreenIcon", &m_szOffscreenIcon, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_ICON_OFFSET:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_flUpOffset", m_flUpOffset, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_ICON_RELATIVE_OFFSET:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_flRelativeUpOffset", m_flRelativeUpOffset, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_RANGE:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_fRange", m_fRange, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_FLAGS:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_iFlags", m_iFlags, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_CAPTION_COLOR:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szCaptionColor", &m_szCaptionColor, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_GROUP:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szLessonGroup", &m_szLessonGroup, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_CAPTION:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szDisplayText", &m_szDisplayText, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_CAPTION_PARAM:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szDisplayParamText", &m_szDisplayParamText, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_BINDING:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szBinding", &m_szBinding, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_GAMEPAD_BINDING:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szGamepadBinding", &m_szGamepadBinding, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_PRIORITY:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_iPriority", m_iPriority, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_REPLACE_KEY:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_stringReplaceKey", &m_stringReplaceKey, &pLessonElement->szParam, eventParam_string );
+
+	case LESSON_VARIABLE_LOCK_DURATION:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_fLockDuration", m_fLockDuration, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_CAN_OPEN_WHEN_DEAD:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_bCanOpenWhenDead", m_bCanOpenWhenDead, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_BUMP_WITH_TIMEOUT_WHEN_LEARNED:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_bBumpWithTimeoutWhenLearned", m_bBumpWithTimeoutWhenLearned, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_ONCE_LEARNED_NEVER_OPEN:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_bOnceLearnedNeverOpen", m_bOnceLearnedNeverOpen, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_CAN_TIMEOUT_WHILE_INACTIVE:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_bCanTimeoutWhileInactive", m_bCanTimeoutWhileInactive, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_USABLE_IN_MIDAIR:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_bUsableInMidair", m_bUsableInMidair, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_TIMEOUT:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_fTimeout", m_fTimeout, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_UPDATE_INTERVAL:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_fUpdateInterval", m_fUpdateInterval, &pLessonElement->szParam, eventParam_float );
+
+	case LESSON_VARIABLE_START_SOUND:
+		return ProcessElementAction( pLessonElement->iAction, pLessonElement->bNot, "m_szStartSound", &m_szStartSound, &pLessonElement->szParam, eventParam_string );
 	}
 
 	return true;
@@ -2900,7 +4190,7 @@ bool CScriptedIconLesson::ProcessElementAction( int iAction, bool bNot, const ch
 				ConColorMsg( CBaseLesson::m_rgbaVerbosePlain, ( bNot ) ? ( ") != 0\n" ) : ( ") == 0\n" ) );
 			}
 
-			return ( bNot ) ? ( Q_stricmp( pchModelName, pchParam ) != 0 ) : ( Q_stricmp( pchModelName, pchParam ) == 0 );
+			return ( bNot ) ? ( V_stricmp( pchModelName, pchParam ) != 0 ) : ( V_stricmp( pchModelName, pchParam ) == 0 );
 		}
 		
 		case LESSON_ACTION_HEALTH_LESS_THAN:
@@ -3073,7 +4363,7 @@ bool CScriptedIconLesson::ProcessElementAction( int iAction, bool bNot, const ch
 				ConColorMsg( CBaseLesson::m_rgbaVerboseName, "\"%s\"\n", pchParam );
 			}
 
-			return ( bNot ) ? ( Q_stricmp( pBaseCombatWeapon->GetName(), pchParam ) != 0 ) : ( Q_stricmp( pBaseCombatWeapon->GetName(), pchParam ) == 0 );
+			return ( bNot ) ? ( V_stricmp( pBaseCombatWeapon->GetName(), pchParam ) != 0 ) : ( V_stricmp( pBaseCombatWeapon->GetName(), pchParam ) == 0 );
 		}
 
 		case LESSON_ACTION_WEAPON_HAS:
@@ -3698,8 +4988,8 @@ bool CScriptedIconLesson::ProcessElementAction( int iAction, bool bNot, const ch
 			}
 
 			char szTemp[ 256 ];
-			Q_strncpy( szTemp, pchVar->String(), sizeof( szTemp ) );
-			Q_strncat( szTemp, pchParam, sizeof( szTemp ) );
+			V_strncpy( szTemp, pchVar->String(), sizeof( szTemp ) );
+			V_strncat( szTemp, pchParam, sizeof( szTemp ) );
 
 			*pchVar = szTemp;
 			return true;
@@ -3714,7 +5004,7 @@ bool CScriptedIconLesson::ProcessElementAction( int iAction, bool bNot, const ch
 				ConColorMsg( CBaseLesson::m_rgbaVerbosePlain, ( bNot ) ? ( ") != 0\n" ) : ( ") == 0\n" ) );
 			}
 
-			return ( bNot ) ? ( Q_strcmp( pchVar->String(), pchParam ) != 0 ) : ( Q_strcmp( pchVar->String(), pchParam ) == 0 );
+			return ( bNot ) ? ( V_strcmp( pchVar->String(), pchParam ) != 0 ) : ( V_strcmp( pchVar->String(), pchParam ) == 0 );
 
 		case LESSON_ACTION_HAS_PREFIX:
 			if ( gameinstructor_verbose.GetInt() > 0 && ShouldShowSpew() )
@@ -3738,7 +5028,7 @@ bool CScriptedIconLesson::ProcessElementAction( int iAction, bool bNot, const ch
 				ConColorMsg( CBaseLesson::m_rgbaVerbosePlain, ( bNot ) ? ( ") >= 0\n" ) : ( ") < 0\n" ) );
 			}
 
-			return ( bNot ) ? ( Q_strcmp( pchVar->String(), pchParam ) >= 0 ) : ( Q_strcmp( pchVar->String(), pchParam ) < 0 );
+			return ( bNot ) ? ( V_strcmp( pchVar->String(), pchParam ) >= 0 ) : ( V_strcmp( pchVar->String(), pchParam ) < 0 );
 	}
 
 	DevWarning( "Invalid lesson action type used with \"%s\" variable type.\n", pchVarName );
@@ -3785,27 +5075,103 @@ void CScriptedIconLesson::PreReadLessonsFromFile()
 	bFirstTime = false;
 
 	// Run init info call macros on all scriptable variables (see: LESSON_VARIABLE_FACTORY definition)
-#define LESSON_VARIABLE_MACRO			LESSON_VARIABLE_INIT_SYMBOL
-#define LESSON_VARIABLE_MACRO_BOOL		LESSON_VARIABLE_INIT_SYMBOL
-#define LESSON_VARIABLE_MACRO_EHANDLE	LESSON_VARIABLE_INIT_SYMBOL
-#define LESSON_VARIABLE_MACRO_STRING	LESSON_VARIABLE_INIT_SYMBOL
-	LESSON_VARIABLE_FACTORY
-#undef LESSON_VARIABLE_MACRO
-#undef LESSON_VARIABLE_MACRO_BOOL
-#undef LESSON_VARIABLE_MACRO_EHANDLE
-#undef LESSON_VARIABLE_MACRO_STRING
+g_nVOIDSymbol = KeyValuesSystem()->GetSymbolForString( "VOID" );
+g_nLOCAL_PLAYERSymbol = KeyValuesSystem()->GetSymbolForString( "LOCAL_PLAYER" );
+g_nOUTPUTSymbol = KeyValuesSystem()->GetSymbolForString( "OUTPUT" );
+g_nENTITY1Symbol = KeyValuesSystem()->GetSymbolForString( "ENTITY1" );
+g_nENTITY2Symbol = KeyValuesSystem()->GetSymbolForString( "ENTITY2" );
+g_nSTRING1Symbol = KeyValuesSystem()->GetSymbolForString( "STRING1" );
+g_nSTRING2Symbol = KeyValuesSystem()->GetSymbolForString( "STRING2" );
+g_nINTEGER1Symbol = KeyValuesSystem()->GetSymbolForString( "INTEGER1" );
+g_nINTEGER2Symbol = KeyValuesSystem()->GetSymbolForString( "INTEGER2" );
+g_nFLOAT1Symbol = KeyValuesSystem()->GetSymbolForString( "FLOAT1" );
+g_nFLOAT2Symbol = KeyValuesSystem()->GetSymbolForString( "FLOAT2" );
+g_nICON_TARGETSymbol = KeyValuesSystem()->GetSymbolForString( "ICON_TARGET" );
+g_nUI_TARGET_NAMESymbol = KeyValuesSystem()->GetSymbolForString( "UI_TARGET_NAME" );
+g_nUI_TARGET_LOOKUPSymbol = KeyValuesSystem()->GetSymbolForString( "UI_TARGET_LOOKUP" );
+g_nUI_TARGET_EDGESymbol = KeyValuesSystem()->GetSymbolForString( "UI_TARGET_EDGE" );
+g_nFIXED_POSITION_XSymbol = KeyValuesSystem()->GetSymbolForString( "FIXED_POSITION_X" );
+g_nFIXED_POSITION_YSymbol = KeyValuesSystem()->GetSymbolForString( "FIXED_POSITION_Y" );
+g_nFIXED_POSITIONSymbol = KeyValuesSystem()->GetSymbolForString( "FIXED_POSITION" );
+g_nNO_ICON_TARGETSymbol = KeyValuesSystem()->GetSymbolForString( "NO_ICON_TARGET" );
+g_nALLOW_NODRAW_TARGETSymbol = KeyValuesSystem()->GetSymbolForString( "ALLOW_NODRAW_TARGET" );
+g_nVISIBLESymbol = KeyValuesSystem()->GetSymbolForString( "VISIBLE" );
+g_nSHOW_WHEN_OCCLUDEDSymbol = KeyValuesSystem()->GetSymbolForString( "SHOW_WHEN_OCCLUDED" );
+g_nNO_OFFSCREENSymbol = KeyValuesSystem()->GetSymbolForString( "NO_OFFSCREEN" );
+g_nFORCE_CAPTIONSymbol = KeyValuesSystem()->GetSymbolForString( "FORCE_CAPTION" );
+g_nONSCREEN_ICONSymbol = KeyValuesSystem()->GetSymbolForString( "ONSCREEN_ICON" );
+g_nOFFSCREEN_ICONSymbol = KeyValuesSystem()->GetSymbolForString( "OFFSCREEN_ICON" );
+g_nICON_OFFSETSymbol = KeyValuesSystem()->GetSymbolForString( "ICON_OFFSET" );
+g_nICON_RELATIVE_OFFSETSymbol = KeyValuesSystem()->GetSymbolForString( "ICON_RELATIVE_OFFSET" );
+g_nRANGESymbol = KeyValuesSystem()->GetSymbolForString( "RANGE" );
+g_nFLAGSSymbol = KeyValuesSystem()->GetSymbolForString( "FLAGS" );
+g_nCAPTION_COLORSymbol = KeyValuesSystem()->GetSymbolForString( "CAPTION_COLOR" );
+g_nGROUPSymbol = KeyValuesSystem()->GetSymbolForString( "GROUP" );
+g_nCAPTIONSymbol = KeyValuesSystem()->GetSymbolForString( "CAPTION" );
+g_nCAPTION_PARAMSymbol = KeyValuesSystem()->GetSymbolForString( "CAPTION_PARAM" );
+g_nBINDINGSymbol = KeyValuesSystem()->GetSymbolForString( "BINDING" );
+g_nGAMEPAD_BINDINGSymbol = KeyValuesSystem()->GetSymbolForString( "GAMEPAD_BINDING" );
+g_nPRIORITYSymbol = KeyValuesSystem()->GetSymbolForString( "PRIORITY" );
+g_nREPLACE_KEYSymbol = KeyValuesSystem()->GetSymbolForString( "REPLACE_KEY" );
+g_nLOCK_DURATIONSymbol = KeyValuesSystem()->GetSymbolForString( "LOCK_DURATION" );
+g_nCAN_OPEN_WHEN_DEADSymbol = KeyValuesSystem()->GetSymbolForString( "CAN_OPEN_WHEN_DEAD" );
+g_nBUMP_WITH_TIMEOUT_WHEN_LEARNEDSymbol = KeyValuesSystem()->GetSymbolForString( "BUMP_WITH_TIMEOUT_WHEN_LEARNED" );
+g_nONCE_LEARNED_NEVER_OPENSymbol = KeyValuesSystem()->GetSymbolForString( "ONCE_LEARNED_NEVER_OPEN" );
+g_nCAN_TIMEOUT_WHILE_INACTIVESymbol = KeyValuesSystem()->GetSymbolForString( "CAN_TIMEOUT_WHILE_INACTIVE" );
+g_nUSABLE_IN_MIDAIRSymbol = KeyValuesSystem()->GetSymbolForString( "USABLE_IN_MIDAIR" );
+g_nTIMEOUTSymbol = KeyValuesSystem()->GetSymbolForString( "TIMEOUT" );
+g_nUPDATE_INTERVALSymbol = KeyValuesSystem()->GetSymbolForString( "UPDATE_INTERVAL" );
+g_nSTART_SOUNDSymbol = KeyValuesSystem()->GetSymbolForString( "START_SOUND" );
 
 	// And build the map of variable name to enum
 	// Run string to int macros on all scriptable variables (see: LESSON_VARIABLE_FACTORY definition)
-#define LESSON_VARIABLE_MACRO			LESSON_SCRIPT_STRING_ADD_TO_MAP
-#define LESSON_VARIABLE_MACRO_BOOL		LESSON_SCRIPT_STRING_ADD_TO_MAP
-#define LESSON_VARIABLE_MACRO_EHANDLE	LESSON_SCRIPT_STRING_ADD_TO_MAP
-#define LESSON_VARIABLE_MACRO_STRING	LESSON_SCRIPT_STRING_ADD_TO_MAP
-	LESSON_VARIABLE_FACTORY
-#undef LESSON_VARIABLE_MACRO
-#undef LESSON_VARIABLE_MACRO_BOOL
-#undef LESSON_VARIABLE_MACRO_EHANDLE
-#undef LESSON_VARIABLE_MACRO_STRING
+g_NameToTypeMap.emplace( "VOID", LESSON_VARIABLE_VOID );
+g_NameToTypeMap.emplace( "LOCAL_PLAYER", LESSON_VARIABLE_LOCAL_PLAYER );
+g_NameToTypeMap.emplace( "OUTPUT", LESSON_VARIABLE_OUTPUT );
+g_NameToTypeMap.emplace( "ENTITY1", LESSON_VARIABLE_ENTITY1 );
+g_NameToTypeMap.emplace( "ENTITY2", LESSON_VARIABLE_ENTITY2 );
+g_NameToTypeMap.emplace( "STRING1", LESSON_VARIABLE_STRING1 );
+g_NameToTypeMap.emplace( "STRING2", LESSON_VARIABLE_STRING2 );
+g_NameToTypeMap.emplace( "INTEGER1", LESSON_VARIABLE_INTEGER1 );
+g_NameToTypeMap.emplace( "INTEGER2", LESSON_VARIABLE_INTEGER2 );
+g_NameToTypeMap.emplace( "FLOAT1", LESSON_VARIABLE_FLOAT1 );
+g_NameToTypeMap.emplace( "FLOAT2", LESSON_VARIABLE_FLOAT2 );
+g_NameToTypeMap.emplace( "ICON_TARGET", LESSON_VARIABLE_ICON_TARGET );
+g_NameToTypeMap.emplace( "UI_TARGET_NAME", LESSON_VARIABLE_UI_TARGET_NAME );
+g_NameToTypeMap.emplace( "UI_TARGET_LOOKUP", LESSON_VARIABLE_UI_TARGET_LOOKUP );
+g_NameToTypeMap.emplace( "UI_TARGET_EDGE", LESSON_VARIABLE_UI_TARGET_EDGE );
+g_NameToTypeMap.emplace( "FIXED_POSITION_X", LESSON_VARIABLE_FIXED_POSITION_X );
+g_NameToTypeMap.emplace( "FIXED_POSITION_Y", LESSON_VARIABLE_FIXED_POSITION_Y );
+g_NameToTypeMap.emplace( "FIXED_POSITION", LESSON_VARIABLE_FIXED_POSITION );
+g_NameToTypeMap.emplace( "NO_ICON_TARGET", LESSON_VARIABLE_NO_ICON_TARGET );
+g_NameToTypeMap.emplace( "ALLOW_NODRAW_TARGET", LESSON_VARIABLE_ALLOW_NODRAW_TARGET );
+g_NameToTypeMap.emplace( "VISIBLE", LESSON_VARIABLE_VISIBLE );
+g_NameToTypeMap.emplace( "SHOW_WHEN_OCCLUDED", LESSON_VARIABLE_SHOW_WHEN_OCCLUDED );
+g_NameToTypeMap.emplace( "NO_OFFSCREEN", LESSON_VARIABLE_NO_OFFSCREEN );
+g_NameToTypeMap.emplace( "FORCE_CAPTION", LESSON_VARIABLE_FORCE_CAPTION );
+g_NameToTypeMap.emplace( "ONSCREEN_ICON", LESSON_VARIABLE_ONSCREEN_ICON );
+g_NameToTypeMap.emplace( "OFFSCREEN_ICON", LESSON_VARIABLE_OFFSCREEN_ICON );
+g_NameToTypeMap.emplace( "ICON_OFFSET", LESSON_VARIABLE_ICON_OFFSET );
+g_NameToTypeMap.emplace( "ICON_RELATIVE_OFFSET", LESSON_VARIABLE_ICON_RELATIVE_OFFSET );
+g_NameToTypeMap.emplace( "RANGE", LESSON_VARIABLE_RANGE );
+g_NameToTypeMap.emplace( "FLAGS", LESSON_VARIABLE_FLAGS );
+g_NameToTypeMap.emplace( "CAPTION_COLOR", LESSON_VARIABLE_CAPTION_COLOR );
+g_NameToTypeMap.emplace( "GROUP", LESSON_VARIABLE_GROUP );
+g_NameToTypeMap.emplace( "CAPTION", LESSON_VARIABLE_CAPTION );
+g_NameToTypeMap.emplace( "CAPTION_PARAM", LESSON_VARIABLE_CAPTION_PARAM );
+g_NameToTypeMap.emplace( "BINDING", LESSON_VARIABLE_BINDING );
+g_NameToTypeMap.emplace( "GAMEPAD_BINDING", LESSON_VARIABLE_GAMEPAD_BINDING );
+g_NameToTypeMap.emplace( "PRIORITY", LESSON_VARIABLE_PRIORITY );
+g_NameToTypeMap.emplace( "REPLACE_KEY", LESSON_VARIABLE_REPLACE_KEY );
+g_NameToTypeMap.emplace( "LOCK_DURATION", LESSON_VARIABLE_LOCK_DURATION );
+g_NameToTypeMap.emplace( "CAN_OPEN_WHEN_DEAD", LESSON_VARIABLE_CAN_OPEN_WHEN_DEAD );
+g_NameToTypeMap.emplace( "BUMP_WITH_TIMEOUT_WHEN_LEARNED", LESSON_VARIABLE_BUMP_WITH_TIMEOUT_WHEN_LEARNED );
+g_NameToTypeMap.emplace( "ONCE_LEARNED_NEVER_OPEN", LESSON_VARIABLE_ONCE_LEARNED_NEVER_OPEN );
+g_NameToTypeMap.emplace( "CAN_TIMEOUT_WHILE_INACTIVE", LESSON_VARIABLE_CAN_TIMEOUT_WHILE_INACTIVE );
+g_NameToTypeMap.emplace( "USABLE_IN_MIDAIR", LESSON_VARIABLE_USABLE_IN_MIDAIR );
+g_NameToTypeMap.emplace( "TIMEOUT", LESSON_VARIABLE_TIMEOUT );
+g_NameToTypeMap.emplace( "UPDATE_INTERVAL", LESSON_VARIABLE_UPDATE_INTERVAL );
+g_NameToTypeMap.emplace( "START_SOUND", LESSON_VARIABLE_START_SOUND );
 
 	// Set up mapping of field types
 	g_TypeToParamTypeMap.emplace( "float", FIELD_FLOAT );

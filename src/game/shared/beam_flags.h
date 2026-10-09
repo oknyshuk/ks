@@ -1,14 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-
-#if !defined( BEAM_FLAGS_H )
-#define BEAM_FLAGS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 enum
 {
@@ -31,5 +23,3 @@ enum
 	FBEAM_REVERSED			= 0x00010000,
 	NUM_BEAM_FLAGS = 17	// KEEP THIS UPDATED!
 };
-
-#endif // BEAM_FLAGS_H

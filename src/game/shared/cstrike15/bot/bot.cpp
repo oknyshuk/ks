@@ -1,13 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), Leon Hartwig, 2003
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "cs_shareddefs.h"
 
 #include "basegrenade_shared.h"
@@ -47,7 +71,7 @@ ActiveGrenade::ActiveGrenade( CBaseGrenade *grenadeEntity )
 	case GRENADE_TYPE_SMOKE:		m_radius = SmokeGrenadeRadius; m_isSmoke = true;			break;
 	case GRENADE_TYPE_SENSOR:		m_radius = MolotovGrenadeRadius; m_isSensor = true;			break;
 	default:
-		AssertMsg( 0, "Invalid grenade type!\n" );
+		contract_assert( false && "Invalid grenade type!\n" );
 		m_radius = HEGrenadeRadius;
 	}
 }
@@ -110,4 +134,3 @@ const Vector &ActiveGrenade::GetPosition( void ) const
 
 	return m_entity->GetAbsOrigin();
 }
-

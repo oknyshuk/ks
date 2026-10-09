@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2012, Valve Corporation, All rights reserved. ============//
-//
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2012 Valve Corporation
 
-#include <math.h>
-#include <float.h>	// needed for flt_epsilon
-#include "basetypes.h"
-#include "tier0/dbg.h"
-#include "mathlib/vector4d.h"
-#include "mathlib/vector.h"
-#include "mathlib/volumeculler.h"
+import std;
+import ks.math;
 
 // Returns true if the AABB is completely within the frustum.
 // Basic scalar approach derived from "Real Time Rendering" 2nd edition section 13.13.3.
@@ -218,7 +211,7 @@ bool CVolumeCuller::CheckBoxCenterHalfDiagonal( const VectorAligned &center, con
 
 void CVolumeCuller::SetExclusionFrustumPlanes( const VPlane *pPlanes )
 {
-	COMPILE_TIME_ASSERT( sizeof( VPlane ) == sizeof( fltx4 ) );
+	static_assert( sizeof( VPlane ) == sizeof( fltx4 ) );
 
 	if ( !pPlanes )
 	{
@@ -237,7 +230,7 @@ void CVolumeCuller::SetExclusionFrustumPlanes( const VPlane *pPlanes )
 
 void CVolumeCuller::SetBaseFrustumPlanes( const VPlane *pPlanes )
 {
-	COMPILE_TIME_ASSERT( sizeof( VPlane ) == sizeof( fltx4 ) );
+	static_assert( sizeof( VPlane ) == sizeof( fltx4 ) );
 
 	if ( !pPlanes )
 	{
@@ -259,7 +252,7 @@ void CVolumeCuller::GetBaseFrustumPlanes( VPlane *pBasePlanes ) const
 
 void CVolumeCuller::SetInclusionVolumePlanes( const VPlane *pPlanes, uint nNumPlanes )
 {
-	Assert( nNumPlanes <= cMaxInclusionVolumePlanes );
+	contract_assert( nNumPlanes <= cMaxInclusionVolumePlanes );
 	nNumPlanes = std::min<int>( nNumPlanes, cMaxInclusionVolumePlanes );
 	m_nNumInclusionVolumePlanes = nNumPlanes;
 

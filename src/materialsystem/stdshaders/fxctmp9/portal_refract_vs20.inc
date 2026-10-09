@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
@@ -11,7 +12,7 @@ private:
 public:
 	void SetSTAGE( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nSTAGE = i;
 #ifdef _DEBUG
 		m_bSTAGE = true;
@@ -19,7 +20,7 @@ public:
 	}
 	void SetSTAGE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nSTAGE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSTAGE = true;
@@ -33,7 +34,7 @@ private:
 public:
 	void SetUSEONSTATICPROP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nUSEONSTATICPROP = i;
 #ifdef _DEBUG
 		m_bUSEONSTATICPROP = true;
@@ -41,7 +42,7 @@ public:
 	}
 	void SetUSEONSTATICPROP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUSEONSTATICPROP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUSEONSTATICPROP = true;
@@ -66,7 +67,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bSTAGE && m_bUSEONSTATICPROP;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 2 * m_nSTAGE ) + ( 6 * m_nUSEONSTATICPROP ) + 0;
 	}
@@ -82,7 +83,7 @@ private:
 public:
 	void SetCOMPRESSED_VERTS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOMPRESSED_VERTS = i;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -90,7 +91,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -111,7 +112,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nCOMPRESSED_VERTS ) + 0;
 	}

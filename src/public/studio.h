@@ -1,34 +1,12 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef STUDIO_H
-#define STUDIO_H
-
-
-#include "basetypes.h"
-#include "mathlib/vector2d.h"
-#include "mathlib/vector.h"
-#include "mathlib/vector4d.h"
-#include "mathlib/compressed_vector.h"
-#include "tier0/dbg.h"
-#include "tier0/threadtools.h"
-#include "mathlib/mathlib.h"
-#include "utlvector.h"
+import ks.tier1;
 #include "datamap.h"
-#include "generichash.h"
 #include "localflexcontroller.h"
-#include "tier1/intern_pool.h"
-#include "tier1/map_ops.h"
-#include "convar.h"
 #include "resourcefile/resourcestream.h"
-#include <unordered_map>
-#include <unordered_set>
-#include <mutex>
+import std;
 
 #define STUDIO_ENABLE_PERF_COUNTERS
 
@@ -59,28 +37,28 @@ Studio models are position independent, so the cache manager can move them.
 ==============================================================================
 */
 
-#define STUDIO_VERSION		49
+inline constexpr auto STUDIO_VERSION = 49;
 
 struct studiohdr_t;
 
-#define MAXSTUDIOTRIANGLES	65536	// TODO: tune this
-#define MAXSTUDIOVERTS		65536	// TODO: tune this
-#define	MAXSTUDIOFLEXVERTS	10000	// max number of verts that can be flexed per mesh.  TODO: tune this
-#define MAXSTUDIOSKINS		32		// total textures
-#define MAXSTUDIOBONES		256		// total bones actually used
-#define MAXSTUDIOFLEXDESC	1024	// maximum number of low level flexes (actual morph targets)
-#define MAXSTUDIOFLEXCTRL	96		// maximum number of flexcontrollers (input sliders)
-#define MAXSTUDIOPOSEPARAM	24
-#define MAXSTUDIOBONECTRLS	4
-#define MAXSTUDIOANIMBLOCKS 256
+inline constexpr auto MAXSTUDIOTRIANGLES = 65536; // TODO: tune this
+inline constexpr auto MAXSTUDIOVERTS = 65536; // TODO: tune this
+inline constexpr auto MAXSTUDIOFLEXVERTS = 10000; // max number of verts that can be flexed per mesh.  TODO: tune this
+inline constexpr auto MAXSTUDIOSKINS = 32; // total textures
+inline constexpr auto MAXSTUDIOBONES = 256; // total bones actually used
+inline constexpr auto MAXSTUDIOFLEXDESC = 1024; // maximum number of low level flexes (actual morph targets)
+inline constexpr auto MAXSTUDIOFLEXCTRL = 96; // maximum number of flexcontrollers (input sliders)
+inline constexpr auto MAXSTUDIOPOSEPARAM = 24;
+inline constexpr auto MAXSTUDIOBONECTRLS = 4;
+inline constexpr auto MAXSTUDIOANIMBLOCKS = 256;
 
-#define MAXSTUDIOBONEBITS	8		// NOTE: MUST MATCH MAXSTUDIOBONES
+inline constexpr auto MAXSTUDIOBONEBITS = 8; // NOTE: MUST MATCH MAXSTUDIOBONES
 
 // NOTE!!! : Changing this number also changes the vtx file format!!!!!
-#define MAX_NUM_BONES_PER_VERT 3
+inline constexpr auto MAX_NUM_BONES_PER_VERT = 3;
 
 //Adrian - Remove this when we completely phase out the old event system.
-#define NEW_EVENT_STYLE ( 1 << 10 )
+inline constexpr auto NEW_EVENT_STYLE = ( 1 << 10 );
 
 struct mstudiodata_t
 {
@@ -88,27 +66,27 @@ struct mstudiodata_t
 	int		offset;
 };
 
-#define STUDIO_PROC_AXISINTERP	1
-#define STUDIO_PROC_QUATINTERP	2
-#define STUDIO_PROC_AIMATBONE	3
-#define STUDIO_PROC_AIMATATTACH 4
-#define STUDIO_PROC_JIGGLE		5
-#define STUDIO_PROC_TWIST_MASTER 6
-#define STUDIO_PROC_TWIST_SLAVE 7	// Multiple twist bones are computed at once for the same parent/child combo so TWIST_NULL do nothing
-#define STUDIO_PROC_POINT_CONSTRAINT	8
-#define STUDIO_PROC_ORIENT_CONSTRAINT	9
-#define STUDIO_PROC_AIM_CONSTRAINT		10
-#define STUDIO_PROC_IK_CONSTRAINT		11
-#define STUDIO_PROC_PARENT_CONSTRAINT	12
+inline constexpr auto STUDIO_PROC_AXISINTERP = 1;
+inline constexpr auto STUDIO_PROC_QUATINTERP = 2;
+inline constexpr auto STUDIO_PROC_AIMATBONE = 3;
+inline constexpr auto STUDIO_PROC_AIMATATTACH = 4;
+inline constexpr auto STUDIO_PROC_JIGGLE = 5;
+inline constexpr auto STUDIO_PROC_TWIST_MASTER = 6;
+inline constexpr auto STUDIO_PROC_TWIST_SLAVE = 7; // Multiple twist bones are computed at once for the same parent/child combo so TWIST_NULL do nothing
+inline constexpr auto STUDIO_PROC_POINT_CONSTRAINT = 8;
+inline constexpr auto STUDIO_PROC_ORIENT_CONSTRAINT = 9;
+inline constexpr auto STUDIO_PROC_AIM_CONSTRAINT = 10;
+inline constexpr auto STUDIO_PROC_IK_CONSTRAINT = 11;
+inline constexpr auto STUDIO_PROC_PARENT_CONSTRAINT = 12;
 // 13 is reserved for legacy Dota cloth
-#define STUDIO_PROC_SOFTBODY			16
+inline constexpr auto STUDIO_PROC_SOFTBODY = 16;
 
 // If you want to embed a pointer into one of the structures that is serialized, use this class! It will ensure that the pointers consume the 
 // right amount of space and work correctly across 32 and 64 bit. It also makes sure that there is no surprise about how large the structure
 // is when placed in the middle of another structure, and supports Intel's desired behavior on 64-bit that pointers are always 8-byte aligned.
 #pragma pack( push, 4 )
 template < class T >
-struct ALIGN4 serializedstudioptr_t
+struct alignas(4) serializedstudioptr_t
 {
 	T* m_pData;
 
@@ -125,7 +103,7 @@ struct ALIGN4 serializedstudioptr_t
 
 	inline T* operator=( T* ptr )          { return m_pData = ptr; }
 	
-} ALIGN4_POST;
+};
 
 #pragma pack( pop )
 
@@ -170,13 +148,13 @@ private:
 };
 
 
-#define JIGGLE_IS_FLEXIBLE				0x01
-#define JIGGLE_IS_RIGID					0x02
-#define JIGGLE_HAS_YAW_CONSTRAINT		0x04
-#define JIGGLE_HAS_PITCH_CONSTRAINT		0x08
-#define JIGGLE_HAS_ANGLE_CONSTRAINT		0x10
-#define JIGGLE_HAS_LENGTH_CONSTRAINT	0x20
-#define JIGGLE_HAS_BASE_SPRING			0x40
+inline constexpr auto JIGGLE_IS_FLEXIBLE = 0x01;
+inline constexpr auto JIGGLE_IS_RIGID = 0x02;
+inline constexpr auto JIGGLE_HAS_YAW_CONSTRAINT = 0x04;
+inline constexpr auto JIGGLE_HAS_PITCH_CONSTRAINT = 0x08;
+inline constexpr auto JIGGLE_HAS_ANGLE_CONSTRAINT = 0x10;
+inline constexpr auto JIGGLE_HAS_LENGTH_CONSTRAINT = 0x20;
+inline constexpr auto JIGGLE_HAS_BASE_SPRING = 0x40;
 
 struct mstudiojigglebone_t
 {
@@ -459,32 +437,32 @@ struct mstudiolinearbone_t
 	int numbones;
 
 	int flagsindex;
-	inline int flags( int i ) const { Assert( i >= 0 && i < numbones); return *((int *)(((byte *)this) + flagsindex) + i); };
-	inline int *pflags( int i ) { Assert( i >= 0 && i < numbones); return ((int *)(((byte *)this) + flagsindex) + i); };
+	inline int flags( int i ) const { contract_assert( i >= 0 && i < numbones ); return *((int *)(((byte *)this) + flagsindex) + i); };
+	inline int *pflags( int i ) { contract_assert( i >= 0 && i < numbones ); return ((int *)(((byte *)this) + flagsindex) + i); };
 
 	int	parentindex;
-	inline int parent( int i ) const { Assert( i >= 0 && i < numbones); return *((int *)(((byte *)this) + parentindex) + i); };
+	inline int parent( int i ) const { contract_assert( i >= 0 && i < numbones ); return *((int *)(((byte *)this) + parentindex) + i); };
 
 	int	posindex;
-	inline const Vector &pos( int i ) const { Assert( i >= 0 && i < numbones); return *((Vector *)(((byte *)this) + posindex) + i); };
+	inline const Vector &pos( int i ) const { contract_assert( i >= 0 && i < numbones ); return *((Vector *)(((byte *)this) + posindex) + i); };
 
 	int quatindex;
-	inline const Quaternion &quat( int i ) const { Assert( i >= 0 && i < numbones); return *((Quaternion *)(((byte *)this) + quatindex) + i); };
+	inline const Quaternion &quat( int i ) const { contract_assert( i >= 0 && i < numbones ); return *((Quaternion *)(((byte *)this) + quatindex) + i); };
 
 	int rotindex;
-	inline const RadianEuler &rot( int i ) const { Assert( i >= 0 && i < numbones); return *((RadianEuler *)(((byte *)this) + rotindex) + i); };
+	inline const RadianEuler &rot( int i ) const { contract_assert( i >= 0 && i < numbones ); return *((RadianEuler *)(((byte *)this) + rotindex) + i); };
 
 	int posetoboneindex;
-	inline const matrix3x4_t &poseToBone( int i ) const { Assert( i >= 0 && i < numbones); return *((matrix3x4_t *)(((byte *)this) + posetoboneindex) + i); };
+	inline const matrix3x4_t &poseToBone( int i ) const { contract_assert( i >= 0 && i < numbones ); return *((matrix3x4_t *)(((byte *)this) + posetoboneindex) + i); };
 
 	int	posscaleindex;
-	inline const Vector &posscale( int i ) const { Assert( i >= 0 && i < numbones); return *((Vector *)(((byte *)this) + posscaleindex) + i); };
+	inline const Vector &posscale( int i ) const { contract_assert( i >= 0 && i < numbones ); return *((Vector *)(((byte *)this) + posscaleindex) + i); };
 
 	int	rotscaleindex;
-	inline const Vector &rotscale( int i ) const { Assert( i >= 0 && i < numbones); return *((Vector *)(((byte *)this) + rotscaleindex) + i); };
+	inline const Vector &rotscale( int i ) const { contract_assert( i >= 0 && i < numbones ); return *((Vector *)(((byte *)this) + rotscaleindex) + i); };
 
 	int	qalignmentindex;
-	inline const Quaternion &qalignment( int i ) const { Assert( i >= 0 && i < numbones); return *((Quaternion *)(((byte *)this) + qalignmentindex) + i); };
+	inline const Quaternion &qalignment( int i ) const { contract_assert( i >= 0 && i < numbones ); return *((Quaternion *)(((byte *)this) + qalignmentindex) + i); };
 
 	int unused[6];
 
@@ -537,7 +515,7 @@ struct mstudioboneflexdriver_t
 
 	inline mstudioboneflexdrivercontrol_t *pBoneFlexDriverControl( int i ) const
 	{
-		Assert( i >= 0 && i < m_nControlCount );
+		contract_assert( i >= 0 && i < m_nControlCount );
 		return (mstudioboneflexdrivercontrol_t *)(((byte *)this) + m_nControlIndex) + i;
 	}
 
@@ -550,41 +528,41 @@ private:
 };
 
 
-#define BONE_CALCULATE_MASK			0x1F
-#define BONE_PHYSICALLY_SIMULATED	0x01	// bone is physically simulated when physics are active
-#define BONE_PHYSICS_PROCEDURAL		0x02	// procedural when physics is active
-#define BONE_ALWAYS_PROCEDURAL		0x04	// bone is always procedurally animated
-#define BONE_SCREEN_ALIGN_SPHERE	0x08	// bone aligns to the screen, not constrained in motion.
-#define BONE_SCREEN_ALIGN_CYLINDER	0x10	// bone aligns to the screen, constrained by it's own axis.
-#define BONE_WORLD_ALIGN			0x20	// bone is rigidly aligned to the world (but can still translate)
+inline constexpr auto BONE_CALCULATE_MASK = 0x1F;
+inline constexpr auto BONE_PHYSICALLY_SIMULATED = 0x01; // bone is physically simulated when physics are active
+inline constexpr auto BONE_PHYSICS_PROCEDURAL = 0x02; // procedural when physics is active
+inline constexpr auto BONE_ALWAYS_PROCEDURAL = 0x04; // bone is always procedurally animated
+inline constexpr auto BONE_SCREEN_ALIGN_SPHERE = 0x08; // bone aligns to the screen, not constrained in motion.
+inline constexpr auto BONE_SCREEN_ALIGN_CYLINDER = 0x10; // bone aligns to the screen, constrained by it's own axis.
+inline constexpr auto BONE_WORLD_ALIGN = 0x20; // bone is rigidly aligned to the world (but can still translate)
 
-#define BONE_USED_MASK				0x000FFF00
-#define BONE_USED_BY_ANYTHING		0x000FFF00
-#define BONE_USED_BY_HITBOX			0x00000100	// bone (or child) is used by a hit box
-#define BONE_USED_BY_ATTACHMENT		0x00000200	// bone (or child) is used by an attachment point
-#define BONE_USED_BY_VERTEX_MASK	0x0003FC00
-#define BONE_USED_BY_VERTEX_LOD0	0x00000400	// bone (or child) is used by the toplevel model via skinned vertex
-#define BONE_USED_BY_VERTEX_LOD1	0x00000800	
-#define BONE_USED_BY_VERTEX_LOD2	0x00001000  
-#define BONE_USED_BY_VERTEX_LOD3	0x00002000
-#define BONE_USED_BY_VERTEX_LOD4	0x00004000
-#define BONE_USED_BY_VERTEX_LOD5	0x00008000
-#define BONE_USED_BY_VERTEX_LOD6	0x00010000
-#define BONE_USED_BY_VERTEX_LOD7	0x00020000
-#define BONE_USED_BY_BONE_MERGE		0x00040000	// bone is available for bone merge to occur against it
-#define BONE_ALWAYS_SETUP			0x00080000
+inline constexpr auto BONE_USED_MASK = 0x000FFF00;
+inline constexpr auto BONE_USED_BY_ANYTHING = 0x000FFF00;
+inline constexpr auto BONE_USED_BY_HITBOX = 0x00000100; // bone (or child) is used by a hit box
+inline constexpr auto BONE_USED_BY_ATTACHMENT = 0x00000200; // bone (or child) is used by an attachment point
+inline constexpr auto BONE_USED_BY_VERTEX_MASK = 0x0003FC00;
+inline constexpr auto BONE_USED_BY_VERTEX_LOD0 = 0x00000400; // bone (or child) is used by the toplevel model via skinned vertex
+inline constexpr auto BONE_USED_BY_VERTEX_LOD1 = 0x00000800;
+inline constexpr auto BONE_USED_BY_VERTEX_LOD2 = 0x00001000;
+inline constexpr auto BONE_USED_BY_VERTEX_LOD3 = 0x00002000;
+inline constexpr auto BONE_USED_BY_VERTEX_LOD4 = 0x00004000;
+inline constexpr auto BONE_USED_BY_VERTEX_LOD5 = 0x00008000;
+inline constexpr auto BONE_USED_BY_VERTEX_LOD6 = 0x00010000;
+inline constexpr auto BONE_USED_BY_VERTEX_LOD7 = 0x00020000;
+inline constexpr auto BONE_USED_BY_BONE_MERGE = 0x00040000; // bone is available for bone merge to occur against it
+inline constexpr auto BONE_ALWAYS_SETUP = 0x00080000;
 
-#define BONE_USED_BY_VERTEX_AT_LOD(lod) ( BONE_USED_BY_VERTEX_LOD0 << (lod) )
+template <typename T1> [[gnu::always_inline]] inline auto BONE_USED_BY_VERTEX_AT_LOD( T1 lod ) { return ( BONE_USED_BY_VERTEX_LOD0 << (lod) ); }
 #define BONE_USED_BY_ANYTHING_AT_LOD(lod) ( ( BONE_USED_BY_ANYTHING & ~BONE_USED_BY_VERTEX_MASK ) | BONE_USED_BY_VERTEX_AT_LOD(lod) )
 
-#define MAX_NUM_LODS 8
+inline constexpr auto MAX_NUM_LODS = 8;
 
-#define BONE_TYPE_MASK				0x00F00000
-#define BONE_FIXED_ALIGNMENT		0x00100000	// bone can't spin 360 degrees, all interpolation is normalized around a fixed orientation
+inline constexpr auto BONE_TYPE_MASK = 0x00F00000;
+inline constexpr auto BONE_FIXED_ALIGNMENT = 0x00100000; // bone can't spin 360 degrees, all interpolation is normalized around a fixed orientation
 
-#define BONE_HAS_SAVEFRAME_POS		0x00200000	// Vector48
-#define BONE_HAS_SAVEFRAME_ROT64	0x00400000	// Quaternion64
-#define BONE_HAS_SAVEFRAME_ROT32	0x00800000	// Quaternion32
+inline constexpr auto BONE_HAS_SAVEFRAME_POS = 0x00200000; // Vector48
+inline constexpr auto BONE_HAS_SAVEFRAME_ROT64 = 0x00400000; // Quaternion64
+inline constexpr auto BONE_HAS_SAVEFRAME_ROT32 = 0x00800000; // Quaternion32
 
 // bone controllers
 struct mstudiobonecontroller_t
@@ -664,7 +642,7 @@ struct mstudioevent_t
 	inline char * const pszEventName( void ) const { return ((char *)this) + szeventindex; }
 };
 
-#define	ATTACHMENT_FLAG_WORLD_ALIGN 0x10000
+inline constexpr auto ATTACHMENT_FLAG_WORLD_ALIGN = 0x10000;
 
 // attachment
 struct mstudioattachment_t
@@ -677,12 +655,12 @@ struct mstudioattachment_t
 	int					unused[8];
 };
 
-#define IK_SELF 1
-#define IK_WORLD 2
-#define IK_GROUND 3
-#define IK_RELEASE 4
-#define IK_ATTACHMENT 5
-#define IK_UNLATCH 6
+inline constexpr auto IK_SELF = 1;
+inline constexpr auto IK_WORLD = 2;
+inline constexpr auto IK_GROUND = 3;
+inline constexpr auto IK_RELEASE = 4;
+inline constexpr auto IK_ATTACHMENT = 5;
+inline constexpr auto IK_UNLATCH = 6;
 
 struct mstudioikerror_t
 {
@@ -820,12 +798,12 @@ struct mstudioanim_valueptr_t
 	inline mstudioanimvalue_t *pAnimvalue( int i ) const { if (offset[i] > 0) return  (mstudioanimvalue_t *)(((byte *)this) + offset[i]); else return nullptr; };
 };
 
-#define STUDIO_ANIM_RAWPOS	0x01 // Vector48
-#define STUDIO_ANIM_RAWROT	0x02 // Quaternion48
-#define STUDIO_ANIM_ANIMPOS	0x04 // mstudioanim_valueptr_t
-#define STUDIO_ANIM_ANIMROT	0x08 // mstudioanim_valueptr_t
-#define STUDIO_ANIM_DELTA	0x10
-#define STUDIO_ANIM_RAWROT2	0x20 // Quaternion64
+inline constexpr auto STUDIO_ANIM_RAWPOS = 0x01; // Vector48
+inline constexpr auto STUDIO_ANIM_RAWROT = 0x02; // Quaternion48
+inline constexpr auto STUDIO_ANIM_ANIMPOS = 0x04; // mstudioanim_valueptr_t
+inline constexpr auto STUDIO_ANIM_ANIMROT = 0x08; // mstudioanim_valueptr_t
+inline constexpr auto STUDIO_ANIM_DELTA = 0x10;
+inline constexpr auto STUDIO_ANIM_RAWROT2 = 0x20; // Quaternion64
 
 // per bone per animation DOF and weight pointers, RLE encoded
 struct mstudio_rle_anim_t
@@ -849,14 +827,14 @@ struct mstudio_rle_anim_t
 };
 
 
-#define STUDIO_FRAME_CONST_POS	0x01 // Vector48 in constants
-#define STUDIO_FRAME_CONST_ROT	0x02 // Quaternion48 in constants
-#define STUDIO_FRAME_ANIM_POS	0x04 // Vector48 in framedata
-#define STUDIO_FRAME_ANIM_ROT	0x08 // Quaternion48 in framedata
-#define STUDIO_FRAME_ANIM_POS2	0x10 // Vector in framedata
-#define STUDIO_FRAME_CONST_POS2	0x20 // Vector in constants
-#define STUDIO_FRAME_CONST_ROT2	0x40 // Quaternion48S in constants
-#define STUDIO_FRAME_ANIM_ROT2	0x80 // Quaternion48S in framedata
+inline constexpr auto STUDIO_FRAME_CONST_POS = 0x01; // Vector48 in constants
+inline constexpr auto STUDIO_FRAME_CONST_ROT = 0x02; // Quaternion48 in constants
+inline constexpr auto STUDIO_FRAME_ANIM_POS = 0x04; // Vector48 in framedata
+inline constexpr auto STUDIO_FRAME_ANIM_ROT = 0x08; // Quaternion48 in framedata
+inline constexpr auto STUDIO_FRAME_ANIM_POS2 = 0x10; // Vector in framedata
+inline constexpr auto STUDIO_FRAME_CONST_POS2 = 0x20; // Vector in constants
+inline constexpr auto STUDIO_FRAME_CONST_ROT2 = 0x40; // Quaternion48S in constants
+inline constexpr auto STUDIO_FRAME_ANIM_ROT2 = 0x80; // Quaternion48S in framedata
 
 struct mstudio_frame_anim_t
 {
@@ -1000,7 +978,7 @@ struct mstudioseqdesc_t
 
 	int					numevents;
 	int					eventindex;
-	inline mstudioevent_t *pEvent( int i ) const { Assert( i >= 0 && i < numevents); return (mstudioevent_t *)(((byte *)this) + eventindex) + i; };
+	inline mstudioevent_t *pEvent( int i ) const { contract_assert( i >= 0 && i < numevents ); return (mstudioevent_t *)(((byte *)this) + eventindex) + i; };
 	
 	Vector				bbmin;		// per sequence bounding box
 	Vector				bbmax;		
@@ -1054,7 +1032,7 @@ struct mstudioseqdesc_t
 
 	int					numautolayers;	//
 	int					autolayerindex;
-	inline mstudioautolayer_t *pAutolayer( int i ) const { Assert( i >= 0 && i < numautolayers); return (mstudioautolayer_t *)(((byte *)this) + autolayerindex) + i; };
+	inline mstudioautolayer_t *pAutolayer( int i ) const { contract_assert( i >= 0 && i < numautolayers ); return (mstudioautolayer_t *)(((byte *)this) + autolayerindex) + i; };
 
 	int					weightlistindex;
 	inline float		*pBoneweight( int i ) const { return ((float *)(((byte *)this) + weightlistindex) + i); };
@@ -1067,7 +1045,7 @@ struct mstudioseqdesc_t
 
 	int					numiklocks;
 	int					iklockindex;
-	inline mstudioiklock_t *pIKLock( int i ) const { Assert( i >= 0 && i < numiklocks); return (mstudioiklock_t *)(((byte *)this) + iklockindex) + i; };
+	inline mstudioiklock_t *pIKLock( int i ) const { contract_assert( i >= 0 && i < numiklocks ); return (mstudioiklock_t *)(((byte *)this) + iklockindex) + i; };
 
 	// Key values
 	int					keyvalueindex;
@@ -1078,11 +1056,11 @@ struct mstudioseqdesc_t
 
 	int					activitymodifierindex;
 	int					numactivitymodifiers;
-	inline mstudioactivitymodifier_t *pActivityModifier( int i ) const { Assert( i >= 0 && i < numactivitymodifiers); return activitymodifierindex != 0 ? (mstudioactivitymodifier_t *)(((byte *)this) + activitymodifierindex) + i : nullptr; };
+	inline mstudioactivitymodifier_t *pActivityModifier( int i ) const { contract_assert( i >= 0 && i < numactivitymodifiers ); return activitymodifierindex != 0 ? (mstudioactivitymodifier_t *)(((byte *)this) + activitymodifierindex) + i : nullptr; };
 
 	int					animtagindex;
 	int					numanimtags;
-	inline mstudioanimtag_t *pAnimTag( int i ) const { Assert( i >= 0 && i < numanimtags); return (mstudioanimtag_t *)(((byte *)this) + animtagindex) + i; };
+	inline mstudioanimtag_t *pAnimTag( int i ) const { contract_assert( i >= 0 && i < numanimtags ); return (mstudioanimtag_t *)(((byte *)this) + animtagindex) + i; };
 
 	int					rootDriverIndex;
 
@@ -1337,8 +1315,8 @@ struct mstudioflex_t
 	int					numverts;
 	int					vertindex;
 
-	inline	mstudiovertanim_t *pVertanim( int i ) const { Assert( vertanimtype == STUDIO_VERT_ANIM_NORMAL ); return (mstudiovertanim_t *)(((byte *)this) + vertindex) + i; };
-	inline	mstudiovertanim_wrinkle_t *pVertanimWrinkle( int i ) const { Assert( vertanimtype == STUDIO_VERT_ANIM_WRINKLE ); return  (mstudiovertanim_wrinkle_t *)(((byte *)this) + vertindex) + i; };
+	inline	mstudiovertanim_t *pVertanim( int i ) const { contract_assert( vertanimtype == STUDIO_VERT_ANIM_NORMAL ); return (mstudiovertanim_t *)(((byte *)this) + vertindex) + i; };
+	inline	mstudiovertanim_wrinkle_t *pVertanimWrinkle( int i ) const { contract_assert( vertanimtype == STUDIO_VERT_ANIM_WRINKLE ); return  (mstudiovertanim_wrinkle_t *)(((byte *)this) + vertindex) + i; };
 
 	inline	byte *pBaseVertanim( ) const { return ((byte *)this) + vertindex; };
 	inline	int	VertAnimSizeBytes() const { return ( vertanimtype == STUDIO_VERT_ANIM_NORMAL ) ? sizeof(mstudiovertanim_t) : sizeof(mstudiovertanim_wrinkle_t); }
@@ -1643,15 +1621,15 @@ inline bool mstudio_modelvertexdata_t::HasExtraData(void) const
 
 inline int mstudio_modelvertexdata_t::GetGlobalVertexIndex(int i) const
 {
-	mstudiomodel_t *modelptr = (mstudiomodel_t *)((byte *)this - offsetof(mstudiomodel_t, vertexdata));
-	Assert( ( modelptr->vertexindex % sizeof( mstudiovertex_t ) ) == 0 );
+	mstudiomodel_t *modelptr = (mstudiomodel_t *)((byte *)this - __builtin_offsetof(mstudiomodel_t, vertexdata));
+	contract_assert( ( modelptr->vertexindex % sizeof( mstudiovertex_t ) ) == 0 );
 	return ( i + ( modelptr->vertexindex / sizeof( mstudiovertex_t ) ) );
 }
 
 inline int mstudio_modelvertexdata_t::GetGlobalTangentIndex( int i ) const
 {
-	mstudiomodel_t *modelptr = (mstudiomodel_t *)((byte *)this - offsetof(mstudiomodel_t, vertexdata));
-	Assert( ( modelptr->tangentsindex % sizeof( Vector4D ) ) == 0 );
+	mstudiomodel_t *modelptr = (mstudiomodel_t *)((byte *)this - __builtin_offsetof(mstudiomodel_t, vertexdata));
+	contract_assert( ( modelptr->tangentsindex % sizeof( Vector4D ) ) == 0 );
 	return ( i + ( modelptr->tangentsindex / sizeof( Vector4D ) ) );
 }
 
@@ -1733,7 +1711,7 @@ inline const thinModelVertices_t * mstudiomesh_t::GetThinVertexData( void *pMode
 
 inline int mstudio_meshvertexdata_t::GetModelVertexIndex( int i ) const
 {
-	mstudiomesh_t *meshptr = (mstudiomesh_t *)((byte *)this - offsetof(mstudiomesh_t,vertexdata)); 
+	mstudiomesh_t *meshptr = (mstudiomesh_t *)((byte *)this - __builtin_offsetof(mstudiomesh_t,vertexdata)); 
 	return meshptr->vertexoffset + i;
 }
 
@@ -1871,7 +1849,7 @@ struct studiohwdata_t
 			m_NumTimesRenderedThisFrame = 0;
 			m_pStudioHdr = pStudioHdr;
 		}
-		Assert( m_pStudioHdr && ( m_pStudioHdr == pStudioHdr ) );
+		contract_assert( m_pStudioHdr && ( m_pStudioHdr == pStudioHdr ) );
 		if ( nFacesOverride == -1 ) 
 		{
 			nFacesOverride = ( nLOD < m_NumLODs ) ? m_pLODs[ nLOD ].m_NumFaces : 0;
@@ -2013,11 +1991,11 @@ struct thinModelVertices_t
 {
 	void Init( int numBoneInfluences, Vector *positions, unsigned short *normals, float *boneWeights, byte *boneIndices )
 	{
-		Assert( positions != nullptr );
-		Assert( normals   != nullptr );
-		Assert( ( numBoneInfluences >= 0 ) && ( numBoneInfluences <= 3 ) );
-		Assert( numBoneInfluences > 0 ? !!boneIndices : !boneIndices );
-		Assert( numBoneInfluences > 1 ? !!boneWeights : !boneWeights );
+		contract_assert( positions != nullptr );
+		contract_assert( normals   != nullptr );
+		contract_assert( ( numBoneInfluences >= 0 ) && ( numBoneInfluences <= 3 ) );
+		contract_assert( numBoneInfluences > 0 ? !!boneIndices : !boneIndices );
+		contract_assert( numBoneInfluences > 1 ? !!boneWeights : !boneWeights );
 		m_numBoneInfluences	= numBoneInfluences;
 		m_vecPositions		= positions;
 		m_vecNormals		= normals;
@@ -2027,13 +2005,13 @@ struct thinModelVertices_t
 
 	void SetPosition( int vertIndex, const Vector & position )
 	{
-		Assert( m_vecPositions );
+		contract_assert( m_vecPositions );
 		m_vecPositions[ vertIndex ] = position;
 	}
 
 	void SetNormal( int vertIndex, const Vector & normal )
 	{
-		Assert( m_vecNormals );
+		contract_assert( m_vecNormals );
 		unsigned int packedNormal;
 		PackNormal_UBYTE4( normal.x, normal.y, normal.z, &packedNormal );
 		m_vecNormals[ vertIndex ] = (unsigned short)( 0x0000FFFF & packedNormal );
@@ -2041,8 +2019,8 @@ struct thinModelVertices_t
 
 	void SetBoneWeights( int vertIndex, const mstudioboneweight_t & boneWeights )
 	{
-		Assert( ( m_numBoneInfluences  >= 1 ) && ( m_numBoneInfluences  <= 3 ) );
-		Assert( ( boneWeights.numbones >= 1 ) && ( boneWeights.numbones <= m_numBoneInfluences ) );
+		contract_assert( ( m_numBoneInfluences  >= 1 ) && ( m_numBoneInfluences  <= 3 ) );
+		contract_assert( ( boneWeights.numbones >= 1 ) && ( boneWeights.numbones <= m_numBoneInfluences ) );
 		int    numStoredWeights = std::max( 0, ( m_numBoneInfluences - 1 ) );
 		float *pBaseWeight	= m_boneWeights + vertIndex*numStoredWeights;
 		byte  *pBaseIndex	= m_boneIndices + vertIndex*m_numBoneInfluences;
@@ -2058,64 +2036,64 @@ struct thinModelVertices_t
 
 	void GetMeshPosition( mstudiomesh_t *pMesh, int meshIndex, Vector *pPosition ) const
 	{
-		Assert( pMesh );
+		contract_assert( pMesh );
 		GetPosition( pMesh->vertexdata.GetGlobalVertexIndex( meshIndex ), pPosition );
 	}
 
 	void GetMeshNormal( mstudiomesh_t *pMesh, int meshIndex, Vector *pNormal ) const
 	{
-		Assert( pMesh );
+		contract_assert( pMesh );
 		GetNormal( pMesh->vertexdata.GetGlobalVertexIndex( meshIndex ), pNormal );
 	}
 
 	void GetMeshBoneWeights( mstudiomesh_t *pMesh, int meshIndex, mstudioboneweight_t *pBoneWeights ) const
 	{
-		Assert( pMesh );
+		contract_assert( pMesh );
 		GetBoneWeights( pMesh->vertexdata.GetGlobalVertexIndex( meshIndex ), pBoneWeights );
 	}
 
 	void GetModelPosition( mstudiomodel_t *pModel, int modelIndex, Vector *pPosition ) const
 	{
-		Assert( pModel );
+		contract_assert( pModel );
 		GetPosition( pModel->vertexdata.GetGlobalVertexIndex( modelIndex ), pPosition );
 	}
 
 	void GetModelNormal( mstudiomodel_t *pModel, int modelIndex, Vector *pNormal ) const
 	{
-		Assert( pModel );
+		contract_assert( pModel );
 		GetNormal( pModel->vertexdata.GetGlobalVertexIndex( modelIndex ), pNormal );
 	}
 
 	void GetModelBoneWeights( mstudiomodel_t *pModel, int modelIndex, mstudioboneweight_t *pBoneWeights ) const
 	{
-		Assert( pModel );
+		contract_assert( pModel );
 		GetBoneWeights( pModel->vertexdata.GetGlobalVertexIndex( modelIndex ), pBoneWeights );
 	}
 
 private:
 	void GetPosition( int vertIndex, Vector *pPosition ) const
 	{
-		Assert( pPosition );
-		Assert( m_vecPositions );
+		contract_assert( pPosition );
+		contract_assert( m_vecPositions );
 		*pPosition = m_vecPositions[ vertIndex ];
 	}
 
 	void GetNormal( int vertIndex, Vector *pNormal ) const
 	{
-		Assert( pNormal );
-		Assert( m_vecNormals );
+		contract_assert( pNormal );
+		contract_assert( m_vecNormals );
 		unsigned int packedNormal = 0x0000FFFF & m_vecNormals[ vertIndex ];
 		UnpackNormal_UBYTE4( &packedNormal, pNormal->Base() );
 	}
 
-	void GetBoneWeights( int vertIndex, mstudioboneweight_t * RESTRICT pBoneWeights ) const
+	void GetBoneWeights( int vertIndex, mstudioboneweight_t * __restrict__ pBoneWeights ) const
 	{
-		Assert( pBoneWeights );
-		Assert( ( m_numBoneInfluences <= 1 ) || ( m_boneWeights != nullptr ) );
-		Assert( ( m_numBoneInfluences <= 0 ) || ( m_boneIndices != nullptr ) );
+		contract_assert( pBoneWeights );
+		contract_assert( ( m_numBoneInfluences <= 1 ) || ( m_boneWeights != nullptr ) );
+		contract_assert( ( m_numBoneInfluences <= 0 ) || ( m_boneIndices != nullptr ) );
 		int    numStoredWeights = std::max( 0, ( m_numBoneInfluences - 1 ) );
-		float * RESTRICT pBaseWeight	= m_boneWeights + vertIndex*numStoredWeights;
-		byte  * RESTRICT pBaseIndex	= m_boneIndices + vertIndex*m_numBoneInfluences;
+		float * __restrict__ pBaseWeight	= m_boneWeights + vertIndex*numStoredWeights;
+		byte  * __restrict__ pBaseIndex	= m_boneIndices + vertIndex*m_numBoneInfluences;
 		float  sum			= 0.0f;
 		// TODO: unroll this loop? It's only three. We could use a switch
 		// and code it explicitly for the various possible m_numBoneInfluences
@@ -2165,8 +2143,8 @@ private:
 // ----------------------------------------------------------
 
 // little-endian "IDSS"
-#define MODEL_STREAM_FILE_ID		(('S'<<24)+('S'<<16)+('D'<<8)+'I')
-#define MODEL_STREAM_FILE_VERSION	1
+inline constexpr auto MODEL_STREAM_FILE_ID = (('S'<<24)+('S'<<16)+('D'<<8)+'I');
+inline constexpr auto MODEL_STREAM_FILE_VERSION = 1;
 
 struct vertexStreamFileHeader_t
 {
@@ -2199,12 +2177,12 @@ struct PhysFeModelDesc_t;
 // ----------------------------------------------------------
 
 // little-endian "IDSV"
-#define MODEL_VERTEX_FILE_ID		(('V'<<24)+('S'<<16)+('D'<<8)+'I')
-#define MODEL_VERTEX_FILE_VERSION	4
+inline constexpr auto MODEL_VERTEX_FILE_ID = (('V'<<24)+('S'<<16)+('D'<<8)+'I');
+inline constexpr auto MODEL_VERTEX_FILE_VERSION = 4;
 // this id (IDCV) is used once the vertex data has been compressed (see CMDLCache::CreateThinVertexes)
-#define MODEL_VERTEX_FILE_THIN_ID	(('V'<<24)+('C'<<16)+('D'<<8)+'I')
+inline constexpr auto MODEL_VERTEX_FILE_THIN_ID = (('V'<<24)+('C'<<16)+('D'<<8)+'I');
 // this id (IDDV) is used once the vertex data has been discarded (see CMDLCache::CreateNullVertexes)
-#define MODEL_VERTEX_FILE_NULL_ID	(('V'<<24)+('D'<<16)+('D'<<8)+'I')
+inline constexpr auto MODEL_VERTEX_FILE_NULL_ID = (('V'<<24)+('D'<<16)+('D'<<8)+'I');
 
 struct vertexFileHeader_t
 {
@@ -2264,104 +2242,104 @@ struct vertexFileFixup_t
 };
 
 // This flag is set if no hitbox information was specified
-#define STUDIOHDR_FLAGS_AUTOGENERATED_HITBOX	( 1 << 0 )
+inline constexpr auto STUDIOHDR_FLAGS_AUTOGENERATED_HITBOX = ( 1 << 0 );
 
 // NOTE:  This flag is set at loadtime, not mdl build time so that we don't have to rebuild
 // models when we change materials.
-#define STUDIOHDR_FLAGS_USES_ENV_CUBEMAP		( 1 << 1 )
+inline constexpr auto STUDIOHDR_FLAGS_USES_ENV_CUBEMAP = ( 1 << 1 );
 
 // Use this when there are translucent parts to the model but we're not going to sort it 
-#define STUDIOHDR_FLAGS_FORCE_OPAQUE			( 1 << 2 )
+inline constexpr auto STUDIOHDR_FLAGS_FORCE_OPAQUE = ( 1 << 2 );
 
 // Use this when we want to render the opaque parts during the opaque pass
 // and the translucent parts during the translucent pass
-#define STUDIOHDR_FLAGS_TRANSLUCENT_TWOPASS		( 1 << 3 )
+inline constexpr auto STUDIOHDR_FLAGS_TRANSLUCENT_TWOPASS = ( 1 << 3 );
 
 // This is set any time the .qc files has $staticprop in it
 // Means there's no bones and no transforms
-#define STUDIOHDR_FLAGS_STATIC_PROP				( 1 << 4 )
+inline constexpr auto STUDIOHDR_FLAGS_STATIC_PROP = ( 1 << 4 );
 
 // NOTE:  This flag is set at loadtime, not mdl build time so that we don't have to rebuild
 // models when we change materials.
-#define STUDIOHDR_FLAGS_USES_FB_TEXTURE		    ( 1 << 5 )
+inline constexpr auto STUDIOHDR_FLAGS_USES_FB_TEXTURE = ( 1 << 5 );
 
 // This flag is set by studiomdl.exe if a separate "$shadowlod" entry was present
 //  for the .mdl (the shadow lod is the last entry in the lod list if present)
-#define STUDIOHDR_FLAGS_HASSHADOWLOD			( 1 << 6 )
+inline constexpr auto STUDIOHDR_FLAGS_HASSHADOWLOD = ( 1 << 6 );
 
 // NOTE:  This flag is set at loadtime, not mdl build time so that we don't have to rebuild
 // models when we change materials.
-#define STUDIOHDR_FLAGS_USES_BUMPMAPPING		( 1 << 7 )
+inline constexpr auto STUDIOHDR_FLAGS_USES_BUMPMAPPING = ( 1 << 7 );
 
 // NOTE:  This flag is set when we should use the actual materials on the shadow LOD
 // instead of overriding them with the default one (necessary for translucent shadows)
-#define STUDIOHDR_FLAGS_USE_SHADOWLOD_MATERIALS	( 1 << 8 )
+inline constexpr auto STUDIOHDR_FLAGS_USE_SHADOWLOD_MATERIALS = ( 1 << 8 );
 
 // NOTE:  This flag is set when we should use the actual materials on the shadow LOD
 // instead of overriding them with the default one (necessary for translucent shadows)
-#define STUDIOHDR_FLAGS_OBSOLETE				( 1 << 9 )
+inline constexpr auto STUDIOHDR_FLAGS_OBSOLETE = ( 1 << 9 );
 
 // NOTE:  This flag is set when we need to draw in the additive stage of the deferred rendering
-#define STUDIOHDR_FLAGS_NEEDS_DEFERRED_ADDITIVE	( 1 << 10 )
+inline constexpr auto STUDIOHDR_FLAGS_NEEDS_DEFERRED_ADDITIVE = ( 1 << 10 );
 
 // NOTE:  This flag is set at mdl build time
-#define STUDIOHDR_FLAGS_NO_FORCED_FADE			( 1 << 11 )
+inline constexpr auto STUDIOHDR_FLAGS_NO_FORCED_FADE = ( 1 << 11 );
 
 // NOTE:  The npc will lengthen the viseme check to always include two phonemes
-#define STUDIOHDR_FLAGS_FORCE_PHONEME_CROSSFADE	( 1 << 12 )
+inline constexpr auto STUDIOHDR_FLAGS_FORCE_PHONEME_CROSSFADE = ( 1 << 12 );
 
 // This flag is set when the .qc has $constantdirectionallight in it
 // If set, we use constantdirectionallightdot to calculate light intensity
 // rather than the normal directional dot product
 // only valid if STUDIOHDR_FLAGS_STATIC_PROP is also set
-#define STUDIOHDR_FLAGS_CONSTANT_DIRECTIONAL_LIGHT_DOT ( 1 << 13 )
+inline constexpr auto STUDIOHDR_FLAGS_CONSTANT_DIRECTIONAL_LIGHT_DOT = ( 1 << 13 );
 
 // Flag to mark delta flexes as already converted from disk format to memory format
-#define STUDIOHDR_FLAGS_FLEXES_CONVERTED		( 1 << 14 )
+inline constexpr auto STUDIOHDR_FLAGS_FLEXES_CONVERTED = ( 1 << 14 );
 
 // Indicates the studiomdl was built in preview mode
-#define STUDIOHDR_FLAGS_BUILT_IN_PREVIEW_MODE	( 1 << 15 )
+inline constexpr auto STUDIOHDR_FLAGS_BUILT_IN_PREVIEW_MODE = ( 1 << 15 );
 
 // Ambient boost (runtime flag)
-#define STUDIOHDR_FLAGS_AMBIENT_BOOST			( 1 << 16 )
+inline constexpr auto STUDIOHDR_FLAGS_AMBIENT_BOOST = ( 1 << 16 );
 
 // Don't cast shadows from this model (useful on first-person models)
-#define STUDIOHDR_FLAGS_DO_NOT_CAST_SHADOWS		( 1 << 17 )
+inline constexpr auto STUDIOHDR_FLAGS_DO_NOT_CAST_SHADOWS = ( 1 << 17 );
 
 // alpha textures should cast shadows in vrad on this model (ONLY prop_static!)
-#define STUDIOHDR_FLAGS_CAST_TEXTURE_SHADOWS	( 1 << 18 )
+inline constexpr auto STUDIOHDR_FLAGS_CAST_TEXTURE_SHADOWS = ( 1 << 18 );
 
 // Model has a quad-only Catmull-Clark SubD cage
-#define STUDIOHDR_FLAGS_SUBDIVISION_SURFACE		( 1 << 19 )
+inline constexpr auto STUDIOHDR_FLAGS_SUBDIVISION_SURFACE = ( 1 << 19 );
 
 // flagged on load to indicate no animation events on this model
-#define STUDIOHDR_FLAGS_NO_ANIM_EVENTS			( 1 << 20 )
+inline constexpr auto STUDIOHDR_FLAGS_NO_ANIM_EVENTS = ( 1 << 20 );
 
 // If flag is set then studiohdr_t.flVertAnimFixedPointScale contains the
 // scale value for fixed point vert anim data, if not set then the
 // scale value is the default of 1.0 / 4096.0.  Regardless use
 // studiohdr_t::VertAnimFixedPointScale() to always retrieve the scale value
-#define STUDIOHDR_FLAGS_VERT_ANIM_FIXED_POINT_SCALE	( 1 << 21 )
+inline constexpr auto STUDIOHDR_FLAGS_VERT_ANIM_FIXED_POINT_SCALE = ( 1 << 21 );
 
 // If flag is set then model data is processed for EDGE
 // the flag is set at tool time when producing PS3-format assets
-#define STUDIOHDR_FLAGS_PS3_EDGE_FORMAT			( 1 << 22 )
+inline constexpr auto STUDIOHDR_FLAGS_PS3_EDGE_FORMAT = ( 1 << 22 );
 
 // this is a specific case to indicate a model is over budget
-#define STUDIOHDR_FLAGS_OVER_BUDGET					( 1 << 23 )
+inline constexpr auto STUDIOHDR_FLAGS_OVER_BUDGET = ( 1 << 23 );
 
 // this is a specific case to indicate a model is over budget
-#define STUDIOHDR_FLAGS_IGNORE_BUDGETS				( 1 << 24 )
+inline constexpr auto STUDIOHDR_FLAGS_IGNORE_BUDGETS = ( 1 << 24 );
 
 // internally generated combined model
-#define STUDIOHDR_FLAGS_COMBINED					( 1 << 25 )
+inline constexpr auto STUDIOHDR_FLAGS_COMBINED = ( 1 << 25 );
 
 // Model has an additional set of UVs
-#define STUDIOHDR_FLAGS_EXTRA_VERTEX_DATA			( 1 << 26 )
+inline constexpr auto STUDIOHDR_FLAGS_EXTRA_VERTEX_DATA = ( 1 << 26 );
 
 // NOTE:  This flag is set at loadtime, not mdl build time so that we don't have to rebuild
 // models when we change materials.
-#define STUDIOHDR_BAKED_VERTEX_LIGHTING_IS_INDIRECT_ONLY	( 1 << 27 )
+inline constexpr auto STUDIOHDR_BAKED_VERTEX_LIGHTING_IS_INDIRECT_ONLY = ( 1 << 27 );
 
 // NOTE! Next time we up the .mdl file format, remove studiohdr2_t
 // and insert all fields in this structure into studiohdr_t.
@@ -2387,13 +2365,13 @@ struct studiohdr2_t
 
 	int m_nBoneFlexDriverCount;
 	int m_nBoneFlexDriverIndex;
-	inline mstudioboneflexdriver_t *pBoneFlexDriver( int i ) const { Assert( i >= 0 && i < m_nBoneFlexDriverCount ); return (mstudioboneflexdriver_t *)(((byte *)this) + m_nBoneFlexDriverIndex) + i; }
+	inline mstudioboneflexdriver_t *pBoneFlexDriver( int i ) const { contract_assert( i >= 0 && i < m_nBoneFlexDriverCount ); return (mstudioboneflexdriver_t *)(((byte *)this) + m_nBoneFlexDriverIndex) + i; }
 
 	CResourcePointer< PhysFeModelDesc_t > m_pFeModel; // this is functionally the same as having an index and a function, but more readable.
 
 	int m_nBodyGroupPresetCount;
 	int m_nBodyGroupPresetIndex;
-	inline mstudiobodygrouppreset_t *pBodyGroupPreset( int i ) const { Assert( i >= 0 && i < m_nBodyGroupPresetCount); return (mstudiobodygrouppreset_t *)(((byte *)this) + m_nBodyGroupPresetIndex) + i; };
+	inline mstudiobodygrouppreset_t *pBodyGroupPreset( int i ) const { contract_assert( i >= 0 && i < m_nBodyGroupPresetCount ); return (mstudiobodygrouppreset_t *)(((byte *)this) + m_nBodyGroupPresetIndex) + i; };
 	
 	int padding_unused; // This hasn't been used before, use it if you need it.
 
@@ -2432,13 +2410,13 @@ struct studiohdr_t
 
 	int					numbones;			// bones
 	int					boneindex;
-	inline const mstudiobone_t *pBone( int i ) const { Assert( i >= 0 && i < numbones); return (mstudiobone_t *)(((byte *)this) + boneindex) + i; };
+	inline const mstudiobone_t *pBone( int i ) const { contract_assert( i >= 0 && i < numbones ); return (mstudiobone_t *)(((byte *)this) + boneindex) + i; };
 	int					RemapSeqBone( int iSequence, int iLocalBone ) const;	// maps local sequence bone to global bone
 	int					RemapAnimBone( int iAnim, int iLocalBone ) const;		// maps local animations bone to global bone
 
 	int					numbonecontrollers;		// bone controllers
 	int					bonecontrollerindex;
-	inline mstudiobonecontroller_t *pBonecontroller( int i ) const { Assert( i >= 0 && i < numbonecontrollers); return (mstudiobonecontroller_t *)(((byte *)this) + bonecontrollerindex) + i; };
+	inline mstudiobonecontroller_t *pBonecontroller( int i ) const { contract_assert( i >= 0 && i < numbonecontrollers ); return (mstudiobonecontroller_t *)(((byte *)this) + bonecontrollerindex) + i; };
 
 	int					numhitboxsets;
 	int					hitboxsetindex;
@@ -2446,7 +2424,7 @@ struct studiohdr_t
 	// Look up hitbox set by index
 	mstudiohitboxset_t	*pHitboxSet( int i ) const 
 	{ 
-		Assert( i >= 0 && i < numhitboxsets); 
+		contract_assert( i >= 0 && i < numhitboxsets ); 
 		return (mstudiohitboxset_t *)(((byte *)this) + hitboxsetindex ) + i; 
 	};
 
@@ -2543,7 +2521,7 @@ struct studiohdr_t
 	// raw textures
 	int					numtextures;
 	int					textureindex;
-	inline mstudiotexture_t *pTexture( int i ) const { Assert( i >= 0 && i < numtextures ); return (mstudiotexture_t *)(((byte *)this) + textureindex) + i; }; 
+	inline mstudiotexture_t *pTexture( int i ) const { contract_assert( i >= 0 && i < numtextures ); return (mstudiotexture_t *)(((byte *)this) + textureindex) + i; }; 
 
 
 	// raw textures search paths
@@ -2565,7 +2543,7 @@ struct studiohdr_t
 //private:
 	int					numlocalattachments;
 	int					localattachmentindex;
-	inline mstudioattachment_t	*pLocalAttachment( int i ) const { Assert( i >= 0 && i < numlocalattachments); return (mstudioattachment_t *)(((byte *)this) + localattachmentindex) + i; };
+	inline mstudioattachment_t	*pLocalAttachment( int i ) const { contract_assert( i >= 0 && i < numlocalattachments ); return (mstudioattachment_t *)(((byte *)this) + localattachmentindex) + i; };
 //public:
 	int					GetNumAttachments( void ) const;
 	const mstudioattachment_t &pAttachment( int i ) const;
@@ -2578,8 +2556,8 @@ struct studiohdr_t
 	int					numlocalnodes;
 	int					localnodeindex;
 	int					localnodenameindex;
-	inline char			*pszLocalNodeName( int iNode ) const { Assert( iNode >= 0 && iNode < numlocalnodes); return (((char *)this) + *((int *)(((byte *)this) + localnodenameindex) + iNode)); }
-	inline byte			*pLocalTransition( int i ) const { Assert( i >= 0 && i < (numlocalnodes * numlocalnodes)); return (byte *)(((byte *)this) + localnodeindex) + i; };
+	inline char			*pszLocalNodeName( int iNode ) const { contract_assert( iNode >= 0 && iNode < numlocalnodes ); return (((char *)this) + *((int *)(((byte *)this) + localnodenameindex) + iNode)); }
+	inline byte			*pLocalTransition( int i ) const { contract_assert( i >= 0 && i < (numlocalnodes * numlocalnodes) ); return (byte *)(((byte *)this) + localnodeindex) + i; };
 
 //public:
 	int					EntryNode( int iSequence );
@@ -2589,28 +2567,28 @@ struct studiohdr_t
 
 	int					numflexdesc;
 	int					flexdescindex;
-	inline mstudioflexdesc_t *pFlexdesc( int i ) const { Assert( i >= 0 && i < numflexdesc); return (mstudioflexdesc_t *)(((byte *)this) + flexdescindex) + i; };
+	inline mstudioflexdesc_t *pFlexdesc( int i ) const { contract_assert( i >= 0 && i < numflexdesc ); return (mstudioflexdesc_t *)(((byte *)this) + flexdescindex) + i; };
 
 	int					numflexcontrollers;
 	int					flexcontrollerindex;
-	inline mstudioflexcontroller_t *pFlexcontroller( LocalFlexController_t i ) const { Assert( i >= 0 && i < numflexcontrollers); return (mstudioflexcontroller_t *)(((byte *)this) + flexcontrollerindex) + i; };
+	inline mstudioflexcontroller_t *pFlexcontroller( LocalFlexController_t i ) const { contract_assert( i >= 0 && i < numflexcontrollers ); return (mstudioflexcontroller_t *)(((byte *)this) + flexcontrollerindex) + i; };
 
 	int					numflexrules;
 	int					flexruleindex;
-	inline mstudioflexrule_t *pFlexRule( int i ) const { Assert( i >= 0 && i < numflexrules); return (mstudioflexrule_t *)(((byte *)this) + flexruleindex) + i; };
+	inline mstudioflexrule_t *pFlexRule( int i ) const { contract_assert( i >= 0 && i < numflexrules ); return (mstudioflexrule_t *)(((byte *)this) + flexruleindex) + i; };
 
 	int					numikchains;
 	int					ikchainindex;
-	inline mstudioikchain_t *pIKChain( int i ) const { Assert( i >= 0 && i < numikchains); return (mstudioikchain_t *)(((byte *)this) + ikchainindex) + i; };
+	inline mstudioikchain_t *pIKChain( int i ) const { contract_assert( i >= 0 && i < numikchains ); return (mstudioikchain_t *)(((byte *)this) + ikchainindex) + i; };
 
 	int					nummouths;
 	int					mouthindex;
-	inline mstudiomouth_t *pMouth( int i ) const { Assert( i >= 0 && i < nummouths); return (mstudiomouth_t *)(((byte *)this) + mouthindex) + i; };
+	inline mstudiomouth_t *pMouth( int i ) const { contract_assert( i >= 0 && i < nummouths ); return (mstudiomouth_t *)(((byte *)this) + mouthindex) + i; };
 
 //private:
 	int					numlocalposeparameters;
 	int					localposeparamindex;
-	inline mstudioposeparamdesc_t *pLocalPoseParameter( int i ) const { Assert( i >= 0 && i < numlocalposeparameters); return (mstudioposeparamdesc_t *)(((byte *)this) + localposeparamindex) + i; };
+	inline mstudioposeparamdesc_t *pLocalPoseParameter( int i ) const { contract_assert( i >= 0 && i < numlocalposeparameters ); return (mstudioposeparamdesc_t *)(((byte *)this) + localposeparamindex) + i; };
 //public:
 	int					GetNumPoseParameters( void ) const;
 	const mstudioposeparamdesc_t &pPoseParameter( int i );
@@ -2627,7 +2605,7 @@ struct studiohdr_t
 
 	int					numlocalikautoplaylocks;
 	int					localikautoplaylockindex;
-	inline mstudioiklock_t *pLocalIKAutoplayLock( int i ) const { Assert( i >= 0 && i < numlocalikautoplaylocks); return (mstudioiklock_t *)(((byte *)this) + localikautoplaylockindex) + i; };
+	inline mstudioiklock_t *pLocalIKAutoplayLock( int i ) const { contract_assert( i >= 0 && i < numlocalikautoplaylocks ); return (mstudioiklock_t *)(((byte *)this) + localikautoplaylockindex) + i; };
 
 	int					GetNumIKAutoplayLocks( void ) const;
 	const mstudioiklock_t &pIKAutoplayLock( int i );
@@ -2642,7 +2620,7 @@ struct studiohdr_t
 	// external animations, models, etc.
 	int					numincludemodels;
 	int					includemodelindex;
-	inline mstudiomodelgroup_t *pModelGroup( int i ) const { Assert( i >= 0 && i < numincludemodels); return (mstudiomodelgroup_t *)(((byte *)this) + includemodelindex) + i; };
+	inline mstudiomodelgroup_t *pModelGroup( int i ) const { contract_assert( i >= 0 && i < numincludemodels ); return (mstudiomodelgroup_t *)(((byte *)this) + includemodelindex) + i; };
 	// implementation specific call to get a named model
 	const studiohdr_t	*FindModel( void **cache, char const *modelname ) const;
 
@@ -2656,7 +2634,7 @@ struct studiohdr_t
 	inline char * const pszAnimBlockName( void ) const { return ((char *)this) + szanimblocknameindex; }
 	int					numanimblocks;
 	int					animblockindex;
-	inline mstudioanimblock_t *pAnimBlock( int i ) const { Assert( i > 0 && i < numanimblocks); return (mstudioanimblock_t *)(((byte *)this) + animblockindex) + i; };
+	inline mstudioanimblock_t *pAnimBlock( int i ) const { contract_assert( i > 0 && i < numanimblocks ); return (mstudioanimblock_t *)(((byte *)this) + animblockindex) + i; };
 
 	// Relocated to studiohdr2_t
 	int					unused_animblockModel;
@@ -2695,7 +2673,7 @@ struct studiohdr_t
 
 	int					numflexcontrollerui;
 	int					flexcontrolleruiindex;
-	mstudioflexcontrollerui_t *pFlexControllerUI( int i ) const { Assert( i >= 0 && i < numflexcontrollerui); return (mstudioflexcontrollerui_t *)(((byte *)this) + flexcontrolleruiindex) + i; }
+	mstudioflexcontrollerui_t *pFlexControllerUI( int i ) const { contract_assert( i >= 0 && i < numflexcontrollerui ); return (mstudioflexcontrollerui_t *)(((byte *)this) + flexcontrolleruiindex) + i; }
 
 	float				flVertAnimFixedPointScale;
 	inline float		VertAnimFixedPointScale() const { return ( flags & STUDIOHDR_FLAGS_VERT_ANIM_FIXED_POINT_SCALE ) ? flVertAnimFixedPointScale : 1.0f / 4096.0f; }
@@ -2708,7 +2686,7 @@ struct studiohdr_t
 
 	// Src bone transforms are transformations that will convert .dmx or .smd-based animations into .mdl-based animations
 	int					NumSrcBoneTransforms() const { return studiohdr2index ? pStudioHdr2()->numsrcbonetransform : 0; }
-	const mstudiosrcbonetransform_t* SrcBoneTransform( int i ) const { Assert( i >= 0 && i < NumSrcBoneTransforms()); return (mstudiosrcbonetransform_t *)(((byte *)this) + pStudioHdr2()->srcbonetransformindex) + i; }
+	const mstudiosrcbonetransform_t* SrcBoneTransform( int i ) const { contract_assert( i >= 0 && i < NumSrcBoneTransforms() ); return (mstudiosrcbonetransform_t *)(((byte *)this) + pStudioHdr2()->srcbonetransformindex) + i; }
 
 	inline int			IllumPositionAttachmentIndex() const { return studiohdr2index ? pStudioHdr2()->IllumPositionAttachmentIndex() : 0; }
 
@@ -2717,18 +2695,18 @@ struct studiohdr_t
 	inline mstudiolinearbone_t *pLinearBones() const { return studiohdr2index ? pStudioHdr2()->pLinearBones() : nullptr; }
 
 	inline int			BoneFlexDriverCount() const { return studiohdr2index ? pStudioHdr2()->m_nBoneFlexDriverCount : 0; }
-	inline const mstudioboneflexdriver_t* BoneFlexDriver( int i ) const { Assert( i >= 0 && i < BoneFlexDriverCount() ); return studiohdr2index ? pStudioHdr2()->pBoneFlexDriver( i ) : nullptr; }
+	inline const mstudioboneflexdriver_t* BoneFlexDriver( int i ) const { contract_assert( i >= 0 && i < BoneFlexDriverCount() ); return studiohdr2index ? pStudioHdr2()->pBoneFlexDriver( i ) : nullptr; }
 
 	inline int			BodyGroupPresetCount() const { return studiohdr2index ? pStudioHdr2()->m_nBodyGroupPresetCount : 0; }
-	inline const mstudiobodygrouppreset_t *BodyGroupPreset( int i ) const { Assert( i >= 0 && i < BodyGroupPresetCount() ); return studiohdr2index ? pStudioHdr2()->pBodyGroupPreset( i ) : nullptr; }
+	inline const mstudiobodygrouppreset_t *BodyGroupPreset( int i ) const { contract_assert( i >= 0 && i < BodyGroupPresetCount() ); return studiohdr2index ? pStudioHdr2()->pBodyGroupPreset( i ) : nullptr; }
 
 	void* 				VirtualModel() const { return studiohdr2index ? (void *)( pStudioHdr2()->virtualModel ) : nullptr; }
-	void				SetVirtualModel( void* ptr ) { Assert( studiohdr2index ); if ( studiohdr2index ) { pStudioHdr2()->virtualModel = ptr; } }
+	void				SetVirtualModel( void* ptr ) { contract_assert( studiohdr2index ); if ( studiohdr2index ) { pStudioHdr2()->virtualModel = ptr; } }
 
 	void*				VertexBase() const { return studiohdr2index ? (void *)( pStudioHdr2()->pVertexBase ) : nullptr; }
-	void				SetVertexBase( void* pVertexBase ) const { Assert( studiohdr2index ); if ( studiohdr2index ) { pStudioHdr2()->pVertexBase = pVertexBase; } }
+	void				SetVertexBase( void* pVertexBase ) const { contract_assert( studiohdr2index ); if ( studiohdr2index ) { pStudioHdr2()->pVertexBase = pVertexBase; } }
 	void*				IndexBase() const { return studiohdr2index ? ( void * ) ( pStudioHdr2()->pIndexBase ) : nullptr; }
-	void				SetIndexBase( void* pIndexBase ) const { Assert( studiohdr2index ); if ( studiohdr2index ) { pStudioHdr2()->pIndexBase  = pIndexBase; } }
+	void				SetIndexBase( void* pIndexBase ) const { contract_assert( studiohdr2index ); if ( studiohdr2index ) { pStudioHdr2()->pIndexBase  = pIndexBase; } }
 
 
 	// NOTE: No room to add stuff? Up the .mdl file format version 
@@ -3097,8 +3075,8 @@ public:
 
 
 		// double-check that the data I point to hasn't changed
-		bool ValidateAgainst( const CStudioHdr * RESTRICT pstudiohdr ) RESTRICT;
-		void SetValidation( const CStudioHdr *RESTRICT pstudiohdr ) RESTRICT;
+		bool ValidateAgainst( const CStudioHdr * __restrict__ pstudiohdr ) __restrict__;
+		void SetValidation( const CStudioHdr *__restrict__ pstudiohdr ) __restrict__;
 
 		friend class CStudioHdr;
 	};
@@ -3365,92 +3343,92 @@ inline const mstudioflexcontroller_t *mstudioflexcontrollerui_t::pController( in
 }
 
 
-#define STUDIO_CONST	1	// get float
-#define STUDIO_FETCH1	2	// get Flexcontroller value
-#define STUDIO_FETCH2	3	// get flex weight
-#define STUDIO_ADD		4
-#define STUDIO_SUB		5
-#define STUDIO_MUL		6
-#define STUDIO_DIV		7
-#define STUDIO_NEG		8	// not implemented
-#define STUDIO_EXP		9	// not implemented
-#define STUDIO_OPEN		10	// only used in token parsing
-#define STUDIO_CLOSE	11
-#define STUDIO_COMMA	12	// only used in token parsing
-#define STUDIO_MAX		13
-#define STUDIO_MIN		14
-#define STUDIO_2WAY_0	15	// Fetch a value from a 2 Way slider for the 1st value RemapVal( 0.0, 0.5, 0.0, 1.0 )
-#define STUDIO_2WAY_1	16	// Fetch a value from a 2 Way slider for the 2nd value RemapVal( 0.5, 1.0, 0.0, 1.0 )
-#define STUDIO_NWAY		17	// Fetch a value from a 2 Way slider for the 2nd value RemapVal( 0.5, 1.0, 0.0, 1.0 )
-#define STUDIO_COMBO	18	// Perform a combo operation (essentially multiply the last N values on the stack)
-#define STUDIO_DOMINATE	19	// Performs a combination domination operation
-#define STUDIO_DME_LOWER_EYELID 20	// 
-#define STUDIO_DME_UPPER_EYELID 21	// 
+inline constexpr auto STUDIO_CONST = 1; // get float
+inline constexpr auto STUDIO_FETCH1 = 2; // get Flexcontroller value
+inline constexpr auto STUDIO_FETCH2 = 3; // get flex weight
+inline constexpr auto STUDIO_ADD = 4;
+inline constexpr auto STUDIO_SUB = 5;
+inline constexpr auto STUDIO_MUL = 6;
+inline constexpr auto STUDIO_DIV = 7;
+inline constexpr auto STUDIO_NEG = 8; // not implemented
+inline constexpr auto STUDIO_EXP = 9; // not implemented
+inline constexpr auto STUDIO_OPEN = 10; // only used in token parsing
+inline constexpr auto STUDIO_CLOSE = 11;
+inline constexpr auto STUDIO_COMMA = 12; // only used in token parsing
+inline constexpr auto STUDIO_MAX = 13;
+inline constexpr auto STUDIO_MIN = 14;
+inline constexpr auto STUDIO_2WAY_0 = 15; // Fetch a value from a 2 Way slider for the 1st value RemapVal( 0.0, 0.5, 0.0, 1.0 )
+inline constexpr auto STUDIO_2WAY_1 = 16; // Fetch a value from a 2 Way slider for the 2nd value RemapVal( 0.5, 1.0, 0.0, 1.0 )
+inline constexpr auto STUDIO_NWAY = 17; // Fetch a value from a 2 Way slider for the 2nd value RemapVal( 0.5, 1.0, 0.0, 1.0 )
+inline constexpr auto STUDIO_COMBO = 18; // Perform a combo operation (essentially multiply the last N values on the stack)
+inline constexpr auto STUDIO_DOMINATE = 19; // Performs a combination domination operation
+inline constexpr auto STUDIO_DME_LOWER_EYELID = 20; //
+inline constexpr auto STUDIO_DME_UPPER_EYELID = 21; //
 
 // motion flags
-#define STUDIO_X		0x00000001
-#define STUDIO_Y		0x00000002	
-#define STUDIO_Z		0x00000004
-#define STUDIO_XR		0x00000008
-#define STUDIO_YR		0x00000010
-#define STUDIO_ZR		0x00000020
+inline constexpr auto STUDIO_X = 0x00000001;
+inline constexpr auto STUDIO_Y = 0x00000002;
+inline constexpr auto STUDIO_Z = 0x00000004;
+inline constexpr auto STUDIO_XR = 0x00000008;
+inline constexpr auto STUDIO_YR = 0x00000010;
+inline constexpr auto STUDIO_ZR = 0x00000020;
 
-#define STUDIO_LX		0x00000040
-#define STUDIO_LY		0x00000080
-#define STUDIO_LZ		0x00000100
-#define STUDIO_LXR		0x00000200
-#define STUDIO_LYR		0x00000400
-#define STUDIO_LZR		0x00000800
+inline constexpr auto STUDIO_LX = 0x00000040;
+inline constexpr auto STUDIO_LY = 0x00000080;
+inline constexpr auto STUDIO_LZ = 0x00000100;
+inline constexpr auto STUDIO_LXR = 0x00000200;
+inline constexpr auto STUDIO_LYR = 0x00000400;
+inline constexpr auto STUDIO_LZR = 0x00000800;
 
-#define STUDIO_LINEAR	0x00001000
+inline constexpr auto STUDIO_LINEAR = 0x00001000;
 
-#define STUDIO_TYPES	0x0003FFFF
-#define STUDIO_RLOOP	0x00040000	// controller that wraps shortest distance
+inline constexpr auto STUDIO_TYPES = 0x0003FFFF;
+inline constexpr auto STUDIO_RLOOP = 0x00040000; // controller that wraps shortest distance
 
 // sequence and autolayer flags
-#define STUDIO_LOOPING	0x0001		// ending frame should be the same as the starting frame
-#define STUDIO_SNAP		0x0002		// do not interpolate between previous animation and this one
-#define STUDIO_DELTA	0x0004		// this sequence "adds" to the base sequences, not slerp blends
-#define STUDIO_AUTOPLAY	0x0008		// temporary flag that forces the sequence to always play
-#define STUDIO_POST		0x0010		// 
-#define STUDIO_ALLZEROS	0x0020		// this animation/sequence has no real animation data
-#define STUDIO_FRAMEANIM 0x0040		// animation is encoded as by frame x bone instead of RLE bone x frame
-#define STUDIO_CYCLEPOSE 0x0080		// cycle index is taken from a pose parameter index
-#define STUDIO_REALTIME	0x0100		// cycle index is taken from a real-time clock, not the animations cycle index
-#define STUDIO_LOCAL	0x0200		// sequence has a local context sequence
-#define STUDIO_HIDDEN	0x0400		// don't show in default selection views
-#define STUDIO_OVERRIDE	0x0800		// a forward declared sequence (empty)
-#define STUDIO_ACTIVITY	0x1000		// Has been updated at runtime to activity index
-#define STUDIO_EVENT	0x2000		// Has been updated at runtime to event index on server
-#define STUDIO_WORLD	0x4000		// sequence blends in worldspace
-#define STUDIO_NOFORCELOOP 0x8000	// do not force the animation loop
-#define STUDIO_EVENT_CLIENT 0x10000	// Has been updated at runtime to event index on client
-#define STUDIO_WORLD_AND_RELATIVE 0x20000 // do worldspace blend, then do normal blend on top
-#define STUDIO_ROOTXFORM 0x40000	// sequence wants to derive a root re-xform from a given bone
+inline constexpr auto STUDIO_LOOPING = 0x0001; // ending frame should be the same as the starting frame
+inline constexpr auto STUDIO_SNAP = 0x0002; // do not interpolate between previous animation and this one
+inline constexpr auto STUDIO_DELTA = 0x0004; // this sequence "adds" to the base sequences, not slerp blends
+inline constexpr auto STUDIO_AUTOPLAY = 0x0008; // temporary flag that forces the sequence to always play
+inline constexpr auto STUDIO_POST = 0x0010; //
+inline constexpr auto STUDIO_ALLZEROS = 0x0020; // this animation/sequence has no real animation data
+inline constexpr auto STUDIO_FRAMEANIM = 0x0040; // animation is encoded as by frame x bone instead of RLE bone x frame
+inline constexpr auto STUDIO_CYCLEPOSE = 0x0080; // cycle index is taken from a pose parameter index
+inline constexpr auto STUDIO_REALTIME = 0x0100; // cycle index is taken from a real-time clock, not the animations cycle index
+inline constexpr auto STUDIO_LOCAL = 0x0200; // sequence has a local context sequence
+inline constexpr auto STUDIO_HIDDEN = 0x0400; // don't show in default selection views
+inline constexpr auto STUDIO_OVERRIDE = 0x0800; // a forward declared sequence (empty)
+inline constexpr auto STUDIO_ACTIVITY = 0x1000; // Has been updated at runtime to activity index
+inline constexpr auto STUDIO_EVENT = 0x2000; // Has been updated at runtime to event index on server
+inline constexpr auto STUDIO_WORLD = 0x4000; // sequence blends in worldspace
+inline constexpr auto STUDIO_NOFORCELOOP = 0x8000; // do not force the animation loop
+inline constexpr auto STUDIO_EVENT_CLIENT = 0x10000; // Has been updated at runtime to event index on client
+inline constexpr auto STUDIO_WORLD_AND_RELATIVE = 0x20000; // do worldspace blend, then do normal blend on top
+inline constexpr auto STUDIO_ROOTXFORM = 0x40000; // sequence wants to derive a root re-xform from a given bone
 
 // autolayer flags
 //							0x0001
 //							0x0002
 //							0x0004
 //							0x0008
-#define STUDIO_AL_POST		0x0010		// 
+inline constexpr auto STUDIO_AL_POST = 0x0010; //
 //							0x0020
-#define STUDIO_AL_SPLINE	0x0040		// convert layer ramp in/out curve is a spline instead of linear
-#define STUDIO_AL_XFADE		0x0080		// pre-bias the ramp curve to compense for a non-1 weight, assuming a second layer is also going to accumulate
+inline constexpr auto STUDIO_AL_SPLINE = 0x0040; // convert layer ramp in/out curve is a spline instead of linear
+inline constexpr auto STUDIO_AL_XFADE = 0x0080; // pre-bias the ramp curve to compense for a non-1 weight, assuming a second layer is also going to accumulate
 //							0x0100
-#define STUDIO_AL_NOBLEND	0x0200		// animation always blends at 1.0 (ignores weight)
+inline constexpr auto STUDIO_AL_NOBLEND = 0x0200; // animation always blends at 1.0 (ignores weight)
 //							0x0400
 //							0x0800
-#define STUDIO_AL_LOCAL		0x1000		// layer is a local context sequence
+inline constexpr auto STUDIO_AL_LOCAL = 0x1000; // layer is a local context sequence
 //							0x2000
-#define STUDIO_AL_POSE		0x4000		// layer blends using a pose parameter instead of parent cycle
+inline constexpr auto STUDIO_AL_POSE = 0x4000; // layer blends using a pose parameter instead of parent cycle
 
 
 // Insert this code anywhere that you need to allow for conversion from an old STUDIO_VERSION to a new one.
 // If we only support the current version, this function should be empty.
 inline bool Studio_ConvertStudioHdrToNewVersion( studiohdr_t *pStudioHdr )
 {
-	COMPILE_TIME_ASSERT( STUDIO_VERSION == 49 ); //  put this to make sure this code is updated upon changing version.
+	static_assert( STUDIO_VERSION == 49 ); //  put this to make sure this code is updated upon changing version.
 
 	int version = pStudioHdr->version;
 	if ( version == STUDIO_VERSION )
@@ -3468,7 +3446,7 @@ inline bool Studio_ConvertStudioHdrToNewVersion( studiohdr_t *pStudioHdr )
 			if ( pAnim->sectionframes != 0 )
 			{
 				// zero most everything out
-				memset( &(pAnim->numframes), 0, (byte *)(pAnim + 1) - (byte *)&(pAnim->numframes) );
+				std::memset( &(pAnim->numframes), 0, (byte *)(pAnim + 1) - (byte *)&(pAnim->numframes) );
 
 				pAnim->numframes = 1;
 				pAnim->animblock = -1; // disable animation fetching
@@ -3614,7 +3592,7 @@ inline int Studio_LoadVertexes( const vertexFileHeader_t *pTempVvdHdr, vertexFil
 	numVertexes = pTempVvdHdr->numLODVertexes[rootLOD];
 
 	// copy all data up to start of vertexes
-	memcpy((void*)pNewVvdHdr, (void*)pTempVvdHdr, pTempVvdHdr->vertexDataStart);
+	std::memcpy((void*)pNewVvdHdr, (void*)pTempVvdHdr, pTempVvdHdr->vertexDataStart);
 
 	for ( i = 0; i < rootLOD; i++)
 	{
@@ -3648,7 +3626,7 @@ inline int Studio_LoadVertexes( const vertexFileHeader_t *pTempVvdHdr, vertexFil
 	{		
 		// fixups not required
 		// transfer vertex data
-		memcpy(
+		std::memcpy(
 			(byte *)pNewVvdHdr+pNewVvdHdr->vertexDataStart, 
 			(byte *)pTempVvdHdr+pTempVvdHdr->vertexDataStart,
 			numVertexes*sizeof(mstudiovertex_t) );
@@ -3656,7 +3634,7 @@ inline int Studio_LoadVertexes( const vertexFileHeader_t *pTempVvdHdr, vertexFil
 		if (bNeedsTangentS)
 		{
 			// transfer tangent data to cache memory
-			memcpy(
+			std::memcpy(
 				(byte *)pNewVvdHdr+pNewVvdHdr->tangentDataStart, 
 				(byte *)pTempVvdHdr+pTempVvdHdr->tangentDataStart,
 				numVertexes*sizeof(Vector4D) );
@@ -3666,7 +3644,7 @@ inline int Studio_LoadVertexes( const vertexFileHeader_t *pTempVvdHdr, vertexFil
 		if (bHasExtraData)
 		{
 			// Memcpy whole blob of extra bytes
-			memcpy(pNewExtraHeader, pExtraHeader, pExtraHeader->m_totalbytes);
+			std::memcpy(pNewExtraHeader, pExtraHeader, pExtraHeader->m_totalbytes);
 		}
 
 		return numVertexes;
@@ -3685,7 +3663,7 @@ inline int Studio_LoadVertexes( const vertexFileHeader_t *pTempVvdHdr, vertexFil
 		}
 
 		// copy vertexes
-		memcpy(
+		std::memcpy(
 			(mstudiovertex_t *)((byte *)pNewVvdHdr+pNewVvdHdr->vertexDataStart) + target,
 			(mstudiovertex_t *)((byte *)pTempVvdHdr+pTempVvdHdr->vertexDataStart) + pFixupTable[i].sourceVertexID,
 			pFixupTable[i].numVertexes*sizeof(mstudiovertex_t) );
@@ -3693,7 +3671,7 @@ inline int Studio_LoadVertexes( const vertexFileHeader_t *pTempVvdHdr, vertexFil
 		if (bNeedsTangentS)
 		{
 			// copy tangents
-			memcpy(
+			std::memcpy(
 				(Vector4D *)((byte *)pNewVvdHdr+pNewVvdHdr->tangentDataStart) + target,
 				(Vector4D *)((byte *)pTempVvdHdr+pTempVvdHdr->tangentDataStart) + pFixupTable[i].sourceVertexID,
 				pFixupTable[i].numVertexes*sizeof(Vector4D) );
@@ -3702,13 +3680,13 @@ inline int Studio_LoadVertexes( const vertexFileHeader_t *pTempVvdHdr, vertexFil
 		if (bHasExtraData)
 		{
 			// Memcpy header and index records
-			memcpy(pNewExtraHeader, pExtraHeader, sizeof(ExtraVertexAttributesHeader_t) + sizeof(ExtraVertexAttributeIndex_t)*pExtraHeader->m_count);
+			std::memcpy(pNewExtraHeader, pExtraHeader, sizeof(ExtraVertexAttributesHeader_t) + sizeof(ExtraVertexAttributeIndex_t)*pExtraHeader->m_count);
 			// copy extra data
 			for (int e = 0; e < pExtraHeader->m_count; ++e)
 			{
 				int offset = pExtraIndex[e].m_offset;
 				int bytesPerVertex = pExtraIndex[e].m_bytes;
-				memcpy((byte*)pNewExtraHeader + offset + target*bytesPerVertex,
+				std::memcpy((byte*)pNewExtraHeader + offset + target*bytesPerVertex,
 					(byte*)pExtraHeader + offset + pFixupTable[i].sourceVertexID*bytesPerVertex,
 					pFixupTable[i].numVertexes*bytesPerVertex);
 			}
@@ -3723,6 +3701,3 @@ inline int Studio_LoadVertexes( const vertexFileHeader_t *pTempVvdHdr, vertexFil
 
 	return target;
 }
-
-
-#endif // STUDIO_H

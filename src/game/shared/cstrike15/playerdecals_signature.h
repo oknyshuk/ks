@@ -1,32 +1,31 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Player decals signature validation code
-//
-//=============================================================================//
 
-#ifndef PLAYERDECALS_SIGNATURE_H
-#define PLAYERDECALS_SIGNATURE_H
-
-#include "tier1/byte_writer.h"
+import std;
+import ks.tier1;
+#include "usermessages_schema.h"
 
 //
 // We will be using RSA 1024-bit private signing key
 // PKCS1 signature length is guaranteed to be 128 bytes
 //
-#define PLAYERDECALS_SIGNATURE_VERSION 1
-#define PLAYERDECALS_SIGNATURE_BYTELEN 128
+inline constexpr auto PLAYERDECALS_SIGNATURE_VERSION = 1;
+inline constexpr auto PLAYERDECALS_SIGNATURE_BYTELEN = 128;
 
-#define PLAYERDECALS_NUMCHARGES 50
+inline constexpr auto PLAYERDECALS_NUMCHARGES = 50;
 
-#define PLAYERDECALS_UNITS_SIZE 48
-#define PLAYERDECALS_COOLDOWN_SECONDS 45
+inline constexpr auto PLAYERDECALS_UNITS_SIZE = 48;
+inline constexpr auto PLAYERDECALS_COOLDOWN_SECONDS = 45;
 
-#define PLAYERDECALS_DURATION_SOLID 240
-#define PLAYERDECALS_DURATION_FADE1  40
-#define PLAYERDECALS_DURATION_FADE2 120
-#define PLAYERDECALS_DURATION_APPLY 1.5f
+inline constexpr auto PLAYERDECALS_DURATION_SOLID = 240;
+inline constexpr auto PLAYERDECALS_DURATION_FADE1 = 40;
+inline constexpr auto PLAYERDECALS_DURATION_FADE2 = 120;
+inline constexpr auto PLAYERDECALS_DURATION_APPLY = 1.5f;
 
-#define PLAYERDECALS_LIMIT_COUNT 100
+inline constexpr auto PLAYERDECALS_LIMIT_COUNT = 100;
 
 
 
@@ -72,5 +71,3 @@ inline bool BValidateClientPlayerDecalSignature( ks::net::PlayerDecalDigitalSign
 	// Removed for partner depot
 	return true;
 }
-
-#endif // PLAYERDECALS_SIGNATURE_H

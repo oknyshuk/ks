@@ -1,12 +1,11 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Base class for simple projectiles
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#ifndef CBASEPROJECTILE_H
-#define CBASEPROJECTILE_H
+#include "baseanimating.h"
+#include "const.h"
+
+// Purpose: Base class for simple projectiles
 
 enum MoveType_t;
 enum MoveCollide_t;
@@ -40,5 +39,3 @@ public:
 	int m_iDmgType;
 	EHANDLE m_hIntendedTarget;
 };
-
-#endif // CBASEPROJECTILE_H

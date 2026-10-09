@@ -1,15 +1,7 @@
-//====== Copyright c 1996-2007, Valve Corporation, All rights reserved. =======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
 #include "matchmakingqos.h"
-#include "threadtools.h"
-
-
 
 //
 // Default implementation of QOS
@@ -32,4 +24,3 @@ MM_QOS_t MM_GetQos()
 {
 	return s_DefaultQos;
 }
-

@@ -1,24 +1,12 @@
-//=========== (C) Copyright 1999 Valve, L.L.C. All rights reserved. ===========
-//
-// The copyright to the contents herein is the property of Valve, L.L.C.
-// The contents may be used and/or copied only with the written permission of
-// Valve, L.L.C., or in accordance with the terms and conditions stipulated in
-// the agreement/contract under which the contents have been supplied.
-//
-// $Header: $
-// $NoKeywords: $
-//
-// model loading and caching
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1999 Valve Corporation
 
-#ifndef IMDLCACHE_H
-#define IMDLCACHE_H
+// Purpose: model loading and caching
 
+import std;
+import ks.tier1;
 
-#include "tier0/platform.h"
-
-#include "appframework/iappsystem.h"
 #include "filesystem.h"
 #include "string_t.h"
 
@@ -30,7 +18,6 @@ struct studiohwdata_t;
 struct vcollide_t;
 struct virtualmodel_t;
 struct vertexFileHeader_t;
-class KeyValues;
 class IDataCacheSection;
 class IVTFTexture;
 
@@ -81,7 +68,7 @@ enum MDLCacheDataType_t
 	MDLCACHE_DECODEDANIMBLOCK
 };
 
-abstract_class IMDLCacheNotify
+class IMDLCacheNotify
 {
 public:
     virtual ~IMDLCacheNotify() { };
@@ -121,11 +108,11 @@ enum MDLCacheFlush_t
 //-----------------------------------------------------------------------------
 // Combiner
 //-----------------------------------------------------------------------------
-#define COMBINER_MAX_MODELS						15
-#define COMBINER_MAX_LODS						8
-#define COMBINER_MAX_TEXTURES_PER_MATERIAL		5
-#define COMBINER_MAX_ATLAS_GROUPS				5
-#define COMBINER_MAX_MATERIALS_PER_INPUT_MODEL	4
+inline constexpr auto COMBINER_MAX_MODELS = 15;
+inline constexpr auto COMBINER_MAX_LODS = 8;
+inline constexpr auto COMBINER_MAX_TEXTURES_PER_MATERIAL = 5;
+inline constexpr auto COMBINER_MAX_ATLAS_GROUPS = 5;
+inline constexpr auto COMBINER_MAX_MATERIALS_PER_INPUT_MODEL = 4;
 
 
 enum ECombinedResult
@@ -239,7 +226,7 @@ typedef void (*CombinedModelLoadedCallback)( void *pUserData, MDLHandle_t OldHan
 //-----------------------------------------------------------------------------
 // The main MDL cacher 
 //----------------------------------------------------------------------------- 
-abstract_class IMDLCache : public IAppSystem
+class IMDLCache : public IAppSystem
 {
 public:
 	// Used to install callbacks for when data is loaded + unloaded
@@ -405,7 +392,7 @@ public:
 	virtual void		DebugCombinerInfo( ) = 0;
 };
 
-DECLARE_TIER3_INTERFACE( IMDLCache, g_pMDLCache );
+extern IMDLCache *g_pMDLCache;;
 
 
 //-----------------------------------------------------------------------------
@@ -445,20 +432,8 @@ private:
 	IMDLCache *m_pCache;
 };
 
-#define MDCACHE_FINE_GRAINED 1
 
-#if defined(MDCACHE_FINE_GRAINED)
 #define MDLCACHE_CRITICAL_SECTION_( pCache ) CMDLCacheCriticalSection cacheCriticalSection(pCache)
 #define MDLCACHE_COARSE_LOCK_( pCache ) CMDLCacheCoarseCriticalSection cacheCoarseCriticalSection(pCache)
-#elif defined(MDLCACHE_LEVEL_LOCKED)
-#define MDLCACHE_CRITICAL_SECTION_( pCache )  ((void)(0))
-#define MDLCACHE_COARSE_LOCK_( pCache ) ((void)(0))
-#else
-#define MDLCACHE_CRITICAL_SECTION_( pCache ) ((void)(0))
-#define MDLCACHE_COARSE_LOCK_( pCache ) CMDLCacheCriticalSection cacheCriticalSection(pCache); CMDLCacheCoarseCriticalSection cacheCoarseCriticalSection(pCache)
-#endif
 #define MDLCACHE_CRITICAL_SECTION() MDLCACHE_CRITICAL_SECTION_(mdlcache)
 #define MDLCACHE_COARSE_LOCK() MDLCACHE_COARSE_LOCK_(mdlcache)
-
-#endif // IMDLCACHE_H
-

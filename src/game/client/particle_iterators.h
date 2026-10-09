@@ -1,20 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Client side CTFTeam class
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef PARTICLE_ITERATORS_H
-#define PARTICLE_ITERATORS_H
-
 
 #include "materialsystem/imesh.h"
 #include "particledraw.h"
+#include "particlemgr.h"
 
-
-#define NUM_PARTICLES_PER_BATCH 200
-#define MAX_TOTAL_PARTICLES		2048	// Max particles in the world
+inline constexpr auto NUM_PARTICLES_PER_BATCH = 200;
+inline constexpr auto MAX_TOTAL_PARTICLES = 2048; // Max particles in the world
 
 //
 // Iterate the particles like this:
@@ -125,7 +120,7 @@ inline CParticleRenderIterator::CParticleRenderIterator()
 
 inline const Particle* CParticleRenderIterator::GetFirst()
 {
-	Assert( !m_bGotFirst );
+	contract_assert( !m_bGotFirst );
 	m_bGotFirst = true;
 
 	m_pCur = m_pMaterial->m_Particles.m_pNext;
@@ -157,8 +152,8 @@ inline void CParticleRenderIterator::TestFlushBatch()
 
 inline const Particle* CParticleRenderIterator::GetNext( float sortKey )
 {
-	Assert( m_bGotFirst );
-	Assert( m_pCur );
+	contract_assert( m_bGotFirst );
+	contract_assert( m_pCur );
 
 	TestFlushBatch();
 
@@ -218,7 +213,7 @@ inline Particle* CParticleSimulateIterator::GetFirst()
 	// Make sure they're either starting out fresh or that the previous guy iterated through all the particles.
 	if ( m_bGotFirst )
 	{
-		Assert( m_pNextParticle == &m_pMaterial->m_Particles );
+		contract_assert( m_pNextParticle == &m_pMaterial->m_Particles );
 	}
 #endif
 
@@ -264,7 +259,3 @@ inline float CParticleSimulateIterator::GetTimeDelta() const
 {
 	return m_flTimeDelta;
 }
-
-
-#endif // PARTICLE_ITERATORS_H
-

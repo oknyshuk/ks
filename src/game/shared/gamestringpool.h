@@ -1,36 +1,30 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Pool of all per-level strings. Allocates memory for strings, 
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Pool of all per-level strings. Allocates memory for strings,
 //			consolodating duplicates. The memory is freed on behalf of clients
 //			at level transition. Strings are of type string_t.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef GAMESTRINGPOOL_H
-#define GAMESTRINGPOOL_H
+import std;
+#include "string_t.h"
 
-
-#if !defined( GC )
 class IGameSystem;
-#endif
 
 //-----------------------------------------------------------------------------
 // String allocation
 //-----------------------------------------------------------------------------
 string_t AllocPooledString( const char *pszValue );
-#define AllocPooledStringConstant( pszValue ) AllocPooledString( pszValue )
+template <typename T1> [[gnu::always_inline]] inline auto AllocPooledStringConstant( T1 pszValue ) { return AllocPooledString( pszValue ); }
 string_t FindPooledString( const char *pszValue );
 void RemovePooledString( const char *pszValue );
 
-#define AssertIsValidString( s )	AssertMsg( s == NULL_STRING || s == FindPooledString( STRING(s) ), "Invalid string " #s );
+#define AssertIsValidString( s )	contract_assert( s == NULL_STRING || s == FindPooledString( STRING(s) ) );
 		 
 //-----------------------------------------------------------------------------
 // String system accessor
 //-----------------------------------------------------------------------------
-#if !defined( GC )
 IGameSystem *GameStringSystem();
-#endif
 
 //-----------------------------------------------------------------------------
 class CGameString
@@ -51,15 +45,15 @@ public:
 	~CGameString() 
 	{ 
 		if ( m_bCopy ) 
-			free( (void *)m_pszString ); 
+			std::free( (void *)m_pszString ); 
 	}
 
 	void Set( const char *pszString, bool bCopy = false )
 	{
 		if ( m_bCopy && m_pszString )
-			free( (void *)m_pszString );
+			std::free( (void *)m_pszString );
 		m_iszString = NULL_STRING;
-		m_pszString = ( !bCopy ) ? pszString : strdup( pszString );
+		m_pszString = ( !bCopy ) ? pszString : __builtin_strdup( pszString );
 	}
 
 	// This is only for temp variables!
@@ -116,5 +110,3 @@ private:
 	static int gm_iSerialNumber;
 
 };
-
-#endif // GAMESTRINGPOOL_H

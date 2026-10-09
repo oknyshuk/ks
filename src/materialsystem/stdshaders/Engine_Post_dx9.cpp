@@ -1,9 +1,5 @@
-//========= Copyright (c) 1996-2007, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
 #include "BaseVSShader.h"
 
@@ -31,7 +27,7 @@ ConVar mat_noise_enable( "mat_noise_enable", "0", FCVAR_MATERIAL_SYSTEM_THREAD |
 
 DEFINE_FALLBACK_SHADER( Engine_Post, Engine_Post_dx9 )
 BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (software anti-aliasing, bloom, color-correction", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( FBTEXTURE,				SHADER_PARAM_TYPE_TEXTURE,	"_rt_FullFrameFB",	"Full framebuffer texture" )
 		SHADER_PARAM( AAENABLE,					SHADER_PARAM_TYPE_BOOL,		"0",				"Enable software anti-aliasing" )
 		SHADER_PARAM( FXAAINTERNALC,			SHADER_PARAM_TYPE_VEC4,		"[0 0 0 0]",		"Internal fxaa Console values set via material proxy" )

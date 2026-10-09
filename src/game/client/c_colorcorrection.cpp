@@ -1,10 +1,21 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Color correction entity with simple radial falloff
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 
@@ -12,9 +23,7 @@
 #include "filesystem.h"
 #include "cdll_client_int.h"
 #include "colorcorrectionmgr.h"
-#include "materialsystem/MaterialSystemUtil.h"
 #include "iclientmode.h"
-
 
 static ConVar mat_colcorrection_disableentities( "mat_colcorrection_disableentities", "0", FCVAR_NONE, "Disable map color-correction entities" );
 
@@ -82,7 +91,7 @@ void C_ColorCorrection::OnDataChanged(DataUpdateType_t updateType)
 			char cleanName[MAX_PATH];
 			V_StripExtension( m_netLookupFilename, cleanName, sizeof( cleanName ) );
 			char name[MAX_PATH];
-			Q_snprintf( name, MAX_PATH, "%s_%d", cleanName, entindex() );
+			V_snprintf( name, MAX_PATH, "%s_%d", cleanName, entindex() );
 
 			m_CCHandle = g_pColorCorrectionMgr->AddColorCorrectionEntity( this, name, m_netLookupFilename );
 		}
@@ -99,7 +108,7 @@ bool C_ColorCorrection::ShouldDraw()
 
 void C_ColorCorrection::Update( C_BasePlayer *pPlayer, float ccScale )
 {
-	Assert( m_CCHandle != INVALID_CLIENT_CCHANDLE );
+	contract_assert( m_CCHandle != INVALID_CLIENT_CCHANDLE );
 
 	if ( mat_colcorrection_disableentities.GetInt() )
 	{
@@ -232,4 +241,3 @@ void UpdateColorCorrectionEntities( C_BasePlayer *pPlayer, float ccScale, C_Colo
 		pList[i]->Update(pPlayer, ccScale);
 	}
 }
-

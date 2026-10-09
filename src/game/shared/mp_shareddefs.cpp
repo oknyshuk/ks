@@ -1,12 +1,20 @@
-//====== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "vphysics_interface.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "igameevents.h"
+#include "ndebugoverlay.h"
+#endif
 #include "mp_shareddefs.h"
-
 
 const char *g_pszMPConcepts[] =
 {
@@ -81,11 +89,11 @@ const char *g_pszMPConcepts[] =
 int GetMPConceptIndexFromString( const char *pszConcept )
 {
 	// Make sure our concept string and enum arrays are the same length
-	Assert( ARRAYSIZE( g_pszMPConcepts ) == MP_TF_CONCEPT_COUNT );
+	contract_assert( std::size( g_pszMPConcepts ) == MP_TF_CONCEPT_COUNT );
 
-	for ( int iConcept = 0; iConcept < ARRAYSIZE( g_pszMPConcepts ); ++iConcept )
+	for ( int iConcept = 0; iConcept < std::size( g_pszMPConcepts ); ++iConcept )
 	{
-		if ( !Q_stricmp( pszConcept, g_pszMPConcepts[iConcept] ) )
+		if ( !V_stricmp( pszConcept, g_pszMPConcepts[iConcept] ) )
 			return iConcept;
 	}
 

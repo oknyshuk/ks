@@ -1,17 +1,10 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
+import ks.tier1;
 #include "dmxloader/dmxelement.h"
-#include <ctype.h>
-#include "tier1/serialization.h"
-#include "tier1/text_reader.h"
-#include "tier1/text_writer.h"
-#include <limits.h>
+import std;
 #include "dmxserializationdictionary.h"
-
 
 //-----------------------------------------------------------------------------
 // a simple class to keep track of a stack of valid parsed symbols
@@ -130,7 +123,7 @@ int CDmxKeyValues2ErrorStack::Push( std::string_view symName )
 void CDmxKeyValues2ErrorStack::Pop()
 {
 	m_errorIndex--;
-	Assert(m_errorIndex>=0);
+	contract_assert( m_errorIndex>=0 );
 }
 
 
@@ -139,7 +132,7 @@ void CDmxKeyValues2ErrorStack::Pop()
 //-----------------------------------------------------------------------------
 void CDmxKeyValues2ErrorStack::Reset( int stackLevel, std::string_view symName )
 {
-	Assert( stackLevel >= 0 && stackLevel < m_errorIndex );
+	contract_assert( stackLevel >= 0 && stackLevel < m_errorIndex );
 	m_errorStack[stackLevel] = symName;
 }
 
@@ -151,10 +144,10 @@ void CDmxKeyValues2ErrorStack::ReportError( const char *pFmt, ... )
 {
 	char temp[2048];
 
-	va_list args;
-	va_start( args, pFmt );
-	Q_vsnprintf( temp, sizeof( temp ), pFmt, args );
-	va_end( args );
+	std::va_list args;
+	__builtin_va_start( args, pFmt );
+	V_vsnprintf( temp, sizeof( temp ), pFmt, args );
+	__builtin_va_end( args );
 
 	Warning( "%s(%d) : %s\n", m_pFilename, m_nFileLine, temp );
 
@@ -319,7 +312,7 @@ DmxElementDictHandle_t CDmxElementDictionary::InsertElement( CDmxElement *pEleme
 //-----------------------------------------------------------------------------
 void CDmxElementDictionary::SetElementId( DmxElementDictHandle_t hElement, const DmObjectId_t &objectId )
 {
-	Assert( hElement != ELEMENT_DICT_HANDLE_INVALID );
+	contract_assert( hElement != ELEMENT_DICT_HANDLE_INVALID );
 	CopyUniqueId( objectId, &m_Dict[hElement].m_Id );
 }
 
@@ -406,7 +399,7 @@ void CDmxElementDictionary::HookUpElementAttributes()
 	int n = std::ssize( m_Attributes );
 	for ( int i = 0; i < n; ++i )
 	{
-		Assert( m_Attributes[i].m_bObjectId );
+		contract_assert( m_Attributes[i].m_bObjectId );
 
 		DmxElementDictHandle_t hElement = FindElement( m_Attributes[i].m_ObjectId );
 		CDmxElement *pElement = GetElement( hElement );
@@ -621,20 +614,21 @@ static int SortAttributeByName(const void *p1, const void *p2 )
 	const CDmxAttribute **ppAtt2 = (const CDmxAttribute**)p2;
 	const char *pAttName1 = (*ppAtt1)->GetName();
 	const char *pAttName2 = (*ppAtt2)->GetName();
-	return Q_stricmp( pAttName1, pAttName2 );
+	return V_stricmp( pAttName1, pAttName2 );
 }
 
 bool CDmxSerializerKeyValues2::SerializeAttributes( ks::text_writer &buf, CDmxSerializationDictionary &dict, CDmxElement *pElement )
 {
+	ks::ScratchArena<> scratch;
 	int nCount = pElement->AttributeCount();
-	CDmxAttribute **ppAttributes = (CDmxAttribute**)stackalloc( nCount * sizeof(CDmxAttribute*) );
+	CDmxAttribute **ppAttributes = scratch.Alloc<CDmxAttribute*>( nCount );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		ppAttributes[i] = pElement->GetAttribute( i );
 	}
 
 	// Sort by name
-	qsort( ppAttributes, nCount, sizeof(CDmxAttribute*), SortAttributeByName );
+	std::qsort( ppAttributes, nCount, sizeof(CDmxAttribute*), SortAttributeByName );
 
 	for ( int i = 0; i < nCount; ++i )
 	{
@@ -723,7 +717,7 @@ bool CDmxSerializerKeyValues2::Serialize( ks::text_writer &outBuf, CDmxElement *
 	SetSerializationDelimiter( &ks::c_string_escapes );
 	SetSerializationArrayDelimiter( "," );
 
-	bool bFlatMode = !Q_stricmp( pFormatName, "keyvalues2_flat" );
+	bool bFlatMode = !V_stricmp( pFormatName, "keyvalues2_flat" );
 
 	// Save elements, attribute links
 	CDmxSerializationDictionary dict;
@@ -751,7 +745,7 @@ bool CDmxSerializerKeyValues2::Serialize( ks::text_writer &outBuf, CDmxElement *
 void CDmxSerializerKeyValues2::EatWhitespacesAndComments( ks::text_reader &buf )
 {
 	const std::string_view text = buf.rest();
-	size_t nOffset = 0;
+	std::size_t nOffset = 0;
 	while ( nOffset < text.size() )
 	{
 		// Eat whitespaces, keep track of line count
@@ -795,7 +789,7 @@ CDmxSerializerKeyValues2::TokenType_t CDmxSerializerKeyValues2::ReadToken( ks::t
 		return TOKEN_EOF;
 
 	// Compute token length and type
-	size_t nLength = 0;
+	std::size_t nLength = 0;
 	TokenType_t t = TOKEN_INVALID;
 	switch( buf.peek_char() )
 	{
@@ -1004,7 +998,7 @@ bool CDmxSerializerKeyValues2::UnserializeElementArrayAttribute( ks::text_reader
 				return false;
 			}
 
-			Assert( IsUniqueIdValid( id ) );
+			contract_assert( IsUniqueIdValid( id ) );
 			m_ElementDict.AddArrayAttribute( pAttribute, id );
 		}
 		else
@@ -1288,9 +1282,9 @@ bool CDmxSerializerKeyValues2::UnserializeElement( ks::text_reader &buf, const c
 		const std::string attributeTypeStr = Unquote( tokenBuf );
 		const char *attributeType = attributeTypeStr.c_str();
 
-		if ( !Q_stricmp( "elementid", attributeType ) )
+		if ( !V_stricmp( "elementid", attributeType ) )
 		{
-			if ( Q_stricmp( "id", attributeName ) != 0 )
+			if ( V_stricmp( "id", attributeName ) != 0 )
 				return false; // elementid is no longer a valid attribute type - only the id should be of this type
 			if ( !UnserializeId( buf, hElement ) )
 				return false;
@@ -1300,7 +1294,7 @@ bool CDmxSerializerKeyValues2::UnserializeElement( ks::text_reader &buf, const c
 		DmAttributeType_t nAttrType = AT_UNKNOWN;
 		for ( int i = 0; i < AT_TYPE_COUNT; ++i )
 		{
-			if ( !Q_stricmp( CDmxAttribute::s_pAttributeTypeName[i], attributeType ) )
+			if ( !V_stricmp( CDmxAttribute::s_pAttributeTypeName[i], attributeType ) )
 			{
 				nAttrType = (DmAttributeType_t)i;
 				break;

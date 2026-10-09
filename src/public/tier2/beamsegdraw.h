@@ -1,16 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#if !defined( BEAMSEGDRAW_H )
-#define BEAMSEGDRAW_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #define NOISE_DIVISIONS		128
 
-
-#include "mathlib/vector.h"
+import std;
+import ks.math;
 #include "materialsystem/imesh.h"
 
 //-----------------------------------------------------------------------------
@@ -33,9 +28,9 @@ struct BeamSeg_t
 	void SetColor( float r, float g, float b, float a )
 	{
 		// Specify the points.
-		Assert( IsFinite(r) && IsFinite(g) && IsFinite(b) && IsFinite(a) );
-		Assert( (r >= 0.0) && (g >= 0.0) && (b >= 0.0) && (a >= 0.0) );
-		Assert( (r <= 1.0) && (g <= 1.0) && (b <= 1.0) && (a <= 1.0) );
+		contract_assert( IsFinite(r) && IsFinite(g) && IsFinite(b) && IsFinite(a) );
+		contract_assert( (r >= 0.0) && (g >= 0.0) && (b >= 0.0) && (a >= 0.0) );
+		contract_assert( (r <= 1.0) && (g <= 1.0) && (b <= 1.0) && (a <= 1.0) );
 
 		m_color.r = FastFToC( r );
 		m_color.g = FastFToC( g );
@@ -46,9 +41,9 @@ struct BeamSeg_t
 	void SetColor( float r, float g, float b )
 	{
 		// Specify the points.
-		Assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );
-		Assert( (r >= 0.0) && (g >= 0.0) && (b >= 0.0) );
-		Assert( (r <= 1.0) && (g <= 1.0) && (b <= 1.0) );
+		contract_assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );
+		contract_assert( (r >= 0.0) && (g >= 0.0) && (b >= 0.0) );
+		contract_assert( (r <= 1.0) && (g <= 1.0) && (b <= 1.0) );
 
 		m_color.r = FastFToC( r );
 		m_color.g = FastFToC( g );
@@ -58,9 +53,9 @@ struct BeamSeg_t
 	void SetAlpha( float a )
 	{
 		// Specify the points.
-		Assert( IsFinite(a) );
-		Assert( (a >= 0.0) );
-		Assert( (a <= 1.0) );
+		contract_assert( IsFinite(a) );
+		contract_assert( (a >= 0.0) );
+		contract_assert( (a <= 1.0) );
 
 		m_color.a = FastFToC( a );
 	}
@@ -114,7 +109,7 @@ public:
 	// Pass null for pMaterial if you have already set the material you want.
 	void			Start( IMatRenderContext *pRenderContext, int nSegs, IMaterial *pMaterial=0, CMeshBuilder *pMeshBuilder = nullptr, int nMeshVertCount = 0 );
 
-	void			ComputeRenderInfo( BeamSegRenderInfo_t *pRenderInfo, const Vector &vecCameraPos, int nSegCount, const BeamSeg_t *pSegs ) RESTRICT;
+	void			ComputeRenderInfo( BeamSegRenderInfo_t *pRenderInfo, const Vector &vecCameraPos, int nSegCount, const BeamSeg_t *pSegs ) __restrict__;
 	virtual void	NextSeg( BeamSeg_t *pSeg );
 	void			End();
 
@@ -154,5 +149,3 @@ protected:
 // Assumes the material has already been bound
 //-----------------------------------------------------------------------------
 void DrawSprite( const Vector &vecOrigin, float flWidth, float flHeight, color32 color );
-
-#endif // BEAMDRAW_H

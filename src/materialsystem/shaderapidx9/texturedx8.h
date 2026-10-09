@@ -1,20 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef TEXTUREDX8_H
-#define TEXTUREDX8_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "togl/rendermechanism.h"
 #include "bitmap/imageformat.h"
 #include "locald3dtypes.h"
 #include "shaderapi/ishaderapi.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -91,5 +82,3 @@ bool LockTexture( ShaderAPITextureHandle_t textureHandle, int copy, IDirect3DBas
 
 void UnlockTexture( ShaderAPITextureHandle_t textureHandle, int copy, IDirect3DBaseTexture* pTexture, int level, 
 	D3DCUBEMAP_FACES cubeFaceID );
-
-#endif // TEXTUREDX8_H

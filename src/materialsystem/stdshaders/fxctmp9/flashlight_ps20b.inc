@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $SFM == 0 ) && ( $UBERLIGHT == 1 )
 // !$WORLDVERTEXTRANSITION && $NORMALMAP2
@@ -24,7 +25,7 @@ private:
 public:
 	void SetSFM( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nSFM = i;
 #ifdef _DEBUG
 		m_bSFM = true;
@@ -32,7 +33,7 @@ public:
 	}
 	void SetSFM( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nSFM = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSFM = true;
@@ -46,7 +47,7 @@ private:
 public:
 	void SetNORMALMAP( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nNORMALMAP = i;
 #ifdef _DEBUG
 		m_bNORMALMAP = true;
@@ -54,7 +55,7 @@ public:
 	}
 	void SetNORMALMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nNORMALMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNORMALMAP = true;
@@ -68,7 +69,7 @@ private:
 public:
 	void SetNORMALMAP2( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nNORMALMAP2 = i;
 #ifdef _DEBUG
 		m_bNORMALMAP2 = true;
@@ -76,7 +77,7 @@ public:
 	}
 	void SetNORMALMAP2( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nNORMALMAP2 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNORMALMAP2 = true;
@@ -90,7 +91,7 @@ private:
 public:
 	void SetWORLDVERTEXTRANSITION( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nWORLDVERTEXTRANSITION = i;
 #ifdef _DEBUG
 		m_bWORLDVERTEXTRANSITION = true;
@@ -98,7 +99,7 @@ public:
 	}
 	void SetWORLDVERTEXTRANSITION( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWORLDVERTEXTRANSITION = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWORLDVERTEXTRANSITION = true;
@@ -112,7 +113,7 @@ private:
 public:
 	void SetSEAMLESS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSEAMLESS = i;
 #ifdef _DEBUG
 		m_bSEAMLESS = true;
@@ -120,7 +121,7 @@ public:
 	}
 	void SetSEAMLESS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSEAMLESS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSEAMLESS = true;
@@ -134,7 +135,7 @@ private:
 public:
 	void SetDETAILTEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDETAILTEXTURE = i;
 #ifdef _DEBUG
 		m_bDETAILTEXTURE = true;
@@ -142,7 +143,7 @@ public:
 	}
 	void SetDETAILTEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDETAILTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAILTEXTURE = true;
@@ -156,7 +157,7 @@ private:
 public:
 	void SetDETAIL_BLEND_MODE( int i )
 	{
-		Assert( i >= 0 && i <= 11 );
+		contract_assert( i >= 0 && i <= 11 );
 		m_nDETAIL_BLEND_MODE = i;
 #ifdef _DEBUG
 		m_bDETAIL_BLEND_MODE = true;
@@ -164,7 +165,7 @@ public:
 	}
 	void SetDETAIL_BLEND_MODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 11 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 11 );
 		m_nDETAIL_BLEND_MODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAIL_BLEND_MODE = true;
@@ -178,7 +179,7 @@ private:
 public:
 	void SetFLASHLIGHTDEPTHFILTERMODE( int i )
 	{
-		Assert( i >= 0 && i <= 3 );
+		contract_assert( i >= 0 && i <= 3 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -186,7 +187,7 @@ public:
 	}
 	void SetFLASHLIGHTDEPTHFILTERMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -200,7 +201,7 @@ private:
 public:
 	void SetDOPIXELFOG( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDOPIXELFOG = i;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -208,7 +209,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -261,7 +262,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bSFM && m_bNORMALMAP && m_bNORMALMAP2 && m_bWORLDVERTEXTRANSITION && m_bSEAMLESS && m_bDETAILTEXTURE && m_bDETAIL_BLEND_MODE && m_bFLASHLIGHTDEPTHFILTERMODE && m_bDOPIXELFOG;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 4 * m_nSFM ) + ( 4 * m_nNORMALMAP ) + ( 12 * m_nNORMALMAP2 ) + ( 24 * m_nWORLDVERTEXTRANSITION ) + ( 48 * m_nSEAMLESS ) + ( 96 * m_nDETAILTEXTURE ) + ( 192 * m_nDETAIL_BLEND_MODE ) + ( 2304 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 9216 * m_nDOPIXELFOG ) + 0;
 	}
@@ -277,7 +278,7 @@ private:
 public:
 	void SetFLASHLIGHTSHADOWS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLASHLIGHTSHADOWS = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = true;
@@ -285,7 +286,7 @@ public:
 	}
 	void SetFLASHLIGHTSHADOWS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHTSHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = true;
@@ -299,7 +300,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -307,7 +308,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -332,7 +333,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bFLASHLIGHTSHADOWS && m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nFLASHLIGHTSHADOWS ) + ( 2 * m_nPIXELFOGTYPE ) + 0;
 	}

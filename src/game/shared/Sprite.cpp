@@ -1,10 +1,56 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Implements visual effects entities: sprites, beams, bubbles, etc.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
@@ -18,8 +64,6 @@
 #include "Sprite.h"
 #include "model_types.h"
 #include "engine/ivmodelinfo.h"
-#include "tier0/vprof.h"
-#include "engine/ivdebugoverlay.h"
 
 #if defined( CLIENT_DLL )
 	#include "enginesprite.h"
@@ -412,7 +456,7 @@ void CSprite::Animate( float frames )
 #endif
 		{
 			if ( m_flMaxFrame > 0 )
-				m_flFrame = fmod( m_flFrame, m_flMaxFrame );
+				m_flFrame = std::fmod( m_flFrame, m_flMaxFrame );
 		}
 	}
 }
@@ -682,7 +726,7 @@ extern ConVar r_drawviewmodel;
 //-----------------------------------------------------------------------------
 int CSprite::DrawModel( int flags, const RenderableInstance_t &instance )
 {
-	VPROF_BUDGET( "CSprite::DrawModel", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "CSprite::DrawModel", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	//See if we should draw
 	if ( !IsVisible() || ( m_bReadyToDraw == false ) )
 		return 0;
@@ -705,7 +749,7 @@ int CSprite::DrawModel( int flags, const RenderableInstance_t &instance )
 		char msg[256];
 		V_snprintf( msg, 256, "Sprite %d has non-mod_sprite model %s (type %d)\n",
 			entindex(), modelName, modelinfo->GetModelType( GetModel() ) );
-		AssertMsgOnce( 0, msg );
+		contract_assert( 0 );
 		return 0;
 	}
 

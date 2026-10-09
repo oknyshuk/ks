@@ -1,10 +1,5 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "vertexlitgeneric_dx9_helper.h"
@@ -12,9 +7,8 @@
 #include "cloak_blended_pass_helper.h"
 #include "flesh_interior_blended_pass_helper.h"
 
-
 BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( ALBEDO, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "albedo (Base texture with no baked lighting)" )
 		SHADER_PARAM( COMPRESS, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "compression wrinklemap" )
 		SHADER_PARAM( STRETCH, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "expansion wrinklemap" )

@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Bot radio chatter system
-//
-// $NoKeywords: $
-//=============================================================================//
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
-
-#ifndef CS_BOT_CHATTER_H
-#define CS_BOT_CHATTER_H
-
 
 #include "nav_mesh.h"
 #include "cs_gamestate.h"
@@ -17,16 +12,16 @@
 class CCSBot;
 class BotChatterInterface;
 
-#define MAX_PLACES_PER_MAP 64
+inline constexpr auto MAX_PLACES_PER_MAP = 64;
 
 typedef unsigned int PlaceCriteria;
 
 typedef unsigned int CountCriteria;
-#define UNDEFINED_COUNT 0xFFFF
-#define COUNT_CURRENT_ENEMIES	0xFF		// use the number of enemies we see right when we speak
-#define COUNT_MANY 4						// equal to or greater than this is "many"
+inline constexpr auto UNDEFINED_COUNT = 0xFFFF;
+inline constexpr auto COUNT_CURRENT_ENEMIES = 0xFF; // use the number of enemies we see right when we speak
+inline constexpr auto COUNT_MANY = 4; // equal to or greater than this is "many"
 
-#define UNDEFINED_SUBJECT (-1)
+inline constexpr auto UNDEFINED_SUBJECT = (-1);
 
 /// @todo Make Place a class with member fuctions for this
 bool GetRandomSpotAtPlace( Place place, Vector *pPos );
@@ -673,11 +668,8 @@ class BotChatterCoop : public BotChatterInterface
 	typedef BotChatterInterface BaseClass;
 public:
 	BotChatterCoop( CCSBot *me );
-	virtual void KilledMyEnemy( int nVictimID ) OVERRIDE;
-	virtual void EnemiesRemaining( void ) OVERRIDE;
-	virtual void CelebrateWin( void ) OVERRIDE;
-	virtual void EnemySpotted( void ) OVERRIDE;
+	virtual void KilledMyEnemy( int nVictimID ) override;
+	virtual void EnemiesRemaining( void ) override;
+	virtual void CelebrateWin( void ) override;
+	virtual void EnemySpotted( void ) override;
 };
-
-
-#endif // CS_BOT_CHATTER_H

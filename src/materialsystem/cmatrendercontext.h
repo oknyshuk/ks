@@ -1,15 +1,9 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#ifndef CMATERIALRENDERSTATE_H
-#define CMATERIALRENDERSTATE_H
-
-
-#include "tier1/delegates.h"
-#include <vector>
+import ks.tier1;
+import std;
 #include "materialsystem_global.h"
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/ishaderapi.h"
@@ -20,13 +14,7 @@
 #include "imatrendercontextinternal.h"
 #include "occlusionquerymgr.h"
 #include "materialsystem/MaterialSystemUtil.h"
-#include "tier1/memstack.h"
 #include "rocketui/rocketui.h"
-
-#ifndef MATSYS_INTERNAL
-#error "This file is private to the implementation of IMaterialSystem/IMaterialSystemInternal"
-#endif
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -43,7 +31,7 @@ class CMatCallQueue;
 //-----------------------------------------------------------------------------
 // Render targets
 //-----------------------------------------------------------------------------
-#define MAX_RENDER_TARGETS 4
+inline constexpr auto MAX_RENDER_TARGETS = 4;
 
 
 //-----------------------------------------------------------------------------
@@ -69,7 +57,7 @@ public:
 	IMaterialInternal*						GetCurrentMaterialInternal() const								{ return m_pCurrentMaterial;	}	
 	virtual void							SetCurrentMaterialInternal(IMaterialInternal* pCurrentMaterial)	{
 																												m_pCurrentMaterial = pCurrentMaterial;
-																												Assert( (m_pCurrentMaterial == nullptr) || ((IMaterialInternal *)m_pCurrentMaterial)->IsRealTimeVersion() );
+																												contract_assert( (m_pCurrentMaterial == nullptr) || ((IMaterialInternal *)m_pCurrentMaterial)->IsRealTimeVersion() );
 																											}
 	IMaterial *								GetCurrentMaterial()											{ return GetCurrentMaterialInternal(); }
 	virtual void *							GetCurrentProxy()												{ return m_pCurrentProxyData; }
@@ -150,7 +138,7 @@ public:
 	int										RenderDataSizeUsed() const;
 	
 	// debugging
-	virtual void							PrintfVA( char *fmt, va_list vargs );
+	virtual void							PrintfVA( char *fmt, std::va_list vargs );
 	virtual void							Printf( char *fmt, ... );
 	virtual	float							Knob( char *knobname, float *setvalue = nullptr );
 	
@@ -289,16 +277,16 @@ public:
 
 	void									OnReleaseShaderObjects();
 
-	DELEGATE_TO_OBJECT_0V( 					EvictManagedResources, g_pShaderAPI );
+	void EvictManagedResources()	{ (g_pShaderAPI)->EvictManagedResources(); };
 
 	// Set the current texture that is a copy of the framebuffer.
 	void									SetFrameBufferCopyTexture( ITexture *pTexture, int textureIndex );
 
 	IMesh *									CreateStaticMesh( VertexFormat_t vertexFormat, const char *pTextureBudgetGroup, IMaterial * pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr );
-	DELEGATE_TO_OBJECT_1V(					DestroyStaticMesh, IMesh *, g_pShaderDevice );
+	void DestroyStaticMesh( IMesh * a1 )	{ (g_pShaderDevice)->DestroyStaticMesh( a1 ); };
 	IMesh *									GetDynamicMesh( bool buffered, IMesh* pVertexOverride = 0, IMesh* pIndexOverride = 0, IMaterial *pAutoBind = 0 );
 	virtual IMesh*							GetDynamicMeshEx( VertexFormat_t vertexFormat, bool bBuffered = true, IMesh* pVertexOverride = 0, IMesh* pIndexOverride = 0, IMaterial *pAutoBind = 0 );
-	DELEGATE_TO_OBJECT_0( IMesh *,			GetFlexMesh, g_pShaderAPI );
+	IMesh * GetFlexMesh()	{ return (g_pShaderAPI)->GetFlexMesh(); };
 
 // ------------ New Vertex/Index Buffer interface ----------------------------
 	IVertexBuffer *CreateStaticVertexBuffer( VertexFormat_t fmt, int nVertexCount, const char *pBudgetGroup )
@@ -311,13 +299,13 @@ public:
 		return g_pShaderDevice->CreateIndexBuffer( SHADER_BUFFER_TYPE_STATIC, fmt, nIndexCount, pBudgetGroup );
 	}
 
-	DELEGATE_TO_OBJECT_1V(					DestroyVertexBuffer, IVertexBuffer *, g_pShaderDevice );
-	DELEGATE_TO_OBJECT_1V(					DestroyIndexBuffer, IIndexBuffer *, g_pShaderDevice );
-	DELEGATE_TO_OBJECT_3( IVertexBuffer *, 	GetDynamicVertexBuffer, int, VertexFormat_t, bool, g_pShaderDevice );
-	DELEGATE_TO_OBJECT_0( IIndexBuffer *, 	GetDynamicIndexBuffer, g_pShaderDevice );
-	DELEGATE_TO_OBJECT_7V(					BindVertexBuffer, int, IVertexBuffer *, int, int, int, VertexFormat_t, int, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_2V(					BindIndexBuffer, IIndexBuffer *, int, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_3V(					Draw,  MaterialPrimitiveType_t, int, int, g_pShaderAPI );
+	void DestroyVertexBuffer( IVertexBuffer * a1 )	{ (g_pShaderDevice)->DestroyVertexBuffer( a1 ); };
+	void DestroyIndexBuffer( IIndexBuffer * a1 )	{ (g_pShaderDevice)->DestroyIndexBuffer( a1 ); };
+	IVertexBuffer * GetDynamicVertexBuffer( int a1, VertexFormat_t a2, bool a3 )	{ return (g_pShaderDevice)->GetDynamicVertexBuffer( a1, a2, a3 ); };
+	IIndexBuffer * GetDynamicIndexBuffer()	{ return (g_pShaderDevice)->GetDynamicIndexBuffer(); };
+	void BindVertexBuffer( int a1, IVertexBuffer * a2, int a3, int a4, int a5, VertexFormat_t a6, int a7 )	{ (g_pShaderAPI)->BindVertexBuffer( a1, a2, a3, a4, a5, a6, a7 ); };
+	void BindIndexBuffer( IIndexBuffer * a1, int a2 )	{ (g_pShaderAPI)->BindIndexBuffer( a1, a2 ); };
+	void Draw( MaterialPrimitiveType_t a1, int a2, int a3 )	{ (g_pShaderAPI)->Draw( a1, a2, a3 ); };
 // ------------ End ----------------------------
 
 	void									BindLocalCubemap( ITexture *pTexture );
@@ -355,9 +343,9 @@ public:
 	ShaderAPITextureHandle_t				GetPaintmapTexture( int nLightmapPage );
 
 	// Allows us to override the depth buffer setting of a material
-	DELEGATE_TO_OBJECT_3V(					OverrideDepthEnable, bool, bool, bool, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_2V(					OverrideAlphaWriteEnable, bool, bool, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_2V(					OverrideColorWriteEnable, bool, bool, g_pShaderAPI );
+	void OverrideDepthEnable( bool a1, bool a2, bool a3 )	{ (g_pShaderAPI)->OverrideDepthEnable( a1, a2, a3 ); };
+	void OverrideAlphaWriteEnable( bool a1, bool a2 )	{ (g_pShaderAPI)->OverrideAlphaWriteEnable( a1, a2 ); };
+	void OverrideColorWriteEnable( bool a1, bool a2 )	{ (g_pShaderAPI)->OverrideColorWriteEnable( a1, a2 ); };
 
 	// FIXME: This is a hack required for NVidia/XBox, can they fix in drivers?
 	void									DrawScreenSpaceQuad( IMaterial* pMaterial );
@@ -368,30 +356,30 @@ public:
 	void									BindLightmapPage( int lightmapPageID );
 	void									BindPaintTexture( ITexture *pTexture );
 
-	DELEGATE_TO_OBJECT_2V(					SetLights, int, const LightDesc_t *, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1V(					SetLightingOrigin, Vector, g_pShaderAPI );
+	void SetLights( int a1, const LightDesc_t * a2 )	{ (g_pShaderAPI)->SetLights( a1, a2 ); };
+	void SetLightingOrigin( Vector a1 )	{ (g_pShaderAPI)->SetLightingOrigin( a1 ); };
 
-	DELEGATE_TO_OBJECT_1V(					SetAmbientLightCube, LightCube_t, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_0V(					DisableAllLocalLights, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1V(					SetLightingState, const MaterialLightingState_t&, g_pShaderAPI );
+	void SetAmbientLightCube( LightCube_t a1 )	{ (g_pShaderAPI)->SetAmbientLightCube( a1 ); };
+	void DisableAllLocalLights()	{ (g_pShaderAPI)->DisableAllLocalLights(); };
+	void SetLightingState( const MaterialLightingState_t& a1 )	{ (g_pShaderAPI)->SetLightingState( a1 ); };
 
 	void									CopyRenderTargetToTexture( ITexture *pTexture );
 
 	void									ClearBuffers( bool bClearColor, bool bClearDepth, bool bClearStencil );
-	DELEGATE_TO_OBJECT_3V(					ClearColor3ub, unsigned char, unsigned char, unsigned char, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_4V(					ClearColor4ub, unsigned char, unsigned char, unsigned char, unsigned char, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_2V(					ClearBuffersObeyStencil, bool, bool, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_3V(					ClearBuffersObeyStencilEx, bool, bool, bool, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_0V(					PerformFullScreenStencilOperation, g_pShaderAPI );
+	void ClearColor3ub( unsigned char a1, unsigned char a2, unsigned char a3 )	{ (g_pShaderAPI)->ClearColor3ub( a1, a2, a3 ); };
+	void ClearColor4ub( unsigned char a1, unsigned char a2, unsigned char a3, unsigned char a4 )	{ (g_pShaderAPI)->ClearColor4ub( a1, a2, a3, a4 ); };
+	void ClearBuffersObeyStencil( bool a1, bool a2 )	{ (g_pShaderAPI)->ClearBuffersObeyStencil( a1, a2 ); };
+	void ClearBuffersObeyStencilEx( bool a1, bool a2, bool a3 )	{ (g_pShaderAPI)->ClearBuffersObeyStencilEx( a1, a2, a3 ); };
+	void PerformFullScreenStencilOperation()	{ (g_pShaderAPI)->PerformFullScreenStencilOperation(); };
 
 	// read to a unsigned char rgb image.
-	DELEGATE_TO_OBJECT_6V(					ReadPixels, int, int, int, int, unsigned char *, ImageFormat, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_7V(					ReadPixels, int, int, int, int, unsigned char *, ImageFormat, ITexture *, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_6V(					ReadPixelsAsync, int, int, int, int, unsigned char *, ImageFormat, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_7V(					ReadPixelsAsync, int, int, int, int, unsigned char *, ImageFormat, ITexture *, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_8V(					ReadPixelsAsync, int, int, int, int, unsigned char *, ImageFormat, ITexture *, CThreadEvent *, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_6V(					ReadPixelsAsyncGetResult, int, int, int, int, unsigned char *, ImageFormat, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_7V(					ReadPixelsAsyncGetResult, int, int, int, int, unsigned char *, ImageFormat, CThreadEvent *, g_pShaderAPI );
+	void ReadPixels( int a1, int a2, int a3, int a4, unsigned char * a5, ImageFormat a6 )	{ (g_pShaderAPI)->ReadPixels( a1, a2, a3, a4, a5, a6 ); };
+	void ReadPixels( int a1, int a2, int a3, int a4, unsigned char * a5, ImageFormat a6, ITexture * a7 )	{ (g_pShaderAPI)->ReadPixels( a1, a2, a3, a4, a5, a6, a7 ); };
+	void ReadPixelsAsync( int a1, int a2, int a3, int a4, unsigned char * a5, ImageFormat a6 )	{ (g_pShaderAPI)->ReadPixelsAsync( a1, a2, a3, a4, a5, a6 ); };
+	void ReadPixelsAsync( int a1, int a2, int a3, int a4, unsigned char * a5, ImageFormat a6, ITexture * a7 )	{ (g_pShaderAPI)->ReadPixelsAsync( a1, a2, a3, a4, a5, a6, a7 ); };
+	void ReadPixelsAsync( int a1, int a2, int a3, int a4, unsigned char * a5, ImageFormat a6, ITexture * a7, CThreadEvent * a8 )	{ (g_pShaderAPI)->ReadPixelsAsync( a1, a2, a3, a4, a5, a6, a7, a8 ); };
+	void ReadPixelsAsyncGetResult( int a1, int a2, int a3, int a4, unsigned char * a5, ImageFormat a6 )	{ (g_pShaderAPI)->ReadPixelsAsyncGetResult( a1, a2, a3, a4, a5, a6 ); };
+	void ReadPixelsAsyncGetResult( int a1, int a2, int a3, int a4, unsigned char * a5, ImageFormat a6, CThreadEvent * a7 )	{ (g_pShaderAPI)->ReadPixelsAsyncGetResult( a1, a2, a3, a4, a5, a6, a7 ); };
 	void									ReadPixelsAndStretch( Rect_t *pSrcRect, Rect_t *pDstRect, unsigned char *pBuffer, ImageFormat dstFormat, int nDstStride ) { g_pShaderAPI->ReadPixels( pSrcRect, pDstRect, pBuffer, dstFormat, nDstStride ); }
 
 	// Gets/sets viewport
@@ -400,32 +388,32 @@ public:
 	virtual void							DepthRange( float zNear, float zFar );
 
 	// Selection mode methods
-	DELEGATE_TO_OBJECT_1( int,				SelectionMode, bool, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_2V(					SelectionBuffer, unsigned int *, int, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_0V(					ClearSelectionNames, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1V(					LoadSelectionName, int, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1V(					PushSelectionName, int, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_0V(					PopSelectionName, g_pShaderAPI );
+	int SelectionMode( bool a1 )	{ return (g_pShaderAPI)->SelectionMode( a1 ); };
+	void SelectionBuffer( unsigned int * a1, int a2 )	{ (g_pShaderAPI)->SelectionBuffer( a1, a2 ); };
+	void ClearSelectionNames()	{ (g_pShaderAPI)->ClearSelectionNames(); };
+	void LoadSelectionName( int a1 )	{ (g_pShaderAPI)->LoadSelectionName( a1 ); };
+	void PushSelectionName( int a1 )	{ (g_pShaderAPI)->PushSelectionName( a1 ); };
+	void PopSelectionName()	{ (g_pShaderAPI)->PopSelectionName(); };
 
 	// Sets the cull mode
-	DELEGATE_TO_OBJECT_1V(					CullMode, MaterialCullMode_t, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_0V(					FlipCullMode, g_pShaderAPI );
+	void CullMode( MaterialCullMode_t a1 )	{ (g_pShaderAPI)->CullMode( a1 ); };
+	void FlipCullMode()	{ (g_pShaderAPI)->FlipCullMode(); };
 
-	DELEGATE_TO_OBJECT_0V(					BeginGeneratingCSMs, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_0V(					EndGeneratingCSMs, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_3V(					PerpareForCascadeDraw, int, float, float, g_pShaderAPI );
+	void BeginGeneratingCSMs()	{ (g_pShaderAPI)->BeginGeneratingCSMs(); };
+	void EndGeneratingCSMs()	{ (g_pShaderAPI)->EndGeneratingCSMs(); };
+	void PerpareForCascadeDraw( int a1, float a2, float a3 )	{ (g_pShaderAPI)->PerpareForCascadeDraw( a1, a2, a3 ); };
 
 	// Sets the number of bones for skinning
-	DELEGATE_TO_OBJECT_1V(					SetNumBoneWeights, int, g_pShaderAPI );
+	void SetNumBoneWeights( int a1 )	{ (g_pShaderAPI)->SetNumBoneWeights( a1 ); };
 
 	void									LoadBoneMatrix( int boneIndex, const matrix3x4_t& matrix );
-	DELEGATE_TO_OBJECT_3V(					SetFlexWeights, int, int, const MorphWeight_t*, g_pShaderAPI );
+	void SetFlexWeights( int a1, int a2, const MorphWeight_t* a3 )	{ (g_pShaderAPI)->SetFlexWeights( a1, a2, a3 ); };
 
 	// Fog-related methods
 	void									FogMode( MaterialFogMode_t fogMode )								{ g_pShaderAPI->SceneFogMode( fogMode ); }
-	DELEGATE_TO_OBJECT_1V(					FogStart, float, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1V(					FogEnd, float, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1V(					SetFogZ, float, g_pShaderAPI );
+	void FogStart( float a1 )	{ (g_pShaderAPI)->FogStart( a1 ); };
+	void FogEnd( float a1 )	{ (g_pShaderAPI)->FogEnd( a1 ); };
+	void SetFogZ( float a1 )	{ (g_pShaderAPI)->SetFogZ( a1 ); };
 	void									FogColor3f( float r, float g, float b );
 	void									FogColor3fv( const float* rgb );
 	void									FogColor3ub( unsigned char r, unsigned char g, unsigned char b )	{	g_pShaderAPI->SceneFogColor3ub( r, g, b ); }
@@ -434,7 +422,7 @@ public:
 
 	MaterialFogMode_t						GetFogMode( void )													{ return g_pShaderAPI->GetSceneFogMode(); }
 	void									GetFogColor( unsigned char *rgb )									{ g_pShaderAPI->GetSceneFogColor( rgb ); }
-	DELEGATE_TO_OBJECT_3V(					GetFogDistances, float *, float *, float *, g_pShaderAPI );
+	void GetFogDistances( float * a1, float * a2, float * a3 )	{ (g_pShaderAPI)->GetFogDistances( a1, a2, a3 ); };
 	int										GetCurrentNumBones( ) const											{ return g_pShaderAPI->GetCurrentNumBones(); }	
 
 	// Bind standard textures
@@ -450,18 +438,18 @@ public:
 	// planes (which are specified in world space) to generate projection-space user clip planes
 	// Occasionally (for the particle system in hl2, for example), we want to override that
 	// behavior and explictly specify a ViewProj transform for user clip planes
-	DELEGATE_TO_OBJECT_1V(					EnableUserClipTransformOverride, bool, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1V(					UserClipTransform, const VMatrix &, g_pShaderAPI );
+	void EnableUserClipTransformOverride( bool a1 )	{ (g_pShaderAPI)->EnableUserClipTransformOverride( a1 ); };
+	void UserClipTransform( const VMatrix & a1 )	{ (g_pShaderAPI)->UserClipTransform( a1 ); };
 
 	// Gets the window size
-	DELEGATE_TO_OBJECT_2VC(					GetWindowSize, int &, int &, g_pShaderDevice );
+	void GetWindowSize( int & a1, int & a2 )	const { (g_pShaderDevice)->GetWindowSize( a1, a2 ); };
 
 	// Methods related to occlusion query
 	OcclusionQueryObjectHandle_t			CreateOcclusionQueryObject();
-	DELEGATE_TO_OBJECT_1V(					DestroyOcclusionQueryObject, OcclusionQueryObjectHandle_t, g_pOcclusionQueryMgr );
-	DELEGATE_TO_OBJECT_1V(					BeginOcclusionQueryDrawing, OcclusionQueryObjectHandle_t, g_pOcclusionQueryMgr );
-	DELEGATE_TO_OBJECT_1V(					EndOcclusionQueryDrawing, OcclusionQueryObjectHandle_t, g_pOcclusionQueryMgr );
-	DELEGATE_TO_OBJECT_1V(					ResetOcclusionQueryObject, OcclusionQueryObjectHandle_t, g_pOcclusionQueryMgr );
+	void DestroyOcclusionQueryObject( OcclusionQueryObjectHandle_t a1 )	{ (g_pOcclusionQueryMgr)->DestroyOcclusionQueryObject( a1 ); };
+	void BeginOcclusionQueryDrawing( OcclusionQueryObjectHandle_t a1 )	{ (g_pOcclusionQueryMgr)->BeginOcclusionQueryDrawing( a1 ); };
+	void EndOcclusionQueryDrawing( OcclusionQueryObjectHandle_t a1 )	{ (g_pOcclusionQueryMgr)->EndOcclusionQueryDrawing( a1 ); };
+	void ResetOcclusionQueryObject( OcclusionQueryObjectHandle_t a1 )	{ (g_pOcclusionQueryMgr)->ResetOcclusionQueryObject( a1 ); };
 	int										OcclusionQuery_GetNumPixelsRendered( OcclusionQueryObjectHandle_t h );
 
 	bool									InFlashlightMode() const;
@@ -510,7 +498,7 @@ public:
 	
 	// Force writes only when z matches. . . useful for stenciling things out
 	// by rendering the desired Z values ahead of time.
-	DELEGATE_TO_OBJECT_1V(					ForceDepthFuncEquals, bool, g_pShaderAPI );
+	void ForceDepthFuncEquals( bool a1 )	{ (g_pShaderAPI)->ForceDepthFuncEquals( a1 ); };
 
 	// Two methods of building lightmap bits from floating point src data
 
@@ -530,27 +518,27 @@ public:
 	void									CopyRenderTargetToTextureEx( ITexture *pTexture, int nRenderTargetID, Rect_t *pSrcRect, Rect_t *pDstRect = nullptr );
 	void									CopyTextureToRenderTargetEx( int nRenderTargetID, ITexture *pTexture, Rect_t *pSrcRect, Rect_t *pDstRect = nullptr );
 	
-	DELEGATE_TO_OBJECT_2V(					SetFloatRenderingParameter, int, float, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_2V(					SetIntRenderingParameter, int, int, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_2V(					SetTextureRenderingParameter, int, ITexture *, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_2V(					SetVectorRenderingParameter, int, const Vector &, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1C( float,			GetFloatRenderingParameter, int, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1C( int,				GetIntRenderingParameter, int, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1C( ITexture *,		GetTextureRenderingParameter, int, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1C( Vector,			GetVectorRenderingParameter, int, g_pShaderAPI );
+	void SetFloatRenderingParameter( int a1, float a2 )	{ (g_pShaderAPI)->SetFloatRenderingParameter( a1, a2 ); };
+	void SetIntRenderingParameter( int a1, int a2 )	{ (g_pShaderAPI)->SetIntRenderingParameter( a1, a2 ); };
+	void SetTextureRenderingParameter( int a1, ITexture * a2 )	{ (g_pShaderAPI)->SetTextureRenderingParameter( a1, a2 ); };
+	void SetVectorRenderingParameter( int a1, const Vector & a2 )	{ (g_pShaderAPI)->SetVectorRenderingParameter( a1, a2 ); };
+	float GetFloatRenderingParameter( int a1 )	const { return (g_pShaderAPI)->GetFloatRenderingParameter( a1 ); };
+	int GetIntRenderingParameter( int a1 )	const { return (g_pShaderAPI)->GetIntRenderingParameter( a1 ); };
+	ITexture * GetTextureRenderingParameter( int a1 )	const { return (g_pShaderAPI)->GetTextureRenderingParameter( a1 ); };
+	Vector GetVectorRenderingParameter( int a1 )	const { return (g_pShaderAPI)->GetVectorRenderingParameter( a1 ); };
 
-	DELEGATE_TO_OBJECT_4V(					GetMaxToRender, IMesh *, bool, int *, int *, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1( int,				GetMaxVerticesToRender, IMaterial *, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_0( int,				GetMaxIndicesToRender, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_1V(					SetStencilState, const ShaderStencilState_t &, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_5V(					ClearStencilBufferRectangle, int, int, int, int, int, g_pShaderAPI );
+	void GetMaxToRender( IMesh * a1, bool a2, int * a3, int * a4 )	{ (g_pShaderAPI)->GetMaxToRender( a1, a2, a3, a4 ); };
+	int GetMaxVerticesToRender( IMaterial * a1 )	{ return (g_pShaderAPI)->GetMaxVerticesToRender( a1 ); };
+	int GetMaxIndicesToRender()	{ return (g_pShaderAPI)->GetMaxIndicesToRender(); };
+	void SetStencilState( const ShaderStencilState_t & a1 )	{ (g_pShaderAPI)->SetStencilState( a1 ); };
+	void ClearStencilBufferRectangle( int a1, int a2, int a3, int a4, int a5 )	{ (g_pShaderAPI)->ClearStencilBufferRectangle( a1, a2, a3, a4, a5 ); };
 
 	// PIX support
-	DELEGATE_TO_OBJECT_2V(					BeginPIXEvent, unsigned long, const char *, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_0V(					EndPIXEvent, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_2V(					SetPIXMarker, unsigned long, const char *, g_pShaderAPI );
+	void BeginPIXEvent( unsigned long a1, const char * a2 )	{ (g_pShaderAPI)->BeginPIXEvent( a1, a2 ); };
+	void EndPIXEvent()	{ (g_pShaderAPI)->EndPIXEvent(); };
+	void SetPIXMarker( unsigned long a1, const char * a2 )	{ (g_pShaderAPI)->SetPIXMarker( a1, a2 ); };
 
-	DELEGATE_TO_OBJECT_2V(					SetShadowDepthBiasFactors, float, float, g_pShaderAPI );
+	void SetShadowDepthBiasFactors( float a1, float a2 )	{ (g_pShaderAPI)->SetShadowDepthBiasFactors( a1, a2 ); };
 
 	void									BeginBatch( IMesh* pIndices );
 	void									BindBatch( IMesh* pVertices, IMaterial *pAutoBind = nullptr );
@@ -568,9 +556,9 @@ public:
 
 	CMaterialSystem							*GetMaterialSystem() const;
 
-	DELEGATE_TO_OBJECT_0V(					ForceHardwareSync, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_0V(					BeginFrame, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_0V(					EndFrame, g_pShaderAPI );
+	void ForceHardwareSync()	{ (g_pShaderAPI)->ForceHardwareSync(); };
+	void BeginFrame()	{ (g_pShaderAPI)->BeginFrame(); };
+	void EndFrame()	{ (g_pShaderAPI)->EndFrame(); };
 
 	virtual void							BeginMorphAccumulation();
 	virtual void							EndMorphAccumulation();
@@ -582,26 +570,26 @@ public:
 	virtual float							*LockSubDBuffer( int nNumRows );
 	virtual void							UnlockSubDBuffer();
 
-	DELEGATE_TO_OBJECT_1V(                  PushDeformation, const DeformationBase_t *, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_0V(                  PopDeformation, g_pShaderAPI );
-	DELEGATE_TO_OBJECT_0C( int,             GetNumActiveDeformations, g_pShaderAPI );
+	void PushDeformation( const DeformationBase_t * a1 )	{ (g_pShaderAPI)->PushDeformation( a1 ); };
+	void PopDeformation()	{ (g_pShaderAPI)->PopDeformation(); };
+	int GetNumActiveDeformations()	const { return (g_pShaderAPI)->GetNumActiveDeformations(); };
 
 	// Color correction related methods..
-	DELEGATE_TO_OBJECT_1V(					EnableColorCorrection, bool, g_pColorCorrectionSystem );
-	DELEGATE_TO_OBJECT_1( ColorCorrectionHandle_t, AddLookup, const char *, g_pColorCorrectionSystem );
-	DELEGATE_TO_OBJECT_1( bool,				RemoveLookup, ColorCorrectionHandle_t, g_pColorCorrectionSystem );
-	DELEGATE_TO_OBJECT_1V(					LockLookup, ColorCorrectionHandle_t, g_pColorCorrectionSystem );
-	DELEGATE_TO_OBJECT_2V(					LoadLookup, ColorCorrectionHandle_t, const char *, g_pColorCorrectionSystem );
-	DELEGATE_TO_OBJECT_1V(					UnlockLookup, ColorCorrectionHandle_t, g_pColorCorrectionSystem );
-	DELEGATE_TO_OBJECT_2V(					SetLookupWeight, ColorCorrectionHandle_t, float, g_pColorCorrectionSystem );
-	DELEGATE_TO_OBJECT_0V(					ResetLookupWeights, g_pColorCorrectionSystem );
-	DELEGATE_TO_OBJECT_2V(					SetResetable, ColorCorrectionHandle_t, bool, g_pColorCorrectionSystem );
+	void EnableColorCorrection( bool a1 )	{ (g_pColorCorrectionSystem)->EnableColorCorrection( a1 ); };
+	ColorCorrectionHandle_t AddLookup( const char * a1 )	{ return (g_pColorCorrectionSystem)->AddLookup( a1 ); };
+	bool RemoveLookup( ColorCorrectionHandle_t a1 )	{ return (g_pColorCorrectionSystem)->RemoveLookup( a1 ); };
+	void LockLookup( ColorCorrectionHandle_t a1 )	{ (g_pColorCorrectionSystem)->LockLookup( a1 ); };
+	void LoadLookup( ColorCorrectionHandle_t a1, const char * a2 )	{ (g_pColorCorrectionSystem)->LoadLookup( a1, a2 ); };
+	void UnlockLookup( ColorCorrectionHandle_t a1 )	{ (g_pColorCorrectionSystem)->UnlockLookup( a1 ); };
+	void SetLookupWeight( ColorCorrectionHandle_t a1, float a2 )	{ (g_pColorCorrectionSystem)->SetLookupWeight( a1, a2 ); };
+	void ResetLookupWeights()	{ (g_pColorCorrectionSystem)->ResetLookupWeights(); };
+	void SetResetable( ColorCorrectionHandle_t a1, bool a2 )	{ (g_pColorCorrectionSystem)->SetResetable( a1, a2 ); };
 
 	virtual void							SetFullScreenDepthTextureValidityFlag( bool bIsValid );
 
 
 
-	DELEGATE_TO_OBJECT_1V(					AntiAliasingHint, int, g_pShaderAPI );
+	void AntiAliasingHint( int a1 )	{ (g_pShaderAPI)->AntiAliasingHint( a1 ); };
 
 	// A special path used to tick the front buffer while loading on the 360
 	virtual void							SetNonInteractiveLogoTexture( ITexture *pTexture, float flNormalizedX, float flNormalizedY, float flNormalizedW, float flNormalizedH );
@@ -610,21 +598,21 @@ public:
 	virtual void							EnableNonInteractiveMode( MaterialNonInteractiveMode_t mode );
 	virtual void			                RefreshFrontBufferNonInteractive();
 
-	DELEGATE_TO_OBJECT_1V(					FlipCulling, bool, g_pShaderAPI );
+	void FlipCulling( bool a1 )	{ (g_pShaderAPI)->FlipCulling( a1 ); };
 
 //	DELEGATE_TO_OBJECT_1V(					EnableSinglePassFlashlightMode, bool, g_pShaderAPI );
 	virtual void							EnableSinglePassFlashlightMode( bool bEnable );	
 	virtual bool							SinglePassFlashlightModeEnabled() const;
 
-	DELEGATE_TO_OBJECT_2V(					DrawInstances, int, const MeshInstanceData_t *, g_pShaderAPI );
+	void DrawInstances( int a1, const MeshInstanceData_t * a2 )	{ (g_pShaderAPI)->DrawInstances( a1, a2 ); };
 
-	DELEGATE_TO_OBJECT_1V(                  UpdateGameTime, float, g_pShaderAPI );
+	void UpdateGameTime( float a1 )	{ (g_pShaderAPI)->UpdateGameTime( a1 ); };
 
 	//--------------------------------------------------------
 	// debug logging - no-op in queued context
 	//--------------------------------------------------------
 	virtual void							Printf( char *fmt, ... );
-	virtual void							PrintfVA( char *fmt, va_list vargs );;
+	virtual void							PrintfVA( char *fmt, std::va_list vargs );;
 	virtual float							Knob( char *knobname, float *setvalue=nullptr );	
 
 
@@ -635,7 +623,7 @@ public:
 	virtual void RenderRocketHUD(void *cmdList) { if (g_pRocketUI) g_pRocketUI->RenderHUDFrame(cmdList); }
 	virtual void RenderRocketMenu(void *cmdList) { if (g_pRocketUI) g_pRocketUI->RenderMenuFrame(cmdList); }
 
-	DELEGATE_TO_OBJECT_1( ColorCorrectionHandle_t, FindLookup, const char *, g_pColorCorrectionSystem );
+	ColorCorrectionHandle_t FindLookup( const char * a1 )	{ return (g_pColorCorrectionSystem)->FindLookup( a1 ); };
 
 	//---------------------------------------------------------
 protected:
@@ -797,5 +785,3 @@ inline CMaterialSystem *CMatRenderContext::GetMaterialSystem() const
 
 
 //-----------------------------------------------------------------------------
-
-#endif // CMATERIALRENDERSTATE_H

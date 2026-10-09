@@ -1,10 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
 // TextConsoleUnix.h: Unix interface for the TextConsole class.
 //
 //////////////////////////////////////////////////////////////////////
@@ -12,13 +10,9 @@
 #if !defined TEXTCONSOLE_UNIX_H
 #define TEXTCONSOLE_UNIX_H
 
-
-
-
-#include <termios.h>
-#include <stdio.h>
+import ks.platform;
+import std;
 #include "textconsole.h"
-
 
 typedef enum
 {
@@ -47,8 +41,8 @@ private:
 
 	bool m_bConDebug;
 
-	struct termios termStored;
-	FILE *tty;
+	ks::platform::terminal_state *termStored = nullptr;
+	std::FILE *tty;
 };
 
 

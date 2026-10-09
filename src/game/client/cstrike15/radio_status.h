@@ -1,13 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef RADIO_STATUS_H
-#define RADIO_STATUS_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+
+#include "igamesystem.h"
+#include "shareddefs.h"
 
 class IMaterial;
 
@@ -46,6 +43,3 @@ private:
 
 // Get the (global) voice manager. 
 CRadioStatus* RadioManager();
-
-
-#endif // RADIO_STATUS_H

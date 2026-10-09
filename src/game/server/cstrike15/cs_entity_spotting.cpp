@@ -1,16 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A game system for tracking and updating entity spot state
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "cs_entity_spotting.h"
 #include "cs_player.h"
 #include "cs_bot.h"
 #include "sensorgrenade_projectile.h"
 
-#define ENTITY_SPOT_FREQUENCY 0.5f
+constexpr auto ENTITY_SPOT_FREQUENCY = 0.5f;
 
 static CCSEntitySpotting s_EntitySpotting("CCSEntitySpotting");
 CCSEntitySpotting * g_EntitySpotting = &s_EntitySpotting;
@@ -28,7 +55,7 @@ ConVar radarmaxdot( "radarvismaxdot", ".996", FCVAR_CHEAT, "how closely you have
 template < typename SpotFunctor >
 bool ForEachEntitySpotter( SpotFunctor &func )
 {
-	VPROF( "ForEachEntitySpotter" );
+	CVProfScope _( "ForEachEntitySpotter", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	for ( int i = 1; i <= gpGlobals->maxClients; ++i )
 	{
 		CBasePlayer *player = static_cast< CBasePlayer * >( UTIL_PlayerByIndex( i ) );
@@ -196,10 +223,10 @@ public:
 				case 1: // new method method
 				{
 							int fov = csPlayer->GetFOVForNetworking() / 2;
-							float cosfov = cosf( ( float )fov*3.1415f / 180.0f );
+							float cosfov = std::cosf( ( float )fov*3.1415f / 180.0f );
 
 							float d = distance / radardist.GetFloat();
-							d = clamp( powf( d, radarpow.GetFloat() ), cosfov, radarmaxdot.GetFloat() );
+							d = clamp( std::powf( d, radarpow.GetFloat() ), cosfov, radarmaxdot.GetFloat() );
 
 							doTrace = ( dot > d );
 				}
@@ -453,8 +480,3 @@ bool CCSEntitySpotting::Init( void )
 {
 	return true;
 }
-
-
-
-
-

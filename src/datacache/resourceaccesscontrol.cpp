@@ -1,16 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <mutex>
+import std;
+import ks.tier1;
 #include "datacache/iresourceaccesscontrol.h"
-#include "tier1/utlvector.h"
-#include "tier1/utlstring.h"
 #include "tier2/tier2.h"
-#include "tier1/convar.h"
-
 
 //-----------------------------------------------------------------------------
 // NOTE: Necessary until we have all our resources wrangled.
@@ -70,8 +64,7 @@ private:
 //-----------------------------------------------------------------------------
 CResourceAccessControl g_ResourceAccessControl;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CResourceAccessControl, IResourceAccessControl, 
-	RESOURCE_ACCESS_CONTROL_INTERFACE_VERSION, g_ResourceAccessControl );
+static InterfaceReg s_Reg_CResourceAccessControl_IResourceAccessControl( []() -> void * { return static_cast<IResourceAccessControl *>( &g_ResourceAccessControl ); }, RESOURCE_ACCESS_CONTROL_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -93,8 +86,8 @@ static const char *s_pResourceTypeName[] =
 CResourceAccessControl::CResourceAccessControl()
 {
 	m_nThreadCount = 0;
-	memset( m_pLimitAccess, 0xFF, sizeof(m_pLimitAccess) );
-	memset( m_pThread, 0, sizeof(m_pThread) );
+	std::memset( m_pLimitAccess, 0xFF, sizeof(m_pLimitAccess) );
+	std::memset( m_pThread, 0, sizeof(m_pThread) );
 }
 
 
@@ -104,7 +97,7 @@ CResourceAccessControl::CResourceAccessControl()
 void CResourceAccessControl::Shutdown()
 {
 	DestroyAllResourceLists();
-	memset( m_pLimitAccess, 0xFF, sizeof(m_pLimitAccess) );
+	std::memset( m_pLimitAccess, 0xFF, sizeof(m_pLimitAccess) );
 	BaseClass::Shutdown();
 }
 
@@ -140,8 +133,8 @@ int CResourceAccessControl::FindOrAddCurrentThreadID()
 //-----------------------------------------------------------------------------
 void CResourceAccessControl::FixupResourceName( const char *pResourceName, char *pBuf, int nBufLen )
 {
-	Q_StripExtension( pResourceName, pBuf, nBufLen );
-	Q_FixSlashes( pBuf, '/' );
+	V_StripExtension( pResourceName, pBuf, nBufLen );
+	V_FixSlashes( pBuf, '/' );
 	V_RemoveDotSlashes( pBuf, '/' );
 }
 
@@ -159,7 +152,7 @@ ResourceList_t CResourceAccessControl::CreateResourceList( const char *pDebugNam
 void CResourceAccessControl::DestroyAllResourceLists( )
 {
 	m_ResourceLists.clear(); m_ResourceLists.shrink_to_fit();
-	memset( m_pLimitAccess, 0xFF, sizeof(m_pLimitAccess) );
+	std::memset( m_pLimitAccess, 0xFF, sizeof(m_pLimitAccess) );
 }
 
 bool CResourceAccessControl::ContainsResource( ResourceList_t hResourceList, ResourceTypeOld_t nType, const char *pResourceName )
@@ -172,7 +165,7 @@ bool CResourceAccessControl::ContainsResource( ResourceList_t hResourceList, Res
 	int nCount = std::ssize( list );
 	for ( int i = 0; i < nCount; ++i )
 	{
-		if ( !Q_stricmp( pBuf, list[i].data() ) )
+		if ( !V_stricmp( pBuf, list[i].data() ) )
 			return true;
 	}
 	return false;
@@ -216,7 +209,7 @@ bool CResourceAccessControl::IsAccessAllowed( ResourceTypeOld_t nType, const cha
 	if ( ContainsResource( (ResourceList_t)( intp )hResourceList, nType, pResourceName ) )
 		return true;
 
-	COMPILE_TIME_ASSERT( ARRAYSIZE( s_pResourceTypeName ) == RESOURCE_TYPE_OLD_COUNT );
+	static_assert( std::size( s_pResourceTypeName ) == RESOURCE_TYPE_OLD_COUNT );
 	Warning( "Access to %s resource \"%s\" denied. Missing precache in %s?\n",
 		s_pResourceTypeName[nType], pResourceName, m_ResourceLists[hResourceList].m_DebugName.data() );
 

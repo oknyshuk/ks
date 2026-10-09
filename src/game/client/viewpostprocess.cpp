@@ -1,17 +1,24 @@
-//========== Copyright (c) 2008, Valve Corporation, All rights reserved. ==========
-//
-// Purpose:
-//
-//=================================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2008 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "materialsystem/materialsystem_config.h"
-#include "tier1/callqueue.h"
 #include "colorcorrectionmgr.h"
 #include "view_scene.h"
 #include "c_world.h"
@@ -23,11 +30,9 @@
 #include "bitmap/tgawriter.h"
 #include "filesystem.h"
 
-
 #include "weapon_csbase.h"
 #include "c_cs_player.h"
 
-#include "tier0/memalloc.h"
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -512,9 +517,9 @@ enum HistogramEntryState_t
 	HESTATE_QUERY_DONE,
 };
 
-#define NUM_HISTOGRAM_BUCKETS 31
-#define NUM_HISTOGRAM_BUCKETS_NEW 17
-#define MAX_QUERIES_PER_FRAME 1
+constexpr auto NUM_HISTOGRAM_BUCKETS = 31;
+constexpr auto NUM_HISTOGRAM_BUCKETS_NEW = 17;
+constexpr auto MAX_QUERIES_PER_FRAME = 1;
 
 class CHistogramBucket
 {
@@ -654,7 +659,7 @@ void CHistogramBucket::IssueQuery( int nFrameNum )
 	m_nFrameQueued = nFrameNum;
 }
 
-#define HISTOGRAM_BAR_SIZE 200
+constexpr auto HISTOGRAM_BAR_SIZE = 200;
 
 class CTonemapSystem
 {
@@ -699,7 +704,7 @@ public:
 		m_flCurrentTonemapScale = 1.0f;
 
 		m_nNumMovingAverageValid = 0;
-		for ( int i = 0; i < ARRAYSIZE( m_movingAverageTonemapScale ) - 1; i++ )
+		for ( int i = 0; i < std::size( m_movingAverageTonemapScale ) - 1; i++ )
 		{
 			m_movingAverageTonemapScale[i] = 1.0f;
 		}
@@ -1035,7 +1040,7 @@ void CTonemapSystem::UpdateBucketRanges()
 			if ( mat_tonemap_algorithm.GetInt() == 0 ) // Original algorithm
 			{
 				// Use a logarithmic ramp for high range in the low range
-				pBucket->m_flMinLuminance = -0.01f + exp( FLerp( log( 0.01f ), log( 0.01f + 1.0f ), 0.0f, nNumHistogramBuckets - 1.0f, nBucket ) );
+				pBucket->m_flMinLuminance = -0.01f + std::exp( FLerp( std::log( 0.01f ), log( 0.01f + 1.0f ), 0.0f, nNumHistogramBuckets - 1.0f, nBucket ) );
 				pBucket->m_flMaxLuminance = -0.01f + exp( FLerp( log( 0.01f ), log( 0.01f + 1.0f ), 0.0f, nNumHistogramBuckets - 1.0f, nBucket + 1.0f ) );
 			}
 			else
@@ -1045,7 +1050,7 @@ void CTonemapSystem::UpdateBucketRanges()
 				pBucket->m_flMaxLuminance = float( nBucket + 1 ) / float( nNumHistogramBuckets - 1 );
 
 				// Use a distribution with slightly more bins in the low range
-				pBucket->m_flMinLuminance = pBucket->m_flMinLuminance > 0.0f ? powf( pBucket->m_flMinLuminance, 2.5f ) : pBucket->m_flMinLuminance;
+				pBucket->m_flMinLuminance = pBucket->m_flMinLuminance > 0.0f ? std::powf( pBucket->m_flMinLuminance, 2.5f ) : pBucket->m_flMinLuminance;
 				pBucket->m_flMaxLuminance = pBucket->m_flMaxLuminance > 0.0f ? powf( pBucket->m_flMaxLuminance, 2.5f ) : pBucket->m_flMaxLuminance;
 			}
 		}
@@ -1337,7 +1342,7 @@ void CTonemapSystem::ResetTonemappingScale( float flTonemapScale )
 
 void CTonemapSystem::SetTargetTonemappingScale( float flTonemapScale )
 {
-	Assert( IsFinite( flTonemapScale ) );
+	contract_assert( IsFinite( flTonemapScale ) );
 	if ( IsFinite( flTonemapScale ) )
 	{
 		m_flTargetTonemapScale = flTonemapScale;
@@ -1377,36 +1382,36 @@ void ResetToneMapping( float flTonemappingScale )
 
 void CTonemapSystem::SetTonemapScale( IMatRenderContext *pRenderContext, float flTargetTonemapScalar, float flMinValue, float flMaxValue )
 {
-	Assert( IsFinite( flTargetTonemapScalar ) );
+	contract_assert( IsFinite( flTargetTonemapScalar ) );
 	if ( !IsFinite( flTargetTonemapScalar ) )
 		return;
 
 	//=========================================================================//
 	// Save off new target tonemap scalar so we can compute a weighted average //
 	//=========================================================================//
-	if ( m_nNumMovingAverageValid < ARRAYSIZE( m_movingAverageTonemapScale ))
+	if ( m_nNumMovingAverageValid < std::size( m_movingAverageTonemapScale ))
 	{
 		m_movingAverageTonemapScale[ m_nNumMovingAverageValid++ ] = flTargetTonemapScalar;
 	}
 	else
 	{
 		// Scroll, losing oldest
-		for ( int i = 0; i < ARRAYSIZE( m_movingAverageTonemapScale ) - 1; i++ )
+		for ( int i = 0; i < std::size( m_movingAverageTonemapScale ) - 1; i++ )
 			m_movingAverageTonemapScale[ i ] = m_movingAverageTonemapScale[ i + 1 ];
-		m_movingAverageTonemapScale[ ARRAYSIZE( m_movingAverageTonemapScale ) - 1 ] = flTargetTonemapScalar;
+		m_movingAverageTonemapScale[ std::size( m_movingAverageTonemapScale ) - 1 ] = flTargetTonemapScalar;
 	}
 
 	//==================================================================//
 	// Compute a weighted average of the last 10 target tonemap scalars //
 	//==================================================================//
-	if ( m_nNumMovingAverageValid == ARRAYSIZE( m_movingAverageTonemapScale ) ) // If we have a full buffer
+	if ( m_nNumMovingAverageValid == std::size( m_movingAverageTonemapScale ) ) // If we have a full buffer
 	{
 		float flWeightedAverage = 0.0f;
 		float flSumWeights = 0.0f;
-		int iMidPoint = ARRAYSIZE( m_movingAverageTonemapScale ) / 2;
-		for ( int i = 0; i < ARRAYSIZE( m_movingAverageTonemapScale ); i++ )
+		int iMidPoint = std::size( m_movingAverageTonemapScale ) / 2;
+		for ( int i = 0; i < std::size( m_movingAverageTonemapScale ); i++ )
 		{
-			float flWeight = abs( i - iMidPoint ) * ( 1.0f / ( ARRAYSIZE( m_movingAverageTonemapScale ) / 2 ) );
+			float flWeight = abs( i - iMidPoint ) * ( 1.0f / ( std::size( m_movingAverageTonemapScale ) / 2 ) );
 			flSumWeights += flWeight;
 			flWeightedAverage += flWeight * m_movingAverageTonemapScale[i];
 		}
@@ -1462,7 +1467,7 @@ void CTonemapSystem::SetTonemapScale( IMatRenderContext *pRenderContext, float f
 
 		if ( !IsFinite( m_flCurrentTonemapScale ) )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			m_flCurrentTonemapScale = m_flTargetTonemapScale;
 		}
 	}
@@ -2018,8 +2023,8 @@ static void DumpTGAofRenderTarget( const int width, const int height, const char
 	g_pMemAlloc->Free( pImage );
 
 	// async write to disk (this will take ownership of the memory)
-	char szPathedFileName[_MAX_PATH];
-	Q_snprintf( szPathedFileName, sizeof(szPathedFileName), "//MOD/%d_%s_%s.tga", s_nRTIndex++, pFilename, "PC" );
+	char szPathedFileName[k_cMaxPath];
+	V_snprintf( szPathedFileName, sizeof(szPathedFileName), "//MOD/%d_%s_%s.tga", s_nRTIndex++, pFilename, "PC" );
 
 	FileHandle_t fileTGA = filesystem->Open( szPathedFileName, "wb" );
 	filesystem->Write( buffer.data(), buffer.size(), fileTGA );
@@ -2034,12 +2039,12 @@ static bool s_bScreenEffectTextureIsUpdated = false;
 static void DownsampleFBQuarterSize( IMatRenderContext *pRenderContext, int nSrcWidth, int nSrcHeight, ITexture* pDest,
 									 bool bFloatHDR = false )
 {
-	Assert( pRenderContext );
-	Assert( pDest );
+	contract_assert( pRenderContext );
+	contract_assert( pDest );
 
 	// *Everything* in here relies on the small RTs being exactly 1/4 the full FB res
-	Assert( pDest->GetActualWidth()  == nSrcWidth  / 4 );
-	Assert( pDest->GetActualHeight() == nSrcHeight / 4 );
+	contract_assert( pDest->GetActualWidth()  == nSrcWidth  / 4 );
+	contract_assert( pDest->GetActualHeight() == nSrcHeight / 4 );
 
 	IMaterial *downsample_mat;
 	{
@@ -2111,10 +2116,10 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext,
 
 
 	// *Everything* in here relies on the small RTs being exactly 1/4 the full FB res
-	Assert( dest_rt0->GetActualWidth()  == pSrc->GetActualWidth()  / 4 );
-	Assert( dest_rt0->GetActualHeight() == pSrc->GetActualHeight() / 4 );
-	Assert( dest_rt1->GetActualWidth()  == pSrc->GetActualWidth()  / 4 );
-	Assert( dest_rt1->GetActualHeight() == pSrc->GetActualHeight() / 4 );
+	contract_assert( dest_rt0->GetActualWidth()  == pSrc->GetActualWidth()  / 4 );
+	contract_assert( dest_rt0->GetActualHeight() == pSrc->GetActualHeight() / 4 );
+	contract_assert( dest_rt1->GetActualWidth()  == pSrc->GetActualWidth()  / 4 );
+	contract_assert( dest_rt1->GetActualHeight() == pSrc->GetActualHeight() / 4 );
 
 	// downsample fb to rt0
 	if ( bExtractBloomRange )
@@ -2269,7 +2274,7 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 	}
 	
 	CMatRenderContextPtr pRenderContext( materials );
-	PIXEVENT( pRenderContext, "DoEnginePostProcessing" );
+	( pRenderContext, "DoEnginePostProcessing" );
 
 	if ( r_queued_post_processing.GetInt() )
 	{
@@ -3132,8 +3137,8 @@ bool IsDepthOfFieldEnabled()
 
 static inline bool SetMaterialVarFloat( IMaterial* pMat, const char* pVarName, float flValue )
 {
-	Assert( pMat != nullptr );
-	Assert( pVarName != nullptr );
+	contract_assert( pMat != nullptr );
+	contract_assert( pVarName != nullptr );
 	if ( pMat == nullptr || pVarName == nullptr )
 	{
 		return false;
@@ -3151,8 +3156,8 @@ static inline bool SetMaterialVarFloat( IMaterial* pMat, const char* pVarName, f
 
 static inline bool SetMaterialVarInt( IMaterial* pMat, const char* pVarName, int nValue )
 {
-	Assert( pMat != nullptr );
-	Assert( pVarName != nullptr );
+	contract_assert( pMat != nullptr );
+	contract_assert( pVarName != nullptr );
 	if ( pMat == nullptr || pVarName == nullptr )
 	{
 		return false;
@@ -3195,8 +3200,8 @@ void DoDepthOfField( const CViewSetup &view )
 		ITexture *dest_rt0 = materials->FindTexture( "_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET );
 
 		// *Everything* in here relies on the small RTs being exactly 1/4 the full FB res
-		Assert( dest_rt0->GetActualWidth()  == pSrc->GetActualWidth()  / 4 );
-		Assert( dest_rt0->GetActualHeight() == pSrc->GetActualHeight() / 4 );
+		contract_assert( dest_rt0->GetActualWidth()  == pSrc->GetActualWidth()  / 4 );
+		contract_assert( dest_rt0->GetActualHeight() == pSrc->GetActualHeight() / 4 );
 
 		// Downsample fb to rt0
 		DownsampleFBQuarterSize( pRenderContext, nSrcWidth, nSrcHeight, dest_rt0, true );
@@ -3432,8 +3437,8 @@ void BlurEntity( IClientRenderable *pRenderable, bool bPreDraw, int drawFlags, c
 		/////////////////////////////////////	
 
 		// *Everything* in here relies on the small RTs being exactly 1/4 the full FB res
-		Assert( dest_rt[0]->GetActualWidth()  == pFullFrameFB->GetActualWidth()  / 4 );
-		Assert( dest_rt[0]->GetActualHeight() == pFullFrameFB->GetActualHeight() / 4 );
+		contract_assert( dest_rt[0]->GetActualWidth()  == pFullFrameFB->GetActualWidth()  / 4 );
+		contract_assert( dest_rt[0]->GetActualHeight() == pFullFrameFB->GetActualHeight() / 4 );
 
 		// Downsample fb to rt0
 		DownsampleFBQuarterSize( pRenderContext, nSrcWidth, nSrcHeight, dest_rt[0], true );

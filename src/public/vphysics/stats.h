@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef STATS_H
-#define STATS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // internal counters to measure cost of physics simulation
 struct physics_stats_t
@@ -32,6 +27,3 @@ struct physics_stats_t
 
 	int		frictionEventsProcessed;
 };
-
-
-#endif // STATS_H

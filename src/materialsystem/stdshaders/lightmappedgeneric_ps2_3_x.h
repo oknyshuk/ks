@@ -1,28 +1,28 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-//	SKIP: $NORMALMAPALPHAENVMAPMASK && $BASEALPHAENVMAPMASK
+// SKIP: $NORMALMAPALPHAENVMAPMASK && $BASEALPHAENVMAPMASK
 //	SKIP: $NORMALMAPALPHAENVMAPMASK && $ENVMAPMASK
 //	SKIP: $BASEALPHAENVMAPMASK && $ENVMAPMASK
 //	SKIP: $BASEALPHAENVMAPMASK && $SELFILLUM
-//  SKIP: !$FASTPATH && $FASTPATHENVMAPCONTRAST
-//  SKIP: !$FASTPATH && $FASTPATHENVMAPTINT
+// SKIP: !$FASTPATH && $FASTPATHENVMAPCONTRAST
+// SKIP: !$FASTPATH && $FASTPATHENVMAPTINT
 //	SKIP: !$BUMPMAP && $BUMPMAP2
 //	SKIP: $BASEALPHAENVMAPMASK && ( $BUMPMAP && !$ENVMAPANISOTROPY )
-//  SKIP: $SEAMLESS && ( $DETAIL_BLEND_MODE != 12 )
-//  SKIP: $BUMPMASK && ( $SEAMLESS ||  ( $DETAILTEXTURE != 12 ) || $SELFILLUM || $BASETEXTURE2 )
-//  SKIP: $ENVMAPANISOTROPY && !$ENVMAP && ( $BUMPMAP != 1 )
-//  SKIP: $ENVMAPANISOTROPY && $NORMALMAPALPHAENVMAPMASK
-//  SKIP: !$BUMPMAP && $ADDBUMPMAPS
-//  SKIP: !$BUMPMAP2 && $ADDBUMPMAPS
-//  SKIP: $BUMPMASK && $ADDBUMPMAPS
-//  SKIP: $ADDBUMPMAPS && ( $DETAIL_BLEND_MODE != 12 ) [ps20]
-//  SKIP: ( $DETAIL == 2 ) && !$BASETEXTURE2
-
+// SKIP: $SEAMLESS && ( $DETAIL_BLEND_MODE != 12 )
+// SKIP: $BUMPMASK && ( $SEAMLESS ||  ( $DETAILTEXTURE != 12 ) || $SELFILLUM || $BASETEXTURE2 )
+// SKIP: $ENVMAPANISOTROPY && !$ENVMAP && ( $BUMPMAP != 1 )
+// SKIP: $ENVMAPANISOTROPY && $NORMALMAPALPHAENVMAPMASK
+// SKIP: !$BUMPMAP && $ADDBUMPMAPS
+// SKIP: !$BUMPMAP2 && $ADDBUMPMAPS
+// SKIP: $BUMPMASK && $ADDBUMPMAPS
+// SKIP: $ADDBUMPMAPS && ( $DETAIL_BLEND_MODE != 12 ) [ps20]
+// SKIP: ( $DETAIL == 2 ) && !$BASETEXTURE2
 // 360 compiler craps out on some combo in this family.  Content doesn't use blendmode 10 anyway
-//  SKIP: $FASTPATH && $PIXELFOGTYPE && $BASETEXTURE2 && $CUBEMAP && ($DETAIL_BLEND_MODE == 10 ) [CONSOLE]
-
+// SKIP: $FASTPATH && $PIXELFOGTYPE && $BASETEXTURE2 && $CUBEMAP && ($DETAIL_BLEND_MODE == 10 ) [CONSOLE]
 // Turning off 32bit lightmaps on Portal 2 to save shader perf. --Thorsten
-//#define USE_32BIT_LIGHTMAPS_ON_360 //uncomment to use 32bit lightmaps, be sure to keep this in sync with the same #define in materialsystem/cmatlightmaps.cpp
+// #define USE_32BIT_LIGHTMAPS_ON_360 //uncomment to use 32bit lightmaps, be sure to keep this in sync with the same #define in materialsystem/cmatlightmaps.cpp
 
 #if defined( SHADER_MODEL_PS_2_0 )
 //#error ps2.0 support removed for this shader

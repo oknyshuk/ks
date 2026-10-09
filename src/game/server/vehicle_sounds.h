@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef VEHICLE_SOUNDS_H
-#define VEHICLE_SOUNDS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "vcollide_parse.h"
+#include "string_t.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -30,7 +26,7 @@ enum vehiclesound
 extern char *vehiclesound_parsenames[VS_NUM_SOUNDS];
 
 // This is a list of vehiclesounds to automatically stop when the vehicle's driver exits the vehicle
-#define NUM_SOUNDS_TO_STOP_ON_EXIT	4
+inline constexpr auto NUM_SOUNDS_TO_STOP_ON_EXIT = 4;
 extern vehiclesound g_iSoundsToStopOnExit[NUM_SOUNDS_TO_STOP_ON_EXIT];
 
 //-----------------------------------------------------------------------------
@@ -127,5 +123,3 @@ private:
 	int	m_iCurrentState;
 	int m_iCurrentCrashSound;
 };
-
-#endif // VEHICLE_SOUNDS_H

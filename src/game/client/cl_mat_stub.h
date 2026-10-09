@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef MAT_STUB_H
-#define MAT_STUB_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class IMaterialSystem;
 
@@ -31,6 +24,3 @@ public:
 
 // Returns true if mat_stub is 1.
 bool IsMatStubEnabled();
-
-
-#endif // MAT_STUB_H

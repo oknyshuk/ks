@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( ( $COMPOSITEMODE == 1 ) && ( $SKINNING != 0 ) )
 // ( ( $COMPOSITEMODE == 1 ) && ( $NUM_LIGHTS != 0 ) )
@@ -13,7 +14,7 @@ private:
 public:
 	void SetCOMPOSITEMODE( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nCOMPOSITEMODE = i;
 #ifdef _DEBUG
 		m_bCOMPOSITEMODE = true;
@@ -21,7 +22,7 @@ public:
 	}
 	void SetCOMPOSITEMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nCOMPOSITEMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPOSITEMODE = true;
@@ -42,7 +43,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bCOMPOSITEMODE;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 20 * m_nCOMPOSITEMODE ) + 0;
 	}
@@ -58,7 +59,7 @@ private:
 public:
 	void SetSKINNING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSKINNING = i;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -66,7 +67,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -80,7 +81,7 @@ private:
 public:
 	void SetCOMPRESSED_VERTS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOMPRESSED_VERTS = i;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -88,7 +89,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -102,7 +103,7 @@ private:
 public:
 	void SetNUM_LIGHTS( int i )
 	{
-		Assert( i >= 0 && i <= 4 );
+		contract_assert( i >= 0 && i <= 4 );
 		m_nNUM_LIGHTS = i;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -110,7 +111,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -139,7 +140,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bSKINNING && m_bCOMPRESSED_VERTS && m_bNUM_LIGHTS;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nSKINNING ) + ( 2 * m_nCOMPRESSED_VERTS ) + ( 4 * m_nNUM_LIGHTS ) + 0;
 	}

@@ -1,14 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef VERTEXDECL_H
-#define VERTEXDECL_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "locald3dtypes.h"
 #include "materialsystem/imaterial.h"
@@ -19,7 +11,6 @@
 //		or NULL if all the streams should be mapped in a default manner
 //
 
-
 //-----------------------------------------------------------------------------
 // Gets the declspec associated with a vertex format
 //-----------------------------------------------------------------------------
@@ -29,7 +20,3 @@ IDirect3DVertexDeclaration9 *FindOrCreateVertexDecl( VertexFormat_t fmt, bool bS
 // Clears out all declspecs
 //-----------------------------------------------------------------------------
 void ReleaseAllVertexDecl( );
-
-
-#endif // VERTEXDECL_H 
-

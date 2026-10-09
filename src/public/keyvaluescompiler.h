@@ -1,26 +1,14 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef KEYVALUESCOMPILER_H
-#define KEYVALUESCOMPILER_H
+import ks.tier1;
+import std;
 
-#include "tier0/platform.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier1/filename_table.h"
-#include <map>
-#include <set>
-#include <string>
-#include <vector>
-
-class KeyValues;
 
 #define COMPILED_KEYVALUES_ID	MAKEID( 'V', 'K', 'V', 'F' )
 
-#define COMPILED_KEYVALUES_VERSION	1
+inline constexpr auto COMPILED_KEYVALUES_VERSION = 1;
 
 struct KVHeader_t
 {
@@ -55,7 +43,7 @@ struct KVInfo_t
 
 	inline void SetParent( int index )
 	{
-		Assert( index <= 32768 );
+		contract_assert( index <= 32768 );
 		parentIndex = index;
 	}
 
@@ -162,14 +150,14 @@ public:
 
 	KeyValues	*Instance( char const *kvfilename );
 	bool		InstanceInPlace( KeyValues& head, char const *kvfilename );
-	bool		LookupKeyValuesRootKeyName( char const *kvfilename, char *outbuf, size_t bufsize );
+	bool		LookupKeyValuesRootKeyName( char const *kvfilename, char *outbuf, std::size_t bufsize );
 
 	// Indices are in-order positions.
 	int			First() const;
 	int			Next( int i ) const;
 	int			InvalidIndex() const;
 
-	void		GetFileName( int index, char *buf, size_t bufsize );
+	void		GetFileName( int index, char *buf, std::size_t bufsize );
 
 private:
 
@@ -205,5 +193,3 @@ private:
 
 	std::vector< std::byte >			m_LoadBuffer;
 };
-
-#endif // KEYVALUESCOMPILER_H

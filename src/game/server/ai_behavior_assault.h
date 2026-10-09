@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef AI_BEHAVIOR_ASSAULT_H
-#define AI_BEHAVIOR_ASSAULT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -15,7 +10,7 @@
 #include "ai_moveshoot.h"
 #include "ai_utils.h"
 
-#define CUE_POINT_TOLERANCE (3.0*12.0)
+inline constexpr auto CUE_POINT_TOLERANCE = (3.0*12.0);
 
 enum RallySelectMethod_t
 {
@@ -53,9 +48,9 @@ enum
 };
 
 // Allow diversion from the assault up to this amount of time after last having an enemy
-#define ASSAULT_DIVERSION_TIME		4
+inline constexpr auto ASSAULT_DIVERSION_TIME = 4;
 
-#define SF_ASSAULTPOINT_CLEARONARRIVAL	0x00000001
+inline constexpr auto SF_ASSAULTPOINT_CLEARONARRIVAL = 0x00000001;
 
 //=============================================================================
 //=============================================================================
@@ -329,5 +324,3 @@ private:
 	//---------------------------------
 	
 };
-
-#endif // AI_BEHAVIOR_ASSAULT_H

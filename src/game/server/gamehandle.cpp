@@ -1,16 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: returns the module handle of the game dll
 //			this is in its own file to protect it from tier0 PROTECTED_THINGS
-//=============================================================================//
 
-
-#include <stdio.h>
-#include "tier0/dbg.h"
+import std;
+import ks.core;
 
 void *GetGameModuleHandle()
 {
-	Assert(0);
+	contract_assert( 0 );
 	return nullptr; // NOT implemented
 }
-

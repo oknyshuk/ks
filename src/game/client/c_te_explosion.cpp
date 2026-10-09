@@ -1,10 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Client explosions
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "tempentity.h"  // FLAGS
@@ -12,11 +18,9 @@
 #include "ragdollexplosionenumerator.h"
 #include "glow_overlay.h"
 #include "fx_explosion.h"
-#include "engine/ivdebugoverlay.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
 
-#define	OLD_EXPLOSION	0
+constexpr auto OLD_EXPLOSION = 0;
 
 
 // Enumator class for ragdolls being affected by explosive forces

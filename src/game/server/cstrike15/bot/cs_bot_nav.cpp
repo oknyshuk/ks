@@ -1,41 +1,53 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
 #include "cs_bot.h"
 #include "obstacle_pushaway.h"
-#include "fmtstr.h"
 
 const float NearBreakableCheckDist = 20.0f;
 const float FarBreakableCheckDist = 300.0f;
 
-#define DEBUG_BREAKABLES 0
-#define DEBUG_DOORS 0
+constexpr auto DEBUG_DOORS = 0;
 
 //--------------------------------------------------------------------------------------------------------------
-#if DEBUG_BREAKABLES
-static void DrawOutlinedQuad( const Vector &p1,
-							const Vector &p2,
-							const Vector &p3,
-							const Vector &p4,
-							int r, int g, int b,
-							float duration )
-{
-	NDebugOverlay::Triangle( p1, p2, p3, r, g, b, 20, false, duration );
-	NDebugOverlay::Triangle( p3, p4, p1, r, g, b, 20, false, duration );
-	NDebugOverlay::Line( p1, p2, r, g, b, false, duration );
-	NDebugOverlay::Line( p2, p3, r, g, b, false, duration );
-	NDebugOverlay::Line( p3, p4, r, g, b, false, duration );
-	NDebugOverlay::Line( p4, p1, r, g, b, false, duration );
-}
-ConVar bot_debug_breakable_duration( "bot_debug_breakable_duration", "30" );
-#endif // DEBUG_BREAKABLES
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -51,17 +63,6 @@ CBaseEntity * CheckForEntitiesAlongSegment( const Vector &start, const Vector &e
 	{
 		entity = enumerator->m_AlreadyHit[0];
 	}
-
-#if DEBUG_BREAKABLES
-	if ( entity )
-	{
-		DrawOutlinedQuad( start + mins, start + maxs, end + maxs, end + mins, 255, 0, 0, bot_debug_breakable_duration.GetFloat() );
-	}
-	else
-	{
-		DrawOutlinedQuad( start + mins, start + maxs, end + maxs, end + mins, 0, 255, 0, 0.1 );
-	}
-#endif // DEBUG_BREAKABLES
 
 	return entity;
 }
@@ -97,12 +98,6 @@ CBaseEntity * CCSBot::FindEntitiesOnPath( float distance, CPushAwayEnumerator *e
 	if ( isDegeneratePath )
 	{
 		entity = CheckForEntitiesAlongSegment( WorldSpaceCenter(), m_goalPosition + Vector( 0, 0, HalfHumanHeight ), mins, maxs, enumerator );
-#if DEBUG_BREAKABLES
-		if ( entity )
-		{
-			NDebugOverlay::HorzArrow( WorldSpaceCenter(), m_goalPosition, 6, 0, 0, 255, 255, true, bot_debug_breakable_duration.GetFloat() );
-		}
-#endif // DEBUG_BREAKABLES
 	}
 	else
 	{
@@ -157,9 +152,6 @@ CBaseEntity * CCSBot::FindEntitiesOnPath( float distance, CPushAwayEnumerator *e
 			entity = CheckForEntitiesAlongSegment( start + Vector( 0, 0, HalfHumanHeight ), end + Vector( 0, 0, HalfHumanHeight ), mins, maxs, enumerator );
 			if ( entity )
 			{
-#if DEBUG_BREAKABLES
-				NDebugOverlay::HorzArrow( start, end, 4, 0, 255, 0, 255, true, bot_debug_breakable_duration.GetFloat() );
-#endif // DEBUG_BREAKABLES
 				break;
 			}
 
@@ -179,9 +171,6 @@ CBaseEntity * CCSBot::FindEntitiesOnPath( float distance, CPushAwayEnumerator *e
 				entity = CheckForEntitiesAlongSegment( start + Vector( 0, 0, HalfHumanHeight ), end + Vector( 0, 0, HalfHumanHeight ), mins, maxs, enumerator );
 				if ( entity )
 				{
-#if DEBUG_BREAKABLES
-					NDebugOverlay::HorzArrow( start, end, 4, 0, 255, 0, 255, true, bot_debug_breakable_duration.GetFloat() );
-#endif // DEBUG_BREAKABLES
 					break;
 				}
 			}
@@ -198,9 +187,6 @@ CBaseEntity * CCSBot::FindEntitiesOnPath( float distance, CPushAwayEnumerator *e
 //--------------------------------------------------------------------------------------------------------------
 void CCSBot::PushawayTouch( CBaseEntity *pOther )
 {
-#if DEBUG_BREAKABLES
-	NDebugOverlay::EntityBounds( pOther, 255, 0, 0, 127, 0.1f );
-#endif // DEBUG_BREAKABLES
 
 	// if we're not stuck or crouched, we don't care
 	if ( !m_isStuck && !IsCrouching() )
@@ -208,7 +194,7 @@ void CCSBot::PushawayTouch( CBaseEntity *pOther )
 
 	// See if it's breakable
 	CBaseEntity *props[1];
-	CBotBreakableEnumerator enumerator( props, ARRAYSIZE( props ) );
+	CBotBreakableEnumerator enumerator( props, std::size( props ) );
 	enumerator.EnumElement( pOther );
 
 	if ( enumerator.m_nAlreadyHit == 1 )
@@ -228,45 +214,8 @@ void CCSBot::PushawayTouch( CBaseEntity *pOther )
  */
 void CCSBot::BreakablesCheck( void )
 {
-	SNPROF( "BreakablesCheck" );
 	if ( !TheCSBots()->AllowedToDoExpensiveBotOperationThisFrame() )
 		return;
-
-#if DEBUG_BREAKABLES
-	/*
-	// Debug code to visually mark all breakables near us
-	{
-		Ray_t ray;
-		Vector origin = WorldSpaceCenter();
-		Vector mins( -400, -400, -400 );
-		Vector maxs( 400, 400, 400 );
-		ray.Init( origin, origin, mins, maxs );
-
-		CBaseEntity *props[40];
-		CBotBreakableEnumerator enumerator( props, ARRAYSIZE( props ) );
-		::partition->EnumerateElementsAlongRay( PARTITION_ENGINE_SOLID_EDICTS, ray, false, &enumerator );
-		for ( int i=0; i<enumerator.m_nAlreadyHit; ++i )
-		{
-			CBaseEntity *prop = props[i];
-			if ( prop && prop->m_takedamage == DAMAGE_YES )
-			{
-				CFmtStr msg;
-				const char *text = msg.sprintf( "%s, %d health", prop->GetClassname(), prop->m_iHealth );
-				if ( prop->m_iHealth > 200 )
-				{
-					NDebugOverlay::EntityBounds( prop, 255, 0, 0, 10, 0.2f );
-					prop->EntityText( 0, text, 0.2f, 255, 0, 0, 255 );
-				}
-				else
-				{
-					NDebugOverlay::EntityBounds( prop, 0, 255, 0, 10, 0.2f );
-					prop->EntityText( 0, text, 0.2f, 0, 255, 0, 255 );
-				}
-			}
-		}
-	}
-	*/
-#endif // DEBUG_BREAKABLES
 
 	if ( IsAttacking() )
 	{
@@ -274,7 +223,7 @@ void CCSBot::BreakablesCheck( void )
 		if ( IsUsingKnife() && m_enemy != nullptr )
 		{
 			CBaseEntity *breakables[1];
-			CBotBreakableEnumerator enumerator( breakables, ARRAYSIZE( breakables ) );
+			CBotBreakableEnumerator enumerator( breakables, std::size( breakables ) );
 
 			CBaseEntity *breakable = nullptr;
 			Vector mins = Vector( -HalfHumanWidth, -HalfHumanWidth, -HalfHumanWidth );
@@ -282,9 +231,6 @@ void CCSBot::BreakablesCheck( void )
 			breakable = CheckForEntitiesAlongSegment( WorldSpaceCenter(), m_enemy->WorldSpaceCenter(), mins, maxs, &enumerator );
 			if ( breakable )
 			{
-#if DEBUG_BREAKABLES
-				NDebugOverlay::HorzArrow( WorldSpaceCenter(), m_enemy->WorldSpaceCenter(), 6, 0, 0, 255, 255, true, bot_debug_breakable_duration.GetFloat() );
-#endif // DEBUG_BREAKABLES
 
 				// look at it (chances are we'll already be looking at it, since it's between us and our enemy)
 				SetLookAt( "Breakable", breakable->WorldSpaceCenter(), PRIORITY_HIGH, 0.1f, false, 5.0f, true );
@@ -303,7 +249,7 @@ void CCSBot::BreakablesCheck( void )
 
 	// Check just in front of us on the path
 	CBaseEntity *breakables[4];
-	CBotBreakableEnumerator enumerator( breakables, ARRAYSIZE( breakables ) );
+	CBotBreakableEnumerator enumerator( breakables, std::size( breakables ) );
 	CBaseEntity *breakable = FindEntitiesOnPath( NearBreakableCheckDist, &enumerator, true );
 
 	// If we don't have an object right in front of us, check a ways out
@@ -334,7 +280,7 @@ void CCSBot::BreakablesCheck( void )
 			if ( !shouldShoot )
 			{
 				CBaseEntity *breakables[ 1 ];
-				CBotBreakableEnumerator LOSbreakable( breakables, ARRAYSIZE( breakables ) );
+				CBotBreakableEnumerator LOSbreakable( breakables, std::size( breakables ) );
 
 				// compute the unit vector along our view
 				Vector aimDir = GetViewVector();
@@ -370,7 +316,6 @@ void CCSBot::BreakablesCheck( void )
  */
 void CCSBot::DoorCheck( void )
 {
-	SNPROF( "DoorCheck" );
 	if ( !TheCSBots()->AllowedToDoExpensiveBotOperationThisFrame() )
 		return;
 
@@ -387,7 +332,7 @@ void CCSBot::DoorCheck( void )
 
 	// Find any doors that need a +use to open just in front of us along the path.
 	CBaseEntity *doors[4];
-	CBotDoorEnumerator enumerator( doors, ARRAYSIZE( doors ) );
+	CBotDoorEnumerator enumerator( doors, std::size( doors ) );
 	CBaseEntity *door = FindEntitiesOnPath( NearBreakableCheckDist, &enumerator, false );
 
 	if ( door )
@@ -444,7 +389,6 @@ void CCSBot::ResetStuckMonitor( void )
  */
 void CCSBot::StuckCheck( void )
 {
-	SNPROF("StuckCheck");
 
 	if (m_isStuck)
 	{
@@ -979,4 +923,3 @@ bool CCSBot::IsAtEnemySpawn( void ) const
 
 	return false;
 }
-

@@ -1,15 +1,11 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Tier2 logging helpers. Adds support for file I/O
-//
-//===============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef TIER2_LOGGING_H
-#define TIER2_LOGGING_H
+// Purpose: Tier2 logging helpers. Adds support for file I/O
 
-
-#include "logging.h"
-
+import std;
+import ks.core;
 
 const int MAX_SIMULTANEOUS_LOGGING_FILE_COUNT = 16;
 const int INVALID_LOGGING_FILE_HANDLE = -1;
@@ -17,9 +13,9 @@ const int INVALID_LOGGING_FILE_HANDLE = -1;
 typedef int LoggingFileHandle_t;
 typedef void * FileHandle_t;
 
-#define FILELOGGINGLISTENER_INTERFACE_VERSION	"FileLoggingListener001"
+inline constexpr const char *FILELOGGINGLISTENER_INTERFACE_VERSION = "FileLoggingListener001";
 
-abstract_class IFileLoggingListener : public ILoggingListener
+class IFileLoggingListener : public ILoggingListener
 {
 public:
 	virtual void Log( const LoggingContext_t *pContext, const char *pMessage ) = 0;
@@ -65,5 +61,3 @@ private:
 	// Table which maps logging channel IDs to open files
 	int m_FileIndices[MAX_LOGGING_CHANNEL_COUNT];
 };
-
-#endif // TIER2_LOGGING_H

@@ -1,23 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "server_pch.h"
-#include <time.h>
+// main precompiled header for server files
+
+
+#include "common.h"
+#include "qlimits.h"
+#include "quakedef.h"
+#include "decal.h"
+#include "host_cmd.h"
+#include "cmodel_engine.h"
+#include "sv_log.h"
+#include "sound.h"
+#include "EngineSoundInternal.h"
+#include "checksum_engine.h"
+#include "host.h"
+#include "keys.h"
+#include "vengineserver_impl.h"
+#include "server.h"
+#include "eiface.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+#include "proto_oob.h"
+#include "edict.h"
 #include "server.h"
 #include "sv_log.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
 #include "sv_main.h"
-#include "tier0/icommandline.h"
 #include <proto_oob.h>
+import ks.tier1;
+import std;
 #include "GameEventManager.h"
-#include "netadr.h"
-#include "sv_steamauth.h"
 
 static ConVar sv_logsdir( "sv_logsdir", "logs", FCVAR_ARCHIVE, "Folder in the game directory where server logs will be stored." );
 static ConVar sv_logfile( "sv_logfile", "1", FCVAR_ARCHIVE, "Log server information in the log file." );
@@ -32,7 +46,9 @@ static ConVar sv_logsocket2_substr( "sv_logsocket2_substr", "", FCVAR_RELEASE, "
 
 CLog g_Log;	// global Log object
 
-CON_COMMAND( log, "Enables logging to file, console, and udp < on | off >." )
+static void log( const CCommand &args );
+static ConCommand log_command( "log", log, "Enables logging to file, console, and udp < on | off >." );
+static void log( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -91,7 +107,7 @@ CON_COMMAND( log, "Enables logging to file, console, and udp < on | off >." )
 		return;
 	}
 
-	if ( !Q_stricmp( args[1], "off" ) || !Q_stricmp( args[1], "0" ) )
+	if ( !V_stricmp( args[1], "off" ) || !V_stricmp( args[1], "0" ) )
 	{
 		if ( g_Log.IsActive() )
 		{
@@ -100,7 +116,7 @@ CON_COMMAND( log, "Enables logging to file, console, and udp < on | off >." )
 			ConMsg( "Server logging disabled.\n" );
 		}
 	}
-	else if ( !Q_stricmp( args[1], "on" ) || !Q_stricmp( args[1], "1" ) )
+	else if ( !V_stricmp( args[1], "on" ) || !V_stricmp( args[1], "1" ) )
 	{
 		g_Log.SetLoggingState( true );
 		ConMsg( "Server logging enabled.\n" );
@@ -132,7 +148,7 @@ static void helper_logaddress_add( const CCommand &args, char const *szCommand, 
 	}
 	else
 	{
-		pszPort = Q_strstr( pszIP, ":" );
+		pszPort = V_strstr( pszIP, ":" );
 
 		// if we have "IP:port" as one argument inside quotes
 		if ( pszPort )
@@ -147,7 +163,7 @@ static void helper_logaddress_add( const CCommand &args, char const *szCommand, 
 		}
 	}
 
-	if ( !Q_atoi( pszPort ) )
+	if ( !V_atoi( pszPort ) )
 	{
 		ConMsg( "%s:  must specify a valid port\n", szCommand );
 		return;
@@ -160,7 +176,7 @@ static void helper_logaddress_add( const CCommand &args, char const *szCommand, 
 	}
 
 	char szAdr[32];
-	Q_snprintf( szAdr, sizeof( szAdr ), "%s:%s", pszIP, pszPort );
+	V_snprintf( szAdr, sizeof( szAdr ), "%s:%s", pszIP, pszPort );
 
 	if ( NET_StringToAdr( szAdr, &adr ) )
 	{
@@ -182,12 +198,16 @@ static void helper_logaddress_add( const CCommand &args, char const *szCommand, 
 	}
 }
 
-CON_COMMAND( logaddress_add, "Set address and port for remote host <ip:port>." )
+static void logaddress_add( const CCommand &args );
+static ConCommand logaddress_add_command( "logaddress_add", logaddress_add, "Set address and port for remote host <ip:port>." );
+static void logaddress_add( const CCommand &args )
 {
 	helper_logaddress_add( args, "logaddress_add", 0ull );
 }
 
-CON_COMMAND( logaddress_add_ex, "Set address and port for remote host <ip:port> and supplies a unique token in the UDP packets." )
+static void logaddress_add_ex( const CCommand &args );
+static ConCommand logaddress_add_ex_command( "logaddress_add_ex", logaddress_add_ex, "Set address and port for remote host <ip:port> and supplies a unique token in the UDP packets." );
+static void logaddress_add_ex( const CCommand &args )
 {
 	CRC64_t crcToken;
 	CRC64_Init( &crcToken );
@@ -195,10 +215,6 @@ CON_COMMAND( logaddress_add_ex, "Set address and port for remote host <ip:port> 
 	const char *szCmdLine = CommandLine()->GetCmdLine();
 	if ( szCmdLine && *szCmdLine )
 		CRC64_ProcessBuffer( &crcToken, szCmdLine, V_strlen( szCmdLine ) );
-
-	const char *szSteamToken = Steam3Server().GetAccountToken();
-	if ( szSteamToken && *szSteamToken )
-		CRC64_ProcessBuffer( &crcToken, szSteamToken, V_strlen( szSteamToken ) );
 
 	const char *szLocalAdr = net_local_adr.ToString();
 	if ( szLocalAdr && *szLocalAdr )
@@ -228,7 +244,9 @@ void FnChangeCallback_logaddress_token_secret( IConVar *var, const char *pOldVal
 	ConMsg( "logaddress_token_secret:  token checksum = %016llX\n", s_ullLogaddressTokenSecret );
 }
 ConVar logaddress_token_secret( "logaddress_token_secret", "", FCVAR_RELEASE, "Set a secret string that will be hashed when using logaddress with explicit token hash.", FnChangeCallback_logaddress_token_secret );
-CON_COMMAND( logaddress_add_ts, "Set address and port for remote host <ip:port> and uses a unique checksum from logaddress_token_secret in the UDP packets." )
+static void logaddress_add_ts( const CCommand &args );
+static ConCommand logaddress_add_ts_command( "logaddress_add_ts", logaddress_add_ts, "Set address and port for remote host <ip:port> and uses a unique checksum from logaddress_token_secret in the UDP packets." );
+static void logaddress_add_ts( const CCommand &args )
 {
 	if ( !s_ullLogaddressTokenSecret )
 	{
@@ -239,12 +257,16 @@ CON_COMMAND( logaddress_add_ts, "Set address and port for remote host <ip:port> 
 	helper_logaddress_add( args, "logaddress_add_ts", s_ullLogaddressTokenSecret );
 }
 
-CON_COMMAND( logaddress_delall, "Remove all udp addresses being logged to" )
+static void logaddress_delall( const CCommand &args );
+static ConCommand logaddress_delall_command( "logaddress_delall", logaddress_delall, "Remove all udp addresses being logged to" );
+static void logaddress_delall( const CCommand &args )
 {
 	g_Log.DelAllLogAddress();
 }
 
-CON_COMMAND( logaddress_del, "Remove address and port for remote host <ip:port>." )
+static void logaddress_del( const CCommand &args );
+static ConCommand logaddress_del_command( "logaddress_del", logaddress_del, "Remove address and port for remote host <ip:port>." );
+static void logaddress_del( const CCommand &args )
 {
 	netadr_t adr;
 	const char *pszIP, *pszPort;
@@ -263,7 +285,7 @@ CON_COMMAND( logaddress_del, "Remove address and port for remote host <ip:port>.
 	}
 	else
 	{
-		pszPort = Q_strstr( pszIP, ":" );
+		pszPort = V_strstr( pszIP, ":" );
 
 		// if we have "IP:port" as one argument inside quotes
 		if ( pszPort )
@@ -278,7 +300,7 @@ CON_COMMAND( logaddress_del, "Remove address and port for remote host <ip:port>.
 		}
 	}
 
-	if ( !Q_atoi( pszPort ) )
+	if ( !V_atoi( pszPort ) )
 	{
 		ConMsg( "logaddress_del:  must specify a valid port\n" );
 		return;
@@ -291,7 +313,7 @@ CON_COMMAND( logaddress_del, "Remove address and port for remote host <ip:port>.
 	}
 
 	char szAdr[32];
-	Q_snprintf( szAdr, sizeof( szAdr ), "%s:%s", pszIP, pszPort );
+	V_snprintf( szAdr, sizeof( szAdr ), "%s:%s", pszIP, pszPort );
 
 	if ( NET_StringToAdr( szAdr, &adr ) )
 	{
@@ -310,7 +332,9 @@ CON_COMMAND( logaddress_del, "Remove address and port for remote host <ip:port>.
 	}
 }
 
-CON_COMMAND( logaddress_list, "List all addresses currently being used by logaddress." )
+static void logaddress_list( const CCommand &args );
+static ConCommand logaddress_list_command( "logaddress_list", logaddress_list, "List all addresses currently being used by logaddress." );
+static void logaddress_list( const CCommand &args )
 {
 	g_Log.ListLogAddress();
 }
@@ -509,7 +533,7 @@ Prints a log message to the server's log file, console, and possible a UDP addre
 */
 void CLog::Printf( const char *fmt, ... )
 {
-	va_list			argptr;
+	std::va_list			argptr;
 	static char		string[1024];
 	
 	if ( !IsActive() )
@@ -517,9 +541,9 @@ void CLog::Printf( const char *fmt, ... )
 		return;
 	}
 
-	va_start ( argptr, fmt );
-	Q_vsnprintf ( string, sizeof( string ), fmt, argptr );
-	va_end   ( argptr );
+	__builtin_va_start ( argptr, fmt );
+	V_vsnprintf ( string, sizeof( string ), fmt, argptr );
+	__builtin_va_end   ( argptr );
 
 	Print( string );
 }
@@ -533,18 +557,16 @@ void CLog::Print( const char * text )
 		return;
 	}
 
-	if ( Q_strlen( text ) > 1024 )
+	if ( V_strlen( text ) > 1024 )
 	{
 		DevMsg( 1, "CLog::Print: string too long (>1024 bytes)." );
 		return;
 	}
 
-	serverGameDLL->LogForHTTPListeners( text );
-
-	tm today;
+	std::tm today;
 	Plat_GetLocalTime( &today );
 
-	Q_snprintf( string, sizeof( string ), "L %02i/%02i/%04i - %02i:%02i:%02i: %s",
+	V_snprintf( string, sizeof( string ), "L %02i/%02i/%04i - %02i:%02i:%02i: %s",
 		today.tm_mon+1, today.tm_mday, 1900 + today.tm_year,
 		today.tm_hour, today.tm_min, today.tm_sec, text );
 
@@ -608,27 +630,27 @@ void CLog::FireGameEvent( IGameEvent *event )
 		return;
 	}
 
-	if ( Q_strcmp(name, "server_spawn") == 0 )
+	if ( V_strcmp(name, "server_spawn") == 0 )
 	{
 		Printf( "Started map \"%s\" (CRC \"%i\")\n", sv.GetMapName(), ( int ) sv.worldmapCRC );
 	}
 
-	else if ( Q_strcmp(name, "server_shutdown") == 0 )
+	else if ( V_strcmp(name, "server_shutdown") == 0 )
 	{
 		Printf( "server_message: \"%s\"\n", event->GetString("reason") );
 	}
 
-	else if ( Q_strcmp(name, "server_cvar") == 0 )
+	else if ( V_strcmp(name, "server_cvar") == 0 )
 	{
 		Printf( "server_cvar: \"%s\" \"%s\"\n", event->GetString("cvarname"), event->GetString("cvarvalue")  );
 	}
 
-	else if ( Q_strcmp(name, "server_message") == 0 )
+	else if ( V_strcmp(name, "server_message") == 0 )
 	{
 		Printf( "server_message: \"%s\"\n", event->GetString("text") );
 	}
 	
-	else if ( Q_strcmp(name, "server_addban") == 0 )
+	else if ( V_strcmp(name, "server_addban") == 0 )
 	{
 		if ( sv_logbans.GetInt() > 0 )
 		{
@@ -640,7 +662,7 @@ void CLog::FireGameEvent( IGameEvent *event )
 			const char *pszCmdGiver = event->GetString( "by" );
 			const char *pszResult = nullptr;
 			
-			if ( Q_strlen( pszIP ) > 0 )
+			if ( V_strlen( pszIP ) > 0 )
 			{
 				pszResult = event->GetInt( "kicked" ) > 0 ? "was kicked and banned by IP" : "was banned by IP";
 
@@ -690,7 +712,7 @@ void CLog::FireGameEvent( IGameEvent *event )
 		}
 	}
 
-	else if ( Q_strcmp(name, "server_removeban") == 0 )
+	else if ( V_strcmp(name, "server_removeban") == 0 )
 	{
 		if ( sv_logbans.GetInt() > 0 )
 		{
@@ -698,7 +720,7 @@ void CLog::FireGameEvent( IGameEvent *event )
 			const char *pszIP = event->GetString( "ip" );	
 			const char *pszCmdGiver = event->GetString( "by" );
 			
-			if ( Q_strlen( pszIP ) > 0 )
+			if ( V_strlen( pszIP ) > 0 )
 			{
 				Printf( "Removeip: \"<><><>\" was unbanned by \"%s\" (IP \"%s\")\n", 
 								pszCmdGiver,
@@ -765,7 +787,7 @@ void CLog::Open( void )
 	Close();
 
 	// Find a new log file slot
-	tm today;
+	std::tm today;
 	Plat_GetLocalTime( &today );
 	const char *pszLogsDir = sv_logsdir.GetString();
 
@@ -785,14 +807,14 @@ void CLog::Open( void )
 	ipparts[3] = (ip) & 0xff;
 	int port = NET_GetUDPPort( NS_SERVER );
 
-	Q_snprintf( szFileBase, sizeof( szFileBase ), "%s/L%03i_%03i_%03i_%03i_%i_%04i%02i%02i%02i%02i_", 
+	V_snprintf( szFileBase, sizeof( szFileBase ), "%s/L%03i_%03i_%03i_%03i_%i_%04i%02i%02i%02i%02i_", 
 		pszLogsDir, ipparts[0], ipparts[1], ipparts[2], ipparts[3], port, today.tm_year + 1900, today.tm_mon + 1, today.tm_mday, today.tm_hour, today.tm_min );
 
 	for ( i = 0; i < 1000; i++ )
 	{
-		Q_snprintf( szTestFile, sizeof( szTestFile ), "%s%03i.log", szFileBase, i );
+		V_snprintf( szTestFile, sizeof( szTestFile ), "%s%03i.log", szFileBase, i );
 
-		Q_FixSlashes( szTestFile );
+		V_FixSlashes( szTestFile );
 		COM_CreatePath( szTestFile );
 
 		fp = g_pFileSystem->Open( szTestFile, "r", "LOGDIR" );
@@ -826,5 +848,3 @@ void CLog::Open( void )
 	}
 	Printf( "Log file started (file \"%s\") (game \"%s\") (version \"%i\")\n", szTestFile, com_gamedir, build_number() );
 }
-
-

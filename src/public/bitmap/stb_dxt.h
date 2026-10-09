@@ -1,3 +1,4 @@
+#pragma once
 // stb_dxt.h - v1.04 - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
@@ -17,16 +18,13 @@
 //   v1.01  - (stb) fix bug converting to RGB that messed up quality, thanks ryg & cbloom
 //   v1.00  - (stb) first release
 
-#ifndef STB_INCLUDE_STB_DXT_H
-#define STB_INCLUDE_STB_DXT_H
 
 // compression mode (bitflags)
-#define STB_DXT_NORMAL    0
-#define STB_DXT_DITHER    1   // use dithering. dubious win. never use for normal maps and the like!
-#define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower.
+inline constexpr auto STB_DXT_NORMAL = 0;
+inline constexpr auto STB_DXT_DITHER = 1; // use dithering. dubious win. never use for normal maps and the like!
+inline constexpr auto STB_DXT_HIGHQUAL = 2; // high quality mode, does two refinement steps instead of 1. ~30-40% slower.
 
 void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode);
-#define STB_COMPRESS_DXT_BLOCK
 
 #ifdef STB_DXT_IMPLEMENTATION
 
@@ -44,9 +42,7 @@ void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int a
 //     you also see "(a*5 + b*3) / 8" on some old GPU designs.
 // #define STB_DXT_USE_ROUNDING_BIAS
 
-#include <stdlib.h>
-#include <math.h>
-#include <string.h> // memset
+import std;
 
 static unsigned char stb__Expand5[32];
 static unsigned char stb__Expand6[64];
@@ -81,14 +77,9 @@ static unsigned short stb__As16Bit(int r, int g, int b)
 // linear interpolation at 1/3 point between a and b, using desired rounding type
 static int stb__Lerp13(int a, int b)
 {
-#ifdef STB_DXT_USE_ROUNDING_BIAS
-   // with rounding bias
-   return a + stb__Mul8Bit(b-a, 0x55);
-#else
    // without rounding bias
    // replace "/ 3" by "* 0xaaab) >> 17" if your compiler sucks or you really need every ounce of speed.
    return (2*a + b) / 3;
-#endif
 }
 
 // lerp RGB color
@@ -149,7 +140,7 @@ static void stb__DitherBlock(unsigned char *dest, unsigned char *block)
   for (ch=0; ch<3; ++ch) {
       unsigned char *bp = block+ch, *dp = dest+ch;
       unsigned char *quant = (ch == 1) ? stb__QuantGTab+8 : stb__QuantRBTab+8;
-      memset(err, 0, sizeof(err));
+      std::memset(err, 0, sizeof(err));
       for(y=0; y<4; ++y) {
          dp[ 0] = quant[bp[ 0] + ((3*ep2[1] + 5*ep2[0]) >> 4)];
          ep1[0] = bp[ 0] - dp[ 0];
@@ -621,4 +612,3 @@ void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int a
 }
 #endif // STB_DXT_IMPLEMENTATION
 
-#endif // STB_INCLUDE_STB_DXT_H

@@ -1,9 +1,10 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef SOLIDENERGY_HELPER_H
-#define SOLIDENERGY_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+class CBasePerMaterialContextData;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -20,7 +21,7 @@ struct SolidEnergyVars_t
 {
 	SolidEnergyVars_t()
 	{
-		memset( this, 0xFF, sizeof( SolidEnergyVars_t ) );
+		std::memset( this, 0xFF, sizeof( SolidEnergyVars_t ) );
 	}
 
 	int m_nBaseTexture;
@@ -90,5 +91,3 @@ void InitSolidEnergy( CBaseVSShader *pShader, IMaterialVar** params, SolidEnergy
 void DrawSolidEnergy( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 					IShaderShadow* pShaderShadow, SolidEnergyVars_t &info, VertexCompressionType_t vertexCompression,
 					CBasePerMaterialContextData **pContextDataPtr );
-
-#endif // SOLIDENERGY_HELPER_H

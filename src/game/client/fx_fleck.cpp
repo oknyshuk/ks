@@ -1,16 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "fx_fleck.h"
 
-
 // enable this to have the fleck_merge cvar as well as the current system count displayed as it changes (for profiling)
-#define REPORT_MERGED_FLECKS 0
 
 //
 // class PARTICLE_MERGE
@@ -39,18 +42,9 @@ private:
 	PARTICLE_MERGE m_merge;
 };
 
-#if REPORT_MERGED_FLECKS
-ConVar fleck_merge("fleck_merge","1");
-int g_PCount = 0;
-#endif
-
 template< class PARTICLE_EFFECT, class PARTICLE_MERGE >
 void CParticleMergeList<PARTICLE_EFFECT,PARTICLE_MERGE>::AddParticleSystem( PARTICLE_EFFECT *pSystem )
 {
-#if REPORT_MERGED_FLECKS
-	g_PCount++;
-	Msg("PS: %d\n", g_PCount);
-#endif
 	pSystem->m_pNextParticleSystem = m_pHead;
 	m_pHead = pSystem;
 }
@@ -58,10 +52,6 @@ void CParticleMergeList<PARTICLE_EFFECT,PARTICLE_MERGE>::AddParticleSystem( PART
 template< class PARTICLE_EFFECT, class PARTICLE_MERGE >
 void CParticleMergeList<PARTICLE_EFFECT,PARTICLE_MERGE>::RemoveParticleSystem( PARTICLE_EFFECT *pRemove )
 {
-#if REPORT_MERGED_FLECKS
-	g_PCount--;
-	Msg("PS: %d\n", g_PCount);
-#endif
 	PARTICLE_EFFECT **pPrev = &m_pHead;
 	PARTICLE_EFFECT *pCur = *pPrev;
 	while ( pCur )
@@ -79,10 +69,6 @@ void CParticleMergeList<PARTICLE_EFFECT,PARTICLE_MERGE>::RemoveParticleSystem( P
 template< class PARTICLE_EFFECT, class PARTICLE_MERGE >
 PARTICLE_EFFECT *CParticleMergeList<PARTICLE_EFFECT,PARTICLE_MERGE>::FindAndMergeParticleSystem( const char *pEffectName, const Vector &center, const Vector &extents )
 {
-#if REPORT_MERGED_FLECKS
-	if ( !fleck_merge.GetBool() )
-		return nullptr;
-#endif
 
 	for ( PARTICLE_EFFECT *pMerge = m_pHead; pMerge != nullptr; pMerge = pMerge->m_pNextParticleSystem )
 	{
@@ -102,7 +88,7 @@ public:
 	bool MergeParticleSystems( PARTICLE_EFFECT *pSystem, const char *pEffectName, const Vector &center, const Vector &extents )
 	{
 		// by default, match names
-		if ( !Q_stricmp(pSystem->GetEffectName(), pEffectName) )
+		if ( !V_stricmp(pSystem->GetEffectName(), pEffectName) )
 		{
 			Vector mins, maxs;
 			pSystem->GetBinding().GetWorldspaceBounds( &mins, &maxs );
@@ -232,5 +218,3 @@ void CFleckParticles::SimulateParticles( CParticleSimulateIterator *pIterator )
 		pParticle = (FleckParticle*)pIterator->GetNext();
 	}
 }
-
-

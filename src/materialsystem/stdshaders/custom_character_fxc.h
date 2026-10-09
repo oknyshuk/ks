@@ -1,12 +1,9 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-// Use samplers 9+
-
+// Purpose: Use samplers 9+
 // Use constanst registers 29+
-
-#ifndef USEPATTERN
-	#define USEPATTERN 0
-#endif
 
 #ifndef GENERATEBASETEXTURE
 	#define GENERATEBASETEXTURE 0
@@ -42,7 +39,6 @@
 	#define NORMALALPHAUSED 0
 #endif
 	
-
 sampler MaterialMaskSampler			: register( s9 );
 sampler AOSampler					: register( s10 );
 sampler3D GrungeSampler				: register( s11 );

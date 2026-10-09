@@ -1,27 +1,71 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "const.h"
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "cs_playeranimstate.h"
 #include "base_playeranimstate.h"
-#include "tier0/vprof.h"
 #include "animation.h"
 #include "weapon_csbase.h"
 #include "studio.h"
-#include "apparent_velocity_helper.h"
-#include "tier1/map_ops.h"
 #include "weapon_basecsgrenade.h"
 #include "datacache/imdlcache.h"
 
-#include "cs_shareddefs.h"
 
 #ifdef CLIENT_DLL
 	#include "c_cs_player.h"
 	#include "bone_setup.h"
-	#include "tier1/interpolatedvar.h"
 	#include "c_cs_hostage.h"
 #else
 	#include "cs_player.h"
@@ -29,27 +73,27 @@
 	#include "cs_gamestats.h"
 #endif
 
-#define ANIM_TOPSPEED_WALK			100
-#define ANIM_TOPSPEED_RUN			250
-#define ANIM_TOPSPEED_RUN_CROUCH	85
+constexpr auto ANIM_TOPSPEED_WALK = 100;
+constexpr auto ANIM_TOPSPEED_RUN = 250;
+constexpr auto ANIM_TOPSPEED_RUN_CROUCH = 85;
 
-#define DEFAULT_IDLE_NAME "idle_upper_"
-#define DEFAULT_CROUCH_IDLE_NAME "crouch_idle_upper_"
-#define DEFAULT_CROUCH_WALK_NAME "crouch_walk_upper_"
-#define DEFAULT_WALK_NAME "walk_upper_"
-#define DEFAULT_RUN_NAME "run_upper_"
+inline constexpr const char *DEFAULT_IDLE_NAME = "idle_upper_";
+inline constexpr const char *DEFAULT_CROUCH_IDLE_NAME = "crouch_idle_upper_";
+inline constexpr const char *DEFAULT_CROUCH_WALK_NAME = "crouch_walk_upper_";
+inline constexpr const char *DEFAULT_WALK_NAME = "walk_upper_";
+inline constexpr const char *DEFAULT_RUN_NAME = "run_upper_";
 
-#define DEFAULT_FIRE_IDLE_NAME "idle_shoot_"
-#define DEFAULT_FIRE_CROUCH_NAME "crouch_idle_shoot_"
-#define DEFAULT_FIRE_CROUCH_WALK_NAME "crouch_walk_shoot_"
-#define DEFAULT_FIRE_WALK_NAME "walk_shoot_"
-#define DEFAULT_FIRE_RUN_NAME "run_shoot_"
+inline constexpr const char *DEFAULT_FIRE_IDLE_NAME = "idle_shoot_";
+inline constexpr const char *DEFAULT_FIRE_CROUCH_NAME = "crouch_idle_shoot_";
+inline constexpr const char *DEFAULT_FIRE_CROUCH_WALK_NAME = "crouch_walk_shoot_";
+inline constexpr const char *DEFAULT_FIRE_WALK_NAME = "walk_shoot_";
+inline constexpr const char *DEFAULT_FIRE_RUN_NAME = "run_shoot_";
 
-#define DEFAULT_SILENCER_ATTACH_NAME "silencer_attach_%s"
-#define DEFAULT_SILENCER_DETACH_NAME "silencer_detach_%s"
+inline constexpr const char *DEFAULT_SILENCER_ATTACH_NAME = "silencer_attach_%s";
+inline constexpr const char *DEFAULT_SILENCER_DETACH_NAME = "silencer_detach_%s";
 
-#define ANIM_ACT_DURATION_BEFORE_RETURN_TO_IDLE 0.5f
-#define ANIM_ACT_DURATION_BEFORE_RETURN_TO_WALK 0.7f
+constexpr auto ANIM_ACT_DURATION_BEFORE_RETURN_TO_IDLE = 0.5f;
+constexpr auto ANIM_ACT_DURATION_BEFORE_RETURN_TO_WALK = 0.7f;
 
 enum CSPlayerAnimStateLayer_t
 {
@@ -133,11 +177,7 @@ protected:
 	bool IsOuterGrenadePrimed();
 	void ComputeGrenadeSequence( CStudioHdr *pStudioHdr );
 	int CalcGrenadePrimeSequence();
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 	int CalcGrenadeThrowSequence( bool bUnderhand = false );
-#else
-	int CalcGrenadeThrowSequence();
-#endif
 	int GetOuterGrenadeThrowCounter();
 
 	const char* GetWeaponSuffix();
@@ -145,7 +185,7 @@ protected:
 
 	void UpdateLayerSequenceGeneric( CStudioHdr *pStudioHdr, int iLayer, bool &bEnabled, float &flCurCycle, int &iSequence, bool bWaitAtEnd, float flWeight = 1.0f );
 
-	virtual int CalcSequenceIndex( PRINTF_FORMAT_STRING const char *pBaseName, ... );
+	virtual int CalcSequenceIndex( const char *pBaseName, ... );
 
 	bool ActiveWeaponIsDeployed();
 
@@ -303,7 +343,7 @@ Activity CCSHostageAnimState::CalcMainActivity()
 	}
 	else
 	{
-		Assert( dynamic_cast<CHostage*>( m_pOuter ) );
+		contract_assert( dynamic_cast<CHostage*>( m_pOuter ) );
 		CHostage *me = (CHostage*)m_pOuter;
 		
 		// If we have no leader, hang out.
@@ -517,7 +557,7 @@ void CCSPlayerAnimState::ClearAnimationLayer( int layer )
  */
 int CCSPlayerAnimState::SelectWeightedSequence( Activity activity )
 {
-	VPROF( "CCSPlayerAnimState::ComputeMainSequence" );
+	CVProfScope _( "CCSPlayerAnimState::ComputeMainSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( activity > ACT_CROUCHIDLE || activity < 1 )
 	{
@@ -535,7 +575,7 @@ int CCSPlayerAnimState::SelectWeightedSequence( Activity activity )
 
 #if defined(CLIENT_DLL) && defined(_DEBUG)
 	int realSequence = GetOuter()->SelectWeightedSequence( activity );
-	Assert( realSequence == sequence );
+	contract_assert( realSequence == sequence );
 #endif
 
 	return sequence;
@@ -545,17 +585,17 @@ int CCSPlayerAnimState::SelectWeightedSequence( Activity activity )
 //--------------------------------------------------------------------------------------------------------------
 // sprintf version of LookupSequence() 
 //--------------------------------------------------------------------------------------------------------------
-int CCSPlayerAnimState::CalcSequenceIndex( PRINTF_FORMAT_STRING const char *pBaseName, ... )
+int CCSPlayerAnimState::CalcSequenceIndex( const char *pBaseName, ... )
 {
-	VPROF( "CCSPlayerAnimState::CalcSequenceIndex" );
+	CVProfScope _( "CCSPlayerAnimState::CalcSequenceIndex", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CheckCachedSequenceValidity();
 
 	char szFullName[512];
-	va_list marker;
-	va_start( marker, pBaseName );
-	Q_vsnprintf( szFullName, sizeof( szFullName ), pBaseName, marker );
-	va_end( marker );
+	std::va_list marker;
+	__builtin_va_start( marker, pBaseName );
+	V_vsnprintf( szFullName, sizeof( szFullName ), pBaseName, marker );
+	__builtin_va_end( marker );
 
 	// FIXME: this looks up on the player, not their weapon
 	int iSequence = GetOuter()->LookupSequence( szFullName );
@@ -595,7 +635,7 @@ void CCSPlayerAnimState::ClearAnimationState()
 
 void CCSPlayerAnimState::DoAnimationEvent( PlayerAnimEvent_t animEvent, int nData )
 {
-	Assert( animEvent != PLAYERANIMEVENT_THROW_GRENADE );
+	contract_assert( animEvent != PLAYERANIMEVENT_THROW_GRENADE );
 
 	CWeaponCSBase *pActiveWeapon = m_pHelpers->CSAnim_GetActiveWeapon();
 	bool currentWeaponIsDeployedWeapon = ActiveWeaponIsDeployed();
@@ -815,11 +855,11 @@ int CCSPlayerAnimState::CalcSilencerChangeLayerSequence( PlayerAnimEvent_t animE
 
 	if ( animEvent == PLAYERANIMEVENT_SILENCER_ATTACH )
 	{
-		Q_snprintf( szName, sizeof( szName ), DEFAULT_SILENCER_ATTACH_NAME, weaponSuffix );
+		V_snprintf( szName, sizeof( szName ), DEFAULT_SILENCER_ATTACH_NAME, weaponSuffix );
 	}
 	else if ( animEvent == PLAYERANIMEVENT_SILENCER_DETACH )
 	{
-		Q_snprintf( szName, sizeof( szName ), DEFAULT_SILENCER_DETACH_NAME, weaponSuffix );
+		V_snprintf( szName, sizeof( szName ), DEFAULT_SILENCER_DETACH_NAME, weaponSuffix );
 	}
 	else
 	{
@@ -900,7 +940,7 @@ int CCSPlayerAnimState::CalcReloadLayerSequence( PlayerAnimEvent_t animEvent )
 // Avoid doing this look up since we don't need it for CSGO
 
 	// Next, look for reload_<weapon name><_start|_loop|_end>.
-	Q_snprintf( szName, sizeof( szName ), "reload_%s%s", weaponSuffix, reloadSuffix );
+	V_snprintf( szName, sizeof( szName ), "reload_%s%s", weaponSuffix, reloadSuffix );
 	iReloadSequence = m_pOuter->LookupSequence( szName );
 	if ( iReloadSequence != -1 )
 		return iReloadSequence;
@@ -908,7 +948,7 @@ int CCSPlayerAnimState::CalcReloadLayerSequence( PlayerAnimEvent_t animEvent )
 	// Ok, look for generic categories.. pistol, shotgun, rifle, etc.
 	if ( pWeapon->GetWeaponType() == WEAPONTYPE_PISTOL )
 	{
-		Q_snprintf( szName, sizeof( szName ), "reload_pistol" );
+		V_snprintf( szName, sizeof( szName ), "reload_pistol" );
 		iReloadSequence = m_pOuter->LookupSequence( szName );
 		if ( iReloadSequence != -1 )
 			return iReloadSequence;
@@ -979,7 +1019,7 @@ bool CCSPlayerAnimState::IsOuterGrenadePrimed()
 
 void CCSPlayerAnimState::ComputeGrenadeSequence( CStudioHdr *pStudioHdr )
 {
-	VPROF( "CCSPlayerAnimState::ComputeGrenadeSequence" );
+	CVProfScope _( "CCSPlayerAnimState::ComputeGrenadeSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( m_bThrowingGrenade )
 	{
@@ -988,9 +1028,7 @@ void CCSPlayerAnimState::ComputeGrenadeSequence( CStudioHdr *pStudioHdr )
 	else
 	{
 
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 		bool bThrowingUnderhand = false;
-#endif
 
 		if ( m_pPlayer )
 		{
@@ -1002,12 +1040,10 @@ void CCSPlayerAnimState::ComputeGrenadeSequence( CStudioHdr *pStudioHdr )
 				m_iLastThrowGrenadeCounter = GetOuterGrenadeThrowCounter();
 				return;
 			}
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 			else
 			{
 				bThrowingUnderhand = pGren->IsThrownUnderhand();
 			}
-#endif
 		}
 
 		// Priming the grenade isn't an event.. we just watch the player for it.
@@ -1045,11 +1081,7 @@ void CCSPlayerAnimState::ComputeGrenadeSequence( CStudioHdr *pStudioHdr )
 				m_iLastThrowGrenadeCounter = GetOuterGrenadeThrowCounter();
 
 				// Now play the throw animation.
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 				m_iGrenadeSequence = CalcGrenadeThrowSequence( bThrowingUnderhand );
-#else
-				m_iGrenadeSequence = CalcGrenadeThrowSequence();
-#endif				
 				if ( m_iGrenadeSequence != -1 )
 				{
 					// Configure to start playing 
@@ -1101,11 +1133,7 @@ int CCSPlayerAnimState::CalcGrenadePrimeSequence()
 	return CalcSequenceIndex( "%s_shoot_gren1", prefix );
 }
 
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 int CCSPlayerAnimState::CalcGrenadeThrowSequence( bool bUnderhand )
-#else
-int CCSPlayerAnimState::CalcGrenadeThrowSequence( )
-#endif
 {
 	const char *prefix = "";
 	switch ( GetCurrentMainSequenceActivity() )
@@ -1135,13 +1163,11 @@ int CCSPlayerAnimState::CalcGrenadeThrowSequence( )
 			prefix = "idle";
 			break;
 	}
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 	if ( bUnderhand )
 	{
 		return CalcSequenceIndex( "%s_shoot_gren3", prefix );
 	}
 	else
-#endif
 	{
 		return CalcSequenceIndex( "%s_shoot_gren2", prefix );
 	}
@@ -1157,13 +1183,13 @@ int CCSPlayerAnimState::GetOuterGrenadeThrowCounter()
 
 void CCSPlayerAnimState::ComputeSilencerChangeSequence( CStudioHdr *pStudioHdr )
 {
-	VPROF( "CCSPlayerAnimState::ComputeSilencerChangeSequence" );
+	CVProfScope _( "CCSPlayerAnimState::ComputeSilencerChangeSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	UpdateLayerSequenceGeneric( pStudioHdr, SILENCERSEQUENCE_LAYER, m_bSilencerChanging, m_flSilencerChangeCycle, m_iSilencerChangeSequence, false );
 }
 
 void CCSPlayerAnimState::ComputeReloadSequence( CStudioHdr *pStudioHdr )
 {
-	VPROF( "CCSPlayerAnimState::ComputeReloadSequence" );
+	CVProfScope _( "CCSPlayerAnimState::ComputeReloadSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	bool hold = m_flReloadHoldEndTime > gpGlobals->curtime;
 	UpdateLayerSequenceGeneric( pStudioHdr, RELOADSEQUENCE_LAYER, m_bReloading, m_flReloadCycle, m_iReloadSequence, hold );
 	if ( !m_bReloading )
@@ -1323,7 +1349,7 @@ void CCSPlayerAnimState::ComputeFootPlantSequence( CStudioHdr *pStudioHdr )
 	if ( !m_bInFootPlantIdleTurn )
 		return;
 
-	VPROF("CCSPlayerAnimState::ComputeFootPlantSequence");
+	CVProfScope _( "CCSPlayerAnimState::ComputeFootPlantSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CBaseCombatCharacter *pBaseCombatCharacter = dynamic_cast<CBaseCombatCharacter*>(m_pOuter);
 	if (!pBaseCombatCharacter)
@@ -1335,7 +1361,7 @@ void CCSPlayerAnimState::ComputeFootPlantSequence( CStudioHdr *pStudioHdr )
 
 void CCSPlayerAnimState::ComputeFlinchSequence( CStudioHdr *pStudioHdr )
 {
-	VPROF( "CCSPlayerAnimState::ComputeFlinchSequence" );
+	CVProfScope _( "CCSPlayerAnimState::ComputeFlinchSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CBaseCombatCharacter *pBaseCombatCharacter = dynamic_cast< CBaseCombatCharacter* >( m_pOuter );
 	if ( !pBaseCombatCharacter )
@@ -1386,7 +1412,7 @@ int CCSPlayerAnimState::CalcFlashedLayerSequence( CBaseCombatCharacter *pBaseCom
 
 void CCSPlayerAnimState::ComputeFlashedSequence( CStudioHdr *pStudioHdr )
 {
-	VPROF( "CCSPlayerAnimState::ComputeFlashedSequence" );
+	CVProfScope _( "CCSPlayerAnimState::ComputeFlashedSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CBaseCombatCharacter *pBaseCombatCharacter = dynamic_cast< CBaseCombatCharacter* >( m_pOuter );
 	if ( !pBaseCombatCharacter )
@@ -1469,7 +1495,7 @@ int CCSPlayerAnimState::CalcTauntLayerSequence( CBaseCombatCharacter *pBaseComba
 
 void CCSPlayerAnimState::ComputeTauntSequence( CStudioHdr *pStudioHdr )
 {
-	VPROF( "CCSPlayerAnimState::ComputeFlinchSequence" );
+	CVProfScope _( "CCSPlayerAnimState::ComputeFlinchSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CBaseCombatCharacter *pBaseCombatCharacter = dynamic_cast< CBaseCombatCharacter* >( m_pOuter );
 	if ( !pBaseCombatCharacter )
@@ -1499,7 +1525,7 @@ void CCSPlayerAnimState::ComputeTauntSequence( CStudioHdr *pStudioHdr )
 
 int CCSPlayerAnimState::CalcAimLayerSequence( float *flCycle, float *flAimSequenceWeight, bool bForceIdle )
 {
-	VPROF( "CCSPlayerAnimState::CalcAimLayerSequence" );
+	CVProfScope _( "CCSPlayerAnimState::CalcAimLayerSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	const char *pSuffix = GetWeaponSuffix();
 	if ( !pSuffix )
@@ -1554,7 +1580,7 @@ int CCSPlayerAnimState::CalcAimLayerSequence( float *flCycle, float *flAimSequen
 
 const char* CCSPlayerAnimState::GetWeaponSuffix()
 {
-	VPROF( "CCSPlayerAnimState::GetWeaponSuffix" );
+	CVProfScope _( "CCSPlayerAnimState::GetWeaponSuffix", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Figure out the weapon suffix.
 	CWeaponCSBase *pWeapon = m_pHelpers->CSAnim_GetActiveWeapon();
@@ -1562,16 +1588,6 @@ const char* CCSPlayerAnimState::GetWeaponSuffix()
 		return nullptr;
 
 	const char *pSuffix = pWeapon->GetPlayerAnimationExtension();
-
-#ifdef CS_SHIELD_ENABLED
-	if ( m_pOuter->HasShield() == true )
-	{
-		if ( m_pOuter->IsShieldDrawn() == true )
-			pSuffix = "shield";
-		else 
-			pSuffix = "shield_undeployed";
-	}
-#endif
 
 	return pSuffix;
 }
@@ -1592,7 +1608,7 @@ int CCSPlayerAnimState::CalcFireLayerSequence(PlayerAnimEvent_t animEvent)
 	if ( pWeapon->GetCSWeaponID() == WEAPON_ELITE )
 	{
 		bool bPrimary = (animEvent == PLAYERANIMEVENT_FIRE_GUN_PRIMARY);
-		Q_snprintf( tempsuffix, sizeof(tempsuffix), "%s_%c", pSuffix, bPrimary?'r':'l' );
+		V_snprintf( tempsuffix, sizeof(tempsuffix), "%s_%c", pSuffix, bPrimary?'r':'l' );
 		pSuffix = tempsuffix;
 	}
 	else if ( pWeapon->GetCSWeaponID() == WEAPON_KNIFE || pWeapon->GetCSWeaponID() == WEAPON_KNIFE_GG )
@@ -1601,27 +1617,27 @@ int CCSPlayerAnimState::CalcFireLayerSequence(PlayerAnimEvent_t animEvent)
 
 		if ( animEvent == PLAYERANIMEVENT_FIRE_GUN_PRIMARY )
 		{
-			Q_snprintf( tempsuffix, sizeof(tempsuffix), "%s_light_r", pSuffix );
+			V_snprintf( tempsuffix, sizeof(tempsuffix), "%s_light_r", pSuffix );
 		}
 		else if ( animEvent == PLAYERANIMEVENT_FIRE_GUN_PRIMARY_OPT )
 		{
-			Q_snprintf( tempsuffix, sizeof(tempsuffix), "%s_light_l", pSuffix );
+			V_snprintf( tempsuffix, sizeof(tempsuffix), "%s_light_l", pSuffix );
 		}
 		else if ( animEvent == PLAYERANIMEVENT_FIRE_GUN_PRIMARY_SPECIAL1 )
 		{
-			Q_snprintf( tempsuffix, sizeof(tempsuffix), "%s_light_r_bs", pSuffix );
+			V_snprintf( tempsuffix, sizeof(tempsuffix), "%s_light_r_bs", pSuffix );
 		}
 		else if ( animEvent == PLAYERANIMEVENT_FIRE_GUN_PRIMARY_OPT_SPECIAL1 )
 		{
-			Q_snprintf( tempsuffix, sizeof(tempsuffix), "%s_light_l_bs", pSuffix );
+			V_snprintf( tempsuffix, sizeof(tempsuffix), "%s_light_l_bs", pSuffix );
 		}
 		else if ( animEvent == PLAYERANIMEVENT_FIRE_GUN_SECONDARY )
 		{
-			Q_snprintf( tempsuffix, sizeof(tempsuffix), "%s_heavy", pSuffix );
+			V_snprintf( tempsuffix, sizeof(tempsuffix), "%s_heavy", pSuffix );
 		}
 		else if ( animEvent == PLAYERANIMEVENT_FIRE_GUN_SECONDARY_SPECIAL1 )
 		{
-			Q_snprintf( tempsuffix, sizeof(tempsuffix), "%s_heavy_bs", pSuffix );
+			V_snprintf( tempsuffix, sizeof(tempsuffix), "%s_heavy_bs", pSuffix );
 		}
 		else
 		{
@@ -1700,7 +1716,7 @@ float CCSPlayerAnimState::GetCurrentMaxGroundSpeed()
 	}
 	else
 	{
-		AssertMsg1( false, "Need to handle the activity %d", currentActivity);
+		contract_assert( false && "Need to handle the activity %d" );
 		DevMsg("Need to handle the activity %d\n", (int)currentActivity);
 		m_flTargetMaxSpeed = 0.0f;
 	}
@@ -1882,7 +1898,7 @@ void CCSPlayerAnimState::ComputeSequences( CStudioHdr *pStudioHdr )
 {
 	BaseClass::ComputeSequences( pStudioHdr );
 
-	VPROF( "CCSPlayerAnimState::ComputeSequences" );
+	CVProfScope _( "CCSPlayerAnimState::ComputeSequences", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	
 	// dispatched through weapon
 	ComputeDeploySequence( pStudioHdr );
@@ -1913,7 +1929,7 @@ void CCSPlayerAnimState::ClearAnimationLayers()
 
 void CCSPlayerAnimState::ComputeFireSequence( CStudioHdr *pStudioHdr )
 {
-	VPROF( "CCSPlayerAnimState::ComputeFireSequence" );
+	CVProfScope _( "CCSPlayerAnimState::ComputeFireSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( m_delayedFire != PLAYERANIMEVENT_COUNT )
 	{
@@ -1974,7 +1990,7 @@ int CCSPlayerAnimState::CalcDeployLayerSequence( void )
 	//return CalcSequenceIndex( "deploy_%s", pSuffix );
 	
 	char szName[512];
-	Q_snprintf( szName, sizeof( szName ), "deploy_%s", pSuffix );
+	V_snprintf( szName, sizeof( szName ), "deploy_%s", pSuffix );
 	return m_pOuter->LookupSequence( szName );
 }
 
@@ -2017,7 +2033,7 @@ void CCSPlayerAnimState::ComputeDeploySequence( CStudioHdr *pStudioHdr )
 
 	if ( m_bDeploying )
 	{
-		VPROF( "CCSPlayerAnimState::ComputeDeploySequence" );
+		CVProfScope _( "CCSPlayerAnimState::ComputeDeploySequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		UpdateLayerSequenceGeneric( pStudioHdr, DEPLOYSEQUENCE_LAYER, m_bDeploying, m_flDeployCycle, m_iDeploySequence, false );
 		
 		// Not deploying anymore so clear out the layer.

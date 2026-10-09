@@ -1,19 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Interface that entities can use to redirect scoring to other entities.
 //			i.e. A rocket redirects scoring to the player that fired it.
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ISCORER_H
-#define ISCORER_H
 
 //-----------------------------------------------------------------------------
 // Purpose: Interface that entities can use to redirect scoring to other entities.
 //			i.e. A rocket redirects scoring to the player that fired it.
 //-----------------------------------------------------------------------------
-abstract_class IScorer
+class IScorer
 {
 public:
 	// Return the entity that should receive the score
@@ -21,6 +17,3 @@ public:
 	// Return the entity that should get assistance credit
 	virtual CBasePlayer *GetAssistant( void ) = 0;
 };
-
-
-#endif // ISCORER_H

@@ -1,26 +1,20 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// 
-//
-//===============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef SOS_SYSTEM_H
-#define SOS_SYSTEM_H
-
-#include "tier1/utlstring.h"
-#include "tier1/map_ops.h"
+import ks.tier1;
 #include "toolframework/itoolframework.h"
 #include "snd_dma.h"
 #include "snd_channels.h"
 #include "sos_entry_match_system.h"
-#include <memory>
-
-
+import std;
+#include "snd_sfx.h"
+#include "snd_audio_source.h"
 
 class CSosOperator;
 class CSosOperatorStack;
 // Externs the logging channel
-DECLARE_LOGGING_CHANNEL( LOG_SND_OPERATORS );
+extern LoggingChannelID_t LOG_SND_OPERATORS;;
 
 extern bool IsSoundSourceViewEntity( int soundsource );
 
@@ -33,7 +27,7 @@ extern ConVar snd_sos_show_operator_entry_filter;
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-#define SOS_INVALID_TRACK_NUMBER -1
+inline constexpr auto SOS_INVALID_TRACK_NUMBER = -1;
 
 
 struct track_data_t 
@@ -86,16 +80,17 @@ extern CSosOperatorStackList *S_InitChannelOperators( stack_data_t &stackData );
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-#define SO_MAX_DATA_SIZE SO_MAX_SPEAKERS
-#define SO_MAX_SPEAKERS ( CCHANVOLUMES / 2 )
-#define SO_POSITION_ARRAY_SIZE 3
-#define XPOSITION 0
-#define YPOSITION 1
-#define ZPOSITION 2
-#define SO_ANGLE_ARRAY_SIZE 3
-#define XANGLE 0
-#define YANGLE 1
-#define ZANGLE 2
+inline constexpr auto SO_MAX_SPEAKERS = ( CCHANVOLUMES / 2 );
+
+inline constexpr auto SO_MAX_DATA_SIZE = SO_MAX_SPEAKERS;
+inline constexpr auto SO_POSITION_ARRAY_SIZE = 3;
+inline constexpr auto XPOSITION = 0;
+inline constexpr auto YPOSITION = 1;
+inline constexpr auto ZPOSITION = 2;
+inline constexpr auto SO_ANGLE_ARRAY_SIZE = 3;
+inline constexpr auto XANGLE = 0;
+inline constexpr auto YANGLE = 1;
+inline constexpr auto ZANGLE = 2;
 
 // 
 // 
@@ -253,10 +248,10 @@ enum SODataType_t
 	SO_FLOAT = 0,
 };
 
-#define SO_SINGLE 1
-#define SO_VEC3 3
-#define SO_SPEAKERS SO_MAX_SPEAKERS
-#define SO_VEC3_X_8 3 * 8
+inline constexpr int SO_SINGLE = 1;
+inline constexpr int SO_VEC3 = 3;
+inline constexpr auto SO_SPEAKERS = SO_MAX_SPEAKERS;
+inline constexpr auto SO_VEC3_X_8 = 3 * 8;
 
 
 // enum SODataCount_t
@@ -332,14 +327,14 @@ public:
 
 	void			AddToTail( CSosOperator *pOperator, const char *pName );
 
-	int				FindOperatorViaOffset( size_t nOffset );
+	int				FindOperatorViaOffset( std::size_t nOffset );
 	CSosOperator	*FindOperator( const char *pName, void **pStructHandle );
 	int				FindOperator( const char *pName );
 	const char*     GetOperatorName( int nOpIndex ) { return m_vOperatorNames[ nOpIndex ]; }
 	int				GetOperatorOffset( int nIndex );
 	int				GetOperatorOutputOffset( const char *pOperatorName, const char *pOutputName );
 	void			*GetMemPtr() { return m_pMemPool; }
-	size_t			GetSize() { return m_nMemSize; }
+	std::size_t			GetSize() { return m_nMemSize; }
 	void			Execute( channel_t *pChannel, CScratchPad *pScratchPad );
 	void			ExecuteIterator( channel_t *pChannel, CScratchPad *pScratchPad, const void *pVoidMem, const char *pOperatorName, int * pnOperatorIndex );
 	void			Init( );
@@ -348,7 +343,7 @@ public:
 	inline bool		IsType( SosStackType_t SosType ) { return ( SosType == m_SOSType ); }
 
 	void			Print( int nLevel );
-	void			Copy( CSosOperatorStack *pDstStack, size_t nMemOffset );
+	void			Copy( CSosOperatorStack *pDstStack, std::size_t nMemOffset );
 	void			ParseKV( KeyValues *pParamKV );
 	bool			ShouldPrintOperators( ) const;
 	bool			ShouldPrintOperatorUpdates( ) const;
@@ -360,7 +355,7 @@ private:
 	char m_nName[64];
 	SosStackType_t m_SOSType;
 	void *m_pMemPool;
-	size_t m_nMemSize;
+	std::size_t m_nMemSize;
 	std::vector< CSosOperator * > m_vStack;
 	ks::idict< int > m_vOperatorMap;				// name -> index in m_vStack
 	std::vector< const char * > m_vOperatorNames;	// parallel to m_vStack; points at m_vOperatorMap keys
@@ -534,5 +529,3 @@ private:
 };
 
 #define g_pSoundOperatorSystem CSosOperatorSystem::GetSoundOperatorSystem()
-
-#endif // SOS_SYSTEM_H

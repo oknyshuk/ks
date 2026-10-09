@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Entity that propagates general data needed by clients for every player.
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_PLAYERRESOURCE_H
-#define C_PLAYERRESOURCE_H
+// Purpose: Entity that propagates general data needed by clients for every player.
 
 #include "reflect_annotations.h"
 #include "dt_recv.h"
@@ -16,8 +12,8 @@
 #include "c_baseentity.h"
 #include <igameresources.h>
 
-#define PLAYER_UNCONNECTED_NAME	"unconnected"
-#define PLAYER_ERROR_NAME		"ERRORNAME"
+inline constexpr const char *PLAYER_UNCONNECTED_NAME = "unconnected";
+inline constexpr const char *PLAYER_ERROR_NAME = "ERRORNAME";
 
 void RecvProxy_ChangedTeam( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
@@ -45,9 +41,6 @@ public : // IGameResources intreface
 	virtual bool	IsFakePlayer( int index );
 	virtual bool	IsLocalPlayer( int index  );
 	virtual bool	IsHLTV(int index);
-#if defined( REPLAY_ENABLED )
-	virtual bool	IsReplay(int index);
-#endif
 
 	virtual const char *GetPlayerName( int index );
 	virtual int		GetPing( int index );
@@ -96,5 +89,3 @@ protected:
 };
 
 extern C_PlayerResource *g_PR;
-
-#endif // C_PLAYERRESOURCE_H

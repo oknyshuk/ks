@@ -1,16 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Core types for the response rules -- criteria, responses, rules, and matchers.
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.core;
 
-#ifndef RESPONSE_HOST_INTERFACE_H
-#define RESPONSE_HOST_INTERFACE_H
+// Purpose: Core types for the response rules -- criteria, responses, rules, and matchers.
 
 #include "filesystem.h"
 class IUniformRandomStream;
-class ICommandLine;
 
 namespace ResponseRules
 {
@@ -21,7 +17,7 @@ namespace ResponseRules
 	// back when the response rules were inside the server.dll . Now that the rules
 	// are included into a standalone editor, we don't necessarily have an engine around,
 	// so there needs to be some other implementation. 
-	abstract_class IEngineEmulator
+	class IEngineEmulator
 	{
 	public:
 		/// Given an input text buffer data pointer, parses a single token into the variable token and returns the new
@@ -53,6 +49,3 @@ namespace ResponseRules
 		static IEngineEmulator *Get();
 	};
 };
-
-
-#endif

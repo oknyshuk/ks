@@ -1,13 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef HLTVSERVER_H
-#define HLTVSERVER_H
-
-#include <mutex>
 #include "baseserver.h"
 #include "hltvclient.h"
 #include "hltvdemo.h"
@@ -15,14 +9,15 @@
 #include "clientframe.h"
 #include "networkstringtable.h"
 #include <ihltv.h>
-#include <convar.h>
+import std;
+import ks.tier1;
 
-#define HLTV_BUFFER_VOICE			0	// player voice data
-#define HLTV_BUFFER_SOUNDS			1	// unreliable sounds
-#define HLTV_BUFFER_TEMPENTS		2	// temporary/event entities
-#define	HLTV_BUFFER_RELIABLE		3	// reliable messages
-#define HLTV_BUFFER_UNRELIABLE		4	// unreliable messages
-#define HLTV_BUFFER_MAX				5	// end marker
+inline constexpr auto HLTV_BUFFER_VOICE = 0; // player voice data
+inline constexpr auto HLTV_BUFFER_SOUNDS = 1; // unreliable sounds
+inline constexpr auto HLTV_BUFFER_TEMPENTS = 2; // temporary/event entities
+inline constexpr auto HLTV_BUFFER_RELIABLE = 3; // reliable messages
+inline constexpr auto HLTV_BUFFER_UNRELIABLE = 4; // unreliable messages
+inline constexpr auto HLTV_BUFFER_MAX = 5; // end marker
 
 // proxy dispatch modes
 #define DISPATCH_MODE_OFF			0
@@ -112,11 +107,11 @@ public: // CBaseServer interface:
 	IClient *ConnectClient ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
 		const char *name, const char *password, const char *hashedCDkey, int cdKeyLen,
 		const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
-		const byte *pbEncryptionKey, int nEncryptionKeyIndex ) OVERRIDE;
+		const byte *pbEncryptionKey, int nEncryptionKeyIndex ) override;
 
-	virtual bool GetRedirectAddressForConnectClient( const ns_address &adr, const SplitPlayerConnects_t &splitScreenClients, ns_address *pNetAdrRedirect ) OVERRIDE;
+	virtual bool GetRedirectAddressForConnectClient( const ns_address &adr, const SplitPlayerConnects_t &splitScreenClients, ns_address *pNetAdrRedirect ) override;
 
-	bool	CheckHltvPasswordMatch( const char *szPasswordProvidedByClient, const char *szServerRequiredPassword, CSteamID steamidClient );
+	bool	CheckHltvPasswordMatch( const char *szPasswordProvidedByClient, const char *szServerRequiredPassword, CPlayerId playeridClient );
 
 	virtual bool	GetClassBaseline( ServerClass *pClass, SerializedEntityHandle_t *pHandle);
 
@@ -159,7 +154,7 @@ public: // IDemoPlayer interface
 	int		GetPlaybackTick( void );
 
 	bool	StartPlayback( const char *filename, bool bAsTimeDemo, CDemoPlaybackParameters_t const *pPlaybackParameters, int );
-	CDemoPlaybackParameters_t const * GetDemoPlaybackParameters() OVERRIDE { return nullptr; }
+	CDemoPlaybackParameters_t const * GetDemoPlaybackParameters() override { return nullptr; }
 
 	bool	IsPlayingBack( void )const; // true if demo loaded and playing back
 	bool	IsPlaybackPaused( void )const; // true if playback paused
@@ -232,7 +227,6 @@ public:
 	float GetSnapshotRate()const { return m_flSnapshotRate; }
 	void FixupConvars( CNETMsg_SetConVar_t &convars );
 protected:
-	virtual bool ShouldUpdateMasterServer();
 
 private:
 	CBaseClient *CreateNewClient( int slot );
@@ -302,7 +296,7 @@ private:
 		//the next frame in our list (newest is at the tail of the list)
 		SHLTVDeltaFrame_t	*m_pNewerDeltaFrame;
 
-		size_t GetMemSize()const;
+		std::size_t GetMemSize()const;
 	};
 
 	//the newest delta frame that we've encoded
@@ -330,7 +324,7 @@ private:
 	//called to free all delta frames that are queued
 	void				FreeAllDeltaFrames( );
 
-	virtual IDemoStream *GetDemoStream() OVERRIDE { return &m_DemoFile; }
+	virtual IDemoStream *GetDemoStream() override { return &m_DemoFile; }
 public:
 
 	CGameClient		*m_MasterClient;		// if != NULL, this is the master HLTV 
@@ -466,6 +460,3 @@ protected:
 
 typedef THltvServerIterator<true> CActiveHltvServerIterator;
 typedef THltvServerIterator<false> CHltvServerIterator;
-
-
-#endif // HLTVSERVER_H

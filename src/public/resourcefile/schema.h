@@ -1,7 +1,7 @@
-#ifndef SCHEMA_H_
-#define SCHEMA_H_
+#pragma once
 
-#include "basetypes.h" // for 'schema' define
+import std;
+import ks.core;
 
 #include "resourcefile/resourcestream.h"
 #include "resourcefile/resourcefile.h"
@@ -9,17 +9,6 @@
 
 class CResourceStructIntrospection;
 
-#ifdef COMPILING_SCHEMA
-#define INTERNAL_SCHEMA_CLASS_MARKER_DATA `__schema_class_marker_data__`
-#define INTERNAL_SCHEMA_CLASS_MARKER_VIRTUAL `__schema_class_marker_virtual__`
-#define INTERNAL_SCHEMA_CLASS_MARKER_ABSTRACT `__schema_class_marker_abstract__`
-#define INTERNAL_SCHEMA_CLASS_MARKER_SIMPLE `__schema_class_marker_simple__`
-#else
-#define INTERNAL_SCHEMA_CLASS_MARKER_DATA
-#define INTERNAL_SCHEMA_CLASS_MARKER_VIRTUAL
-#define INTERNAL_SCHEMA_CLASS_MARKER_ABSTRACT
-#define INTERNAL_SCHEMA_CLASS_MARKER_SIMPLE
-#endif
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
@@ -56,7 +45,7 @@ public: \
 // Data Classes (no vtable)
 
 #define DECLARE_SCHEMA_DATA_CLASS( _className ) \
-	INTERNAL_SCHEMA_CLASS_MARKER_DATA \
+	 \
 	DECLARE_SCHEMA_PLAIN_CLASS_HELPER( _className, CSchemaClassBinding )
 
 #define DEFINE_SCHEMA_DATA_CLASS( _className ) DEFINE_SCHEMA_CLASS_HELPER( _className, CSchemaClassBinding )
@@ -66,7 +55,7 @@ public: \
 // Virtual Classes
 
 #define DECLARE_SCHEMA_VIRTUAL_CLASS( _className ) \
-	INTERNAL_SCHEMA_CLASS_MARKER_VIRTUAL \
+	 \
 	DECLARE_SCHEMA_VIRTUAL_CLASS_HELPER( _className, CSchemaClassBinding )
 
 #define DEFINE_SCHEMA_VIRTUAL_CLASS( _className ) DEFINE_SCHEMA_CLASS_HELPER( _className, CSchemaClassBinding )
@@ -76,7 +65,7 @@ public: \
 // Abstract Classes
 
 #define DECLARE_SCHEMA_ABSTRACT_CLASS( _className ) \
-	INTERNAL_SCHEMA_CLASS_MARKER_ABSTRACT \
+	 \
 	DECLARE_SCHEMA_VIRTUAL_CLASS_HELPER( _className, CSchemaAbstractClassBinding )
 
 #define DEFINE_SCHEMA_ABSTRACT_CLASS( _className ) DEFINE_SCHEMA_CLASS_HELPER( _className, CSchemaAbstractClassBinding )
@@ -90,7 +79,7 @@ public: \
 // - If unserialized, it will be memzeroed rather than constructed
 
 #define DECLARE_SCHEMA_SIMPLE_CLASS( _name ) \
-	INTERNAL_SCHEMA_CLASS_MARKER_SIMPLE \
+	 \
 	const CResourceStructIntrospection *Schema_GetIntrospection( ) const { return g_pResourceSystem->FindStructIntrospection( #_name ); }
 
 //////////////////////////////////////////////////////////////////////////
@@ -198,4 +187,3 @@ public:
 	}
 };
 
-#endif

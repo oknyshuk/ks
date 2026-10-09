@@ -1,4 +1,5 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
 /* Example how to plug this into an existing shader:
 
@@ -24,9 +25,10 @@
 				}
 			}
 
+import ks.tier1;
 		#include "flesh_interior_blended_pass_helper.h"
 
-		In BEGIN_SHADER_PARAMS:
+		In :
 			// Flesh Interior Pass
 			SHADER_PARAM( FLESHINTERIORENABLED, SHADER_PARAM_TYPE_BOOL, "0", "Enable Flesh interior blend pass" )
 			SHADER_PARAM( FLESHINTERIORTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Flesh color texture" )
@@ -117,17 +119,14 @@
 			}
 
 ==================================================================================================== */
-
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
-#include "convar.h"
+import std;
 #include "flesh_interior_blended_pass_helper.h"
 
 // Auto generated inc files
 #include "flesh_interior_blended_pass_vs20.inc"
 #include "flesh_interior_blended_pass_ps20.inc"
 #include "flesh_interior_blended_pass_ps20b.inc"
-
 
 void InitParamsFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, FleshInteriorBlendedPassVars_t &info )
 {

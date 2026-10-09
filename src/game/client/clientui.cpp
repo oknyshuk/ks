@@ -1,29 +1,29 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
 // Console GPU alignment stub (not used on PC)
+#include "rocketui/rmlui.h"
+import ks.tier1;
 #ifndef GPU_RESOLVE_ALIGNMENT
 #define GPU_RESOLVE_ALIGNMENT 1
 #endif
 
-#include "cbase.h"
-#include <bitset>
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
 #include "clientui.h"
 #include "iengineui.h"
-#include "uicenterprint.h"
-#include "tier0/vprof.h"
 #include "iclientmode.h"
-#include <keyvalues.h>
 #include "filesystem.h"
-
-
-
-
-
 
 bool IsWidescreen( void );
 
@@ -151,7 +151,7 @@ void CSplitScreenLetterBox::Init()
 				if ( pchAspect )
 				{
 					// Allowable syntax is "16 by 9" or "16 x 9" or "1.77"
-					if ( Q_stristr( pchAspect, " by " ) )
+					if ( V_stristr( pchAspect, " by " ) )
 					{
 						float f1, f2;
 						if ( 2 == sscanf( pchAspect, "%f by %f", &f1, &f2 ) && f2 > 0.001f )
@@ -164,7 +164,7 @@ void CSplitScreenLetterBox::Init()
 							m_bValid = false;
 						}
 					}
-					else if ( Q_stristr( pchAspect, " x " ) )
+					else if ( V_stristr( pchAspect, " x " ) )
 					{
 						float f1, f2;
 						if ( 2 == sscanf( pchAspect, "%f x %f", &f1, &f2 ) && f2 > 0.001f )
@@ -177,9 +177,9 @@ void CSplitScreenLetterBox::Init()
 							m_bValid = false;
 						}
 					}
-					else if ( Q_atof( pchAspect ) > 0.1f )
+					else if ( V_atof( pchAspect ) > 0.1f )
 					{
-						m_Settings[ i ].m_flAspectRatio = Q_atof( pchAspect );
+						m_Settings[ i ].m_flAspectRatio = V_atof( pchAspect );
 					}
 					else
 					{
@@ -226,10 +226,10 @@ bool IsWidescreen( void )
 
 bool CSplitScreenLetterBox::GetSettings( bool *pbInsetHud, float *pflAspect, float *pFOV, float *pViewModelFOV )
 {
-	Assert( pbInsetHud );
-	Assert( pflAspect );
-	Assert( pFOV );
-	Assert( pViewModelFOV );
+	contract_assert( pbInsetHud );
+	contract_assert( pflAspect );
+	contract_assert( pFOV );
+	contract_assert( pViewModelFOV );
 	static bool bUsedDefaultsLastTime = false;
 	if ( !m_bValid || m_nSplitScreenPlayers == 1 || UI_UsePipSplit() || ss_force_primary_fullscreen.GetBool() )
 	{
@@ -276,7 +276,9 @@ bool CSplitScreenLetterBox::GetSettings( bool *pbInsetHud, float *pflAspect, flo
 
 static CSplitScreenLetterBox g_LetterBox;
 
-CON_COMMAND( ss_reloadletterbox, "ss_reloadletterbox" )
+static void ss_reloadletterbox( const CCommand &args );
+static ConCommand ss_reloadletterbox_command( "ss_reloadletterbox", ss_reloadletterbox, "ss_reloadletterbox" );
+static void ss_reloadletterbox( const CCommand &args )
 {
 	g_LetterBox.Init();
 	UI_OnSplitScreenStateChanged();
@@ -372,7 +374,7 @@ void UI_UpdateScreenSpaceBounds( int nNumSplits, int sx, int sy, int sw, int sh 
 		validSlots.push_back( i );
 	}
 
-	Assert( std::ssize( validSlots ) == nNumSplits );
+	contract_assert( std::ssize( validSlots ) == nNumSplits );
 
 	switch ( nNumSplits )
 	{
@@ -508,7 +510,7 @@ void IterateRemoteSplitScreenViewSlots_Push( bool bSet )
 
 void IterateRemoteSplitScreenViewSlots_Pop( void )
 {
-	Assert( std::ssize( s_IterateNetworkedSplitScreenSlotsPushedValues ) > 0 );
+	contract_assert( std::ssize( s_IterateNetworkedSplitScreenSlotsPushedValues ) > 0 );
 	g_bIterateRemoteSplitScreenPlayers = s_IterateNetworkedSplitScreenSlotsPushedValues.back();
 	s_IterateNetworkedSplitScreenSlotsPushedValues.resize( s_IterateNetworkedSplitScreenSlotsPushedValues.size() - 1 );
 }

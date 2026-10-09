@@ -1,10 +1,20 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_predmap.h"
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
@@ -15,7 +25,6 @@
 #include "reflect_sendtable.h"
 #endif
 #include "particle_property.h"
-#include "utlvector.h"
 
 #ifdef CLIENT_DLL
 
@@ -82,7 +91,7 @@ void CParticleProperty::Init( CBaseEntity *pEntity )
 //-----------------------------------------------------------------------------
 int CParticleProperty::GetParticleAttachment( C_BaseEntity *pEntity, const char *pszAttachmentName, const char *pszParticleName )
 {
-	Assert( pEntity && pEntity->GetBaseAnimating() );
+	contract_assert( pEntity && pEntity->GetBaseAnimating() );
 	if ( !pEntity || !pEntity->GetBaseAnimating() )
 		return -1;
 
@@ -179,7 +188,7 @@ CNewParticleEffect *CParticleProperty::CreatePrecached( int nPrecacheIndex, Part
 	CParticleSystemDefinition *pDef = g_pParticleSystemMgr->FindPrecachedParticleSystem( nPrecacheIndex );
 	if ( !pDef )
 	{
-		AssertMsg( 0, "Attempting to create unknown particle system" );
+		contract_assert( false && "Attempting to create unknown particle system" );
 		return nullptr;
 	}
 	return Create( pDef, iAttachType, iAttachmentPoint, vecOriginOffset, matOffset );
@@ -203,7 +212,7 @@ CNewParticleEffect *CParticleProperty::Create( const char *pszParticleName, Part
 //-----------------------------------------------------------------------------
 void CParticleProperty::AddControlPoint( CNewParticleEffect *pEffect, int iPoint, C_BaseEntity *pEntity, ParticleAttachment_t iAttachType, const char *pszAttachmentName, Vector vecOriginOffset, matrix3x4_t *matOffset )
 {
-	Assert( pEffect );
+	contract_assert( pEffect );
 	if ( pEffect )
 	{
 		int iAttachment = -1;
@@ -231,9 +240,9 @@ void CParticleProperty::AddControlPoint( CNewParticleEffect *pEffect, int iPoint
 //-----------------------------------------------------------------------------
 void CParticleProperty::AddControlPoint( int iEffectIndex, int iPoint, C_BaseEntity *pEntity, ParticleAttachment_t iAttachType, int iAttachmentPoint, Vector vecOriginOffset, matrix3x4_t *matOffset )
 {
-	Assert( iEffectIndex >= 0 && iEffectIndex < std::ssize( m_ParticleEffects ) );
+	contract_assert( iEffectIndex >= 0 && iEffectIndex < std::ssize( m_ParticleEffects ) );
 	ParticleEffectList_t *pEffect = &m_ParticleEffects[iEffectIndex];
-	Assert( std::ssize( pEffect->pControlPoints ) < MAX_PARTICLE_CONTROL_POINTS );
+	contract_assert( std::ssize( pEffect->pControlPoints ) < MAX_PARTICLE_CONTROL_POINTS );
 
 	int iIndex = std::ssize( pEffect->pControlPoints ); pEffect->pControlPoints.emplace_back();
 	ParticleControlPoint_t *pNewPoint = &pEffect->pControlPoints[iIndex];
@@ -325,7 +334,7 @@ void CParticleProperty::StopEmissionAndDestroyImmediately( CNewParticleEffect *p
 	if ( pEffect )
 	{
 		int iIndex = FindEffect( pEffect );
-		Assert( iIndex != -1 );
+		contract_assert( iIndex != -1 );
 		if ( iIndex != -1 )
 		{
 			m_ParticleEffects.erase( m_ParticleEffects.begin() + iIndex );
@@ -357,7 +366,7 @@ void CParticleProperty::StopEmissionAndDestroyImmediately( CNewParticleEffect *p
 //-----------------------------------------------------------------------------
 void CParticleProperty::StopParticlesInvolving( CBaseEntity *pEntity, bool bForceRemoveInstantly /* =false */ )
 {
-	Assert( pEntity );
+	contract_assert( pEntity );
 
 	EHANDLE entHandle = pEntity;
 
@@ -395,7 +404,7 @@ void CParticleProperty::StopParticlesInvolving( CBaseEntity *pEntity, bool bForc
 void CParticleProperty::StopParticlesNamed( const char *pszEffectName, bool bForceRemoveInstantly /* =false */, int nSplitScreenPlayerSlot /*= -1*/ )
 {
 	CParticleSystemDefinition *pDef = g_pParticleSystemMgr->FindParticleSystem( pszEffectName );
-	AssertMsg1(pDef, "Could not find particle definition %s", pszEffectName );
+	contract_assert( pDef && "Could not find particle definition %s" );
 	if (!pDef)
 		return;
 
@@ -429,7 +438,7 @@ void CParticleProperty::StopParticlesNamed( const char *pszEffectName, bool bFor
 void CParticleProperty::OnParticleSystemUpdated( CNewParticleEffect *pEffect, float flTimeDelta )
 {
 	int iIndex = FindEffect( pEffect );
-	Assert( iIndex != -1 );
+	contract_assert( iIndex != -1 );
 	if ( iIndex == -1 )
 		return;
 
@@ -496,7 +505,7 @@ int CParticleProperty::FindEffect( const char *pEffectName )
 {
 	for ( int i = 0; i < std::ssize( m_ParticleEffects ); i++ )
 	{
-		if ( !Q_stricmp( m_ParticleEffects[i].pParticleEffect->GetName(), pEffectName ) )
+		if ( !V_stricmp( m_ParticleEffects[i].pParticleEffect->GetName(), pEffectName ) )
 			return i;
 	}
 
@@ -569,7 +578,7 @@ void CParticleProperty::UpdateControlPoint( ParticleEffectList_t *pEffect, int i
 			C_BaseAnimating *pAnimating = pPoint->hEntity->GetBaseAnimating();
 
 			bool bValid = false;
-			Assert( pAnimating );
+			contract_assert( pAnimating );
 			if ( pAnimating )
 			{
 				matrix3x4_t attachmentToWorld;
@@ -603,7 +612,7 @@ void CParticleProperty::UpdateControlPoint( ParticleEffectList_t *pEffect, int i
 #ifdef _DEBUG
 						float flTests[3] = {vecForward.Dot( vecRight ), vecRight.Dot( vecUp ), vecUp.Dot( vecForward )};
 						static float s_flMaxTest = 0.001f;
-						Assert( fabs( flTests[0] ) + fabs( flTests[1] ) + fabs( flTests[2] ) < s_flMaxTest );
+						contract_assert( fabs( flTests[0] ) + fabs( flTests[1] ) + fabs( flTests[2] ) < s_flMaxTest );
 #endif
 						MatrixPosition( attachmentToWorld, vecOrigin );
 
@@ -632,7 +641,7 @@ void CParticleProperty::UpdateControlPoint( ParticleEffectList_t *pEffect, int i
 			}
 			if ( !bValid )
 			{
-				AssertOnce( 0 );
+				contract_assert( 0 );
 				return;
 			}
 		}
@@ -654,10 +663,10 @@ void CParticleProperty::UpdateControlPoint( ParticleEffectList_t *pEffect, int i
 			if ( !pEnt->IsPlayer() )
 				return;
 
-			C_BasePlayer *pPlayer = assert_cast< C_BasePlayer* >( pEnt );
+			C_BasePlayer *pPlayer = static_cast< C_BasePlayer* >( pEnt );
 
 			bool bValid = false;
-			Assert( pPlayer );
+			contract_assert( pPlayer );
 			if ( pPlayer )
 			{
 				bValid = true;
@@ -666,7 +675,7 @@ void CParticleProperty::UpdateControlPoint( ParticleEffectList_t *pEffect, int i
 			}
 			if ( !bValid )
 			{
-				AssertOnce( 0 );
+				contract_assert( 0 );
 				return;
 			}
 		}
@@ -705,7 +714,7 @@ void CParticleProperty::UpdateControlPoint( ParticleEffectList_t *pEffect, int i
 		{
 			C_BaseAnimating *pAnimating = pPoint->hEntity->GetBaseAnimating();
 
-			Assert( pAnimating );
+			contract_assert( pAnimating );
 			if ( pAnimating )
 			{
 				matrix3x4_t rootBone;

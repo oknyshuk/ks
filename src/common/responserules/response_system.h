@@ -1,20 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: The CResponseSystem class. Don't include this header; include the response_types
 // into which it is transcluded.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef RESPONSE_SYSTEM_H
-#define RESPONSE_SYSTEM_H
+import ks.tier1;
+#include "responserules/response_types_internal.h"
 
-#include "tier1/map_ops.h"
-
-#include <map>
-#include <set>
-#include <string>
-#include <vector>
+import std;
 
 namespace ResponseRules
 {
@@ -110,7 +104,7 @@ namespace ResponseRules
 			}
 			if ( std::ssize( m_ScriptStack ) <= 0 )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				return false;
 			}
 
@@ -128,7 +122,7 @@ namespace ResponseRules
 		{
 			if ( std::ssize( m_ScriptStack ) <= 0 )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				return false;
 			}
 
@@ -210,7 +204,7 @@ public:
 		bool		Compare( const char *setValue, Criteria *c, bool verbose = false );
 		bool		CompareUsingMatcher( const char *setValue, Matcher& m, bool verbose = false );
 		void		ComputeMatcher( Criteria *c, Matcher& matcher );
-		void		ResolveToken( Matcher& matcher, char *token, size_t bufsize, char const *rawtoken );
+		void		ResolveToken( Matcher& matcher, char *token, std::size_t bufsize, char const *rawtoken );
 		float		LookupEnumeration( const char *name, bool& found );
 
 		ResponseRulePartition::tIndex FindBestMatchingRule( const CriteriaSet& set, bool verbose, float &scoreOfBestMatchingRule );
@@ -224,11 +218,11 @@ public:
 		bool		ResolveResponse( ResponseSearchResult& result, int depth, const char *name, bool verbose = false, IResponseFilter *pFilter = nullptr );
 		int			SelectWeightedResponseFromResponseGroup( ResponseGroup *g, IResponseFilter *pFilter );
 		void		DescribeResponseGroup( ResponseGroup *group, int selected, int depth );
-		void		DebugPrint( int depth, PRINTF_FORMAT_STRING const char *fmt, ... ) FMTFUNCTION( 3, 4 );
+		[[gnu::format(printf, 3, 4)]] void		DebugPrint( int depth, const char *fmt, ... );
 
 		void		LoadFromBuffer( const char *scriptfile, const char *buffer );
 
-		void		GetCurrentScript( char *buf, size_t buflen );
+		void		GetCurrentScript( char *buf, std::size_t buflen );
 		int			GetCurrentToken() const;
 		void		SetCurrentScript( const char *script );
 		
@@ -245,7 +239,7 @@ public:
 		void		PushScript( const char *scriptfile, unsigned char *buffer );
 		void		PopScript(void);
 
-		void		ResponseWarning( PRINTF_FORMAT_STRING const char *fmt, ... ) FMTFUNCTION( 2, 3 );
+		[[gnu::format(printf, 2, 3)]] void		ResponseWarning( const char *fmt, ... );
 
 		// Names repeat: custom systems copy a group for each rule that uses it.
 		std::multimap< std::string, ResponseGroup, ks::iless >	m_Responses;
@@ -293,5 +287,3 @@ public:
 	const float AIS_DEF_MIN_DELAY 	= 2.8; // Minimum amount of time an NPCs will wait after someone has spoken before considering speaking again
 	const float AIS_DEF_MAX_DELAY 	= 3.2; // Maximum amount of time an NPCs will wait after someone has spoken before considering speaking again
 }
-
-#endif // RESPONSE_SYSTEM_H

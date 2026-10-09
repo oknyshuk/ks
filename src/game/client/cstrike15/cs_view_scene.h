@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CS_VIEW_SCENE_H
-#define CS_VIEW_SCENE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "viewrender.h"
 
@@ -32,5 +26,3 @@ private:
 	
 	ITexture *m_pFlashTexture;
 };
-
-#endif //CS_VIEW_SCENE_H

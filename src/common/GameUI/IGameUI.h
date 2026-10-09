@@ -1,26 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IGAMEUI_H
-#define IGAMEUI_H
-
-#include "interface.h"
+import std;
+import ks.tier1;
 
 class CCommand;
-
-// reasons why the user can't connect to a game server
-enum ESteamLoginFailure
-{
-	STEAMLOGINFAILURE_NONE,
-	STEAMLOGINFAILURE_BADTICKET,
-	STEAMLOGINFAILURE_NOSTEAMLOGIN,
-	STEAMLOGINFAILURE_VACBANNED,
-	STEAMLOGINFAILURE_LOGGED_IN_ELSEWHERE
-};
 
 enum ESystemNotify
 {
@@ -48,7 +33,7 @@ enum ECommandMsgBoxSlot
 //-----------------------------------------------------------------------------
 // Purpose: contains all the functions that the GameUI dll exports
 //-----------------------------------------------------------------------------
-abstract_class IGameUI 
+class IGameUI 
 {
 public:
 	// initialization/shutdown
@@ -69,7 +54,6 @@ public:
 	// OLD: Use OnConnectToServer2
 	virtual void OLD_OnConnectToServer(const char *game, int IP, int port) = 0; 
 	
-	virtual void OnDisconnectFromServer_OLD( uint8 eSteamLoginFailure, const char *username ) = 0;
 	virtual void OnLevelLoadingStarted( const char *levelName, bool bShowProgressDialog ) = 0;
 	virtual void OnLevelLoadingFinished(bool bError, const char *failureReason, const char *extendedReason) = 0;
 	virtual void StartLoadingScreenForCommand( const char* command ) = 0;
@@ -91,10 +75,10 @@ public:
 	virtual void CreateCommandMsgBox( const char* pszTitle, const char* pszMessage, bool showOk = true, bool showCancel = false, const char* okCommand = nullptr, const char* cancelCommand = nullptr, const char* closedCommand = nullptr, const char* pszLegend = nullptr ) = 0;
 	virtual void CreateCommandMsgBoxInSlot( ECommandMsgBoxSlot slot, const char* pszTitle, const char* pszMessage, bool showOk = true, bool showCancel = false, const char* okCommand = nullptr, const char* cancelCommand = nullptr, const char* closedCommand = nullptr, const char* pszLegend = nullptr ) = 0;
 
-	virtual void OnConnectToServer2(const char *game, int IP, int connectionPort, int queryPort) = 0;
+	virtual void OnConnectToServer2(const char *game, int IP, int connectionPort) = 0;
 
 	virtual void SetProgressOnStart() = 0;
-	virtual void OnDisconnectFromServer( uint8 eSteamLoginFailure ) = 0;
+	virtual void OnDisconnectFromServer() = 0;
 
 	virtual void NeedConnectionProblemWaitScreen() = 0;
 	virtual void ShowPasswordUI( char const *pchCurrentPW ) = 0;
@@ -111,6 +95,4 @@ public:
 	virtual void RestoreTopLevelMenu() = 0;
 };
 
-#define GAMEUI_INTERFACE_VERSION "GameUI011"
-
-#endif // IGAMEUI_H
+inline constexpr const char *GAMEUI_INTERFACE_VERSION = "GameUI011";

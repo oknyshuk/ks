@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef S3TC_DECODE_H
-#define S3TC_DECODE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "bitmap/imageformat.h"
 enum ImageFormat;
@@ -26,7 +20,7 @@ public:
 };
 
 
-#define MAX_S3TC_BLOCK_BYTES	16
+inline constexpr auto MAX_S3TC_BLOCK_BYTES = 16;
 
 
 S3PaletteIndex S3TC_GetPixelPaletteIndex( ImageFormat format, const char *pS3Block, int x, int y );
@@ -101,6 +95,3 @@ inline S3RGBA S3TC_RGBABlend( const S3RGBA &a, const S3RGBA &b, int aMul, int bM
 	ret.a = (unsigned char)(( (int)a.a * aMul + (int)b.a * bMul ) / div );
 	return ret;
 }
-
-
-#endif // S3TC_DECODE_H

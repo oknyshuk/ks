@@ -1,9 +1,5 @@
-//========= Copyright (c) 1996-2011, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:  Holds ELO data on Xbox
-//
-//=====================================================================================//
-#ifndef _IPLAYERRANKINGDATA_H_
-#define _IPLAYERRANKINGDATA_H_
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2011 Valve Corporation
 
-#endif  // _IPLAYERRANKINGDATA_H_
+// Purpose: Holds ELO data on Xbox

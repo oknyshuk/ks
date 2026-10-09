@@ -1,9 +1,64 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "const.h"
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
+#include "ndebugoverlay.h"
+#endif
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
@@ -352,7 +407,7 @@ void CFuncLadder::FindNearbyDismountPoints( const Vector& origin, float radius, 
 	while ( (pEntity = gEntList.FindEntityByClassnameWithin( pEntity, "info_ladder_dismount", origin, radius)) != nullptr )
 	{
 		CInfoLadderDismount *landingspot = static_cast< CInfoLadderDismount * >( pEntity );
-		Assert( landingspot );
+		contract_assert( landingspot );
 
 		// If spot has a target, then if the target is not this ladder, don't add to our list.
 		if ( landingspot->m_target != NULL_STRING )

@@ -1,24 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( IVIEWPORT_H )
-#define IVIEWPORT_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.tier1;
 
 #include "viewport_panel_names.h"
 
-class KeyValues;
 
-abstract_class IViewPortPanel
+class IViewPortPanel
 {
 	
 public:
@@ -46,7 +34,7 @@ public:
 	virtual void LevelInit( void ) {}
 };
 
-abstract_class IViewPort
+class IViewPort
 {
 public:
 	virtual void UpdateAllPanels( void ) = 0;
@@ -63,5 +51,3 @@ public:
 
 extern IViewPort *GetViewPortInterface();
 extern IViewPort *GetFullscreenViewPortInterface();
-
-#endif // IVIEWPORT_H

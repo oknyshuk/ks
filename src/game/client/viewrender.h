@@ -1,19 +1,17 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#if !defined( VIEWRENDER_H )
-#define VIEWRENDER_H
-
+import ks.vstdlib;
 #include "shareddefs.h"
 #include "tier2/tier2.h"
 #include "iviewrender.h"
 #include "view_shared.h"
 
-#include "mathlib/volumeculler.h"
-#include "vstdlib/jobthread.h"
+import std;
+#include "cdll_client_int.h"
+#include "networkvar.h"
+#include "clientleafsystem.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -76,8 +74,8 @@ enum view_id_t
 };
 view_id_t CurrentViewID();
 
-#define PASS_BUILDLISTS (1<<0)
-#define PASS_DRAWLISTS  (1<<1)
+inline constexpr auto PASS_BUILDLISTS = (1<<0);
+inline constexpr auto PASS_DRAWLISTS = (1<<1);
 
 //-----------------------------------------------------------------------------
 // Purpose: Stored pitch drifting variables
@@ -101,14 +99,14 @@ struct ViewCustomVisibility_t
 	ViewCustomVisibility_t()
 	{
 		m_nNumVisOrigins = 0;
-		m_VisData.m_fDistToAreaPortalTolerance = FLT_MAX; 
+		m_VisData.m_fDistToAreaPortalTolerance = std::numeric_limits<float>::max(); 
 		m_iForceViewLeaf = -1;
 	}
 
 	void AddVisOrigin( const Vector& origin )
 	{
 		// Don't allow them to write past array length
-		AssertMsg( m_nNumVisOrigins < MAX_VIS_LEAVES, "Added more origins than will fit in the array!" );
+		contract_assert( ( m_nNumVisOrigins < MAX_VIS_LEAVES ) && "Added more origins than will fit in the array!" );
 
 		// If the vis origin count is greater than the size of our array, just fail to add this origin
 		if ( m_nNumVisOrigins >= MAX_VIS_LEAVES )
@@ -499,7 +497,7 @@ public:
 	virtual void	OnRenderStart();
 	void			DriftPitch (void);
 
-	static CViewRender *	GetMainView() { return assert_cast<CViewRender *>( view ); }
+	static CViewRender *	GetMainView() { return static_cast<CViewRender *>( view ); }
 
 	void			AddViewToScene( CRendering3dView *pView ) { m_SimpleExecutor.AddView( pView ); }
 
@@ -724,10 +722,10 @@ protected:
 
 	CMaterialReference	m_WhiteMaterial;
 
-	CON_COMMAND_MEMBER_F( CViewRender, "screenfademinsize", OnScreenFadeMinSize, "Modify global screen fade min size in pixels", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
-	CON_COMMAND_MEMBER_F( CViewRender, "screenfademaxsize", OnScreenFadeMaxSize, "Modify global screen fade max size in pixels", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+	void OnScreenFadeMinSize( const CCommand &args );
+	CConCommandMemberAccessor< CViewRender > m_OnScreenFadeMinSize_register{ this, "screenfademinsize", &CViewRender::OnScreenFadeMinSize, "Modify global screen fade min size in pixels", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY };
+	void OnScreenFadeMaxSize( const CCommand &args );
+	CConCommandMemberAccessor< CViewRender > m_OnScreenFadeMaxSize_register{ this, "screenfademaxsize", &CViewRender::OnScreenFadeMaxSize, "Modify global screen fade max size in pixels", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY };
 
 	float				m_flSmokeOverlayAmount;
 };
-
-#endif // VIEWRENDER_H

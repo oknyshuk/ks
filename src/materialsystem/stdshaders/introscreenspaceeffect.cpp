@@ -1,9 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 
@@ -11,9 +7,8 @@
 #include "IntroScreenSpaceEffect_ps20.inc"
 #include "IntroScreenSpaceEffect_ps20b.inc"
 
-
 BEGIN_VS_SHADER_FLAGS( IntroScreenSpaceEffect, "Help for IntroScreenSpaceEffect", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( MODE, SHADER_PARAM_TYPE_INTEGER, "0", "" )
 		SHADER_PARAM( ENABLESRGB, SHADER_PARAM_TYPE_BOOL, "0", "" )
 	END_SHADER_PARAMS

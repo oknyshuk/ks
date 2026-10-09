@@ -1,17 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Client side CTFTeam class
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_CS_TEAM_H
-#define C_CS_TEAM_H
+// Purpose: Client side CTFTeam class
 
 #include "reflect_annotations.h"
 
 #include "c_team.h"
 #include "shareddefs.h"
+#include "weapon_parse.h"
 
 class C_BaseEntity;
 class C_BaseObject;
@@ -33,5 +30,3 @@ public:
 
 const char* Helper_GetLocalPlayerAssassinationQuestLocToken( const CEconQuestDefinition *pQuest );
 bool Helper_GetDecoratedAssassinationTargetName( const CEconQuestDefinition *pQuest, wchar_t* pszBuffer, size_t nBuffSizeInCharacters );
-
-#endif // C_CS_TEAM_H

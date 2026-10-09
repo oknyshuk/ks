@@ -1,16 +1,15 @@
-//============ Copyright  Valve Corporation, All rights reserved. =============
-//
-// When embroidered patches are generated from sticker kits, we must wait
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+// Purpose: When embroidered patches are generated from sticker kits, we must wait
 // for the textures to be generated before saving to disk.
-//
-//=============================================================================
 
-#ifndef CS_CUSTOM_EMBROIDER_GENERATION_MGR_H
-#define CS_CUSTOM_EMBROIDER_GENERATION_MGR_H
-
+import ks.tier1;
 #include "igamesystem.h"
 #include "materialsystem/icustommaterialmanager.h"
-#include "utlvector.h"
+import std;
+#include "datacache/imdlcache.h"
 
 struct CustomMaterialGenerationData_t
 {
@@ -39,5 +38,3 @@ private:
 	bool m_bHasJob;
 
 };
-
-#endif //CS_CUSTOM_EMBROIDER_GENERATION_MGR_H

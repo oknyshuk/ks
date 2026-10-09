@@ -1,41 +1,88 @@
-//========= Copyright (c) 1996-2011, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Game types and modes
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2011 Valve Corporation
 
+// Purpose: Game types and modes
 
 //
 // NOTE: This is horrible design to have this file included in multiple projects (client.dll, server.dll, matchmaking.dll)
 // which don't have same interfaces applicable to interact with the engine and don't have sufficient context here
 // hence these compile-time conditionals to use appropriate interfaces
 //
-#if defined( CLIENT_DLL ) || defined( GAME_DLL )
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
 #endif
-
-#if defined( MATCHMAKING_DS_DLL )
+#if defined( CLIENT_DLL ) || defined( GAME_DLL )
+#if defined(CLIENT_DLL)
+import std;
+import ks.core;
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "worldsize.h"
+#include "engine/ivmodelinfo.h"
+#include "npcevent.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
 #include "eiface.h"
-#include "matchmaking/imatchframework.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#endif
 #endif
 
 #include "gametypes.h"
 
-#include "strtools.h"
 #include "dlchelper.h"
-#include "../engine/filesystem_engine.h"
 #include "filesystem.h"
 #include "tier2/fileutils.h"
 
-#include "matchmaking/cstrike15/imatchext_cstrike15.h"
 
 #if defined ( MATCHMAKING_DLL )
 #include "../../../matchmaking/mm_extensions.h"
 #endif
 
-
-#include "fmtstr.h"
 
 void DisplayGameModeConvars( void );
 
@@ -163,7 +210,6 @@ GameTypes::MapGroup::MapGroup()
 	m_Name[0] = '\0';
 	m_NameID[0] = '\0';
 	m_ImageName[0] = '\0';
-	m_bIsWorkshopMapGroup = false;
 }
 
 // ============================================================================================ //
@@ -200,7 +246,7 @@ GameTypes::CustomBotDifficulty::~CustomBotDifficulty()
 // Singleton
 static GameTypes s_GameTypes;
 IGameTypes *g_pGameTypes = &s_GameTypes;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( GameTypes, IGameTypes, VENGINE_GAMETYPES_VERSION, s_GameTypes );
+static InterfaceReg s_Reg_GameTypes_IGameTypes( []() -> void * { return static_cast<IGameTypes *>( &s_GameTypes ); }, VENGINE_GAMETYPES_VERSION );;
 
 // -------------------------------------------------------------------------------------------- //
 // Purpose: Constructor
@@ -277,7 +323,6 @@ bool GameTypes::Initialize( bool force /* = false*/ )
 
 	// Merge map sidecar files ( map.kv )
 	// Map sidecar loading has been moved to CCSGameRules::InitializeGameTypeAndMode
-	// to eliminate large workshop subscription load times
 	//	InitMapSidecars( pKV );
 
 	// Lastly, merge key values from gamemodes_server.txt or from the file specified on the
@@ -397,7 +442,7 @@ void GameTypes::InitMapSidecars( KeyValues* pKV )
 	KeyValues *pKVMaps = pKV->FindKey( "maps" );
 
 	char mapwild[MAX_PATH];
-	Q_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", false ? "360." : "" );
+	V_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", false ? "360." : "" );
 	std::vector< std::string > outList;
 	// BEGIN Search the maps dir for .kv files that correspond to bsps.
 	RecursiveFindFilesMatchingName( &outList, "maps", mapwild, "GAME" );
@@ -421,19 +466,6 @@ void GameTypes::AddMapKVs( KeyValues* pKVMaps, const char* curMap )
 	V_FixSlashes( filename, '/' );
 	V_snprintf( kvFilename, sizeof( kvFilename ), "%s.kv", filename );
 
-	if ( !g_pFullFileSystem->FileExists( kvFilename ) )
-	{
-		if ( !StringHasPrefix( filename, "maps/workshop/" ) )
-			return;
-
-		char *pchNameBase = strrchr( filename, '/' );
-		if ( !pchNameBase )
-			return;
-
-		// For workshop maps attempt sidecars by bare non-ID name too
-		V_snprintf( kvFilename, sizeof( kvFilename ), "maps/%s.kv", pchNameBase + 1 );
-	}
-
 	if ( !g_pFullFileSystem->FileExists( kvFilename ) ) 
 		return;
 	
@@ -442,7 +474,7 @@ void GameTypes::AddMapKVs( KeyValues* pKVMaps, const char* curMap )
 	//
 	const char* szMapNameBase = filename;
 	// Strip off the "maps/" to find the correct entry.
-	if ( !Q_strnicmp( szMapNameBase, "maps/", 5 ) )
+	if ( !V_strnicmp( szMapNameBase, "maps/", 5 ) )
 	{
 		szMapNameBase += 5;	
 	}
@@ -530,13 +562,13 @@ int GameTypes::FindWeaponProgressionIndex( std::vector< WeaponProgression > & ve
 // -------------------------------------------------------------------------------------------- //
 bool GameTypes::LoadGameTypes( KeyValues *pKV )
 {
-	Assert( pKV );
+	contract_assert( pKV );
 	if ( !pKV )
 	{
 		return false;
 	}
 
-	Assert( std::ssize( m_GameTypes ) == 0 );
+	contract_assert( std::ssize( m_GameTypes ) == 0 );
 	if ( !m_GameTypes.empty() )
 	{
 		m_GameTypes.clear();
@@ -770,13 +802,13 @@ bool GameTypes::LoadGameTypes( KeyValues *pKV )
 // -------------------------------------------------------------------------------------------- //
 bool GameTypes::LoadMaps( KeyValues *pKV )
 {
-	Assert( pKV );
+	contract_assert( pKV );
 	if ( !pKV )
 	{
 		return false;
 	}
 
-	Assert( std::ssize( m_Maps ) == 0 );
+	contract_assert( std::ssize( m_Maps ) == 0 );
 	if ( !m_Maps.empty() )
 	{
 		m_Maps.clear();
@@ -810,7 +842,7 @@ bool GameTypes::LoadMaps( KeyValues *pKV )
 // -------------------------------------------------------------------------------------------- //
 bool GameTypes::LoadMapEntry( KeyValues *pKV_Map )
 {
-	Assert( pKV_Map );
+	contract_assert( pKV_Map );
 	if ( !pKV_Map )
 	{
 		return false;
@@ -924,24 +956,14 @@ bool GameTypes::LoadMapEntry( KeyValues *pKV_Map )
 // -------------------------------------------------------------------------------------------- //
 bool GameTypes::LoadMapGroups( KeyValues *pKV )
 {
-	Assert( pKV );
+	contract_assert( pKV );
 	if ( !pKV )
 	{
 		return false;
 	}
 
 	//Assert( m_MapGroups.Count() == 0 );
-	if ( !m_MapGroups.empty() )
-	{
-		//m_MapGroups.PurgeAndDeleteElements();
-		for ( int i = (int)std::ssize( m_MapGroups ) - 1; i >= 0; i-- )
-		{
-			if ( !m_MapGroups[i]->m_bIsWorkshopMapGroup )
-			{
-				m_MapGroups.erase( m_MapGroups.begin() + i );
-			}
-		}
-	}
+	m_MapGroups.clear();
 
 	// Get the mapgroups.
 	const char *mapGroupsEntry = "mapGroups";
@@ -1017,13 +1039,13 @@ bool GameTypes::LoadMapGroups( KeyValues *pKV )
 // -------------------------------------------------------------------------------------------- //
 bool GameTypes::LoadCustomBotDifficulties( KeyValues *pKV )
 {
-	Assert( pKV );
+	contract_assert( pKV );
 	if ( !pKV )
 	{
 		return false;
 	}
 
-	Assert( std::ssize( m_CustomBotDifficulties ) == 0 );
+	contract_assert( std::ssize( m_CustomBotDifficulties ) == 0 );
 	if ( !m_CustomBotDifficulties.empty() )
 	{
 		m_CustomBotDifficulties.clear();
@@ -1094,7 +1116,7 @@ bool GameTypes::LoadCustomBotDifficulties( KeyValues *pKV )
 // -------------------------------------------------------------------------------------------- //
 GameTypes::GameType *GameTypes::GetGameType_Internal( const char *gameType )
 {
-	Assert( gameType );
+	contract_assert( gameType );
 	if ( gameType &&
 		 gameType[0] != '\0' )
 	{
@@ -1102,7 +1124,7 @@ GameTypes::GameType *GameTypes::GetGameType_Internal( const char *gameType )
 		for ( const auto &pGameTypeOwned : m_GameTypes )
 		{
 			GameType *pGameType = pGameTypeOwned.get();
-			Assert( pGameType );
+			contract_assert( pGameType );
 			if ( pGameType &&
 				 V_stricmp( pGameType->m_Name, gameType ) == 0 )
 			{
@@ -1122,7 +1144,7 @@ GameTypes::GameType *GameTypes::GetGameType_Internal( const char *gameType )
 // -------------------------------------------------------------------------------------------- //
 GameTypes::GameMode *GameTypes::GetGameMode_Internal( GameType *pGameType, const char *gameMode )
 {
-	Assert( pGameType && gameMode );
+	contract_assert( pGameType && gameMode );
 	if ( pGameType && 
 		 gameMode &&
 		 gameMode[0] != '\0' )
@@ -1131,7 +1153,7 @@ GameTypes::GameMode *GameTypes::GetGameMode_Internal( GameType *pGameType, const
 		for ( const auto &pGameModeOwned : pGameType->m_GameModes )
 		{
 			GameMode *pGameMode = pGameModeOwned.get();
-			Assert( pGameMode );
+			contract_assert( pGameMode );
 			if ( pGameMode &&
 				 V_stricmp( pGameMode->m_Name, gameMode ) == 0 )
 			{
@@ -1173,7 +1195,7 @@ GameTypes::GameType *GameTypes::GetCurrentGameType_Internal( void )
 // -------------------------------------------------------------------------------------------- //
 GameTypes::GameMode *GameTypes::GetCurrentGameMode_Internal( GameType *pGameType )
 {
-	Assert( pGameType );
+	contract_assert( pGameType );
 	if ( !pGameType )
 	{
 		return nullptr;
@@ -1194,7 +1216,8 @@ GameTypes::GameMode *GameTypes::GetCurrentGameMode_Internal( GameType *pGameType
 // -------------------------------------------------------------------------------------------- //
 GameTypes::MapGroup *GameTypes::GetMapGroup_Internal( const char *mapGroup )
 {
-	Assert( mapGroup );
+	ks::ScratchArena<> scratch;
+	contract_assert( mapGroup );
 	if ( mapGroup &&
 		 mapGroup[0] != '\0' )
 	{
@@ -1211,11 +1234,11 @@ GameTypes::MapGroup *GameTypes::GetMapGroup_Internal( const char *mapGroup )
 #endif
 		// Find the game type in our local list
 		char const *pchMapGroupToFind = mapGroup;
-		if ( char const *pchComma = strchr( mapGroup, ',' ) )
+		if ( char const *pchComma = std::strchr( mapGroup, ',' ) )
 		{
 			// Use only the first mapgroup from the list for search
-			char *pchCopy = ( char * ) stackalloc( pchComma - mapGroup + 1 );
-			Q_strncpy( pchCopy, mapGroup, pchComma - mapGroup + 1 );
+			char *pchCopy = ( char * ) scratch.AllocBytes( pchComma - mapGroup + 1 );
+			V_strncpy( pchCopy, mapGroup, pchComma - mapGroup + 1 );
 			pchCopy[ pchComma - mapGroup ] = 0;
 			pchMapGroupToFind = pchCopy;
 		}
@@ -1223,26 +1246,13 @@ GameTypes::MapGroup *GameTypes::GetMapGroup_Internal( const char *mapGroup )
 		for ( const auto &pMapGroupOwned : m_MapGroups )
 		{
 			MapGroup *pMapGroup = pMapGroupOwned.get();
-			Assert( pMapGroup );
+			contract_assert( pMapGroup );
 			if ( pMapGroup &&
 				 V_stricmp( pMapGroup->m_Name, pchMapGroupToFind ) == 0 )
 			{
 				// Found it.
 				return pMapGroup;
 			}
-		}
-
-		// Not found in pre-built array, fake one for workshop
-		if ( char const *pszWorkshopMapgroup = strstr( pchMapGroupToFind, "@workshop" ) )
-		{
-			char const *pszMapId = pszWorkshopMapgroup + 9;
-			if ( *pszMapId ) ++ pszMapId;
-			CFmtStr fmtGroupName( "%llu", Q_atoui64( pszMapId ) );
-			char const *szIndividualMapName = pszWorkshopMapgroup + 1;
-			
-			std::vector< std::string > lstMapNames;
-			lstMapNames.emplace_back( szIndividualMapName );
-			return CreateWorkshopMapGroupInternal( fmtGroupName, lstMapNames );
 		}
 
 		// Not found.
@@ -1263,7 +1273,7 @@ GameTypes::Map *GameTypes::GetMap_Internal( const char *mapName )
 		return nullptr;
 	}
 
-	Assert( mapName );
+	contract_assert( mapName );
 	if ( !mapName ||
 		 mapName[0] == '\0' )
 	{
@@ -1308,7 +1318,7 @@ GameTypes::Map *GameTypes::GetMap_Internal( const char *mapName )
 	for ( const auto &pMapOwned : m_Maps )
 	{
 		Map *pMap = pMapOwned.get();
-		Assert( pMap );
+		contract_assert( pMap );
 		if ( pMap &&
 			 V_stricmp( pMap->m_Name, mapNameNoExt ) == 0 )
 		{
@@ -1368,47 +1378,47 @@ bool GameTypes::GetGameTypeAndModeFromAlias( const char *modeAlias, int& iType, 
 {	
 	iType = g_invalidInteger;
 	iMode = g_invalidInteger;
-	if ( Q_strcmp( "competitive", modeAlias ) == 0 || Q_strcmp( "comp", modeAlias ) == 0 )
+	if ( V_strcmp( "competitive", modeAlias ) == 0 || V_strcmp( "comp", modeAlias ) == 0 )
 	{
 		iType = 0;
 		iMode = 1;
 	}
-	else if ( Q_strcmp( "casual", modeAlias ) == 0 )
+	else if ( V_strcmp( "casual", modeAlias ) == 0 )
 	{
 		iType = 0;
 		iMode = 0;
 	}
-	else if ( Q_strcmp( "armsrace", modeAlias ) == 0 || Q_strcmp( "arms", modeAlias ) == 0 || Q_strcmp( "gungame", modeAlias ) == 0 || Q_strcmp( "gg", modeAlias ) == 0 )
+	else if ( V_strcmp( "armsrace", modeAlias ) == 0 || V_strcmp( "arms", modeAlias ) == 0 || V_strcmp( "gungame", modeAlias ) == 0 || V_strcmp( "gg", modeAlias ) == 0 )
 	{
 		iType = 1;
 		iMode = 0;
 	}
-	else if ( Q_strcmp( "demolition", modeAlias ) == 0 || Q_strcmp( "demo", modeAlias ) == 0 )
+	else if ( V_strcmp( "demolition", modeAlias ) == 0 || V_strcmp( "demo", modeAlias ) == 0 )
 	{
 		iType = 1;
 		iMode = 1;
 	}
-	else if ( Q_strcmp( "deathmatch", modeAlias ) == 0 || Q_strcmp( "dm", modeAlias ) == 0 )
+	else if ( V_strcmp( "deathmatch", modeAlias ) == 0 || V_strcmp( "dm", modeAlias ) == 0 )
 	{
 		iType = 1;
 		iMode = 2;
 	}
-	else if ( Q_strcmp( "training", modeAlias ) == 0 )
+	else if ( V_strcmp( "training", modeAlias ) == 0 )
 	{
 		iType = 2;
 		iMode = 0;
 	}
-	else if ( Q_strcmp( "custom", modeAlias ) == 0 )
+	else if ( V_strcmp( "custom", modeAlias ) == 0 )
 	{
 		iType = 3;
 		iMode = 0;
 	}
-	else if ( Q_strcmp( "guardian", modeAlias ) == 0 || Q_strcmp( "guard", modeAlias ) == 0 || Q_strcmp( "cooperative", modeAlias ) == 0 )
+	else if ( V_strcmp( "guardian", modeAlias ) == 0 || V_strcmp( "guard", modeAlias ) == 0 || V_strcmp( "cooperative", modeAlias ) == 0 )
 	{
 		iType = 4;
 		iMode = 0;
 	}
-	else if ( Q_strcmp( "default", modeAlias ) == 0 || Q_strcmp( "auto", modeAlias ) == 0 )
+	else if ( V_strcmp( "default", modeAlias ) == 0 || V_strcmp( "auto", modeAlias ) == 0 )
 	{
 		SetRunMapWithDefaultGametype( true );
 		return false;
@@ -1461,7 +1471,7 @@ void GameTypes::SetAndParseExtendedServerInfo( KeyValues *pExtendedServerInfo )
 
 		m_iCurrentServerNumSlots = m_pExtendedServerInfo->GetInt( "numSlots", 0 );
 		m_pServerMap = std::make_unique< Map >();
-		V_strncpy( m_pServerMap->m_Name, m_pExtendedServerInfo->GetString( "map", "" ), ARRAYSIZE(m_pServerMap->m_Name) );
+		V_strncpy( m_pServerMap->m_Name, m_pExtendedServerInfo->GetString( "map", "" ), std::size( m_pServerMap->m_Name ) );
 		V_FixSlashes( m_pServerMap->m_Name, '/' );
 		m_pServerMap->m_TViewModelArms.assign( ks::nz( m_pExtendedServerInfo->GetString( "t_arms", "" ) ) );
 		m_pServerMap->m_CTViewModelArms.assign( ks::nz( m_pExtendedServerInfo->GetString( "ct_arms", "" ) ) );
@@ -1493,7 +1503,7 @@ void GameTypes::SetAndParseExtendedServerInfo( KeyValues *pExtendedServerInfo )
 		}
 
 		m_pServerMapGroup = std::make_unique< MapGroup >();
-		V_strncpy( m_pServerMapGroup->m_Name, m_pExtendedServerInfo->GetString( "mapgroup", "" ), ARRAYSIZE(m_pServerMapGroup->m_Name) );
+		V_strncpy( m_pServerMapGroup->m_Name, m_pExtendedServerInfo->GetString( "mapgroup", "" ), std::size( m_pServerMapGroup->m_Name ) );
 		KeyValues *pMapsInGroup = m_pExtendedServerInfo->FindKey( "maplist", false );
 		if ( pMapsInGroup )
 		{
@@ -1540,11 +1550,6 @@ void GameTypes::CheckShouldSetDefaultGameModeAndType( const char* szMapNameFull 
 #elif defined( GAME_DLL )
 	mode = engine->GetLaunchOptions();
 #elif defined( MATCHMAKING_DLL )
-	if ( IVEngineServer *pIVEngineServer = ( IVEngineServer * ) g_pMatchFramework->GetMatchExtensions()->GetRegisteredExtensionInterface( INTERFACEVERSION_VENGINESERVER ) )
-	{
-		mode = pIVEngineServer->GetLaunchOptions();
-	}
-#elif defined( MATCHMAKING_DS_DLL )
 	if ( IVEngineServer *pIVEngineServer = ( IVEngineServer * ) g_pMatchFramework->GetMatchExtensions()->GetRegisteredExtensionInterface( INTERFACEVERSION_VENGINESERVER ) )
 	{
 		mode = pIVEngineServer->GetLaunchOptions();
@@ -1615,17 +1620,6 @@ void GameTypes::CheckShouldSetDefaultGameModeAndType( const char* szMapNameFull 
 	}
 #endif
 
-#ifndef CLIENT_DLL
-	// now force the loading screen to show the correct ghing
-// 	char const *pGameType = GetGameTypeFromInt( iType );
-// 	char const *pGameMode = GetGameModeFromInt( iMode, iType );
-// 	PopulateLevelInfo( szMapNameBase, pGameType, pGameMode );
-// 	BaseModUI::CBaseModPanel *pBaseModPanel = BaseModUI::CBaseModPanel::GetSingletonPtr();
-// 	if ( pBaseModPanel && pBaseModPanel->IsVisible() )
-// 	{
-// 		pBaseModPanel->CreateAndLoadDialogForKeyValues( szMapNameBase );
-// 	}
-#endif
 }
 
 // -------------------------------------------------------------------------------------------- //
@@ -1650,7 +1644,7 @@ int GameTypes::GetCurrentGameMode() const
 const char *GameTypes::GetCurrentGameTypeNameID( void )
 {
 	GameType *pGameType = GetCurrentGameType_Internal();
-	Assert( pGameType );
+	contract_assert( pGameType );
 	if ( !pGameType )
 	{
 		return nullptr;
@@ -1665,14 +1659,14 @@ const char *GameTypes::GetCurrentGameTypeNameID( void )
 const char *GameTypes::GetCurrentGameModeNameID( void )
 {
 	GameType *pGameType = GetCurrentGameType_Internal();
-	Assert( pGameType );
+	contract_assert( pGameType );
 	if ( !pGameType )
 	{
 		return nullptr;
 	}
 
 	GameMode *pGameMode = GetCurrentGameMode_Internal( pGameType );
-	Assert( pGameMode );
+	contract_assert( pGameMode );
 	if ( !pGameMode )
 	{
 		return nullptr;
@@ -1690,14 +1684,14 @@ const char *GameTypes::GetCurrentGameModeNameID( void )
 bool GameTypes::ApplyConvarsForCurrentMode( bool isMultiplayer )
 {
 	GameType *pGameType = GetCurrentGameType_Internal();
-	Assert( pGameType );
+	contract_assert( pGameType );
 	if ( !pGameType || pGameType->m_Index == CS_GameType_Custom )
 	{
 		return false;
 	}
 
 	GameMode *pGameMode = GetCurrentGameMode_Internal( pGameType );
-	Assert( pGameMode );
+	contract_assert( pGameMode );
 	if ( !pGameMode )
 	{
 		return false;
@@ -1718,7 +1712,7 @@ bool GameTypes::ApplyConvarsForCurrentMode( bool isMultiplayer )
 	// Apply the convars for this mode.
 	for ( KeyValues *pKV_Convar = pKV_Convars->GetFirstValue(); pKV_Convar; pKV_Convar = pKV_Convar->GetNextValue() )
 	{
-		if ( !Q_stricmp( "exec", pKV_Convar->GetName() ) )
+		if ( !V_stricmp( "exec", pKV_Convar->GetName() ) )
 		{
 			CFmtStr sExecCmd( "exec \"%s\"\n", pKV_Convar->GetString() );
 			//
@@ -1744,12 +1738,6 @@ bool GameTypes::ApplyConvarsForCurrentMode( bool isMultiplayer )
 				pIVEngineServer->ServerCommand( sExecCmd );
 				pIVEngineServer->ServerExecute();
 			}
-#elif defined( MATCHMAKING_DS_DLL )
-			if ( IVEngineServer *pIVEngineServer = ( IVEngineServer * ) g_pMatchFramework->GetMatchExtensions()->GetRegisteredExtensionInterface( INTERFACEVERSION_VENGINESERVER ) )
-			{
-				pIVEngineServer->ServerCommand( sExecCmd );
-				pIVEngineServer->ServerExecute();
-			}
 #else
 #error "gametypes.cpp included in an unexpected project"
 #endif
@@ -1764,7 +1752,7 @@ bool GameTypes::ApplyConvarsForCurrentMode( bool isMultiplayer )
 	if ( !isMultiplayer )
 	{
 		CustomBotDifficulty *pBotDiff = GetCurrentCustomBotDifficulty_Internal();
-		Assert( pBotDiff );
+		contract_assert( pBotDiff );
 		if ( pBotDiff )
 		{
 			KeyValues *pKV_ConvarsBotDiff = pBotDiff->m_pConvars;
@@ -1776,9 +1764,9 @@ bool GameTypes::ApplyConvarsForCurrentMode( bool isMultiplayer )
 					// Only allow a certain set of convars to control bot difficulty
 					char const *arrBotConvars[] = { "bot_difficulty", "bot_dont_shoot", "bot_quota" };
 					bool bBotConvar = false;
-					for ( int jj = 0; jj < Q_ARRAYSIZE( arrBotConvars ); ++ jj )
+					for ( int jj = 0; jj < std::size( arrBotConvars ); ++ jj )
 					{
-						if ( !Q_stricmp( pKV_Convar->GetName(), arrBotConvars[jj] ) )
+						if ( !V_stricmp( pKV_Convar->GetName(), arrBotConvars[jj] ) )
 						{
 							bBotConvar = true;
 							break;
@@ -1816,14 +1804,14 @@ bool GameTypes::ApplyConvarsForCurrentMode( bool isMultiplayer )
 void GameTypes::DisplayConvarsForCurrentMode( void )
 {
 	GameType *pGameType = GetCurrentGameType_Internal();
-	Assert( pGameType );
+	contract_assert( pGameType );
 	if ( !pGameType )
 	{
 		return;
 	}
 
 	GameMode *pGameMode = GetCurrentGameMode_Internal( pGameType );
-	Assert( pGameMode );
+	contract_assert( pGameMode );
 	if ( !pGameMode )
 	{
 		return;
@@ -1852,14 +1840,14 @@ void GameTypes::DisplayConvarsForCurrentMode( void )
 const std::vector< IGameTypes::WeaponProgression > *GameTypes::GetWeaponProgressionForCurrentModeCT( void )
 {
 	GameType *pGameType = GetCurrentGameType_Internal();
-	Assert( pGameType );
+	contract_assert( pGameType );
 	if ( !pGameType )
 	{
 		return nullptr;
 	}
 
 	GameMode *pGameMode = GetCurrentGameMode_Internal( pGameType );
-	Assert( pGameMode );
+	contract_assert( pGameMode );
 	if ( !pGameMode )
 	{
 		return nullptr;
@@ -1874,14 +1862,14 @@ const std::vector< IGameTypes::WeaponProgression > *GameTypes::GetWeaponProgress
 const std::vector< IGameTypes::WeaponProgression > *GameTypes::GetWeaponProgressionForCurrentModeT( void )
 {
 	GameType *pGameType = GetCurrentGameType_Internal();
-	Assert( pGameType );
+	contract_assert( pGameType );
 	if ( !pGameType )
 	{
 		return nullptr;
 	}
 
 	GameMode *pGameMode = GetCurrentGameMode_Internal( pGameType );
-	Assert( pGameMode );
+	contract_assert( pGameMode );
 	if ( !pGameMode )
 	{
 		return nullptr;
@@ -1895,21 +1883,21 @@ const std::vector< IGameTypes::WeaponProgression > *GameTypes::GetWeaponProgress
 // -------------------------------------------------------------------------------------------- //
 const char *GameTypes::GetRandomMapGroup( const char *gameType, const char *gameMode )
 {
-	Assert( gameType && gameMode );
+	contract_assert( gameType && gameMode );
 	if ( !gameType || !gameMode )
 	{
 		return nullptr;
 	}
 
 	GameType *pGameType = GetGameType_Internal( gameType );
-	Assert( pGameType );
+	contract_assert( pGameType );
 	if ( !pGameType )
 	{
 		return nullptr;
 	}
 
 	GameMode *pGameMode = GetGameMode_Internal( pGameType, gameMode );
-	Assert( pGameMode );
+	contract_assert( pGameMode );
 	if ( !pGameMode )
 	{
 		return nullptr;
@@ -1931,14 +1919,14 @@ const char *GameTypes::GetRandomMapGroup( const char *gameType, const char *game
 // -------------------------------------------------------------------------------------------- //
 const char *GameTypes::GetFirstMap( const char *mapGroup )
 {
-	Assert( mapGroup );
+	contract_assert( mapGroup );
 	if ( !mapGroup )
 	{
 		return nullptr;
 	}
 
 	MapGroup *pMapGroup = GetMapGroup_Internal( mapGroup );
-	Assert( pMapGroup );
+	contract_assert( pMapGroup );
 	if ( !pMapGroup )
 	{
 		return nullptr;
@@ -1957,14 +1945,14 @@ const char *GameTypes::GetFirstMap( const char *mapGroup )
 // -------------------------------------------------------------------------------------------- //
 const char *GameTypes::GetRandomMap( const char *mapGroup )
 {
-	Assert( mapGroup );
+	contract_assert( mapGroup );
 	if ( !mapGroup )
 	{
 		return nullptr;
 	}
 
 	MapGroup *pMapGroup = GetMapGroup_Internal( mapGroup );
-	Assert( pMapGroup );
+	contract_assert( pMapGroup );
 	if ( !pMapGroup )
 	{
 		return nullptr;
@@ -1986,14 +1974,14 @@ const char *GameTypes::GetRandomMap( const char *mapGroup )
 const char *GameTypes::GetNextMap( const char *mapGroup, const char *mapName )
 {
 	Msg( "Looking for next map in mapgroup '%s'...\n", mapGroup );
-	Assert( mapGroup );
+	contract_assert( mapGroup );
 	if ( !mapGroup )
 	{
 		return nullptr;
 	}
 
 	MapGroup *pMapGroup = GetMapGroup_Internal( mapGroup );
-	Assert( pMapGroup );
+	contract_assert( pMapGroup );
 	if ( !pMapGroup )
 	{
 		return nullptr;
@@ -2162,7 +2150,7 @@ bool GameTypes::ApplyConvarsForMap( const char *mapName, bool isMultiplayer )
 		if ( !isMultiplayer )
 		{
 			CustomBotDifficulty *pBotDiff = GetCurrentCustomBotDifficulty_Internal();
-			Assert( pBotDiff );
+			contract_assert( pBotDiff );
 			if ( pBotDiff )
 			{
 				setBotQuota = !pBotDiff->m_HasBotQuota;
@@ -2341,14 +2329,14 @@ const int GameTypes::GetDefaultGameModeForMap( const char *mapName )
 // -------------------------------------------------------------------------------------------- //
 const std::vector< std::string > *GameTypes::GetMapGroupMapList( const char *mapGroup )
 {
-	Assert( mapGroup );
+	contract_assert( mapGroup );
 	if ( !mapGroup || StringIsEmpty( mapGroup ) )
 	{
 		return nullptr;
 	}
 
 	MapGroup *pMapGroup = GetMapGroup_Internal( mapGroup );
-	Assert( pMapGroup );
+	contract_assert( pMapGroup );
 	if ( !pMapGroup )
 	{
 		return nullptr;
@@ -2389,7 +2377,7 @@ const char* GameTypes::GetGameTypeFromInt( int gameType )
 	for ( const auto &pGameTypeOwned : m_GameTypes )
 	{
 		GameType *pGameType = pGameTypeOwned.get();
-		Assert( pGameType );
+		contract_assert( pGameType );
 		if ( pGameType && pGameType->m_Index == gameType )
 		{
 			// Found it.
@@ -2408,14 +2396,14 @@ const char* GameTypes::GetGameModeFromInt( int gameType, int gameMode )
 	for ( const auto &pGameTypeOwned : m_GameTypes )
 	{
 		GameType *pGameType = pGameTypeOwned.get();
-		Assert( pGameType );
+		contract_assert( pGameType );
 		if ( pGameType && pGameType->m_Index == gameType )
 		{
 			// Find the game mode.
 			for ( const auto &pGameModeOwned : pGameType->m_GameModes )
 			{
 				GameMode *pGameMode = pGameModeOwned.get();
-				Assert( pGameMode );
+				contract_assert( pGameMode );
 				if ( pGameMode && pGameMode->m_Index == gameMode )
 				{
 					// Found it.
@@ -2436,14 +2424,14 @@ bool GameTypes::GetGameTypeFromMode( const char *szGameMode, const char *&pszGam
 	for ( const auto &pGameTypeOwned : m_GameTypes )
 	{
 		GameType *pGameType = pGameTypeOwned.get();
-		Assert( pGameType );
+		contract_assert( pGameType );
 		if ( pGameType )
 		{
 			// Find the game mode.
 			for ( const auto &pGameModeOwned : pGameType->m_GameModes )
 			{
 				GameMode *pGameMode = pGameModeOwned.get();
-				Assert( pGameMode );
+				contract_assert( pGameMode );
 				if ( pGameMode && !V_strcmp( pGameMode->m_Name, szGameMode ) )
 				{
 					// Found it.
@@ -2477,8 +2465,8 @@ bool GameTypes::GetGameModeAndTypeIntsFromStrings( const char* szGameType, const
 	{
 		if ( mode && type )
 		{
-			Assert( type->m_Index >= 0 && type->m_Index < std::ssize( m_GameTypes ) );
-			Assert( mode->m_Index >= 0 && mode->m_Index < std::ssize( type->m_GameModes ) );
+			contract_assert( type->m_Index >= 0 && type->m_Index < std::ssize( m_GameTypes ) );
+			contract_assert( mode->m_Index >= 0 && mode->m_Index < std::ssize( type->m_GameModes ) );
 
 			if ( type->m_Index >= 0 && type->m_Index < std::ssize( m_GameTypes ) &&
 				 mode->m_Index >= 0 && mode->m_Index < std::ssize( type->m_GameModes ) )						
@@ -2501,8 +2489,8 @@ bool GameTypes::GetGameModeAndTypeNameIdsFromStrings( const char* szGameType, co
 		
 	if ( GetGameModeAndTypeFromStrings( szGameType, szGameMode, type, mode ) )
 	{
-		Assert ( mode && mode->m_NameID );
-		Assert ( type && type->m_NameID );
+		contract_assert( mode && mode->m_NameID );
+		contract_assert( type && type->m_NameID );
 
 		if ( mode && mode->m_NameID && type && type->m_NameID )
 		{
@@ -2524,7 +2512,7 @@ bool GameTypes::GetGameModeAndTypeFromStrings( const char* szGameType, const cha
 {      
 	outGameType = nullptr;
 	outGameMode = nullptr;
-	Assert( szGameType && szGameMode );
+	contract_assert( szGameType && szGameMode );
 	if ( !szGameType || !szGameMode )
 	{
 		return false;
@@ -2537,11 +2525,11 @@ bool GameTypes::GetGameModeAndTypeFromStrings( const char* szGameType, const cha
 	}
 
 	outGameType = GetGameType_Internal( szGameType );
-	Assert( outGameType );
+	contract_assert( outGameType );
 	if ( outGameType )
 	{
 		outGameMode = GetGameMode_Internal( outGameType, szGameMode );
-		Assert( outGameMode );
+		contract_assert( outGameMode );
 		if ( outGameMode )
 		{
 			return true;
@@ -2555,14 +2543,14 @@ bool GameTypes::GetGameModeAndTypeFromStrings( const char* szGameType, const cha
 int GameTypes::GetNoResetVoteThresholdForCurrentModeCT( void )
 {
 	GameType *pGameType = GetCurrentGameType_Internal();
-	Assert( pGameType );
+	contract_assert( pGameType );
 	if ( !pGameType )
 	{
 		return -1;
 	}
 
 	GameMode *pGameMode = GetCurrentGameMode_Internal( pGameType );
-	Assert( pGameMode );
+	contract_assert( pGameMode );
 	if ( !pGameMode )
 	{
 		return -1;
@@ -2574,14 +2562,14 @@ int GameTypes::GetNoResetVoteThresholdForCurrentModeCT( void )
 int GameTypes::GetNoResetVoteThresholdForCurrentModeT( void )
 {
 	GameType *pGameType = GetCurrentGameType_Internal();
-	Assert( pGameType );
+	contract_assert( pGameType );
 	if ( !pGameType )
 	{
 		return -1;
 	}
 
 	GameMode *pGameMode = GetCurrentGameMode_Internal( pGameType );
-	Assert( pGameMode );
+	contract_assert( pGameMode );
 	if ( !pGameMode )
 	{
 		return -1;
@@ -2594,9 +2582,9 @@ int GameTypes::GetCurrentServerNumSlots( void )
 {
 	// This is only valid if we are connected to a server and received the extended info blob
 #if defined ( MATCHMAKING_DLL )
-	Assert(  m_pExtendedServerInfo && g_pMatchExtensions->GetIVEngineClient() && g_pMatchExtensions->GetIVEngineClient()->IsConnected() );
+	contract_assert( m_pExtendedServerInfo && g_pMatchExtensions->GetIVEngineClient() && g_pMatchExtensions->GetIVEngineClient()->IsConnected() );
 #endif
-	Assert ( GameTypes_IsOnClient() );
+	contract_assert( GameTypes_IsOnClient() );
 
 	return m_iCurrentServerNumSlots;
 }
@@ -2604,42 +2592,6 @@ int GameTypes::GetCurrentServerNumSlots( void )
 int GameTypes::GetCurrentServerSettingInt( const char *szSetting, int iDefaultValue )
 {
 	return m_pExtendedServerInfo->GetInt( szSetting, iDefaultValue );
-}
-
-bool GameTypes::CreateOrUpdateWorkshopMapGroup( const char* szName, const std::vector< std::string > & vecMapNames )
-{
-	return !!CreateWorkshopMapGroupInternal( szName, vecMapNames );
-}
-
-GameTypes::MapGroup * GameTypes::CreateWorkshopMapGroupInternal( const char* szName, const std::vector< std::string > & vecMapNames )
-{
-	MapGroup *pMapGroup = GetMapGroup_Internal( szName );
-	if ( !pMapGroup )
-	{
-		pMapGroup = m_MapGroups.emplace_back( std::make_unique< MapGroup >() ).get();
-		V_strcpy_safe( pMapGroup->m_Name, szName );
-	}
-
-	// Workshop map groups are named their publishfileid, so a nonzero integer. 
-	Assert( V_atoui64( szName ) != 0 );
-	pMapGroup->m_bIsWorkshopMapGroup = true;
-
-	// Clear old map list, stomp with new one
-	pMapGroup->m_Maps.clear();
-
-	for ( const auto &mapName : vecMapNames )
-	{
-		const char* szMap = mapName.c_str();
-		pMapGroup->m_Maps.emplace_back( szMap );
-		V_FixSlashes( pMapGroup->m_Maps.back().data(), '/' );
-	}
-	return pMapGroup;
-}
-
-bool GameTypes::IsWorkshopMapGroup( const char* szMapGroupName )
-{
-	MapGroup *pMapGroup = GetMapGroup_Internal( szMapGroupName );
-	return pMapGroup && pMapGroup->m_bIsWorkshopMapGroup;
 }
 
 // ============================================================================================ //

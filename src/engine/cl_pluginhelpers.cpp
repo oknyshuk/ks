@@ -1,10 +1,26 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:  baseclientstate.cpp: implementation of the CBaseClientState class.
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "client_pch.h"
+// Purpose: baseclientstate.cpp: implementation of the CBaseClientState class.
+
+// main precompiled header for client files
+
+import std;
+import ks.tier1;
+
+
+
+
+
+
+#include "client.h"
+#include "cl_main.h"
+
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "cl_pluginhelpers.h"
 
 static CPluginUIManager s_PluginManager;

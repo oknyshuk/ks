@@ -1,11 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef GROUNDLINK_H
-#define GROUNDLINK_H
+#include "ehandle.h"
+
+#if defined( CLIENT_DLL )
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
+#else
+class CBaseEntity;
+typedef CHandle<CBaseEntity> EHANDLE;
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Used for tracking many to one ground entity chains ( many ents can share a single ground entity )
@@ -16,5 +21,3 @@ struct groundlink_t
 	groundlink_t			*nextLink;
 	groundlink_t			*prevLink;
 };
-
-#endif // GROUNDLINK_H

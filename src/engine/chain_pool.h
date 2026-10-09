@@ -1,15 +1,14 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
 // Many small doubly linked chains sharing one ks::slot_pool, for pools whose owners each keep the head handle of
 // their own chain. Handles stay valid until freed, freed slots are reused most-recent first, elements never move.
 
-#ifndef CHAIN_POOL_H
-#define CHAIN_POOL_H
 
-#include "tier1/slot_pool.h"
+import ks.tier1;
 
-#include <utility>
+import std;
 
 namespace ks
 {
@@ -93,10 +92,10 @@ namespace ks
 		T &operator[]( I h )				{ return m_Pool[h].value; }
 		const T &operator[]( I h ) const	{ return m_Pool[h].value; }
 		bool contains( I h ) const			{ return m_Pool.contains( h ); }
-		size_t size() const					{ return m_Pool.size(); }
+		std::size_t size() const					{ return m_Pool.size(); }
 		bool empty() const					{ return m_Pool.empty(); }
-		size_t slot_count() const			{ return m_Pool.slot_count(); }
-		bool full() const					{ return m_Pool.size() >= size_t( invalid ); }	// every handle below invalid is live
+		std::size_t slot_count() const			{ return m_Pool.slot_count(); }
+		bool full() const					{ return m_Pool.size() >= std::size_t( invalid ); }	// every handle below invalid is live
 		void clear()						{ m_Pool.clear(); }
 
 	private:
@@ -104,4 +103,3 @@ namespace ks
 	};
 }
 
-#endif // CHAIN_POOL_H

@@ -1,15 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #define DISABLE_PROTECTED_THINGS
 #include "togl/rendermechanism.h"
 #include "shadershadowdx8.h"
 #include "locald3dtypes.h"
-#include "utlvector.h"
 #include "shaderapi/ishaderutil.h"
 #include "shaderapidx8_global.h"
 #include "shaderapidx8.h"
@@ -18,7 +13,6 @@
 #include "imeshdx8.h"
 #include "materialsystem/materialsystem_config.h"
 #include "vertexshaderdx8.h"
-
 
 //-----------------------------------------------------------------------------
 // The DX8 implementation of the shader setup interface
@@ -152,8 +146,7 @@ private:
 static CShaderShadowDX8 g_ShaderShadow;
 IShaderShadowDX8 *g_pShaderShadowDx8 = &g_ShaderShadow;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CShaderShadowDX8, IShaderShadow, 
-								  SHADERSHADOW_INTERFACE_VERSION, g_ShaderShadow )
+static InterfaceReg s_Reg_CShaderShadowDX8_IShaderShadow( []() -> void * { return static_cast<IShaderShadow *>( &g_ShaderShadow ); }, SHADERSHADOW_INTERFACE_VERSION );;
 
 //-----------------------------------------------------------------------------
 // Global instance
@@ -169,7 +162,7 @@ IShaderShadowDX8* ShaderShadow()
 //-----------------------------------------------------------------------------
 CShaderShadowDX8::CShaderShadowDX8( ) : m_pHardwareConfig(0)
 {	
-	memset( &m_ShadowState, 0, sizeof(m_ShadowState) );
+	std::memset( &m_ShadowState, 0, sizeof(m_ShadowState) );
 }
 
 CShaderShadowDX8::~CShaderShadowDX8()
@@ -185,7 +178,7 @@ void CShaderShadowDX8::Init( )
 	m_pHardwareConfig = g_pHardwareConfigDx8;
 	
 	// Clear out the shadow state
-	memset( &m_ShadowState, 0, sizeof(m_ShadowState) );
+	std::memset( &m_ShadowState, 0, sizeof(m_ShadowState) );
 
 	m_ShadowState.m_FogAndMiscState.m_bDisableFogGammaCorrection = false;
 
@@ -605,7 +598,7 @@ void CShaderShadowDX8::VertexShaderVertexFormat( unsigned int nFlags,
 	int nTexCoordCount, int* pTexCoordDimensions, int nUserDataSize )
 {
 	// Code that creates a Mesh should specify whether it contains bone weights+indices, *not* the shader.
-	Assert( ( nFlags & VERTEX_BONE_INDEX ) == 0 );
+	contract_assert( ( nFlags & VERTEX_BONE_INDEX ) == 0 );
 	nFlags &= ~VERTEX_BONE_INDEX;
 
 	// This indicates we're using a vertex shader
@@ -626,10 +619,10 @@ void CShaderShadowDX8::VertexShaderVertexFormat( unsigned int nFlags,
 			bComplained = true;
 		}
 		// All vertex formats should contain position...
-		Assert( nFlags & VERTEX_POSITION );
+		contract_assert( nFlags & VERTEX_POSITION );
 		nFlags |= VERTEX_POSITION;
 		// This error should occur only if we have zero texcoords, or if we have a single, 1-D texcoord
-		Assert( ( nTexCoordCount == 0 ) ||
+		contract_assert( ( nTexCoordCount == 0 ) ||
 			    ( ( nTexCoordCount == 1 ) && pTexCoordDimensions && ( pTexCoordDimensions[0] == 1 ) ) );
 		nTexCoordCount = 1;
 		m_ShadowShaderState.m_VertexUsage = MeshMgr()->ComputeVertexFormat( nFlags, nTexCoordCount, nullptr, 0, nUserDataSize );
@@ -671,7 +664,7 @@ float CShaderShadowDX8::GetLightMapScaleFactor( void ) const
 //-----------------------------------------------------------------------------
 void CShaderShadowDX8::FogMode( ShaderFogMode_t fogMode, bool bVertexFog )
 {
-	Assert( fogMode >= 0 && fogMode < SHADER_FOGMODE_NUMFOGMODES );
+	contract_assert( fogMode >= 0 && fogMode < SHADER_FOGMODE_NUMFOGMODES );
 	m_ShadowState.m_FogAndMiscState.m_FogMode = fogMode;
 	m_ShadowState.m_FogAndMiscState.m_bVertexFogEnable = bVertexFog;
 }

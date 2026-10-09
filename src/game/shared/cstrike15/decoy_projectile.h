@@ -1,18 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef DECOY_PROJECTILE_H
-#define DECOY_PROJECTILE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "basecsgrenade_projectile.h"
 #include "cs_shareddefs.h"
-
 
 #if defined( CLIENT_DLL )
 
@@ -76,5 +69,3 @@ private:
 };
 
 #endif // GAME_DLL
-
-#endif // DECOY_PROJECTILE_H

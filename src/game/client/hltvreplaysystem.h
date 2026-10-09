@@ -1,12 +1,17 @@
-//======= Copyright (c) Valve Corporation, All rights reserved. ======
-#ifndef HLTV_REPLAY_SYSTEM
-#define HLTV_REPLAY_SYSTEM
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include <memory>
-#include <unordered_map>
+import std;
+import ks.math;
+#include "cdll_int.h"
+#include "GameEventListener.h"
+#include "ehandle.h"
+
+class C_BasePlayer;
 
 // this struct is followed by matrix3x4a_t bones
-struct ALIGN16 CachedRagdollBones_t
+struct alignas(16) CachedRagdollBones_t
 {
 	int nBones;
 	int nBodyParts;
@@ -15,7 +20,7 @@ struct ALIGN16 CachedRagdollBones_t
 	matrix3x4a_t *GetBones() { return ( matrix3x4a_t * )( this + 1 ); }
 	matrix3x4a_t *GetBodyParts() { return GetBones() + nBones; }
 
-} ALIGN16_POST;
+};
 
 class CHltvReplaySystem: public CGameEventListener
 {
@@ -181,7 +186,6 @@ protected:
 
 	mutable float m_flDebugLastRequestedReplayVideoFadeAmount;
 
-	uint32	m_nSteamSelfAccountId;
 
 	uint32 m_nExperimentalEvents;
 
@@ -192,5 +196,3 @@ protected:
 
 extern CHltvReplaySystem g_HltvReplaySystem;
 extern int CL_GetHltvReplayDelay();
-
-#endif // HLTV_REPLAY_SYSTEM

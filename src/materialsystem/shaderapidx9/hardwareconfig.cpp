@@ -1,19 +1,15 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #define DISABLE_PROTECTED_THINGS
+import ks.tier1;
 #include "togl/rendermechanism.h"
 #include "hardwareconfig.h"
 #include "shaderapi/ishaderutil.h"
 #include "shaderapi_global.h"
 #include "materialsystem/materialsystem_config.h"
-#include "tier1/convar.h"
+import std;
 #include "shaderdevicebase.h"
-#include "tier0/icommandline.h"
 
 
 extern ConVar mat_slopescaledepthbias_shadowmap;
@@ -28,13 +24,12 @@ static ConVar developer( "developer", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_
 static CHardwareConfig s_HardwareConfig;
 CHardwareConfig *g_pHardwareConfigDx8 = &s_HardwareConfig;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CHardwareConfig, IMaterialSystemHardwareConfig, 
-	MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION, s_HardwareConfig )
+static InterfaceReg s_Reg_CHardwareConfig_IMaterialSystemHardwareConfig( []() -> void * { return static_cast<IMaterialSystemHardwareConfig *>( &s_HardwareConfig ); }, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION );;
 
 
 CHardwareConfig::CHardwareConfig()
 {
-	memset( &m_Caps, 0, sizeof( HardwareCaps_t ) );
+	std::memset( &m_Caps, 0, sizeof( HardwareCaps_t ) );
 	memset( &m_ActualCaps, 0, sizeof( HardwareCaps_t ) );
 	memset( &m_UnOverriddenCaps, 0, sizeof( HardwareCaps_t ) );
 
@@ -168,7 +163,7 @@ void CHardwareConfig::ForceCapsToDXLevel( HardwareCaps_t *pCaps, int nDxLevel, c
 		break;
 
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		break;
 	}
 
@@ -180,7 +175,7 @@ void CHardwareConfig::ForceCapsToDXLevel( HardwareCaps_t *pCaps, int nDxLevel, c
 //-----------------------------------------------------------------------------
 void CHardwareConfig::SetupHardwareCaps( int nDXLevel, const HardwareCaps_t &actualCaps )
 {
-	Assert( nDXLevel != 0 );
+	contract_assert( nDXLevel != 0 );
 
 	if ( nDXLevel < actualCaps.m_nMinDXSupportLevel )
 	{
@@ -191,7 +186,7 @@ void CHardwareConfig::SetupHardwareCaps( int nDXLevel, const HardwareCaps_t &act
 		Warning( "Trying to set dxlevel (%d) which is higher than the card can support (%d)!\n", nDXLevel, actualCaps.m_nMaxDXSupportLevel );
 	}
 
-	memcpy( &m_Caps, &actualCaps, sizeof(HardwareCaps_t) );
+	std::memcpy( &m_Caps, &actualCaps, sizeof(HardwareCaps_t) );
 	memcpy( &m_UnOverriddenCaps, &actualCaps, sizeof(HardwareCaps_t) );
 
 	// Don't bother with fallbacks for DX10 or consoles
@@ -265,7 +260,7 @@ void CHardwareConfig::SetupHardwareCaps( int nDXLevel, const HardwareCaps_t &act
 //-----------------------------------------------------------------------------
 void CHardwareConfig::SetupHardwareCaps( const ShaderDeviceInfo_t& mode, const HardwareCaps_t &actualCaps )
 {
-	memcpy( &m_ActualCaps, &actualCaps, sizeof(HardwareCaps_t) );
+	std::memcpy( &m_ActualCaps, &actualCaps, sizeof(HardwareCaps_t) );
 	SetupHardwareCaps( mode.m_nDXLevel, actualCaps );
 }
 
@@ -579,7 +574,7 @@ bool CHardwareConfig::PreferDynamicTextures() const
 bool CHardwareConfig::SupportsHDR() const
 {
 	// This is a deprecated function. . use GetHDRType instead.  For shipping HL2, this always being false is correct.
-	Assert( 0 );
+	contract_assert( 0 );
 	return false;
 }
 
@@ -851,4 +846,3 @@ bool CHardwareConfig::HasFullResolutionDepthTexture(void) const
 		return false;
 	}
 }
-

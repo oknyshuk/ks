@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ICLIENTENTITY_H
-#define ICLIENTENTITY_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "iclientrenderable.h"
 #include "iclientnetworkable.h"
@@ -25,7 +18,7 @@ struct SpatializationInfo_t;
 //-----------------------------------------------------------------------------
 // Purpose: All client entities must implement this interface.
 //-----------------------------------------------------------------------------
-abstract_class IClientEntity : public IClientUnknown, public IClientRenderable, public IClientNetworkable, public IClientThinkable
+class IClientEntity : public IClientUnknown, public IClientRenderable, public IClientNetworkable, public IClientThinkable
 {
 public:
 	// Delete yourself.
@@ -44,6 +37,3 @@ public:
 	virtual bool			IsBlurred( void ) = 0;
 
 };
-
-
-#endif // ICLIENTENTITY_H

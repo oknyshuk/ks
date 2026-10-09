@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#ifndef CLIENT_H
-#define CLIENT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-
-
+#include "edict.h"
 
 class CCommand;
 class CUserCmd;
@@ -26,7 +19,3 @@ void ClientPrecache( void );
 void ClientGamePrecache( void );
 const char *GetGameDescription( void );
 void Host_Say( edict_t *pEdict, bool teamonly );
-
-
-
-#endif		// CLIENT_H

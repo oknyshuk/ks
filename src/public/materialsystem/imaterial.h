@@ -1,14 +1,7 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef IMATERIAL_H
-#define IMATERIAL_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
 
 #include "bitmap/imageformat.h"
 #include "materialsystem/imaterialsystem.h"
@@ -20,60 +13,59 @@
 class IMaterialVar;
 class ITexture;
 class IMaterialProxy;
-class Vector;
 
 //-----------------------------------------------------------------------------
 // Flags for GetVertexFormat
 //-----------------------------------------------------------------------------
-#define	VERTEX_POSITION					0x0001
-#define	VERTEX_NORMAL					0x0002
-#define	VERTEX_COLOR					0x0004
-#define	VERTEX_SPECULAR					0x0008
+inline constexpr auto VERTEX_POSITION = 0x0001;
+inline constexpr auto VERTEX_NORMAL = 0x0002;
+inline constexpr auto VERTEX_COLOR = 0x0004;
+inline constexpr auto VERTEX_SPECULAR = 0x0008;
 
-#define	VERTEX_TANGENT_S				0x0010
-#define	VERTEX_TANGENT_T				0x0020
-#define	VERTEX_TANGENT_SPACE			( VERTEX_TANGENT_S | VERTEX_TANGENT_T )
+inline constexpr auto VERTEX_TANGENT_S = 0x0010;
+inline constexpr auto VERTEX_TANGENT_T = 0x0020;
+inline constexpr auto VERTEX_TANGENT_SPACE = ( VERTEX_TANGENT_S | VERTEX_TANGENT_T );
 
 // Indicates we're using wrinkle
-#define	VERTEX_WRINKLE					0x0040
+inline constexpr auto VERTEX_WRINKLE = 0x0040;
 
 // Indicates we're using bone indices
-#define	VERTEX_BONE_INDEX				0x0080
+inline constexpr auto VERTEX_BONE_INDEX = 0x0080;
 
 	// Indicates this expects a color stream on stream 1
-#define VERTEX_COLOR_STREAM_1			0x0100
+inline constexpr auto VERTEX_COLOR_STREAM_1 = 0x0100;
 
 // Indicates this format shouldn't be bloated to cache align it
 // (only used for VertexUsage)
-#define	VERTEX_FORMAT_USE_EXACT_FORMAT	0x0200
+inline constexpr auto VERTEX_FORMAT_USE_EXACT_FORMAT = 0x0200;
 
 // Indicates that compressed vertex elements are to be used (see also VertexCompressionType_t)
-#define	VERTEX_FORMAT_COMPRESSED		0x400
+inline constexpr auto VERTEX_FORMAT_COMPRESSED = 0x400;
 
 // Position or normal (if present) should be 4D not 3D
-#define VERTEX_FORMAT_PAD_POS_NORM		0x800
+inline constexpr auto VERTEX_FORMAT_PAD_POS_NORM = 0x800;
 
 // Update this if you add or remove bits...
-#define	VERTEX_LAST_BIT					11
+inline constexpr auto VERTEX_LAST_BIT = 11;
 
-#define	VERTEX_BONE_WEIGHT_BIT			(VERTEX_LAST_BIT + 1)
-#define	USER_DATA_SIZE_BIT				(VERTEX_LAST_BIT + 4)
-#define	TEX_COORD_SIZE_BIT				(VERTEX_LAST_BIT + 7)
+inline constexpr auto VERTEX_BONE_WEIGHT_BIT = (VERTEX_LAST_BIT + 1);
+inline constexpr auto USER_DATA_SIZE_BIT = (VERTEX_LAST_BIT + 4);
+inline constexpr auto TEX_COORD_SIZE_BIT = (VERTEX_LAST_BIT + 7);
 
-#define	VERTEX_BONE_WEIGHT_MASK			( 0x7 << VERTEX_BONE_WEIGHT_BIT )
-#define	USER_DATA_SIZE_MASK				( 0x7 << USER_DATA_SIZE_BIT )
+inline constexpr auto VERTEX_BONE_WEIGHT_MASK = ( 0x7 << VERTEX_BONE_WEIGHT_BIT );
+inline constexpr auto USER_DATA_SIZE_MASK = ( 0x7 << USER_DATA_SIZE_BIT );
 
-#define	VERTEX_FORMAT_FIELD_MASK		0x0FF
+inline constexpr auto VERTEX_FORMAT_FIELD_MASK = 0x0FF;
 
 // If everything is off, it's an unknown vertex format
-#define	VERTEX_FORMAT_UNKNOWN			0
+inline constexpr auto VERTEX_FORMAT_UNKNOWN = 0;
 
 
 
 //-----------------------------------------------------------------------------
 // Macros for construction..
 //-----------------------------------------------------------------------------
-#define VERTEX_BONEWEIGHT( _n )				((_n) << VERTEX_BONE_WEIGHT_BIT)
+template <typename T1> [[gnu::always_inline]] inline auto VERTEX_BONEWEIGHT( T1 _n ) { return ((_n) << VERTEX_BONE_WEIGHT_BIT); }
 #define VERTEX_USERDATA_SIZE( _n )			((_n) << USER_DATA_SIZE_BIT)
 #define VERTEX_TEXCOORD_MASK( _coord )		(( 0x7ULL ) << ( TEX_COORD_SIZE_BIT + 3 * (_coord) ))
 
@@ -188,61 +180,61 @@ inline void Detect_VertexElement_t_Changes( VertexElement_t element ) // GREPs f
 {
 	// Make it harder for someone to change VertexElement_t without noticing that dependent code
 	// (GetVertexElementSize, VertexElementToDeclType, CVBAllocTracker) needs updating
-	Assert( VERTEX_ELEMENT_NUMELEMENTS == 50 );
+	contract_assert( VERTEX_ELEMENT_NUMELEMENTS == 50 );
 	switch ( element )
 	{
-		case VERTEX_ELEMENT_POSITION:		Assert( VERTEX_ELEMENT_POSITION		== 0	); break;
-		case VERTEX_ELEMENT_POSITION4D:		Assert( VERTEX_ELEMENT_POSITION4D	== 1	); break;
-		case VERTEX_ELEMENT_NORMAL:			Assert( VERTEX_ELEMENT_NORMAL		== 2	); break;
-		case VERTEX_ELEMENT_NORMAL4D:		Assert( VERTEX_ELEMENT_NORMAL4D		== 3	); break;
-		case VERTEX_ELEMENT_COLOR:			Assert( VERTEX_ELEMENT_COLOR		== 4	); break;
-		case VERTEX_ELEMENT_SPECULAR:		Assert( VERTEX_ELEMENT_SPECULAR		== 5	); break;
-		case VERTEX_ELEMENT_TANGENT_S:		Assert( VERTEX_ELEMENT_TANGENT_S	== 6	); break;
-		case VERTEX_ELEMENT_TANGENT_T:		Assert( VERTEX_ELEMENT_TANGENT_T	== 7	); break;
-		case VERTEX_ELEMENT_WRINKLE:		Assert( VERTEX_ELEMENT_WRINKLE		== 8	); break;
-		case VERTEX_ELEMENT_BONEINDEX:		Assert( VERTEX_ELEMENT_BONEINDEX	== 9	); break;
-		case VERTEX_ELEMENT_BONEWEIGHTS1:	Assert( VERTEX_ELEMENT_BONEWEIGHTS1	== 10	); break;
-		case VERTEX_ELEMENT_BONEWEIGHTS2:	Assert( VERTEX_ELEMENT_BONEWEIGHTS2	== 11	); break;
-		case VERTEX_ELEMENT_BONEWEIGHTS3:	Assert( VERTEX_ELEMENT_BONEWEIGHTS3	== 12	); break;
-		case VERTEX_ELEMENT_BONEWEIGHTS4:	Assert( VERTEX_ELEMENT_BONEWEIGHTS4	== 13	); break;
-		case VERTEX_ELEMENT_USERDATA1:		Assert( VERTEX_ELEMENT_USERDATA1	== 14	); break;
-		case VERTEX_ELEMENT_USERDATA2:		Assert( VERTEX_ELEMENT_USERDATA2	== 15	); break;
-		case VERTEX_ELEMENT_USERDATA3:		Assert( VERTEX_ELEMENT_USERDATA3	== 16	); break;
-		case VERTEX_ELEMENT_USERDATA4:		Assert( VERTEX_ELEMENT_USERDATA4	== 17	); break;
-		case VERTEX_ELEMENT_TEXCOORD1D_0:	Assert( VERTEX_ELEMENT_TEXCOORD1D_0	== 18	); break;
-		case VERTEX_ELEMENT_TEXCOORD1D_1:	Assert( VERTEX_ELEMENT_TEXCOORD1D_1	== 19	); break;
-		case VERTEX_ELEMENT_TEXCOORD1D_2:	Assert( VERTEX_ELEMENT_TEXCOORD1D_2	== 20	); break;
-		case VERTEX_ELEMENT_TEXCOORD1D_3:	Assert( VERTEX_ELEMENT_TEXCOORD1D_3	== 21	); break;
-		case VERTEX_ELEMENT_TEXCOORD1D_4:	Assert( VERTEX_ELEMENT_TEXCOORD1D_4	== 22	); break;
-		case VERTEX_ELEMENT_TEXCOORD1D_5:	Assert( VERTEX_ELEMENT_TEXCOORD1D_5	== 23	); break;
-		case VERTEX_ELEMENT_TEXCOORD1D_6:	Assert( VERTEX_ELEMENT_TEXCOORD1D_6	== 24	); break;
-		case VERTEX_ELEMENT_TEXCOORD1D_7:	Assert( VERTEX_ELEMENT_TEXCOORD1D_7	== 25	); break;
-		case VERTEX_ELEMENT_TEXCOORD2D_0:	Assert( VERTEX_ELEMENT_TEXCOORD2D_0	== 26	); break;
-		case VERTEX_ELEMENT_TEXCOORD2D_1:	Assert( VERTEX_ELEMENT_TEXCOORD2D_1	== 27	); break;
-		case VERTEX_ELEMENT_TEXCOORD2D_2:	Assert( VERTEX_ELEMENT_TEXCOORD2D_2	== 28	); break;
-		case VERTEX_ELEMENT_TEXCOORD2D_3:	Assert( VERTEX_ELEMENT_TEXCOORD2D_3	== 29	); break;
-		case VERTEX_ELEMENT_TEXCOORD2D_4:	Assert( VERTEX_ELEMENT_TEXCOORD2D_4	== 30	); break;
-		case VERTEX_ELEMENT_TEXCOORD2D_5:	Assert( VERTEX_ELEMENT_TEXCOORD2D_5	== 31	); break;
-		case VERTEX_ELEMENT_TEXCOORD2D_6:	Assert( VERTEX_ELEMENT_TEXCOORD2D_6	== 32	); break;
-		case VERTEX_ELEMENT_TEXCOORD2D_7:	Assert( VERTEX_ELEMENT_TEXCOORD2D_7	== 33	); break;
-		case VERTEX_ELEMENT_TEXCOORD3D_0:	Assert( VERTEX_ELEMENT_TEXCOORD3D_0	== 34	); break;
-		case VERTEX_ELEMENT_TEXCOORD3D_1:	Assert( VERTEX_ELEMENT_TEXCOORD3D_1	== 35	); break;
-		case VERTEX_ELEMENT_TEXCOORD3D_2:	Assert( VERTEX_ELEMENT_TEXCOORD3D_2	== 36	); break;
-		case VERTEX_ELEMENT_TEXCOORD3D_3:	Assert( VERTEX_ELEMENT_TEXCOORD3D_3	== 37	); break;
-		case VERTEX_ELEMENT_TEXCOORD3D_4:	Assert( VERTEX_ELEMENT_TEXCOORD3D_4	== 38	); break;
-		case VERTEX_ELEMENT_TEXCOORD3D_5:	Assert( VERTEX_ELEMENT_TEXCOORD3D_5	== 39	); break;
-		case VERTEX_ELEMENT_TEXCOORD3D_6:	Assert( VERTEX_ELEMENT_TEXCOORD3D_6	== 40	); break;
-		case VERTEX_ELEMENT_TEXCOORD3D_7:	Assert( VERTEX_ELEMENT_TEXCOORD3D_7	== 41	); break;
-		case VERTEX_ELEMENT_TEXCOORD4D_0:	Assert( VERTEX_ELEMENT_TEXCOORD4D_0	== 42	); break;
-		case VERTEX_ELEMENT_TEXCOORD4D_1:	Assert( VERTEX_ELEMENT_TEXCOORD4D_1	== 43	); break;
-		case VERTEX_ELEMENT_TEXCOORD4D_2:	Assert( VERTEX_ELEMENT_TEXCOORD4D_2	== 44	); break;
-		case VERTEX_ELEMENT_TEXCOORD4D_3:	Assert( VERTEX_ELEMENT_TEXCOORD4D_3	== 45	); break;
-		case VERTEX_ELEMENT_TEXCOORD4D_4:	Assert( VERTEX_ELEMENT_TEXCOORD4D_4	== 46	); break;
-		case VERTEX_ELEMENT_TEXCOORD4D_5:	Assert( VERTEX_ELEMENT_TEXCOORD4D_5	== 47	); break;
-		case VERTEX_ELEMENT_TEXCOORD4D_6:	Assert( VERTEX_ELEMENT_TEXCOORD4D_6	== 48	); break;
-		case VERTEX_ELEMENT_TEXCOORD4D_7:	Assert( VERTEX_ELEMENT_TEXCOORD4D_7	== 49	); break;
+		case VERTEX_ELEMENT_POSITION:		contract_assert( VERTEX_ELEMENT_POSITION		== 0 ); break;
+		case VERTEX_ELEMENT_POSITION4D:		contract_assert( VERTEX_ELEMENT_POSITION4D	== 1 ); break;
+		case VERTEX_ELEMENT_NORMAL:			contract_assert( VERTEX_ELEMENT_NORMAL		== 2 ); break;
+		case VERTEX_ELEMENT_NORMAL4D:		contract_assert( VERTEX_ELEMENT_NORMAL4D		== 3 ); break;
+		case VERTEX_ELEMENT_COLOR:			contract_assert( VERTEX_ELEMENT_COLOR		== 4 ); break;
+		case VERTEX_ELEMENT_SPECULAR:		contract_assert( VERTEX_ELEMENT_SPECULAR		== 5 ); break;
+		case VERTEX_ELEMENT_TANGENT_S:		contract_assert( VERTEX_ELEMENT_TANGENT_S	== 6 ); break;
+		case VERTEX_ELEMENT_TANGENT_T:		contract_assert( VERTEX_ELEMENT_TANGENT_T	== 7 ); break;
+		case VERTEX_ELEMENT_WRINKLE:		contract_assert( VERTEX_ELEMENT_WRINKLE		== 8 ); break;
+		case VERTEX_ELEMENT_BONEINDEX:		contract_assert( VERTEX_ELEMENT_BONEINDEX	== 9 ); break;
+		case VERTEX_ELEMENT_BONEWEIGHTS1:	contract_assert( VERTEX_ELEMENT_BONEWEIGHTS1	== 10 ); break;
+		case VERTEX_ELEMENT_BONEWEIGHTS2:	contract_assert( VERTEX_ELEMENT_BONEWEIGHTS2	== 11 ); break;
+		case VERTEX_ELEMENT_BONEWEIGHTS3:	contract_assert( VERTEX_ELEMENT_BONEWEIGHTS3	== 12 ); break;
+		case VERTEX_ELEMENT_BONEWEIGHTS4:	contract_assert( VERTEX_ELEMENT_BONEWEIGHTS4	== 13 ); break;
+		case VERTEX_ELEMENT_USERDATA1:		contract_assert( VERTEX_ELEMENT_USERDATA1	== 14 ); break;
+		case VERTEX_ELEMENT_USERDATA2:		contract_assert( VERTEX_ELEMENT_USERDATA2	== 15 ); break;
+		case VERTEX_ELEMENT_USERDATA3:		contract_assert( VERTEX_ELEMENT_USERDATA3	== 16 ); break;
+		case VERTEX_ELEMENT_USERDATA4:		contract_assert( VERTEX_ELEMENT_USERDATA4	== 17 ); break;
+		case VERTEX_ELEMENT_TEXCOORD1D_0:	contract_assert( VERTEX_ELEMENT_TEXCOORD1D_0	== 18 ); break;
+		case VERTEX_ELEMENT_TEXCOORD1D_1:	contract_assert( VERTEX_ELEMENT_TEXCOORD1D_1	== 19 ); break;
+		case VERTEX_ELEMENT_TEXCOORD1D_2:	contract_assert( VERTEX_ELEMENT_TEXCOORD1D_2	== 20 ); break;
+		case VERTEX_ELEMENT_TEXCOORD1D_3:	contract_assert( VERTEX_ELEMENT_TEXCOORD1D_3	== 21 ); break;
+		case VERTEX_ELEMENT_TEXCOORD1D_4:	contract_assert( VERTEX_ELEMENT_TEXCOORD1D_4	== 22 ); break;
+		case VERTEX_ELEMENT_TEXCOORD1D_5:	contract_assert( VERTEX_ELEMENT_TEXCOORD1D_5	== 23 ); break;
+		case VERTEX_ELEMENT_TEXCOORD1D_6:	contract_assert( VERTEX_ELEMENT_TEXCOORD1D_6	== 24 ); break;
+		case VERTEX_ELEMENT_TEXCOORD1D_7:	contract_assert( VERTEX_ELEMENT_TEXCOORD1D_7	== 25 ); break;
+		case VERTEX_ELEMENT_TEXCOORD2D_0:	contract_assert( VERTEX_ELEMENT_TEXCOORD2D_0	== 26 ); break;
+		case VERTEX_ELEMENT_TEXCOORD2D_1:	contract_assert( VERTEX_ELEMENT_TEXCOORD2D_1	== 27 ); break;
+		case VERTEX_ELEMENT_TEXCOORD2D_2:	contract_assert( VERTEX_ELEMENT_TEXCOORD2D_2	== 28 ); break;
+		case VERTEX_ELEMENT_TEXCOORD2D_3:	contract_assert( VERTEX_ELEMENT_TEXCOORD2D_3	== 29 ); break;
+		case VERTEX_ELEMENT_TEXCOORD2D_4:	contract_assert( VERTEX_ELEMENT_TEXCOORD2D_4	== 30 ); break;
+		case VERTEX_ELEMENT_TEXCOORD2D_5:	contract_assert( VERTEX_ELEMENT_TEXCOORD2D_5	== 31 ); break;
+		case VERTEX_ELEMENT_TEXCOORD2D_6:	contract_assert( VERTEX_ELEMENT_TEXCOORD2D_6	== 32 ); break;
+		case VERTEX_ELEMENT_TEXCOORD2D_7:	contract_assert( VERTEX_ELEMENT_TEXCOORD2D_7	== 33 ); break;
+		case VERTEX_ELEMENT_TEXCOORD3D_0:	contract_assert( VERTEX_ELEMENT_TEXCOORD3D_0	== 34 ); break;
+		case VERTEX_ELEMENT_TEXCOORD3D_1:	contract_assert( VERTEX_ELEMENT_TEXCOORD3D_1	== 35 ); break;
+		case VERTEX_ELEMENT_TEXCOORD3D_2:	contract_assert( VERTEX_ELEMENT_TEXCOORD3D_2	== 36 ); break;
+		case VERTEX_ELEMENT_TEXCOORD3D_3:	contract_assert( VERTEX_ELEMENT_TEXCOORD3D_3	== 37 ); break;
+		case VERTEX_ELEMENT_TEXCOORD3D_4:	contract_assert( VERTEX_ELEMENT_TEXCOORD3D_4	== 38 ); break;
+		case VERTEX_ELEMENT_TEXCOORD3D_5:	contract_assert( VERTEX_ELEMENT_TEXCOORD3D_5	== 39 ); break;
+		case VERTEX_ELEMENT_TEXCOORD3D_6:	contract_assert( VERTEX_ELEMENT_TEXCOORD3D_6	== 40 ); break;
+		case VERTEX_ELEMENT_TEXCOORD3D_7:	contract_assert( VERTEX_ELEMENT_TEXCOORD3D_7	== 41 ); break;
+		case VERTEX_ELEMENT_TEXCOORD4D_0:	contract_assert( VERTEX_ELEMENT_TEXCOORD4D_0	== 42 ); break;
+		case VERTEX_ELEMENT_TEXCOORD4D_1:	contract_assert( VERTEX_ELEMENT_TEXCOORD4D_1	== 43 ); break;
+		case VERTEX_ELEMENT_TEXCOORD4D_2:	contract_assert( VERTEX_ELEMENT_TEXCOORD4D_2	== 44 ); break;
+		case VERTEX_ELEMENT_TEXCOORD4D_3:	contract_assert( VERTEX_ELEMENT_TEXCOORD4D_3	== 45 ); break;
+		case VERTEX_ELEMENT_TEXCOORD4D_4:	contract_assert( VERTEX_ELEMENT_TEXCOORD4D_4	== 46 ); break;
+		case VERTEX_ELEMENT_TEXCOORD4D_5:	contract_assert( VERTEX_ELEMENT_TEXCOORD4D_5	== 47 ); break;
+		case VERTEX_ELEMENT_TEXCOORD4D_6:	contract_assert( VERTEX_ELEMENT_TEXCOORD4D_6	== 48 ); break;
+		case VERTEX_ELEMENT_TEXCOORD4D_7:	contract_assert( VERTEX_ELEMENT_TEXCOORD4D_7	== 49 ); break;
 	default:
-		Assert( 0 ); // Invalid input or VertexElement_t has definitely changed
+		contract_assert( 0 ); // Invalid input or VertexElement_t has definitely changed
 		break;
 	}
 }
@@ -251,10 +243,7 @@ inline void Detect_VertexElement_t_Changes( VertexElement_t element ) // GREPs f
 // One compressed normals+tangents into a SHORT2 each (8 bytes total)
 // The other compresses them together, into a single UBYTE4 (4 bytes total)
 // FIXME: pick one or the other, compare lighting quality in important cases
-#define COMPRESSED_NORMALS_SEPARATETANGENTS_SHORT2	0
-#define COMPRESSED_NORMALS_COMBINEDTANGENTS_UBYTE4	1
-//#define COMPRESSED_NORMALS_TYPE						COMPRESSED_NORMALS_SEPARATETANGENTS_SHORT2
-#define COMPRESSED_NORMALS_TYPE						COMPRESSED_NORMALS_COMBINEDTANGENTS_UBYTE4
+// The UBYTE4 scheme is used (the SHORT2 scheme was dropped).
 
 inline int GetVertexElementSize( VertexElement_t element, VertexCompressionType_t compressionType )
 {
@@ -265,18 +254,11 @@ inline int GetVertexElementSize( VertexElement_t element, VertexCompressionType_
 		// Compressed-vertex element sizes
 		switch ( element )
 		{
-#if		( COMPRESSED_NORMALS_TYPE == COMPRESSED_NORMALS_SEPARATETANGENTS_SHORT2 )
-			case VERTEX_ELEMENT_NORMAL:
-				return ( 2 * sizeof( short ) );
-			case VERTEX_ELEMENT_USERDATA4:
-				return ( 2 * sizeof( short ) );
-#else //( COMPRESSED_NORMALS_TYPE == COMPRESSED_NORMALS_COMBINEDTANGENTS_UBYTE4 ) 
 			// Normals and tangents (userdata4) are combined into a single UBYTE4 vertex element
 			case VERTEX_ELEMENT_NORMAL:
 				return ( 4 * sizeof( unsigned char ) );
 			case VERTEX_ELEMENT_USERDATA4:
 				return ( 0 );
-#endif
 			// Compressed bone weights use a SHORT2 vertex element:
 			case VERTEX_ELEMENT_BONEWEIGHTS1:
 			case VERTEX_ELEMENT_BONEWEIGHTS2:
@@ -340,7 +322,7 @@ inline int GetVertexElementSize( VertexElement_t element, VertexCompressionType_
 		case VERTEX_ELEMENT_TEXCOORD4D_6:	return ( 4 * sizeof( float ) );
 		case VERTEX_ELEMENT_TEXCOORD4D_7:	return ( 4 * sizeof( float ) );
 		default:
-			Assert(0);
+			contract_assert( 0 );
 			return 0;
 	};
 }
@@ -448,7 +430,7 @@ enum PreviewImageRetVal_t
 //-----------------------------------------------------------------------------
 // material interface
 //-----------------------------------------------------------------------------
-abstract_class IMaterial
+class IMaterial
 {
 public:
 	// Get the name of the material.  This is a full path to 
@@ -656,6 +638,3 @@ inline VertexStreamSpec_t * FindVertexStreamSpec( VertexFormat_t iElement, Verte
 	}
 	return nullptr;
 }
-
-
-#endif // IMATERIAL_H

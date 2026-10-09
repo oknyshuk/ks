@@ -1,22 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( HOST_H )
-#define HOST_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "convar.h"
+import std;
+import ks.tier1;
 
-
-#define SCRIPT_DIR			"scripts/"
+inline constexpr const char *SCRIPT_DIR = "scripts/";
 
 struct model_t;
 struct AudioState_t;
-class KeyValues;
 namespace ks::net { struct CMsg_CVars; }
 
 class CCommonHostState
@@ -79,12 +71,12 @@ inline const char *GetBaseDirectory()
 // FIXME, move all this crap somewhere else
 //
 
-// when we are using -fork, and we are the parent controlling process, we want to avoid a bunch of stuff, such as registering ourselves with the xlsp master or steam, etc
-#define FORK_ID_PARENT_PROCESS -1
+// when we are using -fork, and we are the parent controlling process, we want to avoid a bunch of stuff, such as registering ourselves with the xlsp master, etc
+inline constexpr int FORK_ID_PARENT_PROCESS = -1;
 extern int g_nForkID;
-extern int g_nSocketToParentProcess;						// -1 if we are not a child, otherwise its a socket that talks to the parent process
+extern ks::platform::socket *g_nSocketToParentProcess;		// null if we are not a child, otherwise its a socket that talks to the parent process
 
-FORCEINLINE bool IsChildProcess( void )
+[[gnu::always_inline]] inline bool IsChildProcess( void )
 {
 	return g_nForkID > 0;
 }
@@ -103,8 +95,8 @@ extern	float		host_frameendtime_computationduration;
 extern	int			host_framecount;	// incremented every frame, never reset
 extern	double		realtime;			// not bounded in any way, changed at
 // start of every frame, never reset
-void Host_Error (PRINTF_FORMAT_STRING const char *error, ...) FMTFUNCTION( 1, 2 );
-void Host_EndGame (bool bShowMainMenu, PRINTF_FORMAT_STRING const char *message, ...) FMTFUNCTION( 2, 3 );
+void Host_Error (const char *error, ...) [[gnu::format(printf, 1, 2)]];
+void Host_EndGame (bool bShowMainMenu, const char *message, ...) [[gnu::format(printf, 2, 3)]];
 
 // user message
 #define MAX_USER_MSG_BITS 12
@@ -148,10 +140,6 @@ void Host_BeginThreadedSound();
 // bFinal is true when the user is done talking.
 void CL_SendVoicePacket(bool bFinal);
 
-bool Host_IsSecureServerAllowed();
-void Host_DisallowSecureServers();
-bool Host_AllowLoadModule( const char *pFilename, const char *pPathID, bool bAllowUnknown );
-
 // Accumulated filtered time on machine ( i.e., host_framerate can alter host_time )
 extern float host_time;
 
@@ -185,10 +173,7 @@ extern int	host_currentframetick;
 
 // Set by the game DLL to tell us to do the same timing tricks as timedemo.
 extern bool g_bDedicatedServerBenchmarkMode;
-extern uint GetSteamAppID();
-
-#include "steam/steamclientpublic.h"
-extern EUniverse GetSteamUniverse();
+extern uint GetGameAppID();
 
 // 
 // \return true iff PS3 (and only PS3) and Quitting (on user request or disk eject or other critical condition when we absolutely must quit within 10 seconds)
@@ -202,8 +187,3 @@ inline bool IsPS3QuitRequested()
 	// if not on PS3, do not disturb the old logic of host_state which has a lot of dependencies, because other platforms do not require the game to quit cleanly
 	return false;
 }
-
-
-
-#endif // HOST_H
-

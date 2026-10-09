@@ -1,20 +1,26 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "server_pch.h"
-#include <mutex>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// main precompiled header for server files
+
+import ks.tier1;
+
+#include "decal.h"
+#include "cmodel_engine.h"
+#include "sound.h"
+#include "keys.h"
+#include "vengineserver_impl.h"
+#include "server.h"
+#include "eiface.h"
+#include "edict.h"
+#include "server_class.h"
+import std;
 
 #include "hltvserver.h"
-#if defined( REPLAY_ENABLED )
-#include "replayserver.h"
-#endif
 #include "framesnapshot.h"
 #include "sys_dll.h"
 
-DEFINE_FIXEDSIZE_ALLOCATOR( CFrameSnapshot, 64, ks::fixed_pool::grow::fast );
+ks::fixed_pool CFrameSnapshot::s_Allocator( sizeof(CFrameSnapshot), 64, ks::fixed_pool::grow::fast, "CFrameSnapshot pool", alignof(CFrameSnapshot) );
 
 
 static ConVar sv_creationtickcheck( "sv_creationtickcheck", "1", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Do extended check for encoding of timestamps against tickcount" );
@@ -29,8 +35,8 @@ CFrameSnapshotManager *framesnapshotmanager = &g_FrameSnapshotManager;
 //-----------------------------------------------------------------------------
 CFrameSnapshotManager::CFrameSnapshotManager( void ) : m_PackedEntitiesPool( MAX_EDICTS / 16, ks::fixed_pool::grow::slow )
 {
-	COMPILE_TIME_ASSERT( INVALID_PACKED_ENTITY_HANDLE == 0 );
-	Q_memset( m_pLastPackedData, 0x00, MAX_EDICTS * sizeof(PackedEntityHandle_t) );
+	static_assert( INVALID_PACKED_ENTITY_HANDLE == 0 );
+	V_memset( m_pLastPackedData, 0x00, MAX_EDICTS * sizeof(PackedEntityHandle_t) );
 }
 
 //-----------------------------------------------------------------------------
@@ -41,8 +47,8 @@ CFrameSnapshotManager::~CFrameSnapshotManager( void )
 #ifdef _DEBUG
 	if ( !IsInErrorExit() )
 	{
-		Assert( m_FrameSnapshots.empty() );
-		Assert( m_PackedEntitiesPool.count() == 0 );
+		contract_assert( m_FrameSnapshots.empty() );
+		contract_assert( m_PackedEntitiesPool.count() == 0 );
 	}
 #endif
 }
@@ -54,13 +60,13 @@ CFrameSnapshotManager::~CFrameSnapshotManager( void )
 void CFrameSnapshotManager::LevelChanged()
 {
 	// Clear all lists...
-	Assert( m_FrameSnapshots.empty() );
+	contract_assert( m_FrameSnapshots.empty() );
 
 	// Release the most recent snapshot...
 	m_PackedEntitiesPool.clear();
 	m_PackedEntityCache.clear();
-	COMPILE_TIME_ASSERT( INVALID_PACKED_ENTITY_HANDLE == 0 );
-	Q_memset( m_pLastPackedData, 0x00, MAX_EDICTS * sizeof(PackedEntityHandle_t) );
+	static_assert( INVALID_PACKED_ENTITY_HANDLE == 0 );
+	V_memset( m_pLastPackedData, 0x00, MAX_EDICTS * sizeof(PackedEntityHandle_t) );
 }
 
 CFrameSnapshot *CFrameSnapshotManager::NextSnapshot( CFrameSnapshot *pSnapshot )
@@ -77,9 +83,6 @@ CFrameSnapshot *CFrameSnapshotManager::NextSnapshot( CFrameSnapshot *pSnapshot )
 }
 
 CFrameSnapshot*	CFrameSnapshotManager::CreateEmptySnapshot(
-#ifdef DEBUG_SNAPSHOT_REFERENCES
-	char const *szDebugName,
-#endif
 	int tickcount, int maxEntities, uint32 nSnapshotSet )
 {
 	CFrameSnapshot *snap = nullptr;
@@ -88,18 +91,12 @@ CFrameSnapshot*	CFrameSnapshotManager::CreateEmptySnapshot(
 		snap = new CFrameSnapshot;
 		snap->AddReference();
 	}
-#ifdef DEBUG_SNAPSHOT_REFERENCES
-	Q_strncpy( snap->m_chDebugSnapshotName, szDebugName, sizeof( snap->m_chDebugSnapshotName ) );
-#endif
 	snap->m_nSnapshotSet = nSnapshotSet;
 	snap->m_nTickCount = tickcount;
 	snap->m_nNumEntities = maxEntities;
 	snap->m_nValidEntities = 0;
 	snap->m_pValidEntities = nullptr;
 	snap->m_pHLTVEntityData = nullptr;
-#if defined( REPLAY_ENABLED )
-	snap->m_pReplayEntityData = nullptr;
-#endif
 	snap->m_pEntities = new CFrameSnapshotEntry[maxEntities];
 
 	CFrameSnapshotEntry *entry = snap->m_pEntities;
@@ -126,19 +123,12 @@ CFrameSnapshot*	CFrameSnapshotManager::CreateEmptySnapshot(
 // Input  : framenumber - 
 //-----------------------------------------------------------------------------
 CFrameSnapshot* CFrameSnapshotManager::TakeTickSnapshot(
-#ifdef DEBUG_SNAPSHOT_REFERENCES
-	char const *szDebugName,
-#endif
 	int tickcount, uint32 nSnapshotSet )
 {
 	unsigned short nValidEntities[MAX_EDICTS];
 
-	SNPROF( __FUNCTION__ );
 
 	CFrameSnapshot *snap = CreateEmptySnapshot(
-#ifdef DEBUG_SNAPSHOT_REFERENCES
-		szDebugName,
-#endif
 		tickcount, sv.num_edicts, nSnapshotSet );
 
 	int maxclients = sv.GetClientCount();
@@ -169,9 +159,9 @@ CFrameSnapshot* CFrameSnapshotManager::TakeTickSnapshot(
 		}
 		
 		// entity exists and is not marked as 'free'
-		Assert( edict->m_NetworkSerialNumber != -1 );
-		Assert( edict->GetNetworkable() );
-		Assert( edict->GetNetworkable()->GetServerClass() );
+		contract_assert( edict->m_NetworkSerialNumber != -1 );
+		contract_assert( edict->GetNetworkable() );
+		contract_assert( edict->GetNetworkable()->GetServerClass() );
 
 		entry->m_nSerialNumber	= edict->m_NetworkSerialNumber;
 		entry->m_pClass			= edict->GetNetworkable()->GetServerClass();
@@ -180,21 +170,14 @@ CFrameSnapshot* CFrameSnapshotManager::TakeTickSnapshot(
 
 	// create dynamic valid entities array and copy indices
 	snap->m_pValidEntities = new unsigned short[snap->m_nValidEntities];
-	Q_memcpy( snap->m_pValidEntities, nValidEntities, snap->m_nValidEntities * sizeof(unsigned short) );
+	V_memcpy( snap->m_pValidEntities, nValidEntities, snap->m_nValidEntities * sizeof(unsigned short) );
 
 	if ( IsHltvActive() )
 	{
 		snap->m_pHLTVEntityData = new CHLTVEntityData[snap->m_nValidEntities];
-		Q_memset( snap->m_pHLTVEntityData, 0, snap->m_nValidEntities * sizeof(CHLTVEntityData) );
+		V_memset( snap->m_pHLTVEntityData, 0, snap->m_nValidEntities * sizeof(CHLTVEntityData) );
 	}
 
-#if defined( REPLAY_ENABLED )
-	if ( replay && replay->IsActive() )
-	{
-		snap->m_pReplayEntityData = new CReplayEntityData[snap->m_nValidEntities];
-		Q_memset( snap->m_pReplayEntityData, 0, snap->m_nValidEntities * sizeof(CReplayEntityData) );
-	}
-#endif
 	snap->m_iExplicitDeleteSlots.assign( m_iExplicitDeleteSlots.begin(), m_iExplicitDeleteSlots.end() );
 	m_iExplicitDeleteSlots.clear(); m_iExplicitDeleteSlots.shrink_to_fit();
 
@@ -223,7 +206,7 @@ void CFrameSnapshotManager::DeleteFrameSnapshot( CFrameSnapshot* pSnapshot )
 
 void CFrameSnapshotManager::RemoveEntityReference( PackedEntityHandle_t handle )
 {
-	Assert( handle != INVALID_PACKED_ENTITY_HANDLE );
+	contract_assert( handle != INVALID_PACKED_ENTITY_HANDLE );
 
 	PackedEntity *packedEntity = PackedEntityFromHandle( handle );
 
@@ -248,7 +231,7 @@ void CFrameSnapshotManager::RemoveEntityReference( PackedEntityHandle_t handle )
 
 void CFrameSnapshotManager::AddEntityReference( PackedEntityHandle_t handle )
 {
-	Assert( handle != INVALID_PACKED_ENTITY_HANDLE );
+	contract_assert( handle != INVALID_PACKED_ENTITY_HANDLE );
 
 	PackedEntityFromHandle( handle )->m_ReferenceCount++;
 }
@@ -272,7 +255,7 @@ bool CFrameSnapshotManager::ShouldForceRepack( CFrameSnapshot* pSnapshot, int en
 	if ( sv_creationtickcheck.GetBool() )
 	{
 		PackedEntity *pe = PackedEntityFromHandle( handle );
-		Assert( pe );
+		contract_assert( pe );
 		if ( pe && pe->ShouldCheckCreationTick() )
 		{
 			int nCurrentNetworkBase			= g_ServerGlobalVariables.GetNetworkBase( pSnapshot->m_nTickCount, entity );
@@ -303,7 +286,7 @@ bool CFrameSnapshotManager::UsePreviouslySentPacket( CFrameSnapshot* pSnapshot,
 				return false;
 			}
 
-			Assert( entity < pSnapshot->m_nNumEntities );
+			contract_assert( entity < pSnapshot->m_nNumEntities );
 			pSnapshot->m_pEntities[entity].m_pPackedData = handle;
 			PackedEntityFromHandle( handle )->m_ReferenceCount++;
 			return true;
@@ -363,15 +346,14 @@ PackedEntity* CFrameSnapshotManager::CreatePackedEntity( CFrameSnapshot* pSnapsh
 
 PackedEntity* CFrameSnapshotManager::CreateLocalPackedEntity( CFrameSnapshot* pSnapshot, int entity )
 {
-	MEM_ALLOC_CREDIT();
 
 	m_WriteMutex.lock();
 	PackedEntity *packedEntity = m_PackedEntitiesPool.alloc();
 	PackedEntityHandle_t handle = reinterpret_cast< PackedEntityHandle_t >( packedEntity );
 	m_WriteMutex.unlock();
 
-	Assert( entity < pSnapshot->m_nNumEntities );
-	Assert( entity >= 0 && entity < ARRAYSIZE(m_pLastPackedData) );
+	contract_assert( entity < pSnapshot->m_nNumEntities );
+	contract_assert( entity >= 0 && entity < std::size( m_pLastPackedData ) );
 
 	packedEntity->m_ReferenceCount = 1;
 	packedEntity->m_nEntityIndex = entity;
@@ -426,7 +408,7 @@ UnpackedDataCache_t *CFrameSnapshotManager::GetCachedUncompressedEntity( PackedE
 		}
 	}
 
-	Assert ( pdcOldest );
+	contract_assert( pdcOldest );
 
 	// hmm, not in cache, clear & return oldest one
 	pdcOldest->counter = m_nPackedEntityCacheCounter;
@@ -491,10 +473,7 @@ CFrameSnapshot::CFrameSnapshot()
 	m_nReferences = 0;
 #if defined( _DEBUG )
 	++g_nAllocatedSnapshots;
-	Assert( g_nAllocatedSnapshots < 80000 ); // this probably would indicate a memory leak.
-#endif
-#ifdef DEBUG_SNAPSHOT_REFERENCES
-	Q_memset( m_chDebugSnapshotName, 0, sizeof( m_chDebugSnapshotName ) );
+	contract_assert( g_nAllocatedSnapshots < 80000 ); // this probably would indicate a memory leak.
 #endif
 }
 
@@ -506,7 +485,7 @@ CFrameSnapshot::~CFrameSnapshot()
 
 	if ( m_pTempEntities )
 	{
-		Assert( m_nTempEntities>0 );
+		contract_assert( m_nTempEntities>0 );
 		for (int i = 0; i < m_nTempEntities; i++ )
 		{
 			delete m_pTempEntities[i];
@@ -520,24 +499,18 @@ CFrameSnapshot::~CFrameSnapshot()
 		delete [] m_pHLTVEntityData;
 	}
 
-#if defined( REPLAY_ENABLED )
-	if ( m_pReplayEntityData )
-	{
-		delete [] m_pReplayEntityData;
-	}
-#endif	
-	Assert ( m_nReferences == 0 );
+	contract_assert( m_nReferences == 0 );
 
 #if defined( _DEBUG )
 	--g_nAllocatedSnapshots;
-	Assert( g_nAllocatedSnapshots >= 0 );
+	contract_assert( g_nAllocatedSnapshots >= 0 );
 #endif
 }
 
 
 void CFrameSnapshot::AddReference()
 {
-	Assert( m_nReferences < 0xFFFF );
+	contract_assert( m_nReferences < 0xFFFF );
 	++m_nReferences;
 }
 
@@ -550,7 +523,7 @@ void CFrameSnapshot::ReleaseReference()
 	//
 	std::scoped_lock lock( framesnapshotmanager->m_FrameSnapshotsWriteMutex );
 
-	Assert( m_nReferences > 0 );
+	contract_assert( m_nReferences > 0 );
 
 	--m_nReferences;
 	if ( m_nReferences == 0 )
@@ -558,4 +531,3 @@ void CFrameSnapshot::ReleaseReference()
 		g_FrameSnapshotManager.DeleteFrameSnapshot( this );
 	}
 }
-

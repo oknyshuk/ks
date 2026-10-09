@@ -1,11 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 
@@ -15,15 +39,9 @@
 #include "team.h"
 #include "ai_basenpc.h"
 
-
 // Use this to disable caching and other optimizations in senses
-#define DEBUG_SENSES 1
 
-#ifdef DEBUG_SENSES
-#define AI_PROFILE_SENSES(tag) AI_PROFILE_SCOPE(tag)
-#else
-#define AI_PROFILE_SENSES(tag) ((void)0)
-#endif
+#define AI_PROFILE_SENSES(tag) 
 
 const float AI_STANDARD_NPC_SEARCH_TIME = .25;
 const float AI_EFFICIENT_NPC_SEARCH_TIME = .35;
@@ -222,7 +240,7 @@ bool CAI_Senses::SeeEntity( CBaseEntity *pSightEnt )
 
 CBaseEntity *CAI_Senses::GetFirstSeenEntity( AISightIter_t *pIter, seentype_t iSeenType ) const
 { 
-	COMPILE_TIME_ASSERT( sizeof( AISightIter_t ) == sizeof( AISightIterVal_t ) );
+	static_assert( sizeof( AISightIter_t ) == sizeof( AISightIterVal_t ) );
 	
 	AISightIterVal_t *pIterVal = (AISightIterVal_t *)pIter;
 	
@@ -230,7 +248,7 @@ CBaseEntity *CAI_Senses::GetFirstSeenEntity( AISightIter_t *pIter, seentype_t iS
 	pIterVal->SeenArray = (char)iSeenType;
 	int iFirstArray = ( iSeenType == SEEN_ALL ) ? 0 : iSeenType;
 
-	for ( int i = iFirstArray; i < ARRAYSIZE( m_SeenArrays ); i++ )
+	for ( int i = iFirstArray; i < std::size( m_SeenArrays ); i++ )
 	{
 		if ( !m_SeenArrays[i]->empty() )
 		{
@@ -252,7 +270,7 @@ CBaseEntity *CAI_Senses::GetNextSeenEntity( AISightIter_t *pIter ) const
 	{
 		AISightIterVal_t *pIterVal = (AISightIterVal_t *)pIter;
 		
-		for ( int i = pIterVal->array;  i < ARRAYSIZE( m_SeenArrays ); i++ )
+		for ( int i = pIterVal->array;  i < std::size( m_SeenArrays ); i++ )
 		{
 			for ( int j = pIterVal->iNext; j < std::ssize( *m_SeenArrays[i] ); j++ )
 			{
@@ -292,7 +310,7 @@ void CAI_Senses::EndGather( int nSeen, std::vector< EHANDLE > *pResult )
 		CBaseEntity *pCurrent = GetOuter()->m_pLink;
 		for (int i = 0; i < nSeen; i++ )
 		{
-			Assert( pCurrent );
+			contract_assert( pCurrent );
 			(*pResult)[i].Set( pCurrent );
 			pCurrent = pCurrent->m_pLink;
 		}
@@ -590,7 +608,6 @@ CSound *CAI_Senses::GetClosestSound( bool fScent, int validTypes, bool bUsePrior
 
 void CAI_Senses::PerformSensing( void )
 {
-	AI_PROFILE_SCOPE	(CAI_BaseNPC_PerformSensing);
 		
 	// -----------------
 	//  Look	
@@ -684,7 +701,7 @@ void CAI_SensedObjectsManager::AddEntity( CBaseEntity *pEntity )
 		return;
 
 	// We shouldn't be adding players or NPCs to this list
-	Assert( !pEntity->IsPlayer() && !pEntity->IsNPC() );
+	contract_assert( !pEntity->IsPlayer() && !pEntity->IsNPC() );
 
 	// Add the object flag so it gets removed when it dies
 	pEntity->AddFlag( FL_OBJECT );

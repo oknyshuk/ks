@@ -1,24 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef PARTICLE_LIGHT_H
-#define PARTICLE_LIGHT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "baseentity.h"
-
 
 //==================================================
 // CParticleLight. These are tied to 
 //==================================================
 
-#define PARTICLELIGHT_ENTNAME	"env_particlelight"
+inline constexpr const char *PARTICLELIGHT_ENTNAME = "env_particlelight";
 
 class CParticleLight : public CServerOnlyPointEntity
 {
@@ -35,6 +27,3 @@ public:
 	[[= ks::reflect::Key{ .name = "PSName" } ]] string_t		m_PSName;	// Name of the particle system entity this light affects.
 	[[= ks::reflect::Key{ .name = "Directional" } ]] bool			m_bDirectional;
 };
-
-
-#endif // PARTICLE_LIGHT_H

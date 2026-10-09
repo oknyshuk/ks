@@ -1,8 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "vertexlitgeneric_dx9_helper.h"
@@ -12,7 +9,7 @@ DEFINE_FALLBACK_SHADER( Wireframe, Wireframe_DX9 )
 BEGIN_VS_SHADER( Wireframe_DX9,
 			  "Help for Wireframe_DX9" )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( DISPLACEMENTMAP, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "Displacement map" )
 		SHADER_PARAM( DISPLACEMENTWRINKLE, SHADER_PARAM_TYPE_BOOL, "0", "Displacement map contains wrinkle displacements")
 	END_SHADER_PARAMS
@@ -50,4 +47,3 @@ BEGIN_VS_SHADER( Wireframe_DX9,
 		DrawVertexLitGeneric_DX9( this, params, pShaderAPI, pShaderShadow, false, vars, vertexCompression, pContextDataPtr );
 	}
 END_SHADER
-

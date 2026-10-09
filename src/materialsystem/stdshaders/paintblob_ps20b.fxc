@@ -1,4 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC:	"BACK_SURFACE"				"0..1"
 // STATIC:	"LIGHT_WARP"				"0..1"
@@ -14,14 +15,12 @@
 // DYNAMIC: "NUM_LIGHTS"				"0..4"	[ps30]
 // DYNAMIC: "FLASHLIGHT"				"0..1"
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"
-
 // For now, 'BACK_SURFACE' is a dead-simple path (just writes depth into dest alpha), so skip all non-HW-config combos:
 // SKIP: ( $BACK_SURFACE == 1 ) && ( $LIGHT_WARP > 0 )
 // SKIP: ( $BACK_SURFACE == 1 ) && ( $FRESNEL_WARP > 0 )
 // SKIP: ( $BACK_SURFACE == 1 ) && ( $INTERIOR_LAYER > 0 )
 // SKIP: ( $BACK_SURFACE == 1 ) && ( $OPACITY_TEXTURE > 0 )
 // SKIP: ( $BACK_SURFACE == 1 ) && ( $CONTACT_SHADOW > 0 )
-
 
 #include "common_ps_fxc.h"
 #include "common_vertexlitgeneric_dx9.h"

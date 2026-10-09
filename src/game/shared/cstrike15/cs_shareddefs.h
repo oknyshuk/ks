@@ -1,19 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Shared CS definitions.
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CS_SHAREDDEFS_H
-#define CS_SHAREDDEFS_H
+// Purpose: Shared CS definitions.
 
 #include "csgo_limits.h"
+#include "shareddefs.h"
+#if defined( CLIENT_DLL )
+#include "cdll_client_int.h"
+#endif
 
 //=============================================================================
 // Econ system type stubs (econ system removed)
 //=============================================================================
 typedef uint16 item_definition_index_t;
-#define INVALID_ITEM_DEF_INDEX ((item_definition_index_t)0)
+inline constexpr auto INVALID_ITEM_DEF_INDEX = ((item_definition_index_t)0);
 
 // Loadout slot positions
 enum loadout_positions_t
@@ -78,7 +79,7 @@ static const char* g_szLoadoutStrings[] = {
 
 typedef uint64 itemid_t;
 typedef uint32 attrib_value_t;
-#define INVALID_ITEM_ID ((itemid_t)0)
+inline constexpr auto INVALID_ITEM_ID = ((itemid_t)0);
 
 // Kill eater event types (StatTrak)
 enum kill_eater_event_t
@@ -100,25 +101,23 @@ typedef CEconItemDefinition CCStrike15ItemDefinition;
 typedef CEconItemDefinition GameItemDefinition_t;
 
 // Item found method strings (stub)
-#define NUM_ITEM_FOUND_METHODS 22
+inline constexpr auto NUM_ITEM_FOUND_METHODS = 22;
 extern const char *g_pszItemFoundMethodStrings[NUM_ITEM_FOUND_METHODS];
 
 // Econ attribute hook macros (stubs - econ system removed)
-#define CALL_ATTRIB_HOOK_FLOAT(value, name) ((void)0)
-#define CALL_ATTRIB_HOOK_INT(value, name) ((void)0)
-#define CALL_ATTRIB_HOOK_FLOAT_ON_OTHER(other, value, name) ((void)0)
-#define CALL_ATTRIB_HOOK_INT_ON_OTHER(other, value, name) ((void)0)
 
 /*======================*/
 //      Menu stuff      //
 /*======================*/
 
 #include <game/client/iviewport.h>
+import ks.core;
+import std;
 
 #include "cs_achievementdefs.h"
 
 // CS-specific viewport panels
-#define PANEL_CHOOSE_CLASS			"choose_class"
+inline constexpr const char *PANEL_CHOOSE_CLASS = "choose_class";
 
 // Buy sub menus
 // #define MENU_PISTOL					"menu_pistol"
@@ -128,21 +127,19 @@ extern const char *g_pszItemFoundMethodStrings[NUM_ITEM_FOUND_METHODS];
 // #define MENU_MACHINEGUN				"menu_mg"
 // #define MENU_EQUIPMENT				"menu_equip"
 
-#define CSTRIKE_VISUALS_DATA_BYTES 96
+inline constexpr auto CSTRIKE_VISUALS_DATA_BYTES = 96;
 
-#define MAX_HOSTAGES				12
-#define MAX_HOSTAGE_RESCUES			4
+inline constexpr auto MAX_HOSTAGES = 12;
+inline constexpr auto MAX_HOSTAGE_RESCUES = 4;
 
-#define MAX_MATCH_STATS_ROUNDS 30
-#define MATCH_STATS_TEAM_SWAP_ROUND	15
+inline constexpr auto MAX_MATCH_STATS_ROUNDS = 30;
+inline constexpr auto MATCH_STATS_TEAM_SWAP_ROUND = 15;
 
 #define IRONSIGHT // Enable viewmodel ironsight feature
-#define GRENADE_UNDERHAND_FEATURE_ENABLED // Enable underhand grenade feature
-#define GRENADE_DEFAULT_SIZE 2.0
+inline constexpr auto GRENADE_DEFAULT_SIZE = 2.0;
 
 // Brock H. - TR - 03/31/09
 // This will allow the player to control CS bots
-#define CS_CONTROLLABLE_BOTS_ENABLED 1
 
 // demo & press build flags
 #if !defined( CSTRIKE_DEMO_PRESSBUILD )
@@ -161,9 +158,9 @@ extern const char *g_pszItemFoundMethodStrings[NUM_ITEM_FOUND_METHODS];
 #endif
 
 //=============================================================================
-#define CSTRIKE_DEFAULT_AVATAR		"avatar_default_64"
-#define CSTRIKE_DEFAULT_T_AVATAR "avatar_default-t_64"
-#define CSTRIKE_DEFAULT_CT_AVATAR "avatar_default_64"
+inline constexpr const char *CSTRIKE_DEFAULT_AVATAR = "avatar_default_64";
+inline constexpr const char *CSTRIKE_DEFAULT_T_AVATAR = "avatar_default-t_64";
+inline constexpr const char *CSTRIKE_DEFAULT_CT_AVATAR = "avatar_default_64";
 //=============================================================================
 
 extern const float CS_PLAYER_SPEED_RUN;
@@ -201,9 +198,9 @@ namespace TeamJoinFailedReason
 	};
 };
 
-#define CS_HOSTAGE_TRANSTIME_PICKUP		0.1
-#define CS_HOSTAGE_TRANSTIME_DROP		0.25
-#define CS_HOSTAGE_TRANSTIME_RESCUE		4.0
+inline constexpr auto CS_HOSTAGE_TRANSTIME_PICKUP = 0.1;
+inline constexpr auto CS_HOSTAGE_TRANSTIME_DROP = 0.25;
+inline constexpr auto CS_HOSTAGE_TRANSTIME_RESCUE = 4.0;
 
 enum EHostageStates_t
 {
@@ -217,8 +214,8 @@ enum EHostageStates_t
 	k_EHostageStates_Dead,
 };
 
-#define CONSTANT_UNITS_SMOKEGRENADERADIUS 166
-#define CONSTANT_UNITS_GENERICGRENADERADIUS 115
+inline constexpr auto CONSTANT_UNITS_SMOKEGRENADERADIUS = 166;
+inline constexpr auto CONSTANT_UNITS_GENERICGRENADERADIUS = 115;
 
 const float SmokeGrenadeRadius = CONSTANT_UNITS_SMOKEGRENADERADIUS;
 const float FlashbangGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
@@ -230,62 +227,62 @@ const float DecoyGrenadeRadius = CONSTANT_UNITS_GENERICGRENADERADIUS;
 // These go in CCSPlayer::m_iAddonBits and get sent to the client so it can create
 // grenade models hanging off players.
 // [mlowrance] Molotov purposely left out
-#define ADDON_FLASHBANG_1		0x0001
-#define ADDON_FLASHBANG_2		0x0002
-#define ADDON_HE_GRENADE		0x0004
-#define ADDON_SMOKE_GRENADE		0x0008
-#define ADDON_C4				0x0010
-#define ADDON_DEFUSEKIT			0x0020
-#define ADDON_PRIMARY			0x0040
-#define ADDON_PISTOL			0x0080
-#define ADDON_PISTOL2			0x0100
-#define ADDON_DECOY				0x0200
-#define ADDON_KNIFE				0x0400
-#define ADDON_MASK				0x0800
-#define ADDON_TAGRENADE			0x1000
-#define NUM_ADDON_BITS			13
+inline constexpr auto ADDON_FLASHBANG_1 = 0x0001;
+inline constexpr auto ADDON_FLASHBANG_2 = 0x0002;
+inline constexpr auto ADDON_HE_GRENADE = 0x0004;
+inline constexpr auto ADDON_SMOKE_GRENADE = 0x0008;
+inline constexpr auto ADDON_C4 = 0x0010;
+inline constexpr auto ADDON_DEFUSEKIT = 0x0020;
+inline constexpr auto ADDON_PRIMARY = 0x0040;
+inline constexpr auto ADDON_PISTOL = 0x0080;
+inline constexpr auto ADDON_PISTOL2 = 0x0100;
+inline constexpr auto ADDON_DECOY = 0x0200;
+inline constexpr auto ADDON_KNIFE = 0x0400;
+inline constexpr auto ADDON_MASK = 0x0800;
+inline constexpr auto ADDON_TAGRENADE = 0x1000;
+inline constexpr auto NUM_ADDON_BITS = 13;
 
-#define ADDON_CLIENTSIDE_HOLIDAY_HAT			( 0x1 << NUM_ADDON_BITS )
-#define ADDON_CLIENTSIDE_GHOST					( 0x2 << NUM_ADDON_BITS )
-#define ADDON_CLIENTSIDE_ASSASSINATION_TARGET	( 0x4 << NUM_ADDON_BITS )
-#define NUM_CLIENTSIDE_ADDON_BITS 3
+inline constexpr auto ADDON_CLIENTSIDE_HOLIDAY_HAT = ( 0x1 << NUM_ADDON_BITS );
+inline constexpr auto ADDON_CLIENTSIDE_GHOST = ( 0x2 << NUM_ADDON_BITS );
+inline constexpr auto ADDON_CLIENTSIDE_ASSASSINATION_TARGET = ( 0x4 << NUM_ADDON_BITS );
+inline constexpr auto NUM_CLIENTSIDE_ADDON_BITS = 3;
 
 
 // Indices of each weapon slot.
-#define WEAPON_SLOT_RIFLE		0	// (primary slot)
-#define WEAPON_SLOT_PISTOL		1	// (secondary slot)
-#define WEAPON_SLOT_KNIFE		2
-#define WEAPON_SLOT_GRENADES	3
-#define WEAPON_SLOT_C4			4
+inline constexpr auto WEAPON_SLOT_RIFLE = 0; // (primary slot)
+inline constexpr auto WEAPON_SLOT_PISTOL = 1; // (secondary slot)
+inline constexpr auto WEAPON_SLOT_KNIFE = 2;
+inline constexpr auto WEAPON_SLOT_GRENADES = 3;
+inline constexpr auto WEAPON_SLOT_C4 = 4;
 
-#define WEAPON_SLOT_FIRST		0
-#define WEAPON_SLOT_LAST		4
+inline constexpr auto WEAPON_SLOT_FIRST = 0;
+inline constexpr auto WEAPON_SLOT_LAST = 4;
 
 
 // CS Team IDs.
-#define TEAM_TERRORIST			2
-#define	TEAM_CT					3
-#define TEAM_MAXCOUNT			4	// update this if we ever add teams (unlikely)
+inline constexpr auto TEAM_TERRORIST = 2;
+inline constexpr auto TEAM_CT = 3;
+inline constexpr auto TEAM_MAXCOUNT = 4; // update this if we ever add teams (unlikely)
 
-#define TEAM_TERRORIST_BASE0	TEAM_TERRORIST - 2
-#define TEAM_CT_BASE0			TEAM_CT - 2
+inline constexpr auto TEAM_TERRORIST_BASE0 = TEAM_TERRORIST - 2;
+inline constexpr auto TEAM_CT_BASE0 = TEAM_CT - 2;
 
 // [menglish] CS specific death animation time now that freeze cam is implemented
 //			in order to linger on the players body less 
-#define CS_DEATH_ANIMATION_TIME			0.5
+inline constexpr auto CS_DEATH_ANIMATION_TIME = 0.5;
  
 // [tj] The number of times you must kill a given player to be dominating them
 // Should always be more than 1
-#define CS_KILLS_FOR_DOMINATION			4
+inline constexpr auto CS_KILLS_FOR_DOMINATION = 4;
 
-#define CS_DEATH_DOMINATION				0x0001	// killer is dominating victim
-#define CS_DEATH_REVENGE				0x0002	// killer got revenge on victim
+inline constexpr auto CS_DEATH_DOMINATION = 0x0001; // killer is dominating victim
+inline constexpr auto CS_DEATH_REVENGE = 0x0002; // killer got revenge on victim
 
 
 //--------------
 // CSPort Specific damage flags
 //--------------
-#define DMG_HEADSHOT		(DMG_LASTGENERICFLAG<<1)
+inline constexpr auto DMG_HEADSHOT = (DMG_LASTGENERICFLAG<<1);
 
 
 struct PlayerViewmodelArmConfig
@@ -383,15 +380,15 @@ enum GrenadeType_t
 	GRENADE_TYPE_TOTAL,
 };
 
-#define PUSHAWAY_THINK_INTERVAL		(1.0f / 20.0f)
-#define GLOWUPDATE_DEFAULT_THINK_INTERVAL		0.2f
+inline constexpr auto PUSHAWAY_THINK_INTERVAL = (1.0f / 20.0f);
+inline constexpr auto GLOWUPDATE_DEFAULT_THINK_INTERVAL = 0.2f;
 
-#define CS_MAX_PLAYER_MODELS 10
+inline constexpr auto CS_MAX_PLAYER_MODELS = 10;
 #define MAX_MODEL_STRING_SIZE 256
 
-#define CS_CLASS_NONE 0
+inline constexpr auto CS_CLASS_NONE = 0;
 
-#define MAX_ENDMATCH_VOTE_PANELS 10
+inline constexpr auto MAX_ENDMATCH_VOTE_PANELS = 10;
 const PlayerViewmodelArmConfig *GetPlayerViewmodelArmConfigForPlayerModel( const char* szPlayerModel );
 
 class PlayerModelInfo
@@ -466,9 +463,9 @@ enum CSMvpReason_t
 };
 
 // Keep these in sync with CSClasses.
-#define CS_MUZZLEFLASH_NONE -1
-#define CS_MUZZLEFLASH_NORM	0
-#define CS_MUZZLEFLASH_X	1
+inline constexpr auto CS_MUZZLEFLASH_NONE = -1;
+inline constexpr auto CS_MUZZLEFLASH_NORM = 0;
+inline constexpr auto CS_MUZZLEFLASH_X = 1;
 
 extern const char *pszWinPanelCategoryHeaders[];
 
@@ -519,9 +516,6 @@ namespace QuestProgress
 		// This is only verified on client, and could be mismatched between client and server.
 		QUEST_WARMUP,
 
-		// No steam account found
-		QUEST_NOT_CONNECTED_TO_STEAM,
-
 		// Playing on community server, quests only enabled on Valve servers
 		QUEST_NONOFFICIAL_SERVER,
 
@@ -546,9 +540,7 @@ namespace QuestProgress
 	};
 
 	const int QuestReasonBits = 4;
-	COMPILE_TIME_ASSERT( QUEST_REASON_MAX <= ( 1 << QuestReasonBits ) );
+	static_assert( QUEST_REASON_MAX <= ( 1 << QuestReasonBits ) );
 
 	const char* ReasonString(Reason reason); // for use by UI code, so that values stay consistent if enum changes
 }
-
-#endif // CS_SHAREDDEFS_H

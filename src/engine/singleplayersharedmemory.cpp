@@ -1,11 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "singleplayersharedmemory.h"
-#include "tier1/utlstring.h"
+import std;
 
 CSPSharedMemoryManager s_SinglePlayerSharedMemoryManager;
 CSPSharedMemoryManager *g_pSinglePlayerSharedMemoryManager = &s_SinglePlayerSharedMemoryManager;
@@ -16,9 +14,9 @@ public:
 	CSPSharedMemory( void ) : m_pMemory(nullptr), m_Size(0), m_iRefCount(0) { };
 	~CSPSharedMemory( void );
 
-	virtual bool	Init( size_t iSize ); //Initial implementation assumes the size is fixed/hardcoded
+	virtual bool	Init( std::size_t iSize ); //Initial implementation assumes the size is fixed/hardcoded
 	virtual uint8 *	Base( void );
-	virtual size_t	Size( void );
+	virtual std::size_t	Size( void );
 
 	virtual void	AddRef( void );
 	virtual void	Release( void );
@@ -27,28 +25,28 @@ public:
 	std::string m_Name;
 	int m_iEntNum;
 	uint8 *m_pMemory;
-	size_t m_Size;
+	std::size_t m_Size;
 	unsigned int m_iRefCount;
 };
 
 CSPSharedMemory::~CSPSharedMemory( void )
 {
-	Assert( m_iRefCount == 0 );
+	contract_assert( m_iRefCount == 0 );
 	
 	//if( m_pMemory )
 	//	delete []m_pMemory;
 }
 
-bool CSPSharedMemory::Init( size_t iSize )
+bool CSPSharedMemory::Init( std::size_t iSize )
 {
-	Assert( iSize != 0 );
-	Assert( (m_Size == 0) || (m_Size == iSize) );
+	contract_assert( iSize != 0 );
+	contract_assert( (m_Size == 0) || (m_Size == iSize) );
 
 	if( m_Size == 0 )
 	{
 		m_pMemory = new uint8 [iSize];
 		m_Size = iSize;
-		memset( m_pMemory, 0, iSize );
+		std::memset( m_pMemory, 0, iSize );
 		return true;
 	}
 	return false;
@@ -56,11 +54,11 @@ bool CSPSharedMemory::Init( size_t iSize )
 
 uint8 * CSPSharedMemory::Base( void )
 {
-	Assert( m_pMemory != nullptr );
+	contract_assert( m_pMemory != nullptr );
 	return m_pMemory;
 }
 
-size_t CSPSharedMemory::Size( void )
+std::size_t CSPSharedMemory::Size( void )
 {
 	return m_Size;
 }
@@ -93,7 +91,7 @@ void CSPSharedMemory::Release( void )
 
 CSPSharedMemoryManager::~CSPSharedMemoryManager( void )
 {
-	Assert( std::ssize( m_SharedSpaces ) == 0 );
+	contract_assert( std::ssize( m_SharedSpaces ) == 0 );
 
 	for( int i = std::ssize( m_SharedSpaces ); --i >= 0; )
 	{

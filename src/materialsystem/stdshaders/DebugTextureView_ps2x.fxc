@@ -1,9 +1,9 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "SHOWALPHA"			"0..1"
 // DYNAMIC: "ISCUBEMAP"			"0..1"
 // DYNAMIC: "ISVOLUME"			"0..1"
-
 // SKIP: $ISCUBEMAP && $ISVOLUME
 
 #include "common_ps_fxc.h"

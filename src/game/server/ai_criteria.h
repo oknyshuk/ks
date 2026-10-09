@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_CRITERIA_H
-#define AI_CRITERIA_H
-
+import ks.math;
 #include "tier2/interval.h"
-#include "mathlib/compressed_vector.h"
+import std;
 #include "../../public/responserules/response_types.h"
-
 
 using ResponseRules::ResponseType_t;
 
@@ -32,5 +27,3 @@ class AI_ResponseReturnValue : AI_Response
 
 };
 */
-
-#endif // AI_CRITERIA_H

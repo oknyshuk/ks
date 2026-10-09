@@ -1,16 +1,9 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef IMORPHINTERNAL_H
-#define IMORPHINTERNAL_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
 #include "materialsystem/imorph.h"
 #include "shaderapi/shareddefs.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -21,7 +14,7 @@ class ITextureInternal;
 //-----------------------------------------------------------------------------
 // Render context for morphs
 //-----------------------------------------------------------------------------
-abstract_class IMorphMgrRenderContext
+class IMorphMgrRenderContext
 {
 public:
 };
@@ -32,7 +25,7 @@ public:
 // Morph data class 
 //
 //-----------------------------------------------------------------------------
-abstract_class IMorphInternal : public IMorph
+class IMorphInternal : public IMorph
 {
 public:
 	virtual void Init( MorphFormat_t format, const char *pDebugName ) = 0;
@@ -44,7 +37,7 @@ public:
 //-----------------------------------------------------------------------------
 // Morph manager class
 //-----------------------------------------------------------------------------
-abstract_class IMorphMgr
+class IMorphMgr
 {
 public:
 	// Allocate,free scratch textures + materials
@@ -84,5 +77,3 @@ public:
 };
 
 extern IMorphMgr *g_pMorphMgr;
-
-#endif // IMORPHINTERNAL_H

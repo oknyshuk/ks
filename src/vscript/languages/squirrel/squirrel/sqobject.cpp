@@ -1,7 +1,14 @@
 /*
 	see copyright notice in squirrel.h
 */
-#include "sqpcheader.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+
+#include <squirrel.h>
+#include "sqobject.h"
+#include "sqstate.h"
 #include "sqvm.h"
 #include "sqstring.h"
 #include "sqarray.h"
@@ -81,7 +88,7 @@ SQUnsignedInteger TranslateIndex(const SQObjectPtr &idx)
 			return 0;
 		case OT_INTEGER:
 			return (SQUnsignedInteger)_integer(idx);
-		default: Assert(0); break;
+		default: contract_assert( 0 ); break;
 	}
 	return 0;
 }

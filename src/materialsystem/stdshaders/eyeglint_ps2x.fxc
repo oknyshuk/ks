@@ -1,8 +1,7 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Run procedural glint generation inner loop in pixel shader (ps_2_0)
-//
-// ==========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+// Purpose: Run procedural glint generation inner loop in pixel shader (ps_2_0)
 
 struct PS_INPUT
 {

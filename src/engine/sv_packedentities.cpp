@@ -1,41 +1,45 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// main precompiled header for server files
 
 
-#include "server_pch.h"
-#include <atomic>
+import ks.vstdlib;
+#include "common.h"
+#include "quakedef.h"
+#include "decal.h"
+#include "host_cmd.h"
+#include "cmodel_engine.h"
+#include "sv_log.h"
+#include "sound.h"
+#include "EngineSoundInternal.h"
+#include "checksum_engine.h"
+#include "host.h"
+#include "keys.h"
+#include "vengineserver_impl.h"
+#include "server.h"
+#include "eiface.h"
+#include "filesystem.h"
+#include "console.h"
+#include "edict.h"
+#include "server_class.h"
+import std;
 #include "client.h"
 #include "sv_packedentities.h"
-#include "bspfile.h"
 #include "eiface.h"
 #include "dt_send_eng.h"
 #include "dt_common_eng.h"
 #include "changeframelist.h"
 #include "sv_main.h"
 #include "hltvserver.h"
-#if defined( REPLAY_ENABLED )
-#include "replayserver.h"
-#endif
-#include "dt_instrumentation_server.h"
 #include "LocalNetworkBackdoor.h"
-#include "tier0/vprof.h"
 #include "host.h"
-#include "networkstringtableserver.h"
 #include "networkstringtable.h"
 #include "dt.h"
-#include "con_nprint.h"
-#include "smooth_average.h"
 #include "vengineserver_impl.h"
-#include "vstdlib/jobthread.h"
-#include "enginethreads.h"
 #include "networkvar.h"
 
 #include "serializedentity.h"
-
 
 #ifdef DEDICATED
 IClientEntityList *entitylist = nullptr;
@@ -70,9 +74,7 @@ static inline bool SV_EnsurePrivateData(edict_t *pEdict)
 void SV_EnsureInstanceBaseline( ServerClass *pServerClass, int iEdict, SerializedEntityHandle_t handle )
 {
 	edict_t *pEnt = &sv.edicts[iEdict];
-	ErrorIfNot( pEnt->GetNetworkable(),
-		("SV_EnsureInstanceBaseline: edict %d missing ent", iEdict)
-	);
+	if ( !( pEnt->GetNetworkable() ) ) Error("SV_EnsureInstanceBaseline: edict %d missing ent", iEdict);
 
 	ServerClass *pClass = pEnt->GetNetworkable()->GetServerClass();
 
@@ -91,13 +93,13 @@ void SV_EnsureInstanceBaseline( ServerClass *pServerClass, int iEdict, Serialize
 			SendTable_WritePropList( pServerClass->m_pTable, handle, &buf, iEdict, nullptr );
 
 			char idString[32];
-			Q_snprintf( idString, sizeof( idString ), "%d", pClass->m_ClassID );
+			V_snprintf( idString, sizeof( idString ), "%d", pClass->m_ClassID );
 
 			// Ok, make a new instance baseline so they can reference it.
 			int temp = sv.GetInstanceBaselineTable()->AddString( 
 				true, idString,	// Note we're sending a string with the ID number, not the class name.
 				buf.GetNumBytesWritten(), packedData );
-			Assert( temp != INVALID_STRING_INDEX );
+			contract_assert( temp != INVALID_STRING_INDEX );
 			// Copy the baseline data into the handles table
 			if ( !sv.m_BaselineHandles.contains( temp ) )
 				sv.m_BaselineHandles.emplace( temp, g_pSerializedEntities->CopySerializedEntity( handle, __FILE__, __LINE__ ) );
@@ -130,7 +132,7 @@ static inline bool DoesEdictChangeInfoContainPropIndex( SendTable *pSendTable, c
 			continue;
 
 		const PropIndicesCollection_t &coll = index->second;
-		for ( int nIndex=0; nIndex < ARRAYSIZE( coll.m_Indices ); nIndex++ )
+		for ( int nIndex=0; nIndex < std::size( coll.m_Indices ); nIndex++ )
 		{
 			if ( coll.m_Indices[nIndex] == nProp )
 			{
@@ -154,11 +156,7 @@ static inline CChangeFrameList * GetMergedChangeFrameList( PackedEntity* pPrevFr
 	{
 		CActiveHltvServerIterator hltv;
 
-#if defined( REPLAY_ENABLED )
-		if ( hltv || (replay && replay->IsActive()) )
-#else
 		if ( hltv )
-#endif	
 		{
 			// in HLTV or Replay mode every PackedEntity keeps it's own ChangeFrameList
 			// we just copy the ChangeFrameList from prev frame and update it
@@ -171,9 +169,8 @@ static inline CChangeFrameList * GetMergedChangeFrameList( PackedEntity* pPrevFr
 			pChangeFrame = pPrevFrame->SnagChangeFrameList();
 		}
 
-		ErrorIfNot( pChangeFrame, ("SV_PackEntity: SnagChangeFrameList returned null") );
-		ErrorIfNot( pChangeFrame->GetNumProps() == nNumProps,
-			("SV_PackEntity: SnagChangeFrameList mismatched number of props[%d vs %d]", nNumProps, pChangeFrame->GetNumProps() ) );
+		if ( !( pChangeFrame ) ) Error("SV_PackEntity: SnagChangeFrameList returned null");
+		if ( !( pChangeFrame->GetNumProps() == nNumProps ) ) Error("SV_PackEntity: SnagChangeFrameList mismatched number of props[%d vs %d]", nNumProps, pChangeFrame->GetNumProps() );
 
 		pChangeFrame->SetChangeTick( ChangeList.data(), std::ssize( ChangeList ), nTick );
 	}
@@ -246,9 +243,8 @@ static inline void SV_PackEntity(
 	ServerClass* pServerClass,
 	CFrameSnapshot *pSnapshot )
 {
-	Assert( edictIdx < pSnapshot->m_nNumEntities );
+	contract_assert( edictIdx < pSnapshot->m_nNumEntities );
 
-	MEM_ALLOC_CREDIT();
 
 	const int iSerialNum = pSnapshot->m_pEntities[ edictIdx ].m_nSerialNumber;
 
@@ -392,7 +388,9 @@ static inline void SV_PackEntity(
 	edict->ClearStateChanged();
 }
 
-CON_COMMAND( sv_dump_entity_pack_stats, "Show stats on entity packing." )
+static void sv_dump_entity_pack_stats( const CCommand &args );
+static ConCommand sv_dump_entity_pack_stats_command( "sv_dump_entity_pack_stats", sv_dump_entity_pack_stats, "Show stats on entity packing." );
+static void sv_dump_entity_pack_stats( const CCommand &args )
 {
 	Msg("Entity Packing stats:\n");
 	Msg("  numFastPathEncodes=%u\n", g_PackedEntityStats.m_numFastPathEncodes );
@@ -427,35 +425,6 @@ void SV_FillHLTVData( CFrameSnapshot *pSnapshot, edict_t *edict, int iValidEdict
 	}
 }
 
-#if defined( REPLAY_ENABLED )
-// in Replay mode we ALWAYS have to store position and PVS info, even if entity didnt change
-void SV_FillReplayData( CFrameSnapshot *pSnapshot, edict_t *edict, int iValidEdict )
-{
-	if ( pSnapshot->m_pReplayEntityData && edict )
-	{
-		CReplayEntityData *pReplayData = &pSnapshot->m_pReplayEntityData[iValidEdict];
-
-		PVSInfo_t *pvsInfo = edict->GetNetworkable()->GetPVSInfo();
-
-		if ( pvsInfo->m_nClusterCount == 1 )
-		{
-			// store cluster, if entity spawns only over one cluster
-			pReplayData->m_nNodeCluster = pvsInfo->m_pClusters[0];
-		}
-		else
-		{
-			// otherwise save PVS head node for larger entities
-			pReplayData->m_nNodeCluster = pvsInfo->m_nHeadNode | (1<<31);
-		}
-
-		// remember origin
-		pReplayData->origin[0] = pvsInfo->m_vCenter[0];
-		pReplayData->origin[1] = pvsInfo->m_vCenter[1];
-		pReplayData->origin[2] = pvsInfo->m_vCenter[2];
-	}
-}
-#endif
-
 // Returns the SendTable that should be used with the specified edict.
 SendTable* GetEntSendTable(edict_t *pEdict)
 {
@@ -477,7 +446,7 @@ void PackEntities_NetworkBackDoor(
 	CGameClient **clients,
 	CFrameSnapshot *snapshot )
 {
-	Assert( clientCount == 1 );
+	contract_assert( clientCount == 1 );
 
 	CGameClient *client = clients[0];	// update variables cl, pInfo, frame for current client
 	CCheckTransmitInfo *pInfo =  &client->m_PackInfo;
@@ -492,14 +461,14 @@ void PackEntities_NetworkBackDoor(
 		// this is a bit of a hack to ensure that we get a "preview" of the
 		//  packet timstamp that the server will send so that things that
 		//  are encoded relative to packet time will be correct
-		Assert( edict->m_NetworkSerialNumber != -1 );
+		contract_assert( edict->m_NetworkSerialNumber != -1 );
 
 		bool bShouldTransmit = (*pInfo->m_pTransmitEdict)[index];
 
 		//CServerDTITimer timer( pSendTable, SERVERDTI_ENCODE );
 		// If we're using the fast path for a single-player game, just pass the entity
 		// directly over to the client.
-		Assert( index < snapshot->m_nNumEntities );
+		contract_assert( index < snapshot->m_nNumEntities );
 		ServerClass *pSVClass = snapshot->m_pEntities[ index ].m_pClass;
 		g_pLocalNetworkBackdoor->EntState( index, edict->m_NetworkSerialNumber, 
 			pSVClass->m_ClassID, pSVClass->m_pTable, edict->GetUnknown(), edict->HasStateChanged(), bShouldTransmit );
@@ -537,9 +506,8 @@ void PackEntities_Normal(
 	CGameClient **clients,
 	CFrameSnapshot *snapshot )
 {
-	SNPROF("PackEntities_Normal");
 
-	Assert( snapshot->m_nValidEntities <= MAX_EDICTS );
+	contract_assert( snapshot->m_nValidEntities <= MAX_EDICTS );
 
 	PackWork_t workItems[MAX_EDICTS];
 	int workItemCount = 0;
@@ -550,18 +518,13 @@ void PackEntities_Normal(
 	{
 		int index = snapshot->m_pValidEntities[ iValidEdict ];
 		
-		Assert( index < snapshot->m_nNumEntities );
+		contract_assert( index < snapshot->m_nNumEntities );
 
 		edict_t* edict = &sv.edicts[ index ];
 
 		// if HLTV is running save PVS info for each entity
 		SV_FillHLTVData( snapshot, edict, iValidEdict );
 		
-#if defined( REPLAY_ENABLED )
-		// if Replay is running save PVS info for each entity
-		SV_FillReplayData( snapshot, edict, iValidEdict );
-#endif
-
 		// Check to see if the entity changed this frame...
 		//ServerDTI_RegisterNetworkStateChange( pSendTable, ent->m_bStateChanged );
 
@@ -612,13 +575,11 @@ void SV_ComputeClientPacks(
 	CGameClient **clients,
 	CFrameSnapshot *snapshot )
 {
-	SNPROF( "SV_ComputeClientPacks" );
 	MDLCACHE_CRITICAL_SECTION_(g_pMDLCache);
 	// Do some setup for each client
 	{
 		for (int iClient = 0; iClient < clientCount; ++iClient)
 		{
-			TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "CheckTransmit:%d", iClient );
 
 			if ( clients[ iClient ]->IsHltvReplay() )
 			{
@@ -651,11 +612,7 @@ void SV_ComputeClientPacks(
 #endif
 
 		// This will force network string table updates for local client to go through the backdoor if it's active
-#ifdef SHARED_NET_STRING_TABLES
-		sv.m_StringTables->TriggerCallbacks( clients[0]->m_nDeltaTick );
-#else
 		sv.m_StringTables->DirectUpdate( clients[0]->GetMaxAckTickCount() );
-#endif
 		
 		g_pLocalNetworkBackdoor->StartEntityStateUpdate();
 
@@ -762,8 +719,8 @@ void SV_ComputeClassInfosCRC( CRC32_t* crc )
 
 	for ( ServerClass *pClass=pClasses; pClass; pClass=pClass->m_pNext )
 	{
-		CRC32_ProcessBuffer( crc, (void *)pClass->m_pNetworkName, Q_strlen( pClass->m_pNetworkName ) );
-		CRC32_ProcessBuffer( crc, (void *)pClass->m_pTable->GetName(), Q_strlen(pClass->m_pTable->GetName() ) );
+		CRC32_ProcessBuffer( crc, (void *)pClass->m_pNetworkName, V_strlen( pClass->m_pNetworkName ) );
+		CRC32_ProcessBuffer( crc, (void *)pClass->m_pTable->GetName(), V_strlen(pClass->m_pTable->GetName() ) );
 	}
 }
 
@@ -779,9 +736,7 @@ void CGameServer::AssignClassIds()
 	}
 	
 	// These should be the same! If they're not, then it should detect an explicit create message.
-	ErrorIfNot( nClasses <= MAX_SERVER_CLASSES,
-		("CGameServer::AssignClassIds: too many server classes (%i, MAX = %i).\n", nClasses, MAX_SERVER_CLASSES );
-	);
+	if ( !( nClasses <= MAX_SERVER_CLASSES ) ) Error("CGameServer::AssignClassIds: too many server classes (%i, MAX = %i).\n", nClasses, MAX_SERVER_CLASSES );;
 
 	serverclasses = nClasses;
 	serverclassbits = Q_log2( serverclasses ) + 1;
@@ -836,7 +791,9 @@ const char* GetObjectClassName( int objectID )
 
 
 //-----------------------------------------------------------------------------
-CON_COMMAND( sv_dump_class_info, "Dump server class infos." )
+static void sv_dump_class_info( const CCommand &args );
+static ConCommand sv_dump_class_info_command( "sv_dump_class_info", sv_dump_class_info, "Dump server class infos." );
+static void sv_dump_class_info( const CCommand &args )
 {
 	ServerClass *pClasses = serverGameDLL->GetAllServerClasses();
 
@@ -851,7 +808,6 @@ CON_COMMAND( sv_dump_class_info, "Dump server class infos." )
 
 
 //-----------------------------------------------------------------------------
-#include "tier1/tokenset.h"
 
 const tokenset_t< SendPropType > gSendPropTypeTokenSet[] =
 {
@@ -922,7 +878,9 @@ static void PrintSendProp( int index, const SendProp *pSendProp )
 }
 
 //-----------------------------------------------------------------------------
-CON_COMMAND( sv_dump_class_table, "Dump server class table matching the pattern (substr)." )
+static void sv_dump_class_table( const CCommand &args );
+static ConCommand sv_dump_class_table_command( "sv_dump_class_table", sv_dump_class_table, "Dump server class table matching the pattern (substr)." );
+static void sv_dump_class_table( const CCommand &args )
 {
 	if ( args.ArgC() < 2 )
 	{
@@ -936,7 +894,7 @@ CON_COMMAND( sv_dump_class_table, "Dump server class table matching the pattern 
 	{
 		for ( ServerClass *pCount=pClasses; pCount; pCount=pCount->m_pNext )
 		{
-			if ( pCount->m_pTable->m_pPrecalc && Q_stristr( pCount->GetName(), args[a] ) != nullptr )
+			if ( pCount->m_pTable->m_pPrecalc && V_stristr( pCount->GetName(), args[a] ) != nullptr )
 			{
 				Msg( "%s:\n", pCount->GetName() );
 				Msg( "\tIndex,Name,Offset,Bits,Type,Flags,Priority\n" );
@@ -954,4 +912,3 @@ CON_COMMAND( sv_dump_class_table, "Dump server class table matching the pattern 
 		}
 	}
 }
-

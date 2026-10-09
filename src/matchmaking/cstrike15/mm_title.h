@@ -1,11 +1,6 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef MM_TITLE_H
-#define MM_TITLE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "../mm_framework.h"
 
@@ -54,9 +49,6 @@ public:
 	// Run every frame
 	virtual void RunFrame() {}
 
-	// Title leaderboards
-	virtual KeyValues * DescribeTitleLeaderboard( char const *szLeaderboardView );
-
 	// Sets up all necessary client-side convars and user info before
 	// connecting to server
 	virtual void PrepareClientForConnect( KeyValues *pSettings );
@@ -82,5 +74,3 @@ public:
 
 // Match title singleton
 extern CMatchTitle *g_pMatchTitle;
-
-#endif // MM_TITLE_H

@@ -1,14 +1,10 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
 #include "dmxserializationdictionary.h"
 #include "dmxloader/dmxelement.h"
 #include "dmxloader/dmxattribute.h"
-#include <algorithm>
-
+import std;
 
 //-----------------------------------------------------------------------------
 //
@@ -160,8 +156,6 @@ DmxSerializationHandle_t CDmxSerializationDictionary::NextRootElement( DmxSerial
 
 CDmxElement *CDmxSerializationDictionary::GetRootElement( DmxSerializationHandle_t h )
 {
-	Assert( m_Dict[h].m_bRoot );
+	contract_assert( m_Dict[h].m_bRoot );
 	return m_Dict[h].m_pElement;
 }
-
-

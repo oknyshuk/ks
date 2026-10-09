@@ -5,6 +5,16 @@
 // them. Keeping it here is what lets netmessages_schema.h stay free of <meta>, which costs
 // roughly 0.6s in every translation unit that parses it.
 
+#if defined(CLIENT_DLL)
+#elif defined(GAME_DLL)
+#endif
+#if defined(CLIENT_DLL)
+import std;
+import ks.core;
+#elif defined(GAME_DLL)
+import std;
+import ks.core;
+#endif
 #include "netmessages_schema.h"
 #include "usermessages_schema.h"
 #include "proto.h"

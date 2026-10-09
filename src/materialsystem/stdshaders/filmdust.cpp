@@ -1,9 +1,5 @@
-//========= Copyright (c) 1996-2002, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2002 Valve Corporation
 
 #include "BaseVSShader.h"
 
@@ -13,7 +9,7 @@
 #include "../materialsystem_global.h"
 
 BEGIN_VS_SHADER_FLAGS( FilmDust, "Help for FilmDust", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( DUST_TEXTURE,   SHADER_PARAM_TYPE_TEXTURE, "0", "Film dust texture" )
 		SHADER_PARAM( CHANNEL_SELECT, SHADER_PARAM_TYPE_VEC4,    "",  "Select which color channel to use" )
 	END_SHADER_PARAMS

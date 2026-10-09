@@ -1,8 +1,9 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-#ifndef KISAKSTRIKE_RKPANEL_PLAY_H
-#define KISAKSTRIKE_RKPANEL_PLAY_H
+#include <rocketui/rmlui.h>
+
 
 #include <rocketui/rocketui.h>
 
@@ -28,4 +29,3 @@ private:
     static bool m_bVisible;
 };
 
-#endif //KISAKSTRIKE_RKPANEL_PLAY_H

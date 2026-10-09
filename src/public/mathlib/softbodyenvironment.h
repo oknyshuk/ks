@@ -1,17 +1,15 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// A small subset of CRnWorld
-// Note: mathlib is tentative place for this code. We will probably move it to a separate lib or dll or vphysics.dll
-//
-#ifndef MATHLIB_SOFTBODY_ENV_HDR
-#define MATHLIB_SOFTBODY_ENV_HDR
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "mathlib/vector.h"
+// Purpose: A small subset of CRnWorld
+// Note: mathlib is tentative place for this code. We will probably move it to a separate lib or dll or vphysics.dll
+
+import ks.math;
 #include "rubikon/param_types.h"
-#include <vector>
+import std;
 #include "mathlib/softbody.h"
 #include "rubikon/intersection.h"
-#include "mathlib/aabb.h"
 #include "mathlib/dynamictree.h"
 
 class CDynamicTree;
@@ -145,7 +143,7 @@ inline void CSoftbodyEnvironment::Register( CSoftbody *pSoftbody )
 inline void CSoftbodyEnvironment::Unregister( CSoftbody *pSoftbody )
 {
 	int nIndex = CSoftbody::CWorldIndexPred::GetIndex( pSoftbody );
-	Assert( m_Softbodies[ nIndex ] == pSoftbody );
+	contract_assert( m_Softbodies[ nIndex ] == pSoftbody );
 	CSoftbody *pLast = m_Softbodies.back();
 	m_Softbodies[ nIndex ] = pLast;
 	m_Softbodies.pop_back();
@@ -162,7 +160,7 @@ inline void CSoftbodyEnvironment::Step( float dt, float flSubstepDt, int nMaxSub
 	int nSubsteps = int( flSubsteps );
 	if ( nSubsteps < nMaxSubsteps )
 	{
-		m_flAccumulatedTimeSlack = m_flAccumulatedTimeSlack - floorf( flSubsteps * flSubstepDt );
+		m_flAccumulatedTimeSlack = m_flAccumulatedTimeSlack - std::floorf( flSubsteps * flSubstepDt );
 	}
 	else
 	{
@@ -184,12 +182,9 @@ inline AABB_t CSoftbodyCollisionShape::GetBbox()const
 	switch ( m_nType )
 	{
 	default:
-		Assert( m_nType == SHAPE_SPHERE );
+		contract_assert( m_nType == SHAPE_SPHERE );
 		return static_cast< const CSoftbodyCollisionSphere* >( this )->GetBbox();
 	case SHAPE_CAPSULE:
 		return static_cast< const CSoftbodyCollisionCapsule* >( this )->GetBbox();
 	}
 }
-
-#endif
-

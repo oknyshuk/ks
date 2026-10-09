@@ -1,10 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Particles which are simulated locally to some space (attachment, bone, etc)
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Particles which are simulated locally to some space (attachment, bone, etc)
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "particles_simple.h"
 #include "particles_localspace.h"
 
@@ -128,7 +134,7 @@ void CLocalSpaceEmitter::SetupTransformMatrix( void )
 		if ( pRenderable->GetAttachment( m_nAttachment, mat ) == false )
 		{
 			// This attachment is bogus!
-			Assert(0);
+			contract_assert( 0 );
 		}
 	
 		// Tell the particle effect so it knows
@@ -155,4 +161,3 @@ void CLocalSpaceEmitter::SetupTransformMatrix( void )
 	// We preapply the local transform because we need to squash it for viewmodel FOV.
 	m_ParticleEffect.SetAutoApplyLocalTransform( false );
 }
-

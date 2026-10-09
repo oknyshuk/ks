@@ -1,27 +1,19 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#if !defined( VIEW_H )
-#define VIEW_H
+
+import std;
+import ks.tier1;
 
 #if _DEBUG
 extern bool g_bRenderingCameraView;		// For debugging (frustum fix for cameras)...
 #endif
 
-class VMatrix;
-class Vector;
-class QAngle;
-class VPlane;
 
 
 // near and far Z it uses to render the world.
-#define VIEW_NEARZ	7
+inline constexpr int VIEW_NEARZ = 7;
 //#define VIEW_FARZ	28400
 
 
@@ -87,5 +79,3 @@ static inline bool ShouldDrawInWireFrameMode( void )
 }
 
 void ComputeCameraVariables( const Vector &vecOrigin, const QAngle &vecAngles, Vector *pVecForward, Vector *pVecRight, Vector *pVecUp, VMatrix *pMatCamInverse );
-
-#endif // VIEW_H

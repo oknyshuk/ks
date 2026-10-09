@@ -1,12 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.core;
 #include "engine/IEngineSound.h"
-#include "tier0/dbg.h"
+import std;
 #include "quakedef.h"
 #include "vox.h"
 #include "server.h"
@@ -18,7 +15,6 @@
 #include "enginesingleuserfilter.h"
 #include "snd_audio_source.h"
 #include "soundchars.h"
-#include "tier0/vprof.h"
 #ifndef DEDICATED
 #include "engineui.h"
 #endif
@@ -115,17 +111,17 @@ public:
 	}
 	virtual void	NotifyBeginMoviePlayback()
 	{
-		AssertMsg( 0, "Not supported" );
+		contract_assert( false && "Not supported" );
 	}
 
 	virtual void	NotifyEndMoviePlayback()
 	{
-		AssertMsg( 0, "Not supported" );
+		contract_assert( false && "Not supported" );
 	}
 
 	virtual bool	IsMoviePlaying()
 	{
-		AssertMsg( 0, "Not supported" );
+		contract_assert( false && "Not supported" );
 		return false;
 	}
 
@@ -137,16 +133,16 @@ public:
 
 	virtual bool GetPreventSound( )
 	{
-		AssertMsg( 0, "Not supported" );
+		contract_assert( false && "Not supported" );
 		return false;
 	}
 
 
-	virtual void SetReplaySoundFade( float flReplayVolume ) { Assert( !"Client-only service" ); }
-	virtual float GetReplaySoundFade()const { Assert( !"Client-only service" );  return 0.0f; }
+	virtual void SetReplaySoundFade( float flReplayVolume ) { contract_assert( !"Client-only service" ); }
+	virtual float GetReplaySoundFade()const { contract_assert( !"Client-only service" );  return 0.0f; }
 
-	virtual void SetReplayMusicGain( float flReplayMusicGain ) { Assert( !"Client-only service" ); }
-	virtual float GetReplayMusicGain()const { Assert( !"Client-only service" );  return 0.0f; }
+	virtual void SetReplayMusicGain( float flReplayMusicGain ) { contract_assert( !"Client-only service" ); }
+	virtual float GetReplayMusicGain()const { contract_assert( !"Client-only service" );  return 0.0f; }
 
 
 private:
@@ -160,8 +156,7 @@ private:
 // Client-server neutral sound interface accessor
 //-----------------------------------------------------------------------------
 static CEngineSoundServer s_EngineSoundServer;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CEngineSoundServer, IEngineSound, 
-	IENGINESOUND_SERVER_INTERFACE_VERSION, s_EngineSoundServer );
+static InterfaceReg s_Reg_CEngineSoundServer_IEngineSound( []() -> void * { return static_cast<IEngineSound *>( &s_EngineSoundServer ); }, IENGINESOUND_SERVER_INTERFACE_VERSION );;
 
 IEngineSound *EngineSoundServer()
 {
@@ -260,8 +255,8 @@ void CEngineSoundServer::EmitSoundInternal( IRecipientFilter& filter, int iEntIn
 	float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
 	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*=-1*/ )
 {
-	AssertMsg( pDirection == nullptr, "Direction specification not currently supported on server sounds" );
-	AssertMsg( bUpdatePositions, "Non-updated positions not currently supported on server sounds" );
+	contract_assert( ( pDirection == nullptr ) && "Direction specification not currently supported on server sounds" );
+	contract_assert( bUpdatePositions && "Non-updated positions not currently supported on server sounds" );
 
 	if (flVolume < 0 || flVolume > 1)
 	{
@@ -297,7 +292,7 @@ void CEngineSoundServer::EmitSentenceByIndex( IRecipientFilter& filter, int iEnt
 	if ( iSentenceIndex >= 0 )
 	{
 		char pName[8];
-		Q_snprintf( pName, sizeof(pName), "!%d", iSentenceIndex );
+		V_snprintf( pName, sizeof(pName), "!%d", iSentenceIndex );
 		EmitSoundInternal( filter, iEntIndex, iChannel, nullptr, SOUNDEMITTER_INVALID_HASH, pName, flVolume, iSoundLevel, nSeed,
 			iFlags, iPitch, pOrigin, pDirection, pUtlVecOrigins, bUpdatePositions, soundtime, speakerentity );
 	}
@@ -311,7 +306,7 @@ int CEngineSoundServer::EmitSound( IRecipientFilter& filter, int iEntIndex, int 
 	float flVolume, float flAttenuation, int nSeed, int iFlags, int iPitch, 
 	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
 {
-	VPROF( "CEngineSoundServer::EmitSound" );
+	CVProfScope _( "CEngineSoundServer::EmitSound", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	EmitSound( filter, iEntIndex, iChannel, pSoundEntry, iSoundEntryHash, pSample, flVolume, ATTN_TO_SNDLVL( flAttenuation ), nSeed, iFlags, 
 		iPitch, pOrigin, pDirection, pUtlVecOrigins, bUpdatePositions, soundtime, speakerentity );
 	return -1;	// Negative for unsupported feature.
@@ -321,7 +316,7 @@ int CEngineSoundServer::EmitSound( IRecipientFilter& filter, int iEntIndex, int 
 	float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
 	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
 {
-	VPROF( "CEngineSoundServer::EmitSound" );
+	CVProfScope _( "CEngineSoundServer::EmitSound", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( pSample && TestSoundChar(pSample, CHAR_SENTENCE) )
 	{
 		int iSentenceIndex = -1;
@@ -389,7 +384,7 @@ void CEngineSoundServer::SetRoomType( IRecipientFilter& filter, int roomType )
 //-----------------------------------------------------------------------------
 void CEngineSoundServer::SetPlayerDSP( IRecipientFilter& filter, int dspType, bool fastReset )
 {
-	Assert( !fastReset );
+	contract_assert( !fastReset );
 	if ( fastReset )
 	{
 		Warning( "SetPlayerDSP:  fastReset only valid from client\n" );
@@ -410,7 +405,7 @@ void CEngineSoundServer::SetPlayerDSP( IRecipientFilter& filter, int dspType, bo
 
 void CEngineSoundServer::StopAllSounds(bool bClearBuffers)
 {
-	AssertMsg( 0, "Not supported" );
+	contract_assert( false && "Not supported" );
 }
 // bool CEngineSoundServer::GetPreventSound( void )
 // {
@@ -419,7 +414,7 @@ void CEngineSoundServer::StopAllSounds(bool bClearBuffers)
 
 int CEngineSoundServer::EmitAmbientSound( const char *pSample, float flVolume, int iPitch, int flags, float soundtime /*= 0.0f*/ )
 {
-	AssertMsg( 0, "Not supported" );
+	contract_assert( false && "Not supported" );
 	return 0;
 }
 
@@ -503,6 +498,3 @@ void Host_RestartAmbientSounds()
 	}
 #endif
 } */
-
-
-

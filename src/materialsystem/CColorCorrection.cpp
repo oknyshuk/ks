@@ -1,16 +1,12 @@
-//====== Copyright 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: Color correction system
-//
-//==============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#define _cdecl
+// Purpose: Color correction system
+
 #include "materialsystem/IColorCorrection.h"
 #include "materialsystem_global.h"
 #include "shaderapi/ishaderapi.h"
 #include "texturemanager.h"
-#include "utlvector.h"
-#include "generichash.h"
 #include "filesystem.h"
 #include "tier2/fileutils.h"
 #include "pixelwriter.h"
@@ -32,7 +28,7 @@ public:
 		int nWidth = pVTFTexture->Width();
 		int nHeight = pVTFTexture->Height();
 		int nDepth = pVTFTexture->Depth();
-		Assert( nWidth == COLOR_CORRECTION_TEXTURE_SIZE && nHeight == COLOR_CORRECTION_TEXTURE_SIZE && nDepth == COLOR_CORRECTION_TEXTURE_SIZE );
+		contract_assert( nWidth == COLOR_CORRECTION_TEXTURE_SIZE && nHeight == COLOR_CORRECTION_TEXTURE_SIZE && nDepth == COLOR_CORRECTION_TEXTURE_SIZE );
 
 		for ( int z = 0; z < nDepth; ++z )
 		{
@@ -231,7 +227,7 @@ CColorCorrectionSystem g_ColorCorrectionSystem;
 IColorCorrectionSystem *g_pColorCorrectionSystem = &g_ColorCorrectionSystem;
 
 // Don't allow this on the 360.. it doesn't work in mat_queued_mode
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CColorCorrectionSystem, IColorCorrectionSystem, COLORCORRECTION_INTERFACE_VERSION, g_ColorCorrectionSystem );
+static InterfaceReg s_Reg_CColorCorrectionSystem_IColorCorrectionSystem( []() -> void * { return static_cast<IColorCorrectionSystem *>( &g_ColorCorrectionSystem ); }, COLORCORRECTION_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -383,7 +379,7 @@ void CColorCorrectionSystem::ResetLookup()
 //  ColorCorrectionLookup_t sorting function
 //-----------------------------------------------------------------------------
 typedef ColorCorrectionLookup_t * CCLPtr;
-int _cdecl CompareLookups( const CCLPtr *lookup_a, const CCLPtr *lookup_b )
+int CompareLookups( const CCLPtr *lookup_a, const CCLPtr *lookup_b )
 {
 	if ( (*lookup_a)->m_flWeight < (*lookup_b)->m_flWeight )
 		return 1;
@@ -433,7 +429,7 @@ ColorCorrectionHandle_t CColorCorrectionSystem::GetLookupHandle( const char *pNa
 {	
 	// case and slash insensitive
 	FileNameHandle_t hName = g_pFullFileSystem->FindOrAddFileName( pName );
-	COMPILE_TIME_ASSERT( sizeof( FileNameHandle_t ) == sizeof( ColorCorrectionHandle_t ) );
+	static_assert( sizeof( FileNameHandle_t ) == sizeof( ColorCorrectionHandle_t ) );
 
 	return (ColorCorrectionHandle_t)hName;
 }
@@ -602,12 +598,12 @@ void CColorCorrectionSystem::SetLookup( ColorCorrectionHandle_t handle, RGBX5551
 //-----------------------------------------------------------------------------
 void CColorCorrectionSystem::SetLookupPtr( ColorCorrectionLookup_t *lookup, RGBX5551_t inColor, color24 outColor )
 {
-	Assert( lookup->m_bLocked );
+	contract_assert( lookup->m_bLocked );
 
 	if ( !lookup->m_pColorCorrection )
 	{
 		// Uh oh, contract broken, the backing volume was freed, no access should have occured
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
@@ -635,7 +631,7 @@ color24 CColorCorrectionSystem::GetLookup( ColorCorrectionHandle_t handle, RGBX5
 	if ( !lookup->m_pColorCorrection )
 	{
 		// Uh oh, contract broken, the backing volume was freed, no access should have occured
-		Assert( 0 );
+		contract_assert( 0 );
 		color24 col; col.r = 0; col.g = 0; col.b = 0;
 		return col;
 	}
@@ -679,8 +675,8 @@ void CColorCorrectionSystem::LoadLookup( ColorCorrectionHandle_t handle, const c
 	if ( !lookup )
 		return;
 
-	Assert( lookup->m_bLocked );
-	Assert( pLookupName );
+	contract_assert( lookup->m_bLocked );
+	contract_assert( pLookupName );
 
 	char szXboxName[MAX_PATH];
 
@@ -734,17 +730,17 @@ void CColorCorrectionSystem::CopyLookup( ColorCorrectionHandle_t handle, const c
 	if ( !lookup )
 		return;
 
-	Assert( lookup->m_bLocked );
-	Assert( pSrcColorCorrection );
+	contract_assert( lookup->m_bLocked );
+	contract_assert( pSrcColorCorrection );
 
 	if ( !lookup->m_pColorCorrection )
 	{
 		// Uh oh, contract broken, the backing volume was freed, no access should have occured
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
-	Q_memcpy( lookup->m_pColorCorrection, pSrcColorCorrection, sizeof(color24)*COLOR_CORRECTION_TEXTURE_SIZE*COLOR_CORRECTION_TEXTURE_SIZE*COLOR_CORRECTION_TEXTURE_SIZE );
+	V_memcpy( lookup->m_pColorCorrection, pSrcColorCorrection, sizeof(color24)*COLOR_CORRECTION_TEXTURE_SIZE*COLOR_CORRECTION_TEXTURE_SIZE*COLOR_CORRECTION_TEXTURE_SIZE );
 }
 
 //-----------------------------------------------------------------------------
@@ -761,7 +757,7 @@ void CColorCorrectionSystem::ResetLookup( ColorCorrectionHandle_t handle )
 	if ( !lookup )
 		return;
 
-	Assert( lookup->m_bLocked );
+	contract_assert( lookup->m_bLocked );
 
 	RGBX5551_t inColor;
 
@@ -904,7 +900,7 @@ void CColorCorrectionSystem::SetResetable( ColorCorrectionHandle_t handle, bool 
 //-----------------------------------------------------------------------------
 void CColorCorrectionSystem::GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo )
 {
-	COMPILE_TIME_ASSERT( COLOR_CORRECTION_MAX_TEXTURES == ARRAYSIZE( pInfo->m_pLookupWeights ) );
+	static_assert( COLOR_CORRECTION_MAX_TEXTURES == std::extent_v<decltype( ShaderColorCorrectionInfo_t::m_pLookupWeights )> );
 	pInfo->m_bIsEnabled = m_bEnabled && ( GetNumLookups() > 0 || m_DefaultColorCorrectionWeight != 0.0f );
 	pInfo->m_nLookupCount = GetNumLookups();
 	GetNormalizedWeights( &pInfo->m_flDefaultWeight, pInfo->m_pLookupWeights );

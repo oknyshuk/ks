@@ -1,13 +1,9 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: These are a couple of base proxy classes to help us with
 // getting/setting source/result material vars
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef FUNCTIONPROXY_H
-#define FUNCTIONPROXY_H
 
 #include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterialvar.h"
@@ -70,6 +66,3 @@ protected:
 	IMaterialVar* m_pSrc1;
 	IMaterialVar* m_pSrc2;
 };
-
-#endif // FUNCTIONPROXY_H
-

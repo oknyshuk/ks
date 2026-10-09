@@ -1,20 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( HOST_CMD_H )
-#define HOST_CMD_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "savegame_version.h"
-#include "convar.h"
+import std;
 
 // The launcher includes this file, too
 #ifndef LAUNCHERONLY
@@ -38,4 +28,3 @@ extern ConVar host_name;
 extern int  gHostSpawnCount;
 
 #endif // LAUNCHERONLY
-#endif // HOST_CMD_H

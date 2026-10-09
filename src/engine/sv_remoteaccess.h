@@ -1,17 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Handles all the functions for implementing remote access to the engine
-//
-//===========================================================================//
-#ifndef SV_REMOTEACCESS_H
-#define SV_REMOTEACCESS_H
 
-
+import ks.tier1;
 #include "igameserverdata.h"
-#include "tier1/byte_writer.h"
-#include "tier1/text_writer.h"
-#include <list>
-#include <vector>
+import std;
 
 class CRConServer;
 
@@ -91,6 +86,3 @@ private:
 
 extern CServerRemoteAccess g_ServerRemoteAccess;
 extern "C" void NotifyDedicatedServerUI(const char *message);
-
-#endif // SV_REMOTEACCESS_H
-

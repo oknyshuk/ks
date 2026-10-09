@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 //--------------------------------------------------------------------------------------------------------------
 // download.h
 // 
 // Header file for optional HTTP asset downloading
 // Author: Matthew D. Campbell (matt@turtlerockstudios.com), 2004
 //--------------------------------------------------------------------------------------------------------------
-
-#ifndef DOWNLOAD_H
-#define DOWNLOAD_H
 
 //--------------------------------------------------------------------------------------------------------------
 // Function Prototypes
@@ -27,5 +21,3 @@ int		CL_GetDownloadQueueSize(void);
 int		CL_CanUseHTTPDownload(void);
 void	CL_MarkMapAsUsingHTTPDownload(void);
 bool	CL_ShouldRedownloadFile( const char *filename );
-
-#endif // DOWNLOAD_H

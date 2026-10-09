@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -21,7 +22,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_motion_blur_ps20 0
+inline constexpr int shaderStaticTest_motion_blur_ps20 = 0;
 class motion_blur_ps20_Dynamic_Index
 {
 private:
@@ -32,7 +33,7 @@ private:
 public:
 	void SetD_NUM_BLUR_SAMPLES( int i )
 	{
-		Assert( i >= 0 && i <= 14 );
+		contract_assert( i >= 0 && i <= 14 );
 		m_nD_NUM_BLUR_SAMPLES = i;
 #ifdef _DEBUG
 		m_bD_NUM_BLUR_SAMPLES = true;
@@ -40,7 +41,7 @@ public:
 	}
 	void SetD_NUM_BLUR_SAMPLES( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 14 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 14 );
 		m_nD_NUM_BLUR_SAMPLES = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bD_NUM_BLUR_SAMPLES = true;
@@ -61,7 +62,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bD_NUM_BLUR_SAMPLES;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nD_NUM_BLUR_SAMPLES ) + 0;
 	}
@@ -74,7 +75,7 @@ static const ShaderComboInformation_t s_DynamicComboArray_motion_blur_ps20[1] =
 };
 static const ShaderComboSemantics_t motion_blur_ps20_combos =
 {
-	"motion_blur_ps20", s_DynamicComboArray_motion_blur_ps20, 1, NULL, 0 
+	"motion_blur_ps20", s_DynamicComboArray_motion_blur_ps20, 1, nullptr, 0 
 };
 
 class ConstructMe_motion_blur_ps20

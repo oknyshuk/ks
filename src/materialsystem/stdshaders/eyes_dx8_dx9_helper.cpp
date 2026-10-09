@@ -1,14 +1,10 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "tier1/convar.h"
-#include "mathlib/vmatrix.h"
+import std;
 #include "eyes_dx8_dx9_helper.h"
-#include "cpp_shader_constant_register_map.h"
 
 #include "eyes_vs20.inc"
 #include "eyes_ps20.inc"
@@ -21,7 +17,6 @@
 #include "eyes_ps30.inc"
 #include "eyes_flashlight_vs30.inc"
 #include "eyes_flashlight_ps30.inc"
-
 
 void InitParamsEyes_DX8_DX9( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, 
 							Eyes_DX8_DX9_Vars_t &info )
@@ -111,7 +106,7 @@ static void DrawFlashlight( bool bDX9, CBaseVSShader *pShader, IMaterialVar** pa
 		pShaderShadow->EnableAlphaWrites( false );
 
 #ifdef STDSHADER_DX9_DLL_EXPORT
-		Assert( bDX9 );
+		contract_assert( bDX9 );
 
 		ShadowFilterMode_t nShadowFilterMode = g_pHardwareConfig->GetShadowFilterMode( false /* bForceLowQuality */, g_pHardwareConfig->HasFastVertexTextures() && !false && !false );	// Based upon vendor and device dependent formats
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
@@ -172,7 +167,7 @@ static void DrawFlashlight( bool bDX9, CBaseVSShader *pShader, IMaterialVar** pa
 		pShader->BindTexture( SHADER_SAMPLER3, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nIris, info.m_nIrisFrame );
 
 #ifdef STDSHADER_DX9_DLL_EXPORT
-		Assert( bDX9 );
+		contract_assert( bDX9 );
 
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
 		{
@@ -270,7 +265,7 @@ static void DrawUsingVertexShader( bool bDX9, CBaseVSShader *pShader, IMaterialV
 		bool bSRGBRead01 = false;
 
 #ifdef STDSHADER_DX9_DLL_EXPORT
-		Assert( bDX9 );
+		contract_assert( bDX9 );
 		bSRGBRead01 = true;
 
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
@@ -336,7 +331,7 @@ static void DrawUsingVertexShader( bool bDX9, CBaseVSShader *pShader, IMaterialV
 		pShader->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_5, info.m_nGlintV );
 
 #ifdef STDSHADER_DX9_DLL_EXPORT
-		Assert( bDX9 );
+		contract_assert( bDX9 );
 
 		LightState_t lightState = {0, false, false};
 		pShaderAPI->GetDX9LightState( &lightState );
@@ -423,5 +418,3 @@ void DrawEyes_DX8_DX9( bool bDX9, CBaseVSShader *pShader, IMaterialVar** params,
 	bool bHasFlashlight = pShader->UsingFlashlight( params );
 	DrawEyes_DX8_DX9_Internal( bDX9, pShader, params, pShaderAPI, pShaderShadow, bHasFlashlight, info, vertexCompression );
 }
-
-

@@ -1,18 +1,19 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-// STATIC:	"MASKS1"					"0..1"		
+// STATIC:	"MASKS1"					"0..1"
 // STATIC:	"MASKS2"					"0..1"
-// STATIC:	"FRESNELRANGESTEXTURE"		"0..1"		
+// STATIC:	"FRESNELRANGESTEXTURE"		"0..1"
 // STATIC:	"PHONGWARPTEXTURE"			"0..1"		[ps30]
 // STATIC:	"ENVMAP"					"0..1"
-// STATIC:	"AMBIENTREFLECTION"			"0..1"		
+// STATIC:	"AMBIENTREFLECTION"			"0..1"
 // STATIC:	"USEBOUNCECOLOR"			"0..1"		[ps30]
 // STATIC:	"ANISOTROPY"				"0..1"		[ps30]
 // STATIC:	"BASEALPHAPHONGMASK"		"0..1"		[ps30]
 // STATIC:	"BASEALPHAENVMASK"			"0..1"
 // STATIC:	"BUMPALPHAENVMASK"			"0..1"
 // STATIC:	"SHADOWSATURATION"			"0..1"		[ps30]
-// STATIC:  "BASEALPHASELFILLUMMASK"	"0..1"	
+// STATIC:  "BASEALPHASELFILLUMMASK"	"0..1"
 // STATIC:  "FAKERIM"					"0..1"
 // STATIC:  "CASCADED_SHADOW_MAPPING"	"0..1"		[ps30]
 // STATIC:	"CSM_MODE"					"0..3"		[ps30]
@@ -20,9 +21,8 @@
 // STATIC:  "USEPATTERN"				"0..4"
 // STATIC:  "FLASHLIGHT"				"0..1"
 // STATIC:  "FLASHLIGHTDEPTHFILTERMODE" "0..3"
-
 // DYNAMIC: "NUM_LIGHTS"				"0..4"		[ps30]
-// DYNAMIC: "DYN_CSM_ENABLED"			"0..1"		
+// DYNAMIC: "DYN_CSM_ENABLED"			"0..1"
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"	"0..0"
 // DYNAMIC: "WRITEWATERFOGTODESTALPHA"	"0..1"
 

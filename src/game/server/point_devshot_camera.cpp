@@ -1,22 +1,47 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A camera entity that's used by the -makedevshots system to take
 //			dev screenshots everytime the map is checked into source control.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
-#include "tier0/icommandline.h"
 #include "igamesystem.h"
 #include "filesystem.h"
-#include <keyvalues.h>
 
 int g_iDevShotCameraCount = 0;
-#define DEVSHOT_INITIAL_WAIT		5			// Time after the level spawn before the first devshot camera takes it's shot
-#define DEVSHOT_INTERVAL			5			// Time between each devshot camera taking it's shot
+constexpr auto DEVSHOT_INITIAL_WAIT = 5; // Time after the level spawn before the first devshot camera takes it's shot
+constexpr auto DEVSHOT_INTERVAL = 5; // Time between each devshot camera taking it's shot
 
 //-----------------------------------------------------------------------------
 // Purpose: A camera entity that's used by the -makedevshots system to take
@@ -93,7 +118,7 @@ void CPointDevShotCamera::DevShotThink_Setup( void )
 	engine->ClientCommand( pPlayer->edict(), "notarget" );
 
 	pPlayer->AddSolidFlags( FSOLID_NOT_SOLID );
-	pPlayer->EnableControl(FALSE);
+	pPlayer->EnableControl(false);
 	pPlayer->SetViewEntity( this );
 	pPlayer->SetFOV( this, m_iFOV );
 
@@ -191,7 +216,7 @@ public:
 
 			// See if we've got a camera file to import cameras from
 			char szFullName[512];
-			Q_snprintf(szFullName,sizeof(szFullName), "maps/%s.txt", STRING( gpGlobals->mapname ));
+			V_snprintf(szFullName,sizeof(szFullName), "maps/%s.txt", STRING( gpGlobals->mapname ));
 			KeyValues *pkvMapCameras = new KeyValues( "MapCameras" );
 			if ( pkvMapCameras->LoadFromFile( filesystem, szFullName, "MOD" ) )
 			{
@@ -206,7 +231,7 @@ public:
 
 					// Make a camera, and move it to the position specified
 					CPointDevShotCamera	*pCamera = (CPointDevShotCamera*)CreateEntityByName( "point_devshot_camera" );
-					Assert( pCamera );
+					contract_assert( pCamera );
 					pCamera->KeyValue( "cameraname", pCameraName );
 					pCamera->KeyValue( "origin", pkvCamera->GetString( "origin", "0 0 0" ) );
 					pCamera->KeyValue( "angles", pkvCamera->GetString( "angles", "0 0 0" ) );

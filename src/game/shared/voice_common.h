@@ -1,20 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef VOICE_COMMON_H
-#define VOICE_COMMON_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "const.h"
+#include "shareddefs.h"
 
-
-#define VOICE_MAX_PLAYERS		MAX_PLAYERS
-#define VOICE_MAX_PLAYERS_DW	((VOICE_MAX_PLAYERS / 32) + !!(VOICE_MAX_PLAYERS & 31))
-#define VOICE_DEFAULT_PROXIMITY_RANGE 1200 //100 feet
-
-
-#endif // VOICE_COMMON_H
+inline constexpr auto VOICE_MAX_PLAYERS = MAX_PLAYERS;
+inline constexpr auto VOICE_MAX_PLAYERS_DW = ((VOICE_MAX_PLAYERS / 32) + !!(VOICE_MAX_PLAYERS & 31));
+inline constexpr auto VOICE_DEFAULT_PROXIMITY_RANGE = 1200; //100 feet

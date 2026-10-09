@@ -1,10 +1,7 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
+import ks.tier1;
 #include "quakedef.h"
 #include "lightcache.h"
 #include "cmodel_engine.h"
@@ -12,7 +9,6 @@
 #include "studio_internal.h"
 #include "bspfile.h"
 #include "cdll_engine_int.h"
-#include "tier1/fixed_pool.h"
 #include "gl_model_private.h"
 #include "r_local.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
@@ -31,9 +27,8 @@
 #include "client.h"
 #include "cl_main.h"
 #include "collisionutils.h"
-#include "tier0/vprof.h"
 #include "filesystem_engine.h"
-#include "mathlib/anorms.h"
+import std;
 #include "gl_matsysiface.h"
 #include "materialsystem/materialsystem_config.h"
 #include "tier2/tier2.h"
@@ -48,32 +43,26 @@
 // calculation. Vrad's calculation includes the emit_surfaces, so if we're NOT using it, then
 // we want to include emit_surface lights here.
 
-					  
 // this should be prime to make the hash better
-#define MAX_CACHE_ENTRY		200
-#define MAX_CACHE_BUCKETS	MAX_CACHE_ENTRY
+constexpr auto MAX_CACHE_ENTRY = 200;
 
 // number of bits per grid in x, y, z
-#define HASH_GRID_SIZEX		5
-#define	HASH_GRID_SIZEY		5
-#define	HASH_GRID_SIZEZ		7
+constexpr auto HASH_GRID_SIZEX = 5;
+constexpr auto HASH_GRID_SIZEY = 5;
+constexpr auto HASH_GRID_SIZEZ = 7;
 
-#define LIGHTCACHE_SNAP_EPSILON	0.5f
+constexpr auto LIGHTCACHE_SNAP_EPSILON = 0.5f;
 
 float Engine_WorldLightDistanceFalloff( const dworldlight_t *wl, const Vector& delta, bool bNoRadiusCheck = false );
 float Engine_WorldLightAngle( const dworldlight_t *wl, const Vector& lnormal, const Vector& snormal, const Vector& delta );
 
-#define MAX_LIGHTSTYLE_BITS	 MAX_LIGHTSTYLES
-#define MAX_LIGHTSTYLE_BYTES ( (MAX_LIGHTSTYLE_BITS + 7) / 8 )
+constexpr auto MAX_LIGHTSTYLE_BYTES = ( (MAX_LIGHTSTYLES + 7) / 8 );
 
 static byte g_FrameMissCount = 0;
 static int g_FrameIndex = 0;
 ConVar lightcache_maxmiss("lightcache_maxmiss","2", FCVAR_CHEAT);
 
-#define NUMRANDOMNORMALS	162
-static Vector	s_raddir[NUMRANDOMNORMALS] = {
 #include "randomnormals.h"
-};
 
 static ConVar r_lightcache_numambientsamples( "r_lightcache_numambientsamples", "162", FCVAR_CHEAT, 
 											 "number of random directions to fire rays when computing ambient lighting",
@@ -128,11 +117,11 @@ struct LightingStateInfo_t
 	float	m_pIllum[MAXLOCALLIGHTS];
 	LightingStateInfo_t()
 	{
-		memset( this, 0, sizeof( *this ) );
+		std::memset( this, 0, sizeof( *this ) );
 	}
 	void Clear()
 	{
-		memset( this, 0, sizeof( *this ) );
+		std::memset( this, 0, sizeof( *this ) );
 	}
 };
  
@@ -145,7 +134,7 @@ public:
 	CBaseLightCache()
 	{
 		m_pEnvCubemapTexture = nullptr;
-		memset( m_pLightstyles, 0, sizeof( m_pLightstyles ) );
+		std::memset( m_pLightstyles, 0, sizeof( m_pLightstyles ) );
 		m_LightingFlags = 0;
 		m_LastFrameUpdated_LightStyles = -1;
 	}
@@ -260,17 +249,18 @@ static ConVar r_maxnewsamples		("r_maxnewsamples", "6");
 static ConVar r_maxsampledist		("r_maxsampledist", "128");
 static ConVar r_lightcachecenter	("r_lightcachecenter", "1", FCVAR_CHEAT );
 
-CON_COMMAND_F( r_lightcache_invalidate, "", FCVAR_CHEAT )
+static void r_lightcache_invalidate( const CCommand &args );
+static ConCommand r_lightcache_invalidate_command( "r_lightcache_invalidate", r_lightcache_invalidate, "", FCVAR_CHEAT );
+static void r_lightcache_invalidate( const CCommand &args )
 {
 	R_StudioInitLightingCache();
 }
 
 // head and tail sentinels of the LRU
-#define LIGHT_LRU_HEAD_INDEX MAX_CACHE_ENTRY
-#define LIGHT_LRU_TAIL_INDEX (MAX_CACHE_ENTRY+1)
+constexpr auto LIGHT_LRU_TAIL_INDEX = (MAX_CACHE_ENTRY+1);
 
 static lightcache_t lightcache[MAX_CACHE_ENTRY + 2]; // the extra 2 are the head and tail
-static unsigned short lightbuckets[MAX_CACHE_BUCKETS];
+static unsigned short lightbuckets[MAX_CACHE_ENTRY];
 
 static ks::object_pool<PropLightcache_t>	s_PropCache( 256, ks::fixed_pool::grow::slow );
  
@@ -296,7 +286,7 @@ inline unsigned short GetLightCacheIndex( const lightcache_t *pCache )
 
 inline lightcache_t& GetLightLRUHead()
 {
-	return lightcache[LIGHT_LRU_HEAD_INDEX];
+	return lightcache[MAX_CACHE_ENTRY];
 }
 
 inline lightcache_t& GetLightLRUTail()
@@ -312,15 +302,15 @@ void R_StudioInitLightingCache( void )
 {
 	unsigned short i;
 
-	memset( lightcache, 0, sizeof(lightcache) );
+	std::memset( lightcache, 0, sizeof(lightcache) );
 
-	for ( i=0; i < ARRAYSIZE( lightcache ); i++ )
+	for ( i=0; i < std::size( lightcache ); i++ )
 		lightcache[i].bucket = 0xFFFF;
 
-	for ( i=0; i < ARRAYSIZE( lightbuckets ); i++ )
+	for ( i=0; i < std::size( lightbuckets ); i++ )
 			lightbuckets[i] = 0xFFFF;
 
-	unsigned short last = LIGHT_LRU_HEAD_INDEX;
+	unsigned short last = MAX_CACHE_ENTRY;
 	// Link every node into the LRU
 	for ( i = 0; i < MAX_CACHE_ENTRY-1; i++)
 	{
@@ -333,7 +323,7 @@ void R_StudioInitLightingCache( void )
 	lightcache[i].lru_next = LIGHT_LRU_TAIL_INDEX;
 
 	// link the sentinels
-	lightcache[LIGHT_LRU_HEAD_INDEX].lru_next = 0;
+	lightcache[MAX_CACHE_ENTRY].lru_next = 0;
 	lightcache[LIGHT_LRU_TAIL_INDEX].lru_prev = i;
 
 	// Lower number of lights on older hardware
@@ -439,7 +429,7 @@ static void LightcacheUnlink( lightcache_t *pcache )
 			}
 			plist = lightcache[plist].next;
 		}
-		assert(found);
+		contract_assert( found );
 	}
 }
 
@@ -469,7 +459,7 @@ static lightcache_t *LightcacheGetLRU( void )
 static int LightcacheHashKey( int x, int y, int z, int leaf )
 {
 	unsigned int key = (((x<<20) + (y<<8) + z) ^ (leaf));
-	key =  key % MAX_CACHE_BUCKETS;
+	key =  key % MAX_CACHE_ENTRY;
 	return (int)key;
 }
 
@@ -549,8 +539,8 @@ void ComputeLightcacheBounds( const Vector &vecOrigin, Vector *pMins, Vector *pM
 	pMaxs->y = pMins->y + (1 << HASH_GRID_SIZEY );
 	pMaxs->z = pMins->z + (1 << HASH_GRID_SIZEZ );
 
-	Assert( (pMins->x <= vecOrigin.x) && (pMins->y <= vecOrigin.y) && (pMins->z <= vecOrigin.z) );
-	Assert( (pMaxs->x >= vecOrigin.x) && (pMaxs->y >= vecOrigin.y) && (pMaxs->z >= vecOrigin.z) );
+	contract_assert( (pMins->x <= vecOrigin.x) && (pMins->y <= vecOrigin.y) && (pMins->z <= vecOrigin.z) );
+	contract_assert( (pMaxs->x >= vecOrigin.x) && (pMaxs->y >= vecOrigin.y) && (pMaxs->z >= vecOrigin.z) );
 }
 
 //-----------------------------------------------------------------------------
@@ -615,12 +605,12 @@ static void ComputeAmbientFromSurface( SurfaceHandle_t surfID, dworldlight_t* pS
 static void ComputeAmbientFromSphericalSamples( const Vector& start, 
 						Vector* lightBoxColor )
 {
-	VPROF( "ComputeAmbientFromSphericalSamples" );
+	CVProfScope _( "ComputeAmbientFromSphericalSamples", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// find any ambient lights
 	dworldlight_t *pSkylight = FindAmbientLight();
 
 	Vector radcolor[NUMRANDOMNORMALS];
-	Assert( cached_r_lightcache_numambientsamples <= ARRAYSIZE( radcolor ) );
+	contract_assert( cached_r_lightcache_numambientsamples <= std::size( radcolor ) );
 
 	// sample world by casting N rays distributed across a sphere
 	Vector upend;
@@ -721,7 +711,7 @@ static void R_StudioGetAmbientLightForPoint(
 {
 	*bAddedLeafAmbientCube = false;
 
-	VPROF( "R_StudioGetAmbientLightForPoint" );
+	CVProfScope _( "R_StudioGetAmbientLightForPoint", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	int i;
 	if ( g_pMaterialSystemConfig->nFullbright == 1 )
 	{
@@ -1019,7 +1009,7 @@ static float LightIntensityAndDirectionAtPointNew( dworldlight_t* pLight, lightz
 	// [msmith per Henry Goffin] This fraction should not be flipped.
 	// pm.fraction = 1-pm.fraction;
 	
-	float flHitDistance = ( pm.startsolid ) ? FLT_EPSILON : ( pm.fraction ) * flTraceDistance;
+	float flHitDistance = ( pm.startsolid ) ? std::numeric_limits<float>::epsilon() : ( pm.fraction ) * flTraceDistance;
 	
 	if ( pSample )
 	{
@@ -1075,8 +1065,8 @@ static float LightIntensityAndDirectionInBox( dworldlight_t* pLight,
 				if ( dist > (sphereRadius + pLight->radius * LightRadiusFactor) )
 					return 0;
 				// PERFORMANCE: precalc this and store in the light?
-				float angle = acos(pLight->stopdot2);
-				float sinAngle = sin(angle);
+				float angle = std::acos(pLight->stopdot2);
+				float sinAngle = std::sin(angle);
 				if ( !IsSphereIntersectingCone( mid, sphereRadius, pLight->origin, pLight->normal, sinAngle, pLight->stopdot2 ) )
 					return 0;
 			}
@@ -1187,12 +1177,12 @@ bool ComputeVertexLightingFromSphericalSamples( const Vector& vecVertex,
 	int i;
 	for ( i = 0; i < cached_r_lightcache_numambientsamples; i++)
 	{
-		float flDot = DotProduct( vecNormal, s_raddir[i] );
+		float flDot = DotProduct( vecNormal, g_RandomNormals[i] );
 		if ( flDot < 0.0f )
 			continue;
 
 		// FIXME: a good optimization would be to scale this per leaf
-		VectorMA( vecVertex, COORD_EXTENT * 1.74, s_raddir[i], upend );
+		VectorMA( vecVertex, COORD_EXTENT * 1.74, g_RandomNormals[i], upend );
 
 		// Now that we've got a ray, see what surface we've hit
 		SurfaceHandle_t surfID = R_LightVec( vecVertex, upend, false, color );
@@ -1351,7 +1341,7 @@ static const byte *AddWorldLightToLightingState( dworldlight_t* pWorldLight,
 												 bool bIgnoreVis = false,
 												 bool bIgnoreVisTest = false )
 {
-	Assert( lightingState.numlights >= 0 && lightingState.numlights <= MAXLOCALLIGHTS );
+	contract_assert( lightingState.numlights >= 0 && lightingState.numlights <= MAXLOCALLIGHTS );
 
 	// only do it if the entity can see into the lights leaf
 	if ( !bIgnoreVisTest )
@@ -1485,8 +1475,8 @@ static void WorldLightFromDynamicLight( dlight_t const& dynamicLight,
 	{
 		worldLight.type = emit_spotlight;
 		VectorCopy( dynamicLight.m_Direction, worldLight.normal );
-		worldLight.stopdot = cos( dynamicLight.m_InnerAngle * M_PI / 180.0f );
-		worldLight.stopdot2 = cos( dynamicLight.m_OuterAngle * M_PI / 180.0f );
+		worldLight.stopdot = std::cos( dynamicLight.m_InnerAngle * std::numbers::pi / 180.0f );
+		worldLight.stopdot2 = cos( dynamicLight.m_OuterAngle * std::numbers::pi / 180.0f );
 	}
 }
 
@@ -1497,7 +1487,7 @@ static void WorldLightFromDynamicLight( dlight_t const& dynamicLight,
 static const byte *ComputeLightStyles( lightcache_t* pCache, LightingState_t& lightingState,
 									  const Vector& origin, int leaf, const byte* pVis )
 {
-	VPROF_INCREMENT_COUNTER( "ComputeLightStyles", 1 );
+	VProfIncrementCounter<"ComputeLightStyles">( 1 );
 	LightingStateInfo_t info;
 
 	lightingState.ZeroLightingState();
@@ -1540,10 +1530,10 @@ static void AddLightStylesForStaticProp( PropLightcache_t *pcache, LightingState
 	// ejecting less relevant local lights + folding them into the ambient cube
 	for( int i = 0; i < std::ssize( pcache->m_LightStyleWorldLights ); ++i )
 	{
-		Assert( pcache->m_LightStyleWorldLights[i] >= 0 );
-		Assert( pcache->m_LightStyleWorldLights[i] < host_state.worldbrush->numworldlights );
+		contract_assert( pcache->m_LightStyleWorldLights[i] >= 0 );
+		contract_assert( pcache->m_LightStyleWorldLights[i] < host_state.worldbrush->numworldlights );
 		dworldlight_t *wl = &host_state.worldbrush->worldlights[pcache->m_LightStyleWorldLights[i]];
-		Assert( wl->style != 0 );
+		contract_assert( wl->style != 0 );
 
 		// Now add that world light into our list of worldlights
 		AddWorldLightToLightingState( wl, nullptr, lightingState, *pcache, pcache->m_LightingOrigin, nullptr, 
@@ -1571,7 +1561,7 @@ static const byte* AddDLights( LightingStateInfo_t& info, LightingState_t& light
 
 	// Next, add each world light with a lightstyle into the lighting state,
 	// ejecting less relevant local lights + folding them into the ambient cube
-	dlight_t* RESTRICT dl;
+	dlight_t* __restrict__ dl;
 	for ( int i=0; i<g_nNumActiveDLights; ++i, ++dl )
 	{
 		dl = &(cl_dlights[ g_ActiveDLightIndex[i] ]);
@@ -1619,7 +1609,7 @@ static const byte* AddELights( LightingStateInfo_t& info, LightingState_t& light
 	
 	// Next, add each world light with a lightstyle into the lighting state,
 	// ejecting less relevant local lights + folding them into the ambient cube
-	dlight_t* RESTRICT dl;
+	dlight_t* __restrict__ dl;
 	for ( int i=0; i<g_nNumActiveELights; ++i )
 	{
 		dl = &(cl_elights[ g_ActiveELightIndex[i] ]);
@@ -1676,7 +1666,7 @@ static const byte *ComputeDynamicLighting( lightcache_t* pCache, LightingState_t
 {
 	if (pCache->m_LastFrameUpdated_DynamicLighting != r_framecount)
 	{
-		VPROF_INCREMENT_COUNTER( "ComputeDynamicLighting", 1 );
+		VProfIncrementCounter<"ComputeDynamicLighting">( 1 );
 
 		// First factor in the cache into the current lighting state..
 		LightingStateInfo_t info;
@@ -1692,8 +1682,8 @@ static const byte *ComputeDynamicLighting( lightcache_t* pCache, LightingState_t
 		pCache->m_LastFrameUpdated_DynamicLighting = r_framecount;
 	}
 
-	Assert( pCache->m_DynamicLightingState.numlights >= 0 && pCache->m_DynamicLightingState.numlights <= MAXLOCALLIGHTS );
-	memcpy( &lightingState, &pCache->m_DynamicLightingState, sizeof(LightingState_t) );
+	contract_assert( pCache->m_DynamicLightingState.numlights >= 0 && pCache->m_DynamicLightingState.numlights <= MAXLOCALLIGHTS );
+	std::memcpy( &lightingState, &pCache->m_DynamicLightingState, sizeof(LightingState_t) );
 	return pVis;
 }
 
@@ -1708,7 +1698,7 @@ static const byte *ComputeExclusiveDynamicLighting( LightingState_t& lightingSta
 	lightingState.ZeroLightingState();
 	pVis = AddDLights( info, lightingState, origin, leaf, pVis, pRenderable );
 	pVis = AddELights( info, lightingState, origin, leaf, pVis, pRenderable );
-	Assert( lightingState.numlights >= 0 && lightingState.numlights <= MAXLOCALLIGHTS );
+	contract_assert( lightingState.numlights >= 0 && lightingState.numlights <= MAXLOCALLIGHTS );
 	return pVis;
 }
 
@@ -1847,7 +1837,7 @@ static void AddStaticLighting(
 	bool bStaticProp,
 	bool bAddedLeafAmbientCube )
 {
-	VPROF( "AddStaticLighting" );
+	CVProfScope _( "AddStaticLighting", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// First, blat out the lighting state
 	int i;
 	pCache->m_StaticLightingState.numlights = 0;
@@ -1857,7 +1847,7 @@ static void AddStaticLighting(
 	{
 		pCache->m_LightingFlags &= ~( HACKLIGHTCACHEFLAGS_HASSWITCHABLELIGHTSTYLE | 
 							  HACKLIGHTCACHEFLAGS_HASNONSWITCHABLELIGHTSTYLE );
-		memset( pCache->m_pLightstyles, 0, sizeof( pCache->m_pLightstyles ) );
+		std::memset( pCache->m_pLightstyles, 0, sizeof( pCache->m_pLightstyles ) );
 	}
 	
 	// Next, add each static light one at a time into the lighting state,
@@ -1875,7 +1865,7 @@ static void AddStaticLighting(
 		// See the comment titled "EMIT_SURFACE LIGHTS" at the top for info.
 		if ( bAddedLeafAmbientCube && (wl->flags & DWL_FLAGS_INAMBIENTCUBE) )
 		{
-			Assert( wl->type == emit_surface );
+			contract_assert( wl->type == emit_surface );
 			continue;
 		}
 
@@ -2070,9 +2060,9 @@ bool IdentifyLightingErrors( int leaf, LightingState_t& lightingState )
 //-----------------------------------------------------------------------------
 static const byte* ComputeStaticLightingForCacheEntry( CBaseLightCache *pcache, const Vector& origin, int leaf, bool bStaticProp = false )
 {
-	VPROF_INCREMENT_COUNTER( "ComputeStaticLightingForCacheEntry", 1 );
+	VProfIncrementCounter<"ComputeStaticLightingForCacheEntry">( 1 );
 	
-	VPROF( "ComputeStaticLightingForCacheEntry" );
+	CVProfScope _( "ComputeStaticLightingForCacheEntry", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// Figure out the PVS info for this location
  	const byte* pVis = CM_ClusterPVS( CM_LeafCluster( leaf ) );
 
@@ -2098,10 +2088,10 @@ static const byte* ComputeStaticLightingForCacheEntry( CBaseLightCache *pcache, 
 static void BuildStaticLightingCacheLightStyleInfo( PropLightcache_t* pcache, const Vector& mins, const Vector& maxs )
 {
 	const byte *pVis = nullptr;
-	Assert( std::ssize( pcache->m_LightStyleWorldLights ) == 0 );
+	contract_assert( std::ssize( pcache->m_LightStyleWorldLights ) == 0 );
 	pcache->m_LightingFlags &= ~( HACKLIGHTCACHEFLAGS_HASSWITCHABLELIGHTSTYLE | HACKLIGHTCACHEFLAGS_HASSWITCHABLELIGHTSTYLE );
 	// clear lightstyles
-	memset( pcache->m_pLightstyles, 0, MAX_LIGHTSTYLE_BYTES );
+	std::memset( pcache->m_pLightstyles, 0, MAX_LIGHTSTYLE_BYTES );
 	for ( short i = 0; i < host_state.worldbrush->numworldlights; ++i)
 	{
 		dworldlight_t *wl = &host_state.worldbrush->worldlights[i];
@@ -2131,7 +2121,6 @@ static void BuildStaticLightingCacheLightStyleInfo( PropLightcache_t* pcache, co
 			}
 
 			{
-			MEM_ALLOC_CREDIT();
 			pcache->m_LightStyleWorldLights.push_back( i );
 			}
 
@@ -2221,10 +2210,10 @@ bool StaticLightCacheAffectedByAnimatedLightStyle( LightCacheHandle_t handle )
 	{
 		for( int i = 0; i < std::ssize( pcache->m_LightStyleWorldLights ); ++i )
 		{
-			Assert( pcache->m_LightStyleWorldLights[i] >= 0 );
-			Assert( pcache->m_LightStyleWorldLights[i] < host_state.worldbrush->numworldlights );
+			contract_assert( pcache->m_LightStyleWorldLights[i] >= 0 );
+			contract_assert( pcache->m_LightStyleWorldLights[i] < host_state.worldbrush->numworldlights );
 			dworldlight_t *wl = &host_state.worldbrush->worldlights[pcache->m_LightStyleWorldLights[i]];
-			Assert( wl->style != 0 );
+			contract_assert( wl->style != 0 );
 			if( d_lightstylenumframes[wl->style] > 1 )
 			{
 				return true;
@@ -2245,10 +2234,10 @@ bool StaticLightCacheNeedsSwitchableLightUpdate( LightCacheHandle_t handle )
 	{
 		for( int i = 0; i < std::ssize( pcache->m_LightStyleWorldLights ); ++i )
 		{
-			Assert( pcache->m_LightStyleWorldLights[i] >= 0 );
-			Assert( pcache->m_LightStyleWorldLights[i] < host_state.worldbrush->numworldlights );
+			contract_assert( pcache->m_LightStyleWorldLights[i] >= 0 );
+			contract_assert( pcache->m_LightStyleWorldLights[i] < host_state.worldbrush->numworldlights );
 			dworldlight_t *wl = &host_state.worldbrush->worldlights[pcache->m_LightStyleWorldLights[i]];
-			Assert( wl->style != 0 );
+			contract_assert( wl->style != 0 );
 			// Is it a switchable light?
 			if( d_lightstylenumframes[wl->style] <= 1 )
 			{
@@ -2296,7 +2285,7 @@ void InvalidateStaticLightingCache(void)
 LightingState_t *LightcacheGetStatic( LightCacheHandle_t cache, ITexture **pEnvCubemapTexture, unsigned int flags )
 {
 	PropLightcache_t *pcache = ( PropLightcache_t * )cache;
-	Assert( pcache );
+	contract_assert( pcache );
 
 	// get the cubemap texture
 	if ( pEnvCubemapTexture )
@@ -2605,11 +2594,11 @@ bool AllowFullCacheMiss(int flags)
 
 lightcache_t *FindNearestCache( int x, int y, int z, int leafIndex )
 {
-	int bestDist = INT_MAX;
+	int bestDist = std::numeric_limits<int>::max();
 	lightcache_t *pBest = nullptr;
 	short current = GetLightLRUTail().lru_prev;
 	int dx, dy, dz;
-	while ( current != LIGHT_LRU_HEAD_INDEX )
+	while ( current != MAX_CACHE_ENTRY )
 	{
 		lightcache_t *pCache = &lightcache[current];
 		int dist = 0;
@@ -2643,7 +2632,7 @@ ITexture *LightcacheGetDynamic( const Vector& origin, LightingState_t& lightingS
 							   LightcacheGetDynamic_Stats &stats, const IClientRenderable* pRenderable,
 							   unsigned int flags, bool bDebugModel )
 {
-	VPROF_BUDGET( "LightcacheGet", VPROF_BUDGETGROUP_LIGHTCACHE );
+	CVProfScope _( "LightcacheGet", 0, VPROF_BUDGETGROUP_LIGHTCACHE, false, BUDGETFLAG_OTHER );
 
 	LightingStateInfo_t info;
 
@@ -2688,7 +2677,7 @@ ITexture *LightcacheGetDynamic( const Vector& origin, LightingState_t& lightingS
 	}
 	if ( !pCache )
 	{
-		VPROF_INCREMENT_COUNTER( "lightcache miss", 1 );
+		VProfIncrementCounter<"lightcache miss">( 1 );
 
 		// cache miss, nothing appropriate from the frame cache, make a new entry
 		pCache = NewLightcacheEntry(bucket);
@@ -2889,7 +2878,7 @@ static bool IsDynamicLight( dworldlight_t *pWorldLight )
 {
 	// NOTE: This only works because we're using some implementation details
 	// that the dynamic lights are stored in a little static array
-	return ( pWorldLight >= s_pDynamicLight && pWorldLight < &s_pDynamicLight[ARRAYSIZE(s_pDynamicLight)] );
+	return ( pWorldLight >= s_pDynamicLight && pWorldLight < &s_pDynamicLight[std::size( s_pDynamicLight )] );
 }
 
 
@@ -2898,13 +2887,14 @@ static bool IsDynamicLight( dworldlight_t *pWorldLight )
 //-----------------------------------------------------------------------------
 void ComputeLighting( const Vector& pt, const Vector* pNormal, bool bClamp, bool bAddDynamicLightsToBox, Vector& color, Vector *pBoxColors )
 {
+	ks::ScratchArena<> scratch;
 	LightingState_t lightingState;
 	LightcacheGetDynamic_Stats stats;
 	LightcacheGetDynamic( pt, lightingState, stats, nullptr, LIGHTCACHEFLAGS_STATIC|LIGHTCACHEFLAGS_DYNAMIC|LIGHTCACHEFLAGS_LIGHTSTYLE|LIGHTCACHEFLAGS_ALLOWFAST );
 	int i;
 	if ( pNormal )
 	{
-		LightDesc_t* pLightDesc = (LightDesc_t*)stackalloc( lightingState.numlights * sizeof(LightDesc_t) );
+		LightDesc_t* pLightDesc = scratch.Alloc<LightDesc_t>( lightingState.numlights );
 		
 		for ( i=0; i < lightingState.numlights; ++i )
 		{
@@ -2941,7 +2931,7 @@ void ComputeLighting( const Vector& pt, const Vector* pNormal, bool bClamp, bool
 	// If they want the colors for each box side, give it to them.
 	if ( pBoxColors )
 	{
-		memcpy( pBoxColors, lightingState.r_boxcolor, sizeof( lightingState.r_boxcolor ) );
+		std::memcpy( pBoxColors, lightingState.r_boxcolor, sizeof( lightingState.r_boxcolor ) );
 	}
 
 	if (bClamp)
@@ -2965,7 +2955,7 @@ public:
 
 	virtual IterationRetval_t EnumElement( IHandleEntity *pHandleEntity )
 	{
-		Assert( StaticPropMgr()->IsStaticProp( pHandleEntity ) );
+		contract_assert( StaticPropMgr()->IsStaticProp( pHandleEntity ) );
 
 		PropLightcache_t *pCache = 
 			( PropLightcache_t * )StaticPropMgr()->GetLightCacheHandleForStaticProp( pHandleEntity );

@@ -1,10 +1,36 @@
 // chicken.cpp
 // An interactive, shootable chicken
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
-#include "tier1/fmtstr.h"
 #include "chicken.h"
 #include "cs_player.h"
 #include "cs_gamerules.h"
@@ -23,10 +49,10 @@ class HostagePathCost;
 
 extern ConVar hostage_debug;
 
-#define CHICKEN_ZOMBIE_SPAWN_DURATION 3.5f
+constexpr auto CHICKEN_ZOMBIE_SPAWN_DURATION = 3.5f;
 
-#define CHICKEN_DISTANCE_RUN 200.0f
-#define CHICKEN_DISTANCE_WALK 100.0f
+constexpr auto CHICKEN_DISTANCE_RUN = 200.0f;
+constexpr auto CHICKEN_DISTANCE_WALK = 100.0f;
 
 //-----------------------------------------------------------------------
 CChicken::CChicken()
@@ -535,7 +561,7 @@ void CChicken::Update( void )
 	std::vector< CBasePlayer * > playerVector;
 	CollectPlayers( &playerVector, TEAM_ANY, COLLECT_ONLY_LIVING_PLAYERS );
 
-	float closeRangeSq = FLT_MAX;
+	float closeRangeSq = std::numeric_limits<float>::max();
 	CBasePlayer *close = nullptr;
 
 	for( int i=0; i<std::ssize( playerVector ); ++i )

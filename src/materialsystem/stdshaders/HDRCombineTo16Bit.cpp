@@ -1,20 +1,15 @@
-//========= Copyright (c) 1996-2004, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "common_hlsl_cpp_consts.h"
 #include "HDRCombineTo16Bit_ps20.inc"
 #include "HDRCombineTo16Bit_ps20b.inc"
 #include "HDRCombineTo16Bit_vs20.inc"
-#include "convar.h"
-
+import std;
 
 BEGIN_VS_SHADER_FLAGS( HDRCombineTo16Bit, "Help for HDRCombineTo16Bit", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( SOURCEMRTRENDERTARGET, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 	END_SHADER_PARAMS
 

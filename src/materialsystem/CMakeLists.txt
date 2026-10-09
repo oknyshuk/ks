@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 oknyshuk
+
 add_library(materialsystem OBJECT
     CColorCorrection.cpp
     cmaterial.cpp
@@ -24,5 +27,5 @@ add_library(materialsystem OBJECT
     cmatrendercontext.cpp
     cmatqueuedrendercontext.cpp
 )
-target_link_libraries(materialsystem PRIVATE ks_common tier0 memoverride public_common bitmap tier1 tier2 tier3 interfaces vstdlib mathlib shaderlib vtf videocfg)
+target_link_libraries(materialsystem PRIVATE ks_common ks_desktop tier0 memoverride public_common bitmap tier1 tier2 tier3 interfaces vstdlib mathlib shaderlib vtf videocfg)
 target_compile_definitions(materialsystem PRIVATE DEFINE_MATERIALSYSTEM_INTERFACE=1 MATERIALSYSTEM_EXPORTS=1)

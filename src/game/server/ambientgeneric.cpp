@@ -1,13 +1,40 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-//			ambient_generic: a sound emitter used for one-shot and looping sounds.
-//
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+// Purpose: ambient_generic: a sound emitter used for one-shot and looping sounds.
+
+import std;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
 #include "reflect_datamap.h"
-#include "reflect_annotations.h"
 #include "ambientgeneric.h"
 #include "engine/IEngineSound.h"
 
@@ -16,17 +43,12 @@
 // Input  : radius - 
 //			playEverywhere - (disable attenuation)
 //-----------------------------------------------------------------------------
-#define REFERENCE_dB			60.0
+constexpr auto REFERENCE_dB = 60.0;
 
-#define AMBIENT_GENERIC_UPDATE_RATE	5	// update at 5hz
-#define AMBIENT_GENERIC_THINK_DELAY ( 1.0f / float( AMBIENT_GENERIC_UPDATE_RATE ) )
+constexpr auto AMBIENT_GENERIC_UPDATE_RATE = 5; // update at 5hz
+inline constexpr auto AMBIENT_GENERIC_THINK_DELAY = ( 1.0f / float( AMBIENT_GENERIC_UPDATE_RATE ) );
 
-#ifdef HL1_DLL
-ConVar hl1_ref_db_distance( "hl1_ref_db_distance", "18.0" );
-#define	REFERENCE_dB_DISTANCE	hl1_ref_db_distance.GetFloat()
-#else
-#define REFERENCE_dB_DISTANCE	36.0
-#endif//HL1_DLL
+constexpr auto REFERENCE_dB_DISTANCE = 36.0;
 
 static soundlevel_t ComputeSoundlevel( float radius, bool playEverywhere )
 {
@@ -36,7 +58,7 @@ static soundlevel_t ComputeSoundlevel( float radius, bool playEverywhere )
 	{
 		// attenuation is set to a distance, compute falloff
 
-		float dB_loss = 20 * log10( radius / REFERENCE_dB_DISTANCE );
+		float dB_loss = 20 * std::log10( radius / REFERENCE_dB_DISTANCE );
 
 		soundlevel = (soundlevel_t)(int)(40 + dB_loss); // sound at 40dB at reference distance
 	}
@@ -47,7 +69,7 @@ static soundlevel_t ComputeSoundlevel( float radius, bool playEverywhere )
 
 // ==================== GENERIC AMBIENT SOUND ======================================
 
-#define CDPVPRESETMAX 27
+constexpr auto CDPVPRESETMAX = 27;
 
 // presets for runtime pitch and vol modulation of ambient sounds
 
@@ -96,7 +118,7 @@ void CAmbientGeneric::Spawn( void )
 	ComputeMaxAudibleDistance( );
 
 	char *szSoundFile = (char *)STRING( m_iszSound );
-	if ( !m_iszSound || strlen( szSoundFile ) < 1 )
+	if ( !m_iszSound || std::strlen( szSoundFile ) < 1 )
 	{
 		Warning( "Empty %s (%s) at %.2f, %.2f, %.2f\n", GetClassname(), GetDebugName(), GetAbsOrigin().x, GetAbsOrigin().y, GetAbsOrigin().z );
 		UTIL_Remove(this);
@@ -137,7 +159,7 @@ void CAmbientGeneric::Spawn( void )
 //-----------------------------------------------------------------------------
 // Computes the max audible radius for a given sound level
 //-----------------------------------------------------------------------------
-#define MIN_AUDIBLE_VOLUME 1.01e-3
+constexpr auto MIN_AUDIBLE_VOLUME = 1.01e-3;
 
 void CAmbientGeneric::ComputeMaxAudibleDistance( )
 {
@@ -268,7 +290,7 @@ void CAmbientGeneric::InputFadeOut( inputdata_t &inputdata )
 void CAmbientGeneric::Precache( void )
 {
 	char *szSoundFile = (char *)STRING( m_iszSound );
-	if ( m_iszSound != NULL_STRING && strlen( szSoundFile ) > 1 )
+	if ( m_iszSound != NULL_STRING && std::strlen( szSoundFile ) > 1 )
 	{
 		if (*szSoundFile != '!')
 		{
@@ -365,7 +387,7 @@ void CAmbientGeneric::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 	if ( FBitSet( m_spawnflags, SF_AMBIENT_SOUND_EVERYWHERE ) )
 		return;
 
-	Assert( pInfo->m_pClientEnt );
+	contract_assert( pInfo->m_pClientEnt );
 	CBaseEntity *pClient = (CBaseEntity*)(pInfo->m_pClientEnt->GetUnknown());
 	if ( !pClient )
 		return;
@@ -846,12 +868,12 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 	// preset
 	if (FStrEq(szKeyName, "preset"))
 	{
-		m_dpv.preset = atoi(szValue);
+		m_dpv.preset = std::atoi(szValue);
 	}
 	// pitchrun
 	else if (FStrEq(szKeyName, "pitch"))
 	{
-		m_dpv.pitchrun = atoi(szValue);
+		m_dpv.pitchrun = std::atoi(szValue);
 
 		if (m_dpv.pitchrun > 255) m_dpv.pitchrun = 255;
 		if (m_dpv.pitchrun < 0) m_dpv.pitchrun = 0;
@@ -859,7 +881,7 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 	// pitchstart
 	else if (FStrEq(szKeyName, "pitchstart"))
 	{
-		m_dpv.pitchstart = atoi(szValue);
+		m_dpv.pitchstart = std::atoi(szValue);
 
 		if (m_dpv.pitchstart > 255) m_dpv.pitchstart = 255;
 		if (m_dpv.pitchstart < 0) m_dpv.pitchstart = 0;
@@ -867,7 +889,7 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 	// spinup
 	else if (FStrEq(szKeyName, "spinup"))
 	{
-		m_dpv.spinup = atoi(szValue);
+		m_dpv.spinup = std::atoi(szValue);
 
 		if (m_dpv.spinup > 100) m_dpv.spinup = 100;
 		if (m_dpv.spinup < 0) m_dpv.spinup = 0;
@@ -879,7 +901,7 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 	// spindown
 	else if (FStrEq(szKeyName, "spindown"))
 	{
-		m_dpv.spindown = atoi(szValue);
+		m_dpv.spindown = std::atoi(szValue);
 
 		if (m_dpv.spindown > 100) m_dpv.spindown = 100;
 		if (m_dpv.spindown < 0) m_dpv.spindown = 0;
@@ -891,7 +913,7 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 	// volstart
 	else if (FStrEq(szKeyName, "volstart"))
 	{
-		m_dpv.volstart = atoi(szValue);
+		m_dpv.volstart = std::atoi(szValue);
 
 		if (m_dpv.volstart > 10) m_dpv.volstart = 10;
 		if (m_dpv.volstart < 0) m_dpv.volstart = 0;
@@ -901,7 +923,7 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 	// legacy fadein
 	else if (FStrEq(szKeyName, "fadein"))
 	{
-		m_dpv.fadein = atoi(szValue);
+		m_dpv.fadein = std::atoi(szValue);
 
 		if (m_dpv.fadein > 100) m_dpv.fadein = 100;
 		if (m_dpv.fadein < 0) m_dpv.fadein = 0;
@@ -913,7 +935,7 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 	// legacy fadeout
 	else if (FStrEq(szKeyName, "fadeout"))
 	{
-		m_dpv.fadeout = atoi(szValue);
+		m_dpv.fadeout = std::atoi(szValue);
 
 		if (m_dpv.fadeout > 100) m_dpv.fadeout = 100;
 		if (m_dpv.fadeout < 0) m_dpv.fadeout = 0;
@@ -925,7 +947,7 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 	// fadeinsecs
 	else if (FStrEq(szKeyName, "fadeinsecs"))
 	{
-		m_dpv.fadein = atoi(szValue);
+		m_dpv.fadein = std::atoi(szValue);
 
 		if (m_dpv.fadein > 100) m_dpv.fadein = 100;
 		if (m_dpv.fadein < 0) m_dpv.fadein = 0;
@@ -937,7 +959,7 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 	// fadeoutsecs
 	else if (FStrEq(szKeyName, "fadeoutsecs"))
 	{
-		m_dpv.fadeout = atoi(szValue);
+		m_dpv.fadeout = std::atoi(szValue);
 
 		if (m_dpv.fadeout > 100) m_dpv.fadeout = 100;
 		if (m_dpv.fadeout < 0) m_dpv.fadeout = 0;
@@ -949,13 +971,13 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 	// lfotype
 	else if (FStrEq(szKeyName, "lfotype"))
 	{
-		m_dpv.lfotype = atoi(szValue);
+		m_dpv.lfotype = std::atoi(szValue);
 		if (m_dpv.lfotype > 4) m_dpv.lfotype = LFO_TRIANGLE;
 	}
 	// lforate
 	else if (FStrEq(szKeyName, "lforate"))
 	{
-		m_dpv.lforate = atoi(szValue);
+		m_dpv.lforate = std::atoi(szValue);
 
 		if (m_dpv.lforate > 1000) m_dpv.lforate = 1000;
 		if (m_dpv.lforate < 0) m_dpv.lforate = 0;
@@ -965,7 +987,7 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 	// lfomodpitch
 	else if (FStrEq(szKeyName, "lfomodpitch"))
 	{
-		m_dpv.lfomodpitch = atoi(szValue);
+		m_dpv.lfomodpitch = std::atoi(szValue);
 		if (m_dpv.lfomodpitch > 100) m_dpv.lfomodpitch = 100;
 		if (m_dpv.lfomodpitch < 0) m_dpv.lfomodpitch = 0;
 	}
@@ -973,14 +995,14 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 	// lfomodvol
 	else if (FStrEq(szKeyName, "lfomodvol"))
 	{
-		m_dpv.lfomodvol = atoi(szValue);
+		m_dpv.lfomodvol = std::atoi(szValue);
 		if (m_dpv.lfomodvol > 100) m_dpv.lfomodvol = 100;
 		if (m_dpv.lfomodvol < 0) m_dpv.lfomodvol = 0;
 	}
 	// cspinup
 	else if (FStrEq(szKeyName, "cspinup"))
 	{
-		m_dpv.cspinup = atoi(szValue);
+		m_dpv.cspinup = std::atoi(szValue);
 		if (m_dpv.cspinup > 100) m_dpv.cspinup = 100;
 		if (m_dpv.cspinup < 0) m_dpv.cspinup = 0;
 	}

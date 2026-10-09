@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ====
-//
-// Purpose:
-//
-//=============================================================================
-
-#ifndef LOGIC_PLAYERPROXY_H
-#define LOGIC_PLAYERPROXY_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Used to relay outputs/inputs from the player to the world and vice versa
@@ -46,6 +41,3 @@ public:
 
 	EHANDLE m_hPlayer;
 };
-
-
-#endif	// LOGIC_PLAYERPROXY_H

@@ -1,12 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "common_hlsl_cpp_consts.h"
-#include "convar.h"
+import std;
 
 #include "Downsample_nohdr_ps20.inc"
 #include "Downsample_nohdr_ps20b.inc"
@@ -18,7 +15,7 @@ static ConVar r_bloomtintexponent( "r_bloomtintexponent", "2.2", FCVAR_MATERIAL_
 
 BEGIN_VS_SHADER_FLAGS( Downsample_nohdr, "Help for Downsample_nohdr", SHADER_NOT_EDITABLE )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( BLOOMTYPE, SHADER_PARAM_TYPE_INTEGER, "0", "" )
 		SHADER_PARAM( BLOOMEXP, SHADER_PARAM_TYPE_FLOAT, "2.5", "" )
 		SHADER_PARAM( BLOOMSATURATION, SHADER_PARAM_TYPE_FLOAT, "1.0", "" )

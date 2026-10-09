@@ -1,13 +1,13 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:	See memorylog.h
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+// Purpose: See memorylog.h
+
+import std;
+import ks.tier1;
+#include "shareddefs.h"
+#include "util.h"
 #include "memorylog.h"
-
-
 
 // Memory log auto game system instantiation
 CMemoryLog g_MemoryLog;
@@ -27,4 +27,3 @@ void CMemoryLog::LevelInitPostEntity( void )
 {
 //#include "entitylist.h"
 }
-

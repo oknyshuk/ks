@@ -1,23 +1,15 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#ifndef ENGINECALLBACK_H
-#define ENGINECALLBACK_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef EIFACE_H
 #include "eiface.h"
-#endif
 
 #define random random_valve // stdlib.h defined random()..., and so does vstdlib/random.h
 
 #include "tier3/tier3.h"
 #include "tier2/tier2_logging.h"
 #include "proto_types.h"
-#include <string>
+import std;
 
 class IFileSystem;				// include FileSystem.h
 class IUniformRandomStream;		// include vstdlib/random.h
@@ -35,8 +27,6 @@ class IMDLCache;
 class IServerEngineTools;
 class IScriptManager;
 class IServerFoundry;
-class CSteamAPIContext;
-class CSteamGameServerAPIContext;
 
 extern IVEngineServer			*engine;
 extern IVoiceServer				*g_pVoiceServer;
@@ -52,9 +42,6 @@ extern IVDebugOverlay			*debugoverlay;
 extern IServerEngineTools		*serverenginetools;
 extern IServerFoundry			*serverfoundry;
 extern IScriptManager			*scriptmanager;
-
-extern CSteamAPIContext			*steamapicontext; // available on game clients
-extern CSteamGameServerAPIContext *steamgameserverapicontext; //available on game servers
 
 
 
@@ -130,23 +117,23 @@ void MessageWriteBitVecIntegral( const Vector& vecValue );
 #define WRITE_CHAR		(MessageWriteChar)
 #define WRITE_SHORT		(MessageWriteShort)
 #define WRITE_WORD		(MessageWriteWord)
-#define WRITE_LONG		(MessageWriteLong)
-#define WRITE_FLOAT		(MessageWriteFloat)
-#define WRITE_ANGLE		(MessageWriteAngle)
-#define WRITE_COORD		(MessageWriteCoord)
-#define WRITE_VEC3COORD	(MessageWriteVec3Coord)
-#define WRITE_VEC3NORMAL (MessageWriteVec3Normal)
-#define WRITE_ANGLES	(MessageWriteAngles)
-#define WRITE_STRING	(MessageWriteString)
-#define WRITE_ENTITY	(MessageWriteEntity)
-#define WRITE_EHANDLE	(MessageWriteEHandle)
+inline constexpr auto WRITE_LONG = (MessageWriteLong);
+inline constexpr auto WRITE_FLOAT = (MessageWriteFloat);
+inline constexpr auto WRITE_ANGLE = (MessageWriteAngle);
+inline constexpr auto WRITE_COORD = (MessageWriteCoord);
+inline constexpr auto WRITE_VEC3COORD = (MessageWriteVec3Coord);
+inline constexpr auto WRITE_VEC3NORMAL = (MessageWriteVec3Normal);
+inline constexpr auto WRITE_ANGLES = (MessageWriteAngles);
+inline constexpr auto WRITE_STRING = (MessageWriteString);
+inline constexpr auto WRITE_ENTITY = (MessageWriteEntity);
+inline constexpr auto WRITE_EHANDLE = (MessageWriteEHandle);
 
 // Bitwise
-#define WRITE_BOOL		(MessageWriteBool)
-#define WRITE_UBITLONG	(MessageWriteUBitLong)
-#define WRITE_SBITLONG	(MessageWriteSBitLong)
-#define WRITE_BITS		(MessageWriteBits)
-#define WRITE_VEC3_INTEGRAL  (MessageWriteBitVecIntegral)
+inline constexpr auto WRITE_BOOL = (MessageWriteBool);
+inline constexpr auto WRITE_UBITLONG = (MessageWriteUBitLong);
+inline constexpr auto WRITE_SBITLONG = (MessageWriteSBitLong);
+inline constexpr auto WRITE_BITS = (MessageWriteBits);
+inline constexpr auto WRITE_VEC3_INTEGRAL = (MessageWriteBitVecIntegral);
 
 //-----------------------------------------------------------------------------
 // Send a user message
@@ -160,5 +147,3 @@ void SendUserMessage( IRecipientFilter &filter, int message, const T &msg )
 	ks::proto::write( msg, ( std::byte * ) data.data() );
 	engine->SendUserMessage( filter, message, data.data(), int( data.size() ) );
 }
-
-#endif		//ENGINECALLBACK_H

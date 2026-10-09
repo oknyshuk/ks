@@ -1,10 +1,7 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#include "vstdlib/vcover.h"
-
+import std;
+import ks.vstdlib;
 
 CVCoverage g_VCoverage;

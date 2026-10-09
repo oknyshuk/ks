@@ -1,7 +1,19 @@
 //--------------------------------------------------------------------------------------------------------
 // Copyright (c) 2007 Turtle Rock Studios, Inc.
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_predmap.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"

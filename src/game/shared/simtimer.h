@@ -1,15 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SIMTIMER_H
-#define SIMTIMER_H
+#ifdef CLIENT_DLL
+#include "cdll_client_int.h"
+#else
+#include "edict.h"
+extern CGlobalVars *gpGlobals;
+#endif
+import std;
+import ks.vstdlib;
+#include "sharedInterface.h"
 
-
-#define ST_EPS 0.001
+inline constexpr auto ST_EPS = 0.001;
 
 //-----------------------------------------------------------------------------
 
@@ -337,5 +340,3 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-
-#endif // SIMTIMER_H

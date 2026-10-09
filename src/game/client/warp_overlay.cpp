@@ -1,10 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Screen warp overlay
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "view.h"
 #include "c_sun.h"
 #include "particles_simple.h"
@@ -65,25 +72,25 @@ void CWarpOverlay::Draw( bool bCacheFullSceneState )
 
 		vPt = vBasePt - vRight + vUp;
 		builder.Position3fv( vPt.Base() );
-		builder.Color4f( VectorExpand(vColor), 1 );
+		builder.Color4f( vColor.x, vColor.y, vColor.z, 1 );
 		builder.TexCoord2f( 0, 0, 1 );
 		builder.AdvanceVertex();
 
 		vPt = vBasePt + vRight + vUp;
 		builder.Position3fv( vPt.Base() );
-		builder.Color4f( VectorExpand(vColor), 1 );
+		builder.Color4f( vColor.x, vColor.y, vColor.z, 1 );
 		builder.TexCoord2f( 0, 1, 1 );
 		builder.AdvanceVertex();
 
 		vPt = vBasePt + vRight - vUp;
 		builder.Position3fv( vPt.Base() );
-		builder.Color4f( VectorExpand(vColor), 1 );
+		builder.Color4f( vColor.x, vColor.y, vColor.z, 1 );
 		builder.TexCoord2f( 0, 1, 0 );
 		builder.AdvanceVertex();
 
 		vPt = vBasePt - vRight - vUp;
 		builder.Position3fv( vPt.Base() );
-		builder.Color4f( VectorExpand(vColor), 1 );
+		builder.Color4f( vColor.x, vColor.y, vColor.z, 1 );
 		builder.TexCoord2f( 0, 0, 0 );
 		builder.AdvanceVertex();
 		

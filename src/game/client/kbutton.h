@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#if !defined( KBUTTON_H )
-#define KBUTTON_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "shareddefs.h"
 
@@ -24,5 +18,3 @@ struct kbutton_t
 
 	Split_t		m_PerUser[ MAX_SPLITSCREEN_PLAYERS ];
 };
-
-#endif // KBUTTON_H

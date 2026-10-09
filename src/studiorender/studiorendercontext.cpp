@@ -1,31 +1,21 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include <stdlib.h>
-#include "tier0/platform.h"
+import std;
+import ks.vstdlib;
 #include "studiorendercontext.h"
 #include "optimize.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/imorph.h"
 #include "materialsystem/ivballoctracker.h"
-#include "vstdlib/random.h"
-#include "tier0/tslist.h"
-#include "tier0/platform.h"
-#include "tier1/refcount.h"
-#include "tier1/callqueue.h"
 #include "cmodel.h"
-#include "tier0/vprof.h"
 
-#include "tier0/memalloc.h"
 // garymcthack - this should go elsewhere
-#define MAX_NUM_BONE_INDICES 4
+constexpr auto MAX_NUM_BONE_INDICES = 4;
 
 // number of topology_indices attributes before one-ring starts
-#define NUM_TOPOLOGY_INDICES_ATTRIBUTES 14 
+constexpr auto NUM_TOPOLOGY_INDICES_ATTRIBUTES = 14;
 
 
 //-----------------------------------------------------------------------------
@@ -49,10 +39,10 @@ void StudioChangeCallback( IConVar *var, const char *pOldValue, float flOldValue
 //-----------------------------------------------------------------------------
 void BuildTexturePath( const char *pTexturePath, const char *pTextureName, char *pDest, int destSizeInBytes )
 {
-	Assert( pTexturePath != nullptr );
-	Assert( pTextureName != nullptr );
-	Assert( pDest != nullptr );
-	Assert( destSizeInBytes > 0 );
+	contract_assert( pTexturePath != nullptr );
+	contract_assert( pTextureName != nullptr );
+	contract_assert( pDest != nullptr );
+	contract_assert( destSizeInBytes > 0 );
 	if ( pTexturePath == nullptr ||
 		 pTextureName == nullptr ||
 		 pDest == nullptr ||
@@ -118,7 +108,7 @@ public:
 		m_pRenderContext = nullptr;
 	}
 
-	void *Alloc( size_t bytes )
+	void *Alloc( std::size_t bytes )
 	{
 		void *p = m_pRenderContext->LockRenderData( bytes );
 		m_pRenderContext->UnlockRenderData( p ); // Unlock is fine, always queued mode
@@ -144,8 +134,7 @@ static float s_pZeroFlexWeights[MAXSTUDIOFLEXDESC];
 //-----------------------------------------------------------------------------
 IStudioDataCache *g_pStudioDataCache = nullptr;
 static CStudioRenderContext s_StudioRenderContext;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CStudioRenderContext, IStudioRender, 
-						STUDIO_RENDER_INTERFACE_VERSION, s_StudioRenderContext );
+static InterfaceReg s_Reg_CStudioRenderContext_IStudioRender( []() -> void * { return static_cast<IStudioRender *>( &s_StudioRenderContext ); }, STUDIO_RENDER_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -307,7 +296,7 @@ static bool UsesMouthShader( IMaterial *pMaterial )
 	static unsigned int clientShaderCache = 0;
 	IMaterialVar *clientShaderVar = pMaterial->FindVarFast( "$clientShader", &clientShaderCache );
 	if ( clientShaderVar )
-		return ( Q_stricmp( clientShaderVar->GetStringValue(), "MouthShader" ) == 0 );
+		return ( V_stricmp( clientShaderVar->GetStringValue(), "MouthShader" ) == 0 );
 	return false;
 }
 
@@ -342,7 +331,7 @@ void CStudioRenderContext::LoadMaterials( studiohdr_t *phdr,
 	OptimizedModel::FileHeader_t *pVtxHeader, studioloddata_t &lodData, int lodID )
 {
 	typedef IMaterial *IMaterialPtr;
-	Assert( phdr );
+	contract_assert( phdr );
 
 	lodData.numMaterials = phdr->numtextures;
 	if ( lodData.numMaterials == 0 )
@@ -352,10 +341,10 @@ void CStudioRenderContext::LoadMaterials( studiohdr_t *phdr,
 	}
 
 	lodData.ppMaterials = new IMaterialPtr[lodData.numMaterials];
-	Assert( lodData.ppMaterials );
+	contract_assert( lodData.ppMaterials );
 
 	lodData.pMaterialFlags = new int[lodData.numMaterials];
-	Assert( lodData.pMaterialFlags );
+	contract_assert( lodData.pMaterialFlags );
 
 	int i, j;
 
@@ -373,7 +362,7 @@ void CStudioRenderContext::LoadMaterials( studiohdr_t *phdr,
 		bool		bNeedRefCount = true;
 
 		const char *pszTextureName = GetTextureName( phdr, pVtxHeader, lodID, i );
-		Assert( pszTextureName );
+		contract_assert( pszTextureName );
 
 		// Combined models can have combined textures, their names start with '!'
 		if ( ( phdr->flags & STUDIOHDR_FLAGS_COMBINED ) == 0 && pszTextureName[ 0 ] != '!' )
@@ -402,14 +391,14 @@ void CStudioRenderContext::LoadMaterials( studiohdr_t *phdr,
 				// hack - if it isn't found, go through the motions of looking for it again
 				// so that the materialsystem will give an error.
 				char szPrefix[256];
-				Q_strncpy( szPrefix, phdr->pszName(), sizeof( szPrefix ) );
-				Q_strncat( szPrefix, " : ", sizeof( szPrefix ), COPY_ALL_CHARACTERS );
+				V_strncpy( szPrefix, phdr->pszName(), sizeof( szPrefix ) );
+				V_strncat( szPrefix, " : ", sizeof( szPrefix ), COPY_ALL_CHARACTERS );
 				for ( j = 0; j < phdr->numcdtextures; j++ )
 				{
-					Q_strncpy( szPath, phdr->pCdtexture( j ), sizeof( szPath ) );
+					V_strncpy( szPath, phdr->pCdtexture( j ), sizeof( szPath ) );
 					const char *textureName = GetTextureName( phdr, pVtxHeader, lodID, i );
-					Q_strncat( szPath, textureName, sizeof( szPath ), COPY_ALL_CHARACTERS );
-					Q_FixSlashes( szPath, CORRECT_PATH_SEPARATOR );
+					V_strncat( szPath, textureName, sizeof( szPath ), COPY_ALL_CHARACTERS );
+					V_FixSlashes( szPath, CORRECT_PATH_SEPARATOR );
 					g_pMaterialSystem->FindMaterial( szPath, ( phdr->flags & STUDIOHDR_FLAGS_STATIC_PROP ) ? TEXTURE_GROUP_STATIC_PROP : TEXTURE_GROUP_MODEL, true, szPrefix );
 				}
 			}
@@ -483,7 +472,7 @@ int CStudioRenderContext::CountDeltaFlexedStripGroups( mstudiomodel_t *pModel, O
 	int nFlexedStripGroupCount = 0;
 	for ( int k = 0; k < pModel->nummeshes; ++k )
 	{
-		Assert( pModel->nummeshes == pVtxLOD->numMeshes );
+		contract_assert( pModel->nummeshes == pVtxLOD->numMeshes );
 		OptimizedModel::MeshHeader_t* pVtxMesh = pVtxLOD->pMesh(k);
 		for (int i = 0; i < pVtxMesh->numStripGroups; ++i )
 		{
@@ -502,12 +491,13 @@ int CStudioRenderContext::CountDeltaFlexedStripGroups( mstudiomodel_t *pModel, O
 //-----------------------------------------------------------------------------
 int CStudioRenderContext::CountFlexedVertices( mstudiomesh_t* pMesh, OptimizedModel::StripGroupHeader_t* pStripGroup )
 {
+	ks::ScratchArena<> scratch;
 	if ( !pMesh->numflexes )
 		return 0;
 
 	// an inverse mapping from mesh index to strip group index
-	unsigned short *pMeshIndexToGroupIndex = (unsigned short*)stackalloc( pMesh->pModel()->numvertices * sizeof(unsigned short) );
-	memset( pMeshIndexToGroupIndex, 0xFF, pMesh->pModel()->numvertices * sizeof(unsigned short) );
+	unsigned short *pMeshIndexToGroupIndex = (unsigned short*)scratch.AllocBytes( pMesh->pModel()->numvertices * sizeof(unsigned short) );
+	std::memset( pMeshIndexToGroupIndex, 0xFF, pMesh->pModel()->numvertices * sizeof(unsigned short) );
 	for ( int i = 0; i < pStripGroup->numVerts; ++i )
 	{
 		int nMeshVert = pStripGroup->pVertex(i)->origMeshVertID;
@@ -550,10 +540,11 @@ static int SortVertCount( const void *arg1, const void *arg2 )
 	return s_pVertexCount[*( const int* )arg2] - s_pVertexCount[*( const int* )arg1];
 }
 
-#define MIN_HWMORPH_FLEX_COUNT 200
+constexpr auto MIN_HWMORPH_FLEX_COUNT = 200;
 
 void CStudioRenderContext::DetermineHWMorphing( mstudiomodel_t *pModel, OptimizedModel::ModelLODHeader_t *pVtxLOD )
 {
+	ks::ScratchArena<> scratch;
 	if ( !g_pMaterialSystemHardwareConfig->HasFastVertexTextures() )
 		return;
 
@@ -584,11 +575,11 @@ void CStudioRenderContext::DetermineHWMorphing( mstudiomodel_t *pModel, Optimize
 
 	// FIXME: We should do this at studiomdl time?
 	// Certainly counting the # of flexed vertices can be done at studiomdl time.
-	int *pVertexCount = (int*)stackalloc( nFlexedStripGroup * sizeof(int) );
+	int *pVertexCount = scratch.Alloc<int>( nFlexedStripGroup );
 	int nCount = 0;
 	for ( int k = 0; k < pModel->nummeshes; ++k )
 	{
-		Assert( pModel->nummeshes == pVtxLOD->numMeshes );
+		contract_assert( pModel->nummeshes == pVtxLOD->numMeshes );
 		mstudiomesh_t* pMesh = pModel->pMesh(k);
 		OptimizedModel::MeshHeader_t* pVtxMesh = pVtxLOD->pMesh(k);
 		for (int i = 0; i < pVtxMesh->numStripGroups; ++i )
@@ -601,16 +592,16 @@ void CStudioRenderContext::DetermineHWMorphing( mstudiomodel_t *pModel, Optimize
 		}
 	}
 
-	int *pSortedVertexIndices = (int*)stackalloc( nFlexedStripGroup * sizeof(int) );
+	int *pSortedVertexIndices = scratch.Alloc<int>( nFlexedStripGroup );
 	for ( int i = 0; i < nFlexedStripGroup; ++i )
 	{
 		pSortedVertexIndices[i] = i;
 	}
 	s_pVertexCount = pVertexCount;
-	qsort( pSortedVertexIndices, nCount, sizeof(int), SortVertCount );
+	std::qsort( pSortedVertexIndices, nCount, sizeof(int), SortVertCount );
 
-	bool *pSuppressHWMorph = (bool*)stackalloc( nFlexedStripGroup * sizeof(bool) ); 
-	memset(	pSuppressHWMorph, 1, nFlexedStripGroup * sizeof(bool) );
+	bool *pSuppressHWMorph = scratch.Alloc<bool>( nFlexedStripGroup ); 
+	std::memset(	pSuppressHWMorph, 1, nFlexedStripGroup * sizeof(bool) );
 	for ( int i = 0; i < nMaxHWMorphBatchCount; ++i )
 	{
 		pSuppressHWMorph[pSortedVertexIndices[i]] = false;
@@ -620,7 +611,7 @@ void CStudioRenderContext::DetermineHWMorphing( mstudiomodel_t *pModel, Optimize
 	int nIndex = 0;
 	for ( int k = 0; k < pModel->nummeshes; ++k )
 	{
-		Assert( pModel->nummeshes == pVtxLOD->numMeshes );
+		contract_assert( pModel->nummeshes == pVtxLOD->numMeshes );
 		OptimizedModel::MeshHeader_t* pVtxMesh = pVtxLOD->pMesh(k);
 		for (int i = 0; i < pVtxMesh->numStripGroups; ++i )
 		{
@@ -829,7 +820,7 @@ template <VertexCompressionType_t T> bool CStudioRenderContext::R_AddVertexToMes
 	}
 
 	// Set all the weights at once (the meshbuilder performs additional, post-compression, normalization):
-	Assert( pVertex->numBones <= 3 );
+	contract_assert( pVertex->numBones <= 3 );
 
 	if ( pVertex->numBones > 0 )
 	{
@@ -850,7 +841,7 @@ inline const mstudio_meshvertexdata_t * GetFatVertexData( mstudiomesh_t * pMesh,
 		return nullptr;
 	}
 	const mstudio_meshvertexdata_t *pVertData = pMesh->GetVertexData( pStudioHdr );
-	Assert( pVertData );
+	contract_assert( pVertData );
 	if ( !pVertData )
 	{
 		static unsigned int warnCount = 0;
@@ -893,7 +884,7 @@ void CStudioRenderContext::R_StudioBuildMeshGroup(	const char *pModelName, bool 
 	if ( hwSkin )
 	{
 		const mstudio_meshvertexdata_t *vertData = GetFatVertexData( pMesh, pStudioHdr );
-		Assert( vertData );
+		contract_assert( vertData );
 
 
 		for ( i = 0; i < pStripGroup->numVerts; ++i )
@@ -934,9 +925,8 @@ void CStudioRenderContext::R_StudioBuildMeshGroup(	const char *pModelName, bool 
 
 	{
 		// Copy over the strip indices. We need access to the indices for decals
-		MEM_ALLOC_CREDIT_( "Models:Index data" );
 		pMeshGroup->m_pIndices = new unsigned short[ pStripGroup->numIndices ];
-		memcpy( pMeshGroup->m_pIndices, pStripGroup->pIndex(0), pStripGroup->numIndices * sizeof(unsigned short) );
+		std::memcpy( pMeshGroup->m_pIndices, pStripGroup->pIndex(0), pStripGroup->numIndices * sizeof(unsigned short) );
 
 		// Also copy topology indices, if any
 		pMeshGroup->m_pTopologyIndices = nullptr;
@@ -971,6 +961,7 @@ void CStudioRenderContext::R_StudioBuildMorph( studiohdr_t *pStudioHdr,
 	studiomeshgroup_t* pMeshGroup, mstudiomesh_t* pMesh, 
 	OptimizedModel::StripGroupHeader_t *pStripGroup )
 {
+	ks::ScratchArena<> scratch;
 	if ( !g_pMaterialSystemHardwareConfig->HasFastVertexTextures() || 
 		( ( pMeshGroup->m_Flags & MESHGROUP_IS_DELTA_FLEXED ) == 0 ) ||
 		( ( pStripGroup->flags & OptimizedModel::STRIPGROUP_SUPPRESS_HW_MORPH ) != 0 ) )
@@ -980,8 +971,8 @@ void CStudioRenderContext::R_StudioBuildMorph( studiohdr_t *pStudioHdr,
 	}
 
 	// Build an inverse mapping from mesh index to strip group index
-	unsigned short *pMeshIndexToGroupIndex = (unsigned short*)stackalloc( pMesh->pModel()->numvertices * sizeof(unsigned short) );
-	memset( pMeshIndexToGroupIndex, 0xFF, pMesh->pModel()->numvertices * sizeof(unsigned short) );
+	unsigned short *pMeshIndexToGroupIndex = (unsigned short*)scratch.AllocBytes( pMesh->pModel()->numvertices * sizeof(unsigned short) );
+	std::memset( pMeshIndexToGroupIndex, 0xFF, pMesh->pModel()->numvertices * sizeof(unsigned short) );
 	for ( int i = 0; i < pStripGroup->numVerts; ++i )
 	{
 		int nMeshVert = pStripGroup->pVertex(i)->origMeshVertID;
@@ -1000,7 +991,7 @@ void CStudioRenderContext::R_StudioBuildMorph( studiohdr_t *pStudioHdr,
 	}
 
 	char pTemp[256];
-	Q_snprintf( pTemp, sizeof(pTemp), "%s [%p]", pStudioHdr->name, pMeshGroup );
+	V_snprintf( pTemp, sizeof(pTemp), "%s [%p]", pStudioHdr->name, pMeshGroup );
 	pMeshGroup->m_pMorph = pRenderContext->CreateMorph( morphType, pTemp );
 
 	const float flVertAnimFixedPointScale = pStudioHdr->VertAnimFixedPointScale();
@@ -1068,7 +1059,7 @@ void CStudioRenderContext::R_StudioBuildMeshStrips( studiomeshgroup_t* pMeshGrou
 	int boneStateChangeOffset = pStripGroup->numStrips * sizeof(OptimizedModel::StripHeader_t);
 	for( i = 0; i < pStripGroup->numStrips; ++i )
 	{
-		memcpy( &pMeshGroup->m_pStripData[i], pStripGroup->pStrip(i),
+		std::memcpy( &pMeshGroup->m_pStripData[i], pStripGroup->pStrip(i),
 			sizeof( OptimizedModel::StripHeader_t ) );
 
 		// Fixup the bone state change offset, since we have it right after the strip data
@@ -1208,7 +1199,7 @@ VertexFormat_t CStudioRenderContext::CalculateVertexFormat( const studiohdr_t *p
 	}*/
 
 	// materials on models should never have tangent space as they use userdata
-	Assert( !(newVertexFormat & VERTEX_TANGENT_SPACE) );
+	contract_assert( !(newVertexFormat & VERTEX_TANGENT_SPACE) );
 
 	// Don't compress the mesh unless it is HW-skinned (we only want to compress static
 	// VBs, not dynamic ones - that would slow down the MeshBuilder in dynamic use cases).
@@ -1259,7 +1250,7 @@ bool CStudioRenderContext::MeshNeedsTangentSpace( studiohdr_t *pStudioHdr, studi
 	for ( int i=0; i<pStudioHdr->numskinfamilies; i++)
 	{
 		IMaterial* pMaterial = pStudioLodData->ppMaterials[pSkinref[pMesh->material]];
-		Assert( pMaterial );
+		contract_assert( pMaterial );
 		if( !pMaterial )
 		{
 			continue;
@@ -1327,7 +1318,6 @@ void CStudioRenderContext::R_StudioCreateSingleMesh( studiohdr_t *pStudioHdr, st
 
 		{
 			// Build the mapping from strip group vertex idx to actual mesh idx
-			MEM_ALLOC_CREDIT_( "Models:Index data" );
 			pMeshGroup->m_pGroupIndexToMeshIndex = new unsigned short[pStripGroup->numVerts + PREFETCH_VERT_COUNT];
 			pMeshGroup->m_NumVertices = pStripGroup->numVerts;
 		}
@@ -1358,7 +1348,7 @@ void CStudioRenderContext::R_StudioCreateStaticMeshes( studiohdr_t *pStudioHdr,
 {
 	int i, j, k;
 
-	Assert( pStudioHdr && pVtxHdr && pStudioHWData );
+	contract_assert( pStudioHdr && pVtxHdr && pStudioHWData );
 
 	pStudioHWData->m_pLODs[nLodID].m_pMeshData = new studiomeshdata_t[pStudioHWData->m_NumStudioMeshes];
 
@@ -1402,11 +1392,11 @@ void CStudioRenderContext::R_StudioCreateStaticMeshes( studiohdr_t *pStudioHdr,
 			// Iterate over all the meshes....
 			for ( k = 0; k < pModel->nummeshes; ++k )
 			{
-				Assert( pModel->nummeshes == pVtxLOD->numMeshes );
+				contract_assert( pModel->nummeshes == pVtxLOD->numMeshes );
 				mstudiomesh_t* pMesh = pModel->pMesh(k);
 				OptimizedModel::MeshHeader_t* pVtxMesh = pVtxLOD->pMesh(k);
 
-				Assert( pMesh->meshid < pStudioHWData->m_NumStudioMeshes );
+				contract_assert( pMesh->meshid < pStudioHWData->m_NumStudioMeshes );
 				R_StudioCreateSingleMesh( pStudioHdr, &pStudioHWData->m_pLODs[nLodID],
 					pMesh, pVtxMesh, pVtxHdr->maxBonesPerVert, 
 					&pStudioHWData->m_pLODs[nLodID].m_pMeshData[pMesh->meshid], pColorMeshID );
@@ -1503,7 +1493,7 @@ void CStudioRenderContext::R_StudioDestroyStaticMeshes( int numStudioMeshes, stu
 void CStudioRenderContext::BuildDecalBoneMap( studiohdr_t *pStudioHdr, int *pUsedBones, int *pBoneRemap, int *pMaxBoneCount, mstudiomesh_t* pMesh, OptimizedModel::StripGroupHeader_t* pStripGroup )
 {
 	const mstudio_meshvertexdata_t *pVertData = GetFatVertexData( pMesh, pStudioHdr );
-	Assert( pVertData );
+	contract_assert( pVertData );
 	for ( int i = 0; i < pStripGroup->numVerts; ++i )
 	{
 		int nMeshVert = pStripGroup->pVertex( i )->origMeshVertID;
@@ -1540,14 +1530,15 @@ void CStudioRenderContext::BuildDecalBoneMap( studiohdr_t *pStudioHdr, int *pUse
 //-----------------------------------------------------------------------------
 void CStudioRenderContext::ComputeHWMorphDecalBoneRemap( studiohdr_t *pStudioHdr, OptimizedModel::FileHeader_t *pVtxHdr, studiohwdata_t *pStudioHWData, int nLOD )
 {
+	ks::ScratchArena<> scratch;
 	if ( pStudioHdr->numbones == 0 )
 		return;
 
 	// Remaps sw bones to hw bones during decal rendering
 	// NOTE: Only bones affecting vertices which have hw flexes will be add to this map.
 	int nBufSize = pStudioHdr->numbones * sizeof(int);
-	int *pBoneRemap = (int*)stackalloc( nBufSize );
-	memset( pBoneRemap, 0xFF, nBufSize );
+	int *pBoneRemap = (int*)scratch.AllocBytes( nBufSize );
+	std::memset( pBoneRemap, 0xFF, nBufSize );
 	int nMaxBoneCount = 0;
 
 	// NOTE: HW bone index 0 is always the identity transform during decals.
@@ -1570,7 +1561,7 @@ void CStudioRenderContext::ComputeHWMorphDecalBoneRemap( studiohdr_t *pStudioHdr
 			// Iterate over all the meshes....
 			for ( int k = 0; k < pModel->nummeshes; ++k )
 			{
-				Assert( pModel->nummeshes == pVtxLOD->numMeshes );
+				contract_assert( pModel->nummeshes == pVtxLOD->numMeshes );
 				mstudiomesh_t* pMesh = pModel->pMesh(k);
 				OptimizedModel::MeshHeader_t* pVtxMesh = pVtxLOD->pMesh(k);
 
@@ -1596,7 +1587,7 @@ void CStudioRenderContext::ComputeHWMorphDecalBoneRemap( studiohdr_t *pStudioHdr
 		}
 
 		pStudioLOD->m_pHWMorphDecalBoneRemap = new int[ pStudioHdr->numbones ];
-		memcpy( pStudioLOD->m_pHWMorphDecalBoneRemap, pBoneRemap, nBufSize ); 
+		std::memcpy( pStudioLOD->m_pHWMorphDecalBoneRemap, pBoneRemap, nBufSize ); 
 		pStudioLOD->m_nDecalBoneCount = nMaxBoneCount;
 	}
 }
@@ -1620,9 +1611,9 @@ bool CStudioRenderContext::LoadModel( studiohdr_t *pStudioHdr, void *pVtxBuffer,
 	int	i;
 	int	j;
 
-	Assert( pStudioHdr );
-	Assert( pVtxBuffer );
-	Assert( pStudioHWData );
+	contract_assert( pStudioHdr );
+	contract_assert( pVtxBuffer );
+	contract_assert( pStudioHWData );
 
 	if ( !pStudioHdr || !pVtxBuffer || !pStudioHWData )
 		return false;
@@ -1647,11 +1638,11 @@ bool CStudioRenderContext::LoadModel( studiohdr_t *pStudioHdr, void *pVtxBuffer,
 	}
 
 	// Create static meshes
-	Assert( pVertexHdr->numLODs );
+	contract_assert( pVertexHdr->numLODs );
 	pStudioHWData->m_RootLOD = std::min<std::common_type_t<byte, int>>( pStudioHdr->rootLOD, pVertexHdr->numLODs-1 );
 	pStudioHWData->m_NumLODs = pVertexHdr->numLODs;
 	pStudioHWData->m_pLODs   = new studioloddata_t[pVertexHdr->numLODs];
-	memset( pStudioHWData->m_pLODs, 0, pVertexHdr->numLODs * sizeof( studioloddata_t ));
+	std::memset( pStudioHWData->m_pLODs, 0, pVertexHdr->numLODs * sizeof( studioloddata_t ));
 
 	// reset the runtime flags
 	pStudioHdr->flags &= ~STUDIOHDR_FLAGS_USES_ENV_CUBEMAP;
@@ -1688,7 +1679,7 @@ bool CStudioRenderContext::LoadModel( studiohdr_t *pStudioHdr, void *pVtxBuffer,
 	}
 
 #ifdef _DEBUG
-	Assert( nColorMeshID == totalNumMeshGroups );
+	contract_assert( nColorMeshID == totalNumMeshGroups );
 #endif
 
 	return true;
@@ -1799,7 +1790,7 @@ void CStudioRenderContext::SetLODSwitchValue( studiohwdata_t &hardwareData, int 
 //-----------------------------------------------------------------------------
 int CStudioRenderContext::GetMaterialList( studiohdr_t *pStudioHdr, int count, IMaterial** ppMaterials )
 {
-	Assert( pStudioHdr );
+	contract_assert( pStudioHdr );
 
 	if ( pStudioHdr->textureindex == 0 )
 		return 0;
@@ -1897,7 +1888,7 @@ int CStudioRenderContext::GetMaterialListFromBodyAndSkin( MDLHandle_t studio, in
 			{
 				mstudiomesh_t *pMesh = pModel->pMesh(k);
 				IMaterial *pMaterial = ppInputMaterials[pSkinRef[pMesh->material]];
-				Assert( pMaterial );
+				contract_assert( pMaterial );
 
 				int m;
 				for ( m=0; m<found; m++ )
@@ -1930,7 +1921,7 @@ void CStudioRenderContext::GetPerfStats( DrawModelResults_t *pResults, const Dra
 	pResults->m_ActualTriCount = pResults->m_TextureMemoryBytes = 0;
 	pResults->m_Materials.clear();
 
-	Assert( info.m_Lod >= 0 );
+	contract_assert( info.m_Lod >= 0 );
 	if ( info.m_Lod < 0 || !info.m_pHardwareData->m_pLODs )
 		return;
 
@@ -1972,12 +1963,12 @@ void CStudioRenderContext::GetPerfStats( DrawModelResults_t *pResults, const Dra
 		{
 			mstudiomesh_t *pMesh = pModel->pMesh(k);
 			IMaterial *pMaterial = ppMaterials[pSkinRef[pMesh->material]];
-			Assert( pMaterial );
+			contract_assert( pMaterial );
 			studiomeshdata_t *pMeshData = &pStudioMeshes[pMesh->meshid];
 			if( pMeshData->m_NumGroup == 0 )
 				continue;
 
-			Assert( pResults->m_NumMaterials == std::ssize( pResults->m_Materials ) );
+			contract_assert( pResults->m_NumMaterials == std::ssize( pResults->m_Materials ) );
 			pResults->m_NumMaterials++;
 			if( pResults->m_NumMaterials < MAX_DRAW_MODEL_INFO_MATERIALS )
 			{
@@ -1985,7 +1976,7 @@ void CStudioRenderContext::GetPerfStats( DrawModelResults_t *pResults, const Dra
 			}
 			else
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 			}
 			if( pSpewBuf )
 			{
@@ -2080,7 +2071,7 @@ static ConVar r_hwmorph( "r_hwmorph", "0", FCVAR_CHEAT, "", true, 0, true, 0, nu
 void CStudioRenderContext::BeginFrame( void )
 {
 	// Cache a few values here so I don't have to in software inner loops:
-	Assert( g_pMaterialSystemHardwareConfig );
+	contract_assert( g_pMaterialSystemHardwareConfig );
 	m_RC.m_Config.m_bSupportsVertexAndPixelShaders = true;
 	m_RC.m_Config.m_bSupportsOverbright = true;
 	m_RC.m_Config.m_bEnableHWMorph = r_hwmorph.GetInt() != 0;
@@ -2123,12 +2114,12 @@ void CStudioRenderContext::EndFrame( void )
 //-----------------------------------------------------------------------------
 void CStudioRenderContext::UpdateConfig( const StudioRenderConfig_t& config )
 {
-	memcpy( &m_RC.m_Config, &config, sizeof( StudioRenderConfig_t ) );
+	std::memcpy( &m_RC.m_Config, &config, sizeof( StudioRenderConfig_t ) );
 }
 
 void CStudioRenderContext::GetCurrentConfig( StudioRenderConfig_t& config )
 {
-	memcpy( &config, &m_RC.m_Config, sizeof( StudioRenderConfig_t ) );
+	std::memcpy( &config, &m_RC.m_Config, sizeof( StudioRenderConfig_t ) );
 }
 
 
@@ -2198,7 +2189,7 @@ void CStudioRenderContext::SetAmbientLightColors( const Vector *pColors )
 
 void CStudioRenderContext::SetAmbientLightColors( const Vector4D *pColors )
 {
-	memcpy( m_RC.m_LightBoxColors, pColors, 6 * sizeof(Vector4D) );
+	std::memcpy( m_RC.m_LightBoxColors, pColors, 6 * sizeof(Vector4D) );
 
 	// FIXME: Would like to get this into the render thread, but there's systemic confusion
 	// about whether to set lighting state here or in the material system
@@ -2249,6 +2240,7 @@ static ConVar r_randomflex( "r_randomflex", "0", FCVAR_CHEAT );
 //-----------------------------------------------------------------------------
 void CStudioRenderContext::GenerateRandomFlexWeights( int nWeightCount, float* pWeights, float *pDelayedWeights )
 {
+	ks::ScratchArena<> scratch;
 	int nRandomFlex = r_randomflex.GetInt();
 	if ( nRandomFlex <= 0 || !pWeights )
 		return;
@@ -2258,7 +2250,7 @@ void CStudioRenderContext::GenerateRandomFlexWeights( int nWeightCount, float* p
 		nRandomFlex = nWeightCount;
 	}
 
-	int *pIndices = (int*)stackalloc( nWeightCount * sizeof(int) );
+	int *pIndices = scratch.Alloc<int>( nWeightCount );
 	for ( int i = 0; i < nWeightCount; ++i )
 	{
 		pIndices[i] = i;
@@ -2273,7 +2265,7 @@ void CStudioRenderContext::GenerateRandomFlexWeights( int nWeightCount, float* p
 		pIndices[i] = nTemp;
 	}
 
-	memset( pWeights, 0, nWeightCount * sizeof(float) );
+	std::memset( pWeights, 0, nWeightCount * sizeof(float) );
 	for ( int i = 0; i < nRandomFlex; ++i )
 	{
 		pWeights[ pIndices[i] ] = RandomFloat( 0.0f, 1.0f );
@@ -2330,6 +2322,7 @@ int CStudioRenderContext::ComputeRenderLOD( IMatRenderContext *pRenderContext,
 //-----------------------------------------------------------------------------
 void CStudioRenderContext::InvokeBindProxies( IMatRenderContext *pRenderContext, ICallQueue *pCallQueue, const DrawModelInfo_t &info )
 {
+	ks::ScratchArena<> scratch;
 	bool bSelectiveOverride = ( m_RC.m_nForcedMaterialType == OVERRIDE_SELECTIVE );
 
 	if ( m_RC.m_pForcedMaterial[ 0 ] && !bSelectiveOverride )
@@ -2351,8 +2344,8 @@ void CStudioRenderContext::InvokeBindProxies( IMatRenderContext *pRenderContext,
 
 	// This is used to ensure proxies are only called once
 	int nBufSize = info.m_pStudioHdr->numtextures * sizeof(bool);
-	bool *pProxyCalled = (bool*)stackalloc( nBufSize );
-	memset( pProxyCalled, 0, nBufSize );
+	bool *pProxyCalled = (bool*)scratch.AllocBytes( nBufSize );
+	std::memset( pProxyCalled, 0, nBufSize );
 
 	IMaterial **ppMaterials = info.m_pHardwareData->m_pLODs[ info.m_Lod ].ppMaterials;
 	mstudiomodel_t *pModel;
@@ -2429,7 +2422,7 @@ void CStudioRenderContext::DrawModel( DrawModelResults_t *pResults, const DrawMo
 	MaterialLock_t hLock = 0;
 	if ( flags & STUDIORENDER_DRAW_ACCURATETIME )
 	{
-		VPROF("STUDIORENDER_DRAW_ACCURATETIME");
+		CVProfScope _( "STUDIORENDER_DRAW_ACCURATETIME", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		// Flush the material system before timing this model:
 		hLock = g_pMaterialSystem->Lock();
@@ -2477,7 +2470,7 @@ void CStudioRenderContext::DrawModel( DrawModelResults_t *pResults, const DrawMo
 
 	if( flags & STUDIORENDER_DRAW_ACCURATETIME )
 	{
-		VPROF( "STUDIORENDER_DRAW_ACCURATETIME" );
+		CVProfScope _( "STUDIORENDER_DRAW_ACCURATETIME", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		// Make sure this model is completely drawn before ending the timer:
 		g_pMaterialSystem->Flush(true);
@@ -2509,15 +2502,15 @@ void CStudioRenderContext::DrawModelArray( const StudioModelArrayInfo_t &drawInf
 	// IStudioRender when running with -dev which validates the incoming data
 	// even in release builds.. may do it at some point
 
-	Assert( pRenderContext->IsRenderData( drawInfo.m_pFlashlights ) );
+	contract_assert( pRenderContext->IsRenderData( drawInfo.m_pFlashlights ) );
 
 	StudioArrayInstanceData_t *pTest = pInstanceData;
 	for ( int i = 0; i < nCount; ++i, pTest = (StudioArrayInstanceData_t*)( (unsigned char*)pTest + nInstanceStride ) )
 	{
-		Assert( pRenderContext->IsRenderData( pTest->m_pPoseToWorld ) );
-		Assert( pRenderContext->IsRenderData( pTest->m_pFlexWeights ) );
-		Assert( pRenderContext->IsRenderData( pTest->m_pDelayedFlexWeights ) );
-		Assert( pRenderContext->IsRenderData( pTest->m_pLightingState ) );
+		contract_assert( pRenderContext->IsRenderData( pTest->m_pPoseToWorld ) );
+		contract_assert( pRenderContext->IsRenderData( pTest->m_pFlexWeights ) );
+		contract_assert( pRenderContext->IsRenderData( pTest->m_pDelayedFlexWeights ) );
+		contract_assert( pRenderContext->IsRenderData( pTest->m_pLightingState ) );
 	}
 #endif
 
@@ -2539,7 +2532,7 @@ void CStudioRenderContext::DrawModelArray( const StudioModelArrayInfo_t &drawInf
 			StudioArrayInstanceData_t *pCurrInstanceData = pQueuedInstanceData;
 			for ( int i = 0; i < nCount; ++i )
 			{
-				memcpy( pCurrInstanceData, pInstanceData, sizeof(StudioArrayInstanceData_t) );
+				std::memcpy( pCurrInstanceData, pInstanceData, sizeof(StudioArrayInstanceData_t) );
 				pInstanceData = (StudioArrayInstanceData_t*)( (unsigned char*)pInstanceData + nInstanceStride );
 				++pCurrInstanceData;
 			}
@@ -2560,20 +2553,20 @@ void CStudioRenderContext::DrawModelArray( const StudioModelArrayInfo2_t &drawIn
 	// NOTE: It would be nice to instantiate a different implementation of
 	// IStudioRender when running with -dev which validates the incoming data
 	// even in release builds.. may do it at some point
-	Assert( pRenderContext->IsRenderData( drawInfo.m_pFlashlights ) );
+	contract_assert( pRenderContext->IsRenderData( drawInfo.m_pFlashlights ) );
 
 	for ( int i = 0; i < nCount; ++i )
 	{
 		StudioArrayData_t &arrayData = pArrayData[i];
-		Assert( pRenderContext->IsRenderData( arrayData.m_pInstanceData ) );
+		contract_assert( pRenderContext->IsRenderData( arrayData.m_pInstanceData ) );
 		for ( int j = 0; j < arrayData.m_nCount; ++j )
 		{
 			int nOffset = j * nInstanceStride;
 			StudioArrayInstanceData_t *pTest = ( StudioArrayInstanceData_t* )( (uint8*)arrayData.m_pInstanceData + nOffset );
-			Assert( pRenderContext->IsRenderData( pTest->m_pPoseToWorld ) );
-			Assert( pRenderContext->IsRenderData( pTest->m_pFlexWeights ) );
-			Assert( pRenderContext->IsRenderData( pTest->m_pDelayedFlexWeights ) );
-			Assert( pRenderContext->IsRenderData( pTest->m_pLightingState ) );
+			contract_assert( pRenderContext->IsRenderData( pTest->m_pPoseToWorld ) );
+			contract_assert( pRenderContext->IsRenderData( pTest->m_pFlexWeights ) );
+			contract_assert( pRenderContext->IsRenderData( pTest->m_pDelayedFlexWeights ) );
+			contract_assert( pRenderContext->IsRenderData( pTest->m_pLightingState ) );
 		}
 	}
 #endif
@@ -2605,18 +2598,18 @@ void CStudioRenderContext::DrawModelShadowArray( int nCount, StudioArrayData_t *
 	// even in release builds.. may do it at some point
 
 	// These are the only supported flags in this path
-	Assert( ( nFlags & ~( STUDIORENDER_SHADOWDEPTHTEXTURE | STUDIORENDER_DRAW_OPAQUE_ONLY | STUDIORENDER_SHADOWDEPTHTEXTURE_INCLUDE_TRANSLUCENT_MATERIALS ) ) == 0 );
+	contract_assert( ( nFlags & ~( STUDIORENDER_SHADOWDEPTHTEXTURE | STUDIORENDER_DRAW_OPAQUE_ONLY | STUDIORENDER_SHADOWDEPTHTEXTURE_INCLUDE_TRANSLUCENT_MATERIALS ) ) == 0 );
 
 	for ( int i = 0; i < nCount; ++i )
 	{
 		StudioArrayData_t &shadow = pShadowData[i];
-		Assert( pRenderContext->IsRenderData( shadow.m_pInstanceData ) );
+		contract_assert( pRenderContext->IsRenderData( shadow.m_pInstanceData ) );
 		for ( int j = 0; j < shadow.m_nCount; ++j )
 		{
 			StudioShadowArrayInstanceData_t *pTest = ( StudioShadowArrayInstanceData_t* )((uint8*)shadow.m_pInstanceData + ( nInstanceStride * j ) );
-			Assert( pRenderContext->IsRenderData( pTest->m_pPoseToWorld ) );
-			Assert( pRenderContext->IsRenderData( pTest->m_pFlexWeights ) );
-			Assert( pRenderContext->IsRenderData( pTest->m_pDelayedFlexWeights ) );
+			contract_assert( pRenderContext->IsRenderData( pTest->m_pPoseToWorld ) );
+			contract_assert( pRenderContext->IsRenderData( pTest->m_pFlexWeights ) );
+			contract_assert( pRenderContext->IsRenderData( pTest->m_pDelayedFlexWeights ) );
 		}
 	}
 #endif
@@ -2727,7 +2720,7 @@ void CStudioRenderContext::AddShadow( IMaterial* pMaterial, void* pProxyData,
 		// NOTE: We don't need to make proxies work, because proxies are only ever used
 		// when casting shadows onto props, which we don't do..that feature is disabled.
 		// When casting flashlights onto mdls, which we *do* use, the proxy is NULL.
-		Assert( pProxyData == nullptr );
+		contract_assert( pProxyData == nullptr );
 		if ( pProxyData != nullptr )
 		{
 			Warning( "Cannot call CStudioRenderContext::AddShadows w/ proxies in queued mode!\n" );
@@ -2760,9 +2753,8 @@ void CStudioRenderContext::AddDecal( StudioDecalHandle_t handle, studiohdr_t *pS
 	IMaterial* pDecalMaterial, float radius, int body, bool noPokethru, int maxLODToDecal, void *pvProxyUserData, int nAdditionalDecalFlags )
 {
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
-	Assert( pRenderContext->IsRenderData( pBoneToWorld ) );
+	contract_assert( pRenderContext->IsRenderData( pBoneToWorld ) );
 	QUEUE_STUDIORENDER_CALL_RC( AddDecal, CStudioRender, g_pStudioRenderImp, pRenderContext, 
 		handle, m_RC, pBoneToWorld, pStudioHdr, ray, decalUp, pDecalMaterial, radius, 
 		body, noPokethru, maxLODToDecal, pvProxyUserData, nAdditionalDecalFlags );
 }
-

@@ -1,19 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#if !defined( FX_H )
-#define FX_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "mathlib/vector.h"
+import std;
+import ks.math;
 #include "particles_simple.h"
 #include "c_pixel_visibility.h"
+#include "icliententityinternal.h"
 
-class Vector;
 class CGameTrace;
 typedef CGameTrace trace_t;
 //struct trace_t;
@@ -101,4 +95,3 @@ extern PMaterialHandle g_Mat_BloodPuff[2];
 extern PMaterialHandle g_Mat_Fleck_Glass[2];
 extern PMaterialHandle g_Mat_SMG_Muzzleflash[4];
 extern PMaterialHandle g_Mat_Combine_Muzzleflash[3];
-#endif // FX_H

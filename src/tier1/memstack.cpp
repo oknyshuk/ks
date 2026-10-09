@@ -1,22 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "tier0/dbg.h"
-#include "memstack.h"
-#include <map>
-#include "tier0/memalloc.h"
-
+import ks.tier1;
+import std;
 
 static volatile bool bSpewAllocations = false; // TODO: Register CMemoryStacks with g_pMemAlloc, so it can spew a summary
 
 //-----------------------------------------------------------------------------
-
-MEMALLOC_DEFINE_EXTERNAL_TRACKING(CMemoryStack);
-
 //-----------------------------------------------------------------------------
 
 void PrintStatus( void* p )
@@ -35,10 +25,6 @@ CMemoryStack::CMemoryStack()
 	, m_bRegisteredAllocation( false )
  	, m_maxSize( 0 )
 	, m_alignment( 16 )
-#ifdef MEMSTACK_VIRTUAL_MEMORY_AVAILABLE
- 	, m_commitIncrement( 0 )
-	, m_minCommit( 0 )
-#endif
 {
 	AddMemoryInfoCallback( this );
 	m_pszAllocOwner = MemAlloc_StrDup( "CMemoryStack unattributed" );
@@ -59,77 +45,21 @@ CMemoryStack::~CMemoryStack()
 
 bool CMemoryStack::Init( const char *pszAllocOwner, unsigned maxSize, unsigned commitIncrement, unsigned initialCommit, unsigned alignment )
 {
-	Assert( !m_pBase );
+	contract_assert( !m_pBase );
 
 	m_bPhysical = false;
 
 	m_maxSize = maxSize;
 	m_alignment = AlignValue( alignment, 4 );
 
-	Assert( m_alignment == alignment );
-	Assert( m_maxSize > 0 );
+	contract_assert( m_alignment == alignment );
+	contract_assert( m_maxSize > 0 );
 
 	SetAllocOwner( pszAllocOwner );
 
-#ifdef MEMSTACK_VIRTUAL_MEMORY_AVAILABLE
-
-	if ( commitIncrement != 0 )
-	{
-		m_commitIncrement = commitIncrement;
-	}
-
-	unsigned pageSize;
-
-	SYSTEM_INFO sysInfo;
-	GetSystemInfo( &sysInfo );
-	Assert( !( sysInfo.dwPageSize & (sysInfo.dwPageSize-1)) );
-	pageSize = sysInfo.dwPageSize;
-
-	if ( m_commitIncrement == 0 )
-	{
-		m_commitIncrement = pageSize;
-	}
-	else
-	{
-		m_commitIncrement = AlignValue( m_commitIncrement, pageSize );
-	}
-
-	m_maxSize = AlignValue( m_maxSize, m_commitIncrement );
-	
-	Assert( m_maxSize % pageSize == 0 && m_commitIncrement % pageSize == 0 && m_commitIncrement <= m_maxSize );
-
-	m_pBase = (unsigned char *)VirtualAlloc( nullptr, m_maxSize, VA_RESERVE_FLAGS, PAGE_NOACCESS );
-	if ( !m_pBase )
-	{
-#if !defined( NO_MALLOC_OVERRIDE )
-		g_pMemAlloc->OutOfMemory();
-#endif
-		return false;
-	}
-	m_pCommitLimit = m_pNextAlloc = m_pBase;
-
-	if ( initialCommit )
-	{
-		initialCommit = AlignValue( initialCommit, m_commitIncrement );
-		Assert( initialCommit <= m_maxSize );
-		bool bInitialCommitSucceeded = !!VirtualAlloc( m_pCommitLimit, initialCommit, VA_COMMIT_FLAGS, PAGE_READWRITE );
-		if ( !bInitialCommitSucceeded )
-		{
-#if !defined( NO_MALLOC_OVERRIDE )
-			g_pMemAlloc->OutOfMemory( initialCommit );
-#endif
-			return false;
-		}
-		m_minCommit = initialCommit;
-		m_pCommitLimit += initialCommit;
-		RegisterAllocation();
-	}
-
-#else
-	m_pBase = (byte*)MemAlloc_AllocAligned( m_maxSize, alignment ? alignment : 1 );
+	m_pBase = (byte*)MemAlloc_AllocAlignedUnattributed( m_maxSize, alignment ? alignment : 1 );
 	m_pNextAlloc = m_pBase;
 	m_pCommitLimit = m_pBase + m_maxSize;
-#endif
 
 	m_pHighestAllocLimit = m_pNextAlloc;
 
@@ -145,11 +75,7 @@ void CMemoryStack::Term()
 	FreeAll();
 	if ( m_pBase )
 	{
-#ifdef MEMSTACK_VIRTUAL_MEMORY_AVAILABLE
-		VirtualFree( m_pBase, 0, MEM_RELEASE );
-#else
 		MemAlloc_FreeAligned( m_pBase );
-#endif
 		m_pBase = nullptr;
 		// Zero these variables to avoid getting misleading mem_dump
 		// results when m_pBase is NULL.
@@ -168,73 +94,21 @@ int CMemoryStack::GetSize() const
 	if ( m_bPhysical )
 		return m_maxSize;
 
-#ifdef MEMSTACK_VIRTUAL_MEMORY_AVAILABLE
-	return m_pCommitLimit - m_pBase; 
-#else
 	return m_maxSize;
-#endif
 }
 
 
 //-------------------------------------
 
-bool CMemoryStack::CommitTo( byte *pNextAlloc ) RESTRICT
+bool CMemoryStack::CommitTo( byte *pNextAlloc ) __restrict__
 {
-#ifdef MEMSTACK_VIRTUAL_MEMORY_AVAILABLE
-	unsigned char *	pNewCommitLimit = AlignValue( pNextAlloc, m_commitIncrement );
-	ptrdiff_t commitIncrement 		= pNewCommitLimit - m_pCommitLimit;
-	
-	if( m_pCommitLimit + commitIncrement > m_pAllocLimit )
-	{
-#if !defined( NO_MALLOC_OVERRIDE )
-		g_pMemAlloc->OutOfMemory( commitIncrement );
-#endif
-		return false;
-	}
-
-	if ( pNewCommitLimit > m_pCommitLimit )
-	{
-		RegisterDeallocation(false);
-		bool bAllocationSucceeded = !!VirtualAlloc( m_pCommitLimit, commitIncrement, VA_COMMIT_FLAGS, PAGE_READWRITE );
-		if ( !bAllocationSucceeded )
-		{
-#if !defined( NO_MALLOC_OVERRIDE )
-			g_pMemAlloc->OutOfMemory( commitIncrement );
-#endif
-			return false;
-		}
-		m_pCommitLimit = pNewCommitLimit;
-
-		RegisterAllocation();
-	}
-	else if ( pNewCommitLimit < m_pCommitLimit )
-	{
-		if  ( m_pNextAlloc > pNewCommitLimit )
-		{
-			Warning( "ATTEMPTED TO DECOMMIT OWNED MEMORY STACK SPACE\n" );
-			pNewCommitLimit = AlignValue( m_pNextAlloc, m_commitIncrement );
-		}
-
-		if ( pNewCommitLimit < m_pCommitLimit )
-		{
-			RegisterDeallocation(false);
-			ptrdiff_t decommitIncrement = m_pCommitLimit - pNewCommitLimit;
-			VirtualFree( pNewCommitLimit, decommitIncrement, MEM_DECOMMIT );
-			m_pCommitLimit = pNewCommitLimit;
-			RegisterAllocation();
-		}
-	}
-
-	return true;
-#else
 	return false;
-#endif
 }
 
 // Identify the owner of this memory stack's memory
 void CMemoryStack::SetAllocOwner( const char *pszAllocOwner )
 {
-	if ( !pszAllocOwner || !Q_strcmp( m_pszAllocOwner, pszAllocOwner ) )
+	if ( !pszAllocOwner || !V_strcmp( m_pszAllocOwner, pszAllocOwner ) )
 		return;
 	g_pMemAlloc->Free( m_pszAllocOwner );
 	m_pszAllocOwner = MemAlloc_StrDup( pszAllocOwner );
@@ -277,16 +151,10 @@ void CMemoryStack::FreeToAllocPoint( MemoryStackMark_t mark, bool bDecommit )
 	mark = AlignValue( mark, m_alignment );
 	byte *pAllocPoint = m_pBase + mark;
 
-	Assert( pAllocPoint >= m_pBase && pAllocPoint <= m_pNextAlloc );
+	contract_assert( pAllocPoint >= m_pBase && pAllocPoint <= m_pNextAlloc );
 	if ( pAllocPoint >= m_pBase && pAllocPoint <= m_pNextAlloc )
 	{
 		m_pNextAlloc = pAllocPoint;
-#ifdef MEMSTACK_VIRTUAL_MEMORY_AVAILABLE
-		if ( bDecommit )
-		{
-			CommitTo( std::max( m_pNextAlloc, (m_pBase + m_minCommit) ) );
-		}
-#endif
 	}
 }
 
@@ -313,24 +181,24 @@ const char* CMemoryStack::GetMemoryName() const
 	return m_pszAllocOwner;
 }
 
-size_t CMemoryStack::GetAllocatedBytes() const
+std::size_t CMemoryStack::GetAllocatedBytes() const
 {
 	return GetUsed();
 }
 
-size_t CMemoryStack::GetCommittedBytes() const
+std::size_t CMemoryStack::GetCommittedBytes() const
 {
 	return GetSize();
 }
 
-size_t CMemoryStack::GetReservedBytes() const
+std::size_t CMemoryStack::GetReservedBytes() const
 {
 	return GetMaxSize();
 }
 
-size_t CMemoryStack::GetHighestBytes() const
+std::size_t CMemoryStack::GetHighestBytes() const
 {
-	size_t highest = m_pHighestAllocLimit - m_pBase;
+	std::size_t highest = m_pHighestAllocLimit - m_pBase;
 	return highest;
 }
 
@@ -338,7 +206,7 @@ size_t CMemoryStack::GetHighestBytes() const
 
 void CMemoryStack::PrintContents() const
 {
-	size_t highest = m_pHighestAllocLimit - m_pBase;
+	std::size_t highest = m_pHighestAllocLimit - m_pBase;
 	Msg( "CMemoryStack %s\n", m_pszAllocOwner );
 	Msg( "    Total used memory:      %d KB\n", GetUsed() / 1024 );
 	Msg( "    Total committed memory: %d KB\n", GetSize() / 1024 );

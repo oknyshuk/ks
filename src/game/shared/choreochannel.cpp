@@ -1,22 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
+import std;
+import ks.tier1;
 #include "choreochannel.h"
 #include "choreoevent.h"
 #include "choreoscene.h"
-#include <algorithm>
-#include <set>
-#include "tier1/map_ops.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -44,7 +33,7 @@ CChoreoChannel::CChoreoChannel(const char *name )
 CChoreoChannel&	CChoreoChannel::operator=( const CChoreoChannel& src )
 {
 	m_bActive = src.m_bActive;
-	Q_strncpy( m_szName, src.m_szName, sizeof( m_szName ) );
+	V_strncpy( m_szName, src.m_szName, sizeof( m_szName ) );
 	for ( int i = 0; i < std::ssize( src.m_Events ); i++ )
 	{
 		CChoreoEvent *e = src.m_Events[ i ];
@@ -64,8 +53,8 @@ CChoreoChannel&	CChoreoChannel::operator=( const CChoreoChannel& src )
 //-----------------------------------------------------------------------------
 void CChoreoChannel::SetName( const char *name )
 {
-	assert( Q_strlen( name ) < MAX_CHANNEL_NAME );
-	Q_strncpy( m_szName, name, sizeof( m_szName ) );
+	contract_assert( V_strlen( name ) < MAX_CHANNEL_NAME );
+	V_strncpy( m_szName, name, sizeof( m_szName ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -213,7 +202,7 @@ void CChoreoChannel::ReconcileGestureTimes()
 	for ( i = 0; i < c; i++ )
 	{
 		CChoreoEvent *e = GetEvent( i );
-		Assert( e );
+		contract_assert( e );
 		if ( e->GetType() != CChoreoEvent::GESTURE )
 			continue;
 
@@ -267,7 +256,7 @@ void CChoreoChannel::ReconcileGestureTimes()
 			//  to the begining of the scene even if there is a null gesture in place at the begining.
 			// -------------------------
 			/*
-			else if ( pEntryTag && !Q_stricmp( previous->GetName(), "NULL" ) )
+			else if ( pEntryTag && !V_stricmp( previous->GetName(), "NULL" ) )
 			{
 				// If the previous was a null event, then do a bit of fixup
 				event->SetStartTime( previous->GetEndTime() );
@@ -349,7 +338,7 @@ void CChoreoChannel::ReconcileCloseCaption()
 	for ( i = 0; i < c; i++ )
 	{
 		CChoreoEvent *e = GetEvent( i );
-		Assert( e );
+		contract_assert( e );
 		if ( e->GetType() != CChoreoEvent::SPEAK )
 			continue;
 
@@ -391,7 +380,7 @@ void CChoreoChannel::ReconcileCloseCaption()
 		if ( sortedEventInGroup <= 1 )
 		{
 			CChoreoEvent *e = *eg.timeSortedEvents.begin();
-			Assert( e );
+			contract_assert( e );
 			// Make sure it's the master
 			e->SetCloseCaptionType( CChoreoEvent::CC_MASTER );
 			// Since it's by itself, can't be using "combined" file
@@ -438,7 +427,7 @@ bool CChoreoChannel::GetSortedCombinedEventList( char const *cctoken, std::vecto
 	for ( i = 0; i < c; i++ )
 	{
 		CChoreoEvent *e = GetEvent( i );
-		Assert( e );
+		contract_assert( e );
 		if ( e->GetType() != CChoreoEvent::SPEAK )
 			continue;
 
@@ -451,7 +440,7 @@ bool CChoreoChannel::GetSortedCombinedEventList( char const *cctoken, std::vecto
 			 continue;
 
 		char const *token = e->GetCloseCaptionToken();
-		if ( Q_stricmp( token, cctoken ) )
+		if ( V_stricmp( token, cctoken ) )
 			continue;
 
 		events.push_back( e );
@@ -466,13 +455,13 @@ void CChoreoChannel::SaveToBuffer( ks::byte_writer& buf, CChoreoScene *pScene, I
 	buf.write< short >( pStringPool->FindOrAddString( GetName() ) );
 
 	int c = GetNumEvents();
-	Assert( c <= 255 );
+	contract_assert( c <= 255 );
 	buf.write< unsigned char >( c );
 
 	for ( int i = 0; i < c; i++ )
 	{
 		CChoreoEvent *e = GetEvent( i );
-		Assert( e );
+		contract_assert( e );
 		e->SaveToBuffer( buf, pScene, pStringPool );
 	}
 

@@ -1,24 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BSPLIB_H
-#define BSPLIB_H
-
-
-
-#include <cstddef>
-#include <optional>
-#include <vector>
+import std;
+import ks.tier1;
 #include "bspfile.h"
-#include "utlvector.h"
-#include "utlstring.h"
-#include "mathlib/vector4d.h"
 #ifdef ENGINE_DLL
 #include "zone.h"
 #endif
@@ -39,10 +25,10 @@ class IZip;
 extern bool g_bHDR;
 
 // default width/height of luxels in world units.
-#define DEFAULT_LUXEL_SIZE ( 16.0f )
+inline constexpr auto DEFAULT_LUXEL_SIZE = ( 16.0f );
 
-#define	SINGLE_BRUSH_MAP	(MAX_BRUSH_LIGHTMAP_DIM_INCLUDING_BORDER*MAX_BRUSH_LIGHTMAP_DIM_INCLUDING_BORDER)
-#define	SINGLEMAP			(MAX_LIGHTMAP_DIM_INCLUDING_BORDER*MAX_LIGHTMAP_DIM_INCLUDING_BORDER)
+inline constexpr auto SINGLE_BRUSH_MAP = (MAX_BRUSH_LIGHTMAP_DIM_INCLUDING_BORDER*MAX_BRUSH_LIGHTMAP_DIM_INCLUDING_BORDER);
+inline constexpr auto SINGLEMAP = (MAX_LIGHTMAP_DIM_INCLUDING_BORDER*MAX_LIGHTMAP_DIM_INCLUDING_BORDER);
 
 struct entity_t
 {
@@ -382,6 +368,3 @@ inline const char* TexInfo_TexName( int iTexInfo )
 {
 	return TexDataStringTable_GetString( dtexdata[texinfo[iTexInfo].texdata].nameStringTableID );
 }
-
-
-#endif // BSPLIB_H

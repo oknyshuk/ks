@@ -1,13 +1,8 @@
-//===== Copyright (c) 2013-2013, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2013 Valve Corporation
+
 // Purpose: Interface to help with rendering CMDLs & CMergedMDLs to textures.
-//
-//===========================================================================//
-
-
-#ifndef IRENDERTORTHELPEROBJECT_H
-#define IRENDERTORTHELPEROBJECT_H
-
 
 #include "materialsystem/imaterialsystem.h"
 #include "mathlib/camera.h"
@@ -75,7 +70,5 @@ public:
 	virtual bool Process() = 0;
 };
 
-#define RENDER_TO_RT_HELPER_INTERFACE_VERSION	"RenderToRTHelper001"
+inline constexpr const char *RENDER_TO_RT_HELPER_INTERFACE_VERSION = "RenderToRTHelper001";
 extern IRenderToRTHelper *g_pRenderToRTHelper;
-
-#endif // IRENDERTORTHELPEROBJECT_H

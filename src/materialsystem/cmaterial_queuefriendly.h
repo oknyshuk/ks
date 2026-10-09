@@ -1,14 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef CMATERIAL_QUEUEFRIENDLY_H
-#define CMATERIAL_QUEUEFRIENDLY_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "imaterialinternal.h"
 
@@ -84,7 +76,7 @@ public:
 
 
 
-#define QUEUEFRIENDLY_USED_INTERNALLY_ASSERT AssertMsg( 0, "CMaterial_QueueFriendly used internally within materialsystem. Update the calling code to use a realtime CMaterial." )
+#define QUEUEFRIENDLY_USED_INTERNALLY_ASSERT contract_assert( false && "CMaterial_QueueFriendly used internally within materialsystem. Update the calling code to use a realtime CMaterial." )
 
 	//------------------------------------------------------------------------------
 	// IMaterialInternal interfaces. Internal systems should not be using this queue
@@ -140,7 +132,7 @@ public:
 	virtual void CompactMaterialVars() {}
 
 	// The material system should be asking, and it should be working with the realtime version only.
-	virtual bool HasQueueFriendlyProxies() const { Assert( !"Unexpected call to HasQueueFriendlyProxies" ); return false; }
+	virtual bool HasQueueFriendlyProxies() const { contract_assert( !"Unexpected call to HasQueueFriendlyProxies" ); return false; }
 
 	virtual bool SetTempExcluded( bool bSet, int nExcludedDimensionLimit ); 
 
@@ -152,8 +144,3 @@ private:
 	float m_fAlphaModulationOnQueueCompletion;
 	Vector m_vColorModulationOnQueueCompletion;
 };
-
-
-
-#endif //#ifndef CMATERIAL_QUEUEFRIENDLY_H
-

@@ -1,8 +1,10 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
+
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
+import std;
 #include "portal_refract_helper.h"
-#include "convar.h"
 
 // Auto generated inc files
 #include "portal_refract_vs20.inc"
@@ -10,7 +12,6 @@
 #include "portal_refract_ps20b.inc"
 
 #include "shaderapifast.h"
-
 
 void InitParamsPortalRefract( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, PortalRefractVars_t &info )
 {
@@ -177,7 +178,7 @@ void DrawPortalRefract( CBaseVSShader *pShader, IMaterialVar** params,
 		float vPackedVsConst1[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		float flTime = IS_PARAM_DEFINED( info.m_nTime ) && params[info.m_nTime]->GetFloatValue() > 0.0f ? params[info.m_nTime]->GetFloatValue() : ShaderApiFast( pShaderAPI )->CurrentTime();
 		vPackedVsConst1[0] = flTime;
-		vPackedVsConst1[0] -= (float)( floor( vPackedVsConst1[0] / 1000.0f ) ) * 1000.0f;
+		vPackedVsConst1[0] -= (float)( std::floor( vPackedVsConst1[0] / 1000.0f ) ) * 1000.0f;
 		ShaderApiFast( pShaderAPI )->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, vPackedVsConst1, 1 );
 
 		bool bNvidiaStereoActiveThisFrame = pShaderAPI->IsStereoActiveThisFrame();

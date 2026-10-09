@@ -1,16 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef RENDER_H
-#define RENDER_H
-
-
-#include "mathlib/vector.h"
+import std;
+import ks.math;
 
 // render.h -- public interface to refresh functions
 
@@ -30,7 +23,7 @@ inline const Vector &CurrentViewOrigin()
 	extern Vector g_CurrentViewOrigin;
 #ifndef DEDICATED
 	extern bool g_bCanAccessCurrentView;
-	Assert( g_bCanAccessCurrentView );
+	contract_assert( g_bCanAccessCurrentView );
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 #endif
 	return g_CurrentViewOrigin;
@@ -42,7 +35,7 @@ inline const Vector &CurrentViewForward()
 	extern Vector g_CurrentViewOrigin;
 #ifndef DEDICATED
 	extern bool g_bCanAccessCurrentView;
-	Assert( g_bCanAccessCurrentView );
+	contract_assert( g_bCanAccessCurrentView );
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 #endif
 	return g_CurrentViewForward;
@@ -53,7 +46,7 @@ inline const Vector &CurrentViewRight()
 	extern Vector g_CurrentViewRight;
 #ifndef DEDICATED
 	extern bool g_bCanAccessCurrentView;
-	Assert( g_bCanAccessCurrentView );
+	contract_assert( g_bCanAccessCurrentView );
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 #endif
 	return g_CurrentViewRight;
@@ -64,7 +57,7 @@ inline const Vector &CurrentViewUp()
 	extern Vector g_CurrentViewUp;
 #ifndef DEDICATED
 	extern bool g_bCanAccessCurrentView;
-	Assert( g_bCanAccessCurrentView );
+	contract_assert( g_bCanAccessCurrentView );
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 #endif
 	return g_CurrentViewUp;
@@ -146,9 +139,8 @@ void R_LoadWorldGeometry( bool bDXChange = false );
 #include "view_shared.h"
 #include "ivrenderview.h"
 
-class VMatrix;
 
-abstract_class IRender
+class IRender
 {
 public:
 	virtual void	FrameBegin( void ) = 0;
@@ -211,4 +203,3 @@ void R_PushDlights (void);
 
 // UNDONE Remove this - pass this around to functions/systems that need it.
 extern IRender *g_EngineRenderer;
-#endif			// RENDER_H

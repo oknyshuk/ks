@@ -1,15 +1,9 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef GAMESTATS_H
-#define GAMESTATS_H
-
-#include "tier1/map_ops.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
+import ks.tier1;
+import std;
 #include "igamesystem.h"
 
 const int GAMESTATS_VERSION = 1;
@@ -168,9 +162,9 @@ enum PerfStatsEventEnum_t
 	PERF_STATS_EVENT_COUNT
 };
 
-#define STATS_WINDOW_SIZE ( 60 * 10 )						// # of records to hold
-#define STATS_TRAILING_WINDOW_SIZE ( 30 )					// # of records to hold in trailing window prior to stat recording
-#define STATS_RECORD_INTERVAL 1								// # of seconds between data grabs. 2 * 300 = every 10 minutes
+inline constexpr auto STATS_WINDOW_SIZE = ( 60 * 10 ); // # of records to hold
+inline constexpr auto STATS_TRAILING_WINDOW_SIZE = ( 30 ); // # of records to hold in trailing window prior to stat recording
+inline constexpr auto STATS_RECORD_INTERVAL = 1; // # of seconds between data grabs. 2 * 300 = every 10 minutes
 
 class CGameStats;
 
@@ -178,6 +172,7 @@ void UpdatePerfStats( void );
 void FirePerfStatsEvent( PerfStatsEventEnum_t nEvent, int nLookAhead = CFpsHistory::HISTORY_BUF_SIZE, int nLookBack = CFpsHistory::HISTORY_BUF_SIZE );
 void SetGameStatsHandler( CGameStats *pGameStats );
 
+class CBaseEntity;
 class CBasePlayer;
 class CPropVehicleDriveable;
 class CTakeDamageInfo;
@@ -209,7 +204,7 @@ public:
 		  m_bCyberCafe( false ),
 		  m_nDeaths( 0 )
 	  {
-		  Q_memset( m_nSkill, 0, sizeof( m_nSkill ) );
+		  V_memset( m_nSkill, 0, sizeof( m_nSkill ) );
 	  }
 
 	  void		Clear();
@@ -308,7 +303,7 @@ public:
 	virtual void Event_SaveGame( void );
 	virtual void Event_LoadGame( void );
 
-	void StatsLog( PRINTF_FORMAT_STRING char const *fmt, ... );
+	void StatsLog( char const *fmt, ... );
 	
 	// This is the first call made, so that we can "subclass" the CBaseGameStats based on gamedir as needed (e.g., ep2 vs. episodic)
 	virtual CBaseGameStats *OnInit( CBaseGameStats *pCurrentGameStats, char const *gamedir ) { return pCurrentGameStats; }
@@ -360,9 +355,9 @@ public:
 	virtual bool SaveToFileNOW( bool bForceSyncWrite = false ); //saves buffers to their respective files now, returns success or failure
 	virtual bool UploadStatsFileNOW( void ); //uploads data to the CSER now, returns success or failure
 
-	static bool AppendLump( int nMaxLumpCount, ks::byte_writer &SaveBuffer, unsigned short iLump, unsigned short iLumpCount, size_t nSize, void *pData );
+	static bool AppendLump( int nMaxLumpCount, ks::byte_writer &SaveBuffer, unsigned short iLump, unsigned short iLumpCount, std::size_t nSize, void *pData );
 	static bool GetLumpHeader( int nMaxLumpCount, ks::byte_reader &LoadBuffer, unsigned short &iLump, unsigned short &iLumpCount, bool bPermissive = false );
-	static void LoadLump( ks::byte_reader &LoadBuffer, unsigned short iLumpCount, size_t nSize, void *pData );
+	static void LoadLump( ks::byte_reader &LoadBuffer, unsigned short iLumpCount, std::size_t nSize, void *pData );
 
 	//default save behavior is to save on level shutdown, and game shutdown
 	virtual bool AutoSave_OnInit( void ) { return false; }
@@ -379,7 +374,6 @@ public:
 	virtual bool AutoUpload_OnLevelShutdown( void ) { return false; }
 
 	// Helper for builtin stuff
-	void SetSteamStatistic( bool bUsingSteam );
 	void SetCyberCafeStatistic( bool bIsCyberCafeUser );
 	void SetHDRStatistic( bool bHDREnabled );
 	void SetCaptionsStatistic( bool bClosedCaptionsEnabled );
@@ -402,10 +396,10 @@ public:
 //			iLump - 
 //			iLumpCount - 
 //-----------------------------------------------------------------------------
-inline bool CBaseGameStats::AppendLump( int nMaxLumpCount, ks::byte_writer &SaveBuffer, unsigned short iLump, unsigned short iLumpCount, size_t nSize, void *pData )
+inline bool CBaseGameStats::AppendLump( int nMaxLumpCount, ks::byte_writer &SaveBuffer, unsigned short iLump, unsigned short iLumpCount, std::size_t nSize, void *pData )
 {
 	// Verify the lump index.
-	Assert( ( iLump > 0 ) && ( iLump < nMaxLumpCount ) );
+	contract_assert( ( iLump > 0 ) && ( iLump < nMaxLumpCount ) );
 
 	if ( !( ( iLump > 0 ) && ( iLump < nMaxLumpCount ) ) )
 		return false;
@@ -418,7 +412,7 @@ inline bool CBaseGameStats::AppendLump( int nMaxLumpCount, ks::byte_writer &Save
 	SaveBuffer.write< unsigned short >( iLump );
 	SaveBuffer.write< unsigned short >( iLumpCount );
 
-	size_t nTotalSize = iLumpCount * nSize;
+	std::size_t nTotalSize = iLumpCount * nSize;
 	SaveBuffer.write_bytes( pData, nTotalSize );
 
 	return true;
@@ -446,7 +440,7 @@ inline bool CBaseGameStats::GetLumpHeader( int nMaxLumpCount, ks::byte_reader &L
 		return true;
 
 	// Verify the lump index.
-	Assert( ( iLump > 0 ) && ( iLump < nMaxLumpCount ) );
+	contract_assert( ( iLump > 0 ) && ( iLump < nMaxLumpCount ) );
 	if ( !( ( iLump > 0 ) && ( iLump < nMaxLumpCount ) ) )
 	{
 		return false;
@@ -466,7 +460,7 @@ inline bool CBaseGameStats::GetLumpHeader( int nMaxLumpCount, ks::byte_reader &L
 //			nSize - size of each lump
 //			pData - where to store the data
 //-----------------------------------------------------------------------------
-inline void CBaseGameStats::LoadLump( ks::byte_reader &LoadBuffer, unsigned short iLumpCount, size_t nSize, void *pData )
+inline void CBaseGameStats::LoadLump( ks::byte_reader &LoadBuffer, unsigned short iLumpCount, std::size_t nSize, void *pData )
 {
 	LoadBuffer.read_bytes( pData, iLumpCount * nSize );
 }
@@ -474,5 +468,3 @@ inline void CBaseGameStats::LoadLump( ks::byte_reader &LoadBuffer, unsigned shor
 #endif // GAME_DLL
 
 extern CBaseGameStats *gamestats; //starts out pointing at a singleton of the class above, overriding this in any constructor should work for replacing it
-
-#endif // GAMESTATS_H

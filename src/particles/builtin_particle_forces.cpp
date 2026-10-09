@@ -1,15 +1,13 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: particle system code
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include "tier0/platform.h"
+// Purpose: particle system code
+
+import ks.core;
 #include "particles/particles.h"
 #include "filesystem.h"
 #include "tier2/tier2.h"
 #include "tier2/fileutils.h"
-#include "tier1/strtools.h"
 
 #ifdef USE_BLOBULATOR
 // TODO: These should be in public by the time the SDK ships
@@ -114,6 +112,7 @@ void C_OP_ParentVortices::AddForces( FourVectors *pAccumulatedForces,
 									  float flStrength,
 									  void *pContext ) const
 {
+	ks::ScratchArena<> scratch;
 	if ( pParticles->m_pParent && ( pParticles->m_pParent->m_nActiveParticles ) )
 	{
 
@@ -122,7 +121,7 @@ void C_OP_ParentVortices::AddForces( FourVectors *pAccumulatedForces,
 		Twist_AxisInWorldSpace.VectorNormalize();
 
 		int nVortices = pParticles->m_pParent->m_nActiveParticles;
-		VortexParticle_t *pVortices = ( VortexParticle_t * ) stackalloc( nVortices * sizeof( VortexParticle_t ) );
+		VortexParticle_t *pVortices = scratch.Alloc<VortexParticle_t>( nVortices );
 		for( int i = 0; i < nVortices; i++ )
 		{
 			pVortices[i].m_v4TwistAxis = Twist_AxisInWorldSpace;
@@ -136,13 +135,13 @@ void C_OP_ParentVortices::AddForces( FourVectors *pAccumulatedForces,
 			if ( m_bFlipBasedOnYaw )
 			{
 				float const *pYaw = pParticles->m_pParent->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_YAW, i );
-				if ( pYaw[0] >= M_PI )
+				if ( pYaw[0] >= std::numbers::pi )
 				{
 					pVortices[i].m_v4Center *= Four_NegativeOnes;
 				}
 			}
 		}
-		size_t nPosStride;
+		std::size_t nPosStride;
 		const FourVectors *pPos=pParticles->Get4VAttributePtr( PARTICLE_ATTRIBUTE_XYZ, &nPosStride );
 		for(int i=0; i < nBlocks ; i++)
 		{
@@ -225,7 +224,7 @@ void C_OP_TwistAroundAxis::AddForces( FourVectors *pAccumulatedForces,
 	pParticles->GetControlPointAtTime( 0, pParticles->m_flCurTime, &vecCenter );
 	FourVectors Center;
 	Center.DuplicateVector( vecCenter );
-	size_t nPosStride;
+	std::size_t nPosStride;
 	fltx4 ForceScale = ReplicateX4( m_fForceAmount * flStrength );
 	const FourVectors *pPos=pParticles->Get4VAttributePtr( PARTICLE_ATTRIBUTE_XYZ, &nPosStride );
 	for(int i=0;i<nBlocks;i++)
@@ -304,7 +303,7 @@ void C_OP_AttractToControlPoint::AddForces( FourVectors *pAccumulatedForces,
 	pParticles->GetControlPointAtTime( m_nControlPointNumber, pParticles->m_flCurTime, &vecCenter );
 	FourVectors Center;
 	Center.DuplicateVector( vecCenter );
-	size_t nPosStride;
+	std::size_t nPosStride;
 	const FourVectors *pPos=pParticles->Get4VAttributePtr( PARTICLE_ATTRIBUTE_XYZ, &nPosStride );
 
 	for(int i=0;i<nBlocks;i++)
@@ -489,7 +488,7 @@ void C_OP_LennardJonesForce::addParticleForce(PhysParticle* a, PhysParticle* b, 
 	float f;
 	if(a->group == b->group) // In the same group
 	{
-		float p = a->radius * 2.0f / (d+FLT_EPSILON);
+		float p = a->radius * 2.0f / (d+std::numeric_limits<float>::epsilon());
 		float p2 = p * p;
 		float p4 = p2 * p2;
 
@@ -541,7 +540,7 @@ void C_OP_LennardJonesForce::addParticleForce(PhysParticle* a, PhysParticle* b, 
 	if(f < -m_fMaxRepulsion) f = -m_fMaxRepulsion;
 	if(f > m_fMaxAttraction) f = m_fMaxAttraction;
 
-	Point3D scaledr = (b->center - a->center) * (f/(d+FLT_EPSILON)); // Dividing by d scales distance down to a unit vector
+	Point3D scaledr = (b->center - a->center) * (f/(d+std::numeric_limits<float>::epsilon())); // Dividing by d scales distance down to a unit vector
 	a->force.add(scaledr); 
 	b->force.subtract(scaledr);
 }
@@ -833,14 +832,14 @@ void C_OP_TurbulenceForce::AddForces( FourVectors *pAccumulatedForces,
 	C4VAttributeIterator pXYZ( PARTICLE_ATTRIBUTE_XYZ, pParticles );
 	fltx4 fl4Scales[4];
 	FourVectors v4Amounts[4];
-	for( int i = 0; i < ARRAYSIZE( fl4Scales ); i++ )
+	for( int i = 0; i < std::size( fl4Scales ); i++ )
 	{
 		fl4Scales[i] = ReplicateX4( m_flNoiseCoordScale[i] );
 		v4Amounts[i].DuplicateVector( m_vecNoiseAmount[i] );
 	}
 	for(int i=0;i<nBlocks;i++)
 	{
-		for( int j = 0; j < ARRAYSIZE( fl4Scales ); j++ )
+		for( int j = 0; j < std::size( fl4Scales ); j++ )
 		{
 			FourVectors ppos = *pXYZ;
 			ppos *= fl4Scales[j];
@@ -880,4 +879,3 @@ void AddBuiltInParticleForceGenerators( void )
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_FORCEGENERATOR, C_OP_LennardJonesForce );
 #endif
 }
-

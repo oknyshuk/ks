@@ -1,44 +1,42 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Main control for any streaming sound output device.
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "audio_pch.h"
-#include "const.h"
+// Purpose: Main control for any streaming sound output device.
+
+import std;
+
+
+import ks.tier1;
+
+#include "sound.h"
+#include "soundservice.h"
+#include "soundflags.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+
+#include "audio/private/posix_stubs.h"
 #include "cdll_int.h"
 #include "sound.h"
 #include "client_class.h"
 #include "icliententitylist.h"
-#include "con_nprint.h"
-#include "tier0/icommandline.h"
 #include "vox_private.h"
-#include "../../traceinit.h"
-#include "../../cmd.h"
 #include "toolframework/itoolframework.h"
-#include "vstdlib/random.h"
-#include "vstdlib/jobthread.h"
-#include "vaudio/ivaudio.h"
 #include "../../client.h"
 #include "../../cl_main.h"
-#include "../../enginetrace.h"			// for traceline
-#include "../../public/bspflags.h"		// for traceline
-#include "../../public/gametrace.h"		// for traceline
 #include "vphysics_interface.h"		// for surface props
-#include "../../ispatialpartitioninternal.h"	// for entity enumerator
 #include "../../debugoverlay.h"
 #include "icliententity.h"
 #include "../../cmodel_engine.h"
-#include "../../staticpropmgr.h"
 #include "../../server.h"
-#include "edict.h"
 #include "../../pure_server.h"
-#include "voice.h"
-#include "snd_dma.h"
 #include "snd_mixgroups.h"
 
 
-#include "tier0/memalloc.h"
 
 extern ConVar dsp_volume;
 // extern ConVar volume;
@@ -78,19 +76,19 @@ static ConVar snd_disable_mixer_solo("snd_disable_mixer_solo", "0", FCVAR_CHEAT 
 // see scripts/soundmixers.txt for data format
 //------------------------------------------------------------------------------
 
-#define CMXRGROUPMAX		128					// up to n mixgroups
-#define CMXRGROUPRULESMAX	(CMXRGROUPMAX + 16)	// max number of group rules
-#define	CMXRSOUNDMIXERSMAX	32					// up to n sound mixers per project
-#define	CMXRMIXLAYERSMAX	16					// up to n mix layers per project
+constexpr auto CMXRGROUPMAX = 128; // up to n mixgroups
+constexpr auto CMXRGROUPRULESMAX = (CMXRGROUPMAX + 16); // max number of group rules
+constexpr auto CMXRSOUNDMIXERSMAX = 32; // up to n sound mixers per project
+constexpr auto CMXRMIXLAYERSMAX = 16; // up to n mix layers per project
 
 // mix groups - these equivalent to submixes on an audio mixer
 
-#define CMXRMATCHMAX	8
+constexpr auto CMXRMATCHMAX = 8;
 
 // list of rules for determining sound membership in mix groups.
 // All conditions which are not null are ANDed together 
-#define CMXRCLASSMAX	16
-#define CMXRNAMEMAX		32
+constexpr auto CMXRCLASSMAX = 16;
+constexpr auto CMXRNAMEMAX = 32;
 
 struct classlistelem_t
 {
@@ -130,15 +128,15 @@ struct soundmixer_t
 {
 	float			mixAmount;
 	char			szsoundmixer[CMXRNAMEMAX];					// name of this soundmixer
-	float ALIGN128	mapMixgroupidToVolume[CMXRGROUPMAX];		// sparse array of mix group volume values for this soundmixer
-	float ALIGN128	mapMixgroupidToLevel[CMXRGROUPMAX];			// sparse array of mix group volume values for this soundmixer
-	float ALIGN128	mapMixgroupidToDsp[CMXRGROUPMAX];			// sparse array of mix group volume values for this soundmixer
-	float ALIGN128	mapMixgroupidToSolo[CMXRGROUPMAX];			// sparse array of mix group solo values for this soundmixer
-	float ALIGN128	mapMixgroupidToMute[CMXRGROUPMAX];			// sparse array of mix group mute values for this soundmixer
+	float mapMixgroupidToVolume[CMXRGROUPMAX];		// sparse array of mix group volume values for this soundmixer
+	float mapMixgroupidToLevel[CMXRGROUPMAX];			// sparse array of mix group volume values for this soundmixer
+	float mapMixgroupidToDsp[CMXRGROUPMAX];			// sparse array of mix group volume values for this soundmixer
+	float mapMixgroupidToSolo[CMXRGROUPMAX];			// sparse array of mix group solo values for this soundmixer
+	float mapMixgroupidToMute[CMXRGROUPMAX];			// sparse array of mix group mute values for this soundmixer
 
 };
 
-#define CMXRTRIGGEREDLAYERMAX 16
+constexpr auto CMXRTRIGGEREDLAYERMAX = 16;
 /*struct layertrigger_t
 {
 	int			cmixlayers;									// number of layers
@@ -191,14 +189,14 @@ void MXR_SetCurrentSoundMixer( const char *szsoundmixer )
 {
 	// if soundmixer name is not different from current name, return
 
-	if ( !Q_stricmp(szsoundmixer, g_szsoundmixer_cur) )
+	if ( !V_stricmp(szsoundmixer, g_szsoundmixer_cur) )
 	{
 		return;
 	}
 
 	for (int i = 0; i < g_csoundmixers; i++)
 	{
-		if ( !Q_stricmp(g_soundmixers[i].szsoundmixer, szsoundmixer) )
+		if ( !V_stricmp(g_soundmixers[i].szsoundmixer, szsoundmixer) )
 		{
 			g_isoundmixer = i;
 
@@ -330,7 +328,7 @@ const char *GetClientClassname( SoundSource soundsource )
 int MXR_GetMixGroupListFromDirName( const char *pDirname, byte *pList, int listMax )
 {
 	// if we call this before the groups are parsed we'll get bad data
-	Assert(g_cgrouprules>0);
+	contract_assert( g_cgrouprules>0 );
 	int count = 0;
 	for ( int i = 0; i < listMax; i++ )
 	{
@@ -356,7 +354,7 @@ bool MXR_IsMusicGroup( int ruleIndex )
 	if ( ruleIndex != 255 && ruleIndex >= 0 && ruleIndex < g_cgrouprules )
 	{
 		grouprule_t *prule = &g_grouprules[ruleIndex];
-		if ( Q_stristr(prule->szmixgroup, "music") )
+		if ( V_stristr(prule->szmixgroup, "music") )
 			return true;
 	}
 	return false;
@@ -379,7 +377,7 @@ void MXR_GetMixGroupFromSoundsource( channel_t *pchan )
 	bool classMatch[CMXRCLASSMAX];
 
 	// init all mixgroups for channel
-	for ( int i = 0; i < ARRAYSIZE( pchan->mixgroups ); i++ )
+	for ( int i = 0; i < std::size( pchan->mixgroups ); i++ )
 	{
 		pchan->mixgroups[i] = -1;
 	}
@@ -388,7 +386,7 @@ void MXR_GetMixGroupFromSoundsource( channel_t *pchan )
 	pchan->sfx->getname(sndname, sizeof(sndname));
 
 	// Use forward slashes here
-	Q_FixSlashes( sndname, '/' );
+	V_FixSlashes( sndname, '/' );
 	const char *pszclassname = GetClientClassname( pchan->soundsource );
 
 	if ( snd_showclassname.GetInt() == 1 && pszclassname )
@@ -402,8 +400,8 @@ void MXR_GetMixGroupFromSoundsource( channel_t *pchan )
 
 	for ( int i = 0; i < g_cgroupclass; i++ )
 	{
-		classMatch[i] = ( pszclassname && Q_stristr( pszclassname, g_groupclasslist[i].szclassname ) || 
-						( bIsPlayer && !Q_strcmp( g_groupclasslist[i].szclassname, "localPlayer") ) );
+		classMatch[i] = ( pszclassname && V_stristr( pszclassname, g_groupclasslist[i].szclassname ) || 
+						( bIsPlayer && !V_strcmp( g_groupclasslist[i].szclassname, "localPlayer") ) );
 	}
 
 	// check all group rules for a match, save
@@ -428,27 +426,27 @@ void MXR_GetMixGroupFromSoundsource( channel_t *pchan )
 		// check directory or name substring
 #ifdef _DEBUG
 		// check dir table is correct in CSfxTable cache
-		if ( prule->szdir[ 0 ] && Q_stristr( sndname, prule->szdir ) )
+		if ( prule->szdir[ 0 ] && V_stristr( sndname, prule->szdir ) )
 		{
-			Assert(currentDirRule == i);
+			contract_assert( currentDirRule == i );
 		}
 		else
 		{
-			Assert(currentDirRule != i);
+			contract_assert( currentDirRule != i );
 		}
 		if ( prule->classId >= 0 )
 		{
 			// rule has a valid class id and table is correct
-			Assert(prule->classId < g_cgroupclass);
-			bool bShouldBeTrue = ( pszclassname && Q_stristr(pszclassname, g_groupclasslist[prule->classId].szclassname) ) ||
-				( !Q_strcmp( g_groupclasslist[prule->classId].szclassname, "localPlayer" ) && bIsPlayer );
+			contract_assert( prule->classId < g_cgroupclass );
+			bool bShouldBeTrue = ( pszclassname && V_stristr(pszclassname, g_groupclasslist[prule->classId].szclassname) ) ||
+				( !V_strcmp( g_groupclasslist[prule->classId].szclassname, "localPlayer" ) && bIsPlayer );
 			if ( bShouldBeTrue )
 			{					  
-				Assert(classMatch[prule->classId] == true);
+				contract_assert( classMatch[prule->classId] == true );
 			}
 			else
 			{
-				Assert(classMatch[prule->classId] == false);
+				contract_assert( classMatch[prule->classId] == false );
 			}
 		}
 #endif
@@ -456,7 +454,7 @@ void MXR_GetMixGroupFromSoundsource( channel_t *pchan )
 		// becuse the list is sorted and we visit all elements
 		if ( currentDirRule == i )
 		{
-			Assert(prule->szdir[0]);
+			contract_assert( prule->szdir[0] );
 			currentDirRuleIndex++;
 			currentDirRule = 255;
 			if ( currentDirRuleIndex < pchan->sfx->m_mixGroupCount )
@@ -510,7 +508,7 @@ void MXR_GetMixGroupFromSoundsource( channel_t *pchan )
 				if ( filter[0] )
 				{
 					// utility: show classname of ent making sound
-					if ( Q_stristr( sndname, filter ))
+					if ( V_stristr( sndname, filter ))
 					{
 						DevMsg( "%s", sndname );
 						// show main mixgroup for this sound
@@ -563,8 +561,8 @@ float MXR_GetDuckVolume( int mixgroupid )
 	if ( snd_disable_mixer_duck.GetInt() )
 		return 1.0;
 
-	Assert ( mixgroupid < g_cgrouprules );
-	Assert( mixgroupid >= 0 && mixgroupid < ARRAYSIZE(g_mapMixgroupidToGrouprulesid) );
+	contract_assert( mixgroupid < g_cgrouprules );
+	contract_assert( mixgroupid >= 0 && mixgroupid < std::size( g_mapMixgroupidToGrouprulesid ) );
 
 	int	grouprulesid = g_mapMixgroupidToGrouprulesid[mixgroupid];
 
@@ -579,7 +577,7 @@ float MXR_GetDuckVolume( int mixgroupid )
 
 }
 
-#define SND_DUCKER_UPDATETIME	0.1		// seconds to wait between ducker updates
+constexpr auto SND_DUCKER_UPDATETIME = 0.1; // seconds to wait between ducker updates
 
 double g_mxr_ducktime = 0.0;			// time of last update to ducker
 
@@ -872,27 +870,27 @@ void S_SetIndexedMixGroupOfMixer( int imixgroup, const char *szparam, float val,
 	// TODO: need to lose these string compares for cdllint as well, make int enums!!
 	if(imixgroup >= 0)
 	{
-		if(!Q_stricmp("vol", szparam))
+		if(!V_stricmp("vol", szparam))
 		{
 			pmixer->mapMixgroupidToVolume[imixgroup] = val;
 		}
-		else if(!Q_stricmp("level", szparam))
+		else if(!V_stricmp("level", szparam))
 		{
 				pmixer->mapMixgroupidToLevel[imixgroup] = val;
 		}
-		else if(!Q_stricmp("dsp", szparam))
+		else if(!V_stricmp("dsp", szparam))
 		{
 				pmixer->mapMixgroupidToDsp[imixgroup] = val;
 		}
-		else if(!Q_stricmp("mute", szparam))
+		else if(!V_stricmp("mute", szparam))
 		{
 				pmixer->mapMixgroupidToMute[imixgroup] = val;
 		}
-		else if(!Q_stricmp("solo", szparam))
+		else if(!V_stricmp("solo", szparam))
 		{
 				pmixer->mapMixgroupidToSolo[imixgroup] = val;
 		}
-		else if(!Q_stricmp("mix", szparam))
+		else if(!V_stricmp("mix", szparam))
 		{
 				pmixer->mixAmount = val;
 		}
@@ -928,14 +926,14 @@ void S_SetMixGroupOfMixer( const char *szgroupname, const char *szparam, float v
 	if ( !szgroupname )
 		return;
 	
-	if ( Q_strlen(szgroupname) == 0 )
+	if ( V_strlen(szgroupname) == 0 )
 		return;
 
 	// scan group rules for mapping from name to id
 	for (int i = 0; i < g_cgrouprules; i++)
 	{
 		// if the mix groups name contains the string we set it
-		if ( Q_stristr( g_grouprules[i].szmixgroup, szgroupname ) )
+		if ( V_stristr( g_grouprules[i].szmixgroup, szgroupname ) )
 		{
 			if(bPrintSetMixerDebug)
 				DevMsg("Setting Mixer %s: MixGroup %s: %s : %f\n", pmixer->szsoundmixer, g_grouprules[i].szmixgroup, szparam,  val );
@@ -983,7 +981,7 @@ int MXR_GetMixLayerIndexFromName( const char *szmixlayername )
 	{
 		// sound mixers
 		soundmixer_t *pmixer = &g_mixlayers[i];
-		if ( !Q_stricmp( pmixer->szsoundmixer, szmixlayername ) )
+		if ( !V_stricmp( pmixer->szsoundmixer, szmixlayername ) )
 		{
 			return i;
 		}
@@ -1002,7 +1000,7 @@ void S_SetMixLayerLevel(int index, float level)
 
 void S_SetMixLayerTriggerFactor( int nMixLayerIndex, int nMixGroupIndex, float flFactor )
 {
-	Assert( nMixLayerIndex != -1 );
+	contract_assert( nMixLayerIndex != -1 );
 
 	layertrigger_t *playertriggers = &g_layertriggers[ nMixLayerIndex ];
 
@@ -1050,7 +1048,7 @@ static void MXR_SetSoundMixer( const CCommand &args )
 
 	const char *szgroupname = args[1];
 	const char *szparam = args[2];
-	float val = atof( args[3] );
+	float val = std::atof( args[3] );
 
 	bPrintSetMixerDebug = true;
 	S_SetMixGroupOfCurrentMixer(szgroupname, szparam, val, MIXER_SET );
@@ -1071,13 +1069,13 @@ static void MXR_SetMixLayer( const CCommand &args )
 	const char *szlayername = args[1];
 	const char *szgroupname = args[2];
 	const char *szparam = args[3];
-	float val = atof( args[4] );
+	float val = std::atof( args[4] );
 
 	bPrintSetMixerDebug = true;
 	for( int i = 0; i < g_cmixlayers; i++)
 	{
 		soundmixer_t *pmixlayer = &g_mixlayers[i];
-		if(!Q_stricmp(pmixlayer->szsoundmixer, szlayername))
+		if(!V_stricmp(pmixlayer->szsoundmixer, szlayername))
 		{
 			DevMsg("Setting MixLayer %s\n", pmixlayer->szsoundmixer);
 			S_SetMixGroupOfMixer(szgroupname, szparam, val, pmixlayer, MIXER_SET );
@@ -1096,12 +1094,12 @@ static void MXR_SetMixLayerAmount( const CCommand &args )
 	}
 
 	const char *szlayername = args[1];
-	float val = atof( args[2] );
+	float val = std::atof( args[2] );
 
 	for( int i = 0; i < g_cmixlayers; i++)
 	{
 		soundmixer_t *pmixlayer = &g_mixlayers[i];
-		if(!Q_stricmp(pmixlayer->szsoundmixer, szlayername))
+		if(!V_stricmp(pmixlayer->szsoundmixer, szlayername))
 		{
 			DevMsg("Setting MixLayer %s : mix %f\n", pmixlayer->szsoundmixer, val);
 			pmixlayer->mixAmount = val;
@@ -1121,7 +1119,7 @@ static void MXR_SetMixLayerTriggerFactor( const CCommand &args )
 
 	const char *szlayername = args[1];
 	const char *szgroupname = args[2];
-	float val = atof( args[3] );
+	float val = std::atof( args[3] );
 
 	S_SetMixLayerTriggerFactor( szlayername, szgroupname, val );
 
@@ -1177,7 +1175,7 @@ void MXR_GetValuesFromMixGroupIndex( mixervalues_t *mixValues, int imixgroup )
 {
 
 	// save lowest duck gain value for any of the mix groups this sound is in
-	Assert(imixgroup < CMXRGROUPMAX);
+	contract_assert( imixgroup < CMXRGROUPMAX );
 
 	soundmixer_t *pmixer = MXR_GetCurrentMixer( );
 	if( !pmixer )
@@ -1245,7 +1243,7 @@ void MXR_GetVolFromMixGroup( channel_t *ch, mixervalues_t *mixValues, int *plast
 			duckgain = duckgain_new;
 
 
-		Assert(imixgroup < CMXRGROUPMAX);
+		contract_assert( imixgroup < CMXRGROUPMAX );
 		
 		// return first mixgroup id in the passed in array
 		// that maps to a non -1 volume value for this
@@ -1276,12 +1274,12 @@ int MXR_GetMixgroupFromName( const char *pszgroupname )
 	if ( !pszgroupname )
 		return -1;
 	
-	if ( Q_strlen(pszgroupname) == 0 )
+	if ( V_strlen(pszgroupname) == 0 )
 		return -1;
 
 	for (int i = 0; i < g_cgrouprules; i++)
 	{
-		if ( !Q_stricmp(g_grouprules[i].szmixgroup, pszgroupname ) )
+		if ( !V_stricmp(g_grouprules[i].szmixgroup, pszgroupname ) )
 			return g_grouprules[i].mixgroupid;
 	}	
 
@@ -1339,26 +1337,26 @@ void MXR_AssignGroupIds( void )
 int MXR_AddClassname( const char *pName )
 {
 	char szclassname[CMXRNAMEMAX];
-	Q_strncpy( szclassname, pName, CMXRNAMEMAX );
+	V_strncpy( szclassname, pName, CMXRNAMEMAX );
 	for ( int i = 0; i < g_cgroupclass; i++ )
 	{
-		if ( !Q_stricmp( szclassname, g_groupclasslist[i].szclassname ) )
+		if ( !V_stricmp( szclassname, g_groupclasslist[i].szclassname ) )
 			return i;
 	}
 	if ( g_cgroupclass >= CMXRCLASSMAX )
 	{
-		Assert(g_cgroupclass < CMXRCLASSMAX);
+		contract_assert( g_cgroupclass < CMXRCLASSMAX );
 		return -1;
 	}
-	Q_memcpy(g_groupclasslist[g_cgroupclass].szclassname, pName, ( std::min<std::common_type_t<int, size_t>>(CMXRNAMEMAX-1, strlen(pName)) ));
+	V_memcpy(g_groupclasslist[g_cgroupclass].szclassname, pName, ( std::min<std::common_type_t<int, std::size_t>>(CMXRNAMEMAX-1, std::strlen(pName)) ));
 	g_cgroupclass++;
 	return g_cgroupclass-1;
 }
 
 
 ConVar snd_soundmixer_version("snd_soundmixer_version", "2" );
-#define CHAR_LEFT_PAREN		'{'
-#define CHAR_RIGHT_PAREN	'}'
+constexpr auto CHAR_LEFT_PAREN = '{';
+constexpr auto CHAR_RIGHT_PAREN = '}';
 
 // load group rules and sound mixers from file
 
@@ -1380,10 +1378,10 @@ enum
 	MXRPARSE_LAYERTRIGGERS
 
 };
-#define MIXGROUPS_STRING "MixGroups"
-#define SOUNDMIXERS_STRING "SoundMixers"
-#define MIXLAYERS_STRING "MixLayers"
-#define LAYERTRIGGERS_STRING "LayerTriggers"
+inline constexpr const char *MIXGROUPS_STRING = "MixGroups";
+inline constexpr const char *SOUNDMIXERS_STRING = "SoundMixers";
+inline constexpr const char *MIXLAYERS_STRING = "MixLayers";
+inline constexpr const char *LAYERTRIGGERS_STRING = "LayerTriggers";
 
 ConVar DebugMXRParse("snd_soundmixer_parse_debug", "0");
 
@@ -1397,7 +1395,7 @@ const char *MXR_ParseMixGroup(const char *pstart)
 	// if no value specified, set to 0 length string
 	if(parse_debug)
 		DevMsg("MixGroup %s:\n", com_token);
-	Q_memcpy(pgroup->szmixgroup, com_token, ( std::min<std::common_type_t<int, size_t>>(CMXRNAMEMAX-1, strlen(com_token)) ));
+	V_memcpy(pgroup->szmixgroup, com_token, ( std::min<std::common_type_t<int, std::size_t>>(CMXRNAMEMAX-1, std::strlen(com_token)) ));
 
 	// make sure all copied strings are null terminated
 	pgroup->szmixgroup[CMXRNAMEMAX-1]	= 0;
@@ -1408,7 +1406,7 @@ const char *MXR_ParseMixGroup(const char *pstart)
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
 		{
-			Q_memcpy(pgroup->szdir, com_token, ( std::min<std::common_type_t<int, size_t>>(CMXRNAMEMAX-1, strlen(com_token)) ));
+			V_memcpy(pgroup->szdir, com_token, ( std::min<std::common_type_t<int, size_t>>(CMXRNAMEMAX-1, strlen(com_token)) ));
 			V_strlower( pgroup->szdir );
 			// HACK to find group that affects voice channels
 			if ( V_strstr(pgroup->szdir, "?voice") )
@@ -1444,15 +1442,15 @@ const char *MXR_ParseMixGroup(const char *pstart)
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
 		{
-			if (!Q_stricmp(com_token, "CHAN_STATIC"))
+			if (!V_stricmp(com_token, "CHAN_STATIC"))
 				pgroup->chantype = CHAN_STATIC;
-			else if (!Q_stricmp(com_token, "CHAN_WEAPON"))
+			else if (!V_stricmp(com_token, "CHAN_WEAPON"))
 				pgroup->chantype = CHAN_WEAPON;
-			else if (!Q_stricmp(com_token, "CHAN_VOICE"))
+			else if (!V_stricmp(com_token, "CHAN_VOICE"))
 				pgroup->chantype = CHAN_VOICE;
-			else if (!Q_stricmp(com_token, "CHAN_BODY"))
+			else if (!V_stricmp(com_token, "CHAN_BODY"))
 				pgroup->chantype = CHAN_BODY;
-			else if (!Q_stricmp(com_token, "CHAN_ITEM"))
+			else if (!V_stricmp(com_token, "CHAN_ITEM"))
 				pgroup->chantype = CHAN_ITEM;
 		}
 		else
@@ -1468,7 +1466,7 @@ const char *MXR_ParseMixGroup(const char *pstart)
 	{
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
-			pgroup->soundlevel_min = atoi(com_token);
+			pgroup->soundlevel_min = std::atoi(com_token);
 		else
 			pgroup->soundlevel_min = -1;
 	}
@@ -1480,7 +1478,7 @@ const char *MXR_ParseMixGroup(const char *pstart)
 	{
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
-			pgroup->soundlevel_max = atoi(com_token);
+			pgroup->soundlevel_max = std::atoi(com_token);
 		else
 			pgroup->soundlevel_max = -1;
 	}
@@ -1492,7 +1490,7 @@ const char *MXR_ParseMixGroup(const char *pstart)
 	{
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
-			pgroup->priority = atoi(com_token);
+			pgroup->priority = std::atoi(com_token);
 		else
 			pgroup->priority = 50;
 	}
@@ -1505,7 +1503,7 @@ const char *MXR_ParseMixGroup(const char *pstart)
 	{
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
-			pgroup->is_ducked = atoi(com_token);
+			pgroup->is_ducked = std::atoi(com_token);
 		else
 			pgroup->is_ducked = 0;
 	}
@@ -1517,7 +1515,7 @@ const char *MXR_ParseMixGroup(const char *pstart)
 	{
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
-			pgroup->causes_ducking = atoi(com_token);
+			pgroup->causes_ducking = std::atoi(com_token);
 		else
 			pgroup->causes_ducking = 0;
 	}
@@ -1529,7 +1527,7 @@ const char *MXR_ParseMixGroup(const char *pstart)
 	{
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
-			pgroup->duck_target_pct = ((float)(atoi(com_token))) / 100.0f;
+			pgroup->duck_target_pct = ((float)(std::atoi(com_token))) / 100.0f;
 		else
 			pgroup->duck_target_pct = 0.5f;
 	}
@@ -1542,7 +1540,7 @@ const char *MXR_ParseMixGroup(const char *pstart)
 	{
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
-			pgroup->ducker_threshold = ((float)(atoi(com_token))) / 100.0f;
+			pgroup->ducker_threshold = ((float)(std::atoi(com_token))) / 100.0f;
 		else
 			pgroup->ducker_threshold = 0.5f;
 	}
@@ -1587,7 +1585,7 @@ const char *MXR_ParseSoundMixer(const char *pstart, soundmixer_t *pmixer)
 	{
 		pstart = COM_Parse( pstart );
 		if( com_token[0] )
-			volume = atof( com_token );
+			volume = std::atof( com_token );
 		else
 			volume = 1.0;
 
@@ -1603,26 +1601,26 @@ const char *MXR_ParseSoundMixer(const char *pstart, soundmixer_t *pmixer)
 		{
 			// get "level" value
 			pstart = COM_Parse( pstart );
-			level = atof( com_token );
+			level = std::atof( com_token );
 		}
 
 		if(COM_TokenWaiting( pstart ))
 		{
 			// get "dsp" value
 			pstart = COM_Parse( pstart );
-			dsp = atof( com_token );
+			dsp = std::atof( com_token );
 		}
 
 		if(COM_TokenWaiting( pstart ))
 		{
 			pstart = COM_Parse( pstart );
-			solo = atof( com_token );
+			solo = std::atof( com_token );
 		}
 
 		if(COM_TokenWaiting( pstart ))
 		{
 			pstart = COM_Parse( pstart );
-			mute = atof( com_token );
+			mute = std::atof( com_token );
 		}
 
 	}
@@ -1631,7 +1629,7 @@ const char *MXR_ParseSoundMixer(const char *pstart, soundmixer_t *pmixer)
 	for (int i = 0; i < g_cgrouprules; i++)
 	{
 		// if the mix groups name contains the string we set it
-		if ( !Q_strcmp( g_grouprules[i].szmixgroup, szgroupname ) )
+		if ( !V_strcmp( g_grouprules[i].szmixgroup, szgroupname ) )
 		{
 			// sanity check mix group
 			if(g_grouprules[i].mixgroupid < 0 || g_grouprules[i].mixgroupid >= CMXRGROUPMAX)
@@ -1707,7 +1705,7 @@ const char *MXR_ParseLayerTriggers(const char *pstart)
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
 		{
-			playertriggers->fthreshold[imixgroupid] = atof( com_token );
+			playertriggers->fthreshold[imixgroupid] = std::atof( com_token );
 		}
 	}
 	else
@@ -1719,7 +1717,7 @@ const char *MXR_ParseLayerTriggers(const char *pstart)
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
 		{
-			playertriggers->fmixamount[imixgroupid] = atof( com_token );
+			playertriggers->fmixamount[imixgroupid] = std::atof( com_token );
 		}
 	}
 	else
@@ -1731,7 +1729,7 @@ const char *MXR_ParseLayerTriggers(const char *pstart)
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
 		{
-			playertriggers->fattack[imixgroupid] = atof( com_token );
+			playertriggers->fattack[imixgroupid] = std::atof( com_token );
 		}
 	}
 	else
@@ -1743,7 +1741,7 @@ const char *MXR_ParseLayerTriggers(const char *pstart)
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
 		{
-			playertriggers->frelease[imixgroupid] = atof( com_token );
+			playertriggers->frelease[imixgroupid] = std::atof( com_token );
 		}
 	}
 
@@ -1761,9 +1759,9 @@ bool MXR_LoadAllSoundMixers( void )
 	g_cmixlayers	= 0;					// total number of soundmixers found
 	g_cgrouprules	= 0;					// total number of group rules found
 
-	Q_memset(g_soundmixers, 0, sizeof(g_soundmixers));
-	Q_memset(g_mixlayers, 0, sizeof(g_mixlayers));
-	Q_memset(g_grouprules, 0, sizeof(g_grouprules));
+	V_memset(g_soundmixers, 0, sizeof(g_soundmixers));
+	V_memset(g_mixlayers, 0, sizeof(g_mixlayers));
+	V_memset(g_grouprules, 0, sizeof(g_grouprules));
 
 		// init all mix group mixer values to -1.
 	for (int i = 0; i < CMXRSOUNDMIXERSMAX; i++)
@@ -1821,7 +1819,7 @@ bool MXR_LoadAllSoundMixers( void )
 	bool bResult = false;
 	char *pbuffer;
 
-	Q_snprintf( szFile, sizeof( szFile ), "scripts/soundmixers.txt" );
+	V_snprintf( szFile, sizeof( szFile ), "scripts/soundmixers.txt" );
 
 	pbuffer = (char *)COM_LoadFile( szFile, 5, nullptr ); // Use malloc - free at end of this routine
 	if ( !pbuffer )
@@ -1844,7 +1842,7 @@ bool MXR_LoadAllSoundMixers( void )
 	{
 		pstart = COM_Parse( pstart );
 	
-		if ( strlen(com_token) <= 0)
+		if ( std::strlen(com_token) <= 0)
 			break; // eof
 
 		// handle in and out of brackets
@@ -1903,28 +1901,28 @@ bool MXR_LoadAllSoundMixers( void )
 		// parsing the outside?
 		if( currentMxrParse == MXRPARSE_NONE)
 		{
-			if (!Q_strcmp( com_token, MIXGROUPS_STRING ) )
+			if (!V_strcmp( com_token, MIXGROUPS_STRING ) )
 			{
 				currentMxrParse = MXRPARSE_MIXGROUPS;
 				if(parse_debug)
 					DevMsg("Parsing MixGroups:\n");
 				continue;
 			}
-			else if (!Q_strcmp( com_token, SOUNDMIXERS_STRING ) )
+			else if (!V_strcmp( com_token, SOUNDMIXERS_STRING ) )
 			{
 				currentMxrParse = MXRPARSE_SOUNDMIXERS;
 				if(parse_debug)
 					DevMsg("Parsing SoundMixers:\n");
 				continue;
 			}
-			else if (!Q_strcmp( com_token, MIXLAYERS_STRING ) )
+			else if (!V_strcmp( com_token, MIXLAYERS_STRING ) )
 			{
 				currentMxrParse = MXRPARSE_MIXLAYERS;
 				if(parse_debug)
 					DevMsg("Parsing MixLayers:\n");
 				continue;
 			}
-			else if (!Q_strcmp( com_token, LAYERTRIGGERS_STRING ) )
+			else if (!V_strcmp( com_token, LAYERTRIGGERS_STRING ) )
 			{
 				currentMxrParse = MXRPARSE_LAYERTRIGGERS;
 				if(parse_debug)
@@ -1969,7 +1967,7 @@ bool MXR_LoadAllSoundMixers( void )
 
 			currentMxrParse = MXRPARSE_SOUNDMIXERGROUPS;
 
-			Q_memcpy(pmixer->szsoundmixer, com_token, ( std::min<std::common_type_t<int, size_t>>(CMXRNAMEMAX-1, strlen(com_token)) ));
+			V_memcpy(pmixer->szsoundmixer, com_token, ( std::min<std::common_type_t<int, std::size_t>>(CMXRNAMEMAX-1, std::strlen(com_token)) ));
 		}
 		else if ( currentMxrParse == MXRPARSE_SOUNDMIXERGROUPS &&  currentParseLevel == 2 )
 		{
@@ -1993,7 +1991,7 @@ bool MXR_LoadAllSoundMixers( void )
 
 			currentMxrParse = MXRPARSE_MIXLAYERGROUPS;
 
-			Q_memcpy(pmixlayer->szsoundmixer, com_token, ( std::min<std::common_type_t<int, size_t>>(CMXRNAMEMAX-1, strlen(com_token)) ));
+			V_memcpy(pmixlayer->szsoundmixer, com_token, ( std::min<std::common_type_t<int, std::size_t>>(CMXRNAMEMAX-1, std::strlen(com_token)) ));
 
 		}
 		else if ( currentMxrParse == MXRPARSE_MIXLAYERGROUPS &&  currentParseLevel == 2 )
@@ -2114,7 +2112,7 @@ void S_GetMixGroupOfCurrentMixer( const char *szgroupname, soundmixer_t *pmixer)
 	int imixgroup = 0;
 	for (int i = 0; i < g_cgrouprules; i++)
 	{
-		if(Q_stristr(g_grouprules[i].szmixgroup, szgroupname))
+		if(V_stristr(g_grouprules[i].szmixgroup, szgroupname))
 		{
 			imixgroup = g_grouprules[i].mixgroupid;
 				
@@ -2173,15 +2171,15 @@ struct debug_showvols_t
 // show the current soundmixer output
 // display routine for MXR_DebugShowMixVolumes
 
-#define MXR_DEBUG_INCY	(1.0/40.0)			// vertical text spacing
-#define MXR_DEBUG_GREENSTART 0.3			// start position on screen of bar
+constexpr auto MXR_DEBUG_INCY = (1.0/40.0); // vertical text spacing
+constexpr auto MXR_DEBUG_GREENSTART = 0.3; // start position on screen of bar
 
-#define MXR_DEBUG_MAXVOL		1.0			// max volume scale
-#define MXR_DEBUG_REDLIMIT		1.0			// volume limit into yellow
-#define MXR_DEBUG_YELLOWLIMIT	0.7			// volume limit into red
+constexpr auto MXR_DEBUG_MAXVOL = 1.0; // max volume scale
+constexpr auto MXR_DEBUG_REDLIMIT = 1.0; // volume limit into yellow
+constexpr auto MXR_DEBUG_YELLOWLIMIT = 0.7; // volume limit into red
 
-#define MXR_DEBUG_VOLSCALE 48				// length of graph in characters
-#define MXR_DEBUG_CHAR			'-'			// bar character
+constexpr auto MXR_DEBUG_VOLSCALE = 48; // length of graph in characters
+constexpr auto MXR_DEBUG_CHAR = '-'; // bar character
 
 
 int g_debug_mxr_displaycount = 0;
@@ -2208,11 +2206,11 @@ void MXR_DebugGraphMixVolumes( debug_showvols_t *groupvols, int cgroups)
 	
 	// show volume, dsp_volume
 
-/*	Q_snprintf( text, 128, "Game Volume: %1.2f", volume.GetFloat());
+/*	V_snprintf( text, 128, "Game Volume: %1.2f", volume.GetFloat());
 	CDebugOverlay::AddScreenTextOverlay(flXpos, flYpos, duration, r, g, b,a,  text); 
 	flYpos += MXR_DEBUG_INCY; */
 
-	Q_snprintf( text, 128, "DSP Volume: %1.2f", dsp_volume.GetFloat());
+	V_snprintf( text, 128, "DSP Volume: %1.2f", dsp_volume.GetFloat());
 	CDebugOverlay::AddScreenTextOverlay(flXpos, flYpos, duration, r, g, b,a,  text); 
 	flYpos += MXR_DEBUG_INCY;
 	
@@ -2222,7 +2220,7 @@ void MXR_DebugGraphMixVolumes( debug_showvols_t *groupvols, int cgroups)
 
 		r = r % 255; g = g % 255; b = b % 255;
 		
-		Q_snprintf( text, 128, "%s: %1.2f (%1.2f)", groupvols[i].psz, 
+		V_snprintf( text, 128, "%s: %1.2f (%1.2f)", groupvols[i].psz, 
 					groupvols[i].vol * g_DuckScale, groupvols[i].totalvol * g_DuckScale);
 
 		CDebugOverlay::AddScreenTextOverlay(flXpos, flYpos, duration, r, g, b,a,  text);
@@ -2248,11 +2246,11 @@ void MXR_DebugGraphMixVolumes( debug_showvols_t *groupvols, int cgroups)
 			//flXposBar = flXpos + MXR_DEBUG_GREENSTART;
 
 			rb = 0; gb= 255; bb = 0;		// green bar
-			Q_memset(bartext, 0, sizeof(bartext));
+			V_memset(bartext, 0, sizeof(bartext));
 
 			cbars = (int)((float)vol1 * (float)MXR_DEBUG_VOLSCALE);
 			cbars = clamp(cbars, 0, MXR_DEBUG_VOLSCALE*3-1);
-			Q_memset(bartext, MXR_DEBUG_CHAR, cbars);
+			V_memset(bartext, MXR_DEBUG_CHAR, cbars);
 
 			CDebugOverlay::AddScreenTextOverlay(flXposBar, flYpos, duration, rb, gb, bb,ab,  bartext);
 		}
@@ -2262,11 +2260,11 @@ void MXR_DebugGraphMixVolumes( debug_showvols_t *groupvols, int cgroups)
 		if (vol2 > MXR_DEBUG_YELLOWLIMIT)	
 		{
 			rb = 255; gb = 255; bb = 0;	
-			Q_memset(bartext, 0, sizeof(bartext));
+			V_memset(bartext, 0, sizeof(bartext));
 
 			cbars = (int)((float)vol2 * (float)MXR_DEBUG_VOLSCALE);
 			cbars = clamp(cbars, 0, MXR_DEBUG_VOLSCALE*3-1);
-			Q_memset(bartext, MXR_DEBUG_CHAR, cbars);
+			V_memset(bartext, MXR_DEBUG_CHAR, cbars);
 
 			CDebugOverlay::AddScreenTextOverlay(flXposBar, flYpos, duration, rb, gb, bb,ab,  bartext);
 		}
@@ -2276,11 +2274,11 @@ void MXR_DebugGraphMixVolumes( debug_showvols_t *groupvols, int cgroups)
 		{
 			//flXposBar = flXpos + MXR_DEBUG_REDSTART;
 			rb = 255; gb = 0; bb = 0;
-			Q_memset(bartext, 0, sizeof(bartext));
+			V_memset(bartext, 0, sizeof(bartext));
 
 			cbars = (int)((float)vol3 * (float)MXR_DEBUG_VOLSCALE);
 			cbars = clamp(cbars, 0, MXR_DEBUG_VOLSCALE*3-1);
-			Q_memset(bartext, MXR_DEBUG_CHAR, cbars);
+			V_memset(bartext, MXR_DEBUG_CHAR, cbars);
 
 			CDebugOverlay::AddScreenTextOverlay(flXposBar, flYpos, duration, rb, gb, bb,ab,  bartext);
 		}
@@ -2387,5 +2385,3 @@ void MXR_DebugSetMixGroupVolume( const CCommand &args )
 }
 
 #endif //_DEBUG
-
-

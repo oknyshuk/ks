@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PARTICLELITGENERIC_DX9_HELPER_H
-#define PARTICLELITGENERIC_DX9_HELPER_H
-
-#include <string.h>
-
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -25,7 +18,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct ParticleLitGeneric_DX9_Vars_t
 {												
-	ParticleLitGeneric_DX9_Vars_t() { memset( this, 0xFF, sizeof(ParticleLitGeneric_DX9_Vars_t) ); }
+	ParticleLitGeneric_DX9_Vars_t() { std::memset( this, 0xFF, sizeof(ParticleLitGeneric_DX9_Vars_t) ); }
 
 	int m_nBaseTexture;
 	int m_nBaseTextureFrame;
@@ -42,6 +35,3 @@ void InitParamsParticleLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** pa
 void InitParticleLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, ParticleLitGeneric_DX9_Vars_t &info );
 void DrawParticleLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 	IShaderDynamicAPI *pShaderAPI, IShaderShadow* pShaderShadow, ParticleLitGeneric_DX9_Vars_t &info );
-
-
-#endif // PARTICLELITGENERIC_DX9_HELPER_H

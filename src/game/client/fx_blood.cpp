@@ -1,20 +1,23 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A blood spray effect, like a big exit wound, used when people are
 //			violently impaled, skewered, eviscerated, etc.
-//
-//=============================================================================//
 
-#include "cbase.h"
-#include "precache_register.h"
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "fx_sparks.h"
-#include "iefx.h"
 #include "c_te_effect_dispatch.h"
-#include "particles_ez.h"
-#include "decals.h"
-#include "engine/IEngineSound.h"
 #include "fx_quad.h"
-#include "engine/ivdebugoverlay.h"
 #include "shareddefs.h"
 #include "fx.h"
 #include "fx_blood.h"
@@ -498,7 +501,7 @@ void BloodImpactCallback( const CEffectData & data )
 	bool bFoundBlood = false;
 
 	// Find which sort of blood we are
-	for ( int i = 0; i < ARRAYSIZE( bloodCallbacks ); i++ )
+	for ( int i = 0; i < std::size( bloodCallbacks ); i++ )
 	{
 		if ( bloodCallbacks[i].nColor == data.m_nColor )
 		{

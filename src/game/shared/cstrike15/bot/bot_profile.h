@@ -1,21 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
-
-#ifndef _BOT_PROFILE_H_
-#define _BOT_PROFILE_H_
-
 
 #include "bot_constants.h"
 #include "bot_util.h"
 #include "cs_weapon_parse.h"
-#include <memory>
-#include <vector>
+import std;
 
 enum
 {
@@ -431,6 +423,3 @@ protected:
 
 /// the global singleton for accessing BotProfiles
 extern BotProfileManager *TheBotProfiles;
-
-
-#endif // _BOT_PROFILE_H_

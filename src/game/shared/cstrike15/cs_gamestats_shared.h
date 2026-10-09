@@ -1,18 +1,37 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose:
-//
-//=============================================================================
-#ifndef CS_GAMESTATS_SHARED_H
-#define CS_GAMESTATS_SHARED_H
-#include "cbase.h"
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#endif
 // #include "tier1/utlvector.h"
 #include "shareddefs.h"
 #include "cs_shareddefs.h"
 #include "cs_weapon_parse.h"
 
-
-#define CS_NUM_LEVELS 18
+inline constexpr auto CS_NUM_LEVELS = 18;
 
 //=============================================================================
 // Helper class for simple manipulation of bit arrays.
@@ -385,21 +404,20 @@ enum CSStatType_t
 };
 
 
-#define CSSTAT_FIRST (CSSTAT_UNDEFINED+1)
-#define CSSTAT_LAST (CSSTAT_MAX-1)
+inline constexpr auto CSSTAT_FIRST = (CSSTAT_UNDEFINED+1);
+inline constexpr auto CSSTAT_LAST = (CSSTAT_MAX-1);
 
 //
 // CS Game Stats Flags
 //
-#define CSSTAT_PRIORITY_MASK		0x000F
-#define CSSTAT_PRIORITY_NEVER		0x0000		// not sent to client
-#define CSSTAT_PRIORITY_ENDROUND	0x0001		// sent at end of round
-#define CSSTAT_PRIORITY_LOW			0x0002		// sent every 2500ms
-#define CSSTAT_PRIORITY_HIGH		0x0003		// sent every 250ms
+inline constexpr auto CSSTAT_PRIORITY_MASK = 0x000F;
+inline constexpr auto CSSTAT_PRIORITY_NEVER = 0x0000; // not sent to client
+inline constexpr auto CSSTAT_PRIORITY_ENDROUND = 0x0001; // sent at end of round
+inline constexpr auto CSSTAT_PRIORITY_LOW = 0x0002; // sent every 2500ms
+inline constexpr auto CSSTAT_PRIORITY_HIGH = 0x0003; // sent every 250ms
 
 struct CSStatProperty
 {
-	const char*	szSteamName;			// name of the stat on steam
 	const char*	szLocalizationToken;	// localization token for the stat
 	uint flags;							// priority flags for sending to client
 };
@@ -417,7 +435,7 @@ struct StatsCollection_t
 
 	void Reset()
 	{
-		for ( int i = 0; i < ARRAYSIZE( m_iValue ); i++ )
+		for ( int i = 0; i < std::size( m_iValue ); i++ )
 		{
 			m_iValue[i] = 0;
 		}
@@ -425,13 +443,13 @@ struct StatsCollection_t
 
 	int operator[] ( int index ) const
 	{
-		Assert(index >= 0 && index < ARRAYSIZE(m_iValue));
+		contract_assert( index >= 0 && index < std::size( m_iValue ) );
 		return m_iValue[index];
 	}
 
 	int& operator[] ( int index )
 	{
-		Assert(index >= 0 && index < ARRAYSIZE(m_iValue));
+		contract_assert( index >= 0 && index < std::size( m_iValue ) );
 		return m_iValue[index];
 	}
 
@@ -454,7 +472,7 @@ struct RoundStatsDirectAverage_t
 
 	void Reset()
 	{
-		for ( int i = 0; i < ARRAYSIZE( m_fStat ); i++ )
+		for ( int i = 0; i < std::size( m_fStat ); i++ )
 		{
 			m_fStat[i] = 0;
 		}
@@ -462,7 +480,7 @@ struct RoundStatsDirectAverage_t
 
 	RoundStatsDirectAverage_t& operator +=( const StatsCollection_t &other )
 	{
-		for ( int i = 0; i < ARRAYSIZE( m_fStat ); i++ )
+		for ( int i = 0; i < std::size( m_fStat ); i++ )
 		{
 			m_fStat[i] += other[i];
 		}
@@ -473,7 +491,7 @@ struct RoundStatsDirectAverage_t
 	{
 		if (divisor > 0)
 		{
-			for ( int i = 0; i < ARRAYSIZE( m_fStat ); i++ )
+			for ( int i = 0; i < std::size( m_fStat ); i++ )
 			{
 				m_fStat[i] /= divisor;
 			}
@@ -483,7 +501,7 @@ struct RoundStatsDirectAverage_t
 
 	RoundStatsDirectAverage_t& operator *=( const float &divisor)
 	{
-		for ( int i = 0; i < ARRAYSIZE( m_fStat ); i++ )
+		for ( int i = 0; i < std::size( m_fStat ); i++ )
 		{
 			m_fStat[i] *= divisor;
 		}
@@ -504,7 +522,7 @@ struct RoundStatsRollingAverage_t
 
 	void Reset()
 	{
-		for ( int i = 0; i < ARRAYSIZE( m_fStat ); i++ )
+		for ( int i = 0; i < std::size( m_fStat ); i++ )
 		{
 			m_fStat[i] = 0;
 		}
@@ -513,7 +531,7 @@ struct RoundStatsRollingAverage_t
 
 	RoundStatsRollingAverage_t& operator +=( const RoundStatsRollingAverage_t &other )
 	{
-		for ( int i = 0; i < ARRAYSIZE( m_fStat ); i++ )
+		for ( int i = 0; i < std::size( m_fStat ); i++ )
 		{
 			m_fStat[i] += other.m_fStat[i];
 		}
@@ -522,7 +540,7 @@ struct RoundStatsRollingAverage_t
 
     RoundStatsRollingAverage_t& operator +=( const StatsCollection_t &other )
 	{
-		for ( int i = 0; i < ARRAYSIZE( m_fStat ); i++ )
+		for ( int i = 0; i < std::size( m_fStat ); i++ )
 		{
             m_fStat[i] += other[i];
 		}
@@ -533,7 +551,7 @@ struct RoundStatsRollingAverage_t
 	{
 		if (divisor > 0)
 		{
-			for ( int i = 0; i < ARRAYSIZE( m_fStat ); i++ )
+			for ( int i = 0; i < std::size( m_fStat ); i++ )
 			{
 				m_fStat[i] /= divisor;
 			}
@@ -543,7 +561,7 @@ struct RoundStatsRollingAverage_t
 
 	void RollDataSetIntoAverage ( const RoundStatsRollingAverage_t &other )
 	{
-		for ( int i = 0; i < ARRAYSIZE( m_fStat ); i++ )
+		for ( int i = 0; i < std::size( m_fStat ); i++ )
 		{
 			m_fStat[i] *= m_numberOfDataSets;
 			m_fStat[i] += other.m_fStat[i];
@@ -572,9 +590,9 @@ struct KillStats_t
 
 	void Reset()
 	{
-		Q_memset( iNumKilled, 0, sizeof( iNumKilled ) );
-		Q_memset( iNumKilledBy, 0, sizeof( iNumKilledBy ) );
-		Q_memset( iNumKilledByUnanswered, 0, sizeof( iNumKilledByUnanswered ) );
+		V_memset( iNumKilled, 0, sizeof( iNumKilled ) );
+		V_memset( iNumKilledBy, 0, sizeof( iNumKilledBy ) );
+		V_memset( iNumKilledByUnanswered, 0, sizeof( iNumKilledByUnanswered ) );
 	}
 
 	int iNumKilled[MAX_PLAYERS+1];					// how many times this player has killed each other player
@@ -639,6 +657,3 @@ extern const WeaponName_StatId WeaponName_StatId_Table[];
 
 //Used to look up the appropriate entry by the ID of the actual weapon
 const WeaponName_StatId& GetWeaponTableEntryFromWeaponId(CSWeaponID id);
-
-
-#endif // CS_GAMESTATS_SHARED_H

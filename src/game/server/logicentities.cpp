@@ -1,21 +1,44 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ====
-//
-// Purpose: Implements many of the entities that control logic flow within a map.
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Implements many of the entities that control logic flow within a map.
+
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
-#include "mathlib/mathlib.h"
 #include "globalstate.h"
 #include "ndebugoverlay.h"
-#include "vstdlib/random.h"
 #include "gameinterface.h"
-
 
 extern CServerGameDLL g_ServerGameDLL;
 
@@ -23,7 +46,7 @@ extern CServerGameDLL g_ServerGameDLL;
 // Purpose: An entity that acts as a container for game scripts.
 //-----------------------------------------------------------------------------
 
-#define MAX_SCRIPT_GROUP 16
+constexpr auto MAX_SCRIPT_GROUP = 16;
 
 class CLogicScript : public CPointEntity
 {
@@ -170,7 +193,7 @@ void CLogicCompareInteger::InputValue( inputdata_t &inputdata )
 	{
 		// TODO: need to add this event with a lower priority, so it gets called after all inputs have arrived
 		g_EventQueue.AddEvent( this, "CompareValues", 0, inputdata.pActivator, this, inputdata.nOutputID );
-		m_AllIntCompares.m_bUpdatedThisFrame = TRUE;
+		m_AllIntCompares.m_bUpdatedThisFrame = true;
 	}
 }
 
@@ -180,7 +203,7 @@ void CLogicCompareInteger::InputValue( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CLogicCompareInteger::InputCompareValues( inputdata_t &inputdata )
 {
-	m_AllIntCompares.m_bUpdatedThisFrame = FALSE;
+	m_AllIntCompares.m_bUpdatedThisFrame = false;
 
 	// loop through all the values comparing them
 	int value = m_iIntegerValue;
@@ -450,7 +473,7 @@ void CTimerEntity::ResetTimer( void )
 //-----------------------------------------------------------------------------
 void CTimerEntity::Enable( void )
 {
-	m_iDisabled = FALSE;
+	m_iDisabled = false;
 	ResetTimer();
 }
 
@@ -460,7 +483,7 @@ void CTimerEntity::Enable( void )
 //-----------------------------------------------------------------------------
 void CTimerEntity::Disable( void )
 {
-	m_iDisabled = TRUE;
+	m_iDisabled = true;
 	SetNextThink( TICK_NEVER_THINK );
 }
 
@@ -632,7 +655,7 @@ int CTimerEntity::DrawDebugTextOverlays( void )
 		char tempstr[512];
 
 		// print refire time
-		Q_snprintf(tempstr,sizeof(tempstr),"refire interval: %.2f sec", m_flRefireTime);
+		V_snprintf(tempstr,sizeof(tempstr),"refire interval: %.2f sec", m_flRefireTime);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
@@ -640,7 +663,7 @@ int CTimerEntity::DrawDebugTextOverlays( void )
 		if ( !m_iDisabled )
 		{
 			float flNextThink = GetNextThink();
-			Q_snprintf( tempstr, sizeof( tempstr ), "      firing in: %.2f sec", flNextThink - gpGlobals->curtime );
+			V_snprintf( tempstr, sizeof( tempstr ), "      firing in: %.2f sec", flNextThink - gpGlobals->curtime );
 			EntityText( text_offset, tempstr, 0);
 			text_offset++;
 		}
@@ -975,7 +998,7 @@ void CC_Global_Set( const CCommand &args )
 		return;
 	}
 
-	int nState = atoi( szState );
+	int nState = std::atoi( szState );
 
 	int nIndex = GlobalEntity_GetIndex( szGlobal );
 
@@ -1192,7 +1215,7 @@ int CEnvGlobal::DrawDebugTextOverlays(void)
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
 		char tempstr[512];
-		Q_snprintf(tempstr,sizeof(tempstr),"State: %s",STRING(m_globalstate));
+		V_snprintf(tempstr,sizeof(tempstr),"State: %s",STRING(m_globalstate));
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
@@ -1201,15 +1224,15 @@ int CEnvGlobal::DrawDebugTextOverlays(void)
 		switch( nState )
 		{
 		case GLOBAL_OFF:
-			Q_strncpy(tempstr,"Value: OFF",sizeof(tempstr));
+			V_strncpy(tempstr,"Value: OFF",sizeof(tempstr));
 			break;
 
 		case GLOBAL_ON:
-			Q_strncpy(tempstr,"Value: ON",sizeof(tempstr));
+			V_strncpy(tempstr,"Value: ON",sizeof(tempstr));
 			break;
 
 		case GLOBAL_DEAD:
-			Q_strncpy(tempstr,"Value: DEAD",sizeof(tempstr));
+			V_strncpy(tempstr,"Value: DEAD",sizeof(tempstr));
 			break;
 		}
 		EntityText(text_offset,tempstr,0);
@@ -1221,7 +1244,7 @@ int CEnvGlobal::DrawDebugTextOverlays(void)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-#define MS_MAX_TARGETS 32
+constexpr auto MS_MAX_TARGETS = 32;
 
 const int SF_MULTI_INIT	= 1;
 
@@ -1315,7 +1338,7 @@ void CMultiSource::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 
 	// CONSIDER: a Use input to the multisource always toggles.  Could check useType for ON/OFF/TOGGLE
 
-	Assert(i > 0);
+	contract_assert( i > 0 );
 	m_rgTriggered[i-1] ^= 1;
 
 	// 
@@ -1368,7 +1391,7 @@ void CMultiSource::Register(void)
 	CBaseEntity *pTarget = nullptr;
 
 	m_iTotal = 0;
-	memset( m_rgEntities, 0, MS_MAX_TARGETS * sizeof(EHANDLE) );
+	std::memset( m_rgEntities, 0, MS_MAX_TARGETS * sizeof(EHANDLE) );
 
 	SetThink(&CMultiSource::SUB_DoNothing);
 
@@ -1463,7 +1486,7 @@ bool CMathCounter::KeyValue(const char *szKeyName, const char *szValue)
 	//
 	if (!stricmp(szKeyName, "startvalue"))
 	{
-		m_OutValue.Init(atoi(szValue));
+		m_OutValue.Init(std::atoi(szValue));
 		return(true);
 	}
 
@@ -1509,25 +1532,25 @@ int CMathCounter::DrawDebugTextOverlays( void )
 	{
 		char tempstr[512];
 
-		Q_snprintf(tempstr,sizeof(tempstr),"    min value: %f", m_flMin);
+		V_snprintf(tempstr,sizeof(tempstr),"    min value: %f", m_flMin);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"    max value: %f", m_flMax);
+		V_snprintf(tempstr,sizeof(tempstr),"    max value: %f", m_flMax);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"current value: %f", m_OutValue.Get());
+		V_snprintf(tempstr,sizeof(tempstr),"current value: %f", m_OutValue.Get());
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		if( m_bDisabled )
 		{	
-			Q_snprintf(tempstr,sizeof(tempstr),"*DISABLED*");		
+			V_snprintf(tempstr,sizeof(tempstr),"*DISABLED*");		
 		}
 		else
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Enabled.");
+			V_snprintf(tempstr,sizeof(tempstr),"Enabled.");
 		}
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
@@ -1822,7 +1845,7 @@ void CMathCounter::UpdateOutValue(CBaseEntity *pActivator, float fNewValue)
 //
 //			This can also be used to fire a random output from a set of outputs.
 //-----------------------------------------------------------------------------
-#define MAX_LOGIC_CASES 16
+constexpr auto MAX_LOGIC_CASES = 16;
 
 class CLogicCase : public CLogicalEntity
 {
@@ -1898,7 +1921,7 @@ void CLogicCase::InputValue( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 int CLogicCase::BuildCaseMap(unsigned char *puchCaseMap)
 {
-	memset(puchCaseMap, 0, sizeof(unsigned char) * MAX_LOGIC_CASES);
+	std::memset(puchCaseMap, 0, sizeof(unsigned char) * MAX_LOGIC_CASES);
 
 	int nNumCases = 0;
 	for (int i = 0; i < MAX_LOGIC_CASES; i++)
@@ -1930,7 +1953,7 @@ void CLogicCase::InputPickRandom( inputdata_t &inputdata )
 		int nRandom = random->RandomInt(0, nNumCases - 1);
 		int nCase = (unsigned char)uchCaseMap[nRandom];
 
-		Assert(nCase < MAX_LOGIC_CASES);
+		contract_assert( nCase < MAX_LOGIC_CASES );
 
 		if (nCase < MAX_LOGIC_CASES)
 		{
@@ -1986,7 +2009,7 @@ void CLogicCase::InputPickRandomShuffle( inputdata_t &inputdata )
 		int nRandom = random->RandomInt( 0, nCaseCount - 1 );
 
 		int nCase = m_uchShuffleCaseMap[nRandom];
-		Assert(nCase < MAX_LOGIC_CASES);
+		contract_assert( nCase < MAX_LOGIC_CASES );
 
 		if (nCase < MAX_LOGIC_CASES)
 		{
@@ -2119,12 +2142,12 @@ int CLogicCompare::DrawDebugTextOverlays( void )
 		char tempstr[512];
 
 		// print duration
-		Q_snprintf(tempstr,sizeof(tempstr),"    Initial Value: %f", m_flInValue);
+		V_snprintf(tempstr,sizeof(tempstr),"    Initial Value: %f", m_flInValue);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		// print hold time
-		Q_snprintf(tempstr,sizeof(tempstr),"    Compare Value: %f", m_flCompareValue);
+		V_snprintf(tempstr,sizeof(tempstr),"    Compare Value: %f", m_flCompareValue);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}
@@ -2312,7 +2335,7 @@ int CLogicBranch::DrawDebugTextOverlays( void )
 		char tempstr[512];
 
 		// print refire time
-		Q_snprintf( tempstr, sizeof(tempstr), "Branch value: %s", (m_bInValue) ? "TRUE" : "FALSE" );
+		V_snprintf( tempstr, sizeof(tempstr), "Branch value: %s", (m_bInValue) ? "TRUE" : "FALSE" );
 		EntityText( text_offset, tempstr, 0 );
 		text_offset++;
 	}
@@ -2472,7 +2495,7 @@ IMPLEMENT_REFLECT_DATAMAP( CLogicActiveAutosave )
 void CLogicAutosave::InputSetMinHitpointsThreshold( inputdata_t &inputdata )
 {
 	int setTo = inputdata.value.Int();
-	AssertMsg1(setTo >= 0 && setTo <= 100, "Tried to set autosave MinHitpointsThreshold to %d!\n", setTo);
+	contract_assert( ( setTo >= 0 && setTo <= 100 ) && "Tried to set autosave MinHitpointsThreshold to %d!\n" );
 	m_minHitPoints = setTo;
 }
 
@@ -2564,7 +2587,7 @@ LINK_ENTITY_TO_CLASS( logic_collision_pair, CLogicCollisionPair );
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-#define MAX_LOGIC_BRANCH_NAMES 16
+constexpr auto MAX_LOGIC_BRANCH_NAMES = 16;
 
 class CLogicBranchList : public CLogicalEntity
 {
@@ -2746,7 +2769,7 @@ int CLogicBranchList::DrawDebugTextOverlays( void )
 			CLogicBranch *pBranch = (CLogicBranch *)m_LogicBranchList[ i ].Get();
 			if ( pBranch )
 			{
-				Q_snprintf( tempstr, sizeof(tempstr), "Branch (%s): %s", STRING(pBranch->GetEntityName()), (pBranch->GetLogicBranchState()) ? "TRUE" : "FALSE" );
+				V_snprintf( tempstr, sizeof(tempstr), "Branch (%s): %s", STRING(pBranch->GetEntityName()), (pBranch->GetLogicBranchState()) ? "TRUE" : "FALSE" );
 				EntityText( text_offset, tempstr, 0 );
 				text_offset++;
 			}

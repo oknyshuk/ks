@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
@@ -11,7 +12,7 @@ private:
 public:
 	void SetBLEND( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBLEND = i;
 #ifdef _DEBUG
 		m_bBLEND = true;
@@ -19,7 +20,7 @@ public:
 	}
 	void SetBLEND( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBLEND = true;
@@ -40,7 +41,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bBLEND;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nBLEND ) + 0;
 	}
@@ -62,7 +63,7 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_watercheap_vs20 0
+inline constexpr int shaderDynamicTest_watercheap_vs20 = 0;
 
 static const ShaderComboInformation_t s_StaticComboArray_WaterCheap_vs20[1] = 
 {
@@ -70,7 +71,7 @@ static const ShaderComboInformation_t s_StaticComboArray_WaterCheap_vs20[1] =
 };
 static const ShaderComboSemantics_t WaterCheap_vs20_combos =
 {
-	"WaterCheap_vs20", NULL, 0, s_StaticComboArray_WaterCheap_vs20, 1 
+	"WaterCheap_vs20", nullptr, 0, s_StaticComboArray_WaterCheap_vs20, 1 
 };
 
 class ConstructMe_WaterCheap_vs20

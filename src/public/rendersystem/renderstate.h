@@ -1,35 +1,30 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: API-independent render state declarations
-//
-// $NoKeywords: $
-//
-//===========================================================================//
 
-#ifndef RENDERSTATE_H
-#define RENDERSTATE_H
-
-
-#include "tier1/interface.h"
-#include "tier1/generichash.h"
-#include "basetypes.h"
-#include "mathlib/mathlib.h"
+import ks.tier1;
+import std;
 
 //-----------------------------------------------------------------------------
 // Handle to render state objects
 //-----------------------------------------------------------------------------
-DECLARE_POINTER_HANDLE( RsRasterizerStateHandle_t );
-#define RENDER_RASTERIZER_STATE_HANDLE_INVALID	( (RsRasterizerStateHandle_t)0 )
-DECLARE_POINTER_HANDLE( RsDepthStencilStateHandle_t );
-#define RENDER_DEPTH_STENCIL_STATE_HANDLE_INVALID	( (RsDepthStencilStateHandle_t)0 )
-DECLARE_POINTER_HANDLE( RsBlendStateHandle_t );
-#define RENDER_BLEND_STATE_HANDLE_INVALID	( (RsBlendStateHandle_t)0 )
+struct RsRasterizerStateHandle_t__ { int unused; };
+using RsRasterizerStateHandle_t = RsRasterizerStateHandle_t__ *;
+inline constexpr auto RENDER_RASTERIZER_STATE_HANDLE_INVALID = ( (RsRasterizerStateHandle_t)0 );
+struct RsDepthStencilStateHandle_t__ { int unused; };
+using RsDepthStencilStateHandle_t = RsDepthStencilStateHandle_t__ *;
+inline constexpr auto RENDER_DEPTH_STENCIL_STATE_HANDLE_INVALID = ( (RsDepthStencilStateHandle_t)0 );
+struct RsBlendStateHandle_t__ { int unused; };
+using RsBlendStateHandle_t = RsBlendStateHandle_t__ *;
+inline constexpr auto RENDER_BLEND_STATE_HANDLE_INVALID = ( (RsBlendStateHandle_t)0 );
 
 
 //-----------------------------------------------------------------------------
 // Packs a float4 color to ARGB 8-bit int color compatible with D3D9
 //-----------------------------------------------------------------------------
-FORCEINLINE uint32 PackFloat4ColorToUInt32( float flR, float flG, float flB, float flA )
+[[gnu::always_inline]] inline uint32 PackFloat4ColorToUInt32( float flR, float flG, float flB, float flA )
 {
 	uint32 nR, nG, nB, nA;
 	nR = uint32( flR * 255.0f );
@@ -42,7 +37,7 @@ FORCEINLINE uint32 PackFloat4ColorToUInt32( float flR, float flG, float flB, flo
 //-----------------------------------------------------------------------------
 // Packs a float4 color to ARGB 8-bit int color compatible with D3D9, clamping the floats to [0, 1]
 //-----------------------------------------------------------------------------
-FORCEINLINE uint32 ClampAndPackFloat4ColorToUInt32( float flR, float flG, float flB, float flA )
+[[gnu::always_inline]] inline uint32 ClampAndPackFloat4ColorToUInt32( float flR, float flG, float flB, float flA )
 {
 	uint32 nR, nG, nB, nA;
 	nR = uint32( clamp( flR, 0.0f, 1.0f ) * 255.0f );
@@ -55,7 +50,7 @@ FORCEINLINE uint32 ClampAndPackFloat4ColorToUInt32( float flR, float flG, float 
 //-----------------------------------------------------------------------------
 // Unpacks an ARGB 8-bit int color to 4 floats
 //-----------------------------------------------------------------------------
-FORCEINLINE void UnpackUint32ColorToFloat4( uint32 nPackedColor, float* pflR, float* pflG, float* pflB, float* pflA )
+[[gnu::always_inline]] inline void UnpackUint32ColorToFloat4( uint32 nPackedColor, float* pflR, float* pflG, float* pflB, float* pflA )
 {
 	uint32 nR, nG, nB, nA;
 
@@ -181,15 +176,15 @@ struct RsRasterizerStateDesc_t
 	*/
 
 
-	FORCEINLINE uint32 HashValue() const
+	[[gnu::always_inline]] inline uint32 HashValue() const
 	{
 		// TODO: Optimize this
 		return HashItem( *this );
 	}
 
-	FORCEINLINE bool operator==( RsRasterizerStateDesc_t const &state ) const
+	[[gnu::always_inline]] inline bool operator==( RsRasterizerStateDesc_t const &state ) const
 	{
-		return memcmp( this, &state, sizeof( RsRasterizerStateDesc_t ) ) == 0;
+		return std::memcmp( this, &state, sizeof( RsRasterizerStateDesc_t ) ) == 0;
 	}
 };
 
@@ -225,15 +220,15 @@ struct RsDepthStencilStateDesc_t
 	// Stencil ref not part of this, it's set explicitly when binding DS state block
 	// TODO: Figure out if I should pull the 360 HiStencil ref out too.
 
-	FORCEINLINE uint32 HashValue() const
+	[[gnu::always_inline]] inline uint32 HashValue() const
 	{
 		// TODO: Optimize this
 		return HashItem( *this );
 	}
 
-	FORCEINLINE bool operator==( RsDepthStencilStateDesc_t const &state ) const
+	[[gnu::always_inline]] inline bool operator==( RsDepthStencilStateDesc_t const &state ) const
 	{
-		return memcmp( this, &state, sizeof( RsDepthStencilStateDesc_t ) ) == 0;
+		return std::memcmp( this, &state, sizeof( RsDepthStencilStateDesc_t ) ) == 0;
 	}
 };
 
@@ -253,15 +248,15 @@ struct RsBlendStateDesc_t
 	RsBlendOp_t m_blendOpAlpha[RS_MAX_RENDER_TARGETS];
 	uint8 m_nRenderTargetWriteMask[RS_MAX_RENDER_TARGETS];
 
-	FORCEINLINE uint32 HashValue() const
+	[[gnu::always_inline]] inline uint32 HashValue() const
 	{
 		// TODO: Optimize this
 		return HashItem( *this );
 	}
 
-	FORCEINLINE bool operator==( RsBlendStateDesc_t const &state ) const
+	[[gnu::always_inline]] inline bool operator==( RsBlendStateDesc_t const &state ) const
 	{
-		return memcmp( this, &state, sizeof( RsBlendStateDesc_t ) ) == 0;
+		return std::memcmp( this, &state, sizeof( RsBlendStateDesc_t ) ) == 0;
 	}
 };
 
@@ -293,37 +288,37 @@ enum RsFilterType_t
 	RS_FILTER_TYPE_LINEAR = 1
 };
 
-FORCEINLINE RsFilter_t RsEncodeBasicTextureFilter( RsFilterType_t minFilter, RsFilterType_t magFilter, RsFilterType_t mipFilter, bool bComparison )
+[[gnu::always_inline]] inline RsFilter_t RsEncodeBasicTextureFilter( RsFilterType_t minFilter, RsFilterType_t magFilter, RsFilterType_t mipFilter, bool bComparison )
 {
 	return static_cast< RsFilter_t >( ( bComparison ? 0x80 : 0 ) | ( ( minFilter & 0x3 ) << 4 ) | ( ( magFilter & 0x3 ) << 2 ) | ( mipFilter & 0x3 ) );
 }
 
-FORCEINLINE RsFilter_t RsEncodeAnisoTextureFilter( bool bComparison )
+[[gnu::always_inline]] inline RsFilter_t RsEncodeAnisoTextureFilter( bool bComparison )
 {
 	return RsEncodeBasicTextureFilter( RS_FILTER_TYPE_LINEAR, RS_FILTER_TYPE_LINEAR, RS_FILTER_TYPE_LINEAR, bComparison );
 }
 
-FORCEINLINE RsFilterType_t RsGetTextureMinFilterType( RsFilter_t filter )
+[[gnu::always_inline]] inline RsFilterType_t RsGetTextureMinFilterType( RsFilter_t filter )
 {
 	return static_cast< RsFilterType_t >( 0x3 & ( filter >> 4 ) );
 }
 
-FORCEINLINE RsFilterType_t RsGetTextureMagFilterType( RsFilter_t filter )
+[[gnu::always_inline]] inline RsFilterType_t RsGetTextureMagFilterType( RsFilter_t filter )
 {
 	return static_cast< RsFilterType_t >( 0x3 & ( filter >> 2 ) );
 }
 
-FORCEINLINE RsFilterType_t RsGetTextureMipFilterType( RsFilter_t filter )
+[[gnu::always_inline]] inline RsFilterType_t RsGetTextureMipFilterType( RsFilter_t filter )
 {
 	return static_cast< RsFilterType_t >( 0x3 & filter );
 }
 
-FORCEINLINE bool RsIsComparisonTextureFilter( RsFilter_t filter )
+[[gnu::always_inline]] inline bool RsIsComparisonTextureFilter( RsFilter_t filter )
 {
 	return ( filter & 0x80 ) != 0;
 }
 
-FORCEINLINE bool RsIsAnisoTextureFilter( RsFilter_t filter )
+[[gnu::always_inline]] inline bool RsIsAnisoTextureFilter( RsFilter_t filter )
 {
 	return static_cast< RsFilter_t >( filter & ~0x80 ) == RS_FILTER_ANISOTROPIC;
 }
@@ -369,81 +364,81 @@ public:
 		m_nPad = 0;
 	}
 
-	FORCEINLINE RsFilter_t GetFilterMode() const { return static_cast< RsFilter_t >( m_nFilterMode ); }
-	FORCEINLINE void SetFilterMode( RsFilter_t filter ) { m_nFilterMode = filter; }
+	[[gnu::always_inline]] inline RsFilter_t GetFilterMode() const { return static_cast< RsFilter_t >( m_nFilterMode ); }
+	[[gnu::always_inline]] inline void SetFilterMode( RsFilter_t filter ) { m_nFilterMode = filter; }
 
-	FORCEINLINE RsTextureAddressMode_t GetTextureAddressModeU() const { return static_cast< RsTextureAddressMode_t >( m_nAddressU ); }
-	FORCEINLINE RsTextureAddressMode_t GetTextureAddressModeV() const { return static_cast< RsTextureAddressMode_t >( m_nAddressV ); }
-	FORCEINLINE RsTextureAddressMode_t GetTextureAddressModeW() const { return static_cast< RsTextureAddressMode_t >( m_nAddressW ); }
+	[[gnu::always_inline]] inline RsTextureAddressMode_t GetTextureAddressModeU() const { return static_cast< RsTextureAddressMode_t >( m_nAddressU ); }
+	[[gnu::always_inline]] inline RsTextureAddressMode_t GetTextureAddressModeV() const { return static_cast< RsTextureAddressMode_t >( m_nAddressV ); }
+	[[gnu::always_inline]] inline RsTextureAddressMode_t GetTextureAddressModeW() const { return static_cast< RsTextureAddressMode_t >( m_nAddressW ); }
 
-	FORCEINLINE void SetTextureAddressModeU( RsTextureAddressMode_t addressMode ) { m_nAddressU = addressMode; }
-	FORCEINLINE void SetTextureAddressModeV( RsTextureAddressMode_t addressMode ) { m_nAddressV = addressMode; }
-	FORCEINLINE void SetTextureAddressModeW( RsTextureAddressMode_t addressMode ) { m_nAddressW = addressMode; }
+	[[gnu::always_inline]] inline void SetTextureAddressModeU( RsTextureAddressMode_t addressMode ) { m_nAddressU = addressMode; }
+	[[gnu::always_inline]] inline void SetTextureAddressModeV( RsTextureAddressMode_t addressMode ) { m_nAddressV = addressMode; }
+	[[gnu::always_inline]] inline void SetTextureAddressModeW( RsTextureAddressMode_t addressMode ) { m_nAddressW = addressMode; }
 	
-	FORCEINLINE float32 GetMipLodBias() const
+	[[gnu::always_inline]] inline float32 GetMipLodBias() const
 	{
 		return float32( m_nMipLodBias ) / 16.0f * ( m_nMipLodBiasSign ? -1.0f : 1.0f );
 	}
 
-	FORCEINLINE void SetMipLodBias( float32 flBias )
+	[[gnu::always_inline]] inline void SetMipLodBias( float32 flBias )
 	{
-		m_nMipLodBias = int( fabsf( flBias ) * 16.0f );
+		m_nMipLodBias = int( std::fabsf( flBias ) * 16.0f );
 		m_nMipLodBiasSign = ( flBias >= 0.0f ) ? 0 : 1;
 	}
 
-	FORCEINLINE uint32 GetMaxAnisotropy() const { return 1 << m_nAnisoExp; }
-	FORCEINLINE void SetMaxAnisotropy( uint32 nMaxAniso )
+	[[gnu::always_inline]] inline uint32 GetMaxAnisotropy() const { return 1 << m_nAnisoExp; }
+	[[gnu::always_inline]] inline void SetMaxAnisotropy( uint32 nMaxAniso )
 	{
 		uint32 nAnisoExp = uint32( FastLog2( std::max<std::common_type_t<uint32, int>>( nMaxAniso, 1 ) ) );
 		m_nAnisoExp = std::min<std::common_type_t<uint32, int>>( nAnisoExp, 7 );
 	}
 
-	FORCEINLINE RsComparison_t GetComparisonFunc() const { return static_cast< RsComparison_t >( m_nComparisonFunc ); }
-	FORCEINLINE void SetComparisonFunc( RsComparison_t compFunc ) { m_nComparisonFunc = compFunc; }
+	[[gnu::always_inline]] inline RsComparison_t GetComparisonFunc() const { return static_cast< RsComparison_t >( m_nComparisonFunc ); }
+	[[gnu::always_inline]] inline void SetComparisonFunc( RsComparison_t compFunc ) { m_nComparisonFunc = compFunc; }
 
-	FORCEINLINE void SetBorderColor( const float32 *pBorderColor )
+	[[gnu::always_inline]] inline void SetBorderColor( const float32 *pBorderColor )
 	{
 		m_nBorderColor8Bit = ClampAndPackFloat4ColorToUInt32( pBorderColor[0], pBorderColor[1], pBorderColor[2], pBorderColor[3] );
 	}
 
-	FORCEINLINE void GetBorderColor( float32 *pBorderColorOut ) const
+	[[gnu::always_inline]] inline void GetBorderColor( float32 *pBorderColorOut ) const
 	{
 		UnpackUint32ColorToFloat4( m_nBorderColor8Bit, pBorderColorOut, pBorderColorOut + 1, pBorderColorOut + 2, pBorderColorOut + 3 );
 	}
 
-	FORCEINLINE uint32 GetBorderColor32Bit() const
+	[[gnu::always_inline]] inline uint32 GetBorderColor32Bit() const
 	{
 		return m_nBorderColor8Bit;
 	}
 
-	FORCEINLINE void GetMinMaxLod( uint32 *pMinLodOut, uint32 *pMaxLodOut ) const
+	[[gnu::always_inline]] inline void GetMinMaxLod( uint32 *pMinLodOut, uint32 *pMaxLodOut ) const
 	{
 		*pMinLodOut = m_nMinLod;
 		*pMaxLodOut = m_nMaxLod;
 	}
 
-	FORCEINLINE uint32 GetMinLod() const
+	[[gnu::always_inline]] inline uint32 GetMinLod() const
 	{
 		return m_nMinLod;
 	}
 
-	FORCEINLINE uint32 GetMaxLod() const
+	[[gnu::always_inline]] inline uint32 GetMaxLod() const
 	{
 		return m_nMaxLod;
 	}
 
-	FORCEINLINE void SetMinMaxLod( uint32 nMinLod, uint32 nMaxLod )
+	[[gnu::always_inline]] inline void SetMinMaxLod( uint32 nMinLod, uint32 nMaxLod )
 	{
 		m_nMinLod = std::min<std::common_type_t<int, uint32>>( 15, nMinLod );
 		m_nMaxLod = std::min<std::common_type_t<int, uint32>>( 15, nMaxLod );
 	}
 
-	FORCEINLINE void SetMinLod( uint32 nMinLod )
+	[[gnu::always_inline]] inline void SetMinLod( uint32 nMinLod )
 	{
 		m_nMinLod = std::min<std::common_type_t<int, uint32>>( 15, nMinLod );
 	}
 
-	FORCEINLINE void SetMaxLod( uint32 nMaxLod )
+	[[gnu::always_inline]] inline void SetMaxLod( uint32 nMaxLod )
 	{
 		m_nMaxLod = std::min<std::common_type_t<int, uint32>>( 15, nMaxLod );
 	}
@@ -454,15 +449,15 @@ public:
 	bool GetSrgbFetchEnabled() const { return m_nSrgbFetchEnable ? true : false; }
 	void SetSrgbFetchEnabled( bool bEnable ) { m_nSrgbFetchEnable = bEnable; }
 
-	FORCEINLINE uint32 HashValue( void ) const
+	[[gnu::always_inline]] inline uint32 HashValue( void ) const
 	{
-		COMPILE_TIME_ASSERT( sizeof( CSamplerStateDesc ) == 12 );
+		static_assert( sizeof( CSamplerStateDesc ) == 12 );
 		return Hash12( this );
 	}
 
-	FORCEINLINE bool operator==( CSamplerStateDesc const &state ) const
+	[[gnu::always_inline]] inline bool operator==( CSamplerStateDesc const &state ) const
 	{
-		return memcmp( this, &state, sizeof( CSamplerStateDesc ) ) == 0;
+		return std::memcmp( this, &state, sizeof( CSamplerStateDesc ) ) == 0;
 	}
 
 private:
@@ -526,5 +521,3 @@ enum RenderBlendMode_t
 
 	RENDER_NUM_BUILTIN_BLENDSTATES
 };
-
-#endif // RENDERSTATE_H

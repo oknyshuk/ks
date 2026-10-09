@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "basetypes.h"
+import ks.tier1;
 #include "traceinit.h"
-#include "utlvector.h"
-#include "sys.h"
+import std;
 #include "common.h"
 
 //-----------------------------------------------------------------------------
@@ -93,7 +87,7 @@ CInitTracker::~CInitTracker( void )
 void CInitTracker::Init( const char *init, const char *shutdown, int listnum )
 {
 	InitFunc *f = new InitFunc;
-	Assert( f );
+	contract_assert( f );
 	f->initname			= init;
 	f->shutdownname		= shutdown;
 	f->sequence			= m_nNumFuncs[ listnum ];
@@ -142,7 +136,7 @@ void CInitTracker::Shutdown( const char *shutdown, int listnum )
 
 		if ( !stricmp( f->shutdownname, shutdown ) )
 		{
-			Assert( f->referencecount );
+			contract_assert( f->referencecount );
 			//f->shutdowntime = Sys_FloatTime();
 			f->referencecount--;
 			return;

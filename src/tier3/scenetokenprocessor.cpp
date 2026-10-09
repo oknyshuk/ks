@@ -1,16 +1,11 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "../game/shared/choreoscene.h"
-#include "../game/shared/choreoactor.h"
-#include "../game/shared/choreochannel.h"
 #include "../game/shared/choreoevent.h"
 #include "../game/shared/iscenetokenprocessor.h"
-#include "characterset.h"
-
+import std;
 
 //-----------------------------------------------------------------------------
 // Purpose: Helper for parsing scene data file
@@ -131,7 +126,7 @@ bool CSceneTokenProcessor::GetToken( bool crossline )
 {
 	// NOTE: crossline is ignored here, may need to implement if needed
 	m_pBuffer = ParseNextToken( m_pBuffer );
-	if ( Q_strlen( m_szToken ) >= 0 )
+	if ( V_strlen( m_szToken ) >= 0 )
 		return true;
 	return false;
 }
@@ -169,13 +164,13 @@ bool CSceneTokenProcessor::TokenAvailable( void )
 void CSceneTokenProcessor::Error( const char *fmt, ... )
 {
 	char string[ 2048 ];
-	va_list argptr;
-	va_start( argptr, fmt );
-	Q_vsnprintf( string, sizeof(string), fmt, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, fmt );
+	V_vsnprintf( string, sizeof(string), fmt, argptr );
+	__builtin_va_end( argptr );
 
 	Warning( "%s", string );
-	Assert(0);
+	contract_assert( 0 );
 }
 
 //-----------------------------------------------------------------------------
@@ -198,4 +193,3 @@ void SetTokenProcessorBuffer( const char *buf )
 {
 	g_TokenProcessor.SetBuffer( (char *)buf );
 }
-

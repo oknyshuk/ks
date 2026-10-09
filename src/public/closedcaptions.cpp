@@ -1,11 +1,38 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#endif
 #include "closedcaptions.h"
 #include "filesystem.h"
-#include <vector>
 
 // Assumed to be set up by calling code
 bool AsyncCaption_t::LoadFromFile( char const *pchFullPath )
@@ -14,7 +41,6 @@ bool AsyncCaption_t::LoadFromFile( char const *pchFullPath )
 	if ( FILESYSTEM_INVALID_HANDLE == fh )
 		return false;
 
-	MEM_ALLOC_CREDIT();
 
 	// Read the header
 	g_pFullFileSystem->Read( &m_Header, sizeof( m_Header ), fh );

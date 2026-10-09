@@ -1,11 +1,11 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// A port of CRnSoftbody
-// Note: mathlib is tentative place for this code. We will probably move it to a separate lib or dll or vphysics.dll
-//
-#ifndef MATHLIB_SOFTBODY_HDR
-#define MATHLIB_SOFTBODY_HDR
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+// Purpose: A port of CRnSoftbody
+// Note: mathlib is tentative place for this code. We will probably move it to a separate lib or dll or vphysics.dll
+
+import ks.tier1;
 #include "rubikon/param_types.h"
 #include "rubikon/debugname.h"
 #include "rubikon/intersection.h"
@@ -17,9 +17,8 @@
 // #include "collisionfilter.h"
 // #include "rnserialize.h"
 // #include "legacyobject.h"
-#include <vector>
+import std;
 #include "mathlib/femodel.h"
-#include "tier1/hierarchicalbitvec.h"
 #include "rubikon/serializehelpers.h"
 
 namespace ks { class text_reader; }
@@ -81,7 +80,7 @@ public:
 };
 
 
-class ALIGN16 CSoftbody
+class alignas(16) CSoftbody
 {
 public:
 	CSoftbody( void );
@@ -137,7 +136,7 @@ public:
 
 	int GetParticleCount( ) const { return m_nParticleCount; }
 
-	void SetDebugNameV( const char* pNameFormat, va_list args ) { m_DebugName.SetV( pNameFormat, args );}
+	void SetDebugNameV( const char* pNameFormat, std::va_list args ) { m_DebugName.SetV( pNameFormat, args );}
 	const char *GetDebugName() const { return m_DebugName.Get(); }
 	void AppendDebugInfo( std::string &line );
 	void Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebugOverlay );
@@ -431,13 +430,13 @@ protected:
 	friend class CTaperedCapsuleColliderFunctor;
 	friend class CGluePredictFunctor;
 	friend class CSphereColliderFunctor;
-} ALIGN16_POST;
+};
 
 
 
 inline void CSoftbody::GlueNode( uint nDynNode, uint nParentNode, float flStickiness )
 {
-	Assert( nDynNode < m_pFeModel->GetDynamicNodeCount() );
+	contract_assert( nDynNode < m_pFeModel->GetDynamicNodeCount() );
 	m_StickyBuffer.Set( nDynNode );
 	CParticleGlue &glue = m_pParticleGlue[ nDynNode ];
 	glue.m_flStickiness = flStickiness;
@@ -448,7 +447,7 @@ inline void CSoftbody::GlueNode( uint nDynNode, uint nParentNode, float flSticki
 
 inline void CSoftbody::GlueNode( uint nDynNode, uint nParentNode0, uint nParentNode1, float flStickiness, float flWeight1 )
 {
-	Assert( nDynNode < m_pFeModel->GetDynamicNodeCount() );
+	contract_assert( nDynNode < m_pFeModel->GetDynamicNodeCount() );
 	m_StickyBuffer.Set( nDynNode );
 	CParticleGlue &glue = m_pParticleGlue[ nDynNode ];
 	glue.m_flStickiness = flStickiness;
@@ -532,7 +531,3 @@ public:
 
 	void Collide( uint16 nCollisionMask );
 };
-
-
-
-#endif

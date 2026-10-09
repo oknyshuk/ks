@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef MULTIPLAY_GAMERULES_H
-#define MULTIPLAY_GAMERULES_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "gamerules.h"
-
 
 #ifdef CLIENT_DLL
 
@@ -31,8 +24,8 @@ class CBaseMultiplayerPlayer;
 
 #endif
 
-#define MAX_SPEAK_CONCEPT_LEN 64
-#define MAX_VOICE_COMMAND_SUBTITLE	256
+inline constexpr auto MAX_SPEAK_CONCEPT_LEN = 64;
+inline constexpr auto MAX_VOICE_COMMAND_SUBTITLE = 256;
 
 typedef struct
 {
@@ -66,7 +59,7 @@ public:
 	CSameTeamGroup();
 	CSameTeamGroup( const CSameTeamGroup &src );
 
-	// Different users will require different logic for whom to add (e.g., all SplitScreen players on same team, or all Steam Friends on same team)
+	// Different users will require different logic for whom to add (e.g., all SplitScreen players on same team)
 	virtual void Build( CGameRules *pGameRules, CBasePlayer *pl ) = 0;
 	virtual void MaybeAddPlayer( CBasePlayer *pl ) = 0;
 
@@ -130,7 +123,7 @@ public:
 	virtual bool IsCoOp( void );
 
 // Client connection/disconnection
-	// If ClientConnected returns FALSE, the connection is rejected and the user is provided the reason specified in
+	// If ClientConnected returns false, the connection is rejected and the user is provided the reason specified in
 	//  svRejectReason
 	// Only the client's name and remote address are provided to the dll for verification.
 	virtual bool ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, char *reject, int maxrejectlen );
@@ -194,7 +187,7 @@ public:
 	virtual int PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *pTarget );
 	virtual bool PlayerCanHearChat( CBasePlayer *pListener, CBasePlayer *pSpeaker, bool bTeamOnly );
 
-	virtual bool PlayTextureSounds( void ) { return FALSE; }
+	virtual bool PlayTextureSounds( void ) { return false; }
 	virtual bool PlayFootstepSounds( CBasePlayer *pl );
 
 // NPCs
@@ -254,5 +247,3 @@ inline CMultiplayRules* MultiplayRules()
 {
 	return static_cast<CMultiplayRules*>(g_pGameRules);
 }
-
-#endif // MULTIPLAY_GAMERULES_H

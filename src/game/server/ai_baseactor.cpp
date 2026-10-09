@@ -1,10 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 
@@ -101,10 +127,10 @@ static char const *g_ServerSideFlexControllers[] =
 //-----------------------------------------------------------------------------
 bool CAI_BaseActor::IsServerSideFlexController( char const *szName )
 {
-	int c = ARRAYSIZE( g_ServerSideFlexControllers );
+	int c = std::size( g_ServerSideFlexControllers );
 	for ( int i = 0; i < c; ++i )
 	{
-		if ( !Q_stricmp( szName, g_ServerSideFlexControllers[ i ] ) )
+		if ( !V_stricmp( szName, g_ServerSideFlexControllers[ i ] ) )
 			return true;
 	}
 	return false;
@@ -155,9 +181,9 @@ void CAI_BaseActor::SetModel( const char *szModelName )
 
 bool CAI_BaseActor::StartSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event, CChoreoActor *actor, CBaseEntity *pTarget )
 {
-	Assert( info );
-	Assert( info->m_pScene );
-	Assert( info->m_pEvent );
+	contract_assert( info );
+	contract_assert( info->m_pScene );
+	contract_assert( info->m_pEvent );
 
 	// FIXME: this code looks duplicated
 	switch ( info->m_pEvent->GetType() )
@@ -253,9 +279,9 @@ bool CAI_BaseActor::StartSceneEvent( CSceneEventInfo *info, CChoreoScene *scene,
 
 bool CAI_BaseActor::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event )
 {
-	Assert( info );
-	Assert( info->m_pScene );
-	Assert( info->m_pEvent );
+	contract_assert( info );
+	contract_assert( info->m_pScene );
+	contract_assert( info->m_pEvent );
 
 	// FIXME: this code looks duplicated
 	switch ( info->m_pEvent->GetType() )
@@ -549,9 +575,9 @@ bool CAI_BaseActor::RandomFaceFlex( CSceneEventInfo *info, CChoreoScene *scene, 
 
 bool CAI_BaseActor::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canceled )
 {
-	Assert( info );
-	Assert( info->m_pScene );
-	Assert( info->m_pEvent );
+	contract_assert( info );
+	contract_assert( info->m_pScene );
+	contract_assert( info->m_pEvent );
 
 	// FIXME: this code looks duplicated
 	switch ( info->m_pEvent->GetType() )
@@ -570,9 +596,9 @@ bool CAI_BaseActor::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool 
 
 bool CAI_BaseActor::CheckSceneEventCompletion( CSceneEventInfo *info, float currenttime, CChoreoScene *scene, CChoreoEvent *event )
 {
-	Assert( info );
-	Assert( info->m_pScene );
-	Assert( info->m_pEvent );
+	contract_assert( info );
+	contract_assert( info->m_pScene );
+	contract_assert( info->m_pEvent );
 
 	switch ( event->GetType() )
 	{
@@ -710,8 +736,8 @@ Vector CAI_BaseActor::EyePosition( )
 }
 
 
-#define MIN_LOOK_TARGET_DIST 1.0f
-#define MAX_FULL_LOOK_TARGET_DIST 10.0f
+constexpr auto MIN_LOOK_TARGET_DIST = 1.0f;
+constexpr auto MAX_FULL_LOOK_TARGET_DIST = 10.0f;
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns true if target is in legal range of eye movement for the current head position
@@ -803,7 +829,7 @@ float CAI_BaseActor::HeadTargetValidity(const Vector &lookTargetPos)
 //-----------------------------------------------------------------------------
 void CAI_BaseActor::SetHeadDirection( const Vector &vTargetPos, float flInterval)
 {
-	Assert(0); // Actors shouldn't be calling this, it doesn't do anything
+	contract_assert( 0 ); // Actors shouldn't be calling this, it doesn't do anything
 }
 
 float CAI_BaseActor::ClampWithBias( PoseParameter_t index, float value, float base )
@@ -1148,12 +1174,12 @@ float CAI_BaseActor::PickLookTarget( CAI_InterestTarget &queue, bool bExcludePla
 
 	if ( args.hTarget != nullptr )
 	{
-		Assert( args.vTarget == vec3_invalid );
+		contract_assert( args.vTarget == vec3_invalid );
 		queue.Add( args.hTarget, args.flInfluence, args.flDuration, args.flRamp );
 	}
 	else
 	{
-		Assert( args.vTarget != vec3_invalid );
+		contract_assert( args.vTarget != vec3_invalid );
 		queue.Add( args.vTarget, args.flInfluence, args.flDuration, args.flRamp );
 	}
 
@@ -1372,17 +1398,17 @@ void CAI_BaseActor::StartTaskRangeAttack1( const Task_t *pTask )
 // hardcode the default rr_remarkables_enabled value for now because I don't know what
 // the current state of unhackable config files is. Should be fixed.
 // (TODO)
-#define AI_REMARKABLES_ENABLED_DEFAULT "1"
+inline constexpr const char *AI_REMARKABLES_ENABLED_DEFAULT = "1";
 
 ConVar rr_remarkable_world_entities_replay_limit( "rr_remarkable_world_entities_replay_limit", "1", FCVAR_CHEAT, "TLK_REMARKs will be dispatched no more than this many times for any given info_remarkable" );
 ConVar rr_remarkables_enabled( "rr_remarkables_enabled", AI_REMARKABLES_ENABLED_DEFAULT, FCVAR_CHEAT, "If 1, polling for info_remarkables and issuances of TLK_REMARK is enabled." );
 ConVar rr_remarkable_max_distance( "rr_remarkable_max_distance", "1200", FCVAR_CHEAT, "AIs will not even consider remarkarbles that are more than this many units away." );
-#define AI_REMARK_SPEECH_INTERVAL 1
+constexpr auto AI_REMARK_SPEECH_INTERVAL = 1;
 /************************************************************************/
 /* TODO: Make perfier
  *       Plumb through interrupt priority in speech */
 /************************************************************************/
-bool CAI_BaseActor::UpdateRemarkableSpeech() RESTRICT
+bool CAI_BaseActor::UpdateRemarkableSpeech() __restrict__
 {
 	// done in caller
 	/*
@@ -1390,7 +1416,7 @@ bool CAI_BaseActor::UpdateRemarkableSpeech() RESTRICT
 		return false;
 	*/
 		
-	VPROF( "CAI_BaseActor::UpdateRemarkableSpeech" );
+	CVProfScope _( "CAI_BaseActor::UpdateRemarkableSpeech", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( CanPollRemarkables() )
 	{
 		m_fNextRemarkPollTime = gpGlobals->curtime + AI_REMARK_SPEECH_INTERVAL;
@@ -1402,7 +1428,7 @@ bool CAI_BaseActor::UpdateRemarkableSpeech() RESTRICT
 		CInfoRemarkable::tRemarkableList *pList = CInfoRemarkable::GetListOfAllThatIsRemarkable();
 		const float maxDistSq = rr_remarkable_max_distance.GetFloat() * rr_remarkable_max_distance.GetFloat();
 		const int remarkLimit = rr_remarkable_world_entities_replay_limit.GetInt();
-		for ( CInfoRemarkable * RESTRICT remarkable : *pList )
+		for ( CInfoRemarkable * __restrict__ remarkable : *pList )
 		{
 			// do a quick distance test for a rough cull.
 			if ( GetAbsOrigin().DistToSqr(remarkable->GetAbsOrigin()) > maxDistSq )
@@ -1435,7 +1461,7 @@ bool CAI_BaseActor::CanPollRemarkables()
 		   ( gpGlobals->curtime > m_fNextRemarkPollTime )	;
 }
 
-bool CAI_BaseActor::TestRemarkingUpon( CInfoRemarkable * RESTRICT pRemarkable )
+bool CAI_BaseActor::TestRemarkingUpon( CInfoRemarkable * __restrict__ pRemarkable )
 {
 	return	IsInFieldOfView( pRemarkable )					&&
 			IsLineOfSightClear( pRemarkable, IGNORE_ACTORS );
@@ -1622,7 +1648,7 @@ void CAI_BaseActor::MaintainLookTargets( float flInterval )
 		}
 	}
 
-	Assert( flHeadInfluence <= 1.0 );
+	contract_assert( flHeadInfluence <= 1.0 );
 
 	// turn head toward target
 	if (bValidHeadTarget)

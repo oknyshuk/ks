@@ -1,10 +1,13 @@
+#pragma once
+
+#include "entitylist.h"
+#include "player.h"
+#include "shared_classnames.h"
 /**
  * EntityUtil.h
  * Various utility functions
  */
 
-#ifndef _ENTITY_UTIL_H_
-#define _ENTITY_UTIL_H_
 
 //------------------------------------------------------------------------------------------
 enum WhoType
@@ -294,4 +297,3 @@ inline Vector VectorReflect( const Vector &in, const Vector &unitNormal )
 }
 
 
-#endif // _ENTITY_UTIL_H_

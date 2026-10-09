@@ -1,10 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -16,7 +43,6 @@
 #include "datacache/imdlcache.h"
 #include "bone_setup.h"
 #include "physics_prop_ragdoll.h"
-#include "keyvalues.h"
 #include "props.h"
 #include "RagdollBoogie.h"
 #include "ai_criteria.h"
@@ -41,12 +67,12 @@ const float ATTACHED_DAMPING_SCALE = 50.0f;
 //-----------------------------------------------------------------------------
 // Spawnflags
 //-----------------------------------------------------------------------------
-#define	SF_RAGDOLLPROP_DEBRIS		0x0004
-#define SF_RAGDOLLPROP_USE_LRU_RETIREMENT	0x1000
-#define	SF_RAGDOLLPROP_ALLOW_DISSOLVE		0x2000	// Allow this prop to be dissolved
-#define	SF_RAGDOLLPROP_MOTIONDISABLED		0x4000
-#define	SF_RAGDOLLPROP_ALLOW_STRETCH		0x8000
-#define	SF_RAGDOLLPROP_STARTASLEEP			0x10000
+constexpr auto SF_RAGDOLLPROP_DEBRIS = 0x0004;
+constexpr auto SF_RAGDOLLPROP_USE_LRU_RETIREMENT = 0x1000;
+constexpr auto SF_RAGDOLLPROP_ALLOW_DISSOLVE = 0x2000; // Allow this prop to be dissolved
+constexpr auto SF_RAGDOLLPROP_MOTIONDISABLED = 0x4000;
+constexpr auto SF_RAGDOLLPROP_ALLOW_STRETCH = 0x8000;
+constexpr auto SF_RAGDOLLPROP_STARTASLEEP = 0x10000;
 
 //-----------------------------------------------------------------------------
 // Networking
@@ -75,7 +101,7 @@ void CRagdollProp::Spawn( void )
 	// Starts out as the default fade scale value
 	m_flDefaultFadeScale = GetGlobalFadeScale();
 
-	Assert( RAGDOLL_MAX_ELEMENTS == 24 );
+	contract_assert( RAGDOLL_MAX_ELEMENTS == 24 );
 	Precache();
 	SetModel( STRING( GetModelName() ) );
 
@@ -170,7 +196,7 @@ CRagdollProp::CRagdollProp( void )
 	m_strSourceClassName = NULL_STRING;
 	m_anglesOverrideString = NULL_STRING;
 	m_ragdoll.listCount = 0;
-	Assert( (1<<RAGDOLL_INDEX_BITS) >=RAGDOLL_MAX_ELEMENTS );
+	contract_assert( (1<<RAGDOLL_INDEX_BITS) >=RAGDOLL_MAX_ELEMENTS );
 	m_allAsleep = false;
 	SetGlobalFadeScale( 1.0f );
 	m_flDefaultFadeScale = 1.0f;
@@ -377,7 +403,7 @@ void CRagdollProp::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 	// Don't take physics damage from whoever's holding him with the physcannon.
 	if ( VPhysicsGetObject() && (VPhysicsGetObject()->GetGameFlags() & FVPHYSICS_PLAYER_HELD) )
 	{
-		if ( pHitEntity && (pHitEntity == HasPhysicsAttacker( FLT_MAX )) )
+		if ( pHitEntity && (pHitEntity == HasPhysicsAttacker( std::numeric_limits<float>::max() )) )
 			return;
 	}
 
@@ -602,26 +628,26 @@ void CRagdollProp::InitRagdoll( const Vector &forceVector, int forceBone, const 
 	params.fixedConstraints = false;
 	RagdollCreate( m_ragdoll, params, physenv );
 	RagdollApplyAnimationAsVelocity( m_ragdoll, pPrevBones, pBoneToWorld, dt );
-	if ( m_anglesOverrideString != NULL_STRING && Q_strlen(m_anglesOverrideString.ToCStr()) > 0 )
+	if ( m_anglesOverrideString != NULL_STRING && V_strlen(m_anglesOverrideString.ToCStr()) > 0 )
 	{
 		char szToken[2048];
 		const char *pStr = nexttoken(szToken, STRING(m_anglesOverrideString), ',');
 		// anglesOverride is index,angles,index,angles (e.g. "1, 22.5 123.0 0.0, 2, 0 0 0, 3, 0 0 180.0")
 		while ( szToken[0] != 0 )
 		{
-			int objectIndex = atoi(szToken);
+			int objectIndex = std::atoi(szToken);
 			// sanity check to make sure this token is an integer
-			Assert( atof(szToken) == ((float)objectIndex) );
+			contract_assert( std::atof(szToken) == ((float)objectIndex) );
 			pStr = nexttoken(szToken, pStr, ',');
-			Assert( szToken[0] );
+			contract_assert( szToken[0] );
 			if ( objectIndex >= m_ragdoll.listCount )
 			{
-				Warning("Bad ragdoll pose in entity %s, model (%s) at %s, model changed?\n", GetDebugName(), GetModelName().ToCStr(), VecToString(GetAbsOrigin()) );
+				Warning("Bad ragdoll pose in entity %s, model (%s) at %s, model changed?\n", GetDebugName(), GetModelName().ToCStr(), VecToString(GetAbsOrigin()).c_str() );
 			}
 			else if ( szToken[0] != 0 )
 			{
 				QAngle angles;
-				Assert( objectIndex >= 0 && objectIndex < RAGDOLL_MAX_ELEMENTS );
+				contract_assert( objectIndex >= 0 && objectIndex < RAGDOLL_MAX_ELEMENTS );
 				UTIL_StringToVector( angles.Base(), szToken );
 				int boneIndex = m_ragdoll.boneIndex[objectIndex];
 				AngleMatrix( angles, pBoneToWorld[boneIndex] );
@@ -645,7 +671,6 @@ void CRagdollProp::InitRagdoll( const Vector &forceVector, int forceBone, const 
 
 	if ( activateRagdoll )
 	{
-		MEM_ALLOC_CREDIT();
 		RagdollActivate( m_ragdoll, params.pCollide, GetModelIndex(), bWakeRagdoll );
 	}
 
@@ -735,7 +760,7 @@ void CRagdollProp::SetupBones( matrix3x4a_t *pBoneToWorld, int boneMask )
 	MDLCACHE_CRITICAL_SECTION();
 	CStudioHdr *pStudioHdr = GetModelPtr( );
 	bool sim[MAXSTUDIOBONES];
-	memset( sim, 0, pStudioHdr->numbones() );
+	std::memset( sim, 0, pStudioHdr->numbones() );
 
 	int i;
 
@@ -963,7 +988,7 @@ int CRagdollProp::VPhysicsGetObjectList( IPhysicsObject **pList, int listMax )
 
 void CRagdollProp::UpdateNetworkDataFromVPhysics( IPhysicsObject *pPhysics, int index )
 {
-	Assert(index < m_ragdoll.listCount);
+	contract_assert( index < m_ragdoll.listCount );
 
 	QAngle angles;
 	Vector vPos;
@@ -983,7 +1008,7 @@ void CRagdollProp::UpdateNetworkDataFromVPhysics( IPhysicsObject *pPhysics, int 
 //-----------------------------------------------------------------------------
 // Fade out due to the LRU telling it do
 //-----------------------------------------------------------------------------
-#define FADE_OUT_LENGTH 0.5f
+constexpr auto FADE_OUT_LENGTH = 0.5f;
 
 void CRagdollProp::FadeOut( float flDelay, float fadeTime ) 
 {
@@ -1053,7 +1078,7 @@ int CRagdollProp::DrawDebugTextOverlays(void)
 			}
 
 			char tempstr[512];
-			Q_snprintf(tempstr, sizeof(tempstr),"Mass: %.2f kg / %.2f lb (%s)", mass, kg2lbs(mass), GetMassEquivalent(mass) );
+			V_snprintf(tempstr, sizeof(tempstr),"Mass: %.2f kg / %.2f lb (%s)", mass, kg2lbs(mass), GetMassEquivalent(mass) );
 			EntityText( text_offset, tempstr, 0);
 			text_offset++;
 		}
@@ -1164,7 +1189,7 @@ CBaseAnimating *CreateServerRagdollSubmodel( CBaseAnimating *pOwner, const char 
 	// HACKHACK: don't want this parent anymore
 	pRagdoll->SetParent( nullptr );
 
-	memcpy( pBoneToWorldNext, pBoneToWorld, sizeof(pBoneToWorld) );
+	std::memcpy( pBoneToWorldNext, pBoneToWorld, sizeof(pBoneToWorld) );
 
 	pRagdoll->InitRagdoll( vec3_origin, -1, vec3_origin, pBoneToWorld, pBoneToWorldNext, 0.1, collisionGroup, true );
 	return pRagdoll;
@@ -1280,7 +1305,7 @@ CBaseEntity *CreateServerRagdoll( CBaseAnimating *pAnimating, int forceBone, con
 		// Get a list of bones with hitboxes below the plane of impact
 		int boxList[128];
 		Vector normal(0,0,-1);
-		int count = pAnimating->GetHitboxesFrontside( boxList, ARRAYSIZE(boxList), normal, DotProduct( normal, info.GetDamagePosition() ) );
+		int count = pAnimating->GetHitboxesFrontside( boxList, std::size( boxList ), normal, DotProduct( normal, info.GetDamagePosition() ) );
 		
 		// distribute force over mass of entire character
 		float massScale = Studio_GetMass(pAnimating->GetModelPtr());
@@ -1508,11 +1533,11 @@ void CRagdollProp::GetAngleOverrideFromCurrentState( char *pOut, int size )
 	{
 		if ( i != 0 )
 		{
-			Q_strncat( pOut, ",", size, COPY_ALL_CHARACTERS );
+			V_strncat( pOut, ",", size, COPY_ALL_CHARACTERS );
 
 		}
 		CFmtStr str("%d,%.2f %.2f %.2f", i, m_ragAngles[i].x, m_ragAngles[i].y, m_ragAngles[i].z );
-		Q_strncat( pOut, str, size, COPY_ALL_CHARACTERS );
+		V_strncat( pOut, str, size, COPY_ALL_CHARACTERS );
 	}
 }
 

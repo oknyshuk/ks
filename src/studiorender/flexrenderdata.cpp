@@ -1,9 +1,5 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #include "flexrenderdata.h"
 
@@ -73,7 +69,7 @@ void CCachedRenderData::SetBodyPart( int bodypart )
 
 void CCachedRenderData::SetModel( int model )
 {
-	Assert(m_Body >= 0);
+	contract_assert( m_Body >= 0 );
 	m_Model = model;
 	ks::ensure_size( m_CacheDict[m_Body], m_Model+1 );
 	m_Mesh = -1;
@@ -84,7 +80,7 @@ void CCachedRenderData::SetModel( int model )
 
 void CCachedRenderData::SetMesh( int mesh )
 {
-	Assert((m_Model >= 0) && (m_Body >= 0));
+	contract_assert( (m_Model >= 0) && (m_Body >= 0) );
 
 	m_Mesh = mesh;
 	ks::ensure_size( m_CacheDict[m_Body][m_Model], m_Mesh+1 );
@@ -113,7 +109,7 @@ void CCachedRenderData::SetMesh( int mesh )
 
 bool CCachedRenderData::IsFlexComputationDone( ) const
 {
-	Assert((m_Model >= 0) && (m_Body >= 0) && (m_Mesh >= 0));
+	contract_assert( (m_Model >= 0) && (m_Body >= 0) && (m_Mesh >= 0) );
 
 	// Lets create the dictionary entry
 	// If the tags match, that means we're doing the computation twice!!!
@@ -127,7 +123,7 @@ bool CCachedRenderData::IsFlexComputationDone( ) const
 
 void CCachedRenderData::SetupComputation( mstudiomesh_t *pMesh, bool flexComputation )
 {
-	Assert((m_Model >= 0) && (m_Body >= 0) && (m_Mesh >= 0));
+	contract_assert( (m_Model >= 0) && (m_Body >= 0) && (m_Mesh >= 0) );
 //	Assert( !m_pFirstIndex );
 
 	// Lets create the dictionary entry
@@ -155,10 +151,10 @@ void CCachedRenderData::SetupComputation( mstudiomesh_t *pMesh, bool flexComputa
 
 CachedPosNormTan_t* CCachedRenderData::CreateFlexVertex( int vertex )
 {
-	Assert( m_pFirstFlexIndex );
-	Assert( m_pFirstFlexIndex[vertex].m_Tag != m_CurrentTag );
+	contract_assert( m_pFirstFlexIndex );
+	contract_assert( m_pFirstFlexIndex[vertex].m_Tag != m_CurrentTag );
 
-	Assert ( m_FlexVertexCount < MAXSTUDIOFLEXVERTS );
+	contract_assert( m_FlexVertexCount < MAXSTUDIOFLEXVERTS );
 	if ( m_FlexVertexCount >= MAXSTUDIOFLEXVERTS )
 		return nullptr;
 
@@ -178,10 +174,10 @@ CachedPosNormTan_t* CCachedRenderData::CreateFlexVertex( int vertex )
 
 CachedPosNorm_t* CCachedRenderData::CreateThinFlexVertex( int vertex )
 {
-	Assert( m_pFirstThinFlexIndex );
-	Assert( m_pFirstThinFlexIndex[vertex].m_Tag != m_CurrentTag );
+	contract_assert( m_pFirstThinFlexIndex );
+	contract_assert( m_pFirstThinFlexIndex[vertex].m_Tag != m_CurrentTag );
 
-	Assert ( m_ThinFlexVertexCount < MAXSTUDIOFLEXVERTS );
+	contract_assert( m_ThinFlexVertexCount < MAXSTUDIOFLEXVERTS );
 	if ( m_ThinFlexVertexCount >= MAXSTUDIOFLEXVERTS )
 		return nullptr;
 
@@ -224,11 +220,11 @@ void CCachedRenderData::RenormalizeFlexVertices( bool bHasTangentData, bool bQua
 
 CachedPosNorm_t* CCachedRenderData::CreateWorldVertex( int vertex )
 {
-	Assert( m_pFirstWorldIndex );
+	contract_assert( m_pFirstWorldIndex );
 	if ( m_pFirstWorldIndex[vertex].m_Tag != m_CurrentTag )
 	{
 		// Point the world list to the new world vertex
-		Assert( m_WorldVertexCount < MAXSTUDIOVERTS );
+		contract_assert( m_WorldVertexCount < MAXSTUDIOVERTS );
 		m_pFirstWorldIndex[vertex].m_Tag = m_CurrentTag;
 		m_pFirstWorldIndex[vertex].m_VertexIndex = m_WorldVertexCount;
 
@@ -237,4 +233,3 @@ CachedPosNorm_t* CCachedRenderData::CreateWorldVertex( int vertex )
 	}
 	return GetWorldVertex( vertex );
 }
-

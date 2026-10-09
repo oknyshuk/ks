@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef PARTICLE_LITSMOKEEMITTER_H
-#define PARTICLE_LITSMOKEEMITTER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "particles_simple.h"
 
@@ -66,5 +60,3 @@ inline PMaterialHandle	CLitSmokeEmitter::GetSmokeMaterial() const
 {
 	return m_hSmokeMaterial;
 }
-
-#endif // PARTICLE_LITSMOKEEMITTER_H

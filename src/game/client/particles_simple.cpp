@@ -1,18 +1,22 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
 #include "particles_simple.h"
 #include "env_wind_shared.h"
-#include "keyvalues.h"
 #include "toolframework_client.h"
 #include "toolframework/itoolframework.h"
-#include "vstdlib/ikeyvaluessystem.h"
-#include "tier1/vector_ops.h"
-
 
 // Used for debugging to make sure all particle effects get freed when we exit.
 std::vector<CParticleEffect*> g_ParticleEffects;
@@ -21,7 +25,7 @@ class CEffectChecker
 public:
 	~CEffectChecker()
 	{
-		Assert( g_ParticleEffects.empty() );
+		contract_assert( g_ParticleEffects.empty() );
 	}
 } g_EffectChecker;
 
@@ -50,7 +54,7 @@ CParticleEffect::~CParticleEffect( void )
 {
 #if defined( _DEBUG )
 	bool bFound = ks::swap_erase_first( g_ParticleEffects, this );
-	Assert( bFound );
+	contract_assert( bFound );
 #endif
 	// HACKHACK: Prevent re-entering the destructor, clear m_Flags.
 	// For some reason we'll get a callback into NotifyRemove() after being deleted!
@@ -94,7 +98,7 @@ void CParticleEffect::AddRef()
 
 void CParticleEffect::Release()
 {
-	Assert( m_RefCount > 0 );
+	contract_assert( m_RefCount > 0 );
 	--m_RefCount;
 
 	// If all the particles are already gone, delete ourselves now.
@@ -117,7 +121,7 @@ void CParticleEffect::Release()
 //-----------------------------------------------------------------------------
 const Vector &CParticleEffect::GetSortOrigin()
 {
-	Assert(m_vSortOrigin.IsValid());
+	contract_assert( m_vSortOrigin.IsValid() );
 	return m_vSortOrigin;
 }
 
@@ -152,7 +156,6 @@ void CParticleEffect::NotifyRemove()
 {
 	if( m_Flags & FLAG_ALLOCATED )
 	{
-		Assert( IsReleased() );
 		delete this;
 	}
 }
@@ -198,7 +201,7 @@ PMaterialHandle CParticleEffect::GetPMaterial(const char *name)
 Particle *CParticleEffect::AddParticle( unsigned int particleSize, PMaterialHandle material, const Vector &origin )
 {
 	// If you get here, then you must call SetSortOrigin before adding particles.
-	Assert( m_vSortOrigin.IsValid() );
+	contract_assert( m_vSortOrigin.IsValid() );
 
 	Particle *pParticle = (Particle *) m_ParticleEffect.AddParticle( particleSize, material );
 
@@ -298,7 +301,7 @@ float CSimpleEmitter::UpdateScale( const SimpleParticle *pParticle )
 // Output : Vector
 //-----------------------------------------------------------------------------
 
-#define WIND_ACCEL 50
+constexpr auto WIND_ACCEL = 50;
 
 void CSimpleEmitter::UpdateVelocity( SimpleParticle *pParticle, float timeDelta )
 {
@@ -494,7 +497,7 @@ ks::intrusive_ptr<CFireSmokeEffect> CFireSmokeEffect::Create( const char *pDebug
 
 float CFireSmokeEffect::UpdateAlpha( const SimpleParticle *pParticle )
 {
-	return ( ((float)pParticle->m_uchStartAlpha/255.0f) * sin( M_PI * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
+	return ( ((float)pParticle->m_uchStartAlpha/255.0f) * std::sin( std::numbers::pi * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
 }
 
 //-----------------------------------------------------------------------------

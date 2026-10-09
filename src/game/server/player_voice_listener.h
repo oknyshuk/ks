@@ -1,14 +1,9 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Purpose: 
-//
-//===========================================================================
-
-#ifndef PLAYER_VOICE_LISTENER_H
-#define PLAYER_VOICE_LISTENER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "igamesystem.h"
+#include "shareddefs.h"
 
 class CPlayerVoiceListener : public CAutoGameSystem
 {
@@ -44,5 +39,3 @@ private:
 };
 
 extern CPlayerVoiceListener &PlayerVoiceListener( void );
-
-#endif // PLAYER_VOICE_LISTENER_H

@@ -1,42 +1,55 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Main control for any streaming sound output device.
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "audio_pch.h"
+// Purpose: Main control for any streaming sound output device.
+
+
+
+
+import ks.vstdlib;
+#include "tier2/riff.h"
+#include "sound.h"
+#include "soundservice.h"
+#include "voice_sound_engine_interface.h"
+#include "soundflags.h"
+#include "filesystem.h"
+#include "../filesystem_engine.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_mix_buf.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_common.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+#include "snd_wave_source.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+
+#include "audio/private/posix_stubs.h"
 #include "host.h"
-#include "time.h"
 #include "const.h"
 #include "cdll_int.h"
 #include "sound.h"
 #include "client_class.h"
 #include "icliententitylist.h"
-#include "tier1/fmtstr.h"
 #include "con_nprint.h"
-#include "tier0/icommandline.h"
 #include "vox_private.h"
 #include "../../traceinit.h"
-#include "../../cmd.h"
 #include "toolframework/itoolframework.h"
-#include "vstdlib/random.h"
-#include "vstdlib/jobthread.h"
 #include "vaudio/ivaudio.h"
 #include "../../client.h"
 #include "../../cl_main.h"
-#include "tier3/tier3.h"
-#include "tier1/fixed_pool.h"
 #include "../../enginetrace.h"			// for traceline
 #include "../../public/bspflags.h"		// for traceline
 #include "../../public/gametrace.h"		// for traceline
 #include "vphysics_interface.h"		// for surface props
-#include "../../ispatialpartitioninternal.h"	// for entity enumerator
 #include "../../debugoverlay.h"
 #include "icliententity.h"
 #include "../../cmodel_engine.h"
 #include "../../staticpropmgr.h"
 #include "../../server.h"
-#include "edict.h"
 #include "../../pure_server.h"
 #include "voice.h"
 #include "snd_dma.h"
@@ -44,17 +57,11 @@
 #include "../../cl_splitscreen.h"
 #include "../../common/blackbox_helper.h"
 #include "snd_op_sys/sos_system.h"
-#include <set>
-#include <mutex>
-#include <atomic>
+import std;
 #include "snd_dev_common.h"
-#include <unordered_map>
-#include "tier1/map_ops.h"
-
-#include "cl_steamauth.h"
 
 
-#include "tier0/memalloc.h"
+
 ///////////////////////////////////
 // DEBUGGING
 //
@@ -66,9 +73,12 @@
 ConVar snd_sos_show_client_rcv("snd_sos_show_client_rcv", "0", FCVAR_CHEAT);
 ConVar snd_sos_allow_dynamic_chantype( "snd_sos_allow_dynamic_chantype", "1" );
 
-BEGIN_DEFINE_LOGGING_CHANNEL( LOG_SOUND_OPERATOR_SYSTEM, "SoundOperatorSystem", LCF_CONSOLE_ONLY, LS_MESSAGE );
-ADD_LOGGING_CHANNEL_TAG( "SoundOperatorSystem" );
-END_DEFINE_LOGGING_CHANNEL();
+static void Register_LOG_SOUND_OPERATOR_SYSTEM_Tags();
+LoggingChannelID_t LOG_SOUND_OPERATOR_SYSTEM = LoggingSystem_RegisterLoggingChannel( "SoundOperatorSystem", Register_LOG_SOUND_OPERATOR_SYSTEM_Tags, LCF_CONSOLE_ONLY, LS_MESSAGE );
+void Register_LOG_SOUND_OPERATOR_SYSTEM_Tags()
+{
+LoggingSystem_AddTagToCurrentChannel( "SoundOperatorSystem" );
+};
 
 extern ConVar dsp_spatial;
 extern IPhysicsSurfaceProps	*physprops;
@@ -187,7 +197,7 @@ std::recursive_mutex g_ActiveSoundListMutex;
 
 void CActiveChannels::Add( channel_t *pChannel )
 {
-	Assert( pChannel->activeIndex == 0 );
+	contract_assert( pChannel->activeIndex == 0 );
 	m_list[m_count] = pChannel - channels;
 	m_count++;
 	pChannel->activeIndex = m_count;
@@ -198,8 +208,8 @@ void CActiveChannels::Remove( channel_t *pChannel )
 	if ( pChannel->activeIndex == 0 )
 		return;
 	int activeIndex = pChannel->activeIndex - 1;
-	Assert( activeIndex >= 0 && activeIndex < m_count );
-	Assert( pChannel == &channels[m_list[activeIndex]] );
+	contract_assert( activeIndex >= 0 && activeIndex < m_count );
+	contract_assert( pChannel == &channels[m_list[activeIndex]] );
 	m_count--;
 	// Not the last one?  Swap the last one with this one and fix its index
 	if ( activeIndex < m_count )
@@ -216,7 +226,7 @@ void CActiveChannels::GetActiveChannels( CChannelList &list ) const
 	list.m_count = m_count;
 	if ( m_count )
 	{
-		Q_memcpy( list.m_list, m_list, sizeof(m_list[0])*m_count );
+		V_memcpy( list.m_list, m_list, sizeof(m_list[0])*m_count );
 	}
 	list.m_hasSpeakerChannels = true;
 	list.m_has11kChannels = true;
@@ -291,10 +301,6 @@ vec_t S_GetNominalClipDist()
 	return sound_nominal_clip_dist;
 }
 
-#if USE_AUDIO_DEVICE_V1
-int64			g_soundtime = 0;		// sample PAIRS output since start
-double			g_soundtimeerror = 0.0;  // Error in sound time (used for synchronizing movie output sound to host_time)
-#endif
 int64  			g_paintedtime = 0; 		// sample PAIRS mixed since start
 
 float			g_ClockSyncArray[NUM_CLOCK_SYNCS] = {0};
@@ -365,7 +371,7 @@ std::recursive_mutex g_SoundMapMutex;
 class CDummySfx : public CSfxTable
 {
 public:
-	virtual const char *getname( char *pBuf, size_t bufLen )
+	virtual const char *getname( char *pBuf, std::size_t bufLen )
 	{
 		V_strncpy( pBuf, name, bufLen );
 		return pBuf;
@@ -373,7 +379,7 @@ public:
 
 	void setname( const char *pName )
 	{
-		Q_strncpy( name, pName, sizeof( name ) );
+		V_strncpy( name, pName, sizeof( name ) );
 		OnNameChanged(name);
 	}
 
@@ -430,10 +436,10 @@ void CSfxTable::OnNameChanged( const char *pName )
 	if ( pName && g_cgrouprules )
 	{
 		char szString[MAX_PATH];
-		Q_strncpy( szString, pName, sizeof(szString) );
-		Q_FixSlashes( szString, '/' );
+		V_strncpy( szString, pName, sizeof(szString) );
+		V_FixSlashes( szString, '/' );
 		V_strlower( szString );
-		m_mixGroupCount = MXR_GetMixGroupListFromDirName( szString, m_mixGroupList, ARRAYSIZE(m_mixGroupList) );
+		m_mixGroupCount = MXR_GetMixGroupListFromDirName( szString, m_mixGroupList, std::size( m_mixGroupList ) );
 		m_bIsMusic = false;
 		for ( int i = 0; i < m_mixGroupCount; i++ )
 		{
@@ -455,7 +461,7 @@ void CSfxTable::OnNameChanged( const char *pName )
 //-----------------------------------------------------------------------------
 // Returns the decorated name. Cannot be used nested more than a few levels.
 //-----------------------------------------------------------------------------
-const char *CSfxTable::getname( char *pBuf, size_t bufLen )
+const char *CSfxTable::getname( char *pBuf, std::size_t bufLen )
 {
 	if ( m_fnHandle )
 	{
@@ -476,7 +482,7 @@ FileNameHandle_t CSfxTable::GetFileNameHandle()
 //-----------------------------------------------------------------------------
 // Returns the file name, sound prefix chars are stripped
 //-----------------------------------------------------------------------------
-const char *CSfxTable::GetFileName( char *pOutBuf, size_t bufLen )
+const char *CSfxTable::GetFileName( char *pOutBuf, std::size_t bufLen )
 {
 
 	const char *pName = getname(pOutBuf, bufLen);
@@ -528,9 +534,6 @@ float g_flReplayMusicGain = 1.0f;
 // 0)headphones 2)stereo speakers 4)quad 5)5point1 
 // autodetected from windows settings
 ConVar snd_surround( "snd_surround_speakers", "-1" );
-#if USE_AUDIO_DEVICE_V1
-ConVar snd_legacy_surround( "snd_legacy_surround", "0", FCVAR_ARCHIVE );
-#endif
 
 ConVar snd_noextraupdate( "snd_noextraupdate", "0" );
 ConVar snd_show( "snd_show", "0", FCVAR_CHEAT, "Show sounds info");
@@ -553,7 +556,6 @@ static ConVar ui_volume_scale( "ui_volume_scale", "1.0" );
 ConVar movie_volume_scale( "movie_volume_scale", "1.0" );
 
 // user configurable music volume - NOTE there is no music submix so this is pre-multiplied into each channel
-ConVar snd_musicvolume_multiplier_inoverlay( "snd_musicvolume_multiplier_inoverlay", "0.1", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "Music volume multiplier when Steam Overlay is active", true, 0.0f, true, 1.0f );
 
 ConVar snd_musicvolume( "snd_musicvolume", "0.7", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "Overall music volume", true, 0.0f, true, 1.0f );
 ConVar snd_menumusic_volume( "snd_menumusic_volume", "1.0", FCVAR_ARCHIVE | FCVAR_RELEASE, "Relative volume of the main menu music." );
@@ -601,9 +603,7 @@ float S_GetMasterVolume( void )
 
 void S_SoundInfo_f(void)
 {
-#if !USE_AUDIO_DEVICE_V1
 	g_AudioDevice->OutputDebugInfo();
-#endif
 
 	if ( !g_AudioDevice->IsActive() )
 	{
@@ -624,8 +624,6 @@ void S_SoundInfo_f(void)
 		}
 	}
 }
-
-#if !USE_AUDIO_DEVICE_V1
 
 static void OnSndVarChanged( IConVar *pVar, const char *pOldString, float flOldValue );
 ConVar snd_mute_losefocus("snd_mute_losefocus", "1", FCVAR_ARCHIVE);
@@ -717,7 +715,9 @@ eSubSystems_t GetDefaultAudioSubsystem()
 	return nSubsystem;
 }
 
-CON_COMMAND( sound_device_list, "Lists all available audio devices." )
+static void sound_device_list( const CCommand &args );
+static ConCommand sound_device_list_command( "sound_device_list", sound_device_list, "Lists all available audio devices." );
+static void sound_device_list( const CCommand &args )
 {
 	g_AudioDeviceList.UpdateDeviceList();
 
@@ -736,8 +736,6 @@ CON_COMMAND( sound_device_list, "Lists all available audio devices." )
 	}
 }
 
-#endif
-
 /*
 ================
 S_Startup
@@ -753,29 +751,20 @@ void S_Startup( void )
 
 	if ( bFirst )
 	{
-#if !USE_AUDIO_DEVICE_V1
 		snd_mute_losefocus.InstallChangeCallback( &OnSndVarChanged );
 		sound_device_override.InstallChangeCallback( &OnSndVarChanged );
 		snd_surround.InstallChangeCallback( &OnSndVarChanged );
-#endif
 
 		bFirst = false;
 	}
 
 	if ( !g_AudioDevice )
 	{
-#if USE_AUDIO_DEVICE_V1
-		g_AudioDevice = IAudioDevice::AutoDetectInit();
-		if ( !g_AudioDevice )
-		{
-			Error( "Unable to init audio" );
-		}
-#else
 		extern HWND* pmainwindow;
 
 		eSubSystems_t nSubsystem = GetDefaultAudioSubsystem();
 		g_AudioDeviceList.BuildDeviceList( nSubsystem );
-		Assert( g_AudioDeviceList.IsValid() );
+		contract_assert( g_AudioDeviceList.IsValid() );
 
 		g_AudioDeviceInitParams.Defaults();
 		g_AudioDeviceInitParams.m_bPlayEvenWhenNotInFocus = !snd_mute_losefocus.GetBool();
@@ -794,7 +783,6 @@ void S_Startup( void )
 			g_AudioDeviceInitParams.OverrideDevice( pDevice );
 		}
 		g_AudioDevice = g_AudioDeviceList.CreateDevice( g_AudioDeviceInitParams );
-#endif
 	}
 }
 
@@ -903,10 +891,10 @@ void S_Shutdown(void)
 			time(&ltime);
 			localtime(&ltime);*/
 
-			time_t timet = time( nullptr );
-			struct tm *tm  = localtime( &timet );
+			std::time_t timet = time( nullptr );
+			struct tm *tm  = std::localtime( &timet );
 			char filename[32];
-			Q_snprintf( filename, 32, "soundlog_%i_%02i_%02i_%02i_%02i.txt", tm->tm_year, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min );
+			V_snprintf( filename, 32, "soundlog_%i_%02i_%02i_%02i_%02i.txt", tm->tm_year, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min );
 			
 			DumpFilePaths(filename);
 		}
@@ -949,10 +937,6 @@ void S_Shutdown(void)
 		MIX_FreeAllPaintbuffers();
 		snd_initialized = false;
 		g_paintedtime = 0;
-#if USE_AUDIO_DEVICE_V1
-		g_soundtime = 0;
-		g_soundtimeerror = 0.0;
-#endif
 		s_buffers = 0;
 		s_oldsampleOutCount = 0;
 		s_lastsoundtime = 0.0f;
@@ -997,7 +981,7 @@ CSfxTable *S_FindName( const char *szName, int *pInCache )
 	if ( it != s_Sounds.end() )
 	{
 		sfx = it->second.pSfx;
-		Assert( sfx );
+		contract_assert( sfx );
 		if ( pInCache )
 		{
 			// indicate whether or not sound is currently in the cache.
@@ -1010,7 +994,7 @@ CSfxTable *S_FindName( const char *szName, int *pInCache )
 		SfxDictEntry entry;
 		entry.pSfx = s_SoundPool.alloc();
 
-		Assert( entry.pSfx );
+		contract_assert( entry.pSfx );
 
 		s_Sounds.emplace( fnHandle, entry );
 		sfx = entry.pSfx;
@@ -1036,7 +1020,7 @@ CSfxTable *S_FindName( const char *szName, int *pInCache )
 double g_flAccumulatedSoundLoadTime = 0.0f;
 CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundError )
 {
-	VPROF( "S_LoadSound" );
+	CVProfScope _( "S_LoadSound", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	char nameBuf[MAX_PATH];
 	soundError = SE_OK;
 
@@ -1142,7 +1126,7 @@ CSfxTable *S_PrecacheSound( const char *name )
 	}
 	else
 	{
-		Assert( !"S_PrecacheSound:  Failed to create sfx" );
+		contract_assert( !"S_PrecacheSound:  Failed to create sfx" );
 	}
 
 	return sfx;
@@ -1161,8 +1145,8 @@ void S_InternalReloadSound( CSfxTable *sfx )
 
 	char pExt[10];
 	char nameBuf[MAX_PATH];
-	Q_ExtractFileExtension( sfx->getname(nameBuf,sizeof(nameBuf)), pExt, sizeof(pExt) );
-	int nSource = !Q_stricmp( pExt, "mp3" ) ? CAudioSource::AUDIO_SOURCE_MP3 : CAudioSource::AUDIO_SOURCE_WAV;
+	V_ExtractFileExtension( sfx->getname(nameBuf,sizeof(nameBuf)), pExt, sizeof(pExt) );
+	int nSource = !V_stricmp( pExt, "mp3" ) ? CAudioSource::AUDIO_SOURCE_MP3 : CAudioSource::AUDIO_SOURCE_WAV;
 //	audiosourcecache->RebuildCacheEntry( nSource, sfx->IsPrecachedSound(), sfx );
 	audiosourcecache->GetInfo( nSource, sfx->IsPrecachedSound(), sfx ); // Do a size/date check and rebuild the cache entry if necessary.
 }
@@ -1185,7 +1169,7 @@ void S_ReloadSound( const char *name )
 	if ( sfx )
 	{
 		char nameBuf[MAX_PATH];
-		Assert( Q_stricmp( sfx->getname(nameBuf, sizeof(nameBuf)), name ) == 0 );
+		contract_assert( V_stricmp( sfx->getname(nameBuf, sizeof(nameBuf)), name ) == 0 );
 	}
 #endif
 	
@@ -1201,7 +1185,7 @@ void S_ReloadFilesInList( IFileList *pFilesToReload )
 	wavedatacache->Flush();
 	
 	// Reload any sounds that are:
-	//	 a) not from the Steam caches
+	//	 a) not from the original game content
 	//	 b) not in the whitelist
 	// Stops before the last entry.
 	auto iLast = s_Sounds.empty() ? s_Sounds.end() : std::prev( s_Sounds.end() );
@@ -1211,7 +1195,7 @@ void S_ReloadFilesInList( IFileList *pFilesToReload )
 		char filename[MAX_PATH * 3];
 		if ( !g_pFileSystem->String( fnHandle, filename, sizeof( filename ) ) )
 		{
-			Assert( !"S_HandlePureServerWhitelist - can't get a filename." );
+			contract_assert( !"S_HandlePureServerWhitelist - can't get a filename." );
 			continue;
 		}
 	
@@ -1221,9 +1205,9 @@ void S_ReloadFilesInList( IFileList *pFilesToReload )
 		{
 			char fullFilename[MAX_PATH*2];
 			if ( IsSoundChar( filename[0] ) )
-				Q_snprintf( fullFilename, sizeof( fullFilename ), "sound/%s", &filename[1] );
+				V_snprintf( fullFilename, sizeof( fullFilename ), "sound/%s", &filename[1] );
 			else
-				Q_snprintf( fullFilename, sizeof( fullFilename ), "sound/%s", filename );
+				V_snprintf( fullFilename, sizeof( fullFilename ), "sound/%s", filename );
 			
 			S_InternalReloadSound( sfx );
 		}
@@ -1297,7 +1281,7 @@ ConVar voice_steal("voice_steal", "2");
 
 float ClosestListenerDistSqr( const Vector &check )
 {
-	float bestDSqr = FLT_MAX;
+	float bestDSqr = std::numeric_limits<float>::max();
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 	{
 		float distSqr = check.DistToSqr( listener_origin[ hh ] );
@@ -1452,7 +1436,7 @@ channel_t *SND_StealDynamicChannel(SoundSource soundsource, int entchannel, cons
 		return &channels[availableChannel];
 
 	// Still haven't found a suitable channel, so choose the one with the least amount of time left to play
-	float life_left = FLT_MAX;
+	float life_left = std::numeric_limits<float>::max();
 	int first_to_die = -1;
 	bool bAllowVoiceSteal = voice_steal.GetBool();
 
@@ -1704,7 +1688,7 @@ bool S_IsMusic( channel_t *pChannel )
 			char *pGroupName = MXR_GetGroupnameFromId( pChannel->mixgroups[i] );
 			// HACK: Consider mp3s playing in the UI as music since the only cases of that 
 			// currently are startup music files e.g. #ui/gamestartup1.mp3
-			if ( !Q_strcmp( pGroupName, "Music" ) || (bIsMp3 && !Q_stricmp(pGroupName,"UI")))
+			if ( !V_strcmp( pGroupName, "Music" ) || (bIsMp3 && !V_stricmp(pGroupName,"UI")))
 			{
 				return true;
 			}
@@ -1729,7 +1713,7 @@ void S_GetCurrentlyPlayingMusic( std::vector< musicsave_t >& musiclist )
 
 		musicsave_t song;
 		char nameBuf[MAX_PATH];
-		Q_strncpy( song.songname, pChannel->sfx->getname(nameBuf,sizeof(nameBuf)), sizeof( song.songname ) );
+		V_strncpy( song.songname, pChannel->sfx->getname(nameBuf,sizeof(nameBuf)), sizeof( song.songname ) );
 		song.sampleposition = pChannel->pMixer->GetPositionForSave();
 		song.master_volume = pChannel->master_vol;
 
@@ -1743,7 +1727,7 @@ void S_GetCurrentlyPlayingMusic( std::vector< musicsave_t >& musiclist )
 //-----------------------------------------------------------------------------
 void S_RestartSong( const musicsave_t *song )
 {
-	Assert( song );
+	contract_assert( song );
 
 	// Start the song
 	CSfxTable *pSound = S_PrecacheSound( song->songname );
@@ -2009,8 +1993,8 @@ float SND_GetDspMix( channel_t *pchannel, int idist)
 
 ConVar snd_dvar_dist_min( "snd_dvar_dist_min", "240" /* (20.0  * 12.0) */, FCVAR_CHEAT, "Play full 'near' sound at this distance" );
 ConVar snd_dvar_dist_max( "snd_dvar_dist_max", "1320" /* (110.0  * 12.0) */, FCVAR_CHEAT, "Play full 'far' sound at this distance" );
-#define DVAR_MIX_MIN	0.0
-#define DVAR_MIX_MAX	1.0
+constexpr auto DVAR_MIX_MIN = 0.0;
+constexpr auto DVAR_MIX_MAX = 1.0;
 
 // calculate mixing parameter for CHAR_DISTVAR wavs
 // returns 0 - 1.0, 1.0 is 100% far sound (wav right)
@@ -2134,14 +2118,14 @@ bool SND_GetClosestPoint( channel_t *pChannel, const Vector &vecListenerOrigin, 
 
 // Also modifies channel pitch based on distance to nearest approach point
 
-#define DOPPLER_DIST_LEFT_TO_RIGHT	(4*12)		// separate left/right sounds by 4'
+constexpr auto DOPPLER_DIST_LEFT_TO_RIGHT = (4*12); // separate left/right sounds by 4'
 
-#define DOPPLER_DIST_MAX			(20*12)		// max distance - causes min pitch
-#define DOPPLER_DIST_MIN			(1*12)		// min distance - causes max pitch
-#define DOPPLER_PITCH_MAX			1.5			// max pitch change due to distance
-#define DOPPLER_PITCH_MIN			0.25		// min pitch change due to distance
+constexpr auto DOPPLER_DIST_MAX = (20*12); // max distance - causes min pitch
+constexpr auto DOPPLER_DIST_MIN = (1*12); // min distance - causes max pitch
+constexpr auto DOPPLER_PITCH_MAX = 1.5; // max pitch change due to distance
+constexpr auto DOPPLER_PITCH_MIN = 0.25; // min pitch change due to distance
 
-#define DOPPLER_RANGE_MAX			(10*12)		// don't play doppler wav unless within this range
+constexpr auto DOPPLER_RANGE_MAX = (10*12); // don't play doppler wav unless within this range
 												// UNDONE: should be set by caller!
 
 static void SND_GetDopplerPoints( channel_t *pChannel, const Vector &vecListenerOrigin, QAngle &source_angles, Vector &vnearpoint, Vector &source_doppler_left, Vector &source_doppler_right)
@@ -2206,7 +2190,7 @@ ConVar snd_showstart( "snd_showstart", "0", FCVAR_CHEAT );	// showstart always s
 												// 7 - show 2 and total gain & dist in ft. to sound source
 												// snd_showstart reports only the sounds being actively played. To see sounds that should be played but may have been discarded (for errors or other reasons), use snd_report_start_sound. 
 
-#define SND_GAIN_PLAYER_WEAPON_DB 2.0	// increase player weapon gain by N dB
+constexpr auto SND_GAIN_PLAYER_WEAPON_DB = 2.0; // increase player weapon gain by N dB
 
 // dB = 20 log (amplitude/32768)		0 to -90.3dB
 // amplitude = 32768 * 10 ^ (dB/20)		0 to +/- 32768
@@ -2214,13 +2198,13 @@ ConVar snd_showstart( "snd_showstart", "0", FCVAR_CHEAT );	// showstart always s
 
 float Gain_To_dB ( float gain )
 {
-	float dB = 20 * log ( gain );
+	float dB = 20 * std::log ( gain );
 	return dB;
 }
 
 float dB_To_Gain ( float dB )
 {
-	float gain = powf (10, dB / 20.0);
+	float gain = std::powf (10, dB / 20.0);
 	return gain;
 }
 
@@ -2254,7 +2238,7 @@ soundlevel_t SND_GetSndlvl ( channel_t *pchannel )
 float SND_GetGainFromMult( float gain, float dist_mult, vec_t dist );
 
 // NOTE: This is to eliminate the effect of "volume" on the distance falloff curve
-// NOTE: may NOT BE TRUE, only effects compression?? and only from master volume control!
+// NOTE: may NOT BE true, only effects compression?? and only from master volume control!
 ConVar snd_preGainDistFalloff( "snd_pre_gain_dist_falloff", "1", FCVAR_CHEAT );	// showstart always skips info on player footsteps!
 
 // gain curve construction
@@ -2274,20 +2258,20 @@ static float SND_GetMusicVolumeGainMultiplierInOverlay()
 		// Update every 0.1 sec
 		static ConVarRef cl_embedded_stream_video_playing( "cl_embedded_stream_video_playing" );
 		bool bInClientVideoPlaying = ( cl_embedded_stream_video_playing.IsValid() && cl_embedded_stream_video_playing.GetBool() );
-		bool bCurrentlyActive = Steam3Client().IsGameOverlayActive() || bInClientVideoPlaying;
+		bool bCurrentlyActive = bInClientVideoPlaying;
 		if ( bCurrentlyActive != s_bOverlayActiveLastKnown )
 		{
 			s_flMusicVolumeOverlayMultiplierPrevious = ( flTimeNow > s_flLastUpdateTime + 1.0 ) ? s_flMusicVolumeOverlayMultiplierTarget : ( s_flMusicVolumeOverlayMultiplierPrevious + ( flTimeNow - s_flLastUpdateTime ) * ( s_flMusicVolumeOverlayMultiplierTarget - s_flMusicVolumeOverlayMultiplierPrevious ) );
 			s_flLastUpdateTime = flTimeNow;
 			s_bOverlayActiveLastKnown = bCurrentlyActive;
-			s_flMusicVolumeOverlayMultiplierTarget = bCurrentlyActive ? ( bInClientVideoPlaying ? 0.0f : snd_musicvolume_multiplier_inoverlay.GetFloat() ) : 1.0f;
+			s_flMusicVolumeOverlayMultiplierTarget = bCurrentlyActive ? 0.0f : 1.0f;
 		}
 	}
 	return ( flTimeNow > s_flLastUpdateTime + 1.0 ) ? s_flMusicVolumeOverlayMultiplierTarget : ( s_flMusicVolumeOverlayMultiplierPrevious + ( flTimeNow - s_flLastUpdateTime ) * ( s_flMusicVolumeOverlayMultiplierTarget - s_flMusicVolumeOverlayMultiplierPrevious ) );
 }
 float SND_GetGain( int nSlot, gain_t *gs, const channel_t *ch, const Vector &vecListenerOrigin, bool fplayersound, bool fmusicsound, bool flooping, vec_t dist, bool bAttenuated, bool bOkayToTrace )
 {
-	VPROF_( "SND_GetGain", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
+	CVProfScope _( "SND_GetGain", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
 
 	if ( ch->flags.m_bCompatibilityAttenuation )
 	{
@@ -2375,7 +2359,7 @@ float SND_GetGain( int nSlot, gain_t *gs, const channel_t *ch, const Vector &vec
 // always ramp channel gain changes over time
 // returns ramped gain, given new target gain
 
-#define SND_GAIN_FADE_TIME	0.25		// xfade seconds between obscuring gain changes
+constexpr auto SND_GAIN_FADE_TIME = 0.25; // xfade seconds between obscuring gain changes
 
 float SND_FadeToNewGain( gain_t *gs, const channel_t *ch, float gain_new )
 {
@@ -2425,7 +2409,7 @@ float SND_FadeToNewGain( gain_t *gs, const channel_t *ch, float gain_new )
 	return gs->ob_gain;
 }
 
-#define SND_TRACE_UPDATE_MAX  2			// max of N channels may be checked for obscured source per frame
+constexpr auto SND_TRACE_UPDATE_MAX = 2; // max of N channels may be checked for obscured source per frame
 
 int g_snd_trace_count = 0;		// total tracelines for gain obscuring made this frame
 
@@ -2705,8 +2689,8 @@ float PercentDifference( float a, float b )
 
 // NOTE: Do not change SND_WALL_TRACE_LEN without also changing PRC_MDY6 delay value in snd_dsp.cpp!
 
-#define SND_WALL_TRACE_LEN (100.0*12.0)		// trace max of 100' = max of 100 milliseconds of linear delay
-#define SND_SPATIAL_WAIT	(0.25)			// seconds to wait between traces
+constexpr auto SND_WALL_TRACE_LEN = (100.0*12.0); // trace max of 100' = max of 100 milliseconds of linear delay
+constexpr auto SND_SPATIAL_WAIT = (0.25); // seconds to wait between traces
 
 // change mod delay value on chan 0..3 to v (inches)
 
@@ -2758,8 +2742,8 @@ bool SND_IsListenerValid()
 
 void SND_SetSpatialDelays()
 {
-	VPROF("SoundSpatialDelays");
-	float dist = FLT_MAX, v, vp;
+	CVProfScope _( "SoundSpatialDelays", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	float dist = std::numeric_limits<float>::max(), v, vp;
 	Vector v_dir, v_dir2;
 	int chan_max = (g_AudioDevice->IsSurround() ? 4 : 2) + (g_AudioDevice->IsSurroundCenter() ? 1 : 0);  // 2, 4, 5 channels
 	
@@ -2767,7 +2751,7 @@ void SND_SetSpatialDelays()
 	// init struct if 1st time through
 	if ( !g_ssp_init )
 	{
-		Q_memset(&g_ssp, 0, sizeof(snd_spatial_t));
+		V_memset(&g_ssp, 0, sizeof(snd_spatial_t));
 		g_ssp_init = true;
 	}
 
@@ -2987,27 +2971,27 @@ ConVar das_debug( "adsp_debug", "0", FCVAR_ARCHIVE );
 												// 5: draw teal box around all props around player
 												// 6: draw teal box around room as detected
 
-#define DAS_CWALLS				20				// # of wall traces to save for calculating room dimensions
-#define DAS_ROOM_TRACE_LEN		(400.0*12.0)	// max size of trace to check for room dimensions
+constexpr auto DAS_CWALLS = 20; // # of wall traces to save for calculating room dimensions
+constexpr auto DAS_ROOM_TRACE_LEN = (400.0*12.0); // max size of trace to check for room dimensions
 
-#define DAS_AUTO_WAIT	0.25					// wait min of n seconds between dsp_room changes and update checks
+constexpr auto DAS_AUTO_WAIT = 0.25; // wait min of n seconds between dsp_room changes and update checks
 
-#define DAS_WIDTH_MIN	0.4						// min % change in avg width of any wall pair to cause new dsp
-#define DAS_REFL_MIN	0.5						// min % change in avg refl of any wall to cause new dsp
-#define DAS_SKYHIT_MIN	0.8						// min % change in # of sky hits per wall
+constexpr auto DAS_WIDTH_MIN = 0.4; // min % change in avg width of any wall pair to cause new dsp
+constexpr auto DAS_REFL_MIN = 0.5; // min % change in avg refl of any wall to cause new dsp
+constexpr auto DAS_SKYHIT_MIN = 0.8; // min % change in # of sky hits per wall
 
-#define DAS_DIST_MIN	(4.0 * 12.0)			// min distance between room dsp changes
-#define DAS_DIST_MAX	(40.0 * 12.0)			// max distance to preserve room dsp changes
+constexpr auto DAS_DIST_MIN = (4.0 * 12.0); // min distance between room dsp changes
+constexpr auto DAS_DIST_MAX = (40.0 * 12.0); // max distance to preserve room dsp changes
 
-#define DAS_DIST_MIN_OUTSIDE	(6.0 * 12.0)	// min distance between room dsp changes outside
-#define DAS_DIST_MAX_OUTSIDE	(100.0 * 12.0)	// max distance to preserve room dsp changes outside
+constexpr auto DAS_DIST_MIN_OUTSIDE = (6.0 * 12.0); // min distance between room dsp changes outside
+constexpr auto DAS_DIST_MAX_OUTSIDE = (100.0 * 12.0); // max distance to preserve room dsp changes outside
 
-#define IVEC_DIAG_UP	8						// start of diagonal up vectors
-#define IVEC_UP			18						// up vector
-#define IVEC_DOWN		19						// down vector
+constexpr auto IVEC_DIAG_UP = 8; // start of diagonal up vectors
+constexpr auto IVEC_UP = 18; // up vector
+constexpr auto IVEC_DOWN = 19; // down vector
 
-#define DAS_REFLECTIVITY_NORM	0.5
-#define DAS_REFLECTIVITY_SKY	0.0
+constexpr auto DAS_REFLECTIVITY_NORM = 0.5;
+constexpr auto DAS_REFLECTIVITY_SKY = 0.0;
 
 // auto dsp room struct
 
@@ -3065,7 +3049,7 @@ struct das_node_t
 	das_room_t room;
 };
 
-#define DAS_CNODES	40					// keep around last n nodes - must be same as DSP_CAUTO_PRESETS!!!
+constexpr auto DAS_CNODES = 40; // keep around last n nodes - must be same as DSP_CAUTO_PRESETS!!!
 
 das_node_t g_das_nodes[DAS_CNODES];		// all dsp detection nodes
 das_node_t *g_pdas_last_node = nullptr;	// last node that saw player
@@ -3127,7 +3111,7 @@ float S_DSPGetCurrentDASRoomSkyPercent(void)
 }
 void DAS_InitNodes( void )
 {
-	Q_memset(g_das_nodes, 0, sizeof(das_node_t) * DAS_CNODES);
+	V_memset(g_das_nodes, 0, sizeof(das_node_t) * DAS_CNODES);
 	g_das_check_next = 0;
 	g_das_store_next = 0;
 	g_das_all_checked = 0;
@@ -3180,7 +3164,7 @@ void DAS_InitNodes( void )
 
 void DAS_InitAutoRoom( das_room_t *proom)
 {
-		Q_memset(proom, 0, sizeof (das_room_t));
+		V_memset(proom, 0, sizeof (das_room_t));
 }
 
 // reset all nodes for next round of visibility checks between player & nodes
@@ -3418,7 +3402,7 @@ public:
 	}
 };
 
-#define DAS_TRACE_MASK		(CONTENTS_SOLID|CONTENTS_MOVEABLE|CONTENTS_WINDOW)
+inline constexpr auto DAS_TRACE_MASK = (CONTENTS_SOLID|CONTENTS_MOVEABLE|CONTENTS_WINDOW);
 
 // returns true if clear line exists between node and player
 // if node can see player, sets up node distance and flag fseesplayer
@@ -3797,7 +3781,7 @@ void DAS_SetTraceHeight( das_room_t *proom, trace_t *ptrU, trace_t *ptrD )
 		proom->lowceiling = h;
 	}		
 
-	Assert (proom->vplayer.z <= ptrU->endpos.z);
+	contract_assert( proom->vplayer.z <= ptrU->endpos.z );
 
 	if (das_debug.GetInt() > 1)
 	{
@@ -4458,7 +4442,7 @@ int DAS_GetRoomDSP( das_room_t *proom, int inode )
 
 void DAS_CheckNewRoomDSP()
 {
-	VPROF("DAS_CheckNewRoomDSP");
+	CVProfScope _( "DAS_CheckNewRoomDSP", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	das_room_t *proom = &g_das_room;
 	int dsp_preset;
 	bool bRoom_ready = false;
@@ -4616,7 +4600,7 @@ check_new_room_exit:
 
 void RemapPlayerOrMusicVols(  channel_t *ch, float volumes[CCHANVOLUMES/2], bool fplayersound, bool fmusicsound, float mono )
 {
-	VPROF_("RemapPlayerOrMusicVols", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
+	CVProfScope _( "RemapPlayerOrMusicVols", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
 
 	if ( !fplayersound && !fmusicsound )
 		return;	// no remapping
@@ -4714,7 +4698,7 @@ void SND_MergeVolumes( const int build_volumes[ MAX_SPLITSCREEN_CLIENTS ][CCHANV
 	{
 		int val = 0;
 		int count = 0;
-		int maxVal = INT_MIN;
+		int maxVal = std::numeric_limits<int>::min();
 		FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 		{
 			int check = build_volumes[ hh ][ v ];
@@ -4820,7 +4804,7 @@ static int SND_GetGUID()
 
 void SND_ActivateChannel( channel_t *pChannel, int nGUID )
 {
-	Q_memset( pChannel, 0, sizeof(*pChannel) );
+	V_memset( pChannel, 0, sizeof(*pChannel) );
 	g_ActiveChannels.Add( pChannel );
 	pChannel->guid = nGUID;
 }
@@ -4859,7 +4843,7 @@ void SND_ExecuteUpdateOperators( channel_t *ch )
 		return;
 	}
 
-	VPROF( "SND_ExecuteUpdateOperators" );
+	CVProfScope _( "SND_ExecuteUpdateOperators", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	
 	//////////////////////////////////////////////////////////////////////////
 	// set all scratch pad settings
@@ -4904,7 +4888,7 @@ SND_Spatialize
 */
 void SND_Spatialize(channel_t *ch)
 {
-	VPROF( "SND_Spatialize" );
+	CVProfScope _( "SND_Spatialize", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// process via operators only
 	if( ch->m_pStackList && ch->m_pStackList->HasStack( CSosOperatorStack::SOS_UPDATE ) )
@@ -5035,7 +5019,7 @@ void SND_Spatialize(channel_t *ch)
 	si.m_pUtlVecMultiAngles = nullptr;
 
 	{
-		VPROF_("SoundServices->GetSoundSpatializtion", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
+		CVProfScope _( "SoundServices->GetSoundSpatializtion", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
 		g_pSoundServices->GetSoundSpatialization( ch->soundsource, si );	
 	}
 
@@ -5062,12 +5046,12 @@ void SND_Spatialize(channel_t *ch)
 	fdopplerwav = ((ch->wavtype == CHAR_DOPPLER) && !fplayersound);
 	if ( fdopplerwav )
 	{
-		VPROF_( "SND_Spatialize doppler", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
+		CVProfScope _( "SND_Spatialize doppler", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
 			
 		// along sound source forward direction (doppler wavs)
 		// calculate point of closest approach for CHAR_DOPPLER wavs, replace source_vec
 
-		float bestDist = FLT_MAX;
+		float bestDist = std::numeric_limits<float>::max();
 		Vector nearestPoint;
 		FOR_EACH_VALID_SPLITSCREEN_PLAYER( nSlot )
 		{
@@ -5112,7 +5096,7 @@ void SND_Spatialize(channel_t *ch)
 	else
 	{
 		// source_vec is vector from listener to sound source
-		dist = FLT_MAX;
+		dist = std::numeric_limits<float>::max();
 
 		FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 		{
@@ -5230,7 +5214,7 @@ void SND_Spatialize(channel_t *ch)
 		// we've already picked the best doppler listener in the code above, so only spaitilize for that player
 		// don't merge volumes because there is only one set of volumes here.
 
-		VPROF_("SND_Spatialize doppler", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
+		CVProfScope _( "SND_Spatialize doppler", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
 		// fill out channel volumes for both doppler sound source locations
 		float volumes[CCHANVOLUMES/2];
 
@@ -5245,7 +5229,7 @@ void SND_Spatialize(channel_t *ch)
 	}
 	else
 	{
-		VPROF( "SND_Spatialize no-doppler" );
+		CVProfScope _( "SND_Spatialize no-doppler", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		// fill out channel volumes for single sound source location
 		float volumes[CCHANVOLUMES/2];
@@ -5405,7 +5389,7 @@ void PrintSoundFileName( const char *pText1, const char *pFileName, CSfxTable *p
 void PrintChannel( const char *pText1, const char *pFileName, channel_t * pChannel, const char *pText2 = nullptr )
 {
 	int nIndex = pChannel - &channels[ 0 ];
-	Assert( ( nIndex >= 0 ) && ( nIndex < MAX_CHANNELS ) );
+	contract_assert( ( nIndex >= 0 ) && ( nIndex < MAX_CHANNELS ) );
 
 	Msg( "Channel - Index: %d - Guid: %d.\n", nIndex, pChannel->guid );
 	PrintSoundFileName( pText1, pFileName, pChannel->sfx, pText2 );
@@ -5414,7 +5398,7 @@ void PrintChannel( const char *pText1, const char *pFileName, channel_t * pChann
 void PrintChannel( const char *pText1, channel_t * pChannel, const char *pText2 = nullptr )
 {
 	int nIndex = pChannel - &channels[ 0 ];
-	Assert( ( nIndex >= 0 ) && ( nIndex < MAX_CHANNELS ) );
+	contract_assert( ( nIndex >= 0 ) && ( nIndex < MAX_CHANNELS ) );
 
 	Msg( "Channel - Index: %d - Guid: %d.\n", nIndex, pChannel->guid );
 	PrintSoundFileName( pText1, pChannel->sfx, pText2 );
@@ -5423,7 +5407,7 @@ void PrintChannel( const char *pText1, channel_t * pChannel, const char *pText2 
 void PrintChannelInfo( channel_t * pChannel )
 {
 	int nIndex = pChannel - &channels[ 0 ];
-	Assert( ( nIndex >= 0 ) && ( nIndex < MAX_CHANNELS ) );
+	contract_assert( ( nIndex >= 0 ) && ( nIndex < MAX_CHANNELS ) );
 
 	unsigned int sampleCount = RemainingSamples( pChannel );
 	float timeleft = (float)sampleCount / (float)pChannel->sfx->pSource->SampleRate();
@@ -5486,8 +5470,8 @@ void S_StopChannel( channel_t *pChannel )
 // soundsource, entchannel and sfx, and perform alteration on channel
 // as indicated by 'flags' parameter. If shut down request and
 // sfx contains a sentence name, shut off the sentence.
-// returns TRUE if sound was altered,
-// returns FALSE if sound was not found (sound is not playing)
+// returns true if sound was altered,
+// returns false if sound was not found (sound is not playing)
 
 int S_AlterChannel( StartSoundParams_t &pParams )
 {
@@ -5534,7 +5518,7 @@ int S_AlterChannel( StartSoundParams_t &pParams )
 					S_StopChannelUnlocked( &channels[ch_idx] );
 				}
 			
-				return TRUE;
+				return true;
 			}
 		}
 		// channel not found
@@ -5542,7 +5526,7 @@ int S_AlterChannel( StartSoundParams_t &pParams )
 		{
 			Msg( "%s(%d): Channel not found for sound '%s'.\n", __FILE__, __LINE__, nameBuf );
 		}
-		return FALSE;
+		return false;
 
 	}
 
@@ -5637,13 +5621,13 @@ int S_AlterChannel( StartSoundParams_t &pParams )
 					S_StopChannelUnlocked( &channels[ch_idx] );
 				}
 				if ( ( flags & SND_IGNORE_NAME ) == 0 )
-					return TRUE;
+					return true;
 				else
 					bSuccess = true;
 			}
 		}
 	}
-	return ( bSuccess ) ? ( TRUE ) : ( FALSE );
+	return ( bSuccess ) ? ( true ) : ( false );
 }
 
 int S_AlterChannelByGuid( StartSoundParams_t &pParams )
@@ -5790,7 +5774,7 @@ bool BChannelLowVolume( channel_t *pch, float vol_min )
 }
 
 // Get the loudest actual volume for a channel (not counting targets).
-float ChannelLoudestCurVolume( const channel_t * RESTRICT pch )
+float ChannelLoudestCurVolume( const channel_t * __restrict__ pch )
 {
 	float loudest = pch->fvolume[0];
 	for (int i = 1; i < CCHANVOLUMES; i++)
@@ -5816,7 +5800,7 @@ void ChannelClearVolumes( channel_t *pch )
 
 int ChannelGetVol( channel_t *pch, int ivol )
 {
-	Assert(ivol < CCHANVOLUMES);
+	contract_assert( ivol < CCHANVOLUMES );
 	return (int)(pch->fvolume[ivol]);	
 }
 
@@ -5839,9 +5823,9 @@ int ChannelGetMaxVol( channel_t *pch )
 
 void ChannelSetVol( channel_t *pch, int ivol, int vol )
 {
-	Assert(ivol < CCHANVOLUMES);
+	contract_assert( ivol < CCHANVOLUMES );
 	
-	pch->fvolume[ivol] = (float)(iclamp(vol, 0, 255));	
+	pch->fvolume[ivol] = (float)(clamp(vol, 0, 255));	
 
 	pch->fvolume_target[ivol] = pch->fvolume[ivol];
 	pch->fvolume_inc[ivol] = 0.0;
@@ -5851,8 +5835,8 @@ void ChannelSetVol( channel_t *pch, int ivol, int vol )
 
 void ChannelCopyVolumes( channel_t *pch, float *pvolume_dest, int ivol_start, int cvol )
 {
-	Assert (ivol_start < CCHANVOLUMES);
-	Assert (ivol_start + cvol <= CCHANVOLUMES);
+	contract_assert( ivol_start < CCHANVOLUMES );
+	contract_assert( ivol_start + cvol <= CCHANVOLUMES );
 
 	if ( ( ivol_start == 0 ) && ( cvol == CCHANVOLUMES ) )
 	{
@@ -5893,9 +5877,9 @@ ConVar snd_vol_xfade_incr_max( "snd_vol_xfade_incr_max", "20.0", 0, "Never chang
 ConVar snd_vol_no_xfade( "snd_vol_no_xfade", "5.0", 0, "If current and target volumes are close, don't cross-fade." );
 ConVar snd_vol_xfade_speed_multiplier_for_doppler( "snd_vol_xfade_speed_multiplier_for_doppler", "1", 0, "Doppler effect is extremely sensible to volume variation. To reduce the pops, the cross-fade has to be very slow." );
 
-#define	VOL_XFADE_TIME	snd_vol_xfade_time.GetFloat()
-#define VOL_INCR_MAX	snd_vol_xfade_incr_max.GetFloat()
-#define VOL_NO_XFADE	snd_vol_no_xfade.GetFloat()
+inline float VOL_XFADE_TIME() { return snd_vol_xfade_time.GetFloat(); }
+inline auto VOL_INCR_MAX() { return snd_vol_xfade_incr_max.GetFloat(); }
+inline auto VOL_NO_XFADE() { return snd_vol_no_xfade.GetFloat(); }
 
 // set volume target and volume increment (for crossfade) for channel & speaker
 void ChannelSetVolTarget( channel_t *pch, int ivol, float volume_target )
@@ -5905,7 +5889,7 @@ void ChannelSetVolTarget( channel_t *pch, int ivol, float volume_target )
 	float vol_target = (float)(clamp(volume_target, 0, 255));
 	float vol_current;
 
-	Assert(ivol < CCHANVOLUMES);
+	contract_assert( ivol < CCHANVOLUMES );
 	
 	// set volume target
 	pch->fvolume_target[ivol] = vol_target;
@@ -5923,7 +5907,7 @@ void ChannelSetVolTarget( channel_t *pch, int ivol, float volume_target )
 	// if first time spatializing, set target = volume with no crossfade
 	// if current & target volumes are close - don't bother crossfading
 
-	if ( pch->flags.bfirstpass || (fabs(vol_target - vol_current) < VOL_NO_XFADE * fMultiplier)) 
+	if ( pch->flags.bfirstpass || (fabs(vol_target - vol_current) < VOL_NO_XFADE() * fMultiplier)) 
 	{
 		// set current volume = target, no increment
 
@@ -5933,11 +5917,11 @@ void ChannelSetVolTarget( channel_t *pch, int ivol, float volume_target )
 
 	// get crossfade increment 'speed' (volume change per frame)
 
-	speed = ( frametime / VOL_XFADE_TIME ) * (vol_target - vol_current);
+	speed = ( frametime / VOL_XFADE_TIME() ) * (vol_target - vol_current);
 
 	// make sure we never increment by more than +/- VOL_INCR_MAX volume units per frame
 	
-	speed = clamp(speed, -VOL_INCR_MAX, VOL_INCR_MAX) * fMultiplier;
+	speed = clamp(speed, -VOL_INCR_MAX(), VOL_INCR_MAX()) * fMultiplier;
 
 	pch->fvolume_inc[ivol] = speed;	
 }
@@ -5951,7 +5935,7 @@ void ChannelSetVolTargets( channel_t *pch, float *pvolumes, int ivol_offset, int
 {
 	float volume_target;
 
-	Assert(ivol_offset + cvol <= CCHANVOLUMES);
+	contract_assert( ivol_offset + cvol <= CCHANVOLUMES );
 
 	for (int i = 0; i < cvol; i++)
 	{
@@ -6009,15 +5993,15 @@ void DumpFilePaths(const char *filename)
 	ks::text_writer configBuff;
 
 	char computername[ 64 ];
-	Q_memset( computername, 0, sizeof( computername ) );
-	if ( gethostname( computername, sizeof(computername) ) == -1 )
+	V_memset( computername, 0, sizeof( computername ) );
+	if ( !ks::platform::host_name( computername, sizeof(computername) ) )
 	{
-		Q_strncpy( computername, "Linux????", sizeof( computername ) );
+		V_strncpy( computername, "Linux????", sizeof( computername ) );
 	}
 	computername[sizeof(computername)-1] = '\0';
 	// todo: morasky, ugly, fix  this and make generic!
-//	Q_snprintf( szFileName, sizeof(szFileName), "\\\\fileserver\\User\\portal2\\soundlogs\\%s_%s", computername, filename );
-	Q_snprintf( szFileName, sizeof(szFileName), "%s\\%s_%s", snd_store_filepaths.GetString(), computername, filename );
+//	V_snprintf( szFileName, sizeof(szFileName), "\\\\fileserver\\User\\portal2\\soundlogs\\%s_%s", computername, filename );
+	V_snprintf( szFileName, sizeof(szFileName), "%s\\%s_%s", snd_store_filepaths.GetString(), computername, filename );
 //	g_pFileSystem->CreateDirHierarchy( "\\fileserver\\User\\portal2\\soundlogs\\", NULL );
 	g_pFileSystem->CreateDirHierarchy( snd_store_filepaths.GetString(), nullptr );
 	if ( g_pFileSystem->FileExists( szFileName, nullptr ) && !g_pFileSystem->IsFileWritable( szFileName, nullptr ) )
@@ -6039,7 +6023,7 @@ void DumpFilePaths(const char *filename)
 
 	// make a persistent copy that async will use and free
 	char *tempBlock = new char[configBuff.size()];
-	Q_memcpy( tempBlock, configBuff.c_str(), configBuff.size() );
+	V_memcpy( tempBlock, configBuff.c_str(), configBuff.size() );
 
 	// async write the buffer, and then free it
 	g_pFileSystem->AsyncWrite( szFileName, tempBlock, configBuff.size(), true );
@@ -6059,7 +6043,7 @@ void S_DumpFilePaths( const CCommand &args )
 	}
 
 	const char *filename = args[1];
-	Assert( filename && filename [ 0 ] );
+	contract_assert( filename && filename [ 0 ] );
 	DumpFilePaths(filename);
 }
 
@@ -6100,16 +6084,14 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 	}
 
 	
-#ifndef NO_TOOLFRAMEWORK
 	if ( toolframework->InToolMode() )
 	{	
 		// If the active tool does not want game sounds to be played, return if the sound did not originate from a tool.
 		if ( !toolframework->ShouldGamePlaySounds() && !params.bToolSound )
 			return 0;
 	}
-#endif
 
-	if ( snd_filter.GetString()[ 0 ] && !Q_stristr( sndname, snd_filter.GetString() ) )
+	if ( snd_filter.GetString()[ 0 ] && !V_stristr( sndname, snd_filter.GetString() ) )
 	{
 		return 0;
 	}
@@ -6234,7 +6216,7 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 	SND_ActivateChannel( ch, nGUID );
 	ChannelClearVolumes( ch );
 
-	if ( ( (*snd_find_channel.GetString()) != '\0' ) && ( Q_stristr( sndname, snd_find_channel.GetString() ) != 0 ) )
+	if ( ( (*snd_find_channel.GetString()) != '\0' ) && ( V_stristr( sndname, snd_find_channel.GetString() ) != 0 ) )
 	{
 		// This is a sound we are interested in. Display some useful information.
 		PrintChannel( "FoundChannel", sndname, ch, "from ConVar snd_find_channel." );
@@ -6278,14 +6260,6 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 	{
 		g_pSoundServices->GetToolSpatialization( ch->userdata, ch->guid, si );
 	}
-
-#ifdef DEBUG_CHANNELS
-	{
-		char szTmp[128];
-		Q_snprintf( szTmp, sizeof( szTmp ), "Sound %s playing on Dynamic game channel %d\n", sndname, IWavstreamOfCh( ch ) );
-		Plat_DebugString(szTmp);
-	}
-#endif
 
 	CAudioSource *pSource = nullptr;
 
@@ -6484,8 +6458,8 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 	// actually reading first set of samples
 	if ( params.delay != 0.0f )
 	{
-		Assert( ch->sfx );
-		Assert( ch->sfx->pSource );
+		contract_assert( ch->sfx );
+		contract_assert( ch->sfx->pSource );
 
 		float rate = ch->sfx->pSource->SampleRate();
 		int delaySamples = (int)( params.delay * rate * params.pitch * 0.01f );
@@ -6613,7 +6587,7 @@ static bool S_ShouldSplitSound( const StartSoundParams_t &params )
 CTSQueue< StartSoundParams_t >	g_QueuedSounds;
 static int S_StartSound_( StartSoundParams_t& params )
 {
-	VPROF_( "S_StartSound_", 0, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );	
+	CVProfScope _( "S_StartSound_", 0, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );	
 
 	if ( host_threaded_sound.GetInt() )
 	{
@@ -6793,7 +6767,7 @@ int S_StartSoundEntry( StartSoundParams_t &pStartParams, int nSeed, bool bFromPr
 	if ( !pScriptParams.soundname[0] )
 		return 0;
 
-// 	if ( !Q_strncasecmp( pScriptParams.soundname, "vo", 2 ) &&
+// 	if ( !V_strncasecmp( pScriptParams.soundname, "vo", 2 ) &&
 // 		!( pScriptParams.channel == CHAN_STREAM ||
 // 		pScriptParams.channel == CHAN_VOICE ) )
 // 	{
@@ -7276,7 +7250,7 @@ void S_StopAllSounds( bool bClear )
 	// sound operator system stuff
 	g_pSoundOperatorSystem->ClearSubSystems();
 
-	Q_memset( channels, 0, MAX_CHANNELS * sizeof(channel_t) );
+	V_memset( channels, 0, MAX_CHANNELS * sizeof(channel_t) );
 
 	if ( bClear )
 	{
@@ -7284,9 +7258,8 @@ void S_StopAllSounds( bool bClear )
 	}
 
 	// Clear any remaining soundfade
-	memset( &soundfade, 0, sizeof( soundfade ) );
+	std::memset( &soundfade, 0, sizeof( soundfade ) );
 
-	Assert( g_ActiveChannels.GetActiveCount() == 0 );
 }
 
 void S_PreventSound( bool bSetting )
@@ -7496,7 +7469,7 @@ void DEBUG_drawGainCurve(void)
 
 	int count = std::ssize( gainList );
 	char str[32];
-	sprintf(str, "%i ft", 0);  
+	std::sprintf(str, "%i ft", 0);  
 	CDebugOverlay::AddScreenTextOverlay(0, 0, .1, 0, 255, 0, 255,  str);
 
 	sprintf(str, "%i ft", count / 2); 
@@ -7579,15 +7552,13 @@ Called once each time through the main loop
 */
 void S_Update( const CAudioState *pAudioState )
 {
-	VPROF_BUDGET( "S_Update", VPROF_BUDGETGROUP_OTHER_SOUND );
+	CVProfScope _( "S_Update", 0, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
 
 	int			i;
 	channel_t	*ch;
 	channel_t	*combine;
 
-#if !USE_AUDIO_DEVICE_V1
 	S_CheckDevice();
-#endif
 
 	// check for errors and handle them
 	if ( !g_AudioDevice->IsActive() )
@@ -7702,8 +7673,8 @@ void S_Update( const CAudioState *pAudioState )
 		for ( i = 0; i < list.Count(); i++ )
 		{
 			ch = list.GetChannel(i);
-			Assert( ch->sfx );
-			Assert( ch->activeIndex > 0 );
+			contract_assert( ch->sfx );
+			contract_assert( ch->activeIndex > 0 );
 
 			// respatialize channel
 			SND_Spatialize( ch );
@@ -7729,8 +7700,8 @@ void S_Update( const CAudioState *pAudioState )
 		for ( i = 0 ; i < list.Count() ; ++i )
 		{
 			ch = list.GetChannel(i);
-			Assert(ch->sfx);
-			Assert(ch->activeIndex > 0);
+			contract_assert( ch->sfx );
+			contract_assert( ch->activeIndex > 0 );
 
 			// need to check bfirstpass because sound tracing may have been deferred
 			if ( ch->flags.bfirstpass || (robinmask & s_roundrobin) == ( i & robinmask ) )
@@ -8033,7 +8004,9 @@ void S_DumpClientSounds( )
 		total++;
 	}
 }
-CON_COMMAND( snd_dumpclientsounds, "Dump sounds to console" )
+static void snd_dumpclientsounds( const CCommand &args );
+static ConCommand snd_dumpclientsounds_command( "snd_dumpclientsounds", snd_dumpclientsounds, "Dump sounds to console" );
+static void snd_dumpclientsounds( const CCommand &args )
 {
 	S_DumpClientSounds();
 // 	con_nprint_t np;
@@ -8124,7 +8097,7 @@ void DEBUG_ShowChannelCount( void )
 		r = 255;
 	}
 	char chanStr[128];
-	sprintf( chanStr, "STATIC CHANNEL COUNT: %i : %i", nStaticNum, nShowStaticChannelMax );
+	std::sprintf( chanStr, "STATIC CHANNEL COUNT: %i : %i", nStaticNum, nShowStaticChannelMax );
 	CDebugOverlay::AddScreenTextOverlay( 0.01, 0.4, 0.01, r, g, b, a, chanStr );
 
 	if( nDynamicNum > MAX_DYNAMIC_CHANNELS - 10 )
@@ -8146,68 +8119,6 @@ void DEBUG_ShowChannelCount( void )
 
 }
 
-#if USE_AUDIO_DEVICE_V1
-
-//-----------------------------------------------------------------------------
-// Set g_soundtime to number of full samples that have been transfered out to hardware
-// since start.
-//-----------------------------------------------------------------------------
-void GetSoundTime(void)
-{
-	// Make them 64 bits so calculation is done in 64 bits.
-	int64	fullsamples;
-	int64	sampleOutCount;
-
-	// size of output buffer in *full* 16 bit samples
-	// A 2 channel device has a *full* sample consisting of a 16 bit LR pair.
-	// A 1 channel device has a *full* sample consiting of a 16 bit single sample.
-	fullsamples = g_AudioDevice->DeviceSampleCount() / g_AudioDevice->ChannelCount();
-
-	// NOTE: it is possible to miscount buffers if it has wrapped twice between
-	// calls to S_Update.  However, since the output buffer size is > 1 second of sound, 
-	// this should only occur for framerates lower than 1hz
-
-	// sampleOutCount is counted in 16 bit *full* samples, of number of samples output to hardware
-	// for current output buffer
-	sampleOutCount = g_AudioDevice->GetOutputPosition();
-	if ( sampleOutCount < s_oldsampleOutCount )
-	{
-		// buffer wrapped
-		s_buffers++;
-	}
-
-	s_oldsampleOutCount = sampleOutCount;
-
-	if ( cl_movieinfo.IsRecording() )
-	{
-		// in movie, just mix one frame worth of sound
-		float t = g_pSoundServices->GetHostTime();
-		if ( s_lastsoundtime != t )
-		{
-			double flSamples = (double)g_pSoundServices->GetHostFrametime() * (double)g_AudioDevice->SampleRate();
-			int nSamples = (int)flSamples;
-			double flSampleError = flSamples - (double)nSamples;
-			g_soundtimeerror += flSampleError;
-			if ( fabs( g_soundtimeerror ) > 1.0 )
-			{
-				 int nErrorSamples = (int)g_soundtimeerror;
-				 g_soundtimeerror -= (double)nErrorSamples;
-				 nSamples += nErrorSamples;
-			}
-			 
-			g_soundtime += nSamples;
-			s_lastsoundtime = t;
-		}
-	}
-	else
-	{
-		// g_soundtime indicates how many *full* samples have actually been
-		// played out to dma
-		g_soundtime = s_buffers*fullsamples + sampleOutCount;
-	}
-}
-#endif
-
 void S_ExtraUpdate( void )
 {
 
@@ -8228,7 +8139,7 @@ void S_ExtraUpdate( void )
 	// some sounds to incorrectly spatialize to 0 volume, killing them before they can play.
 	if ( !SND_IsListenerValid() )
 		return;
-	VPROF_BUDGET( "CEngineClient::Sound_ExtraUpdate()", VPROF_BUDGETGROUP_OTHER_SOUND );
+	CVProfScope _( "CEngineClient::Sound_ExtraUpdate()", 0, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
 
 	// Only mix if you have used up 90% of the mixahead buffer
 	double tNow = Plat_FloatTime();
@@ -8250,55 +8161,9 @@ extern void DEBUG_StopSoundMeasure(int type, int samplecount );
 
 void S_Update_Guts( float mixAheadTime )
 {
-	VPROF( "S_Update_Guts" );
+	CVProfScope _( "S_Update_Guts", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	DEBUG_StartSoundMeasure(4, 0);
-#if USE_AUDIO_DEVICE_V1
-	// Update our perception of audio time.
-	// 'g_soundtime' tells how many samples have
-	// been played out of the dma buffer since sound system startup.
-	// 'g_paintedtime' indicates how many samples we've actually mixed
-	// and sent to the dma buffer since sound system startup.
-	GetSoundTime();
-
-//	if ( g_soundtime > g_paintedtime )
-//	{
-//		// if soundtime > paintedtime, then the dma buffer
-//		// has played out more sound than we've actually
-//		// mixed.  We need to call S_Update_ more often.
-//
-//		DevMsg ("S_Update_ : Underflow\n"); 
-//		paintedtime = g_soundtime;		
-//	}
-//	(kdb) above code doesn't handle underflow correctly 
-//	should actually zero out the paintbuffer to advance to the new
-//	time.
-
-	// mix ahead of current position
-	int64 endtime = g_AudioDevice->PaintBegin( mixAheadTime, g_soundtime, g_paintedtime );
-
-	int samples = endtime - g_paintedtime;
-	samples = samples < 0 ? 0 : samples;
-	if ( samples )
-	{
-		THREAD_LOCK_SOUND();
-
-		DEBUG_StartSoundMeasure( 2, samples );
-
-		MIX_PaintChannels( endtime, s_bIsListenerUnderwater );
-
-		MXR_DebugShowMixVolumes();
-
-		MXR_UpdateAllDuckerVolumes();
-
-		DEBUG_ShowChannelCount( );
-
-		DEBUG_StopSoundMeasure( 2, 0 );
-
-	}
-	g_AudioDevice->PaintEnd();
-	DEBUG_StopSoundMeasure( 4, samples );
-#else
 	THREAD_LOCK_SOUND();
 	uint nTotal = 0;
 	// compute how much audio time is queued up waiting for output
@@ -8340,11 +8205,10 @@ void S_Update_Guts( float mixAheadTime )
 	}
 
 	DEBUG_StopSoundMeasure( 4, nTotal );
-#endif
 
 }
 
-#define THREADED_MIX_TIME 33
+constexpr auto THREADED_MIX_TIME = 33;
 
 ConVar snd_ShowThreadFrameTime( "snd_ShowThreadFrameTime", "0" );
 
@@ -8454,17 +8318,17 @@ void S_DspParms( const CCommand &args )
 	int cparam = std::min( args.ArgC() - 4, 16);
 
 	float params[16];
-	Q_memset( params, 0, sizeof(float) * 16 );
+	V_memset( params, 0, sizeof(float) * 16 );
 
 	// get preset & proc
 	int idsp, iproc;
-	idsp = Q_atof( args[1] );
-	iproc = Q_atof( args[2] );
+	idsp = V_atof( args[1] );
+	iproc = V_atof( args[2] );
 
 	// get params
 	for (int i = 0; i < cparam; i++)
 	{
-		params[i] = Q_atof( args[i+4] );
+		params[i] = V_atof( args[i+4] );
 	}
 
 	// set up params & switch preset
@@ -8479,10 +8343,10 @@ void S_Play( const char *pszName, bool flush = false )
 	char		szName[256];
 	CSfxTable	*pSfx;
 	
-	Q_strncpy( szName, pszName, sizeof( szName ) );
-	if ( !Q_strrchr( pszName, '.' ) )
+	V_strncpy( szName, pszName, sizeof( szName ) );
+	if ( !V_strrchr( pszName, '.' ) )
 	{
-		Q_strncat( szName, ".wav", sizeof( szName ), COPY_ALL_CHARACTERS );
+		V_strncat( szName, ".wav", sizeof( szName ), COPY_ALL_CHARACTERS );
 	}
 
 	pSfx = S_FindName( szName, &inCache );
@@ -8509,7 +8373,7 @@ void S_Play( const char *pszName, bool flush = false )
 
 static void S_Play( const CCommand &args )
 {
-	bool bFlush = !Q_stricmp( args[0], "playflush" );
+	bool bFlush = !V_stricmp( args[0], "playflush" );
 	for ( int i = 1; i < args.ArgC(); ++i )
 	{
 		S_Play( args[i], bFlush );
@@ -8525,18 +8389,18 @@ static void S_PlayVol( const CCommand &args )
 	
 	for ( int i = 1; i<args.ArgC(); i += 2 )
 	{
-		if ( !Q_strrchr( args[i], '.') )
+		if ( !V_strrchr( args[i], '.') )
 		{
-			Q_strncpy( name, args[i], sizeof( name ) );
-			Q_strncat( name, ".wav", sizeof( name ), COPY_ALL_CHARACTERS );
+			V_strncpy( name, args[i], sizeof( name ) );
+			V_strncat( name, ".wav", sizeof( name ), COPY_ALL_CHARACTERS );
 		}
 		else
 		{
-			Q_strncpy( name, args[i], sizeof( name ) );
+			V_strncpy( name, args[i], sizeof( name ) );
 		}
 
 		pSfx = S_PrecacheSound( name );
-		vol = Q_atof( args[i+1] );
+		vol = V_atof( args[i+1] );
 
 		int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 
@@ -8566,12 +8430,12 @@ static void S_PlayDelay( const CCommand &args )
 	char szName[256];
 	CSfxTable *pSfx;
 
-	float delay = Q_atof( args[ 1 ] );
+	float delay = V_atof( args[ 1 ] );
 	
-	Q_strncpy(szName, args[ 2 ], sizeof( szName ) );
-	if ( !Q_strrchr( args[ 2 ], '.' ) )
+	V_strncpy(szName, args[ 2 ], sizeof( szName ) );
+	if ( !V_strrchr( args[ 2 ], '.' ) )
 	{
-		Q_strncat( szName, ".wav", sizeof( szName ), COPY_ALL_CHARACTERS );
+		V_strncat( szName, ".wav", sizeof( szName ), COPY_ALL_CHARACTERS );
 	}
 
 	pSfx = S_FindName( szName, nullptr );
@@ -8821,14 +8685,14 @@ float S_GetMono16Samples( const char *pszName, std::vector< short >& sampleList 
 					else if ( mix_sample_size == 4 )
 					{
 						// Not likely to have 4 bytes mono!!!
-						Assert( 0 );
+						contract_assert( 0 );
 
 						int s = *( int * )( pData + offset );
 						sample = s >> 16;
 					}
 					else
 					{
-						Assert( 0 );
+						contract_assert( 0 );
 					}
 
 					sampleList.push_back( sample );
@@ -8848,7 +8712,7 @@ float S_GetMono16Samples( const char *pszName, std::vector< short >& sampleList 
 					if ( mix_sample_size == 1 )
 					{
 						// Not possible!!!, must be at least 2 bytes!!!
-						Assert( 0 );
+						contract_assert( 0 );
 
 						char v = *( char * )( pData + offset );
 						left = right = ( v << 8 );
@@ -8867,7 +8731,7 @@ float S_GetMono16Samples( const char *pszName, std::vector< short >& sampleList 
 					}
 					else
 					{
-						Assert( 0 );
+						contract_assert( 0 );
 					}
 
 					short sample = ( left + right ) >> 1;
@@ -8896,13 +8760,13 @@ bool S_GetSoundChannelVolume( const char* sound, float &flVolumeLeft, float &flV
 	for ( int i = 0; i < list.Count(); i++ )
 	{
 		channel_t* ch = list.GetChannel(i);
-		Assert( ch->sfx );
-		Assert( ch->activeIndex > 0 );
+		contract_assert( ch->sfx );
+		contract_assert( ch->activeIndex > 0 );
 
 		ch->sfx->GetFileName( buf, MAX_PATH );
-		Q_FixSlashes( buf, '/' );
+		V_FixSlashes( buf, '/' );
 
-		if ( !Q_stricmp( buf, sound ) )
+		if ( !V_stricmp( buf, sound ) )
 		{
 			flVolumeLeft = ch->fvolume[IFRONT_LEFT];
 			flVolumeRight = ch->fvolume[IFRONT_RIGHT];
@@ -8923,7 +8787,9 @@ float S_SoundGetPitchScale( void )
 	return g_flPitchScale;
 }
 
-CON_COMMAND( snd_print_channel_by_index, "Prints the content of a channel from its index. snd_print_channel_by_index <index>." )
+static void snd_print_channel_by_index( const CCommand &args );
+static ConCommand snd_print_channel_by_index_command( "snd_print_channel_by_index", snd_print_channel_by_index, "Prints the content of a channel from its index. snd_print_channel_by_index <index>." );
+static void snd_print_channel_by_index( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -8931,7 +8797,7 @@ CON_COMMAND( snd_print_channel_by_index, "Prints the content of a channel from i
 		return;
 	}
 
-	int nIndex = atoi( args.Arg( 1 ) );
+	int nIndex = std::atoi( args.Arg( 1 ) );
 	if ( ( nIndex < 0 ) || ( nIndex >= MAX_CHANNELS ) )
 	{
 		Warning( "Incorrect usage of snd_print_channel_by_index. Pass the index from 0 to %d.\n", MAX_CHANNELS - 1 );
@@ -8943,7 +8809,9 @@ CON_COMMAND( snd_print_channel_by_index, "Prints the content of a channel from i
 	PrintChannel( "PrintChannel", pChannel );
 }
 
-CON_COMMAND( snd_print_channel_by_guid, "Prints the content of a channel from its guid. snd_print_channel_by_guid <guid>." )
+static void snd_print_channel_by_guid( const CCommand &args );
+static ConCommand snd_print_channel_by_guid_command( "snd_print_channel_by_guid", snd_print_channel_by_guid, "Prints the content of a channel from its guid. snd_print_channel_by_guid <guid>." );
+static void snd_print_channel_by_guid( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -8951,7 +8819,7 @@ CON_COMMAND( snd_print_channel_by_guid, "Prints the content of a channel from it
 		return;
 	}
 
-	int nGuid = atoi( args.Arg( 1 ) );
+	int nGuid = std::atoi( args.Arg( 1 ) );
 
 	std::scoped_lock soundLock( g_SndMutex );
 	channel_t *pChannel = nullptr;
@@ -8972,7 +8840,9 @@ CON_COMMAND( snd_print_channel_by_guid, "Prints the content of a channel from it
 	PrintChannel( "PrintChannel", pChannel );
 }
 
-CON_COMMAND( snd_print_channels, "Prints all the active channel.")
+static void snd_print_channels( const CCommand &args );
+static ConCommand snd_print_channels_command( "snd_print_channels", snd_print_channels, "Prints all the active channel." );
+static void snd_print_channels( const CCommand &args )
 {
 	std::scoped_lock soundLock( g_SndMutex );
 
@@ -8993,7 +8863,9 @@ CON_COMMAND( snd_print_channels, "Prints all the active channel.")
 	}
 }
 
-CON_COMMAND( snd_set_master_volume, "Sets the master volume for a channel. snd_set_master_volume <guid> <mastervolume>." )
+static void snd_set_master_volume( const CCommand &args );
+static ConCommand snd_set_master_volume_command( "snd_set_master_volume", snd_set_master_volume, "Sets the master volume for a channel. snd_set_master_volume <guid> <mastervolume>." );
+static void snd_set_master_volume( const CCommand &args )
 {
 	if ( args.ArgC() != 3 )
 	{
@@ -9001,7 +8873,7 @@ CON_COMMAND( snd_set_master_volume, "Sets the master volume for a channel. snd_s
 		return;
 	}
 
-	int nGuid = atoi( args.Arg( 1 ) );
+	int nGuid = std::atoi( args.Arg( 1 ) );
 	int nVolume = atoi( args.Arg( 2 ) );
 
 	std::scoped_lock soundLock( g_SndMutex );

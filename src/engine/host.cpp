@@ -1,27 +1,20 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-//===========================================================================//
-
-#include "tier1/text_writer.h"
-#include <atomic>
-#include "tier0/fasttimer.h"
-#include "tier0/memalloc.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 
-#include "tier1/fmtstr.h"
-#include "vstdlib/jobthread.h"
-#include "vstdlib/random.h"
+#include <stdio.h>
+
+import std;
+
+
+import ks.vstdlib;
 
 #include "server.h"
-#include "host_jmp.h"
 #include "screen.h"
 #include "keys.h"
 #include "cdll_int.h"
 #include "eiface.h"
 #include "sv_main.h"
-#include "master.h"
 #include "sv_log.h"
 #include "shadowmgr.h"
 #include "zone.h"
@@ -29,19 +22,13 @@
 #include "sv_filter.h"
 #include "ivideomode.h"
 #include "vprof_engine.h"
-#include "iengine.h"
 #include "matchmaking/imatchframework.h"
-#include "tier2/tier2.h"
 #include "enginethreads.h"
-#include "steam/steam_api.h"
 #include "LoadScreenUpdate.h"
-#include "datacache/idatacache.h"
 #include "profile.h"
 #include "dbginput.h"
 #include "filesystem.h"
-#include "tier0/microprofiler.h"
 
-#include "checksum_sha1.h"
 
 #if !defined DEDICATED
 #include "voice.h"
@@ -49,7 +36,6 @@
 #include "vaudio/ivaudio.h"
 #endif
 
-#include "icvar.h"
 
 #include "sys.h"
 #include "client.h"
@@ -58,10 +44,10 @@
 #include "console.h"
 #include "view.h"
 #include "host.h"
+#include "host_jmp.h"
 #include "decal.h"
 #include "gl_matsysiface.h"
 #include "gl_shader.h"
-#include "sys_dll.h"
 #include "cmodel_engine.h"
 #ifndef DEDICATED
 #include "con_nprint.h"
@@ -78,18 +64,12 @@
 #include "dt_instrumentation_server.h"
 #include "const.h"
 #include "bitbuf_errorhandler.h"
-#include "soundflags.h"
 #include "enginestats.h"
-#include "tier1/strtools.h"
 #include "testscriptmgr.h"
 #include "tmessage.h"
-#include "tier0/vprof.h"
-#include "tier0/etwprof.h"
-#include "tier0/icommandline.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "MapReslistGenerator.h"
 #include "DownloadListGenerator.h"
-#include "download.h"
 #include "staticpropmgr.h"
 #include "GameEventManager.h"
 #include "iprediction.h"
@@ -97,18 +77,12 @@
 #include "cl_main.h"
 #include "hltvserver.h"
 #include "hltvtest.h"
-#if defined( REPLAY_ENABLED )
-#include "replayserver.h"
-#include "replayhistorymanager.h"
-#endif
 #include "sys_mainwind.h"
 #ifndef DEDICATED
 #include "engineui.h"
-#include "cl_steamauth.h"
 #endif
 #include "sv_remoteaccess.h" // NotifyDedicatedServerUI()
 #include "snd_audio_source.h"
-#include "sv_steamauth.h"
 #include "MapReslistGenerator.h"
 #include "DevShotGenerator.h"
 #include "sv_plugin.h"
@@ -117,16 +91,25 @@
 #include "inputsystem/iinputsystem.h"
 #include "cvar.h"
 #include "soundservice.h"
-#include "steam/isteamremotestorage.h"
-#include "ConfigManager.h"
-#include "materialsystem/idebugtextureinfo.h"
-#include "audio_pch.h"
-#include "platforminputdevice.h"
+
+
+
+#include "../filesystem_engine.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_channels.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+#include "snd_stubs.h"
+#include "snd_wave_source.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+
+#include "audio/private/posix_stubs.h"
 #include "status.h"
 #include "matchmaking/mm_helpers.h"
 #include "rocketui/rocketui.h"
-
-extern ConVar cl_cloud_settings;
 
 #ifndef DEDICATED
 extern IVAudio *vaudio;
@@ -154,7 +137,6 @@ int host_frameticks = 0;
 int host_tickcount = 0;
 int host_currentframetick = 0;
 bool g_bLowViolence = false;
-static bool g_bAllowSecureServers = true;
 
 	#include "appframework/ilaunchermgr.h"
 	extern ILauncherMgr *g_pLauncherMgr;
@@ -189,24 +171,24 @@ public:
 
 	void MarkFrameStartTime()
 	{
-		double newframestarttime = Sys_FloatTime();
+		double newframestarttime = Plat_FloatTime();
 		framestarttimeduration = framestarttime ? ( newframestarttime - framestarttime ) : 0.0;
 		framestarttime = newframestarttime;
 	}
 	void MarkFrame();
 	void StartFrameSegment( int i )
 	{
-		starttime[i] = Sys_FloatTime();
+		starttime[i] = Plat_FloatTime();
 	}
 
 	void EndFrameSegment( int i )
 	{
-		double dt = Sys_FloatTime() - starttime[i];
+		double dt = Plat_FloatTime() - starttime[i];
 		deltas[ i ] += dt;
 	}
 	void MarkSwapTime( )
 	{
-		double newswaptime = Sys_FloatTime();
+		double newswaptime = Plat_FloatTime();
 		frametime = newswaptime - swaptime;
 		swaptime = newswaptime;
 
@@ -319,9 +301,7 @@ void Snd_Restart_f()
 		pCommand->Dispatch( cmd );
 	}
 
-#ifndef NO_VOICE
 	Voice_ForceInit();
-#endif // NO_VOICE
 
 #endif
 }
@@ -357,11 +337,13 @@ const char *GetMapName( void )
 		// possibly at menu
 		pTest = "nomap";
 	}
-	Q_FileBase( pTest, mapname, sizeof( mapname ) );
+	V_FileBase( pTest, mapname, sizeof( mapname ) );
 	return mapname;
 }
 
-CON_COMMAND( mem_dump, "Dump memory stats to text file." )
+static void mem_dump( const CCommand &args );
+static ConCommand mem_dump_command( "mem_dump", mem_dump, "Dump memory stats to text file." );
+static void mem_dump( const CCommand &args )
 {
 	ConMsg("Writing memory stats to file memstats.txt\n");
 	const char *mapname = GetMapName();
@@ -371,22 +353,30 @@ CON_COMMAND( mem_dump, "Dump memory stats to text file." )
 	DumpMemoryInfoStats();
 }
 
-CON_COMMAND( mem_verify, "Verify the validity of the heap" )
+static void mem_verify( const CCommand &args );
+static ConCommand mem_verify_command( "mem_verify", mem_verify, "Verify the validity of the heap" );
+static void mem_verify( const CCommand &args )
 {
 	g_pMemAlloc->heapchk();
 }
 
-CON_COMMAND( mem_compact, "" )
+static void mem_compact( const CCommand &args );
+static ConCommand mem_compact_command( "mem_compact", mem_compact, "" );
+static void mem_compact( const CCommand &args )
 {
 	g_pMemAlloc->CompactHeap();
 }
 
-CON_COMMAND( mem_incremental_compact, "" )
+static void mem_incremental_compact( const CCommand &args );
+static ConCommand mem_incremental_compact_command( "mem_incremental_compact", mem_incremental_compact, "" );
+static void mem_incremental_compact( const CCommand &args )
 {
 	g_pMemAlloc->CompactIncremental();
 }
 
-CON_COMMAND( mem_eat, "" )
+static void mem_eat( const CCommand &args );
+static ConCommand mem_eat_command( "mem_eat", mem_eat, "" );
+static void mem_eat( const CCommand &args )
 {
 	MemAlloc_Alloc( 1024*1024 );
 }
@@ -412,7 +402,9 @@ static bool MemTest()
 	return result;
 }
 
-CON_COMMAND( mem_test, "" )
+static void mem_test( const CCommand &args );
+static ConCommand mem_test_command( "mem_test", mem_test, "" );
+static void mem_test( const CCommand &args )
 {
 	MemTest();
 }
@@ -423,93 +415,9 @@ static ConVar next( "next", "0", FCVAR_CHEAT, "Set to 1 to advance to next frame
 // Print a debug message when the client or server cache is missed
 ConVar host_showcachemiss( "host_showcachemiss", "0", 0, "Print a debug message when the client or server cache is missed." );
 static ConVar mem_dumpstats( "mem_dumpstats", "0", 0, "Dump current and max heap usage info to console at end of frame ( set to 2 for continuous output )\n" );
-static ConVar host_ShowIPCCallCount( "host_ShowIPCCallCount", "0", 0, "Print # of IPC calls this number of times per second. If set to -1, the # of IPC calls is shown every frame." );
 
 ConVar vprof_server_spike_threshold( "vprof_server_spike_threshold", "999.0" );
 ConVar vprof_server_thread( "vprof_server_thread", "0" );
-
-#if defined( RAD_TELEMETRY_ENABLED )
-
-static void OnChangeTelemetryPause ( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	TM_PAUSE( TELEMETRY_LEVEL0, 1 );
-}
-
-static void OnChangeTelemetryResume ( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	TM_PAUSE( TELEMETRY_LEVEL0, 0 );
-}
-
-static void OnChangeTelemetryLevel ( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	char* pIEnd;
-	const char *pLevel = (( ConVar* )var)->GetString();
-
-	TelemetrySetLevel( strtoul( pLevel, &pIEnd, 0 ) );
-}
-
-static void OnChangeTelemetryFrameCount ( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	char* pIEnd;
-	const char *pFrameCount = (( ConVar* )var)->GetString();
-
-	g_Telemetry.FrameCount = strtoul( pFrameCount, &pIEnd, 0 );
-	Msg( " TELEMETRY: Setting Telemetry FrameCount: '%d'\n", g_Telemetry.FrameCount );
-}
-
-static void OnChangeTelemetryServer ( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	const char *pServerAddress = (( ConVar* )var)->GetString();
-
-	Q_strncpy( g_Telemetry.ServerAddress, pServerAddress, ARRAYSIZE( g_Telemetry.ServerAddress ) );
-	Msg( " TELEMETRY: Setting Telemetry server: '%s'\n", pServerAddress );
-}
-
-static void OnChangeTelemetryZoneFilterVal ( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	char* pIEnd;
-	const char *pFilterValue = (( ConVar* )var)->GetString();
-
-	g_Telemetry.ZoneFilterVal = strtoul( pFilterValue, &pIEnd, 0 );
-	Msg( " TELEMETRY: Setting Telemetry ZoneFilterVal: '%d'\n", g_Telemetry.ZoneFilterVal );
-}
-
-static void OnChangeTelemetryDemoStart ( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	char* pIEnd;
-	const char *pVal = (( ConVar* )var)->GetString();
-
-	g_Telemetry.DemoTickStart = strtoul( pVal, &pIEnd, 0 );
-	if( g_Telemetry.DemoTickStart > 2000 )
-	{
-		char cmd[ 256 ];
-
-		// If we're far away from the start of the demo file, then jump to ~1000 ticks before.
-		Q_snprintf( cmd, sizeof( cmd ), "demo_gototick %d", g_Telemetry.DemoTickStart - 1000 );
-		Cbuf_AddText( Cbuf_GetCurrentPlayer(), cmd, kCommandSrcCode, 100 );
-	}
-	Msg( " TELEMETRY: Setting Telemetry DemoTickStart: '%d'\n", g_Telemetry.DemoTickStart );
-}
-
-static void OnChangeTelemetryDemoEnd ( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	char* pIEnd;
-	const char *pVal = (( ConVar* )var)->GetString();
-
-	g_Telemetry.DemoTickEnd = strtoul( pVal, &pIEnd, 0 );
-	Msg( " TELEMETRY: Setting Telemetry DemoTickEnd: '%d'\n", g_Telemetry.DemoTickEnd );
-}
-
-ConVar telemetry_pause( "telemetry_pause", "0", FCVAR_RELEASE, "Pause Telemetry", OnChangeTelemetryPause );
-ConVar telemetry_resume( "telemetry_resume", "0", FCVAR_RELEASE, "Resume Telemetry", OnChangeTelemetryResume );
-ConVar telemetry_filtervalue( "telemetry_filtervalue", "500", FCVAR_RELEASE, "Set Telemetry ZoneFilterVal (MicroSeconds)", OnChangeTelemetryZoneFilterVal );
-ConVar telemetry_framecount( "telemetry_framecount", "0", 0, "Set Telemetry count of frames to capture", OnChangeTelemetryFrameCount );
-ConVar telemetry_level( "telemetry_level", "0", FCVAR_RELEASE, "Set Telemetry profile level: 0 being off. Hight bit set for mask: 0x8#######", OnChangeTelemetryLevel );
-ConVar telemetry_server( "telemetry_server", "localhost", FCVAR_RELEASE, "Set Telemetry server", OnChangeTelemetryServer );
-ConVar telemetry_demostart( "telemetry_demostart", "0", 0, "When playing demo, start telemetry on tick #", OnChangeTelemetryDemoStart );
-ConVar telemetry_demoend( "telemetry_demoend", "0", 0, "When playing demo, stop telemetry on tick #", OnChangeTelemetryDemoEnd );
-
-#endif
 
 static unsigned g_MainThreadId = ThreadGetCurrentId();
 
@@ -569,11 +477,13 @@ void OnChangeThreadReserve( IConVar *var, const char *pOldValue, float flOldValu
 
 ConVar threadpool_reserve( "threadpool_reserve", "0", 0, "Consume the specified number of threads in the thread pool", 0, 0, 0, 0, &OnChangeThreadReserve );
 
-CON_COMMAND( threadpool_cycle_reserve, "Cycles threadpool reservation by powers of 2" )
+static void threadpool_cycle_reserve( const CCommand &args );
+static ConCommand threadpool_cycle_reserve_command( "threadpool_cycle_reserve", threadpool_cycle_reserve, "Cycles threadpool reservation by powers of 2" );
+static void threadpool_cycle_reserve( const CCommand &args )
 {
 	int nCores = g_pThreadPool->NumThreads() + 1;
 	int nAvailableCores = nCores - g_NumReservedThreads;
-	Assert( nAvailableCores );
+	contract_assert( nAvailableCores );
 	int ratio = nCores / nAvailableCores;
 	ratio *= 2;
 	if ( ratio > nCores )
@@ -586,23 +496,29 @@ CON_COMMAND( threadpool_cycle_reserve, "Cycles threadpool reservation by powers 
 	}
 }
 
-CON_COMMAND( thread_test_tslist, "" )
+static void thread_test_tslist( const CCommand &args );
+static ConCommand thread_test_tslist_command( "thread_test_tslist", thread_test_tslist, "" );
+static void thread_test_tslist( const CCommand &args )
 {
-	int nLengthList = ( args.ArgC() == 1 ) ? 1 : atoi( args.Arg( 1 ) );
+	int nLengthList = ( args.ArgC() == 1 ) ? 1 : std::atoi( args.Arg( 1 ) );
 	int nTests = ( args.ArgC() == 2 ) ? 1 : atoi( args.Arg( 2 ) );
 	RunTSListTests( nLengthList, nTests );
 }
 
-CON_COMMAND( thread_test_tsqueue, "" )
+static void thread_test_tsqueue( const CCommand &args );
+static ConCommand thread_test_tsqueue_command( "thread_test_tsqueue", thread_test_tsqueue, "" );
+static void thread_test_tsqueue( const CCommand &args )
 {
-	int nLengthList = ( args.ArgC() < 2 ) ? 10000 : atoi( args.Arg( 1 ) );
+	int nLengthList = ( args.ArgC() < 2 ) ? 10000 : std::atoi( args.Arg( 1 ) );
 	int nTests = ( args.ArgC() < 3 ) ? 1 : atoi( args.Arg( 2 ) );
 	RunTSQueueTests( nLengthList, nTests );
 }
 
-CON_COMMAND( threadpool_run_tests, "" )
+static void threadpool_run_tests( const CCommand &args );
+static ConCommand threadpool_run_tests_command( "threadpool_run_tests", threadpool_run_tests, "" );
+static void threadpool_run_tests( const CCommand &args )
 {
-	int nTests = ( args.ArgC() == 1 ) ? 1 : atoi( args.Arg( 1 ) );
+	int nTests = ( args.ArgC() == 1 ) ? 1 : std::atoi( args.Arg( 1 ) );
 	for ( int i = 0; i < nTests; i++ )
 	{
 		RunThreadPoolTests();
@@ -678,8 +594,6 @@ static int	host_hunklevel;
 
 CGameClient	*host_client;			// current client
 
-jmp_buf 	host_abortserver;
-jmp_buf     host_enddemo;
 
 static ConVar	host_profile( "host_profile","0" );
 
@@ -697,18 +611,22 @@ ConVar	deathmatch( "deathmatch","0", FCVAR_NOTIFY, "Running a deathmatch server.
 ConVar	coop( "coop","0", FCVAR_NOTIFY, "Cooperative play." );			// 0 or 1
 ConVar	r_ForceRestore( "r_ForceRestore", "0", 0 );
 
-CON_COMMAND_F( display_elapsedtime, "Displays how much time has elapsed since the game started", FCVAR_CHEAT )
+static void display_elapsedtime( const CCommand &args );
+static ConCommand display_elapsedtime_command( "display_elapsedtime", display_elapsedtime, "Displays how much time has elapsed since the game started", FCVAR_CHEAT );
+static void display_elapsedtime( const CCommand &args )
 {
 	Msg( "Elapsed time: %.2f\n", realtime );
 }
 
-CON_COMMAND( host_timer_report, "Spew CPU timer jitter for the last 128 frames in microseconds (dedicated only)" )
+static void host_timer_report( const CCommand &args );
+static ConCommand host_timer_report_command( "host_timer_report", host_timer_report, "Spew CPU timer jitter for the last 128 frames in microseconds (dedicated only)" );
+static void host_timer_report( const CCommand &args )
 {
 	if ( sv.IsDedicated() )
 	{
-		for (int i = 1; i <= ARRAYSIZE( host_jitterhistory ); ++i)
+		for (int i = 1; i <= std::size( host_jitterhistory ); ++i)
 		{
-			unsigned int slot = ( i + host_jitterhistorypos ) % ARRAYSIZE( host_jitterhistory );
+			unsigned int slot = ( i + host_jitterhistorypos ) % std::size( host_jitterhistory );
 			Msg( "%7d\n", ( int ) ( host_jitterhistory[ slot ] * 1000000 ) );
 		}
 	}
@@ -719,40 +637,6 @@ ConVar host_runframe_input_parcelremainder( "host_runframe_input_parcelremainder
 #ifndef DEDICATED
 void CL_CheckToDisplayStartupMenus(); // in cl_main.cpp
 #endif
-
-
-bool GetFileFromRemoteStorage( ISteamRemoteStorage *pRemoteStorage, const char *pszRemoteFileName, const char *pszLocalFileName, char const *pathID )
-{
-	bool bSuccess = false;
-
-	// check if file exists in Steam Cloud first
-	int32 nFileSize = pRemoteStorage->GetFileSize( pszRemoteFileName );
-
-	if ( nFileSize > 0 )
-	{
-		std::vector<char> buf( nFileSize );
-		if ( pRemoteStorage->FileRead( pszRemoteFileName, buf.data(), nFileSize ) == nFileSize )
-		{
-			FileHandle_t hFile = g_pFileSystem->Open( pszLocalFileName, "wb", pathID );
-			if( hFile )
-			{
-				bSuccess = g_pFileSystem->Write( buf.data(), nFileSize, hFile ) == nFileSize;
-				g_pFileSystem->Close( hFile );
-
-				if ( bSuccess )
-				{
-					DevMsg( "[Cloud]: SUCCEESS retrieved %s from remote storage into %s\n", pszRemoteFileName, pszLocalFileName );
-				}
-				else
-				{
-					DevMsg( "[Cloud]: FAILED retrieved %s from remote storage into %s\n", pszRemoteFileName, pszLocalFileName );
-				}
-			}
-		}
-	}
-
-	return bSuccess;
-}
 
 
 void CCommonHostState::SetWorldModel( model_t *pModel )
@@ -774,7 +658,7 @@ void CCommonHostState::SetWorldModel( model_t *pModel )
 #ifndef DEDICATED
 void Host_SetAudioState( const AudioState_t &audioState )
 {
-	memcpy( &s_AudioState.GetPerUser(), &audioState, sizeof(AudioState_t) );
+	std::memcpy( &s_AudioState.GetPerUser(), &audioState, sizeof(AudioState_t) );
 }
 #endif
 
@@ -809,9 +693,9 @@ void Host_EndGame (bool bShowMainMenu, const char *message, ...)
 	va_list		argptr;
 	char		string[1024];
 
-	va_start (argptr,message);
-	Q_vsnprintf (string,sizeof(string),message,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,message);
+	V_vsnprintf (string,sizeof(string),message,argptr);
+	__builtin_va_end (argptr);
 	ConMsg ("Host_EndGame: %s\n",string);
 
 #ifndef DEDICATED
@@ -843,7 +727,7 @@ void Host_EndGame (bool bShowMainMenu, const char *message, ...)
 #ifndef DEDICATED
 		CL_NextDemo ();
 #endif
-		longjmp (host_enddemo, 1);
+		throw CHostEndDemo();
 	}
 	else
 	{
@@ -853,7 +737,7 @@ void Host_EndGame (bool bShowMainMenu, const char *message, ...)
 #endif
 		if ( g_bAbortServerSet )
 		{
-			longjmp (host_abortserver, 1);
+			throw CHostAbortServer();
 		}
 	}
 }
@@ -877,13 +761,10 @@ void Host_Error (const char *error, ...)
 	}
 	inerror = true;
 
-#ifndef DEDICATED
-	//	CL_WriteMessageHistory();	TODO must be done by network layer
-#endif
 
-	va_start (argptr,error);
-	Q_vsnprintf(string,sizeof(string),error,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,error);
+	V_vsnprintf(string,sizeof(string),error,argptr);
+	__builtin_va_end (argptr);
 
 	if ( sv.IsDedicated() )
 	{
@@ -908,7 +789,7 @@ void Host_Error (const char *error, ...)
 
 	if ( g_bAbortServerSet )
 	{
-		longjmp (host_abortserver, 1);
+		throw CHostAbortServer();
 	}
 }
 
@@ -945,7 +826,7 @@ void CHostSubscribeForProfileEvents::OnEvent( KeyValues *pEvent )
 {
 	char const *szEvent = pEvent->GetName();
 
-	if ( !Q_stricmp( szEvent, "OnProfileDataLoaded" ) )
+	if ( !V_stricmp( szEvent, "OnProfileDataLoaded" ) )
 	{
 		int iController = pEvent->GetInt( "iController" );
 		Host_ReadConfiguration( iController, false );
@@ -972,12 +853,12 @@ void Host_SubscribeForProfileEvents( bool bSubscribe )
 void UseDefaultBindings( void )
 {
 	FileHandle_t f;
-	char szFileName[ _MAX_PATH ];
+	char szFileName[ k_cMaxPath ];
 	char token[ 1024 ];
 	char szKeyName[ 256 ];
 
 	// read kb_def file to get default key binds
-	Q_snprintf( szFileName, sizeof( szFileName ), "%skb_def.lst", SCRIPT_DIR );
+	V_snprintf( szFileName, sizeof( szFileName ), "%skb_def.lst", SCRIPT_DIR );
 	f = g_pFileSystem->Open( szFileName, "r");
 	if ( !f )
 	{
@@ -995,12 +876,12 @@ void UseDefaultBindings( void )
 	while ( 1 )
 	{
 		buf = COM_ParseFile( buf, token, sizeof( token ) );
-		if ( strlen( token ) <= 0 )
+		if ( std::strlen( token ) <= 0 )
 			break;
-		Q_strncpy ( szKeyName, token, sizeof( szKeyName ) );
+		V_strncpy ( szKeyName, token, sizeof( szKeyName ) );
 
 		buf = COM_ParseFile( buf, token, sizeof( token ) );
-		if ( strlen( token ) <= 0 )  // Error
+		if ( std::strlen( token ) <= 0 )  // Error
 			break;
 
 		// finally, bind key
@@ -1058,7 +939,6 @@ bool Host_WasConfigCfgExecuted( const int iController )
 	int iIndex = iController;
 	if ( iIndex < 0 )
 		iIndex = 0;
-	Assert( iIndex >= 0 && iIndex < MAX_SPLITSCREEN_CLIENTS );
 
 	return g_bConfigCfgExecuted[iIndex];
 }
@@ -1068,7 +948,6 @@ void Host_SetConfigCfgExecuted( const int iController, bool bExecuted = true )
 	int iIndex = iController;
 	if ( iIndex < 0 )
 		iIndex = 0;
-	Assert( iIndex >= 0 && iIndex < MAX_SPLITSCREEN_CLIENTS );
 
 	g_bConfigCfgExecuted[iIndex] = bExecuted;
 }
@@ -1077,7 +956,7 @@ void Host_ResetGlobalConfiguration()
 {
 
 	// We exec our global default configuration for non-consoles
-	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "exec config.global" PLATFORM_EXT ".cfg game\n" );
+	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "exec config.global"".cfg game\n" );
 	Cbuf_Execute();
 }
 
@@ -1155,7 +1034,7 @@ void Host_WriteConfiguration( const int iController, const char *filename )
 		char		szFileName[MAX_PATH];
 		ks::text_writer	configBuff;
 
-		Q_snprintf( szFileName, sizeof(szFileName), "cfg/%s", filename );
+		V_snprintf( szFileName, sizeof(szFileName), "cfg/%s", filename );
 		g_pFileSystem->CreateDirHierarchy( "cfg", GetConfigPathID() );
 		if ( g_pFileSystem->FileExists( szFileName, GetConfigPathID() ) && !g_pFileSystem->IsFileWritable( szFileName, GetConfigPathID() ) )
 		{
@@ -1187,12 +1066,9 @@ void Host_WriteConfiguration( const int iController, const char *filename )
 			return;
 		}
 
-		AssertMsg( false, "SteamCloud not available on Xbox 360. Badger Martin to fix this." );
-
-
 		// make a persistent copy that async will use and free
 		char *tempBlock = new char[configBuff.size()];
-		Q_memcpy( tempBlock, configBuff.c_str(), configBuff.size() );
+		V_memcpy( tempBlock, configBuff.c_str(), configBuff.size() );
 
 		// async write the buffer, and then free it
 		char		szFileNameToWriteLocal[MAX_PATH] = {};
@@ -1221,27 +1097,6 @@ void Host_ReadConfiguration( const int iController, const bool readDefault )
 
 	// Handle the console case
 	bool saveconfig = false;
-
-	ISteamRemoteStorage *pRemoteStorage = Steam3Client().SteamClient() ? (ISteamRemoteStorage *)Steam3Client().SteamClient()->GetISteamGenericInterface(
-		SteamAPI_GetHSteamUser(), SteamAPI_GetHSteamPipe(), STEAMREMOTESTORAGE_INTERFACE_VERSION ):nullptr;
-
-	if ( pRemoteStorage )
-	{
-		// if cloud settings is default but remote storage does not exist yet, set it to sync all because this is the first
-		// computer the game is run on--default to copying everything to the cloud
-		if ( cl_cloud_settings.GetInt() == -1 && !pRemoteStorage->FileExists( "cfg/config.cfg" ) )
-		{
-			DevMsg( "[Cloud]: Default setting with remote data non-existent, sync all\n" );
-			cl_cloud_settings.SetValue( STEAMREMOTESTORAGE_CLOUD_ALL );
-		}
-
-		if ( cl_cloud_settings.GetInt() != -1 && ( cl_cloud_settings.GetInt() & STEAMREMOTESTORAGE_CLOUD_CONFIG ) )
-		{
-			// config files are run through the exec command which got pretty complicated with all the splitscreen
-			// stuff. Steam UFS doens't support split screen well (2 users ?)
-			GetFileFromRemoteStorage( pRemoteStorage, "cfg/config.cfg", "cfg/config.cfg", GetConfigPathID() );
-		}
-	}
 
 	if ( g_pFileSystem->FileExists( "//usrlocal/cfg/config.cfg" ) )
 	{
@@ -1288,7 +1143,9 @@ void Host_ReadConfiguration( const int iController, const bool readDefault )
 	}
 }
 
-CON_COMMAND( host_writeconfig, "Store current settings to config.cfg (or specified .cfg file)." )
+static void host_writeconfig( const CCommand &args );
+static ConCommand host_writeconfig_command( "host_writeconfig", host_writeconfig, "Store current settings to config.cfg (or specified .cfg file)." );
+static void host_writeconfig( const CCommand &args )
 {
 	if ( args.ArgC() > 2 )
 	{
@@ -1306,7 +1163,7 @@ CON_COMMAND( host_writeconfig, "Store current settings to config.cfg (or specifi
 
 		char outfile[ MAX_QPATH ];
 		// Strip path and extension from filename
-		Q_FileBase( filename, outfile, sizeof( outfile ) );
+		V_FileBase( filename, outfile, sizeof( outfile ) );
 		Host_WriteConfiguration( -1, va( "%s.cfg", outfile ) );
 	}
 	else
@@ -1315,7 +1172,9 @@ CON_COMMAND( host_writeconfig, "Store current settings to config.cfg (or specifi
 	}
 }
 
-CON_COMMAND( host_writeconfig_ss, "Store current settings to config.cfg (or specified .cfg file) with first param as splitscreen index." )
+static void host_writeconfig_ss( const CCommand &args );
+static ConCommand host_writeconfig_ss_command( "host_writeconfig_ss", host_writeconfig_ss, "Store current settings to config.cfg (or specified .cfg file) with first param as splitscreen index." );
+static void host_writeconfig_ss( const CCommand &args )
 {
 	if ( args.ArgC() <= 1 || args.ArgC() > 3)
 	{
@@ -1333,15 +1192,15 @@ CON_COMMAND( host_writeconfig_ss, "Store current settings to config.cfg (or spec
 
 		char outfile[ MAX_QPATH ];
 		// Strip path and extension from filename
-		Q_FileBase( filename, outfile, sizeof( outfile ) );
+		V_FileBase( filename, outfile, sizeof( outfile ) );
 
-		int controller = atoi( args[1] );
+		int controller = std::atoi( args[1] );
 
 		Host_WriteConfiguration( controller, va( "%s.cfg", outfile ) );
 	}
 	else if ( args.ArgC() == 2 )
 	{
-		int controller = atoi( args[1] );
+		int controller = std::atoi( args[1] );
 		Host_WriteConfiguration( controller, "config.cfg" );
 	}
 	else
@@ -1350,7 +1209,9 @@ CON_COMMAND( host_writeconfig_ss, "Store current settings to config.cfg (or spec
 	}
 }
 
-CON_COMMAND( host_reset_config, "reset config (for testing) with param as splitscreen index." )
+static void host_reset_config( const CCommand &args );
+static ConCommand host_reset_config_command( "host_reset_config", host_reset_config, "reset config (for testing) with param as splitscreen index." );
+static void host_reset_config( const CCommand &args )
 {
 	if ( args.ArgC() <= 1 || args.ArgC() > 2)
 	{
@@ -1360,7 +1221,7 @@ CON_COMMAND( host_reset_config, "reset config (for testing) with param as splits
 
 	else if ( args.ArgC() == 2 )
 	{
-		int controller = atoi( args[1] );
+		int controller = std::atoi( args[1] );
 		Host_ResetConfiguration( controller );
 	}
 
@@ -1404,9 +1265,9 @@ void Host_ReadPreStartupConfiguration()
 	};
 
 	// loop through looking for all the cvars to apply
-	for (int i = 0; i < ARRAYSIZE(s_PreStartupConfigConVars); i++)
+	for (int i = 0; i < std::size( s_PreStartupConfigConVars ); i++)
 	{
-		const char *search = Q_stristr(configBuffer, s_PreStartupConfigConVars[i]);
+		const char *search = V_stristr(configBuffer, s_PreStartupConfigConVars[i]);
 		if (search)
 		{
 			// read over the token
@@ -1475,14 +1336,6 @@ void Host_ShutdownServer( void )
 	Host_FreeStateAndWorld( true );
 	sv.Shutdown();// sv.Shutdown() references some heap memory, so run it before Host_FreeToLowMark()
 	Host_FreeToLowMark( true );
-
-#if defined( REPLAY_ENABLED )
-	if ( g_pServerReplayHistoryManager )
-	{
-		g_pServerReplayHistoryManager->Shutdown();
-		g_pServerReplayHistoryManager = nullptr;
-	}
-#endif
 
 	if ( IGameEvent *event = g_GameEventManager.CreateEvent( "server_shutdown" ) )
 	{
@@ -1563,7 +1416,7 @@ void Host_AccumulateTime( float dt )
 		}
 		else if ( fps < -1 )
 		{
-			fps = 1.0f/fabsf(fps);
+			fps = 1.0f/std::fabsf(fps);
 			if ( fps > dt )
 			{
 				fps = dt;
@@ -1580,14 +1433,11 @@ void Host_AccumulateTime( float dt )
 
 		host_frametime_unbounded = host_frametime;
 
-#ifndef NO_TOOLFRAMEWORK
 		if ( CommandLine()->CheckParm( "-tools" ) == nullptr && !g_bReplayLoadedTools )
 		{
-#endif // !NO_TOOLFRAMEWORK
 			host_frametime = std::min<std::common_type_t<float, double>>( host_frametime, MAX_FRAMETIME * fullscale);
 			host_frametime_unscaled = std::min<std::common_type_t<float, double>>( host_frametime_unscaled, MAX_FRAMETIME );
 			host_frametime_unscaled = std::max<std::common_type_t<float, double>>( host_frametime_unscaled, MIN_FRAMETIME );
-#ifndef NO_TOOLFRAMEWORK
 		}
 		else
 		{
@@ -1595,10 +1445,8 @@ void Host_AccumulateTime( float dt )
 			host_frametime_unscaled = std::min<std::common_type_t<float, double>>( host_frametime_unscaled, MAX_TOOLS_FRAMETIME );
 			host_frametime_unscaled = std::max<std::common_type_t<float, double>>( host_frametime_unscaled, MIN_TOOLS_FRAMETIME );
 		}
-#endif // !NO_TOOLFRAMEWORK
 	}
 	else
-#ifndef NO_TOOLFRAMEWORK
 		if ( CommandLine()->CheckParm( "-tools" ) != nullptr && !g_bReplayLoadedTools )
 		{
 			host_frametime_unbounded = host_frametime;
@@ -1607,7 +1455,6 @@ void Host_AccumulateTime( float dt )
 			host_frametime_unscaled = host_frametime;
 		}
 		else
-#endif // !NO_TOOLFRAMEWORK
 	{	// don't allow really long or short frames
 		host_frametime_unbounded = host_frametime;
 		host_frametime = std::min<std::common_type_t<float, double>>( host_frametime, MAX_FRAMETIME );
@@ -1627,7 +1474,7 @@ void Host_AccumulateTime( float dt )
 
 }
 
-#define FPS_AVG_FRAC 0.9f
+constexpr auto FPS_AVG_FRAC = 0.9f;
 
 float g_fFramesPerSecond = 0.0f;
 
@@ -1661,7 +1508,7 @@ void Host_GetHostInfo(float *fps, int *nActive, int *nMaxPlayers, char *pszMap, 
 	if (pszMap)
 	{
 		if (sv.m_szMapname && sv.m_szMapname[0])
-			Q_strncpy(pszMap, sv.m_szMapname, maxlen );
+			V_strncpy(pszMap, sv.m_szMapname, maxlen );
 		else
 			pszMap[0] = '\0';
 	}
@@ -1673,7 +1520,7 @@ static bool AppearsNumeric( char const *in )
 {
 	char const *p = in;
 	int special[ 3 ];
-	Q_memset( special, 0, sizeof( special ) );
+	V_memset( special, 0, sizeof( special ) );
 
 	for ( ; *p; p++ )
 	{
@@ -1726,13 +1573,13 @@ char const * Host_CleanupConVarStringValue( char const *invalue )
 {
 	static char clean[ 256 ];
 
-	Q_snprintf( clean, sizeof( clean ), "%s", invalue );
+	V_snprintf( clean, sizeof( clean ), "%s", invalue );
 
 	// Don't mess with empty string
 	// Otherwise, if it appears numeric and has a decimal, try to strip all zeroes after decimal
-	if ( Q_strlen( clean ) >= 1 && AppearsNumeric( clean ) && Q_strstr( clean, "." ) )
+	if ( V_strlen( clean ) >= 1 && AppearsNumeric( clean ) && V_strstr( clean, "." ) )
 	{
-		char *end = clean + strlen( clean ) - 1;
+		char *end = clean + std::strlen( clean ) - 1;
 		while ( *end && end >= clean )
 		{
 			// Removing trailing zeros
@@ -1776,7 +1623,7 @@ int Host_CountVariablesWithFlags( int flags, bool nonDefault )
 			continue;
 
 		// It's == to the default value, don't count
-		if ( nonDefault && !Q_strcasecmp( pthiscvar->GetDefault(), pthiscvar->GetString() ) )
+		if ( nonDefault && !V_strcasecmp( pthiscvar->GetDefault(), pthiscvar->GetString() ) )
 			continue;
 
 		++c;
@@ -1807,16 +1654,6 @@ void Host_BuildUserInfoUpdateMessage( int nSplitScreenSlot, ks::net::CMsg_CVars 
 	if ( count <= 0 )
 		return;
 
-#if !defined( DEDICATED )
-	// Add local user SteamID
-	if ( Steam3Client().SteamUser() && Steam3Client().SteamUser()->GetSteamID().GetAccountID() )
-	{
-		++ count;
-		NetMsgSetCVarUsingDictionary( &rCvarList->cvars.emplace_back(), "accountid",
-			CFmtStr( "%u", Steam3Client().SteamUser()->GetSteamID().GetAccountID() ) );
-	}
-#endif
-
 	ICvar::Iterator iter( g_pCVar );
 	for ( iter.SetFirst() ; iter.IsValid() ; iter.Next() )
 	{
@@ -1830,7 +1667,7 @@ void Host_BuildUserInfoUpdateMessage( int nSplitScreenSlot, ks::net::CMsg_CVars 
 			continue;
 
 		// It's == to the default value, don't count
-		if ( nonDefault && !Q_strcasecmp( pthiscvar->GetDefault(), pthiscvar->GetString() ) )
+		if ( nonDefault && !V_strcasecmp( pthiscvar->GetDefault(), pthiscvar->GetString() ) )
 			continue;
 
 		if ( pthiscvar->GetSplitScreenPlayerSlot() != nSplitScreenSlot )
@@ -1848,7 +1685,7 @@ void Host_BuildUserInfoUpdateMessage( int nSplitScreenSlot, ks::net::CMsg_CVars 
 	}
 
 	// Make sure this count matches original one
-	Assert( rCvarList->cvars.size() <= count );
+	contract_assert( rCvarList->cvars.size() <= count );
 }
 
 //-----------------------------------------------------------------------------
@@ -1883,7 +1720,7 @@ void Host_BuildConVarUpdateMessage( ks::net::CMsg_CVars *rCvarList, int flags, b
 			continue;
 
 		// It's == to the default value, don't count
-		if ( nonDefault && !Q_strcasecmp( pthiscvar->GetDefault(), pthiscvar->GetString() ) )
+		if ( nonDefault && !V_strcasecmp( pthiscvar->GetDefault(), pthiscvar->GetString() ) )
 			continue;
 
 		NetMsgSetCVarUsingDictionary( &rCvarList->cvars.emplace_back(), pthiscvar->GetName(),
@@ -1896,7 +1733,6 @@ void Host_BuildConVarUpdateMessage( ks::net::CMsg_CVars *rCvarList, int flags, b
 extern IVEngineClient *engineClient;
 void CL_SendVoicePacket(bool bFinal)
 {
-#if !defined( NO_VOICE )
 	if ( !Voice_IsRecording() )
 		return;
 
@@ -1912,14 +1748,7 @@ void CL_SendVoicePacket(bool bFinal)
 		CCLCMsg_VoiceData_t voiceMsg;
 
 		voiceMsg.data = std::string( ( const char * ) uchVoiceData, nLength );
-		if ( format == VoiceFormat_Steam )
-		{
-			voiceMsg.format = ks::net::VOICEDATA_FORMAT_STEAM;
-		}
-		else
-		{
-			voiceMsg.format = ks::net::VOICEDATA_FORMAT_ENGINE;
-		}
+		voiceMsg.format = ks::net::VOICEDATA_FORMAT_ENGINE;
 
 		player_info_t playerInfo;
 		if ( engineClient->GetPlayerInfo( engineClient->GetLocalPlayer(), &playerInfo ) )
@@ -1933,19 +1762,16 @@ void CL_SendVoicePacket(bool bFinal)
 
 		GetBaseLocalClient().m_NetChannel->SendNetMsg( voiceMsg );
 	}
-#endif
 }
 
 void CL_ProcessVoiceData()
 {
-	VPROF_BUDGET( "CL_ProcessVoiceData", VPROF_BUDGETGROUP_OTHER_NETWORKING );
+	CVProfScope _( "CL_ProcessVoiceData", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
-#if !defined( NO_VOICE )
 	if ( Voice_Idle( host_state.interval_per_tick ) )
 	{
 		CL_SendVoicePacket( false );
 	}
-#endif
 
 }
 #endif
@@ -1980,7 +1806,6 @@ Update sound subsystem and cd audio
 */
 void Host_UpdateSounds( void )
 {
-	SNPROF("Host_UpdateSounds");
 
 #if !defined( DEDICATED )
 	MDLCACHE_COARSE_LOCK_(g_pMDLCache);
@@ -2076,7 +1901,7 @@ void CFrameTimer::MarkFrame()
 		}
 
 		char sz[ 256 ];
-		Q_snprintf( sz, sizeof( sz ),
+		V_snprintf( sz, sizeof( sz ),
 			"%3i fps -- inp(%3.1f) sv(%3.1f) cl(%3.1f) render(%3.1f) snd(%3.1f) cl_dll(%3.1f) exec(%3.1f) ents(%d) ticks(%d)",
 			(int)fps,
 			fs_input,
@@ -2103,7 +1928,7 @@ void CFrameTimer::MarkFrame()
 
 }
 
-#define FRAME_TIME_FILTER_TIME 0.5f
+constexpr auto FRAME_TIME_FILTER_TIME = 0.5f;
 
 void CFrameTimer::ComputeFrameVariability()
 {
@@ -2152,7 +1977,7 @@ void CFrameTimer::ComputeFrameVariability()
 		{
 			i = FRAME_HISTORY_COUNT - 1;
 		}
-		flExpCurveArea += exp( flExponent * n );
+		flExpCurveArea += std::exp( flExponent * n );
 		flAverageTime += m_pFrameTimeHistory[i] * exp( flExponent * n );
 		++n;
 	}
@@ -2216,15 +2041,10 @@ void CFrameTimer::ComputeFrameVariability()
 	}
 
 	double variance = devSquaredFrameTime / (double)( count );
-	m_flFPSStdDeviationSeconds = sqrt( variance );
+	m_flFPSStdDeviationSeconds = std::sqrt( variance );
 
 	variance = devSquaredFrameStartTime / ( double ) ( count );
 	m_flFPSStdDeviationFrameStartTimeSeconds = sqrt( variance );
-
-#ifdef RAD_TELEMETRY_ENABLED
-    tmPlot( TELEMETRY_LEVEL0, TMPT_NONE, 0, m_flFPSStdDeviationSeconds * 1000.0f, "m_flFPSStdDeviationSeconds(ms)" );
-	tmPlot( TELEMETRY_LEVEL0, TMPT_NONE, 0, m_flFPSStdDeviationFrameStartTimeSeconds * 1000.0f, "m_flFPSStdDeviationFrameStartTimeMS(ms)" );
-#endif
 
 //	printf("var: %.2f avg:%.6f frametime:%f\n", m_flFPSStdDeviationSeconds * 1000.0f, avg, frametime);
 }
@@ -2355,7 +2175,7 @@ Runs all active servers
 
 void _Host_RunFrame_Input( float accumulated_extra_samples, bool bFinalTick )
 {
-	VPROF_BUDGET( "_Host_RunFrame_Input", _T("Input") );
+	CVProfScope _( "_Host_RunFrame_Input", 0, "Input", false, BUDGETFLAG_OTHER );
 
 	// Run a test script?
 	static bool bFirstFrame = true;
@@ -2396,17 +2216,17 @@ void _Host_RunFrame_Input( float accumulated_extra_samples, bool bFinalTick )
 
 void _Host_ProcessVoice_Server( void )
 {
-	VPROF_BUDGET( "_Host_ProcessVoice_Server", VPROF_BUDGETGROUP_GAME );
+	CVProfScope _( "_Host_ProcessVoice_Server", 0, VPROF_BUDGETGROUP_GAME, false, BUDGETFLAG_OTHER );
 
 	SV_ProcessVoice();
 }
 
 void _Host_RunFrame_Server( bool finaltick )
 {
-	VPROF_BUDGET( "_Host_RunFrame_Server", VPROF_BUDGETGROUP_GAME );
-	VPROF_INCREMENT_COUNTER( "ticks", 1 );
+	CVProfScope _( "_Host_RunFrame_Server", 0, VPROF_BUDGETGROUP_GAME, false, BUDGETFLAG_OTHER );
+	VProfIncrementCounter<"ticks">( 1 );
 
-	VPROF_TEST_SPIKE( vprof_server_spike_threshold.GetFloat() );
+	CVProfSpikeDetector vprof_spike_detector( vprof_server_spike_threshold.GetFloat() );
 
 	// Run the Server frame ( read, run physics, respond )
 	g_HostTimes.StartFrameSegment( FRAME_SEGMENT_SERVER );
@@ -2421,7 +2241,6 @@ void _Host_RunFrame_Server( bool finaltick )
 
 void _Host_RunFrame_Server_Async( int numticks )
 {
-#ifdef VPROF_ENABLED
 	if ( vprof_server_thread.GetBool() )
 	{
 		if ( g_VProfTargetThread != ThreadGetCurrentId() )
@@ -2436,7 +2255,6 @@ void _Host_RunFrame_Server_Async( int numticks )
 			g_VProfTargetThread = g_MainThreadId;
 		}
 	}
-#endif
 
 	MDLCACHE_COARSE_LOCK_(g_pMDLCache);
 	for ( int tick = 0; tick < numticks; tick++ )
@@ -2452,14 +2270,14 @@ void _Host_RunFrame_Server_Async( int numticks )
 void _Host_RunFrame_Client( bool framefinished )
 {
 #ifndef DEDICATED
-	VPROF( "_Host_RunFrame_Client" );
+	CVProfScope _( "_Host_RunFrame_Client", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	g_HostTimes.StartFrameSegment( FRAME_SEGMENT_CLIENT );
 
 	// Get any current state update from server, etc.
 	CL_ReadPackets( framefinished );
 
-	GetBaseLocalClient().CheckUpdatingSteamResources();
+	GetBaseLocalClient().CheckUpdatingResources();
 	GetBaseLocalClient().CheckFileCRCsWithServer();
 
 	// Resend connection request if needed.
@@ -2470,8 +2288,6 @@ void _Host_RunFrame_Client( bool framefinished )
 		void CL_DemoCheckGameUIRevealTime();
 		CL_DemoCheckGameUIRevealTime();
 	}
-
-	Steam3Client().RunFrame();
 
 #if defined( _DEBUG )
 	// Debug!!! FireGameEvent
@@ -2530,7 +2346,7 @@ void CheckSpecialCheatVars()
 void _Host_RunFrame_Render()
 {
 #ifndef DEDICATED
-	VPROF( "_Host_RunFrame_Render" );
+	CVProfScope _( "_Host_RunFrame_Render", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CheckSpecialCheatVars();
 
@@ -2548,11 +2364,11 @@ void _Host_RunFrame_Render()
 	CL_LatchInterpolationAmount();
 
 	{
-		VPROF( "_Host_RunFrame_Render - UpdateScreen" );
+		CVProfScope _( "_Host_RunFrame_Render - UpdateScreen", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		Host_UpdateScreen();
 	}
 	{
-		VPROF( "_Host_RunFrame_Render - CL_DecayLights" );
+		CVProfScope _( "_Host_RunFrame_Render - CL_DecayLights", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		CL_DecayLights ();
 	}
 
@@ -2686,7 +2502,7 @@ void _Host_RunFrame_Sound()
 		return;
 	}
 
-	VPROF_BUDGET( "_Host_RunFrame_Sound", VPROF_BUDGETGROUP_OTHER_SOUND );
+	CVProfScope _( "_Host_RunFrame_Sound", 0, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
 
 	g_HostTimes.StartFrameSegment( FRAME_SEGMENT_SOUND );
 
@@ -2722,7 +2538,7 @@ void Host_EndThreadedSound()
 		return;
 	}
 
-	VPROF_BUDGET( "_Host_RunFrame_Sound", VPROF_BUDGETGROUP_OTHER_SOUND );
+	CVProfScope _( "_Host_RunFrame_Sound", 0, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
 	g_pSoundJob->WaitForFinishAndRelease();
 	g_pSoundJob = nullptr;
 }
@@ -2758,7 +2574,9 @@ float Host_GetSoundDuration( const char *pSample )
 	return SV_GetSoundDuration( pSample );
 }
 
-CON_COMMAND( host_runofftime, "Run off some time without rendering/updating sounds\n" )
+static void host_runofftime( const CCommand &args );
+static ConCommand host_runofftime_command( "host_runofftime", host_runofftime, "Run off some time without rendering/updating sounds\n" );
+static void host_runofftime( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -2778,7 +2596,7 @@ CON_COMMAND( host_runofftime, "Run off some time without rendering/updating soun
 		return;
 	}
 
-	float advanceTime = atof( args[1] );
+	float advanceTime = std::atof( args[1] );
 	if ( advanceTime <= 0.0f )
 		return;
 
@@ -2794,45 +2612,6 @@ CON_COMMAND( host_runofftime, "Run off some time without rendering/updating soun
 
 	SCR_UpdateScreen();
 	SCR_UpdateScreen ();
-}
-
-S_API int SteamGameServer_GetIPCCallCount();
-void Host_ShowIPCCallCount()
-{
-	// If set to 0 then get out.
-	if ( host_ShowIPCCallCount.GetInt() == 0 )
-		return;
-
-	static float s_flLastTime = 0;
-	static int s_nLastTick = host_tickcount;
-	static int s_nLastFrame = host_framecount;
-
-	// Figure out how often they want to update.
-	double flInterval = 0;
-	if ( host_ShowIPCCallCount.GetFloat() > 0 )
-	{
-		flInterval = 1.0f / host_ShowIPCCallCount.GetFloat();
-	}
-
-	// This is called every frame so increment the frame counter.
-	double flCurTime = Plat_FloatTime();
-	if ( flCurTime - s_flLastTime >= flInterval )
-	{
-		uint32 callCount = 0;
-
-		// Avoid a divide by zero.
-		int frameCount = host_framecount - s_nLastFrame;
-		int tickCount = host_tickcount - s_nLastTick;
-		if ( frameCount == 0 || tickCount == 0 )
-			return;
-
-		Msg( "host_ShowIPCCallCount: %d IPC calls in the past [%d frames, %d ticks]  Avg: [%.2f/frame, %.2f/tick]\n",
-			callCount, frameCount, tickCount, (float)callCount / frameCount, (float)callCount / tickCount );
-
-		s_flLastTime = flCurTime;
-		s_nLastTick = host_tickcount;
-		s_nLastFrame = host_framecount;
-	}
 }
 
 void Host_SetClientInSimulation( bool bInSimulation )
@@ -2947,8 +2726,8 @@ static void PrintFsStats()
 		{
 			continue;		// Skip this one
 		}
-		nMinStats[i] = INT_MAX;
-		nMaxStats[i] = INT_MIN;
+		nMinStats[i] = std::numeric_limits<int>::max();
+		nMaxStats[i] = std::numeric_limits<int>::min();
 		nAvgStats[i] = 0;
 
 		for ( int j = 0; j < nFrameHistorySize; ++j )
@@ -3014,9 +2793,8 @@ static void PrintFsStats()
 }
 #endif
 
-#define LOG_FRAME_OUTPUT 0
 
-void _Host_RunFrame (float time)
+static void _Host_RunFrame_Impl (float time)
 {
 	g_HostTimes.MarkFrameStartTime();
 
@@ -3025,18 +2803,6 @@ void _Host_RunFrame (float time)
 	double prevremainder;
 	bool shouldrender;
 
-#if defined( RAD_TELEMETRY_ENABLED )
-
-	if( g_Telemetry.DemoTickEnd == ( uint32 )-1 )
-
-	{
-
-		Cbuf_AddText( Cbuf_GetCurrentPlayer(), "quit\n" );
-
-	}
-
-#endif
-
 #ifndef DEDICATED
 	CClientState &cl = GetBaseLocalClient();
 #endif
@@ -3044,7 +2810,7 @@ void _Host_RunFrame (float time)
 	int numticks;
 	{
 		// Profile scope specific to the top of this function, protect from setjmp() problems
-		VPROF( "_Host_RunFrame_Upto_MarkFrame" );
+		CVProfScope _( "_Host_RunFrame_Upto_MarkFrame", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		if ( host_checkheap )
 		{
@@ -3076,9 +2842,6 @@ void _Host_RunFrame (float time)
 
 		static int lastrunoffsecond = -1;
 
-		if ( setjmp ( host_enddemo ) )
-			return;			// demo finished.
-
 		// decide the simulation time
 		Host_AccumulateTime ( time );
 		_Host_SetGlobalTime();
@@ -3105,7 +2868,7 @@ void _Host_RunFrame (float time)
 		float flMinimumTickInterval = bAlternateTicks ? host_state.interval_per_tick * 2.0f : host_state.interval_per_tick;
 		if ( host_remainder >= flMinimumTickInterval )
 		{
-			numticks = (int)( floor(host_remainder / host_state.interval_per_tick ) );
+			numticks = (int)( std::floor(host_remainder / host_state.interval_per_tick ) );
 
 			// round to nearest even ending tick in alternate ticks mode so the last
 			// tick is always simulated prior to updating the network data
@@ -3138,7 +2901,7 @@ void _Host_RunFrame (float time)
 
 	{
 		// Profile scope, protect from setjmp() problems
-		VPROF( "_Host_RunFrame" );
+		CVProfScope _( "_Host_RunFrame", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		g_HostTimes.StartFrameSegment( FRAME_SEGMENT_CMD_EXECUTE );
 
@@ -3197,7 +2960,7 @@ void _Host_RunFrame (float time)
 
 				// Track jitter (delta between ideal time and actual tick execution time)
 				host_jitterhistory[ host_jitterhistorypos ] = jitter;
-				host_jitterhistorypos = ( host_jitterhistorypos + 1 ) % ARRAYSIZE(host_jitterhistory);
+				host_jitterhistorypos = ( host_jitterhistorypos + 1 ) % std::size( host_jitterhistory );
 
 				// Very slowly decay "ideal" towards current wall clock unless delta is large
 				if ( fabs( jitter ) > 1.0f )
@@ -3292,20 +3055,6 @@ void _Host_RunFrame (float time)
 				hltvtest->RunFrame();
 			}
 
-#if defined( REPLAY_ENABLED )
-			// run replay if active
-			if ( replay )
-			{
-				replay->RunFrame();
-
-				if ( g_pServerReplayHistoryManager )
-					g_pServerReplayHistoryManager->Update();
-			}
-
-			if ( g_pClientReplayHistoryManager && g_pClientReplayHistoryManager->IsInitialized() )
-				g_pClientReplayHistoryManager->Update();
-#endif
-
 #ifndef DEDICATED
 			// This is a hack to let timedemo pull messages from the queue faster than every 15 msec
 			// Also when demoplayer is skipping packets to a certain tick we should process the queue
@@ -3336,12 +3085,6 @@ void _Host_RunFrame (float time)
 				// but they have a cap applied by IN_SetSampleTime() so they are not also
 				// simulated during input gathering
 				CL_ExtraMouseUpdate( g_ClientGlobalVariables.frametime );
-			}
-#endif
-#if LOG_FRAME_OUTPUT
-			if ( !cl.IsPaused() || !sv.IsPaused() )
-			{
-				Msg("=============SIM: CLIENT %5d + %d, SERVER %5d + %d\t REM: %.2f\n", cl.GetClientTickCount(), numticks, sv.m_nTickCount, numticks, host_remainder*1000.0f );
 			}
 #endif
 		}
@@ -3473,12 +3216,6 @@ void _Host_RunFrame (float time)
 
 			pGameJob = new CFunctorJob( CreateFunctor( _Host_RunFrame_Server_Async, serverticks ) );
 			g_pThreadPool->AddJob( pGameJob );
-#if LOG_FRAME_OUTPUT
-			if ( !cl.IsPaused() || !sv.IsPaused() )
-			{
-				Msg("=============SIM: CLIENT %5d + %d, SERVER %5d + %d\t REM: %.2f\n", cl.GetClientTickCount(), clientticks, sv.m_nTickCount, serverticks, host_remainder*1000.0f );
-			}
-#endif
 		}
 #endif	// DEDICATED
 
@@ -3491,16 +3228,6 @@ void _Host_RunFrame (float time)
 
 		if ( shouldrender )
 		{
-#if LOG_FRAME_OUTPUT
-			if ( !cl.IsPaused() || !sv.IsPaused() )
-			{
-				static float lastFrameTime = 0;
-				float frametime = g_ClientGlobalVariables.curtime - lastFrameTime;
-				Msg("RENDER AT: %6.4f: %.2fms [%.2fms implicit] frametime\n",
-					g_ClientGlobalVariables.curtime, g_ClientGlobalVariables.frametime*1000.0f, frametime * 1000.0f);
-				lastFrameTime = g_ClientGlobalVariables.curtime;
-			}
-#endif
 
 			//-------------------
 			// rendering
@@ -3525,7 +3252,7 @@ void _Host_RunFrame (float time)
 #ifndef DEDICATED
 		if ( !sv.IsDedicated() )
 		{
-			VPROF_BUDGET( "_Host_RunFrame - ClientDLL_Update", VPROF_BUDGETGROUP_CLIENT_SIM );
+			CVProfScope _( "_Host_RunFrame - ClientDLL_Update", 0, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_OTHER );
 			// Client-side simulation
 			g_HostTimes.StartFrameSegment( FRAME_SEGMENT_CLDLL );
 
@@ -3537,7 +3264,7 @@ void _Host_RunFrame (float time)
 		if ( pGameJob )
 		{
 			{
-				VPROF_BUDGET( "WaitForAsyncServer", "AsyncServer" );
+				CVProfScope _( "WaitForAsyncServer", 0, "AsyncServer", false, BUDGETFLAG_OTHER );
 				if ( Host_IsSinglePlayerGame() )
 				{
 					// This should change to a YieldWait if the server starts wanting to parallel process. If
@@ -3584,7 +3311,18 @@ void _Host_RunFrame (float time)
 		GetTestScriptMgr()->CheckPoint( "frame_end" );
 	} // Profile scope, protect from setjmp() problems
 
-	Host_ShowIPCCallCount();
+}
+
+void _Host_RunFrame (float time)
+{
+	try
+	{
+		_Host_RunFrame_Impl( time );
+	}
+	catch ( const CHostEndDemo & )
+	{
+		// demo finished.
+	}
 }
 /*
 ==============================
@@ -3615,7 +3353,7 @@ void Host_RunFrame( float time )
 	}
 
 	{
-		VPROF( "UpdateDynamicModels" );
+		CVProfScope _( "UpdateDynamicModels", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		CMDLCacheCriticalSection critsec(g_pMDLCache);
 		modelloader->UpdateDynamicModels();
 	}
@@ -3626,11 +3364,11 @@ void Host_RunFrame( float time )
 		return;
 	}
 
-	double	time1 = Sys_FloatTime();
+	double	time1 = Plat_FloatTime();
 
 	_Host_RunFrame( time );
 
-	double	time2 = Sys_FloatTime();
+	double	time2 = Plat_FloatTime();
 
 	timetotal += time2 - time1; // time in seconds
 	timecount++;
@@ -3653,34 +3391,11 @@ void Host_RunFrame( float time )
 //-----------------------------------------------------------------------------
 bool IsLowViolence_CommandLine()
 {
-#if defined( _LOWVIOLENCE )
-	// a low violence build can not be-undone
-	return true;
-#endif
 
 	return ( CommandLine()->FindParm( "-lv" ) != 0 );
 }
 
 #ifndef DEDICATED
-//-----------------------------------------------------------------------------
-// A more secure means of enforcing low violence.
-//-----------------------------------------------------------------------------
-bool IsLowViolence_Secure()
-{
-	// CS:GO does not have any low violence regions. Ignore what Steam reports.
-	return false;
-
-	if ( Steam3Client().SteamApps() )
-	{
-		// let Steam determine current violence settings
-		return Steam3Client().SteamApps()->BIsLowViolence();
-	}
-
-
-	return false;
-}
-
-
 //-----------------------------------------------------------------------------
 // If "User Token 2" exists in HKEY_CURRENT_USER/Software/Valve/Half-Life/Settings
 // then we disable gore. Obviously not very secure.
@@ -3696,42 +3411,42 @@ bool IsLowViolence_Registry()
 	char szBuffer[128];
 	bool bReducedGore = false;
 
-	memset( szBuffer, 0, 128 );
+	std::memset( szBuffer, 0, 128 );
 
 	char const *appname = "Source";
-	Q_snprintf(szSubKey, sizeof( szSubKey ), "Software\\Valve\\%s\\Settings", appname );
+	V_snprintf(szSubKey, sizeof( szSubKey ), "Software\\Valve\\%s\\Settings", appname );
 
 	nBufferLen = 127;
-	Q_strncpy( szBuffer, "", sizeof( szBuffer ) );
+	V_strncpy( szBuffer, "", sizeof( szBuffer ) );
 
 	Sys_GetRegKeyValue( szSubKey, "User Token 2", szBuffer,	nBufferLen, szBuffer );
 
 	// Gore reduction active?
-	bReducedGore = ( Q_strlen( szBuffer ) > 0 ) ? true : false;
+	bReducedGore = ( V_strlen( szBuffer ) > 0 ) ? true : false;
 	if ( !bReducedGore )
 	{
 		Sys_GetRegKeyValue( szSubKey, "User Token 3", szBuffer, nBufferLen, szBuffer );
 
-		bReducedGore = ( Q_strlen( szBuffer ) > 0 ) ? true : false;
+		bReducedGore = ( V_strlen( szBuffer ) > 0 ) ? true : false;
 	}
 
 	char gamedir[MAX_OSPATH];
-	Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
+	V_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
 
 	// also check mod specific directories for LV changes
-	Q_snprintf(szSubKey, sizeof( szSubKey ), "Software\\Valve\\%s\\%s\\Settings", appname, gamedir );
+	V_snprintf(szSubKey, sizeof( szSubKey ), "Software\\Valve\\%s\\%s\\Settings", appname, gamedir );
 
 	nBufferLen = 127;
-	Q_strncpy( szBuffer, "", sizeof( szBuffer ) );
+	V_strncpy( szBuffer, "", sizeof( szBuffer ) );
 
 	Sys_GetRegKeyValue( szSubKey, "User Token 2", szBuffer,	nBufferLen, szBuffer );
-	if ( Q_strlen( szBuffer ) > 0 )
+	if ( V_strlen( szBuffer ) > 0 )
 	{
 		bReducedGore = true;
 	}
 
 	Sys_GetRegKeyValue( szSubKey, "User Token 3", szBuffer,	nBufferLen, szBuffer );
-	if ( Q_strlen( szBuffer ) > 0 )
+	if ( V_strlen( szBuffer ) > 0 )
 	{
 		bReducedGore = true;
 	}
@@ -3745,24 +3460,12 @@ bool IsLowViolence_Registry()
 void Host_CheckGore( void )
 {
 	bool bLowViolenceRegistry = false;
-	bool bLowViolenceSecure = false;
 	bool bLowViolenceCommandLine = IsLowViolence_CommandLine();
-
-#ifndef DEDICATED
-	//
-	// First check the old method of enabling low violence via the registry.
-	//
-	//
-	// Next check the new method of enabling low violence based on country of purchase
-	// and other means that are inaccessible by the user.
-	//
-	bLowViolenceSecure = IsLowViolence_Secure();
-#endif
 
 	//
 	// If either method says "yes" to low violence, we're in low violence mode.
 	//
-	if ( bLowViolenceRegistry || bLowViolenceSecure || bLowViolenceCommandLine )
+	if ( bLowViolenceRegistry || bLowViolenceCommandLine )
 	{
 		g_bLowViolence = true;
 
@@ -3800,33 +3503,33 @@ void Host_InitProcessor( void )
 	}
 
 	char szFeatureString[256];
-	Q_strncpy( szFeatureString, pi.m_szProcessorID, sizeof( szFeatureString ) );
-	Q_strncat( szFeatureString, " ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
+	V_strncpy( szFeatureString, pi.m_szProcessorID, sizeof( szFeatureString ) );
+	V_strncat( szFeatureString, " ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
 
 	if( pi.m_bSSE )
 	{
-		if( MathLib_SSEEnabled() ) Q_strncat(szFeatureString, "SSE ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
-		else					   Q_strncat(szFeatureString, "(SSE) ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
+		if( MathLib_SSEEnabled() ) V_strncat(szFeatureString, "SSE ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
+		else					   V_strncat(szFeatureString, "(SSE) ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
 	}
 
 	if( pi.m_bSSE2 )
 	{
-		if( MathLib_SSE2Enabled() ) Q_strncat(szFeatureString, "SSE2 ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
-		else					   Q_strncat(szFeatureString, "(SSE2) ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
+		if( MathLib_SSE2Enabled() ) V_strncat(szFeatureString, "SSE2 ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
+		else					   V_strncat(szFeatureString, "(SSE2) ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
 	}
 
 	if( pi.m_bMMX )
 	{
-		if( MathLib_MMXEnabled() ) Q_strncat(szFeatureString, "MMX ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
-		else					   Q_strncat(szFeatureString, "(MMX) ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
+		if( MathLib_MMXEnabled() ) V_strncat(szFeatureString, "MMX ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
+		else					   V_strncat(szFeatureString, "(MMX) ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
 	}
 
-	if( pi.m_bRDTSC )	Q_strncat(szFeatureString, "RDTSC ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
-	if( pi.m_bCMOV )	Q_strncat(szFeatureString, "CMOV ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
-	if( pi.m_bFCMOV )	Q_strncat(szFeatureString, "FCMOV ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
+	if( pi.m_bRDTSC )	V_strncat(szFeatureString, "RDTSC ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
+	if( pi.m_bCMOV )	V_strncat(szFeatureString, "CMOV ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
+	if( pi.m_bFCMOV )	V_strncat(szFeatureString, "FCMOV ", sizeof( szFeatureString ), COPY_ALL_CHARACTERS );
 
 	// Remove the trailing space.  There will always be one.
-	szFeatureString[Q_strlen(szFeatureString)-1] = '\0';
+	szFeatureString[V_strlen(szFeatureString)-1] = '\0';
 
 	// Dump CPU information:
 	if( pi.m_nLogicalProcessors == 1 )
@@ -3842,7 +3545,7 @@ void Host_InitProcessor( void )
 		char buffer[256] = "";
 		if( pi.m_nPhysicalProcessors != pi.m_nLogicalProcessors )
 		{
-			Q_snprintf(buffer, sizeof( buffer ), " (%i physical)", (int) pi.m_nPhysicalProcessors );
+			V_snprintf(buffer, sizeof( buffer ), " (%i physical)", (int) pi.m_nPhysicalProcessors );
 		}
 
 		ConDMsg( "%i CPUs%s, Frequency: %.01f %s,  Features: %s\n",
@@ -3915,28 +3618,11 @@ void Host_PostInit()
 #endif
 }
 
-#if defined( REPLAY_ENABLED )
-void Replay_Init()
-{
-	Assert( replay == nullptr );
-}
-
-void Replay_Shutdown()
-{
-	if ( replay )
-	{
-		replay->Shutdown();
-		delete replay;
-		replay = nullptr;
-	}
-}
-#endif
-
 void HLTV_Init()
 {
 	for ( int i = 0; i < HLTV_SERVER_MAX_COUNT; ++i )
-		Assert ( g_pHltvServer[ i ] == nullptr );
-	Assert ( hltvtest == nullptr );
+		contract_assert( g_pHltvServer[ i ] == nullptr );
+	contract_assert( hltvtest == nullptr );
 }
 
 void HLTV_Shutdown()
@@ -3961,98 +3647,19 @@ void HLTV_Shutdown()
 void InstallConVarHook( void );
 
 int g_nForkID = 0;
-int g_nSocketToParentProcess = -1;
+ks::platform::socket *g_nSocketToParentProcess = nullptr;
 
-#include <sys/socket.h>
-#include <sys/types.h>
 void SendStringToParentProcess( char const *pMsg )
 {
-	Assert( IsChildProcess() );
-	Assert( g_nSocketToParentProcess != -1 );
-	send( g_nSocketToParentProcess, pMsg, 1 + strlen( pMsg ), MSG_DONTWAIT );
+	contract_assert( IsChildProcess() );
+	contract_assert( g_nSocketToParentProcess != nullptr );
+	ks::platform::send_bytes( g_nSocketToParentProcess, pMsg, 1 + std::strlen( pMsg ), nullptr );
 }
 
 
 CDebugInputThread * g_pDebugInputThread;
 
 
-// Check with steam to see if the requested file (requires full path) is a valid, signed binary
-#define SignatureWarning( ... ) ((void)(0))
-static bool Host_IsValidSignature( const char *pFilename, bool bAllowUnknown )
-{
-#if defined( DEDICATED )
-	return true;
-#else
-	if ( Steam3Client().SteamUtils() )
-	{
-		SteamAPICall_t hAPICall = Steam3Client().SteamUtils()->CheckFileSignature( pFilename );
-		bool bAPICallFailed = true;
-		while ( !Steam3Client().SteamUtils()->IsAPICallCompleted(hAPICall, &bAPICallFailed) )
-		{
-			SteamAPI_RunCallbacks();
-			ThreadSleep( 1 );
-		}
-
-		if( bAPICallFailed )
-		{
-			SignatureWarning( "CheckFileSignature API call on %s failed", pFilename );
-		}
-		else
-		{
-			CheckFileSignature_t result;
-			Steam3Client().SteamUtils()->GetAPICallResult( hAPICall, &result, sizeof(result), result.k_iCallback, &bAPICallFailed );
-			if( bAPICallFailed )
-			{
-				SignatureWarning( "CheckFileSignature API call on %s failed\n", pFilename );
-			}
-			else
-			{
-				if( result.m_eCheckFileSignature == k_ECheckFileSignatureValidSignature || result.m_eCheckFileSignature == k_ECheckFileSignatureNoSignaturesFoundForThisApp )
-					return true;
-				if ( bAllowUnknown && result.m_eCheckFileSignature == k_ECheckFileSignatureNoSignaturesFoundForThisFile )
-					return true;
-				SignatureWarning( "No valid signature found for %s\n", pFilename );
-			}
-		}
-	}
-	return false;
-#endif
-}
-
-
-// Ask steam if it is ok to load this DLL.  Unsigned DLLs should not be loaded unless
-// the client is running -insecure (testing a plugin for example)
-// This keeps legitimate users with modified binaries from getting VAC banned because of them
-bool Host_AllowLoadModule( const char *pFilename, const char *pPathID, bool bAllowUnknown )
-{
-	// dedicated servers don't check signatures
-	// OSX and Linux have no ability to check signatures
-	return true;
-}
-
-bool Host_IsSecureServerAllowed()
-{
-	if ( CommandLine()->FindParm("-insecure") || CommandLine()->FindParm("-tools") )
-		g_bAllowSecureServers = false;
-
-	return g_bAllowSecureServers;
-}
-
-void Host_DisallowSecureServers()
-{
-#if !defined(DEDICATED)
-	if ( g_bAllowSecureServers && ( GetBaseLocalClient().IsConnected() || sv.IsActive() ) )
-	{	// Force-disconnect local client if secure mode changes mid-connection
-		GetBaseLocalClient().Disconnect( true );
-	}
-
-	g_bAllowSecureServers = false;
-#endif
-}
-
-void Host_FinishSecureSignatureChecks()
-{
-}
 
 static bool s_bDedicatedForPurposesOfThreadPool = false;
 
@@ -4082,15 +3689,6 @@ void Host_Init( bool bDedicated )
 		g_nForkID = FORK_ID_PARENT_PROCESS;
 	}
 
-
-	if ( !bDedicated && Host_IsSecureServerAllowed() )
-	{
-		//
-		// Signature checking code:
-		//
-
-	/** Removed for partner depot **/
-	}
 
 	ThreadPoolStartParams_t startParams;
 	s_bDedicatedForPurposesOfThreadPool = bDedicated;
@@ -4136,8 +3734,6 @@ void Host_Init( bool bDedicated )
 
 	TRACEINIT( COM_Init(), COM_Shutdown() );
 
-#if !defined(DEDICATED) && !defined(LEFT4DEAD)
-#endif
 
 	TRACEINIT( Filter_Init(), Filter_Shutdown() );
 
@@ -4163,11 +3759,9 @@ void Host_Init( bool bDedicated )
 
 	// Seed the random number generator
 	float flTimeToSeed = Plat_FloatTime();
-	COMPILE_TIME_ASSERT( sizeof( flTimeToSeed ) == sizeof( int ) );
+	static_assert( sizeof( flTimeToSeed ) == sizeof( int ) );
 	RandomSeed( ( reinterpret_cast< int & >( flTimeToSeed ) ) & 0x7FFFFFFF );
 	DevMsg( "Seeded random number generator @ %d ( %.3f )\n", ( reinterpret_cast< int & >( flTimeToSeed ) ) & 0x7FFFFFFF, flTimeToSeed );
-
-	TRACEINIT( g_pSteamSocketMgr->Init(), g_pSteamSocketMgr->Shutdown() );
 
 	TRACEINIT( g_GameEventManager.Init(), g_GameEventManager.Shutdown() );
 
@@ -4182,9 +3776,6 @@ void Host_Init( bool bDedicated )
 
 	TRACEINIT( HLTV_Init(), HLTV_Shutdown() );
 
-#if defined( REPLAY_ENABLED )
-	TRACEINIT( Replay_Init(), Replay_Shutdown() );
-#endif
 	ConDMsg( "Heap: %5.2f Mb\n", host_parms.memsize/(1024.0f*1024.0f) );
 
 	// Deal with Gore Settings
@@ -4244,7 +3835,7 @@ void Host_Init( bool bDedicated )
 
 
 #ifndef DEDICATED
-	memset( g_bConfigCfgExecuted, 0, sizeof(g_bConfigCfgExecuted) );
+	std::memset( g_bConfigCfgExecuted, 0, sizeof(g_bConfigCfgExecuted) );
 
 	Host_ReadConfiguration( -1, false );
 	TRACEINIT( S_Init(), S_Shutdown() );
@@ -4285,10 +3876,6 @@ void Host_Init( bool bDedicated )
 	// Mark DLL as active
 	//	eng->SetNextState( InEditMode() ? IEngine::DLL_PAUSED : IEngine::DLL_ACTIVE );
 
-#ifdef RAD_TELEMETRY_ENABLED
-    TelemetryTick();
-#endif
-
 	// Initialize processor subsystem, and print relevant information:
 	Host_InitProcessor();
 
@@ -4296,13 +3883,11 @@ void Host_Init( bool bDedicated )
 	Hunk_AllocName( 0, "-HOST_HUNKLEVEL-" );
 	host_hunklevel = Hunk_LowMark();
 
-#ifdef SOURCE_MT
 	if ( CommandLine()->FindParm( "-swapcores" ) )
 	{
 		g_nMaterialSystemThread = 1;
 		g_nServerThread = 0;
 	}
-#endif
 
 	Host_AllowQueuedMaterialSystem( false );
 
@@ -4346,18 +3931,6 @@ void Host_Init( bool bDedicated )
 		Cbuf_AddText( Cbuf_GetCurrentPlayer(), "quit\n" );
 	}
 
-	if ( !bDedicated && Host_IsSecureServerAllowed() )
-	{
-		Host_FinishSecureSignatureChecks();
-	}
-
-#if !defined(DEDICATED)
-	if ( g_pMatchFramework && !Host_IsSecureServerAllowed() )
-	{
-		g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( new KeyValues( "OnClientInsecureBlocked", "reason", "init" ) );
-	}
-#endif
-
 	// Official valve servers must be running with a certificate
 	if ( CommandLine()->FindParm( "-certificate" ) ||
 		( serverGameDLL && serverGameDLL->IsValveDS() && !CommandLine()->FindParm( "-ignore_certificate_valveds" ) ) )
@@ -4380,13 +3953,13 @@ void Host_Init( bool bDedicated )
 // There's a version of this in bsplib.cpp!!!  Make sure that they match.
 void GetPlatformMapPath( const char *pMapPath, char *pPlatformMapPath, int maxLength )
 {
-	Q_strncpy( pPlatformMapPath, pMapPath, maxLength );
+	V_strncpy( pPlatformMapPath, pMapPath, maxLength );
 
 	// It's OK for this to be NULL on the dedicated server.
 	if( g_pMaterialSystemHardwareConfig )
 	{
-		Q_StripExtension( pMapPath, pPlatformMapPath, maxLength );
-		Q_strncat( pPlatformMapPath, ".bsp", maxLength, COPY_ALL_CHARACTERS );
+		V_StripExtension( pMapPath, pPlatformMapPath, maxLength );
+		V_strncat( pPlatformMapPath, ".bsp", maxLength, COPY_ALL_CHARACTERS );
 	}
 }
 
@@ -4465,12 +4038,12 @@ void Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 	GetPlatformMapPath( mapname, dxMapName, MAX_PATH );
 	host_map.SetValue( dxMapName );
 
-	Q_strncpy( level, mapname, sizeof( level ) );
+	V_strncpy( level, mapname, sizeof( level ) );
 	if ( !start )
 		startspot = nullptr;
 	else
 	{
-		Q_strncpy( _startspot, start, sizeof( _startspot ) );
+		V_strncpy( _startspot, start, sizeof( _startspot ) );
 		startspot = _startspot;
 	}
 
@@ -4492,7 +4065,7 @@ void Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 
 #endif
 
-	Q_strncpy( oldlevel, sv.GetMapName(), sizeof( oldlevel ) );
+	V_strncpy( oldlevel, sv.GetMapName(), sizeof( oldlevel ) );
 
 	g_pServerPluginHandler->LevelShutdown();
 
@@ -4502,8 +4075,6 @@ void Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 
 	sv.InactivateClients();
 
-#if !defined(DEDICATED)
-#endif
 
 	if ( sv.RestartOnLevelChange() )
 	{
@@ -4547,7 +4118,7 @@ void Host_Changelevel( bool loadfromsavedgame, const char *mapname, char *mapGro
 	// Offset stored elapsed time by the current elapsed time for this new map
 	int maptime = sv.GetTime();
 	int minutes = ( int )( maptime / 60.0f );
-	int seconds = ( int )fmod( maptime, 60.0f );
+	int seconds = ( int )std::fmod( maptime, 60.0f );
 #endif
 
 	NotifyDedicatedServerUI( "UpdateMap" );
@@ -4568,7 +4139,7 @@ SERVER TRANSITIONS
 */
 bool Host_NewGame( char *mapName, char *mapGroupName, bool loadGame, bool bBackgroundLevel, bool bSplitScreenConnect, const char *pszOldMap, const char *pszLandmark )
 {
-	VPROF( "Host_NewGame" );
+	CVProfScope _( "Host_NewGame", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	COM_TimestampedLog( "Host_NewGame" );
 
 	// reset some convars if loading background map
@@ -4579,7 +4150,7 @@ bool Host_NewGame( char *mapName, char *mapGroupName, bool loadGame, bool bBackg
 	char dxMapName[MAX_PATH];
 	V_FixSlashes( mapName, '/' );
 	GetPlatformMapPath( mapName, dxMapName, MAX_PATH );
-	Q_strncpy( previousMapName, host_map.GetString(), sizeof( previousMapName ) );
+	V_strncpy( previousMapName, host_map.GetString(), sizeof( previousMapName ) );
 	host_map.SetValue( dxMapName );
 
 	// Setup gamemode based on the settings the map was started with
@@ -4603,12 +4174,12 @@ bool Host_NewGame( char *mapName, char *mapGroupName, bool loadGame, bool bBackg
 
 	if ( !loadGame )
 	{
-		VPROF( "Host_NewGame_HostState_RunGameInit" );
+		CVProfScope _( "Host_NewGame_HostState_RunGameInit", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		HostState_RunGameInit();
 	}
 
 	// init network mode
-	VPROF_SCOPE_BEGIN( "Host_NewGame_SpawnServer" );
+	{ CVProfScope _( "Host_NewGame_SpawnServer", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	NET_SetMultiplayer( sv.IsMultiplayer() );
 	if ( !sv.IsMultiplayer() )
@@ -4631,7 +4202,7 @@ bool Host_NewGame( char *mapName, char *mapGroupName, bool loadGame, bool bBackg
 	ConColorMsg( Color( 0, 255, 0 ), "Host_NewGame on map %s%s\n",
 		mapName, sv.IsLevelMainMenuBackground() ? " (background map)" : "" );
 
-	VPROF_SCOPE_END();
+	};
 
 	// make sure the time is set
 	g_ServerGlobalVariables.curtime = sv.GetTime();
@@ -4667,18 +4238,18 @@ bool Host_NewGame( char *mapName, char *mapGroupName, bool loadGame, bool bBackg
 
 		if ( bSplitScreenConnect )
 		{
-			Assert( !bBackgroundLevel );
+			contract_assert( !bBackgroundLevel );
 			nNumPlayers = host_state.max_splitscreen_players;
 		}
 
 		char str[512];
 		if ( nNumPlayers > 1 )
 		{
-			Q_snprintf( str, sizeof( str ), "connect_splitscreen localhost:%d %d", sv.GetUDPPort(), nNumPlayers );
+			V_snprintf( str, sizeof( str ), "connect_splitscreen localhost:%d %d", sv.GetUDPPort(), nNumPlayers );
 		}
 		else
 		{
-			Q_snprintf( str, sizeof( str ), "connect localhost:%d", sv.GetUDPPort() );
+			V_snprintf( str, sizeof( str ), "connect localhost:%d", sv.GetUDPPort() );
 		}
 		Cbuf_AddText( Cbuf_GetCurrentPlayer(), str );
 	}
@@ -4707,8 +4278,8 @@ bool Host_NewGame( char *mapName, char *mapGroupName, bool loadGame, bool bBackg
 
 void Host_FreeStateAndWorld( bool server )
 {
-	Assert( host_initialized );
-	Assert( host_hunklevel );
+	contract_assert( host_initialized );
+	contract_assert( host_hunklevel );
 
 	// If called by the client and we are running a listen server, just ignore
 	if ( !server && sv.IsActive() )
@@ -4745,8 +4316,8 @@ void Host_FreeStateAndWorld( bool server )
 //-----------------------------------------------------------------------------
 void Host_FreeToLowMark( bool server )
 {
-	Assert( host_initialized );
-	Assert( host_hunklevel );
+	contract_assert( host_initialized );
+	contract_assert( host_hunklevel );
 
 	// If called by the client and we are running a listen server, just ignore
 	if ( !server && ( sv.IsActive() || sv.IsLoading() ) )
@@ -4806,9 +4377,7 @@ void Host_Shutdown(void)
 
 	host_initialized = false;
 
-#if defined(VPROF_ENABLED)
 	VProfRecord_Shutdown();
-#endif
 
 #if !defined DEDICATED
 	if ( !sv.IsDedicated() )
@@ -4876,27 +4445,15 @@ void Host_Shutdown(void)
 		TRACESHUTDOWN( ShutdownMaterialSystem() );
 	}
 
-#if defined( REPLAY_ENABLED )
-	TRACESHUTDOWN( Replay_Shutdown() );
-#endif
 	TRACESHUTDOWN( HLTV_Shutdown() );
 
 	TRACESHUTDOWN( g_Log.Shutdown() );
 
 	TRACESHUTDOWN( g_GameEventManager.Shutdown() );
 
-#if !defined( DEDICATED )
-	if ( !sv.IsDedicated() )
-	{
-		Steam3Client().Shutdown();
-	}
-#endif
-
 	TRACESHUTDOWN( sv.Shutdown() );
 
 	NET_Shutdown();
-
-	TRACESHUTDOWN( g_pSteamSocketMgr->Shutdown() );
 
 #ifndef DEDICATED
 	TRACESHUTDOWN( Key_Shutdown() );
@@ -4904,8 +4461,6 @@ void Host_Shutdown(void)
 
 	TRACESHUTDOWN( Filter_Shutdown() );
 
-#if !defined(DEDICATED) && !defined(LEFT4DEAD)
-#endif
 
 	TRACESHUTDOWN( COM_Shutdown() );
 
@@ -4956,21 +4511,7 @@ void Host_EnsureHostNameSet()
 	if ( host_name.GetString()[0] == 0 )
 	{
 		const char *szHostName = "";
-#ifndef DEDICATED
-		// if this is a PC listen server and there is a logged-on Steam user, use the user's Steam name as the host name
-		if ( !sv.IsDedicated() && Steam3Client().SteamUser() )
-		{
-			if ( Steam3Client().SteamUser()->BLoggedOn() )
-			{
-				szHostName = Steam3Client().SteamFriends()->GetPersonaName();
-			}
-		}
-#endif
-		// if all else fails, use the game description as the host name
-		if ( !szHostName[0] )
-		{
-			szHostName = serverGameDLL->GetGameDescription();
-		}
+		szHostName = serverGameDLL->GetGameDescription();
 		host_name.SetValue( szHostName );
 	}
 }

@@ -1,28 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef DISPINFO_H
-#define DISPINFO_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //=============================================================================
 
-#include <assert.h>
-#include <bitset>
+import std;
+import ks.tier1;
 #include "idispinfo.h"
 #include "bspfile.h"
-#include "mathlib/vmatrix.h"
 #include "dispnode.h"
 #include "builddisp.h"
-#include "utlvector.h"
 #include "disp_helpers.h"
-#include "tier0/fasttimer.h"
 #include "dlight.h"
 #include "zone.h"
 
@@ -355,7 +343,7 @@ inline int CDispInfo::GetSideLength() const
 
 inline int CDispInfo::NumVerts() const
 {
-	Assert( std::ssize( m_Verts ) == m_pPowerInfo->m_MaxVerts );
+	contract_assert( std::ssize( m_Verts ) == m_pPowerInfo->m_MaxVerts );
 	return m_pPowerInfo->m_MaxVerts;
 }
 
@@ -365,7 +353,7 @@ inline int CDispInfo::NumVerts() const
 
 inline CDispRenderVert* CDispInfo::GetVertex( int i )
 {
-	Assert( i < NumVerts() );
+	contract_assert( i < NumVerts() );
 	return &m_Verts[i];
 }
 
@@ -387,19 +375,17 @@ inline bool CDispInfo::IsTouched( void )
 
 inline int CDispInfo::VertIndex( int x, int y ) const
 {
-	Assert( x >= 0 && x < GetSideLength() && y >= 0 && y < GetSideLength() );
+	contract_assert( x >= 0 && x < GetSideLength() && y >= 0 && y < GetSideLength() );
 	return y * GetSideLength() + x;
 }
 
 
 inline int CDispInfo::VertIndex( CVertIndex const &vert ) const
 {
-	Assert( vert.x >= 0 && vert.x < GetSideLength() && vert.y >= 0 && vert.y < GetSideLength() );
+	contract_assert( vert.x >= 0 && vert.x < GetSideLength() && vert.y >= 0 && vert.y < GetSideLength() );
 	return vert.y * GetSideLength() + vert.x;
 }
 
 
 void DispInfo_BatchDecals( CDispInfo **pVisibleDisps, int nVisibleDisps );
 void DispInfo_DrawDecals( class IMatRenderContext *pRenderContex, CDispInfo **pVisibleDisps, int nVisibleDisps );
-
-#endif // DISPINFO_H

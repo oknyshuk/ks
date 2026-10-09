@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef GAME_EVENT_LISTENER_H
-#define GAME_EVENT_LISTENER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
 #include "igameevents.h"
 extern IGameEventManager2 *gameeventmanager;
@@ -77,5 +71,3 @@ private:
 	// Have we registered for any events?
 	bool m_bRegisteredForEvents;
 };
-
-#endif

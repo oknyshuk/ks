@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // ObjectList.h: interface for the ObjectList class.
 //
 //////////////////////////////////////////////////////////////////////
-
-#ifndef OBJECTLIST_H
-#define OBJECTLIST_H
-
-#pragma once
 
 #include "IObjectContainer.h"	// Added by ClassView
 
@@ -54,5 +46,3 @@ protected:
 	int			number;
 
 };
-
-#endif // !defined

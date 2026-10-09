@@ -1,12 +1,10 @@
+import ks.tier1;
 #include "datacache/imdlcache.h"
 #include "optimize.h"
 #include "mdlcombine.h"
 #include "filesystem.h"
 #include "studio.h"
-#include "mathlib/mathlib.h"
-#include <math.h>
-#include "tier1/characterset.h"
-#include "keyvalues.h"
+import std;
 #include "vtfcombine.h"
 
 // beware: this does not do any type of byte swapping for handling of endian issues!
@@ -19,17 +17,7 @@ static characterset_t	s_BreakSet;
 unsigned int CModelCombine::m_nNextAssetID = 0;
 
 
-#ifdef DEBUG_COMBINE
-
-#define DebugCombineMsg( ... ) Msg( __VA_ARGS__ )
-//#define TEST_MDL_COMBINE	1
-//#define TEST_VTX_COMBINE	1
-
-#else
-
 #define DebugCombineMsg( ... )
-
-#endif
 
 
 
@@ -41,7 +29,7 @@ CCombinerMemoryWriter::CCombinerMemoryWriter( )
 
 CCombinerMemoryWriter::~CCombinerMemoryWriter( )
 {
-	free( m_pWorkBuffer );
+	std::free( m_pWorkBuffer );
 }
 
 
@@ -51,16 +39,13 @@ void CCombinerMemoryWriter::Init( )
 	{
 		CharacterSetBuild( &s_BreakSet, "{}()':" );
 
-		m_pWorkBuffer = ( char * )malloc( COMBINER_WORK_BUFFER_SIZE );
+		m_pWorkBuffer = ( char * )std::malloc( COMBINER_WORK_BUFFER_SIZE );
 		m_pEndBuffer = m_pWorkBuffer + COMBINER_WORK_BUFFER_SIZE - 1;
 	}
 
-	memset( m_pWorkBuffer, 0, COMBINER_WORK_BUFFER_SIZE );
+	std::memset( m_pWorkBuffer, 0, COMBINER_WORK_BUFFER_SIZE );
 
 	m_pWriteArea = m_pWritePos = nullptr;
-#ifdef DEBUG_COMBINE
-	m_pErrorPos = nullptr;
-#endif // DEBUG_COMBINE
 	m_nWriteArea = -1;
 
 	InitWriteArea( WRITE_AREA_VVD, m_pWorkBuffer );
@@ -96,18 +81,11 @@ char *CCombinerMemoryWriter::AllocWrite( int nSize )
 {
 	char *pOrigPos = m_pWritePos;
 
-#ifdef DEBUG_COMBINE
-	if ( m_pErrorPos >= m_pWritePos && m_pErrorPos < m_pWritePos + nSize )
-	{
-		Msg( "AllocFailure: %d offset %d\n", m_pErrorPos - m_pWriteArea, m_pErrorPos - m_pWritePos );
-		Assert( 0 );
-	}
-#endif // DEBUG_COMBINE
 	m_pWritePos += nSize;
 
 	if ( m_pWritePos > m_pEndBuffer )
 	{
-		AssertMsg( false, "Internal model combiner buffer not large enough" );
+		contract_assert( false && "Internal model combiner buffer not large enough" );
 		V_sprintf_safe( g_ModelCombiner.GetResults()->m_szErrorMessage, "Internal model combiner buffer not large enough" );
 		throw( COMBINE_RESULT_FLAG_OUT_OF_MEMORY );
 	}
@@ -144,7 +122,7 @@ char *CCombinerMemoryWriter::WriteBuffer( const void *pData, int nSize )
 {
 	char *pOrigPos = AllocWrite( nSize );
 
-	memcpy( pOrigPos, pData, nSize );
+	std::memcpy( pOrigPos, pData, nSize );
 
 	return pOrigPos;
 }
@@ -160,36 +138,25 @@ char *CCombinerMemoryWriter::WriteBufferWithOffset( const void *pData, int nSize
 
 char *CCombinerMemoryWriter::WriteString( const char *pszString )
 {
-	return WriteBuffer( pszString, strlen( pszString ) + 1 );
+	return WriteBuffer( pszString, std::strlen( pszString ) + 1 );
 }
 
 
 char *CCombinerMemoryWriter::WriteText( const char *pszString )
 {
-	return WriteBuffer( pszString, strlen( pszString ) );
+	return WriteBuffer( pszString, std::strlen( pszString ) );
 }
 
 
 void CCombinerMemoryWriter::AlignWrite( int nAlignSize )
 {
-#ifdef DEBUG_COMBINE
-	char *pPriorPos = m_pWritePos;
-#endif	// DEBUG_COMBINE
 
 	nAlignSize--;
 	m_pWritePos = ( char * )( ( intp )( m_pWritePos + nAlignSize ) & ( ~nAlignSize ) );
 
-#ifdef DEBUG_COMBINE
-	if ( m_pErrorPos >= pPriorPos && m_pErrorPos < m_pWritePos )
-	{
-		DebugCombineMsg( "AlignFailure: %d offset %d\n", m_pErrorPos - m_pWriteArea, m_pErrorPos - m_pWritePos );
-		Assert( 0 );
-	}
-#endif // DEBUG_COMBINE
-
 	if ( m_pWritePos > m_pEndBuffer )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		V_sprintf_safe( g_ModelCombiner.GetResults()->m_szErrorMessage, "Internal model combiner buffer not large enough" );
 		throw( COMBINE_RESULT_FLAG_OUT_OF_MEMORY );
 	}
@@ -210,13 +177,13 @@ void CModelCombine::Init( TCombinedStudioData *pCombinedStudioData )
 {
 	m_pCombinedStudioData = pCombinedStudioData;
 
-	memset( &m_pCombinedStudioData->m_Results, 0, sizeof( m_pCombinedStudioData->m_Results ) );
+	std::memset( &m_pCombinedStudioData->m_Results, 0, sizeof( m_pCombinedStudioData->m_Results ) );
 	for ( int nGroup = 0; nGroup < COMBINER_MAX_ATLAS_GROUPS; nGroup++ )
 	{
-		memset( &m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_pCombinedTextures, 0, sizeof( m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_pCombinedTextures ) );
-		memset( &m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_nCombinedTextureSizes, 0, sizeof( m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_nCombinedTextureSizes ) );
+		std::memset( &m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_pCombinedTextures, 0, sizeof( m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_pCombinedTextures ) );
+		std::memset( &m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_nCombinedTextureSizes, 0, sizeof( m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_nCombinedTextureSizes ) );
 		m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_pCombinedMaterial = nullptr;
-		memset( &m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_szCombinedMaterialName, 0, sizeof( m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_szCombinedMaterialName ) );
+		std::memset( &m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_szCombinedMaterialName, 0, sizeof( m_pCombinedStudioData->m_AtlasGroups[ nGroup ].m_szCombinedMaterialName ) );
 	}
 
 	// we need to make sure we don't have any periods, as other routines may strip off those as an extension
@@ -250,14 +217,14 @@ void CModelCombine::AddToStringTable( void *base, int *ptr, const char *string )
 {
 	if ( numStrings >= COMBINER_MAX_STRINGS )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "Too many strings for string table of size %d", COMBINER_MAX_STRINGS );
 		throw( COMBINE_RESULT_FLAG_TOO_MANY_STRINGS );
 	}
 
 	for ( int i = 0; i < numStrings; i++ )
 	{
-		if ( !string || !strcmp( string, strings[ i ].string ) )
+		if ( !string || !std::strcmp( string, strings[ i ].string ) )
 		{
 			strings[ numStrings ].base = ( byte * )base;
 			strings[ numStrings ].ptr = ptr;
@@ -293,7 +260,7 @@ void CModelCombine::WriteStringTable( )
 		{
 			// initial filler to match string tables up
 			strings[ i ].addr = ( byte * )g_CombinerWriter.GetWritePos();
-			g_CombinerWriter.WriteBuffer( strings[ i ].string, strlen( strings[ i ].string ) + 1 );
+			g_CombinerWriter.WriteBuffer( strings[ i ].string, std::strlen( strings[ i ].string ) + 1 );
 		}
 		else if ( strings[ i ].dupindex == -1 )
 		{
@@ -303,7 +270,7 @@ void CModelCombine::WriteStringTable( )
 			// keep track of address in case of duplication
 			strings[ i ].addr = ( byte * )g_CombinerWriter.GetWritePos();
 			// copy string data, add a terminating \0
-			g_CombinerWriter.WriteBuffer( strings[ i ].string, strlen( strings[ i ].string ) + 1 );
+			g_CombinerWriter.WriteBuffer( strings[ i ].string, std::strlen( strings[ i ].string ) + 1 );
 		}
 		else
 		{
@@ -318,39 +285,16 @@ void CModelCombine::WriteStringTable( )
 
 void CModelCombine::VerifyField( int nField, const char *pszDescription )
 {
-#ifdef DEBUG_COMBINE
-	int *pOriginal = ( int * )( ( ( byte * )m_pStudioHdr[ 0 ] ) + nField );
-	int *pCombined = ( int * )( ( ( byte * )m_pCombinedStudioHdr ) + nField );
-
-	DebugCombineMsg( "Verify Field %s: %d / %d\n", pszDescription, *pOriginal, *pCombined );
-#endif // DEBUG_COMBINE
 }
 
 
 void CModelCombine::VerifyField2( int nField, const char *pszDescription )
 {
-#ifdef DEBUG_COMBINE
-	int *pOriginal = ( int * )( ( ( byte * )m_pStudioHdr2[ 0 ] ) + nField );
-	int *pCombined = ( int * )( ( ( byte * )m_pCombinedStudioHdr2 ) + nField );
-
-	DebugCombineMsg( "Verify Field2 %s: %d / %d\n", pszDescription, *pOriginal, *pCombined );
-#endif // DEBUG_COMBINE
 }
 
 
 void CModelCombine::VerifyOffset( void *pPtr, const char *pszDescription, void *pWritePos )
 {
-#ifdef DEBUG_COMBINE
-	int pV1 = ( ( char * )pPtr ) - ( ( char * ) m_pStudioHdr[ 0 ] );
-
-	if ( pWritePos == 0 )
-	{
-		pWritePos = m_pWritePos;
-	}
-	int pV2 = ( char * )pWritePos - m_pWriteArea;
-
-	DebugCombineMsg( "Verify Offset %s: %d / %d ( %d )\n", pszDescription, pV1, pV2, pV2 - pV1 );
-#endif // DEBUG_COMBINE
 }
 
 
@@ -367,7 +311,7 @@ bool CModelCombine::Resolve( )
 	{
 		if ( STRING(m_pCombinedStudioData->m_ModelInputData[ 0 ].m_iszModelName)[ 0 ] == 0 )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "No primary model specified" );
 			throw( COMBINE_RESULT_FLAG_MISSING_ASSET_FILE );
 		}
@@ -377,11 +321,11 @@ bool CModelCombine::Resolve( )
 		for( int nModel = 0; nModel < m_pCombinedStudioData->m_nNumModels; nModel++ )
 		{
 			V_strcpy_safe( szFileName, STRING(m_pCombinedStudioData->m_ModelInputData[ nModel ].m_iszModelName) );
-			Q_SetExtension( szFileName, ".mdl", sizeof( szFileName ) );
+			V_SetExtension( szFileName, ".mdl", sizeof( szFileName ) );
 			auto mdlFile = g_pFullFileSystem->ReadFile( szFileName, "GAME" );
 			if ( !mdlFile )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "Missing asset file: %s", szFileName );
 				throw( COMBINE_RESULT_FLAG_MISSING_ASSET_FILE );
 			}
@@ -390,22 +334,22 @@ bool CModelCombine::Resolve( )
 			m_pStudioHdr2[ nModel ] = ( studiohdr2_t * )( MDL_Data[ nModel ].data() + m_pStudioHdr[ nModel ]->studiohdr2index );
 
 			V_strcpy_safe( szFileName, STRING(m_pCombinedStudioData->m_ModelInputData[ nModel ].m_iszModelName) );
-			Q_SetExtension( szFileName, ".dx90.vtx", sizeof( szFileName ) );			// GetVTXExtension() private :(
+			V_SetExtension( szFileName, ".dx90.vtx", sizeof( szFileName ) );			// GetVTXExtension() private :(
 			auto vtxFile = g_pFullFileSystem->ReadFile( szFileName, "GAME" );
 			if ( !vtxFile )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "Missing asset file: %s", szFileName );
 				throw( COMBINE_RESULT_FLAG_MISSING_ASSET_FILE );
 			}
 			VTX_Data[ nModel ] = std::move( *vtxFile );
 
 			V_strcpy_safe( szFileName, STRING(m_pCombinedStudioData->m_ModelInputData[ nModel ].m_iszModelName) );
-			Q_SetExtension( szFileName, ".vvd", sizeof( szFileName ) );
+			V_SetExtension( szFileName, ".vvd", sizeof( szFileName ) );
 			auto vvdFile = g_pFullFileSystem->ReadFile( szFileName, "GAME" );
 			if ( !vvdFile )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "Missing asset file: %s", szFileName );
 				throw( COMBINE_RESULT_FLAG_MISSING_ASSET_FILE );
 			}
@@ -425,12 +369,7 @@ bool CModelCombine::Resolve( )
 
 		CombineVTX();
 
-#ifdef TEST_MDL_COMBINE
-		CombineMDL( true );
-		TestCombineMDL();
-#else
 		CombineMDL( false );
-#endif
 
 		g_CombinerWriter.SetWriteArea( -1 );
 		
@@ -461,12 +400,12 @@ void CModelCombine::DetermineMasterBoneList( )
 
 	if ( pPrimaryStudioHdr->numbones > COMBINER_MAX_BONES )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "Too many bones in primary model: %d > %d", pPrimaryStudioHdr->numbones, COMBINER_MAX_BONES );
 		throw( COMBINE_RESULT_FLAG_TOO_MANY_BONES );
 	}
 
-	memset( m_nMasterToLocalBoneRemap, -1, sizeof( m_nMasterToLocalBoneRemap ) );
+	std::memset( m_nMasterToLocalBoneRemap, -1, sizeof( m_nMasterToLocalBoneRemap ) );
 
 	m_nNumMasterBones = 0;
 	for( int nBone = 0; nBone < pPrimaryStudioHdr->numbones; nBone++ )
@@ -506,7 +445,7 @@ void CModelCombine::DetermineMasterBoneList( )
 			{
 				if ( m_nNumMasterBones >= COMBINER_MAX_BONES )
 				{
-					Assert( 0 );
+					contract_assert( 0 );
 					V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "Too many bones from secondary model %s", pSecondaryStudioHdr->pszName() );
 					throw( COMBINE_RESULT_FLAG_TOO_MANY_BONES );
 				}
@@ -532,7 +471,7 @@ void CModelCombine::CombineMDL_PreintStrings( )
 	{
 		if ( numStrings >= COMBINER_MAX_STRINGS )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "Too many initial strings %d > %d", numStrings, COMBINER_MAX_STRINGS );
 			throw( COMBINE_RESULT_FLAG_TOO_MANY_STRINGS );
 		}
@@ -543,7 +482,7 @@ void CModelCombine::CombineMDL_PreintStrings( )
 		strings[ numStrings ].dupindex = -2;
 		numStrings++;
 
-		pStringData += strlen( pStringData ) + 1;
+		pStringData += std::strlen( pStringData ) + 1;
 	}
 }
 
@@ -715,7 +654,7 @@ void CModelCombine::WriteBoneAttachments( )
 
 	g_CombinerWriter.AlignWrite( 4 );
 
-	VerifyField( offsetof( studiohdr_t, localattachmentindex ), "BoneAttachments" );
+	VerifyField( __builtin_offsetof( studiohdr_t, localattachmentindex ), "BoneAttachments" );
 }
 
 
@@ -783,7 +722,7 @@ void CModelCombine::WriteHitBoxes( )
 		g_CombinerWriter.AlignWrite( 4 );
 	}
 
-	VerifyField( offsetof( studiohdr_t, hitboxsetindex ), "HitBoxes" );
+	VerifyField( __builtin_offsetof( studiohdr_t, hitboxsetindex ), "HitBoxes" );
 }
 
 
@@ -808,18 +747,19 @@ void CModelCombine::WriteBoneTable( )
 		pBoneTable[ i ] = i;
 	}
 
-	qsort( pBoneTable, m_pCombinedStudioHdr->numbones, sizeof( byte ), BoneNameCompare );
+	std::qsort( pBoneTable, m_pCombinedStudioHdr->numbones, sizeof( byte ), BoneNameCompare );
 }
 
 
 void CModelCombine::CombineMDL_Bones( )
 {
+	ks::ScratchArena<> scratch;
 	studiohdr_t *pPrimaryStudioHdr = m_pStudioHdr[ 0 ];
 
 	AddToStringTable( m_pCombinedStudioHdr, &m_pCombinedStudioHdr->surfacepropindex, pPrimaryStudioHdr->pszSurfaceProp() );
 
-	int *nFlags = ( int * )stackalloc( sizeof( int ) * m_nNumMasterBones );
-	memset( nFlags, 0, sizeof( int ) * m_nNumMasterBones );
+	int *nFlags = scratch.Alloc<int>( m_nNumMasterBones );
+	std::memset( nFlags, 0, sizeof( int ) * m_nNumMasterBones );
 
 	for( int nModel = 0; nModel < m_pCombinedStudioData->m_nNumModels; nModel++ )
 	{
@@ -895,7 +835,7 @@ void CModelCombine::CombineMDL_Bones( )
 
 	if ( pPrimaryStudioHdr->numbonecontrollers > 0 )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "model has bone controllers: %s", pPrimaryStudioHdr->pszName() );
 		throw( COMBINE_RESULT_FLAG_UNSUPPORTED_FEATURE );
 	}
@@ -916,7 +856,7 @@ void CModelCombine::WriteAnimation( mstudioanimdesc_t *pOrigAnim, void *pAnimDat
 {
 	if ( ( pOrigAnim->flags & STUDIO_FRAMEANIM ) != 0 )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "model has anim frames" );
 		throw( COMBINE_RESULT_FLAG_UNSUPPORTED_FEATURE );
 	}
@@ -1074,7 +1014,7 @@ void CModelCombine::CombineMDL_Anims( )
 		g_CombinerWriter.AlignWrite( 4 );
 		if ( pOrigAnim->numikrules > 0 )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "model has ik rules: %s", pStudioHdr->pszName() );
 			throw( COMBINE_RESULT_FLAG_UNSUPPORTED_FEATURE );
 		}
@@ -1143,7 +1083,7 @@ void CModelCombine::CombineMDL_SequenceInfo( )
 {
 	studiohdr_t *pStudioHdr = m_pStudioHdr[ 0 ];
 
-	VerifyField( offsetof( studiohdr_t, localseqindex ), "Sequence Info" );
+	VerifyField( __builtin_offsetof( studiohdr_t, localseqindex ), "Sequence Info" );
 	
 	m_pCombinedStudioHdr->numlocalseq = pStudioHdr->numlocalseq;
 	g_CombinerWriter.WriteBufferWithOffset( pStudioHdr->pLocalSeqdesc( 0 ), sizeof( mstudioseqdesc_t ) * pStudioHdr->numlocalseq, m_pCombinedStudioHdr->localseqindex );
@@ -1198,7 +1138,7 @@ void CModelCombine::CombineMDL_SequenceInfo( )
 			{
 				mstudioseqdesc_t *pOrigPreviousSequence = pStudioHdr->pLocalSeqdesc( nPreviousSequence );
 
-				if ( memcmp( pOrigPreviousSequence->pBoneweight( 0 ), pOrigSequence->pBoneweight( 0 ), pStudioHdr->numbones * sizeof( float ) ) == 0 )
+				if ( std::memcmp( pOrigPreviousSequence->pBoneweight( 0 ), pOrigSequence->pBoneweight( 0 ), pStudioHdr->numbones * sizeof( float ) ) == 0 )
 				{
 					nFound = nPreviousSequence;
 					break;
@@ -1212,7 +1152,7 @@ void CModelCombine::CombineMDL_SequenceInfo( )
 			}
 			else
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "was not able to find existing weight in model: %s", pStudioHdr->pszName() );
 				throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
 			}
@@ -1377,7 +1317,7 @@ void CModelCombine::WriteModel( int nModel )
 
 						if ( bWrinkleVAnim )
 						{
-							Assert( 0 );
+							contract_assert( 0 );
 							V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "model has anim wrinkle" );
 							throw( COMBINE_RESULT_FLAG_UNSUPPORTED_FEATURE );
 
@@ -1441,7 +1381,7 @@ void CModelCombine::CombineMDL_Model( )
 		m_nFlexModelSource = 0;
 	}
 
-	VerifyField( offsetof( studiohdr_t, bodypartindex ), "Body Part Sequence" );
+	VerifyField( __builtin_offsetof( studiohdr_t, bodypartindex ), "Body Part Sequence" );
 
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr->bodypartindex );
 	g_CombinerWriter.WriteBuffer( pPrimaryStudioHdr->pBodypart( 0 ), pPrimaryStudioHdr->numbodyparts * sizeof( mstudiobodyparts_t ) );
@@ -1492,7 +1432,7 @@ void CModelCombine::CombineMDL_Model( )
 	m_pCombinedStudioHdr->numflexcontrollerui = pFlexStudioHdr->numflexcontrollerui;
 
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr->flexdescindex );
-	VerifyField( offsetof( studiohdr_t, flexdescindex ), "Flex Desc" );
+	VerifyField( __builtin_offsetof( studiohdr_t, flexdescindex ), "Flex Desc" );
 	if ( pFlexStudioHdr->numflexdesc > 0 )
 	{
 		g_CombinerWriter.WriteBuffer( pFlexStudioHdr->pFlexdesc( 0 ), pFlexStudioHdr->numflexdesc * sizeof( mstudioflexdesc_t ) );
@@ -1506,7 +1446,7 @@ void CModelCombine::CombineMDL_Model( )
 	}
 
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr->flexcontrollerindex );
-	VerifyField( offsetof( studiohdr_t, flexdescindex ), "Flex Controller" );
+	VerifyField( __builtin_offsetof( studiohdr_t, flexdescindex ), "Flex Controller" );
 	if ( pFlexStudioHdr->numflexcontrollers > 0 )
 	{
 		g_CombinerWriter.WriteBuffer( pFlexStudioHdr->pFlexcontroller( ( LocalFlexController_t )0 ), pFlexStudioHdr->numflexcontrollers * sizeof( mstudioflexcontroller_t ) );
@@ -1521,7 +1461,7 @@ void CModelCombine::CombineMDL_Model( )
 	}
 
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr->flexruleindex );
-	VerifyField( offsetof( studiohdr_t, flexruleindex ), "Flex Rules" );
+	VerifyField( __builtin_offsetof( studiohdr_t, flexruleindex ), "Flex Rules" );
 	if ( pFlexStudioHdr->numflexrules > 0 )
 	{
 		g_CombinerWriter.WriteBuffer( pFlexStudioHdr->pFlexRule( 0 ), pFlexStudioHdr->numflexrules * sizeof( mstudioflexrule_t ) );
@@ -1539,7 +1479,7 @@ void CModelCombine::CombineMDL_Model( )
 	}
 
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr->flexcontrolleruiindex );
-	VerifyField( offsetof( studiohdr_t, flexcontrolleruiindex ), "Flex Controller UI" );
+	VerifyField( __builtin_offsetof( studiohdr_t, flexcontrolleruiindex ), "Flex Controller UI" );
 	if ( pFlexStudioHdr->numflexcontrollerui > 0 )
 	{
 		g_CombinerWriter.WriteBuffer( pFlexStudioHdr->pFlexControllerUI( 0 ), pFlexStudioHdr->numflexcontrollerui * sizeof( mstudioflexcontrollerui_t ) );
@@ -1556,7 +1496,7 @@ void CModelCombine::CombineMDL_Model( )
 	}
 
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr->ikchainindex );
-	VerifyField( offsetof( studiohdr_t, ikchainindex ), "IK Chain" );
+	VerifyField( __builtin_offsetof( studiohdr_t, ikchainindex ), "IK Chain" );
 	if ( pPrimaryStudioHdr->numikchains > 0 )
 	{
 		g_CombinerWriter.WriteBuffer( pPrimaryStudioHdr->pIKChain( 0 ), pPrimaryStudioHdr->numikchains * sizeof( mstudioikchain_t ) );
@@ -1575,7 +1515,7 @@ void CModelCombine::CombineMDL_Model( )
 	}
 
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr->localikautoplaylockindex );
-	VerifyField( offsetof( studiohdr_t, localikautoplaylockindex ), "IK Autoplay Lock" );
+	VerifyField( __builtin_offsetof( studiohdr_t, localikautoplaylockindex ), "IK Autoplay Lock" );
 	if ( pPrimaryStudioHdr->numlocalikautoplaylocks > 0 )
 	{
 		g_CombinerWriter.WriteBuffer( pPrimaryStudioHdr->pLocalIKAutoplayLock( 0 ), pPrimaryStudioHdr->numlocalikautoplaylocks * sizeof( mstudioiklock_t ) );
@@ -1583,7 +1523,7 @@ void CModelCombine::CombineMDL_Model( )
 	}
 
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr->mouthindex );
-	VerifyField( offsetof( studiohdr_t, mouthindex ), "Mouth" );
+	VerifyField( __builtin_offsetof( studiohdr_t, mouthindex ), "Mouth" );
 	if ( pPrimaryStudioHdr->nummouths )
 	{
 		g_CombinerWriter.WriteBuffer( pPrimaryStudioHdr->pMouth( 0 ), pPrimaryStudioHdr->nummouths * sizeof( mstudiomouth_t ) );
@@ -1591,7 +1531,7 @@ void CModelCombine::CombineMDL_Model( )
 	}
 
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr->localposeparamindex );
-	VerifyField( offsetof( studiohdr_t, localposeparamindex ), "Pose Param" );
+	VerifyField( __builtin_offsetof( studiohdr_t, localposeparamindex ), "Pose Param" );
 	if ( pPrimaryStudioHdr->numlocalposeparameters > 0 )
 	{
 		g_CombinerWriter.WriteBuffer( pPrimaryStudioHdr->pLocalPoseParameter( 0 ), pPrimaryStudioHdr->numlocalposeparameters * sizeof( mstudioposeparamdesc_t ) );
@@ -1611,7 +1551,7 @@ void CModelCombine::CombineMDL_Model( )
 	}
 
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr->includemodelindex );
-	VerifyField( offsetof( studiohdr_t, includemodelindex ), "Model Groups" );
+	VerifyField( __builtin_offsetof( studiohdr_t, includemodelindex ), "Model Groups" );
 	if ( pPrimaryStudioHdr->numincludemodels > 0 )
 	{
 		g_CombinerWriter.WriteBuffer( pPrimaryStudioHdr->pModelGroup( 0 ), pPrimaryStudioHdr->numincludemodels * sizeof( mstudiomodelgroup_t ) );
@@ -1625,12 +1565,12 @@ void CModelCombine::CombineMDL_Model( )
 	}
 
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr->animblockindex );
-	VerifyField( offsetof( studiohdr_t, animblockindex ), "Anim Blocks" );
+	VerifyField( __builtin_offsetof( studiohdr_t, animblockindex ), "Anim Blocks" );
 	if ( pPrimaryStudioHdr->numanimblocks > 0 )
 	{
 		g_CombinerWriter.WriteBuffer( pPrimaryStudioHdr->pAnimBlock( 0 ), pPrimaryStudioHdr->numanimblocks * sizeof( mstudioanimblock_t ) );
 
-		Assert( 0 );
+		contract_assert( 0 );
 		V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "model has anim blocks: %s", pPrimaryStudioHdr->pszName() );
 		throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
 	}
@@ -1648,7 +1588,7 @@ void CModelCombine::CombineMDL_Textures( )
 	
 	// first allocate/write out "blank" texture entries (materials)
 	mstudiotexture_t NewTexture;
-	memset( &NewTexture, 0, sizeof( NewTexture ) );
+	std::memset( &NewTexture, 0, sizeof( NewTexture ) );
 	NewTexture.sznameindex = 0;
 	NewTexture.used = 1;
 	for ( int nAtlasGroup = 0; nAtlasGroup < m_pCombinedStudioHdr->numtextures; nAtlasGroup++ )
@@ -1699,7 +1639,7 @@ void CModelCombine::CombineMDL_KeyValues( )
 	studiohdr_t *pStudioHdr = m_pStudioHdr[ 0 ];
 
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr->keyvalueindex );
-	VerifyField( offsetof( studiohdr_t, keyvalueindex ), "KeyValues" );
+	VerifyField( __builtin_offsetof( studiohdr_t, keyvalueindex ), "KeyValues" );
 
 	if ( pStudioHdr->keyvaluesize > 0 )
 	{
@@ -1723,7 +1663,7 @@ void CModelCombine::CombineMDL_KeyValues( )
 void CModelCombine::CombineMDL_BoneTransforms( )
 {
 	g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr2->srcbonetransformindex );
-	VerifyField2( offsetof( studiohdr2_t, srcbonetransformindex ), "Bone Transforms" );
+	VerifyField2( __builtin_offsetof( studiohdr2_t, srcbonetransformindex ), "Bone Transforms" );
 	// need to merge bone transforms from the sub models?
 	if ( m_pStudioHdr2[ 0 ]->numsrcbonetransform > 0 )
 	{
@@ -1741,7 +1681,7 @@ void CModelCombine::CombineMDL_BoneTransforms( )
 	if ( m_pStudioHdr2[ 0 ]->pLinearBones() != nullptr )
 	{
 		g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr2->linearboneindex, m_pCombinedStudioHdr2 );
-		VerifyField2( offsetof( studiohdr2_t, linearboneindex ), "Linear Bone Index" );
+		VerifyField2( __builtin_offsetof( studiohdr2_t, linearboneindex ), "Linear Bone Index" );
 		mstudiolinearbone_t *pNewLinearBone =  ( mstudiolinearbone_t * )g_CombinerWriter.WriteBuffer( m_pStudioHdr2[ 0 ]->pLinearBones(), sizeof( mstudiolinearbone_t ) );
 		pNewLinearBone->numbones = m_nNumMasterBones;
 
@@ -1772,7 +1712,7 @@ void CModelCombine::CombineMDL_BoneFlexDrivers( )
 	if ( m_pStudioHdr2[ m_nFlexModelSource ]->m_nBoneFlexDriverCount > 0 )
 	{
 		g_CombinerWriter.WriteOffset( m_pCombinedStudioHdr2->m_nBoneFlexDriverIndex, m_pCombinedStudioHdr2 );
-		VerifyField2( offsetof( studiohdr2_t, m_nBoneFlexDriverIndex ), "Bone Flex Drivers" );
+		VerifyField2( __builtin_offsetof( studiohdr2_t, m_nBoneFlexDriverIndex ), "Bone Flex Drivers" );
 		g_CombinerWriter.WriteBuffer( m_pStudioHdr2[ m_nFlexModelSource ]->pBoneFlexDriver( 0 ), m_pStudioHdr2[ m_nFlexModelSource ]->m_nBoneFlexDriverCount * sizeof( mstudioboneflexdriver_t ) );
 		g_CombinerWriter.AlignWrite( 4 );
 
@@ -1880,57 +1820,6 @@ void CModelCombine::CombineMDL( bool bNoStringTable )
 }
 
 
-#ifdef DEBUG_COMBINE
-
-void CModelCombine::TestCombineMDL( )
-{
-	int		nLength = m_pCombinedStudioHdr->length;
-	char	*pOrig = ( char * )m_pStudioHdr[ 0 ];
-	char	*pNew = ( char * )m_pCombinedStudioHdr;
-	char	*pStart = pNew;
-
-	if ( nLength != m_pStudioHdr[ 0 ]->length )
-	{
-		Msg( "Test Failure: Original Length: %d, New Length: %d\n", m_pStudioHdr[ 0 ]->length, nLength );
-		if ( nLength > m_pStudioHdr[ 0 ]->length )
-		{
-			nLength = m_pStudioHdr[ 0 ]->length;
-		}
-	}
-
-	int nOffset = sizeof( studiohdr_t ) + sizeof( studiohdr2_t );
-	nLength -= nOffset;
-	pOrig += nOffset;
-	pNew += nOffset;
-
-	char *pErrorPos = nullptr;
-
-	for( ; nLength; pOrig++, pNew++, nLength-- )
-	{
-		if ( ( *pOrig ) != ( *pNew ) )
-		{
-			pErrorPos = pNew;
-			break;
-		}
-	}
-
-	if ( pErrorPos != nullptr )
-	{
-		Msg( "Test Failure: Offset %d\n", pNew - pStart );
-		Init( m_pCombinedStudioData );
-		m_pErrorPos = pErrorPos;
-
-		// need to do VVD and VTX to recreate memory
-		CombineVVD();
-		CombineVTX();
-
-		CombineMDL( true );
-	}
-}
-
-#endif // DEBUG_COMBINE
-
-
 void CModelCombine::CalcVTXInfo()
 {
 	for( int nModel = 0; nModel < m_pCombinedStudioData->m_nNumModels; nModel++ )
@@ -1979,7 +1868,7 @@ void CModelCombine::CalcVTXInfo()
 								
 										if ( pOrigStrip->numTopologyIndices > 0 )
 										{
-											Assert( 0 );
+											contract_assert( 0 );
 											V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "strip has topology indices" );
 											throw( COMBINE_RESULT_FLAG_UNSUPPORTED_FEATURE );
 										}
@@ -2018,12 +1907,12 @@ void CModelCombine::WriteStrip( OptimizedModel::StripGroupHeader_t	*pNewStripGro
 
 	if ( pOrigStrip->numTopologyIndices > 0 )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "strip has topology indices" );
 		throw( COMBINE_RESULT_FLAG_UNSUPPORTED_FEATURE );
 	}
 
-	Assert( m_CurrentHardwareData.m_nStrips < m_MaxHardwareData.m_nStrips );
+	contract_assert( m_CurrentHardwareData.m_nStrips < m_MaxHardwareData.m_nStrips );
 	
 	pNewStrip->numIndices = pOrigStrip->numIndices;
 	pNewStrip->numTopologyIndices = pOrigStrip->numTopologyIndices;
@@ -2042,8 +1931,8 @@ void CModelCombine::WriteStrip( OptimizedModel::StripGroupHeader_t	*pNewStripGro
 	for( int nIndex = 0; nIndex < pOrigStrip->numIndices; nIndex++ )
 	{
 		*pNewIndex = ( *pOrigIndex ) + nOffset;
-		Assert( ( *pNewIndex ) >= pNewStrip->vertOffset );
-		Assert( ( *pNewIndex ) < pNewStrip->vertOffset + pNewStrip->numVerts );
+		contract_assert( ( *pNewIndex ) >= pNewStrip->vertOffset );
+		contract_assert( ( *pNewIndex ) < pNewStrip->vertOffset + pNewStrip->numVerts );
 
 		pOrigIndex++;
 		pNewIndex++;
@@ -2305,9 +2194,9 @@ void CModelCombine::CombineVTX( )
 	m_pCombinedHardwareHeader->numLODs = pPrimaryHeader->numLODs;
 
 	// figure out the worst case scenario - we'll have some blank spots in the file, but should be minimal
-	memset( &m_MaxHardwareData, 0, sizeof( m_MaxHardwareData ) );
-	memset( &m_CurrentHardwareData, 0, sizeof( m_CurrentHardwareData ) );
-	memset( &m_HardwareOffsets, 0, sizeof( m_HardwareOffsets ) );
+	std::memset( &m_MaxHardwareData, 0, sizeof( m_MaxHardwareData ) );
+	std::memset( &m_CurrentHardwareData, 0, sizeof( m_CurrentHardwareData ) );
+	std::memset( &m_HardwareOffsets, 0, sizeof( m_HardwareOffsets ) );
 
 
 	CalcVTXInfo();
@@ -2343,7 +2232,7 @@ void CModelCombine::CombineVTX( )
 		{
 			if ( m_pCombinedStudioData->m_Results.m_nNumIndexes[ nModel ][ nLOD ] > m_pCombinedStudioData->m_Results.m_nNumIndexes[ nModel ][ nLOD - 1 ] )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "%s has lower LOD which has higher triangle count\n", m_pStudioHdr[ nModel ]->pszName() );
 				m_pCombinedStudioData->m_Results.m_nDetailedError = COMBINED_DETAIL_ERROR_MODEL_LOWER_LOD_HIGHER_TRI_COUNT;
 				V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorDetails, "Model %s\nLOD %d Tris %d\nLOD %d Tris %d\n", m_pStudioHdr[ nModel ]->pszName(), nLOD - 1, m_pCombinedStudioData->m_Results.m_nNumIndexes[ nModel ][ nLOD - 1 ] / 3, 
@@ -2366,17 +2255,11 @@ void CModelCombine::CombineVTX( )
 
 		if ( pOrigMaterialReplacementList->numReplacements > 0 )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "material has replacements" );
 			throw( COMBINE_RESULT_FLAG_UNSUPPORTED_FEATURE );
 		}
 	}
-
-#ifdef TEST_VTX_COMBINE
-
-	TestCombineVTX();
-
-#endif // TEST_VTX_COMBINE
 
 //	int nSize = Min( 48916, VTX_Data[ 0 ].size() );
 //	memcpy( m_pCombinedHardwareHeader, VTX_Data[ 0 ].data(), nSize );
@@ -2384,101 +2267,6 @@ void CModelCombine::CombineVTX( )
 //	g_CombinerWriter.AlignWrite( 128 );
 //	m_pCombinedHardwareHeader = ( OptimizedModel::FileHeader_t * )g_CombinerWriter.WriteBuffer( VTX_Data[ 0 ].data(), VTX_Data[ 0 ].size() );
 }
-
-
-#ifdef DEBUG_COMBINE
-
-void CModelCombine::TestCombineVTX( )
-{
-	OptimizedModel::FileHeader_t	*pPrimaryHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ 0 ].data();
-
-	Assert( pPrimaryHeader->version == m_pCombinedHardwareHeader->version );
-	Assert( pPrimaryHeader->vertCacheSize == m_pCombinedHardwareHeader->vertCacheSize );
-	Assert( pPrimaryHeader->maxBonesPerStrip == m_pCombinedHardwareHeader->maxBonesPerStrip );
-	Assert( pPrimaryHeader->maxBonesPerFace == m_pCombinedHardwareHeader->maxBonesPerFace );
-	Assert( pPrimaryHeader->maxBonesPerVert == m_pCombinedHardwareHeader->maxBonesPerVert );
-	Assert( pPrimaryHeader->numLODs == m_pCombinedHardwareHeader->numLODs );
-	Assert( pPrimaryHeader->numBodyParts == m_pCombinedHardwareHeader->numBodyParts );
-
-	for( int nBodyPart = 0; nBodyPart < pPrimaryHeader->numBodyParts; nBodyPart++ )
-	{
-		OptimizedModel::BodyPartHeader_t	*pOrigBodyPart = pPrimaryHeader->pBodyPart( nBodyPart );
-		OptimizedModel::BodyPartHeader_t	*pNewBodyPart = m_pCombinedHardwareHeader->pBodyPart( nBodyPart );
-
-		Assert( pOrigBodyPart->numModels == pNewBodyPart->numModels );
-
-		for( int nModel = 0; nModel < pOrigBodyPart->numModels; nModel++ )
-		{
-			OptimizedModel::ModelHeader_t	*pOrigModel = pOrigBodyPart->pModel( nModel );
-			OptimizedModel::ModelHeader_t	*pNewModel = pNewBodyPart->pModel( nModel );
-
-			Assert( pOrigModel->numLODs == pNewModel->numLODs );
-
-			for( int nLOD = 0; nLOD < pOrigModel->numLODs; nLOD++ )
-			{
-				OptimizedModel::ModelLODHeader_t	*pOrigLOD = pOrigModel->pLOD( nLOD );
-				OptimizedModel::ModelLODHeader_t	*pNewLOD = pNewModel->pLOD( nLOD );
-
-				Assert( pOrigLOD->numMeshes == pNewLOD->numMeshes );
-				Assert( pOrigLOD->switchPoint == pNewLOD->switchPoint );
-
-				for( int nMesh = 0; nMesh < pOrigLOD->numMeshes; nMesh++ )
-				{
-					OptimizedModel::MeshHeader_t	*pOrigMesh = pOrigLOD->pMesh( nMesh );
-					OptimizedModel::MeshHeader_t	*pNewMesh = pNewLOD->pMesh( nMesh );
-
-					Assert( pOrigMesh->numStripGroups == pNewMesh->numStripGroups );
-					Assert( pOrigMesh->flags == pNewMesh->flags );
-
-					for( int nStripGroup = 0; nStripGroup < pOrigMesh->numStripGroups; nStripGroup++ )
-					{
-						OptimizedModel::StripGroupHeader_t	*pOrigStripGroup = pOrigMesh->pStripGroup( nStripGroup );
-						OptimizedModel::StripGroupHeader_t	*pNewStripGroup = pNewMesh->pStripGroup( nStripGroup );
-
-						Assert( pOrigStripGroup->numVerts == pNewStripGroup->numVerts );
-						Assert( pOrigStripGroup->numIndices == pNewStripGroup->numIndices );
-						Assert( pOrigStripGroup->numStrips == pNewStripGroup->numStrips );
-						Assert( pOrigStripGroup->flags == pNewStripGroup->flags );
-						Assert( pOrigStripGroup->numTopologyIndices == pNewStripGroup->numTopologyIndices );
-
-						for( int nNumVerts = 0; nNumVerts < pOrigStripGroup->numVerts; nNumVerts++ )
-						{
-							OptimizedModel::Vertex_t	*pOrigVertex = pOrigStripGroup->pVertex( nNumVerts );
-							OptimizedModel::Vertex_t	*pNewVertex = pNewStripGroup->pVertex( nNumVerts );
-
-							Assert( memcmp( pOrigVertex, pNewVertex, sizeof( *pOrigVertex ) ) == 0 );
-						}
-
-						for( int nStrip = 0; nStrip < pOrigStripGroup->numStrips; nStrip++ )
-						{
-							OptimizedModel::StripHeader_t	*pOrigStrip = pOrigStripGroup->pStrip( nStrip );
-							OptimizedModel::StripHeader_t	*pNewStrip = pNewStripGroup->pStrip( nStrip );
-
-							Assert( pOrigStrip->numIndices == pNewStrip->numIndices );
-							Assert( pOrigStrip->numVerts == pNewStrip->numVerts );
-							Assert( pOrigStrip->numBones == pNewStrip->numBones );
-							Assert( pOrigStrip->flags == pNewStrip->flags );
-							Assert( pOrigStrip->numBoneStateChanges == pNewStrip->numBoneStateChanges );
-							Assert( pOrigStrip->numTopologyIndices == pNewStrip->numTopologyIndices );
-
-
-							for( int nBoneStateChange = 0; nBoneStateChange < pOrigStrip->numBoneStateChanges; nBoneStateChange++ )
-							{
-								OptimizedModel::BoneStateChangeHeader_t	*pOrigBoneStateChange = pOrigStrip->pBoneStateChange( nBoneStateChange );
-								OptimizedModel::BoneStateChangeHeader_t	*pNewBoneStateChange = pNewStrip->pBoneStateChange( nBoneStateChange );
-
-								Assert( pOrigBoneStateChange->hardwareID == pNewBoneStateChange->hardwareID );
-								Assert( pOrigBoneStateChange->newBoneID == pNewBoneStateChange->newBoneID );
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-#endif // DEBUG_COMBINE
 
 
 // this will move a vert belonging to a secondary model from pose space of that secondary model
@@ -2612,7 +2400,7 @@ void CModelCombine::CombineVVD( )
 					}
 				}
 
-				Assert( nNumWritten == nNumVerts );
+				contract_assert( nNumWritten == nNumVerts );
 			}
 			else
 			{
@@ -2661,13 +2449,13 @@ void CModelCombine::CombineVVD( )
 						{
 							double flInteger;
 
-							pNewVertex->m_vecTexCoord.x = ( float )modf( ( double )pNewVertex->m_vecTexCoord.x, &flInteger );
+							pNewVertex->m_vecTexCoord.x = ( float )std::modf( ( double )pNewVertex->m_vecTexCoord.x, &flInteger );
 							if ( pNewVertex->m_vecTexCoord.x < 0.0f )
 							{
 								pNewVertex->m_vecTexCoord.x += 1.0f;
 							}
 
-							pNewVertex->m_vecTexCoord.y = ( float )modf( ( double )pNewVertex->m_vecTexCoord.y, &flInteger );
+							pNewVertex->m_vecTexCoord.y = ( float )std::modf( ( double )pNewVertex->m_vecTexCoord.y, &flInteger );
 							if ( pNewVertex->m_vecTexCoord.y < 0.0f )
 							{
 								pNewVertex->m_vecTexCoord.y += 1.0f;
@@ -2713,7 +2501,7 @@ void CModelCombine::CombineVVD( )
 	{
 		if ( m_pVertexFileHeader[ nModel ]->tangentDataStart == 0 )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "vertex file has tangent data" );
 			throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
 		}
@@ -2818,7 +2606,7 @@ int CModelCombine::AddMaterialToTextureCombiner( int nTextureIndex, int nModel, 
 
 	if ( bFound == false )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "model %s has missing material %s", m_pStudioHdr[ nModel ]->pszName(), pszTextureName );
 		throw( COMBINE_RESULT_FLAG_MISSING_ASSET_FILE );
 	}

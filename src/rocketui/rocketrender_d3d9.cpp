@@ -9,14 +9,15 @@
 // stage releases); the actual D3D9 work happens on the RENDER thread in
 // Replay(), which owns the finished command list. See rocketrender.h.
 
+
+
 #include "rocketfilesystem.h"
 #include "rocketrender.h"
 #include <rocketui/rmlui.h>
 
 #include <d3d9.h>
 
-#include <stdio.h>
-#include <string.h>
+import std;
 
 RocketRenderD3D9 RocketRenderD3D9::m_Instance;
 
@@ -195,20 +196,20 @@ void RocketRenderD3D9::SetupRenderState() {
   // Rasterization
   m_pDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
   m_pDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
-  m_pDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
-  m_pDevice->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-  m_pDevice->SetRenderState(D3DRS_DITHERENABLE, FALSE);
-  m_pDevice->SetRenderState(D3DRS_CLIPPING, FALSE);
+  m_pDevice->SetRenderState(D3DRS_ZENABLE, false);
+  m_pDevice->SetRenderState(D3DRS_ZWRITEENABLE, false);
+  m_pDevice->SetRenderState(D3DRS_DITHERENABLE, false);
+  m_pDevice->SetRenderState(D3DRS_CLIPPING, false);
   m_pDevice->SetRenderState(D3DRS_CLIPPLANEENABLE, 0);
 
   // Premultiplied alpha blend
-  m_pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+  m_pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
   m_pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
   m_pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
   m_pDevice->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
 
   // Stencil: always pass initially (only when a stencil buffer is present).
-  m_pDevice->SetRenderState(D3DRS_STENCILENABLE, m_hasStencil ? TRUE : FALSE);
+  m_pDevice->SetRenderState(D3DRS_STENCILENABLE, m_hasStencil ? true : false);
   m_pDevice->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
   m_pDevice->SetRenderState(D3DRS_STENCILREF, 1);
   m_pDevice->SetRenderState(D3DRS_STENCILMASK, 0xFFFFFFFF);
@@ -221,11 +222,11 @@ void RocketRenderD3D9::SetupRenderState() {
   // otherwise the AMD ATOC path stays active based on stale POINTSIZE alone.
   m_pDevice->SetRenderState(D3DRS_POINTSIZE, 0x3F800000u); // 1.0f
   m_pDevice->SetRenderState(D3DRS_ADAPTIVETESS_Y, 0);
-  m_pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+  m_pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, false);
 
   // Misc game state that bleeds into the Vulkan pipeline
-  m_pDevice->SetRenderState(D3DRS_SRGBWRITEENABLE, FALSE);
-  m_pDevice->SetRenderState(D3DRS_FOGENABLE, FALSE);
+  m_pDevice->SetRenderState(D3DRS_SRGBWRITEENABLE, false);
+  m_pDevice->SetRenderState(D3DRS_FOGENABLE, false);
   m_pDevice->SetRenderState(
       D3DRS_COLORWRITEENABLE,
       D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
@@ -237,7 +238,7 @@ void RocketRenderD3D9::SetupRenderState() {
   m_pDevice->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_NONE);
   m_pDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
   m_pDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-  m_pDevice->SetSamplerState(0, D3DSAMP_SRGBTEXTURE, FALSE);
+  m_pDevice->SetSamplerState(0, D3DSAMP_SRGBTEXTURE, false);
 
   // Fixed-function pipeline: bind no shaders and let DXVK generate the VS/PS
   // from device state. FF reads far more implicit state than an explicit
@@ -248,11 +249,11 @@ void RocketRenderD3D9::SetupRenderState() {
   if (m_vtxDecl)
     m_pDevice->SetVertexDeclaration(m_vtxDecl);
 
-  m_pDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
-  m_pDevice->SetRenderState(D3DRS_SPECULARENABLE, FALSE);
+  m_pDevice->SetRenderState(D3DRS_LIGHTING, false);
+  m_pDevice->SetRenderState(D3DRS_SPECULARENABLE, false);
   m_pDevice->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
   m_pDevice->SetRenderState(D3DRS_VERTEXBLEND, D3DVBF_DISABLE);
-  m_pDevice->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, FALSE);
+  m_pDevice->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, false);
 
   // Row-vector transforms (v * World * View * Proj), passed un-transposed.
   // VIEW/PROJECTION are constant; WORLD is set per draw. The +0.5 half-pixel
@@ -282,7 +283,7 @@ void RocketRenderD3D9::BeginFrame() {
   // the 3D scene underneath is preserved. Holding no offscreen D3DPOOL_DEFAULT
   // target means device resets (e.g. resolution changes) never stall on alive
   // losable resources.
-  m_pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+  m_pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
 
   // Clip masks need a stencil buffer. Detect whether the engine's bound DS has
   // one: if not, skip the (otherwise-failing) stencil clear and fall back to
@@ -721,7 +722,7 @@ void RocketRenderD3D9::Replay(void *p) {
       break;
     case UICmdType::ScissorEnable:
       m_pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE,
-                                c.enable ? TRUE : FALSE);
+                                c.enable ? true : false);
       break;
     case UICmdType::ScissorRegion: {
       RECT rect = {c.region.Left(), c.region.Top(), c.region.Right(),
@@ -731,7 +732,7 @@ void RocketRenderD3D9::Replay(void *p) {
     }
     case UICmdType::ClipEnable:
       if (m_hasStencil)
-        m_pDevice->SetRenderState(D3DRS_STENCILENABLE, c.enable ? TRUE : FALSE);
+        m_pDevice->SetRenderState(D3DRS_STENCILENABLE, c.enable ? true : false);
       break;
     case UICmdType::ClipRender:
       RenderToClipMaskDev(c.op, c.geom, c.translation);

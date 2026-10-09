@@ -1,16 +1,45 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "cs_gamerules.h"
 #include "cs_bot.h"
-#include "fmtstr.h"
 #include "cs_simple_hostage.h"
 
 //-----------------------------------------------------------------------------------------------------------
@@ -25,7 +54,7 @@ float CCSBot::GetMoveSpeed( void )
  */
 void CCSBot::Upkeep( void )
 {
-	VPROF_BUDGET( "CCSBot::Upkeep", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CCSBot::Upkeep", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	if (TheNavMesh->IsGenerating() || !IsAlive())
 		return;
@@ -228,7 +257,7 @@ void CCSBot::CoopUpdateChecks()
  */
 void CCSBot::Update( void )
 {
-	VPROF_BUDGET( "CCSBot::Update", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CCSBot::Update", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	// If bot_flipout is on, then we only do stuff in Upkeep().
 	if ( cv_bot_flipout.GetBool() )
@@ -373,7 +402,6 @@ void CCSBot::Update( void )
 	CCSPlayer *threat = GetRecognizedEnemy();
 	if (threat)
 	{
-		SNPROF("(threat)");
 
 		Vector threatOrigin = GetCentroid( threat );
 
@@ -493,7 +521,6 @@ void CCSBot::Update( void )
 	//
 	if (m_enemy != nullptr)
 	{
-		SNPROF("Validate existing enemy, if any");
 
 		if (IsAwareOfEnemyDeath())
 		{
@@ -545,7 +572,6 @@ void CCSBot::Update( void )
 
 	{
 
-	SNPROF("1");
 
 
 	if (!IsBlind() && !IsLookingAtSpot(PRIORITY_UNINTERRUPTABLE) )
@@ -574,14 +600,12 @@ void CCSBot::Update( void )
 	//
 	if (GetDisposition() == IGNORE_ENEMIES)
 	{
-		SNPROF("Fire weapon at enemy");
 
 		FireWeaponAtEnemy();
 	}
 
 	{
 
-		SNPROF("2");
 
 	// toss grenades
 	LookForGrenadeTargets();
@@ -605,7 +629,6 @@ void CCSBot::Update( void )
 	/// @todo This doesn't work if we are restricted to just knives and sniper rifles because we cant use the rifle at close range
 	if (!IsSafe() && !IsUsingGrenade() && IsUsingKnife() && !IsEscapingFromBomb())
 	{
-		SNPROF("3");
 		EquipBestWeapon();
 	}
 
@@ -614,13 +637,11 @@ void CCSBot::Update( void )
 	const float safeRearmTime = 5.0f;
 	if (!IsReloading() && IsUsingPistol() && !IsPrimaryWeaponEmpty() && GetTimeSinceLastSawEnemy() > safeRearmTime)
 	{
-		SNPROF("4");
 		EquipBestWeapon();
 	}
 
 	{
 
-	SNPROF("5");
 	// reload our weapon if we must
 	ReloadCheck();
 
@@ -652,7 +673,6 @@ void CCSBot::Update( void )
 
 	if (!IsBlind())
 	{
-		SNPROF("6");
 
 		// check encounter spots
 		UpdatePeripheralVision();
@@ -660,7 +680,6 @@ void CCSBot::Update( void )
 		// watch for snipers
 		if (CanSeeSniper() && !HasSeenSniperRecently())
 		{
-			SNPROF("watch for smipers");
 
 			GetChatter()->SpottedSniper();
 
@@ -692,7 +711,6 @@ void CCSBot::Update( void )
 	//
 
 	{
-		SNPROF("Scenario interrupts");
 
 	switch (TheCSBots()->GetScenario())
 	{
@@ -765,7 +783,6 @@ void CCSBot::Update( void )
 		!IsBlind() && 
 		!GetGameState()->IsAtPlantedBombsite())
 	{
-		SNPROF("7");
 
 		// chance of following is proportional to teamwork attribute
 		if (GetProfile()->GetTeamwork() > RandomFloat( 0.0f, 1.0f ))
@@ -808,7 +825,6 @@ void CCSBot::Update( void )
 		}
 		else
 		{	
-			SNPROF("8");
 
 			// we decided not to follow, don't re-check for a duration
 			m_allowAutoFollowTime = gpGlobals->curtime + 15.0f + (1.0f - GetProfile()->GetTeamwork()) * 30.0f;
@@ -817,7 +833,6 @@ void CCSBot::Update( void )
 
 	if (IsFollowing())
 	{
-		SNPROF("9");
 		// if we are following someone, make sure they are still alive
 		CBaseEntity *leader = m_leader;
 		if (leader == nullptr || !leader->IsAlive())
@@ -845,13 +860,11 @@ void CCSBot::Update( void )
 	//
 
 	{
-		SNPROF("9b");
 
 
 	if (m_isOpeningDoor)
 	{
 
-		SNPROF("m_isOpeningDoor");
 		// opening doors takes precedence over attacking because DoorCheck() will stop opening doors if
 		// we don't have a knife out.
 		m_openDoorState.OnUpdate( this );
@@ -865,13 +878,11 @@ void CCSBot::Update( void )
 	}
 	else if (m_isAttacking)
 	{
-		SNPROF("m_attackState.OnUpdate");
 
 		m_attackState.OnUpdate( this );
 	}
 	else
 	{
-        TM_ZONE_FILTERED(TELEMETRY_LEVEL1, 50, TMZF_NONE, "%s", tmDynamicString(TELEMETRY_LEVEL0, m_state->GetName())); 
 		//SNPROF(m_state->GetName());
 
 		m_state->OnUpdate( this );
@@ -880,7 +891,6 @@ void CCSBot::Update( void )
 	// do wait behavior
 	if (!IsAttacking() && IsWaiting())
 	{
-		SNPROF("do wait behavior1");
 
 		ResetStuckMonitor();
 		ClearMovement();
@@ -889,7 +899,6 @@ void CCSBot::Update( void )
 	// don't move while reloading unless we see an enemy
 	if (IsReloading() && !m_isEnemyVisible)
 	{
-		SNPROF("do wait behavior2");
 		ResetStuckMonitor();
 		ClearMovement();
 	}
@@ -899,7 +908,6 @@ void CCSBot::Update( void )
 	// if we get too far ahead of the hostages we are escorting, wait for them
 	if (!IsAttacking() && m_inhibitWaitingForHostageTimer.IsElapsed())
 	{
-		SNPROF("10");
 
 		const float waitForHostageRange = 500.0f;
 		if ((GetTask() == COLLECT_HOSTAGES || GetTask() == RESCUE_HOSTAGES) && GetRangeToFarthestEscortedHostage() > waitForHostageRange)
@@ -1184,7 +1192,6 @@ void CCSBot::DebugDisplay( void ) const
  */
 void CCSBot::UpdateTravelDistanceToAllPlayers( void )
 {
-	SNPROF("UpdateTravelDistanceToAllPlayers");
 
 	const unsigned char numPhases = 3;
 

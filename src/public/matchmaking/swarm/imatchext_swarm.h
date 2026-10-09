@@ -1,14 +1,6 @@
-//===== Copyright c 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef IMATCHEXT_SWARM_H
-#define IMATCHEXT_SWARM_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 //
 //
@@ -64,7 +56,7 @@ struct TitleData3
 };
 
 
-abstract_class IMatchExtSwarm
+class IMatchExtSwarm
 {
 public:
 	// Get server map information for the session settings
@@ -73,8 +65,6 @@ public:
 	virtual KeyValues * GetMapInfoByBspName( KeyValues *pSettings, char const *szBspMapName, KeyValues **ppMissionInfo = nullptr ) = 0;
 };
 
-#define IMATCHEXT_SWARM_INTERFACE "IMATCHEXT_SWARM_INTERFACE_001"
+inline constexpr const char *IMATCHEXT_SWARM_INTERFACE = "IMATCHEXT_SWARM_INTERFACE_001";
 
 // #define SWARM_DLC_NUMBER_XXX			20
-
-#endif // IMATCHEXT_L4D_H

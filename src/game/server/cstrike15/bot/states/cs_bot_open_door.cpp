@@ -1,18 +1,26 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), April 2005
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "baseanimating.h"
 #include "cs_bot.h"
 #include "BasePropDoor.h"
 #include "doors.h"
 #include "props.h"
-
 
 //-------------------------------------------------------------------------------------------------
 /**
@@ -92,7 +100,7 @@ void OpenDoorState::OnUpdate( CCSBot *me )
 
 			if ( door )
 			{
-				AssertMsg( door->GetHealth() > 2, "Bot is stuck on a door and is going to destroy it to get free!\n" );
+				contract_assert( ( door->GetHealth() > 2 ) && "Bot is stuck on a door and is going to destroy it to get free!\n" );
 
 				CTakeDamageInfo damageInfo( me, me, 2.0f, DMG_GENERIC );
 				door->TakeDamage( damageInfo );
@@ -112,6 +120,3 @@ void OpenDoorState::OnExit( CCSBot *me )
 	me->ClearLookAt();
 	me->ResetStuckMonitor();
 }
-
-
-

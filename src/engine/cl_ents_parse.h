@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CL_ENTS_PARSE_H
-#define CL_ENTS_PARSE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class CEntityReadInfo;
 namespace ks::net { struct CSVCMsg_PacketEntities; }
@@ -17,6 +11,3 @@ void CL_PreserveExistingEntity( int nOldEntity );
 void CL_CopyNewEntity( CEntityReadInfo &u, int iClass, int iSerialNum );
 void CL_PreprocessEntities( void );
 bool CL_ProcessPacketEntities ( const ks::net::CSVCMsg_PacketEntities &msg );
-
-
-#endif // CL_ENTS_PARSE_H

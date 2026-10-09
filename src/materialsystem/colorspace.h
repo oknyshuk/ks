@@ -1,20 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef COLORSPACE_H
-#define COLORSPACE_H
-
-
-#include "mathlib/mathlib.h"
-#include "mathlib/ssemath.h"
-#include "mathlib/bumpvects.h"
-#include "tier0/dbg.h"
+import std;
+import ks.math;
 
 extern float g_LinearToVertex[4096];	// linear (0..4) to screen corrected vertex space (0..1?)
 
@@ -50,7 +39,7 @@ namespace ColorSpace
 	// converts 0..1 linear value to screen gamma (0..255)
 	int LinearToScreenGamma( float f );
 
-	FORCEINLINE void LinearToLightmap( unsigned char *pDstRGB, const float *pSrcRGB )
+	[[gnu::always_inline]] inline void LinearToLightmap( unsigned char *pDstRGB, const float *pSrcRGB )
 	{
 		Vector tmpVect;
 		int i, j;
@@ -75,7 +64,7 @@ namespace ColorSpace
 	}
 
 	// Clamp the three values for bumped lighting such that we trade off directionality for brightness.
-	FORCEINLINE void ColorClampBumped( Vector& color1, Vector& color2, Vector& color3 )
+	[[gnu::always_inline]] inline void ColorClampBumped( Vector& color1, Vector& color2, Vector& color3 )
 	{
 		Vector maxs;
 		Vector *colors[3] = { &color1, &color2, &color3 };
@@ -127,7 +116,7 @@ namespace ColorSpace
 		if( color3[2] < 0.f ) color3[2] = 0.f;
 	}
 
-	FORCEINLINE void LinearToBumpedLightmap( const float *linearColor, const float *linearBumpColor1,
+	[[gnu::always_inline]] inline void LinearToBumpedLightmap( const float *linearColor, const float *linearBumpColor1,
 		const float *linearBumpColor2, const float *linearBumpColor3,
 		unsigned char *ret, unsigned char *retBump1,
 		unsigned char *retBump2, unsigned char *retBump3 )
@@ -200,7 +189,7 @@ namespace ColorSpace
 	// Note - We shouldn't be taking the simple average in the bump case when normalizing anyway
 	// (i.e. add together and multiply by 0.575 comments below). 
 	// Keeping the averaging as is for consistency with RGB's, etc
-	FORCEINLINE void LinearToBumpedLightmapAlpha( const float *linearAlpha, const float *linearBumpAlpha1,
+	[[gnu::always_inline]] inline void LinearToBumpedLightmapAlpha( const float *linearAlpha, const float *linearBumpAlpha1,
 												  const float *linearBumpAlpha2, const float *linearBumpAlpha3,
 												  unsigned char *ret, unsigned char *retBump1,
 												  unsigned char *retBump2, unsigned char *retBump3 )
@@ -268,22 +257,22 @@ namespace ColorSpace
 	// this is important for overlays, since a bumped overlay on a non-bumped 
 	// lightmap surface is still drawn with the bumped lightmap shader, with 3x the base lightmap
 	// and vice versa. If we're not consistent, we break the CSM blending
-	FORCEINLINE void LinearToLightmapAlpha( unsigned char *pDstA, const float srcA )
+	[[gnu::always_inline]] inline void LinearToLightmapAlpha( unsigned char *pDstA, const float srcA )
 	{
 		pDstA[0] = RoundFloatToByte( (srcA * 255.0f) / 3.0f );
 	}
 
-	FORCEINLINE void LinearToLightmapAlpha( int *pDstA, const float srcA )
+	[[gnu::always_inline]] inline void LinearToLightmapAlpha( int *pDstA, const float srcA )
 	{
 		pDstA[0] = LinearToUnsignedShort( srcA / 3.0f, 16 );
 	}
 
-	FORCEINLINE void LinearToLightmapAlpha( float *pA )
+	[[gnu::always_inline]] inline void LinearToLightmapAlpha( float *pA )
 	{
 		pA[0] = pA[0] / 3.0f;
 	}
 
-	FORCEINLINE void 
+	[[gnu::always_inline]] inline void 
 		LinearToBumpedLightmap( const float *linearColor, const float *linearBumpColor1,
 		const float *linearBumpColor2, const float *linearBumpColor3,
 		float *ret, float *retBump1,
@@ -347,7 +336,7 @@ namespace ColorSpace
 	// Note - We shouldn't be taking the simple average in the bump case when normalizing anyway
 	// (i.e. add together and multiply by 0.575 comments below). 
 	// Keeping the averaging as is for consistency with RGB's, etc
-	FORCEINLINE void LinearToBumpedLightmapAlpha( const float *linearAlpha, const float *linearBumpAlpha1,
+	[[gnu::always_inline]] inline void LinearToBumpedLightmapAlpha( const float *linearAlpha, const float *linearBumpAlpha1,
 												  const float *linearBumpAlpha2, const float *linearBumpAlpha3,
 												  float *ret, float *retBump1,
 												  float *retBump2, float *retBump3 )
@@ -393,7 +382,7 @@ namespace ColorSpace
 
 	// The domain of the inputs is floats [0 .. 16.0f]
 	// the output range is also floats [0 .. 16.0f] (eg, compression to short does not happen)
-	FORCEINLINE void 
+	[[gnu::always_inline]] inline void 
 		LinearToBumpedLightmap( FLTX4 linearColor, FLTX4 linearBumpColor1,
 		FLTX4 linearBumpColor2, FLTX4 linearBumpColor3,
 		fltx4 &ret, fltx4 &retBump1,		// I pray that with inlining
@@ -428,7 +417,7 @@ namespace ColorSpace
 
 	// input: floats [0 .. 16.0f]
 	// output: shorts [0 .. 65535]
-	FORCEINLINE void 
+	[[gnu::always_inline]] inline void 
 		LinearToBumpedLightmap( const float *linearColor, const float *linearBumpColor1,
 		const float *linearBumpColor2, const float *linearBumpColor3,
 		unsigned short *ret, unsigned short *retBump1,
@@ -443,5 +432,3 @@ namespace ColorSpace
 		ClampToHDR( linearBump3, retBump3 );
 	}
 };
-
-#endif // COLORSPACE_H

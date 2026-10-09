@@ -1,11 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.core;
 #include "clientsideeffects.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imesh.h"
@@ -129,5 +126,3 @@ void FX_AddCenteredCube( const Vector &center, float size, const Vector &vColor,
 {
 	FX_AddCube(center-Vector(size,size,size), center+Vector(size,size,size), vColor, life, materialName);
 }
-
-

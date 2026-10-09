@@ -1,17 +1,12 @@
-//====== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef IMATERIALPROXYDICT_H
-#define IMATERIALPROXYDICT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 class IMaterialProxy;
 
 typedef IMaterialProxy *MaterialProxyFactory_t();
 
-abstract_class IMaterialProxyDict
+class IMaterialProxyDict
 {
 public:
 	// This is used to instance a proxy.
@@ -39,5 +34,3 @@ extern IMaterialProxyDict &GetMaterialProxyDict();
 		}																	\
 	};																		\
 	static C##proxyName##Foo g_C##proxyName##Foo;
-
-#endif // IMATERIALPROXYDICT_H

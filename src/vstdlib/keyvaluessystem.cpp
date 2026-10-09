@@ -1,24 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <mutex>
-#include <vstdlib/ikeyvaluessystem.h>
-#include <keyvalues.h>
-#include "tier1/fixed_pool.h"
-#include "tier1/map_ops.h"
-#include "tier0/threadtools.h"
-#include "tier1/memstack.h"
-#include "tier1/convar.h"
+import std;
+import ks.vstdlib;
 
-
-#include "tier0/memalloc.h"
-#ifdef NO_SBH // no need to pool if using tier0 small block heap
-#define KEYVALUES_USE_POOL 1
-#endif
 
 //
 // Defines platform-endian-specific macros:
@@ -32,16 +17,9 @@
 // region immediately following a null-byte-terminated string, essentially
 // sharing the null-byte-terminator with the first memory byte
 //
-#if defined( PLAT_LITTLE_ENDIAN )
 // Number in memory has lowest-byte in front, use shifts to make it zero
-#define MEM_4BYTES_AS_0_AND_3BYTES( x4bytes ) ( ( (uint32) (x4bytes) ) << 8 )
-#define MEM_4BYTES_FROM_0_AND_3BYTES( x03bytes ) ( ( (uint32) (x03bytes) ) >> 8 )
-#endif
-#if defined( PLAT_BIG_ENDIAN )
-// Number in memory has highest-byte in front, use masking to make it zero
-#define MEM_4BYTES_AS_0_AND_3BYTES( x4bytes ) ( ( (uint32) (x4bytes) ) & 0x00FFFFFF )
-#define MEM_4BYTES_FROM_0_AND_3BYTES( x03bytes ) ( ( (uint32) (x03bytes) ) & 0x00FFFFFF )
-#endif
+template <typename T1> [[gnu::always_inline]] inline auto MEM_4BYTES_AS_0_AND_3BYTES( T1 x4bytes ) { return ( ( (uint32) (x4bytes) ) << 8 ); }
+template <typename T1> [[gnu::always_inline]] inline auto MEM_4BYTES_FROM_0_AND_3BYTES( T1 x03bytes ) { return ( ( (uint32) (x03bytes) ) >> 8 ); }
 
 //-----------------------------------------------------------------------------
 // Purpose: Central storage point for KeyValues memory and symbols
@@ -82,9 +60,6 @@ public:
 	virtual HKeySymbol GetSymbolForStringCaseSensitive( HKeySymbol &hCaseInsensitiveSymbol, const char *name, bool bCreate = true );
 
 private:
-#ifdef KEYVALUES_USE_POOL
-	std::unique_ptr< ks::fixed_pool > m_pMemPool;
-#endif
 	int m_iMaxKeyValuesSize;
 
 	// string hash table
@@ -149,7 +124,6 @@ IKeyValuesSystem *KeyValuesSystem()
 CKeyValuesSystem::CKeyValuesSystem() :
 	m_HashItemMemPool(sizeof(hash_item_t), 64, ks::fixed_pool::grow::fast, "CKeyValuesSystem::m_HashItemMemPool")
 {
-	MEM_ALLOC_CREDIT();
 	// initialize hash table
 	m_HashTable.resize( m_HashTable.size() + 2047 );
 	for (int i = 0; i < std::ssize( m_HashTable ); i++)
@@ -172,21 +146,6 @@ CKeyValuesSystem::CKeyValuesSystem() :
 //-----------------------------------------------------------------------------
 CKeyValuesSystem::~CKeyValuesSystem()
 {
-#ifdef KEYVALUES_USE_POOL
-#ifdef _DEBUG
-	// display any memory leaks
-	if (m_pMemPool && m_pMemPool->count() > 0)
-	{
-		DevMsg("Leaked KeyValues blocks: %d\n", m_pMemPool->count());
-	}
-
-	// iterate all the existing keyvalues displaying their names
-	for ( const auto &[pMem, nameIndex] : m_KeyValuesTrackingList )
-	{
-		DevMsg("\tleaked KeyValues(%s)\n", &m_Strings[nameIndex]);
-	}
-#endif
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -207,17 +166,7 @@ void CKeyValuesSystem::RegisterSizeofKeyValues(int size)
 //-----------------------------------------------------------------------------
 void *CKeyValuesSystem::AllocKeyValuesMemory(int size)
 {
-#ifdef KEYVALUES_USE_POOL
-	// allocate, if we don't have one yet
-	if (!m_pMemPool)
-	{
-		m_pMemPool = std::make_unique< ks::fixed_pool >( m_iMaxKeyValuesSize, 1024, ks::fixed_pool::grow::fast, "CKeyValuesSystem::m_pMemPool" );
-	}
-
-	return m_pMemPool->alloc(size);
-#else
 	return MemAlloc_Alloc( size );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -225,11 +174,7 @@ void *CKeyValuesSystem::AllocKeyValuesMemory(int size)
 //-----------------------------------------------------------------------------
 void CKeyValuesSystem::FreeKeyValuesMemory(void *pMem)
 {
-#ifdef KEYVALUES_USE_POOL
-	m_pMemPool->free(pMem);
-#else
 	g_pMemAlloc->Free( pMem );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -243,7 +188,6 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 	}
 
 	std::scoped_lock lock( m_mutex );
-	MEM_ALLOC_CREDIT();
 
 	int hash = CaseInsensitiveHash(name, std::ssize( m_HashTable ));
 	int i = 0;
@@ -275,7 +219,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 
 			// build up the new item
 			item->next = nullptr;
-			int numStringBytes = strlen(name);
+			int numStringBytes = std::strlen(name);
 			char *pString = (char *)m_Strings.Alloc( numStringBytes + 1 + 3 );
 			if ( !pString )
 			{
@@ -283,7 +227,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 				return -1;
 			}
 			item->stringIndex = pString - (char *)m_Strings.GetBase();
-			Q_memcpy( pString, name, numStringBytes );
+			V_memcpy( pString, name, numStringBytes );
 			* reinterpret_cast< uint32 * >( pString + numStringBytes ) = 0;	// string null-terminator + 3 alternative spelling bytes
 			return (HKeySymbol)item->stringIndex;
 		}
@@ -292,7 +236,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 	}
 
 	// shouldn't be able to get here
-	Assert(0);
+	contract_assert( 0 );
 	return (-1);
 }
 
@@ -307,7 +251,6 @@ HKeySymbol CKeyValuesSystem::GetSymbolForStringCaseSensitive( HKeySymbol &hCaseI
 	}
 
 	std::scoped_lock lock( m_mutex );
-	MEM_ALLOC_CREDIT();
 
 	int hash = CaseInsensitiveHash(name, std::ssize( m_HashTable ));
 	int numNameStringBytes = -1;
@@ -327,13 +270,13 @@ HKeySymbol CKeyValuesSystem::GetSymbolForStringCaseSensitive( HKeySymbol &hCaseI
 		{
 			// strings are equal in a case-insensitive compare, but have different case for some letters
 			// Need to walk the case-resolving chain
-			numNameStringBytes = Q_strlen( pCompareString );
+			numNameStringBytes = V_strlen( pCompareString );
 			uint32 *pnCaseResolveIndex = reinterpret_cast< uint32 * >( pCompareString + numNameStringBytes );
 			hCaseInsensitiveSymbol = (HKeySymbol)item->stringIndex;
 			while ( int nAlternativeStringIndex = MEM_4BYTES_FROM_0_AND_3BYTES( *pnCaseResolveIndex ) )
 			{
 				pCompareString = (char *)m_Strings.GetBase() + nAlternativeStringIndex;
-				int iResult = strcmp( name, pCompareString );
+				int iResult = std::strcmp( name, pCompareString );
 				if ( !iResult )
 				{
 					// found an exact match
@@ -361,7 +304,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForStringCaseSensitive( HKeySymbol &hCaseI
 					return -1;
 				}
 				int nNewAlternativeStringIndex = pString - (char *)m_Strings.GetBase();
-				Q_memcpy( pString, name, numNameStringBytes );
+				V_memcpy( pString, name, numNameStringBytes );
 				* reinterpret_cast< uint32 * >( pString + numNameStringBytes ) = 0;	// string null-terminator + 3 alternative spelling bytes
 				*pnCaseResolveIndex = MEM_4BYTES_AS_0_AND_3BYTES( nNewAlternativeStringIndex );	// link previous spelling entry to the new entry
 				return (HKeySymbol)nNewAlternativeStringIndex;
@@ -388,7 +331,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForStringCaseSensitive( HKeySymbol &hCaseI
 
 			// build up the new item
 			item->next = nullptr;
-			int numStringBytes = strlen(name);
+			int numStringBytes = std::strlen(name);
 			char *pString = (char *)m_Strings.Alloc( numStringBytes + 1 + 3 );
 			if ( !pString )
 			{
@@ -396,7 +339,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForStringCaseSensitive( HKeySymbol &hCaseI
 				return -1;
 			}
 			item->stringIndex = pString - (char *)m_Strings.GetBase();
-			Q_memcpy( pString, name, numStringBytes );
+			V_memcpy( pString, name, numStringBytes );
 			* reinterpret_cast< uint32 * >( pString + numStringBytes ) = 0;	// string null-terminator + 3 alternative spelling bytes
 			hCaseInsensitiveSymbol = (HKeySymbol)item->stringIndex;
 			return (HKeySymbol)item->stringIndex;
@@ -406,7 +349,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForStringCaseSensitive( HKeySymbol &hCaseI
 	}
 
 	// shouldn't be able to get here
-	Assert(0);
+	contract_assert( 0 );
 	return (-1);
 }
 
@@ -419,7 +362,7 @@ const char *CKeyValuesSystem::GetStringForSymbol(HKeySymbol symbol)
 	{
 		return "";
 	}
-	return ((char *)m_Strings.GetBase() + (size_t)symbol);
+	return ((char *)m_Strings.GetBase() + (std::size_t)symbol);
 }
 
 //-----------------------------------------------------------------------------
@@ -427,10 +370,6 @@ const char *CKeyValuesSystem::GetStringForSymbol(HKeySymbol symbol)
 //-----------------------------------------------------------------------------
 void CKeyValuesSystem::AddKeyValuesToMemoryLeakList(void *pMem, HKeySymbol name)
 {
-#ifdef _DEBUG
-	// only track the memory leaks in debug builds
-	m_KeyValuesTrackingList.emplace( pMem, name );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -438,10 +377,6 @@ void CKeyValuesSystem::AddKeyValuesToMemoryLeakList(void *pMem, HKeySymbol name)
 //-----------------------------------------------------------------------------
 void CKeyValuesSystem::RemoveKeyValuesFromMemoryLeakList(void *pMem)
 {
-#ifdef _DEBUG
-	// only track the memory leaks in debug builds
-	m_KeyValuesTrackingList.erase( pMem );
-#endif
 }
 
 //-----------------------------------------------------------------------------

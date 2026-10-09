@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $BUMPMAP == 0 )
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
@@ -16,7 +17,7 @@ private:
 public:
 	void SetBUMPMAP( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nBUMPMAP = i;
 #ifdef _DEBUG
 		m_bBUMPMAP = true;
@@ -24,7 +25,7 @@ public:
 	}
 	void SetBUMPMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nBUMPMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBUMPMAP = true;
@@ -38,7 +39,7 @@ private:
 public:
 	void SetCUBEMAP( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nCUBEMAP = i;
 #ifdef _DEBUG
 		m_bCUBEMAP = true;
@@ -46,7 +47,7 @@ public:
 	}
 	void SetCUBEMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nCUBEMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCUBEMAP = true;
@@ -60,7 +61,7 @@ private:
 public:
 	void SetSEAMLESS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSEAMLESS = i;
 #ifdef _DEBUG
 		m_bSEAMLESS = true;
@@ -68,7 +69,7 @@ public:
 	}
 	void SetSEAMLESS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSEAMLESS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSEAMLESS = true;
@@ -82,7 +83,7 @@ private:
 public:
 	void SetTHICKPAINT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nTHICKPAINT = i;
 #ifdef _DEBUG
 		m_bTHICKPAINT = true;
@@ -90,7 +91,7 @@ public:
 	}
 	void SetTHICKPAINT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTHICKPAINT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTHICKPAINT = true;
@@ -104,7 +105,7 @@ private:
 public:
 	void SetDOPIXELFOG( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDOPIXELFOG = i;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -112,7 +113,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -149,7 +150,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bBUMPMAP && m_bCUBEMAP && m_bSEAMLESS && m_bTHICKPAINT && m_bDOPIXELFOG;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 8 * m_nBUMPMAP ) + ( 24 * m_nCUBEMAP ) + ( 72 * m_nSEAMLESS ) + ( 144 * m_nTHICKPAINT ) + ( 288 * m_nDOPIXELFOG ) + 0;
 	}
@@ -165,7 +166,7 @@ private:
 public:
 	void SetFASTPATHENVMAPCONTRAST( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFASTPATHENVMAPCONTRAST = i;
 #ifdef _DEBUG
 		m_bFASTPATHENVMAPCONTRAST = true;
@@ -173,7 +174,7 @@ public:
 	}
 	void SetFASTPATHENVMAPCONTRAST( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFASTPATHENVMAPCONTRAST = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFASTPATHENVMAPCONTRAST = true;
@@ -187,7 +188,7 @@ private:
 public:
 	void SetFASTPATH( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFASTPATH = i;
 #ifdef _DEBUG
 		m_bFASTPATH = true;
@@ -195,7 +196,7 @@ public:
 	}
 	void SetFASTPATH( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFASTPATH = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFASTPATH = true;
@@ -209,7 +210,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -217,7 +218,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -246,7 +247,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bFASTPATHENVMAPCONTRAST && m_bFASTPATH && m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nFASTPATHENVMAPCONTRAST ) + ( 2 * m_nFASTPATH ) + ( 4 * m_nPIXELFOGTYPE ) + 0;
 	}

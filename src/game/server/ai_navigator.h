@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_NAVIGATOR_H
-#define AI_NAVIGATOR_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "simtimer.h"
 #include "ai_component.h"
@@ -32,8 +25,6 @@ typedef int AI_TaskFailureCode_t;
 // Debugging tools
 //-----------------------------------------------------------------------------
 
-#define DEBUG_AI_NAVIGATION 1
-#ifdef DEBUG_AI_NAVIGATION
 extern ConVar ai_debug_nav;
 #define DbgNav() ai_debug_nav.GetBool()
 #define DbgNavMsg( pAI, pszMsg ) \
@@ -44,19 +35,14 @@ extern ConVar ai_debug_nav;
 	} while (0)
 #define DbgNavMsg1( pAI, pszMsg, a ) DbgNavMsg( pAI, CFmtStr(static_cast<const char *>(pszMsg), (a) ) )
 #define DbgNavMsg2( pAI, pszMsg, a, b ) DbgNavMsg( pAI, CFmtStr(static_cast<const char *>(pszMsg), (a), (b) ) )
-#else
-#define DbgNav() false
-#define DbgNavMsg( pAI, pszMsg ) ((void)0)
-#define DbgNavMsg1( pAI, pszMsg, a ) ((void)0)
-#define DbgNavMsg2( pAI, pszMsg, a, b ) ((void)0)
-#endif
 
 
 //-----------------------------------------------------------------------------
 // STRUCTURES & ENUMERATIONS
 //-----------------------------------------------------------------------------
 
-DECLARE_POINTER_HANDLE( AI_PathNode_t );
+struct AI_PathNode_t__ { int unused; };
+using AI_PathNode_t = AI_PathNode_t__ *;
 
 //-------------------------------------
 // Purpose: Constants used to specify the properties of a requested navigation
@@ -82,7 +68,7 @@ CBaseEntity * const AIN_DEF_TARGET = (AIN_NO_TARGET + 1);
 extern const Vector AIN_NO_DEST;
 
 // Goal does not specify a node location
-#define AIN_NO_NODE ((AI_PathNode_t)-1)
+inline const AI_PathNode_t AIN_NO_NODE = reinterpret_cast<AI_PathNode_t>( static_cast<std::intptr_t>( -1 ) );
 
 
 //-------------------------------------
@@ -752,5 +738,3 @@ inline AI_NavGoal_t::AI_NavGoal_t( GoalType_t	 type,
 }
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_NAVIGATOR_H

@@ -1,3 +1,23 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include "rocketui/rmlui.h"
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "npcevent.h"
+#include "debugoverlay_shared.h"
 #include "rkmenu_main.h"
 
 #include "rkpanel.h"
@@ -5,6 +25,8 @@
 #include "rkhud_model.h"
 
 #include <rocketui/rmlui.h>
+import ks.tier1;
+import std;
 
 #include "rkpanel_options.h"
 #include "rkpanel_play.h"

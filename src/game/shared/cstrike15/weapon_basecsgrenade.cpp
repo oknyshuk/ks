@@ -1,10 +1,54 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
@@ -17,13 +61,11 @@
 #include "weapon_csbase.h"
 #include "../../client/weapon_selection.h"
 #include "gamerules.h"
-#include "npcevent.h"
 #include "engine/IEngineSound.h"
 #include "weapon_basecsgrenade.h"
 #include "in_buttons.h"	
 #include "datacache/imdlcache.h"
 
-#include "cs_shareddefs.h"
 
 #ifdef CLIENT_DLL
 
@@ -38,8 +80,7 @@
 
 #endif
 
-
-#define GRENADE_TIMER	1.5f //Seconds
+constexpr auto GRENADE_TIMER = 1.5f; //Seconds
 
 
 IMPLEMENT_NETWORKCLASS_ALIASED( BaseCSGrenade, DT_BaseCSGrenade )
@@ -58,12 +99,10 @@ LINK_ENTITY_TO_CLASS_ALIASED( weapon_basecsgrenade, BaseCSGrenade );
 ConVar sv_ignoregrenaderadio( "sv_ignoregrenaderadio", "0", FCVAR_RELEASE, "Turn off Fire in the hole messages" );
 #endif
 
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 	#define GRENADE_SECONDARY_DAMPENING 0.3f
 	#define GRENADE_SECONDARY_LOWER 12.0f
 	#define GRENADE_SECONDARY_TRANSITION 1.3f
 	#define GRENADE_SECONDARY_INTERP 2.0f
-#endif
 
 CBaseCSGrenade::CBaseCSGrenade()
 {
@@ -72,10 +111,8 @@ CBaseCSGrenade::CBaseCSGrenade()
 	m_bPinPulled = false;
 	m_fThrowTime = 0;
 	m_bLoopingSoundPlaying = false;
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 	m_flThrowStrength = 1.0f;
 	m_flThrowStrengthClientSmooth = 1.0f;
-#endif
 
 #ifndef CLIENT_DLL
 	m_bHasEmittedProjectile = false;
@@ -98,10 +135,8 @@ bool CBaseCSGrenade::Deploy()
 	m_bRedraw = false;
 	m_bIsHeldByPlayer = true;
 	m_bPinPulled = false;
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 	m_flThrowStrength = 1.0f;
 	m_flThrowStrengthClientSmooth = 1.0f;
-#endif
 	m_fThrowTime = 0;
 #ifndef CLIENT_DLL
 	// if we're officially out of grenades, ditch this weapon
@@ -147,10 +182,8 @@ bool CBaseCSGrenade::Holster( CBaseCombatWeapon *pSwitchingTo )
 	// we don't want to set m_bIsHeldByPlayer to true because the weapon actually holsters before it's removed from the inventory after the last grenade has been thrown
 	// this causes a visual bug in the weapon selection UI
 	m_bPinPulled = false; // when this is holstered make sure the pin isnt pulled.
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 	m_flThrowStrength = 1.0f;
 	m_flThrowStrengthClientSmooth = 1.0f;
-#endif
 	m_fThrowTime = 0;
 #ifndef CLIENT_DLL
 	// If they attempt to switch weapons before the throw animation is done, 
@@ -210,7 +243,6 @@ void CBaseCSGrenade::PrimaryAttack()
 void CBaseCSGrenade::SecondaryAttack()
 {
 
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 	if ( !m_bPinPulled )
 	{
 		m_flThrowStrength = 0.0f;
@@ -222,7 +254,6 @@ void CBaseCSGrenade::SecondaryAttack()
 
 	PrimaryAttack();
 	return;
-#endif
 
 	/*if ( m_bRedraw )
 		return;
@@ -307,7 +338,6 @@ void CBaseCSGrenade::ItemPreFrame()
 
 }
 
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 float CBaseCSGrenade::ApproachThrownStrength()
 {
 	 m_flThrowStrengthClientSmooth = Approach( 
@@ -317,7 +347,6 @@ float CBaseCSGrenade::ApproachThrownStrength()
 			);
 	 return m_flThrowStrengthClientSmooth;
 }
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -335,7 +364,6 @@ void CBaseCSGrenade::ItemPostFrame()
 	bool bPrimaryHeld = (pPlayer->m_nButtons & IN_ATTACK) != 0;
 	bool bSecondaryHeld = (pPlayer->m_nButtons & IN_ATTACK2) != 0;
 	
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 	if ( m_bPinPulled && ( bPrimaryHeld || bSecondaryHeld ) )
 	{
 		float flIdealThrowStrength = 0.5f;
@@ -348,19 +376,16 @@ void CBaseCSGrenade::ItemPostFrame()
 
 		m_flThrowStrength = Approach( flIdealThrowStrength, m_flThrowStrength, gpGlobals->frametime * GRENADE_SECONDARY_TRANSITION );
 	}
-#endif
 
 	// If they let go of the fire buttons, they want to throw the grenade.
 	if ( m_bPinPulled && !(bPrimaryHeld) && !(bSecondaryHeld) ) 
 	{
 #ifndef CLIENT_DLL
-		#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 		if ( IsThrownUnderhand() )
 		{
 			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_THROW_GRENADE_UNDERHAND );
 		}
 		else
-		#endif
 		{
 			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_THROW_GRENADE );
 		}
@@ -371,13 +396,11 @@ void CBaseCSGrenade::ItemPostFrame()
 		MDLCACHE_CRITICAL_SECTION();
 		m_bPinPulled = false;
 		
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 		if ( IsThrownUnderhand() )
 		{
 			SendWeaponAnim( ACT_VM_RELEASE );
 		}
 		else
-#endif
 		{
 			SendWeaponAnim( ACT_VM_THROW );	
 		}
@@ -512,7 +535,7 @@ void CBaseCSGrenade::ItemPostFrame()
 		CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
 		if ( !pPlayer )
 		{
-			Assert( false );
+			contract_assert( false );
 			return;
 		}
 
@@ -527,12 +550,12 @@ void CBaseCSGrenade::ItemPostFrame()
 			angThrow[PITCH] += 360.0f;
 		}
 
-		AssertMsg( angThrow[PITCH] <= 90.0f && angThrow[PITCH] >= -90.0f, "Grenade throw pitch angle must be between -90 and 90 for the adustments to work.");
+		contract_assert( ( angThrow[PITCH] <= 90.0f && angThrow[PITCH] >= -90.0f ) && "Grenade throw pitch angle must be between -90 and 90 for the adustments to work." );
 
 		// NB. a pitch of +90 is looking straight down, -90 is looking straight up
 
 		// add a 10 degrees upwards angle to the throw when looking horizontal, lerp the upwards boost to 0 at the pitch extremes
-		angThrow[PITCH] -= 10.0f * (90.0f - fabsf(angThrow[PITCH])) / 90.0f;
+		angThrow[PITCH] -= 10.0f * (90.0f - std::fabsf(angThrow[PITCH])) / 90.0f;
 
 		const float kBaseVelocity = GetThrowVelocity();
 		//const float kThrowVelocityClampRatio = 750.0f / 540.0f;	// from original CSS values
@@ -540,21 +563,17 @@ void CBaseCSGrenade::ItemPostFrame()
 		//float flVel = clamp((90 - angThrow.x) / 90, 0.0f, kThrowVelocityClampRatio) * kBaseVelocity;
 		float flVel = clamp( (kBaseVelocity * 0.9f), 15, 750 );
 
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 		//clamp the throw strength ranges just to be sure
 		float flClampedThrowStrength = m_flThrowStrength;
 		flClampedThrowStrength = clamp( flClampedThrowStrength, 0.0f, 1.0f );
 
 		flVel *= Lerp( flClampedThrowStrength, GRENADE_SECONDARY_DAMPENING, 1.0f );
-#endif
 		Vector vForward;
 		AngleVectors( angThrow, &vForward );
 
 		Vector vecSrc = pPlayer->GetAbsOrigin() + pPlayer->GetViewOffset();
 
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 		vecSrc += Vector(0, 0, Lerp( flClampedThrowStrength, -GRENADE_SECONDARY_LOWER, 0.0f ) );
-#endif
 		// We want to throw the grenade from 16 units out.  But that can cause problems if we're facing
 		// a thin wall.  Do a hull trace to be safe.
 		// Wills: Moved the trace length out to 22 inches, then subtract 6. This way we default to 16, 
@@ -622,7 +641,7 @@ void CBaseCSGrenade::ItemPostFrame()
 		CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
 		if ( !pPlayer )
 		{
-			Assert( false );
+			contract_assert( false );
 			return;
 		}
 
@@ -647,7 +666,7 @@ void CBaseCSGrenade::ItemPostFrame()
 
 	void CBaseCSGrenade::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer, const CCSWeaponInfo& weaponInfo )
 	{
-		Assert( 0 && "CBaseCSGrenade::EmitGrenade should not be called. Make sure to implement this in your subclass!\n" );
+		contract_assert( 0 && "CBaseCSGrenade::EmitGrenade should not be called. Make sure to implement this in your subclass!\n" );
 	}
 
 	bool CBaseCSGrenade::AllowsAutoSwitchFrom( void ) const
@@ -656,4 +675,3 @@ void CBaseCSGrenade::ItemPostFrame()
 	}
 
 #endif
-

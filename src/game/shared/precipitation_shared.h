@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef PRECIPITATION_SHARED_H
-#define PRECIPITATION_SHARED_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Types of precipitation
 enum PrecipitationType_t
@@ -21,6 +15,3 @@ enum PrecipitationType_t
 	PRECIPITATION_TYPE_PARTICLESNOW,
 	NUM_PRECIPITATION_TYPES
 };
-
-
-#endif // PRECIPITATION_SHARED_H

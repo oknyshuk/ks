@@ -1,10 +1,60 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
@@ -16,7 +66,6 @@
 #endif
 #include "molotov_projectile.h"
 
-#include "keyvalues.h"
 #include "weapon_csbase.h"
 #include "particle_parse.h"
 
@@ -91,8 +140,8 @@ ConVar weapon_molotov_maxdetonateslope(
 	true, 90.0 );
 
 
-#define MOLOTOV_MODEL "models/Weapons/w_eq_molotov_dropped.mdl"
-#define INCGREN_MODEL "models/Weapons/w_eq_incendiarygrenade_dropped.mdl"
+inline constexpr const char *MOLOTOV_MODEL = "models/Weapons/w_eq_molotov_dropped.mdl";
+inline constexpr const char *INCGREN_MODEL = "models/Weapons/w_eq_incendiarygrenade_dropped.mdl";
 
 
 LINK_ENTITY_TO_CLASS( molotov_projectile, CMolotovProjectile );
@@ -260,7 +309,7 @@ void CMolotovProjectile::BounceTouch( CBaseEntity *other )
 	else
 	{
 		// only detonate on surfaces less steep than this
-		const float kMinCos = cosf(DEG2RAD(weapon_molotov_maxdetonateslope.GetFloat()));
+		const float kMinCos = std::cosf(DEG2RAD(weapon_molotov_maxdetonateslope.GetFloat()));
 		if ( hitTrace.plane.normal.z >= kMinCos )
 		{
 			Detonate();
@@ -398,15 +447,6 @@ void CMolotovProjectile::Detonate( void )
 		inferno->SetInfernoType( INFERNO_TYPE_FIRE );
 	inferno->StartBurning( burnPos, splashNormal, vBurnDir );
 
-	if ( inferno->WasCreatedInSmoke() )
-	{
-		// we extinguished ourselves with this throw.
-		m_unOGSExtraFlags |= GRENADE_EXTINGUISHED_INFERNO;	
-	}
-
-	// We override the base class detonate and don't chain down-- 
-	RecordDetonation();
-	
 	StopSound( "Molotov.Loop" );
 	
 	UTIL_Remove( this );

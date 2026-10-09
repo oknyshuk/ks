@@ -1,17 +1,16 @@
-//====== Copyright 1996-2005, Valve Corporation, All rights reserved. =======
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
 // Purpose: Stub for item inventory system (econ system removed)
-//
-//=============================================================================
 
-#ifndef ITEM_INVENTORY_H
-#define ITEM_INVENTORY_H
-
-#include "steam/steam_api.h"
+import std;
+import ks.core;
 
 // Type definitions
 typedef uint64 globalindex_t;
-#define INVALID_GLOBAL_INDEX ((globalindex_t)0)
+inline constexpr auto INVALID_GLOBAL_INDEX = ((globalindex_t)0);
 
 enum EItemRequestResult
 {
@@ -67,5 +66,3 @@ public:
 
 	virtual void PostInit( void ) {}
 };
-
-#endif // ITEM_INVENTORY_H

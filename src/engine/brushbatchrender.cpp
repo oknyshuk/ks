@@ -1,25 +1,33 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
+// main precompiled header for client rendering code
 
-#include "render_pch.h"
-#include <mutex>
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialvar.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "r_local.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_lightmap.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
+import std;
 #include "brushbatchrender.h"
 #include "icliententity.h"
 #include "r_decal.h"
 #include "gl_rsurf.h"
-#include "tier0/vprof.h"
-#include <algorithm>
-
 
 CBrushBatchRender g_BrushBatchRenderer;
 
-FORCEINLINE void ModulateMaterial( IMaterial *pMaterial, float *pOldColor )
+[[gnu::always_inline]] inline void ModulateMaterial( IMaterial *pMaterial, float *pOldColor )
 {
 	if ( g_bIsBlendingOrModulating )
 	{
@@ -31,7 +39,7 @@ FORCEINLINE void ModulateMaterial( IMaterial *pMaterial, float *pOldColor )
 
 }
 
-FORCEINLINE void UnModulateMaterial( IMaterial *pMaterial, float *pOldColor )
+[[gnu::always_inline]] inline void UnModulateMaterial( IMaterial *pMaterial, float *pOldColor )
 {
 	if ( g_bIsBlendingOrModulating )
 	{
@@ -67,14 +75,14 @@ void CBrushBatchRender::DrawTranslucentBrushModel( IMatRenderContext *pRenderCon
 void CBrushBatchRender::AddSurfaceToBatch( transrender_t &render, transnode_t *pNode, transbatch_t *pBatch, SurfaceHandle_t surfID )
 {
 	pBatch->surfaceCount++;
-	Assert(render.surfaceCount < MAX_TRANS_SURFACES);
+	contract_assert( render.surfaceCount < MAX_TRANS_SURFACES );
 
 	pBatch->indexCount += (MSurf_VertCount( surfID )-2)*3;
 	render.surfaces[render.surfaceCount] = surfID;
 	render.surfaceCount++;
 	if ( SurfaceHasDecals( surfID ) || MSurf_ShadowDecals( surfID ) != SHADOW_DECAL_HANDLE_INVALID )
 	{
-		Assert(render.decalSurfaceCount < MAX_TRANS_DECALS);
+		contract_assert( render.decalSurfaceCount < MAX_TRANS_DECALS );
 		pNode->decalSurfaceCount++;
 		render.decalSurfaces[render.decalSurfaceCount] = surfID;
 		render.decalSurfaceCount++;
@@ -85,7 +93,7 @@ void CBrushBatchRender::AddTransNode( transrender_t &render )
 {
 	render.pLastNode = &render.nodes[render.nodeCount];
 	render.nodeCount++;
-	Assert(render.nodeCount < MAX_TRANS_NODES);
+	contract_assert( render.nodeCount < MAX_TRANS_NODES );
 	render.pLastBatch = nullptr;
 	render.pLastNode->firstBatch = render.batchCount;
 	render.pLastNode->firstDecalSurface = render.decalSurfaceCount;
@@ -96,7 +104,7 @@ void CBrushBatchRender::AddTransNode( transrender_t &render )
 void CBrushBatchRender::AddTransBatch( transrender_t &render, SurfaceHandle_t surfID )
 {
 	transbatch_t &batch = render.batches[render.pLastNode->firstBatch + render.pLastNode->batchCount];
-	Assert(render.batchCount < MAX_TRANS_BATCHES);
+	contract_assert( render.batchCount < MAX_TRANS_BATCHES );
 	render.pLastNode->batchCount++;
 	render.batchCount++;
 	batch.firstSurface = render.surfaceCount;
@@ -205,7 +213,7 @@ void CBrushBatchRender::BuildTransLists_r( transrender_t &render, model_t *model
 
 void CBrushBatchRender::DrawTransLists( IMatRenderContext *pRenderContext, transrender_t &render, void *pProxyData )
 {
-	PIXEVENT( pRenderContext, "DrawTransLists()" );
+	( pRenderContext, "DrawTransLists()" );
 
 	bool skipLight = false;
 	if ( g_pMaterialSystemConfig->nFullbright == 1 )
@@ -242,7 +250,7 @@ void CBrushBatchRender::DrawTransLists( IMatRenderContext *pRenderContext, trans
 			for ( int k = 0; k < batch.surfaceCount; k++ )
 			{
 				SurfaceHandle_t surfID = render.surfaces[batch.firstSurface + k];
-				Assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
+				contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
 				BuildIndicesForSurface( meshBuilder, surfID );
 
 			}
@@ -257,7 +265,7 @@ void CBrushBatchRender::DrawTransLists( IMatRenderContext *pRenderContext, trans
 			for ( j = 0; j < node.decalSurfaceCount; j++ )
 			{
 				SurfaceHandle_t surfID = render.decalSurfaces[node.firstDecalSurface + j];
-				Assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
+				contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
 				if( SurfaceHasDecals( surfID ) )
 				{
 					DecalSurfaceAdd( surfID, BRUSHMODEL_DECAL_SORT_GROUP );
@@ -327,7 +335,7 @@ void CBrushBatchRender::ClearRenderHandles( void )
 	for ( int iBrush = 1 ; iBrush < host_state.worldbrush->numsubmodels ; ++iBrush )
 	{
 		char szBrushModel[5]; // inline model names "*1", "*2" etc
-		Q_snprintf( szBrushModel, sizeof( szBrushModel ), "*%i", iBrush );
+		V_snprintf( szBrushModel, sizeof( szBrushModel ), "*%i", iBrush );
 		model_t *pModel = modelloader->GetModelForName( szBrushModel, IModelLoader::FMODELLOADER_SERVER );	
 		if ( pModel )
 		{
@@ -390,7 +398,7 @@ CBrushBatchRender::brushrender_t *CBrushBatchRender::FindOrCreateRenderBatch( mo
 	ks::qsort( surfaceList, SurfaceCmp );
 	render.pPlanes = new cplane_t *[std::ssize( planeList )];
 	render.planeCount = std::ssize( planeList );
-	memcpy( render.pPlanes, planeList.data(), sizeof(cplane_t *)*std::ssize( planeList ) );
+	std::memcpy( render.pPlanes, planeList.data(), sizeof(cplane_t *)*std::ssize( planeList ) );
 	render.pSurfaces = new brushrendersurface_t[std::ssize( surfaceList )];
 	render.surfaceCount = std::ssize( surfaceList );
 
@@ -455,7 +463,7 @@ CBrushBatchRender::brushrender_t *CBrushBatchRender::FindOrCreateRenderBatch( mo
 //-----------------------------------------------------------------------------
 void CBrushBatchRender::DrawOpaqueBrushModel( IMatRenderContext *pRenderContext, IClientEntity *baseentity, model_t *model, ERenderDepthMode_t DepthMode )
 {
-	VPROF( "R_DrawOpaqueBrushModel" );
+	CVProfScope _( "R_DrawOpaqueBrushModel", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	SurfaceHandle_t firstSurfID = SurfaceHandleFromIndex( model->brush.firstmodelsurface, model->brush.pShared );
 
 	brushrender_t *pRender = FindOrCreateRenderBatch( model );
@@ -465,7 +473,7 @@ void CBrushBatchRender::DrawOpaqueBrushModel( IMatRenderContext *pRenderContext,
 
 	bool skipLight = false;
 
-	PIXEVENT( pRenderContext, "DrawOpaqueBrushModel()" );
+	( pRenderContext, "DrawOpaqueBrushModel()" );
 
 	if ( (g_pMaterialSystemConfig->nFullbright == 1) || ( DepthMode == DEPTH_MODE_SHADOW || DepthMode == DEPTH_MODE_SSA0 ) )
 	{
@@ -475,7 +483,7 @@ void CBrushBatchRender::DrawOpaqueBrushModel( IMatRenderContext *pRenderContext,
 
 	void *pProxyData = baseentity ? baseentity->GetClientRenderable() : nullptr;
 	int backface[1024];
-	Assert( pRender->planeCount < 1024 );
+	contract_assert( pRender->planeCount < 1024 );
 
 	// NOTE: Backface culling is almost no perf gain.  Can be removed from brush model rendering.
 	// Check the shared planes once
@@ -600,7 +608,7 @@ void CBrushBatchRender::DrawOpaqueBrushModel( IMatRenderContext *pRenderContext,
 					continue;
 				SurfaceHandle_t surfID = firstSurfID + surface.surfaceIndex;
 
-				Assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
+				contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
 
 				// PORTAL 2 PAINT RENDERING
 				if ( (DepthMode == DEPTH_MODE_NORMAL) && ( MSurf_Flags( surfID ) & SURFDRAW_PAINTED ) )
@@ -652,7 +660,7 @@ void CBrushBatchRender::DrawOpaqueBrushModel( IMatRenderContext *pRenderContext,
 	if ( std::ssize( paintableSurfaces ) )
 	{
 		pRenderContext->SetRenderingPaint( true );
-		PIXEVENT( pRenderContext, "Paint" );
+		( pRenderContext, "Paint" );
 
 		int nBatchIndex = 0;
 		int nSurfaceIndex = 0;
@@ -758,7 +766,7 @@ void CBrushBatchRender::DrawBrushModelShadow( IMatRenderContext *pRenderContext,
 
 	for ( int i=0 ; i<model->brush.nummodelsurfaces ; i++, surfID++)
 	{
-		Assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
+		contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
 
 		if ( MSurf_Flags(surfID) & SURFDRAW_TRANS )
 			continue;
@@ -833,7 +841,7 @@ void CBrushBatchRender::BuildBatchListToDraw( int nCount, const BrushArrayInstan
 				batch.m_pInstanceData = &instance;
 				batch.m_pBrushRender = pRender;
 				batch.m_nBatchIndex = nBatchIndex;
-				Assert( nBatchIndex < ( 1 << 15 ) );
+				contract_assert( nBatchIndex < ( 1 << 15 ) );
 			}
 		}
 	}
@@ -851,7 +859,7 @@ void CBrushBatchRender::ComputeLightmapPages( int nCount, BrushBatchRenderData_t
 		{
 			brushrenderbatch_t &batch = pRenderData[i].m_pBrushRender->pBatches[ pRenderData[i].m_nBatchIndex ];
 			int nSortID = batch.sortID;
-			Assert( nSortID >= 0 && nSortID < std::ssize( g_WorldStaticMeshes ) );
+			contract_assert( nSortID >= 0 && nSortID < std::ssize( g_WorldStaticMeshes ) );
 			pRenderData[i].m_nLightmapPage = materialSortInfoArray[ nSortID ].lightmapPageID;
 		}
 		return;
@@ -941,13 +949,14 @@ int CBrushBatchRender::ComputeInstanceGroups( IMatRenderContext *pRenderContext,
 //-----------------------------------------------------------------------------
 bool CBrushBatchRender::DrawSortedBatchList( IMatRenderContext* pRenderContext, int nCount, BrushInstanceGroup_t *pInstanceGroup, int nMaxInstanceCount )
 {
-	VPROF( "DrawSortedBatchList" );
-	PIXEVENT( pRenderContext, "DrawSortedBatchList()" );
+	ks::ScratchArena<> scratch;
+	CVProfScope _( "DrawSortedBatchList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	( pRenderContext, "DrawSortedBatchList()" );
 
 	// Needed to allow the system to detect which samplers are bound to lightmap textures
 	pRenderContext->BindLightmapPage( 0 );
 
-	MeshInstanceData_t *pInstance = (MeshInstanceData_t*)stackalloc( nMaxInstanceCount * sizeof(MeshInstanceData_t) );
+	MeshInstanceData_t *pInstance = scratch.Alloc<MeshInstanceData_t>( nMaxInstanceCount );
 
 	bool bHasPaintedSurfaces = false;
 	for ( int i = 0; i < nCount; i++ )
@@ -976,7 +985,7 @@ bool CBrushBatchRender::DrawSortedBatchList( IMatRenderContext* pRenderContext, 
 				const brushrendersurface_t &surface = renderData.m_pBrushRender->pSurfaces[batch.firstSurface + k];
 				SurfaceHandle_t surfID = firstSurfID + surface.surfaceIndex;
 
-				Assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
+				contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
 				BuildIndicesForSurface( indexBuilder, surfID );
 				if ( MSurf_Flags( surfID ) & SURFDRAW_PAINTED )
 				{
@@ -1018,10 +1027,11 @@ bool CBrushBatchRender::DrawSortedBatchList( IMatRenderContext* pRenderContext, 
 
 void CBrushBatchRender::DrawPaintForBatches( IMatRenderContext* pRenderContext, int nCount, const BrushInstanceGroup_t *pInstanceGroup, int nMaxInstanceCount )
 {
-	MeshInstanceData_t *pInstance = (MeshInstanceData_t*)stackalloc( nMaxInstanceCount * sizeof(MeshInstanceData_t) );
+	ks::ScratchArena<> scratch;
+	MeshInstanceData_t *pInstance = scratch.Alloc<MeshInstanceData_t>( nMaxInstanceCount );
 
 	pRenderContext->SetRenderingPaint( true );
-	PIXEVENT( pRenderContext, "Paint" );
+	( pRenderContext, "Paint" );
 
 	for ( int i = 0; i < nCount; i++ )
 	{
@@ -1211,7 +1221,8 @@ void CBrushBatchRender::DrawArrayDebugInformation( IMatRenderContext *pRenderCon
 void CBrushBatchRender::DrawBrushModelArray( IMatRenderContext* pRenderContext, int nCount, 
 	const BrushArrayInstanceData_t *pInstanceData )
 {
-	brushrender_t **ppBrushRender = (brushrender_t**)stackalloc( nCount * sizeof(brushrender_t*) );
+	ks::ScratchArena<> scratch;
+	brushrender_t **ppBrushRender = scratch.Alloc<brushrender_t*>( nCount );
 	ks::small_vector< BrushBatchRenderData_t, 1024 > batchesToRender;
 	BuildBatchListToDraw( nCount, pInstanceData, batchesToRender, ppBrushRender );
 
@@ -1305,12 +1316,13 @@ inline bool CBrushBatchRender::ShadowSortLessFunc( const BrushBatchRenderData_t 
 //-----------------------------------------------------------------------------
 void CBrushBatchRender::DrawShadowBatchList( IMatRenderContext* pRenderContext, int nCount, BrushInstanceGroup_t *pInstanceGroup, int nMaxInstanceCount )
 {
-	VPROF( "DrawShadowBatchList" );
-	PIXEVENT( pRenderContext, "DrawShadowBatchList()" );
+	ks::ScratchArena<> scratch;
+	CVProfScope _( "DrawShadowBatchList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	( pRenderContext, "DrawShadowBatchList()" );
 
 	pRenderContext->BindLightmapPage( MATERIAL_SYSTEM_LIGHTMAP_PAGE_WHITE_BUMP );
 
-	MeshInstanceData_t *pInstance = (MeshInstanceData_t*)stackalloc( nMaxInstanceCount * sizeof(MeshInstanceData_t) );
+	MeshInstanceData_t *pInstance = scratch.Alloc<MeshInstanceData_t>( nMaxInstanceCount );
 
 	for ( int i = 0; i < nCount; i++ )
 	{
@@ -1368,7 +1380,7 @@ void CBrushBatchRender::DrawShadowBatchList( IMatRenderContext* pRenderContext, 
 				const brushrendersurface_t &surface = renderData.m_pBrushRender->pSurfaces[batch.firstSurface + k];
 				SurfaceHandle_t surfID = firstSurfID + surface.surfaceIndex;
 
-				Assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
+				contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
 				BuildIndicesForSurface( indexBuilder, surfID );
 			}
 

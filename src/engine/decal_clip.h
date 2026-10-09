@@ -1,25 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DECAL_CLIP_H
-#define DECAL_CLIP_H
-
-
-#include "mathlib/vector.h"
-#include "mathlib/vector2d.h"
-#include "mathlib/compressed_vector.h"
+import std;
+import ks.math;
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/imaterial.h"
 #include "filesystem.h"
 #include "decal_private.h"
 #include "gl_model_private.h"
 
-
-#define MAX_DECALCLIPVERT		48
+inline constexpr auto MAX_DECALCLIPVERT = 48;
 
 
 class CDecalVert
@@ -65,6 +56,4 @@ void R_SetupDecalTextureSpaceBasis(
 	Vector textureSpaceBasis[3],
 	float decalWorldScale[2] );
 
-extern ALIGN16 CDecalVert g_DecalClipVerts[MAX_DECALCLIPVERT];
-
-#endif // DECAL_CLIP_H
+extern CDecalVert g_DecalClipVerts[MAX_DECALCLIPVERT];

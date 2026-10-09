@@ -1,15 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef PARTICLES_LOCALSPACE_H
-#define PARTICLES_LOCALSPACE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "particles_simple.h"
+#include "icliententityinternal.h"
 
-#define	FLE_VIEWMODEL	0x00000001
+inline constexpr auto FLE_VIEWMODEL = 0x00000001;
 
 class CLocalSpaceEmitter : public CSimpleEmitter
 {
@@ -44,5 +40,3 @@ private:
 
 	//FIXME: Bones here as well...
 };
-
-#endif // PARTICLES_LOCALSPACE_H

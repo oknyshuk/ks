@@ -1,3 +1,4 @@
+#pragma once
 // XUnzip.h  Version 1.1
 //
 // Authors:      Mark Adler et al. (see below)
@@ -86,42 +87,29 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef XUNZIP_H
-#define XUNZIP_H
 
-#if !defined( DWORD )
+import ks.core;
+import std;
+
 typedef unsigned int DWORD;
-#endif
 
-#if !defined( TCHAR )
 typedef char TCHAR;
+
+#if defined(POSIX)
+// PATH_MAX directly: platform.h owns MAX_PATH, and defining it here would rewrite its declaration.
 #endif
 
-#if defined(POSIX) && !defined(MAX_PATH)
-#include <limits.h>
-#define MAX_PATH PATH_MAX
-typedef bool BOOL;
-#endif
-
-#ifndef XZIP_H
-#if !defined(DECLARE_HANDLE)
-#if !defined(HANDLE)
-typedef void *HANDLE;
-#endif
-#define DECLARE_HANDLE(name) typedef struct name##__ { int unused; } *name
-#endif
-DECLARE_HANDLE(HZIP);		// An HZIP identifies a zip file that is being created
-#endif
+#include "zip/xzip_common.h"
 
 
-typedef time_t FILETIME;
+typedef std::time_t FILETIME;
 
 typedef DWORD ZRESULT;
 // return codes from any of the zip functions. Listed later.
 
-#define ZIP_HANDLE   1
-#define ZIP_FILENAME 2
-#define ZIP_MEMORY   3
+inline constexpr int ZIP_HANDLE = 1;
+inline constexpr int ZIP_FILENAME = 2;
+inline constexpr int ZIP_MEMORY = 3;
 
 typedef struct
 { int index;                 // index of this file within the zip
@@ -185,7 +173,6 @@ HZIP OpenZip(void *z, unsigned int len, DWORD flags);
 // Returns:     ZRESULT - ZR_OK if success, otherwise some other value
 //
 
-#define GetZipItem GetZipItemA
 
 ZRESULT GetZipItemA(HZIP hz, int index, ZIPENTRY *ze);
 ZRESULT GetZipItemW(HZIP hz, int index, ZIPENTRYW *ze);
@@ -212,7 +199,7 @@ ZRESULT GetZipItemW(HZIP hz, int index, ZIPENTRYW *ze);
 //
 // Parameters:  hz      - handle of open zip archive
 //              name    - name of file to look for inside zip archive
-//              ic      - TRUE = case insensitive
+//              ic      - true = case insensitive
 //              index   - pointer to index number returned, or -1
 //              ze      - pointer to a ZIPENTRY (if ANSI) or ZIPENTRYW struct
 //                        (if Unicode)
@@ -220,7 +207,6 @@ ZRESULT GetZipItemW(HZIP hz, int index, ZIPENTRYW *ze);
 // Returns:     ZRESULT - ZR_OK if success, otherwise some other value
 //
 
-#define FindZipItem FindZipItemA
 
 ZRESULT FindZipItemA(HZIP hz, const TCHAR *name, bool ic, int *index, ZIPENTRY *ze);
 ZRESULT FindZipItemW(HZIP hz, const TCHAR *name, bool ic, int *index, ZIPENTRYW *ze);
@@ -285,34 +271,34 @@ unsigned int FormatZipMessage(ZRESULT code, char *buf,unsigned int len);
 
 
 // These are the result codes:
-#define ZR_OK         0x00000000     // nb. the pseudo-code zr-recent is never returned,
-#define ZR_RECENT     0x00000001     // but can be passed to FormatZipMessage.
+inline constexpr int ZR_OK = 0x00000000;	// nb. the pseudo-code zr-recent is never returned,
+inline constexpr int ZR_RECENT = 0x00000001;	// but can be passed to FormatZipMessage.
 // The following come from general system stuff (e.g. files not openable)
-#define ZR_GENMASK    0x0000FF00
-#define ZR_NODUPH     0x00000100     // couldn't duplicate the handle
-#define ZR_NOFILE     0x00000200     // couldn't create/open the file
-#define ZR_NOALLOC    0x00000300     // failed to allocate some resource
-#define ZR_WRITE      0x00000400     // a general error writing to the file
-#define ZR_NOTFOUND   0x00000500     // couldn't find that file in the zip
-#define ZR_MORE       0x00000600     // there's still more data to be unzipped
-#define ZR_CORRUPT    0x00000700     // the zipfile is corrupt or not a zipfile
-#define ZR_READ       0x00000800     // a general error reading the file
+inline constexpr int ZR_GENMASK = 0x0000FF00;
+inline constexpr int ZR_NODUPH = 0x00000100;	// couldn't duplicate the handle
+inline constexpr int ZR_NOFILE = 0x00000200;	// couldn't create/open the file
+inline constexpr int ZR_NOALLOC = 0x00000300;	// failed to allocate some resource
+inline constexpr int ZR_WRITE = 0x00000400;	// a general error writing to the file
+inline constexpr int ZR_NOTFOUND = 0x00000500;	// couldn't find that file in the zip
+inline constexpr int ZR_MORE = 0x00000600;	// there's still more data to be unzipped
+inline constexpr int ZR_CORRUPT = 0x00000700;	// the zipfile is corrupt or not a zipfile
+inline constexpr int ZR_READ = 0x00000800;	// a general error reading the file
 // The following come from mistakes on the part of the caller
-#define ZR_CALLERMASK 0x00FF0000
-#define ZR_ARGS       0x00010000     // general mistake with the arguments
-#define ZR_NOTMMAP    0x00020000     // tried to ZipGetMemory, but that only works on mmap zipfiles, which yours wasn't
-#define ZR_MEMSIZE    0x00030000     // the memory size is too small
-#define ZR_FAILED     0x00040000     // the thing was already failed when you called this function
-#define ZR_ENDED      0x00050000     // the zip creation has already been closed
-#define ZR_MISSIZE    0x00060000     // the indicated input file size turned out mistaken
-#define ZR_PARTIALUNZ 0x00070000     // the file had already been partially unzipped
-#define ZR_ZMODE      0x00080000     // tried to mix creating/opening a zip 
+inline constexpr int ZR_CALLERMASK = 0x00FF0000;
+inline constexpr int ZR_ARGS = 0x00010000;	// general mistake with the arguments
+inline constexpr int ZR_NOTMMAP = 0x00020000;	// tried to ZipGetMemory, but that only works on mmap zipfiles, which yours wasn't
+inline constexpr int ZR_MEMSIZE = 0x00030000;	// the memory size is too small
+inline constexpr int ZR_FAILED = 0x00040000;	// the thing was already failed when you called this function
+inline constexpr int ZR_ENDED = 0x00050000;	// the zip creation has already been closed
+inline constexpr int ZR_MISSIZE = 0x00060000;	// the indicated input file size turned out mistaken
+inline constexpr int ZR_PARTIALUNZ = 0x00070000;	// the file had already been partially unzipped
+inline constexpr int ZR_ZMODE = 0x00080000;	// tried to mix creating/opening a zip
 // The following come from bugs within the zip library itself
-#define ZR_BUGMASK    0xFF000000
-#define ZR_NOTINITED  0x01000000     // initialisation didn't work
-#define ZR_SEEK       0x02000000     // trying to seek in an unseekable file
-#define ZR_NOCHANGE   0x04000000     // changed its mind on storage, but not allowed
-#define ZR_FLATE      0x05000000     // an internal error in the de/inflation code
+inline constexpr int ZR_BUGMASK = 0xFF000000;
+inline constexpr int ZR_NOTINITED = 0x01000000;	// initialisation didn't work
+inline constexpr int ZR_SEEK = 0x02000000;	// trying to seek in an unseekable file
+inline constexpr int ZR_NOCHANGE = 0x04000000;	// changed its mind on storage, but not allowed
+inline constexpr int ZR_FLATE = 0x05000000;	// an internal error in the de/inflation code
 
 
 
@@ -381,22 +367,12 @@ unsigned int FormatZipMessage(ZRESULT code, char *buf,unsigned int len);
 // the cpp files for zip and unzip are both present, so we will call
 // one or the other of them based on a dynamic choice. If the header file
 // for only one is present, then we will bind to that particular one.
-HZIP OpenZipU(void *z,unsigned int len,DWORD flags);
+HZIP OpenZip(void *z,unsigned int len,DWORD flags);
 ZRESULT CloseZipU(HZIP hz);
 unsigned int FormatZipMessageU(ZRESULT code, char *buf,unsigned int len);
 bool IsZipHandleU(HZIP hz);
-#define OpenZip OpenZipU
-
-#ifdef XZIP_H
-#undef CloseZip
-#define CloseZip(hz) (IsZipHandleU(hz)?CloseZipU(hz):CloseZipZ(hz))
-#else
-#define CloseZip CloseZipU
-#define FormatZipMessage FormatZipMessageU
-#endif
 
 // safe defintion of unzip, catches exceptions
 bool SafeUnzipMemory( const void *pvZipped, int cubZipped, void *pvDest, int cubDest /* should be the exact expected unzipped size */ );
 
 
-#endif //XUNZIP_H

@@ -1,21 +1,18 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
 #include "motion_blur_vs20.inc"
 #include "motion_blur_ps20.inc"
 #include "motion_blur_ps20b.inc"
-#include "convar.h"
+import std;
 
 ConVar mat_motion_blur_percent_of_screen_max( "mat_motion_blur_percent_of_screen_max", "4.0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 DEFINE_FALLBACK_SHADER( MotionBlur, MotionBlur_dx9 )
 BEGIN_VS_SHADER_FLAGS( MotionBlur_dx9, "Motion Blur", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( MOTIONBLURINTERNAL, SHADER_PARAM_TYPE_VEC4, "[0 0 0 0]", "Internal motion blur value set by proxy" )
 		SHADER_PARAM( MOTIONBLURVIEWPORTINTERNAL, SHADER_PARAM_TYPE_VEC4, "[0 0 0 0]", "Internal motion blur value set by proxy" )
 	END_SHADER_PARAMS

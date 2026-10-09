@@ -1,18 +1,12 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
-#ifndef DEMOFORMAT_H
-#define DEMOFORMAT_H
+import std;
+import ks.tier1;
 
-#include "mathlib/vector.h"
-#include "utlvector.h"
-#include "tier0/platform.h"
-
-#define DEMO_HEADER_ID		"HL2DEMO"
-#define DEMO_PROTOCOL		4
+inline constexpr const char *DEMO_HEADER_ID = "HL2DEMO";
+inline constexpr auto DEMO_PROTOCOL = 4;
 
 #if !defined( MAX_OSPATH )
 #define	MAX_OSPATH		260			// max length of a filesystem pathname
@@ -59,10 +53,10 @@ struct demoheader_t
 	int		signonlength;					// length of sigondata in bytes
 };
 
-#define FDEMO_NORMAL		0
-#define FDEMO_USE_ORIGIN2	(1<<0)
-#define FDEMO_USE_ANGLES2	(1<<1)
-#define FDEMO_NOINTERP		(1<<2)	// don't interpolate between this an last view
+inline constexpr auto FDEMO_NORMAL = 0;
+inline constexpr auto FDEMO_USE_ORIGIN2 = (1<<0);
+inline constexpr auto FDEMO_USE_ANGLES2 = (1<<1);
+inline constexpr auto FDEMO_NOINTERP = (1<<2); // don't interpolate between this an last view
 
 struct democmdinfo_t
 {
@@ -226,7 +220,7 @@ struct CSmoothingContext
 			return *this;
 
 		active = src.active;
-		Q_strncpy( filename, src.filename, sizeof( filename ) );
+		V_strncpy( filename, src.filename, sizeof( filename ) );
 
 		smooth.clear();
 		int c = std::ssize( src.smooth );
@@ -248,5 +242,3 @@ struct CSmoothingContext
 	std::vector< demosmoothing_t >	smooth;
 	int								m_nFirstSelectableSample;
 };
-
-#endif // DEMOFORMAT_H

@@ -1,14 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( UICENTERPRINT_H )
-#define UICENTERPRINT_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -29,5 +22,3 @@ public:
 };
 
 extern CCenterPrint *GetCenterPrint();
-
-#endif // UICENTERPRINT_H

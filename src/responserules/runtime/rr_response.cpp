@@ -1,22 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #include "rrbase.h"
 
 #include <tier2/interval.h>
+import ks.core;
 
 /*
 #include "AI_Criteria.h"
 #include "ai_speech.h"
-#include <keyvalues.h>
-#include "engine/IEngineSound.h"
 */
-
-#include "tier0/memalloc.h"
+import std;
 using namespace ResponseRules;
 
 //-----------------------------------------------------------------------------
@@ -37,7 +31,7 @@ CRR_Response::CRR_Response( const CRR_Response &from ) : m_fMatchScore(0)
 {
 	// Assert( (void*)(&m_Type) == (void*)this );
 	Invalidate();
-	memcpy( this, &from, sizeof(*this) );
+	std::memcpy( this, &from, sizeof(*this) );
 	m_szContext = nullptr;
 	SetContext( from.m_szContext );
 	m_bApplyContextToWorld = from.m_bApplyContextToWorld;
@@ -49,7 +43,7 @@ CRR_Response &CRR_Response::operator=( const CRR_Response &from )
 {
 	// Assert( (void*)(&m_Type) == (void*)this );
 	Invalidate();
-	memcpy( this, &from, sizeof(*this) );
+	std::memcpy( this, &from, sizeof(*this) );
 	m_szContext = nullptr;
 	SetContext( from.m_szContext );
 	m_bApplyContextToWorld = from.m_bApplyContextToWorld;
@@ -85,7 +79,7 @@ void CRR_Response::Invalidate()
 // please do not new or delete CRR_Responses.
 void CRR_Response::operator delete(void* p) 
 { 
-	AssertMsg(false, "DO NOT new or delete CRR_Response s.");
+	contract_assert( false && "DO NOT new or delete CRR_Response s." );
 	g_pMemAlloc->Free(p);
 }
 
@@ -97,9 +91,9 @@ void CRR_Response::operator delete(void* p)
 void CRR_Response::Init( ResponseType_t type, const char *responseName, const ResponseParams& responseparams, const char *ruleName, const char *applyContext, bool bApplyContextToWorld )
 {
 	m_Type = type;
-	Q_strncpy( m_szResponseName, responseName, sizeof( m_szResponseName ) );
+	V_strncpy( m_szResponseName, responseName, sizeof( m_szResponseName ) );
 	// Copy underlying criteria
-	Q_strncpy( m_szMatchingRule, ruleName ? ruleName : "NULL", sizeof( m_szMatchingRule ) );
+	V_strncpy( m_szMatchingRule, ruleName ? ruleName : "NULL", sizeof( m_szMatchingRule ) );
 	m_Params = responseparams;
 	SetContext( applyContext );
 	m_bApplyContextToWorld = bApplyContextToWorld;
@@ -135,9 +129,9 @@ void CRR_Response::Describe(  const CriteriaSet *pDebugCriteria )
 // Purpose: 
 // Output : char const
 //-----------------------------------------------------------------------------
-void CRR_Response::GetName( char *buf, size_t buflen ) const
+void CRR_Response::GetName( char *buf, std::size_t buflen ) const
 {
-	Q_strncpy( buf, m_szResponseName, buflen );
+	V_strncpy( buf, m_szResponseName, buflen );
 }
 
 
@@ -145,7 +139,7 @@ void CRR_Response::GetName( char *buf, size_t buflen ) const
 // Purpose: 
 // Output : char const
 //-----------------------------------------------------------------------------
-void CRR_Response::GetResponse( char *buf, size_t buflen ) const
+void CRR_Response::GetResponse( char *buf, std::size_t buflen ) const
 {
 	GetName( buf, buflen );
 }
@@ -158,7 +152,7 @@ const char *CRR_Response::DescribeResponse( ResponseType_t type )
 {
 	if ( (int)type < 0 || (int)type >= ResponseRules::NUM_RESPONSES )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return "???CRR_Response bogus index";
 	}
 
@@ -166,7 +160,7 @@ const char *CRR_Response::DescribeResponse( ResponseType_t type )
 	{
 	default:
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 		// Fall through
 	case ResponseRules::RESPONSE_NONE:
@@ -301,9 +295,9 @@ void CRR_Response::SetContext( const char *context )
 
 	if ( context )
 	{
-		int len = Q_strlen( context );
+		int len = V_strlen( context );
 		m_szContext = new char[ len + 1 ];
-		Q_memcpy( m_szContext, context, len );
+		V_memcpy( m_szContext, context, len );
 		m_szContext[ len ] = 0;
 	}
 }

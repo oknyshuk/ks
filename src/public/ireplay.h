@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IREPLAY_H
-#define IREPLAY_H
-
-
-#include "interface.h"
+import std;
+import ks.tier1;
 
 class IServer;
 class IReplayDirector;
@@ -20,7 +13,7 @@ struct netadr_s;
 //-----------------------------------------------------------------------------
 // Interface the Replay module exposes to the engine
 //-----------------------------------------------------------------------------
-#define INTERFACEVERSION_REPLAYSERVER	"ReplayServer001"
+inline constexpr const char *INTERFACEVERSION_REPLAYSERVER = "ReplayServer001";
 
 class IReplayServer : public IBaseInterface
 {
@@ -34,5 +27,3 @@ public:
 
 	virtual void	BroadcastEvent(IGameEvent *event) = 0; // send a director command to all specs
 };
-
-#endif

@@ -1,26 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IMATERIALPROXYFACTORY_H
-#define IMATERIALPROXYFACTORY_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "interface.h"
+import std;
+import ks.tier1;
 
-#define IMATERIAL_PROXY_FACTOR_INTERFACE_VERSION "IMaterialProxyFactory001"
+inline constexpr const char *IMATERIAL_PROXY_FACTOR_INTERFACE_VERSION = "IMaterialProxyFactory001";
 
 class IMaterialProxy;
 
-abstract_class IMaterialProxyFactory
+class IMaterialProxyFactory
 {
 public:
 	virtual IMaterialProxy *CreateProxy( const char *proxyName ) = 0;
 	virtual void DeleteProxy( IMaterialProxy *pProxy ) = 0;
 	virtual CreateInterfaceFn GetFactory() = 0;
 };
-
-#endif // IMATERIALPROXYFACTORY_H

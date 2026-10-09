@@ -1,3 +1,4 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
@@ -18,16 +19,11 @@
 //   - one ill-formed consteval function reports as "non-constant condition" at every
 //     call site, naming none of them.
 
-#ifndef KS_REFLECT_H
-#define KS_REFLECT_H
 
 #include "reflect_annotations.h"
 #include "string_t.h"
 
-#include <meta>
-#include <span>
-#include <vector>
-#include <string_view>
+import std;
 
 // Forward declarations only: comparing reflections does not need a complete type. Must be at
 // global scope -- declared inside ks::reflect they would name different types, and the tag
@@ -696,4 +692,3 @@ consteval std::size_t array_element_size( std::meta::info t )
 
 } // namespace ks::reflect
 
-#endif // KS_REFLECT_H

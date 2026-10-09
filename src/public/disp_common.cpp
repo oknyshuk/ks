@@ -1,9 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "disp_common.h"
 #include "disp_powerinfo.h"
@@ -207,7 +203,7 @@ int GetNeighborEdgePower( CDispUtilsHelper *pDisp, int iEdge, int iSub )
 	CDispUtilsHelper *pNeighbor = pDisp->GetDispUtilsByIndex( pSub->GetNeighborIndex() );
 	
 	CShiftInfo *pInfo = &g_ShiftInfos[pSub->m_Span][pSub->m_NeighborSpan];
-	Assert( pInfo->m_bValid );
+	contract_assert( pInfo->m_bValid );
 
 	return pNeighbor->GetPower() + pInfo->m_PowerShiftAdd;
 }
@@ -235,7 +231,7 @@ CDispUtilsHelper* SetupEdgeIncrements(
 	CDispUtilsHelper *pNeighbor = pDisp->GetDispUtilsByIndex( pSub->m_iNeighbor );
 
 	CShiftInfo *pShiftInfo = &g_ShiftInfos[pSub->m_Span][pSub->m_NeighborSpan];
-	Assert( pShiftInfo->m_bValid );
+	contract_assert( pShiftInfo->m_bValid );
 
 	// Setup a start point and edge increment (NOTE: just precalculate these
 	// and store them in the CDispSubNeighbors).
@@ -375,14 +371,14 @@ CDispUtilsHelper* TransformIntoSubNeighbor(
 	// Now map the one into the other.
 	int iFreeDim = !g_EdgeDims[iEdge];
 	int fixedPercent = ((nodeIndex[iFreeDim] - viSrcStart[iFreeDim]) * (1<<16)) / (viSrcEnd[iFreeDim] - viSrcStart[iFreeDim]);
-	Assert( fixedPercent >= 0 && fixedPercent <= (1<<16) );
+	contract_assert( fixedPercent >= 0 && fixedPercent <= (1<<16) );
 
 	int nbDim = g_EdgeDims[iNBEdge];
 	out[nbDim] = viDestStart[nbDim];
 	out[!nbDim] = viDestStart[!nbDim] + ((viDestEnd[!nbDim] - viDestStart[!nbDim]) * fixedPercent) / (1<<16);
 
-	Assert( out.x >= 0 && out.x < pNeighbor->GetSideLength() );
-	Assert( out.y >= 0 && out.y < pNeighbor->GetSideLength() );
+	contract_assert( out.x >= 0 && out.x < pNeighbor->GetSideLength() );
+	contract_assert( out.y >= 0 && out.y < pNeighbor->GetSideLength() );
 
 	return pNeighbor;
 }
@@ -668,7 +664,7 @@ const CVertIndex& CDispUtilsHelper::GetCornerPointIndex( int iCorner ) const
 
 int CDispUtilsHelper::VertIndexToInt( const CVertIndex &i ) const
 {
-	Assert( i.x >= 0 && i.x < GetSideLength() && i.y >= 0 && i.y < GetSideLength() );
+	contract_assert( i.x >= 0 && i.x < GetSideLength() && i.y >= 0 && i.y < GetSideLength() );
 	return i.y * GetSideLength() + i.x;
 }
 
@@ -689,7 +685,7 @@ CVertIndex CDispUtilsHelper::GetEdgeMidPoint( int iEdge ) const
 	else if ( iEdge == NEIGHBOREDGE_BOTTOM )
 		return CVertIndex( mid, 0 );
 
-	Assert( false );
+	contract_assert( false );
 	return CVertIndex( 0, 0 );
 }
 
@@ -851,7 +847,7 @@ void AddNeighbor( CCoreDispInfo *pMain,
 	// Make sure this slot isn't used on either displacement.
 	if ( pSub->IsValid() || pNeighborSub->IsValid() )
 	{
-		ExecuteOnce( Warning( "Found a displacement edge abutting multiple other edges.\n" ) );
+		ExecuteOnce( [&]{ Warning( "Found a displacement edge abutting multiple other edges.\n" ); } );
 		return;
 	}
 
@@ -1049,7 +1045,7 @@ void VerifyNeighborConnections( CCoreDispInfo **ppListBase, int nDisps )
 					if ( !VerifyNeighborVertConnection( pHelper, it.GetVertIndex(), it.GetCurrentNeighbor(), it.GetNBVertIndex(), iEdge ) )
 					{
 						pDisp->GetEdgeNeighbor( iEdge )->SetInvalid();
-						Warning( "Warning: invalid neighbor connection on displacement near (%.2f %.2f %.2f)\n", VectorExpand( pDisp->GetCornerPoint(0) ) );
+						Warning( "Warning: invalid neighbor connection on displacement near (%.2f %.2f %.2f)\n", (pDisp->GetCornerPoint(0)).x, (pDisp->GetCornerPoint(0)).y, (pDisp->GetCornerPoint(0)).z );
 						bHappy = false;
 					}
 				}			
@@ -1152,11 +1148,11 @@ bool IsVertAllowed( CDispUtilsHelper *pDisp, CVertIndex const &sideVert, int iLe
 
 	CDispSubNeighbor *pSub = &pDisp->GetEdgeNeighbor( iSide )->m_SubNeighbors[iSub];
 	CDispUtilsHelper *pNeighbor = pDisp->GetDispUtilsByIndex( pSub->m_iNeighbor );
-	Assert( pNeighbor );
+	contract_assert( pNeighbor );
 
 	// Ok, there is a neighbor.. see if this vertex exists in the neighbor.
 	CShiftInfo *pShiftInfo = &g_ShiftInfos[pSub->m_Span][pSub->m_NeighborSpan];
-	Assert( pShiftInfo->m_bValid );
+	contract_assert( pShiftInfo->m_bValid );
 
 	if ( ( pNeighbor->GetPowerInfo()->GetPower() + pShiftInfo->m_PowerShiftAdd ) < ( iLevel+1 ) )
 	{
@@ -1392,7 +1388,7 @@ static int GetAllNeighbors( const CCoreDispInfo *pDisp, int (&iNeighbors)[512] )
 
 		for ( int i=0; i < pCorner->m_nNeighbors; i++ )
 		{
-			if ( nNeighbors < Q_ARRAYSIZE( iNeighbors ) )
+			if ( nNeighbors < std::size( iNeighbors ) )
 				iNeighbors[nNeighbors++] = pCorner->m_Neighbors[i];
 		}
 	}
@@ -1404,7 +1400,7 @@ static int GetAllNeighbors( const CCoreDispInfo *pDisp, int (&iNeighbors)[512] )
 		for ( int i=0; i < 2; i++ )
 		{
 			if ( pEdge->m_SubNeighbors[i].IsValid() )
-				if ( nNeighbors < Q_ARRAYSIZE( iNeighbors ) )
+				if ( nNeighbors < std::size( iNeighbors ) )
 					iNeighbors[nNeighbors++] = pEdge->m_SubNeighbors[i].GetNeighborIndex();
 		}
 	}

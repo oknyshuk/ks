@@ -1,11 +1,11 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-// X360 and PS3 cascaded shadow mapping
-
+// Purpose: X360 and PS3 cascaded shadow mapping
 // 7LS TODO - PS3
 
 	#error Unsupported
-
 
 float CSMSampleShadowBuffer1Tap( float2 vPositionLs, float flComparisonDepth )
 {

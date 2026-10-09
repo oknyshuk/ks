@@ -1,19 +1,46 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ====
-//
-// Purpose: Implements buttons.
-//
-//====================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
+// Purpose: Implements buttons.
+
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "doors.h"
 #include "ndebugoverlay.h"
 #include "spark.h"
-#include "vstdlib/random.h"
 #include "engine/IEngineSound.h"
-#include "tier1/strtools.h"
 #include "buttons.h"
 #include "eventqueue.h"
 
@@ -21,16 +48,16 @@ void PlayLockSounds( CBaseEntity *pEdict, locksound_t *pls, int flocked, int fbu
 string_t MakeButtonSound( int sound );				// get string of button sound number
 
 
-#define SF_BUTTON_DONTMOVE				1
-#define SF_ROTBUTTON_NOTSOLID			1
-#define	SF_BUTTON_TOGGLE				32		// button stays pushed until reactivated
-#define SF_BUTTON_TOUCH_ACTIVATES		256		// Button fires when touched.
-#define SF_BUTTON_DAMAGE_ACTIVATES		512		// Button fires when damaged.
-#define SF_BUTTON_USE_ACTIVATES			1024	// Button fires when used.
-#define SF_BUTTON_LOCKED				2048	// Whether the button is initially locked.
-#define	SF_BUTTON_SPARK_IF_OFF			4096	// button sparks in OFF state
-#define	SF_BUTTON_JIGGLE_ON_USE_LOCKED	8192	// whether to jiggle if someone uses us when we're locked
-#define SF_BUTTON_NOTSOLID				16384
+constexpr auto SF_BUTTON_DONTMOVE = 1;
+constexpr auto SF_ROTBUTTON_NOTSOLID = 1;
+constexpr auto SF_BUTTON_TOGGLE = 32; // button stays pushed until reactivated
+constexpr auto SF_BUTTON_TOUCH_ACTIVATES = 256; // Button fires when touched.
+constexpr auto SF_BUTTON_DAMAGE_ACTIVATES = 512; // Button fires when damaged.
+constexpr auto SF_BUTTON_USE_ACTIVATES = 1024; // Button fires when used.
+constexpr auto SF_BUTTON_LOCKED = 2048; // Whether the button is initially locked.
+constexpr auto SF_BUTTON_SPARK_IF_OFF = 4096; // button sparks in OFF state
+constexpr auto SF_BUTTON_JIGGLE_ON_USE_LOCKED = 8192; // whether to jiggle if someone uses us when we're locked
+constexpr auto SF_BUTTON_NOTSOLID = 16384;
 
 
 IMPLEMENT_REFLECT_DATAMAP( CBaseButton )
@@ -104,23 +131,23 @@ bool CBaseButton::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "locked_sound"))
 	{
-		m_bLockedSound = atof(szValue);
+		m_bLockedSound = std::atof(szValue);
 	}
 	else if (FStrEq(szKeyName, "locked_sentence"))
 	{
-		m_bLockedSentence = atof(szValue);
+		m_bLockedSentence = std::atof(szValue);
 	}
 	else if (FStrEq(szKeyName, "unlocked_sound"))
 	{
-		m_bUnlockedSound = atof(szValue);
+		m_bUnlockedSound = std::atof(szValue);
 	}
 	else if (FStrEq(szKeyName, "unlocked_sentence"))
 	{
-		m_bUnlockedSentence = atof(szValue);
+		m_bUnlockedSentence = std::atof(szValue);
 	}
 	else if (FStrEq(szKeyName, "min_use_angle"))
 	{
-		SetUseLookAtAngle( atof(szValue) );
+		SetUseLookAtAngle( std::atof(szValue) );
 	}
 	else
 	{
@@ -193,7 +220,7 @@ void CBaseButton::Press( CBaseEntity *pActivator, BUTTON_CODE eCode )
 	if (m_bLocked)
 	{
 		// play button locked sound
-		PlayLockSounds(this, &m_ls, TRUE, TRUE);
+		PlayLockSounds(this, &m_ls, true, true);
 		return;
 	}
 
@@ -395,8 +422,8 @@ void CBaseButton::Spawn( )
 		m_vecPosition2 = m_vecPosition1;
 	}
 
-	m_fStayPushed = (m_flWait == -1 ? TRUE : FALSE);
-	m_fRotating = FALSE;
+	m_fStayPushed = (m_flWait == -1 ? true : false);
+	m_fRotating = false;
 
 	if (HasSpawnFlags(SF_BUTTON_LOCKED))
 	{
@@ -448,7 +475,7 @@ bool CBaseButton::CreateVPhysics()
 string_t MakeButtonSound( int sound )
 { 
 	char tmp[1024];
-	Q_snprintf( tmp, sizeof(tmp), "Buttons.snd%d", sound );
+	V_snprintf( tmp, sizeof(tmp), "Buttons.snd%d", sound );
 	return AllocPooledString(tmp);
 }
 
@@ -470,7 +497,7 @@ void CBaseButton::ButtonSpark ( void )
 //-----------------------------------------------------------------------------
 bool CBaseButton::OnUseLocked( CBaseEntity *pActivator )
 {
-	PlayLockSounds(this, &m_ls, TRUE, TRUE);
+	PlayLockSounds(this, &m_ls, true, true);
 
 	if ( gpGlobals->curtime > m_flUseLockedTime )
 	{
@@ -587,7 +614,7 @@ void CBaseButton::ButtonTouch( CBaseEntity *pOther )
 	if (!UTIL_IsMasterTriggered(m_sMaster, pOther) || m_bLocked)
 	{
 		// play button locked sound
-		PlayLockSounds(this, &m_ls, TRUE, TRUE);
+		PlayLockSounds(this, &m_ls, true, true);
 		return;
 	}
 
@@ -643,13 +670,13 @@ void CBaseButton::ButtonActivate( void )
 	if (!UTIL_IsMasterTriggered(m_sMaster, m_hActivator) || m_bLocked)
 	{
 		// button is locked, play locked sound
-		PlayLockSounds(this, &m_ls, TRUE, TRUE);
+		PlayLockSounds(this, &m_ls, true, true);
 		return;
 	}
 	else
 	{
 		// button is unlocked, play unlocked sound
-		PlayLockSounds(this, &m_ls, FALSE, TRUE);
+		PlayLockSounds(this, &m_ls, false, true);
 	}
 
 	ASSERT(m_toggle_state == TS_AT_BOTTOM);
@@ -795,11 +822,11 @@ int CBaseButton::DrawDebugTextOverlays()
 			nState = 4;
 		}
 
-		Q_snprintf( tempstr, sizeof(tempstr), "State: %s", pszStates[nState] );
+		V_snprintf( tempstr, sizeof(tempstr), "State: %s", pszStates[nState] );
 		EntityText( text_offset, tempstr, 0 );
 		text_offset++;
 
-		Q_snprintf( tempstr, sizeof(tempstr), "%s", m_bLocked ? "Locked" : "Unlocked" );
+		V_snprintf( tempstr, sizeof(tempstr), "%s", m_bLocked ? "Locked" : "Unlocked" );
 		EntityText( text_offset, tempstr, 0 );
 		text_offset++;
 	}
@@ -865,8 +892,8 @@ void CRotButton::Spawn( void )
 	m_vecAngle2	= GetLocalAngles() + m_vecMoveAng * m_flMoveDistance;
 	ASSERTSZ(m_vecAngle1 != m_vecAngle2, "rotating button start/end positions are equal\n");
 
-	m_fStayPushed = (m_flWait == -1 ? TRUE : FALSE);
-	m_fRotating = TRUE;
+	m_fStayPushed = (m_flWait == -1 ? true : false);
+	m_fRotating = true;
 
 	SetUse(&CRotButton::ButtonUse);
 
@@ -896,9 +923,9 @@ bool CRotButton::CreateVPhysics( void )
 //-----------------------------------------------------------------------------
 // CMomentaryRotButton spawnflags
 //-----------------------------------------------------------------------------
-#define SF_MOMENTARY_DOOR			1
-#define SF_MOMENTARY_NOT_USABLE		2
-#define SF_MOMENTARY_AUTO_RETURN	16
+constexpr auto SF_MOMENTARY_DOOR = 1;
+constexpr auto SF_MOMENTARY_NOT_USABLE = 2;
+constexpr auto SF_MOMENTARY_AUTO_RETURN = 16;
 
 
 IMPLEMENT_REFLECT_DATAMAP( CMomentaryRotButton )
@@ -1458,24 +1485,24 @@ int CMomentaryRotButton::DrawDebugTextOverlays(void)
 	{
 		char tempstr[255];
 		
-		Q_snprintf(tempstr,sizeof(tempstr),"QAngle: %.2f %.2f %.2f", GetLocalAngles()[0], GetLocalAngles()[1], GetLocalAngles()[2]);
+		V_snprintf(tempstr,sizeof(tempstr),"QAngle: %.2f %.2f %.2f", GetLocalAngles()[0], GetLocalAngles()[1], GetLocalAngles()[2]);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"AVelocity: %.2f %.2f %.2f", GetLocalAngularVelocity()[0], GetLocalAngularVelocity()[1], GetLocalAngularVelocity()[2]);
+		V_snprintf(tempstr,sizeof(tempstr),"AVelocity: %.2f %.2f %.2f", GetLocalAngularVelocity()[0], GetLocalAngularVelocity()[1], GetLocalAngularVelocity()[2]);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"Target Pos:   %3.3f",m_IdealYaw);
+		V_snprintf(tempstr,sizeof(tempstr),"Target Pos:   %3.3f",m_IdealYaw);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		float flCurPos = GetPos(GetLocalAngles());
-		Q_snprintf(tempstr,sizeof(tempstr),"Current Pos:   %3.3f",flCurPos);
+		V_snprintf(tempstr,sizeof(tempstr),"Current Pos:   %3.3f",flCurPos);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"Direction: %s",(m_direction == 1) ? "Forward" : "Backward");
+		V_snprintf(tempstr,sizeof(tempstr),"Direction: %s",(m_direction == 1) ? "Forward" : "Backward");
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 

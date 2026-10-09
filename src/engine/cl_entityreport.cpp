@@ -1,17 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "client_pch.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// main precompiled header for client files
+
+import std;
+import ks.tier1;
+
+
+#include "render.h"
+
+
+
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+
+#include "host.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 
 ConVar cl_entityreport( "cl_entityreport", "0", FCVAR_CHEAT, "For debugging, draw entity states to console" );
 
 // How quickly to move rolling average for entityreport
-#define BITCOUNT_AVERAGE 0.95f
+constexpr auto BITCOUNT_AVERAGE = 0.95f;
 // How long to flush item when something important happens
-#define EFFECT_TIME  1.5f
+constexpr auto EFFECT_TIME = 1.5f;
 // How long to latch peak bit count for item
 #define PEAK_LATCH_TIME 2.0f;
 

@@ -1,8 +1,9 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-#ifndef KISAKSTRIKE_RKHUD_CROSSHAIR_H
-#define KISAKSTRIKE_RKHUD_CROSSHAIR_H
+#include <rocketui/rmlui.h>
+
 
 #include <rocketui/rocketui.h>
 #include "rkhud_document.h"
@@ -28,4 +29,3 @@ private:
     void UpdateCrosshair();
 };
 
-#endif //KISAKSTRIKE_RKHUD_CROSSHAIR_H

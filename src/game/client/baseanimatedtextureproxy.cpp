@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "cdll_client_int.h"
 #include "baseanimatedtextureproxy.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/itexture.h"
-#include "tier1/keyvalues.h"
 
 //-----------------------------------------------------------------------------
 // Constructor, destructor: 
@@ -65,7 +63,7 @@ void CBaseAnimatedTextureProxy::Cleanup()
 //-----------------------------------------------------------------------------
 void CBaseAnimatedTextureProxy::OnBind( void *pEntity )
 {
-	Assert ( m_AnimatedTextureVar );
+	contract_assert( m_AnimatedTextureVar );
 
 	if( m_AnimatedTextureVar->GetType() != MATERIAL_VAR_TYPE_TEXTURE )
 	{
@@ -77,7 +75,7 @@ void CBaseAnimatedTextureProxy::OnBind( void *pEntity )
 
 	if ( numFrames <= 0 )
 	{
-		Assert( !"0 frames in material calling animated texture proxy" );
+		contract_assert( !"0 frames in material calling animated texture proxy" );
 		return;
 	}
 

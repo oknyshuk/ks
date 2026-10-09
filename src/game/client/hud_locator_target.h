@@ -1,36 +1,35 @@
-//====== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. =======
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
 // Purpose: Add entities to this system, and the Locator will maintain an arrow
 //			on the HUD that points to the entities when they are offscreen.
-//
-//=============================================================================
 
-#ifndef L4D_HUD_LOCATOR_H
-#define L4D_HUD_LOCATOR_H
+import std;
+import ks.math;
 
+class CHudTexture;
 
-#include "steam/isteamcontroller.h"
+inline constexpr auto MAX_LOCATOR_BINDINGS_SHOWN = 8;
+inline constexpr auto MAX_LOCATOR_TARGETS = 10;
+inline constexpr auto LOCATOR_FLAGS_NONE = 0x00000000;
 
-#define MAX_LOCATOR_BINDINGS_SHOWN	8
-#define MAX_LOCATOR_TARGETS			10
-#define LOCATOR_FLAGS_NONE			0x00000000
-
-#define LOCATOR_ICON_FX_NONE			0x00000000
+inline constexpr auto LOCATOR_ICON_FX_NONE = 0x00000000;
 #define LOCATOR_ICON_FX_PULSE_SLOW		0x00000001
-#define LOCATOR_ICON_FX_PULSE_FAST		0x00000002
-#define LOCATOR_ICON_FX_PULSE_URGENT	0x00000004
+inline constexpr auto LOCATOR_ICON_FX_PULSE_FAST = 0x00000002;
+inline constexpr auto LOCATOR_ICON_FX_PULSE_URGENT = 0x00000004;
 #define LOCATOR_ICON_FX_ALPHA_SLOW		0x00000008
-#define LOCATOR_ICON_FX_ALPHA_FAST		0x00000010
-#define LOCATOR_ICON_FX_ALPHA_URGENT	0x00000020
+inline constexpr auto LOCATOR_ICON_FX_ALPHA_FAST = 0x00000010;
+inline constexpr auto LOCATOR_ICON_FX_ALPHA_URGENT = 0x00000020;
 #define LOCATOR_ICON_FX_SHAKE_NARROW	0x00000040
-#define LOCATOR_ICON_FX_SHAKE_WIDE		0x00000080
+inline constexpr auto LOCATOR_ICON_FX_SHAKE_WIDE = 0x00000080;
 #define LOCATOR_ICON_FX_STATIC			0x00000100	// This icon draws at a fixed location on the HUD.
-#define LOCATOR_ICON_FX_NO_OFFSCREEN	0x00000200
-#define LOCATOR_ICON_FX_FORCE_CAPTION	0x00000400	// Always draw the caption, even when the icon is occluded.
-#define LOCATOR_ICON_FX_FADE_OUT		0x00000800	// Set when deactivated so it can smoothly vanish
-#define LOCATOR_ICON_FX_FADE_IN			0x00001000	// Set when activated so it can smoothly appear
-#define LOCATOR_ICON_FX_SCALE_BY_DIST	0x00002000	// Scales the icon in the world by how far away it is
-#define LOCATOR_ICON_FX_SCALE_LARGE		0x00004000	// Scales the icon triple the normal size
+inline constexpr auto LOCATOR_ICON_FX_NO_OFFSCREEN = 0x00000200;
+inline constexpr auto LOCATOR_ICON_FX_FORCE_CAPTION = 0x00000400; // Always draw the caption, even when the icon is occluded.
+inline constexpr auto LOCATOR_ICON_FX_FADE_OUT = 0x00000800; // Set when deactivated so it can smoothly vanish
+inline constexpr auto LOCATOR_ICON_FX_FADE_IN = 0x00001000; // Set when activated so it can smoothly appear
+inline constexpr auto LOCATOR_ICON_FX_SCALE_BY_DIST = 0x00002000; // Scales the icon in the world by how far away it is
+inline constexpr auto LOCATOR_ICON_FX_SCALE_LARGE = 0x00004000; // Scales the icon triple the normal size
 
 // Interned game instructor string; equal strings share storage, so == compares pointers.
 class CGameInstructorSymbol
@@ -140,7 +139,6 @@ public:
 	void SetOnscreenIconTextureName( const char *pszTexture );
 	void SetOffscreenIconTextureName( const char *pszTexture );
 	void SetBinding( const char *pszBinding );
-	void SetSteamControllerBindingToOrigin( EControllerActionOrigin *pOrigins, int nOriginalToken, const char *pszActionName );
 	const char *UseBindingImage( char *pchIconTextureName, size_t bufSize );
 	void SetIconNoTarget( bool bIconNoTarget ) { m_bIconNoTarget = bIconNoTarget; }
 
@@ -175,7 +173,6 @@ private:
 	CGameInstructorSymbol	m_szBinding;
 
 	bool		m_bWasControllerLast;
-	bool		m_bWasSteamControllerLast;
 	const char	*m_pchDrawBindingName;
 	const char	*m_pchDrawBindingNameOffscreen;
 	int			m_iEffectsFlags;
@@ -190,6 +187,3 @@ extern int Locator_AddTarget();
 extern void Locator_RemoveTarget( int hTarget );
 CLocatorTarget *Locator_GetTargetFromHandle( int hTarget );
 void Locator_ComputeTargetIconPositionFromHandle( int hTarget );
-
-
-#endif // L4D_HUD_LOCATOR_H

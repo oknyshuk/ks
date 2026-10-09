@@ -1,13 +1,12 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "KERNEL"					"0..4"
 // STATIC: "CLEAR_COLOR"			"0..1"
 // STATIC: "APPROX_SRGB_ADAPTER"	"0..1" [ps20b] [PC]
 // STATIC: "APPROX_SRGB_ADAPTER"	"0..0" [ps20b] [CONSOLE]
-
 // We only support our approximate sRGB adapter on the Gaussian kernels
 // SKIP: ( $APPROX_SRGB_ADAPTER == 1 ) && ( $KERNEL == 0 ) [ps20b] [PC]
-
 // Don't bother with our approximate sRGB adapter if we're clearing
 // SKIP: ( $APPROX_SRGB_ADAPTER == 1 ) && ( $CLEAR_COLOR == 1 ) [ps20b] [PC]
 

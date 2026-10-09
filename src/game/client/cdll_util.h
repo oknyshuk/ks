@@ -1,27 +1,17 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( CDLL_UTIL_H )
-#define CDLL_UTIL_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <soundflags.h>
-#include "mathlib/vector.h"
 #include <shareddefs.h>
-#include "color.h"
+import std;
+import ks.math;
 
 #include "shake.h"
 #include "bitmap/imageformat.h"
 #include "ispatialpartition.h"
 #include "materialsystem/MaterialSystemUtil.h"
 
-class Vector;
-class QAngle;
 class IMaterial;
 class ITexture;
 class IClientEntity;
@@ -66,7 +56,7 @@ byte	*UTIL_LoadFileForMe( const char *filename, int *pLength );
 void	UTIL_FreeFile( byte *buffer );
 void	UTIL_MakeSafeName( const char *oldName, char *newName, int newNameBufSize );	///< Cleans up player names for putting in vgui controls (cleaned names can be up to original*2+1 in length)
 const char *UTIL_SafeName( const char *oldName );	///< Wraps UTIL_MakeSafeName, and returns a static buffer
-void	UTIL_ReplaceKeyBindings( const wchar_t *inbuf, int inbufsizebytes, OUT_Z_BYTECAP(outbufsizebytes) wchar_t *outbuf, int outbufsizebytes );
+void	UTIL_ReplaceKeyBindings( const wchar_t *inbuf, int inbufsizebytes, wchar_t *outbuf, int outbufsizebytes );
 
 void	UTIL_MessageText( C_BasePlayer *player, const char *text, Color color = Color( 0, 0, 0, 0 ) );
 
@@ -75,7 +65,7 @@ unsigned char UTIL_ComputeEntityFade( C_BaseEntity *pEntity, float flMinDist, fl
 
 client_textmessage_t	*TextMessageGet( const char *pName );
 
-char	*VarArgs( PRINTF_FORMAT_STRING const char *format, ... );
+char	*VarArgs( const char *format, ... );
 	
 
 // Get the entity the local player is spectating (can be a player or a ragdoll entity).
@@ -144,7 +134,7 @@ T *_CreateEntity( T *newClass, const char *className )
 	if ( !newEnt )
 	{
 		Warning( "classname %s used to create wrong class type\n", className );
-		Assert(0);
+		contract_assert( 0 );
 	}
 
 	return newEnt;
@@ -176,5 +166,3 @@ void UTIL_GetClientStatusText( char *buffer, int bufsize );
 class CGameTrace;
 typedef CGameTrace trace_t;
 void		UTIL_ClearTrace			( trace_t &trace );
-
-#endif // !CDLL_UTIL_H

@@ -1,35 +1,27 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Interfaces between the client.dll and engine
-//
-//===========================================================================//
 
-#ifndef CDLL_INT_H
-#define CDLL_INT_H
-
-#include "basetypes.h"
-#include "interface.h"
-#include "mathlib/mathlib.h"
+import std;
+import ks.tier1;
 #include "const.h"
-#include "checksum_crc.h"
 #include "datamap.h"
-#include "tier1/bitbuf.h"
 #include "inputsystem/ButtonCode.h"
 #include "modes.h"
 #include "string_t.h"
 #include "toolframework/itoolentity.h"
-#include "steam/isteamremotestorage.h"
 
 //-----------------------------------------------------------------------------
 // forward declarations
 //-----------------------------------------------------------------------------
-FORWARD_DECLARE_HANDLE( InputContextHandle_t );
-class CSteamAPIContext;
+struct InputContextHandle_t__;
+using InputContextHandle_t = InputContextHandle_t__ *;
 struct adsp_auto_params_t;
 class ClientClass;
 struct model_t;
 class CSentence;
-struct vrect_t;
 struct cmodel_t;
 class IMaterial;
 class CAudioSource;
@@ -38,7 +30,6 @@ class SurfInfo;
 class ISpatialQuery;
 struct cache_user_t;
 class IMaterialSystem;
-class VMatrix;
 struct ScreenFade_t;
 struct ScreenShake_t;
 class CViewSetup;
@@ -55,14 +46,12 @@ class ISPSharedMemory;
 class IDemoRecorder;
 struct AudioState_t;
 class CGamestatsData;
-class KeyValues;
 class IFileList;
 class IReplayFactory;
 struct WriteReplayScreenshotParams_t;
 class IMaterialProxy;
 struct InputEvent_t;
 struct SpatializationInfo_t;
-class IConVar;
 class CJob;
 namespace ks::net { struct CSVCMsg_HltvReplay; }
 class INetMessage;
@@ -130,16 +119,12 @@ typedef struct player_info_s
 	bool			fakeplayer;
 	// true if player is the HLTV proxy
 	bool			ishltv;
-#if defined( REPLAY_ENABLED )
-	// true if player is the Replay proxy
-	bool			isreplay;
-#endif
 	// custom files CRC for this player
 	CRC32_t			customFiles[MAX_CUSTOM_FILES];
 	// this counter increases each time the server downloaded a new file
 	unsigned char	filesDownloaded;
 } player_info_t;
-#define CDLL_PLAYER_INFO_S_VERSION_CURRENT 0xFFFFFFFFFFFFF002ull
+inline constexpr auto CDLL_PLAYER_INFO_S_VERSION_CURRENT = 0xFFFFFFFFFFFFF002ull;
 
 typedef struct player_info_s_version_1
 {
@@ -188,7 +173,6 @@ enum BindingLookupOption_t
 	BINDINGLOOKUP_ALL = -1,
 	BINDINGLOOKUP_KEYBOARD_ONLY = 0,
 	BINDINGLOOKUP_JOYSTICK_ONLY,
-	BINDINGLOOKUP_STEAMCONTROLLER_ONLY,
 };
 
 
@@ -247,7 +231,8 @@ enum ClientDLLObserverMode_t
 //-----------------------------------------------------------------------------
 // Lightcache entry handle
 //-----------------------------------------------------------------------------
-DECLARE_POINTER_HANDLE( LightCacheHandle_t );
+struct LightCacheHandle_t__ { int unused; };
+using LightCacheHandle_t = LightCacheHandle_t__ *;
 
 
 //-----------------------------------------------------------------------------
@@ -262,7 +247,7 @@ struct OcclusionParams_t
 //-----------------------------------------------------------------------------
 // Demo custom data callback type
 //-----------------------------------------------------------------------------
-typedef void (*pfnDemoCustomDataCallback)( uint8 *pData, size_t iSize );
+typedef void (*pfnDemoCustomDataCallback)( uint8 *pData, std::size_t iSize );
 
 
 //-----------------------------------------------------------------------------
@@ -270,15 +255,15 @@ typedef void (*pfnDemoCustomDataCallback)( uint8 *pData, size_t iSize );
 // See vstdlib/random.h for the interface definition
 // NOTE: If you change this, also change VENGINE_SERVER_RANDOM_INTERFACE_VERSION in eiface.h
 //-----------------------------------------------------------------------------
-#define VENGINE_CLIENT_RANDOM_INTERFACE_VERSION	"VEngineRandom001"
+inline constexpr const char *VENGINE_CLIENT_RANDOM_INTERFACE_VERSION = "VEngineRandom001";
 
 // change this when the new version is incompatable with the old
-#define VENGINE_CLIENT_INTERFACE_VERSION		"VEngineClient014"
+inline constexpr const char *VENGINE_CLIENT_INTERFACE_VERSION = "VEngineClient014";
 
 //-----------------------------------------------------------------------------
 // Purpose: Interface exposed from the engine to the client .dll
 //-----------------------------------------------------------------------------
-abstract_class IVEngineClient
+class IVEngineClient
 {
 public:
 	// Find the model's surfaces that intersect the given sphere.
@@ -375,9 +360,9 @@ public:
 
 	// Prints the formatted string to the notification area of the screen ( down the right hand edge
 	//  numbered lines starting at position 0
-	virtual void				Con_NPrintf( int pos, PRINTF_FORMAT_STRING const char *fmt, ... ) = 0;
+	virtual void				Con_NPrintf( int pos, const char *fmt, ... ) = 0;
 	// Similar to Con_NPrintf, but allows specifying custom text color and duration information
-	virtual void				Con_NXPrintf( const struct con_nprint_s *info, PRINTF_FORMAT_STRING const char *fmt, ... ) = 0;
+	virtual void				Con_NXPrintf( const struct con_nprint_s *info, const char *fmt, ... ) = 0;
 
 	// Is the specified world-space bounding box inside the view frustum?
 	virtual int					IsBoxVisible( const Vector& mins, const Vector& maxs ) = 0;
@@ -444,11 +429,9 @@ public:
 	virtual char const	*GetLevelName( void ) = 0;
 	virtual char const	*GetLevelNameShort( void ) = 0;
 	virtual char const	*GetMapGroupName( void ) = 0;
-#if !defined( NO_VOICE )
 	// Obtain access to the voice tweaking API
 	virtual struct IVoiceTweak_s *GetVoiceTweakAPI( void ) = 0;
 	virtual void SetVoiceCasterID( uint32 casterID ) = 0;
-#endif
 	// Tell engine stats gathering system that the rendering frame is beginning/ending
 	virtual void		EngineStats_BeginFrame( void ) = 0;
 	virtual void		EngineStats_EndFrame( void ) = 0;
@@ -521,19 +504,6 @@ public:
 	// Is this a HLTV broadcast ?
 	virtual bool		IsHLTV( void ) = 0;
 
-#if defined( REPLAY_ENABLED )
-	// Is this a Replay demo?
-	virtual bool		IsReplay( void ) = 0;
-	// Download a replay from the given URL
-	virtual void		DownloadReplay( int nReplayDownloadGroupId ) = 0;
-	// Is replay enabled?
-	virtual bool		IsReplayEnabled() = 0;
-	// Is replay recording?
-	virtual bool		IsReplayRecording() = 0;
-	// Get the replay recording tick from server
-	virtual int			GetReplayRecordingTick() = 0;
-#endif  // REPLAY_ENABLED
-
 	// is this level loaded as just the background to the main menu? (active, but unplayable)
 	virtual bool		IsLevelMainMenuBackground( void ) = 0;
 	// returns the name of the background level
@@ -557,13 +527,9 @@ public:
 	// current screen aspect ratio (eg. 4.0f/3.0f, 16.0f/9.0f)
 	virtual float		GetScreenAspectRatio( int viewportWidth, int viewportHeight ) = 0;
 
-	// allow the game UI to login a user
-	virtual bool		REMOVED_SteamRefreshLogin( const char *password, bool isSecure ) = 0;
-	virtual bool		REMOVED_SteamProcessCall( bool & finished ) = 0;
-
 	// allow other modules to know about engine versioning (one use is a proxy for network compatability)
 	virtual unsigned int	GetEngineBuildNumber() = 0; // engines build
-	virtual const char *	GetProductVersionString() = 0; // mods version number (steam.inf)
+	virtual const char *	GetProductVersionString() = 0; // mods version number
 
 	// Communicates to the color correction editor that it's time to grab the pre-color corrected frame
 	// Passes in the actual size of the viewport
@@ -652,7 +618,7 @@ public:
 
 	//All callbacks have to be registered before demo recording begins. TODO: Macro'ize a way to do it at startup
 	virtual void RegisterDemoCustomDataCallback( string_t szCallbackSaveID, pfnDemoCustomDataCallback pCallback ) = 0;
-	virtual void RecordDemoCustomData( pfnDemoCustomDataCallback pCallback, const void *pData, size_t iDataLength ) = 0;
+	virtual void RecordDemoCustomData( pfnDemoCustomDataCallback pCallback, const void *pData, std::size_t iDataLength ) = 0;
 
 	// global sound pitch scaling
 	virtual void SetPitchScale( float flPitchScale ) = 0;
@@ -730,10 +696,6 @@ public:
 
 	virtual void SetConnectionPassword( char const *pchCurrentPW ) = 0;
 
-	virtual CSteamAPIContext* GetSteamAPIContext() = 0;
-
-	virtual void SubmitStatRecord( char const *szMapName, uint uiBlobVersion, uint uiBlobSize, const void *pvBlob ) = 0;
-
 	// Sends a key values server command, not allowed from scripts execution
 	// Params:
 	//	pKeyValues	- key values to be serialized and sent to server
@@ -795,13 +757,10 @@ public:
 	virtual bool SOSSetOpvarFloat( const char *pOpVarName, float flValue ) = 0;
 	virtual bool SOSGetOpvarFloat( const char *pOpVarName, float &flValue ) = 0;
 
-	virtual bool IsSubscribedMap( const char *pchMapName, bool bOnlyOnDisk ) = 0;
-	virtual bool IsFeaturedMap( const char *pchMapName, bool bOnlyOnDisk ) = 0;
-
 	// Access demo playback parameters
 	virtual CDemoPlaybackParameters_t const * GetDemoPlaybackParameters() = 0;
 
-	// Client version from the steam.inf, this will be compared to the GC version
+	// Client version from the version info file
 	virtual int GetClientVersion() const = 0; // engines build
 
 	virtual bool IsDemoSkipping() = 0;
@@ -825,7 +784,7 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: Interface exposed from the client .dll back to the engine
 //-----------------------------------------------------------------------------
-abstract_class IBaseClientDLL
+class IBaseClientDLL
 {
 public:
 	// Connect appsystem components, get global interfaces, don't run any other init code
@@ -1055,22 +1014,10 @@ public:
 	virtual const Frustum_t* GetBuildViewFrustum( void ) const = 0;
 	virtual const std::vector< Frustum_t >* GetBuildViewAeraFrustums( void ) const = 0;
 
-	virtual bool IsSubscribedMap( const char *pchMapName, bool bOnlyOnDisk ) = 0;
-	virtual bool IsFeaturedMap( const char *pchMapName, bool bOnlyOnDisk ) = 0;
-
-	// Gets file info for a workshop map, downloads latest version if needed
-	virtual void DownloadCommunityMapFile( PublishedFileId_t id ) = 0;
-
-	// Return download progress from 0.0 - 1.0, or -1.0 on error
-	virtual float GetUGCFileDownloadProgress( PublishedFileId_t id ) = 0;
-
 	virtual void RecordUIEvent( const char* szEvent ) = 0;
 
 	// Inventory access
 	virtual float FindInventoryItemWithMaxAttributeValue( char const *szItemType, char const *szAttrClass ) = 0;
-
-	// Inventory access
-	virtual void DetermineSubscriptionKvToAdvertise( KeyValues *kvLocalPlayer ) = 0;
 
 	// Evidence validation
 	virtual bool ValidateSignedEvidenceHeader( char const *szKey, void const *pvHeader, CDemoPlaybackParameters_t *pPlaybackParameters ) = 0;
@@ -1078,8 +1025,6 @@ public:
 	virtual bool ShouldSkipEvidencePlayback( CDemoPlaybackParameters_t const *pPlaybackParameters ) = 0;
 
 	virtual bool IsConnectedUserInfoChangeAllowed( IConVar *pCvar ) = 0;
-
-	virtual char const * GetRichPresenceStatusString() = 0;
 
 	// Returns true if the client can stop recording a demo now.  If the client returns false,
 	// an error message of up to length bytes should be returned in errorMsg.
@@ -1098,12 +1043,12 @@ public:
 	virtual void OnTickPre( int tickcount ) = 0;
 };
 
-#define CLIENT_DLL_INTERFACE_VERSION		"VClient018"
+inline constexpr const char *CLIENT_DLL_INTERFACE_VERSION = "VClient018";
 
 //-----------------------------------------------------------------------------
 // Purpose: Interface exposed from the client .dll back to the engine for specifying shared .dll IAppSystems (e.g., ISoundEmitterSystem)
 //-----------------------------------------------------------------------------
-abstract_class IClientDLLSharedAppSystems
+class IClientDLLSharedAppSystems
 {
 public:
 	virtual int	Count() = 0;
@@ -1111,8 +1056,4 @@ public:
 	virtual char const *GetInterfaceName( int idx ) = 0;
 };
 
-#define CLIENT_DLL_SHARED_APPSYSTEMS		"VClientDllSharedAppSystems001"
-
-
-
-#endif // CDLL_INT_H
+inline constexpr const char *CLIENT_DLL_SHARED_APPSYSTEMS = "VClientDllSharedAppSystems001";

@@ -1,13 +1,27 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include "rocketui/rmlui.h"
 #include "rkhud_teammenu.h"
 
 #include "rkpanel.h"
 
 #include "rkhud_model.h"
 
-#include "cbase.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "cdll_client_int.h" // extern globals to interfaces like engineclient
 
 #include <rocketui/rmlui.h>
+import ks.tier1;
+import std;
 
 Rml::ElementDocument *RocketTeamMenuDocument::m_pInstance = nullptr;
 bool RocketTeamMenuDocument::m_bVisible = false;

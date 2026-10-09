@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_ROUTEDIST_H
-#define AI_ROUTEDIST_H
-
+import ks.math;
 #include "ai_navtype.h"
-
+import std;
 
 // ----------------------------------------------------------------------------
 // Computes the route distance + route direction based on nav type
@@ -54,5 +49,3 @@ inline float ComputePathDirection( Navigation_t navType, const Vector &start, co
 		return VectorNormalize( *pDirection );
 	}
 }
-
-#endif // AI_ROUTEDIST_H

@@ -1,19 +1,11 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include <sys/socket.h>
-#include <netinet/in.h>
+import ks.tier1;
 #include "host.h"
 #include "blockingudpsocket.h"
 #include "cserserverprotocol_engine.h"
-#include "keyvalues.h"
-#include "bitbuf.h"
+import std;
 #include "mathlib/IceKey.H"
 #include "net.h"
 
@@ -134,8 +126,9 @@ bool UploadData( char const *cserIP, char const *tablename, KeyValues *fields )
 		CBlockingUDPSocket *socket = new CBlockingUDPSocket();
 		if ( socket )
 		{
-			struct sockaddr_in sa;
-			cseradr.ToSockadr( (struct sockaddr *)&sa );
+			ks::platform::address sa;
+			sa.ip = cseradr.GetIPHostByteOrder();
+			sa.port = cseradr.GetPort();
 
 			// Don't bother waiting for response here
 			socket->SendSocketMessage( sa, (const byte *)buf.GetData(), buf.GetNumBytesWritten() );
@@ -149,7 +142,9 @@ bool UploadData( char const *cserIP, char const *tablename, KeyValues *fields )
 }
 
 /*
-CON_COMMAND( datatest, "" )
+static void datatest( const CCommand &args );
+static ConCommand datatest_command( "datatest", datatest, "" );
+static void datatest( const CCommand &args )
 {
 	KeyValues *kv = new KeyValues( "data" );
 	kv->SetString( "IDHash", "abcdefg" );

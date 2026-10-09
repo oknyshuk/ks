@@ -1,33 +1,47 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "ndebugoverlay.h"
 
-#include "tier0/platform.h"
 #include "player_lagcompensation.h"
 #include "usercmd.h"
 #include "inetchannelinfo.h"
 #include "BaseAnimatingOverlay.h"
-#include "tier0/vprof.h"
 #include "collisionutils.h"
-#include <bitset>
 
-#define LC_NONE				0
-#define LC_ALIVE			(1<<0)
+constexpr auto LC_NONE = 0;
+constexpr auto LC_ALIVE = (1<<0);
 
-#define LC_ORIGIN_CHANGED	(1<<8)
-#define LC_ANGLES_CHANGED	(1<<9)
-#define LC_SIZE_CHANGED		(1<<10)
-#define LC_ANIMATION_CHANGED (1<<11)
+constexpr auto LC_ORIGIN_CHANGED = (1<<8);
+constexpr auto LC_ANGLES_CHANGED = (1<<9);
+constexpr auto LC_SIZE_CHANGED = (1<<10);
+constexpr auto LC_ANIMATION_CHANGED = (1<<11);
 
-#define LAG_COMPENSATION_TELEPORTED_DISTANCE_SQR ( 64.0f * 64.0f )
-#define LAG_COMPENSATION_EPS_SQR ( 0.1f * 0.1f )
+constexpr auto LAG_COMPENSATION_TELEPORTED_DISTANCE_SQR = ( 64.0f * 64.0f );
+constexpr auto LAG_COMPENSATION_EPS_SQR = ( 0.1f * 0.1f );
 // Allow 4 units of error ( about 1 / 8 bbox width )
-#define LAG_COMPENSATION_ERROR_EPS_SQR ( 4.0f * 4.0f )
+constexpr auto LAG_COMPENSATION_ERROR_EPS_SQR = ( 4.0f * 4.0f );
 
 ConVar sv_unlag( "sv_unlag", "1", FCVAR_DEVELOPMENTONLY, "Enables player lag compensation" );
 ConVar sv_maxunlag( "sv_maxunlag", "1.0", FCVAR_DEVELOPMENTONLY, "Maximum lag compensation in seconds", true, 0.0f, true, 1.0f );
@@ -42,8 +56,8 @@ ConVar sv_lagpushticks( "sv_lagpushticks", "0", FCVAR_DEVELOPMENTONLY, "Push com
 
 ConVar sv_lagcompensateself( "sv_lagcompensateself", "0", FCVAR_CHEAT, "Player can lag compensate themselves." );
 
-#define COSINE_20F 0.93969f
-#define SINE_20F 0.34202f
+constexpr auto COSINE_20F = 0.93969f;
+constexpr auto SINE_20F = 0.34202f;
 
 static CLagCompensationManager g_LagCompensationManager( "CLagCompensationManager" );
 ILagCompensationManager *lagcompensation = &g_LagCompensationManager;
@@ -71,7 +85,7 @@ static void RestoreEntityTo( CBaseEntity *pEntity, const Vector &vWantedPos )
 {
 	// Try to move to the wanted position from our current position.
 	trace_t tr;
-	VPROF_BUDGET( "RestoreEntityTo", "CLagCompensationManager" );
+	CVProfScope _( "RestoreEntityTo", 0, "CLagCompensationManager", false, BUDGETFLAG_OTHER );
 	if( sv_lagcompensationforcerestore.GetBool() )
 	{
 		// We don't have to test for validity.  Just put them back where you found them.
@@ -140,7 +154,7 @@ void CLagCompensationManager::FrameUpdatePostEntityThink()
 		return;
 	}
 	
-	VPROF_BUDGET( "FrameUpdatePostEntityThink", "CLagCompensationManager" );
+	CVProfScope _( "FrameUpdatePostEntityThink", 0, "CLagCompensationManager", false, BUDGETFLAG_OTHER );
 
 	std::set< CBaseEntity * > rbEntityList;
 
@@ -188,7 +202,7 @@ void CLagCompensationManager::FrameUpdatePostEntityThink()
 //-----------------------------------------------------------------------------
 void CLagCompensationManager::StartLagCompensation( CBasePlayer *player, LagCompensationType lagCompensationType, const Vector& weaponPos, const QAngle &weaponAngles, float weaponRange )
 {
-	Assert(!m_isCurrentlyDoingCompensation);
+	contract_assert( !m_isCurrentlyDoingCompensation );
 
 	// Assume no entities need to be restored
 	for ( auto it = m_CompensatedEntities.begin(); it != m_CompensatedEntities.end(); )
@@ -230,7 +244,7 @@ void CLagCompensationManager::StartLagCompensation( CBasePlayer *player, LagComp
 	}
 
 	// NOTE: Put this here so that it won't show up in single player mode.
-	VPROF_BUDGET( "StartLagCompensation", VPROF_BUDGETGROUP_OTHER_NETWORKING );
+	CVProfScope _( "StartLagCompensation", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
 	m_isCurrentlyDoingCompensation = true;
 
@@ -285,7 +299,7 @@ void CLagCompensationManager::StartLagCompensation( CBasePlayer *player, LagComp
 
 	if ( m_weaponRange <= 0 )
 	{
-		m_weaponRange = FLOAT32_MAX;
+		m_weaponRange = std::numeric_limits<float>::max();
 	}
 
 	// Iterate all lag compensatable entities
@@ -321,7 +335,7 @@ bool CLagCompensationManager::BacktrackEntity( CBaseEntity *entity, float flTarg
 	Vector org, mins, maxs;
 	QAngle ang;
 
-	VPROF_BUDGET( "BacktrackEntity", "CLagCompensationManager" );
+	CVProfScope _( "BacktrackEntity", 0, "CLagCompensationManager", false, BUDGETFLAG_OTHER );
 
 	// check if we have at least one entry
 	if ( track->empty() )
@@ -361,7 +375,7 @@ bool CLagCompensationManager::BacktrackEntity( CBaseEntity *entity, float flTarg
 		prevOrg = record->m_vecOrigin;
 	}
 
-	Assert( record );
+	contract_assert( record );
 
 	if ( !record )
 	{
@@ -380,14 +394,14 @@ bool CLagCompensationManager::BacktrackEntity( CBaseEntity *entity, float flTarg
 		// we didn't find the exact time but have a valid previous record
 		// so interpolate between these two records;
 
-		Assert( prevRecord->m_flSimulationTime > record->m_flSimulationTime );
-		Assert( flTargetTime < prevRecord->m_flSimulationTime );
+		contract_assert( prevRecord->m_flSimulationTime > record->m_flSimulationTime );
+		contract_assert( flTargetTime < prevRecord->m_flSimulationTime );
 
 		// calc fraction between both records
 		frac = ( flTargetTime - record->m_flSimulationTime ) / 
 			( prevRecord->m_flSimulationTime - record->m_flSimulationTime );
 
-		Assert( frac > 0 && frac < 1 ); // should never extrapolate
+		contract_assert( frac > 0 && frac < 1 ); // should never extrapolate
 
 		ang  = Lerp( frac, record->m_vecAngles, prevRecord->m_vecAngles );
 		org  = Lerp( frac, record->m_vecOrigin, prevRecord->m_vecOrigin  );
@@ -601,7 +615,7 @@ bool CLagCompensationManager::BacktrackEntity( CBaseEntity *entity, float flTarg
 		entity->GetBaseAnimating()->InvalidateBoneCache();
 
 	/*
-	char text[256]; Q_snprintf( text, sizeof(text), "time %.2f", flTargetTime );
+	char text[256]; V_snprintf( text, sizeof(text), "time %.2f", flTargetTime );
 	pPlayer->DrawServerHitboxes( 10 );
 	NDebugOverlay::Text( org, text, false, 10 );
 	if ( skipAnims )
@@ -629,7 +643,7 @@ bool CLagCompensationManager::BacktrackEntity( CBaseEntity *entity, float flTarg
 
 void CLagCompensationManager::FinishLagCompensation( CBasePlayer *player )
 {
-	VPROF_BUDGET_FLAGS( "FinishLagCompensation", VPROF_BUDGETGROUP_OTHER_NETWORKING, BUDGETFLAG_CLIENT|BUDGETFLAG_SERVER );
+	CVProfScope _( "FinishLagCompensation", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_CLIENT|BUDGETFLAG_SERVER );
 
 	m_isCurrentlyDoingCompensation = false;
 
@@ -657,7 +671,7 @@ void CLagCompensationManager::FinishLagCompensation( CBasePlayer *player )
 
 void CLagCompensationManager::RecordDataIntoTrack( CBaseEntity *entity, LagRecordList *track, bool wantsAnims )
 {
-	Assert( track->size() < 1000 ); // insanity check
+	contract_assert( track->size() < 1000 ); // insanity check
 
 	// remove all records before that time:
 	int flDeadtime = gpGlobals->curtime - sv_maxunlag.GetFloat();

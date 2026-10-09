@@ -1,17 +1,18 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef C_SCENEENTITY_H
-#define C_SCENEENTITY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
 #include "ichoreoeventcallback.h"
 
 #include "reflect_annotations.h"
-#include <vector>
+import std;
+#include "dt_recv.h"
+#include "shareddefs.h"
+#include "c_baseentity.h"
+#include "client_class.h"
+#include "ehandle.h"
+
+class C_BaseFlex;
 
 // named by the Proxy<> annotation below; defined in c_sceneentity.cpp
 void RecvProxy_ForcedClientTime( const CRecvProxyData *pData, void *pStruct, void *pOut );
@@ -118,5 +119,3 @@ private:
 
 	std::vector< QueuedEvents_t > m_QueuedEvents;
 };
-
-#endif // C_SCENEENTITY_H

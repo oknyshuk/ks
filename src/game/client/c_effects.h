@@ -1,17 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_EFFECTS_H
-#define C_EFFECTS_H
-
+#include "rocketui/rmlui.h"
+import ks.tier1;
 #include "reflect_annotations.h"
 
-#include "cbase.h"
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
 #include "precipitation_shared.h"
-#include "tier1/intrusive_ptr.h"
 
 // Draw rain effects.
 void DrawPrecipitation();
@@ -204,6 +203,3 @@ protected:
 private:
 	CClient_Precipitation( const CClient_Precipitation & ); // not defined, not accessible
 };
-
-
-#endif // C_EFFECTS_H

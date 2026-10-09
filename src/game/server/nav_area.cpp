@@ -1,30 +1,49 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_area.cpp
 // AI Navigation areas
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-#include "cbase.h"
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 
-#include "tier0/vprof.h"
-#include "tier0/tslist.h"
-#include "vstdlib/jobthread.h"
 
 #include "nav_mesh.h"
 #include "nav_node.h"
 #include "nav_pathfind.h"
 #include "nav_colors.h"
-#include "fmtstr.h"
 #include "props_shared.h"
 #include "func_breakablesurf.h"
 
-
-#include "color.h"
 #include "collisionutils.h"
 #include "functorutils.h"
 #include "team.h"
@@ -83,7 +102,7 @@ static void SelectedSetColorChaged( IConVar *var, const char *pOldValue, float f
 	int g = color->r();
 	int b = color->b();
 	int a = color->a();
-	int numFound = sscanf( colorVar.GetString(), "%d %d %d %d", &r, &g, &b, &a );
+	int numFound = std::sscanf( colorVar.GetString(), "%d %d %d %d", &r, &g, &b, &a );
 
 	(*color)[0] = r;
 	(*color)[1] = g;
@@ -115,7 +134,7 @@ void CNavVectorNoEditAllocator::Reset()
 	m_nBytesCurrent = 0;
 }
 
-void *CNavVectorNoEditAllocator::Alloc( size_t nSize )
+void *CNavVectorNoEditAllocator::Alloc( std::size_t nSize )
 {
 	if ( !m_memory.GetBase() )
 	{
@@ -126,14 +145,14 @@ void *CNavVectorNoEditAllocator::Alloc( size_t nSize )
 	return m_pCurrent;
 }
 
-void *CNavVectorNoEditAllocator::Realloc( void *pMem, size_t nSize )
+void *CNavVectorNoEditAllocator::Realloc( void *pMem, std::size_t nSize )
 {
 	if ( pMem != m_pCurrent )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		Error( "Nav mesh cannot be mutated after load\n" );
 	}
-	if ( nSize > (size_t)m_nBytesCurrent )
+	if ( nSize > (std::size_t)m_nBytesCurrent )
 	{
 		m_memory.Alloc( nSize - m_nBytesCurrent );
 		m_nBytesCurrent = nSize;
@@ -145,11 +164,11 @@ void CNavVectorNoEditAllocator::Free( void *pMem )
 {
 }
 
-size_t CNavVectorNoEditAllocator::GetSize( void *pMem )
+std::size_t CNavVectorNoEditAllocator::GetSize( void *pMem )
 {
 	if ( pMem != m_pCurrent )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		Error( "Nav mesh cannot be mutated after load\n" );
 	}
 	return m_nBytesCurrent;
@@ -374,7 +393,7 @@ CNavNode *CNavArea::FindClosestNode( const Vector &pos, NavDirType dir ) const
 	GetNodes( dir, &nodes );
 
 	CNavNode *bestNode = nullptr;
-	float bestDistanceSq = FLT_MAX;
+	float bestDistanceSq = std::numeric_limits<float>::max();
 
 	for ( int i=0; i<std::ssize( nodes ); ++i )
 	{
@@ -556,46 +575,6 @@ void CNavArea::OnRoundRestart( void )
 	ConnectElevators();
 	m_damagingTickCount = 0;
 }
-
-
-#ifdef DEBUG_AREA_PLAYERCOUNTS
-//--------------------------------------------------------------------------------------------------------------
-void CNavArea::IncrementPlayerCount( int teamID, int entIndex )
-{
-	ConColorMsg( Color( 128, 255, 128, 255 ), "%f: Adding ent %d (team %d) to area %d\n", gpGlobals->curtime, entIndex, teamID, GetID() );
-	teamID = teamID % MAX_NAV_TEAMS;
-	Assert( !m_playerEntIndices[teamID].HasElement( entIndex ) );
-	if ( !m_playerEntIndices[teamID].HasElement( entIndex ) )
-	{
-		m_playerEntIndices[teamID].AddToTail( entIndex );
-	}
-
-	if (m_playerCount[ teamID ] == 255)
-	{
-		Warning( "CNavArea::IncrementPlayerCount: Overflow\n" );
-		return;
-	}
-
-	++m_playerCount[ teamID ];
-}
-
-//--------------------------------------------------------------------------------------------------------------
-void CNavArea::DecrementPlayerCount( int teamID, int entIndex )
-{
-	ConColorMsg( Color( 128, 128, 255, 255 ), "%f: Removing ent %d (team %d) from area %d\n", gpGlobals->curtime, entIndex, teamID, GetID() );
-	teamID = teamID % MAX_NAV_TEAMS;
-	Assert( m_playerEntIndices[teamID].HasElement( entIndex ) );
-	m_playerEntIndices[teamID].FindAndFastRemove( entIndex );
-
-	if (m_playerCount[ teamID ] == 0)
-	{
-		Warning( "CNavArea::IncrementPlayerCount: Underflow\n" );
-		return;
-	}
-
-	--m_playerCount[ teamID ];
-}
-#endif // DEBUG_AREA_PLAYERCOUNTS
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -1197,7 +1176,7 @@ bool CNavArea::IsConnected( const CNavArea *area, NavDirType dir ) const
  */
 float CNavArea::ComputeGroundHeightChange( const CNavArea *area )
 {
-	VPROF_BUDGET( "CNavArea::ComputeHeightChange", "NextBot" );
+	CVProfScope _( "CNavArea::ComputeHeightChange", 0, "NextBot", false, BUDGETFLAG_OTHER );
 
 	Vector closeFrom, closeTo;
 	area->GetClosestPointOnArea( GetCenter(), &closeTo );
@@ -1367,8 +1346,8 @@ void CNavArea::FinishSplitEdit( CNavArea *newArea, NavDirType ignoreEdge )
 		{
 			for ( int i=0; i<2; ++i )
 			{
-				Assert( newArea->m_node[ corner[i] ] );
-				Assert( newArea->m_node[ corner[i] ]->GetConnectedNode( dir ) );
+				contract_assert( newArea->m_node[ corner[i] ] );
+				contract_assert( newArea->m_node[ corner[i] ]->GetConnectedNode( dir ) );
 				newArea->m_node[ corner[i] ] = newArea->m_node[ corner[i] ]->GetConnectedNode( dir );
 			}
 		}
@@ -1994,7 +1973,7 @@ bool CNavArea::IsCoplanar( const CNavArea *area ) const
  * NOTE: pos->z is not used.
  */
 
-float CNavArea::GetZ( float x, float y ) const RESTRICT
+float CNavArea::GetZ( float x, float y ) const __restrict__
 {
 	// guard against division by zero due to degenerate areas
 	if (m_invDxCorners == 0.0f || m_invDyCorners == 0.0f)
@@ -2023,7 +2002,7 @@ float CNavArea::GetZ( float x, float y ) const RESTRICT
  * Return closest point to 'pos' on 'area'.
  * Returned point is in 'close'.
  */
-void CNavArea::GetClosestPointOnArea( const Vector * RESTRICT pPos, Vector *close ) const RESTRICT 
+void CNavArea::GetClosestPointOnArea( const Vector * __restrict__ pPos, Vector *close ) const __restrict__ 
 {
 	float x, y, z;
 
@@ -2400,7 +2379,7 @@ void CNavArea::ComputeClosestPointInPortal( const CNavArea *to, NavDirType dir, 
  */
 bool CNavArea::IsContiguous( const CNavArea *other ) const
 {
-	VPROF_BUDGET( "CNavArea::IsContiguous", "NextBot" );
+	CVProfScope _( "CNavArea::IsContiguous", 0, "NextBot", false, BUDGETFLAG_OTHER );
 
 	// find which side it is connected on
 	int dir;
@@ -2431,7 +2410,7 @@ bool CNavArea::IsContiguous( const CNavArea *other ) const
  */
 float CNavArea::ComputeAdjacentConnectionHeightChange( const CNavArea *destinationArea ) const
 {
-	VPROF_BUDGET( "CNavArea::ComputeAdjacentConnectionHeightChange", "NextBot" );
+	CVProfScope _( "CNavArea::ComputeAdjacentConnectionHeightChange", 0, "NextBot", false, BUDGETFLAG_OTHER );
 
 	// find which side it is connected on
 	int dir;
@@ -2442,7 +2421,7 @@ float CNavArea::ComputeAdjacentConnectionHeightChange( const CNavArea *destinati
 	}
 
 	if ( dir == NUM_DIRECTIONS )
-		return FLT_MAX;
+		return std::numeric_limits<float>::max();
 
 	Vector myEdge;
 	float halfWidth;
@@ -2692,7 +2671,7 @@ void CNavArea::Draw( void ) const
 	}
 
 	int bgcolor[4];
-	if ( 4 == sscanf( nav_area_bgcolor.GetString(), "%d %d %d %d", &(bgcolor[0]), &(bgcolor[1]), &(bgcolor[2]), &(bgcolor[3]) ) )
+	if ( 4 == std::sscanf( nav_area_bgcolor.GetString(), "%d %d %d %d", &(bgcolor[0]), &(bgcolor[1]), &(bgcolor[2]), &(bgcolor[3]) ) )
 	{
 		for ( int i=0; i<4; ++i )
 			bgcolor[i] = clamp( bgcolor[i], 0, 255 );
@@ -3186,7 +3165,7 @@ void CNavArea::DrawConnectedAreas( void ) const
  */
 void CNavArea::AddToOpenList( void )
 {
-	Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
+	contract_assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 
 	if ( IsOpen() )
 	{
@@ -3212,10 +3191,10 @@ void CNavArea::AddToOpenList( void )
 	CNavArea *area, *last = nullptr;
 	int thisCostBits = *reinterpret_cast<const int *>(&m_totalCost);
 
-	Assert ( m_totalCost >= 0.0f );
+	contract_assert( m_totalCost >= 0.0f );
 	for( area = m_openList; area; area = area->m_nextOpen )
 	{
-		Assert ( area->GetTotalCost() >= 0.0f );
+		contract_assert( area->GetTotalCost() >= 0.0f );
 		int thoseCostBits = *reinterpret_cast<const int *>(&area->m_totalCost);
 		if ( thisCostBits < thoseCostBits )
 		{
@@ -3252,7 +3231,7 @@ void CNavArea::AddToOpenList( void )
 		m_openListTail = this;
 	}
 
-	Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
+	contract_assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 }
 
 
@@ -3262,7 +3241,7 @@ void CNavArea::AddToOpenList( void )
  */
 void CNavArea::AddToOpenListTail( void )
 {
-	Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
+	contract_assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 
 	if ( IsOpen() )
 	{
@@ -3281,7 +3260,7 @@ void CNavArea::AddToOpenListTail( void )
 		this->m_prevOpen = nullptr;
 		this->m_nextOpen = nullptr;
 
-		Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
+		contract_assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 		return;
 	}
 
@@ -3293,7 +3272,7 @@ void CNavArea::AddToOpenListTail( void )
 
 	m_openListTail = this;
 
-	Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
+	contract_assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -3466,11 +3445,11 @@ bool IsHidingSpotInCover( const Vector &spot )
 		return true;
 
 	const float coverRange = 100.0f;
-	const float inc = M_PI / 8.0f;
+	const float inc = std::numbers::pi / 8.0f;
 
-	for( float angle = 0.0f; angle < 2.0f * M_PI; angle += inc )
+	for( float angle = 0.0f; angle < 2.0f * std::numbers::pi; angle += inc )
 	{
-		to = from + Vector( coverRange * (float)cos(angle), coverRange * (float)sin(angle), HalfHumanHeight );
+		to = from + Vector( coverRange * (float)std::cos(angle), coverRange * (float)std::sin(angle), HalfHumanHeight );
 
 		UTIL_TraceLine( from, to, MASK_NPCSOLID_BRUSHONLY, nullptr, COLLISION_GROUP_NONE, &result );
 
@@ -3530,7 +3509,7 @@ static Vector FindPositionInArea( CNavArea *area, NavCornerType corner )
 				pos = cornerPos + Vector(  area->GetSizeX()*0.5f*multX,  area->GetSizeY()*0.5f*multY, 0.0f );
 				if ( !area->IsOverlapping( pos ) )
 				{
-					AssertMsg( false, UTIL_VarArgs( "A Hiding Spot can't be placed on its area at (%.0f %.0f %.0f)", cornerPos.x, cornerPos.y, cornerPos.z) );
+					contract_assert( false );
 
 					// Just pull the position to a small offset
 					pos = cornerPos + Vector(  1.0f*multX,  1.0f*multY, 0.0f );
@@ -3788,15 +3767,15 @@ void CNavArea::ComputeSniperSpots( void )
 
 void CNavArea::AddHidingSpot( HidingSpot * pSpot )
 {
-	Assert( ks::find_index( m_hidingSpots, pSpot ) == -1 );
+	contract_assert( ks::find_index( m_hidingSpots, pSpot ) == -1 );
 	m_hidingSpots.push_back( pSpot );
 }
 
 void CNavArea::RemoveHidingSpot( HidingSpot * pSpot )
 {
 	bool bSuccess = ks::erase_first( m_hidingSpots, pSpot );
-	Assert( bSuccess );
-	NOTE_UNUSED( bSuccess );
+	contract_assert( bSuccess );
+	(void)bSuccess;
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -4117,12 +4096,14 @@ bool CNavArea::ComputeLighting( void )
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_update_lighting, "Recomputes lighting values", FCVAR_CHEAT )
+static void nav_update_lighting( const CCommand &args );
+static ConCommand nav_update_lighting_command( "nav_update_lighting", nav_update_lighting, "Recomputes lighting values", FCVAR_CHEAT );
+static void nav_update_lighting( const CCommand &args )
 {
 	int numComputed = 0;
 	if ( args.ArgC() == 2 )
 	{
-		int areaID = atoi( args[1] );
+		int areaID = std::atoi( args[1] );
 		CNavArea *area = TheNavMesh->GetNavAreaByID( areaID );
 		if ( area )
 		{
@@ -4399,7 +4380,7 @@ static void CommandNavUpdateBlocked( void )
 		area->UpdateBlocked( true );
 		if ( area->IsBlocked( TEAM_ANY ) )
 		{
-			DevMsg( "Area #%d %s is blocked\n", area->GetID(), VecToString( area->GetCenter() + Vector( 0, 0, HalfHumanHeight ) ) );
+			DevMsg( "Area #%d %s is blocked\n", area->GetID(), VecToString(area->GetCenter() + Vector( 0, 0, HalfHumanHeight )).c_str() );
 		}
 	}
 	else
@@ -4411,7 +4392,7 @@ static void CommandNavUpdateBlocked( void )
 			area->UpdateBlocked( true );
 			if ( area->IsBlocked( TEAM_ANY ) )
 			{
-				DevMsg( "Area #%d %s is blocked\n", area->GetID(), VecToString( area->GetCenter() + Vector( 0, 0, HalfHumanHeight ) ) );
+				DevMsg( "Area #%d %s is blocked\n", area->GetID(), VecToString(area->GetCenter() + Vector( 0, 0, HalfHumanHeight )).c_str() );
 				if ( !blockedArea )
 				{
 					blockedArea = area;
@@ -4588,7 +4569,7 @@ void CNavArea::MarkAsUnblocked( int teamID, bool bGenerateEvent )
 // checks if any func_nav_blockers are still blocking the area
 void CNavArea::UpdateBlockedFromNavBlockers( void )
 {
-	VPROF( "CNavArea::UpdateBlockedFromNavBlockers" );
+	CVProfScope _( "CNavArea::UpdateBlockedFromNavBlockers", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	Extent bounds;
 	GetExtent( &bounds );
 
@@ -4681,7 +4662,7 @@ void CNavArea::UnblockArea( void )
  */
 void CNavArea::UpdateBlocked( bool force, int teamID )
 {
-	VPROF( "CNavArea::UpdateBlocked" );
+	CVProfScope _( "CNavArea::UpdateBlocked", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( !force && !m_blockedTimer.IsElapsed() )
 	{
 		return;
@@ -4725,7 +4706,7 @@ void CNavArea::UpdateBlocked( bool force, int teamID )
 	CTraceFilterWalkableEntities filter( nullptr, COLLISION_GROUP_PLAYER_MOVEMENT, WALK_THRU_DOORS | WALK_THRU_BREAKABLES );
 	trace_t tr;
 	{
-	VPROF( "CNavArea::UpdateBlocked-Trace" );
+	CVProfScope _( "CNavArea::UpdateBlocked-Trace", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	UTIL_TraceHull(
 		origin,
 		origin,
@@ -4768,7 +4749,7 @@ void CNavArea::UpdateBlocked( bool force, int teamID )
 
 	if ( wasBlocked != isBlocked )
 	{
-		VPROF( "CNavArea::UpdateBlocked-Event" );
+		CVProfScope _( "CNavArea::UpdateBlocked-Event", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		IGameEvent * event = gameeventmanager->CreateEvent( "nav_blocked" );
 		if ( event )
 		{
@@ -4946,7 +4927,7 @@ static void CommandNavCheckFloor( void )
 		area->CheckFloor( nullptr );
 		if ( area->IsBlocked( TEAM_ANY ) )
 		{
-			DevMsg( "Area #%d %s is blocked\n", area->GetID(), VecToString( area->GetCenter() + Vector( 0, 0, HalfHumanHeight ) ) );
+			DevMsg( "Area #%d %s is blocked\n", area->GetID(), VecToString(area->GetCenter() + Vector( 0, 0, HalfHumanHeight )).c_str() );
 		}
 	}
 	else
@@ -4957,7 +4938,7 @@ static void CommandNavCheckFloor( void )
 			area->CheckFloor( nullptr );
 			if ( area->IsBlocked( TEAM_ANY ) )
 			{
-				DevMsg( "Area #%d %s is blocked\n", area->GetID(), VecToString( area->GetCenter() + Vector( 0, 0, HalfHumanHeight ) ) );
+				DevMsg( "Area #%d %s is blocked\n", area->GetID(), VecToString(area->GetCenter() + Vector( 0, 0, HalfHumanHeight )).c_str() );
 			}
 		}
 
@@ -5030,7 +5011,7 @@ static int m_nPVSSize;		// PVS size in bytes
 
 NavVisPairSet g_NavVisPairHash;
 
-#define MASK_NAV_VISION				(MASK_BLOCKLOS_AND_NPCS|CONTENTS_IGNORE_NODRAW_OPAQUE)
+inline constexpr auto MASK_NAV_VISION = (MASK_BLOCKLOS_AND_NPCS|CONTENTS_IGNORE_NODRAW_OPAQUE);
 
 
 //--------------------------------------------------------------------------------------------------------
@@ -5238,7 +5219,7 @@ const CNavArea::CAreaBindInfoArray &CNavArea::ComputeVisibilityDelta( const CNav
 	// do not delta from a delta - if 'other' is already inheriting, use its inherited source directly
 	if ( other->m_inheritVisibilityFrom.area != nullptr )
 	{
-		Assert( false && "Visibility inheriting from inherited area" );
+		contract_assert( false && "Visibility inheriting from inherited area" );
 
 		delta = m_potentiallyVisibleAreas;
 		return delta;
@@ -5318,7 +5299,7 @@ CTSListWithFreeList< CNavArea::AreaBindInfo > g_ComputedVis;
 
 void CNavArea::ComputeVisToArea( CNavArea *&pOtherArea )
 {
-	CNavArea *area = assert_cast< CNavArea * >( pOtherArea );
+	CNavArea *area = static_cast< CNavArea * >( pOtherArea );
 	VisibilityType visThisToOther = ( area == g_pCurVisArea ) ? COMPLETELY_VISIBLE : NOT_VISIBLE;
 	VisibilityType visOtherToThis = NOT_VISIBLE;
 
@@ -5409,7 +5390,7 @@ void CNavArea::ComputeVisibilityToMesh( void )
 	{
 		visPair.SetPair( this, (CNavArea *)collectedArea );
 		[[maybe_unused]] bool bInserted = g_NavVisPairHash.insert( visPair ).second;
-		Assert( bInserted );
+		contract_assert( bInserted );
 	}
 }
 
@@ -5496,7 +5477,7 @@ bool CNavArea::IsPartiallyVisible( const Vector &eye, CBaseEntity *ignore ) cons
 //--------------------------------------------------------------------------------------------------------
 bool CNavArea::IsPotentiallyVisible( const CNavArea *viewedArea ) const
 {
-	VPROF_BUDGET( "CNavArea::IsPotentiallyVisible", "NextBot" );
+	CVProfScope _( "CNavArea::IsPotentiallyVisible", 0, "NextBot", false, BUDGETFLAG_OTHER );
 
 	if ( viewedArea == nullptr )
 	{
@@ -5541,7 +5522,7 @@ bool CNavArea::IsPotentiallyVisible( const CNavArea *viewedArea ) const
 //--------------------------------------------------------------------------------------------------------
 bool CNavArea::IsCompletelyVisible( const CNavArea *viewedArea ) const
 {
-	VPROF_BUDGET( "CNavArea::IsCompletelyVisible", "NextBot" );
+	CVProfScope _( "CNavArea::IsCompletelyVisible", 0, "NextBot", false, BUDGETFLAG_OTHER );
 
 	if ( viewedArea == nullptr )
 	{
@@ -5588,7 +5569,7 @@ bool CNavArea::IsCompletelyVisible( const CNavArea *viewedArea ) const
  */
 bool CNavArea::IsPotentiallyVisibleToTeam( int teamIndex ) const
 {
-	VPROF_BUDGET( "CNavArea::IsPotentiallyVisibleToTeam", "NextBot" );
+	CVProfScope _( "CNavArea::IsPotentiallyVisibleToTeam", 0, "NextBot", false, BUDGETFLAG_OTHER );
 
 	CTeam *team = GetGlobalTeam( teamIndex );
 
@@ -5615,7 +5596,7 @@ bool CNavArea::IsPotentiallyVisibleToTeam( int teamIndex ) const
  */
 bool CNavArea::IsCompletelyVisibleToTeam( int teamIndex ) const
 {
-	VPROF_BUDGET( "CNavArea::IsCompletelyVisibleToTeam", "NextBot" );
+	CVProfScope _( "CNavArea::IsCompletelyVisibleToTeam", 0, "NextBot", false, BUDGETFLAG_OTHER );
 
 	CTeam *team = GetGlobalTeam( teamIndex );
 
@@ -5649,19 +5630,3 @@ Vector CNavArea::GetRandomPoint( void ) const
 
 	return spot;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

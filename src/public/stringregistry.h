@@ -1,21 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		A registry of strings and associated ints
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef STRINGREGISTRY_H
-#define STRINGREGISTRY_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier1/map_ops.h"
+// Purpose: A registry of strings and associated ints
+
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Purpose: Just a convenience/legacy wrapper for ks::idict<> .
@@ -57,5 +47,3 @@ public:
 	~CStringRegistry(void);			// Need to free allocated memory
 	CStringRegistry(void);
 };
-
-#endif // STRINGREGISTRY_H

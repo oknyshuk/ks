@@ -1,14 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: The worldspawn entity. This spawns first when each level begins.
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef WORLD_H
-#define WORLD_H
+// Purpose: The worldspawn entity. This spawns first when each level begins.
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 enum
 {
@@ -93,6 +90,3 @@ private:
 
 CWorld* GetWorldEntity();
 extern const char *GetDefaultLightstyleString( int styleIndex );
-
-
-#endif // WORLD_H

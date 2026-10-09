@@ -1,17 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#ifndef SYS_H
-#define SYS_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SYSEXTERNAL_H
 #include "sysexternal.h"
-#endif
 
 // sys.h -- non-portable functions
 
@@ -56,5 +47,3 @@ void Sys_CreateFileAssociations( int count, FileAssociationInfo *list );
 void Sys_NoCrashDialog();
 void Sys_TestSendKey( const char *pKey );
 void Sys_OutputDebugString(const char *msg);
-
-#endif			// SYS_H

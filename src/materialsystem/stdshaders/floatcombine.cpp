@@ -1,9 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 
@@ -11,9 +7,8 @@
 #include "floatcombine_ps20.inc"
 #include "floatcombine_ps20b.inc"
 
-
 BEGIN_VS_SHADER_FLAGS( floatcombine, "Help for floatcombine", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( BLOOMTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( SHARPNESS, SHADER_PARAM_TYPE_FLOAT, "1", "" )
 	    SHADER_PARAM( WOODCUT, SHADER_PARAM_TYPE_FLOAT, "0", "" )

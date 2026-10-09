@@ -1,18 +1,12 @@
-//===== Copyright (c) 2005-2013, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005-2013 Valve Corporation
+
 // Purpose: A higher level link library for general use in the game and tools.
-//
-//===========================================================================//
 
-
-#ifndef MDLUTILS_H
-#define MDLUTILS_H
-
-
-#include <utility>
+import std;
+import ks.math;
 #include "datacache/imdlcache.h"
-#include "mathlib/vector.h"
-#include "color.h"
 #include "studio.h"
 #include "materialsystem/custommaterialowner.h"
 #include "materialsystem/MaterialSystemUtil.h"
@@ -21,7 +15,6 @@
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-struct matrix3x4_t;
 
 class CMDLAttachmentData
 {
@@ -230,7 +223,3 @@ void GetMDLBoundingSphere( Vector *pVecCenter, float *pRadius, MDLHandle_t h, in
 // Determines which pose parameters are used by the specified sequence
 //-----------------------------------------------------------------------------
 void FindSequencePoseParameters( CStudioHdr &hdr, int nSequence, bool *pPoseParameters, int nCount );
-
-
-#endif // MDLUTILS_H
-

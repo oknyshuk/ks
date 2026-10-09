@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2014, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2014 Valve Corporation
 
-#ifndef LIGHTMAPPED_4WAYBLEND_DX9_HELPER_H
-#define LIGHTMAPPED_4WAYBLEND_DX9_HELPER_H
-
-#include <string.h>
+import std;
 #include "BaseVSShader.h"
 #include "shaderlib/commandbuilder.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -27,7 +20,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct Lightmapped_4WayBlend_DX9_Vars_t
 {
-	Lightmapped_4WayBlend_DX9_Vars_t() { memset( this, 0xFF, sizeof(Lightmapped_4WayBlend_DX9_Vars_t) ); }
+	Lightmapped_4WayBlend_DX9_Vars_t() { std::memset( this, 0xFF, sizeof(Lightmapped_4WayBlend_DX9_Vars_t) ); }
 
 	int m_nBaseTexture;
 	int m_nBaseTextureFrame;
@@ -146,5 +139,3 @@ void DrawLightmapped_4WayBlend_DX9( CBaseVSShader *pShader, IMaterialVar** param
 
 void DrawLightmapped_4WayBlend_DX9_FastPath( int *dynVSIdx, int *dynPSIdx, CBaseVSShader *pShader, IMaterialVar** params, 
 											 IShaderDynamicAPI *pShaderAPI, Lightmapped_4WayBlend_DX9_Vars_t &info, CBasePerMaterialContextData **pContextDataPtr, BOOL bCSMEnabled );
-
-#endif // MULTIBLEND_DX9_HELPER_H

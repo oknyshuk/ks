@@ -1,17 +1,13 @@
-//======= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======
-//
-//	Implementation of the CGameEventTransmitter class.
-//
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
+// Purpose: Implementation of the CGameEventTransmitter class.
 
-#include <tier0/vprof.h>
+import ks.tier1;
 #include "gameeventtransmitter.h"
 #include "net.h"
-#include "tier1/convar.h"
+import std;
 #include "GameEventManager.h"
-#include "tier0/icommandline.h"
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction

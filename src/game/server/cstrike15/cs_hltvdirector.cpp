@@ -1,15 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
 #include "hltvdirector.h"
 #include "igameevents.h"
-
 
 class CCSHLTVDirector : public CHLTVDirector
 {
@@ -51,10 +79,10 @@ void CCSHLTVDirector::CreateShotFromEvent( const CHLTVGameEvent *event )
 
 	CBaseEntity *player = nullptr;
 
-	if ( !Q_strcmp( "hostage_rescued", name ) ||
-		 !Q_strcmp( "hostage_hurt", name ) ||
-		 !Q_strcmp( "hostage_follows", name ) ||
-		 !Q_strcmp( "hostage_killed", name ) )
+	if ( !V_strcmp( "hostage_rescued", name ) ||
+		 !V_strcmp( "hostage_hurt", name ) ||
+		 !V_strcmp( "hostage_follows", name ) ||
+		 !V_strcmp( "hostage_killed", name ) )
 	{
 		player = UTIL_PlayerByUserId( event->m_Event->GetInt("userid") );
 
@@ -74,8 +102,8 @@ void CCSHLTVDirector::CreateShotFromEvent( const CHLTVGameEvent *event )
 		m_iPVSEntity = player->entindex();
 	}
 
-	else if (	!Q_strcmp( "bomb_beginplant", name ) ||
-				!Q_strcmp( "bomb_begindefuse", name ) )
+	else if (	!V_strcmp( "bomb_beginplant", name ) ||
+				!V_strcmp( "bomb_begindefuse", name ) )
 	{
 
 		player = UTIL_PlayerByUserId( event->m_Event->GetInt("userid") );
@@ -184,7 +212,6 @@ const char** CCSHLTVDirector::GetModEvents()
 		"tournament_reward",
 		"item_found",
 		"items_gifted",
-		"achievement_earned",
 		"round_announce_warmup",
 		"round_announce_last_round_half",
 		"round_announce_final",
@@ -210,7 +237,7 @@ const char** CCSHLTVDirector::GetModEvents()
 
 static CCSHLTVDirector s_HLTVDirector;	// singleton
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CHLTVDirector, IHLTVDirector, INTERFACEVERSION_HLTVDIRECTOR, s_HLTVDirector );
+static InterfaceReg s_Reg_CHLTVDirector_IHLTVDirector( []() -> void * { return static_cast<IHLTVDirector *>( &s_HLTVDirector ); }, INTERFACEVERSION_HLTVDIRECTOR );;
 
 CHLTVDirector* HLTVDirector()
 {

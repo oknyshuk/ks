@@ -1,12 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "physics.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_physicsprop.h"
@@ -15,7 +23,6 @@
 #include "c_cs_player.h"
 #define CPhysBox C_PhysBox
 #define CPhysicsProp C_PhysicsProp
-
 
 IMPLEMENT_NETWORKCLASS_ALIASED( DynamicProp, DT_DynamicProp )
 
@@ -39,7 +46,7 @@ bool C_DynamicProp::TestBoneFollowers( const Ray_t &ray, unsigned int fContentsM
 	CBaseEntity	*pList[128];
 	Vector mins, maxs;
 	CollisionProp()->WorldSpaceAABB( &mins, &maxs );
-	int count = UTIL_EntitiesInBox( pList, ARRAYSIZE(pList), mins, maxs, 0, PARTITION_CLIENT_SOLID_EDICTS );
+	int count = UTIL_EntitiesInBox( pList, std::size( pList ), mins, maxs, 0, PARTITION_CLIENT_SOLID_EDICTS );
 	for ( int i = 0; i < count; i++ )
 	{
 		if ( pList[i]->GetOwnerEntity() == this )
@@ -285,7 +292,7 @@ public:
 
 	virtual bool IsAsleep()
 	{
-		Assert ( 0 );
+		contract_assert( 0 );
 		return true;
 	}
 
@@ -305,8 +312,8 @@ class [[= ks::reflect::NetTable{ .name = "DT_PhysicsPropMultiplayer" } ]]
 
 	virtual int GetMultiplayerPhysicsMode()
 	{
-		Assert( m_iPhysicsMode != PHYSICS_MULTIPLAYER_CLIENTSIDE );
-		Assert( m_iPhysicsMode != PHYSICS_MULTIPLAYER_AUTODETECT );
+		contract_assert( m_iPhysicsMode != PHYSICS_MULTIPLAYER_CLIENTSIDE );
+		contract_assert( m_iPhysicsMode != PHYSICS_MULTIPLAYER_AUTODETECT );
 		return m_iPhysicsMode;
 	}
 
@@ -322,7 +329,7 @@ class [[= ks::reflect::NetTable{ .name = "DT_PhysicsPropMultiplayer" } ]]
 
 	virtual void ComputeWorldSpaceSurroundingBox( Vector *mins, Vector *maxs )
 	{
-		Assert( mins != nullptr && maxs != nullptr );
+		contract_assert( mins != nullptr && maxs != nullptr );
 		if ( !mins || !maxs )
 			return;
 

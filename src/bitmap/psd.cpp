@@ -1,23 +1,19 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "bitmap/psd.h"
-#include "tier0/dbg.h"
-#include "tier1/byte_reader.h"
+import std;
 #include "filesystem.h"
 #include "tier2/tier2.h"
 #include "bitmap/imageformat.h"
 #include "bitmap/bitmap.h"
 
-
 //-----------------------------------------------------------------------------
 // The PSD signature bytes
 //-----------------------------------------------------------------------------
-#define PSD_SIGNATURE 0x38425053
-#define PSD_IMGRES_SIGNATURE 0x3842494D
+constexpr auto PSD_SIGNATURE = 0x38425053;
+constexpr auto PSD_IMGRES_SIGNATURE = 0x3842494D;
 
 //-----------------------------------------------------------------------------
 // Format of the PSD header on disk
@@ -89,16 +85,16 @@ struct PSDPalette_t
 //-----------------------------------------------------------------------------
 bool IsPSDFile( ks::byte_reader &buf )
 {
-	const size_t nGet = buf.tell();
+	const std::size_t nGet = buf.tell();
 	PSDHeader_t header{};
 	buf.read_bytes( &header, sizeof(header) );
 	buf.seek( nGet );
 
-	if ( BigLong( header.m_nSignature ) != PSD_SIGNATURE )
+	if ( DWordSwapC( header.m_nSignature ) != PSD_SIGNATURE )
 		return false;
-	if ( BigShort( header.m_nVersion ) != 1 )
+	if ( WordSwapC( header.m_nVersion ) != 1 )
 		return false;
-	return ( BigShort( header.m_nDepth ) == 8 );
+	return ( WordSwapC( header.m_nDepth ) == 8 );
 }
 
 bool IsPSDFile( const char *pFileName, const char *pPathID )
@@ -119,21 +115,21 @@ bool IsPSDFile( const char *pFileName, const char *pPathID )
 //-----------------------------------------------------------------------------
 bool PSDGetInfo( ks::byte_reader &buf, int *pWidth, int *pHeight, ImageFormat *pImageFormat, float *pSourceGamma )
 {
-	const size_t nGet = buf.tell();
+	const std::size_t nGet = buf.tell();
 	PSDHeader_t header{};
 	buf.read_bytes( &header, sizeof(header) );
 	buf.seek( nGet );
 
-	if ( BigLong( header.m_nSignature ) != PSD_SIGNATURE )
+	if ( DWordSwapC( header.m_nSignature ) != PSD_SIGNATURE )
 		return false;
-	if ( BigShort( header.m_nVersion ) != 1 )
+	if ( WordSwapC( header.m_nVersion ) != 1 )
 		return false;
-	if ( BigShort( header.m_nDepth ) != 8 )
+	if ( WordSwapC( header.m_nDepth ) != 8 )
 		return false;
 
-	*pWidth = BigLong( header.m_nColumns );
-	*pHeight = BigLong( header.m_nRows );
-	*pImageFormat = BigShort( header.m_nChannels ) == 3 ? IMAGE_FORMAT_RGB888 : IMAGE_FORMAT_RGBA8888;
+	*pWidth = DWordSwapC( header.m_nColumns );
+	*pHeight = DWordSwapC( header.m_nRows );
+	*pImageFormat = WordSwapC( header.m_nChannels ) == 3 ? IMAGE_FORMAT_RGB888 : IMAGE_FORMAT_RGBA8888;
 	*pSourceGamma = ARTWORK_GAMMA;
 
 	return true;
@@ -156,18 +152,18 @@ bool PSDGetInfo( const char *pFileName, const char *pPathID, int *pWidth, int *p
 //-----------------------------------------------------------------------------
 PSDImageResources PSDGetImageResources( ks::byte_reader &buf )
 {
-	const size_t nGet = buf.tell();
+	const std::size_t nGet = buf.tell();
 
 	// Header
 	PSDHeader_t header{};
 	buf.read_bytes( &header, sizeof( header ) );
 
 	// Then palette
-	unsigned int numBytesPalette = BigLong( buf.read<unsigned int>() );
+	unsigned int numBytesPalette = DWordSwapC( buf.read<unsigned int>() );
 	buf.skip( numBytesPalette );
 
 	// Then image resources
-	unsigned int numBytesImgResources = BigLong( buf.read<unsigned int>() );
+	unsigned int numBytesImgResources = DWordSwapC( buf.read<unsigned int>() );
 	PSDImageResources imgres( numBytesImgResources, reinterpret_cast< const unsigned char * >( buf.rest().data() ) );
 
 	// Restore the seek
@@ -293,11 +289,12 @@ static int s_pChannelIndex[MODE_COUNT+1][4] =
 
 static void PSDReadUncompressedChannels( ks::byte_reader &buf, int nChannelsCount, PSDMode_t mode, PSDPalette_t &palette, Bitmap_t &bitmap )
 {
-	unsigned char *pChannelRow = (unsigned char*)stackalloc( bitmap.Width() );
+	ks::ScratchArena<> scratch;
+	unsigned char *pChannelRow = (unsigned char*)scratch.AllocBytes( bitmap.Width() );
 	for ( int i=0; i<nChannelsCount; ++i )
 	{
 		int nIndex = s_pChannelIndex[mode][i];
-		Assert( nIndex != -1 );
+		contract_assert( nIndex != -1 );
 
 		unsigned char *pDest = bitmap.GetBits();
 		for( int j=0; j < bitmap.Height(); ++j )
@@ -321,11 +318,12 @@ static void PSDReadUncompressedChannels( ks::byte_reader &buf, int nChannelsCoun
 //-----------------------------------------------------------------------------
 static void PSDReadCompressedChannels( ks::byte_reader &buf, int nChannelsCount, PSDMode_t mode, PSDPalette_t &palette, Bitmap_t &bitmap )
 {
-	unsigned char *pChannelRow = (unsigned char*)stackalloc( bitmap.Width() );
+	ks::ScratchArena<> scratch;
+	unsigned char *pChannelRow = (unsigned char*)scratch.AllocBytes( bitmap.Width() );
 	for ( int i=0; i<nChannelsCount; ++i )
 	{
 		int nIndex = s_pChannelIndex[mode][i];
-		Assert( nIndex != -1 );
+		contract_assert( nIndex != -1 );
 
 		unsigned char *pDest = bitmap.GetBits();
 		for( int j=0; j < bitmap.Height(); ++j )
@@ -339,21 +337,21 @@ static void PSDReadCompressedChannels( ks::byte_reader &buf, int nChannelsCount,
 				{
 					// If nCount is between 0 + 7F, it means copy the next nCount+1 bytes directly
 					++nCount;
-					Assert( (unsigned int)nCount <= nPixelsRemaining );
+					contract_assert( (unsigned int)nCount <= nPixelsRemaining );
 					buf.read_bytes( pSrc, nCount );
 				}
 				else
 				{
 					// If nCount is between 80 and FF, it means replicate the next byte -Count+1 times
 					nCount = -nCount + 1;
-					Assert( (unsigned int)nCount <= nPixelsRemaining );
+					contract_assert( (unsigned int)nCount <= nPixelsRemaining );
 					unsigned char nPattern = buf.read<unsigned char>();
-					memset( pSrc, nPattern, nCount );
+					std::memset( pSrc, nPattern, nCount );
 				}
 				pSrc += nCount;
 				nPixelsRemaining -= nCount;
 			}
-			Assert( nPixelsRemaining == 0 );
+			contract_assert( nPixelsRemaining == 0 );
 
 			// Collate the channels together
 			for ( int k = 0; k < bitmap.Width(); ++k, pDest += 4 )
@@ -372,18 +370,19 @@ static void PSDReadCompressedChannels( ks::byte_reader &buf, int nChannelsCount,
 //-----------------------------------------------------------------------------
 bool PSDReadFileRGBA8888( ks::byte_reader &buf, Bitmap_t &bitmap )
 {
+	ks::ScratchArena<> scratch;
 	PSDHeader_t header{};
 	buf.read_bytes( &header, sizeof(header) );
 
-	if ( BigLong( header.m_nSignature ) != PSD_SIGNATURE )
+	if ( DWordSwapC( header.m_nSignature ) != PSD_SIGNATURE )
 		return false;
-	if ( BigShort( header.m_nVersion ) != 1 )
+	if ( WordSwapC( header.m_nVersion ) != 1 )
 		return false;
-	if ( BigShort( header.m_nDepth ) != 8 )
+	if ( WordSwapC( header.m_nDepth ) != 8 )
 		return false;
 
-	PSDMode_t mode = (PSDMode_t)BigShort( header.m_nMode );
-	int nChannelsCount = BigShort( header.m_nChannels );
+	PSDMode_t mode = (PSDMode_t)WordSwapC( header.m_nMode );
+	int nChannelsCount = WordSwapC( header.m_nChannels );
 
 	if ( mode == MODE_MULTICHANNEL || mode == MODE_LAB )
 		return false;
@@ -411,13 +410,13 @@ bool PSDReadFileRGBA8888( ks::byte_reader &buf, Bitmap_t &bitmap )
 		return false;
 	}
 
-	int nWidth = BigLong( header.m_nColumns );
-	int nHeight = BigLong( header.m_nRows );
+	int nWidth = DWordSwapC( header.m_nColumns );
+	int nHeight = DWordSwapC( header.m_nRows );
 
 	// Skip parts of memory we don't care about
-	int nColorModeSize = BigLong( buf.read<unsigned int>() );
-	Assert( nColorModeSize % 3 == 0 );
-	unsigned char *pPaletteBits = (unsigned char*)stackalloc( nColorModeSize );
+	int nColorModeSize = DWordSwapC( buf.read<unsigned int>() );
+	contract_assert( nColorModeSize % 3 == 0 );
+	unsigned char *pPaletteBits = (unsigned char*)scratch.AllocBytes( nColorModeSize );
 	PSDPalette_t palette;
 	palette.m_pRed = palette.m_pGreen = palette.m_pBlue = 0;
 	if ( nColorModeSize )
@@ -428,12 +427,12 @@ bool PSDReadFileRGBA8888( ks::byte_reader &buf, Bitmap_t &bitmap )
 		palette.m_pGreen = palette.m_pRed + nPaletteSize;
 		palette.m_pBlue = palette.m_pGreen + nPaletteSize;
 	}
- 	int nImageResourcesSize = BigLong( buf.read<unsigned int>() );
+ 	int nImageResourcesSize = DWordSwapC( buf.read<unsigned int>() );
 	buf.skip( nImageResourcesSize );
-	int nLayersSize = BigLong( buf.read<unsigned int>() );
+	int nLayersSize = DWordSwapC( buf.read<unsigned int>() );
 	buf.skip( nLayersSize );
 
-	unsigned short nCompressionType = BigShort( buf.read<short>() );
+	unsigned short nCompressionType = WordSwapC( buf.read<short>() );
 
 	bitmap.Init( nWidth, nHeight, IMAGE_FORMAT_RGBA8888 );
 
@@ -493,7 +492,7 @@ bool PSDReadFileRGBA8888( const char *pFileName, const char *pPathID, Bitmap_t &
 PSDImageResources::ResElement PSDImageResources::FindElement( Resource eType ) const
 {
 	ResElement res;
-	memset( &res, 0, sizeof( res ) );
+	std::memset( &res, 0, sizeof( res ) );
 
 	unsigned char const *pvBuffer = m_pvBuffer, * const pvBufferEnd = m_pvBuffer + m_numBytes;
 	while ( pvBuffer < pvBufferEnd )
@@ -504,15 +503,15 @@ PSDImageResources::ResElement PSDImageResources::FindElement( Resource eType ) c
 		// 2 : length
 		// bytes[ length ]
 
-		uint32 uSignature = BigLong( *( uint32* )( pvBuffer ) );
+		uint32 uSignature = DWordSwapC( *( uint32* )( pvBuffer ) );
 		pvBuffer += 4;
 		if ( uSignature != PSD_IMGRES_SIGNATURE )
 			break;
 
-		unsigned short uType = BigShort( *( unsigned short * )( pvBuffer ) );
+		unsigned short uType = WordSwapC( *( unsigned short * )( pvBuffer ) );
 		pvBuffer += 6;
 
-		unsigned short uLength = BigShort( *( unsigned short * )( pvBuffer ) );
+		unsigned short uLength = WordSwapC( *( unsigned short * )( pvBuffer ) );
 		pvBuffer += 2;
 
 		if ( uType == eType )
@@ -534,7 +533,7 @@ PSDImageResources::ResElement PSDImageResources::FindElement( Resource eType ) c
 PSDResFileInfo::ResFileInfoElement PSDResFileInfo::FindElement( ResFileInfo eType ) const
 {
 	ResFileInfoElement res;
-	memset( &res, 0, sizeof( res ) );
+	std::memset( &res, 0, sizeof( res ) );
 
 	unsigned char const *pvBuffer = m_res.m_pvData, * const pvBufferEnd = pvBuffer + m_res.m_numBytes;
 	while ( pvBuffer < pvBufferEnd )
@@ -544,13 +543,13 @@ PSDResFileInfo::ResFileInfoElement PSDResFileInfo::FindElement( ResFileInfo eTyp
 		// 2 : length
 		// bytes[ length ]
 		
-		unsigned short uResLabel = BigShort( *( unsigned short * )( pvBuffer ) );
+		unsigned short uResLabel = WordSwapC( *( unsigned short * )( pvBuffer ) );
 		pvBuffer += 2;
 
 		unsigned char uType = *pvBuffer;
 		pvBuffer += 1;
 
-		unsigned short uLength = BigShort( *( unsigned short * )( pvBuffer ) );
+		unsigned short uLength = WordSwapC( *( unsigned short * )( pvBuffer ) );
 		pvBuffer += 2;
 
 		if ( uType == eType && uResLabel == 0x1C02 )

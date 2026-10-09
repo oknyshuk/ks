@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef ICHOREOEVENTCALLBACK_H
-#define ICHOREOEVENTCALLBACK_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class CChoreoEvent;
 class CChoreoChannel;
@@ -16,7 +11,7 @@ class CChoreoScene;
 // Purpose: During choreo playback, events are triggered by calling back from
 //  the scene through this interface.
 //-----------------------------------------------------------------------------
-abstract_class IChoreoEventCallback
+class IChoreoEventCallback
 {
 public:
 	virtual void StartEvent( float currenttime, CChoreoScene *scene, CChoreoEvent *event ) = 0;
@@ -27,5 +22,3 @@ public:
 	// Called for events that are part of a pause condition
 	virtual bool CheckEvent( float currenttime, CChoreoScene *scene, CChoreoEvent *event ) = 0;
 };
-
-#endif // ICHOREOEVENTCALLBACK_H

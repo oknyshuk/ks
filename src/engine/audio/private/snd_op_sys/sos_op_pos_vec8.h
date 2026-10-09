@@ -1,14 +1,8 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
-
-#ifndef SOS_OP_POS_VEC8_H
-#define SOS_OP_POS_VEC8_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "sos_op.h"
-
 
 //-----------------------------------------------------------------------------
 // simple operator for setting a single position
@@ -34,5 +28,3 @@ class CSosOperatorPosVec8 : public CSosOperator
 {
 	SOS_HEADER_DESC( CSosOperatorPosVec8 )
 };
-
-#endif // SOS_OP_POS_VEC8_H

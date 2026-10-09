@@ -1,8 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 //	STATIC: "NORMALMAP"				"0..1"
 //  STATIC: "WORLDVERTEXTRANSITION" "0..1"

@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef BASEGRENADE_SHARED_H
-#define BASEGRENADE_SHARED_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
@@ -30,7 +24,7 @@
 
 #include "cs_shareddefs.h"
 
-#define BASEGRENADE_EXPLOSION_VOLUME	1024
+inline constexpr auto BASEGRENADE_EXPLOSION_VOLUME = 1024;
 
 void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const void *pStruct,
     const void *pData, DVariant *pOut, int iElement, int objectID );
@@ -170,5 +164,3 @@ private:
 	CBaseGrenade( const CBaseGrenade & ); // not defined, not accessible
 
 };
-
-#endif // BASEGRENADE_SHARED_H

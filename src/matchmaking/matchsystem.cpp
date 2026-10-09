@@ -1,14 +1,10 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "mm_framework.h"
 
 #include "matchsystem.h"
 #include "playermanager.h"
-
 
 static CMatchSystem s_MatchSystem;
 CMatchSystem *g_pMatchSystem = &s_MatchSystem;
@@ -61,10 +57,3 @@ IDlcManager * CMatchSystem::GetDlcManager()
 {
 	return nullptr;
 }
-
-void CMatchSystem::Update()
-{
-	if ( g_pPlayerManager )
-		g_pPlayerManager->Update();
-}
-

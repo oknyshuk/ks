@@ -1,86 +1,57 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
 // CTextConsoleUnix.cpp: Unix implementation of the TextConsole class.
 //
 //////////////////////////////////////////////////////////////////////
 
 
 
+import ks.core;
 #include "TextConsoleUnix.h"
 
 // un-needed include...
 //#include "resource.h"
-#include "tier0/icommandline.h"
 //#include "../ifilesystem.h"
 #include "filesystem.h"
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <termios.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/time.h>
-#include <signal.h>
+import std;
 
 
 
-#define CONSOLE_LOG_FILE "console.log"
+inline constexpr const char *CONSOLE_LOG_FILE = "console.log";
 
 bool CTextConsoleUnix::Init( )
 {
-	static struct termios termNew;
-	sigset_t block_ttou;
-
-	sigemptyset (&block_ttou);
-	sigaddset (&block_ttou, SIGTTOU);
-	sigprocmask (SIG_BLOCK, &block_ttou, nullptr);
-
 	tty = stdout;
 	
 	// this code is for echo-ing key presses to the connected tty
 	// (which is != STDOUT) 
-	if ( isatty(STDIN_FILENO) )
+	if ( ks::platform::terminal_attached() )
 	{
-		tty = fopen( ctermid( nullptr ), "w+" );	
+		tty = std::fopen( "/dev/tty", "w+" );	
 		if ( !tty )
 		{	
-			printf("Unable to open tty(%s) for output\n", ctermid( nullptr ) );
+			std::printf("Unable to open tty(%s) for output\n", "/dev/tty" );
 			tty = stdout;
 		}
 		else
 		{
-			setbuf( tty, nullptr ); // turn buffering off
+			std::setbuf( tty, nullptr ); // turn buffering off
 		}
 	}
 	else
 	{
-		tty = fopen( "/dev/null", "w+" );
+		tty = std::fopen( "/dev/null", "w+" );
 		if ( !tty )
 		{
 			tty = stdout;
 		}
 	}
 
-	tcgetattr( STDIN_FILENO, &termStored );
-
-	memcpy( &termNew, &termStored, sizeof( struct termios ) );
-
-	/* Disable canonical mode, and set buffer size to 1 byte */
-	termNew.c_lflag &= ( ~ICANON );
-	termNew.c_cc[ VMIN ] = 1;
-	termNew.c_cc[ VTIME ] = 0;
-
-	/* disable echo */
-	termNew.c_lflag &= ( ~ECHO );
-
-	tcsetattr( STDIN_FILENO, TCSANOW, &termNew );
-	sigprocmask (SIG_UNBLOCK, &block_ttou, nullptr);
+	/* Disable canonical mode, set buffer size to 1 byte, disable echo */
+	termStored = ks::platform::terminal_enter_raw_mode();
 
 	m_bConDebug = CommandLine()->FindParm( "-condebug" ) != 0;
 	if ( m_bConDebug && CommandLine()->FindParm( "-conclearlog" ) )
@@ -94,13 +65,8 @@ bool CTextConsoleUnix::Init( )
 
 void CTextConsoleUnix::ShutDown( void )
 {
-	sigset_t block_ttou;
-
- 	sigemptyset (&block_ttou);
- 	sigaddset (&block_ttou, SIGTTOU);
-	sigprocmask (SIG_BLOCK, &block_ttou, nullptr);
-	tcsetattr( STDIN_FILENO, TCSANOW, &termStored );
-	sigprocmask (SIG_UNBLOCK, &block_ttou, nullptr);
+	ks::platform::terminal_restore( termStored );
+	termStored = nullptr;
 
 	CTextConsole::ShutDown();
 }
@@ -109,19 +75,8 @@ void CTextConsoleUnix::ShutDown( void )
 // return 0 if the kb isn't hit
 int CTextConsoleUnix::kbhit( void )
 {
-  fd_set			rfds;
-  struct timeval	tv;
-
-  /* Watch stdin (fd 0) to see when it has input. */
-  FD_ZERO( &rfds );
-  FD_SET( STDIN_FILENO, &rfds );
-
-  /* Return immediately. */
-  tv.tv_sec	= 0;
-  tv.tv_usec	= 0;
-
   /* Must be in raw or cbreak mode for this to work correctly. */
-  return select( STDIN_FILENO + 1, &rfds, nullptr, nullptr, &tv )!=-1 && FD_ISSET( STDIN_FILENO, &rfds );
+  return ks::platform::terminal_input_ready();
 }
 
 
@@ -133,12 +88,7 @@ char * CTextConsoleUnix::GetLine( void )
 	escape_sequence_t es;
 
 	es = ESCAPE_CLEAR;
-	sigset_t block_ttou;
-
- 	sigemptyset (&block_ttou);
- 	sigaddset (&block_ttou, SIGTTOU);
- 	sigaddset (&block_ttou, SIGTTIN);
-	sigprocmask (SIG_BLOCK, &block_ttou, nullptr);
+	ks::platform::terminal_block_job_signals( true );
 
 
 	while ( 1 )
@@ -149,7 +99,7 @@ char * CTextConsoleUnix::GetLine( void )
 		if ( !kbhit() )
 			break;
 		ch = 0;
-        	int numRead = read( STDIN_FILENO, &ch, 1 );
+        	long numRead = ks::platform::terminal_read( &ch, 1 );
 		if ( !numRead )
 			break;
 		
@@ -161,7 +111,7 @@ char * CTextConsoleUnix::GetLine( void )
 			nLen = ReceiveNewline();
 			if ( nLen )
 			{
-				sigprocmask (SIG_UNBLOCK, &block_ttou, nullptr);
+				ks::platform::terminal_block_job_signals( false );
 				return m_szConsoleText;	
 			}
 			break;
@@ -262,10 +212,10 @@ char * CTextConsoleUnix::GetLine( void )
 			break;
         }
 
-		fflush( stdout );
+		std::fflush( stdout );
 	}
 
-	sigprocmask (SIG_UNBLOCK, &block_ttou, nullptr);
+	ks::platform::terminal_block_job_signals( false );
 	return nullptr;
 }
 
@@ -279,7 +229,7 @@ void CTextConsoleUnix::PrintRaw( char * pszMsg, int nChars )
 		{
 			if ( nChars == 0 )
 			{
-				g_pFullFileSystem->Write( pszMsg, strlen( pszMsg ), fh );
+				g_pFullFileSystem->Write( pszMsg, std::strlen( pszMsg ), fh );
 			}
 			else
 			{
@@ -291,7 +241,7 @@ void CTextConsoleUnix::PrintRaw( char * pszMsg, int nChars )
 
 	if ( nChars == 0 )
 	{
-		printf( "%s", pszMsg );
+		std::printf( "%s", pszMsg );
 	}
 	else
 	{
@@ -299,7 +249,7 @@ void CTextConsoleUnix::PrintRaw( char * pszMsg, int nChars )
 
 		for ( nCount = 0; nCount < nChars; nCount++ )
 		{
-			printf( "%c", pszMsg[ nCount ] );
+			std::printf( "%c", pszMsg[ nCount ] );
 		}
 	}
 }
@@ -309,7 +259,7 @@ void CTextConsoleUnix::Echo( char * pszMsg, int nChars )
 {
 	if ( nChars == 0 )
 	{
-		fprintf( tty, "%s", pszMsg );
+		std::fprintf( tty, "%s", pszMsg );
 	}
 	else
 	{
@@ -317,22 +267,16 @@ void CTextConsoleUnix::Echo( char * pszMsg, int nChars )
 
 		for ( nCount = 0; nCount < nChars; nCount++ )
 		{
-			fprintf( tty, "%c", pszMsg[ nCount ] );
+			std::fprintf( tty, "%c", pszMsg[ nCount ] );
 		}
 	}
 }
 
 int CTextConsoleUnix::GetWidth( void )
 {
-	struct winsize	ws;
 	int				nWidth;
 
-	nWidth = 0;
-
-	if ( ioctl( STDOUT_FILENO, TIOCGWINSZ, &ws ) == 0 )
-	{
-		nWidth = (int)ws.ws_col;
- 	} 
+	nWidth = ks::platform::terminal_columns();
  
  /*	if ( nWidth <= 0 )
 	{
@@ -354,5 +298,3 @@ int CTextConsoleUnix::GetWidth( void )
 
 	return nWidth;    
 } 
-
-

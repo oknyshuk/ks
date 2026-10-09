@@ -1,15 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "toggletextureproxy.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/itexture.h"
-#include <keyvalues.h>
 #include "functionproxy.h"
 
 #include "imaterialproxydict.h"
@@ -74,7 +77,7 @@ void CBaseToggleTextureProxy::Cleanup()
 //-----------------------------------------------------------------------------
 void CBaseToggleTextureProxy::OnBind( void *pC_BaseEntity )
 {
-	assert ( m_TextureVar );
+	contract_assert( m_TextureVar );
 
 	if (!pC_BaseEntity)
 		return;

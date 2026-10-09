@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav.h
 // Data structures and constants for the Navigation Mesh system
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
-
-#ifndef _NAV_H_
-#define _NAV_H_
 
 #include "modelentities.h"		// for CFuncBrush
 
@@ -46,22 +40,22 @@ const float ClimbUpHeight = 200.0f;				// height to check for climbing up
 const float CliffHeight = 300.0f;				// height which we consider a significant cliff which we would not want to fall off of
 
 // TERROR: Converted these values to use the same numbers as the player bounding boxes etc
-#define HalfHumanWidth			16
-#define HalfHumanHeight			35.5
-#define HumanHeight				71
-#define HumanEyeHeight			62
-#define HumanCrouchHeight		55
-#define HumanCrouchEyeHeight	37
+inline constexpr auto HalfHumanWidth = 16;
+inline constexpr auto HalfHumanHeight = 35.5;
+inline constexpr auto HumanHeight = 71;
+inline constexpr auto HumanEyeHeight = 62;
+inline constexpr auto HumanCrouchHeight = 55;
+inline constexpr auto HumanCrouchEyeHeight = 37;
 
 
-#define NAV_MAGIC_NUMBER 0xFEEDFACE				// to help identify nav files
+inline constexpr auto NAV_MAGIC_NUMBER = 0xFEEDFACE; // to help identify nav files
 
 /**
  * A place is a named group of navigation areas
  */
 typedef unsigned int Place;
-#define UNDEFINED_PLACE 0				// ie: "no place"
-#define ANY_PLACE 0xFFFF
+inline constexpr auto UNDEFINED_PLACE = 0; // ie: "no place"
+inline constexpr auto ANY_PLACE = 0xFFFF;
 
 enum NavErrorType
 {
@@ -382,12 +376,12 @@ inline float RoundToUnits( float val, float unit )
 /**
  * Return true if given entity can be ignored when moving
  */
-#define WALK_THRU_PROP_DOORS		0x01
-#define WALK_THRU_FUNC_DOORS		0x02
-#define WALK_THRU_DOORS				(WALK_THRU_PROP_DOORS | WALK_THRU_FUNC_DOORS)
-#define WALK_THRU_BREAKABLES		0x04
-#define WALK_THRU_TOGGLE_BRUSHES	0x08
-#define WALK_THRU_EVERYTHING		(WALK_THRU_DOORS | WALK_THRU_BREAKABLES | WALK_THRU_TOGGLE_BRUSHES)
+inline constexpr auto WALK_THRU_PROP_DOORS = 0x01;
+inline constexpr auto WALK_THRU_FUNC_DOORS = 0x02;
+inline constexpr auto WALK_THRU_DOORS = (WALK_THRU_PROP_DOORS | WALK_THRU_FUNC_DOORS);
+inline constexpr auto WALK_THRU_BREAKABLES = 0x04;
+inline constexpr auto WALK_THRU_TOGGLE_BRUSHES = 0x08;
+inline constexpr auto WALK_THRU_EVERYTHING = (WALK_THRU_DOORS | WALK_THRU_BREAKABLES | WALK_THRU_TOGGLE_BRUSHES);
 extern ConVar nav_solid_props;
 inline bool IsEntityWalkable( CBaseEntity *entity, unsigned int flags )
 {
@@ -465,5 +459,3 @@ private:
 
 extern bool IsWalkableTraceLineClear( const Vector &from, const Vector &to, unsigned int flags = 0 );
 extern bool IsWalkableTraceHullClear( const Vector &from, const Vector &to, const Vector &mins, const Vector &maxs, unsigned int flags );
-
-#endif // _NAV_H_

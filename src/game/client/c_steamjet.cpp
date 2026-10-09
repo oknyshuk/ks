@@ -1,10 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Implements a particle system steam jet.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "particle_prototype.h"
@@ -16,8 +25,8 @@
 #define	STEAM_NORMAL	0
 #define	STEAM_HEATWAVE	1
 
-#define STEAMJET_NUMRAMPS			5
-#define SF_EMISSIVE					0x00000001
+constexpr auto STEAMJET_NUMRAMPS = 5;
+constexpr auto SF_EMISSIVE = 0x00000001;
 
 
 //==================================================
@@ -124,7 +133,6 @@ private:
 // ------------------------------------------------------------------------- //
 
 // Expose to the particle app.
-EXPOSE_PROTOTYPE_EFFECT(SteamJet, C_SteamJet);
 
 
 // Datatable..
@@ -264,7 +272,7 @@ void C_SteamJet::Update(float fTimeDelta)
 {
 	if(!m_pParticleMgr)
 	{
-		assert(false);
+		contract_assert( false );
 		return;
 	}
 
@@ -405,7 +413,7 @@ void C_SteamJet::RenderParticles( CParticleRenderIterator *pIterator )
 		vRampColor[1] = std::min( 1.0f, vRampColor[1] );
 		vRampColor[2] = std::min( 1.0f, vRampColor[2] );
 
-		float sinLifetime = sin(pParticle->m_Lifetime * 3.14159f / pParticle->m_DieTime);
+		float sinLifetime = std::sin(pParticle->m_Lifetime * 3.14159f / pParticle->m_DieTime);
 
 		if ( m_nType == STEAM_HEATWAVE )
 		{
@@ -519,5 +527,3 @@ void C_SteamJet::UpdateLightingRamp()
 		}
 	}
 }
-
-

@@ -1,14 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#ifndef CBENCHMARK_H
-#define CBENCHMARK_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -16,7 +8,7 @@
 class CCommand;
 
 
-#define MAX_BUFFER_SIZE 2048
+inline constexpr auto MAX_BUFFER_SIZE = 2048;
 
 //-----------------------------------------------------------------------------
 // Purpose: Holds benchmark data & state
@@ -30,7 +22,6 @@ public:
 	void StartBenchmark( const CCommand &args );
 	void StopBenchmark();
 	void SetResultsFilename( const char *pFilename );
-	void Upload();
 
 private:
 	bool m_bIsTestRunning;
@@ -45,6 +36,3 @@ inline CBenchmarkResults *GetBenchResultsMgr()
 	extern CBenchmarkResults g_BenchmarkResults;
 	return &g_BenchmarkResults;
 }
-
-
-#endif // CBENCHMARK_H

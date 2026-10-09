@@ -1,23 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		An NPC's memory of potential enemies 
-//
-//=============================================================================//
-
-
-#include <map>
-#include <memory>
-
-#ifndef AI_MEMORY_H
-#define AI_MEMORY_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: An NPC's memory of potential enemies
+
+import std;
+import ks.math;
+#include "entitylist.h"
 
 class CAI_Network;
 
 const float AI_DEF_ENEMY_DISCARD_TIME = 60.0;
 
 #define AI_UNKNOWN_ENEMY (((CBaseEntity *)nullptr)+1) // use this to probe for unseen attackers
-#define AI_INVALID_TIME (FLT_MAX * -1.0)
+inline constexpr auto AI_INVALID_TIME = (std::numeric_limits<float>::max() * -1.0);
 
 //-----------------------------------------------------------------------------
 // AI_EnemyInfo_t
@@ -118,5 +114,3 @@ private:
 typedef CAI_Enemies::CMemMap::iterator AIEnemiesIter_t;
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_MEMORY_H

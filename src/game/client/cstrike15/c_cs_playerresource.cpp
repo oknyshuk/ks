@@ -1,27 +1,31 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: CS's custom C_PlayerResource
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_cs_playerresource.h"
 #include <shareddefs.h>
 #include <cs_shareddefs.h>
-#include "hud.h"
+import ks.vstdlib;
+import std;
 #include "localize/ilocalize.h"
-#include "vstdlib/vstrtools.h"
 #include "cs_gamerules.h"
 #include "c_cs_player.h"
 #include "c_cs_team.h"
 #include "cs_item_inventory.h"
 
-
 IMPLEMENT_REFLECT_CLIENTCLASS( C_CS_PlayerResource, DT_CSPlayerResource, CCSPlayerResource )
-#if CS_CONTROLLABLE_BOTS_ENABLED 
-#endif
 
 ConVar cl_show_playernames_max_chars_console( "cl_show_playernames_max_chars_console", "0", FCVAR_CLIENTDLL | FCVAR_DEVELOPMENTONLY, "Shows all player names (including bots) as 16 W's." );
 
@@ -61,12 +65,6 @@ C_CS_PlayerResource::C_CS_PlayerResource()
 //-----------------------------------------------------------------------------
 C_CS_PlayerResource::~C_CS_PlayerResource()
 {
-#if defined ENABLE_CLIENT_INVENTORIES_FOR_OTHER_PLAYERS
-	for ( int i = 0; i < Q_ARRAYSIZE( m_Inventory ); ++ i )
-	{
-		m_Inventory[i].Shutdown();
-	}
-#endif
 }
 
 bool C_CS_PlayerResource::IsVIP(int iIndex )
@@ -341,31 +339,6 @@ void C_CS_PlayerResource::OnDataChanged(DataUpdateType_t updateType)
 {
 	BaseClass::OnDataChanged( updateType );
 
-#if defined ENABLE_CLIENT_INVENTORIES_FOR_OTHER_PLAYERS
-	static XUID s_mySteamID = steamapicontext->SteamUser()->GetSteamID().ConvertToUint64();
-
-	// Request player inventories that we haven't requested yet regardless if they are in our out of PVS
-	for ( int i = 1; i <= MAX_PLAYERS; i ++ )
-	{
-		if ( ( m_Xuids[i] != INVALID_XUID ) && ( m_Xuids[i] != s_mySteamID ) )
-		{
-			bool bRequest = false;
-
-			if ( CSteamID( m_Xuids[i] ).GetAccountID() != CSteamID( m_Inventory[i].GetOwner().ID() ).GetAccountID() )
-				bRequest = true;
-			else if ( !m_Inventory[i].GetSOC() )
-				bRequest = true;
-			else if ( !m_Inventory[i].GetSOC()->BIsInitialized() || !m_Inventory[i].GetSOC()->BIsSubscribed() )
-				bRequest = true;
-
-			if ( bRequest )
-			{
-				// We need to request this user's inventory
-				CSInventoryManager()->SteamRequestInventory( &m_Inventory[i], CSteamID( m_Xuids[i] ) );
-			}
-		}
-	}
-#endif
 }
 
 bool C_CS_PlayerResource::EndMatchNextMapAllVoted( void )
@@ -377,7 +350,7 @@ const char *C_CS_PlayerResource::GetClanTag( int iIndex )
 {
 	if ( iIndex < 1 || iIndex > MAX_PLAYERS )
 	{
-		Assert( false );
+		contract_assert( false );
 		return "";
 	}
 
@@ -392,8 +365,6 @@ const char *C_CS_PlayerResource::GetClanTag( int iIndex )
 
 	return m_szClan[iIndex];
 }
-
-#if CS_CONTROLLABLE_BOTS_ENABLED
 
 bool C_CS_PlayerResource::IsControllingBot( int index )
 {
@@ -489,7 +460,7 @@ void C_CS_PlayerResource::UpdatePlayerName( int slot )
 	if ( !pchPlayerName )
 		pchPlayerName = PLAYER_UNCONNECTED_NAME;
 
-	if ( !m_szName[ slot ] || Q_stricmp( m_szName[ slot ], pchPlayerName ) )
+	if ( !m_szName[ slot ] || V_stricmp( m_szName[ slot ], pchPlayerName ) )
 	{
 		m_szName[ slot ] = AllocPooledString( pchPlayerName );
 	}
@@ -499,13 +470,6 @@ int C_CS_PlayerResource::GetBotDifficulty( int index )
 {
 	return m_iBotDifficulty[index];
 }
-
-#if defined ENABLE_CLIENT_INVENTORIES_FOR_OTHER_PLAYERS
-CCSPlayerInventory * C_CS_PlayerResource::GetInventory( int index )
-{
-	return &m_Inventory[index];
-}
-#endif
 
 const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* buffer, int buffsize, EDecoratedPlayerNameFlag_t flags )
 {
@@ -529,7 +493,7 @@ const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* 
 			// HACK: We want to have a fake name for this player if they're our target
 			// but we want to show the real player name if they're controlling a bot AND show the fake name in the scoreboard
 			// for their dead player entry. 
-			Assert( m_bDisableAssassinationTargetNameOverride == false );
+			contract_assert( m_bDisableAssassinationTargetNameOverride == false );
 			m_bDisableAssassinationTargetNameOverride = true;
 		}
 		else if ( IsFakePlayer( index ) && !cl_show_playernames_max_chars_console.GetBool() && CSGameRules() && !CSGameRules()->IsPlayingCooperativeGametype() )
@@ -539,7 +503,7 @@ const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* 
 		else if ( IsControllingBot( index ) && addBotToNameIfControllingBot )
 		{
 			nBotControlStringType = 1; // BOT ( name )
-			Assert( m_bDisableAssassinationTargetNameOverride == false );
+			contract_assert( m_bDisableAssassinationTargetNameOverride == false );
 			m_bDisableAssassinationTargetNameOverride = true;
 		}
 
@@ -555,12 +519,12 @@ const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* 
 			if ( sv_show_bot_difficulty_in_name.GetBool() )
 			{
 				// Show bot difficulty as part of the bot name
-				V_snprintf( nameBuf, ARRAYSIZE( nameBuf ) - 1, "%s[%d]", GetPlayerName( nameIndex ), GetBotDifficulty( index ) );
+				V_snprintf( nameBuf, std::size( nameBuf ) - 1, "%s[%d]", GetPlayerName( nameIndex ), GetBotDifficulty( index ) );
 			}
 			else
 			{
 				// Hide bot difficulty
-				V_snprintf( nameBuf, ARRAYSIZE( nameBuf ) - 1, "%s", GetPlayerName( nameIndex ) );
+				V_snprintf( nameBuf, std::size( nameBuf ) - 1, "%s", GetPlayerName( nameIndex ) );
 			}
 		}
 		else if ( GetCoachingTeam( index ) != 0 )
@@ -587,14 +551,14 @@ const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* 
 		{
 			//wchar_t wszClanTag[ MAX_PLAYER_NAME_LENGTH ];
 			char szClan[MAX_PLAYER_NAME_LENGTH];
-			if ( bShowClanName && Q_strlen( GetClanTag( index ) ) > 1 )
+			if ( bShowClanName && V_strlen( GetClanTag( index ) ) > 1 )
 			{
 				const char* optionalSpace = "";
 				if ( GetClanTag( index )[0] == '#' )
 				{
 					optionalSpace = " ";
 				}
-				Q_snprintf( szClan, sizeof( szClan ), "%s%s ", optionalSpace, GetClanTag( index ) );
+				V_snprintf( szClan, sizeof( szClan ), "%s%s ", optionalSpace, GetClanTag( index ) );
 			}
 			else
 			{
@@ -602,7 +566,7 @@ const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* 
 			}
 			//g_pLocalize->ConvertANSIToUnicode( szClan, wszClanTag, sizeof( wszClanTag ) );
 
-			V_snprintf( nameBuf, ARRAYSIZE( nameBuf ) - 1, "%s%s", szClan, GetPlayerName( nameIndex ) );
+			V_snprintf( nameBuf, std::size( nameBuf ) - 1, "%s%s", szClan, GetPlayerName( nameIndex ) );
 		}
 
 		V_UTF8ToUnicode( nameBuf /*GetPlayerName( nameIndex )*/, wide_name, sizeof( wide_name ) );
@@ -635,7 +599,3 @@ const wchar_t* C_CS_PlayerResource::GetDecoratedPlayerName( int index, wchar_t* 
 
 	return buffer;
 }
-
-
-#endif
-

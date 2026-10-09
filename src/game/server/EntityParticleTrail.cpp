@@ -1,14 +1,31 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Drops particles where the entity was.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Drops particles where the entity was.
+
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "reflect_sendtable.h"
-#include "reflect_annotations.h"
 #include "EntityParticleTrail.h"
-#include "networkstringtable_gamedll.h"
 
 //-----------------------------------------------------------------------------
 // Used to retire the entity
@@ -131,7 +148,7 @@ void CEntityParticleTrail::IncrementRefCount()
 void CEntityParticleTrail::DecrementRefCount()
 {
 	--m_nRefCount;
-	Assert( m_nRefCount >= 0 );
+	contract_assert( m_nRefCount >= 0 );
 	if ( m_nRefCount == 0 )
 	{
 		FollowEntity( nullptr );
@@ -147,7 +164,6 @@ void CEntityParticleTrail::DecrementRefCount()
 void CEntityParticleTrail::NotifySystemEvent( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params )
 {
 	BaseClass::NotifySystemEvent( pNotify, eventType, params );
-	Assert( pNotify == GetMoveParent() );
 	if ( eventType == NOTIFY_EVENT_DESTROY )
 	{
 		FollowEntity( nullptr );

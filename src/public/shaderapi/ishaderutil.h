@@ -1,18 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ISHADERUTIL_H
-#define ISHADERUTIL_H
-
-
-
+import ks.tier1;
 #include "materialsystem/imaterial.h"
-#include "appframework/iappsystem.h"
+import std;
 #include "shaderapi/ishaderapi.h"
 
 //-----------------------------------------------------------------------------
@@ -27,7 +19,7 @@ enum StandardTextureId_t;
 class CPrimList;
 struct ShaderColorCorrectionInfo_t;
 
-#define SHADER_UTIL_INTERFACE_VERSION "VShaderUtil001"
+inline constexpr const char *SHADER_UTIL_INTERFACE_VERSION = "VShaderUtil001";
 
 enum shaderthreadevent_t
 {
@@ -40,7 +32,7 @@ enum shaderthreadevent_t
 	SHADER_THREAD_RESET_RENDER_STATE =	7,
 };
 
-abstract_class IShaderUtil : public IAppSystem
+class IShaderUtil : public IAppSystem
 {
 public:
 	// Method to allow clients access to the MaterialSystem_Config
@@ -134,5 +126,3 @@ public:
 
 	virtual ShaderAPITextureHandle_t GetStandardTexture( StandardTextureId_t id ) = 0;
 };
-
-#endif // ISHADERUTIL_H

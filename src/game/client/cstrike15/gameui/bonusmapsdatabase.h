@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BONUSMAPSDATABASE_H
-#define BONUSMAPSDATABASE_H
-
-
-#include "utlvector.h"
-
+import std;
+import ks.tier1;
 
 struct ChallengeDescription_t
 {
@@ -75,7 +68,6 @@ struct BonusMapChallenge_t
 };
 
 
-class KeyValues;
 
 
 //-----------------------------------------------------------------------------
@@ -146,7 +138,7 @@ private:
 	bool	m_bHasLoadedSaveData;
 
 	int		m_iDirDepth;
-	char	m_szCurrentPath[_MAX_PATH];
+	char	m_szCurrentPath[k_cMaxPath];
 	float	m_fCurrentCompletion;
 	int		m_iCompletableLevels;
 
@@ -159,6 +151,3 @@ void GetChallengeMedals( ChallengeDescription_t *pChallengeDescription, int &iBe
 CBonusMapsDatabase *BonusMapsDatabase( void );
 
 extern const char g_pszMedalNames[4][8];
-
-
-#endif // BONUSMAPSDATABASE_H

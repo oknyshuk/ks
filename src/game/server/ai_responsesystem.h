@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_RESPONSESYSTEM_H
-#define AI_RESPONSESYSTEM_H
-
-#include "utlvector.h"
-
+import std;
+import ks.tier1;
 
 #include "ai_criteria.h"
 #include "../../public/responserules/response_types.h"
@@ -19,6 +14,3 @@
 ResponseRules::IResponseSystem *PrecacheCustomResponseSystem( const char *scriptfile );
 ResponseRules::IResponseSystem *BuildCustomResponseSystemGivenCriteria( const char *pszBaseFile, const char *pszCustomName, AI_CriteriaSet &criteriaSet, float flCriteriaScore );
 void DestroyCustomResponseSystems();
-
-
-#endif // AI_RESPONSESYSTEM_H

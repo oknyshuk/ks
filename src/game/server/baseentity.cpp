@@ -1,15 +1,40 @@
-//======= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======
-//
-// Purpose: The base class from which all game entities are derived.
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#include "cbase.h"
-#include "tier0/memalloc.h"
+// Purpose: The base class from which all game entities are derived.
+
+import std;
+import ks.vstdlib;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
-#include "tier1/map_ops.h"
 #include "globalstate.h"
 #include "client.h"
 #include "decals.h"
@@ -27,12 +52,10 @@
 #include "team.h"
 #include "sendproxy.h"
 #include "IEffects.h"
-#include "vstdlib/random.h"
 #include "baseentity.h"
 #include "collisionutils.h"
 #include "coordsize.h"
 #include "animation.h"
-#include "tier1/strtools.h"
 #include "engine/IEngineSound.h"
 #include "bone_setup.h"
 #include "vcollide_parse.h"
@@ -45,7 +68,6 @@
 #include "SkyCamera.h"
 #include "sceneentity.h"
 #include "game.h"
-#include "tier0/vprof.h"
 #include "ai_basenpc.h"
 #include "iservervehicle.h"
 #include "eventlist.h"
@@ -54,23 +76,18 @@
 #include "cached_file_data.h"
 #include "positionwatcher.h"
 #include "movetype_push.h"
-#include "tier0/icommandline.h"
 #include "vphysics/friction.h"
-#include <ctype.h>
 #include "datacache/imdlcache.h"
 #include "ModelSoundsCache.h"
 #include "env_debughistory.h"
-#include "tier1/utlstring.h"
 #include "vscript_server.h"
 #include "toolframework/itoolframework.h"
 #include "videocfg/videocfg.h"
-#include "vstdlib/ikeyvaluessystem.h"
 #include "ilagcompensationmanager.h"
 #include "bittools.h"
 #include "cellcoord.h"
 #include "sendprop_priorities.h"
 #include "videocfg/videocfg.h"
-#include "tier0/stackstats.h"
 
 
 extern bool g_bTestMoveTypeStepSimulation;
@@ -109,11 +126,11 @@ void SendProxy_AnimTime( const SendProp *pProp, const void *pStruct, const void 
 
 #if defined( _DEBUG )
 	CBaseAnimating *pAnimating = pEntity->GetBaseAnimating();
-	Assert( pAnimating );
+	contract_assert( pAnimating );
 
 	if ( pAnimating )
 	{
-		Assert( !pAnimating->IsUsingClientSideAnimation() );
+		contract_assert( !pAnimating->IsUsingClientSideAnimation() );
 	}
 #endif
 	
@@ -166,7 +183,7 @@ IMPLEMENT_REFLECT_TABLE_IN( CBaseEntity, DT_AnimTimeMustBeFirst );
 void BuildMergedPlayerIndexListForSplitUser( int nPlayerIndex, std::vector< int > &list )
 {
 	CBasePlayer *pl = static_cast< CBasePlayer * >( CBaseEntity::Instance( nPlayerIndex ) );
-	Assert( pl );
+	contract_assert( pl );
 	if ( !pl )
 		return;
 
@@ -194,33 +211,11 @@ void BuildMergedPlayerIndexListForSplitUser( int nPlayerIndex, std::vector< int 
 	}
 }
 
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-
-static void* SendProxy_SendPredictableId( const SendProp *pProp, const void *pStruct, const void *pVarData, CSendProxyRecipients *pRecipients, int objectID )
-{
-	CBaseEntity *pEntity = (CBaseEntity *)pStruct;
-	if ( !pEntity || !pEntity->m_PredictableID->IsActive() )
-		return nullptr;
-
-	int id_player_index = pEntity->m_PredictableID->GetPlayer();
-
-	std::vector< int > rList;
-	BuildMergedPlayerIndexListForSplitUser( id_player_index, rList );
-	pRecipients->ClearAllRecipients();
-	for ( int nPlayerIndex : rList )
-	{
-		pRecipients->SetRecipient( nPlayerIndex );
-	}	
-	return ( void * )pVarData;
-}
-REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendPredictableId );
-#endif
-
 //--------------------------------------------------------------------------------------------------------
 void SendProxy_Origin( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	CBaseEntity *entity = (CBaseEntity*)pStruct;
-	Assert( entity );
+	contract_assert( entity );
 
 	const Vector *v;
 
@@ -240,7 +235,7 @@ void SendProxy_Origin( const SendProp *pProp, const void *pStruct, const void *p
 void SendProxy_OriginXY( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	CBaseEntity *entity = (CBaseEntity*)pStruct;
-	Assert( entity );
+	contract_assert( entity );
 
 	const Vector *v;
 
@@ -259,7 +254,7 @@ void SendProxy_OriginXY( const SendProp *pProp, const void *pStruct, const void 
 void SendProxy_OriginZ( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	CBaseEntity *entity = (CBaseEntity*)pStruct;
-	Assert( entity );
+	contract_assert( entity );
 
 	const Vector *v;
 
@@ -276,7 +271,7 @@ static float const cellEpsilon = 0.001f;
 void CBaseEntity::SendProxy_CellX( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID)
 {
 	CBaseEntity *entity = (CBaseEntity*)pStruct;
-	Assert( entity );
+	contract_assert( entity );
 
 	const Vector *v;
 	int cell[3];
@@ -294,7 +289,7 @@ void CBaseEntity::SendProxy_CellX( const SendProp *pProp, const void *pStruct, c
 void CBaseEntity::SendProxy_CellY( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID)
 {
 	CBaseEntity *entity = (CBaseEntity*)pStruct;
-	Assert( entity );
+	contract_assert( entity );
 
 	const Vector *v;
 	int cell[3];
@@ -312,7 +307,7 @@ void CBaseEntity::SendProxy_CellY( const SendProp *pProp, const void *pStruct, c
 void CBaseEntity::SendProxy_CellZ( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID)
 {
 	CBaseEntity *entity = (CBaseEntity*)pStruct;
-	Assert( entity );
+	contract_assert( entity );
 
 	const Vector *v;
 	int cell[3];
@@ -333,7 +328,7 @@ void CBaseEntity::SendProxy_CellZ( const SendProp *pProp, const void *pStruct, c
 void CBaseEntity::SendProxy_CellOrigin( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	CBaseEntity *entity = (CBaseEntity*)pStruct;
-	Assert( entity );
+	contract_assert( entity );
 
 	const Vector *v;
 	int cell[3];
@@ -348,21 +343,21 @@ void CBaseEntity::SendProxy_CellOrigin( const SendProp *pProp, const void *pStru
 
 	int const cellwidth = entity->m_cellwidth; // Load it into a register
 
-	Assert( cell[0] == CellFromCoord( cellwidth, v->x ) );
-	Assert( cell[1] == CellFromCoord( cellwidth, v->y ) );
-	Assert( cell[2] == CellFromCoord( cellwidth, v->z ) );
+	contract_assert( cell[0] == CellFromCoord( cellwidth, v->x ) );
+	contract_assert( cell[1] == CellFromCoord( cellwidth, v->y ) );
+	contract_assert( cell[2] == CellFromCoord( cellwidth, v->z ) );
 
 	// Adjust based on cell size
 	pOut->m_Vector[ 0 ] = CellInCoord( cellwidth, cell[0], v->x );
 	pOut->m_Vector[ 1 ] = CellInCoord( cellwidth, cell[1], v->y );
 	pOut->m_Vector[ 2 ] = CellInCoord( cellwidth, cell[2], v->z );
 
-	Assert( pOut->m_Vector[ 0 ] >= 0.0f );
-	Assert( pOut->m_Vector[ 1 ] >= 0.0f );
-	Assert( pOut->m_Vector[ 2 ] >= 0.0f );
-	Assert( fabs( CoordFromCell( cellwidth, cell[0], pOut->m_Vector[ 0 ] ) - v->x ) < cellEpsilon );
-	Assert( fabs( CoordFromCell( cellwidth, cell[1], pOut->m_Vector[ 1 ] ) - v->y ) < cellEpsilon );
-	Assert( fabs( CoordFromCell( cellwidth, cell[2], pOut->m_Vector[ 2 ] ) - v->z ) < cellEpsilon );
+	contract_assert( pOut->m_Vector[ 0 ] >= 0.0f );
+	contract_assert( pOut->m_Vector[ 1 ] >= 0.0f );
+	contract_assert( pOut->m_Vector[ 2 ] >= 0.0f );
+	contract_assert( fabs( CoordFromCell( cellwidth, cell[0], pOut->m_Vector[ 0 ] ) - v->x ) < cellEpsilon );
+	contract_assert( fabs( CoordFromCell( cellwidth, cell[1], pOut->m_Vector[ 1 ] ) - v->y ) < cellEpsilon );
+	contract_assert( fabs( CoordFromCell( cellwidth, cell[2], pOut->m_Vector[ 2 ] ) - v->z ) < cellEpsilon );
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -371,7 +366,7 @@ void CBaseEntity::SendProxy_CellOrigin( const SendProp *pProp, const void *pStru
 void CBaseEntity::SendProxy_CellOriginXY( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	CBaseEntity *entity = (CBaseEntity*)pStruct;
-	Assert( entity );
+	contract_assert( entity );
 
 	const Vector *v;
 	int cell[3];
@@ -385,16 +380,16 @@ void CBaseEntity::SendProxy_CellOriginXY( const SendProp *pProp, const void *pSt
 
 	int const cellwidth = entity->m_cellwidth; // Load it into a register
 
-	Assert( cell[0] == CellFromCoord( cellwidth, v->x ) );
-	Assert( cell[1] == CellFromCoord( cellwidth, v->y ) );
+	contract_assert( cell[0] == CellFromCoord( cellwidth, v->x ) );
+	contract_assert( cell[1] == CellFromCoord( cellwidth, v->y ) );
 
 	pOut->m_Vector[ 0 ] = CellInCoord( cellwidth, cell[0], v->x );
 	pOut->m_Vector[ 1 ] = CellInCoord( cellwidth, cell[1], v->y );
 
-	Assert( pOut->m_Vector[ 0 ] >= 0.0f );
-	Assert( pOut->m_Vector[ 1 ] >= 0.0f );
-	Assert( fabs( CoordFromCell( cellwidth, cell[0], pOut->m_Vector[ 0 ] ) - v->x ) < cellEpsilon );
-	Assert( fabs( CoordFromCell( cellwidth, cell[1], pOut->m_Vector[ 1 ] ) - v->y ) < cellEpsilon );
+	contract_assert( pOut->m_Vector[ 0 ] >= 0.0f );
+	contract_assert( pOut->m_Vector[ 1 ] >= 0.0f );
+	contract_assert( fabs( CoordFromCell( cellwidth, cell[0], pOut->m_Vector[ 0 ] ) - v->x ) < cellEpsilon );
+	contract_assert( fabs( CoordFromCell( cellwidth, cell[1], pOut->m_Vector[ 1 ] ) - v->y ) < cellEpsilon );
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -403,7 +398,7 @@ void CBaseEntity::SendProxy_CellOriginXY( const SendProp *pProp, const void *pSt
 void CBaseEntity::SendProxy_CellOriginZ( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	CBaseEntity *entity = (CBaseEntity*)pStruct;
-	Assert( entity );
+	contract_assert( entity );
 
 	const Vector *v;
 	int cell[3];
@@ -416,18 +411,18 @@ void CBaseEntity::SendProxy_CellOriginZ( const SendProp *pProp, const void *pStr
 
 	int const cellwidth = entity->m_cellwidth; // Load it into a register
 
-	Assert( cell[2] == CellFromCoord( cellwidth, v->z ) );
+	contract_assert( cell[2] == CellFromCoord( cellwidth, v->z ) );
 
 	pOut->m_Float = CellInCoord( cellwidth, cell[2], v->z );
 
-	Assert( pOut->m_Float >= 0.0f );
-	Assert( fabs( CoordFromCell( cellwidth, cell[2], pOut->m_Float ) - v->z ) < cellEpsilon );
+	contract_assert( pOut->m_Float >= 0.0f );
+	contract_assert( fabs( CoordFromCell( cellwidth, cell[2], pOut->m_Float ) - v->z ) < cellEpsilon );
 }
 
 void SendProxy_Angles( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	CBaseEntity *entity = (CBaseEntity*)pStruct;
-	Assert( entity );
+	contract_assert( entity );
 
 	const QAngle *a;
 
@@ -447,13 +442,6 @@ void SendProxy_Angles( const SendProp *pProp, const void *pStruct, const void *p
 
 // This table encodes the CBaseEntity data.
 IMPLEMENT_REFLECT_SERVERCLASS( CBaseEntity, DT_BaseEntity )
-#if defined(ENABLE_CREATE_TIME)
-#endif
-#if PREDICTION_ERROR_CHECK_LEVEL > 1 
-#else
-#endif
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-#endif
 
 //-----------------------------------------------------------------------------
 
@@ -463,7 +451,7 @@ bool EntityNamesMatchCStrings( const char *pszQuery, const char *pszNameToMatch 
 	{
 		char cName = *pszNameToMatch;
 		char cQuery = *pszQuery;
-		if ( cName != cQuery && tolower(cName) != tolower(cQuery) ) // people almost always use lowercase, so assume that first
+		if ( cName != cQuery && std::tolower(cName) != tolower(cQuery) ) // people almost always use lowercase, so assume that first
 			break;
 		++pszNameToMatch;
 		++pszQuery;
@@ -483,12 +471,12 @@ bool EntityNamesMatchCStrings( const char *pszQuery, const char *pszNameToMatch 
 
 CBaseEntity::CBaseEntity( bool bServerOnly )
 {
-	COMPILE_TIME_ASSERT( MOVETYPE_LAST < (1 << MOVETYPE_MAX_BITS) );
-	COMPILE_TIME_ASSERT( MOVECOLLIDE_COUNT < (1 << MOVECOLLIDE_MAX_BITS) );
+	static_assert( MOVETYPE_LAST < (1 << MOVETYPE_MAX_BITS) );
+	static_assert( MOVECOLLIDE_COUNT < (1 << MOVECOLLIDE_MAX_BITS) );
 
 	// Fix CPU_LEVEL_BIT_COUNT/GPU_LEVEL_BIT_COUNT here if necessary
-	COMPILE_TIME_ASSERT( CPU_LEVEL_PC_COUNT+1 <= (1 << CPU_LEVEL_BIT_COUNT) );
-	COMPILE_TIME_ASSERT( GPU_LEVEL_PC_COUNT+1 <= (1 << GPU_LEVEL_BIT_COUNT) );
+	static_assert( CPU_LEVEL_PC_COUNT+1 <= (1 << CPU_LEVEL_BIT_COUNT) );
+	static_assert( GPU_LEVEL_PC_COUNT+1 <= (1 << GPU_LEVEL_BIT_COUNT) );
 
 #ifdef _DEBUG
 	// necessary since in debug, we initialize vectors to NAN for debugging
@@ -564,9 +552,6 @@ CBaseEntity::CBaseEntity( bool bServerOnly )
 	m_ppListByClassHead = nullptr;
 	SetNetworkQuantizeOriginAngAngles( false );
 
-#if defined(ENABLE_CREATE_TIME)
-	m_flCreateTime = 0.0f;
-#endif
 	m_pEvent = nullptr;
 
 
@@ -617,7 +602,7 @@ CBaseEntity::~CBaseEntity( )
 	//  another entity.
 	// That kind of operation should only occur in UpdateOnRemove calls
 	// Deletion should only occur via UTIL_Remove(Immediate) calls, not via naked delete calls
-	Assert( g_bDisableEhandleAccess );
+	contract_assert( g_bDisableEhandleAccess );
 
 	VPhysicsDestroyObject();
 
@@ -642,7 +627,7 @@ void CBaseEntity::PostConstructor( const char *szClassname )
 		SetClassname(szClassname);
 	}
 
-	Assert( m_iClassname != NULL_STRING && STRING(m_iClassname) != nullptr );
+	contract_assert( m_iClassname != NULL_STRING && STRING(m_iClassname) != nullptr );
 
 	// Possibly get an edict, and add self to global list of entites.
 	if ( IsEFlagSet( EFL_SERVER_ONLY ) )
@@ -732,7 +717,7 @@ void CBaseEntity::ValidateDataDescription(void)
 	{
 		for (int j = i - 1; --j >= 0; )
 		{
-			if (!Q_stricmp(names[i], names[j]))
+			if (!V_stricmp(names[i], names[j]))
 			{
 				DevMsg( "%s has multiple data description entries for \"%s\"\n", STRING(m_iClassname), names[i]);
 				break;
@@ -772,7 +757,7 @@ void CBaseEntity::StopFollowingEntity( )
 {
 	if( !IsFollowingEntity() )
 	{
-		Assert( IsEffectActive( EF_BONEMERGE ) == 0 );
+		contract_assert( IsEffectActive( EF_BONEMERGE ) == 0 );
 		return;
 	}
 
@@ -848,9 +833,9 @@ struct TimedOverlay_t
 void CBaseEntity::AddTimedOverlay( const char *msg, int endTime )
 {
 	TimedOverlay_t *pNewTO = new TimedOverlay_t;
-	int len = strlen(msg);
+	int len = std::strlen(msg);
 	pNewTO->msg = new char[len + 1];
-	Q_strncpy(pNewTO->msg,msg, len+1);
+	V_strncpy(pNewTO->msg,msg, len+1);
 	pNewTO->msgEndTime = gpGlobals->curtime + endTime;
 	pNewTO->msgStartTime = gpGlobals->curtime;
 	pNewTO->pNextTimedOverlay = m_pTimedOverlay;
@@ -957,7 +942,7 @@ void CBaseEntity::DrawTimedOverlays(void)
 	if ((m_debugOverlays & OVERLAY_MESSAGE_BIT))
 	{
 		char tempstr[512];
-		Q_snprintf( tempstr, sizeof( tempstr ), "[%s]", GetDebugName() );
+		V_snprintf( tempstr, sizeof( tempstr ), "[%s]", GetDebugName() );
 		EntityText(0,tempstr, 0);
 	}
 	
@@ -1035,7 +1020,7 @@ void CBaseEntity::DrawVPhysicsObjectCenterAndContactPoints(IPhysicsObject *obj)
 		Vector axis;
 		float deltaAngle;
 		RotationDeltaAxisAngle( angles, GetAbsAngles(), axis, deltaAngle );
-		if ( dist > 2 || fabsf(deltaAngle) > 2 )
+		if ( dist > 2 || std::fabsf(deltaAngle) > 2 )
 		{
 			Vector mins, maxs;
 
@@ -1091,7 +1076,7 @@ void CBaseEntity::DrawDebugGeometryOverlays(void)
 		DrawVPhysicsObjectCenterAndContactPoints(VPhysicsGetObject());
 
 		IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-		int count = VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+		int count = VPhysicsGetObjectList( pList, std::size( pList ) );
 		for ( int i = 0; i < count; i++ )
 		{
 			DrawVPhysicsObjectCenterAndContactPoints(pList[i]);
@@ -1181,13 +1166,13 @@ int CBaseEntity::DrawDebugTextOverlays(void)
 		int b = 0;
 
 		char tempstr[512];
-		Q_snprintf( tempstr, sizeof(tempstr), "(%d) Name: %s (%s)", entindex(), GetDebugName(), GetClassname() );
+		V_snprintf( tempstr, sizeof(tempstr), "(%d) Name: %s (%s)", entindex(), GetDebugName(), GetClassname() );
 		EntityText(offset,tempstr, 0,r,g,b);
 		offset++;
 
 		if( m_iGlobalname != NULL_STRING )
 		{
-			Q_snprintf( tempstr, sizeof(tempstr), "GLOBALNAME: %s", STRING( m_iGlobalname ) );
+			V_snprintf( tempstr, sizeof(tempstr), "GLOBALNAME: %s", STRING( m_iGlobalname ) );
 			EntityText(offset,tempstr, 0);
 			offset++;
 		}
@@ -1195,16 +1180,16 @@ int CBaseEntity::DrawDebugTextOverlays(void)
 		if (debug_overlay_fullposition.GetBool() )
 		{
 			Vector vecOrigin = GetAbsOrigin();
-			Q_snprintf( tempstr, sizeof(tempstr), "pos: (%f, %f, %f)\n", vecOrigin.x, vecOrigin.y, vecOrigin.z );
+			V_snprintf( tempstr, sizeof(tempstr), "pos: (%f, %f, %f)\n", vecOrigin.x, vecOrigin.y, vecOrigin.z );
 			EntityText( offset, tempstr, 0 );
 			offset++;
 
 			QAngle angOrientation = GetAbsAngles();
-			Q_snprintf( tempstr, sizeof(tempstr), "ang: (%f, %f, %f)\n", angOrientation.x, angOrientation.y, angOrientation.z );
+			V_snprintf( tempstr, sizeof(tempstr), "ang: (%f, %f, %f)\n", angOrientation.x, angOrientation.y, angOrientation.z );
 			EntityText( offset, tempstr, 0 );
 			offset++;
 
-			Q_snprintf( tempstr, sizeof(tempstr), "cell: (%d, %d, %d)\n", m_cellX.Get(), m_cellY.Get(), m_cellZ.Get() );
+			V_snprintf( tempstr, sizeof(tempstr), "cell: (%d, %d, %d)\n", m_cellX.Get(), m_cellY.Get(), m_cellZ.Get() );
 			EntityText( offset, tempstr, 0 );
 			offset++;
 
@@ -1214,14 +1199,14 @@ int CBaseEntity::DrawDebugTextOverlays(void)
 			cellOrigin.y = CellInCoord( cellwidth, m_cellY, m_vecOrigin->y );
 			cellOrigin.z = CellInCoord( cellwidth, m_cellZ, m_vecOrigin->z );
 
-			Q_snprintf( tempstr, sizeof(tempstr), "celloffset: (%f, %f, %f)\n", cellOrigin.x, cellOrigin.y, cellOrigin.z );
+			V_snprintf( tempstr, sizeof(tempstr), "celloffset: (%f, %f, %f)\n", cellOrigin.x, cellOrigin.y, cellOrigin.z );
 			EntityText( offset, tempstr, 0 );
 			offset++;
 		}
 		else
 		{
 			Vector vecOrigin = GetAbsOrigin();
-			Q_snprintf( tempstr, sizeof(tempstr), "Position: %0.3f, %0.3f, %0.3f\n", vecOrigin.x, vecOrigin.y, vecOrigin.z );
+			V_snprintf( tempstr, sizeof(tempstr), "Position: %0.3f, %0.3f, %0.3f\n", vecOrigin.x, vecOrigin.y, vecOrigin.z );
 			EntityText( offset, tempstr, 0 );
 			offset++;
 		}
@@ -1234,14 +1219,14 @@ int CBaseEntity::DrawDebugTextOverlays(void)
 
 		if ( GetModelName() != NULL_STRING || GetBaseAnimating() )
 		{
-			Q_snprintf(tempstr, sizeof(tempstr), "Model:%s", STRING(GetModelName()) );
+			V_snprintf(tempstr, sizeof(tempstr), "Model:%s", STRING(GetModelName()) );
 			EntityText(offset,tempstr,0,255,255,0);
 			offset++;
 		}
 
 		if( m_hDamageFilter.Get() != nullptr )
 		{
-			Q_snprintf( tempstr, sizeof(tempstr), "DAMAGE FILTER:%s", m_hDamageFilter->GetDebugName() );
+			V_snprintf( tempstr, sizeof(tempstr), "DAMAGE FILTER:%s", m_hDamageFilter->GetDebugName() );
 			EntityText( offset,tempstr,0,r,g,b);
 			offset++;
 		}
@@ -1253,18 +1238,18 @@ int CBaseEntity::DrawDebugTextOverlays(void)
 			{
 				for ( int i = 0; i < count; ++i )
 				{
-					Q_snprintf(tempstr, sizeof(tempstr),"Context: %s:%s", GetContextName( i ), GetContextValue( i ) );
+					V_snprintf(tempstr, sizeof(tempstr),"Context: %s:%s", GetContextName( i ), GetContextValue( i ) );
 					EntityText( offset, tempstr, 0,r,g,b);
 					offset++;
 				}
 			}
 		}
 
-		Q_snprintf(tempstr, sizeof(tempstr), "Flags :%d", GetFlags() );
+		V_snprintf(tempstr, sizeof(tempstr), "Flags :%d", GetFlags() );
 		EntityText(offset,tempstr,0);
 		offset++;
 
-		Q_snprintf(tempstr, sizeof(tempstr), "Effects :%d (EF_NODRAW=%d)", GetEffects(), GetEffects() & EF_NODRAW );
+		V_snprintf(tempstr, sizeof(tempstr), "Effects :%d (EF_NODRAW=%d)", GetEffects(), GetEffects() & EF_NODRAW );
 		EntityText(offset,tempstr,0);
 		offset++;
 
@@ -1380,7 +1365,7 @@ void CBaseEntity::SetParent( CBaseEntity *pParentEntity, int iAttachment )
 	if ( m_pParent == this )
 	{
 		// should never set parent to 'this' - makes no sense
-		Assert(0);
+		contract_assert( 0 );
 		m_pParent = nullptr;
 	}
 	
@@ -1551,7 +1536,7 @@ CBaseEntityOutput *CBaseEntity::FindNamedOutput( const char *pszOutput )
 			if ( ( dataDesc->fieldType == FIELD_CUSTOM ) && ( dataDesc->flags & FTYPEDESC_OUTPUT ) )
 			{
 				CBaseEntityOutput *pOutput = ( CBaseEntityOutput * )( ( intp )this + ( int )dataDesc->fieldOffset );
-				if ( !Q_stricmp( dataDesc->externalName, pszOutput ) )
+				if ( !V_stricmp( dataDesc->externalName, pszOutput ) )
 				{
 					return pOutput;
 				}
@@ -1571,7 +1556,7 @@ void CBaseEntity::Activate( void )
 
 	if ( g_bCheckForChainedActivate && g_bReceivedChainedActivate )
 	{
-		AssertMsg2( false, "Multiple calls to base class Activate() by %s (a %s)!\n", GetDebugName(), GetClassname() );
+		contract_assert( false && "Multiple calls to base class Activate() by %s (a %s)!\n" );
 	}
 	g_bReceivedChainedActivate = true;
 #endif
@@ -1765,15 +1750,6 @@ void CBaseEntity::TakeDamage( const CTakeDamageInfo &inputInfo )
 float CBaseEntity::GetAttackDamageScale( CBaseEntity *pVictim )
 {
 	float flScale = 1;
-#if ENABLE_DAMAGE_MODIFIERS
-	for ( CDamageModifier *pModifier : m_DamageModifiers )
-	{
-		if ( !pModifier->IsDamageDoneToMe() )
-		{
-			flScale *= pModifier->GetModifier();
-		}
-	}
-#endif
 	return flScale;
 }
 
@@ -1783,15 +1759,6 @@ float CBaseEntity::GetAttackDamageScale( CBaseEntity *pVictim )
 float CBaseEntity::GetReceivedDamageScale( CBaseEntity *pAttacker )
 {
 	float flScale = 1;
-#if ENABLE_DAMAGE_MODIFIERS
-	for ( CDamageModifier *pModifier : m_DamageModifiers )
-	{
-		if ( pModifier->IsDamageDoneToMe() )
-		{
-			flScale *= pModifier->GetModifier();
-		}
-	}
-#endif
 	return flScale;
 }
 
@@ -1810,7 +1777,7 @@ int CBaseEntity::VPhysicsTakeDamage( const CTakeDamageInfo &info )
 	if ( (info.GetDamageType() & (DMG_BULLET | DMG_CLUB)) && info.GetDamageForce().IsZero() )
 		return 1;
 
-	Assert(VPhysicsGetObject() != nullptr);
+	contract_assert( VPhysicsGetObject() != nullptr );
 	if ( VPhysicsGetObject() )
 	{
 		Vector force = info.GetDamageForce();
@@ -1822,7 +1789,7 @@ int CBaseEntity::VPhysicsTakeDamage( const CTakeDamageInfo &info )
 		// setup the damage force & position inside the CTakeDamageInfo (Utility functions for this are in
 		// takedamageinfo.cpp. If you think the damage shouldn't cause force (unlikely!) then you can set the 
 		// damage type to DMG_GENERIC, or | DMG_CRUSH if you need to preserve the damage type for purposes of HUD display.
-		Assert( force != vec3_origin && offset != vec3_origin );
+		contract_assert( force != vec3_origin && offset != vec3_origin );
 
 		unsigned short gameFlags = VPhysicsGetObject()->GetGameFlags();
 		if ( gameFlags & FVPHYSICS_PLAYER_HELD )
@@ -1842,7 +1809,7 @@ int CBaseEntity::VPhysicsTakeDamage( const CTakeDamageInfo &info )
 		else if ( (gameFlags & FVPHYSICS_PART_OF_RAGDOLL) && (gameFlags & FVPHYSICS_CONSTRAINT_STATIC) )
 		{
 			IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-			int count = VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+			int count = VPhysicsGetObjectList( pList, std::size( pList ) );
 			for ( int i = 0; i < count; i++ )
 			{
 				if ( !(pList[i]->GetGameFlags() & FVPHYSICS_CONSTRAINT_STATIC) )
@@ -2294,7 +2261,6 @@ static void ComputePushStartMatrix( matrix3x4_t &start, CBaseEntity *pEntity, co
 	ConcatTransforms( delta, pEntity->EntityToWorldTransform(), start );
 }
 
-#define DEBUG_PUSH_MESSAGES 0
 static void CheckPushedEntity( CBaseEntity *pEntity, pushblock_t &params )
 {
 	IPhysicsObject *pPhysics = pEntity->VPhysicsGetObject();
@@ -2302,12 +2268,9 @@ static void CheckPushedEntity( CBaseEntity *pEntity, pushblock_t &params )
 		return;
 	// somehow we've got a static or motion disabled physics object in hierarchy!
 	// This is not allowed!  Don't test blocking in that case.
-	Assert(pPhysics->IsMoveable());
+	contract_assert( pPhysics->IsMoveable() );
 	if ( !pPhysics->IsMoveable() || !pPhysics->GetShadowController() )
 	{
-#if DEBUG_PUSH_MESSAGES
-		Msg("Blocking %s, not moveable!\n", pEntity->GetClassname());
-#endif
 		return;
 	}
 
@@ -2328,12 +2291,6 @@ static void CheckPushedEntity( CBaseEntity *pEntity, pushblock_t &params )
 	}
 	else
 	{
-#if DEBUG_PUSH_MESSAGES
-		if ( pPhysics->IsAttachedToConstraint(false))
-		{
-			Msg("Warning, hierarchical entity is attached to a constraint %s\n", pEntity->GetClassname());
-		}
-#endif
 	}
 
 	if ( checkmove )
@@ -2352,19 +2309,12 @@ static void CheckPushedEntity( CBaseEntity *pEntity, pushblock_t &params )
 		if ( (targetAmount - entityAmount) > 1 )
 		{
 			pEntity->UpdatePhysicsShadowToCurrentPosition(0);
-#if DEBUG_PUSH_MESSAGES
-			Warning("Someone slammed the position of a %s\n", pEntity->GetClassname() );
-#endif
 		}
 		else
 		{
 			float dist = targetAmount - currentAmount;
 			if ( dist > 1 )
 			{
-	#if DEBUG_PUSH_MESSAGES
-				const char *pName = pEntity->GetClassname();
-				Msg( "%s blocked by %.2f units\n", pName, dist );
-	#endif
 				float movementAmount = targetAmount - (speed * params.movetime);
 				if ( pEntity == params.pRootParent )
 				{
@@ -2404,7 +2354,7 @@ static void CheckPushedEntity( CBaseEntity *pEntity, pushblock_t &params )
 		Vector axis;
 		float deltaAngle;
 		RotationDeltaAxisAngle( angles, pEntity->GetAbsAngles(), axis, deltaAngle );
-		if ( fabsf(deltaAngle) > 0.5f )
+		if ( std::fabsf(deltaAngle) > 0.5f )
 		{
 			Vector targetAxis;
 			QAngle targetRot;
@@ -2414,18 +2364,6 @@ static void CheckPushedEntity( CBaseEntity *pEntity, pushblock_t &params )
 			if ( fabsf(deltaTargetAngle) > 0.01f )
 			{
 				float expectedDist = deltaAngle;
-#if DEBUG_PUSH_MESSAGES
-				const char *pName = pEntity->GetClassname();
-				Msg( "%s blocked by %.2f degrees\n", pName, deltaAngle );
-				if ( pPhysics->IsAsleep() )
-				{
-					Msg("Asleep while blocked?\n");
-				}
-				if ( pPhysics->GetGameFlags() & FVPHYSICS_PENETRATING )
-				{
-					Msg("Blocking for penetration!\n");
-				}
-#endif
 				if ( pEntity == params.pRootParent )
 				{
 					expectedDist = pEntity->GetLocalAngularVelocity().Length() * params.movetime;
@@ -2450,9 +2388,6 @@ static void CheckPushedEntity( CBaseEntity *pEntity, pushblock_t &params )
 			else
 			{
 				pEntity->UpdatePhysicsShadowToCurrentPosition(0);
-#if DEBUG_PUSH_MESSAGES
-				Warning("Someone slammed the position of a %s\n", pEntity->GetClassname() );
-#endif
 			}
 		}
 	}
@@ -2489,7 +2424,7 @@ void CBaseEntity::VPhysicsUpdatePusher( IPhysicsObject *pPhysics )
 		if ( HasDataObjectType(PHYSICSPUSHLIST) )
 		{
 			pList = (physicspushlist_t *)GetDataObject( PHYSICSPUSHLIST );
-			Assert(pList);
+			contract_assert( pList );
 		}
 		bool checkrot = (GetLocalAngularVelocity() != vec3_angle) ? true : false;
 		bool checkmove = (GetLocalVelocity() != vec3_origin) ? true : false;
@@ -2628,7 +2563,7 @@ void CBaseEntity::PhysicsRelinkChildren( float dt )
 		{
 			// the only case where this is valid is if this entity is an attached ragdoll.
 			// So assert here to catch the non-ragdoll case.
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 
 		if ( child->FirstMoveChild() )
@@ -2704,7 +2639,7 @@ int CBaseEntity::VPhysicsGetObjectList( IPhysicsObject **pList, int listMax )
 	if ( pPhys )
 	{
 		// multi-object entities must implement this function
-		Assert( !(pPhys->GetGameFlags() & FVPHYSICS_MULTIOBJECT_ENTITY) );
+		contract_assert( !(pPhys->GetGameFlags() & FVPHYSICS_MULTIOBJECT_ENTITY) );
 		if ( listMax > 0 )
 		{
 			pList[0] = pPhys;
@@ -2719,7 +2654,7 @@ int CBaseEntity::VPhysicsGetObjectList( IPhysicsObject **pList, int listMax )
 bool CBaseEntity::VPhysicsIsFlesh( void )
 {
 	IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-	int count = VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+	int count = VPhysicsGetObjectList( pList, std::size( pList ) );
 	for ( int i = 0; i < count; i++ )
 	{
 		int material = pList[i]->GetMaterialIndex();
@@ -2752,52 +2687,6 @@ extern ConVar ai_LOS_mode;
 // Uncomment the #define ENABLE_RUNTIME_STACK_TRANSLATION line in stacktools.h
 // vpc +game /allgames /nofpo  to disable frame pointer omission in *ALL COMPILED PROJECTS*
 // rebuild everything
-#ifdef ENABLE_STACK_STATS_GATHERING
-//#define FVIS_STACK_TRACKING
-#endif
-
-#if defined( FVIS_STACK_TRACKING )
-struct Count_t ///< simple wrapper so I get a default constructor
-{
-	DECLARE_CALLSTACKSTATSTRUCT();
-
-	Count_t() : i(0) {};
-	Count_t(int a) : i(a) {};
-
-	unsigned int i;
-};
-BEGIN_STATSTRUCTDESCRIPTION( Count_t )
-END_STATSTRUCTDESCRIPTION()
-
-static CCallStackStatsGatherer<Count_t, 16> s_FVisCallStackInfo; 
-
-
-void CC_FVis_Stack_Reset( const CCommand& args )
-{
-	s_FVisCallStackInfo.Reset();
-}
-static ConCommand perf_fvis_stacks_reset("perf_fvis_stacks_reset", CC_FVis_Stack_Reset, "Resets CBaseEntity::FVisible stacktrace counts", FCVAR_CHEAT);
-
-void CC_FVis_Stack_Dump( const CCommand& args )
-{
-	int count = s_FVisCallStackInfo.NumEntries();
-	for (int i = 0 ; i < count ; ++i)
-	{
-		Msg( "\t%d calls:\n", s_FVisCallStackInfo.GetEntry(i) );
-
-		// print call stack
-		// TranslateStackInfo( const void * const *pCallStack, int iCallStackCount, tchar *szOutput, int iOutBufferSize, const tchar *szEntrySeparator, TranslateStackInfo_StyleFlags_t style = TSISTYLEFLAG_DEFAULT );
-		char outBuf[1024];
-		TranslateStackInfo( s_FVisCallStackInfo.GetCallStackForIndex(i), s_FVisCallStackInfo.CapturedCallStackLength, outBuf, 1023, "\n", (TranslateStackInfo_StyleFlags_t)(TSISTYLEFLAG_MODULENAME | TSISTYLEFLAG_SYMBOLNAME | TSISTYLEFLAG_SHORTPATH ) );
-		Msg( outBuf );
-		Msg( "\n\n" );
-	}
-}
-static ConCommand perf_fvis_stacks_dump("perf_fvis_stacks_dump", CC_FVis_Stack_Dump, "Dump info on all CBaseEntity::FVisible stack traces to console", FCVAR_CHEAT);
-
-ConVar perf_fvis_stacks_trace( "perf_fvis_stacks_trace", "0", FCVAR_CHEAT, "Enable to get detailed perf on fvis" );
-
-#endif
 
 //=========================================================
 // FVisible - returns true if a line can be traced from
@@ -2805,15 +2694,7 @@ ConVar perf_fvis_stacks_trace( "perf_fvis_stacks_trace", "0", FCVAR_CHEAT, "Enab
 //=========================================================
 bool CBaseEntity::FVisible( CBaseEntity *pEntity, int traceMask, CBaseEntity **ppBlocker )
 {
-	VPROF( "CBaseEntity::FVisible" );
-
-#if defined( FVIS_STACK_TRACKING )
-	if ( perf_fvis_stacks_trace.GetBool() )
-	{
-		CCallStackStatsGatherer_StructAccessor_AutoLock<Count_t> accessor = s_FVisCallStackInfo.GetEntry(); //( CCallStackStorage( s_FVisCallStackInfo.StackFunction, 1 ) );
-		accessor->i += 1;
-	}
-#endif
+	CVProfScope _( "CBaseEntity::FVisible", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( pEntity->GetFlags() & FL_NOTARGET )
 		return false;
@@ -2853,7 +2734,7 @@ bool CBaseEntity::FVisible( CBaseEntity *pEntity, int traceMask, CBaseEntity **p
 		// Got line of sight on the vehicle the player is driving!
 		if ( pEntity && pEntity->IsPlayer() )
 		{
-			CBasePlayer *pPlayer = assert_cast<CBasePlayer*>( pEntity );
+			CBasePlayer *pPlayer = static_cast<CBasePlayer*>( pEntity );
 			if ( tr.Ent<CBaseEntity>() == pPlayer->GetVehicleEntity() )
 				return true;
 		}
@@ -2876,15 +2757,7 @@ bool CBaseEntity::FVisible( CBaseEntity *pEntity, int traceMask, CBaseEntity **p
 //=========================================================
 bool CBaseEntity::FVisible( const Vector &vecTarget, int traceMask, CBaseEntity **ppBlocker )
 {
-	VPROF( "CBaseEntity::FVisible" );
-
-#if defined( FVIS_STACK_TRACKING )
-	if ( perf_fvis_stacks_trace.GetBool() )
-	{
-		CCallStackStatsGatherer_StructAccessor_AutoLock<Count_t> accessor = s_FVisCallStackInfo.GetEntry(); //( CCallStackStorage( s_FVisCallStackInfo.StackFunction, 1 ) );
-		accessor->i += 1;
-	}
-#endif
+	CVProfScope _( "CBaseEntity::FVisible", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	trace_t tr;
 	Vector vecLookerOrigin = EyePosition();// look through the caller's 'eyes'
@@ -3005,7 +2878,7 @@ bool CBaseEntity::PassesDamageFilter( const CTakeDamageInfo &info )
 
 bool CBaseEntity::NameMatchesComplex( const char *pszNameOrWildcard )
 {
-	if ( !Q_stricmp( "!player", pszNameOrWildcard) )
+	if ( !V_stricmp( "!player", pszNameOrWildcard) )
 		return IsPlayer();
 
 	return EntityNamesMatch( pszNameOrWildcard, m_iName );
@@ -3120,7 +2993,7 @@ CBaseEntity * CBaseEntity::CreateNoSpawn( const char *szName, const Vector &vecO
 	CBaseEntity *pEntity = CreateEntityByName( szName, -1, false );
 	if ( !pEntity )
 	{
-		Assert( !"CreateNoSpawn: only works for CBaseEntities" );
+		contract_assert( !"CreateNoSpawn: only works for CBaseEntities" );
 		return nullptr;
 	}
 
@@ -3210,40 +3083,30 @@ bool CBaseEntity::ShouldSavePhysics()
 // allocates and frees memory for itself from the engine->
 // All fields in the object are all initialized to 0.
 //-----------------------------------------------------------------------------
-void *CBaseEntity::operator new( size_t stAllocateBlock )
+void *CBaseEntity::operator new( std::size_t stAllocateBlock )
 {
 	// call into engine to get memory
-	Assert( stAllocateBlock != 0 );
+	contract_assert( stAllocateBlock != 0 );
 	return calloc( 1, stAllocateBlock );
 };
 
-void *CBaseEntity::operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
+void *CBaseEntity::operator new( std::size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
 {
 	// call into engine to get memory
-	Assert( stAllocateBlock != 0 );
+	contract_assert( stAllocateBlock != 0 );
 	return MemAlloc_InlineCallocMemset( MemAlloc_Alloc(stAllocateBlock, pFileName, nLine), 1, stAllocateBlock );
 }
 
 void CBaseEntity::operator delete( void *pMem )
 {
 	// get the engine to free the memory
-	free( pMem );
+	std::free( pMem );
 }
 
 
 #ifdef _DEBUG
 void CBaseEntity::FunctionCheck( inputfunc_t pFunction, const char *name )
 { 
-#ifdef USES_SAVERESTORE
-	// Note, if you crash here and your class is using multiple inheritance, it is
-	// probably the case that CBaseEntity (or a descendant) is not the first
-	// class in your list of ancestors, which it must be.
-	if ( pFunction && !UTIL_FunctionToName( GetDataDescMap(), pFunction ) )
-	{
-		Warning( "FUNCTION NOT IN TABLE!: %s:%s (%08lx)\n", STRING(m_iClassname), name, *reinterpret_cast<uint32*>(&pFunction) );
-		Assert(0);
-	}
-#endif
 }
 #endif
 
@@ -3278,7 +3141,7 @@ void CBaseEntity::SetMoveType( MoveType_t val, MoveCollide_t moveCollide )
 	// Make sure the move type + move collide are compatible...
 	if ((val != MOVETYPE_FLY) && (val != MOVETYPE_FLYGRAVITY))
 	{
-		Assert( moveCollide == MOVECOLLIDE_DEFAULT );
+		contract_assert( moveCollide == MOVECOLLIDE_DEFAULT );
 	}
 
 	if ( m_MoveType == MOVETYPE_VPHYSICS && val != m_MoveType )
@@ -3289,7 +3152,7 @@ void CBaseEntity::SetMoveType( MoveType_t val, MoveCollide_t moveCollide )
 			// you're changing away from MOVETYPE_VPHYSICS without making the object 
 			// shadow?  This isn't likely to work, assert.
 			// You probably meant to call VPhysicsInitShadow() instead of VPhysicsInitNormal()!
-			Assert( VPhysicsGetObject()->GetShadowController() );
+			contract_assert( VPhysicsGetObject()->GetShadowController() );
 		}
 	}
 #endif
@@ -3308,7 +3171,7 @@ void CBaseEntity::SetMoveType( MoveType_t val, MoveCollide_t moveCollide )
 	// This is needed to the removal of MOVETYPE_FOLLOW:
 	// We can't transition from follow to a different movetype directly
 	// or the leaf code will break.
-	Assert( !IsEffectActive( EF_BONEMERGE ) );
+	contract_assert( !IsEffectActive( EF_BONEMERGE ) );
 	if ( IsPushableMoveType(val) != IsPushableMoveType(m_MoveType) )
 	{
 		CollisionProp()->MarkPartitionHandleDirty();
@@ -3406,7 +3269,7 @@ int CBaseEntity::UpdateTransmitState()
 {
 	// If you get this assert, you should be calling DispatchUpdateTransmitState
 	// instead of UpdateTransmitState.
-	Assert( g_nInsideDispatchUpdateTransmitState > 0 );
+	contract_assert( g_nInsideDispatchUpdateTransmitState > 0 );
 
 	
 	// If an object is the moveparent of something else, don't skip it just because it's marked EF_NODRAW or else
@@ -3485,7 +3348,7 @@ int CBaseEntity::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 
 	CBaseEntity *pRecipientEntity = CBaseEntity::Instance( pInfo->m_pClientEnt );
 
-	Assert( pRecipientEntity->IsPlayer() );
+	contract_assert( pRecipientEntity->IsPlayer() );
 	
 	CBasePlayer *pRecipientPlayer = static_cast<CBasePlayer*>( pRecipientEntity );
 
@@ -3585,7 +3448,7 @@ void CBaseEntity::ComputeWorldSpaceSurroundingBox( Vector *pMins, Vector *pMaxs 
 {
 	// Should never get here.. only use USE_GAME_CODE with bounding boxes
 	// if you have an implementation for this method
-	Assert( 0 );
+	contract_assert( 0 );
 }
 
 
@@ -3624,15 +3487,15 @@ void CBaseEntity::DrawInputOverlay(const char *szInputName, CBaseEntity *pCaller
 	char bigstring[1024];
 	if ( Value.FieldType() == FIELD_INTEGER )
 	{
-		Q_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s,%d) <-- (%s)\n", gpGlobals->curtime, szInputName, Value.Int(), pCaller ? pCaller->GetDebugName() : nullptr);
+		V_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s,%d) <-- (%s)\n", gpGlobals->curtime, szInputName, Value.Int(), pCaller ? pCaller->GetDebugName() : nullptr);
 	}
 	else if ( Value.FieldType() == FIELD_STRING )
 	{
-		Q_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s,%s) <-- (%s)\n", gpGlobals->curtime, szInputName, Value.String(), pCaller ? pCaller->GetDebugName() : nullptr);
+		V_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s,%s) <-- (%s)\n", gpGlobals->curtime, szInputName, Value.String(), pCaller ? pCaller->GetDebugName() : nullptr);
 	}
 	else
 	{
-		Q_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s) <-- (%s)\n", gpGlobals->curtime, szInputName, pCaller ? pCaller->GetDebugName() : nullptr);
+		V_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s) <-- (%s)\n", gpGlobals->curtime, szInputName, pCaller ? pCaller->GetDebugName() : nullptr);
 	}
 	AddTimedOverlay(bigstring, 10.0);
 
@@ -3659,11 +3522,11 @@ void CBaseEntity::DrawOutputOverlay(CEventAction *ev)
 	char bigstring[1024];
 	if ( ev->m_flDelay )
 	{
-		Q_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s) --> (%s),%.1f) \n", gpGlobals->curtime, STRING(ev->m_iTargetInput), STRING(ev->m_iTarget), ev->m_flDelay);
+		V_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s) --> (%s),%.1f) \n", gpGlobals->curtime, STRING(ev->m_iTargetInput), STRING(ev->m_iTarget), ev->m_flDelay);
 	}
 	else
 	{
-		Q_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s) --> (%s)\n", gpGlobals->curtime,  STRING(ev->m_iTargetInput), STRING(ev->m_iTarget));
+		V_snprintf( bigstring,sizeof(bigstring), "%3.1f  (%s) --> (%s)\n", gpGlobals->curtime,  STRING(ev->m_iTargetInput), STRING(ev->m_iTarget));
 	}
 	AddTimedOverlay(bigstring, 10.0);
 
@@ -3779,7 +3642,7 @@ bool CBaseEntity::AcceptInput( const char *szInputName, CBaseEntity *pActivator,
 		{
 			if ( dmap->dataDesc[i].flags & FTYPEDESC_INPUT )
 			{
-				if ( !Q_stricmp(dmap->dataDesc[i].externalName, szInputName) )
+				if ( !V_stricmp(dmap->dataDesc[i].externalName, szInputName) )
 				{
 					// found a match
 
@@ -3789,11 +3652,11 @@ bool CBaseEntity::AcceptInput( const char *szInputName, CBaseEntity *pActivator,
 						// mapper debug message
 						if (pCaller != nullptr)
 						{
-							Q_snprintf( szBuffer, sizeof(szBuffer), "(%0.2f) input %s: %s.%s(%s)\n", gpGlobals->curtime, STRING(pCaller->m_iName.Get()), GetDebugName(), szInputName, Value.String() );
+							V_snprintf( szBuffer, sizeof(szBuffer), "(%0.2f) input %s: %s.%s(%s)\n", gpGlobals->curtime, STRING(pCaller->m_iName.Get()), GetDebugName(), szInputName, Value.String() );
 						}
 						else
 						{
-							Q_snprintf( szBuffer, sizeof(szBuffer), "(%0.2f) input <NULL>: %s.%s(%s)\n", gpGlobals->curtime, GetDebugName(), szInputName, Value.String() );
+							V_snprintf( szBuffer, sizeof(szBuffer), "(%0.2f) input <NULL>: %s.%s(%s)\n", gpGlobals->curtime, GetDebugName(), szInputName, Value.String() );
 						}
 						DevMsg( 2, "%s", szBuffer );
 						ADD_DEBUG_HISTORY( HISTORY_ENTITY_IO, szBuffer );
@@ -3841,8 +3704,8 @@ bool CBaseEntity::AcceptInput( const char *szInputName, CBaseEntity *pActivator,
 						if ( m_ScriptScope.IsInitialized() )
 						{
 							char szScriptFunctionName[255];
-							Q_strcpy( szScriptFunctionName, "Input" );
-							Q_strcat( szScriptFunctionName, szInputName, 255 );
+							V_strcpy( szScriptFunctionName, "Input" );
+							V_strcat( szScriptFunctionName, szInputName, 255 );
 
 							g_pScriptVM->SetValue( "activator", ( pActivator ) ? ScriptVariant_t( pActivator->GetScriptInstance() ) : SCRIPT_VARIANT_NULL );
 							g_pScriptVM->SetValue( "caller", ( pCaller ) ? ScriptVariant_t( pCaller->GetScriptInstance() ) : SCRIPT_VARIANT_NULL );
@@ -3959,7 +3822,7 @@ bool CBaseEntity::ReadKeyField( const char *varName, variant_t *var )
 		{
 			if ( dmap->dataDesc[i].flags & (FTYPEDESC_OUTPUT | FTYPEDESC_KEY) )
 			{
-				if ( !Q_stricmp(dmap->dataDesc[i].externalName, varName) )
+				if ( !V_stricmp(dmap->dataDesc[i].externalName, varName) )
 				{
 					var->Set( dmap->dataDesc[i].fieldType, ((char*)this) + dmap->dataDesc[i].fieldOffset);
 					return true;
@@ -4134,7 +3997,7 @@ void CBaseEntity::InputSetLocalOrigin( inputdata_t &inputdata )
 {
 	Vector tmpVec;
 
-	if (sscanf(inputdata.value.String(), "[%f %f %f]", &tmpVec[0], &tmpVec[1], &tmpVec[2]) == 0)
+	if (std::sscanf(inputdata.value.String(), "[%f %f %f]", &tmpVec[0], &tmpVec[1], &tmpVec[2]) == 0)
 	{
 		// Try sucking out 3 floats with no []s
 		sscanf(inputdata.value.String(), "%f %f %f", &tmpVec[0], &tmpVec[1], &tmpVec[2]);
@@ -4151,7 +4014,7 @@ void CBaseEntity::InputSetLocalAngles( inputdata_t &inputdata )
 {
 	Vector tmpVec;
 
-	if (sscanf(inputdata.value.String(), "[%f %f %f]", &tmpVec[0], &tmpVec[1], &tmpVec[2]) == 0)
+	if (std::sscanf(inputdata.value.String(), "[%f %f %f]", &tmpVec[0], &tmpVec[1], &tmpVec[2]) == 0)
 	{
 		// Try sucking out 3 floats with no []s
 		sscanf(inputdata.value.String(), "%f %f %f", &tmpVec[0], &tmpVec[1], &tmpVec[2]);
@@ -4507,14 +4370,14 @@ void CBaseEntity::Teleport( const Vector *newPosition, const QAngle *newAngles, 
 		TeleportEntity( this, teleportList[i], newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
 	}
 
-	Assert( g_TeleportStack[index] == this );
+	contract_assert( g_TeleportStack[index] == this );
 	ks::swap_remove( g_TeleportStack, index );
 
 	// FIXME: add an initializer function to StepSimulationData
 	StepSimulationData *step = ( StepSimulationData * )GetDataObject( STEPSIMULATION );
 	if (step)
 	{
-		Q_memset( step, 0, sizeof( *step ) );
+		V_memset( step, 0, sizeof( *step ) );
 	}
 }
 
@@ -4545,7 +4408,7 @@ CStudioHdr *ModelSoundsCache_LoadModel( const char *filename )
 
 void ModelSoundsCache_FinishModel( CStudioHdr *hdr )
 {
-	Assert( hdr );
+	contract_assert( hdr );
 	delete hdr;
 }
 
@@ -4608,40 +4471,6 @@ public:
 static CModelSoundsCacheSaver g_ModelSoundsCacheSaver( "CModelSoundsCacheSaver" );
 
 //#define WATCHACCESS
-#if defined( WATCHACCESS )
-
-static bool g_bWatching = true;
-
-void ModelLogFunc( const char *fileName, const char *accessType )
-{
-	if ( g_bWatching && !CBaseEntity::IsPrecacheAllowed() )
-	{
-		if ( Q_stristr( fileName, ".vcd" ) )
-		{
-			Msg( "%s\n", fileName );
-		}
-	}
-}
-
-class CWatchForModelAccess: public CAutoGameSystem
-{
-public:
-	virtual bool Init()
-	{
-		filesystem->AddLoggingFunc(&ModelLogFunc);
-		return true;
-	}
-
-	virtual void Shutdown()
-	{
-		filesystem->RemoveLoggingFunc(&ModelLogFunc);
-	}
-
-};
-
-static CWatchForModelAccess g_WatchForModels;
-
-#endif
 
 // HACK:  This must match the #define in cl_animevent.h in the client .dll code!!!
 #define CL_EVENT_SOUND				5004
@@ -4657,7 +4486,7 @@ static CWatchForModelAccess g_WatchForModels;
 void CBaseEntity::PrecacheSoundHelper( const char *pName )
 {
 	// 360 only
-	Assert( 0 );
+	contract_assert( 0 );
 	return;
 }
 
@@ -4712,9 +4541,9 @@ void CBaseEntity::PrecacheModelComponents( int nModelIndex )
 	if ( !g_ModelSoundsCache.EntryExists( name ) )
 	{
 		char extension[ 8 ];
-		Q_ExtractFileExtension( name, extension, sizeof( extension ) );
+		V_ExtractFileExtension( name, extension, sizeof( extension ) );
 
-		if ( Q_stristr( extension, "mdl" ) )
+		if ( V_stristr( extension, "mdl" ) )
 		{
 			DevMsg( 2, "Late precache of %s, need to rebuild modelsounds.cache\n", name );
 		}
@@ -4733,7 +4562,7 @@ void CBaseEntity::PrecacheModelComponents( int nModelIndex )
 	}
 
 	CModelSoundsCache *entry = g_ModelSoundsCache.Get( name );
-	Assert( entry );
+	contract_assert( entry );
 	if ( entry )
 	{
 		entry->PrecacheSoundList();
@@ -4825,26 +4654,16 @@ int CBaseEntity::PrecacheModel( const char *name, bool bPreload )
 	{
 		if ( !engine->IsModelPrecached( name ) )
 		{
-			Assert( !"CBaseEntity::PrecacheModel:  too late" );
+			contract_assert( !"CBaseEntity::PrecacheModel:  too late" );
 			Warning( "Late precache of %s\n", name );
 		}
 	}
-#if defined( WATCHACCESS )
-	else
-	{
-		g_bWatching = false;
-	}
-#endif
 
 	int idx = engine->PrecacheModel( name, bPreload );
 	if ( idx != -1 )
 	{
 		PrecacheModelComponents( idx );
 	}
-
-#if defined( WATCHACCESS )
-	g_bWatching = true;
-#endif
 
 	return idx;
 }
@@ -5039,7 +4858,7 @@ void CC_Ent_Remove( const CCommand& args )
 	}
 	else 
 	{
-		int index = atoi( args[1] );
+		int index = std::atoi( args[1] );
 		if ( index )
 		{
 			pEntity = CBaseEntity::Instance( index );
@@ -5174,7 +4993,7 @@ void CC_Find_Ent( const CCommand& args )
 		bool bMatches = false;
 		if ( pszClassname && pszClassname[0] )
 		{
-			if ( Q_stristr( pszClassname, pszSubString ) )
+			if ( V_stristr( pszClassname, pszSubString ) )
 			{
 				bMatches = true;
 			}
@@ -5182,7 +5001,7 @@ void CC_Find_Ent( const CCommand& args )
 
 		if ( !bMatches && pszTargetname && pszTargetname[0] )
 		{
-			if ( Q_stristr( pszTargetname, pszSubString ) )
+			if ( V_stristr( pszTargetname, pszSubString ) )
 			{
 				bMatches = true;
 			}
@@ -5208,7 +5027,7 @@ void CC_Find_Ent_Index( const CCommand& args )
 		return;
 	}
 
-	int iIndex = atoi(args[1]);
+	int iIndex = std::atoi(args[1]);
 	CBaseEntity	*pEnt = UTIL_EntityByIndex( iIndex );
 	if ( pEnt )
 	{
@@ -5236,29 +5055,29 @@ void DumpEntity( CBaseEntity *ent )
 						switch( var.FieldType() )
 						{
 						case FIELD_STRING:
-							Q_strncpy( buf, var.String() ,sizeof(buf));
+							V_strncpy( buf, var.String() ,sizeof(buf));
 							break;
 						case FIELD_INTEGER:
 							if ( var.Int() )
-								Q_snprintf( buf,sizeof(buf), "%d", var.Int() );
+								V_snprintf( buf,sizeof(buf), "%d", var.Int() );
 							break;
 						case FIELD_FLOAT:
 							if ( var.Float() )
-								Q_snprintf( buf,sizeof(buf), "%.2f", var.Float() );
+								V_snprintf( buf,sizeof(buf), "%.2f", var.Float() );
 							break;
 						case FIELD_EHANDLE:
 							{
 								// get the entities name
 								if ( var.Entity() )
 								{
-									Q_snprintf( buf,sizeof(buf), "%s", STRING(var.Entity()->GetEntityName()) );
+									V_snprintf( buf,sizeof(buf), "%s", STRING(var.Entity()->GetEntityName()) );
 								}
 							}
 							break;
 						}
 
 						// don't print out the duplicate keys
-						if ( !Q_stricmp("parentname",dmap->dataDesc[i].externalName) || !Q_stricmp("targetname",dmap->dataDesc[i].externalName) )
+						if ( !V_stricmp("parentname",dmap->dataDesc[i].externalName) || !V_stricmp("targetname",dmap->dataDesc[i].externalName) )
 							continue;
 
 						// don't print out empty keys
@@ -5364,7 +5183,7 @@ public:
 			}
 			if ( command.ArgC() >= 5 )
 			{
-				delay = atoi( command.Arg( 4 ) );
+				delay = std::atoi( command.Arg( 4 ) );
 			}
 
 			g_EventQueue.AddEvent( target, action, value, delay, pPlayer, pPlayer );
@@ -5381,20 +5200,20 @@ public:
 		const char *cmdname = "ent_fire";
 
 		char *substring = (char *)partial;
-		if ( Q_strstr( partial, cmdname ) )
+		if ( V_strstr( partial, cmdname ) )
 		{
-			substring = (char *)partial + strlen( cmdname ) + 1;
+			substring = (char *)partial + std::strlen( cmdname ) + 1;
 		}
 
 		int checklen = 0;
-		char *space = Q_strstr( substring, " " );
+		char *space = V_strstr( substring, " " );
 		if ( space )
 		{
 			return EntFire_AutoCompleteInput( partial, commands );;
 		}
 		else
 		{
-			checklen = Q_strlen( substring );
+			checklen = V_strlen( substring );
 		}
 
 		std::set< std::string, ks::iless > symbols;
@@ -5406,7 +5225,7 @@ public:
 			if ( pos->GetEntityName() == NULL_STRING )
 				continue;
 
-			if ( Q_strnicmp( STRING( pos->GetEntityName() ), substring, checklen ) )
+			if ( V_strnicmp( STRING( pos->GetEntityName() ), substring, checklen ) )
 				continue;
 
 			std::string sym = STRING( pos->GetEntityName() );
@@ -5423,8 +5242,8 @@ public:
 			const char *name = sym.c_str();
 
 			char buf[ 512 ];
-			Q_strncpy( buf, name, sizeof( buf ) );
-			Q_strlower( buf );
+			V_strncpy( buf, name, sizeof( buf ) );
+			V_strlower( buf );
 
 			std::string command;
 			command = CFmtStr( "%s %s", cmdname, buf );
@@ -5439,25 +5258,25 @@ private:
 		const char *cmdname = "ent_fire";
 
 		char *substring = (char *)partial;
-		if ( Q_strstr( partial, cmdname ) )
+		if ( V_strstr( partial, cmdname ) )
 		{
-			substring = (char *)partial + strlen( cmdname ) + 1;
+			substring = (char *)partial + std::strlen( cmdname ) + 1;
 		}
 
 		int checklen = 0;
-		char *space = Q_strstr( substring, " " );
+		char *space = V_strstr( substring, " " );
 		if ( !space )
 		{
-			Assert( !"CC_EntFireAutoCompleteInputFunc is broken\n" );
+			contract_assert( !"CC_EntFireAutoCompleteInputFunc is broken\n" );
 			return 0;
 		}
 
-		checklen = Q_strlen( substring );
+		checklen = V_strlen( substring );
 
 		char targetEntity[ 256 ];
 		targetEntity[0] = 0;
 		int nEntityNameLength = (space-substring);
-		Q_strncat( targetEntity, substring, sizeof( targetEntity ), nEntityNameLength );
+		V_strncat( targetEntity, substring, sizeof( targetEntity ), nEntityNameLength );
 
 		// Find the target entity by name
 		CBaseEntity *target = gEntList.FindEntityByName( nullptr, targetEntity );
@@ -5494,7 +5313,7 @@ private:
 				// See if we've got a partial string for the input name already
 				if ( inputPartial != nullptr )
 				{
-					if ( Q_strnicmp( inputPartial, field->externalName, nInputNameLength ) )
+					if ( V_strnicmp( inputPartial, field->externalName, nInputNameLength ) )
 						continue;
 				}
 
@@ -5514,8 +5333,8 @@ private:
 			const char *name = sym.c_str();
 
 			char buf[ 512 ];
-			Q_strncpy( buf, name, sizeof( buf ) );
-			Q_strlower( buf );
+			V_strncpy( buf, name, sizeof( buf ) );
+			V_strlower( buf );
 
 			std::string command;
 			command = CFmtStr( "%s %s %s", cmdname, targetEntity, buf );
@@ -5668,7 +5487,7 @@ static ConCommand ent_pivot("ent_pivot", CC_Ent_Pivot, "Displays the pivot for t
 //------------------------------------------------------------------------------
 void CC_Ent_Step( const CCommand& args )
 {
-	int nSteps = atoi(args[1]);
+	int nSteps = std::atoi(args[1]);
 	if (nSteps <= 0)
 	{
 		nSteps = 1;
@@ -5840,7 +5659,7 @@ matrix3x4_t& CBaseEntity::GetParentToWorldTransform( matrix3x4_t &tempMatrix )
 	CBaseEntity *pMoveParent = GetMoveParent();
 	if ( !pMoveParent )
 	{
-		Assert( false );
+		contract_assert( false );
 		SetIdentityMatrix( tempMatrix );
 		return tempMatrix;
 	}
@@ -5866,7 +5685,7 @@ matrix3x4_t& CBaseEntity::GetParentToWorldTransform( matrix3x4_t &tempMatrix )
 //-----------------------------------------------------------------------------
 void CBaseEntity::SetAbsOrigin( const Vector& absOrigin )
 {
-	AssertMsg( absOrigin.IsValid(), "Invalid origin set" );
+	contract_assert( ( absOrigin.IsValid() ) && "Invalid origin set" );
 	
 	// This is necessary to get the other fields of m_rgflCoordinateFrame ok
 	CalcAbsolutePosition();
@@ -5975,7 +5794,7 @@ void CBaseEntity::SetAbsVelocity( const Vector &vecAbsVelocity )
 	InvalidatePhysicsRecursive( VELOCITY_CHANGED );
 	RemoveEFlags( EFL_DIRTY_ABSVELOCITY );
 
-	Assert( vecAbsVelocity.IsValid() );
+	contract_assert( vecAbsVelocity.IsValid() );
 	m_vecAbsVelocity = vecAbsVelocity;
 
 	// NOTE: Do *not* do a network state change in this case.
@@ -6042,7 +5861,7 @@ void CBaseEntity::SetLocalOrigin( const Vector& origin )
 		{
 			Warning( "Bad SetLocalOrigin(%f,%f,%f) on %s\n", origin.x, origin.y, origin.z, GetDebugName() );
 		}
-		Assert( false );
+		contract_assert( false );
 		return;
 	}
 
@@ -6051,9 +5870,9 @@ void CBaseEntity::SetLocalOrigin( const Vector& origin )
 		// Sanity check to make sure the origin is valid.
 #ifdef _DEBUG
 		float largeVal = 1024 * 128;
-		Assert( origin.x >= -largeVal && origin.x <= largeVal );
-		Assert( origin.y >= -largeVal && origin.y <= largeVal );
-		Assert( origin.z >= -largeVal && origin.z <= largeVal );
+		contract_assert( origin.x >= -largeVal && origin.x <= largeVal );
+		contract_assert( origin.y >= -largeVal && origin.y <= largeVal );
+		contract_assert( origin.z >= -largeVal && origin.z <= largeVal );
 #endif
 		
 		InvalidatePhysicsRecursive( POSITION_CHANGED );
@@ -6080,7 +5899,7 @@ void CBaseEntity::SetLocalAngles( const QAngle& angles )
 	if ( !IsEntityQAngleReasonable( angles ) )
 	{
 		Warning( "Bad SetLocalAngles(%f,%f,%f) on %s\n", angles.x, angles.y, angles.z, GetDebugName() );
-		Assert( false );
+		contract_assert( false );
 		return;
 	}
 
@@ -6101,7 +5920,7 @@ void CBaseEntity::SetLocalVelocity( const Vector &inVecVelocity )
 	{
 	case -1:
 		Warning( "Discarding SetLocalVelocity(%f,%f,%f) on %s\n", vecVelocity.x, vecVelocity.y, vecVelocity.z, GetDebugName() );
-		Assert( false );
+		contract_assert( false );
 		return;
 	case 0:
 		if ( CheckEmitReasonablePhysicsSpew() )
@@ -6129,7 +5948,7 @@ void CBaseEntity::SetLocalAngularVelocity( const QAngle &vecAngVelocity )
 		{
 			Warning( "Bad SetLocalAngularVelocity(%f,%f,%f) on %s\n", vecAngVelocity.x, vecAngVelocity.y, vecAngVelocity.z, GetDebugName() );
 		}
-		Assert( false );
+		contract_assert( false );
 		return;
 	}
 
@@ -6239,32 +6058,7 @@ bool CBaseEntity::IsFloating()
 //-----------------------------------------------------------------------------
 CBaseEntity *CBaseEntity::CreatePredictedEntityByName( const char *classname, const char *module, int line, bool persist /* = false */ )
 {
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-	CBasePlayer *player = CBaseEntity::GetPredictionPlayer();
-	Assert( player );
-
-	CBaseEntity *ent = nullptr;
-
-	int command_number = player->CurrentCommandNumber();
-	int player_index = player->entindex() - 1;
-
-	CPredictableId testId;
-	testId.Init( player_index, command_number, classname, module, line );
-
-	ent = CreateEntityByName( classname );
-	// No factory???
-	if ( !ent )
-		return nullptr;
-
-	ent->SetPredictionEligible( true );
-
-	// Set up "shared" id number
-	ent->m_PredictableID.GetForModify().SetRaw( testId.GetRaw() );
-
-	return ent;
-#else
 	return nullptr;
-#endif
 
 }
 
@@ -6370,7 +6164,7 @@ void CBaseEntity::ModifyOrAppendCriteria( AI_CriteriaSet& set )
 	}
 
 	// Append anything from world I/O/keyvalues with "world" as prefix
-	CWorld *world = assert_cast< CWorld * >( CBaseEntity::Instance( INDEXENT( 0 ) ) );
+	CWorld *world = static_cast< CWorld * >( CBaseEntity::Instance( INDEXENT( 0 ) ) );
 	if ( world )
 	{
 		world->AppendContextToCriteria( set, "world" );
@@ -6395,7 +6189,7 @@ void CBaseEntity::AppendContextToCriteria( AI_CriteriaSet& set, const char *pref
 		const char *name = GetContextName( i );
 		const char *value = GetContextValue( i );
 
-			Q_snprintf( sz, sizeof( sz ), "%s%s", prefix, name );
+			V_snprintf( sz, sizeof( sz ), "%s%s", prefix, name );
 
 			set.AppendCriteria( sz, value );
 		}
@@ -6440,7 +6234,7 @@ const char *CBaseEntity::GetContextName( int index ) const
 {
 	if ( index < 0 || index >= std::ssize( m_ResponseContexts ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return "";
 	}
 
@@ -6456,7 +6250,7 @@ const char *CBaseEntity::GetContextValue( int index ) const
 {
 	if ( index < 0 || index >= std::ssize( m_ResponseContexts ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return "";
 	}
 
@@ -6480,7 +6274,7 @@ bool CBaseEntity::ContextExpired( int index ) const
 {
 	if ( index < 0 || index >= std::ssize( m_ResponseContexts ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return true;
 	}
 
@@ -6584,27 +6378,6 @@ void CBaseEntity::InputCallScriptFunction( inputdata_t& inputdata )
 
 // #define VMPROFILE	// define to profile vscript calls
 
-#ifdef VMPROFILE
-float g_debugCumulativeTime = 0.0;		
-float g_debugCounter = 0;
-
-#define START_VMPROFILE float debugStartTime = Plat_FloatTime();
-#define UPDATE_VMPROFILE \
-	g_debugCumulativeTime += Plat_FloatTime() - debugStartTime; \
-	g_debugCounter++; \
-	if ( g_debugCounter >= 500 ) \
-	{ \
-		DevMsg("***VSCRIPT PROFILE***: %s %s: %6.4f milliseconds\n", "500 vscript function calls", "", g_debugCumulativeTime*1000.0 ); \
-		g_debugCounter = 0; \
-		g_debugCumulativeTime = 0.0; \
-	} \
-
-#else
-
-#define START_VMPROFILE
-#define UPDATE_VMPROFILE
-
-#endif // VMPROFILE
 
 //-----------------------------------------------------------------------------
 // Returns true if the function was located and called. false otherwise.
@@ -6612,7 +6385,7 @@ float g_debugCounter = 0;
 //-----------------------------------------------------------------------------
 bool CBaseEntity::CallScriptFunction( const char *pFunctionName, ScriptVariant_t *pFunctionReturn )
 {
-	START_VMPROFILE
+	
 
 	if( !ValidateScriptScope() )
 	{
@@ -6634,7 +6407,7 @@ bool CBaseEntity::CallScriptFunction( const char *pFunctionName, ScriptVariant_t
 		m_ScriptScope.ReleaseFunction( hFunc );
 		g_pScriptVM->ClearValue( "owninginstance" );
 
-		UPDATE_VMPROFILE
+		
 
 		return true;
 	}
@@ -6991,8 +6764,8 @@ void CBaseEntity::InputEnableDraw( inputdata_t &inputdata )
 void CBaseEntity::InputAddOutput( inputdata_t &inputdata )
 {
 	char sOutputName[MAX_PATH];
-	Q_strncpy( sOutputName, inputdata.value.String(), sizeof(sOutputName) );
-	char *sChar = strchr( sOutputName, ' ' );
+	V_strncpy( sOutputName, inputdata.value.String(), sizeof(sOutputName) );
+	char *sChar = std::strchr( sOutputName, ' ' );
 	if ( sChar )
 	{
 		*sChar = '\0';
@@ -7137,7 +6910,7 @@ static ConCommand ent_autoaim("ent_autoaim", CC_Ent_Autoaim, "Displays the entit
 CAI_BaseNPC	*CBaseEntity::MyNPCPointer( void ) 
 { 
 	if ( IsNPC() ) 
-		return assert_cast<CAI_BaseNPC *>(this);
+		return static_cast<CAI_BaseNPC *>(this);
 
 	return nullptr;
 }
@@ -7152,7 +6925,7 @@ void CBaseEntity::ComputeStepSimulationNetwork( StepSimulationData *step )
 {
 	if ( !step )
 	{
-		Assert( !"ComputeStepSimulationNetworkOriginAndAngles with NULL step\n" );
+		contract_assert( !"ComputeStepSimulationNetworkOriginAndAngles with NULL step\n" );
 		return;
 	}
 
@@ -7306,7 +7079,7 @@ void CBaseEntity::ComputeStepSimulationNetwork( StepSimulationData *step )
 //-----------------------------------------------------------------------------
 bool CBaseEntity::UseStepSimulationNetworkOrigin( const Vector **out_v, int cell[3] )
 {
-	Assert( out_v );
+	contract_assert( out_v );
 
 
 	if ( g_bTestMoveTypeStepSimulation &&
@@ -7332,7 +7105,7 @@ bool CBaseEntity::UseStepSimulationNetworkOrigin( const Vector **out_v, int cell
 //-----------------------------------------------------------------------------
 bool CBaseEntity::UseStepSimulationNetworkAngles( const QAngle **out_a )
 {
-	Assert( out_a );
+	contract_assert( out_a );
 
 	if ( g_bTestMoveTypeStepSimulation &&
 		GetMoveType() == MOVETYPE_STEP &&
@@ -7361,7 +7134,7 @@ bool CBaseEntity::AddStepDiscontinuity( float flTime, const Vector &vecOrigin, c
 
 	if (!step)
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
@@ -7400,11 +7173,11 @@ void CBaseEntity::RemoveRecipientsIfNotCloseCaptioning( CRecipientFilter& filter
 			continue;
 
 		const char *cvarvalue = engine->GetClientConVarValue( playerIndex, "closecaption" );
-		Assert( cvarvalue );
+		contract_assert( cvarvalue );
 		if ( !cvarvalue[ 0 ] )
 			continue;
 
-		int value = atoi( cvarvalue );
+		int value = std::atoi( cvarvalue );
 
 		// No close captions?
 		if ( value == 0 )
@@ -7497,9 +7270,9 @@ void CBaseEntity::RemoveDeferred( void )
 	SetMoveType( MOVETYPE_NONE );
 }
 
-#define MIN_CORPSE_FADE_TIME		10.0
-#define	MIN_CORPSE_FADE_DIST		256.0
-#define	MAX_CORPSE_FADE_DIST		1500.0
+constexpr auto MIN_CORPSE_FADE_TIME = 10.0;
+constexpr auto MIN_CORPSE_FADE_DIST = 256.0;
+constexpr auto MAX_CORPSE_FADE_DIST = 1500.0;
 
 //
 // fade out - slowly fades a entity out, then removes it.
@@ -7630,11 +7403,12 @@ void CBaseEntity::SUB_FadeOut( void  )
 //-----------------------------------------------------------------------------
 HSCRIPT CBaseEntity::GetScriptInstance()
 {
+	ks::ScratchArena<> scratch;
 	if ( !m_hScriptInstance )
 	{
 		if ( m_iszScriptId == NULL_STRING )
 		{
-			char *szName = (char *)stackalloc( 1024 );
+			char *szName = (char *)scratch.AllocBytes( 1024 );
 			g_pScriptVM->GenerateUniqueKey( ( m_iName.Get() != NULL_STRING ) ? STRING(GetEntityName()) : GetClassname(), szName, 1024 );
 			m_iszScriptId = AllocPooledString( szName );
 		}
@@ -7655,13 +7429,13 @@ bool CBaseEntity::ValidateScriptScope()
 	{
 		if( scriptmanager == nullptr )
 		{
-			ExecuteOnce( DevMsg( "Cannot execute script because scripting is disabled (-scripting)\n" ) );
+			ExecuteOnce( [&]{ DevMsg( "Cannot execute script because scripting is disabled (-scripting)\n" ); } );
 			return false;
 		}
 
 		if( g_pScriptVM == nullptr )
 		{
-			ExecuteOnce( DevMsg(" Cannot execute script because there is no available VM\n" ) );
+			ExecuteOnce( [&]{ DevMsg(" Cannot execute script because there is no available VM\n" ); } );
 			return false;
 		}
 
@@ -7707,7 +7481,7 @@ void CBaseEntity::RunVScripts()
 	ScriptLanguage_t language = g_pScriptVM->GetLanguage();
 
 	// Make a call chainer for each in this entities scope
-	for ( int j = 0; j < ARRAYSIZE( sCallChainFunctions ); ++j )
+	for ( int j = 0; j < std::size( sCallChainFunctions ); ++j )
 	{
 		
 		if ( language == SL_PYTHON )
@@ -7736,7 +7510,7 @@ void CBaseEntity::RunVScripts()
 
 		RunScriptFile( szScripts[i].c_str(), IsWorld() );
 
-		for ( int j = 0; j < ARRAYSIZE( sCallChainFunctions ); ++j )
+		for ( int j = 0; j < std::size( sCallChainFunctions ); ++j )
 		{
 			if ( language == SL_PYTHON )
 			{
@@ -7846,32 +7620,7 @@ bool CBaseEntity::DoesHavePlayerChild()
 void CBaseEntity::SetFriction( float flFriction )
 { 
 	m_flFriction = flFriction;
-#if defined(ENABLE_FRICTION_OVERRIDE)
-	if ( GetIndexForThinkContext( "FrictionRevertThink" ) != NO_THINK_CONTEXT )
-	{
-		SetContextThink( nullptr, TICK_NEVER_THINK, "FrictionRevertThink" );
-	}
-#endif
 }
-
-#if defined(ENABLE_FRICTION_OVERRIDE)
-void CBaseEntity::FrictionRevertThink( void )
-{
-	SetFriction( m_flOverriddenFriction );
-}
-
-
-void CBaseEntity::OverrideFriction( float duration, float friction )
-{
-	if ( GetIndexForThinkContext( "FrictionRevertThink" ) == NO_THINK_CONTEXT || GetNextThinkTick( "FrictionRevertThink" ) == TICK_NEVER_THINK )
-	{
-		// not already overriding friction.  this is what we'll restore to.
-		m_flOverriddenFriction = m_flFriction;
-	}
-	m_flFriction = friction;
-	SetContextThink( &CBaseEntity::FrictionRevertThink, gpGlobals->curtime + duration, "FrictionRevertThink" );
-}
-#endif
 
 void CBaseEntity::SetNetworkQuantizeOriginAngAngles( bool bQuantize )
 {
@@ -7881,7 +7630,6 @@ void CBaseEntity::SetNetworkQuantizeOriginAngAngles( bool bQuantize )
 // NOTE:  This only quantizes to the default entity precision currently used by CBaseEntity!!!
 void CBaseEntity::NetworkQuantize( Vector &org, QAngle &angles )
 {
-#if PREDICTION_ERROR_CHECK_LEVEL < 2
 	// Angles are sent with 13 (SENDPROP_ANGROTATION_DEFAULT_BITS)bits to represent 0 -> 359.??? (SPROP_ROUNDDOWN)
 	const float QUANTIZE_MIN_ANGLE = 0.0f;
 	const float QUANTIZE_MAX_ANGLE = 360.0f - 360.0f / (float)( 1 << SENDPROP_ANGROTATION_DEFAULT_BITS );
@@ -7894,8 +7642,8 @@ void CBaseEntity::NetworkQuantize( Vector &org, QAngle &angles )
 
 	if ( !( SENDPROP_VECORIGIN_FLAGS & SPROP_NOSCALE ) )
 	{
-		COMPILE_TIME_ASSERT( SENDPROP_VECORIGIN_FLAGS & ( SPROP_COORD | SPROP_CELL_COORD ) );
-		COMPILE_TIME_ASSERT( !(SENDPROP_VECORIGIN_FLAGS & ( SPROP_COORD_MP_LOWPRECISION | SPROP_COORD_MP_INTEGRAL ) ) );
+		static_assert( SENDPROP_VECORIGIN_FLAGS & ( SPROP_COORD | SPROP_CELL_COORD ) );
+		static_assert( !(SENDPROP_VECORIGIN_FLAGS & ( SPROP_COORD_MP_LOWPRECISION | SPROP_COORD_MP_INTEGRAL ) ) );
 
 		for ( int i = 0 ; i < 3; ++i )
 		{
@@ -7915,7 +7663,6 @@ void CBaseEntity::NetworkQuantize( Vector &org, QAngle &angles )
 			angles[ i ] = QUANTIZE_MIN_ANGLE + (float)uiAngle / QUANTIZE_HIGHLOWMULTIPLIER;
 		}
 	}
-#endif
 }
 
 //------------------------------------------------------------------------------
@@ -7961,7 +7708,7 @@ void CBaseEntity::ClearSpottedBy( void )
 
 void CBaseEntity::SetIsSpottedBy( int nPlayerEntIndex )
 {
-	Assert( nPlayerEntIndex > 0 && nPlayerEntIndex <= MAX_PLAYERS );
+	contract_assert( nPlayerEntIndex > 0 && nPlayerEntIndex <= MAX_PLAYERS );
 	if ( nPlayerEntIndex > 0 && nPlayerEntIndex <= MAX_PLAYERS )
 	{
 		int maskBitIndex = nPlayerEntIndex - 1; // player ents start at 1
@@ -7997,7 +7744,7 @@ void CC_Ent_Create( const CCommand& args )
 	{
 		if ( entity->IsPlayer() )
 		{
-			AssertMsg( false, "Cannot ent_create players!" );
+			contract_assert( false && "Cannot ent_create players!" );
 			Warning( "Cannot ent_create players!\n" );
 			UTIL_Remove( entity );
 		}
@@ -8038,7 +7785,7 @@ bool CC_GetCommandEnt( const CCommand& args, CBaseEntity **ent, Vector *vecTarge
 	// Find the entity
 	*ent = nullptr;
 	// First try using it as an entindex
-	int iEntIndex = atoi( args[1] );
+	int iEntIndex = std::atoi( args[1] );
 	if ( iEntIndex )
 	{
 		*ent = CBaseEntity::Instance( iEntIndex );

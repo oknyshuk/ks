@@ -1,11 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Voice / Sentence streaming & parsing code
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
 
 //===============================================================================
 // VOX. Algorithms to load and play spoken text sentences from a file:
@@ -45,25 +41,39 @@
 // each word's data is loaded directy from disk and freed right after playback.
 //===============================================================================
 
-#include "audio_pch.h"
+
+
+
+import ks.vstdlib;
+#include "tier2/riff.h"
+#include "sound.h"
+#include "soundservice.h"
+#include "filesystem.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_convars.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+#include "snd_wave_source.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+
+#include "audio/private/posix_stubs.h"
 #include "vox_private.h"
-#include "characterset.h"
-#include "vstdlib/random.h"
 #include "engine/IEngineSound.h"
-#include "tier1/intern_pool.h"
-#include "tier1/map_ops.h"
-#include "tier1/string_ops.h"
 #include "../../MapReslistGenerator.h"
 #include "../../cl_splitscreen.h"
-#include <set>
+import std;
 
-#include "tier0/memalloc.h"
 // In other C files.
 // Globals
 extern IFileSystem *g_pFileSystem;
 
 // This is the initial capacity for sentences, the array will grow if necessary
-#define MAX_EXPECTED_SENTENCES	900
+constexpr auto MAX_EXPECTED_SENTENCES = 900;
 
 std::vector< sentence_t >	g_Sentences;
 // FIXME: could get this through common includes
@@ -75,7 +85,7 @@ static char		*rgpparseword[CVOXWORDMAX];	// array of pointers to parsed words
 static char		voxperiod[] = "_period";				// vocal pause
 static char		voxcomma[] = "_comma";				// vocal pause
 
-#define CVOXMAPNAMESMAX 24
+constexpr auto CVOXMAPNAMESMAX = 24;
 static char *g_rgmapnames[CVOXMAPNAMESMAX];
 static int g_cmapnames = 0;
 
@@ -145,7 +155,7 @@ struct WordBuf
 
 	WordBuf( const WordBuf& src )
 	{
-		Q_strncpy( word, src.word, sizeof( word ) );
+		V_strncpy( word, src.word, sizeof( word ) );
 	}
 
 	void Set( char const *w )
@@ -155,10 +165,10 @@ struct WordBuf
 			word[ 0 ] = 0;
 			return;
 		}
-		Q_strncpy( word, w, sizeof( word ) );
-		while ( Q_strlen( word ) >= 1 && word[ Q_strlen( word ) - 1 ] == ' ' )
+		V_strncpy( word, w, sizeof( word ) );
+		while ( V_strlen( word ) >= 1 && word[ V_strlen( word ) - 1 ] == ' ' )
 		{
-			word[ Q_strlen( word ) - 1 ] = 0;
+			word[ V_strlen( word ) - 1 ] = 0;
 		}
 	}
 
@@ -238,7 +248,7 @@ char **VOX_ParseString(char *psz)
 	char c;
 	characterset_t nextWord, skip;
 
-	memset(rgpparseword, 0, sizeof(char *) * CVOXWORDMAX);
+	std::memset(rgpparseword, 0, sizeof(char *) * CVOXWORDMAX);
 
 	if (!psz)
 		return nullptr;
@@ -311,7 +321,7 @@ char *VOX_GetDirectory(char *szpath, int maxpath, char *psz)
 {
 	char c;
 	int cb = 0;
-	char *pszscan = psz + Q_strlen( psz ) - 1;
+	char *pszscan = psz + V_strlen( psz ) - 1;
 
 	// scan backwards until first '/' or start of string
 	c = *pszscan;
@@ -324,16 +334,16 @@ char *VOX_GetDirectory(char *szpath, int maxpath, char *psz)
 	if (c != '/')
 	{
 		// didn't find '/', return default directory
-		Q_strncpy(szpath, "vox/", maxpath );
+		V_strncpy(szpath, "vox/", maxpath );
 		return psz;
 	}
 
-	cb = Q_strlen(psz) - cb;
+	cb = V_strlen(psz) - cb;
 
 	cb = clamp( cb, 0, maxpath - 1 );
 
 	// FIXME:  Is this safe?
-	Q_memcpy(szpath, psz, cb);
+	V_memcpy(szpath, psz, cb);
 	szpath[cb] = 0;
 	return pszscan + 1;
 }
@@ -423,7 +433,7 @@ int VOX_ParseWordParams(char *psz, voxword_t *pvoxword, int fFirst)
 	// look at next to last char to see if we have a 
 	// valid format:
 
-	c = *(psz + strlen(psz) - 1);
+	c = *(psz + std::strlen(psz) - 1);
 	
 	if (c != ')')
 		return 1;		// no formatting, return
@@ -452,7 +462,7 @@ int VOX_ParseWordParams(char *psz, voxword_t *pvoxword, int fFirst)
 		if (ct == ')')
 			break;
 
-		memset(sznum, 0, sizeof(sznum));
+		std::memset(sznum, 0, sizeof(sznum));
 		i = 0;
 
 		c = *(++psz);
@@ -468,7 +478,7 @@ int VOX_ParseWordParams(char *psz, voxword_t *pvoxword, int fFirst)
 		}
 
 		// get value of number
-		i = atoi(sznum);
+		i = std::atoi(sznum);
 
 		switch (ct)
 		{
@@ -495,11 +505,11 @@ int VOX_ParseWordParams(char *psz, voxword_t *pvoxword, int fFirst)
 		return 1;
 }
 
-#define CVOXSAVEDWORDSIZE	32
+constexpr auto CVOXSAVEDWORDSIZE = 32;
 
 // saved entity name/number based on type of entity & id
 
-#define CVOXGLOBMAX	4		// max number of rnd and seqential globals
+constexpr auto CVOXGLOBMAX = 4; // max number of rnd and seqential globals
 
 typedef struct _vox_entname
 {
@@ -522,7 +532,7 @@ typedef struct _vox_entname
 
 } vox_entname;
 
-#define CENTNAMESMAX	64
+constexpr auto CENTNAMESMAX = 64;
 
 vox_entname g_entnames[CENTNAMESMAX];
 
@@ -533,8 +543,8 @@ int g_entnamelastsaved = 0;
 void VOX_InitAllEntnames( void )
 {
 	g_entnamelastsaved = 0;	
-	Q_memset(g_entnames, 0, sizeof(g_entnames));
-	Q_memset(g_rgmapnames, 0, sizeof(g_rgmapnames));
+	V_memset(g_entnames, 0, sizeof(g_entnames));
+	V_memset(g_rgmapnames, 0, sizeof(g_rgmapnames));
 	g_cmapnames = 0;
 }
 
@@ -627,7 +637,7 @@ char * VOX_LookupRndVirtual( char *pGroupName )
 	if (!psz)
 		return nullptr;
 
-	char *pend = Q_strstr(psz, " ");
+	char *pend = V_strstr(psz, " ");
 	if (pend)
 		*pend = 0;
 
@@ -662,7 +672,7 @@ char *VOX_LookupSentenceByIndex( const char *pGroupname, int ipick, int *pipickn
 
 	// strip trailing whitespace
 	
-	char *pend = Q_strstr(psz, " ");
+	char *pend = V_strstr(psz, " ");
 	if (pend)
 		*pend = 0;
 
@@ -681,10 +691,10 @@ char * VOX_LookupNumber( char *pGroupName, int ipick )
 	// construct group name from V_NUMBERS + TYPE
 
 	char sznumbers[16];
-	int glen = Q_strlen(pGroupName);
-	int slen = Q_strlen("V_NUMBERS");
+	int glen = V_strlen(pGroupName);
+	int slen = V_strlen("V_NUMBERS");
 	
-	Q_strcpy(sznumbers, "V_NUMBERS");
+	V_strcpy(sznumbers, "V_NUMBERS");
 
 	// insert type character
 	sznumbers[slen] = pGroupName[glen-1];
@@ -957,7 +967,7 @@ ConVar snd_vox_captiontrace( "snd_vox_captiontrace", "0", 0, "Shows sentence nam
 // if no ent found, alloc a new one and establish shector.
 // sectors expire after approx 5 minutes.
 
-#define VOXSECTORMAX			20
+constexpr auto VOXSECTORMAX = 20;
 
 static float g_vox_lastsectorupdate = 0;
 static int g_vox_isector = -1;
@@ -1156,7 +1166,7 @@ int VOX_GetMapNameIndex( const char *pszmapname )
 {
 	for (int i = 0; i < g_cmapnames; i++)
 	{
-		if ( Q_strstr( pszmapname, g_rgmapnames[i] ) )
+		if ( V_strstr( pszmapname, g_rgmapnames[i] ) )
 			return i;
 	}
 	return 0;
@@ -1209,7 +1219,7 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 			pszNew2 = nullptr;
 			char szparseword[256];
 			
-			int slen = Q_strlen(rgpparseword[i]);
+			int slen = V_strlen(rgpparseword[i]);
 			char chtype = rgpparseword[i][slen-1];
 
 			// copy word to temp location so we can perform in-place substitutions
@@ -1218,7 +1228,7 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 
 			// fbymap is true if lookup is performed via mapname instead of via ordinal
 
-			pszmaptoken = ( Q_strstr(szparseword, "_MAP__") );
+			pszmaptoken = ( V_strstr(szparseword, "_MAP__") );
 
 			fbymap = (pszmaptoken == nullptr ? false : true);
 
@@ -1232,16 +1242,16 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 				// '_map_' lookups relative to the mapname
 				pszmaptoken[4] = '0';
 				if (imap < 10)
-					Q_snprintf( &(pszmaptoken[5]), 1, "%1d", imap );	
+					V_snprintf( &(pszmaptoken[5]), 1, "%1d", imap );	
 				else
-					Q_snprintf( &(pszmaptoken[4]), 2, "%d", imap );
+					V_snprintf( &(pszmaptoken[4]), 2, "%d", imap );
 			}
 			
-			if ( Q_strstr(szparseword, "V_MYNAME") )
+			if ( V_strstr(szparseword, "V_MYNAME") )
 			{
 				iname = 1;
 			}
-			else if ( Q_strstr(szparseword, "V_MYNUM") )
+			else if ( V_strstr(szparseword, "V_MYNUM") )
 			{
 				iname = 0;
 			}
@@ -1257,7 +1267,7 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 			}
 			else
 			{
-				if ( Q_strstr(szparseword, "V_RND") )
+				if ( V_strstr(szparseword, "V_RND") )
 				{
 					// lookup random first word from this named group,
 					// return static, null terminated string
@@ -1265,17 +1275,17 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 					pszNew = VOX_LookupRndVirtual( szparseword );
 					cnew = 1;
 				}
-				else if ( Q_strstr(szparseword, "V_DIST") )
+				else if ( V_strstr(szparseword, "V_DIST") )
 				{
 					// get range from ent to player, return pointers to new words
 					VOX_LookupRangeHeadingOrGrid( 0, szparseword, pchan, soundsource, &pszNew, &pszNew1, &pszNew2, &cnew, true );
 				}
-				else if ( Q_strstr(szparseword, "V_DIR") )
+				else if ( V_strstr(szparseword, "V_DIR") )
 				{
 					// get heading from ent to player, return pointers to new words
 					VOX_LookupRangeHeadingOrGrid( 1, szparseword, pchan, soundsource, &pszNew, &pszNew1, &pszNew2, &cnew, false);
 				}
-				else if ( Q_strstr(szparseword, "V_IDIED") )
+				else if ( V_strstr(szparseword, "V_IDIED") )
 				{
 					// SILENT MARKER - this ent died - mark as dead and timestamp
 
@@ -1285,11 +1295,11 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 						// if not found, allocate new ent, give him a name & number, mark as dead
 						char szgroup1[32];
 						char szgroup2[32];
-						Q_strcpy(szgroup1, "V_MYNAME");
+						V_strcpy(szgroup1, "V_MYNAME");
 						szgroup1[8] = chtype;
 						szgroup1[9] = 0;
 
-						Q_strcpy(szgroup2, "V_MYNUM");
+						V_strcpy(szgroup2, "V_MYNUM");
 						szgroup2[7] = chtype;
 						szgroup2[8] = 0;
 
@@ -1306,7 +1316,7 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 					VOX_DeleteWord(i);
 
 				}
-				else if ( Q_strstr(szparseword, "V_WHODIED") )
+				else if ( V_strstr(szparseword, "V_WHODIED") )
 				{
 					// get last dead unit of this type
 
@@ -1330,7 +1340,7 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 					}
 
 				}
-				else if ( Q_strstr(szparseword, "V_SECTOR") )
+				else if ( V_strstr(szparseword, "V_SECTOR") )
 				{
 					// sectors are fictional - they simply
 					// increase sequentially and expire every 5 minutes
@@ -1339,18 +1349,18 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 					if (pszNew)
 						cnew = 1;
 				}
-				else if ( Q_strstr(szparseword, "V_GRIDX") )
+				else if ( V_strstr(szparseword, "V_GRIDX") )
 				{
 					// player x position in 10 meter increments
 					VOX_LookupRangeHeadingOrGrid( 2, szparseword, pchan, soundsource, &pszNew, &pszNew1, &pszNew2, &cnew, true );
 				}
-				else if ( Q_strstr(szparseword, "V_GRIDY") )
+				else if ( V_strstr(szparseword, "V_GRIDY") )
 				{
 					// player y position in 10 meter increments
 					VOX_LookupRangeHeadingOrGrid( 3, szparseword, pchan, soundsource, &pszNew, &pszNew1, &pszNew2, &cnew, true );
 				
 				}
-				else if ( Q_strstr(szparseword, "V_G0_") )
+				else if ( V_strstr(szparseword, "V_G0_") )
 				{
 					// 4 rnd globals per type, globals expire after 5 minutes
 					// used for target designation, master sector code name etc.
@@ -1359,7 +1369,7 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 					if (pszNew)
 						cnew = 1;
 				}
-				else if ( Q_strstr(szparseword, "V_G1_") )
+				else if ( V_strstr(szparseword, "V_G1_") )
 				{
 					// 4 rnd globals per type, globals expire after 5 minutes
 					// used for target designation, master sector code name etc.
@@ -1368,7 +1378,7 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 					if (pszNew)
 						cnew = 1;
 				}
-				else if ( Q_strstr(szparseword, "V_G2_") )
+				else if ( V_strstr(szparseword, "V_G2_") )
 				{
 					// 4 rnd globals per type, globals expire after 5 minutes
 					// used for target designation, master sector code name etc.
@@ -1377,7 +1387,7 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 					if (pszNew)
 						cnew = 1;
 				}
-				else if ( Q_strstr(szparseword, "V_G3_") )
+				else if ( V_strstr(szparseword, "V_G3_") )
 				{
 					// 4 rnd globals per type, globals expire after 5 minutes
 					// used for target designation, master sector code name etc.
@@ -1386,7 +1396,7 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 					if (pszNew)
 						cnew = 1;
 				}
-				else if ( Q_strstr(szparseword, "V_SEQG0_") )
+				else if ( V_strstr(szparseword, "V_SEQG0_") )
 				{
 					// 4 sequential globals per type, selected sequentially in list
 					// used for total target hit count etc.
@@ -1395,7 +1405,7 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 					if (pszNew)
 						cnew = 1;
 				}
-				else if ( Q_strstr(szparseword, "V_SEQG1_") )
+				else if ( V_strstr(szparseword, "V_SEQG1_") )
 				{
 					// 4 sequential globals per type, selected sequentially in list
 					// used for total target hit count etc.
@@ -1404,7 +1414,7 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 					if (pszNew)
 						cnew = 1;
 				}
-				else if ( Q_strstr(szparseword, "V_SEQG2_") )
+				else if ( V_strstr(szparseword, "V_SEQG2_") )
 				{
 					// 4 sequential globals per type, selected sequentially in list
 					// used for total target hit count etc.
@@ -1413,7 +1423,7 @@ void VOX_ReplaceVirtualNames( channel_t *pchan )
 					if (pszNew)
 						cnew = 1;
 				}
-				else if ( Q_strstr(szparseword, "V_SEQG3_") )
+				else if ( V_strstr(szparseword, "V_SEQG3_") )
 				{
 					// 4 sequential globals per type, selected sequentially in list
 					// used for total target hit count etc.
@@ -1446,15 +1456,15 @@ void VOX_Precache( IEngineSound *pSoundSystem, int sentenceIndex, const char *pP
 		g_Sentences[sentenceIndex].isPrecached = true;
 	}
 
-	memset(rgvoxword, 0, sizeof (voxword_t) * CVOXWORDMAX);
-	char *psz = (char *)(g_Sentences[sentenceIndex].pName + Q_strlen(g_Sentences[sentenceIndex].pName) + 1);
+	std::memset(rgvoxword, 0, sizeof (voxword_t) * CVOXWORDMAX);
+	char *psz = (char *)(g_Sentences[sentenceIndex].pName + V_strlen(g_Sentences[sentenceIndex].pName) + 1);
 	// get directory from string, advance psz
 	psz = VOX_GetDirectory(szpath, sizeof( szpath ), psz );
-	Q_strncpy(buffer, psz, sizeof( buffer ) );
+	V_strncpy(buffer, psz, sizeof( buffer ) );
 	psz = buffer;
 	if ( pPathOverride )
 	{
-		Q_strncpy(szpath, pPathOverride, sizeof(szpath));
+		V_strncpy(szpath, pPathOverride, sizeof(szpath));
 	}
 
 	// parse sentence (also inserts null terminators between words)
@@ -1479,7 +1489,7 @@ void VOX_Precache( IEngineSound *pSoundSystem, int sentenceIndex, const char *pP
 			int c = std::ssize( list );
 			for ( int j = 0 ; j < c; ++j )
 			{
-				Q_snprintf( pathbuffer, sizeof( pathbuffer ), "%s%s.wav", szpath, list[j].word );
+				V_snprintf( pathbuffer, sizeof( pathbuffer ), "%s%s.wav", szpath, list[j].word );
 				pSoundSystem->PrecacheSound( pathbuffer, false );
 			}
 		}
@@ -1489,7 +1499,7 @@ void VOX_Precache( IEngineSound *pSoundSystem, int sentenceIndex, const char *pP
 			if (VOX_ParseWordParams(pWords[i], &rgvoxword[cword], i == 0))
 			{
 				// this is a valid word (as opposed to a parameter block)
-				Q_snprintf( pathbuffer, sizeof( pathbuffer ), "%s%s.wav", szpath, pWords[i] );
+				V_snprintf( pathbuffer, sizeof( pathbuffer ), "%s%s.wav", szpath, pWords[i] );
 				// find name, if already in cache, mark voxword
 				// so we don't discard when word is done playing
 				pSoundSystem->PrecacheSound( pathbuffer, false );
@@ -1503,10 +1513,10 @@ void VOX_PrecacheSentenceGroup( IEngineSound *pSoundSystem, const char *pGroupNa
 {
 	int i;
 
-	int len = Q_strlen( pGroupName );
+	int len = V_strlen( pGroupName );
 	for ( i = 0; i < std::ssize( g_Sentences ); i++ )
 	{
-		if ( !g_Sentences[i].isPrecached && !Q_strncasecmp( g_Sentences[i].pName, pGroupName, len ) )
+		if ( !g_Sentences[i].isPrecached && !V_strncasecmp( g_Sentences[i].pName, pGroupName, len ) )
 		{
 			VOX_Precache( pSoundSystem, i, pPathOverride );
 		}
@@ -1532,7 +1542,7 @@ void VOX_LoadSound( channel_t *pchan, const char *pszin )
 	if (!pszin)
 		return;
 
-	memset(rgvoxword, 0, sizeof (voxword_t) * CVOXWORDMAX);
+	std::memset(rgvoxword, 0, sizeof (voxword_t) * CVOXWORDMAX);
 	memset(buffer, 0, sizeof(buffer));
 
 	// lookup actual string in g_Sentences, 
@@ -1549,14 +1559,14 @@ void VOX_LoadSound( channel_t *pchan, const char *pszin )
 	// get directory from string, advance psz
 	psz = VOX_GetDirectory(szpath, sizeof( szpath ), psz );
 
-	if ( Q_strlen(psz) > sizeof(buffer) - 1 )
+	if ( V_strlen(psz) > sizeof(buffer) - 1 )
 	{
 		DevMsg ("VOX_LoadSound: sentence is too long %s\n",psz);
 		return;
 	}
 
 	// copy into buffer
-	Q_strncpy(buffer, psz, sizeof( buffer ) );
+	V_strncpy(buffer, psz, sizeof( buffer ) );
 	psz = buffer;
 
 	// parse sentence (also inserts null terminators between words)
@@ -1576,9 +1586,9 @@ void VOX_LoadSound( channel_t *pchan, const char *pszin )
 	char captionstream[ 1024 ];
 
 	char groupname[ 512 ];
-	Q_strncpy( groupname, pszin, sizeof( groupname ) );
+	V_strncpy( groupname, pszin, sizeof( groupname ) );
 
-	int len = Q_strlen( groupname );
+	int len = V_strlen( groupname );
 
 	while ( len > 0 && V_isdigit( groupname[ len - 1 ] ) )
 	{
@@ -1586,7 +1596,7 @@ void VOX_LoadSound( channel_t *pchan, const char *pszin )
 		--len;
 	}
 	
-	Q_snprintf( captionstream, sizeof( captionstream ), "%s ", groupname );
+	V_snprintf( captionstream, sizeof( captionstream ), "%s ", groupname );
 
 	while (rgpparseword[i])
 	{
@@ -1595,7 +1605,7 @@ void VOX_LoadSound( channel_t *pchan, const char *pszin )
 		if (VOX_ParseWordParams(rgpparseword[i], &rgvoxword[cword], i == 0))
 		{
 			// this is a valid word (as opposed to a parameter block)
-			Q_snprintf( pathbuffer, sizeof( pathbuffer ), "%s%s.wav", szpath, rgpparseword[i] );
+			V_snprintf( pathbuffer, sizeof( pathbuffer ), "%s%s.wav", szpath, rgpparseword[i] );
 
 			// find name, if already in cache, mark voxword
 			// so we don't discard when word is done playing
@@ -1605,9 +1615,9 @@ void VOX_LoadSound( channel_t *pchan, const char *pszin )
 			rgvoxword[cword].fKeepCached = 1;
 
 			char captiontoken[ 128 ];
-			Q_snprintf( captiontoken, sizeof( captiontoken ), "S(%s%s) ", szpath, rgpparseword[i] );
+			V_snprintf( captiontoken, sizeof( captiontoken ), "S(%s%s) ", szpath, rgpparseword[i] );
 
-			Q_strncat( captionstream, captiontoken, sizeof( captionstream ), COPY_ALL_CHARACTERS );
+			V_strncat( captionstream, captiontoken, sizeof( captionstream ), COPY_ALL_CHARACTERS );
 
 			cword++;
 		}
@@ -1627,7 +1637,7 @@ void VOX_LoadSound( channel_t *pchan, const char *pszin )
 
 		pchan->flags.isSentence = true;
 		pchan->sfx = rgvoxword[0].sfx;
-		Assert(pchan->sfx);
+		contract_assert( pchan->sfx );
 
 		if ( g_pSoundServices )
 		{
@@ -1669,7 +1679,7 @@ struct CCPairLess
 {
 	bool operator()( const ccpair& lhs, const ccpair& rhs ) const
 	{
-		return Q_stricmp( lhs.token.word, rhs.token.word ) < 0;
+		return V_stricmp( lhs.token.word, rhs.token.word ) < 0;
 	}
 };
 typedef std::set< ccpair, CCPairLess > CCPairSet_t;
@@ -1680,10 +1690,10 @@ void VOX_AddNumbers( char *pGroupName, std::vector< WordBuf >& list )
 	for ( int i = 0; i <= 30; ++i )
 	{
 		char sznumbers[16];
-		int glen = Q_strlen(pGroupName);
-		int slen = Q_strlen("V_NUMBERS");
+		int glen = V_strlen(pGroupName);
+		int slen = V_strlen("V_NUMBERS");
 		
-		Q_strcpy(sznumbers, "V_NUMBERS");
+		V_strcpy(sznumbers, "V_NUMBERS");
 
 		// insert type character
 		sznumbers[slen] = pGroupName[glen-1];
@@ -1712,7 +1722,7 @@ void VOX_AddRndVirtual( char *pGroupName, std::vector< WordBuf >& list )
 	// get pointer to sentence name within group, using lru
 	for ( int snum = 0; snum < g_SentenceGroups[ isentenceg ].count; ++snum )
 	{
-		Q_snprintf( szsentencename, sizeof( szsentencename ), "%s%d", szgroupname, snum );
+		V_snprintf( szsentencename, sizeof( szsentencename ), "%s%d", szgroupname, snum );
 
 		char *psz = VOX_LookupString( szsentencename[0] == '!' ? szsentencename+1 : szsentencename, nullptr);
 
@@ -1742,16 +1752,16 @@ void VOX_BuildVirtualNameList( char *word, std::vector< WordBuf >& list )
 
 	char szparseword[256];
 	
-	int slen = Q_strlen(word);
+	int slen = V_strlen(word);
 	char chtype = word[slen-1];
 
 	// copy word to temp location so we can perform in-place substitutions
 
-	Q_strncpy( szparseword, word, sizeof( szparseword ) );
+	V_strncpy( szparseword, word, sizeof( szparseword ) );
 
 	// fbymap is true if lookup is performed via mapname instead of via ordinal
 
-	pszmaptoken = ( Q_strstr(szparseword, "_MAP__") );
+	pszmaptoken = ( V_strstr(szparseword, "_MAP__") );
 
 	fbymap = (pszmaptoken == nullptr ? false : true);
 
@@ -1764,9 +1774,9 @@ void VOX_BuildVirtualNameList( char *word, std::vector< WordBuf >& list )
 			// '_map_' lookups relative to the mapname
 			pszmaptoken[4] = '0';
 			if (imap < 10)
-				Q_snprintf( &(pszmaptoken[5]), 1, "%1d", imap );	
+				V_snprintf( &(pszmaptoken[5]), 1, "%1d", imap );	
 			else
-				Q_snprintf( &(pszmaptoken[4]), 2, "%d", imap );
+				V_snprintf( &(pszmaptoken[4]), 2, "%d", imap );
 
 			// Recurse...
 			VOX_BuildVirtualNameList( szparseword, list );
@@ -1774,11 +1784,11 @@ void VOX_BuildVirtualNameList( char *word, std::vector< WordBuf >& list )
 		return;
 	}
 	
-	if ( Q_strstr(szparseword, "V_MYNAME") )
+	if ( V_strstr(szparseword, "V_MYNAME") )
 	{
 		iname = 1;
 	}
-	else if ( Q_strstr(szparseword, "V_MYNUM") )
+	else if ( V_strstr(szparseword, "V_MYNUM") )
 	{
 		iname = 0;
 	}
@@ -1793,32 +1803,32 @@ void VOX_BuildVirtualNameList( char *word, std::vector< WordBuf >& list )
 	}
 	else
 	{
-		if ( Q_strstr(szparseword, "V_RND") )
+		if ( V_strstr(szparseword, "V_RND") )
 		{
 			// lookup random first word from this named group,
 			// return static, null terminated string
 			VOX_AddRndVirtual( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_DIST") )
+		else if ( V_strstr(szparseword, "V_DIST") )
 		{
 			VOX_AddNumbers( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_DIR") )
+		else if ( V_strstr(szparseword, "V_DIR") )
 		{
 			VOX_AddNumbers( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_IDIED") )
+		else if ( V_strstr(szparseword, "V_IDIED") )
 		{
 			// SILENT MARKER - this ent died - mark as dead and timestamp
 
 			// if not found, allocate new ent, give him a name & number, mark as dead
 			char szgroup1[32];
 			char szgroup2[32];
-			Q_strcpy(szgroup1, "V_MYNAME");
+			V_strcpy(szgroup1, "V_MYNAME");
 			szgroup1[8] = chtype;
 			szgroup1[9] = 0;
 
-			Q_strcpy(szgroup2, "V_MYNUM");
+			V_strcpy(szgroup2, "V_MYNUM");
 			szgroup2[7] = chtype;
 			szgroup2[8] = 0;
 
@@ -1827,7 +1837,7 @@ void VOX_BuildVirtualNameList( char *word, std::vector< WordBuf >& list )
 			return;
 
 		}
-		else if ( Q_strstr(szparseword, "V_WHODIED") )
+		else if ( V_strstr(szparseword, "V_WHODIED") )
 		{
 			// get last dead unit of this type
 			/*
@@ -1853,47 +1863,47 @@ void VOX_BuildVirtualNameList( char *word, std::vector< WordBuf >& list )
 			*/
 
 		}
-		else if ( Q_strstr(szparseword, "V_SECTOR") )
+		else if ( V_strstr(szparseword, "V_SECTOR") )
 		{
 			VOX_AddNumbers( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_GRIDX") )
+		else if ( V_strstr(szparseword, "V_GRIDX") )
 		{
 			VOX_AddNumbers( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_GRIDY") )
+		else if ( V_strstr(szparseword, "V_GRIDY") )
 		{
 			VOX_AddNumbers( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_G0_") )
+		else if ( V_strstr(szparseword, "V_G0_") )
 		{
 			VOX_AddRndVirtual( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_G1_") )
+		else if ( V_strstr(szparseword, "V_G1_") )
 		{
 			VOX_AddRndVirtual( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_G2_") )
+		else if ( V_strstr(szparseword, "V_G2_") )
 		{
 			VOX_AddRndVirtual( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_G3_") )
+		else if ( V_strstr(szparseword, "V_G3_") )
 		{
 			VOX_AddRndVirtual( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_SEQG0_") )
+		else if ( V_strstr(szparseword, "V_SEQG0_") )
 		{
 			VOX_AddRndVirtual( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_SEQG1_") )
+		else if ( V_strstr(szparseword, "V_SEQG1_") )
 		{
 			VOX_AddRndVirtual( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_SEQG2_") )
+		else if ( V_strstr(szparseword, "V_SEQG2_") )
 		{
 			VOX_AddRndVirtual( szparseword, list );
 		}
-		else if ( Q_strstr(szparseword, "V_SEQG3_") )
+		else if ( V_strstr(szparseword, "V_SEQG3_") )
 		{
 			VOX_AddRndVirtual( szparseword, list );
 		}
@@ -1932,7 +1942,7 @@ void VOX_TouchSounds( TouchList_t& list, const CCPairSet_t& ccpairs, bool spewse
 		
 		// Msg( "touch %s\n", fn );
 		char expanded[ 512 ];
-		Q_snprintf( expanded, sizeof( expanded ), "sound/%s", fn );
+		V_snprintf( expanded, sizeof( expanded ), "sound/%s", fn );
 
 		FileHandle_t fh = g_pFileSystem->Open( expanded, "rb" );
 		if ( FILESYSTEM_INVALID_HANDLE != fh )
@@ -1956,9 +1966,9 @@ void VOX_TouchSounds( TouchList_t& list, const CCPairSet_t& ccpairs, bool spewse
 			for ( const ccpair& pair : ccpairs )
 			{
 				char outline[ 512 ];
-				Q_snprintf( outline, sizeof( outline ), "%s\n", pair.fullpath.word );
+				V_snprintf( outline, sizeof( outline ), "%s\n", pair.fullpath.word );
 
-				g_pFileSystem->Write( outline, Q_strlen(outline), fh );
+				g_pFileSystem->Write( outline, V_strlen(outline), fh );
 			}
 
 			g_pFileSystem->Close( fh );
@@ -1981,7 +1991,7 @@ void VOX_TouchSound( const char *pszin, TouchList_t& filelist, CCPairSet_t& ccpa
 	if (!pszin)
 		return;
 
-	memset(rgvoxword, 0, sizeof (voxword_t) * CVOXWORDMAX);
+	std::memset(rgvoxword, 0, sizeof (voxword_t) * CVOXWORDMAX);
 	memset(buffer, 0, sizeof(buffer));
 
 	// lookup actual string in g_Sentences, 
@@ -1998,14 +2008,14 @@ void VOX_TouchSound( const char *pszin, TouchList_t& filelist, CCPairSet_t& ccpa
 	// get directory from string, advance psz
 	psz = VOX_GetDirectory(szpath, sizeof( szpath ), psz );
 
-	if ( Q_strlen(psz) > sizeof(buffer) - 1 )
+	if ( V_strlen(psz) > sizeof(buffer) - 1 )
 	{
 		DevMsg ("VOX_TouchSound: sentence is too long %s\n",psz);
 		return;
 	}
 
 	// copy into buffer
-	Q_strncpy(buffer, psz, sizeof( buffer ) );
+	V_strncpy(buffer, psz, sizeof( buffer ) );
 	psz = buffer;
 
 	// parse sentence (also inserts null terminators between words)
@@ -2037,14 +2047,14 @@ void VOX_TouchSound( const char *pszin, TouchList_t& filelist, CCPairSet_t& ccpa
 				for ( int j = 0 ; j < c; ++j )
 				{
 					char name[ 256 ];
-					Q_snprintf( name, sizeof( name ), "%s", list[ j ].word );
+					V_snprintf( name, sizeof( name ), "%s", list[ j ].word );
 
 					if ( StringHasPrefix( name, "V_" ) )
 					{
 						Warning( "VOX_TouchSound didn't resolve virtual token %s!\n", name );
 					}
 
-					Q_snprintf( pathbuffer, sizeof( pathbuffer ), "%s%s.wav", szpath, name );
+					V_snprintf( pathbuffer, sizeof( pathbuffer ), "%s%s.wav", szpath, name );
 					VOX_Touch( pathbuffer, filelist );
 
 					WordBuf w;
@@ -2054,11 +2064,11 @@ void VOX_TouchSound( const char *pszin, TouchList_t& filelist, CCPairSet_t& ccpa
 						rep.push_back( w );
 					}
 					ccpair pair;
-					Q_snprintf( pair.token.word, sizeof( pair.token.word ), "S(%s%s)", szpath, name );
+					V_snprintf( pair.token.word, sizeof( pair.token.word ), "S(%s%s)", szpath, name );
 					pair.value.Set( name );
 
-					Q_snprintf( pathbuffer, sizeof( pathbuffer ), "%s/sound/%s%s.wav", g_pSoundServices->GetGameDir(), szpath, name );
-					Q_FixSlashes( pathbuffer, '\\' );
+					V_snprintf( pathbuffer, sizeof( pathbuffer ), "%s/sound/%s%s.wav", g_pSoundServices->GetGameDir(), szpath, name );
+					V_FixSlashes( pathbuffer, '\\' );
 					pair.fullpath.Set( pathbuffer );
 
 					ccpairs.insert( pair );
@@ -2067,7 +2077,7 @@ void VOX_TouchSound( const char *pszin, TouchList_t& filelist, CCPairSet_t& ccpa
 			else
 			{
 				// this is a valid word (as opposed to a parameter block)
-				Q_snprintf( pathbuffer, sizeof( pathbuffer ), "%s%s.wav", szpath, rgpparseword[i] );
+				V_snprintf( pathbuffer, sizeof( pathbuffer ), "%s%s.wav", szpath, rgpparseword[i] );
 				VOX_Touch( pathbuffer, filelist );
 
 				WordBuf w;
@@ -2075,11 +2085,11 @@ void VOX_TouchSound( const char *pszin, TouchList_t& filelist, CCPairSet_t& ccpa
 				rep.push_back( w );
 
 				ccpair pair;
-				Q_snprintf( pair.token.word, sizeof( pair.token.word ), "S(%s%s)", szpath, rgpparseword[i] );
+				V_snprintf( pair.token.word, sizeof( pair.token.word ), "S(%s%s)", szpath, rgpparseword[i] );
 				pair.value.Set( rgpparseword[i] );
 
-				Q_snprintf( pathbuffer, sizeof( pathbuffer ), "%s/sound/%s%s.wav", g_pSoundServices->GetGameDir(), szpath, rgpparseword[ i ] );
-				Q_FixSlashes( pathbuffer, CORRECT_PATH_SEPARATOR );
+				V_snprintf( pathbuffer, sizeof( pathbuffer ), "%s/sound/%s%s.wav", g_pSoundServices->GetGameDir(), szpath, rgpparseword[ i ] );
+				V_FixSlashes( pathbuffer, CORRECT_PATH_SEPARATOR );
 				pair.fullpath.Set( pathbuffer );
 
 				ccpairs.insert( pair );
@@ -2096,26 +2106,26 @@ void VOX_TouchSound( const char *pszin, TouchList_t& filelist, CCPairSet_t& ccpa
 		for ( int i = 0; i < std::ssize( rep ); ++i )
 		{
 			/*
-			if ( !Q_stricmp( rep[ i ].word, "_comma" ) )
+			if ( !V_stricmp( rep[ i ].word, "_comma" ) )
 			{
-				if ( i != 0 && Q_strlen( outbuf ) >= 1 )
+				if ( i != 0 && V_strlen( outbuf ) >= 1 )
 				{
-					outbuf[ Q_strlen( outbuf ) - 1 ] =0;
+					outbuf[ V_strlen( outbuf ) - 1 ] =0;
 				}
 
 				// Don't end sentence with comma..
 				if ( i != rep.Count() - 1 )
 				{
-					Q_strncat( outbuf, ", ", sizeof( outbuf ), COPY_ALL_CHARACTERS );
+					V_strncat( outbuf, ", ", sizeof( outbuf ), COPY_ALL_CHARACTERS );
 				}
 				continue;
 			}
 			*/
 
-			Q_strncat( outbuf, rep[ i ].word, sizeof( outbuf ), COPY_ALL_CHARACTERS );
+			V_strncat( outbuf, rep[ i ].word, sizeof( outbuf ), COPY_ALL_CHARACTERS );
 			if ( i != std::ssize( rep ) - 1 )
 			{
-				Q_strncat( outbuf, " ", sizeof( outbuf ), COPY_ALL_CHARACTERS );
+				V_strncat( outbuf, " ", sizeof( outbuf ), COPY_ALL_CHARACTERS );
 			}
 		}
 
@@ -2157,7 +2167,7 @@ void VOX_ParseLineCommands( char *pSentenceData, int sentenceIndex )
 		}
 
 		// Copy good string to temp buffer
-		memcpy( tempBuffer + tempBufferPos, pSentenceData, length );
+		std::memcpy( tempBuffer + tempBufferPos, pSentenceData, length );
 		
 		// Move the copy position
 		tempBufferPos += length;
@@ -2179,13 +2189,13 @@ void VOX_ParseLineCommands( char *pSentenceData, int sentenceIndex )
 			}
 
 			// Simple comparison of string commands:
-			switch( tolower( *pSentenceData ) )
+			switch( std::tolower( *pSentenceData ) )
 			{
 			case 'l':
 				// All commands starting with len here
 				if ( StringHasPrefix( pSentenceData, "len" ) )
 				{
-					g_Sentences[sentenceIndex].length = atof( pSentenceData + 3 ) ;
+					g_Sentences[sentenceIndex].length = std::atof( pSentenceData + 3 ) ;
 
 					// "len " len + space
 					pSentenceData += V_strlen( "len" ) + 1;
@@ -2209,7 +2219,7 @@ void VOX_ParseLineCommands( char *pSentenceData, int sentenceIndex )
 					while ( *pSentenceData && ( *pSentenceData != '}' && !( *pSentenceData <= 32 ) ) )
 						pSentenceData++;
 
-					if ( Q_strlen( com_token ) > 0 )
+					if ( V_strlen( com_token ) > 0 )
 					{
 						g_Sentences[sentenceIndex].caption = ks::global_symbols().intern( com_token );
 					}
@@ -2253,7 +2263,7 @@ void VOX_ParseLineCommands( char *pSentenceData, int sentenceIndex )
 		tempBuffer[ tempBufferPos ] = 0;
 		
 		// Copy it over the original data
-		Q_strcpy( pStart, tempBuffer );
+		V_strcpy( pStart, tempBuffer );
 	}
 }
 
@@ -2263,7 +2273,8 @@ void VOX_ParseLineCommands( char *pSentenceData, int sentenceIndex )
 //-----------------------------------------------------------------------------
 int VOX_GroupAdd( const char *pSentenceName )
 {
-	int len = strlen( pSentenceName ) - 1;
+	ks::ScratchArena<> scratch;
+	int len = std::strlen( pSentenceName ) - 1;
 
 	// group members end in a number
 	if ( len <= 0 || !V_isdigit(pSentenceName[len]) )
@@ -2276,8 +2287,8 @@ int VOX_GroupAdd( const char *pSentenceName )
 	}
 
 	// make a copy of the actual group name
-	char *groupName = (char *)stackalloc( len + 2 );
-	Q_strncpy( groupName, pSentenceName, len+2 );
+	char *groupName = (char *)scratch.AllocBytes( len + 2 );
+	V_strncpy( groupName, pSentenceName, len+2 );
 
 	// check for it in the list
 	int i;
@@ -2306,16 +2317,6 @@ int VOX_GroupAdd( const char *pSentenceName )
 	group->count = 1;
 	return addIndex;
 }
-
-#if DEAD
-//-----------------------------------------------------------------------------
-// Purpose: clear the sentence groups
-//-----------------------------------------------------------------------------
-void VOX_GroupClear( void )
-{
-	g_SentenceGroups.RemoveAll();
-}
-#endif
 
 
 void VOX_LRUInit( sentencegroup_t *pGroup )
@@ -2472,7 +2473,7 @@ int VOX_GroupPickSequential( int isentenceg, char *szfound, int szfoundLen, int 
 	if (ipick >= count)
 		ipick = count-1;
 
-	Q_snprintf( szfound, szfoundLen, "!%s%d", szgroupname, ipick );
+	V_snprintf( szfound, szfoundLen, "!%s%d", szgroupname, ipick );
 	
 	if (ipick >= count)
 	{
@@ -2503,7 +2504,7 @@ int VOX_GroupPick( int isentenceg, char *szfound, int strLen )
 	unsigned char i;
 	unsigned char count;
 	unsigned char ipick=0;
-	int ffound = FALSE;
+	int ffound = false;
 	
 	if (isentenceg < 0 || isentenceg > std::ssize( g_SentenceGroups ))
 		return -1;
@@ -2519,7 +2520,7 @@ int VOX_GroupPick( int isentenceg, char *szfound, int strLen )
 			{
 				ipick = plru[i];
 				plru[i] = 0xFF;
-				ffound = TRUE;
+				ffound = true;
 				break;
 			}
 
@@ -2529,7 +2530,7 @@ int VOX_GroupPick( int isentenceg, char *szfound, int strLen )
 		}
 		else
 		{
-			Q_snprintf( szfound, strLen, "!%s%d", szgroupname, ipick );
+			V_snprintf( szfound, strLen, "!%s%d", szgroupname, ipick );
 			return ipick;
 		}
 	}
@@ -2575,7 +2576,7 @@ int VOX_ListFileIsLoaded( const char *psentenceFileName )
 	filelist_t *pList = g_pSentenceFileList;
 	while ( pList )
 	{
-		if ( !strcmp( psentenceFileName, pList->pFileName ) )
+		if ( !std::strcmp( psentenceFileName, pList->pFileName ) )
 			return true;
 
 		pList = pList->pNext;
@@ -2593,12 +2594,12 @@ void VOX_ListMarkFileLoaded( const char *psentenceFileName )
 	filelist_t	*pEntry;
 	char		*pName;
 
-	pEntry = (filelist_t *)MemAlloc_Alloc( sizeof(filelist_t) + strlen( psentenceFileName ) + 1);
+	pEntry = (filelist_t *)MemAlloc_Alloc( sizeof(filelist_t) + std::strlen( psentenceFileName ) + 1);
 
 	if ( pEntry )
 	{
 		pName = (char *)(pEntry+1);
-		Q_strcpy( pName, psentenceFileName );
+		V_strcpy( pName, psentenceFileName );
 
 		pEntry->pFileName = pName;
 		pEntry->pNext = g_pSentenceFileList;
@@ -2614,20 +2615,20 @@ void VOX_CompactSentenceFile()
 	int i;
 	for ( i = 0; i < std::ssize( g_Sentences ); i++ )
 	{
-		int len = Q_strlen( g_Sentences[i].pName ) + 1;
+		int len = V_strlen( g_Sentences[i].pName ) + 1;
 		const char *pData = g_Sentences[i].pName + len;
-		int dataLen = Q_strlen( pData ) + 1;
+		int dataLen = V_strlen( pData ) + 1;
 		totalMem += len + dataLen;
 	}
 	ks::ensure_size( g_SentenceFile, totalMem );
 	totalMem = 0;
 	for ( i = 0; i < std::ssize( g_Sentences ); i++ )
 	{
-		int len = Q_strlen( g_Sentences[i].pName ) + 1;
+		int len = V_strlen( g_Sentences[i].pName ) + 1;
 		const char *pData = g_Sentences[i].pName + len;
-		int dataLen = Q_strlen( pData ) + 1;
+		int dataLen = V_strlen( pData ) + 1;
 		char *pDest = &g_SentenceFile[totalMem];
-		memcpy( pDest, g_Sentences[i].pName, len + dataLen );
+		std::memcpy( pDest, g_Sentences[i].pName, len + dataLen );
 		g_Sentences[i].pName = pDest;
 		totalMem += len + dataLen;
 	}
@@ -2833,7 +2834,7 @@ char *VOX_LookupString(const char *pSentenceName, int *psentencenum, bool *pbEmi
 				*pflDuration = g_Sentences[ i ].length;
 			}
 
-			return (char *)(name + Q_strlen(name) + 1);
+			return (char *)(name + V_strlen(name) + 1);
 		}
 	}
 	return nullptr;
@@ -2847,6 +2848,3 @@ const char *VOX_SentenceNameFromIndex( int sentencenum )
 		return g_Sentences[sentencenum].pName;
 	return nullptr;
 }
-
-
-

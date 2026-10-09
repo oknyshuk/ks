@@ -1,21 +1,14 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ITOOLENTITY_H
-#define ITOOLENTITY_H
-
-#include "tier1/interface.h"
-#include "tier1/utlvector.h"
-#include "color.h"
+import ks.tier1;
+import std;
 #include "basehandle.h"
 #include "iclientrenderable.h"
 #include "engine/ishadowmgr.h"
 #include "engine/ivmodelinfo.h"
 #include "engine/IClientLeafSystem.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -24,8 +17,6 @@ class IServerEntity;
 class IClientEntity;
 class IToolSystem;
 class IClientRenderable;
-class Vector;
-class QAngle;
 
 
 //-----------------------------------------------------------------------------
@@ -172,7 +163,7 @@ public:
 	virtual bool			IsRenderingThirdPerson() const = 0;
 };
 
-#define VCLIENTTOOLS_INTERFACE_VERSION "VCLIENTTOOLS001"
+inline constexpr const char *VCLIENTTOOLS_INTERFACE_VERSION = "VCLIENTTOOLS001";
 
 
 class CEntityRespawnInfo
@@ -228,6 +219,4 @@ public:
 	virtual void RemoveEntity( int nHammerID ) = 0;
 };
 
-#define VSERVERTOOLS_INTERFACE_VERSION "VSERVERTOOLS001"
-
-#endif // ITOOLENTITY_H
+inline constexpr const char *VSERVERTOOLS_INTERFACE_VERSION = "VSERVERTOOLS001";

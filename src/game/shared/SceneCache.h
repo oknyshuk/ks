@@ -1,19 +1,14 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef SCENECACHE_H
-#define SCENECACHE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "cached_file_data.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include <flat_set>
+import std;
 
 class CChoreoEvent;
 
-#define SCENECACHE_VERSION		7
+inline constexpr auto SCENECACHE_VERSION = 7;
 
 
 #pragma pack(1)
@@ -37,5 +32,3 @@ public:
 	static void PrecacheSceneEvent( CChoreoEvent *event, std::flat_multiset< int > &soundlist );
 };
 #pragma pack()
-
-#endif // SCENECACHE_H

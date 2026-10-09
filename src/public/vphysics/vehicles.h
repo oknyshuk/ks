@@ -1,28 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef VEHICLES_H
-#define VEHICLES_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "datamap.h"
+class IPhysicsObject;
 
+inline constexpr auto VEHICLE_TYPE_CAR_WHEELS = (1<<0);
+inline constexpr auto VEHICLE_TYPE_CAR_RAYCAST = (1<<1);
+inline constexpr auto VEHICLE_TYPE_JETSKI_RAYCAST = (1<<2);
+inline constexpr auto VEHICLE_TYPE_AIRBOAT_RAYCAST = (1<<3);
 
-#define VEHICLE_TYPE_CAR_WHEELS			(1<<0)
-#define VEHICLE_TYPE_CAR_RAYCAST		(1<<1)
-#define VEHICLE_TYPE_JETSKI_RAYCAST		(1<<2)
-#define VEHICLE_TYPE_AIRBOAT_RAYCAST	(1<<3)
+inline constexpr auto VEHICLE_MAX_AXLE_COUNT = 4;
+inline constexpr auto VEHICLE_MAX_GEAR_COUNT = 6;
+inline constexpr auto VEHICLE_MAX_WHEEL_COUNT = (2*VEHICLE_MAX_AXLE_COUNT);
 
-#define VEHICLE_MAX_AXLE_COUNT	4
-#define VEHICLE_MAX_GEAR_COUNT	6
-#define VEHICLE_MAX_WHEEL_COUNT	(2*VEHICLE_MAX_AXLE_COUNT)
-
-#define VEHICLE_TIRE_NORMAL		0
-#define VEHICLE_TIRE_BRAKING	1
-#define VEHICLE_TIRE_POWERSLIDE	2
+inline constexpr auto VEHICLE_TIRE_NORMAL = 0;
+inline constexpr auto VEHICLE_TIRE_BRAKING = 1;
+inline constexpr auto VEHICLE_TIRE_POWERSLIDE = 2;
 
 struct vehicle_controlparams_t
 {
@@ -56,8 +50,8 @@ struct vehicle_operatingparams_t
 };
 
 // Debug!
-#define VEHICLE_DEBUGRENDERDATA_MAX_WHEELS		10
-#define VEHICLE_DEBUGRENDERDATA_MAX_AXLES		3
+inline constexpr auto VEHICLE_DEBUGRENDERDATA_MAX_WHEELS = 10;
+inline constexpr auto VEHICLE_DEBUGRENDERDATA_MAX_AXLES = 3;
 
 struct vehicle_debugcarsystem_t
 {
@@ -242,6 +236,4 @@ enum PassengerSeatAnimType_t
 	PASSENGER_SEAT_EXIT
 };
 
-#define VEHICLE_SEAT_INVALID	-1		// An invalid seat
-
-#endif // VEHICLES_H
+inline constexpr auto VEHICLE_SEAT_INVALID = -1; // An invalid seat

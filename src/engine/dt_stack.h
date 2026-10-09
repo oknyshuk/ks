@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DATATABLE_STACK_H
-#define DATATABLE_STACK_H
-
-
-#include <span>
+import std;
 #include "dt.h"
 #include "dt_recv_decoder.h"
-
 
 class CSendNode;
 static 	CSendProxyRecipients s_Recipients; // avoid calling constructor each time
@@ -27,7 +19,7 @@ static 	CSendProxyRecipients s_Recipients; // avoid calling constructor each tim
 //
 // ----------------------------------------------------------------------------- //
 
-abstract_class CDatatableStack
+class CDatatableStack
 {
 public:
 	
@@ -99,7 +91,7 @@ inline unsigned char* CDatatableStack::GetCurStructBase() const
 
 inline void CDatatableStack::SeekToProp( int iProp )
 {
-	Assert( m_bInitted );
+	contract_assert( m_bInitted );
 	
 	m_iCurProp = iProp;
 	m_pCurProp = m_pPrecalc->GetProp( iProp );
@@ -114,7 +106,7 @@ inline int CDatatableStack::GetObjectID() const
 // "Not routed yet" marker for explicit routes; must match Init's fill.
 inline unsigned char *UnroutedProxy()
 {
-	return reinterpret_cast< unsigned char * >( ~uintptr_t{ 0 } );
+	return reinterpret_cast< unsigned char * >( ~std::uintptr_t{ 0 } );
 }
 
 // For Init( true, ... ): proxies are called lazily, along the current prop's path only.
@@ -346,6 +338,3 @@ inline const SendProp* CServerDatatableStack::GetCurProp() const
 {
 	return m_pPrecalc->GetProp( GetCurPropIndex() );
 }
-
-
-#endif // DATATABLE_STACK_H

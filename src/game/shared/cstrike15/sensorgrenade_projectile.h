@@ -1,14 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef SENSORGRENADE_PROJECTILE_H
-#define SENSORGRENADE_PROJECTILE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-
 
 #include "basecsgrenade_projectile.h"
 #if defined( CLIENT_DLL )
@@ -80,5 +74,3 @@ private:
 };
 
 #endif // GAME_DLL
-
-#endif // SENSORGRENADE_PROJECTILE_H

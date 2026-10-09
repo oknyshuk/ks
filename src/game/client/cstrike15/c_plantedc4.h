@@ -1,23 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#ifndef C_PLANTEDC4_H
-#define C_PLANTEDC4_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+#include "rocketui/rmlui.h"
+import ks.tier1;
 #include "reflect_annotations.h"
 
-#include "cbase.h"
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
 #include "in_buttons.h"
 #include "decals.h"
 
 #include "c_cs_player.h"
 #include "c_rope.h"
-#include "utlvector.h"
-
 
 // ------------------------------------------------------------------------------------------ //
 // CPlantedC4 class.
@@ -41,7 +39,7 @@ public:
 
 	void ClientThink( void );
 
-	int GetSecondsRemaining( void ) { return ceil( m_flC4Blow - gpGlobals->curtime ); }
+	int GetSecondsRemaining( void ) { return std::ceil( m_flC4Blow - gpGlobals->curtime ); }
 
 	inline bool IsBombActive( void ) { return m_bBombTicking; }
 	CNetworkVar( bool, m_bBombTicking, [[= ks::reflect::Net{} ]] );
@@ -83,7 +81,7 @@ public:
 	float	m_flNextRadarFlashTime;	// next time to change flash state
 	bool	m_bRadarFlash;			// is the flash on or off
 
-	virtual void UpdateOnRemove( void ) OVERRIDE;
+	virtual void UpdateOnRemove( void ) override;
 
 private:
 	bool CreateDefuserRopes( void );
@@ -93,5 +91,3 @@ private:
 };
 
 extern std::vector< C_PlantedC4* > g_PlantedC4s;
-
-#endif //C_PLANTEDC4_H

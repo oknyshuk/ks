@@ -1,20 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ZIP_UTILS_H
-#define ZIP_UTILS_H
+import std;
+import ks.tier1;
 
-#include <cstddef>
-#include <cstdio>
-#include <optional>
-#include <vector>
-#include "tier0/dbg.h"
-#include "tier1/byte_writer.h"
-
-abstract_class IZip
+class IZip
 {
 public:
 	virtual void			Reset() = 0;
@@ -50,7 +41,7 @@ public:
 
 	// Writes out zip file to a filestream - uses current alignment size 
 	// (set by file's previous alignment, or a call to ForceAlignment)
-	virtual void			SaveToDisk			( FILE *fout ) = 0;
+	virtual void			SaveToDisk			( std::FILE *fout ) = 0;
 	
 	// Reads a zip file from a buffer into memory - sets current alignment size to 
 	// the file's alignment size, unless overridden by a ForceAlignment call)
@@ -60,7 +51,7 @@ public:
 	// Only ReadFileFromZip() is supported because the zip file could be >2GB
 
 	// Forces a specific alignment size for all subsequent file operations, overriding files' previous alignment size.
-	// Return to using files' individual alignment sizes by passing FALSE.
+	// Return to using files' individual alignment sizes by passing false.
 	virtual void			ForceAlignment		( bool aligned, bool bCompatibleFormat, unsigned int alignmentSize=0 ) = 0;
 
 	virtual unsigned int	GetAlignment() = 0;
@@ -70,5 +61,3 @@ public:
 	static IZip *CreateZip( const char *pDiskCacheWritePath = nullptr, bool bSortByName = false );
 	static void ReleaseZip( IZip *zip );
 };
-
-#endif // ZIP_UTILS_H

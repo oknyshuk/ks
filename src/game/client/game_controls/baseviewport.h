@@ -1,20 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef BASEVIEWPORT_H
-#define BASEVIEWPORT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // viewport interface for the rest of the dll
+import ks.tier1;
 #include "game/client/iviewport.h"
 
-#include "tier1/utlvector.h"
-#include "tier1/map_ops.h"
+import std;
 #include "igameevents.h"
 #include "noopanimcontroller.h"
+#include "GameEventListener.h"
 
 class IBaseFileSystem;
 class IGameUIFuncs;
@@ -84,6 +79,3 @@ protected:
 private:
 	virtual void InitViewportSingletons( void );
 };
-
-
-#endif // BASEVIEWPORT_H

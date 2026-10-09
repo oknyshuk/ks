@@ -1,12 +1,14 @@
-#include "basetypes.h"
-#include "commonmacros.h"
 
-#include <mutex>
+
 #include <SDL3/SDL.h>
+
+
+import ks.core;
+import std;
 
 #include "soundsystem/lowlevel.h"
 
-#define DEFAULT_DEVICE_NAME "SDLDefaultDevice"
+inline constexpr const char *DEFAULT_DEVICE_NAME = "SDLDefaultDevice";
 #define DEFAULT_DEVICE_NAME_WIDE L"SDLDefaultDevice"
 
 class CAudioSDL : public IAudioDevice2
@@ -134,7 +136,7 @@ bool CAudioSDL::Init( const audio_device_init_params_t &params )
                 }
 
                 wchar_t devNameWide[AUDIO_DEVICE_NAME_MAX];
-                Q_UTF8ToWString( devName, devNameWide, sizeof( devNameWide ) );
+                Q_UTF8ToUTF32( devName, devNameWide, sizeof( devNameWide ) );
                 if ( wcscmp( devNameWide, params.m_overrideDeviceName ) == 0 )
                 {
                     m_nDeviceIndex = i;
@@ -153,7 +155,7 @@ bool CAudioSDL::Init( const audio_device_init_params_t &params )
 	m_pStream = SDL_OpenAudioDeviceStream( SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, AudioStreamCallback, this );
 
 	const char *pDeviceNameUTF8 = m_nDeviceIndex == -1 ? DEFAULT_DEVICE_NAME : SDL_GetAudioDeviceName( pDevices[m_nDeviceIndex] );
-	Q_UTF8ToWString( pDeviceNameUTF8, m_deviceID, sizeof( m_deviceID ) );
+	Q_UTF8ToUTF32( pDeviceNameUTF8, m_deviceID, sizeof( m_deviceID ) );
 
 	SDL_free( pDevices );
 
@@ -165,8 +167,8 @@ bool CAudioSDL::Init( const audio_device_init_params_t &params )
 	SDL_GetAudioStreamFormat( m_pStream, &obtained, nullptr );
 
 	// BUGBUG: Assert this for now
-	Assert( obtained.channels == 2 );
-	Assert( obtained.freq == int(MIX_DEFAULT_SAMPLING_RATE) );
+	contract_assert( obtained.channels == 2 );
+	contract_assert( obtained.freq == int(MIX_DEFAULT_SAMPLING_RATE) );
 
 	m_nChannels = obtained.channels;
 	m_nSampleBits = SDL_AUDIO_BITSIZE( obtained.format );
@@ -182,7 +184,7 @@ bool CAudioSDL::Init( const audio_device_init_params_t &params )
 	
 	for ( int i = 0; i != kNumBuffers; ++i )
 	{
-		m_pBuffer[ i ] = (short *)MemAlloc_AllocAligned( nBufferSize * m_nBufferCount, 16 );
+		m_pBuffer[ i ] = (short *)MemAlloc_AllocAlignedUnattributed( nBufferSize * m_nBufferCount, 16 );
 	}
 
 	m_nReadBuffer = m_nWriteBuffer = 0;
@@ -279,10 +281,10 @@ const wchar_t* CAudioSDL::GetDeviceID() const
 
 void CAudioSDL::OutputDebugInfo() const
 {
-	fprintf(stderr, "SDL Audio Device\n" );
-	fprintf(stderr, "Channels:\t%d\n", ChannelCount() );
-	fprintf(stderr, "Bits/Sample:\t%d\n", BitsPerSample() );
-	fprintf(stderr, "Rate:\t\t%d\n", SampleRate() );
+	std::fprintf(stderr, "SDL Audio Device\n" );
+	std::fprintf(stderr, "Channels:\t%d\n", ChannelCount() );
+	std::fprintf(stderr, "Bits/Sample:\t%d\n", BitsPerSample() );
+	std::fprintf(stderr, "Rate:\t\t%d\n", SampleRate() );
 }
 
 void CAudioSDL::FillAudioBuffer( SDL_AudioStream *stream, int additional_amount )
@@ -425,7 +427,7 @@ int Audio_EnumerateSDLDevices( audio_device_description_t *pDeviceListOut, int n
 	if ( nListCount > 0 )
 	{
 		audio_device_description_t& description = pDeviceListOut[0];
-		Q_UTF8ToWString( DEFAULT_DEVICE_NAME, description.m_deviceName, sizeof(description.m_deviceName) );
+		Q_UTF8ToUTF32( DEFAULT_DEVICE_NAME, description.m_deviceName, sizeof(description.m_deviceName) );
         V_strcpy_safe( description.m_friendlyName, "#OS_Default_Device" );
 		description.m_nChannelCount = 6;
 		description.m_bIsDefault = true;
@@ -443,8 +445,8 @@ int Audio_EnumerateSDLDevices( audio_device_description_t *pDeviceListOut, int n
 
 		audio_device_description_t& description = pDeviceListOut[i+1];
 
-		Q_UTF8ToWString( pNameUTF8, description.m_deviceName, sizeof(description.m_deviceName) );
-		Q_WStringToUTF8( description.m_deviceName, description.m_friendlyName, sizeof(description.m_friendlyName) );
+		Q_UTF8ToUTF32( pNameUTF8, description.m_deviceName, sizeof(description.m_deviceName) );
+		Q_UTF32ToUTF8( description.m_deviceName, description.m_friendlyName, sizeof(description.m_friendlyName) );
 		description.m_nChannelCount = 6;
 		description.m_bIsDefault = false;
 		description.m_bIsAvailable = true;

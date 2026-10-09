@@ -1,13 +1,43 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 //---------------------------------------------------------
 //---------------------------------------------------------
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "decals.h"
@@ -18,10 +48,8 @@
 #include "engine/IEngineSound.h"
 #include "ispatialpartition.h"
 #include "collisionutils.h"
-#include "tier0/vprof.h"
 #include "nav.h"
 #include "nav_mesh.h"
-
 
 /********************************************************************
  NOTE: if you are looking at this file becase you would like flares 
@@ -41,27 +69,23 @@
  For some partial work towards this end, see changelist 192474.
 
  ********************************************************************/
+constexpr auto FIRE_HEIGHT = 256.0f;
+template <typename T1> [[gnu::always_inline]] inline auto FIRE_SCALE_FROM_SIZE( T1 firesize ) { return (firesize * (1/FIRE_HEIGHT)); }
 
+constexpr auto FIRE_MAX_GROUND_OFFSET = 24.0f; //(2 feet)
 
-
-
-#define	FIRE_HEIGHT				256.0f
-#define FIRE_SCALE_FROM_SIZE(firesize)		(firesize * (1/FIRE_HEIGHT))
-
-#define	FIRE_MAX_GROUND_OFFSET	24.0f	//(2 feet)
-
-#define	DEFAULT_ATTACK_TIME	4.0f
-#define	DEFAULT_DECAY_TIME	8.0f
+constexpr auto DEFAULT_ATTACK_TIME = 4.0f;
+constexpr auto DEFAULT_DECAY_TIME = 8.0f;
 
 // UNDONE: This shouldn't be constant but depend on specific fire
-#define	FIRE_WIDTH				128
+constexpr auto FIRE_WIDTH = 128;
 #define	FIRE_MINS				Vector(-20,-20,0 )   // Sould be FIRE_WIDTH in size
 #define FIRE_MAXS				Vector( 20, 20,20)	 // Sould be FIRE_WIDTH in size
-#define FIRE_SPREAD_DAMAGE_MULTIPLIER 2.0
+constexpr auto FIRE_SPREAD_DAMAGE_MULTIPLIER = 2.0;
 
-#define FIRE_MAX_HEAT_LEVEL		64.0f
-#define	FIRE_NORMAL_ATTACK_TIME	20.0f
-#define FIRE_THINK_INTERVAL		0.1
+constexpr auto FIRE_MAX_HEAT_LEVEL = 64.0f;
+constexpr auto FIRE_NORMAL_ATTACK_TIME = 20.0f;
+constexpr auto FIRE_THINK_INTERVAL = 0.1;
 
 ConVar fire_maxabsorb( "fire_maxabsorb", "50" );
 ConVar fire_absorbrate( "fire_absorbrate", "3" );
@@ -74,7 +98,6 @@ ConVar fire_dmgbase( "fire_dmgbase", "1" );
 ConVar fire_growthrate( "fire_growthrate", "1.0" );
 ConVar fire_dmginterval( "fire_dmginterval", "1.0" );
 
-#define VPROF_FIRE(s) VPROF( s )
 
 class CFire : public CBaseEntity
 {
@@ -131,7 +154,7 @@ public:
 			{
 				NDebugOverlay::EntityBounds(this, 88, 255, 128, 0 ,0);
 				char tempstr[512];
-				Q_snprintf( tempstr, sizeof(tempstr), "Heat: %.1f", m_flHeatAbsorb );
+				V_snprintf( tempstr, sizeof(tempstr), "Heat: %.1f", m_flHeatAbsorb );
 				EntityText(1,tempstr, 0);
 			}
 			else if ( !IsBurning() )
@@ -278,7 +301,7 @@ int FireSystem_GetFiresInSphere( CFire **pList, int listMax, bool onlyActiveFire
 bool FireSystem_IsValidFirePosition( const Vector &position, float testRadius )
 {
 	CFire *pList[1];
-	int count = FireSystem_GetFiresInSphere( pList, ARRAYSIZE(pList), true, position, testRadius );
+	int count = FireSystem_GetFiresInSphere( pList, std::size( pList ), true, position, testRadius );
 	if ( count > 0 )
 		return false;
 	return true;
@@ -391,14 +414,14 @@ bool FireSystem_CanAddFire( Vector *position, float separationRadius, fireType_e
 //-----------------------------------------------------------------------------
 bool FireSystem_StartFire( const Vector &position, float fireHeight, float attack, float fuel, int flags, CBaseEntity *owner, fireType_e type )
 {
-	VPROF_FIRE( "FireSystem_StartFire1" );
+	CVProfScope _( "FireSystem_StartFire1", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	Vector testPos = position;
 	//Must be okay to add fire here
 	if ( FireSystem_CanAddFire( &testPos, 16.0f, type, flags ) == false )
 	{
 		CFire *pFires[16];
-		int fireCount = FireSystem_GetFiresInSphere( pFires, ARRAYSIZE(pFires), true, position, 16.0f );
+		int fireCount = FireSystem_GetFiresInSphere( pFires, std::size( pFires ), true, position, 16.0f );
 		for ( int i = 0; i < fireCount; i++ )
 		{
 			// add to this fire
@@ -439,7 +462,7 @@ bool FireSystem_StartFire( const Vector &position, float fireHeight, float attac
 //-----------------------------------------------------------------------------
 bool FireSystem_StartFire( CBaseAnimating *pEntity, float fireHeight, float attack, float fuel, int flags, CBaseEntity *owner, fireType_e type )
 {
-	VPROF_FIRE( "FireSystem_StartFire2" );
+	CVProfScope _( "FireSystem_StartFire2", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	Vector position = pEntity->GetAbsOrigin();
 	Vector testPos = position;
@@ -449,7 +472,7 @@ bool FireSystem_StartFire( CBaseAnimating *pEntity, float fireHeight, float atta
 	{
 		// Contribute heat to all fires within 16 units of this fire.
 		CFire *pFires[16];
-		int fireCount = FireSystem_GetFiresInSphere( pFires, ARRAYSIZE(pFires), true, position, 16.0f );
+		int fireCount = FireSystem_GetFiresInSphere( pFires, std::size( pFires ), true, position, 16.0f );
 		for ( int i = 0; i < fireCount; i++ )
 		{
 			pFires[i]->AddHeat( fireHeight, false );
@@ -483,7 +506,7 @@ void FireSystem_ExtinguishInRadius( const Vector &origin, float radius, float ra
 	float heat = (1-rate) * fire_extscale.GetFloat();
 
 	CFire *pFires[32];
-	int fireCount = FireSystem_GetFiresInSphere( pFires, ARRAYSIZE(pFires), false, origin, radius );
+	int fireCount = FireSystem_GetFiresInSphere( pFires, std::size( pFires ), false, origin, radius );
 	for ( int i = 0; i < fireCount; i++ )
 	{
 		pFires[i]->Extinguish( heat );
@@ -498,11 +521,11 @@ void FireSystem_ExtinguishInRadius( const Vector &origin, float radius, float ra
 //-----------------------------------------------------------------------------
 void FireSystem_AddHeatInRadius( const Vector &origin, float radius, float heat )
 {
-	VPROF_FIRE( "FireSystem_AddHeatInRadius" );
+	CVProfScope _( "FireSystem_AddHeatInRadius", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CFire *pFires[32];
 
-	int fireCount = FireSystem_GetFiresInSphere( pFires, ARRAYSIZE(pFires), false, origin, radius );
+	int fireCount = FireSystem_GetFiresInSphere( pFires, std::size( pFires ), false, origin, radius );
 	for ( int i = 0; i < fireCount; i++ )
 	{
 		pFires[i]->AddHeat( heat );
@@ -883,7 +906,7 @@ bool CFire::GetFireDimensions( Vector *pFireMins, Vector *pFireMaxs )
 //-----------------------------------------------------------------------------
 void CFire::Update( float simTime )
 {
-	VPROF_FIRE( "CFire::Update" );
+	CVProfScope _( "CFire::Update", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( m_flFuel != 0 )
 	{
@@ -935,7 +958,7 @@ void CFire::Update( float simTime )
 
 	CBaseEntity *pNearby[256];
 	CFire *pFires[16];
-	int nearbyCount = UTIL_EntitiesInBox( pNearby, ARRAYSIZE(pNearby), fireMins, fireMaxs, 0 );
+	int nearbyCount = UTIL_EntitiesInBox( pNearby, std::size( pNearby ), fireMins, fireMaxs, 0 );
 	int fireCount = 0;
 	int i;
 
@@ -961,7 +984,7 @@ void CFire::Update( float simTime )
 		
 		if ( FClassnameIs( pOther, "env_fire" ) )
 		{
-			if ( fireCount < ARRAYSIZE(pFires) )
+			if ( fireCount < std::size( pFires ) )
 			{
 				pFires[fireCount] = (CFire *)pOther;
 				fireCount++;
@@ -1172,9 +1195,9 @@ bool CFire::GoOut()
 // cannot put out
 //==================================================
 
-#define FIRESOURCE_THINK_TIME		0.25		// seconds to 
+constexpr auto FIRESOURCE_THINK_TIME = 0.25; // seconds to
 
-#define SF_FIRESOURCE_START_ON		0x0001
+constexpr auto SF_FIRESOURCE_START_ON = 0x0001;
 
 class CEnvFireSource : public CBaseEntity
 {
@@ -1218,7 +1241,7 @@ void CEnvFireSource::Think()
 	SetNextThink( gpGlobals->curtime + FIRESOURCE_THINK_TIME );
 
 	CFire *pFires[128];
-	int fireCount = FireSystem_GetFiresInSphere( pFires, ARRAYSIZE(pFires), false, GetAbsOrigin(), m_radius );
+	int fireCount = FireSystem_GetFiresInSphere( pFires, std::size( pFires ), false, GetAbsOrigin(), m_radius );
 
 	for ( int i = 0; i < fireCount; i++ )
 	{
@@ -1255,7 +1278,7 @@ void CEnvFireSource::InputDisable( inputdata_t &inputdata )
 //==================================================
 // CEnvFireSensor detects changes in heat
 //==================================================
-#define SF_FIRESENSOR_START_ON	1
+constexpr auto SF_FIRESENSOR_START_ON = 1;
 
 class CEnvFireSensor : public CBaseEntity
 {
@@ -1312,7 +1335,7 @@ void CEnvFireSensor::Think()
 
 	float heat = 0;
 	CFire *pFires[128];
-	int fireCount = FireSystem_GetFiresInSphere( pFires, ARRAYSIZE(pFires), true, GetAbsOrigin(), m_radius );
+	int fireCount = FireSystem_GetFiresInSphere( pFires, std::size( pFires ), true, GetAbsOrigin(), m_radius );
 	for ( int i = 0; i < fireCount; i++ )
 	{
 		heat += pFires[i]->GetHeatLevel();
@@ -1388,7 +1411,7 @@ int CFire::DrawDebugTextOverlays( void )
 		char tempstr[512];
 
 		// print flame size
-		Q_snprintf(tempstr,sizeof(tempstr),"    size: %f", m_flFireSize);
+		V_snprintf(tempstr,sizeof(tempstr),"    size: %f", m_flFireSize);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}

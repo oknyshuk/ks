@@ -1,11 +1,23 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "audio_pch.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+
+
+import std;
+import ks.tier1;
+
+#include "tier2/riff.h"
+#include "sound.h"
+#include "soundservice.h"
+#include "filesystem.h"
+
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+#include "snd_wave_data.h"
+#include "snd_io.h"
+
+#include "audio/private/posix_stubs.h"
 #include "snd_mp3_source.h"
 
 CAudioSourceMP3::CAudioSourceMP3( CSfxTable *pSfx )
@@ -126,7 +138,7 @@ void CAudioSourceMP3::GetCacheData( CAudioSourceCachedInfo *info )
 // Purpose: 
 // Output : char const
 //-----------------------------------------------------------------------------
-char const *CAudioSourceMP3::GetFileName( char *pOutBuf, size_t bufLen )
+char const *CAudioSourceMP3::GetFileName( char *pOutBuf, std::size_t bufLen )
 {
 	return m_pSfx ? m_pSfx->GetFileName(pOutBuf, bufLen) : "NULL m_pSfx";
 }
@@ -136,7 +148,7 @@ char const *CAudioSourceMP3::GetFileName( char *pOutBuf, size_t bufLen )
 //-----------------------------------------------------------------------------
 void CAudioSourceMP3::CheckAudioSourceCache()
 {
-	Assert( m_pSfx );
+	contract_assert( m_pSfx );
 
 	if ( !m_pSfx->IsPrecachedSound() )
 	{
@@ -345,10 +357,10 @@ int	CAudioSourceStreamMP3::GetOutputData( void **pData, int64 samplePosition, in
 
 bool Audio_IsMP3( const char *pName )
 {
-	int len = strlen(pName);
+	int len = std::strlen(pName);
 	if ( len > 4 )
 	{
-		if ( !Q_strnicmp( &pName[len - 4], ".mp3", 4 ) )
+		if ( !V_strnicmp( &pName[len - 4], ".mp3", 4 ) )
 		{
 			return true;
 		}
@@ -387,4 +399,3 @@ CAudioSource *Audio_CreateMemoryMP3( CSfxTable *pSfx )
 	}
 	return pMP3;
 }
-

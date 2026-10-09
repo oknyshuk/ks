@@ -1,18 +1,9 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef __UIGAMEDATA_H__
-#define __UIGAMEDATA_H__
-
-#include <map>
-#include "tier1/keyvalues.h"
-#include "tier1/fmtstr.h"
-
-
-#include "steam/steam_api.h"
+import std;
+import ks.tier1;
 
 
 #include "matchmaking/imatchframework.h"
@@ -22,8 +13,6 @@
 #include "matchmaking/iservermanager.h"
 
 
-#include "tokenset.h"
-
 #include "engineinterface.h"
 
 #include "matchmaking/mm_helpers.h"
@@ -31,7 +20,6 @@
 namespace BaseModUI {
 
 	class CAsyncCtxUIOnDeviceAttached;
-	class CAvatarImage;
 	class CBaseModFrame;
 
 	extern const tokenset_t< const char * > s_characterPortraits[];
@@ -139,7 +127,6 @@ namespace BaseModUI {
 
 		void OpenFriendRequestPanel(int index, uint64 playerXuid);
 		void OpenInviteUI( char const *szInviteUiType );
-		void ExecuteOverlayCommand( char const *szCommand );
 
 		// Listening for match events
 		virtual void OnEvent( KeyValues *pEvent );
@@ -174,14 +161,6 @@ namespace BaseModUI {
 		void FinishPasswordUI( bool bOk );
 
 		char const * GetPlayerName( XUID playerID, char const *szPlayerNameSpeculative );
-
-
-		STEAM_CALLBACK( CUIGameData, Steam_OnUserStatsReceived, UserStatsReceived_t, m_CallbackUserStatsReceived );
-		STEAM_CALLBACK( CUIGameData, Steam_OnUserStatsStored, UserStatsStored_t, m_CallbackUserStatsStored );
-
-
-
-		STEAM_CALLBACK( CUIGameData, Steam_OnPersonaStateChanged, PersonaStateChange_t, m_CallbackPersonaStateChanged );
 
 
 		void ReloadScheme();
@@ -223,9 +202,6 @@ namespace BaseModUI {
 		float m_flShowConnectionProblemTimer;
 		float m_flTimeLastFrame;
 		bool  m_bShowConnectionProblemActive;
-
-		std::map< XUID, CAvatarImage * > m_mapUserXuidToAvatar;
-		std::map< XUID, std::string > m_mapUserXuidToName;
 
 		//XUI info
 		bool m_bXUIOpen;
@@ -290,7 +266,6 @@ int GameModeIntFromString( const char *szString );
 // 	{ "lock", "#SessionError_Lock", RemapText_t::MATCH_FULL },
 // 	{ "kicked", "#SessionError_Kicked", RemapText_t::MATCH_FULL },
 // 	{ "migrate", "#SessionError_Migrate", RemapText_t::MATCH_FULL },
-// 	{ "SteamServersDisconnected", "#SessionError_SteamServersDisconnected", RemapText_t::MATCH_FULL },
 // 	{ NULL, NULL, RemapText_t::MATCH_FULL }
 // };
 // szReason = RemapText_t::RemapRawText( arrText, szReason );
@@ -313,9 +288,9 @@ struct RemapText_t
 		switch( m_eMatchPolicy )
 		{
 		case MATCH_FULL:
-			return !Q_stricmp( szRawText, m_szRawText );
+			return !V_stricmp( szRawText, m_szRawText );
 		case MATCH_SUBSTR:
-			return Q_stristr( szRawText, m_szRawText ) != nullptr;
+			return V_stristr( szRawText, m_szRawText ) != nullptr;
 		case MATCH_START:
 			return StringHasPrefix( szRawText, m_szRawText );
 		default:
@@ -335,6 +310,3 @@ struct RemapText_t
 		return szRawText;
 	}
 };
-
-
-#endif // __UIGAMEDATA_H__

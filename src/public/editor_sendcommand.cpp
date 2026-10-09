@@ -1,18 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Implements an interface to the map editor for the execution of
 //			editor shell commands from another application. Commands allow the
 //			creation and deletion of entities, AI nodes, and AI node connections.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-
-#include <stdio.h>
+import std;
+import ks.tier1;
 #include "editor_sendcommand.h"
-#include "tier1/strtools.h"
-#include "mathlib/vector.h"
-
 
 const int MAX_COMMAND_BUFFER = 2048;
 //-----------------------------------------------------------------------------
@@ -25,7 +20,7 @@ const int MAX_COMMAND_BUFFER = 2048;
 EditorSendResult_t Editor_BeginSession(const char *pszMapName, int nMapVersion, bool bShowUI)
 {
 	char szCommand[MAX_COMMAND_BUFFER];
-	Q_snprintf(szCommand,sizeof(szCommand), "session_begin %s %d", pszMapName, nMapVersion);
+	V_snprintf(szCommand,sizeof(szCommand), "session_begin %s %d", pszMapName, nMapVersion);
 	return(Editor_SendCommand(szCommand, bShowUI));
 }
 
@@ -40,7 +35,7 @@ EditorSendResult_t Editor_BeginSession(const char *pszMapName, int nMapVersion, 
 EditorSendResult_t Editor_CheckVersion(const char *pszMapName, int nMapVersion, bool bShowUI)
 {
 	char szCommand[MAX_COMMAND_BUFFER];
-	Q_snprintf(szCommand,sizeof(szCommand), "map_check_version %s %d", pszMapName, nMapVersion);
+	V_snprintf(szCommand,sizeof(szCommand), "map_check_version %s %d", pszMapName, nMapVersion);
 	return(Editor_SendCommand(szCommand, bShowUI));
 }
 
@@ -55,7 +50,7 @@ EditorSendResult_t Editor_CheckVersion(const char *pszMapName, int nMapVersion, 
 EditorSendResult_t Editor_CreateEntity(const char *pszEntity, float x, float y,  float z, bool bShowUI)
 {
 	char szCommand[MAX_COMMAND_BUFFER];
-	Q_snprintf(szCommand,sizeof(szCommand), "entity_create %s %g %g %g", pszEntity, x, y, z);
+	V_snprintf(szCommand,sizeof(szCommand), "entity_create %s %g %g %g", pszEntity, x, y, z);
 	return(Editor_SendCommand(szCommand, bShowUI));
 }
 
@@ -71,7 +66,7 @@ EditorSendResult_t Editor_CreateEntity(const char *pszEntity, float x, float y, 
 EditorSendResult_t Editor_CreateNode(const char *pszNodeClass, int nID, float x, float y,  float z, bool bShowUI)
 {
 	char szCommand[MAX_COMMAND_BUFFER];
-	Q_snprintf(szCommand,sizeof(szCommand), "node_create %s %d %g %g %g", pszNodeClass, nID, x, y, z);
+	V_snprintf(szCommand,sizeof(szCommand), "node_create %s %d %g %g %g", pszNodeClass, nID, x, y, z);
 	return(Editor_SendCommand(szCommand, bShowUI));
 }
 
@@ -87,7 +82,7 @@ EditorSendResult_t Editor_CreateNode(const char *pszNodeClass, int nID, float x,
 EditorSendResult_t Editor_CreateNodeLink(int nStartID, int nEndID, bool bShowUI)
 {
 	char szCommand[MAX_COMMAND_BUFFER];
-	Q_snprintf(szCommand,sizeof(szCommand), "nodelink_create %d %d", nStartID, nEndID);
+	V_snprintf(szCommand,sizeof(szCommand), "nodelink_create %d %d", nStartID, nEndID);
 	return(Editor_SendCommand(szCommand, bShowUI));
 }
 
@@ -102,7 +97,7 @@ EditorSendResult_t Editor_CreateNodeLink(int nStartID, int nEndID, bool bShowUI)
 EditorSendResult_t Editor_DeleteEntity(const char *pszEntity, float x, float y, float z, bool bShowUI)
 {
 	char szCommand[MAX_COMMAND_BUFFER];
-	Q_snprintf(szCommand,sizeof(szCommand), "entity_delete %s %g %g %g", pszEntity, x, y, z);
+	V_snprintf(szCommand,sizeof(szCommand), "entity_delete %s %g %g %g", pszEntity, x, y, z);
 	return(Editor_SendCommand(szCommand, bShowUI));
 }
 
@@ -111,7 +106,7 @@ EditorSendResult_t Editor_DeleteEntity(const char *pszEntity, float x, float y, 
 EditorSendResult_t Editor_SetKeyValue(const char *pszEntity, float x, float y, float z, const char *pKey, const char *pValue, bool bShowUI)
 {
 	char szCommand[MAX_COMMAND_BUFFER];
-	Q_snprintf(szCommand,sizeof(szCommand), "entity_set_keyvalue %s %f %f %f \"%s\" \"%s\"", pszEntity, x, y, z, pKey, pValue);
+	V_snprintf(szCommand,sizeof(szCommand), "entity_set_keyvalue %s %f %f %f \"%s\" \"%s\"", pszEntity, x, y, z, pKey, pValue);
 	return(Editor_SendCommand(szCommand, bShowUI));
 }
 
@@ -120,7 +115,7 @@ EditorSendResult_t Editor_SetKeyValue(const char *pszEntity, float x, float y, f
 EditorSendResult_t Editor_RotateEntity(const char *pszEntity, float x, float y, float z, const QAngle &incrementalRotation, bool bShowUI)
 {
 	char szCommand[MAX_COMMAND_BUFFER];
-	Q_snprintf(szCommand,sizeof(szCommand), "entity_rotate_incremental %s %f %f %f %f %f %f", pszEntity, x, y, z, incrementalRotation.x, incrementalRotation.y, incrementalRotation.z );
+	V_snprintf(szCommand,sizeof(szCommand), "entity_rotate_incremental %s %f %f %f %f %f %f", pszEntity, x, y, z, incrementalRotation.x, incrementalRotation.y, incrementalRotation.z );
 	return(Editor_SendCommand(szCommand, bShowUI));
 }
 //-----------------------------------------------------------------------------
@@ -132,7 +127,7 @@ EditorSendResult_t Editor_RotateEntity(const char *pszEntity, float x, float y, 
 EditorSendResult_t Editor_DeleteNode(int nID, bool bShowUI)
 {
 	char szCommand[MAX_COMMAND_BUFFER];
-	Q_snprintf(szCommand,sizeof(szCommand), "node_delete %d", nID);
+	V_snprintf(szCommand,sizeof(szCommand), "node_delete %d", nID);
 	return(Editor_SendCommand(szCommand, bShowUI));
 }
 
@@ -147,7 +142,7 @@ EditorSendResult_t Editor_DeleteNode(int nID, bool bShowUI)
 EditorSendResult_t Editor_DeleteNodeLink(int nStartID, int nEndID, bool bShowUI)
 {
 	char szCommand[MAX_COMMAND_BUFFER];
-	Q_snprintf(szCommand,sizeof(szCommand), "nodelink_delete %d %d", nStartID, nEndID);
+	V_snprintf(szCommand,sizeof(szCommand), "nodelink_delete %d %d", nStartID, nEndID);
 	return(Editor_SendCommand(szCommand, bShowUI));
 }
 
@@ -177,4 +172,3 @@ EditorSendResult_t Editor_SendCommand(const char *pszCommand, bool bShowUI)
 
 	return(Editor_OK);
 }
-

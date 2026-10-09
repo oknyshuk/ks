@@ -1,13 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
 #include "test_stressentities.h"
-#include "vstdlib/random.h"
 #include "world.h"
 
 CStressEntityReg	*CStressEntityReg::s_pHead = nullptr;
@@ -66,7 +96,7 @@ void Test_InitRandomEntitySpawner( const CCommand &args )
 	// Create slots for all the entities..
 	int nSlots = 100;
 	if ( args.ArgC() >= 2 )
-		nSlots = atoi( args[ 1 ] );
+		nSlots = std::atoi( args[ 1 ] );
 
 	g_StressEntities.clear(); g_StressEntities.shrink_to_fit();
 	g_StressEntities.assign( nSlots, {} );
@@ -87,7 +117,7 @@ void Test_SpawnRandomEntities( const CCommand &args )
 		Error( "Test_SpawnRandomEntities: not initialized (call Test_InitRandomEntitySpawner frst)." );
 	} 
 
-	int nMin = atoi( args[ 1 ] );
+	int nMin = std::atoi( args[ 1 ] );
 	int nMax = atoi( args[ 2 ] );
 	int count = RandomInt( nMin, nMax );
 
@@ -113,7 +143,7 @@ void Test_RandomizeInPVS( const CCommand &args )
 		Error( "Test_RandomizeInPVS <percentage chance to change>" );
 	}
 
-	int percent = atoi( args[ 1 ] );
+	int percent = std::atoi( args[ 1 ] );
 	for ( int i=0; i < std::ssize( g_StressEntities ); i++ )
 	{
 		CBaseEntity *pEnt = g_StressEntities[i];
@@ -146,4 +176,3 @@ ConCommand cc_Test_InitRandomEntitySpawner( "Test_InitRandomEntitySpawner", Test
 ConCommand cc_Test_SpawnRandomEntities( "Test_SpawnRandomEntities", Test_SpawnRandomEntities, 0, FCVAR_CHEAT );
 ConCommand cc_Test_RandomizeInPVS( "Test_RandomizeInPVS", Test_RandomizeInPVS, 0, FCVAR_CHEAT );
 ConCommand cc_Test_RemoveAllRandomEntities( "Test_RemoveAllRandomEntities", Test_RemoveAllRandomEntities, 0, FCVAR_CHEAT );
-

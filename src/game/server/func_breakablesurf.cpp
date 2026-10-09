@@ -1,17 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A planar textured surface that breaks into increasingly smaller fragments
 //			as it takes damage. Undamaged pieces remain attached to the world
 //			until they are damaged. Used for window panes.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "te.h"
+#include "physics.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
-#include "ndebugoverlay.h"
 #include "filters.h"
 #include "player.h"
 #include "func_breakablesurf.h"
@@ -19,31 +37,30 @@
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
-#include "globals.h"
 #include "physics_impact_damage.h"
 #include "te_effect_dispatch.h"
 #include "GameStats.h"
 
 // Spawn flags
-#define SF_BREAKABLESURF_CRACK_DECALS				0x00000001
-#define SF_BREAKABLESURF_DAMAGE_FROM_HELD_OBJECTS	0x00000002
+constexpr auto SF_BREAKABLESURF_CRACK_DECALS = 0x00000001;
+constexpr auto SF_BREAKABLESURF_DAMAGE_FROM_HELD_OBJECTS = 0x00000002;
 
 //#############################################################################
 //  > CWindowPane
 //#############################################################################
-#define WINDOW_PANEL_SIZE			12
-#define WINDOW_SMALL_SHARD_SIZE		4
-#define WINDOW_LARGE_SHARD_SIZE		7
-#define WINDOW_MAX_SUPPORT			6.75
-#define WINDOW_BREAK_SUPPORT		0.20
+constexpr auto WINDOW_PANEL_SIZE = 12;
+constexpr auto WINDOW_SMALL_SHARD_SIZE = 4;
+constexpr auto WINDOW_LARGE_SHARD_SIZE = 7;
+constexpr auto WINDOW_MAX_SUPPORT = 6.75;
+constexpr auto WINDOW_BREAK_SUPPORT = 0.20;
 
-#define WINDOW_PANE_BROKEN			-1
-#define WINDOW_PANE_HEALTHY			1
+constexpr auto WINDOW_PANE_BROKEN = -1;
+constexpr auto WINDOW_PANE_HEALTHY = 1;
 
 // Also defined in WC
-#define QUAD_ERR_NONE				0
-#define QUAD_ERR_MULT_FACES			1
-#define QUAD_ERR_NOT_QUAD			2
+constexpr auto QUAD_ERR_NONE = 0;
+constexpr auto QUAD_ERR_MULT_FACES = 1;
+constexpr auto QUAD_ERR_NOT_QUAD = 2;
 
 //
 // func_breakable - bmodel that breaks into pieces after taking damage
@@ -1222,4 +1239,3 @@ void CBreakableSurface::VPhysicsCollision( int index, gamevcollisionevent_t *pEv
 	}
 	BaseClass::VPhysicsCollision( index, pEvent );
 }
-

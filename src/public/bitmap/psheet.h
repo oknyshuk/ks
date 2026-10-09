@@ -1,16 +1,12 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
+
 // Purpose: sheet definitions for particles and other sprite functions
-//
-//===========================================================================//
 
-#ifndef PSHEET_H
-#define PSHEET_H
-
-
-#include "tier1/tracked_ref.h"
+import std;
+import ks.tier1;
 #include "materialsystem/MaterialSystemUtil.h"
-#include "tier1/utlvector.h"
 
 namespace ks { class byte_reader; }
 
@@ -21,10 +17,10 @@ namespace ks { class byte_reader; }
 // for fast lookups to retrieve sequence data, we store the sequence information discretized into
 // a fixed # of frames. If this discretenesss is a visual problem, you can lerp the blend values to get it
 // perfect.
-#define SEQUENCE_SAMPLE_COUNT 512
+inline constexpr auto SEQUENCE_SAMPLE_COUNT = 512;
 
-#define MAX_IMAGES_PER_FRAME_ON_DISK 4
-#define MAX_IMAGES_PER_FRAME_IN_MEMORY 2
+inline constexpr auto MAX_IMAGES_PER_FRAME_ON_DISK = 4;
+inline constexpr auto MAX_IMAGES_PER_FRAME_IN_MEMORY = 2;
 
 struct SequenceSampleTextureCoords_t
 {
@@ -127,7 +123,3 @@ private:
 	CSheet* m_pSheetData;
 	CMaterialReference m_Material;
 };
-
-
-#endif   // PSHEET_H
-

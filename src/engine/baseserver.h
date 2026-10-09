@@ -1,23 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BASESERVER_H
-#define BASESERVER_H
-
-#include <mutex>
 #include <iserver.h>
-#include <netadr.h>
-#include <bitbuf.h>
-#include <utlvector.h>
+import std;
+import ks.tier1;
 #include "baseclient.h"
 #include "netmessages.h"
 #include "net.h"
 #include "event_system.h"
-#include <map>
-#include <memory>
 
 class CNetworkStringTableContainer;
 class PackedEntity;
@@ -36,15 +27,15 @@ enum server_state_t
 // MAX_CHALLENGES is made large to prevent a denial
 //  of service attack that could cycle all of them
 //  out before legitimate users connected
-#define MAX_CHALLENGES 16384
+inline constexpr auto MAX_CHALLENGES = 16384;
 
 // time a challenge is valid for, in seconds
-#define CHALLENGE_LIFETIME 60*60.0f
+inline constexpr auto CHALLENGE_LIFETIME = 60*60.0f;
 
 // MAX_DELTA_TICKS defines the maximum delta difference allowed 
 // for delta compression, if clients request on older tick as
 // delta baseline, send a full update. 
-#define MAX_DELTA_TICKS	192		// this is about 3 seconds
+inline constexpr auto MAX_DELTA_TICKS = 192; // this is about 3 seconds
 
 typedef struct
 {
@@ -103,7 +94,7 @@ public: // IServer implementation
 
 	virtual void	BroadcastMessage( INetMessage &msg, bool onlyActive = false, bool reliable = false );
 	virtual void	BroadcastMessage( INetMessage &msg, IRecipientFilter &filter );
-	virtual void	BroadcastPrintf ( PRINTF_FORMAT_STRING const char *fmt, ...) FMTFUNCTION( 2, 3 );
+	[[gnu::format(printf, 2, 3)]] virtual void	BroadcastPrintf ( const char *fmt, ...);
 
 	virtual const char * GetPassword() const;
 
@@ -138,20 +129,18 @@ public: // IConnectionlessPacketHandler implementation
 	void	CheckTimeouts (void);
 	void	UpdateUserSettings(void);
 	void	SendPendingServerInfo(void);
-	void	OnSteamServerLogonSuccess( uint32 externalIP );
 
 	INetworkStringTable *GetInstanceBaselineTable( void );
 	INetworkStringTable *GetLightStyleTable( void );
 	INetworkStringTable *GetUserInfoTable( void );
 
-	virtual void	RejectConnection(const ns_address &adr, PRINTF_FORMAT_STRING const char *fmt, ... ) FMTFUNCTION( 3, 4 );
+	[[gnu::format(printf, 3, 4)]] virtual void	RejectConnection(const ns_address &adr, const char *fmt, ... );
 
 	float	GetFinalTickTime( void ) const;
 
 	virtual bool CheckIPRestrictions( const ns_address &adr, int nAuthProtocol );
 
 	void	SetMasterServerRulesDirty();
-	void	SendQueryPortToClient( netadr_t &adr );
 
 	void	RecalculateTags( void );
 	void	AddTag( const char *pszTag, const char *pszSubTagValue = nullptr );
@@ -172,13 +161,11 @@ public: // IConnectionlessPacketHandler implementation
 
 	bool IsPlayingSoloAgainstBots() const;
 	bool ShouldHideServer() const;
-	bool ShouldHideFromMasterServer() const;
 	int  GetMaxHumanPlayers() const;
 	int  GetNumHumanPlayers() const;
 
 	void GetMasterServerPlayerCounts( int &nHumans, int &nMaxHumanSlots, int &nBots );
 
-	void OnPasswordChanged();
 
 	void ShowTags() const;
 	uint64 GetMatchId()const { return m_nMatchId; }
@@ -213,20 +200,10 @@ protected:
 
 	virtual void	CalculateCPUUsage();
 
-	// Keep the master server data updated.
-	virtual bool	ShouldUpdateMasterServer();
-	
-	void			CheckMasterServerRequestRestart();
-	void			UpdateMasterServer();
-	void			UpdateMasterServerRules();
-	virtual void	UpdateMasterServerPlayers() {}
-	void			ForwardPacketsFromMasterServerUpdater();
-
 	void SetRestartOnLevelChange(bool state)  { m_bRestartOnLevelChange = state; }
 
 	bool RequireValidChallenge( const ns_address &adr );
 	bool ValidChallenge( const ns_address &adr, int challengeNr );
-	bool ValidInfoChallenge( const ns_address &adr, const char *nugget );
 
 	void ClearBaselineHandles( void );
 
@@ -267,7 +244,7 @@ public:
 	void	UpdateReservedState();
 
 	uint64	GetReservationCookie() const;
-	void	SetReservationCookie( uint64 uiCookie, PRINTF_FORMAT_STRING char const *pchReasonFormat, ... ) FMTFUNCTION( 3, 4 );
+	[[gnu::format(printf, 3, 4)]] void	SetReservationCookie( uint64 uiCookie, char const *pchReasonFormat, ... );
 	bool ReserveServerForQueuedGame( char const *szReservationPayload );
 	
 	bool	IsExclusiveToLobbyConnections() const;
@@ -282,8 +259,6 @@ public:
 	};
 	void	SendReservationStatus( EReservationStatus_t kEReservationStatus );
 	void	ClearReservationStatus();
-
-	void	FlagForSteamIDReuseAfterShutdown();
 
 private:
 
@@ -316,12 +291,9 @@ protected:
 	float		m_fStartTime;
 	float		m_fLastCPUCheckTime;
 
-	// This is only used for Steam's master server updater to refer to this server uniquely.
 	bool		m_bRestartOnLevelChange;
-	double		m_flFlagForSteamIDReuseAfterShutdownTime;
 	
 	bool		m_bMasterServerRulesDirty;
-	double		m_flLastMasterServerUpdateTime;
 	struct SplitDisconnect_t
 	{
 		CBaseClient *m_pUser;
@@ -369,7 +341,3 @@ protected:
 extern std::recursive_mutex g_svInstanceBaselineMutex;
 
 const ConVar &GetIndexedConVar( const ConVar &cv, int nIndex );
-
-
-
-#endif // BASESERVER_H

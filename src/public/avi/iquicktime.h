@@ -1,21 +1,12 @@
-//====== Copyright 2010, Valve Corporation, All rights reserved. ==============
-//
-// The copyright to the contents herein is the property of Valve, L.L.C.
-// The contents may be used and/or copied only with the written permission of
-// Valve, L.L.C., or in accordance with the terms and conditions stipulated in
-// the agreement/contract under which the contents have been supplied.
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2010 Valve Corporation
 
-#ifndef IQUICKTIME_H
-#define IQUICKTIME_H
+import std;
+import ks.tier1;
 
-
-  
-#include "appframework/iappsystem.h"
-
-#define QUICKTIME_LOOP_MOVIE	0x01
-#define QUICKTIME_PRELOAD		0x02
+inline constexpr auto QUICKTIME_LOOP_MOVIE = 0x01;
+inline constexpr auto QUICKTIME_PRELOAD = 0x02;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -78,7 +69,7 @@ enum
 //-----------------------------------------------------------------------------
 // Main QUICKTIME interface
 //-----------------------------------------------------------------------------
-#define QUICKTIME_INTERFACE_VERSION "IQuickTime001"
+inline constexpr const char *QUICKTIME_INTERFACE_VERSION = "IQuickTime001";
 
 class IQuickTime : public IAppSystem
 {
@@ -113,6 +104,3 @@ public:
 
 	virtual bool SetSoundDevice( void *pDevice ) = 0;
 };
-
-
-#endif // IQUICKTIME_H

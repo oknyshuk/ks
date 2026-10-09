@@ -1,30 +1,11 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "vstdlib/cvar.h"
-#include <ctype.h>
-#include "tier0/icommandline.h"
-#include <set>
-#include "tier1/strtools.h"
-#include "tier1/keyvalues.h"
-#include "tier1/convar.h"
-#include "tier0/vprof.h"
-#include "tier1/tier1.h"
-#include "tier1/byte_writer.h"
-#include <map>
-#include "tier1/fmtstr.h"
+import ks.vstdlib;
+import std;
 
 
-#include <wctype.h>
-#include <wchar.h>
 
-#define VPROJ_INCREMENT_COUNTER(a, b) /* */
-#define VPROJ(a) /* */
 
 
 //-----------------------------------------------------------------------------
@@ -35,7 +16,7 @@ class CDefaultCvarQuery : public CBaseAppSystem< ICvarQuery >
 public:
 	virtual void *QueryInterface( const char *pInterfaceName )
 	{
-		if ( !Q_stricmp( pInterfaceName, CVAR_QUERY_INTERFACE_VERSION ) )
+		if ( !V_stricmp( pInterfaceName, CVAR_QUERY_INTERFACE_VERSION ) )
 			return (ICvarQuery*)this;
 		return nullptr;
 	
@@ -90,10 +71,6 @@ public:
 	virtual void			RevertFlaggedConVars( int nFlag );
 	virtual void			InstallCVarQuery( ICvarQuery *pQuery );
 
-#if defined( USE_VXCONSOLE )
-	virtual void			PublishToVXConsole( );
-#endif
-
 	virtual void			SetMaxSplitScreenSlots( int nSlots );
 	virtual int				GetMaxSplitScreenSlots() const;
 
@@ -101,7 +78,7 @@ public:
 	virtual void			RemoveSplitScreenConVars( CVarDLLIdentifier_t id );
 
 	virtual int				GetConsoleDisplayFuncCount() const;
-	virtual void			GetConsoleText( int nDisplayFuncIndex, char *pchText, size_t bufSize ) const;
+	virtual void			GetConsoleText( int nDisplayFuncIndex, char *pchText, std::size_t bufSize ) const;
 	virtual bool			IsMaterialThreadSetAllowed( ) const;
 	virtual void			QueueMaterialThreadSetValue( ConVar *pConVar, const char *pValue );
 	virtual void			QueueMaterialThreadSetValue( ConVar *pConVar, int nValue );
@@ -139,10 +116,10 @@ protected:
 		CCVarIteratorInternal( CCvar *outer ) 
 			: m_pOuter( outer ), m_pHash( &outer->m_CommandHash ) // remember my CCvar, iterator starts invalid
 		{}
-		virtual void		SetFirst( void ) RESTRICT;
-		virtual void		Next( void ) RESTRICT;
-		virtual	bool		IsValid( void ) RESTRICT;
-		virtual ConCommandBase *Get( void ) RESTRICT;
+		virtual void		SetFirst( void ) __restrict__;
+		virtual void		Next( void ) __restrict__;
+		virtual	bool		IsValid( void ) __restrict__;
+		virtual ConCommandBase *Get( void ) __restrict__;
 	protected:
 		CCvar * const m_pOuter;
 		CConCommandHash * const m_pHash;
@@ -205,30 +182,28 @@ protected:
 
 private:
 	// Standard console commands -- DO NOT PLACE ANY HIGHER THAN HERE BECAUSE THESE MUST BE THE FIRST TO DESTRUCT
-	CON_COMMAND_MEMBER_F( CCvar, "find", Find, "Find concommands with the specified string in their name/help text.", 0 )
-#ifdef _DEBUG
-	CON_COMMAND_MEMBER_F( CCvar, "ccvar_hash_report", HashReport, "report info on bucket distribution of internal hash.", 0 )
-#endif
+	void Find( const CCommand &args );
+	CConCommandMemberAccessor< CCvar > m_Find_register{ this, "find", &CCvar::Find, "Find concommands with the specified string in their name/help text.", 0 };
 };
 
-void CCvar::CCVarIteratorInternal::SetFirst( void ) RESTRICT
+void CCvar::CCVarIteratorInternal::SetFirst( void ) __restrict__
 {
 	m_hashIter = m_pHash->First();
 }
 
-void CCvar::CCVarIteratorInternal::Next( void ) RESTRICT
+void CCvar::CCVarIteratorInternal::Next( void ) __restrict__
 {
 	m_hashIter = m_pHash->Next( m_hashIter );
 }
 
-bool CCvar::CCVarIteratorInternal::IsValid( void ) RESTRICT
+bool CCvar::CCVarIteratorInternal::IsValid( void ) __restrict__
 {
 	return m_pHash->IsValidIterator( m_hashIter );
 }
 
-ConCommandBase *CCvar::CCVarIteratorInternal::Get( void ) RESTRICT
+ConCommandBase *CCvar::CCVarIteratorInternal::Get( void ) __restrict__
 {
-	Assert( IsValid( ) );
+	contract_assert( m_pHash->IsValidIterator( m_hashIter ) );
 	return (*m_pHash)[m_hashIter];
 }
 
@@ -241,7 +216,7 @@ ICvar::ICVarIteratorInternal *CCvar::FactoryInternalIterator( void )
 // Factor for CVars 
 //-----------------------------------------------------------------------------
 static CCvar s_Cvar;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CCvar, ICvar, CVAR_INTERFACE_VERSION, s_Cvar );
+static InterfaceReg s_Reg_CCvar_ICvar( []() -> void * { return static_cast<ICvar *>( &s_Cvar ); }, CVAR_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -288,7 +263,7 @@ void CCvar::Disconnect()
 	s_pCVarQuery = nullptr;
 	DisconnectTier1Libraries();
 
-	Assert( m_SplitScreenAddedConVarsMap.empty() );
+	contract_assert( m_SplitScreenAddedConVarsMap.empty() );
 }
 
 InitReturnVal_t CCvar::Init()
@@ -315,7 +290,7 @@ void *CCvar::QueryInterface( const char *pInterfaceName )
 //-----------------------------------------------------------------------------
 void CCvar::InstallCVarQuery( ICvarQuery *pQuery )
 {
-	Assert( s_pCVarQuery == &s_DefaultCvarQuery );
+	contract_assert( s_pCVarQuery == &s_DefaultCvarQuery );
 	s_pCVarQuery = pQuery ? pQuery : &s_DefaultCvarQuery;
 }
 
@@ -354,10 +329,6 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 	{
 		if ( variable->IsCommand() || pOther->IsCommand() )
 		{
-#ifdef _DEBUG
-			// Don't warn if the commands are the same - this happens with some debug only commands
-			if( Q_stricmp(variable->GetName(), pOther->GetName() ) != 0 )
-#endif
 			{
 				Warning( "WARNING: unable to link %s and %s because one or more is a ConCommand.\n", variable->GetName(), pOther->GetName() );
 			}
@@ -375,7 +346,7 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 				if(  pChildVar->m_pszDefaultValue && pParentVar->m_pszDefaultValue &&
 					 pChildVar->IsFlagSet( FCVAR_REPLICATED ) && pParentVar->IsFlagSet( FCVAR_REPLICATED ) )
 				{
-					if( Q_stricmp( pChildVar->m_pszDefaultValue, pParentVar->m_pszDefaultValue ) != 0 )
+					if( V_stricmp( pChildVar->m_pszDefaultValue, pParentVar->m_pszDefaultValue ) != 0 )
 					{
 						Warning( "Parent and child ConVars with different default values! %s child: %s parent: %s (parent wins)\n", 
 							variable->GetName(), pChildVar->m_pszDefaultValue, pParentVar->m_pszDefaultValue );
@@ -399,11 +370,11 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 				}
 
 				// make sure we don't have conflicting help strings.
-				if ( pChildVar->m_pszHelpString && Q_strlen( pChildVar->m_pszHelpString ) != 0 )
+				if ( pChildVar->m_pszHelpString && V_strlen( pChildVar->m_pszHelpString ) != 0 )
 				{
-					if ( pParentVar->m_pszHelpString && Q_strlen( pParentVar->m_pszHelpString ) != 0 )
+					if ( pParentVar->m_pszHelpString && V_strlen( pParentVar->m_pszHelpString ) != 0 )
 					{
-						if ( Q_stricmp( pParentVar->m_pszHelpString, pChildVar->m_pszHelpString ) != 0 )
+						if ( V_stricmp( pParentVar->m_pszHelpString, pChildVar->m_pszHelpString ) != 0 )
 						{
 							Warning( "Convar %s has multiple help strings:\n\tparent (wins): \"%s\"\n\tchild: \"%s\"\n", 
 								variable->GetName(), pParentVar->m_pszHelpString, pChildVar->m_pszHelpString );
@@ -421,9 +392,9 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 				static char const * const szFlags[] =
 					{ "FCVAR_CHEAT", "FCVAR_REPLICATED", "FCVAR_DONTRECORD", "FCVAR_ARCHIVE", "FCVAR_ARCHIVE_GAMECONSOLE" };
 
-				COMPILE_TIME_ASSERT( ARRAYSIZE( nFlags ) == ARRAYSIZE( szFlags ) );
+				static_assert( std::size( nFlags ) == std::size( szFlags ) );
 
-				for ( int k = 0; k < ARRAYSIZE( nFlags ); ++ k )
+				for ( int k = 0; k < std::size( nFlags ); ++ k )
 				{
 					if ( ( pChildVar->m_nFlags & nFlags[k] ) != ( pParentVar->m_nFlags & nFlags[k] ) )
 					{
@@ -444,8 +415,7 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 	variable->m_pNext = m_pConCommandList;
 	m_pConCommandList = variable;
 
-	AssertMsg1(FindCommandBase(variable->GetName()) == nullptr, "Console command %s added twice!",
-		variable->GetName());
+	contract_assert( ( FindCommandBase(variable->GetName()) == nullptr ) && "Console command %s added twice!" );
 	m_CommandHash.Insert(variable);
 
 	if ( !variable->IsCommand() )
@@ -499,7 +469,7 @@ void CCvar::RemoveSplitScreenConVars( CVarDLLIdentifier_t id )
 {
 	if ( m_nMaxSplitScreenSlots == 1 )
 	{
-		Assert( m_SplitScreenAddedConVarsMap.empty() );
+		contract_assert( m_SplitScreenAddedConVarsMap.empty() );
 		return;
 	}
 
@@ -602,16 +572,16 @@ void CCvar::UnregisterConCommands( CVarDLLIdentifier_t id )
 //-----------------------------------------------------------------------------
 const ConCommandBase *CCvar::FindCommandBase( const char *name ) const
 {
-	VPROF_INCREMENT_COUNTER( "CCvar::FindCommandBase", 1 );
-	VPROF_BUDGET( "CCvar::FindCommandBase", VPROF_BUDGETGROUP_CVAR_FIND );
+	VProfIncrementCounter<"CCvar::FindCommandBase">( 1 );
+	CVProfScope _( "CCvar::FindCommandBase", 0, VPROF_BUDGETGROUP_CVAR_FIND, false, BUDGETFLAG_OTHER );
 
 	return m_CommandHash.FindPtr( name );
 }
 
 ConCommandBase *CCvar::FindCommandBase( const char *name )
 {
-	VPROF_INCREMENT_COUNTER( "CCvar::FindCommandBase", 1 );
-	VPROF_BUDGET( "CCvar::FindCommandBase", VPROF_BUDGETGROUP_CVAR_FIND );
+	VProfIncrementCounter<"CCvar::FindCommandBase">( 1 );
+	CVProfScope _( "CCvar::FindCommandBase", 0, VPROF_BUDGETGROUP_CVAR_FIND, false, BUDGETFLAG_OTHER );
 
 	return m_CommandHash.FindPtr( name );
 }
@@ -683,10 +653,11 @@ ConCommand *CCvar::FindCommand( const char *pCommandName )
 
 const char* CCvar::GetCommandLineValue( const char *pVariableName )
 {
-	int nLen = Q_strlen(pVariableName);
-	char *pSearch = (char*)stackalloc( nLen + 2 );
+	ks::ScratchArena<> scratch;
+	int nLen = V_strlen(pVariableName);
+	char *pSearch = (char*)scratch.AllocBytes( nLen + 2 );
 	pSearch[0] = '+';
-	memcpy( &pSearch[1], pVariableName, nLen + 1 );
+	std::memcpy( &pSearch[1], pVariableName, nLen + 1 );
 	return CommandLine()->ParmValue( pSearch );
 }
 
@@ -695,13 +666,13 @@ const char* CCvar::GetCommandLineValue( const char *pVariableName )
 //-----------------------------------------------------------------------------
 void CCvar::InstallGlobalChangeCallback( FnChangeCallback_t callback )
 {
-	Assert( callback && ks::find_index( m_GlobalChangeCallbacks, callback ) < 0 );
+	contract_assert( callback && ks::find_index( m_GlobalChangeCallbacks, callback ) < 0 );
 	m_GlobalChangeCallbacks.push_back( callback );
 }
 
 void CCvar::RemoveGlobalChangeCallback( FnChangeCallback_t callback )
 {
-	Assert( callback );
+	contract_assert( callback );
 	ks::erase_first( m_GlobalChangeCallbacks, callback );
 }
 
@@ -738,7 +709,7 @@ void CCvar::RevertFlaggedConVars( int nFlag )
 			continue;
 
 		// It's == to the default value, don't count
-		if ( !Q_stricmp( cvar->GetDefault(), cvar->GetString() ) )
+		if ( !V_stricmp( cvar->GetDefault(), cvar->GetString() ) )
 			continue;
 
 		cvar->Revert();
@@ -752,13 +723,13 @@ void CCvar::RevertFlaggedConVars( int nFlag )
 //-----------------------------------------------------------------------------
 bool CCvar::IsMaterialThreadSetAllowed( ) const
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	return m_bMaterialSystemThreadSetAllowed;
 }
 
 void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, const char *pValue )
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	int j = std::ssize( m_QueuedConVarSets ); m_QueuedConVarSets.emplace_back();
 	m_QueuedConVarSets[j].m_pConVar = pConVar;
 	m_QueuedConVarSets[j].m_nType = CONVAR_SET_STRING;
@@ -767,7 +738,7 @@ void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, const char *pValue )
 
 void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, int nValue )
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	int j = std::ssize( m_QueuedConVarSets ); m_QueuedConVarSets.emplace_back();
 	m_QueuedConVarSets[j].m_pConVar = pConVar;
 	m_QueuedConVarSets[j].m_nType = CONVAR_SET_INT;
@@ -776,7 +747,7 @@ void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, int nValue )
 
 void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, float flValue )
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	int j = std::ssize( m_QueuedConVarSets ); m_QueuedConVarSets.emplace_back();
 	m_QueuedConVarSets[j].m_pConVar = pConVar;
 	m_QueuedConVarSets[j].m_nType = CONVAR_SET_FLOAT;
@@ -785,13 +756,13 @@ void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, float flValue )
 
 bool CCvar::HasQueuedMaterialThreadConVarSets() const
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	return !m_QueuedConVarSets.empty();
 }
 
 int CCvar::ProcessQueuedMaterialThreadConVarSets()
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	m_bMaterialSystemThreadSetAllowed = true;
 
 	int nUpdateFlags = 0;
@@ -868,7 +839,7 @@ void CCvar::DisplayQueuedMessages( )
 //-----------------------------------------------------------------------------
 void CCvar::InstallConsoleDisplayFunc( IConsoleDisplayFunc* pDisplayFunc )
 {
-	Assert( ks::find_index( m_DisplayFuncs, pDisplayFunc ) < 0 );
+	contract_assert( ks::find_index( m_DisplayFuncs, pDisplayFunc ) < 0 );
 	m_DisplayFuncs.push_back( pDisplayFunc );
 	DisplayQueuedMessages();
 }
@@ -883,7 +854,7 @@ int CCvar::GetConsoleDisplayFuncCount() const
 	return std::ssize( m_DisplayFuncs );
 }
 
-void CCvar::GetConsoleText( int nDisplayFuncIndex, char *pchText, size_t bufSize ) const
+void CCvar::GetConsoleText( int nDisplayFuncIndex, char *pchText, std::size_t bufSize ) const
 {
 	m_DisplayFuncs[ nDisplayFuncIndex ]->GetConsoleText( pchText, bufSize );
 }
@@ -891,10 +862,10 @@ void CCvar::GetConsoleText( int nDisplayFuncIndex, char *pchText, size_t bufSize
 void CCvar::ConsoleColorPrintf( const Color& clr, const char *pFormat, ... ) const
 {
 	char temp[ 8192 ];
-	va_list argptr;
-	va_start( argptr, pFormat );
-	_vsnprintf( temp, sizeof( temp ) - 1, pFormat, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, pFormat );
+	std::vsnprintf( temp, sizeof( temp ) - 1, pFormat, argptr );
+	__builtin_va_end( argptr );
 	temp[ sizeof( temp ) - 1 ] = 0;
 
 	int c = std::ssize( m_DisplayFuncs );
@@ -915,10 +886,10 @@ void CCvar::ConsoleColorPrintf( const Color& clr, const char *pFormat, ... ) con
 void CCvar::ConsolePrintf( const char *pFormat, ... ) const
 {
 	char temp[ 8192 ];
-	va_list argptr;
-	va_start( argptr, pFormat );
-	_vsnprintf( temp, sizeof( temp ) - 1, pFormat, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, pFormat );
+	std::vsnprintf( temp, sizeof( temp ) - 1, pFormat, argptr );
+	__builtin_va_end( argptr );
 	temp[ sizeof( temp ) - 1 ] = 0;
 
 	int c = std::ssize( m_DisplayFuncs );
@@ -938,10 +909,10 @@ void CCvar::ConsolePrintf( const char *pFormat, ... ) const
 void CCvar::ConsoleDPrintf( const char *pFormat, ... ) const
 {
 	char temp[ 8192 ];
-	va_list argptr;
-	va_start( argptr, pFormat );
-	_vsnprintf( temp, sizeof( temp ) - 1, pFormat, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, pFormat );
+	std::vsnprintf( temp, sizeof( temp ) - 1, pFormat, argptr );
+	__builtin_va_end( argptr );
 	temp[ sizeof( temp ) - 1 ] = 0;
 
 	int c = std::ssize( m_DisplayFuncs );
@@ -962,35 +933,6 @@ void CCvar::ConsoleDPrintf( const char *pFormat, ... ) const
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-#if defined( USE_VXCONSOLE )
-void CCvar::PublishToVXConsole()
-{
-	const char *commands[6*1024];
-	const char *helptext[6*1024];
-	int	numCommands = 0;
-
-	// iterate and publish commands to the remote console
-	for ( CConCommandHash::CCommandHashIterator_t i = m_CommandHash.First() ;
-		m_CommandHash.IsValidIterator( i ) ; 
-		i = m_CommandHash.Next( i ) )
-	{
-		ConCommandBase *pCur = m_CommandHash[ i ];
-		// add unregistered commands to list
-		if ( numCommands < sizeof(commands)/sizeof(commands[0]) )
-		{
-			commands[numCommands] = pCur->GetName();
-			helptext[numCommands] = pCur->GetHelpText();
-			numCommands++;
-		}
-	}
-
-	if ( numCommands )
-	{
-		XBX_rAddCommands( numCommands, commands, helptext );
-	}
-}
-
-#endif
 
 
 struct ConVarSortLess
@@ -1032,10 +974,10 @@ void CCvar::Find( const CCommand &args )
 		if ( var->IsFlagSet(FCVAR_DEVELOPMENTONLY) || var->IsFlagSet(FCVAR_HIDDEN) )
 			continue;
 
-		if ( !Q_stristr( var->GetName(), search ) && !Q_stristr( var->GetHelpText(), search ) )
+		if ( !V_stristr( var->GetName(), search ) && !V_stristr( var->GetHelpText(), search ) )
 			continue;
 
-        if( subSearch && ( !Q_stristr( var->GetName(), subSearch ) && !Q_stristr( var->GetHelpText(), subSearch ) ) )
+        if( subSearch && ( !V_stristr( var->GetName(), subSearch ) && !V_stristr( var->GetHelpText(), subSearch ) ) )
             continue;
 
 		sorted.insert( var );
@@ -1047,12 +989,6 @@ void CCvar::Find( const CCommand &args )
 	}
 }
 
-#ifdef _DEBUG
-void CCvar::HashReport( const CCommand &args )
-{
-	m_CommandHash.Report();
-}
-#endif
 
 
 void CCvar::SetMaxSplitScreenSlots( int nSlots )
@@ -1095,7 +1031,7 @@ void CConCommandHash::Purge( bool bReinitialize )
 void CConCommandHash::Init( void )
 {
 	// kNUM_BUCKETS must be a power of two.
-	COMPILE_TIME_ASSERT((kNUM_BUCKETS & ( kNUM_BUCKETS - 1 )) == 0);
+	static_assert( (kNUM_BUCKETS & ( kNUM_BUCKETS - 1 )) == 0 );
 
 	// Set the bucket size.
 	m_aBuckets.assign( kNUM_BUCKETS, {} );
@@ -1130,7 +1066,7 @@ CConCommandHash::CCommandHashHandle_t CConCommandHash::FastInsert( ConCommandBas
 //-----------------------------------------------------------------------------
 // Purpose: Remove a given element from the hash.
 //-----------------------------------------------------------------------------
-void CConCommandHash::Remove( CCommandHashHandle_t hHash ) RESTRICT
+void CConCommandHash::Remove( CCommandHashHandle_t hHash ) __restrict__
 {
 	if ( !IsValidHandle( hHash ) )
 		return;
@@ -1145,7 +1081,7 @@ void CConCommandHash::Remove( CCommandHashHandle_t hHash ) RESTRICT
 			return;
 		}
 	}
-	Assert( 0 );
+	contract_assert( 0 );
 }
 
 //-----------------------------------------------------------------------------
@@ -1159,7 +1095,7 @@ void CConCommandHash::RemoveAll( void )
 //-----------------------------------------------------------------------------
 // Find hash entry corresponding to a string name
 //-----------------------------------------------------------------------------
-CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const char *name, HashKey_t hashkey) const RESTRICT
+CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const char *name, HashKey_t hashkey) const __restrict__
 {
 	// hash the "key" - get the correct hash table "bucket"
 	int iBucket = hashkey & kBUCKETMASK;
@@ -1167,7 +1103,7 @@ CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const char *name, H
 	for ( const HashEntry_t &element : m_aBuckets[iBucket] )
 	{
 		if ( element.m_uiKey == hashkey && // if hashes of strings match,
-			 Q_stricmp( name, element.m_Data->GetName() ) == 0) // then test the actual strings
+			 V_stricmp( name, element.m_Data->GetName() ) == 0) // then test the actual strings
 		{
 			return ToHandle( element );
 		}
@@ -1180,7 +1116,7 @@ CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const char *name, H
 //-----------------------------------------------------------------------------
 // Find a command in the hash.
 //-----------------------------------------------------------------------------
-CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const ConCommandBase *cmd ) const RESTRICT
+CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const ConCommandBase *cmd ) const __restrict__
 {
 	// Set this #if to 1 if the assert at bottom starts whining --
 	// that indicates that a console command is being double-registered,
@@ -1198,8 +1134,7 @@ CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const ConCommandBas
 		{
 			// in debug, test to make sure we don't have commands under the same name
 			// or something goofy like that
-			AssertMsg1( ToHandle( element ) == Find(cmd->GetName()),
-				"ConCommand %s had two entries in the hash!", cmd->GetName() );
+			contract_assert( ( ToHandle( element ) == Find(cmd->GetName()) ) && "ConCommand %s had two entries in the hash!" );
 			
 			// return this element
 			return ToHandle( element );
@@ -1207,30 +1142,7 @@ CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const ConCommandBas
 	}
 
 	// found nothing.
-#ifdef DBGFLAG_ASSERT // double check against search by name
-	CCommandHashHandle_t dbghand = Find(cmd->GetName());
-
-	AssertMsg1( InvalidHandle() == dbghand,
-		"ConCommand %s couldn't be found by pointer, but was found by name!", cmd->GetName() );
-#endif
 	return InvalidHandle();
 }
 
 
-#ifdef _DEBUG
-// Dump a report to MSG
-void CConCommandHash::Report( void )
-{
-	Msg("Console command hash bucket load:\n");
-	int total = 0;
-	for ( int iBucket = 0 ; iBucket < kNUM_BUCKETS ; ++iBucket )
-	{
-		int count = (int)m_aBuckets[iBucket].size();
-
-		Msg( "%d: %d\n", iBucket, count );
-		total += count;
-	}
-
-	Msg("\tAverage: %.1f\n", total / ((float)(kNUM_BUCKETS)));
-}
-#endif

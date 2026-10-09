@@ -1,22 +1,16 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Memory allocation!
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#include "pch_tier0.h"
-#include "tier0/mem.h"
+import ks.core;
+
+// First include standard libraries
+import std;
+
+
 //#include <malloc.h>
-#include "tier0/dbg.h"
 
-#include "tier0/minidump.h"
-
-#ifndef STEAM
-#define PvRealloc realloc
-#define PvAlloc malloc
-#define PvExpand _expand
-#endif
 
 enum 
 {
@@ -45,19 +39,19 @@ void *MemAllocScratch( int nMemSize )
 
 		if (s_pBuf)
 		{
-			s_pBuf = (uint8*)PvRealloc( s_pBuf, s_nBufAllocSize );
-			Assert( s_pBuf );	
+			s_pBuf = (uint8*)std::realloc( s_pBuf, s_nBufAllocSize );
+			contract_assert( s_pBuf );	
 		}
 		else
 		{
-			s_pBuf = (uint8*)PvAlloc( s_nBufAllocSize );
+			s_pBuf = (uint8*)std::malloc( s_nBufAllocSize );
 		}
 	}
 
 	int nBase = s_nBufCurSize;
 	s_nBufCurSize += nMemSize;
 	++s_nBufDepth;
-	Assert( s_nBufDepth < MAX_STACK_DEPTH );
+	contract_assert( s_nBufDepth < MAX_STACK_DEPTH );
 	s_pBufStackDepth[s_nBufDepth] = nMemSize;
 
 	return &s_pBuf[nBase];
@@ -65,17 +59,17 @@ void *MemAllocScratch( int nMemSize )
 
 void MemFreeScratch()
 {
-	Assert( s_nBufDepth >= 0 );
+	contract_assert( s_nBufDepth >= 0 );
 	s_nBufCurSize -= s_pBufStackDepth[s_nBufDepth];
 	--s_nBufDepth;
 }
 
-void ZeroMemory( void *mem, size_t length )
+void ZeroMemory( void *mem, std::size_t length )
 {
-	memset( mem, 0x0, length );
+	std::memset( mem, 0x0, length );
 }
 
-void MemOutOfMemory( size_t nBytesAttempted )
+void MemOutOfMemory( std::size_t nBytesAttempted )
 {
 	if ( Plat_IsInDebugSession() )
 	{
@@ -84,6 +78,27 @@ void MemOutOfMemory( size_t nBytesAttempted )
 	else
 	{
 		WriteMiniDump();
-		Plat_ExitProcess( EXIT_FAILURE );
+		Plat_ExitProcess( 1 );
 	}
+}
+
+
+void *MemAllocAligned( std::size_t size, std::size_t align )
+{
+	return MemAlloc_AllocAlignedUnattributed( size, align );
+}
+
+void *MemAllocAlignedFileLine( std::size_t size, std::size_t align, const char *pszFile, int nLine )
+{
+	return MemAlloc_AllocAlignedFileLine( size, align, pszFile, nLine );
+}
+
+void MemFreeAligned( void *pMemBlock )
+{
+	MemAlloc_FreeAligned( pMemBlock );
+}
+
+void MemFreeAlignedFileLine( void *pMemBlock, const char *pszFile, int nLine )
+{
+	MemAlloc_FreeAligned( pMemBlock, pszFile, nLine );
 }

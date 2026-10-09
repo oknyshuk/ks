@@ -1,103 +1,20 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
 // linux has a multi-processing forked server mode.
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/poll.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
-#include <syscall.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-//#include <linux/tcp.h>
-#include <netdb.h>
-//#include <sys/param.h>
-#include <sys/uio.h>
-#include <errno.h>
-#include <string.h>
-#include <stdlib.h>
-#include "isys.h"
+import std;
+import ks.tier1;
 #include "dedicated.h"
 #include "engine_hlds_api.h"
-#include "filesystem.h"
-#include "tier0/dbg.h"
-#include "tier1/strtools.h"
-#include "tier0/icommandline.h"
 #include "tier2/socketcreator.h"
-#include "idedicatedexports.h"
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/ioctl.h>
 #include "mathlib/expressioncalculator.h"
-#define closesocket close
-#define WSAGetLastError() errno
-#define ioctlsocket ioctl
 
 
 
 
 
-#include "tier0/memalloc.h"
 static netadr_t	net_local_adr;
-static unsigned short NET_HostToNetShort( unsigned short us_in )
-{
-	return htons( us_in );
-}
-
-static unsigned short NET_NetToHostShort( unsigned short us_in )
-{
-	return ntohs( us_in );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *s - 
-//			*sadr - 
-// Output : bool	NET_StringToSockaddr
-//-----------------------------------------------------------------------------
-static bool NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
-{
-	char	*colon;
-	char	copy[128];
-	
-	Q_memset (sadr, 0, sizeof(*sadr));
-	((struct sockaddr_in *)sadr)->sin_family = AF_INET;
-	((struct sockaddr_in *)sadr)->sin_port = 0;
-
-	Q_strncpy (copy, s, sizeof( copy ) );
-	// strip off a trailing :port if present
-	for (colon = copy ; *colon ; colon++)
-	{
-		if (*colon == ':')
-		{
-			*colon = 0;
-			((struct sockaddr_in *)sadr)->sin_port = NET_HostToNetShort((short)atoi(colon+1));	
-		}
-	}
-	
-	if (copy[0] >= '0' && copy[0] <= '9' && Q_strstr( copy, "." ) )
-	{
-		*(int *)&((struct sockaddr_in *)sadr)->sin_addr = inet_addr(copy);
-	}
-	else
-	{
-		struct hostent	*h;
-		if ( (h = gethostbyname(copy)) == nullptr )
-			return false;
-		*(int *)&((struct sockaddr_in *)sadr)->sin_addr = *(int *)h->h_addr_list[0];
-	}
-	
-	return true;
-}
-
 /*
 =============
 NET_StringToAdr
@@ -111,26 +28,18 @@ idnewt:28000
 */
 static bool NET_StringToAdr ( const char *s, netadr_t *a)
 {
-	struct sockaddr saddr;
-
 	char address[128];
 	
-	Q_strncpy( address, s, sizeof(address) );
+	V_strncpy( address, s, sizeof(address) );
 
-	if ( !Q_strncmp( address, "localhost", 10 ) || !Q_strncmp( address, "localhost:", 10 ) )
+	if ( !V_strncmp( address, "localhost", 10 ) || !V_strncmp( address, "localhost:", 10 ) )
 	{
 		// subsitute 'localhost' with '127.0.0.1", both have 9 chars
 		// this way we can resolve 'localhost' without DNS and still keep the port
-		Q_memcpy( address, "127.0.0.1", 9 );
+		V_memcpy( address, "127.0.0.1", 9 );
 	}
 
-	
-	if ( !NET_StringToSockaddr (address, &saddr) )
-		return false;
-		
-	a->SetFromSockadr( &saddr );
-
-	return true;
+	return a->SetFromString( address, true );
 }
 
 
@@ -140,15 +49,15 @@ static void NET_GetLocalAddress (void)
 
 	char	buff[512];
 
-	gethostname( buff, sizeof(buff) );	// get own IP address
+	ks::platform::host_name( buff, sizeof(buff) );	// get own IP address
 	buff[sizeof(buff)-1] = 0;			// Ensure that it doesn't overrun the buffer
 	NET_StringToAdr (buff, &net_local_adr);
 
 }
 
 
-#define MAX_STATUS_STRING_LENGTH 1024
-#define MAX_INPUT_FROM_CHILD 2048
+constexpr auto MAX_STATUS_STRING_LENGTH = 1024;
+constexpr auto MAX_INPUT_FROM_CHILD = 2048;
 
 namespace {
 class CConnectedNetConsoleData
@@ -207,12 +116,13 @@ public:
 
 void CParentProcessNetConsoleMgr::SendString( char const *pString, int nidx  )
 {
+	ks::ScratchArena<> scratch;
 	m_Socket.RunFrame();
 	int nCount = m_Socket.GetAcceptedSocketCount();
 	if ( nCount )
 	{
 		// lets add the lf to any cr's
-		char *pTmp = (char * ) stackalloc( strlen( pString ) * 2 + 1 );
+		char *pTmp = (char * ) scratch.AllocBytes( std::strlen( pString ) * 2 + 1 );
 		char *oString = pTmp;
 		char const *pIn = pString;
 		while ( *pIn )
@@ -232,7 +142,7 @@ void CParentProcessNetConsoleMgr::SendString( char const *pString, int nidx  )
 				CConnectedNetConsoleData *pData = ( CConnectedNetConsoleData * ) m_Socket.GetAcceptedSocketData( i );
 				if ( pData->m_bAuthorized )						// no output to un-authed net consoles
 				{
-					send( hSocket, pTmp, oString - pTmp - 1, MSG_NOSIGNAL );
+					ks::platform::send_bytes( hSocket, pTmp, oString - pTmp - 1, nullptr );
 				}
 			}
 		}
@@ -288,8 +198,9 @@ void CParentProcessNetConsoleMgr::RunFrame( void )
 		// const netadr_t& socketAdr = m_Socket.GetAcceptedSocketAddress( i );
 		CConnectedNetConsoleData *pData = ( CConnectedNetConsoleData * ) m_Socket.GetAcceptedSocketData( i );
 		char ch;
-		int pendingLen = recv( hSocket, &ch, sizeof(ch), MSG_PEEK );
-		if ( pendingLen == -1 && SocketWouldBlock() )
+		ks::platform::socket_error error = ks::platform::socket_error::none;
+		long pendingLen = ks::platform::peek_bytes( hSocket, &ch, sizeof(ch), &error );
+		if ( pendingLen == -1 && error == ks::platform::socket_error::again )
 			continue;
 			
 		if ( pendingLen <= 0 )							// eof or error
@@ -299,19 +210,18 @@ void CParentProcessNetConsoleMgr::RunFrame( void )
 		}
 
 		// find out how much we have to read
-		unsigned long readLen;
-		ioctlsocket( hSocket, FIONREAD, &readLen );
+		unsigned long readLen = ks::platform::bytes_available( hSocket );
 		while( readLen > 0  )
 		{
 			char recvBuf[256];
-			int recvLen = recv( hSocket, recvBuf , std::min( sizeof( recvBuf ) , readLen ), 0 );
+			long recvLen = ks::platform::receive_bytes( hSocket, recvBuf , std::min( sizeof( recvBuf ) , readLen ), &error );
 			if ( recvLen == 0 ) // socket was closed
 			{
 				m_Socket.CloseAcceptedSocket( i );
 				break;
 			}
 				
-			if ( recvLen < 0 && !SocketWouldBlock() )
+			if ( recvLen < 0 && error != ks::platform::socket_error::again )
 			{
 				break;
 			}
@@ -355,8 +265,8 @@ void CParentProcessNetConsoleMgr::HandleInputChars( char const *pIn, int recvLen
 
 struct CServerInstance
 {
-	pid_t m_nPid;
-	int m_nSocketToChild;									// "our" side of the socket connection
+	long long m_nPid;
+	SocketHandle_t m_nSocketToChild;									// "our" side of the socket connection
 	int m_nNumCharsInInputBuffer;
 	int m_nNumPlayers;
 
@@ -380,7 +290,7 @@ struct CServerInstance
 	{
 		m_pszStatus[0] = 0;									// clear status string
 		m_bRunning = false;
-		m_nSocketToChild = -1;
+		m_nSocketToChild = nullptr;
 		ClearInputBuffer();
 		ResetStatus();
 	}
@@ -391,7 +301,7 @@ struct CServerInstance
 
 };
 
-#define MAX_CHILD_PROCESSSES 100
+constexpr auto MAX_CHILD_PROCESSSES = 100;
 
 CParentProcessNetConsoleMgr *g_pParentProcessNetConsole;
 int g_nNumChildInstances;
@@ -411,15 +321,15 @@ struct CommandDescriptor
 
 static char *va( const char *format, ... )
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	static char	string[8][512];
 	static int	curstring = 0;
 	
 	curstring = ( curstring + 1 ) % 8;
 
-	va_start (argptr, format);
-	Q_vsnprintf( string[curstring], sizeof( string[curstring] ), format, argptr );
-	va_end (argptr);
+	__builtin_va_start (argptr, format);
+	V_vsnprintf( string[curstring], sizeof( string[curstring] ), format, argptr );
+	__builtin_va_end (argptr);
 
 	return string[curstring];  
 }
@@ -432,7 +342,7 @@ static void s_DoStatusCmd( char const *pArgs, int nConsoleIdx )
 	{
 		CServerInstance *pChild = g_pChildProcesses + i;
 		g_pParentProcessNetConsole->SendString( va( "child %d\n", i ), nConsoleIdx );
-		if ( pChild && ( pChild->m_nSocketToChild != -1 ) )
+		if ( pChild && ( pChild->m_nSocketToChild != nullptr ) )
 		{
 			g_pParentProcessNetConsole->SendString( va( " pid : %d\n", i, pChild->m_nPid ), nConsoleIdx );
 			g_pParentProcessNetConsole->SendString( va( " map : %s\n", pChild->m_pszMapName ), nConsoleIdx );
@@ -448,10 +358,10 @@ static void s_DoQuit( char const *pArgs, int nConsoleIdx )
 	for( int i = 0; i < g_nNumChildInstances; i++ )
 	{
 		CServerInstance *pChild = g_pChildProcesses + i;
-		if ( pChild && ( pChild->m_nSocketToChild != -1 ) )
+		if ( pChild && ( pChild->m_nSocketToChild != nullptr ) )
 		{
 			g_pParentProcessNetConsole->SendString( va( "killing child %d\n", i ), nConsoleIdx );
-			kill( pChild->m_nPid, SIGKILL );
+			ks::platform::kill_process( pChild->m_nPid );
 		}
 	}
 	s_bQuit = true;
@@ -469,10 +379,10 @@ static void s_DoBroadCastCmd( char const *pArgs, int nConsoleIdx )
 		for( int i = 0; i < g_nNumChildInstances; i++ )
 		{
 			CServerInstance *pChild = g_pChildProcesses + i;
-			if ( pChild && ( pChild->m_nSocketToChild != -1 ) )
+			if ( pChild && ( pChild->m_nSocketToChild != nullptr ) )
 			{
-				send( pChild->m_nSocketToChild, pArgs, strlen( pArgs ), MSG_NOSIGNAL );
-				send( pChild->m_nSocketToChild, "\n", 1, MSG_NOSIGNAL );
+				ks::platform::send_bytes( pChild->m_nSocketToChild, pArgs, std::strlen( pArgs ), nullptr );
+				ks::platform::send_bytes( pChild->m_nSocketToChild, "\n", 1, nullptr );
 			}
 		}
 	}
@@ -492,11 +402,11 @@ static void s_DoShutdown( char const *pArgs, int nConsoleIdx )
 	for( int i = 0; i < g_nNumChildInstances; i++ )
 	{
 		CServerInstance *pChild = g_pChildProcesses + i;
-		if ( pChild && ( pChild->m_nSocketToChild != -1 ) )
+		if ( pChild && ( pChild->m_nSocketToChild != nullptr ) )
 		{
 			if ( pChild->m_nNumPlayers == 0 )
 			{
-				kill( pChild->m_nPid, SIGKILL );
+				ks::platform::kill_process( pChild->m_nPid );
 			}
 		}
 	}
@@ -516,7 +426,7 @@ static CommandDescriptor s_CmdTable[]={
 
 static void s_DoFind( char const *pArgs, int nConsoleIdx )
 {
-	for( int i = 0; i < ARRAYSIZE( s_CmdTable ); i++ )
+	for( int i = 0; i < std::size( s_CmdTable ); i++ )
 	{
 		if ( ( pArgs[0] == 0 ) || ( V_stristr( s_CmdTable[i].m_pCmdName, pArgs ) ) )
 		{
@@ -528,7 +438,7 @@ static void s_DoFind( char const *pArgs, int nConsoleIdx )
 
 void CParentProcessNetConsoleMgr::Execute( CConnectedNetConsoleData *pData, int idx )
 {
-	if ( memcmp( pData->m_pszInputCommandBuffer, "PASS ", 5 ) == 0 )
+	if ( std::memcmp( pData->m_pszInputCommandBuffer, "PASS ", 5 ) == 0 )
 	{
 		if ( V_strcmp( pData->m_pszInputCommandBuffer + 5, m_pPassword ) == 0 )
 		{
@@ -547,24 +457,24 @@ void CParentProcessNetConsoleMgr::Execute( CConnectedNetConsoleData *pData, int 
 		if ( pData->m_bAuthorized )
 		{
 			char const *pCmd = pData->m_pszInputCommandBuffer;
-			pCmd += strspn( pCmd, " \t" );
-			char const *pArgs = strchr( pCmd, ' ' );
+			pCmd += std::strspn( pCmd, " \t" );
+			char const *pArgs = std::strchr( pCmd, ' ' );
 			int nCmdLen;
 			if ( pArgs )
 			{
 				nCmdLen = pArgs - pCmd;
-				pArgs += strspn( pArgs, " \t" );			// skip to first char of first word
+				pArgs += std::strspn( pArgs, " \t" );			// skip to first char of first word
 			}
 			else
 			{
-				nCmdLen = strlen( pCmd );
-				pArgs = pCmd + strlen( pCmd );				// point at trailing 0 bytes
+				nCmdLen = std::strlen( pCmd );
+				pArgs = pCmd + std::strlen( pCmd );				// point at trailing 0 bytes
 			}
-			for( int i = 0; i < ARRAYSIZE( s_CmdTable ); i++ )
+			for( int i = 0; i < std::size( s_CmdTable ); i++ )
 			{
 				char const *pTblCmd = s_CmdTable[i].m_pCmdName;
-				if ( ( strlen( pTblCmd ) == nCmdLen ) &&
-					 ( memcmp( pTblCmd, pCmd, nCmdLen ) == 0 ) )
+				if ( ( std::strlen( pTblCmd ) == nCmdLen ) &&
+					 ( std::memcmp( pTblCmd, pCmd, nCmdLen ) == 0 ) )
 				{
 					// found it
 					( *s_CmdTable[i].m_pCmdFn )( pArgs, idx );
@@ -588,61 +498,54 @@ static void HandleDeadChildProcesses( void )
 {
 	for(;;)
 	{
-		int nStatus;
-		pid_t nWait = waitpid( -1, &nStatus, WNOHANG );
-		if ( nWait > 0 )
+		ks::platform::child_status status{};
+		if ( !ks::platform::reap_child( -1, false, &status ) )
 		{
-			// find the process that exited
-			CServerInstance *pFound = nullptr;
-			int nFound = -1;
-			for( int i = 0; i < g_nNumChildInstances; i++ )
+			break;											// no dead children
+		}
+
+		// find the process that exited
+		CServerInstance *pFound = nullptr;
+		int nFound = -1;
+		for( int i = 0; i < g_nNumChildInstances; i++ )
+		{
+			if ( g_pChildProcesses[i].m_nPid == status.pid )
 			{
-				if ( g_pChildProcesses[i].m_nPid == nWait )
-				{
-					pFound = g_pChildProcesses + i;
-					nFound = i;
-					break;
-				}
+				pFound = g_pChildProcesses + i;
+				nFound = i;
+				break;
 			}
-			if ( ! pFound )
-			{
-				Warning( "unknown child process %d exited?\n", nWait );
-			}
-			else
-			{
-				if ( WIFEXITED( nStatus ) )
-				{
-					Msg( "Child %d exited with status %d\n", nFound, WEXITSTATUS( nStatus ) );
-				}
-				if ( WIFSIGNALED( nStatus ) )
-				{
-					Msg( "Child %d aborted with signal %d\n", nFound, WTERMSIG( nStatus ) );
-				}
-				if ( WCOREDUMP( nStatus ) )
-				{
-					Msg( "Child wrote a core dump\n");
-				}
-				pFound->m_bRunning = false;
-				if ( pFound->m_nSocketToChild != -1 )
-				{
-					close( pFound->m_nSocketToChild );
-					pFound->m_nSocketToChild = -1;
-				}
-			}
+		}
+		if ( ! pFound )
+		{
+			Warning( "unknown child process %lld exited?\n", status.pid );
 		}
 		else
 		{
-			break;											// no dead children
+			if ( status.exited )
+			{
+				Msg( "Child %d exited with status %d\n", nFound, status.code );
+			}
+			if ( status.signaled )
+			{
+				Msg( "Child %d aborted with signal %d\n", nFound, status.code );
+			}
+			pFound->m_bRunning = false;
+			if ( pFound->m_nSocketToChild != nullptr )
+			{
+				ks::platform::close_socket( pFound->m_nSocketToChild );
+				pFound->m_nSocketToChild = nullptr;
+			}
 		}
 	}
 }
 
-#define MAX_ACTIVE_PARENT_NETCONSOLE_SOCKETS 20
+constexpr auto MAX_ACTIVE_PARENT_NETCONSOLE_SOCKETS = 20;
 
 static void ServiceChildProcesses( void )
 {
 	// for any children that aren't running (or not running yet), start them
-	pollfd pollFds[MAX_CHILD_PROCESSSES + 1 + MAX_ACTIVE_PARENT_NETCONSOLE_SOCKETS ];
+	ks::platform::poll_entry pollFds[MAX_CHILD_PROCESSSES + 1 + MAX_ACTIVE_PARENT_NETCONSOLE_SOCKETS ];
 	int nPoll = 0;
 	int nNumRunning = 0;
 	for( int i = 0; i < g_nNumChildInstances; i++ )
@@ -651,30 +554,31 @@ static void ServiceChildProcesses( void )
 		{
 			if (! s_bDelayedQuit )
 			{
-				int nSockets[2];
-				int nRslt = socketpair( AF_UNIX, SOCK_STREAM, 0, nSockets );
-				if ( nRslt != 0 )
+				ks::platform::socket *pChildEnd = nullptr;
+				ks::platform::socket *pParentEnd = nullptr;
+				if ( !ks::platform::open_socket_pair( &pChildEnd, &pParentEnd, nullptr ) )
 				{
-					Error( "socket pair returned error errno = %d\n", errno );
+					Error( "socket pair creation failed\n" );
 				}
-				pid_t nChild = fork();
+				ks::platform::set_nonblocking( pParentEnd, nullptr );
+				long long nChild = ks::platform::fork_process();
 				if ( nChild == 0 )							// are we the forked child?
 				{
 					//ResetBaseTime();							// start plat_float time over at 0 for precision
 					PerformCommandLineSubstitutions( i + 1 );
-					close( nSockets[1] );
-					engine->SetSubProcessID( i + 1, nSockets[0] );
+					ks::platform::close_socket( pParentEnd );
+					engine->SetSubProcessID( i + 1, pChildEnd );
 					g_nSubProcessId = i + 1;
 					RunServer( true );
-					syscall( SYS_exit, 0 );					// we are not going to perform a normal c++ exit. We _dont_ want to run destructors, etc.
+					ks::platform::exit_process_now( 0 );		// we are not going to perform a normal c++ exit. We _dont_ want to run destructors, etc.
 				}
 				else
 				{
 					g_pChildProcesses[i].m_nPid = nChild;
 					g_pChildProcesses[i].m_pszStatus[0] = 0;
 					g_pChildProcesses[i].m_bRunning = true;
-					close( nSockets[0] );
-					g_pChildProcesses[i].m_nSocketToChild = nSockets[1];
+					ks::platform::close_socket( pChildEnd );
+					g_pChildProcesses[i].m_nSocketToChild = pParentEnd;
 
 				}
 			}
@@ -683,17 +587,16 @@ static void ServiceChildProcesses( void )
 		{
 			nNumRunning++;
 		}
-		if ( g_pChildProcesses[i].m_nSocketToChild != -1 )
+		if ( g_pChildProcesses[i].m_nSocketToChild != nullptr )
 		{
-			pollFds[nPoll].fd = g_pChildProcesses[i].m_nSocketToChild;
-			pollFds[nPoll].events = POLLIN | POLLERR | POLLHUP;
-			pollFds[nPoll].revents = 0;
+			pollFds[nPoll].s = g_pChildProcesses[i].m_nSocketToChild;
+			pollFds[nPoll].readable = false;
 			nPoll++;
 		}
 	}
 	if ( s_bDelayedQuit && ( nNumRunning == 0 ) )
 	{
-		_exit( 0 );
+		ks::platform::exit_process_now( 0 );
 	}
 
 	// now, wait for activity on any of our sockets or stdin
@@ -703,31 +606,29 @@ static void ServiceChildProcesses( void )
 // 	nPoll++;
 	if ( g_pParentProcessNetConsole && ( g_pParentProcessNetConsole->m_bActive ) )
 	{
-		pollFds[nPoll].fd = g_pParentProcessNetConsole->m_Socket.m_hListenSocket;
-		pollFds[nPoll].events = POLLIN;
-		pollFds[nPoll].revents = 0;
+		pollFds[nPoll].s = g_pParentProcessNetConsole->m_Socket.m_hListenSocket;
+		pollFds[nPoll].readable = false;
 		nPoll++;
 
 		int nCount = g_pParentProcessNetConsole->m_Socket.GetAcceptedSocketCount();
-		for( int i = 0; ( i < nCount ) && ( nPoll < ARRAYSIZE( pollFds ) ); i++ )
+		for( int i = 0; ( i < nCount ) && ( nPoll < std::size( pollFds ) ); i++ )
 		{
 			SocketHandle_t hSocket = g_pParentProcessNetConsole->m_Socket.GetAcceptedSocketHandle( i );
-			pollFds[nPoll].fd = hSocket;
-			pollFds[nPoll].events = POLLIN;
-			pollFds[nPoll].revents = 0;
+			pollFds[nPoll].s = hSocket;
+			pollFds[nPoll].readable = false;
 			nPoll++;
 		}
 	}
 
-	int nPollResult = poll( pollFds, nPoll, 10 * 1000 );		// wait up to 10 seconds. Could wait forever, really
+	int nPollResult = nPoll > 0 ? ks::platform::poll_sockets( pollFds, nPoll, 10 * 1000 ) : 0;		// wait up to 10 seconds. Could wait forever, really
 
 	// check for activity on the sockets from our children
 	int np = 0;
 	for( int i = 0; i < g_nNumChildInstances; i++ )
 	{
-		if ( g_pChildProcesses[i].m_nSocketToChild != -1 )
+		if ( g_pChildProcesses[i].m_nSocketToChild != nullptr )
 		{
-			if ( pollFds[np].revents & POLLIN )				// data ready to read?
+			if ( pollFds[np].readable )				// data ready to read?
 			{
 				g_pChildProcesses[i].HandleSocketInput();
 			}
@@ -756,14 +657,14 @@ void RunServerSubProcesses( int nNumChildren )
 	{
 		ServiceChildProcesses();
 	}
-	_exit( 0 );
+	ks::platform::exit_process_now( 0 );
 }
 
 static bool DecodeParam( char const *pParamName, char const *pInput, char const **pOutPtr )
 {
 	// if the left of the string matches pParamName, return the right of the string else return null
-	int nPLen = strlen( pParamName );
-	if ( memcmp( pParamName, pInput, nPLen ) == 0 )
+	int nPLen = std::strlen( pParamName );
+	if ( std::memcmp( pParamName, pInput, nPLen ) == 0 )
 	{
 		*pOutPtr= pInput + nPLen;
 	}
@@ -778,21 +679,21 @@ void CServerInstance::ProcessInputFromChild( void )
 {
 	if ( m_pszInputBuffer[0] == '#' )					// spew?
 	{
-		puts( m_pszInputBuffer );
+		std::puts( m_pszInputBuffer );
 	}
 	else
 	{
-		char *pSpace = strchr( m_pszInputBuffer, ' ' );
+		char *pSpace = std::strchr( m_pszInputBuffer, ' ' );
 		if ( pSpace )
 		{
 			*( pSpace++ ) = 0;
-			pSpace += strspn( pSpace, " \t" );
+			pSpace += std::strspn( pSpace, " \t" );
 		}
 		else
 		{
-			pSpace = m_pszInputBuffer + strlen( m_pszInputBuffer );
+			pSpace = m_pszInputBuffer + std::strlen( m_pszInputBuffer );
 		}
-		if ( !strcmp( m_pszInputBuffer, "status" ) )
+		if ( !std::strcmp( m_pszInputBuffer, "status" ) )
 		{
 			std::vector< std::string > statusRecords;
 			V_SplitString( pSpace, ";", statusRecords );
@@ -806,7 +707,7 @@ void CServerInstance::ProcessInputFromChild( void )
 				}
 				else if ( DecodeParam( "players=", pRecord, &pParm ) )
 				{
-					m_nNumPlayers = atoi( pParm );
+					m_nNumPlayers = std::atoi( pParm );
 				}
 			}
 		}
@@ -822,7 +723,7 @@ void CServerInstance::ProcessInputFromChild( void )
 void CServerInstance::HandleSocketInput( void )
 {
 	char *pDest = m_pszInputBuffer + m_nNumCharsInInputBuffer;
-	int nRead = recv( m_nSocketToChild, pDest, sizeof( m_pszInputBuffer ) - m_nNumCharsInInputBuffer, MSG_DONTWAIT );
+	long nRead = ks::platform::receive_bytes( m_nSocketToChild, pDest, sizeof( m_pszInputBuffer ) - m_nNumCharsInInputBuffer, nullptr );
 	if ( nRead > 0 )
 	{
 		m_nNumCharsInInputBuffer += nRead;
@@ -838,6 +739,3 @@ void CServerInstance::HandleSocketInput( void )
 
 
 }
-
-
-

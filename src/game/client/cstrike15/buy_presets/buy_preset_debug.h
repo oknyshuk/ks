@@ -1,11 +1,6 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef BUY_PRESET_DEBUG_H
-#define BUY_PRESET_DEBUG_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //--------------------------------------------------------------------------------------------------------------
 // Utility functions for the debugging macros below
@@ -15,8 +10,26 @@ bool IsPresetCurrentCostDebuggingEnabled();	///< cl_preset_debug == 3.0f
 
 //--------------------------------------------------------------------------------------------------------------
 // Macros for conditional debugging of buy presets
-#define PRESET_DEBUG		if (IsPresetDebuggingEnabled())				DevMsg
-#define FULLCOST_DEBUG		if (IsPresetFullCostDebuggingEnabled())		DevMsg
-#define CURRENTCOST_DEBUG	if (IsPresetCurrentCostDebuggingEnabled())	DevMsg
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
 
-#endif // BUY_PRESET_DEBUG_H
+template <typename... Args>
+inline void PRESET_DEBUG( Args &&...args )
+{
+	if ( IsPresetDebuggingEnabled() )
+		DevMsg( static_cast<Args &&>( args )... );
+}
+template <typename... Args>
+inline void FULLCOST_DEBUG( Args &&...args )
+{
+	if ( IsPresetFullCostDebuggingEnabled() )
+		DevMsg( static_cast<Args &&>( args )... );
+}
+template <typename... Args>
+inline void CURRENTCOST_DEBUG( Args &&...args )
+{
+	if ( IsPresetCurrentCostDebuggingEnabled() )
+		DevMsg( static_cast<Args &&>( args )... );
+}
+
+#pragma GCC diagnostic pop

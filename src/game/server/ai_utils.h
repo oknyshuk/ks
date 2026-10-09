@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Simple, small, free-standing tools for building AIs
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_UTILS_H
-#define AI_UTILS_H
+// Purpose: Simple, small, free-standing tools for building AIs
 
 #include "simtimer.h"
 #include "ai_component.h"
-
+#include "util.h"
+#include "baseentity.h"
 
 //-----------------------------------------------------------------------------
 //
@@ -312,5 +310,3 @@ private:
 };
 
 extern string_t g_iszFuncBrushClassname;
-
-#endif // AI_UTILS_H

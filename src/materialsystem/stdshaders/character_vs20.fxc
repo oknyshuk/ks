@@ -1,17 +1,16 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC:	"USEBOUNCECOLOR"				"0..0" [vs20]
 // STATIC:	"USEBOUNCECOLOR"				"0..1" [vs30]
 // STATIC:  "FLASHLIGHT"					"0..1"
-// STATIC:  "FLATTEN_STATIC_CONTROL_FLOW"	"0..1" 
-
+// STATIC:  "FLATTEN_STATIC_CONTROL_FLOW"	"0..1"
 // DYNAMIC: "COMPRESSED_VERTS"				"0..1"
 // DYNAMIC: "SKINNING"						"0..1"
 // DYNAMIC: "NUM_LIGHTS"					"0..4" [vs30]
-// DYNAMIC: "NUM_LIGHTS"					"0..2" [vs20] 
-
+// DYNAMIC: "NUM_LIGHTS"					"0..2" [vs20]
 // If using static control flow on Direct3D, we should use the NUM_LIGHTS=0 combo
-//  SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 ) [vs20] [PC]
+// SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 ) [vs20] [PC]
 
 #include "common_fog_vs_supportsvertexfog_fxc.h"
 #include "common_vs_fxc.h"

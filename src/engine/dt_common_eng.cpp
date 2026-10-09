@@ -1,21 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import ks.core;
 #include "dt_stack.h"
 #include "client.h"
 #include "host.h"
-#include <memory>
-#include <vector>
+import std;
 #include "server.h"
 #include "server_class.h"
 #include "eiface.h"
 #include "demo.h"
 #include "sv_packedentities.h"
-#include "tier0/icommandline.h"
 
 extern std::vector< std::unique_ptr< CClientSendTable > > g_ClientSendTables;
 extern std::vector< std::unique_ptr< CRecvDecoder > > g_RecvDecoders;
@@ -83,7 +78,7 @@ bool DataTable_SetupReceiveTableFromSendTable( SendTable *sendTable, bool bNeeds
 			if ( pSendTableProp->GetDataTable() )
 				pDTName = pSendTableProp->GetDataTable()->m_pNetTableName;
 
-			Assert( pDTName && Q_strlen(pDTName) > 0 );
+			contract_assert( pDTName && V_strlen(pDTName) > 0 );
 
 			pClientProp->SetTableName( pDTName );
 			
@@ -192,7 +187,7 @@ void DataTable_CreateClientClassInfosFromServerClasses( CBaseClientState *pState
 		delete [] pState->m_pServerClasses;
 	}
 
-	Assert( nClasses > 0 );
+	contract_assert( nClasses > 0 );
 
 	pState->m_nServerClasses = nClasses;
 	pState->m_pServerClasses = new C_ServerClassInfo[ pState->m_nServerClasses ];
@@ -206,7 +201,7 @@ void DataTable_CreateClientClassInfosFromServerClasses( CBaseClientState *pState
 	int curID = 0;
 	for ( ServerClass *pClass=pClasses; pClass; pClass=pClass->m_pNext )
 	{
-		Assert( pClass->m_ClassID >= 0 && pClass->m_ClassID < nClasses );
+		contract_assert( pClass->m_ClassID >= 0 && pClass->m_ClassID < nClasses );
 
 		pClass->m_ClassID = curID++;
 
@@ -415,7 +410,7 @@ bool DataTable_ParseClassInfosFromBuffer( CClientState *pState, bf_read *pBuf )
 
 	pState->m_nServerClasses = pBuf->ReadShort();
 
-	Assert( pState->m_nServerClasses );
+	contract_assert( pState->m_nServerClasses );
 	pState->m_pServerClasses = new C_ServerClassInfo[pState->m_nServerClasses];
 
 	if ( !pState->m_pServerClasses )

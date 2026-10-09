@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( C_WORLD_H )
-#define C_WORLD_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -79,5 +74,3 @@ inline const char *C_World::GetDetailSpriteMaterial() const
 void ClientWorldFactoryInit();
 void ClientWorldFactoryShutdown();
 C_World* GetClientWorldEntity();
-
-#endif // C_WORLD_H

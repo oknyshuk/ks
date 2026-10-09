@@ -1,10 +1,30 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "client_pch.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// main precompiled header for client files
+
+import std;
+import ks.tier1;
+
+
+#include "sysexternal.h"
+#include "render.h"
+
+
+
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+
+#include "host.h"
+#include "filesystem.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "cl_demoaction.h"
 #include "cl_demoactionmanager.h"
 
@@ -102,9 +122,9 @@ bool CBaseDemoAction::HasActionFinished( void ) const
 // Input  : sz - 
 // Output : void *CBaseDemoAction::operator
 //-----------------------------------------------------------------------------
-void *CBaseDemoAction::operator new( size_t sz )
+void *CBaseDemoAction::operator new( std::size_t sz )
 {
-	Assert( sz != 0 );
+	contract_assert( sz != 0 );
 	return calloc( 1, sz );
 };
 
@@ -117,7 +137,7 @@ void CBaseDemoAction::operator delete( void *pMem )
 {
 
 	// get the engine to free the memory
-	free( pMem );
+	std::free( pMem );
 }
 
 //-----------------------------------------------------------------------------
@@ -298,7 +318,7 @@ char const *CBaseDemoAction::NameForType( DEMOACTION actionType )
 	}
 	
 	DemoActionDictionary *entry = &g_rgDemoTypeNames[ idx ];
-	Assert( entry->actiontype == actionType );
+	contract_assert( entry->actiontype == actionType );
 
 	return entry->name;
 }
@@ -315,7 +335,7 @@ DEMOACTION CBaseDemoAction::TypeForName( char const *name )
 	for ( i= 0; i < c; i++ )
 	{
 		DemoActionDictionary *entry = &g_rgDemoTypeNames[ i ];
-		if ( !Q_strcasecmp( entry->name, name ) )
+		if ( !V_strcasecmp( entry->name, name ) )
 		{
 			return entry->actiontype;
 		}
@@ -339,7 +359,7 @@ char const *CBaseDemoAction::NameForTimingType( DEMOACTIONTIMINGTYPE timingType 
 	}
 	
 	DemoTimingTagDictionary *entry = &g_rgDemoTimingTypeNames[ idx ];
-	Assert( entry->timingtype == timingType );
+	contract_assert( entry->timingtype == timingType );
 
 	return entry->name;
 }
@@ -356,7 +376,7 @@ DEMOACTIONTIMINGTYPE CBaseDemoAction::TimingTypeForName( char const *name )
 	for ( i= 0; i < c; i++ )
 	{
 		DemoTimingTagDictionary *entry = &g_rgDemoTimingTypeNames[ i ];
-		if ( !Q_strcasecmp( entry->name, name ) )
+		if ( !V_strcasecmp( entry->name, name ) )
 		{
 			return entry->timingtype;
 		}
@@ -375,11 +395,11 @@ static bool g_bSaveChained = false;
 //-----------------------------------------------------------------------------
 void CBaseDemoAction::BufPrintf( int depth, ks::text_writer& buf, char const *fmt, ... )
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		string[1024];
-	va_start (argptr,fmt);
-	Q_vsnprintf(string, sizeof( string ), fmt,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,fmt);
+	V_vsnprintf(string, sizeof( string ), fmt,argptr);
+	__builtin_va_end (argptr);
 
 	while ( depth-- > 0 )
 	{
@@ -436,7 +456,7 @@ void CBaseDemoAction::SaveToBuffer( int depth, int index, ks::text_writer& buf )
 	// First key is factory name
 	BufPrintf( depth + 1, buf, "factory \"%s\"\n", NameForType( GetType() ) );
 	SaveKeysToBuffer( depth + 1, buf );
-	Assert( g_bSaveChained );
+	contract_assert( g_bSaveChained );
 
 	BufPrintf( depth, buf, "}\n" );
 }
@@ -447,7 +467,7 @@ void CBaseDemoAction::SaveToBuffer( int depth, int index, ks::text_writer& buf )
 //-----------------------------------------------------------------------------
 void CBaseDemoAction::SetActionName( char const *name )
 {
-	Q_strncpy( m_szActionName, name, sizeof( m_szActionName ) );
+	V_strncpy( m_szActionName, name, sizeof( m_szActionName ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -479,7 +499,7 @@ bool CBaseDemoAction::Init( KeyValues *pInitData )
 	}
 	else
 	{
-		Assert( m_flStartTime != -1.0f );
+		contract_assert( m_flStartTime != -1.0f );
 		m_Timing = ACTION_USES_TIME;
 	}
 
@@ -487,7 +507,7 @@ bool CBaseDemoAction::Init( KeyValues *pInitData )
 	char const *target = pInitData->GetString( "target", "" );
 	if ( target && target[ 0 ] )
 	{
-		Q_strncpy( m_szActionTarget, target, sizeof( m_szActionTarget ) );
+		V_strncpy( m_szActionTarget, target, sizeof( m_szActionTarget ) );
 	}
 
 	return true;
@@ -499,7 +519,7 @@ bool CBaseDemoAction::Init( KeyValues *pInitData )
 //-----------------------------------------------------------------------------
 int CBaseDemoAction::GetStartTick( void ) const
 {
-	Assert( m_Timing == ACTION_USES_TICK );
+	contract_assert( m_Timing == ACTION_USES_TICK );
 	return m_nStartTick;
 }
 
@@ -509,7 +529,7 @@ int CBaseDemoAction::GetStartTick( void ) const
 //-----------------------------------------------------------------------------
 float CBaseDemoAction::GetStartTime( void ) const
 {
-	Assert( m_Timing == ACTION_USES_TIME );
+	contract_assert( m_Timing == ACTION_USES_TIME );
 	return m_flStartTime;
 }
 
@@ -519,7 +539,7 @@ float CBaseDemoAction::GetStartTime( void ) const
 //-----------------------------------------------------------------------------
 void CBaseDemoAction::SetStartTick( int tick )
 {
-	Assert( m_Timing == ACTION_USES_TICK );
+	contract_assert( m_Timing == ACTION_USES_TICK );
 	m_nStartTick = tick;
 }
 
@@ -529,7 +549,7 @@ void CBaseDemoAction::SetStartTick( int tick )
 //-----------------------------------------------------------------------------
 void CBaseDemoAction::SetStartTime( float t )
 {
-	Assert( m_Timing == ACTION_USES_TIME );
+	contract_assert( m_Timing == ACTION_USES_TIME );
 	m_flStartTime = t;
 }
 
@@ -543,7 +563,7 @@ bool CBaseDemoAction::Update( const DemoActionTimingContext& tc )
 	// Already fired and done?
 	if ( HasActionFinished() )
 	{
-		Assert( GetActionFired() );
+		contract_assert( GetActionFired() );
 		return false;
 	}
 
@@ -586,7 +606,7 @@ bool CBaseDemoAction::Update( const DemoActionTimingContext& tc )
 //-----------------------------------------------------------------------------
 char const *CBaseDemoAction::GetActionName( void ) const
 {
-	Assert( m_szActionName[ 0 ] );
+	contract_assert( m_szActionName[ 0 ] );
 	return m_szActionName;
 }
 
@@ -605,7 +625,7 @@ bool CBaseDemoAction::ActionHasTarget( void ) const
 //-----------------------------------------------------------------------------
 char const *CBaseDemoAction::GetActionTarget( void ) const
 {
-	Assert( ActionHasTarget() );
+	contract_assert( ActionHasTarget() );
 	return m_szActionTarget;
 }
 
@@ -615,7 +635,7 @@ char const *CBaseDemoAction::GetActionTarget( void ) const
 //-----------------------------------------------------------------------------
 void CBaseDemoAction::SetActionTarget( char const *name )
 {
-	Q_strncpy( m_szActionTarget, name, sizeof( m_szActionTarget ) );
+	V_strncpy( m_szActionTarget, name, sizeof( m_szActionTarget ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -630,4 +650,3 @@ void CBaseDemoAction::Reset( void )
 void CBaseDemoAction::OnActionFinished( void )
 {
 }
-

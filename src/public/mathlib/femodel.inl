@@ -1,53 +1,54 @@
+#pragma once
 //----------------------------------------------------------------------------------------------------------
 #define LOAD_NODES_POS( POS, V, IDX ) {																  \
 	fltx4 _pos0 = POS[ IDX[ 0 ] ], _pos1 = POS[ IDX[ 1 ] ], _pos2 = POS[ IDX[ 2 ] ], _pos3 = POS[ IDX[ 3 ] ]; \
 	__m128 tmp3, tmp2, tmp1, tmp0;                          								  \
-	tmp0 = _mm_shuffle_ps( ( _pos0 ), ( _pos1 ), 0x44 );  										  \
-	tmp2 = _mm_shuffle_ps( ( _pos0 ), ( _pos1 ), 0xEE );  										  \
-	tmp1 = _mm_shuffle_ps( ( _pos2 ), ( _pos3 ), 0x44 );  										  \
-	tmp3 = _mm_shuffle_ps( ( _pos2 ), ( _pos3 ), 0xEE );  										  \
-	V.x = _mm_shuffle_ps( tmp0, tmp1, 0x88 );      											  \
-	V.y = _mm_shuffle_ps( tmp0, tmp1, 0xDD );      											  \
-	V.z = _mm_shuffle_ps( tmp2, tmp3, 0x88 );      											  \
+	tmp0 = ks::simd::shuffle<0,1,0,1>( ( _pos0 ), ( _pos1 ) );  										  \
+	tmp2 = ks::simd::shuffle<2,3,2,3>( ( _pos0 ), ( _pos1 ) );  										  \
+	tmp1 = ks::simd::shuffle<0,1,0,1>( ( _pos2 ), ( _pos3 ) );  										  \
+	tmp3 = ks::simd::shuffle<2,3,2,3>( ( _pos2 ), ( _pos3 ) );  										  \
+	V.x = ks::simd::shuffle<0,2,0,2>( tmp0, tmp1 );      											  \
+	V.y = ks::simd::shuffle<1,3,1,3>( tmp0, tmp1 );      											  \
+	V.z = ks::simd::shuffle<0,2,0,2>( tmp2, tmp3 );      											  \
 }
 
 #define LOAD_NODES( V, IDX ) {																  \
 	fltx4 _pos0 = pPos[ IDX[ 0 ] ], _pos1 = pPos[ IDX[ 1 ] ], _pos2 = pPos[ IDX[ 2 ] ], _pos3 = pPos[ IDX[ 3 ] ]; \
 	__m128 tmp3, tmp2, tmp1, tmp0;                          								  \
-	tmp0 = _mm_shuffle_ps( ( _pos0 ), ( _pos1 ), 0x44 );  										  \
-	tmp2 = _mm_shuffle_ps( ( _pos0 ), ( _pos1 ), 0xEE );  										  \
-	tmp1 = _mm_shuffle_ps( ( _pos2 ), ( _pos3 ), 0x44 );  										  \
-	tmp3 = _mm_shuffle_ps( ( _pos2 ), ( _pos3 ), 0xEE );  										  \
-	V.x = _mm_shuffle_ps( tmp0, tmp1, 0x88 );      											  \
-	V.y = _mm_shuffle_ps( tmp0, tmp1, 0xDD );      											  \
-	V.z = _mm_shuffle_ps( tmp2, tmp3, 0x88 );      											  \
+	tmp0 = ks::simd::shuffle<0,1,0,1>( ( _pos0 ), ( _pos1 ) );  										  \
+	tmp2 = ks::simd::shuffle<2,3,2,3>( ( _pos0 ), ( _pos1 ) );  										  \
+	tmp1 = ks::simd::shuffle<0,1,0,1>( ( _pos2 ), ( _pos3 ) );  										  \
+	tmp3 = ks::simd::shuffle<2,3,2,3>( ( _pos2 ), ( _pos3 ) );  										  \
+	V.x = ks::simd::shuffle<0,2,0,2>( tmp0, tmp1 );      											  \
+	V.y = ks::simd::shuffle<1,3,1,3>( tmp0, tmp1 );      											  \
+	V.z = ks::simd::shuffle<0,2,0,2>( tmp2, tmp3 );      											  \
 }
 
 
 #define SAVE_NODES_POS( POS, V, IDX ) {														  \
 	__m128 tmp3, tmp2, tmp1, tmp0;                          								  \
-	tmp0 = _mm_shuffle_ps( V.x, V.y, 0x44 );  												  \
-	tmp2 = _mm_shuffle_ps( V.x, V.y, 0xEE );  												  \
-	tmp1 = _mm_shuffle_ps( V.z, Four_Zeros, 0x44 );  										  \
-	tmp3 = _mm_shuffle_ps( V.z, Four_Zeros, 0xEE );  										  \
-	POS[ IDX[ 0 ] ] = _mm_shuffle_ps( tmp0, tmp1, 0x88 );								      \
-	POS[ IDX[ 1 ] ] = _mm_shuffle_ps( tmp0, tmp1, 0xDD );								      \
-	POS[ IDX[ 2 ] ] = _mm_shuffle_ps( tmp2, tmp3, 0x88 );								      \
-	POS[ IDX[ 3 ] ] = _mm_shuffle_ps( tmp2, tmp3, 0xDD );								      \
+	tmp0 = ks::simd::shuffle<0,1,0,1>( V.x, V.y );  												  \
+	tmp2 = ks::simd::shuffle<2,3,2,3>( V.x, V.y );  												  \
+	tmp1 = ks::simd::shuffle<0,1,0,1>( V.z, Four_Zeros );  										  \
+	tmp3 = ks::simd::shuffle<2,3,2,3>( V.z, Four_Zeros );  										  \
+	POS[ IDX[ 0 ] ] = ks::simd::shuffle<0,2,0,2>( tmp0, tmp1 );								      \
+	POS[ IDX[ 1 ] ] = ks::simd::shuffle<1,3,1,3>( tmp0, tmp1 );								      \
+	POS[ IDX[ 2 ] ] = ks::simd::shuffle<0,2,0,2>( tmp2, tmp3 );								      \
+	POS[ IDX[ 3 ] ] = ks::simd::shuffle<1,3,1,3>( tmp2, tmp3 );								      \
 }
 
 
 
 #define SAVE_NODES( V, IDX ) {																  \
 	__m128 tmp3, tmp2, tmp1, tmp0;                          								  \
-	tmp0 = _mm_shuffle_ps( V.x, V.y, 0x44 );  												  \
-	tmp2 = _mm_shuffle_ps( V.x, V.y, 0xEE );  												  \
-	tmp1 = _mm_shuffle_ps( V.z, Four_Zeros, 0x44 );  										  \
-	tmp3 = _mm_shuffle_ps( V.z, Four_Zeros, 0xEE );  										  \
-	pPos[ IDX[ 0 ] ] = _mm_shuffle_ps( tmp0, tmp1, 0x88 );								      \
-	pPos[ IDX[ 1 ] ] = _mm_shuffle_ps( tmp0, tmp1, 0xDD );								      \
-	pPos[ IDX[ 2 ] ] = _mm_shuffle_ps( tmp2, tmp3, 0x88 );								      \
-	pPos[ IDX[ 3 ] ] = _mm_shuffle_ps( tmp2, tmp3, 0xDD );								      \
+	tmp0 = ks::simd::shuffle<0,1,0,1>( V.x, V.y );  												  \
+	tmp2 = ks::simd::shuffle<2,3,2,3>( V.x, V.y );  												  \
+	tmp1 = ks::simd::shuffle<0,1,0,1>( V.z, Four_Zeros );  										  \
+	tmp3 = ks::simd::shuffle<2,3,2,3>( V.z, Four_Zeros );  										  \
+	pPos[ IDX[ 0 ] ] = ks::simd::shuffle<0,2,0,2>( tmp0, tmp1 );								      \
+	pPos[ IDX[ 1 ] ] = ks::simd::shuffle<1,3,1,3>( tmp0, tmp1 );								      \
+	pPos[ IDX[ 2 ] ] = ks::simd::shuffle<0,2,0,2>( tmp2, tmp3 );								      \
+	pPos[ IDX[ 3 ] ] = ks::simd::shuffle<1,3,1,3>( tmp2, tmp3 );								      \
 }
 
 
@@ -185,7 +186,7 @@ inline fltx4 Perimeter( const FeSimdQuad_t &quad )
 
 inline float Perimeter( const FeTri_t &tri )
 {
-	return fabsf( tri.v1x ) + tri.v2.Length() + sqrtf( tri.v2.y * tri.v2.y + ( tri.v2.x - tri.v1x ) * ( tri.v2.x - tri.v1x ) );
+	return std::fabsf( tri.v1x ) + tri.v2.Length() + std::sqrtf( tri.v2.y * tri.v2.y + ( tri.v2.x - tri.v1x ) * ( tri.v2.x - tri.v1x ) );
 }
 
 inline fltx4 Perimeter( const FeSimdTri_t &tri )
@@ -194,33 +195,33 @@ inline fltx4 Perimeter( const FeSimdTri_t &tri )
 }
 
 
-FORCEINLINE float CrossProductZ( const Vector2D &v1, const Vector2D &v2 )
+[[gnu::always_inline]] inline float CrossProductZ( const Vector2D &v1, const Vector2D &v2 )
 {
 	return v1.x * v2.y - v1.y * v2.x;
 }
 
-FORCEINLINE float CrossProductZ( const Vector2D &v1, const Vector4D &v2 )
+[[gnu::always_inline]] inline float CrossProductZ( const Vector2D &v1, const Vector4D &v2 )
 {
 	return v1.x * v2.y - v1.y * v2.x;
 }
 
-FORCEINLINE float CrossProductZ( const Vector4D &v1, const Vector2D &v2 )
+[[gnu::always_inline]] inline float CrossProductZ( const Vector4D &v1, const Vector2D &v2 )
 {
 	return v1.x * v2.y - v1.y * v2.x;
 }
 
-FORCEINLINE fltx4 CrossProductZ( const FourVectors &v1, const FourVectors2D &v2 )
+[[gnu::always_inline]] inline fltx4 CrossProductZ( const FourVectors &v1, const FourVectors2D &v2 )
 {
 	return v1.x * v2.y - v1.y * v2.x;
 }
 
-FORCEINLINE float DotProduct( const Vector4D &v1, const Vector2D &v2 )
+[[gnu::always_inline]] inline float DotProduct( const Vector4D &v1, const Vector2D &v2 )
 {
 	return v1.x * v2.x + v1.y * v2.y;
 }
 
 
-FORCEINLINE FourVectors AndSIMD( const FourVectors &left, const fltx4 &right )
+[[gnu::always_inline]] inline FourVectors AndSIMD( const FourVectors &left, const fltx4 &right )
 {
 	FourVectors out;
 	out.x = AndSIMD( left.x, right );

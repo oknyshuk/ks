@@ -1,13 +1,8 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "stdlib.h"
-#include "vstdlib/random.h"
-
-#define __cdecl 
+import std;
+import ks.vstdlib;
 
 void srand(unsigned int)
 {
@@ -17,4 +12,3 @@ int rand()
 {
 	return RandomInt( 0, VALVE_RAND_MAX );
 }
-

@@ -1,18 +1,19 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Muzzle flash temp ent
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+
+import std;
+import ks.tier1;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "IEffects.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
-#include "tier0/vprof.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: User Tracer TE
@@ -90,7 +91,7 @@ static inline void RecordMuzzleFlash( const Vector &start, const QAngle &angles,
 //-----------------------------------------------------------------------------
 void C_TEMuzzleFlash::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEMuzzleFlash::PostDataUpdate" );
+	CVProfScope _( "C_TEMuzzleFlash::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	//FIXME: Index is incorrect
 	g_pEffects->MuzzleFlash( m_vecOrigin, m_vecAngles, m_flScale, m_nType );	

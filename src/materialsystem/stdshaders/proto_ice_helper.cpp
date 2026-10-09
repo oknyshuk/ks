@@ -1,9 +1,10 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
+import std;
 #include "proto_ice_helper.h"
-#include "convar.h"
 
 // Auto generated inc files
 #include "proto_ice_vs20.inc"

@@ -1,10 +1,9 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: particle system code
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "tier0/platform.h"
+// Purpose: particle system code
+
+import ks.core;
 #include "particles/particles.h"
 
 

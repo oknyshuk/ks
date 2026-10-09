@@ -1,16 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Colors used for nav editing
 
-#ifndef NAV_COLORS_H
-#define NAV_COLORS_H
-
 //--------------------------------------------------------------------------------------------------------------
+
+import std;
+import ks.math;
 enum NavEditColor
 {
 	// Degenerate area colors
@@ -73,5 +70,3 @@ void NavDrawDashedLine( const Vector& from, const Vector& to, NavEditColor navCo
 void NavDrawVolume( const Vector &vMin, const Vector &vMax, int zMidline, NavEditColor navColor );
 
 //--------------------------------------------------------------------------------------------------------------
-
-#endif // NAV_COLORS_H

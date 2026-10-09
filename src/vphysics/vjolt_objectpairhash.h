@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <unordered_map>
-#include <unordered_set>
+#include "vphysics/object_hash.h"
+import std;
 
 // An undirected graph over opaque object pointers, stored as an adjacency map. VPhysics
 // calls this a "hash" because IVP hand-rolled its buckets; std::unordered_map already is

@@ -1,8 +1,11 @@
 /*
 	see copyright notice in sqrdbg.h
 */
-#include "tier0/basetypes.h"
+#include <string.h>
+
 #include <squirrel.h>
+import std;
+import ks.core;
 #include "sqrdbg.h"
 #include "sqdbgserver.h"
 SQInteger debug_hook(HSQUIRRELVM v);
@@ -14,14 +17,13 @@ SQInteger error_handler(HSQUIRRELVM v);
 
 HSQREMOTEDBG sq_rdbg_init(HSQUIRRELVM v,unsigned short port,SQBool autoupdate)
 {
-	sockaddr_in bindaddr;
+	ks::platform::address bindaddr{};
 	SQDbgServer *rdbg = new SQDbgServer(v);
 	rdbg->_autoupdate = autoupdate?true:false;
-	rdbg->_accept = socket(AF_INET,SOCK_STREAM,0);
-	bindaddr.sin_family = AF_INET;
-	bindaddr.sin_port = htons(port);
-	bindaddr.sin_addr.s_addr = htonl (INADDR_ANY);
-	if(bind(rdbg->_accept,(sockaddr*)&bindaddr,sizeof(bindaddr))==SOCKET_ERROR){
+	rdbg->_accept = ks::platform::open_tcp(nullptr);
+	bindaddr.port = port;
+	bindaddr.ip = 0;
+	if(!ks::platform::bind(rdbg->_accept,bindaddr,nullptr)){
 		delete rdbg;
 		sq_throwerror(v,_SC("failed to bind the socket"));
 		return nullptr;
@@ -44,15 +46,14 @@ SQRESULT sq_rdbg_waitforconnections(HSQREMOTEDBG rdbg)
 	sq_addref(rdbg->_v,&rdbg->_serializefunc);
 	sq_pop(rdbg->_v,1);
 
-	sockaddr_in cliaddr;
-	int addrlen=sizeof(cliaddr);
-	if(listen(rdbg->_accept,0)==SOCKET_ERROR)
+	ks::platform::address cliaddr{};
+	if(!ks::platform::listen_on(rdbg->_accept,0,nullptr))
 		return sq_throwerror(rdbg->_v,_SC("error on listen(socket)"));
-	rdbg->_endpoint = accept(rdbg->_accept,(sockaddr*)&cliaddr,(socklen_t *)&addrlen);
+	rdbg->_endpoint = ks::platform::accept_connection(rdbg->_accept,&cliaddr,nullptr);
 	//do not accept any other connection
 	sqdbg_closesocket(rdbg->_accept);
-	rdbg->_accept = INVALID_SOCKET;
-	if(rdbg->_endpoint==INVALID_SOCKET){
+	rdbg->_accept = nullptr;
+	if(rdbg->_endpoint==nullptr){
 		return sq_throwerror(rdbg->_v,_SC("error accept(socket)"));
 	}
 	while(!rdbg->_ready){
@@ -63,22 +64,13 @@ SQRESULT sq_rdbg_waitforconnections(HSQREMOTEDBG rdbg)
 
 SQRESULT sq_rdbg_update(HSQREMOTEDBG rdbg)
 {
-	struct timeval time;
-	time.tv_sec=0;
-	time.tv_usec=0;
-	fd_set read_flags;
-    FD_ZERO(&read_flags);
-	FD_SET(rdbg->_endpoint, &read_flags);
-	select(0/*ignored*/, &read_flags, nullptr, nullptr, &time);
-
-	if(FD_ISSET(rdbg->_endpoint,&read_flags)){
+	if(rdbg->_endpoint!=nullptr && ks::platform::wait_readable(rdbg->_endpoint,0,nullptr)){
 		char temp[1024];
 		int size=0;
 		char c,prev=0;
 		memset(&temp,0,sizeof(temp));
 		int res;
-		FD_CLR(rdbg->_endpoint, &read_flags);
-		while((res = recv(rdbg->_endpoint,&c,1,0))>0){
+		while((res = (int)ks::platform::receive_bytes(rdbg->_endpoint,&c,1,nullptr))>0){
 			
 			if(c=='\n')break;
 			if(c!='\r'){
@@ -90,7 +82,7 @@ SQRESULT sq_rdbg_update(HSQREMOTEDBG rdbg)
 		switch(res){
 		case 0:
 			return sq_throwerror(rdbg->_v,_SC("disconnected"));
-		case SOCKET_ERROR:
+		case -1:
 			return sq_throwerror(rdbg->_v,_SC("socket error"));
         }
 		

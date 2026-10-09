@@ -1,18 +1,13 @@
-//===== Copyright c 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
+import ks.tier1;
 #include "resourcefile/schema.h"
 #include "resourcesystem/iresourcesystem.h"
-#include "tier1/generichash.h"
-#include "tier0/dbg.h"
+import std;
 
-
-#define STRUCT_NAME_HASH_SEED 0xBAADFEED
-#define FIELD_CRC_HASH_SEED 0x12345678
+constexpr auto STRUCT_NAME_HASH_SEED = 0xBAADFEED;
+constexpr auto FIELD_CRC_HASH_SEED = 0x12345678;
 
 
 //-----------------------------------------------------------------------------
@@ -20,7 +15,7 @@
 //-----------------------------------------------------------------------------
 ResourceStructureId_t ComputeStructureNameHash( const char *pStructName )
 {
-	int nLength = Q_strlen( pStructName );
+	int nLength = V_strlen( pStructName );
 	return (ResourceStructureId_t)MurmurHash2( pStructName, nLength, STRUCT_NAME_HASH_SEED );
 }
 
@@ -38,7 +33,7 @@ CResourceIntrospection* CResourceIntrospection::AddToStream( CResourceStream *pS
 const CResourceIntrospection* CResourceIntrospection::FindInFile( const ResourceFileHeader_t *pHeader )
 {
 	const CResourceIntrospection* pResult = Resource_GetBlock<CResourceIntrospection>( pHeader );
-	Assert( !pResult || pResult->m_nVersion == RESOURCE_INTROSPECTION_VERSION );
+	contract_assert( !pResult || pResult->m_nVersion == RESOURCE_INTROSPECTION_VERSION );
 	return pResult;
 }
 
@@ -74,7 +69,7 @@ const CResourceStructIntrospection* CResourceIntrospection::FindStructIntrospect
 	const char *pResourceType = pEnumIntrospect->FindEnumString( nType ); 
 	for ( int i = 0; i < m_StructIntrospection.Count(); ++i )
 	{
-		if ( !Q_stricmp( m_StructIntrospection[i].m_pResourceType, pResourceType ) )
+		if ( !V_stricmp( m_StructIntrospection[i].m_pResourceType, pResourceType ) )
 			return &m_StructIntrospection[i];
 	}
 	return NULL;
@@ -109,7 +104,7 @@ const CResourceStructIntrospection* CResourceIntrospection::FindPermanentStructI
 	const char *pResourceType = pEnumIntrospect->FindEnumString( nType ); 
 	for ( int i = 0; i < m_StructIntrospection.Count(); ++i )
 	{
-		if ( !Q_stricmp( m_StructIntrospection[i].m_pResourceType, pResourceType ) )
+		if ( !V_stricmp( m_StructIntrospection[i].m_pResourceType, pResourceType ) )
 			return FindStructIntrospection( m_StructIntrospection[i].m_nUncacheableStructId );
 	}
 	return NULL;
@@ -316,7 +311,7 @@ const CResourceFieldIntrospection* CResourceStructIntrospection::FindField( cons
 	int nCount = GetFieldCount();
 	for ( int i = 0; i < nCount; ++i )
 	{
-		if ( !Q_stricmp( m_FieldIntrospection[i].m_pFieldName, pFieldName ) )
+		if ( !V_stricmp( m_FieldIntrospection[i].m_pFieldName, pFieldName ) )
 			return &m_FieldIntrospection[i];
 	}
 	return nullptr;
@@ -349,7 +344,7 @@ void CResourceStructIntrospection::SetStructInfo( CResourceStream *pStream,
 	{
 		pBlockType = s_pEmptyBlockType;
 	}
-	memcpy( m_ResourceBlockType, pBlockType, 4 * sizeof(uint8) );
+	std::memcpy( m_ResourceBlockType, pBlockType, 4 * sizeof(uint8) );
 
 	m_pResourceType = pStream->WriteString( pResourceType );
 
@@ -400,7 +395,7 @@ void CResourceFieldIntrospection::SetFieldInfo( CResourceStream *pStream,
 void CResourceFieldIntrospection::SetFieldType( CResourceStream *pStream,
 											    const std::vector< ResourceFieldType_t >& TypeChain, uint32 nRootFieldData )
 {
-	Assert( std::ssize( TypeChain ) > 0 );
+	contract_assert( std::ssize( TypeChain ) > 0 );
 
 	m_nTypeChainCount = std::ssize( TypeChain );
 	m_nFieldType = TypeChain[0];
@@ -454,7 +449,7 @@ void CResourceFieldIntrospection::SetFieldInfo( CResourceStream *pStream, const 
 
 ResourceFieldType_t CResourceFieldIntrospection::ReadTypeChain( int nChainIndex ) const
 {
-	Assert ( nChainIndex < m_nTypeChainCount );
+	contract_assert( nChainIndex < m_nTypeChainCount );
 
 	if ( nChainIndex == 0 )
 	{
@@ -488,7 +483,7 @@ ResourceFieldType_t CResourceFieldIntrospection::GetRootType() const
 	}
 	else
 	{
-		Assert( m_nTypeChainCount >= 2 );
+		contract_assert( m_nTypeChainCount >= 2 );
 		const uint32* pChain = ((const CResourcePointer<const uint32>*)( &m_nTypeChain ))->GetPtr();
 		return (ResourceFieldType_t)pChain[m_nTypeChainCount-2];
 	}
@@ -501,7 +496,7 @@ int CResourceFieldIntrospection::GetElementMemorySize( int nTypeChainIndex, cons
 	if ( fieldType == RESOURCE_FIELD_TYPE_STRUCT )
 	{
 		// a struct must be at the end of a type chain
-		Assert( nTypeChainIndex == m_nTypeChainCount - 1 );
+		contract_assert( nTypeChainIndex == m_nTypeChainCount - 1 );
 
 		const CResourceStructIntrospection* pStructIntro = nullptr;
 
@@ -514,7 +509,7 @@ int CResourceFieldIntrospection::GetElementMemorySize( int nTypeChainIndex, cons
 			pStructIntro = g_pResourceSystem->FindStructIntrospection( (ResourceStructureId_t)GetRootTypeData() );
 		}
 		
-		Assert( pStructIntro != nullptr );
+		contract_assert( pStructIntro != nullptr );
 
 		return pStructIntro->m_nMemorySize;
 	}
@@ -531,7 +526,7 @@ int CResourceFieldIntrospection::GetElementDiskSize( int nTypeChainIndex, const 
 	if ( fieldType == RESOURCE_FIELD_TYPE_STRUCT )
 	{
 		// a struct must be at the end of a type chain
-		Assert( nTypeChainIndex == m_nTypeChainCount - 1 );
+		contract_assert( nTypeChainIndex == m_nTypeChainCount - 1 );
 
 		const CResourceStructIntrospection* pStructIntro = nullptr;
 
@@ -544,7 +539,7 @@ int CResourceFieldIntrospection::GetElementDiskSize( int nTypeChainIndex, const 
 			pStructIntro = g_pResourceSystem->FindStructIntrospection( (ResourceStructureId_t)GetRootTypeData() );
 		}
 
-		Assert( pStructIntro != nullptr );
+		contract_assert( pStructIntro != nullptr );
 
 		return pStructIntro->m_nDiskSize;
 	}
@@ -562,7 +557,7 @@ int CResourceFieldIntrospection::GetElementSize( const ResourceDataLayout_t nDat
 	}
 	else
 	{
-		Assert( nDataLocation == RESOURCE_DATA_LAYOUT_DISK );
+		contract_assert( nDataLocation == RESOURCE_DATA_LAYOUT_DISK );
 		return GetElementDiskSize(nTypeChainIndex,pIntroDct);
 	}
 }
@@ -574,7 +569,7 @@ int CResourceFieldIntrospection::GetElementAlignment( int nTypeChainIndex, const
 	if ( fieldType == RESOURCE_FIELD_TYPE_STRUCT )
 	{
 		// a struct must be at the end of a type chain
-		Assert( nTypeChainIndex == m_nTypeChainCount - 1 );
+		contract_assert( nTypeChainIndex == m_nTypeChainCount - 1 );
 
 		const CResourceStructIntrospection* pStructIntro = nullptr;
 
@@ -587,7 +582,7 @@ int CResourceFieldIntrospection::GetElementAlignment( int nTypeChainIndex, const
 			pStructIntro = g_pResourceSystem->FindStructIntrospection( (ResourceStructureId_t)GetRootTypeData() );
 		}
 
-		Assert( pStructIntro != nullptr );
+		contract_assert( pStructIntro != nullptr );
 
 		return pStructIntro->m_nAlignment;
 	}
@@ -626,7 +621,7 @@ const CResourceEnumValueIntrospection* CResourceEnumIntrospection::FindEnumValue
 	int nCount = GetEnumValueCount();
 	for ( int i = 0; i < nCount; ++i )
 	{
-		if ( !Q_stricmp( m_EnumValueIntrospection[i].m_pEnumValueName, pEnumValueName ) )
+		if ( !V_stricmp( m_EnumValueIntrospection[i].m_pEnumValueName, pEnumValueName ) )
 			return &m_EnumValueIntrospection[i];
 	}
 	return nullptr;
@@ -707,8 +702,8 @@ CResourceIntrospectionTraversal::CResourceIntrospectionTraversal( const CResourc
 
 void CResourceIntrospectionTraversal::TraverseStruct( const void *pStruct, const CResourceStructIntrospection *pStructIntro )
 {
-	Assert( pStruct != nullptr );
-	Assert( pStructIntro != nullptr );
+	contract_assert( pStruct != nullptr );
+	contract_assert( pStructIntro != nullptr );
 
 	if ( !VisitStruct( pStruct, pStructIntro ) )
 	{
@@ -853,7 +848,7 @@ void CResourceIntrospectionTraversal::TraverseField( const void *pField, const C
 					}
 					break;
 				default:
-					AssertMsg(false, "Unrecognized non-root resource field type" );
+					contract_assert( false && "Unrecognized non-root resource field type" );
 					break;
 			}
 		}
@@ -921,8 +916,8 @@ static ResourceFieldProperties_t s_pFieldTypes[] =
 
 const ResourceFieldProperties_t* ResourceFieldProperties_t::GetFieldProperties( ResourceFieldType_t nFieldType )
 {
-	COMPILE_TIME_ASSERT( ARRAYSIZE( s_pFieldTypes ) == RESOURCE_FIELD_TYPE_COUNT );
-	Assert( nFieldType >= 0 && nFieldType < RESOURCE_FIELD_TYPE_COUNT );
-	Assert( s_pFieldTypes[nFieldType].m_nFieldType == nFieldType );
+	static_assert( std::size( s_pFieldTypes ) == RESOURCE_FIELD_TYPE_COUNT );
+	contract_assert( nFieldType >= 0 && nFieldType < RESOURCE_FIELD_TYPE_COUNT );
+	contract_assert( s_pFieldTypes[nFieldType].m_nFieldType == nFieldType );
 	return &(s_pFieldTypes[nFieldType]);
 }

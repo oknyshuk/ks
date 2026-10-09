@@ -22,13 +22,14 @@
 // modified to take (and use) a context object, ala Microsoft's qsort_s
 // "extension" to the stdlib
 
-#include <stddef.h>                     /* for size_t definition  */
+
+import std;
 
 /*
 **  swap nbytes between a and b
 */
 
-static void swap_bytes(char *a, char *b, size_t nbytes)
+static void swap_bytes(char *a, char *b, std::size_t nbytes)
 {
    char tmp;
    do {
@@ -36,51 +37,48 @@ static void swap_bytes(char *a, char *b, size_t nbytes)
    } while ( --nbytes );
 }
 
-#define  SWAP(a, b)  (swap_bytes((char *)(a), (char *)(b), size))
+constexpr std::size_t kInsertionSortThreshold = 7;	// subfiles of this many elements or fewer are sorted by insertion; at least 3
 
-#define  COMP(ctx, a, b)  ((*comp)((void *)ctx, (void *)(a), (void *)(b)))
-
-#define  T           7    /* subfiles of T or fewer elements will */
-                          /* be sorted by a simple insertion sort */
-                          /* Note!  T must be at least 3          */
-
-extern "C" void qsort_s(void *basep, size_t nelems, size_t size,
+extern "C" void qsort_s(void *basep, std::size_t nelems, std::size_t size,
            int (*comp)(void *, const void *, const void *),
 	   void *ctx)
 {
    char *stack[40], **sp;       /* stack and stack pointer        */
    char *i, *j, *limit;         /* scan and limit pointers        */
-   size_t thresh;               /* size of T elements in bytes    */
+   std::size_t thresh;               /* size of T elements in bytes    */
    char *base;                  /* base pointer as char *         */
 
+
+// Compares two elements through the caller-supplied comparer.}
+   auto Comp = [&]( void *ctx, char *a, char *b ) { return (*comp)( (void *)ctx, (void *)a, (void *)b ); };
    base = (char *)basep;        /* set up char * base pointer     */
-   thresh = T * size;           /* init threshold                 */
+   thresh = kInsertionSortThreshold * size;           /* init threshold                 */
    sp = stack;                  /* init stack pointer             */
    limit = base + nelems * size;/* pointer past end of array      */
    for ( ;; ) {                 /* repeat until break...          */
       if ( limit - base > thresh ) {  /* if more than T elements  */
                                       /*   swap base with middle  */
-         SWAP((((limit-base)/size)/2)*size+base, base);
+         swap_bytes( (char *)((((limit-base)/size)/2)*size+base), (char *)(base), size );
          i = base + size;             /* i scans left to right    */
          j = limit - size;            /* j scans right to left    */
-         if ( COMP(ctx, i, j) > 0 )   /* Sedgewick's              */
-            SWAP(i, j);               /*    three-element sort    */
-         if ( COMP(ctx, base, j) > 0 )/*        sets things up    */
-            SWAP(base, j);            /*            so that       */
-         if ( COMP(ctx, i, base) > 0 )/*      *i <= *base <= *j   */
-            SWAP(i, base);            /* *base is pivot element   */
+         if ( Comp(ctx, i, j) > 0 )   /* Sedgewick's              */
+            swap_bytes( (char *)(i), (char *)(j), size );               /*    three-element sort    */
+         if ( Comp(ctx, base, j) > 0 )/*        sets things up    */
+            swap_bytes( (char *)(base), (char *)(j), size );            /*            so that       */
+         if ( Comp(ctx, i, base) > 0 )/*      *i <= *base <= *j   */
+            swap_bytes( (char *)(i), (char *)(base), size );            /* *base is pivot element   */
          for ( ;; ) {                 /* loop until break         */
             do                        /* move i right             */
                i += size;             /*        until *i >= pivot */
-            while ( COMP(ctx, i, base) < 0 );
+            while ( Comp(ctx, i, base) < 0 );
             do                        /* move j left              */
                j -= size;             /*        until *j <= pivot */
-            while ( COMP(ctx, j, base) > 0 );
+            while ( Comp(ctx, j, base) > 0 );
             if ( i > j )              /* if pointers crossed      */
                break;                 /*     break loop           */
-            SWAP(i, j);       /* else swap elements, keep scanning*/
+            swap_bytes( (char *)(i), (char *)(j), size );       /* else swap elements, keep scanning*/
          }
-         SWAP(base, j);         /* move pivot into correct place  */
+         swap_bytes( (char *)(base), (char *)(j), size );         /* move pivot into correct place  */
          if ( j - base > limit - i ) {  /* if left subfile larger */
             sp[0] = base;             /* stack left subfile base  */
             sp[1] = j;                /*    and limit             */
@@ -93,8 +91,8 @@ extern "C" void qsort_s(void *basep, size_t nelems, size_t size,
          sp += 2;                     /* increment stack pointer  */
       } else {      /* else subfile is small, use insertion sort  */
          for ( j = base, i = j+size; i < limit; j = i, i += size )
-            for ( ; COMP(ctx, j, j+size) > 0; j -= size ) {
-               SWAP(j, j+size);
+            for ( ; Comp(ctx, j, j+size) > 0; j -= size ) {
+               swap_bytes( (char *)(j), (char *)(j+size), size );
                if ( j == base )
                   break;
             }

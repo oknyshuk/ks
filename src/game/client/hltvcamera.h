@@ -1,13 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef HLTVCAMERA_H
-#define HLTVCAMERA_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "GameEventListener.h"
+#include "usercmd.h"
+
+class CViewSetup;
+class C_BaseEntity;
+class C_BasePlayer;
 
 class C_HLTVCamera : CGameEventListener
 {
@@ -34,7 +34,7 @@ public:
 	void SpecNextPlayer( bool bInverse );
 	void SpecNamedPlayer( const char *szPlayerName );
 	void SpecPlayerByIndex( int iIndex );
-	void SpecPlayerByAccountID( const char *pszSteamID );
+	void SpecPlayerByAccountID( const char *pszPlayerID );
 	void ToggleChaseAsFirstPerson();
 	bool IsPVSLocked();
 	bool HasCameraMan() { return ( m_iCameraMan != 0 ); }
@@ -119,7 +119,3 @@ protected:
 
 
 extern C_HLTVCamera *HLTVCamera();	// get Singleton
-
-
-
-#endif // HLTVCAMERA_H

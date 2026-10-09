@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ISERVERPLUGIN_H
-#define ISERVERPLUGIN_H
-
-
+import ks.tier1;
 #include "edict.h"
-#include "tier1/interface.h"
-#include "tier1/keyvalues.h"
+import std;
 
 class CCommand;
 
@@ -38,18 +30,18 @@ typedef enum
 
 
 typedef int QueryCvarCookie_t;
-#define InvalidQueryCvarCookie -1
+inline constexpr auto InvalidQueryCvarCookie = -1;
 
 
-#define INTERFACEVERSION_ISERVERPLUGINCALLBACKS_VERSION_1	"ISERVERPLUGINCALLBACKS001"
-#define INTERFACEVERSION_ISERVERPLUGINCALLBACKS_VERSION_2	"ISERVERPLUGINCALLBACKS002"
-#define INTERFACEVERSION_ISERVERPLUGINCALLBACKS_VERSION_3	"ISERVERPLUGINCALLBACKS003"
-#define INTERFACEVERSION_ISERVERPLUGINCALLBACKS				"ISERVERPLUGINCALLBACKS004"
+inline constexpr const char *INTERFACEVERSION_ISERVERPLUGINCALLBACKS_VERSION_1 = "ISERVERPLUGINCALLBACKS001";
+inline constexpr const char *INTERFACEVERSION_ISERVERPLUGINCALLBACKS_VERSION_2 = "ISERVERPLUGINCALLBACKS002";
+inline constexpr const char *INTERFACEVERSION_ISERVERPLUGINCALLBACKS_VERSION_3 = "ISERVERPLUGINCALLBACKS003";
+inline constexpr const char *INTERFACEVERSION_ISERVERPLUGINCALLBACKS = "ISERVERPLUGINCALLBACKS004";
 
 //-----------------------------------------------------------------------------
 // Purpose: callbacks the engine exposes to the 3rd party plugins (ala MetaMod)
 //-----------------------------------------------------------------------------
-abstract_class IServerPluginCallbacks
+class IServerPluginCallbacks
 {
 public:
 	// Initialize the plugin to run
@@ -150,7 +142,7 @@ public:
 		byte *pbPlainTextKeyForNetchan ) = 0;
 };
 
-#define INTERFACEVERSION_ISERVERPLUGINHELPERS			"ISERVERPLUGINHELPERS001"
+inline constexpr const char *INTERFACEVERSION_ISERVERPLUGINHELPERS = "ISERVERPLUGINHELPERS001";
 
 
 typedef enum
@@ -165,7 +157,7 @@ typedef enum
 //-----------------------------------------------------------------------------
 // Purpose: functions that only 3rd party plugins need
 //-----------------------------------------------------------------------------
-abstract_class IServerPluginHelpers
+class IServerPluginHelpers
 {
 public:
 	// creates an onscreen menu with various option buttons
@@ -192,5 +184,3 @@ public:
 	// Returns InvalidQueryCvarCookie if the entity is invalid.
 	virtual QueryCvarCookie_t StartQueryCvarValue( edict_t *pEntity, const char *pName ) = 0;
 };
-
-#endif //ISERVERPLUGIN_H

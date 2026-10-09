@@ -1,22 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef MAPENTITIES_H
-#define MAPENTITIES_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "mapentities_shared.h"
-
+import std;
+class CBaseEntity;
 
 class CPointTemplate;
 
 
 // This class provides hooks into the map-entity loading process that allows CS to do some tricks
 // when restarting the round. The main trick it tries to do is recreate all 
-abstract_class IMapEntityFilter
+class IMapEntityFilter
 {
 public:
 	virtual bool ShouldCreateEntity( const char *pClassname ) = 0;
@@ -74,5 +69,3 @@ private:
 
 void SpawnHierarchicalList( int nEntities, HierarchicalSpawn_t *pSpawnList, bool bActivateEntities );
 void MapEntity_ParseAllEntites_SpawnTemplates( CPointTemplate **pTemplates, int iTemplateCount, CBaseEntity **pSpawnedEntities, HierarchicalSpawnMapData_t *pSpawnMapData, int iSpawnedEntityCount );
-
-#endif // MAPENTITIES_H

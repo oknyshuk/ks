@@ -1,49 +1,48 @@
-#include "platform.h"
-#include "box_buoyancy.h"
-#include "mathlib/vector4d.h"
+import std;
+import ks.math;
 
 inline const Vector ToVector( const fltx4 & f4 )
 {
 	return Vector( SubFloat( f4, 0 ), SubFloat( f4, 1 ), SubFloat( f4, 2 ) );
 }
 
-FORCEINLINE fltx4 PermYXZW( const fltx4 & a )
+[[gnu::always_inline]] inline fltx4 PermYXZW( const fltx4 & a )
 {
-	return _mm_shuffle_ps( a, a, _MM_SHUFFLE( 3, 2, 0, 1 ) );
+	return ks::simd::shuffle<1,0,2,3>( a );
 }
-FORCEINLINE fltx4 PermXZYW( const fltx4 & a )
+[[gnu::always_inline]] inline fltx4 PermXZYW( const fltx4 & a )
 {
-	return _mm_shuffle_ps( a, a, _MM_SHUFFLE( 3, 1, 2, 0 ) );
+	return ks::simd::shuffle<0,2,1,3>( a );
 }
-FORCEINLINE fltx4 PermZYXW( const fltx4 & a )
+[[gnu::always_inline]] inline fltx4 PermZYXW( const fltx4 & a )
 {
-	return _mm_shuffle_ps( a, a, _MM_SHUFFLE( 3, 0, 1, 2 ) );
+	return ks::simd::shuffle<2,1,0,3>( a );
 }
-FORCEINLINE fltx4 PermXXYW( const fltx4 & a )
+[[gnu::always_inline]] inline fltx4 PermXXYW( const fltx4 & a )
 {
-	return _mm_shuffle_ps( a, a, _MM_SHUFFLE( 3, 1, 0, 0 ) );
+	return ks::simd::shuffle<0,0,1,3>( a );
 }
 
-FORCEINLINE fltx4 PermYZZW( const fltx4 & a )
+[[gnu::always_inline]] inline fltx4 PermYZZW( const fltx4 & a )
 {
-	return _mm_shuffle_ps( a, a, _MM_SHUFFLE( 3, 2, 2, 1 ) );
+	return ks::simd::shuffle<1,2,2,3>( a );
 }
-FORCEINLINE fltx4 Sum3SIMD( const fltx4 &a )
+[[gnu::always_inline]] inline fltx4 Sum3SIMD( const fltx4 &a )
 {
 	return SplatXSIMD( a ) + SplatYSIMD( a ) + SplatZSIMD( a );
 }
-FORCEINLINE fltx4 CombineSIMD( const fltx4 & row0, const fltx4 & row1, const fltx4 & row2, const fltx4 & row3 )
+[[gnu::always_inline]] inline fltx4 CombineSIMD( const fltx4 & row0, const fltx4 & row1, const fltx4 & row2, const fltx4 & row3 )
 {
-	fltx4 tmp0 = _mm_shuffle_ps( row0, row1, 0x44);
-	fltx4 tmp1 = _mm_shuffle_ps( row2, row3, 0x44);
-	return _mm_shuffle_ps(tmp0, tmp1, 0x88);
+	fltx4 tmp0 = ks::simd::shuffle<0,1,0,1>( row0, row1 );
+	fltx4 tmp1 = ks::simd::shuffle<0,1,0,1>( row2, row3 );
+	return ks::simd::shuffle<0,2,0,2>( tmp0, tmp1 );
 }
 
 // Assumes Y(xbox),Z(PC) are splatted
-FORCEINLINE fltx4 CombineXYZ_Special( const fltx4 & x, const fltx4 & y, const fltx4 & z )
+[[gnu::always_inline]] inline fltx4 CombineXYZ_Special( const fltx4 & x, const fltx4 & y, const fltx4 & z )
 {
-	fltx4 tmp0 = _mm_shuffle_ps( x, y, 0x44);
-	return _mm_shuffle_ps(tmp0, z, 0x88);
+	fltx4 tmp0 = ks::simd::shuffle<0,1,0,1>( x, y );
+	return ks::simd::shuffle<0,2,0,2>( tmp0, z );
 }
 
 
@@ -228,8 +227,8 @@ inline FourVectors MsubSIMD( const FourVectors &a, const fltx4 &b, const FourVec
 const fltx4 g_f4_11h4 = {1,1,0.5f,4.0f};
 const fltx4 g_f4_4424 = {4,4,2,4};
 const fltx4 g_f4AlmostInifiniteSlope = {1e+24,1e+24,1e+24,1e+24};
-const int32 ALIGN16 g_SIMD_signmask_W[4] ALIGN16_POST = { (int)0x80000000, (int)0x80000000, (int)0x80000000, (int)0xFFFFFFFF };
-const int32 ALIGN16 g_SIMD_signmask_NoW[4] ALIGN16_POST = { (int)0x80000000, (int)0x80000000, (int)0x80000000, 0 };
+const int32 g_SIMD_signmask_W[4] [[gnu::aligned(16)]] = { (int)0x80000000, (int)0x80000000, (int)0x80000000, (int)0xFFFFFFFF };
+const int32 g_SIMD_signmask_NoW[4] [[gnu::aligned(16)]] = { (int)0x80000000, (int)0x80000000, (int)0x80000000, 0 };
 
 // physical interpretation: we're integrating the pressure force (pascals) along the submerged surface.
 // in other words, we substitute the usual volume integral for surface integral
@@ -270,7 +269,7 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 	box.y = MaskedAssign( swap_b_c, PermXZYW( box.y ), box.y );
 	box.z = MaskedAssign( swap_b_c, PermXZYW( box.z ), box.z );
 
-	Assert( SubFloat( box.z, 0 ) >= SubFloat( box.z, 1 ) && SubFloat( box.z, 1 ) >= SubFloat( box.z, 2 ) && SubFloat( box.z, 2 ) >= 0 );
+	contract_assert( SubFloat( box.z, 0 ) >= SubFloat( box.z, 1 ) && SubFloat( box.z, 1 ) >= SubFloat( box.z, 2 ) && SubFloat( box.z, 2 ) >= 0 );
 
 	// sorted and positive, time to integrate sides: (a,b) (a,c) (b,c)
 	// (a-b).z > (b-a).z, so the a+b, a-b, b-a, -a-b is the order of corners, top-to-bottom
@@ -314,7 +313,7 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 	//             (a+b)-(b-a)	  2a	a
 	//
 	fltx4 f4CutPart = MulSIMD( boxB.z, rcpAz );  // this must be between 0 (b is parallel to z=const) and 1 (a and b both have 45' slope)
-	Assert( IsAllGreaterThanOrEq( Four_Ones + f4Epsilon, SetWToZeroSIMD( f4CutPart ) ) && IsAllGreaterThanOrEq( f4CutPart + f4Epsilon, SetWToZeroSIMD( Four_Zeros ) ) );
+	contract_assert( IsAllGreaterThanOrEq( Four_Ones + f4Epsilon, SetWToZeroSIMD( f4CutPart ) ) && IsAllGreaterThanOrEq( f4CutPart + f4Epsilon, SetWToZeroSIMD( Four_Zeros ) ) );
 	//fltx4 rcpCutPart = AndSIMD( ReciprocalSIMD( f4CutPart ), CmpGtSIMD( f4CutPart, f4Epsilon ) );
 
 	// integrate the full sides of the box, multiplied by the XY projection areas
@@ -352,13 +351,6 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 	fltx4 f4Full_W_Cpos = Four_Fours * ( boxCenterZ + boxC.z ), f4Full_W_Cneg = Four_Fours * ( boxCenterZ - boxC.z );
 
 	// this is how we'd  compute the center of mass for fully-submerged cube, for validation
-#ifdef _DEBUG
-	fltx4 f4TestVolume = Dot3SIMD( f4Full_W_Cpos - f4Full_W_Cneg, f4SideProj );
-	fltx4 f4TestSideProjDivVolume = f4SideProj * ReciprocalSIMD( f4TestVolume );
-	fltx4 f4TestLeverX = Dot3SIMD( f4Full_X_Cpos - f4Full_X_Cneg, f4TestSideProjDivVolume ), f4TestLeverY = Dot3SIMD( f4Full_Y_Cpos - f4Full_Y_Cneg, f4TestSideProjDivVolume );
-	fltx4 f4TestLeverZ = Dot3SIMD( f4Full_Z_Cpos - f4Full_Z_Cneg, f4TestSideProjDivVolume );
-	fltx4 f4TestResult = CombineSIMD( f4TestLeverX + SplatWSIMD(box_in.x), f4TestLeverY + SplatWSIMD(box_in.y), f4TestLeverZ, f4TestVolume ); (void)f4TestResult;
-#endif
 
 	//
 	//
@@ -456,15 +448,6 @@ fltx4 GetBoxBuoyancy3x4( const FourVectors &box_in )
 
 		fltx4 f4Center_W_Cpos = Four_Fours * f4CenterZ0_Cpos, f4Center_W_Cneg = Four_Fours * f4CenterZ0_Cneg;
 
-#ifdef _DEBUG
-		fltx4 f4CenterVolume = Dot3SIMD( f4Center_W_Cpos, f4CenterProj_Cpos ) - Dot3SIMD( f4Center_W_Cneg, f4CenterProj_Cneg );
-		fltx4 f4CenterLeverX = Dot3SIMD( f4Center_X_Cpos, f4CenterProj_Cpos ) - Dot3SIMD( f4Center_X_Cneg, f4CenterProj_Cneg );
-		fltx4 f4CenterLeverY = Dot3SIMD( f4Center_Y_Cpos, f4CenterProj_Cpos ) - Dot3SIMD( f4Center_Y_Cneg, f4CenterProj_Cneg );
-		fltx4 f4CenterLeverZ = Dot3SIMD( f4Center_Z_Cpos, f4CenterProj_Cpos ) - Dot3SIMD( f4Center_Z_Cneg, f4CenterProj_Cneg );
-
-		// this is the condenced result of previous integration
-		fltx4 f4CenterComponent = CombineSIMD( f4CenterLeverX, f4CenterLeverY, f4CenterLeverZ, f4CenterVolume );(void)f4CenterComponent;
-#endif
 	//
 	//
 	//////////////////////////////////////////////////////////////////////////
@@ -644,7 +627,7 @@ Vector4D GetPyramidBuoyancy( const Vector &pos, const Vector &a, const Vector &b
 			// switching sign
 			float flFraction = prevVert.z / ( prevVert.z - verts[i].z );
 			verts2[numVerts2] = prevVert * ( 1 - flFraction ) +  verts[i] * flFraction;
-			Assert( fabs( verts2[numVerts2].z ) < 1e-5f );
+			contract_assert( std::fabs( verts2[numVerts2].z ) < 1e-5f );
 			verts2[numVerts2].z = 0;
 			numVerts2++;
 		}
@@ -654,7 +637,7 @@ Vector4D GetPyramidBuoyancy( const Vector &pos, const Vector &a, const Vector &b
 	float flSum = 0, flSign = 1.0f;
 	Vector vecCenter( 0, 0, 0 );
 	Vector normal = CrossProduct( a, b );
-	Assert( DotProduct( normal, n ) >= -1e-6f );
+	contract_assert( DotProduct( normal, n ) >= -1e-6f );
 	if ( DotProduct( pos + n, normal ) < 0 ) // pos + n is the center of the face
 	{
 		flSign = -1.0f;
@@ -685,7 +668,7 @@ Vector4D GetPyramidBuoyancy( const Vector &pos, const Vector &a, const Vector &b
 		{
 			// this segment is guaranteed to be under water
 			float flElementVolume = DotProduct( CrossProduct( curVert, rootVert ), nextVert ) / 6;
-			flElementVolume = fabs( flElementVolume );
+			flElementVolume = std::fabs( flElementVolume );
 			flSum += flElementVolume ;
 
 			Vector vecElementCenter =  ( rootVert + curVert + nextVert ) * 0.25f;
@@ -787,7 +770,7 @@ Vector4D GetBuoyancy( const Vector &pos, Vector box[3] )
 Vector4D operator % ( const Vector4D & a, const Vector4D & b )
 {
 	Vector4D ave;
-	ave.Init( fabs( a.w + b.w ) > 1e-6f ? ( a.AsVector3D() * a.w + b.AsVector3D() * b.w ) / ( a.w + b.w ) : Vector( 0, 0, 0 ), a.w + b.w );
+	ave.Init( std::fabs( a.w + b.w ) > 1e-6f ? ( a.AsVector3D() * a.w + b.AsVector3D() * b.w ) / ( a.w + b.w ) : Vector( 0, 0, 0 ), a.w + b.w );
 	return ave;
 }
 
@@ -846,11 +829,7 @@ struct Test_t
 	void Test()
 	{
 		PermTest();
-#ifdef _DEBUG
-		BuoyancyTest();
-#else
 		Benchmark();
-#endif
 	}
 
 	bool TestAllEqual( const fltx4 & a, const fltx4 & b )
@@ -860,30 +839,6 @@ struct Test_t
 
 	void PermTest()
 	{
-#ifdef _DEBUG
-		fltx4 f4Canonical = {0.125f, 1.125f, 2.125f, 3.125f};
-		float flCanonical[4] = {0.125f, 1.125f, 2.125f, 3.125f};
-		fltx4 f4CanonicalYXZW = {1.125f, 0.125f, 2.125f, 3.125f};
-		fltx4 f4CanonicalXZYW = {0.125f, 2.125f, 1.125f, 3.125f};
-		fltx4 f4CanonicalZYXW = {2.125f, 1.125f, 0.125f, 3.125f};
-		fltx4 f4CanonicalXXYW = {0.125f, 0.125f, 1.125f, 3.125f};
-		fltx4 f4CanonicalYZZW = {1.125f, 2.125f, 2.125f, 3.125f};
-
-		Assert( TestAllEqual( f4Canonical, LoadUnalignedSIMD( flCanonical ) ) );
-
-		for ( int i = 0; i < 4; ++i )
-		{
-			float flSubFloat = SubFloat( f4Canonical, i );
-			Assert( fabs( flSubFloat - float( i ) - 0.125f ) < 1e-6f );
-		}
-
-
-		Assert( TestAllEqual( PermYXZW( f4Canonical ), ( f4CanonicalYXZW ) ) );
-		Assert( TestAllEqual( PermXZYW( f4Canonical ), ( f4CanonicalXZYW ) ) );
-		Assert( TestAllEqual( PermZYXW( f4Canonical ), ( f4CanonicalZYXW ) ) );
-		Assert( TestAllEqual( PermXXYW( f4Canonical ), ( f4CanonicalXXYW ) ) );
-		Assert( TestAllEqual( PermYZZW( f4Canonical ), f4CanonicalYZZW ) );
-#endif
 	}
 
 	void BuoyancyTest()
@@ -898,13 +853,13 @@ struct Test_t
 			{Vector( 2, 0, 1 ), Vector( -1, 0, 2 ), Vector( 0, 0, 0.0f )},
 			{RotateZ(Vector( 1, 0, 1 ),45), RotateZ(Vector( -1, 0, 1 ),45), Vector( 0, 0, 0.0f )},
 			{RotateZ(Vector( 1, 0, 1 ),30), RotateZ(Vector( -1, 0, 1 ),30), Vector( 0, 0, 0.5f )},
-			{RotateZ(Vector( sqrtf(0.5f), 0, sqrtf(0.5f) ),45), RotateZ(Vector( 0, 1, 0 ),45), Vector( 0, 0, 0.5f )},
-			{RotateY(RotateZ(Vector(1,0,0),45),atan(sqrtf(2))*180/M_PI),RotateY(RotateZ(Vector(0,1,0),45),atan(sqrtf(2))*180/M_PI), Vector(0,0,0)}, // unit cube with tips extended high/low
-			{RotateY(RotateZ(Vector(1,0,0),45),atan(sqrtf(2))*180/M_PI),RotateY(RotateZ(Vector(0,1,0),45),atan(sqrtf(2))*180/M_PI), Vector(0,0,0.01f)}, // unit cube with tips extended high/low
-			{RotateY(RotateZ(Vector(1,0,0),45),atan(sqrtf(2))*180/M_PI),RotateY(RotateZ(Vector(0,1,0),45),atan(sqrtf(2))*180/M_PI), Vector(0,0,0.25f)}, // unit cube with tips extended high/low
-			{RotateY(RotateZ(Vector(1,0,0),45),atan(sqrtf(2))*180/M_PI),RotateY(RotateZ(Vector(0,1,0),45),atan(sqrtf(2))*180/M_PI), Vector(0,0,0.5f)}, // unit cube with tips extended high/low
-			{RotateY(RotateZ(Vector(1,0,0),45),atan(sqrtf(2))*180/M_PI),RotateY(RotateZ(Vector(0,1,0),45),atan(sqrtf(2))*180/M_PI), Vector(0,0,-0.25f)}, // unit cube with tips extended high/low
-			{RotateY(RotateZ(Vector(1,0,0),45),atan(sqrtf(2))*180/M_PI),RotateY(RotateZ(Vector(0,1,0),45),atan(sqrtf(2))*180/M_PI), Vector(0,0,-0.5f)}, // unit cube with tips extended high/low
+			{RotateZ(Vector( std::sqrtf(0.5f), 0, std::sqrtf(0.5f) ),45), RotateZ(Vector( 0, 1, 0 ),45), Vector( 0, 0, 0.5f )},
+			{RotateY(RotateZ(Vector(1,0,0),45),std::atan(std::sqrtf(2))*180/std::numbers::pi),RotateY(RotateZ(Vector(0,1,0),45),std::atan(std::sqrtf(2))*180/std::numbers::pi), Vector(0,0,0)}, // unit cube with tips extended high/low
+			{RotateY(RotateZ(Vector(1,0,0),45),std::atan(std::sqrtf(2))*180/std::numbers::pi),RotateY(RotateZ(Vector(0,1,0),45),std::atan(std::sqrtf(2))*180/std::numbers::pi), Vector(0,0,0.01f)}, // unit cube with tips extended high/low
+			{RotateY(RotateZ(Vector(1,0,0),45),std::atan(std::sqrtf(2))*180/std::numbers::pi),RotateY(RotateZ(Vector(0,1,0),45),std::atan(std::sqrtf(2))*180/std::numbers::pi), Vector(0,0,0.25f)}, // unit cube with tips extended high/low
+			{RotateY(RotateZ(Vector(1,0,0),45),std::atan(std::sqrtf(2))*180/std::numbers::pi),RotateY(RotateZ(Vector(0,1,0),45),std::atan(std::sqrtf(2))*180/std::numbers::pi), Vector(0,0,0.5f)}, // unit cube with tips extended high/low
+			{RotateY(RotateZ(Vector(1,0,0),45),std::atan(std::sqrtf(2))*180/std::numbers::pi),RotateY(RotateZ(Vector(0,1,0),45),std::atan(std::sqrtf(2))*180/std::numbers::pi), Vector(0,0,-0.25f)}, // unit cube with tips extended high/low
+			{RotateY(RotateZ(Vector(1,0,0),45),std::atan(std::sqrtf(2))*180/std::numbers::pi),RotateY(RotateZ(Vector(0,1,0),45),std::atan(std::sqrtf(2))*180/std::numbers::pi), Vector(0,0,-0.5f)}, // unit cube with tips extended high/low
 			{Vector( 2, 1, 1 ), Vector( -1, 1, 1 ), Vector( 0, 0, 0.0f )},
 			{Vector( 2, 1, 1 ), Vector( -1, 1, 1 ), Vector( 0, 0, 0.5f )},
 			{Vector( 0, 2, 1 ).Normalized(), Vector( 1, -1, 2 ).Normalized(), Vector( 0, 0, 0 )},
@@ -935,14 +890,14 @@ struct Test_t
 			Vector4D result1 = GetBoxBuoyancy(a,b,c,pos);
 			fltx4 f4ResultV2 = GetBoxBuoyancy3x4( box );
 			fltx4 f4Residual = f4ResultV2 - LoadUnalignedSIMD( &result1 );
-			float flError = sqrtf( SubFloat( Dot4SIMD( f4Residual, f4Residual ), 0 ) );
+			float flError = std::sqrtf( SubFloat( Dot4SIMD( f4Residual, f4Residual ), 0 ) );
 			if( flError > flMaxError )
 			{
 				flMaxError = flError;
 				Msg( "%d. Error %g\n", nAttempt, flError);
 			}
 
-			Assert( IsAllGreaterThan( ReplicateX4( 1e-4f ), fabs( f4Residual ) ) );
+			contract_assert( IsAllGreaterThan( ReplicateX4( 1e-4f ), fabs( f4Residual ) ) );
 
 			float flBoxVolume = a.Length() * b.Length() * c.Length() * 8; (void)(flBoxVolume); // debug only
 

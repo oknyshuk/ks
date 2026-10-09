@@ -1,6 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Arbitrary length bit string
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Arbitrary length bit string
 //				** NOTE: This class does NOT override the bitwise operators
 //						 as doing so would require overriding the operators
 //						 to allocate memory for the returned bitstring.  This method
@@ -8,18 +10,3 @@
 //						 would have to remember to delete the memory.  Funtions
 //						 are used instead to require the calling party to allocate
 //						 and destroy their own memory
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef BITSTRING_H
-#define BITSTRING_H
-#pragma once
-
-#endif // BITSTRING_H

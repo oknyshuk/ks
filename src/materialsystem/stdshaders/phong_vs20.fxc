@@ -1,9 +1,9 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "SFM"						"0..0" [vs20] [PC]
 // STATIC: "SFM"						"0..1" [vs30] [PC]
 // STATIC: "SFM"						"0..0" [CONSOLE]
-
 // STATIC: "DECAL"							"0..1" [vs30]
 // STATIC: "WORLD_NORMAL"					"0..0" [vs20] [PC]
 // STATIC: "WORLD_NORMAL"					"0..1" [vs30] [PC]
@@ -12,7 +12,6 @@
 // STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..0" [CONSOLE]
 // STATIC: "CASCADED_SHADOW_MAPPING"		"0..1" [vs20] [PC]
 // STATIC: "CASCADED_SHADOW_MAPPING"		"0..0" [vs30] [PC]
-
 // DYNAMIC: "CSM_VIEWMODELQUALITY"			"0..1" [vs20] [PC]
 // DYNAMIC: "CSM_VIEWMODELQUALITY"			"0..0" [vs30] [PC]
 // DYNAMIC: "COMPRESSED_VERTS"				"0..1"
@@ -23,14 +22,11 @@
 // DYNAMIC: "TESSELLATION"					"0..0" [CONSOLE]
 // DYNAMIC: "NUM_LIGHTS"					"0..2" [vs20] [PC]
 // DYNAMIC: "NUM_LIGHTS"					"0..0" [vs20] [CONSOLE]
-// DYNAMIC: "STATICLIGHT3"					"0..1" 
-
+// DYNAMIC: "STATICLIGHT3"					"0..1"
 //	SKIP: ( $SFM == 0 ) && ( $MORPHING )
 //	SKIP: ( $SFM == 0 ) && ( $TESSELLATION )
-
 // If using static control flow on Direct3D, we should use the NUM_LIGHTS=0 combo
-//  SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 ) [vs20] [PC]
-
+// SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 ) [vs20] [PC]
 // SKIP: ( $MORPHING || $SKINNING || $COMPRESSED_VERTS ) && $TESSELLATION
 
 #include "common_fog_vs_supportsvertexfog_fxc.h"

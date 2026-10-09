@@ -1,38 +1,16 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:  Utility class to help in socket creation. Works for clients + servers
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
+// Purpose: Utility class to help in socket creation. Works for clients + servers
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <errno.h>
-#include <sys/ioctl.h>
-#define closesocket close
-#define WSAGetLastError() errno
-#define ioctlsocket ioctl
-#include <tier0/dbg.h>
+import std;
+import ks.core;
+
 #include "socketcreator.h"
-//#include "server.h"
 
-
-/*
-====================
-NET_ErrorString
-====================
-*/
-const char *NET_ErrorString (int code)
+const char *NET_ErrorString( ks::platform::socket_error error )
 {
-	return strerror( code );
-}
-
-bool SocketWouldBlock()
-{
-	return (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS);
+	return ks::platform::socket_error_text( error );
 }
 
 //-----------------------------------------------------------------------------
@@ -40,7 +18,7 @@ bool SocketWouldBlock()
 //-----------------------------------------------------------------------------
 CSocketCreator::CSocketCreator( ISocketCreatorListener *pListener )
 {
-	m_hListenSocket = -1;
+	m_hListenSocket = nullptr;
 	m_pListener = pListener;
 }
 
@@ -58,7 +36,7 @@ CSocketCreator::~CSocketCreator()
 //-----------------------------------------------------------------------------
 bool CSocketCreator::IsListening() const
 {
-	return m_hListenSocket != -1;
+	return m_hListenSocket != nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -68,11 +46,12 @@ bool CSocketCreator::CreateListenSocket( const netadr_t &netAdr, bool bListenOnA
 {
 	CloseListenSocket();
 
+	ks::platform::socket_error error = ks::platform::socket_error::none;
 	m_ListenAddress = netAdr;
-	m_hListenSocket = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if ( m_hListenSocket == -1 )
+	m_hListenSocket = ks::platform::open_tcp( &error );
+	if ( m_hListenSocket == nullptr )
 	{
-		Warning( "Socket unable to create socket (%s)\n", NET_ErrorString( WSAGetLastError() ) );
+		Warning( "Socket unable to create socket (%s)\n", NET_ErrorString( error ) );
 		return false;
 	}
 
@@ -82,22 +61,19 @@ bool CSocketCreator::CreateListenSocket( const netadr_t &netAdr, bool bListenOnA
 		return false;
 	}
 
-	struct sockaddr_in s;
-	m_ListenAddress.ToSockadr( (struct sockaddr *)&s );
+	ks::platform::address local = m_ListenAddress.ToAddress();
 	if ( bListenOnAllInterfaces )
-		s.sin_addr.s_addr = INADDR_ANY;
-	int ret = bind( m_hListenSocket, (struct sockaddr *)&s, sizeof(struct sockaddr_in) );
-	if ( ret == -1 )
+		local.ip = 0;
+	if ( !ks::platform::bind( m_hListenSocket, local, &error ) )
 	{
-		Warning( "Socket bind failed (%s)\n", NET_ErrorString( WSAGetLastError() ) );
+		Warning( "Socket bind failed (%s)\n", NET_ErrorString( error ) );
 		CloseListenSocket();
 		return false;
 	}
 
-	ret = listen( m_hListenSocket, SOCKET_TCP_MAX_ACCEPTS );
-	if ( ret == -1 )
+	if ( !ks::platform::listen_on( m_hListenSocket, SOCKET_TCP_MAX_ACCEPTS, &error ) )
 	{
-		Warning( "Socket listen failed (%s)\n", NET_ErrorString( WSAGetLastError() ) );
+		Warning( "Socket listen failed (%s)\n", NET_ErrorString( error ) );
 		CloseListenSocket();
 		return false;
 	}
@@ -109,20 +85,16 @@ bool CSocketCreator::CreateListenSocket( const netadr_t &netAdr, bool bListenOnA
 //-----------------------------------------------------------------------------
 // Configures a socket for use
 //-----------------------------------------------------------------------------
-bool CSocketCreator::ConfigureSocket( int sock )
+bool CSocketCreator::ConfigureSocket( SocketHandle_t sock )
 {
 	// disable NAGLE (rcon cmds are small in size)
-	int nodelay = 1;
-	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&nodelay, sizeof(nodelay)); 
+	ks::platform::set_socket_option( sock, ks::platform::socket_option::no_delay, 1, nullptr );
+	ks::platform::set_socket_option( sock, ks::platform::socket_option::reuse_address, 1, nullptr );
 
-	nodelay = 1;
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&nodelay, sizeof(nodelay));
-
-	int opt = 1, ret; 
-	ret = ioctlsocket( sock, FIONBIO, (unsigned long*)&opt ); // non-blocking
-	if ( ret == -1 )
+	ks::platform::socket_error error = ks::platform::socket_error::none;
+	if ( !ks::platform::set_nonblocking( sock, &error ) )
 	{
-		Warning( "Socket accept ioctl(FIONBIO) failed (%i)\n", WSAGetLastError() );
+		Warning( "Socket accept set_nonblocking failed (%s)\n", NET_ErrorString( error ) );
 		return false;
 	}
 	return true;
@@ -134,33 +106,29 @@ bool CSocketCreator::ConfigureSocket( int sock )
 //-----------------------------------------------------------------------------
 void CSocketCreator::ProcessAccept()
 {
-	int newSocket;
-	sockaddr sa;
-	int nLengthAddr = sizeof(sa);
-
-	newSocket = accept( m_hListenSocket, &sa, (socklen_t *)&nLengthAddr );
-	if ( newSocket == -1 )
+	ks::platform::address peer{};
+	ks::platform::socket_error error = ks::platform::socket_error::none;
+	SocketHandle_t newSocket = ks::platform::accept_connection( m_hListenSocket, &peer, &error );
+	if ( newSocket == nullptr )
 	{
-		if ( !SocketWouldBlock()
-			&& errno != EINTR 
-		 )
+		if ( error != ks::platform::socket_error::again && error != ks::platform::socket_error::interrupted )
 		{
-			Warning ("Socket ProcessAccept Error: %s\n", NET_ErrorString( WSAGetLastError() ) );
+			Warning ("Socket ProcessAccept Error: %s\n", NET_ErrorString( error ) );
 		}
 		return;
 	}
 
 	if ( !ConfigureSocket( newSocket ) )
 	{
-		closesocket( newSocket );
+		ks::platform::close_socket( newSocket );
 		return; 
 	}
 
 	netadr_t adr;
-	adr.SetFromSockadr( &sa );
+	adr.SetFromAddress( peer );
 	if ( m_pListener && !m_pListener->ShouldAcceptSocket( newSocket, adr ) )
 	{
-		closesocket( newSocket );
+		ks::platform::close_socket( newSocket );
 		return;
 	}
 
@@ -190,55 +158,44 @@ int CSocketCreator::ConnectSocket( const netadr_t &netAdr, bool bSingleSocket )
 		CloseAllAcceptedSockets();
 	}
 
-	SocketHandle_t hSocket = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP );
-	if ( hSocket == -1 )
+	ks::platform::socket_error error = ks::platform::socket_error::none;
+	SocketHandle_t hSocket = ks::platform::open_tcp( &error );
+	if ( hSocket == nullptr )
 	{
-		Warning( "Unable to create socket (%s)\n", NET_ErrorString( WSAGetLastError() ) );
+		Warning( "Unable to create socket (%s)\n", NET_ErrorString( error ) );
 		return -1;
 	}
 
-	int opt = 1, ret;
-	ret = ioctlsocket( hSocket, FIONBIO, (unsigned long*)&opt ); // non-blocking
-	if ( ret == -1 )
+	if ( !ks::platform::set_nonblocking( hSocket, &error ) )
 	{
-		Warning( "Socket ioctl(FIONBIO) failed (%s)\n", NET_ErrorString( WSAGetLastError() ) );
-		closesocket( hSocket );
-		return -1;																	   
+		Warning( "Socket set_nonblocking failed (%s)\n", NET_ErrorString( error ) );
+		ks::platform::close_socket( hSocket );
+		return -1;
 	}
 
 	// disable NAGLE (rcon cmds are small in size)
-	int nodelay = 1;
-	setsockopt( hSocket, IPPROTO_TCP, TCP_NODELAY, (char*)&nodelay, sizeof(nodelay) ); 
+	ks::platform::set_socket_option( hSocket, ks::platform::socket_option::no_delay, 1, nullptr );
 
-	struct sockaddr_in s;
-	netAdr.ToSockadr( (struct sockaddr *)&s );
-
-	ret = connect( hSocket, (struct sockaddr *)&s, sizeof(s));
-	if ( ret == -1 )
+	if ( !ks::platform::connect( hSocket, netAdr.ToAddress(), &error ) )
 	{
-		if ( !SocketWouldBlock() )
+		if ( error != ks::platform::socket_error::again )
 		{	
-			Warning( "Socket connection failed (%s)\n", NET_ErrorString( WSAGetLastError() ) );
-			closesocket( hSocket );
+			Warning( "Socket connection failed (%s)\n", NET_ErrorString( error ) );
+			ks::platform::close_socket( hSocket );
 			return -1;
 		}
 
-		fd_set writefds;
-		struct timeval tv;
-		tv.tv_usec = 0;
-		tv.tv_sec = 1;
-		FD_ZERO( &writefds );
-		FD_SET( static_cast<u_int>( hSocket ), &writefds );
-		if ( select ( hSocket + 1, nullptr, &writefds, nullptr, &tv ) < 1 ) // block for at most 1 second
+		// block for at most 1 second
+		if ( !ks::platform::wait_writable( hSocket, 1000000000ull, nullptr ) )
 		{
-			closesocket( hSocket );		// took too long to connect to, give up
+			ks::platform::close_socket( hSocket );		// took too long to connect to, give up
 			return -1;
 		}
 	}
 
 	if ( m_pListener && !m_pListener->ShouldAcceptSocket( hSocket, netAdr ) )
 	{
-		closesocket( hSocket );
+		ks::platform::close_socket( hSocket );
 		return -1;
 	}
 
@@ -265,10 +222,10 @@ int CSocketCreator::ConnectSocket( const netadr_t &netAdr, bool bSingleSocket )
 //-----------------------------------------------------------------------------
 void CSocketCreator::CloseListenSocket()
 {
-	if ( m_hListenSocket != -1 )
+	if ( m_hListenSocket != nullptr )
 	{
-		closesocket( m_hListenSocket );
-		m_hListenSocket = -1;
+		ks::platform::close_socket( m_hListenSocket );
+		m_hListenSocket = nullptr;
 	}
 }
 
@@ -282,7 +239,7 @@ void CSocketCreator::CloseAcceptedSocket( int nIndex )
 	{
 		m_pListener->OnSocketClosed( connected.m_hSocket, connected.m_Address, connected.m_pData );
 	}
-	closesocket( connected.m_hSocket );
+	ks::platform::close_socket( connected.m_hSocket );
 	m_hAcceptedSockets.erase( m_hAcceptedSockets.begin() + nIndex );
 }
 
@@ -296,7 +253,7 @@ void CSocketCreator::CloseAllAcceptedSockets()
 		{
 			m_pListener->OnSocketClosed( connected.m_hSocket, connected.m_Address, connected.m_pData );
 		}
-		closesocket( connected.m_hSocket );
+		ks::platform::close_socket( connected.m_hSocket );
 	}
 	m_hAcceptedSockets.clear();
 }
@@ -343,5 +300,3 @@ void* CSocketCreator::GetAcceptedSocketData( int nIndex )
 {
 	return m_hAcceptedSockets[nIndex].m_pData;
 }
-
-

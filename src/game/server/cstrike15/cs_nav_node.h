@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_node.h
 // Navigation Nodes are used when generating a Navigation Mesh by point sampling the map
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
-
-#ifndef _CS_NAV_NODE_H_
-#define _CS_NAV_NODE_H_
 
 #include "cs_nav.h"
 
@@ -50,7 +44,7 @@ public:
 	CSNavNode *GetParent( void ) const;
 
 	void MarkAsVisited( NavDirType dir );							///< mark the given direction as having been visited
-	BOOL HasVisited( NavDirType dir );								///< return TRUE if the given direction has already been searched
+	BOOL HasVisited( NavDirType dir );								///< return true if the given direction has already been searched
 	BOOL IsBiLinked( NavDirType dir ) const;						///< node is bidirectionally linked to another node in the given direction
 	BOOL IsClosedCell( void ) const;								///< node is the NW corner of a bi-linked quad of nodes
 
@@ -130,6 +124,3 @@ inline CNavArea *CSNavNode::GetArea( void ) const
 {
 	return m_area;
 }
-
-
-#endif // _CS_NAV_NODE_H_

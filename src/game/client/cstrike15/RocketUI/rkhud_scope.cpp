@@ -1,17 +1,26 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
+#include "rocketui/rmlui.h"
 #include "rkhud_scope.h"
 
 #include "rkhud_model.h"
 
-#include "cbase.h"
-#include "hud_macros.h"
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "c_cs_player.h"
 #include "weapon_csbase.h"
 #include "predicted_viewmodel.h"
 
 #include <rocketui/rmlui.h>
+import ks.tier1;
+import std;
 
 DECLARE_HUDELEMENT_DEPTH( RkHudScope, 70 );
 
@@ -127,7 +136,7 @@ void RkHudScope::UpdateScope()
         return;
 
     float fHalfFov = DEG2RAD( flTargetFOVForZoom ) * 0.5f;
-    float fInaccuracyIn640x480Pixels = 320.0f / tanf( fHalfFov );
+    float fInaccuracyIn640x480Pixels = 320.0f / std::tanf( fHalfFov );
 
     float fWeaponInaccuracy = pWeapon->GetInaccuracy() + pWeapon->GetSpread();
     if( !cl_crosshair_sniper_show_normal_inaccuracy.GetBool() )
@@ -139,7 +148,7 @@ void RkHudScope::UpdateScope()
 
     // Animate blur
     float flInsetGoal = fSpreadDistance * ( 0.4f / 30.0f );
-    m_fAnimInset = Approach( flInsetGoal, m_fAnimInset, fabsf( ( flInsetGoal - m_fAnimInset ) * gpGlobals->frametime ) * 19.0f );
+    m_fAnimInset = Approach( flInsetGoal, m_fAnimInset, std::fabsf( ( flInsetGoal - m_fAnimInset ) * gpGlobals->frametime ) * 19.0f );
     m_fLineSpreadDistance = RemapValClamped( gpGlobals->frametime * 140.0f, 0.0f, 1.0f, m_fLineSpreadDistance, fRawSpreadDistance );
 
     float flAccuracyFishtail = pWeapon->GetAccuracyFishtail();
@@ -188,13 +197,13 @@ void RkHudScope::UpdateScope()
     if( thickness < 1 )
         thickness = 1;
 
-    float fBlurWidth = powf( m_fLineSpreadDistance, 0.75f );
+    float fBlurWidth = std::powf( m_fLineSpreadDistance, 0.75f );
     float fScreenBlurWidth = fBlurWidth * screenTall / 640.0f;
     next.steady = ( fScreenBlurWidth <= thickness + 0.5f );
 
     float a = next.steady ? ( ( fBlurWidth < 1.0f ) ? 1.0f : 1.0f / fBlurWidth )
                           : ( ( fBlurWidth < 1.8f ) ? 1.0f : 1.8f / fBlurWidth );
-    a = clamp( sqrtf( a ), 140.0f / 255.0f, 1.0f );
+    a = clamp( std::sqrtf( a ), 140.0f / 255.0f, 1.0f );
     char op[16];
     V_snprintf( op, sizeof(op), "%.3f", a );
     next.opacity = op;

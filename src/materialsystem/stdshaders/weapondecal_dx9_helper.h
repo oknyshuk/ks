@@ -1,9 +1,10 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef WEAPONDECAL_HELPER_H
-#define WEAPONDECAL_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+class CBasePerMaterialContextData;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -20,7 +21,7 @@ struct WeaponDecalVars_t
 {
 	WeaponDecalVars_t()
 	{
-		memset( this, 0xFF, sizeof( WeaponDecalVars_t ) );
+		std::memset( this, 0xFF, sizeof( WeaponDecalVars_t ) );
 	}
 
 	int m_nBaseTexture;
@@ -114,5 +115,3 @@ void InitWeaponDecal( CBaseVSShader *pShader, IMaterialVar** params, WeaponDecal
 void DrawWeaponDecal( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 	IShaderShadow* pShaderShadow, WeaponDecalVars_t &info, VertexCompressionType_t vertexCompression,
 	CBasePerMaterialContextData **pContextDataPtr );
-
-#endif // WEAPONDECAL_HELPER_H

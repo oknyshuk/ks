@@ -1,16 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-#include "tier1/text_reader.h"
+import ks.tier1;
 
-#include "tier1/characterset.h"
 
-#include <algorithm>
-#include <climits>
-#include <cstdarg>
-#include <cstdint>
-#include <cstdlib>
-#include <cstring>
+import std;
 
 namespace ks
 {
@@ -311,13 +305,13 @@ namespace ks
 
 	int text_reader::scanf( const char *fmt, ... ) noexcept
 	{
-		va_list list;
-		va_start( list, fmt );
+		std::va_list list;
+		__builtin_va_start( list, fmt );
 
 		int numScanned = 0;
 		if ( m_failed )
 		{
-			va_end( list );
+			__builtin_va_end( list );
 			return 0;
 		}
 
@@ -352,7 +346,7 @@ namespace ks
 			{
 			case 'c':
 				{
-					char *ch = va_arg( list, char * );
+					char *ch = __builtin_va_arg( list, char * );
 					*ch = peek_char();
 					good = !at_end();
 					if ( good )
@@ -362,9 +356,9 @@ namespace ks
 
 			case 'h':
 				if ( *fmt == 'd' || *fmt == 'i' )
-					good = read( *va_arg( list, int16_t * ) );
+					good = read( *__builtin_va_arg( list, std::int16_t * ) );
 				else if ( *fmt == 'u' )
-					good = read( *va_arg( list, uint16_t * ) );
+					good = read( *__builtin_va_arg( list, std::uint16_t * ) );
 				else
 					good = false;
 				if ( good )
@@ -375,9 +369,9 @@ namespace ks
 				if ( *fmt++ != '6' || *fmt++ != '4' )
 					good = false;
 				else if ( *fmt == 'd' )
-					good = read( *va_arg( list, int64_t * ) );
+					good = read( *__builtin_va_arg( list, std::int64_t * ) );
 				else if ( *fmt == 'u' )
-					good = read( *va_arg( list, uint64_t * ) );
+					good = read( *__builtin_va_arg( list, std::uint64_t * ) );
 				else
 					good = false;
 				if ( good )
@@ -386,33 +380,33 @@ namespace ks
 
 			case 'i':
 			case 'd':
-				good = read( *va_arg( list, int32_t * ) );
+				good = read( *__builtin_va_arg( list, std::int32_t * ) );
 				break;
 
 			case 'x':
-				good = read( *va_arg( list, uint32_t * ), 16 );
+				good = read( *__builtin_va_arg( list, std::uint32_t * ), 16 );
 				break;
 
 			case 'u':
-				good = read( *va_arg( list, uint32_t * ) );
+				good = read( *__builtin_va_arg( list, std::uint32_t * ) );
 				break;
 
 			case 'l':
 				if ( *fmt == 'f' )
-					good = read( *va_arg( list, double * ) );
+					good = read( *__builtin_va_arg( list, double * ) );
 				else if ( *fmt == 'l' && *++fmt == 'd' )
-					good = read( *va_arg( list, int64_t * ) );
+					good = read( *__builtin_va_arg( list, std::int64_t * ) );
 				else
 					good = false;
 				break;
 
 			case 'f':
-				good = read( *va_arg( list, float * ) );
+				good = read( *__builtin_va_arg( list, float * ) );
 				break;
 
 			case 's':
 				{
-					char *s = va_arg( list, char * );
+					char *s = __builtin_va_arg( list, char * );
 					const std::string_view word = read_word();
 					const std::size_t n = std::min< std::size_t >( word.size(), 63 );
 					std::memcpy( s, word.data(), n );
@@ -430,7 +424,7 @@ namespace ks
 			++numScanned;
 		}
 
-		va_end( list );
+		__builtin_va_end( list );
 		return numScanned;
 	}
 }

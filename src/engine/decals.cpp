@@ -1,20 +1,31 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// Functionality common to wad and decal code in gl_draw.c and draw.c
-//
-//===========================================================================//
-#include "render_pch.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Functionality common to wad and decal code in gl_draw.c and draw.c
+
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
 #include "decal.h"
 #include "decal_private.h"
-#include "zone.h"
-#include "sys.h"
 #include "gl_matsysiface.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
 #include "materialsystem/imaterial.h"
-#include <map>
+import std;
 
 struct DecalEntry
 {
@@ -79,7 +90,6 @@ void Draw_DecalSetName( int decal, char *name )
 {
 	while ( decal >= std::ssize( g_DecalLookup ) )
 	{
-		MEM_ALLOC_CREDIT();
 		g_DecalLookup.push_back( nullptr );
 	}
 
@@ -114,7 +124,7 @@ void Draw_DecalSetName( int decal, char *name )
 // used for save/restore
 int Draw_DecalIndexFromName( char *name, bool *found )
 {
-	Assert( found );
+	contract_assert( found );
 
 	FileNameHandle_t fnHandle = g_pFileSystem->FindOrAddFileName( name );
 	auto lookup = g_DecalDictionary.find( fnHandle );
@@ -175,4 +185,3 @@ void Decal_Shutdown( void )
 	g_DecalLookup.clear(); g_DecalLookup.shrink_to_fit();
 	g_DecalDictionary.clear();
 }
-

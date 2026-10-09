@@ -1,35 +1,42 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PROPS_SHARED_H
-#define PROPS_SHARED_H
-
+import ks.tier1;
 #include "igamesystem.h"
-#include <keyvalues.h>
+import std;
+#include "string_t.h"
+#include "const.h"
+#include "vphysics_interface.h"
+#include "ehandle.h"
+class CBaseEntity;
+#ifdef CLIENT_DLL
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
+#else
+typedef CHandle<CBaseEntity> EHANDLE;
+#endif
 
 // Phys prop spawnflags
-#define SF_PHYSPROP_START_ASLEEP				0x000001
-#define SF_PHYSPROP_DONT_TAKE_PHYSICS_DAMAGE	0x000002		// this prop can't be damaged by physics collisions
-#define SF_PHYSPROP_DEBRIS						0x000004
-#define SF_PHYSPROP_MOTIONDISABLED				0x000008		// motion disabled at startup (flag only valid in spawn - motion can be enabled via input)
-#define	SF_PHYSPROP_TOUCH						0x000010		// can be 'crashed through' by running player (plate glass)
-#define SF_PHYSPROP_PRESSURE					0x000020		// can be broken by a player standing on it
-#define SF_PHYSPROP_ENABLE_ON_PHYSCANNON		0x000040		// enable motion only if the player grabs it with the physcannon
-#define SF_PHYSPROP_NO_ROTORWASH_PUSH			0x000080		// The rotorwash doesn't push these
-#define SF_PHYSPROP_ENABLE_PICKUP_OUTPUT		0x000100		// If set, allow the player to +USE this for the purposes of generating an output
-#define SF_PHYSPROP_PREVENT_PICKUP				0x000200		// If set, prevent +USE/Physcannon pickup of this prop
-#define SF_PHYSPROP_PREVENT_PLAYER_TOUCH_ENABLE	0x000400		// If set, the player will not cause the object to enable its motion when bumped into
-#define SF_PHYSPROP_HAS_ATTACHED_RAGDOLLS		0x000800		// Need to remove attached ragdolls on enable motion/etc
-#define SF_PHYSPROP_FORCE_TOUCH_TRIGGERS		0x001000		// Override normal debris behavior and respond to triggers anyway
-#define SF_PHYSPROP_FORCE_SERVER_SIDE			0x002000		// Force multiplayer physics object to be serverside
-#define SF_PHYSPROP_RADIUS_PICKUP				0x004000		// For Xbox, makes small objects easier to pick up by allowing them to be found 
-#define SF_PHYSPROP_DISABLE_MOTION_ON_FREEZE	0x010000		// Phys prop disables motion the first time it comes to rest
-#define SF_PHYSPROP_ALWAYS_PICK_UP				0x100000		// Physcannon can always pick this up, no matter what mass or constraints may apply.
-#define SF_PHYSPROP_NO_COLLISIONS				0x200000		// Don't enable collisions on spawn
-#define SF_PHYSPROP_IS_GIB						0x400000		// Limit # of active gibs
+inline constexpr auto SF_PHYSPROP_START_ASLEEP = 0x000001;
+inline constexpr auto SF_PHYSPROP_DONT_TAKE_PHYSICS_DAMAGE = 0x000002; // this prop can't be damaged by physics collisions
+inline constexpr auto SF_PHYSPROP_DEBRIS = 0x000004;
+inline constexpr auto SF_PHYSPROP_MOTIONDISABLED = 0x000008; // motion disabled at startup (flag only valid in spawn - motion can be enabled via input)
+inline constexpr auto SF_PHYSPROP_TOUCH = 0x000010; // can be 'crashed through' by running player (plate glass)
+inline constexpr auto SF_PHYSPROP_PRESSURE = 0x000020; // can be broken by a player standing on it
+inline constexpr auto SF_PHYSPROP_ENABLE_ON_PHYSCANNON = 0x000040; // enable motion only if the player grabs it with the physcannon
+inline constexpr auto SF_PHYSPROP_NO_ROTORWASH_PUSH = 0x000080; // The rotorwash doesn't push these
+inline constexpr auto SF_PHYSPROP_ENABLE_PICKUP_OUTPUT = 0x000100; // If set, allow the player to +USE this for the purposes of generating an output
+inline constexpr auto SF_PHYSPROP_PREVENT_PICKUP = 0x000200; // If set, prevent +USE/Physcannon pickup of this prop
+inline constexpr auto SF_PHYSPROP_PREVENT_PLAYER_TOUCH_ENABLE = 0x000400; // If set, the player will not cause the object to enable its motion when bumped into
+inline constexpr auto SF_PHYSPROP_HAS_ATTACHED_RAGDOLLS = 0x000800; // Need to remove attached ragdolls on enable motion/etc
+inline constexpr auto SF_PHYSPROP_FORCE_TOUCH_TRIGGERS = 0x001000; // Override normal debris behavior and respond to triggers anyway
+inline constexpr auto SF_PHYSPROP_FORCE_SERVER_SIDE = 0x002000; // Force multiplayer physics object to be serverside
+inline constexpr auto SF_PHYSPROP_RADIUS_PICKUP = 0x004000; // For Xbox, makes small objects easier to pick up by allowing them to be found
+inline constexpr auto SF_PHYSPROP_DISABLE_MOTION_ON_FREEZE = 0x010000; // Phys prop disables motion the first time it comes to rest
+inline constexpr auto SF_PHYSPROP_ALWAYS_PICK_UP = 0x100000; // Physcannon can always pick this up, no matter what mass or constraints may apply.
+inline constexpr auto SF_PHYSPROP_NO_COLLISIONS = 0x200000; // Don't enable collisions on spawn
+inline constexpr auto SF_PHYSPROP_IS_GIB = 0x400000; // Limit # of active gibs
 
 // Any barrel farther away than this is ignited rather than exploded.
 #define PROP_EXPLOSION_IGNITE_RADIUS			32.0f
@@ -75,7 +82,7 @@ enum propdata_interactions_t
 };
 
 // Entities using COLLISION_GROUP_SPECIAL_PHYSICS should support this interface.
-abstract_class IMultiplayerPhysics
+class IMultiplayerPhysics
 {
 public:
 	virtual int		GetMultiplayerPhysicsMode() = 0;
@@ -83,10 +90,10 @@ public:
 	virtual bool	IsAsleep() = 0;
 };
 
-#define PHYSICS_MULTIPLAYER_AUTODETECT	0	// use multiplayer physics mode as defined in model prop data
-#define PHYSICS_MULTIPLAYER_SOLID		1	// soild, pushes player away 
-#define PHYSICS_MULTIPLAYER_NON_SOLID	2	// nonsolid, but pushed by player
-#define PHYSICS_MULTIPLAYER_CLIENTSIDE	3	// Clientside only, nonsolid 	
+inline constexpr auto PHYSICS_MULTIPLAYER_AUTODETECT = 0; // use multiplayer physics mode as defined in model prop data
+inline constexpr auto PHYSICS_MULTIPLAYER_SOLID = 1; // soild, pushes player away
+inline constexpr auto PHYSICS_MULTIPLAYER_NON_SOLID = 2; // nonsolid, but pushed by player
+inline constexpr auto PHYSICS_MULTIPLAYER_CLIENTSIDE = 3; // Clientside only, nonsolid
 
 enum mp_break_t
 {
@@ -112,7 +119,7 @@ enum PerformanceMode_t
 //-----------------------------------------------------------------------------
 // Purpose: Derive your entity from this if you want your entity to parse propdata
 //-----------------------------------------------------------------------------
-abstract_class IBreakableWithPropData
+class IBreakableWithPropData
 {
 public:
 	// Damage modifiers
@@ -249,5 +256,3 @@ void PropBreakableCreateAll( int modelindex, IPhysicsObject *pPhysics, const Vec
 void PrecacheGibsForModel( int iModel );
 void BuildGibList( std::vector< breakmodel_t > &list, int modelindex, float defBurstScale, int defCollisionGroup );
 CBaseEntity *CreateGibsFromList( std::vector< breakmodel_t > &list, int modelindex, IPhysicsObject *pPhysics, const breakablepropparams_t &params, CBaseEntity *pEntity, int iPrecomputedBreakableCount, bool bIgnoreGibLImit, bool defaultLocation = true, std::vector< EHANDLE > *pGibList = nullptr, bool bBurning = false );
-
-#endif // PROPS_SHARED_H

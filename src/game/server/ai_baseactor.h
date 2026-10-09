@@ -1,21 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Hooks and classes for the support of humanoid NPCs with 
-//			groovy facial animation capabilities, aka, "Actors"
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_BASEACTOR_H
-#define AI_BASEACTOR_H
+// Purpose: Hooks and classes for the support of humanoid NPCs with
+//			groovy facial animation capabilities, aka, "Actors"
 
 #include "reflect_annotations.h"
 
 #include "ai_basehumanoid.h"
 #include "ai_speech.h"
 #include "AI_Interest_Target.h"
-#include <limits.h>
-
-
 
 //-----------------------------------------------------------------------------
 // CAI_BaseActor
@@ -23,8 +17,8 @@
 // Purpose: The base class for all head/body/eye expressive NPCS.
 //
 //-----------------------------------------------------------------------------
-enum PoseParameter_t { POSE_END=INT_MAX };
-enum FlexWeight_t { FLEX_END=INT_MAX };
+enum PoseParameter_t { POSE_END=std::numeric_limits<int>::max() };
+enum FlexWeight_t { FLEX_END=std::numeric_limits<int>::max() };
 class CInfoRemarkable;
 
 struct AILookTargetArgs_t
@@ -86,7 +80,7 @@ public:
 		m_iszExpressionOverride( NULL_STRING ),
 		m_bRemarkablePolling( false )
 	{
-		memset( m_flextarget, 0, 64 * sizeof( m_flextarget[0] ) );
+		std::memset( m_flextarget, 0, 64 * sizeof( m_flextarget[0] ) );
 	}
 
 	~CAI_BaseActor()
@@ -169,7 +163,7 @@ public:
 
 	// called from GatherConditions() for now because can't think of a better
 	// place to poll it from. Returns true if speaking was tried.
-	bool UpdateRemarkableSpeech() RESTRICT;
+	bool UpdateRemarkableSpeech() __restrict__;
 
 	inline void EnableRemarkables( bool bEnabled ) { m_bRemarkablePolling = bEnabled; }
 
@@ -339,4 +333,3 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-#endif // AI_BASEACTOR_H

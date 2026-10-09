@@ -1,14 +1,24 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Client handler implementations for instruction players how to play
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Client handler implementations for instruction players how to play
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
 
 #include "c_keyvalue_saver.h"
 #include "filesystem.h"
-
 
 // Key Value Saver auto game system instantiation
 C_KeyValueSaver g_KeyValueSaver[ MAX_SPLITSCREEN_PLAYERS ];
@@ -78,9 +88,9 @@ void C_KeyValueSaver::FireGameEvent( IGameEvent *event )
 
 	const char *name = event->GetName();
 
-	if ( Q_strcmp( name, "round_end" ) == 0 || 
-		 Q_strcmp( name, "map_transition" ) == 0 || 
-		 Q_strcmp( name, "game_newmap" ) == 0 )
+	if ( V_strcmp( name, "round_end" ) == 0 || 
+		 V_strcmp( name, "map_transition" ) == 0 || 
+		 V_strcmp( name, "game_newmap" ) == 0 )
 	{
 		// Good place to save
 		WriteAllDirtyKeyValues();

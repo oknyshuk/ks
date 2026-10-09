@@ -1,11 +1,43 @@
-//========= Copyright (c) 1996-2010, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: global dynamic light with cascaded shadow mapping
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2010 Valve Corporation
 
-#include "cbase.h"
+// Purpose: global dynamic light with cascaded shadow mapping
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -103,12 +135,12 @@ bool CCascadeLight::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else if ( FStrEq( szKeyName, "uselightenvangles" ) )
 	{
-		m_bUseLightEnvAngles = ( atoi( szValue ) != 0 );
+		m_bUseLightEnvAngles = ( std::atoi( szValue ) != 0 );
 		return true;
 	}
 	else if ( FStrEq( szKeyName, "maxshadowdistance" ) )
 	{
-		m_flMaxShadowDist = atof( szValue );
+		m_flMaxShadowDist = std::atof( szValue );
 		return true;
 	}
 	
@@ -120,7 +152,7 @@ bool CCascadeLight::GetKeyValue( const char *szKeyName, char *szValue, int iMaxL
 	if ( FStrEq( szKeyName, "color" ) )
 	{
 		// path unused?
-		Q_snprintf( szValue, iMaxLen, "%d %d %d %d", m_LightColor.GetR(), m_LightColor.GetG(), m_LightColor.GetB(), m_LightColor.GetA() );
+		V_snprintf( szValue, iMaxLen, "%d %d %d %d", m_LightColor.GetR(), m_LightColor.GetG(), m_LightColor.GetB(), m_LightColor.GetA() );
 		return true;
 	}
 	return BaseClass::GetKeyValue( szKeyName, szValue, iMaxLen );

@@ -1,14 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Namespace for functions dealing with Debug Overlays
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include "mathlib/mathlib.h"
+// Purpose: Namespace for functions dealing with Debug Overlays
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "player.h"
 #include "ndebugoverlay.h"
 #include "wcedit.h"
@@ -17,8 +41,7 @@
 #include "ai_network.h"
 #include "ai_networkmanager.h"
 
-
-#define		NUM_DEBUG_OVERLAY_LINES		20
+constexpr auto NUM_DEBUG_OVERLAY_LINES = 20;
 
 int				m_nDebugOverlayIndex	= -1;
 OverlayLine_t*	m_debugOverlayLine[NUM_DEBUG_OVERLAY_LINES];
@@ -198,7 +221,7 @@ void UTIL_DrawPositioningOverlay( float flCrossDistance )
 	}
 	/*  Don't show distance for now.
 	char text[25];
-	Q_snprintf(text,sizeof(text),"%3.0f",flCrossDistance/12.0);
+	V_snprintf(text,sizeof(text),"%3.0f",flCrossDistance/12.0);
 	Vector textPos = topPos - pRight*16 + Vector(0,0,10);
 	NDebugOverlay::Text( textPos, text, true, 0 );
 	*/
@@ -237,7 +260,9 @@ void DebugDrawLine( const Vector& vecAbsStart, const Vector& vecAbsEnd, int r, i
 //-----------------------------------------------------------------------------
 // Purpose: Allow all debug overlays to be cleared at once
 //-----------------------------------------------------------------------------
-CON_COMMAND( clear_debug_overlays, "clears debug overlays" )
+static void clear_debug_overlays( const CCommand &args );
+static ConCommand clear_debug_overlays_command( "clear_debug_overlays", clear_debug_overlays, "clears debug overlays" );
+static void clear_debug_overlays( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;

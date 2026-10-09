@@ -1,15 +1,11 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef _MATCHSYSTEM_H_
-#define _MATCHSYSTEM_H_
-
+import ks.tier1;
 #include "mm_framework.h"
 
-#include "utlvector.h"
+import std;
 
 enum PacketTargetType
 {
@@ -24,9 +20,6 @@ class CMatchSystem : public IMatchSystem
 public:
 	CMatchSystem();
 	~CMatchSystem();
-
-public:
-	void Update();
 
 	//IMatchSystem
 public:
@@ -44,6 +37,3 @@ public:
 };
 
 extern CMatchSystem *g_pMatchSystem;
-
-#endif
-

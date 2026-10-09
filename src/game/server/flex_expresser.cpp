@@ -1,13 +1,33 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "basetempentity.h"
 #include "reflect_datamap.h"
-#include "reflect_annotations.h"
-#include "animation.h"
 #include "flex_expresser.h"
 #include "entitylist.h"
 /*
@@ -15,20 +35,12 @@
 #include "studio.h"
 #include "choreoevent.h"
 #include "choreoscene.h"
-#include "choreoactor.h"
-#include "vstdlib/random.h"
 #include "engine/IEngineSound.h"
-#include "tier1/strtools.h"
-#include "keyvalues.h"
 #include "ai_basenpc.h"
 #include "ai_navigator.h"
-#include "ai_moveprobe.h"
-#include "sceneentity.h"
 #include "ai_baseactor.h"
 #include "datacache/imdlcache.h"
 */
-
-
 
 CFlexExpresser::CFlexExpresser()
 {
@@ -49,7 +61,7 @@ CFlexExpresser::~CFlexExpresser()
 //-----------------------------------------------------------------------------
 CAI_Expresser *CFlexExpresser::CreateExpresser( void )
 {
-	AssertMsg1( !m_pExpresser, "LEAK: Double-created expresser for FlexExpresser %s", GetDebugName() );
+	contract_assert( ( !m_pExpresser ) && "LEAK: Double-created expresser for FlexExpresser %s" );
 
 	m_pExpresser = new CAI_ExpresserWithFollowup(this);
 	if ( !m_pExpresser )
@@ -142,14 +154,14 @@ void CFlexExpresser::InputSpeakResponseConcept( inputdata_t &inputdata )
 		++pModifiers;
 
 		// tokenize on spaces
-		char *token = strtok(pModifiers, " ");
+		char *token = std::strtok(pModifiers, " ");
 		while (token)
 		{
 			// find the start characters for the key and value
 			// (seperated by a : which we replace with null)
-			char * RESTRICT key = token;
-			char * RESTRICT colon = const_cast<char *>(V_strnchr(key, ':', 510)); 
-			char * RESTRICT value;
+			char * __restrict__ key = token;
+			char * __restrict__ colon = const_cast<char *>(V_strnchr(key, ':', 510)); 
+			char * __restrict__ value;
 			if (!colon)
 			{
 				Warning( "faulty context k:v pair in entity io %s\n", pInputString );
@@ -163,7 +175,7 @@ void CFlexExpresser::InputSpeakResponseConcept( inputdata_t &inputdata )
 				Warning( "Speak input to %s had overlong parameter %s", GetDebugName(), pInputString );
 				return;
 			}
-			memcpy(outputmodifiers + outWritten, key, toWrite);
+			std::memcpy(outputmodifiers + outWritten, key, toWrite);
 			outWritten += toWrite;
 
 			*colon = 0;
@@ -183,7 +195,7 @@ void CFlexExpresser::InputSpeakResponseConcept( inputdata_t &inputdata )
 			{
 				valString = value;
 			}
-			toWrite = strlen(valString);
+			toWrite = std::strlen(valString);
 			toWrite = std::min( 511-outWritten, toWrite );
 			V_strncpy( outputmodifiers + outWritten, valString, toWrite+1 );
 			outWritten += toWrite;
@@ -231,8 +243,7 @@ CFlexExpresser * CFlexExpresser::AsFlexExpresser( CBaseEntity *pEntity )
 		}
 	}
 
-	AssertMsg1( pEntity == nullptr || dynamic_cast<CFlexExpresser *>(pEntity) == nullptr, "%s subclasses prop_talker; update CFlexExpresser::AsFlexExpresser\n", 
-		pEntity->GetClassname() );
+	contract_assert( ( pEntity == nullptr || dynamic_cast<CFlexExpresser *>(pEntity) == nullptr ) && "%s subclasses prop_talker; update CFlexExpresser::AsFlexExpresser\n" );
 
 	return nullptr;
 }

@@ -1,26 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.vstdlib;
 #include "locald3dtypes.h"
 #include "texturedx8.h"
 #include "shaderapidx8_global.h"
 #include "colorformatdx8.h"
 #include "shaderapi/ishaderutil.h"
 #include "materialsystem/imaterialsystem.h"
-#include "utlvector.h"
-#include "recording.h"
 #include "shaderapi/ishaderapi.h"
 #include "filesystem.h"
 #include "locald3dtypes.h"
-#include "textureheap.h"
-#include "tier1/callqueue.h"
-
-#include "tier0/vprof.h"
+import std;
 
 
 static int s_TextureCount = 0;
@@ -46,7 +37,6 @@ static bool IsVolumeTexture( IDirect3DBaseTexture* pBaseTexture )
 
 static HRESULT GetLevelDesc( IDirect3DBaseTexture* pBaseTexture, UINT level, D3DSURFACE_DESC* pDesc )
 {
-	MEM_ALLOC_D3D_CREDIT();
 
 	if ( !pBaseTexture )
 	{
@@ -71,7 +61,6 @@ static HRESULT GetLevelDesc( IDirect3DBaseTexture* pBaseTexture, UINT level, D3D
 static HRESULT GetSurfaceFromTexture( IDirect3DBaseTexture* pBaseTexture, UINT level, 
 									  D3DCUBEMAP_FACES cubeFaceID, IDirect3DSurface** ppSurfLevel )
 {
-	MEM_ALLOC_D3D_CREDIT();
 
 	if ( !pBaseTexture )
 	{
@@ -94,7 +83,7 @@ static HRESULT GetSurfaceFromTexture( IDirect3DBaseTexture* pBaseTexture, UINT l
 		hr = ( ( IDirect3DCubeTexture * )pBaseTexture )->GetCubeMapSurface( cubeFaceID, level, ppSurfLevel );
 		break;
 	default:
-		Assert(0);
+		contract_assert( 0 );
 		return ( HRESULT )-1;
 	}
 	return hr;
@@ -105,7 +94,6 @@ static HRESULT GetSurfaceFromTexture( IDirect3DBaseTexture* pBaseTexture, UINT l
 //-----------------------------------------------------------------------------
 static ImageFormat GetImageFormat( IDirect3DBaseTexture* pTexture )
 {
-	MEM_ALLOC_D3D_CREDIT();
 
 	if ( pTexture )
 	{
@@ -160,7 +148,7 @@ IDirect3DBaseTexture* CreateD3DTexture( int width, int height, int nDepth,
 	bool bAnsiotropic = (nCreationFlags & TEXTURE_CREATE_ANISOTROPIC) != 0;	// for Posix/GL only
 
 	// NOTE: This function shouldn't be used for creating depth buffers!
-	Assert( !bIsDepthBuffer );
+	contract_assert( !bIsDepthBuffer );
 
 	D3DFORMAT d3dFormat = D3DFMT_UNKNOWN;
 
@@ -171,7 +159,7 @@ IDirect3DBaseTexture* CreateD3DTexture( int width, int height, int nDepth,
 	if ( d3dFormat == D3DFMT_UNKNOWN )
 	{
 		Warning( "ShaderAPIDX8::CreateD3DTexture: Invalid color format!\n" );
-		Assert( 0 );
+		contract_assert( 0 );
 		return 0;
 	}
 
@@ -212,7 +200,7 @@ IDirect3DBaseTexture* CreateD3DTexture( int width, int height, int nDepth,
 	}
 	else if ( bVolumeTexture )
 	{
-		Assert( !bNoD3DBits );
+		contract_assert( !bNoD3DBits );
 		hr = Dx9Device()->CreateVolumeTexture( 
 				width, 
 				height, 
@@ -288,29 +276,6 @@ IDirect3DBaseTexture* CreateD3DTexture( int width, int height, int nDepth,
 		return 0;
 	}
 
-#ifdef MEASURE_DRIVER_ALLOCATIONS
-	int nMipCount = numLevels;
-	if ( !nMipCount )
-	{
-		while ( width > 1 || height > 1 )
-		{
-			width >>= 1;
-			height >>= 1;
-			++nMipCount;
-		}
-	}
-
-	int nMemUsed = nMipCount * 1.1f * 1024;
-	if ( bIsCubeMap )
-	{
-		nMemUsed *= 6;
-	}
-
-	VPROF_INCREMENT_GROUP_COUNTER( "texture count", COUNTER_GROUP_NO_RESET, 1 );
-	VPROF_INCREMENT_GROUP_COUNTER( "texture driver mem", COUNTER_GROUP_NO_RESET, nMemUsed );
-	VPROF_INCREMENT_GROUP_COUNTER( "total driver mem", COUNTER_GROUP_NO_RESET, nMemUsed );
-#endif
-
 	++s_TextureCount;
 
 	return pBaseTexture;
@@ -323,25 +288,13 @@ IDirect3DBaseTexture* CreateD3DTexture( int width, int height, int nDepth,
 void ReleaseD3DTexture( IDirect3DBaseTexture* pD3DTex )
 {
 	int ref = pD3DTex->Release();
-	Assert( ref == 0 );
+	contract_assert( ref == 0 );
 }
 
 void DestroyD3DTexture( IDirect3DBaseTexture* pD3DTex )
 {
 	if ( pD3DTex )
 	{
-#ifdef MEASURE_DRIVER_ALLOCATIONS
-		D3DRESOURCETYPE type = pD3DTex->GetType();
-		int nMipCount = pD3DTex->GetLevelCount();
-		if ( type == D3DRTYPE_CUBETEXTURE )
-		{
-			nMipCount *= 6;
-		}
-		int nMemUsed = nMipCount * 1.1f * 1024;
-		VPROF_INCREMENT_GROUP_COUNTER( "texture count", COUNTER_GROUP_NO_RESET, -1 );
-		VPROF_INCREMENT_GROUP_COUNTER( "texture driver mem", COUNTER_GROUP_NO_RESET, -nMemUsed );
-		VPROF_INCREMENT_GROUP_COUNTER( "total driver mem", COUNTER_GROUP_NO_RESET, -nMemUsed );
-#endif
 
 		CMatRenderContextPtr pRenderContext( materials );
 		ICallQueue *pCallQueue;
@@ -384,15 +337,11 @@ int GetD3DTextureRefCount( IDirect3DBaseTexture *pTex )
 
 static RECT s_LockedSrcRect;
 static D3DLOCKED_RECT s_LockedRect;
-#ifdef DBGFLAG_ASSERT
-static bool s_bInLock = false;
-#endif
 
 bool LockTexture( ShaderAPITextureHandle_t bindId, int copy, IDirect3DBaseTexture* pTexture, int level, 
 	D3DCUBEMAP_FACES cubeFaceID, int xOffset, int yOffset, int width, int height, bool bDiscard,
 	CPixelWriter& writer )
 {
-	Assert( !s_bInLock );
 	
 	IDirect3DSurface* pSurf;
 	HRESULT hr = GetSurfaceFromTexture( pTexture, level, cubeFaceID, &pSurf );
@@ -406,13 +355,6 @@ bool LockTexture( ShaderAPITextureHandle_t bindId, int copy, IDirect3DBaseTextur
 
 	unsigned int flags = D3DLOCK_NOSYSLOCK;
 	flags |= bDiscard ? D3DLOCK_DISCARD : 0;
-	RECORD_COMMAND( DX8_LOCK_TEXTURE, 6 );
-	RECORD_INT( bindId );
-	RECORD_INT( copy );
-	RECORD_INT( level );
-	RECORD_INT( cubeFaceID );
-	RECORD_STRUCT( &s_LockedSrcRect, sizeof(s_LockedSrcRect) );
-	RECORD_INT( flags );
 
 	hr = pSurf->LockRect( &s_LockedRect, &s_LockedSrcRect, flags );
 	pSurf->Release();
@@ -422,60 +364,42 @@ bool LockTexture( ShaderAPITextureHandle_t bindId, int copy, IDirect3DBaseTextur
 
 	writer.SetPixelMemory( GetImageFormat(pTexture), s_LockedRect.pBits, s_LockedRect.Pitch );
 
-#ifdef DBGFLAG_ASSERT
-	s_bInLock = true;
-#endif
 	return true;
 }
 
 void UnlockTexture( ShaderAPITextureHandle_t bindId, int copy, IDirect3DBaseTexture* pTexture, int level, 
 	D3DCUBEMAP_FACES cubeFaceID )
 {
-	Assert( s_bInLock );
 
 	IDirect3DSurface* pSurf;
 	HRESULT hr = GetSurfaceFromTexture( pTexture, level, cubeFaceID, &pSurf );
 	if (FAILED(hr))
 		return;
 
-#ifdef RECORD_TEXTURES 
 	int width = s_LockedSrcRect.right - s_LockedSrcRect.left;
 	int height = s_LockedSrcRect.bottom - s_LockedSrcRect.top;
 	int imageFormatSize = ImageLoader::SizeInBytes( GetImageFormat( pTexture ) );
-	Assert( imageFormatSize != 0 );
+	contract_assert( imageFormatSize != 0 );
 	int validDataBytesPerRow = imageFormatSize * width;
 	int storeSize = validDataBytesPerRow * height;
 	static std::vector< unsigned char > tmpMem;
-	if( tmpMem.Size() < storeSize )
+	if( tmpMem.size() < storeSize )
 	{
-		tmpMem.AddMultipleToTail( storeSize - tmpMem.Size() );
+		tmpMem.resize( storeSize );
 	}
-	unsigned char *pDst = tmpMem.Base();
+	unsigned char *pDst = tmpMem.data();
 	unsigned char *pSrc = ( unsigned char * )s_LockedRect.pBits;
-	RECORD_COMMAND( DX8_SET_TEXTURE_DATA, 3 );
-	RECORD_INT( validDataBytesPerRow );
-	RECORD_INT( height );
 	int i;
 	for( i = 0; i < height; i++ )
 	{
-		memcpy( pDst, pSrc, validDataBytesPerRow );
+		std::memcpy( pDst, pSrc, validDataBytesPerRow );
 		pDst += validDataBytesPerRow;
 		pSrc += s_LockedRect.Pitch;
 	}
-	RECORD_STRUCT( tmpMem.Base(), storeSize );
-#endif // RECORD_TEXTURES 
 	
-	RECORD_COMMAND( DX8_UNLOCK_TEXTURE, 4 );
-	RECORD_INT( bindId );
-	RECORD_INT( copy );
-	RECORD_INT( level );
-	RECORD_INT( cubeFaceID );
 
 	hr = pSurf->UnlockRect();
 	pSurf->Release();
-#ifdef DBGFLAG_ASSERT
-	s_bInLock = false;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -534,16 +458,6 @@ static void BlitSurfaceBits( TextureLoadInfo_t &info, int xOffset, int yOffset, 
 	srcRect.top    = yOffset;
 	srcRect.bottom = yOffset + info.m_nHeight;
 
-#ifndef RECORD_TEXTURES
-	RECORD_COMMAND( DX8_LOCK_TEXTURE, 6 );
-	RECORD_INT( info.m_TextureHandle );
-	RECORD_INT( info.m_nCopy );
-	RECORD_INT( info.m_nLevel );
-	RECORD_INT( info.m_CubeFaceID );
-	RECORD_STRUCT( &srcRect, sizeof(srcRect) );
-	RECORD_INT( D3DLOCK_NOSYSLOCK );
-#endif
-
 	// lock the region (could be the full surface or less)
 	if ( FAILED( pTextureLevel->LockRect( &lockedRect, &srcRect, D3DLOCK_NOSYSLOCK ) ) )
 	{
@@ -557,14 +471,6 @@ static void BlitSurfaceBits( TextureLoadInfo_t &info, int xOffset, int yOffset, 
 	// garymcthack : need to make a recording command for this.
 	ShaderUtil()->ConvertImageFormat( info.m_pSrcData, info.m_SrcFormat,
 						pImage, dstFormat, info.m_nWidth, info.m_nHeight, srcStride, lockedRect.Pitch );
-
-#ifndef RECORD_TEXTURES
-	RECORD_COMMAND( DX8_UNLOCK_TEXTURE, 4 );
-	RECORD_INT( info.m_TextureHandle );
-	RECORD_INT( info.m_nCopy );
-	RECORD_INT( info.m_nLevel );
-	RECORD_INT( info.m_CubeFaceID );
-#endif
 
 	if ( FAILED( pTextureLevel->UnlockRect() ) ) 
 	{
@@ -595,16 +501,6 @@ static void BlitVolumeBits( TextureLoadInfo_t &info, int xOffset, int yOffset, i
 	srcBox.Front = info.m_nZOffset;
 	srcBox.Back = info.m_nZOffset + 1;
 
-#ifndef RECORD_TEXTURES
-	RECORD_COMMAND( DX8_LOCK_TEXTURE, 6 );
-	RECORD_INT( info.m_TextureHandle );
-	RECORD_INT( info.m_nCopy );
-	RECORD_INT( info.m_nLevel );
-	RECORD_INT( info.m_CubeFaceID );
-	RECORD_STRUCT( &srcRect, sizeof(srcRect) );
-	RECORD_INT( D3DLOCK_NOSYSLOCK );
-#endif
-
 	IDirect3DVolumeTexture *pVolumeTexture = static_cast<IDirect3DVolumeTexture*>( info.m_pTexture );
 	if ( FAILED( pVolumeTexture->LockBox( info.m_nLevel, &lockedBox, &srcBox, D3DLOCK_NOSYSLOCK ) ) )
 	{
@@ -617,14 +513,6 @@ static void BlitVolumeBits( TextureLoadInfo_t &info, int xOffset, int yOffset, i
 	unsigned char *pImage = (unsigned char *)lockedBox.pBits;
 	ShaderUtil()->ConvertImageFormat( info.m_pSrcData, info.m_SrcFormat,
 						pImage, dstFormat, info.m_nWidth, info.m_nHeight, srcStride, lockedBox.RowPitch );
-
-#ifndef RECORD_TEXTURES
-	RECORD_COMMAND( DX8_UNLOCK_TEXTURE, 4 );
-	RECORD_INT( info.m_TextureHandle );
-	RECORD_INT( info.m_nCopy );
-	RECORD_INT( info.m_nLevel );
-	RECORD_INT( info.m_CubeFaceID );
-#endif
 
 	if ( FAILED( pVolumeTexture->UnlockBox( info.m_nLevel ) ) ) 
 	{
@@ -649,20 +537,6 @@ static void BlitVolumeBits( TextureLoadInfo_t &info, int xOffset, int yOffset, i
 // NOTE: IF YOU CHANGE THIS, CHANGE THE VERSION IN PLAYBACK.CPP!!!!
 static void BlitTextureBits( TextureLoadInfo_t &info, int xOffset, int yOffset, int srcStride )
 {
-#ifdef RECORD_TEXTURES
-	RECORD_COMMAND( DX8_BLIT_TEXTURE_BITS, 14 );
-	RECORD_INT( info.m_TextureHandle );
-	RECORD_INT( info.m_nCopy );
-	RECORD_INT( info.m_nLevel );
-	RECORD_INT( info.m_CubeFaceID );
-	RECORD_INT( xOffset );
-	RECORD_INT( yOffset );
-	RECORD_INT( info.m_nZOffset );
-	RECORD_INT( info.m_nWidth );
-	RECORD_INT( info.m_nHeight );
-	RECORD_INT( info.m_SrcFormat );
-	RECORD_INT( srcStride );
-	RECORD_INT( GetImageFormat( info.m_pTexture ) );
 	// strides are in bytes.
 	int srcDataSize;
 	if ( srcStride == 0 )
@@ -673,13 +547,10 @@ static void BlitTextureBits( TextureLoadInfo_t &info, int xOffset, int yOffset, 
 	{
 		srcDataSize = srcStride * info.m_nHeight;
 	}
-	RECORD_INT( srcDataSize );
-	RECORD_STRUCT( info.m_pSrcData, srcDataSize );
-#endif // RECORD_TEXTURES
 	
 	if ( !IsVolumeTexture( info.m_pTexture ) )
 	{
-		Assert( info.m_nZOffset == 0 );
+		contract_assert( info.m_nZOffset == 0 );
 		BlitSurfaceBits( info, xOffset, yOffset, srcStride );
 	}
 	else
@@ -693,14 +564,13 @@ static void BlitTextureBits( TextureLoadInfo_t &info, int xOffset, int yOffset, 
 //-----------------------------------------------------------------------------
 void LoadTexture( TextureLoadInfo_t &info )
 {
-	MEM_ALLOC_D3D_CREDIT();
 
-	Assert( info.m_pSrcData );
-	Assert( info.m_pTexture );
+	contract_assert( info.m_pSrcData );
+	contract_assert( info.m_pTexture );
 
 #ifdef _DEBUG
 	ImageFormat format = GetImageFormat( info.m_pTexture );
-	Assert( (format != -1) && (format == ImageLoader::D3DFormatToImageFormat( FindNearestSupportedFormat( format, false, false, false )) ) );
+	contract_assert( (format != -1) && (format == ImageLoader::D3DFormatToImageFormat( FindNearestSupportedFormat( format, false, false, false )) ) );
 #endif
 
 	// Copy in the bits...
@@ -712,13 +582,13 @@ void LoadTexture( TextureLoadInfo_t &info )
 //-----------------------------------------------------------------------------
 void LoadSubTexture( TextureLoadInfo_t &info, int xOffset, int yOffset, int srcStride )
 {
-	Assert( info.m_pSrcData );
-	Assert( info.m_pTexture );
+	contract_assert( info.m_pSrcData );
+	contract_assert( info.m_pTexture );
 
 
 #ifdef _DEBUG
 	ImageFormat format = GetImageFormat( info.m_pTexture );
-	Assert( (format == ImageLoader::D3DFormatToImageFormat( FindNearestSupportedFormat(format, false, false, false )) ) && (format != -1) );
+	contract_assert( (format == ImageLoader::D3DFormatToImageFormat( FindNearestSupportedFormat(format, false, false, false )) ) && (format != -1) );
 #endif
 
 	// Copy in the bits...
@@ -730,7 +600,6 @@ void LoadSubTexture( TextureLoadInfo_t &info, int xOffset, int yOffset, int srcS
 // Returns the size of texture memory, in MB
 //-----------------------------------------------------------------------------
 // Helps with startup time.. we don't use the texture memory size for anything anyways
-#define DONT_CHECK_MEM
 
 int ComputeTextureMemorySize( const GUID &nDeviceGUID, D3DDEVTYPE deviceType )
 {
@@ -759,37 +628,7 @@ int ComputeTextureMemorySize( const GUID &nDeviceGUID, D3DDEVTYPE deviceType )
 	int totalSize = 0;
 	std::vector< IDirect3DBaseTexture* > textures;
 
-#ifndef DONT_CHECK_MEM
-	while (true)
-	{
-		RECORD_COMMAND( DX8_CREATE_TEXTURE, 7 );
-		RECORD_INT( textures.Count() );
-		RECORD_INT( 256 );
-		RECORD_INT( 256 );
-		RECORD_INT( ImageLoader::ImageFormatToD3DFormat(fmt) );
-		RECORD_INT( 1 );
-		RECORD_INT( false );
-		RECORD_INT( 1 );
-
-		IDirect3DBaseTexture* pTex = CreateD3DTexture( 256, 256, 1, fmt, 1, 0 );
-		if (!pTex)
-			break;
-		totalSize += textureSize;
-
-		textures.AddToTail( pTex );
-	} 
-
-	// Free all the temp textures
-	for (int i = textures.Size(); --i >= 0; )
-	{
-		RECORD_COMMAND( DX8_DESTROY_TEXTURE, 1 );
-		RECORD_INT( i );
-
-		DestroyD3DTexture( textures[i] );
-	}
-#else
 	totalSize = 102236160;
-#endif
 	file = g_pFullFileSystem->Open( "vidcfg.bin", "wb", "EXECUTABLE_PATH" );
 	if ( file )
 	{

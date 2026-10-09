@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef COMBATWEAPON_H
-#define COMBATWEAPON_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "entityoutput.h"
 #include "basecombatweapon_shared.h"
@@ -23,5 +16,3 @@
 struct animevent_t;
 
 extern void	SpawnBlood(Vector vecSpot, const Vector &vecDir, int bloodColor, float flDamage);
-
-#endif // COMBATWEAPON_H

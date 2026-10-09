@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( MOD_LOADER_H )
-#define MOD_LOADER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 struct model_t;
 class IMaterial;
@@ -17,7 +12,7 @@ class IFileList;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-abstract_class IModelLoader
+class IModelLoader
 {
 public:
 	enum REFERENCETYPE
@@ -272,5 +267,3 @@ extern bool g_bBakedPropLightingNoSeparateHDR;
 extern bool g_bHasLightmapAlphaData;
 extern bool g_bBakedPropLightingStreams3;
 extern bool g_bHasLightmapAlphaData3;
-
-#endif // MOD_LOADER_H

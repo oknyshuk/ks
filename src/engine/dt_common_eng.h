@@ -1,11 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DT_COMMON_ENG_H
-#define DT_COMMON_ENG_H
+import std;
+import ks.tier1;
+#include "dt_send.h"
 
 class CBaseClientState;
 class ServerClass;
@@ -22,5 +21,3 @@ void DataTable_WriteSendTablesBuffer( ServerClass *pClasses, bf_write *pBuf );
 void DataTable_WriteClassInfosBuffer(ServerClass *pClasses, bf_write *pBuf );
 
 bool DataTable_SetupReceiveTableFromSendTable( SendTable *sendTable, bool bNeedsDecoder );
-
-#endif // DT_COMMON_ENG_H

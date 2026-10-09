@@ -1,16 +1,33 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Base class for many flying NPCs
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Base class for many flying NPCs
+
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "ai_basenpc_flyer_new.h"
 #include "ai_route.h"
 #include "ai_navigator.h"
 
-#define FLYER_ROUTE_REBUILD_TIME	3.0		// Time between route rebuilds
+constexpr auto FLYER_ROUTE_REBUILD_TIME = 3.0; // Time between route rebuilds
 
 
 // NOTE: Never instantiate ai_base_npc_flyer_new directly!!
@@ -133,5 +150,3 @@ void CAI_BaseNPCFlyerNew::RunTask( const Task_t *pTask )
 {
 	BaseClass::RunTask(pTask);
 }
-
-

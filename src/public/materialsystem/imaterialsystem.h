@@ -1,27 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IMATERIALSYSTEM_H
-#define IMATERIALSYSTEM_H
+inline constexpr auto OVERBRIGHT = 2.0f;
+inline constexpr auto OO_OVERBRIGHT = ( 1.0f / 2.0f );
+inline constexpr auto GAMMA = 2.2f;
+inline constexpr auto TEXGAMMA = 2.2f;
 
-
-#define OVERBRIGHT 2.0f
-#define OO_OVERBRIGHT ( 1.0f / 2.0f )
-#define GAMMA 2.2f
-#define TEXGAMMA 2.2f
-
-#include "tier1/interface.h"
-#include "tier1/refcount.h"
-#include "tier1/intrusive_ptr.h"
-#include "mathlib/vector.h"
-#include "mathlib/vector4d.h"
-#include "mathlib/vmatrix.h"
-#include "appframework/iappsystem.h"
+import ks.tier1;
+import std;
 #include "bitmap/imageformat.h"
 #include "texture_group_names.h"
 #include "vtf/vtf.h"
@@ -53,11 +40,8 @@ class IMesh;
 class IVertexBuffer;
 class IIndexBuffer;
 struct MaterialSystem_Config_t;
-class VMatrix;
-struct matrix3x4_t;
 class ITexture;
 struct MaterialSystemHardwareIdentifier_t;
-class KeyValues;
 class IShader;
 class IVertexTexture;
 class IMorph;
@@ -215,7 +199,7 @@ enum MaterialNonInteractiveMode_t
 //-----------------------------------------------------------------------------
 // Special morph used in decalling pass
 //-----------------------------------------------------------------------------
-#define MATERIAL_MORPH_DECAL ( (IMorph*)1 )
+inline IMorph *const MATERIAL_MORPH_DECAL = reinterpret_cast<IMorph *>( 1 );
 
 
 //-----------------------------------------------------------------------------
@@ -244,7 +228,6 @@ enum MaterialContextType_t
 //-----------------------------------------------------------------------------
 // Light structure
 //-----------------------------------------------------------------------------
-#include "mathlib/lightdesc.h"
 
 enum
 {
@@ -260,9 +243,9 @@ struct MaterialLightingState_t
 
 	MaterialLightingState_t &operator=( const MaterialLightingState_t &src )
 	{
-		memcpy( this, &src, sizeof(MaterialLightingState_t) - MATERIAL_MAX_LIGHT_COUNT * sizeof(LightDesc_t) );
-		size_t byteCount = src.m_nLocalLightCount * sizeof(LightDesc_t);
-		Assert( byteCount <= sizeof(m_pLocalLightDesc) );
+		std::memcpy( this, &src, sizeof(MaterialLightingState_t) - MATERIAL_MAX_LIGHT_COUNT * sizeof(LightDesc_t) );
+		std::size_t byteCount = src.m_nLocalLightCount * sizeof(LightDesc_t);
+		contract_assert( byteCount <= sizeof(m_pLocalLightDesc) );
 		memcpy( m_pLocalLightDesc, &src.m_pLocalLightDesc, byteCount );
 		return *this;
 	}
@@ -270,13 +253,13 @@ struct MaterialLightingState_t
 
 
 
-#define CREATERENDERTARGETFLAGS_HDR				0x00000001
-#define CREATERENDERTARGETFLAGS_AUTOMIPMAP		0x00000002
-#define CREATERENDERTARGETFLAGS_UNFILTERABLE_OK 0x00000004
+inline constexpr auto CREATERENDERTARGETFLAGS_HDR = 0x00000001;
+inline constexpr auto CREATERENDERTARGETFLAGS_AUTOMIPMAP = 0x00000002;
+inline constexpr auto CREATERENDERTARGETFLAGS_UNFILTERABLE_OK = 0x00000004;
 // XBOX ONLY:
-#define CREATERENDERTARGETFLAGS_NOEDRAM			0x00000008 // inhibit allocation in 360 EDRAM
-#define CREATERENDERTARGETFLAGS_TEMP			0x00000010 // only allocates memory upon first resolve, destroyed at level end
-#define CREATERENDERTARGETFLAGS_ALIASCOLORANDDEPTHSURFACES 0x00000020 // force the depth surface to be aliased overtop of the color surface in EDRAM, for the special case of depth-only rendering
+inline constexpr auto CREATERENDERTARGETFLAGS_NOEDRAM = 0x00000008; // inhibit allocation in 360 EDRAM
+inline constexpr auto CREATERENDERTARGETFLAGS_TEMP = 0x00000010; // only allocates memory upon first resolve, destroyed at level end
+inline constexpr auto CREATERENDERTARGETFLAGS_ALIASCOLORANDDEPTHSURFACES = 0x00000020; // force the depth surface to be aliased overtop of the color surface in EDRAM, for the special case of depth-only rendering
 
 
 //-----------------------------------------------------------------------------
@@ -335,7 +318,7 @@ struct MaterialSystem_SortInfo_t
 };
 
 
-#define MAX_FB_TEXTURES 4
+inline constexpr auto MAX_FB_TEXTURES = 4;
 
 //-----------------------------------------------------------------------------
 // Information about each adapter
@@ -404,7 +387,12 @@ struct UberlightState_t
 	float m_fHedge;
 	float m_fRoundness;
 
-	IMPLEMENT_OPERATOR_EQUAL( UberlightState_t );
+	public:
+	UberlightState_t &operator=( const UberlightState_t &src )
+	{
+		std::memcpy( this, &src, sizeof( UberlightState_t ) );
+		return *this;
+	};
 };
 
 // fixme: should move this into something else.
@@ -518,13 +506,18 @@ private:
 	int m_nRight;
 	int m_nBottom;
 
-	IMPLEMENT_OPERATOR_EQUAL( FlashlightState_t );
+	public:
+	FlashlightState_t &operator=( const FlashlightState_t &src )
+	{
+		std::memcpy( this, &src, sizeof( FlashlightState_t ) );
+		return *this;
+	};
 };
 
-#define MAX_CASCADED_SHADOW_MAPPING_CASCADES (4)
+inline constexpr auto MAX_CASCADED_SHADOW_MAPPING_CASCADES = (4);
 
 // The number of float4's in the CascadedShadowMappingState_t (starting at m_vLightColor)
-#define CASCADED_SHADOW_MAPPING_CONSTANT_BUFFER_SIZE (26)
+inline constexpr auto CASCADED_SHADOW_MAPPING_CONSTANT_BUFFER_SIZE = (26);
 
 // Note: This struct is sent as-is as an array of pixel shader constants (starting at m_vLightColor). If you modify it, be sure to update CASCADED_SHADOW_MAPPING_CONSTANT_BUFFER_SIZE.
 struct CascadedShadowMappingState_t
@@ -640,15 +633,17 @@ typedef bool (*EndFramePriorToNextContextFunc_t)( void );
 //typedef int VertexBufferHandle_t;
 typedef unsigned short MaterialHandle_t;
 
-DECLARE_POINTER_HANDLE( OcclusionQueryObjectHandle_t );
-#define INVALID_OCCLUSION_QUERY_OBJECT_HANDLE ( (OcclusionQueryObjectHandle_t)0 )
+struct OcclusionQueryObjectHandle_t__ { int unused; };
+using OcclusionQueryObjectHandle_t = OcclusionQueryObjectHandle_t__ *;
+#define INVALID_OCCLUSION_QUERY_OBJECT_HANDLE	( (OcclusionQueryObjectHandle_t)0 )
 
 class IMaterialProxyFactory;
 class ITexture;
 class IMaterialSystemHardwareConfig;
 class CShadowMgr;
 
-DECLARE_POINTER_HANDLE( MaterialLock_t );
+struct MaterialLock_t__ { int unused; };
+using MaterialLock_t = MaterialLock_t__ *;
 
 //-----------------------------------------------------------------------------
 // Information about a material texture
@@ -711,7 +706,7 @@ struct AspectRatioInfo_t
 // 
 //-----------------------------------------------------------------------------
 
-abstract_class IMaterialSystem : public IAppSystem
+class IMaterialSystem : public IAppSystem
 {
 public:
 
@@ -1237,7 +1232,7 @@ public:
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-abstract_class IMatRenderContext : public IRefCounted
+class IMatRenderContext : public IRefCounted
 {
 public:
 	virtual void				BeginRender() = 0;
@@ -1704,7 +1699,7 @@ public:
 	// Update current frame's game time for the shader api.
 	virtual void UpdateGameTime( float flTime ) = 0;
 
-	virtual void			PrintfVA( char *fmt, va_list vargs ) = 0;
+	virtual void			PrintfVA( char *fmt, std::va_list vargs ) = 0;
 	virtual void			Printf( char *fmt, ... ) = 0;
 	virtual float			Knob( char *knobname, float *setvalue = nullptr ) = 0;
 
@@ -1729,7 +1724,7 @@ template< class E > inline E* IMatRenderContext::LockRenderDataTyped( int nCount
 	E *pDstData = (E*)LockRenderData( nSizeInBytes );
 	if ( pSrcData && pDstData )
 	{
-		memcpy( pDstData, pSrcData, nSizeInBytes );
+		std::memcpy( pDstData, pSrcData, nSizeInBytes );
 	}
 	return pDstData;
 }
@@ -1738,7 +1733,7 @@ template< class E > inline E* IMatRenderContext::LockRenderDataTyped( int nCount
 //-----------------------------------------------------------------------------
 // Purpose: Interface exposed from client back to materialsystem, currently just for recording into tools
 //-----------------------------------------------------------------------------
-abstract_class IClientMaterialSystem
+class IClientMaterialSystem
 {
 public:
 	virtual unsigned int GetCurrentRecordingEntity() = 0;
@@ -1746,7 +1741,7 @@ public:
 	virtual void SetMaterialProxyData( void *pProxyData ) = 0;
 };
 
-#define VCLIENTMATERIALSYSTEM_INTERFACE_VERSION "VCLIENTMATERIALSYSTEM001"
+inline constexpr const char *VCLIENTMATERIALSYSTEM_INTERFACE_VERSION = "VCLIENTMATERIALSYSTEM001";
 
 
 //-----------------------------------------------------------------------------
@@ -1909,14 +1904,14 @@ inline const E* CMatRenderData<E>::Base() const
 template< typename E >
 inline E& CMatRenderData<E>::operator[]( int i )
 {
-	Assert( ( i >= 0 ) && ( i < m_nCount ) );
+	contract_assert( ( i >= 0 ) && ( i < m_nCount ) );
 	return m_pRenderData[i];
 }
 
 template< typename E >
 inline const E& CMatRenderData<E>::operator[]( int i ) const
 {
-	Assert( ( i >= 0 ) && ( i < m_nCount ) );
+	contract_assert( ( i >= 0 ) && ( i < m_nCount ) );
 	return m_pRenderData[i];
 }
 
@@ -1961,8 +1956,8 @@ public:
 	PIXEvent( IMatRenderContext *pRenderContext, const char *szName, unsigned long color = PIX_VALVE_ORANGE )
 	{
 		m_pRenderContext = pRenderContext;
-		Assert( m_pRenderContext );
-		Assert( szName );
+		contract_assert( m_pRenderContext );
+		contract_assert( szName );
 		m_pRenderContext->BeginPIXEvent( color, szName );
 	}
 	~PIXEvent()
@@ -1986,25 +1981,9 @@ private:
 
 //-----------------------------------------------------------------------------
 
-#ifdef MATERIAL_SYSTEM_DEBUG_CALL_QUEUE
-#include "tier1/callqueue.h"
-#include "tier1/fmtstr.h"
-static void DoMatSysQueueMark( IMaterialSystem *pMaterialSystem, const char *psz )
-{
-	CMatRenderContextPtr pRenderContext( pMaterialSystem );
-	if ( pRenderContext->GetCallQueue() ) 
-		pRenderContext->GetCallQueue()->QueueCall( Plat_DebugString, ks::envelope<const char *>( psz ) );
-}
-
-#define MatSysQueueMark( pMaterialSystem, ...) DoMatSysQueueMark( pMaterialSystem, CFmtStr( __VA_ARGS__ ) )
-#else
-#define MatSysQueueMark( msg, ...) ((void)0)
-#endif
 
 
 //-----------------------------------------------------------------------------
 
-DECLARE_TIER2_INTERFACE( IMaterialSystem, materials );
-DECLARE_TIER2_INTERFACE( IMaterialSystem, g_pMaterialSystem );
-
-#endif // IMATERIALSYSTEM_H
+extern IMaterialSystem *materials;;
+extern IMaterialSystem *g_pMaterialSystem;;

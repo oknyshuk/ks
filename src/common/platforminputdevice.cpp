@@ -1,13 +1,9 @@
-// ===== Copyright 1996-2012, Valve Corporation, All rights reserved. =======
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2012 Valve Corporation
+
 // Purpose: Provides Cross-Platform Input Device information
-//
-// ==========================================================================
-
-
 
 #include "platforminputdevice.h"
-#include "dbg.h"
 
 class CAutoInit
 {
@@ -66,7 +62,7 @@ int getOrdinalOfSetBit( uint32 iValue, uint32 theBit )
 	if ( ( iValue & theBit ) == 0 )
 		return 0;
 
-	Assert( countBits( theBit ) == 1 );
+	contract_assert( countBits( theBit ) == 1 );
 
 	uint32 curValue = 1;
 	int bitCount = 0;
@@ -113,13 +109,11 @@ void PlatformInputDevice::InitPlatfromInputDeviceInfo( void )
 	s_validPlatformInputDevices[INPUT_DEVICE_PLATFORM_WINDOWS] =
 		INPUT_DEVICE_KEYBOARD_MOUSE | 
 		INPUT_DEVICE_GAMEPAD | 
-		INPUT_DEVICE_HYDRA |
-		INPUT_DEVICE_STEAM_CONTROLLER;
+		INPUT_DEVICE_HYDRA;
 
 	// Mac OSX
 	s_validPlatformInputDevices[INPUT_DEVICE_PLATFORM_OSX] =
-		INPUT_DEVICE_KEYBOARD_MOUSE |
-		INPUT_DEVICE_STEAM_CONTROLLER;
+		INPUT_DEVICE_KEYBOARD_MOUSE;
 
 	// Xbox 360
 	s_validPlatformInputDevices[INPUT_DEVICE_PLATFORM_XBOX360] =
@@ -134,8 +128,7 @@ void PlatformInputDevice::InitPlatfromInputDeviceInfo( void )
 
 	// Linux PC
 	s_validPlatformInputDevices[INPUT_DEVICE_PLATFORM_LINUX] =
-		INPUT_DEVICE_KEYBOARD_MOUSE |
-		INPUT_DEVICE_STEAM_CONTROLLER;
+		INPUT_DEVICE_KEYBOARD_MOUSE;
 
 	for (int n = 0; n < INPUT_DEVICE_PLATFORM_COUNT; n++ )
 	{
@@ -150,10 +143,10 @@ void PlatformInputDevice::InitPlatfromInputDeviceInfo( void )
 
 int	PlatformInputDevice::GetInputDeviceCountforPlatform( InputDevicePlatform_t platform )
 {
-	Assert( s_Initialized );
+	contract_assert( s_Initialized );
 	if ( platform < INPUT_DEVICE_PLATFORM_LOCAL || platform >= INPUT_DEVICE_PLATFORM_COUNT )
 	{
-		AssertMsg( false, "invalid platform" );
+		contract_assert( false && "invalid platform" );
 		return 0;
 	}
 
@@ -163,10 +156,10 @@ int	PlatformInputDevice::GetInputDeviceCountforPlatform( InputDevicePlatform_t p
 
 InputDevice_t PlatformInputDevice::GetValidInputDevicesForPlatform( InputDevicePlatform_t platform )
 {
-	Assert( s_Initialized );
+	contract_assert( s_Initialized );
 	if ( platform < INPUT_DEVICE_PLATFORM_LOCAL || platform >= INPUT_DEVICE_PLATFORM_COUNT )
 	{
-		AssertMsg( false, "invalid platform" );
+		contract_assert( false && "invalid platform" );
 		return INPUT_DEVICE_NONE;
 	}
 
@@ -176,11 +169,11 @@ InputDevice_t PlatformInputDevice::GetValidInputDevicesForPlatform( InputDeviceP
 
 bool PlatformInputDevice::IsInputDeviceValid( InputDevice_t device, InputDevicePlatform_t platform )
 {
-	Assert( s_Initialized );
+	contract_assert( s_Initialized );
 	// make sure inputs make sense
 	if ( platform < INPUT_DEVICE_PLATFORM_ANY || platform >= INPUT_DEVICE_PLATFORM_COUNT )
 	{
-		AssertMsg( false, "invalid platform" );
+		contract_assert( false && "invalid platform" );
 		return false;
 	}
 
@@ -217,7 +210,7 @@ const char *PlatformInputDevice::GetInputDeviceNameUI( InputDevice_t device )
 		case INPUT_DEVICE_MOVE_NAV_CONTROLLER:		return "#INPUT_DEVICE_MOVE_NAV_CONTROLLER";
 		default:
 		{
-			AssertMsg( false, "Invalid Input Device" );
+			contract_assert( false && "Invalid Input Device" );
 			return "<invalid>";
 		}
 	}
@@ -236,7 +229,7 @@ const char *PlatformInputDevice::GetInputDeviceNameInternal( InputDevice_t devic
 		case INPUT_DEVICE_MOVE_NAV_CONTROLLER:		return "NAV_CONTROLLER";
 		default:
 		{
-			AssertMsg( false, "Invalid Input Device" );
+			contract_assert( false && "Invalid Input Device" );
 			return "<INVALID>";
 		}
 	}
@@ -267,7 +260,7 @@ const char *PlatformInputDevice::GetInputDevicePlatformName( InputDevicePlatform
 		case INPUT_DEVICE_PLATFORM_LINUX:		return "Linux PC";
 		default:
 		{
-			AssertMsg( false, "Invalid Input Platform" );
+			contract_assert( false && "Invalid Input Platform" );
 			return "<invalid>";
 		}
 	}
@@ -278,7 +271,7 @@ InputDevice_t PlatformInputDevice::GetDefaultInputDeviceForPlatform( InputDevice
 	// make sure inputs make sense
 	if ( platform < INPUT_DEVICE_PLATFORM_LOCAL || platform >= INPUT_DEVICE_PLATFORM_COUNT )
 	{
-		AssertMsg( false, "invalid platform" );
+		contract_assert( false && "invalid platform" );
 		return INPUT_DEVICE_NONE;
 	}
 
@@ -298,7 +291,7 @@ InputDevice_t PlatformInputDevice::GetDefaultInputDeviceForPlatform( InputDevice
 		case INPUT_DEVICE_PLATFORM_LINUX:		return INPUT_DEVICE_KEYBOARD_MOUSE;
 		default:
 		{
-			AssertMsg( false, "Default device missing" );
+			contract_assert( false && "Default device missing" );
 			return INPUT_DEVICE_NONE;
 		}
 	}
@@ -307,16 +300,16 @@ InputDevice_t PlatformInputDevice::GetDefaultInputDeviceForPlatform( InputDevice
 
 int	PlatformInputDevice::GetInputDeviceOrdinalForPlatform( InputDevice_t device, InputDevicePlatform_t platform )
 {
-	Assert( s_Initialized );
+	contract_assert( s_Initialized );
 	// make sure inputs make sense
 	if ( platform < INPUT_DEVICE_PLATFORM_LOCAL || platform >= INPUT_DEVICE_PLATFORM_COUNT )
 	{
-		AssertMsg( false, "invalid platform" );
+		contract_assert( false && "invalid platform" );
 		return 0;
 	}
 	if ( countBits( device ) != 1 || ( device & s_AllInputDevices ) != device )
 	{
-		AssertMsg( false, "invalid device" );
+		contract_assert( false && "invalid device" );
 		return 0;
 	}
 
@@ -337,11 +330,11 @@ int	PlatformInputDevice::GetInputDeviceOrdinalForPlatform( InputDevice_t device,
 
 InputDevice_t PlatformInputDevice::GetInputDeviceTypefromPlatformOrdinal( int deviceNo, InputDevicePlatform_t platform )
 {
-	Assert( s_Initialized );
+	contract_assert( s_Initialized );
 	// make sure inputs make sense
 	if ( platform < INPUT_DEVICE_PLATFORM_LOCAL || platform >= INPUT_DEVICE_PLATFORM_COUNT )
 	{
-		AssertMsg( false, "invalid platform" );
+		contract_assert( false && "invalid platform" );
 		return INPUT_DEVICE_NONE;
 	}
 
@@ -353,7 +346,7 @@ InputDevice_t PlatformInputDevice::GetInputDeviceTypefromPlatformOrdinal( int de
 
 	if ( deviceNo < 1 || deviceNo > s_numberPlatformInputDevices[platform] )
 	{
-		AssertMsg( false, "bad platform device ordnial" );
+		contract_assert( false && "bad platform device ordnial" );
 		return INPUT_DEVICE_NONE;
 	}
 
@@ -374,7 +367,7 @@ bool PlatformInputDevice::IsInputDeviceAPointer( InputDevice_t device )
 	case INPUT_DEVICE_SHARPSHOOTER:
 		return true;
 	default:
-		AssertMsg(false, "Device not handled.");
+		contract_assert( false && "Device not handled." );
 		break;
 	}
 	return false;

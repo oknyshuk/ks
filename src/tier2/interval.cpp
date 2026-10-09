@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
+import ks.vstdlib;
 #include "tier2/interval.h"
-#include "tier1/strtools.h"
-#include "vstdlib/random.h"
+import std;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -23,16 +18,16 @@ interval_t ReadInterval( const char *pString )
 	tmp.range = 0;
 
 	char tempString[128];
-	Q_strncpy( tempString, pString, sizeof(tempString) );
+	V_strncpy( tempString, pString, sizeof(tempString) );
 	
-	char *token = strtok( tempString, "," );
+	char *token = std::strtok( tempString, "," );
 	if ( token )
 	{
-		tmp.start = atof( token );
-		token = strtok( nullptr, "," );
+		tmp.start = std::atof( token );
+		token = std::strtok( nullptr, "," );
 		if ( token )
 		{
-			tmp.range = atof( token ) - tmp.start;
+			tmp.range = std::atof( token ) - tmp.start;
 		}
 	}
 

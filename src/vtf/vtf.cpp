@@ -1,21 +1,14 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: The VTF file format I/O class to help simplify access to VTF files
-//
-//=====================================================================================//
 
 #undef fopen
+import ks.tier1;
 #include "bitmap/imageformat.h"
 #include "cvtf.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier0/dbg.h"
-#include "mathlib/vector.h"
-#include "mathlib/mathlib.h"
-#include "tier1/strtools.h"
-#include "tier0/mem.h"
+import std;
 #include "s3tc_decode.h"
-#include "utlvector.h"
 
 // byteswap data descriptions
 // stub functions
@@ -47,7 +40,7 @@ S3PaletteIndex S3TC_GetPaletteIndex(
         int y )
 {
 	S3PaletteIndex nullPalette;
-	memset(&nullPalette, 0x0, sizeof(nullPalette));
+	std::memset(&nullPalette, 0x0, sizeof(nullPalette));
 	return nullPalette;
 }
 
@@ -229,11 +222,11 @@ CVTFTexture::CVTFTexture()
 	m_pLowResImageData = nullptr;
 	m_nLowResImageAllocSize = 0;
 
-	Assert( std::ssize( m_arrResourcesInfo ) == 0 );
-	Assert( std::ssize( m_arrResourcesData ) == 0 );
-	Assert( std::ssize( m_arrResourcesData_ForReuse ) == 0 );
+	contract_assert( std::ssize( m_arrResourcesInfo ) == 0 );
+	contract_assert( std::ssize( m_arrResourcesData ) == 0 );
+	contract_assert( std::ssize( m_arrResourcesData_ForReuse ) == 0 );
 
-	memset( &m_Options, 0, sizeof( m_Options ) );
+	std::memset( &m_Options, 0, sizeof( m_Options ) );
 	m_Options.cbSize = sizeof( m_Options );
 }
 
@@ -509,7 +502,7 @@ void CVTFTexture::ImageFileInfo( int nFrame, int nFace, int nMipLevel, int *pSta
 	if ( pImageDataInfo == nullptr )
 	{
 		// This should never happen for real, but can happen if someone intentionally fed us a bad VTF.
-		Assert( pImageDataInfo );
+		contract_assert( pImageDataInfo );
 		( *pStartLocation ) = 0;
 		( *pSizeInBytes ) = 0;
 		return;
@@ -563,7 +556,7 @@ int CVTFTexture::FileSize( int nMipSkipCount ) const
 	if ( pImageDataInfo == nullptr )
 	{
 		// Still do the assert so we can catch this in debug--we don't expect this for well formed files.
-		Assert( pImageDataInfo != nullptr );
+		contract_assert( pImageDataInfo != nullptr );
 		return 0;
 	}
 
@@ -598,7 +591,7 @@ bool CVTFTexture::LoadImageData( ks::byte_reader &buf, const VTFFileHeader_t &he
 	// Fix up the mip count + size based on how many mip levels we skip...
 	if (nSkipMipLevels > 0)
 	{
-		Assert( m_nMipCount > nSkipMipLevels );
+		contract_assert( m_nMipCount > nSkipMipLevels );
 		if (header.numMipLevels < nSkipMipLevels)
 		{
 			// NOTE: This can only happen with older format .vtf files
@@ -635,7 +628,7 @@ bool CVTFTexture::LoadImageData( ks::byte_reader &buf, const VTFFileHeader_t &he
 		}
 	}
 
-	const size_t nGet = buf.tell();
+	const std::size_t nGet = buf.tell();
 
 retryCubemapLoad:
 	for (int iMip = m_nMipCount; --iMip >= 0; )
@@ -677,13 +670,13 @@ retryCubemapLoad:
 	return bOk;
 }
 
-void *CVTFTexture::SetResourceData( uint32 eType, void const *pData, size_t nNumBytes )
+void *CVTFTexture::SetResourceData( uint32 eType, void const *pData, std::size_t nNumBytes )
 {
-	Assert( ( eType & RSRCF_MASK ) == 0 );
+	contract_assert( ( eType & RSRCF_MASK ) == 0 );
 	eType &= ~RSRCF_MASK;
 
 	// Very inefficient to set less than 4 bytes of data
-	Assert( !nNumBytes || ( nNumBytes >= sizeof( uint32 ) ) );
+	contract_assert( !nNumBytes || ( nNumBytes >= sizeof( uint32 ) ) );
 
 	if ( nNumBytes )
 	{
@@ -708,7 +701,7 @@ void *CVTFTexture::SetResourceData( uint32 eType, void const *pData, size_t nNum
 			}
 
 			if ( pData )
-				memcpy( rms.m_pData, pData, nNumBytes );
+				std::memcpy( rms.m_pData, pData, nNumBytes );
 			return rms.m_pData;
 		}
 	}
@@ -719,9 +712,9 @@ void *CVTFTexture::SetResourceData( uint32 eType, void const *pData, size_t nNum
 	}
 }
 
-void *CVTFTexture::GetResourceData( uint32 eType, size_t *pDataSize ) const
+void *CVTFTexture::GetResourceData( uint32 eType, std::size_t *pDataSize ) const
 {
-	Assert( ( eType & RSRCF_MASK ) == 0 );
+	contract_assert( ( eType & RSRCF_MASK ) == 0 );
 	eType &= ~RSRCF_MASK;
 
 	ResourceEntryInfo const *pInfo = FindResourceEntryInfo( eType );
@@ -796,7 +789,7 @@ bool CVTFTexture::ResourceMemorySection::LoadData( ks::byte_reader &buf )
 
 bool CVTFTexture::ResourceMemorySection::WriteData( ks::byte_writer &buf ) const
 {
-	Assert( m_nDataLength && m_pData );
+	contract_assert( m_nDataLength && m_pData );
 	int iBufSize = m_nDataLength;
 	
 	buf.write_bytes( &iBufSize, sizeof( iBufSize ) );
@@ -849,7 +842,7 @@ static bool ReadHeaderFromBufferPastBaseHeader( ks::byte_reader &buf, VTFFileHea
 bool CVTFTexture::ReadHeader( ks::byte_reader &buf, VTFFileHeader_t &header )
 {
 
-	memset( &header, 0, sizeof(VTFFileHeader_t) );
+	std::memset( &header, 0, sizeof(VTFFileHeader_t) );
 	buf.read_bytes( &header, sizeof(VTFFileBaseHeader_t) );
 	if ( !buf.ok() )
 	{
@@ -858,7 +851,7 @@ bool CVTFTexture::ReadHeader( ks::byte_reader &buf, VTFFileHeader_t &header )
 	}
 
 	// Validity check
-	if ( Q_strncmp( header.fileTypeString, "VTF", 4 ) )
+	if ( V_strncmp( header.fileTypeString, "VTF", 4 ) )
 	{
 		Warning( "*** Tried to load a non-VTF file as a VTF file!\n" );
 		return false;
@@ -1073,7 +1066,7 @@ bool CVTFTexture::LoadNewResources( ks::byte_reader &buf )
 
 ResourceEntryInfo const *CVTFTexture::FindResourceEntryInfo( uint32 eType ) const
 {
-	Assert( ( eType & RSRCF_MASK ) == 0 );
+	contract_assert( ( eType & RSRCF_MASK ) == 0 );
 
 	ResourceEntryInfo const *pRange[2];
 	pRange[0] = m_arrResourcesInfo.data();
@@ -1108,7 +1101,7 @@ ResourceEntryInfo * CVTFTexture::FindResourceEntryInfo( uint32 eType )
 
 ResourceEntryInfo * CVTFTexture::FindOrCreateResourceEntryInfo( uint32 eType )
 {
-	Assert( ( eType & RSRCF_MASK ) == 0 );
+	contract_assert( ( eType & RSRCF_MASK ) == 0 );
 
 	int k = 0;
 	for ( ; k < std::ssize( m_arrResourcesInfo ); ++ k )
@@ -1126,7 +1119,7 @@ ResourceEntryInfo * CVTFTexture::FindOrCreateResourceEntryInfo( uint32 eType )
 	}
 
 	ResourceEntryInfo rei;
-	memset( &rei, 0, sizeof( rei ) );
+	std::memset( &rei, 0, sizeof( rei ) );
 	rei.eType = eType;
 
 	// Inserting before "k"
@@ -1146,7 +1139,7 @@ ResourceEntryInfo * CVTFTexture::FindOrCreateResourceEntryInfo( uint32 eType )
 
 bool CVTFTexture::RemoveResourceEntryInfo( uint32 eType )
 {
-	Assert( ( eType & RSRCF_MASK ) == 0 );
+	contract_assert( ( eType & RSRCF_MASK ) == 0 );
 
 	for ( int k = 0; k < std::ssize( m_arrResourcesInfo ); ++ k )
 	{
@@ -1221,8 +1214,8 @@ bool CVTFTexture::Serialize( ks::byte_writer &buf )
 	}
 
 	VTFFileHeader_t header;
-	memset( &header, 0, sizeof( header ) );
-	Q_strncpy( header.fileTypeString, "VTF", 4 );
+	std::memset( &header, 0, sizeof( header ) );
+	V_strncpy( header.fileTypeString, "VTF", 4 );
 	header.version[0] = VTF_MAJOR_VERSION;
 	header.version[1] = VTF_MINOR_VERSION;
 	header.headerSize = sizeof(VTFFileHeader_t) + std::ssize( m_arrResourcesInfo ) * sizeof( ResourceEntryInfo );
@@ -1262,7 +1255,7 @@ bool CVTFTexture::Serialize( ks::byte_writer &buf )
 		return false;
 
 	// Write the dictionary of resource entry infos
-	const size_t iSeekOffsetResInfoFixup = buf.tell();
+	const std::size_t iSeekOffsetResInfoFixup = buf.tell();
 	buf.write_bytes( m_arrResourcesInfo.data(), std::ssize( m_arrResourcesInfo ) * sizeof( ResourceEntryInfo ) );
 	if ( !buf.ok() )
 		return false;
@@ -1272,7 +1265,7 @@ bool CVTFTexture::Serialize( ks::byte_writer &buf )
 	{
 		pRei->resData = static_cast< uint32 >( buf.tell() );
 
-		Assert( m_pLowResImageData );
+		contract_assert( m_pLowResImageData );
 		int iLowResImageSize = ImageLoader::GetMemRequired( m_nLowResImageWidth, 
 			m_nLowResImageHeight, 1, m_LowResImageFormat, false );
 		buf.write_bytes( m_pLowResImageData, iLowResImageSize );
@@ -1314,7 +1307,7 @@ bool CVTFTexture::Serialize( ks::byte_writer &buf )
 		return false;
 
 	// Now fixup the resources dictionary
-	const size_t iTotalBytesPut = buf.tell();
+	const std::size_t iTotalBytesPut = buf.tell();
 	buf.seek( iSeekOffsetResInfoFixup );
 	buf.write_bytes( m_arrResourcesInfo.data(), std::ssize( m_arrResourcesInfo ) * sizeof( ResourceEntryInfo ) );
 	buf.seek( iTotalBytesPut );
@@ -1451,7 +1444,7 @@ int CVTFTexture::FaceSizeInBytes( int nMipLevel ) const
 //-----------------------------------------------------------------------------
 unsigned char *CVTFTexture::ImageData( int iFrame, int iFace, int iMipLevel )
 {
-	Assert( m_pImageData );
+	contract_assert( m_pImageData );
 	int iOffset = GetImageOffset( iFrame, iFace, iMipLevel, m_Format );
 	return &m_pImageData[iOffset];
 }
@@ -1465,7 +1458,7 @@ unsigned char *CVTFTexture::ImageData( int iFrame, int iFace, int iMipLevel, int
 #ifdef _DEBUG
 	int nWidth, nHeight, nDepth;
 	ComputeMipLevelDimensions( iMipLevel, &nWidth, &nHeight, &nDepth );
-	Assert( (x >= 0) && (x <= nWidth) && (y >= 0) && (y <= nHeight) && (z >= 0) && (z <= nDepth) );
+	contract_assert( (x >= 0) && (x <= nWidth) && (y >= 0) && (y <= nHeight) && (z >= 0) && (z <= nDepth) );
 #endif
 
 	int nFaceBytes = FaceSizeInBytes( iMipLevel );
@@ -1481,7 +1474,7 @@ unsigned char *CVTFTexture::ImageData( int iFrame, int iFace, int iMipLevel, int
 //-----------------------------------------------------------------------------
 inline int CVTFTexture::ComputeMipSize( int iMipLevel, ImageFormat fmt ) const
 {
-	Assert( iMipLevel < m_nMipCount );
+	contract_assert( iMipLevel < m_nMipCount );
 	int w, h, d;
 	ComputeMipLevelDimensions( iMipLevel, &w, &h, &d );
 	return ImageLoader::GetMemRequired( w, h, d, fmt, false );		
@@ -1561,9 +1554,9 @@ int CVTFTexture::ComputeTotalSize( ) const
 //-----------------------------------------------------------------------------
 int CVTFTexture::GetImageOffset( int iFrame, int iFace, int iMipLevel, ImageFormat fmt ) const
 {
-	Assert( iFrame < m_nFrameCount );
-	Assert( iFace < m_nFaceCount );
-	Assert( iMipLevel < m_nMipCount );
+	contract_assert( iFrame < m_nFrameCount );
+	contract_assert( iFace < m_nFaceCount );
+	contract_assert( iMipLevel < m_nMipCount );
 
 	int i;
 	int iOffset = 0;
@@ -1591,7 +1584,7 @@ int CVTFTexture::GetImageOffset( int iFrame, int iFace, int iMipLevel, ImageForm
 //-----------------------------------------------------------------------------
 void CVTFTexture::ComputeMipLevelDimensions( int iMipLevel, int *pMipWidth, int *pMipHeight, int *pMipDepth ) const
 {
-	Assert( iMipLevel < m_nMipCount );
+	contract_assert( iMipLevel < m_nMipCount );
 
 	*pMipWidth = m_nWidth >> iMipLevel;
 	*pMipHeight = m_nHeight >> iMipLevel;
@@ -1616,7 +1609,7 @@ void CVTFTexture::ComputeMipLevelDimensions( int iMipLevel, int *pMipWidth, int 
 //-----------------------------------------------------------------------------
 void CVTFTexture::ComputeMipLevelSubRect( Rect_t *pSrcRect, int nMipLevel, Rect_t *pSubRect ) const
 {
-	Assert( pSrcRect->x >= 0 && pSrcRect->y >= 0 && 
+	contract_assert( pSrcRect->x >= 0 && pSrcRect->y >= 0 && 
 		(pSrcRect->x + pSrcRect->width <= m_nWidth) &&  
 		(pSrcRect->y + pSrcRect->height <= m_nHeight) );
 	
@@ -1629,7 +1622,7 @@ void CVTFTexture::ComputeMipLevelSubRect( Rect_t *pSrcRect, int nMipLevel, Rect_
 	float flInvShrink = 1.0f / (float)(1 << nMipLevel);
 	pSubRect->x = ( int )( pSrcRect->x * flInvShrink );
 	pSubRect->y = ( int )( pSrcRect->y * flInvShrink );
-	pSubRect->width = (int)ceil( (pSrcRect->x + pSrcRect->width) * flInvShrink ) - pSubRect->x;
+	pSubRect->width = (int)std::ceil( (pSrcRect->x + pSrcRect->width) * flInvShrink ) - pSubRect->x;
 	pSubRect->height = (int)ceil( (pSrcRect->y + pSrcRect->height) * flInvShrink ) - pSubRect->y;
 }
 
@@ -1652,7 +1645,7 @@ void CVTFTexture::ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV, bool 
 
 	if ( bNormalToDUDV && !( fmt == IMAGE_FORMAT_UV88 || fmt == IMAGE_FORMAT_UVWQ8888 || fmt == IMAGE_FORMAT_UVLX8888 ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
@@ -1702,7 +1695,7 @@ void CVTFTexture::ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV, bool 
 						}
 						else
 						{
-							Assert( 0 );
+							contract_assert( 0 );
 							return;
 						}
 					}
@@ -1723,9 +1716,9 @@ void CVTFTexture::ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV, bool 
 	if ( !AllocateImageData(iConvertedSize) )
 		return;
 		
-	Assert(iConvertedSize<=m_nImageAllocSize);
+	contract_assert( iConvertedSize<=m_nImageAllocSize );
 
-	memcpy( m_pImageData, pConvertedImage, iConvertedSize );
+	std::memcpy( m_pImageData, pConvertedImage, iConvertedSize );
 	m_Format = fmt;
 
 	if ( !ImageLoader::IsCompressed( fmt ) )
@@ -1968,7 +1961,7 @@ static void CalcSphereColor( SphereCalc_t *pCalc, float x, float y )
 	else
 	{
 		// Compute the z distance based on x*x + y*y + z*z = r*r 
-		float z = sqrt( pCalc->m_flRadiusSq - flRadiusSq );
+		float z = std::sqrt( pCalc->m_flRadiusSq - flRadiusSq );
 
 		// Here's the untransformed surface normal
 		normal.Init( x, y, z );
@@ -2005,7 +1998,7 @@ static void CalcHemisphereColor( SphereCalc_t *pCalc, float x, float y )
 	}
 
 	// Compute the z distance based on x*x + y*y + z*z = r*r 
-	float z = sqrt( pCalc->m_flRadiusSq - flRadiusSq );
+	float z = std::sqrt( pCalc->m_flRadiusSq - flRadiusSq );
 
 	// Here's the untransformed surface normal
 	normal.Init( x, y, z );
@@ -2176,7 +2169,7 @@ void CVTFTexture::GenerateSpheremap( LookDir_t lookDir )
 void CVTFTexture::GenerateHemisphereMap( unsigned char *pSphereMapBitsRGBA, int targetWidth, 
 		int targetHeight, LookDir_t lookDir, int iFrame )
 {
-	Assert( m_Format == IMAGE_FORMAT_RGBA8888 );
+	contract_assert( m_Format == IMAGE_FORMAT_RGBA8888 );
 
 	unsigned char *pCubeMaps[6];
 
@@ -2202,42 +2195,42 @@ static void FixCubeMapFacing( unsigned char* pImage, int cubeFaceID, int size, I
 	{
 	case CUBEMAP_FACE_RIGHT:	// +x
 		retVal = ImageLoader::RotateImageLeft( pImage, pImage, size, fmt );
-		Assert( retVal );
+		contract_assert( retVal );
 		retVal = ImageLoader::FlipImageVertically( pImage, pImage, size, size, fmt );
-		Assert( retVal );
+		contract_assert( retVal );
 		break;
 
 	case CUBEMAP_FACE_LEFT:		// -x
 		retVal = ImageLoader::RotateImageLeft( pImage, pImage, size, fmt );
-		Assert( retVal );
+		contract_assert( retVal );
 		retVal = ImageLoader::FlipImageHorizontally( pImage, pImage, size, size, fmt );
-		Assert( retVal );
+		contract_assert( retVal );
 		break;
 
 	case CUBEMAP_FACE_BACK:		// +y
 		retVal = ImageLoader::RotateImage180( pImage, pImage, size, fmt );
-		Assert( retVal );
+		contract_assert( retVal );
 		retVal = ImageLoader::FlipImageHorizontally( pImage, pImage, size, size, fmt );
-		Assert( retVal );
+		contract_assert( retVal );
 		break;
 
 	case CUBEMAP_FACE_FRONT:	// -y
 		retVal = ImageLoader::FlipImageHorizontally( pImage, pImage, size, size, fmt );
-		Assert( retVal );
+		contract_assert( retVal );
 		break;
 
 	case CUBEMAP_FACE_UP:		// +z
 		retVal = ImageLoader::RotateImageLeft( pImage, pImage, size, fmt );
-		Assert( retVal );
+		contract_assert( retVal );
 		retVal = ImageLoader::FlipImageVertically( pImage, pImage, size, size, fmt );
-		Assert( retVal );
+		contract_assert( retVal );
 		break;
 
 	case CUBEMAP_FACE_DOWN:		// -z
 		retVal = ImageLoader::FlipImageHorizontally( pImage, pImage, size, size, fmt );
-		Assert( retVal );
+		contract_assert( retVal );
 		retVal = ImageLoader::RotateImageLeft( pImage, pImage, size, fmt );
-		Assert( retVal );
+		contract_assert( retVal );
 		break;
 	}
 }
@@ -2250,12 +2243,12 @@ void CVTFTexture::FixCubemapFaceOrientation( )
 	if (!IsCubeMap())
 		return;
 
-	Assert( !ImageLoader::IsCompressed( m_Format ) );
+	contract_assert( !ImageLoader::IsCompressed( m_Format ) );
 	for (int iMipLevel = 0; iMipLevel < m_nMipCount; ++iMipLevel)
 	{
 		int iMipSize, iTemp, nDepth;
 		ComputeMipLevelDimensions( iMipLevel, &iMipSize, &iTemp, &nDepth );
-		Assert( (iMipSize == iTemp) && (nDepth == 1) );
+		contract_assert( (iMipSize == iTemp) && (nDepth == 1) );
 
 		for (int iFrame = 0; iFrame < m_nFrameCount; ++iFrame)
 		{
@@ -2337,7 +2330,7 @@ void CVTFTexture::Compute2DGradient()
 						flSobelY += pSliceData[ PixelOffset( iX + 1, iY + 1, nSrcWidth, nSrcHeight ) * 4 + 3 ] * 1.0f;  //
 						flSobelY /= 255.0f;
 
-						float flLength = sqrtf( ( flSobelX * flSobelX ) + ( flSobelY * flSobelY ) );
+						float flLength = std::sqrtf( ( flSobelX * flSobelX ) + ( flSobelY * flSobelY ) );
 
 						float flX = ( flLength == 0.0f ) ? 0.5f : ( ( flSobelX / flLength ) + 1.0f ) / 2.0f; // Normalized, since we care about direction, but not magnitude
 						float flY = ( flLength == 0.0f ) ? 0.5f : ( ( -flSobelY / flLength ) + 1.0f ) / 2.0f;	// Inverting Y to match source1-style normals
@@ -2392,7 +2385,7 @@ void CVTFTexture::GenerateMipmaps()
 //		return;
 //	}
 
-	Assert( m_Format == IMAGE_FORMAT_RGBA8888 || m_Format == IMAGE_FORMAT_RGB323232F || m_Format == IMAGE_FORMAT_RGBA32323232F );
+	contract_assert( m_Format == IMAGE_FORMAT_RGBA8888 || m_Format == IMAGE_FORMAT_RGB323232F || m_Format == IMAGE_FORMAT_RGBA32323232F );
 
 	// FIXME: Should we be doing anything special for normalmaps other than a final normalization pass?
 	ImageLoader::ResampleInfo_t info;
@@ -2525,7 +2518,7 @@ void CVTFTexture::GenerateMipmaps()
 			}
 			else if ( m_Options.flags0 & ( VtfProcessingOptions::OPT_DECAY_EXP_R << ch ) )
 			{
-				info.m_flColorScale[ch] = pow( m_Options.fDecayExponentBase[ch], iMipLevel - iLastNonDecayMip );
+				info.m_flColorScale[ch] = std::pow( m_Options.fDecayExponentBase[ch], iMipLevel - iLastNonDecayMip );
 			}
 			else
 			{
@@ -2535,13 +2528,13 @@ void CVTFTexture::GenerateMipmaps()
 			if ( !bMipBlendActive )
 			{
 				bMipBlendActive = true;
-				printf( "Blending mip%d %dx%d to", iMipLevel, info.m_nDestWidth, info.m_nDestHeight );
+				std::printf( "Blending mip%d %dx%d to", iMipLevel, info.m_nDestWidth, info.m_nDestHeight );
 			}
 
-			printf( "   %c=%d ~%d%%", chChannels[ch], m_Options.clrDecayGoal[ch], int( (1.f - info.m_flColorScale[ch]) * 100.0f + 0.5f ) );
+			std::printf( "   %c=%d ~%d%%", chChannels[ch], m_Options.clrDecayGoal[ch], int( (1.f - info.m_flColorScale[ch]) * 100.0f + 0.5f ) );
 		}
 		if ( bMipBlendActive )
-			printf( "\n" );
+			std::printf( "\n" );
 
 		if ( bNormalMap )
 		{
@@ -2584,7 +2577,7 @@ void CVTFTexture::GenerateMipmaps()
 
 void CVTFTexture::PutOneOverMipLevelInAlpha()
 {
-	Assert( m_Format == IMAGE_FORMAT_RGBA8888 );
+	contract_assert( m_Format == IMAGE_FORMAT_RGBA8888 );
 
 	for (int iMipLevel = 0; iMipLevel < m_nMipCount; ++iMipLevel)
 	{
@@ -2610,7 +2603,7 @@ void CVTFTexture::PutOneOverMipLevelInAlpha()
 
 void CVTFTexture::PremultAlphaWithMipFraction()
 {
-	Assert( m_Format == IMAGE_FORMAT_RGBA8888 );
+	contract_assert( m_Format == IMAGE_FORMAT_RGBA8888 );
 
 	for (int iMipLevel = 0; iMipLevel < m_nMipCount; ++iMipLevel)
 	{
@@ -2649,7 +2642,7 @@ void CVTFTexture::ComputeReflectivity( )
 		return;
 	}
 
-	Assert( m_Format == IMAGE_FORMAT_RGBA8888 );
+	contract_assert( m_Format == IMAGE_FORMAT_RGBA8888 );
 
 	int divisor = 0;
 	m_vecReflectivity.Init( 0.0f, 0.0f, 0.0f );
@@ -2690,7 +2683,7 @@ void CVTFTexture::ComputeAlphaFlags()
 		m_Options.flags0 &= ~( VtfProcessingOptions::OPT_MIP_ALPHATEST );
 		return;
 	}
-	Assert( m_Format == IMAGE_FORMAT_RGBA8888 );
+	contract_assert( m_Format == IMAGE_FORMAT_RGBA8888 );
 
 	m_nFlags &= ~(TEXTUREFLAGS_EIGHTBITALPHA | TEXTUREFLAGS_ONEBITALPHA);
 	
@@ -2807,8 +2800,8 @@ void CVTFTexture::PostProcess( bool bGenerateSpheremap, LookDir_t lookDir, bool 
 
 void CVTFTexture::SetPostProcessingSettings( VtfProcessingOptions const *pOptions )
 {
-	memset( &m_Options, 0, sizeof( m_Options ) );
-	memcpy( &m_Options, pOptions, std::min<std::common_type_t<long unsigned int, uint32>>( sizeof( m_Options ), pOptions->cbSize ) );
+	std::memset( &m_Options, 0, sizeof( m_Options ) );
+	std::memcpy( &m_Options, pOptions, std::min<std::common_type_t<long unsigned int, uint32>>( sizeof( m_Options ), pOptions->cbSize ) );
 	m_Options.cbSize = sizeof( m_Options );
 
 	// Optionally perform the fixups
@@ -2824,8 +2817,8 @@ bool CVTFTexture::ConstructLowResImage()
 	{
 		return true;
 	}
-	Assert( m_Format == IMAGE_FORMAT_RGBA8888 );
-	Assert( m_pLowResImageData );
+	contract_assert( m_Format == IMAGE_FORMAT_RGBA8888 );
+	contract_assert( m_pLowResImageData );
 
 	std::vector<unsigned char> lowResSizeImage( m_nLowResImageWidth * m_nLowResImageHeight * 4 );
 
@@ -2874,17 +2867,17 @@ void CVTFTexture::SetupEdgeIncrement( CEdgePos &start, CEdgePos &end, CEdgePos &
 	inc.x = inc.y = 0;
 	if ( start.x != end.x )
 	{
-		Assert( start.y == end.y );
+		contract_assert( start.y == end.y );
 		inc.x = (start.x < end.x) ? 1 : -1;
 	}
 	else if ( start.y != end.y )
 	{
-		Assert( start.x == end.x );
+		contract_assert( start.x == end.x );
 		inc.y = (start.y < end.y) ? 1 : -1;
 	}
 	else
 	{
-		Assert( false );
+		contract_assert( false );
 	}
 }
 
@@ -2942,7 +2935,7 @@ void CVTFTexture::BlendCubeMapFaceEdges(
 {
 	int nMipWidth, nMipHeight, nMipDepth;
 	ComputeMipLevelDimensions( iMipLevel, &nMipWidth, &nMipHeight, &nMipDepth );
-	Assert( nMipDepth == 1 );
+	contract_assert( nMipDepth == 1 );
 	if ( nMipWidth <= 1 || nMipHeight <= 1 )
 		return;
 
@@ -3004,7 +2997,7 @@ void CVTFTexture::BlendCubeMapFaceCorners(
 {
 	int nMipWidth, nMipHeight, nMipDepth;
 	ComputeMipLevelDimensions( iMipLevel, &nMipWidth, &nMipHeight, &nMipDepth );
-	Assert( nMipDepth == 1 );
+	contract_assert( nMipDepth == 1 );
 
 	// Setup the coordinates of each texel.
 	CEdgePos texelPos[3];
@@ -3044,7 +3037,7 @@ void CVTFTexture::BlendCubeMapFaceCorners(
 	}
 	else
 	{
-		Assert( false );
+		contract_assert( false );
 	}
 }
 
@@ -3095,7 +3088,7 @@ void CVTFTexture::BuildCubeMapMatchLists(
 		}
 	}
 
-	Assert( nTotalEdgesMatched == 12 );
+	contract_assert( nTotalEdgesMatched == 12 );
 
 	// For each corner vert, find the 3 edges touching it.
 	for ( int iVert=0; iVert < NUM_CORNER_MATCHES; iVert++ )
@@ -3114,7 +3107,7 @@ void CVTFTexture::BuildCubeMapMatchLists(
 				}
 			}
 		}
-		Assert( iTouchingFace == 3 );
+		contract_assert( iTouchingFace == 3 );
 	}
 }
 
@@ -3123,11 +3116,11 @@ void CVTFTexture::BlendCubeMapEdgePalettes(
 	int iMipLevel,
 	const CEdgeMatch *pMatch )
 {
-	Assert( m_Format == IMAGE_FORMAT_DXT1 || m_Format == IMAGE_FORMAT_DXT5 );
+	contract_assert( m_Format == IMAGE_FORMAT_DXT1 || m_Format == IMAGE_FORMAT_DXT5 );
 
 	int nMipWidth, nMipHeight, nMipDepth;
 	ComputeMipLevelDimensions( iMipLevel, &nMipWidth, &nMipHeight, &nMipDepth );
-	Assert( nMipDepth == 1 );
+	contract_assert( nMipDepth == 1 );
 	if ( nMipWidth <= 8 || nMipHeight <= 8 )
 		return;
 
@@ -3179,7 +3172,7 @@ void CVTFTexture::BlendCubeMapCornerPalettes(
 {
 	int nMipWidth, nMipHeight, nMipDepth;
 	ComputeMipLevelDimensions( iMipLevel, &nMipWidth, &nMipHeight, &nMipDepth );
-	Assert( nMipDepth == 1 );
+	contract_assert( nMipDepth == 1 );
 	if ( nMipWidth < 4 || nMipHeight < 4 )
 		return;
 
@@ -3250,14 +3243,14 @@ void CVTFTexture::MatchCubeMapBorders( int iStage, ImageFormat finalFormat, bool
 	if ( !IsCubeMap() )
 		return;
 	
-	Assert( IsCubeMap() );
-	Assert( m_nFaceCount >= 6 );
+	contract_assert( IsCubeMap() );
+	contract_assert( m_nFaceCount >= 6 );
 
 	if ( iStage == 1 )
 	{
 		// Stage 1 is while the image is still RGBA8888. If we're not going to S3 compress the image,
 		// then it is easiest to match the borders now.
-		Assert( m_Format == IMAGE_FORMAT_RGBA8888 );
+		contract_assert( m_Format == IMAGE_FORMAT_RGBA8888 );
 		if ( finalFormat == IMAGE_FORMAT_DXT1 || finalFormat == IMAGE_FORMAT_DXT5 )
 		{
 			// If we're going to S3 compress the image eventually, then store off the original version
@@ -3265,7 +3258,7 @@ void CVTFTexture::MatchCubeMapBorders( int iStage, ImageFormat finalFormat, bool
 			// repalettizing).
 			int nTotalBytes = ComputeTotalSize();
 			m_OriginalData.assign( nTotalBytes / 4, {} );
-			memcpy( m_OriginalData.data(), ImageData(), nTotalBytes );
+			std::memcpy( m_OriginalData.data(), ImageData(), nTotalBytes );
 			
 			// Swap R and B in these because IMAGE_FORMAT_RGBA8888 is swapped from the way S3RGBAs are.
 			for ( int i=0; i < nTotalBytes/4; i++ )
@@ -3282,7 +3275,7 @@ void CVTFTexture::MatchCubeMapBorders( int iStage, ImageFormat finalFormat, bool
 	{
 		if ( finalFormat == IMAGE_FORMAT_DXT1 || finalFormat == IMAGE_FORMAT_DXT5 )
 		{
-			Assert( m_Format == finalFormat );
+			contract_assert( m_Format == finalFormat );
 		}
 		else
 		{	
@@ -3359,7 +3352,7 @@ it was once.
 	for ( int iVert=0; iVert < 8; iVert++ )
 	{
 		char str[512];
-		Q_snprintf( str, sizeof( str ), "%d", iVert );
+		V_snprintf( str, sizeof( str ), "%d", iVert );
 		CTextParams params;
 		params.m_flLetterWidth = 20;
 		params.m_vPos = vertPositions[iVert];
@@ -3430,4 +3423,3 @@ it was once.
 		pPad->Flush();
 	}
 */
-

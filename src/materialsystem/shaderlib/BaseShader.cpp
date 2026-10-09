@@ -1,12 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "shaderlib/BaseShader.h"
 #include "shaderlib/ShaderDLL.h"
-#include "tier0/dbg.h"
 #include "shaderDLL_Global.h"
 #include "materialsystem/ishadersystem.h"
 #include "materialsystem/imaterial.h"
@@ -16,12 +13,8 @@
 #include "shaderlib/cshader.h"
 #include "shaderlib/commandbuilder.h"
 #include "renderparm.h"
-#include "mathlib/vmatrix.h"
-#include "tier1/strtools.h"
-#include "convar.h"
-#include "tier0/vprof.h"
+import std;
 #include "shaderapifast.h"
-
 
 //-----------------------------------------------------------------------------
 // Storage buffer used for instance command buffers
@@ -107,7 +100,7 @@ int CBaseShader::GetParamCount( ) const
 
 const ShaderParamInfo_t &CBaseShader::GetParamInfo( int nParamIndex ) const
 {
-	Assert( nParamIndex < NUM_SHADER_MATERIAL_VARS );
+	contract_assert( nParamIndex < NUM_SHADER_MATERIAL_VARS );
 	return s_StandardParams[nParamIndex];
 }
 
@@ -118,7 +111,7 @@ const ShaderParamInfo_t &CBaseShader::GetParamInfo( int nParamIndex ) const
 void CBaseShader::InitShaderParams( IMaterialVar** ppParams, const char *pMaterialName )
 {
 	// Re-entrancy check
-	Assert( !s_ppParams );
+	contract_assert( !s_ppParams );
 
 	s_ppParams = ppParams;
 
@@ -130,7 +123,7 @@ void CBaseShader::InitShaderParams( IMaterialVar** ppParams, const char *pMateri
 void CBaseShader::InitShaderInstance( IMaterialVar** ppParams, IShaderInit *pShaderInit, const char *pMaterialName, const char *pTextureGroupName )
 {
 	// Re-entrancy check
-	Assert( !s_ppParams );
+	contract_assert( !s_ppParams );
 
 	s_ppParams = ppParams;
 	s_pShaderInit = pShaderInit;
@@ -146,9 +139,9 @@ void CBaseShader::InitShaderInstance( IMaterialVar** ppParams, IShaderInit *pSha
 void CBaseShader::DrawElements( IMaterialVar **ppParams, int nModulationFlags,
 	IShaderShadow* pShaderShadow, IShaderDynamicAPI* pShaderAPI, VertexCompressionType_t vertexCompression, CBasePerMaterialContextData **pContextDataPtr, CBasePerInstanceContextData** pInstanceDataPtr )
 {
-	VPROF("CBaseShader::DrawElements");
+	CVProfScope _( "CBaseShader::DrawElements", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// Re-entrancy check
-	Assert( !s_ppParams );
+	contract_assert( !s_ppParams );
 
 	s_ppParams = ppParams;
 	s_pShaderAPI = pShaderAPI;
@@ -226,7 +219,7 @@ void CBaseShader::SetInitialShadowState( )
 void CBaseShader::Draw( bool bMakeActualDrawCall )
 {
 	// You forgot to call PI_EndCommandBuffer
-	Assert( !s_bBuildingInstanceCommandBuffer );
+	contract_assert( !s_bBuildingInstanceCommandBuffer );
 
 	if ( IsSnapshotting() )
 	{
@@ -274,16 +267,16 @@ void CBaseShader::PI_BeginCommandBuffer()
 	// NOTE: This assertion is here because the memory allocation strategy
 	// is perhaps not the best if this is used in dynamic states; we should
 	// rethink in that case.
-	Assert( IsSnapshotting() );
+	contract_assert( IsSnapshotting() );
 
-	Assert( !s_bBuildingInstanceCommandBuffer );
+	contract_assert( !s_bBuildingInstanceCommandBuffer );
 	s_bBuildingInstanceCommandBuffer = true;
 	s_InstanceCommandBuffer.Reset();
 }
 
 void CBaseShader::PI_EndCommandBuffer()
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 
 	// Automagically add skinning
 	if ( CShader_IsFlag2Set( s_ppParams, MATERIAL_VAR2_SUPPORTS_HW_SKINNING ) )
@@ -318,7 +311,7 @@ void CBaseShader::PI_EndCommandBuffer()
 			pContextData->m_pCommandBuffer = pBuf;
 			pContextData->m_nSize = nSize;
 		}
-		memcpy( pBuf, s_InstanceCommandBuffer.Base(), nSize );
+		std::memcpy( pBuf, s_InstanceCommandBuffer.Base(), nSize );
 	}
 }
 
@@ -328,49 +321,49 @@ void CBaseShader::PI_EndCommandBuffer()
 //-----------------------------------------------------------------------------
 void CBaseShader::PI_SetPixelShaderAmbientLightCube( int nFirstRegister )
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	s_InstanceCommandBuffer.SetPixelShaderAmbientLightCube( nFirstRegister );
 }
 
 void CBaseShader::PI_SetPixelShaderLocalLighting( int nFirstRegister )
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	s_InstanceCommandBuffer.SetPixelShaderLocalLighting( nFirstRegister );
 }
 
 void CBaseShader::PI_SetVertexShaderAmbientLightCube( /*int nFirstRegister*/ )
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	s_InstanceCommandBuffer.SetVertexShaderAmbientLightCube( /*nFirstRegister*/ );
 }
 
 void CBaseShader::PI_SetVertexShaderLocalLighting()
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	s_InstanceCommandBuffer.SetVertexShaderLocalLighting( );
 }
 
 void CBaseShader::PI_SetSkinningMatrices()
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	s_InstanceCommandBuffer.SetSkinningMatrices();
 }
 
 void CBaseShader::PI_SetPixelShaderAmbientLightCubeLuminance( int nFirstRegister )
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	s_InstanceCommandBuffer.SetPixelShaderAmbientLightCubeLuminance( nFirstRegister );
 }
 
 void CBaseShader::PI_SetPixelShaderGlintDamping( int nFirstRegister )
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	s_InstanceCommandBuffer.SetPixelShaderGlintDamping( nFirstRegister );
 }
 
 void CBaseShader::PI_SetModulationPixelShaderDynamicState_LinearColorSpace_LinearScale( int nRegister, float scale )
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	Vector color2( 1.0f, 1.0f, 1.0f );
 	ApplyColor2Factor( color2.Base(), true );
 	s_InstanceCommandBuffer.SetModulationPixelShaderDynamicState_LinearColorSpace_LinearScale( nRegister, color2, scale );
@@ -378,7 +371,7 @@ void CBaseShader::PI_SetModulationPixelShaderDynamicState_LinearColorSpace_Linea
 
 void CBaseShader::PI_SetModulationPixelShaderDynamicState_LinearScale( int nRegister, float scale )
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	Vector color2( 1.0f, 1.0f, 1.0f );
 	ApplyColor2Factor( color2.Base() );
 	s_InstanceCommandBuffer.SetModulationPixelShaderDynamicState_LinearScale( nRegister, color2, scale );
@@ -386,7 +379,7 @@ void CBaseShader::PI_SetModulationPixelShaderDynamicState_LinearScale( int nRegi
 
 void CBaseShader::PI_SetModulationPixelShaderDynamicState_LinearScale_ScaleInW( int nRegister, float scale )
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	Vector color2( 1.0f, 1.0f, 1.0f );
 	ApplyColor2Factor( color2.Base() );
 	s_InstanceCommandBuffer.SetModulationPixelShaderDynamicState_LinearScale_ScaleInW( nRegister, color2, scale );
@@ -394,7 +387,7 @@ void CBaseShader::PI_SetModulationPixelShaderDynamicState_LinearScale_ScaleInW( 
 
 void CBaseShader::PI_SetModulationPixelShaderDynamicState_LinearColorSpace( int nRegister )
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	Vector color2( 1.0f, 1.0f, 1.0f );
 	ApplyColor2Factor( color2.Base(), true );
 	s_InstanceCommandBuffer.SetModulationPixelShaderDynamicState_LinearColorSpace( nRegister, color2 );
@@ -402,7 +395,7 @@ void CBaseShader::PI_SetModulationPixelShaderDynamicState_LinearColorSpace( int 
 
 void CBaseShader::PI_SetModulationPixelShaderDynamicState( int nRegister )
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	Vector color2( 1.0f, 1.0f, 1.0f );
 	ApplyColor2Factor( color2.Base() );
 	s_InstanceCommandBuffer.SetModulationPixelShaderDynamicState( nRegister, color2 );
@@ -410,7 +403,7 @@ void CBaseShader::PI_SetModulationPixelShaderDynamicState( int nRegister )
 
 void CBaseShader::PI_SetModulationVertexShaderDynamicState()
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	Vector color2( 1.0f, 1.0f, 1.0f );
 	ApplyColor2Factor( color2.Base() );
 	s_InstanceCommandBuffer.SetModulationVertexShaderDynamicState( VERTEX_SHADER_MODULATION_COLOR, color2 );
@@ -418,7 +411,7 @@ void CBaseShader::PI_SetModulationVertexShaderDynamicState()
 
 void CBaseShader::PI_SetModulationVertexShaderDynamicState_LinearScale( float flScale )
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	Vector color2( 1.0f, 1.0f, 1.0f );
 	ApplyColor2Factor( color2.Base() );
 	s_InstanceCommandBuffer.SetModulationVertexShaderDynamicState_LinearScale( VERTEX_SHADER_MODULATION_COLOR, color2, flScale );
@@ -426,7 +419,7 @@ void CBaseShader::PI_SetModulationVertexShaderDynamicState_LinearScale( float fl
 
 void CBaseShader::PI_SetModulationPixelShaderDynamicState_Identity( int nRegister )
 {
-	Assert( s_bBuildingInstanceCommandBuffer );
+	contract_assert( s_bBuildingInstanceCommandBuffer );
 	s_InstanceCommandBuffer.SetModulationPixelShaderDynamicState_Identity( nRegister );
 }
 
@@ -438,7 +431,7 @@ int CBaseShader::FindParamIndex( const char *pName ) const
 	int numParams = GetParamCount();
 	for( int i = 0; i < numParams; i++ )
 	{
-		if( Q_strnicmp( GetParamInfo( i ).m_pName, pName, 64 ) == 0 )
+		if( V_strnicmp( GetParamInfo( i ).m_pName, pName, 64 ) == 0 )
 		{
 			return i;
 		}
@@ -515,9 +508,9 @@ void CBaseShader::LoadCubeMap( int nTextureVar, int nAdditionalCreationFlags /* 
 
 ShaderAPITextureHandle_t CBaseShader::GetShaderAPITextureBindHandle( int nTextureVar, int nFrameVar, int nTextureChannel )
 {
-	Assert( !IsSnapshotting() );
-	Assert( nTextureVar != -1 );
-	Assert ( s_ppParams );
+	contract_assert( !IsSnapshotting() );
+	contract_assert( nTextureVar != -1 );
+	contract_assert( s_ppParams );
 
 	IMaterialVar* pTextureVar = s_ppParams[nTextureVar];
 	IMaterialVar* pFrameVar = (nFrameVar != -1) ? s_ppParams[nFrameVar] : nullptr;
@@ -527,7 +520,7 @@ ShaderAPITextureHandle_t CBaseShader::GetShaderAPITextureBindHandle( int nTextur
 
 void CBaseShader::BindVertexTexture( VertexTextureSampler_t vtSampler, int nTextureVar, int nFrame /* = 0  */)
 {
-	Assert( !IsSnapshotting() );
+	contract_assert( !IsSnapshotting() );
 
 	IMaterialVar* pTextureVar = s_ppParams[nTextureVar];
 	if ( !pTextureVar )
@@ -554,9 +547,9 @@ void CBaseShader::BindTexture( Sampler_t sampler1, TextureBindFlags_t nBindFlags
 
 void CBaseShader::BindTexture( Sampler_t sampler1, Sampler_t sampler2, TextureBindFlags_t nBindFlags, int nTextureVar, int nFrameVar /* = -1 */ )
 {
-	Assert( !IsSnapshotting() );
-	Assert( nTextureVar != -1 );
-	Assert ( s_ppParams );
+	contract_assert( !IsSnapshotting() );
+	contract_assert( nTextureVar != -1 );
+	contract_assert( s_ppParams );
 
 	IMaterialVar* pTextureVar = s_ppParams[nTextureVar];
 	IMaterialVar* pFrameVar = (nFrameVar != -1) ? s_ppParams[nFrameVar] : nullptr;
@@ -583,7 +576,7 @@ void CBaseShader::BindTexture( Sampler_t sampler1, TextureBindFlags_t nBindFlags
 
 void CBaseShader::BindTexture( Sampler_t sampler1, Sampler_t sampler2, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame /* = 0 */ )
 {
-	Assert( !IsSnapshotting() );
+	contract_assert( !IsSnapshotting() );
 
 	if ( sampler2 == -1 )
 	{
@@ -775,7 +768,7 @@ void CBaseShader::ApplyColor2Factor( float *pColorOut, bool isLinearSpace ) cons
 //-----------------------------------------------------------------------------
 void CBaseShader::EnableAlphaBlending( ShaderBlendFactor_t src, ShaderBlendFactor_t dst )
 {
-	Assert( IsSnapshotting() );
+	contract_assert( IsSnapshotting() );
 	s_pShaderShadow->EnableBlending( true );
 	s_pShaderShadow->BlendFunc( src, dst );
 	s_pShaderShadow->EnableDepthWrites(false);
@@ -783,13 +776,13 @@ void CBaseShader::EnableAlphaBlending( ShaderBlendFactor_t src, ShaderBlendFacto
 
 void CBaseShader::DisableAlphaBlending()
 {
-	Assert( IsSnapshotting() );
+	contract_assert( IsSnapshotting() );
 	s_pShaderShadow->EnableBlending( false );
 }
 
 void CBaseShader::SetNormalBlendingShadowState( int textureVar, bool isBaseTexture )
 {
-	Assert( IsSnapshotting() );
+	contract_assert( IsSnapshotting() );
 
 	// Either we've got a constant modulation
 	bool isTranslucent = IsAlphaModulating();
@@ -814,7 +807,7 @@ void CBaseShader::SetNormalBlendingShadowState( int textureVar, bool isBaseTextu
 //ConVar mat_debug_flashlight_only( "mat_debug_flashlight_only", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 void CBaseShader::SetAdditiveBlendingShadowState( int textureVar, bool isBaseTexture )
 {
-	Assert( IsSnapshotting() );
+	contract_assert( IsSnapshotting() );
 
 	// Either we've got a constant modulation
 	bool isTranslucent = IsAlphaModulating();
@@ -895,13 +888,13 @@ void CBaseShader::SetBlendingShadowState( BlendType_t nMode )
 //-----------------------------------------------------------------------------
 void CBaseShader::SingleTextureLightmapBlendMode( )
 {
-	Assert( IsSnapshotting() );
+	contract_assert( IsSnapshotting() );
 
 	s_pShaderShadow->EnableBlending( true );
 	s_pShaderShadow->BlendFunc( SHADER_BLEND_DST_COLOR, SHADER_BLEND_SRC_COLOR );
 }
 
-FORCEINLINE void CBaseShader::SetFogMode( ShaderFogMode_t fogMode )
+[[gnu::always_inline]] inline void CBaseShader::SetFogMode( ShaderFogMode_t fogMode )
 {
 	bool bVertexFog = ((CurrentMaterialVarFlags() & MATERIAL_VAR_VERTEXFOG) != 0);
 
@@ -922,36 +915,36 @@ FORCEINLINE void CBaseShader::SetFogMode( ShaderFogMode_t fogMode )
 //-----------------------------------------------------------------------------
 void CBaseShader::FogToOOOverbright( void )
 {
-	Assert( IsSnapshotting() );
+	contract_assert( IsSnapshotting() );
 	SetFogMode( SHADER_FOGMODE_OO_OVERBRIGHT );
 }
 
 void CBaseShader::FogToWhite( void )
 {
-	Assert( IsSnapshotting() );
+	contract_assert( IsSnapshotting() );
 	SetFogMode( SHADER_FOGMODE_WHITE );
 }
 void CBaseShader::FogToBlack( void )
 {
-	Assert( IsSnapshotting() );
+	contract_assert( IsSnapshotting() );
 	SetFogMode( SHADER_FOGMODE_BLACK );
 }
 
 void CBaseShader::FogToGrey( void )
 {
-	Assert( IsSnapshotting() );
+	contract_assert( IsSnapshotting() );
 	SetFogMode( SHADER_FOGMODE_GREY );
 }
 
 void CBaseShader::FogToFogColor( void )
 {
-	Assert( IsSnapshotting() );
+	contract_assert( IsSnapshotting() );
 	SetFogMode( SHADER_FOGMODE_FOGCOLOR );
 }
 
 void CBaseShader::DisableFog( void )
 {
-	Assert( IsSnapshotting() );
+	contract_assert( IsSnapshotting() );
 	s_pShaderShadow->FogMode( SHADER_FOGMODE_DISABLED, false );
 }
 

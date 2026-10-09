@@ -1,10 +1,8 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Third-party notice: Info-ZIP; see the original copyright and license below.
+
 // XZip.cpp  Version 1.1
 //
 // Authors:      Mark Adler et al. (see below)
@@ -93,23 +91,17 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#if defined( PROTECTED_THINGS_ENABLE )
-#undef PROTECTED_THINGS_ENABLE // from protected_things.h
-#endif
-#include "tier0/platform.h"
-#define far
-#define near
+
+
 #define INVALID_HANDLE_VALUE (void*)-1
-#define _tzset tzset
 
 
 
-#include <time.h>
+import std;
+import ks.tier1;
 #include "zip/XZip.h"
-#include <stdarg.h>
 
-#include <sys/mman.h>
-#define _stricmp strcasecmp
+#define _stricmp __builtin_strcasecmp
 
 
 #ifdef XZIP_NOT_THREAD_SAFE
@@ -118,21 +110,14 @@ static ZRESULT lasterrorZ=ZR_OK;
 static ZRESULT lasterrorZ=ZR_OK;
 #endif
 
-#include "tier1/strtools.h"
-#include "tier0/dbg.h"
 
-#include "tier0/memalloc.h"
 
 typedef unsigned char uch;      // unsigned 8-bit value
 typedef unsigned short ush;     // unsigned 16-bit value
 typedef unsigned long ulg;      // unsigned 32-bit value
-typedef size_t extent;          // file size
+typedef std::size_t extent;          // file size
 typedef unsigned Pos;   // must be at least 32 bits
 typedef unsigned IPos; // A Pos is an index in the character window. Pos is used only for parameter passing
-
-#ifndef EOF
-#define EOF (-1)
-#endif
 
 
 // Error return values.  The values 0..4 and 12..18 follow the conventions
@@ -266,7 +251,6 @@ typedef unsigned IPos; // A Pos is an index in the character window. Pos is used
 // The three kinds of block type
 
 #define LIT_BUFSIZE  0x8000
-#define DIST_BUFSIZE  LIT_BUFSIZE
 // Sizes of match buffers for literals/lengths and distances.  There are
 // 4 reasons for limiting LIT_BUFSIZE to 64K:
 //   - frequencies can be kept in 16 bit counters
@@ -362,7 +346,6 @@ typedef unsigned IPos; // A Pos is an index in the character window. Pos is used
 // byte no longer takes part in the hash key, that is:
 //   H_SHIFT * MIN_MATCH >= HASH_BITS
 
-#define max_insert_length  max_lazy_match
 // Insert new strings in the hash table only if the match length
 // is not greater than this length. This saves time but degrades compression.
 // max_insert_length is used only for compression levels <= 3.
@@ -484,8 +467,8 @@ class TTreeState
   int base_dist[D_CODES];
   // First normalized distance for each code (0 = distance of 1)
 
-  uch far l_buf[LIT_BUFSIZE];  // buffer for literals/lengths
-  ush far d_buf[DIST_BUFSIZE]; // buffer for distances
+  uch l_buf[LIT_BUFSIZE];  // buffer for literals/lengths
+  ush d_buf[LIT_BUFSIZE]; // buffer for distances
 
   uch flag_buf[(LIT_BUFSIZE/8)];
   // flag_buf is a bit array distinguishing literals from lengths in
@@ -611,7 +594,7 @@ class TDeflateState
 
 
 typedef struct iztimes {
-  time_t atime,mtime,ctime;
+  std::time_t atime,mtime,ctime;
 } iztimes; // access, modify, create times
 
 typedef struct zlist {
@@ -629,7 +612,7 @@ typedef struct zlist {
   int mark;                     // Marker for files to operate on
   int trash;                    // Marker for files to delete
   int dosflag;                  // Set to force MSDOS file attributes
-  struct zlist far *nxt;        // Pointer to next header in list
+  struct zlist *nxt;        // Pointer to next header in list
 } TZipFileInfo;
 
 
@@ -661,8 +644,8 @@ void AssertXZip(TState &state,bool cond, const char *msg)
 	state.err=msg;
 }
 
-void Trace(const char *x, ...) {va_list paramList; va_start(paramList, x); paramList; va_end(paramList);}
-void Tracec(bool ,const char *x, ...) {va_list paramList; va_start(paramList, x); paramList; va_end(paramList);}
+void Trace(const char *x, ...) {std::va_list paramList; __builtin_va_start(paramList, x); paramList; __builtin_va_end(paramList);}
+void Tracec(bool ,const char *x, ...) {std::va_list paramList; __builtin_va_start(paramList, x); paramList; __builtin_va_end(paramList);}
 
 
 // ===========================================================================
@@ -1351,7 +1334,7 @@ int ct_tally (TState &state,int dist, int lc)
                100L - out_length*100L/in_length);
         if (state.ts.last_dist < state.ts.last_lit/2 && out_length < in_length/2) return 1;
     }
-    return (state.ts.last_lit == LIT_BUFSIZE-1 || state.ts.last_dist == DIST_BUFSIZE);
+    return (state.ts.last_lit == LIT_BUFSIZE-1 || state.ts.last_dist == LIT_BUFSIZE);
     /* We avoid equality with LIT_BUFSIZE because of wraparound at 64K
      * on 16 bit machines and because stored blocks are restricted to
      * 64K-1 bytes.
@@ -1512,7 +1495,7 @@ void copy_block(TState &state, char *block, unsigned len, int header)
     } else if (state.bs.out_offset + len > state.bs.out_size) {
         AssertXZip(state,false,"output buffer too small for in-memory compression");
     } else {
-        memcpy(state.bs.out_buf + state.bs.out_offset, block, len);
+        std::memcpy(state.bs.out_buf + state.bs.out_offset, block, len);
         state.bs.out_offset += len;
     }
     state.bs.bits_sent += (ulg)len<<3;
@@ -1584,7 +1567,7 @@ void lm_init (TState &state, int pack_level, ush *flags)
      * prev[] will be initialized on the fly.
      */
     state.ds.head[HASH_SIZE-1] = NIL;
-    memset((char*)state.ds.head, NIL, (unsigned)(HASH_SIZE-1)*sizeof(*state.ds.head));
+    std::memset((char*)state.ds.head, NIL, (unsigned)(HASH_SIZE-1)*sizeof(*state.ds.head));
 
     /* Set the default configuration parameters:
      */
@@ -1606,7 +1589,7 @@ void lm_init (TState &state, int pack_level, ush *flags)
     j <<= 1; // Can read 64K in one step
     state.ds.lookahead = state.readfunc(state, (char*)state.ds.window, j);
 
-    if (state.ds.lookahead == 0 || state.ds.lookahead == (unsigned)EOF) {
+    if (state.ds.lookahead == 0 || state.ds.lookahead == (unsigned)std::char_traits<char>::eof()) {
        state.ds.eofile = 1, state.ds.lookahead = 0;
        return;
     }
@@ -1638,8 +1621,8 @@ void lm_init (TState &state, int pack_level, ush *flags)
 int longest_match(TState &state,IPos cur_match)
 {
     unsigned chain_length = state.ds.max_chain_length;   /* max hash chain length */
-    uch far *scan = state.ds.window + state.ds.strstart; /* current string */
-    uch far *match;                    /* matched string */
+    uch *scan = state.ds.window + state.ds.strstart; /* current string */
+    uch *match;                    /* matched string */
     int len;                           /* length of current match */
     int best_len = state.ds.prev_length;                 /* best match length so far */
     IPos limit = state.ds.strstart > (IPos)MAX_DIST ? state.ds.strstart - (IPos)MAX_DIST : NIL;
@@ -1653,7 +1636,7 @@ int longest_match(TState &state,IPos cur_match)
 
 
 
-    uch far *strend = state.ds.window + state.ds.strstart + MAX_MATCH;
+    uch *strend = state.ds.window + state.ds.strstart + MAX_MATCH;
     uch scan_end1  = scan[best_len-1];
     uch scan_end   = scan[best_len];
 
@@ -1752,7 +1735,7 @@ void fill_window(TState &state)
         /* If the window is almost full and there is insufficient lookahead,
          * move the upper half to the lower one to make room in the upper half.
          */
-        if (more == (unsigned)EOF) {
+        if (more == (unsigned)std::char_traits<char>::eof()) {
             /* Very unlikely, but possible on 16 bit machine if strstart == 0
              * and lookahead == 1 (input done one byte at time)
              */
@@ -1767,7 +1750,7 @@ void fill_window(TState &state)
             /* By the IN assertion, the window is not empty so we can't confuse
              * more == 0 with more == 64K on a 16 bit machine.
              */
-            memcpy((char*)state.ds.window, (char*)state.ds.window+WSIZE, (unsigned)WSIZE);
+            std::memcpy((char*)state.ds.window, (char*)state.ds.window+WSIZE, (unsigned)WSIZE);
             state.ds.match_start -= WSIZE;
             state.ds.strstart    -= WSIZE; /* we now have strstart >= MAX_DIST: */
 
@@ -1803,7 +1786,7 @@ void fill_window(TState &state)
 
         n = state.readfunc(state, (char*)state.ds.window+state.ds.strstart+state.ds.lookahead, more);
 
-        if (n == 0 || n == (unsigned)EOF) {
+        if (n == 0 || n == (unsigned)std::char_traits<char>::eof()) {
             state.ds.eofile = 1;
         } else {
             state.ds.lookahead += n;
@@ -1865,7 +1848,7 @@ ulg deflate_fast(TState &state)
             /* Insert new strings in the hash table only if the match length
              * is not too large. This saves time but degrades compression.
              */
-            if (match_length <= state.ds.max_insert_length
+            if (match_length <= state.ds.max_lazy_match
                 && state.ds.lookahead >= MIN_MATCH) {
                 match_length--; /* string at strstart already in hash table */
                 do {
@@ -2021,7 +2004,7 @@ ulg deflate(TState &state)
 
 
 
-int putlocal(struct zlist far *z, WRITEFUNC wfunc,void *param)
+int putlocal(struct zlist *z, WRITEFUNC wfunc,void *param)
 { // Write a local header described by *z to file *f.  Return a ZE_ error code.
   PUTLG(LOCSIG, f);
   PUTSH(z->ver, f);
@@ -2033,16 +2016,16 @@ int putlocal(struct zlist far *z, WRITEFUNC wfunc,void *param)
   PUTLG(z->len, f);
   PUTSH(z->nam, f);
   PUTSH(z->ext, f);
-  size_t res = (size_t)wfunc(param, z->iname, (unsigned int)z->nam);
+  std::size_t res = (std::size_t)wfunc(param, z->iname, (unsigned int)z->nam);
   if (res!=z->nam) return ZE_TEMP;
   if (z->ext)
-  { res = (size_t)wfunc(param, z->extra, (unsigned int)z->ext);
+  { res = (std::size_t)wfunc(param, z->extra, (unsigned int)z->ext);
     if (res!=z->ext) return ZE_TEMP;
   }
   return ZE_OK;
 }
 
-int putextended(struct zlist far *z, WRITEFUNC wfunc, void *param)
+int putextended(struct zlist *z, WRITEFUNC wfunc, void *param)
 { // Write an extended local header described by *z to file *f. Returns a ZE_ code
   PUTLG(EXTLOCSIG, f);
   PUTLG(z->crc, f);
@@ -2051,7 +2034,7 @@ int putextended(struct zlist far *z, WRITEFUNC wfunc, void *param)
   return ZE_OK;
 }
 
-int putcentral(struct zlist far *z, WRITEFUNC wfunc, void *param)
+int putcentral(struct zlist *z, WRITEFUNC wfunc, void *param)
 { // Write a central header entry of *z to file *f. Returns a ZE_ code.
   PUTLG(CENSIG, f);
   PUTSH(z->vem, f);
@@ -2069,9 +2052,9 @@ int putcentral(struct zlist far *z, WRITEFUNC wfunc, void *param)
   PUTSH(z->att, f);
   PUTLG(z->atx, f);
   PUTLG(z->off, f);
-  if ((size_t)wfunc(param, z->iname, (unsigned int)z->nam) != z->nam ||
-      (z->cext && (size_t)wfunc(param, z->cextra, (unsigned int)z->cext) != z->cext) ||
-      (z->com && (size_t)wfunc(param, z->comment, (unsigned int)z->com) != z->com))
+  if ((std::size_t)wfunc(param, z->iname, (unsigned int)z->nam) != z->nam ||
+      (z->cext && (std::size_t)wfunc(param, z->cextra, (unsigned int)z->cext) != z->cext) ||
+      (z->com && (std::size_t)wfunc(param, z->comment, (unsigned int)z->com) != z->com))
     return ZE_TEMP;
   return ZE_OK;
 }
@@ -2174,7 +2157,7 @@ ulg crc32(ulg crc, const uch *buf, extent len)
 
 
 bool HasZipSuffix(const char *fn)
-{ const char *ext = fn+strlen(fn);
+{ const char *ext = fn+std::strlen(fn);
   while (ext>fn && *ext!='.') ext--;
   if (ext==fn && *ext!='.') return false;
   if (_stricmp(ext,".Z")==0) return true;
@@ -2189,10 +2172,10 @@ bool HasZipSuffix(const char *fn)
 }
 
 
-int timet_to_timestamp( time_t time )
+int timet_to_timestamp( std::time_t time )
 {
-	struct tm *tm;
-	tm = localtime( &time );
+	std::tm *tm;
+	tm = std::localtime( &time );
 	if ( !tm )
 		return 0;
 	
@@ -2318,7 +2301,7 @@ unsigned TZip::swrite(void *param,const char *buf, unsigned size)
 unsigned int TZip::write(const char *buf,unsigned int size)
 { if (obuf!=0)
   { if (opos+size>=mapsize) {oerr=ZR_MEMSIZE; return 0;}
-    memcpy(obuf+opos, buf, size);
+    std::memcpy(obuf+opos, buf, size);
     opos+=size;
     return size;
   }
@@ -2381,7 +2364,7 @@ ZRESULT TZip::open_mem(void *src,unsigned int len)
 { hfin=0; bufin=(const char*)src; selfclosehf=false; crc=CRCVAL_INITIAL; ired=0; csize=0; ired=0;
   lenin=len; posin=0;
   if (src==0 || len==0) return ZR_ARGS;
-	times.atime = time(nullptr);
+	times.atime = std::time(nullptr);
 	times.mtime = times.atime;
 	times.ctime = times.atime;
 	timestamp = timet_to_timestamp( times.atime );
@@ -2390,7 +2373,7 @@ ZRESULT TZip::open_mem(void *src,unsigned int len)
 
 ZRESULT TZip::open_dir()
 { hfin=0; bufin=0; selfclosehf=false; crc=CRCVAL_INITIAL; isize=0; csize=0; ired=0;
-	times.atime = time(nullptr);
+	times.atime = std::time(nullptr);
 	times.mtime = times.atime;
 	times.ctime = times.atime;
 	timestamp = timet_to_timestamp( times.atime );
@@ -2408,7 +2391,7 @@ unsigned TZip::read(char *buf, unsigned size)
   { if (posin>=lenin) return 0; // end of input
     ulg red = lenin-posin;
     if (red>size) red=size;
-    memcpy(buf, bufin+posin, red);
+    std::memcpy(buf, bufin+posin, red);
     posin += red;
     ired += red;
     crc = crc32(crc, (uch*)buf, red);
@@ -2438,7 +2421,7 @@ ZRESULT TZip::ideflate(TZipFileInfo *zfi)
   // be initted each time, and which didn't, but that's kind of difficult.
   // Maybe for the next version...
   //
-  bi_init(state,buf, sizeof(buf), TRUE); // it used to be just 1024-size, not 16384 as here
+  bi_init(state,buf, sizeof(buf), true); // it used to be just 1024-size, not 16384 as here
   ct_init(state,&zfi->att);
   lm_init(state,state.level, &zfi->flg);
   ulg sz = deflate(state);
@@ -2450,7 +2433,7 @@ ZRESULT TZip::ideflate(TZipFileInfo *zfi)
 ZRESULT TZip::istore()
 { ulg size=0;
   for (;;)
-  { unsigned int cin=read(buf,16384); if (cin<=0 || cin==(unsigned int)EOF) break;
+  { unsigned int cin=read(buf,16384); if (cin<=0 || cin==(unsigned int)std::char_traits<char>::eof()) break;
     unsigned int cout = write(buf,cin); if (cout!=cin) return ZR_MISSIZE;
     size += cin;
   }
@@ -2470,7 +2453,7 @@ ZRESULT TZip::Add(const char *odstzn, void *src,unsigned int len, DWORD flags)
 
 	// zip has its own notion of what its names should look like: i.e. dir/file.stuff
 	char dstzn[MAX_PATH]; 
-	strcpy(dstzn, odstzn);
+	std::strcpy(dstzn, odstzn);
 	if (*dstzn == 0) 
 		return ZR_ARGS;
 	char *d=dstzn; 
@@ -2480,7 +2463,7 @@ ZRESULT TZip::Add(const char *odstzn, void *src,unsigned int len, DWORD flags)
 			*d = '/'; d++;
 	}
 	bool isdir = (flags==ZIP_FOLDER);
-	bool needs_trailing_slash = (isdir && dstzn[strlen(dstzn)-1]!='/');
+	bool needs_trailing_slash = (isdir && dstzn[std::strlen(dstzn)-1]!='/');
 	int method=DEFLATE; 
 	if (isdir || HasZipSuffix(dstzn)) 
 		method=STORE;
@@ -2504,15 +2487,15 @@ ZRESULT TZip::Add(const char *odstzn, void *src,unsigned int len, DWORD flags)
 
 	// Initialize the local header
 	TZipFileInfo zfi; zfi.nxt=nullptr;
-	strcpy(zfi.name,"");
-	strcpy(zfi.iname,dstzn); 
-	zfi.nam=strlen(zfi.iname);
+	std::strcpy(zfi.name,"");
+	std::strcpy(zfi.iname,dstzn); 
+	zfi.nam=std::strlen(zfi.iname);
 	if (needs_trailing_slash) 
 	{
-		strcat(zfi.iname,"/"); 
+		std::strcat(zfi.iname,"/"); 
 		zfi.nam++;
 	}
-	strcpy(zfi.zname,"");
+	std::strcpy(zfi.zname,"");
 	zfi.extra=nullptr; zfi.ext=0;   // extra header to go after this compressed data, and its length
 	zfi.cextra=nullptr; zfi.cext=0; // extra header to go in the central end-of-zip directory, and its length
 	zfi.comment=nullptr; zfi.com=0; // comment, and its length
@@ -2556,7 +2539,7 @@ ZRESULT TZip::Add(const char *odstzn, void *src,unsigned int len, DWORD flags)
 	xloc[14] = (char)(times.ctime >> 8);
 	xloc[15] = (char)(times.ctime >> 16);
 	xloc[16] = (char)(times.ctime >> 24);
-	memcpy(zfi.cextra,zfi.extra,EB_C_UT_SIZE);
+	std::memcpy(zfi.cextra,zfi.extra,EB_C_UT_SIZE);
 	zfi.cextra[EB_LEN] = EB_UT_LEN(1);
 
 
@@ -2625,9 +2608,9 @@ ZRESULT TZip::Add(const char *odstzn, void *src,unsigned int len, DWORD flags)
 
 	// Keep a copy of the zipfileinfo, for our end-of-zip directory
 	char *cextra = new char[zfi.cext]; 
-	memcpy(cextra,zfi.cextra,zfi.cext); zfi.cextra=cextra;
+	std::memcpy(cextra,zfi.cextra,zfi.cext); zfi.cextra=cextra;
 	TZipFileInfo *pzfi = new TZipFileInfo; 
-	memcpy(pzfi,&zfi,sizeof(zfi));
+	std::memcpy(pzfi,&zfi,sizeof(zfi));
 	if (zfis==nullptr) 
 		zfis=pzfi;
 	else 
@@ -2698,10 +2681,10 @@ unsigned int FormatZipMessageZ(ZRESULT code, char *buf,unsigned int len)
     case ZR_NOCHANGE: msg="Zip-bug: tried to change mind, but not allowed"; break;
     case ZR_FLATE: msg="Zip-bug: an internal error during flation"; break;
   }
-  unsigned int mlen=(unsigned int)strlen(msg);
+  unsigned int mlen=(unsigned int)std::strlen(msg);
   if (buf==0 || len==0) return mlen;
   unsigned int n=mlen; if (n+1>len) n=len-1;
-  Q_strncpy(buf,msg,n); buf[n]=0;
+  V_strncpy(buf,msg,n); buf[n]=0;
   return mlen;
 }
 
@@ -2715,7 +2698,6 @@ typedef struct
 
 HZIP CreateZipZ(void *z,unsigned int len,DWORD flags)
 { 
-	_tzset();
 	TZip *zip = new TZip();
 	lasterrorZ = zip->Create(z,len,flags);
 	if (lasterrorZ != ZR_OK) 
@@ -2748,9 +2730,9 @@ ZRESULT ZipAdd(HZIP hz, const TCHAR *dstzn, void *src, unsigned int len, DWORD f
 	if (flags == ZIP_FILENAME)
 	{
 		char szDest[MAX_PATH*2];
-		memset(szDest, 0, sizeof(szDest));
+		std::memset(szDest, 0, sizeof(szDest));
 
-		strcpy(szDest, dstzn);
+		std::strcpy(szDest, dstzn);
 
 		lasterrorZ = zip->Add(szDest, src, len, flags);
 	}
@@ -2787,5 +2769,3 @@ bool IsZipHandleZ(HZIP hz)
   TZipHandleData *han = (TZipHandleData*)hz;
   return (han->flag==2);
 }
-
-

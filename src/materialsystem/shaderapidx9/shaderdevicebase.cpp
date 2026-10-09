@@ -1,20 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #define DISABLE_PROTECTED_THINGS
+import ks.tier1;
 #include "togl/rendermechanism.h"
 #include "shaderdevicebase.h"
-#include "tier1/keyvalues.h"
-#include "tier1/convar.h"
-#include "tier1/text_writer.h"
-#include "tier0/icommandline.h"
+import std;
 #include "tier2/tier2.h"
 #include "filesystem.h"
-#include "datacache/idatacache.h"
 #include "shaderapi/ishaderutil.h"
 #include "shaderapibase.h"
 #include "shaderapi/ishadershadow.h"
@@ -47,8 +40,8 @@ static void InitShaderAPICVars( )
 //-----------------------------------------------------------------------------
 // Read dx support levels
 //-----------------------------------------------------------------------------
-#define SUPPORT_CFG_FILE "dxsupport_mac.cfg"
-#define SUPPORT_CFG_OVERRIDE_FILE "dxsupport_override.cfg"
+inline constexpr const char *SUPPORT_CFG_FILE = "dxsupport_mac.cfg";
+inline constexpr const char *SUPPORT_CFG_OVERRIDE_FILE = "dxsupport_override.cfg";
 
 
 //-----------------------------------------------------------------------------
@@ -95,9 +88,8 @@ void *ShaderDeviceFactory( const char *pName, int *pReturnCode )
 //-----------------------------------------------------------------------------
 bool CShaderDeviceMgrBase::Connect( CreateInterfaceFn factory )
 {
-	LOCK_SHADERAPI();
 
-	Assert( !g_pShaderDeviceMgrBase );
+	contract_assert( !g_pShaderDeviceMgrBase );
 
 	s_TempFactory = factory;
 
@@ -126,7 +118,6 @@ bool CShaderDeviceMgrBase::Connect( CreateInterfaceFn factory )
 
 void CShaderDeviceMgrBase::Disconnect()
 {
-	LOCK_SHADERAPI();
 
 	g_pShaderDeviceMgrBase = nullptr;
 	g_pShaderUtil = nullptr;
@@ -147,9 +138,9 @@ void CShaderDeviceMgrBase::Disconnect()
 //-----------------------------------------------------------------------------
 void *CShaderDeviceMgrBase::QueryInterface( const char *pInterfaceName )
 {
-	if ( !Q_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) )
 		return ( IShaderDeviceMgr* )this;
-	if ( !Q_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
 		return ( IMaterialSystemHardwareConfig* )g_pHardwareConfigDx8;
 	return nullptr;
 }
@@ -160,7 +151,7 @@ void *CShaderDeviceMgrBase::QueryInterface( const char *pInterfaceName )
 //-----------------------------------------------------------------------------
 const HardwareCaps_t& CShaderDeviceMgrBase::GetHardwareCaps( int nAdapter ) const
 {
-	Assert( ( nAdapter >= 0 ) && ( nAdapter < GetAdapterCount() ) );
+	contract_assert( ( nAdapter >= 0 ) && ( nAdapter < GetAdapterCount() ) );
 	return m_Adapters[nAdapter].m_ActualCaps;
 }
 
@@ -177,7 +168,7 @@ static inline int ReadHexValue( KeyValues *pVal, const char *pName )
 	}
 
 	char *pTemp;
-	int nVal = strtol( pString, &pTemp, 16 );
+	int nVal = std::strtol( pString, &pTemp, 16 );
 	return (pTemp != pString) ? nVal : -1;
 }
 
@@ -232,7 +223,7 @@ static void AddKey( KeyValues *pDest, KeyValues *pSrc )
 		pDest->SetColor( pSrc->GetName(), pSrc->GetColor() );
 		break;
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		break;
 	}
 }
@@ -281,8 +272,8 @@ KeyValues *CShaderDeviceMgrBase::FindCPUSpecificConfig( KeyValues *pKeyValues, i
 		if ( !pName )
 			continue;
 
-		if ( ( bAMD && Q_stristr( pName, "AMD" ) ) || 
-			( !bAMD && Q_stristr( pName, "Intel" ) ) )
+		if ( ( bAMD && V_stristr( pName, "AMD" ) ) || 
+			( !bAMD && V_stristr( pName, "Intel" ) ) )
 		{
 			int nMinMegahertz = pGroup->GetInt( "min megahertz", -1 );
 			int nMaxMegahertz = pGroup->GetInt( "max megahertz", -1 );
@@ -544,7 +535,6 @@ static unsigned long GetRam()
 bool CShaderDeviceMgrBase::GetRecommendedVideoConfig( int nAdapter, int nVendorID, int nDeviceID, KeyValues *pConfiguration ) 
 {
 
-	LOCK_SHADERAPI();
 
 	VidMatConfigData_t configData;
 	V_strcpy_safe( configData.szFileName, "cfg/moddefaults_mac.txt" );
@@ -584,7 +574,6 @@ bool CShaderDeviceMgrBase::GetRecommendedVideoConfig( int nAdapter, int nVendorI
 //-----------------------------------------------------------------------------
 bool CShaderDeviceMgrBase::GetRecommendedConfigurationInfo( int nAdapter, int nDXLevel, int nVendorID, int nDeviceID, KeyValues *pConfiguration )
 {
-	LOCK_SHADERAPI();
 
 	VidMatConfigData_t configData;
 	V_strcpy_safe( configData.szFileName, "../bin/dxsupport.cfg" );
@@ -617,7 +606,7 @@ bool CShaderDeviceMgrBase::GetRecommendedConfigurationInfo( int nAdapter, int nD
 //-----------------------------------------------------------------------------
 bool CShaderDeviceMgrBase::GetRecommendedVideoConfig( int nAdapter, KeyValues *pCongifuration )
 {
-	Assert( nAdapter >= 0 && nAdapter <= GetAdapterCount() );
+	contract_assert( nAdapter >= 0 && nAdapter <= GetAdapterCount() );
 	MaterialAdapterInfo_t info;
 	GetAdapterInfo( nAdapter, info );
 	return GetRecommendedVideoConfig( nAdapter, info.m_VendorID, info.m_DeviceID, pCongifuration );
@@ -628,7 +617,7 @@ bool CShaderDeviceMgrBase::GetRecommendedVideoConfig( int nAdapter, KeyValues *p
 //-----------------------------------------------------------------------------
 bool CShaderDeviceMgrBase::GetRecommendedConfigurationInfo( int nAdapter, int nDXLevel, KeyValues *pCongifuration )
 {
-	Assert( nAdapter >= 0 && nAdapter <= GetAdapterCount() );
+	contract_assert( nAdapter >= 0 && nAdapter <= GetAdapterCount() );
 	MaterialAdapterInfo_t info;
 	GetAdapterInfo( nAdapter, info );
 	return GetRecommendedConfigurationInfo( nAdapter, nDXLevel, info.m_VendorID, info.m_DeviceID, pCongifuration );
@@ -655,14 +644,12 @@ int CShaderDeviceMgrBase::GetClosestActualDXLevel( int nDxLevel ) const
 //-----------------------------------------------------------------------------
 void CShaderDeviceMgrBase::AddModeChangeCallback( ShaderModeChangeCallbackFunc_t func )
 {
-	LOCK_SHADERAPI();
-	Assert( func && ks::find_index( m_ModeChangeCallbacks, func ) < 0 );
+	contract_assert( func && ks::find_index( m_ModeChangeCallbacks, func ) < 0 );
 	m_ModeChangeCallbacks.push_back( func );
 }
 
 void CShaderDeviceMgrBase::RemoveModeChangeCallback( ShaderModeChangeCallbackFunc_t func )
 {
-	LOCK_SHADERAPI();
 	ks::erase_first( m_ModeChangeCallbacks, func );
 }
 
@@ -685,8 +672,7 @@ void CShaderDeviceMgrBase::AddDeviceDependentObject( IShaderDeviceDependentObjec
 {
 	if ( pObject )
 	{
-		LOCK_SHADERAPI();
-		Assert( pObject && ks::find_index( m_DeviceDependentObjects, pObject ) < 0 );
+		contract_assert( pObject && ks::find_index( m_DeviceDependentObjects, pObject ) < 0 );
 		m_DeviceDependentObjects.push_back( pObject );
 	}
 }
@@ -695,7 +681,6 @@ void CShaderDeviceMgrBase::RemoveDeviceDependentObject( IShaderDeviceDependentOb
 {
 	if ( pObject )
 	{
-		LOCK_SHADERAPI();
 		ks::erase_first( m_DeviceDependentObjects, pObject );
 	}
 }
@@ -727,11 +712,11 @@ void* CShaderDeviceMgrBase::ShaderInterfaceFactory( const char *pInterfaceName, 
 	{
 		*pReturnCode = IFACE_OK;
 	}
-	if ( !Q_stricmp( pInterfaceName, SHADER_DEVICE_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_INTERFACE_VERSION ) )
 		return static_cast< IShaderDevice* >( g_pShaderDeviceBase );
-	if ( !Q_stricmp( pInterfaceName, SHADERAPI_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, SHADERAPI_INTERFACE_VERSION ) )
 		return static_cast< IShaderAPI* >( g_pShaderAPIBase );
-	if ( !Q_stricmp( pInterfaceName, SHADERSHADOW_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, SHADERSHADOW_INTERFACE_VERSION ) )
 		return static_cast< IShaderShadow* >( g_pShaderShadow );
 
 	if ( pReturnCode )
@@ -775,7 +760,7 @@ void CShaderDeviceBase::RemoveThreadOwner()
 	m_dwThreadId = 0xFFFFFFFF;
 }
 
-bool CShaderDeviceBase::ThreadOwnsDevice()
+bool CShaderDeviceBase::ThreadOwnsDevice() const
 {
 	if ( ThreadGetCurrentId() == m_dwThreadId )
 		return true;
@@ -803,101 +788,13 @@ bool CShaderDeviceBase::IsAAEnabled() const
 //-----------------------------------------------------------------------------
 // Methods for interprocess communication to release resources
 //-----------------------------------------------------------------------------
-#define MATERIAL_SYSTEM_WINDOW_ID		0xFEEDDEAD
-
-#ifdef USE_ACTUAL_DX
-static VD3DHWND GetTopmostParentWindow( VD3DHWND hWnd )
-{
-	// Find the parent window...
-	VD3DHWND hParent = GetParent( hWnd );
-	while ( hParent )
-	{
-		hWnd = hParent;
-		hParent = GetParent( hWnd );
-	}
-
-	return hWnd;
-}
-
-static BOOL CALLBACK EnumChildWindowsProc( VD3DHWND hWnd, LPARAM lParam )
-{
-	int windowId = GetWindowLongPtr( hWnd, GWLP_USERDATA );
-	if (windowId == MATERIAL_SYSTEM_WINDOW_ID)
-	{
-		COPYDATASTRUCT copyData;
-		copyData.dwData = lParam;
-		copyData.cbData = 0;
-		copyData.lpData = 0;
-
-		SendMessage(hWnd, WM_COPYDATA, 0, (LPARAM)&copyData);
-	}
-	return TRUE;
-}
-
-static BOOL CALLBACK EnumWindowsProc( VD3DHWND hWnd, LPARAM lParam )
-{
-	EnumChildWindows( hWnd, EnumChildWindowsProc, lParam );
-	return TRUE;
-}
-
-static BOOL CALLBACK EnumWindowsProcNotThis( VD3DHWND hWnd, LPARAM lParam )
-{
-	if ( g_pShaderDeviceBase && ( GetTopmostParentWindow( (VD3DHWND)g_pShaderDeviceBase->GetIPCHWnd() ) == hWnd ) )
-		return TRUE;
-
-	EnumChildWindows( hWnd, EnumChildWindowsProc, lParam );
-	return TRUE;
-}
-#endif
+constexpr auto MATERIAL_SYSTEM_WINDOW_ID = 0xFEEDDEAD;
 
 //-----------------------------------------------------------------------------
 // Adds a hook to let us know when other instances are setting the mode
 //-----------------------------------------------------------------------------
 
-#ifdef STRICT
-#define WINDOW_PROC WNDPROC
-#else
 #define WINDOW_PROC FARPROC
-#endif
-
-#ifdef USE_ACTUAL_DX
-static LRESULT CALLBACK ShaderDX8WndProc(VD3DHWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
-{
-	// FIXME: Should these IPC messages tell when an app has focus or not?
-	// If so, we'd want to totally disable the shader api layer when an app
-	// doesn't have focus.
-
-	// Look for the special IPC message that tells us we're trying to set
-	// the mode....
-	switch(msg)
-	{
-	case WM_COPYDATA:
-		{
-			if ( !g_pShaderDeviceBase )
-				break;
-
-			COPYDATASTRUCT* pData = (COPYDATASTRUCT*)lParam;
-
-			// that number is our magic cookie number
-			if ( pData->dwData == CShaderDeviceBase::RELEASE_MESSAGE )
-			{
-				g_pShaderDeviceBase->OtherAppInitializing(true);
-			}
-			else if ( pData->dwData == CShaderDeviceBase::REACQUIRE_MESSAGE )  
-			{
-				g_pShaderDeviceBase->OtherAppInitializing(false);
-			}
-			else if ( pData->dwData == CShaderDeviceBase::EVICT_MESSAGE )  
-			{
-				g_pShaderDeviceBase->EvictManagedResourcesInternal( );
-			}
-		}
-		break;
-	}
-
-	return DefWindowProc( hWnd, msg, wParam, lParam );
-}
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -905,47 +802,11 @@ static LRESULT CALLBACK ShaderDX8WndProc(VD3DHWND hWnd, UINT msg, WPARAM wParam,
 //-----------------------------------------------------------------------------
 void CShaderDeviceBase::InstallWindowHook( void* hWnd )
 {
-	Assert( m_hWndCookie == nullptr );
-#ifdef USE_ACTUAL_DX
-	VD3DHWND hParent = GetTopmostParentWindow( (VD3DHWND)hWnd );
-
-	// Attach a child window to the parent; we're gonna store special info there
-	// We can't use the USERDATA, cause other apps may want to use this.
-	HINSTANCE hInst = (HINSTANCE)GetWindowLongPtr( hParent, GWLP_HINSTANCE );
-	WNDCLASS		wc;
-	memset( &wc, 0, sizeof( wc ) );
-	wc.style         = CS_NOCLOSE | CS_PARENTDC;
-	wc.lpfnWndProc   = ShaderDX8WndProc;
-	wc.hInstance     = hInst;
-	wc.lpszClassName = "shaderdx8";
-
-	// In case an old one is sitting around still...
-	UnregisterClass( "shaderdx8", hInst );
-
-	RegisterClass( &wc );
-
-	// Create the window
-	m_hWndCookie = CreateWindow( "shaderdx8", "shaderdx8", WS_CHILD, 
-		0, 0, 0, 0, hParent, nullptr, hInst, nullptr );
-
-	// Marks it as a material system window
-	SetWindowLongPtr( (VD3DHWND)m_hWndCookie, GWLP_USERDATA, MATERIAL_SYSTEM_WINDOW_ID );
-#endif
+	contract_assert( m_hWndCookie == nullptr );
 }
 
 void CShaderDeviceBase::RemoveWindowHook( void* hWnd )
 {
-#ifdef USE_ACTUAL_DX
-	if ( m_hWndCookie )
-	{
-		DestroyWindow( (VD3DHWND)m_hWndCookie ); 
-		m_hWndCookie = 0;
-	}
-
-	VD3DHWND hParent = GetTopmostParentWindow( (VD3DHWND)hWnd );
-	HINSTANCE hInst = (HINSTANCE)GetWindowLongPtr( hParent, GWLP_HINSTANCE );
-	UnregisterClass( "shaderdx8", hInst );
-#endif
 }
 
 
@@ -954,18 +815,6 @@ void CShaderDeviceBase::RemoveWindowHook( void* hWnd )
 //-----------------------------------------------------------------------------
 void CShaderDeviceBase::SendIPCMessage( IPCMessage_t msg )
 {
-#ifdef USE_ACTUAL_DX
-	// Gotta send this to all windows, since we don't know which ones
-	// are material system apps...
-	if ( msg != EVICT_MESSAGE )
-	{
-		EnumWindows( EnumWindowsProc, (DWORD)msg );
-	}
-	else
-	{
-		EnumWindows( EnumWindowsProcNotThis, (DWORD)msg );
-	}
-#endif
 }
 
 
@@ -990,7 +839,6 @@ int CShaderDeviceBase::FindView( void* hWnd ) const
 //-----------------------------------------------------------------------------
 bool CShaderDeviceBase::AddView( void* hWnd )
 {
-	LOCK_SHADERAPI();
 	/*
 	// If we haven't created a device yet
 	if (!Dx9Device())
@@ -1018,7 +866,6 @@ bool CShaderDeviceBase::AddView( void* hWnd )
 
 void CShaderDeviceBase::RemoveView( void* hWnd )
 {
-	LOCK_SHADERAPI();
 	/*
 	// Look for the view in the list of views
 	int i = FindView(hwnd);
@@ -1035,7 +882,6 @@ void CShaderDeviceBase::RemoveView( void* hWnd )
 //-----------------------------------------------------------------------------
 void CShaderDeviceBase::SetView( void* hWnd )
 {
-	LOCK_SHADERAPI();
 
 	ShaderViewport_t viewport;
 	g_pShaderAPIBase->GetViewports( &viewport, 1 );
@@ -1060,5 +906,3 @@ void CShaderDeviceBase::GetWindowSize( int& nWidth, int& nHeight ) const
 	g_pShaderAPIBase->GetBackBufferDimensions( nWidth, nHeight );
 
 }
-
-

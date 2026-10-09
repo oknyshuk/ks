@@ -1,23 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef C_FUNC_DUST_H
-#define C_FUNC_DUST_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 #include "dt_recv.h"
-
 
 #include "c_baseentity.h"
 #include "particles_simple.h"
 #include "particle_util.h"
 #include "bspflags.h"
-
-
 
 // ------------------------------------------------------------------------------------ //
 // CDustEffect particle renderer.
@@ -109,7 +100,3 @@ public:
 private:
 	C_Func_Dust( const C_Func_Dust & ); // not defined, not accessible
 };
-
-
-
-#endif // C_FUNC_DUST_H

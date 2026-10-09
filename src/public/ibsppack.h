@@ -1,20 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IBSPPACK_H
-#define IBSPPACK_H
-
-#include "interface.h"
-#include "utlvector.h"
-#include "utlstring.h"
+import std;
+import ks.tier1;
 
 class IFileSystem;
 
-abstract_class IBSPPack
+class IBSPPack
 {
 public:
 	virtual void LoadBSPFile( IFileSystem *pFileSystem, char *filename ) = 0;
@@ -34,6 +27,4 @@ public:
 
 // Bumped when the vtable changes. The engine fetches this exact name, so a stale bsppack module is
 // rejected by the factory rather than handed over with a vtable that no longer matches.
-#define IBSPPACK_VERSION_STRING "IBSPPACK004"
-
-#endif // IBSPPACK_H
+inline constexpr const char *IBSPPACK_VERSION_STRING = "IBSPPACK004";

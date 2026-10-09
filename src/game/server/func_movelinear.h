@@ -1,20 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef FUNC_MOVELINEAR_H
-#define FUNC_MOVELINEAR_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-#pragma once
-
 #include "basetoggle.h"
 #include "entityoutput.h"
-
 
 class IPhysicsFluidController;
 
@@ -69,4 +60,3 @@ public:
 	[[= ks::reflect::Key{ .name = "OnFullyOpen" } ]] COutputEvent m_OnFullyOpen;
 	[[= ks::reflect::Key{ .name = "OnFullyClosed" } ]] COutputEvent m_OnFullyClosed;
 };
-#endif // FUNC_MOVELINEAR_H

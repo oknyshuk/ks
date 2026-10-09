@@ -1,16 +1,24 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
+#include "rocketui/rmlui.h"
 #include "rkhud_crosshair.h"
 
 #include "rkhud_model.h"
 
-#include "cbase.h"
-#include "hud_macros.h"
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
 #include "c_cs_player.h"
 #include "weapon_csbase.h"
 
 #include <rocketui/rmlui.h>
+import ks.tier1;
+import std;
 
 DECLARE_HUDELEMENT( RkHudCrosshair );
 
@@ -136,7 +144,7 @@ void RkHudCrosshair::UpdateCrosshair()
                 //   scale = screenHeight / (2 * tan(vfov/2))
                 //         = screenHeight / (1.5 * tan(baseFov/2))
                 float fov = pPlayer->GetFOV();
-                float flScale = (float)dimensions.y / ( 1.5f * tanf( DEG2RAD( fov ) * 0.5f ) );
+                float flScale = (float)dimensions.y / ( 1.5f * std::tanf( DEG2RAD( fov ) * 0.5f ) );
 
                 // Pitch: negative = looking up → screen Y decreases
                 // Yaw:   positive = looking left → screen X decreases

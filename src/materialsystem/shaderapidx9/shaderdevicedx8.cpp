@@ -1,20 +1,16 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #define DISABLE_PROTECTED_THINGS
+import ks.vstdlib;
+import ks.desktop;
 #include "locald3dtypes.h"
 
 #include "shaderdevicedx8.h"
 #include "shaderapi/ishaderutil.h"
 #include "shaderapidx8_global.h"
 #include "filesystem.h"
-#include "tier0/icommandline.h"
-#include "tier2/tier2.h"
+import std;
 #include "shadershadowdx8.h"
 #include "colorformatdx8.h"
 #include "materialsystem/IShader.h"
@@ -23,43 +19,18 @@
 #include "imeshdx8.h"
 #include "materialsystem/materialsystem_config.h"
 #include "vertexshaderdx8.h"
-#include "recording.h"
-#include "vstdlib/ikeyvaluessystem.h"
 #include "winutils.h"
-#include "tier0/vprof_telemetry.h"
-#include "tier0/miniprofiler.h"
 
 
-#define D3D_BATCH_PERF_ANALYSIS 0
-
-#if D3D_BATCH_PERF_ANALYSIS
-	// Define this if you want all d3d9 interfaces hooked and run through the dx9hook.h shim interfaces. For profiling, etc.
-	#define DO_DX9_HOOK
-#endif
-
-#ifdef DO_DX9_HOOK
-
-#if D3D_BATCH_PERF_ANALYSIS
-ConVar d3d_batch_vis( "d3d_batch_vis", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
-ConVar d3d_batch_vis_abs_scale( "d3d_batch_vis_abs_scale", ".050", FCVAR_MATERIAL_SYSTEM_THREAD );
-ConVar d3d_present_vis_abs_scale( "d3d_batch_vis_abs_scale", ".050", FCVAR_MATERIAL_SYSTEM_THREAD );
-ConVar d3d_batch_vis_y_scale( "d3d_batch_vis_y_scale", "0.0", FCVAR_MATERIAL_SYSTEM_THREAD );
-uint64 g_nTotalD3DCalls, g_nTotalD3DCycles;
-static double s_rdtsc_to_ms;
-#endif
-
-#include "dx9hook.h"
-#endif
 
 #include "wmi.h"
 
 
 
 #include "appframework/ilaunchermgr.h"
-#include "appframework/sdlwindow.h"
 
 // A logging channel used during engine initialization
-DECLARE_LOGGING_CHANNEL( LOG_EngineInitialization );
+extern LoggingChannelID_t LOG_EngineInitialization;;
 
 
 //-----------------------------------------------------------------------------
@@ -68,13 +39,8 @@ DECLARE_LOGGING_CHANNEL( LOG_EngineInitialization );
 static CShaderDeviceMgrDx8 g_ShaderDeviceMgrDx8;
 CShaderDeviceMgrDx8* g_pShaderDeviceMgrDx8 = &g_ShaderDeviceMgrDx8;
 
-#ifndef SHADERAPIDX10
-
 // In the shaderapidx10.dll, we use its version of IShaderDeviceMgr. 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CShaderDeviceMgrDx8, IShaderDeviceMgr, 
-	SHADER_DEVICE_MGR_INTERFACE_VERSION, g_ShaderDeviceMgrDx8 )
-
-#endif
+static InterfaceReg s_Reg_CShaderDeviceMgrDx8_IShaderDeviceMgr( []() -> void * { return static_cast<IShaderDeviceMgr *>( &g_ShaderDeviceMgrDx8 ); }, SHADER_DEVICE_MGR_INTERFACE_VERSION );;
 
 
 
@@ -114,17 +80,16 @@ CShaderDeviceMgrDx8::~CShaderDeviceMgrDx8()
 //-----------------------------------------------------------------------------
 bool CShaderDeviceMgrDx8::Connect( CreateInterfaceFn factory )
 {
-	LOCK_SHADERAPI();
 
 	if ( !BaseClass::Connect( factory ) )
 		return false;
 
-	setenv("DXVK_WSI_DRIVER", "SDL3", 0);
-	setenv("DXVK_CONFIG",
+	ks::platform::set_environment("DXVK_WSI_DRIVER", "SDL3", false);
+	ks::platform::set_environment("DXVK_CONFIG",
 	       "d3d9.hideIntelGpu = False;"
 	       "dxvk.latencySleep = True;"
 	       "d3d9.maxFrameLatency = 1",
-	       0);
+	       false);
 
 #if defined( DO_DX9_HOOK )
 	m_pD3D = Direct3DCreate9Hook(D3D_SDK_VERSION);
@@ -139,16 +104,11 @@ bool CShaderDeviceMgrDx8::Connect( CreateInterfaceFn factory )
 	}
 
 
-	// FIXME: Want this to be here, but we can't because Steam
-	// hasn't had it's application ID set up yet.
-
-//	InitAdapterInfo();
 	return true;
 }
 
 void CShaderDeviceMgrDx8::Disconnect()
 {
-	LOCK_SHADERAPI();
 
 
 	if ( m_pD3D )
@@ -168,8 +128,6 @@ void CShaderDeviceMgrDx8::Disconnect()
 //-----------------------------------------------------------------------------
 InitReturnVal_t CShaderDeviceMgrDx8::Init( )
 {
-	// FIXME: Remove call to InitAdapterInfo once Steam startup issues are resolved.
-	// Do it in Connect instead.
 	InitAdapterInfo();
 
 	return INIT_OK;
@@ -181,7 +139,6 @@ InitReturnVal_t CShaderDeviceMgrDx8::Init( )
 //-----------------------------------------------------------------------------
 void CShaderDeviceMgrDx8::Shutdown( )
 {
-	LOCK_SHADERAPI();
 	
 // FIXME: Make PIX work
 	
@@ -248,7 +205,7 @@ void CShaderDeviceMgrDx8::InitAdapterInfo()
 		const char *pShaderParam = CommandLine()->ParmValue( "-shader" );
 		if ( pShaderParam )
 		{
-			Q_strncpy( info.m_ActualCaps.m_pShaderDLL, pShaderParam, sizeof( info.m_ActualCaps.m_pShaderDLL ) );
+			V_strncpy( info.m_ActualCaps.m_pShaderDLL, pShaderParam, sizeof( info.m_ActualCaps.m_pShaderDLL ) );
 		}
 	}
 }
@@ -422,8 +379,8 @@ void CShaderDeviceMgrDx8::CheckVendorDependentAlphaToCoverage( HardwareCaps_t *p
 
 	// Bail out on OpenGL
 	pCaps->m_bSupportsAlphaToCoverage	 = true;
-	pCaps->m_AlphaToCoverageEnableValue	 = TRUE;
-	pCaps->m_AlphaToCoverageDisableValue = FALSE;
+	pCaps->m_AlphaToCoverageEnableValue	 = true;
+	pCaps->m_AlphaToCoverageDisableValue = false;
 	pCaps->m_AlphaToCoverageState		 = D3DRS_ADAPTIVETESS_Y;
 	return;
 
@@ -504,8 +461,8 @@ void CShaderDeviceMgrDx8::CheckVendorDependentDepthResolveSupport( HardwareCaps_
 
 extern ConVar mat_hdr_level;
 
-#define SHADOWMAP_SLOPESCALEDEPTHBIAS	"8"
-#define SHADOWMAP_DEPTHBIAS				"20"
+inline constexpr const char *SHADOWMAP_SLOPESCALEDEPTHBIAS = "8";
+inline constexpr const char *SHADOWMAP_DEPTHBIAS = "20";
 
 ConVar mat_slopescaledepthbias_shadowmap( "mat_slopescaledepthbias_shadowmap", SHADOWMAP_SLOPESCALEDEPTHBIAS, FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_NONE );
 ConVar mat_depthbias_shadowmap(	"mat_depthbias_shadowmap", SHADOWMAP_DEPTHBIAS, FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_NONE );
@@ -571,7 +528,7 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 		}
 	}
 
-	Q_strncpy( pCaps->m_pDriverName, ident.Description, MATERIAL_ADAPTER_NAME_LENGTH );
+	V_strncpy( pCaps->m_pDriverName, ident.Description, MATERIAL_ADAPTER_NAME_LENGTH );
 	pCaps->m_VendorID = ident.VendorId;
 	pCaps->m_DeviceID = ident.DeviceId;
 	pCaps->m_SubSysID = ident.SubSysId;
@@ -586,22 +543,16 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 	pCaps->m_PreferDynamicTextures = ( caps.Caps2 & D3DCAPS2_DYNAMICTEXTURES ) ? 1 : 0;
 
 	pCaps->m_HasSetDeviceGammaRamp = (caps.Caps2 & D3DCAPS2_CANCALIBRATEGAMMA) != 0;
-	Assert( ((caps.VertexShaderVersion >> 8) & 0xFF) >= 1 );
-	Assert( ((caps.PixelShaderVersion >> 8) & 0xFF) >= 1 );
+	contract_assert( ((caps.VertexShaderVersion >> 8) & 0xFF) >= 1 );
+	contract_assert( ((caps.PixelShaderVersion >> 8) & 0xFF) >= 1 );
 
 	pCaps->m_bScissorSupported = ( caps.RasterCaps & D3DPRASTERCAPS_SCISSORTEST ) !=  0;
 
-#if defined( DX8_COMPATABILITY_MODE )
-	pCaps->m_SupportsPixelShaders_2_b  = false;
-	pCaps->m_SupportsShaderModel_3_0  = false;
-	pCaps->m_SupportsMipmappedCubemaps = false;
-#else
-	Assert( ( caps.PixelShaderVersion & 0xffff ) >= 0x0200 );
+	contract_assert( ( caps.PixelShaderVersion & 0xffff ) >= 0x0200 );
 	pCaps->m_SupportsPixelShaders_2_b = ( ( caps.PixelShaderVersion & 0xffff ) >= 0x0200) && (caps.PS20Caps.NumInstructionSlots >= 512); // More caps to this, but this will do
-	Assert( ( caps.VertexShaderVersion & 0xffff ) >= 0x0200 );
+	contract_assert( ( caps.VertexShaderVersion & 0xffff ) >= 0x0200 );
 	pCaps->m_SupportsShaderModel_3_0 = ( caps.PixelShaderVersion & 0xffff ) >= 0x0300;
 	pCaps->m_SupportsMipmappedCubemaps = ( caps.TextureCaps & D3DPTEXTURECAPS_MIPCUBEMAP ) ? true : false;
-#endif
 
 	if ( IsOpenGL() )
 	{
@@ -648,10 +599,10 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 	pCaps->m_bSupportsMagAnisotropicFiltering = (caps.TextureFilterCaps & D3DPTFILTERCAPS_MAGFANISOTROPIC) != 0;
 	pCaps->m_nMaxAnisotropy = pCaps->m_bSupportsAnisotropicFiltering ? caps.MaxAnisotropy : 1; 
 
-	Assert( caps.TextureCaps & D3DPTEXTURECAPS_CUBEMAP );
-	Assert( !( caps.TextureCaps & D3DPTEXTURECAPS_POW2 ) || ( caps.TextureCaps & D3DPTEXTURECAPS_NONPOW2CONDITIONAL ) );
+	contract_assert( caps.TextureCaps & D3DPTEXTURECAPS_CUBEMAP );
+	contract_assert( !( caps.TextureCaps & D3DPTEXTURECAPS_POW2 ) || ( caps.TextureCaps & D3DPTEXTURECAPS_NONPOW2CONDITIONAL ) );
 
-	Assert( caps.TextureCaps & D3DPTEXTURECAPS_PROJECTED );
+	contract_assert( caps.TextureCaps & D3DPTEXTURECAPS_PROJECTED );
 
 	if ( pCaps->m_bSoftwareVertexProcessing )
 	{
@@ -958,7 +909,7 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 		pCaps->m_HDRType = HDR_TYPE_NONE;
 	}
 
-	Assert( caps.MaxStreams > 1 );
+	contract_assert( caps.MaxStreams > 1 );
 	pCaps->m_bSupportsStreamOffset = ( caps.DevCaps2 & D3DDEVCAPS2_STREAMOFFSET );
 
 	pCaps->m_flMinGammaControlPoint = 0.0f;
@@ -1060,7 +1011,7 @@ void CShaderDeviceMgrDx8::ComputeDXSupportLevel( HardwareCaps_t &caps )
 		return;
 	}
 
-	Assert( 0 ); 
+	contract_assert( 0 ); 
 	// we don't support this!
 	caps.m_nMinDXSupportLevel = 90;
 	caps.m_nMaxDXSupportLevel = 90;
@@ -1073,7 +1024,6 @@ void CShaderDeviceMgrDx8::ComputeDXSupportLevel( HardwareCaps_t &caps )
 //-----------------------------------------------------------------------------
 int CShaderDeviceMgrDx8::GetAdapterCount() const
 {
-	// FIXME: Remove call to InitAdapterInfo once Steam startup issues are resolved.
 	const_cast<CShaderDeviceMgrDx8*>( this )->InitAdapterInfo();
 
 	return std::ssize( m_Adapters );
@@ -1085,12 +1035,11 @@ int CShaderDeviceMgrDx8::GetAdapterCount() const
 //-----------------------------------------------------------------------------
 void CShaderDeviceMgrDx8::GetAdapterInfo( int nAdapter, MaterialAdapterInfo_t& info ) const
 {
-	// FIXME: Remove call to InitAdapterInfo once Steam startup issues are resolved.
 	const_cast<CShaderDeviceMgrDx8*>( this )->InitAdapterInfo();
 
-	Assert( ( nAdapter >= 0 ) && ( nAdapter < std::ssize( m_Adapters ) ) );
+	contract_assert( ( nAdapter >= 0 ) && ( nAdapter < std::ssize( m_Adapters ) ) );
 	const HardwareCaps_t &caps = m_Adapters[ nAdapter ].m_ActualCaps;
-	memcpy( &info, &caps, sizeof(MaterialAdapterInfo_t) );
+	std::memcpy( &info, &caps, sizeof(MaterialAdapterInfo_t) );
 }
 
 
@@ -1099,7 +1048,6 @@ void CShaderDeviceMgrDx8::GetAdapterInfo( int nAdapter, MaterialAdapterInfo_t& i
 //-----------------------------------------------------------------------------
 bool CShaderDeviceMgrDx8::SetAdapter( int nAdapter, int nAdapterFlags )
 {
-	LOCK_SHADERAPI();
 
 	// FIXME:
 	//	g_pShaderDeviceDx8->m_bReadPixelsEnabled = (nAdapterFlags & MATERIAL_INIT_READ_PIXELS_ENABLED) != 0;
@@ -1113,12 +1061,6 @@ bool CShaderDeviceMgrDx8::SetAdapter( int nAdapter, int nAdapterFlags )
 	{
 		g_pShaderDeviceDx8->m_DisplayAdapter = 0;
 	}
-
-#ifdef NVPERFHUD
-	// hack for nvperfhud
-	g_pShaderDeviceDx8->m_DisplayAdapter = m_pD3D->GetAdapterCount() - 1;
-	g_pShaderDeviceDx8->m_DeviceType = D3DDEVTYPE_REF;
-#endif
 
 	// backward compat
 	if ( !g_pShaderDeviceDx8->OnAdapterSet() )
@@ -1150,8 +1092,7 @@ void CShaderDeviceMgrDx8::GetDesktopResolution( int *pWidth, int *pHeight, int n
 //-----------------------------------------------------------------------------
 int CShaderDeviceMgrDx8::GetModeCount( int nAdapter ) const
 {
-	LOCK_SHADERAPI();
-	Assert( m_pD3D && (nAdapter < GetAdapterCount() ) );
+	contract_assert( m_pD3D && (nAdapter < GetAdapterCount() ) );
 
 	// fixme - what format should I use here?
 	return m_pD3D->GetAdapterModeCount( nAdapter, D3DFMT_X8R8G8B8 );
@@ -1163,18 +1104,17 @@ int CShaderDeviceMgrDx8::GetModeCount( int nAdapter ) const
 //-----------------------------------------------------------------------------
 void CShaderDeviceMgrDx8::GetModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter, int nMode ) const
 {
-	Assert( pInfo->m_nVersion == SHADER_DISPLAY_MODE_VERSION );
+	contract_assert( pInfo->m_nVersion == SHADER_DISPLAY_MODE_VERSION );
 
-	LOCK_SHADERAPI();
-	Assert( m_pD3D && (nAdapter < GetAdapterCount() ) );
-	Assert( nMode < GetModeCount( nAdapter ) );
+	contract_assert( m_pD3D && (nAdapter < GetAdapterCount() ) );
+	contract_assert( nMode < GetModeCount( nAdapter ) );
 
 	HRESULT hr;
 	D3DDISPLAYMODE d3dInfo;
 
 	// fixme - what format should I use here?
 	hr = D3D()->EnumAdapterModes( nAdapter, D3DFMT_X8R8G8B8, nMode, &d3dInfo );
-	Assert( !FAILED(hr) );
+	contract_assert( !FAILED(hr) );
 
 	pInfo->m_nWidth       = d3dInfo.Width;
 	pInfo->m_nHeight      = d3dInfo.Height;
@@ -1190,10 +1130,9 @@ void CShaderDeviceMgrDx8::GetModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter,
 //-----------------------------------------------------------------------------
 void CShaderDeviceMgrDx8::GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter ) const
 {
-	Assert( pInfo->m_nVersion == SHADER_DISPLAY_MODE_VERSION );
+	contract_assert( pInfo->m_nVersion == SHADER_DISPLAY_MODE_VERSION );
 
-	LOCK_SHADERAPI();
-	Assert( D3D() );
+	contract_assert( D3D() );
 
 	HRESULT hr;
 	D3DDISPLAYMODE mode;
@@ -1202,8 +1141,8 @@ void CShaderDeviceMgrDx8::GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nA
 	// the actual window/display resolution.
 	if ( g_pLauncherMgr )
 	{
-		int nWidth = 0, nHeight = 0;
-		SDL_GetWindowSizeInPixels( GetGameSDLWindow(), &nWidth, &nHeight );
+		const ks::desktop::size pixels = ks::desktop::window_pixel_size( ks::desktop::game_window() );
+		int nWidth = pixels.width, nHeight = pixels.height;
 		if ( nWidth > 0 && nHeight > 0 )
 		{
 			mode.Width = nWidth;
@@ -1215,13 +1154,13 @@ void CShaderDeviceMgrDx8::GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nA
 		{
 			// Fallback to D3D query
 			hr = D3D()->GetAdapterDisplayMode( nAdapter, &mode );
-			Assert( !FAILED(hr) );
+			contract_assert( !FAILED(hr) );
 		}
 	}
 	else
 	{
 		hr = D3D()->GetAdapterDisplayMode( nAdapter, &mode );
-		Assert( !FAILED(hr) );
+		contract_assert( !FAILED(hr) );
 	}
 
 	pInfo->m_nWidth = mode.Width;
@@ -1237,9 +1176,8 @@ void CShaderDeviceMgrDx8::GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nA
 //-----------------------------------------------------------------------------
 CreateInterfaceFn CShaderDeviceMgrDx8::SetMode( void *hWnd, int nAdapter, const ShaderDeviceInfo_t& mode )
 {
-	LOCK_SHADERAPI();
 
-	Assert( nAdapter < GetAdapterCount() );
+	contract_assert( nAdapter < GetAdapterCount() );
 	int nDXLevel = mode.m_nDXLevel != 0 ? mode.m_nDXLevel : m_Adapters[nAdapter].m_ActualCaps.m_nDXSupportLevel;
 	if ( nDXLevel > m_Adapters[nAdapter].m_ActualCaps.m_nMaxDXSupportLevel )
 	{
@@ -1343,7 +1281,7 @@ int CShaderDeviceMgrDx8::GetVidMemBytes( int nAdapter ) const
 CShaderDeviceDx8::CShaderDeviceDx8()
 {
 	m_pD3DDevice = nullptr;
-	for ( int i = 0; i < ARRAYSIZE(m_pFrameSyncQueryObject); i++ )
+	for ( int i = 0; i < std::size( m_pFrameSyncQueryObject ); i++ )
 	{
 		m_pFrameSyncQueryObject[i] = nullptr;
 		m_bQueryIssued[i] = false;
@@ -1526,13 +1464,13 @@ void CShaderDeviceDx8::SetPresentParameters( void* hWnd, int nAdapter, const Sha
 	// Fullscreen is managed by SDL (sdlmgr) — always tell D3D9 we're windowed so
 	// DXVK's WSI layer doesn't call enterFullscreenMode, which double-triggers
 	// fullscreen and causes Wayland compositors to bounce the window between monitors.
-	m_PresentParameters.Windowed = TRUE;
+	m_PresentParameters.Windowed = true;
 	// DXVK: Force COPY to preserve backbuffer content between frames.
 	// DISCARD with Vulkan swapchain rotation causes stale content (dirty rectangles bug).
 	m_PresentParameters.SwapEffect = D3DSWAPEFFECT_COPY;
 
 	// for 360, we want to create it ourselves for hierarchical z support
-	m_PresentParameters.EnableAutoDepthStencil = false ? FALSE : TRUE; 
+	m_PresentParameters.EnableAutoDepthStencil = false ? false : true; 
 
 	// What back-buffer format should we use?
 	ImageFormat backBufferFormat = FindNearestSupportedBackBufferFormat( nAdapter,
@@ -1715,10 +1653,6 @@ void CShaderDeviceDx8::ShutdownDevice()
 	{
 		Dx9Device()->Release();
 
-#ifdef STUBD3D
-		delete ( CStubD3DDevice * )Dx9Device();
-#endif
-
 		Dx9Device()->ShutDownDevice();
 
 		RemoveWindowHook( (VD3DHWND)m_hWnd );
@@ -1742,7 +1676,6 @@ bool CShaderDeviceDx8::IsUsingGraphics() const
 //-----------------------------------------------------------------------------
 int CShaderDeviceDx8::GetCurrentAdapter() const
 {
-	LOCK_SHADERAPI();
 	return m_DisplayAdapter;
 }
 
@@ -1752,16 +1685,11 @@ int CShaderDeviceDx8::GetCurrentAdapter() const
 //-----------------------------------------------------------------------------
 void CShaderDeviceDx8::SpewDriverInfo() const
 {
-	LOCK_SHADERAPI();
 	HRESULT hr;
 	D3DCAPS caps;
 	D3DADAPTER_IDENTIFIER9 ident;
 
-	RECORD_COMMAND( DX8_GET_DEVICE_CAPS, 0 );
 
-	RECORD_COMMAND( DX8_GET_ADAPTER_IDENTIFIER, 2 );
-	RECORD_INT( m_nAdapter );
-	RECORD_INT( 0 );
 
 	Dx9Device()->GetDeviceCaps( &caps );
 	hr = D3D()->GetAdapterIdentifier( m_nAdapter, D3DENUM_WHQL_LEVEL, &ident );
@@ -1876,7 +1804,6 @@ void CShaderDeviceDx8::SpewDriverInfo() const
 		Warning( "m_HDRType: HDR_TYPE_FLOAT\n" );
 		break;
 	default:
-		Assert( 0 );
 		break;
 	}
 	Warning( "m_UseFastClipping: %s\n", g_pHardwareConfigDx8->Caps().m_UseFastClipping ? "yes" : "no" );
@@ -1908,7 +1835,6 @@ void CShaderDeviceDx8::GetBackBufferDimensions( int& width, int& height ) const
 
 const AspectRatioInfo_t	&CShaderDeviceDx8::GetAspectRatioInfo() const
 {
-	Assert( m_AspectRatioInfo.m_bInitialized );
 	if ( !m_AspectRatioInfo.m_bInitialized )
 	{
 		Error( "GetAspectRatioInfo called before aspect ratio is initialized!\n" );
@@ -1944,7 +1870,7 @@ void CShaderDeviceDx8::DetectQuerySupport( IDirect3DDevice9 *pD3DDevice )
 
 
 #if(DIRECT3D_VERSION < 0x0900)
-#define D3DDEVTYPE_NULLREF 	( D3DDEVTYPE )4
+inline constexpr auto D3DDEVTYPE_NULLREF = ( D3DDEVTYPE )4;
 #endif
 
 //-----------------------------------------------------------------------------
@@ -1954,12 +1880,6 @@ IDirect3DDevice9* CShaderDeviceDx8::InvokeCreateDevice( void* hWnd, int nAdapter
 {
 	IDirect3DDevice9 *pD3DDevice = nullptr;
 	D3DDEVTYPE devType = DX8_DEVTYPE;
-
-#if NVPERFHUD
-	nAdapter = D3D()->GetAdapterCount()-1;
-	devType = D3DDEVTYPE_REF;
-	deviceCreationFlags = D3DCREATE_FPU_PRESERVE | D3DCREATE_HARDWARE_VERTEXPROCESSING;
-#endif
 
 	// Create the device with multi-threaded safeguards if we're using mat_queue_mode 2.
 	// The logic to enable multithreaded rendering happens well after the device has been created, 
@@ -1971,10 +1891,6 @@ IDirect3DDevice9* CShaderDeviceDx8::InvokeCreateDevice( void* hWnd, int nAdapter
 	{
 		deviceCreationFlags |= D3DCREATE_MULTITHREADED;
 	}
-
-#ifdef ENABLE_NULLREF_DEVICE_SUPPORT
-	devType =  CommandLine()->FindParm( "-nulldevice" ) ? D3DDEVTYPE_NULLREF: devType;
-#endif
 
 
 	HRESULT hr = D3D()->CreateDevice( nAdapter, devType,
@@ -1991,8 +1907,7 @@ IDirect3DDevice9* CShaderDeviceDx8::InvokeCreateDevice( void* hWnd, int nAdapter
 	{
 		// Otherwise we failed, show a message and shutdown
 		pD3DDevice = nullptr;
-		Log_Warning( LOG_EngineInitialization, "Failed to create %s device! Please see the following for more info.\n"
-			"http://support.steampowered.com/cgi-bin/steampowered.cfg/php/enduser/std_adp.php?p_faqid=772\n", IsOpenGL() ? "OpenGL" : "D3D"  );
+		Log_Warning( LOG_EngineInitialization, "Failed to create %s device!\n", IsOpenGL() ? "OpenGL" : "D3D"  );
 	}
 
 	return pD3DDevice;
@@ -2004,15 +1919,11 @@ IDirect3DDevice9* CShaderDeviceDx8::InvokeCreateDevice( void* hWnd, int nAdapter
 //-----------------------------------------------------------------------------
 bool CShaderDeviceDx8::CreateD3DDevice( void* pHWnd, int nAdapter, const ShaderDeviceInfo_t &info )
 {
-	Assert( info.m_nVersion == SHADER_DEVICE_INFO_VERSION );
 
-	MEM_ALLOC_CREDIT_( __FILE__ ": D3D Device" );
 
 	VD3DHWND hWnd = (VD3DHWND)pHWnd;
 
-#if ( !defined( PIX_INSTRUMENTATION ) && !defined( NVPERFHUD ) )
 	D3DPERF_SetOptions(1);	// Explicitly disallow PIX instrumented profiling in external builds
-#endif
 
 	// Get some caps....
 	D3DCAPS caps;
@@ -2029,7 +1940,7 @@ bool CShaderDeviceDx8::CreateD3DDevice( void* pHWnd, int nAdapter, const ShaderD
 	// Make it part of HardwareCaps_t
 	InitializeColorInformation( nAdapter, DX8_DEVTYPE, m_AdapterFormat );
 
-	Assert( D3DSupportsCompressedTextures() );
+	contract_assert( D3DSupportsCompressedTextures() );
 
 	const HardwareCaps_t &adapterCaps = g_ShaderDeviceMgrDx8.GetHardwareCaps( nAdapter );
 	DWORD deviceCreationFlags = ComputeDeviceCreationFlags( caps, adapterCaps.m_bSoftwareVertexProcessing );
@@ -2051,12 +1962,7 @@ bool CShaderDeviceDx8::CreateD3DDevice( void* pHWnd, int nAdapter, const ShaderD
 
 	// This must happen AFTER device creation
 
-#ifdef STUBD3D
-	Dx9Device() = new CStubD3DDevice( pD3DDevice, g_pFullFileSystem );
-#else
 	Dx9Device()->SetDevicePtr( pD3DDevice, &m_PresentParameters, pHWnd );
-
-#endif
 
 
 	// CheckDeviceLost();
@@ -2129,7 +2035,7 @@ void CShaderDeviceDx8::AllocFrameSyncObjects( void )
 
 	if ( m_DeviceSupportsCreateQuery == 0 )
 	{
-		for ( int i = 0; i < ARRAYSIZE(m_pFrameSyncQueryObject); i++ )
+		for ( int i = 0; i < std::size( m_pFrameSyncQueryObject ); i++ )
 		{
 			m_pFrameSyncQueryObject[i] = nullptr;
 			m_bQueryIssued[i] = false;
@@ -2138,18 +2044,16 @@ void CShaderDeviceDx8::AllocFrameSyncObjects( void )
 	}
 
 	// FIXME FIXME FIXME!!!!!  Need to record this.
-	for ( int i = 0; i < ARRAYSIZE(m_pFrameSyncQueryObject); i++ )
+	for ( int i = 0; i < std::size( m_pFrameSyncQueryObject ); i++ )
 	{
 		HRESULT hr = Dx9Device()->CreateQuery( D3DQUERYTYPE_EVENT, &m_pFrameSyncQueryObject[i] );
 		if( hr == D3DERR_NOTAVAILABLE )
 		{
 			Warning( "D3DQUERYTYPE_EVENT not available on this driver\n" );
-			Assert( m_pFrameSyncQueryObject[i] == nullptr );
 		}
 		else
 		{
-			Assert( hr == D3D_OK );
-			Assert( m_pFrameSyncQueryObject[i] );
+			contract_assert( m_pFrameSyncQueryObject[i] );
 			m_pFrameSyncQueryObject[i]->Issue( D3DISSUE_END );
 			m_bQueryIssued[i] = true;
 		}
@@ -2167,7 +2071,7 @@ void CShaderDeviceDx8::FreeFrameSyncObjects( void )
 	FreeFrameSyncTextureObject();
 
 	// FIXME FIXME FIXME!!!!!  Need to record this.
-	for ( int i = 0; i < ARRAYSIZE(m_pFrameSyncQueryObject); i++ )
+	for ( int i = 0; i < std::size( m_pFrameSyncQueryObject ); i++ )
 	{
 		if ( m_pFrameSyncQueryObject[i] )
 		{
@@ -2189,11 +2093,7 @@ void CShaderDeviceDx8::FreeFrameSyncObjects( void )
 						break;
 				} while ( hr == S_FALSE );
 			}
-#ifdef DBGFLAG_ASSERT
-			int nRetVal = 
-#endif
 			m_pFrameSyncQueryObject[i]->Release();
-			Assert( nRetVal == 0 );
 			m_pFrameSyncQueryObject[i] = nullptr;
 			m_bQueryIssued[i] = false;
 		}
@@ -2218,7 +2118,6 @@ void CShaderDeviceDx8::OtherAppInitializing( bool initializing )
 		}
 		return;
 	}
-	Assert( m_bOtherAppInitializing != initializing );
 
 	if ( !IsDeactivated() )
 	{
@@ -2238,7 +2137,6 @@ void CShaderDeviceDx8::OtherAppInitializing( bool initializing )
 
 void CShaderDeviceDx8::HandleThreadEvent( uint32 threadEvent )
 {
-	Assert(ThreadOwnsDevice());
 	switch ( threadEvent )
 	{
 	case SHADER_THREAD_OTHER_APP_START:
@@ -2300,7 +2198,7 @@ void CShaderDeviceDx8::ReleaseResources( bool bReleaseManagedResources /*= true*
 	{
 		// We shouldn't be asked to release resources but keep mananged resources around unless 
 		// this thread owns the device.
-		Assert( bReleaseManagedResources == true );
+		contract_assert( bReleaseManagedResources == true );
 
 		// Set our resources as not being released yet.  
 		// We reset this in two places since release resources can be called without a call to TryDeviceReset.
@@ -2314,11 +2212,10 @@ void CShaderDeviceDx8::ReleaseResources( bool bReleaseManagedResources /*= true*
 	{
 		Warning( "ReleaseResources has no effect, now at level %d.\n", m_numReleaseResourcesRefCount );
 		DevWarning( "ReleaseResources called twice is a bug: use IsDeactivated to check for a valid device.\n" );
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
-	LOCK_SHADERAPI();
 	CPixEvent( PIX_VALVE_ORANGE, "ReleaseResources" );
 
 	FreeFrameSyncObjects();
@@ -2338,7 +2235,7 @@ void CShaderDeviceDx8::ReleaseResources( bool bReleaseManagedResources /*= true*
 #endif
 
 	// All meshes cleaned up?
-	Assert( MeshMgr()->BufferCount() == 0 );
+	contract_assert( MeshMgr()->BufferCount() == 0 );
 
 	// Signal that our resources have been released so that we can try to reset the device
 	m_bResourcesReleased = true;
@@ -2367,7 +2264,7 @@ void CShaderDeviceDx8::ReacquireResourcesInternal( bool bResetState, bool bForce
 		if ( m_numReleaseResourcesRefCount > 1 )
 		{
 			Warning( "Forcefully resetting device (%s), resources release level was %d.\n", pszForceReason ? pszForceReason : "unspecified", m_numReleaseResourcesRefCount );
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 		m_numReleaseResourcesRefCount = 0;
 	}
@@ -2378,7 +2275,7 @@ void CShaderDeviceDx8::ReacquireResourcesInternal( bool bResetState, bool bForce
 		{
 			Warning( "ReacquireResources has no effect, now at level %d.\n", m_numReleaseResourcesRefCount );
 			DevWarning( "ReacquireResources being discarded is a bug: use IsDeactivated to check for a valid device.\n" );
-			Assert( 0 );
+			contract_assert( 0 );
 
 			if ( m_numReleaseResourcesRefCount < 0 )
 			{
@@ -2394,12 +2291,9 @@ void CShaderDeviceDx8::ReacquireResourcesInternal( bool bResetState, bool bForce
 		ResetRenderState();
 	}
 
-	LOCK_SHADERAPI();
 	CPixEvent event( PIX_VALVE_ORANGE, "ReacquireResources" );
 
-#ifdef VPROF_ENABLED
-	VPROF_INCREMENT_GROUP_COUNTER( "reacquire_resources", COUNTER_GROUP_NO_RESET, 1 );
-#endif
+	VProfIncrementCounter<"reacquire_resources", COUNTER_GROUP_NO_RESET>( 1 );
 
 	g_pShaderAPIBase->RestoreShaderObjects();
 	AllocFrameSyncObjects();
@@ -2465,10 +2359,9 @@ void CShaderDeviceDx8::CheckDeviceLost( bool bOtherAppInitializing )
 	// but that seems to only make sense if we have resizable windows where 
 	// we do *not* allocate buffers as large as the entire current video mode
 	// which we're not doing
-	m_bIsMinimized = ( IsIconic( (VD3DHWND)m_hWnd ) == TRUE );
+	m_bIsMinimized = ( IsIconic( (VD3DHWND)m_hWnd ) == true );
 	m_bOtherAppInitializing = bOtherAppInitializing;
 
-	RECORD_COMMAND( DX8_TEST_COOPERATIVE_LEVEL, 0 );
 	HRESULT hr = Dx9Device()->TestCooperativeLevel();
 
 #ifdef _DEBUG
@@ -2599,11 +2492,11 @@ bool CShaderDeviceDx8::BuildStaticShader(	bool bVertexShader, void **ppShader, c
 
 	if ( bVertexShader )
 	{
-		Dx9Device()->CreateVertexShader( shaderData, (IDirect3DVertexShader9 **)ppShader, pShaderName );
+		Dx9Device()->CreateVertexShader( shaderData, (IDirect3DVertexShader9 **)ppShader );
 	}
 	else
 	{
-		Dx9Device()->CreatePixelShader( shaderData, (IDirect3DPixelShader9 **)ppShader, pShaderName );
+		Dx9Device()->CreatePixelShader( shaderData, (IDirect3DPixelShader9 **)ppShader );
 	}
 
 
@@ -2725,19 +2618,16 @@ void CShaderDeviceDx8::UpdatePresentStats()
 
 // at least on PS/3, framerate is capped at 30 fps (33ms) and trying to Present every 
 // 15 ms will cause a backlog of frames to render, which will effectively stall every Present after the first 2 for 33ms
-#define LOADING_PRESENT_UPDATE_INTERVAL 0.05f
+constexpr auto LOADING_PRESENT_UPDATE_INTERVAL = 0.05f;
 static float g_flLastUpdateTime = 0.0f;
 bool g_bInSwap = false;
 
 
-#if ENABLE_MICRO_PROFILER
 double g_time_PresentProfilerReset = 0;
 CMicroProfiler g_mp_Present;
-#endif
 
 void CShaderDeviceDx8::OnDebugEvent( const char * pEvent )
 {
-#if ENABLE_MICRO_PROFILER
 	double timeNow = Plat_FloatTime(), timeDelta = timeNow - g_time_PresentProfilerReset;
 	double flSleepMilliseconds = g_mp_Present.GetTotalMilliseconds();
 	if( g_mp_Present.m_numCalls )
@@ -2750,7 +2640,6 @@ void CShaderDeviceDx8::OnDebugEvent( const char * pEvent )
 	}
 	g_mp_Present.Reset();
 	g_time_PresentProfilerReset = timeNow;
-#endif
 }
 
 
@@ -2794,7 +2683,6 @@ void CShaderDeviceDx8::RefreshFrontBufferNonInteractive()
 //-----------------------------------------------------------------------------
 void CShaderDeviceDx8::Present()
 {
-	LOCK_SHADERAPI();
 
 	// flush the dynamic buffer and execute the per-draw call queuene
 	g_pShaderAPIBase->OnPresent();
@@ -2846,13 +2734,13 @@ void CShaderDeviceDx8::Present()
 			srcRect.top = viewport.m_nTopLeftY;
 			srcRect.bottom = viewport.m_nTopLeftY + viewport.m_nHeight;
 
-			MICRO_PROFILE( g_mp_Present );
+			CMicroProfilerGuard _( &( g_mp_Present ) );
 			hr = Dx9Device()->Present( &srcRect, &destRect, (VD3DHWND)m_ViewHWnd, 0 );
 		}
 		else
 		{
 			g_pShaderAPIBase->OwnGPUResources( false );
-			MICRO_PROFILE( g_mp_Present );
+			CMicroProfilerGuard _( &( g_mp_Present ) );
 			hr = Dx9Device()->Present( 0, 0, 0, 0 );
 		}
 	}
@@ -2867,18 +2755,6 @@ void CShaderDeviceDx8::Present()
 		CheckDeviceLost( m_bOtherAppInitializing );
 	}
 
-
-#ifdef RECORD_KEYFRAMES
-	static int frame = 0;
-	++frame;
-	if (frame == KEYFRAME_INTERVAL)
-	{
-		RECORD_COMMAND( DX8_KEYFRAME, 0 );
-
-		g_pShaderAPIBase->ResetRenderState();
-		frame = 0;
-	}
-#endif
 
 	g_pShaderAPIBase->AdvancePIXFrame();
 
@@ -2921,7 +2797,7 @@ void CShaderDeviceDx8::SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMi
 {
 	DevMsg( 2, "SetHardwareGammaRamp( %f )\n", fGamma );
 
-	Assert( Dx9Device() );
+	contract_assert( Dx9Device() );
 	if( !Dx9Device() )
 		return;
 
@@ -2942,7 +2818,7 @@ void CShaderDeviceDx8::SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMi
 		flSrgbGammaValue = flInputValue;
 
 		// Apply the user controlled exponent curve
-		float flCorrection = pow( flSrgbGammaValue, ( fGamma / 2.2f ) );
+		float flCorrection = std::pow( flSrgbGammaValue, ( fGamma / 2.2f ) );
 		flCorrection = clamp( flCorrection, 0.0f, 1.0f );
 
 		// TV adjustment - Apply an exp and a scale and bias
@@ -2974,7 +2850,7 @@ void CShaderDeviceDx8::SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMi
 //-----------------------------------------------------------------------------
 // Shader compilation
 //-----------------------------------------------------------------------------
-IShaderBuffer* CShaderDeviceDx8::CompileShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion )
+IShaderBuffer* CShaderDeviceDx8::CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion )
 {
 	return ShaderManager()->CompileShader( pProgram, nBufLen, pShaderVersion );
 }
@@ -2991,13 +2867,13 @@ void CShaderDeviceDx8::DestroyVertexShader( VertexShaderHandle_t hShader )
 
 GeometryShaderHandle_t CShaderDeviceDx8::CreateGeometryShader( IShaderBuffer* pShaderBuffer )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 	return GEOMETRY_SHADER_HANDLE_INVALID;
 }
 
 void CShaderDeviceDx8::DestroyGeometryShader( GeometryShaderHandle_t hShader )
 {
-	Assert( hShader == GEOMETRY_SHADER_HANDLE_INVALID );
+	contract_assert( hShader == GEOMETRY_SHADER_HANDLE_INVALID );
 }
 
 PixelShaderHandle_t CShaderDeviceDx8::CreatePixelShader( IShaderBuffer *pBuffer )
@@ -3018,13 +2894,11 @@ void CShaderDeviceDx8::DestroyPixelShader( PixelShaderHandle_t hShader )
 //-----------------------------------------------------------------------------
 IMesh* CShaderDeviceDx8::CreateStaticMesh( VertexFormat_t vertexFormat, const char *pTextureBudgetGroup, IMaterial * pMaterial, VertexStreamSpec_t *pStreamSpec )
 {
-	LOCK_SHADERAPI();
 	return MeshMgr()->CreateStaticMesh( vertexFormat, pTextureBudgetGroup, pMaterial, pStreamSpec );
 }
 
 void CShaderDeviceDx8::DestroyStaticMesh( IMesh* pMesh )
 {
-	LOCK_SHADERAPI();
 	MeshMgr()->DestroyStaticMesh( pMesh );
 }
 
@@ -3034,37 +2908,30 @@ void CShaderDeviceDx8::DestroyStaticMesh( IMesh* pMesh )
 //-----------------------------------------------------------------------------
 IVertexBuffer *CShaderDeviceDx8::CreateVertexBuffer( ShaderBufferType_t type, VertexFormat_t fmt, int nVertexCount, const char *pBudgetGroup )
 {
-	LOCK_SHADERAPI();
 	return MeshMgr()->CreateVertexBuffer( type, fmt, nVertexCount, pBudgetGroup );
 }
 
 void CShaderDeviceDx8::DestroyVertexBuffer( IVertexBuffer *pVertexBuffer )
 {
-	LOCK_SHADERAPI();
 	MeshMgr()->DestroyVertexBuffer( pVertexBuffer );
 }
 
 IIndexBuffer *CShaderDeviceDx8::CreateIndexBuffer( ShaderBufferType_t bufferType, MaterialIndexFormat_t fmt, int nIndexCount, const char *pBudgetGroup )
 {
-	LOCK_SHADERAPI();
 	return MeshMgr()->CreateIndexBuffer( bufferType, fmt, nIndexCount, pBudgetGroup );
 }
 
 void CShaderDeviceDx8::DestroyIndexBuffer( IIndexBuffer *pIndexBuffer )
 {
-	LOCK_SHADERAPI();
 	MeshMgr()->DestroyIndexBuffer( pIndexBuffer );
 }
 
 IVertexBuffer *CShaderDeviceDx8::GetDynamicVertexBuffer( int streamID, VertexFormat_t vertexFormat, bool bBuffered )
 {
-	LOCK_SHADERAPI();
 	return MeshMgr()->GetDynamicVertexBuffer( streamID, vertexFormat, bBuffered );
 }
 
 IIndexBuffer *CShaderDeviceDx8::GetDynamicIndexBuffer( )
 {
-	LOCK_SHADERAPI();
 	return MeshMgr()->GetDynamicIndexBuffer( );
 }
-

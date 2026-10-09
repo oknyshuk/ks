@@ -1,6 +1,5 @@
-//=============== Copyright (c) Valve Corporation, All rights reserved. =================//
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "BaseVSShader.h"
 #include "shaderlib/commandbuilder.h"
@@ -13,7 +12,7 @@
 //#define CHARACTER_LIMIT_LIGHTS_WITH_PHONGWARP 1
 
 BEGIN_VS_SHADER( Character, "Help for Character Shader" )
-	BEGIN_SHADER_PARAMS
+	
 
 		SHADER_PARAM( BUMPMAP, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( MASKS1, SHADER_PARAM_TYPE_TEXTURE, "", "" )
@@ -949,7 +948,7 @@ BEGIN_VS_SHADER( Character, "Help for Character Shader" )
 			{
 				bWriteDepthToAlpha = false;
 				bWriteWaterFogToAlpha = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z);
-				AssertMsg( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha), "Can't write two values to alpha at the same time." );
+				contract_assert( ( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha) ) && "Can't write two values to alpha at the same time." );
 			}
 			else
 			{
@@ -965,11 +964,6 @@ BEGIN_VS_SHADER( Character, "Help for Character Shader" )
 			// need to turn off some features for shadercompile to complete, otherwise it runs out of memory before all combos are compiled
 			if ( bPreview )
 				nNumLights = clamp( nNumLights, 0, 1 );
-
-			#if defined( CHARACTER_LIMIT_LIGHTS_WITH_PHONGWARP )
-				if ( bHasPhongWarpTexture ) 
-					nNumLights = clamp( nNumLights, 0, 3 );
-			#endif
 
 			// Vertex Shader
 			DECLARE_DYNAMIC_VERTEX_SHADER( character_vs30 );
@@ -1109,7 +1103,7 @@ BEGIN_VS_SHADER( Character, "Help for Character Shader" )
 				vParams[3] = clamp( vParams[3] - 1, 0, 7 );
 				pShaderAPI->SetPixelShaderConstant( 45, vParams, 1 );
 
-				vParams[0] = pow( params[WEARPROGRESS]->GetFloatValue(),  params[WEAREXPONENT]->GetFloatValue() );
+				vParams[0] = std::pow( params[WEARPROGRESS]->GetFloatValue(),  params[WEAREXPONENT]->GetFloatValue() );
 				vParams[1] = params[PATTERNDETAILINFLUENCE]->GetFloatValue();
 				if ( bPattern )
 				{

@@ -1,14 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#ifndef ANIMATION_H
-#define ANIMATION_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+import std;
+import ks.math;
 
 #define ACTIVITY_NOT_AVAILABLE		-1
 
@@ -34,7 +29,7 @@ void GetEyePosition( CStudioHdr *pstudiohdr, Vector &vecEyePosition );
 int LookupActivity( CStudioHdr *pstudiohdr, const char *label );
 int LookupSequence( CStudioHdr *pstudiohdr, const char *label );
 
-#define NOMOTION 99999
+inline constexpr auto NOMOTION = 99999;
 void GetSequenceLinearMotion( CStudioHdr *pstudiohdr, int iSequence, const float poseParameter[], Vector *pVec );
 
 const char *GetSequenceName( CStudioHdr *pstudiohdr, int sequence );
@@ -105,5 +100,3 @@ enum animtag_indices
 float GetFirstSequenceAnimTag( CStudioHdr *pstudiohdr, int sequence, int nDesiredTag, float flStart = 0, float flEnd = 1 );
 
 float GetAnySequenceAnimTag( CStudioHdr *pstudiohdr, int sequence, int nDesiredTag, float flDefault );
-
-#endif	//ANIMATION_H

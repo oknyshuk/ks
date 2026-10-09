@@ -1,5 +1,4 @@
-#ifndef COMMON_VERTEXLITGENERIC_DX9_H_
-#define COMMON_VERTEXLITGENERIC_DX9_H_
+#pragma once
 
 #include "common_ps_fxc.h"
 
@@ -381,4 +380,3 @@ float3 PixelShaderDoLighting( const float3 worldPos, const float3 worldNormal,
 	return linearColor;
 }
 
-#endif //#ifndef COMMON_VERTEXLITGENERIC_DX9_H_

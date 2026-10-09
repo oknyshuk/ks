@@ -1,10 +1,28 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "audio_pch.h"
+import std;
+
+
+import ks.tier1;
+
+#include "tier2/riff.h"
+#include "sound.h"
+#include "soundservice.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_mix_buf.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_common.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+#include "snd_wave_mixer_adpcm.h"
+
+#include "audio/private/posix_stubs.h"
 
 extern bool FUseHighQualityPitch( channel_t *pChannel );
 
@@ -87,7 +105,7 @@ CAudioMixer *CreateWaveMixer( IWaveData *data, int format, int channels, int bit
 	{
 	case WAVE_FORMAT_PCM:
 		{
-			Assert( (initialStreamPosition == 0 ) && (skipInitialSamples == 0 ) );		// Not supported, so make sure the caller did not expect anything.
+			contract_assert( (initialStreamPosition == 0 ) && (skipInitialSamples == 0 ) );		// Not supported, so make sure the caller did not expect anything.
 			CAudioMixer *pMixer;
 			if ( channels > 1 )
 			{
@@ -103,7 +121,7 @@ CAudioMixer *CreateWaveMixer( IWaveData *data, int format, int channels, int bit
 				else
 					pMixer = new CAudioMixerWave16Mono( data );
 			}
-			Assert( CalcSampleSize(bits, channels) == pMixer->GetMixSampleSize() );
+			contract_assert( CalcSampleSize(bits, channels) == pMixer->GetMixSampleSize() );
 			return pMixer;
 		}
 		break;
@@ -115,7 +133,7 @@ CAudioMixer *CreateWaveMixer( IWaveData *data, int format, int channels, int bit
 
 	default:
 		// unsupported format or wav file missing!!!
-		Assert( false );
+		contract_assert( false );
 		return nullptr;
 	}
 }
@@ -275,7 +293,7 @@ static uint AppendToBuffer( char *pBuffer, const char *pSampleData, int nBytes, 
 {
 	int nAvail = pBufferEnd - pBuffer;
 	int nCopy = std::min( nBytes, nAvail );
-	Q_memcpy( pBuffer, pSampleData, nCopy );
+	V_memcpy( pBuffer, pSampleData, nCopy );
 	return nCopy;
 }
 
@@ -295,7 +313,7 @@ extern ConVar snd_find_channel;
 
 char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_request, int *pSamplesLoaded, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] )
 {
-	VPROF( "CAudioMixerWave::LoadMixBuffer" );
+	CVProfScope _( "CAudioMixerWave::LoadMixBuffer", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	int samples_loaded;
 	char *pSample = nullptr;
 	char *pData = nullptr;
@@ -311,14 +329,14 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 		// none available, bail out
 		// 360 might not be able to get samples due to latency of loop seek
 		// could also be the valid EOF for non-loops (caller keeps polling for data, until no more)
-		AssertOnce( !m_pData->Source().IsLooped() );
+		contract_assert( !m_pData->Source().IsLooped() );
 		*pSamplesLoaded = 0;
 
 		if ( (*snd_find_channel.GetString()) != '\0' )
 		{
 			char sndname[MAX_PATH];
 			GetSource()->GetFileName( sndname, sizeof(sndname) );
-			if ( Q_stristr( sndname, snd_find_channel.GetString() ) != 0 )
+			if ( V_stristr( sndname, snd_find_channel.GetString() ) != 0 )
 			{
 				Msg( "%s(%d): Sound '%s' is finished or accumulated too much latency.\n", __FILE__, __LINE__, sndname );
 			}
@@ -332,7 +350,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 	const char *pCopyBufferEnd = pCopy + nTempCopyBufferSize;
 
 
-	Assert( pCopy );
+	contract_assert( pCopy );
 	if ( !pCopy )
 	{
 		Warning( "LoadMixBuffer: no paint buffer\n" );
@@ -352,7 +370,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 			// if this assert fails, then pitch is too high (ie: > 2.0) or the sample counters have diverged.
 			// NOTE: to prevent this, pitch should always be capped in MixDataToDevice (but isn't nor are the sample counters).
 			DevWarning( "LoadMixBuffer: sample load request %d exceeds buffer sizes\n", sample_load_request );
-			Assert( 0 );
+			contract_assert( 0 );
 			*pSamplesLoaded = 0;
 			return nullptr;
 		}
@@ -393,7 +411,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 
 	// cCopySamps = sample_max_loaded - floor(m_fsample_index);
 
-	if ( sample_loaded_index < 0 || (floor(m_fsample_index) > sample_loaded_index))
+	if ( sample_loaded_index < 0 || (std::floor(m_fsample_index) > sample_loaded_index))
 	{
 		// no samples previously loaded, or
 		// next sample index is entirely within the next block of samples to be loaded,
@@ -404,17 +422,17 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 	{
 		// next sample index is entirely within the previous block of samples loaded,
 		// so we'll need the last 2 samples loaded.  (can occur when rate < 1.0)		
-		Assert ( ceil(m_fsample_index + 0.00000001) == sample_loaded_index );
+		contract_assert( std::ceil(m_fsample_index + 0.00000001) == sample_loaded_index );
 		cCopySamps = 2;
 	}
 	else
 	{
 		// next sample index is between the next block and the previously loaded block,
 		// so we'll need the last sample loaded.  (can occur when 1.0 < rate < 2.0)
-		Assert( floor(m_fsample_index) == sample_loaded_index );
+		contract_assert( floor(m_fsample_index) == sample_loaded_index );
 		cCopySamps = 1;
 	}
-	Assert( cCopySamps >= 0 && cCopySamps <= 2 );
+	contract_assert( cCopySamps >= 0 && cCopySamps <= 2 );
 
 	// point to the sample(s) we are to copy
 	if ( cCopySamps )
@@ -478,7 +496,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 	if ( samples_loaded < sample_load_request )
 	{
 		// should always be able to get as many samples as we request from looping sound sources
-		AssertOnce( !m_pData->Source().IsLooped() );
+		contract_assert( !m_pData->Source().IsLooped() );
 
 		// these samples are filled with 0, not loaded.
 		// non-looping source hit end of data, fill rest of g_temppaintbuffer with 0
@@ -487,7 +505,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 		int nAvail = pCopyBufferEnd - pCopy;
 		int nFill = samples_zero_fill * samplesize;
 		nFill = std::min( nAvail, nFill );
-		Q_memset( pCopy, 0, nFill );
+		V_memset( pCopy, 0, nFill );
 		pCopy += nFill;
 		samples_loaded += samples_zero_fill;
 	}
@@ -496,13 +514,13 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 	{
 		// always save last 2 samples from copy buffer to channel 
 		// (we'll need 0,1 or 2 samples as start of next buffer for interpolation)
-		Assert( sizeof( pChannel->sample_prev ) >= samplesize*2 );
+		contract_assert( sizeof( pChannel->sample_prev ) >= samplesize*2 );
 		pSample = pCopy - samplesize*2;
-		Q_memcpy( &(pChannel->sample_prev[0]), pSample, samplesize*2 );
+		V_memcpy( &(pChannel->sample_prev[0]), pSample, samplesize*2 );
 	}
 
 	// this routine must always return as many samples loaded (or zeros) as requested.
-	Assert( samples_loaded == sample_load_request );
+	contract_assert( samples_loaded == sample_load_request );
 
 	*pSamplesLoaded = samples_loaded;
 
@@ -557,7 +575,7 @@ int CAudioMixerWave::GetSampleLoadRequest( double rate, int sampleCountOut, bool
 	fsample_index_end = m_fsample_index + RoundToFixedPoint( rate, sampleCountOut-1, bInterpolated_pitch );				
 
 	// always round up to ensure we'll have that n+1 sample for interpolation	
-	sample_index_high = (int64)( ceil( fsample_index_end ) );															
+	sample_index_high = (int64)( std::ceil( fsample_index_end ) );															
 	
 	// make sure we always round the floating point index up by at least 1 sample,
 	// ie: make sure integer sample_index_high is greater than floating point sample index
@@ -565,11 +583,11 @@ int CAudioMixerWave::GetSampleLoadRequest( double rate, int sampleCountOut, bool
 	{
 		sample_index_high++;
 	}
-	Assert ( sample_index_high > fsample_index_end );
+	contract_assert( sample_index_high > fsample_index_end );
 
 	// attempt to load enough samples so we can reach sample_index_high sample.
 	sample_load_request = sample_index_high - m_sample_loaded_index;
-	Assert( sample_index_high >= m_sample_loaded_index );
+	contract_assert( sample_index_high >= m_sample_loaded_index );
 
 	// NOTE: we can actually return 0 samples to load if rate < 1.0
 	// and sampleCountOut == 1.  In this case, the output sample
@@ -650,7 +668,7 @@ int CAudioMixerWave::MixDataToDevice_( channel_t *pChannel, int sampleCount, int
 		bool bInterpolated_pitch = FUseHighQualityPitch( pChannel );
 		double rate;
 
-		VPROF_( bInterpolated_pitch ? "CAudioMixerWave::MixData innerloop interpolated" : "CAudioMixerWave::MixData innerloop not interpolated", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
+		CVProfScope _( bInterpolated_pitch ? "CAudioMixerWave::MixData innerloop interpolated" : "CAudioMixerWave::MixData innerloop not interpolated", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
 
 		// process samples in paintbuffer-sized batches
 		int sampleCountOut = std::min( sampleCount, PAINTBUFFER_SIZE );
@@ -672,11 +690,11 @@ int CAudioMixerWave::MixDataToDevice_( channel_t *pChannel, int sampleCount, int
 			int readBytes = sampleSize * num_zero_samples;
 
 			// make sure we don't overflow temp copy buffer (g_temppaintbuffer)
-			Assert ( (TEMP_COPY_BUFFER_SIZE * sizeof(portable_samplepair_t)) > readBytes );
+			contract_assert( (TEMP_COPY_BUFFER_SIZE * sizeof(portable_samplepair_t)) > readBytes );
 			pData = (char *)g_temppaintbuffer;
 
 			// Now copy in some zeroes
-			memset( pData, 0, readBytes );
+			std::memset( pData, 0, readBytes );
 						
 			// we don't pitch shift these samples, so outputSampleCount == samples_loaded
 			samples_loaded	  = num_zero_samples;
@@ -696,7 +714,7 @@ int CAudioMixerWave::MixDataToDevice_( channel_t *pChannel, int sampleCount, int
 			// compute number of new samples to load at 'rate' so we can 
 			// output 'sampleCount' samples, from m_fsample_index to fsample_index_end (inclusive)
 			int sample_load_request = GetSampleLoadRequest( rate, sampleCountOut, bInterpolated_pitch );
-			Assert( sample_load_request >= 0 );
+			contract_assert( sample_load_request >= 0 );
 
 			// return pointer to a new copy buffer (g_temppaintbuffer) loaded with sample_load_request samples +
 			// first sample(s), which are always the last sample(s) from the previous load.
@@ -704,7 +722,7 @@ int CAudioMixerWave::MixDataToDevice_( channel_t *pChannel, int sampleCount, int
 			pData = LoadMixBuffer( pChannel, sample_load_request, &samples_loaded, copyBuf );
 
 			// LoadMixBuffer should always return requested samples.
-			Assert ( !pData || ( samples_loaded == sample_load_request ) );
+			contract_assert( !pData || ( samples_loaded == sample_load_request ) );
 
 			outputSampleCount = sampleCountOut;
 		}	
@@ -718,14 +736,14 @@ int CAudioMixerWave::MixDataToDevice_( channel_t *pChannel, int sampleCount, int
 		SND_MouthEnvelopeFollower( pChannel, pData, outputSampleCount );
 		
 		// get sample fraction from 0th sample in copy buffer
-		double sampleFraction = m_fsample_index - floor( m_fsample_index );
+		double sampleFraction = m_fsample_index - std::floor( m_fsample_index );
 		
 		// if just skipping samples in source, don't mix, just keep reading
 		if ( !bSkipAllMixing )
 		{
 			// mix this data to all active paintbuffers
 			// Verify that we won't get a buffer overrun.
-			Assert( floor( sampleFraction + RoundToFixedPoint(rate, (outputSampleCount-1), bInterpolated_pitch) ) <= samples_loaded );
+			contract_assert( floor( sampleFraction + RoundToFixedPoint(rate, (outputSampleCount-1), bInterpolated_pitch) ) <= samples_loaded );
 
 			int saveIndex = MIX_GetCurrentPaintbufferIndex();
 			for ( int i = 0 ; i < CPAINTBUFFERS; i++ )
@@ -786,4 +804,3 @@ float CAudioMixerWave::GetVolumeScale( void )
 {
 	return 1.0f;
 }
-

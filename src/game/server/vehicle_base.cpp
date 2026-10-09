@@ -1,17 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: UNDONE: Rename this to prop_vehicle.cpp !!!
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: UNDONE: Rename this to prop_vehicle.cpp !!!
+
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "vcollide_parse.h"
 #include "vehicle_base.h"
-#include "ndebugoverlay.h"
 #include "igamemovement.h"
 #include "soundenvelope.h"
 #include "in_buttons.h"
@@ -20,7 +39,7 @@
 #include "physics_impact_damage.h"
 #include "entityblocker.h"
 
-#define SF_PROP_VEHICLE_ALWAYSTHINK		0x00000001
+constexpr auto SF_PROP_VEHICLE_ALWAYSTHINK = 0x00000001;
 
 ConVar g_debug_vehiclebase( "g_debug_vehiclebase", "0", FCVAR_CHEAT );
 extern ConVar g_debug_vehicledriver;
@@ -81,7 +100,9 @@ void CPropVehicle::Spawn( )
 
 // this allows reloading the script variables from disk over an existing vehicle state
 // This is useful for tuning vehicles or updating old saved game formats
-CON_COMMAND(vehicle_flushscript, "Flush and reload all vehicle scripts")
+static void vehicle_flushscript( const CCommand &args );
+static ConCommand vehicle_flushscript_command( "vehicle_flushscript", vehicle_flushscript, "Flush and reload all vehicle scripts" );
+static void vehicle_flushscript( const CCommand &args )
 {
 	PhysFlushVehicleScripts();
 	for ( CBaseEntity *pEnt = gEntList.FirstEnt(); pEnt != nullptr; pEnt = gEntList.NextEnt(pEnt) )
@@ -207,7 +228,7 @@ void CPropVehicle::Think()
 	}
 }
 
-#define SMOOTHING_FACTOR 0.9
+constexpr auto SMOOTHING_FACTOR = 0.9;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -474,7 +495,7 @@ void CPropVehicleDriveable::EnterVehicle( CBaseCombatCharacter *pPassenger )
 	else
 	{
 		// NPCs are not yet supported - jdw
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 }
 
@@ -664,7 +685,7 @@ void CPropVehicleDriveable::InputUnlock( inputdata_t &inputdata )
 bool CPropVehicleDriveable::CanEnterVehicle( CBaseEntity *pEntity )
 {
 	// Only drivers are supported
-	Assert( pEntity && pEntity->IsPlayer() );
+	contract_assert( pEntity && pEntity->IsPlayer() );
 
 	// Prevent entering if the vehicle's being driven by an NPC
 	if ( GetDriver() && GetDriver() != pEntity )
@@ -834,7 +855,7 @@ void CPropVehicleDriveable::TraceAttack( const CTakeDamageInfo &info, const Vect
 				m_hKeepUpright = CreateKeepUpright( GetAbsOrigin(), vec3_angle, this, GetUprightStrength(), false );
 			}
 
-			Assert( m_hKeepUpright );
+			contract_assert( m_hKeepUpright );
 			variant_t emptyVariant;
 			m_hKeepUpright->AcceptInput( "TurnOn", this, this, emptyVariant, USE_TOGGLE );
 
@@ -935,7 +956,7 @@ void CPropVehicleDriveable::Event_KilledOther( CBaseEntity *pVictim, const CTake
 CFourWheelServerVehicle::CFourWheelServerVehicle( void )
 {
 	// Setup our smoothing data
-	memset( &m_ViewSmoothing, 0, sizeof( m_ViewSmoothing ) );
+	std::memset( &m_ViewSmoothing, 0, sizeof( m_ViewSmoothing ) );
 
 	m_ViewSmoothing.bClampEyeAngles		= true;
 	m_ViewSmoothing.bDampenEyePosition	= true;
@@ -993,7 +1014,7 @@ void CFourWheelServerVehicle::GetVehicleViewPosition( int nRole, Vector *pAbsOri
 	else
 	{
 		// NPCs are not supported
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 }
 

@@ -1,18 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Player for HL1.
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef DT_UTLVECTOR_SEND_H
-#define DT_UTLVECTOR_SEND_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Player for HL1.
 
 #include "dt_send.h"
 #include "dt_utlvector_common.h"
-
 
 // Produced by game/shared/reflect_sendtable.h, with ops from WireVec. Uses ops.base/count only.
 SendProp SendPropUtlVector(
@@ -25,6 +18,3 @@ SendProp SendPropUtlVector(
 	SendProp pArrayProp,		// Describe the data inside of each element in the array.
 	SendTableProxyFn varProxy=SendProxy_DataTableToDataTable	// This can be overridden to control who the array is sent to.
 	);
-
-
-#endif	// DT_UTLVECTOR_SEND_H

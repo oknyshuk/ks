@@ -1,24 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Client-server neutral effects interface
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef IEFFECTS_H
-#define IEFFECTS_H
-
-
-#include "basetypes.h"
-#include "mathlib/vector.h"
-#include "interface.h"
+import std;
+import ks.tier1;
 #include "ipredictionsystem.h"
+#include "shake.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-enum ShakeCommand_t;
-class Vector;
 class CGameTrace;
 typedef CGameTrace trace_t;
 
@@ -26,8 +19,8 @@ typedef CGameTrace trace_t;
 //-----------------------------------------------------------------------------
 // Client-server neutral effects interface
 //-----------------------------------------------------------------------------
-#define IEFFECTS_INTERFACE_VERSION	"IEffects001"
-abstract_class IEffects : public IPredictionSystem
+inline constexpr const char *IEFFECTS_INTERFACE_VERSION = "IEffects001";
+class IEffects : public IPredictionSystem
 {
 public:
 	//
@@ -74,6 +67,3 @@ public:
 // Client-server neutral effects interface accessor
 //-----------------------------------------------------------------------------
 extern IEffects *g_pEffects;
-			   
-
-#endif // IEFFECTS_H

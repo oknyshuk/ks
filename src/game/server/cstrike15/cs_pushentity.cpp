@@ -1,18 +1,44 @@
-//========= Copyright Valve Corporation,k All rights reserved. ============//
-//
-//
-// Note: This code integrated then adapted from TF:
-//			//ValveGames/staging/src/game/server/tf/tf_pushentity.cpp
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
+// Purpose: Note: This code integrated then adapted from TF:
+//			//ValveGames/staging/src/game/server/tf/tf_pushentity.cpp
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "pushentity.h"
 #include "cs_player.h"
 #include "collisionutils.h"
 #include "cs_gamerules.h"
-//#include "mathlib/mathlib.h"
 
 class CCSPhysicsPushEntities : public CPhysicsPushedEntities
 {
@@ -27,9 +53,9 @@ public:
 protected:
 
 	// Speculatively checks to see if all entities in this list can be pushed
-	virtual bool SpeculativelyCheckRotPush( const RotatingPushMove_t &rotPushMove, CBaseEntity *pRoot ) OVERRIDE;
-	virtual bool SpeculativelyCheckLinearPush( const Vector &vecAbsPush ) OVERRIDE;
-	virtual void FinishRotPushedEntity( CBaseEntity *pPushedEntity, const RotatingPushMove_t &rotPushMove ) OVERRIDE;
+	virtual bool SpeculativelyCheckRotPush( const RotatingPushMove_t &rotPushMove, CBaseEntity *pRoot ) override;
+	virtual bool SpeculativelyCheckLinearPush( const Vector &vecAbsPush ) override;
+	virtual void FinishRotPushedEntity( CBaseEntity *pPushedEntity, const RotatingPushMove_t &rotPushMove ) override;
 	
 private:
 
@@ -72,7 +98,6 @@ CCSPhysicsPushEntities::~CCSPhysicsPushEntities()
 //-----------------------------------------------------------------------------
 bool CCSPhysicsPushEntities::SpeculativelyCheckRotPush( const RotatingPushMove_t &rotPushMove, CBaseEntity *pRoot )
 {
-	TM_ZONE_DEFAULT( TELEMETRY_LEVEL0 );
 
 	Vector vecAbsPush( 0.0f, 0.0f, 0.0f );
 	m_nBlocker = -1;
@@ -117,7 +142,6 @@ bool CCSPhysicsPushEntities::SpeculativelyCheckRotPush( const RotatingPushMove_t
 //-----------------------------------------------------------------------------
 bool CCSPhysicsPushEntities::SpeculativelyCheckLinearPush( const Vector &vecAbsPush )
 {
-	TM_ZONE_DEFAULT( TELEMETRY_LEVEL0 );
 
 	m_nBlocker = -1;
 	int nMovedCount = std::ssize( m_rgMoved );
@@ -160,7 +184,7 @@ bool CCSPhysicsPushEntities::SpeculativelyCheckLinearPush( const Vector &vecAbsP
 bool CCSPhysicsPushEntities::RotationPushCSPlayer( PhysicsPushedInfo_t &info, const Vector &vecAbsPush, const RotatingPushMove_t &rotPushMove, bool bRotationalPush, CBaseEntity* pRoot )
 {
 	const bool cbIgnoreTeammates = !CSGameRules() || !CSGameRules()->IsTeammateSolid();
-	Assert( cbIgnoreTeammates ); // This code doesn't behave if teammates are solid.
+	contract_assert( cbIgnoreTeammates ); // This code doesn't behave if teammates are solid.
 
 	// Clear out the collision entity so that if we early out we don't send bogus collision data to the physics system.
 	info.m_Trace.m_pEnt = nullptr;
@@ -193,7 +217,7 @@ bool CCSPhysicsPushEntities::RotationPushCSPlayer( PhysicsPushedInfo_t &info, co
 		m_flPushDist = VectorNormalize( vMinPushAway );
 		m_vecPushVector = vMinPushAway;
 
-		Assert( !m_vecPushVector.IsZero() ); // Is our push vector legit?
+		contract_assert( !m_vecPushVector.IsZero() ); // Is our push vector legit?
 	}
 	else
 	{
@@ -209,13 +233,14 @@ bool CCSPhysicsPushEntities::RotationPushCSPlayer( PhysicsPushedInfo_t &info, co
 //-----------------------------------------------------------------------------
 bool CCSPhysicsPushEntities::RotationCheckPush( PhysicsPushedInfo_t &info, bool bIgnoreTeammates )
 {
+	ks::ScratchArena<> scratch;
 	// Get the blocking and pushing entities.
 	CBaseEntity *pBlocker = info.m_pEntity;
 	CBaseEntity *pRootEntity = m_rgPusher[0].m_pEntity->GetRootMoveParent();
 	if ( !pBlocker || !pRootEntity )
 		return true;
 
-	int *pPusherHandles = ( int* )stackalloc( std::ssize( m_rgPusher ) * sizeof( int ) );
+	int *pPusherHandles = scratch.Alloc<int>( std::ssize( m_rgPusher ) );
 	UnlinkPusherList( pPusherHandles );
 	for ( int iPushTry = 0; iPushTry < 3; ++iPushTry )
 	{
@@ -253,7 +278,7 @@ bool CCSPhysicsPushEntities::RotationCheckPush( PhysicsPushedInfo_t &info, bool 
 bool CCSPhysicsPushEntities::LinearPushCSPlayer( PhysicsPushedInfo_t &info, const Vector &vecAbsPush, bool bRotationalPush )
 {
 	const bool cbIgnoreTeammates = !CSGameRules() || !CSGameRules()->IsTeammateSolid();
-	Assert( cbIgnoreTeammates ); // This code doesn't behave if teammates are solid.
+	contract_assert( cbIgnoreTeammates ); // This code doesn't behave if teammates are solid.
 
 	// Clear out the collision entity so that if we early out we don't send bogus collision data to the physics system.
 	info.m_Trace.m_pEnt = nullptr;
@@ -300,6 +325,7 @@ bool CCSPhysicsPushEntities::LinearPushCSPlayer( PhysicsPushedInfo_t &info, cons
 //-----------------------------------------------------------------------------
 bool CCSPhysicsPushEntities::LinearCheckPush( PhysicsPushedInfo_t &info, bool bIgnoreTeammates )
 {
+	ks::ScratchArena<> scratch;
 	// Get the blocking and pushing entities.
 	CBaseEntity *pBlocker = info.m_pEntity;
 	CBaseEntity *pRootEntity = m_rgPusher[0].m_pEntity->GetRootMoveParent();
@@ -307,7 +333,7 @@ bool CCSPhysicsPushEntities::LinearCheckPush( PhysicsPushedInfo_t &info, bool bI
 		return true;
 
 	// Unlink the pusher from the spatial partition and attempt a player move.
-	int *pPusherHandles = ( int* )stackalloc( std::ssize( m_rgPusher ) * sizeof( int ) );
+	int *pPusherHandles = scratch.Alloc<int>( std::ssize( m_rgPusher ) );
 	UnlinkPusherList( pPusherHandles );
 	MovePlayer( pBlocker, info, 1.0f, pRootEntity->IsBaseTrain(), bIgnoreTeammates );
 	RelinkPusherList( pPusherHandles );
@@ -341,9 +367,8 @@ bool CCSPhysicsPushEntities::LinearCheckPush( PhysicsPushedInfo_t &info, bool bI
 void CCSPhysicsPushEntities::EnsureValidPushWhileRiding( CBaseEntity *pBlocker, CBaseEntity *pPusher )
 {
 	const bool cbIgnoreTeammates = !CSGameRules() || !CSGameRules()->IsTeammateSolid();
-	Assert( cbIgnoreTeammates ); // This code doesn't behave if teammates are solid.
+	contract_assert( cbIgnoreTeammates ); // This code doesn't behave if teammates are solid.
 	
-	TM_ZONE_DEFAULT( TELEMETRY_LEVEL3 );
 
 	m_vecPushVector.Zero();
 	m_flPushDist = 0.0f;
@@ -365,7 +390,7 @@ void CCSPhysicsPushEntities::EnsureValidPushWhileRiding( CBaseEntity *pBlocker, 
 		Vector vTraceEndpoint = pPusher->GetAbsVelocity();
 		vTraceEndpoint.x = -vTraceEndpoint.x;
 		vTraceEndpoint.y = -vTraceEndpoint.y;
-		vTraceEndpoint.z = sqrt( vTraceEndpoint.x * vTraceEndpoint.x + vTraceEndpoint.y * vTraceEndpoint.y );
+		vTraceEndpoint.z = std::sqrt( vTraceEndpoint.x * vTraceEndpoint.x + vTraceEndpoint.y * vTraceEndpoint.y );
 		vTraceEndpoint = vTraceEndpoint.Normalized() * cMaxDistToLookForPlacement;
 		vTraceEndpoint += pBlocker->GetAbsOrigin();
 
@@ -377,7 +402,7 @@ void CCSPhysicsPushEntities::EnsureValidPushWhileRiding( CBaseEntity *pBlocker, 
 		}
 		else
 		{
-			Assert( !"Failed to find a location upwards or backwards for a blocker, sadness!" );
+			contract_assert( !"Failed to find a location upwards or backwards for a blocker, sadness!" );
 		}
 	}
 }

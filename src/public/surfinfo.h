@@ -1,16 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef SURFINFO_H
-#define SURFINFO_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "mathlib/vplane.h"
+import std;
+import ks.math;
 
 //#include "mathlib/vector.h"
-#define MAX_SURFINFO_VERTS	16
+inline constexpr auto MAX_SURFINFO_VERTS = 16;
 class SurfInfo
 {
 public:
@@ -24,5 +20,3 @@ public:
 	// For engine use only..
 	void			*m_pEngineData;
 };
-
-#endif // SURFINFO_H

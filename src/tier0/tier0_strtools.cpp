@@ -1,19 +1,20 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-#include "pch_tier0.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+import ks.core;
+
+// First include standard libraries
+import std;
+
 
 // This function is marked in the VPC file as always being optimized, even in debug
 // builds, because this gives a ~7% speedup on debug builds because this function is
 // used by the debug allocator.
 
-#define TOLOWERC( x )  (( ( x >= 'A' ) && ( x <= 'Z' ) )?( x + 32 ) : x )
 
-#if !defined( STATIC_LINK )
-#define FDECL extern "C"
-#else
-#define FDECL
-#endif
+static constexpr int ToLowerAscii( int c ) { return ( c >= 'A' && c <= 'Z' ) ? c + 32 : c; }
 
-FDECL int V_tier0_stricmp(const char *s1, const char *s2 )
+int V_tier0_stricmp(const char *s1, const char *s2 )
 {
 	// A string is always equal to itself. This optimization is
 	// surprisingly valuable.
@@ -36,8 +37,8 @@ FDECL int V_tier0_stricmp(const char *s1, const char *s2 )
 			{
 				return c1 - c2;
 			}
-			c1 = TOLOWERC( c1 );
-			c2 = TOLOWERC( c2 );
+			c1 = ToLowerAscii( c1 );
+			c2 = ToLowerAscii( c2 );
 			if ( c1 != c2 )
 			{
 				return c1 - c2;
@@ -55,8 +56,8 @@ FDECL int V_tier0_stricmp(const char *s1, const char *s2 )
 			{
 				return c1 - c2;
 			}
-			c1 = TOLOWERC( c1 );
-			c2 = TOLOWERC( c2 );
+			c1 = ToLowerAscii( c1 );
+			c2 = ToLowerAscii( c2 );
 			if ( c1 != c2 )
 			{
 				return c1 - c2;
@@ -65,9 +66,9 @@ FDECL int V_tier0_stricmp(const char *s1, const char *s2 )
 	}
 }
 
-FDECL void V_tier0_strncpy( char *a, const char *b, int n )
+void V_tier0_strncpy( char *a, const char *b, int n )
 {
-	Assert( n >= sizeof( *a ) );
+	contract_assert( n >= sizeof( *a ) );
 
 	// NOTE: Never never use strncpy! Here's what it actually does, which is not what we want!
 
@@ -89,14 +90,14 @@ FDECL void V_tier0_strncpy( char *a, const char *b, int n )
 	*a = 0;
 }
 
-FDECL char *V_tier0_strncat( char *pDest, const char *pSrc, int destBufferSize, int max_chars_to_copy )
+char *V_tier0_strncat( char *pDest, const char *pSrc, int destBufferSize, int max_chars_to_copy )
 {
 	int charstocopy = 0;
 
-	Assert( destBufferSize >= 0 );
+	contract_assert( destBufferSize >= 0 );
 	
-	int len = (int)strlen(pDest);
-	int srclen = (int)strlen( pSrc );
+	int len = (int)std::strlen(pDest);
+	int srclen = (int)std::strlen( pSrc );
 	if ( max_chars_to_copy <= -1 )
 	{
 		charstocopy = srclen;
@@ -119,14 +120,14 @@ FDECL char *V_tier0_strncat( char *pDest, const char *pSrc, int destBufferSize, 
 		return pDest;
 	}
 
-	ANALYZE_SUPPRESS( 6059 ); // warning C6059: : Incorrect length parameter in call to 'strncat'. Pass the number of remaining characters, not the buffer size of 'argument 1'
-	char *pOut = strncat( pDest, pSrc, charstocopy );
+	; // warning C6059: : Incorrect length parameter in call to 'strncat'. Pass the number of remaining characters, not the buffer size of 'argument 1'
+	char *pOut = std::strncat( pDest, pSrc, charstocopy );
 	return pOut;
 }
 
-FDECL int V_tier0_vsnprintf( char *a, int n, const char *f, va_list l )
+int V_tier0_vsnprintf( char *a, int n, const char *f, std::va_list l )
 {
-	int len = _vsnprintf( a, n, f, l );
+	int len = std::vsnprintf( a, n, f, l );
 
 	if ( ( len < 0 ) ||
 		 ( n > 0 && len >= n ) )
@@ -138,12 +139,12 @@ FDECL int V_tier0_vsnprintf( char *a, int n, const char *f, va_list l )
 	return len;
 }
 
-FDECL int V_tier0_snprintf( char *a, int n, const char *f, ... )
+int V_tier0_snprintf( char *a, int n, const char *f, ... )
 {
-    va_list l;
+    std::va_list l;
 
-    va_start( l, f );
+    __builtin_va_start( l, f );
     int len = V_tier0_vsnprintf( a, n, f, l );
-    va_end( l );
+    __builtin_va_end( l );
     return len;
 }

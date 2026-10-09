@@ -1,13 +1,10 @@
-#ifndef ROCKETRENDER_H
-#define ROCKETRENDER_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
 
 #include <rocketui/rmlui.h>
-#include <atomic>
-#include <cstdint>
 #include <d3d9.h>
-#include <mutex>
-#include <utility>
-#include <vector>
+import std;
 
 // INVARIANT: this renderer must never hold a D3DPOOL_DEFAULT resource.
 // D3D9 refuses IDirect3DDevice9::Reset() while any "losable" (D3DPOOL_DEFAULT)
@@ -154,5 +151,3 @@ private:
   std::vector<std::pair<RocketGeometry *, uint32_t>> m_deadGeom;
   std::vector<std::pair<RocketTexture *, uint32_t>> m_deadTex;
 };
-
-#endif // ROCKETRENDER_H

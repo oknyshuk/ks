@@ -1,8 +1,9 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-#ifndef KISAKSTRIKE_RKPANEL_H
-#define KISAKSTRIKE_RKPANEL_H
+#include <rocketui/rmlui.h>
+
 
 #include <rocketui/rocketui.h>
 
@@ -36,4 +37,3 @@ void RkPanelUnload( Rml::ElementDocument *&doc, bool &visible );
 // about it through their own OwnsInput(), which reads `visible`.
 void RkPanelShow( Rml::ElementDocument *doc, bool &visible, bool show );
 
-#endif // KISAKSTRIKE_RKPANEL_H

@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
@@ -17,7 +18,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_debugtextureview_vs20 0
+inline constexpr int shaderStaticTest_debugtextureview_vs20 = 0;
 class debugtextureview_vs20_Dynamic_Index
 {
 private:
@@ -28,7 +29,7 @@ private:
 public:
 	void SetCOMPRESSED_VERTS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOMPRESSED_VERTS = i;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -36,7 +37,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -57,7 +58,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nCOMPRESSED_VERTS ) + 0;
 	}
@@ -70,7 +71,7 @@ static const ShaderComboInformation_t s_DynamicComboArray_DebugTextureView_vs20[
 };
 static const ShaderComboSemantics_t DebugTextureView_vs20_combos =
 {
-	"DebugTextureView_vs20", s_DynamicComboArray_DebugTextureView_vs20, 1, NULL, 0 
+	"DebugTextureView_vs20", s_DynamicComboArray_DebugTextureView_vs20, 1, nullptr, 0 
 };
 
 class ConstructMe_DebugTextureView_vs20

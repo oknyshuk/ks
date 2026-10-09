@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.core;
 #include "textstatsmgr.h"
-#include "tier0/dbg.h"
 
 CTextStatsMgr g_TextStatsMgr;	// The default text stats manager.
 
@@ -57,9 +53,9 @@ char *CTextStatsMgr::GetStatsFilename( void )
 
 void CTextStatsMgr::SetStatsFilename( const char *sFilename )
 {
-	Assert( sFilename && sFilename[0] );
+	contract_assert( sFilename && sFilename[0] );
 
-	Q_strncpy( m_szStatFilename, sFilename, sizeof(m_szStatFilename) );
+	V_strncpy( m_szStatFilename, sFilename, sizeof(m_szStatFilename) );
 }
 
 // ------------------------------------------------------------------------------------------ //
@@ -112,7 +108,7 @@ void CTextStat::Term()
 
 CTextStat::CTextStat( bool bGlobalListHead )
 {
-	Assert( bGlobalListHead );
+	contract_assert( bGlobalListHead );
 	m_pPrev = m_pNext = this;
 }
 
@@ -164,8 +160,3 @@ CTextStatFile::CTextStatFile( TextStatFileFn fn )
 	m_pNext = CTextStatFile::s_pHead;
 	CTextStatFile::s_pHead = this;
 }
-
-
-
-
-

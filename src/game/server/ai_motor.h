@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_MOTOR_H
-#define AI_MOTOR_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "simtimer.h"
 #include "ai_component.h"
@@ -23,8 +16,8 @@ class CAI_PlaneSolver;
 class CAI_MoveProbe;
 class CAI_Navigator;
 
-#define AI_CALC_YAW_SPEED -1
-#define AI_KEEP_YAW_SPEED -2
+inline constexpr auto AI_CALC_YAW_SPEED = -1;
+inline constexpr auto AI_KEEP_YAW_SPEED = -2;
 
 //-----------------------------------------------------------------------------
 
@@ -220,5 +213,3 @@ public:
 };
 
 //=============================================================================
-
-#endif // AI_MOTOR_H

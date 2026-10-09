@@ -1,4 +1,5 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
 /* Example how to plug this into an existing shader:
 
@@ -18,9 +19,10 @@
 				}
 			}
 
+import ks.tier1;
 		#include "emissive_scroll_blended_pass_helper.h"
 
-		In BEGIN_SHADER_PARAMS:
+		In :
 			// Emissive Scroll Pass
 			SHADER_PARAM( EMISSIVEBLENDENABLED, SHADER_PARAM_TYPE_BOOL, "0", "Enable emissive blend pass" )
 			SHADER_PARAM( EMISSIVEBLENDBASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "self-illumination map" )
@@ -83,11 +85,9 @@
 			}
 
 ==================================================================================================== */
-
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
 #include "emissive_scroll_blended_pass_helper.h"
-#include "convar.h"
+import std;
 
 // Auto generated inc files
 #include "emissive_scroll_blended_pass_vs20.inc"
@@ -96,7 +96,6 @@
 
 #include "emissive_scroll_blended_pass_vs30.inc"
 #include "emissive_scroll_blended_pass_ps30.inc"
-
 
 void InitParamsEmissiveScrollBlendedPass( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, EmissiveScrollBlendedPassVars_t &info )
 {

@@ -1,15 +1,31 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Game-specific impact effect hooks
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Game-specific impact effect hooks
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 #include "fx_impact.h"
 #include "tempent.h"
 #include "c_te_effect_dispatch.h"
 #include "c_te_legacytempents.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Handle weapon effect callbacks

@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef BONE_ACCESSOR_H
-#define BONE_ACCESSOR_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "studio.h"
-
 
 class C_BaseAnimating;
 
@@ -127,6 +120,3 @@ inline matrix3x4a_t *CBoneAccessor::GetBoneArrayForWrite( void ) const
 {
 	return m_pBones;
 }
-
-
-#endif // BONE_ACCESSOR_H

@@ -1,14 +1,6 @@
-//===== Copyright (c) 1996-2010, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef GPUMEMORYSTATS_H
-#define GPUMEMORYSTATS_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2010 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // Stats on GPU memory usage
@@ -23,5 +15,3 @@ struct GPUMemoryStats
 	unsigned int nGPUMemSize;	// Total size of GPU memory
 	unsigned int nGPUMemFree;	// Free GPU memory (cross-reference w/ the other totals to measure wasted space)
 };
-
-#endif // GPUMEMORYSTATS_H

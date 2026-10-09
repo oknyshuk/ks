@@ -1,17 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-#ifndef SOCKET_CREATOR_H
-#define SOCKET_CREATOR_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "tier1/utlvector.h"
-#include "tier1/netadr.h"
+import std;
+import ks.tier1;
 #include "igameserverdata.h"
 
-typedef int SocketHandle_t;
+
+typedef ks::platform::socket *SocketHandle_t;
 
 
 struct ISocketCreatorListener
@@ -66,7 +62,7 @@ private:
 	};
 
 	void ProcessAccept();
-	bool ConfigureSocket( int sock );
+	bool ConfigureSocket( SocketHandle_t sock );
 
 public:
 	struct AcceptedSocket_t
@@ -84,10 +80,3 @@ public:
 	netadr_t		m_ListenAddress;	// Address used to listen on
 };
 
-
-//-----------------------------------------------------------------------------
-// Returns true if the socket would block because of the last socket command
-//-----------------------------------------------------------------------------
-bool SocketWouldBlock();
-
-#endif // SOCKET_CREATOR_H

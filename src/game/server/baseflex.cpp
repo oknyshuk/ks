@@ -1,10 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.vstdlib;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_sendtable.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
@@ -15,10 +41,7 @@
 #include "choreoevent.h"
 #include "choreoscene.h"
 #include "choreoactor.h"
-#include "vstdlib/random.h"
 #include "engine/IEngineSound.h"
-#include "tier1/strtools.h"
-#include "keyvalues.h"
 #include "ai_basenpc.h"
 #include "ai_navigator.h"
 #include "ai_moveprobe.h"
@@ -35,7 +58,7 @@ static ConVar scene_showunlock( "scene_showunlock", "0", FCVAR_ARCHIVE, "Show wh
 // static ConVar scene_checktagposition( "scene_checktagposition", "0", FCVAR_ARCHIVE, "When playing back a choreographed scene, check the current position of the tags relative to where they were authored." );
 
 // Fake layer # to force HandleProcessSceneEvent to actually allocate the layer during npc think time instead of in between.
-#define REQUEST_DEFERRED_LAYER_ALLOCATION	-2
+constexpr auto REQUEST_DEFERRED_LAYER_ALLOCATION = -2;
 
 extern bool g_bClientFlex;
 
@@ -248,9 +271,9 @@ void CBaseFlex::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
-		Assert( info );
-		Assert( info->m_pScene );
-		Assert( info->m_pEvent );
+		contract_assert( info );
+		contract_assert( info->m_pScene );
+		contract_assert( info->m_pEvent );
 
 		if ( info->m_pScene != scene )
 			continue;
@@ -258,7 +281,7 @@ void CBaseFlex::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 		if ( !ClearSceneEvent( info, false, canceled ))
 		{
 			// unknown expression to clear!!
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 
 		// Free this slot
@@ -277,9 +300,9 @@ void CBaseFlex::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 
 bool CBaseFlex::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canceled )
 {
-	Assert( info );
-	Assert( info->m_pScene );
-	Assert( info->m_pEvent );
+	contract_assert( info );
+	contract_assert( info->m_pScene );
+	contract_assert( info->m_pEvent );
 
 	// FIXME: this code looks duplicated
 	switch ( info->m_pEvent->GetType() )
@@ -383,7 +406,7 @@ void CBaseFlex::AddSceneEvent( CChoreoScene *scene, CChoreoEvent *event, CBaseEn
 
 	CSceneEventInfo info;
 
-	memset( (void *)&info, 0, sizeof( info ) );
+	std::memset( (void *)&info, 0, sizeof( info ) );
 
 	info.m_pEvent		= event;
 	info.m_pScene		= scene;
@@ -445,7 +468,7 @@ bool CBaseFlex::RequestStartGestureSceneEvent( CSceneEventInfo *info, CChoreoSce
 
 bool CBaseFlex::HandleStartSequenceSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event, CChoreoActor *actor )
 {
-	Assert( info->m_iLayer == REQUEST_DEFERRED_LAYER_ALLOCATION );
+	contract_assert( info->m_iLayer == REQUEST_DEFERRED_LAYER_ALLOCATION );
 
 	info->m_nSequence = LookupSequence( event->GetParameters() );
 	info->m_iLayer = -1;
@@ -503,7 +526,7 @@ bool CBaseFlex::HandleStartSequenceSceneEvent( CSceneEventInfo *info, CChoreoSce
 
 bool CBaseFlex::HandleStartGestureSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event, CChoreoActor *actor )
 {
-	Assert( info->m_iLayer == REQUEST_DEFERRED_LAYER_ALLOCATION );
+	contract_assert( info->m_iLayer == REQUEST_DEFERRED_LAYER_ALLOCATION );
 
 	info->m_nSequence = LookupSequence( event->GetParameters() );
 	info->m_iLayer = -1;
@@ -541,11 +564,11 @@ bool CBaseFlex::HandleStartGestureSceneEvent( CSceneEventInfo *info, CChoreoScen
 		{
 			if (!stricmp( pkvFaceposer->GetName(), "startloop" ))
 			{
-				strcpy( szStartLoop, pkvFaceposer->GetString() );
+				std::strcpy( szStartLoop, pkvFaceposer->GetString() );
 			}
 			else if (!stricmp( pkvFaceposer->GetName(), "endloop" ))
 			{
-				strcpy( szEndLoop, pkvFaceposer->GetString() );
+				std::strcpy( szEndLoop, pkvFaceposer->GetString() );
 			}
 		}
 
@@ -750,14 +773,14 @@ bool CBaseFlex::StartSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CCh
 //-----------------------------------------------------------------------------
 void CBaseFlex::RemoveSceneEvent( CChoreoScene *scene, CChoreoEvent *event, bool fastKill )
 {
-	Assert( event );
+	contract_assert( event );
 
 	for ( int i = 0 ; i < std::ssize( m_SceneEvents ); i++ )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
-		Assert( info );
-		Assert( info->m_pEvent );
+		contract_assert( info );
+		contract_assert( info->m_pEvent );
 
 		if ( info->m_pScene != scene )
 			continue;
@@ -789,8 +812,8 @@ bool CBaseFlex::CheckSceneEvent( float currenttime, CChoreoScene *scene, CChoreo
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
-		Assert( info );
-		Assert( info->m_pEvent );
+		contract_assert( info );
+		contract_assert( info->m_pEvent );
 
 		if ( info->m_pScene != scene )
 			continue;
@@ -868,7 +891,7 @@ bool CBaseFlex::CheckSceneEventCompletion( CSceneEventInfo *info, float currentt
 //-----------------------------------------------------------------------------
 void CBaseFlex::ProcessSceneEvents( void )
 {
-	VPROF( "CBaseFlex::ProcessSceneEvents" );
+	CVProfScope _( "CBaseFlex::ProcessSceneEvents", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// slowly decay to netural expression
 	for ( LocalFlexController_t i = LocalFlexController_t(0); i < GetNumFlexControllers(); i++)
 	{
@@ -880,14 +903,14 @@ void CBaseFlex::ProcessSceneEvents( void )
 	for ( int i = 0; i < std::ssize( m_SceneEvents ); i++ )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
-		Assert( info );
+		contract_assert( info );
 
 		// FIXME:  Need a safe handle to m_pEvent in case of memory deletion?
 		CChoreoEvent *event = info->m_pEvent;
-		Assert( event );
+		contract_assert( event );
 
 		CChoreoScene *scene = info->m_pScene;
-		Assert( scene );
+		contract_assert( scene );
 
 		if ( scene && !scene->IsBackground() )
 		{
@@ -935,7 +958,7 @@ public:
 		}
 
 		char directory[ MAX_PATH ];
-		Q_snprintf( directory, sizeof( directory ), "%s/*.*", pFolder );
+		V_snprintf( directory, sizeof( directory ), "%s/*.*", pFolder );
 
 		FileFindHandle_t fh;
 		const char *fn;
@@ -950,20 +973,20 @@ public:
 			if ( g_pFullFileSystem->FindIsDirectory( fh ) )
 			{
 				char folderpath[MAX_PATH];
-				Q_snprintf( folderpath, sizeof( folderpath ), "%s/%s", pFolder, fn );
+				V_snprintf( folderpath, sizeof( folderpath ), "%s/%s", pFolder, fn );
 
 				InitRecursive( folderpath );
 				continue;
 			}
 
-			const char *pExt = Q_GetFileExtension( fn );
-			if ( pExt && Q_stricmp( pExt, "vfe" ) )
+			const char *pExt = V_GetFileExtension( fn );
+			if ( pExt && V_stricmp( pExt, "vfe" ) )
 			{
 				continue;
 			}
 
 			char fullFileName[MAX_PATH];
-			Q_snprintf( fullFileName, sizeof(fullFileName), "%s/%s", pFolder, fn );
+			V_snprintf( fullFileName, sizeof(fullFileName), "%s/%s", pFolder, fn );
 
 			// strip default folder and extension
 			int index = V_strlen( "expressions/" );
@@ -1013,10 +1036,9 @@ public:
 	const void *FindSceneFile( CBaseFlex *instance, const char *filename, bool allowBlockingIO )
 	{
 		char szFilename[MAX_PATH];
-		Assert( V_strlen( filename ) < MAX_PATH );
 		V_strcpy( szFilename, filename );
 
-		Q_FixSlashes( szFilename );
+		V_FixSlashes( szFilename );
 
 		// See if it's already loaded
 		int i;
@@ -1046,7 +1068,7 @@ public:
 		// Create scene entry
 		CFlexSceneFile *pfile = new CFlexSceneFile;
 		// Remember filename
-		Q_strncpy( pfile->filename, szFilename, sizeof( pfile->filename ) );
+		V_strncpy( pfile->filename, szFilename, sizeof( pfile->filename ) );
 		// Remember data pointer
 		pfile->buffer = buffer;
 		// Add to list
@@ -1087,12 +1109,11 @@ CFlexSceneFileManager g_FlexSceneFileManager( "CFlexSceneFileManager" );
 //-----------------------------------------------------------------------------
 void CBaseFlex::EnsureTranslations( const flexsettinghdr_t *pSettinghdr )
 {
-	Assert( pSettinghdr );
 
 	if ( m_LocalToGlobal.contains( pSettinghdr ) )
 		return;
 
-	Assert( pSettinghdr->numkeys > 0 );
+	contract_assert( pSettinghdr->numkeys > 0 );
 	std::vector< LocalFlexController_t > mapping( pSettinghdr->numkeys );
 
 	for ( int i = 0; i < pSettinghdr->numkeys; ++i )
@@ -1115,7 +1136,7 @@ LocalFlexController_t CBaseFlex::FlexControllerLocalToGlobal( const flexsettingh
 	if ( idx == m_LocalToGlobal.end() )
 	{
 		// This should never happen!!!
-		Assert( 0 );
+		contract_assert( 0 );
 		Warning( "Unable to find mapping for flexcontroller %i, settings %p on %i/%s\n", key, pSettinghdr, entindex(), GetClassname() );
 		EnsureTranslations( pSettinghdr );
 		idx = m_LocalToGlobal.find( pSettinghdr );
@@ -1127,7 +1148,7 @@ LocalFlexController_t CBaseFlex::FlexControllerLocalToGlobal( const flexsettingh
 
 	const std::vector< LocalFlexController_t >& result = idx->second;
 	// Validate lookup
-	Assert( !result.empty() && key < std::ssize( result ) );
+	contract_assert( !result.empty() && key < std::ssize( result ) );
 	LocalFlexController_t index = result[ key ];
 	return index;
 }
@@ -1144,11 +1165,11 @@ const void *CBaseFlex::FindSceneFile( const char *filename )
 	static char szExtendedPath[MAX_PATH];
 	if ( StringHasPrefix( STRING( GetModelName() ), "models" ) )
 	{
-		strcpy( szExtendedPath, StringAfterPrefix( STRING( GetModelName() ), "models" ) + 1 );
+		std::strcpy( szExtendedPath, StringAfterPrefix( STRING( GetModelName() ), "models" ) + 1 );
 	}
 	else
 	{
-		strcpy( szExtendedPath, STRING( GetModelName() ) );
+		std::strcpy( szExtendedPath, STRING( GetModelName() ) );
 	}
 	V_StripExtension( szExtendedPath, szExtendedPath, sizeof( szExtendedPath ) );
 	V_FixupPathName( szExtendedPath, sizeof( szExtendedPath ), szExtendedPath );
@@ -1187,7 +1208,7 @@ ConVar	ai_expression_frametime( "ai_expression_frametime", "0.05", FCVAR_NONE, "
 //-----------------------------------------------------------------------------
 bool CBaseFlex::ProcessFlexAnimationSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event )
 {
-	VPROF( "CBaseFlex::ProcessFlexAnimationSceneEvent" );
+	CVProfScope _( "CBaseFlex::ProcessFlexAnimationSceneEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( event->HasEndTime() )
 	{
@@ -1239,7 +1260,7 @@ bool CBaseFlex::ProcessFlexSettingSceneEvent( CSceneEventInfo *info, CChoreoScen
 	if ( !event->HasEndTime() )
 		return true;
 
-	VPROF( "CBaseFlex::ProcessFlexSettingSceneEvent" );
+	CVProfScope _( "CBaseFlex::ProcessFlexSettingSceneEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Look up the actual strings
 	const char *scenefile	= event->GetParameters();
@@ -1273,7 +1294,7 @@ bool CBaseFlex::ProcessFacingSceneEvent( CSceneEventInfo *info, CChoreoScene *sc
 	if (info->m_hTarget == nullptr)
 		return false;
 
-	VPROF( "CBaseFlex::ProcessFacingSceneEvent" );
+	CVProfScope _( "CBaseFlex::ProcessFacingSceneEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// make sure we're still able to play this command
 	if (!EnterSceneSequence( scene, event, true ))
@@ -1334,11 +1355,11 @@ static Activity DetermineExpressionMoveActivity( CChoreoEvent *event, CAI_BaseNP
 		return activity;
 
 	// Custom distance styles are appended to param2 with a space as a separator
-	const char *pszAct = Q_strstr( sParam2, " " );
+	const char *pszAct = V_strstr( sParam2, " " );
 	if ( pszAct )
 	{
 		char szActName[256];
-		Q_strncpy( szActName, sParam2, sizeof(szActName) );
+		V_strncpy( szActName, sParam2, sizeof(szActName) );
 		szActName[ (pszAct-sParam2) ] = '\0';
 		pszAct = szActName;
 	}
@@ -1347,15 +1368,15 @@ static Activity DetermineExpressionMoveActivity( CChoreoEvent *event, CAI_BaseNP
 		pszAct = sParam2;
 	}
 
-	if ( !Q_stricmp( pszAct, "Walk" ) )
+	if ( !V_stricmp( pszAct, "Walk" ) )
 	{
 		activity = ACT_WALK;
 	}
-	else if ( !Q_stricmp( pszAct, "Run" ) )
+	else if ( !V_stricmp( pszAct, "Run" ) )
 	{
 		activity = ACT_RUN;
 	}
-	else if ( !Q_stricmp( pszAct, "CrouchWalk" ) )
+	else if ( !V_stricmp( pszAct, "CrouchWalk" ) )
 	{
 		activity = ACT_WALK_CROUCH;
 	}
@@ -1385,7 +1406,7 @@ bool CBaseFlex::ProcessMoveToSceneEvent( CSceneEventInfo *info, CChoreoScene *sc
 	if (!myNpc)
 		return false;
 
-	VPROF( "CBaseFlex::ProcessMoveToSceneEvent" );
+	CVProfScope _( "CBaseFlex::ProcessMoveToSceneEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// make sure we're still able to play this command
 	if (!EnterSceneSequence( scene, event, true ))
@@ -1529,7 +1550,7 @@ bool CBaseFlex::ProcessMoveToSceneEvent( CSceneEventInfo *info, CChoreoScene *sc
 
 bool CBaseFlex::ProcessLookAtSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event )
 {
-	VPROF( "CBaseFlex::ProcessLookAtSceneEvent" );
+	CVProfScope _( "CBaseFlex::ProcessLookAtSceneEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	CAI_BaseNPC *myNpc = MyNPCPointer( );
 	if (myNpc && info->m_hTarget != nullptr)
 	{
@@ -1558,7 +1579,7 @@ bool CBaseFlex::ProcessLookAtSceneEvent( CSceneEventInfo *info, CChoreoScene *sc
 //-----------------------------------------------------------------------------
 bool CBaseFlex::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event )
 {
-	VPROF( "CBaseFlex::ProcessSceneEvent" );
+	CVProfScope _( "CBaseFlex::ProcessSceneEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	switch ( event->GetType() )
 	{
 	case CChoreoEvent::FLEXANIMATION:
@@ -1588,7 +1609,6 @@ bool CBaseFlex::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, C
 	default:
 		{
 			Msg( "unknown type %d in ProcessSceneEvent()\n", event->GetType() );
-			Assert( 0 );
 		}
 	}
 
@@ -1671,25 +1691,23 @@ void CBaseFlex::AddFlexAnimation( CSceneEventInfo *info )
 			if ( track->IsComboType() )
 			{
 				char name[ 512 ];
-				Q_strncpy( name, "right_" ,sizeof(name));
-				Q_strncat( name, track->GetFlexControllerName(),sizeof(name), COPY_ALL_CHARACTERS );
+				V_strncpy( name, "right_" ,sizeof(name));
+				V_strncat( name, track->GetFlexControllerName(),sizeof(name), COPY_ALL_CHARACTERS );
 
 				track->SetFlexControllerIndex( FindFlexController( name ), 0, 0 );
 
 				if ( CAI_BaseActor::IsServerSideFlexController( name ) )
 				{
-					Assert( !"Should stereo controllers ever be server side only?" );
 					track->SetServerSide( true );
 				}
 
-				Q_strncpy( name, "left_" ,sizeof(name));
-				Q_strncat( name, track->GetFlexControllerName(),sizeof(name), COPY_ALL_CHARACTERS );
+				V_strncpy( name, "left_" ,sizeof(name));
+				V_strncat( name, track->GetFlexControllerName(),sizeof(name), COPY_ALL_CHARACTERS );
 
 				track->SetFlexControllerIndex( FindFlexController( name ), 0, 1 );
 
 				if ( CAI_BaseActor::IsServerSideFlexController( name ) )
 				{
-					Assert( !"Should stereo controllers ever be server side only?" );
 					track->SetServerSide( true );
 				}
 			}
@@ -1709,7 +1727,7 @@ void CBaseFlex::AddFlexAnimation( CSceneEventInfo *info )
 	// decay if this is a background scene and there's other flex animations playing
 	float weight = event->GetIntensity( scenetime ) * info->UpdateWeight( this );
 	{
-	VPROF( "AddFlexAnimation_SetFlexWeight" );
+	CVProfScope _( "AddFlexAnimation_SetFlexWeight", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Compute intensity for each track in animation and apply
 	// Iterate animation tracks
@@ -2388,7 +2406,7 @@ void CFlexCycler::Think( void )
 		if (pszExpression && pszExpression[0] == '+' && pszExpression[1] != '\0')
 		{
 			int i;
-			int j = atoi( &pszExpression[1] );
+			int j = std::atoi( &pszExpression[1] );
 			for ( i = 0; i < GetNumFlexControllers(); i++)
 			{
 				m_flextarget[m_flexnum] = 0;
@@ -2416,16 +2434,16 @@ void CFlexCycler::Think( void )
 			{
 				// Throw a differently offset sine wave on all of the flex controllers
 				float fFlexTime = i * (1.0f / (float)GetNumFlexControllers()) + gpGlobals->curtime;
-				m_flextarget[i] = sinf( fFlexTime ) * 0.5f + 0.5f;
+				m_flextarget[i] = std::sinf( fFlexTime ) * 0.5f + 0.5f;
 				SetFlexWeight( i, m_flextarget[i] );
 			}
 		}
-		else if (pszExpression && pszExpression[0] != '\0' && strcmp(pszExpression, "+") != 0)
+		else if (pszExpression && pszExpression[0] != '\0' && std::strcmp(pszExpression, "+") != 0)
 		{
 			char szExpression[128];
 			char szTemp[32];
 
-			Q_strncpy( szExpression, pszExpression ,sizeof(szExpression));
+			V_strncpy( szExpression, pszExpression ,sizeof(szExpression));
 			char *pszExpression = szExpression;
 
 			while (*pszExpression != '\0')
@@ -2460,7 +2478,7 @@ void CFlexCycler::Think( void )
 					}
 					else
 					{
-						if (sscanf( pszExpression, "%31s", szTemp ) == 1)
+						if (std::sscanf( pszExpression, "%31s", szTemp ) == 1)
 						{
 							m_flexnum = LookupFlex( szTemp );
 
@@ -2469,7 +2487,7 @@ void CFlexCycler::Think( void )
 								m_flextarget[m_flexnum] = 1.0;
 								// SetFlexTarget( m_flexnum );
 							}
-							pszExpression += strlen( szTemp ) - 1;
+							pszExpression += std::strlen( szTemp ) - 1;
 						}
 					}
 				}
@@ -2491,7 +2509,7 @@ void CFlexCycler::Think( void )
 			}
 			else if (stricmp( GetFlexControllerType( m_flexnum ), "phoneme" ) != 0)
 			{
-				if (strstr( GetFlexControllerName( m_flexnum ), "upper_raiser" ) == nullptr)
+				if (std::strstr( GetFlexControllerName( m_flexnum ), "upper_raiser" ) == nullptr)
 				{
 					Msg( "%s:%s\n", GetFlexControllerType( m_flexnum ), GetFlexControllerName( m_flexnum ) );
 					SetFlexTarget( m_flexnum );
@@ -2517,7 +2535,7 @@ void CFlexCycler::Think( void )
 		{
 			m_istalking = 1;
 			char pszSentence[256];
-			Q_snprintf( pszSentence,sizeof(pszSentence), "%s%d", STRING(m_iszSentence), m_sentence++ );
+			V_snprintf( pszSentence,sizeof(pszSentence), "%s%d", STRING(m_iszSentence), m_sentence++ );
 			int sentenceIndex = engine->SentenceIndexFromName( pszSentence );
 			if (sentenceIndex >= 0)
 			{

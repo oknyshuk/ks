@@ -1,17 +1,24 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: BuyPresetWeapon implementation, and misc knowledge relating to weapons
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: BuyPresetWeapon implementation, and misc knowledge relating to weapons
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
 
 #include "buy_preset_debug.h"
 #include "buy_presets.h"
 #include "weapon_csbase.h"
 #include "cs_ammodef.h"
 #include "cs_gamerules.h"
-#include "bot/shared_util.h"
 #include "localize/ilocalize.h"
 #include "c_cs_player.h"
 
@@ -159,9 +166,9 @@ int CalcClipsNeeded( const BuyPresetWeapon *pWeapon, const CCSWeaponInfo *pInfo,
 			numClips = pWeapon->GetAmmoAmount();
 			if ( pWeapon->GetCSWeaponID() == WEAPON_NONE && numClips >= 4 )
 			{
-				numClips = ceil(maxRounds/(float)buySize);
+				numClips = std::ceil(maxRounds/(float)buySize);
 			}
-			numClips = std::min<std::common_type_t<float, int>>( ceil(maxRounds/(float)buySize), numClips );
+			numClips = std::min<std::common_type_t<float, int>>( std::ceil(maxRounds/(float)buySize), numClips );
 
 			numClips -= ammo[pInfo->GetPrimaryAmmoType() ]/buySize;
 			if ( numClips < 0 || ammo[pInfo->GetPrimaryAmmoType() ] == maxRounds )
@@ -330,7 +337,7 @@ CWeaponCSBase *GetWeaponInSlot( int iSlot, int iSlotPos )
 
 	for ( int i = 0; i < MAX_WEAPONS; i++ )
 	{
-		CWeaponCSBase *pWeapon = assert_cast< CWeaponCSBase * >(player->GetWeapon(i));
+		CWeaponCSBase *pWeapon = static_cast< CWeaponCSBase * >(player->GetWeapon(i));
 		
 		if ( pWeapon == nullptr )
 			continue;

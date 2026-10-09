@@ -1,17 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Misc utility code.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef UTIL_H
-#define UTIL_H
-
+import ks.vstdlib;
 #include "ai_activity.h"
-#include "steam/steam_gameserver.h"
 #include "enginecallback.h"
-#include "basetypes.h"
 #include "tempentity.h"
 #include "string_t.h"
 #include "gamestringpool.h"
@@ -21,10 +16,8 @@
 #include "server_class.h"
 #include "shake.h"
 
-#include "vstdlib/random.h"
-#include <string.h>
+import std;
 
-#include "utlvector.h"
 #include "util_shared.h"
 #include "shareddefs.h"
 #include "networkvar.h"
@@ -44,7 +37,6 @@ struct levellist_t
 class IServerNetworkable;
 class IEntityFactory;
 
-	#define SETUP_EXTERNC(mapClassName)
 
 
 
@@ -53,7 +45,6 @@ class IEntityFactory;
 template< class T >
 T *_CreateEntityTemplate( T *newEnt, const char *className )
 {
-	MEM_ALLOC_CREDIT_(MEM_ALLOC_CLASSNAME(T));
 	newEnt = new T; // this is the only place 'new' should be used!
 	newEnt->PostConstructor( className );
 	return newEnt;
@@ -69,7 +60,7 @@ enum EUtilSayTextMessageType_t
 
 
 // This is the glue that hooks .MAP entity class names to our CPP classes
-abstract_class IEntityFactoryDictionary
+class IEntityFactoryDictionary
 {
 public:
 	virtual void InstallFactory( IEntityFactory *pFactory, const char *pClassName ) = 0;
@@ -86,12 +77,12 @@ inline bool CanCreateEntityClass( const char *pszClassname )
 	return ( EntityFactoryDictionary() != nullptr && EntityFactoryDictionary()->FindFactory( pszClassname ) != nullptr );
 }
 
-abstract_class IEntityFactory
+class IEntityFactory
 {
 public:
 	virtual IServerNetworkable *Create( const char *pClassName ) = 0;
 	virtual void Destroy( IServerNetworkable *pNetworkable ) = 0;
-	virtual size_t GetEntitySize() = 0;
+	virtual std::size_t GetEntitySize() = 0;
 };
 
 template <class T>
@@ -117,7 +108,7 @@ public:
 		}
 	}
 
-	virtual size_t GetEntitySize()
+	virtual std::size_t GetEntitySize()
 	{
 		return sizeof(T);
 	}
@@ -138,7 +129,7 @@ inline int ENTINDEX( edict_t *pEdict )
 	if ( !pEdict ) 
 		return 0;
 	int edictIndex = pEdict - gpGlobals->pEdicts; 
-	Assert( edictIndex < MAX_EDICTS && edictIndex >= 0 );
+	contract_assert( edictIndex < MAX_EDICTS && edictIndex >= 0 );
 	return edictIndex;
 }
 
@@ -146,7 +137,7 @@ int	  ENTINDEX( CBaseEntity *pEnt );
 
 inline edict_t* INDEXENT( int iEdictNum )		
 {
-	Assert(iEdictNum>=0 && iEdictNum < MAX_EDICTS);
+	contract_assert( iEdictNum>=0 && iEdictNum < MAX_EDICTS );
 	if ( gpGlobals->pEdicts )
 	{
 		edict_t *pEdict = gpGlobals->pEdicts + iEdictNum;
@@ -164,10 +155,10 @@ inline bool FNullEnt(const edict_t* pent)
 }
 
 // Dot products for view cone checking
-#define VIEW_FIELD_FULL		(float)-1.0 // +-180 degrees
-#define	VIEW_FIELD_WIDE		(float)-0.7 // +-135 degrees 0.1 // +-85 degrees, used for full FOV checks 
-#define	VIEW_FIELD_NARROW	(float)0.7 // +-45 degrees, more narrow check used to set up ranged attacks
-#define	VIEW_FIELD_ULTRA_NARROW	(float)0.9 // +-25 degrees, more narrow check used to set up ranged attacks
+inline constexpr auto VIEW_FIELD_FULL = (float)-1.0; // +-180 degrees
+inline constexpr auto VIEW_FIELD_WIDE = (float)-0.7; // +-135 degrees 0.1 // +-85 degrees, used for full FOV checks
+inline constexpr auto VIEW_FIELD_NARROW = (float)0.7; // +-45 degrees, more narrow check used to set up ranged attacks
+inline constexpr auto VIEW_FIELD_ULTRA_NARROW = (float)0.9; // +-25 degrees, more narrow check used to set up ranged attacks
 
 class CBaseEntity;
 class CBasePlayer;
@@ -337,7 +328,7 @@ void		UTIL_Beam( Vector &Start, Vector &End, int nModelIndex, int nHaloIndex, un
 				float Life, unsigned char Width, unsigned char EndWidth, unsigned char FadeLength, unsigned char Noise, unsigned char Red, unsigned char Green,
 				unsigned char Blue, unsigned char Brightness, unsigned char Speed);
 
-const char	*UTIL_VarArgs( PRINTF_FORMAT_STRING const char *format, ... ) FMTFUNCTION( 1, 2 );
+const char	*UTIL_VarArgs( const char *format, ... ) [[gnu::format(printf, 1, 2)]];
 bool		UTIL_IsValidEntity( CBaseEntity *pEnt );
 bool		UTIL_TeamsMatch( const char *pTeamName1, const char *pTeamName2 );
 
@@ -443,7 +434,7 @@ void			UTIL_HudMessage( CBasePlayer *pToPlayer, const hudtextparms_t &textparms,
 void			UTIL_HudHintText( CBaseEntity *pEntity, const char *pMessage );
 
 // Writes message to console with timestamp and FragLog header.
-void			UTIL_LogPrintf( PRINTF_FORMAT_STRING const char *fmt, ... ) FMTFUNCTION( 1, 2 );
+void			UTIL_LogPrintf( const char *fmt, ... ) [[gnu::format(printf, 1, 2)]];
 
 // Sorta like FInViewCone, but for nonNPCs. 
 float UTIL_DotPoints ( const Vector &vecSrc, const Vector &vecCheck, const Vector &vecDir );
@@ -476,35 +467,35 @@ void DBG_AssertFunction(bool fExpr, const char* szExpr, const char* szFile, int 
 
 #include "globals.h"
 
-#define	LFO_SQUARE			1
-#define LFO_TRIANGLE		2
-#define LFO_RANDOM			3
+inline constexpr auto LFO_SQUARE = 1;
+inline constexpr auto LFO_TRIANGLE = 2;
+inline constexpr auto LFO_RANDOM = 3;
 
 // func_rotating
-#define SF_BRUSH_ROTATE_Y_AXIS		0
-#define SF_BRUSH_ROTATE_START_ON	1
-#define SF_BRUSH_ROTATE_BACKWARDS	2
-#define SF_BRUSH_ROTATE_Z_AXIS		4
-#define SF_BRUSH_ROTATE_X_AXIS		8
+inline constexpr auto SF_BRUSH_ROTATE_Y_AXIS = 0;
+inline constexpr auto SF_BRUSH_ROTATE_START_ON = 1;
+inline constexpr auto SF_BRUSH_ROTATE_BACKWARDS = 2;
+inline constexpr auto SF_BRUSH_ROTATE_Z_AXIS = 4;
+inline constexpr auto SF_BRUSH_ROTATE_X_AXIS = 8;
 
-#define SF_BRUSH_ROTATE_SMALLRADIUS	128
-#define SF_BRUSH_ROTATE_MEDIUMRADIUS 256
-#define SF_BRUSH_ROTATE_LARGERADIUS 512
-#define SF_BRUSH_ROTATE_CLIENTSIDE	1024
+inline constexpr auto SF_BRUSH_ROTATE_SMALLRADIUS = 128;
+inline constexpr auto SF_BRUSH_ROTATE_MEDIUMRADIUS = 256;
+inline constexpr auto SF_BRUSH_ROTATE_LARGERADIUS = 512;
+inline constexpr auto SF_BRUSH_ROTATE_CLIENTSIDE = 1024;
 
-#define PUSH_BLOCK_ONLY_X	1
-#define PUSH_BLOCK_ONLY_Y	2
+inline constexpr auto PUSH_BLOCK_ONLY_X = 1;
+inline constexpr auto PUSH_BLOCK_ONLY_Y = 2;
 
-#define SF_LIGHT_START_OFF		1
+inline constexpr auto SF_LIGHT_START_OFF = 1;
 
-#define SPAWNFLAG_NOMESSAGE	1
-#define SPAWNFLAG_NOTOUCH	1
-#define SPAWNFLAG_DROIDONLY	4
+inline constexpr auto SPAWNFLAG_NOMESSAGE = 1;
+inline constexpr auto SPAWNFLAG_NOTOUCH = 1;
+inline constexpr auto SPAWNFLAG_DROIDONLY = 4;
 
-#define SPAWNFLAG_USEONLY	1		// can't be touched, must be used (buttons)
+inline constexpr auto SPAWNFLAG_USEONLY = 1; // can't be touched, must be used (buttons)
 
-#define TELE_PLAYER_ONLY	1
-#define TELE_SILENT			2
+inline constexpr auto TELE_PLAYER_ONLY = 1;
+inline constexpr auto TELE_SILENT = 2;
 
 // Sound Utilities
 
@@ -569,7 +560,7 @@ inline float UTIL_DistApprox( const Vector &vec1, const Vector &vec2 )
 	dy = vec1.y - vec2.y;
 	dz = vec1.z - vec2.z;
 
-	return fabs(dx) + fabs(dy) + fabs(dz);
+	return std::fabs(dx) + std::fabs(dy) + std::fabs(dz);
 }
 
 //---------------------------------------------------------
@@ -582,7 +573,7 @@ inline float UTIL_DistApprox2D( const Vector &vec1, const Vector &vec2 )
 	dx = vec1.x - vec2.x;
 	dy = vec1.y - vec2.y;
 
-	return fabs(dx) + fabs(dy);
+	return std::fabs(dx) + std::fabs(dy);
 }
 
 // Find out if an entity is facing another entity or position within a given tolerance range
@@ -625,4 +616,45 @@ bool UTIL_IsGroundLevel( float radius, const Vector &position, float hullHeight,
 // Given a vector, clamps the scalar axes to MAX_COORD_FLOAT ranges from worldsize.h
 void UTIL_BoundToWorldSize( Vector *pVecPos );
 
-#endif // UTIL_H
+// maximum number of targets a single multi_manager entity may be assigned.
+inline constexpr auto MAX_MULTI_TARGETS = 16;
+
+// NPCEvent.h declarations
+struct animevent_t;
+
+struct studiohdr_t;
+class CStudioHdr;
+
+extern void FireTargets( const char *targetName, CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+
+// people gib if their health is <= this at the time of death
+inline constexpr auto GIB_HEALTH_VALUE = -30;
+
+inline constexpr auto MAX_OLD_ENEMIES = 4; // how many old enemies to remember
+
+// used by suit voice to indicate damage sustained and repaired type to player
+
+enum
+{
+	itbd_Paralyze = 0,
+	itbd_NerveGas,
+	itbd_PoisonRecover,
+	itbd_Radiation,
+	itbd_DrownRecover,
+	itbd_Acid,
+	itbd_SlowBurn,
+	itbd_SlowFreeze,
+
+	// Must be last!
+	CDMG_TIMEBASED
+};
+
+// when calling KILLED(), a value that governs gib behavior is expected to be 
+// one of these three values
+inline constexpr auto GIB_NORMAL = 0; // gib if entity was overkilled
+inline constexpr auto GIB_NEVER = 1; // never gib, no matter how much death damage is done ( freezing, etc )
+inline constexpr auto GIB_ALWAYS = 2; // always gib
+
+class CAI_BaseNPC;
+class CAI_ScriptedSequence;
+class CSound;

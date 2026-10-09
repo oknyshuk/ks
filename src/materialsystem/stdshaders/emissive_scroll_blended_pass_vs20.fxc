@@ -1,11 +1,11 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // DYNAMIC: "COMPRESSED_VERTS"			"0..1"
 // DYNAMIC: "SKINNING"					"0..1"
-
 // DYNAMIC: "MORPHING"					"0..0" [ = false ]
-
 // Includes
+
 #include "common_vs_fxc.h"
 
 // Globals

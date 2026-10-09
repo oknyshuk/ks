@@ -2,9 +2,42 @@
 // Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
 
 
-#include "cbase.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/JobSystemWithBarrier.h>
+#include <Jolt/Core/FixedSizeFreeList.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/PhysicsScene.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollidePointResult.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Ragdoll/Ragdoll.h>
+#include <Jolt/Physics/Collision/CollisionDispatch.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
+#include <Jolt/Physics/Constraints/ConeConstraint.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
+#include <Jolt/Physics/Constraints/FixedConstraint.h>
+#include <Jolt/Physics/Constraints/SixDOFConstraint.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
+#include <Jolt/Physics/Constraints/SliderConstraint.h>
+#include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
+import std;
+import ks.tier1;
+#include "compat/branch_overrides.h"
+#include "vcollide_parse.h"
 
-#include "vjolt_interface.h"
 #include "vjolt_keyvalues_schema.h"
 
 #include "vjolt_surfaceprops.h"
@@ -12,7 +45,7 @@
 //-------------------------------------------------------------------------------------------------
 
 JoltPhysicsSurfaceProps JoltPhysicsSurfaceProps::s_PhysicsSurfaceProps;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( JoltPhysicsSurfaceProps, IPhysicsSurfaceProps, VPHYSICS_SURFACEPROPS_INTERFACE_VERSION, JoltPhysicsSurfaceProps::GetInstance() );
+static InterfaceReg s_Reg_JoltPhysicsSurfaceProps_IPhysicsSurfaceProps( []() -> void * { return static_cast<IPhysicsSurfaceProps *>( &JoltPhysicsSurfaceProps::GetInstance() ); }, VPHYSICS_SURFACEPROPS_INTERFACE_VERSION );;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -195,7 +228,6 @@ const char *JoltPhysicsSurfaceProps::GetPropName( int surfaceDataIndex ) const
 
 void JoltPhysicsSurfaceProps::SetWorldMaterialIndexTable( int *pMapArray, int mapSize )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -236,31 +268,26 @@ KeyValues *JoltPhysicsSurfaceProps::SurfacePropsToKeyValues( const char *pszBuff
 
 void *JoltPhysicsSurfaceProps::GetIVPMaterial( int nIndex )
 {
-	Log_Stub( LOG_VJolt );
 	return nullptr;
 }
 
 int JoltPhysicsSurfaceProps::GetIVPMaterialIndex( const void *pMaterial ) const
 {
-	Log_Stub( LOG_VJolt );
 	return (int)(uintp)( pMaterial );
 }
 
 void *JoltPhysicsSurfaceProps::GetIVPManager( void )
 {
-	Log_Stub( LOG_VJolt );
 	return nullptr;
 }
 
 int JoltPhysicsSurfaceProps::RemapIVPMaterialIndex( int nIndex ) const
 {
-	Log_Stub( LOG_VJolt );
 	return nIndex;
 }
 
 const char *JoltPhysicsSurfaceProps::GetReservedMaterialName( int nMaterialIndex ) const
 {
-	Log_Stub( LOG_VJolt );
 	return "default";
 }
 

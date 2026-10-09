@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2012, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Stub - weapon skin visualization removed with econ
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2012 Valve Corporation
 
-#ifndef CS_CUSTOM_WEAPON_VISUALSDATA_PROCESSOR_H
-#define CS_CUSTOM_WEAPON_VISUALSDATA_PROCESSOR_H
+// Purpose: Stub - weapon skin visualization removed with econ
 
 #include "cs_shareddefs.h"
 #include "materialsystem/base_visuals_data_processor.h"
@@ -121,5 +117,3 @@ private:
 	int m_nPhongIntensity;
 	bool m_bIgnoreWeaponSizeScale;
 };
-
-#endif // CUSTOM_WEAPON_VISUALSDATA_PROCESSOR

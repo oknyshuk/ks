@@ -1,21 +1,22 @@
+#pragma once
 // ai_addon.h
 
-#ifndef AI_ADDON_H
-#define AI_ADDON_H
 
+import ks.tier1;
 #include "reflect_annotations.h"
 
-#include "tier1/utlvector.h"
+import std;
 
 #include "baseanimating.h"
 #include "ai_agent.h"
 #include "ai_behavior.h"
 #include "player_pickup.h"
 #include "IEffects.h"
+#include "player.h"
 
 class CAI_BaseNPC;
 
-#define INVALID_ADDON_ATTACHMENT_ID	-1
+inline constexpr auto INVALID_ADDON_ATTACHMENT_ID = -1;
 
 int GetIDForAttachmentName( char *pszAttachmentName );
 int GetNumAddOnAttachmentPoints();
@@ -175,15 +176,15 @@ class CAI_AddOnBehavior : public CAI_AddOnBehaviorBase
 public:
 	virtual int BindAddOn( ADDON *pAddOn )	
 	{ 
-		Assert( m_AddOns.Find( pAddOn ) == m_AddOns.InvalidIndex() );
-		Assert( static_cast<CAI_AddOn *>(pAddOn) ); // Satic cast is used to trap improper inheritance
+		contract_assert( m_AddOns.Find( pAddOn ) == m_AddOns.InvalidIndex() );
+		contract_assert( static_cast<CAI_AddOn *>(pAddOn) ); // Satic cast is used to trap improper inheritance
 		m_AddOns.AddToTail( pAddOn );
 		return m_AddOns.Count(); 
 	}
 
 	virtual int UnbindAddOn( ADDON *pAddOn ) 
 	{ 
-		Assert( m_AddOns.Find( pAddOn ) != m_AddOns.InvalidIndex() );
+		contract_assert( m_AddOns.Find( pAddOn ) != m_AddOns.InvalidIndex() );
 		m_AddOns.FindAndRemove( pAddOn );
 		return m_AddOns.Count(); 
 	}
@@ -278,4 +279,3 @@ class CAI_AddOnBehaviorConnector : public ADDON
 	typedef CAI_AddOnBehaviorConnector<DLLClassName, BehaviorName> DLLClassName##_##BehaviorName##_Binder; \
 	LINK_ENTITY_TO_CLASS( mapClassName, DLLClassName##_##BehaviorName##_Binder )
 
-#endif // AI_ADDON_H

@@ -1,29 +1,20 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
+import ks.tier1;
 #include "studio.h"
 #include "studiorendercontext.h"
-#include "bitmap/imageformat.h"
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imesh.h"
-#include "mathlib/mathlib.h"
+import std;
 #include "studiorender.h"
 #include "pixelwriter.h"
 #include "vtf/vtf.h"
-#include "tier1/convar.h"
-#include "tier1/keyvalues.h"
-#include "tier0/vprof.h"
 
-#define sign( a ) (((a) < 0) ? -1 : (((a) > 0) ? 1 : 0 ))
+template <typename T1> [[gnu::always_inline]] inline constexpr auto sign( T1 a ) { return (((a) < 0) ? -1 : (((a) > 0) ? 1 : 0 )); }
 
 void CStudioRender::R_StudioEyeballPosition( const mstudioeyeball_t *peyeball, eyeballstate_t *pstate )
 {
@@ -111,7 +102,7 @@ void CStudioRender::R_StudioEyelidFACS( const mstudioeyeball_t *peyeball, const 
 	vecNormTarget.z = clamp( vecNormTarget.z, -1.0f, 1.0f );
 
 	// get weighted position of eyeball angles based on the "raiser", "neutral", and "lowerer" controls
-	upperlid = m_pFlexWeights[peyeball->upperflexdesc[0]] * asin( vecNormTarget.x );
+	upperlid = m_pFlexWeights[peyeball->upperflexdesc[0]] * std::asin( vecNormTarget.x );
 	upperlid += m_pFlexWeights[peyeball->upperflexdesc[1]] * asin( vecNormTarget.y );
 	upperlid += m_pFlexWeights[peyeball->upperflexdesc[2]] * asin( vecNormTarget.z );
 
@@ -187,9 +178,9 @@ float CStudioRender::RampFlexWeight( mstudioflex_t &flex, float w )
 //-----------------------------------------------------------------------------
 void CStudioRender::R_StudioFlexVerts( mstudiomesh_t *pmesh, int lod, bool bQuadList )
 {
-	VPROF_BUDGET( "CStudioRender::R_StudioFlexVerts", VPROF_BUDGETGROUP_MODEL_RENDERING );
+	CVProfScope _( "CStudioRender::R_StudioFlexVerts", 0, VPROF_BUDGETGROUP_MODEL_RENDERING, false, BUDGETFLAG_OTHER );
 
-	Assert( pmesh );
+	contract_assert( pmesh );
 
 	const float flVertAnimFixedPointScale = m_pStudioHdr->VertAnimFixedPointScale();
 
@@ -205,7 +196,7 @@ void CStudioRender::R_StudioFlexVerts( mstudiomesh_t *pmesh, int lod, bool bQuad
 		return;
 	}
 	const mstudio_meshvertexdata_t *vertData = pmesh->GetVertexData( m_pStudioHdr );
-	Assert( vertData );
+	contract_assert( vertData );
 	if ( !vertData )
 	{
 		static unsigned int warnCount = 0;
@@ -215,7 +206,7 @@ void CStudioRender::R_StudioFlexVerts( mstudiomesh_t *pmesh, int lod, bool bQuad
 	}
 
 	// The flex data should have been converted to the new (fixed-point) format on load:
-	Assert( m_pStudioHdr->flags & STUDIOHDR_FLAGS_FLEXES_CONVERTED );
+	contract_assert( m_pStudioHdr->flags & STUDIOHDR_FLAGS_FLEXES_CONVERTED );
 	if ( ( m_pStudioHdr->flags & STUDIOHDR_FLAGS_FLEXES_CONVERTED ) == 0 )
 	{
 		static unsigned int flexConversionTimesWarned = 0;
@@ -288,7 +279,7 @@ void CStudioRender::R_StudioFlexVerts( mstudiomesh_t *pmesh, int lod, bool bQuad
 					if ( pStudioTangentS )
 					{
 						Vector4DCopy( pStudioTangentS[n], pFlexedVertex->m_TangentS );
-						Assert( pFlexedVertex->m_TangentS.w == -1.0f || pFlexedVertex->m_TangentS.w == 1.0f );
+						contract_assert( pFlexedVertex->m_TangentS.w == -1.0f || pFlexedVertex->m_TangentS.w == 1.0f );
 					}
 				}
 				else
@@ -318,7 +309,7 @@ void CStudioRender::R_StudioFlexVerts( mstudiomesh_t *pmesh, int lod, bool bQuad
 				if ( pStudioTangentS )
 				{
 					pFlexedVertex->m_TangentS.AsVector3D() += pAnim->GetNDeltaFixed( flVertAnimFixedPointScale ) * w;
-					Assert( pFlexedVertex->m_TangentS.w == -1.0f || pFlexedVertex->m_TangentS.w == 1.0f );
+					contract_assert( pFlexedVertex->m_TangentS.w == -1.0f || pFlexedVertex->m_TangentS.w == 1.0f );
 				}
 			}
 		}
@@ -330,9 +321,9 @@ void CStudioRender::R_StudioFlexVerts( mstudiomesh_t *pmesh, int lod, bool bQuad
 // REMOVED!!  Look in version 32 if you need it.
 //static void R_StudioEyeballNormals( const mstudioeyeball_t *peyeball, int count, const Vector *psrcverts, Vector *pdestnorms )
 
-#define KERNEL_DIAMETER 2
+constexpr auto KERNEL_DIAMETER = 2;
 #define KERNEL_TEXELS (KERNEL_DIAMETER)
-#define KERNEL_TEXEL_RADIUS (KERNEL_TEXELS / 2)
+constexpr auto KERNEL_TEXEL_RADIUS = (KERNEL_TEXELS / 2);
 
 inline float GlintGaussSpotCoefficient( float dx, float dy /*, float *table */ )
 {
@@ -341,7 +332,7 @@ inline float GlintGaussSpotCoefficient( float dx, float dy /*, float *table */ )
 	float r2 = (dx * dx + dy * dy) * rsq;
 	if (r2 <= 1.0f)
 	{
-		return exp( -25.0 * r2 );
+		return std::exp( -25.0 * r2 );
 		// NOTE: This optimization doesn't make much of a difference
 		//int index = r2 * (GLINT_TABLE_ENTRIES-1);
 		//return table[index];
@@ -442,14 +433,14 @@ public:
 
 		CStudioRender::GlintRenderData_t pRenderData[16];
 		int nGlintCount = m_pStudioRender->BuildGlintRenderData( pRenderData, 
-			ARRAYSIZE(pRenderData),	m_pState, *m_pVRight, *m_pVUp, *m_pROrigin );
+			std::size( pRenderData ),	m_pState, *m_pVRight, *m_pVUp, *m_pROrigin );
 
 		// setup glint texture
 		unsigned char *pTextureData = pVTFTexture->ImageData( 0, 0, 0 );
 		CPixelWriter pixelWriter;
 		pixelWriter.SetPixelMemory( pVTFTexture->Format(), pTextureData, pVTFTexture->RowSizeInBytes( 0 ) );
   		int nImageSize = pVTFTexture->ComputeMipSize( 0 );
-  		memset( pTextureData, 0, nImageSize );
+  		std::memset( pTextureData, 0, nImageSize );
 
 		// Put in glints due to the lights in the scene
 		for ( int i = 0; i < nGlintCount; ++i )
@@ -598,7 +589,7 @@ ITexture* CStudioRender::RenderGlintTexture( const eyeballstate_t *pState,
 	const Vector& vright, const Vector& vup, const Vector& r_origin )
 {
 	GlintRenderData_t pRenderData[16];
-	int nGlintCount = BuildGlintRenderData( pRenderData, ARRAYSIZE(pRenderData),
+	int nGlintCount = BuildGlintRenderData( pRenderData, std::size( pRenderData ),
 		pState, vright, vup, r_origin );
 
 	if ( nGlintCount == 0 )
@@ -663,7 +654,7 @@ ITexture* CStudioRender::RenderGlintTexture( const eyeballstate_t *pState,
 		float ooWidth  = 1.0f / (float)m_GlintWidth;
 		float ooHeight = 1.0f / (float)m_GlintHeight;
 
-		int x0 = floor(x);
+		int x0 = std::floor(x);
 		int y0 = floor(y);
 		int x1 = x0 + 1.0f;
 		int y1 = y0 + 1.0f;
@@ -745,7 +736,7 @@ void CStudioRender::R_StudioEyeballGlint( const eyeballstate_t *pstate, IMateria
 {
 	// Kick off a PIX event, since this process encompasses a bunch of locks etc...
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
-	PIXEVENT( pRenderContext, "GenerateEyeballGlint" );
+	( pRenderContext, "GenerateEyeballGlint" );
 
 	// Don't do a procedural glint texture if there are enough pixels covered by the eyeball onscreen,
 	// and the eye isn't backfaced.

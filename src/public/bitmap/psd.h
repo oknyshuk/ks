@@ -1,13 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Methods relating to saving + loading PSD files (photoshop)
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef PSD_H
-#define PSD_H
-
 
 #include "bitmap/imageformat.h" //ImageFormat enum definition
 
@@ -97,6 +92,3 @@ PSDImageResources PSDGetImageResources( ks::byte_reader &buf );
 //-----------------------------------------------------------------------------
 bool PSDReadFileRGBA8888( ks::byte_reader &buf, Bitmap_t &bitmap );
 bool PSDReadFileRGBA8888( const char *pFileName, const char *pPathID, Bitmap_t &bitmap );
-
-
-#endif // PSD_H

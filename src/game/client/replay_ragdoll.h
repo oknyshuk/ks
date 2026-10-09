@@ -1,13 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef REPLAY_RAGDOLL_H
-#define REPLAY_RAGDOLL_H
-
-#include <vector>
+import std;
+import ks.math;
+#include "bone_accessor.h"
 
 //--------------------------------------------------------------------------------
 
@@ -147,5 +144,3 @@ inline bool CReplayRagdollCache::FindFrame( RagdollSimulationFrame_t*& pFrameOut
 }
 
 //--------------------------------------------------------------------------------
-
-#endif // REPLAY_RAGDOLL_H

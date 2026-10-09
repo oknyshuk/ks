@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -20,7 +21,7 @@ private:
 public:
 	void SetVERTEXCOLOR( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nVERTEXCOLOR = i;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -28,7 +29,7 @@ public:
 	}
 	void SetVERTEXCOLOR( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nVERTEXCOLOR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -42,7 +43,7 @@ private:
 public:
 	void SetCONSTANTCOLOR( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCONSTANTCOLOR = i;
 #ifdef _DEBUG
 		m_bCONSTANTCOLOR = true;
@@ -50,7 +51,7 @@ public:
 	}
 	void SetCONSTANTCOLOR( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCONSTANTCOLOR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCONSTANTCOLOR = true;
@@ -64,7 +65,7 @@ private:
 public:
 	void SetHDRTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nHDRTYPE = i;
 #ifdef _DEBUG
 		m_bHDRTYPE = true;
@@ -72,7 +73,7 @@ public:
 	}
 	void SetHDRTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nHDRTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHDRTYPE = true;
@@ -86,7 +87,7 @@ private:
 public:
 	void SetSRGB( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSRGB = i;
 #ifdef _DEBUG
 		m_bSRGB = true;
@@ -94,7 +95,7 @@ public:
 	}
 	void SetSRGB( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSRGB = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSRGB = true;
@@ -127,7 +128,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bVERTEXCOLOR && m_bCONSTANTCOLOR && m_bHDRTYPE && m_bSRGB;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 4 * m_nVERTEXCOLOR ) + ( 8 * m_nCONSTANTCOLOR ) + ( 16 * m_nHDRTYPE ) + ( 48 * m_nSRGB ) + 0;
 	}
@@ -143,7 +144,7 @@ private:
 public:
 	void SetHDRENABLED( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nHDRENABLED = i;
 #ifdef _DEBUG
 		m_bHDRENABLED = true;
@@ -151,7 +152,7 @@ public:
 	}
 	void SetHDRENABLED( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHDRENABLED = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHDRENABLED = true;
@@ -165,7 +166,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -173,7 +174,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -198,7 +199,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bHDRENABLED && m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nHDRENABLED ) + ( 2 * m_nPIXELFOGTYPE ) + 0;
 	}

@@ -1,16 +1,17 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-//	STATIC: "ENVMAP_MASK"				"0..1"
+// STATIC: "ENVMAP_MASK"				"0..1"
 //	STATIC: "TANGENTSPACE"				"0..1"
-//  STATIC: "BUMPMAP"					"0..1"
+// STATIC: "BUMPMAP"					"0..1"
 //	STATIC: "DETAILTEXTURE"				"0..2"
-//  STATIC: "VERTEXCOLOR"				"0..1"
-//  STATIC: "VERTEXALPHATEXBLENDFACTOR"	"0..1"
-//  STATIC: "SEAMLESS"                  "0..1"
-
+// STATIC: "VERTEXCOLOR"				"0..1"
+// STATIC: "VERTEXALPHATEXBLENDFACTOR"	"0..1"
+// STATIC: "SEAMLESS"                  "0..1"
 // disable seamless & bumpmask (does not appear to be used)
-//  STATIC: "BUMPMASK"                  "0..0"
+// STATIC: "BUMPMASK"                  "0..0"
 // diffuse bump map is always true when bumpmapping is enabled, so just set it to 1
+
 #define DIFFUSEBUMPMAP 1
 
 //	STATIC: "FLASHLIGHT"				"0..1"	[CONSOLE]
@@ -34,7 +35,6 @@
 #include "common_fog_vs_supportsvertexfog_fxc.h"
 #include "common_vs_fxc.h"
 #include "common_lightmappedgeneric_fxc.h"
-
 
 static const int g_FogType						= DOWATERFOG;
 static const bool g_UseSeparateEnvmapMask		= ENVMAP_MASK;

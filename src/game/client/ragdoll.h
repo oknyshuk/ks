@@ -1,15 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef RAGDOLL_H
-#define RAGDOLL_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
 
 #include "ragdoll_shared.h"
 
@@ -18,11 +10,10 @@
 class C_BaseEntity;
 class CStudioHdr;
 struct mstudiobone_t;
-class Vector;
 class IPhysicsObject;
 class CBoneAccessor;
 
-abstract_class IRagdoll
+class IRagdoll
 {
 public:
 	virtual ~IRagdoll() {}
@@ -126,5 +117,3 @@ CRagdoll *CreateRagdoll(
 void NoteRagdollCreationTick( C_BaseEntity *pRagdoll );
 // returns true if the ragdoll was created on this tick
 bool WasRagdollCreatedOnCurrentTick( C_BaseEntity *pRagdoll );
-
-#endif // RAGDOLL_H

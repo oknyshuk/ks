@@ -1,25 +1,20 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: Engine system for loading and managing tools
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Engine system for loading and managing tools
+
+import ks.tier1;
 #include "quakedef.h"
-#include "tier0/icommandline.h"
 #include "toolframework/itooldictionary.h"
 #include "toolframework/itoolsystem.h"
 #include "toolframework/itoolframework.h"
 #include "toolframework/iclientenginetools.h"
 #include "toolframework/iserverenginetools.h"
-#include "tier1/keyvalues.h"
-#include "tier1/utlvector.h"
-#include "tier1/tier1.h"
-#include "tier1/intern_pool.h"
+import std;
 #include "filesystem_engine.h"
 #include "toolframework/itoolframework.h"
 #include "baseclientstate.h"
 #include "sys.h"
-#include "tier1/fmtstr.h"
 
 class IToolSystem;
 extern CreateInterfaceFn g_AppSystemFactory;
@@ -476,7 +471,7 @@ void CToolFrameworkInternal::ShutdownModules()
 	int i;
 	for ( i = std::ssize( m_Modules ); --i >= 0; )
 	{
-		Assert( !m_Modules[i].m_pDictionary );
+		contract_assert( !m_Modules[i].m_pDictionary );
 		Sys_UnloadModule( m_Modules[i].m_pModule );
 		m_Modules[i].m_pModule = nullptr;
 	}
@@ -666,7 +661,7 @@ bool CToolFrameworkInternal::ShouldGameRenderView()
 	if ( m_nActiveToolIndex >= 0 )
 	{
 		IToolSystem *tool = m_ToolSystems[ m_nActiveToolIndex ];
-		Assert( tool );
+		contract_assert( tool );
 		return tool->ShouldGameRenderView( );
 	}
 	return true;
@@ -681,7 +676,7 @@ bool CToolFrameworkInternal::ShouldGamePlaySounds()
 	if ( m_nActiveToolIndex >= 0 )
 	{
 		IToolSystem *tool = m_ToolSystems[ m_nActiveToolIndex ];
-		Assert( tool );
+		contract_assert( tool );
 		return tool->ShouldGamePlaySounds();
 	}
 	return true;
@@ -694,7 +689,7 @@ IMaterialProxy *CToolFrameworkInternal::LookupProxy( const char *proxyName )
 	for ( int i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *tool = m_ToolSystems[ i ];
-		Assert( tool );
+		contract_assert( tool );
 
 		IMaterialProxy *matProxy = tool->LookupProxy( proxyName );
 		if ( matProxy )
@@ -727,7 +722,7 @@ void CToolFrameworkInternal::LoadToolsFromEngineToolsManifest()
 
 	// Load rootdir/bin/enginetools.txt
 	KeyValues *kv = new KeyValues( "enginetools" );
-	Assert( kv );
+	contract_assert( kv );
 	// Load enginetools.txt if it available and fallback to sdkenginetools.txt 
 	char szToolConfigFile[25];
 
@@ -746,7 +741,7 @@ void CToolFrameworkInternal::LoadToolsFromEngineToolsManifest()
 				tool != nullptr;
 				tool = tool->GetNextKey() )
 		{
-			if ( !Q_stricmp( tool->GetName(),  "library" ) )
+			if ( !V_stricmp( tool->GetName(),  "library" ) )
 			{
 				// CHECK both bin/tools and gamedir/bin/tools
 				LoadToolsFromLibrary( tool->GetString() );
@@ -762,7 +757,7 @@ ToolModule_t *CToolFrameworkInternal::Find( char const *pModuleName )
 	for ( int i = 0; i < std::ssize( m_Modules ); ++i )
 	{
 		ToolModule_t *tm = &m_Modules[ i ];
-		if ( !Q_stricmp( tm->m_sDllName.c_str(), pModuleName ) )
+		if ( !V_stricmp( tm->m_sDllName.c_str(), pModuleName ) )
 			return tm;
 	}
 
@@ -801,20 +796,20 @@ int CToolAutoCompleteFileList::AutoCompletionFunc( char const *partial, char com
 	char const *cmdname = m_pszCommandName;
 
 	char *substring = (char *)partial;
-	if ( Q_strstr( partial, cmdname ) )
+	if ( V_strstr( partial, cmdname ) )
 	{
-		substring = (char *)partial + strlen( cmdname ) + 1;
+		substring = (char *)partial + std::strlen( cmdname ) + 1;
 	}
 
 	// Search the directory structure.
 	char searchpath[MAX_QPATH];
-	if ( m_pszSubDir && m_pszSubDir[0] && Q_strcasecmp( m_pszSubDir, "NULL" ) )
+	if ( m_pszSubDir && m_pszSubDir[0] && V_strcasecmp( m_pszSubDir, "NULL" ) )
 	{
-		Q_snprintf(searchpath,sizeof(searchpath),"%s/*.%s", m_pszSubDir, m_pszExtension );
+		V_snprintf(searchpath,sizeof(searchpath),"%s/*.%s", m_pszSubDir, m_pszExtension );
 	}
 	else
 	{
-		Q_snprintf(searchpath,sizeof(searchpath),"*.%s", m_pszExtension );
+		V_snprintf(searchpath,sizeof(searchpath),"*.%s", m_pszExtension );
 	}
 
 	ks::intern_pool entries( true );
@@ -824,13 +819,13 @@ int CToolAutoCompleteFileList::AutoCompletionFunc( char const *partial, char com
 	while ( findfn )
 	{
 		char sz[ MAX_QPATH ] = { 0 };
-		Q_StripExtension( findfn, sz, sizeof( sz ) );
+		V_StripExtension( findfn, sz, sizeof( sz ) );
 
 		bool add = false;
 		// Insert into lookup
 		if ( substring[0] )
 		{
-			if ( !Q_strncasecmp( findfn, substring, strlen( substring ) ) )
+			if ( !V_strncasecmp( findfn, substring, std::strlen( substring ) ) )
 			{
 				add = true;
 			}
@@ -861,9 +856,9 @@ int CToolAutoCompleteFileList::AutoCompletionFunc( char const *partial, char com
 	{
 		char const *filename = symbols[ i ].data();
 
-		Q_snprintf( commands[ i ], sizeof( commands[ i ] ), "%s %s", cmdname, filename );
+		V_snprintf( commands[ i ], sizeof( commands[ i ] ), "%s %s", cmdname, filename );
 		// Remove .dem
-		commands[ i ][ strlen( commands[ i ] ) - 4 ] = 0;
+		commands[ i ][ std::strlen( commands[ i ] ) - 4 ] = 0;
 	}
 
 	return std::ssize( symbols );
@@ -893,9 +888,9 @@ public:
 		char const *cmdname = m_pszCommandName;
 
 		char *substring = (char *)partial;
-		if ( Q_strstr( partial, cmdname ) )
+		if ( V_strstr( partial, cmdname ) )
 		{
-			substring = (char *)partial + strlen( cmdname ) + 1;
+			substring = (char *)partial + std::strlen( cmdname ) + 1;
 		}
 
 		std::vector< std::string > modules;
@@ -905,13 +900,13 @@ public:
 		{
 			char const *pFileName = modules[ i ].c_str();
 			char filename[ MAX_PATH ];
-			Q_FileBase( pFileName, filename, sizeof( filename ) );
+			V_FileBase( pFileName, filename, sizeof( filename ) );
 
 			bool add = false;
 			// Insert into lookup
 			if ( substring[0] )
 			{
-				if ( !Q_strncasecmp( filename, substring, strlen( substring ) ) )
+				if ( !V_strncasecmp( filename, substring, std::strlen( substring ) ) )
 				{
 					add = true;
 				}
@@ -923,7 +918,7 @@ public:
 
 			if ( add )
 			{
-				Q_snprintf( commands[ c ], sizeof( commands[ c ] ), "%s %s", cmdname, filename );
+				V_snprintf( commands[ c ], sizeof( commands[ c ] ), "%s %s", cmdname, filename );
 				++c;
 			}
 		}
@@ -955,14 +950,14 @@ void Tool_Unload_f( const CCommand &args )
 	bool bPromptForSave = true;
 	if ( args.ArgC() > 2 )
 	{
-		if ( Q_stricmp( "-nosave", args.Arg( 2 ) ) == 0 )
+		if ( V_stricmp( "-nosave", args.Arg( 2 ) ) == 0 )
 		{
 			bPromptForSave = false;
 		}
 	}
 
 	char fn[ MAX_PATH ];
-	Q_FileBase( args.Arg( 1 ), fn, sizeof( fn ) );
+	V_FileBase( args.Arg( 1 ), fn, sizeof( fn ) );
 
 	CFmtStr module( "tools/%s.dll", fn ); 
 	g_ToolFrameworkInternal.UnloadTools( module, bPromptForSave );
@@ -1095,7 +1090,7 @@ void Tool_Load_f( const CCommand &args )
 	}
 
 	char fn[ MAX_PATH ];
-	Q_FileBase( args.Arg( 1 ), fn, sizeof( fn ) );
+	V_FileBase( args.Arg( 1 ), fn, sizeof( fn ) );
 
 	CFmtStr module( "tools/%s.dll", fn ); 
 	if ( g_ToolFrameworkInternal.Find( module )  )
@@ -1160,7 +1155,6 @@ bool CToolFrameworkInternal::IsThirdPersonCamera()
 	if ( m_nActiveToolIndex >= 0 )
 	{
 		IToolSystem *tool = m_ToolSystems[ m_nActiveToolIndex ];
-		Assert( tool );
 		return tool->IsThirdPersonCamera( );
 	}
 	return false;
@@ -1172,7 +1166,6 @@ bool CToolFrameworkInternal::IsToolRecording()
 	if ( m_nActiveToolIndex >= 0 )
 	{
 		IToolSystem *tool = m_ToolSystems[ m_nActiveToolIndex ];
-		Assert( tool );
 		return tool->IsToolRecording( );
 	}
 	return false;
@@ -1258,7 +1251,6 @@ const char* CToolFrameworkInternal::GetEntityData( const char *pActualEntityData
 	if ( m_nActiveToolIndex >= 0 )
 	{
 		IToolSystem *tool = m_ToolSystems[ m_nActiveToolIndex ];
-		Assert( tool );
 		return tool->GetEntityData( pActualEntityData );
 	}
 	return pActualEntityData;
@@ -1270,7 +1262,6 @@ void* CToolFrameworkInternal::QueryInterface( const char *pInterfaceName )
 	for ( int i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *tool = m_ToolSystems[ i ];
-		Assert( tool );
 		void *pRet = tool->QueryInterface( pInterfaceName );
 		if ( pRet )
 			return pRet;
@@ -1297,7 +1288,6 @@ void CToolFrameworkInternal::PostToolMessage( HTOOLHANDLE hEntity, KeyValues *ms
 	for ( int i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *tool = m_ToolSystems[ i ];
-		Assert( tool );
 		tool->PostToolMessage( hEntity, msg );
 	}
 }
@@ -1314,7 +1304,6 @@ void CToolFrameworkInternal::AdjustEngineViewport( int& x, int& y, int& width, i
 	if ( m_nActiveToolIndex >= 0 )
 	{
 		IToolSystem *tool = m_ToolSystems[ m_nActiveToolIndex ];
-		Assert( tool );
 		tool->AdjustEngineViewport( x, y, width, height );
 	}
 }
@@ -1328,7 +1317,6 @@ bool CToolFrameworkInternal::SetupEngineView( Vector &origin, QAngle &angles, fl
 		return false;
 
 	IToolSystem *tool = m_ToolSystems[ m_nActiveToolIndex ];
-	Assert( tool );
 	return tool->SetupEngineView( origin, angles, fov );
 }
 
@@ -1341,7 +1329,6 @@ bool CToolFrameworkInternal::SetupAudioState( AudioState_t &audioState )
 		return false;
 
 	IToolSystem *tool = m_ToolSystems[ m_nActiveToolIndex ];
-	Assert( tool );
 	return tool->SetupAudioState( audioState );
 }
 
@@ -1440,7 +1427,7 @@ IToolSystem *CToolFrameworkInternal::SwitchToTool( const char* pToolName )
 	int nCount = GetToolCount();
 	for ( int i = 0; i < nCount; ++i )
 	{
-		if ( !Q_stricmp( pToolName, GetToolName(i) ) )
+		if ( !V_stricmp( pToolName, GetToolName(i) ) )
 		{
 			SwitchToTool( i );
 			return m_ToolSystems[i];
@@ -1486,7 +1473,6 @@ void CToolFrameworkInternal::PostMessage( KeyValues *msg )
 	if ( m_nActiveToolIndex >= 0 )
 	{
 		IToolSystem *tool = m_ToolSystems[ m_nActiveToolIndex ];
-		Assert( tool );
 		tool->PostToolMessage( 0, msg );
 	}
 }
@@ -1496,7 +1482,6 @@ bool CToolFrameworkInternal::GetSoundSpatialization( int iUserData, int guid, Sp
 	if ( m_nActiveToolIndex >= 0 )
 	{
 		IToolSystem *tool = m_ToolSystems[ m_nActiveToolIndex ];
-		Assert( tool );
 		return tool->GetSoundSpatialization( iUserData, guid, info );
 	}
 	return true;
@@ -1561,7 +1546,8 @@ public:
 	virtual bool InToolMode();
 };
 
-EXPOSE_SINGLE_INTERFACE( CClientEngineTools, IClientEngineTools, VCLIENTENGINETOOLS_INTERFACE_VERSION );
+static CClientEngineTools s_Singleton_CClientEngineTools;
+static InterfaceReg s_Reg_CClientEngineTools_IClientEngineTools( []() -> void * { return static_cast<IClientEngineTools *>( &s_Singleton_CClientEngineTools ); }, VCLIENTENGINETOOLS_INTERFACE_VERSION );;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1698,7 +1684,8 @@ public:
 	virtual bool InToolMode();
 };
 
-EXPOSE_SINGLE_INTERFACE( CServerEngineTools, IServerEngineTools, VSERVERENGINETOOLS_INTERFACE_VERSION );
+static CServerEngineTools s_Singleton_CServerEngineTools;
+static InterfaceReg s_Reg_CServerEngineTools_IServerEngineTools( []() -> void * { return static_cast<IServerEngineTools *>( &s_Singleton_CServerEngineTools ); }, VSERVERENGINETOOLS_INTERFACE_VERSION );;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1787,4 +1774,3 @@ bool CServerEngineTools::InToolMode()
 {
 	return g_ToolFrameworkInternal.InToolMode();
 }
-

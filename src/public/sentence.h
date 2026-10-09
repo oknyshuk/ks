@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef SENTENCE_H
-#define SENTENCE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // X360 optimizes out the extra memory needed by the editors in these types
-#define PHONEME_EDITOR 1
 
-#include "utlvector.h"
+import std;
+import ks.tier1;
 
 namespace ks
 {
@@ -20,9 +15,9 @@ namespace ks
 	class text_writer;
 }
 
-#define CACHED_SENTENCE_VERSION			1
-#define CACHED_SENTENCE_VERSION_ALIGNED	4
-#define CACHED_SENTENCE_VERSION_PACKED	5
+inline constexpr auto CACHED_SENTENCE_VERSION = 1;
+inline constexpr auto CACHED_SENTENCE_VERSION_ALIGNED = 4;
+inline constexpr auto CACHED_SENTENCE_VERSION_PACKED = 5;
 
 //-----------------------------------------------------------------------------
 // Purpose: A sample point
@@ -34,10 +29,8 @@ struct CEmphasisSample
 	float		value;
 
 	void SetSelected( bool isSelected );
-#if PHONEME_EDITOR
 	// Used by editors only
 	bool		selected;
-#endif
 };
 
 class CBasePhonemeTag
@@ -46,7 +39,7 @@ public:
 	CBasePhonemeTag();
 	CBasePhonemeTag( const CBasePhonemeTag& from );
 
-	CBasePhonemeTag &operator=( const CBasePhonemeTag &from )	{ memcpy( this, &from, sizeof(*this) ); return *this; }
+	CBasePhonemeTag &operator=( const CBasePhonemeTag &from )	{ std::memcpy( this, &from, sizeof(*this) ); return *this; }
 
 	float GetStartTime() const				{ return m_flStartTime; }
 	void SetStartTime( float startTime )	{ m_flStartTime = startTime; }
@@ -82,11 +75,9 @@ public:
 	char const		*GetTag() const;
 
 	unsigned int	ComputeDataCheckSum();
-#if PHONEME_EDITOR
 	bool			m_bSelected;
 	unsigned int	m_uiStartByte;
 	unsigned int	m_uiEndByte;
-#endif
 	void SetSelected( bool isSelected );
 	bool GetSelected() const;
 	void SetStartAndEndBytes( unsigned int start, unsigned int end );
@@ -120,11 +111,9 @@ public:
 	float			m_flEndTime;
 
 	std::vector< CPhonemeTag * > m_Phonemes;
-#if PHONEME_EDITOR
 	bool			m_bSelected;
 	unsigned int	m_uiStartByte;
 	unsigned int	m_uiEndByte;
-#endif
 	void SetSelected( bool isSelected );
 	bool GetSelected() const;
 	void SetStartAndEndBytes( unsigned int start, unsigned int end );
@@ -259,22 +248,16 @@ public:
 	static bool		ShouldSplitWord( char in );
 
 public:
-#if PHONEME_EDITOR
 	char			*m_szText;
 
 	std::vector< CWordTag * >	m_Words;
-#endif
 	std::vector< CBasePhonemeTag * > m_RunTimePhonemes;
 
-#if PHONEME_EDITOR
 	int				m_nResetWordBase;
-#endif
 	// Phoneme emphasis data
 	std::vector< CEmphasisSample > m_EmphasisSamples;
 
-#if PHONEME_EDITOR
 	unsigned int	m_uCheckSum;
-#endif
 	bool			m_bIsValid : 8;
 	bool			m_bStoreCheckSum : 8;
 	bool			m_bShouldVoiceDuck : 8;
@@ -292,5 +275,3 @@ private:
 
 	friend class PhonemeEditor;
 };
-
-#endif // SENTENCE_H

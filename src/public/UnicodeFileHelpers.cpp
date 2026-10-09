@@ -1,12 +1,8 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <stdlib.h>
-#include <ctype.h>
-#include <wctype.h>
+import std;
+import ks.core;
 #include "UnicodeFileHelpers.h"
 
 //-----------------------------------------------------------------------------
@@ -14,7 +10,7 @@
 //-----------------------------------------------------------------------------
 ucs2 *AdvanceOverWhitespace(ucs2 *Start)
 {
-	while (*Start != 0 && iswspace(*Start))
+	while (*Start != 0 && std::iswspace(*Start))
 	{
 		Start++;
 	}
@@ -76,7 +72,7 @@ ucs2 *ReadUnicodeToken(ucs2 *start, ucs2 *token, int tokenBufferSize, bool &quot
 	{
 		// copy out the string until we hit a whitespace
 		int count = 0;
-		while (*start && !iswspace(*start) && count < tokenBufferSize-1)
+		while (*start && !std::iswspace(*start) && count < tokenBufferSize-1)
 		{
 			// no checking for special characters if it's not a quoted string
 			*token = *start;
@@ -148,7 +144,7 @@ ucs2 *ReadUnicodeTokenNoSpecial(ucs2 *start, ucs2 *token, int tokenBufferSize, b
 	{
 		// copy out the string until we hit a whitespace
 		int count = 0;
-		while (*start && !iswspace(*start) && count < tokenBufferSize-1)
+		while (*start && !std::iswspace(*start) && count < tokenBufferSize-1)
 		{
 			// no checking for special characters if it's not a quoted string
 			*token = *start;

@@ -1,12 +1,10 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Matthew D. Campbell (matt@turtlerockstudios.com), 2004
 
-#include "cbase.h"
+import std;
+import ks.core;
 #include "buy_preset_debug.h"
 
 #ifdef _DEBUG

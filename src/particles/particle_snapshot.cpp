@@ -1,33 +1,26 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: see CParticleSnapshot declaration (in particles.h)
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "tier0/platform.h"
+// Purpose: see CParticleSnapshot declaration (in particles.h)
+
+import ks.tier1;
 #include "particles/particles.h"
-#include "filesystem.h"
-#include "tier2/tier2.h"
-#include "tier2/fileutils.h"
-#include "tier1/strtools.h"
+import std;
 #include "dmxloader/dmxloader.h"
 #include "dmxloader/utlsoacontainer_serialization.h"
-#include "tier1/lzmaDecoder.h"
-#include "tier0/vprof.h"
-#include "particles_internal.h"
 
 
 // This macro is used to process the attribute mapping parameters, for both vararg versions of Init():
 #define ATTRIBUTE_MAPPING_LOOP( _lastarg_ )						\
-	va_list args;												\
-	va_start( args, _lastarg_ );								\
+	std::va_list args;												\
+	__builtin_va_start( args, _lastarg_ );								\
 	for(;;)														\
 	{															\
-		int nFieldNumber = va_arg( args, int );					\
+		int nFieldNumber = __builtin_va_arg( args, int );					\
 		if ( nFieldNumber == -1 )								\
 			break;												\
 		/* Associate nParticleAttribute with nFieldNumber */	\
-		int nParticleAttribute = va_arg( args, int );
+		int nParticleAttribute = __builtin_va_arg( args, int );
 
 
 //-----------------------------------------------------------------------------
@@ -37,8 +30,8 @@ void CParticleSnapshot::Purge( void )
 {
 	m_Container.Purge();
 	m_pContainer = nullptr;
-	for ( int i = 0; i < ARRAYSIZE( m_ParticleAttributeToContainerAttribute ); i++ ) m_ParticleAttributeToContainerAttribute[ i ] = -1;
-	for ( int i = 0; i < ARRAYSIZE( m_ContainerAttributeToParticleAttribute ); i++ ) m_ContainerAttributeToParticleAttribute[ i ] = -1;
+	for ( int i = 0; i < std::size( m_ParticleAttributeToContainerAttribute ); i++ ) m_ParticleAttributeToContainerAttribute[ i ] = -1;
+	for ( int i = 0; i < std::size( m_ContainerAttributeToParticleAttribute ); i++ ) m_ContainerAttributeToParticleAttribute[ i ] = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -50,7 +43,7 @@ bool CParticleSnapshot::AddAttributeMapping( int nFieldNumber, int nParticleAttr
 		 ( ( m_ContainerAttributeToParticleAttribute[ nFieldNumber       ] != -1 ) && ( m_ContainerAttributeToParticleAttribute[ nFieldNumber       ] != nParticleAttribute ) ) )
 	{
 		Warning( "CParticleSnapshot::%s - Invalid attribute mapping specified (must be one-to-one)!\n", pFunc );
-		Assert( 0 );
+		contract_assert( 0 );
 		Purge();
 		return false;
 	}
@@ -74,7 +67,7 @@ bool CParticleSnapshot::ValidateAttributeMapping( int nFieldNumber, int nParticl
 			Warning( "  (data type of container field %d does not match particle attribute %s)\n", nFieldNumber, g_pParticleSystemMgr->GetParticleAttributeName( nParticleAttribute ) );
 		if ( !m_pContainer->HasAllocatedMemory( nFieldNumber ) )
 			Warning( "  (container field %d has no allocated data)\n", nFieldNumber );
-		Assert( 0 );
+		contract_assert( 0 );
 		Purge();
 		return false;
 	}
@@ -86,10 +79,10 @@ bool CParticleSnapshot::ValidateAttributeMapping( int nFieldNumber, int nParticl
 //-----------------------------------------------------------------------------
 bool CParticleSnapshot::Init( int nX, int nY, int nZ, const AttributeMapVector &attributeMaps )
 {
-	Assert( std::ssize( attributeMaps ) > 0 );
+	contract_assert( std::ssize( attributeMaps ) > 0 );
 	if ( std::ssize( attributeMaps ) <= 0 )
 		return false;
-	Assert( ( nX >= 1 ) && ( nY >= 1 ) && ( nZ >= 1 ) );
+	contract_assert( ( nX >= 1 ) && ( nY >= 1 ) && ( nZ >= 1 ) );
 	if ( ( nX < 1 ) || ( nY < 1 ) || ( nZ < 1 ) )
 		return false;
 
@@ -131,7 +124,7 @@ bool CParticleSnapshot::Init( int nX, int nY, int nZ, ... )
 //-----------------------------------------------------------------------------
 bool CParticleSnapshot::InitExternal( CSOAContainer *pContainer, const AttributeMapVector &attributeMaps )
 {
-	Assert( std::ssize( attributeMaps ) > 0 );
+	contract_assert( std::ssize( attributeMaps ) > 0 );
 	if ( std::ssize( attributeMaps ) <= 0 )
 		return false;
 
@@ -179,31 +172,31 @@ void CParticleSnapshot::CheckParticleAttributesForChanges( void )
 {
 	// If this doesn't compile, then we need to bump the file version and perform fixup on files saved w/ the old attribute definitions:
 	// TODO: store out an array of attribute names (g_pParticleSystemMgr->GetParticleAttributeName()) with the data so the fixup can be automatic and general
-	COMPILE_TIME_ASSERT( MAX_PARTICLE_ATTRIBUTES == 24 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_XYZ					==  0 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_LIFE_DURATION		==  1 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_PREV_XYZ			==  2 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_RADIUS				==  3 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_ROTATION			==  4 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_ROTATION_SPEED		==  5 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_TINT_RGB			==  6 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_ALPHA				==  7 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_CREATION_TIME		==  8 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER		==  9 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_TRAIL_LENGTH		== 10 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_PARTICLE_ID			== 11 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_YAW					== 12 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER1	== 13 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_HITBOX_INDEX		== 14 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_HITBOX_RELATIVE_XYZ	== 15 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_ALPHA2				== 16 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_SCRATCH_VEC			== 17 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_SCRATCH_FLOAT		== 18 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_UNUSED				== 19 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_PITCH				== 20 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_NORMAL				== 21 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_GLOW_RGB			== 22 );
-	COMPILE_TIME_ASSERT( PARTICLE_ATTRIBUTE_GLOW_ALPHA			== 23 );
+	static_assert( MAX_PARTICLE_ATTRIBUTES == 24 );
+	static_assert( PARTICLE_ATTRIBUTE_XYZ					==  0 );
+	static_assert( PARTICLE_ATTRIBUTE_LIFE_DURATION		==  1 );
+	static_assert( PARTICLE_ATTRIBUTE_PREV_XYZ			==  2 );
+	static_assert( PARTICLE_ATTRIBUTE_RADIUS				==  3 );
+	static_assert( PARTICLE_ATTRIBUTE_ROTATION			==  4 );
+	static_assert( PARTICLE_ATTRIBUTE_ROTATION_SPEED		==  5 );
+	static_assert( PARTICLE_ATTRIBUTE_TINT_RGB			==  6 );
+	static_assert( PARTICLE_ATTRIBUTE_ALPHA				==  7 );
+	static_assert( PARTICLE_ATTRIBUTE_CREATION_TIME		==  8 );
+	static_assert( PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER		==  9 );
+	static_assert( PARTICLE_ATTRIBUTE_TRAIL_LENGTH		== 10 );
+	static_assert( PARTICLE_ATTRIBUTE_PARTICLE_ID			== 11 );
+	static_assert( PARTICLE_ATTRIBUTE_YAW					== 12 );
+	static_assert( PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER1	== 13 );
+	static_assert( PARTICLE_ATTRIBUTE_HITBOX_INDEX		== 14 );
+	static_assert( PARTICLE_ATTRIBUTE_HITBOX_RELATIVE_XYZ	== 15 );
+	static_assert( PARTICLE_ATTRIBUTE_ALPHA2				== 16 );
+	static_assert( PARTICLE_ATTRIBUTE_SCRATCH_VEC			== 17 );
+	static_assert( PARTICLE_ATTRIBUTE_SCRATCH_FLOAT		== 18 );
+	static_assert( PARTICLE_ATTRIBUTE_UNUSED				== 19 );
+	static_assert( PARTICLE_ATTRIBUTE_PITCH				== 20 );
+	static_assert( PARTICLE_ATTRIBUTE_NORMAL				== 21 );
+	static_assert( PARTICLE_ATTRIBUTE_GLOW_RGB			== 22 );
+	static_assert( PARTICLE_ATTRIBUTE_GLOW_ALPHA			== 23 );
 }
 
 //-----------------------------------------------------------------------------
@@ -281,7 +274,7 @@ bool CParticleSnapshot::Unserialize( const char *pFullPath )
 
 		// Validate the attribute mapping (re-'add' it, in both directions, to be paranoid)
 		int nForwardMaps = 0, nReverseMaps = 0;
-		for ( int i = 0; i < ARRAYSIZE( m_ParticleAttributeToContainerAttribute ); i++ )
+		for ( int i = 0; i < std::size( m_ParticleAttributeToContainerAttribute ); i++ )
 		{
 			int nFieldNumber = m_ParticleAttributeToContainerAttribute[ i ];
 			if ( nFieldNumber == -1 )
@@ -294,7 +287,7 @@ bool CParticleSnapshot::Unserialize( const char *pFullPath )
 			}
 			nForwardMaps++;
 		}
-		for ( int i = 0; i < ARRAYSIZE( m_ContainerAttributeToParticleAttribute ); i++ )
+		for ( int i = 0; i < std::size( m_ContainerAttributeToParticleAttribute ); i++ )
 		{
 			int nParticleAttribute = m_ContainerAttributeToParticleAttribute[ i ];
 			if ( nParticleAttribute == -1 )
@@ -312,7 +305,7 @@ bool CParticleSnapshot::Unserialize( const char *pFullPath )
 		{
 			bSuccess = false;
 			Warning( "ERROR: CParticleSnapshot::Unserialize - error in data in file %s (no attribute mapping specified)\n", pFullPath );
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 	}
 
@@ -340,7 +333,7 @@ bool CParticleSnapshot::Serialize( const char *pFullPath, bool bTextMode )
 		return false;
 	}
 	const char *pExtension = V_GetFileExtension( pFullPath );
-	if ( !pExtension || Q_stricmp( pExtension, "psf" ) )
+	if ( !pExtension || V_stricmp( pExtension, "psf" ) )
 	{
 		Warning( "ERROR: CParticleSnapshot::Serialize - file extension should be '.psf' (%s)\n", pFullPath );
 		return false;

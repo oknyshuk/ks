@@ -1,12 +1,13 @@
-#ifndef _ISERVERMANAGER_H_
-#define _ISERVERMANAGER_H_
+#pragma once
+
+import ks.core;
 
 class IServer;
 class IServerManager;
 
 #include "imatchsystem.h"
 
-abstract_class IMatchServer
+class IMatchServer
 {
 public:
 	//
@@ -29,7 +30,7 @@ public:
 	virtual void Join() = 0;
 };
 
-abstract_class IServerManager
+class IServerManager
 {
 public:
 	//
@@ -53,4 +54,3 @@ public:
 };
 
 
-#endif // _ISERVERMANAGER_H_

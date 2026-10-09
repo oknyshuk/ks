@@ -1,20 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#if !defined( IENGINE_H )
-#define IENGINE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "interface.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-abstract_class IEngine
+class IEngine
 {
 public:
 	enum
@@ -52,5 +46,3 @@ public:
 };
 
 extern IEngine *eng;
-
-#endif // IENGINE_H

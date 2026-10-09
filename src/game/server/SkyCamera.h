@@ -1,15 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Resource collection entity
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SKYCAMERA_H
-#define SKYCAMERA_H
+// Purpose: Resource collection entity
 
 #include "reflect_annotations.h"
-
+#include "baseentity.h"
+#include "playernet_vars.h"
 
 class CSkyCamera;
 
@@ -54,6 +51,3 @@ public:
 //-----------------------------------------------------------------------------
 CSkyCamera*		GetCurrentSkyCamera();
 CSkyCamera*		GetSkyCameraList();
-
-
-#endif // SKYCAMERA_H

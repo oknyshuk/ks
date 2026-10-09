@@ -1,24 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "commonmacros.h"
-#include "basetypes.h"
+#if defined(CLIENT_DLL)
+#endif
+#if defined(CLIENT_DLL)
+import std;
+import ks.core;
+#endif
+import ks.tier1;
 #include "sentence.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier1/text_reader.h"
-#include "tier1/text_writer.h"
-#include <stdlib.h>
-#include "mathlib/vector.h"
-#include "mathlib/mathlib.h"
-#include <ctype.h>
-#include "checksum_crc.h"
 #include "phonemeconverter.h"
 
 //-----------------------------------------------------------------------------
@@ -26,7 +16,6 @@
 //-----------------------------------------------------------------------------
 int ConvertANSIToUnicode(const char *ansi, wchar_t *unicode, int unicodeBufferSize);
 
-#if PHONEME_EDITOR
 void CEmphasisSample::SetSelected( bool isSelected )
 {
 	selected = isSelected;
@@ -73,20 +62,6 @@ unsigned int CWordTag::GetEndByte() const
 {
 	return m_uiEndByte;
 }
-#else
-// xbox doesn't store this data
-void CEmphasisSample::SetSelected( bool isSelected ) {}
-void CPhonemeTag::SetSelected( bool isSelected ) {}
-bool CPhonemeTag::GetSelected() const { return false; }
-void CPhonemeTag::SetStartAndEndBytes( unsigned int start, unsigned int end ) {}
-unsigned int CPhonemeTag::GetStartByte() const { return 0; }
-unsigned int CPhonemeTag::GetEndByte() const { return 0; }
-void CWordTag::SetSelected( bool isSelected ) {}
-bool CWordTag::GetSelected() const { return false; }
-void CWordTag::SetStartAndEndBytes( unsigned int start, unsigned int end ) {}
-unsigned int CWordTag::GetStartByte() const { return 0; }
-unsigned int CWordTag::GetEndByte() const { return 0; }
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -185,10 +160,10 @@ void CWordTag::SetWord( const char *word )
 	if ( !word || !word[ 0 ] )
 		return;
 
-	int len = strlen( word ) + 1;
+	int len = std::strlen( word ) + 1;
 	m_pszWord = new char[ len ];
-	Assert( m_pszWord );
-	Q_strncpy( m_pszWord, word, len );
+	contract_assert( m_pszWord );
+	V_strncpy( m_pszWord, word, len );
 }
 
 //-----------------------------------------------------------------------------
@@ -211,7 +186,7 @@ unsigned int CWordTag::ComputeDataCheckSum()
 	// Checksum the text
 	if ( m_pszWord != nullptr )
 	{
-		CRC32_ProcessBuffer( &crc, m_pszWord, Q_strlen( m_pszWord ) );
+		CRC32_ProcessBuffer( &crc, m_pszWord, V_strlen( m_pszWord ) );
 	}
 	// Checksum phonemes
 	c = std::ssize( m_Phonemes );
@@ -240,7 +215,7 @@ CBasePhonemeTag::CBasePhonemeTag()
 
 CBasePhonemeTag::CBasePhonemeTag( const CBasePhonemeTag& from )
 {
-	memcpy( this, &from, sizeof(*this) );
+	std::memcpy( this, &from, sizeof(*this) );
 }
 
 
@@ -309,10 +284,10 @@ void CPhonemeTag::SetTag( const char *phoneme )
 	if ( !phoneme || !phoneme [ 0 ] )
 		return;
 
-	int len = Q_strlen( phoneme ) + 1;
+	int len = V_strlen( phoneme ) + 1;
 	m_szPhoneme = new char[ len ];
-	Assert( m_szPhoneme );
-	Q_strncpy( m_szPhoneme, phoneme, len );
+	contract_assert( m_szPhoneme );
+	V_strncpy( m_szPhoneme, phoneme, len );
 }
 
 char const *CPhonemeTag::GetTag() const
@@ -327,7 +302,7 @@ unsigned int CPhonemeTag::ComputeDataCheckSum()
 	CRC32_Init( &crc );
 
 	// Checksum the text
-	CRC32_ProcessBuffer( &crc, m_szPhoneme, Q_strlen( m_szPhoneme ) );
+	CRC32_ProcessBuffer( &crc, m_szPhoneme, V_strlen( m_szPhoneme ) );
 	int phonemeCode = GetPhonemeCode();
 	CRC32_ProcessBuffer( &crc, &phonemeCode, sizeof( int ) );
 
@@ -397,7 +372,7 @@ char const *CSentence::NameForLanguage( int language )
 		return "unknown_language";
 
 	CCLanguage *entry = &g_CCLanguageLookup[ language ];
-	Assert( entry->type == language );
+	contract_assert( entry->type == language );
 	return entry->name;
 }
 
@@ -412,7 +387,7 @@ int CSentence::LanguageForName( char const *name )
 	for ( l = 0; l < CC_NUM_LANGUAGES; l++ )
 	{
 		CCLanguage *entry = &g_CCLanguageLookup[ l ];
-		Assert( entry->type == l );
+		contract_assert( entry->type == l );
 		if ( !stricmp( entry->name, name ) )
 			return l;
 	}
@@ -424,11 +399,9 @@ int CSentence::LanguageForName( char const *name )
 //-----------------------------------------------------------------------------
 CSentence::CSentence( void )
 {
-#if PHONEME_EDITOR
 	m_nResetWordBase = 0;
 	m_szText = 0;
 	m_uCheckSum = 0;
-#endif
 	m_bShouldVoiceDuck = false;
 	m_bStoreCheckSum = false;
 	m_bIsValid = false;
@@ -441,17 +414,15 @@ CSentence::CSentence( void )
 CSentence::~CSentence( void )
 {
 	Reset();
-#if PHONEME_EDITOR
 	delete[] m_szText;
-#endif
 }
 
 
-static void ReadWord( ks::text_reader &buf, char *pDest, size_t nMax )
+static void ReadWord( ks::text_reader &buf, char *pDest, std::size_t nMax )
 {
 	const std::string_view word = buf.read_word();
-	const size_t nCopy = std::min( word.size(), nMax - 1 );
-	memcpy( pDest, word.data(), nCopy );
+	const std::size_t nCopy = std::min( word.size(), nMax - 1 );
+	std::memcpy( pDest, word.data(), nCopy );
 	pDest[ nCopy ] = 0;
 }
 
@@ -466,8 +437,8 @@ void CSentence::ParsePlaintext( ks::text_reader& buf )
 		if ( !stricmp( token, "}" ) || !buf.ok() )
 			break;
 
-		Q_strncat( text, token, sizeof( text ), COPY_ALL_CHARACTERS );
-		Q_strncat( text, " ", sizeof( text ), COPY_ALL_CHARACTERS );
+		V_strncat( text, token, sizeof( text ), COPY_ALL_CHARACTERS );
+		V_strncat( text, " ", sizeof( text ), COPY_ALL_CHARACTERS );
 	}
 
 	SetText( text );
@@ -489,15 +460,15 @@ void CSentence::ParseWords( ks::text_reader& buf )
 			break;
 
 		ReadWord( buf, token, sizeof( token ) );
-		Q_strncpy( word, token, sizeof( word ) );
+		V_strncpy( word, token, sizeof( word ) );
 
 		ReadWord( buf, token, sizeof( token ) );
-		start = atof( token );
+		start = std::atof( token );
 		ReadWord( buf, token, sizeof( token ) );
-		end = atof( token );
+		end = std::atof( token );
 
 		CWordTag *wt = new CWordTag( word );
-		Assert( wt );
+		contract_assert( wt );
 		wt->m_flStartTime = start;
 		wt->m_flEndTime = end;
 
@@ -519,19 +490,19 @@ void CSentence::ParseWords( ks::text_reader& buf )
 			float start, end;
 			float volume;
 
-			code = atoi( token );
+			code = std::atoi( token );
 
 			ReadWord( buf, token, sizeof( token ) );
-			Q_strncpy( phonemename, token, sizeof( phonemename ) );
+			V_strncpy( phonemename, token, sizeof( phonemename ) );
 			ReadWord( buf, token, sizeof( token ) );
-			start = atof( token );
+			start = std::atof( token );
 			ReadWord( buf, token, sizeof( token ) );
-			end = atof( token );
+			end = std::atof( token );
 			ReadWord( buf, token, sizeof( token ) );
-			volume = atof( token );
+			volume = std::atof( token );
 
 			CPhonemeTag *pt = new CPhonemeTag();
-			Assert( pt );
+			contract_assert( pt );
 			pt->SetPhonemeCode( code );
 			pt->SetTag( phonemename );
 			pt->SetStartTime( start );
@@ -552,16 +523,16 @@ void CSentence::ParseEmphasis( ks::text_reader& buf )
 			break;
 
 		char t[ 256 ];
-		Q_strncpy( t, token, sizeof( t ) );
+		V_strncpy( t, token, sizeof( t ) );
 		ReadWord( buf, token, sizeof( token ) );
 
 		char value[ 256 ];
-		Q_strncpy( value, token, sizeof( value ) );
+		V_strncpy( value, token, sizeof( value ) );
 
 		CEmphasisSample sample;
 		sample.SetSelected( false );
-		sample.time = atof( t );
-		sample.value = atof( value );
+		sample.time = std::atof( t );
+		sample.value = std::atof( value );
 
 
 		m_EmphasisSamples.push_back( sample );
@@ -599,11 +570,11 @@ void CSentence::ParseCloseCaption( ks::text_reader& buf )
 				break;
 
 			ReadWord( buf, token, sizeof( token ) );
-			Assert( !stricmp( token, "unicode" ) || !stricmp( token, "char" ) );
+			contract_assert( !stricmp( token, "unicode" ) || !stricmp( token, "char" ) );
 
 			ReadWord( buf, token, sizeof( token ) );
-			const int cc_length = atoi( token );
-			Assert( cc_length >= 0 && cc_length < 4096 );
+			const int cc_length = std::atoi( token );
+			contract_assert( cc_length >= 0 && cc_length < 4096 );
 			// Skip space, the stream bytes, and the space after them
 			buf.get_char();
 			buf.seek( buf.tell() + std::max( cc_length, 0 ) );
@@ -625,22 +596,22 @@ void CSentence::ParseOptions( ks::text_reader& buf )
 		if ( !stricmp( token, "}" ) )
 			break;
 
-		if ( Q_strlen( token ) == 0 )
+		if ( V_strlen( token ) == 0 )
 			break;
 
 		char key[ 256 ];
-		Q_strncpy( key, token, sizeof( key ) );
+		V_strncpy( key, token, sizeof( key ) );
 		char value[ 256 ];
 		ReadWord( buf, token, sizeof( token ) );
-		Q_strncpy( value, token, sizeof( value ) );
+		V_strncpy( value, token, sizeof( value ) );
 
 		if ( !strcmpi( key, "voice_duck" ) )
 		{
-			SetVoiceDuck( atoi(value) ? true : false );
+			SetVoiceDuck( std::atoi(value) ? true : false );
 		}
 		else if ( !strcmpi( key, "checksum" ) )
 		{
-			SetDataCheckSum( (unsigned int)atoi( value ) );
+			SetDataCheckSum( (unsigned int)std::atoi( value ) );
 		}
 	}
 }
@@ -658,11 +629,11 @@ void CSentence::ParseDataVersionOnePointZero( ks::text_reader& buf )
 	while ( 1 )
 	{
 		ReadWord( buf, token, sizeof( token ) );
-		if ( strlen( token ) <= 0 )
+		if ( std::strlen( token ) <= 0 )
 			break;
 
 		char section[ 256 ];
-		Q_strncpy( section, token, sizeof( section ) );
+		V_strncpy( section, token, sizeof( section ) );
 
 		ReadWord( buf, token, sizeof( token ) );
 		if ( stricmp( token, "{" ) )
@@ -702,7 +673,7 @@ float g_maxTime;
 //-----------------------------------------------------------------------------
 void CSentence::CacheSaveToBuffer( ks::byte_writer& buf, int version )
 {
-	Assert( m_bIsCached );
+	contract_assert( m_bIsCached );
 
 	int i;
 	unsigned short pcount = GetRuntimePhonemeCount();
@@ -728,16 +699,16 @@ void CSentence::CacheSaveToBuffer( ks::byte_writer& buf, int version )
 		for ( i = 0; i < pcount; ++i )
 		{
 			const CBasePhonemeTag *phoneme = GetRuntimePhoneme( i );
-			Assert( phoneme );
+			contract_assert( phoneme );
 			buf.write< unsigned char >( CodeToByteCode( phoneme->GetPhonemeCode() ) );
 
 			float start = phoneme->GetStartTime() * 1000.0f/5.0f;
-			Assert( start >= -32768.0f && start <= 32767.0f );
+			contract_assert( start >= -32768.0f && start <= 32767.0f );
 			start = clamp( start, -32768.0f, 32767.0f );
 			buf.write< short >( (short)start );
 
 			float end = phoneme->GetEndTime() * 1000.0f/5.0f;
-			Assert( end >= -32768.0f && end <= 32767.0f );
+			contract_assert( end >= -32768.0f && end <= 32767.0f );
 			end = clamp( end, -32768.0f, 32767.0f );
 			buf.write< short >( (short)end );
 		}
@@ -747,7 +718,7 @@ void CSentence::CacheSaveToBuffer( ks::byte_writer& buf, int version )
 		for ( i = 0; i < pcount; ++i )
 		{
 			const CBasePhonemeTag *phoneme = GetRuntimePhoneme( i );
-			Assert( phoneme );
+			contract_assert( phoneme );
 			buf.write< int >( phoneme->GetPhonemeCode() );
 			buf.write< float >( phoneme->GetStartTime() );
 			buf.write< float >( phoneme->GetEndTime() );
@@ -758,7 +729,7 @@ void CSentence::CacheSaveToBuffer( ks::byte_writer& buf, int version )
 		for ( i = 0; i < pcount; ++i )
 		{
 			const CBasePhonemeTag *phoneme = GetRuntimePhoneme( i );
-			Assert( phoneme );
+			contract_assert( phoneme );
 			buf.write< short >( static_cast< short >( phoneme->GetPhonemeCode() ) );
 			buf.write< float >( phoneme->GetStartTime() );
 			buf.write< float >( phoneme->GetEndTime() );
@@ -767,7 +738,7 @@ void CSentence::CacheSaveToBuffer( ks::byte_writer& buf, int version )
 
 	// emphasis samples and voice duck
 	int c = std::ssize( m_EmphasisSamples );
-	Assert( c <= 32767 );
+	contract_assert( c <= 32767 );
 
 	if ( version == CACHED_SENTENCE_VERSION_PACKED )
 	{
@@ -775,10 +746,10 @@ void CSentence::CacheSaveToBuffer( ks::byte_writer& buf, int version )
 		for ( i = 0; i < c; i++ )
 		{
 			CEmphasisSample *sample = &m_EmphasisSamples[i];
-			Assert( sample );
+			contract_assert( sample );
 
 			float scaledTime = sample->time * 1000.0f/5.0f;
-			Assert( scaledTime >= -32768.0f && scaledTime <= 32767.0f );
+			contract_assert( scaledTime >= -32768.0f && scaledTime <= 32767.0f );
 			scaledTime = clamp( scaledTime, -32768.0f, 32767.0f );
 			buf.write< short >( static_cast< short >( scaledTime ) );
 
@@ -793,7 +764,7 @@ void CSentence::CacheSaveToBuffer( ks::byte_writer& buf, int version )
 		for ( i = 0; i < c; i++ )
 		{
 			CEmphasisSample *sample = &m_EmphasisSamples[i];
-			Assert( sample );
+			contract_assert( sample );
 			buf.write< float >( sample->time );
 			buf.write< float >( sample->value );
 		}
@@ -805,7 +776,7 @@ void CSentence::CacheSaveToBuffer( ks::byte_writer& buf, int version )
 		for ( i = 0; i < c; i++ )
 		{
 			CEmphasisSample *sample = &m_EmphasisSamples[i];
-			Assert( sample );
+			contract_assert( sample );
 			buf.write< float >( sample->time );
 			short scaledValue = (short)clamp( sample->value * 32767.0f, 0.0f, 32767.0f );
 			buf.write< short >( scaledValue );
@@ -945,7 +916,7 @@ int CSentence::GetRuntimePhonemeCount() const
 
 const CBasePhonemeTag *CSentence::GetRuntimePhoneme( int i ) const
 {
-	Assert( m_bIsCached );
+	contract_assert( m_bIsCached );
 	return m_RunTimePhonemes[ i ];
 }
 
@@ -961,7 +932,7 @@ void CSentence::ClearRuntimePhonemes()
 
 void CSentence::AddRuntimePhoneme( const CPhonemeTag *src )
 {
-	Assert( m_bIsCached );
+	contract_assert( m_bIsCached );
 
 	CBasePhonemeTag *tag = new CBasePhonemeTag();
 	*tag = *src;
@@ -972,7 +943,6 @@ void CSentence::AddRuntimePhoneme( const CPhonemeTag *src )
 void CSentence::MakeRuntimeOnly()
 {
 	m_bIsCached = true;
-#if PHONEME_EDITOR
 	delete[] m_szText;
 	m_szText = nullptr;
 
@@ -980,12 +950,12 @@ void CSentence::MakeRuntimeOnly()
 	for ( int i = 0; i < c; ++i )
 	{
 		CWordTag *word = m_Words[ i ];
-		Assert( word );
+		contract_assert( word );
 		int pcount = std::ssize( word->m_Phonemes );
 		for ( int j = 0; j < pcount; ++j )
 		{
 			CPhonemeTag *phoneme = word->m_Phonemes[ j ];
-			Assert( phoneme );
+			contract_assert( phoneme );
 
 			AddRuntimePhoneme( phoneme );
 		}
@@ -998,15 +968,13 @@ void CSentence::MakeRuntimeOnly()
 		delete word;
 		m_Words.erase( m_Words.begin() + 0 );
 	}
-#endif
 	m_bIsValid = true;
 }
 
 
 void CSentence::SaveToBuffer( ks::text_writer& buf )
 {
-#if PHONEME_EDITOR
-	Assert( !m_bIsCached );
+	contract_assert( !m_bIsCached );
 
 	int i, j;
 
@@ -1021,7 +989,7 @@ void CSentence::SaveToBuffer( ks::text_writer& buf )
 	for ( i = 0; i < std::ssize( m_Words ); i++ )
 	{
 		CWordTag *word = m_Words[ i ];
-		Assert( word );
+		contract_assert( word );
 
 		buf.printf( "WORD %s %.3f %.3f\n", 
 			word->GetWord(),
@@ -1032,7 +1000,7 @@ void CSentence::SaveToBuffer( ks::text_writer& buf )
 		for ( j = 0; j < std::ssize( word->m_Phonemes ); j++ )
 		{
 			CPhonemeTag *phoneme = word->m_Phonemes[ j ];
-			Assert( phoneme );
+			contract_assert( phoneme );
 
 			buf.printf( "%i %s %.3f %.3f 1\n", 
 				phoneme->GetPhonemeCode(), 
@@ -1050,7 +1018,7 @@ void CSentence::SaveToBuffer( ks::text_writer& buf )
 	for ( i = 0; i < c; i++ )
 	{
 		CEmphasisSample *sample = &m_EmphasisSamples[ i ];
-		Assert( sample );
+		contract_assert( sample );
 
 		buf.printf( "%f %f\n", sample->time, sample->value );
 	}
@@ -1064,9 +1032,6 @@ void CSentence::SaveToBuffer( ks::text_writer& buf )
 		buf.printf( "checksum %d\n", m_uCheckSum );
 	}
 	buf.printf( "}\n" );
-#else
-	Assert( 0 );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1095,14 +1060,14 @@ void CSentence::InitFromBuffer( ks::text_reader& buf )
 		return;
 
 	ReadWord( buf, token, sizeof( token ) );
-	if ( atof( token ) == 1.0f )
+	if ( std::atof( token ) == 1.0f )
 	{
 		ParseDataVersionOnePointZero( buf );
 		m_bIsValid = true;
 	}
 	else
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 }
@@ -1113,12 +1078,7 @@ void CSentence::InitFromBuffer( ks::text_reader& buf )
 //-----------------------------------------------------------------------------
 int CSentence::GetWordBase( void )
 {
-#if PHONEME_EDITOR
 	return m_nResetWordBase;
-#else
-	Assert( 0 );
-	return 0;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1126,14 +1086,12 @@ int CSentence::GetWordBase( void )
 //-----------------------------------------------------------------------------
 void CSentence::ResetToBase( void )
 {
-#if PHONEME_EDITOR
 	// Delete everything after m_nResetWordBase
 	while ( std::ssize( m_Words ) > m_nResetWordBase )
 	{
 		delete m_Words[ std::ssize( m_Words ) - 1 ];
 		m_Words.erase( m_Words.begin() + ( std::ssize( m_Words ) - 1 ) );
 	}
-#endif
 	ClearRuntimePhonemes();
 }
 
@@ -1142,9 +1100,7 @@ void CSentence::ResetToBase( void )
 //-----------------------------------------------------------------------------
 void CSentence::MarkNewPhraseBase( void )
 {
-#if PHONEME_EDITOR
 	m_nResetWordBase = std::max<long int>( std::ssize( m_Words ), 0 );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1152,7 +1108,6 @@ void CSentence::MarkNewPhraseBase( void )
 //-----------------------------------------------------------------------------
 void CSentence::Reset( void )
 {
-#if PHONEME_EDITOR
 	m_nResetWordBase = 0;
 
 	while ( !m_Words.empty() )
@@ -1160,7 +1115,6 @@ void CSentence::Reset( void )
 		delete m_Words[ 0 ];
 		m_Words.erase( m_Words.begin() + 0 );
 	}
-#endif
 	m_EmphasisSamples.clear();
 
 	ClearRuntimePhonemes();
@@ -1181,9 +1135,7 @@ void CSentence::AddPhonemeTag( CWordTag *word, CPhonemeTag *tag )
 //-----------------------------------------------------------------------------
 void CSentence::AddWordTag( CWordTag *tag )
 {
-#if PHONEME_EDITOR
 	m_Words.push_back( tag );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1193,13 +1145,11 @@ void CSentence::AddWordTag( CWordTag *tag )
 int CSentence::CountPhonemes( void )
 {
 	int c = 0;
-#if PHONEME_EDITOR
 	for( int i = 0; i < std::ssize( m_Words ); i++ )
 	{
 		CWordTag *word = m_Words[ i ];
 		c += std::ssize( word->m_Phonemes );
 	}
-#endif
 	return c;
 }
 
@@ -1210,7 +1160,6 @@ int CSentence::CountPhonemes( void )
 //-----------------------------------------------------------------------------
 CWordTag *CSentence::EstimateBestWord( float time )
 {
-#if PHONEME_EDITOR
 	CWordTag *bestWord = nullptr;
 
 	for( int i = 0; i < std::ssize( m_Words ); i++ )
@@ -1242,7 +1191,6 @@ CWordTag *CSentence::EstimateBestWord( float time )
 	{
 		return m_Words[ std::ssize( m_Words ) - 1 ];
 	}
-#endif
 	// Oh well
 	return nullptr;
 }
@@ -1254,7 +1202,6 @@ CWordTag *CSentence::EstimateBestWord( float time )
 //-----------------------------------------------------------------------------
 CWordTag *CSentence::GetWordForPhoneme( CPhonemeTag *phoneme )
 {
-#if PHONEME_EDITOR
 	for( int i = 0; i < std::ssize( m_Words ); i++ )
 	{
 		CWordTag *word = m_Words[ i ];
@@ -1271,7 +1218,6 @@ CWordTag *CSentence::GetWordForPhoneme( CPhonemeTag *phoneme )
 		}
 
 	}
-#endif
 	return nullptr;
 }
 
@@ -1289,7 +1235,6 @@ CSentence& CSentence::operator=( const CSentence& src )
 
 	int c;
 
-#if PHONEME_EDITOR
 	// Copy everything
 	for ( i = 0 ; i < std::ssize( src.m_Words ); i++ )
 	{
@@ -1309,14 +1254,13 @@ CSentence& CSentence::operator=( const CSentence& src )
 		CEmphasisSample s = src.m_EmphasisSamples[ i ];
 		m_EmphasisSamples.push_back( s );
 	}
-#endif
 
 	m_bIsCached = src.m_bIsCached;
 
 	c = src.GetRuntimePhonemeCount();
 	for ( i = 0; i < c; i++ )
 	{
-		Assert( m_bIsCached );
+		contract_assert( m_bIsCached );
 
 		const CBasePhonemeTag *tag = src.GetRuntimePhoneme( i );
 		CPhonemeTag full;
@@ -1326,10 +1270,8 @@ CSentence& CSentence::operator=( const CSentence& src )
 	}
 
 	m_bShouldVoiceDuck = src.m_bShouldVoiceDuck;
-#if PHONEME_EDITOR
 	m_bStoreCheckSum = src.m_bStoreCheckSum;
 	m_uCheckSum = src.m_uCheckSum;
-#endif
 	m_bIsValid = src.m_bIsValid;
 
 	return (*this);
@@ -1337,7 +1279,6 @@ CSentence& CSentence::operator=( const CSentence& src )
 
 void CSentence::Append( float starttime, const CSentence& src )
 {
-#if PHONEME_EDITOR
 	int i;
 	// Combine
 	for ( i = 0 ; i < std::ssize( src.m_Words ); i++ )
@@ -1366,11 +1307,11 @@ void CSentence::Append( float starttime, const CSentence& src )
 		char fulltext[ 4096 ];
 		if ( GetText()[ 0 ] )
 		{
-			Q_snprintf( fulltext, sizeof( fulltext ), "%s %s", GetText(), src.GetText() );
+			V_snprintf( fulltext, sizeof( fulltext ), "%s %s", GetText(), src.GetText() );
 		}
 		else
 		{
-			Q_strncpy( fulltext, src.GetText(), sizeof( fulltext ) );
+			V_strncpy( fulltext, src.GetText(), sizeof( fulltext ) );
 		}
 		SetText( fulltext );
 	}
@@ -1387,9 +1328,6 @@ void CSentence::Append( float starttime, const CSentence& src )
 
 	// Or in voice duck settings
 	m_bShouldVoiceDuck |= src.m_bShouldVoiceDuck;
-#else
-	Assert( 0 );
-#endif
 }
 
 
@@ -1399,7 +1337,6 @@ void CSentence::Append( float starttime, const CSentence& src )
 //-----------------------------------------------------------------------------
 void CSentence::SetText( const char *text )
 {
-#if PHONEME_EDITOR
 	delete[] m_szText;
 	m_szText = nullptr;
 
@@ -1408,12 +1345,11 @@ void CSentence::SetText( const char *text )
 		return;
 	}
 
-	int len = Q_strlen( text ) + 1;
+	int len = V_strlen( text ) + 1;
 
 	m_szText = new char[ len ];
-	Assert( m_szText );
-	Q_strncpy( m_szText, text, len );
-#endif
+	contract_assert( m_szText );
+	V_strncpy( m_szText, text, len );
 }
 
 //-----------------------------------------------------------------------------
@@ -1422,11 +1358,7 @@ void CSentence::SetText( const char *text )
 //-----------------------------------------------------------------------------
 const char *CSentence::GetText( void ) const
 {
-#if PHONEME_EDITOR
 	return m_szText ? m_szText : "";
-#else
-	return "";
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1434,23 +1366,21 @@ const char *CSentence::GetText( void ) const
 //-----------------------------------------------------------------------------
 void CSentence::SetTextFromWords( void )
 {
-#if PHONEME_EDITOR
 	char fulltext[ 1024 ];
 	fulltext[ 0 ] = 0;
 	for ( int i = 0 ; i < std::ssize( m_Words ); i++ )
 	{
 		CWordTag *word = m_Words[ i ];
 
-		Q_strncat( fulltext, word->GetWord(), sizeof( fulltext ), COPY_ALL_CHARACTERS );
+		V_strncat( fulltext, word->GetWord(), sizeof( fulltext ), COPY_ALL_CHARACTERS );
 
 		if ( i != std::ssize( m_Words ) )
 		{
-			Q_strncat( fulltext, " ", sizeof( fulltext ), COPY_ALL_CHARACTERS );
+			V_strncat( fulltext, " ", sizeof( fulltext ), COPY_ALL_CHARACTERS );
 		}
 	}
 
 	SetText( fulltext );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1587,7 +1517,6 @@ CEmphasisSample *CSentence::GetSample( int index )
 
 void CSentence::GetEstimatedTimes( float& start, float &end )
 {
-#if PHONEME_EDITOR
 	float beststart = 100000.0f;
 	float bestend = -100000.0f;
 
@@ -1601,7 +1530,7 @@ void CSentence::GetEstimatedTimes( float& start, float &end )
 	for ( int i = 0; i< c; i++ )
 	{
 		CWordTag *w = m_Words[ i ];
-		Assert( w );
+		contract_assert( w );
 		if ( w->m_flStartTime < beststart )
 		{
 			beststart = w->m_flStartTime;
@@ -1614,37 +1543,33 @@ void CSentence::GetEstimatedTimes( float& start, float &end )
 
 	if ( beststart == 100000.0f )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		beststart = 0.0f;
 	}
 	if ( bestend == -100000.0f )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		bestend = 1.0f;
 	}
 	start = beststart;
 	end = bestend;
-#endif
 }
 
 void CSentence::SetDataCheckSum( unsigned int chk )
 {
-#if PHONEME_EDITOR
 	m_bStoreCheckSum = true;
 	m_uCheckSum = chk;
-#endif
 }
 
 unsigned int CSentence::ComputeDataCheckSum()
 {
-#if PHONEME_EDITOR
 	int i;
 	int c;
 	CRC32_t crc;
 	CRC32_Init( &crc );
 
 	// Checksum the text
-	CRC32_ProcessBuffer( &crc, GetText(), Q_strlen( GetText() ) );
+	CRC32_ProcessBuffer( &crc, GetText(), V_strlen( GetText() ) );
 	// Checsum words and phonemes
 	c = std::ssize( m_Words );
 	for ( i = 0; i < c; ++i )
@@ -1665,25 +1590,16 @@ unsigned int CSentence::ComputeDataCheckSum()
 	CRC32_Final( &crc );
 
 	return ( unsigned int )crc;
-#else
-	Assert( 0 );
-	return 0;
-#endif
 }
 
 unsigned int CSentence::GetDataCheckSum() const
 {
-#if PHONEME_EDITOR
-	Assert( m_bStoreCheckSum );
-	Assert( m_uCheckSum != 0 );
+	contract_assert( m_bStoreCheckSum );
+	contract_assert( m_uCheckSum != 0 );
 	return m_uCheckSum;
-#else
-	Assert( 0 );
-	return 0;
-#endif
 }
 
-#define STARTEND_TIMEGAP 0.1
+constexpr auto STARTEND_TIMEGAP = 0.1;
 
 int CSentence::CountWords( char const *str )
 {
@@ -1738,7 +1654,7 @@ bool CSentence::ShouldSplitWord( char in )
 
 void CSentence::CreateEventWordDistribution( char const *pszText, float flSentenceDuration )
 {
-	Assert( pszText );
+	contract_assert( pszText );
 	if ( !pszText )
 		return;
 
@@ -1771,10 +1687,10 @@ void CSentence::CreateEventWordDistribution( char const *pszText, float flSenten
 				in++;
 			}
 			
-			if ( strlen( word ) > 0 )
+			if ( std::strlen( word ) > 0 )
 			{
 				CWordTag *w = new CWordTag();
-				Assert( w );
+				contract_assert( w );
 				w->SetWord( word );
 				w->m_flStartTime = wordStart;
 				w->m_flEndTime = wordStart + wordLength;
@@ -1790,10 +1706,10 @@ void CSentence::CreateEventWordDistribution( char const *pszText, float flSenten
 	
 	*out = 0;
 
-	if ( strlen( word ) > 0 )
+	if ( std::strlen( word ) > 0 )
 	{
 		CWordTag *w = new CWordTag();
-		Assert( w );
+		contract_assert( w );
 		w->SetWord( word );
 		w->m_flStartTime = wordStart;
 		w->m_flEndTime = wordStart + wordLength;
@@ -1803,5 +1719,3 @@ void CSentence::CreateEventWordDistribution( char const *pszText, float flSenten
 		wordStart += wordLength;
 	}
 }
-
-

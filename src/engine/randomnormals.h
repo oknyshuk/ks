@@ -1,12 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // NOTE!  These are in random order unlike anorms.h
 // Generated with genrandomnormals 162
+import std;
+import ks.math;
+
+inline constexpr auto NUMRANDOMNORMALS = 162;
+
+inline const Vector g_RandomNormals[NUMRANDOMNORMALS] = {
 Vector( 0.825743, 0.538446, -0.168001 ),
 Vector( -0.843591, -0.159277, 0.512821 ),
 Vector( -0.378488, 0.340066, 0.860873 ),
@@ -169,3 +172,4 @@ Vector( -0.331229, 0.825373, 0.457217 ),
 Vector( -0.497307, -0.798584, 0.339041 ),
 Vector( -0.993168, -0.107407, 0.045615 ),
 Vector( -0.075242, -0.230753, -0.970099 ),
+};

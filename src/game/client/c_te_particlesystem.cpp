@@ -1,11 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"	   
 #include "c_te_particlesystem.h"
@@ -45,7 +51,7 @@ int		ramp3[][3] =
 	{ 47, 47, 47 },
 };
 
-#define SPARK_COLORCOUNT	9
+constexpr auto SPARK_COLORCOUNT = 9;
 
 int		gSparkRamp[ SPARK_COLORCOUNT ][3] =
 {
@@ -273,5 +279,3 @@ void CTEParticleRenderer::SimulateParticles( CParticleSimulateIterator *pIterato
 		pParticle = (StandardParticle_t*)pIterator->GetNext();
 	}
 }
-
-

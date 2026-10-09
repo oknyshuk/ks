@@ -1,11 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Directional lighting with cascaded shadow mapping entity.
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef C_ENV_CASCADE_LIGHT_H
-#define C_ENV_CASCADE_LIGHT_H
 
 #include "reflect_annotations.h"
 #include "dt_recv.h"
@@ -208,5 +205,3 @@ private:
 };
 
 extern CCascadeLightManager g_CascadeLightManager;
-
-#endif // C_ENV_CASCADE_LIGHT_H

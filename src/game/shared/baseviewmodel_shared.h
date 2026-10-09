@@ -1,25 +1,21 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BASEVIEWMODEL_SHARED_H
-#define BASEVIEWMODEL_SHARED_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 #include "const.h"
 #include "shareddefs.h"
 
 #include "predictable_entity.h"
-#include "utlvector.h"
+import std;
 #include "baseplayer_shared.h"
 #include "shared_classnames.h"
 #include "ihasowner.h"
 
 #include "cs_shareddefs.h"
+#include "weapon_parse.h"
 
 void RecvProxy_EffectFlags( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
@@ -63,7 +59,7 @@ private:
 
 #endif
 
-#define VIEWMODEL_INDEX_BITS 1
+inline constexpr auto VIEWMODEL_INDEX_BITS = 1;
 
 class [[= ks::reflect::NetTable{ .name = "DT_BaseViewModel", .base = false } ]]
       [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex, .side = ks::reflect::WireSide::Send }>{} ]]
@@ -94,8 +90,6 @@ public:
 	DECLARE_NETWORKCLASS();
 	DECLARE_PREDICTABLE();
 
-#if !defined( CLIENT_DLL )
-#endif
 
 							CBaseViewModel( void );
 							~CBaseViewModel( void );
@@ -314,7 +308,7 @@ private:
 inline CBaseViewModel *ToBaseViewModel( CBaseAnimating *pAnim )
 {
 	if ( pAnim && pAnim->IsViewModel() )
-		return assert_cast<CBaseViewModel *>(pAnim);
+		return static_cast<CBaseViewModel *>(pAnim);
 	return nullptr;
 }
 
@@ -324,5 +318,3 @@ inline CBaseViewModel *ToBaseViewModel( CBaseEntity *pEntity )
 		return nullptr;
 	return ToBaseViewModel(pEntity->GetBaseAnimating());
 }
-
-#endif // BASEVIEWMODEL_SHARED_H

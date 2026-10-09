@@ -1,13 +1,17 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "cdll_client_int.h"
 #include "sharedInterface.h"
 #include "materialsystem/imaterial.h"
-#include <keyvalues.h>
 #include "materialsystem/imaterialvar.h"
 #include "functionproxy.h"
 
@@ -36,7 +40,7 @@ bool CAddProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 void CAddProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pSrc1 && m_pSrc2 && m_pResult );
+	contract_assert( m_pSrc1 && m_pSrc2 && m_pResult );
 
 	MaterialVarType_t resultType;
 	int vecSize;
@@ -88,8 +92,8 @@ bool CModProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 void CModProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pSrc1 && m_pSrc2 && m_pResult );
-	SetFloatResult(  fmod( m_pSrc1->GetFloatValue(), m_pSrc2->GetFloatValue() )  );
+	contract_assert( m_pSrc1 && m_pSrc2 && m_pResult );
+	SetFloatResult(  std::fmod( m_pSrc1->GetFloatValue(), m_pSrc2->GetFloatValue() )  );
 }
 
 EXPOSE_MATERIAL_PROXY( CModProxy, Modulo );
@@ -116,7 +120,7 @@ bool CSubtractProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 void CSubtractProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pSrc1 && m_pSrc2 && m_pResult );
+	contract_assert( m_pSrc1 && m_pSrc2 && m_pResult );
 
 	MaterialVarType_t resultType;
 	int vecSize;
@@ -168,7 +172,7 @@ bool CMultiplyProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 void CMultiplyProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pSrc1 && m_pSrc2 && m_pResult );
+	contract_assert( m_pSrc1 && m_pSrc2 && m_pResult );
 
 	MaterialVarType_t resultType;
 	int vecSize;
@@ -221,7 +225,7 @@ bool CDivideProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 void CDivideProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pSrc1 && m_pSrc2 && m_pResult );
+	contract_assert( m_pSrc1 && m_pSrc2 && m_pResult );
 
 	MaterialVarType_t resultType;
 	int vecSize;
@@ -296,7 +300,7 @@ bool CClampProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 void CClampProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pSrc1 && m_pResult );
+	contract_assert( m_pSrc1 && m_pResult );
 
 	MaterialVarType_t resultType;
 	int vecSize;
@@ -396,7 +400,7 @@ bool CSineProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 void CSineProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pResult );
+	contract_assert( m_pResult );
 
 	float flValue;
 	float flSineTimeOffset = m_SineTimeOffset.GetFloat();
@@ -407,7 +411,7 @@ void CSineProxy::OnBind( void *pC_BaseEntity )
 		flSinePeriod = 1;
 
 	// get a value in [0,1]
-	flValue = ( sin( 2.0f * M_PI * (gpGlobals->curtime - flSineTimeOffset) / flSinePeriod ) * 0.5f ) + 0.5f;
+	flValue = ( std::sin( 2.0f * std::numbers::pi * (gpGlobals->curtime - flSineTimeOffset) / flSinePeriod ) * 0.5f ) + 0.5f;
 	// get a value in [min,max]	
 	flValue = ( flSineMax - flSineMin ) * flValue + flSineMin;
 	
@@ -429,7 +433,7 @@ public:
 
 void CEqualsProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pSrc1 && m_pResult );
+	contract_assert( m_pSrc1 && m_pResult );
 
 	MaterialVarType_t resultType;
 	int vecSize;
@@ -472,7 +476,7 @@ public:
 
 void CFracProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pSrc1 && m_pResult );
+	contract_assert( m_pSrc1 && m_pResult );
 
 	MaterialVarType_t resultType;
 	int vecSize;
@@ -521,7 +525,7 @@ public:
 
 void CIntProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pSrc1 && m_pResult );
+	contract_assert( m_pSrc1 && m_pResult );
 
 	MaterialVarType_t resultType;
 	int vecSize;
@@ -588,7 +592,7 @@ bool CLinearRampProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 void CLinearRampProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pResult );
+	contract_assert( m_pResult );
 
 	float flValue;
 	
@@ -667,10 +671,10 @@ bool CGaussianNoiseProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 	if (!m_StdDev.Init( pMaterial, pKeyValues, "halfwidth", 1.0f ))
 		return false;
 
-	if (!m_flMinVal.Init( pMaterial, pKeyValues, "minVal", -FLT_MAX ))
+	if (!m_flMinVal.Init( pMaterial, pKeyValues, "minVal", -std::numeric_limits<float>::max() ))
 		return false;
 
-	if (!m_flMaxVal.Init( pMaterial, pKeyValues, "maxVal", FLT_MAX ))
+	if (!m_flMaxVal.Init( pMaterial, pKeyValues, "maxVal", std::numeric_limits<float>::max() ))
 		return false;
 
 	return true;
@@ -732,10 +736,10 @@ bool CExponentialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 	if (!m_Offset.Init( pMaterial, pKeyValues, "offset", 0.0f ))
 		return false;
 
-	if (!m_flMinVal.Init( pMaterial, pKeyValues, "minVal", -FLT_MAX ))
+	if (!m_flMinVal.Init( pMaterial, pKeyValues, "minVal", -std::numeric_limits<float>::max() ))
 		return false;
 
-	if (!m_flMaxVal.Init( pMaterial, pKeyValues, "maxVal", FLT_MAX ))
+	if (!m_flMaxVal.Init( pMaterial, pKeyValues, "maxVal", std::numeric_limits<float>::max() ))
 		return false;
 
 	return true;
@@ -743,7 +747,7 @@ bool CExponentialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 void CExponentialProxy::OnBind( void *pC_BaseEntity )
 {	
-	float flVal = m_Scale.GetFloat() * exp(m_pSrc1->GetFloatValue( ) + m_Offset.GetFloat());
+	float flVal = m_Scale.GetFloat() * std::exp(m_pSrc1->GetFloatValue( ) + m_Offset.GetFloat());
 
 	float flMaxVal = m_flMaxVal.GetFloat();
 	float flMinVal = m_flMinVal.GetFloat();
@@ -847,7 +851,7 @@ bool CLessOrEqualProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 void CLessOrEqualProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pSrc1 && m_pSrc2 && m_pLessVar && m_pGreaterVar && m_pResult );
+	contract_assert( m_pSrc1 && m_pSrc2 && m_pLessVar && m_pGreaterVar && m_pResult );
 
 	IMaterialVar *pSourceVar;
 	if (m_pSrc1->GetFloatValue() <= m_pSrc2->GetFloatValue())
@@ -928,7 +932,7 @@ bool CWrapMinMaxProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 void CWrapMinMaxProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pSrc1 && m_pResult );
+	contract_assert( m_pSrc1 && m_pResult );
 
 	if ( m_flMaxVal.GetFloat() <= m_flMinVal.GetFloat() ) // Bad input, just return the min
 	{
@@ -995,7 +999,7 @@ bool CRemapValClampedProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 void CRemapValClampedProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pSrc1 && m_pResult );
+	contract_assert( m_pSrc1 && m_pResult );
 
 	MaterialVarType_t resultType;
 	int vecSize;

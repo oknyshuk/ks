@@ -1,30 +1,21 @@
-//========= Copyright  1996-2012, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2012 Valve Corporation
+
 // Purpose: Provide custom texture generation (compositing) for use on weapons and clothing
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef CUSTOM_MATERIAL_H
-#define CUSTOM_MATERIAL_H
-
+import ks.tier1;
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/icustommaterial.h"
 #include "materialsystem/icustommaterialmanager.h"
-#include "convar.h"
-#include "utlvector.h"
-#include <map>
-#include <memory>
-#include <string>
+import std;
 
 //#define DISABLE_CUSTOM_MATERIAL_GENERATION
-
 
 class IVisualsDataProcessor;
 class IVisualsDataCompare;
 class ICompositeTexture;
 class CCompositeTexture;
-class KeyValues;
 
 //
 // Custom Materials
@@ -97,14 +88,15 @@ public:
 	virtual bool GetVMTKeyValues( const char *pszVMTName, KeyValues **ppVMTKeyValues );
 
 private:
-	CON_COMMAND_MEMBER_F( CCustomMaterialManager, "mat_reloadallcustommaterials", ReloadAllMaterials, "Reloads all custom materials", FCVAR_CHEAT | FCVAR_CLIENTDLL );
-	CON_COMMAND_MEMBER_F( CCustomMaterialManager, "mat_custommaterialusage", Usage, "Show memory usage for custom weapon materials.", FCVAR_CLIENTDLL );
-	CON_COMMAND_MEMBER_F( CCustomMaterialManager, "mat_reloadvmtcache", ReloadVmtCache, "Reload vmts from vmtcache.txt.", FCVAR_CHEAT | FCVAR_CLIENTDLL | FCVAR_DEVELOPMENTONLY );
+	void ReloadAllMaterials( const CCommand &args );
+	CConCommandMemberAccessor< CCustomMaterialManager > m_ReloadAllMaterials_register{ this, "mat_reloadallcustommaterials", &CCustomMaterialManager::ReloadAllMaterials, "Reloads all custom materials", FCVAR_CHEAT | FCVAR_CLIENTDLL };
+	void Usage( const CCommand &args );
+	CConCommandMemberAccessor< CCustomMaterialManager > m_Usage_register{ this, "mat_custommaterialusage", &CCustomMaterialManager::Usage, "Show memory usage for custom weapon materials.", FCVAR_CLIENTDLL };
+	void ReloadVmtCache( const CCommand &args );
+	CConCommandMemberAccessor< CCustomMaterialManager > m_ReloadVmtCache_register{ this, "mat_reloadvmtcache", &CCustomMaterialManager::ReloadVmtCache, "Reload vmts from vmtcache.txt.", FCVAR_CHEAT | FCVAR_CLIENTDLL | FCVAR_DEVELOPMENTONLY };
 
 	void DestroyMaterials();
 
 	std::vector< CCustomMaterial * > m_pCustomMaterials;
 	std::map< std::string, std::unique_ptr< KeyValues > > m_mapVMTKeyValues;
 };
-
-#endif // CUSTOM_MATERIAL_H

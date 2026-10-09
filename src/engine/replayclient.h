@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef REPLAYCLIENT_H
-#define REPLAYCLIENT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "baseclient.h"
 
@@ -46,15 +41,15 @@ public:
 	
 public: // IClientMessageHandlers
 	
-	virtual bool NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg ) OVERRIDE;
+	virtual bool NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg ) override;
 
-	virtual bool CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg ) OVERRIDE;
-	virtual bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg ) OVERRIDE;
-	virtual bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg ) OVERRIDE;
-	virtual bool CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg ) OVERRIDE;
+	virtual bool CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg ) override;
+	virtual bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg ) override;
+	virtual bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg ) override;
+	virtual bool CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg ) override;
 	
-	virtual bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg ) OVERRIDE;
-	virtual bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg ) OVERRIDE;
+	virtual bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg ) override;
+	virtual bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg ) override;
 
 public:
 	CClientFrame *GetDeltaFrame( int nTick );
@@ -68,6 +63,3 @@ public:
 	char	m_szChatGroup[64];	// client password
 	CReplayServer *m_pReplay;
 };
-
-
-#endif // REPLAYCLIENT_H

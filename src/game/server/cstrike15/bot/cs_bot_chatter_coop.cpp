@@ -1,11 +1,29 @@
-//============== Copyright Valve Corporation, All rights reserved. ============//
-//
-/// Custom chatter rules for bots when playing in cooperative modes
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+// Purpose: / Custom chatter rules for bots when playing in cooperative modes
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "cs_player.h"
 
 #include "bot_util.h"

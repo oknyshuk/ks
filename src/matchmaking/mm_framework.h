@@ -1,26 +1,12 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef MM_FRAMEWORK_H
-#define MM_FRAMEWORK_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 
-#include "tier0/dbg.h"
-#include "tier0/icommandline.h"
+import std;
 
-#include "tier1/strtools.h"
-#include "tier1/checksum_crc.h"
-#include "tier1/keyvalues.h"
-#include "tier1/fmtstr.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include <vector>
 
-#include "mathlib/mathlib.h"
-
+import ks.vstdlib;
 #include "const.h"
 
 #include "inetmsghandler.h"
@@ -29,10 +15,8 @@
 #include "igameevents.h"
 
 #include "tier2/tier2.h"
-#include "vstdlib/jobthread.h"
 
 #include "extkeyvalues.h"
-#include "steam_apihook.h"
 
 
 class CMatchFramework;
@@ -46,15 +30,6 @@ class CMatchFramework;
 
 #include "matchsystem.h"
 #include "playermanager.h"
-
-enum MatchFrameworkInviteFlags_t
-{
-	// Indicates that invite was received using console mechanisms (XMB/boot/etc.)
-	MM_INVITE_FLAG_CONSOLE	= ( 1 << 0 ),
-	// Indicates that the game was booted through a Steam invite
-	MM_INVITE_FLAG_PCBOOT	= ( 1 << 1 ),
-};
-
 
 class CMatchFramework :
 	public CTier2AppSystem< IMatchFramework >,
@@ -101,9 +76,6 @@ public:
 	// Entry point to match into a session
 	virtual void MatchSession( KeyValues *pSettings );
 
-	// Accept invite
-	virtual void AcceptInvite( int iController );
-
 	// Close the session
 	virtual void CloseSession();
 
@@ -126,10 +98,6 @@ public:
 
 public:
 	void SetCurrentMatchSession( IMatchSessionInternal *pNewMatchSession );
-	uint64 GetLastInviteFlags();
-
-protected:
-	void RunFrame_Invite();
 
 public:
 	CMatchFramework();
@@ -146,5 +114,3 @@ extern CMatchFramework *g_pMMF;
 
 extern const char *COM_GetModDirectory();
 extern bool IsLocalClientConnectedToServer();
-
-#endif // MM_FRAMEWORK_H

@@ -1,18 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Revision: $
-// $NoKeywords: $
-//
-// The BSP tree leaf data system
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "basetypes.h"
+// Purpose: The BSP tree leaf data system
+
+import std;
+import ks.tier1;
 #include "bsptreedata.h"
-#include "utlvector.h"
-#include "tier0/dbg.h"
 
 //-----------------------------------------------------------------------------
 // The BSP tree leaf data system
@@ -125,7 +118,7 @@ CBSPTreeData::~CBSPTreeData()
 
 void CBSPTreeData::Init( ISpatialQuery* pBSPTree )
 {
-	Assert( pBSPTree );
+	contract_assert( pBSPTree );
 	m_pBSPTree = pBSPTree;
 
 	m_Handles.reserve( 1024 );
@@ -161,7 +154,7 @@ BSPTreeDataHandle_t CBSPTreeData::NewHandle( int userId )
 	}
 	m_Handles[handle].m_UserId = userId;
 	m_Handles[handle].m_bInUse = true;
-	Assert( m_Handles[handle].m_Leaves.empty() );
+	contract_assert( m_Handles[handle].m_Leaves.empty() );
 
 	return handle;
 }
@@ -262,22 +255,16 @@ bool CBSPTreeData::IsElementInTree( BSPTreeDataHandle_t handle ) const
 bool CBSPTreeData::EnumerateElementsInLeaf( int leaf, IBSPTreeDataEnumerator* pEnum, intp context )
 {
 	const std::vector< BSPTreeDataHandle_t > &elements = m_Leaf[leaf].m_Elements;
-#ifdef DBGFLAG_ASSERT
-	// The enumeration method better damn well not change this list...
-	size_t nCount = elements.size();
-#endif
 
 	// Newest first
-	for ( size_t i = elements.size(); i-- > 0; )
+	for ( std::size_t i = elements.size(); i-- > 0; )
 	{
 		if (!pEnum->EnumerateElement( m_Handles[elements[i]].m_UserId, context ))
 		{
-			Assert( elements.size() == nCount );
 			return false;
 		}
 	}
 
-	Assert( elements.size() == nCount );
 
 	return true;
 }
@@ -305,4 +292,3 @@ bool CBSPTreeData::EnumerateLeavesAlongRay( Ray_t const& ray, ISpatialLeafEnumer
 {
 	return m_pBSPTree->EnumerateLeavesAlongRay( ray, pEnum, context );
 }
-

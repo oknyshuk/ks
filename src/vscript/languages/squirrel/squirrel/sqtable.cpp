@@ -1,7 +1,14 @@
 /*
 see copyright notice in squirrel.h
 */
-#include "sqpcheader.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+
+#include <squirrel.h>
+#include "sqobject.h"
+#include "sqstate.h"
 #include "sqvm.h"
 #include "sqtable.h"
 #include "sqfuncproto.h"
@@ -97,7 +104,7 @@ bool SQTable::Get(const SQObjectPtr &key,SQObjectPtr &val)
 }
 bool SQTable::NewSlot(const SQObjectPtr &key,const SQObjectPtr &val)
 {
-	Assert(type(key) != OT_NULL);
+	contract_assert( type(key) != OT_NULL );
 	SQHash h = HashObj(key) & (_numofnodes - 1);
 	_HashNode *n = _Get(key, h);
 	if (n) {
@@ -119,7 +126,7 @@ bool SQTable::NewSlot(const SQObjectPtr &key,const SQObjectPtr &val)
 		if (mp > n && (othern = &_nodes[mph]) != mp){
 			/* yes; move colliding node into free position */
 			while (othern->next != mp){
-				Assert(othern->next != nullptr);
+				contract_assert( othern->next != nullptr );
 				othern = othern->next;  /* find previous */
 			}
 			othern->next = n;  /* redo the chain with `n' in place of `mp' */

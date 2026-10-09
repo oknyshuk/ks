@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $SFM == 0 ) && ( $UBERLIGHT == 1 )
 // ( $FLASHLIGHT != 0 ) && ( $NUM_LIGHTS > 0 )				
@@ -38,7 +39,7 @@ private:
 public:
 	void SetSFM( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nSFM = i;
 #ifdef _DEBUG
 		m_bSFM = true;
@@ -46,7 +47,7 @@ public:
 	}
 	void SetSFM( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nSFM = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSFM = true;
@@ -60,7 +61,7 @@ private:
 public:
 	void SetCUBEMAP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCUBEMAP = i;
 #ifdef _DEBUG
 		m_bCUBEMAP = true;
@@ -68,7 +69,7 @@ public:
 	}
 	void SetCUBEMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCUBEMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCUBEMAP = true;
@@ -82,7 +83,7 @@ private:
 public:
 	void SetDIFFUSELIGHTING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDIFFUSELIGHTING = i;
 #ifdef _DEBUG
 		m_bDIFFUSELIGHTING = true;
@@ -90,7 +91,7 @@ public:
 	}
 	void SetDIFFUSELIGHTING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDIFFUSELIGHTING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDIFFUSELIGHTING = true;
@@ -104,7 +105,7 @@ private:
 public:
 	void SetLIGHTWARPTEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nLIGHTWARPTEXTURE = i;
 #ifdef _DEBUG
 		m_bLIGHTWARPTEXTURE = true;
@@ -112,7 +113,7 @@ public:
 	}
 	void SetLIGHTWARPTEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nLIGHTWARPTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bLIGHTWARPTEXTURE = true;
@@ -126,7 +127,7 @@ private:
 public:
 	void SetSELFILLUM( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSELFILLUM = i;
 #ifdef _DEBUG
 		m_bSELFILLUM = true;
@@ -134,7 +135,7 @@ public:
 	}
 	void SetSELFILLUM( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSELFILLUM = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSELFILLUM = true;
@@ -148,7 +149,7 @@ private:
 public:
 	void SetSELFILLUMFRESNEL( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSELFILLUMFRESNEL = i;
 #ifdef _DEBUG
 		m_bSELFILLUMFRESNEL = true;
@@ -156,7 +157,7 @@ public:
 	}
 	void SetSELFILLUMFRESNEL( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSELFILLUMFRESNEL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSELFILLUMFRESNEL = true;
@@ -170,7 +171,7 @@ private:
 public:
 	void SetNORMALMAPALPHAENVMAPMASK( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nNORMALMAPALPHAENVMAPMASK = i;
 #ifdef _DEBUG
 		m_bNORMALMAPALPHAENVMAPMASK = true;
@@ -178,7 +179,7 @@ public:
 	}
 	void SetNORMALMAPALPHAENVMAPMASK( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nNORMALMAPALPHAENVMAPMASK = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNORMALMAPALPHAENVMAPMASK = true;
@@ -192,7 +193,7 @@ private:
 public:
 	void SetHALFLAMBERT( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nHALFLAMBERT = i;
 #ifdef _DEBUG
 		m_bHALFLAMBERT = true;
@@ -200,7 +201,7 @@ public:
 	}
 	void SetHALFLAMBERT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nHALFLAMBERT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHALFLAMBERT = true;
@@ -214,7 +215,7 @@ private:
 public:
 	void SetFLASHLIGHT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLASHLIGHT = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -222,7 +223,7 @@ public:
 	}
 	void SetFLASHLIGHT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -236,7 +237,7 @@ private:
 public:
 	void SetDETAILTEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDETAILTEXTURE = i;
 #ifdef _DEBUG
 		m_bDETAILTEXTURE = true;
@@ -244,7 +245,7 @@ public:
 	}
 	void SetDETAILTEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDETAILTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAILTEXTURE = true;
@@ -258,7 +259,7 @@ private:
 public:
 	void SetDETAIL_BLEND_MODE( int i )
 	{
-		Assert( i >= 0 && i <= 7 );
+		contract_assert( i >= 0 && i <= 7 );
 		m_nDETAIL_BLEND_MODE = i;
 #ifdef _DEBUG
 		m_bDETAIL_BLEND_MODE = true;
@@ -266,7 +267,7 @@ public:
 	}
 	void SetDETAIL_BLEND_MODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 7 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 7 );
 		m_nDETAIL_BLEND_MODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAIL_BLEND_MODE = true;
@@ -280,7 +281,7 @@ private:
 public:
 	void SetSHADER_SRGB_READ( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nSHADER_SRGB_READ = i;
 #ifdef _DEBUG
 		m_bSHADER_SRGB_READ = true;
@@ -288,7 +289,7 @@ public:
 	}
 	void SetSHADER_SRGB_READ( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nSHADER_SRGB_READ = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSHADER_SRGB_READ = true;
@@ -302,7 +303,7 @@ private:
 public:
 	void SetWORLD_NORMAL( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nWORLD_NORMAL = i;
 #ifdef _DEBUG
 		m_bWORLD_NORMAL = true;
@@ -310,7 +311,7 @@ public:
 	}
 	void SetWORLD_NORMAL( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nWORLD_NORMAL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWORLD_NORMAL = true;
@@ -324,7 +325,7 @@ private:
 public:
 	void SetCASCADED_SHADOW_MAPPING( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nCASCADED_SHADOW_MAPPING = i;
 #ifdef _DEBUG
 		m_bCASCADED_SHADOW_MAPPING = true;
@@ -332,7 +333,7 @@ public:
 	}
 	void SetCASCADED_SHADOW_MAPPING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nCASCADED_SHADOW_MAPPING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCASCADED_SHADOW_MAPPING = true;
@@ -346,7 +347,7 @@ private:
 public:
 	void SetCSM_MODE( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nCSM_MODE = i;
 #ifdef _DEBUG
 		m_bCSM_MODE = true;
@@ -354,7 +355,7 @@ public:
 	}
 	void SetCSM_MODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nCSM_MODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCSM_MODE = true;
@@ -368,7 +369,7 @@ private:
 public:
 	void SetDECAL_BLEND_MODE( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nDECAL_BLEND_MODE = i;
 #ifdef _DEBUG
 		m_bDECAL_BLEND_MODE = true;
@@ -376,7 +377,7 @@ public:
 	}
 	void SetDECAL_BLEND_MODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nDECAL_BLEND_MODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDECAL_BLEND_MODE = true;
@@ -390,7 +391,7 @@ private:
 public:
 	void SetTINTMASKTEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nTINTMASKTEXTURE = i;
 #ifdef _DEBUG
 		m_bTINTMASKTEXTURE = true;
@@ -398,7 +399,7 @@ public:
 	}
 	void SetTINTMASKTEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nTINTMASKTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTINTMASKTEXTURE = true;
@@ -412,7 +413,7 @@ private:
 public:
 	void SetDOPIXELFOG( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nDOPIXELFOG = i;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -420,7 +421,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -509,7 +510,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bSFM && m_bCUBEMAP && m_bDIFFUSELIGHTING && m_bLIGHTWARPTEXTURE && m_bSELFILLUM && m_bSELFILLUMFRESNEL && m_bNORMALMAPALPHAENVMAPMASK && m_bHALFLAMBERT && m_bFLASHLIGHT && m_bDETAILTEXTURE && m_bDETAIL_BLEND_MODE && m_bSHADER_SRGB_READ && m_bWORLD_NORMAL && m_bCASCADED_SHADOW_MAPPING && m_bCSM_MODE && m_bDECAL_BLEND_MODE && m_bTINTMASKTEXTURE && m_bDOPIXELFOG;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 24 * m_nSFM ) + ( 24 * m_nCUBEMAP ) + ( 48 * m_nDIFFUSELIGHTING ) + ( 96 * m_nLIGHTWARPTEXTURE ) + ( 192 * m_nSELFILLUM ) + ( 384 * m_nSELFILLUMFRESNEL ) + ( 768 * m_nNORMALMAPALPHAENVMAPMASK ) + ( 1536 * m_nHALFLAMBERT ) + ( 1536 * m_nFLASHLIGHT ) + ( 3072 * m_nDETAILTEXTURE ) + ( 6144 * m_nDETAIL_BLEND_MODE ) + ( 49152 * m_nSHADER_SRGB_READ ) + ( 49152 * m_nWORLD_NORMAL ) + ( 49152 * m_nCASCADED_SHADOW_MAPPING ) + ( 49152 * m_nCSM_MODE ) + ( 49152 * m_nDECAL_BLEND_MODE ) + ( 147456 * m_nTINTMASKTEXTURE ) + ( 147456 * m_nDOPIXELFOG ) + 0;
 	}
@@ -525,7 +526,7 @@ private:
 public:
 	void SetWRITEWATERFOGTODESTALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nWRITEWATERFOGTODESTALPHA = i;
 #ifdef _DEBUG
 		m_bWRITEWATERFOGTODESTALPHA = true;
@@ -533,7 +534,7 @@ public:
 	}
 	void SetWRITEWATERFOGTODESTALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWRITEWATERFOGTODESTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWRITEWATERFOGTODESTALPHA = true;
@@ -547,7 +548,7 @@ private:
 public:
 	void SetNUM_LIGHTS( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nNUM_LIGHTS = i;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -555,7 +556,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -569,7 +570,7 @@ private:
 public:
 	void SetAMBIENT_LIGHT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nAMBIENT_LIGHT = i;
 #ifdef _DEBUG
 		m_bAMBIENT_LIGHT = true;
@@ -577,7 +578,7 @@ public:
 	}
 	void SetAMBIENT_LIGHT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nAMBIENT_LIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bAMBIENT_LIGHT = true;
@@ -591,7 +592,7 @@ private:
 public:
 	void SetCASCADE_SIZE( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nCASCADE_SIZE = i;
 #ifdef _DEBUG
 		m_bCASCADE_SIZE = true;
@@ -599,7 +600,7 @@ public:
 	}
 	void SetCASCADE_SIZE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nCASCADE_SIZE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCASCADE_SIZE = true;
@@ -613,7 +614,7 @@ private:
 public:
 	void SetSTATICLIGHT3( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nSTATICLIGHT3 = i;
 #ifdef _DEBUG
 		m_bSTATICLIGHT3 = true;
@@ -621,7 +622,7 @@ public:
 	}
 	void SetSTATICLIGHT3( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nSTATICLIGHT3 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSTATICLIGHT3 = true;
@@ -635,7 +636,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -643,7 +644,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -684,7 +685,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bWRITEWATERFOGTODESTALPHA && m_bNUM_LIGHTS && m_bAMBIENT_LIGHT && m_bCASCADE_SIZE && m_bSTATICLIGHT3 && m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nWRITEWATERFOGTODESTALPHA ) + ( 2 * m_nNUM_LIGHTS ) + ( 6 * m_nAMBIENT_LIGHT ) + ( 12 * m_nCASCADE_SIZE ) + ( 12 * m_nSTATICLIGHT3 ) + ( 12 * m_nPIXELFOGTYPE ) + 0;
 	}

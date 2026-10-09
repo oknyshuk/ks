@@ -1,24 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Applicaton-level hooks for clients of the audio subsystem
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef SOUNDSERVICE_H
-#define SOUNDSERVICE_H
-
-
-class Vector;
-class QAngle;
 class CAudioSource;
 typedef int SoundSource;
 struct SpatializationInfo_t;
 typedef void *FileNameHandle_t;
 struct StartSoundParams_t;
 
+import ks.math;
 #include "cdll_int.h"
-#include <set>
+import std;
 
 //-----------------------------------------------------------------------------
 // Purpose: Services required by the audio system to function, this facade
@@ -31,7 +25,7 @@ struct StartSoundParams_t;
 //			diectly (toml 05-02-02)
 //-----------------------------------------------------------------------------
 
-abstract_class ISoundServices
+class ISoundServices
 {
 public:
 	//---------------------------------
@@ -128,5 +122,3 @@ public:
 extern ISoundServices *g_pSoundServices;
 
 //=============================================================================
-
-#endif // SOUNDSERVICE_H

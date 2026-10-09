@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $BACK_SURFACE == 1 ) && ( $LIGHT_WARP > 0 )
 // ( $BACK_SURFACE == 1 ) && ( $FRESNEL_WARP > 0 )
@@ -35,7 +36,7 @@ private:
 public:
 	void SetBACK_SURFACE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBACK_SURFACE = i;
 #ifdef _DEBUG
 		m_bBACK_SURFACE = true;
@@ -43,7 +44,7 @@ public:
 	}
 	void SetBACK_SURFACE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBACK_SURFACE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBACK_SURFACE = true;
@@ -57,7 +58,7 @@ private:
 public:
 	void SetLIGHT_WARP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nLIGHT_WARP = i;
 #ifdef _DEBUG
 		m_bLIGHT_WARP = true;
@@ -65,7 +66,7 @@ public:
 	}
 	void SetLIGHT_WARP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nLIGHT_WARP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bLIGHT_WARP = true;
@@ -79,7 +80,7 @@ private:
 public:
 	void SetFRESNEL_WARP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFRESNEL_WARP = i;
 #ifdef _DEBUG
 		m_bFRESNEL_WARP = true;
@@ -87,7 +88,7 @@ public:
 	}
 	void SetFRESNEL_WARP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFRESNEL_WARP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFRESNEL_WARP = true;
@@ -101,7 +102,7 @@ private:
 public:
 	void SetHIGH_PRECISION_DEPTH( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nHIGH_PRECISION_DEPTH = i;
 #ifdef _DEBUG
 		m_bHIGH_PRECISION_DEPTH = true;
@@ -109,7 +110,7 @@ public:
 	}
 	void SetHIGH_PRECISION_DEPTH( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHIGH_PRECISION_DEPTH = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHIGH_PRECISION_DEPTH = true;
@@ -123,7 +124,7 @@ private:
 public:
 	void SetINTERIOR_LAYER( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nINTERIOR_LAYER = i;
 #ifdef _DEBUG
 		m_bINTERIOR_LAYER = true;
@@ -131,7 +132,7 @@ public:
 	}
 	void SetINTERIOR_LAYER( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nINTERIOR_LAYER = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bINTERIOR_LAYER = true;
@@ -145,7 +146,7 @@ private:
 public:
 	void SetOPACITY_TEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nOPACITY_TEXTURE = i;
 #ifdef _DEBUG
 		m_bOPACITY_TEXTURE = true;
@@ -153,7 +154,7 @@ public:
 	}
 	void SetOPACITY_TEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nOPACITY_TEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bOPACITY_TEXTURE = true;
@@ -167,7 +168,7 @@ private:
 public:
 	void SetFLASHLIGHTDEPTHFILTERMODE( int i )
 	{
-		Assert( i >= 0 && i <= 3 );
+		contract_assert( i >= 0 && i <= 3 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -175,7 +176,7 @@ public:
 	}
 	void SetFLASHLIGHTDEPTHFILTERMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
 		m_nFLASHLIGHTDEPTHFILTERMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTDEPTHFILTERMODE = true;
@@ -189,7 +190,7 @@ private:
 public:
 	void SetCONTACT_SHADOW( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCONTACT_SHADOW = i;
 #ifdef _DEBUG
 		m_bCONTACT_SHADOW = true;
@@ -197,7 +198,7 @@ public:
 	}
 	void SetCONTACT_SHADOW( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCONTACT_SHADOW = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCONTACT_SHADOW = true;
@@ -246,7 +247,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bBACK_SURFACE && m_bLIGHT_WARP && m_bFRESNEL_WARP && m_bHIGH_PRECISION_DEPTH && m_bINTERIOR_LAYER && m_bOPACITY_TEXTURE && m_bFLASHLIGHTDEPTHFILTERMODE && m_bCONTACT_SHADOW;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 20 * m_nBACK_SURFACE ) + ( 40 * m_nLIGHT_WARP ) + ( 80 * m_nFRESNEL_WARP ) + ( 160 * m_nHIGH_PRECISION_DEPTH ) + ( 320 * m_nINTERIOR_LAYER ) + ( 640 * m_nOPACITY_TEXTURE ) + ( 1280 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 5120 * m_nCONTACT_SHADOW ) + 0;
 	}
@@ -262,7 +263,7 @@ private:
 public:
 	void SetNUM_LIGHTS( int i )
 	{
-		Assert( i >= 0 && i <= 4 );
+		contract_assert( i >= 0 && i <= 4 );
 		m_nNUM_LIGHTS = i;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -270,7 +271,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -284,7 +285,7 @@ private:
 public:
 	void SetFLASHLIGHT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLASHLIGHT = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -292,7 +293,7 @@ public:
 	}
 	void SetFLASHLIGHT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -306,7 +307,7 @@ private:
 public:
 	void SetFLASHLIGHTSHADOWS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLASHLIGHTSHADOWS = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = true;
@@ -314,7 +315,7 @@ public:
 	}
 	void SetFLASHLIGHTSHADOWS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHTSHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHTSHADOWS = true;
@@ -343,7 +344,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bNUM_LIGHTS && m_bFLASHLIGHT && m_bFLASHLIGHTSHADOWS;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nNUM_LIGHTS ) + ( 5 * m_nFLASHLIGHT ) + ( 10 * m_nFLASHLIGHTSHADOWS ) + 0;
 	}

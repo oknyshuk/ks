@@ -1,10 +1,26 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.math;
+#include "const.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 
@@ -96,7 +112,7 @@ void WeaponManager_AddManaged( CBaseEntity *pWeapon )
 	{
 		if ( g_Managers[i]->m_iszWeaponName == pWeapon->m_iClassname )
 		{
-			Assert( ks::find_index( g_Managers[i]->m_ManagedNonWeapons, pWeapon ) == -1 );
+			contract_assert( ks::find_index( g_Managers[i]->m_ManagedNonWeapons, pWeapon ) == -1 );
 			g_Managers[i]->m_ManagedNonWeapons.push_back( pWeapon );
 			break;
 		}
@@ -177,7 +193,7 @@ void CGameWeaponManager::Think()
 		CBaseCombatWeapon *pWeapon = nullptr;
 		// Firstly, count the total number of weapons of this type in the world.
 		// Also count how many of those can potentially be removed.
-		pWeapon = assert_cast<CBaseCombatWeapon *>(gEntList.FindEntityByClassname( pWeapon, pszWeaponName ));
+		pWeapon = static_cast<CBaseCombatWeapon *>(gEntList.FindEntityByClassname( pWeapon, pszWeaponName ));
 
 		while( pWeapon )
 		{
@@ -186,7 +202,7 @@ void CGameWeaponManager::Think()
 				candidates.push_back( pWeapon );
 			}
 
-			pWeapon = assert_cast<CBaseCombatWeapon *>(gEntList.FindEntityByClassname( pWeapon, pszWeaponName ));
+			pWeapon = static_cast<CBaseCombatWeapon *>(gEntList.FindEntityByClassname( pWeapon, pszWeaponName ));
 		}
 	}
 	else
@@ -196,7 +212,7 @@ void CGameWeaponManager::Think()
 			CBaseEntity *pEntity = m_ManagedNonWeapons[i];
 			if ( pEntity )
 			{
-				Assert( pEntity->m_iClassname == m_iszWeaponName );
+				contract_assert( pEntity->m_iClassname == m_iszWeaponName );
 				if ( !pEntity->IsEffectActive( EF_NODRAW ) )
 				{
 					candidates.push_back( pEntity );
@@ -220,7 +236,7 @@ void CGameWeaponManager::Think()
 		bool fRemovedOne = false;
 
 		pCandidate = candidates[i];
-		Assert( !pCandidate->IsEffectActive( EF_NODRAW ) );
+		contract_assert( !pCandidate->IsEffectActive( EF_NODRAW ) );
 
 		if ( gpGlobals->maxClients == 1 )
 		{

@@ -1,16 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_ENTITY_FREEZING_H
-#define C_ENTITY_FREEZING_H
-
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
 #include "reflect_annotations.h"
-
 
 struct EntityFreezingHitboxBlobData_t
 {
@@ -43,6 +41,3 @@ private:
 
 	std::vector< EntityFreezingHitboxBlobData_t > m_HitboxBlobData;
 };
-
-#endif // C_ENTITY_FREEZING_H
-

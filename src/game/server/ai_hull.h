@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-//=============================================================================//
-
-#ifndef AI_HULL_H
-#define AI_HULL_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
 
-class Vector;
 //=========================================================
 // Link Properties. These hulls must correspond to the hulls
 // in AI_Hull.cpp!
@@ -88,5 +84,3 @@ namespace NAI_Hull
 
 	Hull_t		LookupId(const char *szName);
 };
-
-#endif // AI_HULL_H

@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SND_SFX_H
-#define SND_SFX_H
-
+import std;
+import ks.tier1;
 
 class CAudioSource;
 
@@ -17,9 +13,9 @@ public:
 	CSfxTable();
 
 	// gets sound name, possible decorated with prefixes
-	virtual const char	*getname( char *pBuf, size_t bufLen );
+	virtual const char	*getname( char *pBuf, std::size_t bufLen );
 	// gets the filename, the part after the optional prefixes
-	const char			*GetFileName(char *pBuf, size_t bufLen );
+	const char			*GetFileName(char *pBuf, std::size_t bufLen );
 	FileNameHandle_t	GetFileNameHandle();
 
 	void				SetFileNameHandle( FileNameHandle_t hName );
@@ -43,5 +39,3 @@ private:
 	// Only set in debug mode so you can see the name.
 	const char *m_pDebugName;
 };
-
-#endif // SND_SFX_H

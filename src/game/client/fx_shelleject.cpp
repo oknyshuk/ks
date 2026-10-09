@@ -1,12 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "fx.h"
 #include "c_te_effect_dispatch.h"
-#include "c_te_legacytempents.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -52,5 +59,3 @@ void ShotgunShellEjectCallback( const CEffectData &data )
 }
 
 DECLARE_CLIENT_EFFECT( ShotgunShellEject, ShotgunShellEjectCallback );
-
-

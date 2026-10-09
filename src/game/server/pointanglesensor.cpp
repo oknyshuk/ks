@@ -1,24 +1,55 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Used to fire events based on the orientation of a given entity.
-//
 //			Looks at its target's angles every frame and fires an output if its
 //			target's forward vector points at a specified lookat entity for more
 //			than a specified length of time.
-//
 //			It also fires an output whenever the target's angles change.
-//
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
+#include "ndebugoverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
-#include "mathlib/mathlib.h"
 
-#define SF_USE_TARGET_FACING	(1<<0)	// Use the target entity's direction instead of position
+constexpr auto SF_USE_TARGET_FACING = (1<<0); // Use the target entity's direction instead of position
 
 class CPointAngleSensor : public CPointEntity
 {
@@ -80,8 +111,8 @@ bool CPointAngleSensor::KeyValue(const char *szKeyName, const char *szValue)
 {
 	if (FStrEq(szKeyName, "tolerance"))
 	{
-		float flTolerance = atof(szValue);
-		m_flDotTolerance = cos(DEG2RAD(flTolerance));
+		float flTolerance = std::atof(szValue);
+		m_flDotTolerance = std::cos(DEG2RAD(flTolerance));
 	}
 	else
 	{
@@ -347,15 +378,15 @@ int CPointAngleSensor::DrawDebugTextOverlays(void)
 		bool bFacing = IsFacingWithinTolerance(m_hTargetEntity, m_hLookAtEntity, m_flDotTolerance, &flDot);
 
 		char tempstr[512];
-		Q_snprintf(tempstr, sizeof(tempstr), "delta ang (dot)    : %.2f (%f)", RAD2DEG(acos(flDot)), flDot);
+		V_snprintf(tempstr, sizeof(tempstr), "delta ang (dot)    : %.2f (%f)", RAD2DEG(std::acos(flDot)), flDot);
 		EntityText( nOffset, tempstr, 0);
 		nOffset++;
 
-		Q_snprintf(tempstr, sizeof(tempstr), "tolerance ang (dot): %.2f (%f)", RAD2DEG(acos(m_flDotTolerance)), m_flDotTolerance);
+		V_snprintf(tempstr, sizeof(tempstr), "tolerance ang (dot): %.2f (%f)", RAD2DEG(acos(m_flDotTolerance)), m_flDotTolerance);
 		EntityText( nOffset, tempstr, 0);
 		nOffset++;
 
-		Q_snprintf(tempstr, sizeof(tempstr), "facing: %s", bFacing ? "yes" : "no");
+		V_snprintf(tempstr, sizeof(tempstr), "facing: %s", bFacing ? "yes" : "no");
 		EntityText( nOffset, tempstr, 0);
 		nOffset++;
 	}
@@ -367,7 +398,7 @@ int CPointAngleSensor::DrawDebugTextOverlays(void)
 //  Proximity sensor
 // ====================================================================
 
-#define SF_PROXIMITY_TEST_AGAINST_AXIS	(1<<0)
+constexpr auto SF_PROXIMITY_TEST_AGAINST_AXIS = (1<<0);
 
 class CPointProximitySensor : public CPointEntity
 {

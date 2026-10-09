@@ -1,19 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SHADOWMGR_H
-#define SHADOWMGR_H
-
-
+import ks.math;
 #include "engine/ishadowmgr.h"
-#include "mathlib/vmatrix.h"
+import std;
 #include "surfacehandle.h"
-#include "mathlib/ssemath.h"
+class IMatRenderContext;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -55,7 +48,7 @@ struct ShadowClipState_t
 	int	m_TempCount;
 	int	m_ClipCount;
 	ShadowVertex_t	m_pTempVertices[SHADOW_VERTEX_TEMP_COUNT];
-	ShadowVertex_t*	RESTRICT m_ppClipVertices[2][SHADOW_VERTEX_TEMP_COUNT];
+	ShadowVertex_t*	__restrict__ m_ppClipVertices[2][SHADOW_VERTEX_TEMP_COUNT];
 };
 
 
@@ -77,7 +70,7 @@ struct ShadowDecalRenderInfo_t
 //-----------------------------------------------------------------------------
 // Shadow-related functionality internal to the engine
 //-----------------------------------------------------------------------------
-abstract_class IShadowMgrInternal : public IShadowMgr
+class IShadowMgrInternal : public IShadowMgr
 {
 public:
 	virtual void LevelInit( int nSurfCount ) = 0;
@@ -142,6 +135,4 @@ public:
 //-----------------------------------------------------------------------------
 #ifndef DEDICATED
 extern IShadowMgrInternal* g_pShadowMgr;
-#endif
-
 #endif

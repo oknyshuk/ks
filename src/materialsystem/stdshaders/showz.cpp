@@ -1,13 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Visualize shadow z buffers.  Designed to be used when drawing a screen-aligned
-//          quad with a floating-point z-buffer so that the large z-range is divided down
-//          into visual range of grayscale colors.
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "convar.h"
+// Purpose: Visualize shadow z buffers.  Designed to be used when drawing a screen-aligned
+//         quad with a floating-point z-buffer so that the large z-range is divided down
+//         into visual range of grayscale colors.
+
+import std;
+import ks.tier1;
 #include "BaseVSShader.h"
 
 #include "showz_vs20.inc"
@@ -17,7 +16,7 @@
 static ConVar r_showz_power( "r_showz_power", "1.0f", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 BEGIN_VS_SHADER_FLAGS( showz, "Help for ShowZ", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( ALPHADEPTH, SHADER_PARAM_TYPE_INTEGER, "0", "Depth is stored in alpha channel" )
 	END_SHADER_PARAMS
 
@@ -93,4 +92,3 @@ BEGIN_VS_SHADER_FLAGS( showz, "Help for ShowZ", SHADER_NOT_EDITABLE )
 		Draw();
 	}
 END_SHADER
-

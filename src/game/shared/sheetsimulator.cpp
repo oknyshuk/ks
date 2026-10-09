@@ -1,21 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:			The Escort's Shield weapon effect
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: The Escort's Shield weapon effect
+
+import std;
+import ks.core;
 #include "sheetsimulator.h"
 #include "edict.h"
 #include "collisionutils.h"
 
-#define COLLISION_PLANE_OFFSET 6.0f
+constexpr auto COLLISION_PLANE_OFFSET = 6.0f;
 		  
 //-----------------------------------------------------------------------------
 // constructor, destructor
@@ -84,7 +78,7 @@ void CSheetSimulator::AddSpring( int p1, int p2, float restLength )
 
 void CSheetSimulator::AddFixedPointSpring( int fixedPoint, int p, float restLength )
 {
-	Assert( fixedPoint < m_FixedPointCount );
+	contract_assert( fixedPoint < m_FixedPointCount );
 	int spring = std::ssize( m_Springs ); m_Springs.emplace_back();
 	m_Springs[spring].m_Particle1 = p;
 	m_Springs[spring].m_Particle2 = -(fixedPoint+1);
@@ -221,7 +215,7 @@ const Vector& CSheetSimulator::GetPoint( int i ) const
 // Fixed points
 Vector& CSheetSimulator::GetFixedPoint( int i )
 {
-	Assert( i < m_FixedPointCount );
+	contract_assert( i < m_FixedPointCount );
 	return m_pFixedPoint[i];
 }
 
@@ -317,7 +311,7 @@ void CSheetSimulator::ComputeForces()
 		if (m_Springs[i].m_Particle2 >= 0)
 			m_Particle[m_Springs[i].m_Particle2].m_Force -= force;
 
-		Assert( IsFinite( m_Particle[m_Springs[i].m_Particle1].m_Force.x ) &&
+		contract_assert( IsFinite( m_Particle[m_Springs[i].m_Particle1].m_Force.x ) &&
 			IsFinite( m_Particle[m_Springs[i].m_Particle1].m_Force.y) &&
 			IsFinite( m_Particle[m_Springs[i].m_Particle1].m_Force.z) );
 	}
@@ -387,7 +381,7 @@ void CSheetSimulator::InitPosition( int i )
 		MASK_SOLID_BRUSHONLY, m_CollisionGroup, &tr );
 	if ( tr.fraction - 1.0 < 0 )
 	{
-		memcpy( &m_pCollisionPlanes[i], &tr.plane, sizeof(cplane_t) );
+		std::memcpy( &m_pCollisionPlanes[i], &tr.plane, sizeof(cplane_t) );
 		m_pCollisionPlanes[i].dist += COLLISION_PLANE_OFFSET;
 
 		// The trace endpos represents where the center of the box
@@ -437,7 +431,7 @@ void CSheetSimulator::DetectCollision( int i, float flPlaneOffset )
 	if ( tr.fraction - 1.0 < 0 )
 	{
 		m_pValidCollisionPlane[i] = true;
-		memcpy( &m_pCollisionPlanes[i], &tr.plane, sizeof(cplane_t) );
+		std::memcpy( &m_pCollisionPlanes[i], &tr.plane, sizeof(cplane_t) );
 		m_pCollisionPlanes[i].dist += flPlaneOffset;
 	}
 	else if (tr.allsolid || tr.startsolid)
@@ -471,7 +465,7 @@ void CSheetSimulator::DetermineBestCollisionPlane( bool bFarTest )
 			// Now that we've seen all collisions, find the best collision plane
 			// to use (look at myself and all neighbors). The best plane
 			// is the one that comes closest to the origin.
-			m_Particle[idx].m_CollisionDist = FLT_MAX;
+			m_Particle[idx].m_CollisionDist = std::numeric_limits<float>::max();
 			m_Particle[idx].m_CollisionPlane = -1;
 			TestVertAgainstPlane( idx, idx, bFarTest );
 			if (j > 0)
@@ -530,7 +524,7 @@ void CSheetSimulator::EulerStep( float dt )
 		m_Particle[i].m_Position += m_Particle[i].m_Velocity * dt; 
 		m_Particle[i].m_Velocity += m_Particle[i].m_Force * dt / m_Particle[i].m_Mass;
 
-		Assert( IsFinite( m_Particle[i].m_Velocity.x ) &&
+		contract_assert( IsFinite( m_Particle[i].m_Velocity.x ) &&
 			IsFinite( m_Particle[i].m_Velocity.y) &&
 			IsFinite( m_Particle[i].m_Velocity.z) );
 
@@ -538,7 +532,7 @@ void CSheetSimulator::EulerStep( float dt )
 		float lensq = m_Particle[i].m_Velocity.LengthSqr();
 		if (lensq > 1e6)
 		{
-			m_Particle[i].m_Velocity *= 1e3 / sqrt(lensq);
+			m_Particle[i].m_Velocity *= 1e3 / std::sqrt(lensq);
 		}
 	}
 	SatisfyCollisionConstraints();
@@ -572,7 +566,7 @@ void CSheetSimulator::Simulate( float dt, int steps )
 }
 
 
-#define CLAMP_DIST 6.0
+constexpr auto CLAMP_DIST = 6.0;
 
 void CSheetSimulator::ClampPointsToCollisionPlanes()
 {
@@ -588,7 +582,7 @@ void CSheetSimulator::ClampPointsToCollisionPlanes()
 			cplane_t* pPlane = &m_pCollisionPlanes[m_Particle[i].m_CollisionPlane];
 
 			// Make sure we have a close enough perpendicular distance to the plane...
-			float flPerpDist = fabs ( DotProduct( m_Particle[i].m_Position, pPlane->normal ) - pPlane->dist );
+			float flPerpDist = std::fabs ( DotProduct( m_Particle[i].m_Position, pPlane->normal ) - pPlane->dist );
 			if (flPerpDist >= CLAMP_DIST)
 				continue;
 
@@ -621,7 +615,7 @@ void CIterativeSheetSimulator::BeginSimulation( float dt, int steps, int substep
 
 bool CIterativeSheetSimulator::Think( )
 {
-	Assert( m_SimulationSteps >= 0 );
+	contract_assert( m_SimulationSteps >= 0 );
 
 	// Need to iteratively perform collision detection
 	if (m_CurrentCollisionPt >= 0)

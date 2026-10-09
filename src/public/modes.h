@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( MODES_H )
-#define MODES_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 typedef struct vmode_s
 {
@@ -14,5 +9,3 @@ typedef struct vmode_s
 	int			bpp;
 	int			refreshRate;
 } vmode_t;
-
-#endif // MODES_H

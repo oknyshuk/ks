@@ -1,17 +1,14 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ============
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+import ks.tier1;
+
 // Purpose: performs serialization for CSOAContainer (avoids tier1 depending on datamodel)
-//
-//=============================================================================
-
-#ifndef UTLSOACONTAINER_SERIALIZATION_H
-#define UTLSOACONTAINER_SERIALIZATION_H
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class CSOAContainer;
+class CDmxElement;
 
 
 //-----------------------------------------------------------------------------
@@ -19,6 +16,3 @@ class CSOAContainer;
 //-----------------------------------------------------------------------------
 bool SerializeCSOAContainer(   const CSOAContainer *pContainer, CDmxElement *pRootElement );
 bool UnserializeCSOAContainer( const CSOAContainer *pContainer, const CDmxElement *pRootElement );
-
-
-#endif // UTLSOACONTAINER_SERIALIZATION_H

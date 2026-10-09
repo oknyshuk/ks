@@ -1,13 +1,9 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
+import ks.tier1;
 #include "dmxloader/dmxattribute.h"
-#include "tier1/serialization.h"
-#include "tier1/uniqueid.h"
-
+import std;
 
 //-----------------------------------------------------------------------------
 // globals
@@ -18,7 +14,7 @@ ks::intern_pool_mt CDmxAttribute::s_AttributeNameSymbols;
 //-----------------------------------------------------------------------------
 // Attribute size
 //-----------------------------------------------------------------------------
-static size_t s_pAttributeSize[AT_TYPE_COUNT] =
+static std::size_t s_pAttributeSize[AT_TYPE_COUNT] =
 {
 	0,							// AT_UNKNOWN,
 	sizeof(CDmxElement*),		// AT_ELEMENT,
@@ -60,17 +56,17 @@ struct CSizeTest
 	CSizeTest()
 	{
 		// test internal value attribute sizes
-		COMPILE_TIME_ASSERT( sizeof( int )			== 4 );
-		COMPILE_TIME_ASSERT( sizeof( float )		== 4 );
-		COMPILE_TIME_ASSERT( sizeof( bool )			<= 4 );
-		COMPILE_TIME_ASSERT( sizeof( Color )		== 4 );
-		COMPILE_TIME_ASSERT( sizeof( DmeTime_t )	== 4 );
-		COMPILE_TIME_ASSERT( sizeof( Vector2D )		== 8 );
-		COMPILE_TIME_ASSERT( sizeof( Vector )		== 12 );
-		COMPILE_TIME_ASSERT( sizeof( Vector4D )		== 16 );
-		COMPILE_TIME_ASSERT( sizeof( QAngle )		== 12 );
-		COMPILE_TIME_ASSERT( sizeof( Quaternion )	== 16 );
-		COMPILE_TIME_ASSERT( sizeof( VMatrix )		== 64 );
+		static_assert( sizeof( int )			== 4 );
+		static_assert( sizeof( float )		== 4 );
+		static_assert( sizeof( bool )			<= 4 );
+		static_assert( sizeof( Color )		== 4 );
+		static_assert( sizeof( DmeTime_t )	== 4 );
+		static_assert( sizeof( Vector2D )		== 8 );
+		static_assert( sizeof( Vector )		== 12 );
+		static_assert( sizeof( Vector4D )		== 16 );
+		static_assert( sizeof( QAngle )		== 12 );
+		static_assert( sizeof( Quaternion )	== 16 );
+		static_assert( sizeof( VMatrix )		== 64 );
 	};
 };
 static CSizeTest g_sizeTest;
@@ -149,7 +145,7 @@ int CDmxAttribute::AttributeDataSize( DmAttributeType_t type )
 //-----------------------------------------------------------------------------
 DmAttributeType_t CDmxAttribute::ArrayAttributeBasicType( DmAttributeType_t type )
 {
-	COMPILE_TIME_ASSERT( ( AT_FIRST_ARRAY_TYPE - AT_FIRST_VALUE_TYPE ) == ( AT_TYPE_COUNT - AT_FIRST_ARRAY_TYPE ) );
+	static_assert( ( AT_FIRST_ARRAY_TYPE - AT_FIRST_VALUE_TYPE ) == ( AT_TYPE_COUNT - AT_FIRST_ARRAY_TYPE ) );
 	if ( IsArrayType( type ) )
 		type = (DmAttributeType_t)( type - ( AT_FIRST_ARRAY_TYPE - AT_FIRST_VALUE_TYPE ) ); // Array -> array element
 	return type;
@@ -253,7 +249,7 @@ void CDmxAttribute::ConstructDataMemory( void )
 void CDmxAttribute::AllocateDataMemory_AndConstruct( DmAttributeType_t type )
 {
 	AllocateDataMemory( type );
-	Assert( m_pData != nullptr );
+	contract_assert( m_pData != nullptr );
 
 	// Process array and non-array types, including elements
 	CALL_TYPE_TEMPLATIZED_FUNCTION( ConstructDataMemory, (), );
@@ -268,7 +264,7 @@ void CDmxAttribute::FreeDataMemory()
 {
 	if ( m_Type != AT_UNKNOWN )
 	{
-		Assert( m_pData != nullptr );
+		contract_assert( m_pData != nullptr );
 		// Process array and non-array types, including elements
 		CALL_TYPE_TEMPLATIZED_FUNCTION( DestructDataMemory, (), );
 		m_Type = AT_UNKNOWN;
@@ -322,7 +318,7 @@ void CDmxAttribute::SetArrayCount( int nArrayCount )
 void CDmxAttribute::SetArrayCount( int nArrayCount )
 {
 	// Process array types only, including elements
-	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION( SetArrayCount, (nArrayCount), Assert(0) );
+	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION( SetArrayCount, (nArrayCount), contract_assert( 0 ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -340,7 +336,7 @@ const void *CDmxAttribute::GetArrayBase( void ) const
 {
 	const void *pBasePtr = nullptr;
 	// Process array types only, including elements
-	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION( GetArrayBase, (pBasePtr), Assert(0) );
+	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION( GetArrayBase, (pBasePtr), contract_assert( 0 ) );
 	return pBasePtr;
 }
 
@@ -383,7 +379,7 @@ bool CDmxAttribute::Serialize( ks::byte_writer &buf ) const
 {
 	bool bSuccess = false;
 	// Process array and non-array types, excluding elements
-	CALL_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( SerializeType, (bSuccess, buf), AssertMsg( 0, "Cannot serialize elements or element arrays!\n" ) );
+	CALL_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( SerializeType, (bSuccess, buf), contract_assert( false && "Cannot serialize elements or element arrays!\n" ) );
 	return bSuccess;
 }
 
@@ -391,7 +387,7 @@ bool CDmxAttribute::Serialize( ks::text_writer &buf ) const
 {
 	bool bSuccess = false;
 	// Process array and non-array types, excluding elements
-	CALL_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( SerializeType, (bSuccess, buf), AssertMsg( 0, "Cannot serialize elements or element arrays!\n" ) );
+	CALL_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( SerializeType, (bSuccess, buf), contract_assert( false && "Cannot serialize elements or element arrays!\n" ) );
 	return bSuccess;
 }
 
@@ -421,7 +417,7 @@ bool CDmxAttribute::SerializeElement( int nIndex, ks::byte_writer &buf ) const
 
 	bool bSuccess = false;
 	// Process array types only, excluding elements
-	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( SerializeTypedElement, (bSuccess, nIndex, buf), AssertMsg( 0, "Cannot serialize elements!\n" ); );
+	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( SerializeTypedElement, (bSuccess, nIndex, buf), contract_assert( false && "Cannot serialize elements!\n" ); );
 	return bSuccess;
 }
 
@@ -432,7 +428,7 @@ bool CDmxAttribute::SerializeElement( int nIndex, ks::text_writer &buf ) const
 
 	bool bSuccess = false;
 	// Process array types only, excluding elements
-	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( SerializeTypedElement, (bSuccess, nIndex, buf), AssertMsg( 0, "Cannot serialize elements!\n" ); );
+	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( SerializeTypedElement, (bSuccess, nIndex, buf), contract_assert( false && "Cannot serialize elements!\n" ); );
 	return bSuccess;
 }
 
@@ -450,7 +446,7 @@ bool CDmxAttribute::Unserialize( DmAttributeType_t type, ks::byte_reader &buf )
 
 	bool bSuccess = false;
 	// Process array and non-array types, excluding elements
-	CALL_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( UnserializeType, (bSuccess, buf), AssertMsg( 0, "Cannot unserialize elements or element arrays!\n" ); );
+	CALL_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( UnserializeType, (bSuccess, buf), contract_assert( false && "Cannot unserialize elements or element arrays!\n" ); );
 	return bSuccess;
 }
 
@@ -460,7 +456,7 @@ bool CDmxAttribute::Unserialize( DmAttributeType_t type, ks::text_reader &buf )
 
 	bool bSuccess = false;
 	// Process array and non-array types, excluding elements
-	CALL_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( UnserializeType, (bSuccess, buf), AssertMsg( 0, "Cannot unserialize elements or element arrays!\n" ); );
+	CALL_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( UnserializeType, (bSuccess, buf), contract_assert( false && "Cannot unserialize elements or element arrays!\n" ); );
 	return bSuccess;
 }
 
@@ -486,7 +482,7 @@ bool CDmxAttribute::UnserializeElement( DmAttributeType_t type, ks::byte_reader 
 
 	bool bSuccess = false;
 	// Process array types only, excluding elements
-	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( UnserializeTypedElement, (bSuccess, buf), AssertMsg( 0, "Cannot unserialize elements!\n" ) );
+	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( UnserializeTypedElement, (bSuccess, buf), contract_assert( false && "Cannot unserialize elements!\n" ) );
 	return bSuccess;
 }
 
@@ -500,7 +496,7 @@ bool CDmxAttribute::UnserializeElement( DmAttributeType_t type, ks::text_reader 
 
 	bool bSuccess = false;
 	// Process array types only, excluding elements
-	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( UnserializeTypedElement, (bSuccess, buf), AssertMsg( 0, "Cannot unserialize elements!\n" ) );
+	CALL_ARRAY_TYPE_TEMPLATIZED_FUNCTION_NOELEMENTS( UnserializeTypedElement, (bSuccess, buf), contract_assert( false && "Cannot unserialize elements!\n" ) );
 	return bSuccess;
 }
 
@@ -529,7 +525,7 @@ void CDmxAttribute::SetValue( char *pString )
 	SetValue( (const char*)pString );
 }
 
-void CDmxAttribute::SetValue( const void *pBuffer, size_t nLen )
+void CDmxAttribute::SetValue( const void *pBuffer, std::size_t nLen )
 {
 	AllocateDataMemory( AT_VOID );
 	auto *pBlob = (std::vector< unsigned char > *)m_pData;
@@ -548,7 +544,7 @@ void CDmxAttribute::SetValue( DmAttributeType_t type, const void *pSrc, int nLen
 	{
 		nLen = CDmxAttribute::AttributeDataSize( type );
 	}
-	memcpy( m_pData, pSrc, nLen );
+	std::memcpy( m_pData, pSrc, nLen );
 }
 
 // Untyped method for setting arrays, used by unpack
@@ -565,7 +561,7 @@ void CDmxAttribute::SetArrayValue( DmAttributeType_t type, const void *pSrc, int
 	// NOTE: nDestStride will be 4 for char/short/int values, and the below code is designed to work in all those cases
 	DmAttributeType_t basicType = ArrayAttributeBasicType( type );
 	int nDestStride = CDmxAttribute::AttributeDataSize( basicType );
-	Assert( nDataTypeSize <= nDestStride );
+	contract_assert( nDataTypeSize <= nDestStride );
 	nDataTypeSize = std::min( nDataTypeSize, nDestStride );
 
 	SetArrayCount( nArrayLength );
@@ -575,11 +571,11 @@ void CDmxAttribute::SetArrayValue( DmAttributeType_t type, const void *pSrc, int
 	if ( nDataTypeSize != nDestStride )
 	{
 		// Avoid writing junk, keep the data clean in case we inspect the memory or a serialized file:
-		Q_memset( pDest, 0, nDestStride*nArrayLength );
+		V_memset( pDest, 0, nDestStride*nArrayLength );
 	}
 	if ( ( nSrcStride == nDestStride ) && ( nDataTypeSize == nSrcStride ) )
 	{
-		memcpy( pDest, pSrc, nDestStride*nArrayLength );
+		std::memcpy( pDest, pSrc, nDestStride*nArrayLength );
 	}
 	else
 	{
@@ -587,7 +583,7 @@ void CDmxAttribute::SetArrayValue( DmAttributeType_t type, const void *pSrc, int
 		const byte *pByteSrc  = (const byte *)pSrc;
 		for ( int i = 0; i < nArrayLength; i++ )
 		{
-			memcpy( pByteDest, pByteSrc, nDataTypeSize );
+			std::memcpy( pByteDest, pByteSrc, nDataTypeSize );
 			pByteDest += nDestStride;
 			pByteSrc  += nSrcStride;
 		}
@@ -602,7 +598,7 @@ void CDmxAttribute::GetArrayValue( DmAttributeType_t type, void *pDest, int nDat
 	// NOTE: nDestStride will be 4 for char/short/int values, and the below code is designed to work in all those cases
 	DmAttributeType_t basicType = ArrayAttributeBasicType( type );
 	int nSrcStride = CDmxAttribute::AttributeDataSize( basicType );
-	Assert( nDataTypeSize <= nSrcStride );
+	contract_assert( nDataTypeSize <= nSrcStride );
 	nDataTypeSize = std::min( nDataTypeSize, nSrcStride );
 
 	int nSrcArrayLength = GetArrayCount();
@@ -611,7 +607,7 @@ void CDmxAttribute::GetArrayValue( DmAttributeType_t type, void *pDest, int nDat
 	{
 		if ( nSrcStride == nDataTypeSize )
 		{
-			memcpy( pDest, pSrc, nSrcArrayLength*nDataTypeSize );
+			std::memcpy( pDest, pSrc, nSrcArrayLength*nDataTypeSize );
 		}
 		else
 		{
@@ -619,7 +615,7 @@ void CDmxAttribute::GetArrayValue( DmAttributeType_t type, void *pDest, int nDat
 			const byte *pByteSrc = (const byte *)pSrc;
 			for ( int i = 0; i < nSrcArrayLength; i++ )
 			{
-				memcpy( pByteDst, pByteSrc, nDataTypeSize );
+				std::memcpy( pByteDst, pByteSrc, nDataTypeSize );
 				pByteDst += nDataTypeSize;
 				pByteSrc += nSrcStride;
 			}
@@ -634,7 +630,7 @@ void CDmxAttribute::GetArrayValue( DmAttributeType_t type, void *pDest, int nDat
 		byte *pByteDst = ( (byte *)pDest ) + nSrcArrayLength*nDataTypeSize;
 		for ( int i = nSrcArrayLength; i < nDestArrayLength; i++ )
 		{
-			memcpy( pByteDst, temp.m_pData, nDataTypeSize );
+			std::memcpy( pByteDst, temp.m_pData, nDataTypeSize );
 			pByteDst += nDataTypeSize;
 		}
 	}
@@ -652,7 +648,7 @@ void CDmxAttribute::SetValue( const CDmxAttribute *pAttribute )
 	else
 	{
 		// Copying array attributes not done yet..
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 }
 
@@ -685,7 +681,7 @@ void CDmxAttribute::SetValueFromString( const char *pValue )
 
 	default:
 		{
-			int nLen = pValue ? Q_strlen( pValue ) : 0;
+			int nLen = pValue ? V_strlen( pValue ) : 0;
 			if ( nLen == 0 )
 			{
 				SetToDefaultValue();
@@ -702,15 +698,15 @@ void CDmxAttribute::SetValueFromString( const char *pValue )
 	}
 }
 
-const char *CDmxAttribute::GetValueAsString( char *pBuffer, size_t nBufLen ) const
+const char *CDmxAttribute::GetValueAsString( char *pBuffer, std::size_t nBufLen ) const
 {
-	Assert( pBuffer );
+	contract_assert( pBuffer );
 	ks::text_writer buf;
 	Serialize( buf );
 	if ( nBufLen )
 	{
-		const size_t nCopy = std::min( buf.size(), nBufLen - 1 );
-		memcpy( pBuffer, buf.c_str(), nCopy );
+		const std::size_t nCopy = std::min( buf.size(), nBufLen - 1 );
+		std::memcpy( pBuffer, buf.c_str(), nCopy );
 		pBuffer[ nCopy ] = '\0';
 	}
 	return pBuffer;

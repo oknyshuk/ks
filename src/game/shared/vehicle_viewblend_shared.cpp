@@ -1,10 +1,59 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: Used to calculate the player's view in the vehicle
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Used to calculate the player's view in the vehicle
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "vehicle_viewblend_shared.h"
@@ -221,7 +270,7 @@ void SharedVehicleViewSmoothing(CBasePlayer *pPlayer,
 	*pAbsAngles = pPlayer->EyeAngles();
 	if ( r_VehicleViewDampen.GetInt() && pData->bDampenEyePosition )
 	{
-		CPropVehicleDriveable *pDriveable = assert_cast<CPropVehicleDriveable*>(pData->pVehicle);
+		CPropVehicleDriveable *pDriveable = static_cast<CPropVehicleDriveable*>(pData->pVehicle);
 		pDriveable->DampenEyePosition( vehicleEyeOrigin, vehicleEyeAngles );
 	}
 

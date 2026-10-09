@@ -1,18 +1,12 @@
-//====== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. =======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
+
 // Purpose: Provide a class (SSE/SIMD only) holding a 2d matrix of class FourVectors,
 // for high speed processing in tools.
-//
-// $NoKeywords: $
-//
-//=============================================================================//
 
-#include "basetypes.h"
-#include "mathlib/mathlib.h"
+import std;
+import ks.math;
 #include "mathlib/simdvectormatrix.h"
-#include "mathlib/ssemath.h"
-#include "tier0/dbg.h"
-
 
 void CSIMDVectorMatrix::CreateFromCSOAAttributes( CSOAContainer const *pSrc,
 												  int nAttrIdx0, int nAttrIdx1, int nAttrIdx2 )
@@ -43,7 +37,7 @@ void CSIMDVectorMatrix::CreateFromCSOAAttributes( CSOAContainer const *pSrc,
 void CSIMDVectorMatrix::CreateFromRGBA_FloatImageData( int srcwidth, int srcheight,
 													  float const * srcdata )
 {
-	Assert( srcwidth && srcheight && srcdata );
+	contract_assert( srcwidth && srcheight && srcdata );
 	SetSize( srcwidth, srcheight );
 
 	FourVectors * p_write_ptr = m_pData;
@@ -103,8 +97,8 @@ void CSIMDVectorMatrix::RaiseToPower( float power )
 
 CSIMDVectorMatrix & CSIMDVectorMatrix::operator += ( CSIMDVectorMatrix const & src )
 {
-	Assert( m_nWidth == src.m_nWidth );
-	Assert( m_nHeight == src.m_nHeight );
+	contract_assert( m_nWidth == src.m_nWidth );
+	contract_assert( m_nHeight == src.m_nHeight );
 	int nv = NVectors();
 	if ( nv )
 	{
@@ -134,4 +128,3 @@ CSIMDVectorMatrix & CSIMDVectorMatrix::operator *= ( Vector const & src )
 	}
 	return * this;
 }
-

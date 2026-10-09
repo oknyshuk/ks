@@ -1,19 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DATATABLE_SEND_ENG_H
-#define DATATABLE_SEND_ENG_H
-
-
-#include <span>
+import std;
+import ks.tier1;
 #include "dt_send.h"
-#include "bitbuf.h"
-#include "tier1/utlvector.h"
-#include "tier0/platform.h"
 
 
 typedef uint32 CRC32_t;
@@ -22,7 +13,7 @@ class CStandardSendProxies;
 struct edict_t;
 typedef intp SerializedEntityHandle_t;
 
-#define MAX_DELTABITS_SIZE 2048
+inline constexpr auto MAX_DELTABITS_SIZE = 2048;
 
 // ------------------------------------------------------------------------ //
 // SendTable functions.
@@ -119,6 +110,3 @@ bool SendTable_WriteInfos( const SendTable *pTable, bf_write& bfWrite, bool bNee
 
 // do all kinds of checks on a packed entity bitbuffer
 bool SendTable_CheckIntegrity( SendTable *pTable, const void *pData, const int nDataBits );
-
-
-#endif // DATATABLE_SEND_ENG_H

@@ -1,21 +1,14 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SND_MIX_BUF_H
-#define SND_MIX_BUF_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // OPTIMIZE: note that making this larger will not increase performance (12/27/03)
-#define	PAINTBUFFER_SIZE		1020	// 44k: was 512
+import std;
+import ks.math;
 
-#define PAINTBUFFER				(g_curpaintbuffer)
-#define REARPAINTBUFFER			(g_currearpaintbuffer)
-#define CENTERPAINTBUFFER		(g_curcenterpaintbuffer)
-#define CPAINTBUFFERS			6
+inline constexpr auto PAINTBUFFER_SIZE = 1020; // 44k: was 512
+
+inline constexpr auto CPAINTBUFFERS = 6;
 
 // !!! if this is changed, it much be changed in native assembly too !!!
 struct portable_samplepair_t
@@ -32,8 +25,8 @@ enum Channels
 };
 
 // sound mixing buffer
-#define CPAINTFILTERMEM			3
-#define CPAINTFILTERS			4			// maximum number of consecutive upsample passes per paintbuffer
+inline constexpr auto CPAINTFILTERMEM = 3;
+inline constexpr auto CPAINTFILTERS = 4; // maximum number of consecutive upsample passes per paintbuffer
 
 struct paintbuffer_t
 {
@@ -78,23 +71,20 @@ extern portable_samplepair_t *g_curcenterpaintbuffer;
 };
 
 // must be at least PAINTBUFFER_SIZE+1 for upsampling
-#define	PAINTBUFFER_MEM_SIZE		(PAINTBUFFER_SIZE+4)
+inline constexpr auto PAINTBUFFER_MEM_SIZE = (PAINTBUFFER_SIZE+4);
 
 // size in samples of copy buffer used by pitch shifters in mixing
 // allow more memory for this on PC for developers to pitch-shift their way through dialog
-#define TEMP_COPY_BUFFER_SIZE	(PAINTBUFFER_MEM_SIZE * 4)
+inline constexpr auto TEMP_COPY_BUFFER_SIZE = (PAINTBUFFER_MEM_SIZE * 4);
 
 // hard clip input value to -32767 <= y <= 32767
-#define CLIP(x) ((x) > 32767 ? 32767 : ((x) < -32767 ? -32767 : (x)))
+template <typename T1> [[gnu::always_inline]] inline constexpr auto CLIP( T1 x ) { return ((x) > 32767 ? 32767 : ((x) < -32767 ? -32767 : (x))); }
 
 // Branch-less version of CLIP on PPC - Much better.
-FORCEINLINE
+[[gnu::always_inline]] inline
 int iclip( int nInput )
 {
-	int nResult = iclamp( nInput, -32767, +32767 );			// Interestingly it should actually be -32768 but the old code did not use the correct value. Keep the old value for the moment.
-	Assert( nResult == CLIP( nInput ) );
+	int nResult = clamp( nInput, -32767, +32767 );			// Interestingly it should actually be -32768 but the old code did not use the correct value. Keep the old value for the moment.
+	contract_assert( nResult == CLIP( nInput ) );
 	return nResult;
 }
-
-
-#endif // SND_MIX_BUF_H

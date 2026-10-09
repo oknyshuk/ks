@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DOWNLOADLISTGENERATOR_H
-#define DOWNLOADLISTGENERATOR_H
-
+import ks.tier1;
 #include "filesystem.h"
-#include "utlvector.h"
-#include "tier1/intern_pool.h"
+import std;
 #include "networkstringtable.h"
 
-#define DOWNLOADABLE_FILE_TABLENAME	"downloadables"
-#define MAX_DOWNLOADABLE_FILES 8192
+inline constexpr const char *DOWNLOADABLE_FILE_TABLENAME = "downloadables";
+inline constexpr auto MAX_DOWNLOADABLE_FILES = 8192;
 
 enum ConsistencyType
 {
@@ -69,6 +64,3 @@ private:
 
 // singleton accessor
 CDownloadListGenerator &DownloadListGenerator();
-
-
-#endif // DOWNLOADLISTGENERATOR_H

@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: base class for belt items, eg pills and adrenaline
-//
-// $NoKeywords: $
-//=====================================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef _WEAPON_BASE_ITEM_H_
-#define _WEAPON_BASE_ITEM_H_
+// Purpose: base class for belt items, eg pills and adrenaline
 
 #include "reflect_annotations.h"
-
 
 #include "weapon_csbase.h"
 #include "util_shared.h"
@@ -80,6 +75,3 @@ inline bool CWeaponBaseItem::CanBeSelected( void )
 {
 	return true;
 }
-
-
-#endif // _WEAPON_BASE_ITEM_H_

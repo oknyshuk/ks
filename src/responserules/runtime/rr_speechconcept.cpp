@@ -1,12 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "rrbase.h"
-
 
 #if RR_CONCEPTS_ARE_STRINGS
 #pragma error("RR_CONCEPTS_ARE_STRINGS no longer supported")
@@ -50,7 +45,7 @@ bool CRR_Concept::operator==(const char *pszConcept)
 const char *CRR_Concept::GetStringConcept() const
 {
 	InitializeRRConceptTable();
-	AssertMsg( m_iConcept.data(), "AI Concept has invalid string symbol.\n" );
+	contract_assert( ( m_iConcept.data() ) && "AI Concept has invalid string symbol.\n" );
 	return ks::nz( m_iConcept.data() );
 }
 

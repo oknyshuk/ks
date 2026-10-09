@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef TRIGGERS_H
-#define TRIGGERS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -122,7 +116,7 @@ extern std::vector< CHandle<CTriggerMultiple> >	g_hWeaponFireTriggers;
 // NOTE: This uses vphysics to compute touch events.  It doesn't do a per-frame Touch call, so the 
 // Entity I/O is different from a regular trigger
 //------------------------------------------------------------------------------
-#define SF_VPHYSICS_MOTION_MOVEABLE	0x1000
+inline constexpr auto SF_VPHYSICS_MOTION_MOVEABLE = 0x1000;
 
 class [[= ks::reflect::NetTable{ .name = "DT_BaseVPhysicsTrigger" } ]]
       CBaseVPhysicsTrigger : public CBaseEntity
@@ -380,5 +374,3 @@ private:
 	int m_nPlayerButtons;
 	int m_nOldTakeDamage;
 };
-
-#endif // TRIGGERS_H

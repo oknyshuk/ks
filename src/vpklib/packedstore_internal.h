@@ -1,14 +1,14 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#define VPKFILENUMBER_EMBEDDED_IN_DIR_FILE  0x7fff		// if a chunk refers to this file number, it is data embedded in the same file as the directory block.
+import ks.core;
 
-#define VPK_HEADER_MARKER 0x55aa1234						// significes that this is a new vpk header format
-#define VPK_CURRENT_VERSION 2
-#define VPK_PREVIOUS_VERSION 1
+inline constexpr auto VPKFILENUMBER_EMBEDDED_IN_DIR_FILE = 0x7fff; // if a chunk refers to this file number, it is data embedded in the same file as the directory block.
+
+inline constexpr auto VPK_HEADER_MARKER = 0x55aa1234; // significes that this is a new vpk header format
+inline constexpr auto VPK_CURRENT_VERSION = 2;
+inline constexpr auto VPK_PREVIOUS_VERSION = 1;
 
 
 struct VPKDirHeader_t
@@ -56,5 +56,3 @@ struct VPKDirHeaderOld_t
 
 
 #include "vpklib/packedstore.h"
-
-

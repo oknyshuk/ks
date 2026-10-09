@@ -1,25 +1,12 @@
-//=========== (C) Copyright 1999 Valve, L.L.C. All rights reserved. ===========
-//
-// The copyright to the contents herein is the property of Valve, L.L.C.
-// The contents may be used and/or copied only with the written permission of
-// Valve, L.L.C., or in accordance with the terms and conditions stipulated in
-// the agreement/contract under which the contents have been supplied.
-//
-// $Header: $
-// $NoKeywords: $
-//
-// Interface used to construct morph buffers
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1999 Valve Corporation
 
-#ifndef IMORPH_H
-#define IMORPH_H
+// Purpose: Interface used to construct morph buffers
 
-
-#include "mathlib/vector.h"
-#include <float.h>
-#include "tier0/dbg.h"
+import std;
+import ks.math;
 #include "materialsystem/imaterial.h"
-
 
 //-----------------------------------------------------------------------------
 // Single morph data
@@ -58,7 +45,7 @@ struct MorphWeight_t
 //-----------------------------------------------------------------------------
 // Interface to the morph
 //-----------------------------------------------------------------------------
-abstract_class IMorph
+class IMorph
 {
 public:
 	// Locks the morph, destroys any existing contents
@@ -122,7 +109,7 @@ inline CMorphBuilder::CMorphBuilder()
 inline CMorphBuilder::~CMorphBuilder()
 {
 	// You forgot to call End()!
-	Assert( !m_pMorph );
+	contract_assert( !m_pMorph );
 }
 
 
@@ -131,7 +118,7 @@ inline CMorphBuilder::~CMorphBuilder()
 //-----------------------------------------------------------------------------
 inline void CMorphBuilder::Begin( IMorph *pMorph, float flFloatToFixedScale )
 {
-	Assert( pMorph && !m_pMorph );
+	contract_assert( pMorph && !m_pMorph );
 	m_pMorph = pMorph;
 	m_pMorph->Lock( flFloatToFixedScale );
 
@@ -147,7 +134,7 @@ inline void CMorphBuilder::Begin( IMorph *pMorph, float flFloatToFixedScale )
 // End building the morph
 inline void CMorphBuilder::End()
 {
-	Assert( m_pMorph );
+	contract_assert( m_pMorph );
 	m_pMorph->Unlock();
 	m_pMorph = nullptr;
 }
@@ -158,19 +145,19 @@ inline void CMorphBuilder::End()
 //-----------------------------------------------------------------------------
 inline void CMorphBuilder::PositionDelta3fv( const float *pDelta )
 {
-	Assert( m_pMorph );
+	contract_assert( m_pMorph );
 	m_Info.m_PositionDelta.Init( pDelta[0], pDelta[1], pDelta[2] );
 }
 
 inline void CMorphBuilder::PositionDelta3f( float dx, float dy, float dz )
 {
-	Assert( m_pMorph );
+	contract_assert( m_pMorph );
 	m_Info.m_PositionDelta.Init( dx, dy, dz );
 }
 
 inline void CMorphBuilder::PositionDelta3( const Vector &vec )
 {
-	Assert( m_pMorph );
+	contract_assert( m_pMorph );
 	m_Info.m_PositionDelta = vec;
 }
 
@@ -180,19 +167,19 @@ inline void CMorphBuilder::PositionDelta3( const Vector &vec )
 //-----------------------------------------------------------------------------
 inline void CMorphBuilder::NormalDelta3fv( const float *pDelta )
 {
-	Assert( m_pMorph );
+	contract_assert( m_pMorph );
 	m_Info.m_NormalDelta.Init( pDelta[0], pDelta[1], pDelta[2] );
 }
 
 inline void CMorphBuilder::NormalDelta3f( float dx, float dy, float dz )
 {
-	Assert( m_pMorph );
+	contract_assert( m_pMorph );
 	m_Info.m_NormalDelta.Init( dx, dy, dz );
 }
 
 inline void CMorphBuilder::NormalDelta3( const Vector &vec )
 {
-	Assert( m_pMorph );
+	contract_assert( m_pMorph );
 	m_Info.m_NormalDelta = vec;
 }
 
@@ -202,7 +189,7 @@ inline void CMorphBuilder::NormalDelta3( const Vector &vec )
 //-----------------------------------------------------------------------------
 inline void CMorphBuilder::WrinkleDelta1f( float flWrinkle )
 {
-	Assert( m_pMorph );
+	contract_assert( m_pMorph );
 	m_Info.m_flWrinkleDelta = flWrinkle;
 }
 
@@ -212,13 +199,13 @@ inline void CMorphBuilder::WrinkleDelta1f( float flWrinkle )
 //-----------------------------------------------------------------------------
 inline void CMorphBuilder::Speed1f( float flSpeed )
 {
-	Assert( m_pMorph );
+	contract_assert( m_pMorph );
 	m_Info.m_flSpeed = flSpeed;
 }
 
 inline void CMorphBuilder::Side1f( float flSide )
 {
-	Assert( m_pMorph );
+	contract_assert( m_pMorph );
 	m_Info.m_flSide = flSide;
 }
 
@@ -228,7 +215,7 @@ inline void CMorphBuilder::Side1f( float flSide )
 //-----------------------------------------------------------------------------
 inline void CMorphBuilder::AdvanceMorph( int nSourceVertex, int nMorphTargetId )
 {
-	Assert( m_pMorph );
+	contract_assert( m_pMorph );
 
 	m_Info.m_nVertexId = nSourceVertex;
 	m_Info.m_nMorphTargetId = nMorphTargetId;
@@ -243,6 +230,3 @@ inline void CMorphBuilder::AdvanceMorph( int nSourceVertex, int nMorphTargetId )
 	m_Info.m_flSide = VEC_T_NAN;
 #endif
 }
-
-
-#endif // IMORPH_H

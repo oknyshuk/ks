@@ -1,26 +1,14 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "pch_tier0.h"
-#include "tier0/icommandline.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include "tier0/dbg.h"
-#include "tier0_strtools.h"
-#include "tier1/strtools.h" // this is included for the definition of V_isspace()
 
-#include <limits.h>
-#define _MAX_PATH PATH_MAX
+// First include standard libraries
+import std;
 
-#include "tier0/memalloc.h"
+
+import ks.tier1;
+
 
 static const int MAX_PARAMETER_LEN = 128;
 
@@ -149,12 +137,12 @@ void CCommandLine::LoadParametersFromFile( const char *&pSrc, char *&pDst, intp 
 		pSrc++;
 
 	// Now read in parameters from file
-	FILE *fp = fopen( szFileName, "r" );
+	std::FILE *fp = std::fopen( szFileName, "r" );
 	if ( fp )
 	{
 		char c;
-		c = (char)fgetc( fp );
-		while ( c != EOF )
+		c = (char)std::fgetc( fp );
+		while ( c != std::char_traits<char>::eof() )
 		{
 			// Turn return characters into spaces
 			if ( c == '\n' )
@@ -167,17 +155,17 @@ void CCommandLine::LoadParametersFromFile( const char *&pSrc, char *&pDst, intp 
 				break;
 
 			// Get the next character, if there are more
-			c = (char)fgetc( fp );
+			c = (char)std::fgetc( fp );
 		}
 	
 		// Add a terminating space character
 		*pDst++ = ' ';
 
-		fclose( fp );
+		std::fclose( fp );
 	}
 	else
 	{
-		printf( "Parameter file '%s' not found, skipping...", szFileName );
+		std::printf( "Parameter file '%s' not found, skipping...", szFileName );
 	}
 }
 
@@ -193,10 +181,10 @@ void CCommandLine::CreateCmdLine( int argc, char **argv )
 	cmdline[MAX_CHARS] = 0;
 	for ( int i = 0; i < argc; ++i )
 	{
-		strncat( cmdline, "\"", MAX_CHARS );
-		strncat( cmdline, argv[i], MAX_CHARS );
-		strncat( cmdline, "\"", MAX_CHARS );
-		strncat( cmdline, " ", MAX_CHARS );
+		std::strncat( cmdline, "\"", MAX_CHARS );
+		std::strncat( cmdline, argv[i], MAX_CHARS );
+		std::strncat( cmdline, "\"", MAX_CHARS );
+		std::strncat( cmdline, " ", MAX_CHARS );
 	}
 
 	CreateCmdLine( cmdline );
@@ -253,9 +241,9 @@ void CCommandLine::CreateCmdLine( const char *commandline )
 
 	*pDst = '\0';
 
-	size_t len = strlen( szFull ) + 1;
+	std::size_t len = std::strlen( szFull ) + 1;
 	m_pszCmdLine = new char[len];
-	memcpy( m_pszCmdLine, szFull, len );
+	std::memcpy( m_pszCmdLine, szFull, len );
 
 	Plat_SetCommandLine( m_pszCmdLine );
 
@@ -280,7 +268,7 @@ static char * _stristr( char * pStr, const char * pSearch )
 	while (*pLetter != 0)
 	{
 		// Skip over non-matches
-		if (tolower((unsigned char)*pLetter) == tolower((unsigned char)*pSearch))
+		if (std::tolower((unsigned char)*pLetter) == std::tolower((unsigned char)*pSearch))
 		{
 			// Check for match
 			char const* pMatch = pLetter + 1;
@@ -291,7 +279,7 @@ static char * _stristr( char * pStr, const char * pSearch )
 				if (*pMatch == 0)
 					return 0;
 
-				if (tolower((unsigned char)*pMatch) != tolower((unsigned char)*pTest))
+				if (std::tolower((unsigned char)*pMatch) != std::tolower((unsigned char)*pTest))
 					break;
 
 				++pMatch;
@@ -323,12 +311,12 @@ void CCommandLine::RemoveParm( const char *pszParm )
 	char *p, *found;
 	char *pnextparam;
 	intp n;
-	size_t curlen;
+	std::size_t curlen;
 
 	p = m_pszCmdLine;
 	while ( *p )
 	{
-		curlen = strlen( p );
+		curlen = std::strlen( p );
 
 		found = _stristr( p, pszParm );
 		if ( !found )
@@ -342,7 +330,7 @@ void CCommandLine::RemoveParm( const char *pszParm )
 		while ( pnextparam && *pnextparam && (*pnextparam != ' ') && (*pnextparam != '\"') )
 			pnextparam++;
 
-		if ( pnextparam && ( static_cast<size_t>( pnextparam - found ) > strlen( pszParm ) ) )
+		if ( pnextparam && ( static_cast<std::size_t>( pnextparam - found ) > std::strlen( pszParm ) ) )
 		{
 			p = pnextparam;
 			continue;
@@ -360,7 +348,7 @@ void CCommandLine::RemoveParm( const char *pszParm )
 		{
 			// We are either at the end of the string, or at the next param.  Just chop out the current param.
 			n = curlen - ( pnextparam - p ); // # of characters after this param.
-			memmove( found, pnextparam, n );
+			std::memmove( found, pnextparam, n );
 
 			found[n] = '\0';
 		}
@@ -368,14 +356,14 @@ void CCommandLine::RemoveParm( const char *pszParm )
 		{
 			// Clear out rest of string.
 			n = pnextparam - found;
-			memset( found, 0, n );
+			std::memset( found, 0, n );
 		}
 	}
 
 	// Strip and trailing ' ' characters left over.
 	while ( 1 )
 	{
-		intp len = strlen( m_pszCmdLine );
+		intp len = std::strlen( m_pszCmdLine );
 		if ( len == 0 || m_pszCmdLine[ len - 1 ] != ' ' )
 			break;
 		
@@ -396,19 +384,19 @@ void CCommandLine::AppendParm( const char *pszParm, const char *pszValues )
 	intp nNewLength = 0;
 	char *pCmdString;
 
-	nNewLength = strlen( pszParm );            // Parameter.
+	nNewLength = std::strlen( pszParm );            // Parameter.
 	if ( pszValues )
-		nNewLength += strlen( pszValues ) + 1;  // Values + leading space character.
+		nNewLength += std::strlen( pszValues ) + 1;  // Values + leading space character.
 	nNewLength++; // Terminal 0;
 
 	if ( !m_pszCmdLine )
 	{
 		m_pszCmdLine = new char[ nNewLength ];
-		strcpy( m_pszCmdLine, pszParm );
+		std::strcpy( m_pszCmdLine, pszParm );
 		if ( pszValues )
 		{
-			strcat( m_pszCmdLine, " " );
-			strcat( m_pszCmdLine, pszValues );
+			std::strcat( m_pszCmdLine, " " );
+			std::strcat( m_pszCmdLine, pszValues );
 		}
 
 		ParseCommandLine();
@@ -418,18 +406,18 @@ void CCommandLine::AppendParm( const char *pszParm, const char *pszValues )
 	// Remove any remnants from the current Cmd Line.
 	RemoveParm( pszParm );
 
-	nNewLength += strlen( m_pszCmdLine ) + 1 + 1;
+	nNewLength += std::strlen( m_pszCmdLine ) + 1 + 1;
 
 	pCmdString = new char[ nNewLength ];
-	memset( pCmdString, 0, nNewLength );
+	std::memset( pCmdString, 0, nNewLength );
 
-	strcpy ( pCmdString, m_pszCmdLine ); // Copy old command line.
-	strcat ( pCmdString, " " ); // Put in a space
-	strcat ( pCmdString, pszParm );
+	std::strcpy ( pCmdString, m_pszCmdLine ); // Copy old command line.
+	std::strcat ( pCmdString, " " ); // Put in a space
+	std::strcat ( pCmdString, pszParm );
 	if ( pszValues )
 	{
-		strcat( pCmdString, " " );
-		strcat( pCmdString, pszValues );
+		std::strcat( pCmdString, " " );
+		std::strcat( pCmdString, pszValues );
 	}
 
 	// Kill off the old one
@@ -494,9 +482,9 @@ void CCommandLine::AddArgument( const char *pFirst, const char *pLast )
 	if ( m_nParmCount >= MAX_PARAMETERS )
 		Error( "CCommandLine::AddArgument: exceeded %d parameters", MAX_PARAMETERS );
 
-	size_t nLen = ( pLast - pFirst ) + 1;
+	std::size_t nLen = ( pLast - pFirst ) + 1;
 	m_ppParms[m_nParmCount] = new char[nLen];
-	memcpy( m_ppParms[m_nParmCount], pFirst, nLen - 1 );
+	std::memcpy( m_ppParms[m_nParmCount], pFirst, nLen - 1 );
 	m_ppParms[m_nParmCount][nLen - 1] = 0;
 
 	++m_nParmCount;
@@ -605,7 +593,7 @@ bool CCommandLine::HasParm( const char *psz ) const
 
 const char* CCommandLine::GetParm( int nIndex ) const
 {
-	Assert( (nIndex >= 0) && (nIndex < m_nParmCount) );
+	contract_assert( (nIndex >= 0) && (nIndex < m_nParmCount) );
 	if ( (nIndex < 0) || (nIndex >= m_nParmCount) )
 		return "";
 	return m_ppParms[nIndex];
@@ -614,14 +602,14 @@ void CCommandLine::SetParm( int nIndex, char const *pParm )
 {
 	if ( pParm )
 	{
-		Assert( (nIndex >= 0) && (nIndex < m_nParmCount) );
+		contract_assert( (nIndex >= 0) && (nIndex < m_nParmCount) );
 		if ( (nIndex >= 0) && (nIndex < m_nParmCount) )
 		{
 			if ( m_ppParms[nIndex] )
 				delete[] m_ppParms[nIndex];
-			size_t nLen = strlen( pParm ) + 1;
+			std::size_t nLen = std::strlen( pParm ) + 1;
 			m_ppParms[nIndex] = new char[nLen];
-			memcpy( m_ppParms[nIndex], pParm, nLen );
+			std::memcpy( m_ppParms[nIndex], pParm, nLen );
 		}
 
 	}
@@ -655,7 +643,7 @@ int	CCommandLine::ParmValue( const char *psz, int nDefaultVal ) const
 	if ( m_ppParms[nIndex + 1][0] == '-' || m_ppParms[nIndex + 1][0] == '+' )
 		return nDefaultVal;
 
-	return atoi( m_ppParms[nIndex + 1] );
+	return std::atoi( m_ppParms[nIndex + 1] );
 }
 
 float CCommandLine::ParmValue( const char *psz, float flDefaultVal ) const
@@ -668,5 +656,5 @@ float CCommandLine::ParmValue( const char *psz, float flDefaultVal ) const
 	if ( m_ppParms[nIndex + 1][0] == '-' || m_ppParms[nIndex + 1][0] == '+' )
 		return flDefaultVal;
 
-	return atof( m_ppParms[nIndex + 1] );
+	return std::atof( m_ppParms[nIndex + 1] );
 }

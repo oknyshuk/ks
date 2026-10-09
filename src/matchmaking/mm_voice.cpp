@@ -1,27 +1,15 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
+import ks.tier1;
 #include "mm_voice.h"
 
-#include "fmtstr.h"
+import std;
 
-#define MMVOICEMSG(...) ((void)0)
-#define MMVOICEMSG2(...) ((void)0)
-
-static inline bool FriendRelationshipMute( int iRelationship )
+static XUID LocalPlayerXuid()
 {
-	switch ( iRelationship )
-	{
-	case k_EFriendRelationshipBlocked:
-	case k_EFriendFlagIgnored:
-	case k_EFriendFlagIgnoredFriend:
-		return true;
-	default:
-		return false;
-	}
+	IPlayerLocal *pLocal = g_pPlayerManager->GetLocalPlayer( XBX_GetPrimaryUserId() );
+	return pLocal ? pLocal->GetXUID() : 0;
 }
 
 //
@@ -50,13 +38,11 @@ bool CMatchVoice::CanPlaybackTalker( XUID xuidTalker )
 {
 	if ( IsMachineMutingLocalTalkers( xuidTalker ) )
 	{
-		MMVOICEMSG2( "CanPlaybackTalker(0x%llX)=false(IsMachineMutingLocalTalkers)\n", xuidTalker );
 		return false;
 	}
 
 	if ( IsMachineMuted( xuidTalker ) )
 	{
-		MMVOICEMSG2( "CanPlaybackTalker(0x%llX)=false(IsMachineMuted)\n", xuidTalker );
 		return false;
 	}
 
@@ -66,31 +52,8 @@ bool CMatchVoice::CanPlaybackTalker( XUID xuidTalker )
 // Whether we are explicitly muting a remote player
 bool CMatchVoice::IsTalkerMuted( XUID xuidTalker )
 {
-
-	if ( FriendRelationshipMute( steamapicontext->SteamFriends()->GetFriendRelationship( xuidTalker ) ) )
-	{
-		MMVOICEMSG( "IsTalkerMuted(0x%llX)=true(GetFriendRelationship=0x%X)\n", xuidTalker, steamapicontext->SteamFriends()->GetFriendRelationship( xuidTalker ) );
-		return true;
-	}
-
 	if ( ks::find_index( m_arrMutedTalkers, xuidTalker ) != -1 )
 	{
-		MMVOICEMSG( "IsTalkerMuted(0x%llX)=true(locallist)\n", xuidTalker );
-		return true;
-	}
-
-	xuidTalker = RemapTalkerXuid( xuidTalker );
-
-	if ( FriendRelationshipMute( steamapicontext->SteamFriends()->GetFriendRelationship( xuidTalker ) ) )
-	{
-		MMVOICEMSG( "IsTalkerMuted(0x%llX/0x%llX)=true(GetFriendRelationship=0x%X)\n", xuidTalker, xuidOriginal, steamapicontext->SteamFriends()->GetFriendRelationship( xuidTalker ) );
-		return true;
-	}
-
-
-	if ( ks::find_index( m_arrMutedTalkers, xuidTalker ) != -1 )
-	{
-		MMVOICEMSG( "IsTalkerMuted(0x%llX/0x%llX)=true(locallist)\n", xuidTalker, xuidOriginal );
 		return true;
 	}
 
@@ -103,60 +66,12 @@ bool CMatchVoice::IsMachineMuted( XUID xuidPlayer )
 	return IsTalkerMuted( xuidPlayer );
 }
 
-// X360: Remap XUID of a player to a valid LIVE-enabled XUID
-// PS3: Remap SteamID of a player to a PSN ID
-XUID CMatchVoice::RemapTalkerXuid( XUID xuidTalker )
-{
-		return xuidTalker;
-
-
-	// Find the session and the talker within session members
-	IMatchSession *pMatchSession = g_pMatchFramework->GetMatchSession();
-	if ( !pMatchSession )
-		return xuidTalker;
-
-	KeyValues *pSettings = pMatchSession->GetSessionSettings();
-
-	KeyValues *pMachine = nullptr;
-	KeyValues *pTalker = SessionMembersFindPlayer( pSettings, xuidTalker, &pMachine );
-	if ( !pTalker || !pMachine )
-		return xuidTalker;
-
-
-	// Check this user name if he is a guest
-	char const *szTalkerName = pTalker->GetString( "name" );
-	char const *pchr = strchr( szTalkerName, '(' );
-	if ( !pchr )
-		return xuidTalker;	// user is not a guest
-
-	// Find another user from the same machine
-	int numPlayers = pMachine->GetInt( "numPlayers" );
-	for ( int k = 0; k < numPlayers; ++ k )
-	{
-		KeyValues *pOtherPlayer = pMachine->FindKey( CFmtStr( "player%d", k ) );
-		if ( !pOtherPlayer )
-			continue;
-
-		char const *szOtherName = pOtherPlayer->GetString( "name" );
-		if ( strchr( szOtherName, '(' ) )
-			continue;
-
-		XUID xuidOther = pOtherPlayer->GetUint64( "xuid" );
-		if ( xuidOther )
-			return xuidOther;
-	}
-
-	// No remapping
-	return xuidTalker;
-}
-
 // Check player-player voice privileges for machine blocking purposes
 bool CMatchVoice::IsTalkerMutedWithPrivileges( int dwCtrlr, XUID xuidTalker )
 {
 
 	if ( ks::find_index( m_arrMutedTalkers, xuidTalker ) != -1 )
 	{
-		MMVOICEMSG( "IsTalkerMutedWithPrivileges(%d/0x%llX)=true(locallist)\n", dwCtrlr, xuidTalker );
 		return true;
 	}
 
@@ -179,7 +94,7 @@ bool CMatchVoice::IsMachineMutingLocalTalkers( XUID xuidPlayer )
 		return false;
 
 	// Find the local player record in the session
-	XUID xuidLocalId = g_pPlayerManager->GetLocalPlayer( XBX_GetPrimaryUserId() )->GetXUID();
+	XUID xuidLocalId = LocalPlayerXuid();
 	KeyValues *pLocalMachine = nullptr;
 	SessionMembersFindPlayer( pSettings, xuidLocalId, &pLocalMachine );
 	if ( !pLocalMachine || pLocalMachine == pMachine )
@@ -200,7 +115,6 @@ bool CMatchVoice::IsMachineMutingLocalTalkers( XUID xuidPlayer )
 				XUID xuidLocal = pLocalMachine->GetUint64( CFmtStr( "player%d/xuid", iLocal ) );
 				if ( xuidMuted == xuidLocal )
 				{
-					MMVOICEMSG2( "IsMachineMutingLocalTalkers(0x%llX/0x%llX)=true(mutelist)\n", xuidPlayer, xuidLocal );
 					return true;
 				}
 			}
@@ -213,28 +127,12 @@ bool CMatchVoice::IsMachineMutingLocalTalkers( XUID xuidPlayer )
 // Whether voice recording mode is currently active
 bool CMatchVoice::IsVoiceRecording()
 {
-
-	EVoiceResult res = steamapicontext->SteamUser()->GetAvailableVoice( nullptr, nullptr, 0 );
-
-	switch ( res )
-	{
-	case k_EVoiceResultOK:
-	case k_EVoiceResultNoData:
-		return true;
-	default:
-		return false;
-	}
-
 	return false;
 }
 
 // Enable or disable voice recording
 void CMatchVoice::SetVoiceRecording( bool bRecordingEnabled )
 {
-	if ( bRecordingEnabled )
-		steamapicontext->SteamUser()->StartVoiceRecording();
-	else
-		steamapicontext->SteamUser()->StopVoiceRecording();
 }
 
 // Enable or disable voice mute for a given talker
@@ -257,13 +155,17 @@ void CMatchVoice::MuteTalker( XUID xuidTalker, bool bMute )
 	g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( new KeyValues( "OnSysMuteListChanged" ) );
 }
 
-CON_COMMAND( voice_reset_mutelist, "Reset all mute information for all players who were ever muted." )
+static void voice_reset_mutelist( const CCommand &args );
+static ConCommand voice_reset_mutelist_command( "voice_reset_mutelist", voice_reset_mutelist, "Reset all mute information for all players who were ever muted." );
+static void voice_reset_mutelist( const CCommand &args )
 {
 	g_pMatchVoice->MuteTalker( 0ull, false );
 	Msg( "Mute list cleared.\n" );
 }
 
-CON_COMMAND( voice_mute, "Mute a specific Steam user" )
+static void voice_mute( const CCommand &args );
+static ConCommand voice_mute_command( "voice_mute", voice_mute, "Mute a specific user" );
+static void voice_mute( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -271,7 +173,7 @@ CON_COMMAND( voice_mute, "Mute a specific Steam user" )
 	}
 	else
 	{
-		int iUserId = Q_atoi( args.Arg( 1 ) );
+		int iUserId = V_atoi( args.Arg( 1 ) );
 		player_info_t pi;
 		if ( !g_pMatchExtensions->GetIVEngineClient()->GetPlayerInfo( iUserId, &pi ) || !pi.xuid )
 		{
@@ -291,7 +193,9 @@ usage:
 	Msg( "Example usage: voice_mute player#   -   where player# is a number that you can find with \"voice_show_mute\" command.\n" );
 }
 
-CON_COMMAND( voice_unmute, "Unmute a specific Steam user, or `all` to unmute all connected players." )
+static void voice_unmute( const CCommand &args );
+static ConCommand voice_unmute_command( "voice_unmute", voice_unmute, "Unmute a specific user, or `all` to unmute all connected players." );
+static void voice_unmute( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -299,9 +203,9 @@ CON_COMMAND( voice_unmute, "Unmute a specific Steam user, or `all` to unmute all
 	}
 	else
 	{
-		if ( !Q_stricmp( "all", args.Arg(1) ) )
+		if ( !V_stricmp( "all", args.Arg(1) ) )
 		{
-			XUID xuidLocal = g_pPlayerManager->GetLocalPlayer( XBX_GetPrimaryUserId() )->GetXUID();
+			XUID xuidLocal = LocalPlayerXuid();
 			int maxClients = g_pMatchExtensions->GetIVEngineClient()->GetMaxClients();
 			for ( int i = 1; i <= maxClients; ++ i )
 			{
@@ -320,7 +224,7 @@ CON_COMMAND( voice_unmute, "Unmute a specific Steam user, or `all` to unmute all
 			return;
 		}
 
-		int iUserId = Q_atoi( args.Arg( 1 ) );
+		int iUserId = V_atoi( args.Arg( 1 ) );
 		player_info_t pi;
 		if ( !g_pMatchExtensions->GetIVEngineClient()->GetPlayerInfo( iUserId, &pi ) || !pi.xuid )
 		{
@@ -340,13 +244,15 @@ usage:
 	Msg( "Example usage: voice_unmute {player#|all}   -   where player# is a number that you can find with \"voice_show_mute\" command, or all to unmute all connected players.\n" );
 }
 
-CON_COMMAND( voice_show_mute, "Show whether current players are muted." )
+static void voice_show_mute( const CCommand &args );
+static ConCommand voice_show_mute_command( "voice_show_mute", voice_show_mute, "Show whether current players are muted." );
+static void voice_show_mute( const CCommand &args )
 {
 	if ( g_pMatchExtensions->GetIVEngineClient()->GetDemoPlaybackParameters() )
 		return;
 
 	bool bPrinted = false;
-	XUID xuidLocal = g_pPlayerManager->GetLocalPlayer( XBX_GetPrimaryUserId() )->GetXUID();
+	XUID xuidLocal = LocalPlayerXuid();
 	int maxClients = g_pMatchExtensions->GetIVEngineClient()->GetMaxClients();
 	for ( int i = 1; i <= maxClients; ++ i )
 	{

@@ -1,9 +1,8 @@
-#ifndef SHADERAPI_BUILTIN_H
-#define SHADERAPI_BUILTIN_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
 
-
-#include "interface.h"
+import std;
+import ks.tier1;
 
 CreateInterfaceFn ShaderApiEmptyFactory();
-
-#endif // SHADERAPI_BUILTIN_H

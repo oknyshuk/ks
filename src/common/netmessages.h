@@ -1,33 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
-
-#ifndef NETMESSAGES_H
-#define NETMESSAGES_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <inetmessage.h>
-#include <checksum_crc.h>
-#include <checksum_md5.h>
 #include <const.h>
-#include <utlvector.h>
 #include "qlimits.h"
-#include "mathlib/vector.h"
 #include <soundflags.h>
-#include <bitbuf.h>
 #include <inetchannel.h>
 #include "protocol.h"
 #include <inetmsghandler.h>
 #include <igameevents.h>
 #include "networksystem/inetworksystem.h"
 #include <engine/iserverplugin.h>
-#include <color.h>
-#include <tier0/tslist.h>
-#include <functional>
-#include "tier1/utlstring.h"
-#include "tier1/tokenset.h"
+import ks.tier1;
+import std;
 #include "netmessages_signon.h"
 
 // eliminates a conflict with TYPE_BOOL in OSX
@@ -75,7 +61,8 @@ public:
 			return ok;
 		}
 
-		void *shifted = stackalloc( size );
+		ks::ScratchArena<> scratch;
+		void *shifted = scratch.AllocBytes( size );
 		return buffer.ReadBytes( shifted, size ) &&
 		       ks::proto::read_bytes( body(), shifted, size );
 	}
@@ -98,7 +85,8 @@ public:
 			return true;
 		}
 
-		void *shifted = stackalloc( size );
+		ks::ScratchArena<> scratch;
+		void *shifted = scratch.AllocBytes( size );
 		ks::proto::write( body(), (std::byte *)shifted );
 		buffer.WriteVarInt32( GetType() );
 		buffer.WriteVarInt32( size );
@@ -112,7 +100,7 @@ public:
 	}
 
 	virtual int GetType() const { return msgType; }
-	virtual size_t GetSize() const { return sizeof( *this ); }
+	virtual std::size_t GetSize() const { return sizeof( *this ); }
 	virtual const char *GetName() const { return ks::proto::type_name<PBType_t>(); }
 	virtual int GetGroup() const { return groupType; }
 
@@ -226,7 +214,7 @@ private:
 		{
 			const typename _N::MyType_t &typedSrc = static_cast< const typename _N::MyType_t & >( src );
 
-			Assert( m_handler );
+			contract_assert( m_handler );
 			if( m_handler )
 			{
 				return m_handler( static_cast< typename _N::PBType_t const & >( typedSrc ) );
@@ -479,5 +467,3 @@ private:
 	net_scratchbuffer_t& operator=( const net_scratchbuffer_t& );	// FORBID
 	static CTSPool< buffer_t > sm_NetScratchBuffers;
 };
-
-#endif // NETMESSAGES_H

@@ -1,12 +1,11 @@
-#ifndef _IDATACENTER_H_
-#define _IDATACENTER_H_
+#pragma once
 
 class IDatacenter;
 class IDatacenterCmdBatch;
 
 #include "imatchsystem.h"
 
-abstract_class IDatacenter
+class IDatacenter
 {
 public:
 	//
@@ -29,7 +28,7 @@ public:
 	virtual bool CanReachDatacenter() = 0;
 };
 
-abstract_class IDatacenterCmdBatch
+class IDatacenterCmdBatch
 {
 public:
 	//
@@ -83,4 +82,3 @@ public:
 };
 
 
-#endif // _IDATACENTER_H_

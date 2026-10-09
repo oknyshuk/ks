@@ -1,19 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
-#include "common_hlsl_cpp_consts.h"
 
 #include "Downsample_ps20.inc"
 #include "Downsample_ps20b.inc"
 
-
 BEGIN_VS_SHADER_FLAGS( Downsample, "Help for Downsample", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 	END_SHADER_PARAMS
 
 	SHADER_INIT

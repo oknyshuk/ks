@@ -1,8 +1,9 @@
-#ifndef ROCKETFILESYSTEM_H
-#define ROCKETFILESYSTEM_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
 
 #include <rocketui/rmlui.h>
-#include <vector>
+import std;
 
 // Decode a Valve .vtf texture (from the game filesystem, incl. VPKs) to RGBA8888.
 // Lets RmlUi reuse the original engine sprites directly (see LoadTexture).
@@ -35,5 +36,3 @@ public:
   // Returns the length of the file
   size_t Length(Rml::FileHandle file) override;
 };
-
-#endif // ROCKETFILESYSTEM_H

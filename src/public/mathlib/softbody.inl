@@ -1,6 +1,6 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-#ifndef MATHLIB_SOFTBODY_INL_HDR
-#define MATHLIB_SOFTBODY_INL_HDR
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "mathlib/softbodyenvironment.h"
 inline void CSoftbody::Shutdown()
@@ -9,5 +9,3 @@ inline void CSoftbody::Shutdown()
 	MemAlloc_FreeAligned( m_pParticles );
 	m_StickyBuffer.Clear();
 }
-
-#endif // MATHLIB_SOFTBODY_INL_HDR

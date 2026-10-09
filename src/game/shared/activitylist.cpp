@@ -1,18 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
 #include "ai_activity.h"
 #include "activitylist.h"
 #include "stringregistry.h"
 
 #include "filesystem.h"
-#include <keyvalues.h>
-#include "tier1/map_ops.h"
 
 extern IFileSystem *filesystem;
 
@@ -58,7 +53,6 @@ void ActivityList_Free( void )
 // add a new activity to the database
 activitylist_t *ActivityList_AddActivityEntry( const char *pName, int iActivityIndex, bool isPrivate )
 {
-	MEM_ALLOC_CREDIT();
 	int index = std::ssize( g_ActivityList ); g_ActivityList.emplace_back();
 	activitylist_t *pList = &g_ActivityList[index];
 	pList->activityIndex = iActivityIndex;
@@ -109,7 +103,7 @@ bool ActivityList_RegisterSharedActivity( const char *pszActivityName, int iActi
 
 	// technically order isn't dependent, but it's too damn easy to forget to add new ACT_'s to all three lists.
 	static int lastActivityIndex = -1;
-	Assert( iActivityIndex < LAST_SHARED_ACTIVITY && (iActivityIndex == lastActivityIndex + 1 || iActivityIndex == 0) );
+	contract_assert( iActivityIndex < LAST_SHARED_ACTIVITY && (iActivityIndex == lastActivityIndex + 1 || iActivityIndex == 0) );
 	lastActivityIndex = iActivityIndex;
 
 	// first, check to make sure the slot we're asking for is free. It must be for 
@@ -123,7 +117,7 @@ bool ActivityList_RegisterSharedActivity( const char *pszActivityName, int iActi
 	if ( pList )
 	{
 		Warning( "***\nShared activity collision! %s<->%s\n***\n", pszActivityName, g_ActivityStrings.GetStringForKey( pList->stringKey ) );
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	// ----------------------------------------------------------------
@@ -148,7 +142,7 @@ Activity ActivityList_RegisterPrivateActivity( const char *pszActivityName )
 		{
 			// this private activity collides with a shared activity. That is not allowed.
 			Warning( "***\nShared<->Private Activity collision!\n***\n" );
-			Assert(0);
+			contract_assert( 0 );
 			return ACT_INVALID;
 		}
 	}
@@ -1362,11 +1356,11 @@ void ActivityList_RegisterSharedActivities( void )
 	REGISTER_SHARED_ACTIVITY( ACT_CSGO_EXIT_LADDER_TOP );
 	REGISTER_SHARED_ACTIVITY( ACT_CSGO_EXIT_LADDER_BOTTOM );
 
-	AssertMsg( g_HighestActivity == LAST_SHARED_ACTIVITY - 1, "Not all activities from ai_activity.h registered in activitylist.cpp" ); 
+	contract_assert( ( g_HighestActivity == LAST_SHARED_ACTIVITY - 1 ) && "Not all activities from ai_activity.h registered in activitylist.cpp" ); 
 } 
 
 // HACKHACK: Keep backwards compatibility on broken activities temporarily
-#define ACTIVITY_FILE_TAG 0x80800000
+constexpr auto ACTIVITY_FILE_TAG = 0x80800000;
 
 
 

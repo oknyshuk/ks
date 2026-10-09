@@ -1,11 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include <stdio.h>
-#include <memory.h>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
 
 // Copied from sound.cpp in the DLL
 char *memfgets( unsigned char *pMemFile, int fileSize, int *pFilePos, char *pBuffer, int bufferSize )
@@ -44,7 +40,7 @@ char *memfgets( unsigned char *pMemFile, int fileSize, int *pFilePos, char *pBuf
 		// We read in size bytes
 		int size = i - filePos;
 		// copy it out
-		memcpy( pBuffer, pMemFile + filePos, sizeof(unsigned char)*size );
+		std::memcpy( pBuffer, pMemFile + filePos, sizeof(unsigned char)*size );
 		
 		// If the buffer isn't full, terminate (this is always true)
 		if ( size < bufferSize )

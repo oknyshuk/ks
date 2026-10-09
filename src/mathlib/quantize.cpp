@@ -1,31 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef STDIO_H
-#include <stdio.h>
-#endif
-
-#ifndef STRING_H
-#include <string.h>
-#endif
-
-#ifndef QUANTIZE_H
-#include <quantize.h>
-#endif
-
-#include "tier0/basetypes.h"
-
-#include <algorithm>
-
-#include <stdlib.h>
+import std;
 
 
-#include <math.h>
+import ks.math;
+
+
+
 
 
 static int current_ndims;
@@ -36,9 +18,8 @@ static uint8 *current_weights;
 
 double SquaredError;
 
-#define SPLIT_THEN_SORT 1
 
-#define SQ(x) ((x)*(x))
+static constexpr auto Sq( auto x ) { return x * x; }
 
 static struct QuantizedValue *AllocQValue(void)
 {
@@ -52,7 +33,7 @@ static struct QuantizedValue *AllocQValue(void)
 	ret->Mins=new uint8[current_ndims];
 	ret->Maxs=new uint8[current_ndims];
 	ret->Sums=new int [current_ndims];
-	memset(ret->Sums,0,sizeof(int)*current_ndims);
+	std::memset(ret->Sums,0,sizeof(int)*current_ndims);
 	ret->NQuant=0;
 	ret->sortdim=-1;
 	return ret;
@@ -81,30 +62,17 @@ static int QNumSort(void const *a, void const *b)
 	return (as>bs)?1:-1;
 }
 
-#if SPLIT_THEN_SORT
-#else
-static int current_sort_dim;
-
-static int samplesort(void const *a, void const *b)
-{
-	uint8 as=((struct Sample *) a)->Value[current_sort_dim];
-	uint8 bs=((struct Sample *) b)->Value[current_sort_dim];
-	if (as==bs) return 0;
-	return (as>bs)?1:-1;
-}
-#endif
-
 static int sortlong(void const *a, void const *b)
 {
 	// treat the entire vector of values as a long integer for duplicate removal.
-	return memcmp(((struct Sample *) a)->Value,
+	return std::memcmp(((struct Sample *) a)->Value,
 				  ((struct Sample *) b)->Value,current_ndims);
 }
 
 
   
-#define NEXTSAMPLE(s) ( (struct Sample *) (((uint8 *) s)+current_ssize))
-#define SAMPLE(s,i) NthSample(s,i,current_ndims)
+template <typename T1> [[gnu::always_inline]] inline auto NEXTSAMPLE( T1 s ) { return ( (struct Sample *) (((uint8 *) s)+current_ssize)); }
+template <typename T1, typename T2> [[gnu::always_inline]] inline auto SAMPLE( T1 s, T2 i ) { return NthSample(s,i,current_ndims); }
 
 static void SetNDims(int n)
 {
@@ -115,7 +83,7 @@ static void SetNDims(int n)
 int CompressSamples(struct Sample *s, int nsamples, int ndims)
 {
 	SetNDims(ndims);
-	qsort(s,nsamples,current_ssize,sortlong);
+	std::qsort(s,nsamples,current_ssize,sortlong);
 	// now, they are all sorted by treating all dimensions as a large number.
 	// we may now remove duplicates.
 	struct Sample *src=s;
@@ -126,10 +94,10 @@ int CompressSamples(struct Sample *s, int nsamples, int ndims)
 	int noutput=1;
 	while(--nsamples)		// while some remain
 	{
-		if (memcmp(src->Value,lastdst->Value,current_ndims))
+		if (std::memcmp(src->Value,lastdst->Value,current_ndims))
 		{
 			// yikes, a difference has been found!
-			memcpy(dst,src,current_ssize);
+			std::memcpy(dst,src,current_ssize);
 			lastdst=dst;
 			dst=NEXTSAMPLE(dst);
 			noutput++;
@@ -147,10 +115,10 @@ void PrintSamples(struct Sample const *s, int nsamples, int ndims)
 	int cnt=0;
 	while(nsamples--)
 	{
-		printf("sample #%d, count=%d, values=\n { ",cnt++,s->Count);
+		std::printf("sample #%d, count=%d, values=\n { ",cnt++,s->Count);
 		for(int d=0;d<ndims;d++)
-			printf("%02x,",s->Value[d]);
-		printf("}\n");
+			std::printf("%02x,",s->Value[d]);
+		std::printf("}\n");
 		s=NEXTSAMPLE(s);
 	}
 }
@@ -162,26 +130,26 @@ void PrintQTree(struct QuantizedValue const *p,int idlevel)
 	if (p)
 	{
 		for(i=0;i<idlevel;i++)
-			printf(" ");
-		printf("node=%p NSamples=%d value=%d Mean={",p,p->NSamples,p->value);
+			std::printf(" ");
+		std::printf("node=%p NSamples=%d value=%d Mean={",p,p->NSamples,p->value);
 		for(i=0;i<current_ndims;i++)
-			printf("%x,",p->Mean[i]);
-		printf("}\n");
+			std::printf("%x,",p->Mean[i]);
+		std::printf("}\n");
 		for(i=0;i<idlevel;i++)
-			printf(" ");
-		printf("Errors={");
+			std::printf(" ");
+		std::printf("Errors={");
 		for(i=0;i<current_ndims;i++)
-			printf("%f,",p->ErrorMeasure[i]);
-		printf("}\n");
+			std::printf("%f,",p->ErrorMeasure[i]);
+		std::printf("}\n");
 		for(i=0;i<idlevel;i++)
-			printf(" ");
-		printf("Mins={");
+			std::printf(" ");
+		std::printf("Mins={");
 		for(i=0;i<current_ndims;i++)
-			printf("%d,",p->Mins[i]);
-		printf("} Maxs={");
+			std::printf("%d,",p->Mins[i]);
+		std::printf("} Maxs={");
 		for(i=0;i<current_ndims;i++)
-			printf("%d,",p->Maxs[i]);
-		printf("}\n");
+			std::printf("%d,",p->Maxs[i]);
+		std::printf("}\n");
 		PrintQTree(p->Children[0],idlevel+2);
 		PrintQTree(p->Children[1],idlevel+2);
 	}
@@ -195,7 +163,7 @@ static void UpdateStats(struct QuantizedValue *v)
 	double WorstError[MAXDIMS];
 	int i,j;
   
-	memset(Means,0,sizeof(Means));
+	std::memset(Means,0,sizeof(Means));
 	int N=0;
 	for(i=0;i<v->NSamples;i++)
 	{
@@ -218,7 +186,7 @@ static void UpdateStats(struct QuantizedValue *v)
 		double c=s->Count;
 		for(j=0;j<current_ndims;j++)
 		{
-			double diff=SQ(s->Value[j]-v->Mean[j]);
+			double diff=Sq(s->Value[j]-v->Mean[j]);
 			Errors[j]+=c*diff; // charles uses abs not sq()
 			if (diff>WorstError[j])
 				WorstError[j]=diff;
@@ -230,9 +198,7 @@ static void UpdateStats(struct QuantizedValue *v)
 	{
 		v->ErrorMeasure[j]=(ErrorScale*Errors[j]*current_weights[j]);
 		v->TotalError+=v->ErrorMeasure[j];
-#if SPLIT_THEN_SORT
 		v->ErrorMeasure[j]*=WorstError[j];
-#endif
 	}
 	v->TotSamples=N;
 }
@@ -277,7 +243,6 @@ static void SubdivideNode(struct QuantizedValue *n, int whichdim)
 	int NAdded=0;
 	int i;
 
-#if SPLIT_THEN_SORT
 	// we will try the "split then sort" method. This works by finding the
 	// means for all samples above and below the mean along the given axis.
 	// samples are then split into two groups, with the selection based upon
@@ -337,7 +302,7 @@ static void SubdivideNode(struct QuantizedValue *n, int whichdim)
 		struct Sample *s=SAMPLE(n->Samples,i);
 		for(int d=0;d<current_ndims;d++)
 			for(int w=0;w<2;w++)
-				dist[w]+=current_weights[d]*SQ(LocalMean[d][w]-s->Value[d]);
+				dist[w]+=current_weights[d]*Sq(LocalMean[d][w]-s->Value[d]);
 		s->QNum=(dist[0]<dist[1]);
     }
 
@@ -345,35 +310,11 @@ static void SubdivideNode(struct QuantizedValue *n, int whichdim)
 	// hey ho! we have now labelled each one with a candidate bin. Let's
 	// sort the array by moving the 0-labelled ones to the head of the array.
 	n->sortdim=-1;
-	qsort(n->Samples,n->NSamples,current_ssize,QNumSort);
+	std::qsort(n->Samples,n->NSamples,current_ssize,QNumSort);
 	for(i=0;i<n->NSamples;i++,NAdded++)
 		if (SAMPLE(n->Samples,i)->QNum)
 			break;
   
-#else
-	if (whichdim != n->sortdim)
-	{
-		current_sort_dim=whichdim;
-		qsort(n->Samples,n->NSamples,current_ssize,samplesort);
-		n->sortdim=whichdim;
-	}
-	// now, the samples are sorted along the proper dimension.  we need
-	// to find the place to cut in order to split the node.  this is
-	// complicated by the fact that each sample entry can represent many
-	// samples. What we will do is start at the beginning of the array,
-	// adding samples to the first node, until either the number added
-	// is >=TotSamples/2, or there is only one left.
-	int TotAdded=0;
-	for(;;)
-	{
-		if (NAdded==n->NSamples-1)
-			break;
-		if (TotAdded>=n->TotSamples/2)
-			break;
-		TotAdded+=SAMPLE(n->Samples,NAdded)->Count;
-		NAdded++;
-	}
-#endif
 	struct QuantizedValue *a=AllocQValue();
 	a->sortdim=n->sortdim;
 	a->Samples=n->Samples;
@@ -451,8 +392,8 @@ void CheckInRange(struct QuantizedValue *q, uint8 *max, uint8 *min)
 		}
 		for (int i=0;i<current_ndims;i++)
 		{
-			if (q->Maxs[i]>max[i]) printf("error1\n");
-			if (q->Mins[i]<min[i]) printf("error2\n");
+			if (q->Maxs[i]>max[i]) std::printf("error1\n");
+			if (q->Mins[i]<min[i]) std::printf("error2\n");
 		}
 	}
 }
@@ -490,7 +431,7 @@ double MinimumError(struct QuantizedValue const *q, uint8 const *sample,
 		{
 			val1=(val2<=q->Mins[i])?q->Mins[i]:q->Maxs[i];
 		}
-		err+=weights[i]*SQ(val1-val2);
+		err+=weights[i]*Sq(val1-val2);
 	}
 	return err;
 }
@@ -505,7 +446,7 @@ double MaximumError(struct QuantizedValue const *q, uint8 const *sample,
 		int val1=(abs(val2-q->Mins[i])>abs(val2-q->Maxs[i]))?
 			q->Mins[i]:
 			q->Maxs[i];
-		err+=weights[i]*SQ(val2-val1);
+		err+=weights[i]*Sq(val2-val1);
 	}
 	return err;
 }
@@ -580,24 +521,24 @@ void *RemoveHeapItem(struct FHeap *h)
 
 struct FHeap TheQueue;
 
-#define PUSHNODE(a) { \
-  (a)->MinError=MinimumError(a,sample,ndims,weights); \
-  if ((a)->MinError < besterror) HeapInsert(&TheQueue,&(a)->MinError); \
- }
-
 struct QuantizedValue *FindMatch(uint8 const *sample, int ndims,
 								 uint8 *weights, struct QuantizedValue *q)
 {
 	InitHeap(&TheQueue);
 	struct QuantizedValue *bestmatch=0;
 	double besterror=1.0e63;
-	PUSHNODE(q);
+	auto pushNode = [&]( struct QuantizedValue *a )
+	{
+		a->MinError=MinimumError(a,sample,ndims,weights);
+		if (a->MinError < besterror) HeapInsert(&TheQueue,&a->MinError);
+	};
+	pushNode(q);
 	for(;;)
 	{
 		struct QuantizedValue *test=(struct QuantizedValue *)
 			RemoveHeapItem(&TheQueue);
 		if (! test) break;		// heap empty
-//    printf("got pop node =%p minerror=%f\n",test,test->MinError);
+//    std::printf("got pop node =%p minerror=%f\n",test,test->MinError);
     
 		if (test->MinError>besterror) break;
 		if (test->Children[0])

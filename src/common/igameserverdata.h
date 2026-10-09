@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IGAMESERVERDATA_H
-#define IGAMESERVERDATA_H
-
-#include "interface.h"
-#include "netadr.h"
+import std;
+import ks.tier1;
 
 typedef unsigned int ra_listener_id;
 const ra_listener_id INVALID_LISTENER_ID = 0xffffffff;
@@ -20,7 +14,7 @@ const ra_listener_id INVALID_LISTENER_ID = 0xffffffff;
 //			designed to be a simple data parsing interface so that the implementation
 //			can be as similar to remote administration as possible
 //-----------------------------------------------------------------------------
-abstract_class IGameServerData : public IBaseInterface
+class IGameServerData : public IBaseInterface
 {
 public:
 	// writes out a request
@@ -79,7 +73,4 @@ RESPONSE:
 
 */
 
-#define GAMESERVERDATA_INTERFACE_VERSION "GameServerData001"
-
-
-#endif // IGAMESERVERDATA_H
+inline constexpr const char *GAMESERVERDATA_INTERFACE_VERSION = "GameServerData001";

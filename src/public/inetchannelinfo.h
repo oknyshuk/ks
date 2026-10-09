@@ -1,21 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( INETCHANNELINFO_H )
-#define INETCHANNELINFO_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#define FLOW_OUTGOING	0		
-#define FLOW_INCOMING	1
+inline constexpr int FLOW_OUTGOING = 0;
+inline constexpr int FLOW_INCOMING = 1;
 #define MAX_FLOWS		2		// in & out
 
 class INetChannelInfo
@@ -79,7 +67,3 @@ public:
 
 	virtual float		GetTimeoutSeconds() const = 0;
 };
-
-#endif // INETCHANNELINFO_H
-
-

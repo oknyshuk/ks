@@ -1,19 +1,45 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Implementation of entities that cause NPCs to participate in
 //			scripted events. These entities find and temporarily possess NPCs
 //			within a given search radius.
-//
 //			Multiple scripts with the same targetname will start frame-synchronized.
-//
 //			Scripts will find available NPCs by name or class name and grab them
 //			to play the script. If the NPC is already playing a script, the
 //			new script may enqueue itself unless there is already a non critical
 //			script in the queue.
-//
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "ai_schedule.h"
@@ -26,7 +52,6 @@
 #include "animation.h"
 #include "scripted.h"
 #include "entitylist.h"
-
 
 ConVar ai_task_pre_script(  "ai_task_pre_script", "0", FCVAR_NONE );
 
@@ -179,7 +204,7 @@ void CAI_ScriptedSequence::StopThink()
 {
 	if ( m_bThinking )
 	{
-		Assert( !m_bInitiatedSelfDelete );
+		contract_assert( !m_bInitiatedSelfDelete );
 		SetThink( nullptr);
 		m_bThinking = false;
 	}
@@ -361,7 +386,7 @@ void CAI_ScriptedSequence::InputScriptPlayerDeath( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 bool CAI_ScriptedSequence::IsTimeToStart( void )
 {
-	Assert( !m_bWaitForBeginSequence );
+	contract_assert( !m_bWaitForBeginSequence );
 
 	return ( m_iDelay == 0 );
 }
@@ -726,7 +751,7 @@ void CAI_ScriptedSequence::OnBeginSequence( void )
 //-----------------------------------------------------------------------------
 bool CAI_ScriptedSequence::StartSequence( CAI_BaseNPC *pTarget, string_t iszSeq, bool completeOnEmpty )
 {
-	Assert( pTarget );
+	contract_assert( pTarget );
 	m_sequenceStarted = true;
 	m_bIsPlayingEntry = (iszSeq == m_iszEntry);
 
@@ -774,8 +799,8 @@ void CAI_ScriptedSequence::SynchronizeSequence( CAI_BaseNPC *pNPC )
 {
 	//Msg("%s (for %s) called SynchronizeSequence() at %0.2f\n", GetTarget()->GetDebugName(), GetDebugName(), gpGlobals->curtime);
 
-	Assert( m_iDelay == 0 );
-	Assert( m_bWaitForBeginSequence == false );
+	contract_assert( m_iDelay == 0 );
+	contract_assert( m_bWaitForBeginSequence == false );
 	m_bForceSynch = false;
 
 	// Reset cycle position
@@ -1392,81 +1417,81 @@ int CAI_ScriptedSequence::DrawDebugTextOverlays( void )
 	{
 		char tempstr[512];
 
-		Q_snprintf(tempstr,sizeof(tempstr),"Target: %s", GetTarget() ? GetTarget()->GetDebugName() : "None" ) ;
+		V_snprintf(tempstr,sizeof(tempstr),"Target: %s", GetTarget() ? GetTarget()->GetDebugName() : "None" ) ;
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		switch (m_fMoveTo)
 		{
 		case CINE_MOVETO_WAIT: 
-			Q_snprintf(tempstr,sizeof(tempstr),"Moveto: Wait" );
+			V_snprintf(tempstr,sizeof(tempstr),"Moveto: Wait" );
 			break;
 		case CINE_MOVETO_WAIT_FACING:
-			Q_snprintf(tempstr,sizeof(tempstr),"Moveto: Wait Facing" );
+			V_snprintf(tempstr,sizeof(tempstr),"Moveto: Wait Facing" );
 			break;
 		case CINE_MOVETO_WALK:
-			Q_snprintf(tempstr,sizeof(tempstr),"Moveto: Walk to Mark" );
+			V_snprintf(tempstr,sizeof(tempstr),"Moveto: Walk to Mark" );
 			break;
 		case CINE_MOVETO_RUN: 
-			Q_snprintf(tempstr,sizeof(tempstr),"Moveto: Run to Mark" );
+			V_snprintf(tempstr,sizeof(tempstr),"Moveto: Run to Mark" );
 			break;
 		case CINE_MOVETO_CUSTOM:
-			Q_snprintf(tempstr,sizeof(tempstr),"Moveto: Custom move to Mark" );
+			V_snprintf(tempstr,sizeof(tempstr),"Moveto: Custom move to Mark" );
 			break;
 		case CINE_MOVETO_TELEPORT: 
-			Q_snprintf(tempstr,sizeof(tempstr),"Moveto: Teleport to Mark" );
+			V_snprintf(tempstr,sizeof(tempstr),"Moveto: Teleport to Mark" );
 			break;
 		}
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"Thinking: %s", m_bThinking ? "Yes" : "No" ) ;
+		V_snprintf(tempstr,sizeof(tempstr),"Thinking: %s", m_bThinking ? "Yes" : "No" ) ;
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		if ( GetEntityName() != NULL_STRING )
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Delay: %d", m_iDelay ) ;
+			V_snprintf(tempstr,sizeof(tempstr),"Delay: %d", m_iDelay ) ;
 			EntityText(text_offset,tempstr,0);
 			text_offset++;
 		}
 
-		Q_snprintf(tempstr,sizeof(tempstr),"Start Time: %f", m_startTime ) ;
+		V_snprintf(tempstr,sizeof(tempstr),"Start Time: %f", m_startTime ) ;
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"Sequence has started: %s", m_sequenceStarted ? "Yes" : "No" ) ;
+		V_snprintf(tempstr,sizeof(tempstr),"Sequence has started: %s", m_sequenceStarted ? "Yes" : "No" ) ;
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"Cancel Other Sequences: %s", m_bDontCancelOtherSequences ? "No" : "Yes" ) ;
+		V_snprintf(tempstr,sizeof(tempstr),"Cancel Other Sequences: %s", m_bDontCancelOtherSequences ? "No" : "Yes" ) ;
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		if ( m_bWaitForBeginSequence )
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Is waiting for BeingSequence" );
+			V_snprintf(tempstr,sizeof(tempstr),"Is waiting for BeingSequence" );
 			EntityText(text_offset,tempstr,0);
 			text_offset++;
 		}
 
 		if ( m_bIsPlayingEntry )
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Is playing entry" );
+			V_snprintf(tempstr,sizeof(tempstr),"Is playing entry" );
 			EntityText(text_offset,tempstr,0);
 			text_offset++;
 		}
 
 		if ( m_bLoopActionSequence )
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Will loop action sequence" );
+			V_snprintf(tempstr,sizeof(tempstr),"Will loop action sequence" );
 			EntityText(text_offset,tempstr,0);
 			text_offset++;
 		}
 
 		if ( m_bSynchPostIdles )
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Will synch post idles" );
+			V_snprintf(tempstr,sizeof(tempstr),"Will synch post idles" );
 			EntityText(text_offset,tempstr,0);
 			text_offset++;
 		}
@@ -1634,7 +1659,7 @@ void CAI_ScriptedSchedule::StartSchedule( CAI_BaseNPC *pTarget )
 		CHintCriteria hintCriteria;
 		hintCriteria.SetGroup( m_sGoalEnt );
 		hintCriteria.SetHintType( HINT_ANY );
-		hintCriteria.AddIncludePosition( pTarget->GetAbsOrigin(), FLT_MAX );
+		hintCriteria.AddIncludePosition( pTarget->GetAbsOrigin(), std::numeric_limits<float>::max() );
 		CAI_Hint *pHint = CAI_HintManager::FindHint( pTarget->GetAbsOrigin(), hintCriteria );
 		if ( !pHint )
 		{
@@ -1657,12 +1682,12 @@ void CAI_ScriptedSchedule::StartSchedule( CAI_BaseNPC *pTarget )
 	
 	pTarget->ForceDecisionThink();
 
-	Assert( m_nForceState >= 0 && m_nForceState < ARRAYSIZE(forcedStatesMap) );
+	contract_assert( m_nForceState >= 0 && m_nForceState < std::size( forcedStatesMap ) );
 	
 	NPC_STATE forcedState = forcedStatesMap[m_nForceState];
 
 	// trap if this isn't a legal thing to do
-	Assert( pTarget->IsInterruptable() );
+	contract_assert( pTarget->IsInterruptable() );
 
 	if ( forcedState != NPC_STATE_NONE )
 		pTarget->SetState( forcedState );
@@ -1847,11 +1872,11 @@ private:
 };
 
 
-#define SF_SENTENCE_ONCE				0x0001
-#define SF_SENTENCE_FOLLOWERS			0x0002	// only say if following player
-#define SF_SENTENCE_INTERRUPT			0x0004	// force talking except when dead
-#define SF_SENTENCE_CONCURRENT			0x0008	// allow other people to keep talking
-#define SF_SENTENCE_SPEAKTOACTIVATOR	0x0010
+constexpr auto SF_SENTENCE_ONCE = 0x0001;
+constexpr auto SF_SENTENCE_FOLLOWERS = 0x0002; // only say if following player
+constexpr auto SF_SENTENCE_INTERRUPT = 0x0004; // force talking except when dead
+constexpr auto SF_SENTENCE_CONCURRENT = 0x0008; // allow other people to keep talking
+constexpr auto SF_SENTENCE_SPEAKTOACTIVATOR = 0x0010;
 
 IMPLEMENT_REFLECT_DATAMAP( CAI_ScriptedSentence )
 
@@ -1870,7 +1895,7 @@ bool CAI_ScriptedSentence::KeyValue( const char *szKeyName, const char *szValue 
 {
 	if(FStrEq(szKeyName, "volume"))
 	{
-		m_flVolume = atof( szValue ) * 0.1;
+		m_flVolume = std::atof( szValue ) * 0.1;
 	}
 	else
 	{
@@ -2114,4 +2139,3 @@ const char *CAI_ScriptedSequence::GetSpawnPreIdleSequenceForScript( CBaseEntity 
 	}
 	return nullptr;
 }
-

@@ -1,17 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "gamecontrols_vs20.inc"
 #include "gamecontrols_ps20.inc"
 
-
 BEGIN_VS_SHADER_FLAGS( GAMECONTROLS, "Help for Game Controls", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 	END_SHADER_PARAMS
 
 	SHADER_INIT_PARAMS()

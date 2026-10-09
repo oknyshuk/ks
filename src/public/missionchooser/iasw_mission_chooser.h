@@ -1,15 +1,13 @@
-#ifndef MISSION_CHOOSER_INT_H
-#define MISSION_CHOOSER_INT_H
+#pragma once
 
+import ks.tier1;
 #include "appframework/IAppSystem.h"
-#include "utlvector.h"
+import std;
 
 class IASW_Random_Missions;
 class IASW_Mission_Chooser_Source;
 class IASW_Map_Builder;
-class KeyValues;
 class CUniformRandomStream;
-class Color;
 class IASWSpawnSelection;
 
 class IASW_Location;
@@ -114,7 +112,7 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: Interface exposed from the mission chooser .dll (to the game dlls and tilegen.exe)
 //-----------------------------------------------------------------------------
-abstract_class IASW_Mission_Chooser : public IAppSystem
+class IASW_Mission_Chooser : public IAppSystem
 {
 public:
 	virtual bool GetCurrentTimeAndDate(int *year, int *month, int *dayOfWeek, int *day, int *hour, int *minute, int *second) = 0;
@@ -127,6 +125,5 @@ public:
 	virtual IASWSpawnSelection *SpawnSelection() = 0;
 };
 
-#define ASW_MISSION_CHOOSER_VERSION		"VASWMissionChooser001"
+inline constexpr const char *ASW_MISSION_CHOOSER_VERSION = "VASWMissionChooser001";
 
-#endif // MISSION_CHOOSER_INT_H

@@ -1,31 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef TRACE_H
-#define TRACE_H
-
-
-
-#include "mathlib/mathlib.h"
+import std;
+import ks.math;
 
 // Note: These flags need to match the bspfile.h DISPTRI_TAG_* flags.
-#define DISPSURF_FLAG_SURFACE		(1<<0)
-#define DISPSURF_FLAG_WALKABLE		(1<<1)
-#define DISPSURF_FLAG_BUILDABLE		(1<<2)
-#define DISPSURF_FLAG_SURFPROP1		(1<<3)
-#define DISPSURF_FLAG_SURFPROP2		(1<<4)
-#define DISPSURF_FLAG_SURFPROP3		(1<<5)
-#define DISPSURF_FLAG_SURFPROP4		(1<<6)
+inline constexpr auto DISPSURF_FLAG_SURFACE = (1<<0);
+inline constexpr auto DISPSURF_FLAG_WALKABLE = (1<<1);
+inline constexpr auto DISPSURF_FLAG_BUILDABLE = (1<<2);
+inline constexpr auto DISPSURF_FLAG_SURFPROP1 = (1<<3);
+inline constexpr auto DISPSURF_FLAG_SURFPROP2 = (1<<4);
+inline constexpr auto DISPSURF_FLAG_SURFPROP3 = (1<<5);
+inline constexpr auto DISPSURF_FLAG_SURFPROP4 = (1<<6);
 
 //=============================================================================
 // Base Trace Structure
@@ -69,5 +56,3 @@ private:
 	// No copy constructors allowed
 	CBaseTrace(const CBaseTrace& vOther);
 };
-
-#endif // TRACE_H

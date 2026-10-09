@@ -1,77 +1,121 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-// Information about algorithmic stuff that can occur on both client + server
-//
-// In order to reduce network traffic, it's possible to create a algorithms 
-// that will work on both the client and the server and be totally repeatable. 
-// All we need do is to send down initial conditions and let the algorithm 
-// compute the values at various times. Note that this algorithm will be called 
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Information about algorithmic stuff that can occur on both client + server
+// In order to reduce network traffic, it's possible to create a algorithms
+// that will work on both the client and the server and be totally repeatable.
+// All we need do is to send down initial conditions and let the algorithm
+// compute the values at various times. Note that this algorithm will be called
 // at different times with different frequencies on the client and server.
-//
 // The trick here is that in order for it to be repeatable, the algorithm either
-// cannot depend on random numbers, or, if it does, we need to make sure that 
-// the random numbers generated are effectively done at the beginning of time, 
-// so that differences in frame rate on client and server won't matter. It also 
-// is important that the initial state sent across the network is identical 
-// bitwise so that we produce the exact same results. Therefore no compression 
-// should be used in the datatables. 
-//
+// cannot depend on random numbers, or, if it does, we need to make sure that
+// the random numbers generated are effectively done at the beginning of time,
+// so that differences in frame rate on client and server won't matter. It also
+// is important that the initial state sent across the network is identical
+// bitwise so that we produce the exact same results. Therefore no compression
+// should be used in the datatables.
 // Note also that each algorithm must have its own random number stream so that
 // it cannot possibly interact with other code using random numbers that will
 // be called at various different intervals on the client + server. Use the
 // CUniformRandomStream class for this.
-//
 // There are two types of client-server neutral code: Code that doesn't interact
-// with player prediction, and code that does. The code that doesn't interact 
-// with player prediction simply has to be able to produce the result f(time) 
+// with player prediction, and code that does. The code that doesn't interact
+// with player prediction simply has to be able to produce the result f(time)
 // where time is monotonically increasing. For prediction, we have to produce
-// the result f(time) where time does *not* monotonically increase (time can be 
+// the result f(time) where time does *not* monotonically increase (time can be
 // anywhere between the "current" time and the prior 10 seconds).
-//
-// Code that is not used by player prediction can maintain state because later 
+// Code that is not used by player prediction can maintain state because later
 // calls will always compute the value at some future time. This computation can
-// use random number generation, but with the following restriction: Your code 
-// must generate exactly the same number of random numbers regardless of how 
+// use random number generation, but with the following restriction: Your code
+// must generate exactly the same number of random numbers regardless of how
 // frequently the code is called.
-//
 // In specific, this means that all random numbers used must either be computed
-// at init time, or must be used in an 'event-based form'. Namely, use random 
+// at init time, or must be used in an 'event-based form'. Namely, use random
 // numbers to compute the time at which events occur and the random inputs for
 // those events.  When simulating forward, you must simulate all intervening
 // time and generate the same number of random numbers.
-//
 // For functions planned to be used by player prediction, one method is to use
 // some sort of stateless computation (where the only states are the initial
 // state and time). Note that random number generators have state implicit in
 // the number of calls made to that random number generator, and therefore you
-// cannot call a random number generator unless you are able to 
-//
+// cannot call a random number generator unless you are able to
 // 1) Use a random number generator that can return the ith random number, namely:
-//
 //	float r = random( i );	// i == the ith number in the random sequence
-//
-// 2) Be able to accurately know at any given time t how many random numbers 
+// 2) Be able to accurately know at any given time t how many random numbers
 //		have already been generated (namely, compute the i in part 1 above).
-//
-// There is another alternative for code meant to be used by player prediction: 
-// you could just store a history of 'events' from which you could completely 
+// There is another alternative for code meant to be used by player prediction:
+// you could just store a history of 'events' from which you could completely
 // determine the value of f(time). That history would need to be at least 10
 // seconds long, which is guaranteed to be longer than the amount of time that
 // prediction would need. I've written a class which I haven't tested yet (but
-// will be using soon) called CTimedEventQueue (currently located in 
+// will be using soon) called CTimedEventQueue (currently located in
 // env_wind_shared.h) which I plan to use to solve my problem (getting wind to
 // blow players).
-//
-//=============================================================================//
-#include "cbase.h"
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
+#endif
 #include "env_wind_shared.h"
 #include "soundenvelope.h"
 #include "IEffects.h"
 #include "engine/IEngineSound.h"
 #include "sharedInterface.h"
 #include "renderparm.h"
-#include "tier1/vector_ops.h"
 
 #ifdef CLIENT_DLL 
 #include "physics_softbody.h"
@@ -80,7 +124,9 @@
 #ifdef CLIENT_DLL
 // Test concommand for wind/tree sway. Couldn't think of a better way to put it.
 // Will move it out of this file when we figure out how the weather control will be implemented.
-CON_COMMAND( cl_tree_sway_dir, "sets tree sway wind direction and strength" )
+static void cl_tree_sway_dir( const CCommand &args );
+static ConCommand cl_tree_sway_dir_command( "cl_tree_sway_dir", cl_tree_sway_dir, "sets tree sway wind direction and strength" );
+static void cl_tree_sway_dir( const CCommand &args )
 {
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 	if ( args.ArgC() == 3 )
@@ -150,7 +196,7 @@ void CEnvWindShared::Init( int nEntIndex, int iRandomSeed, float flTime,
 // Computes wind variation
 //-----------------------------------------------------------------------------
 
-#define WIND_VARIATION_UPDATE_TIME 0.1f
+constexpr auto WIND_VARIATION_UPDATE_TIME = 0.1f;
 
 void CEnvWindShared::ComputeWindVariation( float flTime )
 {
@@ -189,7 +235,7 @@ void CEnvWindShared::UpdateWindSound( float flTotalWindSpeed )
 //-----------------------------------------------------------------------------
 // Updates the swaying of trees
 //-----------------------------------------------------------------------------
-#define TREE_SWAY_UPDATE_TIME 2.0f
+constexpr auto TREE_SWAY_UPDATE_TIME = 2.0f;
 
 void CEnvWindShared::UpdateTreeSway( float flTime )
 {
@@ -216,8 +262,8 @@ void CEnvWindShared::UpdateTreeSway( float flTime )
 // Updates the wind speed
 //-----------------------------------------------------------------------------
 
-#define WIND_ACCELERATION	150.0f	// wind speed can accelerate this many units per second
-#define WIND_DECELERATION	15.0f	// wind speed can decelerate this many units per second
+constexpr auto WIND_ACCELERATION = 150.0f; // wind speed can accelerate this many units per second
+constexpr auto WIND_DECELERATION = 15.0f; // wind speed can decelerate this many units per second
 
 float CEnvWindShared::WindThink( float flTime )
 {

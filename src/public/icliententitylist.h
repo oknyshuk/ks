@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( ICLIENTENTITYLIST_H )
-#define ICLIENTENTITYLIST_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "interface.h"
+import std;
+import ks.tier1;
 
 class IClientEntity;
 class ClientClass;
@@ -31,7 +24,7 @@ struct EntityCacheInfo_t
 //-----------------------------------------------------------------------------
 // Purpose: Exposes IClientEntity's to engine
 //-----------------------------------------------------------------------------
-abstract_class IClientEntityList
+class IClientEntityList
 {
 public:
 	// Get IClientNetworkable interface for specified entity
@@ -58,7 +51,4 @@ public:
 
 extern IClientEntityList *entitylist;
 
-#define VCLIENTENTITYLIST_INTERFACE_VERSION	"VClientEntityList003"
-
-#endif // ICLIENTENTITYLIST_H
-
+inline constexpr const char *VCLIENTENTITYLIST_INTERFACE_VERSION = "VClientEntityList003";

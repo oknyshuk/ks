@@ -1,25 +1,15 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
+
 // Purpose: A higher level link library for general use in the game and tools.
-//
-//===========================================================================//
 
-
-#ifndef FILEUTILS_H
-#define FILEUTILS_H
-
-
-#ifndef TIER2_H
+import ks.core;
 #include "tier2/tier2.h"
-#endif
 
-#ifndef FILESYSTEM_H
 #include "filesystem.h"
-#endif
 
-#include "tier0/platform.h"
-#include <cstddef>
-#include <vector>
+import std;
 
 // Builds a directory which is a subdirectory of the current mod
 void GetModSubdirectory( const char *pSubDir, char *pBuf, int nBufLen );
@@ -28,10 +18,10 @@ void GetModSubdirectory( const char *pSubDir, char *pBuf, int nBufLen );
 void GetModContentSubdirectory( const char *pSubDir, char *pBuf, int nBufLen );
 
 // Generates a filename under the 'game' subdirectory given a subdirectory of 'content'
-void ComputeModFilename( const char *pContentFileName, char *pBuf, size_t nBufLen );
+void ComputeModFilename( const char *pContentFileName, char *pBuf, std::size_t nBufLen );
 
 // Generates a filename under the 'content' subdirectory given a subdirectory of 'game'
-void ComputeModContentFilename( const char *pGameFileName, char *pBuf, size_t nBufLen );
+void ComputeModContentFilename( const char *pGameFileName, char *pBuf, std::size_t nBufLen );
 
 // Finds all files matching the a name within a directory and its sub directories. Output entries are paths to found files (relative to and including szStartDirectory)
 void RecursiveFindFilesMatchingName( std::vector< std::string > *outFileList, const char* szStartDirectory, const char* szTargetFileName, const char *pathID );
@@ -50,15 +40,15 @@ bool GenerateFullPath( const char *pFileName, char const *pPathID, char *pBuf, i
 
 
 // Generates a .360 file if it doesn't exist or is out of sync with the pc source file
-#define UOC_FAIL		-1
-#define UOC_NOT_CREATED	0
-#define UOC_CREATED		1
+inline constexpr auto UOC_FAIL = -1;
+inline constexpr auto UOC_NOT_CREATED = 0;
+inline constexpr auto UOC_CREATED = 1;
 typedef bool ( *CreateCallback_t )( const char *pSourceName, const char *pTargetName, const char *pPathID, void *pExtraData );
 int UpdateOrCreate( const char *pSourceName, char *pTargetName, int targetLen, const char *pPathID, CreateCallback_t pfnCreate, bool bForce = false, void *pExtraData = nullptr );
 
 char *CreatePlatformFilename( const char *pSourceName, char *pTargetName, int targetLen );
 
-FORCEINLINE const char *AdjustFileExtensionForPlatform( const char *pSourceName, char *pTargetName, int targetLen )
+[[gnu::always_inline]] inline const char *AdjustFileExtensionForPlatform( const char *pSourceName, char *pTargetName, int targetLen )
 {
 	return pSourceName;
 }
@@ -130,7 +120,7 @@ public:
 	// input for big-endian systems.
 	void PutInt( int n )
 	{
-		int n1=LittleDWord( n );
+		int n1=( n );
 		Write(&n1, sizeof( n1 ) );
 	}
 
@@ -138,7 +128,7 @@ public:
 	{
 		int ret;
 		MustRead( &ret, sizeof( ret ));
-		return LittleDWord( ret );
+		return ( ret );
 	}
 
 	float GetFloat( void )
@@ -154,7 +144,7 @@ public:
 		Write( &f, sizeof( f ) );
 	}
 
-	bool IsOk( void )
+	bool IsOk( void ) const
 	{
 		return ( m_FileHandle != FILESYSTEM_INVALID_HANDLE) &&
 			( g_pFullFileSystem->IsOk( m_FileHandle ) );
@@ -172,7 +162,7 @@ public:
 
 	unsigned int Size( void )
 	{
-		Assert( IsOk() );
+		contract_assert( IsOk() );
 		return g_pFullFileSystem->Size( m_FileHandle );
 	}
 
@@ -312,6 +302,3 @@ public:
 };
 
 const char *COM_GetModDirectory();
-
-#endif // FILEUTILS_H
-

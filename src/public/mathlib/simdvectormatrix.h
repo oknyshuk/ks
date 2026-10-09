@@ -1,22 +1,12 @@
-//====== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. =======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
+
 // Purpose: Provide a class (SSE/SIMD only) holding a 2d matrix of class FourVectors,
 // for high speed processing in tools.
-//
-// $NoKeywords: $
-//
-//=============================================================================//
 
-#ifndef SIMDVECTORMATRIX_H
-#define SIMDVECTORMATRIX_H
-
-
-
-#include <string.h>
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
-#include "tier1/utlsoacontainer.h"
-#include "mathlib/ssemath.h"
+import std;
+import ks.tier1;
 
 class CSIMDVectorMatrix
 {
@@ -83,7 +73,7 @@ public:
 	{
 		SetSize( src.m_nWidth, src.m_nHeight );
 		if ( m_pData )
-			memcpy( m_pData, src.m_pData, m_nHeight*m_nPaddedWidth*sizeof(m_pData[0]) ); 
+			std::memcpy( m_pData, src.m_pData, m_nHeight*m_nPaddedWidth*sizeof(m_pData[0]) ); 
 		return *this;
 	}
 
@@ -102,9 +92,9 @@ public:
 	// you're not getting the sse advantage
 	Vector Element(int x, int y) const
 	{
-		Assert( m_pData );
-		Assert( x < m_nWidth );
-		Assert( y < m_nHeight );
+		contract_assert( m_pData );
+		contract_assert( x < m_nWidth );
+		contract_assert( y < m_nHeight );
 		Vector ret;
 		FourVectors const *pData=m_pData+y*m_nPaddedWidth+(x >> 2);
 
@@ -118,22 +108,18 @@ public:
 	//addressing the individual fourvectors elements
 	FourVectors &CompoundElement(int x, int y)
 	{
-		Assert( m_pData );
-		Assert( y < m_nHeight );
-		Assert( x < m_nPaddedWidth );
+		contract_assert( m_pData );
+		contract_assert( y < m_nHeight );
+		contract_assert( x < m_nPaddedWidth );
 		return m_pData[x + m_nPaddedWidth*y ];
 	}
 
 	// math operations on the whole image
 	void Clear( void )
 	{
-		Assert( m_pData );
-		memset( m_pData, 0, m_nHeight*m_nPaddedWidth*sizeof(m_pData[0]) );
+		contract_assert( m_pData );
+		std::memset( m_pData, 0, m_nHeight*m_nPaddedWidth*sizeof(m_pData[0]) );
 	}
 
 	void RaiseToPower( float power );
 };
-
-
-
-#endif

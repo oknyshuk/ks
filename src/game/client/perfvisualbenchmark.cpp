@@ -1,18 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
 #include "perfvisualbenchmark.h"
-#include "keyvalues.h"
 
-#define VAR		0
-#define ON		1
-#define OFF		2
-#define DETAILS	3
+constexpr auto VAR = 0;
+constexpr auto ON = 1;
+constexpr auto OFF = 2;
+constexpr auto DETAILS = 3;
 
 static CPerfVisualBenchmark s_PerfVisualBenchmark; // singleton
 
@@ -269,7 +273,7 @@ void CPerfVisualBenchmark::PreRender( )
 	// Turn off any previous value
 	if ( m_RunInfo[m_iCurVar].m_pVarName )
 	{
-		Q_snprintf(combuffer, sizeof(combuffer), "%s %s\n", m_RunInfo[m_iCurVar].m_pVarName, m_RunInfo[m_iCurVar].m_pOffVal );	//turn off current var
+		V_snprintf(combuffer, sizeof(combuffer), "%s %s\n", m_RunInfo[m_iCurVar].m_pVarName, m_RunInfo[m_iCurVar].m_pOffVal );	//turn off current var
 		engine->ClientCmd_Unrestricted(combuffer);
 	}
 
@@ -281,7 +285,7 @@ void CPerfVisualBenchmark::PreRender( )
 		return;
 	}
 
-	Q_snprintf(combuffer, sizeof(combuffer), "%s %s\n",m_RunInfo[m_iCurVar].m_pVarName, m_RunInfo[m_iCurVar].m_pOnVal);  //turn on next var
+	V_snprintf(combuffer, sizeof(combuffer), "%s %s\n",m_RunInfo[m_iCurVar].m_pVarName, m_RunInfo[m_iCurVar].m_pOnVal);  //turn on next var
 	engine->ClientCmd_Unrestricted(combuffer);
 }
 
@@ -302,4 +306,3 @@ void CPerfVisualBenchmark::Print()				//  sort and print into console
 		m_RunInfo[curMax].m_flFPS=-1;
 	}
 }
-

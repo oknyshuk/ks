@@ -1,18 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
-#include "tier1/keyvalues.h"
-#include "tier0/vprof.h"
 #include "toolframework_client.h"
 
 //-----------------------------------------------------------------------------
@@ -130,7 +128,7 @@ void TE_BreakModel( IRecipientFilter& filter, float delay,
 //-----------------------------------------------------------------------------
 void C_TEBreakModel::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEBreakModel::PostDataUpdate" );
+	CVProfScope _( "C_TEBreakModel::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	tempents->BreakModel( m_vecOrigin, m_angRotation, m_vecSize, m_vecVelocity,
 		m_nRandomization, m_fTime, m_nCount, m_nModelIndex, m_nFlags );
@@ -164,4 +162,3 @@ void TE_BreakModel( IRecipientFilter& filter, float delay, KeyValues *pKeyValues
 	TE_BreakModel( filter, 0.0f, vecOrigin, angles, vecSize, vecVel,
 		nModelIndex, nRandomization, nCount, flDuration, nFlags );
 }
-

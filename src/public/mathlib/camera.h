@@ -1,36 +1,19 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CAMERA_H
-#define CAMERA_H
-
-
-#include <math.h>
-#include <float.h>
+import std;
 
 // For vec_t, put this somewhere else?
-#include "tier0/basetypes.h"
-#include "mathlib/vector.h"
+import ks.math;
 
-#include "tier0/dbg.h"
-#include "mathlib/vector2d.h"
-#include "mathlib/math_pfns.h"
-#include "mathlib/vmatrix.h"
-#include "mathlib/ssemath.h"
 #include "datamap.h"
-#include "mathlib/aabb.h"
 
-#include "tier0/memalloc.h"
 // declarations for camera and frustum
 
 extern VMatrix g_matViewToCameraMatrix, g_matCameraToViewMatrix;
 
-struct ALIGN16 Camera_t
+struct alignas(16) Camera_t
 {
 	void Init( const Vector &origin, const QAngle &angles, float flNear, float flFar, float flFOV, float flAspect );
 	void InitOrtho( const Vector &origin, const QAngle &angles, float flNear, float flFar, float flWidth, float flHeight );
@@ -62,7 +45,7 @@ struct ALIGN16 Camera_t
 
 	float m_flWidth;	// For ortho.
 	float m_flHeight;
-} ALIGN16_POST;
+};
 
 inline void Camera_t::Init( const Vector &origin, const QAngle &angles, float flNear, float flFar, float flFOV, float flAspect )
 {
@@ -353,7 +336,7 @@ public:
 	float ComputeScreenSize( Vector vecOrigin, float flRadius ) const;
 
 	/// Return the Sin of the FOV
-	FORCEINLINE float SinFOV( void ) const { return sin( DEG2RAD( GetCameraFOV() ) ); }
+	[[gnu::always_inline]] inline float SinFOV( void ) const { return std::sin( DEG2RAD( GetCameraFOV() ) ); }
 
 	const Camera_t &GetCameraStruct() const { return m_camera; }
 
@@ -496,7 +479,7 @@ inline void CFrustum::SetCameraPosition( const Vector &origin )
 		return;
 
 	m_camera.m_origin = origin;
-	Assert( origin.IsValid() && origin.IsReasonable() );
+	contract_assert( origin.IsValid() && origin.IsReasonable() );
 
 	m_bDirty = true; 
 }
@@ -652,6 +635,3 @@ inline void CFrustum::SetClipSpaceBounds( float flClipSpaceBottomLeftX, float fl
 	m_flClipSpaceTopRightY = flClipSpaceTopRightY;
 	m_bDirty = true;
 }
-
-#endif // CAMERA_H
-

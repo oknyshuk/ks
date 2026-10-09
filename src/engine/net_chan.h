@@ -1,38 +1,33 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: net_chan.h
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef NET_CHAN_H
-#define NET_CHAN_H
+// Purpose: net_chan.h
 
 #include "net.h"
-#include "netadr.h"
 #include "qlimits.h"
-#include "bitbuf.h"
 #include <inetmessage.h>
 #include <filesystem.h>
-#include "utlvector.h"
+import ks.tier1;
 #include "const.h"
 #include "inetchannel.h"
 #include "netmessages.h"
-#include <set>
+import std;
 
 // How fast to converge flow estimates
-#define FLOW_AVG ( 3.0 / 4.0 )
+inline constexpr auto FLOW_AVG = ( 3.0 / 4.0 );
  // Don't compute more often than this
-#define FLOW_INTERVAL 0.25
+inline constexpr auto FLOW_INTERVAL = 0.25;
 
 
-#define NET_FRAMES_BACKUP	128		// must be power of 2
-#define NET_FRAMES_MASK		(NET_FRAMES_BACKUP-1)
-#define MAX_SUBCHANNELS		8		// we have 8 alternative send&wait bits
+inline constexpr auto NET_FRAMES_BACKUP = 128; // must be power of 2
+inline constexpr auto NET_FRAMES_MASK = (NET_FRAMES_BACKUP-1);
+inline constexpr auto MAX_SUBCHANNELS = 8; // we have 8 alternative send&wait bits
 
-#define SUBCHANNEL_FREE		0	// subchannel is free to use
-#define SUBCHANNEL_TOSEND	1	// subchannel has data, but not send yet
-#define SUBCHANNEL_WAITING	2   // sbuchannel sent data, waiting for ACK
-#define SUBCHANNEL_DIRTY	3	// subchannel is marked as dirty during changelevel
+inline constexpr auto SUBCHANNEL_FREE = 0; // subchannel is free to use
+inline constexpr auto SUBCHANNEL_TOSEND = 1; // subchannel has data, but not send yet
+inline constexpr auto SUBCHANNEL_WAITING = 2; // sbuchannel sent data, waiting for ACK
+inline constexpr auto SUBCHANNEL_DIRTY = 3; // subchannel is marked as dirty during changelevel
 
 namespace ks::net { struct CNETMsg_SplitScreenUser; }
 
@@ -214,13 +209,12 @@ public:	// INetChannel interface
 
 	int			IncrementSplitPacketSequence();
 
-	virtual bool	WasLastMessageReliable() const OVERRIDE; // True if the last (or currently processing) message was sent via the reliable channel
+	virtual bool	WasLastMessageReliable() const override; // True if the last (or currently processing) message was sent via the reliable channel
 
-	virtual const unsigned char * GetChannelEncryptionKey() const OVERRIDE;
+	virtual const unsigned char * GetChannelEncryptionKey() const override;
 
-	virtual bool	EnqueueVeryLargeAsyncTransfer( INetMessage &msg ) OVERRIDE;	// Enqueues a message for a large async transfer
+	virtual bool	EnqueueVeryLargeAsyncTransfer( INetMessage &msg ) override;	// Enqueues a message for a large async transfer
 
-	// For Steam sockets, returns true if the low level socket is gone (remote disconnected, etc.)
 	bool		IsRemoteDisconnected() const;
 
 public:
@@ -343,7 +337,7 @@ public:
 // don't use any vars below this (only in net_ws.cpp)
 
 	int			m_Socket;   // NS_SERVER or NS_CLIENT index, depending on channel.
-	int			m_StreamSocket;	// TCP socket handle
+	ks::platform::socket *m_StreamSocket;	// TCP socket handle
 
 	unsigned int m_MaxReliablePayloadSize;	// max size of reliable payload in a single packet	
 	bool		m_bWasLastMessageReliable;
@@ -373,11 +367,11 @@ public:
 	
 	// TCP stream state maschine:
 	bool		m_StreamActive;		// true if TCP is active
-	int			m_SteamType;		// STREAM_CMD_*
+	int			m_StreamType;		// STREAM_CMD_*
 	int			m_StreamSeqNr;		// each blob send of TCP as an increasing ID
 	int			m_StreamLength;		// total length of current stream blob
 	int			m_StreamReceived;	// length of already received bytes
-	char		m_SteamFile[MAX_OSPATH];	// if receiving file, this is it's name
+	char		m_StreamFile[MAX_OSPATH];	// if receiving file, this is it's name
 	std::vector<byte> m_StreamData;			// Here goes the stream data (if not file). Only allocated if we're going to use it.
 
 	// packet history
@@ -415,6 +409,3 @@ public:
 
 	std::vector<byte>			m_EncryptionKey;
 };
-
-
-#endif // NET_CHAN_H

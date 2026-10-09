@@ -1,26 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//          
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef VOICE_SOUND_ENGINE_INTERFACE_H
-#define VOICE_SOUND_ENGINE_INTERFACE_H
 #pragma once
-
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 /*! @defgroup VoiceSoundEngineInterface VoiceSoundEngineInterface
 Abstracts out the sound engine for the voice code.
 GoldSrc and Src each have a different implementation of this.
 @{
 */
-
-
-
 //! Max number of receiving voice channels.
-#define VOICE_NUM_CHANNELS			5	
+inline constexpr auto VOICE_NUM_CHANNELS = 5;
 
 // ----------------------------------------------------------------------------- //
 // Functions for voice.cpp.
@@ -97,6 +85,3 @@ CAudioSource* Voice_SetupAudioSource( int soundsource, int entchannel );
 
 
 /*! @} End VoiceSoundEngineInterface group */
-
-
-#endif // VOICE_SOUND_ENGINE_INTERFACE_H

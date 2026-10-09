@@ -1,17 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Defines the interface that the GameUI dll exports
-//
-// $NoKeywords: $
-//=============================================================================//
 
 #ifndef GAMEUI_INTERFACE_H
 #define GAMEUI_INTERFACE_H
-#pragma once
 
 #include "GameUI/IGameUI.h"
 
-#include "convar.h"
+import std;
+import ks.tier1;
 
 #error "DEPRICIATED: Use the gameui_interface in the cstrike15 folder"
 class IGameClientExports;
@@ -51,11 +50,10 @@ public:
 	virtual void OnGameUIActivated();
 	virtual void OnGameUIHidden();
 	virtual void OLD_OnConnectToServer( const char *game, int IP, int port );	// OLD: use OnConnectToServer2
-	virtual void OnConnectToServer2( const char *game, int IP, int connectionPort, int queryPort );
-	virtual void OnDisconnectFromServer( uint8 eSteamLoginFailure );
+	virtual void OnConnectToServer2( const char *game, int IP, int connectionPort );
+	virtual void OnDisconnectFromServer();
 	virtual void OnLevelLoadingStarted( const char *levelName, bool bShowProgressDialog );
 	virtual void OnLevelLoadingFinished( bool bError, const char *failureReason, const char *extendedReason );
-	virtual void OnDisconnectFromServer_OLD( uint8 eSteamLoginFailure, const char *username ) { OnDisconnectFromServer( eSteamLoginFailure ); }
 
 	// progress
 	virtual bool UpdateProgressBar(float progress, const char *statusText);
@@ -107,7 +105,6 @@ private:
 
 	int m_iGameIP;
 	int m_iGameConnectionPort;
-	int m_iGameQueryPort;
 	
 	int m_iFriendsLoadPauseFrames;
 	int m_iPlayGameStartupSound;

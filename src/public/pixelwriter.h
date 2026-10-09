@@ -1,28 +1,14 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef PIXELWRITER_H
-#define PIXELWRITER_H
-
-
-#define FORCEINLINE_PIXEL inline
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // This flag allows us to write to formats we we don't support direct pixel access
 // (like DXT1) without spewing errors.  The only actions that are available for
 // these formats are direct access to the bitstream.
-#define ALLOW_UNSUPPORTED_FORMATS 1
 
+import ks.math;
 #include "bitmap/imageformat.h"
-#include "tier0/dbg.h"
-#include "mathlib/compressed_vector.h"
-#include "mathlib/ssemath.h"
-#include "mathlib/vector4d.h"
-#include "cache_hints.h"
+import std;
 
 //-----------------------------------------------------------------------------
 // Color writing class 
@@ -31,54 +17,54 @@
 class CPixelWriter
 {
 public:
-	FORCEINLINE void SetPixelMemory( ImageFormat format, void* pMemory, int stride );
-	FORCEINLINE void *GetPixelMemory() { return m_pBase; }
+	[[gnu::always_inline]] inline void SetPixelMemory( ImageFormat format, void* pMemory, int stride );
+	[[gnu::always_inline]] inline void *GetPixelMemory() { return m_pBase; }
 
 	// this is no longer used:
 
-	FORCEINLINE void Seek( int x, int y );
-	FORCEINLINE void* SkipBytes( int n ) RESTRICT;
-	FORCEINLINE void SkipPixels( int n );	
-	FORCEINLINE void WritePixel( int r, int g, int b, int a = 255 );
-	FORCEINLINE void WritePixelNoAdvance( int r, int g, int b, int a = 255 );
-	FORCEINLINE void WritePixelSigned( int r, int g, int b, int a = 255 );
-	FORCEINLINE void WritePixelNoAdvanceSigned( int r, int g, int b, int a = 255 );
-	FORCEINLINE void ReadPixelNoAdvance( int &r, int &g, int &b, int &a );
+	[[gnu::always_inline]] inline void Seek( int x, int y );
+	[[gnu::always_inline]] inline void* SkipBytes( int n ) __restrict__;
+	[[gnu::always_inline]] inline void SkipPixels( int n );	
+	[[gnu::always_inline]] inline void WritePixel( int r, int g, int b, int a = 255 );
+	[[gnu::always_inline]] inline void WritePixelNoAdvance( int r, int g, int b, int a = 255 );
+	[[gnu::always_inline]] inline void WritePixelSigned( int r, int g, int b, int a = 255 );
+	[[gnu::always_inline]] inline void WritePixelNoAdvanceSigned( int r, int g, int b, int a = 255 );
+	[[gnu::always_inline]] inline void ReadPixelNoAdvance( int &r, int &g, int &b, int &a );
 
 	// Floating point formats
-	FORCEINLINE void WritePixelNoAdvanceF( float r, float g, float b, float a = 1.0f );
-	FORCEINLINE void WritePixelF( float r, float g, float b, float a = 1.0f );
-	FORCEINLINE void WriteManyPixelF( const float * RESTRICT pSrc, const int num  ); // write a contiguous stream of 4-floats. 
+	[[gnu::always_inline]] inline void WritePixelNoAdvanceF( float r, float g, float b, float a = 1.0f );
+	[[gnu::always_inline]] inline void WritePixelF( float r, float g, float b, float a = 1.0f );
+	[[gnu::always_inline]] inline void WriteManyPixelF( const float * __restrict__ pSrc, const int num  ); // write a contiguous stream of 4-floats. 
 
 
 
 	// SIMD formats
-	FORCEINLINE void WritePixel( FLTX4 rgba ) RESTRICT;
-	FORCEINLINE void WritePixelNoAdvance( FLTX4 rgba ) RESTRICT;
+	[[gnu::always_inline]] inline void WritePixel( FLTX4 rgba ) __restrict__;
+	[[gnu::always_inline]] inline void WritePixelNoAdvance( FLTX4 rgba ) __restrict__;
 
 
-	FORCEINLINE void WritePixelNoAdvance16F( float r, float g, float b, float a );
+	[[gnu::always_inline]] inline void WritePixelNoAdvance16F( float r, float g, float b, float a );
 
 
-	FORCEINLINE unsigned char GetPixelSize() { return m_Size; }	
-	FORCEINLINE unsigned short GetBytesPerRow() { return m_BytesPerRow; }
+	[[gnu::always_inline]] inline unsigned char GetPixelSize() { return m_Size; }	
+	[[gnu::always_inline]] inline unsigned short GetBytesPerRow() { return m_BytesPerRow; }
 
-	FORCEINLINE bool IsUsingFloatFormat() const;
-	FORCEINLINE bool IsUsing16BitFloatFormat() const;
+	[[gnu::always_inline]] inline bool IsUsingFloatFormat() const;
+	[[gnu::always_inline]] inline bool IsUsing16BitFloatFormat() const;
 
 	// We allow "unsupported" formats only if you are writing directly into the bitstream
-	FORCEINLINE bool IsUsingSupportedFormat() const;
+	[[gnu::always_inline]] inline bool IsUsingSupportedFormat() const;
 
-	FORCEINLINE unsigned char *GetCurrentPixel() { return m_pBits; }
+	[[gnu::always_inline]] inline unsigned char *GetCurrentPixel() { return m_pBits; }
 
 private:
 	// helper functions for some explicit combinations of flags and sizes -- lets us
 	// do some conversions on the GPRs using bitshifts rather than a round trip to the
 	// FPU and a LHS.
-	FORCEINLINE void WriteManyPixelTo16BitF( const float * RESTRICT pSrc, int num  ) RESTRICT; // write a contiguous stream of 4-floats. 
-	// FORCEINLINE void WriteManyPixelTo32BitF( const float * RESTRICT pSrc, const int num  ); // write a contiguous stream of 4-floats. 
+	[[gnu::always_inline]] inline void WriteManyPixelTo16BitF( const float * __restrict__ pSrc, int num  ) __restrict__; // write a contiguous stream of 4-floats. 
+	// [[gnu::always_inline]] inline void WriteManyPixelTo32BitF( const float * RESTRICT pSrc, const int num  ); // write a contiguous stream of 4-floats. 
 
-	FORCEINLINE void AssertFormatIsSupported( ImageFormat format ) const;
+	[[gnu::always_inline]] inline void AssertFormatIsSupported( ImageFormat format ) const;
 
 	enum
 	{
@@ -104,22 +90,22 @@ private:
 
 };
 
-FORCEINLINE_PIXEL bool CPixelWriter::IsUsingFloatFormat() const
+inline bool CPixelWriter::IsUsingFloatFormat() const
 {
 	return (m_nFlags & PIXELWRITER_USING_FLOAT_FORMAT) != 0;
 }
 
-FORCEINLINE_PIXEL bool CPixelWriter::IsUsing16BitFloatFormat() const
+inline bool CPixelWriter::IsUsing16BitFloatFormat() const
 {
 	return (m_nFlags & PIXELWRITER_USING_16BIT_FLOAT_FORMAT) != 0;
 }
 
-FORCEINLINE_PIXEL bool CPixelWriter::IsUsingSupportedFormat() const
+inline bool CPixelWriter::IsUsingSupportedFormat() const
 {
 	return (m_nFlags & PIXELWRITER_USING_UNSUPPORTED_FORMAT) == 0;
 }
 
-FORCEINLINE_PIXEL void CPixelWriter::SetPixelMemory( ImageFormat format, void* pMemory, int stride )
+inline void CPixelWriter::SetPixelMemory( ImageFormat format, void* pMemory, int stride )
 {
 	m_pBits = (unsigned char*)pMemory;
 	m_pBase = m_pBits;
@@ -316,17 +302,7 @@ FORCEINLINE_PIXEL void CPixelWriter::SetPixelMemory( ImageFormat format, void* p
 	// FIXME: Add more color formats as need arises
 	default:
 		{
-#if ALLOW_UNSUPPORTED_FORMATS
 			m_nFlags |= PIXELWRITER_USING_UNSUPPORTED_FORMAT;
-#else // ALLOW_UNSUPPORTED_FORMATS
-			static bool format_error_printed[NUM_IMAGE_FORMATS];
-			if ( !format_error_printed[format] )
-			{
-				Assert( 0 );
-				Msg( "CPixelWriter::SetPixelMemory:  Unsupported image format %i\n", format );
-				format_error_printed[format] = true;
-			}
-#endif // ALLOW_UNSUPPORTED_FORMATS
 			m_Size = 0; // set to zero so that we don't stomp memory for formats that we don't understand.
             m_RShift = 0;
             m_GShift = 0;
@@ -345,9 +321,9 @@ FORCEINLINE_PIXEL void CPixelWriter::SetPixelMemory( ImageFormat format, void* p
 //-----------------------------------------------------------------------------
 // Sets where we're writing to
 //-----------------------------------------------------------------------------
-FORCEINLINE_PIXEL void CPixelWriter::Seek( int x, int y )
+inline void CPixelWriter::Seek( int x, int y )
 {
-	Assert( IsUsingSupportedFormat() );
+	contract_assert( IsUsingSupportedFormat() );
 	m_pBits = m_pBase + y * m_BytesPerRow + x * m_Size;
 }
 
@@ -355,7 +331,7 @@ FORCEINLINE_PIXEL void CPixelWriter::Seek( int x, int y )
 //-----------------------------------------------------------------------------
 // Skips n bytes:
 //-----------------------------------------------------------------------------
-FORCEINLINE_PIXEL void* CPixelWriter::SkipBytes( int n ) RESTRICT
+inline void* CPixelWriter::SkipBytes( int n ) __restrict__
 {
 	m_pBits += n;
 	return m_pBits;
@@ -365,19 +341,19 @@ FORCEINLINE_PIXEL void* CPixelWriter::SkipBytes( int n ) RESTRICT
 //-----------------------------------------------------------------------------
 // Skips n pixels:
 //-----------------------------------------------------------------------------
-FORCEINLINE_PIXEL void CPixelWriter::SkipPixels( int n )
+inline void CPixelWriter::SkipPixels( int n )
 {
-	Assert( IsUsingSupportedFormat() );
+	contract_assert( IsUsingSupportedFormat() );
 	SkipBytes( n * m_Size );
 }
 
 //-----------------------------------------------------------------------------
 // Writes a pixel without advancing the index		PC ONLY
 //-----------------------------------------------------------------------------
-FORCEINLINE_PIXEL void CPixelWriter::WritePixelNoAdvanceF( float r, float g, float b, float a )
+inline void CPixelWriter::WritePixelNoAdvanceF( float r, float g, float b, float a )
 {
-	Assert( IsUsingSupportedFormat() );
-	Assert( IsUsingFloatFormat() );
+	contract_assert( IsUsingSupportedFormat() );
+	contract_assert( IsUsingFloatFormat() );
 
 	// X360TBD: Not ported
 
@@ -393,12 +369,12 @@ FORCEINLINE_PIXEL void CPixelWriter::WritePixelNoAdvanceF( float r, float g, flo
 		pBuf[ m_GShift >> 5 ] |= (FloatBits(g) & m_GMask) << ( m_GShift & 0x1F );
 		pBuf[ m_BShift >> 5 ] |= (FloatBits(b) & m_BMask) << ( m_BShift & 0x1F );
 		pBuf[ m_AShift >> 5 ] |= (FloatBits(a) & m_AMask) << ( m_AShift & 0x1F );
-		memcpy( m_pBits, pBuf, m_Size );
+		std::memcpy( m_pBits, pBuf, m_Size );
 	}
 }
 
 
-FORCEINLINE void CPixelWriter::WritePixelNoAdvance16F( float r, float g, float b, float a )
+[[gnu::always_inline]] inline void CPixelWriter::WritePixelNoAdvance16F( float r, float g, float b, float a )
 {
 	{
 		float16 fp16[4];
@@ -412,16 +388,16 @@ FORCEINLINE void CPixelWriter::WritePixelNoAdvance16F( float r, float g, float b
 		pBuf[ m_GShift >> 4 ] |= (fp16[1].GetBits() & m_GMask) << ( m_GShift & 0xF );
 		pBuf[ m_BShift >> 4 ] |= (fp16[2].GetBits() & m_BMask) << ( m_BShift & 0xF );
 		pBuf[ m_AShift >> 4 ] |= (fp16[3].GetBits() & m_AMask) << ( m_AShift & 0xF );
-		memcpy( m_pBits, pBuf, m_Size );
+		std::memcpy( m_pBits, pBuf, m_Size );
 	}
 }
 
 //-----------------------------------------------------------------------------
 // Writes a lot of pixels, efficiently		
 //-----------------------------------------------------------------------------
-FORCEINLINE_PIXEL void CPixelWriter::WriteManyPixelTo16BitF( const float * RESTRICT pSrc, int num  ) RESTRICT
+inline void CPixelWriter::WriteManyPixelTo16BitF( const float * __restrict__ pSrc, int num  ) __restrict__
 {
-	Assert( IsUsingSupportedFormat() );
+	contract_assert( IsUsingSupportedFormat() );
 	const static int SIZE = 4*sizeof(unsigned short); // known precondition
 	const static int MASK = 0xFFFF;
 	// another known precondition:  m_RShift == 0 && m_GShift == 16 && m_BShift == 32 && m_AShift == 48 
@@ -439,7 +415,7 @@ FORCEINLINE_PIXEL void CPixelWriter::WriteManyPixelTo16BitF( const float * RESTR
 		}
 		*/
 
-		float16 * RESTRICT pOut = reinterpret_cast< float16 * >(pBits);
+		float16 * __restrict__ pOut = reinterpret_cast< float16 * >(pBits);
 		pOut[0].SetFloat( pSrc[0] );
 		pOut[1].SetFloat( pSrc[1] );
 		pOut[2].SetFloat( pSrc[2] );
@@ -465,7 +441,7 @@ FORCEINLINE_PIXEL void CPixelWriter::WriteManyPixelTo16BitF( const float * RESTR
 //-----------------------------------------------------------------------------
 // Writes a pixel, advances the write index 
 //-----------------------------------------------------------------------------
-FORCEINLINE_PIXEL void CPixelWriter::WritePixelF( float r, float g, float b, float a )
+inline void CPixelWriter::WritePixelF( float r, float g, float b, float a )
 {
 	WritePixelNoAdvanceF(r, g, b, a);
 	m_pBits += m_Size;
@@ -477,15 +453,15 @@ FORCEINLINE_PIXEL void CPixelWriter::WritePixelF( float r, float g, float b, flo
 // (ie, each pixel consists of four consecutive floats, and the data is 
 //  consecutive in memory)
 //-----------------------------------------------------------------------------
-FORCEINLINE_PIXEL void CPixelWriter::WriteManyPixelF( const float * RESTRICT pSrc, const int num  )
+inline void CPixelWriter::WriteManyPixelF( const float * __restrict__ pSrc, const int num  )
 {
-	Assert( IsUsingSupportedFormat() );
-	Assert( IsUsingFloatFormat() );
+	contract_assert( IsUsingSupportedFormat() );
+	contract_assert( IsUsingFloatFormat() );
 	// X360TBD: Not ported
 
 	if ( m_Size == 4*sizeof(unsigned short) && (PIXELWRITER_USING_16BIT_FLOAT_FORMAT & m_nFlags) )
 	{
-		Assert( m_RShift == 0 && m_GShift == 16 && m_BShift == 32 && m_AShift == 48 );
+		contract_assert( m_RShift == 0 && m_GShift == 16 && m_BShift == 32 && m_AShift == 48 );
 		WriteManyPixelTo16BitF( pSrc, num );
 	}
 	/*
@@ -503,7 +479,7 @@ FORCEINLINE_PIXEL void CPixelWriter::WriteManyPixelF( const float * RESTRICT pSr
 //-----------------------------------------------------------------------------
 // Writes a pixel, advances the write index 
 //-----------------------------------------------------------------------------
-FORCEINLINE_PIXEL void CPixelWriter::WritePixel( int r, int g, int b, int a )
+inline void CPixelWriter::WritePixel( int r, int g, int b, int a )
 {
 	WritePixelNoAdvance(r,g,b,a);
 	m_pBits += m_Size;
@@ -512,7 +488,7 @@ FORCEINLINE_PIXEL void CPixelWriter::WritePixel( int r, int g, int b, int a )
 //-----------------------------------------------------------------------------
 // Writes a pixel, advances the write index 
 //-----------------------------------------------------------------------------
-FORCEINLINE_PIXEL void CPixelWriter::WritePixelSigned( int r, int g, int b, int a )
+inline void CPixelWriter::WritePixelSigned( int r, int g, int b, int a )
 {
 	WritePixelNoAdvanceSigned(r,g,b,a);
 	m_pBits += m_Size;
@@ -522,10 +498,10 @@ FORCEINLINE_PIXEL void CPixelWriter::WritePixelSigned( int r, int g, int b, int 
 //-----------------------------------------------------------------------------
 // Writes a pixel without advancing the index
 //-----------------------------------------------------------------------------
-FORCEINLINE_PIXEL void CPixelWriter::WritePixelNoAdvance( int r, int g, int b, int a )
+inline void CPixelWriter::WritePixelNoAdvance( int r, int g, int b, int a )
 {
-	Assert( IsUsingSupportedFormat() );
-	Assert( !IsUsingFloatFormat() );
+	contract_assert( IsUsingSupportedFormat() );
+	contract_assert( !IsUsingFloatFormat() );
 
 	if ( m_Size <= 0 )
 	{
@@ -541,7 +517,7 @@ FORCEINLINE_PIXEL void CPixelWriter::WritePixelNoAdvance( int r, int g, int b, i
 		switch( m_Size )
 		{
 		default:
-			Assert( 0 );
+			contract_assert( 0 );
 			return;
 		case 1:
 			{
@@ -568,7 +544,7 @@ FORCEINLINE_PIXEL void CPixelWriter::WritePixelNoAdvance( int r, int g, int b, i
 	}
 	else	// RGBA32323232 or RGBA16161616 -- PC only.
 	{
-		AssertMsgOnce(!false, "Unsupported lightmap format used in WritePixelNoAdvance(). This is a severe performance fault.\n");
+		contract_assert( ( !false ) && "Unsupported lightmap format used in WritePixelNoAdvance(). This is a severe performance fault.\n" );
 //		AssertMsg(!IsX360(), "Unsupported lightmap format used in WritePixelNoAdvance(). This is a severe performance fault.\n");
 
 		int64 val = ( ( int64 )(r & m_RMask) ) << m_RShift;
@@ -591,7 +567,7 @@ FORCEINLINE_PIXEL void CPixelWriter::WritePixelNoAdvance( int r, int g, int b, i
 				return;
 			}
 		default:
-			Assert( 0 );
+			contract_assert( 0 );
 			return;
 		}
 	}
@@ -603,10 +579,10 @@ FORCEINLINE_PIXEL void CPixelWriter::WritePixelNoAdvance( int r, int g, int b, i
 // Writes a signed pixel without advancing the index
 //-----------------------------------------------------------------------------
 
-FORCEINLINE_PIXEL void CPixelWriter::WritePixelNoAdvanceSigned( int r, int g, int b, int a )
+inline void CPixelWriter::WritePixelNoAdvanceSigned( int r, int g, int b, int a )
 {
-	Assert( IsUsingSupportedFormat() );
-	Assert( !IsUsingFloatFormat() );
+	contract_assert( IsUsingSupportedFormat() );
+	contract_assert( !IsUsingFloatFormat() );
 
 	if ( m_Size <= 0 )
 	{
@@ -669,16 +645,16 @@ FORCEINLINE_PIXEL void CPixelWriter::WritePixelNoAdvanceSigned( int r, int g, in
 			pSignedBits[0] = (signed char)((val & 0xff));
 			break;
 		default:
-			Assert( 0 );
+			contract_assert( 0 );
 			return;
 		}
 	}
 }
 
-FORCEINLINE_PIXEL void CPixelWriter::ReadPixelNoAdvance( int &r, int &g, int &b, int &a )
+inline void CPixelWriter::ReadPixelNoAdvance( int &r, int &g, int &b, int &a )
 {
-	Assert( IsUsingSupportedFormat() );
-	Assert( !IsUsingFloatFormat() );
+	contract_assert( IsUsingSupportedFormat() );
+	contract_assert( !IsUsingFloatFormat() );
 
 	int val = m_pBits[0];
 	if ( m_Size > 1 )
@@ -699,5 +675,3 @@ FORCEINLINE_PIXEL void CPixelWriter::ReadPixelNoAdvance( int &r, int &g, int &b,
 	b = (val>>m_BShift) & m_BMask;
 	a = (val>>m_AShift) & m_AMask;
 }
-
-#endif // PIXELWRITER_H;

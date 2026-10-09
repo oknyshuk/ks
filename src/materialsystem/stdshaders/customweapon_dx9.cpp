@@ -1,17 +1,15 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Shader for compositing weapon textures
-//
-//==========================================================================//
 
 #include "BaseVSShader.h"
 #include "customweapon_dx9_helper.h"
-#include "cpp_shader_constant_register_map.h"
 
 DEFINE_FALLBACK_SHADER( CustomWeapon, CustomWeapon_dx9 )
 
 	BEGIN_VS_SHADER( CustomWeapon_dx9, "CustomWeapon" )
-	BEGIN_SHADER_PARAMS
+	
 
 	SHADER_PARAM( SURFACETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shader/SurfaceTexture", "RGB: Object-space normal, A: Cavity" )
 	SHADER_PARAM( AOTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shader/AOTexture", "RGB: Ambient Occlusion" )

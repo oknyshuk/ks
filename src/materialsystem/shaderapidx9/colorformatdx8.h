@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ====//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef COLORFORMATDX8_H
-#define COLORFORMATDX8_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <pixelwriter.h>
 #include "togl/rendermechanism.h"
@@ -26,7 +19,6 @@
 
 // FOURCC format for nVidia null texture format
 #define NVFMT_NULL		((D3DFORMAT)(MAKEFOURCC('N','U','L','L')))
-
 
 //-----------------------------------------------------------------------------
 // Finds the nearest supported frame buffer format
@@ -56,5 +48,3 @@ D3DFORMAT FindNearestSupportedFormat( ImageFormat format, bool bIsVertexTexture,
 D3DFORMAT FindNearestSupportedDepthFormat( int nAdapter, ImageFormat displayFormat, ImageFormat renderTargetFormat, D3DFORMAT depthFormat );
 
 const char *D3DFormatName( D3DFORMAT d3dFormat );
-
-#endif // COLORFORMATDX8_H

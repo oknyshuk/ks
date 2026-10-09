@@ -1,23 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ICLIENTTHINKABLE_H
-#define ICLIENTTHINKABLE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "iclientunknown.h"
-
 
 class CClientThinkHandlePtr;
 typedef CClientThinkHandlePtr* ClientThinkHandle_t;
 
 
 // Entities that implement this interface can be put into the client think list.
-abstract_class IClientThinkable
+class IClientThinkable
 {
 public:
 	// Gets at the containing class...
@@ -33,6 +25,3 @@ public:
 	// Called by the client when it deletes the entity.
 	virtual void				Release() = 0;
 };
-
-
-#endif // ICLIENTTHINKABLE_H

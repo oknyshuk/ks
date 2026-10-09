@@ -1,17 +1,26 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Client side implementation of CBaseCombatWeapon.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
 #include "iclientmode.h"
 #include "iinput.h"
 #include "weapon_selection.h"
 #include "engine/ivmodelinfo.h"
-#include "tier0/vprof.h"
-#include "hltvcamera.h"
-#include "tier1/keyvalues.h"
 #include "toolframework/itoolframework.h"
 #include "toolframework_client.h"
 #include "c_cs_player.h"
@@ -62,7 +71,7 @@ void C_BaseCombatWeapon::NotifyShouldTransmit( ShouldTransmitState_t state )
 //-----------------------------------------------------------------------------
 static inline bool ShouldDrawLocalPlayer( C_BasePlayer *pl )
 {
-	Assert( pl );
+	contract_assert( pl );
 	return pl->ShouldDrawLocalPlayer();
 }
 
@@ -395,7 +404,7 @@ IClientModelRenderable*	C_BaseCombatWeapon::GetClientModelRenderable()
 //-----------------------------------------------------------------------------
 int C_BaseCombatWeapon::DrawModel( int flags, const RenderableInstance_t &instance )
 {
-	VPROF_BUDGET( "C_BaseCombatWeapon::DrawModel", VPROF_BUDGETGROUP_MODEL_RENDERING );
+	CVProfScope _( "C_BaseCombatWeapon::DrawModel", 0, VPROF_BUDGETGROUP_MODEL_RENDERING, false, BUDGETFLAG_OTHER );
 	if ( !m_bReadyToDraw )
 		return 0;
 
@@ -567,5 +576,5 @@ void C_BaseCombatWeapon::GetToolRecordingState( KeyValues *msg )
 	if ( !ToolsEnabled() )
 		return;
 
-	Assert(false);
+	contract_assert( false );
 }

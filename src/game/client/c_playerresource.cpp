@@ -1,20 +1,29 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Entity that propagates general data needed by clients for every player.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_predmap.h"
-#include "reflect_annotations.h"
 #include "c_playerresource.h"
 #include "c_team.h"
 #include "gamestringpool.h"
 #include "hltvreplaysystem.h"
 #include "rocketui/rocketui.h"
-#include "tier1/fmtstr.h"
-#include "tier1/map_ops.h"
 #include "localize/ilocalize.h"
 
 const float PLAYER_RESOURCE_THINK_INTERVAL = 0.2f;
@@ -47,7 +56,7 @@ IGameResources * GameResources( void ) { return g_PR; }
 //-----------------------------------------------------------------------------
 C_PlayerResource::C_PlayerResource()
 {
-	for ( int i=0; i<ARRAYSIZE(m_szName); ++i )
+	for ( int i=0; i<std::size( m_szName ); ++i )
 	{
 		m_szName[i] = AllocPooledString( "unconnected" );
 	}
@@ -110,7 +119,7 @@ void C_PlayerResource::UpdateXuids( void )
 				{
 					if ( pParameters->m_bAnonymousPlayerIdentity )
 					{
-// 						CSteamID steamid( newXuid );
+// 						CPlayerId steamid( newXuid );
 // 						steamid.SetAccountID( ( ~uint32(0) ) -1 - i );
 // 						newXuid = steamid.ConvertToUint64();
 						newXuid = INVALID_XUID;
@@ -183,7 +192,7 @@ void C_PlayerResource::UpdatePlayerName( int slot )
 		}
 	}
 
-	if ( !m_szName[slot] || Q_stricmp( m_szName[slot], pchPlayerName ) )
+	if ( !m_szName[slot] || V_stricmp( m_szName[slot], pchPlayerName ) )
 	{
 		m_szName[slot] = AllocPooledString( pchPlayerName );
 	}
@@ -206,9 +215,9 @@ void C_PlayerResource::ClientThink()
 	if ( !s_chStaticArrayVarName[ 0 ] ) \
 	{ \
 		wchar_t const * const kwszTheSuspect = g_pLocalize->Find( szLocToken ); \
-		Assert( kwszTheSuspect ); \
+		contract_assert( kwszTheSuspect ); \
 		V_UnicodeToUTF8( kwszTheSuspect, s_chStaticArrayVarName, sizeof( s_chStaticArrayVarName ) ); \
-		Assert( s_chStaticArrayVarName[ 0 ] ); \
+		contract_assert( s_chStaticArrayVarName[ 0 ] ); \
 		if ( !s_chStaticArrayVarName[ 0 ] ) \
 			V_strcpy_safe( s_chStaticArrayVarName, szDefaultText ); \
 	}
@@ -220,7 +229,7 @@ public:
 	CStaticPlayerNamesSet()
 	{
 		m_bInitialized = false;
-		Q_memset( m_szNames, 0, sizeof( m_szNames ) );
+		V_memset( m_szNames, 0, sizeof( m_szNames ) );
 	}
 
 	char const * GetName( int idx )
@@ -344,7 +353,7 @@ const char *C_PlayerResource::GetPlayerName( int iIndex )
 
 	if ( iIndex < 1 || iIndex > MAX_PLAYERS )
 	{
-		Assert( false );
+		contract_assert( false );
 		return PLAYER_ERROR_NAME;
 	}
 	
@@ -352,7 +361,7 @@ const char *C_PlayerResource::GetPlayerName( int iIndex )
 		return PLAYER_UNCONNECTED_NAME;
 
 	// X360TBD: Network - figure out why the name isn't set
-	if ( !m_szName[ iIndex ] || !Q_stricmp( m_szName[ iIndex ], PLAYER_UNCONNECTED_NAME ) )
+	if ( !m_szName[ iIndex ] || !V_stricmp( m_szName[ iIndex ], PLAYER_UNCONNECTED_NAME ) )
 	{
 		// If you get a full "reset" uncompressed update from server, then you can have NULLNAME show up in the scoreboard
 		UpdatePlayerName( iIndex );
@@ -364,7 +373,7 @@ const char *C_PlayerResource::GetPlayerName( int iIndex )
 		{
 			player_info_t sPlayerInfo;
 			if ( pParameters->m_uiLockFirstPersonAccountID && engine->GetPlayerInfo( iIndex, &sPlayerInfo ) &&
-				( CSteamID( sPlayerInfo.xuid ).GetAccountID() == pParameters->m_uiLockFirstPersonAccountID ) )
+				( CPlayerId( sPlayerInfo.xuid ).GetAccountID() == pParameters->m_uiLockFirstPersonAccountID ) )
 			{
 				STATIC_PLAYER_NAME_UTF8_ARRAY_LOCALIZED( s_utf8TheSuspect, "#CSGO_Overwatch_TheSuspect", "The Suspect" );
 				return s_utf8TheSuspect;
@@ -389,7 +398,7 @@ int C_PlayerResource::GetTeam(int iIndex )
 {
 	if ( iIndex < 1 || iIndex > MAX_PLAYERS )
 	{
-		Assert( false );
+		contract_assert( false );
 		return 0;
 	}
 	else
@@ -402,7 +411,7 @@ int C_PlayerResource::GetPendingTeam(int iIndex )
 {
 	if ( iIndex < 1 || iIndex > MAX_PLAYERS )
 	{
-		Assert( false );
+		contract_assert( false );
 		return 0;
 	}
 	else
@@ -425,7 +434,7 @@ int C_PlayerResource::GetCoachingTeam(int index)
 {
 	if ( index < 1 || index > MAX_PLAYERS )
 	{
-		Assert( false );
+		contract_assert( false );
 		return 0;
 	}
 	else
@@ -483,25 +492,6 @@ bool C_PlayerResource::IsHLTV(int index)
 	
 	return false;
 }
-
-#if defined( REPLAY_ENABLED )
-bool C_PlayerResource::IsReplay(int index)
-{
-	if ( !IsConnected( index ) )
-		return false;
-
-#if defined( REPLAY_ENABLED )
-	player_info_t sPlayerInfo;
-
-	if ( engine->GetPlayerInfo( index, &sPlayerInfo ) )
-	{
-		return sPlayerInfo.isreplay;
-	}
-#endif
-
-	return false;
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -591,7 +581,7 @@ const Color &C_PlayerResource::GetTeamColor(int index )
 {
 	if ( index < 0 || index >= MAX_TEAMS )
 	{
-		Assert( false );
+		contract_assert( false );
 		static Color blah;
 		return blah;
 	}
@@ -628,7 +618,7 @@ XUID C_PlayerResource::GetXuid( int iIndex )
 //-----------------------------------------------------------------------------
 void C_PlayerResource::FillXuidText( int iIndex, char *buf, int bufSize )
 {
-	Assert( buf && bufSize );
+	contract_assert( buf && bufSize );
 	if ( buf && bufSize )
 	{
 		XUID xuid = GetXuid( iIndex );

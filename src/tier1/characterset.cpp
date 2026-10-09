@@ -1,18 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <string.h>
-#include "characterset.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Purpose: builds a simple lookup table of a group of important characters
@@ -27,7 +17,7 @@ void CharacterSetBuild( characterset_t *pSetBuffer, const char *pszSetString )
 	if ( !pSetBuffer || !pszSetString )
 		return;
 
-	memset( pSetBuffer->set, 0, sizeof(pSetBuffer->set) );
+	std::memset( pSetBuffer->set, 0, sizeof(pSetBuffer->set) );
 
 	while ( pszSetString[i] )
 	{

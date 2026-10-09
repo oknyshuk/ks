@@ -1,12 +1,63 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "reflect_predmap.h"
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
@@ -19,7 +70,6 @@
 #include "baseparticleentity.h"
 
 #ifdef CLIENT_DLL
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
 #endif
 
@@ -109,13 +159,13 @@ const Vector &CBaseParticleEntity::GetSortOrigin()
 void CBaseParticleEntity::SimulateParticles( CParticleSimulateIterator *pIterator )
 {
 	// If you derive from CBaseParticleEntity, you must implement simulation and rendering.
-	Assert( false );
+	contract_assert( false );
 }
 
 void CBaseParticleEntity::RenderParticles( CParticleRenderIterator *pIterator )
 {
 	// If you derive from CBaseParticleEntity, you must implement simulation and rendering.
-	Assert( false );
+	contract_assert( false );
 }
 
 #endif

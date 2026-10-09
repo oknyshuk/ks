@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
 
-#ifndef C_TRACER_H
-#define C_TRACER_H
-
-class Vector;
 class ParticleDraw;
 class CMeshBuilder;
 
@@ -36,5 +29,3 @@ void Tracer_Draw( CMeshBuilder *pMeshBuilder, Vector const& start, Vector const&
 // returne false if the tracer is offscreen
 //-----------------------------------------------------------------------------
 bool Tracer_ComputeVerts( const Vector &start, const Vector &delta, float width, Vector *pVerts );
-
-#endif // C_TRACER_H

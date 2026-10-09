@@ -1,19 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Deal with weapon being out
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#ifndef AI_BEHAVIOR_RAPPEL_H
-#define AI_BEHAVIOR_RAPPEL_H
+// Purpose: Deal with weapon being out
 
 #include "ai_behavior.h"
 
@@ -83,7 +72,3 @@ private:
 	Vector	m_vecRopeAnchor;
 	
 };
-
-#endif // AI_BEHAVIOR_RAPPEL_H
-
-

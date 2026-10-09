@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef CLIENTMODE_H
-#define CLIENTMODE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "iclientmode.h"
 
@@ -16,5 +9,3 @@ typedef struct
 	char *name;
 	bool draw;
 } ModeElements;
-
-#endif 

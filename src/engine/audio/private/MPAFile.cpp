@@ -1,16 +1,11 @@
-//====== Copyright 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "winlite.h"
+import ks.tier1;
 #include "MPAFile.h"
 #include "soundchars.h"
-#include "tier1/map_ops.h"
-#include <map>
+import std;
 
-#include "tier0/memalloc.h"
 
 // exception class
 CMPAException::CMPAException(ErrorIDs ErrorID, const char *szFile, const char *szFunction, bool bGetLastError ) :
@@ -52,7 +47,7 @@ const char *m_szErrors[] =
 
 };
 
-#define MAX_ERR_LENGTH 256
+constexpr auto MAX_ERR_LENGTH = 256;
 void CMPAException::ShowError()
 {
     char szErrorMsg[MAX_ERR_LENGTH] = {0};
@@ -61,15 +56,15 @@ void CMPAException::ShowError()
     // this is not buffer-overflow-proof!
     if( m_szFunction )
     {
-        sprintf( szHelp, _T("%s: "), m_szFunction );
-        strcat( szErrorMsg, szHelp );
+        std::sprintf( szHelp, "%s: ", m_szFunction );
+        std::strcat( szErrorMsg, szHelp );
     }
     if( m_szFile )
     {
-        sprintf( szHelp, _T("'%s'\n"), m_szFile );
-        strcat( szErrorMsg, szHelp );
+        std::sprintf( szHelp, "'%s'\n", m_szFile );
+        std::strcat( szErrorMsg, szHelp );
     }
-    strcat( szErrorMsg, m_szErrors[m_ErrorID] );
+    std::strcat( szErrorMsg, m_szErrors[m_ErrorID] );
 
     // show error message
     Warning( "%s\n", szErrorMsg );
@@ -238,7 +233,7 @@ void CMPAFile::Open( const char * szFilename )
     if( m_hFile == FILESYSTEM_INVALID_HANDLE )
     {
         // throw error
-        throw CMPAException( CMPAException::ErrOpenFile, szFilename, _T("CreateFile"), true );
+        throw CMPAException( CMPAException::ErrOpenFile, szFilename, "CreateFile", true );
     }
 }
 
@@ -253,7 +248,7 @@ void CMPAFile::SetPosition( int offset )
     if (liOff.LowPart  == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR )
     {
         // throw error
-        throw CMPAException( CMPAException::ErrSetPosition, m_szFile, _T("SetFilePointer"), true );
+        throw CMPAException( CMPAException::ErrSetPosition, m_szFile, "SetFilePointer", true );
     }
     */
 
@@ -278,8 +273,8 @@ uint32 CMPAFile::Read( void *pData, uint32 dwSize, uint32 dwOffset )
 // convert from big endian to native format (Intel=little endian) and return as uint32 (32bit)
 uint32 CMPAFile::ExtractBytes( uint32& dwOffset, uint32 dwNumBytes, bool bMoveOffset )
 {   
-    Assert( dwNumBytes > 0 );
-    Assert( dwNumBytes <= 4 );  // max 4 byte
+    contract_assert( dwNumBytes > 0 );
+    contract_assert( dwNumBytes <= 4 );  // max 4 byte
 
     // enough bytes in buffer, otherwise read from file
     if( !m_pBuffer || ( ((int)(m_dwBufferSize - dwOffset)) < (int)dwNumBytes) )
@@ -322,7 +317,7 @@ void CMPAFile::FillBuffer( uint32 dwOffsetToRead )
     // take over data from old buffer
     if( m_pBuffer )
     {
-        memcpy( pNewBuffer, m_pBuffer, m_dwBufferSize );
+        std::memcpy( pNewBuffer, m_pBuffer, m_dwBufferSize );
 
         // release old buffer 
         delete[] m_pBuffer;
@@ -346,7 +341,7 @@ float GetMP3Duration_Helper( char const *filename )
 
 	// See if it's in the RB tree already...
 	char fn[ 512 ];
-	Q_snprintf( fn, sizeof( fn ), "sound/%s", PSkipSoundChars( filename ) );
+	V_snprintf( fn, sizeof( fn ), "sound/%s", PSkipSoundChars( filename ) );
 
 	FileNameHandle_t h = g_pFullFileSystem->FindOrAddFileName( fn );
 

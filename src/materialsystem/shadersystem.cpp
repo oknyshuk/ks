@@ -1,31 +1,19 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "shadersystem.h"
-#include <stdlib.h>
+import std;
 #include "materialsystem_global.h"
 #include "filesystem.h"
-#include "tier1/map_ops.h"
 #include "shaderlib/ShaderDLL.h"
 #include "texturemanager.h"
 #include "itextureinternal.h"
 #include "IHardwareConfigInternal.h"
-#include "mathlib/vmatrix.h"
 #include "imaterialinternal.h"
-#include "tier1/strtools.h"
-#include "tier0/icommandline.h"
 #include "shaderlib/cshader.h"
-#include "tier1/convar.h"
-#include "tier1/keyvalues.h"
-#include "shader_dll_verify.h"
-#include "tier0/vprof.h"
-#include "tier1/tier1_logging.h"
-#include <unordered_set>
 
-#define ShaderApiParam( x ) x
+template <typename T1> [[gnu::always_inline]] inline constexpr auto ShaderApiParam( T1 x ) { return x; }
 
 
 //#define DEBUG_DEPTH 1
@@ -202,8 +190,7 @@ private:
 //-----------------------------------------------------------------------------
 static CShaderSystem s_ShaderSystem;
 IShaderSystemInternal *g_pShaderSystem = &s_ShaderSystem;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CShaderSystem, IShaderSystem, 
-						SHADERSYSTEM_INTERFACE_VERSION, s_ShaderSystem );
+static InterfaceReg s_Reg_CShaderSystem_IShaderSystem( []() -> void * { return static_cast<IShaderSystem *>( &s_ShaderSystem ); }, SHADERSYSTEM_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -260,7 +247,7 @@ void CShaderSystem::ModInit()
 {
 	// Load up standard shader DLLs...
 	int dxSupportLevel = HardwareConfig()->GetMaxDXSupportLevel();
-	Assert( dxSupportLevel >= 60 );
+	contract_assert( dxSupportLevel >= 60 );
 	dxSupportLevel /= 10;
 
 	LoadModShaderDLLs( dxSupportLevel );
@@ -405,9 +392,9 @@ bool CShaderSystem::LoadShaderDLL( const char *pFullPath, const char *pPathID, b
 	else
 	{
 		nShaderDLLIndex = std::ssize( m_ShaderDLLs ); m_ShaderDLLs.emplace_back();
-		int nLen = Q_strlen(pFullPath) + 1;
+		int nLen = V_strlen(pFullPath) + 1;
 		m_ShaderDLLs[nShaderDLLIndex].m_pFileName = new char[ nLen ];
-		Q_strncpy( m_ShaderDLLs[nShaderDLLIndex].m_pFileName, pFullPath, nLen );
+		V_strncpy( m_ShaderDLLs[nShaderDLLIndex].m_pFileName, pFullPath, nLen );
 	}
 
 	// Ok, the shader DLL's good!
@@ -431,7 +418,7 @@ int CShaderSystem::FindShaderDLL( const char *pFullPath )
 {
 	for ( int i = std::ssize( m_ShaderDLLs ); --i >= 0; )
 	{
-		if ( !Q_stricmp( pFullPath, m_ShaderDLLs[i].m_pFileName ) )
+		if ( !V_stricmp( pFullPath, m_ShaderDLLs[i].m_pFileName ) )
 			return i;
 	}
 
@@ -661,9 +648,9 @@ int CShaderSystem::GetShaders( int nFirstShader, int nMaxCount, IShader **ppShad
 //-----------------------------------------------------------------------------
 inline StateSnapshot_t CShaderSystem::CurrentStateSnapshot()
 {
-	Assert( m_pRenderState );
-	Assert( m_nRenderPass < MAX_RENDER_PASSES );
-	Assert( m_nRenderPass < m_pRenderState->m_pSnapshots[m_nModulation].m_nPassCount );
+	contract_assert( m_pRenderState );
+	contract_assert( m_nRenderPass < MAX_RENDER_PASSES );
+	contract_assert( m_nRenderPass < m_pRenderState->m_pSnapshots[m_nModulation].m_nPassCount );
 	return m_pRenderState->m_pSnapshots[m_nModulation].m_Snapshot[m_nRenderPass];
 }
 
@@ -689,7 +676,7 @@ void CShaderSystem::CreateDebugMaterials()
 	for ( i = 0; i < MATERIAL_DEBUG_COUNT; ++i )
 	{
 		char shaderName[64];
-		Q_snprintf( shaderName, sizeof( shaderName ), "___%s_%d.vmt", s_pDebugShaderName[i], i );
+		V_snprintf( shaderName, sizeof( shaderName ), "___%s_%d.vmt", s_pDebugShaderName[i], i );
 		m_pDebugMaterials[i] = static_cast<IMaterialInternal*>(MaterialSystem()->CreateMaterial( shaderName, pVMTKeyValues[i] ));
 		if( m_pDebugMaterials[i] )
 			m_pDebugMaterials[i] = m_pDebugMaterials[i]->GetRealTimeVersion();
@@ -726,7 +713,7 @@ void CShaderSystem::CleanUpDebugMaterials()
 void CShaderSystem::PrepForShaderDraw( IShader *pShader,
 	IMaterialVar** ppParams, ShaderRenderState_t* pRenderState, int nModulation )
 {
-	Assert( !m_pRenderState );
+	contract_assert( !m_pRenderState );
 
 	// 360 runs the console remotely, spew cannot cause the matsys to be reentrant
 	// 360 sidesteps the other negative affect that *all* buffered spew redirects as warning text
@@ -748,8 +735,6 @@ void CShaderSystem::DoneWithShaderDraw()
 }
 
 
-#ifdef _DEBUG
-#endif
 
 //-----------------------------------------------------------------------------
 // Call the SHADER_PARAM_INIT block of the shaders
@@ -832,13 +817,11 @@ void CShaderSystem::InitShaderParameters( IShader *pShader, IMaterialVar **param
 			break;
 
 		default:
-			Assert(0);
+			contract_assert( 0 );
 		}
 	}
 }
 
-#ifdef _DEBUG
-#endif
 
 //-----------------------------------------------------------------------------
 // Call the SHADER_INIT block of the shaders
@@ -861,9 +844,9 @@ void CShaderSystem::InitRenderStateFlags( ShaderRenderState_t* pRenderState, int
 	pRenderState->m_Flags = 0;
 
 	// Make sure the shader don't force these flags. . they are automatically computed.
-	Assert( !( pRenderState->m_Flags & SHADER_OPACITY_TRANSLUCENT ) );
-	Assert( !( pRenderState->m_Flags & SHADER_OPACITY_ALPHATEST ) );
-	Assert( !( pRenderState->m_Flags & SHADER_OPACITY_OPAQUE ) );
+	contract_assert( !( pRenderState->m_Flags & SHADER_OPACITY_TRANSLUCENT ) );
+	contract_assert( !( pRenderState->m_Flags & SHADER_OPACITY_ALPHATEST ) );
+	contract_assert( !( pRenderState->m_Flags & SHADER_OPACITY_OPAQUE ) );
 
 	// If we are in release mode, just go ahead and clear in case the above is screwed up.
 	pRenderState->m_Flags &= ~SHADER_OPACITY_MASK;
@@ -935,18 +918,18 @@ void CShaderSystem::ComputeRenderStateFlagsFromSnapshot( ShaderRenderState_t* pR
 #ifdef _DEBUG
 	if( pRenderState->m_Flags & SHADER_OPACITY_TRANSLUCENT )
 	{
-		Assert( !( pRenderState->m_Flags & SHADER_OPACITY_ALPHATEST ) );
-		Assert( !( pRenderState->m_Flags & SHADER_OPACITY_OPAQUE ) );
+		contract_assert( !( pRenderState->m_Flags & SHADER_OPACITY_ALPHATEST ) );
+		contract_assert( !( pRenderState->m_Flags & SHADER_OPACITY_OPAQUE ) );
 	}
 	if( pRenderState->m_Flags & SHADER_OPACITY_ALPHATEST )
 	{
-		Assert( !( pRenderState->m_Flags & SHADER_OPACITY_TRANSLUCENT ) );
-		Assert( !( pRenderState->m_Flags & SHADER_OPACITY_OPAQUE ) );
+		contract_assert( !( pRenderState->m_Flags & SHADER_OPACITY_TRANSLUCENT ) );
+		contract_assert( !( pRenderState->m_Flags & SHADER_OPACITY_OPAQUE ) );
 	}
 	if( pRenderState->m_Flags & SHADER_OPACITY_OPAQUE )
 	{
-		Assert( !( pRenderState->m_Flags & SHADER_OPACITY_ALPHATEST ) );
-		Assert( !( pRenderState->m_Flags & SHADER_OPACITY_TRANSLUCENT ) );
+		contract_assert( !( pRenderState->m_Flags & SHADER_OPACITY_ALPHATEST ) );
+		contract_assert( !( pRenderState->m_Flags & SHADER_OPACITY_TRANSLUCENT ) );
 	}
 #endif
 }
@@ -955,8 +938,6 @@ void CShaderSystem::ComputeRenderStateFlagsFromSnapshot( ShaderRenderState_t* pR
 //-----------------------------------------------------------------------------
 // Initializes state snapshots
 //-----------------------------------------------------------------------------
-#ifdef _DEBUG
-#endif
 
 int CShaderSystem::GetModulationSnapshotCount( IMaterialVar **params )
 {
@@ -1036,8 +1017,6 @@ void CShaderSystem::InitStateSnapshots( IShader *pShader, IMaterialVar **params,
 	SET_FLAGS2B( MATERIAL_VAR2_USE_GBUFFER1, bGBuffer1 );
 }
 
-#ifdef _DEBUG
-#endif
 
 //-----------------------------------------------------------------------------
 // Helper to count texture coordinates
@@ -1151,6 +1130,7 @@ static void AddSnapshotsToList( RenderPassList_t *pPassList, int &nSnapshotID, S
 //-----------------------------------------------------------------------------
 bool CShaderSystem::ComputeVertexFormatFromSnapshot( IMaterialVar **params, ShaderRenderState_t* pRenderState )
 {
+	ks::ScratchArena<> scratch;
 	// When computing the usage, use the snapshot that has no alpha or color
 	// modulation. We need the usage + format to be the same for all
 	// combinations of alpha + color modulation, though, or we are asking for
@@ -1170,8 +1150,7 @@ bool CShaderSystem::ComputeVertexFormatFromSnapshot( IMaterialVar **params, Shad
 		numSnapshots += pRenderState->m_pSnapshots[SHADER_USING_EDITOR].m_nPassCount;
 	}
 
-	StateSnapshot_t* pSnapshots = (StateSnapshot_t*)stackalloc( 
-		numSnapshots * sizeof(StateSnapshot_t) ); 
+	StateSnapshot_t* pSnapshots = scratch.Alloc<StateSnapshot_t>( numSnapshots ); 
 
 	int snapshotID = 0;
 	AddSnapshotsToList( &pRenderState->m_pSnapshots[0], snapshotID, pSnapshots );
@@ -1188,7 +1167,7 @@ bool CShaderSystem::ComputeVertexFormatFromSnapshot( IMaterialVar **params, Shad
 		AddSnapshotsToList( &pRenderState->m_pSnapshots[SHADER_USING_EDITOR], snapshotID, pSnapshots );
 	}
 
-	Assert( snapshotID == numSnapshots );
+	contract_assert( snapshotID == numSnapshots );
 
 	pRenderState->m_VertexUsage = g_pShaderAPI->ComputeVertexUsage( numSnapshots, pSnapshots );
 
@@ -1197,8 +1176,7 @@ bool CShaderSystem::ComputeVertexFormatFromSnapshot( IMaterialVar **params, Shad
 	for ( int mod = 1; mod < nModulationSnapshotCount; ++mod )
 	{
 		int numSnapshotsTest = pRenderState->m_pSnapshots[mod].m_nPassCount;
-		StateSnapshot_t* pSnapshotsTest = (StateSnapshot_t*)stackalloc( 
-			numSnapshotsTest * sizeof(StateSnapshot_t) );
+		StateSnapshot_t* pSnapshotsTest = scratch.Alloc<StateSnapshot_t>( numSnapshotsTest );
 
 		for (int i = 0; i < numSnapshotsTest; ++i)
 		{
@@ -1206,7 +1184,7 @@ bool CShaderSystem::ComputeVertexFormatFromSnapshot( IMaterialVar **params, Shad
 		}
 
 		VertexFormat_t usageTest = g_pShaderAPI->ComputeVertexUsage( numSnapshotsTest, pSnapshotsTest );
-		Assert( IsVertexFormatSubsetOfVertexformat( usageTest, pRenderState->m_VertexUsage ) );
+		contract_assert( IsVertexFormatSubsetOfVertexformat( usageTest, pRenderState->m_VertexUsage ) );
 	}
 #endif
 
@@ -1222,7 +1200,7 @@ bool CShaderSystem::ComputeVertexFormatFromSnapshot( IMaterialVar **params, Shad
 //-----------------------------------------------------------------------------
 bool CShaderSystem::InitRenderState( IShader *pShader, int numParams, IMaterialVar **params, ShaderRenderState_t* pRenderState, char const* pMaterialName )
 {
-	Assert( !m_pRenderState );
+	contract_assert( !m_pRenderState );
 
 	// Initialize render state flags
 	InitRenderStateFlags( pRenderState, numParams, params );
@@ -1291,7 +1269,7 @@ void CShaderSystem::DrawElements( IShader *pShader, IMaterialVar **params,
 								  uint32 nModulationFlags,
 								  bool bRenderingPreTessPatchMesh )
 {
-	VPROF("CShaderSystem::DrawElements");
+	CVProfScope _( "CShaderSystem::DrawElements", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	g_pShaderAPI->InvalidateDelayedShaderConstants();
 
@@ -1317,23 +1295,6 @@ void CShaderSystem::DrawElements( IShader *pShader, IMaterialVar **params,
 	{
 		DrawNormalMap( pShader, params, vertexCompression );
 	}
-#if defined(DEBUG_DEPTH)
-	else if ( mat_debugdepth.GetInt() && ((materialVarFlags & MATERIAL_VAR_NO_DEBUG_OVERRIDE) == 0) )
-	{
-		int nIndex = 0;
-		if ( IsFlagSet( params, MATERIAL_VAR_DECAL ) )
-		{
-			nIndex |= 0x1;
-		}
-		IMaterialInternal *pDebugMaterial = m_pDebugMaterials[ MATERIAL_DEBUG_DEPTH + nIndex ];
-		if ( !g_pShaderAPI->IsDepthWriteEnabled( pRenderState->m_Snapshots[mod].m_Snapshot[0] )	)
-		{
-			pDebugMaterial = m_pDebugMaterials[MATERIAL_DEBUG_WIREFRAME];
-		}
-
-		DrawUsingMaterial( pDebugMaterial, vertexCompression );
-	}
-#endif
 	else if( bRenderingPreTessPatchMesh && !IsFlag2Set( params, MATERIAL_VAR2_SUPPORTS_TESSELLATION ) )
 	{
 		Warning( "Warning error: CShaderSystem::DrawElements: Mesh supports tessellation, but material does not.\n" );
@@ -1399,8 +1360,8 @@ bool CShaderSystem::CanUseEditorMaterials() const
 //-----------------------------------------------------------------------------
 void CShaderSystem::TakeSnapshot( )
 {
-	Assert( m_pRenderState );
-	Assert( m_nModulation < SnapshotTypeCount() );
+	contract_assert( m_pRenderState );
+	contract_assert( m_nModulation < SnapshotTypeCount() );
 
 	if ( g_pHardwareConfig->GetDXSupportLevel() >= 92 )
 	{
@@ -1414,7 +1375,7 @@ void CShaderSystem::TakeSnapshot( )
 	// Take a snapshot...
 	snapshotList.m_Snapshot[snapshotList.m_nPassCount] = g_pShaderAPI->TakeSnapshot();
 	++snapshotList.m_nPassCount;
-	Assert( snapshotList.m_nPassCount <= MAX_RENDER_PASSES );
+	contract_assert( snapshotList.m_nPassCount <= MAX_RENDER_PASSES );
 }
 
 
@@ -1423,11 +1384,11 @@ void CShaderSystem::TakeSnapshot( )
 //-----------------------------------------------------------------------------
 void CShaderSystem::DrawSnapshot( const unsigned char *pInstanceCommandBuffer, bool bMakeActualDrawCall )
 {
-	Assert( m_pRenderState );
+	contract_assert( m_pRenderState );
 	RenderPassList_t& snapshotList = m_pRenderState->m_pSnapshots[m_nModulation];
 
 	int nPassCount = snapshotList.m_nPassCount;
-	Assert( m_nRenderPass < nPassCount );
+	contract_assert( m_nRenderPass < nPassCount );
 
 	if ( bMakeActualDrawCall )
 	{
@@ -1476,11 +1437,11 @@ void CShaderSystem::CopyMaterialVarToDebugShader( IMaterialInternal *pDebugMater
 {
 	bool bFound;
 	IMaterialVar *pMaterialVar = pDebugMaterial->FindVar( pDstVarName ? pDstVarName : pSrcVarName, &bFound );
-	Assert( bFound );
+	contract_assert( bFound );
 
 	for( int i = pShader->GetParamCount(); --i >= 0; )
 	{
-		if( !Q_stricmp( ppParams[i]->GetName( ), pSrcVarName ) )
+		if( !V_stricmp( ppParams[i]->GetName( ), pSrcVarName ) )
 		{
 			pMaterialVar->CopyFrom( ppParams[i] );
 			return;
@@ -1524,7 +1485,7 @@ void CShaderSystem::DrawNormalMap( IShader *pShader, IMaterialVar **ppParams, Ve
 	{
 		bool bFound;
 		IMaterialVar *pMaterialVar = pDebugMaterial->FindVar( "$bumpmap", &bFound );
-		Assert( bFound );
+		contract_assert( bFound );
 
 		pMaterialVar->SetUndefined();
 	}
@@ -1543,7 +1504,7 @@ bool CShaderSystem::DrawEnvmapMask( IShader *pShader, IMaterialVar **ppParams,
 
 	bool bFound;
 	IMaterialVar *pMaterialVar = pDebugMaterial->FindVar( "$showalpha", &bFound );
-	Assert( bFound );
+	contract_assert( bFound );
 
 	if( IsFlagSet( ppParams, MATERIAL_VAR_NORMALMAPALPHAENVMAPMASK ) )
 	{
@@ -1590,7 +1551,7 @@ bool CShaderSystem::DrawEnvmapMask( IShader *pShader, IMaterialVar **ppParams,
 
 ShaderAPITextureHandle_t CShaderSystem::GetShaderAPITextureBindHandle( ITexture *pTexture, int nFrame, int nTextureChannel )
 {
-	Assert( !IsTextureInternalEnvCubemap( static_cast<ITextureInternal*>(pTexture) ) );
+	contract_assert( !IsTextureInternalEnvCubemap( static_cast<ITextureInternal*>(pTexture) ) );
 
 	// Bind away baby
 	if( pTexture )
@@ -1607,7 +1568,7 @@ ShaderAPITextureHandle_t CShaderSystem::GetShaderAPITextureBindHandle( ITexture 
 void CShaderSystem::BindTexture( Sampler_t sampler1, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame /* = 0 */ )
 {
 	// The call to IMaterialVar::GetTextureValue should have converted this to a real thing
-	Assert( !IsTextureInternalEnvCubemap( static_cast<ITextureInternal*>(pTexture) ) );
+	contract_assert( !IsTextureInternalEnvCubemap( static_cast<ITextureInternal*>(pTexture) ) );
 
 	// Bind away baby
 	if( pTexture )
@@ -1620,7 +1581,7 @@ void CShaderSystem::BindTexture( Sampler_t sampler1, TextureBindFlags_t nBindFla
 void CShaderSystem::BindTexture( Sampler_t sampler1, Sampler_t sampler2, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame /* = 0 */ )
 {
 	// The call to IMaterialVar::GetTextureValue should have converted this to a real thing
-	Assert( !IsTextureInternalEnvCubemap( static_cast<ITextureInternal*>(pTexture) ) );
+	contract_assert( !IsTextureInternalEnvCubemap( static_cast<ITextureInternal*>(pTexture) ) );
 
 	// Bind away baby
 	if( pTexture )
@@ -1705,7 +1666,7 @@ void CShaderSystem::LoadTexture( IMaterialVar *pTextureVar, const char *pTexture
 //-----------------------------------------------------------------------------
 void CShaderSystem::LoadBumpMap( IMaterialVar *pTextureVar, const char *pTextureGroupName, int nAdditionalCreationFlags )
 {
-	Assert( pTextureVar );
+	contract_assert( pTextureVar );
 
 	if (pTextureVar->GetType() != MATERIAL_VAR_TYPE_STRING)
 	{
@@ -1757,12 +1718,12 @@ void CShaderSystem::LoadCubeMap( IMaterialVar **ppParams, IMaterialVar *pTexture
 	{
 		ITextureInternal *pTexture;
 		char textureName[MAX_PATH];
-		Q_strncpy( textureName, pTextureVar->GetStringValue(), MAX_PATH );
+		V_strncpy( textureName, pTextureVar->GetStringValue(), MAX_PATH );
 		if ( HardwareConfig()->GetHDRType() != HDR_TYPE_NONE )
 		{
 			// Overload the texture name to ".hdr.vtf" (instead of .vtf) if we are running with 
 			// HDR enabled.
-			Q_strncat( textureName, ".hdr", MAX_PATH, COPY_ALL_CHARACTERS );
+			V_strncat( textureName, ".hdr", MAX_PATH, COPY_ALL_CHARACTERS );
 		}
 		pTexture = TextureManager()->FindOrLoadTexture( textureName, TEXTURE_GROUP_CUBE_MAP, nAdditionalCreationFlags );
 
@@ -1780,5 +1741,3 @@ void CShaderSystem::AddShaderComboInformation( const ShaderComboSemantics_t *pSe
 {
 	g_pShaderAPI->AddShaderComboInformation( pSemantics );
 }
-
-

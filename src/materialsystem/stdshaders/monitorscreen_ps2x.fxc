@@ -1,6 +1,7 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//paired with unlittwotexture_vs20
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+// Purpose: paired with unlittwotexture_vs20
 // STATIC: "TEXTURE2"					"0..1"
 
 #include "common_fog_ps_fxc.h"

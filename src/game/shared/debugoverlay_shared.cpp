@@ -1,16 +1,70 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Utility functions for using debug overlays to visualize information
 //			in the world.  Uses the IVDebugOverlay interface.
-//
-//=============================================================================//
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "debugoverlay_shared.h"
 #include "gamerules.h"
-#include "mathlib/mathlib.h"
 
-#define	MAX_OVERLAY_DIST_SQR	90000000
+constexpr auto MAX_OVERLAY_DIST_SQR = 90000000;
 
 //-----------------------------------------------------------------------------
 // Purpose: Local player on the server or client
@@ -172,7 +226,7 @@ void NDebugOverlay::Triangle( const Vector &p1, const Vector &p2, const Vector &
 	if ( !GetPlayerView( clipOrigin, clipForward ) )
 		return;
 
-	Assert( GameRules() );
+	contract_assert( GameRules() );
 	if ( !GameRules()->IsTopDown() )
 	{
 		// Clip triangles that are far away
@@ -247,7 +301,7 @@ void NDebugOverlay::Text( const Vector &origin, const char *text, bool bViewChec
 	if ( !GetPlayerView( clipOrigin, clipForward ) )
 		return;
 
-	Assert( GameRules() );
+	contract_assert( GameRules() );
 	if ( !GameRules()->IsTopDown() )
 	{
 		// Clip text that is far away
@@ -402,7 +456,7 @@ void NDebugOverlay::DrawTickMarkedLine(const Vector &startPos, const Vector &end
 		if (tickTextCnt == tickTextDist)
 		{
 			char text[25];
-			Q_snprintf(text,sizeof(text),"%i",i);
+			V_snprintf(text,sizeof(text),"%i",i);
 			Vector textPos = tickLeft + Vector(0,0,8);
 			Line(tickLeft, tickRight, 255,255,255,noDepthTest,duration);
 			Text( textPos, text, true, 0 );
@@ -580,9 +634,9 @@ void NDebugOverlay::Sphere( const Vector &center, float radius, int r, int g, in
 	float angle;
 	for( angle=0.0f; angle <= 360.0f; angle += 22.5f )
 	{
-		edge.x = radius * cosf( angle / 180.0f * M_PI ) + center.x;
+		edge.x = radius * std::cosf( angle / 180.0f * std::numbers::pi ) + center.x;
 		edge.y = center.y;
-		edge.z = radius * sinf( angle / 180.0f * M_PI ) + center.z;
+		edge.z = radius * std::sinf( angle / 180.0f * std::numbers::pi ) + center.z;
 
 		Line( edge, lastEdge, r, g, b, noDepthTest, flDuration );
 
@@ -593,8 +647,8 @@ void NDebugOverlay::Sphere( const Vector &center, float radius, int r, int g, in
 	for( angle=0.0f; angle <= 360.0f; angle += 22.5f )
 	{
 		edge.x = center.x;
-		edge.y = radius * cosf( angle / 180.0f * M_PI ) + center.y;
-		edge.z = radius * sinf( angle / 180.0f * M_PI ) + center.z;
+		edge.y = radius * std::cosf( angle / 180.0f * std::numbers::pi ) + center.y;
+		edge.z = radius * std::sinf( angle / 180.0f * std::numbers::pi ) + center.z;
 
 		Line( edge, lastEdge, r, g, b, noDepthTest, flDuration );
 
@@ -604,8 +658,8 @@ void NDebugOverlay::Sphere( const Vector &center, float radius, int r, int g, in
 	lastEdge = Vector( center.x, radius + center.y, center.z );
 	for( angle=0.0f; angle <= 360.0f; angle += 22.5f )
 	{
-		edge.x = radius * cosf( angle / 180.0f * M_PI ) + center.x;
-		edge.y = radius * sinf( angle / 180.0f * M_PI ) + center.y;
+		edge.x = radius * std::cosf( angle / 180.0f * std::numbers::pi ) + center.x;
+		edge.y = radius * std::sinf( angle / 180.0f * std::numbers::pi ) + center.y;
 		edge.z = center.z;
 
 		Line( edge, lastEdge, r, g, b, noDepthTest, flDuration );
@@ -651,7 +705,7 @@ void NDebugOverlay::Circle( const Vector &position, const QAngle &angles, float 
 void NDebugOverlay::Circle( const Vector &position, const Vector &xAxis, const Vector &yAxis, float radius, int r, int g, int b, int a, bool bNoDepthTest, float flDuration )
 {
 	const unsigned int nSegments = 16;
-	const float flRadStep = (M_PI*2.0f) / (float) nSegments;
+	const float flRadStep = (std::numbers::pi*2.0f) / (float) nSegments;
 
 	Vector vecLastPosition;
 	
@@ -697,13 +751,13 @@ void NDebugOverlay::Sphere( const Vector &position, const QAngle &angles, float 
 	Circle( position, xAxis, zAxis, radius, r, g, b, a, bNoDepthTest, flDuration );	// xz plane
 }
 
-#define NUM_CONE_LINES 8
-#define NUM_CONE_CIRCLES 3
+constexpr auto NUM_CONE_LINES = 8;
+constexpr auto NUM_CONE_CIRCLES = 3;
 void NDebugOverlay::Cone( const Vector & position, const Vector & axis, float angleRadians, float length, int r, int g, int b, int a, bool bNoDepthTest, float flDuration )
 {
 	//draw lines down the length of the cone.
-	float radiusStep = ( M_PI * 2.0f ) / NUM_CONE_LINES;
-	float sinHalfAngle = sinf( angleRadians * 0.5f ); 
+	float radiusStep = ( std::numbers::pi * 2.0f ) / NUM_CONE_LINES;
+	float sinHalfAngle = std::sinf( angleRadians * 0.5f ); 
 	float finalRadius = sinHalfAngle * length;
 
 	QAngle vecAngles;

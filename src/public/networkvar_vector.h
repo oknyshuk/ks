@@ -1,12 +1,10 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
-//
-// Included by networkvar.h
-//
-//==================================================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef NETWORKVAR_VECTOR_H
-#define NETWORKVAR_VECTOR_H
+// Purpose: Included by networkvar.h
 
+#include "networkvar.h"
 
 // This is the normal case.. you've got a SendPropVector to match your CNetworkVector
 #define CNetworkVector( name, ... ) CNetworkVectorInternal( Vector, name, NetworkStateChanged, CNetworkVectorBase __VA_OPT__(,) __VA_ARGS__ )
@@ -19,16 +17,12 @@
 // for the XY components and SendPropFloat for the Z component.
 #define CNetworkVectorXY_SeparateZ( name, ... ) CNetworkVectorInternal( Vector, name, NetworkStateChanged, CNetworkVectorXY_SeparateZBase __VA_OPT__(,) __VA_ARGS__ )
 
-
-
 // This is the normal case.. you've got a SendPropQAngle to match your CNetworkQAngle
 #define CNetworkQAngle( name, ... ) CNetworkVectorInternal( QAngle, name, NetworkStateChanged, CNetworkVectorBase __VA_OPT__(,) __VA_ARGS__ )
 
 // This variant of a CNetworkQAngle should be used if you want to use SendPropFloat
 // on each individual component of the vector.
 #define CNetworkQAngleXYZ( name, ... ) CNetworkVectorInternal( QAngle, name, NetworkStateChanged, CNetworkVectorXYZBase __VA_OPT__(,) __VA_ARGS__ )
-
-
 
 //
 // Use these variants if you want the networkvar to not trigger a change in the baseclass
@@ -64,58 +58,58 @@ class CNetworkVectorCommonBase : public CNetworkVarBase< Type, Changer >
 	typedef CNetworkVarBase< Type, Changer > base;
 public:
 
-	FORCEINLINE  void Init( float ix=0, float iy=0, float iz=0 ) 
+	[[gnu::always_inline]] inline  void Init( float ix=0, float iy=0, float iz=0 ) 
 	{
 		base::Set( Type( ix, iy, iz ) );
 	}
 	
-	FORCEINLINE float GetX() const { return this->m_Value.x; }
-	FORCEINLINE float GetY() const { return this->m_Value.y; }
-	FORCEINLINE float GetZ() const { return this->m_Value.z; }
-	FORCEINLINE float operator[]( int i ) const { return this->m_Value[i]; }
+	[[gnu::always_inline]] inline float GetX() const { return this->m_Value.x; }
+	[[gnu::always_inline]] inline float GetY() const { return this->m_Value.y; }
+	[[gnu::always_inline]] inline float GetZ() const { return this->m_Value.z; }
+	[[gnu::always_inline]] inline float operator[]( int i ) const { return this->m_Value[i]; }
 
-	FORCEINLINE bool operator==( const Type &val ) const 
+	[[gnu::always_inline]] inline bool operator==( const Type &val ) const 
 	{ 
 		return this->m_Value == (Type)val; 
 	}
 
-	FORCEINLINE bool operator!=( const Type &val ) const 
+	[[gnu::always_inline]] inline bool operator!=( const Type &val ) const 
 	{
 		return this->m_Value != (Type)val; 
 	}
 
-	FORCEINLINE const Type operator+( const Type &val ) const 
+	[[gnu::always_inline]] inline const Type operator+( const Type &val ) const 
 	{
 		return this->m_Value + val; 
 	}
 
-	FORCEINLINE const Type operator-( const Type &val ) const
+	[[gnu::always_inline]] inline const Type operator-( const Type &val ) const
 	{ 
 		return this->m_Value - val; 
 	}
 
-	FORCEINLINE const Type operator*( const Type &val ) const
+	[[gnu::always_inline]] inline const Type operator*( const Type &val ) const
 	{
 		return this->m_Value * val; 
 	}
 
-	FORCEINLINE const Type& operator*=( float val )
+	[[gnu::always_inline]] inline const Type& operator*=( float val )
 	{
 		return base::Set( this->m_Value * val );
 	}
 
-	FORCEINLINE const Type operator*( float val ) const
+	[[gnu::always_inline]] inline const Type operator*( float val ) const
 	{
 		return this->m_Value * val; 
 	}
 
-	FORCEINLINE const Type operator/( const Type &val ) const
+	[[gnu::always_inline]] inline const Type operator/( const Type &val ) const
 	{
 		return this->m_Value / val; 
 	}
 
 protected:
-	FORCEINLINE void DetectChange( float &out, float in ) 
+	[[gnu::always_inline]] inline void DetectChange( float &out, float in ) 
 	{
 		if ( out != in ) 
 		{
@@ -141,21 +135,21 @@ class CNetworkVectorBase : public CNetworkVectorCommonBase< Type, Changer >
 public:
 	static constexpr int GetNetworkVarFlags() { return NETWORKVAR_IS_A_VECTOR; }
 
-	FORCEINLINE const Type& operator=( const Type &val ) 
+	[[gnu::always_inline]] inline const Type& operator=( const Type &val ) 
 	{ 
 		return base::Set( val ); 
 	}
 
-	FORCEINLINE const Type& operator=( const CNetworkVectorBase<Type,Changer> &val ) 
+	[[gnu::always_inline]] inline const Type& operator=( const CNetworkVectorBase<Type,Changer> &val ) 
 	{ 
 		return base::Set( val.m_Value );
 	}
-	FORCEINLINE void SetX( float val ) { this->DetectChange( this->m_Value.x, val ); }
-	FORCEINLINE void SetY( float val ) { this->DetectChange( this->m_Value.y, val ); }
-	FORCEINLINE void SetZ( float val ) { this->DetectChange( this->m_Value.z, val ); }
-	FORCEINLINE void Set( int i, float val ) { this->DetectChange( this->m_Value[i], val ); }
+	[[gnu::always_inline]] inline void SetX( float val ) { this->DetectChange( this->m_Value.x, val ); }
+	[[gnu::always_inline]] inline void SetY( float val ) { this->DetectChange( this->m_Value.y, val ); }
+	[[gnu::always_inline]] inline void SetZ( float val ) { this->DetectChange( this->m_Value.z, val ); }
+	[[gnu::always_inline]] inline void Set( int i, float val ) { this->DetectChange( this->m_Value[i], val ); }
 
-	FORCEINLINE const Type& operator*=( float val )
+	[[gnu::always_inline]] inline const Type& operator*=( float val )
 	{
 		return base::Set( this->m_Value * val );
 	}
@@ -174,17 +168,17 @@ public:
 	
 	static constexpr int GetNetworkVarFlags() { return NETWORKVAR_IS_A_VECTOR | NETWORKVAR_VECTOR_XYZ_FLAG; }
 
-	FORCEINLINE const Type& operator=( const Type &val ) 
+	[[gnu::always_inline]] inline const Type& operator=( const Type &val ) 
 	{ 
 		return Set( val ); 
 	}
 
-	FORCEINLINE const Type& operator=( const CNetworkVectorBase<Type,Changer> &val ) 
+	[[gnu::always_inline]] inline const Type& operator=( const CNetworkVectorBase<Type,Changer> &val ) 
 	{ 
 		return Set( val.m_Value );
 	}
 
-	FORCEINLINE const Type& Set( const Type &val )
+	[[gnu::always_inline]] inline const Type& Set( const Type &val )
 	{
 		SetX( val.x );
 		SetY( val.y );
@@ -193,7 +187,7 @@ public:
 		return this->m_Value;
 	}
 	
-	FORCEINLINE Type& GetForModify()
+	[[gnu::always_inline]] inline Type& GetForModify()
 	{
 		this->NetworkStateChanged( &((float*)this)[0] );
 		this->NetworkStateChanged( &((float*)this)[1] );
@@ -201,39 +195,39 @@ public:
 		return this->m_Value;
 	}
 
-	FORCEINLINE const Type& SetDirect( const Type &val )
+	[[gnu::always_inline]] inline const Type& SetDirect( const Type &val )
 	{
 		GetForModify() = val;
 		return this->m_Value;
 	}
 
-	FORCEINLINE void SetX( float val ) { DetectChange( 0, val ); }
-	FORCEINLINE void SetY( float val ) { DetectChange( 1, val ); }
-	FORCEINLINE void SetZ( float val ) { DetectChange( 2, val ); }
-	FORCEINLINE void Set( int i, float val ) { DetectChange( i, val ); }
+	[[gnu::always_inline]] inline void SetX( float val ) { DetectChange( 0, val ); }
+	[[gnu::always_inline]] inline void SetY( float val ) { DetectChange( 1, val ); }
+	[[gnu::always_inline]] inline void SetZ( float val ) { DetectChange( 2, val ); }
+	[[gnu::always_inline]] inline void Set( int i, float val ) { DetectChange( i, val ); }
 
-	FORCEINLINE const Type& operator+=( const Type &val )
+	[[gnu::always_inline]] inline const Type& operator+=( const Type &val )
 	{
 		return Set( this->m_Value + val );
 	}
 
-	FORCEINLINE const Type& operator-=( const Type &val )
+	[[gnu::always_inline]] inline const Type& operator-=( const Type &val )
 	{
 		return Set( this->m_Value - val );
 	}
 
-	FORCEINLINE const Type& operator*=( float val )
+	[[gnu::always_inline]] inline const Type& operator*=( float val )
 	{
 		return Set( this->m_Value * val );
 	}
 
-	FORCEINLINE const Type& operator/=( float val )
+	[[gnu::always_inline]] inline const Type& operator/=( float val )
 	{
 		return Set( this->m_Value / val );
 	}
 
 private:
-	FORCEINLINE void DetectChange( int nComponent, float in ) 
+	[[gnu::always_inline]] inline void DetectChange( int nComponent, float in ) 
 	{
 		float *pVar = &((float*)this)[nComponent];
 		if ( *pVar != in ) 
@@ -262,17 +256,17 @@ public:
 	
 	static constexpr int GetNetworkVarFlags() { return NETWORKVAR_IS_A_VECTOR | NETWORKVAR_VECTOR_XY_SEPARATEZ_FLAG; }
 
-	FORCEINLINE const Type& operator=( const Type &val ) 
+	[[gnu::always_inline]] inline const Type& operator=( const Type &val ) 
 	{ 
 		return Set( val ); 
 	}
 
-	FORCEINLINE const Type& operator=( const CNetworkVectorBase<Type,Changer> &val ) 
+	[[gnu::always_inline]] inline const Type& operator=( const CNetworkVectorBase<Type,Changer> &val ) 
 	{ 
 		return Set( val.m_Value );
 	}
 
-	FORCEINLINE const Type& Set( const Type &val )
+	[[gnu::always_inline]] inline const Type& Set( const Type &val )
 	{
 		SetX( val.x );
 		SetY( val.y );
@@ -281,46 +275,46 @@ public:
 		return this->m_Value;
 	}
 	
-	FORCEINLINE Type& GetForModify()
+	[[gnu::always_inline]] inline Type& GetForModify()
 	{
 		this->NetworkStateChanged( &((float*)this)[0] );	// Mark the offset of our XY SendProp as changed.
 		this->NetworkStateChanged( &((float*)this)[2] );	// Mark the offset of our Z SendProp as changed.
 		return this->m_Value;
 	}
 
-	FORCEINLINE const Type& SetDirect( const Type &val )
+	[[gnu::always_inline]] inline const Type& SetDirect( const Type &val )
 	{
 		GetForModify() = val;
 		return this->m_Value;
 	}
 
-	FORCEINLINE void SetX( float val ) { DetectChange( 0, val ); }
-	FORCEINLINE void SetY( float val ) { DetectChange( 1, val ); }
-	FORCEINLINE void SetZ( float val ) { DetectChange( 2, val ); }
-	FORCEINLINE void Set( int i, float val ) { DetectChange( i, val ); }
+	[[gnu::always_inline]] inline void SetX( float val ) { DetectChange( 0, val ); }
+	[[gnu::always_inline]] inline void SetY( float val ) { DetectChange( 1, val ); }
+	[[gnu::always_inline]] inline void SetZ( float val ) { DetectChange( 2, val ); }
+	[[gnu::always_inline]] inline void Set( int i, float val ) { DetectChange( i, val ); }
 
-	FORCEINLINE const Type& operator+=( const Type &val )
+	[[gnu::always_inline]] inline const Type& operator+=( const Type &val )
 	{
 		return Set( this->m_Value + val );
 	}
 
-	FORCEINLINE const Type& operator-=( const Type &val )
+	[[gnu::always_inline]] inline const Type& operator-=( const Type &val )
 	{
 		return Set( this->m_Value - val );
 	}
 
-	FORCEINLINE const Type& operator*=( float val )
+	[[gnu::always_inline]] inline const Type& operator*=( float val )
 	{
 		return Set( this->m_Value * val );
 	}
 
-	FORCEINLINE const Type& operator/=( float val )
+	[[gnu::always_inline]] inline const Type& operator/=( float val )
 	{
 		return Set( this->m_Value / val );
 	}
 
 private:
-	FORCEINLINE void DetectChange( int nComponent, float in ) 
+	[[gnu::always_inline]] inline void DetectChange( int nComponent, float in ) 
 	{
 		float *pVar = &((float*)this)[nComponent];
 		if ( *pVar != in ) 
@@ -332,7 +326,3 @@ private:
 		}
 	}
 };
-
-
-#endif // NETWORKVAR_VECTOR_H
-

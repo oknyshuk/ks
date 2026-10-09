@@ -1,20 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.math;
 #include "r_studiolight.h"
 #include "studiorender.h"
 #include "studiorendercontext.h"
 #include "studio.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
-#include "mathlib/vector.h"
-#include "mathlib/mathlib.h"
-#include <float.h>
+import std;
 
 void R_WorldLightDelta( const LightDesc_t *wl, const Vector& org, Vector& delta );
 
@@ -33,7 +26,7 @@ int CopyLocalLightingState( int nMaxLights, LightDesc_t *pDest, int nLightCount,
 	for( int i = 0; i < nLightCount; i++ )
 	{
 		LightDesc_t *pLight = &pDest[i];
-		memcpy( pLight, &pSrc[i], sizeof( LightDesc_t ) );
+		std::memcpy( pLight, &pSrc[i], sizeof( LightDesc_t ) );
 		pLight->m_Flags = 0;
 		if( pLight->m_Attenuation0 != 0.0f )
 		{
@@ -114,7 +107,7 @@ void R_WorldLightDelta( const LightDesc_t *wl, const Vector& org, Vector& delta 
 
 		default:
 			// Bug: need to return an error
-			Assert( 0 );
+			contract_assert( 0 );
 			break;
 	}
 }
@@ -124,7 +117,20 @@ void R_WorldLightDelta( const LightDesc_t *wl, const Vector& org, Vector& delta 
 #define LIGHT_EFFECTS_FUNCTABLE_SIZE 256
 
 // TODO: cone clipping calc's wont work for boxlight since the player asks for a single point.  Not sure what the volume is.
-TEMPLATE_FUNCTION_TABLE( void, R_LightEffectsWorldFunctionTable, ( const LightDesc_t* pLightDesc, const lightpos_t *light, const Vector& normal, Vector &dest ), LIGHT_EFFECTS_FUNCTABLE_SIZE )
+struct R_LightEffectsWorldFunctionTable
+{
+	template <int nArgument> static void Run( const LightDesc_t* pLightDesc, const lightpos_t *light, const Vector& normal, Vector &dest );
+	using Type = void (*)( const LightDesc_t* pLightDesc, const lightpos_t *light, const Vector& normal, Vector &dest );
+	static constexpr int count = LIGHT_EFFECTS_FUNCTABLE_SIZE;
+};
+template <int... I>
+static constexpr std::array<R_LightEffectsWorldFunctionTable::Type, R_LightEffectsWorldFunctionTable::count> Make_R_LightEffectsWorldFunctionTable( std::integer_sequence<int, I...> )
+{
+	return { { &R_LightEffectsWorldFunctionTable::template Run<I>... } };
+}
+inline constexpr std::array<R_LightEffectsWorldFunctionTable::Type, R_LightEffectsWorldFunctionTable::count> R_LightEffectsWorldFunctionTable_functions = Make_R_LightEffectsWorldFunctionTable( std::make_integer_sequence<int, R_LightEffectsWorldFunctionTable::count>{} );
+template <int nArgument>
+void R_LightEffectsWorldFunctionTable::Run( const LightDesc_t* pLightDesc, const lightpos_t *light, const Vector& normal, Vector &dest )
 {
 	enum  
 	{ 
@@ -135,10 +141,6 @@ TEMPLATE_FUNCTION_TABLE( void, R_LightEffectsWorldFunctionTable, ( const LightDe
 	};
  
 	//	VPROF( "R_LightEffectsWorld" );
-
-	#ifdef NO_AMBIENT_CUBE
-		dest[0] = dest[1] = dest[2] = 0.0f;
-	#endif
 
 	// FIXME: lighting effects for normal and position are independent!
 	// FIXME: these can be pre-calculated per normal
@@ -191,7 +193,21 @@ TEMPLATE_FUNCTION_TABLE( void, R_LightEffectsWorldFunctionTable, ( const LightDe
 	}
 }
 
-TEMPLATE_FUNCTION_TABLE( void, R_LightEffectsWorldFunctionTableConstDirectional, ( const LightDesc_t* pLightDesc, const lightpos_t *light, const Vector& normal, Vector &dest, float flDirectionalConstant ), LIGHT_EFFECTS_FUNCTABLE_SIZE )
+
+struct R_LightEffectsWorldFunctionTableConstDirectional
+{
+	template <int nArgument> static void Run( const LightDesc_t* pLightDesc, const lightpos_t *light, const Vector& normal, Vector &dest, float flDirectionalConstant );
+	using Type = void (*)( const LightDesc_t* pLightDesc, const lightpos_t *light, const Vector& normal, Vector &dest, float flDirectionalConstant );
+	static constexpr int count = LIGHT_EFFECTS_FUNCTABLE_SIZE;
+};
+template <int... I>
+static constexpr std::array<R_LightEffectsWorldFunctionTableConstDirectional::Type, R_LightEffectsWorldFunctionTableConstDirectional::count> Make_R_LightEffectsWorldFunctionTableConstDirectional( std::integer_sequence<int, I...> )
+{
+	return { { &R_LightEffectsWorldFunctionTableConstDirectional::template Run<I>... } };
+}
+inline constexpr std::array<R_LightEffectsWorldFunctionTableConstDirectional::Type, R_LightEffectsWorldFunctionTableConstDirectional::count> R_LightEffectsWorldFunctionTableConstDirectional_functions = Make_R_LightEffectsWorldFunctionTableConstDirectional( std::make_integer_sequence<int, R_LightEffectsWorldFunctionTableConstDirectional::count>{} );
+template <int nArgument>
+void R_LightEffectsWorldFunctionTableConstDirectional::Run( const LightDesc_t* pLightDesc, const lightpos_t *light, const Vector& normal, Vector &dest, float flDirectionalConstant )
 {
 	enum  
 	{ 
@@ -202,10 +218,6 @@ TEMPLATE_FUNCTION_TABLE( void, R_LightEffectsWorldFunctionTableConstDirectional,
 	};
 
 	//	VPROF( "R_LightEffectsWorld" );
-
-#ifdef NO_AMBIENT_CUBE
-	dest[0] = dest[1] = dest[2] = 0.0f;
-#endif
 
 	// FIXME: lighting effects for normal and position are independent!
 	// FIXME: these can be pre-calculated per normal
@@ -291,7 +303,7 @@ inline int R_LightEffectsWorldIndex(const LightDesc_t* pLightDesc, int nNumLight
 	int nIndex = ((pLightDesc[0].m_Type & 0x3) << 6) | ((pLightDesc[1].m_Type & 0x3) << 4) | ( (pLightDesc[2].m_Type & 0x3) << 2) | (pLightDesc[3].m_Type & 0x3);
 	nIndex &= s_pLightMask[ nNumLights ]; 
 
-	Assert( nIndex >= 0 && nIndex < R_LightEffectsWorldFunctionTable::count );
+	contract_assert( nIndex >= 0 && nIndex < R_LightEffectsWorldFunctionTable::count );
 	return nIndex;
 }
 
@@ -301,9 +313,22 @@ inline int R_LightEffectsWorldIndex(const LightDesc_t* pLightDesc, int nNumLight
 */
 // TODO: move cone calcs to position
 // TODO: cone clipping calc's wont work for boxlight since the player asks for a single point.  Not sure what the volume is.
-TEMPLATE_FUNCTION_TABLE( float, R_WorldLightDistanceFalloffFunctionTable, ( const LightDesc_t *wl, const Vector& delta ), 8)
+struct R_WorldLightDistanceFalloffFunctionTable
 {
-	Assert( nArgument != 0 );
+	template <int nArgument> static float Run( const LightDesc_t *wl, const Vector& delta );
+	using Type = float (*)( const LightDesc_t *wl, const Vector& delta );
+	static constexpr int count = 8;
+};
+template <int... I>
+static constexpr std::array<R_WorldLightDistanceFalloffFunctionTable::Type, R_WorldLightDistanceFalloffFunctionTable::count> Make_R_WorldLightDistanceFalloffFunctionTable( std::integer_sequence<int, I...> )
+{
+	return { { &R_WorldLightDistanceFalloffFunctionTable::template Run<I>... } };
+}
+inline constexpr std::array<R_WorldLightDistanceFalloffFunctionTable::Type, R_WorldLightDistanceFalloffFunctionTable::count> R_WorldLightDistanceFalloffFunctionTable_functions = Make_R_WorldLightDistanceFalloffFunctionTable( std::make_integer_sequence<int, R_WorldLightDistanceFalloffFunctionTable::count>{} );
+template <int nArgument>
+float R_WorldLightDistanceFalloffFunctionTable::Run( const LightDesc_t *wl, const Vector& delta )
+{
+	contract_assert( nArgument != 0 );
 
 	float dist2 = DotProduct( delta, delta );
 
@@ -315,7 +340,7 @@ TEMPLATE_FUNCTION_TABLE( float, R_WorldLightDistanceFalloffFunctionTable, ( cons
 	}
 
 	// The general purpose equation:
-	float fTotal = FLT_EPSILON;
+	float fTotal = std::numeric_limits<float>::epsilon();
 
 	if( nArgument & LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION0 )
 	{
@@ -338,14 +363,14 @@ TEMPLATE_FUNCTION_TABLE( float, R_WorldLightDistanceFalloffFunctionTable, ( cons
 //-----------------------------------------------------------------------------
 // Calculate the falloff from the world lights 
 //-----------------------------------------------------------------------------
-float FASTCALL R_WorldLightDistanceFalloff( const LightDesc_t *wl, const Vector& delta )
+float R_WorldLightDistanceFalloff( const LightDesc_t *wl, const Vector& delta )
 {
 	// Ensure no invalid flags are set
-	Assert( ! ( wl->m_Flags & ~(LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION0|LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION1|LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION2|LIGHTTYPE_OPTIMIZATIONFLAGS_DERIVED_VALUES_CALCED) ) );
+	contract_assert( ! ( wl->m_Flags & ~(LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION0|LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION1|LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION2|LIGHTTYPE_OPTIMIZATIONFLAGS_DERIVED_VALUES_CALCED) ) );
 
 	// calculate falloff
 	int flags = wl->m_Flags & (LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION0|LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION1|LIGHTTYPE_OPTIMIZATIONFLAGS_HAS_ATTENUATION2);
-	return R_WorldLightDistanceFalloffFunctionTable::functions[flags](wl, delta);
+	return R_WorldLightDistanceFalloffFunctionTable_functions[flags](wl, delta);
 }
 
 
@@ -370,7 +395,7 @@ void CStudioRender::R_InitLightEffectsWorld3()
 {
 	// set the function pointer
 	int index = R_LightEffectsWorldIndex( m_pRC->m_LocalLights, m_pRC->m_NumLocalLights );
-	R_LightEffectsWorld3 = R_LightEffectsWorldFunctionTable::functions[index];
+	R_LightEffectsWorld3 = R_LightEffectsWorldFunctionTable_functions[index];
 }
 
 
@@ -404,16 +429,16 @@ void CStudioRenderContext::ComputeLighting( const Vector* pAmbient, int lightCou
 		return;
 	}
 
-	if ( lightCount > ARRAYSIZE( m_pLightPos ) )
+	if ( lightCount > std::size( m_pLightPos ) )
 	{
-		AssertMsg( 0, "Light count out of range in ComputeLighting\n" );
-		lightCount = ARRAYSIZE( m_pLightPos );
+		contract_assert( false && "Light count out of range in ComputeLighting\n" );
+		lightCount = std::size( m_pLightPos );
 	}
 
 	// Calculate color given lightpos_t lightpos, a normal, and the ambient
 	// color from the ambient cube calculated in ComputeLightingCommon
 	int index = ComputeLightingCommon( pAmbient, lightCount, pLights, pt, normal, m_pLightPos, lighting );
-	R_LightEffectsWorldFunctionTable::functions[index]( pLights, m_pLightPos, normal, lighting );
+	R_LightEffectsWorldFunctionTable_functions[index]( pLights, m_pLightPos, normal, lighting );
 }
 
 
@@ -431,14 +456,14 @@ void CStudioRenderContext::ComputeLightingConstDirectional( const Vector* pAmbie
 		return;
 	}
 
-	if ( lightCount > ARRAYSIZE( m_pLightPos ) )
+	if ( lightCount > std::size( m_pLightPos ) )
 	{
-		AssertMsg( 0, "Light count out of range in ComputeLighting\n" );
-		lightCount = ARRAYSIZE( m_pLightPos );
+		contract_assert( false && "Light count out of range in ComputeLighting\n" );
+		lightCount = std::size( m_pLightPos );
 	}
 
 	// Calculate color given lightpos_t lightpos, a normal, and the ambient
 	// color from the ambient cube calculated in ComputeLightingCommon
 	int index = ComputeLightingCommon( pAmbient, lightCount, pLights, pt, normal, m_pLightPos, lighting );
-	R_LightEffectsWorldFunctionTableConstDirectional::functions[index]( pLights, m_pLightPos, normal, lighting, flDirectionalAmount );
+	R_LightEffectsWorldFunctionTableConstDirectional_functions[index]( pLights, m_pLightPos, normal, lighting, flDirectionalAmount );
 }

@@ -1,17 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.core;
 #include "cs_bot.h"
 #include "cs_shareddefs.h"
-#include "mathlib/mathlib.h"
-
 
 ConVar mp_coopmission_bot_difficulty_offset(
 	"mp_coopmission_bot_difficulty_offset",
@@ -67,9 +62,6 @@ ConVar cv_bot_allow_rifles( "bot_allow_rifles", "1", FCVAR_RELEASE|FCVAR_REPLICA
 ConVar cv_bot_allow_machine_guns( "bot_allow_machine_guns", "1", FCVAR_RELEASE|FCVAR_REPLICATED, "If nonzero, bots may use the machine gun." );
 ConVar cv_bot_allow_grenades( "bot_allow_grenades", "1", FCVAR_RELEASE|FCVAR_REPLICATED, "If nonzero, bots may use grenades." );
 ConVar cv_bot_allow_snipers( "bot_allow_snipers", "1", FCVAR_RELEASE|FCVAR_REPLICATED, "If nonzero, bots may use sniper rifles." );
-#ifdef CS_SHIELD_ENABLED
-ConVar cv_bot_allow_shield( "bot_allow_shield", "1", FCVAR_REPLICATED );
-#endif // CS_SHIELD_ENABLED
 ConVar cv_bot_join_team( "bot_join_team", "any", FCVAR_REPLICATED | FCVAR_RELEASE, "Determines the team bots will join into. Allowed values: 'any', 'T', or 'CT'." );
 ConVar cv_bot_join_after_player( "bot_join_after_player", "1", FCVAR_REPLICATED | FCVAR_RELEASE, "If nonzero, bots wait until a player joins before entering the game." );
 ConVar cv_bot_auto_vacate( "bot_auto_vacate", "1", FCVAR_REPLICATED, "If nonzero, bots will automatically leave to make room for human players." );
@@ -82,9 +74,7 @@ ConVar cv_bot_dont_shoot( "bot_dont_shoot", "0", FCVAR_REPLICATED | FCVAR_RELEAS
 ConVar cv_bot_eco_limit( "bot_eco_limit", "2000", FCVAR_REPLICATED, "If nonzero, bots will not buy if their money falls below this amount." );
 ConVar cv_bot_auto_follow( "bot_auto_follow", "0", FCVAR_REPLICATED, "If nonzero, bots with high co-op may automatically follow a nearby human player." );
 ConVar cv_bot_flipout( "bot_flipout", "0", FCVAR_REPLICATED, "If nonzero, bots use no CPU for AI. Instead, they run around randomly." );
-#if CS_CONTROLLABLE_BOTS_ENABLED
 ConVar cv_bot_controllable( "bot_controllable", "1", FCVAR_REPLICATED, "Determines whether bots can be controlled by players" );
-#endif
 
 extern void FinishClientPutInServer( CCSPlayer *pPlayer );
 
@@ -140,7 +130,7 @@ bool CCSBot::Initialize( const BotProfile *profile, int team )
 	char preserved_name[256];
 	preserved_name[0] = 0;
 
-	AssertMsg( profile != nullptr, "You cannot pass in null for a bot profile." );
+	contract_assert( ( profile != nullptr ) && "You cannot pass in null for a bot profile." );
 	if ( nullptr == profile ) return false;
 
 	if ( m_pLocalProfile )
@@ -150,10 +140,10 @@ bool CCSBot::Initialize( const BotProfile *profile, int team )
 		if ( CSGameRules() && CSGameRules()->IsPlayingCooperativeGametype() )
 		{
 			// change names everytime in coop
-			Q_snprintf( preserved_name, 256, "%s", profile->GetName() );
+			V_snprintf( preserved_name, 256, "%s", profile->GetName() );
 		}
 		else
-			Q_snprintf( preserved_name, 256, "%s", m_pLocalProfile->GetName() );
+			V_snprintf( preserved_name, 256, "%s", m_pLocalProfile->GetName() );
 		delete m_pLocalProfile;
 	}
 
@@ -165,7 +155,7 @@ bool CCSBot::Initialize( const BotProfile *profile, int team )
 		m_pLocalProfile->Clone( profile );
 
 		// Restore the name
-		if ( Q_strlen( preserved_name ) > 0 )
+		if ( V_strlen( preserved_name ) > 0 )
 		{
 			m_pLocalProfile->SetName( preserved_name );
 		}
@@ -245,7 +235,7 @@ void CCSBot::CoopInitialize( void )
 			bool bIsAgressive = pEnemySpawnSpot->IsBotAgressive(); 
 
 			char profileName[128];
-			Q_snprintf( profileName, sizeof( profileName ), "Level_%d%s", ( int )nDifficulty, bIsAgressive ? "_Agressive" : "" );
+			V_snprintf( profileName, sizeof( profileName ), "Level_%d%s", ( int )nDifficulty, bIsAgressive ? "_Agressive" : "" );
 
 			const BotProfile* pNewProfileData = TheBotProfiles->GetProfileMatchingTemplate( profileName, TEAM_TERRORIST, botDifficultyType, CSGameRules()->GetMatchDevice(), true );
 
@@ -254,21 +244,21 @@ void CCSBot::CoopInitialize( void )
 				char szHeavy[64] = {};
 				int nArmor = pEnemySpawnSpot->GetArmorToSpawnWith();
 				if ( nArmor == 1 )
-					Q_snprintf( szHeavy, sizeof( szHeavy ), "%s", "" );
+					V_snprintf( szHeavy, sizeof( szHeavy ), "%s", "" );
 				else if ( nArmor == 2 )
-					Q_snprintf( szHeavy, sizeof( szHeavy ), "%s", "Heavy " );
+					V_snprintf( szHeavy, sizeof( szHeavy ), "%s", "Heavy " );
 
 				char szName[128] = {};
 				char szDifficulty[128] = {};
 
 				if ( nDifficulty >= 6 )
-					Q_snprintf( szDifficulty, sizeof( szDifficulty ), "%s", "Elite " );
+					V_snprintf( szDifficulty, sizeof( szDifficulty ), "%s", "Elite " );
 				else if ( nDifficulty >= 4 )
-					Q_snprintf( szDifficulty, sizeof( szDifficulty ), "%s", "Expert " );
+					V_snprintf( szDifficulty, sizeof( szDifficulty ), "%s", "Expert " );
 				else
-					Q_snprintf( szDifficulty, sizeof( szDifficulty ), "%s", "" );
+					V_snprintf( szDifficulty, sizeof( szDifficulty ), "%s", "" );
 
-				Q_snprintf( szName, sizeof( szName ), "%s%sPhoenix", szHeavy, szDifficulty );
+				V_snprintf( szName, sizeof( szName ), "%s%sPhoenix", szHeavy, szDifficulty );
 
 				Initialize( pNewProfileData, GetTeamNumber() );
 				SetPlayerName( szName );
@@ -475,11 +465,6 @@ void CCSBot::ResetValues( void )
 
 	m_burnedByFlamesTimer.Invalidate();
 
-#ifdef OPT_VIS_CSGO
-	V_memset( m_bVis, 0, sizeof(m_bVis) );
-	V_memset( m_aVisParts, 0, sizeof(m_aVisParts) );
-#endif
-
 	// start in idle state
 	m_isOpeningDoor = false;
 	StopAttacking();
@@ -538,4 +523,3 @@ void CCSBot::Spawn( void )
 	// set the bot name here (after we've had a chance to initialize a new profile
 	V_strcpy_safe( m_name, GetPlayerName() );
 }
-

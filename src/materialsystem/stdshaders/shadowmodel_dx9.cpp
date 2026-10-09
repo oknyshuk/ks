@@ -1,10 +1,5 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 //Note: Not upgraded to vs/ps 2.0 fxc's because this shader is unused and there are no test cases to verify against.
 #include "BaseVSShader.h"
@@ -19,7 +14,7 @@ DEFINE_FALLBACK_SHADER( ShadowModel, ShadowModel_DX9 )
 //PC version
 BEGIN_VS_SHADER_FLAGS( ShadowModel_DX9, "Help for ShadowModel", SHADER_NOT_EDITABLE )
 
-BEGIN_SHADER_PARAMS
+
 SHADER_PARAM( BASETEXTUREOFFSET, SHADER_PARAM_TYPE_VEC2, "[0 0]", "$baseTexture texcoord offset" )
 SHADER_PARAM( BASETEXTURESCALE, SHADER_PARAM_TYPE_VEC2, "[1 1]", "$baseTexture texcoord scale" )
 SHADER_PARAM( FALLOFFOFFSET, SHADER_PARAM_TYPE_FLOAT, "0", "Distance at which shadow starts to fade" )
@@ -109,5 +104,3 @@ SHADER_DRAW
 	Draw( );
 }
 END_SHADER
-
-

@@ -1,17 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef IHLTVDIRECTOR_H
-#define IHLTVDIRECTOR_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.tier1;
 
 class IHLTVServer;
-class KeyValues;
-class Vector;
 
-#define INTERFACEVERSION_HLTVDIRECTOR			"HLTVDirector001"
+inline constexpr const char *INTERFACEVERSION_HLTVDIRECTOR = "HLTVDirector001";
 
 class IHLTVDirector
 {
@@ -32,5 +26,3 @@ public:
 
 	virtual const char**	GetModEvents() = 0;
 };
-
-#endif // IHLTVDIRECTOR_H

@@ -1,13 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "convar.h"
+import std;
 
 #include "unlitgeneric_vs20.inc"
 #include "unlitgeneric_ps20.inc"
@@ -20,7 +16,7 @@ static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_MATERIAL_SY
 
 BEGIN_VS_SHADER_FLAGS( DebugNormalMap, "Help for DebugNormalMap", SHADER_NOT_EDITABLE )
 			  
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( BUMPMAP, SHADER_PARAM_TYPE_TEXTURE, "shadertest/WorldDiffuseBumpMap_bump", "bump map" )
 		SHADER_PARAM( BUMPFRAME, SHADER_PARAM_TYPE_INTEGER, "0", "frame number for $bumpmap" )
 		SHADER_PARAM( BUMPTRANSFORM, SHADER_PARAM_TYPE_MATRIX, "center .5 .5 scale 1 1 rotate 0 translate 0 0", "$bumpmap texcoord transform" )
@@ -147,4 +143,3 @@ BEGIN_VS_SHADER_FLAGS( DebugNormalMap, "Help for DebugNormalMap", SHADER_NOT_EDI
 		Draw();
 	}
 END_SHADER
-

@@ -1,23 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef EHANDLE_H
-#define EHANDLE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #if defined( _DEBUG ) && defined( GAME_DLL )
-#include "tier0/dbg.h"
-#include "cbase.h"
+import std;
+import ks.core;
 #endif
-
 
 #include "const.h"
 #include "basehandle.h"
 #include "entitylist_base.h"
-
 
 class IHandleEntity;
 
@@ -185,7 +177,4 @@ T* CHandle<T>::operator -> () const
 
 // specialization of EnsureValidValue for CHandle<T>
 template<typename T>
-FORCEINLINE void EnsureValidValue( CHandle<T> &x ) { x = INVALID_EHANDLE; }
-
-
-#endif // EHANDLE_H
+[[gnu::always_inline]] inline void EnsureValidValue( CHandle<T> &x ) { x = INVALID_EHANDLE; }

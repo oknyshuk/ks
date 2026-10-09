@@ -1,16 +1,9 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
+
 // Purpose: defines constants to use for the materialsystem and shaderapi
 // SetxxxRenderingParameter functions
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef RENDERPARM_H
-#define RENDERPARM_H
-
-#pragma once
 
 enum RenderParamInt_t
 {
@@ -36,8 +29,8 @@ enum RenderParamInt_t
 };
 
 // for INT_RENDERPARM_BACK_BUFFER_INDEX
-#define BACK_BUFFER_INDEX_DEFAULT	0
-#define BACK_BUFFER_INDEX_HDR		1
+inline constexpr auto BACK_BUFFER_INDEX_DEFAULT = 0;
+inline constexpr auto BACK_BUFFER_INDEX_HDR = 1;
 
 enum RenderParamFloat_t
 {
@@ -67,11 +60,7 @@ enum RenderParamVector_t
 };
 
 // ENABLE_FIXED_LIGHTING modes:
-#define ENABLE_FIXED_LIGHTING_NONE 0
-#define ENABLE_FIXED_LIGHTING_BASICLIGHT 1
-#define ENABLE_FIXED_LIGHTING_OUTPUTMRTS_FOR_DEFERRED_LIGHTING 2
-#define ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH 3
-
-
-
-#endif // RENDERPARM_H
+inline constexpr auto ENABLE_FIXED_LIGHTING_NONE = 0;
+inline constexpr auto ENABLE_FIXED_LIGHTING_BASICLIGHT = 1;
+inline constexpr auto ENABLE_FIXED_LIGHTING_OUTPUTMRTS_FOR_DEFERRED_LIGHTING = 2;
+inline constexpr auto ENABLE_FIXED_LIGHTING_OUTPUTNORMAL_AND_DEPTH = 3;

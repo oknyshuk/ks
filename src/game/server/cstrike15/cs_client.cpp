@@ -1,10 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 /*
 
 ===== tf_client.cpp ========================================================
@@ -12,8 +8,36 @@
   HL2 client/server game specific stuff
 
 */
-
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "player.h"
 #include "gamerules.h"
 #include "entitylist.h"
@@ -28,7 +52,6 @@
 #include "cs_player.h"
 #include "cs_gamerules.h"
 #include "cs_bot.h"
-#include "tier0/vprof.h"
 #include "teamplayroundbased_gamerules.h"
 #include "usermessages.h"
 
@@ -61,7 +84,7 @@ void FinishClientPutInServer( CCSPlayer *pPlayer )
 
 
 	char sName[128];
-	Q_strncpy( sName, pPlayer->GetPlayerName(), sizeof( sName ) );
+	V_strncpy( sName, pPlayer->GetPlayerName(), sizeof( sName ) );
 	
 	// First parse the name and remove any %'s
 	for ( char *pApersand = sName; pApersand != nullptr && *pApersand != 0; pApersand++ )
@@ -97,7 +120,7 @@ void ClientPutInServer( edict_t *pEdict, const char *playername )
 void ClientActive( edict_t *pEdict, bool bLoadGame )
 {
 	// Can't load games in CS!
-	Assert( !bLoadGame );
+	contract_assert( !bLoadGame );
 
 	CCSPlayer *pPlayer = ToCSPlayer( CBaseEntity::Instance( pEdict ) );
 	FinishClientPutInServer( pPlayer );
@@ -191,7 +214,7 @@ void respawn( CBaseEntity *pEdict, bool fCopyCorpse )
 
 void GameStartFrame( void )
 {
-	VPROF( "GameStartFrame" );
+	CVProfScope _( "GameStartFrame", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( g_fGameOver )
 		return;

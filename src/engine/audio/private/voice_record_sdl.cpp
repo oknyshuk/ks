@@ -1,20 +1,15 @@
-//========= Copyright 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
+
 // This module implements the voice record and compression functions 
 
-#include "tier0/platform.h"
 #include "ivoicerecord.h"
 
-#include <assert.h>
 
 #define min(a,b)  (((a) < (b)) ? (a) : (b))
-#include "../../thirdparty/mojoAL/AL/al.h"
-#include "../../thirdparty/mojoAL/AL/alc.h"
+#include <AL/al.h>
+#include <AL/alc.h>
+import ks.core;
 
 // ------------------------------------------------------------------------------
 // VoiceRecord_OpenAL

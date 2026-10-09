@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $CASCADED_SHADOW_MAPPING == 0 ) && ( $DYN_CSM_ENABLED == 1 )
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
@@ -21,7 +22,7 @@ private:
 public:
 	void SetCASCADED_SHADOW_MAPPING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCASCADED_SHADOW_MAPPING = i;
 #ifdef _DEBUG
 		m_bCASCADED_SHADOW_MAPPING = true;
@@ -29,7 +30,7 @@ public:
 	}
 	void SetCASCADED_SHADOW_MAPPING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCASCADED_SHADOW_MAPPING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCASCADED_SHADOW_MAPPING = true;
@@ -43,7 +44,7 @@ private:
 public:
 	void SetCSM_MODE( int i )
 	{
-		Assert( i >= 0 && i <= 3 );
+		contract_assert( i >= 0 && i <= 3 );
 		m_nCSM_MODE = i;
 #ifdef _DEBUG
 		m_bCSM_MODE = true;
@@ -51,7 +52,7 @@ public:
 	}
 	void SetCSM_MODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
 		m_nCSM_MODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCSM_MODE = true;
@@ -76,7 +77,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bCASCADED_SHADOW_MAPPING && m_bCSM_MODE;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 4 * m_nCASCADED_SHADOW_MAPPING ) + ( 8 * m_nCSM_MODE ) + 0;
 	}
@@ -92,7 +93,7 @@ private:
 public:
 	void SetDYN_CSM_ENABLED( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDYN_CSM_ENABLED = i;
 #ifdef _DEBUG
 		m_bDYN_CSM_ENABLED = true;
@@ -100,7 +101,7 @@ public:
 	}
 	void SetDYN_CSM_ENABLED( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDYN_CSM_ENABLED = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDYN_CSM_ENABLED = true;
@@ -114,7 +115,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -122,7 +123,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -147,7 +148,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bDYN_CSM_ENABLED && m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nDYN_CSM_ENABLED ) + ( 2 * m_nPIXELFOGTYPE ) + 0;
 	}

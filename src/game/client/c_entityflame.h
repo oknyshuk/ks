@@ -1,12 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#ifndef C_ENTITY_FLAME_H
-#define C_ENTITY_FLAME_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "c_baseentity.h"
 #include "reflect_annotations.h"
@@ -39,6 +33,3 @@ private:
 	EHANDLE				m_hOldAttached;
 	[[= ks::reflect::Net{} ]] bool				m_bCheapEffect;
 };
-
-
-#endif // C_ENTITY_FLAME_H

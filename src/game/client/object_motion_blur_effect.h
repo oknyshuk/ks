@@ -1,14 +1,12 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Functionality to render object motion blur
-//
-//===============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef OBJECT_MOTION_BLUR_EFFECT_H
-#define OBJECT_MOTION_BLUR_EFFECT_H
+// Purpose: Functionality to render object motion blur
 
-
-#include "utlvector.h"
+import std;
+import ks.tier1;
+#include "c_baseanimating.h"
 
 //-----------------------------------------------------------------------------
 // Central registry for objects that want motion blur applied to them,
@@ -33,7 +31,7 @@ public:
 
 	void SetVelocityScale( int nObjectHandle, float flVelocityScale ) 
 	{ 
-		Assert( !m_ObjectMotionBlurDefinitions[nObjectHandle].IsUnused() );
+		contract_assert( !m_ObjectMotionBlurDefinitions[nObjectHandle].IsUnused() );
 		m_ObjectMotionBlurDefinitions[nObjectHandle].m_flVelocityScale = flVelocityScale;
 	}
 	
@@ -94,5 +92,3 @@ private:
 	CMotionBlurObject( const CMotionBlurObject &other );
 	CMotionBlurObject& operator=( const CMotionBlurObject &other );
 };
-
-#endif // OBJECT_MOTION_BLUR_EFFECT_H

@@ -1,16 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
-#include "hud.h"		
 #include "c_props.h"
 #include "iclientvehicle.h"
-#include <color.h>
 #include "vehicle_choreo_generic_shared.h"
 #include "vehicle_viewblend_shared.h"
 
@@ -268,4 +274,3 @@ void C_PropVehicleChoreoGeneric::UpdateViewClamps( void )
 	m_flYawMaxCurrent = InterpolateViewClamp( m_flYawMaxCurrent, m_vehicleView.flYawMax );
 	m_flYawMinCurrent = InterpolateViewClamp( m_flYawMinCurrent, m_vehicleView.flYawMin );
 }
-

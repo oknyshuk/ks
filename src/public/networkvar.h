@@ -1,17 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #ifndef NETWORKVAR_H
 #define NETWORKVAR_H
 
-
-#include "tier0/dbg.h"
-#include "tier0/platform.h"
-#include "reflect_wirevar.h"   // ks::reflect::WireVar, which marks the wrappers below
-#include "convar.h"
+import ks.core;
+import std;
+import ks.math;
+import ks.tier1;
 
 #if defined( CLIENT_DLL ) || defined( GAME_DLL )
 	#include "basehandle.h"
@@ -40,9 +36,9 @@
 //
 // Networkvar flags.
 //
-#define NETWORKVAR_IS_A_VECTOR				0x0001		// Is it any type of network vector?
-#define NETWORKVAR_VECTOR_XYZ_FLAG			0x0002		// Is it a CNetworkVectorXYZ?
-#define NETWORKVAR_VECTOR_XY_SEPARATEZ_FLAG	0x0004		// Is it a CNetworkVectorXY_SeparateZ?
+inline constexpr auto NETWORKVAR_IS_A_VECTOR = 0x0001; // Is it any type of network vector?
+inline constexpr auto NETWORKVAR_VECTOR_XYZ_FLAG = 0x0002; // Is it a CNetworkVectorXYZ?
+inline constexpr auto NETWORKVAR_VECTOR_XY_SEPARATEZ_FLAG = 0x0004; // Is it a CNetworkVectorXY_SeparateZ?
 
 #define NETWORKVAR_ALL_FLAGS ( NETWORKVAR_IS_A_VECTOR | NETWORKVAR_VECTOR_XYZ_FLAG | NETWORKVAR_VECTOR_XY_SEPARATEZ_FLAG )
 
@@ -54,14 +50,14 @@
 class CMemZeroOnNew
 {
 public:
-	void *operator new( size_t nSize )
+	void *operator new( std::size_t nSize )
 	{
 		void *pMem = MemAlloc_Alloc( nSize );
 		V_memset( pMem, 0, nSize );
 		return pMem;
 	}
 
-	void* operator new( size_t nSize, int nBlockUse, const char *pFileName, int nLine )
+	void* operator new( std::size_t nSize, int nBlockUse, const char *pFileName, int nLine )
 	{
 		void *pMem = MemAlloc_Alloc( nSize, pFileName, nLine );
 		V_memset( pMem, 0, nSize );
@@ -90,12 +86,12 @@ inline int InternalCheckDeclareClass( const char *pClassName, const char *pClass
 {
 	// This makes sure that casting from ThisClass to BaseClass works right. You'll get a compiler error if it doesn't
 	// work at all, and you'll get a runtime error if you use multiple inheritance.
-	Assert( pTestPtr == pBasePtr );
+	contract_assert( pTestPtr == pBasePtr );
 	
 	// This is triggered by IMPLEMENT_SERVER_CLASS. It does DLLClassName::CheckDeclareClass( #DLLClassName ).
 	// If they didn't do a DECLARE_CLASS in DLLClassName, then it'll be calling its base class's version
 	// and the class names won't match.
-	Assert( (void*)pClassName == (void*)pClassNameMatch );
+	contract_assert( (void*)pClassName == (void*)pClassNameMatch );
 	return 0;
 }
 
@@ -107,42 +103,6 @@ inline int CheckDeclareClass_Access( T *, const char *pShouldBe )
 }
 
 
-#ifdef  VALIDATE_DECLARE_CLASS
-
-	#define DECLARE_CLASS( className, baseClassName ) \
-		typedef baseClassName BaseClass; \
-		typedef className ThisClass; \
-		template <typename T> friend int CheckDeclareClass_Access(T *, const char *pShouldBe); \
-		static int CheckDeclareClass( const char *pShouldBe ) \
-		{ \
-			InternalCheckDeclareClass( pShouldBe, #className, (ThisClass*)0xFFFFF, (BaseClass*)(ThisClass*)0xFFFFF ); \
-			return CheckDeclareClass_Access( (BaseClass *)nullptr, #baseClassName ); \
-		}
-
-	// Use this macro when you have a base class, but it's part of a library that doesn't use network vars
-	// or any of the things that use ThisClass or BaseClass.
-	#define DECLARE_CLASS_GAMEROOT( className, baseClassName ) \
-		typedef baseClassName BaseClass; \
-		typedef className ThisClass; \
-		template <typename T> friend int CheckDeclareClass_Access(T *, const char *pShouldBe); \
-		static int CheckDeclareClass( const char *pShouldBe ) \
-		{ \
-			return InternalCheckDeclareClass( pShouldBe, #className, (ThisClass*)0xFFFFF, (BaseClass*)(ThisClass*)0xFFFFF ); \
-		}
-
-	// Deprecated macro formerly used to work around VC++98 bug
-	#define DECLARE_CLASS_NOFRIEND( className, baseClassName ) \
-		DECLARE_CLASS( className, baseClassName )
-
-	#define DECLARE_CLASS_NOBASE( className ) \
-		typedef className ThisClass; \
-		template <typename T> friend int CheckDeclareClass_Access(T *, const char *pShouldBe); \
-		static int CheckDeclareClass( const char *pShouldBe ) \
-		{ \
-			return InternalCheckDeclareClass( pShouldBe, #className, 0, 0 ); \
-		} 
-
-#else
 	#define DECLARE_CLASS( className, baseClassName ) \
 		typedef baseClassName BaseClass; \
 		typedef className ThisClass;
@@ -151,7 +111,6 @@ inline int CheckDeclareClass_Access( T *, const char *pShouldBe )
 	#define DECLARE_CLASS_NOFRIEND( className, baseClassName )	DECLARE_CLASS( className, baseClassName )
 
 	#define DECLARE_CLASS_NOBASE( className )					typedef className ThisClass;
-#endif
 
 
 
@@ -242,14 +201,14 @@ public:
 // embedded member needs one too, because DEFINE_PRED_TYPEDESCRIPTION names one (C_BasePlayer's
 // m_Local).
 #define CNetworkVarEmbedded( type, name, ... ) \
-    struct GetOffset_##name{ static FORCEINLINE int Get() { return MyOffsetOf( ThisClass, name ); } }; \
+    struct GetOffset_##name{ [[gnu::always_inline]] static inline int Get() { return MyOffsetOf( ThisClass, name ); } }; \
 	typedef NetworkVarEmbedded< type, ThisClass, GetOffset_##name > NetworkVar_##name; \
 	friend class NetworkVarEmbedded< type, ThisClass, GetOffset_##name >; \
 	__VA_ARGS__ NetworkVar_##name name;
 
 // Zero the object -- necessary for CNetworkVar and possibly other cases.
 template<typename T>
-FORCEINLINE void EnsureValidValue( T &x ) { x = T(0); }
+[[gnu::always_inline]] inline void EnsureValidValue( T &x ) { x = T(0); }
 // For types that cannot compile the line above (such as QAngle, Vector, etc.)
 // define a EnsureValidValue overload in the appropriate header files.
 
@@ -312,20 +271,20 @@ public:
 		EnsureValidValue( m_Value );
 	}
 
-	FORCEINLINE explicit CNetworkVarBase( Type val )
+	[[gnu::always_inline]] inline explicit CNetworkVarBase( Type val )
 	: m_Value( val )
 	{
 		NetworkStateChanged();
 	}
 
-	FORCEINLINE const Type& SetDirect( const Type &val )
+	[[gnu::always_inline]] inline const Type& SetDirect( const Type &val )
 	{
 		NetworkStateChanged();
 		m_Value = val;
 		return m_Value;
 	}
 
-	FORCEINLINE const Type& Set( const Type &val )
+	[[gnu::always_inline]] inline const Type& Set( const Type &val )
 	{
 		if ( NetworkParanoidUnequal( m_Value, val ) )
 		{
@@ -336,77 +295,77 @@ public:
 	}
 	
 	template< class C >
-	FORCEINLINE const Type& operator=( const C &val ) 
+	[[gnu::always_inline]] inline const Type& operator=( const C &val ) 
 	{ 
 		return Set( ( const Type )val ); 
 	}
 
 	template< class C >
-	FORCEINLINE const Type& operator=( const CNetworkVarBase< C, Changer > &val ) 
+	[[gnu::always_inline]] inline const Type& operator=( const CNetworkVarBase< C, Changer > &val ) 
 	{ 
 		return Set( ( const Type )val.m_Value ); 
 	}
 
-	FORCEINLINE Type& GetForModify()
+	[[gnu::always_inline]] inline Type& GetForModify()
 	{
 		NetworkStateChanged();
 		return m_Value;
 	}
 
 	template< class C >
-	FORCEINLINE const Type& operator+=( const C &val ) 
+	[[gnu::always_inline]] inline const Type& operator+=( const C &val ) 
 	{
 		return Set( m_Value + ( const Type )val ); 
 	}
 
 	template< class C >
-	FORCEINLINE const Type& operator-=( const C &val ) 
+	[[gnu::always_inline]] inline const Type& operator-=( const C &val ) 
 	{
 		return Set( m_Value - ( const Type )val ); 
 	}
 	
 	template< class C >
-	FORCEINLINE const Type& operator/=( const C &val ) 
+	[[gnu::always_inline]] inline const Type& operator/=( const C &val ) 
 	{
 		return Set( m_Value / ( const Type )val ); 
 	}
 	
 	template< class C >
-	FORCEINLINE const Type& operator*=( const C &val ) 
+	[[gnu::always_inline]] inline const Type& operator*=( const C &val ) 
 	{
 		return Set( m_Value * ( const Type )val ); 
 	}
 	
 	template< class C >
-	FORCEINLINE const Type& operator^=( const C &val ) 
+	[[gnu::always_inline]] inline const Type& operator^=( const C &val ) 
 	{
 		return Set( m_Value ^ ( const Type )val ); 
 	}
 
 	template< class C >
-	FORCEINLINE const Type& operator|=( const C &val ) 
+	[[gnu::always_inline]] inline const Type& operator|=( const C &val ) 
 	{
 		return Set( m_Value | ( const Type )val ); 
 	}
 
-	FORCEINLINE const Type& operator++()
+	[[gnu::always_inline]] inline const Type& operator++()
 	{
 		return (*this += 1);
 	}
 
-	FORCEINLINE Type operator--()
+	[[gnu::always_inline]] inline Type operator--()
 	{
 		return (*this -= 1);
 	}
 	
-	FORCEINLINE Type operator++( int ) // postfix version..
+	[[gnu::always_inline]] inline Type operator++( int ) // postfix version..
 	{
 		Type val = m_Value;
 		(*this += 1);
 		return val;
 	}
 
-	FORCEINLINE Type operator--( int ) // postfix version..
+	[[gnu::always_inline]] inline Type operator--( int ) // postfix version..
 	{
 		Type val = m_Value;
 		(*this -= 1);
@@ -417,22 +376,22 @@ public:
 	// CNetworkVarBase<unsigned char> = 0x1
 	// (it warns about converting from an int to an unsigned char).
 	template< class C >
-	FORCEINLINE const Type& operator&=( const C &val ) 
+	[[gnu::always_inline]] inline const Type& operator&=( const C &val ) 
 	{	
 		return Set( m_Value & ( const Type )val ); 
 	}
 
-	FORCEINLINE operator const Type&() const 
+	[[gnu::always_inline]] inline operator const Type&() const 
 	{
 		return m_Value; 
 	}
 	
-	FORCEINLINE const Type& Get() const 
+	[[gnu::always_inline]] inline const Type& Get() const 
 	{
 		return m_Value; 
 	}
 	
-	FORCEINLINE const Type* operator->() const 
+	[[gnu::always_inline]] inline const Type* operator->() const 
 	{
 		return &m_Value; 
 	}
@@ -440,12 +399,12 @@ public:
 	Type m_Value;
 
 protected:
-	FORCEINLINE void NetworkStateChanged()
+	[[gnu::always_inline]] inline void NetworkStateChanged()
 	{
 		Changer::NetworkStateChanged( this );
 	}
 	
-	FORCEINLINE void NetworkStateChanged( void *pVar )
+	[[gnu::always_inline]] inline void NetworkStateChanged( void *pVar )
 	{
 		Changer::NetworkStateChanged( this, pVar );
 	}
@@ -765,21 +724,21 @@ private:
 		\
 		const type& Get( int i ) const \
 		{ \
-			Assert( i >= 0 && i < count ); \
+			contract_assert( i >= 0 && i < count ); \
 			return m_Value[i]; \
 		} \
 		\
 		type& GetForModify( int i ) \
 		{ \
-			Assert( i >= 0 && i < count ); \
+			contract_assert( i >= 0 && i < count ); \
 			NetworkStateChanged( i ); \
 			return m_Value[i]; \
 		} \
 		\
 		void Set( int i, const type &val ) \
 		{ \
-			Assert( i >= 0 && i < count ); \
-			if( memcmp( &m_Value[i], &val, sizeof(type) ) ) \
+			contract_assert( i >= 0 && i < count ); \
+			if( std::memcmp( &m_Value[i], &val, sizeof(type) ) ) \
 			{ \
 				NetworkStateChanged( i ); \
 			       	m_Value[i] = val; \

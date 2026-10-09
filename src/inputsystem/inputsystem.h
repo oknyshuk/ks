@@ -1,41 +1,22 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#ifndef INPUTSYSTEM_H
-#define INPUTSYSTEM_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#define DONT_DEFINE_DWORD
-
-#include "platform.h"
-#include "basetypes.h"
 
 
 
 typedef char xKey_t;
+import ks.tier1;
 #include "posix_stubs.h"
 #include "appframework/ilaunchermgr.h"
 
 #include "inputsystem/iinputsystem.h"
 #include "tier2/tier2.h"
 
-#include "tier1/map_ops.h"
 #include "inputsystem/ButtonCode.h"
 #include "inputsystem/AnalogCode.h"
-#include <bitset>
-#include "tier1/utlvector.h"
+import std;
 #include "input_device.h"
-
-#include "steam/steam_api.h"
-
-enum
-{
-	INPUT_TYPE_GENERIC_JOYSTICK = 0,
-	INPUT_TYPE_STEAMCONTROLLER,
-};
 
 //-----------------------------------------------------------------------------
 // Implementation of the input system
@@ -211,41 +192,6 @@ private:
 		bool m_bDirty;
 	};
 
-	// Steam Controller
-	struct steampad_t
-	{
-		steampad_t()
-		{ 
-			m_nHardwareIndex = 0;
-			m_nJoystickIndex = INVALID_USER_ID;
-			m_nLastPacketIndex = 0;
-			active = false; 
-			memset( lastAnalogKeys, 0, sizeof( lastAnalogKeys ) );
-		}
-		bool				active;
-
-		sKey_t				lastAnalogKeys[MAX_STEAMPADAXIS];
-		appKey_t			m_appSKeys[ SK_MAX_KEYS ];
-		// Hardware index and joystick index don't necessarily match
-		// Joystick index will depend on the order of multiple initialized devices
-		// Which could include other controller types
-		// Hardware index should line up 1:1 with the order they're polled
-		// and could change based on removing devices, unlike Joystick Index
-		uint32				m_nHardwareIndex;
-		int					m_nJoystickIndex;
-		uint32				m_nLastPacketIndex;
-	};
-
-	steampad_t m_SteamControllerDevice[MAX_STEAM_CONTROLLERS];
-	uint32 m_unNumSteamControllerConnected;
-
-	bool	m_bControllerModeActive;
-
-	int m_nControllerType[MAX_JOYSTICKS+MAX_STEAM_CONTROLLERS];
-
-	//Steam controllers start after this index.
-	int m_nJoystickBaseline;
-
 public:
 	// Initializes all Xbox controllers
 	void InitializeXDevices( void );
@@ -286,12 +232,6 @@ public:
 	// Dispatches all joystick button events through the game's window procs
 	void ProcessEvent( UINT uMsg, WPARAM wParam, LPARAM lParam );
 
-	// Initializes SteamControllers - Returns true if steam is running and finds controllers, otherwise false
-	bool InitializeSteamControllers( void );
-
-	// Samples all Steam Controllers - returns true if active this frame
-	bool PollSteamControllers( void );
-
 	// Initializes joysticks
 	void InitializeJoysticks( void );
 
@@ -306,9 +246,6 @@ public:
 
 	// Record button state and post the event
 	void JoystickButtonEvent( ButtonCode_t button, int sample );
-
-	bool IsSteamControllerActive() const;
-	void SetSteamControllerMode( const char *pSteamControllerMode, const void *obj );
 
 private:
 
@@ -346,9 +283,6 @@ private:
 	// Converts xbox keys to button codes
 	ButtonCode_t XKeyToButtonCode( int nUserId, int nXKey ) const;
 
-	// Converts SteamController keys to button codes
-	ButtonCode_t SKeyToButtonCode( int nUserId, int nXKey ) const;	
-	
 	// Computes the sample tick
 	int ComputeSampleTick();
 
@@ -411,8 +345,6 @@ private:
 	unsigned short m_JoysticksEnabled;	// bit per joystick
 	int m_nJoystickCount;
 	bool m_bXController;
-	bool m_bSteamController;
-	float m_flLastSteamControllerInput;
 
 	float m_flLastControllerPollTime;
 public:
@@ -477,6 +409,3 @@ inline bool CInputSystem::ShouldGenerateUIEvents() const
 {
 	return m_nUIEventClientCount > 0;
 }
-
-
-#endif // INPUTSYSTEM_H

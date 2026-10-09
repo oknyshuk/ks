@@ -1,17 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_NAMESPACES_H
-#define AI_NAMESPACES_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class CStringRegistry;
 
 
-#define MAX_STRING_INDEX 9999
+inline constexpr auto MAX_STRING_INDEX = 9999;
 const int GLOBAL_IDS_BASE = 1000000000; // decimal for debugging readability
 
 //-----------------------------------------------------------------------------
@@ -283,5 +277,3 @@ inline int CAI_ClassScheduleIdSpace::ConditionLocalToGlobal( int localID ) const
 }
 
 //=============================================================================
-
-#endif // AI_NAMESPACES_H

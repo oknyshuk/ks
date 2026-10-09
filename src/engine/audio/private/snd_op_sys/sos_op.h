@@ -1,18 +1,13 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef SOS_OP_H
-#define SOS_OP_H
-
-#include <mutex>
+import std;
 #include "sos_system.h"
 #include "snd_channels.h"
 
 // Externs the logging channel
-DECLARE_LOGGING_CHANNEL( LOG_SND_OPERATORS );
+extern LoggingChannelID_t LOG_SND_OPERATORS;;
 
 
 
@@ -21,8 +16,8 @@ DECLARE_LOGGING_CHANNEL( LOG_SND_OPERATORS );
 
 
 
-#define VALUE_REF_CHAR '@'
-#define CLOSE_SQ_BRACKET ']'
+inline constexpr auto VALUE_REF_CHAR = '@';
+inline constexpr auto CLOSE_SQ_BRACKET = ']';
 
 #define SOS_INPUT_FLOAT( memberName, memberCount ) \
 	float memberName[memberCount]; \
@@ -42,8 +37,8 @@ DECLARE_LOGGING_CHANNEL( LOG_SND_OPERATORS );
 #define SOS_REGISTER_INPUT( className, memberName, memberCount, memberString, type )	\
 	{																					\
 		InputData_t inputData;															\
-		inputData.m_nValueOffset = offsetof( className##_t, memberName );					\
-		inputData.m_nOffsetOffset = offsetof( className##_t, memberName##Offset );		\
+		inputData.m_nValueOffset = __builtin_offsetof( className##_t, memberName );					\
+		inputData.m_nOffsetOffset = __builtin_offsetof( className##_t, memberName##Offset );		\
 		inputData.m_Type = type;														\
 		inputData.m_nCount = memberCount;												\
 		inputData.m_pName = memberString;												\
@@ -57,7 +52,7 @@ DECLARE_LOGGING_CHANNEL( LOG_SND_OPERATORS );
 #define SOS_REGISTER_OUTPUT( className, memberName, memberCount, memberString, type )	\
 	{																					\
 		OutputData_t outputData;														\
-		outputData.m_nValueOffset = offsetof( className##_t, memberName );					\
+		outputData.m_nValueOffset = __builtin_offsetof( className##_t, memberName );					\
 		outputData.m_Type = type;														\
 		outputData.m_nCount = memberCount;												\
 		outputData.m_pName = memberString;												\
@@ -85,7 +80,7 @@ classname g_##classname;
 public: \
 	classname(); \
 	virtual void	SetDefaults( void *pVoidMem ) const ; \
-	virtual size_t	GetSize() const { return sizeof( classname##_t ); } \
+	virtual std::size_t	GetSize() const { return sizeof( classname##_t ); } \
 	virtual void	Execute( void *pVoidMem, channel_t *pChannel, CScratchPad *pScratchPad, CSosOperatorStack *pStack, int nOpIndex ) const ; \
 	virtual void	Print( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex, int nLevel ) const ; \
 	virtual void    OpHelp( ) const ; \
@@ -123,7 +118,7 @@ public:
 	// But then in most cases, the implementation would more efficient (estimated at 4 to 10 times faster).
 	void					ResolveInputValue( void *pInputDefault, int *pOffsetArray, short nDataCount, SODataType_t nDataType, void *pStackMem ) const;
 	void					ResolveInputValues( void *pStructMem, void *pStackMem ) const;
-	void					OffsetConnections( void *pVoidMem, size_t nOffset ) const;
+	void					OffsetConnections( void *pVoidMem, std::size_t nOffset ) const;
 	bool					BaseParseKV( CSosOperatorStack *pStack, CSosOperator_t *pStructMem, const char *pParamString, const char *pValueString ) const; 
 	int						ParseValueRef( CSosOperatorStack *pStack, const char *pParamString, const char *pValueString ) const;
 	void					PrintBaseParams( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex, int nLevel ) const;
@@ -132,7 +127,7 @@ public:
 	void					SetBaseDefaults( void *pVoidMem ) const;
 
 	virtual void			SetDefaults( void *pVoidMem ) const = 0;
-	virtual size_t			GetSize() const = 0;
+	virtual std::size_t			GetSize() const = 0;
 	virtual void			Execute( void *pVoidMem, channel_t *pChannel, CScratchPad *pScratchPad, CSosOperatorStack *pStack, int nOpIndex ) const = 0;
 	virtual void			Print( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex, int nLevel ) const = 0;
 	virtual void			OpHelp( ) const = 0;
@@ -148,7 +143,7 @@ public:
 	struct OutputData_t
 	{
 		const char *m_pName;	// registered name (a literal)
-		size_t m_nValueOffset;
+		std::size_t m_nValueOffset;
 		SODataType_t m_Type;
 		short m_nCount;
 	};
@@ -156,8 +151,8 @@ public:
 	struct InputData_t
 	{
 		const char *m_pName;	// registered name (a literal)
-		size_t m_nValueOffset;
-		size_t m_nOffsetOffset;
+		std::size_t m_nValueOffset;
+		std::size_t m_nOffsetOffset;
 		SODataType_t m_Type;
 		short m_nCount;
 	};
@@ -168,5 +163,3 @@ public:
 	ks::idict< int > m_vInputMap;	// name -> index in m_vInputs
 	std::vector< InputData_t > m_vInputs;
 };
-
-#endif // SOS_OP_H

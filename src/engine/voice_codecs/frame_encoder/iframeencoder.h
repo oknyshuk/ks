@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IFRAMEENCODER_H
-#define IFRAMEENCODER_H
 #pragma once
-
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // A frame encoder is a codec that encodes and decodes data in fixed-size frames.
 // VoiceCodec_Frame handles queuing of data and the IVoiceCodec interface.
-abstract_class IFrameEncoder
+class IFrameEncoder
 {
 public:
 	virtual			~IFrameEncoder() {}
@@ -34,6 +26,3 @@ public:
 	// Some codecs maintain state between Compress and Decompress calls. This should clear that state.
 	virtual bool	ResetState() = 0;
 };
-
-
-#endif // IFRAMEENCODER_H

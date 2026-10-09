@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============
-//
-// Purpose:  CS-specific things to vote on
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CS_VOTEISSUES_H
-#define CS_VOTEISSUES_H
-
+// Purpose: CS-specific things to vote on
 
 #include "vote_controller.h"
 
@@ -90,8 +86,8 @@ private:
 	void				ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSubject, uint32 *pReason = nullptr );
 	void				NotifyGC( CCSPlayer *pSubject, bool bKickedSuccessfully, uint32 unReason );
 
-	CSteamID			m_steamIDVoteCaller;
-	CSteamID			m_steamIDtoBan;
+	CPlayerId			m_playerIDVoteCaller;
+	CPlayerId			m_playerIDtoBan;
 	bool				m_bPlayerCrashed;
 };
 
@@ -416,5 +412,3 @@ public:
 	virtual bool		IsUnanimousVoteToPass() { return true; } // Require all attending humans to vote
 	virtual vote_create_failed_t MakeVoteFailErrorCodeForClients( vote_create_failed_t eDefaultFailCode ) { return VOTE_FAILED_CONTINUE; }
 };
-
-#endif // CS_VOTEISSUES_H

@@ -1,21 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef HLTVDIRECTOR_H
-#define HLTVDIRECTOR_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "GameEventListener.h"
 #include <igamesystem.h>
 #include <ihltvdirector.h>
 #include <ihltv.h>
-#include <set>
+import std;
+#include "ihltvdirector.h"
+#include "igamesystem.h"
+#include "baseentity.h"
+#include "shareddefs.h"
 
-#define	HLTV_MIN_DIRECTOR_DELAY		3	// minimum delay if director is enabled
-#define	HLTV_MAX_DELAY				120	// maximum delay
+inline constexpr auto HLTV_MIN_DIRECTOR_DELAY = 3; // minimum delay if director is enabled
+inline constexpr auto HLTV_MAX_DELAY = 120; // maximum delay
 
 
 #define MAX_NUM_CAMERAS				64	// support up to 64 fixed cameras per level
@@ -51,10 +49,10 @@ public:
 	CHLTVDirector();
 	virtual ~CHLTVDirector();
 
-	virtual void AddHLTVServer( IHLTVServer *hltv )OVERRIDE; // give the director an HLTV interface 
-	virtual void RemoveHLTVServer( IHLTVServer *hltv ) OVERRIDE;
-	virtual IHLTVServer* GetHLTVServer( int nIndex ) OVERRIDE { return m_HltvServers[ nIndex ].m_pHLTVServer; }
-	virtual int GetHLTVServerCount() OVERRIDE { return std::ssize( m_HltvServers ); }
+	virtual void AddHLTVServer( IHLTVServer *hltv )override; // give the director an HLTV interface 
+	virtual void RemoveHLTVServer( IHLTVServer *hltv ) override;
+	virtual IHLTVServer* GetHLTVServer( int nIndex ) override { return m_HltvServers[ nIndex ].m_pHLTVServer; }
+	virtual int GetHLTVServerCount() override { return std::ssize( m_HltvServers ); }
 	int		GetDirectorTick( void );	// get current broadcast tick from director
 	int		GetPVSEntity( void ); // get current view entity (PVS)
 	Vector	GetPVSOrigin( void ); // get current PVS origin, if PVS entity is 0
@@ -139,5 +137,3 @@ protected:
 
 extern IGameSystem* HLTVDirectorSystem();
 extern CHLTVDirector* HLTVDirector();
-
-#endif // HLTVDIRECTOR_H

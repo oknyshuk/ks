@@ -1,16 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef MIXER_CONTROLS_H
-#define MIXER_CONTROLS_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-abstract_class IMixerControls
+class IMixerControls
 {
 
 public:
@@ -42,6 +34,3 @@ extern IMixerControls *g_pMixerControls;
 // Allocates a set of mixer controls.
 void InitMixerControls();
 void ShutdownMixerControls();
-
-
-#endif // MIXER_CONTROLS_H

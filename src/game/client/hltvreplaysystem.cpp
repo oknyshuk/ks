@@ -1,5 +1,24 @@
-//======= Copyright (c) Valve Corporation, All rights reserved. ======
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 #include "hltvreplaysystem.h"
 #include "hltvcamera.h"
 #include "cs_gamerules.h"
@@ -7,8 +26,6 @@
 #include "engine/IEngineSound.h"
 #include "netmessages.h"
 #include "cstrike15/c_cs_player.h"
-#include "ihltv.h"
-#include "steam/steam_api.h"
 
 ConVar snd_deathcam_replay_mix( "snd_deathcam_replay_mix", "0", 0, "When set to non-0, client switches to DeathCam_Replay_Mix mixgroup during deathcam replay" );
 ConVar spec_replay_review_sound( "spec_replay_review_sound", "1", FCVAR_CLIENTDLL, "When set to non-0, a sound effect is played during Killer Replay" );
@@ -49,7 +66,6 @@ CHltvReplaySystem::CHltvReplaySystem()
 	m_nCurrentPlaybackTick = 0;
 	m_flCurrentPlaybackTime = 0.0f;
 	m_nDemoPlaybackXuid = 0;
-	m_nSteamSelfAccountId = 0;
 	m_flReplayVideoFadeAmount = 0.0f;
 	m_flReplaySoundFadeAmount = 0.0f;
 	m_nExperimentalEvents = 0;
@@ -200,7 +216,7 @@ void CHltvReplaySystem::OnHltvReplay( const ks::net::CSVCMsg_HltvReplay  &msg )
 
 void CHltvReplaySystem::OnHltvReplayTick()
 {
-	Assert( m_bWaitingForHltvReplayTick );
+	contract_assert( m_bWaitingForHltvReplayTick );
 	m_bWaitingForHltvReplayTick = false;
 	m_nHltvReplayBeginTick = gpGlobals->tickcount;
 	Update();
@@ -446,7 +462,7 @@ void CHltvReplaySystem::OnLevelInit()
 	m_flHltvLastRequestRealTime = 0;
 	m_flCurrentPlaybackTime = 0;
 	StopFades();
-	Assert( !m_nHltvReplayDelay ); // we MAY be in demo playback
+	contract_assert( !m_nHltvReplayDelay ); // we MAY be in demo playback
 	if ( !m_bListeningForGameEvents )
 	{
 		ListenForGameEvent( "round_start" );
@@ -515,19 +531,12 @@ void CHltvReplaySystem::SetDemoPlaybackHighlightXuid( uint64 xuid, bool bLowligh
 {
 	m_nDemoPlaybackXuid = xuid;
 	m_bDemoPlaybackLowLights = bLowlights;
-	if ( !m_nSteamSelfAccountId && steamapicontext )
-	{
-		if ( ISteamUser* pSteamUser = steamapicontext->SteamUser() )
-		{
-			m_nSteamSelfAccountId = pSteamUser->GetSteamID().GetAccountID();
-		}
-	}
 }
 
 
 bool CHltvReplaySystem::IsDemoPlaybackXuidOther()const
 {
-	return m_nSteamSelfAccountId != uint32( m_nDemoPlaybackXuid );
+	return uint32( m_nDemoPlaybackXuid ) != 0;
 }
 
 
@@ -535,10 +544,10 @@ C_BasePlayer *CHltvReplaySystem::GetDemoPlaybackPlayer()
 {
 	if ( C_BasePlayer *pPlayer = m_DemoPlaybackPlayer.Get() )
 	{
-		CSteamID steamId;
-		if ( pPlayer->GetSteamID(&steamId) )
+		CPlayerId playerUid;
+		if ( pPlayer->GetPlayerID(&playerUid) )
 		{
-			if ( steamId.GetAccountID() == uint32( m_nDemoPlaybackXuid ) )
+			if ( playerUid.GetAccountID() == uint32( m_nDemoPlaybackXuid ) )
 				return pPlayer;
 		}
 	}
@@ -548,10 +557,10 @@ C_BasePlayer *CHltvReplaySystem::GetDemoPlaybackPlayer()
 	{
 		if ( C_BasePlayer *pPlayer = UTIL_PlayerByIndex( i ) )
 		{
-			CSteamID steamId;
-			if ( pPlayer->GetSteamID( &steamId ) )
+			CPlayerId playerUid;
+			if ( pPlayer->GetPlayerID( &playerUid ) )
 			{
-				if ( steamId.GetAccountID() == uint32( m_nDemoPlaybackXuid ) )
+				if ( playerUid.GetAccountID() == uint32( m_nDemoPlaybackXuid ) )
 				{
 					m_DemoPlaybackPlayer.Set( pPlayer );
 					return pPlayer;
@@ -565,7 +574,7 @@ C_BasePlayer *CHltvReplaySystem::GetDemoPlaybackPlayer()
 
 void CHltvReplaySystem::SetDemoPlaybackFadeBrackets( int nCurrentPlaybackTick, int nStartAt, int nStopAt )
 {
-	Assert( m_bDemoPlayback );
+	contract_assert( m_bDemoPlayback );
 	if ( nCurrentPlaybackTick + 320 < nStartAt && nStartAt != m_nDemoPlaybackStartAt )
 	{
 		// we're starting a jump forward in time. The jump is long (over 320 ticks), so it may take some time, and we don't want the sounds currently in the queue to randomly play
@@ -583,15 +592,11 @@ void CHltvReplaySystem::SetDemoPlaybackFadeBrackets( int nCurrentPlaybackTick, i
 
 bool CHltvReplaySystem::IsHltvReplayFeatureEnabled()
 {
-#if HLTV_REPLAY_ENABLED
 	if ( g_bEngineIsHLTV )
 		return false; // no replay during replay or GOTV
 
 	static ConVarRef spec_replay_enable( "spec_replay_enable" );
 	return spec_replay_enable.GetBool();
-#else
-	return false;
-#endif
 }
 
 bool CHltvReplaySystem::IsHltvReplayButtonEnabled()
@@ -715,7 +720,7 @@ bool IsPlayerTeamDead( int nPlayerEntIndex )
 			{
 				if ( CBasePlayer *pPlayer = UTIL_PlayerByIndex( i ) )
 				{
-					Assert( pPlayer != pPrincipalPlayer );
+					contract_assert( pPlayer != pPrincipalPlayer );
 					if ( pPlayer->GetTeamNumber() == nTeam )
 					{
 						if ( pPlayer->IsAlive() )
@@ -870,7 +875,7 @@ void CHltvReplaySystem::CacheRagdollBones()
 					nRagdollsCached++;
 					int nBones = pRagdoll->GetModelPtr()->numbones();
 					int nBodyParts = pRagdoll->m_pRagdoll->RagdollBoneCount();
-					CachedRagdollBones_t *pCachedRagdoll = ( CachedRagdollBones_t * )MemAlloc_AllocAligned( sizeof( CachedRagdollBones_t ) + sizeof( matrix3x4a_t ) * ( nBones + nBodyParts + 1 ), 16 );
+					CachedRagdollBones_t *pCachedRagdoll = ( CachedRagdollBones_t * )MemAlloc_AllocAlignedUnattributed( sizeof( CachedRagdollBones_t ) + sizeof( matrix3x4a_t ) * ( nBones + nBodyParts + 1 ), 16 );
 					pCachedRagdoll->bAllAsleep = true;
 					pCachedRagdoll->nBones = nBones;
 					pCachedRagdoll->nBodyParts = nBodyParts;
@@ -892,9 +897,9 @@ void CHltvReplaySystem::CacheRagdollBones()
 						}
 					}
 
-					Assert( pBones[ nBones ].GetColumn( X_AXIS ) == Vector( 11, 22, 33 ) );
+					contract_assert( pBones[ nBones ].GetColumn( X_AXIS ) == Vector( 11, 22, 33 ) );
 					[[maybe_unused]] bool bInserted = m_mapCachedRagdollBones.try_emplace( nEntIndex, pCachedRagdoll ).second;
-					Assert( bInserted );
+					contract_assert( bInserted );
 				}
 			}
 			else

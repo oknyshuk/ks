@@ -1,21 +1,16 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#if !defined( INPUT_H )
-#define INPUT_H
-
+import ks.math;
 #include "iinput.h"
-#include <mutex>
-#include "mathlib/vector.h"
+import std;
 #include "kbutton.h"
 #include "ehandle.h"
 #include "inputsystem/AnalogCode.h"
 #include "shareddefs.h"
+#include "usercmd.h"
+#include "inputsystem/iinputstacksystem.h"
 
 typedef uint32 CRC32_t;
 
@@ -152,7 +147,6 @@ protected:
 	void			ControllerMove( int nSlot, float frametime, CUserCmd *cmd );	
 	float			ScaleAxisValue( const float axisValue, const float axisThreshold );
 	virtual void	JoyStickMove( float frametime, CUserCmd *cmd );
-	virtual void	SteamControllerMove( float frametime, CUserCmd *cmd );
 
 	virtual bool	ControllerModeActive( void );
 	virtual bool	JoyStickActive();
@@ -185,9 +179,6 @@ protected:
 
 	bool		m_fTrackIRAvailable;
 	// TrackIR
-
-	// SteamController
-	void		ApplySteamControllerCameraMove( QAngle& viewangles, CUserCmd *cmd, Vector2D vecPosition );
 
 protected:
 	typedef struct
@@ -400,7 +391,3 @@ extern class ConVar joy_autosprint;
 
 extern void KeyDown( kbutton_t *b, const char *c );
 extern void KeyUp( kbutton_t *b, const char *c );
-
-
-#endif // INPUT_H
-	

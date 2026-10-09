@@ -1,19 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#if !defined( UTIL_REGISTRY_H )
-#define UTIL_REGISTRY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
+import ks.core;
 
 
 //-----------------------------------------------------------------------------
 // Purpose: Interface to registry
 //-----------------------------------------------------------------------------
-abstract_class IRegistry
+class IRegistry
 {
 public:
 	// We have to have a virtual destructor since otherwise the derived class destructors
@@ -45,5 +40,3 @@ extern IRegistry *registry;
 IRegistry *InstanceRegistry( char const *subDirectoryUnderValve );
 // Calls Shutdown and deletes it
 void ReleaseInstancedRegistry( IRegistry *reg );
-
-#endif // UTIL_REGISTRY_H

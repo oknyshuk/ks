@@ -1,15 +1,9 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
+import ks.tier1;
 #include "iregistry.h"
-#include "tier0/dbg.h"
-#include "tier1/strtools.h"
-#include <stdio.h>
+import std;
 
 //-----------------------------------------------------------------------------
 // Purpose: Exposes registry interface to rest of launcher
@@ -53,7 +47,7 @@ void ReleaseInstancedRegistry( IRegistry *reg )
 {
 	if ( !reg )
 	{
-		Assert( !"ReleaseInstancedRegistry( reg == NULL )!" );
+		contract_assert( !"ReleaseInstancedRegistry( reg == NULL )!" );
 		return;
 	}
 
@@ -70,37 +64,37 @@ IRegistry *registry = ( IRegistry * )&g_Registry;
 //-----------------------------------------------------------------------------
 int CRegistry::ReadInt( const char *pKeyBase, const char *pKey, int defaultValue )
 {
-	int nLen = strlen( pKeyBase );
-	int nKeyLen = strlen( pKey );
-	char *pFullKey = (char*)_alloca( nLen + nKeyLen + 2 );
-	Q_snprintf( pFullKey, nLen + nKeyLen + 2, "%s\\%s", pKeyBase, pKey );
+	int nLen = std::strlen( pKeyBase );
+	int nKeyLen = std::strlen( pKey );
+	char *pFullKey = (char*)__builtin_alloca( nLen + nKeyLen + 2 );
+	V_snprintf( pFullKey, nLen + nKeyLen + 2, "%s\\%s", pKeyBase, pKey );
 	return ReadInt( pFullKey, defaultValue );
 }
 
 void CRegistry::WriteInt( const char *pKeyBase, const char *pKey, int value )
 {
-	int nLen = strlen( pKeyBase );
-	int nKeyLen = strlen( pKey );
-	char *pFullKey = (char*)_alloca( nLen + nKeyLen + 2 );
-	Q_snprintf( pFullKey, nLen + nKeyLen + 2, "%s\\%s", pKeyBase, pKey );
+	int nLen = std::strlen( pKeyBase );
+	int nKeyLen = std::strlen( pKey );
+	char *pFullKey = (char*)__builtin_alloca( nLen + nKeyLen + 2 );
+	V_snprintf( pFullKey, nLen + nKeyLen + 2, "%s\\%s", pKeyBase, pKey );
 	WriteInt( pFullKey, value );
 }
 
 const char *CRegistry::ReadString( const char *pKeyBase, const char *pKey, const char *defaultValue )
 {
-	int nLen = strlen( pKeyBase );
-	int nKeyLen = strlen( pKey );
-	char *pFullKey = (char*)_alloca( nLen + nKeyLen + 2 );
-	Q_snprintf( pFullKey, nLen + nKeyLen + 2, "%s\\%s", pKeyBase, pKey );
+	int nLen = std::strlen( pKeyBase );
+	int nKeyLen = std::strlen( pKey );
+	char *pFullKey = (char*)__builtin_alloca( nLen + nKeyLen + 2 );
+	V_snprintf( pFullKey, nLen + nKeyLen + 2, "%s\\%s", pKeyBase, pKey );
 	return ReadString( pFullKey, defaultValue );
 }
 
 void CRegistry::WriteString( const char *pKeyBase, const char *pKey, const char *value )
 {
-	int nLen = strlen( pKeyBase );
-	int nKeyLen = strlen( pKey );
-	char *pFullKey = (char*)_alloca( nLen + nKeyLen + 2 );
-	Q_snprintf( pFullKey, nLen + nKeyLen + 2, "%s\\%s", pKeyBase, pKey );
+	int nLen = std::strlen( pKeyBase );
+	int nKeyLen = std::strlen( pKey );
+	char *pFullKey = (char*)__builtin_alloca( nLen + nKeyLen + 2 );
+	V_snprintf( pFullKey, nLen + nKeyLen + 2, "%s\\%s", pKeyBase, pKey );
 	WriteString( pFullKey, value );
 }
 
@@ -180,7 +174,7 @@ bool CRegistry::DirectInit( const char *subDirectoryUnderValve )
 bool CRegistry::Init( const char *platformName )
 {
 	char subDir[ 512 ];
-	snprintf( subDir, sizeof(subDir), "%s\\Settings", platformName );
+	std::snprintf( subDir, sizeof(subDir), "%s\\Settings", platformName );
 	return DirectInit( subDir );
 }
 
@@ -195,4 +189,3 @@ void CRegistry::Shutdown( void )
 	// Make invalid
 	m_bValid = false;
 }
-

@@ -1,22 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ITEXTURE_H
-#define ITEXTURE_H
-
-
-#include "tier0/platform.h"
+import ks.core;
 #include "bitmap/imageformat.h" // ImageFormat defn.
 #include "materialsystem/imaterialsystem.h"
 
 class IVTFTexture;
 class ITexture;
-struct Rect_t;
 
 
 struct AsyncTextureContext_t
@@ -41,7 +32,7 @@ struct AsyncTextureContext_t
 // cause this interface to be called. It will also be called upon
 // mode switch, or on other occasions where the bits are discarded.
 //-----------------------------------------------------------------------------
-abstract_class ITextureRegenerator
+class ITextureRegenerator
 {
 public:
 	// This will be called when the texture bits need to be regenerated.
@@ -59,7 +50,7 @@ public:
 	virtual IVTFTexture *GetPreallocatedScratchTexture() { return nullptr; }
 };
 
-abstract_class ITexture
+class ITexture
 {
 public:
 	// Various texture polling methods
@@ -80,7 +71,7 @@ public:
 	//		pnumBytes		on return is the number of bytes available in the read-only data buffer or is undefined
 	// Returns:
 	//		pointer to the resource data, or NULL
-	virtual void *GetResourceData( uint32 eDataType, size_t *pNumBytes ) const = 0;
+	virtual void *GetResourceData( uint32 eDataType, std::size_t *pNumBytes ) const = 0;
 
 	// Methods associated with reference count
 	virtual void IncrementReferenceCount( void ) = 0;
@@ -155,6 +146,3 @@ inline bool IsErrorTexture( ITexture *pTex )
 {
 	return !pTex || pTex->IsError();
 }
-
-
-#endif // ITEXTURE_H

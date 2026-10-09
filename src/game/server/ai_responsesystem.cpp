@@ -1,28 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "player.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "ai_responsesystem.h"
 #include "igamesystem.h"
 #include "ai_criteria.h"
-#include <keyvalues.h>
 #include "filesystem.h"
-#include "tier1/map_ops.h"
 #include "ai_speech.h"
-#include "tier0/icommandline.h"
-#include <ctype.h>
 #include "sceneentity.h"
 #include "isaverestore.h"
-#include "fmtstr.h"
 #include "multiplay_gamerules.h"
-#include "characterset.h"
 #include "responserules/response_host_interface.h"
 #include "responserules/response_types_internal.h"
 
@@ -136,7 +151,7 @@ class CResponseRulesToEngineInterface : public ResponseRules::IEngineEmulator
 	///  reading position
 	virtual const char			*ParseFile( const char *data, char *token, int maxlen ) 
 	{
-		NOTE_UNUSED( maxlen );
+		(void)maxlen;
 		return RR_Parse( data, token );
 	}
 
@@ -237,17 +252,17 @@ void CGameResponseSystem::Precache()
 			case RESPONSE_SCENE:
 				{
 					// fixup $gender references
-					char file[_MAX_PATH];
-					Q_strncpy( file, response.value, sizeof(file) );
-					char *gender = strstr( file, "$gender" );
+					char file[k_cMaxPath];
+					V_strncpy( file, response.value, sizeof(file) );
+					char *gender = std::strstr( file, "$gender" );
 					if ( gender )
 					{
 						// replace with male & female
-						const char *postGender = gender + strlen("$gender");
+						const char *postGender = gender + std::strlen("$gender");
 						*gender = 0;
-						char genderFile[_MAX_PATH];
+						char genderFile[k_cMaxPath];
 						// male
-						Q_snprintf( genderFile, sizeof(genderFile), "%smale%s", file, postGender);
+						V_snprintf( genderFile, sizeof(genderFile), "%smale%s", file, postGender);
 
 						PrecacheInstancedScene( genderFile );
 						if ( bTouchFiles )
@@ -255,7 +270,7 @@ void CGameResponseSystem::Precache()
 							TouchFile( genderFile );
 						}
 
-						Q_snprintf( genderFile, sizeof(genderFile), "%sfemale%s", file, postGender);
+						V_snprintf( genderFile, sizeof(genderFile), "%sfemale%s", file, postGender);
 
 						PrecacheInstancedScene( genderFile );
 						if ( bTouchFiles )
@@ -295,12 +310,12 @@ public:
 	CInstancedResponseSystem( const char *scriptfile ) :
 	  m_pszScriptFile( 0 )
 	  {
-		  Assert( scriptfile );
+		  contract_assert( scriptfile );
 
-		  int len = Q_strlen( scriptfile ) + 1;
+		  int len = V_strlen( scriptfile ) + 1;
 		  m_pszScriptFile = new char[ len ];
-		  Assert( m_pszScriptFile );
-		  Q_strncpy( m_pszScriptFile, scriptfile, len );
+		  contract_assert( m_pszScriptFile );
+		  V_strncpy( m_pszScriptFile, scriptfile, len );
 	  }
 
 	  ~CInstancedResponseSystem()
@@ -309,7 +324,7 @@ public:
 	  }
 	  virtual const char *GetScriptFile( void ) 
 	  {
-		  Assert( m_pszScriptFile );
+		  contract_assert( m_pszScriptFile );
 		  return m_pszScriptFile;
 	  }
 
@@ -363,7 +378,7 @@ public:
 
 	virtual void Release()
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 	void AddInstancedResponseSystem( const char *scriptfile, CInstancedResponseSystem *sys )
@@ -522,7 +537,9 @@ void CDefaultResponseSystem::DestroyCustomResponseSystems()
 static CDefaultResponseSystem defaultresponsesytem;
 IResponseSystem *g_pResponseSystem = &defaultresponsesytem;
 
-CON_COMMAND_F( rr_reloadresponsesystems, "Reload all response system scripts.", FCVAR_CHEAT )
+static void rr_reloadresponsesystems( const CCommand &args );
+static ConCommand rr_reloadresponsesystems_command( "rr_reloadresponsesystems", rr_reloadresponsesystems, "Reload all response system scripts.", FCVAR_CHEAT );
+static void rr_reloadresponsesystems( const CCommand &args )
 {
 	defaultresponsesytem.ReloadAllResponseSystems();
 }

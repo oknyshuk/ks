@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
 #if !defined TEXTCONSOLE_H
 #define TEXTCONSOLE_H
-#pragma once
-
-
 
 #define MAX_CONSOLE_TEXTLEN 256
 #define MAX_BUFFER_LINES	30

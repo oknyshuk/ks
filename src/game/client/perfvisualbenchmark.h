@@ -1,10 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #if !defined PERFVISUALBENCHMARK_H
 #define PERFVISUALBENCHMARK_H
@@ -12,7 +8,6 @@
 #define FPS_STABILIZE_TIME 1.5
 #define FPS_STABILIZE_TIME_RELOAD_MATERIALS 10.0
 #define FPS_MEASURE_TIME 2.0
-
 
 #include <igameevents.h>
 #include <igamesystem.h>

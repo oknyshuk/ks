@@ -1,8 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Clears color/depth, but obeys stencil while doing so
-//
-//=============================================================================//
 
 #include "BaseVSShader.h"
 
@@ -10,12 +9,11 @@
 #include "bufferclearobeystencil_ps20.inc"
 #include "bufferclearobeystencil_ps20b.inc"
 
-
 DEFINE_FALLBACK_SHADER( BufferClearObeyStencil, BufferClearObeyStencil_DX9 )
 
 BEGIN_VS_SHADER_FLAGS( BufferClearObeyStencil_DX9, "", SHADER_NOT_EDITABLE )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( CLEARCOLOR, SHADER_PARAM_TYPE_INTEGER, "1", "activates clearing of color" )
 		SHADER_PARAM( CLEARALPHA, SHADER_PARAM_TYPE_INTEGER, "-1", "activates clearing of alpha. -1 == copy CLEARCOLOR setting" )
 		SHADER_PARAM( CLEARDEPTH, SHADER_PARAM_TYPE_INTEGER, "1", "activates clearing of depth" )		

@@ -1,41 +1,60 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "client_pch.h"
-#include "tier0/memalloc.h"
+// main precompiled header for client files
+
+
+#include "common.h"
+#include "qlimits.h"
+#include "icliententitylist.h"
+
+#include "cmd.h"
+#include "protocol.h"
+#include "render.h"
+
+
+#include "screen.h"
+
+#include "gl_shader.h"
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+
+#include "con_nprint.h"
+#include "debugoverlay.h"
+#include "demo.h"
+#include "host_state.h"
+#include "host.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+#include "sys.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "sound.h"
 #include <inetchannel.h>
-#include <time.h>
+import ks.tier1;
+import std;
 #include "checksum_engine.h"
 #include "con_nprint.h"
 #include "r_local.h"
 #include "gl_lightmap.h"
 #include "console.h"
-#include "traceinit.h"
-#include "cl_demo.h"
 #include "cdll_engine_int.h"
 #include "debugoverlay.h"
 #include "filesystem_engine.h"
 #include "icliententity.h"
-#include "dt_recv_eng.h"
 #include "engineui.h"
 #include "testscriptmgr.h"
-#include <tier0/vprof.h>
-#include <proto_oob.h>
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "gl_matsysiface.h"
 #include "staticpropmgr.h"
-#include "ispatialpartitioninternal.h"
-#include "cbenchmark.h"
 #include "vox.h"
 #include "LocalNetworkBackdoor.h"
-#include <tier0/icommandline.h>
 #include "GameEventManager.h"
 #include "ivideomode.h"
 #include "decal.h"
@@ -43,36 +62,19 @@
 #include "cl_rcon.h"
 #include "engineui.h"
 #include "snd_audio_source.h"
-#include "iregistry.h"
 #include "sys.h"
-#include <vstdlib/random.h>
-#include "tier0/etwprof.h"
-#include "SteamInterface.h"
 #include "sys_dll.h"
 #include "avi/iavi.h"
-#include "cl_steamauth.h"
-#include "matchmaking/imatchframework.h"
-#include "tier2/tier2.h"
 #include "host_state.h"
 #include "enginethreads.h"
 #include "pure_server.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "LoadScreenUpdate.h"
-#include "tier0/systeminformation.h"
-#include "steam/steam_api.h"
-#include "SourceAppInfo.h"
 #include "enginethreads.h"
-#include "tier1/characterset.h"
 #include "const.h"
 #include "audio/private/snd_sfx.h"
 #include "MapReslistGenerator.h"
 
-#if defined( REPLAY_ENABLED )
-#include "replayhistorymanager.h"
-#endif
-
-#include "ConfigManager.h"
-#include <set>
 
 extern IVEngineClient *engineClient;
 
@@ -81,9 +83,9 @@ void CL_ResetEntityBits( void );
 void EngineTool_UpdateScreenshot();
 
 // If we get more than 250 messages in the incoming buffer queue, dump any above this #
-#define MAX_INCOMING_MESSAGES		250
+constexpr auto MAX_INCOMING_MESSAGES = 250;
 // Size of command send buffer
-#define MAX_CMD_BUFFER				4000
+constexpr auto MAX_CMD_BUFFER = 4000;
 
 CGlobalVarsBase g_ClientGlobalVariables( true );
 AVIHandle_t g_hCurrentAVI = AVIHANDLE_INVALID;
@@ -140,17 +142,17 @@ static ConVar cl_retire_low_priority_lights( "cl_retire_low_priority_lights", "0
 // This is called when a client receives the whitelist from a pure server (on map change).
 // Each pure server (and each map on the server) has a whitelist that says which files a 
 // client is allowed to load off disk. When the client gets the whitelist, it must
-// flush out any files that it has loaded previously that were NOT in the Steam cache.
+// flush out any files that it has loaded previously that were NOT in the original game content.
 //
 // -- pseudocode --
 // for all loaded resources (models/sounds/materials/scripts)
 //	 for each file related to this resource
 //     if (file is not in whitelist)
-//       if (file was loaded off disk instead of coming from the Steam cache)
+//       if (file was loaded off disk instead of coming from the original game content)
 //         flush the file
 //
 // Note: It could also check in here that the on-disk file is actually different 
-//       than the Steam one. If it happens to have the same CRC, then there's no need
+//       than the original one. If it happens to have the same CRC, then there's no need
 //       to do all the flushing.
 //
 void CL_HandlePureServerWhitelist( CPureServerWhitelist *pWhitelist )
@@ -252,10 +254,7 @@ const CPrecacheUserData* CL_GetPrecacheUserData( INetworkStringTable *table, int
 	const CPrecacheUserData *data = ( CPrecacheUserData * )table->GetStringUserData( index, &testLength );
 	if ( data )
 	{
-		ErrorIfNot( 
-			testLength == sizeof( *data ),
-			("CL_GetPrecacheUserData(%d,%d) - length (%d) invalid.", table->GetTableId(), index, testLength)
-		);
+		if ( !( testLength == sizeof( *data ) ) ) Error("CL_GetPrecacheUserData(%d,%d) - length (%d) invalid.", table->GetTableId(), index, testLength);
 
 	}
 	return data;
@@ -272,7 +271,7 @@ void CL_InitHL2DemoFlag()
 	if ( !initialized )
 	{
 
-		if ( !Q_stricmp( COM_GetModDirectory(), "hl2" ) && CommandLine()->CheckParm( "-demo" ) ) 
+		if ( !V_stricmp( COM_GetModDirectory(), "hl2" ) && CommandLine()->CheckParm( "-demo" ) ) 
 		{
 			s_bIsHL2Demo = true;
 		}
@@ -333,7 +332,7 @@ bool CL_CheckCRCs( const char *pszMap )
 	if ( !GetBaseLocalClient().serverCRC && !GetBaseLocalClient().serverClientSideDllCRC )
 		return true;
 
-	VPROF_BUDGET( "CL_CheckCRCs", VPROF_BUDGETGROUP_STEAM );
+	CVProfScope _( "CL_CheckCRCs", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
 	CRC32_t mapCRC;        // If this is the worldmap, CRC agains server's map
 
@@ -389,7 +388,7 @@ bool CL_CheckCRCs( const char *pszMap )
 //-----------------------------------------------------------------------------
 void CL_ReallocateDynamicData( int maxclients )
 {
-	Assert( entitylist );
+	contract_assert( entitylist );
 	if ( entitylist )
 	{
 		entitylist->SetMaxEntities( MAX_EDICTS );
@@ -406,7 +405,7 @@ Updates the local time and reads/handles messages on client net connection.
 ConVar net_earliertempents( "net_earliertempents", "0", FCVAR_CHEAT );
 void CL_ReadPackets ( bool bFinalTick )
 {
-	VPROF_BUDGET( "CL_ReadPackets", VPROF_BUDGETGROUP_OTHER_NETWORKING );
+	CVProfScope _( "CL_ReadPackets", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
 	// Before parsing any messages, assume we're in split player "slot 0"
 	splitscreen->SetActiveSplitScreenPlayerSlot( 0 );
@@ -486,7 +485,6 @@ void CL_ReadPackets ( bool bFinalTick )
 				// Show the vgui dialog on timeout
 				COM_ExplainDisconnection( false, "Connection to server timed out.");
 			}
-			// Check for Steam mediated socket disconnection
 			else if ( cl.m_NetChannel->IsRemoteDisconnected() )
 			{
 				bDisconnected = true;
@@ -544,7 +542,7 @@ void CL_ClearState ( void )
 		g_pLocalNetworkBackdoor->ClearState();
 
 	// clear other arrays	
-	memset (cl_dlights, 0, sizeof(cl_dlights));
+	std::memset (cl_dlights, 0, sizeof(cl_dlights));
 	memset (cl_elights, 0, sizeof(cl_elights));
 	g_bActiveDlights = false;
 	g_bActiveElights = false;
@@ -685,7 +683,7 @@ void CL_DispatchSound( const SoundInfo_t &sound )
 		{
 			pSentenceName = "";
 		}
-		Q_snprintf( name, sizeof( name ), "%c%s", CHAR_SENTENCE, pSentenceName );
+		V_snprintf( name, sizeof( name ), "%c%s", CHAR_SENTENCE, pSentenceName );
 		pSfx = S_DummySfx( name );
 	}
 	else
@@ -695,7 +693,7 @@ void CL_DispatchSound( const SoundInfo_t &sound )
 		{
 			DevMsg("    Entity '%d' created the late load.\n", sound.nEntityIndex );
 		}
-		Q_strncpy( name, GetBaseLocalClient().GetSoundName( sound.nSoundNum ), sizeof( name ) );
+		V_strncpy( name, GetBaseLocalClient().GetSoundName( sound.nSoundNum ), sizeof( name ) );
 	}
 	params.pSfx = pSfx;
 
@@ -754,7 +752,9 @@ void CL_Retry()
 }
 
 //REMOVED FOR PORTAL2:
-CON_COMMAND_F( retry, "Retry connection to last server.", FCVAR_DONTRECORD | FCVAR_SERVER_CAN_EXECUTE | FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void retry( const CCommand &args );
+static ConCommand retry_command( "retry", retry, "Retry connection to last server.", FCVAR_DONTRECORD | FCVAR_SERVER_CAN_EXECUTE | FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void retry( const CCommand &args )
 {
 	CL_Retry();
 }
@@ -785,7 +785,7 @@ void SplitString( char const *pchString, std::vector< std::string > &list )
 	}
 
 	*pOut = 0;
-	if ( Q_strlen( token ) > 0 )
+	if ( V_strlen( token ) > 0 )
 	{
 		list.push_back( std::string( token ) );
 	}
@@ -798,7 +798,9 @@ CL_Connect_f
 User command to connect to server
 =====================
 */
-CON_COMMAND_F( connect, "Connect to specified server.", FCVAR_DONTRECORD )
+static void connect( const CCommand &args );
+static ConCommand connect_command( "connect", connect, "Connect to specified server.", FCVAR_DONTRECORD );
+static void connect( const CCommand &args )
 {
 	if ( args.ArgC() < 2 )
 	{
@@ -851,8 +853,7 @@ CON_COMMAND_F( connect, "Connect to specified server.", FCVAR_DONTRECORD )
 	}
 	
 
-	// When using '+connect ip:port' in a Steam URL 'steam://run/730//+connect ip:port', we can't use the : character. 
-	// Support using '?' instead and replace all '?' with ':' in the string.
+	// Support using '?' instead of ':' in the address and replace all '?' with ':' in the string.
 
 	char strAddress[2][64];
 	int addressCount = 0;
@@ -874,7 +875,7 @@ CON_COMMAND_F( connect, "Connect to specified server.", FCVAR_DONTRECORD )
 			char* qmindex = strAddress[ i ];
 
 			addressCount++;
-			while ( ( qmindex = strchr( qmindex ,'?') ) != nullptr )
+			while ( ( qmindex = std::strchr( qmindex ,'?') ) != nullptr )
 			{
 				*qmindex = ':';
 			}
@@ -896,7 +897,9 @@ CL_Connect_SplitScreen_f
 User command to connect to server with multiple players
 =====================
 */
-CON_COMMAND_F( connect_splitscreen, "Connect to specified server. With multiple players.", FCVAR_DONTRECORD | FCVAR_RELEASE | FCVAR_HIDDEN )
+static void connect_splitscreen( const CCommand &args );
+static ConCommand connect_splitscreen_command( "connect_splitscreen", connect_splitscreen, "Connect to specified server. With multiple players.", FCVAR_DONTRECORD | FCVAR_RELEASE | FCVAR_HIDDEN );
+static void connect_splitscreen( const CCommand &args )
 {
 	if ( args.ArgC() < 3 )
 	{
@@ -917,7 +920,7 @@ CON_COMMAND_F( connect_splitscreen, "Connect to specified server. With multiple 
 
 	int last = std::ssize( argValues ) - 1;
 
-	int numPlayers = Q_atoi( argValues[ last ].c_str() );
+	int numPlayers = V_atoi( argValues[ last ].c_str() );
 	if ( numPlayers <= 0 )
 	{
 		ConMsg( "Must have at least one player.\n" );
@@ -984,7 +987,7 @@ CON_COMMAND_F( connect_splitscreen, "Connect to specified server. With multiple 
 //-----------------------------------------------------------------------------
 void CL_SetupMapName( const char* pName, char* pFixedName, int maxlen )
 {
-	const char* pSlash = strrchr( pName, '\\' );
+	const char* pSlash = std::strrchr( pName, '\\' );
 	const char* pSlash2 = strrchr( pName, '/' );
 	if (pSlash2 > pSlash)
 		pSlash = pSlash2;
@@ -993,8 +996,8 @@ void CL_SetupMapName( const char* pName, char* pFixedName, int maxlen )
 	else 
 		pSlash = pName;
 
-	Q_strncpy( pFixedName, pSlash, maxlen );
-	char* pExt = strchr( pFixedName, '.' );
+	V_strncpy( pFixedName, pSlash, maxlen );
+	char* pExt = std::strchr( pFixedName, '.' );
 	if (pExt)
 		*pExt = 0;
 }
@@ -1026,15 +1029,9 @@ CPureServerWhitelist* CL_LoadWhitelist( INetworkStringTable *pTable, const char 
 
 void CL_CheckForPureServerWhitelist()
 {
-#ifdef DISABLE_PURE_SERVER_STUFF
-	return;
-#endif
 
 	// Don't do sv_pure stuff in SP games or HLTV/replay
 	if ( GetBaseLocalClient().m_nMaxClients <= 1 || GetBaseLocalClient().ishltv
-#ifdef REPLAY_ENABLED
-		|| GetBaseLocalClient().isreplay
-#endif // ifdef REPLAY_ENABLED
 		)
 		return;
 	
@@ -1059,25 +1056,6 @@ void CL_CheckForPureServerWhitelist()
 }
 
 
-int CL_GetServerQueryPort()
-{
-	// Yes, this is ugly getting this data out of a string table. Would be better to have it in our network protocol,
-	// but we don't have a way to change the protocol without breaking things for people.
-	if ( !GetBaseLocalClient().m_pServerStartupTable )
-		return 0;
-		
-	int iString = GetBaseLocalClient().m_pServerStartupTable->FindStringIndex( "QueryPort" );
-	if ( iString == INVALID_STRING_INDEX )
-		return 0;
-		
-	int dataLen; 
-	const void *pData = GetBaseLocalClient().m_pServerStartupTable->GetStringUserData( iString, &dataLen );
-	if ( pData && dataLen == sizeof( int ) )
-		return *((const int*)pData);
-	else
-		return 0;
-}
-
 /*
 ==================
 CL_RegisterResources
@@ -1097,52 +1075,6 @@ void CL_RegisterResources( void )
 	// Force main window to repaint... (only does something if running shaderapi
 	videomode->InvalidateWindow();
 }
-
-#ifndef DEDICATED
-class CEngineReliableAvatarCallback_t
-{
-public:
-	CEngineReliableAvatarCallback_t()
-		: m_CallbackPersonaStateChanged( this, &CEngineReliableAvatarCallback_t::Steam_OnPersonaStateChanged )
-		, m_CallbackAvatarImageLoaded( this, &CEngineReliableAvatarCallback_t::Steam_OnAvatarImageLoaded )
-	{
-		ISteamUser *pSteamUser = Steam3Client().SteamUser();
-		if ( pSteamUser )
-			m_steamID = pSteamUser->GetSteamID();
-	}
-
-	void UploadMyOwnAvatarToGameServer();
-
-private:
-	STEAM_CALLBACK( CEngineReliableAvatarCallback_t, Steam_OnPersonaStateChanged, PersonaStateChange_t, m_CallbackPersonaStateChanged );
-	STEAM_CALLBACK( CEngineReliableAvatarCallback_t, Steam_OnAvatarImageLoaded, AvatarImageLoaded_t, m_CallbackAvatarImageLoaded );
-
-	CSteamID m_steamID;
-};
-void CEngineReliableAvatarCallback_t::Steam_OnAvatarImageLoaded( AvatarImageLoaded_t *pParam )
-{
-	if ( pParam && ( pParam->m_steamID == m_steamID ) )
-		UploadMyOwnAvatarToGameServer();
-}
-
-void CEngineReliableAvatarCallback_t::Steam_OnPersonaStateChanged( PersonaStateChange_t *pParam )
-{
-	if ( pParam && ( pParam->m_nChangeFlags & k_EPersonaChangeAvatar ) && ( pParam->m_ulSteamID == m_steamID.ConvertToUint64() ) )
-		UploadMyOwnAvatarToGameServer();
-}
-void CEngineReliableAvatarCallback_t::UploadMyOwnAvatarToGameServer()
-{
-	if ( GetBaseLocalClient().IsActive() )
-	{
-		// Kick off upload for our own avatar data now
-		if ( CNETMsg_PlayerAvatarData_t *pMsgMyAvatarData = GetBaseLocalClient().AllocOwnPlayerAvatarData() )
-		{
-			GetBaseLocalClient().m_NetChannel->EnqueueVeryLargeAsyncTransfer( *pMsgMyAvatarData );
-			delete pMsgMyAvatarData;
-		}
-	}
-}
-#endif
 
 void CL_FullyConnected( void )
 {
@@ -1207,8 +1139,7 @@ void CL_FullyConnected( void )
 #endif
 	}
 
-	int iQueryPort = CL_GetServerQueryPort();
-	EngineUI()->NotifyOfServerConnect(com_gamedir, ip, port, iQueryPort);
+	EngineUI()->NotifyOfServerConnect(com_gamedir, ip, port);
 
 	GetTestScriptMgr()->CheckPoint( "FinishedMapLoad" );
 
@@ -1227,9 +1158,9 @@ void CL_FullyConnected( void )
 
 		ConDMsg( "Signon traffic \"%s\":  incoming %s [%d pkts], outgoing %s [%d pkts]\n",
 			GetBaseLocalClient().m_NetChannel->GetName(),
-			Q_pretifymem( cl.m_NetChannel->GetTotalData( FLOW_INCOMING ), 3 ),
+			V_pretifymem( cl.m_NetChannel->GetTotalData( FLOW_INCOMING ), 3 ),
 			cl.m_NetChannel->GetTotalPackets( FLOW_INCOMING ),
-			Q_pretifymem( cl.m_NetChannel->GetTotalData( FLOW_OUTGOING ), 3 ),
+			V_pretifymem( cl.m_NetChannel->GetTotalData( FLOW_OUTGOING ), 3 ),
 			cl.m_NetChannel->GetTotalPackets( FLOW_OUTGOING ) );
 	}
 
@@ -1310,12 +1241,6 @@ void CL_FullyConnected( void )
 	{
 		engineClient->ClientCmd( "cameraman_request" );
 	}
-
-#ifndef DEDICATED
-	// Register a listener that will be uploading our own avatar data to the game server
-	static CEngineReliableAvatarCallback_t s_EngineReliableAvatarCallback;
-	s_EngineReliableAvatarCallback.UploadMyOwnAvatarToGameServer();
-#endif
 }
 
 /*
@@ -1347,7 +1272,7 @@ void CL_NextDemo (void)
 		}
 	}
 
-	Q_snprintf (str,sizeof( str ), "playdemo %s", GetBaseLocalClient().demos[GetBaseLocalClient().demonum]);
+	V_snprintf (str,sizeof( str ), "playdemo %s", GetBaseLocalClient().demos[GetBaseLocalClient().demonum]);
 	Cbuf_AddText( Cbuf_GetCurrentPlayer(), str );
 	GetBaseLocalClient().demonum++;
 }
@@ -1363,22 +1288,24 @@ void CL_TakeScreenshot(const char *name)
 
 	if ( name != nullptr )
 	{
-		Q_strncpy( cl_snapshotname, name, sizeof( cl_snapshotname ) );		
+		V_strncpy( cl_snapshotname, name, sizeof( cl_snapshotname ) );		
 	}
 	else
 	{
 		cl_snapshotname[0] = 0;
 
-		if ( Q_strlen( cl_screenshotname.GetString() ) > 0 )
+		if ( V_strlen( cl_screenshotname.GetString() ) > 0 )
 		{
-			Q_snprintf( cl_snapshotname, sizeof( cl_snapshotname ), "%s", cl_screenshotname.GetString() );		
+			V_snprintf( cl_snapshotname, sizeof( cl_snapshotname ), "%s", cl_screenshotname.GetString() );		
 		}
 	}
 
 	cl_snapshot_subdirname[0] = 0;
 }
 
-CON_COMMAND_F( screenshot, "Take a screenshot.", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void screenshot( const CCommand &args );
+static ConCommand screenshot_command( "screenshot", screenshot, "Take a screenshot.", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void screenshot( const CCommand &args )
 {
 	GetTestScriptMgr()->SetWaitCheckPoint( "screenshot" );
 
@@ -1396,14 +1323,16 @@ CON_COMMAND_F( screenshot, "Take a screenshot.", FCVAR_CLIENTCMD_CAN_EXECUTE )
 	}
 }
 
-CON_COMMAND_F( devshots_screenshot, "Used by the -makedevshots system to take a screenshot. For taking your own screenshots, use the 'screenshot' command instead.", FCVAR_DONTRECORD )
+static void devshots_screenshot( const CCommand &args );
+static ConCommand devshots_screenshot_command( "devshots_screenshot", devshots_screenshot, "Used by the -makedevshots system to take a screenshot. For taking your own screenshots, use the 'screenshot' command instead.", FCVAR_DONTRECORD );
+static void devshots_screenshot( const CCommand &args )
 {
 	CL_TakeScreenshot( nullptr );
 
 	// See if we got a subdirectory to store the devshots in
 	if ( args.ArgC() == 2 )
 	{
-		Q_strncpy( cl_snapshot_subdirname, args[1], sizeof( cl_snapshot_subdirname ) );		
+		V_strncpy( cl_snapshot_subdirname, args[1], sizeof( cl_snapshot_subdirname ) );		
 
 		// Use the first available shot in each subdirectory
 		cl_snapshotnum = 0;
@@ -1424,7 +1353,7 @@ void CL_TakeJpeg(const char *name, int quality)
 
 	if ( name != nullptr )
 	{
-		Q_strncpy( cl_snapshotname, name, sizeof( cl_snapshotname ) );		
+		V_strncpy( cl_snapshotname, name, sizeof( cl_snapshotname ) );		
 	}
 	else
 	{
@@ -1432,13 +1361,15 @@ void CL_TakeJpeg(const char *name, int quality)
 	}
 }
 
-CON_COMMAND( jpeg, "Take a jpeg screenshot:  jpeg <filename> <quality 1-100>." )
+static void jpeg( const CCommand &args );
+static ConCommand jpeg_command( "jpeg", jpeg, "Take a jpeg screenshot:  jpeg <filename> <quality 1-100>." );
+static void jpeg( const CCommand &args )
 {
 	if( args.ArgC() >= 2 )
 	{
 		if ( args.ArgC() == 3 )
 		{
-			CL_TakeJpeg( args[ 1 ], Q_atoi( args[2] ) );
+			CL_TakeJpeg( args[ 1 ], V_atoi( args[2] ) );
 		}
 		else
 		{
@@ -1480,7 +1411,7 @@ void CL_TakeSnapshotAndSwap()
 			if ( timer >= 0.0f )
 			{
 				// Figure out a good name
-				//Q_snprintf( cl_snapshotname, sizeof( cl_snapshotname ), "fps_%.2f", (1.0f / realFrameTime) );	
+				//V_snprintf( cl_snapshotname, sizeof( cl_snapshotname ), "fps_%.2f", (1.0f / realFrameTime) );	
 				cl_takesnapshot = true;
 
 				timer -= fps_screenshot_frequency.GetFloat();
@@ -1510,7 +1441,7 @@ void CL_TakeSnapshotAndSwap()
 
 		if ( world && world->GetModel() )
 		{
-			Q_FileBase( modelloader->GetName( ( model_t *)world->GetModel() ), base, sizeof( base ) );
+			V_FileBase( modelloader->GetName( ( model_t *)world->GetModel() ), base, sizeof( base ) );
 
 			if ( PLATFORM_EXT[0] )
 			{
@@ -1520,24 +1451,24 @@ void CL_TakeSnapshotAndSwap()
 		}
 		else
 		{
-			Q_strncpy( base, "Snapshot", sizeof( base ) );
+			V_strncpy( base, "Snapshot", sizeof( base ) );
 		}
 
 		char extension[MAX_OSPATH];
-		Q_snprintf( extension, sizeof( extension ), "%s.%s", GetPlatformExt(), cl_takejpeg ? "jpg" : "tga" );
+		V_snprintf( extension, sizeof( extension ), "%s.%s", GetPlatformExt(), cl_takejpeg ? "jpg" : "tga" );
 
 		// Using a subdir? If so, create it
 		if ( cl_snapshot_subdirname[0] )
 		{
-			Q_snprintf( filename, sizeof( filename ), "screenshots/%s/%s", base, cl_snapshot_subdirname );
+			V_snprintf( filename, sizeof( filename ), "screenshots/%s/%s", base, cl_snapshot_subdirname );
 			g_pFileSystem->CreateDirHierarchy( filename, "DEFAULT_WRITE_PATH" );
 		}
 
 		if ( cl_snapshotname[0] )
 		{
 			{
-				Q_strncpy( base, cl_snapshotname, sizeof( base ) );
-				Q_snprintf( filename, sizeof( filename ), "screenshots/%s%s", base, extension );
+				V_strncpy( base, cl_snapshotname, sizeof( base ) );
+				V_snprintf( filename, sizeof( filename ), "screenshots/%s%s", base, extension );
 
 				// See if the base file already exists and rename if so and if possible.
 				if( g_pFileSystem->GetFileTime( filename ) != 0 )
@@ -1547,7 +1478,7 @@ void CL_TakeSnapshotAndSwap()
 					// Only loop until we hit 9999 (incremented to 10000 afterwards).  More screen shots than that, out of luck.
 					for( int iNumber = 0; iNumber < 10000 ; iNumber++)
 					{
-						Q_snprintf( renamedfile, sizeof( renamedfile ), "screenshots/%s_%04d%s", base, iNumber, extension );
+						V_snprintf( renamedfile, sizeof( renamedfile ), "screenshots/%s_%04d%s", base, iNumber, extension );
 						
 						// GetFileTime() is used as a file exists check
 						if( !g_pFileSystem->GetFileTime( renamedfile ) )
@@ -1569,11 +1500,11 @@ void CL_TakeSnapshotAndSwap()
 			{
 				if ( cl_snapshot_subdirname[0] )
 				{
-					Q_snprintf( filename, sizeof( filename ), "screenshots/%s/%s/%s%04d%s", base, cl_snapshot_subdirname, base, cl_snapshotnum++, extension  );
+					V_snprintf( filename, sizeof( filename ), "screenshots/%s/%s/%s%04d%s", base, cl_snapshot_subdirname, base, cl_snapshotnum++, extension  );
 				}
 				else
 				{
-					Q_snprintf( filename, sizeof( filename ), "screenshots/%s%04d%s", base, cl_snapshotnum++, extension  );
+					V_snprintf( filename, sizeof( filename ), "screenshots/%s%04d%s", base, cl_snapshotnum++, extension  );
 				}
 
 				if( !g_pFileSystem->GetFileTime( filename, "DEFAULT_WRITE_PATH" ) )
@@ -1625,7 +1556,7 @@ void CL_TakeSnapshotAndSwap()
 		double curtime = Plat_FloatTime();
 
 		double dt = std::min( curtime - flLastTime, MAX_FRAMETIME );
-		double desiredInterval = 1.0 / fabsf( host_framerate.GetFloat() );
+		double desiredInterval = 1.0 / std::fabsf( host_framerate.GetFloat() );
 
 		double flSleepInterval = desiredInterval - dt;
 		if ( flSleepInterval > 0.0f )
@@ -1653,14 +1584,14 @@ void CL_TakeSnapshotAndSwap()
 static float s_flPreviousHostFramerate = 0;
 void CL_StartMovie( const char *filename, int flags, int nWidth, int nHeight, float flFrameRate, int jpeg_quality )
 {
-	Assert( g_hCurrentAVI == AVIHANDLE_INVALID );
+	contract_assert( g_hCurrentAVI == AVIHANDLE_INVALID );
 
 	// StartMove depends on host_framerate not being 0.
 	s_flPreviousHostFramerate = host_framerate.GetFloat();
 	host_framerate.SetValue( flFrameRate );
 
 	cl_movieinfo.Reset();
-	Q_strncpy( cl_movieinfo.moviename, filename, sizeof( cl_movieinfo.moviename ) );
+	V_strncpy( cl_movieinfo.moviename, filename, sizeof( cl_movieinfo.moviename ) );
 	cl_movieinfo.type = flags;
 	cl_movieinfo.jpeg_quality = jpeg_quality;
 
@@ -1670,8 +1601,8 @@ void CL_StartMovie( const char *filename, int flags, int nWidth, int nHeight, fl
 #define SOUND_DMA_SPEED		44100		// hardware playback rate
 
 		AVIParams_t params;
-		Q_strncpy( params.m_pFileName, filename, sizeof( params.m_pFileName ) );
-		Q_strncpy( params.m_pPathID, "MOD", sizeof( params.m_pPathID ) );
+		V_strncpy( params.m_pFileName, filename, sizeof( params.m_pFileName ) );
+		V_strncpy( params.m_pPathID, "MOD", sizeof( params.m_pPathID ) );
 		params.m_nNumChannels = 2;
 		params.m_nSampleBits = 16;
 		params.m_nSampleRate = SOUND_DMA_SPEED;
@@ -1733,7 +1664,9 @@ Sets the engine up to dump frames
 ===============
 */
 
-CON_COMMAND_F( startmovie, "Start recording movie frames.", FCVAR_DONTRECORD )
+static void startmovie( const CCommand &args );
+static ConCommand startmovie_command( "startmovie", startmovie, "Start recording movie frames.", FCVAR_DONTRECORD );
+static void startmovie( const CCommand &args )
 {
 	if( args.ArgC() < 2 )
 	{
@@ -1765,28 +1698,28 @@ CON_COMMAND_F( startmovie, "Start recording movie frames.", FCVAR_DONTRECORD )
 		flags = 0;
 		for ( int i = 2; i < args.ArgC(); ++i )
 		{
-			if ( !Q_stricmp( args[ i ], "avi" ) )
+			if ( !V_stricmp( args[ i ], "avi" ) )
 			{
 				flags |= MovieInfo_t::FMOVIE_AVI | MovieInfo_t::FMOVIE_AVISOUND;
 			}
-			if ( !Q_stricmp( args[ i ], "raw" ) )
+			if ( !V_stricmp( args[ i ], "raw" ) )
 			{
 				flags |= MovieInfo_t::FMOVIE_TGA | MovieInfo_t::FMOVIE_WAV;
 			}
-			if ( !Q_stricmp( args[ i ], "tga" ) )
+			if ( !V_stricmp( args[ i ], "tga" ) )
 			{
 				flags |= MovieInfo_t::FMOVIE_TGA;
 			}
-			if ( !Q_stricmp( args[ i ], "jpeg" ) || !Q_stricmp( args[ i ], "jpg" ) )
+			if ( !V_stricmp( args[ i ], "jpeg" ) || !V_stricmp( args[ i ], "jpg" ) )
 			{
 				flags &= ~MovieInfo_t::FMOVIE_TGA;
 				flags |= MovieInfo_t::FMOVIE_JPG;
 			}
-			if ( !Q_stricmp( args[ i ], "jpeg_quality" ) )
+			if ( !V_stricmp( args[ i ], "jpeg_quality" ) )
 			{
-				jpeg_quality = clamp( Q_atoi( args[ ++i ] ), 1, 100 );
+				jpeg_quality = clamp( V_atoi( args[ ++i ] ), 1, 100 );
 			}
-			if ( !Q_stricmp( args[ i ], "wav" ) )
+			if ( !V_stricmp( args[ i ], "wav" ) )
 			{
 				flags |= MovieInfo_t::FMOVIE_WAV;
 			}
@@ -1813,7 +1746,9 @@ CON_COMMAND_F( startmovie, "Start recording movie frames.", FCVAR_DONTRECORD )
 //-----------------------------------------------------------------------------
 // Ends frame dumping
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( endmovie, "Stop recording movie frames.", FCVAR_DONTRECORD )
+static void endmovie( const CCommand &args );
+static ConCommand endmovie_command( "endmovie", endmovie, "Stop recording movie frames.", FCVAR_DONTRECORD );
+static void endmovie( const CCommand &args )
 {
 	if( !CL_IsRecordingMovie() )
 	{
@@ -1834,7 +1769,9 @@ CL_Rcon_f
   an unconnected command.
 =====================
 */
-CON_COMMAND_F( rcon, "Issue an rcon command.", FCVAR_DONTRECORD )
+static void rcon( const CCommand &args );
+static ConCommand rcon_command( "rcon", rcon, "Issue an rcon command.", FCVAR_DONTRECORD );
+static void rcon( const CCommand &args )
 {
 	char	message[1024];   // Command message
 	char    szParam[ 256 ];
@@ -1844,18 +1781,18 @@ CON_COMMAND_F( rcon, "Issue an rcon command.", FCVAR_DONTRECORD )
 		const char *pParam = args[i];
 		// put quotes around empty arguments so we can pass things like this: rcon sv_password ""
 		// otherwise the "" on the end is lost
-		if ( strchr( pParam, ' ' ) || ( Q_strlen( pParam ) == 0 ) )
+		if ( std::strchr( pParam, ' ' ) || ( V_strlen( pParam ) == 0 ) )
 		{
-			Q_snprintf( szParam, sizeof( szParam ), "\"%s\"", pParam );
-			Q_strncat( message, szParam, sizeof( message ), COPY_ALL_CHARACTERS );
+			V_snprintf( szParam, sizeof( szParam ), "\"%s\"", pParam );
+			V_strncat( message, szParam, sizeof( message ), COPY_ALL_CHARACTERS );
 		}
 		else
 		{
-			Q_strncat( message, pParam, sizeof( message ), COPY_ALL_CHARACTERS );
+			V_strncat( message, pParam, sizeof( message ), COPY_ALL_CHARACTERS );
 		}
 		if ( i != ( args.ArgC() - 1 ) )
 		{
-			Q_strncat (message, " ", sizeof( message ), COPY_ALL_CHARACTERS);
+			V_strncat (message, " ", sizeof( message ), COPY_ALL_CHARACTERS);
 		}
 	}
 
@@ -1863,7 +1800,9 @@ CON_COMMAND_F( rcon, "Issue an rcon command.", FCVAR_DONTRECORD )
 }
 
 
-CON_COMMAND_F( box, "Draw a debug box.", FCVAR_CHEAT )
+static void box( const CCommand &args );
+static ConCommand box_command( "box", box, "Draw a debug box.", FCVAR_CHEAT );
+static void box( const CCommand &args )
 {
 	if( args.ArgC() != 7 )
 	{
@@ -1874,7 +1813,7 @@ CON_COMMAND_F( box, "Draw a debug box.", FCVAR_CHEAT )
 	Vector mins, maxs;
 	for (int i = 0; i < 3; ++i)
 	{
-		mins[i] = atof(args[i + 1]); 
+		mins[i] = std::atof(args[i + 1]); 
 		maxs[i] = atof(args[i + 4]); 
 	}
 	CDebugOverlay::AddBoxOverlay( vec3_origin, mins, maxs, vec3_angle, 255, 0, 0, 0, 100 );
@@ -1887,7 +1826,9 @@ CL_View_f
 Debugging changes the view entity to the specified index
 ===============
 */
-CON_COMMAND_F( cl_view, "Set the view entity index.", FCVAR_CHEAT )
+static void cl_view( const CCommand &args );
+static ConCommand cl_view_command( "cl_view", cl_view, "Set the view entity index.", FCVAR_CHEAT );
+static void cl_view( const CCommand &args )
 {
 	int nNewView;
 
@@ -1901,7 +1842,7 @@ CON_COMMAND_F( cl_view, "Set the view entity index.", FCVAR_CHEAT )
 	if ( GetBaseLocalClient().m_nMaxClients > 1 )
 		return;
 
-	nNewView = atoi( args[1] );
+	nNewView = std::atoi( args[1] );
 	if (!nNewView)
 		return;
 
@@ -1977,7 +1918,7 @@ dlight_t *CL_AllocDlight (int key)
 	int i = CL_AllocLightFromArray( cl_dlights, MAX_DLIGHTS, key );
 	dlight_t *dl = &cl_dlights[i];
 	R_MarkDLightNotVisible( i );
-	memset (dl, 0, sizeof(*dl));
+	std::memset (dl, 0, sizeof(*dl));
 	dl->key = key;
 	r_dlightchanged |= (1 << i);
 	r_dlightactive |= (1 << i);
@@ -1996,7 +1937,7 @@ dlight_t *CL_AllocElight (int key)
 {
 	int i = CL_AllocLightFromArray( cl_elights, MAX_ELIGHTS, key );
 	dlight_t *el = &cl_elights[i];
-	memset (el, 0, sizeof(*el));
+	std::memset (el, 0, sizeof(*el));
 	el->key = key;
 	g_bActiveElights = true;
 	return el;
@@ -2118,9 +2059,6 @@ void CL_ExtraMouseUpdate( float frametime )
 
 		// Don't create usercmds here during playback, they were encoded into the packet already
 		if ( demoplayer->IsPlayingBack() && !GetLocalClient().ishltv
-#	ifdef REPLAY_ENABLED
-			&& !GetLocalClient().isreplay
-#	endif
 			)
 			continue;
 
@@ -2207,9 +2145,6 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 	if ( demoplayer->IsPlayingBack() )
 	{
 		if ( cl.ishltv 
-#	ifdef REPLAY_ENABLED
-			|| cl.isreplay 
-#	endif // ifdef REPLAY_ENABLED
 			)
 		{
 			// still do it when playing back a HLTV/replay demo
@@ -2232,7 +2167,7 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 
 	if ( cl.IsActive() )
 	{
-		VPROF( "CL_Move" );
+		CVProfScope _( "CL_Move", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		int nextcommandnr = cl.lastoutgoingcommand + cl.chokedcommands + 1;
 
@@ -2304,7 +2239,7 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 		if ( bAllowTimeout )
 		{
 			float flTimeOut = cl.m_NetChannel->GetTimeoutSeconds();
-			Assert( flTimeOut != -1.0f );
+			contract_assert( flTimeOut != -1.0f );
 			float flRemainingTime = std::max( flTimeOut - cl.m_NetChannel->GetTimeSinceLastReceived(), 0.0f );
 
 			// write time until connection is dropped to a convar
@@ -2411,7 +2346,9 @@ void CL_HudMessage( const char *pMessage )
 	}
 }
 
-CON_COMMAND_F( cl_showents, "Dump entity list to console.", FCVAR_CHEAT )
+static void cl_showents( const CCommand &args );
+static ConCommand cl_showents_command( "cl_showents", cl_showents, "Dump entity list to console.", FCVAR_CHEAT );
+static void cl_showents( const CCommand &args )
 {
 	for ( int i = 0; i < entitylist->GetMaxEntities(); i++ )
 	{
@@ -2421,12 +2358,12 @@ CON_COMMAND_F( cl_showents, "Dump entity list to console.", FCVAR_CHEAT )
 		if((pEnt = entitylist->GetClientNetworkable(i)) != nullptr)
 		{
 			entStr[0] = 0;
-			Q_snprintf(classStr, sizeof( classStr ), "'%s'", pEnt->GetClientClass()->m_pNetworkName);
+			V_snprintf(classStr, sizeof( classStr ), "'%s'", pEnt->GetClientClass()->m_pNetworkName);
 		}
 		else
 		{
-			Q_snprintf(entStr, sizeof( entStr ), "(missing), ");
-			Q_snprintf(classStr, sizeof( classStr ), "(missing)");
+			V_snprintf(entStr, sizeof( entStr ), "(missing), ");
+			V_snprintf(classStr, sizeof( classStr ), "(missing)");
 		}
 
 		if ( pEnt )
@@ -2455,7 +2392,7 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 	{
 		// presence of args identifies an end-of-game situation
 
-		if ( !Q_stricmp( args[1], "force" ) )
+		if ( !V_stricmp( args[1], "force" ) )
 		{
 			// Adrian: Have to do this so the menu shows up if we ever call this while in a level.
 			Host_Disconnect( true );
@@ -2463,7 +2400,7 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 			return false;
 		}
 
-		if ( !Q_stricmp( args[1], "playendgamevid" ) )
+		if ( !V_stricmp( args[1], "playendgamevid" ) )
 		{
 			// Bail back to the menu and play the end game video.
 			CommandLine()->AppendParm( "-endgamevid", nullptr ); 
@@ -2472,7 +2409,7 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 			return false;
 		}
 
-		if ( !Q_stricmp( args[1], "playrecapvid" ) )
+		if ( !V_stricmp( args[1], "playrecapvid" ) )
 		{
 			// Bail back to the menu and play the recap video
 			CommandLine()->AppendParm( "-recapvid", nullptr ); 
@@ -2495,7 +2432,7 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 	return true;
 }
 
-#define DEFAULT_BACKGROUND_NAME	"background01"
+inline constexpr const char *DEFAULT_BACKGROUND_NAME = "background01";
 
 int CL_GetBackgroundLevelIndex( int nNumChapters )
 {
@@ -2515,7 +2452,7 @@ int CL_GetBackgroundLevelIndex( int nNumChapters )
 //-----------------------------------------------------------------------------
 void CL_GetBackgroundLevelName( char *pszBackgroundName, int bufSize, bool bMapName )
 {
-	Q_strncpy( pszBackgroundName, DEFAULT_BACKGROUND_NAME, bufSize );
+	V_strncpy( pszBackgroundName, DEFAULT_BACKGROUND_NAME, bufSize );
 
 	KeyValues *pChapterFile = new KeyValues( pszBackgroundName );
 
@@ -2556,7 +2493,7 @@ void CL_GetBackgroundLevelName( char *pszBackgroundName, int bufSize, bool bMapN
 
 			if ( szChapterIndex )
 			{
-				int nChapter = atoi(szChapterIndex);
+				int nChapter = std::atoi(szChapterIndex);
 
 				if( nChapter > nNumChapters )
 					nNumChapters = nChapter;
@@ -2569,13 +2506,13 @@ void CL_GetBackgroundLevelName( char *pszBackgroundName, int bufSize, bool bMapN
 
 		// Find the chapter background with this index
 		char buf[4];
-		Q_snprintf( buf, sizeof(buf), "%d", nChapterToLoad );
+		V_snprintf( buf, sizeof(buf), "%d", nChapterToLoad );
 		KeyValues *pLoadChapter = pChapterRoot->FindKey(buf);
 
 		// Copy the background name
 		if ( pLoadChapter )
 		{
-			Q_strncpy( pszBackgroundName, pLoadChapter->GetString(), bufSize );
+			V_strncpy( pszBackgroundName, pLoadChapter->GetString(), bufSize );
 		}
 	}
 
@@ -2586,7 +2523,7 @@ void CL_GetBackgroundLevelName( char *pszBackgroundName, int bufSize, bool bMapN
 // A random number at startup (sequential for 360), drives the product
 // startup screen choice.
 //-----------------------------------------------------------------------------
-#define NUM_STARTUP_IMAGES	2
+constexpr auto NUM_STARTUP_IMAGES = 2;
 unsigned int CL_GetStartupIndex()
 {
 	static unsigned int nWhich = 0;
@@ -2632,7 +2569,7 @@ void CL_CheckToDisplayStartupMenus( const CCommand &args )
 		CL_GetBackgroundLevelName( szBackgroundName, sizeof(szBackgroundName), true );
 
 		char cmd[256];
-		Q_snprintf( cmd, sizeof(cmd), "map_background %s\n", szBackgroundName );
+		V_snprintf( cmd, sizeof(cmd), "map_background %s\n", szBackgroundName );
 		Cbuf_AddText( Cbuf_GetCurrentPlayer(), cmd );
 	}
 }
@@ -2649,7 +2586,7 @@ void CL_DemoTransitionFromTrainstation()
 	sv_unlockedchapters.SetValue(6); // unlock ravenholm
 	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "sv_cheats 1; fadeout 1.5; sv_cheats 0;");
 	Cbuf_Execute();
-	s_fDemoRevealGameUITime = Sys_FloatTime() + 1.5;
+	s_fDemoRevealGameUITime = Plat_FloatTime() + 1.5;
 	s_bIsRavenHolmn = false;
 }
 
@@ -2657,7 +2594,7 @@ void CL_DemoTransitionFromRavenholm()
 {
 	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "sv_cheats 1; fadeout 2; sv_cheats 0;");
 	Cbuf_Execute();
-	s_fDemoRevealGameUITime = Sys_FloatTime() + 1.9;
+	s_fDemoRevealGameUITime = Plat_FloatTime() + 1.9;
 	s_bIsRavenHolmn = true;
 }
 
@@ -2665,7 +2602,7 @@ void CL_DemoTransitionFromTestChmb()
 {
 	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "sv_cheats 1; fadeout 2; sv_cheats 0;");
 	Cbuf_Execute();
-	s_fDemoRevealGameUITime = Sys_FloatTime() + 1.9;	
+	s_fDemoRevealGameUITime = Plat_FloatTime() + 1.9;	
 }
 
 
@@ -2678,7 +2615,7 @@ void CL_DemoCheckGameUIRevealTime( )
 {
 	if ( s_fDemoRevealGameUITime > 0 )
 	{
-		if ( s_fDemoRevealGameUITime < Sys_FloatTime() )
+		if ( s_fDemoRevealGameUITime < Plat_FloatTime() )
 		{
 			s_fDemoRevealGameUITime = -1;
 
@@ -2688,7 +2625,7 @@ void CL_DemoCheckGameUIRevealTime( )
 			CCommand args;
 			CL_CheckToDisplayStartupMenus( args );
 
-			s_fDemoPlayMusicTime = Sys_FloatTime() + 1.0;
+			s_fDemoPlayMusicTime = Plat_FloatTime() + 1.0;
 		}
 	}
 
@@ -2696,7 +2633,7 @@ void CL_DemoCheckGameUIRevealTime( )
 	{
 		V_CheckGamma();
 		V_RenderUIOnly();
-		if ( s_fDemoPlayMusicTime < Sys_FloatTime() )
+		if ( s_fDemoPlayMusicTime < Plat_FloatTime() )
 		{
 			s_fDemoPlayMusicTime = -1;
 			EngineUI()->ActivateGameUI();
@@ -2729,7 +2666,7 @@ void CL_SetPagedPoolInfo()
 {
 }
 
-void CL_SetSteamCrashComment()
+void CL_SetCrashComment()
 {
 
 	char map[ 80 ];
@@ -2762,13 +2699,13 @@ void CL_SetSteamCrashComment()
 
 	// Make a string out of the high part and low parts of driver version
 	char szDXDriverVersion[ 64 ];
-	Q_snprintf( szDXDriverVersion, sizeof( szDXDriverVersion ), "%ld.%ld.%ld.%ld", 
+	V_snprintf( szDXDriverVersion, sizeof( szDXDriverVersion ), "%ld.%ld.%ld.%ld", 
 		( long )( info.m_nDriverVersionHigh>>16 ), 
 		( long )( info.m_nDriverVersionHigh & 0xffff ), 
 		( long )( info.m_nDriverVersionLow>>16 ), 
 		( long )( info.m_nDriverVersionLow & 0xffff ) );
 
-	Q_snprintf( driverinfo, sizeof(driverinfo), "Driver Name:  %s\nDriver Version: %s\nVendorId / DeviceId:  0x%x / 0x%x\nSubSystem / Rev:  0x%x / 0x%x\nDXLevel:  %s\nVid:  %i x %i",
+	V_snprintf( driverinfo, sizeof(driverinfo), "Driver Name:  %s\nDriver Version: %s\nVendorId / DeviceId:  0x%x / 0x%x\nSubSystem / Rev:  0x%x / 0x%x\nDXLevel:  %s\nVid:  %i x %i",
 		info.m_pDriverName,
 		szDXDriverVersion,
 		info.m_VendorID,
@@ -2792,7 +2729,7 @@ void CL_SetSteamCrashComment()
 	ConVarRef mat_queue_mode( "mat_queue_mode" );
 	ConVarRef mat_triplebuffered( "mat_triplebuffered" );
 
-	Q_snprintf( videoinfo, sizeof(videoinfo), "picmip: %i\nforceaniso: %i\nantialias: %i (%i)\nvsync: 1\nrootlod: %i\nshadowrendertotexture: %i\nr_flashlightdepthtexture %i\n"\
+	V_snprintf( videoinfo, sizeof(videoinfo), "picmip: %i\nforceaniso: %i\nantialias: %i (%i)\nvsync: 1\nrootlod: %i\nshadowrendertotexture: %i\nr_flashlightdepthtexture %i\n"\
 				"waterforceexpensive: %i\nwaterforcereflectentities: %i\nmat_motion_blur_enabled: %i\nmat_queue_mode %i\nmat_triplebuffered: %i\ncsm_quality_level: %i",
 				mat_picmip.GetInt(), mat_forceaniso.GetInt(), mat_antialias.GetInt(), mat_aaquality.GetInt(), r_rootlod.GetInt(), r_shadowrendertotexture.GetInt(),
 				r_flashlightdepthtexture.GetInt(), r_waterforceexpensive.GetInt(), r_waterforcereflectentities.GetInt(), mat_motion_blur_enabled.GetInt(), mat_queue_mode.GetInt(), 
@@ -2803,7 +2740,7 @@ void CL_SetSteamCrashComment()
 		latency = (int)( 1000.0f * GetBaseLocalClient().m_NetChannel->GetAvgLatency( FLOW_OUTGOING ) );
 	}
 
-	Q_snprintf( misc, sizeof( misc ), "skill:%i rate %i update %i cmd %i latency %i msec", 
+	V_snprintf( misc, sizeof( misc ), "skill:%i rate %i update %i cmd %i latency %i msec", 
 		skill.GetInt(),
 		cl_rate->GetInt(),
 		(int)cl_updaterate->GetFloat(),
@@ -2823,7 +2760,7 @@ void CL_SetSteamCrashComment()
 	struct tm newtime;
 	Plat_GetLocalTime( &newtime );
 	if( newtime.tm_hour > 12 )        /* Set up extension. */
-		Q_strncpy( am_pm, "PM", sizeof( am_pm ) );
+		V_strncpy( am_pm, "PM", sizeof( am_pm ) );
 	if( newtime.tm_hour > 12 )        /* Convert from 24-hour */
 		newtime.tm_hour -= 12;    /*   to 12-hour clock.  */
 	if( newtime.tm_hour == 0 )        /*Set hour to 12 if midnight. */
@@ -2832,13 +2769,13 @@ void CL_SetSteamCrashComment()
 	char tString[ 128 ];
 	Plat_GetTimeString( &newtime, tString, sizeof( tString ) );
 
-	int tLen = Q_strlen( tString );
+	int tLen = V_strlen( tString );
 	if ( tLen > 0 && tString[ tLen - 1 ] == '\n' )
 	{
 		tString[ tLen - 1 ] = 0;
 	}
 
-	Q_snprintf( g_minidumpinfo, sizeof(g_minidumpinfo),
+	V_snprintf( g_minidumpinfo, sizeof(g_minidumpinfo),
 			"Map: %s\n"\
 			"Game: %s\n"\
 			"Build: %i\n"\
@@ -2862,45 +2799,12 @@ void CL_SetSteamCrashComment()
 //
 static ConCommand startupmenu( "startupmenu", &CL_CheckToDisplayStartupMenus, "Opens initial menu screen and loads the background bsp, but only if no other level is being loaded, and we're not in developer mode." );
 
-ConVar cl_language( "cl_language", "english", FCVAR_HIDDEN, "Language (from Steam API)" );
+ConVar cl_language( "cl_language", "english", FCVAR_HIDDEN, "Language" );
 void CL_InitLanguageCvar()
 {
 	// !! bug do i need to do something linux-wise here.
-	char language[64];
-
-	// Fallback to English
-	V_strncpy( language, "english", sizeof( language ) );
-	
-	{
-	}
-	cl_language.SetValue( language );
+	cl_language.SetValue( "english" );
 }
-
-void CL_ChangeCloudSettingsCvar( IConVar *var, const char *pOldValue, float flOldValue )
-{
-	// !! bug do i need to do something linux-wise here.
-	if ( Steam3Client().SteamUtils() )
-	{
-	}
-}
-
-ConVar cl_cloud_settings( "cl_cloud_settings", "-1", FCVAR_HIDDEN, "Cloud enabled from (from HKCU\\Software\\Valve\\Steam\\Apps\\appid\\Cloud)", CL_ChangeCloudSettingsCvar );
-void CL_InitCloudSettingsCvar()
-{
-	if ( Steam3Client().SteamUtils() )
-	{
-		int iCloudSettings = -1;
-		iCloudSettings = STEAMREMOTESTORAGE_CLOUD_ALL;
-		
-		cl_cloud_settings.SetValue( iCloudSettings );
-	}
-	else
-	{
-		// If not on PC or steam not available, set to 0 to make sure no replication occurs or is attempted
-		cl_cloud_settings.SetValue( 0 );
-	}
-}
-
 
 /*
 =================
@@ -2916,11 +2820,7 @@ void CL_Init( void )
 	}
 
 	CL_InitLanguageCvar();
-	CL_InitCloudSettingsCvar();
 
-#if defined( REPLAY_ENABLED )
-	g_pClientReplayHistoryManager->Init();
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2928,12 +2828,11 @@ void CL_Init( void )
 //-----------------------------------------------------------------------------
 void CL_Shutdown( void )
 {
-#if defined( REPLAY_ENABLED )
-	g_pClientReplayHistoryManager->Shutdown();
-#endif
 }
 
-CON_COMMAND_F( cl_fullupdate, "Forces the server to send a full update packet", FCVAR_CHEAT )
+static void cl_fullupdate( const CCommand &args );
+static ConCommand cl_fullupdate_command( "cl_fullupdate", cl_fullupdate, "Forces the server to send a full update packet", FCVAR_CHEAT );
+static void cl_fullupdate( const CCommand &args )
 {
 	GetLocalClient().ForceFullUpdate( "cl_fullupdate command" );
 }
@@ -2941,7 +2840,9 @@ CON_COMMAND_F( cl_fullupdate, "Forces the server to send a full update packet", 
 
 #ifdef _DEBUG
 
-CON_COMMAND( cl_download, "Downloads a file from server." )
+static void cl_download( const CCommand &args );
+static ConCommand cl_download_command( "cl_download", cl_download, "Downloads a file from server." );
+static void cl_download( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 		return;
@@ -2955,7 +2856,9 @@ CON_COMMAND( cl_download, "Downloads a file from server." )
 #endif // _DEBUG
 
 
-CON_COMMAND_F( setinfo, "Adds a new user info value", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void setinfo( const CCommand &args );
+static ConCommand setinfo_command( "setinfo", setinfo, "Adds a new user info value", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void setinfo( const CCommand &args )
 {
 	if ( args.ArgC() != 3 )
 	{
@@ -3015,8 +2918,8 @@ CON_COMMAND_F( setinfo, "Adds a new user info value", FCVAR_CLIENTCMD_CAN_EXECUT
 	else
 	{
 		// cvar not found, create it now
-		char *pszString = new char[Q_strlen( name ) + 1];
-		Q_strcpy( pszString, name );
+		char *pszString = new char[V_strlen( name ) + 1];
+		V_strcpy( pszString, name );
 
 		pCommand = new ConVar( pszString, "", FCVAR_USERINFO, "Custom user info value" );
 	}
@@ -3034,7 +2937,9 @@ CON_COMMAND_F( setinfo, "Adds a new user info value", FCVAR_CLIENTCMD_CAN_EXECUT
 }
 
 
-CON_COMMAND( cl_precacheinfo, "Show precache info (client)." )
+static void cl_precacheinfo( const CCommand &args );
+static ConCommand cl_precacheinfo_command( "cl_precacheinfo", cl_precacheinfo, "Show precache info (client)." );
+static void cl_precacheinfo( const CCommand &args )
 {
 	if ( args.ArgC() == 2 )
 	{
@@ -3050,7 +2955,9 @@ CON_COMMAND( cl_precacheinfo, "Show precache info (client)." )
 }
 
 
-CON_COMMAND_F( con_min_severity, "Minimum severity level for messages sent to any logging channel: LS_MESSAGE=0, LS_WARNING=1, LS_ASSERT=2, LS_ERROR=3.", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void con_min_severity( const CCommand &args );
+static ConCommand con_min_severity_command( "con_min_severity", con_min_severity, "Minimum severity level for messages sent to any logging channel: LS_MESSAGE=0, LS_WARNING=1, LS_ASSERT=2, LS_ERROR=3.", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void con_min_severity( const CCommand &args )
 {
 	if ( args.ArgC() > 1 )
 	{
@@ -3081,7 +2988,7 @@ void Callback_ModelChanged( void *object, INetworkStringTable *stringTable, int 
 	}
 	else
 	{
-		Assert( 0 ) ; // Callback_*Changed called with wrong stringtable
+		contract_assert( 0 ) ; // Callback_*Changed called with wrong stringtable
 	}
 }
 
@@ -3105,7 +3012,7 @@ void Callback_GenericChanged( void *object, INetworkStringTable *stringTable, in
 	}
 	else
 	{
-		Assert( 0 ) ; // Callback_*Changed called with wrong stringtable
+		contract_assert( 0 ) ; // Callback_*Changed called with wrong stringtable
 	}
 }
 
@@ -3129,7 +3036,7 @@ void Callback_SoundChanged( void *object, INetworkStringTable *stringTable, int 
 	}
 	else
 	{
-		Assert( 0 ) ; // Callback_*Changed called with wrong stringtable
+		contract_assert( 0 ) ; // Callback_*Changed called with wrong stringtable
 	}
 }
 
@@ -3141,20 +3048,20 @@ void Callback_DecalChanged( void *object, INetworkStringTable *stringTable, int 
 	}
 	else
 	{
-		Assert( 0 ) ; // Callback_*Changed called with wrong stringtable
+		contract_assert( 0 ) ; // Callback_*Changed called with wrong stringtable
 	}
 }
 
 
 void Callback_InstanceBaselineChanged( void *object, INetworkStringTable *stringTable, int stringNumber, const char *newString, const void *newData )
 {
-	Assert( stringTable == GetBaseLocalClient().m_pInstanceBaselineTable );
+	contract_assert( stringTable == GetBaseLocalClient().m_pInstanceBaselineTable );
 	GetLocalClient().UpdateInstanceBaseline( stringNumber );
 }
 
 void Callback_UserInfoChanged( void *object, INetworkStringTable *stringTable, int stringNumber, const char *newString, const void *newData )
 {
-	Assert( stringTable == GetBaseLocalClient().m_pUserInfoTable );
+	contract_assert( stringTable == GetBaseLocalClient().m_pUserInfoTable );
 
 	// stringnumber == player slot
 
@@ -3215,7 +3122,7 @@ void CL_HookClientStringTables()
 // Installs the all, and invokes cb for all existing items
 void CL_InstallAndInvokeClientStringTableCallbacks()
 {
-	VPROF_BUDGET( "CL_InstallAndInvokeClientStringTableCallbacks", VPROF_BUDGETGROUP_OTHER_NETWORKING );
+	CVProfScope _( "CL_InstallAndInvokeClientStringTableCallbacks", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
 	// install hooks
 	int numTables = GetBaseLocalClient().m_StringTableContainer->GetNumTables();

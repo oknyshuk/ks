@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_NAVGOALTYPE_H
-#define AI_NAVGOALTYPE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // =======================================
 //  Movement goals 
@@ -28,5 +21,3 @@ enum GoalType_t
 	
 	GOALTYPE_INVALID
 };
-
-#endif // AI_NAVGOALTYPE_H

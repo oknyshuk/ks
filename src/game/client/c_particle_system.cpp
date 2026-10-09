@@ -1,18 +1,23 @@
-//====== Copyright (c) Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//====================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "particles/particles.h"
 #include "c_te_effect_dispatch.h"
 #include "particles_new.h"
-#include "networkstringtable_clientdll.h"
-#include "tier0/vprof.h"
-#include "tier1/fmtstr.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: An entity that spawns and controls a particle system
@@ -172,7 +177,7 @@ void C_ParticleSystem::PostDataUpdate( DataUpdateType_t updateType )
 		if( m_bActive && ParticleProp()->IsValidEffect( m_pEffect ) )
 		{
 			//server controlled control points (variables in particle effects instead of literal follow points)
-			for( int i = 0; i != ARRAYSIZE( m_iServerControlPointAssignments ); ++i )
+			for( int i = 0; i != std::size( m_iServerControlPointAssignments ); ++i )
 			{
 				if( m_iServerControlPointAssignments[i] != 255 )
 				{
@@ -210,9 +215,7 @@ void C_ParticleSystem::ClientThink( void )
 						ParticleProp()->AddControlPoint( pEffect, i + 1, pOnEntity, PATTACH_ABSORIGIN_FOLLOW );
 					}
 
-					AssertMsg2( m_iControlPointParents[i] >= 0 && m_iControlPointParents[i] <= kMAXCONTROLPOINTS ,
-						"Particle system specified bogus control point parent (%d) for point %d.",
-						m_iControlPointParents[i], i );
+					contract_assert( ( m_iControlPointParents[i] >= 0 && m_iControlPointParents[i] <= kMAXCONTROLPOINTS ) && "Particle system specified bogus control point parent (%d) for point %d." );
 
 					if (m_iControlPointParents[i] != 0)
 					{
@@ -221,7 +224,7 @@ void C_ParticleSystem::ClientThink( void )
 				}
 
 				//server controlled control points (variables in particle effects instead of literal follow points)
-				for( int i = 0; i != ARRAYSIZE( m_iServerControlPointAssignments ); ++i )
+				for( int i = 0; i != std::size( m_iServerControlPointAssignments ); ++i )
 				{
 					if( m_iServerControlPointAssignments[i] != 255 )
 					{
@@ -234,7 +237,7 @@ void C_ParticleSystem::ClientThink( void )
 				}
 
 				// Attach our particle snapshot if we have one
-				Assert( m_pSnapshot || !m_szSnapshotFileName[0] ); // m_szSnapshotFileName shouldn't change after the create update
+				contract_assert( m_pSnapshot || !m_szSnapshotFileName[0] ); // m_szSnapshotFileName shouldn't change after the create update
 				if ( m_pSnapshot )
 				{
 					pEffect->SetControlPointSnapshot( 0, m_pSnapshot );
@@ -250,7 +253,7 @@ void C_ParticleSystem::ClientThink( void )
 				float flTimeDelta = gpGlobals->curtime - m_flStartTime;
 				if ( flTimeDelta > 0.01f )
 				{
-					VPROF_BUDGET( "C_ParticleSystem::ClientThink SkipToTime", "Particle Simulation" );
+					CVProfScope _( "C_ParticleSystem::ClientThink SkipToTime", 0, "Particle Simulation", false, BUDGETFLAG_OTHER );
 					pEffect->SkipToTime( flTimeDelta );
 				}
 			}

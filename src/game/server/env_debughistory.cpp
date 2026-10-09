@@ -1,17 +1,48 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
 #include "env_debughistory.h"
-#include "tier0/vprof.h"
 
 // Number of characters worth of debug to use per history category
-#define DEBUG_HISTORY_VERSION			6
-#define DEBUG_HISTORY_FIRST_VERSIONED	5
-#define MAX_DEBUG_HISTORY_LINE_LENGTH	256
-#define MAX_DEBUG_HISTORY_LENGTH		(1000 * MAX_DEBUG_HISTORY_LINE_LENGTH)
+constexpr auto DEBUG_HISTORY_VERSION = 6;
+constexpr auto DEBUG_HISTORY_FIRST_VERSIONED = 5;
+constexpr auto MAX_DEBUG_HISTORY_LINE_LENGTH = 256;
+constexpr auto MAX_DEBUG_HISTORY_LENGTH = (1000 * MAX_DEBUG_HISTORY_LINE_LENGTH);
 
 //-----------------------------------------------------------------------------
 // Purpose: Stores debug history in savegame files for debugging reference
@@ -78,13 +109,13 @@ void CDebugHistory::AddDebugHistoryLine( int iCategory, const char *szLine )
 		return;
 
 	const char *pszRemaining = szLine;
-	int iCharsToWrite = strlen( pszRemaining ) + 1;	// Add 1 so that we copy the null terminator
+	int iCharsToWrite = std::strlen( pszRemaining ) + 1;	// Add 1 so that we copy the null terminator
 
 	// Clip the line if it's too long. Wasteful doing it this way, but keeps code below nice & simple.
 	char szTmpBuffer[MAX_DEBUG_HISTORY_LINE_LENGTH];
 	if ( iCharsToWrite > MAX_DEBUG_HISTORY_LINE_LENGTH)
 	{
-		memcpy( szTmpBuffer, szLine, sizeof(szTmpBuffer) );
+		std::memcpy( szTmpBuffer, szLine, sizeof(szTmpBuffer) );
 		szTmpBuffer[MAX_DEBUG_HISTORY_LINE_LENGTH-1] = '\0';
 		pszRemaining = szTmpBuffer;
 		iCharsToWrite = MAX_DEBUG_HISTORY_LINE_LENGTH;
@@ -96,7 +127,7 @@ void CDebugHistory::AddDebugHistoryLine( int iCategory, const char *szLine )
 
 		// Write into the buffer
 		int iWrote = std::min( iCharsToWrite, iCharsLeftBeforeLoop );
-		memcpy( m_DebugLineEnd[iCategory], pszRemaining, iWrote );	
+		std::memcpy( m_DebugLineEnd[iCategory], pszRemaining, iWrote );	
 		m_DebugLineEnd[iCategory] += iWrote;
 		pszRemaining += iWrote;
 
@@ -192,7 +223,7 @@ void CDebugHistory::ClearHistories( void )
 {
 	for ( int i = 0; i < MAX_HISTORY_CATEGORIES; i++ )
 	{
-		memset( m_DebugLines[i], 0, sizeof(m_DebugLines[i]) );
+		std::memset( m_DebugLines[i], 0, sizeof(m_DebugLines[i]) );
 		m_DebugLineEnd[i] = m_DebugLines[i];
 	}
 }
@@ -227,7 +258,7 @@ CDebugHistory *GetDebugHistory()
 		}
 	}
 
-	Assert( s_DebugHistory );
+	contract_assert( s_DebugHistory );
 	return s_DebugHistory;
 }
 
@@ -271,7 +302,7 @@ void CC_DebugHistory_AddLine( const CCommand &args )
 		return;
 	}
 
-	int iCategory = atoi(args[ 1 ]);
+	int iCategory = std::atoi(args[ 1 ]);
 	const char *pszLine = args[ 2 ];
 	AddDebugHistoryLine( iCategory, pszLine );
 }
@@ -293,7 +324,7 @@ void CC_DebugHistory_Dump( const CCommand &args )
 
 	if ( GetDebugHistory() )
 	{
-		int iCategory = atoi(args[ 1 ]);
+		int iCategory = std::atoi(args[ 1 ]);
 		GetDebugHistory()->DumpDebugHistory( iCategory );
 	}
 }
@@ -307,4 +338,3 @@ static ConCommand dbghist_dump("dbghist_dump", CC_DebugHistory_Dump,
 							   "     3: Alyx Blind\n"
 							   "     4: Log of damage done to player",
 							   FCVAR_NONE );
-

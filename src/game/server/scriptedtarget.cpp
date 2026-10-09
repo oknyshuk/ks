@@ -1,11 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "ai_default.h"
@@ -254,11 +278,11 @@ int CScriptedTarget::DrawDebugTextOverlays(void)
 		char tempstr[512];
 		if (m_iDisabled) 
 		{
-			Q_strncpy(tempstr,"State: Off",sizeof(tempstr));
+			V_strncpy(tempstr,"State: Off",sizeof(tempstr));
 		}
 		else
 		{
-			Q_strncpy(tempstr,"State: On",sizeof(tempstr));
+			V_strncpy(tempstr,"State: On",sizeof(tempstr));
 		}
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
@@ -269,11 +293,11 @@ int CScriptedTarget::DrawDebugTextOverlays(void)
 		CBaseEntity *pTarget = GetNextTarget();
 		if (pTarget) 
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Next: %s",pTarget->GetDebugName() );
+			V_snprintf(tempstr,sizeof(tempstr),"Next: %s",pTarget->GetDebugName() );
 		}
 		else
 		{
-			Q_strncpy(tempstr,"Next: -NONE-",sizeof(tempstr));
+			V_strncpy(tempstr,"Next: -NONE-",sizeof(tempstr));
 		}
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
@@ -283,15 +307,15 @@ int CScriptedTarget::DrawDebugTextOverlays(void)
 		// --------------
 		if (GetTarget()!=nullptr) 
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"User: %s",GetTarget()->GetDebugName() );
+			V_snprintf(tempstr,sizeof(tempstr),"User: %s",GetTarget()->GetDebugName() );
 		}
 		else if (m_iDisabled)
 		{
-			Q_strncpy(tempstr,"User: -NONE-",sizeof(tempstr));
+			V_strncpy(tempstr,"User: -NONE-",sizeof(tempstr));
 		}
 		else 
 		{
-			Q_strncpy(tempstr,"User: -LOOKING-",sizeof(tempstr));
+			V_strncpy(tempstr,"User: -LOOKING-",sizeof(tempstr));
 		}
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
@@ -334,4 +358,3 @@ void CScriptedTarget::DrawDebugGeometryOverlays(void)
 	}
 	CBaseEntity::DrawDebugGeometryOverlays();
 }
-

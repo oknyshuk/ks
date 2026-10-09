@@ -1,18 +1,15 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import ks.tier1;
 #include "keyvaluescompiler.h"
 #include "filesystem.h"
-#include "tier1/keyvalues.h"
 #include "tier2/tier2.h"
-#include <iterator>
-#include <map>
+import std;
 
 bool CRunTimeKeyValuesStringTable::ReadStringTable( int numStrings, ks::byte_reader &buf )
 {
-	Assert( std::ssize( m_Strings ) == 0 );
+	contract_assert( std::ssize( m_Strings ) == 0 );
 
 	if ( numStrings < 0 )
 	{
@@ -208,9 +205,9 @@ int CCompiledKeyValuesReader::InvalidIndex() const
 	return -1;
 }
 
-void CCompiledKeyValuesReader::GetFileName( int index, char *buf, size_t bufsize )
+void CCompiledKeyValuesReader::GetFileName( int index, char *buf, std::size_t bufsize )
 {
-	Assert( buf );
+	contract_assert( buf );
 	buf[ 0 ] = 0;
 	FileNameHandle_t handle = std::next( m_Dict.begin(), index )->hFile;
 	g_pFullFileSystem->String( handle, buf, bufsize );
@@ -323,7 +320,7 @@ bool CCompiledKeyValuesReader::CreateInPlaceFromData( KeyValues& head, const Fil
 			}
 
 			KeyValues *parent = idx->second.kv;
-			Assert( parent );
+			contract_assert( parent );
 
 			KeyValues *sub = new KeyValues( m_StringTable.Lookup( info.key ) );
 
@@ -373,8 +370,8 @@ bool CCompiledKeyValuesReader::CreateInPlaceFromData( KeyValues& head, const Fil
 bool CCompiledKeyValuesReader::InstanceInPlace( KeyValues& head, char const *kvfilename )
 {
 	char sz[ 512 ];
-	Q_strncpy( sz, kvfilename, sizeof( sz ) );
-	Q_FixSlashes( sz );
+	V_strncpy( sz, kvfilename, sizeof( sz ) );
+	V_FixSlashes( sz );
 
 	FileInfo_t search;
 	search.hFile = g_pFullFileSystem->FindOrAddFileName( sz );
@@ -393,8 +390,8 @@ bool CCompiledKeyValuesReader::InstanceInPlace( KeyValues& head, char const *kvf
 KeyValues *CCompiledKeyValuesReader::Instance( char const *kvfilename )
 {
 	char sz[ 512 ];
-	Q_strncpy( sz, kvfilename, sizeof( sz ) );
-	Q_FixSlashes( sz );
+	V_strncpy( sz, kvfilename, sizeof( sz ) );
+	V_FixSlashes( sz );
 
 	FileInfo_t search;
 	search.hFile = g_pFullFileSystem->FindOrAddFileName( sz );
@@ -410,11 +407,11 @@ KeyValues *CCompiledKeyValuesReader::Instance( char const *kvfilename )
 	return CreateFromData( info );
 }
 
-bool CCompiledKeyValuesReader::LookupKeyValuesRootKeyName( char const *kvfilename, char *outbuf, size_t bufsize )
+bool CCompiledKeyValuesReader::LookupKeyValuesRootKeyName( char const *kvfilename, char *outbuf, std::size_t bufsize )
 {
 	char sz[ 512 ];
-	Q_strncpy( sz, kvfilename, sizeof( sz ) );
-	Q_FixSlashes( sz );
+	V_strncpy( sz, kvfilename, sizeof( sz ) );
+	V_FixSlashes( sz );
 
 	FileInfo_t search;
 	search.hFile = g_pFullFileSystem->FindOrAddFileName( sz );
@@ -427,6 +424,6 @@ bool CCompiledKeyValuesReader::LookupKeyValuesRootKeyName( char const *kvfilenam
 
 	const FileInfo_t& info = *idx;
 
-	Q_strncpy( outbuf, m_StringTable.Lookup( m_Data[ info.nFirstIndex ].key ), bufsize );
+	V_strncpy( outbuf, m_StringTable.Lookup( m_Data[ info.nFirstIndex ].key ), bufsize );
 	return true;
 }

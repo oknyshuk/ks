@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef LOCALNETWORKBACKDOOR_H
-#define LOCALNETWORKBACKDOOR_H
-
-#include <bitset>
+import std;
 #include "quakedef.h"
 #include "cl_localnetworkbackdoor.h"
 #include "icliententitylist.h"
@@ -20,10 +15,8 @@
 #include "cdll_engine_int.h"
 #include "datacache/imdlcache.h"
 #include "sys_dll.h"
-#include <vector>
 #include "edict.h"
 #include "server.h"
-
 
 class SendTable;
 
@@ -106,6 +99,3 @@ private:
 
 // The client will set this if it decides to use the fast path.
 extern CLocalNetworkBackdoor *g_pLocalNetworkBackdoor;
-
-
-#endif // LOCALNETWORKBACKDOOR_H

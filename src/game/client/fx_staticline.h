@@ -1,18 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.math;
 #include "clientsideeffects.h"
 
-#if !defined( FXSTATICLINE_H )
-#define FXSTATICLINE_H
-
-#include "mathlib/vector.h"
+import std;
 
 class IMaterial;
 
@@ -39,5 +32,3 @@ protected:
 	float			m_fLife;
 	float			m_fScale;
 };
-
-#endif

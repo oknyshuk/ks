@@ -1,11 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.core;
 #include "particledraw.h"
 #include "materialsystem/imesh.h"
 
@@ -74,7 +71,7 @@ bool Tracer_ComputeVerts( const Vector &start, const Vector &delta, float width,
 		return false;
 
 	// Resize the normal to be appropriate based on the width
-	VectorScale( normal, 0.5f * width / sqrt(sqLength), normal );
+	VectorScale( normal, 0.5f * width / std::sqrt(sqLength), normal );
 
 	VectorSubtract( clippedStart, normal, pVerts[0] );
 	VectorAdd( clippedStart, normal, pVerts[1] );

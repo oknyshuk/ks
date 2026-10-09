@@ -1,14 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: An application framework 
-//
-// $Revision: $
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef APPFRAMEWORK_H
-#define APPFRAMEWORK_H
-
+// Purpose: An application framework
 
 #include "appframework/IAppSystemGroup.h"
 #include "ilaunchabledll.h"
@@ -41,71 +35,16 @@ void AppShutdown( CAppSystemGroup *pAppSystemGroup );
 
 
 //-----------------------------------------------------------------------------
-// Macros to create singleton application objects for windowed + console apps
-//-----------------------------------------------------------------------------
-
-// This assumes you've used one of the 
-#define DEFINE_LAUNCHABLE_DLL_STEAM_APP() \
-	class CAppLaunchableDLL : public ILaunchableDLL \
-	{ \
-	public: \
-		virtual int	main( int argc, char **argv ) \
-		{ \
-			return AppMain( argc, argv, &__s_SteamApplicationObject ); \
-		} \
-	}; \
-	static CAppLaunchableDLL __g_AppLaunchableDLL; \
-	EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CAppLaunchableDLL, ILaunchableDLL, LAUNCHABLE_DLL_INTERFACE_VERSION, __g_AppLaunchableDLL ); 
-
-
-#define DEFINE_WINDOWED_APPLICATION_OBJECT_GLOBALVAR( _globalVarName ) \
-	int main( int argc, char **argv )										\
-	{																							\
-		extern int ValveLinuxWindowedMain( int argc, char **argv, CAppSystemGroup *pAppSystemGroup ); \
-		return ValveLinuxWindowedMain( argc, argv, &_globalVarName ); \
-	}
-
-#define DEFINE_CONSOLE_APPLICATION_OBJECT_GLOBALVAR( _globalVarName ) \
-	int main( int argc, char **argv )			\
-	{											\
-		return AppMain( argc, argv, &_globalVarName );	\
-	}
-
-#define DEFINE_BINLAUNCHABLE_APPLICATION_OBJECT_GLOBALVAR( _globalVarName )	\
-	class CApplicationDLL : public ILaunchableDLL								\
-	{																			\
-	public:																		\
-		virtual int main( int argc, char **argv )								\
-		{																		\
-			return AppMain( argc, argv, &_globalVarName );						\
-		}																		\
-	};																			\
-	EXPOSE_SINGLE_INTERFACE( CApplicationDLL, ILaunchableDLL, LAUNCHABLE_DLL_INTERFACE_VERSION )
-
-#define DEFINE_WINDOWED_APPLICATION_OBJECT( _className )	\
-	static _className __s_ApplicationObject;				\
-	DEFINE_WINDOWED_APPLICATION_OBJECT_GLOBALVAR( __s_ApplicationObject )
-
-#define DEFINE_CONSOLE_APPLICATION_OBJECT( _className )	\
-	static _className __s_ApplicationObject;			\
-	DEFINE_CONSOLE_APPLICATION_OBJECT_GLOBALVAR( __s_ApplicationObject )
-
-#define DEFINE_BINLAUNCHABLE_APPLICATION_OBJECT( _className )	\
-	static _className __s_ApplicationObject;					\
-	DEFINE_BINLAUNCHABLE_APPLICATION_OBJECT_GLOBALVAR( __s_ApplicationObject )
-
-
-//-----------------------------------------------------------------------------
-// This class is a helper class used for steam-based applications.
+// This class is a helper class used for file system-based applications.
 // It loads up the file system in preparation for using it to load other
-// required modules from steam.
+// required modules.
 //-----------------------------------------------------------------------------
-class CSteamApplication : public CAppSystemGroup
+class CFSApplication : public CAppSystemGroup
 {
 	typedef CAppSystemGroup BaseClass;
 
 public:
-	CSteamApplication( CSteamAppSystemGroup *pAppSystemGroup );
+	CFSApplication( CFSAppSystemGroup *pAppSystemGroup );
 
 	// Implementation of IAppSystemGroup
 	virtual bool Create( );
@@ -122,73 +61,26 @@ public:
 public:
 	// Here's a hook to override the filesystem DLL that it tries to load.
 	// By default, it uses FileSystem_GetFileSystemDLLName to figure this out.
-	virtual bool GetFileSystemDLLName( char *pOut, int nMaxBytes, bool &bIsSteam );
+	virtual bool GetFileSystemDLLName( char *pOut, int nMaxBytes );
 
 protected:
 	IFileSystem *m_pFileSystem;
-	CSteamAppSystemGroup *m_pChildAppSystemGroup;
-	bool m_bSteam;
+	CFSAppSystemGroup *m_pChildAppSystemGroup;
 };
 
 
-class CBinLaunchableSteamApp : public CSteamApplication
+class CBinLaunchableFSApp : public CFSApplication
 {
 public:
-	CBinLaunchableSteamApp( CSteamAppSystemGroup *pAppSystemGroup ) : CSteamApplication( pAppSystemGroup )
+	CBinLaunchableFSApp( CFSAppSystemGroup *pAppSystemGroup ) : CFSApplication( pAppSystemGroup )
 	{
 	}
 
-	virtual bool GetFileSystemDLLName( char *pOut, int nMaxChars, bool &bIsSteam )
+	virtual bool GetFileSystemDLLName( char *pOut, int nMaxChars )
 	{
 		// Our path should already include game\bin, so just use the filename directly
-		// and don't try to figure out an absolute path to it as CSteamApplication does.
+		// and don't try to figure out an absolute path to it as CFSApplication does.
 		V_strncpy( pOut, "filesystem_stdio", nMaxChars );
-		bIsSteam = false;
 		return true;
 	}
 };
-
-
-//-----------------------------------------------------------------------------
-// Macros to help create singleton application objects for windowed + console steam apps
-//-----------------------------------------------------------------------------
-#define DEFINE_WINDOWED_STEAM_APPLICATION_OBJECT_GLOBALVAR( _className, _varName )	\
-	static CSteamApplication __s_SteamApplicationObject( &_varName );	\
-	DEFINE_WINDOWED_APPLICATION_OBJECT_GLOBALVAR( __s_SteamApplicationObject )
-
-#define DEFINE_WINDOWED_STEAM_APPLICATION_OBJECT( _className )	\
-	static _className __s_ApplicationObject;				\
-	static CSteamApplication __s_SteamApplicationObject( &__s_ApplicationObject );	\
-	DEFINE_WINDOWED_APPLICATION_OBJECT_GLOBALVAR( __s_SteamApplicationObject )
-
-#define DEFINE_CONSOLE_STEAM_APPLICATION_OBJECT_GLOBALVAR( _className, _varName )	\
-	static CSteamApplication __s_SteamApplicationObject( &_varName );	\
-	DEFINE_CONSOLE_APPLICATION_OBJECT_GLOBALVAR( __s_SteamApplicationObject )
-
-#define DEFINE_CONSOLE_STEAM_APPLICATION_OBJECT( _className )	\
-	static _className __s_ApplicationObject;			\
-	static CSteamApplication __s_SteamApplicationObject( &__s_ApplicationObject );	\
-	DEFINE_CONSOLE_APPLICATION_OBJECT_GLOBALVAR( __s_SteamApplicationObject )
-
-#define DEFINE_BINLAUNCHABLE_STEAM_APPLICATION_OBJECT_GLOBALVAR( _className, _varName )	\
-	static CBinLaunchableSteamApp __s_SteamApplicationObject( &_varName );	\
-	DEFINE_BINLAUNCHABLE_APPLICATION_OBJECT_GLOBALVAR( __s_SteamApplicationObject )
-
-#define DEFINE_BINLAUNCHABLE_STEAM_APPLICATION_OBJECT( _className )	\
-	static _className __s_ApplicationObject;			\
-	static CBinLaunchableSteamApp __s_SteamApplicationObject( &__s_ApplicationObject );	\
-	DEFINE_BINLAUNCHABLE_APPLICATION_OBJECT_GLOBALVAR( __s_SteamApplicationObject )
-
-
-// This defines your steam application object and ties it to your appsystemgroup.
-// This does NOT hookup its AppMain to get called. You'll have to call that from startup code
-// or use something like DEFINE_LAUNCHABLE_DLL_STEAM_APP() to call it.
-//
-// _steamApplicationClass derives from CSteamApplication.
-// _appClass derives from CAppSystemGroup (.. can derive from - or be - CTier2SteamApp for example).
-// 
-#define DEFINE_CUSTOM_STEAM_APPLICATION_OBJECT( _steamApplicationClassName, _appClassName ) \
-	static _appClassName __s_ApplicationObject;				\
-	static _steamApplicationClassName __s_SteamApplicationObject( &__s_ApplicationObject );
-
-#endif // APPFRAMEWORK_H

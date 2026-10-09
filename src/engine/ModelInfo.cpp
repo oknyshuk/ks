@@ -1,12 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import ks.tier1;
 #include "engine/ivmodelinfo.h"
-#include <mutex>
+import std;
 #include "filesystem.h"
 #include "gl_model_private.h"
 #include "modelloader.h"
@@ -18,11 +15,7 @@
 #include "materialsystem/imaterial.h"
 #include "lightcache.h"
 #include "istudiorender.h"
-#include "tier1/map_ops.h"
-#include <unordered_map>
-#include "filesystem_engine.h"
 #include "client.h"
-#include "sys_dll.h"
 #include "gl_rsurf.h"
 #include "networkstringtable.h"
 
@@ -32,7 +25,7 @@
 static void R_StudioGetLightingCenter( IClientRenderable *pRenderable, studiohdr_t* pStudioHdr, const Vector& origin,
 								const QAngle &angles, Vector* pLightingOrigin )
 {
-	Assert( pLightingOrigin );
+	contract_assert( pLightingOrigin );
 	matrix3x4_t matrix;
 	AngleMatrix( angles, origin, matrix );
 	R_ComputeLightingOrigin( pRenderable, pStudioHdr, matrix, *pLightingOrigin );
@@ -166,7 +159,7 @@ public:
 	virtual bool					RegisterModelLoadCallback( int modelindex, IModelLoadCallback* pCallback, bool bCallImmediatelyIfLoaded = true );
 	virtual void					UnregisterModelLoadCallback( int modelindex, IModelLoadCallback* pCallback );
 	virtual void					OnLevelChange();
-	virtual void					OnDynamicModelStringTableChanged( int nStringIndex, const char *pString, const void *pData ) { Assert(false); }
+	virtual void					OnDynamicModelStringTableChanged( int nStringIndex, const char *pString, const void *pData ) { contract_assert( false ); }
 
 	virtual model_t					*ReferenceModel( const char *name ) { return nullptr; }
 	virtual void					UnreferenceModel( model_t *model ) {}
@@ -250,7 +243,7 @@ void CModelInfo::GetModelRenderBounds( const model_t *model, Vector& mins, Vecto
 	case mod_studio:
 		{
 			studiohdr_t *pStudioHdr = ( studiohdr_t * )modelloader->GetExtraData( (model_t*)model );
-			Assert( pStudioHdr );
+			contract_assert( pStudioHdr );
 
 			// NOTE: We're not looking at the sequence box here, although we could
 			if (!VectorCompare( vec3_origin, pStudioHdr->view_bbmin ) || !VectorCompare( vec3_origin, pStudioHdr->view_bbmax ))
@@ -456,7 +449,7 @@ bool CModelInfo::IsUsingFBTexture( const model_t *model, int nSkin, int nBody, v
 			case mod_studio:
 			{
 				IMaterial *pMaterials[ 128 ];
-				int materialCount = g_pStudioRender->GetMaterialListFromBodyAndSkin( model->studio, nSkin, nBody, ARRAYSIZE( pMaterials ), pMaterials );
+				int materialCount = g_pStudioRender->GetMaterialListFromBodyAndSkin( model->studio, nSkin, nBody, std::size( pMaterials ), pMaterials );
 				for ( int i = 0; i < materialCount; i++ )
 				{
 					if ( pMaterials[i] != nullptr )
@@ -503,7 +496,7 @@ int CModelInfo::GetModelMaterials( const model_t *model, int count, IMaterial** 
 void CModelInfo::GetIlluminationPoint( const model_t *model, IClientRenderable *pRenderable, const Vector& origin, 
 	const QAngle& angles, Vector* pLightingOrigin )
 {
-	Assert( model->type == mod_studio );
+	contract_assert( model->type == mod_studio );
 	studiohdr_t* pStudioHdr = (studiohdr_t*)GetModelExtraData(model);
 	if (pStudioHdr)
 	{
@@ -723,7 +716,7 @@ int CModelInfo::GetModelIndex( const char *name ) const
 		int netdyn = pTable->FindStringIndex( name );
 		if ( netdyn != INVALID_STRING_INDEX )
 		{
-			Assert( !ks::is_valid_index( m_NetworkedDynamicModels, netdyn ) || V_strcmp( m_NetworkedDynamicModels[netdyn]->szPathName, name ) == 0 );
+			contract_assert( !ks::is_valid_index( m_NetworkedDynamicModels, netdyn ) || V_strcmp( m_NetworkedDynamicModels[netdyn]->szPathName, name ) == 0 );
 			return NETDYNAMIC_TO_MODEL( netdyn );
 		}
 	}
@@ -740,7 +733,7 @@ int CModelInfo::GetModelClientSideIndex( const char *name ) const
 		{
 			if ( const int *pSlot = ks::find_ptr( m_ClientDynamicModelSlots, file ) )
 			{
-				Assert( V_strcmp( m_ClientDynamicModels[*pSlot]->szPathName, name ) == 0 );
+				contract_assert( V_strcmp( m_ClientDynamicModels[*pSlot]->szPathName, name ) == 0 );
 				return CLIENTSIDE_TO_MODEL( *pSlot );
 			}
 		}
@@ -754,7 +747,7 @@ int CModelInfo::AddClientDynamicModel( model_t *pModel )
 	auto [it, bInserted] = m_ClientDynamicModelSlots.try_emplace( pModel->fnHandle, 0 );
 	if ( !bInserted )
 	{
-		Assert( m_ClientDynamicModels[it->second] == pModel );
+		contract_assert( m_ClientDynamicModels[it->second] == pModel );
 		return it->second;
 	}
 
@@ -785,7 +778,7 @@ void CModelInfo::RemoveClientDynamicModel( model_t *pModel )
 
 model_t *CModelInfo::LookupDynamicModel( int i )
 {
-	Assert( IsDynamicModelIndex( i ) );
+	contract_assert( IsDynamicModelIndex( i ) );
 	if ( IsClientOnlyModelIndex( i ) )
 	{
 		int h = MODEL_TO_CLIENTSIDE( i );
@@ -815,7 +808,7 @@ model_t *CModelInfo::LookupDynamicModel( int i )
 bool CModelInfo::RegisterModelLoadCallback( int modelIndex, IModelLoadCallback* pCallback, bool bCallImmediatelyIfLoaded )
 {
 	const model_t *pModel = GetModel( modelIndex );
-	Assert( pModel );
+	contract_assert( pModel );
 	if ( pModel && IsDynamicModelIndex( modelIndex ) )
 	{
 		return modelloader->RegisterModelLoadCallback( const_cast< model_t *>( pModel ), pCallback, bCallImmediatelyIfLoaded );
@@ -837,7 +830,7 @@ void CModelInfo::UnregisterModelLoadCallback( int modelIndex, IModelLoadCallback
 	else if ( IsDynamicModelIndex( modelIndex ) )
 	{
 		const model_t *pModel = LookupDynamicModel( modelIndex );
-		Assert( pModel );
+		contract_assert( pModel );
 		if ( pModel )
 		{
 			modelloader->UnregisterModelLoadCallback( const_cast< model_t *>( pModel ), pCallback );
@@ -858,7 +851,7 @@ void CModelInfo::AddRefDynamicModel( int modelIndex )
 	if ( IsDynamicModelIndex( modelIndex ) )
 	{
 		model_t *pModel = LookupDynamicModel( modelIndex );
-		Assert( pModel );
+		contract_assert( pModel );
 		if ( pModel )
 		{
 			modelloader->AddRefDynamicModel( pModel, IsClientOnlyModelIndex( modelIndex ) );
@@ -871,7 +864,7 @@ void CModelInfo::ReleaseDynamicModel( int modelIndex )
 	if ( IsDynamicModelIndex( modelIndex ) )
 	{
 		model_t *pModel = LookupDynamicModel( modelIndex );
-		Assert( pModel );
+		contract_assert( pModel );
 		if ( pModel )
 		{
 			modelloader->ReleaseDynamicModel( pModel, IsClientOnlyModelIndex( modelIndex ) );
@@ -934,16 +927,16 @@ void CModelInfoServer::GetModelMaterialColorAndLighting( const model_t *model, c
 int CModelInfoServer::RegisterDynamicModel( const char *name, bool bClientSide )
 {
 	// Server should not know about client-side dynamic models!
-	Assert( !bClientSide );
+	contract_assert( !bClientSide );
 	if ( bClientSide )
 		return -1;
 
 	char buf[256];
-	V_strncpy( buf, name, ARRAYSIZE(buf) );
+	V_strncpy( buf, name, std::size( buf ) );
 	V_RemoveDotSlashes( buf, '/' );
 	name = buf;
 
-	Assert( StringHasPrefix( name, "models/" ) && V_strstr( name, ".mdl" ) != nullptr );
+	contract_assert( StringHasPrefix( name, "models/" ) && V_strstr( name, ".mdl" ) != nullptr );
 
 	// Already known? bClientSide should always be false and is asserted above.
 	int index = GetModelIndex( name );
@@ -951,12 +944,12 @@ int CModelInfoServer::RegisterDynamicModel( const char *name, bool bClientSide )
 		return index;
 
 	INetworkStringTable *pTable = GetDynamicModelStringTable();
-	Assert( pTable );
+	contract_assert( pTable );
 	if ( !pTable )
 		return -1;
 
 	// Register this model with the dynamic model string table
-	Assert( pTable->FindStringIndex( name ) == INVALID_STRING_INDEX );
+	contract_assert( pTable->FindStringIndex( name ) == INVALID_STRING_INDEX );
 	bool bWasLocked = static_cast< CNetworkStringTable* >( pTable )->Lock( false );
 	char nIsLoaded = 0;
 	int netidx = pTable->AddString( true, name, 1, &nIsLoaded );	
@@ -966,7 +959,7 @@ int CModelInfoServer::RegisterDynamicModel( const char *name, bool bClientSide )
 	GrowNetworkedDynamicModels( netidx );
 	m_NetworkedDynamicModels[ netidx ] = modelloader->GetDynamicModel( name, bClientSide );
 
-	Assert( MODEL_TO_NETDYNAMIC( ( short ) NETDYNAMIC_TO_MODEL( netidx ) ) == netidx );
+	contract_assert( MODEL_TO_NETDYNAMIC( ( short ) NETDYNAMIC_TO_MODEL( netidx ) ) == netidx );
 	return NETDYNAMIC_TO_MODEL( netidx );
 }
 
@@ -1008,7 +1001,7 @@ void CModelInfoServer::ReleaseCombinedModel( int nModelIndex )
 
 
 static CModelInfoServer	g_ModelInfoServer;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CModelInfoServer, IVModelInfo, VMODELINFO_SERVER_INTERFACE_VERSION, g_ModelInfoServer );
+static InterfaceReg s_Reg_CModelInfoServer_IVModelInfo( []() -> void * { return static_cast<IVModelInfo *>( &g_ModelInfoServer ); }, VMODELINFO_SERVER_INTERFACE_VERSION );;
 
 // Expose IVModelInfo to the engine
 IVModelInfo *modelinfo = &g_ModelInfoServer;
@@ -1266,16 +1259,16 @@ void CModelInfoClient::GetModelMaterialColorAndLighting( const model_t *model, c
 int CModelInfoClient::RegisterDynamicModel( const char *name, bool bClientSide )
 {
 	// Clients cannot register non-client-side dynamic models!
-	Assert( bClientSide );
+	contract_assert( bClientSide );
 	if ( !bClientSide )
 		return -1;
 
 	char buf[256];
-	V_strncpy( buf, name, ARRAYSIZE(buf) );
+	V_strncpy( buf, name, std::size( buf ) );
 	V_RemoveDotSlashes( buf, '/' );
 	name = buf;
 
-	Assert( V_strstr( name, ".mdl" ) != nullptr );
+	contract_assert( V_strstr( name, ".mdl" ) != nullptr );
 
 	// Already known? bClientSide should always be true and is asserted above.
 	int index = GetModelClientSideIndex( name );
@@ -1284,10 +1277,10 @@ int CModelInfoClient::RegisterDynamicModel( const char *name, bool bClientSide )
 
 	// Lookup (or create) model_t* and register it to get a stable iterator index
 	model_t* pModel = modelloader->GetDynamicModel( name, true );
-	Assert( pModel );
+	contract_assert( pModel );
 	int localidx = AddClientDynamicModel( pModel );
-	Assert( std::ssize( m_ClientDynamicModelSlots ) < ((32767 >> 1) - 2) );
-	Assert( MODEL_TO_CLIENTSIDE( (short) CLIENTSIDE_TO_MODEL( localidx ) ) == localidx );
+	contract_assert( std::ssize( m_ClientDynamicModelSlots ) < ((32767 >> 1) - 2) );
+	contract_assert( MODEL_TO_CLIENTSIDE( (short) CLIENTSIDE_TO_MODEL( localidx ) ) == localidx );
 	return CLIENTSIDE_TO_MODEL( localidx );
 }
 
@@ -1309,10 +1302,10 @@ int CModelInfoClient::RegisterCombinedDynamicModel( const char *pszName, MDLHand
 	model_t* pModel = modelloader->GetDynamicCombinedModel( pszName, true );
 	pModel->studio = MDLHANDLE_INVALID;
 	modelloader->UpdateDynamicCombinedModel( pModel, Handle, true );
-	Assert( pModel );
+	contract_assert( pModel );
 	int localidx = AddClientDynamicModel( pModel );
-	Assert( std::ssize( m_ClientDynamicModelSlots ) < ((32767 >> 1) - 2) );
-	Assert( MODEL_TO_CLIENTSIDE( (short) CLIENTSIDE_TO_MODEL( localidx ) ) == localidx );
+	contract_assert( std::ssize( m_ClientDynamicModelSlots ) < ((32767 >> 1) - 2) );
+	contract_assert( MODEL_TO_CLIENTSIDE( (short) CLIENTSIDE_TO_MODEL( localidx ) ) == localidx );
 	return CLIENTSIDE_TO_MODEL( localidx );
 }
 
@@ -1434,7 +1427,7 @@ void CModelInfoClient::TouchWorldWeaponModelCache( const char **ppWeaponModels, 
 }
 
 static CModelInfoClient	g_ModelInfoClient;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CModelInfoClient, IVModelInfoClient, VMODELINFO_CLIENT_INTERFACE_VERSION, g_ModelInfoClient );
+static InterfaceReg s_Reg_CModelInfoClient_IVModelInfoClient( []() -> void * { return static_cast<IVModelInfoClient *>( &g_ModelInfoClient ); }, VMODELINFO_CLIENT_INTERFACE_VERSION );;
 
 // Expose IVModelInfo to the engine
 IVModelInfoClient *modelinfoclient = &g_ModelInfoClient;

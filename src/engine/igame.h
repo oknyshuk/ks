@@ -1,14 +1,6 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#ifndef IGAME_H
-#define IGAME_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class IGame
 {
@@ -49,5 +41,3 @@ public:
 };
 
 extern IGame *game;
-
-#endif // IGAME_H

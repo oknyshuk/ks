@@ -1,16 +1,23 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "audio_pch.h"
-#include "tier2/interval.h"
+import std;
+
+
+
+import ks.tier1;
+#include "sound.h"
+#include "soundservice.h"
+#include "filesystem.h"
+
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+
+#include "audio/private/posix_stubs.h"
 
 #include "sos_op.h"
 #include "sos_op_pos_vec8.h"
-
-
-
 
 extern Color OpColor;
 extern Color ConnectColor;
@@ -109,7 +116,7 @@ void CSosOperatorPosVec8::Execute( void *pVoidMem, channel_t *pChannel, CScratch
 void CSosOperatorPosVec8::Print( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex, int nLevel ) const
 {
 	CSosOperatorPosVec8_t *pStructMem = (CSosOperatorPosVec8_t *)pVoidMem;
-	NOTE_UNUSED( pStructMem );
+	(void)pStructMem;
 	PrintBaseParams( pVoidMem, pStack, nOpIndex, nLevel );
 
 }
@@ -143,4 +150,3 @@ void CSosOperatorPosVec8::ParseKV( CSosOperatorStack *pStack, void *pVoidMem, Ke
 		pParams = pParams->GetNextKey();
 	}
 }
-

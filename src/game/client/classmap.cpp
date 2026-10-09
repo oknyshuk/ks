@@ -1,12 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
 #include "iclassmap.h"
-#include "tier1/map_ops.h"
 
 class classentry_t
 {
@@ -25,7 +22,7 @@ public:
 
 	void SetMapName( char const *newname )
 	{
-		Q_strncpy( mapname, newname, sizeof( mapname ) );
+		V_strncpy( mapname, newname, sizeof( mapname ) );
 	}
 
 	DISPATCHFUNCTION	factory;
@@ -55,7 +52,7 @@ IClassMap& GetClassMap( void )
 void CClassMap::Add( const char *mapname, const char *classname, int size, DISPATCHFUNCTION factory = 0 )
 {
 	const char *map = Lookup( classname );
-	if ( map && !Q_strcasecmp( mapname, map ) )
+	if ( map && !V_strcasecmp( mapname, map ) )
 		return;
 
 	classentry_t element;
@@ -83,7 +80,7 @@ C_BaseEntity *CClassMap::CreateEntity( const char *mapname )
 	{
 		classentry_t *lookup = &entry;
 
-		if ( Q_stricmp( lookup->GetMapName(), mapname ) )
+		if ( V_stricmp( lookup->GetMapName(), mapname ) )
 			continue;
 
 		if ( !lookup->factory )
@@ -106,7 +103,7 @@ int CClassMap::GetClassSize( const char *classname )
 	{
 		classentry_t *lookup = &entry;
 
-		if ( Q_strcmp( lookup->GetMapName(), classname ) )
+		if ( V_strcmp( lookup->GetMapName(), classname ) )
 			continue;
 
 		return lookup->size;

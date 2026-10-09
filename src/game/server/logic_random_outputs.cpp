@@ -1,14 +1,26 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ====
-//
-// When triggered, will attempt to fire off each of its outputs.  Each output
-//  has its own chance of firing.
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: When triggered, will attempt to fire off each of its outputs.  Each output
+// has its own chance of firing.
+
+import std;
+import ks.math;
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "baseanimating.h"
 #include "reflect_datamap.h"
-#include "reflect_annotations.h"
-#include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
 #include "soundent.h"
@@ -42,7 +54,7 @@ bool CLogicRandomOutputs::KeyValue( const char *szKeyName, const char *szValue )
 		{
 			if ( FStrEq( szKeyName, UTIL_VarArgs( "OnTriggerChance%d", i ) ) )
 			{
-				m_flOnTriggerChance[i] = atof( szValue );
+				m_flOnTriggerChance[i] = std::atof( szValue );
 				return true;
 			}
 		}
@@ -170,4 +182,3 @@ void CLogicRandomOutputs::InputTrigger( inputdata_t &inputdata )
 		}
 	}
 }
-

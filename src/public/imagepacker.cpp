@@ -1,11 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.math;
 #include "imagepacker.h"
-#include "mathlib/mathlib.h"
+import std;
 
 float CImagePacker::GetEfficiency( void )
 {
@@ -16,7 +14,7 @@ bool CImagePacker::Reset( int nSortId, int maxLightmapWidth, int maxLightmapHeig
 {
 	int i;
 	
-	Assert( maxLightmapWidth <= MAX_MAX_LIGHTMAP_WIDTH );
+	contract_assert( maxLightmapWidth <= MAX_MAX_LIGHTMAP_WIDTH );
 	
 	m_MaxLightmapWidth = maxLightmapWidth;
 	m_MaxLightmapHeight = maxLightmapHeight;
@@ -57,12 +55,6 @@ inline int CImagePacker::GetMaxYIndex( int firstX, int width )
 bool CImagePacker::AddBlock( int width, int height, 
 						   int *returnX, int *returnY )
 {
-#ifdef ADD_ONE_TEXEL_BORDER
-	width += 2;
-	height += 2;
-	width = clamp( width, m_MaxLightmapWidth );
-	height = clamp( height, m_MaxLightmapHeight );
-#endif
 
 	// If we've already determined that a block this big couldn't fit
 	// then blow off checking again...
@@ -145,10 +137,6 @@ bool CImagePacker::AddBlock( int width, int height,
 	
 	//  AddBlockToLightmapImage( *returnX, *returnY, width, height );
 	m_AreaUsed += width * height;
-#ifdef ADD_ONE_TEXEL_BORDER
-	*returnX++;
-	*returnY++;
-#endif
 	return true;
 }
 

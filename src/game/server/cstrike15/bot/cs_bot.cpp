@@ -1,13 +1,34 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
 #include "cs_simple_hostage.h"
 #include "cs_gamerules.h"
 #include "func_breakablesurf.h"
@@ -200,12 +221,12 @@ void CCSBot::Event_Killed( const CTakeDamageInfo &info )
 /**
  * Return true if line segment intersects rectagular volume
  */
-#define HI_X	0x01
-#define LO_X 0x02
-#define HI_Y	0x04
-#define LO_Y 0x08
-#define HI_Z	0x10
-#define LO_Z 0x20
+constexpr auto HI_X = 0x01;
+constexpr auto LO_X = 0x02;
+constexpr auto HI_Y = 0x04;
+constexpr auto LO_Y = 0x08;
+constexpr auto HI_Z = 0x10;
+constexpr auto LO_Z = 0x20;
 
 inline bool IsIntersectingBox( const Vector& start, const Vector& end, const Vector& boxMin, const Vector& boxMax )
 {
@@ -1163,9 +1184,9 @@ float CCSBot::SlowNoise( float fTau ) const
 	int iUniqueOffset = HashInt(entindex()) & 0xFF;
 	float t = (float)iUniqueOffset;
 
-	t = (t + gpGlobals->curtime / fTau) * M_PI * 2.0f;
+	t = (t + gpGlobals->curtime / fTau) * std::numbers::pi * 2.0f;
 
-	return 0.25f * ( cosf( fTau ) + cosf( fTau * 29.f / 47.f ) + cosf( fTau * 59.f / 137.f ) + cosf( fTau * 151.f / 499.f ) );
+	return 0.25f * ( std::cosf( fTau ) + cosf( fTau * 29.f / 47.f ) + cosf( fTau * 59.f / 137.f ) + cosf( fTau * 151.f / 499.f ) );
 }
 
 

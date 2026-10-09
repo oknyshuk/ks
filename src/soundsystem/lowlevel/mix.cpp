@@ -1,7 +1,6 @@
-#include "basetypes.h"
-#include "mathlib/ssemath.h"
+import std;
+import ks.math;
 #include "soundsystem/lowlevel.h"
-#include "tier0/vprof.h"
 
 // simple inline to test alignemnt of a value
 inline bool IsAlign4( uint nAlign )
@@ -14,43 +13,43 @@ inline bool IsAligned16Bytes( void *p )
 	return ( uintp( p ) & 0xF ) ? false : true;
 }
 
-FORCEINLINE shortx8 ShiftRightShortSIMD( const shortx8 &inputValue, const shortx8 &shiftBitCount )
+[[gnu::always_inline]] inline shortx8 ShiftRightShortSIMD( const shortx8 &inputValue, const shortx8 &shiftBitCount )
 {
 	return _mm_srl_epi16( inputValue, shiftBitCount );
 }
 
-FORCEINLINE shortx8 SignedExtractLowAsInt32( const shortx8 &a )
+[[gnu::always_inline]] inline shortx8 SignedExtractLowAsInt32( const shortx8 &a )
 {
 	shortx8 signExtend = _mm_cmplt_epi16( a, _mm_setzero_si128() );
 	return _mm_unpacklo_epi16( a, signExtend );
 }
 
-FORCEINLINE shortx8 SignedExtractHighAsInt32( const shortx8 &a )
+[[gnu::always_inline]] inline shortx8 SignedExtractHighAsInt32( const shortx8 &a )
 {
 	shortx8 signExtend = _mm_cmplt_epi16( a, _mm_setzero_si128() );
 	return _mm_unpackhi_epi16( a, signExtend );
 }
 
-FORCEINLINE shortx8 RoundtFloatToInt32( const fltx4 &input )
+[[gnu::always_inline]] inline shortx8 RoundtFloatToInt32( const fltx4 &input )
 {
 	return _mm_cvtps_epi32( input );
 }
 
-FORCEINLINE shortx8 PackInt32x2ToShortx8( const shortx8 &input0, const shortx8 &input1 )
+[[gnu::always_inline]] inline shortx8 PackInt32x2ToShortx8( const shortx8 &input0, const shortx8 &input1 )
 {
 	return _mm_packs_epi32( input0, input1 );
 }
 
 // Load 4 aligned words into a SIMD register
-FORCEINLINE shortx8 LoadAlignedShortx8SIMD( const void * RESTRICT pSIMD )
+[[gnu::always_inline]] inline shortx8 LoadAlignedShortx8SIMD( const void * __restrict__ pSIMD )
 {
 	return _mm_load_si128( reinterpret_cast<const __m128i *>( pSIMD ) );
 }
 
 // Load 4 unaligned words into a SIMD register
-FORCEINLINE shortx8 LoadUnalignedShortx8SIMD( const void * RESTRICT pSIMD )
+[[gnu::always_inline]] inline shortx8 LoadUnalignedShortx8SIMD( const void * __restrict__ pSIMD )
 {
-	return _mm_loadu_si128( reinterpret_cast<const __m128i *>( pSIMD ) );
+	return ks::simd::load_unaligned_i( reinterpret_cast<const __m128i *>( pSIMD ) );
 }
 
 // create a stereo interleaved signed-16 buffer from two float-32 buffers
@@ -148,7 +147,7 @@ void ConvertFloat32Int16_Clamp_Interleave2( short *pOut, float *pflInputLeft, fl
 // Faster SIMD version for 6-in, 6-out
 void ConvertFloat32Int16_Clamp_Interleave6( short *pOut, int nOutputChannelCount, int nChannelStrideFloats, float *pflChannel0, int nInputChannelCount, int nSampleCount )
 {
-	Assert( nOutputChannelCount == 6 && nInputChannelCount == 6 && IsAligned16Bytes( pflChannel0 ) );
+	contract_assert( nOutputChannelCount == 6 && nInputChannelCount == 6 && IsAligned16Bytes( pflChannel0 ) );
 	const float *pInput0 = pflChannel0;
 	const float *pInput1 = pflChannel0 + nChannelStrideFloats;
 	const float *pInput2 = pflChannel0 + 2*nChannelStrideFloats;
@@ -168,20 +167,20 @@ void ConvertFloat32Int16_Clamp_Interleave6( short *pOut, int nOutputChannelCount
 		fltx4 fl4Samples5 = LoadAlignedSIMD( pInput5 + i ); //  5 11 17 23
 
 		// interleave into pairs
-		fltx4 fl4Pair0 = _mm_shuffle_ps( fl4Samples0, fl4Samples1, MM_SHUFFLE_REV( 0, 1, 0, 1 ) );	//  0  6  1  7
-		fltx4 fl4Pair1 = _mm_shuffle_ps( fl4Samples0, fl4Samples1, MM_SHUFFLE_REV( 2, 3, 2, 3 ) );	// 12 18 13 19
-		fltx4 fl4Pair2 = _mm_shuffle_ps( fl4Samples2, fl4Samples3, MM_SHUFFLE_REV( 0, 1, 0, 1 ) );	//  2  8  3  9
-		fltx4 fl4Pair3 = _mm_shuffle_ps( fl4Samples2, fl4Samples3, MM_SHUFFLE_REV( 2, 3, 2, 3 ) );	// 14 20 15 21
-		fltx4 fl4Pair4 = _mm_shuffle_ps( fl4Samples4, fl4Samples5, MM_SHUFFLE_REV( 0, 1, 0, 1 ) );	//  4 10  5 11
-		fltx4 fl4Pair5 = _mm_shuffle_ps( fl4Samples4, fl4Samples5, MM_SHUFFLE_REV( 2, 3, 2, 3 ) );	// 16 22 17 23
+		fltx4 fl4Pair0 = ks::simd::shuffle<0,1,0,1>( fl4Samples0, fl4Samples1 );	//  0  6  1  7
+		fltx4 fl4Pair1 = ks::simd::shuffle<2,3,2,3>( fl4Samples0, fl4Samples1 );	// 12 18 13 19
+		fltx4 fl4Pair2 = ks::simd::shuffle<0,1,0,1>( fl4Samples2, fl4Samples3 );	//  2  8  3  9
+		fltx4 fl4Pair3 = ks::simd::shuffle<2,3,2,3>( fl4Samples2, fl4Samples3 );	// 14 20 15 21
+		fltx4 fl4Pair4 = ks::simd::shuffle<0,1,0,1>( fl4Samples4, fl4Samples5 );	//  4 10  5 11
+		fltx4 fl4Pair5 = ks::simd::shuffle<2,3,2,3>( fl4Samples4, fl4Samples5 );	// 16 22 17 23
 
 		// now put in final order
-		fltx4 fl4Out0 = _mm_shuffle_ps( fl4Pair0, fl4Pair2, MM_SHUFFLE_REV( 0, 2, 0, 2 ) );	//  0  1  2  3
-		fltx4 fl4Out1 = _mm_shuffle_ps( fl4Pair4, fl4Pair0, MM_SHUFFLE_REV( 0, 2, 1, 3 ) );	//  4  5  6  7
-		fltx4 fl4Out2 = _mm_shuffle_ps( fl4Pair2, fl4Pair4, MM_SHUFFLE_REV( 1, 3, 1, 3 ) );	//  8  9 10 11
-		fltx4 fl4Out3 = _mm_shuffle_ps( fl4Pair1, fl4Pair3, MM_SHUFFLE_REV( 0, 2, 0, 2 ) );	// 12 13 14 15
-		fltx4 fl4Out4 = _mm_shuffle_ps( fl4Pair5, fl4Pair1, MM_SHUFFLE_REV( 0, 2, 1, 3 ) );	// 16 17 18 19
-		fltx4 fl4Out5 = _mm_shuffle_ps( fl4Pair3, fl4Pair5, MM_SHUFFLE_REV( 1, 3, 1, 3 ) );	// 20 21 22 23
+		fltx4 fl4Out0 = ks::simd::shuffle<0,2,0,2>( fl4Pair0, fl4Pair2 );	//  0  1  2  3
+		fltx4 fl4Out1 = ks::simd::shuffle<0,2,1,3>( fl4Pair4, fl4Pair0 );	//  4  5  6  7
+		fltx4 fl4Out2 = ks::simd::shuffle<1,3,1,3>( fl4Pair2, fl4Pair4 );	//  8  9 10 11
+		fltx4 fl4Out3 = ks::simd::shuffle<0,2,0,2>( fl4Pair1, fl4Pair3 );	// 12 13 14 15
+		fltx4 fl4Out4 = ks::simd::shuffle<0,2,1,3>( fl4Pair5, fl4Pair1 );	// 16 17 18 19
+		fltx4 fl4Out5 = ks::simd::shuffle<1,3,1,3>( fl4Pair3, fl4Pair5 );	// 20 21 22 23
 
 		// pack into 3 bundles of 8
 		shortx8 nOut0 = PackInt32x2ToShortx8( RoundtFloatToInt32( fl4Out0 ), RoundtFloatToInt32( fl4Out1 ) );
@@ -199,7 +198,7 @@ void ConvertFloat32Int16_Clamp_Interleave6( short *pOut, int nOutputChannelCount
 // Faster SIMD version for 8-in, 8-out
 void ConvertFloat32Int16_Clamp_Interleave8( short *pOut, int nOutputChannelCount, int nChannelStrideFloats, float *pflChannel0, int nInputChannelCount, int nSampleCount )
 {
-	Assert( nOutputChannelCount == 8 && nInputChannelCount == 8 && IsAligned16Bytes( pflChannel0 ) );
+	contract_assert( nOutputChannelCount == 8 && nInputChannelCount == 8 && IsAligned16Bytes( pflChannel0 ) );
 	const float *pInput0 = pflChannel0;
 	const float *pInput1 = pflChannel0 + nChannelStrideFloats;
 	const float *pInput2 = pflChannel0 + 2 * nChannelStrideFloats;
@@ -223,24 +222,24 @@ void ConvertFloat32Int16_Clamp_Interleave8( short *pOut, int nOutputChannelCount
 		fltx4 fl4Samples7 = LoadAlignedSIMD( pInput7 + i ); //  7 15 23 31
 
 		// interleave into pairs
-		fltx4 fl4Pair0 = _mm_shuffle_ps( fl4Samples0, fl4Samples1, MM_SHUFFLE_REV( 0, 1, 0, 1 ) );	//  0  8  1  9
-		fltx4 fl4Pair1 = _mm_shuffle_ps( fl4Samples0, fl4Samples1, MM_SHUFFLE_REV( 2, 3, 2, 3 ) );	// 16 24 17 25
-		fltx4 fl4Pair2 = _mm_shuffle_ps( fl4Samples2, fl4Samples3, MM_SHUFFLE_REV( 0, 1, 0, 1 ) );	//  2 10  3 11
-		fltx4 fl4Pair3 = _mm_shuffle_ps( fl4Samples2, fl4Samples3, MM_SHUFFLE_REV( 2, 3, 2, 3 ) );	// 18 26 19 27
-		fltx4 fl4Pair4 = _mm_shuffle_ps( fl4Samples4, fl4Samples5, MM_SHUFFLE_REV( 0, 1, 0, 1 ) );	//  4 12  5 13
-		fltx4 fl4Pair5 = _mm_shuffle_ps( fl4Samples4, fl4Samples5, MM_SHUFFLE_REV( 2, 3, 2, 3 ) );	// 20 28 21 29
-		fltx4 fl4Pair6 = _mm_shuffle_ps( fl4Samples6, fl4Samples7, MM_SHUFFLE_REV( 0, 1, 0, 1 ) );	//  6 14  7 15
-		fltx4 fl4Pair7 = _mm_shuffle_ps( fl4Samples6, fl4Samples7, MM_SHUFFLE_REV( 2, 3, 2, 3 ) );	// 22 30 23 31
+		fltx4 fl4Pair0 = ks::simd::shuffle<0,1,0,1>( fl4Samples0, fl4Samples1 );	//  0  8  1  9
+		fltx4 fl4Pair1 = ks::simd::shuffle<2,3,2,3>( fl4Samples0, fl4Samples1 );	// 16 24 17 25
+		fltx4 fl4Pair2 = ks::simd::shuffle<0,1,0,1>( fl4Samples2, fl4Samples3 );	//  2 10  3 11
+		fltx4 fl4Pair3 = ks::simd::shuffle<2,3,2,3>( fl4Samples2, fl4Samples3 );	// 18 26 19 27
+		fltx4 fl4Pair4 = ks::simd::shuffle<0,1,0,1>( fl4Samples4, fl4Samples5 );	//  4 12  5 13
+		fltx4 fl4Pair5 = ks::simd::shuffle<2,3,2,3>( fl4Samples4, fl4Samples5 );	// 20 28 21 29
+		fltx4 fl4Pair6 = ks::simd::shuffle<0,1,0,1>( fl4Samples6, fl4Samples7 );	//  6 14  7 15
+		fltx4 fl4Pair7 = ks::simd::shuffle<2,3,2,3>( fl4Samples6, fl4Samples7 );	// 22 30 23 31
 
 		// now put in final order
-		fltx4 fl4Out0 = _mm_shuffle_ps( fl4Pair0, fl4Pair2, MM_SHUFFLE_REV( 0, 2, 0, 2 ) );	//  0  1  2  3
-		fltx4 fl4Out1 = _mm_shuffle_ps( fl4Pair4, fl4Pair6, MM_SHUFFLE_REV( 0, 2, 0, 2 ) );	//  4  5  6  7
-		fltx4 fl4Out2 = _mm_shuffle_ps( fl4Pair0, fl4Pair2, MM_SHUFFLE_REV( 1, 3, 1, 3 ) );	//  8  9 10 11
-		fltx4 fl4Out3 = _mm_shuffle_ps( fl4Pair4, fl4Pair6, MM_SHUFFLE_REV( 1, 3, 1, 3 ) );	// 12 13 14 15
-		fltx4 fl4Out4 = _mm_shuffle_ps( fl4Pair1, fl4Pair3, MM_SHUFFLE_REV( 0, 2, 0, 2 ) );	// 16 17 18 19
-		fltx4 fl4Out5 = _mm_shuffle_ps( fl4Pair5, fl4Pair7, MM_SHUFFLE_REV( 0, 2, 0, 2 ) );	// 20 21 22 23
-		fltx4 fl4Out6 = _mm_shuffle_ps( fl4Pair1, fl4Pair3, MM_SHUFFLE_REV( 1, 3, 1, 3 ) );	// 24 25 26 27
-		fltx4 fl4Out7 = _mm_shuffle_ps( fl4Pair5, fl4Pair7, MM_SHUFFLE_REV( 1, 3, 1, 3 ) );	// 28 29 30 31
+		fltx4 fl4Out0 = ks::simd::shuffle<0,2,0,2>( fl4Pair0, fl4Pair2 );	//  0  1  2  3
+		fltx4 fl4Out1 = ks::simd::shuffle<0,2,0,2>( fl4Pair4, fl4Pair6 );	//  4  5  6  7
+		fltx4 fl4Out2 = ks::simd::shuffle<1,3,1,3>( fl4Pair0, fl4Pair2 );	//  8  9 10 11
+		fltx4 fl4Out3 = ks::simd::shuffle<1,3,1,3>( fl4Pair4, fl4Pair6 );	// 12 13 14 15
+		fltx4 fl4Out4 = ks::simd::shuffle<0,2,0,2>( fl4Pair1, fl4Pair3 );	// 16 17 18 19
+		fltx4 fl4Out5 = ks::simd::shuffle<0,2,0,2>( fl4Pair5, fl4Pair7 );	// 20 21 22 23
+		fltx4 fl4Out6 = ks::simd::shuffle<1,3,1,3>( fl4Pair1, fl4Pair3 );	// 24 25 26 27
+		fltx4 fl4Out7 = ks::simd::shuffle<1,3,1,3>( fl4Pair5, fl4Pair7 );	// 28 29 30 31
 
 		// pack into 4 bundles of 8
 		shortx8 nOut0 = PackInt32x2ToShortx8( RoundtFloatToInt32( fl4Out0 ), RoundtFloatToInt32( fl4Out1 ) );
@@ -305,7 +304,7 @@ void ConvertFloat32Int16_Clamp_InterleaveStride( short *pOut, int nOutputChannel
 			}
 		}
 	}
-	Assert( nOutputChannelCount >= nInputChannelCount );
+	contract_assert( nOutputChannelCount >= nInputChannelCount );
 }
 
 // constants for linear ramping
@@ -317,8 +316,8 @@ const fltx4 g_fl4_Sequence1234 = { 1.0, 2.0, 3.0, 4.0 };
 void ScaleBuffer( float flOutput[MIX_BUFFER_SIZE], const float input[MIX_BUFFER_SIZE], float scale )
 {
 	fltx4 volume = ReplicateX4(scale);
-	fltx4 * RESTRICT pOut = (fltx4 *)&flOutput[0];
-	fltx4 * RESTRICT pIn = (fltx4 *)&input[0];
+	fltx4 * __restrict__ pOut = (fltx4 *)&flOutput[0];
+	fltx4 * __restrict__ pIn = (fltx4 *)&input[0];
 	for ( int i = 0; i < MIX_BUFFER_SIZE/4; i++ )
 	{
 		fltx4 sample = LoadAlignedSIMD( pIn );
@@ -338,8 +337,8 @@ void ScaleBufferRamp( float flOutput[MIX_BUFFER_SIZE], const float flInput[MIX_B
 
 	fltx4 fl4VolumeInc = MulSIMD( fl4VolumeStep, Four_Fours );
 
-	fltx4 * RESTRICT pOut = (fltx4 *)&flOutput[0];
-	fltx4 * RESTRICT pIn = (fltx4 *)&flInput[0];
+	fltx4 * __restrict__ pOut = (fltx4 *)&flOutput[0];
+	fltx4 * __restrict__ pIn = (fltx4 *)&flInput[0];
 	for ( int i = 0; i < MIX_BUFFER_SIZE / 4; i++ )
 	{
 		fltx4 fl4Sample = LoadAlignedSIMD( pIn );
@@ -352,7 +351,7 @@ void ScaleBufferRamp( float flOutput[MIX_BUFFER_SIZE], const float flInput[MIX_B
 
 void SilenceBuffer( float flBuffer[MIX_BUFFER_SIZE] )
 {
-	fltx4 * RESTRICT pOut = (fltx4 *)&flBuffer[0];
+	fltx4 * __restrict__ pOut = (fltx4 *)&flBuffer[0];
 	fltx4 fl4Zero = LoadZeroSIMD();
 	for ( int i = 0; i < MIX_BUFFER_SIZE/4; i++ )
 	{
@@ -372,8 +371,8 @@ void SilenceBuffers( CAudioMixBuffer *pBuffers, int nBufferCount )
 void MixBuffer( float flOutput[MIX_BUFFER_SIZE], const float flInput[MIX_BUFFER_SIZE], float scale )
 {
 	fltx4 fl4Volume = ReplicateX4(scale);
-	fltx4 * RESTRICT pOut = (fltx4 *)&flOutput[0];
-	fltx4 * RESTRICT pIn = (fltx4 *)&flInput[0];
+	fltx4 * __restrict__ pOut = (fltx4 *)&flOutput[0];
+	fltx4 * __restrict__ pIn = (fltx4 *)&flInput[0];
 	for ( int i = 0; i < MIX_BUFFER_SIZE/4; i++ )
 	{
 		fltx4 fl4Sample = LoadAlignedSIMD( pIn );
@@ -394,8 +393,8 @@ void MixBufferRamp( float flOutput[MIX_BUFFER_SIZE], const float flInput[MIX_BUF
 
 	fltx4 fl4VolumeInc = MulSIMD( fl4VolumeStep, Four_Fours );
 
-	fltx4 * RESTRICT pOut = (fltx4 *)&flOutput[0];
-	fltx4 * RESTRICT pIn = (fltx4 *)&flInput[0];
+	fltx4 * __restrict__ pOut = (fltx4 *)&flOutput[0];
+	fltx4 * __restrict__ pIn = (fltx4 *)&flInput[0];
 	for ( int i = 0; i < MIX_BUFFER_SIZE / 4; i++ )
 	{
 		fltx4 fl4Sample = LoadAlignedSIMD( pIn );
@@ -411,9 +410,9 @@ void SumBuffer2x1( float flOutput[MIX_BUFFER_SIZE], float flInput0[MIX_BUFFER_SI
 {
 	fltx4 fl4Scale0 = ReplicateX4(flScale0);
 	fltx4 fl4Scale1 = ReplicateX4(flScale1);
-	fltx4 * RESTRICT pOut = (fltx4 *)&flOutput[0];
-	fltx4 * RESTRICT pIn0 = (fltx4 *)&flInput0[0];
-	fltx4 * RESTRICT pIn1 = (fltx4 *)&flInput1[0];
+	fltx4 * __restrict__ pOut = (fltx4 *)&flOutput[0];
+	fltx4 * __restrict__ pIn0 = (fltx4 *)&flInput0[0];
+	fltx4 * __restrict__ pIn1 = (fltx4 *)&flInput1[0];
 	for ( int i = 0; i < MIX_BUFFER_SIZE/4; i++ )
 	{
 		fltx4 fl4Sample0 = LoadAlignedSIMD( pIn0 );
@@ -428,8 +427,8 @@ void SumBuffer2x1( float flOutput[MIX_BUFFER_SIZE], float flInput0[MIX_BUFFER_SI
 
 void SwapBuffersInPlace( float flInput0[MIX_BUFFER_SIZE], float flInput1[MIX_BUFFER_SIZE] )
 {
-	fltx4 * RESTRICT pIn0 = (fltx4 *)&flInput0[0];
-	fltx4 * RESTRICT pIn1 = (fltx4 *)&flInput1[0];
+	fltx4 * __restrict__ pIn0 = (fltx4 *)&flInput0[0];
+	fltx4 * __restrict__ pIn1 = (fltx4 *)&flInput1[0];
 	for ( int i = 0; i < MIX_BUFFER_SIZE/4; i++ )
 	{
 		fltx4 fl4Sample0 = LoadAlignedSIMD( pIn0 );
@@ -447,7 +446,7 @@ float BufferLevel( float flInput0[MIX_BUFFER_SIZE] )
 	float flAbsMax = 0.0f;
 	for ( int i = 0; i < MIX_BUFFER_SIZE; i++ )
 	{
-		flAbsMax = Max( flAbsMax, (float)fabs(flInput0[i]) );
+		flAbsMax = Max( flAbsMax, (float)std::fabs(flInput0[i]) );
 	}
 	return flAbsMax;
 }
@@ -457,7 +456,7 @@ float AvergeBufferAmplitude( float flInput0[MIX_BUFFER_SIZE] )
 	float flTotal = 0;
 	for ( int i = 0; i < MIX_BUFFER_SIZE; i++ )
 	{
-		flTotal += fabs( flInput0[i] );
+		flTotal += std::fabs( flInput0[i] );
 	}
 	return flTotal * ( 1.0f / MIX_BUFFER_SIZE );
 }

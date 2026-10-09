@@ -1,24 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Client-side CBasePlayer
 
-#ifndef C_PHYSBOX_H
-#define C_PHYSBOX_H
-
 #include "reflect_annotations.h"
-#pragma once
-
 
 #include "c_baseentity.h"
-
 
 class [[= ks::reflect::NetTable{ .name = "DT_PhysBox" } ]]
       C_PhysBox : public C_BaseEntity
@@ -34,9 +22,3 @@ public:
 public:
 	[[= ks::reflect::Net{} ]] float			m_mass;	// TEST..
 };
-
-
-#endif
-
-
-

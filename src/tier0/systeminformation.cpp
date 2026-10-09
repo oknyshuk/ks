@@ -1,18 +1,10 @@
-//====== Copyright c 1996-2007, Valve Corporation, All rights reserved. =======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "pch_tier0.h"
+import ks.core;
 
-
-#include "tier0/platform.h"
-#include "tier0/systeminformation.h"
-
-
+// First include standard libraries
+import std;
 
 
 //
@@ -30,9 +22,6 @@ uint32 Plat_GetMemPageSize()
 //
 SYSTEM_CALL_RESULT_t Plat_GetPagedPoolInfo( PAGED_POOL_INFO_t *pPPI )
 {
-	memset( pPPI, 0, sizeof( *pPPI ) );
+	std::memset( pPPI, 0, sizeof( *pPPI ) );
 	return SYSCALL_UNSUPPORTED;
 }
-
-
-

@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "convar.h"
+import std;
 
 #include "depthwrite_ps20.inc"
 #include "depthwrite_ps20b.inc"
@@ -20,7 +16,7 @@ static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_MATERIAL_SY
 
 BEGIN_VS_SHADER_FLAGS( DepthWrite, "Help for Depth Write", SHADER_NOT_EDITABLE )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( ALPHATESTREFERENCE, SHADER_PARAM_TYPE_FLOAT, "", "Alpha reference value" )
 		SHADER_PARAM( DISPLACEMENTMAP, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "Displacement map" )
 		SHADER_PARAM( DISPLACEMENTWRINKLE, SHADER_PARAM_TYPE_BOOL, "0", "Displacement map contains wrinkle displacements")
@@ -216,9 +212,9 @@ BEGIN_VS_SHADER_FLAGS( DepthWrite, "Help for Depth Write", SHADER_NOT_EDITABLE )
 					}
 
 					// Currently, tessellation is mutually exclusive with any kind of GPU-side skinning, morphing or vertex compression
-					Assert( !pShaderAPI->IsHWMorphingEnabled() );
-					Assert( pShaderAPI->GetCurrentNumBones() == 0 );
-					Assert( vertexCompression == 0);
+					contract_assert( !pShaderAPI->IsHWMorphingEnabled() );
+					contract_assert( pShaderAPI->GetCurrentNumBones() == 0 );
+					contract_assert( vertexCompression == 0 );
 				}
 
 				if ( g_pHardwareConfig->HasFastVertexTextures() )

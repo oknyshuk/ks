@@ -1,23 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#if !defined( PARTICLE_COLLISION_H )
-#define PARTICLE_COLLISION_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "particles_simple.h"
 #include "particlemgr.h"
 
-#define	MAX_COLLISION_PLANES	6
+inline constexpr int MAX_COLLISION_PLANES = 6;
 
 //
 // CBaseSimpleCollision
@@ -70,5 +58,3 @@ protected:
 	float	m_flCollisionDampen;
 	float	m_flAngularCollisionDampen;
 };
-
-#endif //PARTICLE_COLLISION_H

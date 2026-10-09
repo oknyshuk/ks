@@ -1,13 +1,41 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
 #include "ServerNetworkProperty.h"
-#include "tier0/dbg.h"
 #include "gameinterface.h"
 
 extern CTimedEventMgr g_NetworkPropertyEventMgr;
@@ -68,7 +96,7 @@ void CServerNetworkProperty::CacheServerClass()
 //-----------------------------------------------------------------------------
 void CServerNetworkProperty::AttachEdict( edict_t *pRequiredEdict )
 {
-	Assert ( !m_pPev );
+	contract_assert( !m_pPev );
 
 	// see if there is an edict allocated for it, otherwise get one from the engine
 	if ( !pRequiredEdict )
@@ -185,7 +213,7 @@ bool CServerNetworkProperty::IsInPVS( const edict_t *pRecipient, const void *pvs
 	// negative leaf count is a node number
 	// If no pvs, add any entity
 
-	Assert( pvs && ( edict() != pRecipient ) );
+	contract_assert( pvs && ( edict() != pRecipient ) );
 
 	unsigned char *pPVS = ( unsigned char * )pvs;
 	
@@ -210,7 +238,7 @@ bool CServerNetworkProperty::IsInPVS( const edict_t *pRecipient, const void *pvs
 bool CServerNetworkProperty::IsInPVS( const CCheckTransmitInfo *pInfo )
 {
 	// PVS data must be up to date
-	Assert( !m_pPev || ( ( m_pPev->m_fStateFlags & FL_EDICT_DIRTY_PVS_INFORMATION ) == 0 ) );
+	contract_assert( !m_pPev || ( ( m_pPev->m_fStateFlags & FL_EDICT_DIRTY_PVS_INFORMATION ) == 0 ) );
 	
 	int i;
 
@@ -252,7 +280,7 @@ bool CServerNetworkProperty::IsInPVS( const CCheckTransmitInfo *pInfo )
 	// negative leaf count is a node number
 	// If no pvs, add any entity
 
-	Assert( edict() != pInfo->m_pClientEnt );
+	contract_assert( edict() != pInfo->m_pClientEnt );
 
 	unsigned char *pPVS = ( unsigned char * )pInfo->m_PVS;
 	
@@ -292,6 +320,3 @@ void CServerNetworkProperty::FireEvent()
 		m_bPendingStateChange = false;
 	}
 }
-
-
-

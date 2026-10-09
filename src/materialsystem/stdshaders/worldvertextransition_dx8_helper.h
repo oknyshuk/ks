@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2002, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2002 Valve Corporation
 
-#ifndef WORLDVERTEXTRANSITION_DX8_HELPER_H
-#define WORLDVERTEXTRANSITION_DX8_HELPER_H
-
-#include <string.h>
-
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -25,7 +18,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct WorldVertexTransitionEditor_DX8_Vars_t
 {
-	WorldVertexTransitionEditor_DX8_Vars_t() { memset( this, 0xFF, sizeof(WorldVertexTransitionEditor_DX8_Vars_t) ); }
+	WorldVertexTransitionEditor_DX8_Vars_t() { std::memset( this, 0xFF, sizeof(WorldVertexTransitionEditor_DX8_Vars_t) ); }
 
 	int m_nBaseTextureVar;
 	int m_nBaseTextureFrameVar;
@@ -39,6 +32,3 @@ void InitParamsWorldVertexTransitionEditor_DX8( IMaterialVar** params, WorldVert
 void InitWorldVertexTransitionEditor_DX8( CBaseVSShader *pShader, IMaterialVar** params, WorldVertexTransitionEditor_DX8_Vars_t &info );
 void DrawWorldVertexTransitionEditor_DX8( CBaseVSShader *pShader, IMaterialVar** params, 
 	IShaderDynamicAPI *pShaderAPI, IShaderShadow* pShaderShadow, WorldVertexTransitionEditor_DX8_Vars_t &info );
-
-
-#endif // WORLDVERTEXTRANSITION_DX8_HELPER_H

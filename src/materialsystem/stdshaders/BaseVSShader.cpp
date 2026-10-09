@@ -1,22 +1,11 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-// This is what all vs/ps (dx8+) shaders inherit from.
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "cpp_shader_constant_register_map.h"
+// Purpose: This is what all vs/ps (dx8+) shaders inherit from.
+
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
-#include "mathlib/bumpvects.h"
-#include "convar.h"
-#include "tier0/icommandline.h"
-
-#ifdef HDR
-#include "vertexlit_and_unlit_generic_hdr_ps20.inc"
-#include "vertexlit_and_unlit_generic_hdr_ps20b.inc"
-#endif
+import std;
 
 #include "lightmappedgeneric_flashlight_vs30.inc"
 #include "flashlight_ps30.inc"
@@ -38,14 +27,14 @@ ConVar r_flashlightbrightness( "r_flashlightbrightness", "0.25", FCVAR_MATERIAL_
 //-----------------------------------------------------------------------------
 void CBaseVSShader::SetPixelShaderConstant( int pixelReg, int constantVar, int constantVar2 )
 {
-	Assert( !IsSnapshotting() );
+	contract_assert( !IsSnapshotting() );
 	if ((!s_ppParams) || (constantVar == -1) || (constantVar2 == -1))
 		return;
 
 	IMaterialVar* pPixelVar = s_ppParams[constantVar];
-	Assert( pPixelVar );
+	contract_assert( pPixelVar );
 	IMaterialVar* pPixelVar2 = s_ppParams[constantVar2];
-	Assert( pPixelVar2 );
+	contract_assert( pPixelVar2 );
 
 	float val[4];
 	if (pPixelVar->GetType() == MATERIAL_VAR_TYPE_VECTOR)
@@ -63,14 +52,14 @@ void CBaseVSShader::SetPixelShaderConstant( int pixelReg, int constantVar, int c
 
 void CBaseVSShader::SetPixelShaderConstantGammaToLinear( int pixelReg, int constantVar, int constantVar2 )
 {
-	Assert( !IsSnapshotting() );
+	contract_assert( !IsSnapshotting() );
 	if ((!s_ppParams) || (constantVar == -1) || (constantVar2 == -1))
 		return;
 
 	IMaterialVar* pPixelVar = s_ppParams[constantVar];
-	Assert( pPixelVar );
+	contract_assert( pPixelVar );
 	IMaterialVar* pPixelVar2 = s_ppParams[constantVar2];
-	Assert( pPixelVar2 );
+	contract_assert( pPixelVar2 );
 
 	float val[4];
 	if (pPixelVar->GetType() == MATERIAL_VAR_TYPE_VECTOR)
@@ -92,12 +81,12 @@ void CBaseVSShader::SetPixelShaderConstantGammaToLinear( int pixelReg, int const
 
 void CBaseVSShader::SetPixelShaderConstant_W( int pixelReg, int constantVar, float fWValue )
 {
-	Assert( !IsSnapshotting() );
+	contract_assert( !IsSnapshotting() );
 	if ((!s_ppParams) || (constantVar == -1))
 		return;
 
 	IMaterialVar* pPixelVar = s_ppParams[constantVar];
-	Assert( pPixelVar );
+	contract_assert( pPixelVar );
 
 	float val[4];
 	if (pPixelVar->GetType() == MATERIAL_VAR_TYPE_VECTOR)
@@ -110,12 +99,12 @@ void CBaseVSShader::SetPixelShaderConstant_W( int pixelReg, int constantVar, flo
 
 void CBaseVSShader::SetPixelShaderConstant( int pixelReg, int constantVar )
 {
-	Assert( !IsSnapshotting() );
+	contract_assert( !IsSnapshotting() );
 	if ((!s_ppParams) || (constantVar == -1))
 		return;
 
 	IMaterialVar* pPixelVar = s_ppParams[constantVar];
-	Assert( pPixelVar );
+	contract_assert( pPixelVar );
 
 	float val[4];
 	if (pPixelVar->GetType() == MATERIAL_VAR_TYPE_VECTOR)
@@ -127,12 +116,12 @@ void CBaseVSShader::SetPixelShaderConstant( int pixelReg, int constantVar )
 
 void CBaseVSShader::SetPixelShaderConstantGammaToLinear( int pixelReg, int constantVar )
 {
-	Assert( !IsSnapshotting() );
+	contract_assert( !IsSnapshotting() );
 	if ((!s_ppParams) || (constantVar == -1))
 		return;
 
 	IMaterialVar* pPixelVar = s_ppParams[constantVar];
-	Assert( pPixelVar );
+	contract_assert( pPixelVar );
 
 	float val[4];
 	if (pPixelVar->GetType() == MATERIAL_VAR_TYPE_VECTOR)
@@ -181,12 +170,12 @@ void CBaseVSShader::SetPixelShaderConstantGammaToLinear( int var, float const* p
 // GR - special version with fix for const/lerp issue
 void CBaseVSShader::SetPixelShaderConstantFudge( int pixelReg, int constantVar )
 {
-	Assert( !IsSnapshotting() );
+	contract_assert( !IsSnapshotting() );
 	if ((!s_ppParams) || (constantVar == -1))
 		return;
 
 	IMaterialVar* pPixelVar = s_ppParams[constantVar];
-	Assert( pPixelVar );
+	contract_assert( pPixelVar );
 
 	float val[4];
 	if (pPixelVar->GetType() == MATERIAL_VAR_TYPE_VECTOR)
@@ -204,12 +193,12 @@ void CBaseVSShader::SetPixelShaderConstantFudge( int pixelReg, int constantVar )
 
 void CBaseVSShader::SetVertexShaderConstant( int vertexReg, int constantVar )
 {
-	Assert( !IsSnapshotting() );
+	contract_assert( !IsSnapshotting() );
 	if ((!s_ppParams) || (constantVar == -1))
 		return;
 
 	IMaterialVar* pVertexVar = s_ppParams[constantVar];
-	Assert( pVertexVar );
+	contract_assert( pVertexVar );
 
 	float val[4];
 	if (pVertexVar->GetType() == MATERIAL_VAR_TYPE_VECTOR)
@@ -500,7 +489,7 @@ void CBaseVSShader::LoadBumpLightmapCoordinateAxes_PixelShader( int pixelReg )
 	Vector4D basis[3];
 	for (int i = 0; i < 3; ++i)
 	{
-		memcpy( &basis[i], &g_localBumpBasis[i], 3 * sizeof(float) );
+		std::memcpy( &basis[i], &g_localBumpBasis[i], 3 * sizeof(float) );
 		basis[i][3] = 0.0f;
 	}
 	s_pShaderAPI->SetPixelShaderConstant( pixelReg, (float*)basis, 3 );
@@ -526,7 +515,7 @@ void CBaseVSShader::LoadBumpLightmapCoordinateAxes_VertexShader( int vertexReg )
 	s_pShaderAPI->SetVertexShaderConstant( vertexReg, (float*)basis, 3 );
 	for (i = 0; i < 3; ++i)
 	{
-		memcpy( &basis[i], &g_localBumpBasis[i], 3 * sizeof(float) );
+		std::memcpy( &basis[i], &g_localBumpBasis[i], 3 * sizeof(float) );
 		basis[i][3] = 0.0f;
 	}
 	s_pShaderAPI->SetVertexShaderConstant( vertexReg + 3, (float*)basis, 3 );
@@ -702,7 +691,7 @@ BlendType_t CBaseVSShader::EvaluateBlendRequirements( int textureVar, bool isBas
 
 void CBaseVSShader::SetFlashlightVertexShaderConstants( bool bBump, int bumpTransformVar, bool bDetail, int detailScaleVar, bool bSetTextureTransforms )
 {
-	Assert( !IsSnapshotting() );
+	contract_assert( !IsSnapshotting() );
 
 	VMatrix worldToTexture;
 	const FlashlightState_t &flashlightState = s_pShaderAPI->GetFlashlightState( worldToTexture );
@@ -980,7 +969,7 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 		}
 		if( vars.m_bWorldVertexTransition )
 		{
-			Assert( vars.m_nBaseTexture2Var >= 0 && vars.m_nBaseTexture2FrameVar >= 0 );
+			contract_assert( vars.m_nBaseTexture2Var >= 0 && vars.m_nBaseTexture2FrameVar >= 0 );
 			BindTexture( SHADER_SAMPLER4, TEXTURE_BINDFLAGS_SRGBREAD, vars.m_nBaseTexture2Var, vars.m_nBaseTexture2FrameVar );
 		}
 		ShaderApiFast( pShaderAPI )->BindStandardTexture( SHADER_SAMPLER2, TEXTURE_BINDFLAGS_NONE, TEXTURE_NORMALIZATION_CUBEMAP );
@@ -1050,8 +1039,8 @@ void CBaseVSShader::DrawFlashlight_dx90( IMaterialVar** params, IShaderDynamicAP
 
 			if( vars.m_bTeeth )
 			{
-				Assert( vars.m_nTeethForwardVar >= 0 );
-				Assert( vars.m_nTeethIllumFactorVar >= 0 );
+				contract_assert( vars.m_nTeethForwardVar >= 0 );
+				contract_assert( vars.m_nTeethIllumFactorVar >= 0 );
 				Vector4D lighting;
 				params[vars.m_nTeethForwardVar]->GetVecValue( lighting.Base(), 3 );
 				lighting[3] = params[vars.m_nTeethIllumFactorVar]->GetFloatValue();
@@ -1113,7 +1102,7 @@ void CBaseVSShader::HashShadow2DJitter( const float fJitterSeed, float *fU, floa
 	int nTexWidth, nTexHeight;
 	s_pShaderAPI->GetStandardTextureDimensions( &nTexWidth, &nTexHeight, TEXTURE_SHADOW_NOISE_2D );
 
-	int nSeed = fmod (fJitterSeed, 1.0f) * nTexWidth * nTexHeight;
+	int nSeed = std::fmod (fJitterSeed, 1.0f) * nTexWidth * nTexHeight;
 
 	int nRow = nSeed / nTexHeight;
 	int nCol = nSeed % nTexWidth;
@@ -1155,7 +1144,7 @@ void CBaseVSShader::DrawEqualDepthToDestAlpha( void )
 		Draw( bMakeActualDrawCall );
 	}
 #else
-	Assert( 0 ); //probably just needs a shader update to the latest
+	contract_assert( 0 ); //probably just needs a shader update to the latest
 #endif
 }
 

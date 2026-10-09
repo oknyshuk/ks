@@ -1,12 +1,28 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include "rocketui/rmlui.h"
 #include "rkpanel_options.h"
 
 #include "rkpanel.h"
 
 #include "rkhud_model.h"
 
-#include "cbase.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 #include "cdll_client_int.h" // extern globals to interfaces like engineclient
-#include "tier1/convar.h"
 #include "IGameUIFuncs.h"
 #include "modes.h"
 #include "materialsystem/materialsystem_config.h"
@@ -15,6 +31,8 @@ extern IGameUIFuncs *gameuifuncs;
 extern IMaterialSystem *materials;
 
 #include <rocketui/rmlui.h>
+import ks.tier1;
+import std;
 #include "rkhud_pausemenu.h"
 #include "rkmenu_main.h"
 
@@ -195,7 +213,7 @@ static void BindOptions( Rml::DataModelConstructor &c )
         ConVarRef pitch( "m_pitch" );
         if ( !target || !pitch.IsValid() )
             return;
-        float absVal = fabsf( pitch.GetFloat() );
+        float absVal = std::fabsf( pitch.GetFloat() );
         if ( absVal < 0.0001f )
             absVal = 0.022f;
         pitch.SetValue( target->HasAttribute( "checked" ) ? -absVal : absVal );
@@ -284,7 +302,7 @@ void RocketOptionsDocument::PopulateResolution()
     sel->RemoveAll();
 
     int selectedIdx = -1;
-    int bestMatch = INT_MAX;
+    int bestMatch = std::numeric_limits<int>::max();
     int optionCount = 0;
 
     // Check if current backbuffer resolution is in the mode list.
@@ -532,4 +550,3 @@ void RocketOptionsDocument::ShowPanel( bool bShow, bool immediate )
 
     RkPanelShow( m_pInstance, m_bVisible, bShow );
 }
-

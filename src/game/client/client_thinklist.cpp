@@ -1,12 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/vprof.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+
 
 CClientThinkList g_ClientThinkList;
 
@@ -129,7 +131,6 @@ void CClientThinkList::SetNextClientThink( ClientEntityHandle_t hEnt, float flNe
 		pEntry->m_flLastClientThink = 0.0f;
 	}
 
-	Assert( GetThinkEntry( hThink )->m_hEnt == hEnt );
 	GetThinkEntry( hThink )->m_flNextClientThink = flNextTime;
 }
 
@@ -173,7 +174,6 @@ void CClientThinkList::RemoveThinkable( ClientEntityHandle_t hEnt )
 		ClientThinkHandle_t hThink = pThink->GetThinkHandle();
 		if ( hThink != INVALID_THINK_HANDLE )
 		{
-			Assert( GetThinkEntry( hThink )->m_hEnt == hEnt );
 			RemoveThinkable( hThink );
 		}
 	}
@@ -198,17 +198,17 @@ void CClientThinkList::PerformThinkFunction( ThinkEntry_t *pEntry, float flCurti
 		// which would cause it to be removed + readded into the list
 		pThink->ClientThink();
 	}
-	else if ( pEntry->m_flNextClientThink == FLT_MAX )
+	else if ( pEntry->m_flNextClientThink == std::numeric_limits<float>::max() )
 	{
 		// This is an entity that doesn't need to think again; remove it
 		RemoveThinkable( pEntry->m_hEnt );
 	}
 	else
 	{
-		Assert( pEntry->m_flNextClientThink <= flCurtime );
+		contract_assert( pEntry->m_flNextClientThink <= flCurtime );
 
 		// Indicate we're not going to think again
-		pEntry->m_flNextClientThink = FLT_MAX;
+		pEntry->m_flNextClientThink = std::numeric_limits<float>::max();
 
 		// NOTE: The Think function here could call SetNextClientThink
 		// which would cause it to be readded into the list
@@ -265,7 +265,8 @@ void CClientThinkList::AddEntityToFrameThinkList( ThinkEntry_t *pEntry, bool bAl
 //-----------------------------------------------------------------------------
 void CClientThinkList::PerformThinkFunctions()
 {
-	VPROF_("Client Thinks", 1, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_CLIENT);
+	ks::ScratchArena<> scratch;
+	CVProfScope _( "Client Thinks", 1, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_CLIENT );
 
 	int nMaxList = (int)m_ThinkEntries.size();
 	if ( nMaxList == 0 )
@@ -276,12 +277,12 @@ void CClientThinkList::PerformThinkFunctions()
 	// Build a list of entities to think this frame, in order of hierarchy.
 	// Do this because the list may be modified during the thinking and also to
 	// prevent bad situations where an entity can think more than once in a frame.
-	ThinkEntry_t **ppThinkEntryList = (ThinkEntry_t**)stackalloc( nMaxList * sizeof(ThinkEntry_t*) );
+	ThinkEntry_t **ppThinkEntryList = scratch.Alloc<ThinkEntry_t*>( nMaxList );
 	int nThinkCount = 0;
 	for ( ThinkEntry_t &entry : m_ThinkEntries )
 	{
 		AddEntityToFrameThinkList( &entry, false, nThinkCount, ppThinkEntryList );
-		Assert( nThinkCount <= nMaxList );
+		contract_assert( nThinkCount <= nMaxList );
 	}
 
 	// While we're in the loop, no changes to the think list are allowed
@@ -351,7 +352,7 @@ void CClientThinkList::PerformThinkFunctions()
 void CClientThinkList::AddToDeleteList( ClientEntityHandle_t hEnt )
 {
 	// Sanity check!
-	Assert( hEnt != ClientEntityList().InvalidHandle() );
+	contract_assert( hEnt != ClientEntityList().InvalidHandle() );
 	if ( hEnt == ClientEntityList().InvalidHandle() )
 		return;
 
@@ -376,7 +377,7 @@ void CClientThinkList::AddToDeleteList( ClientEntityHandle_t hEnt )
 void CClientThinkList::RemoveFromDeleteList( ClientEntityHandle_t hEnt )
 {
 	// Sanity check!
-	Assert( hEnt != ClientEntityList().InvalidHandle() );
+	contract_assert( hEnt != ClientEntityList().InvalidHandle() );
 	if ( hEnt == ClientEntityList().InvalidHandle() )
 		return;
 
@@ -420,4 +421,3 @@ void CClientThinkList::CleanUpDeleteList()
 
 	m_aDeleteList.clear();
 }
-

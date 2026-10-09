@@ -1,17 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+import std;
+import ks.tier1;
 #include "IRunGameEngine.h"
 #include "engineinterface.h"
-#include "tier1/strtools.h"
 #include "IGameUIFuncs.h"
-#include "tier1/convar.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Interface to running the engine from the UI dlls
@@ -60,7 +54,7 @@ public:
 	// returns true if the player is currently connected to a game server
 	virtual bool IsInGame()
 	{
-		return engine->GetLevelName() && strlen(engine->GetLevelName()) > 0;
+		return engine->GetLevelName() && std::strlen(engine->GetLevelName()) > 0;
 	}
 
 	// gets information about the server the engine is currently connected to
@@ -77,7 +71,7 @@ public:
 
 		// update the player's name if necessary
 		ConVarRef name( "name" );
-		if ( name.IsValid() && trackerName && *trackerName && !Q_strcmp( name.GetString(), "unnamed" ) )
+		if ( name.IsValid() && trackerName && *trackerName && !V_strcmp( name.GetString(), "unnamed" ) )
 		{
 			name.SetValue(trackerName);
 		}
@@ -119,7 +113,7 @@ public:
 		return engine->GetEngineBuildNumber();
 	}
 
-	// return the product version of the mod being played (comes from steam.inf)
+	// return the product version of the mod being played
 	virtual const char *GetProductVersionString()
 	{
 		return engine->GetProductVersionString();
@@ -176,4 +170,3 @@ public:
 //#ifndef _XBOX
 //#endif
 //}
-

@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef OPTIMIZE_H
-#define OPTIMIZE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #include "studio.h"
 
-#define MAX_NUM_BONES_PER_STRIP 512
+inline constexpr auto MAX_NUM_BONES_PER_STRIP = 512;
 
-#define OPTIMIZED_MODEL_FILE_VERSION 7
+inline constexpr auto OPTIMIZED_MODEL_FILE_VERSION = 7;
 
 extern bool g_bDumpGLViewFiles;
 
@@ -246,5 +239,3 @@ struct FileHeader_t
 void WriteOptimizedFiles( studiohdr_t *phdr, s_bodypart_t *pSrcBodyParts );
 
 }; // namespace OptimizedModel
-
-#endif // OPTIMIZE_H

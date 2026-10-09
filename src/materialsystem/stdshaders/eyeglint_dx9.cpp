@@ -1,10 +1,7 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Run procedural glint generation inner loop in pixel shader
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
+
+// Purpose: Run procedural glint generation inner loop in pixel shader
 
 #include "BaseVSShader.h"
 #include "shaderlib/cshader.h"
@@ -13,11 +10,10 @@
 #include "eyeglint_ps20.inc"
 #include "eyeglint_ps20b.inc"
 
-
 DEFINE_FALLBACK_SHADER( EyeGlint, EyeGlint_dx9 )
 BEGIN_VS_SHADER( EyeGlint_dx9, "Help for EyeGlint" )
 
-BEGIN_SHADER_PARAMS
+
 END_SHADER_PARAMS
 
 SHADER_INIT

@@ -1,18 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#if !defined( SIMPLE3D_H )
-#define SIMPLE3D_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "particles_simple.h"
 #include "particle_collision.h"
@@ -59,5 +47,3 @@ private:
 	CSimple3DEmitter( const CSimple3DEmitter & );
 
 };
-
-#endif	//SIMPLE3D_H

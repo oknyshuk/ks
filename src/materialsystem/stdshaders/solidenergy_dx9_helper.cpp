@@ -1,8 +1,8 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "BaseVSShader.h"
 #include "solidenergy_dx9_helper.h"
-#include "cpp_shader_constant_register_map.h"
 
 // Auto generated inc files
 #include "solidenergy_vs20.inc"
@@ -317,19 +317,19 @@ void DrawSolidEnergy(  CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 			if( IS_PARAM_DEFINED( info.m_nTangentTOpacityRanges ) )
 				params[info.m_nTangentTOpacityRanges]->GetVecValue( flConsts, 4 );
 			else
-				memcpy( flConsts, kDefaultFalloffRanges, sizeof( kDefaultFalloffRanges ) );
+				std::memcpy( flConsts, kDefaultFalloffRanges, sizeof( kDefaultFalloffRanges ) );
 			pContextData->m_SemiStaticCmdsOut.SetPixelShaderConstant( 0, flConsts, 1 );
 
 			if( IS_PARAM_DEFINED( info.m_nTangentSOpacityRanges ) )
 				params[info.m_nTangentSOpacityRanges]->GetVecValue( flConsts, 4 );
 			else
-				memcpy( flConsts, kDefaultFalloffRanges, sizeof( kDefaultFalloffRanges ) );
+				std::memcpy( flConsts, kDefaultFalloffRanges, sizeof( kDefaultFalloffRanges ) );
 			pContextData->m_SemiStaticCmdsOut.SetPixelShaderConstant( 1, flConsts, 1 );
 
 			if( IS_PARAM_DEFINED( info.m_nFresnelOpacityRanges ) )
 				params[info.m_nFresnelOpacityRanges]->GetVecValue( flConsts, 4 );
 			else
-				memcpy( flConsts, kDefaultFalloffRanges, sizeof( kDefaultFalloffRanges ) );
+				std::memcpy( flConsts, kDefaultFalloffRanges, sizeof( kDefaultFalloffRanges ) );
 			pContextData->m_SemiStaticCmdsOut.SetPixelShaderConstant( 2, flConsts, 1 );
 
 			pContextData->m_SemiStaticCmdsOut.SetDepthFeatheringShaderConstants( 4, params[info.m_nDepthBlendScale]->GetFloatValue() );

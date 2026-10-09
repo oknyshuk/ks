@@ -1,10 +1,41 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -96,7 +127,7 @@ int CFuncBrush::DrawDebugTextOverlays( void )
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
 		char tempstr[512];
-		Q_snprintf( tempstr,sizeof(tempstr), "angles: %g %g %g", (double)GetLocalAngles()[PITCH], (double)GetLocalAngles()[YAW], (double)GetLocalAngles()[ROLL] );
+		V_snprintf( tempstr,sizeof(tempstr), "angles: %g %g %g", (double)GetLocalAngles()[PITCH], (double)GetLocalAngles()[YAW], (double)GetLocalAngles()[ROLL] );
 		EntityText( nOffset, tempstr, 0 );
 		nOffset++;
 	}
@@ -179,7 +210,7 @@ void CFuncBrush::TurnOff( void )
 
 	WakeRestingObjects();	
 
-	m_iDisabled = TRUE;
+	m_iDisabled = true;
 }
 
 
@@ -208,7 +239,7 @@ void CFuncBrush::TurnOn( void )
 		}		
 	}
 
-	m_iDisabled = FALSE;
+	m_iDisabled = false;
 }
 
 
@@ -370,4 +401,3 @@ bool CTriggerBrush::PassesInputFilter( CBaseEntity *pOther, int filter )
 
 	return true;
 }
-

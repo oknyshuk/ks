@@ -1,18 +1,10 @@
-//========= Copyright c 1996-2011, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//====================================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2011 Valve Corporation
 
-#ifndef __MDLCOMBINE_H
-#define __MDLCOMBINE_H
-
-
-
-#include <cstddef>
-#include <vector>
-
+import ks.tier1;
+import std;
+#include "datacache/imdlcache.h"
 
 struct studiohdr2_t;
 struct studiodata_t;
@@ -20,7 +12,6 @@ struct mstudiobone_t;
 struct mstudioanimdesc_t;
 struct mstudiomodel_t;
 class CModelCombine;
-class KeyValues;
 
 
 namespace OptimizedModel
@@ -37,12 +28,12 @@ namespace OptimizedModel
 //#define DEBUG_COMBINE	1
 
 
-#define COMBINER_MAX_STRINGS				2000
-#define COMBINER_MAX_BONES					( 53 * 2 )
-#define COMBINER_MAX_SUB_MODELS				20
-#define COMBINER_WORK_BUFFER_SIZE			( 2 * 1024 * 1024 )
-#define COMBINER_MAX_MATERIALS				( COMBINER_MAX_MATERIALS_PER_INPUT_MODEL * COMBINER_MAX_MODELS )
-#define COMBINER_MAX_BODYPARTS_PER_MODEL	5
+inline constexpr auto COMBINER_MAX_STRINGS = 2000;
+inline constexpr auto COMBINER_MAX_BONES = ( 53 * 2 );
+inline constexpr auto COMBINER_MAX_SUB_MODELS = 20;
+inline constexpr auto COMBINER_WORK_BUFFER_SIZE = ( 2 * 1024 * 1024 );
+inline constexpr auto COMBINER_MAX_MATERIALS = ( COMBINER_MAX_MATERIALS_PER_INPUT_MODEL * COMBINER_MAX_MODELS );
+inline constexpr auto COMBINER_MAX_BODYPARTS_PER_MODEL = 5;
 
 typedef struct SAtlasGroup
 {
@@ -134,9 +125,6 @@ private:
 	char		*m_pWritePos;
 	char		*m_pSaveWritePos[ MAX_WRITE_AREAS ];
 	int			m_nWriteArea;
-#ifdef DEBUG_COMBINE
-	char		*m_pErrorPos;
-#endif
 
 };
 
@@ -216,9 +204,6 @@ private:
 	void		CombineMDL_AssignMeshIDs( );
 
 	void		CombineMDL( bool bNoStringTable );
-#ifdef DEBUG_COMBINE
-	void		TestCombineMDL( );
-#endif // DEBUG_COMBINE
 
 	void		CalcVTXInfo();
 
@@ -230,9 +215,6 @@ private:
 	void		WriteModel( int nModel, OptimizedModel::BodyPartHeader_t *pNewBodyPart, OptimizedModel::BodyPartHeader_t *pOrigBodyPart );
 	void		WriteBodyPart( int nBodyPart );
 	void		CombineVTX( );
-#ifdef DEBUG_COMBINE
-	void		TestCombineVTX( );
-#endif // DEBUG_COMBINE
 
 	//
 	void		CombineVVD_OffsetVerts( );
@@ -306,6 +288,3 @@ private:
 
 
 extern CModelCombine			g_ModelCombiner;
-
-
-#endif // __MDLCOMBINE_H

@@ -1,21 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Avoid these warnings:
 
+import ks.core;
 #include "riff.h"
-#include <stdio.h>
-#include <string.h>
-#include "tier0/dbg.h"
-
-
+import std;
 
 #define RIFF_ID MAKEID('R','I','F','F')
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Opens a RIFF file using the given I/O mechanism
@@ -39,7 +31,7 @@ InFileRIFF::InFileRIFF( const char *pFileName, IFileReadBinary &io ) : m_io(io)
 	riff = ReadInt();
 	if ( riff != RIFF_ID )
 	{
-		printf( "Not a RIFF File [%s]\n", pFileName );
+		std::printf( "Not a RIFF File [%s]\n", pFileName );
 		m_riffSize = 0;
 	}
 	else
@@ -74,7 +66,7 @@ int InFileRIFF::ReadInt( void )
 {
 	int tmp = 0;
 	m_io.read( &tmp, sizeof(int), m_file );
-	tmp = LittleLong( tmp );
+	tmp = ( tmp );
 
 	return tmp;
 }
@@ -393,7 +385,7 @@ void IterateOutputRIFF::ChunkWriteData( void *pOutput, int size )
 
 void IterateOutputRIFF::ChunkFinish( void )
 {
-	Assert( m_chunkStart != -1 );
+	contract_assert( m_chunkStart != -1 );
 
 	m_chunkPosition = m_riff.PositionGet();
 	
@@ -412,7 +404,7 @@ void IterateOutputRIFF::ChunkFinish( void )
 
 void IterateOutputRIFF::ChunkStart( unsigned int chunkname )
 {
-	Assert( m_chunkStart == -1 );
+	contract_assert( m_chunkStart == -1 );
 
 	m_chunkStart = m_riff.PositionGet();
 
@@ -435,7 +427,7 @@ void IterateOutputRIFF::CopyChunkData( IterateRIFF& input )
 	if (  input.ChunkSize() > 0 )
 	{
 		char *buffer = new char[ input.ChunkSize() ];
-		Assert( buffer );
+		contract_assert( buffer );
 
 		input.ChunkRead( buffer );
 

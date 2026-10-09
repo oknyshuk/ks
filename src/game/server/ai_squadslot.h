@@ -1,20 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		The default shared conditions
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef	SQUADSLOT_H
-#define	SQUADSLOT_H
+// Purpose: The default shared conditions
 
-#define	MAX_SQUADSLOTS 32
+inline constexpr auto MAX_SQUADSLOTS = 32;
 
 //=========================================================
 // These are the default shared squad slots
@@ -45,6 +35,3 @@ enum SQUAD_SLOT_t {
 	// ======================================
 	LAST_SHARED_SQUADSLOT,		
 };
-
-
-#endif	//SQUADSLOT_H

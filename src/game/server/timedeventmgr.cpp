@@ -1,13 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "shareddefs.h"
+#include "util.h"
 #include "timedeventmgr.h"
-#include "tier0/vprof.h"
-#include "tier1/vector_ops.h"
 
 // ------------------------------------------------------------------------------------------ //
 // CEventRegister.
@@ -46,7 +44,7 @@ void CEventRegister::Term()
 
 void CEventRegister::SetUpdateInterval( float interval )
 {
-	Assert( m_pEventMgr );
+	contract_assert( m_pEventMgr );
 
 	if ( m_pEventMgr )
 	{
@@ -98,7 +96,7 @@ CTimedEventMgr::CTimedEventMgr() = default;
 
 void CTimedEventMgr::FireEvents()
 {
-	VPROF( "CTimedEventMgr::FireEvents" );
+	CVProfScope _( "CTimedEventMgr::FireEvents", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	while ( !m_Events.empty() )
 	{
 		// Fire the top element, then break out.

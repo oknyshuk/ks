@@ -1,20 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
-#include "tier0/vprof.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Breakable Model TE
@@ -130,7 +127,7 @@ void TE_PhysicsProp( IRecipientFilter& filter, float delay,
 //-----------------------------------------------------------------------------
 void C_TEPhysicsProp::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEPhysicsProp::PostDataUpdate" );
+	CVProfScope _( "C_TEPhysicsProp::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	color24 clrRenderConverted;
 	clrRenderConverted.r = m_clrRender.r;
@@ -168,4 +165,3 @@ void TE_PhysicsProp( IRecipientFilter& filter, float delay, KeyValues *pKeyValue
 
 	TE_PhysicsProp( filter, delay, nModelIndex, nSkin, vecOrigin, angles, vecVel, flags, nEffects, convertedRenderColor );
 }
-

@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <stdarg.h>
+import std;
+import ks.tier1;
 #include "gameui_util.h"
-#include "strtools.h"
 #include "engineinterface.h"
-
 
 static int g_nGameUIActiveSplitscreenPlayerSlot = 0;
 
@@ -88,7 +82,7 @@ void GameUI_MakeSafeName( const char *oldName, char *newName, int newNameBufSize
 //			... - 
 // Output : char
 //-----------------------------------------------------------------------------
-// Unused :: char *VarArgs( PRINTF_FORMAT_STRING const char *format, ... );
+// Unused :: char *VarArgs( const char *format, ... );
 
 //-----------------------------------------------------------------------------
 // This version is simply used to make reading convars simpler.
@@ -127,11 +121,11 @@ void CGameUIConVarRef::Init( const char *pName, bool bIgnoreMissing )
 		char pchName[ 256 ];
 		if ( i != 0 )
 		{
-			Q_snprintf( pchName, sizeof( pchName ), "%s%d", pName, i + 1 );
+			V_snprintf( pchName, sizeof( pchName ), "%s%d", pName, i + 1 );
 		}
 		else
 		{
-			Q_strncpy( pchName, pName, sizeof( pchName ) );
+			V_strncpy( pchName, pName, sizeof( pchName ) );
 		}
 
 		info.m_pConVar = g_pCVar ? g_pCVar->FindVar( pchName ) : &s_EmptyConVar;
@@ -171,7 +165,7 @@ CGameUIConVarRef::CGameUIConVarRef( IConVar *pConVar )
 	{
 		info = m_Info[ i ];
 		char pchName[ 256 ];
-		Q_snprintf( pchName, sizeof( pchName ), "%s%d", pConVar->GetName(), i + 1 );
+		V_snprintf( pchName, sizeof( pchName ), "%s%d", pConVar->GetName(), i + 1 );
 
 		info.m_pConVar = g_pCVar ? g_pCVar->FindVar( pchName ) : &s_EmptyConVar;
 		if ( !info.m_pConVar )
@@ -204,4 +198,3 @@ CGameUiSetActiveSplitScreenPlayerGuard::~CGameUiSetActiveSplitScreenPlayerGuard(
 {
 	engine->SetActiveSplitScreenPlayerSlot( m_nSaveSlot );
 }
-

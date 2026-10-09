@@ -1,13 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef FUNC_LADDER_H
-#define FUNC_LADDER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#ifdef CLIENT_DLL
+#include "c_baseentity.h"
+#else
+#include "baseentity.h"
+#endif
 
 #if defined( CLIENT_DLL )
 #define CFuncLadder C_FuncLadder
@@ -27,7 +27,7 @@ public:
 typedef CHandle< CInfoLadderDismount > CInfoLadderDismountHandle;
 
 // Spawnflags
-#define SF_LADDER_DONTGETON			1			// Set for ladders that are acting as automount points, but not really ladders
+inline constexpr auto SF_LADDER_DONTGETON = 1; // Set for ladders that are acting as automount points, but not really ladders
 
 //-----------------------------------------------------------------------------
 // Purpose: A player-climbable ladder
@@ -113,5 +113,3 @@ inline bool CFuncLadder::IsEnabled() const
 }
 
 const char *FuncLadder_GetSurfaceprops(CBaseEntity *pLadderEntity);
-
-#endif // FUNC_LADDER_H

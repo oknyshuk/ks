@@ -1,39 +1,32 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include <keyvalues.h>
+import std;
+import ks.vstdlib;
 #include "filesystem.h"
 #include "tier2/interval.h"
-#include "mathlib/mathlib.h"
 #include "engine/IEngineSound.h"
 #include "soundemittersystembase.h"
-#include "tier1/text_writer.h"
 #include "soundchars.h"
-#include "vstdlib/random.h"
-#include "checksum_crc.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "tier2/tier2.h"
 #include "datacache/iresourceaccesscontrol.h"
-#include "checksum_crc.h"
-#include "tier1/generichash.h"
 
+inline constexpr const char *MANIFEST_FILE = "scripts/game_sounds_manifest.txt";
+inline constexpr const char *GAME_SOUNDS_HEADER_BLOCK = "scripts/game_sounds_header.txt";
 
-#define MANIFEST_FILE				"scripts/game_sounds_manifest.txt"
-#define GAME_SOUNDS_HEADER_BLOCK	"scripts/game_sounds_header.txt"
-
-BEGIN_DEFINE_LOGGING_CHANNEL( LOG_SOUNDEMITTER_SYSTEM, "SoundEmitterSystem", LCF_CONSOLE_ONLY, LS_MESSAGE );
-END_DEFINE_LOGGING_CHANNEL();
+static void Register_LOG_SOUNDEMITTER_SYSTEM_Tags();
+LoggingChannelID_t LOG_SOUNDEMITTER_SYSTEM = LoggingSystem_RegisterLoggingChannel( "SoundEmitterSystem", Register_LOG_SOUNDEMITTER_SYSTEM_Tags, LCF_CONSOLE_ONLY, LS_MESSAGE );
+void Register_LOG_SOUNDEMITTER_SYSTEM_Tags()
+{
+};
 
 //-----------------------------------------------------------------------------
 
-#define MAX_MEASURED_SOUNDENTRIES 6124
+constexpr auto MAX_MEASURED_SOUNDENTRIES = 6124;
 
 // Allocate sound entries in 64k blocks
-DEFINE_FIXEDSIZE_ALLOCATOR( CSoundEntry, 64*1024 / sizeof( CSoundEntry ), ks::fixed_pool::grow::slow );
+ks::fixed_pool CSoundEntry::s_Allocator( sizeof(CSoundEntry), 64*1024 / sizeof( CSoundEntry ), ks::fixed_pool::grow::slow, "CSoundEntry pool", alignof(CSoundEntry) );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -87,7 +80,7 @@ public:
 	void	SetSeed( int iSeed )
 	{
 		// Never call this from the client or game!
-		Assert(0);
+		contract_assert( 0 );
 	}
 
 	// Generates random numbers
@@ -158,7 +151,7 @@ static void AccumulateFileNameAndTimestampIntoChecksum( CRC32_t *crc, char const
 
 	long ft = g_pFullFileSystem->GetFileTime( filename, "GAME" );
 	CRC32_ProcessBuffer( crc, &ft, sizeof( ft ) );
-	CRC32_ProcessBuffer( crc, filename, Q_strlen( filename ) );
+	CRC32_ProcessBuffer( crc, filename, V_strlen( filename ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -219,7 +212,7 @@ bool CSoundEmitterSystemBase::LoadGameSoundManifest()
 
 		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != nullptr; sub = sub->GetNextKey() )
 		{
-			if ( !Q_stricmp( sub->GetName(), "precache_file" ) )
+			if ( !V_stricmp( sub->GetName(), "precache_file" ) )
 			{
 				AccumulateFileNameAndTimestampIntoChecksum( &crc, sub->GetString() );
 
@@ -227,7 +220,7 @@ bool CSoundEmitterSystemBase::LoadGameSoundManifest()
 				AddSoundsFromFile( sub->GetString(), false, false );
 				continue;
 			}
-			if ( !Q_stricmp( sub->GetName(), "autocache_file" ) )
+			if ( !V_stricmp( sub->GetName(), "autocache_file" ) )
 			{
 				AccumulateFileNameAndTimestampIntoChecksum( &crc, sub->GetString() );
 
@@ -235,7 +228,7 @@ bool CSoundEmitterSystemBase::LoadGameSoundManifest()
 				AddSoundsFromFile( sub->GetString(), false, true );
 				continue;
 			}
-			else if ( !Q_stricmp( sub->GetName(), "preload_file" ) )
+			else if ( !V_stricmp( sub->GetName(), "preload_file" ) )
 			{
 				AccumulateFileNameAndTimestampIntoChecksum( &crc, sub->GetString() );
 
@@ -438,7 +431,7 @@ int	CSoundEmitterSystemBase::FindBestSoundForGender( SoundFile *pSoundnames, int
 		{
 
 			// TODO: morasky, this should get tested at load time?
-			Assert( std::ssize( slots ) < MAX_SOUND_SEED_VALUE );
+			contract_assert( std::ssize( slots ) < MAX_SOUND_SEED_VALUE );
 
 			int nRandomIndex = randomStream->RandomInt( 0, std::ssize( slots ) - 1 );
 
@@ -486,7 +479,7 @@ bool CSoundEmitterSystemBase::GetParametersForSound( const char *soundname, CSou
 	{
 		static ks::intern_pool soundWarnings;
 		char key[ 256 ];
-		Q_snprintf( key, sizeof( key ), "%s:%s", soundname, params.soundname );
+		V_snprintf( key, sizeof( key ), "%s:%s", soundname, params.soundname );
 		if ( !soundWarnings.contains( key ) )
 		{
 			soundWarnings.intern( key );
@@ -503,7 +496,7 @@ CSoundParametersInternal *CSoundEmitterSystemBase::InternalGetParametersForSound
 {
 	if ( !ks::is_valid_index( m_Sounds, index ) )
 	{
-		Assert( !"CSoundEmitterSystemBase::InternalGetParametersForSound:  Bogus index" );
+		contract_assert( !"CSoundEmitterSystemBase::InternalGetParametersForSound:  Bogus index" );
 		return nullptr;
 	}
 
@@ -572,7 +565,7 @@ void CSoundEmitterSystemBase::AddSoundName( CSoundParametersInternal& params, ch
 //-----------------------------------------------------------------------------
 static const char *FindGenderMacro( const char *wavename, int *duration )
 {
-	char const *p = Q_stristr( wavename, SOUNDGENDER_MACRO );
+	char const *p = V_stristr( wavename, SOUNDGENDER_MACRO );
 	if ( p )
 	{
 		*duration = SOUNDGENDER_MACRO_LENGTH;
@@ -598,19 +591,19 @@ void CSoundEmitterSystemBase::ExpandSoundNameMacros( CSoundParametersInternal& p
 	}
 
 	int offset = p - wavename;
-	Assert( offset >= 0 );
+	contract_assert( offset >= 0 );
 
 	// Create a "male" and "female" version of the sound
 	char before[ 256 ], after[ 256 ];
-	Q_memset( before, 0, sizeof( before ) );
-	Q_memset( after, 0, sizeof( after ) );
+	V_memset( before, 0, sizeof( before ) );
+	V_memset( after, 0, sizeof( after ) );
 
 	SplitName( wavename, offset, duration, before, sizeof( before ), after, sizeof( after ) );
 
 	char temp[ 256 ];
-	Q_snprintf( temp, sizeof( temp ), "%s%s%s", before, "male", after );
+	V_snprintf( temp, sizeof( temp ), "%s%s%s", before, "male", after );
 	AddSoundName( params, temp, GENDER_MALE );
-	Q_snprintf( temp, sizeof( temp ), "%s%s%s", before, "female", after );
+	V_snprintf( temp, sizeof( temp ), "%s%s%s", before, "female", after );
 	AddSoundName( params, temp, GENDER_FEMALE );
 
 	// Add the conversion entry with the gender tags still in it
@@ -623,7 +616,7 @@ void CSoundEmitterSystemBase::ExpandSoundNameMacros( CSoundParametersInternal& p
 void CSoundEmitterSystemBase::GenderExpandString( gender_t gender, char const *in, char *out, int maxlen )
 {
 	// Assume the worst
-	Q_strncpy( out, in, maxlen );
+	V_strncpy( out, in, maxlen );
 
 	int duration = SOUNDGENDER_MACRO_LENGTH;
 	const char *p = FindGenderMacro( in, &duration );
@@ -639,12 +632,12 @@ void CSoundEmitterSystemBase::GenderExpandString( gender_t gender, char const *i
 	}
 
 	int offset = p - in;
-	Assert( offset >= 0 );
+	contract_assert( offset >= 0 );
 
 	// Create a "male" and "female" version of the sound
 	char before[ 256 ], after[ 256 ];
-	Q_memset( before, 0, sizeof( before ) );
-	Q_memset( after, 0, sizeof( after ) );
+	V_memset( before, 0, sizeof( before ) );
+	V_memset( after, 0, sizeof( after ) );
 
 	SplitName( in, offset, duration, before, sizeof( before ), after, sizeof( after ) );
 
@@ -653,17 +646,17 @@ void CSoundEmitterSystemBase::GenderExpandString( gender_t gender, char const *i
 	default:
 	case GENDER_NONE:
 		{
-			Assert( !"CSoundEmitterSystemBase::GenderExpandString:  expecting MALE or FEMALE!" );
+			contract_assert( !"CSoundEmitterSystemBase::GenderExpandString:  expecting MALE or FEMALE!" );
 		}
 		break;
 	case GENDER_MALE:
 		{
-			Q_snprintf( out, maxlen, "%s%s%s", before, "male", after );
+			V_snprintf( out, maxlen, "%s%s%s", before, "male", after );
 		}
 		break;
 	case GENDER_FEMALE:
 		{
-			Q_snprintf( out, maxlen, "%s%s%s", before, "female", after );
+			V_snprintf( out, maxlen, "%s%s%s", before, "female", after );
 		}
 		break;
 	}
@@ -703,11 +696,11 @@ void CSoundEmitterSystemBase::LoadGlobalActors()
 				}
 
 				gender_t gender = GENDER_NONE;
-				if ( !Q_stricmp( pvkActor->GetString(), "male" ) )
+				if ( !V_stricmp( pvkActor->GetString(), "male" ) )
 				{
 					gender = GENDER_MALE;
 				}
-				else if (!Q_stricmp( pvkActor->GetString(), "female" ) )
+				else if (!V_stricmp( pvkActor->GetString(), "female" ) )
 				{
 					gender = GENDER_FEMALE;
 				}
@@ -729,7 +722,7 @@ gender_t CSoundEmitterSystemBase::GetActorGender( char const *actormodel )
 	actor[0] = 0;
 	if ( actormodel )
 	{
-		Q_FileBase( actormodel, actor, sizeof( actor ) );
+		V_FileBase( actormodel, actor, sizeof( actor ) );
 	}
 
 	auto idx = m_ActorGenders.find( actor );
@@ -759,23 +752,23 @@ bool CSoundEmitterSystemBase::InitSoundInternalParameters( const char *soundname
 	KeyValues *pKey = kv->GetFirstSubKey();
 	while ( pKey )
 	{
-		if ( !Q_strcasecmp( pKey->GetName(), "channel" ) )
+		if ( !V_strcasecmp( pKey->GetName(), "channel" ) )
 		{
 			params.ChannelFromString( pKey->GetString() );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "volume" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "volume" ) )
 		{
 			params.VolumeFromString( pKey->GetString() );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "pitch" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "pitch" ) )
 		{
 			params.PitchFromString( pKey->GetString() );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "wave" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "wave" ) )
 		{
 			ExpandSoundNameMacros( params, pKey->GetString() );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "rndwave" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "rndwave" ) )
 		{
 			KeyValues *pWaves = pKey->GetFirstSubKey();
 			while ( pWaves )
@@ -785,7 +778,7 @@ bool CSoundEmitterSystemBase::InitSoundInternalParameters( const char *soundname
 				{
 					if( !bEntryNumHasErrored )
 					{
-						Assert( params.NumSoundNames() >= MAX_SOUND_RNDWAVE_NUM );
+						contract_assert( params.NumSoundNames() >= MAX_SOUND_RNDWAVE_NUM );
 						Log_Warning( LOG_SOUNDEMITTER_SYSTEM, "Error: SoundEmitterSystemBase: %s attempting to load too many rndwave soundfiles!\n", soundname );
 					}
 					bEntryNumHasErrored	= true;
@@ -798,20 +791,20 @@ bool CSoundEmitterSystemBase::InitSoundInternalParameters( const char *soundname
 				pWaves = pWaves->GetNextKey();
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "attenuation" ) || !Q_strcasecmp( pKey->GetName(), "CompatibilityAttenuation" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "attenuation" ) || !V_strcasecmp( pKey->GetName(), "CompatibilityAttenuation" ) )
 		{
 			if ( params.GetSoundLevel().start != SNDLVL_NORM || params.GetSoundLevel().range != 0 )
 			{
 				DevMsg( "CSoundEmitterSystemBase::GetParametersForSound:  sound %s has multiple attenuation, CompatabilityAttenuation, and/or soundlevel entries.\n", soundname );
 			}
 
-			if ( !Q_strncasecmp( pKey->GetString(), "SNDLVL_", strlen( "SNDLVL_" ) ) )
+			if ( !V_strncasecmp( pKey->GetString(), "SNDLVL_", std::strlen( "SNDLVL_" ) ) )
 			{
 				DevMsg( "CSoundEmitterSystemBase::GetParametersForSound:  sound %s has \"attenuation\" with %s value!\n",
 					soundname, pKey->GetString() );
 			}
 
-			if ( !Q_strncasecmp( pKey->GetString(), "ATTN_", strlen( "ATTN_" ) ) )
+			if ( !V_strncasecmp( pKey->GetString(), "ATTN_", std::strlen( "ATTN_" ) ) )
 			{
 				params.SetSoundLevel( ATTN_TO_SNDLVL( TranslateAttenuation( pKey->GetString() ) ) );
 			}
@@ -829,7 +822,7 @@ bool CSoundEmitterSystemBase::InitSoundInternalParameters( const char *soundname
 
 			// Goldsrc compatibility mode.. feed the sndlevel value through the sound engine interface in such a way
 			// that it can reconstruct the original sndlevel value and flag the sound as using Goldsrc attenuation.
-			bool bCompatibilityAttenuation = !Q_strcasecmp( pKey->GetName(), "CompatibilityAttenuation" );
+			bool bCompatibilityAttenuation = !V_strcasecmp( pKey->GetName(), "CompatibilityAttenuation" );
 			if ( bCompatibilityAttenuation )
 			{
 				if ( params.GetSoundLevel().range != 0 )
@@ -840,14 +833,14 @@ bool CSoundEmitterSystemBase::InitSoundInternalParameters( const char *soundname
 				params.SetSoundLevel( SNDLEVEL_TO_COMPATIBILITY_MODE( params.GetSoundLevel().start ) );
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "soundlevel" ) || !Q_strcasecmp( pKey->GetName(), "CompatibilitySoundlevel" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "soundlevel" ) || !V_strcasecmp( pKey->GetName(), "CompatibilitySoundlevel" ) )
 		{
 			if ( params.GetSoundLevel().start != SNDLVL_NORM || params.GetSoundLevel().range != 0 )
 			{
 				DevMsg( "CSoundEmitterSystemBase::GetParametersForSound:  sound %s has multiple attenuation, CompatabilityAttenuation, and/or soundlevel entries.\n", soundname );
 			}
 
-			if ( !Q_strncasecmp( pKey->GetString(), "ATTN_", strlen( "ATTN_" ) ) )
+			if ( !V_strncasecmp( pKey->GetString(), "ATTN_", std::strlen( "ATTN_" ) ) )
 			{
 				DevMsg( "CSoundEmitterSystemBase::GetParametersForSound:  sound %s has \"soundlevel\" with %s value!\n",
 					soundname, pKey->GetString() );
@@ -857,7 +850,7 @@ bool CSoundEmitterSystemBase::InitSoundInternalParameters( const char *soundname
 
 			// Goldsrc compatibility mode.. feed the sndlevel value through the sound engine interface in such a way
 			// that it can reconstruct the original sndlevel value and flag the sound as using Goldsrc attenuation.
-			bool bCompatibilityAttenuation = !Q_strcasecmp( pKey->GetName(), "CompatibilitySoundlevel" );
+			bool bCompatibilityAttenuation = !V_strcasecmp( pKey->GetName(), "CompatibilitySoundlevel" );
 			if ( bCompatibilityAttenuation )
 			{
 				if ( params.GetSoundLevel().range != 0 )
@@ -868,17 +861,17 @@ bool CSoundEmitterSystemBase::InitSoundInternalParameters( const char *soundname
 				params.SetSoundLevel( SNDLEVEL_TO_COMPATIBILITY_MODE( params.GetSoundLevel().start ) );
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "play_to_owner_only" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "play_to_owner_only" ) )
 		{
 			params.SetOnlyPlayToOwner( pKey->GetBool() );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "delay_msec" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "delay_msec" ) )
 		{
 			// Don't allow negative delay
 			params.SetDelayMsec( std::max( 0, pKey->GetInt() ) );
 
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "soundentry_version" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "soundentry_version" ) )
 		{
 			params.SetSoundEntryVersion( pKey->GetInt() );
 		}
@@ -927,7 +920,7 @@ const char *CSoundEmitterSystemBase::GetWavFileForSound( const char *soundname, 
 	}
 
 	static char outsound[ 512 ];
-	Q_strncpy( outsound, params.soundname, sizeof( outsound ) );
+	V_strncpy( outsound, params.soundname, sizeof( outsound ) );
 	return outsound;
 }
 
@@ -982,7 +975,6 @@ void CSoundEmitterSystemBase::AddSoundsFromFile( const char *filename, bool bPre
 				CSoundEntry *pEntry;
 
 				{
-					MEM_ALLOC_CREDIT();
 					pEntry = new CSoundEntry;
 				}
 			
@@ -1012,7 +1004,6 @@ void CSoundEmitterSystemBase::AddSoundsFromFile( const char *filename, bool bPre
 					add = false;
 					if ( bIsOverride )
 					{
-						MEM_ALLOC_CREDIT();
 
 						// Store off the old sound if it's not already an "override" from another file!!!
 						// Otherwise, just whack it again!!!
@@ -1043,7 +1034,6 @@ void CSoundEmitterSystemBase::AddSoundsFromFile( const char *filename, bool bPre
 				
 				if ( add )
 				{
-					MEM_ALLOC_CREDIT();
 
 					InitSoundInternalParameters( pKeys->GetName(), pKeys, pEntry->m_SoundParams );
 					pEntry->m_SoundParams.SetShouldPreload( bPreload ); // this gets handled by game code after initting.
@@ -1083,7 +1073,7 @@ void CSoundEmitterSystemBase::AddSoundsFromFile( const char *filename, bool bPre
 			duplicatedReplacements );
 	}
 
-	Assert( scriptindex >= 0 );
+	contract_assert( scriptindex >= 0 );
 }
 
 
@@ -1103,7 +1093,7 @@ int CSoundEmitterSystemBase::CheckForMissingWavFiles( bool verbose )
 		CSoundParametersInternal *internal = InternalGetParametersForSound( i );
 		if ( !internal )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			continue;
 		}
 
@@ -1113,14 +1103,14 @@ int CSoundEmitterSystemBase::CheckForMissingWavFiles( bool verbose )
 			const char *name = GetWaveName( internal->GetSoundNames()[ wave ].symbol );
 			if ( !name || !name[ 0 ] )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				continue;
 			}
 
 			// Skip ! sentence stuff
 			if ( name[0] == CHAR_SENTENCE )
 				continue;
-			Q_snprintf( testfile, sizeof( testfile ), "sound/%s", PSkipSoundChars( name ) );
+			V_snprintf( testfile, sizeof( testfile ), "sound/%s", PSkipSoundChars( name ) );
 			if ( g_pFullFileSystem->FileExists( testfile ) )
 				continue;
 
@@ -1148,26 +1138,26 @@ float CSoundEmitterSystemBase::TranslateAttenuation( const char *key )
 {
 	if ( !key )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return ATTN_NORM;
 	}
 
-	if ( !Q_strcasecmp( key, "ATTN_NONE" ) )
+	if ( !V_strcasecmp( key, "ATTN_NONE" ) )
 		return ATTN_NONE;
 
-	if ( !Q_strcasecmp( key, "ATTN_NORM" ) )
+	if ( !V_strcasecmp( key, "ATTN_NORM" ) )
 		return ATTN_NORM;
 
-	if ( !Q_strcasecmp( key, "ATTN_IDLE" ) )
+	if ( !V_strcasecmp( key, "ATTN_IDLE" ) )
 		return ATTN_IDLE;
 
-	if ( !Q_strcasecmp( key, "ATTN_STATIC" ) )
+	if ( !V_strcasecmp( key, "ATTN_STATIC" ) )
 		return ATTN_STATIC;
 
-	if ( !Q_strcasecmp( key, "ATTN_RICOCHET" ) )
+	if ( !V_strcasecmp( key, "ATTN_RICOCHET" ) )
 		return ATTN_RICOCHET;
 
-	if ( !Q_strcasecmp( key, "ATTN_GUNFIRE" ) )
+	if ( !V_strcasecmp( key, "ATTN_GUNFIRE" ) )
 		return ATTN_GUNFIRE;
 
 	DevMsg( "CSoundEmitterSystem:  Unknown attenuation key %s\n", key );
@@ -1201,7 +1191,7 @@ const char *CSoundEmitterSystemBase::GetSourceFileForSound( int index ) const
 {
 	if ( index < 0 || index >= (int)std::ssize( m_Sounds ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return "";
 	}
 
@@ -1209,7 +1199,7 @@ const char *CSoundEmitterSystemBase::GetSourceFileForSound( int index ) const
 	int scriptindex = entry->m_nScriptFileIndex;
 	if ( scriptindex < 0 || scriptindex >= std::ssize( m_SoundKeyValues ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return "";
 	}
 	static char fn[ 512 ];
@@ -1217,7 +1207,7 @@ const char *CSoundEmitterSystemBase::GetSourceFileForSound( int index ) const
 	{
 		return fn;
 	}
-	Assert( 0 );
+	contract_assert( 0 );
 	return "";
 }
 
@@ -1260,7 +1250,6 @@ bool CSoundEmitterSystemBase::AddSound( const char *soundname, const char *scrip
 		return false;
 	}
 
-	MEM_ALLOC_CREDIT();
 
 	// More like an update...
 	if ( IsValidIndex( idx ) )
@@ -1305,7 +1294,7 @@ void CSoundEmitterSystemBase::RemoveSound( const char *soundname )
 	int scriptindex = m_Sounds[ idx ]->m_nScriptFileIndex;
 	if ( scriptindex < 0 || scriptindex >= std::ssize( m_SoundKeyValues ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
@@ -1324,7 +1313,7 @@ void CSoundEmitterSystemBase::MoveSound( const char *soundname, const char *news
 	int oldscriptindex = m_Sounds[ idx ]->m_nScriptFileIndex;
 	if ( oldscriptindex < 0 || oldscriptindex >= std::ssize( m_SoundKeyValues ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
@@ -1403,7 +1392,7 @@ void CSoundEmitterSystemBase::SaveChangesToSoundScript( int scriptindex )
 			int len = g_pFullFileSystem->Size( header );
 			
 			unsigned char *data = new unsigned char[ len + 1 ];
-			Q_memset( data, 0, len + 1 );
+			V_memset( data, 0, len + 1 );
 			
 			g_pFullFileSystem->Read( data, len, header );
 			g_pFullFileSystem->Close( header );
@@ -1430,7 +1419,7 @@ void CSoundEmitterSystemBase::SaveChangesToSoundScript( int scriptindex )
 	int c = GetSoundCount();
 	for ( int i = 0; i < c; i++ )
 	{
-		if ( Q_stricmp( outfile, GetSourceFileForSound( i ) ) )
+		if ( V_stricmp( outfile, GetSourceFileForSound( i ) ) )
 			continue;
 
 		// It's marked for deletion, just skip it
@@ -1472,12 +1461,12 @@ void CSoundEmitterSystemBase::SaveChangesToSoundScript( int scriptindex )
 
 			if ( waveCount == 1 )
 			{
-				Assert( p->GetSoundNames()[ 0 ].gender == GENDER_NONE );
+				contract_assert( p->GetSoundNames()[ 0 ].gender == GENDER_NONE );
 				buf.printf( "\t\"wave\"\t\t\t\"%s\"\n", GetWaveName( p->GetSoundNames()[ 0 ].symbol ) );
 			}
 			else if ( convertedCount == 1 )
 			{
-				Assert( p->GetConvertedNames()[ 0 ].gender == GENDER_NONE );
+				contract_assert( p->GetConvertedNames()[ 0 ].gender == GENDER_NONE );
 				buf.printf( "\t\"wave\"\t\t\t\"%s\"\n", GetWaveName( p->GetConvertedNames()[ 0 ].symbol ) );
 			}
 			else
@@ -1541,7 +1530,7 @@ WaveNameId_t CSoundEmitterSystemBase::AddWaveName( const char *name )
 	if ( auto it = m_WaveIds.find( std::string_view( name ) ); it != m_WaveIds.end() )
 		return it->second;
 
-	Assert( m_Waves.size() < WAVENAME_INVALID );
+	contract_assert( m_Waves.size() < WAVENAME_INVALID );
 	auto it = m_WaveIds.emplace( name, (WaveNameId_t)m_Waves.size() ).first;
 	m_Waves.push_back( it->first.c_str() );
 	return it->second;
@@ -1550,7 +1539,7 @@ WaveNameId_t CSoundEmitterSystemBase::AddWaveName( const char *name )
 void CSoundEmitterSystemBase::RenameSound( const char *soundname, const char *newname )
 {
 	// Same name?
-	if ( !Q_stricmp( soundname, newname ) )
+	if ( !V_stricmp( soundname, newname ) )
 	{
 		return;
 	}
@@ -1572,7 +1561,6 @@ void CSoundEmitterSystemBase::RenameSound( const char *soundname, const char *ne
 		return;
 	}
 
-	MEM_ALLOC_CREDIT();
 
 	// Copy out old entry
 	CSoundEntry *pEntry = m_Sounds[ index ];
@@ -1644,7 +1632,7 @@ bool CSoundEmitterSystemBase::GetParametersForSoundEx( const char *soundname, HS
 
 	if ( !internal )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		Warning( "CSoundEmitterSystemBase::GetParametersForSound:  No such sound %s\n", soundname );
 
 		HSOUNDSCRIPTHASH hash = HashSoundName( "Error" );
@@ -1673,7 +1661,7 @@ bool CSoundEmitterSystemBase::GetParametersForSoundEx( const char *soundname, HS
 
 	if ( bestIndex >= 0 )
 	{
-		Q_strncpy( params.soundname, GetWaveName( internal->GetSoundNames()[ bestIndex ].symbol), sizeof( params.soundname ) );
+		V_strncpy( params.soundname, GetWaveName( internal->GetSoundNames()[ bestIndex ].symbol), sizeof( params.soundname ) );
 
 		// If we are actually emitting the sound, mark it as not available...
 		if ( isbeingemitted )
@@ -1696,13 +1684,13 @@ bool CSoundEmitterSystemBase::GetParametersForSoundEx( const char *soundname, HS
 		params.soundname[ 0 ] != CHAR_SENTENCE )
 	{
 		char testfile[ 256 ];
-		Q_snprintf( testfile, sizeof( testfile ), "sound/%s", PSkipSoundChars( params.soundname ) );
+		V_snprintf( testfile, sizeof( testfile ), "sound/%s", PSkipSoundChars( params.soundname ) );
 		if ( !g_pFullFileSystem->FileExists( testfile ) )
 		{
 			// Prevent repetitive spew...
 			static ks::intern_pool soundWarnings;
 			char key[ 256 ];
-			Q_snprintf( key, sizeof( key ), "%s:%s", soundname, params.soundname );
+			V_snprintf( key, sizeof( key ), "%s:%s", soundname, params.soundname );
 			if ( !soundWarnings.contains( key ) )
 			{
 				soundWarnings.intern( key );
@@ -1786,7 +1774,7 @@ void CSoundEmitterSystemBase::ClearSoundOverrides()
 
 void CSoundEmitterSystemBase::AddHash( char const *pchSoundName, int nIndex )
 {
-	Assert( nIndex >= 0 && nIndex < std::ssize( m_Sounds ) );
+	contract_assert( nIndex >= 0 && nIndex < std::ssize( m_Sounds ) );
 	CSoundEntry *entry = m_Sounds[ nIndex ];
 	HSOUNDSCRIPTHASH hash = HashSoundName( pchSoundName );
 	
@@ -1828,7 +1816,7 @@ int CSoundEmitterSystemBase::GetSoundIndexForHash( HSOUNDSCRIPTHASH hash ) const
 	return slot->second.soundIndex;
 }
 
-#define SOUNDEMITTER_MURMURHASH_SEED ( ( 'D' << 24 ) | ( 'O' << 16 ) | ( 'T' << 8 ) | 'A' )
+constexpr auto SOUNDEMITTER_MURMURHASH_SEED = ( ( 'D' << 24 ) | ( 'O' << 16 ) | ( 'T' << 8 ) | 'A' );
 
 HSOUNDSCRIPTHASH CSoundEmitterSystemBase::HashSoundName( char const *pchSndName ) const
 {
@@ -1889,12 +1877,12 @@ void CSoundEmitterSystemBase::DescribeSound( char const *soundname )
 
 		if ( waveCount == 1 )
 		{
-			Assert( p->GetSoundNames()[ 0 ].gender == GENDER_NONE );
+			contract_assert( p->GetSoundNames()[ 0 ].gender == GENDER_NONE );
 			Msg( "\t\"wave\"\t\t\t\"%s\"\n", GetWaveName( p->GetSoundNames()[ 0 ].symbol ) );
 		}
 		else if ( convertedCount == 1 )
 		{
-			Assert( p->GetConvertedNames()[ 0 ].gender == GENDER_NONE );
+			contract_assert( p->GetConvertedNames()[ 0 ].gender == GENDER_NONE );
 			Msg( "\t\"wave\"\t\t\t\"%s\"\n", GetWaveName( p->GetConvertedNames()[ 0 ].symbol ) );
 		}
 		else
@@ -1930,5 +1918,4 @@ void CSoundEmitterSystemBase::Flush()
 }
 
 CSoundEmitterSystemBase g_SoundEmitterSystemBase;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CSoundEmitterSystemBase, ISoundEmitterSystemBase, 
-						SOUNDEMITTERSYSTEM_INTERFACE_VERSION, g_SoundEmitterSystemBase );
+static InterfaceReg s_Reg_CSoundEmitterSystemBase_ISoundEmitterSystemBase( []() -> void * { return static_cast<ISoundEmitterSystemBase *>( &g_SoundEmitterSystemBase ); }, SOUNDEMITTERSYSTEM_INTERFACE_VERSION );;

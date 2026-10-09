@@ -1,20 +1,10 @@
-//===== Copyright 1996-2013, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2013 Valve Corporation
 
-
-#include "tier0/vprof.h"
-#include "tier0/memalloc.h"
-#include "tier0/etwprof.h"
-#include "tier0/icommandline.h"
-#include "tier0/systeminformation.h"
-#include "tier1/text_writer.h"
-#include "tier1/keyvalues.h"
+import std;
+import ks.tier1;
 #include "matchmaking/imatchframework.h"
 #include "edict.h"
-#include "cdll_engine_int.h"
 #include "igame.h"
 #include "host_cmd.h"
 #include "status.h"
@@ -59,7 +49,7 @@ static PAGED_POOL_INFO_t final;
 
 //-----------------------------------------------------------------------------
 
-template < size_t N >
+template < std::size_t N >
 static void Status_CopyText( char (&dest)[N], const ks::text_writer &text )
 {
 	V_strncpy( dest, text.c_str(), N );
@@ -114,10 +104,10 @@ static void Status_PrintCallback( const char *fmt, ... )
 {
 	if ( s_pStatusBuffer )
 	{
-		va_list		argptr;
-		va_start (argptr,fmt);
+		std::va_list		argptr;
+		__builtin_va_start (argptr,fmt);
 		s_pStatusBuffer->vprintf( fmt, argptr );
-		va_end (argptr);
+		__builtin_va_end (argptr);
 	}
 }
 
@@ -230,25 +220,4 @@ void Status_CheckSendETWMark()
 {
 	// If ETW (Event Tracing for Windows) is available, 
 	// collect status text every 5 seconds
-#ifdef ETW_MARKS_ENABLED
-	// Don't emit status events if nobody is listening.
-	if ( ETWIsTracingEnabled() )
-	{
-		static double fLastETWUpdateTime = -5.0;
-		double fCurrentTime = Plat_FloatTime();
-
-		// update status buffer every 5 seconds and write to vtrace/xperf mark
-		if ( fCurrentTime - fLastETWUpdateTime > 5.0 )
-		{
-			fLastETWUpdateTime = fCurrentTime;
-			Status_UpdateBuffers( true );
-			ETWMark( g_szMinidumpInfoBuffer );
-			ETWMark( g_szMemoryStatusBuffer );
-			ETWMark( g_szHostStatusBuffer );
-			ETWMark( g_szMatchmakingStatusBuffer );
-			ETWMark( g_szAudioStatusBuffer );
-		}
-	}
-#endif
 }
-

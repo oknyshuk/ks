@@ -1,22 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef NETWORKSTRINGTABLE_H
-#define NETWORKSTRINGTABLE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "networkstringtabledefs.h"
 #include "networkstringtableitem.h"
-#include "checksum_crc.h"
+import std;
 #include "netmessages.h"
-#include "tier1/bitbuf.h"
 
 class SVC_CreateStringTable;
 class CBaseClient;
 
-abstract_class INetworkStringDict
+class INetworkStringDict
 {
 public:
 	virtual ~INetworkStringDict() {}
@@ -33,7 +28,7 @@ public:
 	virtual const CNetworkStringTableItem &Element( int index ) const = 0;
 };
 
-abstract_class INetworkStringTableDictionaryMananger
+class INetworkStringTableDictionaryMananger
 {
 public:
 	virtual bool OnLevelLoadStart( char const *pchMapName, CRC32_t *pStringTableCRC ) = 0;
@@ -89,7 +84,6 @@ public:
 
 public:
 	
-#ifndef SHARED_NET_STRING_TABLES
 	int				WriteUpdate( CBaseClient *client, bf_write &buf, int tick_ack ) const;
 	void			ParseUpdate( bf_read &buf, int entries );
 
@@ -106,8 +100,6 @@ public:
 	bool			ReadStringTable( bf_read& buf );
 
 	bool			WriteBaselines( CSVCMsg_CreateStringTable_t &msg );
-
-#endif
 
 	void			TriggerCallbacks( int tick_ack  );
 	
@@ -189,7 +181,6 @@ public:
 	// Update a client (called once during packet sending per client)
 	void		SetTick( int tick_count);
 
-#ifndef SHARED_NET_STRING_TABLES
 	// rollback feature
 	void		EnableRollback( bool bState );
 	void		RestoreTick( int tick );
@@ -201,7 +192,6 @@ public:
 	void		WriteUpdateMessage( CBaseClient *client, int tick_ack, bf_write &buf );
 	void		WriteBaselines( char const *pchMapName, bf_write &buf );
 	void		DirectUpdate( int tick_ack );	// fill mirror table directly with updates
-#endif
 
 	void		TriggerCallbacks( int tick_ack ); // fire callback functions 
 
@@ -227,5 +217,3 @@ private:
 
 	std::vector< CNetworkStringTable* > m_Tables;	// the string tables
 };
-
-#endif // NETWORKSTRINGTABLE_H

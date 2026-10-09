@@ -1,28 +1,20 @@
-//========= Copyright (c) 1996-2011, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2011 Valve Corporation
+
 // Purpose: Game types and modes
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef GAME_TYPES_H
-#define GAME_TYPES_H
-
-
+import ks.vstdlib;
 #include "gametypes/igametypes.h"
-#include "tier1/keyvalues.h"
-#include "vstdlib/random.h"
 #include "const.h"
-#include <memory>
-#include <vector>
+import std;
 
+inline constexpr auto GAMETYPES_MAX_NAME = 64;
+inline constexpr auto GAMETYPES_MAX_ID = 64;
+inline constexpr auto GAMETYPES_MAX_MAP_NAME = 32;
 
-#define GAMETYPES_MAX_NAME	64
-#define GAMETYPES_MAX_ID	64
-#define GAMETYPES_MAX_MAP_NAME	32
-
-#define GAMETYPES_MAX_MAP_GROUP_NAME 32
-#define GAMETYPES_MAX_IMAGE_NAME	64
+inline constexpr auto GAMETYPES_MAX_MAP_GROUP_NAME = 32;
+inline constexpr auto GAMETYPES_MAX_IMAGE_NAME = 64;
 
 // enum for "game_type" convar.
 // Note: these values match the order of the game types in GameModes.txt
@@ -32,7 +24,7 @@ enum CS_GameType
 	CS_GameType_Classic = CS_GameType_Min,		// Casual and competitive (see gamerules_*.cfg)
 	CS_GameType_GunGame,						// Arms race
 	CS_GameType_Training,						// training map - just one map in this mode
-	CS_GameType_Custom,							// capture the flag and such, set by map; not supported by matchmaking, supported through workshop, there are very few maps that use this game mode
+	CS_GameType_Custom,							// capture the flag and such, set by map; not supported by matchmaking, there are very few maps that use this game mode
 	CS_GameType_Cooperative,					// players vs bots - matchmade, operation missions
 	CS_GameType_Max = CS_GameType_Cooperative
 };
@@ -187,10 +179,6 @@ public:
 	// Map group properties
 	virtual const std::vector< std::string > *GetMapGroupMapList( const char *mapGroup );
 
-	// Make a new map group. 
-	virtual bool CreateOrUpdateWorkshopMapGroup( const char* szName, const std::vector< std::string > & vecMapNames );
-	virtual bool IsWorkshopMapGroup( const char* szMapGroupName );
-
 	//
 	// Custom Bot Difficulty
 	//
@@ -294,7 +282,6 @@ private:
 		char m_NameID[GAMETYPES_MAX_ID]; // UI identifier for the map name
 		char m_ImageName[GAMETYPES_MAX_IMAGE_NAME]; // texture for map image
 		std::vector< std::string > m_Maps;
-		bool m_bIsWorkshopMapGroup;
 	};
 
 	struct CustomBotDifficulty
@@ -309,7 +296,6 @@ private:
 		bool m_HasBotQuota; // true if this difficulty level has a bot quota in the convars
 	};
 
-	MapGroup *CreateWorkshopMapGroupInternal( const char* szName, const std::vector< std::string > & vecMapNames );
 	int FindWeaponProgressionIndex( std::vector< WeaponProgression > & vecWeaponProgression, const char * szWeaponName );
 	void ClearServerMapGroupInfo( void );
 	bool m_Initialized; // true if the game types interface has been initialized
@@ -337,5 +323,3 @@ private:
 	// this keeps track of whehther the data the loading screen has is correct or not
 	bool m_bLoadingScreenDataIsCorrect;
 };
-
-#endif // GAME_TYPES_H

@@ -1,6 +1,5 @@
-#include <basetypes.h>
-#include <float.h>
-#include "simplex.h"
+import std;
+import ks.math;
 
 // a nice tutorial on simplex method: http://math.uww.edu/~mcfarlat/ism.htm
 CSimplex::CSimplex():
@@ -122,7 +121,7 @@ void CSimplex::GatherSolution()
 	// DUAL SOLUTION is in the row [m_numConstraints], and it's basic variables are indicated by m_pNonBasic array and are reversed:
 	// first the DUAL SLACK variables are numbered 0..m_numVariables; the rest (m_numVariables+1..m_numVariables+m_numConstraints) are the DUAL variables
 
-	memset(m_pSolution, 0, sizeof(*m_pSolution) * NumColumns()); // initial value of all X's are 0's
+	std::memset(m_pSolution, 0, sizeof(*m_pSolution) * NumColumns()); // initial value of all X's are 0's
 	for(int nRow = 0; nRow < m_numConstraints; ++nRow)
 	{
 		int nBasisVariable = m_pBasis[nRow];
@@ -229,7 +228,7 @@ bool CSimplex::IteratePhase2()
 // Self-explanatory, isn't it?
 bool CSimplex::Pivot(int nPivotRow, int nPivotColumn)
 {
-	if(fabs(Tableau(nPivotRow, nPivotColumn)) < 1e-8f)
+	if(std::fabs(Tableau(nPivotRow, nPivotColumn)) < 1e-8f)
 	{
 		m_state = kCannotPivot;
 		return false; // Can NOT pivot on zero :( choose another (ie. fancier) pivot rule
@@ -289,7 +288,7 @@ int CSimplex::FindPivotColumn()
 
 int CSimplex::FindPivotRow(int nColumn)
 {
-	float flBest = FLT_MAX;
+	float flBest = std::numeric_limits<float>::max();
 	int nBest = -1;
 	for(int nRow = 0; nRow < m_numConstraints; ++nRow)
 	{		    
@@ -350,7 +349,7 @@ void CSimplex::PrepareTableau()
 	} 
 	//m_pSolution[m_numVariables+m_numConstraints] = 
 	Tableau(m_numConstraints, NumColumns()-1) = 0.0f; // starting with "0" objective, and all "0" variables
-	memcpy(m_pInitialTableau,m_pTableau,(NumRows()+1) * NumColumns() * sizeof(float));
+	std::memcpy(m_pInitialTableau,m_pTableau,(NumRows()+1) * NumColumns() * sizeof(float));
 }
 
 
@@ -374,7 +373,7 @@ void CSimplex::SetObjectiveFactor(int nConstant, float fFactor)
 
 void CSimplex::SetObjectiveFactors(int numFactors, const float *pFactors)
 {
-	Assert(numFactors == m_numVariables);
+	contract_assert( numFactors == m_numVariables );
 	for(int i =0; i < m_numVariables && i < numFactors; ++i)
 		SetObjectiveFactor(i,pFactors[i]);
 }
@@ -383,14 +382,14 @@ void CSimplex::SetObjectiveFactors(int numFactors, const float *pFactors)
 
 float CSimplex::GetSolution(int nVariable)const
 {
-	Assert(nVariable < m_numVariables);
+	contract_assert( nVariable < m_numVariables );
 	return m_pSolution[nVariable];
 }
 
 
 float CSimplex::GetSlack(int nConstraint)const
 {
-	Assert(nConstraint < m_numConstraints);
+	contract_assert( nConstraint < m_numConstraints );
 	return m_pSolution[m_numVariables + nConstraint];
 }
 

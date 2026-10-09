@@ -1,29 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef VOX_PRIVATE_H
-#define VOX_PRIVATE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef VOX_H
+import ks.tier1;
 #include "vox.h"
-#endif
 
-#ifndef UTLVECTOR_H
-#include "utlvector.h"
-#endif
 
-#include <string_view>
+import std;
 
 struct channel_t;
 class CSfxTable;
@@ -42,8 +25,8 @@ struct voxword_t
 	CSfxTable *sfx;					// name and cache pointer
 };
 
-#define CVOXWORDMAX		32
-#define CVOXZEROSCANMAX	255			// scan up to this many samples for next zero crossing
+inline constexpr auto CVOXWORDMAX = 32;
+inline constexpr auto CVOXZEROSCANMAX = 255; // scan up to this many samples for next zero crossing
 
 struct sentence_t
 {
@@ -70,5 +53,3 @@ extern int				VOX_ParseWordParams( char *psz, voxword_t *pvoxword, int fFirst );
 extern void				VOX_SetChanVol( channel_t *ch );
 extern char				**VOX_ParseString( char *psz );
 extern CAudioMixer		*CreateSentenceMixer( voxword_t *pwords );
-
-#endif // VOX_PRIVATE_H

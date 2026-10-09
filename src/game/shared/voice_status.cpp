@@ -1,17 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
-#include "basetypes.h"
-#include "tier1/bit_ops.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
 #include "hud.h"
-#include <string.h>
-#include <stdio.h>
 #include "voice_status.h"
-#include "r_efx.h"
 #include "cdll_client_int.h"
 #include "hud_macros.h"
 #include "c_playerresource.h"
@@ -19,26 +21,18 @@
 #include "c_baseplayer.h"
 #include "materialsystem/imesh.h"
 #include "view.h"
-#include "convar.h"
 #include "materialsystem/imaterial.h"
-#include "tier0/dbg.h"
 #include "cdll_int.h"
 #include "con_nprint.h"
 
-
 #include "c_cs_player.h"
-#include "matchmaking/imatchtitle.h"
-#include "matchmaking/iplayer.h"
-#include "matchmaking/mm_helpers.h"
 #include "matchmaking/imatchframework.h"
-
-
 
 extern int cam_thirdperson;
 
 
-#define VOICE_MODEL_INTERVAL		0.3
-#define SQUELCHOSCILLATE_PER_SECOND	2.0f
+constexpr auto VOICE_MODEL_INTERVAL = 0.3;
+constexpr auto SQUELCHOSCILLATE_PER_SECOND = 2.0f;
 
 ConVar voice_modenable( "voice_modenable", "1", FCVAR_ARCHIVE | FCVAR_CLIENTCMD_CAN_EXECUTE, "Enable/disable voice in this mod." );
 ConVar voice_clientdebug( "voice_clientdebug", "0" );
@@ -49,7 +43,6 @@ ConVar voice_all_icons( "voice_all_icons", "0", FCVAR_NONE, "Draw all players' v
 ConVar voice_icons_method( "voice_icons_method", "2", FCVAR_NONE, "0 = classic style, 1 = particles, 2 = integrated into target ID" );
 
 ConVar cl_mute_enemy_team( "cl_mute_enemy_team", "0", FCVAR_ARCHIVE, "Block all communication from players on the enemy team." );
-ConVar cl_mute_all_but_friends_and_party( "cl_mute_all_but_friends_and_party", "0", FCVAR_ARCHIVE, "Only allow communication from friends and matchmaking party members. Doesn't apply to competitive matchmaking games." );
 
 // ---------------------------------------------------------------------- //
 // The voice manager for the client.
@@ -176,7 +169,7 @@ int CVoiceStatus::Init(
 		m_bBanMgrInitialized = true;
 	}
 
-	Assert(!g_pInternalVoiceStatus);
+	contract_assert( !g_pInternalVoiceStatus );
 	g_pInternalVoiceStatus = this;
 
 
@@ -518,7 +511,7 @@ void CVoiceStatus::UpdateServerState(bool bForce)
 		m_bServerModEnable = bCVarModEnable;
 
 		char str[256];
-		Q_snprintf(str, sizeof(str), "VModEnable %d", m_bServerModEnable);
+		V_snprintf(str, sizeof(str), "VModEnable %d", m_bServerModEnable);
 		
 		{
 			HACK_GETLOCALPLAYER_GUARD( "CVoiceStatus::UpdateServerState" );
@@ -532,7 +525,7 @@ void CVoiceStatus::UpdateServerState(bool bForce)
 	}
 
 	char str[2048];
-	Q_strncpy(str,"vban",sizeof(str));
+	V_strncpy(str,"vban",sizeof(str));
 	bool bChange = false;
 
 	for(unsigned long dw=0; dw < VOICE_MAX_PLAYERS_DW; dw++)
@@ -568,8 +561,8 @@ void CVoiceStatus::UpdateServerState(bool bForce)
 
 		// Ok, the server needs to be updated.
 		char numStr[512];
-		Q_snprintf(numStr,sizeof(numStr), " %lx", banMask);
-		Q_strncat(str, numStr, sizeof(str), COPY_ALL_CHARACTERS);
+		V_snprintf(numStr,sizeof(numStr), " %lx", banMask);
+		V_strncat(str, numStr, sizeof(str), COPY_ALL_CHARACTERS);
 	}
 
 	if(bChange || bForce)
@@ -661,16 +654,6 @@ bool CVoiceStatus::IsPlayerBlocked(int iPlayer)
 }
 
 
-bool IsPartyMember( XUID xuidPlayer )
-{
-	if ( IMatchSession *pMatchSession = g_pMatchFramework->GetMatchSession() )
-	{
-		return SessionMembersFindPlayer( pMatchSession->GetSessionSettings(), xuidPlayer ) != nullptr;
-	}
-	return false;
-}
-
-
 bool CVoiceStatus::ShouldHideCommunicationFromPlayer( int iPlayerIndex )
 {
 	C_CSPlayer* pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
@@ -681,23 +664,6 @@ bool CVoiceStatus::ShouldHideCommunicationFromPlayer( int iPlayerIndex )
 	{
 		if ( pLocalPlayer && pLocalPlayer->IsOtherEnemy( iPlayerIndex ) && 
 			( pLocalPlayer->GetTeamNumber() == TEAM_CT || pLocalPlayer->GetTeamNumber() == TEAM_TERRORIST ) )
-			return true;
-	}
-	if ( cl_mute_all_but_friends_and_party.GetBool() && CSGameRules() && !CSGameRules()->IsQueuedMatchmaking() )
-	{
-		// This type of muting doesn't make sense when playing back a demo
-		if ( engine->IsPlayingDemo() )
-			return false;
-		C_CSPlayer * pOther = ToCSPlayer( UTIL_PlayerByIndex( iPlayerIndex ) );
-		CSteamID otherID;
-		bool bIsInParty = false;
-		if ( pOther && pOther->GetSteamID( &otherID ) )
-		{
-			if ( IsPartyMember( otherID.ConvertToUint64() ) )
-				bIsInParty = true;
-		}
-
-		if ( pLocalPlayer && !pLocalPlayer->HasPlayerAsFriend( pOther ) && !bIsInParty )
 			return true;
 	}
 

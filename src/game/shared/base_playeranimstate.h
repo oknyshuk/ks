@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BASE_PLAYERANIMSTATE_H
-#define BASE_PLAYERANIMSTATE_H
-
-
+#include "networkvar.h"
 #include "iplayeranimstate.h"
 #include "studio.h"
 #include "sequence_Transitioner.h"
@@ -22,17 +17,17 @@
 // If a guy is moving slower than this, then he's considered to not be moving
 // (so he goes to his idle animation at full playback rate rather than his walk 
 // animation at low playback rate).
-#define MOVING_MINIMUM_SPEED 0.5f
+inline constexpr auto MOVING_MINIMUM_SPEED = 0.5f;
 
-#define FOOTPLANT_MINIMUM_SPEED 0.1f
+inline constexpr auto FOOTPLANT_MINIMUM_SPEED = 0.1f;
 
-#define MAIN_IDLE_SEQUENCE_LAYER 0	// For 8-way blended models, this layer blends an idle on top of the run/walk animation to simulate a 9-way blend.
+inline constexpr auto MAIN_IDLE_SEQUENCE_LAYER = 0; // For 8-way blended models, this layer blends an idle on top of the run/walk animation to simulate a 9-way blend.
 									// For 9-way blended models, we don't use this layer.
 
-#define AIMSEQUENCE_LAYER		1	// Aim sequence uses layers 0 and 1 for the weapon idle animation (needs 2 layers so it can blend).
+inline constexpr auto AIMSEQUENCE_LAYER = 1; // Aim sequence uses layers 0 and 1 for the weapon idle animation (needs 2 layers so it can blend).
 
 
-#define NUM_AIMSEQUENCE_LAYERS	2	// Then it uses layers 2 and 3 to blend in the weapon run/walk/crouchwalk animation.
+inline constexpr auto NUM_AIMSEQUENCE_LAYERS = 2; // Then it uses layers 2 and 3 to blend in the weapon run/walk/crouchwalk animation.
 
 
 // Everyone who derives from CBasePlayerAnimState gets to fill in this info
@@ -60,7 +55,7 @@ public:
 // CBasePlayerAnimState declaration.
 // ------------------------------------------------------------------------------------------------ //
 
-abstract_class CBasePlayerAnimState : public IPlayerAnimState
+class CBasePlayerAnimState : public IPlayerAnimState
 {
 public:
 	DECLARE_CLASS_NOBASE( CBasePlayerAnimState );
@@ -146,8 +141,8 @@ public:
 	void DebugShowAnimStateFull( int iStartLine );
 
 	virtual void DebugShowAnimState( int iStartLine );
-	void AnimStatePrintf( int iLine, PRINTF_FORMAT_STRING const char *pMsg, ... );
-	void AnimStateLog( PRINTF_FORMAT_STRING const char *pMsg, ... );
+	void AnimStatePrintf( int iLine, const char *pMsg, ... );
+	void AnimStateLog( const char *pMsg, ... );
 
 	// Calculate the playback rate for movement layer
 	virtual float CalcMovementPlaybackRate( bool *bIsMoving );
@@ -175,7 +170,7 @@ protected:
 
 	// Sets up the string you specify, looks for that sequence and returns the index. 
 	// Complains in the console and returns 0 if it can't find it.
-	virtual int CalcSequenceIndex( PRINTF_FORMAT_STRING const char *pBaseName, ... );
+	virtual int CalcSequenceIndex( const char *pBaseName, ... );
 
 	Activity GetCurrentMainSequenceActivity() const;
 
@@ -302,6 +297,3 @@ inline Activity CBasePlayerAnimState::GetCurrentMainSequenceActivity() const
 {
 	return m_eCurrentMainSequenceActivity;
 }
-
-
-#endif // BASE_PLAYERANIMSTATE_H

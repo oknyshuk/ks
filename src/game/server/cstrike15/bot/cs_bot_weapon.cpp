@@ -1,13 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "igameevents.h"
+#include "ndebugoverlay.h"
 #include "cs_bot.h"
 #include "basecsgrenade_projectile.h"
 #include "../../../shared/cstrike15/cs_gamerules.h"
@@ -74,7 +75,7 @@ void CCSBot::FireWeaponAtEnemy( void )
 			const float halfSize = (IsUsingSniperRifle()) ? HalfHumanWidth : 2.0f * HalfHumanWidth;
 
 			// aiming tolerance depends on how close the target is - closer targets subtend larger angles
-			float aimTolerance = (float)cos( atan( halfSize / rangeToEnemy ) );
+			float aimTolerance = (float)std::cos( std::atan( halfSize / rangeToEnemy ) );
 
 			if (onTarget > aimTolerance)
 			{
@@ -265,7 +266,7 @@ void CCSBot::PickNewAimSpot()
 		}
 
 		// decay old aim focus angle
-		m_aimFocus *= expf(logf(GetProfile()->GetAimFocusDecay()) * m_aimFocusInterval);
+		m_aimFocus *= std::expf(std::logf(GetProfile()->GetAimFocusDecay()) * m_aimFocusInterval);
 
 		// calculate current aim focus maxima
 		Vector toTarget = m_targetSpot - EyePositionConst();
@@ -274,15 +275,15 @@ void CCSBot::PickNewAimSpot()
 		QAngle viewAngles = EyeAngles();
 		float deltaYaw = AngleDistance(viewAngles.y, aimGoal.y);
 		float deltaPitch = AngleDistance(viewAngles.x, aimGoal.x);
-		float fAngleOffset = sqrtf(deltaYaw * deltaYaw + deltaPitch * deltaPitch);
+		float fAngleOffset = std::sqrtf(deltaYaw * deltaYaw + deltaPitch * deltaPitch);
 		float fNewMaxFocus = std::min(60.0f, fAngleOffset) * GetProfile()->GetAimFocusOffsetScale();
 		m_aimFocus = std::max(m_aimFocus, fNewMaxFocus);
 
-		float fTheta = RandomFloat(0.0f, 2.0f * M_PI);
+		float fTheta = RandomFloat(0.0f, 2.0f * std::numbers::pi);
 		float fRadius = RandomFloat(0.0f, m_aimFocus);
 
-		m_aimError[YAW] = fRadius * cosf(fTheta);
-		m_aimError[PITCH] = fRadius * sinf(fTheta);
+		m_aimError[YAW] = fRadius * std::cosf(fTheta);
+		m_aimError[PITCH] = fRadius * std::sinf(fTheta);
 	}
 
 	// define time when aim offset will automatically be updated
@@ -1451,4 +1452,3 @@ bool CCSBot::DidPlayerJustFireWeapon( const CCSPlayer *player ) const
 	CWeaponCSBase *weapon = player->GetActiveCSWeapon();
 	return (weapon && !weapon->IsSilenced() && weapon->m_flNextPrimaryAttack > gpGlobals->curtime);
 }
-

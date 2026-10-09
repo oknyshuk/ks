@@ -1,17 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.core;
 #include "cs_bot.h"
 #include "cs_nav_path.h"
-
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -726,4 +721,3 @@ bool CCSBot::MoveToInitialEncounter( void )
 
 	return true;
 }
-

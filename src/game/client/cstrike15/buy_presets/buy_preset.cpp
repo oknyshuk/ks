@@ -1,10 +1,17 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
 
 #include "buy_preset_debug.h"
 #include "buy_presets.h"
@@ -81,7 +88,7 @@ void BuyPresetManager::GetCurrentLoadout( WeaponSet *weaponSet )
 	{
 		int roundsNeeded = ammo[pInfo->GetPrimaryAmmoType()];
 		int buySize = GetCSAmmoDef()->GetBuySize( pInfo->GetPrimaryAmmoType() );
-		int numClips = ceil(roundsNeeded/(float)buySize);
+		int numClips = std::ceil(roundsNeeded/(float)buySize);
 
 		weaponSet->m_primaryWeapon.SetWeaponID( primaryID );
 		weaponSet->m_primaryWeapon.SetAmmoType( AMMO_CLIPS );
@@ -96,7 +103,7 @@ void BuyPresetManager::GetCurrentLoadout( WeaponSet *weaponSet )
 	{
 		int roundsNeeded = ammo[pInfo->GetPrimaryAmmoType()];
 		int buySize = GetCSAmmoDef()->GetBuySize( pInfo->GetPrimaryAmmoType() );
-		int numClips = ceil(roundsNeeded/(float)buySize);
+		int numClips = std::ceil(roundsNeeded/(float)buySize);
 
 		weaponSet->m_secondaryWeapon.SetWeaponID( secondaryID );
 		weaponSet->m_secondaryWeapon.SetAmmoType( AMMO_CLIPS );
@@ -481,7 +488,7 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 						int ammoCost = GetCSAmmoDef()->GetCost( info->GetPrimaryAmmoType() );
 						int ammoBuySize = GetCSAmmoDef()->GetBuySize( info->GetPrimaryAmmoType() );
 						int roundsLeft = maxRounds - ammo[info->GetPrimaryAmmoType()];
-						int clipsLeft = (ammoBuySize > 0) ? ceil(roundsLeft / (float)ammoBuySize) : 0;
+						int clipsLeft = (ammoBuySize > 0) ? std::ceil(roundsLeft / (float)ammoBuySize) : 0;
 						while ( clipsLeft > 0 && cost + ammoCost <= currentCash )
 						{
 							ws.m_primaryWeapon.SetAmmoAmount( ws.m_primaryWeapon.GetAmmoAmount() + 1 );
@@ -510,7 +517,7 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 						int ammoCost = GetCSAmmoDef()->GetCost( info->GetPrimaryAmmoType() );
 						int ammoBuySize = GetCSAmmoDef()->GetBuySize( info->GetPrimaryAmmoType() );
 						int roundsLeft = maxRounds - ammo[info->GetPrimaryAmmoType() ];
-						int clipsLeft = (ammoBuySize > 0) ? ceil(roundsLeft / (float)ammoBuySize) : 0;
+						int clipsLeft = (ammoBuySize > 0) ? std::ceil(roundsLeft / (float)ammoBuySize) : 0;
 						while ( clipsLeft > 0 && cost + ammoCost <= currentCash )
 						{
 							ws.m_secondaryWeapon.SetAmmoAmount( ws.m_secondaryWeapon.GetAmmoAmount() + 1 );
@@ -794,7 +801,7 @@ static void ParseWeaponString( const char *str, BuyPresetWeaponList& weapons, bo
 		if ( !token || strlen(token) >= BufLen )
 			return;
 
-		Q_strncpy( tmpBuf, token, BufLen );
+		V_strncpy( tmpBuf, token, BufLen );
 		tmpBuf[BufLen - 1] = 0;
 		char *tmp = tmpBuf;
 		while ( *tmp )
@@ -817,7 +824,7 @@ static void ParseWeaponString( const char *str, BuyPresetWeaponList& weapons, bo
 			{
 				int maxRounds = GetCSAmmoDef()->MaxCarry( info->GetPrimaryAmmoType(), C_CSPlayer::GetLocalCSPlayer() );
 				int buySize = GetCSAmmoDef()->GetBuySize( info->GetPrimaryAmmoType() );
-				numClips = std::min<std::common_type_t<float, int>>(ceil(maxRounds/(float)buySize), std::max(0, numClips));
+				numClips = std::min<std::common_type_t<float, int>>(std::ceil(maxRounds/(float)buySize), std::max(0, numClips));
 				if ( ((!isPrimary) ^ IsPrimaryWeapon( weaponID )) == 0 )
 					return;
 			}
@@ -897,10 +904,10 @@ void BuyPreset::Parse( KeyValues *data )
 		while ( remainder )
 		{
 			token = SharedGetToken();
-			if ( !token || Q_strlen(token) >= BufLen )
+			if ( !token || V_strlen(token) >= BufLen )
 				break;
 
-			Q_strncpy( tmpBuf, token, BufLen );
+			V_strncpy( tmpBuf, token, BufLen );
 			tmpBuf[BufLen - 1] = 0;
 			char *tmp = tmpBuf;
 			while ( *tmp )

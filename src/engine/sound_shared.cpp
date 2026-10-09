@@ -1,21 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Sound code shared between server and client 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Sound code shared between server and client
 
-#include <math.h>
+import std;
 
-#include "convar.h"
+import ks.tier1;
 #include "sound.h"
-
 
 void DbReferenceChanged( IConVar *var, const char *pOldValue, float flOldValue );
 
 ConVar snd_refdist( "snd_refdist", "36", FCVAR_CHEAT, "Reference distance for snd_refdb" );
 ConVar snd_refdb( "snd_refdb", "60", FCVAR_CHEAT, "Reference dB at snd_refdist", &DbReferenceChanged );
-float snd_refdb_dist_mult = pow( 10.0f, 60.0f / 20.0f );
+float snd_refdb_dist_mult = std::pow( 10.0f, 60.0f / 20.0f );
 ConVar snd_foliage_db_loss( "snd_foliage_db_loss", "4", FCVAR_CHEAT, "foliage dB loss per 1200 units" ); 
 ConVar snd_gain( "snd_gain", "1", FCVAR_CHEAT );
 ConVar snd_gain_max( "snd_gain_max", "1", FCVAR_CHEAT );
@@ -24,25 +21,25 @@ ConVar snd_gain_min( "snd_gain_min", "0.01", FCVAR_CHEAT );
 // precomputed Db multipliers
 void DbReferenceChanged( IConVar *var, const char *pOldValue, float flOldValue )
 {
-	snd_refdb_dist_mult = pow( 10.0f, snd_refdb.GetFloat() / 20.0f );
+	snd_refdb_dist_mult = std::pow( 10.0f, snd_refdb.GetFloat() / 20.0f );
 }
 
 
 // calculate gain based on atmospheric attenuation.
 // as gain excedes threshold, round off (compress) towards 1.0 using spline
-#define SND_GAIN_COMP_EXP_MAX	2.5f	// Increasing SND_GAIN_COMP_EXP_MAX fits compression curve more closely
+constexpr auto SND_GAIN_COMP_EXP_MAX = 2.5f; // Increasing SND_GAIN_COMP_EXP_MAX fits compression curve more closely
 										// to original gain curve as it approaches 1.0.  
-#define SND_GAIN_COMP_EXP_MIN	0.8f	
+constexpr auto SND_GAIN_COMP_EXP_MIN = 0.8f;
 //#define SND_GAIN_COMP_EXP_MIN	1.8f	
 
 
-#define SND_GAIN_COMP_THRESH	0.5f		// gain value above which gain curve is rounded to approach 1.0
+constexpr auto SND_GAIN_COMP_THRESH = 0.5f; // gain value above which gain curve is rounded to approach 1.0
 
 #define SND_DB_MAX				140.0f	// max db of any sound source
 #define SND_DB_MED				90.0f	// db at which compression curve changes
 
 #define SNDLVL_TO_DIST_MULT( sndlvl ) ( sndlvl ? ((snd_refdb_dist_mult / FastPow10( (float)sndlvl / 20 )) / snd_refdist.GetFloat()) : 0 )
-#define DIST_MULT_TO_SNDLVL( dist_mult ) (soundlevel_t)(int)( dist_mult ? ( 20 * log10( (float)(snd_refdb_dist_mult / (dist_mult * snd_refdist.GetFloat()) )) ) : 0 )
+#define DIST_MULT_TO_SNDLVL( dist_mult ) (soundlevel_t)(int)( dist_mult ? ( 20 * std::log10( (float)(snd_refdb_dist_mult / (dist_mult * snd_refdist.GetFloat()) )) ) : 0 )
 
 
 

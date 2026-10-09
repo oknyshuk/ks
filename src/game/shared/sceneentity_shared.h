@@ -1,19 +1,26 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef SCENEENTITY_SHARED_H
-#define SCENEENTITY_SHARED_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #if defined( CLIENT_DLL )
 #define CBaseFlex C_BaseFlex
 #define CSceneEntity C_SceneEntity
 #endif
 
+import ks.tier1;
+#include "ehandle.h"
+#include "studio.h"
+
+#if defined( CLIENT_DLL )
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
+#else
+class CBaseEntity;
+typedef CHandle<CBaseEntity> EHANDLE;
+#endif
+
 #include "iscenetokenprocessor.h"
-#include "tier1/utlvector.h"
+import std;
 
 class CBaseFlex;
 
@@ -88,7 +95,7 @@ public:
 	const char	*CurrentToken( void );
 	bool		GetToken( bool crossline );
 	bool		TokenAvailable( void );
-	void		Error( PRINTF_FORMAT_STRING const char *fmt, ... );
+	void		Error( const char *fmt, ... );
 	void		SetBuffer( char *buffer );
 private:
 	const char	*m_pBuffer;
@@ -97,7 +104,5 @@ private:
 
 extern CSceneTokenProcessor g_TokenProcessor;
 
-void Scene_Printf( PRINTF_FORMAT_STRING const char *pFormat, ... );
+void Scene_Printf( const char *pFormat, ... );
 extern ConVar scene_clientflex;
-
-#endif // SCENEENTITY_SHARED_H

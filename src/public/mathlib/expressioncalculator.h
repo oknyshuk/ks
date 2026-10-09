@@ -1,12 +1,9 @@
-//====== Copyright c 1996-2008, Valve Corporation, All rights reserved. =======
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef MATHLIB_EXPRESSION_CALCULATOR_H
-#define MATHLIB_EXPRESSION_CALCULATOR_H
-
-#include "tier1/utlstring.h"
-#include <vector>
-#include "tier1/utlvector.h"
-
+import ks.tier1;
+import std;
 
 //-----------------------------------------------------------------------------
 // Calculator Parsing class
@@ -75,6 +72,3 @@ private:
 
 // simple warppers for using cExpressionCalculator
 float EvaluateExpression( char const *pExprString, float flValueToReturnIfFailure );
-
-
-#endif // MATHLIB_EXPRESSION_CALCULATOR_H

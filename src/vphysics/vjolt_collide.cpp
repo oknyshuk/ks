@@ -2,20 +2,64 @@
 // Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
 
 
-#include "cbase.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/TempAllocator.h>
+#include <Jolt/Core/JobSystemWithBarrier.h>
+#include <Jolt/Core/FixedSizeFreeList.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Skeleton/Skeleton.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/PhysicsScene.h>
+#include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollidePointResult.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Ragdoll/Ragdoll.h>
+#include <Jolt/Physics/Collision/ShapeCast.h>
+#include <Jolt/Physics/Collision/CollisionDispatch.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/GroupFilter.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
+#include <Jolt/Physics/Constraints/ConeConstraint.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
+#include <Jolt/Physics/Constraints/FixedConstraint.h>
+#include <Jolt/Physics/Constraints/SixDOFConstraint.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
+#include <Jolt/Physics/Constraints/SliderConstraint.h>
+#include <Jolt/Physics/Vehicle/VehicleConstraint.h>
+#include <Jolt/Physics/Vehicle/VehicleCollisionTester.h>
+#include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
+#include "compat/branch_overrides.h"
+#include "cmodel.h"
+#include "vcollide_parse.h"
+#include "vphysics/collision_set.h"
+#include "vphysics/virtualmesh.h"
+#include "vjolt_interface.h"
+#include "vjolt_util.h"
 
-#include "coordsize.h"
-#include "mathlib/polyhedron.h"
 
 // Shape.h only forward declares the set behind Shape::VisitedShapes
 #include <Jolt/Core/UnorderedSet.h>
+import std;
+import ks.math;
 
 #include "vjolt_parse.h"
 #include "vjolt_querymodel.h"
 
 #include "vjolt_collide.h"
 
-#include "tier0/memalloc.h"
 //-------------------------------------------------------------------------------------------------
 
 // Also in vjolt_collide_trace.cpp, should unify or just remove entirely
@@ -28,7 +72,7 @@ static constexpr JPH::MeshShapeSettings::EBuildQuality kMeshBuildQuality =
 	JPH::MeshShapeSettings::EBuildQuality::FavorRuntimePerformance;
 
 JoltPhysicsCollision JoltPhysicsCollision::s_PhysicsCollision;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( JoltPhysicsCollision, IPhysicsCollision, VPHYSICS_COLLISION_INTERFACE_VERSION, JoltPhysicsCollision::GetInstance() );
+static InterfaceReg s_Reg_JoltPhysicsCollision_IPhysicsCollision( []() -> void * { return static_cast<IPhysicsCollision *>( &JoltPhysicsCollision::GetInstance() ); }, VPHYSICS_COLLISION_INTERFACE_VERSION );;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -86,7 +130,6 @@ CPhysConvex *JoltPhysicsCollision::ConvexFromVerts( Vector **pVerts, int vertCou
 
 CPhysConvex *JoltPhysicsCollision::ConvexFromPlanes( float *pPlanes, int planeCount, float mergeDistance )
 {
-	Log_Stub( LOG_VJolt );
 	return nullptr;
 }
 
@@ -99,7 +142,6 @@ float JoltPhysicsCollision::ConvexVolume( CPhysConvex *pConvex )
 
 float JoltPhysicsCollision::ConvexSurfaceArea( CPhysConvex *pConvex )
 {
-	Log_Stub( LOG_VJolt );
 	return 0.0f;
 }
 
@@ -141,7 +183,6 @@ CPhysConvex *JoltPhysicsCollision::ConvexFromConvexPolyhedron( const CPolyhedron
 void JoltPhysicsCollision::ConvexesFromConvexPolygon( const Vector &vPolyNormal, const Vector *pPoints, int iPointCount, CPhysConvex **pOutput )
 {
 	// Slart: Unused
-	Log_Stub( LOG_VJolt );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -165,7 +206,7 @@ void JoltPhysicsCollision::PolysoupAddTriangle( CPhysPolysoup *pSoup, const Vect
 
 CPhysCollide *JoltPhysicsCollision::ConvertPolysoupToCollide( CPhysPolysoup *pSoup, bool useMOPP )
 {
-	VJoltAssertMsg( !useMOPP, "MOPPs not supported\n" );
+	contract_assert( ( !useMOPP ) && "MOPPs not supported\n" );
 
 	if ( useMOPP )
 		return nullptr;
@@ -216,19 +257,16 @@ void JoltPhysicsCollision::DestroyCollide( CPhysCollide *pCollide )
 
 int JoltPhysicsCollision::CollideSize( CPhysCollide *pCollide )
 {
-	Log_Stub( LOG_VJolt );
 	return 0;
 }
 
 int JoltPhysicsCollision::CollideWrite( char *pDest, CPhysCollide *pCollide, bool bSwap /*= false*/ )
 {
-	Log_Stub( LOG_VJolt );
 	return 0;
 }
 
 CPhysCollide *JoltPhysicsCollision::UnserializeCollide( char *pBuffer, int size, int index )
 {
-	Log_Stub( LOG_VJolt );
 	return nullptr;
 }
 
@@ -241,7 +279,6 @@ float JoltPhysicsCollision::CollideVolume( CPhysCollide *pCollide )
 
 float JoltPhysicsCollision::CollideSurfaceArea( CPhysCollide *pCollide )
 {
-	Log_Stub( LOG_VJolt );
 	return 0.0f;
 }
 
@@ -259,7 +296,7 @@ Vector JoltPhysicsCollision::CollideGetExtent( const CPhysCollide *pCollide, con
 	JPH::Mat44 matCollideTransform = JPH::Mat44::sRotationTranslation(
 		SourceToJolt::Angle( collideAngles ), SourceToJolt::Distance( collideOrigin ) - pShape->GetCenterOfMass() );
 
-	float flMaxDot = -FLT_MAX;
+	float flMaxDot = -std::numeric_limits<float>::max();
 	JPH::Vec3 vecMaxExtent = JPH::Vec3::sZero();
 	ActOnSubShapes< JPH::ConvexShape >( pShape, [&]( const JPH::ConvexShape* pConvexShape, JPH::Mat44Arg matSubShapeTransform )
 	{
@@ -306,20 +343,17 @@ void JoltPhysicsCollision::CollideGetMassCenter( CPhysCollide *pCollide, Vector 
 void JoltPhysicsCollision::CollideSetMassCenter( CPhysCollide *pCollide, const Vector &massCenter )
 {
 	// Slart: Only used in studiomdl
-	Log_Stub( LOG_VJolt );
 }
 
 Vector JoltPhysicsCollision::CollideGetOrthographicAreas( const CPhysCollide *pCollide )
 {
 	// Slart: Only used in studiomdl... In a part that is #if 0'd out...
-	Log_Stub( LOG_VJolt );
 	return vec3_origin;
 }
 
 void JoltPhysicsCollision::CollideSetOrthographicAreas( CPhysCollide *pCollide, const Vector &areas )
 {
 	// Slart: Never used
-	Log_Stub( LOG_VJolt );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -327,7 +361,6 @@ void JoltPhysicsCollision::CollideSetOrthographicAreas( CPhysCollide *pCollide, 
 int JoltPhysicsCollision::CollideIndex( const CPhysCollide *pCollide )
 {
 	// Slart: Only used by code behind #ifdef _DEBUG
-	Log_Stub( LOG_VJolt );
 	return 0;
 }
 
@@ -363,7 +396,6 @@ int JoltPhysicsCollision::GetConvexesUsedInCollideable( const CPhysCollide *pCol
 bool JoltPhysicsCollision::IsBoxIntersectingCone( const Vector &boxAbsMins, const Vector &boxAbsMaxs, const truncatedcone_t &cone )
 {
 	// Slart: Never used
-	Log_Stub( LOG_VJolt );
 	return false;
 }
 
@@ -470,19 +502,19 @@ namespace ivp_compat
 
 		const compactledge_t *GetCompactLedge() const
 		{
-			VJoltAssert( this->offset_right_node == 0 );
+			contract_assert( this->offset_right_node == 0 );
 			return ( compactledge_t * )( ( char * )this + this->offset_compact_ledge );
 		}
 
 		const compactledgenode_t *GetLeftChild() const
 		{
-			VJoltAssert( this->offset_right_node );
+			contract_assert( this->offset_right_node );
 			return this + 1;
 		}
 
 		const compactledgenode_t *GetRightChild() const
 		{
-			VJoltAssert( this->offset_right_node );
+			contract_assert( this->offset_right_node );
 			return ( compactledgenode_t * )( ( char * )this + this->offset_right_node );
 		}
 
@@ -576,7 +608,7 @@ namespace ivp_compat
 		std::vector< const compactledge_t * > ledges;
 		GetAllIVPEdges( pFirstLedgeNode, ledges );
 
-		VJoltAssert( !ledges.empty() );
+		contract_assert( !ledges.empty() );
 
 		// One convex per ledge. Models with broken collision hulls have ledges Jolt cannot
 		// build a hull from; those are dropped, so such a prop is missing a piece rather
@@ -869,7 +901,6 @@ bool JoltPhysicsCollision::GetBBoxCacheSize( int *pCachedSize, int *pCachedCount
 CPolyhedron *JoltPhysicsCollision::PolyhedronFromConvex( CPhysConvex * const pConvex, bool bUseTempPolyhedron )
 {
 	// This is vile
-	Log_Stub( LOG_VJolt );
 	return nullptr;
 }
 
@@ -877,7 +908,6 @@ CPolyhedron *JoltPhysicsCollision::PolyhedronFromConvex( CPhysConvex * const pCo
 
 void JoltPhysicsCollision::OutputDebugInfo( const CPhysCollide *pCollide )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 unsigned int JoltPhysicsCollision::ReadStat( int statID )

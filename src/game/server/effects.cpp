@@ -1,29 +1,55 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Implements a grab bag of visual effects entities.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Implements a grab bag of visual effects entities.
+
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "te.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "effects.h"
 #include "gib.h"
 #include "beam_shared.h"
-#include "decals.h"
 #include "func_break.h"
 #include "EntityFlame.h"
 #include "entitylist.h"
 #include "basecombatweapon.h"
-#include "model_types.h"
 #include "player.h"
 #include "physics.h"
 #include "baseparticleentity.h"
 #include "ndebugoverlay.h"
 #include "IEffects.h"
-#include "vstdlib/random.h"
 #include "env_wind_shared.h"
 #include "filesystem.h"
 #include "engine/IEngineSound.h"
@@ -36,11 +62,11 @@
 #include "fx_cs_shared.h"
 #include "cs_player.h"
 
-#define SF_FUNNEL_REVERSE			1 // funnel effect repels particles instead of attracting them.
+constexpr auto SF_FUNNEL_REVERSE = 1; // funnel effect repels particles instead of attracting them.
 
-#define	SF_GIBSHOOTER_REPEATABLE	(1<<0)	// allows a gibshooter to be refired
-#define	SF_SHOOTER_FLAMING			(1<<1)	// gib is on fire
-#define SF_SHOOTER_STRICT_REMOVE	(1<<2)	// remove this gib even if it is in the player's view
+constexpr auto SF_GIBSHOOTER_REPEATABLE = (1<<0); // allows a gibshooter to be refired
+constexpr auto SF_SHOOTER_FLAMING = (1<<1); // gib is on fire
+constexpr auto SF_SHOOTER_STRICT_REMOVE = (1<<2); // remove this gib even if it is in the player's view
 
 // UNDONE: This should be client-side and not use TempEnts
 class [[= ks::reflect::KeyFrom<"m_flSpeed", ks::reflect::Key{ .name = "current" } >{} ]]
@@ -83,7 +109,7 @@ IMPLEMENT_REFLECT_DATAMAP( CBubbling )
 
 
 
-#define SF_BUBBLES_STARTOFF		0x0001
+constexpr auto SF_BUBBLES_STARTOFF = 0x0001;
 
 void CBubbling::Spawn( void )
 {
@@ -617,13 +643,13 @@ bool CEnvShooter::KeyValue( const char *szKeyName, const char *szValue )
 		SetModelName( AllocPooledString(szValue) );
 
 		//Adrian - not pretty...
-		if ( Q_stristr( szValue, ".vmt" ) )
+		if ( V_stristr( szValue, ".vmt" ) )
 			 m_bIsSprite = true;
 	}
 
 	else if (FStrEq(szKeyName, "shootsounds"))
 	{
-		int iNoise = atoi(szValue);
+		int iNoise = std::atoi(szValue);
 		switch( iNoise )
 		{
 		case 0:
@@ -956,13 +982,13 @@ LINK_ENTITY_TO_CLASS( env_blood, CBlood );
 IMPLEMENT_REFLECT_DATAMAP( CBlood )
 
 
-#define SF_BLOOD_RANDOM		0x0001
-#define SF_BLOOD_STREAM		0x0002
-#define SF_BLOOD_PLAYER		0x0004
-#define SF_BLOOD_DECAL		0x0008
-#define SF_BLOOD_CLOUD		0x0010
-#define SF_BLOOD_DROPS		0x0020
-#define SF_BLOOD_GORE		0x0040
+constexpr auto SF_BLOOD_RANDOM = 0x0001;
+constexpr auto SF_BLOOD_STREAM = 0x0002;
+constexpr auto SF_BLOOD_PLAYER = 0x0004;
+constexpr auto SF_BLOOD_DECAL = 0x0008;
+constexpr auto SF_BLOOD_CLOUD = 0x0010;
+constexpr auto SF_BLOOD_DROPS = 0x0020;
+constexpr auto SF_BLOOD_GORE = 0x0040;
 
 
 //-----------------------------------------------------------------------------
@@ -1002,7 +1028,7 @@ bool CBlood::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "color"))
 	{
-		int color = atoi(szValue);
+		int color = std::atoi(szValue);
 		switch ( color )
 		{
 			case 1:
@@ -1215,7 +1241,7 @@ bool CEnvBeverage::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "beveragetype"))
 	{
-		m_nBeverageType = atoi(szValue);
+		m_nBeverageType = std::atoi(szValue);
 	}
 	else
 	{
@@ -1554,8 +1580,8 @@ void CEnvWind::WindThink( void )
 // CEmbers
 //==================================================
 
-#define	bitsSF_EMBERS_START_ON	0x00000001
-#define	bitsSF_EMBERS_TOGGLE	0x00000002
+constexpr auto bitsSF_EMBERS_START_ON = 0x00000001;
+constexpr auto bitsSF_EMBERS_TOGGLE = 0x00000002;
 
 // UNDONE: This is a brush effect-in-volume entity, move client side.
 class [[= ks::reflect::NetTable{ .name = "DT_Embers" } ]]
@@ -1727,8 +1753,8 @@ bool CPhysicsWire::SetupPhysics( void )
 		// Create a ballsocket and attach the two
 		//socket = (CPhysBallSocket *) CreateEntityByName( "phys_ballsocket" );
 
-		Q_snprintf( anchorName,sizeof(anchorName), "__PWIREANCHOR%d", i );
-		Q_snprintf( freeName,sizeof(freeName), "__PWIREFREE%d", i+1 );
+		V_snprintf( anchorName,sizeof(anchorName), "__PWIREANCHOR%d", i );
+		V_snprintf( freeName,sizeof(freeName), "__PWIREFREE%d", i+1 );
 
 		iAnchorName = MAKE_STRING( anchorName );
 		iFreeName	= MAKE_STRING( freeName );
@@ -1805,8 +1831,8 @@ void CEnvMuzzleFlash::InputFire( inputdata_t &inputdata )
 //=========================================================
 // Splash!
 //=========================================================
-#define SF_ENVSPLASH_FINDWATERSURFACE	0x00000001
-#define SF_ENVSPLASH_DIMINISH			0x00000002
+constexpr auto SF_ENVSPLASH_FINDWATERSURFACE = 0x00000001;
+constexpr auto SF_ENVSPLASH_DIMINISH = 0x00000002;
 class CEnvSplash : public CPointEntity
 {
 	DECLARE_CLASS( CEnvSplash, CPointEntity );
@@ -1846,7 +1872,7 @@ void CEnvSplash::Spawn()
 	BaseClass::Spawn();
 }
 
-#define SPLASH_MAX_DEPTH	120.0f
+constexpr auto SPLASH_MAX_DEPTH = 120.0f;
 void CEnvSplash::InputSplash( inputdata_t &inputdata )
 {
 	CEffectData	data;
@@ -2110,7 +2136,7 @@ void CEnvGunfire::ShootThink()
 			angDir,
 			wid,
 			0,
-			CBaseEntity::GetPredictionRandomSeed( SERVER_PLATTIME_RNG ) & 255,
+			CBaseEntity::GetPredictionRandomSeed(  ) & 255,
 			0,
 			0,
 			0,
@@ -2305,21 +2331,6 @@ void CEnvGunfire::FireBullet(
 //#endif
 
 		bFirstHit = false;
-#ifndef CLIENT_DLL
-		//
-		// Propogate a bullet impact event
-		// @todo Add this for shotgun pellets (which dont go thru here)
-		//
-// 		IGameEvent * event = gameeventmanager->CreateEvent( "bullet_impact" );
-// 		if ( event )
-// 		{
-// 			event->SetInt( "userid", GetUserID() );
-// 			event->SetFloat( "x", tr.endpos.x );
-// 			event->SetFloat( "y", tr.endpos.y );
-// 			event->SetFloat( "z", tr.endpos.z );
-// 			gameeventmanager->FireEvent( event );
-// 		}
-#endif
 
 		/************* MATERIAL DETECTION ***********/
 		surfacedata_t *pSurfaceData = physprops->GetSurfaceData( tr.surface.surfaceProps );
@@ -2332,7 +2343,7 @@ void CEnvGunfire::FireBullet(
 
 		//calculate the damage based on the distance the bullet travelled.
 		flCurrentDistance += tr.fraction * ( flDistance - flCurrentDistance );
-		fCurrentDamage *= pow( flRangeModifier, ( flCurrentDistance / 500 ) );
+		fCurrentDamage *= std::pow( flRangeModifier, ( flCurrentDistance / 500 ) );
 
 #ifndef CLIENT_DLL
 		// the value of iPenetration when the round reached its max penetration distance
@@ -2594,8 +2605,8 @@ LINK_ENTITY_TO_CLASS( env_viewpunch, CEnvViewPunch );
 
 IMPLEMENT_REFLECT_DATAMAP( CEnvViewPunch )
 
-#define SF_PUNCH_EVERYONE	0x0001		// Don't check radius
-#define SF_PUNCH_IN_AIR		0x0002		// Punch players in air
+constexpr auto SF_PUNCH_EVERYONE = 0x0001; // Don't check radius
+constexpr auto SF_PUNCH_IN_AIR = 0x0002; // Punch players in air
 
 
 //-----------------------------------------------------------------------------

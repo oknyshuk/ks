@@ -1,22 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
 
-#ifndef IMOVEHELPER_H
-#define IMOVEHELPER_H
-
-
+#include "shareddefs.h"
+#include "basehandle.h"
+#include "const.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
 
-enum PLAYER_ANIM;
 class IPhysicsSurfaceProps;
-class Vector;
 struct model_t;
 struct cmodel_t;
 struct vcollide_t;
@@ -43,13 +38,13 @@ enum
 typedef CBaseHandle EntityHandle_t;
 
 
-#define INVALID_ENTITY_HANDLE INVALID_EHANDLE
+inline constexpr auto INVALID_ENTITY_HANDLE = INVALID_EHANDLE;
 
 //-----------------------------------------------------------------------------
 // Functions the engine provides to IGameMovement to assist in its movement.
 //-----------------------------------------------------------------------------
 
-abstract_class IMoveHelper
+class IMoveHelper
 {
 public:
 	// Call this to set the singleton
@@ -67,7 +62,7 @@ public:
 	virtual void	ProcessImpacts( void ) = 0;
 
 	// Numbered line printf
-	virtual void	Con_NPrintf( int idx, PRINTF_FORMAT_STRING char const* fmt, ... ) = 0;
+	virtual void	Con_NPrintf( int idx, char const* fmt, ... ) = 0;
 
 	// These have separate server vs client impementations
 	virtual void	StartSound( const Vector& origin, int channel, char const* sample, float volume, soundlevel_t soundlevel, int fFlags, int pitch ) = 0;
@@ -110,6 +105,3 @@ inline IMoveHelper* MoveHelper( )
 {
 	return IMoveHelper::GetSingleton();
 }
-
-
-#endif // IMOVEHELPER_H

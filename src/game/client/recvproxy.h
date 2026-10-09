@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: implements various common send proxies
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef RECVPROXY_H
-#define RECVPROXY_H
-
 
 #include "dt_recv.h"
 
@@ -28,13 +23,6 @@ RecvProp RecvPropTime(
 	int offset, 
 	int sizeofVar=kSizeofIgnore );
 
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-RecvProp RecvPropPredictableId(
-	char *pVarName, 
-	int offset, 
-	int sizeofVar=kSizeofIgnore );
-#endif
-
 RecvProp RecvPropEHandle(
 	const char *pVarName,
 	int offset, 
@@ -51,6 +39,3 @@ RecvProp RecvPropIntWithMinusOneFlag(
 	int offset, 
 	int sizeofVar=kSizeofIgnore,
 	RecvVarProxyFn proxyFn=RecvProxy_IntSubOne );
-
-#endif // RECVPROXY_H
-

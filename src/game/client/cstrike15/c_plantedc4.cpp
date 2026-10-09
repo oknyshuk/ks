@@ -1,23 +1,29 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_plantedc4.h"
 #include "engine/IEngineSound.h"
 #include "cs_gamerules.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include <bitbuf.h>
-#include "precache_register.h"
-#include <ranges>
 
-#define PLANTEDC4_MSG_JUSTBLEW 1
-#define TIME_TO_DETONATE_WARNING 10
+constexpr auto PLANTEDC4_MSG_JUSTBLEW = 1;
+constexpr auto TIME_TO_DETONATE_WARNING = 10;
 
 extern ConVar spec_show_xray;
 

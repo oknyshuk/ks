@@ -1,24 +1,57 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Spawn, think, and use functions for common brush entities.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Spawn, think, and use functions for common brush entities.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "doors.h"
-#include "mathlib/mathlib.h"
 #include "physics.h"
 #include "ndebugoverlay.h"
 #include "engine/IEngineSound.h"
 #include "globals.h"
 #include "filters.h"
 						 
-#define		SF_BRUSH_ACCDCC	16// brush should accelerate and decelerate when toggled
-#define		SF_BRUSH_HURT		32// rotating brush that inflicts pain based on rotation speed
-#define		SF_ROTATING_NOT_SOLID	64	// some special rotating objects are not solid.
+constexpr auto SF_BRUSH_ACCDCC = 16; // brush should accelerate and decelerate when toggled
+constexpr auto SF_BRUSH_HURT = 32; // rotating brush that inflicts pain based on rotation speed
+constexpr auto SF_ROTATING_NOT_SOLID = 64; // some special rotating objects are not solid.
 
 // =================== FUNC_WALL ==============================================
 class CFuncWall : public CBaseEntity
@@ -241,8 +274,8 @@ void CFuncVehicleClip::InputDisable( inputdata_t &data )
 
 //============================= FUNC_CONVEYOR =======================================
 
-#define SF_CONVEYOR_VISUAL		0x0001
-#define SF_CONVEYOR_NOTSOLID	0x0002
+constexpr auto SF_CONVEYOR_VISUAL = 0x0001;
+constexpr auto SF_CONVEYOR_NOTSOLID = 0x0002;
 
 class [[= ks::reflect::NetTable{ .name = "DT_FuncConveyor" } ]]
       CFuncConveyor : public CFuncWall
@@ -469,7 +502,7 @@ extern void SendProxy_Origin( const SendProp *pProp, const void *pStruct, const 
 void SendProxy_FuncRotatingOrigin( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	CFuncRotating *entity = (CFuncRotating*)pStruct;
-	Assert( entity );
+	contract_assert( entity );
 	if ( entity->HasSpawnFlags(SF_BRUSH_ROTATE_CLIENTSIDE) )
 	{
 		const Vector *v = &entity->m_vecClientOrigin;
@@ -489,7 +522,7 @@ void SendProxy_FuncRotatingAngle( const SendProp *pProp, const void *pStruct, co
 
 	pOut->m_Float = anglemod( *qa );
 
-	Assert( IsFinite( pOut->m_Float ) );
+	contract_assert( IsFinite( pOut->m_Float ) );
 }
 
 
@@ -511,11 +544,11 @@ bool CFuncRotating::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "fanfriction"))
 	{
-		m_flFanFriction = atof(szValue)/100;
+		m_flFanFriction = std::atof(szValue)/100;
 	}
 	else if (FStrEq(szKeyName, "Volume"))
 	{
-		m_flVolume = atof(szValue) / 10.0;
+		m_flVolume = std::atof(szValue) / 10.0;
 		m_flVolume = clamp(m_flVolume, 0.0, 1.0f);
 	}
 	else
@@ -685,7 +718,7 @@ void CFuncRotating::Precache( void )
 	// Set up rotation sound.
 	//
 	char *szSoundFile = ( char * )STRING( m_NoiseRunning );
-	if ( !m_NoiseRunning || strlen( szSoundFile ) == 0 )
+	if ( !m_NoiseRunning || std::strlen( szSoundFile ) == 0 )
 	{
 		// No sound set up, use the null sound.
 		m_NoiseRunning = AllocPooledString("DoorSound.Null");
@@ -726,8 +759,8 @@ void CFuncRotating::HurtTouch ( CBaseEntity *pOther )
 }
 
 
-#define FANPITCHMIN		30
-#define FANPITCHMAX		100
+constexpr auto FANPITCHMIN = 30;
+constexpr auto FANPITCHMAX = 100;
 
 
 //-----------------------------------------------------------------------------
@@ -1302,7 +1335,7 @@ int CFuncRotating::DrawDebugTextOverlays(void)
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
 		char tempstr[512];
-		Q_snprintf( tempstr, sizeof( tempstr ),"Speed cur (target): %3.2f (%3.2f)", GetMoveSpeed( m_flSpeed ), GetMoveSpeed( m_flTargetSpeed ) );
+		V_snprintf( tempstr, sizeof( tempstr ),"Speed cur (target): %3.2f (%3.2f)", GetMoveSpeed( m_flSpeed ), GetMoveSpeed( m_flTargetSpeed ) );
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}

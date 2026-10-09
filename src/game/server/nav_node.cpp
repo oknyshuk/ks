@@ -1,23 +1,49 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_node.cpp
 // AI Navigation Nodes
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
 
-#include <unordered_map>
 
 #include "nav_node.h"
 #include "nav_colors.h"
 #include "nav_mesh.h"
-#include "tier1/generichash.h"
-
 
 NavDirType Opposite[ NUM_DIRECTIONS ] = { SOUTH, WEST, NORTH, EAST };
 
@@ -33,7 +59,7 @@ extern Vector NavTraceMaxs;
 
 struct CNodeHashFuncs
 {
-	size_t operator()( const Vector2D &pos ) const
+	std::size_t operator()( const Vector2D &pos ) const
 	{
 		return Hash8( &pos );
 	}
@@ -167,7 +193,7 @@ void CNavNode::Draw( void )
 	if ( (!m_isCovered && nav_show_node_id.GetBool()) || (m_isCovered && nav_show_node_id.GetInt() < 0) )
 	{
 		char text[16];
-		Q_snprintf( text, sizeof( text ), "%d", m_id );
+		V_snprintf( text, sizeof( text ), "%d", m_id );
 		NDebugOverlay::Text( m_pos, text, true, 0.1f );
 	}
 
@@ -382,9 +408,9 @@ void CNavNode::CheckCrouch( void )
  */
 void CNavNode::ConnectTo( CNavNode *node, NavDirType dir, float obstacleHeight, float obstacleStartDist, float obstacleEndDist )
 {
-	Assert( obstacleStartDist >= 0 && obstacleStartDist <= GenerationStepSize );
-	Assert( obstacleEndDist >= 0 && obstacleStartDist <= GenerationStepSize );
-	Assert( obstacleStartDist < obstacleEndDist );
+	contract_assert( obstacleStartDist >= 0 && obstacleStartDist <= GenerationStepSize );
+	contract_assert( obstacleEndDist >= 0 && obstacleStartDist <= GenerationStepSize );
+	contract_assert( obstacleStartDist < obstacleEndDist );
 
 	m_to[ dir ] = node;
 	m_obstacleHeight[ dir ] = obstacleHeight;
@@ -414,23 +440,6 @@ CNavNode *CNavNode::GetNode( const Vector &pos )
 			}
 		}
 	}
-
-#ifdef DEBUG_NODE_HASH
-	CNavNode *pTestNode = nullptr;
-	for( CNavNode *node = m_list; node; node = node->m_next )
-	{
-		float dx = fabs( node->m_pos.x - pos.x );
-		float dy = fabs( node->m_pos.y - pos.y );
-		float dz = fabs( node->m_pos.z - pos.z );
-
-		if (dx < tolerance && dy < tolerance && dz < tolerance)
-		{
-			pTestNode = node;
-			break;
-		}
-	}
-	AssertFatal( pTestNode == pNode );
-#endif
 
 	return pNode;
 }
@@ -468,4 +477,3 @@ BOOL CNavNode::IsClosedCell( void ) const
 
 	return false;
 }
-

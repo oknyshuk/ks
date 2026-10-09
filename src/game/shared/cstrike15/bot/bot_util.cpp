@@ -1,23 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "ndebugoverlay.h"
 #include "cs_shareddefs.h"
 #include "engine/IEngineSound.h"
-#include "keyvalues.h"
 
 #include "bot.h"
 #include "bot_util.h"
 #include "bot_profile.h"
 
 #include "cs_bot.h"
-#include <ctype.h>
 
 static int s_iBeamSprite = 0;
 
@@ -280,7 +294,7 @@ extern CBasePlayer *UTIL_GetClosestPlayer( const Vector &pos, float *distance )
 	}
 	
 	if (distance)
-		*distance = (float)sqrt( closeDistSq );
+		*distance = (float)std::sqrt( closeDistSq );
 
 	return closePlayer;
 }
@@ -318,7 +332,7 @@ extern CBasePlayer *UTIL_GetClosestPlayer( const Vector &pos, int team, float *d
 	}
 	
 	if (distance)
-		*distance = (float)sqrt( closeDistSq );
+		*distance = (float)std::sqrt( closeDistSq );
 
 	return closePlayer;
 }
@@ -334,9 +348,9 @@ void UTIL_ConstructBotNetName( char *name, int nameLength, const BotProfile *pro
 	}
 
 	// if there is no bot prefix just use the profile name.
-	if ((cv_bot_prefix.GetString() == nullptr) || (strlen(cv_bot_prefix.GetString()) == 0))
+	if ((cv_bot_prefix.GetString() == nullptr) || (std::strlen(cv_bot_prefix.GetString()) == 0))
 	{
-		Q_strncpy( name, profile->GetName(), nameLength );
+		V_strncpy( name, profile->GetName(), nameLength );
 		return;
 	}
 
@@ -359,7 +373,7 @@ void UTIL_ConstructBotNetName( char *name, int nameLength, const BotProfile *pro
 		const char *translatedAlias = GetTranslatedWeaponAlias( weaponStr );
 
 		char wpnName[128];
-		Q_snprintf( wpnName, sizeof( wpnName ), "weapon_%s", translatedAlias );
+		V_snprintf( wpnName, sizeof( wpnName ), "weapon_%s", translatedAlias );
 		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( wpnName );
 		if ( hWpnInfo != GetInvalidWeaponInfoHandle() )
 		{
@@ -377,15 +391,15 @@ void UTIL_ConstructBotNetName( char *name, int nameLength, const BotProfile *pro
 	}
 
 	char skillStr[16];
-	Q_snprintf( skillStr, sizeof( skillStr ), "%.0f", profile->GetSkill()*100 );
+	V_snprintf( skillStr, sizeof( skillStr ), "%.0f", profile->GetSkill()*100 );
 
 	char temp[MAX_PLAYER_NAME_LENGTH*2];
 	char prefix[MAX_PLAYER_NAME_LENGTH*2];
-	Q_strncpy( temp, cv_bot_prefix.GetString(), sizeof( temp ) );
-	Q_StrSubst( temp, "<difficulty>", diffStr, prefix, sizeof( prefix ) );
-	Q_StrSubst( prefix, "<weaponclass>", weaponStr, temp, sizeof( temp ) );
-	Q_StrSubst( temp, "<skill>", skillStr, prefix, sizeof( prefix ) );
-	Q_snprintf( name, nameLength, "%s %s", prefix, profile->GetName() );
+	V_strncpy( temp, cv_bot_prefix.GetString(), sizeof( temp ) );
+	V_StrSubst( temp, "<difficulty>", diffStr, prefix, sizeof( prefix ) );
+	V_StrSubst( prefix, "<weaponclass>", weaponStr, temp, sizeof( temp ) );
+	V_StrSubst( temp, "<skill>", skillStr, prefix, sizeof( prefix ) );
+	V_snprintf( name, nameLength, "%s %s", prefix, profile->GetName() );
 }
 
 
@@ -521,15 +535,15 @@ void BotPrecache( void )
 }
 
 //------------------------------------------------------------------------------------------------------------
-#define COS_TABLE_SIZE 256
+constexpr auto COS_TABLE_SIZE = 256;
 static float cosTable[ COS_TABLE_SIZE ];
 
 void InitBotTrig( void )
 {
 	for( int i=0; i<COS_TABLE_SIZE; ++i )
 	{
-		float angle = (float)(2.0f * M_PI * i / (float)(COS_TABLE_SIZE-1));
-		cosTable[i] = (float)cos( angle ); 
+		float angle = (float)(2.0f * std::numbers::pi * i / (float)(COS_TABLE_SIZE-1));
+		cosTable[i] = (float)std::cos( angle ); 
 	}
 }
 
@@ -645,7 +659,7 @@ bool WildcardMatch( const char *query, const char *test )
 	{
 		char nameChar = *test;
 		char queryChar = *query;
-		if ( tolower(nameChar) != tolower(queryChar) ) // case-insensitive
+		if ( std::tolower(nameChar) != tolower(queryChar) ) // case-insensitive
 			break;
 		++test;
 		++query;
@@ -660,6 +674,3 @@ bool WildcardMatch( const char *query, const char *test )
 
 	return false;
 }
-
-
-

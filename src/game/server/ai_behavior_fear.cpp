@@ -1,20 +1,45 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "ai_motor.h"
 #include "ai_behavior_fear.h"
 #include "ai_hint.h"
 #include "ai_navigator.h"
 
-
-#define BEHAVIOR_FEAR_SAFETY_TIME		5
-#define FEAR_SAFE_PLACE_TOLERANCE		36.0f
-#define FEAR_ENEMY_TOLERANCE_CLOSE_DIST_SQR		Square(300.0f) // (25 feet)
-#define FEAR_ENEMY_TOLERANCE_TOO_CLOSE_DIST_SQR	Square( 60.0f ) // (5 Feet)
+constexpr auto BEHAVIOR_FEAR_SAFETY_TIME = 5;
+constexpr auto FEAR_SAFE_PLACE_TOLERANCE = 36.0f;
+#define FEAR_ENEMY_TOLERANCE_CLOSE_DIST_SQR	Square(300.0f)	// (25 feet)
+#define FEAR_ENEMY_TOLERANCE_TOO_CLOSE_DIST_SQR	Square( 60.0f )	// (5 Feet)
 
 ConVar ai_enable_fear_behavior( "ai_enable_fear_behavior", "1" );
 
@@ -114,7 +139,7 @@ void CAI_FearBehavior::RunTask( const Task_t *pTask )
 
 			case 1:// Do the pathfinding.
 				{
-					Assert( m_hMovingToHint != nullptr );
+					contract_assert( m_hMovingToHint != nullptr );
 
 					AI_NavGoal_t goal(m_hMovingToHint->GetAbsOrigin());
 					goal.pTarget = nullptr;
@@ -154,8 +179,8 @@ void CAI_FearBehavior::RunTask( const Task_t *pTask )
 
 //-----------------------------------------------------------------------------
 // Purpose: 
-// Output : TRUE if I have an enemy and that enemy would attack me if it could
-// Notes  : Returns FALSE if the enemy is neutral or likes me.
+// Output : true if I have an enemy and that enemy would attack me if it could
+// Notes  : Returns false if the enemy is neutral or likes me.
 //-----------------------------------------------------------------------------
 bool CAI_FearBehavior::EnemyDislikesMe()
 {
@@ -169,7 +194,7 @@ bool CAI_FearBehavior::EnemyDislikesMe()
 
 	Disposition_t disposition = pEnemy->MyNPCPointer()->IRelationType(GetOuter());
 
-	Assert(disposition != D_ER);
+	contract_assert( disposition != D_ER );
 
 	if( disposition >= D_LI )
 		return false;
@@ -182,7 +207,7 @@ bool CAI_FearBehavior::EnemyDislikesMe()
 //-----------------------------------------------------------------------------
 void CAI_FearBehavior::MarkAsUnsafe()
 {
-	Assert( m_hSafePlaceHint );
+	contract_assert( m_hSafePlaceHint );
 
 	// Disable the node to stop anyone from picking it for a while.
 	m_hSafePlaceHint->DisableForSeconds( 5.0f );
@@ -442,7 +467,7 @@ CAI_Hint *CAI_FearBehavior::FindFearWithdrawalDest()
 	CHintCriteria hintCriteria;
 	CAI_BaseNPC *pOuter = GetOuter();
 
-	Assert(pOuter != nullptr);
+	contract_assert( pOuter != nullptr );
 
 	hintCriteria.AddHintType( HINT_PLAYER_ALLY_FEAR_DEST );
 	hintCriteria.SetFlag( bits_HINT_NODE_VISIBLE_TO_PLAYER | bits_HINT_NOT_CLOSE_TO_ENEMY /*| bits_HINT_NODE_IN_VIEWCONE | bits_HINT_NPC_IN_NODE_FOV*/ );

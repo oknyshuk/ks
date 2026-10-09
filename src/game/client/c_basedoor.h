@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( C_BASEDOOR_H )
-#define C_BASEDOOR_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -29,5 +24,3 @@ public:
 public:
 	[[= ks::reflect::Net{} ]] float		m_flWaveHeight;
 };
-
-#endif // C_BASEDOOR_H

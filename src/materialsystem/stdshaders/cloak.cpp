@@ -1,20 +1,18 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
+
 // Purpose: Cloaking shader for Spy in TF2 (and probably many other things to come)
-//
-// $NoKeywords: $
-//=====================================================================================//
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "convar.h"
+import std;
 #include "cloak_dx9_helper.h"
-
 
 DEFINE_FALLBACK_SHADER( Cloak, Cloak_DX90 )
 
 BEGIN_VS_SHADER( Cloak_DX90, "Help for Cloak" )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM_OVERRIDE( COLOR, SHADER_PARAM_TYPE_COLOR, "{255 255 255}", "unused", SHADER_PARAM_NOT_EDITABLE )
 		SHADER_PARAM_OVERRIDE( ALPHA, SHADER_PARAM_TYPE_FLOAT, "1.0", "unused", SHADER_PARAM_NOT_EDITABLE )
 		SHADER_PARAM( REFRACTAMOUNT, SHADER_PARAM_TYPE_FLOAT, "2", "" )
@@ -117,4 +115,3 @@ BEGIN_VS_SHADER( Cloak_DX90, "Help for Cloak" )
 		DrawCloak_DX9( this, params, pShaderAPI, pShaderShadow, info, vertexCompression );
 	}
 END_SHADER
-

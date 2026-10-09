@@ -1,22 +1,25 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "reflect_recvtable.h"
-#include "reflect_annotations.h"
-#include "iviewrender.h"
 #include "precache_register.h"
 #include "studio.h"
 #include "bone_setup.h"
 #include "engine/ivmodelinfo.h"
 #include "c_fire_smoke.h"
 #include "engine/IEngineSound.h"
-#include "iefx.h"
-#include "dlight.h"
-#include "tier0/icommandline.h"
 
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, SmokeStackMaterials )
@@ -102,10 +105,10 @@ C_FireSmoke::~C_FireSmoke()
 }
 
 
-#define	FLAME_ALPHA_START	0.9f
-#define FLAME_ALPHA_END		1.0f
+constexpr auto FLAME_ALPHA_START = 0.9f;
+constexpr auto FLAME_ALPHA_END = 1.0f;
 
-#define	FLAME_TRANS_START	0.75f
+constexpr auto FLAME_TRANS_START = 0.75f;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -152,7 +155,7 @@ bool C_FireSmoke::ShouldDraw()
 void C_FireSmoke::Start( void )
 {
 	const char *lpszEffectName;
-	int nSize = (int) floor( m_flStartScale / 36.0f );
+	int nSize = (int) std::floor( m_flStartScale / 36.0f );
 
 	switch ( nSize )
 	{

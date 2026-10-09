@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef WEAPON_KNIFE_H
-#define WEAPON_KNIFE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "weapon_csbase.h"
-
 
 #if defined( CLIENT_DLL )
 
@@ -19,7 +12,6 @@
 	#define CKnifeGG C_KnifeGG
 
 #endif
-
 
 // ----------------------------------------------------------------------------- //
 // CKnife class definition.
@@ -77,5 +69,3 @@ public:
 
 	virtual CSWeaponID GetCSWeaponID( void ) const		{ return WEAPON_KNIFE_GG; }
 };
-
-#endif // WEAPON_KNIFE_H

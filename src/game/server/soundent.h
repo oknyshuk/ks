@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Soundent.h - the entity that spawns when the world 
 // spawns, and handles the world's active and free sound
 // lists.
 
-#ifndef SOUNDENT_H
-#define SOUNDENT_H
-
 #include "reflect_annotations.h"
-
+#include "baseentity.h"
 
 enum
 {
@@ -86,10 +80,10 @@ enum
 	SOUNDLIST_EMPTY = -1
 };
 
-#define SOUNDENT_VOLUME_MACHINEGUN	1500.0
-#define SOUNDENT_VOLUME_SHOTGUN		1500.0
-#define SOUNDENT_VOLUME_PISTOL		1500.0
-#define SOUNDENT_VOLUME_EMPTY		 500.0 // volume of the "CLICK" when you have no bullets
+inline constexpr auto SOUNDENT_VOLUME_MACHINEGUN = 1500.0;
+inline constexpr auto SOUNDENT_VOLUME_SHOTGUN = 1500.0;
+inline constexpr auto SOUNDENT_VOLUME_PISTOL = 1500.0;
+inline constexpr auto SOUNDENT_VOLUME_EMPTY = 500.0; // volume of the "CLICK" when you have no bullets
 
 enum
 {
@@ -160,7 +154,7 @@ inline bool CSound::DoesSoundExpire() const
 
 inline float CSound::SoundExpirationTime() const
 {
-	return m_bNoExpirationTime ? FLT_MAX : m_flExpireTime;
+	return m_bNoExpirationTime ? std::numeric_limits<float>::max() : m_flExpireTime;
 }
 
 inline bool CSound::IsSoundType( int nSoundFlags ) const
@@ -261,6 +255,3 @@ inline bool CSoundEnt::IsEmpty( void )
 { 
 	return m_iActiveSound == SOUNDLIST_EMPTY; 
 }
-
-
-#endif //SOUNDENT_H

@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Debug overlay / notfication printing 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CON_NPRINT_H
-#define CON_NPRINT_H
-
+// Purpose: Debug overlay / notfication printing
 
 //-----------------------------------------------------------------------------
 // Purpose:  Debug overlay / notfication printing 
@@ -21,8 +17,6 @@ typedef struct con_nprint_s
 } con_nprint_t;
 
 // Print string on line idx
-void Con_NPrintf( int idx, PRINTF_FORMAT_STRING const char *fmt, ... );
+void Con_NPrintf( int idx, const char *fmt, ... );
 // Customized printout
-void Con_NXPrintf( const con_nprint_t *info, PRINTF_FORMAT_STRING const char *fmt, ... );
-
-#endif // CON_NPRINT_H
+void Con_NXPrintf( const con_nprint_t *info, const char *fmt, ... );

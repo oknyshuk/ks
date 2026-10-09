@@ -1,21 +1,17 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CAPTIONCOMPILER_H
-#define CAPTIONCOMPILER_H
-
+import ks.tier1;
 #include "datamap.h"
-#include "checksum_crc.h"
+import std;
 
-#define MAX_BLOCK_BITS	13
+inline constexpr auto MAX_BLOCK_BITS = 13;
 
 #define MAX_BLOCK_SIZE (1<<MAX_BLOCK_BITS )
 
 #define COMPILED_CAPTION_FILEID			MAKEID( 'V', 'C', 'C', 'D' )
-#define COMPILED_CAPTION_VERSION		1
+inline constexpr auto COMPILED_CAPTION_VERSION = 1;
 
 #pragma pack(1)
 struct CompiledCaptionHeader_t
@@ -37,10 +33,11 @@ struct CaptionLookup_t
 
 	void SetHash( char const *string )
 	{
-		int len = Q_strlen( string );
-		char *tempstr = (char *)stackalloc( len + 1 );
-		Q_strncpy( tempstr, string, len + 1 );
-		Q_strlower( tempstr );
+		int len = V_strlen( string );
+		ks::ScratchArena<> scratch;
+		char *tempstr = (char *)scratch.AllocBytes( len + 1 );
+		V_strncpy( tempstr, string, len + 1 );
+		V_strlower( tempstr );
 		CRC32_t temp;
 		CRC32_Init( &temp );
 		CRC32_ProcessBuffer( &temp, tempstr, len );
@@ -64,5 +61,3 @@ struct CaptionBlock_t
 {
 	byte	data[ MAX_BLOCK_SIZE ];
 };
-
-#endif // CAPTIONCOMPILER_H

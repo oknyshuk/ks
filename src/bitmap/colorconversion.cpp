@@ -1,18 +1,9 @@
-//======= Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.math;
 #include "bitmap/imageformat.h"
-#include "basetypes.h"
-#include "tier0/dbg.h"
-#include <malloc.h>
-#include <memory.h>
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include "tier1/strtools.h"
-#include "mathlib/compressed_vector.h"
+import std;
 #include "nvtc.h"
 
 typedef int32 *DWORD_PTR;
@@ -267,8 +258,8 @@ static inline void GetColorBlockColorsBGRA8888( DXTColBlock *pBlock, BGRA8888_t 
 {
 	// input data is assumed to be x86 order
 	// swap to target platform for proper dxt decoding
-	uint16 color0 = LittleShort( pBlock->col0 );
-	uint16 color1 = LittleShort( pBlock->col1 );
+	uint16 color0 = ( pBlock->col0 );
+	uint16 color1 = ( pBlock->col1 );
 
 	// shift to full precision
 	col_0->a = 0xff;
@@ -379,7 +370,7 @@ static inline void DecodeColorBlock( CDestPixel *pOutputImage, DXTColBlock *pCol
 				pOutputImage++;
 				break;
 			default:
-				Assert( 0 );
+				contract_assert( 0 );
 				pOutputImage++;
 				break;
 			}
@@ -475,9 +466,9 @@ static inline void DecodeAlpha3BitLinear( CDestPixel *pImPos, DXTAlphaBlock3BitL
 		{
 			gACol[row][pix].a = (BYTE) gAlphas[ gBits[row][pix] ];
 
-			Assert( gACol[row][pix].r == 0 );
-			Assert( gACol[row][pix].g == 0 );
-			Assert( gACol[row][pix].b == 0 );
+			contract_assert( gACol[row][pix].r == 0 );
+			contract_assert( gACol[row][pix].g == 0 );
+			contract_assert( gACol[row][pix].b == 0 );
 		}
 	}
 
@@ -515,13 +506,14 @@ static inline void DecodeAlpha3BitLinear( CDestPixel *pImPos, DXTAlphaBlock3BitL
 template <class CDestPixel> 
 static void ConvertFromDXT1( const uint8 *src, CDestPixel *dst, int width, int height )
 {
-	Assert( sizeof( BGRA8888_t ) == 4 );
-	Assert( sizeof( RGBA8888_t ) == 4 );
-	Assert( sizeof( RGB888_t ) == 3 );
-	Assert( sizeof( BGR888_t ) == 3 );
-	Assert( sizeof( BGR565_t ) == 2 );
-	Assert( sizeof( BGRA5551_t ) == 2 );
-	Assert( sizeof( BGRA4444_t ) == 2 );
+	ks::ScratchArena<> scratch;
+	contract_assert( sizeof( BGRA8888_t ) == 4 );
+	contract_assert( sizeof( RGBA8888_t ) == 4 );
+	contract_assert( sizeof( RGB888_t ) == 3 );
+	contract_assert( sizeof( BGR888_t ) == 3 );
+	contract_assert( sizeof( BGR565_t ) == 2 );
+	contract_assert( sizeof( BGRA5551_t ) == 2 );
+	contract_assert( sizeof( BGRA4444_t ) == 2 );
 
 	int realWidth = 0;
 	int realHeight = 0;
@@ -536,11 +528,11 @@ static void ConvertFromDXT1( const uint8 *src, CDestPixel *dst, int width, int h
 		width = ( width + 3 ) & ~3;
 		height = ( height + 3 ) & ~3;
 		realDst = dst;
-		dst = ( CDestPixel * )stackalloc( width * height * sizeof( CDestPixel ) );
-		Assert( dst );
+		dst = scratch.Alloc<CDestPixel>( width * height );
+		contract_assert( dst );
 	}
-	Assert( !( width % 4 ) );
-	Assert( !( height % 4 ) );
+	contract_assert( !( width % 4 ) );
+	contract_assert( !( height % 4 ) );
 
 	int xblocks, yblocks;
 	xblocks = width >> 2;
@@ -585,6 +577,7 @@ static void ConvertFromDXT1( const uint8 *src, CDestPixel *dst, int width, int h
 template <class CDestPixel> 
 static void ConvertFromDXT5( const uint8 *src, CDestPixel *dst, int width, int height )
 {
+	ks::ScratchArena<> scratch;
 	int realWidth = 0;
 	int realHeight = 0;
 	CDestPixel *realDst = nullptr;
@@ -598,11 +591,11 @@ static void ConvertFromDXT5( const uint8 *src, CDestPixel *dst, int width, int h
 		width = ( width + 3 ) & ~3;
 		height = ( height + 3 ) & ~3;
 		realDst = dst;
-		dst = ( CDestPixel * )stackalloc( width * height * sizeof( CDestPixel ) );
-		Assert( dst );
+		dst = scratch.Alloc<CDestPixel>( width * height );
+		contract_assert( dst );
 	}
-	Assert( !( width % 4 ) );
-	Assert( !( height % 4 ) );
+	contract_assert( !( width % 4 ) );
+	contract_assert( !( height % 4 ) );
 
 	int xblocks, yblocks;
 	xblocks = width >> 2;
@@ -665,6 +658,7 @@ static void ConvertFromDXT5( const uint8 *src, CDestPixel *dst, int width, int h
 template <class CDestPixel> 
 static void ConvertFromDXT5IgnoreAlpha( const uint8 *src, CDestPixel *dst, int width, int height )
 {
+	ks::ScratchArena<> scratch;
 	int realWidth = 0;
 	int realHeight = 0;
 	CDestPixel *realDst = nullptr;
@@ -678,11 +672,11 @@ static void ConvertFromDXT5IgnoreAlpha( const uint8 *src, CDestPixel *dst, int w
 		width = ( width + 3 ) & ~3;
 		height = ( height + 3 ) & ~3;
 		realDst = dst;
-		dst = ( CDestPixel * )stackalloc( width * height * sizeof( CDestPixel ) );
-		Assert( dst );
+		dst = scratch.Alloc<CDestPixel>( width * height );
+		contract_assert( dst );
 	}
-	Assert( !( width % 4 ) );
-	Assert( !( height % 4 ) );
+	contract_assert( !( width % 4 ) );
+	contract_assert( !( height % 4 ) );
 
 	int xblocks, yblocks;
 	xblocks = width >> 2;
@@ -737,6 +731,7 @@ static void ConvertFromDXT5IgnoreAlpha( const uint8 *src, CDestPixel *dst, int w
 template <class CDestPixel> 
 static void ConvertFromATIxN( const uint8 *src, CDestPixel *dst, int width, int height, bool bATI2N )
 {
+	ks::ScratchArena<> scratch;
 	int realWidth = 0;
 	int realHeight = 0;
 	CDestPixel *realDst = nullptr;
@@ -750,11 +745,11 @@ static void ConvertFromATIxN( const uint8 *src, CDestPixel *dst, int width, int 
 		width = ( width + 3 ) & ~3;
 		height = ( height + 3 ) & ~3;
 		realDst = dst;
-		dst = ( CDestPixel * )stackalloc( width * height * sizeof( CDestPixel ) );
-		Assert( dst );
+		dst = scratch.Alloc<CDestPixel>( width * height );
+		contract_assert( dst );
 	}
-	Assert( !( width % 4 ) );
-	Assert( !( height % 4 ) );
+	contract_assert( !( width % 4 ) );
+	contract_assert( !( height % 4 ) );
 
 	int xblocks, yblocks;
 	xblocks = width >> 2;
@@ -823,7 +818,7 @@ bool ConvertToATIxN(  const uint8 *src, ImageFormat srcImageFormat,
 					  uint8 *dst, ImageFormat dstImageFormat,
 					  int width, int height, int srcStride, int dstStride, bool bDXT5GA = false )
 {
-	Assert( !"ATIxN is no longer supported." );
+	contract_assert( !"ATIxN is no longer supported." );
 	return false;
 }
 
@@ -832,7 +827,7 @@ bool ConvertToDXT(  const uint8 *src, ImageFormat srcImageFormat,
  					uint8 *dst, ImageFormat dstImageFormat, 
 					int width, int height, int srcStride, int dstStride )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 	return false;
 }
 
@@ -841,7 +836,7 @@ bool ConvertToDXTRuntime(	const uint8 *src, ImageFormat srcImageFormat,
 							int width, int height )
 {
 	// from rgba to dxtN using stb_dxt.h  (source format must always be RGBA8888, dest format must be DXT1_RUNTIME or DXT5_RUNTIME
-	Assert( ( srcImageFormat == IMAGE_FORMAT_RGBA8888 || srcImageFormat == IMAGE_FORMAT_BGRA8888 ) && ( dstImageFormat == IMAGE_FORMAT_DXT1_RUNTIME || dstImageFormat == IMAGE_FORMAT_DXT5_RUNTIME ) );
+	contract_assert( ( srcImageFormat == IMAGE_FORMAT_RGBA8888 || srcImageFormat == IMAGE_FORMAT_BGRA8888 ) && ( dstImageFormat == IMAGE_FORMAT_DXT1_RUNTIME || dstImageFormat == IMAGE_FORMAT_DXT5_RUNTIME ) );
 
 	const uint64 *sourcePixels = reinterpret_cast<const uint64 *>(src);
 	uint32 *dest32 = reinterpret_cast<uint32 *>(dst);
@@ -1008,9 +1003,9 @@ void ConvertImageFormat_RGBA16161616F_To_RGB323232F( float16 *pSrcImage, float *
 	}
 }
 
-void ConvertImageFormat_RGBA16161616F_To_RGBA323232F( float16 *pSrcImage, float *pDstImage, int width, int height , size_t src_stride)
+void ConvertImageFormat_RGBA16161616F_To_RGBA323232F( float16 *pSrcImage, float *pDstImage, int width, int height , std::size_t src_stride)
 {
-	size_t s_stride=src_stride/2;
+	std::size_t s_stride=src_stride/2;
 	for(int y=0; y<height; y++)
 	{
 		float16 const *pSrcScan=pSrcImage;
@@ -1169,18 +1164,19 @@ bool ConvertImageFormat( const uint8 *src, ImageFormat srcImageFormat,
  					     uint8 *dst, ImageFormat dstImageFormat, 
 						 int width, int height, int srcStride, int dstStride )
 {
+	ks::ScratchArena<> scratch;
 	// HDRFIXME: WE NEED A BIGGER INTERMEDIATE FORMAT!!!!!
 	if ( srcImageFormat == IMAGE_FORMAT_RGBA16161616 )
 	{
 		if ( dstImageFormat == IMAGE_FORMAT_RGB323232F )
 		{
-			Assert( srcStride == 0 && dstStride == 0 );
+			contract_assert( srcStride == 0 && dstStride == 0 );
 			ConvertImageFormat_RGBA16161616_To_RGB323232F( ( unsigned short * )src, ( float * )dst, width, height );
 			return true;
 		}
 		if ( dstImageFormat == IMAGE_FORMAT_RGBA16161616F )
 		{
-			Assert( srcStride == 0 && dstStride == 0 );
+			contract_assert( srcStride == 0 && dstStride == 0 );
 			ConvertImageFormat_RGBA16161616_To_RGBA16161616F( ( unsigned short * )src, ( float * )dst, width, height );
 			return true;
 		}
@@ -1189,19 +1185,19 @@ bool ConvertImageFormat( const uint8 *src, ImageFormat srcImageFormat,
 	{	
 		if ( dstImageFormat == IMAGE_FORMAT_RGB323232F )
 		{
-			Assert( srcStride == 0 && dstStride == 0 );
+			contract_assert( srcStride == 0 && dstStride == 0 );
 			ConvertImageFormat_RGBA16161616F_To_RGB323232F( ( float16 * )src, ( float * )dst, width, height );
 			return true;
 		}
 		if ( dstImageFormat == IMAGE_FORMAT_RGBA32323232F )
 		{
-			Assert( dstStride == 0 );
+			contract_assert( dstStride == 0 );
 			ConvertImageFormat_RGBA16161616F_To_RGBA323232F( ( float16 * )src, ( float * )dst, width, height, srcStride );
 			return true;
 		}
 		if ( dstImageFormat == IMAGE_FORMAT_RGBA16161616 )
 		{
-			Assert( srcStride == 0 && dstStride == 0 );
+			contract_assert( srcStride == 0 && dstStride == 0 );
 			ConvertImageFormat_RGBA16161616F_To_RGBA16161616( ( float16 * )src, ( unsigned short * )dst, width, height );
 			return true;
 		}
@@ -1210,25 +1206,25 @@ bool ConvertImageFormat( const uint8 *src, ImageFormat srcImageFormat,
 	{
 		if ( dstImageFormat == IMAGE_FORMAT_RGBA16161616 )
 		{
-			Assert( srcStride == 0 && dstStride == 0 );
+			contract_assert( srcStride == 0 && dstStride == 0 );
 			ConvertImageFormat_RGB323232F_To_RGBA16161616( ( float * )src, ( unsigned short * )dst, width, height );
 			return true;
 		}
 		if ( dstImageFormat == IMAGE_FORMAT_RGBA16161616F )
 		{
-			Assert( srcStride == 0 && dstStride == 0 );
+			contract_assert( srcStride == 0 && dstStride == 0 );
 			ConvertImageFormat_RGB323232F_To_RGBA16161616F( ( float * )src, ( float16 * )dst, width, height );
 			return true;
 		}
 		if ( dstImageFormat == IMAGE_FORMAT_RGBA8888 )
 		{
-			Assert( srcStride == 0 );
+			contract_assert( srcStride == 0 );
 			ConvertImageFormat_RGB323232F_To_RGBA8888( ( float * )src, dst, width, height );
 			return true;
 		}
 		if ( dstImageFormat == IMAGE_FORMAT_BGRA8888 )
 		{
-			Assert( srcStride == 0 );
+			contract_assert( srcStride == 0 );
 			ConvertImageFormat_RGB323232F_To_BGRA8888( ( float * )src, dst, width, height );
 			return true;
 		}
@@ -1250,7 +1246,7 @@ bool ConvertImageFormat( const uint8 *src, ImageFormat srcImageFormat,
 
 		int memRequired;
 		memRequired = GetMemRequired( width, height, 1, srcImageFormat, false );
-		memcpy( dst, src, memRequired );
+		std::memcpy( dst, src, memRequired );
 		return true;
 	}
 	else if ( ( srcImageFormat == IMAGE_FORMAT_RGBA8888 ||		
@@ -1404,7 +1400,7 @@ bool ConvertImageFormat( const uint8 *src, ImageFormat srcImageFormat,
 			  srcImageFormat == IMAGE_FORMAT_ATI2N )
 	{
 		// DxtN to DxtN
-		Assert( true );
+		contract_assert( true );
 		return false;
 	}
 	else
@@ -1432,13 +1428,13 @@ bool ConvertImageFormat( const uint8 *src, ImageFormat srcImageFormat,
 				 ( srcStride == dstStride ) && ( width*srcPixelSize == srcStride ) )
 			{
 				// fastest path
-				memcpy( dst, src, height*srcStride ); 
+				std::memcpy( dst, src, height*srcStride ); 
 				return true;
 			}
 
 			for ( line = 0; line < height; ++line )
 			{
-				memcpy( dst, src, width*srcPixelSize ); 
+				std::memcpy( dst, src, width*srcPixelSize ); 
 				dst += dstStride;
 				src += srcStride;
 			}
@@ -1453,7 +1449,7 @@ bool ConvertImageFormat( const uint8 *src, ImageFormat srcImageFormat,
 		}
 		
 		// format conversion
-		uint8 *lineBufRGBA8888 = (uint8 *)stackalloc(width*4);
+		uint8 *lineBufRGBA8888 = (uint8 *)scratch.AllocBytes(width*4);
 		
 		UserFormatToRGBA8888Func_t userFormatToRGBA8888Func;
 		RGBA8888ToUserFormatFunc_t RGBA8888ToUserFormatFunc;
@@ -1621,13 +1617,13 @@ bool RotateImageLeft( const uint8 *src, uint8 *dst,
 	uint8 tmp[4][16];
 	int halfWidthHeight = widthHeight >> 1;
 	int sizeInBytes = SizeInBytes( imageFormat );
-	Assert( sizeInBytes <= 16 && sizeInBytes > 0 );
+	contract_assert( sizeInBytes <= 16 && sizeInBytes > 0 );
 
 	for( y = 0; y < halfWidthHeight; y++ )
 	{
 		for( x = 0; x < halfWidthHeight; x++ )
 		{
-			memcpy( tmp[0], &SRC( x, y ), sizeInBytes );
+			std::memcpy( tmp[0], &SRC( x, y ), sizeInBytes );
 			memcpy( tmp[1], &SRC( y, widthHeight-x-1 ), sizeInBytes );
 			memcpy( tmp[2], &SRC( widthHeight-x-1, widthHeight-y-1 ), sizeInBytes );
 			memcpy( tmp[3], &SRC( widthHeight-y-1, x ), sizeInBytes );
@@ -1655,6 +1651,7 @@ bool RotateImage180( const uint8 *src, uint8 *dst,
 
 bool FlipImageVertically( void *pSrc, void *pDst, int nWidth, int nHeight, ImageFormat imageFormat, int nDstStride )
 {
+	ks::ScratchArena<> scratch;
 	if( IsCompressed( imageFormat ) )
 		return false;
 
@@ -1670,11 +1667,11 @@ bool FlipImageVertically( void *pSrc, void *pDst, int nWidth, int nHeight, Image
 	uint8 *pDstRow = (uint8*)pDst + ((nHeight-1) * nDstStride);
 	if ( pSrc == pDst )
 	{
-		uint8* pTemp = (uint8*)stackalloc( nRowBytes );
+		uint8* pTemp = (uint8*)scratch.AllocBytes( nRowBytes );
 		int nHalfHeight = nHeight >> 1;
 		for ( int i = 0; i < nHalfHeight; i++ )
 		{
-			memcpy( pTemp, pSrcRow, nRowBytes );
+			std::memcpy( pTemp, pSrcRow, nRowBytes );
 			memcpy( pSrcRow, pDstRow, nRowBytes );
 			memcpy( pDstRow, pTemp, nRowBytes );
 
@@ -1686,7 +1683,7 @@ bool FlipImageVertically( void *pSrc, void *pDst, int nWidth, int nHeight, Image
 	{
 		for ( int i = 0; i < nHeight; i++ )
 		{
-			memcpy( pDstRow, pSrcRow, nRowBytes );
+			std::memcpy( pDstRow, pSrcRow, nRowBytes );
 			pSrcRow += nSrcStride;
 			pDstRow -= nDstStride;
 		}
@@ -1703,7 +1700,7 @@ bool FlipImageHorizontally( void *pSrc, void *pDst, int nWidth, int nHeight, Ima
 	uint8 tmp[16];
 	int nSizeInBytes = SizeInBytes( imageFormat );
 	int nRowBytes = nSizeInBytes * nWidth;
-	Assert( nSizeInBytes <= 16 && nSizeInBytes > 0 );
+	contract_assert( nSizeInBytes <= 16 && nSizeInBytes > 0 );
 	int nSrcStride = nRowBytes;
 	if ( nDstStride == 0 )
 	{
@@ -1722,7 +1719,7 @@ bool FlipImageHorizontally( void *pSrc, void *pDst, int nWidth, int nHeight, Ima
 			uint8 *pDstPixel = pDstRow + nRowBytes - nSizeInBytes;
 			for( x = 0; x < nHalfWidth; x++ )
 			{
-				memcpy( tmp, pSrcPixel, nSizeInBytes );
+				std::memcpy( tmp, pSrcPixel, nSizeInBytes );
 				memcpy( pSrcPixel, pDstPixel, nSizeInBytes );
 				memcpy( pDstPixel, tmp, nSizeInBytes );
 
@@ -1742,7 +1739,7 @@ bool FlipImageHorizontally( void *pSrc, void *pDst, int nWidth, int nHeight, Ima
 			uint8 *pDstPixel = pDstRow + nRowBytes - nSizeInBytes;
 			for( x = 0; x < nWidth; x++ )
 			{
-				memcpy( pDstPixel, pSrcPixel, nSizeInBytes );
+				std::memcpy( pDstPixel, pSrcPixel, nSizeInBytes );
 				pSrcPixel += nSizeInBytes;
 				pDstPixel -= nSizeInBytes;
 			}
@@ -1770,13 +1767,13 @@ bool SwapAxes( uint8 *src, int widthHeight, ImageFormat imageFormat )
 
 	uint8 tmp[4];
 	int sizeInBytes = SizeInBytes( imageFormat );
-	Assert( sizeInBytes <= 4 && sizeInBytes > 0 );
+	contract_assert( sizeInBytes <= 4 && sizeInBytes > 0 );
 
 	for( y = 0; y < widthHeight; y++ )
 	{
 		for( x = 0; x < y; x++ )
 		{
-			memcpy( tmp, &SRC( x, y ), sizeInBytes );
+			std::memcpy( tmp, &SRC( x, y ), sizeInBytes );
 			memcpy( &SRC( x, y ), &SRC( y, x ), sizeInBytes );
 			memcpy( &SRC( y, x ), tmp, sizeInBytes );
 		}
@@ -1852,7 +1849,7 @@ void RGBA8888ToR32F( const uint8 *src, uint8 *dst, int numPixels )
 
 void RGBA8888ToRGBA8888( const uint8 *src, uint8 *dst, int numPixels )
 {
-	memcpy( dst, src, 4 * numPixels );
+	std::memcpy( dst, src, 4 * numPixels );
 }
 
 void RGBA8888ToABGR8888( const uint8 *src, uint8 *dst, int numPixels )
@@ -1891,7 +1888,7 @@ void RGBA8888ToBGR888( const uint8 *src, uint8 *dst, int numPixels )
 
 void RGBA8888ToRGB565( const uint8 *src, uint8 *dst, int numPixels )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 	const uint8 *endSrc = src + numPixels * 4;
 	for ( ; src < endSrc; src += 4, dst += 2 )
 	{
@@ -1920,7 +1917,7 @@ void RGBA8888ToIA88( const uint8 *src, uint8 *dst, int numPixels )
 
 void RGBA8888ToP8( const uint8 *src, uint8 *dst, int numPixels )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 }
 
 void RGBA8888ToA8( const uint8 *src, uint8 *dst, int numPixels )
@@ -2115,7 +2112,7 @@ void BGR888ToRGBA8888( const uint8 *src, uint8 *dst, int numPixels )
 
 void RGB565ToRGBA8888( const uint8 *src, uint8 *dst, int numPixels )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 	const uint8 *endSrc = src + numPixels * 2;
 	for ( ; src < endSrc; src += 2, dst += 4 )
 	{
@@ -2148,7 +2145,7 @@ void IA88ToRGBA8888( const uint8 *src, uint8 *dst, int numPixels )
 
 void P8ToRGBA8888( const uint8 *src, uint8 *dst, int numPixels )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 }
 
 void A8ToRGBA8888( const uint8 *src, uint8 *dst, int numPixels )
@@ -2363,6 +2360,3 @@ void RGBA16161616ToRGBA8888( const uint8 *src_, uint8 *dst, int numPixels )
 }
 
 } // ImageLoader namespace ends
-
-
-

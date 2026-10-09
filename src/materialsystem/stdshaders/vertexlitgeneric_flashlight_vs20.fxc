@@ -1,8 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-//  STATIC: "TEETH"			"0..1"
-
-//	DYNAMIC: "SKINNING"		"0..1"
+// STATIC: "TEETH"			"0..1"
+// DYNAMIC: "SKINNING"		"0..1"
 
 #include "common_fog_vs_supportsvertexfog_fxc.h"
 #include "common_vs_fxc.h"
@@ -122,6 +122,3 @@ VS_OUTPUT main( const VS_INPUT v )
 	
 	return o;
 }
-
-
-

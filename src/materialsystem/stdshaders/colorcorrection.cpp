@@ -1,9 +1,5 @@
-//========= Copyright (c) 1996-2002, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2002 Valve Corporation
 
 #include "BaseVSShader.h"
 
@@ -13,9 +9,8 @@
 
 #include "../materialsystem_global.h"
 
-
 BEGIN_VS_SHADER_FLAGS( ColorCorrection, "Help for ColorCorrection", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( WEIGHT_DEFAULT, SHADER_PARAM_TYPE_FLOAT,   "1", "Volume Texture Default Weight" )
 		SHADER_PARAM( WEIGHT0,		  SHADER_PARAM_TYPE_FLOAT,   "0", "Volume Texture Weight 0" )
 		SHADER_PARAM( WEIGHT1,		  SHADER_PARAM_TYPE_FLOAT,   "0", "Volume Texture Weight 1" )
@@ -80,7 +75,7 @@ BEGIN_VS_SHADER_FLAGS( ColorCorrection, "Help for ColorCorrection", SHADER_NOT_E
 			if ( IsOpenGL() )
 			{
 				// JasonM...do we use this shader?  If so, it needs some sRGB adapter love
-				Assert(0);
+				contract_assert( 0 );
 			}
 
 			// Render targets are always sRGB on togl OSX

@@ -1,16 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: This module implements all the proxies used by the particle systems.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+import std;
+import ks.core;
 #include "particlemgr.h"
 #include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterialvar.h"
 
 #include "imaterialproxydict.h"
-
 
 // ------------------------------------------------------------------------ //
 // ParticleSphereProxy
@@ -73,4 +72,3 @@ private:
 };
 
 EXPOSE_MATERIAL_PROXY( ParticleSphereProxy, ParticleSphereProxy );
-

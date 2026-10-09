@@ -1,21 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef IMESHDX8_H
-#define IMESHDX8_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "meshbase.h"
 #include "shaderapi/ishaderapi.h"
 
-
-abstract_class IMeshMgr
+class IMeshMgr
 {
 public:
 	// Initialize, shutdown
@@ -94,5 +84,3 @@ public:
 	virtual void DrawInstances( int nInstanceCount, const MeshInstanceData_t *pInstances ) = 0;
 
 };
-
-#endif // IMESHDX8_H

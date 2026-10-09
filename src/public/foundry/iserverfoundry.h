@@ -1,13 +1,9 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ISERVERFOUNDRY_H
-#define ISERVERFOUNDRY_H
-
-#include "interface.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Purpose: exposed from Foundry (Hammer) to game DLL
@@ -36,6 +32,4 @@ public:
 	virtual void SelectionClickInCenterOfView( const Vector &vPos, const QAngle &vAngles ) = 0;
 };
 
-#define VSERVERFOUNDRY_INTERFACE_VERSION "VSERVERFOUNDRY001"
-
-#endif // ISERVERFOUNDRY_H
+inline constexpr const char *VSERVERFOUNDRY_INTERFACE_VERSION = "VSERVERFOUNDRY001";

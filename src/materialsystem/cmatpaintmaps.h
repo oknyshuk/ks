@@ -1,20 +1,14 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#ifndef CMATERIALPaintmapS_H
-#define CMATERIALPaintmapS_H
-
-#include "tier1/utlvector.h"
+import std;
+import ks.tier1;
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/ipaintmapdatamanager.h"
 
-#ifndef MATSYS_INTERNAL
-#error "This file is private to the implementation of IMaterialSystem/IMaterialSystemInternal"
-#endif
-
+#include "pixelwriter.h"
+#include "shaderapi/ishaderdynamic.h"
 
 class CMaterialSystem;
 
@@ -57,7 +51,7 @@ public:
 private:
 	void InitPaintmapBits( int paintmap );
 	bool LockPaintmap( int paintmap );
-	void FillRect( int paintmap, Rect_t* RESTRICT pRect, BYTE* RESTRICT pPaintData, Rect_t* RESTRICT pSubRect = nullptr ) RESTRICT;
+	void FillRect( int paintmap, Rect_t* __restrict__ pRect, BYTE* __restrict__ pPaintData, Rect_t* __restrict__ pSubRect = nullptr ) __restrict__;
 	void AllocatePaintmapTexture( int paintmap, int iWidth, int iHeight );
 
 	CPixelWriter m_PaintmapPixelWriter;
@@ -68,5 +62,3 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-
-#endif // CMATERIALPaintmapS_H

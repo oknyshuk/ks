@@ -1,22 +1,14 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef ISHADERDYNAMIC_H
-#define ISHADERDYNAMIC_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+import ks.math;
 
 #include "shaderapi/shareddefs.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystem.h"
 
 typedef intp ShaderAPITextureHandle_t;
-#define INVALID_SHADERAPI_TEXTURE_HANDLE 0
+inline constexpr auto INVALID_SHADERAPI_TEXTURE_HANDLE = 0;
 
 
 //-----------------------------------------------------------------------------
@@ -24,7 +16,6 @@ typedef intp ShaderAPITextureHandle_t;
 //-----------------------------------------------------------------------------
 class CMeshBuilder;
 class IMaterialVar;
-struct LightDesc_t; 
 
 
 //-----------------------------------------------------------------------------
@@ -135,8 +126,8 @@ enum TessellationMode_t;
 //-----------------------------------------------------------------------------
 // The Shader interface versions
 //-----------------------------------------------------------------------------
-#define SHADERDYNAMIC_INTERFACE_VERSION		"ShaderDynamic001"
-abstract_class IShaderDynamicAPI
+inline constexpr const char *SHADERDYNAMIC_INTERFACE_VERSION = "ShaderDynamic001";
+class IShaderDynamicAPI
 {
 public:
 
@@ -302,6 +293,3 @@ public:
 };
 
 // end class IShaderDynamicAPI
-
-
-#endif // ISHADERDYNAMIC_H

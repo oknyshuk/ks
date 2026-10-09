@@ -1,13 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_ROPE_H
-#define C_ROPE_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 #include "recvproxy.h"
@@ -16,17 +11,15 @@
 #include "rope_physics.h"
 #include "materialsystem/imaterial.h"
 #include "rope_shared.h"
-#include <bitset>
-
+import std;
 
 void RecvProxy_RecomputeSprings( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
-class KeyValues;
 class C_BaseAnimating;
 struct RopeSegData_t;
 
-#define MAX_ROPE_SUBDIVS		8
-#define MAX_ROPE_SEGMENTS		(ROPE_MAX_SEGMENTS+(ROPE_MAX_SEGMENTS-1)*MAX_ROPE_SUBDIVS)
+inline constexpr auto MAX_ROPE_SUBDIVS = 8;
+inline constexpr auto MAX_ROPE_SEGMENTS = (ROPE_MAX_SEGMENTS+(ROPE_MAX_SEGMENTS-1)*MAX_ROPE_SUBDIVS);
 
 
 enum rope_type
@@ -286,7 +279,7 @@ void Rope_ResetCounters();
 //
 // Rope Manager
 //
-abstract_class IRopeManager
+class IRopeManager
 {
 public:
 	virtual						~IRopeManager() {}
@@ -299,5 +292,3 @@ public:
 };
 
 IRopeManager *RopeManager();
-
-#endif // C_ROPE_H

@@ -1,31 +1,68 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "player.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 
 #include "igamesystem.h"
 #include "GameStats.h"
-#include "tier1/utlstring.h"
 #include "filesystem.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier1/text_writer.h"
-#include "fmtstr.h"
 #include "tier2/tier2.h"
-#include "tier0/cpumonitoring.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 
 #ifndef DEDICATED
 #include "iregistry.h"
 #endif
 
-#include "tier1/map_ops.h"
-#include "tier0/icommandline.h"
-#include "tier0/perfstats.h"
-#include <time.h>
 #ifdef GAME_DLL
 #include "vehicle_base.h"
 #include "reflect_annotations.h"
@@ -37,19 +74,17 @@
 #include "igameresources.h"
 #include "voice_status.h"
 extern const ConVar *sv_cheats;
-#include "steamworks_gamestats_client.h"
 #include "materialsystem/materialsystem_config.h"
 #endif
 
 
-#include "tier0/memalloc.h"
 
 
-#define GAMESTATS_LOG_FILE "gamestats.log"
-#define GAMESTATS_PATHID "MOD"
+inline constexpr const char *GAMESTATS_LOG_FILE = "gamestats.log";
+inline constexpr const char *GAMESTATS_PATHID = "MOD";
 
 /*
-#define ONE_DAY_IN_SECONDS 86400
+constexpr auto ONE_DAY_IN_SECONDS = 86400;
 
 // Lower threshold in debug for testing...
 #if defined( _DEBUG )
@@ -94,7 +129,7 @@ public:
 	{
 		FreeData();
 		char buffer[ 128 ];
-		Q_snprintf( buffer, sizeof( buffer ), "gamestats_" );
+		V_snprintf( buffer, sizeof( buffer ), "gamestats_" );
 		UTIL_GetModDir( buffer + 10, sizeof( buffer ) - 10 );
 		m_pKVData = new KeyValues( buffer );
 	}
@@ -166,7 +201,7 @@ public:
 	template<class T> T AverageStat( T StatsBufferRecord_t::*field ) const
 	{
 		T sum = 0;
-		int iMax = m_bBufferFull ? ARRAYSIZE( m_StatsBuffer ) : m_nWriteIndex;
+		int iMax = m_bBufferFull ? std::size( m_StatsBuffer ) : m_nWriteIndex;
 		for( int i = 0; i < iMax; i++ )
 			sum += m_StatsBuffer[i].*field;
 		return sum / iMax;
@@ -175,7 +210,7 @@ public:
 	template<class T> T MaxStat( T StatsBufferRecord_t::*field ) const
 	{
 		T maxsofar = -16000000;
-		int iMax = m_bBufferFull ? ARRAYSIZE( m_StatsBuffer ) : m_nWriteIndex;
+		int iMax = m_bBufferFull ? std::size( m_StatsBuffer ) : m_nWriteIndex;
 		for( int i = 0; i < iMax; i++ )
 			maxsofar = std::max( maxsofar, m_StatsBuffer[i].*field );
 		return maxsofar;
@@ -184,7 +219,7 @@ public:
 	template<class T> T MinStat( T StatsBufferRecord_t::*field ) const
 	{
 		T minsofar = 16000000;
-		int iMax = m_bBufferFull ? ARRAYSIZE( m_StatsBuffer ) : m_nWriteIndex;
+		int iMax = m_bBufferFull ? std::size( m_StatsBuffer ) : m_nWriteIndex;
 		for( int i = 0; i < iMax; i++ )
 			minsofar = std::min( minsofar, m_StatsBuffer[i].*field );
 		return minsofar;
@@ -193,7 +228,7 @@ public:
 	template<class T> T StdDevStat( T StatsBufferRecord_t::*field, T average ) const
 	{
 		T flDeviationsquared = 0;
-		int iMax = m_bBufferFull ? ARRAYSIZE( m_StatsBuffer ) : m_nWriteIndex;
+		int iMax = m_bBufferFull ? std::size( m_StatsBuffer ) : m_nWriteIndex;
 
 		// Compute std deviation
 		for (int i = 0; i < iMax; i++)
@@ -202,12 +237,12 @@ public:
 			flDeviationsquared += (val * val);
 		}
 
-		return ( ( iMax > 1 ) ? sqrt( (flDeviationsquared / T(iMax - 1) ) ) : 0 );
+		return ( ( iMax > 1 ) ? std::sqrt( (flDeviationsquared / T(iMax - 1) ) ) : 0 );
 	}
 
 	void SortFramerate()
 	{
-		int iMax = ( ( m_bBufferFull ) ? ARRAYSIZE( m_StatsBuffer ) : m_nWriteIndex ) - 1;
+		int iMax = ( ( m_bBufferFull ) ? std::size( m_StatsBuffer ) : m_nWriteIndex ) - 1;
 
 		// Sort members of m_StatsBuffer
 		std::sort(&m_StatsBuffer[0],&m_StatsBuffer[iMax]);
@@ -215,7 +250,7 @@ public:
 
 	float PercentileFramerate( int nPercent )  const
 	{
-	    int iMax = ( ( m_bBufferFull ) ? ARRAYSIZE( m_StatsBuffer ) : m_nWriteIndex ) - 1;
+	    int iMax = ( ( m_bBufferFull ) ? std::size( m_StatsBuffer ) : m_nWriteIndex ) - 1;
 
 		// Return the first or last member if nPercent is out of bounds
 		if ( nPercent >= 100 )
@@ -351,7 +386,7 @@ public:
 	bool			m_bShuttingDown;
 	bool			m_bInLevel;
 	bool			m_bFirstLevel;
-	time_t			m_tLastUpload;
+	std::time_t			m_tLastUpload;
 
 	float			m_flLevelStartTime;
 
@@ -516,7 +551,6 @@ bool CBaseGameStats::StatTrackingAllowed( void )
 #undef localtime
 #undef asctime
 
-#include <time.h>
 
 void CBaseGameStats::StatsLog( char const *fmt, ... )
 {
@@ -524,22 +558,22 @@ void CBaseGameStats::StatsLog( char const *fmt, ... )
 		return;
 
 	char buf[ 2048 ];
-	va_list argptr;
-	va_start( argptr, fmt );
-	Q_vsnprintf( buf, sizeof( buf ), fmt, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, fmt );
+	V_vsnprintf( buf, sizeof( buf ), fmt, argptr );
+	__builtin_va_end( argptr );
 
 	// Prepend timestamp and spew it
 
 	// Prepend the time.
-	time_t aclock;
-	time( &aclock );
-	struct tm *newtime = localtime( &aclock );
+	std::time_t aclock;
+	std::time( &aclock );
+	struct tm *newtime = std::localtime( &aclock );
 
 	char timeString[ 128 ];
-	Q_strncpy( timeString, asctime( newtime ), sizeof( timeString ) );
+	V_strncpy( timeString, std::asctime( newtime ), sizeof( timeString ) );
 	// Get rid of the \n.
-	char *pEnd = strstr( timeString, "\n" );
+	char *pEnd = std::strstr( timeString, "\n" );
 	if ( pEnd )
 	{
 		*pEnd = 0;
@@ -570,26 +604,25 @@ static char s_szStatUploadRegistryKeyName[256] = "";
 
 const char *CBaseGameStats::GetStatSaveFileName( void )
 {
-	AssertMsg( s_szSaveFileName[0] != '\0', "Don't know what file to save stats to." );
+	contract_assert( ( s_szSaveFileName[0] != '\0' ) && "Don't know what file to save stats to." );
 	return s_szSaveFileName;
 }
 
 const char *CBaseGameStats::GetStatUploadRegistryKeyName( void )
 {
-	AssertMsg( s_szStatUploadRegistryKeyName[0] != '\0', "Don't know the registry key to use to mark stats uploads." );
+	contract_assert( ( s_szStatUploadRegistryKeyName[0] != '\0' ) && "Don't know the registry key to use to mark stats uploads." );
 	return s_szStatUploadRegistryKeyName;
 }
 
 const char *CBaseGameStats::GetUserPseudoUniqueID( void )
 {
-	AssertMsg( s_szPseudoUniqueID[0] != '\0', "Don't have a pseudo unique ID." );
+	contract_assert( ( s_szPseudoUniqueID[0] != '\0' ) && "Don't have a pseudo unique ID." );
 	return s_szPseudoUniqueID;
 }
 
 void CBaseGameStats::Event_Init( void )
 {
 #ifdef GAME_DLL
-	SetSteamStatistic( filesystem->IsSteam() );
 	SetCyberCafeStatistic( gamestatsuploader->IsCyberCafeUser() );
 	SetDXLevelStatistic( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() );
 	++m_BasicStats.m_Summary.m_nCount;
@@ -630,8 +663,7 @@ void CBaseGameStats::Event_LevelInit( void )
 		SetHDRStatistic( gamestatsuploader->IsHDREnabled() );
 
 		SetSkillStatistic( skill.GetInt() );
-		SetSteamStatistic( filesystem->IsSteam() );
-		SetCyberCafeStatistic( gamestatsuploader->IsCyberCafeUser() );
+			SetCyberCafeStatistic( gamestatsuploader->IsCyberCafeUser() );
 	}
 #endif // GAME_DLL
 }
@@ -640,7 +672,7 @@ void CBaseGameStats::Event_LevelShutdown( float flElapsed )
 {
 #ifdef GAME_DLL
 	BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.c_str() );
-	Assert( map );
+	contract_assert( map );
 	map->m_nSeconds += (int)flElapsed;
 	gamestats->m_BasicStats.m_Summary.m_nSeconds += (int)flElapsed;
 
@@ -676,7 +708,7 @@ void CBaseGameStats::Event_PlayerKilled( CBasePlayer *pPlayer, const CTakeDamage
 	else
 	{
 		StatsLog( "  Player died, but not in a level!!!\n" );
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 	StatsLog( "CBaseGameStats::Event_PlayerKilled [%s] [%dth death]\n", pPlayer->GetPlayerName(), m_BasicStats.m_Summary.m_nDeaths );
@@ -707,7 +739,7 @@ void CBaseGameStats::Event_Credits()
 
 	if( elapsed < 0.0f )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		Warning( "EVENT_CREDITS with negative elapsed time (rt %f starttime %f)\n", gpGlobals->realtime, CBGSDriver.m_flLevelStartTime );
 		elapsed = 0.0f;
 	}
@@ -775,13 +807,13 @@ bool CBaseGameStats::SaveToFileNOW( bool bForceSyncWrite /* = false */ )
 	}
 	else
 	{
-		// filename is local to game dir for Steam, so we need to prepend game dir for regular file save
+		// filename is local to the game dir, so we need to prepend game dir for regular file save
 		char gamePath[256];
 		engine->GetGameDir( gamePath, 256 );
-		Q_StripTrailingSlash( gamePath );
-		Q_snprintf( fullpath, sizeof( fullpath ), "%s/%s", gamePath, GetStatSaveFileName() );
-		Q_strlower( fullpath );
-		Q_FixSlashes( fullpath );
+		V_StripTrailingSlash( gamePath );
+		V_snprintf( fullpath, sizeof( fullpath ), "%s/%s", gamePath, GetStatSaveFileName() );
+		V_strlower( fullpath );
+		V_FixSlashes( fullpath );
 	}
 
 	// StatsLog( "SaveToFileNOW '%s'\n", fullpath );
@@ -794,7 +826,7 @@ bool CBaseGameStats::SaveToFileNOW( bool bForceSyncWrite /* = false */ )
 	}
 	else
 	{
-		size_t nBufferSize = buf.size();
+		std::size_t nBufferSize = buf.size();
 		void *pMem = new char[nBufferSize];
 		memcpy( pMem, buf.data(), nBufferSize );
 
@@ -878,7 +910,7 @@ bool CBaseGameStats::UploadStatsFileNOW( void )
 	// Update the registry
 #ifndef DEDICATED
 	IRegistry *reg = InstanceRegistry( "Steam" );
-	Assert( reg );
+	contract_assert( reg );
 	reg->WriteInt( GetStatUploadRegistryKeyName(), CBGSDriver.m_tLastUpload );
 	ReleaseInstancedRegistry( reg );
 #endif
@@ -936,7 +968,7 @@ bool CBaseGameStats::LoadFromFile( void )
 
 		if ( s_szPseudoUniqueID[ 0 ] != 0 )
 		{			
-			if ( Q_stricmp( CBGSDriver.m_szLoadedUserID, s_szPseudoUniqueID ) )
+			if ( V_stricmp( CBGSDriver.m_szLoadedUserID, s_szPseudoUniqueID ) )
 			{
 				//UserID changed, blow away log!!!
 				filesystem->RemoveFile( gamestats->GetStatSaveFileName(), GAMESTATS_PATHID );
@@ -1001,17 +1033,17 @@ bool CBaseGameStats_Driver::Init()
 
 	//standardizing is a good thing
 	char szLoweredGameDir[256];
-	Q_strncpy( szLoweredGameDir, pGameDir, sizeof( szLoweredGameDir ) );
-	Q_strlower( szLoweredGameDir );
+	V_strncpy( szLoweredGameDir, pGameDir, sizeof( szLoweredGameDir ) );
+	V_strlower( szLoweredGameDir );
 
 	gamestats = gamestats->OnInit( gamestats, szLoweredGameDir );
 
 	//determine constant strings needed for saving and uploading
-	Q_strncpy( s_szSaveFileName, szLoweredGameDir, sizeof( s_szSaveFileName ) );
-	Q_strncat( s_szSaveFileName, "_gamestats.dat", sizeof( s_szSaveFileName ) );
+	V_strncpy( s_szSaveFileName, szLoweredGameDir, sizeof( s_szSaveFileName ) );
+	V_strncat( s_szSaveFileName, "_gamestats.dat", sizeof( s_szSaveFileName ) );
 
-	Q_strncpy( s_szStatUploadRegistryKeyName, "GameStatsUpload_", sizeof( s_szStatUploadRegistryKeyName ) );
-	Q_strncat( s_szStatUploadRegistryKeyName, szLoweredGameDir, sizeof( s_szStatUploadRegistryKeyName ) );
+	V_strncpy( s_szStatUploadRegistryKeyName, "GameStatsUpload_", sizeof( s_szStatUploadRegistryKeyName ) );
+	V_strncat( s_szStatUploadRegistryKeyName, szLoweredGameDir, sizeof( s_szStatUploadRegistryKeyName ) );
 
 	gamestats->m_bLoggingToFile = CommandLine()->FindParm( "-gamestatsloggingtofile" ) ? true : false;
 	gamestats->m_bLogging = CommandLine()->FindParm( "-gamestatslogging" ) ? true : false;
@@ -1033,7 +1065,7 @@ bool CBaseGameStats_Driver::Init()
 		// FIXME: Load m_tLastUpload from registry and save it back out, too
 #ifndef DEDICATED
 		IRegistry *reg = InstanceRegistry( "Steam" );
-		Assert( reg );
+		contract_assert( reg );
 		m_tLastUpload = reg->ReadInt( gamestats->GetStatUploadRegistryKeyName(), 0 );
 		ReleaseInstancedRegistry( reg );
 #endif
@@ -1110,9 +1142,8 @@ void CBaseGameStats_Driver::PossibleMapChange( void )
 {
 #ifdef GAME_DLL
 	//detect and copy map changes
-	if ( Q_stricmp( m_PrevMapName.c_str(), STRING( gpGlobals->mapname ) ) )
+	if ( V_stricmp( m_PrevMapName.c_str(), STRING( gpGlobals->mapname ) ) )
 	{
-		MEM_ALLOC_CREDIT();
 
 		std::string PrevMapBackup = m_PrevMapName;
 
@@ -1139,7 +1170,7 @@ void CBaseGameStats_Driver::LevelInitPreEntity()
 	m_bInLevel = true;
 	m_bFirstLevel = false;
 
-	if ( Q_stricmp( s_szPseudoUniqueID, "unknown" ) == 0 )
+	if ( V_stricmp( s_szPseudoUniqueID, "unknown" ) == 0 )
 	{
 		// "unknown" means this is a dedicated server and we weren't able to generate a unique ID (e.g. Linux server).
 		// Change the unique ID to be a hash of IP & port.  We couldn't do this earlier because IP is not known until level
@@ -1154,7 +1185,7 @@ void CBaseGameStats_Driver::LevelInitPreEntity()
 			if ( crcInput[0] && crcInput[1] )
 			{
 				CRC32_t crc = CRC32_ProcessSingleBuffer( crcInput, sizeof( crcInput ) );
-				Q_snprintf( s_szPseudoUniqueID, ARRAYSIZE( s_szPseudoUniqueID ), "H:%x", ( int ) crc );
+				V_snprintf( s_szPseudoUniqueID, std::size( s_szPseudoUniqueID ), "H:%x", ( int ) crc );
 			}
 		}
 	}
@@ -1185,7 +1216,7 @@ void CBaseGameStats_Driver::LevelShutdownPreEntity()
 
 	if ( flElapsed < 0.0f )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		Warning( "EVENT_LEVELSHUTDOWN:  with negative elapsed time (rt %f starttime %f)\n", gpGlobals->realtime, m_flLevelStartTime );
 		flElapsed = 0.0f;
 	}
@@ -1234,7 +1265,6 @@ void CBaseGameStats_Driver::OnSave()
 
 void CBaseGameStats_Driver::CollectData( StatSendType_t sendType )
 {
-	MEM_ALLOC_CREDIT();
 
 	// The base stat system holds memory until "APPSHUTDOWN" which on the Xbox isn't good.
 	// When on the Xbox, neither server nor clients collect stats, but the base system still does.
@@ -1260,7 +1290,7 @@ void CBaseGameStats_Driver::CollectData( StatSendType_t sendType )
 #else
 	pGamestatsData = m_pGamestatsData;
 #endif
-	Assert( pGamestatsData || //valid stats
+	contract_assert( pGamestatsData || //valid stats
 			(!gpGlobals->IsClient() && (sendType == STATSEND_APPSHUTDOWN) && gamestats->ShouldSendDataOnLevelShutdown()) ); //or already sent off stats during level shutdown (now in app shutdown)
     
     // If a server is told to send stats on STATSEND_APPSHUTDOWN, we need to check to make sure we still have a valid object.
@@ -1279,13 +1309,13 @@ void CBaseGameStats_Driver::CollectData( StatSendType_t sendType )
 			// make a map node in the KeyValues to use for this level
 			char szMap[MAX_PATH+1]="";
 #ifdef CLIENT_DLL	
-			Q_FileBase( engine->GetLevelName(), szMap, ARRAYSIZE( szMap ) );
+			V_FileBase( engine->GetLevelName(), szMap, std::size( szMap ) );
 #else
-			Q_strncpy( szMap, gpGlobals->mapname.ToCStr(), ARRAYSIZE( szMap ) );
+			V_strncpy( szMap, gpGlobals->mapname.ToCStr(), std::size( szMap ) );
 #endif // CLIENT_DLL
 			if ( !szMap[0] )
 			{
-				Q_FileBase( MapName(), szMap, ARRAYSIZE( szMap ) );
+				V_FileBase( MapName(), szMap, std::size( szMap ) );
 			}
 
 			KeyValues *pKVMap = new KeyValues( "map" );
@@ -1299,40 +1329,13 @@ void CBaseGameStats_Driver::CollectData( StatSendType_t sendType )
 	case STATSEND_APPSHUTDOWN:
 		break;
 	default:
-		Assert( false );
+		contract_assert( false );
 		break;
 	}
 
 	// add common data
 	pGamestatsData->m_bHaveData |= AddBaseDataForSend( pKV, sendType );
     
-#if defined(CLIENT_DLL) && !defined(NO_STEAM)
-	// At the end of every map, clients submit their perfdata for the map
-	if ( sendType == STATSEND_LEVELSHUTDOWN && pGamestatsData && pGamestatsData->m_bHaveData )
-	{
-		// dgoodenough - Remove this for now, since this fails on PS3
-		// PS3_BUILDFIX
-		GetSteamWorksGameStatsClient().AddClientPerfData( pGamestatsData->m_pKVData );
-	}
-	// Time to reset ClientPerfData so we're ready for future recording. We clear the data
-	// whether we submitted or not so that perf data has a clear meaning.
-	ResetData();
-    // The ResetData call realloced m_pGamestatsData. Need to point pGamestatsData to the new m_pGamestatsData !
-    pGamestatsData = m_pGamestatsData;
-	if ( sendType == STATSEND_LEVELSHUTDOWN )
-	{
-		KeyValues *pKVFileStats = new KeyValues( "FileSystemStats" );
-		filesystem->GetVPKFileStatisticsKV( pKVFileStats );
-		GetSteamWorksGameStatsClient().AddVPKLoadStats( pKVFileStats );
-		GetSteamWorksGameStatsClient().AddVPKFileLoadErrorData( pKVFileStats );
-		pKVFileStats->deleteThis();
-		
-		// On Server Disconnect, session is ended later than when a match restarts. This allows ClientPerfData and VPK stats to report properly
-		// Alternately you could place ClientPerfData and VPK in the cs_game_disconnected event, but this event may fire more frequently than we want for CPD/VPK.
-		GetSteamWorksGameStatsClient().EndSession();
-		GetSteamWorksGameStatsClient().ResetServerState();
-	}
-#endif
 	// add game-specific data
 	pGamestatsData->m_bHaveData |= gamestats->AddDataForSend( pKV, sendType );
 }
@@ -1377,7 +1380,7 @@ void CBaseGameStats_Driver::SendData()
 			int fileLen = V_snprintf( szFileName, MAX_PATH, "%s__%2d_%3d_%2d_%2d_%2d.txt", s_szPseudoUniqueID, 
 				timeinfo.tm_year % 100, timeinfo.tm_yday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec );
 
-			Assert( pathLen + fileLen < MAX_PATH );	fileLen;
+			contract_assert( pathLen + fileLen < MAX_PATH );	fileLen;
 
 			V_strncat( szPathName + pathLen, szFileName, MAX_PATH - pathLen );
 
@@ -1386,7 +1389,6 @@ void CBaseGameStats_Driver::SendData()
 	}
 	else
 	{
-		// upload the file to Steam
 		if ( gamestatsuploader )
 			gamestatsuploader->UploadGameStats( "", 1, buf.size(), buf.c_str() );
 	}	
@@ -1560,7 +1562,6 @@ void CBaseGameStats_Driver::ResetData()
 		return;
 #endif
 
-	MEM_ALLOC_CREDIT();
 
 	if ( m_pGamestatsData != nullptr )
 	{
@@ -1648,7 +1649,7 @@ void CBaseGameStats_Driver::FrameUpdatePostEntityThink()
 			float flPausedTime = gpGlobals->realtime - m_flPauseStartTime;
 			if ( flPausedTime < 0.0f )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				Warning( "Game paused time showing up negative (rt %f pausestart %f)\n", gpGlobals->realtime, m_flPauseStartTime );
 				flPausedTime = 0.0f;
 			}
@@ -1701,22 +1702,6 @@ void OverWriteCharsWeHate( char *pStr )
 }
 
 #ifdef GAME_DLL
-
-void CBaseGameStats::SetSteamStatistic( bool bUsingSteam )
-{
-	if( CBGSDriver.m_bFirstLevel )
-	{
-		m_BasicStats.m_Summary.m_bSteam = bUsingSteam;
-	}
-
-	if( CBGSDriver.m_bInLevel )
-	{
-		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.c_str() );
-		map->m_bSteam = bUsingSteam;
-	}
-
-	m_BasicStats.m_bSteam = bUsingSteam;
-}
 
 void CBaseGameStats::SetCyberCafeStatistic( bool bIsCyberCafeUser )
 {
@@ -1868,4 +1853,3 @@ void CPointGamestatsCounter::InputDisable( inputdata_t &inputdata )
 }
 
 #endif // GAME_DLL
-

@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+import std;
+import ks.core;
 #include "rope_physics.h"
-#include "tier0/dbg.h"
 
 CBaseRopePhysics::CBaseRopePhysics( CSimplePhysics::CNode *pNodes, int nNodes, CRopeSpring *pSprings, float *flSpringDistsSqr )
 {
@@ -41,8 +36,8 @@ void CBaseRopePhysics::SetNumNodes( int nNodes )
 	{
 		m_pSprings[i].m_pNode1 = &m_pNodes[i].m_vPos;
 		m_pSprings[i].m_pNode2 = &m_pNodes[i+1].m_vPos;
-		Assert( m_pSprings[i].m_pNode1->IsValid() ); 
-		Assert( m_pSprings[i].m_pNode2->IsValid() ); 
+		contract_assert( m_pSprings[i].m_pNode1->IsValid() ); 
+		contract_assert( m_pSprings[i].m_pNode2->IsValid() ); 
 
 		m_flNodeSpringDistsSqr[i] = m_flSpringDistSqr / NumSprings();
 	}
@@ -133,7 +128,7 @@ void CBaseRopePhysics::ApplyConstraints( CSimplePhysics::CNode *pNodes, int nNod
 
 			if( flDistSqr > flSpringDist )
 			{
-				float flDist = (float)sqrt( flDistSqr );
+				float flDist = (float)std::sqrt( flDistSqr );
 				vTo *= 1 - (m_flSpringDist / flDist);
 
 				*s->m_pNode1 -= vTo * 0.5f;
@@ -145,5 +140,3 @@ void CBaseRopePhysics::ApplyConstraints( CSimplePhysics::CNode *pNodes, int nNod
 			m_pDelegate->ApplyConstraints( pNodes, nNodes );
 	}
 }
-
-

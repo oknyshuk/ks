@@ -1,10 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:  Implements the Effects API
-// Created:  YWB 9/5/2000
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Implements the Effects API
+// Created:  YWB 9/5/2000
 
 #include "quakedef.h"
 #include "r_efx.h"
@@ -160,4 +158,5 @@ dlight_t *CVEfx::GetElightByKey( int key )
 }
 
 // Expose it to the client .dll
-EXPOSE_SINGLE_INTERFACE( CVEfx, IVEfx, VENGINE_EFFECTS_INTERFACE_VERSION );
+static CVEfx s_Singleton_CVEfx;
+static InterfaceReg s_Reg_CVEfx_IVEfx( []() -> void * { return static_cast<IVEfx *>( &s_Singleton_CVEfx ); }, VENGINE_EFFECTS_INTERFACE_VERSION );;

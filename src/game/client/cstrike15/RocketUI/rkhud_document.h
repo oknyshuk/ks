@@ -1,8 +1,9 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-#ifndef KISAKSTRIKE_RKHUD_DOCUMENT_H
-#define KISAKSTRIKE_RKHUD_DOCUMENT_H
+#include <rocketui/rmlui.h>
+
 
 #include "hud_element_helper.h"
 #include "hudelement.h"
@@ -82,4 +83,3 @@ private:
     }
 };
 
-#endif // KISAKSTRIKE_RKHUD_DOCUMENT_H

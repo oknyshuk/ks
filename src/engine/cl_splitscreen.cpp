@@ -1,4 +1,23 @@
-#include "client_pch.h"
+// main precompiled header for client files
+
+import std;
+import ks.tier1;
+
+
+
+
+
+
+#include "cdll_engine_int.h"
+#include "client.h"
+
+#include "demo.h"
+#include "host.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "cl_splitscreen.h"
 
 
@@ -68,7 +87,7 @@ private:
 	bool		m_bInitialized;
 };
 
-static CTHREADLOCALPTR( CSplitScreen::SplitSlot_t )	s_SplitSlot;
+static thread_local CSplitScreen::SplitSlot_t *	s_SplitSlot;
 
 
 static CSplitScreen g_SplitScreenMgr;
@@ -93,7 +112,7 @@ bool CSplitScreen::Init()
 {
 	m_bInitialized = true;
 
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 
 	SplitSlot_t *pSlot = GetSplitSlot();
 	pSlot->m_bLocalPlayerResolvable = false;
@@ -102,7 +121,6 @@ bool CSplitScreen::Init()
 	m_nActiveSplitScreenUserCount = 1;
 	for ( int i = 0 ; i < MAX_SPLITSCREEN_CLIENTS; ++i )
 	{
-		MEM_ALLOC_CREDIT();
 		m_SplitScreenPlayers[ i ] = new SplitPlayer_t();
 		SplitPlayer_t *sp = m_SplitScreenPlayers[ i ];
 		sp->m_bActive = ( i == 0 ) ? true : false;
@@ -114,7 +132,7 @@ bool CSplitScreen::Init()
 
 void CSplitScreen::Shutdown()
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	for ( int i = 0; i < MAX_SPLITSCREEN_CLIENTS; ++i )
 	{
 		delete m_SplitScreenPlayers[ i ];
@@ -124,7 +142,7 @@ void CSplitScreen::Shutdown()
 
 bool CSplitScreen::AddBaseUser( int nSlot, int nPlayerIndex )
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	SplitPlayer_t *sp = m_SplitScreenPlayers[ nSlot ];
 	sp->m_bActive = true;
 	sp->m_Client.m_nSplitScreenSlot = nSlot;
@@ -133,12 +151,12 @@ bool CSplitScreen::AddBaseUser( int nSlot, int nPlayerIndex )
 
 bool CSplitScreen::AddSplitScreenUser( int nSlot, int nPlayerEntityIndex )
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	SplitPlayer_t *sp = m_SplitScreenPlayers[ nSlot ];
 	if ( sp->m_bActive == true )
 	{
-		Assert( sp->m_Client.m_nSplitScreenSlot == nSlot );
-		Assert( sp->m_Client.m_nPlayerSlot == nPlayerEntityIndex - 1 );
+		contract_assert( sp->m_Client.m_nSplitScreenSlot == nSlot );
+		contract_assert( sp->m_Client.m_nPlayerSlot == nPlayerEntityIndex - 1 );
 		return true;
 	}
 
@@ -150,7 +168,7 @@ bool CSplitScreen::AddSplitScreenUser( int nSlot, int nPlayerEntityIndex )
 	adr.m_adr.SetIPAndPort( 0, 0 );
 
 	char szName[ 256 ];
-	Q_snprintf( szName, sizeof( szName), "SPLIT%d", nSlot );
+	V_snprintf( szName, sizeof( szName), "SPLIT%d", nSlot );
 
 	sp->m_bActive = true;
 	sp->m_Client.Clear();
@@ -169,7 +187,7 @@ bool CSplitScreen::AddSplitScreenUser( int nSlot, int nPlayerEntityIndex )
 
 bool CSplitScreen::RemoveSplitScreenUser( int nSlot, int nPlayerIndex )
 {
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	// Msg( "Detached %d from slot %d\n", nPlayerIndex, nSlot );
 
 	int idx = FindSplitPlayerSlot( nPlayerIndex );
@@ -193,60 +211,12 @@ bool CSplitScreen::RemoveSplitScreenUser( int nSlot, int nPlayerIndex )
 
 int CSplitScreen::GetActiveSplitScreenPlayerSlot()
 {
-#if !defined( SPLIT_SCREEN_STUBS )
-	SplitSlot_t *pSlot = GetSplitSlot();
-	int nSlot = pSlot->m_nActiveSplitScreenPlayer;
-#if defined( _DEBUG )
-	if ( nSlot >= host_state.max_splitscreen_players_clientdll )
-	{
-		static bool warned = false;
-		if ( !warned )
-		{
-			warned = true;
-			Warning( "GetActiveSplitScreenPlayerSlot() returning bogus slot #%d\n", nSlot );
-		}
-	}
-#endif
-	return nSlot;
-#else
 	return 0;
-#endif
 }
 
 int CSplitScreen::SetActiveSplitScreenPlayerSlot( int slot )
 {
-#if !defined( SPLIT_SCREEN_STUBS )
-	Assert( m_bInitialized );
-
-	slot = clamp( slot, 0, host_state.max_splitscreen_players_clientdll - 1 );
-
-	SplitSlot_t *pSlot = GetSplitSlot();
-	Assert( pSlot );
-	int old = pSlot->m_nActiveSplitScreenPlayer;
-
-	if ( slot == old )
-		return slot;
-
-	pSlot->m_nActiveSplitScreenPlayer = slot;
-
-	// Only change netchannel in main thread and only change vgui message context id in main thread (for now)
-	if ( pSlot->m_bMainThread )
-	{
-		if ( m_SplitScreenPlayers[ slot ] && m_SplitScreenPlayers[ 0 ] )
-		{
-			INetChannel *nc = m_SplitScreenPlayers[ slot ]->m_Client.m_NetChannel;
-			CBaseClientState &bcs = m_SplitScreenPlayers[ 0 ]->m_Client;
-			if ( bcs.m_NetChannel && nc )
-			{
-				bcs.m_NetChannel->SetActiveChannel( nc );
-			}
-		}
-	}
-
-	return old;
-#else
 	return 0;
-#endif
 }
 
 int	CSplitScreen::GetNumSplitScreenPlayers()
@@ -256,8 +226,8 @@ int	CSplitScreen::GetNumSplitScreenPlayers()
 
 int CSplitScreen::GetSplitScreenPlayerEntity( int nSlot )
 {
-	Assert( nSlot >= 0 && nSlot < host_state.max_splitscreen_players );
-	Assert( host_state.max_splitscreen_players <= MAX_SPLITSCREEN_CLIENTS );
+	contract_assert( nSlot >= 0 && nSlot < host_state.max_splitscreen_players );
+	contract_assert( host_state.max_splitscreen_players <= MAX_SPLITSCREEN_CLIENTS );
 	if ( nSlot < 0 || nSlot >= host_state.max_splitscreen_players )
 		return -1;
 	if ( !m_SplitScreenPlayers[ nSlot ]->m_bActive )
@@ -267,8 +237,8 @@ int CSplitScreen::GetSplitScreenPlayerEntity( int nSlot )
 
 INetChannel *CSplitScreen::GetSplitScreenPlayerNetChan( int nSlot )
 {
-	Assert( nSlot >= 0 && nSlot < host_state.max_splitscreen_players );
-	Assert( host_state.max_splitscreen_players <= MAX_SPLITSCREEN_CLIENTS );
+	contract_assert( nSlot >= 0 && nSlot < host_state.max_splitscreen_players );
+	contract_assert( host_state.max_splitscreen_players <= MAX_SPLITSCREEN_CLIENTS );
 	if ( nSlot < 0 || nSlot >= host_state.max_splitscreen_players )
 		return nullptr;
 	if ( !m_SplitScreenPlayers[ nSlot ]->m_bActive )
@@ -278,7 +248,7 @@ INetChannel *CSplitScreen::GetSplitScreenPlayerNetChan( int nSlot )
 
 bool CSplitScreen::IsValidSplitScreenSlot( int nSlot )
 {
-	Assert( host_state.max_splitscreen_players <= MAX_SPLITSCREEN_CLIENTS );
+	contract_assert( host_state.max_splitscreen_players <= MAX_SPLITSCREEN_CLIENTS );
 	if ( nSlot < 0 || nSlot >= host_state.max_splitscreen_players )
 		return false;
 	return m_SplitScreenPlayers[ nSlot ]->m_bActive;
@@ -312,7 +282,7 @@ int CSplitScreen::FindSplitPlayerSlot( int nPlayerEntityIndex )
 {
 	int nPlayerSlot = nPlayerEntityIndex - 1;
 
-	Assert( host_state.max_splitscreen_players <= MAX_SPLITSCREEN_CLIENTS );
+	contract_assert( host_state.max_splitscreen_players <= MAX_SPLITSCREEN_CLIENTS );
 	for ( int i = 1 ; i < host_state.max_splitscreen_players ; ++i )
 	{
 		if ( m_SplitScreenPlayers[ i ]->m_Client.m_nPlayerSlot == nPlayerSlot )
@@ -325,8 +295,8 @@ int CSplitScreen::FindSplitPlayerSlot( int nPlayerEntityIndex )
 
 bool CSplitScreen::IsDisconnecting( int nSlot )
 {
-	Assert( nSlot >= 0 && nSlot < host_state.max_splitscreen_players );
-	Assert( host_state.max_splitscreen_players <= MAX_SPLITSCREEN_CLIENTS );
+	contract_assert( nSlot >= 0 && nSlot < host_state.max_splitscreen_players );
+	contract_assert( host_state.max_splitscreen_players <= MAX_SPLITSCREEN_CLIENTS );
 	if ( nSlot < 0 || nSlot >= host_state.max_splitscreen_players )
 		return false;
 
@@ -335,12 +305,12 @@ bool CSplitScreen::IsDisconnecting( int nSlot )
 
 void CSplitScreen::SetDisconnecting( int nSlot, bool bState )
 {
-	Assert( nSlot >= 0 && nSlot < host_state.max_splitscreen_players );
-	Assert( host_state.max_splitscreen_players <= MAX_SPLITSCREEN_CLIENTS );
+	contract_assert( nSlot >= 0 && nSlot < host_state.max_splitscreen_players );
+	contract_assert( host_state.max_splitscreen_players <= MAX_SPLITSCREEN_CLIENTS );
 	if ( nSlot < 0 || nSlot >= host_state.max_splitscreen_players )
 		return;
 
-	Assert( nSlot != 0 );
+	contract_assert( nSlot != 0 );
 	m_SplitScreenPlayers[ nSlot ]->m_Client.m_nSignonState = bState ? SIGNONSTATE_NONE : SIGNONSTATE_FULL;
 }
 
@@ -348,7 +318,6 @@ CClientState &CSplitScreen::GetLocalPlayer( int nSlot /*= -1*/ )
 {
 	if ( nSlot == -1 )
 	{
-		Assert( IsLocalPlayerResolvable() );
 		return m_SplitScreenPlayers[ GetActiveSplitScreenPlayerSlot() ]->m_Client;
 	}
 	return m_SplitScreenPlayers[ nSlot ]->m_Client;
@@ -357,7 +326,7 @@ CClientState &CSplitScreen::GetLocalPlayer( int nSlot /*= -1*/ )
 bool CSplitScreen::SetLocalPlayerIsResolvable( char const *pchContext, int line, bool bResolvable )
 {
 	SplitSlot_t *pSlot = GetSplitSlot();
-	Assert( pSlot );
+	contract_assert( pSlot );
 	bool bPrev = pSlot->m_bLocalPlayerResolvable;
 	pSlot->m_bLocalPlayerResolvable = bResolvable;
 	return bPrev;
@@ -366,16 +335,7 @@ bool CSplitScreen::SetLocalPlayerIsResolvable( char const *pchContext, int line,
 bool CSplitScreen::IsLocalPlayerResolvable()
 {
 
-#if defined( SPLIT_SCREEN_STUBS )
-
 	return true;
-
-#else
-
-	SplitSlot_t *pSlot = GetSplitSlot();
-	return pSlot->m_bLocalPlayerResolvable;
-
-#endif
 
 }
 

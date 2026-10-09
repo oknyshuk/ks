@@ -1,11 +1,6 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef DEMO_POLISH_H
-#define DEMO_POLISH_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 //------------------------------------------------------------------------------------------------------------------------
 
@@ -59,5 +54,3 @@ inline float LerpScale( float flInLo, float flInHi, float flOutLo, float flOutHi
 }
 
 //------------------------------------------------------------------------------------------------------------------------
-
-#endif // DEMO_POLISH_H

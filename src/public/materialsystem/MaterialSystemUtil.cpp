@@ -1,16 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imaterialsystem.h"
-#include "tier1/keyvalues.h"
+import std;
 
 //-----------------------------------------------------------------------------
 // Little utility class to deal with material references
@@ -23,7 +19,7 @@ CMaterialReference::CMaterialReference( char const* pMaterialName, const char *p
 {
 	if ( pMaterialName )
 	{
-		Assert( pTextureGroupName );
+		contract_assert( pTextureGroupName );
 		Init( pMaterialName, pTextureGroupName, bComplain );
 	}
 }
@@ -49,7 +45,7 @@ void CMaterialReference::Init( char const* pMaterialName, const char *pTextureGr
 	{
 	}
 
-	Assert( pMaterial );
+	contract_assert( pMaterial );
 	Init( pMaterial );
 }
 
@@ -63,7 +59,7 @@ void CMaterialReference::Init( const char *pMaterialName, KeyValues *pVMTKeyValu
 void CMaterialReference::Init( const char *pMaterialName, const char *pTextureGroupName, KeyValues *pVMTKeyValues )
 {
 	IMaterial *pMaterial = materials->FindProceduralMaterial( pMaterialName, pTextureGroupName, pVMTKeyValues );
-	Assert( pMaterial );
+	contract_assert( pMaterial );
 	Init( pMaterial );
 }
 
@@ -201,7 +197,7 @@ void CTextureReference::InitRenderTarget( int w, int h, RenderTargetSizeMode_t s
 	m_pTexture = materials->CreateNamedRenderTargetTextureEx( pStrOptionalName, w, h, sizeMode, fmt, 
 		depth, textureFlags, renderTargetFlags );
 
-	Assert( m_pTexture );
+	contract_assert( m_pTexture );
 }
 
 //-----------------------------------------------------------------------------
@@ -229,4 +225,3 @@ void CTextureReference::Shutdown( bool bDeleteIfUnReferenced )
 // Builds ONLY the EDRAM render target surface. Used when caller is explicitly managing.
 // The paired system memory texture can be built in an alternate format.
 //-----------------------------------------------------------------------------
-

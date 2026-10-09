@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef VPROF_RECORD_H
-#define VPROF_RECORD_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 void VProfRecord_Shutdown();
 
@@ -32,6 +26,3 @@ int VProfPlayback_SeekToPercent( float percent );		// Seek to a percent of the w
 
 class CVProfile;
 extern CVProfile *g_pVProfileForDisplay;
-
-
-#endif // VPROF_RECORD_H

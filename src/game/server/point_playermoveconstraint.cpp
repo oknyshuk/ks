@@ -1,14 +1,31 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: An entity that can be used to constrain the player's movement around it
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: An entity that can be used to constrain the player's movement around it
+
+import std;
+import ks.math;
+#include "edict.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 
-#define	SF_TELEPORT_TO_SPAWN_POS	0x00000001
+constexpr auto SF_TELEPORT_TO_SPAWN_POS = 0x00000001;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -74,7 +91,7 @@ void CPointPlayerMoveConstraint::InputTurnOn( inputdata_t &inputdata )
 	while ( (pEntity = gEntList.FindEntityByClassnameWithin( pEntity, "player", GetLocalOrigin(), flRadius)) != nullptr )
 	{
 		CBasePlayer *pPlayer = ToBasePlayer( pEntity );
-		Assert( pPlayer );
+		contract_assert( pPlayer );
 		
 		// Only add him if he's not already constrained
 		if ( ks::find_index( m_hConstrainedPlayers, pPlayer ) == -1 )

@@ -1,27 +1,24 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
-#include <mutex>
 
-#include "tier0/valve_off.h"
+import ks.core;
+import std;
+
 char *GetCommandLine();
-#include "resource.h"
-#include "tier0/valve_on.h"
-#include "tier0/threadtools.h"
-#include "tier0/icommandline.h"
-
-#include <dlfcn.h>
-
-// We lazily load the SDL shared object, and only reference functions if it's
-// available, so this can be included on the dedicated server too.
-#include <SDL3/SDL.h>
-
-typedef bool ( SDLCALL FUNC_SDL_ShowMessageBox )( const SDL_MessageBoxData *messageboxdata, int *buttonid );
-typedef SDL_Window* ( SDLCALL FUNC_SDL_GetKeyboardFocus )();
+inline constexpr auto IDD_ASSERT_DIALOG = 101;
+inline constexpr auto IDC_FILENAME_CONTROL = 1000;
+inline constexpr auto IDC_LINE_CONTROL = 1001;
+inline constexpr auto IDC_IGNORE_FILE = 1002;
+inline constexpr auto IDC_IGNORE_NEARBY = 1003;
+inline constexpr auto IDC_IGNORE_NUMLINES = 1004;
+inline constexpr auto IDC_IGNORE_THIS = 1005;
+inline constexpr auto IDC_BREAK = 1006;
+inline constexpr auto IDC_IGNORE_ALL = 1008;
+inline constexpr auto IDC_IGNORE_ALWAYS = 1009;
+inline constexpr auto IDC_IGNORE_NUMTIMES = 1010;
+inline constexpr auto IDC_ASSERT_MSG_CTRL = 1011;
+inline constexpr auto IDC_NOID = -1;
 
 
 class CDialogInitInfo
@@ -61,7 +58,7 @@ static CAssertDisable *g_pAssertDisables = nullptr;
 // Set to true if they want to break in the debugger.
 static bool g_bBreak = false;
 
-static CDialogInitInfo g_Info CONSTRUCT_EARLY;
+static CDialogInitInfo g_Info [[gnu::init_priority(101)]];
 
 static bool g_bDisableAsserts = false;
 
@@ -73,25 +70,25 @@ static bool g_bDisableAsserts = false;
 
 static bool IsDebugBreakEnabled()
 {
-	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), _T("-debugbreak") ) != nullptr );
+	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), "-debugbreak" ) != nullptr );
 	return bResult;
 }
 
 static bool AssertStack()
 {
-	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), _T("-assertstack") ) != nullptr );
+	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), "-assertstack" ) != nullptr );
 	return bResult;
 }
 
 static bool AreAssertsDisabled()
 {
-	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), _T("-noassert") ) != nullptr );
+	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), "-noassert" ) != nullptr );
 	return bResult || g_bDisableAsserts;
 }
 
 static bool AllAssertOnce()
 {
-	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), _T("-assertonce") ) != nullptr );
+	static bool bResult = ( _tcsstr( Plat_GetCommandLine(), "-assertonce" ) != nullptr );
 	return bResult;
 }
 
@@ -103,7 +100,7 @@ static bool AreAssertsEnabledInFileLine( const tchar *pFilename, int iLine )
 	{
 		pNext = pCur->m_pNext;
 
-		if ( _tcsicmp( pFilename, pCur->m_Filename ) == 0 )
+		if ( V_tier0_stricmp( pFilename, pCur->m_Filename ) == 0 )
 		{
 			// Are asserts disabled in the whole file?
 			bool bAssertsEnabled = true;
@@ -149,7 +146,7 @@ CAssertDisable* CreateNewAssertDisable( const tchar *pFilename )
 	pDisable->m_LineMin = pDisable->m_LineMax = -1;
 	pDisable->m_nIgnoreTimes = -1;
 	
-	_tcsncpy( pDisable->m_Filename, g_Info.m_pFilename, sizeof( pDisable->m_Filename ) - 1 );
+	std::strncpy( pDisable->m_Filename, g_Info.m_pFilename, sizeof( pDisable->m_Filename ) - 1 );
 	pDisable->m_Filename[ sizeof( pDisable->m_Filename ) - 1 ] = 0;
 	
 	return pDisable;
@@ -171,63 +168,53 @@ CAssertDisable* IgnoreAssertsNearby( int nRange )
 }
 
 
-
 // -------------------------------------------------------------------------------- //
 // Interface functions.
 // -------------------------------------------------------------------------------- //
 
 // provides access to the global that turns asserts on and off
-PLATFORM_INTERFACE bool AreAllAssertsDisabled()
+bool AreAllAssertsDisabled()
 {
 	return !g_bAssertsEnabled;
 }
 
-PLATFORM_INTERFACE void SetAllAssertsDisabled( bool bAssertsDisabled )
+void SetAllAssertsDisabled( bool bAssertsDisabled )
 {
 	g_bAssertsEnabled = !bAssertsDisabled;
 }
 
 
 // provides access to the global that turns asserts on and off
-PLATFORM_INTERFACE bool IsAssertDialogDisabled()
+bool IsAssertDialogDisabled()
 {
 	return !g_bAssertDialogEnabled;
 }
 
-PLATFORM_INTERFACE void SetAssertDialogDisabled( bool bAssertDialogDisabled )
+void SetAssertDialogDisabled( bool bAssertDialogDisabled )
 {
 	g_bAssertDialogEnabled = !bAssertDialogDisabled;
 }
 
-SDL_Window *g_SDLWindow = nullptr;
+static AssertDialogFunc_t g_pfnAssertDialog = nullptr;
 
-PLATFORM_INTERFACE void SetAssertDialogParent( struct SDL_Window *window )
+void SetAssertDialogHandler( AssertDialogFunc_t func )
 {
-	g_SDLWindow = window;
+	g_pfnAssertDialog = func;
 }
 
-PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent()
+bool ShouldUseNewAssertDialog()
 {
-	return g_SDLWindow;
-}
-
-PLATFORM_INTERFACE bool ShouldUseNewAssertDialog()
-{
-	static bool bMPIWorker = ( _tcsstr( Plat_GetCommandLine(), _T("-mpi_worker") ) != nullptr );
+	static bool bMPIWorker = ( _tcsstr( Plat_GetCommandLine(), "-mpi_worker" ) != nullptr );
 	if ( bMPIWorker )
 	{
 		return false;
 	}
 
-#ifdef DBGFLAG_ASSERTDLG
 	return true;		// always show an assert dialog
-#else
-	return Plat_IsInDebugSession();		// only show an assert dialog if the process is being debugged
-#endif // DBGFLAG_ASSERTDLG
 }
 
 
-PLATFORM_INTERFACE bool DoNewAssertDialog( const tchar *pFilename, int line, const tchar *pExpression )
+bool DoNewAssertDialog( const tchar *pFilename, int line, const tchar *pExpression )
 {
 	static std::recursive_mutex assertDialogMutex;
 	std::scoped_lock lock( assertDialogMutex );
@@ -270,53 +257,21 @@ PLATFORM_INTERFACE bool DoNewAssertDialog( const tchar *pFilename, int line, con
 	g_bBreak = false;
 
 
-	#define COLOR_YELLOW 	"\033[1;33m"
-	#define COLOR_GREEN 	"\033[1;32m"
-	#define COLOR_RED 		"\033[1;31m"
-	#define COLOR_END		"\033[0m"
-	fprintf(stderr, COLOR_YELLOW "ASSERT: " COLOR_RED "%s" COLOR_GREEN ":%i:" COLOR_RED "%s" COLOR_END "\n", pFilename, line, pExpression);
+	std::fprintf( stderr, "\033[1;33mASSERT: \033[1;31m%s\033[1;32m:%i:\033[1;31m%s\033[0m\n", pFilename, line, pExpression );
 	
 
-	static FUNC_SDL_ShowMessageBox *pfnSDLShowMessageBox = nullptr;
-    static FUNC_SDL_GetKeyboardFocus *pfnSDLGetKeyboardFocus = nullptr;
-	if( getenv( "GAME_ASSERT_DIALOG" ) && !pfnSDLShowMessageBox )
+	if( std::getenv( "GAME_ASSERT_DIALOG" ) && g_pfnAssertDialog )
 	{
-
-        void *ret = dlopen( "libSDL3.so.0", RTLD_LAZY );
-
-        pfnSDLShowMessageBox = ( FUNC_SDL_ShowMessageBox * )dlsym( ret, "SDL_ShowMessageBox" );
-        pfnSDLGetKeyboardFocus = ( FUNC_SDL_GetKeyboardFocus * )dlsym( ret, "SDL_GetKeyboardFocus" );
-    }
-
-	if( pfnSDLShowMessageBox )
-	{
-		int buttonid;
 		char text[ 4096 ];
-		SDL_MessageBoxData messageboxdata = { 0 };
 		const char *DefaultAction = Plat_IsInDebugSession() ? "Break" : "Corefile";
-		SDL_MessageBoxButtonData buttondata[] =
-		{
-			{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT,	IDC_BREAK,			DefaultAction			},
-			{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT,	IDC_IGNORE_THIS,	"Ignore"				},
-			{ 0,										IDC_IGNORE_FILE,	"Ignore This File"		},
-			{ 0,										IDC_IGNORE_ALWAYS,	"Always Ignore"			},
-			{ 0,										IDC_IGNORE_ALL,		"Ignore All Asserts"	},
-		};
+		static const int buttonids[] = { IDC_BREAK, IDC_IGNORE_THIS, IDC_IGNORE_FILE, IDC_IGNORE_ALWAYS, IDC_IGNORE_ALL };
+		const char *labels[] = { DefaultAction, "Ignore", "Ignore This File", "Always Ignore", "Ignore All Asserts" };
 
-		_snprintf( text, sizeof( text ), "File: %s\nLine: %i\nExpr: %s\n", pFilename, line, pExpression );
+		std::snprintf( text, sizeof( text ), "File: %s\nLine: %i\nExpr: %s\n", pFilename, line, pExpression );
 		text[ sizeof( text ) - 1 ] = 0;
 
-		messageboxdata.window = g_SDLWindow;
-		messageboxdata.title = "Assertion Failed";
-		messageboxdata.message = text;
-		messageboxdata.numbuttons = ARRAYSIZE( buttondata );
-		messageboxdata.buttons = buttondata;
-
-		bool Ret = ( *pfnSDLShowMessageBox )( &messageboxdata, &buttonid );
-		if( !Ret )
-		{
-			buttonid = IDC_BREAK;
-		}
+		const int chosen = g_pfnAssertDialog( "Assertion Failed", text, labels, std::size( labels ), 0, 1 );
+		const int buttonid = ( chosen >= 0 && chosen < (int)std::size( buttonids ) ) ? buttonids[chosen] : IDC_BREAK;
 
 		switch( buttonid )
 		{
@@ -341,7 +296,7 @@ PLATFORM_INTERFACE bool DoNewAssertDialog( const tchar *pFilename, int line, con
 			break;
 		}
 	}
-	else if ( getenv( "RAISE_ON_ASSERT" ) )
+	else if ( std::getenv( "RAISE_ON_ASSERT" ) )
 	{
 		g_bBreak = true;
 	}
@@ -349,4 +304,3 @@ PLATFORM_INTERFACE bool DoNewAssertDialog( const tchar *pFilename, int line, con
 
 	return g_bBreak;
 }
-

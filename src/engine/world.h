@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-	   
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // world.h
-#ifndef WORLD_H
-#define WORLD_H
 
-
+import std;
+import ks.math;
 
 struct edict_t;
 class ICollideable;
@@ -36,5 +31,3 @@ void SV_FastRelink( edict_t *ent, int tempHandle );
 
 void CL_TriggerMoved( IClientEntity *pTriggerEnt, bool accurateBboxTriggerChecks );
 void CL_SolidMoved( IClientEntity *pTriggerEnt, ICollideable *pSolidCollide, const Vector* pPrevAbsOrigin, bool accurateBboxTriggerChecks );
-
-#endif // WORLD_H

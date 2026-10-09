@@ -1,6 +1,5 @@
-//=============== Copyright (c) Valve Corporation, All rights reserved. =================//
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "BaseVSShader.h"
 #include "customcharacter_vs30.inc"
@@ -9,7 +8,7 @@
 #include "../materialsystem_global.h"
 
 BEGIN_VS_SHADER( CustomCharacter, "Help for CustomCharacter Shader" )
-	BEGIN_SHADER_PARAMS
+	
 	
 	// Original material samplers
 	SHADER_PARAM( BUMPMAP, SHADER_PARAM_TYPE_TEXTURE, "", "" )
@@ -551,7 +550,7 @@ SHADER_DRAW
 			vParams[3] = clamp(vParams[3] - 1, 0, 7);
 			pShaderAPI->SetPixelShaderConstant(45, vParams, 1);
 
-			vParams[0] = pow(params[WEARPROGRESS]->GetFloatValue(), params[WEAREXPONENT]->GetFloatValue());
+			vParams[0] = std::pow(params[WEARPROGRESS]->GetFloatValue(), params[WEAREXPONENT]->GetFloatValue());
 			vParams[1] = params[PATTERNDETAILINFLUENCE]->GetFloatValue();
 			if (bPattern)
 			{

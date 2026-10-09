@@ -1,23 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "basetypes.h"
-#include "tier1/convar.h"
-#include "tier1/strtools.h"
-#include "tier1/characterset.h"
-#include "tier1/text_reader.h"
-#include "tier1/tier1.h"
-#include "tier1/convar_serverbounded.h"
-#include "icvar.h"
-#include "tier0/dbg.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Statically constructed list of ConCommandBases, 
@@ -50,7 +35,7 @@ void ConVar_Register( int nCVarFlag, IConCommandBaseAccessor *pAccessor )
 	if ( !g_pCVar || s_bRegistered )
 		return;
 
-	Assert( s_nDLLIdentifier < 0 );
+	contract_assert( s_nDLLIdentifier < 0 );
 	s_bRegistered = true;
 	s_nCVarFlag = nCVarFlag;
 	s_nDLLIdentifier = g_pCVar->AllocateDLLIdentifier();
@@ -78,7 +63,7 @@ void ConVar_Unregister( )
 	if ( !g_pCVar || !s_bRegistered )
 		return;
 
-	Assert( s_nDLLIdentifier >= 0 );
+	contract_assert( s_nDLLIdentifier >= 0 );
 
 	// Do this after unregister!!!
 	g_pCVar->RemoveSplitScreenConVars( s_nDLLIdentifier );
@@ -153,15 +138,11 @@ void ConCommandBase::Create( const char *pName, const char *pHelpString /*= 0*/,
 	m_bRegistered = false;
 
 	// Name should be static data
-	Assert( pName );
+	contract_assert( pName );
 	m_pszName = pName;
 	m_pszHelpString = pHelpString ? pHelpString : empty_string;
 
 	m_nFlags = flags;
-
-#ifdef ALLOW_DEVELOPMENT_CVARS
-	m_nFlags &= ~FCVAR_DEVELOPMENTONLY;
-#endif
 
 	if ( !( m_nFlags & FCVAR_UNREGISTERED ) )
 	{
@@ -231,9 +212,6 @@ void ConCommandBase::AddFlags( int flags )
 {
 	m_nFlags |= flags;
 
-#ifdef ALLOW_DEVELOPMENT_CVARS
-	m_nFlags &= ~FCVAR_DEVELOPMENTONLY;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -275,7 +253,7 @@ char *ConCommandBase::CopyString( const char *from )
 	int		len;
 	char	*to;
 
-	len = strlen( from );
+	len = std::strlen( from );
 	if ( len <= 0 )
 	{
 		to = new char[1];
@@ -284,7 +262,7 @@ char *ConCommandBase::CopyString( const char *from )
 	else
 	{
 		to = new char[len+1];
-		Q_strncpy( to, from, len+1 );
+		V_strncpy( to, from, len+1 );
 	}
 	return to;
 }
@@ -338,7 +316,7 @@ CCommand::CCommand()
 
 CCommand::CCommand( int nArgC, const char **ppArgV, cmd_source_t source )
 {
-	Assert( nArgC > 0 );
+	contract_assert( nArgC > 0 );
 
 	if ( !s_bBuiltBreakSet )
 	{
@@ -354,20 +332,20 @@ CCommand::CCommand( int nArgC, const char **ppArgV, cmd_source_t source )
 	for ( int i = 0; i < nArgC; ++i )
 	{
 		m_ppArgv[i] = pBuf;
-		int nLen = Q_strlen( ppArgV[i] );
-		memcpy( pBuf, ppArgV[i], nLen+1 );
+		int nLen = V_strlen( ppArgV[i] );
+		std::memcpy( pBuf, ppArgV[i], nLen+1 );
 		if ( i == 0 )
 		{
 			m_nArgv0Size = nLen;
 		}
 		pBuf += nLen+1;
 
-		bool bContainsSpace = strchr( ppArgV[i], ' ' ) != nullptr;
+		bool bContainsSpace = std::strchr( ppArgV[i], ' ' ) != nullptr;
 		if ( bContainsSpace )
 		{
 			*pSBuf++ = '\"';
 		}
-		memcpy( pSBuf, ppArgV[i], nLen );
+		std::memcpy( pSBuf, ppArgV[i], nLen );
 		pSBuf += nLen;
 		if ( bContainsSpace )
 		{
@@ -413,14 +391,14 @@ bool CCommand::Tokenize( const char *pCommand, cmd_source_t source, characterset
 	// Copy the current command into a temp buffer
 	// NOTE: This is here to avoid the pointers returned by DequeueNextCommand
 	// to become invalid by calling AddText. Is there a way we can avoid the memcpy?
-	int nLen = Q_strlen( pCommand );
+	int nLen = V_strlen( pCommand );
 	if ( nLen >= COMMAND_MAX_LENGTH - 1 )
 	{
 		Warning( "CCommand::Tokenize: Encountered command which overflows the tokenizer buffer.. Skipping!\n" );
 		return false;
 	}
 
-	memcpy( m_pArgSBuffer, pCommand, nLen + 1 );
+	std::memcpy( m_pArgSBuffer, pCommand, nLen + 1 );
 
 	// Parse the current command into the current command buffer
 	ks::text_reader bufParse( m_pArgSBuffer, nLen );
@@ -443,7 +421,7 @@ bool CCommand::Tokenize( const char *pCommand, cmd_source_t source, characterset
 			return false;
 		}
 
-		memcpy( pArgvBuf, token->data(), nSize );
+		std::memcpy( pArgvBuf, token->data(), nSize );
 		pArgvBuf[nSize] = 0;
 
 		if ( m_nArgc == 1 )
@@ -456,12 +434,12 @@ bool CCommand::Tokenize( const char *pCommand, cmd_source_t source, characterset
 				--m_nArgv0Size;
 			}
 			m_nArgv0Size -= nSize;
-			Assert( m_nArgv0Size != 0 );
+			contract_assert( m_nArgv0Size != 0 );
 
 			// The StartGet check is to handle this case: "foo"bar
 			// which will parse into 2 different args. ArgS should point to bar.
 			bool bFoundStartQuote = ( m_nArgv0Size > nStartGet ) && ( m_pArgSBuffer[m_nArgv0Size-1] == '\"' );
-			Assert( bFoundEndQuote == bFoundStartQuote );
+			contract_assert( bFoundEndQuote == bFoundStartQuote );
 			if ( bFoundStartQuote )
 			{
 				--m_nArgv0Size;
@@ -475,7 +453,7 @@ bool CCommand::Tokenize( const char *pCommand, cmd_source_t source, characterset
 		}
 
 		nArgvBufferSize += nSize + 1;
-		Assert( nArgvBufferSize <= COMMAND_MAX_LENGTH );
+		contract_assert( nArgvBufferSize <= COMMAND_MAX_LENGTH );
 	}
 
 	return true;
@@ -490,7 +468,7 @@ const char* CCommand::FindArg( const char *pName ) const
 	int nArgC = ArgC();
 	for ( int i = 1; i < nArgC; i++ )
 	{
-		if ( !Q_stricmp( Arg(i), pName ) )
+		if ( !V_stricmp( Arg(i), pName ) )
 			return (i+1) < nArgC ? Arg( i+1 ) : "";
 	}
 	return 0;
@@ -500,7 +478,7 @@ int CCommand::FindArgInt( const char *pName, int nDefaultVal ) const
 {
 	const char *pVal = FindArg( pName );
 	if ( pVal )
-		return atoi( pVal );
+		return std::atoi( pVal );
 	else
 		return nDefaultVal;
 }
@@ -610,7 +588,7 @@ void ConCommand::Dispatch( const CCommand &command )
 	}
 
 	// Command without callback!!!
-	AssertMsg( 0, ( "Encountered ConCommand '%s' without a callback!\n", GetName() ) );
+	contract_assert( 0 );
 }
 
 
@@ -626,7 +604,7 @@ int	ConCommand::AutoCompleteSuggest( const char *partial, std::vector< std::stri
 		return m_pCommandCompletionCallback->CommandCompletionCallback( partial, commands );
 	}
 
-	Assert( m_fnCompletionCallback );
+	contract_assert( m_fnCompletionCallback );
 	if ( !m_fnCompletionCallback )
 		return 0;
 
@@ -722,7 +700,7 @@ void ConVar::InstallChangeCallback( FnChangeCallback_t callback, bool bInvoke /*
 	// Call it immediately to set the initial value...
 	if ( bInvoke )
 	{
-		callback( this, m_Value.m_pszString, ObscureConvarValue( m_Value.m_fValue, ( intp ) this ) );
+		callback( this, m_Value.m_pszString, StoreValue( m_Value.m_fValue, ( intp ) this ) );
 	}
 }
 
@@ -750,9 +728,6 @@ void ConVar::AddFlags( int flags )
 {
 	m_pParent->m_nFlags |= flags;
 
-#ifdef ALLOW_DEVELOPMENT_CVARS
-	m_pParent->m_nFlags &= ~FCVAR_DEVELOPMENTONLY;
-#endif
 }
 
 bool ConVar::IsRegistered( void ) const
@@ -801,7 +776,7 @@ bool ConVar::InternalSetColorFromString( const char *value )
 
 	// Try pulling RGBA color values out of the string
 	int nRGBA[4];
-	int nParamsRead = sscanf( value, "%i %i %i %i", &(nRGBA[0]), &(nRGBA[1]), &(nRGBA[2]), &(nRGBA[3]) );
+	int nParamsRead = std::sscanf( value, "%i %i %i %i", &(nRGBA[0]), &(nRGBA[1]), &(nRGBA[2]), &(nRGBA[3]) );
 
 	if ( nParamsRead >= 3 )
 	{
@@ -828,10 +803,10 @@ bool ConVar::InternalSetColorFromString( const char *value )
 			pColorElement[3] = nRGBA[3];
 
 			// Obscure the value.
-			m_Value.m_nValue = ObscureConvarValue( m_Value.m_nValue, ( intp ) this );
+			m_Value.m_nValue = StoreValue( m_Value.m_nValue, ( intp ) this );
 
 			// Copy that value into a float (even though this has little meaning)
-			m_Value.m_fValue = ObscureConvarValue( ( float )( m_Value.m_nValue ), ( intp ) this );
+			m_Value.m_fValue = StoreValue( ( float )( m_Value.m_nValue ), ( intp ) this );
 		}
 	}
 
@@ -856,9 +831,9 @@ void ConVar::InternalSetValue( const char *value )
 	char  tempVal[ 32 ];
 	const char  *val;
 
-	Assert(m_pParent == this); // Only valid for root convars.
+	contract_assert( m_pParent == this ); // Only valid for root convars.
 
-	float flOldValue = ObscureConvarValue( m_Value.m_fValue, ( intp ) this );
+	float flOldValue = StoreValue( m_Value.m_fValue, ( intp ) this );
 	val = value;
 	if ( !val )
 		val = "";
@@ -872,20 +847,20 @@ void ConVar::InternalSetValue( const char *value )
 		if ( !IsFinite( fNewValue ) )
 		{
 			Warning( "Warning:  %s = '%s' is infinite, clamping value.\n", GetName(), value );
-			fNewValue = FLT_MAX;
-			dblValue = FLT_MAX;
+			fNewValue = std::numeric_limits<float>::max();
+			dblValue = std::numeric_limits<float>::max();
 		}
 
 		if ( ClampValue( fNewValue ) )
 		{
 			dblValue = fNewValue;
-			Q_snprintf( tempVal,sizeof(tempVal), "%f", fNewValue );
+			V_snprintf( tempVal,sizeof(tempVal), "%f", fNewValue );
 			val = tempVal;
 		}
 
 		// Redetermine value
-		m_Value.m_fValue = ObscureConvarValue( fNewValue, (intp) this );
-		m_Value.m_nValue = ObscureConvarValue( ( int ) dblValue, (intp) this ); // convert double to int to avoid precision loss
+		m_Value.m_fValue = StoreValue( fNewValue, (intp) this );
+		m_Value.m_nValue = StoreValue( ( int ) dblValue, (intp) this ); // convert double to int to avoid precision loss
 	}
 
 	if ( !( m_nFlags & FCVAR_NEVER_AS_STRING ) )
@@ -900,12 +875,13 @@ void ConVar::InternalSetValue( const char *value )
 //-----------------------------------------------------------------------------
 void ConVar::ChangeStringValue( const char *tempVal, float flOldValue )
 {
-	Assert( !( m_nFlags & FCVAR_NEVER_AS_STRING ) );
+	ks::ScratchArena<> scratch;
+	contract_assert( !( m_nFlags & FCVAR_NEVER_AS_STRING ) );
 
- 	char* pszOldValue = (char*)stackalloc( m_Value.m_StringLength );
-	memcpy( pszOldValue, m_Value.m_pszString, m_Value.m_StringLength );
+ 	char* pszOldValue = (char*)scratch.AllocBytes( m_Value.m_StringLength );
+	std::memcpy( pszOldValue, m_Value.m_pszString, m_Value.m_StringLength );
 	
-	int len = Q_strlen(tempVal) + 1;
+	int len = V_strlen(tempVal) + 1;
 
 	if ( len > m_Value.m_StringLength)
 	{
@@ -918,7 +894,7 @@ void ConVar::ChangeStringValue( const char *tempVal, float flOldValue )
 		m_Value.m_StringLength = len;
 	}
 
-	memcpy( m_Value.m_pszString, tempVal, len );
+	std::memcpy( m_Value.m_pszString, tempVal, len );
 
 	// Invoke any necessary callback function
 	for ( int i = 0; i < std::ssize( m_fnChangeCallbacks ); ++i )
@@ -931,7 +907,6 @@ void ConVar::ChangeStringValue( const char *tempVal, float flOldValue )
 		g_pCVar->CallGlobalChangeCallbacks( this, pszOldValue, flOldValue );
 	}
 
-	stackfree( pszOldValue );
 }
 
 //-----------------------------------------------------------------------------
@@ -962,7 +937,7 @@ bool ConVar::ClampValue( float& value )
 //-----------------------------------------------------------------------------
 void ConVar::InternalSetFloatValue( float fNewValue )
 {
-	if ( fNewValue == ObscureConvarValue( m_Value.m_fValue, ( intp ) this ) )
+	if ( fNewValue == StoreValue( m_Value.m_fValue, ( intp ) this ) )
 		return;
 
 	if ( IsFlagSet( FCVAR_MATERIAL_THREAD_MASK ) )
@@ -974,25 +949,25 @@ void ConVar::InternalSetFloatValue( float fNewValue )
 		}
 	}
 
-	Assert( m_pParent == this ); // Only valid for root convars.
+	contract_assert( m_pParent == this ); // Only valid for root convars.
 
 	// Check bounds
 	ClampValue( fNewValue );
 
 	// Redetermine value
-	float flOldValue = ObscureConvarValue( m_Value.m_fValue, ( intp ) this );
-	m_Value.m_fValue		= ObscureConvarValue( fNewValue, ( intp) this );
-	m_Value.m_nValue		= ObscureConvarValue( ( int )fNewValue, ( intp) this );
+	float flOldValue = StoreValue( m_Value.m_fValue, ( intp ) this );
+	m_Value.m_fValue		= StoreValue( fNewValue, ( intp) this );
+	m_Value.m_nValue		= StoreValue( ( int )fNewValue, ( intp) this );
 
 	if ( !( m_nFlags & FCVAR_NEVER_AS_STRING ) )
 	{
 		char tempVal[ 32 ];
-		Q_snprintf( tempVal, sizeof( tempVal), "%f", fNewValue );
+		V_snprintf( tempVal, sizeof( tempVal), "%f", fNewValue );
 		ChangeStringValue( tempVal, flOldValue );
 	}
 	else
 	{
-		Assert( std::ssize( m_fnChangeCallbacks ) == 0 );
+		contract_assert( std::ssize( m_fnChangeCallbacks ) == 0 );
 	}
 }
 
@@ -1002,7 +977,7 @@ void ConVar::InternalSetFloatValue( float fNewValue )
 //-----------------------------------------------------------------------------
 void ConVar::InternalSetIntValue( int nValue )
 {
-	if ( nValue == ObscureConvarValue( m_Value.m_nValue, (intp) this ) )
+	if ( nValue == StoreValue( m_Value.m_nValue, (intp) this ) )
 		return;
 
 	if ( IsFlagSet( FCVAR_MATERIAL_THREAD_MASK ) )
@@ -1014,7 +989,7 @@ void ConVar::InternalSetIntValue( int nValue )
 		}
 	}
 
-	Assert( m_pParent == this ); // Only valid for root convars.
+	contract_assert( m_pParent == this ); // Only valid for root convars.
 
 	float fValue = (float)nValue;
 	if ( ClampValue( fValue ) )
@@ -1023,19 +998,19 @@ void ConVar::InternalSetIntValue( int nValue )
 	}
 
 	// Redetermine value
-	float flOldValue = ObscureConvarValue( m_Value.m_fValue, ( intp ) this );
-	m_Value.m_fValue		= ObscureConvarValue( fValue, ( intp) this );
-	m_Value.m_nValue		= ObscureConvarValue( nValue, ( intp) this );
+	float flOldValue = StoreValue( m_Value.m_fValue, ( intp ) this );
+	m_Value.m_fValue		= StoreValue( fValue, ( intp) this );
+	m_Value.m_nValue		= StoreValue( nValue, ( intp) this );
 
 	if ( !( m_nFlags & FCVAR_NEVER_AS_STRING ) )
 	{
 		char tempVal[ 32 ];
-		Q_snprintf( tempVal, sizeof( tempVal ), "%d", nValue );
+		V_snprintf( tempVal, sizeof( tempVal ), "%d", nValue );
 		ChangeStringValue( tempVal, flOldValue );
 	}
 	else
 	{
-		Assert( std::ssize( m_fnChangeCallbacks ) == 0 );
+		contract_assert( std::ssize( m_fnChangeCallbacks ) == 0 );
 	}
 }
 
@@ -1071,7 +1046,7 @@ void ConVar::Create( const char *pName, const char *pDefaultValue, int flags /*=
 
 	// Name should be static data
 	m_pszDefaultValue = pDefaultValue ? pDefaultValue : empty_string;
-	Assert( m_pszDefaultValue );
+	contract_assert( m_pszDefaultValue );
 
 	m_bHasMin = bMin;
 	m_fMinVal = fMin;
@@ -1083,9 +1058,9 @@ void ConVar::Create( const char *pName, const char *pDefaultValue, int flags /*=
 		m_fnChangeCallbacks.push_back( callback );
 	}
 
-	m_Value.m_StringLength = strlen( m_pszDefaultValue ) + 1;
+	m_Value.m_StringLength = std::strlen( m_pszDefaultValue ) + 1;
 	m_Value.m_pszString = new char[m_Value.m_StringLength];
-	memcpy( m_Value.m_pszString, m_pszDefaultValue, m_Value.m_StringLength );
+	std::memcpy( m_Value.m_pszString, m_pszDefaultValue, m_Value.m_StringLength );
 
 	if ( !InternalSetColorFromString( m_Value.m_pszString ) )
 	{
@@ -1095,23 +1070,23 @@ void ConVar::Create( const char *pName, const char *pDefaultValue, int flags /*=
 		if ( !IsFinite( fValue ) )
 		{
 			Warning( "ConVar(%s) defined with infinite float value (%s)\n", pName, m_Value.m_pszString );
-			fValue = FLT_MAX;
-			Assert( 0 );
+			fValue = std::numeric_limits<float>::max();
+			contract_assert( 0 );
 		}
 
 		// Bounds Check, should never happen, if it does, no big deal
 		if ( m_bHasMin && ( fValue < m_fMinVal ) )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 
 		if ( m_bHasMax && ( fValue > m_fMaxVal ) )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 
-		m_Value.m_fValue = ObscureConvarValue( fValue, ( intp ) this );
-		m_Value.m_nValue = ObscureConvarValue( ( int ) dblValue, ( intp) this );
+		m_Value.m_fValue = StoreValue( fValue, ( intp ) this );
+		m_Value.m_nValue = StoreValue( ( int ) dblValue, ( intp) this );
 	}
 
 	BaseClass::Create( pName, pHelpString, flags );
@@ -1221,7 +1196,7 @@ void ConVar::SetDefault( const char *pszDefault )
 { 
 	static const char *empty_string = "";
 	m_pszDefaultValue = pszDefault ? pszDefault : empty_string;
-	Assert( m_pszDefaultValue );
+	contract_assert( m_pszDefaultValue );
 }
 
 //-----------------------------------------------------------------------------
@@ -1304,11 +1279,11 @@ void SplitScreenConVarRef::Init( const char *pName, bool bIgnoreMissing )
 		char pchName[ 256 ];
 		if ( i != 0 )
 		{
-			Q_snprintf( pchName, sizeof( pchName ), "%s%d", pName, i + 1 );
+			V_snprintf( pchName, sizeof( pchName ), "%s%d", pName, i + 1 );
 		}
 		else
 		{
-			Q_strncpy( pchName, pName, sizeof( pchName ) );
+			V_strncpy( pchName, pName, sizeof( pchName ) );
 		}
 
 		info.m_pConVar = g_pCVar ? g_pCVar->FindVar( pchName ) : &s_EmptyConVar;
@@ -1350,7 +1325,7 @@ SplitScreenConVarRef::SplitScreenConVarRef( IConVar *pConVar )
 	{
 		cv_t &info = m_Info[ i ];
 		char pchName[ 256 ];
-		Q_snprintf( pchName, sizeof( pchName ), "%s%d", pConVar->GetName(), i + 1 );
+		V_snprintf( pchName, sizeof( pchName ), "%s%d", pConVar->GetName(), i + 1 );
 
 		info.m_pConVar = g_pCVar ? g_pCVar->FindVar( pchName ) : &s_EmptyConVar;
 		if ( !info.m_pConVar )
@@ -1397,30 +1372,30 @@ static PrintConVarFlags_t g_PrintConVarFlags[] =
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void ConVar_AppendFlags( const ConCommandBase *var, char *buf, size_t bufsize )
+void ConVar_AppendFlags( const ConCommandBase *var, char *buf, std::size_t bufsize )
 {
-	for ( int i = 0; i < ARRAYSIZE( g_PrintConVarFlags ) ; ++i )
+	for ( int i = 0; i < std::size( g_PrintConVarFlags ) ; ++i )
 	{
 		const PrintConVarFlags_t &info =  g_PrintConVarFlags[ i ];
 		if ( var->IsFlagSet( info.flag ) )
 		{
 			char append[ 128 ];
-			Q_snprintf( append, sizeof( append ), " %s", info.desc );
-			Q_strncat( buf, append, bufsize, COPY_ALL_CHARACTERS );
+			V_snprintf( append, sizeof( append ), " %s", info.desc );
+			V_strncat( buf, append, bufsize, COPY_ALL_CHARACTERS );
 		}
 	}
 }
 
-static void AppendPrintf( char *buf, size_t bufsize, char const *fmt, ... )
+static void AppendPrintf( char *buf, std::size_t bufsize, char const *fmt, ... )
 {
 	char scratch[ 1024 ];
-	va_list argptr;
-	va_start( argptr, fmt );
-	_vsnprintf( scratch, sizeof( scratch ) - 1, fmt, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, fmt );
+	std::vsnprintf( scratch, sizeof( scratch ) - 1, fmt, argptr );
+	__builtin_va_end( argptr );
 	scratch[ sizeof( scratch ) - 1 ] = 0;
 
-	Q_strncat( buf, scratch, bufsize, COPY_ALL_CHARACTERS );
+	V_strncat( buf, scratch, bufsize, COPY_ALL_CHARACTERS );
 }
 
 //-----------------------------------------------------------------------------
@@ -1432,7 +1407,7 @@ void ConVar_PrintDescription( const ConCommandBase *pVar )
 	float fMin, fMax;
 	const char *pStr;
 
-	Assert( pVar );
+	contract_assert( pVar );
 
 	Color clr;
 	clr.SetColor( 255, 100, 100, 255 );
@@ -1458,13 +1433,13 @@ void ConVar_PrintDescription( const ConCommandBase *pVar )
 			int intVal = pBounded ? pBounded->GetInt() : var->GetInt();
 			float floatVal = pBounded ? pBounded->GetFloat() : var->GetFloat();
 
-			if ( fabs( (float)intVal - floatVal ) < 0.000001 )
+			if ( std::fabs( (float)intVal - floatVal ) < 0.000001 )
 			{
-				Q_snprintf( tempVal, sizeof( tempVal ), "%d", intVal );
+				V_snprintf( tempVal, sizeof( tempVal ), "%d", intVal );
 			}
 			else
 			{
-				Q_snprintf( tempVal, sizeof( tempVal ), "%f", floatVal );
+				V_snprintf( tempVal, sizeof( tempVal ), "%f", floatVal );
 			}
 		}
 		else
@@ -1492,7 +1467,7 @@ void ConVar_PrintDescription( const ConCommandBase *pVar )
 		}
 
 		// Handle virtualized cvars.
-		if ( pBounded && fabs( pBounded->GetFloat() - var->GetFloat() ) > 0.0001f )
+		if ( pBounded && std::fabs( pBounded->GetFloat() - var->GetFloat() ) > 0.0001f )
 		{
 			AppendPrintf( outstr, sizeof( outstr ), " [%.3f server clamped to %.3f]",
 				var->GetFloat(), pBounded->GetFloat() );

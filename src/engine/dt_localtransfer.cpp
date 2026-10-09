@@ -1,22 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "server.h"
 #include "dt_stack.h"
 #include "dt_localtransfer.h"
-#include "mathlib/vector.h"
+import std;
 #include "edict.h"
-#include "convar.h"
 #include "con_nprint.h"
-#include "tier1/map_ops.h"
 #include "dt_localtransfer.h"
 #include "networkvar.h"
-
-
 
 static ConVar dt_UsePartialChangeEnts( 
 	"dt_UsePartialChangeEnts",
@@ -84,7 +77,7 @@ static void LocalTransfer_CopyProp( CServerDatatableStack &serverStack, unsigned
 
 void AddPropOffsetToMap( CSendTablePrecalc *pPrecalc, int iInProp, int iInOffset, const char *pszPropName )
 {
-	Assert( iInProp < 0xFFFF && iInOffset < 0xFFFF );	
+	contract_assert( iInProp < 0xFFFF && iInOffset < 0xFFFF );	
 	unsigned short iProp = (unsigned short)iInProp;
 	unsigned short iOffset = (unsigned short)iInOffset;
 	
@@ -94,7 +87,7 @@ void AddPropOffsetToMap( CSendTablePrecalc *pPrecalc, int iInProp, int iInOffset
 	{
 		PropIndicesCollection_t coll;
 		coll.m_Indices[0] = iProp;
-		for ( int i=1; i < ARRAYSIZE( coll.m_Indices ); i++ )
+		for ( int i=1; i < std::size( coll.m_Indices ); i++ )
 		{
 			coll.m_Indices[i] = 0xFFFF;
 		}
@@ -110,7 +103,7 @@ void AddPropOffsetToMap( CSendTablePrecalc *pPrecalc, int iInProp, int iInOffset
 		// Look for a slot in the PropIndicesCollection_t to hold the prop index.
 		PropIndicesCollection_t &coll = iOldIndex->second;
 		int i;
-		for ( i=0; i < ARRAYSIZE( coll.m_Indices ); i++ )
+		for ( i=0; i < std::size( coll.m_Indices ); i++ )
 		{
 			if ( coll.m_Indices[i] == 0xFFFF )
 			{
@@ -119,7 +112,7 @@ void AddPropOffsetToMap( CSendTablePrecalc *pPrecalc, int iInProp, int iInOffset
 			}
 		}
 
-		if ( i >= ARRAYSIZE( coll.m_Indices ) )
+		if ( i >= std::size( coll.m_Indices ) )
 		{
 			// If there wasn't enough space to hold this SendProp index, then we have a CNetworkVar that won't 
 			// cause this SendProp to get sent. The fixes are to increase the length of PropIndicesCollection_t::m_Indices
@@ -332,7 +325,7 @@ void LocalTransfer_InitFastCopy(
 
 		if ( pRecvProp )
 		{
-			Assert( stricmp( pSendProp->GetName(), pRecvProp->GetName() ) == 0 );
+			contract_assert( stricmp( pSendProp->GetName(), pRecvProp->GetName() ) == 0 );
 
 			std::vector< CFastLocalTransferPropInfo > *pList = &pPrecalc->m_FastLocalTransfer.m_OtherProps;
 
@@ -361,7 +354,7 @@ void LocalTransfer_InitFastCopy(
 				pSendProp->GetProxyFn() == pSendProxies->m_FloatToFloat &&
 				pRecvProp->GetProxyFn() == pRecvProxies->m_FloatToFloat )
 			{
-				Assert( sizeof( int ) == sizeof( float ) );
+				contract_assert( sizeof( int ) == sizeof( float ) );
 				pList = &pPrecalc->m_FastLocalTransfer.m_FastInt32;
 				++nFastCopyProps;
 			}
@@ -408,7 +401,7 @@ inline int MapPropOffsetsToIndices(
 	unsigned short *pOut )
 {
 	// We could get an overflow if this happens.
-	Assert( nOffsets <= MAX_CHANGE_OFFSETS );
+	contract_assert( nOffsets <= MAX_CHANGE_OFFSETS );
 
 	int nOut = 0;
 	
@@ -434,7 +427,7 @@ inline int MapPropOffsetsToIndices(
 			{
 				static std::set< std::string, ks::iless > testDict;
 				char str[512];
-				Q_snprintf( str, sizeof( str ), "LocalTransfer offset miss - class: %s, DT: %s, offset: %d", pEdict->GetClassName(), pPrecalc->m_pSendTable->m_pNetTableName, pOffsets[i] );
+				V_snprintf( str, sizeof( str ), "LocalTransfer offset miss - class: %s, DT: %s, offset: %d", pEdict->GetClassName(), pPrecalc->m_pSendTable->m_pNetTableName, pOffsets[i] );
 				if ( testDict.insert( str ).second )
 				{
 					Warning( "%s\n", str );
@@ -445,7 +438,7 @@ inline int MapPropOffsetsToIndices(
 		{
 			const PropIndicesCollection_t &coll = index->second;
 			
-			for ( int nIndex=0; nIndex < ARRAYSIZE( coll.m_Indices ); nIndex++ )
+			for ( int nIndex=0; nIndex < std::size( coll.m_Indices ); nIndex++ )
 			{
 				unsigned short propIndex = coll.m_Indices[nIndex];
 				if ( propIndex == 0xFFFF )
@@ -533,16 +526,16 @@ void PrintPartialChangeEntsList()
 		if ( g_PartialChangeEnts[i] >= 0 )
 		{
 			if ( !bFirst )
-				Q_strncat( str, ", ", sizeof( str ) );
+				V_strncat( str, ", ", sizeof( str ) );
 			
 			char tempStr[512];
-			Q_snprintf( tempStr, sizeof( tempStr ), "%d", g_PartialChangeEnts[i] );
-			Q_strncat( str, tempStr, sizeof( str ) );
+			V_snprintf( tempStr, sizeof( tempStr ), "%d", g_PartialChangeEnts[i] );
+			V_strncat( str, tempStr, sizeof( str ) );
 						
 			bFirst = false;
 		}
 	}
-	Q_strncat( str, " - PARTIAL", sizeof( str ) );
+	V_strncat( str, " - PARTIAL", sizeof( str ) );
 	Con_NPrintf( iCurRow++, "%s", str );
 
 	
@@ -554,16 +547,16 @@ void PrintPartialChangeEntsList()
 		if ( g_PartialChangeEnts[i] < 0 )
 		{
 			if ( !bFirst )
-				Q_strncat( str, ", ", sizeof( str ) );
+				V_strncat( str, ", ", sizeof( str ) );
 			
 			char tempStr[512];
-			Q_snprintf( tempStr, sizeof( tempStr ), "%d", -g_PartialChangeEnts[i] );
-			Q_strncat( str, tempStr, sizeof( str ) );
+			V_snprintf( tempStr, sizeof( tempStr ), "%d", -g_PartialChangeEnts[i] );
+			V_strncat( str, tempStr, sizeof( str ) );
 						
 			bFirst = false;
 		}
 	}
-	Q_strncat( str, " -    FULL", sizeof( str ) );
+	V_strncat( str, " -    FULL", sizeof( str ) );
 	Con_NPrintf( iCurRow++, "%s", str );
 	
 	g_PartialChangeEnts.clear(); g_PartialChangeEnts.shrink_to_fit();
@@ -606,13 +599,13 @@ void LocalTransfer_TransferEntity(
 		FastSortList( propIndices, nChangeOffsets );
 
 		// Setup the structure to traverse the source tree.
-		ErrorIfNot( pPrecalc, ("SendTable_Encode: Missing m_pPrecalc for SendTable %s.", pSendTable->m_pNetTableName) );
+		if ( !( pPrecalc ) ) Error("SendTable_Encode: Missing m_pPrecalc for SendTable %s.", pSendTable->m_pNetTableName);
 		CServerDatatableStack serverStack( pPrecalc, (unsigned char*)pSrcEnt, objectID, recip );
 		serverStack.Init( true, true );
 
 		// Setup the structure to traverse the dest tree.
 		CRecvDecoder *pDecoder = pRecvTable->m_pDecoder;
-		ErrorIfNot( pDecoder, ("RecvTable_Decode: table '%s' missing a decoder.", pRecvTable->GetName()) );
+		if ( !( pDecoder ) ) Error("RecvTable_Decode: table '%s' missing a decoder.", pRecvTable->GetName());
 		CClientDatatableStack clientStack( pDecoder, (unsigned char*)pDestEnt, objectID );
 		clientStack.Init( true, true );
 
@@ -633,13 +626,13 @@ void LocalTransfer_TransferEntity(
 	{
 		// Setup the structure to traverse the source tree.
 		CSendTablePrecalc *pPrecalc = pSendTable->m_pPrecalc;
-		ErrorIfNot( pPrecalc, ("SendTable_Encode: Missing m_pPrecalc for SendTable %s.", pSendTable->m_pNetTableName) );
+		if ( !( pPrecalc ) ) Error("SendTable_Encode: Missing m_pPrecalc for SendTable %s.", pSendTable->m_pNetTableName);
 		CServerDatatableStack serverStack( pPrecalc, (unsigned char*)pSrcEnt, objectID, recip );
 		serverStack.Init( false, true );
 
 		// Setup the structure to traverse the dest tree.
 		CRecvDecoder *pDecoder = pRecvTable->m_pDecoder;
-		ErrorIfNot( pDecoder, ("RecvTable_Decode: table '%s' missing a decoder.", pRecvTable->GetName()) );
+		if ( !( pDecoder ) ) Error("RecvTable_Decode: table '%s' missing a decoder.", pRecvTable->GetName());
 		CClientDatatableStack clientStack( pDecoder, (unsigned char*)pDestEnt, objectID );
 		clientStack.Init( true, true );
 
@@ -687,6 +680,3 @@ void LocalTransfer_TransferEntity(
 	}
 	*/
 }
-
-
-

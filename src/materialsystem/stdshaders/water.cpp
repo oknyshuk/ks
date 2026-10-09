@@ -1,14 +1,10 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
+import std;
 #include "common_hlsl_cpp_consts.h" // hack hack hack!
-#include "convar.h"
 
 extern ConVar r_buildingmapforworld;
 
@@ -25,7 +21,7 @@ DEFINE_FALLBACK_SHADER( Water, Water_DX9_HDR )
 BEGIN_VS_SHADER( Water_DX90, 
 			  "Help for Water" )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( REFRACTTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "_rt_WaterRefraction", "" )
 		SHADER_PARAM( SCENEDEPTH, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( REFLECTTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "_rt_WaterReflection", "" )
@@ -178,7 +174,7 @@ BEGIN_VS_SHADER( Water_DX90,
 
 	SHADER_INIT
 	{
-		Assert( params[WATERDEPTH]->IsDefined() );
+		contract_assert( params[WATERDEPTH]->IsDefined() );
 
 		if( params[REFRACTTEXTURE]->IsDefined() )
 		{
@@ -224,7 +220,7 @@ BEGIN_VS_SHADER( Water_DX90,
 			return;
 
 		IMaterialVar* pVar = s_ppParams[constantVar];
-		Assert( pVar );
+		contract_assert( pVar );
 
 		if (pVar->GetType() == MATERIAL_VAR_TYPE_VECTOR)
 			pVar->GetVecValue( val, 4 );
@@ -855,4 +851,3 @@ BEGIN_INHERITED_SHADER( Water_DX9_HDR, Water_DX90,
 		return 0;
 	}
 END_INHERITED_SHADER
-

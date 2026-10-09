@@ -1,28 +1,41 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_area.cpp
 // AI Navigation areas
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "te.h"
 #include "cs_nav_mesh.h"
 #include "cs_nav_area.h"
 #include "cs_gamerules.h"
 #include "nav_pathfind.h"
-#include "nav_colors.h"
-#include "fmtstr.h"
 #include "props_shared.h"
 #include "func_breakablesurf.h"
-#include "color.h"
-#include "collisionutils.h"
 #include "point_hiding_spot.h"
-
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -267,14 +280,14 @@ NavErrorType CCSNavArea::LoadLegacy( ks::byte_reader &fileBuffer, unsigned int v
 	{
 		// load number of connections for this direction
 		unsigned int count = fileBuffer.read< unsigned int >();
-		Assert( fileBuffer.ok() );
+		contract_assert( fileBuffer.ok() );
 
 		m_connect[d].reserve( count );
 		for( unsigned int i=0; i<count; ++i )
 		{
 			NavConnect connect;
 			connect.id = fileBuffer.read< unsigned int >();
-			Assert( fileBuffer.ok() );
+			contract_assert( fileBuffer.ok() );
 
 			// don't allow self-referential connections
 			if ( connect.id != m_id )

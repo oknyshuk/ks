@@ -1,22 +1,13 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "pch_tier0.h"
+import ks.core;
 
-#include "tier0/minidump.h"
-#include "tier0/platform.h"
+// First include standard libraries
+import std;
 
-#include "tier0/minidump.h"
 
-PLATFORM_INTERFACE void WriteMiniDump( const char *pszFilenameSuffix )
+void WriteMiniDump( const char *pszFilenameSuffix )
 {
-}
-
-PLATFORM_INTERFACE void CatchAndWriteMiniDump( FnWMain pfn, int argc, tchar *argv[] )
-{
-	pfn( argc, argv );
 }
 

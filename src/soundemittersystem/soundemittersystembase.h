@@ -1,27 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SOUNDEMITTERSYSTEMBASE_H
-#define SOUNDEMITTERSYSTEMBASE_H
-
+import ks.tier1;
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "tier1/map_ops.h"
-#include "tier1/intern_pool.h"
-#include <string>
-#include <string_view>
-#include <unordered_map>
+import std;
 #include "soundflags.h"
 #include "tier2/interval.h"
-#include "tier1/fixed_pool.h"
 #include "tier2/tier2.h"
 
 soundlevel_t TextToSoundLevel( const char *key );
 
-struct CSoundEntry
+struct CSoundEntry : public ks::pooled< CSoundEntry >
 {
 	std::string_view			m_Name;		// in ks::global_symbols()
 	CSoundParametersInternal	m_SoundParams;
@@ -34,11 +24,13 @@ struct CSoundEntry
 	public:
 		bool Less( CSoundEntry * const & lhs, CSoundEntry *const & rhs, void *pCtx )
 		{
-			return ( Q_stricmp( lhs->m_Name.data(), rhs->m_Name.data() ) < 0 ) ? true : false;
+			return ( V_stricmp( lhs->m_Name.data(), rhs->m_Name.data() ) < 0 ) ? true : false;
 		}
 	};
 
-	DECLARE_FIXEDSIZE_ALLOCATOR(CSoundEntry);
+	private:
+		static ks::fixed_pool s_Allocator;
+		friend class ks::pooled< CSoundEntry >;
 };
 
 //-----------------------------------------------------------------------------
@@ -164,7 +156,7 @@ private:
 	struct CWaveNameHash
 	{
 		using is_transparent = void;
-		size_t operator()( std::string_view s ) const { return std::hash< std::string_view >()( s ); }
+		std::size_t operator()( std::string_view s ) const { return std::hash< std::string_view >()( s ); }
 	};
 	std::vector< const char * >	m_Waves;
 	std::unordered_map< std::string, WaveNameId_t, CWaveNameHash, std::equal_to<> > m_WaveIds;
@@ -178,5 +170,3 @@ private:
 	std::map< HSOUNDSCRIPTHASH, soundEntryHash_t >	m_HashToSoundEntry;
 
 };
-
-#endif // SOUNDEMITTERSYSTEMBASE_H

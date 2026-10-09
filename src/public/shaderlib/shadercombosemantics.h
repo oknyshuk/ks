@@ -1,12 +1,8 @@
-//==== Copyright (c) Valve Corporation, All rights reserved. =======//
-//
-// Vertex/Pixel Shaders
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef SHADERCOMBOSEMANTICS_H
-#define SHADERCOMBOSEMANTICS_H
-
+// Purpose: Vertex/Pixel Shaders
 
 struct ShaderComboInformation_t
 {
@@ -23,5 +19,3 @@ struct ShaderComboSemantics_t
 	const ShaderComboInformation_t *pStaticShaderComboArray;
 	int nStaticShaderComboArrayCount;
 };
-
-#endif // SHADERCOMBOSEMANTICS_H

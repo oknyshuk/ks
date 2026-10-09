@@ -1,19 +1,24 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Implementation for CBaseClientRenderTargets class.
 //			Provides Init functions for common render textures used by the engine.
 //			Mod makers can inherit from this class, and call the Create functions for
 //			only the render textures the want for their mod.
-//=============================================================================//
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
 #include "baseclientrendertargets.h"						// header	
 #include "materialsystem/imaterialsystemhardwareconfig.h"	// Hardware config checks
 #include "materialsystem/itexture.h"						// Hardware config checks
-#include "tier0/icommandline.h"
-#ifdef GAMEUI_UISYSTEM2_ENABLED
-#include "gameui.h"
-#endif
 #include "c_env_cascade_light.h"
 
 ConVar cl_disable_water_render_targets( "cl_disable_water_render_targets", "0" );
@@ -95,10 +100,6 @@ void CBaseClientRenderTargets::SetupClientRenderTargets( IMaterialSystem* pMater
 
 	g_pClientShadowMgr->InitRenderTargets();
 	
-#ifdef GAMEUI_UISYSTEM2_ENABLED
-	g_pGameUIGameSystem->InitRenderTargets();
-#endif
-
 	m_RenderToRTHelperTexture.Init( pMaterialSystem->CreateNamedRenderTargetTextureEx2( "render_to_rt_helper", 512, 512, RT_SIZE_DEFAULT, IMAGE_FORMAT_RGBA8888, MATERIAL_RT_DEPTH_SHARED, TEXTUREFLAGS_SINGLECOPY ) );
 
 	materials = pSave;
@@ -132,5 +133,4 @@ void CBaseClientRenderTargets::ShutdownClientRenderTargets()
 }
 
 static CBaseClientRenderTargets g_BaseClientRenderTargets;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CBaseClientRenderTargets, IClientRenderTargets, 
-	CLIENTRENDERTARGETS_INTERFACE_VERSION, g_BaseClientRenderTargets );
+static InterfaceReg s_Reg_CBaseClientRenderTargets_IClientRenderTargets( []() -> void * { return static_cast<IClientRenderTargets *>( &g_BaseClientRenderTargets ); }, CLIENTRENDERTARGETS_INTERFACE_VERSION );;

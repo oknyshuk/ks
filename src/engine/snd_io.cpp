@@ -1,15 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import ks.tier1;
 #include "tier2/riff.h"
 #include "snd_io.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
-#include "tier1/strtools.h"
+import std;
 
 //-----------------------------------------------------------------------------
 // Purpose: Implements Audio IO on the engine's COMMON filesystem
@@ -31,15 +28,15 @@ FileHandle_t COM_IOReadBinary::open( const char *pFileName )
 {
 	char namebuffer[512];
 	FileHandle_t hFile;
-	Q_strncpy( namebuffer, "sound", sizeof( namebuffer ) );
+	V_strncpy( namebuffer, "sound", sizeof( namebuffer ) );
 
 	// the server is sending back sound names with slashes in front... 
 	if ( pFileName[0] != '/' && pFileName[0] != '\\' )
 	{
-		Q_strncat( namebuffer, "/", sizeof( namebuffer ), COPY_ALL_CHARACTERS );
+		V_strncat( namebuffer, "/", sizeof( namebuffer ), COPY_ALL_CHARACTERS );
 	}
 
-	Q_strncat( namebuffer, pFileName, sizeof( namebuffer ), COPY_ALL_CHARACTERS );
+	V_strncat( namebuffer, pFileName, sizeof( namebuffer ), COPY_ALL_CHARACTERS );
 
 	hFile = g_pFileSystem->Open( namebuffer, "rb", "GAME" );
 
@@ -88,4 +85,3 @@ void COM_IOReadBinary::close( FileHandle_t file )
 
 static COM_IOReadBinary io;
 IFileReadBinary *g_pSndIO = &io;
-

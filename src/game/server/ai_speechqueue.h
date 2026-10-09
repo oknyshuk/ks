@@ -1,18 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: An event queue of AI concepts that dispatches them to appropriate characters.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef AI_SPEECHQUEUE_H
-#define AI_SPEECHQUEUE_H
+#include "igamesystem.h"
+#include "ai_responsesystem.h"
+#include "ai_speechconcept.h"
+#include "baseentity.h"
+import std;
 
-
-#include "ai_speech.h"
-#include <list>
-
-#define AI_RESPONSE_QUEUE_SIZE 64
+inline constexpr auto AI_RESPONSE_QUEUE_SIZE = 64;
 
 enum DeferredResponseTarget_t // possible targets for a deferred response
 {
@@ -51,7 +49,7 @@ public:
 		CFollowupTargetSpec_t(DeferredResponseTarget_t target) // eg, ANY, ALL, etc. 
 			: m_iTargetType(target)  
 		{	
-			AssertMsg(m_iTargetType != kDRT_SPECIFIC, "Response rule followup tried to specify an entity target, but didn't provide the target.\n" ); 
+			contract_assert( ( m_iTargetType != kDRT_SPECIFIC ) && "Response rule followup tried to specify an entity target, but didn't provide the target.\n" ); 
 		}
 		CFollowupTargetSpec_t(void) // default: invalid
 			: m_iTargetType(kDRT_MAX)
@@ -71,7 +69,7 @@ public:
 		*/
 		CFollowupTargetSpec_t m_Target;
 
-		inline void Init( const AIConcept_t &conc, const AI_CriteriaSet * RESTRICT contexts, float dtime, const CFollowupTargetSpec_t &target, CBaseEntity *pIssuer );
+		inline void Init( const AIConcept_t &conc, const AI_CriteriaSet * __restrict__ contexts, float dtime, const CFollowupTargetSpec_t &target, CBaseEntity *pIssuer );
 		inline bool IsQuashed() { return !m_Target.IsValid(); }
 		void Quash(); ///< make this response invalid.
 	};
@@ -84,7 +82,7 @@ public:
 
 	/// Add a deferred response.
 	void Add( const AIConcept_t &conc,  ///< concept to dispatch
-			  const AI_CriteriaSet * RESTRICT contexts, ///< the contexts that come with it (may be NULL)
+			  const AI_CriteriaSet * __restrict__ contexts, ///< the contexts that come with it (may be NULL)
 			  float time,					 ///< when to dispatch it. You can specify a time of zero to mean "immediately."
 			  const CFollowupTargetSpec_t &targetspec, /// All information necessary to target this response
 			  CBaseEntity *pIssuer = nullptr ///< the entity who should not respond if this is a ANY or ALL rule. (eg, don't let people talk to themselves.)
@@ -93,7 +91,7 @@ public:
 	/// Remove all deferred responses matching the concept and issuer.
 	void Remove( const AIConcept_t &conc,  ///< concept to dispatch
 		CBaseEntity * const pIssuer = nullptr ///< the entity issuing the response, if one exists.
-		) RESTRICT;
+		) __restrict__;
 
 	/// Remove all deferred responses queued to be spoken by given character
 	void RemoveSpeechQueuedFor( const CBaseEntity *pSpeaker	);
@@ -122,7 +120,7 @@ protected:
 private:
 	/// Helper function for one case in DispatchOneResponse
 	/// (for better organization)
-	bool DispatchOneResponse_ThenANY( CDeferredResponse &response, AI_CriteriaSet * RESTRICT pDeferredCriteria, CBaseEntity *  const RESTRICT pIssuer, float followupMaxDistSq );
+	bool DispatchOneResponse_ThenANY( CDeferredResponse &response, AI_CriteriaSet * __restrict__ pDeferredCriteria, CBaseEntity *  const __restrict__ pIssuer, float followupMaxDistSq );
 
 	//////////////////// Data ////////////////////
 protected:
@@ -138,7 +136,7 @@ protected:
 	std::vector< EHANDLE > m_ExpresserTargets; // a list of legitimate expresser targets
 };
 
-inline void CResponseQueue::CDeferredResponse::Init(const AIConcept_t &conc, const AI_CriteriaSet * RESTRICT contexts, float dtime, const CFollowupTargetSpec_t &target, CBaseEntity *pIssuer )
+inline void CResponseQueue::CDeferredResponse::Init(const AIConcept_t &conc, const AI_CriteriaSet * __restrict__ contexts, float dtime, const CFollowupTargetSpec_t &target, CBaseEntity *pIssuer )
 {
 	m_concept = conc;
 	m_fDispatchTime = dtime;
@@ -176,7 +174,7 @@ public:
 	virtual void FrameUpdatePostEntityThink( void );
 	virtual void LevelInitPreEntity( void );
 
-	inline CResponseQueue *GetQueue(void) { Assert(m_pQueue); return m_pQueue; }
+	inline CResponseQueue *GetQueue(void) { contract_assert( m_pQueue ); return m_pQueue; }
 
 protected:
 	CResponseQueue *m_pQueue;
@@ -231,7 +229,3 @@ inline void QueueSpeak( const AIConcept_t &conc,					///< concept name to say
 	return g_ResponseQueueManager.GetQueue()->Add( conc, &criteria, gpGlobals->curtime + delay,
 		CResponseQueue::CFollowupTargetSpec_t(target), pIssuer );
 }
-
-
-
-#endif // AI_SPEECHQUEUE_H

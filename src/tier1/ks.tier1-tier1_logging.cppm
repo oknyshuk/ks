@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
+export module ks.tier1:tier1_logging;
+
+import std;
+import ks.math;
+export import :byte_writer;
+
+export extern "C++" {
+
+class CBufferedLoggingListener : public ILoggingListener
+{
+public:
+	CBufferedLoggingListener();
+
+	virtual void Log( const LoggingContext_t *pContext, const tchar *pMessage );
+
+	void EmitBufferedSpew();
+
+private:
+
+	ks::byte_writer m_StoredSpew;
+};
+
+}

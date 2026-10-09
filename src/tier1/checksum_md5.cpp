@@ -1,27 +1,26 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "basetypes.h"
-#include "commonmacros.h"
-#include "checksum_md5.h"
-#include <string.h>
-#include <stdio.h>
-#include "tier1/strtools.h"
-#include "tier0/dbg.h"
+import ks.tier1;
+import std;
 
 // The four core functions - F1 is optimized somewhat
 // #define F1(x, y, z) (x & y | ~x & z)
-#define F1(x, y, z) (z ^ (x & (y ^ z)))
-#define F2(x, y, z) F1(z, x, y)
-#define F3(x, y, z) (x ^ y ^ z)
-#define F4(x, y, z) (y ^ (x | ~z))
+[[gnu::always_inline]] inline constexpr uint32 F1( uint32 x, uint32 y, uint32 z ) { return ( z ^ ( x & ( y ^ z ) ) ); }
+[[gnu::always_inline]] inline constexpr uint32 F2( uint32 x, uint32 y, uint32 z ) { return F1( z, x, y ); }
+[[gnu::always_inline]] inline constexpr uint32 F3( uint32 x, uint32 y, uint32 z ) { return ( x ^ y ^ z ); }
+[[gnu::always_inline]] inline constexpr uint32 F4( uint32 x, uint32 y, uint32 z ) { return ( y ^ ( x | ~z ) ); }
 
 // This is the central step in the MD5 algorithm.
-#define MD5STEP(f, w, x, y, z, data, s) \
-        ( w += f(x, y, z) + data,  w = w<<s | w>>(32-s),  w += x )
+// The round function is a plain function pointer so that F1..F4 can be passed by name.
+typedef uint32 (*MD5RoundFn_t)( uint32, uint32, uint32 );
+
+[[gnu::always_inline]] inline void MD5STEP( MD5RoundFn_t f, uint32 &w, uint32 x, uint32 y, uint32 z, uint32 data, int s )
+{
+	w += f( x, y, z ) + data;
+	w = ( w << s ) | ( w >> ( 32 - s ) );
+	w += x;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: The core of the MD5 algorithm, this alters an existing MD5 hash to
@@ -31,19 +30,8 @@
 //			in[16] - 
 // Output : static void
 //-----------------------------------------------------------------------------
-#if ( PLAT_BIG_ENDIAN == 1 )
-static void MD5Transform(unsigned int buf[4], unsigned int const in_big[16])
-{
-
-	unsigned int in[16];
-	for( int i = 0; i != 16; ++i )
-	{
-		in[i] = LittleDWord(in_big[i]);
-	}
-#else
 static void MD5Transform(unsigned int buf[4], unsigned int const in[16])
 {
-#endif
     unsigned int a, b, c, d;
 
     a = buf[0];
@@ -169,10 +157,10 @@ void MD5Update(MD5Context_t *ctx, unsigned char const *buf, unsigned int len)
         t = 64 - t;
         if (len < t)
 		{
-            memcpy(p, buf, len);
+            std::memcpy(p, buf, len);
             return;
         }
-        memcpy(p, buf, t);
+        std::memcpy(p, buf, t);
         //byteReverse(ctx->in, 16);
         MD5Transform(ctx->buf, (unsigned int *) ctx->in);
         buf += t;
@@ -182,7 +170,7 @@ void MD5Update(MD5Context_t *ctx, unsigned char const *buf, unsigned int len)
 
     while (len >= 64)
 	{
-        memcpy(ctx->in, buf, 64);
+        std::memcpy(ctx->in, buf, 64);
         //byteReverse(ctx->in, 16);
         MD5Transform(ctx->buf, (unsigned int *) ctx->in);
         buf += 64;
@@ -190,7 +178,7 @@ void MD5Update(MD5Context_t *ctx, unsigned char const *buf, unsigned int len)
     }
 
     /* Handle any remaining bytes of data. */
-    memcpy(ctx->in, buf, len);
+    std::memcpy(ctx->in, buf, len);
 }
 
 //-----------------------------------------------------------------------------
@@ -219,36 +207,28 @@ void MD5Final(unsigned char digest[MD5_DIGEST_LENGTH], MD5Context_t *ctx)
     if (count < 8)
 	{
         /* Two lots of padding:  Pad the first block to 64 bytes */
-        memset(p, 0, count);
+        std::memset(p, 0, count);
         //byteReverse(ctx->in, 16);
         MD5Transform(ctx->buf, (unsigned int *) ctx->in);
 
         /* Now fill the next block with 56 bytes */
-        memset(ctx->in, 0, 56);
+        std::memset(ctx->in, 0, 56);
     }
 	else
 	{
         /* Pad block to 56 bytes */
-        memset(p, 0, count - 8);
+        std::memset(p, 0, count - 8);
     }
     //byteReverse(ctx->in, 14);
 
     /* Append length in bits and transform */
-	((unsigned int *) ctx->in)[14] = LittleDWord( ctx->bits[0] );
-	((unsigned int *) ctx->in)[15] = LittleDWord( ctx->bits[1] );
+	((unsigned int *) ctx->in)[14] = ( ctx->bits[0] );
+	((unsigned int *) ctx->in)[15] = ( ctx->bits[1] );
 
     MD5Transform(ctx->buf, (unsigned int *) ctx->in);
     //byteReverse((unsigned char *) ctx->buf, 4);
-#if ( PLAT_BIG_ENDIAN == 1 )
-	COMPILE_TIME_ASSERT( MD5_DIGEST_LENGTH == (sizeof(unsigned int) * 4) );
-	((unsigned int *)digest)[0] = LittleDWord( ctx->buf[0] );
-	((unsigned int *)digest)[1] = LittleDWord( ctx->buf[1] );
-	((unsigned int *)digest)[2] = LittleDWord( ctx->buf[2] );
-	((unsigned int *)digest)[3] = LittleDWord( ctx->buf[3] );
-#else
-    memcpy(digest, ctx->buf, MD5_DIGEST_LENGTH);
-#endif
-    memset(ctx, 0, sizeof(*ctx));        /* In case it's sensitive */
+    std::memcpy(digest, ctx->buf, MD5_DIGEST_LENGTH);
+    std::memset(ctx, 0, sizeof(*ctx));        /* In case it's sensitive */
 }
 
 //-----------------------------------------------------------------------------
@@ -261,9 +241,9 @@ char *MD5_Print( unsigned char *hash, int hashlen )
 {
 	static char szReturn[64];
 
-	Assert( hashlen <= 32 );
+	contract_assert( hashlen <= 32 );
 
-	Q_binarytohex( hash, hashlen, szReturn, sizeof( szReturn ) );
+	V_binarytohex( hash, hashlen, szReturn, sizeof( szReturn ) );
 	return szReturn;
 }
 
@@ -274,17 +254,17 @@ char *MD5_Print( unsigned char *hash, int hashlen )
 //-----------------------------------------------------------------------------
 unsigned int MD5_PseudoRandom(unsigned int nSeed)
 {
-	nSeed = LittleDWord( nSeed );
+	nSeed = ( nSeed );
 	MD5Context_t ctx;
 	unsigned char digest[MD5_DIGEST_LENGTH]; // The MD5 Hash
 
-	memset( &ctx, 0, sizeof( ctx ) );
+	std::memset( &ctx, 0, sizeof( ctx ) );
 		
 	MD5Init(&ctx);
 	MD5Update(&ctx, (unsigned char*)&nSeed, sizeof(nSeed) );
 	MD5Final(digest, &ctx);
 
-	return LittleDWord(*(unsigned int*)(digest+6));	// use 4 middle bytes for random value
+	return (*(unsigned int*)(digest+6));	// use 4 middle bytes for random value
 }
 
 //-----------------------------------------------------------------------------
@@ -302,7 +282,7 @@ void MD5Value_t::Zero()
 //-----------------------------------------------------------------------------
 bool MD5Value_t::IsZero() const
 {
-	for ( int i = 0 ; i < Q_ARRAYSIZE( bits ) ; ++i )
+	for ( int i = 0 ; i < std::size( bits ) ; ++i )
 	{
 		if ( bits[i] != 0 )
 			return false;
@@ -314,7 +294,7 @@ bool MD5Value_t::IsZero() const
 //-----------------------------------------------------------------------------
 void MD5_ProcessSingleBuffer( const void *p, int len, MD5Value_t &md5Result )
 {
-	Assert( len >= 0 );
+	contract_assert( len >= 0 );
 	MD5Context_t ctx;
 	MD5Init( &ctx );
 	MD5Update( &ctx, (unsigned char const *)p, len );

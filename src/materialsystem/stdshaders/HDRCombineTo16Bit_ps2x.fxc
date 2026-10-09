@@ -1,5 +1,6 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
- 
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 #include "common_ps_fxc.h"
 
 sampler LowSampler	: register( s0 );

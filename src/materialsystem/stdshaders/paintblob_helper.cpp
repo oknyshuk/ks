@@ -1,17 +1,16 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
 #include "paintblob_helper.h"
-#include "cpp_shader_constant_register_map.h"
 /*
-#include "mathlib/vmatrix.h"
-#include "convar.h"
+import std;
 */
 
 // Auto generated inc files
 #include "paintblob_vs20.inc"
 #include "paintblob_ps20b.inc"
-
 
 void InitParamsPaintBlob( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, PaintBlobVars_t &info )
 {
@@ -42,7 +41,7 @@ void InitParamsPaintBlob( CBaseVSShader *pShader, IMaterialVar** params, const c
 	SET_PARAM_VEC_IF_NOT_DEFINED( info.m_nBBMax, kDefaultBB, 3 );
 
 	// FLASHLIGHTFIXME: Do ShaderAPI::BindFlashlightTexture
-	Assert( info.m_nFlashlightTexture >= 0 );
+	contract_assert( info.m_nFlashlightTexture >= 0 );
 	if ( g_pHardwareConfig->SupportsBorderColor() )
 	{
 		params[info.m_nFlashlightTexture]->SetStringValue( "effects/flashlight_border" );
@@ -162,7 +161,7 @@ void DrawPaintBlob(  CBaseVSShader *pShader, IMaterialVar** params, IShaderDynam
 		}
 		else
 		{
-			Assert( !"No ps_3_0" );
+			contract_assert( !"No ps_3_0" );
 		}
 
 		// Textures
@@ -230,19 +229,19 @@ void DrawPaintBlob(  CBaseVSShader *pShader, IMaterialVar** params, IShaderDynam
 		if ( IS_PARAM_DEFINED( info.m_nUVProjOffset ) )
 			params[info.m_nUVProjOffset]->GetVecValue( flConsts, 3 );
 		else
-			memcpy( flConsts, kDefaultUVProjOffset, sizeof( kDefaultUVProjOffset ) );
+			std::memcpy( flConsts, kDefaultUVProjOffset, sizeof( kDefaultUVProjOffset ) );
 		pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_1, flConsts );
 
 		if ( IS_PARAM_DEFINED( info.m_nBBMin ) )
 			params[info.m_nBBMin]->GetVecValue( flConsts, 3 );
 		else
-			memcpy( flConsts, kDefaultBB, sizeof( kDefaultBB ) );
+			std::memcpy( flConsts, kDefaultBB, sizeof( kDefaultBB ) );
 		pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_2, flConsts );
 
 		if ( IS_PARAM_DEFINED( info.m_nBBMax ) )
 			params[info.m_nBBMax]->GetVecValue( flConsts, 3 );
 		else
-			memcpy( flConsts, kDefaultBB, sizeof( kDefaultBB ) );
+			std::memcpy( flConsts, kDefaultBB, sizeof( kDefaultBB ) );
 		pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_3, flConsts );
 
 		//////////////////////
@@ -291,7 +290,7 @@ void DrawPaintBlob(  CBaseVSShader *pShader, IMaterialVar** params, IShaderDynam
 		bool bFlashlightShadows = false;
 		if( bHasFlashlight )
 		{
-			Assert( info.m_nFlashlightTexture >= 0 && info.m_nFlashlightTextureFrame >= 0 );
+			contract_assert( info.m_nFlashlightTexture >= 0 && info.m_nFlashlightTextureFrame >= 0 );
 			pShader->BindTexture( SHADER_SAMPLER10, TEXTURE_BINDFLAGS_SRGBREAD, info.m_nFlashlightTexture, info.m_nFlashlightTextureFrame );
 			VMatrix worldToTexture;
 			ITexture *pFlashlightDepthTexture;
@@ -351,11 +350,11 @@ void DrawPaintBlob(  CBaseVSShader *pShader, IMaterialVar** params, IShaderDynam
 		flConsts[3] = IS_PARAM_DEFINED( info.m_nInteriorRefractStrength ) ? params[info.m_nInteriorRefractStrength]->GetFloatValue() : kDefaultInteriorRefractStrength;
 		pShaderAPI->SetPixelShaderConstant( 0, flConsts, 1 );
 
-		Assert( IS_PARAM_DEFINED( info.m_nFresnelParams ) );
+		contract_assert( IS_PARAM_DEFINED( info.m_nFresnelParams ) );
 		if ( IS_PARAM_DEFINED( info.m_nFresnelParams ) )
 			params[info.m_nFresnelParams]->GetVecValue( flConsts, 3 );
 		else
-			memcpy( flConsts, kDefaultFresnelParams, sizeof( kDefaultFresnelParams ) );
+			std::memcpy( flConsts, kDefaultFresnelParams, sizeof( kDefaultFresnelParams ) );
 		flConsts[3] = params[info.m_nInteriorBackgroundBoost]->GetFloatValue();
 		pShaderAPI->SetPixelShaderConstant( 1, flConsts, 1 );
 
@@ -383,7 +382,7 @@ void DrawPaintBlob(  CBaseVSShader *pShader, IMaterialVar** params, IShaderDynam
 		if ( IS_PARAM_DEFINED( info.m_nBaseColorTint ) )
 			params[info.m_nBaseColorTint]->GetVecValue( flConsts, 3 );
 		else
-			memcpy( flConsts, kDefaultBaseColorTint, sizeof( kDefaultBaseColorTint ) );
+			std::memcpy( flConsts, kDefaultBaseColorTint, sizeof( kDefaultBaseColorTint ) );
 		flConsts[3] = IS_PARAM_DEFINED( info.m_nInteriorBackLightScale ) ? params[info.m_nInteriorBackLightScale]->GetFloatValue() : kDefaultInteriorBackLightScale;
 		pShaderAPI->SetPixelShaderConstant( 19, flConsts, 1 );
 

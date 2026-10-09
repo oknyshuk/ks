@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Class data for an AI Concept, an atom of response-driven dialog.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef RR_SPEECHCONCEPT_H
-#define RR_SPEECHCONCEPT_H
-
-
-#include <string_view>
-#include "tier1/intern_pool.h"
+import std;
+import ks.tier1;
 
 #define RR_CONCEPTS_ARE_STRINGS 0
-
 
 typedef ks::intern_pool CRR_ConceptSymbolTable;
 
@@ -50,6 +44,3 @@ private:
 	CRR_Concept& operator=(const char *fromString);
 };
 };
-
-
-#endif

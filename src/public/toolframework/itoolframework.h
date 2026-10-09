@@ -1,24 +1,17 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ITOOLFRAMEWORK_H
-#define ITOOLFRAMEWORK_H
-
-#include "appframework/iappsystem.h"
+import ks.tier1;
 #include "materialsystem/imaterialproxy.h"
 #include "toolframework/itoolentity.h"
-#include "mathlib/vector.h"
-#include "color.h"
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
 class IToolSystem;
 struct SpatializationInfo_t;
-class KeyValues;
 class CBoneList;
 
 
@@ -317,6 +310,4 @@ public:  // general framework hooks
 extern IToolFrameworkInternal *toolframework;
 
 // Exposed to launcher to automatically add AppSystemGroup hooks
-#define VTOOLFRAMEWORK_INTERFACE_VERSION  "VTOOLFRAMEWORKVERSION002"
-
-#endif // ITOOLFRAMEWORK_H
+inline constexpr const char *VTOOLFRAMEWORK_INTERFACE_VERSION = "VTOOLFRAMEWORKVERSION002";

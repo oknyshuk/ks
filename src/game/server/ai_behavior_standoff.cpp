@@ -1,11 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Combat behaviors for AIs in a relatively self-preservationist mode.
 //			Lots of cover taking and attempted shots out of cover.
-//
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 
@@ -19,33 +46,18 @@
 #include "ai_goalentity.h"
 #include "ndebugoverlay.h"
 
-#define GOAL_POSITION_INVALID	Vector( FLT_MAX, FLT_MAX, FLT_MAX )
+inline const Vector GOAL_POSITION_INVALID = Vector( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
 
 ConVar DrawBattleLines( "ai_drawbattlelines", "0", FCVAR_CHEAT );
 
 
 static AI_StandoffParams_t AI_DEFAULT_STANDOFF_PARAMS = { AIHCR_MOVE_ON_COVER, true, true, 1.5f, 2.5f, 1, 3, 25, false, 0.0f };
 
-#define MAKE_ACTMAP_KEY( posture, activity ) ( (((unsigned)(posture)) << 16) | ((unsigned)(activity)) )
+template <typename T1, typename T2> [[gnu::always_inline]] inline constexpr auto MAKE_ACTMAP_KEY( T1 posture, T2 activity ) { return ( (((unsigned)(posture)) << 16) | ((unsigned)(activity)) ); }
 
 // #define DEBUG_STANDOFF 1
 
 
-#ifdef DEBUG_STANDOFF
-#define StandoffMsg( msg ) 					DevMsg( GetOuter(), msg )
-#define StandoffMsg1( msg, a ) 				DevMsg( GetOuter(), msg, a )
-#define StandoffMsg2( msg, a, b ) 			DevMsg( GetOuter(), msg, a, b )
-#define StandoffMsg3( msg, a, b, c ) 		DevMsg( GetOuter(), msg, a, b, c )
-#define StandoffMsg4( msg, a, b, c, d ) 	DevMsg( GetOuter(), msg, a, b, c, d )
-#define StandoffMsg5( msg, a, b, c, d, e )	DevMsg( GetOuter(), msg, a, b, c, d, e )
-#else
-#define StandoffMsg( msg ) 					((void)0)
-#define StandoffMsg1( msg, a ) 				((void)0)
-#define StandoffMsg2( msg, a, b ) 			((void)0)
-#define StandoffMsg3( msg, a, b, c ) 		((void)0)
-#define StandoffMsg4( msg, a, b, c, d ) 	((void)0)
-#define StandoffMsg5( msg, a, b, c, d, e )	((void)0)
-#endif
 
 //-----------------------------------------------------------------------------
 //
@@ -177,7 +189,7 @@ CAI_StandoffBehavior::CAI_StandoffBehavior( CAI_BaseNPC *pOuter )
 	m_fActive = false;
 	SetParameters( AI_DEFAULT_STANDOFF_PARAMS );
 	SetPosture( AIP_STANDING );
-	m_SavedDistTooFar = FLT_MAX;
+	m_SavedDistTooFar = std::numeric_limits<float>::max();
 	m_fForceNewEnemy = false;
 	m_TimePreventForceNewEnemy.Set( 3.0, 6.0 );
 	m_fIgnoreFronts = false;
@@ -254,7 +266,7 @@ void CAI_StandoffBehavior::BeginScheduleSelection()
 	GetOuter()->GetShotRegulator()->Reset();
 
 	m_SavedDistTooFar = GetOuter()->m_flDistTooFar;
-	GetOuter()->m_flDistTooFar = FLT_MAX;
+	GetOuter()->m_flDistTooFar = std::numeric_limits<float>::max();
 	
 	m_TimeForceCoverHint.Set( 8, false );
 	m_RandomCoverChangeTimer.Set( 8, 16, false );
@@ -287,7 +299,7 @@ void CAI_StandoffBehavior::EndScheduleSelection()
 
 void CAI_StandoffBehavior::PrescheduleThink()
 {
-	VPROF_BUDGET( "CAI_StandoffBehavior::PrescheduleThink", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CAI_StandoffBehavior::PrescheduleThink", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	BaseClass::PrescheduleThink();
 	
@@ -420,7 +432,6 @@ int CAI_StandoffBehavior::SelectScheduleUpdateWeapon( void )
 	// Check if need to reload
 	if ( HasCondition ( COND_NO_PRIMARY_AMMO ) || HasCondition ( COND_LOW_PRIMARY_AMMO ))
 	{
-		StandoffMsg( "Out of ammo, reloading\n" );
 		if ( m_params.fCoverOnReload )
 		{
 			GetOuter()->SpeakSentence( STANDOFF_SENTENCE_OUT_OF_AMMO );
@@ -439,7 +450,6 @@ int CAI_StandoffBehavior::SelectScheduleUpdateWeapon( void )
 		if ( iPercent <= m_params.oddsCover && GetEnemy() != nullptr )
 		{
 			SetReuseCurrentCover();
-			StandoffMsg( "Hurt, firing one more shot before cover\n" );
 			if ( !GetOuter()->GetShotRegulator()->IsInRestInterval() )
 			{
 				GetOuter()->GetShotRegulator()->SetBurstShotsRemaining( 1 );
@@ -460,14 +470,12 @@ int CAI_StandoffBehavior::SelectScheduleCheckCover( void )
 		if ( GetEnemy() )
 		{
 			GetOuter()->SpeakSentence( STANDOFF_SENTENCE_FORCED_TAKE_COVER );
-			StandoffMsg( "Taking forced cover\n" );
 			return SCHED_TAKE_COVER_FROM_ENEMY;
 		}
 	}
 		
 	if ( GetOuter()->GetShotRegulator()->IsInRestInterval() )
 	{
-		StandoffMsg( "Regulated to not shoot\n" );
 		if ( GetHintType() == HINT_TACTICAL_COVER_LOW )
 			SetPosture( AIP_CROUCHING );
 		else
@@ -491,7 +499,6 @@ int CAI_StandoffBehavior::SelectScheduleEstablishAim( void )
 		{
 			// force a stand up, just in case
 			GetOuter()->SpeakSentence( STANDOFF_SENTENCE_STAND_CHECK_TARGET );
-			StandoffMsg( "Crouching, standing up to gain LOS\n" );
 			SetPosture( AIP_PEEKING );
 			return SCHED_STANDOFF;
 		}
@@ -501,7 +508,6 @@ int CAI_StandoffBehavior::SelectScheduleEstablishAim( void )
 			{
 				// Look for a new enemy
 				m_fForceNewEnemy = true;
-				StandoffMsg( "Looking for enemy\n" );
 			}
 		}
 	}
@@ -570,7 +576,6 @@ int CAI_StandoffBehavior::TranslateSchedule( int schedule )
 {
 	if ( schedule == SCHED_CHASE_ENEMY )
 	{
-		StandoffMsg( "trying SCHED_ESTABLISH_LINE_OF_FIRE\n" );
 		return SCHED_ESTABLISH_LINE_OF_FIRE;
 	}
 	return BaseClass::TranslateSchedule( schedule );
@@ -676,7 +681,6 @@ Vector CAI_StandoffBehavior::GetStandoffGoalPosition()
 				
 			if ( pBattleLine->m_fActive && pBattleLine->Affects( GetOuter() ) )
 			{
-				StandoffMsg1( "Using battleline %s as goal\n", STRING( pBattleLine->GetEntityName() ) );
 				return pBattleLine->GetAbsOrigin();
 			}
 		}
@@ -821,7 +825,6 @@ void CAI_StandoffBehavior::StartTask( const Task_t *pTask )
 		
 		case TASK_FIND_COVER_FROM_ENEMY:
 		{
-			StandoffMsg( "TASK_FIND_COVER_FROM_ENEMY\n" );
 
 			// If within time window to force change
 			if ( !m_params.fStayAtCover && (!m_TimeForceCoverHint.Expired() || m_RandomCoverChangeTimer.Expired()) )
@@ -858,7 +861,6 @@ void CAI_StandoffBehavior::StartTask( const Task_t *pTask )
 					{
 						// Half the time, if the player is leading, try to find a spot near them
 						bTryGoalPosFirst = false;
-						StandoffMsg( "Not trying goal pos\n" );
 					}
 				}
 
@@ -870,13 +872,11 @@ void CAI_StandoffBehavior::StartTask( const Task_t *pTask )
 					if ( coverPos == vec3_origin )
 						pTacticalServices->FindCoverPos( goalPos, enemyPos, enemyEyePos, 15*12-0.1, 40*12, &coverPos );
 
-					StandoffMsg1( "Trying goal pos, %s\n", ( coverPos == vec3_origin  ) ? "failed" :  "succeeded" );
 				}
 
 				if ( coverPos == vec3_origin  ) 
 				{
 					// Otherwise, find a node near to self
-					StandoffMsg( "Looking for near cover\n" );
 					if ( !GetTacticalServices()->FindCoverPos( enemyPos, enemyEyePos, 0, coverRadius, &coverPos ) ) 
 					{
 						// Try local lateral cover
@@ -888,7 +888,7 @@ void CAI_StandoffBehavior::StartTask( const Task_t *pTask )
 							{
 								if ( !GetTacticalServices()->FindLateralCover( enemyEyePos, 0, &coverPos ) )
 								{
-									Assert( coverPos == vec3_origin );
+									contract_assert( coverPos == vec3_origin );
 								}
 							}
 							m_fIgnoreFronts = false;
@@ -1056,14 +1056,14 @@ void CAI_MappedActivityBehavior_Temporary::UpdateTranslateActivityMap()
 	
 	CBaseCombatWeapon *pWeapon = GetOuter()->GetActiveWeapon();
 	const char *pszWeaponClass = ( pWeapon ) ? pWeapon->GetClassname() : "";
-	for ( int i = 0; i < ARRAYSIZE(mappings); i++ )
+	for ( int i = 0; i < std::size( mappings ); i++ )
 	{
 		if ( !mappings[i].pszWeapon || stricmp( mappings[i].pszWeapon, pszWeaponClass ) == 0 )
 		{
 			if ( HaveSequenceForActivity( mappings[i].translation ) || HaveSequenceForActivity( GetOuter()->Weapon_TranslateActivity( mappings[i].translation ) ) )
 			{
 				[[maybe_unused]] bool bInserted = m_ActivityMap.emplace( MAKE_ACTMAP_KEY( mappings[i].posture, mappings[i].activity ), mappings[i].translation ).second;
-				Assert( bInserted );
+				contract_assert( bInserted );
 			}
 		}
 	}

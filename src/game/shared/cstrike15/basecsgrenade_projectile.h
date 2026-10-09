@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef BASECSGRENADE_PROJECTILE_H
-#define BASECSGRENADE_PROJECTILE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "basegrenade_shared.h"
-
 
 #ifdef CLIENT_DLL
 	#define CBaseCSGrenadeProjectile C_BaseCSGrenadeProjectile
@@ -53,7 +46,7 @@ public:
 #else
 	DECLARE_DATADESC();
 
-	CBaseCSGrenadeProjectile() : m_pWeaponInfo(nullptr), m_bDetonationRecorded(false) {}
+	CBaseCSGrenadeProjectile() : m_pWeaponInfo(nullptr) {}
 	virtual void PostConstructor( const char *className );
 	virtual ~CBaseCSGrenadeProjectile();
 
@@ -71,7 +64,6 @@ public:
 	void DangerSoundThink( void );
 
 	virtual void OnBounced( void ) {}
-	virtual void Explode( trace_t *pTrace, int bitsDamageType );
 	
 	virtual float GetShakeAmplitude( void ) { return 0.0f; }
 	virtual void Splash();
@@ -87,12 +79,6 @@ public:
 	// of weapon they are
 	const CCSWeaponInfo *m_pWeaponInfo;
 
-	enum
-	{
-		GRENADE_EXTINGUISHED_INFERNO = 1 << 0,
-	};
-	uint8				m_unOGSExtraFlags;			// Misc flags about the grenade's effect in game to report to ogs
-
 	EHANDLE m_lastHitPlayer;
 
 	void DetonateOnNextThink( void ) { m_flDetonateTime = 0.0f; }
@@ -104,11 +90,6 @@ protected:
 	//Set the time to detonate ( now + timer )
 	void SetDetonateTimerLength( float timer );
 
-	// Called when this grenade explodes. If your decended class overides some part of the detonation process
-	// and prevents detonate from being called, you need to call this to make ogs still records it.
-	void RecordDetonation( void );
-	bool m_bDetonationRecorded;
-
 private:	
 	
 	//Custom collision to allow for constant elasticity on hit surfaces
@@ -118,5 +99,3 @@ private:
 
 #endif
 };
-
-#endif // BASECSGRENADE_PROJECTILE_H

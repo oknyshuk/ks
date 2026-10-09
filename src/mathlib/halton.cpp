@@ -1,11 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <halton.h>
-
+import std;
+import ks.math;
 
 HaltonSequenceGenerator_t::HaltonSequenceGenerator_t(int b)
 {
@@ -47,6 +44,6 @@ int InsideOut( int nTotal, int nCounter )
 			m = ( m + 1 ) >> 1;
 		}
 	}
-	Assert( ( b >= 0 ) && ( b < nTotal ) );
+	contract_assert( ( b >= 0 ) && ( b < nTotal ) );
 	return b;
 }

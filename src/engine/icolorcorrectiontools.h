@@ -1,15 +1,10 @@
-//====== Copyright (c) 1996-2003, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef ICOLORCORRECTIONTOOLS_H
-#define ICOLORCORRECTIONTOOLS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2003 Valve Corporation
 
 class IColorOperation;
 
-abstract_class IColorCorrectionTools
+class IColorCorrectionTools
 {
 public:
 	virtual void		Init( void ) = 0;
@@ -25,5 +20,3 @@ public:
 };
 
 extern IColorCorrectionTools *colorcorrectiontools;
-
-#endif // COLORCORRECTIONTOOLS_H

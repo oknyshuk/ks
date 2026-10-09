@@ -1,12 +1,19 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#include "pch_materialsystem.h"
+import std;
 
-#define MATSYS_INTERNAL
+
+import ks.tier1;
+
+#include "filesystem.h"
+
+#include "materialsystem_global.h"
+#include "materialsystem/imesh.h"
+
+#include "imaterialinternal.h"
+#include "imaterialsysteminternal.h"
+
 
 #include "cmaterialdict.h"
 
@@ -70,12 +77,12 @@ void CMaterialDict::RemoveMaterialFromMaterialList( IMaterialInternal *pMaterial
 		}
 	}
 
-	Assert( i != InvalidMaterial() );
+	contract_assert( i != InvalidMaterial() );
 
 #ifdef _DEBUG
 	for ( i = iNext; i != InvalidMaterial(); i = NextMaterial(i) )
 	{
-		Assert( m_MaterialSlots[i].m_pMaterial != pMaterial );
+		contract_assert( m_MaterialSlots[i].m_pMaterial != pMaterial );
 	}
 #endif
 }
@@ -87,14 +94,14 @@ void CMaterialDict::RemoveMaterialFromMaterialList( IMaterialInternal *pMaterial
 IMaterialInternal* CMaterialDict::AddMaterial( char const* pName, const char *pTextureGroupName )
 {
 	IMaterialInternal *pMaterial = IMaterialInternal::CreateMaterial( pName, pTextureGroupName );
-	Assert( pMaterial && pMaterial->IsRealTimeVersion() );
+	contract_assert( pMaterial && pMaterial->IsRealTimeVersion() );
 	AddMaterialToMaterialList( pMaterial );
 	return pMaterial;
 }
 
 void CMaterialDict::RemoveMaterial( IMaterialInternal* pMaterial )
 {
-	Assert( (pMaterial == nullptr) || pMaterial->IsRealTimeVersion() );
+	contract_assert( (pMaterial == nullptr) || pMaterial->IsRealTimeVersion() );
 	RemoveMaterialFromMaterialList( pMaterial );
 	IMaterialInternal::DestroyMaterial( pMaterial );
 }
@@ -102,7 +109,7 @@ void CMaterialDict::RemoveMaterial( IMaterialInternal* pMaterial )
 IMaterialInternal *CMaterialDict::AddMaterialSubRect( const char *pName, const char *pTextureGroupName, KeyValues *pKeyValues, KeyValues *pPatchKeyValues )
 {
 	IMaterialInternal *pMaterial = IMaterialInternal::CreateMaterialSubRect( pName, pTextureGroupName, pKeyValues, pPatchKeyValues, true );
-	Assert( pMaterial );
+	contract_assert( pMaterial );
 	AddMaterialToMaterialList( pMaterial );
 	return pMaterial;
 }
@@ -150,4 +157,3 @@ void CMaterialDict::RemoveAllMaterials()
 
 	RemoveAllMaterialsFromMaterialList();
 }
-

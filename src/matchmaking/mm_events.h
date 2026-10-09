@@ -1,14 +1,10 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef MM_EVENTS_H
-#define MM_EVENTS_H
-
+import ks.tier1;
 #include "mm_framework.h"
-#include "utlvector.h"
+import std;
 
 class CMatchEventsSubscription : public IMatchEventsSubscription
 {
@@ -44,5 +40,3 @@ protected:
 
 // Match events subscription singleton
 extern CMatchEventsSubscription *g_pMatchEventsSubscription;
-
-#endif // MM_EVENTS_H

@@ -1,17 +1,11 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
+import ks.tier1;
 #include "mm_title.h"
-#include "mm_title_richpresence.h"
-#include "csgo.spa.h"
 
-
-#include "fmtstr.h"
+import std;
 #include "gametypes/igametypes.h"
-#include "netmessages_signon.h"
 
 extern IGameTypes *g_pGameTypes;
 
@@ -64,12 +58,7 @@ void CMatchTitle::Shutdown()
 
 uint64 CMatchTitle::GetTitleID()
 {
-	static uint64 uiAppID = 0ull;
-	if ( !uiAppID && steamapicontext && steamapicontext->SteamUtils() )
-	{
-		uiAppID = steamapicontext->SteamUtils()->GetAppID();
-	}
-	return uiAppID;
+	return 0ull;
 }
 
 uint64 CMatchTitle::GetTitleServiceID()
@@ -82,8 +71,6 @@ uint64 CMatchTitle::GetTitleSettingsFlags()
 {
 	return MATCHTITLE_SETTING_MULTIPLAYER
 		| MATCHTITLE_VOICE_INGAME
-		| MATCHTITLE_PLAYERMGR_ALLFRIENDS
-		| MATCHTITLE_PLAYERMGR_FRIENDREQS
 	;
 }
 
@@ -107,7 +94,7 @@ char const * CMatchTitle::GetGuestPlayerName( int iUserIndex )
 		if ( wchar_t* wStringTableEntry = pLocalize->Find( "#SFUI_LocalPlayer" ) )
 		{
 			static char szName[ MAX_PLAYER_NAME_LENGTH ] = {0};
-			pLocalize->ConvertUnicodeToANSI( wStringTableEntry, szName, ARRAYSIZE( szName ) );
+			pLocalize->ConvertUnicodeToANSI( wStringTableEntry, szName, std::size( szName ) );
 			return szName;
 		}
 	}
@@ -169,12 +156,6 @@ bool CMatchTitle::StartServerMap( KeyValues *pSettings )
 	return true;
 }
 
-static KeyValues * GetCurrentMatchSessionSettings()
-{
-	IMatchSession *pIMatchSession = g_pMatchFramework->GetMatchSession();
-	return pIMatchSession ? pIMatchSession->GetSessionSettings() : nullptr;
-}
-
 //
 // <Vitaliy> July-2012
 // CS:GO hack: training map has been implemented storing progress in convars instead of
@@ -188,13 +169,8 @@ void CMatchTitle::OnEvent( KeyValues *pEvent )
 {
 	char const *szEvent = pEvent->GetName();
 	
-	if ( !Q_stricmp( "OnPlayerRemoved", szEvent ) ||
-		 !Q_stricmp( "OnPlayerUpdated", szEvent ) )
-	{
-		MM_Title_RichPresence_Update( GetCurrentMatchSessionSettings(), nullptr );
-	}
-	else if ( !Q_stricmp( "OnPlayerMachinesConnected", szEvent ) ||
-		!Q_stricmp( "OnPlayerMachinesDisconnected", szEvent ) )
+	if ( !V_stricmp( "OnPlayerMachinesConnected", szEvent ) ||
+		!V_stricmp( "OnPlayerMachinesDisconnected", szEvent ) )
 	{
 		// Player counts changed on host, update aggregate fields
 		IMatchSession *pMatchSession = g_pMatchFramework->GetMatchSession();
@@ -208,69 +184,37 @@ void CMatchTitle::OnEvent( KeyValues *pEvent )
 		}
 		pMatchSession->UpdateSessionSettings( KeyValues::AutoDeleteInline( kvPackage ) );
 	}
-	else if ( !Q_stricmp( "OnMatchSessionUpdate", szEvent ) )
+	else if ( !V_stricmp( "OnMatchSessionUpdate", szEvent ) )
 	{
-		if ( !Q_stricmp( pEvent->GetString( "state" ), "updated" ) )
+		if ( !V_stricmp( pEvent->GetString( "state" ), "created" ) ||
+			 !V_stricmp( pEvent->GetString( "state" ), "ready" ) )
 		{
-			if ( KeyValues *kvUpdate = pEvent->FindKey( "update" ) )
-			{
-				MM_Title_RichPresence_Update( GetCurrentMatchSessionSettings(), kvUpdate );
-			}
-		}
-		else if ( !Q_stricmp( pEvent->GetString( "state" ), "created" ) ||
-				  !Q_stricmp( pEvent->GetString( "state" ), "ready" ) )
-		{
-			MM_Title_RichPresence_Update( GetCurrentMatchSessionSettings(), nullptr );
 			if ( IMatchSession *pSession = g_pMatchFramework->GetMatchSession() )
 			{
-				if ( !Q_stricmp( "training", pSession->GetSessionSettings()->GetString( "game/type" ) ) )
+				if ( !V_stricmp( "training", pSession->GetSessionSettings()->GetString( "game/type" ) ) )
 					g_bPlayingTrainingMap = true;
 			}
 		}
-		else if ( !Q_stricmp( pEvent->GetString( "state" ), "closed" ) )
+		else if ( !V_stricmp( pEvent->GetString( "state" ), "closed" ) )
 		{
 			if ( g_bPlayingTrainingMap )
 			{
 				g_bPlayingTrainingMap = false;
 				g_pMatchExtensions->GetIVEngineClient()->ClientCmd_Unrestricted( CFmtStr( "host_writeconfig_ss %d", XBX_GetPrimaryUserId() ) );
 			}
-			MM_Title_RichPresence_Update( nullptr, nullptr );
 		}
 	}
-	else if ( !Q_stricmp( szEvent, "Client::CmdKeyValues" ) )
+	else if ( !V_stricmp( szEvent, "Client::CmdKeyValues" ) )
 	{
 		KeyValues *pCmd = pEvent->GetFirstTrueSubKey();
 		if ( !pCmd )
 			return;
 		char const *szCmd = pCmd->GetName();
-		if ( !Q_stricmp( "ExtendedServerInfo", szCmd ) )
+		if ( !V_stricmp( "ExtendedServerInfo", szCmd ) )
 		{
 			KeyValuesDumpAsDevMsg( pCmd, 2, 1 );
 			g_pGameTypes->SetAndParseExtendedServerInfo( pCmd );
 		}
-	}
-	else if ( !Q_stricmp( "OnEngineClientSignonStateChange", szEvent ) )
-	{
-		int iOldState = pEvent->GetInt( "old", 0 );
-		int iNewState = pEvent->GetInt( "new", 0 );
-
-		if (
-			( iOldState >= SIGNONSTATE_CONNECTED &&	// disconnect
-			iNewState < SIGNONSTATE_CONNECTED ) ||
-			( iOldState < SIGNONSTATE_FULL &&	// full connect
-			iNewState >= SIGNONSTATE_FULL )
-			)
-		{
-			MM_Title_RichPresence_Update( nullptr, nullptr );
-		}
-	}
-	else if ( !Q_stricmp( "OnEngineDisconnectReason", szEvent ) )
-	{
-		MM_Title_RichPresence_Update( nullptr, nullptr );
-	}
-	else if ( !Q_stricmp( "OnEngineEndGame", szEvent ) )
-	{
-		MM_Title_RichPresence_Update( nullptr, nullptr );
 	}
 }
 
@@ -290,15 +234,6 @@ void CMatchTitle::FireGameEvent( IGameEvent *pIGameEvent )
 	if ( !szGameEvent || !*szGameEvent )
 		return;
 
-	if ( !Q_stricmp( "round_start", szGameEvent ) ||
-		!Q_stricmp( "round_end", szGameEvent ) ||
-		!Q_stricmp( "game_newmap", szGameEvent ) ||
-		!Q_stricmp( "player_connect", szGameEvent ) ||
-		!Q_stricmp( "player_disconnect", szGameEvent ) )
-	{	// Update rich presence
-		MM_Title_RichPresence_Update( nullptr, nullptr );
-	}
-
 	// Check if the current match session is on an active game server
 	IMatchSession *pMatchSession = g_pMatchFramework->GetMatchSession();
 	if ( !pMatchSession )
@@ -312,10 +247,10 @@ void CMatchTitle::FireGameEvent( IGameEvent *pIGameEvent )
 
 	// Also don't run on the client when there's a host
 	char const *szSessionType = pMatchSession->GetSessionSystemData()->GetString( "type", nullptr );
-	if ( szSessionType && !Q_stricmp( szSessionType, "client" ) )
+	if ( szSessionType && !V_stricmp( szSessionType, "client" ) )
 		return;
 
-	if ( !Q_stricmp( "round_start", szGameEvent ) )
+	if ( !V_stricmp( "round_start", szGameEvent ) )
 	{
 		KeyValues *kvUpdate = KeyValues::FromString(
 			"update",
@@ -329,13 +264,13 @@ void CMatchTitle::FireGameEvent( IGameEvent *pIGameEvent )
 
 		pMatchSession->UpdateSessionSettings( kvUpdate );
 	}
-	else if ( !Q_stricmp( "round_end", szGameEvent ) )
+	else if ( !V_stricmp( "round_end", szGameEvent ) )
 	{
 		g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( new KeyValues(
 			"OnProfilesWriteOpportunity", "reason", "checkpoint"
 			) );
 	}
-	else if ( !Q_stricmp( "finale_start", szGameEvent ) )
+	else if ( !V_stricmp( "finale_start", szGameEvent ) )
 	{
 		pMatchSession->UpdateSessionSettings( KeyValues::AutoDeleteInline( KeyValues::FromString(
 			"update",
@@ -346,7 +281,7 @@ void CMatchTitle::FireGameEvent( IGameEvent *pIGameEvent )
 			" } "
 			) ) );
 	}
-	else if ( !Q_stricmp( "game_newmap", szGameEvent ) )
+	else if ( !V_stricmp( "game_newmap", szGameEvent ) )
 	{
 		const char *szMapName = pIGameEvent->GetString( "mapname", "" );
 
@@ -360,21 +295,10 @@ void CMatchTitle::FireGameEvent( IGameEvent *pIGameEvent )
 			);
 		KeyValues::AutoDelete autodelete( kvUpdate );
 
-		Assert( szMapName && *szMapName );
+		contract_assert( szMapName && *szMapName );
 		if ( szMapName && *szMapName )
 		{
 			kvUpdate->SetString( "update/game/map", szMapName );
-
-			char const *szWorkshopMap = g_pMatchExtensions->GetIVEngineClient()->GetLevelNameShort();
-			if ( StringHasPrefix( szWorkshopMap, "workshop" ) )
-			{
-				size_t nLenMapName = Q_strlen( szMapName );
-				size_t nShortMapName = Q_strlen( szWorkshopMap );
-				if ( ( nShortMapName >= nLenMapName ) &&
-					!Q_stricmp( szWorkshopMap + nShortMapName - nLenMapName, szMapName ) )
-					// Use the name of the workshop map
-					kvUpdate->SetString( "update/game/map", szWorkshopMap );
-			}
 		}
 
 		pMatchSession->UpdateSessionSettings( kvUpdate );
@@ -383,10 +307,10 @@ void CMatchTitle::FireGameEvent( IGameEvent *pIGameEvent )
 			"OnProfilesWriteOpportunity", "reason", "checkpoint"
 			) );
 	}
-	else if ( !Q_stricmp( "server_pre_shutdown", szGameEvent ) )
+	else if ( !V_stricmp( "server_pre_shutdown", szGameEvent ) )
 	{
 		char const *szReason = pIGameEvent->GetString( "reason", "quit" );
-		if ( !Q_stricmp( szReason, "quit" ) )
+		if ( !V_stricmp( szReason, "quit" ) )
 		{
 			DevMsg( "Received server_pre_shutdown notification - server is shutting down...\n" );
 
@@ -397,4 +321,3 @@ void CMatchTitle::FireGameEvent( IGameEvent *pIGameEvent )
 		}
 	}
 }
-

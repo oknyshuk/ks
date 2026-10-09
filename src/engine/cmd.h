@@ -1,23 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// cmd.h -- Command buffer and command execution
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: cmd.h -- Command buffer and command execution
 // Any number of commands can be added in a frame, from several different sources.
 // Most commands come from either keybindings or console line input, but remote
 // servers can also send across commands and entire text files can be execed.
-// 
 // The + command line options are also added to the command buffer.
-// 
 // The game starts with a Cbuf_AddText ("exec quake.rc\n"); Cbuf_Execute ();
-//
-// $NoKeywords: $
-//
-//===========================================================================//
 
-#ifndef CMD_H
-#define CMD_H
-
-
-#include "tier1/commandbuffer.h" // cmd_source_t
+import std;
+import ks.tier1;
 
 // REI 7/18/2016:
 //
@@ -123,7 +116,6 @@
 // accessible via code.
 // 
 //
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -247,5 +239,3 @@ bool Cmd_IsRptActive();
 const char* Cmd_AliasToCommandString( const char* szAliasName );
 
 bool Cbuf_IsProcessingCommands( ECommandTarget_t eTarget );
-
-#endif // CMD_H

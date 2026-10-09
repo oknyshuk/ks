@@ -81,7 +81,6 @@ namespace nv
 			return stereoEnabled != 0;
 		}
 
-#ifndef NO_STEREO_D3D9
 		// The D3D9 "Driver" for stereo updates, encapsulates the logic that is Direct3D9 specific.
 		struct D3D9Type
 		{
@@ -142,9 +141,7 @@ namespace nv
 				texSurface->Release();
 			}
 		};
-#endif // NO_STEREO_D3D9
 
-#ifndef NO_STEREO_D3D10
 		// The D3D10 "Driver" for stereo updates, encapsulates the logic that is Direct3D10 specific.
 		struct D3D10Type
 		{
@@ -206,7 +203,6 @@ namespace nv
 				pDevice->CopySubresourceRegion( tex, 0, 0, 0, 0, staging, 0, &stereoSrcBox );
 			}
 		};
-#endif // NO_STEREO_D3D10
 
 		// The HL2 Stereo class, which can work for either D3D9 or D3D10, depending on which type it's specialized for
 		// Note that both types can live side-by-side in two seperate instances as well.
@@ -345,13 +341,9 @@ namespace nv
 			bool mDeviceLost;
 		};
 
-#ifndef NO_STEREO_D3D9
 		typedef HL2Stereo< D3D9Type > HL2StereoD3D9;
-#endif
 
-#ifndef NO_STEREO_D3D10
 		typedef HL2Stereo< D3D10Type > HL2StereoD3D10;
-#endif
 	};
 };
 

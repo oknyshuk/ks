@@ -1,28 +1,55 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_file.cpp
 // Reading and writing nav files
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January-September 2003
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "recipientfilter.h"
 #include "nav_mesh.h"
 #include "gamerules.h"
 #include "datacache/imdlcache.h"
 
-
-#include "tier1/lzmaDecoder.h"
 
 #ifdef CSTRIKE_DLL
 #include "cs_shareddefs.h"
 #include "nav_pathfind.h"
 #include "cs_nav_area.h"
 #endif
-
 
 //--------------------------------------------------------------------------------------------------------------
 /// The current version of the nav file format
@@ -71,7 +98,7 @@ PlaceDirectory::IndexType PlaceDirectory::GetIndex( Place place ) const
 
 	if (i < 0)
 	{
-		AssertMsg( false, "PlaceDirectory::GetIndex failure" );
+		contract_assert( false && "PlaceDirectory::GetIndex failure" );
 		return 0;
 	}
 
@@ -87,7 +114,7 @@ void PlaceDirectory::AddPlace( Place place )
 		return;
 	}
 
-	Assert( place < 1000 );
+	contract_assert( place < 1000 );
 
 	if (IsKnown( place ))
 		return;
@@ -105,7 +132,7 @@ Place PlaceDirectory::IndexToPlace( IndexType entry ) const
 
 	if (i >= std::ssize( m_directory ))
 	{
-		AssertMsg( false, "PlaceDirectory::IndexToPlace: Invalid entry" );
+		contract_assert( false && "PlaceDirectory::IndexToPlace: Invalid entry" );
 		return UNDEFINED_PLACE;
 	}
 
@@ -125,7 +152,7 @@ void PlaceDirectory::Save( ks::byte_writer &fileBuffer )
 		const char *placeName = TheNavMesh->PlaceToName( m_directory[i] );
 
 		// store string length followed by string itself
-		unsigned short len = (unsigned short)(strlen( placeName ) + 1);
+		unsigned short len = (unsigned short)(std::strlen( placeName ) + 1);
 		fileBuffer.write< unsigned short >( len );
 		fileBuffer.write_bytes( placeName, len );
 	}
@@ -165,8 +192,8 @@ void PlaceDirectory::Load( ks::byte_reader &fileBuffer, int version )
 
 PlaceDirectory placeDirectory;
 
-#define FORMAT_BSPFILE "maps\\%s" PLATFORM_EXT ".bsp"
-#define FORMAT_NAVFILE "maps\\%s" PLATFORM_EXT ".nav"
+inline constexpr const char *FORMAT_BSPFILE = "maps\\%s"".bsp";
+#define FORMAT_NAVFILE "maps\\%s"".nav"
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -176,9 +203,9 @@ char *GetBspFilename( const char *navFilename )
 {
 	static char bspFilename[256];
 
-	Q_snprintf( bspFilename, sizeof( bspFilename ), FORMAT_BSPFILE, STRING( gpGlobals->mapname ) );
+	V_snprintf( bspFilename, sizeof( bspFilename ), FORMAT_BSPFILE, STRING( gpGlobals->mapname ) );
 
-	int len = strlen( bspFilename );
+	int len = std::strlen( bspFilename );
 	if (len < 3)
 		return nullptr;
 
@@ -432,14 +459,14 @@ NavErrorType CNavArea::Load( ks::byte_reader &fileBuffer, unsigned int version, 
 	{
 		// load number of connections for this direction
 		unsigned int count = fileBuffer.read< unsigned int >();
-		Assert( fileBuffer.ok() );
+		contract_assert( fileBuffer.ok() );
 
 		m_connect[d].reserve( count );
 		for( unsigned int i=0; i<count; ++i )
 		{
 			NavConnect connect;
 			connect.id = fileBuffer.read< unsigned int >();
-			Assert( fileBuffer.ok() );
+			contract_assert( fileBuffer.ok() );
 
 			// don't allow self-referential connections
 			if ( connect.id != m_id )
@@ -757,7 +784,7 @@ NavErrorType CNavArea::PostLoad( void )
 	}
 
 	m_inheritVisibilityFrom.area = TheNavMesh->GetNavAreaByID( m_inheritVisibilityFrom.id );
-	Assert( m_inheritVisibilityFrom.area != this );
+	contract_assert( m_inheritVisibilityFrom.area != this );
 
 	// remove any invalid areas from the list
 	AreaBindInfo bad;
@@ -899,13 +926,13 @@ void CNavMesh::ComputeBattlefrontAreas( void )
  */
 const char *CNavMesh::GetFilename( void ) const
 {
-	// filename is local to game dir for Steam, so we need to prepend game dir for regular file save
+	// filename is local to game dir, so we need to prepend game dir for regular file save
 	char gamePath[256];
 	engine->GetGameDir( gamePath, 256 );
 
 	// persistant return value
 	static char filename[256];
-	Q_snprintf( filename, sizeof( filename ), "%s\\" FORMAT_NAVFILE, gamePath, STRING( gpGlobals->mapname ) );
+	V_snprintf( filename, sizeof( filename ), "%s\\" FORMAT_NAVFILE, gamePath, STRING( gpGlobals->mapname ) );
 
 	return filename;
 }
@@ -1110,11 +1137,11 @@ static NavErrorType CheckNavFile( const char *bspFilename )
 		return NAV_CANT_ACCESS_FILE;
 
 	char baseName[256];
-	Q_StripExtension(bspFilename,baseName,sizeof(baseName));
+	V_StripExtension(bspFilename,baseName,sizeof(baseName));
 	char bspPathname[256];
-	Q_snprintf(bspPathname,sizeof(bspPathname), FORMAT_BSPFILE, baseName);
+	V_snprintf(bspPathname,sizeof(bspPathname), FORMAT_BSPFILE, baseName);
 	char filename[256];
-	Q_snprintf(filename,sizeof(filename), FORMAT_NAVFILE, baseName);
+	V_snprintf(filename,sizeof(filename), FORMAT_NAVFILE, baseName);
 
 	bool navIsInBsp = false;
 	FileHandle_t file = filesystem->Open( filename, "rb", "MOD" );	// this ignores .nav files embedded in the .bsp ...
@@ -1209,7 +1236,7 @@ const std::vector< Place > *CNavMesh::GetPlacesFromNavFile( bool *hasUnnamedPlac
 	placeDirectory.Reset();
 	// nav filename is derived from map filename
 	char filename[256];
-	Q_snprintf( filename, sizeof( filename ), FORMAT_NAVFILE, STRING( gpGlobals->mapname ) );
+	V_snprintf( filename, sizeof( filename ), FORMAT_NAVFILE, STRING( gpGlobals->mapname ) );
 
 
 	auto fileData = filesystem->ReadFile( filename, "GAME" );	// this ignores .nav files embedded in the .bsp ...
@@ -1291,7 +1318,7 @@ NavErrorType CNavMesh::Load( void )
 
 	// nav filename is derived from map filename
 	char filename[256];
-	Q_snprintf( filename, sizeof( filename ), FORMAT_NAVFILE, STRING( gpGlobals->mapname ) );
+	V_snprintf( filename, sizeof( filename ), FORMAT_NAVFILE, STRING( gpGlobals->mapname ) );
 
 
 	bool navIsInBsp = false;

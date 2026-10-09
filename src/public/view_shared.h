@@ -1,19 +1,12 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef VIEW_SHARED_H
-#define VIEW_SHARED_H
-
-
-#include "convar.h"
-#include "mathlib/vector.h"
+import ks.tier1;
+import std;
 #include "mathlib/camera.h"
 #include "materialsystem/MaterialSystemUtil.h"
 
-class CVolumeCuller;
 
 //-----------------------------------------------------------------------------
 // Flags passed in with view setup
@@ -217,5 +210,3 @@ inline float CViewSetup::ComputeViewMatrices( VMatrix *pWorldToView, VMatrix *pV
 
 	return flAspectRatio;
 }
-
-#endif // VIEW_SHARED_H

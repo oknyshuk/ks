@@ -1,11 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve LLC, All rights reserved. ============
-//
-//=============================================================================
-#ifndef BASEMULTIPLAYERPLAYER_H
-#define BASEMULTIPLAYERPLAYER_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ai_speech.h"
+#include "player.h"
 
 class CBasePlayer;
 
@@ -35,9 +33,9 @@ public:
 	virtual void		PostConstructor( const char *szClassname );
 	virtual void		ModifyOrAppendCriteria( AI_CriteriaSet& criteriaSet );
 
-	virtual bool		SpeakIfAllowed( AIConcept_t conc, SpeechPriorityType priority, const char *modifiers = nullptr, char *pszOutResponseChosen = nullptr, size_t bufsize = 0, IRecipientFilter *filter = nullptr );
+	virtual bool		SpeakIfAllowed( AIConcept_t conc, SpeechPriorityType priority, const char *modifiers = nullptr, char *pszOutResponseChosen = nullptr, std::size_t bufsize = 0, IRecipientFilter *filter = nullptr );
 	void				SpeakConcept( AI_Response &outresponse, int iConcept );
-	virtual bool		SpeakConceptIfAllowed( int iConcept, const char *modifiers = nullptr, char *pszOutResponseChosen = nullptr, size_t bufsize = 0, IRecipientFilter *filter = nullptr );
+	virtual bool		SpeakConceptIfAllowed( int iConcept, const char *modifiers = nullptr, char *pszOutResponseChosen = nullptr, std::size_t bufsize = 0, IRecipientFilter *filter = nullptr );
 
 	virtual bool		CanHearAndReadChatFrom( CBasePlayer *pPlayer );
 	virtual bool		CanSpeak( void ) { return true; }
@@ -96,9 +94,9 @@ public:
 	float GetConnectionTime( void ) { return m_flConnectionTime; }
 
 	//----------------------------
-	// Steam handling
-	bool		GetSteamID( CSteamID *pID ) const;
-	uint64		GetSteamIDAsUInt64( void ) const;
+	// Player id handling
+	bool		GetPlayerID( CPlayerId *pID ) const;
+	uint64		GetPlayerIDAsUInt64( void ) const;
 
 protected:
 	virtual CAI_Expresser *CreateExpresser( void );
@@ -129,5 +127,3 @@ inline CBaseMultiplayerPlayer *ToBaseMultiplayerPlayer( CBaseEntity *pEntity )
 	return static_cast<CBaseMultiplayerPlayer *>( pEntity );
 #endif
 }
-
-#endif	// BASEMULTIPLAYERPLAYER_H

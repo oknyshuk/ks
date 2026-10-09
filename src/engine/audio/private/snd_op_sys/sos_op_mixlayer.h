@@ -1,15 +1,9 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
-
-#ifndef SOS_OP_MIXLAYER_H
-#define SOS_OP_MIXLAYER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "sos_op.h"
 #include "snd_mixgroups.h"
-
 
 //-----------------------------------------------------------------------------
 // 
@@ -26,6 +20,3 @@ class CSosOperatorMixLayer : public CSosOperator
 {
 	SOS_HEADER_DESC( CSosOperatorMixLayer )
 };
-
-
-#endif // SOS_OP_MIXLAYER_H

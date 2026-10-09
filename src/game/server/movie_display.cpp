@@ -1,15 +1,47 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Allows movies to be played as a VGUI screen in the world
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Allows movies to be played as a VGUI screen in the world
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "EnvMessage.h"
-#include "fmtstr.h"
 #include "filesystem.h"
 
 class [[= ks::reflect::NetTable{ .name = "DT_MovieDisplay" } ]]
@@ -115,7 +147,6 @@ bool CMovieDisplay::KeyValue( const char *szKeyName, const char *szValue )
 	// NOTE: Have to do these separate because they set two values instead of one
 	if( FStrEq( szKeyName, "angles" ) )
 	{
-		Assert( GetMoveParent() == nullptr );
 		QAngle angles;
 		UTIL_StringToVector( angles.Base(), szValue );
 
@@ -168,8 +199,8 @@ void CMovieDisplay::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 void CMovieDisplay::Spawn( void )
 {
 	// Move the strings into a networkable form
-	Q_strcpy( m_szMovieFilename.GetForModify(), m_strMovieFilename.ToCStr() );
-	Q_strcpy( m_szGroupName.GetForModify(), m_strGroupName.ToCStr() );
+	V_strcpy( m_szMovieFilename.GetForModify(), m_strMovieFilename.ToCStr() );
+	V_strcpy( m_szGroupName.GetForModify(), m_strGroupName.ToCStr() );
 
 	Precache();
 
@@ -324,7 +355,7 @@ void CMovieDisplay::InputTakeOverAsMaster( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CMovieDisplay::InputSetDisplayText( inputdata_t &inputdata )
 {
-	Q_strcpy( m_szDisplayText.GetForModify(), inputdata.value.String() );
+	V_strcpy( m_szDisplayText.GetForModify(), inputdata.value.String() );
 }
 
 //-----------------------------------------------------------------------------
@@ -332,7 +363,7 @@ void CMovieDisplay::InputSetDisplayText( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CMovieDisplay::InputSetMovie( inputdata_t &inputdata )
 {
-	Q_strncpy( m_szMovieFilename.GetForModify(), inputdata.value.String(), 128 );
+	V_strncpy( m_szMovieFilename.GetForModify(), inputdata.value.String(), 128 );
 }
 
 

@@ -1,32 +1,23 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Client-server neutral sound interface
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef IENGINESOUND_H
-#define IENGINESOUND_H
-
-
-
-#include "basetypes.h"
-#include "interface.h"
+import std;
+import ks.tier1;
 #include "soundflags.h"
 #include "irecipientfilter.h"
-#include "utlvector.h"
 #include "engine/SndInfo.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-
 
 //-----------------------------------------------------------------------------
 // forward declaration
 //-----------------------------------------------------------------------------
-class Vector;
 
 // Handy defines for EmitSound
-#define SOUND_FROM_LOCAL_PLAYER		-1
-#define SOUND_FROM_WORLD			0
+inline constexpr auto SOUND_FROM_LOCAL_PLAYER = -1;
+inline constexpr auto SOUND_FROM_WORLD = 0;
 
 
 
@@ -35,23 +26,23 @@ class Vector;
 // phase it out as soon as possible.
 
 // Take a regular sndlevel and convert it to compatibility mode.
-#define SNDLEVEL_TO_COMPATIBILITY_MODE( x )		((soundlevel_t)(int)( (x) + 256 ))
+template <typename T1> [[gnu::always_inline]] inline auto SNDLEVEL_TO_COMPATIBILITY_MODE( T1 x ) { return ((soundlevel_t)(int)( (x) + 256 )); }
 
 // Take a compatibility-mode sndlevel and get the REAL sndlevel out of it.
-#define SNDLEVEL_FROM_COMPATIBILITY_MODE( x )	((soundlevel_t)(int)( (x) - 256 ))
+template <typename T1> [[gnu::always_inline]] inline auto SNDLEVEL_FROM_COMPATIBILITY_MODE( T1 x ) { return ((soundlevel_t)(int)( (x) - 256 )); }
 
 // Tells if the given sndlevel is marked as compatibility mode.
-#define SNDLEVEL_IS_COMPATIBILITY_MODE( x )		( (x) >= 256 )
+template <typename T1> [[gnu::always_inline]] inline constexpr auto SNDLEVEL_IS_COMPATIBILITY_MODE( T1 x ) { return ( (x) >= 256 ); }
 
 
 	
 //-----------------------------------------------------------------------------
 // Client-server neutral effects interface
 //-----------------------------------------------------------------------------
-#define IENGINESOUND_CLIENT_INTERFACE_VERSION	"IEngineSoundClient003"
-#define IENGINESOUND_SERVER_INTERFACE_VERSION	"IEngineSoundServer003"
+inline constexpr const char *IENGINESOUND_CLIENT_INTERFACE_VERSION = "IEngineSoundClient003";
+inline constexpr const char *IENGINESOUND_SERVER_INTERFACE_VERSION = "IEngineSoundServer003";
 
-abstract_class IEngineSound
+class IEngineSound
 {
 public:
 	// Precache a particular sample
@@ -129,6 +120,3 @@ public:
 	virtual void SetReplaySoundFade( float flReplayVolume ) = 0;
 	virtual float GetReplaySoundFade()const = 0;
 };
-
-
-#endif // IENGINESOUND_H

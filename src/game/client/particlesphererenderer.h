@@ -1,17 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef PARTICLESPHERERENDERER_H
-#define PARTICLESPHERERENDERER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "particlemgr.h"
 #include "particle_util.h"
-
 
 class CParticleSphereRenderer
 {
@@ -161,7 +153,7 @@ inline void CParticleSphereRenderer::RenderParticle(
 #ifdef _DEBUG
 	if ( pDraw->GetMeshBuilder() )
 	{
-		Assert( m_iLastTickStartRenderCalled == gpGlobals->tickcount );
+		contract_assert( m_iLastTickStartRenderCalled == gpGlobals->tickcount );
 	}
 #endif
 
@@ -199,7 +191,7 @@ inline void CParticleSphereRenderer::RenderParticle_AddColor(
 #ifdef _DEBUG
 	if ( pDraw->GetMeshBuilder() )
 	{
-		Assert( m_iLastTickStartRenderCalled == gpGlobals->tickcount );
+		contract_assert( m_iLastTickStartRenderCalled == gpGlobals->tickcount );
 	}
 #endif
 
@@ -221,6 +213,3 @@ inline void CParticleSphereRenderer::RenderParticle_AddColor(
 		flAlpha,		// alpha
 		flParticleSize );
 }
-
-
-#endif // PARTICLESPHERERENDERER_H

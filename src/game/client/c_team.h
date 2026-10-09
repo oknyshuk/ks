@@ -1,18 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Client side CTeam class
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef C_TEAM_H
-#define C_TEAM_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
 #include "shareddefs.h"
-#include "utlvector.h"
+import std;
 #include "client_thinklist.h"
-
+#include "dt_recv.h"
+#include "client_class.h"
+#include "c_baseentity.h"
 
 class C_BasePlayer;
 
@@ -108,5 +107,3 @@ C_Team *GetPlayersTeam( int iPlayerIndex );
 C_Team *GetPlayersTeam( C_BasePlayer *pPlayer );
 bool ArePlayersOnSameTeam( int iPlayerIndex1, int iPlayerIndex2 );
 extern int GetNumberOfTeams( void );
-
-#endif // C_TEAM_H

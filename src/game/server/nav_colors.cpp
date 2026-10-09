@@ -1,17 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Central point for defining colors and drawing routines for Navigation Mesh edit mode
 // Author: Matthew Campbell, 2004
 
-#include "cbase.h"
+import std;
+import ks.core;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "ndebugoverlay.h"
 #include "nav_colors.h"
-#include "color.h"
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**

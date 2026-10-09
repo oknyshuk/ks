@@ -1,11 +1,39 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Implements breakables and pushables. func_breakable is a bmodel
 //			that breaks into pieces after taking damage.
-//
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.vstdlib;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "player.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "player.h"
@@ -16,13 +44,11 @@
 #include "in_buttons.h"
 #include "physics.h"
 #include "IEffects.h"
-#include "vstdlib/random.h"
 #include "engine/IEngineSound.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "globals.h"
 #include "util.h"
 #include "physics_impact_damage.h"
-#include "tier0/icommandline.h"
 
 
 ConVar func_break_max_pieces( "func_break_max_pieces", "15", FCVAR_ARCHIVE | FCVAR_REPLICATED );
@@ -106,7 +132,7 @@ bool CBreakable::KeyValue( const char *szKeyName, const char *szValue )
 	// UNDONE_WC: explicitly ignoring these fields, but they shouldn't be in the map file!
 	if (FStrEq(szKeyName, "material"))
 	{
-		int i = atoi( szValue);
+		int i = std::atoi( szValue);
 
 		// 0:glass, 1:metal, 2:flesh, 3:wood
 
@@ -128,14 +154,14 @@ bool CBreakable::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else if (FStrEq(szKeyName, "spawnobject") )
 	{
-		int object = atoi( szValue );
-		if ( object > 0 && object < ARRAYSIZE(pSpawnObjects) )
+		int object = std::atoi( szValue );
+		if ( object > 0 && object < std::size( pSpawnObjects ) )
 			m_iszSpawnObject = MAKE_STRING( pSpawnObjects[object] );
 	}
 	else if (FStrEq(szKeyName, "propdata") )
 	{
-		int pdata = atoi( szValue );
-		if ( pdata > 0 && pdata < ARRAYSIZE(pFGDPropData) )
+		int pdata = std::atoi( szValue );
+		if ( pdata > 0 && pdata < std::size( pFGDPropData ) )
 		{
 			m_iszPropData = MAKE_STRING( pFGDPropData[pdata] );
 		}
@@ -347,12 +373,12 @@ void CBreakable::Precache( void )
 	else
 	{
 		// Actually, precache all possible objects...
-		for ( int i = 0; i < ARRAYSIZE(pSpawnObjects) ; ++i )
+		for ( int i = 0; i < std::size( pSpawnObjects ) ; ++i )
 		{
 			if ( !pSpawnObjects[ i ] )
 				continue;
 
-			if ( !Q_strnicmp( pSpawnObjects[ i ], "unused", Q_strlen( "unused" ) ) )
+			if ( !V_strnicmp( pSpawnObjects[ i ], "unused", V_strlen( "unused" ) ) )
 				continue;
 
 			UTIL_PrecacheOther( pSpawnObjects[ i ] );
@@ -542,7 +568,7 @@ void CBreakable::InputSetMass( inputdata_t &inputdata )
 	if ( vPhys )
 	{
 		float toMass = inputdata.value.Float();
-		Assert(toMass > 0);
+		contract_assert( toMass > 0 );
 		vPhys->SetMass( toMass );
 	}
 	else
@@ -566,7 +592,7 @@ bool CBreakable::UpdateHealth( int iNewHealth, CBaseEntity *pActivator )
 
 		if ( m_iMaxHealth == 0 )
 		{
-			Assert( false );
+			contract_assert( false );
 			m_iMaxHealth = 1;
 		}
 
@@ -675,7 +701,7 @@ void CBreakable::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 
 		// We're to take normal damage from this
 		int damageType;
-		IBreakableWithPropData *pBreakableInterface = assert_cast<IBreakableWithPropData*>(this);
+		IBreakableWithPropData *pBreakableInterface = static_cast<IBreakableWithPropData*>(this);
 		float damage = CalculateDefaultPhysicsDamage( index, pEvent, m_impactEnergyScale, true, damageType, pBreakableInterface->GetPhysicsDamageTable() );
 		if ( damage > 0 )
 		{
@@ -1000,7 +1026,7 @@ int CBreakable::DrawDebugTextOverlays(void)
 		if ( GetMaxHealth() )
 		{
 			char tempstr[512];
-			Q_snprintf(tempstr,sizeof(tempstr),"Health: %i",GetHealth());
+			V_snprintf(tempstr,sizeof(tempstr),"Health: %i",GetHealth());
 			EntityText(text_offset,tempstr,0);
 			text_offset++;
 		}
@@ -1008,7 +1034,7 @@ int CBreakable::DrawDebugTextOverlays(void)
 		if ( m_iszBasePropData != NULL_STRING )
 		{
 			char tempstr[512];
-			Q_snprintf(tempstr, sizeof(tempstr),"Base PropData: %s", STRING(m_iszBasePropData) );
+			V_snprintf(tempstr, sizeof(tempstr),"Base PropData: %s", STRING(m_iszBasePropData) );
 			EntityText( text_offset, tempstr, 0);
 			text_offset++;
 		}
@@ -1138,4 +1164,3 @@ void CPushable::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 
 	BaseClass::VPhysicsCollision( index, pEvent );
 }
-

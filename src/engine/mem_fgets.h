@@ -1,12 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( MEM_FGETS_H )
-#define MEM_FGETS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 char *memfgets( unsigned char *pMemFile, int fileSize, int *pFilePos, char *pBuffer, int bufferSize );
-
-#endif // MEM_FGETS_H

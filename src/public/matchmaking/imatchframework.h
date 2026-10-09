@@ -1,23 +1,13 @@
-//===== Copyright c 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef IMATCHFRAMEWORK_H
-#define IMATCHFRAMEWORK_H
-
-
-#define CONTEAMMATCH
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 class IMatchFramework;
 class IMatchSession;
 
-#include "appframework/iappsystem.h"
+import ks.tier1;
 
-#include "tier1/interface.h"
-#include "keyvalues.h"
+import std;
 
 #include "inetchannel.h"
 
@@ -37,7 +27,7 @@ class IMatchSession;
 
 typedef void (*RankedMatchStartCallback)( KeyValues *pSettings, uint32 volatile *pResult );
 
-abstract_class IMatchFramework : public IAppSystem
+class IMatchFramework : public IAppSystem
 {
 public:
 	// Run frame of the matchmaking framework
@@ -71,9 +61,6 @@ public:
 	// Entry point to match into a session
 	virtual void MatchSession( KeyValues *pSettings ) = 0;
 
-	// Accept invite
-	virtual void AcceptInvite( int iController ) = 0;
-
 	// Close the session
 	virtual void CloseSession() = 0;
 	
@@ -85,11 +72,11 @@ public:
 	virtual void UpdateTeamProperties( KeyValues *pTeamProperties ) = 0;
 };
 
-#define IMATCHFRAMEWORK_VERSION_STRING "MATCHFRAMEWORK_001"
+inline constexpr const char *IMATCHFRAMEWORK_VERSION_STRING = "MATCHFRAMEWORK_001";
 
 
 
-abstract_class IMatchSession
+class IMatchSession
 {
 public:
 	// Get an internal pointer to session system-specific data
@@ -111,6 +98,3 @@ public:
 	// Callback when team changes
 	virtual void UpdateTeamProperties( KeyValues *pTeamProperties ) = 0;
 };
-
-
-#endif // IMATCHFRAMEWORK_H

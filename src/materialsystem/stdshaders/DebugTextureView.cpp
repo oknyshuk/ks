@@ -1,4 +1,5 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "shaderlib/cshader.h"
@@ -7,10 +8,9 @@
 #include "debugtextureview_ps20.inc"
 #include "debugtextureview_ps20b.inc"
 
-
 DEFINE_FALLBACK_SHADER( DebugTextureView, DebugTextureView_dx9 )
 BEGIN_VS_SHADER( DebugTextureView_dx9, "Help for DebugTextureView" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( SHOWALPHA, SHADER_PARAM_TYPE_BOOL, "0", "" )
 	END_SHADER_PARAMS
 

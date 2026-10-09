@@ -1,16 +1,10 @@
-//===== Copyright c 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef IMATCHTITLE_H
-#define IMATCHTITLE_H
+import ks.tier1;
 
-
-
-#define TITLE_DATA_PREFIX ""
+inline constexpr const char *TITLE_DATA_PREFIX = "";
 
 
 struct TitleDataFieldsDescription_t
@@ -76,11 +70,9 @@ enum TitleSettingsFlags_t
 	MATCHTITLE_INVITE_ONLY_SINGLE_USER	= ( 1 << 4 ),	// Accepted game invite forcefully disables splitscreen (e.g.: 1-on-1 games)
 	MATCHTITLE_VOICE_INGAME				= ( 1 << 5 ),	// When in active gameplay lobby system doesn't transmit voice
 	MATCHTITLE_XLSPPATCH_SUPPORTED		= ( 1 << 6 ),	// Title supports xlsp patch containers
-	MATCHTITLE_PLAYERMGR_ALLFRIENDS		= ( 1 << 7 ),	// Player manager by default fetches only friends for same game, this will force all friends to be fetched
-	MATCHTITLE_PLAYERMGR_FRIENDREQS		= ( 1 << 8 ),	// Player manager by default fetches only real friends, this will force friend requests to also be fetched
 };
 
-abstract_class IMatchTitle
+class IMatchTitle
 {
 public:
 	// Title ID
@@ -110,9 +102,6 @@ public:
 	// Title avatar awards
 	virtual TitleAvatarAwardsDescription_t const * DescribeTitleAvatarAwards() = 0;
 
-	// Title leaderboards
-	virtual KeyValues * DescribeTitleLeaderboard( char const *szLeaderboardView ) = 0;
-
 	// Sets up all necessary client-side convars and user info before
 	// connecting to server
 	virtual void PrepareClientForConnect( KeyValues *pSettings ) = 0;
@@ -131,7 +120,7 @@ public:
 // Matchmaking title settings extension interface
 //
 
-abstract_class IMatchTitleGameSettingsMgr
+class IMatchTitleGameSettingsMgr
 {
 public:
 	// Extends server game details
@@ -139,36 +128,6 @@ public:
 	
 	// Adds the essential part of game details to be broadcast
 	virtual void ExtendLobbyDetailsTemplate( KeyValues *pDetails, char const *szReason, KeyValues *pFullSettings ) = 0;
-
-	// Extends game settings update packet for lobby transition,
-	// either due to a migration or due to an endgame condition
-	virtual void ExtendGameSettingsForLobbyTransition( KeyValues *pSettings, KeyValues *pSettingsUpdate, bool bEndGame ) = 0;
-
-	// Adds data for datacenter reporting
-	virtual void ExtendDatacenterReport( KeyValues *pReportMsg, char const *szReason ) = 0;
-
-
-	// Rolls up game details for matches grouping
-	//	valid pDetails, null pRollup
-	//		returns a rollup representation of pDetails to be used as an indexing key
-	//	valid pDetails, valid pRollup (usually called second time)
-	//		rolls the details into the rollup, aggregates some values, when
-	//		the aggregate values are missing in pRollup, then this is the first
-	//		details entry being aggregated and would establish the first rollup
-	//		returns pRollup
-	//	null pDetails, valid pRollup
-	//		tries to determine if the rollup should remain even though no details
-	//		matched it, adjusts pRollup to represent no aggregated data
-	//		returns null to drop pRollup, returns pRollup to keep rollup
-	virtual KeyValues * RollupGameDetails( KeyValues *pDetails, KeyValues *pRollup, KeyValues *pQuery ) = 0;
-
-
-	// Defines session search keys for matchmaking
-	virtual KeyValues * DefineSessionSearchKeys( KeyValues *pSettings ) = 0;
-
-	// Defines dedicated server search key
-	virtual KeyValues * DefineDedicatedSearchKeys( KeyValues *pSettings, bool bNeedOfficialServer, int nSearchPass ) = 0;
-
 
 	// Initializes full game settings from potentially abbreviated game settings
 	virtual void InitializeGameSettings( KeyValues *pSettings, char const *szReason ) = 0;
@@ -180,12 +139,6 @@ public:
 	// session settings and networked to remote clients
 	virtual void ExtendGameSettingsUpdateKeys( KeyValues *pSettings, KeyValues *pUpdateDeleteKeys ) = 0;
 
-	virtual KeyValues * ExtendTeamLobbyToGame( KeyValues *pSettings ) = 0;
-
-	// Prepares system for session creation
-	virtual KeyValues * PrepareForSessionCreate( KeyValues *pSettings ) = 0;
-
-
 	// Executes the command on the session settings, this function on host
 	// is allowed to modify Members/Game subkeys and has to fill in modified players KeyValues
 	// When running on a remote client "ppPlayersUpdated" is NULL and players cannot
@@ -196,41 +149,4 @@ public:
 	// join a game in progress, this function is allowed to modify
 	// Members/Game subkeys and has to fill in modified players KeyValues
 	virtual void PrepareLobbyForGame( KeyValues *pSettings, KeyValues **ppPlayersUpdated ) = 0;
-
-	// Prepares the host team lobby for game adjusting the game settings
-	// this function is allowed to prepare modification package to update
-	// Game subkeys.
-	// Returns the update/delete package to be applied to session settings
-	// and pushed to dependent two sesssion of the two teams.
-	virtual KeyValues * PrepareTeamLinkForGame( KeyValues *pSettingsLocal, KeyValues *pSettingsRemote ) = 0;
-
-	
-	// Prepares the client lobby for migration
-	// this function is called when the client session is still in the state
-	// of "client" while handling the original host disconnection and decision
-	// has been made that local machine will be elected as new "host"
-	// Returns NULL if migration should proceed normally
-	// Returns [ kvroot { "error" "n/a" } ] if migration should be aborted.
-	virtual KeyValues * PrepareClientLobbyForMigration( KeyValues *pSettingsLocal, KeyValues *pMigrationInfo ) = 0;
-
-	// Prepares the session for server disconnect
-	// this function is called when the session is still in the active gameplay
-	// state and while localhost is handling the disconnection from game server.
-	// Returns NULL to allow default flow
-	// Returns [ kvroot { "disconnecthdlr" "<opt>" } ] where <opt> can be:
-	//		"destroy" : to trigger a disconnection error and destroy the session
-	//		"lobby" : to initiate a "salvaging" lobby transition
-	virtual KeyValues * PrepareClientLobbyForGameDisconnect( KeyValues *pSettingsLocal, KeyValues *pDisconnectInfo ) = 0;
-
-	// Validates if client profile can set a stat or get awarded an achievement
-	virtual bool AllowClientProfileUpdate( KeyValues *kvUpdate ) = 0;
-	
-	// Retrieves the indexed formula from the match system settings file. (MatchSystem.360.res)
-	virtual char const * GetFormulaAverage( int index ) = 0;
-
-	// Called by the client to notify matchmaking that it should update matchmaking properties based
-	// on player distribution among the teams.
-	virtual void UpdateTeamProperties( KeyValues *pCurrentSettings, KeyValues *pTeamProperties ) = 0;
 };
-
-#endif // IMATCHTITLE_H

@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $FLOAT_BACK_BUFFER == 1 ) && ( $SRGB_INPUT_ADAPTER == 1 )
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
@@ -16,7 +17,7 @@ private:
 public:
 	void SetBLOOMTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBLOOMTYPE = i;
 #ifdef _DEBUG
 		m_bBLOOMTYPE = true;
@@ -24,7 +25,7 @@ public:
 	}
 	void SetBLOOMTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBLOOMTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBLOOMTYPE = true;
@@ -38,7 +39,7 @@ private:
 public:
 	void SetPS3REGCOUNT48( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nPS3REGCOUNT48 = i;
 #ifdef _DEBUG
 		m_bPS3REGCOUNT48 = true;
@@ -46,7 +47,7 @@ public:
 	}
 	void SetPS3REGCOUNT48( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nPS3REGCOUNT48 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPS3REGCOUNT48 = true;
@@ -71,7 +72,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bBLOOMTYPE && m_bPS3REGCOUNT48;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nBLOOMTYPE ) + ( 2 * m_nPS3REGCOUNT48 ) + 0;
 	}
@@ -93,7 +94,7 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_downsample_nohdr_ps20 0
+inline constexpr int shaderDynamicTest_downsample_nohdr_ps20 = 0;
 
 static const ShaderComboInformation_t s_StaticComboArray_Downsample_nohdr_ps20[2] = 
 {
@@ -102,7 +103,7 @@ static const ShaderComboInformation_t s_StaticComboArray_Downsample_nohdr_ps20[2
 };
 static const ShaderComboSemantics_t Downsample_nohdr_ps20_combos =
 {
-	"Downsample_nohdr_ps20", NULL, 0, s_StaticComboArray_Downsample_nohdr_ps20, 2 
+	"Downsample_nohdr_ps20", nullptr, 0, s_StaticComboArray_Downsample_nohdr_ps20, 2 
 };
 
 class ConstructMe_Downsample_nohdr_ps20

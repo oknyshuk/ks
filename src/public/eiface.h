@@ -1,28 +1,15 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef EIFACE_H
-#define EIFACE_H
-
-
-
-#include "convar.h"
-#include "icvar.h"
+import ks.tier1;
 #include "edict.h"
-#include "mathlib/vplane.h"
 #include "iserverentity.h"
 #include "engine/ivmodelinfo.h"
 #include "soundflags.h"
-#include <bitset>
+import std;
 #include "engine/iserverplugin.h"
-#include "tier1/bitbuf.h"
 #include "iclient.h"
-#include "steam/isteamremotestorage.h"
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -53,7 +40,6 @@ class IScratchPad3D;
 class CStandardSendProxies;
 class IAchievementMgr;
 class CGamestatsData;
-class CSteamID;
 class ISPSharedMemory;
 class CGamestatsData;
 namespace ks::net { struct CEngineGotvSyncPacket; }
@@ -64,9 +50,7 @@ typedef struct player_info_s player_info_t;
 // defines
 //-----------------------------------------------------------------------------
 
-#define DLLEXPORT /* */
-
-#define INTERFACEVERSION_VENGINESERVER	"VEngineServer023"
+inline constexpr const char *INTERFACEVERSION_VENGINESERVER = "VEngineServer023";
 
 struct bbox_t
 {
@@ -126,7 +110,7 @@ struct ClientReplayEventParams_t
 //-----------------------------------------------------------------------------
 // Purpose: Interface the engine exposes to the game DLL
 //-----------------------------------------------------------------------------
-abstract_class IVEngineServer
+class IVEngineServer
 {
 public:
 	// Tell engine to change level ( "changelevel s1\n" or "changelevel2 s1 s2\n" )
@@ -218,11 +202,11 @@ public:
 	// Execute any commands currently in the command parser immediately (instead of once per frame)
 	virtual void		ServerExecute( void ) = 0;
 	// Issue the specified command to the specified client (mimics that client typing the command at the console).
-	virtual void		ClientCommand( edict_t *pEdict, PRINTF_FORMAT_STRING const char *szFmt, ... ) FMTFUNCTION( 3, 4 ) = 0;
+	[[gnu::format(printf, 3, 4)]] virtual void		ClientCommand( edict_t *pEdict, const char *szFmt, ... ) = 0;
 
 	// Set the lightstyle to the specified value and network the change to any connected clients.  Note that val must not 
 	//  change place in memory (use MAKE_STRING) for anything that's not compiled into your mod.
-	virtual void		LightStyle( int style, PRINTF_FORMAT_STRING const char *val ) = 0;
+	virtual void		LightStyle( int style, const char *val ) = 0;
 
 	// Project a static decal onto the specified entity / model (for level placed decals in the .bsp)
 	virtual void		StaticDecal( const Vector &originInEntitySpace, int decalIndex, int entityIndex, int modelIndex, bool lowpriority ) = 0;
@@ -415,7 +399,7 @@ public:
 	// Fill in the player info structure for the specified player index (name, model, etc.)
 	virtual bool GetPlayerInfo( int ent_num, player_info_t *pinfo ) = 0;
 
-	// Returns true if this client has been fully authenticated by Steam
+	// Returns true if this client has been fully authenticated
 	virtual bool IsClientFullyAuthenticated( edict_t *pEdict ) = 0;
 
 	// This makes the host run 1 tick per frame instead of checking the system timer to see how many ticks to run in a certain frame.
@@ -437,7 +421,7 @@ public:
 	virtual ISPSharedMemory *GetSinglePlayerSharedMemorySpace( const char *szName, int ent_num = MAX_EDICTS ) = 0;
 
 	// Allocate hunk memory
-	virtual void *AllocLevelStaticData( size_t bytes ) = 0;
+	virtual void *AllocLevelStaticData( std::size_t bytes ) = 0;
 
 	// Gets a list of all clusters' bounds.  Returns total number of clusters.
 	virtual int GetClusterCount() = 0;
@@ -453,12 +437,9 @@ public:
 	virtual void SetGamestatsData( CGamestatsData *pGamestatsData ) = 0;
 	virtual CGamestatsData *GetGamestatsData() = 0;
 
-	// Returns the SteamID of the specified player. It'll be NULL if the player hasn't authenticated yet.
-	virtual const CSteamID	*GetClientSteamID( const edict_t *pPlayerEdict, bool bRequireFullyAuthenticated = false ) = 0;
+	// Returns the player id of the specified player. It'll be NULL if the player hasn't authenticated yet.
+	virtual const CPlayerId	*GetClientPlayerID( const edict_t *pPlayerEdict, bool bRequireFullyAuthenticated = false ) = 0;
 
-	// Returns the SteamID of the game server
-	virtual const CSteamID	*GetGameServerSteamID() = 0;
-	
 	// Validate session
 	virtual void HostValidateSession() = 0;
 
@@ -504,13 +485,13 @@ public:
 	// Get the TV information
 	virtual bool GetEngineHltvInfo( CEngineHltvInfo_t &info ) = 0;
 
-	// Add HLTV proxy whitelist to bypass password and Steam Auth checks upon connection, as CIDR a.b.c.d/numbits
+	// Add HLTV proxy whitelist to bypass password and auth checks upon connection, as CIDR a.b.c.d/numbits
 	virtual void AddHltvRelayProxyWhitelist( uint32 a, uint32 b, uint32 c, uint32 d, uint32 numbits ) = 0;
 
-	// Server version from the steam.inf, this will be compared to the GC version
+	// Server version from the version info file
 	virtual int GetServerVersion() const = 0;
 
-	// On master HLTV this call updates number of external viewers and which portion of those are linked with Steam
+	// On master HLTV this call updates number of external viewers
 	virtual void UpdateHltvExternalViewers( uint32 numTotalViewers, uint32 numLinkedViewers ) = 0;
 
 	// Check whether sv_shutdown was requested
@@ -526,12 +507,12 @@ public:
 	virtual int GetLocalClientIndex( void ) = 0;
 };
 
-#define INTERFACEVERSION_SERVERGAMEDLL				"ServerGameDLL005"
+inline constexpr const char *INTERFACEVERSION_SERVERGAMEDLL = "ServerGameDLL005";
 
 //-----------------------------------------------------------------------------
 // Purpose: These are the interfaces that the game .dll exposes to the engine
 //-----------------------------------------------------------------------------
-abstract_class IServerGameDLL
+class IServerGameDLL
 {
 public:
 	// Initialize the game (one-time call when the DLL is first loaded )
@@ -613,19 +594,13 @@ public:
 	// Called after tools are initialized (i.e. when Foundry is initialized so we can get IServerFoundry).
 	virtual void			PostToolsInit() = 0;
 
-	// When bActive = true the function is called after the steam API has been activated post-level startup
-	// when bActive = false the function is called before the game server session will LogOff and all interfaces will shutdown
-	virtual void			GameServerSteamAPIActivated( bool bActive ) = 0;
-	
 	// Called to apply lobby settings to a dedicated server
 	virtual void			ApplyGameSettings( KeyValues *pKV ) = 0;
 
 	// 
-	virtual void			GetMatchmakingTags( char *buf, size_t bufSize ) = 0;
+	virtual void			GetMatchmakingTags( char *buf, std::size_t bufSize ) = 0;
 
 	virtual void			ServerHibernationUpdate( bool bHibernating ) = 0;
-
-	virtual bool			ShouldPreferSteamAuth() = 0;
 
 	// Added for CS:GO - 
 	// In Competetive mode we do not want to allow direct-connect to Valve servers
@@ -639,22 +614,11 @@ public:
 	// Builds extended server info for new connecting client
 	virtual KeyValues*		GetExtendedServerInfoForNewClient() = 0;
 
-	// Updates GC information for this server
-	virtual void UpdateGCInformation() = 0;
-
 	// Marks the queue matchmaking game as starting
 	virtual void ReportGCQueuedMatchStart( int32 iReservationStage, uint32 *puiConfirmedAccounts, int numConfirmedAccounts ) = 0;
 
-	// Get the published file id for the community map this server is running. 0 if non-ugc map or no map is running.
-	virtual PublishedFileId_t GetUGCMapFileID( const char* szMapPath ) = 0;
-	
-	// Matchmaking game data buffer to set into SteamGameServer()->SetGameData
-	virtual void			GetMatchmakingGameData( char *buf, size_t bufSize ) = 0;
-
-	// Returns true if server is in the process of updating the given map
-	virtual bool HasPendingMapDownloads( void ) const = 0;
-
-	virtual void UpdateUGCMap( PublishedFileId_t id ) = 0;
+	// Matchmaking game data buffer
+	virtual void			GetMatchmakingGameData( char *buf, std::size_t bufSize ) = 0;
 
 	// Returns which encryption key to use for messages to be encrypted for TV
 	virtual EncryptedMessageKeyType_t GetMessageEncryptionKey( INetMessage *pMessage ) = 0;
@@ -674,19 +638,16 @@ public:
 
 	// Last chance validation on connect packet for the client, non-NULL return value
 	// causes the client connect to be aborted with the provided error
-	virtual char const * ClientConnectionValidatePreNetChan( bool bGameServer, char const *adr, int nAuthProtocol, uint64 ullSteamID ) = 0;
+	virtual char const * ClientConnectionValidatePreNetChan( bool bGameServer, char const *adr, int nAuthProtocol, uint64 ullPlayerID ) = 0;
 
 	// Network channel notification from engine to game server code
-	virtual void OnEngineClientNetworkEvent( edict_t *edictClient, uint64 ullSteamID, int nEventType, void *pvParam ) = 0;
+	virtual void OnEngineClientNetworkEvent( edict_t *edictClient, uint64 ullPlayerID, int nEventType, void *pvParam ) = 0;
 
 	// Engine notifying GC with a message
 	virtual void EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt ) = 0;
 
 	// GOTV client attempt redirect over SDR
 	virtual bool OnEngineClientProxiedRedirect( uint64 ullClient, const char *adrProxiedRedirect, const char *adrRegular ) = 0;
-
-	// Tell server about a line we will write to the log file which may be sent to remote listeners
-	virtual bool LogForHTTPListeners( const char* szLogLine ) = 0;
 };
 
 //-----------------------------------------------------------------------------
@@ -694,13 +655,13 @@ public:
 // See vstdlib/random.h for the interface definition
 // NOTE: If you change this, also change VENGINE_CLIENT_RANDOM_INTERFACE_VERSION in cdll_int.h
 //-----------------------------------------------------------------------------
-#define VENGINE_SERVER_RANDOM_INTERFACE_VERSION	"VEngineRandom001"
+inline constexpr const char *VENGINE_SERVER_RANDOM_INTERFACE_VERSION = "VEngineRandom001";
 
-#define INTERFACEVERSION_SERVERGAMEENTS			"ServerGameEnts001"
+inline constexpr const char *INTERFACEVERSION_SERVERGAMEENTS = "ServerGameEnts001";
 //-----------------------------------------------------------------------------
 // Purpose: Interface to get at server entities
 //-----------------------------------------------------------------------------
-abstract_class IServerGameEnts
+class IServerGameEnts
 {
 public:
 	virtual					~IServerGameEnts()	{}
@@ -726,12 +687,12 @@ public:
 	virtual void			PrepareForFullUpdate( edict_t *pEdict ) = 0;
 };
 
-#define INTERFACEVERSION_SERVERGAMECLIENTS		"ServerGameClients004"
+inline constexpr const char *INTERFACEVERSION_SERVERGAMECLIENTS = "ServerGameClients004";
 
 //-----------------------------------------------------------------------------
 // Purpose: Player / Client related functions
 //-----------------------------------------------------------------------------
-abstract_class IServerGameClients
+class IServerGameClients
 {
 public:
 	// Get server maxplayers and lower bound for same
@@ -791,7 +752,7 @@ public:
 	virtual void			ClientVoice( edict_t *pEdict ) = 0;
 
 	// A user has had their network id setup and validated 
-	virtual void			NetworkIDValidated( const char *pszUserName, const char *pszNetworkID, CSteamID steamID ) = 0;
+	virtual void			NetworkIDValidated( const char *pszUserName, const char *pszNetworkID, CPlayerId playerUID ) = 0;
 
 	// Returns max splitscreen slot count ( 1 == no splits, 2 for 2-player split screen )
 	virtual int				GetMaxSplitscreenPlayers() = 0;
@@ -810,9 +771,9 @@ public:
 
 };
 
-#define INTERFACEVERSION_UPLOADGAMESTATS		"ServerUploadGameStats001"
+inline constexpr const char *INTERFACEVERSION_UPLOADGAMESTATS = "ServerUploadGameStats001";
 
-abstract_class IUploadGameStats
+class IUploadGameStats
 {
 public:
 	// Note that this call will block the server until the upload is completed, so use only at levelshutdown if at all.
@@ -825,16 +786,16 @@ public:
 	// Call when created to init the CSER connection
 	virtual void InitConnection( void ) = 0;
 
-	// Call periodically to poll steam for a CSER connection
+	// Call periodically to poll for a CSER connection
 	virtual void UpdateConnection( void ) = 0;
 
 	// If user has disabled stats tracking, do nothing
 	virtual bool IsGameStatsLoggingEnabled() = 0;
 
-	// Gets a non-personally identifiable unique ID for this steam user, used for tracking total gameplay time across
-	//  multiple stats sessions, but isn't trackable back to their Steam account or id.
+	// Gets a non-personally identifiable unique ID for this user, used for tracking total gameplay time across
+	//  multiple stats sessions, but isn't trackable back to their account or id.
 	// Buffer should be 16 bytes, ID will come back as a hexadecimal string version of a GUID
-	virtual void GetPseudoUniqueId( char *buf, size_t bufsize ) = 0;
+	virtual void GetPseudoUniqueId( char *buf, std::size_t bufsize ) = 0;
 
 	// For determining general % of users running using cyber cafe accounts...
 	virtual bool IsCyberCafeUser( void ) = 0;
@@ -843,12 +804,12 @@ public:
 	virtual bool IsHDREnabled( void ) = 0;
 };
 
-#define INTERFACEVERSION_PLUGINHELPERSCHECK		"PluginHelpersCheck001"
+inline constexpr const char *INTERFACEVERSION_PLUGINHELPERSCHECK = "PluginHelpersCheck001";
 
 //-----------------------------------------------------------------------------
 // Purpose: allows the game dll to control which plugin functions can be run
 //-----------------------------------------------------------------------------
-abstract_class IPluginHelpersCheck
+class IPluginHelpersCheck
 {
 public:
 	virtual bool CreateMessage( const char *plugin, edict_t *pEntity, DIALOG_TYPE type, KeyValues *data ) = 0;
@@ -857,7 +818,7 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: Interface exposed from the client .dll back to the engine for specifying shared .dll IAppSystems (e.g., ISoundEmitterSystem)
 //-----------------------------------------------------------------------------
-abstract_class IServerDLLSharedAppSystems
+class IServerDLLSharedAppSystems
 {
 public:
 	virtual int	Count() = 0;
@@ -865,18 +826,16 @@ public:
 	virtual char const *GetInterfaceName( int idx ) = 0;
 };
 
-#define SERVER_DLL_SHARED_APPSYSTEMS		"VServerDllSharedAppSystems001"
+inline constexpr const char *SERVER_DLL_SHARED_APPSYSTEMS = "VServerDllSharedAppSystems001";
 
-#define INTERFACEVERSION_SERVERGAMETAGS		"ServerGameTags001"
+inline constexpr const char *INTERFACEVERSION_SERVERGAMETAGS = "ServerGameTags001";
 
 //-----------------------------------------------------------------------------
 // Purpose: querying the game dll for Server cvar tags
 //-----------------------------------------------------------------------------
-abstract_class IServerGameTags
+class IServerGameTags
 {
 public:
 	// Get the list of cvars that require tags to show differently in the server browser
 	virtual void			GetTaggedConVarList( KeyValues *pCvarTagList ) = 0;
 };
-
-#endif // EIFACE_H

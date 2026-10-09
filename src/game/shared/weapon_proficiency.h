@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
-
-#ifndef WEAPON_PROFICIENCY_H
-#define WEAPON_PROFICIENCY_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 struct WeaponProficiencyInfo_t
 {
@@ -24,6 +18,3 @@ enum WeaponProficiency_t
 };
 
 const char *GetWeaponProficiencyName( WeaponProficiency_t proficiency );
-
-
-#endif // WEAPON_PROFICIENCY_H

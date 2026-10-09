@@ -1,40 +1,45 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // HDRFIXME: reduce the number of include files here.
-#include "render_pch.h"
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "r_local.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_lightmap.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
+#include "view.h"
+#include "worldsize.h"
 #include "cdll_int.h"
 #include "client_class.h"
-#include "icliententitylist.h"
-#include "traceinit.h"
 #include "server.h"
 #include "r_decal.h"
 #include "r_areaportal.h"
 #include "ispatialpartitioninternal.h"
 #include "cdll_engine_int.h"
-#include "ivtex.h"
 #include "materialsystem/itexture.h"
 #include "view.h"
-#include "tier0/dbg.h"
+import std;
 #include "staticpropmgr.h"
 #include "icliententity.h"
-#include "gl_drawlights.h"
 #include "Overlay.h"
-#include "vmodes.h"
 #include "vtf/vtf.h"
 #include "bitmap/imageformat.h"
-#include "cbenchmark.h"
 #include "ivideomode.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "../utils/common/bsplib.h"
-#include "ibsppack.h"
-#include "vprof.h"
 #include "paint.h"
 
 bool g_RendererInLevel = false;
@@ -63,7 +68,7 @@ void R_TimeRefresh_f (void)
 
 	materials->Flush( true );
 
-	Q_memset(&view, 0, sizeof(view));
+	V_memset(&view, 0, sizeof(view));
 	view.origin = MainViewOrigin();
 	view.angles[0] = 0;
 	view.angles[1] = 0;
@@ -83,7 +88,7 @@ void R_TimeRefresh_f (void)
 	int savedeveloper = developer.GetInt();
 	developer.SetValue( 0 );
 
-	start = Sys_FloatTime ();
+	start = Plat_FloatTime ();
 	for (i=0 ; i<128 ; i++)
 	{
 		view.angles[1] = i/128.0*360.0;
@@ -93,7 +98,7 @@ void R_TimeRefresh_f (void)
 
 	materials->Flush( true );
 	Shader_SwapBuffers();
-	stop = Sys_FloatTime ();
+	stop = Plat_FloatTime ();
 	time = stop-start;
 
 	developer.SetValue( savedeveloper );
@@ -146,14 +151,16 @@ void R_RemoveAllDecalsFromAllModels();
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( r_cleardecals, "Usage r_cleardecals <permanent>.", FCVAR_CLIENTCMD_CAN_EXECUTE  )
+static void r_cleardecals( const CCommand &args );
+static ConCommand r_cleardecals_command( "r_cleardecals", r_cleardecals, "Usage r_cleardecals <permanent>.", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void r_cleardecals( const CCommand &args )
 {
 	if ( host_state.worldmodel  )
 	{
 		bool bPermanent = false;
 		if ( args.ArgC() == 2 )
 		{
-			if ( !Q_stricmp( args[1], "permanent" ) )
+			if ( !V_stricmp( args[1], "permanent" ) )
 			{
 				bPermanent = true;
 			}
@@ -250,9 +257,9 @@ void R_LevelInit( void )
 
 	COM_TimestampedLog( "R_LevelInit: Start" );
 
-	VPROF_BUDGET( "R_LevelInit", VPROF_BUDGETGROUP_OTHER_NETWORKING );
+	CVProfScope _( "R_LevelInit", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
-	Assert( g_ClientDLL );
+	contract_assert( g_ClientDLL );
 
 	r_framecount = 1; 
 	R_ResetLightStyles();
@@ -275,8 +282,8 @@ void R_LevelInit( void )
 
 	// INFESTED_DLL - Alien Swarm doesn't want fullbright turned on when there are no lights (since it uses dynamic lights and skips vrad)
 	static char gamedir[MAX_OSPATH];
-	Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
-	if ( host_state.worldmodel->brush.pShared->numworldlights == 0 && Q_stricmp( gamedir, "infested" ) )
+	V_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
+	if ( host_state.worldmodel->brush.pShared->numworldlights == 0 && V_stricmp( gamedir, "infested" ) )
 	{
 		ConDMsg( "Level unlit, setting 'mat_fullbright 1'\n" );
 		mat_fullbright.SetValue( 1 );
@@ -316,4 +323,3 @@ void R_LevelShutdown()
 
 	g_RendererInLevel = false;
 }
-

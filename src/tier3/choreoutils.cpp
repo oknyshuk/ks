@@ -1,19 +1,16 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Helper methods + classes for file access
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
+// Purpose: Helper methods + classes for file access
+
+import ks.tier1;
 #include "tier3/choreoutils.h"
-#include "tier3/tier3.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "studio.h"
-#include "../game/shared/choreoscene.h"
 #include "../game/shared/choreoevent.h"
-#include "tier1/keyvalues.h"
+import std;
 #include "bone_setup.h"
 #include "soundchars.h"
-
 
 //-----------------------------------------------------------------------------
 // Find sequence by name 
@@ -82,31 +79,31 @@ bool AutoAddGestureKeys( CChoreoEvent *e, CStudioHdr *pStudioHdr, float *pPosePa
 
 	for ( pkvFaceposer = pKVAllFaceposer->GetFirstSubKey(); pkvFaceposer; pkvFaceposer = pkvFaceposer->GetNextKey() )
 	{
-		if ( !Q_stricmp( pkvFaceposer->GetName(), "startloop" ) )
+		if ( !V_stricmp( pkvFaceposer->GetName(), "startloop" ) )
 		{
-			Q_strncpy( szStartLoop, pkvFaceposer->GetString(), sizeof(szStartLoop) );
+			V_strncpy( szStartLoop, pkvFaceposer->GetString(), sizeof(szStartLoop) );
 			continue;
 		}
 		
-		if ( !Q_stricmp( pkvFaceposer->GetName(), "endloop" ) )
+		if ( !V_stricmp( pkvFaceposer->GetName(), "endloop" ) )
 		{
-			Q_strncpy( szEndLoop, pkvFaceposer->GetString(), sizeof(szEndLoop) );
+			V_strncpy( szEndLoop, pkvFaceposer->GetString(), sizeof(szEndLoop) );
 			continue;
 		}
 		
-		if ( !Q_stricmp( pkvFaceposer->GetName(), "entrytag" ) )
+		if ( !V_stricmp( pkvFaceposer->GetName(), "entrytag" ) )
 		{
-			Q_strncpy( szEntry, pkvFaceposer->GetString(), sizeof(szEntry) );
+			V_strncpy( szEntry, pkvFaceposer->GetString(), sizeof(szEntry) );
 			continue;
 		}
 		
-		if ( !Q_stricmp( pkvFaceposer->GetName(), "exittag" ) )
+		if ( !V_stricmp( pkvFaceposer->GetName(), "exittag" ) )
 		{
-			Q_strncpy( szExit, pkvFaceposer->GetString(), sizeof(szExit) );
+			V_strncpy( szExit, pkvFaceposer->GetString(), sizeof(szExit) );
 			continue;
 		}
 		
-		if ( !Q_stricmp( pkvFaceposer->GetName(), "tags" ) )
+		if ( !V_stricmp( pkvFaceposer->GetName(), "tags" ) )
 		{
 			if ( nMaxFrame <= 0 )
 				continue;
@@ -129,7 +126,7 @@ bool AutoAddGestureKeys( CChoreoEvent *e, CStudioHdr *pStudioHdr, float *pPosePa
 				}
 				// lock the original tags so they can't be edited
 				ptag = e->FindAbsoluteTag( CChoreoEvent::ORIGINAL, pkvTags->GetName() );
-				Assert( ptag );
+				contract_assert( ptag );
 				ptag->SetLocked( true );
 			}
 			e->VerifyTagOrder();
@@ -194,7 +191,7 @@ bool AutoAddGestureKeys( CChoreoEvent *e, CStudioHdr *pStudioHdr, float *pPosePa
 //-----------------------------------------------------------------------------
 bool UpdateGestureLength( CChoreoEvent *e, CStudioHdr *pStudioHdr, float *pPoseParameters, bool bCheckOnly )
 {
-	Assert( e );
+	contract_assert( e );
 	if ( !e )
 		return false;
 
@@ -227,7 +224,7 @@ bool UpdateGestureLength( CChoreoEvent *e, CStudioHdr *pStudioHdr, float *pPoseP
 //-----------------------------------------------------------------------------
 bool UpdateSequenceLength( CChoreoEvent *e, CStudioHdr *pStudioHdr, float *pPoseParameters, bool bCheckOnly, bool bVerbose )
 {
-	Assert( e );
+	contract_assert( e );
 	if ( !e )
 		return false;
 
@@ -295,7 +292,7 @@ bool UpdateSequenceLength( CChoreoEvent *e, CStudioHdr *pStudioHdr, float *pPose
 	if ( e->HasEndTime() )
 	{
 		float dt = e->GetDuration();
-		if ( fabs( dt - flSeqDuration ) > 0.01f )
+		if ( std::fabs( dt - flSeqDuration ) > 0.01f )
 		{
 			if ( bCheckOnly )
 				return true;
@@ -334,7 +331,7 @@ bool UpdateSequenceLength( CChoreoEvent *e, CStudioHdr *pStudioHdr, float *pPose
 const char *GetSoundForEvent( CChoreoEvent *pEvent, CStudioHdr *pStudioHdr )
 {
 	const char *pSoundName = pEvent->GetParameters();
-	if ( Q_stristr( pSoundName, ".wav" ) )
+	if ( V_stristr( pSoundName, ".wav" ) )
 		return PSkipSoundChars( pSoundName );
 
 	const char *pFileName = g_pSoundEmitterSystem->GetWavFileForSound( pSoundName, ( pStudioHdr && pStudioHdr->IsValid() ) ? pStudioHdr->name() : nullptr );

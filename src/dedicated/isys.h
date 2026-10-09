@@ -1,18 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( ISYS_H )
-#define ISYS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
-#include "interface.h"
+import std;
+import ks.tier1;
 
 class CDedicatedAppSystemGroup;
 
 
-abstract_class ISys
+class ISys
 {
 public:
 	virtual				~ISys( void ) { } 
@@ -34,9 +31,7 @@ public:
 
 	virtual void		ConsoleOutput ( char *string ) = 0;
 	virtual char		*ConsoleInput (void) = 0;
-	virtual void		Printf( PRINTF_FORMAT_STRING const char *fmt, ...) FMTFUNCTION( 2, 3 ) = 0;
+	[[gnu::format(printf, 2, 3)]] virtual void		Printf( const char *fmt, ...) = 0;
 };
 
 extern ISys *sys;
-
-#endif // ISYS_H

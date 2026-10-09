@@ -1,14 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef IMATERIALINTERNAL_H
-#define IMATERIALINTERNAL_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.tier1;
 
 // identifier was truncated to '255' characters in the debug information
 
@@ -16,7 +9,6 @@
 #include "materialsystem/imaterial.h"
 #include "shaderapi/ishaderapi.h"
 #include "filesystem.h"
-
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -28,7 +20,6 @@ class IVertexBuffer;
 class IIndexBuffer;
 struct Shader_VertexArrayData_t;
 struct ShaderRenderState_t;
-class KeyValues;
 class CBasePerMaterialContextData;
 
 
@@ -44,7 +35,7 @@ struct tokencache_t
 //-----------------------------------------------------------------------------
 // Interface for materials used only within the material system
 //-----------------------------------------------------------------------------
-abstract_class IMaterialInternal : public IMaterial
+class IMaterialInternal : public IMaterial
 {
 public:
 	// class factory methods
@@ -178,5 +169,3 @@ extern bool LoadVMTFile( KeyValues &vmtKeyValues, KeyValues &patchKeyValues, con
 
 extern void CompactMaterialVars( IMaterialVar **ppMaterialVars, int nVars );
 extern void CompactMaterialVarHeap();
-
-#endif // IMATERIALINTERNAL_H

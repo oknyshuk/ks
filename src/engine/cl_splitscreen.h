@@ -1,12 +1,6 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef CL_SPLITSCREEN_H
-#define CL_SPLITSCREEN_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 class INetChannel;
 class ISplitScreen
@@ -53,46 +47,15 @@ private:
 	bool m_bResolvable;
 };
 
-// If this is defined, all of the scopeguard objects are NULL'd out to reduce overhead
-#ifdef DEDICATED
-#define SPLIT_SCREEN_STUBS
-#endif
-
-#define SPLIT_SCREEN_STUBS
-
-#if defined( SPLIT_SCREEN_STUBS )
-#define IS_LOCAL_PLAYER_RESOLVABLE true
-#define SET_LOCAL_PLAYER_RESOLVABLE( a, b, c ) true
+inline constexpr auto IS_LOCAL_PLAYER_RESOLVABLE = true;
+template <typename T1, typename T2, typename T3> [[gnu::always_inline]] inline constexpr auto SET_LOCAL_PLAYER_RESOLVABLE( T1 a, T2 b, T3 c ) { return true; }
 #define SET_ACTIVE_SPLIT_SCREEN_PLAYER_SLOT( x )
 
 #define ACTIVE_SPLITSCREEN_PLAYER_GUARD( slot )
-#define FORCE_DEFAULT_SPLITSCREEN_PLAYER_GUARD
 
 #define FOR_EACH_VALID_SPLITSCREEN_PLAYER( iteratorName ) for ( int iteratorName = 0; iteratorName == 0; ++iteratorName )
 
 #define ASSERT_LOCAL_PLAYER_RESOLVABLE()
 #define GET_ACTIVE_SPLITSCREEN_SLOT() ( 0 )
-#define GET_NUM_SPLIT_SCREEN_PLAYERS() 1
-#define IS_VALID_SPLIT_SCREEN_SLOT( i ) ( ( i ) == 0 )
-
-#else
-#define IS_LOCAL_PLAYER_RESOLVABLE ( splitscreen->IsLocalPlayerResolvable() )
-
-#define SET_LOCAL_PLAYER_RESOLVABLE( a, b, c ) ( splitscreen->SetLocalPlayerIsResolvable( a, b, c ) )
-
-#define ACTIVE_SPLITSCREEN_PLAYER_GUARD( slot )	CSetActiveSplitScreenPlayerGuard g_SSGuard( __FILE__, __LINE__, slot );
-#define FORCE_DEFAULT_SPLITSCREEN_PLAYER_GUARD	CSetActiveSplitScreenPlayerGuard g_SSGuard( __FILE__, __LINE__, 0 );
-
-#define FOR_EACH_VALID_SPLITSCREEN_PLAYER( iteratorName )						\
-    for ( int iteratorName = splitscreen->FirstValidSplitScreenSlot();			\
-		 iteratorName != -1;													\
-		iteratorName = splitscreen->NextValidSplitScreenSlot( iteratorName ) )	
-
-#define ASSERT_LOCAL_PLAYER_RESOLVABLE() Assert( splitscreen->IsLocalPlayerResolvable() );
-#define GET_ACTIVE_SPLITSCREEN_SLOT() splitscreen->GetActiveSplitScreenPlayerSlot()
-#define SET_ACTIVE_SPLIT_SCREEN_PLAYER_SLOT( x ) splitscreen->SetActiveSplitScreenPlayerSlot( x )
-#define GET_NUM_SPLIT_SCREEN_PLAYERS() ( splitscreen->GetNumSplitScreenPlayers() )
-#define IS_VALID_SPLIT_SCREEN_SLOT( i ) ( splitscreen->IsValidSplitScreenSlot( i ) )
-#endif
-
-#endif // CL_SPLITSCREEN_H
+[[gnu::always_inline]] inline constexpr auto GET_NUM_SPLIT_SCREEN_PLAYERS() { return 1; }
+template <typename T1> [[gnu::always_inline]] inline constexpr auto IS_VALID_SPLIT_SCREEN_SLOT( T1 i ) { return ( ( i ) == 0 ); }

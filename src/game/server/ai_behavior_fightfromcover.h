@@ -1,14 +1,8 @@
-//========== Copyright (c) 2008, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
-
-#ifndef AI_BEHAVIOR_FIGHTFROMCOVER_H
-#define AI_BEHAVIOR_FIGHTFROMCOVER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2008 Valve Corporation
 
 #include "reflect_annotations.h"
-
 
 #include "ai_goalentity.h"
 #include "ai_behavior.h"
@@ -145,6 +139,3 @@ private:
 	Animation_t m_ShootAnim;
 	Animation_t m_ExitAnim;
 };
-
-
-#endif // AI_BEHAVIOR_FIGHTFROMCOVER_H

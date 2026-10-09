@@ -1,17 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef FILESYSTEM_TOOLS_H
-#define FILESYSTEM_TOOLS_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "filesystem.h"
 #include "filesystem_init.h"
-
 
 // This is the the path of the initial source file
 extern char		qdir[1024];
@@ -26,7 +18,7 @@ extern char		gamedir[1024];
 
 enum FSInitType_t
 {
-	FS_INIT_FULL,					// Load gameinfo.txt, maybe use filesystem_steam, and setup search paths.
+	FS_INIT_FULL,					// Load gameinfo.txt and setup search paths.
 	FS_INIT_COMPATIBILITY_MODE		// Load filesystem_stdio and that's it.
 };
 
@@ -50,8 +42,5 @@ CreateInterfaceFn	FileSystem_GetFactory( void );
 
 
 extern IBaseFileSystem	*g_pFileSystem;
-DECLARE_TIER2_INTERFACE( IFileSystem, g_pFullFileSystem );	// NOTE: this is here when VMPI is being used, but a VMPI app can
+extern IFileSystem *g_pFullFileSystem;;	// NOTE: this is here when VMPI is being used, but a VMPI app can
 											// ONLY use LoadModule/UnloadModule.
-
-
-#endif // FILESYSTEM_TOOLS_H

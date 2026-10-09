@@ -1,25 +1,18 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Defines a group of app systems that all have the same lifetime
 // that need to be connected/initialized, etc. in a well-defined order
-//
-// $Revision: $
-// $NoKeywords: $
-//===========================================================================//
 
-#include "tier0/platform.h"
+import std;
 
+import ks.tier1;
 #include "appframework/ilaunchermgr.h"
 
-#include "tier0/platwindow.h"
 #include "appframework/IAppSystemGroup.h"
-#include "appframework/iappsystem.h"
-#include "interface.h"
 #include "filesystem.h"
 #include "filesystem_init.h"
-#include <algorithm>
 
-#include "tier0/memalloc.h"
 
 //-----------------------------------------------------------------------------
 // constructor, destructor
@@ -50,17 +43,18 @@ CSysModule *CAppSystemGroup::LoadModuleDLL( const char *pDLLName )
 //-----------------------------------------------------------------------------
 AppModule_t CAppSystemGroup::LoadModule( const char *pDLLName )
 {
+	ks::ScratchArena<> scratch;
 	// Remove the extension when creating the name.
-	int nLen = Q_strlen( pDLLName ) + 1;
-	char *pModuleName = (char*)stackalloc( nLen );
-	Q_StripExtension( pDLLName, pModuleName, nLen );
+	int nLen = V_strlen( pDLLName ) + 1;
+	char *pModuleName = (char*)scratch.AllocBytes( nLen );
+	V_StripExtension( pDLLName, pModuleName, nLen );
 
 	// See if we already loaded it...
 	for ( int i = std::ssize( m_Modules ); --i >= 0; ) 
 	{
 		if ( m_Modules[i].m_pModuleName )
 		{
-			if ( !Q_stricmp( pModuleName, m_Modules[i].m_pModuleName ) )
+			if ( !V_stricmp( pModuleName, m_Modules[i].m_pModuleName ) )
 				return i;
 		}
 	}
@@ -76,7 +70,7 @@ AppModule_t CAppSystemGroup::LoadModule( const char *pDLLName )
 	m_Modules[nIndex].m_pModule = pSysModule;
 	m_Modules[nIndex].m_Factory = 0;
 	m_Modules[nIndex].m_pModuleName = (char*)MemAlloc_Alloc( nLen );
-	Q_strncpy( m_Modules[nIndex].m_pModuleName, pModuleName, nLen );
+	V_strncpy( m_Modules[nIndex].m_pModuleName, pModuleName, nLen );
 
 	return nIndex;
 }
@@ -84,16 +78,17 @@ AppModule_t CAppSystemGroup::LoadModule( const char *pDLLName )
 
 int CAppSystemGroup::ReloadModule( const char * pDLLName )
 {
+	ks::ScratchArena<> scratch;
 	// Remove the extension when creating the name.
-	int nLen = Q_strlen( pDLLName ) + 1;
-	char *pModuleName = (char*)stackalloc( nLen );
-	Q_StripExtension( pDLLName, pModuleName, nLen );
+	int nLen = V_strlen( pDLLName ) + 1;
+	char *pModuleName = (char*)scratch.AllocBytes( nLen );
+	V_StripExtension( pDLLName, pModuleName, nLen );
 
 	// See if we already loaded it...
 	for ( int i = std::ssize( m_Modules ); --i >= 0; ) 
 	{
 		Module_t &module = m_Modules[i];
-		if ( module.m_pModuleName && !Q_stricmp( pModuleName, module.m_pModuleName ) )
+		if ( module.m_pModuleName && !V_stricmp( pModuleName, module.m_pModuleName ) )
 		{
 			// found the module, reload
 			Msg("Unloading module %s, dll %s\n", pModuleName, pDLLName );
@@ -198,7 +193,7 @@ IAppSystem *CAppSystemGroup::AddSystem( AppModule_t module, const char *pInterfa
 		return m_Systems[ it->second ];
 	}
 
-	Assert( (module >= 0) && (module < std::ssize( m_Modules )) );
+	contract_assert( (module >= 0) && (module < std::ssize( m_Modules )) );
 	CreateInterfaceFn pFactory = m_Modules[module].m_pModule ? Sys_GetFactory( m_Modules[module].m_pModule ) : m_Modules[module].m_Factory;
 
 	int retval;
@@ -214,7 +209,6 @@ IAppSystem *CAppSystemGroup::AddSystem( AppModule_t module, const char *pInterfa
 	int sysIndex = std::ssize( m_Systems ); m_Systems.push_back( pAppSystem );
 
 	// Inserting into the dict will help us do named lookup later
-	MEM_ALLOC_CREDIT();
 	m_SystemDict.emplace( pInterfaceName, sysIndex );
 	return pAppSystem;
 }
@@ -237,10 +231,10 @@ static const char *g_StageLookup[] =
 
 void CAppSystemGroup::ReportStartupFailure( int nErrorStage, int nSysIndex )
 {
-	COMPILE_TIME_ASSERT( APPSYSTEM_GROUP_STAGE_COUNT == ARRAYSIZE( g_StageLookup ) );
+	static_assert( APPSYSTEM_GROUP_STAGE_COUNT == std::size( g_StageLookup ) );
 
 	const char *pszStageDesc = "Unknown";
-	if ( nErrorStage >= 0 && nErrorStage < ( int )ARRAYSIZE( g_StageLookup ) )
+	if ( nErrorStage >= 0 && nErrorStage < ( int )std::size( g_StageLookup ) )
 	{
 		pszStageDesc = g_StageLookup[ nErrorStage ];
 	}
@@ -267,7 +261,6 @@ void CAppSystemGroup::AddSystem( IAppSystem *pAppSystem, const char *pInterfaceN
 	int sysIndex = std::ssize( m_Systems ); m_Systems.push_back( pAppSystem );
 
 	// Inserting into the dict will help us do named lookup later
-	MEM_ALLOC_CREDIT();
 	// Keep the first system of a name, as the module overload does.
 	m_SystemDict.emplace( pInterfaceName, sysIndex );
 }
@@ -419,7 +412,7 @@ void CAppSystemGroup::ComputeDependencies( LibraryDependencies_t &depend )
 						continue;
 
 					// Check for circular dependency
-					if ( !Q_stricmp( pSecondaryDependency, depend.m_Names[i].c_str() ) )
+					if ( !V_stricmp( pSecondaryDependency, depend.m_Names[i].c_str() ) )
 					{
 						Warning( "Encountered a circular dependency with library %s!\n", pSecondaryDependency );
 						continue;
@@ -448,13 +441,20 @@ bool CAppSystemGroup::SortLessFunc( const int &left, const int &right )
 
 void CAppSystemGroup::SortDependentLibraries( LibraryDependencies_t &depend )
 {
-	int nCount = depend.Count();
+	const int nCount = depend.Count();
 
-	int *pIndices = (int*)stackalloc( nCount * sizeof(int) );
-	for ( int i = 0; i < nCount; ++i )
+	// The dependency table is dense in insertion order and entry i describes m_Systems[i], so the
+	// two must agree. This is checked for real: contract_assert is compiled out
+	// (-fcontract-evaluation-semantic=ignore), and a mismatch would index m_Systems out of range.
+	if ( std::ssize( m_Systems ) != nCount )
 	{
-		pIndices[i] = i;
+		Error( "AppFramework : %d dependency entries for %d app systems\n", nCount, static_cast<int>( std::ssize( m_Systems ) ) );
+		return;
 	}
+
+	std::vector<int> indices( nCount );
+	std::iota( indices.begin(), indices.end(), 0 );
+	int *pIndices = indices.data();
 
 	// Sort by dependency. Can't use fancy stl algorithms here because the sort func isn't strongly transitive.
 	// Using lame bubble sort instead. We could speed this up using a proper depth-first graph walk, but it's not worth the effort.
@@ -504,15 +504,12 @@ void CAppSystemGroup::SortDependentLibraries( LibraryDependencies_t &depend )
 	}
 
 	// Reorder appsystem list + dictionary indexing
-	Assert( std::ssize( m_Systems ) == nCount );
-	int nTempSize = nCount * sizeof(IAppSystem*);
-	IAppSystem **pTemp = (IAppSystem**)stackalloc( nTempSize );
-	memcpy( pTemp, m_Systems.data(), nTempSize );
+	const std::vector<IAppSystem*> previous = m_Systems;
 	for ( int i = 0; i < nCount; ++i )
 	{
-		m_Systems[i] = pTemp[ pIndices[i] ];
+		m_Systems[i] = previous[ pIndices[i] ];
 	}
-								    
+
 	// Remap system indices
 	for ( auto &[name, sysIndex] : m_SystemDict )
 	{
@@ -525,11 +522,9 @@ void CAppSystemGroup::SortDependentLibraries( LibraryDependencies_t &depend )
 				break;
 			}
 		}
-		Assert( j != nCount );
+		contract_assert( j != nCount );
 	}
 
-	( void )stackfree( pTemp );
-	( void )stackfree( pIndices );
 }
 
 
@@ -844,7 +839,7 @@ destroy:
 	// Have to do this because the logging listeners & response policies may live in modules which are being unloaded
 	// @TODO: this seems like a bad legacy practice... app systems should unload their spew handlers gracefully.
 	LoggingSystem_ResetCurrentLoggingState();
-	Assert( g_pDefaultLoggingListener != nullptr );
+	contract_assert( g_pDefaultLoggingListener != nullptr );
 	LoggingSystem_RegisterLoggingListener( g_pDefaultLoggingListener );
 
 	UnloadAllModules();
@@ -857,7 +852,7 @@ destroy:
 	
 //-----------------------------------------------------------------------------
 //
-// This class represents a group of app systems that are loaded through steam
+// This class represents a group of app systems that are loaded through the file system
 //
 //-----------------------------------------------------------------------------
 
@@ -865,7 +860,7 @@ destroy:
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
-CSteamAppSystemGroup::CSteamAppSystemGroup( IFileSystem *pFileSystem, CAppSystemGroup *pAppSystemParent )
+CFSAppSystemGroup::CFSAppSystemGroup( IFileSystem *pFileSystem, CAppSystemGroup *pAppSystemParent )
 {
 	m_pFileSystem = pFileSystem;
 	m_pGameInfoPath[0] = 0;
@@ -873,9 +868,9 @@ CSteamAppSystemGroup::CSteamAppSystemGroup( IFileSystem *pFileSystem, CAppSystem
 
 
 //-----------------------------------------------------------------------------
-// Used by CSteamApplication to set up necessary pointers if we can't do it in the constructor
+// Used by CFSApplication to set up necessary pointers if we can't do it in the constructor
 //-----------------------------------------------------------------------------
-void CSteamAppSystemGroup::Setup( IFileSystem *pFileSystem, CAppSystemGroup *pParentAppSystem )
+void CFSAppSystemGroup::Setup( IFileSystem *pFileSystem, CAppSystemGroup *pParentAppSystem )
 {
 	m_pFileSystem = pFileSystem;
 	m_pParentAppSystem = pParentAppSystem;
@@ -883,9 +878,9 @@ void CSteamAppSystemGroup::Setup( IFileSystem *pFileSystem, CAppSystemGroup *pPa
 
 
 //-----------------------------------------------------------------------------
-// Loads the module from Steam
+// Loads the module
 //-----------------------------------------------------------------------------
-CSysModule *CSteamAppSystemGroup::LoadModuleDLL( const char *pDLLName )
+CSysModule *CFSAppSystemGroup::LoadModuleDLL( const char *pDLLName )
 {
 	return m_pFileSystem->LoadModule( pDLLName );
 }
@@ -894,7 +889,7 @@ CSysModule *CSteamAppSystemGroup::LoadModuleDLL( const char *pDLLName )
 //-----------------------------------------------------------------------------
 // Returns the game info path
 //-----------------------------------------------------------------------------
-const char *CSteamAppSystemGroup::GetGameInfoPath()	const
+const char *CFSAppSystemGroup::GetGameInfoPath()	const
 {
 	return m_pGameInfoPath;
 }
@@ -903,33 +898,25 @@ const char *CSteamAppSystemGroup::GetGameInfoPath()	const
 //-----------------------------------------------------------------------------
 // Sets up the search paths
 //-----------------------------------------------------------------------------
-bool CSteamAppSystemGroup::SetupSearchPaths( const char *pStartingDir, bool bOnlyUseStartingDir, bool bIsTool )
+bool CFSAppSystemGroup::SetupSearchPaths( const char *pStartingDir, bool bOnlyUseStartingDir, bool bIsTool )
 {
-	CFSSteamSetupInfo steamInfo;
-	steamInfo.m_pDirectoryName = pStartingDir;
-	steamInfo.m_bOnlyUseDirectoryName = bOnlyUseStartingDir;
-	steamInfo.m_bToolsMode = bIsTool;
-	steamInfo.m_bSetSteamDLLPath = true;
-	steamInfo.m_bSteam = m_pFileSystem->IsSteam();
-	if ( FileSystem_SetupSteamEnvironment( steamInfo ) != FS_OK )
+	CFSSetupInfo setupInfo;
+	setupInfo.m_pDirectoryName = pStartingDir;
+	setupInfo.m_bOnlyUseDirectoryName = bOnlyUseStartingDir;
+	if ( FileSystem_SetupEnvironment( setupInfo ) != FS_OK )
 		return false;
 
-	CFSMountContentInfo fsInfo;
-	fsInfo.m_pFileSystem = m_pFileSystem;
-	fsInfo.m_bToolsMode = bIsTool;
-	fsInfo.m_pDirectoryName = steamInfo.m_GameInfoPath;
-
-	if ( FileSystem_MountContent( fsInfo ) != FS_OK )
+	if ( FileSystem_SetBasePaths( m_pFileSystem ) != FS_OK )
 		return false;
 
 	// Finally, load the search paths for the "GAME" path.
 	CFSSearchPathsInit searchPathsInit;
-	searchPathsInit.m_pDirectoryName = steamInfo.m_GameInfoPath;
-	searchPathsInit.m_pFileSystem = fsInfo.m_pFileSystem;
+	searchPathsInit.m_pDirectoryName = setupInfo.m_GameInfoPath;
+	searchPathsInit.m_pFileSystem = m_pFileSystem;
 	if ( FileSystem_LoadSearchPaths( searchPathsInit ) != FS_OK )
 		return false;
 
-	FileSystem_AddSearchPath_Platform( fsInfo.m_pFileSystem, steamInfo.m_GameInfoPath );
-	Q_strncpy( m_pGameInfoPath, steamInfo.m_GameInfoPath, sizeof(m_pGameInfoPath) );
+	FileSystem_AddSearchPath_Platform( m_pFileSystem, setupInfo.m_GameInfoPath );
+	V_strncpy( m_pGameInfoPath, setupInfo.m_GameInfoPath, sizeof(m_pGameInfoPath) );
 	return true;
 }

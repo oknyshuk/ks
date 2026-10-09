@@ -1,12 +1,12 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: A higher level link library for general use in the game and tools.
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
-#include "interfaces/interfaces.h"
+// Purpose: A higher level link library for general use in the game and tools.
+
+import std;
+import ks.tier1;
+#include "materialsystem/ivballoctracker.h"
+#include "game_controls/igameuisystemmgr.h"
 
 #include "rocketui/rocketui.h"
 
@@ -167,7 +167,7 @@ struct ConnectionRegistration_t
 };
 
 static int s_nRegistrationCount = 0;
-static ConnectionRegistration_t s_pConnectionRegistration[ ARRAYSIZE(g_pInterfaceGlobals) + 1 ];
+static ConnectionRegistration_t s_pConnectionRegistration[ std::size( g_pInterfaceGlobals ) + 1 ];
 
 void RegisterInterface( CreateInterfaceFn factory, const char *pInterfaceName, void **ppGlobal )
 {
@@ -176,7 +176,7 @@ void RegisterInterface( CreateInterfaceFn factory, const char *pInterfaceName, v
 		*ppGlobal = factory( pInterfaceName, nullptr );
 		if ( *ppGlobal )
 		{
-			Assert( s_nRegistrationCount < ARRAYSIZE(s_pConnectionRegistration) );
+			contract_assert( s_nRegistrationCount < std::size( s_pConnectionRegistration ) );
 			ConnectionRegistration_t &reg = s_pConnectionRegistration[s_nRegistrationCount++];
 			reg.m_ppGlobalStorage = ppGlobal;
 			reg.m_nConnectionPhase = s_nConnectionCount;
@@ -189,7 +189,7 @@ void ReconnectInterface( CreateInterfaceFn factory, const char *pInterfaceName, 
 	*ppGlobal = factory( pInterfaceName, nullptr );
 
 	bool bFound = false;
-	Assert( s_nRegistrationCount < ARRAYSIZE(s_pConnectionRegistration) );
+	contract_assert( s_nRegistrationCount < std::size( s_pConnectionRegistration ) );
 	for ( int i = 0; i < s_nRegistrationCount; ++i )
 	{
 		ConnectionRegistration_t &reg = s_pConnectionRegistration[i];
@@ -202,7 +202,7 @@ void ReconnectInterface( CreateInterfaceFn factory, const char *pInterfaceName, 
 
 	if ( !bFound && *ppGlobal )
 	{
-		Assert( s_nRegistrationCount < ARRAYSIZE(s_pConnectionRegistration) );
+		contract_assert( s_nRegistrationCount < std::size( s_pConnectionRegistration ) );
 		ConnectionRegistration_t &reg = s_pConnectionRegistration[s_nRegistrationCount++];
 		reg.m_ppGlobalStorage = ppGlobal;
 		reg.m_nConnectionPhase = s_nConnectionCount;
@@ -224,7 +224,7 @@ void ConnectInterfaces( CreateInterfaceFn *pFactoryList, int nFactoryCount )
 	{
 		for ( int i = 0; i < nFactoryCount; ++i )
 		{
-			for ( int j = 0; j < ARRAYSIZE( g_pInterfaceGlobals ); ++j )
+			for ( int j = 0; j < std::size( g_pInterfaceGlobals ); ++j )
 			{
 				RegisterInterface( pFactoryList[i], g_pInterfaceGlobals[j].m_pInterfaceName, (void**)g_pInterfaceGlobals[j].m_ppGlobal );
 			}
@@ -236,7 +236,7 @@ void ConnectInterfaces( CreateInterfaceFn *pFactoryList, int nFactoryCount )
 		// Warning("APPSYSTEM: ConnectInterfaces() was called twice for the same DLL.\nThis is expected behavior in building reslists, but questionable otherwise.\n");
 		for ( int i = 0; i < nFactoryCount; ++i )
 		{
-			for ( int j = 0; j < ARRAYSIZE( g_pInterfaceGlobals ); ++j )
+			for ( int j = 0; j < std::size( g_pInterfaceGlobals ); ++j )
 			{
 				ReconnectInterface( pFactoryList[i], g_pInterfaceGlobals[j].m_pInterfaceName, (void**)g_pInterfaceGlobals[j].m_ppGlobal );
 			}
@@ -247,7 +247,7 @@ void ConnectInterfaces( CreateInterfaceFn *pFactoryList, int nFactoryCount )
 
 void DisconnectInterfaces()
 {
-	Assert( s_nConnectionCount > 0 );
+	contract_assert( s_nConnectionCount > 0 );
 	if ( --s_nConnectionCount < 0 )
 		return;
 
@@ -267,9 +267,9 @@ void DisconnectInterfaces()
 //-----------------------------------------------------------------------------
 void ReconnectInterface( CreateInterfaceFn factory, const char *pInterfaceName )
 {
-	for ( int i = 0; i < ARRAYSIZE( g_pInterfaceGlobals ); ++i )
+	for ( int i = 0; i < std::size( g_pInterfaceGlobals ); ++i )
 	{
-		if ( strcmp( g_pInterfaceGlobals[i].m_pInterfaceName, pInterfaceName ) )
+		if ( std::strcmp( g_pInterfaceGlobals[i].m_pInterfaceName, pInterfaceName ) )
 			continue;		
 		ReconnectInterface( factory, g_pInterfaceGlobals[i].m_pInterfaceName, (void**)g_pInterfaceGlobals[i].m_ppGlobal );
 	}

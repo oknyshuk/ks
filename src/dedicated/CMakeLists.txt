@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 oknyshuk
+
 add_library(dedicated OBJECT
     console/textconsole.cpp
     console/TextConsoleUnix.cpp

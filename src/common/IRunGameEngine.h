@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef IRUNGAMEENGINE_H
-#define IRUNGAMEENGINE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "interface.h"
+import std;
+import ks.tier1;
 
 #ifdef GetUserName
 #undef GetUserName
@@ -16,7 +12,7 @@
 //-----------------------------------------------------------------------------
 // Purpose: Interface to running the game engine
 //-----------------------------------------------------------------------------
-abstract_class IRunGameEngine : public IBaseInterface
+class IRunGameEngine : public IBaseInterface
 {
 public:
 	// Returns true if the engine is running, false otherwise.
@@ -73,6 +69,4 @@ public:
 
 };
 
-#define RUNGAMEENGINE_INTERFACE_VERSION "RunGameEngine005"
-
-#endif // IRUNGAMEENGINE_H
+inline constexpr const char *RUNGAMEENGINE_INTERFACE_VERSION = "RunGameEngine005";

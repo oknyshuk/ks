@@ -1,12 +1,45 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A special kind of beam effect that traces from its start position to
 //			its end position and stops if it hits anything.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
@@ -99,9 +132,9 @@ CBeamSpotlight::CBeamSpotlight()
 
 bool CBeamSpotlight::KeyValue( const char *szKeyName, const char *szValue )
 {
-	if ( !Q_stricmp( szKeyName, "SpotlightWidth" ) )
+	if ( !V_stricmp( szKeyName, "SpotlightWidth" ) )
 	{
-		m_flSpotlightGoalWidth = Q_atof(szValue);
+		m_flSpotlightGoalWidth = V_atof(szValue);
 		if ( m_flSpotlightGoalWidth > MAX_BEAM_WIDTH )
 		{
 			Warning( "Map Bug:  %s has SpotLightWidth %f > %f, clamping value\n",
@@ -230,4 +263,3 @@ int CBeamSpotlight::UpdateTransmitState()
 {
 	return SetTransmitState( FL_EDICT_PVSCHECK );
 }
-

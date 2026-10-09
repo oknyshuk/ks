@@ -1,29 +1,27 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Revision: $
-// $NoKeywords: $
-//
-// Fast path model rendering
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Fast path model rendering
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "modelrendersystem.h"
 #include "model_types.h"
 #include "iviewrender.h"
 #include "tier3/tier3.h"
 #undef max
 #undef min
-#include <algorithm>
-#include "tier1/memstack.h"
 #include "engine/ivdebugoverlay.h"
 #include "shaderapi/ishaderapi.h"
 #include "materialsystem/MaterialSystemUtil.h"
 #include "engine_model_client.h"
-#include "tier0/vprof.h"
-
 
 //-----------------------------------------------------------------------------
 // Convars defined by other systems
@@ -252,7 +250,7 @@ uint CModelRenderSystem::AddModelToLists( int &nModelTypeCountInOut, ModelListBy
 	// during the Z prepass).
 
 	const model_t *pModel = data.m_pRenderable->GetModel();
-	Assert( modelinfo->GetModelType( pModel ) == mod_studio );
+	contract_assert( modelinfo->GetModelType( pModel ) == mod_studio );
 
 	// PerfectWorld build needs to not render certain models from the exclude list, so just don't add those models to any lists
 	if ( EngineModelClientFlags( pModel ) & ENGINE_MODEL_CLIENT_MODELFLAG_RENDER_DISABLED )
@@ -274,7 +272,7 @@ uint CModelRenderSystem::AddModelToLists( int &nModelTypeCountInOut, ModelListBy
 	}
 	else
 	{
-		ExecuteOnce( DevWarning( "data.m_pModelRenderable is NULL for %s\n", modelinfo->GetModelName( pModel ) ) );
+		ExecuteOnce( [&]{ DevWarning( "data.m_pModelRenderable is NULL for %s\n", modelinfo->GetModelName( pModel ) ); } );
 	}
 
 	int j;
@@ -585,7 +583,7 @@ void CModelRenderSystem::SortModels( RenderModelInfo_t *pRenderModelInfo, int nL
 	int nModelTypeCount, ModelListByType_t *pModelList, ModelListNode_t *pModelListNode )
 {
 	// First place them in arrays
-	Plat_FastMemset( pRenderModelInfo, 0, sizeof(RenderModelInfo_t) * nListTotal );
+	memset( pRenderModelInfo, 0, sizeof(RenderModelInfo_t) * nListTotal );
 	RenderModelInfo_t *pCurrInfo = pRenderModelInfo;
 	for ( int i = 0; i < nModelTypeCount; ++i )
 	{
@@ -609,7 +607,7 @@ void CModelRenderSystem::SortModels( RenderModelInfo_t *pRenderModelInfo, int nL
 		}
 
 		// Sort within this model type. skin first, then LOD, then body.
-		Assert( pCurrInfo - list.m_pRenderModels == list.m_nCount );
+		contract_assert( pCurrInfo - list.m_pRenderModels == list.m_nCount );
 		std::sort( list.m_pRenderModels, list.m_pRenderModels + list.m_nCount, SortLessFunc ); 
 
 		list.m_nCount -= list.m_nSetupBoneCount;
@@ -904,19 +902,20 @@ void CModelRenderSystem::HookUpStaticLightingState( int nCount, ModelListByType_
 //-----------------------------------------------------------------------------
 int CModelRenderSystem::SetupStaticPropLighting( LightingList_t &lightingList, DataCacheHandle_t *pColorMeshHandle )
 {
+	ks::ScratchArena<> scratch;
 	if ( lightingList.m_nCount == 0 )
 		return 0;
 
 	// Build list of everything that needs lighting
 	int nTotalModels;
-	ModelListByType_t **ppLists = (ModelListByType_t**)stackalloc( lightingList.m_nCount * sizeof(ModelListByType_t*) );
-	unsigned char *pFlags = (unsigned char*)stackalloc( lightingList.m_nCount * sizeof(unsigned char) );
+	ModelListByType_t **ppLists = scratch.Alloc<ModelListByType_t*>( lightingList.m_nCount );
+	unsigned char *pFlags = scratch.Alloc<unsigned char>( lightingList.m_nCount );
 	int nSetupCount = BuildLightingList( ppLists, pFlags, &nTotalModels, lightingList );
 	if ( nSetupCount == 0 )
 		return 0;
 
 	// Build queries used to compute lighting
-	StaticLightingQuery_t *pLightingQuery = (StaticLightingQuery_t*)stackalloc( nTotalModels * sizeof(StaticLightingQuery_t) );
+	StaticLightingQuery_t *pLightingQuery = scratch.Alloc<StaticLightingQuery_t>( nTotalModels );
 	int nOffset = 0;
 	for ( int i = 0; i < nSetupCount; ++i )
 	{
@@ -935,12 +934,12 @@ int CModelRenderSystem::SetupStaticPropLighting( LightingList_t &lightingList, D
 		sizeof(StaticLightingQuery_t), nTotalModels, &pLightingQuery[0].m_pRenderable, sizeof(StaticLightingQuery_t) );
 			   
 	// Does all lighting computations for all models
-	ColorMeshInfo_t **ppColorMeshInfo = (ColorMeshInfo_t**)stackalloc( nTotalModels * sizeof(ColorMeshInfo_t*) );
-	ITexture **ppEnvCubemap = (ITexture**)stackalloc( nTotalModels * sizeof(ITexture*) );
+	ColorMeshInfo_t **ppColorMeshInfo = scratch.Alloc<ColorMeshInfo_t*>( nTotalModels );
+	ITexture **ppEnvCubemap = scratch.Alloc<ITexture*>( nTotalModels );
 
 	CMatRenderData< MaterialLightingState_t > rdLightingState( m_pRenderContext, 2 * nTotalModels );
 	// bring this into cache and clear it, we're going to write to most of it anyway
-	Plat_FastMemset( rdLightingState.Base(), 0, sizeof(MaterialLightingState_t) * 2 * nTotalModels );
+	memset( rdLightingState.Base(), 0, sizeof(MaterialLightingState_t) * 2 * nTotalModels );
 
 	MaterialLightingState_t *pLightingState = rdLightingState.Base();
 	MaterialLightingState_t *pDecalLightingState = &rdLightingState[ nTotalModels ];
@@ -955,12 +954,13 @@ int CModelRenderSystem::SetupStaticPropLighting( LightingList_t &lightingList, D
 
 void CModelRenderSystem::SetupStandardLighting( LightingList_t &lightingList )
 {
+	ks::ScratchArena<> scratch;
 	if ( lightingList.m_nCount == 0 )
 		return;
 
 	// Determine which groups need lighting
-	ModelListByType_t **ppLists = (ModelListByType_t**)stackalloc( lightingList.m_nCount * sizeof(ModelListByType_t*) );
-	unsigned char *pFlags = (unsigned char*)stackalloc( lightingList.m_nCount * sizeof(unsigned char) );
+	ModelListByType_t **ppLists = scratch.Alloc<ModelListByType_t*>( lightingList.m_nCount );
+	unsigned char *pFlags = scratch.Alloc<unsigned char>( lightingList.m_nCount );
 	int nTotalModels = 0;
 	int nSetupCount = BuildLightingList( ppLists, pFlags, &nTotalModels, lightingList );
 	if ( nSetupCount == 0 )
@@ -968,17 +968,9 @@ void CModelRenderSystem::SetupStandardLighting( LightingList_t &lightingList )
 
 	// Compute data necessary for lighting computations
 	int nOffset = 0;
-	LightingQuery_t *pLightingQuery = (LightingQuery_t*)stackalloc( nTotalModels * sizeof(LightingQuery_t) );
+	LightingQuery_t *pLightingQuery = scratch.Alloc<LightingQuery_t>( nTotalModels );
 	CMatRenderData<MaterialLightingState_t> rdLightingState( m_pRenderContext, nTotalModels );
 	MaterialLightingState_t *pLightingState = rdLightingState.Base();
-	PREFETCH360( pLightingState, 0 );
-	PREFETCH360( pLightingState, 128 );
-	PREFETCH360( pLightingState, 256 );
-	PREFETCH360( pLightingState, 384 );
-	PREFETCH360( pLightingState, 512 );
-	PREFETCH360( pLightingState, 640 );
-	PREFETCH360( pLightingState, 768 );
-	PREFETCH360( pLightingState, 896 );
 
 	for ( int i = 0; i < nSetupCount; ++i )
 	{
@@ -990,7 +982,7 @@ void CModelRenderSystem::SetupStandardLighting( LightingList_t &lightingList )
 	memset( pLightingState, 0, nTotalModels * sizeof(MaterialLightingState_t) );
 
 	// Does all lighting computations for all models
-	ITexture **ppEnvCubemap = (ITexture**)stackalloc( nTotalModels * sizeof(ITexture*) );
+	ITexture **ppEnvCubemap = scratch.Alloc<ITexture*>( nTotalModels );
 	modelrender->ComputeLightingState( nTotalModels, pLightingQuery, pLightingState, ppEnvCubemap );
 
 	// Hook up pointers
@@ -1023,20 +1015,21 @@ void CModelRenderSystem::SetupStandardLighting( LightingList_t &lightingList )
 
 int CModelRenderSystem::SetupPhysicsPropLighting( LightingList_t &lightingList, DataCacheHandle_t *pColorMeshHandle )
 {
+	ks::ScratchArena<> scratch;
 	if ( lightingList.m_nCount == 0 )
 		return 0;
 
 	// NOTE: Physics prop lighting is the same as static prop lighting, only
 	// the static lighting is *always* used (the system goes to the standard path
 	// for physics props which are moving or which use bumpmapping).
-	ModelListByType_t **ppLists = (ModelListByType_t**)stackalloc( lightingList.m_nCount * sizeof(ModelListByType_t*) );
-	unsigned char *pFlags = (unsigned char*)stackalloc( lightingList.m_nCount * sizeof(unsigned char) );
+	ModelListByType_t **ppLists = scratch.Alloc<ModelListByType_t*>( lightingList.m_nCount );
+	unsigned char *pFlags = scratch.Alloc<unsigned char>( lightingList.m_nCount );
 	int nTotalModels = 0;
 	int nSetupCount = BuildLightingList( ppLists, pFlags, &nTotalModels, lightingList );
 	if ( nSetupCount == 0 )
 		return 0;
 
-	StaticLightingQuery_t *pLightingQuery = (StaticLightingQuery_t*)stackalloc( nTotalModels * sizeof(StaticLightingQuery_t) );
+	StaticLightingQuery_t *pLightingQuery = scratch.Alloc<StaticLightingQuery_t>( nTotalModels );
 	int nOffset = 0;
 	for ( int i = 0; i < nSetupCount; ++i )
 	{
@@ -1050,8 +1043,8 @@ int CModelRenderSystem::SetupPhysicsPropLighting( LightingList_t &lightingList, 
 	}
 
 	// Does all lighting computations for all models
-	ColorMeshInfo_t **ppColorMeshInfo = (ColorMeshInfo_t**)stackalloc( nTotalModels * sizeof(ColorMeshInfo_t*) );
-	ITexture **ppEnvCubemap = (ITexture**)stackalloc( nTotalModels * sizeof(ITexture*) );
+	ColorMeshInfo_t **ppColorMeshInfo = scratch.Alloc<ColorMeshInfo_t*>( nTotalModels );
+	ITexture **ppEnvCubemap = scratch.Alloc<ITexture*>( nTotalModels );
 	CMatRenderData< MaterialLightingState_t > rdLightingState( m_pRenderContext, 2 * nTotalModels );
 	MaterialLightingState_t *pLightingState = rdLightingState.Base();
 	MaterialLightingState_t *pDecalLightingState = &pLightingState[ nTotalModels ];
@@ -1099,13 +1092,14 @@ int CModelRenderSystem::SetupLighting( LightingList_t *pLightingList, int nModel
 //-----------------------------------------------------------------------------
 void CModelRenderSystem::SetupFlashlightsAndDecals( StudioModelArrayInfo2_t *pInfo, int nModelTypeCount, ModelListByType_t *pModelList, int nTotalModelCount, RenderModelInfo_t *pRenderModels, ModelRenderMode_t renderMode )
 {
+	ks::ScratchArena<> scratch;
 	// Skip lighting + decals if we don't need it
 	if ( renderMode != MODEL_RENDER_MODE_NORMAL )
 		return;
 
 	ShadowHandle_t pFlashlights[MAX_FLASHLIGHTS_PER_INSTANCE_DRAW_CALL];
 	int nInstCount = 0;
-	ModelInstanceHandle_t *pModelInstanceHandle = (ModelInstanceHandle_t*)stackalloc( nTotalModelCount * sizeof(ModelInstanceHandle_t) );
+	ModelInstanceHandle_t *pModelInstanceHandle = scratch.Alloc<ModelInstanceHandle_t>( nTotalModelCount );
 	for ( int i = 0; i < nModelTypeCount; ++i )
 	{
 		ModelListByType_t &list = pModelList[ i ];
@@ -1210,7 +1204,7 @@ void CModelRenderSystem::RenderModels( StudioModelArrayInfo2_t *pInfo, int nMode
 			}
 			else
 			{
-				Assert( !bFoundStencil );
+				contract_assert( !bFoundStencil );
 			}
 #endif
 		}
@@ -1243,7 +1237,7 @@ void CModelRenderSystem::RenderModels( StudioModelArrayInfo2_t *pInfo, int nMode
 	else if ( renderMode == MODEL_RENDER_MODE_RTT_SHADOWS )
 	{
 		// shouldn't get here unless the code is ported from l4d2 to drive this properly.
-		Assert(0);
+		contract_assert( 0 );
 	}
 }
 
@@ -1392,10 +1386,11 @@ inline bool CModelRenderSystem::StencilSortLessFunc( const ModelListByType_t &le
 static ConVar cl_skipfastpath( "cl_skipfastpath", "0", FCVAR_CHEAT, "Set to 1 to stop all models that go through the model fast path from rendering" );
 void CModelRenderSystem::DrawModels( ModelRenderSystemData_t *pEntities, int nCount, ModelRenderMode_t renderMode, bool bShadowDepthIncludeTranslucentMaterials )
 {
+	ks::ScratchArena<> scratch;
 	if ( nCount == 0 || cl_skipfastpath.GetInt() )
 		return;
 
-	VPROF_BUDGET( "CModelRenderSystem::DrawModels", VPROF_BUDGETGROUP_MODEL_FAST_PATH_RENDERING );
+	CVProfScope _( "CModelRenderSystem::DrawModels", 0, VPROF_BUDGETGROUP_MODEL_FAST_PATH_RENDERING, false, BUDGETFLAG_OTHER );
 	MDLCACHE_CRITICAL_SECTION_( g_pMDLCache );
 
 	// While doing this, we need materialsystem to keep around its temp allocations
@@ -1403,7 +1398,7 @@ void CModelRenderSystem::DrawModels( ModelRenderSystemData_t *pEntities, int nCo
 	CMatRenderContextPtr matRenderContext( g_pMaterialSystem );
 	m_pRenderContext = matRenderContext;
 
-	PIXEVENT( m_pRenderContext, "CModelRenderSystem::DrawModels (FASTPATH)" );
+	( m_pRenderContext, "CModelRenderSystem::DrawModels (FASTPATH)" );
 
 	CMatRenderDataReference rdLock( m_pRenderContext );
 
@@ -1412,10 +1407,10 @@ void CModelRenderSystem::DrawModels( ModelRenderSystemData_t *pEntities, int nCo
 	DataCacheHandle_t *pColorMeshHandles = nullptr;
 	if ( renderMode == MODEL_RENDER_MODE_NORMAL )
 	{
-		pColorMeshHandles = (DataCacheHandle_t*)stackalloc( nCount * sizeof(DataCacheHandle_t) );
+		pColorMeshHandles = scratch.Alloc<DataCacheHandle_t>( nCount );
 	}
-	ModelListByType_t *pModelList = (ModelListByType_t*)stackalloc( nCount * sizeof(ModelListByType_t) );
-	ModelListNode_t *pModelListNode = (ModelListNode_t*)stackalloc( nCount * sizeof(ModelListNode_t) );
+	ModelListByType_t *pModelList = scratch.Alloc<ModelListByType_t>( nCount );
+	ModelListNode_t *pModelListNode = scratch.Alloc<ModelListNode_t>( nCount );
 	int nModelsRenderingStencilCount = 0;
 	int nModelTypeCount = BucketModelsByMDL( pModelList, pModelListNode, pEntities, nCount, renderMode, &nModelsRenderingStencilCount );
 
@@ -1461,7 +1456,6 @@ void CModelRenderSystem::DrawModels( ModelRenderSystemData_t *pEntities, int nCo
 	if ( renderMode == MODEL_RENDER_MODE_NORMAL )
 	{
 		modelrender->CleanupStaticLightingState( nColorMeshHandles, pColorMeshHandles );
-		stackfree( pColorMeshHandles );
 	}
 
 	// Blat out temporary memory for bone-to-world transforms
@@ -1478,6 +1472,7 @@ void CModelRenderSystem::DrawModels( ModelRenderSystemData_t *pEntities, int nCo
 //-----------------------------------------------------------------------------
 void CModelRenderSystem::ComputeTranslucentRenderData( ModelRenderSystemData_t *pModels, int nCount, TranslucentInstanceRenderData_t *pRenderData, TranslucentTempData_t *pTempData )
 {
+	ks::ScratchArena<> scratch;
 	if ( nCount == 0 )
 	{
 		pTempData->m_nColorMeshHandleCount = 0;
@@ -1485,7 +1480,7 @@ void CModelRenderSystem::ComputeTranslucentRenderData( ModelRenderSystemData_t *
 		return;
 	}
 						 
-	VPROF_BUDGET( "CModelRenderSystem::ComputeTranslucentRenderData", VPROF_BUDGETGROUP_MODEL_FAST_PATH_RENDERING );
+	CVProfScope _( "CModelRenderSystem::ComputeTranslucentRenderData", 0, VPROF_BUDGETGROUP_MODEL_FAST_PATH_RENDERING, false, BUDGETFLAG_OTHER );
 	MDLCACHE_CRITICAL_SECTION_( g_pMDLCache );
 
 	// While doing this, we need materialsystem to keep around its temp allocations
@@ -1493,7 +1488,7 @@ void CModelRenderSystem::ComputeTranslucentRenderData( ModelRenderSystemData_t *
 	CMatRenderContextPtr matRenderContext( g_pMaterialSystem );
 	m_pRenderContext = matRenderContext;
 
-	PIXEVENT( m_pRenderContext, "CModelRenderSystem::ComputeTranslucentRenderData (FASTPATH)" );
+	( m_pRenderContext, "CModelRenderSystem::ComputeTranslucentRenderData (FASTPATH)" );
 
 	m_pRenderContext->AddRefRenderData();
 	pTempData->m_bReleaseRenderData = true;
@@ -1503,8 +1498,8 @@ void CModelRenderSystem::ComputeTranslucentRenderData( ModelRenderSystemData_t *
 	// FIXME: This is infected-specific for perf test reasons.
 	// Will break into a more fixed pipeline at a later date
 	DataCacheHandle_t *pColorMeshHandles = pTempData->m_pColorMeshHandles;
-	ModelListByType_t *pModelList = (ModelListByType_t*)stackalloc( nCount * sizeof(ModelListByType_t) );
-	ModelListNode_t *pModelListNode = (ModelListNode_t*)stackalloc( nCount * sizeof(ModelListNode_t) );
+	ModelListByType_t *pModelList = scratch.Alloc<ModelListByType_t>( nCount );
+	ModelListNode_t *pModelListNode = scratch.Alloc<ModelListNode_t>( nCount );
 	int nModelsRenderingStencilCount = 0;
 	int nModelTypeCount = BucketModelsByMDL( pModelList, pModelListNode, pModels, nCount, renderMode, &nModelsRenderingStencilCount );
 
@@ -1516,7 +1511,7 @@ void CModelRenderSystem::ComputeTranslucentRenderData( ModelRenderSystemData_t *
 	ComputeModelLODs( nModelTypeCount, pModelList, pModelListNode, renderMode );
 
 	// Sort processing list by body, lod, skin, etc.
-	RenderModelInfo_t *pSortedModelListNode = (RenderModelInfo_t*)stackalloc( nCount * sizeof(RenderModelInfo_t) );
+	RenderModelInfo_t *pSortedModelListNode = scratch.Alloc<RenderModelInfo_t>( nCount );
 	SortModels( pSortedModelListNode, nCount, nModelTypeCount, pModelList, pModelListNode );
 
 	// Setup bones
@@ -1575,7 +1570,7 @@ void CModelRenderSystem::AddBrushModelToList( int nInitialListIndex, ModelRender
 	ModelRenderMode_t renderMode, BrushArrayInstanceData_t &instance, matrix3x4a_t &brushToWorld )
 {
 	const model_t *pModel = data.m_pRenderable->GetModel();
-	Assert( modelinfo->GetModelType( pModel ) == mod_brush );
+	contract_assert( modelinfo->GetModelType( pModel ) == mod_brush );
 
 	brushToWorld = data.m_pRenderable->RenderableToWorldTransform();
 	instance.m_pBrushToWorld = &brushToWorld;
@@ -1599,13 +1594,13 @@ void CModelRenderSystem::AddBrushModelToList( int nInitialListIndex, ModelRender
 				instance.m_pStencilState = &rdStencil[0];
 
 				// Not working yet...
-				Assert( 0 );
+				contract_assert( 0 );
 			}
 		}
 	}
 	else
 	{
-		ExecuteOnce( DevWarning( "data.m_pModelRenderable is NULL for %s\n", modelinfo->GetModelName( pModel ) ) );
+		ExecuteOnce( [&]{ DevWarning( "data.m_pModelRenderable is NULL for %s\n", modelinfo->GetModelName( pModel ) ); } );
 	}
 }
 
@@ -1628,14 +1623,14 @@ void CModelRenderSystem::DrawBrushModels( ModelRenderSystemData_t *pModels, int 
 	if ( nCount == 0 || cl_skipfastpath.GetInt() )
 		return;
 
-	VPROF_BUDGET( "CModelRenderSystem::DrawBrushModels", VPROF_BUDGETGROUP_BRUSH_FAST_PATH_RENDERING );
+	CVProfScope _( "CModelRenderSystem::DrawBrushModels", 0, VPROF_BUDGETGROUP_BRUSH_FAST_PATH_RENDERING, false, BUDGETFLAG_OTHER );
 
 	// While doing this, we need materialsystem to keep around its temp allocations
 	// which we use for bone matrices + flexes
 	CMatRenderContextPtr matRenderContext( g_pMaterialSystem );
 	m_pRenderContext = matRenderContext;
 
-	PIXEVENT( m_pRenderContext, "CModelRenderSystem::DrawBrushModels (FASTPATH)" );
+	( m_pRenderContext, "CModelRenderSystem::DrawBrushModels (FASTPATH)" );
 
 	CMatRenderDataReference rdLock( m_pRenderContext );
 

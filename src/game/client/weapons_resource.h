@@ -1,17 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef WEAPONS_RESOURCE_H
-#define WEAPONS_RESOURCE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "shareddefs.h"
-#include "tier1/map_ops.h"
+import std;
 #include "hud.h"
+#include "weapon_parse.h"
 
 class C_BaseCombatWeapon;
 class CHudTexture;
@@ -40,5 +35,3 @@ public:
 };
 
 extern WeaponsResource gWR;
-
-#endif // WEAPONS_RESOURCE_H

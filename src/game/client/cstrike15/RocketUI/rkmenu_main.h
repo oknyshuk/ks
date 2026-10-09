@@ -1,5 +1,8 @@
-#ifndef KISAKSTRIKE_RKMENU_MAIN_H
-#define KISAKSTRIKE_RKMENU_MAIN_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include <rocketui/rmlui.h>
 
 #include <rocketui/rocketui.h>
 
@@ -20,5 +23,3 @@ public:
 private:
     static bool showing;
 };
-
-#endif //KISAKSTRIKE_RKMENU_MAIN_H

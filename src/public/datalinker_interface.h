@@ -1,16 +1,9 @@
-//========= Copyright c 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef DATA_LINKER_INTERFACE_H
-#define DATA_LINKER_INTERFACE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-
-#include "tier0/platform.h"
-#include "tier0/basetypes.h"
-#include "tier0/dbg.h"
+import std;
+import ks.core;
 
 
 
@@ -42,7 +35,6 @@ DATALINKER_CLASS_ALIGNMENT(uint16,2);
 DATALINKER_CLASS_ALIGNMENT(uint8,1);
 
 // undefine DATALINKER_CHECK_COOKIES if you don't want runtime cookie checks
-#define DATALINKER_CHECK_COOKIES
 
 namespace DataLinker
 {
@@ -57,7 +49,7 @@ inline byte *ResolveOffset(int32 *pOffset)
 inline byte *ResolveOffsetFast(const int32 *pOffset)
 {
 	int offset = *pOffset;
-	Assert(offset != 0);
+	contract_assert( offset != 0 );
 	return ((byte*)pOffset) + offset;
 }
 
@@ -72,14 +64,13 @@ struct Offset_t
 	enum {kDataAlignment = 4};
 
 	int32 offset;
-	bool operator == (int zero)const {Assert(zero == 0); return offset == zero;}
+	bool operator == (int zero)const {contract_assert( zero == 0 ); return offset == zero;}
 	bool IsNull()const {return offset == 0;}
 	int32 NotNull()const {return offset;}
 	const T* GetPtr()const
 	{
 		// validate
 		byte *ptr = ResolveOffsetFast(&offset);
-#ifdef DATALINKER_CHECK_COOKIES
 		if(nCookie)
 		{
 			if(nCookie != ((int*)ptr)[-1])
@@ -87,7 +78,6 @@ struct Offset_t
 				Error("Invalid data cookie %d != %d\n", ((int*)ptr)[-1], nCookie);
 			}
 		}
-#endif
 		return (const T*)ptr;
 	}
 	//const T* GetPtrFast()const {return (const T*)ResolveOffsetFast(&offset);}
@@ -102,7 +92,7 @@ struct OffsetAndSize_t: public Offset_t<T,nCookie>
 
 	const T& operator []( int index ) const
 	{
-		Assert(index < size);
+		contract_assert( index < size );
 		return this->GetPtr()[index];
 	}
 };
@@ -113,7 +103,7 @@ struct OffsetSizeAndStride_t : public OffsetAndSize_t<T,nCookie>
 	int32 stride;
 	const T& operator []( int index ) const
 	{
-		Assert(index < this->size);
+		contract_assert( index < this->size );
 		return *(const T*)(ResolveOffsetFast(&this->offset) + stride * index);
 	}
 };
@@ -172,14 +162,14 @@ enum OffsetTypeEnum
 //////////////////////////////////////////////////////////////////////////
 // this class may be useful at runtime to use fast serialize interface (without data linking)
 // 
-abstract_class IBasicStream
+class IBasicStream
 {
 public:
 	virtual void* WriteBytes(uint numBytes) = 0;
 
 	virtual void Align(uint nAlignment, int nOffset = 0) = 0;
 	inline void AlignPointer(){Align(4);}
-	virtual long Tell() = 0;
+	virtual long Tell() const = 0;
 
 	// the Begin/End semantics differ in different implementations
 	// in some, it can be ignored, some others can use it for statistics and some others may set fixed page boundaries based on the names and/or flags 
@@ -233,7 +223,7 @@ public:
 // WARNING: there are no error-checking facilities here. If you forget to set 
 //          a link, you'll have a NULL offset and no warnings or errors
 //
-abstract_class IStream: public IBasicStream
+class IStream: public IBasicStream
 {
 public:
 	template <typename T,int32 nCookie>	T* WriteAndLink(Offset_t<T,nCookie>*pOffset, uint count = 1);
@@ -258,7 +248,7 @@ public:
 // You can extend this to multiple object files linked at later stage (szDescription 
 // must be unique identifiers)
 // 
-abstract_class ILinkStream: public IStream
+class ILinkStream: public IStream
 {
 public:
 	virtual LinkSource_t WriteOffset(const char *szDescription) = 0;
@@ -312,7 +302,7 @@ inline T* IBasicStream::WriteWithCookie(uint count)
 			Align(sizeof(int32));// we want the cookie itself aligned properly
 		}
 		WriteSimple<int32>(nCookie);
-		Assert((Tell()&(nAlignment-1)) == 0); // must be correctly aligned by now
+		contract_assert( (Tell()&(nAlignment-1)) == 0 ); // must be correctly aligned by now
 	}
 	else
 	{
@@ -342,7 +332,7 @@ inline T* IBasicStream::WriteWithCookieStrided(uint count, uint stride)
 			Align(sizeof(int32));// we want the cookie itself aligned properly
 		}
 		WriteSimple<int32>(nCookie);
-		Assert((Tell()&(nAlignment-1)) == 0); // must be correctly aligned by now
+		contract_assert( (Tell()&(nAlignment-1)) == 0 ); // must be correctly aligned by now
 	}
 	else
 	{
@@ -421,5 +411,3 @@ struct DataLinkerBasicStreamRange_t
 };
 
 #define DATALINKER_RANGE(STREAM,NAME) DataLinkerBasicStreamRange_t dataLinker_basicStreamRange##__LINE((STREAM),(NAME))
-
-#endif

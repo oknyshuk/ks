@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DISP_VERTINDEX_H
-#define DISP_VERTINDEX_H
-
-
-#include "tier0/dbg.h"
-
+import std;
+import ks.core;
 
 // ------------------------------------------------------------------------ //
 // Helper class used for indexing vertices in the 2D grid.
@@ -80,14 +73,14 @@ inline void CVertIndex::Init( short ix, short iy )
 
 inline short& CVertIndex::operator[]( short i )
 {
-	Assert( i >= 0 && i <= 1 );
+	contract_assert( i >= 0 && i <= 1 );
 	return ((short*)this)[i];
 }
 
 
 inline short const& CVertIndex::operator[]( short i ) const
 {
-	Assert( i >= 0 && i <= 1 );
+	contract_assert( i >= 0 && i <= 1 );
 	return ((short*)this)[i];
 }
 
@@ -142,6 +135,3 @@ inline bool CVertIndex::operator!=( CVertIndex const &other ) const
 {
 	return x!=other.x || y!=other.y;
 }
-
-
-#endif // DISP_VERTINDEX_H

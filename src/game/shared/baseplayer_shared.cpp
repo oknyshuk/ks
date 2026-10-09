@@ -1,11 +1,65 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Implements shared baseplayer class functionality
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Implements shared baseplayer class functionality
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "c_recipientfilter.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "player.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "movevars_shared.h"
 #include "util_shared.h"
 #include "datacache/imdlcache.h"
@@ -51,14 +105,12 @@
 	#include "cs_gamerules.h"
 #include "cs_player.h"
 
-
 	extern int TrainSpeed(int iSpeed, int iMax);
 	
 #endif
 
 #include "in_buttons.h"
 #include "engine/IEngineSound.h"
-#include "tier0/vprof.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "decals.h"
 #include "obstacle_pushaway.h"
@@ -67,64 +119,10 @@
 //----------------------------------------------------
 // Player Physics Shadow
 //----------------------------------------------------
-#define VPHYS_MAX_DISTANCE		2.0
-#define VPHYS_MAX_VEL			10
-#define VPHYS_MAX_DISTSQR		(VPHYS_MAX_DISTANCE*VPHYS_MAX_DISTANCE)
-#define VPHYS_MAX_VELSQR		(VPHYS_MAX_VEL*VPHYS_MAX_VEL)
-
-#if defined( DEBUG_MOTION_CONTROLLERS )
-#if defined( GAME_DLL )
-unsigned char g_uColorValue = 255;
-#else
-unsigned char g_uColorValue = 128;
-#endif
-Vector g_vLastPos = vec3_origin;
-Vector g_vShift = vec3_origin;
-ConVar dbg_motionlinetime( "dbg_motionlinetime", "30.0", FCVAR_REPLICATED );
-
-void DebugVelocity( const char *szString, const Vector &vStart, const Vector &vEnd, uint8 iRed, uint8 iGreen, uint8 iBlue )
-{
-	if( dbg_motionlinetime.GetFloat() < 0.0f )
-		return;
-
-	Vector vShift = g_vShift;
-#if defined( CLIENT_DLL )
-#	if defined( KEEP_COMMAND_REPREDICTION_COUNT )
-		vShift *= (1.0f + (float)prediction->GetRepredictionCount());
-#	else
-		vShift *= prediction->IsFirstTimePredicted() ? 1.0f : 2.0f;
-#	endif
-
-
-	iRed >>= 1;
-	iGreen >>= 1;
-	iBlue >>= 1;
-#endif
-	NDebugOverlay::Line( vStart + vShift, vEnd + vShift, iRed, iGreen, iBlue, true, dbg_motionlinetime.GetFloat() );
-}
-
-
-
-void DebugBox( const char *szString, const Vector &vPos, const Vector &vSize, uint8 iRed, uint8 iGreen, uint8 iBlue, uint8 iAlpha )
-{
-	if( dbg_motionlinetime.GetFloat() < 0.0f )
-		return;
-
-	Vector vShift = g_vShift;
-#if defined( CLIENT_DLL )
-#	if defined( KEEP_COMMAND_REPREDICTION_COUNT )
-		vShift *= (1.0f + (float)prediction->GetRepredictionCount());
-#	else
-		vShift *= prediction->IsFirstTimePredicted() ? 1.0f : 2.0f;
-#	endif
-
-	iRed >>= 1;
-	iGreen >>= 1;
-	iBlue >>= 1;
-#endif
-	NDebugOverlay::Box( vPos + vShift, -vSize, vSize, iRed, iGreen, iBlue, iAlpha, dbg_motionlinetime.GetFloat() );
-}
-#endif
+constexpr auto VPHYS_MAX_DISTANCE = 2.0;
+constexpr auto VPHYS_MAX_VEL = 10;
+inline constexpr auto VPHYS_MAX_DISTSQR = (VPHYS_MAX_DISTANCE*VPHYS_MAX_DISTANCE);
+inline constexpr auto VPHYS_MAX_VELSQR = (VPHYS_MAX_VEL*VPHYS_MAX_VEL);
 
 ConVar sv_infinite_ammo( "sv_infinite_ammo", "0", FCVAR_RELEASE | FCVAR_REPLICATED, "Player's active weapon will never run out of ammo. If set to 2 then player has infinite total ammo but still has to reload the magazine." );
 
@@ -249,13 +247,13 @@ void CBasePlayer::ItemPreFrame()
 //-----------------------------------------------------------------------------
 bool CBasePlayer::UsingStandardWeaponsInVehicle( void )
 {
-	Assert( IsInAVehicle() );
+	contract_assert( IsInAVehicle() );
 #if !defined( CLIENT_DLL )
 	IServerVehicle *pVehicle = GetVehicle();
 #else
 	IClientVehicle *pVehicle = GetVehicle();
 #endif
-	Assert( pVehicle );
+	contract_assert( pVehicle );
 	if ( !pVehicle )
 		return true;
 
@@ -276,7 +274,7 @@ bool CBasePlayer::UsingStandardWeaponsInVehicle( void )
 //-----------------------------------------------------------------------------
 void CBasePlayer::ItemPostFrame()
 {
-	VPROF( "CBasePlayer::ItemPostFrame" );
+	CVProfScope _( "CBasePlayer::ItemPostFrame", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Put viewmodels into basically correct place based on new player origin
 	CalcViewModelView( EyePosition(), EyeAngles() );
@@ -308,7 +306,7 @@ void CBasePlayer::ItemPostFrame()
 	if ( m_hUseEntity != nullptr )
 	{
 #if !defined( CLIENT_DLL )
-		Assert( !IsInAVehicle() );
+		contract_assert( !IsInAVehicle() );
 		ImpulseCommands();// this will call playerUse
 #endif
 		return;
@@ -775,6 +773,7 @@ ConVar sv_max_distance_transmit_footsteps( "sv_max_distance_transmit_footsteps",
 //-----------------------------------------------------------------------------
 void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, float fvol, bool bForce )
 {
+	ks::ScratchArena<> scratch;
 	if ( gpGlobals->maxClients > 1 && !sv_footsteps.GetFloat() )
 		return;
 
@@ -796,7 +795,7 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 
 	CSoundParameters params;
 
-	Assert( nSide == 0 || nSide == 1 );
+	contract_assert( nSide == 0 || nSide == 1 );
 
 	if ( m_StepSoundCache[ nSide ].m_usSoundNameIndex == stepSoundName )
 	{
@@ -810,14 +809,14 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 		const char *pRawSoundName = physprops->GetString( stepSoundName );
 		const char *pSoundName = nullptr;
 		int const nStepCopyLen = V_strlen(pRawSoundName) + 4;
-		char *szStep = ( char * ) stackalloc( nStepCopyLen );
+		char *szStep = ( char * ) scratch.AllocBytes( nStepCopyLen );
 		if ( GetTeamNumber() == TEAM_CT )
 		{
-			Q_snprintf(szStep, nStepCopyLen, "ct_%s", pRawSoundName);
+			V_snprintf(szStep, nStepCopyLen, "ct_%s", pRawSoundName);
 		}
 		else
 		{
-			Q_snprintf(szStep, nStepCopyLen, "t_%s", pRawSoundName);
+			V_snprintf(szStep, nStepCopyLen, "t_%s", pRawSoundName);
 		}
 
 		pSoundName = szStep;
@@ -995,7 +994,7 @@ void CBasePlayer::SetStepSoundTime( stepsoundtimes_t iStepSoundTime, bool bWalki
 		break;
 
 	default:
-		Assert(0);
+		contract_assert( 0 );
 		break;
 	}
 
@@ -1020,7 +1019,7 @@ bool CBasePlayer::Weapon_CanUse( CBaseCombatWeapon *pWeapon )
 
 void CBasePlayer::SetAnimationExtension( const char *pExtension )
 {
-	Q_strncpy( m_szAnimExtension, pExtension, sizeof(m_szAnimExtension) );
+	V_strncpy( m_szAnimExtension, pExtension, sizeof(m_szAnimExtension) );
 }
 
 
@@ -1084,7 +1083,7 @@ bool CBasePlayer::Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex 
 		}
 
 		CBaseViewModel *pViewModel = GetViewModel( viewmodelindex );
-		Assert( pViewModel );
+		contract_assert( pViewModel );
 		if ( pViewModel )
 			pViewModel->RemoveEffects( EF_NODRAW );
 		ResetAutoaim( );
@@ -1124,7 +1123,6 @@ void CBasePlayer::AbortReload( void )
 	}
 }
 
-#if !defined( NO_ENTITY_PREDICTION )
 void CBasePlayer::AddToPlayerSimulationList( CBaseEntity *other )
 {
 	CHandle< CBaseEntity > h;
@@ -1133,7 +1131,7 @@ void CBasePlayer::AddToPlayerSimulationList( CBaseEntity *other )
 	if ( ks::find_index( m_SimulatedByThisPlayer, h ) != -1 )
 		return;
 
-	Assert( other->IsPlayerSimulated() );
+	contract_assert( other->IsPlayerSimulated() );
 
 	m_SimulatedByThisPlayer.push_back( h );
 }
@@ -1148,8 +1146,8 @@ void CBasePlayer::RemoveFromPlayerSimulationList( CBaseEntity *other )
 	if ( !other )
 		return;
 
-	Assert( other->IsPlayerSimulated() );
-	Assert( other->GetSimulatingPlayer() == this );
+	contract_assert( other->IsPlayerSimulated() );
+	contract_assert( other->GetSimulatingPlayer() == this );
 
 
 	CHandle< CBaseEntity > h;
@@ -1176,8 +1174,8 @@ void CBasePlayer::SimulatePlayerSimulatedEntities( void )
 			continue;
 		}
 
-		Assert( e->IsPlayerSimulated() );
-		Assert( e->GetSimulatingPlayer() == this );
+		contract_assert( e->IsPlayerSimulated() );
+		contract_assert( e->GetSimulatingPlayer() == this );
 
 		e->PhysicsSimulate();
 	}
@@ -1198,8 +1196,8 @@ void CBasePlayer::SimulatePlayerSimulatedEntities( void )
 			continue;
 		}
 
-		Assert( e->IsPlayerSimulated() );
-		Assert( e->GetSimulatingPlayer() == this );
+		contract_assert( e->IsPlayerSimulated() );
+		contract_assert( e->GetSimulatingPlayer() == this );
 
 		if ( !e->GetCheckUntouch() )
 			continue;
@@ -1230,7 +1228,6 @@ void CBasePlayer::ClearPlayerSimulationList( void )
 
 	m_SimulatedByThisPlayer.clear();
 }
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Return true if we should allow selection of the specified item
@@ -1319,7 +1316,7 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 	// UNDONE: Might be faster to just fold this range into the sphere query
 	CBaseEntity *pObject = nullptr;
 
-	float nearestDist = FLT_MAX;
+	float nearestDist = std::numeric_limits<float>::max();
 	// try the hit entity if there is one, or the ground entity if there isn't.
 	CBaseEntity *pNearest = nullptr;
 
@@ -1631,7 +1628,7 @@ void CBasePlayer::PlayerUse ( void )
 		if ( pPlayer )
 		{
 			const char *cl_useopensbuymenu = engine->GetClientConVarValue( ENTINDEX( pPlayer->edict() ), "cl_use_opens_buy_menu" );
-			if ( cl_useopensbuymenu && atoi( cl_useopensbuymenu ) <= 0 )
+			if ( cl_useopensbuymenu && std::atoi( cl_useopensbuymenu ) <= 0 )
 				bOpenBuyWithUse = false;
 		}
 
@@ -2079,7 +2076,7 @@ void CBasePlayer::CalcVehicleView(
 	Vector& eyeOrigin, QAngle& eyeAngles,
 	float& zNear, float& zFar, float& fov )
 {
-	Assert( pVehicle );
+	contract_assert( pVehicle );
 
 	// Start with our base origin and angles
 	CacheVehicleView();
@@ -2201,8 +2198,8 @@ float CBasePlayer::CalcRoll (const QAngle& angles, const Vector& velocity, float
 //-----------------------------------------------------------------------------
 // Purpose: Allow the viewmodel to layer in artist-authored additive camera animation (to make some first-person anims 'punchier')
 //-----------------------------------------------------------------------------
-#define CAM_DRIVER_RETURN_TO_NORMAL 0.25f
-#define CAM_DRIVER_RETURN_TO_NORMAL_GAIN 0.8f
+constexpr auto CAM_DRIVER_RETURN_TO_NORMAL = 0.25f;
+constexpr auto CAM_DRIVER_RETURN_TO_NORMAL_GAIN = 0.8f;
 void CBasePlayer::CalcAddViewmodelCameraAnimation( Vector& eyeOrigin, QAngle& eyeAngles )
 {
 #ifdef CLIENT_DLL
@@ -2481,7 +2478,7 @@ void CBasePlayer::ClearZoomOwner( void )
 bool CBasePlayer::SetFOV( CBaseEntity *pRequester, int FOV, float zoomRate, int iZoomStart /* = 0 */ )
 {
 	//NOTENOTE: You MUST specify who is requesting the zoom change
-	assert( pRequester != nullptr );
+	contract_assert( pRequester != nullptr );
 	if ( pRequester == nullptr )
 		return false;
 
@@ -2796,11 +2793,6 @@ void CBasePlayer::VPhysicsShadowUpdate( IPhysicsObject *pPhysics )
 	if ( sv_turbophysics.GetBool() )
 		return;
 
-#if defined( DEBUG_MOTION_CONTROLLERS ) && defined( CLIENT_DLL ) 
-	GetVectors( nullptr, &g_vShift, nullptr );
-	g_vShift *= cl_shadowupdatespacing.GetFloat();
-#endif
-
 	Vector newPosition;
 
 	bool physicsUpdated = m_pPhysicsController->GetShadowPosition( &newPosition, nullptr ) > 0 ? true : false;
@@ -3063,9 +3055,6 @@ void CBasePlayer::VPhysicsShadowUpdate( IPhysicsObject *pPhysics )
 	m_oldOrigin = GetAbsOrigin();
 	m_bPhysicsWasFrozen = false;
 
-#if defined( DEBUG_MOTION_CONTROLLERS )
-	g_vLastPos = newPosition;
-#endif
 }
 
 
@@ -3205,23 +3194,6 @@ void CBasePlayer::UpdateVPhysicsPosition( const Vector &position, const Vector &
 	{
 		pPhysGround = nullptr;
 	}
-#if defined( DEBUG_MOTION_CONTROLLERS )
-	if( (GetFlags() & FL_ONGROUND) == 0 )
-	{
-		Vector vCurPos;
-		m_pPhysicsController->GetShadowPosition( &vCurPos, nullptr );
-
-#	if defined( CLIENT_DLL )
-		DebugVelocity( "CBasePlayer::UpdateVPhysicsPosition", vCurPos, position, 255, prediction->IsFirstTimePredicted() ? 0 : 128, 0 );
-		DebugBox( "CBasePlayer::UpdateVPhysicsPosition", vCurPos, Vector( 0.1f, 0.1f, 0.1f ), 0, prediction->IsFirstTimePredicted() ? 0 : 128, 255, 100 ); 
-		DebugBox( "CBasePlayer::UpdateVPhysicsPosition", position, Vector( 0.1f, 0.1f, 0.1f ), 255, prediction->IsFirstTimePredicted() ? 0 : 128, 0, 100 ); 
-#	else
-		DebugVelocity( "CBasePlayer::UpdateVPhysicsPosition", vCurPos, position, 255, 0, 0 );
-		DebugBox( "CBasePlayer::UpdateVPhysicsPosition", vCurPos, Vector( 0.1f, 0.1f, 0.1f ), 0, 0, 255, 100 ); 
-		DebugBox( "CBasePlayer::UpdateVPhysicsPosition", position, Vector( 0.1f, 0.1f, 0.1f ), 255, 0, 0, 100 ); 
-#	endif
-	}
-#endif
 
 	m_pPhysicsController->Update( position, velocity, secondsToArrival, onground, pPhysGround );
 }
@@ -3351,4 +3323,3 @@ bool CBasePlayer::IsSpectator( void ) const
 {
 	return ( GetTeamNumber() == TEAM_SPECTATOR && !IsCoach() );
 }
-

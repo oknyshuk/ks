@@ -1,20 +1,23 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Acts exactly like "AnimatedTexture", but ONLY if the texture 
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Acts exactly like "AnimatedTexture", but ONLY if the texture
 //			it's working on matches the desired texture to work on.
-//
 //			This assumes that some other proxy will be switching out the textures.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
 #include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/itexture.h"
 #include "baseanimatedtextureproxy.h"
-#include "utlstring.h"
-#include <keyvalues.h>
 
 #include "imaterialproxydict.h"
 

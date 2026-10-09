@@ -1,14 +1,8 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
-
-#ifndef SOS_OP_ITERATE_MERGE_H
-#define SOS_OP_ITERATE_MERGE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "sos_op.h"
-
 
 //-----------------------------------------------------------------------------
 // calculate and merge multiple pass speaker volumes
@@ -30,5 +24,3 @@ class CSosOperatorIterateAndMergeSpeakers : public CSosOperator
 {
 	SOS_HEADER_DESC( CSosOperatorIterateAndMergeSpeakers )
 };
-
-#endif // SOS_OP_ITERATE_MERGE_H

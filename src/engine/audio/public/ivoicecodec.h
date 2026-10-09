@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Define the IVoiceCodec interface.
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IVOICECODEC_H
-#define IVOICECODEC_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Define the IVoiceCodec interface.
 
-#include "interface.h"
+import std;
+import ks.tier1;
 
-
-#define BYTES_PER_SAMPLE	2
+inline constexpr auto BYTES_PER_SAMPLE = 2;
 
 
 // This interface is for voice codecs to implement.
@@ -56,6 +50,3 @@ public:
 	// Some codecs maintain state between Compress and Decompress calls. This should clear that state.
 	virtual bool	ResetState()=0;
 };
-
-
-#endif // IVOICECODEC_H

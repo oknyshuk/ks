@@ -1,21 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Class to control 'aim-down-sights' aka "IronSight" weapon functionality
-//
-//=====================================================================================//
-
-
-#ifndef WEAPON_IRONSIGHTCONTROLLER_H
-#define WEAPON_IRONSIGHTCONTROLLER_H
 
 #include "cs_shareddefs.h"
 
 #ifdef IRONSIGHT
 
+#if defined( CLIENT_DLL )
+	#define CWeaponCSBase C_WeaponCSBase
+#endif
+class CWeaponCSBase;
 
 #ifdef CLIENT_DLL
 	#define IRONSIGHT_ANGLE_AVERAGE_SIZE 8
-	#define IRONSIGHT_ANGLE_AVERAGE_DIVIDE ( 1.0f / IRONSIGHT_ANGLE_AVERAGE_SIZE )
+	inline constexpr auto IRONSIGHT_ANGLE_AVERAGE_DIVIDE = ( 1.0f / IRONSIGHT_ANGLE_AVERAGE_SIZE );
 	#define IRONSIGHT_HIDE_CROSSHAIR_THRESHOLD 0.5f
 #endif
 
@@ -110,5 +110,3 @@ private:
 
 
 #endif //IRONSIGHT
-
-#endif // WEAPON_IRONSIGHTCONTROLLER_H

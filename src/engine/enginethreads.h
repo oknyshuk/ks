@@ -1,28 +1,13 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#ifndef ENGINETHREADS_H
-#define ENGINETHREADS_H
-
-#include "tier0/threadtools.h"
+import std;
+import ks.core;
 #include "const.h"
-
-
-#ifdef SOURCE_MT
 
 extern bool g_bThreadedEngine;
 extern int g_nMaterialSystemThread;
 extern int g_nServerThread;
 
 #define IsEngineThreaded() (g_bThreadedEngine)
-
-#else
-
-#define IsEngineThreaded() (false)
-
-#endif
-
-#endif // ENGINETHREADS_H

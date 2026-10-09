@@ -1,12 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef NETWORKSTRINGTABLE_CLIENTDLL_H
-#define NETWORKSTRINGTABLE_CLIENTDLL_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "networkstringtabledefs.h"
 
@@ -19,5 +13,3 @@ extern INetworkStringTable *g_StringTableEffectDispatch;
 extern INetworkStringTable *g_StringTableMaterials;
 extern INetworkStringTable *g_pStringTableInfoPanel;
 extern INetworkStringTable *g_pStringTableClientSideChoreoScenes;
-
-#endif // NETWORKSTRINGTABLE_CLIENTDLL_H

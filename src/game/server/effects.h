@@ -1,25 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef EFFECTS_H
-#define EFFECTS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
 
 #include "reflect_annotations.h"
-
-
+#include "baseentity.h"
 
 class CBaseEntity;
-class Vector;
 
 
 //-----------------------------------------------------------------------------
 // The rotor wash shooter. It emits gibs when pushed by a rotor wash
 //-----------------------------------------------------------------------------
-abstract_class IRotorWashShooter
+class IRotorWashShooter
 {
 public:
 	virtual CBaseEntity *DoWashPush( float flWashStartTime, const Vector &vecForce ) = 0;
@@ -62,6 +55,3 @@ private:
 	DECLARE_SERVERCLASS();
 };
 CEnvQuadraticBeam *CreateQuadraticBeam( const char *pSpriteName, const Vector &start, const Vector &control, const Vector &end, float width, CBaseEntity *pOwner );
-
-
-#endif // EFFECTS_H

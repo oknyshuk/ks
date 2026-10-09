@@ -1,103 +1,75 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: SSE Math primitives.
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <math.h>
-#include <float.h>	// needed for flt_epsilon
-#include "basetypes.h"
-#include "tier0/dbg.h"
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
+// Purpose: SSE Math primitives.
+
+import std;
+import ks.math;
 #include "sse.h"
 
 static const uint32 _sincos_masks[]	  = { (uint32)0x0,  (uint32)~0x0 };
 static const uint32 _sincos_inv_masks[] = { (uint32)~0x0, (uint32)0x0 };
 
 //-----------------------------------------------------------------------------
-// Macros and constants required by some of the SSE assembly:
+// Constants required by some of the SSE assembly:
 //-----------------------------------------------------------------------------
 
-	#define _PS_EXTERN_CONST(Name, Val) \
-		const float _ps_##Name[4] __attribute__((aligned(16))) = { Val, Val, Val, Val }
+const float _ps_am_0[4] [[gnu::aligned(16)]] = { 0.0f, 0.0f, 0.0f, 0.0f };
+const float _ps_am_1[4] [[gnu::aligned(16)]] = { 1.0f, 1.0f, 1.0f, 1.0f };
+const float _ps_am_m1[4] [[gnu::aligned(16)]] = { -1.0f, -1.0f, -1.0f, -1.0f };
+const float _ps_am_0p5[4] [[gnu::aligned(16)]] = { 0.5f, 0.5f, 0.5f, 0.5f };
+const float _ps_am_1p5[4] [[gnu::aligned(16)]] = { 1.5f, 1.5f, 1.5f, 1.5f };
+const float _ps_am_pi[4] [[gnu::aligned(16)]] = { (float)std::numbers::pi, (float)std::numbers::pi, (float)std::numbers::pi, (float)std::numbers::pi };
+const float _ps_am_pi_o_2[4] [[gnu::aligned(16)]] = { (float)(std::numbers::pi / 2.0), (float)(std::numbers::pi / 2.0), (float)(std::numbers::pi / 2.0), (float)(std::numbers::pi / 2.0) };
+const float _ps_am_2_o_pi[4] [[gnu::aligned(16)]] = { (float)(2.0 / std::numbers::pi), (float)(2.0 / std::numbers::pi), (float)(2.0 / std::numbers::pi), (float)(2.0 / std::numbers::pi) };
+const float _ps_am_pi_o_4[4] [[gnu::aligned(16)]] = { (float)(std::numbers::pi / 4.0), (float)(std::numbers::pi / 4.0), (float)(std::numbers::pi / 4.0), (float)(std::numbers::pi / 4.0) };
+const float _ps_am_4_o_pi[4] [[gnu::aligned(16)]] = { (float)(4.0 / std::numbers::pi), (float)(4.0 / std::numbers::pi), (float)(4.0 / std::numbers::pi), (float)(4.0 / std::numbers::pi) };
+const int32 _ps_am_sign_mask[4] [[gnu::aligned(16)]] = { (int)0x80000000, (int)0x80000000, (int)0x80000000, (int)0x80000000 };
+const int32 _ps_am_inv_sign_mask[4] [[gnu::aligned(16)]] = { ~0x80000000, ~0x80000000, ~0x80000000, ~0x80000000 };
+const int32 _ps_am_min_norm_pos[4] [[gnu::aligned(16)]] = { 0x00800000, 0x00800000, 0x00800000, 0x00800000 };
+const int32 _ps_am_mant_mask[4] [[gnu::aligned(16)]] = { (int)0x7f800000, (int)0x7f800000, (int)0x7f800000, (int)0x7f800000 };
+const int32 _ps_am_inv_mant_mask[4] [[gnu::aligned(16)]] = { ~0x7f800000, ~0x7f800000, ~0x7f800000, ~0x7f800000 };
 
-	#define _PS_EXTERN_CONST_TYPE(Name, Type, Val) \
-		const Type _ps_##Name[4]  __attribute__((aligned(16))) = { Val, Val, Val, Val }; \
+static const int32 _epi32_1[4] [[gnu::aligned(16)]] = { 1, 1, 1, 1 };
+static const int32 _epi32_2[4] [[gnu::aligned(16)]] = { 2, 2, 2, 2 };
 
-	#define _EPI32_CONST(Name, Val) \
-		static const int32 _epi32_##Name[4]  __attribute__((aligned(16))) = { Val, Val, Val, Val }
-
- 	#define _PS_CONST(Name, Val) \
- 		static const float _ps_##Name[4]  __attribute__((aligned(16))) = { Val, Val, Val, Val }
-
-_PS_EXTERN_CONST(am_0, 0.0f);
-_PS_EXTERN_CONST(am_1, 1.0f);
-_PS_EXTERN_CONST(am_m1, -1.0f);
-_PS_EXTERN_CONST(am_0p5, 0.5f);
-_PS_EXTERN_CONST(am_1p5, 1.5f);
-_PS_EXTERN_CONST(am_pi, (float)M_PI);
-_PS_EXTERN_CONST(am_pi_o_2, (float)(M_PI / 2.0));
-_PS_EXTERN_CONST(am_2_o_pi, (float)(2.0 / M_PI));
-_PS_EXTERN_CONST(am_pi_o_4, (float)(M_PI / 4.0));
-_PS_EXTERN_CONST(am_4_o_pi, (float)(4.0 / M_PI));
-_PS_EXTERN_CONST_TYPE(am_sign_mask, int32, (int)0x80000000);
-_PS_EXTERN_CONST_TYPE(am_inv_sign_mask, int32, ~0x80000000);
-_PS_EXTERN_CONST_TYPE(am_min_norm_pos,int32, 0x00800000);
-_PS_EXTERN_CONST_TYPE(am_mant_mask, int32, (int)0x7f800000);
-_PS_EXTERN_CONST_TYPE(am_inv_mant_mask, int32, ~0x7f800000);
-
-_EPI32_CONST(1, 1);
-_EPI32_CONST(2, 2);
-
-_PS_CONST(sincos_p0, 0.15707963267948963959e1f);
-_PS_CONST(sincos_p1, -0.64596409750621907082e0f);
-_PS_CONST(sincos_p2, 0.7969262624561800806e-1f);
-_PS_CONST(sincos_p3, -0.468175413106023168e-2f);
-
-#ifdef PFN_VECTORMA
-void  _SSE_VectorMA( const float *start, float scale, const float *direction, float *dest );
-#endif
+static const float _ps_sincos_p0[4] [[gnu::aligned(16)]] = { 0.15707963267948963959e1f, 0.15707963267948963959e1f, 0.15707963267948963959e1f, 0.15707963267948963959e1f };
+static const float _ps_sincos_p1[4] [[gnu::aligned(16)]] = { -0.64596409750621907082e0f, -0.64596409750621907082e0f, -0.64596409750621907082e0f, -0.64596409750621907082e0f };
+static const float _ps_sincos_p2[4] [[gnu::aligned(16)]] = { 0.7969262624561800806e-1f, 0.7969262624561800806e-1f, 0.7969262624561800806e-1f, 0.7969262624561800806e-1f };
+static const float _ps_sincos_p3[4] [[gnu::aligned(16)]] = { -0.468175413106023168e-2f, -0.468175413106023168e-2f, -0.468175413106023168e-2f, -0.468175413106023168e-2f };
 
 //-----------------------------------------------------------------------------
 // SSE implementations of optimized routines:
 //-----------------------------------------------------------------------------
 
 
-//#define _PS_CONST(Name, Val) static const ALIGN16 float _ps_##Name[4] ALIGN16_POST = { Val, Val, Val, Val }
-#define _PS_CONST_TYPE(Name, Type, Val) static const ALIGN16 Type _ps_##Name[4] ALIGN16_POST = { Val, Val, Val, Val }
-
-_PS_CONST_TYPE(sign_mask, int, (int)0x80000000);
-_PS_CONST_TYPE(inv_sign_mask, int, ~0x80000000);
+static const int _ps_sign_mask[4] [[gnu::aligned(16)]] = { (int)0x80000000, (int)0x80000000, (int)0x80000000, (int)0x80000000 };
+static const int _ps_inv_sign_mask[4] [[gnu::aligned(16)]] = { ~0x80000000, ~0x80000000, ~0x80000000, ~0x80000000 };
 
 
-#define _PI32_CONST(Name, Val)  static const ALIGN16 int _pi32_##Name[4]  ALIGN16_POST = { Val, Val, Val, Val }
+static const int _pi32_1[4] [[gnu::aligned(16)]] = { 1, 1, 1, 1 };
+static const int _pi32_inv1[4] [[gnu::aligned(16)]] = { ~1, ~1, ~1, ~1 };
+static const int _pi32_2[4] [[gnu::aligned(16)]] = { 2, 2, 2, 2 };
+static const int _pi32_4[4] [[gnu::aligned(16)]] = { 4, 4, 4, 4 };
+static const int _pi32_0x7f[4] [[gnu::aligned(16)]] = { 0x7f, 0x7f, 0x7f, 0x7f };
+static const float _ps_1[4] [[gnu::aligned(16)]] = { 1.0f, 1.0f, 1.0f, 1.0f };
+static const float _ps_0p5[4] [[gnu::aligned(16)]] = { 0.5f, 0.5f, 0.5f, 0.5f };
 
-_PI32_CONST(1, 1);
-_PI32_CONST(inv1, ~1);
-_PI32_CONST(2, 2);
-_PI32_CONST(4, 4);
-_PI32_CONST(0x7f, 0x7f);
-_PS_CONST(1  , 1.0f);
-_PS_CONST(0p5, 0.5f);
-
-_PS_CONST(minus_cephes_DP1, -0.78515625);
-_PS_CONST(minus_cephes_DP2, -2.4187564849853515625e-4);
-_PS_CONST(minus_cephes_DP3, -3.77489497744594108e-8);
-_PS_CONST(sincof_p0, -1.9515295891E-4);
-_PS_CONST(sincof_p1,  8.3321608736E-3);
-_PS_CONST(sincof_p2, -1.6666654611E-1);
-_PS_CONST(coscof_p0,  2.443315711809948E-005);
-_PS_CONST(coscof_p1, -1.388731625493765E-003);
-_PS_CONST(coscof_p2,  4.166664568298827E-002);
-_PS_CONST(cephes_FOPI, 1.27323954473516); // 4 / M_PI
+static const float _ps_minus_cephes_DP1[4] [[gnu::aligned(16)]] = { -0.78515625, -0.78515625, -0.78515625, -0.78515625 };
+static const float _ps_minus_cephes_DP2[4] [[gnu::aligned(16)]] = { -2.4187564849853515625e-4, -2.4187564849853515625e-4, -2.4187564849853515625e-4, -2.4187564849853515625e-4 };
+static const float _ps_minus_cephes_DP3[4] [[gnu::aligned(16)]] = { -3.77489497744594108e-8, -3.77489497744594108e-8, -3.77489497744594108e-8, -3.77489497744594108e-8 };
+static const float _ps_sincof_p0[4] [[gnu::aligned(16)]] = { -1.9515295891E-4, -1.9515295891E-4, -1.9515295891E-4, -1.9515295891E-4 };
+static const float _ps_sincof_p1[4] [[gnu::aligned(16)]] = { 8.3321608736E-3, 8.3321608736E-3, 8.3321608736E-3, 8.3321608736E-3 };
+static const float _ps_sincof_p2[4] [[gnu::aligned(16)]] = { -1.6666654611E-1, -1.6666654611E-1, -1.6666654611E-1, -1.6666654611E-1 };
+static const float _ps_coscof_p0[4] [[gnu::aligned(16)]] = { 2.443315711809948E-005, 2.443315711809948E-005, 2.443315711809948E-005, 2.443315711809948E-005 };
+static const float _ps_coscof_p1[4] [[gnu::aligned(16)]] = { -1.388731625493765E-003, -1.388731625493765E-003, -1.388731625493765E-003, -1.388731625493765E-003 };
+static const float _ps_coscof_p2[4] [[gnu::aligned(16)]] = { 4.166664568298827E-002, 4.166664568298827E-002, 4.166664568298827E-002, 4.166664568298827E-002 };
+static const float _ps_cephes_FOPI[4] [[gnu::aligned(16)]] = { 1.27323954473516, 1.27323954473516, 1.27323954473516, 1.27323954473516 }; // 4 / M_PI
 
 typedef union xmm_mm_union {
 	__m128 xmm;
 	__m64 mm[2];
 } xmm_mm_union;
-
-#define COPY_MM_TO_XMM(mm0_, mm1_, xmm_) { xmm_mm_union u; u.mm[0]=mm0_; u.mm[1]=mm1_; xmm_ = u.xmm; }
 
 typedef __m128 v4sf;  // vector of 4 float (sse1)
 typedef __m64 v2si;   // vector of 2 int (mmx)
@@ -107,8 +79,8 @@ typedef __m64 v2si;   // vector of 2 int (mmx)
 // SSE Version of VectorTransform
 void VectorTransformSSE(const float *in1, const matrix3x4_t& in2, float *out1)
 {
-	Assert( s_bMathlibInitialized );
-	Assert( in1 != out1 );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( in1 != out1 );
 
 	out1[0] = DotProduct(in1, in2[0]) + in2[0][3];
 	out1[1] = DotProduct(in1, in2[1]) + in2[1][3];
@@ -117,8 +89,8 @@ void VectorTransformSSE(const float *in1, const matrix3x4_t& in2, float *out1)
 
 void VectorRotateSSE( const float *in1, const matrix3x4_t& in2, float *out1 )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( in1 != out1 );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( in1 != out1 );
 
 	out1[0] = DotProduct( in1, in2[0] );
 	out1[1] = DotProduct( in1, in2[1] );
@@ -157,4 +129,3 @@ vec_t DotProduct (const vec_t *a, const vec_t *c)
 	}
 }
 */
-

@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2008, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef PHONG_DX9_HELPER_H
-#define PHONG_DX9_HELPER_H
-
-#include <string.h>
+import std;
 
 #include "vertexlitgeneric_dx9_helper.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -59,5 +54,3 @@ inline void ClampDecalBlendModeAndWarn( int &nDecalBlendMode, int nMin, int nMax
 		nDecalBlendMode = 0;
 	}
 }
-
-#endif // PHONG_DX9_HELPER_H

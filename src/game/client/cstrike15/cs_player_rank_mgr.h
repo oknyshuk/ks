@@ -1,13 +1,16 @@
-//====== Copyright  Valve Corporation, All rights reserved. =================
-//
-// Achievements (aka Medals) are divided into categories. Progress towards
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+
+// Purpose: Achievements (aka Medals) are divided into categories. Progress towards
 // completing a category of medals gives the player a higher 'rank'. Player
 // rank is sent to the server for display on the scoreboard.
-//
 // Ranks, Medals and medal-relevant gamestats earned during a round are recorded
 // here for the purpose of displaying progress towards ranks to the player.
-//
-//=============================================================================
+
 #if !defined CS_PLAYER_RANK_MGR_H
 #define CS_PLAYER_RANK_MGR_H
 
@@ -16,8 +19,6 @@
 #include "cs_player_rank_shared.h"
 #include "cs_gamestats_shared.h"
 
-
-class KeyValues;
 class CBaseAchievement;
 class CAchievement_StatGoal;
 
@@ -95,7 +96,7 @@ public:
 
 	// IMatchEventsSink functions
 public:
-	virtual void OnEvent( KeyValues *pEvent ) OVERRIDE;
+	virtual void OnEvent( KeyValues *pEvent ) override;
 
 private:
 	struct MedalCategoryInfo_t

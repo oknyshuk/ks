@@ -1,22 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// Defines the entry point for the application.
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Defines the entry point for the application.
+
+import ks.tier1;
 #include "reslistgenerator.h"
 #include "filesystem.h"
-#include "tier1/map_ops.h"
-#include "tier1/fmtstr.h"
-#include "characterset.h"
-#include "tier1/utlstring.h"
-#include "tier1/utlvector.h"
-#include "tier1/byte_reader.h"
-#include "tier1/text_reader.h"
-#include "tier0/icommandline.h"
-#include "tier1/keyvalues.h"
+import std;
 
 bool SaveResList( const std::set< std::string, ks::iless > &list, char const *pchFileName, char const *pchSearchPath )
 {
@@ -25,7 +15,7 @@ bool SaveResList( const std::set< std::string, ks::iless > &list, char const *pc
 	{
 		for ( const std::string &s : list )
 		{
-			g_pFullFileSystem->Write( s.c_str(), Q_strlen( s.c_str() ), fh );
+			g_pFullFileSystem->Write( s.c_str(), V_strlen( s.c_str() ), fh );
 			g_pFullFileSystem->Write( "\n", 1, fh );
 		}
 
@@ -57,19 +47,19 @@ void LoadResList( std::set< std::string, ks::iless > &list, char const *pchFileN
 		{
 			break;
 		}
-		const size_t nTokenSize = std::min( token->size(), sizeof( szToken ) - 1 );
-		memcpy( szToken, token->data(), nTokenSize );
+		const std::size_t nTokenSize = std::min( token->size(), sizeof( szToken ) - 1 );
+		std::memcpy( szToken, token->data(), nTokenSize );
 		szToken[ nTokenSize ] = 0;
 
-		Q_strlower( szToken );
-		Q_FixSlashes( szToken );
+		V_strlower( szToken );
+		V_FixSlashes( szToken );
 
 		// Ensure filename has "quotes" around it
 		std::string s;
 		if ( szToken[ 0 ] == '\"' )
 		{
-			Assert( Q_strlen( szToken ) > 2 );
-			Assert( szToken[ Q_strlen( szToken ) - 1 ] == '\"' );
+			contract_assert( V_strlen( szToken ) > 2 );
+			contract_assert( szToken[ V_strlen( szToken ) - 1 ] == '\"' );
 			s = szToken;
 		}
 		else
@@ -167,7 +157,6 @@ CResListGenerator::CResListGenerator() :
 	m_nCurrentWorkItem( 0 ),
 	m_nCurrentState( STATE_SETUP )
 {
-	MEM_ALLOC_CREDIT();
 
 	m_sFinalDir = "reslists";
 	m_sWorkingDir = "reslists_work";
@@ -180,7 +169,7 @@ void CResListGenerator::CollateFiles( char const *pchResListFilename )
 	for ( int i = 0; i < std::ssize( m_WorkItems ); ++i )
 	{
 		char fn[ MAX_PATH ];
-		Q_snprintf( fn, sizeof( fn ), "%s\\%s\\%s\\%s", m_sFullGamePath.c_str(), m_sWorkingDir.c_str(), m_WorkItems[ i ].m_sSubDir.c_str(), pchResListFilename );
+		V_snprintf( fn, sizeof( fn ), "%s\\%s\\%s\\%s", m_sFullGamePath.c_str(), m_sWorkingDir.c_str(), m_WorkItems[ i ].m_sSubDir.c_str(), pchResListFilename );
 		vecReslists.push_back( fn );
 	}
 
@@ -202,9 +191,9 @@ void CResListGenerator::Init( char const *pchBaseDir, char const *pchGameDir )
 	m_sGameDir = ks::nz( pchGameDir );
 
 	char path[MAX_PATH];
-	Q_snprintf( path, sizeof(path), "%s/%s", m_sBaseDir.c_str(), m_sGameDir.c_str() );
-	Q_FixSlashes( path );
-	Q_strlower( path );
+	V_snprintf( path, sizeof(path), "%s/%s", m_sBaseDir.c_str(), m_sGameDir.c_str() );
+	V_FixSlashes( path );
+	V_strlower( path );
 	m_sFullGamePath = path;
 
 	const char *pchCommandFile = nullptr;
@@ -244,8 +233,8 @@ void CResListGenerator::Collate()
 
 //-----------------------------------------------------------------------------
 // Called at each restart invocation, clocks the state.
-// Returns TRUE if caller should proceed with command line, FALSE otherwise.
-// FALSE is used to stop the reslist process which requires additional post passes.
+// Returns true if caller should proceed with command line, false otherwise.
+// false is used to stop the reslist process which requires additional post passes.
 //-----------------------------------------------------------------------------
 bool CResListGenerator::TickAndFixupCommandLine()
 {
@@ -296,13 +285,13 @@ bool CResListGenerator::TickAndFixupCommandLine()
 
 	case STATE_BUILDINGRESLISTS:
 		{
-			Assert( m_nCurrentWorkItem < std::ssize( m_WorkItems ) );
+			contract_assert( m_nCurrentWorkItem < std::ssize( m_WorkItems ) );
 
 			const CWorkItem &work = m_WorkItems[ m_nCurrentWorkItem ];
 
 			// Clean the working dir
 			char szWorkingDir[ 512 ];
-			Q_snprintf( szWorkingDir, sizeof( szWorkingDir ), "%s\\%s", m_sWorkingDir.c_str(), work.m_sSubDir.c_str() );
+			V_snprintf( szWorkingDir, sizeof( szWorkingDir ), "%s\\%s", m_sWorkingDir.c_str(), work.m_sSubDir.c_str() );
 
 			char szFullWorkingDir[MAX_PATH];
 			V_snprintf( szFullWorkingDir, sizeof( szFullWorkingDir ), "%s\\%s", m_sFullGamePath.c_str(), szWorkingDir );
@@ -314,13 +303,13 @@ bool CResListGenerator::TickAndFixupCommandLine()
 			char szMap[ MAX_PATH ] = { 0 };
 			if ( pszStartMap )
 			{
-				Q_strncpy( szMap, pszStartMap, sizeof( szMap ) );
+				V_strncpy( szMap, pszStartMap, sizeof( szMap ) );
 			}
 
 			// Prepare stuff
 			// Reset command line based on current state
 			char szCmd[ 512 ];
-			Q_snprintf( szCmd, sizeof( szCmd ), "%s %s %s -reslistdir %s", m_sOriginalCommandLine.c_str(), m_sBaseCommandLine.c_str(), work.m_sAddCommands.c_str(), szWorkingDir );
+			V_snprintf( szCmd, sizeof( szCmd ), "%s %s %s -reslistdir %s", m_sOriginalCommandLine.c_str(), m_sBaseCommandLine.c_str(), work.m_sAddCommands.c_str(), szWorkingDir );
 			CommandLine()->CreateCmdLine( szCmd );
 
 			// Never rebuild caches by default, inly do it in STATE_GENERATINGCACHES
@@ -339,7 +328,7 @@ bool CResListGenerator::TickAndFixupCommandLine()
 			// Prepare stuff
 			// Reset command line based on current state
 			char szCmd[ 512 ];
-			Q_snprintf( szCmd, sizeof( szCmd ), "%s -reslistdir %s -rebuildaudio", m_sOriginalCommandLine.c_str(), m_sFinalDir.c_str());
+			V_snprintf( szCmd, sizeof( szCmd ), "%s -reslistdir %s -rebuildaudio", m_sOriginalCommandLine.c_str(), m_sFinalDir.c_str());
 			CommandLine()->CreateCmdLine( szCmd );
 			
 			CommandLine()->RemoveParm( "-norebuildaudio" );
@@ -376,7 +365,7 @@ bool CResListGenerator::ShouldContinue()
 void CResListGenerator::LoadMapList( char const *pchGameDir, std::vector< std::string > &vecMaps, char const *pchMapFile )
 {
 	char fullpath[ 512 ];
-	Q_snprintf( fullpath, sizeof( fullpath ), "%s/%s", pchGameDir, pchMapFile );
+	V_snprintf( fullpath, sizeof( fullpath ), "%s/%s", pchGameDir, pchMapFile );
 
 	// Load them in
 	auto file = g_pFullFileSystem->ReadFile( fullpath, "GAME" );
@@ -390,15 +379,15 @@ void CResListGenerator::LoadMapList( char const *pchGameDir, std::vector< std::s
 			const std::string_view line = buf.read_line().substr( 0, sizeof( szMap ) - 1 );
 			if ( line.empty() )
 				break;
-			memcpy( szMap, line.data(), line.size() );
+			std::memcpy( szMap, line.data(), line.size() );
 			szMap[ line.size() ] = 0;
 
 			// Strip trailing CR/LF chars
-			int len = Q_strlen( szMap );
+			int len = V_strlen( szMap );
 			while ( len >= 1 && ( ( szMap[ len - 1 ] == '\n' ) || ( szMap[ len - 1 ] == '\r' ) ) )
 			{
 				szMap[ len - 1 ] = 0;
-				len = Q_strlen( szMap );
+				len = V_strlen( szMap );
 			}
 
 			std::string newMap;
@@ -422,7 +411,7 @@ bool CResListGenerator::InitCommandFile( char const *pchGameDir, char const *pch
 	}
 
 	char fullpath[ 512 ];
-	Q_snprintf( fullpath, sizeof( fullpath ), "%s/%s", pchGameDir, pchCommandFile );
+	V_snprintf( fullpath, sizeof( fullpath ), "%s/%s", pchGameDir, pchCommandFile );
 
 	auto file = g_pFullFileSystem->ReadFile( fullpath, "GAME" );
 	if ( !file )
@@ -489,7 +478,7 @@ bool CResListGenerator::InitCommandFile( char const *pchGameDir, char const *pch
 	do
 	{
 		char sz[ 32 ];
-		Q_snprintf( sz, sizeof( sz ), "%i", i );
+		V_snprintf( sz, sizeof( sz ), "%i", i );
 		KeyValues *subKey = kv->FindKey( sz, false );
 		if ( !subKey )
 			break;
@@ -520,12 +509,10 @@ bool CResListGenerator::InitCommandFile( char const *pchGameDir, char const *pch
 	{
 		Collate();
 		m_bActive = false;
-		exit( -1 );
+		std::exit( -1 );
 	}
 
 	kv->deleteThis();
 
 	return m_bActive;
 }
-
-

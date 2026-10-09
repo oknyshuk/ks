@@ -1,13 +1,45 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Contains the set of functions for manipulating entity hierarchies.
-//
-// $NoKeywords: $
-//=============================================================================//
 
 // UNDONE: Reconcile this with SetParent()
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "hierarchy.h"
 
 //-----------------------------------------------------------------------------
@@ -48,7 +80,7 @@ void UnlinkChild( CBaseEntity *pParent, CBaseEntity *pChild )
 	}
 
 	// This only happens if the child wasn't found in the parent's child list
-	Assert(0);
+	contract_assert( 0 );
 }
 
 void LinkChild( CBaseEntity *pParent, CBaseEntity *pChild )
@@ -79,9 +111,9 @@ void TransferChildren( CBaseEntity *pOldParent, CBaseEntity *pNewParent )
 		LinkChild( pNewParent, pChild );
 
 		// FIXME: This is a hack to guarantee update of the local origin, angles, etc.
-		pChild->m_vecAbsOrigin.Init( FLT_MAX, FLT_MAX, FLT_MAX );
-		pChild->m_angAbsRotation.Init( FLT_MAX, FLT_MAX, FLT_MAX );
-		pChild->m_vecAbsVelocity.Init( FLT_MAX, FLT_MAX, FLT_MAX );
+		pChild->m_vecAbsOrigin.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+		pChild->m_angAbsRotation.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+		pChild->m_vecAbsVelocity.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
 
 		pChild->SetAbsOrigin(vecAbsOrigin);
 		pChild->SetAbsAngles(angAbsRotation);

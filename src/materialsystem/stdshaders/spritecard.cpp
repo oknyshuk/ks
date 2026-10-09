@@ -1,13 +1,11 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: shader for drawing sprites as cards, with animation frame lerping
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
+// Purpose: shader for drawing sprites as cards, with animation frame lerping
+
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "convar.h"
+import std;
 
 // STDSHADER_DX9_DLL_EXPORT
 #include "spritecard_ps20.inc"
@@ -16,10 +14,8 @@
 #include "splinecard_vs20.inc"
 #include "common_hlsl_cpp_consts.h"
 
-#include "tier0/icommandline.h" //command line
 
 
-#define DEFAULT_PARTICLE_FEATHERING_ENABLED 1
 
 static ConVar mat_depthfeather_enable( "mat_depthfeather_enable", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
 
@@ -31,21 +27,12 @@ int GetDefaultDepthFeatheringValue( void ) //Allow the command-line to go agains
 
 	if ( iRetVal == -1 )
 	{
-		#if ( DEFAULT_PARTICLE_FEATHERING_ENABLED == 1 )
 		{
 			if ( CommandLine()->CheckParm( "-softparticlesdefaultoff" ) )
 				iRetVal = 0;
 			else
 				iRetVal = 1;
 		}
-		#else
-		{
-			if ( CommandLine()->CheckParm( "-softparticlesdefaulton" ) )
-				iRetVal = 1;
-			else
-				iRetVal = 0;
-		}
-		#endif
 	}
 
 	// On low end parts on the Mac, we reduce particles and shut off depth blending here
@@ -61,7 +48,7 @@ int GetDefaultDepthFeatheringValue( void ) //Allow the command-line to go agains
 
 BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 
-	BEGIN_SHADER_PARAMS
+	
         SHADER_PARAM( DEPTHBLEND, SHADER_PARAM_TYPE_INTEGER, "0", "fade at intersection boundaries" )
 		SHADER_PARAM( SCENEDEPTH, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( DEPTHBLENDSCALE, SHADER_PARAM_TYPE_FLOAT, "50.0", "Amplify or reduce DEPTHBLEND fading. Lower values make harder edges." )
@@ -529,7 +516,7 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 			{
 				float flZScale=1.0/(params[ZOOMANIMATESEQ2]->GetFloatValue());
 				float C0[4]={ 0.5*(1.0+flZScale), flZScale, params[VERTEXFOGAMOUNT]->GetFloatValue(), 0 };
-				pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, C0, ARRAYSIZE(C0)/4 );
+				pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_7, C0, std::size( C0 )/4 );
 			}
 
 			// set fade constants in vsconsts 8 and 9
@@ -542,7 +529,7 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 						   params[ALPHATRAILFADE]->GetFloatValue(),
 						   params[RADIUSTRAILFADE]->GetFloatValue() };
 
-			pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_8, VC0, ARRAYSIZE(VC0)/4 );
+			pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_8, VC0, std::size( VC0 )/4 );
 
 			if ( bDepthBlend )
 			{
@@ -587,7 +574,7 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 
 			BOOL nBoolShaderConstant = bUseInstancing ? 1 : 0; // Convert to BOOL, which is int
 			pShaderAPI->SetBooleanVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_BOOL_CONST_0, &nBoolShaderConstant, 1 );
-			pShaderAPI->SetPixelShaderConstant( 0, C0, ARRAYSIZE(C0)/4 );
+			pShaderAPI->SetPixelShaderConstant( 0, C0, std::size( C0 )/4 );
 
 			// Set Mod2xIdentity to be 0.5 if we blend in linear space, or 0.5 Gamma->Linear if we blend in gamma space
 			float vPsConst1[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -609,7 +596,7 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 				vDistanceConstants[9] = params[EDGESOFTNESSEND]->GetFloatValue();
 				vDistanceConstants[10] = 0;
 				vDistanceConstants[11] = 0;
-				pShaderAPI->SetPixelShaderConstant( 7, vDistanceConstants, ARRAYSIZE( vDistanceConstants ) / 4 );
+				pShaderAPI->SetPixelShaderConstant( 7, vDistanceConstants, std::size( vDistanceConstants ) / 4 );
 			}
 
 			if ( nSplineType )

@@ -1,21 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: A little helper class that computes a spline patch
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SPLINEPATCH_H
-#define SPLINEPATCH_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "mathlib/vector4d.h"
+// Purpose: A little helper class that computes a spline patch
+
+import std;
+import ks.math;
 
 //-----------------------------------------------------------------------------
 // Spline patch: 
@@ -84,5 +74,3 @@ private:
 
 	float m_LinearFactor;
 };
-
-#endif // SPLINEPATCH_H

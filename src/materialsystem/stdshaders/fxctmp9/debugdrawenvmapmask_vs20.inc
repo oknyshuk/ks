@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
@@ -17,7 +18,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_debugdrawenvmapmask_vs20 0
+inline constexpr int shaderStaticTest_debugdrawenvmapmask_vs20 = 0;
 class debugdrawenvmapmask_vs20_Dynamic_Index
 {
 private:
@@ -28,7 +29,7 @@ private:
 public:
 	void SetCOMPRESSED_VERTS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOMPRESSED_VERTS = i;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -36,7 +37,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -50,7 +51,7 @@ private:
 public:
 	void SetSKINNING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSKINNING = i;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -58,7 +59,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -83,7 +84,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS && m_bSKINNING;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nCOMPRESSED_VERTS ) + ( 2 * m_nSKINNING ) + 0;
 	}
@@ -97,7 +98,7 @@ static const ShaderComboInformation_t s_DynamicComboArray_DebugDrawEnvmapMask_vs
 };
 static const ShaderComboSemantics_t DebugDrawEnvmapMask_vs20_combos =
 {
-	"DebugDrawEnvmapMask_vs20", s_DynamicComboArray_DebugDrawEnvmapMask_vs20, 2, NULL, 0 
+	"DebugDrawEnvmapMask_vs20", s_DynamicComboArray_DebugDrawEnvmapMask_vs20, 2, nullptr, 0 
 };
 
 class ConstructMe_DebugDrawEnvmapMask_vs20

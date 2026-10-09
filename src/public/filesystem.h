@@ -1,39 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef FILESYSTEM_H
-#define FILESYSTEM_H
+import std;
 
+import ks.tier1;
 
-#include <atomic>
-#include <limits.h>
-#include <optional>
-#include <span>
-#include <vector>
-#include "tier1/byte_reader.h"
-
-#include "tier0/threadtools.h"
-#include "tier0/memalloc.h"
-#include "tier0/tslist.h"
-#include "tier1/interface.h"
-#include "tier1/filename_table.h"
-#include "tier1/utlstring.h"
-#include "tier1/functors.h" 
-#include "tier1/checksum_crc.h"
-#include "tier1/checksum_md5.h"
-#include "tier1/utlvector.h"
-#include "appframework/iappsystem.h"
 #include "tier2/tier2.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
 
-class KeyValues;
 class IFileList;
 
 typedef void * FileHandle_t;
@@ -46,13 +24,13 @@ typedef int WaitForResourcesHandle_t;
 // Enums used by the interface
 //-----------------------------------------------------------------------------
 
-#define FILESYSTEM_MAX_SEARCH_PATHS 128
+inline constexpr auto FILESYSTEM_MAX_SEARCH_PATHS = 128;
 
 enum FileSystemSeek_t
 {
-	FILESYSTEM_SEEK_HEAD	= SEEK_SET,
-	FILESYSTEM_SEEK_CURRENT = SEEK_CUR,
-	FILESYSTEM_SEEK_TAIL	= SEEK_END,
+	FILESYSTEM_SEEK_HEAD	= 0,
+	FILESYSTEM_SEEK_CURRENT = 1,
+	FILESYSTEM_SEEK_TAIL	= 2,
 };
 
 enum
@@ -108,113 +86,11 @@ enum
 };
 typedef uint32 PathTypeQuery_t;
 
-#define IS_PACKFILE( n ) ( n & ( PATH_IS_PACKFILE | PATH_IS_MAPPACKFILE ) )
-#define IS_DVDDEV( n )   ( n & PATH_IS_DVDDEV )
+template <typename T1> [[gnu::always_inline]] inline auto IS_PACKFILE( T1 n ) { return ( n & ( PATH_IS_PACKFILE | PATH_IS_MAPPACKFILE ) ); }
+template <typename T1> [[gnu::always_inline]] inline auto IS_DVDDEV( T1 n ) { return ( n & PATH_IS_DVDDEV ); }
 
 
 // In non-retail builds, enable the file blocking access tracking stuff...
-#if defined( TRACK_BLOCKING_IO )
-enum FileBlockingWarning_t
-{
-	// Report how long synchronous i/o took to complete
-	FILESYSTEM_BLOCKING_SYNCHRONOUS = 0,
-	// Report how long async i/o took to complete if AsyncFileFinished caused it to load via "blocking" i/o
-	FILESYSTEM_BLOCKING_ASYNCHRONOUS_BLOCK,
-	// Report how long async i/o took to complete
-	FILESYSTEM_BLOCKING_ASYNCHRONOUS,
-	// Report how long the async "callback" took
-	FILESYSTEM_BLOCKING_CALLBACKTIMING,
-
-	FILESYSTEM_BLOCKING_NUMBINS,
-};
-
-#pragma pack(1)
-class FileBlockingItem
-{
-public:
-	enum
-	{
-		FB_ACCESS_OPEN = 1,
-		FB_ACCESS_CLOSE = 2,
-		FB_ACCESS_READ = 3,
-		FB_ACCESS_WRITE = 4,
-		FB_ACCESS_APPEND = 5,
-		FB_ACCESS_SIZE = 6
-	};
-
-	FileBlockingItem() :
-		m_ItemType( (FileBlockingWarning_t)0 ),
-		m_flElapsed( 0.0f ),
-		m_nAccessType( 0 )
-	{
-		SetFileName( nullptr );
-	}
-
-	FileBlockingItem( int type, char const *filename, float elapsed, int accessType ) :
-		m_ItemType( (FileBlockingWarning_t)type ),
-		m_flElapsed( elapsed ),
-		m_nAccessType( accessType )
-	{
-		SetFileName( filename );
-	}
-
-	void SetFileName( char const *filename )
-	{
-		if ( !filename )
-		{
-			m_szFilename[ 0 ] = 0;
-			return;
-		}
-
-		int len = Q_strlen( filename );
-		if ( len >= sizeof( m_szFilename ) )
-		{
-			Q_strncpy( m_szFilename, &filename[ len - sizeof( m_szFilename ) + 1 ], sizeof( m_szFilename ) );
-		}
-		else
-		{
-			Q_strncpy( m_szFilename, filename, sizeof( m_szFilename ) );
-		}
-	}
-
-	char const *GetFileName() const
-	{
-		return m_szFilename;
-	}
-
-	FileBlockingWarning_t	m_ItemType;
-	float					m_flElapsed;
-	byte					m_nAccessType;
-private:
-
-	char					m_szFilename[ 32 ];
-};
-#pragma pack()
-
-class IBlockingFileItemList
-{
-public:
-	
-	// You can't call any of the below calls without locking first
-	virtual void	LockMutex() = 0;
-	virtual void	UnlockMutex() = 0;
-
-	virtual int		First() const = 0;
-	virtual int		Next( int i ) const = 0;
-	virtual int		InvalidIndex() const = 0;
-
-	virtual const	FileBlockingItem& Get( int index ) const = 0;
-
-	virtual void	Reset() = 0;
-};
-
-#endif // TRACK_BLOCKING_IO
-
-enum FilesystemMountRetval_t
-{
-	FILESYSTEM_MOUNT_OK = 0,
-	FILESYSTEM_MOUNT_FAILED,
-};
 
 enum SearchPathAdd_t
 {
@@ -261,8 +137,10 @@ typedef void (*FSDirtyDiskReportFunc_t)();
 //-----------------------------------------------------------------------------
 // Asynchronous support types
 //-----------------------------------------------------------------------------
-DECLARE_POINTER_HANDLE(FSAsyncControl_t);
-DECLARE_POINTER_HANDLE(FSAsyncFile_t);
+struct FSAsyncControl_t__ { int unused; };
+using FSAsyncControl_t = FSAsyncControl_t__ *;
+struct FSAsyncFile_t__ { int unused; };
+using FSAsyncFile_t = FSAsyncFile_t__ *;
 const FSAsyncFile_t FS_INVALID_ASYNC_FILE = (FSAsyncFile_t)(0x0000ffff);
 
 
@@ -332,7 +210,7 @@ typedef void (*FSAsyncScanCompleteFunc_t)( void* pContext, FSAsyncStatus_t err )
 //---------------------------------------------------------
 struct FileAsyncRequest_t
 {
-	FileAsyncRequest_t()	{ memset( this, 0, sizeof(*this) ); hSpecificAsyncFile = FS_INVALID_ASYNC_FILE;	}
+	FileAsyncRequest_t()	{ std::memset( this, 0, sizeof(*this) ); hSpecificAsyncFile = FS_INVALID_ASYNC_FILE;	}
 	const char *			pszFilename;		// file system name
 	void *					pData;				// optional, system will alloc/free if NULL
 	int						nOffset;			// optional initial seek_set, 0=beginning
@@ -404,9 +282,9 @@ public:
 
 // Spew flags for SetWhitelistSpewFlags (set with the fs_whitelist_spew_flags cvar).
 // Update the comment for the fs_whitelist_spew_flags cvar if you change these.
-#define WHITELIST_SPEW_WHILE_LOADING		0x0001	// list files as they are added to the CRC tracker
-#define WHITELIST_SPEW_RELOAD_FILES			0x0002	// show files the filesystem is telling the engine to reload
-#define WHITELIST_SPEW_DONT_RELOAD_FILES	0x0004	// show files the filesystem is NOT telling the engine to reload
+inline constexpr auto WHITELIST_SPEW_WHILE_LOADING = 0x0001; // list files as they are added to the CRC tracker
+inline constexpr auto WHITELIST_SPEW_RELOAD_FILES = 0x0002; // show files the filesystem is telling the engine to reload
+inline constexpr auto WHITELIST_SPEW_DONT_RELOAD_FILES = 0x0004; // show files the filesystem is NOT telling the engine to reload
 
 
 
@@ -421,7 +299,7 @@ public:
 // returns license flags
 #define DLC_LICENSE_FLAGS( x )			( ( ( (unsigned int)( x ) ) & 0x0000FFFF ) )
 
-#define DLCFLAGS_PRESENCE_ONLY			0x0001	// causes no search path loadout
+inline constexpr auto DLCFLAGS_PRESENCE_ONLY = 0x0001; // causes no search path loadout
 
 
 
@@ -431,10 +309,10 @@ public:
 
 // This is the minimal interface that can be implemented to provide access to
 // a named set of files.
-#define BASEFILESYSTEM_INTERFACE_VERSION		"VBaseFileSystem011"
+inline constexpr const char *BASEFILESYSTEM_INTERFACE_VERSION = "VBaseFileSystem011";
 
 // This interface is for VPK files to communicate with FileTracker
-abstract_class IThreadedFileMD5Processor
+class IThreadedFileMD5Processor
 {
 public:
 	virtual int				SubmitThreadedMD5Request( uint8 *pubBuffer, int cubBuffer, int PackFileID, int nPackFileNumber, int nPackFileFraction ) = 0;
@@ -442,7 +320,7 @@ public:
 	virtual bool			IsMD5RequestComplete( int iRequest, MD5Value_t *pMd5ValueOut ) = 0;
 };
 
-abstract_class IBaseFileSystem
+class IBaseFileSystem
 {
 public:
 	virtual int				Read( void* pOutput, int size, FileHandle_t file ) = 0;
@@ -475,7 +353,7 @@ public:
 	virtual bool			UnzipFile( const char *pFileName, const char *pPath, const char *pDestination ) = 0;
 };
 
-abstract_class IIoStats
+class IIoStats
 {
 public:
 	virtual void OnFileSeek( int nTimeInMs ) = 0;
@@ -503,23 +381,9 @@ protected:
 //-----------------------------------------------------------------------------
 // Main file system interface
 //-----------------------------------------------------------------------------
-abstract_class IFileSystem : public IAppSystem, public IBaseFileSystem
+class IFileSystem : public IAppSystem, public IBaseFileSystem
 {
 public:
-	//--------------------------------------------------------
-	// Steam operations
-	//--------------------------------------------------------
-
-	virtual bool			IsSteam() const = 0;
-
-	// Supplying an extra app id will mount this app in addition 
-	// to the one specified in the environment variable "steamappid"
-	// 
-	// If nExtraAppId is < -1, then it will mount that app ID only.
-	// (Was needed by the dedicated server b/c the "SteamAppId" env var only gets passed to steam.dll
-	// at load time, so the dedicated couldn't pass it in that way).
-	virtual	FilesystemMountRetval_t MountSteamContent( int nExtraAppId = -1 ) = 0;
-
 	//--------------------------------------------------------
 	// Search path manipulation
 	//--------------------------------------------------------
@@ -585,12 +449,8 @@ public:
 	virtual bool			EndOfFile( FileHandle_t file ) = 0;
 
 	virtual char			*ReadLine( char *pOutput, int maxChars, FileHandle_t file ) = 0;
-#if ! defined(SWIG)
-	// Don't let SWIG see the PRINTF_FORMAT_STRING attribute or it will complain.
-	virtual int				FPrintf( FileHandle_t file, PRINTF_FORMAT_STRING const char *pFormat, ... ) FMTFUNCTION( 3, 4 ) = 0;
-#else
-	virtual int				FPrintf( FileHandle_t file, const char *pFormat, ... ) FMTFUNCTION( 3, 4 ) = 0;
-#endif
+	// Don't let SWIG see the attribute or it will complain.
+	[[gnu::format(printf, 3, 4)]] virtual int				FPrintf( FileHandle_t file, const char *pFormat, ... ) = 0;
 
 	//--------------------------------------------------------
 	// Dynamic library operations
@@ -699,7 +559,7 @@ public:
 	// returns true if a file is on disk
 	virtual bool			IsFileImmediatelyAvailable(const char *pFileName) = 0;
 	
-	// copies file out of pak/bsp/steam cache onto disk (to be accessible by third-party code)
+	// copies file out of pak/bsp onto disk (to be accessible by third-party code)
 	virtual void			GetLocalCopy( const char *pFileName ) = 0;
 
 	//--------------------------------------------------------
@@ -731,13 +591,6 @@ public:
 
 	virtual FileNameHandle_t	FindFileName( char const *pFileName ) = 0;
 
-#if defined( TRACK_BLOCKING_IO )
-	virtual void			EnableBlockingFileAccessTracking( bool state ) = 0;
-	virtual bool			IsBlockingFileAccessEnabled() const = 0;
-
-	virtual IBlockingFileItemList *RetrieveBlockingFileAccessInfo() = 0;
-#endif
-
 	virtual void SetupPreloadData() = 0;
 	virtual void DiscardPreloadData() = 0;
 
@@ -763,7 +616,7 @@ public:
 
 	virtual FSAsyncStatus_t AsyncDirectoryScan( const char* pSearchSpec, bool recurseFolders,  void* pContext, FSAsyncScanAddFunc_t pfnAdd, FSAsyncScanCompleteFunc_t pfnDone, FSAsyncControl_t *pControl = nullptr ) = 0;
 
-	virtual bool			GetFileTypeForFullPath( char const *pFullPath, wchar_t *buf, size_t bufSizeInBytes ) = 0;
+	virtual bool			GetFileTypeForFullPath( char const *pFullPath, wchar_t *buf, std::size_t bufSizeInBytes ) = 0;
 
 	//--------------------------------------------------------
 	//--------------------------------------------------------
@@ -804,7 +657,7 @@ public:
 	// (and those CRCs will come out of GetUnverifiedCRCFiles).
 	//
 	// Files listed in pAllowFromDiskList will be allowed to load from disk. All other files will
-	// be forced to come from Steam.
+	// be forced to not come from disk.
 	//
 	// The filesystem hangs onto the whitelists you pass in here, and it will Release() them when it closes down
 	// or when you call this function again.
@@ -814,8 +667,8 @@ public:
 	//
 	// If pFilesToReload is non-null, the filesystem will hand back a list of files that should be reloaded because they
 	// are now "dirty". For example, if you were on a non-pure server and you loaded a certain model, and then you connected
-	// to a pure server that said that model had to come from Steam, then pFilesToReload would specify that model
-	// and the engine should reload it so it can come from Steam.
+	// to a pure server that said that model could not come from disk, then pFilesToReload would specify that model
+	// and the engine should reload it.
 	//
 	// Be sure to call Release() on pFilesToReload.
 	virtual void			RegisterFileWhitelist( IFileList *pWantCRCList, IFileList *pAllowFromDiskList, IFileList **pFilesToReload ) = 0;
@@ -889,10 +742,8 @@ public:
 
 //-----------------------------------------------------------------------------
 
-#define SetLastProfileFileRead( s ) ((void)0)
-#define GetLastProfileFileRead() nullptr
+[[gnu::always_inline]] inline constexpr auto GetLastProfileFileRead() { return nullptr; }
 
-#define DISK_INTENSIVE() ((void)0)
 
 //-----------------------------------------------------------------------------
 
@@ -916,15 +767,14 @@ inline unsigned IFileSystem::GetOptimalReadSize( FileHandle_t hFile, unsigned nL
 
 #if defined(_DEBUG)
 #define AsyncRead( a, b ) AsyncReadCreditAlloc( a, __FILE__, __LINE__, b )
-#define AsyncReadMutiple( a, b, c ) AsyncReadMultipleCreditAlloc( a, b, __FILE__, __LINE__, c )
+template <typename T1, typename T2, typename T3>
+inline auto AsyncReadMutiple( T1 a, T2 b, T3 c, std::source_location loc = std::source_location::current() )
+{
+	return AsyncReadMultipleCreditAlloc( a, b, loc.file_name(), static_cast<int>( loc.line() ), c );
+}
 #endif
 
 //-----------------------------------------------------------------------------
 // Globals Exposed
 //-----------------------------------------------------------------------------
-DECLARE_TIER2_INTERFACE( IFileSystem, g_pFullFileSystem );
-
-
-
-
-#endif // FILESYSTEM_H
+extern IFileSystem *g_pFullFileSystem;;

@@ -1,14 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_MOVETYPES_H
-#define AI_MOVETYPES_H
-
-
+import ks.math;
 #include "ai_navtype.h"
+import std;
+#include "entitylist.h"
 
 class CAI_Path;
 
@@ -19,9 +16,8 @@ class CAI_Path;
 //
 #ifdef DEBUG
 extern void DebugNoteMovementFailure();
-#define DebugNoteMovementFailureIfBlocked( moveResult ) if ( !IsMoveBlocked( moveResult ) ) ((void)0); else DebugNoteMovementFailure()
+#define DebugNoteMovementFailureIfBlocked( moveResult ) if ( !IsMoveBlocked( moveResult ) ) ((void)0); else 
 #else
-#define DebugNoteMovementFailure() ((void)0)
 #define DebugNoteMovementFailureIfBlocked( moveResult ) ((void)0)
 #endif
 
@@ -48,9 +44,6 @@ inline AIMoveResult_t DbgResult( AIMoveResult_t result ) { return result; } // i
 //-----------------------------------------------------------------------------
 // Movement related constants and base types
 //-----------------------------------------------------------------------------
-#ifdef PHYSICS_NPC_SHADOW_DISCREPENCY
-const float AI_EPS_CASTS = 0.3;  // The amount physics and hull cast can disagree
-#endif
 
 
 inline bool IsMoveBlocked( AIMoveResult_t moveResult )
@@ -74,7 +67,7 @@ struct AIMoveTrace_t
 {
 	AIMoveTrace_t()
 	{
-		memset( this, 0, sizeof(*this) );
+		std::memset( this, 0, sizeof(*this) );
 	}
 	
 	AIMoveResult_t 	fStatus;				// See AIMoveResult_t
@@ -121,7 +114,7 @@ struct AILocalMoveGoal_t
 {
 	AILocalMoveGoal_t()
 	{
-		memset( this, 0, sizeof(*this) );
+		std::memset( this, 0, sizeof(*this) );
 	}
 	
 	// Object of the goal
@@ -176,7 +169,7 @@ enum AIMotorMoveResult_t
 //			notify and receive guidance from higher level-classes
 //-----------------------------------------------------------------------------
 
-abstract_class IAI_MovementSink
+class IAI_MovementSink
 {
 public:
 	//---------------------------------
@@ -376,5 +369,3 @@ inline bool CAI_ProxyMovementSink::OnMoveBlocked( AIMoveResult_t *pResult )
 }
 
 //=============================================================================
-
-#endif // AI_MOVETYPES_H

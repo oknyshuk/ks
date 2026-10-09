@@ -1,21 +1,14 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
 #include "BaseVSShader.h"
-#include "cpp_shader_constant_register_map.h"
 
 #include "bik_ps20.inc"
 #include "bik_ps20b.inc"
 #include "bik_vs20.inc"
 
-
 BEGIN_VS_SHADER( Bik, "Help for Bik" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( YTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "Y Bink Texture" )
 		// re-enable this if we want alpha blending
 //		SHADER_PARAM( ATEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "A Bink Texture" )

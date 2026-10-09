@@ -1,11 +1,28 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "server_pch.h"
-#include <bitset>
+// main precompiled header for server files
+
+import ks.tier1;
+
+#include "common.h"
+#include "quakedef.h"
+#include "decal.h"
+#include "cmodel_engine.h"
+#include "sv_log.h"
+#include "sound.h"
+#include "vox.h"
+#include "checksum_engine.h"
+#include "host.h"
+#include "keys.h"
+#include "vengineserver_impl.h"
+#include "server.h"
+#include "eiface.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+#include "console.h"
+#include "edict.h"
+import std;
 #include "framesnapshot.h"
 #include "checksum_engine.h"
 #include "sv_main.h"
@@ -13,34 +30,25 @@
 #include "networkstringtable.h"
 #include "demo.h"
 #include "PlayerState.h"
-#include "tier0/vprof.h"
 #include "sv_packedentities.h"
 #include "LocalNetworkBackdoor.h"
 #include "testscriptmgr.h"
 #include "hltvserver.h"
-#if defined( REPLAY_ENABLED )
-#include "replayserver.h"
-#endif
 #include "pr_edict.h"
 #include "logofile_shared.h"
 #include "dt_send_eng.h"
 #include "sv_plugin.h"
-#include "download.h"
 #include "cmodel_engine.h"
-#include "tier1/commandbuffer.h"
 #include "gl_cvars.h"
-#include "tier2/tier2.h"
 #include "matchmaking/imatchframework.h"
 #include "audio/public/vox.h"	// TERROR: for net_showreliablesounds
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "ihltv.h"
-#include "tier1/string_token.h"
 
 extern CNetworkStringTableContainer *networkStringTableContainerServer;
 
 static ConVar	sv_timeout( "sv_timeout", "65", 0, "After this many seconds without a message from a client, the client is dropped" );
 static ConVar	sv_maxrate( "sv_maxrate", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "Max bandwidth rate allowed on server, 0 == unlimited", true, 0, true, MAX_RATE );
-static ConVar	sv_minrate( "sv_minrate", STRINGIFY( MIN_RATE ), FCVAR_REPLICATED | FCVAR_RELEASE, "Min bandwidth rate allowed on server, 0 == unlimited", true, 0, true, MAX_RATE );
+static ConVar	sv_minrate( "sv_minrate", "MIN_RATE", FCVAR_REPLICATED | FCVAR_RELEASE, "Min bandwidth rate allowed on server, 0 == unlimited", true, 0, true, MAX_RATE );
        
        ConVar	sv_maxupdaterate( "sv_maxupdaterate", "64", FCVAR_REPLICATED | FCVAR_RELEASE, "Maximum updates per second that the server will allow" ); // we need to be able to set max rate to 128
 	   ConVar	sv_minupdaterate( "sv_minupdaterate", "64", FCVAR_REPLICATED | FCVAR_RELEASE, "Minimum updates per second that the server will allow" );
@@ -50,9 +58,7 @@ static ConVar	sv_minrate( "sv_minrate", STRINGIFY( MIN_RATE ), FCVAR_REPLICATED 
 static ConVar	sv_allowdownload ("sv_allowdownload", "1", FCVAR_RELEASE, "Allow clients to download files");
 static ConVar	sv_allowupload ("sv_allowupload", "1", FCVAR_RELEASE, "Allow clients to upload customizations files");
 	   ConVar	sv_sendtables ( "sv_sendtables", "0", FCVAR_DEVELOPMENTONLY, "Force full sendtable sending path." );
-#if HLTV_REPLAY_ENABLED
 	   ConVar	spec_replay_enable( "spec_replay_enable", "0", FCVAR_RELEASE|FCVAR_REPLICATED, "Enable Killer Replay, requires hltv server running." );
-#endif
 	   ConVar	spec_replay_message_time( "spec_replay_message_time", "9.5", FCVAR_RELEASE | FCVAR_REPLICATED, "How long to show the message about Killer Replay after death. The best setting is a bit shorter than spec_replay_autostart_delay + spec_replay_leadup_time + spec_replay_winddown_time" );
 	   ConVar	spec_replay_rate_limit( "spec_replay_rate_limit", "3", FCVAR_RELEASE | FCVAR_REPLICATED, "Minimum allowable pause between replay requests in seconds" );
 
@@ -76,11 +82,6 @@ extern ConVar tv_transmitall;
 extern ConVar sv_pure_kick_clients;
 extern ConVar sv_pure_trace;
 
-#if defined( REPLAY_ENABLED )
-extern ConVar replay_snapshotrate;
-extern ConVar replay_transmitall;
-#endif
-
 // static ConVar sv_failuretime( "sv_failuretime", "0.5", 0, "After this long without a packet from client, don't send any more until client starts sending again" );
 
 static const char * s_clcommands[] = 
@@ -101,9 +102,6 @@ static const char * s_clcommands[] =
 #endif
 	"ss_connect",
 	"ss_disconnect",
-#if defined( REPLAY_ENABLED )
-	"request_replay_demo",
-#endif
 	nullptr,
 };
 
@@ -209,7 +207,7 @@ CGameClient::CGameClient(int slot, CBaseServer *pServer )
 	m_bIsInReplayMode = false;
 
 	// NULL out data we'll never use.
-	memset( &m_PrevPackInfo, 0, sizeof( m_PrevPackInfo ) );
+	std::memset( &m_PrevPackInfo, 0, sizeof( m_PrevPackInfo ) );
 	m_PrevPackInfo.m_pTransmitEdict = &m_PrevTransmitEdict;
 	m_flTimeClientBecameFullyConnected = -1.0f;
 	m_flLastClientCommandQuotaStart = -1.0f;
@@ -230,14 +228,6 @@ bool CGameClient::CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg )
 		Disconnect( "CLCMsg_ClientInfo: SourceTV can not connect to game directly.\n" );
 		return false;
 	}
-
-#if defined( REPLAY_ENABLED )
-	if ( m_bIsReplay )
-	{
-		Disconnect( "CLCMsg_ClientInfo: Replay can not connect to game directly.\n" );
-		return false;
-	}
-#endif
 
 	if ( sv_allowupload.GetBool() )
 	{
@@ -328,7 +318,6 @@ bool CGameClient::CLCMsg_CmdKeyValues( const ks::net::CCLCMsg_CmdKeyValues& msg 
 	serverGameClients->ClientCommandKeyValues( edict, keyvalues );
 	
 
-	MEM_ALLOC_CREDIT();
 	KeyValues *pEvent = new KeyValues( "Server::CmdKeyValues" );
 	pEvent->AddSubKey( autodelete_keyvalues.Detach() );
 	pEvent->SetPtr( "edict", edict );
@@ -388,9 +377,6 @@ bool CGameClient::CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarVal
 		// Negative cookie means the game DLL asked for the value.
 		if ( serverGameDLL && g_bServerGameDLLGreaterThanV5 )
 		{
-#ifdef REL_TO_STAGING_MERGE_TODO
-			serverGameDLL->OnQueryCvarValueFinished( msg.cookie, edict, msg.status_code, msg.name->c_str(), msg.value->c_str() );
-#endif
 		}
 	}
 
@@ -512,7 +498,6 @@ static ConVar sv_extra_client_connect_time( "sv_extra_client_connect_time", "15.
 
 void CGameClient::SetupPackInfo( CFrameSnapshot *pSnapshot )
 {
-	Assert( !IsHltvReplay() );
 	// Compute Vis for each client
 	m_PackInfo.m_nPVSSize = (GetCollisionBSPData()->numclusters + 7) / 8;
 	serverGameClients->ClientSetupVisibility( (edict_t *)m_pViewEntity,
@@ -528,11 +513,7 @@ void CGameClient::SetupPackInfo( CFrameSnapshot *pSnapshot )
 
 	// if this client is the HLTV or Replay client, add the nocheck PVS bit array
 	// normal clients don't need that extra array
-#if defined( REPLAY_ENABLED )
-	if ( IsHLTV() || IsReplay() )
-#else
 	if ( IsHLTV() )
-#endif
 	{
 		// the hltv client doesn't has a ClientFrame list
 		m_pCurrentFrame->transmit_always = new std::bitset<MAX_EDICTS>;
@@ -581,7 +562,7 @@ void CGameClient::SetupPackInfo( CFrameSnapshot *pSnapshot )
 	for ( int j = 0; j < areaCount; j++ )
 	{
 		// Msg("CGameClient::SetupPackInfo: too much areas (%i)", areaCount );
-		AssertOnce( m_PackInfo.m_AreasNetworked < MAX_WORLD_AREAS );
+		contract_assert( m_PackInfo.m_AreasNetworked < MAX_WORLD_AREAS );
 
 		if ( m_PackInfo.m_AreasNetworked >= MAX_WORLD_AREAS )
 			break;
@@ -598,7 +579,7 @@ ConVar spec_replay_rate_base( "spec_replay_rate_base", "1", FCVAR_RELEASE | FCVA
 
 void CGameClient::SetupHltvFrame( int nServerTick )
 {
-	Assert( m_nHltvReplayDelay && m_pHltvReplayServer );
+	contract_assert( m_nHltvReplayDelay && m_pHltvReplayServer );
 	int nReplayTick = nServerTick - m_nHltvReplayDelay; 
 
 	CClientFrame *pFrame = m_pHltvReplayServer->ExpandAndGetClientFrame( nReplayTick, false );
@@ -610,12 +591,11 @@ void CGameClient::SetupHltvFrame( int nServerTick )
 
 void CGameClient::SetupPrevPackInfo()
 {
-	Assert( !IsHltvReplay() );
 	memcpy( &m_PrevTransmitEdict, m_PackInfo.m_pTransmitEdict, sizeof( m_PrevTransmitEdict ) );
 	
 	// Copy the relevant fields into m_PrevPackInfo.
 	m_PrevPackInfo.m_AreasNetworked = m_PackInfo.m_AreasNetworked;
-	memcpy( m_PrevPackInfo.m_Areas, m_PackInfo.m_Areas, sizeof( m_PackInfo.m_Areas[0] ) * m_PackInfo.m_AreasNetworked );
+	std::memcpy( m_PrevPackInfo.m_Areas, m_PackInfo.m_Areas, sizeof( m_PackInfo.m_Areas[0] ) * m_PackInfo.m_AreasNetworked );
 
 	m_PrevPackInfo.m_nPVSSize = m_PackInfo.m_nPVSSize;
 	memcpy( m_PrevPackInfo.m_PVS, m_PackInfo.m_PVS, m_PackInfo.m_nPVSSize );
@@ -694,12 +674,12 @@ bool CGameClient::ProcessIncomingLogo( const char *filename )
 {
 	char crcfilename[ 512 ];
 	char logohex[ 16 ];
-	Q_binarytohex( (byte *)&logo, sizeof( logo ), logohex, sizeof( logohex ) );
+	V_binarytohex( (byte *)&logo, sizeof( logo ), logohex, sizeof( logohex ) );
 
-	Q_snprintf( crcfilename, sizeof( crcfilename ), "materials/decals/downloads/%s.vtf", logohex );
+	V_snprintf( crcfilename, sizeof( crcfilename ), "materials/decals/downloads/%s.vtf", logohex );
 
 	// It's not a logo file?
-	if ( Q_strcasecmp( filename, crcfilename ) )
+	if ( V_strcasecmp( filename, crcfilename ) )
 	{
 		return false;
 	}
@@ -721,11 +701,7 @@ bool CGameClient::ProcessIncomingLogo( const char *filename )
 
 bool CGameClient::IsHearingClient( int index ) const
 {
-#if defined( REPLAY_ENABLED )
-	if ( IsHLTV() || IsReplay() )
-#else
 	if ( IsHLTV() )
-#endif
 		return true;
 
 	if ( index == GetPlayerSlot() )
@@ -769,13 +745,6 @@ void CGameClient::Inactivate( void )
 	m_nHltvReplayStopAt = 0;
 	m_nHltvReplayStartAt = 0;
 	m_nHltvLastSendTick = 0;	// last send tick, don't send ticks twice
-
-#if defined( REPLAY_ENABLED )
-	if ( IsReplay() )
-	{
-		replay->Changelevel();
-	}
-#endif
 
 	BaseClass::Inactivate();
 
@@ -824,13 +793,6 @@ void CGameClient::Clear()
 		}
 	}
 	
-#if defined( REPLAY_ENABLED )
-	if ( m_bIsReplay )
-	{
-		replay->Shutdown();
-	}
-#endif
-
 	BaseClass::Clear();
 
 	m_HltvQueuedMessages.clear();
@@ -962,11 +924,7 @@ bool CGameClient::ProcessSignonStateMsg( int state, int spawncount )
 
 void CGameClient::SendSound( SoundInfo_t &sound, bool isReliable )
 {
-#if defined( REPLAY_ENABLED )
-	if ( IsFakeClient() && !IsHLTV() && !IsReplay() && !IsSplitScreenUser() )
-#else
 	if ( IsFakeClient() && !IsHLTV() && !IsSplitScreenUser() )
-#endif
 	{
 		return; // dont send sound messages to bots
 	}
@@ -1095,7 +1053,7 @@ int	CGameClient::FillSoundsMessage(ks::net::CSVCMsg_Sounds &msg, int nMaxSounds 
 		}
 	}
 
-	Assert( std::ssize( m_Sounds ) <= nMaxSounds );
+	contract_assert( std::ssize( m_Sounds ) <= nMaxSounds );
 
 	return msg.sounds.size();
 }
@@ -1104,7 +1062,7 @@ bool CGameClient::CheckConnect( void )
 {
 	// Allow the game dll to reject this client.
 	char szRejectReason[128];
-	Q_strncpy( szRejectReason, "Connection rejected by game", sizeof( szRejectReason ) );
+	V_strncpy( szRejectReason, "Connection rejected by game", sizeof( szRejectReason ) );
 
 	if ( !g_pServerPluginHandler->ClientConnect( edict, m_Name, m_NetChannel->GetAddress(), szRejectReason, sizeof( szRejectReason ) ) )
 	{
@@ -1232,7 +1190,7 @@ void CGameClient::SpawnPlayer( void )
 	else
 	{
 		// set up the edict
-		Assert( serverGameEnts );
+		contract_assert( serverGameEnts );
 		serverGameEnts->FreeContainingEntity( edict );
 		InitializeEntityDLLFields( edict );
 	}
@@ -1251,10 +1209,7 @@ void CGameClient::SpawnPlayer( void )
 
 CClientFrame *CGameClient::GetDeltaFrame( int nTick )
 {
-	Assert ( !IsHLTV() ); // has no ClientFrames
-#if defined( REPLAY_ENABLED )
-	Assert ( !IsReplay() );  // has no ClientFrames
-#endif	
+	contract_assert( !IsHLTV() ); // has no ClientFrames
 
 	if ( m_bIsInReplayMode )
 	{
@@ -1262,7 +1217,7 @@ CClientFrame *CGameClient::GetDeltaFrame( int nTick )
 
 		serverGameClients->GetReplayDelay( edict, followEntity );
 
-		Assert( followEntity > 0 );
+		contract_assert( followEntity > 0 );
 
 		CGameClient *pFollowEntity = sv.Client( followEntity-1 );
 
@@ -1283,9 +1238,9 @@ void CGameClient::WriteViewAngleUpdate()
 	if ( IsFakeClient() && !IsSplitScreenUser() )
 		return;
 
-	Assert( serverGameClients );
+	contract_assert( serverGameClients );
 	CPlayerState *pl = serverGameClients->GetPlayerState( edict );
-	Assert( pl || IsSplitScreenUser() );
+	contract_assert( pl || IsSplitScreenUser() );
 	if ( !pl )
 		return;
 
@@ -1329,7 +1284,7 @@ bool CGameClient::IsEngineClientCommand( const CCommand &args ) const
 
 	for ( int i = 0; s_clcommands[i] != nullptr; ++i )
 	{
-		if ( !Q_strcasecmp( args[0], s_clcommands[i] ) )
+		if ( !V_strcasecmp( args[0], s_clcommands[i] ) )
 			return true;
 	}
 
@@ -1350,18 +1305,11 @@ bool CGameClient::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice
 			return false;
 		}
 	}
-#if defined( REPLAY_ENABLED )
-	if ( m_bIsReplay )
-	{
-		// pass this message to replay
-		return replay->SendNetMsg( msg, bForceReliable, bVoice );
-	}
-#endif
 	if ( IsHltvReplay() )
 	{
 		if ( msg.GetType() != ks::net::svc_VoiceData ) // let the voice messages through
 		{
-			Assert( !bVoice );
+			contract_assert( !bVoice );
 			bool bResult = true;
 
 			if ( msg.GetType() == ks::net::svc_UserMessage )
@@ -1386,7 +1334,7 @@ bool CGameClient::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice
 
 			return bResult; // just ignore all (other) new messages: we'll take them from hltv later if needed
 		}
-		Assert( bVoice );
+		contract_assert( bVoice );
 	}
 
 	return BaseClass::SendNetMsg( msg, bForceReliable, bVoice );
@@ -1447,7 +1395,7 @@ void CGameClient::FireGameEvent( IGameEvent *event )
 		const char *pEventName = event->GetName();  // please don't fold the string variable, it's useful for debugging
 		uint32 eventName = ks::string_token( pEventName );
 
-		if ( IsInList( eventName, s_HltvQueueableEvents, ARRAYSIZE( s_HltvQueueableEvents ) ) )
+		if ( IsInList( eventName, s_HltvQueueableEvents, std::size( s_HltvQueueableEvents ) ) )
 		{
 			if ( event->IsReliable() ) // skip this event if it's not reliable
 			{
@@ -1459,13 +1407,13 @@ void CGameClient::FireGameEvent( IGameEvent *event )
 			}
 			return;
 		}
-		else if ( IsInList( eventName, s_HltvUnskippableEvents, ARRAYSIZE( s_HltvUnskippableEvents ) ) )
+		else if ( IsInList( eventName, s_HltvUnskippableEvents, std::size( s_HltvUnskippableEvents ) ) )
 		{
 			Msg( "%s (%d) is skipping replay in progress (%d/%d) due to event %s\n", m_Name, m_UserID, sv.GetTick() - m_nHltvReplayDelay - m_nHltvReplayStartAt, m_nHltvReplayStopAt - m_nHltvReplayStartAt, pEventName );
 			StopHltvReplay();
 			return BaseClass::FireGameEvent( event );
 		}
-		else if ( IsInList( eventName, s_HltvPassThroughRealtimeEvents, ARRAYSIZE( s_HltvPassThroughRealtimeEvents ) ) )
+		else if ( IsInList( eventName, s_HltvPassThroughRealtimeEvents, std::size( s_HltvPassThroughRealtimeEvents ) ) )
 		{
 			return BaseClass::FireGameEvent( event, true ); // mark the event as real-time pass-through so that on the other end the client knows it's happening in real time, and it's not a replayed-back event
 		}
@@ -1542,9 +1490,6 @@ bool CGameClient::ExecuteStringCommand( const char *pCommandString )
 #endif
 			 )
 		{
-#if DEVELOPMENT_ONLY 
-			Warning( "WARNING: Client sent concommand %s which is not flagged as executable, ignoring\n" );
-#endif
 			return false;
 		}
 
@@ -1587,7 +1532,6 @@ bool CGameClient::SendSnapshot( CClientFrame * pFrame )
 
 	if ( m_bIsHLTV )
 	{
-		SNPROF( "SendSnapshot - HLTV" );
 
 		CHLTVServer *hltv = GetAnyConnectedHltvServer();
 		// pack sounds to one message
@@ -1613,45 +1557,11 @@ bool CGameClient::SendSnapshot( CClientFrame * pFrame )
 		// remember this snapshot
 		m_pLastSnapshot = pFrame->GetSnapshot(); 
 
-		Assert( !GetHltvReplayDelay() ); // hltv master client shouldn't be in killer replay mode
 		// fake acknowledgement, remove ClientFrame reference immediately 
 		UpdateAcknowledgedFramecount( pFrame->tick_count );
 		
 		return true;
 	}
-
-#if defined( REPLAY_ENABLED )
-	if ( m_bIsReplay )
-	{
-		SNPROF( "SendSnapshot - Replay" );
-
-		char *buf = (char *)_alloca( NET_MAX_PAYLOAD );
-
-		// pack sounds to one message
-		if ( m_Sounds.Count() > 0 )
-		{
-			CSVCMsg_Sounds_t sounds;
-
-			sounds.SetReliable( false );
-			FillSoundsMessage( sounds, m_Server->IsMultiplayer() ? sv_multiplayer_maxsounds.GetInt() : 255 );
-			replay->SendNetMsg( sounds );
-		}
-
-		int maxEnts = replay_transmitall.GetBool()?255:64;
-		replay->WriteTempEntities( this, pFrame->GetSnapshot(), m_pLastSnapshot.get(), *replay->GetBuffer( REPLAY_BUFFER_TEMPENTS ), maxEnts );
-
-		// add snapshot to Replay server frame list
-		replay->AddNewFrame( pFrame );
-
-		// remember this snapshot
-		m_pLastSnapshot = pFrame->GetSnapshot(); 
-
-		// fake acknowledgement, remove ClientFrame reference immediately 
-		UpdateAcknowledgedFramecount( pFrame->tick_count );
-
-		return true;
-	}
-#endif
 
 	// update client viewangles update
 	WriteViewAngleUpdate();
@@ -1676,7 +1586,6 @@ bool CGameClient::SendSnapshot( CClientFrame * pFrame )
 
 		if ( IsFakeClient() )
 		{
-			Assert( !GetHltvReplayDelay() ); // fake clients should not be in "killer replay" mode
 			// fake acknowledgement, remove ClientFrame reference immediately 
 			UpdateAcknowledgedFramecount( pFrame->tick_count );
 		}
@@ -1689,8 +1598,7 @@ bool CGameClient::SendSnapshot( CClientFrame * pFrame )
 
 bool CGameClient::SendHltvReplaySnapshot( CClientFrame * pFrame )
 {
-	Assert( IsHltvReplay() );
-	VPROF_BUDGET( "CGameClient::SendHltvReplaySnapshot", "HLTV" );
+	CVProfScope _( "CGameClient::SendHltvReplaySnapshot", 0, "HLTV", false, BUDGETFLAG_OTHER );
 
 	byte		buf[ NET_MAX_PAYLOAD ];
 	bf_write	msg( "CGameClient::SendHltvReplaySnapshot", buf, sizeof( buf ) );
@@ -1708,7 +1616,7 @@ bool CGameClient::SendHltvReplaySnapshot( CClientFrame * pFrame )
 	if ( m_nForceWaitForTick > 0 )
 	{
 		// just continue transmitting reliable data
-		Assert( !m_bFakePlayer );	// Should never happen
+		contract_assert( !m_bFakePlayer );	// Should never happen
 		m_NetChannel->Transmit();
 		return false;
 	}
@@ -1863,7 +1771,7 @@ bool CGameClient::StartHltvReplay( const HltvReplayParams_t &params )
 
 		int nServerTick = sv.GetTick();
 		float flRealTime = Plat_FloatTime();
-		if ( fabsf( flRealTime - m_flHltvLastReplayRequestTime ) <= spec_replay_rate_limit.GetFloat() )
+		if ( std::fabsf( flRealTime - m_flHltvLastReplayRequestTime ) <= spec_replay_rate_limit.GetFloat() )
 		{
 			DevMsg( "Hltv Replay failure: requests are rate limited to no more than 1 per %g seconds\n", spec_replay_rate_limit.GetFloat() );
 			m_HltvReplayStats.nFailedReplays[ HltvReplayStats_t::FAILURE_TOO_FREQUENT ]++;
@@ -1880,7 +1788,6 @@ bool CGameClient::StartHltvReplay( const HltvReplayParams_t &params )
 			int nDesiredReplayDelay = params.m_flDelay / flTickInterval, nNewReplayDelay = nDesiredReplayDelay;
 			int nNewReplayStopAt = nServerTick + params.m_flStopAt / flTickInterval;
 
-			Assert( hltv->m_CurrentFrame->tick_count >= hltv->m_nFirstTick ); // first known tick should have happened at or before the time of the current recorded HLTV frame
 			if ( nServerTick - nNewReplayDelay < nOldestClientTick )
 			{
 				nNewReplayDelay = nServerTick - nOldestClientTick;
@@ -1990,7 +1897,7 @@ const char *HltvReplayStats_t::AsString()const
 	}
 
 	s_nLastHltvReplayBuffer++;
-	if ( s_nLastHltvReplayBuffer >= ARRAYSIZE( s_HltvReplayBuffers ) )
+	if ( s_nLastHltvReplayBuffer >= std::size( s_HltvReplayBuffers ) )
 		s_nLastHltvReplayBuffer = 0;
 	char *pBuffer = s_HltvReplayBuffers[ s_nLastHltvReplayBuffer ];
 
@@ -2061,7 +1968,6 @@ void CGameClient::StopHltvReplay()
 		FreeBaselines();
 		m_pCurrentFrame = nullptr;
 		DeleteClientFrames( -1 ); // Should we clean up all the frames? Seems logical, as we'll never need them
-		Assert( CountClientFrames() == 0 ); // we shouldn't have used the client frame manager to send HLTV stream to client
 	}
 	// just in case, send the end-of-hltv replay message even if we are not in replay
 	{
@@ -2095,17 +2001,6 @@ bool CGameClient::ShouldSendMessages( void )
 		}
 	}
 	
-#if defined( REPLAY_ENABLED )
-	if ( m_bIsReplay )
-	{
-		// calc snapshot interval
-		int nSnapshotInterval = 1.0f / ( m_Server->GetTickInterval() * replay_snapshotrate.GetFloat() );
-
-		// I am the Replay client, record every nSnapshotInterval tick
-		return ( sv.m_nTickCount >= (replay->m_nLastTick + nSnapshotInterval) );
-	}
-#endif
-
 	// If sv_stressbots is true, then treat a bot more like a regular client and do deltas and such for it.
 	if( !sv_replaybots.GetBool() && IsFakeClient() )
 	{
@@ -2231,7 +2126,7 @@ CClientFrame *CGameClient::GetSendFrame()
 		}
 	}
 
-	Assert( (m_nClientSlot+1 == m_nEntityIndex) || isInReplayMode );
+	contract_assert( (m_nClientSlot+1 == m_nEntityIndex) || isInReplayMode );
 
 	if ( isInReplayMode )
 	{
@@ -2264,7 +2159,6 @@ bool CGameClient::IgnoreTempEntity( CEventInfo *event )
 
 const CCheckTransmitInfo* CGameClient::GetPrevPackInfo()
 {
-	Assert( !IsHltvReplay() ); // we don't maintain this data during Hltv-fed replay
 	return &m_PrevPackInfo;
 }
 

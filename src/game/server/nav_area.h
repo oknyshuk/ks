@@ -1,20 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_area.h
 // Navigation areas
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-#ifndef _NAV_AREA_H_
-#define _NAV_AREA_H_
-
+import ks.tier1;
 #include "nav_ladder.h"
-#include "tier1/memstack.h"
-#include <vector>
+import std;
 
 // BOTPORT: Clean up relationship between team index and danger storage in nav areas
 enum { MAX_NAV_TEAMS = 2 };
@@ -28,10 +22,10 @@ public:
 	CNavVectorNoEditAllocator();
 
 	static void Reset();
-	static void *Alloc( size_t nSize );
-	static void *Realloc( void *pMem, size_t nSize );
+	static void *Alloc( std::size_t nSize );
+	static void *Realloc( void *pMem, std::size_t nSize );
 	static void Free( void *pMem );
-	static size_t GetSize( void *pMem );
+	static std::size_t GetSize( void *pMem );
 
 private:
 	static CMemoryStack m_memory;
@@ -320,13 +314,13 @@ public:
 	bool IsOverlapping( const Extent &extent ) const;			// return true if 'extent' overlaps our 2D extents
 	bool IsOverlappingX( const CNavArea *area ) const;			// return true if 'area' overlaps our X extent
 	bool IsOverlappingY( const CNavArea *area ) const;			// return true if 'area' overlaps our Y extent
-	inline float GetZ( const Vector * RESTRICT pPos ) const RESTRICT;			// return Z of area at (x,y) of 'pos'
-	inline float GetZ( const Vector &pos ) const RESTRICT;						// return Z of area at (x,y) of 'pos'
-	float GetZ( float x, float y ) const RESTRICT;				// return Z of area at (x,y) of 'pos'
+	inline float GetZ( const Vector * __restrict__ pPos ) const __restrict__;			// return Z of area at (x,y) of 'pos'
+	inline float GetZ( const Vector &pos ) const __restrict__;						// return Z of area at (x,y) of 'pos'
+	float GetZ( float x, float y ) const __restrict__;				// return Z of area at (x,y) of 'pos'
 	bool Contains( const Vector &pos ) const;					// return true if given point is on or above this area, but no others
 	bool Contains( const CNavArea *area ) const;	
 	bool IsCoplanar( const CNavArea *area ) const;				// return true if this area and given area are approximately co-planar
-	void GetClosestPointOnArea( const Vector * RESTRICT pPos, Vector *close ) const RESTRICT;	// return closest point to 'pos' on this area - returned point in 'close'
+	void GetClosestPointOnArea( const Vector * __restrict__ pPos, Vector *close ) const __restrict__;	// return closest point to 'pos' on this area - returned point in 'close'
 	void GetClosestPointOnArea( const Vector &pos, Vector *close ) const { return GetClosestPointOnArea( &pos, close ); }
 	float GetDistanceSquaredToPoint( const Vector &pos ) const;	// return shortest distance between point and this area
 	bool IsDegenerate( void ) const;							// return true if this area is badly formed
@@ -441,13 +435,13 @@ public:
 
 	static void ClearSearchLists( void );						// clears the open and closed lists for a new search
 
-	void SetTotalCost( float value )	{ Assert( value >= 0.0 && !IS_NAN(value) ); m_totalCost = value; }
+	void SetTotalCost( float value )	{ contract_assert( value >= 0.0 && !IS_NAN(value) ); m_totalCost = value; }
 	float GetTotalCost( void ) const	{ return m_totalCost; }
 
-	void SetCostSoFar( float value )	{ Assert( value >= 0.0 && !IS_NAN(value) ); m_costSoFar = value; }
+	void SetCostSoFar( float value )	{ contract_assert( value >= 0.0 && !IS_NAN(value) ); m_costSoFar = value; }
 	float GetCostSoFar( void ) const	{ return m_costSoFar; }
 
-	void SetPathLengthSoFar( float value )	{ Assert( value >= 0.0 && !IS_NAN(value) ); m_pathLengthSoFar = value; }
+	void SetPathLengthSoFar( float value )	{ contract_assert( value >= 0.0 && !IS_NAN(value) ); m_pathLengthSoFar = value; }
 	float GetPathLengthSoFar( void ) const	{ return m_pathLengthSoFar; }
 
 	//- editing -----------------------------------------------------------------------------------------
@@ -539,7 +533,7 @@ public:
 				continue;
 
 			// If this assertion triggers, an area is in here twice!
-			Assert( area->m_nVisTestCounter != s_nCurrVisTestCounter );
+			contract_assert( area->m_nVisTestCounter != s_nCurrVisTestCounter );
 			area->m_nVisTestCounter = s_nCurrVisTestCounter;
 
 			if ( m_potentiallyVisibleAreas[i].attributes == NOT_VISIBLE )
@@ -596,7 +590,7 @@ public:
 				continue;
 
 			// If this assertion triggers, an area is in here twice!
-			Assert( area->m_nVisTestCounter != s_nCurrVisTestCounter );
+			contract_assert( area->m_nVisTestCounter != s_nCurrVisTestCounter );
 			area->m_nVisTestCounter = s_nCurrVisTestCounter;
 
 			if ( ( m_potentiallyVisibleAreas[i].attributes & COMPLETELY_VISIBLE ) == 0 )
@@ -685,10 +679,6 @@ private:
 	void AddSpotEncounters( const CNavArea *from, NavDirType fromDir, const CNavArea *to, NavDirType toDir );	// add spot encounter data when moving from area to area
 
 	float m_earliestOccupyTime[ MAX_NAV_TEAMS ];				// min time to reach this spot from spawn
-
-#ifdef DEBUG_AREA_PLAYERCOUNTS
-	std::vector< int > m_playerEntIndices[ MAX_NAV_TEAMS ];
-#endif
 
 	//- lighting ----------------------------------------------------------------------------------------
 	float m_lightIntensity[ NUM_CORNERS ];						// 0..1 light intensity at corners
@@ -783,14 +773,14 @@ inline bool CNavArea::IsOpen( void ) const
 //--------------------------------------------------------------------------------------------------------------
 inline bool CNavArea::IsOpenListEmpty( void )
 {
-	Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
+	contract_assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 	return (m_openList) ? false : true;
 }
 
 //--------------------------------------------------------------------------------------------------------------
 inline CNavArea *CNavArea::PopOpenList( void )
 {
-	Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
+	contract_assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 
 	if ( m_openList )
 	{
@@ -801,12 +791,12 @@ inline CNavArea *CNavArea::PopOpenList( void )
 		area->m_prevOpen = nullptr;
 		area->m_nextOpen = nullptr;
 
-		Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
+		contract_assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 
 		return area;
 	}
 
-	Assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
+	contract_assert( (m_openList && m_openList->m_prevOpen == nullptr) || m_openList == nullptr );
 
 	return nullptr;
 }
@@ -917,7 +907,6 @@ inline bool CNavArea::IsVisible( const Vector &eye, Vector *visSpot ) const
 	return false;
 }
 
-#ifndef DEBUG_AREA_PLAYERCOUNTS
 inline void CNavArea::IncrementPlayerCount( int teamID, int entIndex )
 {
 	teamID = teamID % MAX_NAV_TEAMS;
@@ -943,7 +932,6 @@ inline void CNavArea::DecrementPlayerCount( int teamID, int entIndex )
 
 	--m_playerCount[ teamID ];
 }
-#endif // !DEBUG_AREA_PLAYERCOUNTS
 
 inline unsigned char CNavArea::GetPlayerCount( int teamID ) const
 {
@@ -968,12 +956,12 @@ inline unsigned char CNavArea::GetPlayerCount( int teamID ) const
 * Trilinear interpolation of Z values at quad edges.
 * NOTE: pos->z is not used.
 */
-inline float CNavArea::GetZ( const Vector * RESTRICT pos ) const RESTRICT
+inline float CNavArea::GetZ( const Vector * __restrict__ pos ) const __restrict__
 {
 	return GetZ( pos->x, pos->y );
 }
 
-inline float CNavArea::GetZ( const Vector & pos ) const RESTRICT
+inline float CNavArea::GetZ( const Vector & pos ) const __restrict__
 {
 	return GetZ( pos.x, pos.y );
 }
@@ -990,7 +978,7 @@ inline Vector CNavArea::GetCorner( NavCornerType corner ) const
 	switch( corner )
 	{
 	default:
-		Assert( false && "GetCorner: Invalid type" );
+		contract_assert( false && "GetCorner: Invalid type" );
 	case NORTH_WEST:
 		return m_nwCorner;
 
@@ -1010,6 +998,3 @@ inline Vector CNavArea::GetCorner( NavCornerType corner ) const
 		return m_seCorner;
 	}
 }
-
-
-#endif // _NAV_AREA_H_

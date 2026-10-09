@@ -1,15 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:	Debugging overlay functions
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DEBUGOVERLAY_H
-#define DEBUGOVERLAY_H
+// Purpose: Debugging overlay functions
 
+import std;
+import ks.math;
 
 namespace CDebugOverlay
 {
@@ -33,5 +29,3 @@ namespace CDebugOverlay
 	void AddCapsuleOverlay(const Vector &vStart, const Vector &vEnd, const float &flRadius, int r, int g, int b, int a, float flDuration);
 #endif
 }
-
-#endif // DEBUGOVERLAY_H

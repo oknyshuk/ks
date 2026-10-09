@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
@@ -17,7 +18,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_emissive_scroll_blended_pass_vs30 0
+inline constexpr int shaderStaticTest_emissive_scroll_blended_pass_vs30 = 0;
 class emissive_scroll_blended_pass_vs30_Dynamic_Index
 {
 private:
@@ -28,7 +29,7 @@ private:
 public:
 	void SetCOMPRESSED_VERTS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOMPRESSED_VERTS = i;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -36,7 +37,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -50,7 +51,7 @@ private:
 public:
 	void SetSKINNING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSKINNING = i;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -58,7 +59,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -72,7 +73,7 @@ private:
 public:
 	void SetMORPHING( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nMORPHING = i;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -80,7 +81,7 @@ public:
 	}
 	void SetMORPHING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nMORPHING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -109,7 +110,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS && m_bSKINNING && m_bMORPHING;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nCOMPRESSED_VERTS ) + ( 2 * m_nSKINNING ) + ( 4 * m_nMORPHING ) + 0;
 	}
@@ -124,7 +125,7 @@ static const ShaderComboInformation_t s_DynamicComboArray_emissive_scroll_blende
 };
 static const ShaderComboSemantics_t emissive_scroll_blended_pass_vs30_combos =
 {
-	"emissive_scroll_blended_pass_vs30", s_DynamicComboArray_emissive_scroll_blended_pass_vs30, 3, NULL, 0 
+	"emissive_scroll_blended_pass_vs30", s_DynamicComboArray_emissive_scroll_blended_pass_vs30, 3, nullptr, 0 
 };
 
 class ConstructMe_emissive_scroll_blended_pass_vs30

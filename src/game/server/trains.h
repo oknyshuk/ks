@@ -1,33 +1,26 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef TRAINS_H
-#define TRAINS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-
 
 #include "entityoutput.h"
 #include "pathtrack.h"
 
-
 // Spawnflags of CPathCorner
-#define SF_CORNER_WAITFORTRIG	0x001
-#define SF_CORNER_TELEPORT		0x002
+inline constexpr auto SF_CORNER_WAITFORTRIG = 0x001;
+inline constexpr auto SF_CORNER_TELEPORT = 0x002;
 
 // Tracktrain spawn flags
-#define SF_TRACKTRAIN_NOPITCH					0x0001
-#define SF_TRACKTRAIN_NOCONTROL					0x0002
-#define SF_TRACKTRAIN_FORWARDONLY				0x0004
-#define SF_TRACKTRAIN_PASSABLE					0x0008
-#define SF_TRACKTRAIN_FIXED_ORIENTATION			0x0010
-#define SF_TRACKTRAIN_HL1TRAIN					0x0080
-#define SF_TRACKTRAIN_USE_MAXSPEED_FOR_PITCH	0x0100
-#define SF_TRACKTRAIN_UNBLOCKABLE_BY_PLAYER		0x0200
-#define SF_TRACKTRAIN_ALLOWROLL					0x0400
+inline constexpr auto SF_TRACKTRAIN_NOPITCH = 0x0001;
+inline constexpr auto SF_TRACKTRAIN_NOCONTROL = 0x0002;
+inline constexpr auto SF_TRACKTRAIN_FORWARDONLY = 0x0004;
+inline constexpr auto SF_TRACKTRAIN_PASSABLE = 0x0008;
+inline constexpr auto SF_TRACKTRAIN_FIXED_ORIENTATION = 0x0010;
+inline constexpr auto SF_TRACKTRAIN_HL1TRAIN = 0x0080;
+inline constexpr auto SF_TRACKTRAIN_USE_MAXSPEED_FOR_PITCH = 0x0100;
+inline constexpr auto SF_TRACKTRAIN_UNBLOCKABLE_BY_PLAYER = 0x0200;
+inline constexpr auto SF_TRACKTRAIN_ALLOWROLL = 0x0400;
 
 #define TRAIN_ACTIVE	0x80 
 #define TRAIN_NEW		0xc0
@@ -199,6 +192,3 @@ private:
 
 	float		m_flNextMPSoundTime;
 };
-
-
-#endif // TRAINS_H

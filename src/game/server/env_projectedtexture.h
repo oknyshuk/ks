@@ -1,10 +1,10 @@
-#ifndef ENV_PROJECTEDTEXTURE_H
-#define ENV_PROJECTEDTEXTURE_H
+#pragma once
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
-#define ENV_PROJECTEDTEXTURE_STARTON			(1<<0)
-#define ENV_PROJECTEDTEXTURE_ALWAYSUPDATE		(1<<1)
+inline constexpr auto ENV_PROJECTEDTEXTURE_STARTON = (1<<0);
+inline constexpr auto ENV_PROJECTEDTEXTURE_ALWAYSUPDATE = (1<<1);
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -80,4 +80,3 @@ private:
 };
 
 
-#endif	// ENV_PROJECTEDTEXTURE_H

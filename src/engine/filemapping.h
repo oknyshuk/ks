@@ -1,16 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
 // Purpose: Read-only whole-file memory mapping.
-//
-//============================================================================//
 
-#ifndef FILEMAPPING_H
-#define FILEMAPPING_H
+import std;
 
-
-#include <cstddef>
-#include <span>
-#include <utility>
+import ks.platform;
 
 //-----------------------------------------------------------------------------
 // A read-only mapping of an entire file into the process address space.
@@ -34,7 +31,8 @@ public:
 	CFileMapping &operator=( const CFileMapping & ) = delete;
 
 	CFileMapping( CFileMapping &&other ) noexcept
-		: m_Bytes( std::exchange( other.m_Bytes, std::span<const std::byte>{} ) )
+		: m_Mapping( std::exchange( other.m_Mapping, nullptr ) )
+		, m_Bytes( std::exchange( other.m_Bytes, std::span<const std::byte>{} ) )
 	{
 	}
 
@@ -43,6 +41,7 @@ public:
 		if ( this != &other )
 		{
 			Unmap();
+			m_Mapping = std::exchange( other.m_Mapping, nullptr );
 			m_Bytes = std::exchange( other.m_Bytes, std::span<const std::byte>{} );
 		}
 		return *this;
@@ -67,7 +66,6 @@ public:
 	std::span<const std::byte> Bytes() const { return m_Bytes; }
 
 private:
+	ks::platform::mapping *m_Mapping = nullptr;
 	std::span<const std::byte> m_Bytes;
 };
-
-#endif // FILEMAPPING_H

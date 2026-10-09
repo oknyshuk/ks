@@ -1,24 +1,51 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Implements a brush model entity that moves along a linear path.
 //			Water whose level can be changed is implemented using the same entity.
-//
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "func_movelinear.h"
-#include "entitylist.h"
-#include "locksounds.h"
 #include "ndebugoverlay.h"
 #include "engine/IEngineSound.h"
 
 // -------------------------------
 //  SPAWN_FLAGS
 // -------------------------------
-#define SF_MOVELINEAR_NOTSOLID		8
+constexpr auto SF_MOVELINEAR_NOTSOLID = 8;
 
 LINK_ENTITY_TO_CLASS( func_movelinear, CFuncMoveLinear );
 LINK_ENTITY_TO_CLASS( momentary_door, CFuncMoveLinear );	// For backward compatibility
@@ -125,7 +152,7 @@ bool CFuncMoveLinear::CreateVPhysics( void )
 		IPhysicsObject *pPhysics = VPhysicsInitShadow( false, false );
 		fluidparams_t fluid;
 		
-		Assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
+		contract_assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
 		fluid.damping = 0.01f;
 		fluid.surfacePlane[0] = 0;
 		fluid.surfacePlane[1] = 0;
@@ -350,9 +377,9 @@ void CFuncMoveLinear::InputSetSpeed( inputdata_t &inputdata )
 
 	// FIXME: This is a little questionable.  Do we want to fix the speed, or let it continue on at the old speed?
 	float flDistToGoalSqr = ( m_vecFinalDest - GetLocalOrigin() ).LengthSqr();
-	if ( flDistToGoalSqr > Square( FLT_EPSILON ) )
+	if ( flDistToGoalSqr > Square( std::numeric_limits<float>::epsilon() ) )
 	{
-		if ( fabs( m_flSpeed ) > FLT_EPSILON )
+		if ( fabs( m_flSpeed ) > std::numeric_limits<float>::epsilon() )
 		{
 			// NOTE: We do NOT want to call sound functions here, just vanilla position changes
 			LinearMove( m_vecFinalDest, m_flSpeed );
@@ -379,12 +406,12 @@ int CFuncMoveLinear::DrawDebugTextOverlays(void)
 		char tempstr[512];
 		float flTravelDist = (m_vecPosition1 - m_vecPosition2).Length();
 		float flCurDist	   = (m_vecPosition1 - GetLocalOrigin()).Length();
-		Q_snprintf(tempstr,sizeof(tempstr),"Current Pos: %3.3f",flCurDist/flTravelDist);
+		V_snprintf(tempstr,sizeof(tempstr),"Current Pos: %3.3f",flCurDist/flTravelDist);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		float flTargetDist	   = (m_vecPosition1 - m_vecFinalDest).Length();
-		Q_snprintf(tempstr,sizeof(tempstr),"Target Pos: %3.3f",flTargetDist/flTravelDist);
+		V_snprintf(tempstr,sizeof(tempstr),"Target Pos: %3.3f",flTargetDist/flTravelDist);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}

@@ -1,18 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <mutex>
+import std;
+import ks.tier1;
 #include "IOcclusionSystem.h"
-#include "mathlib/vector.h"
-#include <algorithm>
-#include <flat_set>
-#include "utlvector.h"
-#include <inplace_vector>
 #include "collisionutils.h"
 #include "filesystem.h"
 #include "gl_model_private.h"
@@ -20,8 +11,6 @@
 #include "client.h"
 #include "gl_shader.h"
 #include "materialsystem/imesh.h"
-#include "tier0/vprof.h"
-#include "tier0/icommandline.h"
 
 // Uncomment this if you want to get a whole bunch of paranoid error checking
 // #define DEBUG_OCCLUSION_SYSTEM 1
@@ -30,13 +19,13 @@
 //-----------------------------------------------------------------------------
 // Used to visualizes what the occlusion system is doing.
 //-----------------------------------------------------------------------------
-#define DEFAULT_MIN_OCCLUDER_AREA  5.0f
-#define DEFAULT_MAX_OCCLUDEE_AREA  5.0f
+constexpr auto DEFAULT_MIN_OCCLUDER_AREA = 5.0f;
+constexpr auto DEFAULT_MAX_OCCLUDEE_AREA = 5.0f;
 
-#define DEFAULT_OCCLUSION_STATE "1"
+inline constexpr const char *DEFAULT_OCCLUSION_STATE = "1";
 
 // Used by ViewData ring buffer
-#define OCCLUSION_SYSTEM_VIEWDATA_MAX	32
+constexpr auto OCCLUSION_SYSTEM_VIEWDATA_MAX = 32;
 
 ConVar r_visocclusion( "r_visocclusion", "0", FCVAR_CHEAT, "Activate/deactivate wireframe rendering of what the occlusion system is doing." );
 ConVar r_occlusion( "r_occlusion", DEFAULT_OCCLUSION_STATE, 0, "Activate/deactivate the occlusion system." );
@@ -44,15 +33,6 @@ static ConVar r_occludermincount( "r_occludermincount", "0", 0, "At least this m
 static ConVar r_occlusionspew( "r_occlusionspew", "0", FCVAR_CHEAT, "Activate/deactivates spew about what the occlusion system is doing." );
 ConVar r_occluderminarea( "r_occluderminarea", "0", 0, "Prevents this occluder from being used if it takes up less than X% of the screen. 0 means use whatever the level said to use." );
 ConVar r_occludeemaxarea( "r_occludeemaxarea", "0", 0, "Prevents occlusion testing for entities that take up more than X% of the screen. 0 means use whatever the level said to use." );
-
-#ifdef DEBUG_OCCLUSION_SYSTEM
-
-static ConVar r_occtest( "r_occtest", "0" );
-
-// Set this in the debugger to activate debugging spew
-bool s_bSpew = false;
-
-#endif // DEBUG_OCCLUSION_SYSTEM
 
 
 //-----------------------------------------------------------------------------
@@ -185,28 +165,28 @@ private:
 //-----------------------------------------------------------------------------
 CWingedEdgeList::CWingedEdgeList()
 {
-	m_StartTerminal.m_vecPosition.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
-	m_StartTerminal.m_vecPositionEnd.Init( -FLT_MAX, FLT_MAX, -FLT_MAX );
+	m_StartTerminal.m_vecPosition.Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
+	m_StartTerminal.m_vecPositionEnd.Init( -std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 	m_StartTerminal.m_nLeaveSurfID = -1;
 	m_StartTerminal.m_nEnterSurfID = -1;
 	m_StartTerminal.m_pPrevActiveEdge = nullptr;
 	m_StartTerminal.m_pNextActiveEdge = nullptr;
 	m_StartTerminal.m_flDxDy = 0.0f;
 	m_StartTerminal.m_flOODy = 0.0f;
-	m_StartTerminal.m_flX = -FLT_MAX;
+	m_StartTerminal.m_flX = -std::numeric_limits<float>::max();
 
-	m_EndTerminal.m_vecPosition.Init( FLT_MAX, -FLT_MAX, -FLT_MAX );
-	m_EndTerminal.m_vecPositionEnd.Init( FLT_MAX, FLT_MAX, -FLT_MAX );
+	m_EndTerminal.m_vecPosition.Init( std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
+	m_EndTerminal.m_vecPositionEnd.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 	m_EndTerminal.m_nLeaveSurfID = -1;
 	m_EndTerminal.m_nEnterSurfID = -1;
 	m_EndTerminal.m_pPrevActiveEdge = nullptr;
 	m_EndTerminal.m_pNextActiveEdge = nullptr;
 	m_EndTerminal.m_flDxDy = 0.0f;
 	m_EndTerminal.m_flOODy = 0.0f;
-	m_EndTerminal.m_flX = FLT_MAX;
+	m_EndTerminal.m_flX = std::numeric_limits<float>::max();
 
 	m_BackSurface.m_Plane.normal.Init( 0, 0, 1 );
-	m_BackSurface.m_Plane.dist = FLT_MAX;
+	m_BackSurface.m_Plane.dist = std::numeric_limits<float>::max();
 }
 
 
@@ -251,7 +231,7 @@ inline int CWingedEdgeList::AddEdge( )
 int CWingedEdgeList::AddEdge( const Vector &vecStartVert, const Vector &vecEndVert, int nLeaveSurfID, int nEnterSurfID )
 {
 	// This is true if we've clipped to the near clip plane
-	Assert( (vecStartVert.z >= 0.0) && (vecEndVert.z >= 0.0) );
+	contract_assert( (vecStartVert.z >= 0.0) && (vecEndVert.z >= 0.0) );
 
 	// Don't bother adding edges with dy == 0
 	float dy;
@@ -333,21 +313,21 @@ inline void CWingedEdgeList::UnlinkActiveEdge( WingedEdge_t *pEdge )
 //-----------------------------------------------------------------------------
 void CWingedEdgeList::CheckConsistency()
 {
-	float flLastY = -FLT_MAX;
-	float flLastX = -FLT_MAX;
+	float flLastY = -std::numeric_limits<float>::max();
+	float flLastX = -std::numeric_limits<float>::max();
 	float flLastDxDy = 0;
 
 	int nEdgeCount = EdgeCount();
 	for ( int i = 0; i < nEdgeCount; ++i )
 	{
 		WingedEdge_t *pEdge = &WingedEdge(i);
-		Assert( pEdge->m_vecPosition.y >= flLastY );
+		contract_assert( pEdge->m_vecPosition.y >= flLastY );
 		if ( pEdge->m_vecPosition.y == flLastY )
 		{
-			Assert( pEdge->m_vecPosition.x >= flLastX );
+			contract_assert( pEdge->m_vecPosition.x >= flLastX );
 			if ( pEdge->m_vecPosition.x == flLastX )
 			{
-				Assert( pEdge->m_flDxDy >= flLastDxDy );
+				contract_assert( pEdge->m_flDxDy >= flLastDxDy );
 			}
 		}
 
@@ -359,17 +339,17 @@ void CWingedEdgeList::CheckConsistency()
 	ResetActiveEdgeList();
 	float flCurrentY = NextDiscontinuity();
 	AdvanceActiveEdgeList( flCurrentY );
-	while ( flCurrentY != FLT_MAX )
+	while ( flCurrentY != std::numeric_limits<float>::max() )
 	{
 		// Make sure all edges have correct Xs + enter + leave surfaces..
 		int nCurrentSurfID = -1;
-		float flX = -FLT_MAX;
+		float flX = -std::numeric_limits<float>::max();
 		WingedEdge_t *pCurEdge = FirstActiveEdge();
 		while ( !AtListEnd( pCurEdge ) )
 		{
-			Assert( pCurEdge->m_nLeaveSurfID == nCurrentSurfID );
-			Assert( pCurEdge->m_flX >= flX );
-			Assert( pCurEdge->m_nLeaveSurfID != pCurEdge->m_nEnterSurfID );
+			contract_assert( pCurEdge->m_nLeaveSurfID == nCurrentSurfID );
+			contract_assert( pCurEdge->m_flX >= flX );
+			contract_assert( pCurEdge->m_nLeaveSurfID != pCurEdge->m_nEnterSurfID );
 			nCurrentSurfID = pCurEdge->m_nEnterSurfID;
 			flX = pCurEdge->m_flX;
 			pCurEdge = pCurEdge->m_pNextActiveEdge;
@@ -388,7 +368,7 @@ void CWingedEdgeList::CheckConsistency()
 inline float CWingedEdgeList::ComputeZValue( const Surface_t *pSurface, float x, float y ) const
 {
 	const cplane_t &plane = pSurface->m_Plane;
-	Assert( plane.normal.z == 1.0f );
+	contract_assert( plane.normal.z == 1.0f );
 	return plane.dist - plane.normal.x * x - plane.normal.y * y; 
 }
 
@@ -430,7 +410,7 @@ inline void CWingedEdgeList::InsertActiveEdge( WingedEdge_t *pPrevEdge, WingedEd
 void CWingedEdgeList::ResetActiveEdgeList()
 {
 	// This shouldn't be called unless we're about to do active edge checking
-	Assert( EdgeCount() );
+	contract_assert( EdgeCount() );
 
 	m_nCurrentEdgeIndex = 0;
 
@@ -440,8 +420,8 @@ void CWingedEdgeList::ResetActiveEdgeList()
 
 	m_StartTerminal.m_pNextActiveEdge = &m_EndTerminal;
 	m_EndTerminal.m_pPrevActiveEdge = &m_StartTerminal;
-	Assert( m_StartTerminal.m_pPrevActiveEdge == nullptr );
-	Assert( m_EndTerminal.m_pNextActiveEdge == nullptr );
+	contract_assert( m_StartTerminal.m_pPrevActiveEdge == nullptr );
+	contract_assert( m_EndTerminal.m_pNextActiveEdge == nullptr );
 }
 
 
@@ -483,7 +463,7 @@ inline float CWingedEdgeList::NextDiscontinuity() const
 bool CWingedEdgeList::AdvanceActiveEdgeList( float flCurrY )
 {
 	// Reordering is unnecessary because the winged edges are guaranteed to be non-overlapping
-	m_flNextDiscontinuity = FLT_MAX;
+	m_flNextDiscontinuity = std::numeric_limits<float>::max();
 
 	// Advance all edges until the current Y; we don't need to re-order *any* edges.
 	WingedEdge_t *pCurEdge;
@@ -507,7 +487,7 @@ bool CWingedEdgeList::AdvanceActiveEdgeList( float flCurrY )
 
 	int nEdgeCount = EdgeCount();
 	if ( m_nCurrentEdgeIndex == nEdgeCount )
-		return (m_flNextDiscontinuity != FLT_MAX);
+		return (m_flNextDiscontinuity != std::numeric_limits<float>::max());
 
 	pCurEdge = &WingedEdge( m_nCurrentEdgeIndex );
 
@@ -529,7 +509,7 @@ bool CWingedEdgeList::AdvanceActiveEdgeList( float flCurrY )
 		}
 
 		if ( ++m_nCurrentEdgeIndex == nEdgeCount )
-			return (m_flNextDiscontinuity != FLT_MAX);
+			return (m_flNextDiscontinuity != std::numeric_limits<float>::max());
 
 		pCurEdge = &WingedEdge( m_nCurrentEdgeIndex );
 	}
@@ -540,7 +520,7 @@ bool CWingedEdgeList::AdvanceActiveEdgeList( float flCurrY )
 		m_flNextDiscontinuity = pCurEdge->m_vecPosition.y;
 	}
 
-	return (m_flNextDiscontinuity != FLT_MAX);
+	return (m_flNextDiscontinuity != std::numeric_limits<float>::max());
 }
 
 
@@ -582,9 +562,9 @@ bool CWingedEdgeList::IsOccludingActiveEdgeList( CWingedEdgeList &testList, floa
 	{
 		// In this case, we should be on a span crossing from x <= -1.0f to x > 1.0f.
 		// Do the first occlusion test at x = -1.0f.
-		Assert( pTestEdge->m_flX > -1.0f );
+		contract_assert( pTestEdge->m_flX > -1.0f );
 		pTestEdge = pTestEdge->m_pPrevActiveEdge;
-		Assert( pTestEdge->m_flX <= -1.0f );
+		contract_assert( pTestEdge->m_flX <= -1.0f );
 		flNextTestX = -1.0f;
 	}
 
@@ -609,11 +589,11 @@ bool CWingedEdgeList::IsOccludingActiveEdgeList( CWingedEdgeList &testList, floa
 			return false;
 
 		// We're done if there's no more occludees
-		if ( flNextTestX == FLT_MAX )
+		if ( flNextTestX == std::numeric_limits<float>::max() )
 			return true;
 
 		// We're done if there's no more occluders
-		if ( flNextOccluderX == FLT_MAX )
+		if ( flNextOccluderX == std::numeric_limits<float>::max() )
 			return false;
 
 		if ( flNextTestX <= flNextOccluderX )
@@ -646,10 +626,6 @@ bool CWingedEdgeList::IsOccludingActiveEdgeList( CWingedEdgeList &testList, floa
 //-----------------------------------------------------------------------------
 bool CWingedEdgeList::IsOccludingEdgeList( CWingedEdgeList &testList )
 {
-#ifdef DEBUG_OCCLUSION_SYSTEM
-	testList.CheckConsistency();
-	CheckConsistency();
-#endif
 
 	// Did all the edges get culled for some reason? Then it's occluded
 	if ( testList.EdgeCount() == 0 )
@@ -770,11 +746,7 @@ void CWingedEdgeList::Visualize( unsigned char *pColor )
 		meshBuilder.AdvanceVertex();
 
 		meshBuilder.Position3fv( pEdge->m_vecPositionEnd.Base() );
-#ifdef DEBUG_OCCLUSION_SYSTEM
-		meshBuilder.Color4ub( 0, 0, 255, 255 );
-#else
 		meshBuilder.Color4ubv( pColor );
-#endif
 		meshBuilder.AdvanceVertex();
 	}
 
@@ -1010,34 +982,34 @@ bool CEdgeList::EdgeLess::operator()( unsigned short src1, unsigned short src2 )
 CEdgeList::CEdgeList() : m_OrigSortIndices( EdgeLess{ &m_Edges } )
 {
 
-	m_StartTerminal.m_vecPosition.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
-	m_StartTerminal.m_vecPositionEnd.Init( -FLT_MAX, FLT_MAX, -FLT_MAX );
+	m_StartTerminal.m_vecPosition.Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
+	m_StartTerminal.m_vecPositionEnd.Init( -std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 	m_StartTerminal.m_nSurfID = -1;
 	m_StartTerminal.m_pPrevActiveEdge = nullptr;
 	m_StartTerminal.m_pNextActiveEdge = nullptr;
 	m_StartTerminal.m_flDxDy = 0.0f;
 	m_StartTerminal.m_flOODy = 0.0f;
-	m_StartTerminal.m_flX = -FLT_MAX;
+	m_StartTerminal.m_flX = -std::numeric_limits<float>::max();
 
-	m_EndTerminal.m_vecPosition.Init( FLT_MAX, -FLT_MAX, -FLT_MAX );
-	m_EndTerminal.m_vecPositionEnd.Init( FLT_MAX, FLT_MAX, -FLT_MAX );
+	m_EndTerminal.m_vecPosition.Init( std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
+	m_EndTerminal.m_vecPositionEnd.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 	m_EndTerminal.m_nSurfID = -1;
 	m_EndTerminal.m_pPrevActiveEdge = nullptr;
 	m_EndTerminal.m_pNextActiveEdge = nullptr;
 	m_EndTerminal.m_flDxDy = 0.0f;
 	m_EndTerminal.m_flOODy = 0.0f;
-	m_EndTerminal.m_flX = FLT_MAX;
+	m_EndTerminal.m_flX = std::numeric_limits<float>::max();
 
-	m_StartSurfTerminal.m_flOOz = -FLT_MAX;
+	m_StartSurfTerminal.m_flOOz = -std::numeric_limits<float>::max();
 	m_StartSurfTerminal.m_Plane.normal.Init( 0, 0, 1 );
-	m_StartSurfTerminal.m_Plane.dist = -FLT_MAX;
+	m_StartSurfTerminal.m_Plane.dist = -std::numeric_limits<float>::max();
 	m_StartSurfTerminal.m_nSurfID = -1;
 	m_StartSurfTerminal.m_pNextSurface = nullptr;
 	m_StartSurfTerminal.m_pPrevSurface = nullptr;
 
-	m_EndSurfTerminal.m_flOOz = FLT_MAX;
+	m_EndSurfTerminal.m_flOOz = std::numeric_limits<float>::max();
 	m_EndSurfTerminal.m_Plane.normal.Init( 0, 0, 1 );
-	m_EndSurfTerminal.m_Plane.dist = FLT_MAX;
+	m_EndSurfTerminal.m_Plane.dist = std::numeric_limits<float>::max();
 	m_EndSurfTerminal.m_nSurfID = -1;
 	m_EndSurfTerminal.m_pNextSurface = nullptr;
 	m_EndSurfTerminal.m_pPrevSurface = nullptr;
@@ -1161,7 +1133,7 @@ inline void CEdgeList::SetSurfaceArea( int nSurfID, float flArea )
 inline float CEdgeList::ComputeZValue( const Surface_t *pSurface, float x, float y ) const
 {
 	const cplane_t &plane = pSurface->m_Plane;
-	Assert( plane.normal.z == 1.0f );
+	contract_assert( plane.normal.z == 1.0f );
 	return plane.dist - plane.normal.x * x - plane.normal.y * y; 
 }
 
@@ -1171,7 +1143,7 @@ inline float CEdgeList::ComputeZValue( const Surface_t *pSurface, float x, float
 //-----------------------------------------------------------------------------
 inline void CEdgeList::ComputePointAlongEdge( const Edge_t *pEdge, int nSurfID, float y, Vector *pPoint ) const
 {
-	Assert( (y >= pEdge->m_vecPosition.y) && (y <= pEdge->m_vecPositionEnd.y) );
+	contract_assert( (y >= pEdge->m_vecPosition.y) && (y <= pEdge->m_vecPositionEnd.y) );
 
 	float t;
 	t = (y - pEdge->m_vecPosition.y) * pEdge->m_flOODy;
@@ -1212,7 +1184,7 @@ void CEdgeList::AddEdge( Vector **ppEdgeVertices, int nSurfID )
 	const Vector &vecEndVert = *(ppEdgeVertices[ 1 - nMinIndex ]);
 
 	// This is true if we've clipped to the near clip plane
-	Assert( (vecStartVert.z >= 0.0f) && (vecEndVert.z >= 0.0f) );
+	contract_assert( (vecStartVert.z >= 0.0f) && (vecEndVert.z >= 0.0f) );
 
 	// Don't bother adding edges with dy == 0
 	float dy = vecEndVert.y - vecStartVert.y;
@@ -1260,11 +1232,12 @@ int CEdgeList::SurfCompare( const void *elem1, const void *elem2 )
 //-----------------------------------------------------------------------------
 void CEdgeList::CullSmallOccluders()
 {	 
+	ks::ScratchArena<> scratch;
 	// Cull out all surfaces with too small of a screen area...
 	// Sort the surfaces by screen area, in descending order
 	int nSurfCount = std::ssize( m_Surfaces );
 	s_pSortSurfaces = m_Surfaces.data();
-	qsort( m_SurfaceSort.data(), nSurfCount, sizeof(int), SurfCompare );
+	std::qsort( m_SurfaceSort.data(), nSurfCount, sizeof(int), SurfCompare );
 
 	// We're going to keep the greater of r_occludermin + All surfaces with a screen area >= r_occluderarea
 	int nMinSurfaces = r_occludermincount.GetInt();
@@ -1276,8 +1249,8 @@ void CEdgeList::CullSmallOccluders()
 		flMinScreenArea = OcclusionSystem()->MinOccluderArea() * 0.02f;
 	}
 
-	bool *bUseSurface = (bool*)stackalloc( nSurfCount * sizeof(bool) );
-	memset( bUseSurface, 0, nSurfCount * sizeof(bool) );
+	bool *bUseSurface = scratch.Alloc<bool>( nSurfCount );
+	std::memset( bUseSurface, 0, nSurfCount * sizeof(bool) );
 	
 	int i;
 	for ( i = 0; i < nSurfCount; ++i )
@@ -1288,7 +1261,6 @@ void CEdgeList::CullSmallOccluders()
 		bUseSurface[nSurfID] = true;
 	}
 
-	MEM_ALLOC_CREDIT();
 
 	m_SortIndices.clear();
 	m_SortIndices.reserve( m_OrigSortIndices.size() );
@@ -1321,15 +1293,15 @@ void CEdgeList::RemoveAll()
 void CEdgeList::ResetActiveEdgeList()
 {
 	// This shouldn't be called unless we're about to do active edge checking
-	Assert( ActualEdgeCount() );
+	contract_assert( ActualEdgeCount() );
 
 	m_nCurrentEdgeIndex = 0;
 	m_flNextDiscontinuity = EdgeFromSortIndex( 0 ).m_vecPosition.y;
 
 	m_StartTerminal.m_pNextActiveEdge = &m_EndTerminal;
 	m_EndTerminal.m_pPrevActiveEdge = &m_StartTerminal;
-	Assert( m_StartTerminal.m_pPrevActiveEdge == nullptr );
-	Assert( m_EndTerminal.m_pNextActiveEdge == nullptr );
+	contract_assert( m_StartTerminal.m_pPrevActiveEdge == nullptr );
+	contract_assert( m_EndTerminal.m_pNextActiveEdge == nullptr );
 }
 
 
@@ -1501,13 +1473,6 @@ void CEdgeList::ReduceActiveEdgeList( CWingedEdgeList &wingedEdgeList, float flM
 	// Surface lists should be empty
 	int i;
 
-#ifdef DEBUG_OCCLUSION_SYSTEM
-	for ( i = m_Surfaces.Count(); --i >= 0; )
-	{
-		Assert( m_Surfaces[i].m_pNextSurface == nullptr );
-	}
-#endif
-
 	int nLeaveSurfID = -1;
 	const Edge_t *pCurEdge = FirstActiveEdge();
 	const Edge_t *pNextEdge;
@@ -1541,7 +1506,7 @@ void CEdgeList::ReduceActiveEdgeList( CWingedEdgeList &wingedEdgeList, float flM
 		if ( nLeaveSurfID == nEnterSurfID )
 			continue;
 
-		Assert( ( nLeaveSurfID != -1 ) || ( nEnterSurfID != -1 )  );
+		contract_assert( ( nLeaveSurfID != -1 ) || ( nEnterSurfID != -1 ) );
 
 		int nEdgeSurfID = ( nEnterSurfID != -1 ) ? nEnterSurfID : nLeaveSurfID;
 
@@ -1603,15 +1568,12 @@ void CEdgeList::ReduceActiveEdgeList( CWingedEdgeList &wingedEdgeList, float flM
 				pNewEdge->m_nWingedEdge = i;
 			}
 
-#ifdef DEBUG_OCCLUSION_SYSTEM
-			wingedEdgeList.CheckConsistency();
-#endif
 		}
 
 		nLeaveSurfID = nEnterSurfID;
 	}
 
-	Assert( nLeaveSurfID == -1 );
+	contract_assert( nLeaveSurfID == -1 );
 
 //		Msg("\n");
 
@@ -1624,8 +1586,8 @@ void CEdgeList::ReduceActiveEdgeList( CWingedEdgeList &wingedEdgeList, float flM
 float CEdgeList::LocateEdgeCrossingDiscontinuity( float flNextY, float flPrevY, int &nCount, Edge_t **ppInfo )
 {
 	nCount = 0;
-	float flCurrX = -FLT_MAX;
-	float flNextX = -FLT_MAX;
+	float flCurrX = -std::numeric_limits<float>::max();
+	float flNextX = -std::numeric_limits<float>::max();
 	float flCurrY = flNextY;
 
 	Vector2D vecDelta, vecIntersection;
@@ -1634,7 +1596,7 @@ float CEdgeList::LocateEdgeCrossingDiscontinuity( float flNextY, float flPrevY, 
 	for ( pCurEdge = FirstActiveEdge(); !AtListEnd(pCurEdge); flCurrX = flNextX, pCurEdge = pCurEdge->m_pNextActiveEdge )
 	{
 		// Don't take into account edges that end on the current line
-		Assert( pCurEdge->m_vecPositionEnd.y >= flCurrY );
+		contract_assert( pCurEdge->m_vecPositionEnd.y >= flCurrY );
 
 		flNextX = pCurEdge->m_vecPosition.x + (flCurrY - pCurEdge->m_vecPosition.y) * pCurEdge->m_flDxDy;
 
@@ -1650,7 +1612,7 @@ float CEdgeList::LocateEdgeCrossingDiscontinuity( float flNextY, float flPrevY, 
 		if ( pPrevEdge->m_vecPositionEnd == pCurEdge->m_vecPositionEnd )
 			continue;
 
-		Assert( pPrevEdge->m_flDxDy != pCurEdge->m_flDxDy );
+		contract_assert( pPrevEdge->m_flDxDy != pCurEdge->m_flDxDy );
 
 		// Found one! Let's find the intersection of these two
 		// edges and up the Y discontinuity to that point.
@@ -1692,7 +1654,7 @@ float CEdgeList::LocateEdgeCrossingDiscontinuity( float flNextY, float flPrevY, 
 			nCount = 0;
 		}
 		
-		Assert( nCount < MAX_EDGE_CROSSINGS );
+		contract_assert( nCount < MAX_EDGE_CROSSINGS );
 		flNextX = pPrevEdge->m_vecPosition.x + t * pPrevEdge->m_flDxDy;
 		ppInfo[nCount++] = pCurEdge;
 	}
@@ -1705,12 +1667,12 @@ float CEdgeList::LocateEdgeCrossingDiscontinuity( float flNextY, float flPrevY, 
 //-----------------------------------------------------------------------------
 void CEdgeList::AdvanceActiveEdgeList( float flCurrY )
 {
-	m_flNextDiscontinuity = FLT_MAX;
+	m_flNextDiscontinuity = std::numeric_limits<float>::max();
 
 	// Advance all edges until the current Y; we don't need to re-order *any* edges.
 	Edge_t *pCurEdge;
 	Edge_t *pNextEdge;
-	float flPrevX = -FLT_MAX;
+	float flPrevX = -std::numeric_limits<float>::max();
 	for ( pCurEdge = FirstActiveEdge(); !AtListEnd( pCurEdge ); pCurEdge = pNextEdge )
 	{
 		pNextEdge = pCurEdge->m_pNextActiveEdge;
@@ -1783,7 +1745,7 @@ void CEdgeList::ReorderActiveEdgeList( int nCount, Edge_t **ppCrossings )
 		}
 
 		// This should always be true, since there's always an edge at FLT_MAX.
-		Assert( pLastCrossing );
+		contract_assert( pLastCrossing );
 
 		// Slam all x values to be the same to avoid precision errors...
 		// This guarantees that this crossing at least will occur
@@ -1843,11 +1805,11 @@ void CEdgeList::CheckConsistency()
 	while( !AtListEnd( pEdge ) )
 	{
 		Edge_t *pPrevEdge = pEdge->m_pPrevActiveEdge;
-		Assert( pEdge->m_flX >= pPrevEdge->m_flX );
+		contract_assert( pEdge->m_flX >= pPrevEdge->m_flX );
 		if ( pEdge->m_flX == pPrevEdge->m_flX )
 		{
 			// End point check necessary because of precision errors
-			Assert( (pEdge->m_flDxDy >= pPrevEdge->m_flDxDy) || (pEdge->m_vecPositionEnd == pPrevEdge->m_vecPositionEnd) );
+			contract_assert( (pEdge->m_flDxDy >= pPrevEdge->m_flDxDy) || (pEdge->m_vecPositionEnd == pPrevEdge->m_vecPositionEnd) );
 		}
 
 		pEdge = pEdge->m_pNextActiveEdge;
@@ -1860,6 +1822,7 @@ void CEdgeList::CheckConsistency()
 //-----------------------------------------------------------------------------
 void CEdgeList::ReduceActiveList( CWingedEdgeList &newEdgeList )
 {
+	ks::ScratchArena<> scratch;
 	int nEdgeCount = ActualEdgeCount();
 	if ( nEdgeCount == 0 )
 		return;
@@ -1874,8 +1837,8 @@ void CEdgeList::ReduceActiveList( CWingedEdgeList &newEdgeList )
 
 	Edge_t *pEdgeCrossings[MAX_EDGE_CROSSINGS];
 	ReduceInfo_t *pBuf[2];
-	pBuf[0] = (ReduceInfo_t*)stackalloc( nEdgeCount * sizeof(ReduceInfo_t) );
-	pBuf[1] = (ReduceInfo_t*)stackalloc( nEdgeCount * sizeof(ReduceInfo_t) );
+	pBuf[0] = scratch.Alloc<ReduceInfo_t>( nEdgeCount );
+	pBuf[1] = scratch.Alloc<ReduceInfo_t>( nEdgeCount );
 	m_nPrevReduceCount = m_nNewReduceCount = 0;
 	int nIndex = 0;
 
@@ -1886,7 +1849,7 @@ void CEdgeList::ReduceActiveList( CWingedEdgeList &newEdgeList )
 	float flPrevY = NextDiscontinuity();
 	flPrevY = fpmax( -1.0f, flPrevY );
 
-	m_flNextDiscontinuity = FLT_MAX;
+	m_flNextDiscontinuity = std::numeric_limits<float>::max();
 	IntroduceNewActiveEdges( flPrevY );
 
 	int nEdgeCrossingCount = 0;
@@ -1895,14 +1858,6 @@ void CEdgeList::ReduceActiveList( CWingedEdgeList &newEdgeList )
 	{
 		// Don't immediately progress to the next discontinuity if there are edge crossings.
 		float flNextY = LocateEdgeCrossingDiscontinuity( NextDiscontinuity(), flPrevY, nEdgeCrossingCount, pEdgeCrossings );
-
-#ifdef  DEBUG_OCCLUSION_SYSTEM
-		if ( s_bSpew )
-		{
-			// Debugging spew
-			SpewActiveEdgeList( flPrevY );
-		}
-#endif
 
 		// Reduce the active edge list
 		m_pNewReduceInfo = pBuf[1 - nIndex];
@@ -1929,7 +1884,7 @@ void CEdgeList::ReduceActiveList( CWingedEdgeList &newEdgeList )
 			IntroduceNewActiveEdges( flNextY );
 
 			// Keep advancing the active edge list until it's got no more discontinuities
-			if ( NextDiscontinuity() == FLT_MAX )
+			if ( NextDiscontinuity() == std::numeric_limits<float>::max() )
 				return;
 		}
 		else
@@ -1946,10 +1901,6 @@ void CEdgeList::ReduceActiveList( CWingedEdgeList &newEdgeList )
 				}
 			}
 		}
-
-#ifdef DEBUG_OCCLUSION_SYSTEM
-		CheckConsistency();
-#endif
 
 		nIndex = 1 - nIndex;
 	}
@@ -2011,11 +1962,7 @@ void CEdgeList::Visualize( unsigned char *pColor )
 		meshBuilder.AdvanceVertex();
 
 		meshBuilder.Position3fv( m_Edges[i].m_vecPositionEnd.Base() );
-#ifdef DEBUG_OCCLUSION_SYSTEM
-		meshBuilder.Color4ub( 0, 0, 255, 255 );
-#else
 		meshBuilder.Color4ubv( pColor );
-#endif
 		meshBuilder.AdvanceVertex();
 	}
 
@@ -2359,7 +2306,6 @@ void COcclusionSystem::StitchClippedVertices( Vector *pVertices, int nCount )
 
 		if ( j < 0 )
 		{
-			MEM_ALLOC_CREDIT();
 			// No match found...
 			m_ClippedVerts.push_back( pVertices[i] );
 		}
@@ -2372,13 +2318,14 @@ void COcclusionSystem::StitchClippedVertices( Vector *pVertices, int nCount )
 //-----------------------------------------------------------------------------
 void COcclusionSystem::AddPolygonToEdgeList( const ViewData_t& viewData, CEdgeList &edgeList, Vector **ppPolygon, int nCount, int nSurfID, bool bClipped )
 {
+	ks::ScratchArena<> scratch;
 	// Transform the verts into projection space
 	// Transform into projection space (extra logic here is to simply guarantee that we project each vert exactly once)
 	int nMaxClipVerts = (nCount * 4);
 	int nClipCount, nClipCount1;
-	Vector **ppClipVertex = (Vector**)stackalloc( nMaxClipVerts * sizeof(Vector*) );
-	Vector **ppClipVertex1 = (Vector**)stackalloc( nMaxClipVerts * sizeof(Vector*) );
-	Vector *pVecProjectedVertex = (Vector*)stackalloc( nCount * sizeof(Vector) );
+	Vector **ppClipVertex = scratch.Alloc<Vector*>( nMaxClipVerts );
+	Vector **ppClipVertex1 = scratch.Alloc<Vector*>( nMaxClipVerts );
+	Vector *pVecProjectedVertex = scratch.Alloc<Vector>( nCount );
 
 	int k;
 	for ( k = 0; k < nCount; ++k )
@@ -2404,25 +2351,25 @@ void COcclusionSystem::AddPolygonToEdgeList( const ViewData_t& viewData, CEdgeLi
 	nClipCount1 = ClipPolygonToAxisAlignedPlane( ppClipVertex, nClipCount, aaPlane, ppClipVertex1 );
 	if ( nClipCount1 < 3 )
 		return;
-	Assert( nClipCount1 < nMaxClipVerts );
+	contract_assert( nClipCount1 < nMaxClipVerts );
 
 	aaPlane.m_flSign = 1;
 	nClipCount = ClipPolygonToAxisAlignedPlane( ppClipVertex1, nClipCount1, aaPlane, ppClipVertex );
 	if ( nClipCount < 3 )
 		return;
-	Assert( nClipCount < nMaxClipVerts );
+	contract_assert( nClipCount < nMaxClipVerts );
 
 	aaPlane.m_nAxis = 1;
 	nClipCount1 = ClipPolygonToAxisAlignedPlane( ppClipVertex, nClipCount, aaPlane, ppClipVertex1 );
 	if ( nClipCount1 < 3 )
 		return;
-	Assert( nClipCount1 < nMaxClipVerts );
+	contract_assert( nClipCount1 < nMaxClipVerts );
 
 	aaPlane.m_flSign = -1;
 	nClipCount = ClipPolygonToAxisAlignedPlane( ppClipVertex1, nClipCount1, aaPlane, ppClipVertex );
 	if ( nClipCount < 3 )
 		return;
-	Assert( nClipCount < nMaxClipVerts );
+	contract_assert( nClipCount < nMaxClipVerts );
 
 	// Compute the screen area...
 	float flScreenArea = 0.0f;
@@ -2431,7 +2378,7 @@ void COcclusionSystem::AddPolygonToEdgeList( const ViewData_t& viewData, CEdgeLi
 	{
 		// Using area times two simply because it's faster...
 		float flTriArea = TriArea2DTimesTwo( (*ppClipVertex[0]), (*ppClipVertex[k]), (*ppClipVertex[k+1]) );
-		Assert( flTriArea <= 1e-3 );
+		contract_assert( flTriArea <= 1e-3 );
 		if ( flTriArea < 0 )
 		{
 			flScreenArea += -flTriArea;
@@ -2464,6 +2411,7 @@ void COcclusionSystem::AddPolygonToEdgeList( const ViewData_t& viewData, CEdgeLi
 //-----------------------------------------------------------------------------
 void COcclusionSystem::RecomputeOccluderEdgeList( ViewData_t& viewData )
 {
+	ks::ScratchArena<> scratch;
 #ifndef DEDICATED
 	if ( !viewData.m_bEdgeListDirty )
 		return;
@@ -2507,8 +2455,8 @@ void COcclusionSystem::RecomputeOccluderEdgeList( ViewData_t& viewData )
 				continue;
 
 			// Clip to the near plane (has to be done in world space)
-			Vector **ppSurfVerts = (Vector**)stackalloc( ( nVertexCount ) * sizeof(Vector*) );
-			Vector **ppClipVerts = (Vector**)stackalloc( ( nVertexCount * 2 ) * sizeof(Vector*) );
+			Vector **ppSurfVerts = scratch.Alloc<Vector*>( ( nVertexCount ) );
+			Vector **ppClipVerts = scratch.Alloc<Vector*>( ( nVertexCount * 2 ) );
 			for ( k = 0; k < nVertexCount; ++k )
 			{
 				int nVertIndex = pIndices[nFirstVertexIndex + k];
@@ -2517,7 +2465,7 @@ void COcclusionSystem::RecomputeOccluderEdgeList( ViewData_t& viewData )
 
 			bool bClipped;
 			int nClipCount = ClipPolygonToNearPlane( viewData, ppSurfVerts, nVertexCount, ppClipVerts, &bClipped );
-			Assert( nClipCount <= ( nVertexCount * 2 ) );
+			contract_assert( nClipCount <= ( nVertexCount * 2 ) );
 			if ( nClipCount < 3 )
 				continue;
 
@@ -2588,9 +2536,9 @@ void COcclusionSystem::SetView( const Vector &vecCameraPos, float flFOV, const V
 	pActiveView->m_bEdgeListDirty = true;
 	pActiveView->m_flNearPlaneDist = -( DotProduct( vecCameraPos, pActiveView->m_NearClipPlane.normal ) - pActiveView->m_NearClipPlane.dist );
 	// Due to FP precision issues this value can sometimes drop slightly below 0.0f (during CSM shadow rendering).
-	Assert( pActiveView->m_flNearPlaneDist > -0.125f );
+	contract_assert( pActiveView->m_flNearPlaneDist > -0.125f );
 	pActiveView->m_flNearPlaneDist = std::max( pActiveView->m_flNearPlaneDist, 0.0f );
-	pActiveView->m_flFOVFactor = pActiveView->m_flNearPlaneDist * tan( flFOV * 0.5f * M_PI / 180.0f );
+	pActiveView->m_flFOVFactor = pActiveView->m_flNearPlaneDist * std::tan( flFOV * 0.5f * std::numbers::pi / 180.0f );
 	pActiveView->m_flFOVFactor = pActiveView->m_flNearPlaneDist / pActiveView->m_flFOVFactor;
 	pActiveView->m_flFOVFactor *= pActiveView->m_flFOVFactor;
 
@@ -2711,8 +2659,8 @@ struct WingedEdgeLess
 		Vector2D dEdge1, dEdge2;
 		Vector2DSubtract( pVertices[ pEdge1->m_nVert[ 1 - pEdge1->m_nMinVert ] ].AsVector2D(), pV1->AsVector2D(), dEdge1 );
 		Vector2DSubtract( pVertices[ pEdge2->m_nVert[ 1 - pEdge2->m_nMinVert ] ].AsVector2D(), pV2->AsVector2D(), dEdge2 );
-		Assert( dEdge1.y >= 0.0f );
-		Assert( dEdge2.y >= 0.0f );
+		contract_assert( dEdge1.y >= 0.0f );
+		contract_assert( dEdge2.y >= 0.0f );
 
 		return dEdge1.x * dEdge2.y < dEdge1.y * dEdge2.x;
 	}
@@ -2728,7 +2676,7 @@ bool COcclusionSystem::IsOccluded( int occlusionViewId, const Vector &vecAbsMins
 
 	ViewData_t* pActiveView = &m_viewData[occlusionViewId];
 
-	VPROF_BUDGET( "COcclusionSystem::IsOccluded", VPROF_BUDGETGROUP_OCCLUSION );
+	CVProfScope _( "COcclusionSystem::IsOccluded", 0, VPROF_BUDGETGROUP_OCCLUSION, false, BUDGETFLAG_OTHER );
 
 	// @MULTICORE (toml 9/11/2006): need to eliminate this mutex
 	static std::recursive_mutex mutex;
@@ -2892,10 +2840,6 @@ bool COcclusionSystem::IsOccluded( int occlusionViewId, const Vector &vecAbsMins
 		s_WingedTestEdgeList.AddEdge( startVert, endVert, nLeaveSurfID, nEnterSurfID );
 	}
 
-#ifdef DEBUG_OCCLUSION_SYSTEM
-	s_WingedTestEdgeList.CheckConsistency();
-#endif
-
 	// Now let's see if this edge list is occluded or not..
 	bool bOccluded = m_WingedEdgeList.IsOccludingEdgeList( s_WingedTestEdgeList );
 	if (bOccluded)
@@ -2948,11 +2892,7 @@ void VisualizeQueuedEdges( )
 		meshBuilder.AdvanceVertex();
 
 		meshBuilder.Position3fv( info.m_vecPoint[1].Base() );
-#ifdef DEBUG_OCCLUSION_SYSTEM
-		meshBuilder.Color4ub( 0, 0, 255, 255 );
-#else
 		meshBuilder.Color4ubv( info.m_pColor );
-#endif
 		meshBuilder.AdvanceVertex();
 	}
 

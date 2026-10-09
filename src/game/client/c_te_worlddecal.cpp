@@ -1,18 +1,24 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "iefx.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
 #include "fx.h"
-#include "tier0/vprof.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: World Decal TE
@@ -96,7 +102,7 @@ static inline void RecordWorldDecal( const Vector *pos, int index )
 //-----------------------------------------------------------------------------
 void C_TEWorldDecal::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEWorldDecal::PostDataUpdate" );
+	CVProfScope _( "C_TEWorldDecal::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( r_decals.GetInt() )
 	{

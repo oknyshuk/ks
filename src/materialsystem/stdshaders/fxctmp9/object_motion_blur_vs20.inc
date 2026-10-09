@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
@@ -17,7 +18,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_object_motion_blur_vs20 0
+inline constexpr int shaderStaticTest_object_motion_blur_vs20 = 0;
 class object_motion_blur_vs20_Dynamic_Index
 {
 public:
@@ -34,10 +35,10 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_object_motion_blur_vs20 0
+inline constexpr int shaderDynamicTest_object_motion_blur_vs20 = 0;
 static const ShaderComboSemantics_t object_motion_blur_vs20_combos =
 {
-	"object_motion_blur_vs20", NULL, 0, NULL, 0 
+	"object_motion_blur_vs20", nullptr, 0, nullptr, 0 
 };
 
 class ConstructMe_object_motion_blur_vs20

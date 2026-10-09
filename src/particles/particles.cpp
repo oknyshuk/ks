@@ -1,29 +1,19 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: particle system code
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include <atomic>
-#include "tier0/platform.h"
-#include "tier0/memalloc.h"
+// Purpose: particle system code
+
+import std;
+import ks.tier1;
 #include "particles/particles.h"
 #include "bitmap/psheet.h"
 #include "filesystem.h"
-#include "tier2/tier2.h"
 #include "tier2/fileutils.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier1/map_ops.h"
-#include "tier1/strtools.h"
 #include "dmxloader/dmxloader.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imesh.h"
-#include "tier0/vprof.h"
-#include "tier1/keyvalues.h"
-#include "tier1/lzmaDecoder.h"
 #include "random_floats.h"
 #include "vtf/vtf.h"
 #include "studio.h"
@@ -93,9 +83,9 @@ static char *s_RemapOperatorNameTable[]={
 
 static char const *RemapOperatorName( char const *pOpName )
 {
-	for( int i = 0 ; i < ARRAYSIZE( s_RemapOperatorNameTable ) ; i += 2 )
+	for( int i = 0 ; i < std::size( s_RemapOperatorNameTable ) ; i += 2 )
 	{
-		if ( Q_stricmp( pOpName, s_RemapOperatorNameTable[i] ) == 0 )
+		if ( V_stricmp( pOpName, s_RemapOperatorNameTable[i] ) == 0 )
 		{
 			return s_RemapOperatorNameTable[i + 1 ];
 		}
@@ -201,7 +191,7 @@ void CParticleSystemDictionary::DestroyExistingElement( CDmxElement *pElement )
 //-----------------------------------------------------------------------------
 CParticleSystemDefinition* CParticleSystemDictionary::AddParticleSystem( CDmxElement *pParticleSystem )
 {
-	if ( Q_stricmp( pParticleSystem->GetTypeString(), "DmeParticleSystemDefinition" ) )
+	if ( V_stricmp( pParticleSystem->GetTypeString(), "DmeParticleSystemDefinition" ) )
 		return nullptr;
 
 	DestroyExistingElement( pParticleSystem );
@@ -295,8 +285,8 @@ END_DMXELEMENT_UNPACK( ParticleChildrenInfo_t, s_ChildrenInfoUnpack )
 class CChildOperatorDefinition : public IParticleOperatorDefinition
 {
 public:
-	virtual const char *GetName() const { Assert(0); return nullptr; }
-	virtual CParticleOperatorInstance *CreateInstance( const DmObjectId_t &id ) const { Assert(0); return nullptr; }
+	virtual const char *GetName() const { contract_assert( 0 ); return nullptr; }
+	virtual CParticleOperatorInstance *CreateInstance( const DmObjectId_t &id ) const { contract_assert( 0 ); return nullptr; }
 	//	virtual void DestroyInstance( CParticleOperatorInstance *pInstance ) const { Assert(0); }
 	virtual const DmxElementUnpackStructure_t* GetUnpackStructure() const
 	{
@@ -377,7 +367,7 @@ void CParticleSystemDefinition::UnlinkAllCollections()
 		m_pFirstCollection->UnlinkFromDefList();
 	}
 
-	Assert( m_nFallbackCurrentCount == 0 );
+	contract_assert( m_nFallbackCurrentCount == 0 );
 }
 
 const char *CParticleSystemDefinition::GetName() const
@@ -540,7 +530,7 @@ void CParticleSystemDefinition::ParseOperators(
 		int nFunctionCount = std::ssize( flist );
 		for( int j = 0; j < nFunctionCount; ++j )
 		{
-			if ( Q_stricmp( pOpName, flist[j]->GetName() ) )
+			if ( V_stricmp( pOpName, flist[j]->GetName() ) )
 				continue;
 
 			// found it!
@@ -564,7 +554,7 @@ void CParticleSystemDefinition::ParseOperators(
 			case FUNCTION_INITIALIZER:
 			case FUNCTION_EMITTER:
 				m_nPerParticleInitializedAttributeMask |= pNewRef->GetWrittenAttributes();
-				Assert( pNewRef->GetReadInitialAttributes() == 0 );
+				contract_assert( pNewRef->GetReadInitialAttributes() == 0 );
 				break;
 
 			case FUNCTION_OPERATOR:
@@ -606,7 +596,7 @@ void CParticleSystemDefinition::ParseChildren( CDmxElement *pElement )
 	for ( int i = 0; i < nCount; ++i )
 	{
 		CDmxElement *pChild = children[i]->GetValue<CDmxElement*>( "child" );
-		if ( !pChild || Q_stricmp( pChild->GetTypeString(), "DmeParticleSystemDefinition" ) )
+		if ( !pChild || V_stricmp( pChild->GetTypeString(), "DmeParticleSystemDefinition" ) )
 			continue;
 
 		int j = std::ssize( m_Children ); m_Children.emplace_back();
@@ -661,7 +651,7 @@ void CParticleSystemDefinition::Read( CDmxElement *pElement )
 IMaterial *CParticleSystemDefinition::GetMaterial() const
 {
 	// NOTE: This has to be this way to ensure we don't load every freaking material @ startup
-	Assert( IsPrecached() );
+	contract_assert( IsPrecached() );
 	if ( !IsPrecached() )
 		return nullptr;
 	return (IMaterial *) ( (const IMaterial *) m_Material );
@@ -670,7 +660,7 @@ IMaterial *CParticleSystemDefinition::GetMaterial() const
 
 int CParticleSystemDefinition::GetSheetIndex() const
 {
-	Assert( IsSheetIndexCached() );
+	contract_assert( IsSheetIndexCached() );
 	return m_nSheetIndex;
 }
 
@@ -714,7 +704,7 @@ CParticleSystemDefinition *CParticleSystemDefinition::GetFallbackReplacementDefi
 bool CParticleSystemDefinition::UsesPowerOfTwoFrameBufferTexture()
 {
 	// NOTE: This has to be this way to ensure we don't load every freaking material @ startup
-	Assert( IsPrecached() );
+	contract_assert( IsPrecached() );
 	return g_pMaterialSystem && m_Material && m_Material->NeedsPowerOfTwoFrameBufferTexture( false ); // The false checks if it will ever need the frame buffer, not just this frame
 }
 
@@ -724,7 +714,7 @@ bool CParticleSystemDefinition::UsesPowerOfTwoFrameBufferTexture()
 bool CParticleSystemDefinition::UsesFullFrameBufferTexture()
 {
 	// NOTE: This has to be this way to ensure we don't load every freaking material @ startup
-	Assert( IsPrecached() );
+	contract_assert( IsPrecached() );
 	return g_pMaterialSystem && m_Material && m_Material->NeedsFullFrameBufferTexture( false ); // The false checks if it will ever need the frame buffer, not just this frame
 }
 
@@ -807,7 +797,7 @@ void CParticleSystemDefinition::SetupContextData( void )
 		&m_Operators, &m_Renderers, &m_Initializers, &m_Emitters, &m_ForceGenerators,
 		&m_Constraints
 	};
-	std::vector< size_t > *offsetLists[] = {
+	std::vector< std::size_t > *offsetLists[] = {
 		&m_nOperatorsCtxOffsets, &m_nRenderersCtxOffsets,
 		&m_nInitializersCtxOffsets, &m_nEmittersCtxOffsets,
 		&m_nForceGeneratorsCtxOffsets, &m_nConstraintsCtxOffsets,
@@ -849,7 +839,7 @@ ParticleOperatorList_t *CParticleSystemDefinition::GetOperatorList( ParticleFunc
 	case FUNCTION_CONSTRAINT:
 		return &m_Constraints;
 	default:
-		Assert(0);
+		contract_assert( 0 );
 		return nullptr;
 	}
 }
@@ -888,7 +878,7 @@ CParticleOperatorInstance *CParticleSystemDefinition::FindOperatorByName( const 
 		int nCount = std::ssize( *pVec );
 		for ( int j = 0; j < nCount; ++j )
 		{
-			if ( !Q_stricmp( pOperatorName, (*pVec)[ j ]->GetDefinition()->GetName() ) )
+			if ( !V_stricmp( pOperatorName, (*pVec)[ j ]->GetDefinition()->GetName() ) )
 				return (*pVec)[ j ].get();
 		}
 	}
@@ -951,12 +941,12 @@ void CParticleOperatorInstance::InitNewParticles( CParticleCollection *pParticle
 //------------------------------------------------------------------------------
 // need custom new/delete for alignment for simd
 //------------------------------------------------------------------------------
-void *CParticleCollection::operator new( size_t nSize )
+void *CParticleCollection::operator new( std::size_t nSize )
 {
-	return MemAlloc_AllocAligned( nSize, 16 );
+	return MemAlloc_AllocAlignedUnattributed( nSize, 16 );
 }
 
-void* CParticleCollection::operator new( size_t nSize, int nBlockUse, const char *pFileName, int nLine )
+void* CParticleCollection::operator new( std::size_t nSize, int nBlockUse, const char *pFileName, int nLine )
 {
 	return MemAlloc_AllocAlignedFileLine( nSize, 16, pFileName, nLine );
 }
@@ -977,12 +967,12 @@ void CParticleCollection::operator delete( void* pData, int nBlockUse, const cha
 	}
 }
 
-void *CWorldCollideContextData::operator new( size_t nSize )
+void *CWorldCollideContextData::operator new( std::size_t nSize )
 {
-	return MemAlloc_AllocAligned( nSize, 16 );
+	return MemAlloc_AllocAlignedUnattributed( nSize, 16 );
 }
 
-void* CWorldCollideContextData::operator new( size_t nSize, int nBlockUse, const char *pFileName, int nLine )
+void* CWorldCollideContextData::operator new( std::size_t nSize, int nBlockUse, const char *pFileName, int nLine )
 {
 	return MemAlloc_AllocAlignedFileLine( nSize, 16, pFileName, nLine );
 }
@@ -1009,10 +999,10 @@ void CWorldCollideContextData::operator delete( void* pData, int nBlockUse, cons
 //-----------------------------------------------------------------------------
 CParticleCollection::CParticleCollection( )
 {
-	COMPILE_TIME_ASSERT( ( MAX_RANDOM_FLOATS & ( MAX_RANDOM_FLOATS - 1 ) ) == 0 );
-	COMPILE_TIME_ASSERT( sizeof( s_pRandomFloats ) / sizeof( float ) >= MAX_RANDOM_FLOATS );
+	static_assert( ( MAX_RANDOM_FLOATS & ( MAX_RANDOM_FLOATS - 1 ) ) == 0 );
+	static_assert( sizeof( s_pRandomFloats ) / sizeof( float ) >= MAX_RANDOM_FLOATS );
 
-	Plat_FastMemset( this, 0, sizeof(CParticleCollection) );
+	std::memset( this, 0, sizeof(CParticleCollection) );
 	m_flOOMaxDistSqr = 1.0f;
 
 
@@ -1063,7 +1053,7 @@ CParticleCollection::~CParticleCollection( void )
 		m_pOperatorContextData = nullptr;
 	}
 
-	for( int i = 0 ; i < ARRAYSIZE( m_pCollisionCacheData ) ; i++ )
+	for( int i = 0 ; i < std::size( m_pCollisionCacheData ) ; i++ )
 	{
 		if ( m_pCollisionCacheData[i] )
 		{
@@ -1145,7 +1135,7 @@ void CParticleCollection::Init( CParticleSystemDefinition *pDef, float flDelay, 
 	if ( m_pDef->m_nContextDataSize )
 	{
 		m_pOperatorContextData = reinterpret_cast<uint8 *> 
-			( MemAlloc_AllocAligned( m_pDef->m_nContextDataSize, 16 ) );
+			( MemAlloc_AllocAlignedUnattributed( m_pDef->m_nContextDataSize, 16 ) );
 	}
 	
 	m_flNextSleepTime = g_pParticleSystemMgr->GetLastSimulationTime() + pDef->m_flNoDrawTimeToGoToSleep;
@@ -1179,7 +1169,7 @@ void CParticleCollection::Init( CParticleSystemDefinition *pDef, float flDelay, 
 			m_nControlPointNonPositionalMask |= pChild->m_nControlPointNonPositionalMask;
 			if ( pDef->m_Children[i].m_bEndCap )
 			{
-				pChild->m_flCurTime = -FLT_MAX;
+				pChild->m_flCurTime = -std::numeric_limits<float>::max();
 			}
 		}
 	}
@@ -1214,7 +1204,7 @@ void CParticleCollection::Init( CParticleSystemDefinition *pDef, float flDelay, 
 	m_pCPInfo = new CParticleCPInfo[ m_nNumControlPointsAllocated];
 
 	// align all control point orientations with the global world
-	Plat_FastMemset( m_pCPInfo, 0, sizeof( CParticleCPInfo ) * m_nNumControlPointsAllocated );
+	std::memset( m_pCPInfo, 0, sizeof( CParticleCPInfo ) * m_nNumControlPointsAllocated );
 	for( int i=0; i < m_nNumControlPointsAllocated; i++ )
 	{
 		ControlPoint(i).m_ForwardVector.y = 1.0f;
@@ -1229,7 +1219,7 @@ void CParticleCollection::Init( CParticleSystemDefinition *pDef, float flDelay, 
 		&(m_pDef->m_ForceGenerators),
 		&(m_pDef->m_Constraints),
 	};
-	std::vector< size_t > *offsetlists[]=
+	std::vector< std::size_t > *offsetlists[]=
 	{
 		&(m_pDef->m_nOperatorsCtxOffsets), &(m_pDef->m_nRenderersCtxOffsets),
 		&(m_pDef->m_nInitializersCtxOffsets), &(m_pDef->m_nEmittersCtxOffsets),
@@ -1370,7 +1360,7 @@ bool CParticleCollection::DependsOnSystem( const char *pName ) const
 //-----------------------------------------------------------------------------
 void CParticleCollection::LinkIntoDefList( )
 {
-	Assert( !m_pPrevDef && !m_pNextDef );
+	contract_assert( !m_pPrevDef && !m_pNextDef );
 
 	++( m_pDef->m_nFallbackCurrentCount );
 	m_pPrevDef = nullptr;
@@ -1385,7 +1375,7 @@ void CParticleCollection::LinkIntoDefList( )
 	CParticleCollection *pCollection = m_pDef->FirstCollection();
 	while ( pCollection )
 	{
-		Assert( pCollection->m_pDef == m_pDef );
+		contract_assert( pCollection->m_pDef == m_pDef );
 		pCollection = pCollection->GetNextCollectionUsingSameDef();
 	}
 #endif
@@ -1400,11 +1390,11 @@ void CParticleCollection::UnlinkFromDefList( )
 	if ( m_pDef->m_pFirstCollection == this )
 	{
 		m_pDef->m_pFirstCollection = m_pNextDef;
-		Assert( !m_pPrevDef );
+		contract_assert( !m_pPrevDef );
 	}
 	else 
 	{
-		Assert( m_pPrevDef );
+		contract_assert( m_pPrevDef );
 		m_pPrevDef->m_pNextDef = m_pNextDef;
 	}
 
@@ -1419,7 +1409,7 @@ void CParticleCollection::UnlinkFromDefList( )
 	CParticleCollection *pCollection = m_pDef->FirstCollection();
 	while ( pCollection )
 	{
-		Assert( pCollection->m_pDef == m_pDef );
+		contract_assert( pCollection->m_pDef == m_pDef );
 		pCollection = pCollection->GetNextCollectionUsingSameDef();
 	}
 #endif
@@ -1463,7 +1453,7 @@ CCachedParticleBatches *CParticleCollection::GetCachedParticleBatches()
 //-----------------------------------------------------------------------------
 void CParticleCollection::InitStorage( CParticleSystemDefinition *pDef )
 {
-	Assert( pDef->m_nMaxParticles < 65536 );
+	contract_assert( pDef->m_nMaxParticles < 65536 );
 
 	m_nMaxAllowedParticles = std::min( MAX_PARTICLES_IN_A_SYSTEM, pDef->m_nMaxParticles );
 	m_nAllocatedParticles = 4 + 4 * ( ( m_nMaxAllowedParticles + 3 ) / 4 );						    
@@ -1471,7 +1461,7 @@ void CParticleCollection::InitStorage( CParticleSystemDefinition *pDef )
 	int nConstantMemorySize = 3 * 4 * MAX_PARTICLE_ATTRIBUTES * sizeof(float) + 16;
 						 
 	// Align allocation for constant attributes to 16 byte boundaries
-	m_pConstantMemory =	(uint8 * ) MemAlloc_AllocAligned( nConstantMemorySize, 16 );
+	m_pConstantMemory =	(uint8 * ) MemAlloc_AllocAlignedUnattributed( nConstantMemorySize, 16 );
 	m_pConstantAttributes = ( float * ) m_pConstantMemory;
 
 	m_nPerParticleInitializedAttributeMask = pDef->m_nPerParticleInitializedAttributeMask;
@@ -1505,16 +1495,16 @@ void CParticleCollection::InitStorage( CParticleSystemDefinition *pDef )
 
 	// Gotta allocate a couple extra floats to account for padding
 	int nAllocationSize = m_nAllocatedParticles * sz * sizeof(float) + sizeof( FourVectors );
-	m_pParticleMemory = ( uint8 * ) MemAlloc_AllocAligned( nAllocationSize, 16 );
+	m_pParticleMemory = ( uint8 * ) MemAlloc_AllocAlignedUnattributed( nAllocationSize, 16 );
 	m_nAttributeMemorySize = nAllocationSize;
-	Plat_FastMemset( m_pParticleMemory, 0, nAllocationSize );
+	std::memset( m_pParticleMemory, 0, nAllocationSize );
 
 	// Allocate space for the initial attributes
 	if ( nInitialAttributeSize != 0 )
 	{
 		int nInitialAllocationSize = m_nAllocatedParticles * nInitialAttributeSize * sizeof(float) + sizeof( FourVectors );
-		m_pParticleInitialMemory = ( uint8 * ) MemAlloc_AllocAligned( nInitialAllocationSize, 16 );
-		Plat_FastMemset( m_pParticleInitialMemory, 0, nInitialAllocationSize );
+		m_pParticleInitialMemory = ( uint8 * ) MemAlloc_AllocAlignedUnattributed( nInitialAllocationSize, 16 );
+		memset( m_pParticleInitialMemory, 0, nInitialAllocationSize );
 	}
 
 	// Align allocation to 16-byte boundaries
@@ -1543,7 +1533,7 @@ void CParticleCollection::InitStorage( CParticleSystemDefinition *pDef )
 		{
 			if ( m_nPerParticleReadInitialAttributeMask & ( 1 << bit ) )
 			{
-				Assert( pInitialMem );
+				contract_assert( pInitialMem );
 				m_ParticleInitialAttributes.m_pAttributes[ bit ] = pInitialMem;
 				m_ParticleInitialAttributes.m_nFloatStrides[ bit ] = nAttrSize * 4;
 				pInitialMem += nAttrSize * m_nAllocatedParticles;
@@ -1912,7 +1902,7 @@ bool CParticleCollection::CheckIfOperatorShouldRun(
 	}
 	if ( pOp->m_flOpFadeOscillatePeriod > 0.0 )
 	{
-		flTime = fmod( m_flCurTime*( 1.0/pOp->m_flOpFadeOscillatePeriod ), 1.0 );
+		flTime = std::fmod( m_flCurTime*( 1.0/pOp->m_flOpFadeOscillatePeriod ), 1.0 );
 	}
 
 	float flStrength = FadeInOut( pOp->m_flOpStartFadeInTime, pOp->m_flOpEndFadeInTime,
@@ -1969,27 +1959,7 @@ KillListItem_t *CParticleOperatorInstance::GetParentKillList( CParticleCollectio
 	return nullptr;
 }
 
-#ifdef NDEBUG
 #define CHECKSYSTEM( p ) 0
-#else
-static void CHECKSYSTEM( CParticleCollection *pParticles )
-{
-//	Assert( pParticles->m_nActiveParticles <= pParticles->m_pDef->m_nMaxParticles );
-	for ( int i = 0; i < pParticles->m_nActiveParticles; ++i )
-	{
-		const float *xyz = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_XYZ, i );
-		const float *rad = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_RADIUS, i );
-		const float *xyz_prev = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_PREV_XYZ, i );
-		Assert( IsFinite( rad[0] ) );
-		Assert( IsFinite( xyz[0] ) );
-		Assert( IsFinite( xyz[4] ) );
-		Assert( IsFinite( xyz[8] ) );
-		Assert( IsFinite( xyz_prev[0] ) );
-		Assert( IsFinite( xyz_prev[4] ) );
-		Assert( IsFinite( xyz_prev[8] ) );
-	}
-}
-#endif
 
 void CParticleCollection::RunRestartedEmitters( void )
 {
@@ -2103,9 +2073,6 @@ void CParticleCollection::Render( int nViewRecursionLevel, IMatRenderContext *pR
 		if ( pMaterial &&
 			 ( !bTranslucentOnly || m_pDef->GetMaterial()->IsTranslucent() || ( vecActualModulation[3] != 1.0f ) ) )
 		{
-#if MEASURE_PARTICLE_PERF
-			double flSTime = Plat_FloatTime();
-#endif
 
 			int nCount = std::ssize( m_pDef->m_Renderers );
 			for( int i = 0; i < nCount; i++ )
@@ -2137,11 +2104,6 @@ void CParticleCollection::Render( int nViewRecursionLevel, IMatRenderContext *pR
 				}
 			}
 
-#if MEASURE_PARTICLE_PERF
-			float flETime = Plat_FloatTime() - flSTime;
-			m_pDef->m_flUncomittedTotalRenderTime += flETime;
-			m_pDef->m_flMaxMeasuredRenderTime = std::max( m_pDef->m_flMaxMeasuredRenderTime, flETime );
-#endif
 		}
 	}
 	
@@ -2166,24 +2128,12 @@ void CParticleCollection::UpdatePrevControlPoints( float dt )
 	m_nParticleFlags |= PCFLAGS_PREV_CONTROL_POINTS_INITIALIZED;
 }
 
-#if MEASURE_PARTICLE_PERF
-
-#define START_OP float flOpStartTime = Plat_FloatTime(); VPROF_ENTER_SCOPE(pOp->GetDefinition()->GetName())
-
-#define END_OP  if ( 1 ) {																						\
-	float flETime = Plat_FloatTime() - flOpStartTime;									\
-	IParticleOperatorDefinition *pDef = (IParticleOperatorDefinition *) pOp->m_pDef;	\
-	pDef->RecordExecutionTime( flETime );												\
-} \
-	VPROF_EXIT_SCOPE()
-#else
 #define START_OP
 #define END_OP
-#endif
 
 void CParticleCollection::InitializeNewParticles( int nFirstParticle, int nParticleCount, uint32 nInittedMask, bool bApplyingParentKillList )
 {
-	VPROF_BUDGET( "CParticleCollection::InitializeNewParticles", VPROF_BUDGETGROUP_PARTICLE_SIMULATION );
+	CVProfScope _( "CParticleCollection::InitializeNewParticles", 0, VPROF_BUDGETGROUP_PARTICLE_SIMULATION, false, BUDGETFLAG_OTHER );
 
 #ifdef _DEBUG
 	m_bIsRunningInitializers = true;
@@ -2349,7 +2299,7 @@ void CParticleCollection::EmitAndInit( CParticleCollection *pCollection, bool bA
 
 void CParticleCollection::Simulate( float dt )
 {
-	VPROF_BUDGET( "CParticleCollection::Simulate", VPROF_BUDGETGROUP_PARTICLE_SIMULATION );
+	CVProfScope _( "CParticleCollection::Simulate", 0, VPROF_BUDGETGROUP_PARTICLE_SIMULATION, false, BUDGETFLAG_OTHER );
 	if ( ( dt < 0.0f ) || ( m_bFrozen ) )
 		return;
 
@@ -2388,10 +2338,6 @@ void CParticleCollection::Simulate( float dt )
 
 	m_bPendingRestart = false;
 
-
-#if MEASURE_PARTICLE_PERF
-	float flStartSimTime = Plat_FloatTime();
-#endif
 
 	bool bAttachedKillList = false;
 	
@@ -2461,8 +2407,8 @@ void CParticleCollection::Simulate( float dt )
 			// !! speed - we could copy just the active region.
 			if ( ! m_pPreviousAttributeMemory )
 			{
-				m_pPreviousAttributeMemory = ( uint8 * ) MemAlloc_AllocAligned( m_nAttributeMemorySize, 16 );
-				memset( m_pPreviousAttributeMemory, 0, m_nAttributeMemorySize );
+				m_pPreviousAttributeMemory = ( uint8 * ) MemAlloc_AllocAlignedUnattributed( m_nAttributeMemorySize, 16 );
+				std::memset( m_pPreviousAttributeMemory, 0, m_nAttributeMemorySize );
 				// set up the pointers
 				m_PreviousFrameAttributes = m_ParticleAttributes;
 				for( int i = 0; i < MAX_PARTICLE_ATTRIBUTES; i++ )
@@ -2550,13 +2496,6 @@ void CParticleCollection::Simulate( float dt )
 		}
 	}
 
-#if MEASURE_PARTICLE_PERF
-	m_pDef->m_nMaximumActiveParticles = std::max( m_pDef->m_nMaximumActiveParticles, m_nActiveParticles );
-	float flETime = Plat_FloatTime() - flStartSimTime;
-	m_pDef->m_flUncomittedTotalSimTime += flETime;
-	m_pDef->m_flMaxMeasuredSimTime = std::max( m_pDef->m_flMaxMeasuredSimTime, flETime );
-#endif
-
 	// let children simulate
 	for( CParticleCollection *i = m_Children.head(); i; i = i->m_pNext )
 	{
@@ -2617,7 +2556,7 @@ void CParticleCollection::InitParticleAttributes( int nStartParticle, int nNumPa
 			}
 
 			// If this assertion fails, it means we're writing into constant memory, which is a nono
-			Assert( m_ParticleAttributes.Stride( nAttr ) != 0 );
+			contract_assert( m_ParticleAttributes.Stride( nAttr ) != 0 );
 			float *pConstantAttr = GetConstantAttributeMemory( nAttr );
 			*pAttrData = *pConstantAttr;
 			if ( m_ParticleAttributes.Stride( nAttr ) == 12 )
@@ -2646,8 +2585,8 @@ void CParticleCollection::CopyInitialAttributeValues( int nStartParticle, int nN
 			{
 				const float *pSrcAttribute = GetFloatAttributePtr( nAttr, i );
 				float *pDestAttribute = GetInitialFloatAttributePtrForWrite( nAttr, i );
-				Assert( m_ParticleInitialAttributes.Stride( nAttr ) != 0 );
-				Assert( m_ParticleAttributes.Stride( nAttr ) == m_ParticleInitialAttributes.Stride( nAttr ) );
+				contract_assert( m_ParticleInitialAttributes.Stride( nAttr ) != 0 );
+				contract_assert( m_ParticleAttributes.Stride( nAttr ) == m_ParticleInitialAttributes.Stride( nAttr ) );
 				*pDestAttribute = *pSrcAttribute;
 				if ( m_ParticleAttributes.Stride( nAttr ) == 12 )
 				{
@@ -2666,7 +2605,7 @@ void CParticleCollection::CopyParticleAttributesToPreviousAttributes( void ) con
 		if ( m_PreviousFrameAttributes.Stride( i ) )
 		{
 			int nSz = m_nPaddedActiveParticles * 4 * m_PreviousFrameAttributes.Stride( i );
-			memcpy( m_PreviousFrameAttributes.Address( i ), m_ParticleAttributes.Address( i ), nSz );
+			std::memcpy( m_PreviousFrameAttributes.Address( i ), m_ParticleAttributes.Address( i ), nSz );
 		}
 	}
 }
@@ -2682,9 +2621,9 @@ float CParticleCollection::RandomVectorInUnitSphere( int nRandomSampleId, Vector
 	float v = RandomFloat( nRandomSampleId+1, 0.0001f, 1.0f );
 	float w = RandomFloat( nRandomSampleId+2, 0.0001f, 1.0f );
 
-	float flPhi = acos( 1 - 2 * u );
-	float flTheta = 2 * M_PI * v;
-	float flRadius = powf( w, 1.0f / 3.0f );
+	float flPhi = std::acos( 1 - 2 * u );
+	float flTheta = 2 * std::numbers::pi * v;
+	float flRadius = std::powf( w, 1.0f / 3.0f );
 
 	float flSinPhi, flCosPhi;
 	float flSinTheta, flCosTheta;
@@ -2705,7 +2644,7 @@ float CParticleCollection::RandomVectorInUnitSphere( int nRandomSampleId, Vector
 //-----------------------------------------------------------------------------
 void CParticleCollection::GetControlPointAtTime( int nControlPoint, float flTime, Vector *pControlPoint )
 {
-	Assert( m_pDef->ReadsControlPoint( nControlPoint ) );
+	contract_assert( m_pDef->ReadsControlPoint( nControlPoint ) );
 // 	if ( nControlPoint > GetHighestControlPoint() )
 // 	{
 // 		DevWarning(2, "Warning : Particle system (%s) using unassigned ControlPoint %d!\n", GetName(), nControlPoint );
@@ -2732,7 +2671,7 @@ void CParticleCollection::GetControlPointAtTime( int nControlPoint, float flTime
 
 	float t = deltaTime / m_flDt;
 	VectorLerp( ControlPoint( nControlPoint ).m_PrevPosition, ControlPoint( nControlPoint ).m_Position, t, *pControlPoint );
-	Assert( IsFinite(pControlPoint->x) && IsFinite(pControlPoint->y) && IsFinite(pControlPoint->z) );
+	contract_assert( IsFinite(pControlPoint->x) && IsFinite(pControlPoint->y) && IsFinite(pControlPoint->z) );
 }
 
 //-----------------------------------------------------------------------------
@@ -2741,13 +2680,13 @@ void CParticleCollection::GetControlPointAtTime( int nControlPoint, float flTime
 //-----------------------------------------------------------------------------
 void CParticleCollection::GetControlPointAtPrevTime( int nControlPoint, Vector *pControlPoint )
 {
-	Assert( m_pDef->ReadsControlPoint( nControlPoint ) );
+	contract_assert( m_pDef->ReadsControlPoint( nControlPoint ) );
 	*pControlPoint = ControlPoint( nControlPoint ).m_PrevPosition;
 }
 
 void CParticleCollection::GetControlPointTransformAtCurrentTime( int nControlPoint, matrix3x4_t *pMat )
 {
-	Assert( m_pDef->ReadsControlPoint( nControlPoint ) );
+	contract_assert( m_pDef->ReadsControlPoint( nControlPoint ) );
 	const Vector &vecControlPoint = GetControlPointAtCurrentTime( nControlPoint );
 
 	// FIXME: Use quaternion lerp to get control point transform at time
@@ -2764,7 +2703,7 @@ void CParticleCollection::GetControlPointTransformAtCurrentTime( int nControlPoi
 
 void CParticleCollection::GetControlPointOrientationAtTime( int nControlPoint, float flTime, Vector *pForward, Vector *pRight, Vector *pUp )
 {
-	Assert( m_pDef->ReadsControlPoint( nControlPoint ) );
+	contract_assert( m_pDef->ReadsControlPoint( nControlPoint ) );
 
 	// FIXME: Use quaternion lerp to get control point transform at time
 	*pForward = ControlPoint( nControlPoint ).m_ForwardVector;
@@ -2774,7 +2713,7 @@ void CParticleCollection::GetControlPointOrientationAtTime( int nControlPoint, f
 
 void CParticleCollection::GetControlPointTransformAtTime( int nControlPoint, float flTime, matrix3x4_t *pMat )
 {
-	Assert( m_pDef->ReadsControlPoint( nControlPoint ) );
+	contract_assert( m_pDef->ReadsControlPoint( nControlPoint ) );
 	Vector vecControlPoint;
 	GetControlPointAtTime( nControlPoint, flTime, &vecControlPoint );
 
@@ -2792,7 +2731,7 @@ void CParticleCollection::GetControlPointTransformAtTime( int nControlPoint, flo
 
 void CParticleCollection::GetControlPointTransformAtTime( int nControlPoint, float flTime, CParticleSIMDTransformation *pXForm )
 {
-	Assert( m_pDef->ReadsControlPoint( nControlPoint ) );
+	contract_assert( m_pDef->ReadsControlPoint( nControlPoint ) );
 	Vector vecControlPoint;
 	GetControlPointAtTime( nControlPoint, flTime, &vecControlPoint );
 
@@ -2873,8 +2812,8 @@ void CParticleCollection::RecomputeBounds( void )
 		m_pDef->IsScreenSpaceEffect() )
 	{
 		m_bBoundsValid = false;
-		m_MinBounds.Init( FLT_MAX, FLT_MAX, FLT_MAX );
-		m_MaxBounds.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
+		m_MinBounds.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+		m_MaxBounds.Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 		m_Center.Init();
 		return;
 	}
@@ -2895,7 +2834,7 @@ void CParticleCollection::RecomputeBounds( void )
 	fltx4 maxtail = ReplicateX4( flMaxTail );
 	fltx4 oodt = ReplicateX4( flOODt );
 
-	size_t xyz_stride, prev_stride, trail_stride;
+	std::size_t xyz_stride, prev_stride, trail_stride;
 	const fltx4 *xyz   = GetM128AttributePtr( PARTICLE_ATTRIBUTE_XYZ,			&xyz_stride );
 	const fltx4 *prev  = GetM128AttributePtr( PARTICLE_ATTRIBUTE_PREV_XYZ,		&prev_stride );
 	const fltx4 *trail = GetM128AttributePtr( PARTICLE_ATTRIBUTE_TRAIL_LENGTH,	&trail_stride );
@@ -3173,7 +3112,7 @@ bool CParticleCollection::IsEmitting() const
 
 void CParticleAttributeAddressTable::CopyParticleAttributes( int nSrcIndex, int nDestIndex ) const
 {
-	for( int p = 0; p < ARRAYSIZE( m_pAttributes ); p++ )
+	for( int p = 0; p < std::size( m_pAttributes ); p++ )
 	{
 		switch( m_nFloatStrides[p] )
 		{
@@ -3214,9 +3153,7 @@ void CParticleCollection::MoveParticle( int nInitialIndex, int nNewIndex )
 // Kill List processing.
 //-----------------------------------------------------------------------------
 
-#define THREADED_PARTICLES 1
 
-#if THREADED_PARTICLES
 #define MAX_SIMULTANEOUS_KILL_LISTS 16
 static std::atomic<int> g_nKillBufferInUse[MAX_SIMULTANEOUS_KILL_LISTS];
 static KillListItem_t *g_pKillBuffers[MAX_SIMULTANEOUS_KILL_LISTS];
@@ -3235,7 +3172,7 @@ void CParticleSystemMgr::DetachKillList( CParticleCollection *pParticles )
 				return;
 			}
 		}
-		Assert( 0 );										// how did we get here?
+		contract_assert( 0 );										// how did we get here?
 	}
 }
 
@@ -3262,23 +3199,10 @@ void CParticleSystemMgr::AttachKillList( CParticleCollection *pParticles )
 
 			}
 		}
-		Assert(0);											// why don't we have enough buffers?
+		contract_assert( 0 );											// why don't we have enough buffers?
 		ThreadSleep();
 	}
 }
-#else
-// use one static kill list. no worries because of not threading
-static KillListItem_t g_nParticleKillList[MAX_PARTICLES_IN_A_SYSTEM];
-void CParticleSystemMgr::AttachKillList( CParticleCollection *pParticles )
-{
-	pParticles->m_pParticleKillList = g_nParticleKillList;
-}
-void CParticleCollection::DetachKillList( CParticleCollection *pParticles )
-{
-	Assert( pParticles->m_nNumParticlesToKill == 0 );
-	pParticles->m_pParticleKillList = nullptr;
-}
-#endif
 
 
 void CParticleCollection::ApplyKillList( void )
@@ -3289,7 +3213,7 @@ void CParticleCollection::ApplyKillList( void )
 	{
 		m_nNumParticlesToKill--;
 	}
-	Assert( m_nNumParticlesToKill <= m_nActiveParticles );
+	contract_assert( m_nNumParticlesToKill <= m_nActiveParticles );
 
 	if ( m_nNumParticlesToKill == 0 )
 		return;
@@ -3577,7 +3501,6 @@ bool CParticleSystemMgr::Init( IParticleSystemQuery *pQuery, bool bAllowPrecache
 
 		if ( g_pMaterialSystem )
 		{
-			MEM_ALLOC_CREDIT();
 			KeyValues *pVMTKeyValues = new KeyValues( "DepthWrite" );
 			pVMTKeyValues->SetInt( "$no_fullbright", 1 );
 			pVMTKeyValues->SetInt( "$model", 0 );
@@ -3616,7 +3539,7 @@ void CParticleSystemMgr::InitAttributeTable( void )
 		s_AttributeTable[ bit ].pName = #name;										\
 	}
 
-	memset( s_AttributeTable, 0, sizeof( s_AttributeTable ) );
+	std::memset( s_AttributeTable, 0, sizeof( s_AttributeTable ) );
 
 	INITPARTICLE_ATTRIBUTE( XYZ );
 	INITPARTICLE_ATTRIBUTE( LIFE_DURATION );
@@ -3649,7 +3572,7 @@ void CParticleSystemMgr::InitAttributeTable( void )
 		{
 			// The above list of initializers needs updating!
 			Warning( "CParticleSystemMgr::InitAttributeTable has an out-of-date attribute list! (element %d not set up)\n", i );
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 	}
 }
@@ -3662,7 +3585,7 @@ int CParticleSystemMgr::GetParticleAttributeByName( const char *pName ) const
 	// TODO: OPTIMIZATION: use Chris's CUtlStringToken class here to speed this up
 	for ( int i = 0; i < MAX_PARTICLE_ATTRIBUTES; i++ )
 	{
-		if ( !Q_stricmp( pName, s_AttributeTable[ i ].pName ) )
+		if ( !V_stricmp( pName, s_AttributeTable[ i ].pName ) )
 			return i;
 	}
 	return -1;
@@ -3675,7 +3598,7 @@ const char *CParticleSystemMgr::GetParticleAttributeName( int nAttribute ) const
 {
 	if ( ( nAttribute < 0 ) || ( nAttribute >= MAX_PARTICLE_ATTRIBUTES ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return "unknown";
 	}
 	return s_AttributeTable[ nAttribute ].pName;
@@ -3686,8 +3609,8 @@ const char *CParticleSystemMgr::GetParticleAttributeName( int nAttribute ) const
 //----------------------------------------------------------------------------------
 EAttributeDataType CParticleSystemMgr::GetParticleAttributeDataType( int nAttribute ) const
 {
-	Assert( nAttribute >= 0 );
-	Assert( nAttribute < MAX_PARTICLE_ATTRIBUTES );
+	contract_assert( nAttribute >= 0 );
+	contract_assert( nAttribute < MAX_PARTICLE_ATTRIBUTES );
 	return s_AttributeTable[ nAttribute ].nDataType;
 }
 
@@ -3735,9 +3658,7 @@ void CParticleSystemMgr::PrecacheParticleSystem( int nStringNumber, const char *
 
 void CParticleSystemMgr::LevelShutdown( void )
 {
-#ifndef SERVER_PARTICLE_LIB
 //	InvalidateGlobalCollisionCache();						// keep the collision cahce out of the server binary for now
-#endif
 }
 
 void CParticleSystemMgr::UncacheAllParticleSystems()
@@ -3841,7 +3762,7 @@ static const char *s_pFilterNames[ ] =
 
 const char *CParticleSystemMgr::GetFilterName( ParticleFilterType_t nFilterType ) const
 {
-	COMPILE_TIME_ASSERT( ARRAYSIZE( s_pFilterNames ) == FILTER_COUNT );
+	static_assert( std::size( s_pFilterNames ) == FILTER_COUNT );
 	return s_pFilterNames[nFilterType];
 }
 
@@ -3859,12 +3780,12 @@ const DmxElementUnpackStructure_t *CParticleSystemMgr::GetParticleSystemDefiniti
 //------------------------------------------------------------------------------
 // custom allocators for operators so simd aligned
 //------------------------------------------------------------------------------
-void *CParticleOperatorInstance::operator new( size_t nSize )
+void *CParticleOperatorInstance::operator new( std::size_t nSize )
 {
-	return MemAlloc_AllocAligned( nSize, 16 );
+	return MemAlloc_AllocAlignedUnattributed( nSize, 16 );
 }
 
-void* CParticleOperatorInstance::operator new( size_t nSize, int nBlockUse, const char *pFileName, int nLine )
+void* CParticleOperatorInstance::operator new( std::size_t nSize, int nBlockUse, const char *pFileName, int nLine )
 {
 	return MemAlloc_AllocAlignedFileLine( nSize, 16, pFileName, nLine );
 }
@@ -3921,7 +3842,7 @@ void CParticleSystemMgr::GetParticleSystemsInBuffer( ks::byte_reader &buf, std::
 		return;
 	}
 
-	if ( !Q_stricmp( pRoot->GetTypeString(), "DmeParticleSystemDefinition" ) )
+	if ( !V_stricmp( pRoot->GetTypeString(), "DmeParticleSystemDefinition" ) )
 	{
 		pOutSystemNameList->push_back( pRoot->GetName() );
 		CleanupDMX( pRoot );
@@ -3960,7 +3881,7 @@ bool CParticleSystemMgr::ReadParticleDefinitions( ks::byte_reader &buf, const ch
 		return false;
 	}
 
-	if ( !Q_stricmp( pRoot->GetTypeString(), "DmeParticleSystemDefinition" ) )
+	if ( !V_stricmp( pRoot->GetTypeString(), "DmeParticleSystemDefinition" ) )
 	{
 		CParticleSystemDefinition *pDef = m_pParticleSystemDictionary->AddParticleSystem( pRoot );
 		if ( pDef && bPrecache )
@@ -4169,8 +4090,8 @@ bool CParticleSystemMgr::ReadParticleConfigFile( const char *pFileName, bool bPr
 //	char pFallbackBuf[MAX_PATH];
 	// Look for fallback particle systems
 	char pTemp[MAX_PATH];
-	Q_StripExtension( pFileName, pTemp, sizeof(pTemp) );
-	const char *pExt = Q_GetFileExtension( pFileName );
+	V_StripExtension( pFileName, pTemp, sizeof(pTemp) );
+	const char *pExt = V_GetFileExtension( pFileName );
 	if ( !pExt )
 	{
 		pExt = "pcf";
@@ -4180,7 +4101,7 @@ bool CParticleSystemMgr::ReadParticleConfigFile( const char *pFileName, bool bPr
 	// FIXME: Hook GPU level and/or CPU level into fallbacks instead of dxsupport level
 	if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 90 )
 	{
-		Q_snprintf( pFallbackBuf, sizeof(pFallbackBuf), "%s_dx80.%s", pTemp, pExt );
+		V_snprintf( pFallbackBuf, sizeof(pFallbackBuf), "%s_dx80.%s", pTemp, pExt );
 		if ( g_pFullFileSystem->FileExists( pFallbackBuf ) )
 		{
 			pFileName = pFallbackBuf;
@@ -4188,7 +4109,7 @@ bool CParticleSystemMgr::ReadParticleConfigFile( const char *pFileName, bool bPr
 	}
 	else if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() == 90 &&  g_pMaterialSystemHardwareConfig->PreferReducedFillrate() )
 	{
-		Q_snprintf( pFallbackBuf, sizeof(pFallbackBuf), "%s_dx90_slow.%s", pTemp, pExt );
+		V_snprintf( pFallbackBuf, sizeof(pFallbackBuf), "%s_dx90_slow.%s", pTemp, pExt );
 		if ( g_pFullFileSystem->FileExists( pFallbackBuf ) )
 		{
 			pFileName = pFallbackBuf;
@@ -4430,7 +4351,7 @@ CSheet *CParticleSystemMgr::FindOrLoadSheet( CParticleSystemDefinition *pDef, bo
 	else
 	{
 		// get compact sheet representation held by texture
-		size_t numBytes;
+		std::size_t numBytes;
 		void const *pSheetData = pTex->GetResourceData( VTF_RSRC_SHEET, &numBytes );
 		if ( pSheetData )
 		{
@@ -4570,7 +4491,7 @@ void CParticleSystemMgr::BuildBatchList( int iRenderCache, IMatRenderContext *pR
 					pBatch->m_nVertCount += step.m_nVertCount;
 					pBatch->m_nIndexCount += i;
 					pBatch->m_BatchStep.push_back( step );
-					Assert( pBatch->m_nVertCount <= nMaxVertices && pBatch->m_nIndexCount <= nMaxIndices );
+					contract_assert( pBatch->m_nVertCount <= nMaxVertices && pBatch->m_nIndexCount <= nMaxIndices );
 				}
 				else
 				{
@@ -4578,7 +4499,7 @@ void CParticleSystemMgr::BuildBatchList( int iRenderCache, IMatRenderContext *pR
 						break;
 
 					// Not enough room
-					Assert( pBatch->m_nVertCount > 0 && pBatch->m_nIndexCount > 0 ); 
+					contract_assert( pBatch->m_nVertCount > 0 && pBatch->m_nIndexCount > 0 ); 
 					int j = std::ssize( batches ); batches.emplace_back();
 					pBatch = &batches[j];
 					pBatch->m_nVertCount = 0;
@@ -4626,84 +4547,10 @@ void CParticleSystemMgr::DumpParticleList( const char *pNameSubstring /* = NULL 
 
 void CParticleSystemMgr::DumpProfileInformation( void )
 {
-#if MEASURE_PARTICLE_PERF
-	int nTotalTests = 0;
-	int nActualTests = 0;
-	FileHandle_t fh = g_pFullFileSystem->Open( "particle_profile.csv", "w", "DEFAULT_WRITE_PATH" );
-	if ( fh == FILESYSTEM_INVALID_HANDLE )
-	{
-		Warning( "*** Unable to open profile file!\n" );
-		return;
-	}
-	g_pFullFileSystem->FPrintf( fh, "numframes,%d\n", m_nNumFramesMeasured );
-	g_pFullFileSystem->FPrintf( fh, "name, total time, max time, max particles, allocated particles, total render time, max render time, number of intersection tests, number of actual traces\n");
-	for( int i=0; i < m_pParticleSystemDictionary->NameCount(); i++ )
-	{
-		CParticleSystemDefinition *p = ( *m_pParticleSystemDictionary )[ i ];
-		if ( p->m_nMaximumActiveParticles )
-		{
-			nTotalTests += p->m_nNumIntersectionTests;
-			nActualTests +=p->m_nNumActualRayTraces;
-			g_pFullFileSystem->FPrintf( fh, "%s,%f,%f,%d,%d,%f,%f,%d,%d\n", p->m_Name.Get(), 
-				p->m_flTotalSimTime, p->m_flMaxMeasuredSimTime, p->m_nMaximumActiveParticles, 
-										p->m_nMaxParticles, p->m_flTotalRenderTime, p->m_flMaxMeasuredRenderTime, p->m_nNumIntersectionTests.load(), p->m_nNumActualRayTraces.load() );
-		}
-	}
-	if ( nTotalTests )
-	{
-		g_pFullFileSystem->FPrintf( fh, "\n\nTrace cache efficiency = %f%%\n\n", 100.0 * ( 1.0 - ( nActualTests * ( 1.0 / nTotalTests ) ) ) );
-	}
-	g_pFullFileSystem->FPrintf( fh, "\n\nopname, total time, max time, total render time, max render time\n");
-	for(int i=0; i < ARRAYSIZE( m_ParticleOperators ); i++)
-	{
-		for(int j=0; j < m_ParticleOperators[i].Count() ; j++ )
-		{
-			float flmax = m_ParticleOperators[i][j]->MaximumRecordedExecutionTime();
-			float fltotal = m_ParticleOperators[i][j]->TotalRecordedExecutionTime();
-			if ( fltotal > 0.0 )
-			{
-				g_pFullFileSystem->FPrintf( fh, "%s,%f,%f\n", 
-											m_ParticleOperators[i][j]->GetName(), fltotal, flmax );
-			}
-		}
-	}
-	g_pFullFileSystem->Close( fh );
-#endif
 }
 
 void CParticleSystemMgr::CommitProfileInformation( bool bCommit )
 {
-#if MEASURE_PARTICLE_PERF
-	if ( 1 )
-	{
-		if ( bCommit )
-		{
-			m_nNumFramesMeasured++;
-		}
-		for( int i=0; i < m_pParticleSystemDictionary->NameCount(); i++ )
-		{
-			CParticleSystemDefinition *p = ( *m_pParticleSystemDictionary )[ i ];
-			if ( bCommit )
-			{
-				p->m_flTotalSimTime		+= p->m_flUncomittedTotalSimTime;
-				p->m_flTotalRenderTime	+= p->m_flUncomittedTotalRenderTime;
-			}
-			p->m_flUncomittedTotalSimTime = 0.;
-			p->m_flUncomittedTotalRenderTime = 0.;
-		}
-		for(int i=0; i < ARRAYSIZE( m_ParticleOperators ); i++)
-		{
-			for(int j=0; j < m_ParticleOperators[i].Count() ; j++ )
-			{
-				if ( bCommit )
-				{
-					m_ParticleOperators[i][j]->m_flTotalExecutionTime += m_ParticleOperators[i][j]->m_flUncomittedTime;
-				}
-				m_ParticleOperators[i][j]->m_flUncomittedTime = 0;
-			}
-		}
-	}
-#endif
 }
 
 
@@ -4713,7 +4560,7 @@ void CParticleSystemMgr::DrawRenderCache( IMatRenderContext *pRenderContext, boo
 	if ( nRenderCacheCount == 0 )
 		return;
 
-	VPROF_BUDGET( "CParticleSystemMgr::DrawRenderCache", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "CParticleSystemMgr::DrawRenderCache", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	pRenderContext->MatrixMode( MATERIAL_MODEL );
 	pRenderContext->PushMatrix();
@@ -4742,7 +4589,7 @@ void CParticleSystemMgr::DrawRenderCache( IMatRenderContext *pRenderContext, boo
 		for ( int i = 0; i < nBatchCount; ++i )
 		{
 			const Batch_t& batch = batches[i];
-			Assert( batch.m_nVertCount > 0 && batch.m_nIndexCount > 0 );
+			contract_assert( batch.m_nVertCount > 0 && batch.m_nIndexCount > 0 );
 			meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, batch.m_nVertCount, batch.m_nIndexCount );
 
 			int nVertexOffset = 0;
@@ -4836,7 +4683,7 @@ void GetParticleManifest( std::vector< std::string >& list, const char *pFile )
 	{
 		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != nullptr; sub = sub->GetNextKey() )
 		{
-			if ( !Q_stricmp( sub->GetName(), "file" ) )
+			if ( !V_stricmp( sub->GetName(), "file" ) )
 			{
 				list.push_back( sub->GetString() );
 				continue;

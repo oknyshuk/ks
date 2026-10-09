@@ -1,6 +1,6 @@
-//=========== Copyright  Valve Corporation, All rights reserved. ==============//
-
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "GameEventListener.h"
 #include "igamesystem.h"

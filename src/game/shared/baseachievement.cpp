@@ -1,18 +1,62 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include "reflect_annotations.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "reflect_datamap.h"
 #include "achievementmgr.h"
-#include "icommandline.h"
 #ifdef CLIENT_DLL
 #include "tier3/tier3.h"
 #include "localize/ilocalize.h"
-#include "fmtstr.h"
 #include "cdll_client_int.h"
 #include "matchmaking/imatchframework.h"
 #endif // CLIENT_DLL
@@ -38,7 +82,6 @@ CBaseAchievement::CBaseAchievement()
 	m_iAchievementID = 0;
 	m_iPointValue = 0;
 	m_bHideUntilAchieved = false;
-	m_bStoreProgressInSteam = false;
 	m_pVictimClassNameFilter = nullptr;
 	m_pAttackerClassNameFilter = nullptr;
 	m_pInflictorClassNameFilter = nullptr;
@@ -67,7 +110,7 @@ CBaseAchievement::CBaseAchievement()
 void CBaseAchievement::SetFlags( int iFlags ) 
 { 
 	// must always specify a save method
-	Assert( iFlags & ( ACH_SAVE_WITH_GAME | ACH_SAVE_GLOBAL ) );
+	contract_assert( iFlags & ( ACH_SAVE_WITH_GAME | ACH_SAVE_GLOBAL ) );
 
 	m_iFlags = iFlags; 
 }
@@ -89,11 +132,11 @@ void CBaseAchievement::FireGameEvent( IGameEvent *event )
 	}
 
 	// if the achievement only applies to a specific map, and it's not the current map, skip it
-	if ( m_pMapNameFilter && ( 0 != Q_strcmp( m_pAchievementMgr->GetMapName(), m_pMapNameFilter ) ) )
+	if ( m_pMapNameFilter && ( 0 != V_strcmp( m_pAchievementMgr->GetMapName(), m_pMapNameFilter ) ) )
 		return;
 
 	const char *name = event->GetName();
-	if ( 0 == Q_strcmp( name, "teamplay_round_win" ) )
+	if ( 0 == V_strcmp( name, "teamplay_round_win" ) )
 	{
 		// if this is a round win and the achievement wants full round events only, filter this out
 		// if this is not the end of a full round
@@ -165,7 +208,7 @@ void CBaseAchievement::SetGameDirFilter( const char *pGameDir )
 void CBaseAchievement::SetComponentPrefix( const char *pPrefix )
 {
 	m_pszComponentPrefix = pPrefix;
-	m_iComponentPrefixLen = Q_strlen( pPrefix );
+	m_iComponentPrefixLen = V_strlen( pPrefix );
 }
 
 //-----------------------------------------------------------------------------
@@ -176,7 +219,6 @@ void CBaseAchievement::SetComponentPrefix( const char *pPrefix )
 void CBaseAchievement::Event_EntityKilled( CBaseEntity *pVictim, CBaseEntity *pAttacker, CBaseEntity *pInflictor, IGameEvent *event )
 {
 	// extra paranoid check: should only get here if registered as a kill event listener
-	Assert( GetFlags() & ACH_LISTEN_KILL_EVENTS );
 	if ( !( GetFlags() & ACH_LISTEN_KILL_EVENTS ) )
 		return;
 
@@ -341,16 +383,6 @@ void CBaseAchievement::EvaluateNewAchievement()
 //-----------------------------------------------------------------------------
 void CBaseAchievement::EvaluateIsAlreadyAchieved()
 {
-	// Check platform specific data to determine status of completed achievements.
-	ISteamUserStats *pSteamUserStats = steamapicontext->SteamUserStats();
-	if ( pSteamUserStats )
-	{
-		bool bAchieved;
-		pSteamUserStats->GetAchievement( GetName(), &bAchieved );
-		SetAchieved( bAchieved );
-	}
-	// Handled in CAchievementMgr::UserConnected on X360
-
 	EvaluateNewAchievement();
 }
 
@@ -359,9 +391,9 @@ void CBaseAchievement::EvaluateIsAlreadyAchieved()
 //-----------------------------------------------------------------------------
 void CBaseAchievement::OnMapEvent( const char *pEventName )
 {
-	Assert( m_iFlags & ACH_LISTEN_MAP_EVENTS );
+	contract_assert( m_iFlags & ACH_LISTEN_MAP_EVENTS );
 
-	if ( 0 == Q_stricmp( pEventName, GetName() ) )
+	if ( 0 == V_stricmp( pEventName, GetName() ) )
 	{
 		IncrementCount();
 	}
@@ -372,7 +404,6 @@ void CBaseAchievement::OnMapEvent( const char *pEventName )
 //-----------------------------------------------------------------------------
 void CBaseAchievement::AwardAchievement()
 {
-	Assert( !IsAchieved() );
 	if ( IsAchieved() )
 		return;
 
@@ -387,7 +418,7 @@ void CBaseAchievement::OnComponentEvent( const char *pchComponentName )
 	// find the component name in our list
 	for ( int i = 0; i < m_iNumComponents; i++ )
 	{
-		if ( 0 == Q_strcmp( pchComponentName, m_pszComponentNames[i] ) )
+		if ( 0 == V_strcmp( pchComponentName, m_pszComponentNames[i] ) )
 		{
 			EnsureComponentBitSetAndEvaluate( i );
 			return;
@@ -401,7 +432,7 @@ void CBaseAchievement::OnComponentEvent( const char *pchComponentName )
 //-----------------------------------------------------------------------------
 void CBaseAchievement::EnsureComponentBitSetAndEvaluate( int iBitNumber )
 {
-	Assert( iBitNumber < 64 );	// this is bit #, not a bit mask
+	contract_assert( iBitNumber < 64 );	// this is bit #, not a bit mask
 
 	if ( IsAchieved() )
 		return;
@@ -422,7 +453,7 @@ void CBaseAchievement::EnsureComponentBitSetAndEvaluate( int iBitNumber )
 		SetComponentBits( m_iComponentBits | iBitMask );
 
 
-		Assert( m_iCount <= m_iGoal );
+		contract_assert( m_iCount <= m_iGoal );
 		if ( m_iCount == m_iGoal )
 		{
 			// all components found, award the achievement (and save state)
@@ -497,7 +528,7 @@ void CBaseAchievement::PostRestoreSavedGame()
 //-----------------------------------------------------------------------------
 void CBaseAchievement::SetComponentBits( uint64 iComponentBits ) 
 { 
-	Assert( m_iFlags & ACH_HAS_COMPONENTS );
+	contract_assert( m_iFlags & ACH_HAS_COMPONENTS );
 	// set the bit field
 	m_iComponentBits = iComponentBits; 
 	// count how many bits are set and save that as the count
@@ -563,7 +594,7 @@ bool CBaseAchievement::IsActive()
 		return false;
 	
 	// if there's a map filter and we're not on the specified map, we're not active
-	if ( ( m_pMapNameFilter ) && ( 0 != Q_strcmp( m_pAchievementMgr->GetMapName(), m_pMapNameFilter ) ) )
+	if ( ( m_pMapNameFilter ) && ( 0 != V_strcmp( m_pAchievementMgr->GetMapName(), m_pMapNameFilter ) ) )
 		return false;
 
 	return true;
@@ -658,7 +689,7 @@ void CBaseAchievement::SetAssetAward( const char* assetAwardName )
 	TitleAvatarAwardsDescription_t const *pTitleAssetMap = g_pMatchFramework->GetMatchTitle()->DescribeTitleAvatarAwards();
 	while ( pTitleAssetMap && pTitleAssetMap->m_szAvatarAwardName )
 	{
-		if ( !Q_stricmp( pTitleAssetMap->m_szAvatarAwardName, assetAwardName ) )
+		if ( !V_stricmp( pTitleAssetMap->m_szAvatarAwardName, assetAwardName ) )
 		{
 			SetAssetAwardID( pTitleAssetMap->m_idAvatarAward );
 			return;
@@ -738,12 +769,12 @@ void CFailableAchievement::PostRestoreSavedGame()
 void CFailableAchievement::OnMapEvent( const char *pEventName )
 {
 	// if we're not activated and we got the activation event, activate
-	if ( !m_bActivated && ( 0 == Q_stricmp( pEventName, GetActivationEventName() ) ) )
+	if ( !m_bActivated && ( 0 == V_stricmp( pEventName, GetActivationEventName() ) ) )
 	{
 		OnActivationEvent();
 	}
 	// if this is the evaluation event, see if we've failed or not
-	else if ( m_bActivated && 0 == Q_stricmp( pEventName, GetEvaluationEventName() ) )
+	else if ( m_bActivated && 0 == V_stricmp( pEventName, GetEvaluationEventName() ) )
 	{
 		OnEvaluationEvent();
 	}
@@ -803,13 +834,6 @@ void CAchievement_AchievedCount::Init()
 	SetFlags( ACH_SAVE_GLOBAL );
 	SetGoal( 1 );
 	SetAchievementsRequired( 0, 0, 0 );
-}
-
-// Count how many achievements have been earned in our range
-void CAchievement_AchievedCount::OnSteamUserStatsStored( void )
-{
-	// DO NO CALL. REPLACED BY CHECKMETAACHIEVEMENTS!
-	Assert( 0 );
 }
 
 void CAchievement_AchievedCount::SetAchievementsRequired( int iNumRequired, int iLowRange, int iHighRange )

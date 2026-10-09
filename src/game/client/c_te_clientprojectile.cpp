@@ -1,14 +1,16 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.core;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
-#include "tier0/vprof.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Client Projectile TE
@@ -64,7 +66,7 @@ void TE_ClientProjectile( IRecipientFilter& filter, float delay,
 //-----------------------------------------------------------------------------
 void C_TEClientProjectile::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEClientProjectile::PostDataUpdate" );
+	CVProfScope _( "C_TEClientProjectile::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	tempents->ClientProjectile( m_vecOrigin, m_vecVelocity, vec3_origin, m_nModelIndex, m_nLifeTime, m_hOwner );
 }

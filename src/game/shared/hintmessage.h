@@ -1,13 +1,9 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
-#ifndef HINTMESSAGE_H
-#define HINTMESSAGE_H
-
-#include "utlvector.h"
+import std;
+import ks.tier1;
 #include "simtimer.h"
 
 #ifdef GAME_DLL
@@ -106,5 +102,3 @@ private:
 	CHintMessageQueue				  *m_pQueue;
 	CHintSystem						  *m_pHintSystem;
 };
-
-#endif // HINTMESSAGE_H

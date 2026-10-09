@@ -1,24 +1,13 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#undef PROTECTED_THINGS_ENABLE
+import ks.tier1;
 #include "vertexdecl.h" // this includes <windows.h> inside the dx headers
-#define PROTECTED_THINGS_ENABLE
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "shaderapidx8_global.h"
-#include "tier0/dbg.h"
-#include <set>
-#include "recording.h"
-#include "tier1/strtools.h"
-#include "tier0/vprof.h"
+import std;
 #include "materialsystem/imesh.h"
 #include "shaderdevicedx8.h"
-#include "convar.h"
 
 //-----------------------------------------------------------------------------
 // Computes the DX8 vertex specification
@@ -62,7 +51,7 @@ static const char *DeclTypeToString( BYTE type )
 	case D3DDECLTYPE_FLOAT16_4:
 		return "D3DDECLTYPE_FLOAT16_4";
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		return "ERROR";
 	}
 }
@@ -86,7 +75,7 @@ static const char *DeclMethodToString( BYTE method )
 	case D3DDECLMETHOD_LOOKUPPRESAMPLED:
 		return "D3DDECLMETHOD_LOOKUPPRESAMPLED";
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		return "ERROR";
 	}
 }
@@ -118,7 +107,7 @@ static const char *DeclUsageToString( BYTE usage )
 //	case D3DDECLUSAGE_POSITIONTL:
 //		return "D3DDECLUSAGE_POSITIONTL";
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		return "ERROR";
 	}
 }
@@ -132,13 +121,8 @@ static D3DDECLTYPE VertexElementToDeclType( VertexElement_t element, VertexCompr
 		// Compressed-vertex element sizes
 		switch ( element )
 		{
-#if		( COMPRESSED_NORMALS_TYPE == COMPRESSED_NORMALS_SEPARATETANGENTS_SHORT2 )
-			case VERTEX_ELEMENT_NORMAL:			return D3DDECLTYPE_SHORT2;
-			case VERTEX_ELEMENT_USERDATA4:		return D3DDECLTYPE_SHORT2;
-#else //( COMPRESSED_NORMALS_TYPE == COMPRESSED_NORMALS_COMBINEDTANGENTS_UBYTE4 ) 
 			case VERTEX_ELEMENT_NORMAL:			return D3DDECLTYPE_UBYTE4;
 			case VERTEX_ELEMENT_USERDATA4:		return D3DDECLTYPE_UBYTE4;
-#endif
 			case VERTEX_ELEMENT_BONEWEIGHTS1:	return D3DDECLTYPE_SHORT2;
 			case VERTEX_ELEMENT_BONEWEIGHTS2:	return D3DDECLTYPE_SHORT2;
 			default:
@@ -159,7 +143,7 @@ static D3DDECLTYPE VertexElementToDeclType( VertexElement_t element, VertexCompr
 		case VERTEX_ELEMENT_TANGENT_T:		return D3DDECLTYPE_FLOAT3;
 		case VERTEX_ELEMENT_WRINKLE:
 			// Wrinkle is packed into Position.W, it is not specified as a separate vertex element
-			Assert( 0 );
+			contract_assert( 0 );
 			return D3DDECLTYPE_UNUSED;
 		case VERTEX_ELEMENT_BONEINDEX:		return D3DDECLTYPE_D3DCOLOR;
 		case VERTEX_ELEMENT_BONEWEIGHTS1:	return D3DDECLTYPE_FLOAT1;
@@ -203,7 +187,7 @@ static D3DDECLTYPE VertexElementToDeclType( VertexElement_t element, VertexCompr
 		case VERTEX_ELEMENT_TEXCOORD4D_6:	return D3DDECLTYPE_FLOAT4;
 		case VERTEX_ELEMENT_TEXCOORD4D_7:	return D3DDECLTYPE_FLOAT4;
 		default:
-			Assert(0);
+			contract_assert( 0 );
 			return D3DDECLTYPE_UNUSED;
 	};
 }
@@ -214,7 +198,7 @@ void PrintVertexDeclaration( const D3DVERTEXELEMENT9 *pDecl )
 	static D3DVERTEXELEMENT9 declEnd = D3DDECL_END();
 	for ( i = 0; ; i++ )
 	{
-		if ( memcmp( &pDecl[i], &declEnd, sizeof( declEnd ) ) == 0 )
+		if ( std::memcmp( &pDecl[i], &declEnd, sizeof( declEnd ) ) == 0 )
 		{
 			Warning( "D3DDECL_END\n" );
 			break;
@@ -455,7 +439,7 @@ void ComputeVertexSpec( VertexFormat_t fmt, D3DVERTEXELEMENT9 *pDecl,
 
 	if ( fmt & VERTEX_SPECULAR )
 	{
-		Assert( !bStaticLit );
+		contract_assert( !bStaticLit );
 		pDecl[i].Stream = iStream;
 		pDecl[i].Offset = offset;
 		pDecl[i].Method = D3DDECLMETHOD_DEFAULT;
@@ -475,7 +459,7 @@ void ComputeVertexSpec( VertexFormat_t fmt, D3DVERTEXELEMENT9 *pDecl,
 		int nCoordSize = TexCoordSize( j, fmt );
 		if ( nCoordSize <= 0 )
 			continue;
-		Assert( nCoordSize <= 4 );
+		contract_assert( nCoordSize <= 4 );
 
 		// Check if the texcoord goes as a separate stream spec
 		if ( VertexStreamSpec_t *pSpecEntry = FindVertexStreamSpec( VERTEX_TEXCOORD_SIZE( j, nCoordSize ), pStreamSpec ) )
@@ -525,10 +509,9 @@ void ComputeVertexSpec( VertexFormat_t fmt, D3DVERTEXELEMENT9 *pDecl,
 	int userDataSize = UserDataSize(fmt);
 	if ( userDataSize > 0 )
 	{
-		Assert( userDataSize == 4 ); // This is actually only ever used for tangents
+		contract_assert( userDataSize == 4 ); // This is actually only ever used for tangents
 		pDecl[i].Stream = iStream;
-		if ( ( compressionType == VERTEX_COMPRESSION_ON ) &&
-			 ( COMPRESSED_NORMALS_TYPE == COMPRESSED_NORMALS_COMBINEDTANGENTS_UBYTE4 ) )
+		if ( compressionType == VERTEX_COMPRESSION_ON )
 		{
 			// FIXME: Normals and tangents are packed together into a single UBYTE4 element,
 			//        so just point this back at the same data while we're testing UBYTE4 out.
@@ -589,7 +572,7 @@ void ComputeVertexSpec( VertexFormat_t fmt, D3DVERTEXELEMENT9 *pDecl,
 			if ( pSpecEntry->iVertexDataElement == VERTEX_TEXCOORD_SIZE( idxTexCoord, nCoordSize ) )
 				break;
 		}
-		Assert( pSpecEntry->iVertexDataElement == VERTEX_TEXCOORD_SIZE( idxTexCoord, nCoordSize ) );
+		contract_assert( pSpecEntry->iVertexDataElement == VERTEX_TEXCOORD_SIZE( idxTexCoord, nCoordSize ) );
 		if ( pSpecEntry->iVertexDataElement != VERTEX_TEXCOORD_SIZE( idxTexCoord, nCoordSize ) )
 		{
 			Warning( " ERROR: Cannot compute vertex spec for fmt 0x%08llX requesting 0x%08llX to be passed on STREAM_SPECULAR1!\n",
@@ -689,7 +672,7 @@ void ComputeVertexSpec( VertexFormat_t fmt, D3DVERTEXELEMENT9 *pDecl,
 				if ( pSpecEntry->iVertexDataElement == VERTEX_TEXCOORD_SIZE( idxTexCoord, nCoordSize ) )
 					break;
 			}
-			Assert( pSpecEntry->iVertexDataElement == VERTEX_TEXCOORD_SIZE( idxTexCoord, nCoordSize ) );
+			contract_assert( pSpecEntry->iVertexDataElement == VERTEX_TEXCOORD_SIZE( idxTexCoord, nCoordSize ) );
 			if ( pSpecEntry->iVertexDataElement != VERTEX_TEXCOORD_SIZE( idxTexCoord, nCoordSize ) )
 			{
 				Warning( " ERROR: Cannot compute vertex spec for fmt 0x%08llX requesting 0x%08llX to be passed on STREAM%d!\n",
@@ -762,7 +745,6 @@ static std::set<VertexDeclLookup_t, VertexDeclLess> s_VertexDeclDict;
 //-----------------------------------------------------------------------------
 IDirect3DVertexDeclaration9 *FindOrCreateVertexDecl( VertexFormat_t fmt, bool bStaticLit, bool bUsingFlex, bool bUsingMorph, bool bUsingPreTessPatch, VertexStreamSpec_t *pStreamSpec )
 {
-	MEM_ALLOC_D3D_CREDIT();
 
 	VertexDeclLookup_t lookup;
 	lookup.m_VertexFormat = fmt;
@@ -808,12 +790,9 @@ IDirect3DVertexDeclaration9 *FindOrCreateVertexDecl( VertexFormat_t fmt, bool bS
 		Dx9Device()->CreateVertexDeclaration( decl, &lookup.m_pDecl );
 
 	// NOTE: can't record until we have m_pDecl!
-	RECORD_COMMAND( DX8_CREATE_VERTEX_DECLARATION, 2 );
-	RECORD_INT( ( int )lookup.m_pDecl );
-	RECORD_STRUCT( decl, sizeof( decl ) );
-	COMPILE_TIME_ASSERT( sizeof( decl ) == sizeof( D3DVERTEXELEMENT9 ) * 32 );
+	static_assert( sizeof( decl ) == sizeof( D3DVERTEXELEMENT9 ) * 32 );
 
-	Assert( hr == D3D_OK );
+	contract_assert( hr == D3D_OK );
 	if ( hr != D3D_OK )
 	{
 		Warning( " ERROR: failed to create vertex decl for vertex format %x! You'll probably see messed-up mesh rendering - to diagnose, build shaderapidx9.dll in debug.\n", (int)fmt );

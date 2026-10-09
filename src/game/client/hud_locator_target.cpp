@@ -1,18 +1,30 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: See header file
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+// Purpose: See header file
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 #include "hud_locator_target.h"
 #include "localize/ilocalize.h"
 #include "iinput.h"
 #include "hud.h"
 #include "iengineui.h"
-
-
 
 ConVar locator_fade_time( "locator_fade_time", "0.3", FCVAR_NONE, "Number of seconds it takes for a lesson to fully fade in/out." );
 ConVar locator_lerp_rest( "locator_lerp_rest", "0.25f", FCVAR_NONE, "Number of seconds before moving from the center." );
@@ -262,7 +274,7 @@ void CLocatorTarget::SetCaptionText( const char *pszText, const char *pszParam )
 		}
 
 		wchar_t buf[ 256 ];
-		Q_wcsncpy( buf, pLocalizedText, sizeof( buf ) );
+		V_wcsncpy( buf, pLocalizedText, sizeof( buf ) );
 
 		UTIL_ReplaceKeyBindings( buf, sizeof(buf), outbuf, sizeof( outbuf ) );
 	}
@@ -270,7 +282,7 @@ void CLocatorTarget::SetCaptionText( const char *pszText, const char *pszParam )
 	int len = wcslen( outbuf ) + 1;
 	m_wszCaption.clear();
 	ks::ensure_size( m_wszCaption, len );
-	Q_wcsncpy( m_wszCaption.data(), outbuf, len * sizeof( wchar_t ) );
+	V_wcsncpy( m_wszCaption.data(), outbuf, len * sizeof( wchar_t ) );
 }
 
 void CLocatorTarget::SetCaptionColor( const char *pszCaptionColor )
@@ -333,7 +345,7 @@ void CLocatorTarget::UpdateVguiTarget( void )
 
 void CLocatorTarget::SetVguiTargetName( const char *pchUITargetName )
 {
-	if ( Q_strcmp( m_szUITargetName.String(), pchUITargetName ) == 0 )
+	if ( V_strcmp( m_szUITargetName.String(), pchUITargetName ) == 0 )
 		return;
 
 	m_szUITargetName = pchUITargetName;
@@ -359,7 +371,7 @@ void *CLocatorTarget::GetVguiTarget( void )
 //------------------------------------
 void CLocatorTarget::SetOnscreenIconTextureName( const char *pszTexture )
 {
-	if ( Q_strcmp( m_szOnscreenTexture.String(), pszTexture ) == 0 )
+	if ( V_strcmp( m_szOnscreenTexture.String(), pszTexture ) == 0 )
 		return;
 
 	m_szOnscreenTexture = pszTexture;
@@ -371,7 +383,7 @@ void CLocatorTarget::SetOnscreenIconTextureName( const char *pszTexture )
 //------------------------------------
 void CLocatorTarget::SetOffscreenIconTextureName( const char *pszTexture )
 {
-	if ( Q_strcmp( m_szOffscreenTexture.String(), pszTexture ) == 0 )
+	if ( V_strcmp( m_szOffscreenTexture.String(), pszTexture ) == 0 )
 		return;
 
 	m_szOffscreenTexture = pszTexture;
@@ -395,7 +407,7 @@ void CLocatorTarget::SetBinding( const char *pszBinding )
 	if ( m_bWasControllerLast == bIsControllerNow )
 	{
 		// We haven't toggled joystick enabled recently, so if it's the same bind, bail
-		if ( Q_strcmp( m_szBinding.String(), pszBinding ) == 0 )
+		if ( V_strcmp( m_szBinding.String(), pszBinding ) == 0 )
 		{
 			return;
 		}
@@ -449,7 +461,7 @@ const char *CLocatorTarget::UseBindingImage( char *pchIconTextureName, size_t bu
 	if ( m_iBindingChoicesCount <= 0 )
 	{
 		{
-			Q_strncpy( pchIconTextureName, "icon_key_wide", bufSize );
+			V_strncpy( pchIconTextureName, "icon_key_wide", bufSize );
 			return "#GameUI_Icons_NONE";
 		}
 
@@ -460,108 +472,108 @@ const char *CLocatorTarget::UseBindingImage( char *pchIconTextureName, size_t bu
 	const char *pchBinding = m_pchBindingChoices[ m_iBindingTick % m_iBindingChoicesCount ];
 
 	// We counted at least one binding... this should not be NULL!
-	Assert( pchBinding );
+	contract_assert( pchBinding );
 
 
 	//icon_blank_wide
 	/*
 	if ( input->ControllerModeActive() && 
-		 ( Q_strcmp( pchBinding, "A_BUTTON" ) == 0 || 
-		   Q_strcmp( pchBinding, "B_BUTTON" ) == 0 || 
-		   Q_strcmp( pchBinding, "X_BUTTON" ) == 0 || 
-		   Q_strcmp( pchBinding, "Y_BUTTON" ) == 0 || 
-		   Q_strcmp( pchBinding, "L_SHOULDER" ) == 0 || 
-		   Q_strcmp( pchBinding, "R_SHOULDER" ) == 0 || 
-		   Q_strcmp( pchBinding, "L_TRIGGER" ) == 0 || 
-		   Q_strcmp( pchBinding, "R_TRIGGER" ) == 0 || 
-		   Q_strcmp( pchBinding, "BACK" ) == 0 || 
-		   Q_strcmp( pchBinding, "START" ) == 0 || 
-		   Q_strcmp( pchBinding, "STICK1" ) == 0 || 
-		   Q_strcmp( pchBinding, "STICK2" ) == 0 || 
-		   Q_strcmp( pchBinding, "UP" ) == 0 || 
-		   Q_strcmp( pchBinding, "DOWN" ) == 0 || 
-		   Q_strcmp( pchBinding, "LEFT" ) == 0 || 
-		   Q_strcmp( pchBinding, "RIGHT" ) == 0 ) )
+		 ( V_strcmp( pchBinding, "A_BUTTON" ) == 0 || 
+		   V_strcmp( pchBinding, "B_BUTTON" ) == 0 || 
+		   V_strcmp( pchBinding, "X_BUTTON" ) == 0 || 
+		   V_strcmp( pchBinding, "Y_BUTTON" ) == 0 || 
+		   V_strcmp( pchBinding, "L_SHOULDER" ) == 0 || 
+		   V_strcmp( pchBinding, "R_SHOULDER" ) == 0 || 
+		   V_strcmp( pchBinding, "L_TRIGGER" ) == 0 || 
+		   V_strcmp( pchBinding, "R_TRIGGER" ) == 0 || 
+		   V_strcmp( pchBinding, "BACK" ) == 0 || 
+		   V_strcmp( pchBinding, "START" ) == 0 || 
+		   V_strcmp( pchBinding, "STICK1" ) == 0 || 
+		   V_strcmp( pchBinding, "STICK2" ) == 0 || 
+		   V_strcmp( pchBinding, "UP" ) == 0 || 
+		   V_strcmp( pchBinding, "DOWN" ) == 0 || 
+		   V_strcmp( pchBinding, "LEFT" ) == 0 || 
+		   V_strcmp( pchBinding, "RIGHT" ) == 0 ) )
 	{
 		// Use a blank background for the button icons
-		Q_strncpy( pchIconTextureName, "icon_blank", bufSize );
+		V_strncpy( pchIconTextureName, "icon_blank", bufSize );
 		return pchBinding;
 	}
 	*/
 
-	if ( Q_strcmp( pchBinding, "MOUSE1" ) == 0 )
+	if ( V_strcmp( pchBinding, "MOUSE1" ) == 0 )
 	{
-		Q_strncpy( pchIconTextureName, "icon_mouseLeft", bufSize );
+		V_strncpy( pchIconTextureName, "icon_mouseLeft", bufSize );
 		return nullptr;
 	}
-	else if ( Q_strcmp( pchBinding, "MOUSE2" ) == 0 )
+	else if ( V_strcmp( pchBinding, "MOUSE2" ) == 0 )
 	{
-		Q_strncpy( pchIconTextureName, "icon_mouseRight", bufSize );
+		V_strncpy( pchIconTextureName, "icon_mouseRight", bufSize );
 		return nullptr;
 	}
-	else if ( Q_strcmp( pchBinding, "MOUSE3" ) == 0 )
+	else if ( V_strcmp( pchBinding, "MOUSE3" ) == 0 )
 	{
-		Q_strncpy( pchIconTextureName, "icon_mouseThree", bufSize );
+		V_strncpy( pchIconTextureName, "icon_mouseThree", bufSize );
 		return nullptr;
 	}
-	else if ( Q_strcmp( pchBinding, "MWHEELUP" ) == 0 )
+	else if ( V_strcmp( pchBinding, "MWHEELUP" ) == 0 )
 	{
-		Q_strncpy( pchIconTextureName, "icon_mouseWheel_up", bufSize );
+		V_strncpy( pchIconTextureName, "icon_mouseWheel_up", bufSize );
 		return nullptr;
 	}
-	else if ( Q_strcmp( pchBinding, "MWHEELDOWN" ) == 0 )
+	else if ( V_strcmp( pchBinding, "MWHEELDOWN" ) == 0 )
 	{
-		Q_strncpy( pchIconTextureName, "icon_mouseWheel_down", bufSize );
+		V_strncpy( pchIconTextureName, "icon_mouseWheel_down", bufSize );
 		return nullptr;
 	}
-	else if ( Q_strcmp( pchBinding, "UPARROW" ) == 0 )
+	else if ( V_strcmp( pchBinding, "UPARROW" ) == 0 )
 	{
-		Q_strncpy( pchIconTextureName, "icon_key_up", bufSize );
+		V_strncpy( pchIconTextureName, "icon_key_up", bufSize );
 		return nullptr;
 	}
-	else if ( Q_strcmp( pchBinding, "LEFTARROW" ) == 0 )
+	else if ( V_strcmp( pchBinding, "LEFTARROW" ) == 0 )
 	{
-		Q_strncpy( pchIconTextureName, "icon_key_left", bufSize );
+		V_strncpy( pchIconTextureName, "icon_key_left", bufSize );
 		return nullptr;
 	}
-	else if ( Q_strcmp( pchBinding, "DOWNARROW" ) == 0 )
+	else if ( V_strcmp( pchBinding, "DOWNARROW" ) == 0 )
 	{
-		Q_strncpy( pchIconTextureName, "icon_key_down", bufSize );
+		V_strncpy( pchIconTextureName, "icon_key_down", bufSize );
 		return nullptr;
 	}
-	else if ( Q_strcmp( pchBinding, "RIGHTARROW" ) == 0 )
+	else if ( V_strcmp( pchBinding, "RIGHTARROW" ) == 0 )
 	{
-		Q_strncpy( pchIconTextureName, "icon_key_right", bufSize );
+		V_strncpy( pchIconTextureName, "icon_key_right", bufSize );
 		return nullptr;
 	}
-	else if ( Q_strcmp( pchBinding, "SEMICOLON" ) == 0 || 
-		Q_strcmp( pchBinding, "INS" ) == 0 || 
-		Q_strcmp( pchBinding, "DEL" ) == 0 || 
-		Q_strcmp( pchBinding, "HOME" ) == 0 || 
-		Q_strcmp( pchBinding, "END" ) == 0 || 
-		Q_strcmp( pchBinding, "PGUP" ) == 0 || 
-		Q_strcmp( pchBinding, "PGDN" ) == 0 || 
-		Q_strcmp( pchBinding, "PAUSE" ) == 0 || 
-		Q_strcmp( pchBinding, "F10" ) == 0 || 
-		Q_strcmp( pchBinding, "F11" ) == 0 || 
-		Q_strcmp( pchBinding, "F12" ) == 0 )
+	else if ( V_strcmp( pchBinding, "SEMICOLON" ) == 0 || 
+		V_strcmp( pchBinding, "INS" ) == 0 || 
+		V_strcmp( pchBinding, "DEL" ) == 0 || 
+		V_strcmp( pchBinding, "HOME" ) == 0 || 
+		V_strcmp( pchBinding, "END" ) == 0 || 
+		V_strcmp( pchBinding, "PGUP" ) == 0 || 
+		V_strcmp( pchBinding, "PGDN" ) == 0 || 
+		V_strcmp( pchBinding, "PAUSE" ) == 0 || 
+		V_strcmp( pchBinding, "F10" ) == 0 || 
+		V_strcmp( pchBinding, "F11" ) == 0 || 
+		V_strcmp( pchBinding, "F12" ) == 0 )
 	{
-		Q_strncpy( pchIconTextureName, "icon_key_generic", bufSize );
+		V_strncpy( pchIconTextureName, "icon_key_generic", bufSize );
 		return pchBinding;
 	}
-	else if ( Q_strlen( pchBinding ) <= 2 )
+	else if ( V_strlen( pchBinding ) <= 2 )
 	{
-		Q_strncpy( pchIconTextureName, "icon_key_generic", bufSize );
+		V_strncpy( pchIconTextureName, "icon_key_generic", bufSize );
 		return pchBinding;
 	}
-	else if ( Q_strlen( pchBinding ) <= 6 )
+	else if ( V_strlen( pchBinding ) <= 6 )
 	{
-		Q_strncpy( pchIconTextureName, "icon_key_wide", bufSize );
+		V_strncpy( pchIconTextureName, "icon_key_wide", bufSize );
 		return pchBinding;
 	}
 	else
 	{
-		Q_strncpy( pchIconTextureName, "icon_key_wide", bufSize );
+		V_strncpy( pchIconTextureName, "icon_key_wide", bufSize );
 		return pchBinding;
 	}
 

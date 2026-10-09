@@ -1,13 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "platform.h"
+import ks.tier1;
 #include "filesystem.h"
 #include "filesystem_helpers.h"
-#include "characterset.h"
+import std;
 
 // wordbreak parsing set
 static characterset_t	g_BreakSet, g_BreakSetIncludingColons;
@@ -130,6 +127,3 @@ char* ParseFile( char* pFileBytes, char* pToken, bool* pWasQuoted )
 {
 	return (char*)ParseFile( (const char*)pFileBytes, pToken, pWasQuoted );
 }
-
-
-

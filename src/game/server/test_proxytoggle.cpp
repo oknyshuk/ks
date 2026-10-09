@@ -1,11 +1,41 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "recipientfilter.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "baseentity.h"
@@ -90,7 +120,7 @@ void Test_ProxyToggle_EnableProxy( const CCommand &args )
 		Error( "Test_ProxyToggle_EnableProxy: requires parameter (0 or 1)." );
 	}
 
-	g_bEnableProxy = !!atoi( args[ 1 ] );
+	g_bEnableProxy = !!std::atoi( args[ 1 ] );
 }
 
 void Test_ProxyToggle_SetValue( const CCommand &args )
@@ -104,10 +134,8 @@ void Test_ProxyToggle_SetValue( const CCommand &args )
 		Error( "Test_ProxyToggle_SetValue: no entity present." );
 	}
 
-	g_pTestObj->m_WithProxy = atoi( args[ 1 ] );
+	g_pTestObj->m_WithProxy = std::atoi( args[ 1 ] );
 }
 
 ConCommand cc_Test_ProxyToggle_EnableProxy( "Test_ProxyToggle_EnableProxy", Test_ProxyToggle_EnableProxy, 0, FCVAR_CHEAT );
 ConCommand cc_Test_ProxyToggle_SetValue( "Test_ProxyToggle_SetValue", Test_ProxyToggle_SetValue, 0, FCVAR_CHEAT );
-
-

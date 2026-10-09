@@ -1,12 +1,39 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Functions and data pertaining to the NPCs' AI scheduling system.
 //			Implements default NPC tasks and schedules.
-//
-//=============================================================================//
 
-
-#include "cbase.h"
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "ai_default.h"
 #include "animation.h"
 #include "scripted.h"
@@ -30,7 +57,6 @@
 #include "ai_speech.h"
 #include "game.h"
 #include "IEffects.h"
-#include "vstdlib/random.h"
 #include "ndebugoverlay.h"
 #include "env_debughistory.h"
 #include "ai_behavior.h"
@@ -43,7 +69,7 @@ extern ConVar ai_use_think_optimizations;
 
 ConVar	ai_simulate_task_overtime( "ai_simulate_task_overtime", "0" );
 
-#define MAX_TASKS_RUN 10
+constexpr auto MAX_TASKS_RUN = 10;
 
 struct TaskTimings
 {
@@ -115,7 +141,7 @@ void CAI_BaseNPC::ClearSchedule( const char *szReason )
 //=========================================================
 bool CAI_BaseNPC::FScheduleDone ( void )
 {
-	Assert( GetCurSchedule() != nullptr );
+	contract_assert( GetCurSchedule() != nullptr );
 	
 	if ( GetScheduleCurTaskIndex() == GetCurSchedule()->NumTasks() )
 	{
@@ -137,7 +163,7 @@ bool CAI_BaseNPC::SetSchedule( int localScheduleID )
 		{
 			if (!(localScheduleID == SCHED_SLEEP || localScheduleID == SCHED_WAIT_FOR_SCRIPT || localScheduleID == SCHED_SCRIPTED_WALK || localScheduleID == SCHED_SCRIPTED_RUN || localScheduleID == SCHED_SCRIPTED_CUSTOM_MOVE || localScheduleID == SCHED_SCRIPTED_WAIT || localScheduleID == SCHED_SCRIPTED_FACE) )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				// ExitScriptedSequence();
 			}
 		}
@@ -155,10 +181,10 @@ bool CAI_BaseNPC::SetSchedule( int localScheduleID )
 // with the passed pointer, and sets the ScheduleIndex back
 // to 0
 //=========================================================
-#define SCHEDULE_HISTORY_SIZE	10
+constexpr auto SCHEDULE_HISTORY_SIZE = 10;
 void CAI_BaseNPC::SetSchedule( CAI_Schedule *pNewSchedule )
 {
-	Assert( pNewSchedule != nullptr );
+	contract_assert( pNewSchedule != nullptr );
 
 	OnSetSchedule();
 	
@@ -219,7 +245,7 @@ void CAI_BaseNPC::SetSchedule( CAI_Schedule *pNewSchedule )
 			m_ScheduleHistory.Remove( SCHEDULE_HISTORY_SIZE );
 		}
 
-		assert( m_ScheduleHistory.Count() <= SCHEDULE_HISTORY_SIZE );
+		contract_assert( m_ScheduleHistory.Count() <= SCHEDULE_HISTORY_SIZE );
 
 		// No analysis until the vector is full!
 		if( m_ScheduleHistory.Count() == SCHEDULE_HISTORY_SIZE )
@@ -254,7 +280,7 @@ void CAI_BaseNPC::SetSchedule( CAI_Schedule *pNewSchedule )
 //=========================================================
 void CAI_BaseNPC::NextScheduledTask ( void )
 {
-	Assert( GetCurSchedule() != nullptr );
+	contract_assert( GetCurSchedule() != nullptr );
 
 	SetTaskStatus( TASKSTATUS_NEW );
 	IncScheduleCurTaskIndex();
@@ -520,8 +546,8 @@ CAI_Schedule *CAI_BaseNPC::GetFailSchedule( void )
 	else
 		failedTask = TASK_INVALID;
 
-	Assert( AI_IdIsLocal( prevSchedule ) );
-	Assert( AI_IdIsLocal( failedTask ) );
+	contract_assert( AI_IdIsLocal( prevSchedule ) );
+	contract_assert( AI_IdIsLocal( failedTask ) );
 
 	int scheduleType = SelectFailSchedule( prevSchedule, failedTask, m_ScheduleState.taskFailureCode );
 	return GetScheduleOfType( scheduleType );
@@ -570,7 +596,6 @@ static bool ShouldStopProcessingTasks( CAI_BaseNPC *pNPC, int taskTime, int time
 
 void CAI_BaseNPC::MaintainSchedule ( void )
 {
-	AI_PROFILE_SCOPE(CAI_BaseNPC_RunAI_MaintainSchedule);
 	extern CFastTimer g_AIMaintainScheduleTimer;
 	CTimeScope timeScope(&g_AIMaintainScheduleTimer);
 
@@ -580,17 +605,13 @@ void CAI_BaseNPC::MaintainSchedule ( void )
 	int			i;
 	bool		runTask = true;
 
-#if defined( VPROF_ENABLED )
 #if defined(DISABLE_DEBUG_HISTORY)
 	bool bDebugTaskNames = ( developer.GetBool() || ( VProfAI() && g_VProfCurrentProfile.IsEnabled() ) );
 #else
 	bool bDebugTaskNames = true;
 #endif
-#else
-	bool bDebugTaskNames = false;
-#endif
 
-	memset( g_AITaskTimings, 0, sizeof(g_AITaskTimings) );
+	std::memset( g_AITaskTimings, 0, sizeof(g_AITaskTimings) );
 	
 	g_nAITasksRun = 0;
 	
@@ -721,7 +742,7 @@ void CAI_BaseNPC::MaintainSchedule ( void )
 			g_AITaskTimings[curTiming].startTimer.Start();
 			const Task_t *pTask = GetTask();
 			const char *pszTaskName = ( bDebugTaskNames ) ? TaskName( pTask->iTask ) : "ai_task";
-			Assert( pTask != nullptr );
+			contract_assert( pTask != nullptr );
 			g_AITaskTimings[i].pszTask = pszTaskName;
 
 			if (m_debugOverlays & OVERLAY_TASK_TEXT_BIT)
@@ -770,7 +791,7 @@ void CAI_BaseNPC::MaintainSchedule ( void )
 			{
 				const Task_t *pTask = GetTask();
 				const char *pszTaskName = ( bDebugTaskNames ) ? TaskName( pTask->iTask ) : "ai_task";
-				Assert( pTask != nullptr );
+				contract_assert( pTask != nullptr );
 				g_AITaskTimings[i].pszTask = pszTaskName;
 				// DevMsg( "%.2f RunTask( %s )\n", gpGlobals->curtime, m_pTaskSR->GetStringText( pTask->iTask ) );
 				g_AITaskTimings[curTiming].runTimer.Start();
@@ -792,7 +813,7 @@ void CAI_BaseNPC::MaintainSchedule ( void )
 						break;
 					}
 				}
-				AssertMsg( j < 8, "Runaway task interrupt\n" );
+				contract_assert( ( j < 8 ) && "Runaway task interrupt\n" );
 					
 				AI_PROFILE_SCOPE_END();
 				AI_PROFILE_SCOPE_END();
@@ -857,7 +878,6 @@ void CAI_BaseNPC::MaintainSchedule ( void )
 
 bool CAI_BaseNPC::FindCoverPos( CBaseEntity *pEntity, Vector *pResult )
 {
-	AI_PROFILE_SCOPE(CAI_BaseNPC_FindCoverPos);
 
 	if ( !GetTacticalServices()->FindLateralCover( pEntity->EyePosition(), 0, pResult ) )
 	{
@@ -873,7 +893,6 @@ bool CAI_BaseNPC::FindCoverPos( CBaseEntity *pEntity, Vector *pResult )
 
 bool CAI_BaseNPC::FindCoverPosInRadius( CBaseEntity *pEntity, const Vector &goalPos, float coverRadius, Vector *pResult )
 {
-	AI_PROFILE_SCOPE(CAI_BaseNPC_FindCoverPosInRadius);
 
 	if ( pEntity == nullptr )
 	{
@@ -980,7 +999,7 @@ bool CAI_BaseNPC::FindCoverFromEnemy( bool bNodesOnly, float flMinDistance, floa
 	
 	if ( bNodesOnly )
 	{
-		if ( flMaxDistance == FLT_MAX )
+		if ( flMaxDistance == std::numeric_limits<float>::max() )
 			flMaxDistance = CoverRadius();
 		
 		if ( !GetTacticalServices()->FindCoverPos( pEntity->GetAbsOrigin(), pEntity->EyePosition(), flMinDistance, flMaxDistance, &coverPos ) )
@@ -1152,7 +1171,7 @@ void CAI_BaseNPC::StartScriptMoveToTargetTask( int task )
 		if ( ( newActivity != ACT_SCRIPT_CUSTOM_MOVE ) && TranslateActivity( newActivity ) == ACT_INVALID )
 		{
 			// This NPC can't do this!
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 		else 
 		{
@@ -1221,7 +1240,7 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 		break;
 
 	case TASK_CREATE_PENDING_WEAPON:
-		Assert( m_iszPendingWeapon != NULL_STRING );
+		contract_assert( m_iszPendingWeapon != NULL_STRING );
 		GiveWeapon( m_iszPendingWeapon );
 		m_iszPendingWeapon = NULL_STRING;
 		TaskComplete();
@@ -1513,7 +1532,7 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 		{	
 			bool 	bNodeCover 		= ( task != TASK_FIND_COVER_FROM_ENEMY );
 			float 	flMinDistance 	= ( task == TASK_FIND_FAR_NODE_COVER_FROM_ENEMY ) ? pTask->flTaskData : 0.0;
-			float 	flMaxDistance 	= ( task == TASK_FIND_NEAR_NODE_COVER_FROM_ENEMY ) ? pTask->flTaskData : FLT_MAX;
+			float 	flMaxDistance 	= ( task == TASK_FIND_NEAR_NODE_COVER_FROM_ENEMY ) ? pTask->flTaskData : std::numeric_limits<float>::max();
 			
 			if ( FindCoverFromEnemy( bNodeCover, flMinDistance, flMaxDistance ) )
 			{
@@ -1555,7 +1574,7 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 	case TASK_FACE_HINTNODE:
 		
 		// If the yaw is locked, this function will not act correctly
-		Assert( GetMotor()->IsYawLocked() == false );
+		contract_assert( GetMotor()->IsYawLocked() == false );
 
 		GetMotor()->SetIdealYaw( GetHintNode()->Yaw() );
 		GetMotor()->SetIdealYaw( CalcReasonableFacing( true ) ); // CalcReasonableFacing() is based on previously set ideal yaw
@@ -1617,7 +1636,7 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 			else
 			{
 				float flReasonableFacing = CalcReasonableFacing( true );
-				if ( fabsf( flReasonableFacing - GetMotor()->GetIdealYaw() ) < 1 )
+				if ( std::fabsf( flReasonableFacing - GetMotor()->GetIdealYaw() ) < 1 )
 					TaskComplete();
 				else
 				{
@@ -1887,7 +1906,7 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 				else
 				{
 					// You can't call this task without either innate range attacks or a weapon!
-					Assert( 0 );
+					contract_assert( 0 );
 					TaskFail( FAIL_NO_ROUTE );
 				}
 
@@ -1919,7 +1938,6 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 				return;
 			}
 		
-			AI_PROFILE_SCOPE(CAI_BaseNPC_FindLosToEnemy);
 			float flMaxRange = 2000;
 			float flMinRange = 0;
 			
@@ -2368,7 +2386,6 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 
 	case TASK_GET_PATH_OFF_OF_NPC:
 		{
-			Assert( ( GetGroundEntity() && ( GetGroundEntity()->IsPlayer() || ( GetGroundEntity()->IsNPC() && IRelationType( GetGroundEntity() ) == D_LI ) ) ) );
 			GetNavigator()->SetAllowBigStep( GetGroundEntity() );
 			ChainStartTask( TASK_MOVE_AWAY_PATH, 48 );
 		}
@@ -3101,7 +3118,7 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 		{
 			CBaseEntity *pNewEnemy = BestEnemy();
 
-			Assert( pNewEnemy != GetEnemy() );
+			contract_assert( pNewEnemy != GetEnemy() );
 
 			if( pNewEnemy != nullptr )
 			{
@@ -3219,7 +3236,7 @@ void CAI_BaseNPC::RunAttackTask( int task )
 //=========================================================
 void CAI_BaseNPC::RunTask( const Task_t *pTask )
 {
-	VPROF_BUDGET( "CAI_BaseNPC::RunTask", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CAI_BaseNPC::RunTask", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 	switch ( pTask->iTask )
 	{
 	case TASK_GET_PATH_TO_RANDOM_NODE:
@@ -3230,7 +3247,7 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 	case TASK_TURN_LEFT:
 		{
 			// If the yaw is locked, this function will not act correctly
-			Assert( GetMotor()->IsYawLocked() == false );
+			contract_assert( GetMotor()->IsYawLocked() == false );
 
 			GetMotor()->UpdateYaw();
 
@@ -3366,7 +3383,7 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 	case TASK_FACE_ENEMY:
 		{
 			// If the yaw is locked, this function will not act correctly
-			Assert( GetMotor()->IsYawLocked() == false );
+			contract_assert( GetMotor()->IsYawLocked() == false );
 
 			Vector vecEnemyLKP = GetEnemyLKP();
 			if (!FInAimCone( vecEnemyLKP ))
@@ -3377,7 +3394,7 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 			else
 			{
 				float flReasonableFacing = CalcReasonableFacing( true );
-				if ( fabsf( flReasonableFacing - GetMotor()->GetIdealYaw() ) > 1 )
+				if ( std::fabsf( flReasonableFacing - GetMotor()->GetIdealYaw() ) > 1 )
 					GetMotor()->SetIdealYaw( flReasonableFacing );
 			}
 
@@ -3454,7 +3471,7 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 	case TASK_FACE_PATH:
 		{
 			// If the yaw is locked, this function will not act correctly
-			Assert( GetMotor()->IsYawLocked() == false );
+			contract_assert( GetMotor()->IsYawLocked() == false );
 
 			GetMotor()->UpdateYaw();
    
@@ -3468,7 +3485,7 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 	case TASK_FACE_REASONABLE:
 		{
 			// If the yaw is locked, this function will not act correctly
-			Assert( GetMotor()->IsYawLocked() == false );
+			contract_assert( GetMotor()->IsYawLocked() == false );
 
 			GetMotor()->UpdateYaw();
 
@@ -3851,7 +3868,7 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 		break;
 
 	case TASK_WAIT_FOR_SPEAK_FINISH:
-		Assert( GetExpresser() );
+		contract_assert( GetExpresser() );
 		if ( GetExpresser() )
 		{
 			// Are we waiting for our speech to end? Or for the mutex to be free?
@@ -4379,26 +4396,26 @@ const Task_t *CAI_BaseNPC::GetTask( void )
 void CAI_BaseNPC::TranslateAddOnAttachment( char *pchAttachmentName, int iCount )
 {
 
-	if( Q_strcmp( pchAttachmentName, "addon_baseshooter" ) == 0 )
+	if( V_strcmp( pchAttachmentName, "addon_baseshooter" ) == 0 )
 	{
 		switch ( iCount )
 		{
 		case 0:
-			Q_strcpy( pchAttachmentName, "anim_attachment_lh" );
+			V_strcpy( pchAttachmentName, "anim_attachment_lh" );
 			break;
 
 		case 1:
-			Q_strcpy( pchAttachmentName, "anim_attachment_rh" );
+			V_strcpy( pchAttachmentName, "anim_attachment_rh" );
 			break;
 
 		default:
-			Q_strcpy( pchAttachmentName, "" );
+			V_strcpy( pchAttachmentName, "" );
 		}
 
 		return;
 	}
 
-	Q_strcpy( pchAttachmentName, "" );
+	V_strcpy( pchAttachmentName, "" );
 }
 
 
@@ -4669,7 +4686,7 @@ int CAI_BaseNPC::SelectDeadSchedule()
 //-----------------------------------------------------------------------------
 int CAI_BaseNPC::SelectScriptSchedule()
 {
-	Assert( m_hCine != nullptr );
+	contract_assert( m_hCine != nullptr );
 	if ( m_hCine )
 		return SCHED_AISCRIPT;
 
@@ -4788,11 +4805,11 @@ int CAI_BaseNPC::SelectSchedule( void )
 		return SCHED_IDLE_STAND;
 
 	case NPC_STATE_IDLE:
-		AssertMsgOnce( GetEnemy() == nullptr, "NPC has enemy but is not in combat state?" );
+		contract_assert( ( GetEnemy() == nullptr ) && "NPC has enemy but is not in combat state?" );
 		return SelectIdleSchedule();
 
 	case NPC_STATE_ALERT:
-		AssertMsgOnce( GetEnemy() == nullptr, "NPC has enemy but is not in combat state?" );
+		contract_assert( ( GetEnemy() == nullptr ) && "NPC has enemy but is not in combat state?" );
 		return SelectAlertSchedule();
 
 	case NPC_STATE_COMBAT:

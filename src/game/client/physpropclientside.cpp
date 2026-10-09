@@ -1,10 +1,23 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "const.h"
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "physpropclientside.h"
 #include "vcollide_parse.h"
 #include "mapentities_shared.h"
@@ -12,10 +25,8 @@
 #include "props_shared.h"
 #include "c_te_effect_dispatch.h"
 #include "datacache/imdlcache.h"
-#include "view.h"
-#include "tier0/vprof.h"
 
-#define FADEOUT_TIME	1.0f
+constexpr auto FADEOUT_TIME = 1.0f;
 ConVar	r_propsmaxdist( "r_propsmaxdist", "1200", 0, "Maximum visible distance" );
 
 //////////////////////////////////////////////////////////////////////
@@ -68,11 +79,11 @@ bool C_PhysPropClientside::KeyValue( const char *szKeyName, const char *szValue 
 	}
 	else if ( FStrEq(szKeyName, "health") )
 	{
-		m_iHealth = Q_atoi(szValue);
+		m_iHealth = V_atoi(szValue);
 	}
 	else if (FStrEq(szKeyName, "spawnflags"))
 	{
-		m_spawnflags = Q_atoi(szValue);
+		m_spawnflags = V_atoi(szValue);
 	}
 	else if (FStrEq(szKeyName, "model"))
 	{
@@ -80,29 +91,29 @@ bool C_PhysPropClientside::KeyValue( const char *szKeyName, const char *szValue 
 	}
 	else if (FStrEq(szKeyName, "fademaxdist"))
 	{
-		float flFadeMaxDist = Q_atof(szValue);
+		float flFadeMaxDist = V_atof(szValue);
 		SetDistanceFade( GetMinFadeDist(), flFadeMaxDist );
 	}
 	else if (FStrEq(szKeyName, "fademindist"))
 	{
-		float flFadeMinDist = Q_atof(szValue);
+		float flFadeMinDist = V_atof(szValue);
 		SetDistanceFade( flFadeMinDist, GetMaxFadeDist() );
 	}
 	else if (FStrEq(szKeyName, "fadescale"))
 	{
-		SetGlobalFadeScale( Q_atof(szValue) );
+		SetGlobalFadeScale( V_atof(szValue) );
 	}
 	else if (FStrEq(szKeyName, "inertiaScale"))
 	{
-		m_inertiaScale = Q_atof(szValue);
+		m_inertiaScale = V_atof(szValue);
 	}
 	else if (FStrEq(szKeyName, "skin"))
 	{
-		SetSkin( Q_atoi(szValue) );
+		SetSkin( V_atoi(szValue) );
 	}
 	else if (FStrEq(szKeyName, "physicsmode"))
 	{
-		m_iPhysicsMode = Q_atoi(szValue);
+		m_iPhysicsMode = V_atoi(szValue);
 	}
 
 	else
@@ -496,7 +507,7 @@ void C_PhysPropClientside::Clone( Vector &velocity )
 
 void C_PhysPropClientside::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
 {
-	VPROF( "C_PhysPropClientside::ImpactTrace" );
+	CVProfScope _( "C_PhysPropClientside::ImpactTrace", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
 
 	if( !pPhysicsObject )
@@ -572,7 +583,7 @@ const char *C_PhysPropClientside::ParseEntity( const char *pEntData )
 		Error( "classname missing from entity!\n" );
 	}
 
-	if ( !Q_strcmp( className, "prop_physics_multiplayer" ) )
+	if ( !V_strcmp( className, "prop_physics_multiplayer" ) )
 	{
 		// always force clientside entitis placed in maps
 		C_PhysPropClientside *pEntity = C_PhysPropClientside::CreateNew( true ); 
@@ -588,7 +599,7 @@ const char *C_PhysPropClientside::ParseEntity( const char *pEntData )
 		}
 	}
 
-	if ( !Q_strcmp( className, "func_proprrespawnzone" ) )
+	if ( !V_strcmp( className, "func_proprrespawnzone" ) )
 	{
 		DebuggerBreakIfDebugging();
 	}
@@ -861,8 +872,3 @@ CBaseEntity *BreakModelCreateSingle( CBaseEntity *pOwner, breakmodel_t *pModel, 
 
 	return pEntity;
 }
-
-
-
-
-

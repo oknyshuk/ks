@@ -1,24 +1,22 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose : Singleton manager for color correction on the client
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef COLORCORRECTIONMGR_H
-#define COLORCORRECTIONMGR_H
+// Purpose: Singleton manager for color correction on the client
 
-
+import std;
 #include "igamesystem.h"
 
+class C_BasePlayer;
 class C_ColorCorrection;
 class C_ColorCorrectionVolume;
 
 //------------------------------------------------------------------------------
 // Purpose : Singleton manager for color correction on the client
 //------------------------------------------------------------------------------
-DECLARE_POINTER_HANDLE( ClientCCHandle_t );
-#define INVALID_CLIENT_CCHANDLE ( (ClientCCHandle_t)0 )
+struct ClientCCHandle_t__ { int unused; };
+using ClientCCHandle_t = ClientCCHandle_t__ *;
+inline constexpr auto INVALID_CLIENT_CCHANDLE = ( (ClientCCHandle_t)0 );
 
 class CColorCorrectionMgr : public CBaseGameSystem
 {
@@ -75,6 +73,3 @@ void UpdateColorCorrectionVolumes( C_BasePlayer *pPlayer, float ccScale, C_Color
 // Singleton access
 //------------------------------------------------------------------------------
 extern CColorCorrectionMgr *g_pColorCorrectionMgr;
-
-
-#endif // COLORCORRECTIONMGR_H

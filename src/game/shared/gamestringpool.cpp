@@ -1,32 +1,45 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-
-#if !defined( GC )
-#include "igamesystem.h"
+import std;
+import ks.tier1;
+#if defined(CLIENT_DLL)
+#include "string_t.h"
+#elif defined(GAME_DLL)
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "eiface.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
 #endif
 
+#include "igamesystem.h"
+
 #include "gamestringpool.h"
-#include "tier1/map_ops.h"
 
-#include <algorithm>
-#include <string>
-#include <unordered_set>
 
-#include "tier0/memalloc.h"
 //-----------------------------------------------------------------------------
 // Purpose: The actual storage for pooled per-level strings
 //-----------------------------------------------------------------------------
-#if !defined( GC )
 class CGameStringPool : public CBaseGameSystem
-#else
-class CGameStringPool
-#endif
 {
 	virtual char const *Name() { return "CGameStringPool"; }
 
@@ -103,12 +116,10 @@ static CGameStringPool g_GameStringPool;
 //-----------------------------------------------------------------------------
 // String system accessor
 //-----------------------------------------------------------------------------
-#if !defined( GC )
 IGameSystem *GameStringSystem()
 {
 	return &g_GameStringPool;
 }
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: The public accessor for the level-global pooled strings

@@ -1,17 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef SERVERNETWORKPROPERTY_H
-#define SERVERNETWORKPROPERTY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "iservernetworkable.h"
 #include "server_class.h"
 #include "edict.h"
 #include "timedeventmgr.h"
+#include "networkvar.h"
+#include "entitylist.h"
+#include "util.h"
 
 //
 // Lightweight base class for networkable data on the server.
@@ -250,6 +247,3 @@ inline int CServerNetworkProperty::AreaNum() const
 	const_cast<CServerNetworkProperty*>(this)->RecomputePVSInformation();
 	return m_PVSInfo.m_nAreaNum;
 }
-
-
-#endif // SERVERNETWORKPROPERTY_H

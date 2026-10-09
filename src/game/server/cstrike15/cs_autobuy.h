@@ -1,8 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Headers and defines for Autobuy and Rebuy 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+#include "cs_shareddefs.h"
+#include "cs_weapon_parse.h"
+
+// Purpose: Headers and defines for Autobuy and Rebuy
 
 /**
  * Weapon classes as used by the AutoBuy
@@ -56,7 +60,7 @@ public:
 
 	void Clear()
 	{
-		memset(this, 0, sizeof(RebuyStruct));
+		std::memset(this, 0, sizeof(RebuyStruct));
 	}
 
 	bool isEmpty( void )
@@ -143,7 +147,7 @@ public:
 
 	int numGrenades( void )
 	{
-		return ARRAYSIZE( m_grenades );
+		return std::size( m_grenades );
 	}
 
 };

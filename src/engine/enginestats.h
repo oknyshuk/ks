@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ENGINESTATS_H
-#define ENGINESTATS_H
-
-
-#include "utlvector.h"
+import std;
+import ks.tier1;
 #include "sysexternal.h"
 #include "filesystem.h" // FileHandle_t define
 
@@ -109,7 +103,7 @@ inline void CEngineStats::BeginTimedStat( EngineTimedStatId_t stat )
 	if (m_InFrame)
 	{
 		m_StatGroup.m_StatStartTime[stat] = 
-			Sys_FloatTime();
+			Plat_FloatTime();
 	}
 }
 
@@ -117,7 +111,7 @@ inline void CEngineStats::EndTimedStat( EngineTimedStatId_t stat )
 {
 	if (m_InFrame)
 	{
-		float dt = (float)Sys_FloatTime() - (float)(m_StatGroup.m_StatStartTime[stat]);
+		float dt = (float)Plat_FloatTime() - (float)(m_StatGroup.m_StatStartTime[stat]);
 		m_StatGroup.m_StatFrameTime[stat] += dt; 
 	}
 }
@@ -137,5 +131,3 @@ inline void CEngineStats::SetTimedStat( EngineTimedStatId_t stat, float time )
 	m_StatGroup.m_StatFrameTime[stat] = time; 
 }
 extern CEngineStats g_EngineStats;
-
-#endif // ENGINESTATS_H

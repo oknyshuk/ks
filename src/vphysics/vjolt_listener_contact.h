@@ -4,7 +4,11 @@
 
 #pragma once
 
+#include <Jolt/Jolt.h>
+import ks.core;
 #include "vjolt_controller_fluid.h"
+#include "vjolt_object.h"
+#include "vjolt_util.h"
 
 struct JoltPhysicsContactPair
 {
@@ -226,7 +230,7 @@ public:
 
 	bool ShouldCollide( JoltPhysicsObject *pObject0, JoltPhysicsObject *pObject1 )
 	{
-		VJoltAssert( pObject0 != pObject1 );
+		contract_assert( pObject0 != pObject1 );
 
 		if ( !pObject0 || !pObject1 )
 			return false;
@@ -449,7 +453,7 @@ private:
 		// More than 64 threads are alive and touching physics events at once, which takes
 		// a global pool wider than this bound (-threads can ask for that). Sharing the
 		// last slot races, but it stays in bounds; the old code corrupted memory instead.
-		Assert( !"Ran out of physics event thread slots" );
+		contract_assert( !"Ran out of physics event thread slots" );
 		return kMaxEventThreads - 1;
 	}
 

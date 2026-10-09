@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 )  [PC]
 // ( $STATICLIGHT3 || $MORPHING || $SKINNING || $COMPRESSED_VERTS) && $TESSELLATION
@@ -16,7 +17,7 @@ private:
 public:
 	void SetSFM( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nSFM = i;
 #ifdef _DEBUG
 		m_bSFM = true;
@@ -24,7 +25,7 @@ public:
 	}
 	void SetSFM( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nSFM = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSFM = true;
@@ -38,7 +39,7 @@ private:
 public:
 	void SetHALFLAMBERT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nHALFLAMBERT = i;
 #ifdef _DEBUG
 		m_bHALFLAMBERT = true;
@@ -46,7 +47,7 @@ public:
 	}
 	void SetHALFLAMBERT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHALFLAMBERT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHALFLAMBERT = true;
@@ -60,7 +61,7 @@ private:
 public:
 	void SetUSE_WITH_2B( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nUSE_WITH_2B = i;
 #ifdef _DEBUG
 		m_bUSE_WITH_2B = true;
@@ -68,7 +69,7 @@ public:
 	}
 	void SetUSE_WITH_2B( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUSE_WITH_2B = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUSE_WITH_2B = true;
@@ -82,7 +83,7 @@ private:
 public:
 	void SetWORLD_NORMAL( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nWORLD_NORMAL = i;
 #ifdef _DEBUG
 		m_bWORLD_NORMAL = true;
@@ -90,7 +91,7 @@ public:
 	}
 	void SetWORLD_NORMAL( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nWORLD_NORMAL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWORLD_NORMAL = true;
@@ -104,7 +105,7 @@ private:
 public:
 	void SetFLATTEN_STATIC_CONTROL_FLOW( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLATTEN_STATIC_CONTROL_FLOW = i;
 #ifdef _DEBUG
 		m_bFLATTEN_STATIC_CONTROL_FLOW = true;
@@ -112,7 +113,7 @@ public:
 	}
 	void SetFLATTEN_STATIC_CONTROL_FLOW( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLATTEN_STATIC_CONTROL_FLOW = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLATTEN_STATIC_CONTROL_FLOW = true;
@@ -126,7 +127,7 @@ private:
 public:
 	void SetCASCADED_SHADOW_MAPPING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCASCADED_SHADOW_MAPPING = i;
 #ifdef _DEBUG
 		m_bCASCADED_SHADOW_MAPPING = true;
@@ -134,7 +135,7 @@ public:
 	}
 	void SetCASCADED_SHADOW_MAPPING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCASCADED_SHADOW_MAPPING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCASCADED_SHADOW_MAPPING = true;
@@ -148,7 +149,7 @@ private:
 public:
 	void SetDOPIXELFOG( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDOPIXELFOG = i;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -156,7 +157,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -170,7 +171,7 @@ private:
 public:
 	void SetHARDWAREFOGBLEND( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nHARDWAREFOGBLEND = i;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -178,7 +179,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -227,7 +228,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bSFM && m_bHALFLAMBERT && m_bUSE_WITH_2B && m_bWORLD_NORMAL && m_bFLATTEN_STATIC_CONTROL_FLOW && m_bCASCADED_SHADOW_MAPPING && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 72 * m_nSFM ) + ( 72 * m_nHALFLAMBERT ) + ( 144 * m_nUSE_WITH_2B ) + ( 288 * m_nWORLD_NORMAL ) + ( 288 * m_nFLATTEN_STATIC_CONTROL_FLOW ) + ( 576 * m_nCASCADED_SHADOW_MAPPING ) + ( 1152 * m_nDOPIXELFOG ) + ( 2304 * m_nHARDWAREFOGBLEND ) + 0;
 	}
@@ -243,7 +244,7 @@ private:
 public:
 	void SetCOMPRESSED_VERTS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOMPRESSED_VERTS = i;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -251,7 +252,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -265,7 +266,7 @@ private:
 public:
 	void SetSKINNING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSKINNING = i;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -273,7 +274,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -287,7 +288,7 @@ private:
 public:
 	void SetMORPHING( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nMORPHING = i;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -295,7 +296,7 @@ public:
 	}
 	void SetMORPHING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nMORPHING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -309,7 +310,7 @@ private:
 public:
 	void SetTESSELLATION( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nTESSELLATION = i;
 #ifdef _DEBUG
 		m_bTESSELLATION = true;
@@ -317,7 +318,7 @@ public:
 	}
 	void SetTESSELLATION( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nTESSELLATION = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTESSELLATION = true;
@@ -331,7 +332,7 @@ private:
 public:
 	void SetNUM_LIGHTS( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nNUM_LIGHTS = i;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -339,7 +340,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -353,7 +354,7 @@ private:
 public:
 	void SetSTATICLIGHT3( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nSTATICLIGHT3 = i;
 #ifdef _DEBUG
 		m_bSTATICLIGHT3 = true;
@@ -361,7 +362,7 @@ public:
 	}
 	void SetSTATICLIGHT3( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nSTATICLIGHT3 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSTATICLIGHT3 = true;
@@ -375,7 +376,7 @@ private:
 public:
 	void SetDOWATERFOG( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDOWATERFOG = i;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -383,7 +384,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -428,7 +429,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS && m_bSKINNING && m_bMORPHING && m_bTESSELLATION && m_bNUM_LIGHTS && m_bSTATICLIGHT3 && m_bDOWATERFOG;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nCOMPRESSED_VERTS ) + ( 2 * m_nSKINNING ) + ( 4 * m_nMORPHING ) + ( 4 * m_nTESSELLATION ) + ( 4 * m_nNUM_LIGHTS ) + ( 12 * m_nSTATICLIGHT3 ) + ( 36 * m_nDOWATERFOG ) + 0;
 	}

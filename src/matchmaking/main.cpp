@@ -1,15 +1,7 @@
-//====== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. =======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/stat.h>
-
+import std;
 
 #include "mm_framework.h"
 
@@ -22,8 +14,7 @@ void LinkMatchmakingLib()
 
 static CMatchFramework g_MatchFramework;
 CMatchFramework *g_pMMF = &g_MatchFramework;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CMatchFramework, IMatchFramework,
-								   IMATCHFRAMEWORK_VERSION_STRING, g_MatchFramework );
+static InterfaceReg s_Reg_CMatchFramework_IMatchFramework( []() -> void * { return static_cast<IMatchFramework *>( &g_MatchFramework ); }, IMATCHFRAMEWORK_VERSION_STRING );;
 
 //
 // IAppSystem implementation
@@ -84,7 +75,7 @@ static MatchExtInterface_t s_table[] =
 
 bool CMatchFramework::Connect( CreateInterfaceFn factory )
 {
-	Assert( !s_pfnDelegateFactory );
+	contract_assert( !s_pfnDelegateFactory );
 
 	s_pfnDelegateFactory = factory;
 
@@ -112,26 +103,18 @@ bool CMatchFramework::Connect( CreateInterfaceFn factory )
 	s_pfnDelegateFactory = nullptr;
 
 	MathLib_Init( 2.2f, 2.2f, 0.0f, 2.0f );
-	
-	SteamApiContext_Init();
 
-	// Trigger intialization from Steam users
-	if ( g_pPlayerManager )
-		g_pPlayerManager->OnGameUsersChanged();
-	
 	return true;
 }
 
 void CMatchFramework::Disconnect()
 {
-	SteamApiContext_Shutdown();
-
 	for ( MatchExtInterface_t *ptr = s_table; ptr->m_szName; ++ ptr )
 	{
 		if ( ptr->m_bConnected )
 		{
 			void *pvInterface = (g_pMatchExtensions->*(ptr->m_pfnGetInterface))();
-			Assert( pvInterface );
+			contract_assert( pvInterface );
 			g_pMatchExtensions->UnregisterExtensionInterface( ptr->m_szName, pvInterface );
 			ptr->m_bConnected = false;
 		}
@@ -144,7 +127,7 @@ void CMatchFramework::Disconnect()
 
 void * CMatchFramework::QueryInterface( const char *pInterfaceName )
 {
-	if ( !Q_stricmp( pInterfaceName, IMATCHFRAMEWORK_VERSION_STRING ) )
+	if ( !V_stricmp( pInterfaceName, IMATCHFRAMEWORK_VERSION_STRING ) )
 		return static_cast< IMatchFramework* >( this );
 
 	return nullptr;

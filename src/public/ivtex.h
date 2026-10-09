@@ -1,16 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IVTEX_H
-#define IVTEX_H
-
-
-#include "tier1/interface.h"
-
+import std;
+import ks.tier1;
 
 class IVTex
 {
@@ -22,7 +15,4 @@ public:
 	virtual int VTex( CreateInterfaceFn filesystemFactory, const char *pGameDir, int argc, const char **argv ) = 0;
 };
 
-#define IVTEX_VERSION_STRING "VTEX_003"
-
-
-#endif // IVTEX_H
+inline constexpr const char *IVTEX_VERSION_STRING = "VTEX_003";

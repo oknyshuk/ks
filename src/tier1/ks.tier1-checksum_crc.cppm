@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
+export module ks.tier1:checksum_crc;
+
+import std;
+import ks.math;
+
+export extern "C++" {
+
+typedef uint32 CRC32_t;
+
+void CRC32_Init( CRC32_t *pulCRC );
+void CRC32_ProcessBuffer( CRC32_t *pulCRC, const void *p, int len );
+void CRC32_Final( CRC32_t *pulCRC );
+CRC32_t	CRC32_GetTableEntry( unsigned int slot );
+
+inline CRC32_t CRC32_ProcessSingleBuffer( const void *p, int len )
+{
+	CRC32_t crc;
+
+	CRC32_Init( &crc );
+	CRC32_ProcessBuffer( &crc, p, len );
+	CRC32_Final( &crc );
+
+	return crc;
+}
+
+inline unsigned long CRC32_ConvertToUnsignedLong( CRC32_t *pulCRC  )
+{
+	return (unsigned long)(*pulCRC);
+}
+
+inline CRC32_t CRC32_ConvertFromUnsignedLong( unsigned long ulCRC  )
+{
+	return (CRC32_t)(ulCRC);
+}
+
+typedef uint64 CRC64_t;
+void CRC64_Init( CRC64_t *pCRC );
+void CRC64_ProcessBuffer( CRC64_t *pCRC, const void *p, int len );
+void CRC64_Final( CRC64_t *pCRC );
+
+inline CRC64_t CRC64_ProcessSingleBuffer( const void *p, int len )
+{
+	CRC64_t crc;
+
+	CRC64_Init( &crc );
+	CRC64_ProcessBuffer( &crc, p, len );
+	CRC64_Final( &crc );
+
+	return crc;
+}
+
+}

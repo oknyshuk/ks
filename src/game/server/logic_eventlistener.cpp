@@ -1,12 +1,35 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ====
-//
-// Purpose:		Player for HL2.
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Player for HL2.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "player.h"
 #include "reflect_datamap.h"
-#include "reflect_annotations.h"
 #include "logic_eventlistener.h"
 #include "GameEventListener.h"
 #include "igameevents.h"
@@ -24,25 +47,25 @@ public:
 	{}
 
 	// IGameEventVisitor2
-	virtual bool VisitString( const char* name, const char* value ) OVERRIDE
+	virtual bool VisitString( const char* name, const char* value ) override
 	{
 		mVM->SetValue( mTable, name, value );
 		return true;
 	}
 
-	virtual bool VisitFloat( const char* name, float value ) OVERRIDE
+	virtual bool VisitFloat( const char* name, float value ) override
 	{
 		mVM->SetValue( mTable, name, value );
 		return true;
 	}
 
-	virtual bool VisitInt( const char* name, int value ) OVERRIDE
+	virtual bool VisitInt( const char* name, int value ) override
 	{
 		mVM->SetValue( mTable, name, value );
 		return true;
 	}
 
-	virtual bool VisitBool( const char*name, bool value ) OVERRIDE
+	virtual bool VisitBool( const char*name, bool value ) override
 	{
 		mVM->SetValue( mTable, name, value );
 		return true;
@@ -74,7 +97,7 @@ void CLogicEventListener::FireGameEvent( IGameEvent *event )
 		return;
 
 	const char *name = event->GetName();
-	if ( Q_strcmp( name, STRING(m_iszEventName) ) == 0 )
+	if ( V_strcmp( name, STRING(m_iszEventName) ) == 0 )
 	{
 		if ( m_nTeam > 0 )
 		{
@@ -158,7 +181,7 @@ void CLogicEventListenerItemEquip::FireGameEvent( IGameEvent *event )
 		return;
 
 	const char *name = event->GetName();
-	if ( Q_strcmp( name, "item_equip" ) == 0 )
+	if ( V_strcmp( name, "item_equip" ) == 0 )
 	{
 		if ( m_nTeam > 0 )
 		{
@@ -180,7 +203,7 @@ void CLogicEventListenerItemEquip::FireGameEvent( IGameEvent *event )
 
 		if ( m_szWeaponClassname != NULL_STRING )
 		{
-			if ( Q_strcmp( m_szWeaponClassname.ToCStr(), event->GetString( "item", "" ) ) != 0 )
+			if ( V_strcmp( m_szWeaponClassname.ToCStr(), event->GetString( "item", "" ) ) != 0 )
 				return;
 		}
 
@@ -212,4 +235,3 @@ void CLogicEventListenerItemEquip::InputDisable( inputdata_t &inputdata )
 {
 	m_bIsEnabled = false;
 }
-

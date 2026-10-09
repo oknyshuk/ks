@@ -1,26 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "basetypes.h"
-#include "mathlib/vmatrix.h"
-#include "mathlib/mathlib.h"
-#include <string.h>
-#include "mathlib/vector4d.h"
-#include "ssemath.h"
-#include "tier0/dbg.h"
-
+import ks.math;
+import std;
 
 // ------------------------------------------------------------------------------------------- //
 // Helper functions.
 // ------------------------------------------------------------------------------------------- //
-
-#ifndef VECTOR_NO_SLOW_OPERATIONS
 
 VMatrix SetupMatrixIdentity()
 {
@@ -84,33 +70,28 @@ VMatrix SetupMatrixProjection(const Vector &vOrigin, const VPlane &thePlane)
 	VMatrix mRet;
 
 
-	#define PN thePlane.m_Normal
-	#define PD thePlane.m_Dist;
+		dot = thePlane.m_Normal[0]*vOrigin.x + thePlane.m_Normal[1]*vOrigin.y + thePlane.m_Normal[2]*vOrigin.z - thePlane.m_Dist;
 
-		dot = PN[0]*vOrigin.x + PN[1]*vOrigin.y + PN[2]*vOrigin.z - PD;
+		mRet.m[0][0] = dot - vOrigin.x * thePlane.m_Normal[0];
+		mRet.m[0][1] = -vOrigin.x * thePlane.m_Normal[1];
+		mRet.m[0][2] = -vOrigin.x * thePlane.m_Normal[2];
+		mRet.m[0][3] = -vOrigin.x * -thePlane.m_Dist;
 
-		mRet.m[0][0] = dot - vOrigin.x * PN[0];
-		mRet.m[0][1] = -vOrigin.x * PN[1];
-		mRet.m[0][2] = -vOrigin.x * PN[2];
-		mRet.m[0][3] = -vOrigin.x * -PD;
+		mRet.m[1][0] = -vOrigin.y * thePlane.m_Normal[0];
+		mRet.m[1][1] = dot - vOrigin.y * thePlane.m_Normal[1];
+		mRet.m[1][2] = -vOrigin.y * thePlane.m_Normal[2];
+		mRet.m[1][3] = -vOrigin.y * -thePlane.m_Dist;
 
-		mRet.m[1][0] = -vOrigin.y * PN[0];
-		mRet.m[1][1] = dot - vOrigin.y * PN[1];
-		mRet.m[1][2] = -vOrigin.y * PN[2];
-		mRet.m[1][3] = -vOrigin.y * -PD;
+		mRet.m[2][0] = -vOrigin.z * thePlane.m_Normal[0];
+		mRet.m[2][1] = -vOrigin.z * thePlane.m_Normal[1];
+		mRet.m[2][2] = dot - vOrigin.z * thePlane.m_Normal[2];
+		mRet.m[2][3] = -vOrigin.z * -thePlane.m_Dist;
 
-		mRet.m[2][0] = -vOrigin.z * PN[0];
-		mRet.m[2][1] = -vOrigin.z * PN[1];
-		mRet.m[2][2] = dot - vOrigin.z * PN[2];
-		mRet.m[2][3] = -vOrigin.z * -PD;
+		mRet.m[3][0] = -thePlane.m_Normal[0];
+		mRet.m[3][1] = -thePlane.m_Normal[1];
+		mRet.m[3][2] = -thePlane.m_Normal[2];
+		mRet.m[3][3] = dot + thePlane.m_Dist;
 
-		mRet.m[3][0] = -PN[0];
-		mRet.m[3][1] = -PN[1];
-		mRet.m[3][2] = -PN[2];
-		mRet.m[3][3] = dot + PD;
-
-	#undef PN
-	#undef PD	
 
 	return mRet;
 }
@@ -123,10 +104,10 @@ VMatrix SetupMatrixAxisRot(const Vector &vAxis, vec_t fDegrees)
 	vec_t fRadians;
 
 
-	fRadians = fDegrees * (M_PI / 180.0f);
+	fRadians = fDegrees * (std::numbers::pi / 180.0f);
 	
-	s = (vec_t)sin(fRadians);
-	c = (vec_t)cos(fRadians);
+	s = (vec_t)std::sin(fRadians);
+	c = (vec_t)std::cos(fRadians);
 	t = 1.0f - c;
 
 	tx = t * vAxis.x;	ty = t * vAxis.y;	tz = t * vAxis.z;
@@ -144,8 +125,8 @@ VMatrix SetupMatrixAxisRot(const Vector &vAxis, vec_t fDegrees)
 // above, but takes advantage of the fact that the sin angle is precomputed.
 VMatrix	SetupMatrixAxisToAxisRot(const Vector &vFromAxis, const Vector &vToAxis)
 {
-	Assert( vFromAxis.LengthSqr() == 1 ); // these axes
-	Assert( vToAxis.LengthSqr() == 1 ); // must be normal.
+	contract_assert( vFromAxis.LengthSqr() == 1 ); // these axes
+	contract_assert( vToAxis.LengthSqr() == 1 ); // must be normal.
 
 	vec_t s, c, t; // sin(theta), cos(theta), 1-cos
 	vec_t tx, ty, tz;
@@ -190,13 +171,11 @@ VMatrix SetupMatrixOrgAngles(const Vector &origin, const QAngle &vAngles)
 	return mRet;
 }
 
-#endif // VECTOR_NO_SLOW_OPERATIONS
-
 bool PlaneIntersection( const VPlane &vp1, const VPlane &vp2, const VPlane &vp3, Vector &vOut )
 {
 	Vector v2Cross3 = CrossProduct( vp2.m_Normal, vp3.m_Normal );
 	float flDenom = DotProduct( vp1.m_Normal, v2Cross3 );
-	if ( fabs( flDenom ) < FLT_EPSILON )
+	if ( std::fabs( flDenom ) < std::numeric_limits<float>::epsilon() )
 		return false;
 	Vector vRet = vp1.m_Dist * v2Cross3 + vp2.m_Dist * CrossProduct( vp3.m_Normal, vp1.m_Normal ) + vp3.m_Dist * CrossProduct( vp1.m_Normal, vp2.m_Normal );
 	vOut = vRet * ( 1.0 / flDenom );
@@ -235,7 +214,7 @@ VMatrix& VMatrix::operator=(const VMatrix &mOther)
 
 bool VMatrix::operator==( const VMatrix& src ) const
 {
-	return !memcmp( src.m, m, sizeof(m) );
+	return !std::memcmp( src.m, m, sizeof(m) );
 }
 
 void VMatrix::MatrixMul( const VMatrix &vm, VMatrix &out ) const
@@ -263,16 +242,12 @@ void VMatrix::MatrixMul( const VMatrix &vm, VMatrix &out ) const
 		);
 }
 
-#ifndef VECTOR_NO_SLOW_OPERATIONS
-
 VMatrix VMatrix::operator*(const VMatrix &vm) const
 {
 	VMatrix ret;
 	MatrixMul( vm, ret );
 	return ret;
 }
-
-#endif
 
 bool VMatrix::InverseGeneral(VMatrix &vInverse) const
 {
@@ -436,8 +411,6 @@ void MatrixInverseTranspose( const matrix3x4_t& src, matrix3x4_t& dst )
 }
 
 
-#ifndef VECTOR_NO_SLOW_OPERATIONS
-
 VMatrix VMatrix::InverseTR() const
 {
 	VMatrix ret;
@@ -507,8 +480,6 @@ VMatrix VMatrix::Transpose3x3() const
 		m[0][2], m[1][2], m[2][2], m[2][3],
 		m[3][0], m[3][1], m[3][2], m[3][3]);
 }
-
-#endif // VECTOR_NO_SLOW_OPERATIONS
 
 
 bool VMatrix::IsRotationMatrix() const
@@ -599,31 +570,31 @@ void MatrixToAngles( const VMatrix& src, QAngle& vAngles )
 	left[2] = src[2][1];
 	up[2] = src[2][2];
 
-	float xyDist = sqrtf( forward[0] * forward[0] + forward[1] * forward[1] );
+	float xyDist = std::sqrtf( forward[0] * forward[0] + forward[1] * forward[1] );
 	
 	// enough here to get angles?
 	if ( xyDist > 0.001f )
 	{
 		// (yaw)	y = ATAN( forward.y, forward.x );		-- in our space, forward is the X axis
-		vAngles[1] = RAD2DEG( atan2f( forward[1], forward[0] ) );
+		vAngles[1] = RAD2DEG( std::atan2f( forward[1], forward[0] ) );
 
 		// The engine does pitch inverted from this, but we always end up negating it in the DLL
 		// UNDONE: Fix the engine to make it consistent
 		// (pitch)	x = ATAN( -forward.z, sqrt(forward.x*forward.x+forward.y*forward.y) );
-		vAngles[0] = RAD2DEG( atan2f( -forward[2], xyDist ) );
+		vAngles[0] = RAD2DEG( std::atan2f( -forward[2], xyDist ) );
 
 		// (roll)	z = ATAN( left.z, up.z );
-		vAngles[2] = RAD2DEG( atan2f( left[2], up[2] ) );
+		vAngles[2] = RAD2DEG( std::atan2f( left[2], up[2] ) );
 	}
 	else	// forward is mostly Z, gimbal lock-
 	{
 		// (yaw)	y = ATAN( -left.x, left.y );			-- forward is mostly z, so use right for yaw
-		vAngles[1] = RAD2DEG( atan2f( -left[0], left[1] ) );
+		vAngles[1] = RAD2DEG( std::atan2f( -left[0], left[1] ) );
 
 		// The engine does pitch inverted from this, but we always end up negating it in the DLL
 		// UNDONE: Fix the engine to make it consistent
 		// (pitch)	x = ATAN( -forward.z, sqrt(forward.x*forward.x+forward.y*forward.y) );
-		vAngles[0] = RAD2DEG( atan2f( -forward[2], xyDist ) );
+		vAngles[0] = RAD2DEG( std::atan2f( -forward[2], xyDist ) );
 
 		// Assume no roll in this case as one degree of freedom has been lost (i.e. yaw == roll)
 		vAngles[2] = 0;
@@ -670,7 +641,7 @@ void MatrixCopy( const VMatrix& src, VMatrix& dst )
 {
 	if (&src != &dst)
 	{
-		memcpy( dst.m, src.m, 16 * sizeof(float) );
+		std::memcpy( dst.m, src.m, 16 * sizeof(float) );
 	}
 }
 
@@ -909,16 +880,12 @@ void MatrixTransformPlane( const VMatrix &src, const cplane_t &inPlane, cplane_t
 }
 
 
-#ifndef VECTOR_NO_SLOW_OPERATIONS
-
 VPlane VMatrix::operator*(const VPlane &thePlane) const
 {
 	VPlane ret;
 	TransformPlane( thePlane, ret );
 	return ret;
 }
-
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -968,7 +935,7 @@ void MatrixBuildRotationAboutAxis( VMatrix &dst, const Vector &vAxisOfRot, float
 void MatrixBuildRotation( VMatrix &dst, const Vector& initialDirection, const Vector& finalDirection )
 {
 	float angle = DotProduct( initialDirection, finalDirection );
-	Assert( IsFinite(angle) );
+	contract_assert( IsFinite(angle) );
 	
 	Vector axis;
 
@@ -1002,27 +969,21 @@ void MatrixBuildRotation( VMatrix &dst, const Vector& initialDirection, const Ve
 	{
 		CrossProduct( initialDirection, finalDirection, axis );
 		VectorNormalize( axis );
-		angle = acos(angle) * 180 / M_PI;
+		angle = std::acos(angle) * 180 / std::numbers::pi;
 	}
 
 	MatrixBuildRotationAboutAxis( dst, axis, angle );
 
-#ifdef _DEBUG
-	Vector test;
-	Vector3DMultiply( dst, initialDirection, test );
-	test -= finalDirection;
-	Assert( test.LengthSqr() < 1e-3 );
-#endif
 }
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 void MatrixBuildRotateZ( VMatrix &dst, float angleDegrees )
 {
-	float radians = angleDegrees * ( M_PI / 180.0f );
+	float radians = angleDegrees * ( std::numbers::pi / 180.0f );
 
-	float fSin = ( float )sin( radians );
-	float fCos = ( float )cos( radians );
+	float fSin = ( float )std::sin( radians );
+	float fCos = ( float )std::cos( radians );
 
 	dst[0][0] = fCos; dst[0][1] = -fSin; dst[0][2] = 0.0f; dst[0][3] = 0.0f;
 	dst[1][0] = fSin; dst[1][1] =  fCos; dst[1][2] = 0.0f; dst[1][3] = 0.0f;
@@ -1047,10 +1008,10 @@ void MatrixBuildScale( VMatrix &dst, const Vector& scale )
 void MatrixBuildPerspective( VMatrix &dst, float fovX, float fovY, float zNear, float zFar )
 {
 	// FIXME: collapse all of this into one matrix after we figure out what all should be in here.
-	float width = 2 * zNear * tan( fovX * ( M_PI/180.0f ) * 0.5f );
-	float height = 2 * zNear * tan( fovY * ( M_PI/180.0f ) * 0.5f );
+	float width = 2 * zNear * std::tan( fovX * ( std::numbers::pi/180.0f ) * 0.5f );
+	float height = 2 * zNear * std::tan( fovY * ( std::numbers::pi/180.0f ) * 0.5f );
 
-	memset( dst.Base(), 0, sizeof( dst ) );
+	std::memset( dst.Base(), 0, sizeof( dst ) );
 	dst[0][0]  = 2.0F * zNear / width;
 	dst[1][1]  = 2.0F * zNear / height;
 	dst[2][2] = -zFar / ( zNear - zFar );
@@ -1083,12 +1044,12 @@ static inline void CalculateAABBForNormalizedFrustum_Helper( float x, float y, f
 	Vector volumeSpacePos( x, y, z );
 
 	// Make sure it's been clipped
-	Assert( volumeSpacePos[0] >= -1e-3f );
-	Assert( volumeSpacePos[0] - 1.0f <= 1e-3f );
-	Assert( volumeSpacePos[1] >= -1e-3f );
-	Assert( volumeSpacePos[1] - 1.0f <= 1e-3f );
-	Assert( volumeSpacePos[2] >= -1e-3f );
-	Assert( volumeSpacePos[2] - 1.0f <= 1e-3f );
+	contract_assert( volumeSpacePos[0] >= -1e-3f );
+	contract_assert( volumeSpacePos[0] - 1.0f <= 1e-3f );
+	contract_assert( volumeSpacePos[1] >= -1e-3f );
+	contract_assert( volumeSpacePos[1] - 1.0f <= 1e-3f );
+	contract_assert( volumeSpacePos[2] >= -1e-3f );
+	contract_assert( volumeSpacePos[2] - 1.0f <= 1e-3f );
 
 	Vector worldPos;
 	Vector3DMultiplyPositionProjective( volumeToWorld, volumeSpacePos, worldPos );
@@ -1155,7 +1116,7 @@ void CalculateSphereFromProjectionMatrixInverse( const VMatrix &volumeToWorld, V
 	float h2Sqr = vecCenterFar.DistToSqr( vecFarEdge );
 	float x = (l*l + h2Sqr - h1Sqr) / (2.0f * l);
 	VectorMA( vecCenterNear, (x / l), vecDelta, *pCenter );
-	*pflRadius = sqrt( h1Sqr + x*x );
+	*pflRadius = std::sqrt( h1Sqr + x*x );
 }
 
 //-----------------------------------------------------------------------------
@@ -1247,7 +1208,7 @@ void MatrixBuildOrtho( VMatrix& dst, double left, double top, double right, doub
 
 void MatrixBuildPerspectiveX( VMatrix& dst, double flFovX, double flAspect, double flZNear, double flZFar )
 {
-	float flWidth = 2.0f * flZNear * tanf( flFovX * M_PI / 360.0f );
+	float flWidth = 2.0f * flZNear * std::tanf( flFovX * std::numbers::pi / 360.0f );
 	float flHeight = flWidth / flAspect;
 	dst.Init(   2.0f * flZNear / flWidth,						0.0f,							0.0f,										0.0f,
 				0.0f,  2.0f  * flZNear/ flHeight,							0.0f,										0.0f,
@@ -1257,7 +1218,7 @@ void MatrixBuildPerspectiveX( VMatrix& dst, double flFovX, double flAspect, doub
 
 void MatrixBuildPerspectiveOffCenterX( VMatrix& dst, double flFovX, double flAspect, double flZNear, double flZFar, double bottom, double top, double left, double right )
 {
-	float flWidth = 2.0f * flZNear * tanf( flFovX * M_PI / 360.0f );
+	float flWidth = 2.0f * flZNear * std::tanf( flFovX * std::numbers::pi / 360.0f );
 	float flHeight = flWidth / flAspect;
 
 	// bottom, top, left, right are 0..1 so convert to -<val>/2..<val>/2
@@ -1313,11 +1274,9 @@ void ExtractClipPlanesFromNonTransposedMatrix( const VMatrix &viewProjMatrix, VP
 		float flLen2 = pPlanesOut[i].m_Normal.x * pPlanesOut[i].m_Normal.x + pPlanesOut[i].m_Normal.y * pPlanesOut[i].m_Normal.y + pPlanesOut[i].m_Normal.z * pPlanesOut[i].m_Normal.z;
 		if ( flLen2 != 0.0f )
 		{
-			float flScale = 1.0f / sqrt( flLen2 );
+			float flScale = 1.0f / std::sqrt( flLen2 );
 			pPlanesOut[i].m_Normal *= flScale;
 			pPlanesOut[i].m_Dist *= flScale;
 		}
 	}
 }
-
-

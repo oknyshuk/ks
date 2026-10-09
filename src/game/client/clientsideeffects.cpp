@@ -1,18 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.core;
 #include "clientsideeffects.h"
-#include "tier0/vprof.h"
 
 bool g_FXCreationAllowed = false;
 
@@ -44,7 +35,7 @@ bool FXCreationAllowed( void )
 CClientSideEffect::CClientSideEffect( const char *name )
 {
 	m_pszName = name;
-	Assert( name );
+	contract_assert( name );
 
 	m_bActive = true;
 }
@@ -82,7 +73,7 @@ void CClientSideEffect::Destroy( void )
 	m_bActive = false;
 }
 
-#define MAX_EFFECTS 256
+constexpr auto MAX_EFFECTS = 256;
 
 //-----------------------------------------------------------------------------
 // Purpose: Implements effects list interface
@@ -175,7 +166,7 @@ void CEffectsList::RemoveEffect( int effectIndex )
 //-----------------------------------------------------------------------------
 void CEffectsList::DrawEffects( double frametime )
 {
-	VPROF_BUDGET( "CEffectsList::DrawEffects", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "CEffectsList::DrawEffects", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	int i;
 	CClientSideEffect *effect;
 

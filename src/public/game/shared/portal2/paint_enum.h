@@ -1,5 +1,4 @@
-#ifndef PAINT_ENUM_H
-#define PAINT_ENUM_H
+#pragma once
 
 //=============================================================================
 // Paint Power Type Constants
@@ -26,4 +25,3 @@ enum PaintPowerType
 	INVALID_PAINT_POWER
 };
 
-#endif // PAINT_ENUM_H

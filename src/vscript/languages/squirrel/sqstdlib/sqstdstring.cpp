@@ -1,12 +1,14 @@
 /* see copyright notice in squirrel.h */
 
-#include <squirrel.h>
-#include <sqstdstring.h>
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <assert.h>
+
+#include <squirrel.h>
+#include <sqstdstring.h>
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
 #endif
 

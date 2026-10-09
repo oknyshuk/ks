@@ -1,16 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DYNAMICVB_H
-#define DYNAMICVB_H
-
-
+import ks.core;
 #include "shaderapidx8_global.h"
+#include "locald3dtypes.h"
+import std;
+#include "shaderapi/ishaderutil.h"
+#include "materialsystem/ivballoctracker.h"
+#include "materialsystem/imesh.h"
+
+static constexpr auto kTextureGroupDynamicVertexBufferGlobal = ks::Concat( "TexGroup_global_", TEXTURE_GROUP_DYNAMIC_VERTEX_BUFFER );
 
 /////////////////////////////
 // D. Sim Dietrich Jr.
@@ -21,7 +21,7 @@
 // Helper function to unbind an vertex buffer
 void Unbind( IDirect3DVertexBuffer9 *pVertexBuffer );
 
-#define X360_VERTEX_BUFFER_SIZE_MULTIPLIER 2.0 //minimum of 1, only affects dynamic buffers
+inline constexpr auto X360_VERTEX_BUFFER_SIZE_MULTIPLIER = 2.0; //minimum of 1, only affects dynamic buffers
 //#define X360_BLOCK_ON_VB_FLUSH //uncomment to block until all data is consumed when a flush is requested. Otherwise we only block when absolutely necessary
 
 //#define SPEW_VERTEX_BUFFER_STALLS //uncomment to allow buffer stall spewing.
@@ -40,7 +40,7 @@ public:
 	LPDIRECT3DVERTEXBUFFER GetInterface() const 
 	{ 
 		// If this buffer still exists, then Late Creation didn't happen. Best case: we'll render the wrong image. Worst case: Crash.
-		Assert( !m_pSysmemBuffer );
+		contract_assert( !m_pSysmemBuffer );
 		return m_pVB; 
 	}
 	
@@ -72,22 +72,16 @@ public:
 	// UID
 	unsigned int UID() const 
 	{ 
-#ifdef RECORDING
-		return m_UID; 
-#else
 		return 0;
-#endif
 	}
 
 	void HandlePerFrameTextureStats( int frame )
 	{
-#ifdef VPROF_ENABLED
 		if ( m_Frame != frame && !m_bDynamic )
 		{
 			m_Frame = frame;
 			m_pFrameCounter += m_nBufferSize;
 		}
-#endif
 	}
 	
 	// Do we have enough room without discarding?
@@ -104,7 +98,7 @@ public:
 	// allows one dynamic vb to be shared for multiple formats
 	void ChangeConfiguration( int vertexSize, int totalSize ) 
 	{
-		Assert( m_bDynamic && !m_bLocked && vertexSize );
+		contract_assert( m_bDynamic && !m_bLocked && vertexSize );
 		m_VertexSize = vertexSize;
 		m_VertexCount = m_nBufferSize / vertexSize;
 	}
@@ -131,11 +125,7 @@ private:
 	inline void ReallyUnlock( int unlockBytes )
 	{
 			unlockBytes; // Unused here
-			#if SHADERAPI_NO_D3DDeviceWrapper
-			m_pVB->Unlock();
-			#else
 			Dx9Device()->Unlock( m_pVB );
-			#endif
 	}
 
 	enum LOCK_FLAGS
@@ -164,19 +154,14 @@ private:
 	unsigned char	m_bSoftwareVertexProcessing : 1;
 	unsigned char	m_bLateCreateShouldDiscard : 1;
 
-#ifdef VPROF_ENABLED
 	int				m_Frame;
 	int				*m_pFrameCounter;
 	int				*m_pGlobalCounter;
-#endif
 
 #ifdef _DEBUG
 	static int		s_BufferCount;
 #endif
 
-#ifdef RECORDING
-	unsigned int	m_UID;
-#endif
 };
 
 
@@ -200,23 +185,13 @@ inline CVertexBuffer::CVertexBuffer(D3DDeviceWrapper * pD3D, VertexFormat_t fmt,
 		m_bDynamic(dynamic),
 		m_VertexBufferFormat( fmt ),
 		m_bLateCreateShouldDiscard( false )
-#ifdef VPROF_ENABLED
 		,m_Frame( -1 )
-#endif
 {
-	MEM_ALLOC_CREDIT_( pTextureBudgetName );
-
-#ifdef RECORDING
-	// assign a UID
-	static unsigned int uid = 0;
-	m_UID = uid++;
-#endif
 
 #ifdef _DEBUG
 	++s_BufferCount;
 #endif
 
-#ifdef VPROF_ENABLED
 	if ( !m_bDynamic )
 	{
 		char name[256];
@@ -230,13 +205,12 @@ inline CVertexBuffer::CVertexBuffer(D3DDeviceWrapper * pD3D, VertexFormat_t fmt,
 	}
 	else
 	{
-		m_pGlobalCounter = g_VProfCurrentProfile.FindOrCreateCounter( "TexGroup_global_" TEXTURE_GROUP_DYNAMIC_VERTEX_BUFFER, COUNTER_GROUP_TEXTURE_GLOBAL );
+		m_pGlobalCounter = g_VProfCurrentProfile.FindOrCreateCounter( kTextureGroupDynamicVertexBufferGlobal.c_str(), COUNTER_GROUP_TEXTURE_GLOBAL );
 	}
-#endif
 
 	if ( !g_pShaderUtil->IsRenderThreadSafe() )
 	{
-		m_pSysmemBuffer = ( byte * )malloc( m_nBufferSize );
+		m_pSysmemBuffer = ( byte * )std::malloc( m_nBufferSize );
 		m_nSysmemBufferStartBytes = 0;
 	}
 	else
@@ -245,20 +219,18 @@ inline CVertexBuffer::CVertexBuffer(D3DDeviceWrapper * pD3D, VertexFormat_t fmt,
 		Create( pD3D );
 	}
 
-#ifdef VPROF_ENABLED
 	if ( !m_bDynamic )
 	{
-		Assert( m_pGlobalCounter );
+		contract_assert( m_pGlobalCounter );
 		*m_pGlobalCounter += m_nBufferSize;
 	}
-#endif
 }
 
 
 void CVertexBuffer::Create( D3DDeviceWrapper *pD3D )
 {
 	D3DVERTEXBUFFER_DESC desc;
-	memset( &desc, 0x00, sizeof( desc ) );
+	std::memset( &desc, 0x00, sizeof( desc ) );
 	desc.Format = D3DFMT_VERTEXDATA;
 	desc.Size = m_nBufferSize;
 	desc.Type = D3DRTYPE_VERTEXBUFFER;
@@ -272,20 +244,13 @@ void CVertexBuffer::Create( D3DDeviceWrapper *pD3D )
 	{
 		desc.Usage |= D3DUSAGE_DYNAMIC;
 		// Dynamic meshes should never be compressed (slows down writing to them)
-		Assert( CompressionType( m_TheFVF ) == VERTEX_COMPRESSION_NONE );
+		contract_assert( CompressionType( m_TheFVF ) == VERTEX_COMPRESSION_NONE );
 	}
 	if ( m_bSoftwareVertexProcessing )
 	{
 		desc.Usage |= D3DUSAGE_SOFTWAREPROCESSING;
 	}
 
-	RECORD_COMMAND( DX8_CREATE_VERTEX_BUFFER, 6 );
-	RECORD_INT( m_UID );
-	RECORD_INT( m_nBufferSize );
-	RECORD_INT( desc.Usage );
-	RECORD_INT( desc.FVF );
-	RECORD_INT( desc.Pool );
-	RECORD_INT( m_bDynamic );
 
 	HRESULT hr = pD3D->CreateVertexBuffer( m_nBufferSize, desc.Usage, desc.FVF, desc.Pool, &m_pVB, nullptr );
 
@@ -304,30 +269,23 @@ void CVertexBuffer::Create( D3DDeviceWrapper *pD3D )
 		switch ( hr )
 		{
 		case D3DERR_INVALIDCALL:
-			Assert( !"D3DERR_INVALIDCALL" );
+			contract_assert( !"D3DERR_INVALIDCALL" );
 			break;
 		case D3DERR_OUTOFVIDEOMEMORY:
-			Assert( !"D3DERR_OUTOFVIDEOMEMORY" );
+			contract_assert( !"D3DERR_OUTOFVIDEOMEMORY" );
 			break;
 		case E_OUTOFMEMORY:
-			Assert( !"E_OUTOFMEMORY" );
+			contract_assert( !"E_OUTOFMEMORY" );
 			break;
 		default:
-			Assert( 0 );
+			contract_assert( 0 );
 			break;
 		}
 	}
 #endif
 
-	Assert( m_pVB );
+	contract_assert( m_pVB );
 
-
-#ifdef MEASURE_DRIVER_ALLOCATIONS
-	int nMemUsed = 1024;
-	VPROF_INCREMENT_GROUP_COUNTER( "vb count", COUNTER_GROUP_NO_RESET, 1 );
-	VPROF_INCREMENT_GROUP_COUNTER( "vb driver mem", COUNTER_GROUP_NO_RESET, nMemUsed );
-	VPROF_INCREMENT_GROUP_COUNTER( "total driver mem", COUNTER_GROUP_NO_RESET, nMemUsed );
-#endif
 
 	// Track VB allocations
 	g_VBAllocTracker->CountVB( m_pVB, m_bDynamic, m_nBufferSize, m_VertexSize, m_VertexBufferFormat );
@@ -344,20 +302,12 @@ inline CVertexBuffer::~CVertexBuffer()
 
 	if ( !m_bExternalMemory )
 	{
-#ifdef MEASURE_DRIVER_ALLOCATIONS
-		int nMemUsed = 1024;
-		VPROF_INCREMENT_GROUP_COUNTER( "vb count", COUNTER_GROUP_NO_RESET, -1 );
-		VPROF_INCREMENT_GROUP_COUNTER( "vb driver mem", COUNTER_GROUP_NO_RESET, -nMemUsed );
-		VPROF_INCREMENT_GROUP_COUNTER( "total driver mem", COUNTER_GROUP_NO_RESET, -nMemUsed );
-#endif
 
-#ifdef VPROF_ENABLED
 		if ( !m_bDynamic )
 		{
-			Assert( m_pGlobalCounter );
+			contract_assert( m_pGlobalCounter );
 			*m_pGlobalCounter -= m_nBufferSize;
 		}
-#endif
 
 #ifdef _DEBUG
 		--s_BufferCount;
@@ -368,20 +318,14 @@ inline CVertexBuffer::~CVertexBuffer()
 
 	if ( m_pSysmemBuffer )
 	{
-		free( m_pSysmemBuffer );
+		std::free( m_pSysmemBuffer );
 		m_pSysmemBuffer = nullptr;
 	}
 
 	if ( m_pVB && !m_bExternalMemory )
 	{
-		RECORD_COMMAND( DX8_DESTROY_VERTEX_BUFFER, 1 );
-		RECORD_INT( m_UID );
 
-		#if SHADERAPI_NO_D3DDeviceWrapper
-		m_pVB->Release();
-		#else
 		Dx9Device()->Release( m_pVB );
-		#endif
 	}
 }
 
@@ -409,7 +353,7 @@ inline bool CVertexBuffer::HasEnoughRoom( int numVertices ) const
 //-----------------------------------------------------------------------------
 inline void CVertexBuffer::BlockUntilUnused( int nBufferSize )
 {
-	Assert( nBufferSize <= m_nBufferSize );
+	contract_assert( nBufferSize <= m_nBufferSize );
 
 }
 
@@ -430,7 +374,7 @@ inline unsigned char* CVertexBuffer::Lock( int numVerts, int& baseVertexIndex )
 	// Ensure there is enough space in the VB for this data
 	if ( numVerts > m_VertexCount ) 
 	{ 
-		Assert( 0 );
+		contract_assert( 0 );
 		return 0; 
 	}
 	
@@ -464,19 +408,14 @@ inline unsigned char* CVertexBuffer::Lock( int numVerts, int& baseVertexIndex )
 
 
 	int nLockOffset = NextLockOffset( );
-	RECORD_COMMAND( DX8_LOCK_VERTEX_BUFFER, 4 );
-	RECORD_INT( m_UID );
-	RECORD_INT( nLockOffset );
-	RECORD_INT( nBufferSize );
-	RECORD_INT( dwFlags );
 
 	// If the caller isn't in the thread that owns the render lock, need to return a system memory pointer--cannot talk to GL from 
 	// the non-current thread. 
 	if ( !m_pSysmemBuffer && !g_pShaderUtil->IsRenderThreadSafe() )
 	{
-		m_pSysmemBuffer = ( byte * )malloc( m_nBufferSize );
+		m_pSysmemBuffer = ( byte * )std::malloc( m_nBufferSize );
 		m_nSysmemBufferStartBytes = nLockOffset;
-		Assert( ( m_nSysmemBufferStartBytes % m_VertexSize ) == 0 );
+		contract_assert( ( m_nSysmemBufferStartBytes % m_VertexSize ) == 0 );
 	}
 
 	if ( m_pSysmemBuffer != nullptr )
@@ -484,25 +423,18 @@ inline unsigned char* CVertexBuffer::Lock( int numVerts, int& baseVertexIndex )
 		// Ensure that we're never moving backwards in a buffer--this code would need to be rewritten if so. 
 		// We theorize this can happen if you hit the end of a buffer and then wrap before drawing--but
 		// this would probably break in other places as well.
-		Assert( nLockOffset >= m_nSysmemBufferStartBytes );
+		contract_assert( nLockOffset >= m_nSysmemBufferStartBytes );
 		pLockedData = m_pSysmemBuffer + nLockOffset;
 	}
 	else 
 	{
-		#if SHADERAPI_NO_D3DDeviceWrapper
-		m_pVB->Lock( nLockOffset, 
-						   nBufferSize, 
-						   reinterpret_cast< void** >( &pLockedData ), 
-						   dwFlags );
-		#else
 		Dx9Device()->Lock( m_pVB, nLockOffset, 
 						   nBufferSize, 
 						   reinterpret_cast< void** >( &pLockedData ), 
 						   dwFlags );
-		#endif
 	}
 
-	Assert( pLockedData != 0 );
+	contract_assert( pLockedData != 0 );
 	m_bLocked = true;
 	baseVertexIndex = nLockOffset / m_VertexSize;
 	return pLockedData;
@@ -520,14 +452,14 @@ inline unsigned char* CVertexBuffer::Modify( bool bReadOnly, int firstVertex, in
 	m_nLockCount = numVerts;
 
 	// If this hits, m_pSysmemBuffer logic needs to be added to this code.
-	Assert( g_pShaderUtil->IsRenderThreadSafe() );
-	Assert( !m_pSysmemBuffer );		// if this hits, then we need to add code to handle it
+	contract_assert( g_pShaderUtil->IsRenderThreadSafe() );
+	contract_assert( !m_pSysmemBuffer );		// if this hits, then we need to add code to handle it
 
-	Assert( m_pVB && !m_bDynamic );
+	contract_assert( m_pVB && !m_bDynamic );
 
 	if ( firstVertex + numVerts > m_VertexCount ) 
 	{ 
-		Assert( 0 ); 
+		contract_assert( 0 ); 
 		return nullptr; 
 	}
 
@@ -537,30 +469,17 @@ inline unsigned char* CVertexBuffer::Modify( bool bReadOnly, int firstVertex, in
 		dwFlags |= D3DLOCK_READONLY;
 	}
 
-	RECORD_COMMAND( DX8_LOCK_VERTEX_BUFFER, 4 );
-	RECORD_INT( m_UID );
-	RECORD_INT( firstVertex * m_VertexSize );
-	RECORD_INT( numVerts * m_VertexSize );
-	RECORD_INT( dwFlags );
 
 	// mmw: for forcing all dynamic...        LOCKFLAGS_FLUSH );
-	#if SHADERAPI_NO_D3DDeviceWrapper
-	m_pVB->Lock( 
-		firstVertex * m_VertexSize, 
-		numVerts * m_VertexSize, 
-		reinterpret_cast< void** >( &pLockedData ), 
-		dwFlags );
-	#else
 	Dx9Device()->Lock( 
 		m_pVB, 
 		firstVertex * m_VertexSize, 
 		numVerts * m_VertexSize, 
 		reinterpret_cast< void** >( &pLockedData ), 
 		dwFlags );
-	#endif
 	
 	m_Position = firstVertex * m_VertexSize;
-	Assert( pLockedData != 0 );
+	contract_assert( pLockedData != 0 );
 	m_bLocked = true;
 
 	return pLockedData;
@@ -577,8 +496,6 @@ inline void CVertexBuffer::Unlock( int numVerts )
 	int nLockOffset = NextLockOffset();
 	int nBufferSize = numVerts * m_VertexSize;
 
-	RECORD_COMMAND( DX8_UNLOCK_VERTEX_BUFFER, 1 );
-	RECORD_INT( m_UID );
 
 	if ( m_pSysmemBuffer != nullptr )
 	{
@@ -632,25 +549,18 @@ inline void CVertexBuffer::HandleLateCreation( )
 	}
 
 	// Don't use the Lock function, it does a bunch of stuff we don't want.
-	#if SHADERAPI_NO_D3DDeviceWrapper
-	HRESULT hr = m_pVB->Lock( m_nSysmemBufferStartBytes, 
-	                         dataToWriteBytes,
-				             &pWritePtr,
-				             dwFlags);
-#else
 	HRESULT hr = Dx9Device()->Lock( m_pVB, m_nSysmemBufferStartBytes,
 		dataToWriteBytes,
 		&pWritePtr,
 		dwFlags );
-#endif
 
 	// If this fails we're about to crash. Consider skipping the update and leaving 
 	// m_pSysmemBuffer around to try again later. (For example in case of device loss)
-	Assert( SUCCEEDED( hr ) ); hr; 
-	memcpy( pWritePtr, m_pSysmemBuffer + m_nSysmemBufferStartBytes, dataToWriteBytes );
+	contract_assert( SUCCEEDED( hr ) ); hr; 
+	std::memcpy( pWritePtr, m_pSysmemBuffer + m_nSysmemBufferStartBytes, dataToWriteBytes );
 	ReallyUnlock( dataToWriteBytes );
 
-	free( m_pSysmemBuffer );
+	std::free( m_pSysmemBuffer );
 	m_pSysmemBuffer = nullptr;
 }
 
@@ -660,6 +570,3 @@ inline int CVertexBuffer::AllocationSize() const
 {
 	return m_VertexCount * m_VertexSize;
 }
-
-
-#endif  // DYNAMICVB_H

@@ -1,20 +1,18 @@
-//===== Copyright  1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#ifndef BRUSHBATCHRENDER_H
-#define BRUSHBATCHRENDER_H
+import std;
+import ks.math;
+#include "surfacehandle.h"
+#include "ivrenderview.h"
+#include "iclientrenderable.h"
+#include "gl_model_private.h"
 
-#include <memory>
-#include <mutex>
-#include <vector>
-
-
-
+struct model_t;
+class IClientEntity;
+class IMaterial;
+class IMatRenderContext;
 
 // UNDONE: These are really guesses.  Do we ever exceed these limits?
 const int MAX_TRANS_NODES = 256;
@@ -199,6 +197,3 @@ private:
 #if !defined( DEDICATED )
 extern CBrushBatchRender g_BrushBatchRenderer;
 #endif
-
-
-#endif // BRUSHBATCHRENDER_H

@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_SENTENCE_H
-#define AI_SENTENCE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ai_component.h"
 #include "ai_basenpc.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-
 
 //-----------------------------------------------------------------------------
 // Sentence helper class used by humanoids sometimes. To use:
@@ -42,7 +35,7 @@ enum SentencePriority_t
 //-----------------------------------------------------------------------------
 // This is the met of the class
 //-----------------------------------------------------------------------------
-abstract_class CAI_SentenceBase : public CAI_Component 
+class CAI_SentenceBase : public CAI_Component 
 {
 	DECLARE_CLASS_NOBASE( CAI_SentenceBase );
 	DECLARE_SIMPLE_DATADESC();
@@ -166,7 +159,3 @@ template< class NPC_CLASS > float CAI_Sentence< NPC_CLASS >::m_sentenceVolume = 
 template< class NPC_CLASS > soundlevel_t CAI_Sentence< NPC_CLASS >::m_sentenceSoundlevel = SNDLVL_NORM;
 template< class NPC_CLASS > int CAI_Sentence< NPC_CLASS >::m_voicePitchMin = 0;
 template< class NPC_CLASS > int CAI_Sentence< NPC_CLASS >::m_voicePitchMax = 0;
-
-
-
-#endif	// AI_SENTENCE_H

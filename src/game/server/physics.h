@@ -1,20 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: This is the abstraction layer for the physics simulation system
 // Any calls to the external physics library (ipion) should be made through this
-// layer.  Eventually, the physics system will probably become a DLL and made 
+// layer.  Eventually, the physics system will probably become a DLL and made
 // accessible to the client & server side code.
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef PHYSICS_H
-#define PHYSICS_H
-
 
 #include "physics_shared.h"
+#include "entitylist.h"
+#include "iservernetworkable.h"
 
 class CBaseEntity;
 class IPhysicsMaterial;
@@ -78,7 +73,7 @@ struct triggerevent_t
 	}
 	inline void Clear()
 	{
-		memset( this, 0, sizeof(*this) );
+		std::memset( this, 0, sizeof(*this) );
 	}
 };
 
@@ -177,5 +172,3 @@ void PhysGetMassCenterOverride( CBaseEntity *pEntity, vcollide_t *pCollide, soli
 void PhysSetEntityGameFlags( CBaseEntity *pEntity, unsigned short flags );
 
 void DebugDrawContactPoints(IPhysicsObject *pPhysics);
-
-#endif		// PHYSICS_H

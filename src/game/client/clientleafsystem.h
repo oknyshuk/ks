@@ -1,37 +1,25 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Revision: $
-// $NoKeywords: $
-//
-// This file contains code to allow us to associate client data with bsp leaves.
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#if !defined( CLIENTLEAFSYSTEM_H )
-#define CLIENTLEAFSYSTEM_H
+// Purpose: This file contains code to allow us to associate client data with bsp leaves.
 
+import ks.tier1;
 #include "igamesystem.h"
 #include "engine/IClientLeafSystem.h"
 #include "cdll_int.h"
 #include "ivrenderview.h"
-#include "tier1/fixed_pool.h"
-#include "tier1/refcount.h"
-
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
 struct WorldListInfo_t;
 class IClientRenderable;
-class Vector;
 class CGameTrace;
 typedef CGameTrace trace_t;
 struct Ray_t;
-class Vector2D;
 class CStaticProp;
-class CVolumeCuller;
 
 
 //-----------------------------------------------------------------------------
@@ -67,9 +55,11 @@ struct DistanceFadeInfo_t
 };
 
 
-class CClientRenderablesList : public CRefCounted<>
+class CClientRenderablesList : public CRefCounted<>, public ks::pooled< CClientRenderablesList >
 {
-	DECLARE_FIXEDSIZE_ALLOCATOR( CClientRenderablesList );
+	private:
+		static ks::fixed_pool s_Allocator;
+		friend class ks::pooled< CClientRenderablesList >;
 
 public:
 	CClientRenderablesList()
@@ -210,7 +200,7 @@ enum
 //-----------------------------------------------------------------------------
 // The client leaf system
 //-----------------------------------------------------------------------------
-abstract_class IClientLeafShadowEnum
+class IClientLeafShadowEnum
 {
 public:
 	// The user ID is the id passed into CreateShadow
@@ -229,15 +219,15 @@ public:
 
 
 // defines for subsystem ids. each subsystem id uses up one pointer in each leaf
-#define CLSUBSYSTEM_DETAILOBJECTS 0
-#define N_CLSUBSYSTEMS 1
+inline constexpr int CLSUBSYSTEM_DETAILOBJECTS = 0;
+inline constexpr int N_CLSUBSYSTEMS = 1;
 
 
 
 //-----------------------------------------------------------------------------
 // The client leaf system
 //-----------------------------------------------------------------------------
-abstract_class IClientLeafSystem : public IClientLeafSystemEngine, public IGameSystemPerFrame
+class IClientLeafSystem : public IClientLeafSystemEngine, public IGameSystemPerFrame
 {
 public:
 	// Adds and removes renderables from the leaf lists
@@ -360,8 +350,3 @@ inline IClientLeafSystem* ClientLeafSystem()
 {
 	return g_pClientLeafSystem;
 }
-
-
-#endif	// CLIENTLEAFSYSTEM_H
-
-

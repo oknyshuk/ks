@@ -1,18 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		The default shared conditions
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef	CONDITION_H
-#define	CONDITION_H
+// Purpose: The default shared conditions
 
 // NOTE: Changing this constant will break save files!!! (changes type of CAI_ScheduleBits)
 #ifndef MAX_CONDITIONS
@@ -119,5 +109,3 @@ enum SCOND_t
 	// ======================================
 	LAST_SHARED_CONDITION	
 };
-
-#endif	//CONDITION_H

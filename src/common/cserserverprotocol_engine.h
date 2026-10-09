@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CSERSERVERPROTOCOL_ENGINE_H
-#define CSERSERVERPROTOCOL_ENGINE_H
-
-// NOTE:  These defined must match the ones in Steam's CSERServerProtocol.h!!!
-
-#define C2M_REPORT_GAMESTATISTICS				'k'
-	#define C2M_REPORT_GAMESTATISTICS_PROTOCOL_VERSION_1	1
-	#define C2M_REPORT_GAMESTATISTICS_PROTOCOL_VERSION	2
+inline constexpr auto C2M_REPORT_GAMESTATISTICS = 'k';
+	inline constexpr auto C2M_REPORT_GAMESTATISTICS_PROTOCOL_VERSION_1 = 1;
+	inline constexpr auto C2M_REPORT_GAMESTATISTICS_PROTOCOL_VERSION = 2;
 
 	typedef enum
 	{
@@ -36,7 +29,7 @@
 	//		u32(appID)
 	//		u32 requested upload data length
 
-#define M2C_ACKREPORT_GAMESTATISTICS			'l'
+inline constexpr auto M2C_ACKREPORT_GAMESTATISTICS = 'l';
 	// M2C_ACKREPORT_GAMESTATISTICS details
 	//	u8(protocol okay (bool))
 	//	u8(GS_NO_UPLOAD or GS_UPLOAD_REQESTED )
@@ -45,8 +38,8 @@
 	//	  u16(harvester port #)
 	//	  u32(upload context id)
 
-#define C2M_PHONEHOME							'm'
-	#define C2M_PHONEHOME_PROTOCOL_VERSION	3
+inline constexpr auto C2M_PHONEHOME = 'm';
+	inline constexpr auto C2M_PHONEHOME_PROTOCOL_VERSION = 3;
 
 	// C2M_PHONEHOME
 	//	u8( C2M_PHONEHOME_PROTOCOL_VERSION )
@@ -66,14 +59,14 @@
 		//    4:  map finished + mapname
 		//	string( mapname )
 
-#define M2C_ACKPHONEHOME						'n'
+inline constexpr auto M2C_ACKPHONEHOME = 'n';
 	// M2C_ACKPHONEHOME details
 	//	u8(connection allowed (bool))
 	//  u32(sessionid)
 
-#define C2M_BUGREPORT						'o'
+inline constexpr auto C2M_BUGREPORT = 'o';
 
-	#define C2M_BUGREPORT_PROTOCOL_VERSION			3
+	inline constexpr auto C2M_BUGREPORT_PROTOCOL_VERSION = 3;
 
 		// C2M_BUGREPORT details
 		//		u8(C2M_BUGREPORT_PROTOCOL_VERSION)
@@ -104,7 +97,7 @@
 
 		// Version 3+
 		//  {
-		//			userid( sizeof( TSteamGlobalUserID ) )
+		//			userid
 		//  }
 
 		// --- all versions
@@ -113,7 +106,7 @@
 		//		u32(text length > max 1024)
 		//		text(descriptive text -- capped to text length bytes)
 
-#define M2C_ACKBUGREPORT					'p'
+inline constexpr auto M2C_ACKBUGREPORT = 'p';
 
 	typedef enum
 	{
@@ -134,11 +127,11 @@
 		//	  u32(upload context id)
 
 // Arbitrary encrypted data upload
-#define C2M_UPLOADDATA						'q'
+inline constexpr auto C2M_UPLOADDATA = 'q';
 
-	#define C2M_UPLOADDATA_PROTOCOL_VERSION			1
+	inline constexpr auto C2M_UPLOADDATA_PROTOCOL_VERSION = 1;
 
-	#define C2M_UPLOADDATA_DATA_VERSION				1
+	inline constexpr auto C2M_UPLOADDATA_DATA_VERSION = 1;
 
 		// C2M_BUGREPORT details
 		//		u8(C2M_UPLOADDATA_PROTOCOL_VERSION)
@@ -154,10 +147,7 @@
 		//			string(fieldname 32)
 		//			string(value 128)
 
-#define M2C_ACKUPLOADDATA					'r'
+inline constexpr auto M2C_ACKUPLOADDATA = 'r';
 
 		// M2C_ACKUPLOADDATA details
 		//	u8(protocol okay (bool))
-
-
-#endif // CSERSERVERPROTOCOL_ENGINE_H

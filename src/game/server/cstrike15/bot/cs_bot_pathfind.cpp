@@ -1,16 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "igameevents.h"
+#include "ndebugoverlay.h"
 #include "cs_bot.h"
-
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -1413,7 +1412,7 @@ bool CCSBot::IsRunning( void ) const
  */
 CCSBot::PathResult CCSBot::UpdatePathMovement( bool allowSpeedChange )
 {
-	VPROF_BUDGET( "CCSBot::UpdatePathMovement", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CCSBot::UpdatePathMovement", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	if (m_pathLength == 0)
 		return PATH_FAILURE;
@@ -1437,7 +1436,7 @@ CCSBot::PathResult CCSBot::UpdatePathMovement( bool allowSpeedChange )
 		Jump( MUST_JUMP );
 
 
-	assert( m_pathIndex < m_pathLength );
+	contract_assert( m_pathIndex < m_pathLength );
 
 	//
 	// Stop path attribute
@@ -1833,7 +1832,7 @@ CCSBot::PathResult CCSBot::UpdatePathMovement( bool allowSpeedChange )
 				const char *placeName = TheNavMesh->PlaceToName( area->GetPlace() );
 				if ( placeName && *placeName )
 				{
-					Q_strncpy( m_szLastPlaceName.GetForModify(), placeName, MAX_PLACE_NAME_LENGTH );
+					V_strncpy( m_szLastPlaceName.GetForModify(), placeName, MAX_PLACE_NAME_LENGTH );
 				}
 			}
 
@@ -1889,8 +1888,7 @@ void CCSBot::BuildTrivialPath( const Vector &goal )
  */
 bool CCSBot::ComputePath( const Vector &goal, RouteType route )
 {
-	VPROF_BUDGET( "CCSBot::ComputePath", VPROF_BUDGETGROUP_NPCS );
-    SNPROF( "CCSBot::ComputePath");
+	CVProfScope _( "CCSBot::ComputePath", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	//
 	// Throttle re-pathing
@@ -2088,4 +2086,3 @@ void CCSBot::DrawPath( void )
 		UTIL_DrawBeamPoints( close + Vector( 0, 25, 0 ), close + Vector( 0, -25, 0 ), 1, 0, 255, 0 );
 	}
 }
-

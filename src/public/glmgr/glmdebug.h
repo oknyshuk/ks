@@ -1,5 +1,4 @@
-#ifndef GLMDEBUG_H
-#define	GLMDEBUG_H
+#pragma once
 
 // include this anywhere you need to be able to compile-out code related specifically to GLM debugging.
 
@@ -13,7 +12,7 @@
 		#ifdef DEBUG
 			#define GLMDEBUG 1	// normally 1 here, testing
 		#else
-			// #define GLMDEBUG 2			// don't check this in enabled..
+// #define GLMDEBUG 2			// don't check this in enabled..}
 		#endif
 		
 		#ifndef GLMDEBUG
@@ -36,4 +35,3 @@
 	#define	GLMENDPIXEVENT(args)
 #endif
 
-#endif

@@ -1,9 +1,10 @@
-//====== Copyright 1996-2005, Valve Corporation, All rights reserved. =======
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Uses mp3 code from:  http://www.codeproject.com/audio/MPEGAudioInfo.asp
-//
 // There don't appear to be any licensing restrictions for using this code:
-//
+
 /*
 - Readme - MPEG Audio Info Tool V2.0 - 2004-11-01
 
@@ -26,11 +27,6 @@ This tool was written with MS Visual C++ 7.1. The MFC library is
 statically linked.
 */
 //=============================================================================
-
-#ifndef MPAFILE_H
-#define MPAFILE_H
-
-#pragma once
 
 #include "VBRHeader.h"
 #include "MPAHeader.h"
@@ -118,5 +114,3 @@ public:
 	char *m_pBuffer;
 	uint32 m_dwBufferSize;
 };
-
-#endif // MPAFILE_H

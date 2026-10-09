@@ -1,10 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // FIXME: Should we just pass the Particle draw members directly as
 // arguments to IParticleEffect::SimulateAndRender?
 
@@ -12,10 +9,6 @@
 // by ParticleEffects to render particles. It simply stores render + simulation
 // state
 //
-
-#ifndef PARTICLEDRAW_H
-#define PARTICLEDRAW_H
-
 
 class IMaterial;
 class CMeshBuilder;
@@ -76,6 +69,3 @@ inline CMeshBuilder* ParticleDraw::GetMeshBuilder()
 {
 	return m_pMeshBuilder;
 }
-
-#endif
-

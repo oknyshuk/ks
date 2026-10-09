@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef VEHICLE_CHOREO_GENERIC_SHARED_H
-#define VEHICLE_CHOREO_GENERIC_SHARED_H
-
-
+#include "networkvar.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -36,6 +31,3 @@ struct vehicleview_t
 	CNetworkVar( float, flPitchMin );
 	CNetworkVar( float, flPitchMax );
 };
-
-
-#endif // VEHICLE_CHOREO_GENERIC_SHARED_H

@@ -1,18 +1,10 @@
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Dynamic light at the end of a spotlight
 
 #include "reflect_annotations.h"
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Dynamic light at the end of a spotlight 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef	SPOTLIGHTEND_H
-#define	SPOTLIGHTEND_H
-
-
 
 #include "baseentity.h"
 
@@ -40,7 +32,3 @@ public:
 	Vector			m_vSpotlightDir;
 	Vector			m_vSpotlightOrg;
 };
-
-#endif	//SPOTLIGHTEND_H
-
-

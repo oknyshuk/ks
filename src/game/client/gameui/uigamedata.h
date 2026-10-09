@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
-
-#ifndef __UIGAMEDATA_H__
-#define __UIGAMEDATA_H__
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #undef XBX_GetPrimaryUserId
 
-#include <map>
-#include "tier1/keyvalues.h"
-#include "tier1/fmtstr.h"
+import std;
+import ks.tier1;
 
-#include "steam/steam_api.h"
 
 #include "matchmaking/imatchframework.h"
 #include "matchmaking/imatchsystem.h"
@@ -21,10 +14,7 @@
 #include "matchmaking/iplayermanager.h"
 #include "matchmaking/iservermanager.h"
 
-
 #include "basemodpanel.h"
-#include "UIAvatarImage.h"
-#include "tokenset.h"
 
 #include "EngineInterface.h"
 
@@ -138,7 +128,6 @@ public:
 
 	void OpenFriendRequestPanel(int index, uint64 playerXuid);
 	void OpenInviteUI( char const *szInviteUiType );
-	void ExecuteOverlayCommand( char const *szCommand );
 
 	// Listening for match events
 	virtual void OnEvent( KeyValues *pEvent );
@@ -160,8 +149,6 @@ public:
 	void ShowPasswordUI( char const *pchCurrentPW );
 
 	char const * GetPlayerName( XUID playerID, char const *szPlayerNameSpeculative );
-
-	STEAM_CALLBACK( CUIGameData, Steam_OnPersonaStateChanged, PersonaStateChange_t, m_CallbackPersonaStateChanged );
 
 	void ReloadScheme();
 
@@ -201,9 +188,6 @@ protected:
 	float m_flTimeLastFrame;
 	bool  m_bShowConnectionProblemActive;
 
-	std::map< XUID, CGameUiAvatarImage * > m_mapUserXuidToAvatar;
-	std::map< XUID, std::string > m_mapUserXuidToName;
-
 	//XUI info
 	bool m_bXUIOpen;
 
@@ -234,7 +218,6 @@ uint64 GetDlcInstalledMask();
 // 	{ "lock", "#SessionError_Lock", RemapText_t::MATCH_FULL },
 // 	{ "kicked", "#SessionError_Kicked", RemapText_t::MATCH_FULL },
 // 	{ "migrate", "#SessionError_Migrate", RemapText_t::MATCH_FULL },
-// 	{ "SteamServersDisconnected", "#SessionError_SteamServersDisconnected", RemapText_t::MATCH_FULL },
 // 	{ NULL, NULL, RemapText_t::MATCH_FULL }
 // };
 // szReason = RemapText_t::RemapRawText( arrText, szReason );
@@ -257,9 +240,9 @@ struct RemapText_t
 		switch( m_eMatchPolicy )
 		{
 		case MATCH_FULL:
-			return !Q_stricmp( szRawText, m_szRawText );
+			return !V_stricmp( szRawText, m_szRawText );
 		case MATCH_SUBSTR:
-			return Q_stristr( szRawText, m_szRawText ) != nullptr;
+			return V_stristr( szRawText, m_szRawText ) != nullptr;
 		case MATCH_START:
 			return StringHasPrefix( szRawText, m_szRawText );
 		default:
@@ -279,6 +262,3 @@ struct RemapText_t
 		return szRawText;
 	}
 };
-
-
-#endif // __UIGAMEDATA_H__

@@ -1,20 +1,17 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "BASETEXTURE"				"0..1"
 // STATIC: "MULTITEXTURE"				"0..1"
 // STATIC: "FLASHLIGHT"					"0..1"
 // STATIC: "LIGHTMAPWATERFOG"           "0..1"
 // STATIC: "FLOWMAP"					"0..1"
-
 // Multitexture and basetexture are mutually exclusive.
 // SKIP: $MULTITEXTURE && $BASETEXTURE
-
 // flowmap doesn't play with multitexture or basetexture
 // SKIP: $FLOWMAP && $MULTITEXTURE
-
 // Have to have the flashlight on to get flashlightshadows.
 // SKIP: ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTSHADOWS == 1 )
-
 // basetexture doesn't work with flashlight or lightmapwaterfog.  multitexture doesn't either.  We don't use basetexture or multitexture in newer code and instead use flowmap and flashlight.
 // SKIP: ( $FLASHLIGHT || $LIGHTMAPWATERFOG ) && ( ( $BASETEXTURE && !$FLOWMAP ) || $MULTITEXTURE )
 
@@ -159,5 +156,3 @@ VS_OUTPUT main( const VS_INPUT v )
 
 	return o;
 }
-
-

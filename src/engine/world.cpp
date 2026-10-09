@@ -1,11 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #include "quakedef.h"
 #include "world.h"
 #include "eiface.h"
@@ -19,9 +14,7 @@
 #include "ispatialpartitioninternal.h"
 #include "staticpropmgr.h"
 #include "shadowmgr.h"
-#include "string_t.h"
 #include "enginetrace.h"
-#include "sys_dll.h"
 #include "client.h"
 #include "cdll_int.h"
 #include "cdll_engine_int.h"
@@ -124,7 +117,7 @@ public:
 		m_pEnt = pEnt;
 		m_pCollide = pEnt->GetCollideable();
 		m_nRequiredTriggerFlags = m_pCollide->GetRequiredTriggerFlags();
-		Assert( m_pCollide );
+		contract_assert( m_pCollide );
 
 		Vector vecMins, vecMaxs;
 		CM_GetCollideableTriggerTestBox( m_pCollide, &vecMins, &vecMaxs, accurateBboxTriggerChecks );
@@ -146,10 +139,10 @@ public:
 			return ITERATION_CONTINUE;
 
 		// Static props should never be in the trigger list 
-		Assert( !StaticPropMgr()->IsStaticProp( pHandleEntity ) );
+		contract_assert( !StaticPropMgr()->IsStaticProp( pHandleEntity ) );
 
 		IServerUnknown *pUnk = static_cast<IServerUnknown*>( pHandleEntity );
-		Assert( pUnk );
+		contract_assert( pUnk );
 
 		// Convert the IHandleEntity to an edict_t*...
 		// Context is the thing we're testing everything against		
@@ -217,7 +210,7 @@ public:
 		m_pEnt = pEnt;
 		m_pCollide = pEnt->GetCollideable();
 		m_nRequiredTriggerFlags = m_pCollide->GetRequiredTriggerFlags();
-		Assert( m_pCollide );
+		contract_assert( m_pCollide );
 
 		Vector vecMins, vecMaxs;
 		CM_GetCollideableTriggerTestBox( m_pCollide, &vecMins, &vecMaxs, accurateBboxTriggerChecks );
@@ -244,10 +237,10 @@ public:
 		if ( !m_nRequiredTriggerFlags )
 			return ITERATION_CONTINUE;
 		// Static props should never be in the trigger list 
-		Assert( !StaticPropMgr()->IsStaticProp( pHandleEntity ) );
+		contract_assert( !StaticPropMgr()->IsStaticProp( pHandleEntity ) );
 
 		IClientUnknown *pUnk = static_cast<IClientUnknown*>( pHandleEntity );
-		Assert( pUnk );
+		contract_assert( pUnk );
 
 		// Convert the IHandleEntity to an edict_t*...
 		// Context is the thing we're testing everything against		
@@ -344,11 +337,11 @@ public:
 			return ITERATION_CONTINUE;
 
 		IServerUnknown *pUnk = static_cast< IServerUnknown* >( pHandleEntity );
-		Assert( pUnk );
+		contract_assert( pUnk );
 
 		// Convert the user ID to and edict_t*...
 		edict_t* pTouch = pUnk->GetNetworkable()->GetEdict();
-		Assert( pTouch );
+		contract_assert( pTouch );
 		ICollideable *pTouchCollide = pUnk->GetCollideable();
 
 		// Can't ever touch itself because it's in the other list
@@ -445,11 +438,11 @@ public:
 			return ITERATION_CONTINUE;
 
 		IClientUnknown *pUnk = static_cast< IClientUnknown* >( pHandleEntity );
-		Assert( pUnk );
+		contract_assert( pUnk );
 
 		// Convert the user ID to and edict_t*...
 		IClientEntity* pTouch = pUnk->GetIClientEntity();
-		Assert( pTouch );
+		contract_assert( pTouch );
 		ICollideable *pTouchCollide = pUnk->GetCollideable();
 
 		// Can't ever touch itself because it's in the other list

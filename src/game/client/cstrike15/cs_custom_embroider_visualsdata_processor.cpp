@@ -1,12 +1,10 @@
-//=========== Copyright (c) Valve Corporation, All rights reserved. =============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
-#include "serialization.h"
+import std;
+import ks.tier1;
+#include "cdll_util.h"
+#include "cdll_client_int.h"
 #include "cs_custom_embroider_visualsdata_processor.h"
 
 void CCSEmbroiderVisualsDataCompare::SerializeToBuffer( ks::byte_writer &buf )

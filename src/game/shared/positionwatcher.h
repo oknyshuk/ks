@@ -1,22 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef POSITIONWATCHER_H
-#define POSITIONWATCHER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ehandle.h"
 
+class IPhysicsObject;
+class CBaseEntity;
+
 // inherit from this interface to be able to call WatchPositionChanges
-abstract_class IWatcherCallback
+class IWatcherCallback
 {
 public:
 	virtual ~IWatcherCallback() {}
 };
 
-abstract_class IPositionWatcher : public IWatcherCallback
+class IPositionWatcher : public IWatcherCallback
 {
 public:
 	virtual void NotifyPositionChanged( CBaseEntity *pEntity ) = 0;
@@ -29,7 +27,7 @@ void RemovePositionWatcher( CBaseEntity *pWatcher, CBaseEntity *pMovingEntity );
 
 
 // inherit from this interface to be able to call WatchPositionChanges
-abstract_class IVPhysicsWatcher : public IWatcherCallback
+class IVPhysicsWatcher : public IWatcherCallback
 {
 public:
 	virtual void NotifyVPhysicsStateChanged( IPhysicsObject *pPhysics, CBaseEntity *pEntity, bool bAwake ) = 0;
@@ -39,6 +37,3 @@ public:
 void ReportVPhysicsStateChanged( IPhysicsObject *pPhysics, CBaseEntity *pEntity, bool bAwake );
 void WatchVPhysicsStateChanges( CBaseEntity *pWatcher, CBaseEntity *pPhysicsEntity );
 void RemoveVPhysicsStateWatcher( CBaseEntity *pWatcher, CBaseEntity *pPhysicsEntity );
-
-
-#endif // POSITIONWATCHER_H

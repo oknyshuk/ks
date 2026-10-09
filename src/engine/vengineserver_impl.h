@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Expose the IVEngineServer implementation to engine code.
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef VENGINESERVER_IMPL_H
-#define VENGINESERVER_IMPL_H
+// Purpose: Expose the IVEngineServer implementation to engine code.
 
 #include "eiface.h"
 
@@ -18,7 +14,3 @@ extern IVEngineServer *g_pVEngineServer;
 void SeedRandomNumberGenerator( bool random_invariant );
 
 void InvalidateSharedEdictChangeInfos();
-
-
-#endif // VENGINESERVER_IMPL_H
-

@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SHARED_CLASSNAMES_H
-#define SHARED_CLASSNAMES_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Hacky macros to allow shared code to work without even worse macro-izing
 #if defined( CLIENT_DLL )
@@ -17,6 +11,3 @@
 #define CBasePlayer				C_BasePlayer
 
 #endif
-
-
-#endif // SHARED_CLASSNAMES_H

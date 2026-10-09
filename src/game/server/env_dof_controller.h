@@ -1,8 +1,10 @@
+#pragma once
 
 #if !defined ( ENV_DOF_CONTROLLER_H )
 #define ENV_DOF_CONTROLLER_H
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 struct DOFControlSettings_t
 {

@@ -1,27 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PREDICTIONCOPY_H
-#define PREDICTIONCOPY_H
-
-#include <memory.h>
+import std;
+import ks.tier1;
 #include "datamap.h"
 #include "ehandle.h"
-#include "tier1/utlstring.h"
 
 #if defined( CLIENT_DLL )
 class C_BaseEntity;
 typedef CHandle<C_BaseEntity> EHANDLE;
 
 // #define COPY_CHECK_STRESSTEST
-#if defined( COPY_CHECK_STRESSTEST )
-class IGameSystem;
-IGameSystem* GetPredictionCopyTester( void );
-#endif
 
 #else
 class CBaseEntity;
@@ -119,44 +109,44 @@ private:
 
 
 	// Report function
-	void	ReportFieldsDiffer( const datamap_t *pCurrentMap, const typedescription_t *pField, PRINTF_FORMAT_STRING const char *fmt, ... );
-	void	OutputFieldDescription( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t dt, PRINTF_FORMAT_STRING const char *fmt, ... );
+	void	ReportFieldsDiffer( const datamap_t *pCurrentMap, const typedescription_t *pField, const char *fmt, ... );
+	void	OutputFieldDescription( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t dt, const char *fmt, ... );
 	
 	// Helper for TransferDataCopyOnly
 	void	CopyFlatFieldsUsingRuns( const datamap_t *pCurrentMap, int nPredictionCopyType );
 	void	CopyFlatFields( const datamap_t *pCurrentMap, int nPredictionCopyType );
 	template< class T >
-	FORCEINLINE void CopyField( difftype_t difftype, T *outvalue, const T *invalue, int count );
+	[[gnu::always_inline]] inline void CopyField( difftype_t difftype, T *outvalue, const T *invalue, int count );
 
 	// Helper for TransferDataErrorCheckNoSpew
 	void	ErrorCheckFlatFields_NoSpew( const datamap_t *pCurrentMap, int nPredictionCopyType );
 	template< class T >
-	FORCEINLINE void ProcessField_Compare_NoSpew( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize );
+	[[gnu::always_inline]] inline void ProcessField_Compare_NoSpew( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize );
 
 	// Helper for TransferDataErrorCheckSpew
 	void	ErrorCheckFlatFields_Spew( const datamap_t *pCurrentMap, int nPredictionCopyType );
 	template< class T >
-	FORCEINLINE void ProcessField_Compare_Spew( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize );
+	[[gnu::always_inline]] inline void ProcessField_Compare_Spew( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize );
 
 	// Helper for TransferDataDescribe
 	void	DescribeFields( const std::vector< const datamap_t * > &vecGroups, const datamap_t *pCurrentMap, int nPredictionCopyType );
 	// Main entry point
 	template< class T >
-	FORCEINLINE void ProcessField_Describe( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize );
+	[[gnu::always_inline]] inline void ProcessField_Describe( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize );
 
 	// Helpers for entity field watcher
 	void	DetermineWatchField( const char *operation, int entindex, const datamap_t *dmap );
-	void	WatchMsg( const typedescription_t *pField, PRINTF_FORMAT_STRING const char *fmt, ... );
+	void	WatchMsg( const typedescription_t *pField, const char *fmt, ... );
 	void	DumpWatchField( const typedescription_t *pField, const byte *outvalue, int count );
 	template< class T >
-	FORCEINLINE void WatchField( const typedescription_t *pField, const T *outvalue, int count );
+	[[gnu::always_inline]] inline void WatchField( const typedescription_t *pField, const T *outvalue, int count );
 
 	// Helper for ErrorCheck ops
 	template< class T >
-	FORCEINLINE difftype_t CompareField( const typedescription_t *pField, const T *outvalue, const T *invalue, int count );
+	[[gnu::always_inline]] inline difftype_t CompareField( const typedescription_t *pField, const T *outvalue, const T *invalue, int count );
 	// Used by TRANSFERDATA_ERRORCHECK_SPEW and by TRANSFERDATA_ERRORCHECK_DESCRIBE
 	template< class T >
-	FORCEINLINE void DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const T *outvalue, const T *invalue, int count );
+	[[gnu::always_inline]] inline void DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const T *outvalue, const T *invalue, int count );
 
 private:
 
@@ -183,51 +173,51 @@ typedef void (*FN_FIELD_DESCRIPTION)( const char *classname, const char *fieldna
 // Compare methods
 // 
 // Specializations
-template<> FORCEINLINE CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const float *outvalue, const float *invalue, int count );
-template<> FORCEINLINE CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const Vector *outvalue, const Vector *invalue, int count );
-template<> FORCEINLINE CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const Quaternion *outvalue, const Quaternion *invalue, int count );
-template<> FORCEINLINE CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const char *outvalue, const char *invalue, int count );
-template<> FORCEINLINE CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const EHANDLE *outvalue, const EHANDLE *invalue, int count );
-template<> FORCEINLINE CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const color32 *outvalue, const color32 *invalue, int count );
+template<> [[gnu::always_inline]] inline CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const float *outvalue, const float *invalue, int count );
+template<> [[gnu::always_inline]] inline CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const Vector *outvalue, const Vector *invalue, int count );
+template<> [[gnu::always_inline]] inline CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const Quaternion *outvalue, const Quaternion *invalue, int count );
+template<> [[gnu::always_inline]] inline CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const char *outvalue, const char *invalue, int count );
+template<> [[gnu::always_inline]] inline CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const EHANDLE *outvalue, const EHANDLE *invalue, int count );
+template<> [[gnu::always_inline]] inline CPredictionCopy::difftype_t CPredictionCopy::CompareField( const typedescription_t *pField, const color32 *outvalue, const color32 *invalue, int count );
 
 //
 // Describe Methods
 //
 
 // Specializations
-template<> FORCEINLINE void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const short *outvalue, const short *invalue, int count );
-template<> FORCEINLINE void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const int *outvalue, const int *invalue, int count );
-template<> FORCEINLINE void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const bool *outvalue, const bool *invalue, int count );
-template<> FORCEINLINE void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const float *outvalue, const float *invalue, int count );
-template<> FORCEINLINE void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const char *outvalue, const char *invalue, int count );
-template<> FORCEINLINE void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const Vector* outValue, const Vector *inValue, int count );
-template<> FORCEINLINE void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const Quaternion* outValue, const Quaternion *inValue, int count );
-template<> FORCEINLINE void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const EHANDLE *outvalue, const EHANDLE *invalue, int count );
-template<> FORCEINLINE void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const color32 *outvalue, const color32 *invalue, int count );
-template<> FORCEINLINE void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const uint8 *outvalue, const uint8 *invalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const short *outvalue, const short *invalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const int *outvalue, const int *invalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const bool *outvalue, const bool *invalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const float *outvalue, const float *invalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const char *outvalue, const char *invalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const Vector* outValue, const Vector *inValue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const Quaternion* outValue, const Quaternion *inValue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const EHANDLE *outvalue, const EHANDLE *invalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const color32 *outvalue, const color32 *invalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::DescribeField( const datamap_t *pCurrentMap, const typedescription_t *pField, difftype_t difftype, const uint8 *outvalue, const uint8 *invalue, int count );
 
 
 //
 // Watch Methods
 //
 // Specializations
-template<> FORCEINLINE void CPredictionCopy::WatchField( const typedescription_t *pField, const short *outvalue,int count );
-template<> FORCEINLINE void CPredictionCopy::WatchField( const typedescription_t *pField, const int *outvalue, int count );
-template<> FORCEINLINE void CPredictionCopy::WatchField( const typedescription_t *pField, const bool *outvalue, int count );
-template<> FORCEINLINE void CPredictionCopy::WatchField( const typedescription_t *pField, const float *outvalue, int count );
-template<> FORCEINLINE void CPredictionCopy::WatchField( const typedescription_t *pField, const Vector *outvalue, int count );
-template<> FORCEINLINE void CPredictionCopy::WatchField( const typedescription_t *pField, const Quaternion *outvalue, int count );
-template<> FORCEINLINE void CPredictionCopy::WatchField( const typedescription_t *pField, const EHANDLE *outvalue, int count );
-template<> FORCEINLINE void CPredictionCopy::WatchField( const typedescription_t *pField, const char *outvalue, int count );
-template<> FORCEINLINE void CPredictionCopy::WatchField( const typedescription_t *pField, const color32 *outvalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::WatchField( const typedescription_t *pField, const short *outvalue,int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::WatchField( const typedescription_t *pField, const int *outvalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::WatchField( const typedescription_t *pField, const bool *outvalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::WatchField( const typedescription_t *pField, const float *outvalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::WatchField( const typedescription_t *pField, const Vector *outvalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::WatchField( const typedescription_t *pField, const Quaternion *outvalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::WatchField( const typedescription_t *pField, const EHANDLE *outvalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::WatchField( const typedescription_t *pField, const char *outvalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::WatchField( const typedescription_t *pField, const color32 *outvalue, int count );
 //
 // Copy Methods
 //
 // specializations
-template<> FORCEINLINE void CPredictionCopy::CopyField( difftype_t difftype, char *outvalue, const char *invalue, int count );
+template<> [[gnu::always_inline]] inline void CPredictionCopy::CopyField( difftype_t difftype, char *outvalue, const char *invalue, int count );
 
 template< class T >
-FORCEINLINE void CPredictionCopy::ProcessField_Compare_NoSpew( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize )
+[[gnu::always_inline]] inline void CPredictionCopy::ProcessField_Compare_NoSpew( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize )
 {
 	difftype_t difftype = CompareField( pField, pOutputData, pInputData, fieldSize );
 	if ( difftype == DIFFERS )
@@ -238,7 +228,7 @@ FORCEINLINE void CPredictionCopy::ProcessField_Compare_NoSpew( const datamap_t *
 
 
 template< class T >
-FORCEINLINE void CPredictionCopy::ProcessField_Compare_Spew( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize )
+[[gnu::always_inline]] inline void CPredictionCopy::ProcessField_Compare_Spew( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize )
 {
 	difftype_t difftype = CompareField( pField, pOutputData, pInputData, fieldSize );
 	DescribeField( pCurrentMap, pField, difftype, pOutputData, pInputData, fieldSize );
@@ -246,7 +236,7 @@ FORCEINLINE void CPredictionCopy::ProcessField_Compare_Spew( const datamap_t *pC
 
 
 template< class T >
-FORCEINLINE void CPredictionCopy::ProcessField_Describe( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize )
+[[gnu::always_inline]] inline void CPredictionCopy::ProcessField_Describe( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize )
 {
 	difftype_t difftype = CompareField( pField, pOutputData, pInputData, fieldSize );
 	DescribeField( pCurrentMap, pField, difftype, pOutputData, pInputData, fieldSize );
@@ -280,7 +270,7 @@ private:
 	};
 
 	// Returns field size
-	void				GetValue( char *buf, size_t bufsize );
+	void				GetValue( char *buf, std::size_t bufsize );
 
 	bool				m_bActive : 1;
 	bool				m_bTracking : 1;
@@ -341,4 +331,3 @@ private:
 #endif
 
 #endif // !CLIENT_DLL
-#endif // PREDICTIONCOPY_H

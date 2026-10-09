@@ -1,12 +1,64 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "sharedInterface.h"
@@ -15,10 +67,7 @@
 #include "IEffects.h"
 #include "gamestringpool.h"
 #include "igamesystem.h"
-#include "tier1/vector_ops.h"
-#include "tier1/fixed_pool.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "tier0/vprof.h"
 
 static ConVar soundpatch_captionlength( "soundpatch_captionlength", "2.0", FCVAR_REPLICATED, "How long looping soundpatch captions should display for." );
 
@@ -183,7 +232,7 @@ public:
 
 	virtual bool AddRecipient( CBasePlayer *player )
 	{
-		Assert( player );
+		contract_assert( player );
 
 		int index = player->entindex();
 
@@ -215,7 +264,7 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CCopyRecipientFilter )
 
 // This is the a basic sound controller, a "patch"
 // It has envelopes for pitch and volume and can manage state changes to those
-class CSoundPatch
+class CSoundPatch : public ks::pooled< CSoundPatch >
 {
 public:
 	DECLARE_SIMPLE_DATADESC();
@@ -303,15 +352,21 @@ private:
 	string_t		m_iszClassName;
 #endif
 
-	DECLARE_FIXEDSIZE_ALLOCATOR(CSoundPatch);
+	private:
+		static ks::fixed_pool s_Allocator;
+		friend class ks::pooled< CSoundPatch >;
 };
 
 int CSoundPatch::g_SoundPatchCount = 0;
 
 #ifdef CLIENT_DLL
-CON_COMMAND( cl_report_soundpatch, "reports client-side sound patch count" )
+static void cl_report_soundpatch( const CCommand &args );
+static ConCommand cl_report_soundpatch_command( "cl_report_soundpatch", cl_report_soundpatch, "reports client-side sound patch count" );
+static void cl_report_soundpatch( const CCommand &args )
 #else
-CON_COMMAND( report_soundpatch, "reports sound patch count" )
+static void report_soundpatch( const CCommand &args );
+static ConCommand report_soundpatch_command( "report_soundpatch", report_soundpatch, "reports sound patch count" );
+static void report_soundpatch( const CCommand &args )
 #endif
 {
 #ifndef CLIENT_DLL
@@ -321,7 +376,7 @@ CON_COMMAND( report_soundpatch, "reports sound patch count" )
 
 	Msg("Current sound patches: %d\n", CSoundPatch::g_SoundPatchCount );
 }
-DEFINE_FIXEDSIZE_ALLOCATOR( CSoundPatch, 64, ks::fixed_pool::grow::fast );
+ks::fixed_pool CSoundPatch::s_Allocator( sizeof(CSoundPatch), 64, ks::fixed_pool::grow::fast, "CSoundPatch pool", alignof(CSoundPatch) );
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CSoundPatch )
 
@@ -346,7 +401,7 @@ void CSoundPatch::Init( IRecipientFilter *pFilter, CBaseEntity *pEnt, int channe
 
 	// if not a direct wave reference, crack the script
 	CSoundParameters params;
-	if ( !Q_stristr( pSoundName, ".wav" ) && !Q_stristr( pSoundName, ".mp3" ) &&
+	if ( !V_stristr( pSoundName, ".wav" ) && !V_stristr( pSoundName, ".mp3" ) &&
 		CBaseEntity::GetParametersForSound( pSoundName, params, nullptr ) )
 	{
 		m_flScriptVolume = params.volume;
@@ -475,7 +530,7 @@ float CSoundPatch::GetElapsedTime( void )
 //-----------------------------------------------------------------------------
 inline int CSoundPatch::EntIndex() const
 {
-	Assert( !m_hEnt.IsValid() || m_hEnt.Get() );
+	contract_assert( !m_hEnt.IsValid() || m_hEnt.Get() );
 	return m_hEnt.Get() ? m_hEnt->entindex() : -1;
 }
 
@@ -508,7 +563,7 @@ void CSoundPatch::Shutdown( void )
 			// this will handle that case so a sound patch doesn't get stuck on
 			entIndex = m_soundEntityIndex;
 		}
-		Assert( entIndex >= 0 );
+		contract_assert( entIndex >= 0 );
 		// BUGBUG: Don't crash in release mode
 		if ( entIndex >= 0 )
 		{
@@ -534,7 +589,7 @@ void CSoundPatch::Shutdown( void )
 //-----------------------------------------------------------------------------
 bool CSoundPatch::Update( float time, float deltaTime )
 {
-	VPROF( "CSoundPatch::Update" );
+	CVProfScope _( "CSoundPatch::Update", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( m_shutdownTime && time > m_shutdownTime )
 	{
 		Shutdown();
@@ -646,15 +701,6 @@ void CSoundPatch::StartSound( float flStartTime )
 		}
 
 //#ifdef CLIENT_DLL
-#ifdef ___NOT
-
-		if ( V_stristr( STRING(m_iszSoundName), "music" ) )
-		{
-			// Don't play synchronously - we'll get it with the volume adjustments
-			//engine->ClientCmd( VarArgs("play %s\n", ep.m_pSoundName) );
-		}
-		else
-#endif
 		{
 #ifdef CLIENT_DLL
 			m_guid = CBaseEntity::EmitSound( m_Filter, EntIndex(), ep );
@@ -738,9 +784,9 @@ void CSoundPatch::AddPlayerPost( CBasePlayer *pPlayer )
 // This is an entry in the command queue.  It's used to queue up various pitch and volume changes
 // so you can define an envelope without writing timing code in an entity.  Existing queued commands
 // can be deleted later if the envelope changes dynamically.
-struct SoundCommand_t
+struct SoundCommand_t : public ks::pooled< SoundCommand_t >
 {
-	SoundCommand_t( void ) { memset( this, 0, sizeof(*this) ); }
+	SoundCommand_t( void ) { std::memset( this, 0, sizeof(*this) ); }
 	SoundCommand_t( CSoundPatch *pSound, float executeTime, soundcommands_t command, float deltaTime, float value ) : m_pPatch(pSound), m_time(executeTime), m_deltaTime(deltaTime), m_command(command), m_value(value) {}
 
 	CSoundPatch		*m_pPatch;
@@ -752,10 +798,12 @@ struct SoundCommand_t
 	SoundCommand_t	*m_pNext;
 
 	DECLARE_SIMPLE_DATADESC();
-	DECLARE_FIXEDSIZE_ALLOCATOR(SoundCommand_t);
+	private:
+		static ks::fixed_pool s_Allocator;
+		friend class ks::pooled< SoundCommand_t >;
 };
 
-DEFINE_FIXEDSIZE_ALLOCATOR( SoundCommand_t, 32, ks::fixed_pool::grow::fast );
+ks::fixed_pool SoundCommand_t::s_Allocator( sizeof(SoundCommand_t), 32, ks::fixed_pool::grow::fast, "SoundCommand_t pool", alignof(SoundCommand_t) );
 
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( SoundCommand_t )
@@ -969,7 +1017,7 @@ void CSoundControllerImp::SystemReset( void )
 //-----------------------------------------------------------------------------
 void CSoundControllerImp::SystemUpdate( void )
 {
-	VPROF( "CSoundControllerImp::SystemUpdate" );
+	CVProfScope _( "CSoundControllerImp::SystemUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	float time = g_pEffects->Time();
 	float deltaTime = time - m_flLastTime;
 	
@@ -980,7 +1028,7 @@ void CSoundControllerImp::SystemUpdate( void )
 	m_flLastTime = time;
 
 	{
-		VPROF( "CSoundControllerImp::SystemUpdate:processcommandlist" );
+		CVProfScope _( "CSoundControllerImp::SystemUpdate:processcommandlist", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		while ( !m_commandList.empty() )
 		{
 			// Commands are sorted by time.
@@ -1001,7 +1049,7 @@ void CSoundControllerImp::SystemUpdate( void )
 	// NOTE: Because this loop goes from the end to the beginning
 	// we can fast remove inside it without breaking the indexing
 	{
-		VPROF( "CSoundControllerImp::SystemUpdate:removesounds" );
+		CVProfScope _( "CSoundControllerImp::SystemUpdate:removesounds", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		for ( int i = std::ssize( m_soundList )-1; i >=0; i-- )
 		{
 			CSoundPatch *pNode = m_soundList[i];
@@ -1177,7 +1225,7 @@ float CSoundControllerImp::SoundPlayEnvelope( CSoundPatch *pSound, soundcommands
 	float	duration	= 0.0f;
 	float	totalDuration	= 0.0f;
 
-	Assert( points );
+	contract_assert( points );
 
 	// Clear out all previously acting commands
 	CommandClear( pSound );
@@ -1268,5 +1316,3 @@ CSoundEnvelopeController &CSoundEnvelopeController::GetController( void )
 {
 	return g_Controller;
 }
-
-

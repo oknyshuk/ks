@@ -1,21 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Includes all the headers/declarations necessary to access the
 //			engine interface
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ENGINEINTERFACE_H
-#define ENGINEINTERFACE_H
-
 
 // engine interface
-#include "steam/steam_api.h"
 #include "cdll_client_int.h"
 #include "tier2/tier2.h"
 #include "matchmaking/imatchframework.h"
 
 extern class IEngineUI *engineuifuncs;
-
-#endif // ENGINEINTERFACE_H

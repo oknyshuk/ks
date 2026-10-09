@@ -1,15 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "engine/ivmodelinfo.h"
 #include "particles_simple.h"
 #include "particles_localspace.h"
 #include "c_te_effect_dispatch.h"
-#include "precache_register.h"
-
 
 // Precache our effects
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffect_CS_MuzzleFlash )
@@ -47,7 +54,7 @@ void CS_MuzzleFlashCallback( const CEffectData &data )
 		}
 	}
 
-	Assert( pEmitter );
+	contract_assert( pEmitter );
 	pEmitter->GetBinding().SetBBox( vCenter - Vector( 3, 3, 3 ), vCenter + Vector( 3, 3, 3 ) );
 
 	// haxors - make the clip much shorter so the alpha is not 
@@ -106,7 +113,7 @@ void CS_MuzzleFlashXCallback( const CEffectData &data )
 		pEmitter->GetBinding().SetBBox( vCenter - Vector( 3, 3, 3 ), vCenter + Vector( 3, 3, 3 ) );
 	}	
 
-	Assert( pEmitter );
+	contract_assert( pEmitter );
 
 	// haxors - make the clip much shorter so the alpha is not 
 	// changed based on large clip distances

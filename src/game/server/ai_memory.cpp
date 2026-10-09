@@ -1,18 +1,44 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		An NPC's memory of potential enemies 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: An NPC's memory of potential enemies
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "ai_debug.h"
 #include "ai_memory.h"
 #include "ai_basenpc.h"
 
-#define	EMEMORY_POOL_SIZE		  64
-#define AI_FREE_KNOWLEDGE_DURATION 1.75
+constexpr auto EMEMORY_POOL_SIZE = 64;
+constexpr auto AI_FREE_KNOWLEDGE_DURATION = 1.75;
 
 //-----------------------------------------------------------------------------
 // AI_EnemyInfo_t
@@ -124,7 +150,7 @@ AI_EnemyInfo_t *CAI_Enemies::Find( CBaseEntity *pEntity, bool bTryDangerMemory )
 	{
 		if ( !bTryDangerMemory || ( it = m_Map.find( nullptr ) ) == m_Map.end() )
 			return nullptr;
-		Assert(it->second->bDangerMemory == true);
+		contract_assert( it->second->bDangerMemory == true );
 	}
 	return it->second.get();
 }
@@ -137,7 +163,7 @@ AI_EnemyInfo_t *CAI_Enemies::GetDangerMemory()
 	auto it = m_Map.find( nullptr );
 	if ( it == m_Map.end() )
 		return nullptr;
-	Assert(it->second->bDangerMemory == true);
+	contract_assert( it->second->bDangerMemory == true );
 	return it->second.get();
 }
 
@@ -180,7 +206,6 @@ bool CAI_Enemies::ShouldDiscardMemory( AI_EnemyInfo_t *pMemory )
 
 void CAI_Enemies::RefreshMemories(void)
 {
-	AI_PROFILE_SCOPE(CAI_Enemies_RefreshMemories);
 
 	if ( m_flFreeKnowledgeDuration >= m_flEnemyDiscardTime )
 	{
@@ -242,7 +267,7 @@ bool CAI_Enemies::UpdateMemory(CAI_Network* pAINet, CBaseEntity *pEnemy, const V
 	// Update enemy information
 	if ( pMemory )
 	{
-		Assert(pEnemy || pMemory->bDangerMemory == true);
+		contract_assert( pEnemy || pMemory->bDangerMemory == true );
 
 		if ( firstHand )
 			pMemory->timeLastSeen = gpGlobals->curtime;
@@ -546,7 +571,7 @@ void CAI_Enemies::SetFreeKnowledgeDuration( float flDuration )
 		// If your free knowledge time is greater than your discard time,
 		// you'll forget about secondhand enemies passed to you by squadmates
 		// as soon as you're given them.
-		Assert( m_flFreeKnowledgeDuration < m_flEnemyDiscardTime );
+		contract_assert( m_flFreeKnowledgeDuration < m_flEnemyDiscardTime );
 
 		m_flFreeKnowledgeDuration = m_flEnemyDiscardTime - .1;
 	}
@@ -563,7 +588,7 @@ void CAI_Enemies::SetEnemyDiscardTime( float flTime )
 		// If your free knowledge time is greater than your discard time,
 		// you'll forget about secondhand enemies passed to you by squadmates
 		// as soon as you're given them.
-		Assert( m_flFreeKnowledgeDuration < m_flEnemyDiscardTime );
+		contract_assert( m_flFreeKnowledgeDuration < m_flEnemyDiscardTime );
 
 		m_flFreeKnowledgeDuration = m_flEnemyDiscardTime - .1;
 	}

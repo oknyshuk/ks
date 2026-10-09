@@ -1,12 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
 #include "functionproxy.h"
-#include <keyvalues.h>
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterial.h"
 #include "iclientrenderable.h"
@@ -26,7 +23,7 @@ bool CFloatInput::Init( IMaterial *pMaterial, KeyValues *pKeyValues, const char 
 
 			// Look for numbers...
 			float flValue;
-			int nCount = sscanf( pVarName, "%f", &flValue );
+			int nCount = std::sscanf( pVarName, "%f", &flValue );
 			if (nCount == 1)
 			{
 				m_flValue = flValue;
@@ -35,15 +32,15 @@ bool CFloatInput::Init( IMaterial *pMaterial, KeyValues *pKeyValues, const char 
 
 			// Look for array specification...
 			char pTemp[256];
-			if (strchr(pVarName, '['))
+			if (std::strchr(pVarName, '['))
 			{		 
 				// strip off the array...
-				Q_strncpy( pTemp, pVarName, 256 );
+				V_strncpy( pTemp, pVarName, 256 );
 				char *pArray = strchr( pTemp, '[' );
 				*pArray++ = 0;
 
 				char* pIEnd;
-				m_FloatVecComp = strtol( pArray, &pIEnd, 10 );
+				m_FloatVecComp = std::strtol( pArray, &pIEnd, 10 );
 
 				// Use the version without the array...
 				pVarName = pTemp;
@@ -112,15 +109,15 @@ bool CResultProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 	// Look for array specification...
 	char pTemp[256];
-	if (strchr(pResult, '['))
+	if (std::strchr(pResult, '['))
 	{		 
 		// strip off the array...
-		Q_strncpy( pTemp, pResult, 256 );
+		V_strncpy( pTemp, pResult, 256 );
 		char *pArray = strchr( pTemp, '[' );
 		*pArray++ = 0;
 
 		char* pIEnd;
-		m_ResultVecComp = strtol( pArray, &pIEnd, 10 );
+		m_ResultVecComp = std::strtol( pArray, &pIEnd, 10 );
 
 		// Use the version without the array...
 		pResult = pTemp;
@@ -135,7 +132,7 @@ bool CResultProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 	if( !foundVar )
 		return false;
 
-	if ( !Q_stricmp( pResult, "$alpha" ) )
+	if ( !V_stricmp( pResult, "$alpha" ) )
 	{
 		pMaterial->SetMaterialVarFlag( MATERIAL_VAR_ALPHA_MODIFIED_BY_PROXY, true );
 	}
@@ -272,4 +269,3 @@ void CFunctionProxy::ComputeResultType( MaterialVarType_t& resultType, int& vecS
 		}
 	}
 }
-

@@ -1,12 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <stdlib.h>
-#include <string.h>
+import std;
 #include "materialsystem/imaterialproxy.h"
 #include "materialproxyfactory.h"
 #include "toolframework/itoolframework.h"

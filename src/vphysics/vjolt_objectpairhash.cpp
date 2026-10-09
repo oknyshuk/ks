@@ -2,7 +2,9 @@
 // Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
 
 
-#include "cbase.h"
+import std;
+import ks.core;
+#include "vphysics/object_hash.h"
 
 #include "vjolt_objectpairhash.h"
 

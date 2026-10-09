@@ -1,23 +1,18 @@
-//===== Copyright  1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
+import ks.tier1;
 #include "studiorender.h"
 #include "studiorendercontext.h"
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
-#include "mathlib/mathlib.h"
+import std;
 #include "optimize.h"
 #include "cmodel.h"
 #include "materialsystem/imaterialvar.h"
-#include "convar.h"
 #include "engine/decal_flags.h"
-
-#include "tier0/vprof.h"
 
 
 static int g_nTotalDecalVerts;
@@ -47,14 +42,14 @@ static inline int ConvertToPrivateDecalFlags( int nPublicDecalFlags )
 	if ( ( nPublicDecalFlags & EDF_IMMEDIATECLEANUP ) != 0 )	{ nPublicDecalFlags &= ~EDF_IMMEDIATECLEANUP;	nPrivateFlags |= DECAL_IMMEDIATECLEANUP; }
 
 	// If this hits, we are missing conversion here. 
-	Assert( nPublicDecalFlags == 0 );
+	contract_assert( nPublicDecalFlags == 0 );
 
 	return nPrivateFlags;
 }
 
 
 
-#define MAX_DECAL_INDICES_PER_MODEL 2048
+constexpr auto MAX_DECAL_INDICES_PER_MODEL = 2048;
 
 
 //-----------------------------------------------------------------------------
@@ -96,13 +91,6 @@ private:
 // Functions to make vertex opaque
 //-----------------------------------------------------------------------------
 
-#ifdef COMPACT_DECAL_VERT
-#define GetVecTexCoord( v ) (v.operator Vector2D())
-#define GetVecNormal( v ) (v.operator Vector())
-#else
-#define GetVecTexCoord( v ) v
-#define GetVecNormal( v ) v
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -405,8 +393,8 @@ static int IntersectPlane( DecalClipState_t& state, int start, int end,
 
 	Vector2D dir;
 	Vector2DSubtract( endVert.m_TexCoord, startVert.m_TexCoord, dir );
-	Assert( dir[normalInd] != 0.0f );
-	float t = (val - GetVecTexCoord( startVert.m_TexCoord )[normalInd]) / dir[normalInd];
+	contract_assert( dir[normalInd] != 0.0f );
+	float t = (val - startVert.m_TexCoord[normalInd]) / dir[normalInd];
 				 
 	// Allocate a clipped vertex
 	DecalVertex_t& out = state.m_ClipVerts[state.m_ClipVertCount];
@@ -434,7 +422,7 @@ static int IntersectPlane( DecalClipState_t& state, int start, int end,
 
 	// Interpolate texture coord
 	Vector2D vTexCoord;
-	Vector2DLerp( GetVecTexCoord( startVert.m_TexCoord ), GetVecTexCoord( endVert.m_TexCoord ), t, vTexCoord );
+	Vector2DLerp( startVert.m_TexCoord, endVert.m_TexCoord, t, vTexCoord );
 	out.m_TexCoord = vTexCoord;
 
 	// Compute the clip flags baby...
@@ -496,28 +484,28 @@ void CStudioRender::ConvertMeshVertexToDecalVertex( DecalBuildInfo_t& build,
 	// Copy over the data;
 	// get the texture coords from the decal planar projection
 
-	Assert( meshIndex < MAXSTUDIOVERTS );
+	contract_assert( meshIndex < MAXSTUDIOVERTS );
 
 	if ( build.m_pMeshVertexData )
 	{
 		VectorCopy( *build.m_pMeshVertexData->Position( meshIndex ), decalVertex.m_Position );
-		VectorCopy( *build.m_pMeshVertexData->Normal( meshIndex ), GetVecNormal( decalVertex.m_Normal ) );	
+		VectorCopy( *build.m_pMeshVertexData->Normal( meshIndex ), decalVertex.m_Normal );	
 	}
 	else
 	{
 		// At this point in the code, we should definitely have either compressed or uncompressed vertex data
-		Assert( build.m_pMeshThinVertexData );
+		contract_assert( build.m_pMeshThinVertexData );
 		Vector position;
 		Vector normal;
 		build.m_pMeshThinVertexData->GetMeshPosition( build.m_pMesh, meshIndex, &position );
 		build.m_pMeshThinVertexData->GetMeshNormal( build.m_pMesh, meshIndex, &normal );
 		VectorCopy( position, decalVertex.m_Position );
-		VectorCopy( normal, GetVecNormal( decalVertex.m_Normal ) );	
+		VectorCopy( normal, decalVertex.m_Normal );	
 	}
-	Vector2DCopy( build.m_pVertexInfo[meshIndex].m_UV, GetVecTexCoord( decalVertex.m_TexCoord ) );
+	Vector2DCopy( build.m_pVertexInfo[meshIndex].m_UV, decalVertex.m_TexCoord );
 	decalVertex.m_MeshVertexIndex = meshIndex;
 	decalVertex.m_Mesh = build.m_Mesh;
-	Assert( decalVertex.m_Mesh < 100 );
+	contract_assert( decalVertex.m_Mesh < 100 );
 	decalVertex.m_Model = build.m_Model;
 	decalVertex.m_Body = build.m_Body;
 	decalVertex.m_Group = build.m_Group;
@@ -548,8 +536,8 @@ inline unsigned short CStudioRender::AddVertexToDecal( DecalBuildInfo_t& build, 
 		// Make sure clipped vertices are in the right range...
 		if (build.m_UseClipVert)
 		{
-			Assert( (v.m_TexCoord[0] >= -1e-3) && (v.m_TexCoord[0] - 1.0f < 1e-3) );
-			Assert( (v.m_TexCoord[1] >= -1e-3) && (v.m_TexCoord[1] - 1.0f < 1e-3) );
+			contract_assert( (v.m_TexCoord[0] >= -1e-3) && (v.m_TexCoord[0] - 1.0f < 1e-3) );
+			contract_assert( (v.m_TexCoord[1] >= -1e-3) && (v.m_TexCoord[1] - 1.0f < 1e-3) );
 		}
 #endif
 
@@ -594,13 +582,13 @@ inline unsigned short CStudioRender::AddVertexToDecal( DecalBuildInfo_t& build, 
 	}
 
 	// This path is the path taken by clipped vertices
-	Assert( (vert.m_TexCoord[0] >= -1e-3) && (vert.m_TexCoord[0] - 1.0f < 1e-3) );
-	Assert( (vert.m_TexCoord[1] >= -1e-3) && (vert.m_TexCoord[1] - 1.0f < 1e-3) );
+	contract_assert( (vert.m_TexCoord[0] >= -1e-3) && (vert.m_TexCoord[0] - 1.0f < 1e-3) );
+	contract_assert( (vert.m_TexCoord[1] >= -1e-3) && (vert.m_TexCoord[1] - 1.0f < 1e-3) );
 
 	// Must create a new vertex...
 	decalVertexList.push_back( vert );
 	g_nTotalDecalVerts++;
-	Assert( vertexCount == build.m_VertexCount );
+	contract_assert( vertexCount == build.m_VertexCount );
 	return build.m_VertexCount++;
 }
 
@@ -613,7 +601,7 @@ void CStudioRender::AddClippedDecalToTriangle( DecalBuildInfo_t& build, DecalCli
 	// FIXME: Clipped vertices will almost always be shared. We
 	// need a way of associating clipped vertices with edges so we can share
 	// the clipped vertices quickly
-	Assert( clipState.m_VertCount <= 7 );
+	contract_assert( clipState.m_VertCount <= 7 );
 
 	// Yeah baby yeah!!	Add this sucka
 	int i;
@@ -635,7 +623,6 @@ void CStudioRender::AddClippedDecalToTriangle( DecalBuildInfo_t& build, DecalCli
 	// Add a trifan worth of triangles
 	for ( i = 1; i < clipState.m_VertCount - 1; ++i)
 	{
-		MEM_ALLOC_CREDIT();
 		build.m_pDecalMaterial->m_Indices.push_back( indices[0] );
 		build.m_pDecalMaterial->m_Indices.push_back( indices[i] );
 		build.m_pDecalMaterial->m_Indices.push_back( indices[i+1] );
@@ -751,7 +738,6 @@ void CStudioRender::AddTriangleToDecal( DecalBuildInfo_t& build, int i1, int i2,
 	i2 = AddVertexToDecal( build, i2, gi2 );
 	i3 = AddVertexToDecal( build, i3, gi3 );
 
-	MEM_ALLOC_CREDIT();
 	build.m_pDecalMaterial->m_Indices.push_back( i1 );
 	build.m_pDecalMaterial->m_Indices.push_back( i2 );
 	build.m_pDecalMaterial->m_Indices.push_back( i3 );
@@ -816,7 +802,7 @@ bool CStudioRender::AddDecalToModel( DecalBuildInfo_t& buildInfo )
 		buildInfo.m_Mesh = i;
 		buildInfo.m_pMesh = m_pSubModel->pMesh(i);
 		buildInfo.m_pMeshData = &m_pStudioMeshes[buildInfo.m_pMesh->meshid];
-		Assert(buildInfo.m_pMeshData);
+		contract_assert( buildInfo.m_pMeshData );
 		// Grab either fat or thin vertex data
 		buildInfo.m_pMeshVertexData = buildInfo.m_pMesh->GetVertexData( buildInfo.m_pStudioHdr );
 		if ( buildInfo.m_pMeshVertexData == nullptr )
@@ -926,7 +912,7 @@ void CStudioRender::RetireDecal( DecalModelList_t &list, DecalId_t nRetireID, in
 		}
 	}
 
-	Assert( !"CStudioRender::RetireDecal - Never should get here." );
+	contract_assert( !"CStudioRender::RetireDecal - Never should get here." );
 }
 
 void CStudioRender::RetireDecalAtAddress( DecalModelList_t &list, DecalLRUListIndex_t lruAddress, int iLOD, int iMaxLOD )
@@ -937,7 +923,7 @@ void CStudioRender::RetireDecalAtAddress( DecalModelList_t &list, DecalLRUListIn
 
 	// Find the id to retire and retire all the decals with this id across all LODs.
 	DecalHistoryList_t *pHistoryList = &list.m_pLod[iLOD].m_DecalHistory;
-	Assert( !pHistoryList->empty() );
+	contract_assert( !pHistoryList->empty() );
 	if ( pHistoryList->empty() )
 		return;
 
@@ -966,7 +952,7 @@ void CStudioRender::RetireDecalAtAddress( DecalModelList_t &list, DecalLRUListIn
 				Decal_t &decalToRemove = *pDecalHistory->m_Decal;
 				
 				// Now clear out the vertices referenced by the indices....
-				Assert( std::ssize( vertices ) >= decalToRemove.m_VertexCount );
+				contract_assert( std::ssize( vertices ) >= decalToRemove.m_VertexCount );
 				int vertsToRemove = std::min( decalToRemove.m_VertexCount, (int)std::ssize( vertices ) );
 				vertices.erase( vertices.begin(), vertices.begin() + vertsToRemove );
 				g_nTotalDecalVerts -= vertsToRemove;
@@ -1136,7 +1122,7 @@ bool CStudioRender::BTryToRetireDecal( StudioDecalHandle_t hDecal, DecalHistoryL
 		}
 
 		// Assert that we found and inspected that model decal
-		Assert( i != m_DecalLRU.end() );
+		contract_assert( i != m_DecalLRU.end() );
 	}
 
 	return false;
@@ -1151,7 +1137,8 @@ void CStudioRender::AddDecal( StudioDecalHandle_t hDecal, const StudioRenderCont
 	studiohdr_t *pStudioHdr, const Ray_t& ray, const Vector& decalUp, IMaterial* pDecalMaterial, 
 	float radius, int body, bool noPokethru, int maxLODToDecal, void *pvProxyUserData, int nAdditionalDecalFlags )
 {
-	VPROF( "CStudioRender::AddDecal" );
+	ks::ScratchArena<> scratch;
+	CVProfScope _( "CStudioRender::AddDecal", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 
 	if ( hDecal == STUDIORENDER_DECAL_INVALID )
@@ -1255,9 +1242,9 @@ void CStudioRender::AddDecal( StudioDecalHandle_t hDecal, const StudioRenderCont
 		return;
 	}
 
-	buildInfo.m_pMeshVertices = (MeshVertexInfo_t*)stackalloc( nMeshCount * sizeof(MeshVertexInfo_t) );	
+	buildInfo.m_pMeshVertices = scratch.Alloc<MeshVertexInfo_t>( nMeshCount );	
 	int nVertexCount = ComputeVertexAllocation( iMaxLOD, body, list.m_pHardwareData, buildInfo.m_pMeshVertices );
-	buildInfo.m_pVertexBuffer = (DecalBuildVertexInfo_t*)stackalloc( nVertexCount * sizeof(DecalBuildVertexInfo_t) );
+	buildInfo.m_pVertexBuffer = scratch.Alloc<DecalBuildVertexInfo_t>( nVertexCount );
 
 	// Project all mesh vertices
 	ProjectDecalsOntoMeshes( buildInfo, nMeshCount );
@@ -1355,7 +1342,7 @@ void CStudioRender::AddDecal( StudioDecalHandle_t hDecal, const StudioRenderCont
 					DecalVertexList_t &vertices = pMaterial->m_Vertices;
 				
 					// Now clear out the vertices referenced by the indices....
-					Assert( std::ssize( vertices ) >= buildInfo.m_VertexCount );
+					contract_assert( std::ssize( vertices ) >= buildInfo.m_VertexCount );
 					int vertsToRemove = std::min( (int)buildInfo.m_VertexCount, (int)std::ssize( vertices ) );
 					vertices.erase( vertices.begin(), vertices.begin() + vertsToRemove );
 					g_nTotalDecalVerts -= vertsToRemove;
@@ -1376,7 +1363,7 @@ void CStudioRender::AddDecal( StudioDecalHandle_t hDecal, const StudioRenderCont
 			{
 				bAddedDecals = true;
 
-				Assert(nDecalIndexCount > 0);
+				contract_assert( nDecalIndexCount > 0 );
 
 				DecalList_t::iterator decalIndex = AddDecalToMaterialList( buildInfo.m_pDecalMaterial );
 				Decal_t& decal = *decalIndex;
@@ -1433,15 +1420,15 @@ void CStudioRender::DrawSingleBoneDecals( CMeshBuilder& meshBuilder, const Decal
 	{
 		
 		meshBuilder.Position3fv( vertex.m_Position.Base() );
-		meshBuilder.Normal3fv( GetVecNormal( vertex.m_Normal ).Base() );
+		meshBuilder.Normal3fv( vertex.m_Normal.Base() );
 		{
-			meshBuilder.TexCoord2fv( 0, GetVecTexCoord(vertex.m_TexCoord).Base() );
+			meshBuilder.TexCoord2fv( 0, vertex.m_TexCoord.Base() );
 		}
 		meshBuilder.Color4ub( 255, 255, 255, 255 );
 
 		// In this case, we use the model matrix to send down the single transform, 
 		// so we don't have to send down any bone info per vertex.
-		Assert( meshBuilder.m_NumBoneWeights == 0 );
+		contract_assert( meshBuilder.m_NumBoneWeights == 0 );
 /*
 		meshBuilder.BoneWeight( 0, 1.0f );
 		meshBuilder.BoneWeight( 1, 0.0f );
@@ -1474,18 +1461,18 @@ void CStudioRender::DrawSingleBoneFlexedDecals( IMatRenderContext *pRenderContex
 		else
 		{
 			meshBuilder.Position3fv( vertex.m_Position.Base() );
-			meshBuilder.Normal3fv( GetVecNormal( vertex.m_Normal ).Base() );
+			meshBuilder.Normal3fv( vertex.m_Normal.Base() );
 		}
 
 		{
-			meshBuilder.TexCoord2fv( 0, GetVecTexCoord(vertex.m_TexCoord).Base() );
+			meshBuilder.TexCoord2fv( 0, vertex.m_TexCoord.Base() );
 		}
 
 		meshBuilder.Color4ub( 255, 255, 255, 255 );
 
 		// In this case, we use the model matrix to send down the single transform, 
 		// so we don't have to send down any bone info per vertex.
-		Assert( meshBuilder.m_NumBoneWeights == 0 );
+		contract_assert( meshBuilder.m_NumBoneWeights == 0 );
 
 		meshBuilder.AdvanceVertexF<VTX_HAVEPOS | VTX_HAVENORMAL | VTX_HAVECOLOR, 1>();
 	}
@@ -1506,10 +1493,10 @@ bool CStudioRender::DrawMultiBoneDecals( CMeshBuilder& meshBuilder, DecalMateria
 		
 		int n = vertex.m_MeshVertexIndex;
 
-		Assert( n < MAXSTUDIOVERTS );
+		contract_assert( n < MAXSTUDIOVERTS );
 
 		mstudiomesh_t *pMesh = vertex.GetMesh( pStudioHdr );
-		Assert( pMesh );
+		contract_assert( pMesh );
 
 		m_VertexCache.SetBodyModelMesh( vertex.m_Body, vertex.m_Model, vertex.m_Mesh );
 		if (m_VertexCache.IsVertexPositionCached( n ))
@@ -1568,14 +1555,14 @@ bool CStudioRender::DrawMultiBoneDecals( CMeshBuilder& meshBuilder, DecalMateria
 		}
 
 		{
-			meshBuilder.TexCoord2fv( 0, GetVecTexCoord(vertex.m_TexCoord).Base() );
+			meshBuilder.TexCoord2fv( 0, vertex.m_TexCoord.Base() );
 		}
 
 		meshBuilder.Color4ub( 255, 255, 255, 255 );
 
 		// In this case, we use the model matrix to send down the single transform, 
 		// so we don't have to send down any bone info per vertex.
-		Assert( meshBuilder.m_NumBoneWeights == 0 );
+		contract_assert( meshBuilder.m_NumBoneWeights == 0 );
 /*
 		meshBuilder.BoneWeight( 0, 1.0f );
 		meshBuilder.BoneWeight( 1, 0.0f );
@@ -1607,7 +1594,7 @@ bool CStudioRender::DrawMultiBoneFlexedDecals( IMatRenderContext *pRenderContext
 		int n = vertex.m_MeshVertexIndex;
 
 		mstudiomesh_t *pMesh = vertex.GetMesh( pStudioHdr );
-		Assert( pMesh );
+		contract_assert( pMesh );
 
 		if ( pLastMesh != pMesh )
 		{
@@ -1623,8 +1610,8 @@ bool CStudioRender::DrawMultiBoneFlexedDecals( IMatRenderContext *pRenderContext
 		Vector2D morphUV;
 		if ( pMorph )
 		{
-			Assert( pBoneRemap );
-			Assert( vertex.m_GroupIndex != 0xFFFF );
+			contract_assert( pBoneRemap );
+			contract_assert( vertex.m_GroupIndex != 0xFFFF );
 			if ( !pRenderContext->GetMorphAccumulatorTexCoord( &morphUV, pMorph, vertex.m_GroupIndex ) )
 			{
 				pMorph = nullptr;
@@ -1666,7 +1653,7 @@ bool CStudioRender::DrawMultiBoneFlexedDecals( IMatRenderContext *pRenderContext
 				}
 				else
 				{
-					Assert( pMesh );
+					contract_assert( pMesh );
 					R_StudioTransform( *vertData->Position( n ), pBoneWeights, m_PoseToWorld, pCachedVert->m_Position.AsVector3D() );
 					R_StudioRotate( *vertData->Normal( n ), pBoneWeights, m_PoseToWorld, pCachedVert->m_Normal.AsVector3D() );
 				}
@@ -1680,12 +1667,12 @@ bool CStudioRender::DrawMultiBoneFlexedDecals( IMatRenderContext *pRenderContext
 			}
 
 			meshBuilder.Color4ub( 255, 255, 255, 255 );
-			meshBuilder.TexCoord2fv( 0, GetVecTexCoord( vertex.m_TexCoord ).Base() );
+			meshBuilder.TexCoord2fv( 0, vertex.m_TexCoord.Base() );
 			meshBuilder.TexCoord3f( 2, 0.0f, 0.0f, 0.0f );
 
 			// In this case, we use the model matrix to send down the single transform, 
 			// so we don't have to send down any bone info per vertex.
-			Assert( meshBuilder.m_NumBoneWeights == 0 );
+			contract_assert( meshBuilder.m_NumBoneWeights == 0 );
 			// NOTE: Even if HW morphing is active, since we're using bone 0, it will multiply by identity in the shader
 /*
 			meshBuilder.BoneWeight( 0, 1.0f );	
@@ -1704,14 +1691,14 @@ bool CStudioRender::DrawMultiBoneFlexedDecals( IMatRenderContext *pRenderContext
 			meshBuilder.Position3fv( vertData->Position( n )->Base() );
 			meshBuilder.Normal3fv( vertData->Normal( n )->Base() );
 			meshBuilder.Color4ub( 255, 255, 255, 255 );
-			meshBuilder.TexCoord2fv( 0, GetVecTexCoord( vertex.m_TexCoord ).Base() );
+			meshBuilder.TexCoord2fv( 0, vertex.m_TexCoord.Base() );
 			meshBuilder.TexCoord3f( 2, morphUV.x, morphUV.y, 1.0f );
 
 			// NOTE: We should be renormalizing bone weights here like R_AddVertexToMesh does.. 
 			// It's too expensive. Tough noogies.
 			mstudioboneweight_t* pBoneWeights = vertData->BoneWeights( n );
-			Assert( meshBuilder.m_NumBoneWeights > 0 );
-			Assert( pBoneWeights->numbones <= 3 );
+			contract_assert( meshBuilder.m_NumBoneWeights > 0 );
+			contract_assert( pBoneWeights->numbones <= 3 );
 			meshBuilder.BoneWeight( 0, pBoneWeights->weight[ 0 ] );	
 			meshBuilder.BoneWeight( 1, pBoneWeights->weight[ 1 ] );
 			meshBuilder.BoneWeight( 2, 1.0f - pBoneWeights->weight[ 1 ] - pBoneWeights->weight[ 0 ] );
@@ -1763,7 +1750,7 @@ void CStudioRender::BuildDecalIndices( CMeshBuilder &meshBuilder, const DecalMat
 #ifdef _DEBUG
 		else
 		{
-			Assert( i + 1 == indexCount );
+			contract_assert( i + 1 == indexCount );
 		}
 #endif
 	}
@@ -1783,7 +1770,7 @@ void ComputeSkinMatrixToMemorySSE( mstudioboneweight_t &boneweights, matrix3x4_t
 
 void CStudioRender::DrawInstancedMultiBoneDecals( CMeshBuilder& meshBuilder, const DecalMaterial_t& decalMaterial, studiohdr_t *pStudioHdr, matrix3x4_t *pPoseToWorld )
 {
-	ALIGN16 matrix3x4_t skinMatrix[ DECAL_BATCH_SIZE ] ALIGN16_POST;
+	matrix3x4_t skinMatrix[ DECAL_BATCH_SIZE ] [[gnu::aligned(16)]];
 	Vector4DAligned vecPosition[ DECAL_BATCH_SIZE ];
 	Vector4DAligned vecNormal[ DECAL_BATCH_SIZE ];
 	Vector2D vecTexcoord[ DECAL_BATCH_SIZE ];
@@ -1814,19 +1801,17 @@ void CStudioRender::DrawInstancedMultiBoneDecals( CMeshBuilder& meshBuilder, con
 				if ( j < nVerts )
 				{
 					const DecalVertex_t& nextVertex = verts[j];
-#if   _SSE1
-					_mm_prefetch( reinterpret_cast<const char *>(&nextVertex) , _MM_HINT_T0 );
-#endif
+					ks::simd::prefetch( &nextVertex );
 				}
 			}
 
 
 			int n = vertex.m_MeshVertexIndex;
 
-			Assert( n < MAXSTUDIOVERTS );
+			contract_assert( n < MAXSTUDIOVERTS );
 
-			mstudiomesh_t * RESTRICT pMesh = vertex.GetMesh( pStudioHdr );
-			Assert( pMesh );
+			mstudiomesh_t * __restrict__ pMesh = vertex.GetMesh( pStudioHdr );
+			contract_assert( pMesh );
 
 			if ( pLastMesh != pMesh )
 			{
@@ -1839,10 +1824,10 @@ void CStudioRender::DrawInstancedMultiBoneDecals( CMeshBuilder& meshBuilder, con
 				}
 			}
 
-			vecTexcoord[nCount] = GetVecTexCoord( vertex.m_TexCoord );
+			vecTexcoord[nCount] = vertex.m_TexCoord;
 			if ( vertData )
 			{
-				mstudioboneweight_t*  RESTRICT pBoneWeights = vertData->BoneWeights( n );
+				mstudioboneweight_t*  __restrict__ pBoneWeights = vertData->BoneWeights( n );
 				vecPosition[nCount].Init( *vertData->Position( n ) ); 
 				vecNormal[nCount].Init( *vertData->Normal( n ) );
 				ComputeSkinMatrixToMemorySSE( *pBoneWeights, pPoseToWorld, skinMatrix[nCount] );
@@ -1925,7 +1910,7 @@ void CStudioRender::DrawInstancedMultiBoneDecals( CMeshBuilder& meshBuilder, con
 void CStudioRender::DrawModelArrayDecals( IMatRenderContext *pRenderContext, 
 	studiohdr_t *pStudioHdr, int nCount, DecalRenderData_t *pRenderData, int nFlashlightMask )
 {
-	VPROF( "CStudioRender::DrawModelArrayDecals" );
+	CVProfScope _( "CStudioRender::DrawModelArrayDecals", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// FIXME: Is there a more optimal method? It's unclear since dynamic vbs are used
 	// NOTE: I *think* I can, assuming the same material is used. I can probably
@@ -1934,7 +1919,7 @@ void CStudioRender::DrawModelArrayDecals( IMatRenderContext *pRenderContext,
 	// NOTE: Flexing is not supported here yet
 	// FIXME: This is a problem. . . boomer has flexes and goes through this path, which doesn't apply flexes.
 	// Can you quickly tell if there are active flexes and make the model go through the slow path instead?
-	Assert ( pStudioHdr->numflexdesc == 0 );
+	contract_assert( pStudioHdr->numflexdesc == 0 );
 
 	pRenderContext->SetNumBoneWeights( 0 );
 	pRenderContext->MatrixMode( MATERIAL_MODEL );
@@ -2028,7 +2013,7 @@ void CStudioRender::DrawDecalMaterial( IMatRenderContext *pRenderContext, DecalM
 {
 	// Performance analysis.
 	//	VPROF_BUDGET( "Decals", "Decals" );
-	VPROF( "CStudioRender::DrawDecalMaterial" );
+	CVProfScope _( "CStudioRender::DrawDecalMaterial", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// It's possible for the index count to become zero due to decal retirement
 	int indexCount = std::ssize( decalMaterial.m_Indices );
@@ -2171,7 +2156,7 @@ void CStudioRender::DrawDecal( const DrawModelInfo_t &drawInfo, int lod, int bod
 	if ( handle == STUDIORENDER_DECAL_INVALID )
 		return;
 
-	VPROF("CStudioRender::DrawDecal");
+	CVProfScope _( "CStudioRender::DrawDecal", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 	PreDrawDecal( pRenderContext, drawInfo );
@@ -2187,7 +2172,7 @@ void CStudioRender::DrawDecal( const DrawModelInfo_t &drawInfo, int lod, int bod
 
 	// Add this fix after I fix the other problem.
 	studioloddata_t *pStudioLOD = nullptr;
-	Assert( m_pStudioHdr->numbones != 0 );
+	contract_assert( m_pStudioHdr->numbones != 0 );
 	if ( m_pStudioHdr->numbones <= 1 )
 	{
 		// Use the model matrix to skin if we only have one bone.
@@ -2247,7 +2232,7 @@ void CStudioRender::DrawStaticPropDecals( const DrawModelInfo_t &drawInfo, const
 
 	m_pRC = const_cast< StudioRenderContext_t* >( &rc );
 
-	VPROF("CStudioRender::DrawStaticPropDecals");
+	CVProfScope _( "CStudioRender::DrawStaticPropDecals", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 	PreDrawDecal( pRenderContext, drawInfo );
 
@@ -2288,5 +2273,3 @@ void CStudioRender::CleanupDecals()
 		it = itNext;
 	}
 }
-
-

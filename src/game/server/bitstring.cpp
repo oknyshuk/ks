@@ -1,6 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Arbitrary length bit string
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Arbitrary length bit string
 //				** NOTE: This class does NOT override the bitwise operators
 //						 as doing so would require overriding the operators
 //						 to allocate memory for the returned bitstring.  This method
@@ -8,16 +9,9 @@
 //						 would have to remember to delete the memory.  Funtions
 //						 are used instead to require the calling party to allocate
 //						 and destroy their own memory
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.core;
 
-#include <limits.h>
 
 #include "bitstring.h"
-#include "tier0/dbg.h"
-

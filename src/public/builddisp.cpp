@@ -1,19 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //#include <stdafx.h>
-#include <stdlib.h>
-#include <malloc.h>
+import std;
 #include "builddisp.h"
 #include "collisionutils.h"
-#include "tier1/strtools.h"
-#include "tier0/dbg.h"
 
 //
 // Node Functions (friend functions)
@@ -429,13 +420,13 @@ bool CCoreDispSurface::LongestInU( const Vector &vecU, const Vector &vecV )
 	float flVLength = 0.0f;
 	for ( int iPoint = 0; iPoint < 4; ++iPoint )
 	{
-		float flTestDist = fabs( flDistU[(iPoint+1)%4] - flDistU[iPoint] );
+		float flTestDist = std::fabs( flDistU[(iPoint+1)%4] - flDistU[iPoint] );
 		if ( flTestDist > flULength )
 		{
 			flULength = flTestDist;
 		}
 
-		flTestDist = fabs( flDistV[(iPoint+1)%4] - flDistV[iPoint] );
+		flTestDist = std::fabs( flDistV[(iPoint+1)%4] - flDistV[iPoint] );
 		if ( flTestDist > flVLength )
 		{
 			flVLength = flTestDist;
@@ -689,7 +680,7 @@ CCoreDispInfo::~CCoreDispInfo()
 //-----------------------------------------------------------------------------
 void CCoreDispInfo::InitDispInfo( int power, int minTess, float smoothingAngle, float *alphas, Vector *dispVectorField,  float *dispDistances, int nFlags, const CDispMultiBlend *pvMultiBlends )
 {
-	Assert( power >= MIN_MAP_DISP_POWER && power <= MAX_MAP_DISP_POWER );
+	contract_assert( power >= MIN_MAP_DISP_POWER && power <= MAX_MAP_DISP_POWER );
 
 	//
 	// general displacement data
@@ -847,7 +838,7 @@ CDispCornerNeighbors* CCoreDispInfo::GetCornerNeighbors( int index )
 
 CDispUtilsHelper* CCoreDispInfo::GetDispUtilsByIndex( int index )
 {
-	Assert( m_ppListBase );
+	contract_assert( m_ppListBase );
 	return index == 0xFFFF ? 0 : m_ppListBase[index];
 }
 
@@ -2680,8 +2671,8 @@ void CCoreDispInfo::CreateBoundingBoxes( CoreDispBBox_t *pBBox, int count )
 	int iBox;
 	for( iBox = 0; iBox < count; ++iBox )
 	{
-		pBBox[iBox].vMin.Init( FLT_MAX, FLT_MAX, FLT_MAX );
-		pBBox[iBox].vMax.Init( FLT_MIN, FLT_MIN, FLT_MIN );
+		pBBox[iBox].vMin.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+		pBBox[iBox].vMax.Init( std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min() );
 	}
 
 	// Get the width and height of the displacement surface.
@@ -2722,7 +2713,7 @@ void CCoreDispInfo::CreateBoundingBoxes( CoreDispBBox_t *pBBox, int count )
 	}
 
 	// Verify.
-	Assert( iBox == count );
+	contract_assert( iBox == count );
 
 	// Bloat.
 	for ( iBox = 0; iBox < count; ++iBox )
@@ -2861,9 +2852,8 @@ void CCoreDispInfo::GetTriIndices( int iTri, unsigned short &v1, unsigned short 
 	// Verify we have the correct data (only build when collision data is built).
 	if ( !m_pTris || ( iTri < 0 ) || ( iTri >= GetTriCount() ) )
 	{
-		Assert( iTri >= 0 );
-		Assert( iTri < GetTriCount() );
-		Assert( m_pTris );
+		contract_assert( iTri >= 0 );
+		contract_assert( m_pTris );
 		return;
 	}
 
@@ -2881,9 +2871,8 @@ void CCoreDispInfo::SetTriIndices( int iTri, unsigned short v1, unsigned short v
 	// Verify we have the correct data (only build when collision data is built).
 	if ( !m_pTris || ( iTri < 0 ) || ( iTri >= GetTriCount() ) )
 	{
-		Assert( iTri >= 0 );
-		Assert( iTri < GetTriCount() );
-		Assert( m_pTris );
+		contract_assert( iTri >= 0 );
+		contract_assert( m_pTris );
 		return;
 	}
 
@@ -2901,9 +2890,8 @@ void CCoreDispInfo::GetTriPos( int iTri, Vector &v1, Vector &v2, Vector &v3 )
 	// Verify we have the correct data (only build when collision data is built).
 	if ( !m_pTris || ( iTri < 0 ) || ( iTri >= GetTriCount() ) )
 	{
-		Assert( iTri >= 0 );
-		Assert( iTri < GetTriCount() );
-		Assert( m_pTris );
+		contract_assert( iTri >= 0 );
+		contract_assert( m_pTris );
 		return;
 	}
 
@@ -2921,7 +2909,7 @@ void CCoreDispInfo::InitTris( void )
 	// Verify we have the correct data (only build when collision data is built).
 	if ( !m_pTris )
 	{
-		Assert( m_pTris );
+		contract_assert( m_pTris );
 		return;
 	}
 
@@ -2940,12 +2928,11 @@ void CCoreDispInfo::CreateTris( void )
 	// Verify we have the correct data (only build when collision data is built).
 	if ( !m_pTris )
 	{
-		Assert( m_pTris );
+		contract_assert( m_pTris );
 		return;
 	}
 
 	// Extra sanity check if wanted!
-	Assert( GetTriCount() == ( m_RenderIndexCount / 3 ) );
 
 	int nTriCount = GetTriCount();
 	for ( int iTri = 0, iRender = 0; iTri < nTriCount; ++iTri, iRender += 3 )

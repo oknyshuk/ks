@@ -1,12 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PLAYER_CONTROLLER_H
-#define PLAYER_CONTROLLER_H
-
+import std;
+import ks.math;
+class IPhysicsObject;
 class IPhysicsPlayerControllerEvent
 {
 public:
@@ -48,5 +46,3 @@ public:
 	// returns bitfield e.g. 0 (no contacts), 1 (has physics contact), 2 (contact matching nGameFlags), 3 (both 1 & 2)
 	virtual uint32 GetContactState( uint16 nGameFlags ) = 0;
 };
-
-#endif // PLAYER_CONTROLLER_H

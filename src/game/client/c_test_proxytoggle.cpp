@@ -1,10 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_baseentity.h"
@@ -57,7 +62,9 @@ IMPLEMENT_REFLECT_CLIENTCLASS( C_Test_ProxyToggle_Networkable, DT_ProxyToggle, C
 // ---------------------------------------------------------------------------------------- //
 
 // The engine uses this to get the current value.
-CON_COMMAND_F( Test_ProxyToggle_EnsureValue, "Test_ProxyToggle_EnsureValue", FCVAR_CHEAT )
+static void Test_ProxyToggle_EnsureValue( const CCommand &args );
+static ConCommand Test_ProxyToggle_EnsureValue_command( "Test_ProxyToggle_EnsureValue", Test_ProxyToggle_EnsureValue, "Test_ProxyToggle_EnsureValue", FCVAR_CHEAT );
+static void Test_ProxyToggle_EnsureValue( const CCommand &args )
 {
 	if ( args.ArgC() < 2 )
 	{
@@ -74,7 +81,3 @@ CON_COMMAND_F( Test_ProxyToggle_EnsureValue, "Test_ProxyToggle_EnsureValue", FCV
 		Error( "Test_ProxyToggle_EnsureValue: value (%d) doesn't match wanted value (%d).", g_pTestObj->m_WithProxy, wantedValue );
 	}
 }
-
-
-
-

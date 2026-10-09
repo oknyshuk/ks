@@ -1,25 +1,19 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef CLOSEDCAPTIONS_H
-#define CLOSEDCAPTIONS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "captioncompiler.h"
-#include <flat_set>
-#include <set>
-#include <string>
+import std;
 
-FORWARD_DECLARE_HANDLE( memhandle_t );
+struct memhandle_t__;
+using memhandle_t = memhandle_t__ *;
 
 typedef std::flat_multiset< CaptionLookup_t, CCaptionLookupLess > CaptionDictionary_t;
 struct AsyncCaption_t
 {
 	AsyncCaption_t()
 	{
-		Q_memset( &m_Header, 0, sizeof( m_Header ) );
+		V_memset( &m_Header, 0, sizeof( m_Header ) );
 	}
 
 	struct BlockInfo_t
@@ -65,5 +59,3 @@ struct AsyncCaption_t
 	CompiledCaptionHeader_t	m_Header;
 	std::string				m_DataBaseFile;
 };
-
-#endif // CLOSEDCAPTIONS_H

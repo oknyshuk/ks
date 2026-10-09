@@ -1,8 +1,5 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #ifndef DEDICATED
 #include "screen.h"
@@ -10,14 +7,15 @@
 #include "iprediction.h"
 #include "proto_oob.h"
 #include "demo.h"
-#include "tier0/icommandline.h"
+import std;
+import ks.core;
 #include "ispatialpartitioninternal.h"
 #include "GameEventManager.h"
 #include "cdll_engine_int.h"
 #include "voice.h"
 #include "host_cmd.h"
 #include "server.h"
-#include "convar.h"
+import ks.tier1;
 #include "dt_recv_eng.h"
 #include "dt_common_eng.h"
 #include "LocalNetworkBackdoor.h"
@@ -36,16 +34,43 @@
 #include "r_decal.h"
 #include "materialsystem/imaterial.h"
 #include "EngineSoundInternal.h"
-#include "master.h"
 #include "ivideomode.h"
 #include "download.h"
 #include "GameUI/IGameUI.h"
-#if defined( REPLAY_ENABLED )
-#include "replayhistorymanager.h"
-#endif
 #include "cl_demo.h"
 
-#include "audio_pch.h"
+
+
+import ks.math;
+
+#include "tier2/riff.h"
+#include "soundservice.h"
+#include "voice_sound_engine_interface.h"
+#include "soundflags.h"
+#include "filesystem.h"
+#include "../filesystem_engine.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_mix_buf.h"
+#include "snd_env_fx.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_convars.h"
+#include "snd_dev_common.h"
+#include "snd_dev_direct.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+#include "snd_stubs.h"
+#include "snd_wave_source.h"
+#include "snd_wave_temp.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+#include "snd_wave_mixer_adpcm.h"
+#include "snd_io.h"
+#include "voice_mixer_controls.h"
+
+#include "audio/private/posix_stubs.h"
 
 #include "paint.h"
 
@@ -66,26 +91,6 @@ void CClientState::ConnectionClosing( const char * reason )
 	if ( m_nSignonState > SIGNONSTATE_NONE )
 	{
 		ConMsg( "Disconnect: %s.\n", reason );
-		if ( !Q_stricmp( reason, INVALID_STEAM_TICKET ) )
-		{
-			g_eSteamLoginFailure = STEAMLOGINFAILURE_BADTICKET;
-		}
-		else if ( !Q_stricmp( reason, INVALID_STEAM_LOGON ) )
-		{
-			g_eSteamLoginFailure = STEAMLOGINFAILURE_NOSTEAMLOGIN;
-		}
-		else if ( !Q_stricmp( reason, INVALID_STEAM_LOGGED_IN_ELSEWHERE ) )
-		{
-			g_eSteamLoginFailure = STEAMLOGINFAILURE_LOGGED_IN_ELSEWHERE;
-		}
-		else if ( !Q_stricmp( reason, INVALID_STEAM_VACBANSTATE ) )
-		{
-			g_eSteamLoginFailure = STEAMLOGINFAILURE_VACBANNED;
-		}
-		else
-		{
-			g_eSteamLoginFailure = STEAMLOGINFAILURE_NONE;
-		}
 
 		// If the reason is a localized string, pass it raw.
 		if ( reason && reason[0] == '#' )
@@ -96,7 +101,7 @@ void CClientState::ConnectionClosing( const char * reason )
 		SCR_EndLoadingPlaque();
 		Host_Disconnect(true);
 
-		if ( (reason != nullptr) && (Q_stricmp( reason, "Server shutting down" ) == 0) && //if disconnect reason is server shutdown
+		if ( (reason != nullptr) && (V_stricmp( reason, "Server shutting down" ) == 0) && //if disconnect reason is server shutdown
 			(CommandLine()->FindParm( "-quitonservershutdown" ) != 0) ) //and we want to quit the game whenever the server shuts down (assists quick iteration)
 		{
 			Host_Shutdown(); //quit the game
@@ -204,11 +209,6 @@ void CClientState::Disconnect( bool bShowMainMenu )
 	// stop any demo activities
 	demoplayer->StopPlayback();
 	demorecorder->StopRecording();
-
-#if defined( REPLAY_ENABLED )
-	extern IReplayHistoryManager *g_pClientReplayHistoryManager;
-	g_pClientReplayHistoryManager->StopDownloads();
-#endif
 
 	S_StopAllSounds( true );
 	
@@ -345,11 +345,6 @@ bool CClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg )
 	// is server a HLTV proxy ?
 	ishltv = msg.is_hltv;
 
-#if defined( REPLAY_ENABLED )
-	// is server a replay proxy ?
-	isreplay = msg.is_replay;
-#endif
-
 	// The CRC of the server map must match the CRC of the client map. or else
 	//  the client is probably cheating.
 	serverCRC = msg.map_crc;
@@ -359,14 +354,8 @@ bool CClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg )
 	g_ClientGlobalVariables.maxClients = m_nMaxClients;
 	g_ClientGlobalVariables.network_protocol = msg.protocol;
 
-#ifdef SHARED_NET_STRING_TABLES
-	// use same instance of StringTableContainer as the server does
-	m_StringTableContainer = networkStringTableContainerServer;
-	CL_HookClientStringTables();
-#else
 	// use own instance of StringTableContainer
 	m_StringTableContainer = networkStringTableContainerClient;
-#endif
 
 	CL_ReallocateDynamicData( m_nMaxClients );
 
@@ -445,7 +434,6 @@ bool CClientState::SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg )
 
 bool CClientState::SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg )
 {
-#if !defined( NO_VOICE )
 	if( msg.codec->size() == 0 )
 	{
 		Voice_Deinit();
@@ -455,7 +443,6 @@ bool CClientState::SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg )
 #define SPEEX_QUALITY 4
 		Voice_Init( msg.codec->c_str(), msg.version.has_value() ? msg.version : SPEEX_QUALITY );
 	}
-#endif
 	return true;
 }
 
@@ -464,7 +451,6 @@ ConVar voice_debugfeedback( "voice_debugfeedback", "0" );
 bool CClientState::SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData &msg )
 {
 
-#if !defined( NO_VOICE )
 	if ( voice_debugfeedback.GetBool() )
 	{
 		Msg( "Received voice from: %d\n", msg.client + 1 );
@@ -479,9 +465,9 @@ bool CClientState::SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData &msg )
 	player_info_t playerinfo;
 	engineClient->GetPlayerInfo( iEntity, &playerinfo );
 
-	CSteamID voicePlayer( playerinfo.xuid );
+	CPlayerId voicePlayer( playerinfo.xuid );
 
-	if ( Q_strlen( cl_voice_filter.GetString() ) > 0 && Q_strstr( playerinfo.name, cl_voice_filter.GetString() ) == nullptr )
+	if ( V_strlen( cl_voice_filter.GetString() ) > 0 && V_strstr( playerinfo.name, cl_voice_filter.GetString() ) == nullptr )
 		return true;
 
 	// Data length can be zero when the server is just acking a client's voice data.
@@ -525,10 +511,9 @@ bool CClientState::SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData &msg )
 							   msg.section_number.has_value() ? msg.section_number : 0,
 							   msg.sequence_bytes.has_value() ? msg.sequence_bytes : 0,
 							   msg.uncompressed_sample_offset.has_value() ? msg.uncompressed_sample_offset : 0,
-							   ( msg.format.has_value() && ( msg.format == ks::net::VOICEDATA_FORMAT_STEAM ) ) ? VoiceFormat_Steam : VoiceFormat_Engine );
+							   VoiceFormat_Engine );
 	}
 
-#endif
 	return true;
 };
 
@@ -562,7 +547,7 @@ bool CClientState::SVCMsg_Sounds( const ks::net::CSVCMsg_Sounds& msg )
 		{
 			// client is incrementing the reliable sequence numbers itself
 			m_nSoundSequence = ( m_nSoundSequence + 1 ) & SOUND_SEQNUMBER_MASK;
-			Assert ( sound.nSequenceNumber == 0 );
+			contract_assert( sound.nSequenceNumber == 0 );
 			sound.nSequenceNumber = m_nSoundSequence;
 		}
 
@@ -811,7 +796,7 @@ bool CClientState::SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities &msg
 	void *from = nullptr;
 	C_ServerClassInfo *pServerClass = nullptr;
 	ClientClass *pClientClass = nullptr;
-	ALIGN4 unsigned char data[CEventInfo::MAX_EVENT_DATA] ALIGN4_POST;
+	unsigned char data[CEventInfo::MAX_EVENT_DATA] [[gnu::aligned(4)]];
 	bf_write toBuf( data, sizeof(data) );
 	CEventInfo *ei = nullptr;
 
@@ -879,7 +864,7 @@ bool CClientState::SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities &msg
 		}
 		else
 		{
-			Assert( !eventList.empty() );
+			contract_assert( !eventList.empty() );
 
 			CEventInfo *previous = &eventList.back();
 
@@ -890,7 +875,7 @@ bool CClientState::SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities &msg
 		// Add a slot
 		ei = &eventList.emplace_back();
 
-		Assert( ei );
+		contract_assert( ei );
 
 		ei->classID			= classID;
 		ei->fire_delay		= fire_time + delay;
@@ -922,7 +907,7 @@ bool CClientState::SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg
 
 bool CClientState::SVCMsg_HltvReplay( const ks::net::CSVCMsg_HltvReplay &msg )
 {
-	VPROF( "HltvReplayStart" );
+	CVProfScope _( "HltvReplayStart", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	DevMsg( "%d. Msg_HltvReplay %s->%s\n", GetClientTickCount(), m_nHltvReplayDelay ? "replay" : "real-time", msg.delay ? "replay" : "real-time" );
 	int nWasDelay = m_nHltvReplayDelay;
 	m_nHltvReplayDelay = msg.delay;

@@ -1,19 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IMAGEPACKER_H
-#define IMAGEPACKER_H
+import std;
+import ks.tier1;
 
-
-#include "utlvector.h"
-
-#define MAX_MAX_LIGHTMAP_WIDTH 2048
+inline constexpr auto MAX_MAX_LIGHTMAP_WIDTH = 2048;
 
 
 //-----------------------------------------------------------------------------
@@ -60,6 +52,3 @@ inline void CImagePacker::IncrementSortId()
 {
 	++m_nSortID;
 }
-
-
-#endif // IMAGEPACKER_H

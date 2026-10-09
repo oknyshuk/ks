@@ -1,45 +1,36 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "imorphinternal.h"
-#include "tier0/dbg.h"
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imesh.h"
-#include <algorithm>
-#include <vector>
+import std;
 #include "materialsystem_global.h"
 #include "IHardwareConfigInternal.h"
 #include "pixelwriter.h"
 #include "itextureinternal.h"
-#include "tier1/keyvalues.h"
 #include "texturemanager.h"
 #include "imaterialsysteminternal.h"
 #include "imatrendercontextinternal.h"
 #include "studio.h"
-#include "tier0/vprof.h"
 #include "renderparm.h"
 #include "tier2/renderutils.h"
 #include "bitmap/imageformat.h"
 #include "materialsystem/IShader.h"
 #include "imaterialinternal.h"
 
-
-#include "tier0/memalloc.h"
 //-----------------------------------------------------------------------------
 // Activate to get stats
 //-----------------------------------------------------------------------------
 //#define REPORT_MORPH_STATS 1
 
-
 //-----------------------------------------------------------------------------
 // Used to collapse quads with small gaps
 //-----------------------------------------------------------------------------
-#define MIN_SEGMENT_GAP_SIZE 12
+constexpr auto MIN_SEGMENT_GAP_SIZE = 12;
 
 
 //-----------------------------------------------------------------------------
@@ -94,7 +85,7 @@ CVertexMorphDict::CVertexMorphDict() : m_MorphLists()
 //-----------------------------------------------------------------------------
 void CVertexMorphDict::AddMorph( const MorphVertexInfo_t &info )
 {
-	Assert( info.m_nVertexId != 65535 );
+	contract_assert( info.m_nVertexId != 65535 );
 
 	auto it = std::ranges::lower_bound( m_MorphLists, info.m_nMorphTargetId, {}, &MorphVertexList_t::m_nMorphTargetId );
 	if ( it == m_MorphLists.end() || it->m_nMorphTargetId != info.m_nMorphTargetId )
@@ -342,9 +333,6 @@ public:
 	int m_nMorphCount;
 	CMorph *m_pMorphsToAccumulate[MAX_MODEL_MORPHS];
 
-#ifdef DBGFLAG_ASSERT
-	bool m_bInMorphAccumulation;
-#endif
 };
 
 
@@ -454,7 +442,7 @@ int CMorph::s_nUniqueId = 0;
 //-----------------------------------------------------------------------------
 CMorph::CMorph()
 {
-	memset( m_pMorphTexture, 0, sizeof(m_pMorphTexture) );
+	std::memset( m_pMorphTexture, 0, sizeof(m_pMorphTexture) );
 	m_pMorphBuffer = nullptr;
 	m_nTextureWidth = 0;
 	m_nTextureHeight = 0;
@@ -610,7 +598,7 @@ bool CMorph::IsLocked() const
 //-----------------------------------------------------------------------------
 void CMorph::Lock( float flFloatToFixedScale )
 {
-	Assert( !IsLocked() );
+	contract_assert( !IsLocked() );
 	m_bLocked = true;
 	CleanUp();
 	m_flFloatToFixedScale = flFloatToFixedScale;
@@ -625,7 +613,7 @@ void CMorph::Lock( float flFloatToFixedScale )
 //-----------------------------------------------------------------------------
 void CMorph::AddMorph( const MorphVertexInfo_t &info )
 {
-	Assert( IsLocked() );
+	contract_assert( IsLocked() );
 	m_MorphDict.AddMorph( info );
 }
 
@@ -635,7 +623,7 @@ void CMorph::AddMorph( const MorphVertexInfo_t &info )
 //-----------------------------------------------------------------------------
 void CMorph::Unlock( )
 {
-	Assert( IsLocked() );
+	contract_assert( IsLocked() );
 
 	// Sort the deltas by destination vertex
 	m_MorphDict.SortDeltas();
@@ -679,10 +667,10 @@ void CMorph::CreateAccumulatorMaterial( int nMaterialIndex )
 	{
 		pVMTKeyValues->SetString( "$sidespeed", m_pMorphTexture[MORPH_TEXTURE_SPEED_SIDE_MAP]->GetName() );
 	}
-	Q_snprintf( pTemp, sizeof(pTemp), "[%d %d %d]", m_nTextureWidth, m_nTextureHeight, Get4TupleCount(m_Format) );
+	V_snprintf( pTemp, sizeof(pTemp), "[%d %d %d]", m_nTextureWidth, m_nTextureHeight, Get4TupleCount(m_Format) );
 	pVMTKeyValues->SetString( "$dimensions", pTemp );
 	
-	Q_snprintf( pTemp, sizeof(pTemp), "___AccumulateMorph%d.vmt", nMaterialIndex );
+	V_snprintf( pTemp, sizeof(pTemp), "___AccumulateMorph%d.vmt", nMaterialIndex );
 	m_MorphAccumulationMaterial.Init( pTemp, pVMTKeyValues );
 }
 
@@ -732,7 +720,7 @@ int CMorph::DetermineTotalDeltaCount( const std::vector< MorphSegmentList_t > &m
 void CMorph::ComputeTextureDimensions( const std::vector< MorphSegmentList_t > &morphSegments )
 {
 	int nTotalDeltas = DetermineTotalDeltaCount( morphSegments );
-	m_nTextureHeight = ceil( sqrt( (float)nTotalDeltas ) );
+	m_nTextureHeight = std::ceil( std::sqrt( (float)nTotalDeltas ) );
 
 	// Round the dimension up to a multiple of 4
 	m_nTextureHeight = ( m_nTextureHeight + 3 ) & ( ~0x3 );
@@ -751,7 +739,7 @@ void CMorph::ComputeTextureDimensions( const std::vector< MorphSegmentList_t > &
 		if ( m_nTextureHeight > nMaxTextureHeight )
 		{
 			Warning( "Morph texture is too big!!! Make brian add support for morphs having multiple textures.\n" );
-			Assert( 0 );
+			contract_assert( 0 );
 			m_nTextureHeight = nMaxTextureHeight;
 			break;
 		}
@@ -863,7 +851,7 @@ void CMorph::PackMorphData( )
 	char pTemp[512];
 	if ( m_Format & ( MORPH_POSITION | MORPH_WRINKLE | MORPH_NORMAL ) )
 	{
-		Q_snprintf( pTemp, sizeof(pTemp), "__morphtarget[%d]: pos/norm", s_nUniqueId );
+		V_snprintf( pTemp, sizeof(pTemp), "__morphtarget[%d]: pos/norm", s_nUniqueId );
 
 		int nTotal4Tuples = Get4TupleCount( m_Format );
 		ITexture *pTexture = g_pMaterialSystem->CreateProceduralTexture( pTemp, TEXTURE_GROUP_MORPH_TARGETS, 
@@ -875,7 +863,7 @@ void CMorph::PackMorphData( )
 
 	if ( m_Format & ( MORPH_SIDE | MORPH_SPEED ) )
 	{
-		Q_snprintf( pTemp, sizeof(pTemp), "__morphtarget[%d]: side/speed", s_nUniqueId );
+		V_snprintf( pTemp, sizeof(pTemp), "__morphtarget[%d]: side/speed", s_nUniqueId );
 
 		ITexture *pTexture = g_pMaterialSystem->CreateProceduralTexture( pTemp, TEXTURE_GROUP_MORPH_TARGETS, 
 			m_nTextureWidth, m_nTextureHeight, IMAGE_FORMAT_RGBA8888, 
@@ -898,9 +886,6 @@ void CMorph::PackMorphData( )
 
 	CreateStaticMesh();
 
-#ifdef REPORT_MORPH_STATS
-	DisplayMorphStats( );
-#endif
 }
 
 
@@ -911,7 +896,7 @@ void CMorph::WriteDeltaPositionNormalToTexture( CPixelWriter &pixelWriter, int x
 {
 	// NOTE: 0 = -max range, 32767 = 0, 65534, 65535 = maxrange. 
 	// This way we can encode +/- maxrange and 0 exactly
-	Assert ( m_Format & ( MORPH_POSITION | MORPH_WRINKLE | MORPH_NORMAL ) );
+	contract_assert( m_Format & ( MORPH_POSITION | MORPH_WRINKLE | MORPH_NORMAL ) );
 
 	int n4TupleCount = Get4TupleCount( m_Format );
 	pixelWriter.Seek( x*n4TupleCount, y );
@@ -953,7 +938,7 @@ void CMorph::WriteDeltaPositionNormalToTexture( CPixelWriter &pixelWriter, int x
 
 void CMorph::WriteSideSpeedToTexture( CPixelWriter &pixelWriter, int x, int y, const MorphVertexInfo_t &info )
 {
-	Assert ( m_Format & ( MORPH_SPEED | MORPH_SIDE ) );
+	contract_assert( m_Format & ( MORPH_SPEED | MORPH_SIDE ) );
 
 	// Speed + size go from 0 to 1.
 	int r = 0, g = 0, b = 0, a = 0;
@@ -994,12 +979,12 @@ void CMorph::BuildSegmentList( std::vector< MorphSegmentList_t > &morphSegments 
 	}
 
 	// Allocate space to cache off the morph weights when in the middle of performing morph accumulation
-	Assert( !m_pRenderMorphWeight );
+	contract_assert( !m_pRenderMorphWeight );
 	m_pRenderMorphWeight = new MorphWeight_t[ m_nMaxMorphTargetCount ];
 
-	Assert( m_nMaxMorphTargetCount < 1024 );	// This algorithm of storing a full array is bogus if this isn't true
+	contract_assert( m_nMaxMorphTargetCount < 1024 );	// This algorithm of storing a full array is bogus if this isn't true
 	m_MorphTargetIdToQuadIndex.assign( m_nMaxMorphTargetCount, {} );
-	memset( m_MorphTargetIdToQuadIndex.data(), 0xFF, m_nMaxMorphTargetCount * sizeof(int) );
+	std::memset( m_MorphTargetIdToQuadIndex.data(), 0xFF, m_nMaxMorphTargetCount * sizeof(int) );
 
 	// Builds the segment list
 	int nSrcIndex = 0;
@@ -1010,7 +995,7 @@ void CMorph::BuildSegmentList( std::vector< MorphSegmentList_t > &morphSegments 
 
 		int nSegmentIndex = std::ssize( morphSegments ); morphSegments.emplace_back();
 		MorphSegmentList_t &list = morphSegments[nSegmentIndex];
-		Assert( nSegmentIndex == i );
+		contract_assert( nSegmentIndex == i );
 
 		MorphSegment_t segment;
 		segment.m_nCount = 0;
@@ -1156,7 +1141,7 @@ void CMorph::CreateStaticMesh()
 	{
 		Warning( "Too many morph vertices! Call brian\n" );
 	}
-	Assert( nVertexCount < 65535 );
+	contract_assert( nVertexCount < 65535 );
 
 	int n4TupleCount = Get4TupleCount( m_Format );
 
@@ -1218,8 +1203,8 @@ void CMorph::CreateStaticMesh()
 //-----------------------------------------------------------------------------
 void CMorph::RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect )
 {
-	Assert( pVTFTexture->FrameCount() == 1 && pVTFTexture->FaceCount() == 1 );
-	Assert( pVTFTexture->Height() == m_nTextureHeight );
+	contract_assert( pVTFTexture->FrameCount() == 1 && pVTFTexture->FaceCount() == 1 );
+	contract_assert( pVTFTexture->Height() == m_nTextureHeight );
 
 	int nTextureType;
 	for ( nTextureType = 0; nTextureType < MORPH_TEXTURE_COUNT; ++nTextureType )
@@ -1227,7 +1212,7 @@ void CMorph::RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture
 		if ( pTexture == m_pMorphTexture[nTextureType] )
 			break;
 	}
-	Assert( nTextureType < MORPH_TEXTURE_COUNT );
+	contract_assert( nTextureType < MORPH_TEXTURE_COUNT );
 	MorphPixelWriter_t pWriteFuncs[MORPH_TEXTURE_COUNT] = 
 	{
 		&CMorph::WriteDeltaPositionNormalToTexture,
@@ -1421,10 +1406,6 @@ void CMorph::RenderMorphQuads( IMatRenderContext *pRenderContext, int nRenderId,
 	IMesh *pMesh = pRenderContext->GetDynamicMesh( false, m_pMorphBuffer );
 	meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, 0, nTotalQuadCount * 6 );
 
-#ifdef REPORT_MORPH_STATS
-	int nTexelsRendered = 0;
-#endif
-
 	for ( int i = 0; i < nWeightCount; ++i )
 	{
 		int nMorphIndex = m_MorphTargetIdToQuadIndex[ pWeightLookup[i] ];
@@ -1445,10 +1426,6 @@ void CMorph::RenderMorphQuads( IMatRenderContext *pRenderContext, int nRenderId,
 				continue;
 #endif
 
-#ifdef REPORT_MORPH_STATS
-			nTexelsRendered += Get4TupleCount( m_Format ) * quad.m_nCount;
-#endif
-
 			int nBaseIndex = quad.m_nQuadIndex * 4;
 			meshBuilder.FastIndex( nBaseIndex );
 			meshBuilder.FastIndex( nBaseIndex+1 );
@@ -1462,9 +1439,6 @@ void CMorph::RenderMorphQuads( IMatRenderContext *pRenderContext, int nRenderId,
 	meshBuilder.End();
 	pMesh->Draw();
 
-#ifdef REPORT_MORPH_STATS
-	HandleMorphStats( nWeightCount, nTotalQuadCount, nTexelsRendered );
-#endif
 }
 
 
@@ -1510,20 +1484,21 @@ int CMorph::BuildNonZeroMorphList( int *pWeightIndices, int nWeightCount, const 
 //-----------------------------------------------------------------------------
 bool CMorph::RenderMorphWeights( IMatRenderContext *pRenderContext, int nRenderId, int nWeightCount, const MorphWeight_t* pWeights )
 {
-	VPROF_BUDGET( "CMorph::RenderMorphWeights", _T("HW Morphing") );
+	ks::ScratchArena<> scratch;
+	CVProfScope _( "CMorph::RenderMorphWeights", 0, "HW Morphing", false, BUDGETFLAG_OTHER );
 	if ( m_nMaxMorphTargetCount == 0 )
 		return false;
 
 	// Cache off the weights, we need them when we accumulate the morphs later.
 	int nCountToCopy = std::min( nWeightCount, m_nMaxMorphTargetCount );
-	memcpy( m_pRenderMorphWeight, pWeights, nCountToCopy * sizeof(MorphWeight_t) );
+	std::memcpy( m_pRenderMorphWeight, pWeights, nCountToCopy * sizeof(MorphWeight_t) );
 	int nCountToClear = m_nMaxMorphTargetCount - nWeightCount;
 	if ( nCountToClear > 0 )
 	{
-		memset( &m_pRenderMorphWeight[nCountToCopy], 0, nCountToClear * sizeof(MorphWeight_t) );
+		std::memset( &m_pRenderMorphWeight[nCountToCopy], 0, nCountToClear * sizeof(MorphWeight_t) );
 	}
 
-	int *pWeightIndices = (int*)stackalloc( nCountToCopy * sizeof(int) );
+	int *pWeightIndices = scratch.Alloc<int>( nCountToCopy );
 	int nIndexCount = BuildNonZeroMorphList( pWeightIndices, nCountToCopy, pWeights ); 
 	if ( nIndexCount == 0 )
 		return false;
@@ -1569,10 +1544,11 @@ bool CMorph::RenderMorphWeights( IMatRenderContext *pRenderContext, int nRenderI
 //-----------------------------------------------------------------------------
 void CMorph::AccumulateMorph( int nRenderId )
 {
-	VPROF_BUDGET( "CMorph::AccumulateMorph", _T("HW Morphing") );
+	ks::ScratchArena<> scratch;
+	CVProfScope _( "CMorph::AccumulateMorph", 0, "HW Morphing", false, BUDGETFLAG_OTHER );
 
 	// Build a non-zero weight list and a total quad count
-	int *pTargets = (int*)stackalloc( m_nMaxMorphTargetCount * sizeof(int) );
+	int *pTargets = scratch.Alloc<int>( m_nMaxMorphTargetCount );
 	int nTargetCount = BuildNonZeroMorphList( pTargets, m_nMaxMorphTargetCount, m_pRenderMorphWeight ); 
 
 	// Count the total number of quads to draw
@@ -1611,9 +1587,6 @@ CMorphMgrRenderContext::CMorphMgrRenderContext()
 {
 	m_nMorphCount = 0;
 
-#ifdef DBGFLAG_ASSERT
-	m_bInMorphAccumulation = false;
-#endif
 }
 
 int CMorphMgrRenderContext::GetRenderId( CMorph* pMorph )
@@ -1678,10 +1651,10 @@ void CMorphMgr::AllocateScratchTextures()
 	// because this will rarely change. Just hard code it to something that will fit it.
 	m_nAccumulatorWidth = 256;
 	m_nAccumulatorHeight = 256;
-	Assert( m_nAccumulatorWidth * m_nAccumulatorHeight == MAX_MORPH_ACCUMULATOR_VERTICES * MORPH_ACCUMULATOR_4TUPLES );
+	contract_assert( m_nAccumulatorWidth * m_nAccumulatorHeight == MAX_MORPH_ACCUMULATOR_VERTICES * MORPH_ACCUMULATOR_4TUPLES );
 
-	Assert( IsPowerOfTwo( CMorphMgrRenderContext::MAX_MODEL_MORPHS ) );
-	int nMultFactor = sqrt( (float)CMorphMgrRenderContext::MAX_MODEL_MORPHS );
+	contract_assert( IsPowerOfTwo( CMorphMgrRenderContext::MAX_MODEL_MORPHS ) );
+	int nMultFactor = std::sqrt( (float)CMorphMgrRenderContext::MAX_MODEL_MORPHS );
 	m_nSubrectVerticalCount = nMultFactor;
 
 	m_pMorphAccumTexture = TextureManager()->CreateRenderTargetTexture( "_rt_MorphAccumulator", 
@@ -1882,7 +1855,9 @@ int CMorphMgr::GetAccumulator4TupleCount() const
 //-----------------------------------------------------------------------------
 // Used to compute stats of memory used
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( mat_reporthwmorphmemory, "Reports the amount of size in bytes taken up by hardware morph textures.", FCVAR_CHEAT )
+static void mat_reporthwmorphmemory( const CCommand &args );
+static ConCommand mat_reporthwmorphmemory_command( "mat_reporthwmorphmemory", mat_reporthwmorphmemory, "Reports the amount of size in bytes taken up by hardware morph textures.", FCVAR_CHEAT );
+static void mat_reporthwmorphmemory( const CCommand &args )
 {
 	ConMsg( "Total HW Morph memory used: %dk\n", s_MorphMgr.GetTotalMemoryUsage() /1024 );
 }
@@ -1890,7 +1865,7 @@ CON_COMMAND_F( mat_reporthwmorphmemory, "Reports the amount of size in bytes tak
 void CMorphMgr::RegisterMorphSizeInBytes( int nSizeInBytes )
 {
 	m_nTotalMorphSizeInBytes += nSizeInBytes;
-	Assert( m_nTotalMorphSizeInBytes >= 0 );
+	contract_assert( m_nTotalMorphSizeInBytes >= 0 );
 }
 
 int CMorphMgr::GetTotalMemoryUsage() const
@@ -2097,7 +2072,7 @@ bool CMorphMgr::GetMorphAccumulatorTexCoord( IMorphMgrRenderContext *pRenderCont
 
 	pTexCoord->x = ( x + nColumn + 0.5f ) * flOOWidth;
 	pTexCoord->y = ( y + nRow + 0.5f ) * flOOHeight;
-	Assert( IsFinite( pTexCoord->x ) && IsFinite( pTexCoord->y ) );
+	contract_assert( IsFinite( pTexCoord->x ) && IsFinite( pTexCoord->y ) );
 	return true;
 }
 
@@ -2107,11 +2082,10 @@ bool CMorphMgr::GetMorphAccumulatorTexCoord( IMorphMgrRenderContext *pRenderCont
 //-----------------------------------------------------------------------------
 void CMorphMgr::BeginMorphAccumulation( IMorphMgrRenderContext *pIRenderContext )
 {
-	VPROF_BUDGET( "CMorph::BeginMorphAccumulation", _T("HW Morphing") );
+	CVProfScope _( "CMorph::BeginMorphAccumulation", 0, "HW Morphing", false, BUDGETFLAG_OTHER );
 
 	// Set up the render context
 	CMorphMgrRenderContext *pMorphRenderContext = static_cast< CMorphMgrRenderContext* >( pIRenderContext );
-	Assert( !pMorphRenderContext->m_bInMorphAccumulation );
 	pMorphRenderContext->m_nMorphCount = 0;
 
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
@@ -2147,18 +2121,14 @@ void CMorphMgr::BeginMorphAccumulation( IMorphMgrRenderContext *pIRenderContext 
 #endif
 	}
 	 
-#ifdef DBGFLAG_ASSERT
-	pMorphRenderContext->m_bInMorphAccumulation = true;
-#endif
 }
 
 void CMorphMgr::EndMorphAccumulation( IMorphMgrRenderContext *pIRenderContext )
 {
-	VPROF_BUDGET( "CMorph::EndMorphAccumulation", _T("HW Morphing") );
+	CVProfScope _( "CMorph::EndMorphAccumulation", 0, "HW Morphing", false, BUDGETFLAG_OTHER );
 
 	CMorphMgrRenderContext *pMorphRenderContext = static_cast< CMorphMgrRenderContext* >( pIRenderContext );
-	Assert( pMorphRenderContext->m_bInMorphAccumulation );
-	VPROF_INCREMENT_COUNTER( "HW Morph Count", pMorphRenderContext->m_nMorphCount );
+	VProfIncrementCounter<"HW Morph Count">( pMorphRenderContext->m_nMorphCount );
 
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 
@@ -2214,9 +2184,6 @@ void CMorphMgr::EndMorphAccumulation( IMorphMgrRenderContext *pIRenderContext )
 	pRenderContext->EnableClipping( m_bPrevClippingEnabled );
 	pRenderContext->SetFlashlightMode( m_bFlashlightMode );
 
-#ifdef DBGFLAG_ASSERT
-	pMorphRenderContext->m_bInMorphAccumulation = false;
-#endif
 }
 
 						 
@@ -2226,13 +2193,12 @@ void CMorphMgr::EndMorphAccumulation( IMorphMgrRenderContext *pIRenderContext )
 void CMorphMgr::AccumulateMorph( IMorphMgrRenderContext *pIRenderContext, IMorph* pMorph, int nMorphCount, const MorphWeight_t* pWeights )
 {
 	CMorphMgrRenderContext *pMorphRenderContext = static_cast< CMorphMgrRenderContext* >( pIRenderContext );
-	Assert( pMorphRenderContext->m_bInMorphAccumulation );
 
-	Assert( pMorphRenderContext->m_nMorphCount < CMorphMgrRenderContext::MAX_MODEL_MORPHS );
+	contract_assert( pMorphRenderContext->m_nMorphCount < CMorphMgrRenderContext::MAX_MODEL_MORPHS );
 	if ( pMorphRenderContext->m_nMorphCount >= CMorphMgrRenderContext::MAX_MODEL_MORPHS )
 	{
 		Warning( "Attempted to morph too many meshes in a single model!\n" );
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 
@@ -2249,4 +2215,3 @@ void CMorphMgr::AccumulateMorph( IMorphMgrRenderContext *pIRenderContext, IMorph
 		++pMorphRenderContext->m_nMorphCount;
 	}
 }
-

@@ -1,11 +1,37 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include <string.h>
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 
@@ -13,7 +39,6 @@
 
 #include "game.h"
 #include "engine/IEngineSound.h"
-#include "keyvalues.h"
 #include "ai_basenpc.h"
 #include "ai_criteria.h"
 #include "sceneentity.h"
@@ -97,8 +122,8 @@ RR::CApplyContextOperator *RR::CApplyContextOperator::FindOperator( const char *
 // default is just copy
 bool RR::CApplyContextOperator::Apply( const char *pOldValue, const char *pOperator, char *pNewValue, int pNewValBufSize )
 {
-	Assert( pOperator && pNewValue && pNewValBufSize > 0 );
-	Assert( m_nSkipChars == 0 );
+	contract_assert( pOperator && pNewValue && pNewValBufSize > 0 );
+	contract_assert( m_nSkipChars == 0 );
 	if ( pOperator )
 	{
 		V_strncpy( pNewValue, pOperator, pNewValBufSize );
@@ -112,7 +137,7 @@ bool RR::CApplyContextOperator::Apply( const char *pOldValue, const char *pOpera
 
 bool RR::CIncrementOperator::Apply( const char *pOldValue, const char *pOperator, char *pNewValue, int pNewValBufSize )
 {
-	Assert( pOperator[0] == '+' && pOperator[1] == '+' );
+	contract_assert( pOperator[0] == '+' && pOperator[1] == '+' );
 	// parse out the old value as a numeric
 	int nOld = pOldValue ? V_atoi(pOldValue) : 0;
 	int nInc = V_atoi( pOperator+m_nSkipChars );
@@ -122,7 +147,7 @@ bool RR::CIncrementOperator::Apply( const char *pOldValue, const char *pOperator
 
 bool RR::CDecrementOperator::Apply( const char *pOldValue, const char *pOperator, char *pNewValue, int pNewValBufSize )
 {
-	Assert( pOperator[0] == '-' && pOperator[1] == '-' );
+	contract_assert( pOperator[0] == '-' && pOperator[1] == '-' );
 	// parse out the old value as a numeric
 	int nOld = pOldValue ? V_atoi(pOldValue) : 0;
 	int nInc = V_atoi( pOperator+m_nSkipChars );
@@ -132,7 +157,7 @@ bool RR::CDecrementOperator::Apply( const char *pOldValue, const char *pOperator
 
 bool RR::CToggleOperator::Apply( const char *pOldValue, const char *pOperator, char *pNewValue, int pNewValBufSize )
 {
-	Assert( pOperator[0] == '!' );
+	contract_assert( pOperator[0] == '!' );
 	// parse out the old value as a numeric
 	int nOld = pOldValue ? V_atoi(pOldValue) : 0;
 	V_snprintf( pNewValue, pNewValBufSize, "%d", nOld ? 0 : 1 );
@@ -210,7 +235,7 @@ CAI_Expresser::~CAI_Expresser()
 {
 	m_ConceptHistories.clear();
 
-	CBaseFlex *RESTRICT outer = GetOuter();
+	CBaseFlex *__restrict__ outer = GetOuter();
 	if ( outer )
 	{
 		CAI_TimedSemaphore *pSemaphore = GetMySpeechSemaphore( outer );
@@ -257,7 +282,7 @@ void CAI_Expresser::SetOuter( CBaseFlex *pOuter )
 	// unregister the old one from the queue.
 	if ( m_pOuter && ( m_pOuter != pOuter  ) )
 	{
-		AssertMsg2( false, "Expresser is switching its Outer from %s to %s. Why?", m_pOuter->GetDebugName(), pOuter->GetDebugName() );
+		contract_assert( false && "Expresser is switching its Outer from %s to %s. Why?" );
 		// unregister me with the global expresser queue
 		g_ResponseQueueManager.GetQueue()->RemoveExpresserHost(m_pOuter);
 	}
@@ -273,7 +298,7 @@ static const int LEN_SPECIFIC_SCENE_MODIFIER = strlen( AI_SPECIFIC_SCENE_MODIFIE
 // This function appends "Global world" criteria that are always added to
 // any character doing any match. This represents global concepts like weather, who's
 // alive, etc.
-static void ModifyOrAppendGlobalCriteria( AI_CriteriaSet * RESTRICT outputSet )
+static void ModifyOrAppendGlobalCriteria( AI_CriteriaSet * __restrict__ outputSet )
 {
 	// Add the round duration and current round time
 	if ( CSGameRules() )
@@ -284,7 +309,7 @@ static void ModifyOrAppendGlobalCriteria( AI_CriteriaSet * RESTRICT outputSet )
 }
 
 
-void CAI_Expresser::GatherCriteria( AI_CriteriaSet * RESTRICT outputSet, const AIConcept_t &conc, const char * RESTRICT modifiers )
+void CAI_Expresser::GatherCriteria( AI_CriteriaSet * __restrict__ outputSet, const AIConcept_t &conc, const char * __restrict__ modifiers )
 {
 	// Always include the concept name
 	outputSet->AppendCriteria( "concept", conc, CONCEPT_WEIGHT );
@@ -315,11 +340,11 @@ void CAI_Expresser::GatherCriteria( AI_CriteriaSet * RESTRICT outputSet, const A
 // AI_Response *CAI_Expresser::SpeakFindResponse( AIConcept_t conc, const char *modifiers /*= NULL*/ )
 bool CAI_Expresser::FindResponse( AI_Response &outResponse, AIConcept_t &conc, AI_CriteriaSet *criteria )
 {
-	VPROF("CAI_Expresser::FindResponse");
+	CVProfScope _( "CAI_Expresser::FindResponse", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	IResponseSystem *rs = GetOuter()->GetResponseSystem();
 	if ( !rs )
 	{
-		Assert( !"No response system installed for CAI_Expresser::GetOuter()!!!" );
+		contract_assert( !"No response system installed for CAI_Expresser::GetOuter()!!!" );
 		return false;
 	}
 
@@ -377,7 +402,7 @@ bool CAI_Expresser::FindResponse( AI_Response &outResponse, AIConcept_t &conc, A
 	}
 	else if ( worldWritebackCriteria.GetCount() > 0 )
 	{
-		Assert( CBaseEntity::Instance( INDEXENT( 0 ) )->IsWorld( ) );
+		contract_assert( CBaseEntity::Instance( INDEXENT( 0 ) )->IsWorld( ) );
 		worldWritebackCriteria.WriteToEntity( CBaseEntity::Instance( INDEXENT( 0 ) ) );
 	}
 
@@ -469,7 +494,7 @@ bool CAI_Expresser::SpeakDispatchResponse( AIConcept_t &conc, AI_Response *resul
 	case ResponseRules::RESPONSE_RESPONSE:
 		{
 			// This should have been recursively resolved already
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 		break;
 	case ResponseRules::RESPONSE_PRINT:
@@ -530,21 +555,21 @@ bool CAI_Expresser::FireEntIOFromResponse( char *response, CBaseEntity *pInitiat
 	char *pszParam;
 	char *strtokContext = nullptr;
 
-	pszEntname = strtok_s( response, " ", &strtokContext );
+	pszEntname = strtok_r( response, " ", &strtokContext );
 	if ( !pszEntname )
 	{
 		Warning( "Response was entityio but had bad value %s\n", response );
 		return false;
 	}
 
-	pszInput = strtok_s( nullptr, " ", &strtokContext );
+	pszInput = strtok_r( nullptr, " ", &strtokContext );
 	if ( !pszInput )
 	{
 		Warning( "Response was entityio but had bad value %s\n", response );
 		return false;
 	}
 
-	pszParam =  strtok_s( nullptr, " ", &strtokContext );
+	pszParam =  strtok_r( nullptr, " ", &strtokContext );
 
 	// poke entity io
 	CBaseEntity *pTarget = gEntList.FindEntityByName( nullptr, pszEntname, pInitiator );
@@ -574,7 +599,7 @@ bool CAI_Expresser::FireEntIOFromResponse( char *response, CBaseEntity *pInitiat
 //-----------------------------------------------------------------------------
 float CAI_Expresser::GetResponseDuration( AI_Response *result )
 {
-	Assert( result );
+	contract_assert( result );
 	char response[ 256 ];
 	result->GetResponse( response, sizeof( response ) );
 
@@ -587,7 +612,7 @@ float CAI_Expresser::GetResponseDuration( AI_Response *result )
 		break;
 	case ResponseRules::RESPONSE_SENTENCE:
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			return 999.0f;
 		}
 		break;
@@ -599,7 +624,7 @@ float CAI_Expresser::GetResponseDuration( AI_Response *result )
 	case ResponseRules::RESPONSE_RESPONSE:
 		{
 			// This should have been recursively resolved already
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 		break;
 	case ResponseRules::RESPONSE_PRINT:
@@ -635,9 +660,9 @@ bool CAI_Expresser::Speak( AIConcept_t &conc, const char *modifiers /*= NULL*/, 
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-bool CAI_Expresser::Speak( AIConcept_t &conc, AI_CriteriaSet * RESTRICT criteria, char *pszOutResponseChosen , size_t bufsize , IRecipientFilter *filter  )
+bool CAI_Expresser::Speak( AIConcept_t &conc, AI_CriteriaSet * __restrict__ criteria, char *pszOutResponseChosen , size_t bufsize , IRecipientFilter *filter  )
 {
-	VPROF("CAI_Expresser::Speak");
+	CVProfScope _( "CAI_Expresser::Speak", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( IsSpeechGloballySuppressed() )
 	{
 		return false;
@@ -836,7 +861,7 @@ bool CAI_Expresser::CanSpeakConcept( AIConcept_t conc )
 		return true;
 	}
 
-	Assert( history );
+	contract_assert( history );
 
 	const AI_Response &response = history->m_response;
 	if ( response.IsEmpty() )
@@ -984,7 +1009,7 @@ void CAI_ExpresserHost_NPC_DoModifyOrAppendCriteria( CAI_BaseNPC *pSpeaker, AI_C
 	}
 
 	static const char *pStateNames[] = { "None", "Idle", "Alert", "Combat", "Scripted", "PlayDead", "Dead" };
-	if ( (int)pSpeaker->m_NPCState < ARRAYSIZE(pStateNames) )
+	if ( (int)pSpeaker->m_NPCState < std::size( pStateNames ) )
 	{
 		set.AppendCriteria( "npcstate", UTIL_VarArgs( "[NPCState::%s]", pStateNames[pSpeaker->m_NPCState] ) );
 	}
@@ -1049,7 +1074,9 @@ void CAI_ExpresserHost_NPC_DoModifyOrAppendCriteria( CAI_BaseNPC *pSpeaker, AI_C
 //-----------------------------------------------------------------------------
 
 #if !defined( CSTRIKE_DLL )
-CON_COMMAND( npc_speakall, "Force the npc to try and speak all their responses" )
+static void npc_speakall( const CCommand &args );
+static ConCommand npc_speakall_command( "npc_speakall", npc_speakall, "Force the npc to try and speak all their responses" );
+static void npc_speakall( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;

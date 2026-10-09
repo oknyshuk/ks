@@ -1,4 +1,5 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
 /* Example how to plug this into an existing shader:
 
@@ -6,9 +7,10 @@
 			// Cloak Pass
 			"$cloakPassEnabled" "1"
 
+import ks.tier1;
 		#include "cloak_blended_pass_helper.h"
  
-		In BEGIN_SHADER_PARAMS:
+		In :
 			// Cloak Pass
 			SHADER_PARAM( CLOAKPASSENABLED, SHADER_PARAM_TYPE_BOOL, "0", "Enables cloak render in a second pass" )
 			SHADER_PARAM( CLOAKFACTOR, SHADER_PARAM_TYPE_FLOAT, "0.0", "" )
@@ -128,11 +130,9 @@
 			}
 
 ==================================================================================================== */
-
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
+import std;
 #include "cloak_blended_pass_helper.h"
-#include "convar.h"
 
 // Auto generated inc files
 #include "cloak_blended_pass_vs20.inc"
@@ -141,7 +141,6 @@
 
 #include "cloak_blended_pass_vs30.inc"
 #include "cloak_blended_pass_ps30.inc"
-
 
 void InitParamsCloakBlendedPass( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, CloakBlendedPassVars_t &info )
 {

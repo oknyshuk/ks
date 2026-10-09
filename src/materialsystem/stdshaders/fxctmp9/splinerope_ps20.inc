@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $ALPHATESTREF == 1 ) && ( $SHADOWDEPTH == 1 )
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
@@ -16,7 +17,7 @@ private:
 public:
 	void SetSHADER_SRGB_READ( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nSHADER_SRGB_READ = i;
 #ifdef _DEBUG
 		m_bSHADER_SRGB_READ = true;
@@ -24,7 +25,7 @@ public:
 	}
 	void SetSHADER_SRGB_READ( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nSHADER_SRGB_READ = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSHADER_SRGB_READ = true;
@@ -38,7 +39,7 @@ private:
 public:
 	void SetSHADOWDEPTH( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSHADOWDEPTH = i;
 #ifdef _DEBUG
 		m_bSHADOWDEPTH = true;
@@ -46,7 +47,7 @@ public:
 	}
 	void SetSHADOWDEPTH( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSHADOWDEPTH = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSHADOWDEPTH = true;
@@ -60,7 +61,7 @@ private:
 public:
 	void SetALPHATESTREF( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nALPHATESTREF = i;
 #ifdef _DEBUG
 		m_bALPHATESTREF = true;
@@ -68,7 +69,7 @@ public:
 	}
 	void SetALPHATESTREF( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nALPHATESTREF = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bALPHATESTREF = true;
@@ -97,7 +98,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bSHADER_SRGB_READ && m_bSHADOWDEPTH && m_bALPHATESTREF;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 2 * m_nSHADER_SRGB_READ ) + ( 2 * m_nSHADOWDEPTH ) + ( 4 * m_nALPHATESTREF ) + 0;
 	}
@@ -113,7 +114,7 @@ private:
 public:
 	void SetWRITE_DEPTH_TO_DESTALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nWRITE_DEPTH_TO_DESTALPHA = i;
 #ifdef _DEBUG
 		m_bWRITE_DEPTH_TO_DESTALPHA = true;
@@ -121,7 +122,7 @@ public:
 	}
 	void SetWRITE_DEPTH_TO_DESTALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nWRITE_DEPTH_TO_DESTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWRITE_DEPTH_TO_DESTALPHA = true;
@@ -135,7 +136,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -143,7 +144,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -168,7 +169,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bWRITE_DEPTH_TO_DESTALPHA && m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nWRITE_DEPTH_TO_DESTALPHA ) + ( 1 * m_nPIXELFOGTYPE ) + 0;
 	}

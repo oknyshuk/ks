@@ -1,10 +1,31 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Base VoteController.  Handles holding and voting on issues.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "eiface.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "npcevent.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "vote_controller.h"
@@ -14,7 +35,6 @@
 #include "gameinterface.h"
 #include "cs_gamerules.h"
 #include "usermessages.h"
-
 
 #include "EventLog.h"
 
@@ -95,7 +115,9 @@ int GetVoterTeam( CBaseEntity *pEntity )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( callvote, "Start a vote on an issue.", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+static void callvote( const CCommand &args );
+static ConCommand callvote_command( "callvote", callvote, "Start a vote on an issue.", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void callvote( const CCommand &args )
 {
 	if ( !g_voteControllerGlobal || !g_voteControllerCT || !g_voteControllerT )
 	{
@@ -396,10 +418,10 @@ bool CVoteController::CreateVote( int iEntIndex, const char *pszTypeString, cons
 						for ( int iIndex = 0; iIndex < nNumVoteOptions; iIndex++ )
 						{
 							char szNumber[2];
-							Q_snprintf( szNumber, sizeof( szNumber ), "%i", iIndex + 1 );
+							V_snprintf( szNumber, sizeof( szNumber ), "%i", iIndex + 1 );
 
 							char szOptionName[8] = "option";
-							Q_strncat( szOptionName, szNumber, sizeof( szOptionName ), COPY_ALL_CHARACTERS );
+							V_strncat( szOptionName, szNumber, sizeof( szOptionName ), COPY_ALL_CHARACTERS );
 
 							event->SetString( szOptionName, m_VoteOptions[iIndex] );
 						}
@@ -408,7 +430,7 @@ bool CVoteController::CreateVote( int iEntIndex, const char *pszTypeString, cons
 				}
 				else
 				{
-					Assert( nNumVoteOptions >= 2 );
+					contract_assert( nNumVoteOptions >= 2 );
 				}
 
 				// Get the data out to the client
@@ -552,7 +574,7 @@ CVoteController::TryCastVoteResult CVoteController::TryCastVote( int iEntIndex, 
 	if ( !StringHasPrefix( pszVoteString, "Option" ) )
 		return CAST_FAIL_SYSTEM_ERROR;
 
-	nCurrentVote = (CastVote)( atoi( pszVoteString + V_strlen( "Option" ) ) - 1 );
+	nCurrentVote = (CastVote)( std::atoi( pszVoteString + V_strlen( "Option" ) ) - 1 );
 
 	if ( nCurrentVote < VOTE_OPTION1 || nCurrentVote > VOTE_OPTION5 )
 		return CAST_FAIL_SYSTEM_ERROR;
@@ -579,11 +601,11 @@ CVoteController::TryCastVoteResult CVoteController::TryCastVote( int iEntIndex, 
 #ifndef DEBUG
 	if ( CBasePlayer *pBasePlayerVoter = ToBasePlayer( pVoter ) )
 	{
-		if ( uint64 uiSteamID = pBasePlayerVoter->GetSteamIDAsUInt64() )
+		if ( uint64 uiPlayerID = pBasePlayerVoter->GetPlayerIDAsUInt64() )
 		{
-			if ( ks::find_index( m_arrVotedUsers, uiSteamID ) == -1 )
+			if ( ks::find_index( m_arrVotedUsers, uiPlayerID ) == -1 )
 			{
-				m_arrVotedUsers.push_back( uiSteamID );	// remember that this user already voted
+				m_arrVotedUsers.push_back( uiPlayerID );	// remember that this user already voted
 			}
 			else
 			{
@@ -661,7 +683,7 @@ void CVoteController::VoteControllerThink( void )
 	int nWinningVoteOption = GetWinningVoteOption();
 	if ( !pActiveIssue->IsYesNoVote() || nWinningVoteOption >= std::ssize( m_VoteOptions ) )
 	{
-		Assert( nWinningVoteOption >= 0 && nWinningVoteOption < std::ssize( m_VoteOptions ) );
+		contract_assert( nWinningVoteOption >= 0 && nWinningVoteOption < std::ssize( m_VoteOptions ) );
 		Msg( "Trying to resolve a vote that is not a YES/NO vote, YES/NO votes aren't currently supported! \n");
 		return;
 	}
@@ -1017,7 +1039,7 @@ int CBaseIssue::GetVotesRequiredToPass( void )
 	else
 	{
 		float flnVotesToSucceed = ( CSGameRules() && CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() ) ? std::max( 1, nPotentialVoters - 1 ) : ( ( float )nPotentialVoters * sv_vote_quorum_ratio.GetFloat() );
-		nVotesToSucceed = ceil( flnVotesToSucceed );
+		nVotesToSucceed = std::ceil( flnVotesToSucceed );
 	}
 
 	return nVotesToSucceed;
@@ -1045,7 +1067,7 @@ void CBaseIssue::OnVoteFailed( void )
 	for ( int index = 0; index < std::ssize( m_FailedVotes ); index++ )
 	{
 		FailedVote *pFailedVote = m_FailedVotes[index];
-		if ( Q_strncmp( pFailedVote->szFailedVoteParameter, GetDetailsString(), Q_ARRAYSIZE( pFailedVote->szFailedVoteParameter ) - 1 ) == 0 )
+		if ( V_strncmp( pFailedVote->szFailedVoteParameter, GetDetailsString(), std::size( pFailedVote->szFailedVoteParameter ) - 1 ) == 0 )
 		{
 			pFailedVote->flLockoutTime = gpGlobals->curtime + GetFailedVoteLockOutTime();
 
@@ -1138,10 +1160,10 @@ bool CBaseIssue::CanCallVote( int iEntIndex, const char *pszCommand, const char 
 
 		if ( nTimeRemaining > 1 )
 		{
-			if ( Q_strlen( pCurrentFailure->szFailedVoteCommand ) > 0 && FStrEq( pCurrentFailure->szFailedVoteCommand, pszCommand ) )
+			if ( V_strlen( pCurrentFailure->szFailedVoteCommand ) > 0 && FStrEq( pCurrentFailure->szFailedVoteCommand, pszCommand ) )
 			{
 				// If this issue requires a parameter, see if we're voting for the same one again (i.e. changelevel ctf_2fort)
-				if ( Q_strlen( pCurrentFailure->szFailedVoteParameter ) > 0 && FStrEq( pCurrentFailure->szFailedVoteParameter, pszDetails ) )
+				if ( V_strlen( pCurrentFailure->szFailedVoteParameter ) > 0 && FStrEq( pCurrentFailure->szFailedVoteParameter, pszDetails ) )
 				{
 					bFailed = true;
 					if ( FStrEq( VOTEISSUE_NAME_CHANGELEVEL, pszCommand ) )
@@ -1248,7 +1270,7 @@ void CBaseIssue::SetYesNoVoteCount( int iNumYesVotes, int iNumNoVotes, int iNumP
 void CBaseIssue::ListStandardNoArgCommand( CBasePlayer *forWhom, const char *issueString )
 {
 	char szBuffer[MAX_COMMAND_LENGTH];
-	Q_snprintf( szBuffer, MAX_COMMAND_LENGTH, "callvote %s\n", issueString );
+	V_snprintf( szBuffer, MAX_COMMAND_LENGTH, "callvote %s\n", issueString );
 	ClientPrint( forWhom, HUD_PRINTCONSOLE, szBuffer );
 }
 

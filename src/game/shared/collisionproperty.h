@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef COLLISIONPROPERTY_H
-#define COLLISIONPROPERTY_H
-
+import ks.math;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 #include "collisionproperty.h"
@@ -15,9 +10,9 @@
 
 #include "networkvar.h"
 #include "engine/ICollideable.h"
-#include "mathlib/vector.h"
+import std;
 #include "ispatialpartition.h"
-
+#include "predictable_entity.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -44,8 +39,6 @@ void RecvProxy_SolidFlags( const CRecvProxyData *pData, void *pStruct, void *pOu
 
 class CBaseEntity;
 class IHandleEntity;
-class QAngle;
-class Vector;
 struct Ray_t;
 class IPhysicsObject;
 
@@ -514,10 +507,7 @@ inline bool CCollisionProperty::DoesRotationInvalidateSurroundingBox( ) const
 		return false;
 
 	default:
-		Assert(0);
+		contract_assert( 0 );
 		return true;
 	}
 }
-
-
-#endif // COLLISIONPROPERTY_H

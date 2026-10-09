@@ -1,11 +1,12 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "portal_refract_helper.h"
 
 DEFINE_FALLBACK_SHADER( PortalRefract, PortalRefract_dx9 )
 BEGIN_VS_SHADER( PortalRefract_dx9, "PortalRefract" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( STAGE, SHADER_PARAM_TYPE_INTEGER, "0", "Stage of portal rendering (0, 1, 2)" )
 		SHADER_PARAM( PORTALOPENAMOUNT, SHADER_PARAM_TYPE_FLOAT, "0.0", "Portal open amount 0.0-1.0" )
 		SHADER_PARAM( PORTALSTATIC, SHADER_PARAM_TYPE_FLOAT, "0.0", "Portal static amount 0.0-1.0" )

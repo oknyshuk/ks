@@ -1,26 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Filters are outboard entities that hold a set of rules that other
 //			entities can use to determine behaviors.
-//			
 //			For example, triggers can use an activator filter to determine who
 //			activates them. NPCs and breakables can use a damage filter to
 //			determine what can damage them.
-//
 //			Current filter criteria are:
-//
 //				Activator name
 //				Activator class
 //				Activator team
 //				Damage type (for damage filters only)
-//
 //			More than one filter can be combined to create a more complex boolean
 //			expression by using filter_multi.
-//
-//=============================================================================//
-
-#ifndef FILTERS_H
-#define FILTERS_H
 
 #include "reflect_annotations.h"
 
@@ -55,5 +48,3 @@ protected:
 	virtual bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity );
 	virtual bool PassesDamageFilterImpl(const CTakeDamageInfo &info);
 };
-
-#endif // FILTERS_H

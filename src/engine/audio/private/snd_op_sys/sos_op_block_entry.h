@@ -1,11 +1,6 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
-
-#ifndef SOS_OP_BLOCK_ENTRY_H
-#define SOS_OP_BLOCK_ENTRY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "sos_op.h"
 
@@ -36,5 +31,3 @@ class CSosOperatorBlockEntry : public CSosOperator
 
 	SOS_HEADER_DESC( CSosOperatorBlockEntry )
 };
-
-#endif // SOS_OP_BLOCK_ENTRY_H

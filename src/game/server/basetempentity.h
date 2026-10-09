@@ -1,21 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( BASETEMPENTITY_H )
-#define BASETEMPENTITY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
 #include "edict.h"
+#include "networkvar.h"
+#include "irecipientfilter.h"
+#include "server_class.h"
 
 // This is the base class for TEMP ENTITIES that use the 
 //  event system to propagate
@@ -61,5 +53,3 @@ private:
 	// all the console variables and registers them.
 	static CBaseTempEntity	*s_pTempEntities;
 };
-
-#endif // BASETEMPENTITY_H

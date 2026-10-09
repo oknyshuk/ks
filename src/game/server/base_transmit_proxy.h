@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef BASE_TRANSMIT_PROXY_H
-#define BASE_TRANSMIT_PROXY_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ehandle.h"
-
+#include "iservernetworkable.h"
+#include "entitylist.h"
 
 class CBaseEntity;
 
@@ -33,6 +28,3 @@ private:
 	EHANDLE m_hEnt;
 	unsigned short m_refCount;
 };
-
-
-#endif // BASE_TRANSMIT_PROXY_H

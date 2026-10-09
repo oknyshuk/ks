@@ -1,12 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "cbase.h"
+import std;
+import ks.core;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "beamdraw.h"
 #include "enginesprite.h"
 #include "iviewrender_beams.h"
@@ -34,7 +34,7 @@ CEngineSprite *Draw_SetSpriteTexture( const model_t *pSpriteModel, int frame, in
 	IMaterial		*material;
 
 	psprite = ( CEngineSprite * )modelinfo->GetModelExtraData( pSpriteModel );
-	Assert( psprite );
+	contract_assert( psprite );
 
 	material = psprite->GetMaterial( (RenderMode_t)rendermode, frame );
 	if( !material )
@@ -225,7 +225,7 @@ void DrawSegs( int noise_divisions, float *prgNoise, const model_t* spritemodel,
 	int				i, noiseIndex, noiseStep;
 	float			div, length, fraction, factor, vLast, vStep, brightness;
 	
-	Assert( fadeLength >= 0.0f );
+	contract_assert( fadeLength >= 0.0f );
 	CEngineSprite *pSprite = Draw_SetSpriteTexture( spritemodel, frame, rendermode );
 	if ( !pSprite )
 		return;
@@ -280,7 +280,7 @@ void DrawSegs( int noise_divisions, float *prgNoise, const model_t* spritemodel,
 	}
 	
 	// UNDONE: Expose this paramter as well(3.5)?  Texture scroll rate along beam
-	vLast = fmod(freq*speed,1);	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
+	vLast = std::fmod(freq*speed,1);	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
 
 	if ( flags & FBEAM_SINENOISE )
 	{
@@ -313,7 +313,7 @@ void DrawSegs( int noise_divisions, float *prgNoise, const model_t* spritemodel,
 	}
 
 	// What fraction of beam should be faded
-	Assert( fadeLength >= 0.0f );
+	contract_assert( fadeLength >= 0.0f );
 	float fadeFraction = fadeLength/ delta.Length();
 	
 	// BUGBUG: This code generates NANs when fadeFraction is zero! REVIST!
@@ -330,7 +330,7 @@ void DrawSegs( int noise_divisions, float *prgNoise, const model_t* spritemodel,
 
 	for ( i = 0; i < segments; i++ )
 	{
-		Assert( noiseIndex < (noise_divisions<<16) );
+		contract_assert( noiseIndex < (noise_divisions<<16) );
 		BeamSeg_t curSeg;
 
 		fraction = i * div;
@@ -381,7 +381,7 @@ void DrawSegs( int noise_divisions, float *prgNoise, const model_t* spritemodel,
 			if ( flags & FBEAM_SINENOISE )
 			{
 				float	s, c;
-				SinCos( fraction*M_PI*length + freq, &s, &c );
+				SinCos( fraction*std::numbers::pi*length + freq, &s, &c );
 				VectorMA( curSeg.m_vPos, factor * s, CurrentViewUp(), curSeg.m_vPos );
 				// Rotate the noise along the perpendicluar axis a bit to keep the bolt from looking diagonal
 				VectorMA( curSeg.m_vPos, factor * c, CurrentViewRight(), curSeg.m_vPos );
@@ -420,7 +420,7 @@ void CalcSegOrigin( Vector *vecOut, int iPoint, int noise_divisions, float *prgN
 	const Vector &source, const Vector& delta, const Vector &perp, int segments, 
 	float freq, float scale, float fraction, int flags )
 {
-	Assert( segments > 1 );
+	contract_assert( segments > 1 );
 
 	float factor;
 	float length = VectorLength( delta ) * 0.01;
@@ -447,7 +447,7 @@ void CalcSegOrigin( Vector *vecOut, int iPoint, int noise_divisions, float *prgN
 		if ( flags & FBEAM_SINENOISE )
 		{
 			float	s, c;
-			SinCos( fraction*M_PI*length + freq, &s, &c );
+			SinCos( fraction*std::numbers::pi*length + freq, &s, &c );
 			VectorMA( *vecOut, factor * s, CurrentViewUp(), *vecOut );
 			// Rotate the noise along the perpendicular axis a bit to keep the bolt from looking diagonal
 			VectorMA( *vecOut, factor * c, CurrentViewRight(), *vecOut );
@@ -480,7 +480,7 @@ void DrawTeslaSegs( int noise_divisions, float *prgNoise, const model_t* spritem
 	int				i;
 	float			div, length, fraction, vLast, vStep, brightness;
 	
-	Assert( fadeLength >= 0.0f );
+	contract_assert( fadeLength >= 0.0f );
 	CEngineSprite *pSprite = Draw_SetSpriteTexture( spritemodel, frame, rendermode );
 	if ( !pSprite )
 		return;
@@ -509,14 +509,14 @@ void DrawTeslaSegs( int noise_divisions, float *prgNoise, const model_t* spritem
 	vStep = length*div;	// Texture length texels per space pixel
 
 	// UNDONE: Expose this paramter as well(3.5)?  Texture scroll rate along beam
-	vLast = fmod(freq*speed,1);	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
+	vLast = std::fmod(freq*speed,1);	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
 
 	brightness = 1.0;
 	if ( flags & FBEAM_SHADEIN )
 		brightness = 0;
 
 	// What fraction of beam should be faded
-	Assert( fadeLength >= 0.0f );
+	contract_assert( fadeLength >= 0.0f );
 	float fadeFraction = fadeLength/ delta.Length();
 	
 	// BUGBUG: This code generates NANs when fadeFraction is zero! REVIST!
@@ -773,7 +773,7 @@ void DrawSplineSegs( int noise_divisions, float *prgNoise,
 		vStep = length*div;	// Texture length texels per space pixel
 
 		// UNDONE: Expose this paramter as well(3.5)?  Texture scroll rate along beam
-		vLast = fmod(freq*speed,1);	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
+		vLast = std::fmod(freq*speed,1);	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
 
 		if ( flags & FBEAM_SINENOISE )
 		{
@@ -881,7 +881,7 @@ void DrawSplineSegs( int noise_divisions, float *prgNoise,
 				if ( flags & FBEAM_SINENOISE )
 				{
 					float	s, c;
-					SinCos( fraction*M_PI*length + freq, &s, &c );
+					SinCos( fraction*std::numbers::pi*length + freq, &s, &c );
 					VectorMA( seg.m_vPos, factor * s, CurrentViewUp(), seg.m_vPos );
 					// Rotate the noise along the perpendicluar axis a bit to keep the bolt from looking diagonal
 					VectorMA( seg.m_vPos, factor * c, CurrentViewRight(), seg.m_vPos );
@@ -890,7 +890,7 @@ void DrawSplineSegs( int noise_divisions, float *prgNoise,
 				{
 					VectorMA( seg.m_vPos, factor, CurrentViewUp(), seg.m_vPos );
 					// Rotate the noise along the perpendicluar axis a bit to keep the bolt from looking diagonal
-					factor = prgNoise[noiseIndex>>16] * scale * cos(fraction*M_PI*3+freq);
+					factor = prgNoise[noiseIndex>>16] * scale * std::cos(fraction*std::numbers::pi*3+freq);
 					VectorMA( seg.m_vPos, factor, CurrentViewRight(), seg.m_vPos );
 				}
 			}
@@ -1002,7 +1002,7 @@ void DrawDisk( int noise_divisions, float *prgNoise, const model_t* spritemodel,
 	vStep = length*div;	// Texture length texels per space pixel
 	
 	// UNDONE: Expose this paramter as well(3.5)?  Texture scroll rate along beam
-	vLast = fmod(freq*speed,1);	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
+	vLast = std::fmod(freq*speed,1);	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
 	scale = scale * length;
 
 	w = freq * delta[2];
@@ -1028,7 +1028,7 @@ void DrawDisk( int noise_divisions, float *prgNoise, const model_t* spritemodel,
 		meshBuilder.Position3fv( point.Base() );
 		meshBuilder.AdvanceVertex();
 
-		SinCos( fraction * 2 * M_PI, &s, &c );
+		SinCos( fraction * 2 * std::numbers::pi, &s, &c );
 		point[0] = s * w + source[0];
 		point[1] = c * w + source[1];
 		point[2] = source[2];
@@ -1100,7 +1100,7 @@ void DrawCylinder( int noise_divisions, float *prgNoise, const model_t* spritemo
 	vStep = length*div;	// Texture length texels per space pixel
 	
 	// UNDONE: Expose this paramter as well(3.5)?  Texture scroll rate along beam
-	vLast = fmod(freq*speed,1);	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
+	vLast = std::fmod(freq*speed,1);	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
 	scale = scale * length;
 	
 	CMatRenderContextPtr pRenderContext( materials );
@@ -1114,7 +1114,7 @@ void DrawCylinder( int noise_divisions, float *prgNoise, const model_t* spritemo
 	{
 		float	s, c;
 		fraction = i * div;
-		SinCos( fraction * 2 * M_PI, &s, &c );
+		SinCos( fraction * 2 * std::numbers::pi, &s, &c );
 
 		point[0] = s * freq * radius + source[0];
 		point[1] = c * freq * radius + source[1];
@@ -1179,12 +1179,12 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 	if ( segments < 2 )
 		return;
 
-	segments = segments * M_PI;
+	segments = segments * std::numbers::pi;
 	
 	if ( segments > noise_divisions * 8 )		// UNDONE: Allow more segments?
 		segments = noise_divisions * 8;
 
-	length = VectorLength( d ) * 0.01 * M_PI;
+	length = VectorLength( d ) * 0.01 * std::numbers::pi;
 	if ( length < 0.5 )	// Don't lose all of the noise/texture on short beams
 		length = 0.5;
 	div = 1.0 / (segments-1);
@@ -1193,7 +1193,7 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 	vStep = length*div/8.0;	// Texture length texels per space pixel
 	
 	// UNDONE: Expose this paramter as well(3.5)?  Texture scroll rate along beam
-	vLast = fmod(freq*speed,1);	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
+	vLast = std::fmod(freq*speed,1);	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
 	scale = amplitude * length / 8.0;
 
 	// Iterator to resample noise waveform (it needs to be generated in powers of 2)
@@ -1237,7 +1237,7 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 	for ( i = 0; i < segments + 1; i++ )
 	{
 		fraction = i * div;
-		SinCos( fraction * 2 * M_PI, &x, &y );
+		SinCos( fraction * 2 * std::numbers::pi, &x, &y );
 
 		point[0] = xaxis[0] * x + yaxis[0] * y + center[0];
 		point[1] = xaxis[1] * x + yaxis[1] * y + center[1];
@@ -1250,7 +1250,7 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 			VectorMA( point, factor, CurrentViewUp(), point );
 
 			// Rotate the noise along the perpendicluar axis a bit to keep the bolt from looking diagonal
-			factor = prgNoise[(noiseIndex>>16) & 0x7F] * scale * cos(fraction*M_PI*3*8+freq);
+			factor = prgNoise[(noiseIndex>>16) & 0x7F] * scale * std::cos(fraction*std::numbers::pi*3*8+freq);
 			VectorMA( point, factor, CurrentViewRight(), point );
 		}
 		
@@ -1459,7 +1459,7 @@ void DrawBeamQuadratic( const Vector &start, const Vector &control, const Vector
 	seg.m_flWidth = width;
 	
 	float t = 0;
-	float u = fmod( scrollOffset, 1 );
+	float u = std::fmod( scrollOffset, 1 );
 	float dt = 1.0 / (float)subdivisions;
 	for( int i = 0; i <= subdivisions; i++, t += dt )
 	{

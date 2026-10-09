@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef REPLAYDEMO_H
-#define REPLAYDEMO_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <filesystem.h>
 
@@ -41,7 +36,7 @@ public:
 	void	RecordPacket(); 
 	void	RecordServerClasses( ServerClass *pClasses );
 	void	RecordStringTables(); 
-	void	RecordCustomData( int iCallbackIndex, const void *pData, size_t iDataLength );
+	void	RecordCustomData( int iCallbackIndex, const void *pData, std::size_t iDataLength );
 
 	void	ResetDemoInterpolation() {}
 
@@ -67,7 +62,3 @@ public:
 	bf_write		m_MessageData; // temp buffer for all network messages
 	CReplayServer	*m_pReplayServer;
 };
-
-
-
-#endif // REPLAYDEMO_H

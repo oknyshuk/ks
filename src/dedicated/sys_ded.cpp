@@ -1,35 +1,24 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
-#include <stdio.h>
-#include <stdlib.h>
+
+import std;
+import ks.vstdlib;
 #include "isys.h"
 #include "dedicated.h"
 #include "engine_hlds_api.h"
-#include "checksum_md5.h"
-#include "mathlib/mathlib.h"
-#include "tier0/dbg.h"
-#include "tier1/strtools.h"
-#include "tier0/icommandline.h"
 #include "idedicatedexports.h"
 #include "appframework/AppFramework.h"
 #include "filesystem_init.h"
 #include "tier2/tier2.h"
 #include "dedicated.h"
-#include "vstdlib/cvar.h"
 #include "istudiorender.h"
 #include "datacache/imdlcache.h"
 #include "vphysics_interface.h"
 #include "vscript/ivscript.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "materialsystem/imaterialsystem.h"
-#include <mcheck.h>
-#include <unistd.h>
-#define _chdir chdir
 
 bool InitInstance( );
 void ProcessConsoleInput( void );
@@ -66,8 +55,8 @@ public:
 
 		if ( pContext->m_Severity == LS_ERROR )
 		{
-			fflush(stdout);
-			_exit(1);
+			std::fflush(stdout);
+			Plat_ExitProcess(1);
 		}
 	}
 };
@@ -83,13 +72,13 @@ void BuildCmdLine( int argc, char **argv )
 	
 	for (len = 0, i = 0; i < argc; i++)
 	{
-		len += strlen(argv[i]);
+		len += std::strlen(argv[i]);
 	}
 	
 	if ( len > MAX_LINUX_CMDLINE )
 	{
-		printf( "command line too long, %i max\n", MAX_LINUX_CMDLINE );
-		exit(-1);
+		std::printf( "command line too long, %i max\n", MAX_LINUX_CMDLINE );
+		std::exit(-1);
 		return;
 	}
 	
@@ -98,9 +87,9 @@ void BuildCmdLine( int argc, char **argv )
 	{
 		if ( i > 0 )
 		{
-			strcat( linuxCmdline, " " );
+			std::strcat( linuxCmdline, " " );
 		}
-		strcat( linuxCmdline, argv[ i ] );
+		std::strcat( linuxCmdline, argv[ i ] );
 	}
 }
 
@@ -225,22 +214,13 @@ bool CDedicatedAppSystemGroup::PreInit( )
 	if ( !BaseClass::PreInit() )
 		return false;
 
-	CFSSteamSetupInfo steamInfo;
-	steamInfo.m_pDirectoryName = nullptr;
-	steamInfo.m_bOnlyUseDirectoryName = false;
-	steamInfo.m_bToolsMode = false;
-	steamInfo.m_bSetSteamDLLPath = false;
-	steamInfo.m_bSteam = g_pFullFileSystem->IsSteam();
-	steamInfo.m_bNoGameInfo = steamInfo.m_bSteam;
-	if ( FileSystem_SetupSteamEnvironment( steamInfo ) != FS_OK )
+	CFSSetupInfo setupInfo;
+	setupInfo.m_pDirectoryName = nullptr;
+	setupInfo.m_bOnlyUseDirectoryName = false;
+	if ( FileSystem_SetupEnvironment( setupInfo ) != FS_OK )
 		return false;
 
-	CFSMountContentInfo fsInfo;
-	fsInfo.m_pFileSystem = g_pFullFileSystem;
-	fsInfo.m_bToolsMode = false;
-	fsInfo.m_pDirectoryName = steamInfo.m_GameInfoPath;
-
-	if ( FileSystem_MountContent( fsInfo ) != FS_OK )
+	if ( FileSystem_SetBasePaths( g_pFullFileSystem ) != FS_OK )
 		return false;
 
 	// Needs to be done prior to init material system config
@@ -298,7 +278,7 @@ void CDedicatedAppSystemGroup::Destroy()
 //-----------------------------------------------------------------------------
 static bool GetExecutableName( char *out, int nMaxLen )
 {
-	Q_strncpy( out, g_szEXEName, nMaxLen );
+	V_strncpy( out, g_szEXEName, nMaxLen );
 	return true;
 }
 
@@ -316,13 +296,13 @@ void UTIL_ComputeBaseDir( char *pBaseDir, int nMaxLen )
 
 	if ( GetExecutableName( pBaseDir, nMaxLen ) )
 	{
-		pBuffer = strrchr( pBaseDir, CORRECT_PATH_SEPARATOR );
+		pBuffer = std::strrchr( pBaseDir, CORRECT_PATH_SEPARATOR );
 		if ( pBuffer && *pBuffer )
 		{
 			*(pBuffer+1) = '\0';
 		}
 
-		j = strlen( pBaseDir );
+		j = std::strlen( pBaseDir );
 		if (j > 0)
 		{
 			if ( ( pBaseDir[ j-1 ] == '\\' ) || 
@@ -336,15 +316,15 @@ void UTIL_ComputeBaseDir( char *pBaseDir, int nMaxLen )
 	char const *pOverrideDir = CommandLine()->CheckParm( "-basedir" );
 	if ( pOverrideDir )
 	{
-		strcpy( pBaseDir, pOverrideDir );
+		std::strcpy( pBaseDir, pOverrideDir );
 	}
 
-	Q_strlower( pBaseDir );
-	Q_FixSlashes( pBaseDir );
+	V_strlower( pBaseDir );
+	V_FixSlashes( pBaseDir );
 }
 
 
-static bool s_GameInfoSuggestFN( CFSSteamSetupInfo const *pFsSteamSetupInfo, char *pchPathBuffer, int nBufferLength, bool *pbBubbleDirectories )
+static bool s_GameInfoSuggestFN( CFSSetupInfo const *pFsSetupInfo, char *pchPathBuffer, int nBufferLength, bool *pbBubbleDirectories )
 {
 	V_strncpy( pchPathBuffer, g_gameName, nBufferLength );
 	return true;
@@ -363,7 +343,7 @@ int main(int argc, char **argv)
 {
 	SetupFPUControlWord();
 
-	strcpy(g_szEXEName, *argv);
+	std::strcpy(g_szEXEName, *argv);
 	// Store off command line for argument searching
 	BuildCmdLine(argc, argv);
 
@@ -372,11 +352,6 @@ int main(int argc, char **argv)
 	// Store off command line for argument searching
 	CommandLine()->CreateCmdLine( GetCommandLine() );
 	Plat_SetCommandLine( CommandLine()->GetCmdLine() );
-
-	if ( CommandLine()->CheckParm( "-mtrace" ) )
-	{
-		mtrace();
-	}
 
 	// Figure out the directory the executable is running from
 	// and make that be the current working directory
@@ -392,13 +367,8 @@ int main(int argc, char **argv)
 
 	SetSuggestGameInfoDirFn( s_GameInfoSuggestFN );
 	CDedicatedAppSystemGroup dedicatedSystems;
-	CSteamApplication steamApplication( &dedicatedSystems );
-	int nRet = steamApplication.Run( );
-
-	if ( CommandLine()->CheckParm( "-mtrace" ) )
-	{
-		muntrace();
-	}
+	CFSApplication application( &dedicatedSystems );
+	int nRet = application.Run( );
 
 	return nRet;
 }

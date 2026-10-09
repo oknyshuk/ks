@@ -1,28 +1,21 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <tier0/dbg.h>
-#include <tier1/strtools.h>
+import std;
+import ks.tier1;
 
 #include "demofile.h"
 #include "filesystem_engine.h"
 #include "demo.h"
 #include "demobuffer.h"
-#include "convar.h"	// For dbg_demofile
 #include "host_cmd.h"
 
 #include "cdll_int.h" // For playback parameters
 
-
 void Host_EndGame (bool bShowMainMenu, const char *message, ...);
 
 // Temporary debug stuff:
-#define DEMOFILE_DBG_PRINT
 ConVar dbg_demofile( "dbg_demofile", "0" );
-#if defined( DEMOFILE_DBG_PRINT )
 class CDbgPrint
 {
 public:
@@ -41,9 +34,6 @@ public:
 };
 int CDbgPrint::s_nIndent = 0;
 #define DemoFileDbg(_txt) CDbgPrint printer( _txt )
-#else
-#define DemoFileDbg(_txt) (void)0
-#endif
 
 ConVar demo_strict_validation( "demo_strict_validation", "0", FCVAR_RELEASE );
 
@@ -67,7 +57,7 @@ CDemoFile::~CDemoFile()
 void CDemoFile::WriteSequenceInfo(int nSeqNrIn, int nSeqNrOut)
 {
 	DemoFileDbg( "WriteSequenceInfo()\n" );
-	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
+	contract_assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	m_pBuffer->PutInt( nSeqNrIn );
 	m_pBuffer->PutInt( nSeqNrOut );
 }
@@ -77,7 +67,7 @@ void CDemoFile::WriteSequenceInfo(int nSeqNrIn, int nSeqNrOut)
 //-----------------------------------------------------------------------------
 void CDemoFile::ReadSequenceInfo(int &nSeqNrIn, int &nSeqNrOut)
 {
-	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
+	contract_assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	nSeqNrIn = m_pBuffer->GetInt( );
 	nSeqNrOut = m_pBuffer->GetInt( );
 }
@@ -87,7 +77,7 @@ void CDemoFile::WriteCmdInfo( democmdinfo_t& info )
 {
 	DemoFileDbg( "WriteCmdInfo()\n" );
 
-	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
+	contract_assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	m_pBuffer->Put( &info, sizeof(democmdinfo_t) );
 }
 
@@ -96,7 +86,7 @@ void CDemoFile::WriteCmdInfo( democmdinfo_t& info )
 //-----------------------------------------------------------------------------
 void CDemoFile::ReadCmdInfo( democmdinfo_t& info )
 {
-	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
+	contract_assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	m_pBuffer->Get( &info, sizeof(democmdinfo_t) );
 }
 
@@ -109,12 +99,12 @@ void CDemoFile::ReadCmdInfo( democmdinfo_t& info )
 void CDemoFile::WriteCmdHeader( unsigned char cmd, int tick, int nPlayerSlot )
 {
 	if ( dbg_demofile.GetInt() ) DevMsg( "----------------------------------------\n" );
-	Assert( cmd >= dem_signon && cmd <= dem_lastcmd );
+	contract_assert( cmd >= dem_signon && cmd <= dem_lastcmd );
 
-	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
+	contract_assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	m_pBuffer->PutUnsignedChar( cmd );
 	m_pBuffer->WriteTick( tick );
-	Assert( nPlayerSlot >= 0 &&
+	contract_assert( nPlayerSlot >= 0 &&
 			nPlayerSlot < MAX_SPLITSCREEN_CLIENTS );
 	m_pBuffer->PutChar( nPlayerSlot );
 
@@ -144,7 +134,7 @@ void CDemoFile::WriteCmdHeader( unsigned char cmd, int tick, int nPlayerSlot )
 //-----------------------------------------------------------------------------
 void CDemoFile::ReadCmdHeader( unsigned char& cmd, int& tick, int &nPlayerSlot )
 {
-	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
+	contract_assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	cmd = m_pBuffer->GetUnsignedChar( );
 	if ( !m_pBuffer || !m_pBuffer->IsValid() )
 	{
@@ -173,7 +163,7 @@ void CDemoFile::WriteConsoleCommand( const char *cmdstring, int tick, int nPlaye
 	if ( !m_pBuffer || !m_pBuffer->IsInitialized() )
 		return;
 
-	int len = Q_strlen( cmdstring ) + 1;
+	int len = V_strlen( cmdstring ) + 1;
 	if ( len >= 1024 )
 	{
 		DevMsg("CDemoFile::WriteConsoleCommand: command too long (>1024).\n");
@@ -210,7 +200,6 @@ unsigned int CDemoFile::GetCurPos( bool bRead )
 void CDemoFile::WriteNetworkDataTables( bf_write *buf, int tick )
 {
 	DemoFileDbg( "WriteNetworkDataTables()\n" );
-	MEM_ALLOC_CREDIT();
 
 	if ( !m_pBuffer || !m_pBuffer->IsInitialized() )
 	{
@@ -239,7 +228,6 @@ int CDemoFile::ReadNetworkDataTables( bf_read *buf )
 void CDemoFile::WriteStringTables( bf_write *buf, int tick )
 {
 	DemoFileDbg( "WriteStringTables()\n" );
-	MEM_ALLOC_CREDIT();
 
 	if ( !m_pBuffer || !m_pBuffer->IsInitialized() )
 	{
@@ -284,7 +272,7 @@ int CDemoFile::ReadUserCmd( char *buffer, int &size )
 {
 	int outgoing_sequence;
 	
-	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
+	contract_assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	outgoing_sequence = m_pBuffer->GetInt();
 
 	size = ReadRawData( buffer, size );
@@ -295,7 +283,7 @@ int CDemoFile::ReadUserCmd( char *buffer, int &size )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CDemoFile::WriteCustomData( int iCallbackIndex, const void *pData, size_t iDataSize, int tick )
+void CDemoFile::WriteCustomData( int iCallbackIndex, const void *pData, std::size_t iDataSize, int tick )
 {
 	DemoFileDbg( "WriteCustomData()\n" );
 	if ( !m_pBuffer || !m_pBuffer->IsInitialized() )
@@ -306,9 +294,8 @@ void CDemoFile::WriteCustomData( int iCallbackIndex, const void *pData, size_t i
 	//write the index of the callback according to the table we saved earlier
 	m_pBuffer->PutInt( iCallbackIndex );
 
-	MEM_ALLOC_CREDIT();
 
-	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
+	contract_assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	m_pBuffer->PutInt( iDataSize );
 	m_pBuffer->Put( pData, iDataSize );
 }
@@ -322,7 +309,7 @@ int CDemoFile::ReadCustomData( int *pCallbackIndex, uint8 **ppDataChunk )
 	int size;
 	int iCallbackIndex;
 
-	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
+	contract_assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	iCallbackIndex = m_pBuffer->GetInt();
 	size = m_pBuffer->GetInt();
 
@@ -354,7 +341,7 @@ int CDemoFile::ReadCustomData( int *pCallbackIndex, uint8 **ppDataChunk )
 //-----------------------------------------------------------------------------
 void CDemoFile::SeekTo( int position, bool bRead )
 {
-	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
+	contract_assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	if ( bRead )
 	{
 		m_pBuffer->SeekGet( true, position );
@@ -373,7 +360,7 @@ int CDemoFile::ReadRawData( char *buffer, int length )
 {
 	int size;
 	
-	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
+	contract_assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	size = m_pBuffer->GetInt();
 
 	if ( buffer && (length < size) )
@@ -412,9 +399,8 @@ int CDemoFile::ReadRawData( char *buffer, int length )
 void CDemoFile::WriteRawData( const char *buffer, int length )
 {
 	DemoFileDbg( "WriteRawData()\n" );
-	MEM_ALLOC_CREDIT();
 
-	Assert( m_pBuffer && m_pBuffer->IsInitialized() );
+	contract_assert( m_pBuffer && m_pBuffer->IsInitialized() );
 	m_pBuffer->PutInt( length );
 	m_pBuffer->Put( buffer, length );
 }
@@ -422,7 +408,7 @@ void CDemoFile::WriteRawData( const char *buffer, int length )
 void CDemoFile::WriteDemoHeader()
 {
 	DemoFileDbg( "WriteDemoHeader()\n" );
-	Assert( m_DemoHeader.networkprotocol == GetHostVersion() );
+	contract_assert( m_DemoHeader.networkprotocol == GetHostVersion() );
 
 	DevMsg( "\n" );
 	DevMsg( "     demofilestamp: %s\n", m_DemoHeader.demofilestamp );
@@ -445,7 +431,7 @@ void CDemoFile::WriteDemoHeader()
 demoheader_t *CDemoFile::ReadDemoHeader( CDemoPlaybackParameters_t const *pPlaybackParameters )
 {
 	bool bOk;
-	Q_memset( &m_DemoHeader, 0, sizeof(m_DemoHeader) );
+	V_memset( &m_DemoHeader, 0, sizeof(m_DemoHeader) );
 
 	if ( !m_pBuffer || !m_pBuffer->IsInitialized() )
 		return nullptr;
@@ -456,7 +442,7 @@ demoheader_t *CDemoFile::ReadDemoHeader( CDemoPlaybackParameters_t const *pPlayb
 	if ( !bOk )
 		return nullptr;  // reading failed
 
-	if ( Q_strcmp( m_DemoHeader.demofilestamp, DEMO_HEADER_ID ) )
+	if ( V_strcmp( m_DemoHeader.demofilestamp, DEMO_HEADER_ID ) )
 	{
 		ConMsg( "%s has invalid demo header ID.\n", m_szFileName );
 		return nullptr;
@@ -524,11 +510,11 @@ bool CDemoFile::Open( const char *name, bool bReadOnly, bool bMemoryBuffer )
 	}
 
 	m_szFileName[0] = 0;  // clear name
-	Q_memset( &m_DemoHeader, 0, sizeof(m_DemoHeader) ); // and demo header
+	V_memset( &m_DemoHeader, 0, sizeof(m_DemoHeader) ); // and demo header
 
 	if ( bMemoryBuffer )
 	{
-		Assert( !bReadOnly );	// Only read from files
+		contract_assert( !bReadOnly );	// Only read from files
 		int const nMaxSize = 1024 * 1024 * 16;
 		MemoryDemoBufferInitParams_t params( nMaxSize );
 		m_pBuffer = CreateDemoBuffer( true, params );
@@ -547,7 +533,7 @@ bool CDemoFile::Open( const char *name, bool bReadOnly, bool bMemoryBuffer )
 		return false;
 	}
 
-	Q_strncpy( m_szFileName, name, sizeof(m_szFileName) );
+	V_strncpy( m_szFileName, name, sizeof(m_szFileName) );
 	return true;
 }
 

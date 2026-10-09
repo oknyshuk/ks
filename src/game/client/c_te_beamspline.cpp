@@ -1,22 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.core;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "c_basetempentity.h"
-#include "tier0/vprof.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 
-#define MAX_SPLINE_POINTS 16
+constexpr auto MAX_SPLINE_POINTS = 16;
 //-----------------------------------------------------------------------------
 // Purpose: BeamSpline TE
 //-----------------------------------------------------------------------------
@@ -69,7 +64,7 @@ void TE_BeamSpline( IRecipientFilter& filter, float delay,
 //-----------------------------------------------------------------------------
 void C_TEBeamSpline::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEBeamSpline::PostDataUpdate" );
+	CVProfScope _( "C_TEBeamSpline::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	DevMsg( 1, "Beam spline with %i points received\n", m_nPoints );
 }
@@ -78,4 +73,3 @@ void C_TEBeamSpline::PostDataUpdate( DataUpdateType_t updateType )
 IMPLEMENT_CLIENTCLASS_EVENT( C_TEBeamSpline, DT_TEBeamSpline, CTEBeamSpline );
 
 IMPLEMENT_REFLECT_TABLE( C_TEBeamSpline, DT_TEBeamSpline );
-

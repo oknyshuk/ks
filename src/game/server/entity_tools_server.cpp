@@ -1,15 +1,44 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "recipientfilter.h"
 #include "const.h"
 #include "toolframework/itoolentity.h"
 #include "entitylist.h"
 #include "toolframework/itoolsystem.h"
-#include "keyvalues.h"
 #include "icliententity.h"
 #include "iserverentity.h"
 #include "sceneentity.h"
@@ -18,7 +47,6 @@
 #include "TemplateEntities.h"
 #include "mapentities.h"
 #include "point_template.h"
-
 
 class CFoundryEntitySpawnRecord
 {
@@ -245,7 +273,7 @@ void HandleFoundryEntitySpawnRecords()
 	if ( g_FoundryEntitySpawnRecords.empty() )
 		return;
 
-	VPROF("HandleFoundryEntitySpawnRecords");
+	CVProfScope _( "HandleFoundryEntitySpawnRecords", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Create all the entities.
 	std::vector< CBaseEntity* > newEnts;
@@ -268,7 +296,7 @@ void HandleFoundryEntitySpawnRecords()
 		char szClassName[MAPKEY_MAXLENGTH];
 		if ( !entData.ExtractValue( "classname", szClassName ) )
 		{
-			Assert( false );
+			contract_assert( false );
 			continue;
 		}
 
@@ -395,7 +423,7 @@ void CC_Ent_Keyvalue( const CCommand &args )
 		return;
 	}
 
-	int nID = atoi( args[1] );
+	int nID = std::atoi( args[1] );
 
 	void *pEnt = g_ServerTools.FindEntityByHammerID( nID );
 	if ( !pEnt )
@@ -416,4 +444,3 @@ void CC_Ent_Keyvalue( const CCommand &args )
 } 
 
 static ConCommand ent_keyvalue("ent_keyvalue", CC_Ent_Keyvalue, "Applies the comma delimited key=value pairs to the entity with the given Hammer ID.\n\tFormat: ent_keyvalue <entity id> <key1>=<value1>,<key2>=<value2>,...,<keyN>=<valueN>\n", FCVAR_CHEAT);
-

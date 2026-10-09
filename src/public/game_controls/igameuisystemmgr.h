@@ -1,11 +1,9 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
-#ifndef IGAMEUISYSTEMMGR_H
-#define IGAMEUISYSTEMMGR_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+// Purpose: Forward declarations
 
-
-
-// Forward declarations
 class IGameUISystemMgr;
 class IGameUIScreenController;
 class IGameUIScreenControllerFactory;
@@ -18,7 +16,8 @@ class IGameUISoundPlayback;
 class IMaterialProxy;
 
 // External includes
-#include "tier1/timeutils.h"
+import std;
+import ks.tier1;
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/imaterialsystem.h"
 #include "vgui_surfacelib/ifontsurface.h" 
@@ -32,15 +31,16 @@ class IMaterialProxy;
 
 
 // Types
-FORWARD_DECLARE_HANDLE( InputContextHandle_t );
+struct InputContextHandle_t__;
+using InputContextHandle_t = InputContextHandle_t__ *;
 
 
 
 //-----------------------------------------------------------------------------
 // Interface used to drive gameui (tier3)
 //-----------------------------------------------------------------------------
-#define GAMEUISYSTEMMGR_INTERFACE_VERSION	"GameUISystemMgr001"
-abstract_class IGameUISystemMgr : public IAppSystem
+inline constexpr const char *GAMEUISYSTEMMGR_INTERFACE_VERSION = "GameUISystemMgr001";
+class IGameUISystemMgr : public IAppSystem
 {
 public:
 	virtual void SetGameUIVisible( bool bVisible ) = 0;
@@ -79,7 +79,7 @@ public:
 //-----------------------------------------------------------------------------
 // Used to allow clients to install code hooks to the gui screens
 //-----------------------------------------------------------------------------
-abstract_class IGameUIScreenController
+class IGameUIScreenController
 {
 public:
 	// Connects a screen to the controller, returns number of
@@ -99,7 +99,7 @@ public:
 	virtual void BroadcastEventToScreens( KeyValues *kvEvent ) = 0;
 };
 
-abstract_class IGameUIScreenControllerFactory
+class IGameUIScreenControllerFactory
 {
 public:
 	// Returns an instance of a controller interface (keyvalues owned by caller)
@@ -114,7 +114,7 @@ public:
 //-----------------------------------------------------------------------------
 // IGameUISystem represents a logical collection of UI screens
 //-----------------------------------------------------------------------------
-abstract_class IGameUISystem
+class IGameUISystem
 {
 public:
 	virtual char const * GetName() = 0;
@@ -181,7 +181,7 @@ public:
 //-----------------------------------------------------------------------------
 // Game UI scheme manager
 //-----------------------------------------------------------------------------
-abstract_class IGameUISchemeMgr
+class IGameUISchemeMgr
 {
 public:
 	// loads a scheme from a file
@@ -209,7 +209,7 @@ public:
 //-----------------------------------------------------------------------------
 // Game UI version of a vgui scheme
 //-----------------------------------------------------------------------------
-abstract_class IGameUIScheme
+class IGameUIScheme
 {
 public:
 	// Gets at the scheme's name
@@ -225,7 +225,7 @@ public:
 //-----------------------------------------------------------------------------
 // Used to allow clients to install different sound playback systems
 //-----------------------------------------------------------------------------
-abstract_class IGameUISoundPlayback
+class IGameUISoundPlayback
 {
 public:
 	// EmitSound will return a handle to the sound being played.
@@ -252,6 +252,3 @@ namespace { \
 		} \
 	} s_LinkHelper; \
 };
-
-
-#endif // IGAMEUISYSTEMMGR_H

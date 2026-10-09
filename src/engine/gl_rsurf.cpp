@@ -1,18 +1,29 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
+// main precompiled header for client rendering code
 
-#include "render_pch.h"
+import ks.vstdlib;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialvar.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "r_local.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_lightmap.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
 #include "client.h"
 #include "gl_model_private.h"
 #include "gl_water.h"
 #include "gl_cvars.h"
-#include "zone.h"
 #include "decal.h"
 #include "decal_private.h"
 #include "gl_lightmap.h"
@@ -21,23 +32,16 @@
 #include "gl_rsurf.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/ivballoctracker.h"
-#include "tier2/tier2.h"
 #include "collisionutils.h"
 #include "cdll_int.h"
 #include "r_areaportal.h"
 #include "brushbatchrender.h"
 #include "bsptreedata.h"
 #include "cmodel_private.h"
-#include "tier0/dbg.h"
-#include "crtmemdebug.h"
 #include "iclientrenderable.h"
 #include "icliententitylist.h"
 #include "icliententity.h"
-#include "gl_rmain.h"
-#include "tier0/vprof.h"
-#include <algorithm>
-#include <vector>
-#include "tier1/bit_ops.h"
+import std;
 #include "debugoverlay.h"
 #include "host.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
@@ -48,17 +52,11 @@
 #include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterialvar.h"
 #include "coordsize.h"
-#include "tier1/fixed_pool.h"
-#include "tier0/cache_hints.h"
 #ifndef DEDICATED
 #include "Overlay.h"
 #endif
 #include "paint.h"
 #include "disp.h"
-#include "mathlib/volumeculler.h"
-#include "vstdlib/jobthread.h"
-
-
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -139,7 +137,6 @@ static IBrushRenderer* s_pBrushRenderOverride = 0;
 // Make sure we don't render the same surfaces twice
 //-----------------------------------------------------------------------------
 int	r_surfacevisframe = 0;
-#define r_surfacevisframe dont_use_r_surfacevisframe_here
 
 
 //-----------------------------------------------------------------------------
@@ -166,27 +163,27 @@ static const CVolumeCuller *s_pTopViewVolumeCuller = nullptr;
 class CVisitedSurfs 
 {
 public:
-	FORCEINLINE bool VisitSurface( SurfaceHandle_t surfID )
+	[[gnu::always_inline]] inline bool VisitSurface( SurfaceHandle_t surfID )
 	{
 		return !ks::test_and_set( m_bits, MSurf_Index( surfID ) );
 	}
 
-	FORCEINLINE void MarkSurfaceVisited( SurfaceHandle_t surfID )
+	[[gnu::always_inline]] inline void MarkSurfaceVisited( SurfaceHandle_t surfID )
 	{
 		m_bits[MSurf_Index( surfID )] = true;
 	}
 
-	FORCEINLINE bool VisitedSurface( SurfaceHandle_t surfID )
+	[[gnu::always_inline]] inline bool VisitedSurface( SurfaceHandle_t surfID )
 	{
 		return m_bits[MSurf_Index( surfID )];
 	}
 
-	FORCEINLINE bool VisitedSurface( int index )
+	[[gnu::always_inline]] inline bool VisitedSurface( int index )
 	{
 		return m_bits[index];
 	}
 
-	FORCEINLINE int GetSize() { return static_cast< int >( m_bits.size() ); }
+	[[gnu::always_inline]] inline int GetSize() { return static_cast< int >( m_bits.size() ); }
 
 	void Resize( int nSurfaces )
 	{
@@ -213,7 +210,7 @@ const cplane_t &R_GetBrushModelPlane( const model_t *model, int nIndex, Vector *
 {
 	SurfaceHandle_t surfID = SurfaceHandleFromIndex( model->brush.firstmodelsurface, model->brush.pShared );
 	surfID += nIndex;
-	Assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
+	contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
 
 	if ( pOrigin )
 	{
@@ -297,7 +294,7 @@ public:
 		else
 		{
 			p->AddRef();
-			AssertMsg( p->m_VisitedSurfs.GetSize() == nSurfaces, "World render list pool not cleared between maps" );
+			contract_assert( ( p->m_VisitedSurfs.GetSize() == nSurfaces ) && "World render list pool not cleared between maps" );
 		}
 
 		return p;
@@ -500,7 +497,7 @@ void R_SetTopViewVolumeCuller( const CVolumeCuller *pTopViewVolumeCuller )
 //-----------------------------------------------------------------------------
 void Shader_TranslucentWorldSurface( CWorldRenderList *pRenderList, SurfaceHandle_t surfID )
 {
-	Assert( !SurfaceHasDispInfo( surfID ) && (std::ssize( pRenderList->m_leaves ) > 0) );
+	contract_assert( !SurfaceHasDispInfo( surfID ) && (std::ssize( pRenderList->m_leaves ) > 0) );
 
 	// Hook into the chain of translucent objects for this leaf
 	int sortGroup = MSurf_SortGroup( surfID );
@@ -515,7 +512,7 @@ static inline void Shader_WorldSurface( CWorldRenderList *pRenderList, SurfaceHa
 {
 	// Hook it into the list of surfaces to render with this material
 	// Do it in a way that generates a front-to-back ordering for fast z reject
-	Assert( !SurfaceHasDispInfo( surfID ) );
+	contract_assert( !SurfaceHasDispInfo( surfID ) );
 
 	// Each surface is in exactly one group
 	int nSortGroup = MSurf_SortGroup( surfID );
@@ -547,7 +544,7 @@ static inline void Shader_WorldSurface( CWorldRenderList *pRenderList, SurfaceHa
 //-----------------------------------------------------------------------------
 void Shader_TranslucentDisplacementSurface( CWorldRenderList *pRenderList, SurfaceHandle_t surfID )
 {
-	Assert( SurfaceHasDispInfo( surfID ) && (std::ssize( pRenderList->m_leaves ) > 0));
+	contract_assert( SurfaceHasDispInfo( surfID ) && (std::ssize( pRenderList->m_leaves ) > 0) );
 
 	// For translucent displacement surfaces, they can exist in many
 	// leaves. We want to choose the leaf that's closest to the camera
@@ -574,7 +571,7 @@ void Shader_TranslucentDisplacementSurface( CWorldRenderList *pRenderList, Surfa
 
 static void Shader_DisplacementSurface( CWorldRenderList *pRenderList, SurfaceHandle_t surfID )
 {
-	Assert( SurfaceHasDispInfo( surfID ) );
+	contract_assert( SurfaceHasDispInfo( surfID ) );
 
 	// For opaque displacement surfaces, we're going to build a temporary list of 
 	// displacement surfaces in each material bucket, and then add those to
@@ -612,15 +609,11 @@ void Shader_DrawSurfaceDynamic( IMatRenderContext *pRenderContext, SurfaceHandle
 
 	if ( pPrim->vertCount )
 	{
-#ifdef DBGFLAG_ASSERT
-		int primType = pPrim->type;
-#endif
 		IMesh *pMesh = pRenderContext->GetDynamicMesh( false );
 		CMeshBuilder meshBuilder;
 		for( int i = 0; i < MSurf_NumPrims( surfID ); i++, pPrim++ )
 		{
 			// Can't have heterogeneous primitive lists
-			Assert( primType == pPrim->type );
 			switch( pPrim->type )
 			{
 			case PRIM_TRILIST:
@@ -630,10 +623,10 @@ void Shader_DrawSurfaceDynamic( IMatRenderContext *pRenderContext, SurfaceHandle
 				meshBuilder.Begin( pMesh, MATERIAL_TRIANGLE_STRIP, pPrim->vertCount, pPrim->indexCount );
 				break;
 			default:
-				Assert( 0 );
+				contract_assert( 0 );
 				return;
 			}
-			Assert( pPrim->indexCount );
+			contract_assert( pPrim->indexCount );
 			BuildMSurfacePrimVerts( host_state.worldbrush, pPrim, meshBuilder, surfID );
 			BuildMSurfacePrimIndices( host_state.worldbrush, pPrim, meshBuilder );
 			meshBuilder.End();
@@ -666,7 +659,7 @@ void Shader_DrawSurfaceDynamic( IMatRenderContext *pRenderContext, SurfaceHandle
 // since it causes a lock and drawindexedprimitive per surface! (gary)
 void Shader_DrawSurfaceListStatic( IMatRenderContext *pRenderContext, SurfaceHandle_t *pList, int listCount, int triangleCount )
 {
-	VPROF( "Shader_DrawSurfaceListStatic" );
+	CVProfScope _( "Shader_DrawSurfaceListStatic", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( 
 #ifdef USE_CONVARS
 		mat_forcedynamic.GetInt() || 
@@ -714,7 +707,7 @@ static inline void Shader_SetChainLightmapState( IMatRenderContext *pRenderConte
 	}
 	else
 	{
-		Assert( MSurf_MaterialSortID( surfID ) >= 0 && MSurf_MaterialSortID( surfID ) < std::ssize( g_WorldStaticMeshes ) );
+		contract_assert( MSurf_MaterialSortID( surfID ) >= 0 && MSurf_MaterialSortID( surfID ) < std::ssize( g_WorldStaticMeshes ) );
 		pRenderContext->BindLightmapPage( materialSortInfoArray[MSurf_MaterialSortID( surfID )].lightmapPageID );
 	}
 }
@@ -859,8 +852,8 @@ void Shader_AddSurfaceDynamicTextureOnly( CMeshBuilder &meshBuilder, SurfaceHand
 	if ( SurfaceHasPrims(surfID) )
 	{
 		mprimitive_t *pPrim = &pData->primitives[MSurf_FirstPrimID( surfID, pData )];
-		Assert(pPrim->vertCount==0);
-		Assert( pPrim->indexCount == ((MSurf_VertCount( surfID ) - 2)*3));
+		contract_assert( pPrim->vertCount==0 );
+		contract_assert( pPrim->indexCount == ((MSurf_VertCount( surfID ) - 2)*3) );
 
 		indexBuilder.FastIndexList( &pData->primindices[pPrim->firstIndex], startVert, pPrim->indexCount );
 	}
@@ -880,8 +873,8 @@ void Shader_AddSurfaceDynamic( CMeshBuilder &meshBuilder, SurfaceHandle_t surfID
 	if ( SurfaceHasPrims(surfID) )
 	{
 		mprimitive_t *pPrim = &pData->primitives[MSurf_FirstPrimID( surfID, pData )];
-		Assert(pPrim->vertCount==0);
-		Assert( pPrim->indexCount == ((MSurf_VertCount( surfID ) - 2)*3));
+		contract_assert( pPrim->vertCount==0 );
+		contract_assert( pPrim->indexCount == ((MSurf_VertCount( surfID ) - 2)*3) );
 
 		indexBuilder.FastIndexList( &pData->primindices[pPrim->firstIndex], startVert, pPrim->indexCount );
 	}
@@ -931,7 +924,7 @@ static void Shader_DrawDynamicChain( IMatRenderContext *pRenderContext, const CM
 	{
 		// UNDONE: This will have really bad perf on 360.  There's a simple mod to the above code to fix it 
 		// but it never happens in l4d so I didn't bother writing/testing that code.
-		Assert(0);
+		contract_assert( 0 );
 		MSL_FOREACH_SURFACE_IN_GROUP_BEGIN(sortList, group, surfID)
 		{
 			Shader_DrawSurfaceDynamic( pRenderContext, surfID );
@@ -1008,14 +1001,14 @@ static void Shader_DrawChainsStatic( IMatRenderContext *pRenderContext, const CM
 
 			const surfacesortgroup_t &group = *groupList[listIndex];
 			surfID = sortList.GetSurfaceAtHead(group);
-			Assert( IS_SURF_VALID( surfID ) );
+			contract_assert( IS_SURF_VALID( surfID ) );
 			if ( MSurf_Flags(surfID) & SURFDRAW_DYNAMIC )
 			{
 				dynamicGroups.push_back( &group );
 				continue;
 			}
 
-			Assert( group.triangleCount > 0 );
+			contract_assert( group.triangleCount > 0 );
 			int numIndex = group.triangleCount * 3;
 			if ( indexCount + numIndex > nMaxIndices )
 			{
@@ -1040,7 +1033,7 @@ static void Shader_DrawChainsStatic( IMatRenderContext *pRenderContext, const CM
 					meshList[meshIndex].numbatches = 0;
 					meshList[meshIndex].firstbatch = std::ssize( batchList );
 					pLastMesh = g_WorldStaticMeshes[sortID];
-					Assert( pLastMesh );
+					contract_assert( pLastMesh );
 					meshList[meshIndex].pMesh = pLastMesh;
 				}
 				else
@@ -1060,7 +1053,7 @@ static void Shader_DrawChainsStatic( IMatRenderContext *pRenderContext, const CM
 			batch.firstIndex = indexCount;
 			batch.surfID = surfID;
 			batch.numIndex = numIndex;
-			Assert( indexCount + batch.numIndex < nMaxIndices );
+			contract_assert( indexCount + batch.numIndex < nMaxIndices );
 			indexCount += batch.numIndex;
 
 			meshList[meshIndex].numbatches++;
@@ -1068,7 +1061,7 @@ static void Shader_DrawChainsStatic( IMatRenderContext *pRenderContext, const CM
 
 			MSL_FOREACH_SURFACE_IN_GROUP_BEGIN(sortList, group, surfID)
 			{
-				Assert( meshBuilder.m_nFirstVertex == 0 );
+				contract_assert( meshBuilder.m_nFirstVertex == 0 );
 				//Msg("surfID %d\n", (uint32)surfID );
 				BuildIndicesForWorldSurface( meshBuilder, surfID, host_state.worldbrush );
 			}
@@ -1082,7 +1075,7 @@ static void Shader_DrawChainsStatic( IMatRenderContext *pRenderContext, const CM
 
 
 		int meshTotal = std::ssize( meshList );
-		VPROF_INCREMENT_COUNTER( "vertex format changes", meshTotal );
+		VProfIncrementCounter<"vertex format changes">( meshTotal );
 
 		// HACKHACK: Crappy little bubble sort
 		// UNDONE: Make the traversal happen so that they are already sorted when you get here.
@@ -1114,7 +1107,7 @@ static void Shader_DrawChainsStatic( IMatRenderContext *pRenderContext, const CM
 		{
 			vertexformatlist_t &mesh = meshList[meshMap[m]];
 			IMaterial *pBindMaterial = materialSortInfoArray[MSurf_MaterialSortID( batchList[mesh.firstbatch].surfID )].material;
-			Assert( mesh.pMesh && pBuildMesh );
+			contract_assert( mesh.pMesh && pBuildMesh );
 //			IMesh *pMesh = pRenderContext->GetDynamicMesh( false, mesh.pMesh, pBuildMesh, pBindMaterial );
 			pRenderContext->BindBatch( mesh.pMesh, pBindMaterial );
 
@@ -1228,7 +1221,7 @@ typedef void (*SurfaceDebugFunc_t)( IMatRenderContext *pRenderContext, SurfaceHa
 static void DrawSurfaceID( IMatRenderContext *pRenderContext, SurfaceHandle_t surfID, const Vector &vecCentroid )
 {
 	char buf[32];
-	Q_snprintf(buf, sizeof( buf ), "0x%p", surfID );
+	V_snprintf(buf, sizeof( buf ), "0x%p", surfID );
 	CDebugOverlay::AddTextOverlay( vecCentroid, 0, buf );
 }
 
@@ -1236,7 +1229,7 @@ static void DrawSurfaceIDAsInt( IMatRenderContext *pRenderContext, SurfaceHandle
 {
 	int nInt = (msurface2_t*)surfID - host_state.worldbrush->surfaces2;
 	char buf[32];
-	Q_snprintf( buf, sizeof( buf ), "%d", nInt );
+	V_snprintf( buf, sizeof( buf ), "%d", nInt );
 	CDebugOverlay::AddTextOverlay( vecCentroid, 0, buf );
 }
 
@@ -1245,7 +1238,7 @@ static void DrawSurfaceMaterial( IMatRenderContext *pRenderContext, SurfaceHandl
 	mtexinfo_t * pTexInfo = MSurf_TexInfo(surfID);
 
 	const char *pFullMaterialName = pTexInfo->material ? pTexInfo->material->GetName() : "no material";
-	const char *pSlash = strrchr( pFullMaterialName, '/' );
+	const char *pSlash = std::strrchr( pFullMaterialName, '/' );
 	const char *pMaterialName = strrchr( pFullMaterialName, '\\' );
 	if (pSlash > pMaterialName)
 		pMaterialName = pSlash;
@@ -1266,7 +1259,7 @@ void Shader_DrawSurfaceDebuggingInfo( IMatRenderContext *pRenderContext, Surface
 	for ( int i = 0; i < listCount; i++ )
 	{
 		SurfaceHandle_t surfID = pList[i];
-		Assert( !SurfaceHasDispInfo( surfID ) );
+		contract_assert( !SurfaceHasDispInfo( surfID ) );
 
 		// Compute the centroid of the surface
 		int nCount = MSurf_VertCount( surfID );
@@ -1308,7 +1301,7 @@ void Shader_DrawWireframePolygons( IMatRenderContext *pRenderContext, SurfaceHan
 	for ( int i = 0; i < listCount; i++ )
 	{
 		SurfaceHandle_t surfID = pList[i];
-		Assert( !SurfaceHasDispInfo( surfID ) );
+		contract_assert( !SurfaceHasDispInfo( surfID ) );
 
 		// Compute the centroid of the surface
 		int nCount = MSurf_VertCount( surfID );
@@ -1366,7 +1359,7 @@ static void Shader_DrawChainsWireframe(	IMatRenderContext *pRenderContext, Surfa
 			for ( int i = 0; i < listCount; i++ )
 			{
 				SurfaceHandle_t surfID = pList[i];
-				Assert( !SurfaceHasDispInfo( surfID ) );
+				contract_assert( !SurfaceHasDispInfo( surfID ) );
 				Shader_DrawSurfaceDynamic( pRenderContext, surfID );
 			}
 		}
@@ -1523,7 +1516,7 @@ static void Shader_DrawLuxels( IMatRenderContext *pRenderContext, SurfaceHandle_
 	for ( int i = 0; i < listCount; i++ )
 	{
 		SurfaceHandle_t surfID = pList[i];
-		Assert( !SurfaceHasDispInfo( surfID ) );
+		contract_assert( !SurfaceHasDispInfo( surfID ) );
 
 		// Gotta bind the lightmap page so the rendering knows the lightmap scale
 		pRenderContext->BindLightmapPage( materialSortInfoArray[MSurf_MaterialSortID( surfID )].lightmapPageID );
@@ -1600,13 +1593,12 @@ static void AddProjectedTextureDecalsToList( CWorldRenderList *pRenderList, int 
 	{
 		MSL_FOREACH_SURFACE_IN_GROUP_BEGIN(sortList, group, surfID)
 		{
-			Assert( !SurfaceHasDispInfo( surfID ) );
+			contract_assert( !SurfaceHasDispInfo( surfID ) );
 			if ( SHADOW_DECAL_HANDLE_INVALID != MSurf_ShadowDecals( surfID ) )
 			{
 				// No shadows on water surfaces
 				if ((MSurf_Flags( surfID ) & SURFDRAW_NOSHADOWS) == 0)
 				{
-					MEM_ALLOC_CREDIT();
 					pRenderList->m_ShadowHandles[nSortGroup].push_back( MSurf_ShadowDecals( surfID ) );
 				}
 			}
@@ -1626,8 +1618,8 @@ static void AddProjectedTextureDecalsToList( CWorldRenderList *pRenderList, int 
 //-----------------------------------------------------------------------------
 static void Shader_DrawChains( IMatRenderContext *pRenderContext, const CWorldRenderList *pRenderList, int nSortGroup, ERenderDepthMode_t DepthMode )
 {
-	Assert( !g_EngineRenderer->InLightmapUpdate() );
-	VPROF("Shader_DrawChains");
+	contract_assert( !g_EngineRenderer->InLightmapUpdate() );
+	CVProfScope _( "Shader_DrawChains", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// Draw chains...
 #ifdef USE_CONVARS
 	if ( !mat_forcedynamic.GetInt() && !g_pMaterialSystemConfig->bDrawFlat )
@@ -1652,14 +1644,10 @@ static void Shader_DrawChains( IMatRenderContext *pRenderContext, const CWorldRe
 	{
 		pRenderContext->SetRenderingPaint( true );
 
-		PIXEVENT( pRenderContext, "Paint" );
+		( pRenderContext, "Paint" );
 		for ( int i = 0; i < std::ssize( pRenderList->m_PaintedSurfaces[ nSortGroup ] ); i++ )
 		{
 			SurfaceHandle_t surfID = pRenderList->m_PaintedSurfaces[ nSortGroup ][i];
-#ifdef DBGFLAG_ASSERT
- 			bool bSurfacePainted = ( MSurf_Flags( surfID ) & SURFDRAW_PAINTED ) != 0;
- 			Assert( bSurfacePainted );
-#endif
  
  			IMaterial *pMaterial = MSurf_TexInfo( surfID )->material;
  
@@ -1707,7 +1695,8 @@ static void Shader_DrawChains( IMatRenderContext *pRenderContext, const CWorldRe
 //-----------------------------------------------------------------------------
 static void Shader_DrawDispChain( IMatRenderContext *pRenderContext, int nSortGroup, const CMSurfaceSortList &list, unsigned long flags, ERenderDepthMode_t DepthMode )
 {
-	VPROF_BUDGET( "Shader_DrawDispChain", VPROF_BUDGETGROUP_DISPLACEMENT_RENDERING );
+	ks::ScratchArena<> scratch;
+	CVProfScope _( "Shader_DrawDispChain", 0, VPROF_BUDGETGROUP_DISPLACEMENT_RENDERING, false, BUDGETFLAG_OTHER );
 	int count = 0;
 	msurface2_t **pList;
 	MSL_FOREACH_GROUP_BEGIN( list, nSortGroup, group )
@@ -1718,7 +1707,7 @@ static void Shader_DrawDispChain( IMatRenderContext *pRenderContext, int nSortGr
 
 	if (count)
 	{
-		pList = (msurface2_t **)stackalloc( count * sizeof(msurface2_t *));
+		pList = scratch.Alloc<msurface2_t *>( count );
 		int i = 0;
 		MSL_FOREACH_GROUP_BEGIN( list, nSortGroup, group )
 		{
@@ -1730,11 +1719,10 @@ static void Shader_DrawDispChain( IMatRenderContext *pRenderContext, int nSortGr
 			MSL_FOREACH_SURFACE_IN_GROUP_END()
 		}
 		MSL_FOREACH_GROUP_END()
-		Assert(i==count);
+		contract_assert( i==count );
 
 		// draw displacments, batch decals
 		DispInfo_RenderListWorld( pRenderContext, nSortGroup, pList, count, g_EngineRenderer->ViewGetCurrent().m_bOrtho, flags, DepthMode );
-		stackfree(pList);
 	}
 }
 
@@ -1743,7 +1731,8 @@ static void Shader_DrawDispChain( IMatRenderContext *pRenderContext, int nSortGr
 //-----------------------------------------------------------------------------
 void Shader_DrawDispChainDecalsAndOverlays( IMatRenderContext *pRenderContext, int nSortGroup, const CMSurfaceSortList &list, unsigned long flags )
 {
-	VPROF_BUDGET( "Shader_DrawDispChain", VPROF_BUDGETGROUP_DISPLACEMENT_RENDERING );
+	ks::ScratchArena<> scratch;
+	CVProfScope _( "Shader_DrawDispChain", 0, VPROF_BUDGETGROUP_DISPLACEMENT_RENDERING, false, BUDGETFLAG_OTHER );
 	int count = 0;
 	msurface2_t **pList;
 	MSL_FOREACH_GROUP_BEGIN( list, nSortGroup, group )
@@ -1754,7 +1743,7 @@ void Shader_DrawDispChainDecalsAndOverlays( IMatRenderContext *pRenderContext, i
 
 		if (count)
 		{
-			pList = (msurface2_t **)stackalloc( count * sizeof(msurface2_t *));
+			pList = scratch.Alloc<msurface2_t *>( count );
 			int i = 0;
 			MSL_FOREACH_GROUP_BEGIN( list, nSortGroup, group )
 			{
@@ -1766,17 +1755,16 @@ void Shader_DrawDispChainDecalsAndOverlays( IMatRenderContext *pRenderContext, i
 				MSL_FOREACH_SURFACE_IN_GROUP_END()
 			}
 			MSL_FOREACH_GROUP_END()
-				Assert(i==count);
+				contract_assert( i==count );
 
 			// draw displacments, batch decals
 			DispInfo_RenderListDecalsAndOverlays( pRenderContext, nSortGroup, pList, count, g_EngineRenderer->ViewGetCurrent().m_bOrtho, flags );
-			stackfree(pList);
 		}
 }
 
 static void Shader_BuildDynamicLightmaps( CWorldRenderList *pRenderList )
 {
-	VPROF( "Shader_BuildDynamicLightmaps" );
+	CVProfScope _( "Shader_BuildDynamicLightmaps", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	R_DLightStartView();
 
@@ -2066,9 +2054,9 @@ static void Shader_DrawDepthFillChainsStatic( IMatRenderContext *pRenderContext,
 
 			const surfacesortgroup_t &group = *groupList[listIndex];
 			surfID = sortList.GetSurfaceAtHead(group);
-			Assert( IS_SURF_VALID( surfID ) );
+			contract_assert( IS_SURF_VALID( surfID ) );
 
-			Assert( group.triangleCount > 0 );
+			contract_assert( group.triangleCount > 0 );
 			int numIndex = group.triangleCount * 3;
 			if ( indexCount + numIndex > nMaxIndices )
 			{
@@ -2092,7 +2080,7 @@ static void Shader_DrawDepthFillChainsStatic( IMatRenderContext *pRenderContext,
 					meshList[meshIndex].numbatches = 0;
 					meshList[meshIndex].firstbatch = std::ssize( batchList );
 					pLastMesh = g_DepthMeshForSortID[sortID];
-					Assert( pLastMesh );
+					contract_assert( pLastMesh );
 					meshList[meshIndex].pMesh = pLastMesh;
 				}
 				else
@@ -2112,7 +2100,7 @@ static void Shader_DrawDepthFillChainsStatic( IMatRenderContext *pRenderContext,
 			batch.firstIndex = indexCount;
 			batch.surfID = surfID;
 			batch.numIndex = numIndex;
-			Assert( indexCount + batch.numIndex < nMaxIndices );
+			contract_assert( indexCount + batch.numIndex < nMaxIndices );
 			indexCount += batch.numIndex;
 
 			meshList[meshIndex].numbatches++;
@@ -2160,7 +2148,7 @@ static void Shader_DrawDepthFillChainsStatic( IMatRenderContext *pRenderContext,
 		for ( int m = 0; m < meshTotal; m++ )
 		{
 			vertexformatlist_t &mesh = meshList[meshMap[m]];
-			Assert( mesh.pMesh && pBuildMesh );
+			contract_assert( mesh.pMesh && pBuildMesh );
 			pRenderContext->BindBatch( mesh.pMesh, pDrawMaterial );
 
 			for ( int b = 0; b < mesh.numbatches; b++ )
@@ -2487,9 +2475,9 @@ static void Shader_WorldShadowDepthFillFast( IMatRenderContext *pRenderContext, 
 				const surfacesortgroup_t &group = *meshinfo.m_Groups[j];
 				int nGroupIndexCount = group.triangleCount*3;
 				const SurfaceHandle_t surfID = sortList.GetSurfaceAtHead(group);
-				NOTE_UNUSED( surfID );
+				(void)surfID;
 
-				Assert( IS_SURF_VALID( surfID ) );
+				contract_assert( IS_SURF_VALID( surfID ) );
 
 				bool bSplitPerSurface = ( nGroupIndexCount > nMaxIndices );
 				if ( !bSplitPerSurface )
@@ -2585,7 +2573,7 @@ static void Shader_WorldShadowDepthFillFast( IMatRenderContext *pRenderContext, 
 //-----------------------------------------------------------------------------
 static void Shader_WorldShadowDepthFillX360( IMatRenderContext *pRenderContext, CWorldRenderList *pRenderList, unsigned long flags )
 {
-	PIXEVENT( pRenderContext, "Shader_WorldShadowDepthFillX360()" );
+	( pRenderContext, "Shader_WorldShadowDepthFillX360()" );
 
 	// FIXME: Batch this up with fast path style rendering!
 	// Draws opaque displacement surfaces along with shadows, overlays, flashlights, etc.
@@ -2706,9 +2694,9 @@ static void Shader_WorldShadowDepthFillX360( IMatRenderContext *pRenderContext, 
 		nBatchIndexCount  -= nCurrIndexCount;
 		nIndexCount       -= nCurrIndexCount;
 
-		Assert( nCurrInstanceCount < nInstanceCount );
+		contract_assert( nCurrInstanceCount < nInstanceCount );
 		MeshInstanceData_t &currInstance = pMeshInstances[nCurrInstanceCount++];
-		memset( &currInstance, 0, sizeof(MeshInstanceData_t) );
+		std::memset( &currInstance, 0, sizeof(MeshInstanceData_t) );
 		currInstance.m_nPrimType = MATERIAL_TRIANGLES;
 		currInstance.m_pIndexBuffer = pBuildIndexBuffer;
 		currInstance.m_pVertexBuffer = g_WorldStaticMeshes[ nSortID ];
@@ -2747,7 +2735,7 @@ static void Shader_WorldShadowDepthFillX360( IMatRenderContext *pRenderContext, 
 		indexBuilder.Lock( nBatchIndexCount, 0 );
 
 		MeshInstanceData_t *pCurrInstance = pMeshInstances;
-		memset( pCurrInstance, 0, sizeof(MeshInstanceData_t) );
+		std::memset( pCurrInstance, 0, sizeof(MeshInstanceData_t) );
 		pCurrInstance->m_nPrimType = MATERIAL_TRIANGLES;
 		pCurrInstance->m_pIndexBuffer = pBuildIndexBuffer;
 		pCurrInstance->m_pVertexBuffer = g_WorldStaticMeshes[ nSortID ];
@@ -2802,8 +2790,8 @@ static void Shader_WorldShadowDepthFillX360( IMatRenderContext *pRenderContext, 
 		pMeshInstances++;
 		nInstanceCount--;
 	}
-	Assert( nIndexCount == 0 );
-	Assert( nInstanceCount == 0 );
+	contract_assert( nIndexCount == 0 );
+	contract_assert( nInstanceCount == 0 );
 
 	meshInstanceData.Release();
 }
@@ -2932,7 +2920,7 @@ extern model_t *g_pSimpleWorldModelWater;
 
 void DrawSimpleWorldModel( unsigned long flags )
 {
-	Assert( ( flags & ( DRAWWORLDLISTS_DRAW_SIMPLE_WORLD_MODEL | DRAWWORLDLISTS_DRAW_SIMPLE_WORLD_MODEL_WATER ) ) != 0 );
+	contract_assert( ( flags & ( DRAWWORLDLISTS_DRAW_SIMPLE_WORLD_MODEL | DRAWWORLDLISTS_DRAW_SIMPLE_WORLD_MODEL_WATER ) ) != 0 );
 	if ( ( ( flags & ( DRAWWORLDLISTS_DRAW_SIMPLE_WORLD_MODEL | DRAWWORLDLISTS_DRAW_SIMPLE_WORLD_MODEL_WATER ) ) == 0 ) )
 	{
 		return;
@@ -3057,7 +3045,7 @@ void DrawSimpleWorldModel( unsigned long flags )
 //-----------------------------------------------------------------------------
 static void Shader_WorldEnd( IMatRenderContext *pRenderContext, CWorldRenderList *pRenderList, unsigned long flags, float waterZAdjust )
 {
-	VPROF("Shader_WorldEnd");
+	CVProfScope _( "Shader_WorldEnd", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( flags & ( DRAWWORLDLISTS_DRAW_SHADOWDEPTH | DRAWWORLDLISTS_DRAW_SSAO ) )
 	{
@@ -3115,7 +3103,7 @@ static void Shader_WorldEnd( IMatRenderContext *pRenderContext, CWorldRenderList
 		if ( !( flags & ( 1 << i ) ) )
 			continue;
 
-		PIXEVENT( pRenderContext, s_pMatSortGroupsString[ i ] );
+		( pRenderContext, s_pMatSortGroupsString[ i ] );
 
 		int nSortGroup = s_DrawWorldListsToSortGroup[i];
 		if ( nSortGroup == MAT_SORT_GROUP_WATERSURFACE  )
@@ -3196,7 +3184,7 @@ static void Shader_DrawWorldDecalsAndOverlays( IMatRenderContext *pRenderContext
 		if ( !( flags & ( 1 << i ) ) )
 			continue;
 
-		PIXEVENT( pRenderContext, s_pMatSortGroupsString[ i ] );
+		( pRenderContext, s_pMatSortGroupsString[ i ] );
 
 		int nSortGroup = s_DrawWorldListsToSortGroup[i];
 		if ( nSortGroup == MAT_SORT_GROUP_WATERSURFACE  )
@@ -3269,7 +3257,7 @@ static void Shader_DrawWorldDecalsAndOverlays( IMatRenderContext *pRenderContext
 //-----------------------------------------------------------------------------
 bool Shader_LeafContainsTranslucentSurfaces( IWorldRenderList *pRenderListIn, int sortIndex, unsigned long flags )
 {
-	CWorldRenderList *pRenderList = assert_cast<CWorldRenderList *>(pRenderListIn);
+	CWorldRenderList *pRenderList = static_cast<CWorldRenderList *>(pRenderListIn);
 
 	if ( pRenderList->m_leaves[sortIndex].translucentSurfaceCount > 0 )
 	{
@@ -3299,7 +3287,7 @@ void Shader_DrawTranslucentSurfaces( IMatRenderContext *pRenderContext, IWorldRe
 	if ( !r_drawtranslucentworld.GetBool() )
 		return;
 
-	CWorldRenderList *pRenderList = assert_cast<CWorldRenderList *>(pRenderListIn);
+	CWorldRenderList *pRenderList = static_cast<CWorldRenderList *>(pRenderListIn);
 
 	bool skipLight = false;
 	if ( g_pMaterialSystemConfig->nFullbright == 1 )
@@ -3370,7 +3358,7 @@ void Shader_DrawTranslucentSurfaces( IMatRenderContext *pRenderContext, IWorldRe
 		transsurfacebatch_t *pBatch = &batches[i];
 		SurfaceHandle_t surfID = surfaceList[pBatch->firstSurface];
 		pRenderContext->Bind( MSurf_TexInfo( surfID )->material );
-		Assert( MSurf_MaterialSortID( surfID ) >= 0 && MSurf_MaterialSortID( surfID ) < std::ssize( g_WorldStaticMeshes ) );
+		contract_assert( MSurf_MaterialSortID( surfID ) >= 0 && MSurf_MaterialSortID( surfID ) < std::ssize( g_WorldStaticMeshes ) );
 
 		if ( !skipLight )
 		{
@@ -3474,10 +3462,10 @@ void Shader_DrawTranslucentSurfaces( IMatRenderContext *pRenderContext, IWorldRe
 //
 //=============================================================
 
-static void FASTCALL R_DrawSurface( CWorldRenderList *pRenderList, SurfaceHandle_t surfID )
+static void R_DrawSurface( CWorldRenderList *pRenderList, SurfaceHandle_t surfID )
 {
 	ASSERT_SURF_VALID( surfID );
-	Assert( !SurfaceHasDispInfo( surfID ) );
+	contract_assert( !SurfaceHasDispInfo( surfID ) );
 	if ( MSurf_Flags( surfID ) & SURFDRAW_SKY )
 	{
 		pRenderList->m_bSkyVisible = true;
@@ -3537,11 +3525,10 @@ int LeafToIndex( mleaf_t* pLeaf );
 static inline void UpdateVisibleLeafLists( CWorldRenderList *pRenderList, mleaf_t* pLeaf )
 {
 	// Consistency check...
-	MEM_ALLOC_CREDIT();
 	
 	// Add this leaf to the list of visible leafs
 	int nLeafIndex = LeafToIndex( pLeaf );
-	WorldListLeafData_t * RESTRICT pData = &pRenderList->m_leaves.emplace_back();
+	WorldListLeafData_t * __restrict__ pData = &pRenderList->m_leaves.emplace_back();
 	pData->leafIndex = nLeafIndex;
 	pData->waterData = pLeaf->leafWaterDataID;
 	pData->firstTranslucentSurface = std::ssize( pRenderList->m_AlphaSurfaces );
@@ -3734,7 +3721,7 @@ CBuildWorldListsJob::CBuildWorldListsJob(
 	m_modelOrigin( modelOrigin )
 {
 	m_pAreaFrustum = pAeraFrustum;
-	memcpy( m_RenderAreaBits, pRenderAreaBits, sizeof(m_RenderAreaBits) );
+	std::memcpy( m_RenderAreaBits, pRenderAreaBits, sizeof(m_RenderAreaBits) );
 }
 
 JobStatus_t CBuildWorldListsJob::DoExecute()
@@ -3860,15 +3847,15 @@ void CBuildWorldListsJob::R_RecursiveWorldNode( CWorldRenderList *pRenderList, m
 			// Don't add surfaces that have displacement
 			// UNDONE: Don't emit these at nodes in vbsp!
 			// UNDONE: Emit them at the end of the surface list
-			Assert( !SurfaceHasDispInfo( surfID ) );
+			contract_assert( !SurfaceHasDispInfo( surfID ) );
 
 			// If a surface is marked to draw at a node, then it's not a func_detail.
 			// Only func_detail render at leaves. In the case of normal world surfaces,
 			// we only want to render them if they intersect a visible leaf.
 			uint32 nFlags = MSurf_Flags( surfID );
 
-			Assert( nFlags & SURFDRAW_NODE );
-			Assert( !(nFlags & SURFDRAW_NODRAW) );
+			contract_assert( nFlags & SURFDRAW_NODE );
+			contract_assert( !(nFlags & SURFDRAW_NODRAW) );
 
 			if ( !(nFlags & SURFDRAW_UNDERWATER) && ( side ^ !!(nFlags & SURFDRAW_PLANEBACK)) )
 				continue;		// wrong side
@@ -3943,12 +3930,12 @@ void CBuildWorldListsJob::R_RenderWorldTopView( CWorldRenderList *pRenderList, m
 				// If a surface is marked to draw at a node, then it's not a func_detail.
 				// Only func_detail render at leaves. In the case of normal world surfaces,
 				// we only want to render them if they intersect a visible leaf.
-				Assert( (MSurf_Flags( surfID ) & SURFDRAW_NODE) );
+				contract_assert( (MSurf_Flags( surfID ) & SURFDRAW_NODE) );
 
 				if ( MSurf_Flags( surfID ) & (SURFDRAW_UNDERWATER|SURFDRAW_SKY) )
 					continue;
 
-				Assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
+				contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
 				if ( !m_bTopViewNoBackfaceCulling )
 				{
 					// Back face cull
@@ -4013,7 +4000,7 @@ void CBuildWorldListsJob::R_BuildWorldListNoCull( CWorldRenderList *pRenderList,
 					nodeList[nodeWriteIndex] = node->children[0];
 					nodeWriteIndex = (nodeWriteIndex+1) & (NODELIST_MAX-1);
 					// check for overflow of the ring buffer
-					Assert(nodeWriteIndex != nodeReadIndex);
+					contract_assert( nodeWriteIndex != nodeReadIndex );
 					node = node->children[1];
 					continue;
 				}
@@ -4095,9 +4082,9 @@ void CBuildWorldListsJob::R_DrawLeaf( CWorldRenderList *pRenderList, mleaf_t *pl
 		SurfaceHandle_t surfID = pSurfID[i];
 		ASSERT_SURF_VALID( surfID );
 		// there are never any displacements or nodraws in the leaf list
-		Assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
-		Assert( (MSurf_Flags( surfID ) & SURFDRAW_NODE) );
-		Assert( !SurfaceHasDispInfo(surfID) );
+		contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
+		contract_assert( (MSurf_Flags( surfID ) & SURFDRAW_NODE) );
+		contract_assert( !SurfaceHasDispInfo(surfID) );
 		// mark this one to be drawn at the node
 		visitedSurfs.MarkSurfaceVisited( surfID );
 	}
@@ -4115,7 +4102,7 @@ void CBuildWorldListsJob::R_DrawLeaf( CWorldRenderList *pRenderList, mleaf_t *pl
 		if ( !visitedSurfs.VisitSurface( surfID ) )
 			continue;
 		uint32 flags = surfID->flags;
-		Assert( !(flags & SURFDRAW_NODE) );
+		contract_assert( !(flags & SURFDRAW_NODE) );
 
 		// Back face cull; only func_detail are drawn here
 		if ( (flags & SURFDRAW_NOCULL) == 0 )
@@ -4193,7 +4180,7 @@ void CBuildWorldListsJob::R_DrawTopViewLeaf( CWorldRenderList *pRenderList, mlea
 		if ( MSurf_Flags( surfID ) & SURFDRAW_NODE )
 			continue;
 
-		Assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
+		contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
 
 		if ( !m_bTopViewNoBackfaceCulling )
 		{
@@ -4285,7 +4272,7 @@ void CBuildWorldListsJob::Shader_WorldSurface( CWorldRenderList *pRenderList, Su
 {
 	// Hook it into the list of surfaces to render with this material
 	// Do it in a way that generates a front-to-back ordering for fast z reject
-	Assert( !SurfaceHasDispInfo( surfID ) );
+	contract_assert( !SurfaceHasDispInfo( surfID ) );
 
 	// Each surface is in exactly one group
 	int nSortGroup = MSurf_SortGroup( surfID );
@@ -4317,7 +4304,7 @@ void CBuildWorldListsJob::Shader_WorldSurfaceNoCull( CWorldRenderList *pRenderLi
 {
 	// Hook it into the list of surfaces to render with this material
 	// Do it in a way that generates a front-to-back ordering for fast z reject
-	Assert( !SurfaceHasDispInfo( surfID ) );
+	contract_assert( !SurfaceHasDispInfo( surfID ) );
 
 	// Each surface is in exactly one group
 	int nSortGroup = MSurf_SortGroup( surfID );
@@ -4333,7 +4320,7 @@ void CBuildWorldListsJob::Shader_WorldSurfaceNoCull( CWorldRenderList *pRenderLi
 void R_BuildWorldLists( IWorldRenderList *pRenderListIn, WorldListInfo_t* pInfo, 
 	int iForceViewLeaf, const VisOverrideData_t* pVisData, bool bShadowDepth /* = false */, float *pWaterReflectionHeight )
 {
-	CWorldRenderList *pRenderList = assert_cast<CWorldRenderList *>(pRenderListIn);
+	CWorldRenderList *pRenderList = static_cast<CWorldRenderList *>(pRenderListIn);
 	// Safety measure just in case. I haven't seen that we need this, but...
 	if ( g_LostVideoMemory )
 	{
@@ -4347,9 +4334,8 @@ void R_BuildWorldLists( IWorldRenderList *pRenderListIn, WorldListInfo_t* pInfo,
 		return;
 	}
 
-	VPROF( "R_BuildWorldLists" );
+	CVProfScope _( "R_BuildWorldLists", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-	SNPROF( "R_BuildWorldLists" );
 
 	VectorCopy( g_EngineRenderer->ViewOrigin(), modelorg );
 
@@ -4415,7 +4401,7 @@ void Shader_WorldBegin_Pass2( CWorldRenderList *pRenderList )
 
 void R_BuildWorldLists_Epilogue( IWorldRenderList *pRenderListIn, WorldListInfo_t* pInfo, bool bShadowDepth )
 {
-	CWorldRenderList *pRenderList = assert_cast<CWorldRenderList *>(pRenderListIn);
+	CWorldRenderList *pRenderList = static_cast<CWorldRenderList *>(pRenderListIn);
 	
 	// if doing 2 pass, this epilogue will be on 2nd pass 
 	// => need to call a lite version of Shader_WorldBegin that does away with resetting the world lists
@@ -4554,7 +4540,7 @@ ConVar fast_fogvolume("fast_fogvolume", "0");
 //-----------------------------------------------------------------------------
 void R_GetVisibleFogVolume( const Vector& vEyePoint, const VisOverrideData_t *pVisOverrideData, VisibleFogVolumeInfo_t *pInfo )
 {
-	VPROF_BUDGET( "R_GetVisibleFogVolume", VPROF_BUDGETGROUP_WORLD_RENDERING );
+	CVProfScope _( "R_GetVisibleFogVolume", 0, VPROF_BUDGETGROUP_WORLD_RENDERING, false, BUDGETFLAG_OTHER );
 
 	if ( host_state.worldmodel->brush.pShared->numleafwaterdata == 0 )
 	{
@@ -4568,7 +4554,7 @@ void R_GetVisibleFogVolume( const Vector& vEyePoint, const VisOverrideData_t *pV
 	int nLeafContents = pLeaf->contents;
 	if ( pLeaf->leafWaterDataID != -1 )
 	{
-		Assert( nLeafContents & (CONTENTS_SLIME | CONTENTS_WATER) );
+		contract_assert( nLeafContents & (CONTENTS_SLIME | CONTENTS_WATER) );
 		pInfo->m_bEyeInFogVolume = true;
 		pInfo->m_nVisibleFogVolume = pLeaf->leafWaterDataID;
 		pInfo->m_nVisibleFogVolumeLeaf = nLeafID;
@@ -4577,7 +4563,7 @@ void R_GetVisibleFogVolume( const Vector& vEyePoint, const VisOverrideData_t *pV
 	}
 	else if ( nLeafContents & CONTENTS_TESTFOGVOLUME )
 	{
-		Assert( (nLeafContents & (CONTENTS_SLIME | CONTENTS_WATER)) == 0 );
+		contract_assert( (nLeafContents & (CONTENTS_SLIME | CONTENTS_WATER)) == 0 );
 		if ( fast_fogvolume.GetBool() && host_state.worldbrush->numleafwaterdata == 1 )
 		{
 			pInfo->m_nVisibleFogVolume = 0;
@@ -4616,17 +4602,13 @@ void R_GetVisibleFogVolume( const Vector& vEyePoint, const VisOverrideData_t *pV
 // Uncomment this to allow code to draw wireframe over a particular surface for debugging
 //#define DEBUG_SURF 1
 
-#ifdef DEBUG_SURF
-int g_DebugSurfIndex = -1;
-#endif
-
 void R_DrawWorldLists( IMatRenderContext *pRenderContext, IWorldRenderList *pRenderListIn, unsigned long flags, float waterZAdjust )
 {
-	CWorldRenderList *pRenderList = assert_cast<CWorldRenderList *>(pRenderListIn);
+	CWorldRenderList *pRenderList = static_cast<CWorldRenderList *>(pRenderListIn);
 	if ( g_bTextMode || g_LostVideoMemory )
 		return;
 
-	VPROF("R_DrawWorldLists");
+	CVProfScope _( "R_DrawWorldLists", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( flags & DRAWWORLDLISTS_DRAW_WORLD_GEOMETRY )
 	{
 		Shader_WorldEnd( pRenderContext, pRenderList, flags, waterZAdjust );
@@ -4641,16 +4623,6 @@ void R_DrawWorldLists( IMatRenderContext *pRenderContext, IWorldRenderList *pRen
 		Shader_DrawWorldDecalsAndOverlays( pRenderContext, pRenderList, flags, waterZAdjust );
 	}
 
-#ifdef DEBUG_SURF
-	{
-		VPROF("R_DrawWorldLists (DEBUG_SURF)");
-		if (g_pDebugSurf)
-		{
-			pRenderContext->Bind( g_materialWorldWireframe );
-			Shader_DrawSurfaceDynamic( pRenderContext, g_pDebugSurf );
-		}
-	}
-#endif
 }
 
 
@@ -4659,7 +4631,7 @@ void R_DrawWorldLists( IMatRenderContext *pRenderContext, IWorldRenderList *pRen
 //-----------------------------------------------------------------------------
 int R_GetNumIndicesForWorldList( IWorldRenderList *pRenderListIn, unsigned long nFlags )
 {
-	CWorldRenderList *pRenderList = assert_cast<CWorldRenderList *>( pRenderListIn );
+	CWorldRenderList *pRenderList = static_cast<CWorldRenderList *>( pRenderListIn );
 
 	int nNumIndices = 0;
 	for ( int g = 0; g < MAX_MAT_SORT_GROUPS; ++g )
@@ -4681,7 +4653,7 @@ int R_GetNumIndicesForWorldList( IWorldRenderList *pRenderListIn, unsigned long 
 
 void R_GetWorldListIndicesInfo( WorldListIndicesInfo_t * pInfoOut, IWorldRenderList *pRenderListIn, unsigned long nFlags )
 {
-	CWorldRenderList *pRenderList = assert_cast<CWorldRenderList *>( pRenderListIn );
+	CWorldRenderList *pRenderList = static_cast<CWorldRenderList *>( pRenderListIn );
 
 	uint nTotalTriangles = 0, nMaxBatchTriangles = 0;
 	for ( int g = 0; g < MAX_MAT_SORT_GROUPS; ++g )
@@ -4781,21 +4753,21 @@ void Shader_DrawLightmapPageSurface( SurfaceHandle_t surfID, float red, float gr
 
 void Shader_DrawLightmapPageChains( IWorldRenderList *pRenderListIn, int pageId )
 {
-	CWorldRenderList *pRenderList = assert_cast<CWorldRenderList *>(pRenderListIn);
+	CWorldRenderList *pRenderList = static_cast<CWorldRenderList *>(pRenderListIn);
 	for (int j = 0; j < MAX_MAT_SORT_GROUPS; ++j)
 	{
 		MSL_FOREACH_GROUP_BEGIN( pRenderList->m_SortList, j, group )
 		{
 			SurfaceHandle_t surfID = pRenderList->m_SortList.GetSurfaceAtHead( group );
-			Assert(IS_SURF_VALID(surfID));
-			Assert( MSurf_MaterialSortID( surfID ) >= 0 && MSurf_MaterialSortID( surfID ) < std::ssize( g_WorldStaticMeshes ) );
+			contract_assert( IS_SURF_VALID(surfID) );
+			contract_assert( MSurf_MaterialSortID( surfID ) >= 0 && MSurf_MaterialSortID( surfID ) < std::ssize( g_WorldStaticMeshes ) );
 			if( materialSortInfoArray[MSurf_MaterialSortID( surfID ) ].lightmapPageID != pageId )
 			{
 				continue;
 			}
 			MSL_FOREACH_SURFACE_IN_GROUP_BEGIN( pRenderList->m_SortList, group, surfID )
 			{
-				Assert( !SurfaceHasDispInfo( surfID ) );
+				contract_assert( !SurfaceHasDispInfo( surfID ) );
 				Shader_DrawLightmapPageSurface( surfID, 0.0f, 1.0f, 0.0f );
 			}
 			MSL_FOREACH_SURFACE_IN_GROUP_END()
@@ -4844,7 +4816,7 @@ private:
 //-----------------------------------------------------------------------------
 CBrushSurface::CBrushSurface( SurfaceHandle_t surfID ) : m_SurfaceID(surfID)
 {
-	Assert(IS_SURF_VALID(surfID));
+	contract_assert( IS_SURF_VALID(surfID) );
 	SurfSetupSurfaceContext( m_Ctx, surfID );
 }
 
@@ -4876,14 +4848,14 @@ int  CBrushSurface::GetVertexCount() const
 	else
 	{
 		// not implemented yet
-		Assert(0);
+		contract_assert( 0 );
 		return 0;
 	}
 }
 
 void CBrushSurface::GetVertexData( BrushVertex_t* pVerts )
 {
-	Assert( pVerts );
+	contract_assert( pVerts );
 
 	if( !SurfaceHasPrims( m_SurfaceID ) )
 	{
@@ -4893,7 +4865,7 @@ void CBrushSurface::GetVertexData( BrushVertex_t* pVerts )
 	else
 	{
 		// not implemented yet
-		Assert(0);
+		contract_assert( 0 );
 	}
 }
 
@@ -4944,7 +4916,7 @@ bool Shader_DrawBrushSurfaceOverride( IMatRenderContext *pRenderContext, Surface
 //-----------------------------------------------------------------------------
 void Shader_BrushSurfaceOverride( IMatRenderContext *pRenderContext, SurfaceHandle_t surfID, model_t *model, IClientEntity *baseentity )
 {
-	Assert(s_pBrushRenderOverride);
+	contract_assert( s_pBrushRenderOverride );
 	bool drawDecals = Shader_DrawBrushSurfaceOverride( pRenderContext, surfID, baseentity );
 
 	// fixme: need to get "allowDecals" from the material
@@ -4982,11 +4954,11 @@ void R_Surface_LevelShutdown()
 //-----------------------------------------------------------------------------
 static void R_DrawBrushModel_Override( IMatRenderContext *pRenderContext, IClientEntity *baseentity, model_t *model )
 {
-	VPROF( "R_DrawOpaqueBrushModel_Override" );
+	CVProfScope _( "R_DrawOpaqueBrushModel_Override", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	SurfaceHandle_t surfID = SurfaceHandleFromIndex( model->brush.firstmodelsurface, model->brush.pShared );
 	for (int i=0 ; i<model->brush.nummodelsurfaces ; i++, surfID++)
 	{
-		Assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
+		contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
 
 		Shader_BrushSurfaceOverride( pRenderContext, surfID, model, baseentity );
 	}
@@ -5137,7 +5109,7 @@ void DrawDebugInformation( IMatRenderContext *pRenderContext, const matrix3x4a_t
 void R_DrawBrushModel( IClientEntity *baseentity, model_t *model, 
 					   const matrix3x4a_t& brushModelToWorld, ERenderDepthMode_t DepthMode, bool bDrawOpaque, bool bDrawTranslucent )
 {
-	VPROF( "R_DrawBrushModel" );
+	CVProfScope _( "R_DrawBrushModel", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 #ifdef USE_CONVARS
 	if ( !r_drawbrushmodels.GetInt() )
@@ -5157,7 +5129,7 @@ void R_DrawBrushModel( IClientEntity *baseentity, model_t *model,
 	CMatRenderContextPtr pRenderContext( materials );
 	CBrushModelTransform brushTransform( brushModelToWorld, pRenderContext );
 
-	Assert(model->brush.firstmodelsurface != 0);
+	contract_assert( model->brush.firstmodelsurface != 0 );
 
 	// Draw the puppy...
 	Shader_BrushBegin( model, baseentity );
@@ -5226,13 +5198,13 @@ void R_DrawIdentityBrushModel( IWorldRenderList *pRenderListIn, model_t *model )
 	if ( !model )
 		return;
 
-	CWorldRenderList *pRenderList = assert_cast<CWorldRenderList *>(pRenderListIn);
+	CWorldRenderList *pRenderList = static_cast<CWorldRenderList *>(pRenderListIn);
 
 	SurfaceHandle_t surfID = SurfaceHandleFromIndex( model->brush.firstmodelsurface, model->brush.pShared );
 	
 	for (int j=0 ; j<model->brush.nummodelsurfaces ; ++j, surfID++)
 	{
-		Assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
+		contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODRAW) );
 
 		// FIXME: Can't insert translucent stuff into the list
 		// of translucent surfaces because we don't know what leaf
@@ -5260,7 +5232,7 @@ void R_DrawBrushModelArray( IMatRenderContext* pRenderContext, int nCount,
 						   const BrushArrayInstanceData_t *pInstanceData, int nModelTypeFlags )
 {
 	// For now, we don't support translucency, as we can't re-order rendering
-	Assert( ( nModelTypeFlags & STUDIO_TRANSPARENCY ) == 0 );
+	contract_assert( ( nModelTypeFlags & STUDIO_TRANSPARENCY ) == 0 );
 
 	if ( ( nModelTypeFlags & STUDIO_SHADOWDEPTHTEXTURE ) || ( nModelTypeFlags & STUDIO_SSAODEPTHTEXTURE ) )
 	{
@@ -5277,7 +5249,7 @@ void R_DrawBrushModelArray( IMatRenderContext* pRenderContext, int nCount,
 	else
 	{
 		// Can't draw both opaque + translucent
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 	g_BrushBatchRenderer.DrawBrushModelArray( pRenderContext, nCount, pInstanceData );
@@ -5319,7 +5291,7 @@ struct EnumLeafSphereInfo_t
 
 
 // NOTE: These leaf list routines only return non-solid leaves!  Only use them for rendering-related queries!
-static int ListLeafsInBox( mnode_t * RESTRICT node, const Vector &center, const Vector &extents, unsigned short * RESTRICT pList, int listMax )
+static int ListLeafsInBox( mnode_t * __restrict__ node, const Vector &center, const Vector &extents, unsigned short * __restrict__ pList, int listMax )
 {
 	int leafCount = 0;
 	const int NODELIST_MAX = 1024;
@@ -5360,7 +5332,7 @@ static int ListLeafsInBox( mnode_t * RESTRICT node, const Vector &center, const 
 				nodeList[nodeWriteIndex] = node->children[0];
 				nodeWriteIndex = (nodeWriteIndex+1) & (NODELIST_MAX-1);
 				// check for overflow of the ring buffer
-				Assert(nodeWriteIndex != nodeReadIndex);
+				contract_assert( nodeWriteIndex != nodeReadIndex );
 				node = node->children[1];
 			}
 		}
@@ -5741,7 +5713,7 @@ bool CEngineBSPTree::EnumerateLeavesInBox( const Vector& mins, const Vector& max
 		return false;
 
 	unsigned short list[1024];
-	int count = ListLeavesInBox( mins, maxs, list, ARRAYSIZE(list) );
+	int count = ListLeavesInBox( mins, maxs, list, std::size( list ) );
 	for ( int i = 0; i < count; i++ )
 	{
 		if ( !pEnum->EnumerateLeaf(list[i], context) )
@@ -5804,4 +5776,3 @@ bool CEngineBSPTree::EnumerateLeavesAlongRay( Ray_t const& ray, ISpatialLeafEnum
 		return EnumerateLeavesAlongExtrudedRay_R( host_state.worldbrush->nodes, ray, 0.0f, 1.0f, pEnum, context );
 	}
 }
-

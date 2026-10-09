@@ -1,14 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Monotonic clock backing the timers in tier0/fasttimer.h.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "pch_tier0.h"
+// Purpose: Monotonic clock backing the timers in ks.core:time.
 
-#include <chrono>
+module ks.core;
 
-#include "tier0/fasttimer.h"
+import std;
 
 uint64 Plat_SteadyNanos()
 {

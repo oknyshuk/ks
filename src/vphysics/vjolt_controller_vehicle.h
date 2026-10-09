@@ -4,8 +4,11 @@
 
 #pragma once
 
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
 #include "vjolt_object.h" // IJoltObjectListener
 #include "vjolt_environment.h" // IJoltPhysicsController
+#include "vphysics/vehicles.h"
 
 struct JoltPhysicsWheel
 {

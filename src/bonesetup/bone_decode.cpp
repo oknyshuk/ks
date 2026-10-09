@@ -1,28 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/dbg.h"
-#include "mathlib/mathlib.h"
+import ks.tier1;
 #include "bone_setup.h"
-#include <string.h>
+import std;
 
 #include "collisionutils.h"
-#include "vstdlib/random.h"
-#include "tier0/vprof.h"
 #include "bone_accessor.h"
-#include "mathlib/ssequaternion.h"
-#include "datamanager.h"
-#include "convar.h"
-#include "tier0/tslist.h"
 #include "vphysics_interface.h"
 #include "datacache/idatacache.h"
-
-#include "tier0/miniprofiler.h"
 
 #ifdef CLIENT_DLL
 	#include "posedebugger.h"
@@ -30,13 +16,11 @@
 
 #include "bone_utils.h"
 
-
 //-----------------------------------------------------------------------------
 // Purpose: return a sub frame rotation for a single bone
 //-----------------------------------------------------------------------------
 void ExtractAnimValue( int frame, mstudioanimvalue_t *panimvalue, float scale, float &v1, float &v2 )
 {
-	BONE_PROFILE_FUNC();
 	if ( !panimvalue )
 	{
 		v1 = v2 = 0;
@@ -60,7 +44,7 @@ void ExtractAnimValue( int frame, mstudioanimvalue_t *panimvalue, float scale, f
 		panimvalue += panimvalue->num.valid + 1;
 		if ( panimvalue->num.total == 0 )
 		{
-			Assert( 0 ); // running off the end of the animation stream is bad
+			contract_assert( 0 ); // running off the end of the animation stream is bad
 			v1 = v2 = 0;
 			return;
 		}
@@ -109,7 +93,6 @@ void ExtractAnimValue( int frame, mstudioanimvalue_t *panimvalue, float scale, f
 
 void ExtractAnimValue( int frame, mstudioanimvalue_t *panimvalue, float scale, float &v1 )
 {
-	BONE_PROFILE_FUNC();
 	if ( !panimvalue )
 	{
 		v1 = 0;
@@ -124,7 +107,7 @@ void ExtractAnimValue( int frame, mstudioanimvalue_t *panimvalue, float scale, f
 		panimvalue += panimvalue->num.valid + 1;
 		if ( panimvalue->num.total == 0 )
 		{
-			Assert( 0 ); // running off the end of the animation stream is bad
+			contract_assert( 0 ); // running off the end of the animation stream is bad
 			v1 = 0;
 			return;
 		}
@@ -148,18 +131,17 @@ void CalcBoneQuaternion( int frame, float s,
 						int iBaseFlags, const Quaternion &baseAlignment, 
 						const mstudio_rle_anim_t *panim, Quaternion &q )
 {
-	BONE_PROFILE_FUNC();
 	if ( panim->flags & STUDIO_ANIM_RAWROT )
 	{
 		q = *(panim->pQuat48());
-		Assert( q.IsValid() );
+		contract_assert( q.IsValid() );
 		return;
 	} 
 	
 	if ( panim->flags & STUDIO_ANIM_RAWROT2 )
 	{
 		q = *(panim->pQuat64());
-		Assert( q.IsValid() );
+		contract_assert( q.IsValid() );
 		return;
 	}
 
@@ -197,7 +179,7 @@ void CalcBoneQuaternion( int frame, float s,
 			angle2.z = angle2.z + baseRot.z;
 		}
 
-		Assert( angle1.IsValid() && angle2.IsValid() );
+		contract_assert( angle1.IsValid() && angle2.IsValid() );
 		if (angle1.x != angle2.x || angle1.y != angle2.y || angle1.z != angle2.z)
 		{
 			AngleQuaternion( angle1, q1 );
@@ -225,11 +207,11 @@ void CalcBoneQuaternion( int frame, float s,
 			angle.z = angle.z + baseRot.z;
 		}
 
-		Assert( angle.IsValid() );
+		contract_assert( angle.IsValid() );
 		AngleQuaternion( angle, q );
 	}
 
-	Assert( q.IsValid() );
+	contract_assert( q.IsValid() );
 
 	// align to unified bone
 	if (!(panim->flags & STUDIO_ANIM_DELTA) && (iBaseFlags & BONE_FIXED_ALIGNMENT))
@@ -262,11 +244,10 @@ void CalcBonePosition(	int frame, float s,
 						const Vector &basePos, const Vector &baseBoneScale, 
 						const mstudio_rle_anim_t *panim, BoneVector &pos	)
 {
-	BONE_PROFILE_FUNC();
 	if (panim->flags & STUDIO_ANIM_RAWPOS)
 	{
 		pos = *(panim->pPos());
-		Assert( pos.IsValid() );
+		contract_assert( pos.IsValid() );
 
 		return;
 	}
@@ -310,7 +291,7 @@ void CalcBonePosition(	int frame, float s,
 		pos.z = pos.z + basePos.z;
 	}
 
-	Assert( pos.IsValid() );
+	contract_assert( pos.IsValid() );
 }
 
 
@@ -335,7 +316,6 @@ inline void CalcBonePosition( int frame, float s,
 
 void CalcDecompressedAnimation( const mstudiocompressedikerror_t *pCompressed, int iFrame, float fraq, BoneVector &pos, BoneQuaternion &q )
 {
-	BONE_PROFILE_FUNC();
 	if (fraq > 0.0001f)
 	{
 		Vector p1, p2;
@@ -397,7 +377,6 @@ static void CalcLocalHierarchyAnimation(
 	int boneMask
 	)
 {
-	BONE_PROFILE_FUNC();
 	BoneVector localPos;
 	BoneQuaternion localQ;
 
@@ -502,7 +481,6 @@ static void CalcLocalHierarchyAnimation(
 
 static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *pAnimStudioHdr, const virtualgroup_t *pAnimGroup, const mstudiobone_t *pAnimbone, mstudioanimdesc_t &animdesc, float fFrame, BoneVector *pos, BoneQuaternion *q, int boneMask, float flWeight )
 {
-	BONE_PROFILE_FUNC();
 	byte *pData = animdesc.pZeroFrameData();
 
 	if (!pData)
@@ -526,7 +504,7 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 				{
 					Vector p = *(Vector48 *)pData;
 					pos[i] = pos[i] * (1.0f - flWeight) + p * flWeight;
-					Assert( pos[i].IsValid() );
+					contract_assert( pos[i].IsValid() );
 				}
 				pData += sizeof( Vector48 );
 			}
@@ -536,7 +514,7 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 				{
 					Quaternion q0 = *(Quaternion64 *)pData;
 					QuaternionBlend( q[i], q0, flWeight, q[i] );
-					Assert( q[i].IsValid() );
+					contract_assert( q[i].IsValid() );
 				}
 				pData += sizeof( Quaternion64 );
 			}
@@ -546,7 +524,7 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 				{
 					Quaternion q0 = *(Quaternion32 *)pData;
 					QuaternionBlend( q[i], q0, flWeight, q[i] );
-					Assert( q[i].IsValid() );
+					contract_assert( q[i].IsValid() );
 				}
 				pData += sizeof( Quaternion32 );
 			}
@@ -594,7 +572,7 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 						pos[i] = pos[i] * (1.0f - flWeight) + p3 * flWeight;
 					}
 
-					Assert( pos[i].IsValid() );
+					contract_assert( pos[i].IsValid() );
 				}
 				pData += sizeof( Vector48 ) * animdesc.zeroframecount;
 			}
@@ -616,7 +594,7 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 						Hermite_Spline( q0, q1, q2, s1, q3 );
 						QuaternionBlend( q[i], q3, flWeight, q[i] );
 					}
-					Assert( q[i].IsValid() );
+					contract_assert( q[i].IsValid() );
 				}
 				pData += sizeof( Quaternion64 ) * animdesc.zeroframecount;
 			}
@@ -638,7 +616,7 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 						Hermite_Spline( q0, q1, q2, s1, q3 );
 						QuaternionBlend( q[i], q3, flWeight, q[i] );
 					}
-					Assert( q[i].IsValid() );
+					contract_assert( q[i].IsValid() );
 				}
 				pData += sizeof( Quaternion32 ) * animdesc.zeroframecount;
 			}
@@ -649,20 +627,19 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 // Purpose: Extract and blend two frames from a mstudio_frame_anim_t block of data
 //-----------------------------------------------------------------------------
 
-inline byte *ExtractTwoFrames( byte flags, float s, byte *RESTRICT pFrameData, byte *&pConstantData, int framelength, BoneQuaternion &q, BoneVector &pos, bool bIsDelta = false, const mstudiolinearbone_t *pLinearBones = nullptr, int bone = 0 )
+inline byte *ExtractTwoFrames( byte flags, float s, byte *__restrict__ pFrameData, byte *&pConstantData, int framelength, BoneQuaternion &q, BoneVector &pos, bool bIsDelta = false, const mstudiolinearbone_t *pLinearBones = nullptr, int bone = 0 )
 {
-	BONE_PROFILE_FUNC();
 	Quaternion q1, q2;
 	// Making these aligned.  Could be VectorAligned instead, but I don't want to change the behavior of this code.
-	ALIGN16 Vector p1;
-	ALIGN16 Vector p2;
+	Vector p1;
+	Vector p2;
 
 	if (flags & STUDIO_FRAME_ANIM_ROT)
 	{
 		q1 = *((Quaternion48 *)(pFrameData));
 		q2 = *((Quaternion48 *)(pFrameData + framelength));
 		QuaternionBlend( q1, q2, s, q );
-		Assert( q.IsValid() );
+		contract_assert( q.IsValid() );
 		pFrameData += sizeof( Quaternion48 );
 	}
 	else if (flags & STUDIO_FRAME_ANIM_ROT2)
@@ -670,19 +647,19 @@ inline byte *ExtractTwoFrames( byte flags, float s, byte *RESTRICT pFrameData, b
 		q1 = *((Quaternion48S *)(pFrameData));
 		q2 = *((Quaternion48S *)(pFrameData + framelength));
 		QuaternionBlend( q1, q2, s, q );
-		Assert( q.IsValid() );
+		contract_assert( q.IsValid() );
 		pFrameData += sizeof( Quaternion48S );
 	}
 	else if (flags & STUDIO_FRAME_CONST_ROT)
 	{
 		q = *((Quaternion48 *)(pConstantData));
-		Assert( q.IsValid() );
+		contract_assert( q.IsValid() );
 		pConstantData += sizeof( Quaternion48 );
 	}
 	else if (flags & STUDIO_FRAME_CONST_ROT2)
 	{
 		q = *((Quaternion48S *)(pConstantData));
-		Assert( q.IsValid() );
+		contract_assert( q.IsValid() );
 		pConstantData += sizeof( Quaternion48S );
 	}
 	// the non-virtual version needs initializers for no-animation
@@ -702,13 +679,13 @@ inline byte *ExtractTwoFrames( byte flags, float s, byte *RESTRICT pFrameData, b
 		p1 = *((Vector48 *)(pFrameData));
 		p2 = *((Vector48 *)(pFrameData + framelength));
 		pos = p1 * (1.0 - s) + p2 * s;
-		Assert( pos.IsValid() );
+		contract_assert( pos.IsValid() );
 		pFrameData += sizeof( Vector48 );
 	}
 	else if (flags & STUDIO_FRAME_CONST_POS)
 	{
 		pos = *((Vector48 *)(pConstantData));
-		Assert( pos.IsValid() );
+		contract_assert( pos.IsValid() );
 		pConstantData += sizeof( Vector48 );
 	}
 	else if (flags & STUDIO_FRAME_ANIM_POS2)
@@ -717,14 +694,14 @@ inline byte *ExtractTwoFrames( byte flags, float s, byte *RESTRICT pFrameData, b
 		V_memcpy( &p1, pFrameData, sizeof( p1 ) );
 		V_memcpy( &p2, pFrameData + framelength, sizeof( p2 ) );
 		pos = p1 * (1.0 - s) + p2 * s;
-		Assert( pos.IsValid() );
+		contract_assert( pos.IsValid() );
 		pFrameData += sizeof( Vector );
 	}
 	else if (flags & STUDIO_FRAME_CONST_POS2)
 	{
 		// pFrameData has no alignment guarantees, so using V_memcpy.
 		V_memcpy( &pos, pConstantData, sizeof( pos ) );
-		Assert( pos.IsValid() );
+		contract_assert( pos.IsValid() );
 		pConstantData += sizeof( Vector );
 	}
 	// the non-virtual version needs initializers for no-animation
@@ -748,29 +725,28 @@ inline byte *ExtractTwoFrames( byte flags, float s, byte *RESTRICT pFrameData, b
 
 inline byte *ExtractSingleFrame( byte flags, byte *pFrameData, byte *&pConstantData, BoneQuaternion &q, BoneVector &pos, bool bIsDelta = false, const mstudiolinearbone_t *pLinearBones = nullptr, int bone = 0 )
 {
-	BONE_PROFILE_FUNC();
 	if (flags & STUDIO_FRAME_ANIM_ROT)
 	{
 		q = *((Quaternion48 *)(pFrameData));
-		Assert( q.IsValid() );
+		contract_assert( q.IsValid() );
 		pFrameData += sizeof( Quaternion48 );
 	}
 	else if (flags & STUDIO_FRAME_ANIM_ROT2)
 	{
 		q = *((Quaternion48S *)(pFrameData));
-		Assert( q.IsValid() );
+		contract_assert( q.IsValid() );
 		pFrameData += sizeof( Quaternion48S );
 	}
 	else if (flags & STUDIO_FRAME_CONST_ROT)
 	{
 		q = *((Quaternion48 *)(pConstantData));
-		Assert( q.IsValid() );
+		contract_assert( q.IsValid() );
 		pConstantData += sizeof( Quaternion48 );
 	}
 	else if (flags & STUDIO_FRAME_CONST_ROT2)
 	{
 		q = *((Quaternion48S *)(pConstantData));
-		Assert( q.IsValid() );
+		contract_assert( q.IsValid() );
 		pConstantData += sizeof( Quaternion48S );
 	}
 	// the non-virtual version needs initializers for no-animation
@@ -788,27 +764,27 @@ inline byte *ExtractSingleFrame( byte flags, byte *pFrameData, byte *&pConstantD
 	if (flags & STUDIO_FRAME_ANIM_POS)
 	{
 		pos = *((Vector48 *)(pFrameData));
-		Assert( pos.IsValid() );
+		contract_assert( pos.IsValid() );
 		pFrameData += sizeof( Vector48 );
 	}
 	else if (flags & STUDIO_FRAME_CONST_POS)
 	{
 		pos = *((Vector48 *)(pConstantData));
-		Assert( pos.IsValid() );
+		contract_assert( pos.IsValid() );
 		pConstantData += sizeof( Vector48 );
 	}
 	else if (flags & STUDIO_FRAME_ANIM_POS2)
 	{
 		// pFrameData has no guarantee on alignment, so using V_memcpy.
 		V_memcpy( &pos, pFrameData, sizeof( Vector ) );
-		Assert( pos.IsValid() );
+		contract_assert( pos.IsValid() );
 		pFrameData += sizeof( Vector );
 	}
 	else if (flags & STUDIO_FRAME_CONST_POS2)
 	{
 		// pFrameData has no guarantee on alignment, so using V_memcpy.
 		V_memcpy( &pos, pConstantData, sizeof( Vector ) );
-		Assert( pos.IsValid() );
+		contract_assert( pos.IsValid() );
 		pConstantData += sizeof( Vector );
 	}
 	// the non-virtual version needs initializers for no-animation
@@ -833,9 +809,8 @@ inline byte *ExtractSingleFrame( byte flags, byte *pFrameData, byte *&pConstantD
 // Purpose: Skip forward to the next bone in a mstudio_frame_anim_t block of data
 //-----------------------------------------------------------------------------
 
-inline byte *SkipBoneFrame( byte flags, byte * RESTRICT pFrameData, byte *&pConstantData )
+inline byte *SkipBoneFrame( byte flags, byte * __restrict__ pFrameData, byte *&pConstantData )
 {
-	BONE_PROFILE_FUNC();
 	if (flags & STUDIO_FRAME_ANIM_ROT)
 	{
 		pFrameData += sizeof( Quaternion48 );
@@ -883,7 +858,6 @@ void SetupSingleBoneMatrix(
 	int iBone, 
 	matrix3x4_t &mBoneLocal )
 {
-	BONE_PROFILE_FUNC();
 	// FIXME: why does anyone call this instead of just looking up that entities cached animation?
 	// Reading the callers, I don't see how what it returns is of any use
 
@@ -964,8 +938,7 @@ static void CalcVirtualAnimation( virtualmodel_t *pVModel, const CStudioHdr *pSt
 	mstudioseqdesc_t &seqdesc, int sequence, int animation,
 	float cycle, int boneMask )
 {
-	BONE_PROFILE_FUNC(); // ex: x360: up to 1.4ms 
-	SNPROF_ANIM("CalcVirtualAnimation");
+	 // ex: x360: up to 1.4ms 
 
 	int	i, j, k;
 
@@ -994,9 +967,9 @@ static void CalcVirtualAnimation( virtualmodel_t *pVModel, const CStudioHdr *pSt
 	extern IDataCache *g_pDataCache;
 	// Consoles don't need to lock the modeldata cache since it never flushes
 	static IDataCacheSection *pModelCache = g_pDataCache->FindSection( "ModelData" );
-	AssertOnce( pModelCache->IsFrameLocking() );
+	contract_assert( pModelCache->IsFrameLocking() );
 	static IDataCacheSection *pAnimblockCache = g_pDataCache->FindSection( "AnimBlock" );
-	AssertOnce( pAnimblockCache->IsFrameLocking() );
+	contract_assert( pAnimblockCache->IsFrameLocking() );
 #endif
 
 	int					iFrame;
@@ -1030,10 +1003,6 @@ static void CalcVirtualAnimation( virtualmodel_t *pVModel, const CStudioHdr *pSt
 			framelength = pFrameanim->framelength;
 			pFrameDataNext = pFrameData + framelength;
 
-			PREFETCH360( pBoneFlags, 0 );
-			PREFETCH360( pFrameData, 0 );
-			PREFETCH360( pConstantData, 0 );
-			PREFETCH360( pFrameDataNext, 0 );
 		}
 	}
 	else
@@ -1213,7 +1182,6 @@ void CalcAnimation( const CStudioHdr *pStudioHdr, BoneVector *pos, BoneQuaternio
 	int sequence, int animation,
 	float cycle, int boneMask )
 {
-	BONE_PROFILE_FUNC();
 #ifdef STUDIO_ENABLE_PERF_COUNTERS
 	pStudioHdr->m_nPerfAnimationLayers++;
 #endif
@@ -1226,15 +1194,14 @@ void CalcAnimation( const CStudioHdr *pStudioHdr, BoneVector *pos, BoneQuaternio
 		return;
 	}
 
-	SNPROF_ANIM("CalcAnimation");
 
 #if _DEBUG
 	extern IDataCache *g_pDataCache;
 	// Consoles don't need to lock the modeldata cache since it never flushes
 	static IDataCacheSection *pModelCache = g_pDataCache->FindSection( "ModelData" );
-	AssertOnce( pModelCache->IsFrameLocking() );
+	contract_assert( pModelCache->IsFrameLocking() );
 	static IDataCacheSection *pAnimblockCache = g_pDataCache->FindSection( "AnimBlock" );
-	AssertOnce( pAnimblockCache->IsFrameLocking() );
+	contract_assert( pAnimblockCache->IsFrameLocking() );
 #endif
 
 	mstudioanimdesc_t &animdesc = ((CStudioHdr *)pStudioHdr)->pAnimdesc( animation );
@@ -1273,10 +1240,6 @@ void CalcAnimation( const CStudioHdr *pStudioHdr, BoneVector *pos, BoneQuaternio
 			framelength = pFrameanim->framelength;
 			pFrameDataNext = pFrameData + framelength;
 
-			PREFETCH360( pBoneFlags, 0 );
-			PREFETCH360( pFrameData, 0 );
-			PREFETCH360( pConstantData, 0 );
-			PREFETCH360( pFrameDataNext, 0 );
 		}
 	}
 	else
@@ -1427,4 +1390,3 @@ void CalcAnimation( const CStudioHdr *pStudioHdr, BoneVector *pos, BoneQuaternio
 		g_MatrixPool.Free( boneToWorld );
 	}
 }
-

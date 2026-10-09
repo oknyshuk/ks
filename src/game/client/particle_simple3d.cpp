@@ -1,11 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "particle_simple3d.h"
 #include "view.h"
 
@@ -127,5 +132,3 @@ void CSimple3DEmitter::RenderParticles( CParticleRenderIterator *pIterator )
 		pParticle = (const Particle3D *)pIterator->GetNext( sortKey );
 	}
 }
-
-

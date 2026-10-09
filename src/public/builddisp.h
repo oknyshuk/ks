@@ -1,27 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BUILDDISP_H
-#define BUILDDISP_H
-
-
-#include "commonmacros.h"
-#include "tier0/dbg.h"
+import ks.tier1;
 #include "bspfile.h"
-#include "mathlib/mathlib.h"
-#include "mathlib/bumpvects.h"
-#include "mathlib/vector4d.h"
 #include "disp_common.h"
-#include <bitset>
-#include "tier1/bit_ops.h"
+import std;
 
-#define DISP_ALPHA_PROP_DELTA		382.5f
+inline constexpr auto DISP_ALPHA_PROP_DELTA = 382.5f;
 
 class CCoreDispInfo;
 
@@ -120,15 +106,15 @@ public:
 	void	AdjustSurfPointData( void );
 	
 	// Indexed by CORNER_ defines.
-	CDispCornerNeighbors*		GetCornerNeighbors( int iCorner )		{ Assert( iCorner >= 0 && iCorner < ARRAYSIZE( m_CornerNeighbors ) ); return &m_CornerNeighbors[iCorner]; }
-	const CDispCornerNeighbors*	GetCornerNeighbors( int iCorner ) const { Assert( iCorner >= 0 && iCorner < ARRAYSIZE( m_CornerNeighbors ) ); return &m_CornerNeighbors[iCorner]; }
+	CDispCornerNeighbors*		GetCornerNeighbors( int iCorner )		{ contract_assert( iCorner >= 0 && iCorner < std::size( m_CornerNeighbors ) ); return &m_CornerNeighbors[iCorner]; }
+	const CDispCornerNeighbors*	GetCornerNeighbors( int iCorner ) const { contract_assert( iCorner >= 0 && iCorner < std::size( m_CornerNeighbors ) ); return &m_CornerNeighbors[iCorner]; }
 	
 	// Indexed by CORNER_ defines.
 	int							GetCornerNeighborCount( int iCorner ) const				{ return GetCornerNeighbors( iCorner )->m_nNeighbors; }
-	int							GetCornerNeighbor( int iCorner, int iNeighbor ) const	{ Assert( iNeighbor >= 0 && iNeighbor < GetCornerNeighbors(iCorner)->m_nNeighbors ); return GetCornerNeighbors( iCorner )->m_Neighbors[iNeighbor]; }
+	int							GetCornerNeighbor( int iCorner, int iNeighbor ) const	{ contract_assert( iNeighbor >= 0 && iNeighbor < GetCornerNeighbors(iCorner)->m_nNeighbors ); return GetCornerNeighbors( iCorner )->m_Neighbors[iNeighbor]; }
 	
-	CDispNeighbor*			GetEdgeNeighbor( int iEdge )		{ Assert( iEdge >= 0 && iEdge < ARRAYSIZE( m_EdgeNeighbors ) ); return &m_EdgeNeighbors[iEdge]; }
-	const CDispNeighbor*	GetEdgeNeighbor( int iEdge ) const	{ Assert( iEdge >= 0 && iEdge < ARRAYSIZE( m_EdgeNeighbors ) ); return &m_EdgeNeighbors[iEdge]; }
+	CDispNeighbor*			GetEdgeNeighbor( int iEdge )		{ contract_assert( iEdge >= 0 && iEdge < std::size( m_EdgeNeighbors ) ); return &m_EdgeNeighbors[iEdge]; }
+	const CDispNeighbor*	GetEdgeNeighbor( int iEdge ) const	{ contract_assert( iEdge >= 0 && iEdge < std::size( m_EdgeNeighbors ) ); return &m_EdgeNeighbors[iEdge]; }
 
 
 protected:
@@ -206,8 +192,8 @@ inline int CCoreDispSurface::GetPointCount( void ) const
 //-----------------------------------------------------------------------------
 inline void CCoreDispSurface::SetPoint( int index, Vector const &pt )
 {
-	Assert( index >= 0 );
-	Assert( index < QUAD_POINT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < QUAD_POINT_COUNT );
 	VectorCopy( pt, m_Points[index] );
 }
 
@@ -216,8 +202,8 @@ inline void CCoreDispSurface::SetPoint( int index, Vector const &pt )
 //-----------------------------------------------------------------------------
 inline void CCoreDispSurface::GetPoint( int index, Vector &pt ) const
 {
-	Assert( index >= 0 );
-	Assert( index < QUAD_POINT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < QUAD_POINT_COUNT );
 	VectorCopy( m_Points[index], pt );
 }
 
@@ -226,8 +212,8 @@ inline void CCoreDispSurface::GetPoint( int index, Vector &pt ) const
 //-----------------------------------------------------------------------------
 inline Vector const& CCoreDispSurface::GetPoint( int index ) const
 {
-	Assert( index >= 0 );
-	Assert( index < QUAD_POINT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < QUAD_POINT_COUNT );
 	return m_Points[index];
 }
 
@@ -236,8 +222,8 @@ inline Vector const& CCoreDispSurface::GetPoint( int index ) const
 //-----------------------------------------------------------------------------
 inline void CCoreDispSurface::SetPointNormal( int index, Vector const &normal )
 {
-	Assert( index >= 0 );
-	Assert( index < QUAD_POINT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < QUAD_POINT_COUNT );
 	VectorCopy( normal, m_Normals[index] );
 }
 
@@ -246,8 +232,8 @@ inline void CCoreDispSurface::SetPointNormal( int index, Vector const &normal )
 //-----------------------------------------------------------------------------
 inline void CCoreDispSurface::GetPointNormal( int index, Vector& normal )
 {
-	Assert( index >= 0 );
-	Assert( index < QUAD_POINT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < QUAD_POINT_COUNT );
 	VectorCopy( m_Normals[index], normal );
 }
 
@@ -256,8 +242,8 @@ inline void CCoreDispSurface::GetPointNormal( int index, Vector& normal )
 //-----------------------------------------------------------------------------
 inline void CCoreDispSurface::SetTexCoord( int index, Vector2D const& texCoord )
 {
-	Assert( index >= 0 );
-	Assert( index < QUAD_POINT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < QUAD_POINT_COUNT );
 	Vector2DCopy( texCoord, m_TexCoords[index] );
 }
 
@@ -266,8 +252,8 @@ inline void CCoreDispSurface::SetTexCoord( int index, Vector2D const& texCoord )
 //-----------------------------------------------------------------------------
 inline void CCoreDispSurface::GetTexCoord( int index, Vector2D& texCoord ) const
 {
-	Assert( index >= 0 );
-	Assert( index < QUAD_POINT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < QUAD_POINT_COUNT );
 	Vector2DCopy( m_TexCoords[index], texCoord );
 }
 
@@ -276,10 +262,10 @@ inline void CCoreDispSurface::GetTexCoord( int index, Vector2D& texCoord ) const
 //-----------------------------------------------------------------------------
 inline void CCoreDispSurface::SetLuxelCoord( int bumpIndex, int index, Vector2D const& luxelCoord )
 {
-	Assert( index >= 0 );
-	Assert( index < QUAD_POINT_COUNT );
-	Assert( bumpIndex >= 0 );
-	Assert( bumpIndex < NUM_BUMP_VECTS + 1 );
+	contract_assert( index >= 0 );
+	contract_assert( index < QUAD_POINT_COUNT );
+	contract_assert( bumpIndex >= 0 );
+	contract_assert( bumpIndex < NUM_BUMP_VECTS + 1 );
 	Vector2DCopy( luxelCoord, m_LuxelCoords[bumpIndex][index] );
 }
 
@@ -288,10 +274,10 @@ inline void CCoreDispSurface::SetLuxelCoord( int bumpIndex, int index, Vector2D 
 //-----------------------------------------------------------------------------
 inline void CCoreDispSurface::GetLuxelCoord( int bumpIndex, int index, Vector2D& luxelCoord ) const
 {
-	Assert( index >= 0 );
-	Assert( index < QUAD_POINT_COUNT );
-	Assert( bumpIndex >= 0 );
-	Assert( bumpIndex < NUM_BUMP_VECTS + 1 );
+	contract_assert( index >= 0 );
+	contract_assert( index < QUAD_POINT_COUNT );
+	contract_assert( bumpIndex >= 0 );
+	contract_assert( bumpIndex < NUM_BUMP_VECTS + 1 );
 	Vector2DCopy( m_LuxelCoords[bumpIndex][index], luxelCoord );
 }
 
@@ -300,8 +286,8 @@ inline void CCoreDispSurface::GetLuxelCoord( int bumpIndex, int index, Vector2D&
 //-----------------------------------------------------------------------------
 inline void CCoreDispSurface::SetLuxelCoords( int bumpIndex, Vector2D const luxelCoords[4] )
 {
-	Assert( bumpIndex >= 0 );
-	Assert( bumpIndex < NUM_BUMP_VECTS + 1 );
+	contract_assert( bumpIndex >= 0 );
+	contract_assert( bumpIndex < NUM_BUMP_VECTS + 1 );
 	for( int i=0; i < 4; i++ )
 		Vector2DCopy( luxelCoords[i], m_LuxelCoords[bumpIndex][i] );
 }
@@ -311,8 +297,8 @@ inline void CCoreDispSurface::SetLuxelCoords( int bumpIndex, Vector2D const luxe
 //-----------------------------------------------------------------------------
 inline void CCoreDispSurface::GetLuxelCoords( int bumpIndex, Vector2D luxelCoords[4] ) const
 {
-	Assert( bumpIndex >= 0 );
-	Assert( bumpIndex < NUM_BUMP_VECTS + 1 );
+	contract_assert( bumpIndex >= 0 );
+	contract_assert( bumpIndex < NUM_BUMP_VECTS + 1 );
 	for( int i=0; i < 4; i++ )
 		Vector2DCopy( m_LuxelCoords[bumpIndex][i], luxelCoords[i] );
 }
@@ -322,8 +308,8 @@ inline void CCoreDispSurface::GetLuxelCoords( int bumpIndex, Vector2D luxelCoord
 //-----------------------------------------------------------------------------
 inline void CCoreDispSurface::SetAlpha( int index, float alpha )
 {
-	Assert( index >= 0 );
-	Assert( index < QUAD_POINT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < QUAD_POINT_COUNT );
 	m_Alphas[index] = alpha;
 }
 
@@ -332,8 +318,8 @@ inline void CCoreDispSurface::SetAlpha( int index, float alpha )
 //-----------------------------------------------------------------------------
 inline float CCoreDispSurface::GetAlpha( int const index ) const
 {
-	Assert( index >= 0 );
-	Assert( index < QUAD_POINT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < QUAD_POINT_COUNT );
 	return m_Alphas[index];
 }
 
@@ -406,8 +392,8 @@ inline void CCoreDispSurface::GetTAxis( Vector& axis )
 //-----------------------------------------------------------------------------
 inline void CCoreDispSurface::SetPointStartIndex( int index )
 {
-	Assert( index >= 0 );
-	Assert( index < QUAD_POINT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < QUAD_POINT_COUNT );
 	m_PointStartIndex = index;
 }
 
@@ -579,8 +565,8 @@ inline int CCoreDispNode::GetCenterVertIndex( void )
 //-----------------------------------------------------------------------------
 inline void CCoreDispNode::SetNeighborVertIndex( int dir, int index )
 {
-	Assert( dir >= 0 );
-	Assert( dir < MAX_NEIGHBOR_VERT_COUNT );
+	contract_assert( dir >= 0 );
+	contract_assert( dir < MAX_NEIGHBOR_VERT_COUNT );
 	m_NeighborVertIndices[dir] = index;
 }
 
@@ -589,8 +575,8 @@ inline void CCoreDispNode::SetNeighborVertIndex( int dir, int index )
 //-----------------------------------------------------------------------------
 inline int CCoreDispNode::GetNeighborVertIndex( int dir )
 {
-	Assert( dir >= 0 );
-	Assert( dir < MAX_NEIGHBOR_VERT_COUNT );
+	contract_assert( dir >= 0 );
+	contract_assert( dir < MAX_NEIGHBOR_VERT_COUNT );
 	return m_NeighborVertIndices[dir];
 }
 
@@ -599,8 +585,8 @@ inline int CCoreDispNode::GetNeighborVertIndex( int dir )
 //-----------------------------------------------------------------------------
 inline void CCoreDispNode::SetTriBoundingBox( int index, Vector const& bMin, Vector const& bMax )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_SURF_AT_NODE_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_SURF_AT_NODE_COUNT );
 	VectorCopy( bMin, m_SurfBBoxes[index][0] );
 	VectorCopy( bMax, m_SurfBBoxes[index][1] );
 }
@@ -610,8 +596,8 @@ inline void CCoreDispNode::SetTriBoundingBox( int index, Vector const& bMin, Vec
 //-----------------------------------------------------------------------------
 inline void CCoreDispNode::GetTriBoundingBox( int index, Vector& bMin, Vector& bMax )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_SURF_AT_NODE_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_SURF_AT_NODE_COUNT );
 	VectorCopy( m_SurfBBoxes[index][0], bMin );
 	VectorCopy( m_SurfBBoxes[index][1], bMax );
 }
@@ -621,8 +607,8 @@ inline void CCoreDispNode::GetTriBoundingBox( int index, Vector& bMin, Vector& b
 //-----------------------------------------------------------------------------
 inline void CCoreDispNode::SetTriPlane( int index, Vector const &normal, float dist )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_SURF_AT_NODE_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_SURF_AT_NODE_COUNT );
 	VectorCopy( normal, m_SurfPlanes[index].normal );
 	m_SurfPlanes[index].dist = dist;
 }
@@ -632,8 +618,8 @@ inline void CCoreDispNode::SetTriPlane( int index, Vector const &normal, float d
 //-----------------------------------------------------------------------------
 inline void CCoreDispNode::GetTriPlane( int index, cplane_t *plane )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_SURF_AT_NODE_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_SURF_AT_NODE_COUNT );
 	VectorCopy( m_SurfPlanes[index].normal, plane->normal );
 	plane->dist = m_SurfPlanes[index].dist;
 }
@@ -643,8 +629,8 @@ inline void CCoreDispNode::GetTriPlane( int index, cplane_t *plane )
 //-----------------------------------------------------------------------------
 inline void CCoreDispNode::SetRayBoundingBox( int index, Vector const &bMin, Vector const &bMax )
 {
-	Assert( index >= 0 );
-	Assert( index < 4 );
+	contract_assert( index >= 0 );
+	contract_assert( index < 4 );
 	VectorCopy( bMin, m_RayBBoxes[index][0] );
 	VectorCopy( bMax, m_RayBBoxes[index][1] );
 }
@@ -654,8 +640,8 @@ inline void CCoreDispNode::SetRayBoundingBox( int index, Vector const &bMin, Vec
 //-----------------------------------------------------------------------------
 inline void CCoreDispNode::GetRayBoundingBox( int index, Vector& bMin, Vector& bMax )
 {
-	Assert( index >= 0 );
-	Assert( index < 4 );
+	contract_assert( index >= 0 );
+	contract_assert( index < 4 );
 	VectorCopy( m_RayBBoxes[index][0], bMin );
 	VectorCopy( m_RayBBoxes[index][1], bMax );
 }
@@ -694,13 +680,13 @@ struct CoreDispVert_t
 };
 
 // New, need to use this at the node level
-#define	COREDISPTRI_TAG_WALKABLE				(1<<0)
-#define COREDISPTRI_TAG_FORCE_WALKABLE_BIT		(1<<1)
-#define COREDISPTRI_TAG_FORCE_WALKABLE_VAL		(1<<2)
-#define COREDISPTRI_TAG_BUILDABLE				(1<<3)
-#define COREDISPTRI_TAG_FORCE_BUILDABLE_BIT		(1<<4)
-#define COREDISPTRI_TAG_FORCE_BUILDABLE_VAL		(1<<5)
-#define COREDISPTRI_TAG_FORCE_REMOVE_BIT		(1<<6)
+inline constexpr auto COREDISPTRI_TAG_WALKABLE = (1<<0);
+inline constexpr auto COREDISPTRI_TAG_FORCE_WALKABLE_BIT = (1<<1);
+inline constexpr auto COREDISPTRI_TAG_FORCE_WALKABLE_VAL = (1<<2);
+inline constexpr auto COREDISPTRI_TAG_BUILDABLE = (1<<3);
+inline constexpr auto COREDISPTRI_TAG_FORCE_BUILDABLE_BIT = (1<<4);
+inline constexpr auto COREDISPTRI_TAG_FORCE_BUILDABLE_VAL = (1<<5);
+inline constexpr auto COREDISPTRI_TAG_FORCE_REMOVE_BIT = (1<<6);
 
 struct CoreDispTri_t
 {
@@ -1061,8 +1047,8 @@ inline int CCoreDispInfo::GetFlags( void ) const
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::SetVert( int index, Vector const &vert )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 	VectorCopy( vert, m_pVerts[index].m_Vert );
 }
 
@@ -1071,16 +1057,16 @@ inline void CCoreDispInfo::SetVert( int index, Vector const &vert )
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::GetVert( int index, Vector& vert ) const
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 	VectorCopy( m_pVerts[index].m_Vert, vert );
 }
 
 
 inline const Vector& CCoreDispInfo::GetVert( int index ) const
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 	return m_pVerts[index].m_Vert;
 }
 
@@ -1093,8 +1079,8 @@ inline const Vector& CCoreDispInfo::GetVert( const CVertIndex &index ) const
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::GetFlatVert( int index, Vector& vert ) const
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 	VectorCopy( m_pVerts[index].m_FlatVert, vert );
 }
 
@@ -1102,8 +1088,8 @@ inline void CCoreDispInfo::GetFlatVert( int index, Vector& vert ) const
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::SetFlatVert( int index, const Vector &vert )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 	VectorCopy( vert, m_pVerts[index].m_FlatVert );
 }
 
@@ -1111,8 +1097,8 @@ inline void CCoreDispInfo::SetFlatVert( int index, const Vector &vert )
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::SetNormal( int index, Vector const &normal )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 	VectorCopy( normal, m_pVerts[index].m_Normal );
 }
 
@@ -1127,8 +1113,8 @@ inline void CCoreDispInfo::SetNormal( const CVertIndex &index, Vector const &nor
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::GetNormal( int index, Vector& normal ) const
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 	VectorCopy( m_pVerts[index].m_Normal, normal );
 }
 
@@ -1137,8 +1123,8 @@ inline void CCoreDispInfo::GetNormal( int index, Vector& normal ) const
 //-----------------------------------------------------------------------------
 inline const Vector& CCoreDispInfo::GetNormal( int index ) const
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 	return m_pVerts[index].m_Normal;
 }
 
@@ -1153,15 +1139,15 @@ inline const Vector& CCoreDispInfo::GetNormal( const CVertIndex &index ) const
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::GetTangentS( int index, Vector& tangentS ) const
 {
-	Assert( index >= 0 );
-	Assert( index < GetSize() );
+	contract_assert( index >= 0 );
+	contract_assert( index < GetSize() );
 	VectorCopy( m_pVerts[index].m_TangentS, tangentS );
 }
 
 inline const Vector &CCoreDispInfo::GetTangentS( int index ) const
 {
-	Assert( index >= 0 );
-	Assert( index < GetSize() );
+	contract_assert( index >= 0 );
+	contract_assert( index < GetSize() );
 	return m_pVerts[index].m_TangentS;
 }
 
@@ -1170,8 +1156,8 @@ inline const Vector &CCoreDispInfo::GetTangentS( int index ) const
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::GetTangentT( int index, Vector& tangentT ) const
 {
-	Assert( index >= 0 );
-	Assert( index < GetSize() );
+	contract_assert( index >= 0 );
+	contract_assert( index < GetSize() );
 	VectorCopy( m_pVerts[index].m_TangentT, tangentT );
 }
 
@@ -1180,8 +1166,8 @@ inline void CCoreDispInfo::GetTangentT( int index, Vector& tangentT ) const
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::SetTexCoord( int index, Vector2D const& texCoord )
 {
-	Assert( index >= 0 );
-	Assert( index < GetSize() );
+	contract_assert( index >= 0 );
+	contract_assert( index < GetSize() );
 	Vector2DCopy( texCoord, m_pVerts[index].m_TexCoord );
 }
 
@@ -1190,8 +1176,8 @@ inline void CCoreDispInfo::SetTexCoord( int index, Vector2D const& texCoord )
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::GetTexCoord( int index, Vector2D& texCoord ) const
 {
-	Assert( index >= 0 );
-	Assert( index < GetSize() );
+	contract_assert( index >= 0 );
+	contract_assert( index < GetSize() );
 	Vector2DCopy( m_pVerts[index].m_TexCoord, texCoord );
 }
 
@@ -1200,10 +1186,10 @@ inline void CCoreDispInfo::GetTexCoord( int index, Vector2D& texCoord ) const
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::SetLuxelCoord( int bumpIndex, int index, Vector2D const& luxelCoord )
 {
-	Assert( index >= 0 );
-	Assert( index < GetSize() );
-	Assert( bumpIndex >= 0 );
-	Assert( bumpIndex < NUM_BUMP_VECTS + 1 );
+	contract_assert( index >= 0 );
+	contract_assert( index < GetSize() );
+	contract_assert( bumpIndex >= 0 );
+	contract_assert( bumpIndex < NUM_BUMP_VECTS + 1 );
 	Vector2DCopy( luxelCoord, m_pVerts[index].m_LuxelCoords[bumpIndex] );
 }
 
@@ -1212,10 +1198,10 @@ inline void CCoreDispInfo::SetLuxelCoord( int bumpIndex, int index, Vector2D con
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::GetLuxelCoord( int bumpIndex, int index, Vector2D& luxelCoord ) const 
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
-	Assert( bumpIndex >= 0 );
-	Assert( bumpIndex < NUM_BUMP_VECTS + 1 );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
+	contract_assert( bumpIndex >= 0 );
+	contract_assert( bumpIndex < NUM_BUMP_VECTS + 1 );
 	Vector2DCopy( m_pVerts[index].m_LuxelCoords[bumpIndex], luxelCoord );
 }
 
@@ -1224,8 +1210,8 @@ inline void CCoreDispInfo::GetLuxelCoord( int bumpIndex, int index, Vector2D& lu
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::SetAlpha( int index, float alpha )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 	m_pVerts[index].m_Alpha = alpha;
 }
 
@@ -1234,16 +1220,16 @@ inline void CCoreDispInfo::SetAlpha( int index, float alpha )
 //-----------------------------------------------------------------------------
 inline float CCoreDispInfo::GetAlpha( int index )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 	return m_pVerts[index].m_Alpha;
 }
 
 
 inline void CCoreDispInfo::SetMultiBlend( int index, Vector4D &vBlend, Vector4D &vAlphaBlend, Vector &vColor1, Vector &vColor2, Vector &vColor3, Vector &vColor4 )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 
 	m_pVerts[ index ].m_MultiBlend = vBlend;
 	m_pVerts[ index ].m_AlphaBlend = vAlphaBlend;
@@ -1256,8 +1242,8 @@ inline void CCoreDispInfo::SetMultiBlend( int index, Vector4D &vBlend, Vector4D 
 
 void CCoreDispInfo::SetMultiBlendColor( int index, int nColorIndex, Vector &vColor )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 
 	m_pVerts[ index ].m_vBlendColors[ nColorIndex ] = vColor;
 }
@@ -1265,8 +1251,8 @@ void CCoreDispInfo::SetMultiBlendColor( int index, int nColorIndex, Vector &vCol
 
 inline void CCoreDispInfo::SetMultiBlend( int index, Vector4D &vBlend )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 
 	m_pVerts[ index ].m_MultiBlend = vBlend;
 }
@@ -1274,8 +1260,8 @@ inline void CCoreDispInfo::SetMultiBlend( int index, Vector4D &vBlend )
 
 inline void CCoreDispInfo::SetAlphaBlend( int index, Vector4D &vAlphaBlend )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 
 	m_pVerts[ index ].m_AlphaBlend = vAlphaBlend;
 }
@@ -1283,8 +1269,8 @@ inline void CCoreDispInfo::SetAlphaBlend( int index, Vector4D &vAlphaBlend )
 
 inline void CCoreDispInfo::GetMultiBlend( int index, Vector4D &vBlend, Vector4D &vAlphaBlend, Vector &vColor1, Vector &vColor2, Vector &vColor3, Vector &vColor4 ) const
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 
 	vBlend = m_pVerts[ index ].m_MultiBlend;
 	vAlphaBlend = m_pVerts[ index ].m_AlphaBlend;
@@ -1297,8 +1283,8 @@ inline void CCoreDispInfo::GetMultiBlend( int index, Vector4D &vBlend, Vector4D 
 
 inline void CCoreDispInfo::GetMultiBlend( int index, Vector4D &vBlend ) const
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 
 	vBlend = m_pVerts[ index ].m_MultiBlend;
 }
@@ -1306,8 +1292,8 @@ inline void CCoreDispInfo::GetMultiBlend( int index, Vector4D &vBlend ) const
 
 inline void CCoreDispInfo::GetAlphaBlend( int index, Vector4D &vAlphaBlend ) const
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 
 	vAlphaBlend = m_pVerts[ index ].m_AlphaBlend;
 }
@@ -1349,8 +1335,8 @@ inline void CCoreDispInfo::ResetFieldVectors( void )
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::SetFieldVector( int index, Vector const &v )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 	VectorCopy( v, m_pVerts[index].m_FieldVector ); 
 }
 
@@ -1359,8 +1345,8 @@ inline void CCoreDispInfo::SetFieldVector( int index, Vector const &v )
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::GetFieldVector( int index, Vector& v )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_VERT_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_VERT_COUNT );
 	VectorCopy( m_pVerts[index].m_FieldVector, v ); 
 }
 
@@ -1381,8 +1367,8 @@ inline void CCoreDispInfo::ResetSubdivPositions( void )
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::SetSubdivPosition( int ndx, Vector const &v )
 {
-	Assert( ndx >= 0 );
-	Assert( ndx < MAX_VERT_COUNT );
+	contract_assert( ndx >= 0 );
+	contract_assert( ndx < MAX_VERT_COUNT );
 	m_pVerts[ndx].m_SubdivPos = v;
 }
 
@@ -1391,8 +1377,8 @@ inline void CCoreDispInfo::SetSubdivPosition( int ndx, Vector const &v )
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::GetSubdivPosition( int ndx, Vector& v )
 {
-	Assert( ndx >= 0 );
-	Assert( ndx < MAX_VERT_COUNT );
+	contract_assert( ndx >= 0 );
+	contract_assert( ndx < MAX_VERT_COUNT );
 	v = m_pVerts[ndx].m_SubdivPos;
 }
 
@@ -1416,8 +1402,8 @@ inline void CCoreDispInfo::ResetSubdivNormals( void )
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::SetSubdivNormal( int ndx, Vector const &v )
 {
-	Assert( ndx >= 0 );
-	Assert( ndx < MAX_VERT_COUNT );
+	contract_assert( ndx >= 0 );
+	contract_assert( ndx < MAX_VERT_COUNT );
 	m_pVerts[ndx].m_SubdivNormal = v;
 }
 
@@ -1426,8 +1412,8 @@ inline void CCoreDispInfo::SetSubdivNormal( int ndx, Vector const &v )
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::GetSubdivNormal( int ndx, Vector &v )
 {
-	Assert( ndx >= 0 );
-	Assert( ndx < MAX_VERT_COUNT );
+	contract_assert( ndx >= 0 );
+	contract_assert( ndx < MAX_VERT_COUNT );
 	v = m_pVerts[ndx].m_SubdivNormal;
 }
 
@@ -1448,8 +1434,8 @@ inline void CCoreDispInfo::ResetFieldDistances( void )
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::SetFieldDistance( int index, float dist )
 {
-	Assert( index >= 0 );
-	Assert( index < GetSize() );
+	contract_assert( index >= 0 );
+	contract_assert( index < GetSize() );
 	m_pVerts[index].m_FieldDistance = dist;
 }
 
@@ -1458,8 +1444,8 @@ inline void CCoreDispInfo::SetFieldDistance( int index, float dist )
 //-----------------------------------------------------------------------------
 inline float CCoreDispInfo::GetFieldDistance( int index )
 {
-	Assert( index >= 0 );
-	Assert( index < GetSize() );
+	contract_assert( index >= 0 );
+	contract_assert( index < GetSize() );
 	return m_pVerts[index].m_FieldDistance;
 }
 
@@ -1484,8 +1470,8 @@ inline int CCoreDispInfo::GetRenderIndexCount( void )
 //-----------------------------------------------------------------------------
 inline void CCoreDispInfo::SetRenderIndex( int index, int triIndex )
 {
-	Assert( index >= 0 );
-	Assert( index < ( MAX_VERT_COUNT*2*3) );
+	contract_assert( index >= 0 );
+	contract_assert( index < ( MAX_VERT_COUNT*2*3) );
 	m_RenderIndices[index] = triIndex;
 }
 
@@ -1494,8 +1480,8 @@ inline void CCoreDispInfo::SetRenderIndex( int index, int triIndex )
 //-----------------------------------------------------------------------------
 inline int CCoreDispInfo::GetRenderIndex( int index )
 {
-	Assert( index >= 0 );
-	Assert( index < ( MAX_VERT_COUNT*2*3) );
+	contract_assert( index >= 0 );
+	contract_assert( index < ( MAX_VERT_COUNT*2*3) );
 	return m_RenderIndices[index];
 }
 
@@ -1535,12 +1521,10 @@ inline bool CCoreDispInfo::IsTouched( void )
 //-----------------------------------------------------------------------------
 inline CCoreDispNode *CCoreDispInfo::GetNode( int index )
 {
-	Assert( index >= 0 );
-	Assert( index < MAX_NODE_COUNT );
+	contract_assert( index >= 0 );
+	contract_assert( index < MAX_NODE_COUNT );
 	return &m_Nodes[index];
 }
 
 bool CalcBarycentricCooefs( Vector const &v0, Vector const &v1, Vector const &v2,
 						    Vector const &pt, float &c0, float &c1, float &c2 );
-
-#endif // BUILDDISP_H

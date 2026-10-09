@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $DISTANCEALPHA == 0 ) && ( $SOFTEDGES || $OUTLINE )
 // $DISTANCEALPHA  && $DUALSEQUENCE
@@ -20,7 +21,7 @@ private:
 public:
 	void SetDUALSEQUENCE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDUALSEQUENCE = i;
 #ifdef _DEBUG
 		m_bDUALSEQUENCE = true;
@@ -28,7 +29,7 @@ public:
 	}
 	void SetDUALSEQUENCE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDUALSEQUENCE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDUALSEQUENCE = true;
@@ -42,7 +43,7 @@ private:
 public:
 	void SetSEQUENCE_BLEND_MODE( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nSEQUENCE_BLEND_MODE = i;
 #ifdef _DEBUG
 		m_bSEQUENCE_BLEND_MODE = true;
@@ -50,7 +51,7 @@ public:
 	}
 	void SetSEQUENCE_BLEND_MODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nSEQUENCE_BLEND_MODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSEQUENCE_BLEND_MODE = true;
@@ -64,7 +65,7 @@ private:
 public:
 	void SetADDBASETEXTURE2( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nADDBASETEXTURE2 = i;
 #ifdef _DEBUG
 		m_bADDBASETEXTURE2 = true;
@@ -72,7 +73,7 @@ public:
 	}
 	void SetADDBASETEXTURE2( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nADDBASETEXTURE2 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bADDBASETEXTURE2 = true;
@@ -86,7 +87,7 @@ private:
 public:
 	void SetMAXLUMFRAMEBLEND1( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nMAXLUMFRAMEBLEND1 = i;
 #ifdef _DEBUG
 		m_bMAXLUMFRAMEBLEND1 = true;
@@ -94,7 +95,7 @@ public:
 	}
 	void SetMAXLUMFRAMEBLEND1( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMAXLUMFRAMEBLEND1 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMAXLUMFRAMEBLEND1 = true;
@@ -108,7 +109,7 @@ private:
 public:
 	void SetMAXLUMFRAMEBLEND2( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nMAXLUMFRAMEBLEND2 = i;
 #ifdef _DEBUG
 		m_bMAXLUMFRAMEBLEND2 = true;
@@ -116,7 +117,7 @@ public:
 	}
 	void SetMAXLUMFRAMEBLEND2( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMAXLUMFRAMEBLEND2 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMAXLUMFRAMEBLEND2 = true;
@@ -130,7 +131,7 @@ private:
 public:
 	void SetEXTRACTGREENALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nEXTRACTGREENALPHA = i;
 #ifdef _DEBUG
 		m_bEXTRACTGREENALPHA = true;
@@ -138,7 +139,7 @@ public:
 	}
 	void SetEXTRACTGREENALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nEXTRACTGREENALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bEXTRACTGREENALPHA = true;
@@ -152,7 +153,7 @@ private:
 public:
 	void SetCOLORRAMP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOLORRAMP = i;
 #ifdef _DEBUG
 		m_bCOLORRAMP = true;
@@ -160,7 +161,7 @@ public:
 	}
 	void SetCOLORRAMP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOLORRAMP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOLORRAMP = true;
@@ -174,7 +175,7 @@ private:
 public:
 	void SetANIMBLEND( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nANIMBLEND = i;
 #ifdef _DEBUG
 		m_bANIMBLEND = true;
@@ -182,7 +183,7 @@ public:
 	}
 	void SetANIMBLEND( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nANIMBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bANIMBLEND = true;
@@ -196,7 +197,7 @@ private:
 public:
 	void SetADDSELF( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nADDSELF = i;
 #ifdef _DEBUG
 		m_bADDSELF = true;
@@ -204,7 +205,7 @@ public:
 	}
 	void SetADDSELF( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nADDSELF = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bADDSELF = true;
@@ -218,7 +219,7 @@ private:
 public:
 	void SetMOD2X( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nMOD2X = i;
 #ifdef _DEBUG
 		m_bMOD2X = true;
@@ -226,7 +227,7 @@ public:
 	}
 	void SetMOD2X( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMOD2X = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMOD2X = true;
@@ -240,7 +241,7 @@ private:
 public:
 	void SetDEPTHBLEND( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDEPTHBLEND = i;
 #ifdef _DEBUG
 		m_bDEPTHBLEND = true;
@@ -248,7 +249,7 @@ public:
 	}
 	void SetDEPTHBLEND( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDEPTHBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDEPTHBLEND = true;
@@ -262,7 +263,7 @@ private:
 public:
 	void SetINVERSEDEPTHBLEND( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nINVERSEDEPTHBLEND = i;
 #ifdef _DEBUG
 		m_bINVERSEDEPTHBLEND = true;
@@ -270,7 +271,7 @@ public:
 	}
 	void SetINVERSEDEPTHBLEND( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nINVERSEDEPTHBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bINVERSEDEPTHBLEND = true;
@@ -284,7 +285,7 @@ private:
 public:
 	void SetSHADER_SRGB_READ( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nSHADER_SRGB_READ = i;
 #ifdef _DEBUG
 		m_bSHADER_SRGB_READ = true;
@@ -292,7 +293,7 @@ public:
 	}
 	void SetSHADER_SRGB_READ( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nSHADER_SRGB_READ = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSHADER_SRGB_READ = true;
@@ -306,7 +307,7 @@ private:
 public:
 	void SetCOLOR_LERP_PS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOLOR_LERP_PS = i;
 #ifdef _DEBUG
 		m_bCOLOR_LERP_PS = true;
@@ -314,7 +315,7 @@ public:
 	}
 	void SetCOLOR_LERP_PS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOLOR_LERP_PS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOLOR_LERP_PS = true;
@@ -328,7 +329,7 @@ private:
 public:
 	void SetPACKED_INTERPOLATOR( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPACKED_INTERPOLATOR = i;
 #ifdef _DEBUG
 		m_bPACKED_INTERPOLATOR = true;
@@ -336,7 +337,7 @@ public:
 	}
 	void SetPACKED_INTERPOLATOR( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPACKED_INTERPOLATOR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPACKED_INTERPOLATOR = true;
@@ -350,7 +351,7 @@ private:
 public:
 	void SetDISTANCEALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDISTANCEALPHA = i;
 #ifdef _DEBUG
 		m_bDISTANCEALPHA = true;
@@ -358,7 +359,7 @@ public:
 	}
 	void SetDISTANCEALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDISTANCEALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDISTANCEALPHA = true;
@@ -372,7 +373,7 @@ private:
 public:
 	void SetSOFTEDGES( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSOFTEDGES = i;
 #ifdef _DEBUG
 		m_bSOFTEDGES = true;
@@ -380,7 +381,7 @@ public:
 	}
 	void SetSOFTEDGES( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSOFTEDGES = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSOFTEDGES = true;
@@ -394,7 +395,7 @@ private:
 public:
 	void SetOUTLINE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nOUTLINE = i;
 #ifdef _DEBUG
 		m_bOUTLINE = true;
@@ -402,7 +403,7 @@ public:
 	}
 	void SetOUTLINE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nOUTLINE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bOUTLINE = true;
@@ -416,7 +417,7 @@ private:
 public:
 	void SetMULOUTPUTBYALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nMULOUTPUTBYALPHA = i;
 #ifdef _DEBUG
 		m_bMULOUTPUTBYALPHA = true;
@@ -424,7 +425,7 @@ public:
 	}
 	void SetMULOUTPUTBYALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMULOUTPUTBYALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMULOUTPUTBYALPHA = true;
@@ -517,7 +518,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bDUALSEQUENCE && m_bSEQUENCE_BLEND_MODE && m_bADDBASETEXTURE2 && m_bMAXLUMFRAMEBLEND1 && m_bMAXLUMFRAMEBLEND2 && m_bEXTRACTGREENALPHA && m_bCOLORRAMP && m_bANIMBLEND && m_bADDSELF && m_bMOD2X && m_bDEPTHBLEND && m_bINVERSEDEPTHBLEND && m_bSHADER_SRGB_READ && m_bCOLOR_LERP_PS && m_bPACKED_INTERPOLATOR && m_bDISTANCEALPHA && m_bSOFTEDGES && m_bOUTLINE && m_bMULOUTPUTBYALPHA;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nDUALSEQUENCE ) + ( 2 * m_nSEQUENCE_BLEND_MODE ) + ( 6 * m_nADDBASETEXTURE2 ) + ( 12 * m_nMAXLUMFRAMEBLEND1 ) + ( 24 * m_nMAXLUMFRAMEBLEND2 ) + ( 48 * m_nEXTRACTGREENALPHA ) + ( 96 * m_nCOLORRAMP ) + ( 192 * m_nANIMBLEND ) + ( 384 * m_nADDSELF ) + ( 768 * m_nMOD2X ) + ( 1536 * m_nDEPTHBLEND ) + ( 3072 * m_nINVERSEDEPTHBLEND ) + ( 3072 * m_nSHADER_SRGB_READ ) + ( 3072 * m_nCOLOR_LERP_PS ) + ( 6144 * m_nPACKED_INTERPOLATOR ) + ( 12288 * m_nDISTANCEALPHA ) + ( 24576 * m_nSOFTEDGES ) + ( 49152 * m_nOUTLINE ) + ( 98304 * m_nMULOUTPUTBYALPHA ) + 0;
 	}
@@ -539,7 +540,7 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_spritecard_ps20b 0
+inline constexpr int shaderDynamicTest_spritecard_ps20b = 0;
 
 static const ShaderComboInformation_t s_StaticComboArray_spritecard_ps20b[19] = 
 {
@@ -565,7 +566,7 @@ static const ShaderComboInformation_t s_StaticComboArray_spritecard_ps20b[19] =
 };
 static const ShaderComboSemantics_t spritecard_ps20b_combos =
 {
-	"spritecard_ps20b", NULL, 0, s_StaticComboArray_spritecard_ps20b, 19 
+	"spritecard_ps20b", nullptr, 0, s_StaticComboArray_spritecard_ps20b, 19 
 };
 
 class ConstructMe_spritecard_ps20b

@@ -1,11 +1,61 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "player.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 
 #include "decals.h"
 #include "effect_dispatch_data.h"
@@ -61,7 +111,7 @@ ConVar	ai_shot_bias_max( "ai_shot_bias_max", "1.0", FCVAR_REPLICATED );
 ConVar	ai_debug_shoot_positions( "ai_debug_shoot_positions", "0", FCVAR_REPLICATED | FCVAR_CHEAT );
 
 // Utility func to throttle rate at which the "reasonable position" spew goes out
-static double s_LastEntityReasonableEmitTime = -DBL_MAX;
+static double s_LastEntityReasonableEmitTime = -std::numeric_limits<double>::max();
 bool CheckEmitReasonablePhysicsSpew()
 {
 
@@ -79,7 +129,7 @@ bool CheckEmitReasonablePhysicsSpew()
 }
 
 
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_DEVELOPER_VERBOSE, "DeveloperVerbose" );
+LoggingChannelID_t LOG_DEVELOPER_VERBOSE = LoggingSystem_RegisterLoggingChannel( "DeveloperVerbose", nullptr );;
 
 //-----------------------------------------------------------------------------
 // Purpose: Spawn some blood particles
@@ -89,7 +139,6 @@ void SpawnBlood(Vector vecSpot, const Vector &vecDir, int bloodColor, float flDa
 	UTIL_BloodDrips( vecSpot, vecDir, bloodColor, (int)flDamage );
 }
 
-#if !defined( NO_ENTITY_PREDICTION )
 //-----------------------------------------------------------------------------
 // The player drives simulation of this entity
 //-----------------------------------------------------------------------------
@@ -109,7 +158,6 @@ void CBaseEntity::UnsetPlayerSimulated( void )
 	m_hPlayerSimulationOwner = nullptr;
 	m_bIsPlayerSimulated = false;
 }
-#endif
 
 // position of eyes
 Vector CBaseEntity::EyePosition( void )
@@ -187,8 +235,6 @@ void CBaseEntity::SetEffects( int nEffects )
 			( (nEffects & EF_MARKED_FOR_FAST_REFLECTION ) != ( m_fEffects & EF_MARKED_FOR_FAST_REFLECTION ) );
 #endif
 
-#if !defined( CLIENT_DLL )
-#endif // !CLIENT_DLL
 
 		m_fEffects = nEffects;
 
@@ -221,8 +267,6 @@ void CBaseEntity::SetEffects( int nEffects )
 
 void CBaseEntity::AddEffects( int nEffects ) 
 { 
-#if !defined( CLIENT_DLL )
-#endif // !CLIENT_DLL
 
 	m_fEffects |= nEffects;
 
@@ -328,7 +372,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 {
 	//!! temp hack, until worldcraft is fixed
 	// strip the # tokens from (duplicate) key names
-	char *s = (char *)strchr( szKeyName, '#' );
+	char *s = (char *)std::strchr( szKeyName, '#' );
 	if ( s )
 	{
 		*s = '\0';
@@ -345,13 +389,13 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 
 	if ( FStrEq( szKeyName, "renderamt" ) )
 	{
-		SetRenderAlpha( Q_atoi( szValue ) );
+		SetRenderAlpha( V_atoi( szValue ) );
 		return true;
 	}
 
 	if ( FStrEq( szKeyName, "disableshadows" ))
 	{
-		int val = atoi( szValue );
+		int val = std::atoi( szValue );
 		if (val)
 		{
 			AddEffects( EF_NOSHADOW );
@@ -361,7 +405,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 
 	if ( FStrEq( szKeyName, "drawinfastreflection" ) )
 	{
-		int val = atoi( szValue );
+		int val = std::atoi( szValue );
 		if (val)
 		{
 			AddEffects( EF_MARKED_FOR_FAST_REFLECTION );
@@ -371,7 +415,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 
 	if ( FStrEq( szKeyName, "disableshadowdepth" ) )
 	{
-		int val = atoi( szValue );
+		int val = std::atoi( szValue );
 		if (val)
 		{
 			AddEffects( EF_NOSHADOWDEPTH );
@@ -381,7 +425,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 
 	if ( FStrEq( szKeyName, "shadowdepthnocache" ) )
 	{
-		int val = atoi( szValue );
+		int val = std::atoi( szValue );
 		if ( val == 1 )
 		{
 			AddEffects( EF_SHADOWDEPTH_NOCACHE );
@@ -411,7 +455,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 
 	if ( FStrEq( szKeyName, "disablereceiveshadows" ))
 	{
-		int val = atoi( szValue );
+		int val = std::atoi( szValue );
 		if (val)
 		{
 			AddEffects( EF_NORECEIVESHADOW );
@@ -421,7 +465,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 
 	if ( FStrEq( szKeyName, "disableflashlight" ))
 	{
-		int val = atoi( szValue );
+		int val = std::atoi( szValue );
 		if (val)
 		{
 			AddEffects( EF_NOFLASHLIGHT );
@@ -431,7 +475,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 
 	if ( FStrEq( szKeyName, "nodamageforces" ))
 	{
-		int val = atoi( szValue );
+		int val = std::atoi( szValue );
 		if (val)
 		{
 			AddEFlags( EFL_NO_DAMAGE_FORCES );
@@ -444,18 +488,18 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 	{
 		static char szBuf[64];
 
-		float y = atof( szValue );
+		float y = std::atof( szValue );
 		if (y >= 0)
 		{
-			Q_snprintf( szBuf,sizeof(szBuf), "%f %f %f", GetLocalAngles()[0], y, GetLocalAngles()[2] );
+			V_snprintf( szBuf,sizeof(szBuf), "%f %f %f", GetLocalAngles()[0], y, GetLocalAngles()[2] );
 		}
 		else if ((int)y == -1)
 		{
-			Q_strncpy( szBuf, "-90 0 0", sizeof(szBuf) );
+			V_strncpy( szBuf, "-90 0 0", sizeof(szBuf) );
 		}
 		else
 		{
-			Q_strncpy( szBuf, "90 0 0", sizeof(szBuf) );
+			V_strncpy( szBuf, "90 0 0", sizeof(szBuf) );
 		}
 
 		// Do this so inherited classes looking for 'angles' don't have to bother with 'angle'
@@ -470,7 +514,6 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 
 		// If you're hitting this assert, it's probably because you're
 		// calling SetLocalAngles from within a KeyValues method.. use SetAbsAngles instead!
-		Assert( (GetMoveParent() == nullptr) && !IsEFlagSet( EFL_DIRTY_ABSTRANSFORM ) );
 		SetAbsAngles( angles );
 		return true;
 	}
@@ -482,7 +525,6 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 
 		// If you're hitting this assert, it's probably because you're
 		// calling SetLocalOrigin from within a KeyValues method.. use SetAbsOrigin instead!
-		Assert( (GetMoveParent() == nullptr) && !IsEFlagSet( EFL_DIRTY_ABSTRANSFORM ) );
 		SetAbsOrigin( vecOrigin );
 		return true;
 	}
@@ -515,7 +557,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 		bool printKeyHits = false;
 		const char *debugName = "";
 
-		if ( *ent_debugkeys.GetString() && !Q_stricmp(ent_debugkeys.GetString(), STRING(m_iClassname)) )
+		if ( *ent_debugkeys.GetString() && !V_stricmp(ent_debugkeys.GetString(), STRING(m_iClassname)) )
 		{
 			// Msg( "-- found entity of type %s\n", STRING(m_iClassname) );
 			printKeyHits = true;
@@ -525,7 +567,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 		// loop through the data description, and try and place the keys in
 		for ( datamap_t *dmap = GetDataDescMap(); dmap != nullptr; dmap = dmap->baseMap )
 		{
-			if ( !printKeyHits && *ent_debugkeys.GetString() && !Q_stricmp(dmap->dataClassName, ent_debugkeys.GetString()) )
+			if ( !printKeyHits && *ent_debugkeys.GetString() && !V_stricmp(dmap->dataClassName, ent_debugkeys.GetString()) )
 			{
 				// Msg( "-- found class of type %s\n", dmap->dataClassName );
 				printKeyHits = true;
@@ -582,7 +624,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, float flValue )
 {
 	char	string[256];
 
-	Q_snprintf(string,sizeof(string), "%f", flValue );
+	V_snprintf(string,sizeof(string), "%f", flValue );
 
 	return KeyValue( szKeyName, string );
 }
@@ -591,7 +633,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, int nValue )
 {
 	char	string[256];
 
-	Q_snprintf(string,sizeof(string), "%d", nValue );
+	V_snprintf(string,sizeof(string), "%d", nValue );
 
 	return KeyValue( szKeyName, string );
 }
@@ -600,7 +642,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const Vector &vecValue )
 {
 	char	string[256];
 
-	Q_snprintf(string,sizeof(string), "%f %f %f", vecValue.x, vecValue.y, vecValue.z );
+	V_snprintf(string,sizeof(string), "%f %f %f", vecValue.x, vecValue.y, vecValue.z );
 
 	return KeyValue( szKeyName, string );
 }
@@ -617,50 +659,50 @@ bool CBaseEntity::GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen
 	{
 		color24 tmp = GetRenderColor();
 		unsigned char a = GetRenderAlpha();
-		Q_snprintf( szValue, iMaxLen, "%d %d %d %d", tmp.r, tmp.g, tmp.b, a );
+		V_snprintf( szValue, iMaxLen, "%d %d %d %d", tmp.r, tmp.g, tmp.b, a );
 		return true;
 	}
 	
 	if ( FStrEq( szKeyName, "renderamt" ) )
 	{
 		unsigned char a = GetRenderAlpha();
-		Q_snprintf( szValue, iMaxLen, "%d", a );
+		V_snprintf( szValue, iMaxLen, "%d", a );
 		return true;
 	}
 
 	if ( FStrEq( szKeyName, "disableshadows" ))
 	{
-		Q_snprintf( szValue, iMaxLen, "%d", IsEffectActive( EF_NOSHADOW ) );
+		V_snprintf( szValue, iMaxLen, "%d", IsEffectActive( EF_NOSHADOW ) );
 		return true;
 	}
 
 	if ( FStrEq( szKeyName, "mins" ))
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
 	if ( FStrEq( szKeyName, "maxs" ))
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
 	if ( FStrEq( szKeyName, "disablereceiveshadows" ))
 	{
-		Q_snprintf( szValue, iMaxLen, "%d", IsEffectActive( EF_NORECEIVESHADOW ) );
+		V_snprintf( szValue, iMaxLen, "%d", IsEffectActive( EF_NORECEIVESHADOW ) );
 		return true;
 	}
 
 	if ( FStrEq( szKeyName, "disableflashlight" ))
 	{
-		Q_snprintf( szValue, iMaxLen, "%d", IsEffectActive( EF_NOFLASHLIGHT ) );
+		V_snprintf( szValue, iMaxLen, "%d", IsEffectActive( EF_NOFLASHLIGHT ) );
 		return true;
 	}
 
 	if ( FStrEq( szKeyName, "nodamageforces" ))
 	{
-		Q_snprintf( szValue, iMaxLen, "%d", IsEffectActive( EFL_NO_DAMAGE_FORCES ) );
+		V_snprintf( szValue, iMaxLen, "%d", IsEffectActive( EFL_NO_DAMAGE_FORCES ) );
 		return true;
 	}
 
@@ -675,14 +717,14 @@ bool CBaseEntity::GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen
 	{
 		QAngle angles = GetAbsAngles();
 
-		Q_snprintf( szValue, iMaxLen, "%f %f %f", angles.x, angles.y, angles.z );
+		V_snprintf( szValue, iMaxLen, "%f %f %f", angles.x, angles.y, angles.z );
 		return true;
 	}
 
 	if( FStrEq( szKeyName, "origin" ) )
 	{
 		Vector vecOrigin = GetAbsOrigin();
-		Q_snprintf( szValue, iMaxLen, "%f %f %f", vecOrigin.x, vecOrigin.y, vecOrigin.z );
+		V_snprintf( szValue, iMaxLen, "%f %f %f", vecOrigin.x, vecOrigin.y, vecOrigin.z );
 		return true;
 	}
 
@@ -690,13 +732,13 @@ bool CBaseEntity::GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen
 	
 	if ( FStrEq( szKeyName, "targetname" ) )
 	{
-		Q_snprintf( szValue, iMaxLen, "%s", STRING( GetEntityName() ) );
+		V_snprintf( szValue, iMaxLen, "%s", STRING( GetEntityName() ) );
 		return true;
 	}
 
 	if ( FStrEq( szKeyName, "classname" ) )
 	{
-		Q_snprintf( szValue, iMaxLen, "%s", GetClassname() );
+		V_snprintf( szValue, iMaxLen, "%s", GetClassname() );
 		return true;
 	}
 
@@ -760,7 +802,7 @@ void CBaseEntity::DecalTrace( trace_t *pTrace, char const *decalName )
 	if ( index < 0 )
 		return;
 
-	Assert( pTrace->Ent<CBaseEntity>() );
+	contract_assert( pTrace->Ent<CBaseEntity>() );
 
 	CBroadcastRecipientFilter filter;
 	te->Decal( filter, 0.0, &pTrace->endpos, &pTrace->startpos,
@@ -772,8 +814,8 @@ void CBaseEntity::DecalTrace( trace_t *pTrace, char const *decalName )
 //-----------------------------------------------------------------------------
 void CBaseEntity::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
 {
-	VPROF( "CBaseEntity::ImpactTrace" );
-	Assert( pTrace->Ent<CBaseEntity>() );
+	CVProfScope _( "CBaseEntity::ImpactTrace", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	contract_assert( pTrace->Ent<CBaseEntity>() );
 
 	CBaseEntity *pEntity = pTrace->Ent<CBaseEntity>();
  
@@ -832,7 +874,7 @@ int	CBaseEntity::GetIndexForThinkContext( const char *pszContext )
 {
 	for ( int i = 0; i < std::ssize( m_aThinkFunctions ); i++ )
 	{
-		if ( !Q_strncmp( STRING( m_aThinkFunctions[i].m_iszContext ), pszContext, MAX_CONTEXT_LENGTH ) )
+		if ( !V_strncmp( STRING( m_aThinkFunctions[i].m_iszContext ), pszContext, MAX_CONTEXT_LENGTH ) )
 			return i;
 	}
 
@@ -850,7 +892,7 @@ int CBaseEntity::RegisterThinkContext( const char *szContext )
 
 	// Make a new think func
 	thinkfunc_t sNewFunc;
-	Q_memset( &sNewFunc, 0, sizeof( sNewFunc ) );
+	V_memset( &sNewFunc, 0, sizeof( sNewFunc ) );
 	sNewFunc.m_pfnThink = nullptr;
 	sNewFunc.m_nNextThinkTick = 0;
 	sNewFunc.m_iszContext = AllocPooledString(szContext);
@@ -867,7 +909,7 @@ BASEPTR	CBaseEntity::ThinkSet( BASEPTR func, float thinkTime, const char *szCont
 #if !defined( CLIENT_DLL )
 #if defined( _DEBUG )
 	// Member pointers can be 8 or 16 bytes on 64-bit
-	COMPILE_TIME_ASSERT( sizeof(func) == 8 || sizeof(func) == 16 );
+	static_assert( sizeof(func) == 8 || sizeof(func) == 16 );
 #endif
 #endif
 
@@ -1007,7 +1049,7 @@ int	CBaseEntity::GetNextThinkTick( const char *szContext /*= NULL*/ )
 		iIndex = GetIndexForThinkContext( szContext );
 
 		// Looking up an invalid think context!
-		Assert( iIndex != -1 );
+		contract_assert( iIndex != -1 );
 	}
 
 	if ( ( iIndex == -1 ) || ( m_aThinkFunctions[ iIndex ].m_nNextThinkTick == TICK_NEVER_THINK ) )
@@ -1465,7 +1507,7 @@ bool CBaseEntity::VPhysicsInitSetup()
 #endif
 
 	// If this entity already has a physics object, then it should have been deleted prior to making this call.
-	Assert(!m_pPhysicsObject);
+	contract_assert( !m_pPhysicsObject );
 	VPhysicsDestroyObject();
 
 	m_flNonShadowMass = -1.0f;
@@ -1870,7 +1912,7 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 	int iSeed = 0;
 	if ( IsPlayer() )
 	{
-		iSeed = CBaseEntity::GetPredictionRandomSeed( SERVER_PLATTIME_RNG ) & 255;
+		iSeed = CBaseEntity::GetPredictionRandomSeed(  ) & 255;
 	}
 
 	//-----------------------------------------------------
@@ -2461,7 +2503,7 @@ void CBaseEntity::ApplyLocalVelocityImpulse( const Vector &inVecImpulse )
 		{
 		case -1:
 			Warning( "Discarding ApplyLocalVelocityImpulse(%f,%f,%f) on %s\n", vecImpulse.x, vecImpulse.y, vecImpulse.z, GetDebugName() );
-			Assert( false );
+			contract_assert( false );
 			return;
 
 		case 0:
@@ -2469,7 +2511,7 @@ void CBaseEntity::ApplyLocalVelocityImpulse( const Vector &inVecImpulse )
 			{
 				Warning( "Bad ApplyLocalVelocityImpulse(%f,%f,%f) on %s\n", vecImpulse.x, vecImpulse.y, vecImpulse.z, GetDebugName() );
 			}
-			Assert( false );
+			contract_assert( false );
 			break;
 
 		default:
@@ -2506,7 +2548,7 @@ void CBaseEntity::ApplyAbsVelocityImpulse( const Vector &inVecImpulse )
 		{
 		case -1:
 			Warning( "Discarding ApplyAbsVelocityImpulse(%f,%f,%f) on %s\n", vecImpulse.x, vecImpulse.y, vecImpulse.z, GetDebugName() );
-			Assert( false );
+			contract_assert( false );
 			return;
 
 		case 0:
@@ -2514,7 +2556,7 @@ void CBaseEntity::ApplyAbsVelocityImpulse( const Vector &inVecImpulse )
 			{
 				Warning( "Bad ApplyAbsVelocityImpulse(%f,%f,%f) on %s\n", vecImpulse.x, vecImpulse.y, vecImpulse.z, GetDebugName() );
 			}
-			Assert( false );
+			contract_assert( false );
 			return;
 		default:
 			break;
@@ -2550,7 +2592,7 @@ void CBaseEntity::ApplyLocalAngularVelocityImpulse( const AngularImpulse &angImp
 			{
 				Warning( "Bad ApplyLocalAngularVelocityImpulse(%f,%f,%f) on %s\n", angImpulse.x, angImpulse.y, angImpulse.z, GetDebugName() );
 			}
-			Assert( false );
+			contract_assert( false );
 			return;
 		}
 
@@ -2593,10 +2635,10 @@ void CBaseEntity::CollisionRulesChanged()
 		if ( PhysIsInCallback() )
 		{
 			Warning("Changing collision rules within a callback is likely to cause crashes!\n");
-			Assert(0);
+			contract_assert( 0 );
 		}
 		IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-		int count = VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+		int count = VPhysicsGetObjectList( pList, std::size( pList ) );
 		for ( int i = 0; i < count; i++ )
 		{
 			if ( pList[i] != nullptr ) //this really shouldn't happen, but it does >_<
@@ -2655,11 +2697,7 @@ bool CBaseEntity::IsSimulatingOnAlternateTicks()
 //-----------------------------------------------------------------------------
 bool CBaseEntity::IsToolRecording() const
 {
-#ifndef NO_TOOLFRAMEWORK
 	return m_bToolRecording;
-#else
-	return false;
-#endif
 }
 #endif
 
@@ -2673,7 +2711,7 @@ void CBaseEntity::PhysicsTouchTriggers( const Vector *pPrevAbsOrigin )
 #if defined( CLIENT_DLL )
 #if defined( FAST_TRIGGER_TOUCH )
 	{
-		Assert( !pPrevAbsOrigin );
+		contract_assert( !pPrevAbsOrigin );
 		TouchTriggerPlayerMovement( this );
 		return;
 	}
@@ -2685,7 +2723,7 @@ void CBaseEntity::PhysicsTouchTriggers( const Vector *pPrevAbsOrigin )
 
 	if ( pEntity && !IsWorld() )
 	{
-		Assert(CollisionProp());
+		contract_assert( CollisionProp() );
 		bool isTriggerCheckSolids = IsSolidFlagSet( FSOLID_TRIGGER );
 		bool isSolidCheckTriggers = IsSolid() && !isTriggerCheckSolids;		// NOTE: Moving triggers (items, ammo etc) are not 
 		// checked against other triggers ot reduce the number of touchlinks created
@@ -2694,7 +2732,7 @@ void CBaseEntity::PhysicsTouchTriggers( const Vector *pPrevAbsOrigin )
 
 		if ( GetSolid() == SOLID_BSP ) 
 		{
-			if ( !GetModel() && Q_strlen( STRING( GetModelName() ) ) == 0 ) 
+			if ( !GetModel() && V_strlen( STRING( GetModelName() ) ) == 0 ) 
 			{
 				Warning( "Inserted %s with no model\n", GetClassname() );
 				return;

@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // $MULTITEXTURE && $BASETEXTURE
 // $FLOWMAP && $MULTITEXTURE
@@ -15,7 +16,7 @@ private:
 public:
 	void SetBASETEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBASETEXTURE = i;
 #ifdef _DEBUG
 		m_bBASETEXTURE = true;
@@ -23,7 +24,7 @@ public:
 	}
 	void SetBASETEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBASETEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBASETEXTURE = true;
@@ -37,7 +38,7 @@ private:
 public:
 	void SetMULTITEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nMULTITEXTURE = i;
 #ifdef _DEBUG
 		m_bMULTITEXTURE = true;
@@ -45,7 +46,7 @@ public:
 	}
 	void SetMULTITEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMULTITEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMULTITEXTURE = true;
@@ -59,7 +60,7 @@ private:
 public:
 	void SetFLASHLIGHT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLASHLIGHT = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -67,7 +68,7 @@ public:
 	}
 	void SetFLASHLIGHT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -81,7 +82,7 @@ private:
 public:
 	void SetLIGHTMAPWATERFOG( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nLIGHTMAPWATERFOG = i;
 #ifdef _DEBUG
 		m_bLIGHTMAPWATERFOG = true;
@@ -89,7 +90,7 @@ public:
 	}
 	void SetLIGHTMAPWATERFOG( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nLIGHTMAPWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bLIGHTMAPWATERFOG = true;
@@ -103,7 +104,7 @@ private:
 public:
 	void SetFLOWMAP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLOWMAP = i;
 #ifdef _DEBUG
 		m_bFLOWMAP = true;
@@ -111,7 +112,7 @@ public:
 	}
 	void SetFLOWMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLOWMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLOWMAP = true;
@@ -148,7 +149,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bBASETEXTURE && m_bMULTITEXTURE && m_bFLASHLIGHT && m_bLIGHTMAPWATERFOG && m_bFLOWMAP;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nBASETEXTURE ) + ( 2 * m_nMULTITEXTURE ) + ( 4 * m_nFLASHLIGHT ) + ( 8 * m_nLIGHTMAPWATERFOG ) + ( 16 * m_nFLOWMAP ) + 0;
 	}
@@ -170,7 +171,7 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_water_vs20 0
+inline constexpr int shaderDynamicTest_water_vs20 = 0;
 
 static const ShaderComboInformation_t s_StaticComboArray_Water_vs20[5] = 
 {
@@ -182,7 +183,7 @@ static const ShaderComboInformation_t s_StaticComboArray_Water_vs20[5] =
 };
 static const ShaderComboSemantics_t Water_vs20_combos =
 {
-	"Water_vs20", NULL, 0, s_StaticComboArray_Water_vs20, 5 
+	"Water_vs20", nullptr, 0, s_StaticComboArray_Water_vs20, 5 
 };
 
 class ConstructMe_Water_vs20

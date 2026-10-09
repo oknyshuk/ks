@@ -1,17 +1,14 @@
-//====== Copyright 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BASEACHIEVEMENT_H
-#define BASEACHIEVEMENT_H
-
+#include "networkvar.h"
+#include "datamap.h"
 #include "GameEventListener.h"
 #include "../common/xlast_csgo/csgo.spa.h"
 #include "iachievementmgr.h"
 
-#define AWARD_ID_NONE ""
+inline constexpr const char *AWARD_ID_NONE = "";
 
 class CAchievementMgr;
 class IPlayerLocal;
@@ -45,8 +42,6 @@ public:
 
 
 	void SetHideUntilAchieved( bool bHide ) { m_bHideUntilAchieved = bHide; }
-	void SetStoreProgressInSteam( bool bStoreProgressInSteam ) { m_bStoreProgressInSteam = bStoreProgressInSteam; }
-	bool StoreProgressInSteam() { return m_bStoreProgressInSteam; }
 	virtual bool ShouldShowProgressNotification() { return true; }
 	virtual void OnPlayerStatsUpdate( int nUserSlot ) {}
 
@@ -80,7 +75,7 @@ public:
 	void EvaluateIsAlreadyAchieved();
 	virtual void OnMapEvent( const char *pEventName );
 	virtual void PrintAdditionalStatus() {}		// for debugging, achievements may report additional status in achievement_status concmd
-	virtual void OnSteamUserStatsStored() {}
+	virtual void OnAchievementAwarded() {}
 	virtual void UpdateAchievement( int nData ) {}
 	virtual bool ShouldShowOnHUD() { return m_bShowOnHUD; }
 	virtual void SetShowOnHUD( bool bShow );
@@ -132,7 +127,6 @@ protected:
 	int m_iProgressMsgMinimum;							// the minimum progress needed before showing progress notification
 	int m_iPointValue;									// # of points this achievement is worth (currently only used for XBox Live)
 	bool m_bHideUntilAchieved;							// should this achievement be hidden until achieved?
-	bool m_bStoreProgressInSteam;						// should incremental progress be stored in Steam.  A counter with same name as achievement must be set up in Steam.
 	const char *m_pInflictorClassNameFilter;			// if non-NULL, inflictor class name to filter with
 	const char *m_pInflictorEntityNameFilter;			// if non-NULL, inflictor entity name to filter with
 	const char *m_pVictimClassNameFilter;				// if non-NULL, victim class name to filter with
@@ -146,7 +140,7 @@ protected:
 	const char *m_pszComponentPrefix;
 	int			m_iComponentPrefixLen;
 	bool		m_bAchieved;							// is this achievement achieved
-	uint32		m_uUnlockTime;							// time_t that this achievement was unlocked (0 if before Steamworks unlock time support)
+	uint32		m_uUnlockTime;							// time_t that this achievement was unlocked (0 if unknown)
 	int			m_iCount;								// # of steps satisfied toward this achievement (only valid if not achieved)
 	int			m_iProgressShown;						// # of progress msgs we've shown
 	uint64		m_iComponentBits;						// bitfield of components achieved
@@ -206,7 +200,6 @@ class CAchievement_AchievedCount : public CBaseAchievement
 {
 public:
 	void Init();
-	virtual void OnSteamUserStatsStored( void );
 	virtual bool IsMetaAchievement() { return true; }
 
 	int GetLowRange() { return m_iLowRange; }
@@ -266,5 +259,3 @@ DECLARE_ACHIEVEMENT_( CAchievement##achievementID, achievementID, achievementNam
 
 #define DECLARE_MAP_EVENT_ACHIEVEMENT_HIDDEN( achievementID, achievementName, iPointValue )	\
 	DECLARE_MAP_EVENT_ACHIEVEMENT_( achievementID, achievementName, nullptr, iPointValue, true )
-
-#endif // BASEACHIEVEMENT_H

@@ -1,12 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "cheatcodes.h"
 #include "cmd.h"
-#include "keyvalues.h"
+import std;
 #include "filesystem.h"
 #include "tier2/tier2.h"
 #include "inputsystem/iinputsystem.h"
@@ -16,9 +14,9 @@
 //=========================================================
 // Cheat Codes
 //=========================================================
-#define CHEAT_NAME_MAX_LEN		32
-#define CHEAT_CODE_MAX_LEN		10
-#define CHEAT_COMMAND_MAX_LEN	128
+constexpr auto CHEAT_NAME_MAX_LEN = 32;
+constexpr auto CHEAT_CODE_MAX_LEN = 10;
+constexpr auto CHEAT_COMMAND_MAX_LEN = 128;
 static ButtonCode_t s_pKeyLog[CHEAT_CODE_MAX_LEN];
 static int s_nKeyLogIndex = 0;
 
@@ -51,18 +49,18 @@ void ReadCheatCommandsFromFile( const char *pchFileName )
 			int iCheat = std::ssize( s_CheatCodeCommands ); s_CheatCodeCommands.emplace_back();
 			CheatCodeData_t *pNewCheatCode = &(s_CheatCodeCommands[ iCheat ]);
 
-			Q_strncpy( pNewCheatCode->szName, pKey->GetName(), CHEAT_NAME_MAX_LEN );	// Get the name
+			V_strncpy( pNewCheatCode->szName, pKey->GetName(), CHEAT_NAME_MAX_LEN );	// Get the name
 			pNewCheatCode->bDevOnly = ( pKey->GetInt( "dev", 0 ) != 0 );				// Get developer only flag
 			pNewCheatCode->iCodeLength = 0;												// Start at zero code elements
-			Q_strncpy( pNewCheatCode->szCommand, pKey->GetString( "command", "echo \"Cheat code has no command!\"" ), CHEAT_COMMAND_MAX_LEN );
+			V_strncpy( pNewCheatCode->szCommand, pKey->GetString( "command", "echo \"Cheat code has no command!\"" ), CHEAT_COMMAND_MAX_LEN );
 
 			KeyValues *pSubKey = nullptr;
 			for ( pSubKey = pKey->GetFirstSubKey(); pSubKey; pSubKey = pSubKey->GetNextKey() )
 			{
 				const char *pchType = pSubKey->GetName();
-				if ( Q_strcmp( pchType, "code" ) == 0 )
+				if ( V_strcmp( pchType, "code" ) == 0 )
 				{
-					AssertMsg( ( pNewCheatCode->iCodeLength < CHEAT_NAME_MAX_LEN ), "Cheat code elements exceeded max!" );
+					contract_assert( ( ( pNewCheatCode->iCodeLength < CHEAT_NAME_MAX_LEN ) ) && "Cheat code elements exceeded max!" );
 
 					pNewCheatCode->pButtonCodes[ pNewCheatCode->iCodeLength ] = g_pInputSystem->StringToButtonCode( pSubKey->GetString() );
 					++pNewCheatCode->iCodeLength;

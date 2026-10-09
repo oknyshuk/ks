@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // hltvtest.cpp: implementation of the CHLTVTestSystem class.
 //
 //////////////////////////////////////////////////////////////////////
-#include "basetypes.h"
-#include "cmd.h"
-#include "convar.h"
+import std;
+import ks.tier1;
 #include "hltvtest.h"
 #include "hltvserver.h"
-#include "host.h"
 
 CHLTVTestSystem *hltvtest = nullptr;
 
@@ -37,7 +31,7 @@ void CHLTVTestSystem::RunFrame()
 
 bool CHLTVTestSystem::StartTest(int nClients, const char *pszAddress)
 {
-	Assert( std::ssize( m_Servers ) == 0 );
+	contract_assert( std::ssize( m_Servers ) == 0 );
 
 	while ( std::ssize( m_Servers ) < nClients )
 	{
@@ -82,84 +76,3 @@ bool CHLTVTestSystem::StopsTest()
 
 	return true;
 }
-
-
-#ifdef _HLTVTEST
-
-CON_COMMAND( tv_test_start, "Starts the GOTV test system" )
-{
-	if ( args.ArgC() < 3 )
-	{
-		Msg( "Usage: tv_test_start <number> <ip:port>\n" );
-		return;
-	}
-
-	int nClients = Q_atoi( args[1] );
-
-	char address[MAX_PATH];
-	
-	if ( args.ArgC() == 3 )
-	{
-		Q_strncpy( address, args[2], MAX_PATH );
-	}
-	else
-	{
-		Q_snprintf( address, MAX_PATH, "%s:%s", args[2], args[4] );
-	}
-
-	// If it's not a single player connection to "localhost", initialize networking & stop listenserver
-	if ( StringHasPrefixCaseSensitive( address, "localhost" ) )
-	{
-		Msg( "GOTV test can't connect to localhost.\n" );
-		return;
-	}
-
-	if ( !hltvtest )
-	{
-		// create new HLTV test system
-		hltvtest = new CHLTVTestSystem();
-	}
-	else
-	{
-		// stop old test
-		hltvtest->StopsTest();
-	}
-	
-	// shutdown anything else
-	Host_Disconnect( false );
-
-	// start networking
-	NET_SetMultiplayer( true );	
-
-	hltvtest->StartTest( nClients, address );
-}
-
-CON_COMMAND( tv_test_retry, "Tell test clients to reconnect" )
-{
-	if ( args.ArgC() < 2 )
-	{
-		Msg( "Usage: tv_test_retry <number>\n" );
-		return;
-	}
-
-	int nClients = Q_atoi( args[1] );
-
-	if ( hltvtest )
-	{
-		hltvtest->RetryTest( nClients );
-	}
-	else
-	{
-		Msg("No test running.\n");
-	}
-}
-
-CON_COMMAND( tv_test_stop, "Stops the GOTV test system" )
-{
-	if ( hltvtest )
-	{
-		hltvtest->StopsTest();
-	}
-}
-
-#endif

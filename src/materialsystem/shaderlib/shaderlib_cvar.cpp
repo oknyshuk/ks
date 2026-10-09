@@ -1,11 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "icvar.h"
-#include "tier1/tier1.h"
+import std;
+import ks.tier1;
 
 void InitShaderLibCVars( CreateInterfaceFn cvarFactory )
 {

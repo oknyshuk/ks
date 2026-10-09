@@ -1,15 +1,12 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PARTICLEPROPERTY_H
-#define PARTICLEPROPERTY_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
+#include "predictable_entity.h"
 
-#include "tier1/intrusive_ptr.h"
+import std;
 #include "globalvars_base.h"
 #include "particles_new.h"
 #include "particle_parse.h"
@@ -130,5 +127,3 @@ private:
 };
 
 #include "particle_property_inlines.h"
-
-#endif // PARTICLEPROPERTY_H

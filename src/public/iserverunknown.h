@@ -1,14 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ISERVERUNKNOWN_H
-#define ISERVERUNKNOWN_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ihandleentity.h"
 
@@ -27,6 +19,3 @@ public:
 	virtual IServerNetworkable*	GetNetworkable() = 0;
 	virtual CBaseEntity*		GetBaseEntity() = 0;
 };
-
-
-#endif // ISERVERUNKNOWN_H

@@ -1,24 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import ks.tier1;
 #include "quakedef.h"
 #include "cdll_int.h"
-#include "draw.h"
 #include "tmessage.h"
 #include "common.h"
-#include "characterset.h"
 #include "mem_fgets.h"
-#include "tier0/icommandline.h"
-#include "tier0/platform.h"
-
-#include "tier0/memalloc.h"
-#define MSGFILE_NAME		0
-#define MSGFILE_TEXT		1
-#define MAX_MESSAGES		600			// I don't know if this table will balloon like every other feature in Half-Life
+import std;
+constexpr auto MSGFILE_NAME = 0;
+constexpr auto MSGFILE_TEXT = 1;
+constexpr auto MAX_MESSAGES = 600; // I don't know if this table will balloon like every other feature in Half-Life
 										// But, for now, I've set this to a reasonable value
 // Defined in other files.
 static characterset_t	g_WhiteSpace;
@@ -30,7 +22,7 @@ int						gMessageTableCount = 0;
 char	gNetworkTextMessageBuffer[MAX_NETMESSAGE][512];
 const char *gNetworkMessageNames[MAX_NETMESSAGE] = { NETWORK_MESSAGE1, NETWORK_MESSAGE2, NETWORK_MESSAGE3, NETWORK_MESSAGE4, NETWORK_MESSAGE5, NETWORK_MESSAGE6 };
 
-client_textmessage_t	gNetworkTextMessage[MAX_NETMESSAGE] = 
+client_textmessage_t	gNetworkTextMessage[MAX_NETMESSAGE] =
 {
 	0, // effect
 	255,255,255,255,
@@ -72,11 +64,11 @@ int IsComment( char *pText )
 {
 	if ( pText )
 	{
-		int length = strlen( pText );
+		int length = std::strlen( pText );
 
 		if ( length >= 2 && pText[0] == '/' && pText[1] == '/' )
 			return 1;
-		
+
 		// No text?
 		if ( length > 0 )
 			return 0;
@@ -156,7 +148,7 @@ int ParseFloats( const char *pText, float *pFloat, int count )
 		if ( pTemp )
 		{
 			// Parse a float
-			pFloat[index] = (float)atof( pTemp );
+			pFloat[index] = (float)std::atof( pTemp );
 			count--;
 			index++;
 		}
@@ -168,7 +160,7 @@ int ParseFloats( const char *pText, float *pFloat, int count )
 	return 0;
 }
 
-int ParseString( char const *pText, char *buf, size_t bufsize )
+int ParseString( char const *pText, char *buf, std::size_t bufsize )
 {
 	const char *pTemp = pText;
 
@@ -176,14 +168,14 @@ int ParseString( char const *pText, char *buf, size_t bufsize )
 	pTemp = SkipText( pTemp );
 	// Skip any whitespace in between
 	pTemp = SkipSpace( pTemp );
-	
+
 	if ( pTemp )
 	{
 		char const *pStart = pTemp;
 		pTemp = SkipText( pTemp );
 
 		int len =  std::min<std::common_type_t<long int, int>>( pTemp - pStart + 1, (int)bufsize - 1 );
-		Q_strncpy( buf, pStart, len );
+		V_strncpy( buf, pStart, len );
 		buf[ len ] = 0;
 		return 1;
 	}
@@ -198,7 +190,7 @@ void TrimSpace( const char *source, char *dest )
 	int start, end, length;
 
 	start = 0;
-	end = strlen( source );
+	end = std::strlen( source );
 
 	while ( source[start] && IsWhiteSpace( source[start] ) )
 		start++;
@@ -211,7 +203,7 @@ void TrimSpace( const char *source, char *dest )
 
 	length = end - start;
 	if ( length > 0 )
-		memcpy( dest, source + start, length );
+		std::memcpy( dest, source + start, length );
 	else
 		length = 0;
 
@@ -227,7 +219,7 @@ int IsToken( const char *pText, const char *pTokenName )
 
 	if ( StringHasPrefix( pText+1, pTokenName ) )
 		return 1;
-	
+
 	return 0;
 }
 
@@ -322,7 +314,7 @@ int ParseDirective( const char *pText )
 		{
 			if ( ParseString( pText, g_pchSkipName, sizeof( g_pchSkipName ) ) )
 			{
-				if ( !g_pchSkipName[ 0 ] || !Q_stricmp( g_pchSkipName, "0" ) )
+				if ( !g_pchSkipName[ 0 ] || !V_stricmp( g_pchSkipName, "0" ) )
 				{
 					gMessageParms.pClearMessage = nullptr;
 				}
@@ -342,7 +334,7 @@ int ParseDirective( const char *pText )
 	return 0;
 }
 
-#define NAME_HEAP_SIZE 16384
+constexpr auto NAME_HEAP_SIZE = 16384;
 
 void TextMessageParse( byte *pMemFile, int fileSize )
 {
@@ -351,12 +343,12 @@ void TextMessageParse( byte *pMemFile, int fileSize )
 	char		 currentName[512], nameHeap[ NAME_HEAP_SIZE ];
 	int			lastNamePos;
 
-	int			mode = MSGFILE_NAME;	// Searching for a message name	
+	int			mode = MSGFILE_NAME;	// Searching for a message name
 	int			lineNumber, filePos, lastLinePos;
 	int			messageCount;
 
 	client_textmessage_t	textMessages[ MAX_MESSAGES ];
-	
+
 	int			i, nameHeapSize, textHeapSize, messageSize;
 	intp   nameOffset;
 
@@ -383,7 +375,7 @@ void TextMessageParse( byte *pMemFile, int fileSize )
 		case MSGFILE_NAME:
 			if ( IsComment( trim ) )	// Skip comment lines
 				break;
-			
+
 			if ( ParseDirective( trim ) )	// Is this a directive "$command"?, if so parse it and break
 				break;
 
@@ -398,13 +390,13 @@ void TextMessageParse( byte *pMemFile, int fileSize )
 				ConDMsg("Unexpected '}' found, line %d\n", lineNumber );
 				return;
 			}
-			Q_strncpy( currentName, trim, sizeof( currentName ) );
+			V_strncpy( currentName, trim, sizeof( currentName ) );
 			break;
-		
+
 		case MSGFILE_TEXT:
 			if ( IsEndOfText( trim ) )
 			{
-				int length = strlen(currentName);
+				int length = std::strlen(currentName);
 
 				// Save name on name heap
 				if ( lastNamePos + length > 8192 )
@@ -412,12 +404,12 @@ void TextMessageParse( byte *pMemFile, int fileSize )
 					ConDMsg("Error parsing file!\n" );
 					return;
 				}
-				Q_strcpy( nameHeap + lastNamePos, currentName );
+				V_strcpy( nameHeap + lastNamePos, currentName );
 
 				// Terminate text in-place in the memory file (it's temporary memory that will be deleted)
 				// If the string starts with #, it's a localization string and we don't
 				// want the \n (or \r) on the end or the Find() lookup will fail (so subtract 2)
-				if ( pCurrentText && pCurrentText[0] && pCurrentText[0] == '#' && lastLinePos > 1 && 
+				if ( pCurrentText && pCurrentText[0] && pCurrentText[0] == '#' && lastLinePos > 1 &&
 					( ( pMemFile[lastLinePos - 2] == '\n' ) || ( pMemFile[lastLinePos - 2] == '\r' ) ) )
 				{
 					pMemFile[ lastLinePos - 2 ] = 0;
@@ -433,9 +425,9 @@ void TextMessageParse( byte *pMemFile, int fileSize )
 				lastNamePos += strlen(currentName) + 1;
 				if ( gMessageParms.pClearMessage )
 				{
-					Q_strncpy( nameHeap + lastNamePos, textMessages[ messageCount ].pClearMessage, Q_strlen( textMessages[ messageCount ].pClearMessage ) + 1 );
+					V_strncpy( nameHeap + lastNamePos, textMessages[ messageCount ].pClearMessage, V_strlen( textMessages[ messageCount ].pClearMessage ) + 1 );
 					textMessages[ messageCount ].pClearMessage = nameHeap + lastNamePos;
-					lastNamePos += Q_strlen( textMessages[ messageCount ].pClearMessage ) + 1;
+					lastNamePos += V_strlen( textMessages[ messageCount ].pClearMessage ) + 1;
 				}
 				textMessages[ messageCount ].pMessage = pCurrentText;
 
@@ -486,17 +478,17 @@ void TextMessageParse( byte *pMemFile, int fileSize )
 	nameHeapSize = lastNamePos;
 	textHeapSize = 0;
 	for ( i = 0; i < messageCount; i++ )
-		textHeapSize += strlen( textMessages[i].pMessage ) + 1;
+		textHeapSize += std::strlen( textMessages[i].pMessage ) + 1;
 
 
 	messageSize = (messageCount * sizeof(client_textmessage_t));
 
 	// Must malloc because we need to be able to clear it after initialization
 	gMessageTable = (client_textmessage_t *)MemAlloc_Alloc( textHeapSize + nameHeapSize + messageSize );
-	
+
 	// Copy table over
-	memcpy( gMessageTable, textMessages, messageSize );
-	
+	std::memcpy( gMessageTable, textMessages, messageSize );
+
 	// Copy Name heap
 	pNameHeap = ((char *)gMessageTable) + messageSize;
 	memcpy( pNameHeap, nameHeap, nameHeapSize );
@@ -512,9 +504,9 @@ void TextMessageParse( byte *pMemFile, int fileSize )
 		{
 			gMessageTable[ i ].pClearMessage += nameOffset;
 		}
-		Q_strcpy( pCurrentText, gMessageTable[i].pMessage );	// Copy text over
+		V_strcpy( pCurrentText, gMessageTable[i].pMessage );	// Copy text over
 		gMessageTable[i].pMessage = pCurrentText;
-		pCurrentText += strlen( pCurrentText ) + 1;
+		pCurrentText += std::strlen( pCurrentText ) + 1;
 	}
 
 #if _DEBUG
@@ -558,7 +550,7 @@ void TextMessageInit( void )
 
 	for ( i = 0; i < MAX_NETMESSAGE; i++ )
 	{
-		gNetworkTextMessage[ i ].pMessage = 
+		gNetworkTextMessage[ i ].pMessage =
 			gNetworkTextMessageBuffer[ i ];
 	}
 }
@@ -567,59 +559,59 @@ void TextMessage_DemoMessage( const char *pszMessage, float fFadeInTime, float f
 {
 	if ( !pszMessage || !pszMessage[0] )
 		return;
-	
+
 	// Restore
 	tm_demomessage = orig_demo_message;
 
-	Q_strncpy( gDemoMessageBuffer, (char *)pszMessage, sizeof( gDemoMessageBuffer ) );
+	V_strncpy( gDemoMessageBuffer, (char *)pszMessage, sizeof( gDemoMessageBuffer ) );
 	tm_demomessage.fadein   = fFadeInTime;
 	tm_demomessage.fadeout  = fFadeOutTime;
 	tm_demomessage.holdtime = fHoldTime;
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *pszMessage - 
-//			*message - 
+// Purpose:
+// Input  : *pszMessage -
+//			*message -
 //-----------------------------------------------------------------------------
 void TextMessage_DemoMessageFull( const char *pszMessage, client_textmessage_t const *message )
 {
-	Assert( message );
+	contract_assert( message );
 	if ( !message )
 		return;
 
 	if ( !pszMessage || !pszMessage[0] )
 		return;
 
-	memcpy( &tm_demomessage, message, sizeof( tm_demomessage ) );
+	std::memcpy( &tm_demomessage, message, sizeof( tm_demomessage ) );
 	tm_demomessage.pMessage = orig_demo_message.pMessage;
 	tm_demomessage.pName = orig_demo_message.pName;
-	Q_strncpy( gDemoMessageBuffer, pszMessage, sizeof( gDemoMessageBuffer ) );
+	V_strncpy( gDemoMessageBuffer, pszMessage, sizeof( gDemoMessageBuffer ) );
 }
 
 
 client_textmessage_t *TextMessageGet( const char *pName )
 {
-	if (!Q_stricmp( pName, DEMO_MESSAGE ))
+	if (!V_stricmp( pName, DEMO_MESSAGE ))
 		return &tm_demomessage;
 
 	// HACKHACK -- add 4 "channels" of network text
-	if (!Q_stricmp( pName, NETWORK_MESSAGE1 ))
+	if (!V_stricmp( pName, NETWORK_MESSAGE1 ))
 		return gNetworkTextMessage;
-	else if (!Q_stricmp( pName, NETWORK_MESSAGE2 ))
+	else if (!V_stricmp( pName, NETWORK_MESSAGE2 ))
 		return gNetworkTextMessage + 1;
-	else if (!Q_stricmp( pName, NETWORK_MESSAGE3 ))
+	else if (!V_stricmp( pName, NETWORK_MESSAGE3 ))
 		return gNetworkTextMessage + 2;
-	else if (!Q_stricmp( pName, NETWORK_MESSAGE4 ))
+	else if (!V_stricmp( pName, NETWORK_MESSAGE4 ))
 		return gNetworkTextMessage + 3;
-	else if (!Q_stricmp( pName, NETWORK_MESSAGE5 ))
+	else if (!V_stricmp( pName, NETWORK_MESSAGE5 ))
 		return gNetworkTextMessage + 4;
-	else if (!Q_stricmp( pName, NETWORK_MESSAGE6 ))
+	else if (!V_stricmp( pName, NETWORK_MESSAGE6 ))
 		return gNetworkTextMessage + 5;
 
 	for ( int i = 0; i < gMessageTableCount; i++ )
 	{
-		if ( !Q_stricmp( pName, gMessageTable[i].pName ) )
+		if ( !V_stricmp( pName, gMessageTable[i].pName ) )
 			return &gMessageTable[i];
 	}
 

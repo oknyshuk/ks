@@ -1,21 +1,11 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef NET_SUPPORT_H
-#define NET_SUPPORT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 
-#include "tier0/dbg.h"
-#include "tier0/icommandline.h"
+import ks.tier1;
 
-#include "tier1/strtools.h"
-#include "tier1/checksum_crc.h"
-#include "tier1/keyvalues.h"
-
-#include "mathlib/mathlib.h"
+import std;
 
 #include "appframework/IAppSystemGroup.h"
 #include "matchmaking/imatchframework.h"
@@ -57,15 +47,15 @@ public:
 	virtual void ReserveServer(
 		const ns_address &netAdrPublic, const ns_address &netAdrPrivate,
 		uint64 nServerReservationCookie, KeyValues *pKVGameSettings,
-		IMatchAsyncOperationCallback *pCallback, IMatchAsyncOperation **ppAsyncOperation ) OVERRIDE;
+		IMatchAsyncOperationCallback *pCallback, IMatchAsyncOperation **ppAsyncOperation ) override;
 
 	// Check server reservation cookie matches cookie held by client
 	virtual bool CheckServerReservation( 
 		const ns_address &netAdrPublic, uint64 nServerReservationCookie, uint32 uiReservationStage,
-		IMatchAsyncOperationCallback *pCallback, IMatchAsyncOperation **ppAsyncOperation ) OVERRIDE;
+		IMatchAsyncOperationCallback *pCallback, IMatchAsyncOperation **ppAsyncOperation ) override;
 
 	virtual bool ServerPing( const ns_address &netAdrPublic,
-		IMatchAsyncOperationCallback *pCallback, IMatchAsyncOperation **ppAsyncOperation ) OVERRIDE;
+		IMatchAsyncOperationCallback *pCallback, IMatchAsyncOperation **ppAsyncOperation ) override;
 
 	// When client event is fired
 	virtual void OnMatchEvent( KeyValues *pEvent );
@@ -80,11 +70,7 @@ public:
 		bf_write *pVoicePayload = nullptr,
 		bool bUseCompression = false );
 
-    virtual ISteamNetworkingUtils *GetSteamNetworkingUtils() OVERRIDE;
-
 public:
 	CNetSupportImpl();
 	~CNetSupportImpl();
 };
-
-#endif // NET_SUPPORT_H

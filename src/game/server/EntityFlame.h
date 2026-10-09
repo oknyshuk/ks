@@ -1,23 +1,18 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef ENTITYFLAME_H
-#define ENTITYFLAME_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ai_planesolver.h"
+#include "baseentity.h"
 
+inline constexpr auto FLAME_DAMAGE_INTERVAL = 0.2f; // How often to deal damage.
+inline constexpr auto FLAME_DIRECT_DAMAGE_PER_SEC = 5.0f;
+inline constexpr auto FLAME_RADIUS_DAMAGE_PER_SEC = 4.0f;
 
-#define FLAME_DAMAGE_INTERVAL			0.2f // How often to deal damage.
-#define FLAME_DIRECT_DAMAGE_PER_SEC		5.0f
-#define FLAME_RADIUS_DAMAGE_PER_SEC		4.0f
+inline constexpr auto FLAME_DIRECT_DAMAGE = ( FLAME_DIRECT_DAMAGE_PER_SEC * FLAME_DAMAGE_INTERVAL );
+inline constexpr auto FLAME_RADIUS_DAMAGE = ( FLAME_RADIUS_DAMAGE_PER_SEC * FLAME_DAMAGE_INTERVAL );
 
-#define FLAME_DIRECT_DAMAGE ( FLAME_DIRECT_DAMAGE_PER_SEC * FLAME_DAMAGE_INTERVAL )
-#define FLAME_RADIUS_DAMAGE ( FLAME_RADIUS_DAMAGE_PER_SEC * FLAME_DAMAGE_INTERVAL )
-
-#define FLAME_MAX_LIFETIME_ON_DEAD_NPCS	10.0f
+inline constexpr auto FLAME_MAX_LIFETIME_ON_DEAD_NPCS = 10.0f;
 
 class CAI_Link;
 
@@ -79,5 +74,3 @@ protected:
 	std::vector< CAI_Link * > m_DangerLinks;
 	Obstacle_t m_hObstacle;
 };
-
-#endif // ENTITYFLAME_H

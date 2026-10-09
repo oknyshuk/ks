@@ -1,3 +1,4 @@
+#pragma once
 //
 // - This is the fog header to include for vertex shaders if the shader does support pixel-shader-blended vertex fog.
 //

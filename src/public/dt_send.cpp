@@ -1,20 +1,10 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+import ks.math;
 #include "dt_send.h"
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include "tier0/dbg.h"
-#include "dt_utlvector_common.h"
+import std;
 #include "networkvar.h"
-
-
 
 static CNonModifiedPointerProxy *s_pNonModifiedPointerProxyHead = nullptr;
 
@@ -176,13 +166,13 @@ void SendProxy_AngleToFloat( const SendProp *pProp, const void *pStruct, const v
 	angle = *((float*)pData);
 	pOut->m_Float = anglemod( angle );
 
-	Assert( IsFinite( pOut->m_Float ) );
+	contract_assert( IsFinite( pOut->m_Float ) );
 }
 
 void SendProxy_FloatToFloat( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID)
 {
 	pOut->m_Float = *((float*)pData);
-	Assert( IsFinite( pOut->m_Float ) );
+	contract_assert( IsFinite( pOut->m_Float ) );
 }
 
 void SendProxy_QAngles( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
@@ -196,7 +186,7 @@ void SendProxy_QAngles( const SendProp *pProp, const void *pStruct, const void *
 void SendProxy_VectorToVector( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID)
 {
 	Vector& v = *(Vector*)pData;
-	Assert( v.IsValid() );
+	contract_assert( v.IsValid() );
 	pOut->m_Vector[0] = v[0];
 	pOut->m_Vector[1] = v[1];
 	pOut->m_Vector[2] = v[2];
@@ -205,7 +195,7 @@ void SendProxy_VectorToVector( const SendProp *pProp, const void *pStruct, const
 void SendProxy_VectorXYToVectorXY( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID)
 {
 	Vector& v = *(Vector*)pData;
-	Assert( v.IsValid() );
+	contract_assert( v.IsValid() );
 	pOut->m_Vector[0] = v[0];
 	pOut->m_Vector[1] = v[1];
 }
@@ -229,7 +219,7 @@ void SendProxy_Int32ToInt32( const SendProp *pProp, const void *pStruct, const v
 void SendProxy_Color32ToInt32( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	//Always send/receive as little endian to preserve byte order across network byte swaps
-	pOut->m_Int = LittleDWord( *((uint32 *)pData) );
+	pOut->m_Int = ( *((uint32 *)pData) );
 }
 
 void SendProxy_Int64ToInt64( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID)
@@ -299,7 +289,7 @@ float AssignRangeMultiplier( int nBits, double range )
 		// in the valid range when given the highest value.
 		float multipliers[] = { 0.9999, 0.99, 0.9, 0.8, 0.7 };
 		int i;
-		for ( i=0; i < ARRAYSIZE( multipliers ); i++ )
+		for ( i=0; i < std::size( multipliers ); i++ )
 		{
 			fHighLowMul = (float)( iHighValue / range ) * multipliers[i];
 			if ( (unsigned long)(fHighLowMul * range) > iHighValue ||
@@ -312,10 +302,10 @@ float AssignRangeMultiplier( int nBits, double range )
 			}
 		}
 
-		if ( i == ARRAYSIZE( multipliers ) )
+		if ( i == std::size( multipliers ) )
 		{
 			// Doh! We seem to be unable to represent this range.
-			Assert( false );
+			contract_assert( false );
 			return 0;
 		}
 	}
@@ -342,7 +332,7 @@ SendProp SendPropFloat(
 
 	if ( varProxy == SendProxy_FloatToFloat )
 	{
-		Assert( sizeofVar == 0 || sizeofVar == 4 );
+		contract_assert( sizeofVar == 0 || sizeofVar == 4 );
 	}
 
 	if ( nBits <= 0 || nBits == 32 )
@@ -405,7 +395,7 @@ SendProp SendPropVector(
 
 	if(varProxy == SendProxy_VectorToVector)
 	{
-		Assert(sizeofVar == sizeof(Vector));
+		contract_assert( sizeofVar == sizeof(Vector) );
 	}
 
 	if ( nBits == 32 )
@@ -443,7 +433,7 @@ SendProp SendPropVectorXY(
 
 	if(varProxy == SendProxy_VectorXYToVectorXY)
 	{
-		Assert( sizeofVar == sizeof(Vector) || sizeofVar == sizeof(Vector2D) );
+		contract_assert( sizeofVar == sizeof(Vector) || sizeofVar == sizeof(Vector2D) );
 	}
 
 	if ( nBits == 32 )
@@ -519,7 +509,7 @@ SendProp SendPropAngle(
 
 	if(varProxy == SendProxy_AngleToFloat)
 	{
-		Assert(sizeofVar == 4);
+		contract_assert( sizeofVar == 4 );
 	}
 
 	if ( nBits == 32 )
@@ -569,7 +559,7 @@ SendProp SendPropQAngles(
 
 	if(varProxy == SendProxy_AngleToFloat)
 	{
-		Assert(sizeofVar == 4);
+		contract_assert( sizeofVar == 4 );
 	}
 
 	if ( nBits == 32 )
@@ -637,7 +627,7 @@ SendProp SendPropInt(
 		}
 		else
 		{
-			Assert(!"SendPropInt var has invalid size");
+			contract_assert( !"SendPropInt var has invalid size" );
 			varProxy = SendProxy_Int8ToInt32;	// safest one...
 		}
 	}
@@ -645,7 +635,7 @@ SendProp SendPropInt(
 	// Figure out # of bits if the want us to.
 	if ( nBits <= 0 )
 	{
-		Assert( sizeofVar == 1 || sizeofVar == 2 || sizeofVar == 4 );
+		contract_assert( sizeofVar == 1 || sizeofVar == 2 || sizeofVar == 4 );
 		nBits = sizeofVar * 8;
 	}
 
@@ -689,7 +679,7 @@ SendProp SendPropString(
 {
 	SendProp ret;
 
-	Assert( bufferLen <= DT_MAX_STRING_BUFFERSIZE ); // You can only have strings with 8-bits worth of length.
+	contract_assert( bufferLen <= DT_MAX_STRING_BUFFERSIZE ); // You can only have strings with 8-bits worth of length.
 	
 	ret.m_Type = DPT_String;
 	ret.m_pVarName = pVarName;
@@ -713,7 +703,7 @@ SendProp SendPropArray3(
 {
 	SendProp ret;
 
-	Assert( elements <= MAX_ARRAY_ELEMENTS );
+	contract_assert( elements <= MAX_ARRAY_ELEMENTS );
 
 	ret.m_Type = DPT_DataTable;
 	ret.m_pVarName = pVarName;
@@ -858,7 +848,7 @@ SendProp::~SendProp()
 
 int SendProp::GetNumArrayLengthBits() const
 {
-	Assert( GetType() == DPT_Array );
+	contract_assert( GetType() == DPT_Array );
 	return Q_log2( GetNumElements() ) + 1;
 }
 
@@ -894,4 +884,3 @@ void SendTable::Construct( SendProp *pProps, int nProps, const char *pNetTableNa
 	m_bHasBeenWritten = false;
 	m_bHasPropsEncodedAgainstCurrentTickCount = false;
 }
-

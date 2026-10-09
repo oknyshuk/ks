@@ -1,20 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
 
-#ifndef IOCCLUSIONSYSTEM_H
-#define	IOCCLUSIONSYSTEM_H
-
-
-
-class Vector;
-class VMatrix;
 struct model_t;
-class VPlane;
 
 
 //-----------------------------------------------------------------------------
@@ -47,6 +36,3 @@ public:
 // Singleton accessor
 //-----------------------------------------------------------------------------
 IOcclusionSystem *OcclusionSystem();
-
-
-#endif // IOCCLUSIONSYSTEM_H

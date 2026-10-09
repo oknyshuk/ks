@@ -1,13 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.core;
 #include "cs_bot.h"
 #include "weapon_c4.h"
 #include "cs_simple_hostage.h"
@@ -47,7 +44,7 @@ void PickupHostageState::OnUpdate( CCSBot *me )
 		me->UseEnvironment();
 	}
 
-	CHostage *hostage = assert_cast<CHostage *>( m_entity.Get() );
+	CHostage *hostage = static_cast<CHostage *>( m_entity.Get() );
 
 	if ( hostage && hostage->IsFollowingSomeone() )
 	{
@@ -66,7 +63,7 @@ void PickupHostageState::OnExit( CCSBot *me )
 	me->SetDisposition( CCSBot::ENGAGE_AND_INVESTIGATE );
 	me->ClearLookAt();
 
-	CHostage *hostage = assert_cast<CHostage *>( m_entity.Get() );
+	CHostage *hostage = static_cast<CHostage *>( m_entity.Get() );
 
 	if ( hostage && hostage->IsFollowing( me ) )
 		me->IncreaseHostageEscortCount();

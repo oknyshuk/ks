@@ -1,5 +1,8 @@
-#ifndef ROCKETUIIMPL_H
-#define ROCKETUIIMPL_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include <rocketui/rmlui.h>
 
 // Include Source engine headers first - they define Assert macro
 #include "appframework/ilaunchermgr.h"
@@ -7,13 +10,10 @@
 #include "rocketui/rocketui.h"
 #include "shaderapi/IShaderDevice.h"
 #include "shaderapi/ishaderapi.h"
-#include <utility>
+import std;
 #include "tier3/tier3.h"
 
 #include "rocketrender.h"
-#include <rocketui/rmlui.h>
-#include <atomic>
-#include <unordered_set>
 
 class DeviceCallbacks;
 
@@ -154,5 +154,3 @@ public:
     m_pRocketUI->SetScreenSize(width, height);
   }
 };
-
-#endif // ROCKETUIIMPL_H

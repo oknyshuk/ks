@@ -1,25 +1,15 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#if !defined( CLIENTENTITYLIST_H )
-#define CLIENTENTITYLIST_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/dbg.h"
+import ks.tier1;
 #include "icliententitylist.h"
 #include "iclientunknown.h"
-#include "tier1/slot_pool.h"
-#include "utlvector.h"
 #include "icliententityinternal.h"
 #include "ispatialpartition.h"
 #include "cdll_util.h"
 #include "entitylist_base.h"
-#include <list>
-#include <map>
+import std;
 
 class C_Beam;
 class C_BaseViewModel;
@@ -33,7 +23,7 @@ class C_BaseEntity;
 							   
 class IClientEntityListener;
 
-abstract_class C_BaseEntityClassList
+class C_BaseEntityClassList
 {
 public:
 	C_BaseEntityClassList();
@@ -293,7 +283,3 @@ public:
 	//virtual void OnEntitySpawned( C_BaseEntity *pEntity ) {};
 	virtual void OnEntityDeleted( C_BaseEntity *pEntity ) {};
 };
-
-
-#endif // CLIENTENTITYLIST_H
-

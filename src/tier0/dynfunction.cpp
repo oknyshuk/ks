@@ -1,24 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Shared library loading and symbol lookup.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#include "pch_tier0.h"
-#include "tier0/dynfunction.h"
+import ks.core;
 
-#include <dlfcn.h>
-typedef void *LibraryHandle;
-#define LoadLibraryHandle(libname) dlopen(libname, RTLD_NOW)
-#define CloseLibraryHandle(handle) dlclose(handle)
-#define LookupInLibraryHandle(handle, fn) dlsym(handle, fn)
+// First include standard libraries
+import std;
 
-#ifndef DEBUG
-static inline void dbgdynfn(const char *fmt, ...) {}
-#else
-#define dbgdynfn printf
-#endif
+
+
+typedef ks::platform::library *LibraryHandle;
 
 class CSharedLibraryCache
 {
@@ -34,15 +26,14 @@ public:
 		CSharedLibraryItem(LibraryHandle handle, const char *name)
 		{
 			m_handle = handle;
-			m_name = new char[strlen(name) + 1];
+			m_name = new char[std::strlen(name) + 1];
 			m_next = nullptr;
-			strcpy(m_name, name);
+			std::strcpy(m_name, name);
 		}
 
 		~CSharedLibraryItem()
 		{
-			dbgdynfn("CDynamicFunction: Closing library '%s' (%p)\n", m_name, (void *) m_handle);
-			CloseLibraryHandle(m_handle);
+			ks::platform::close_library(m_handle);
 			delete[] m_name;
 			delete m_next;
 		}
@@ -60,8 +51,7 @@ public:
 		CSharedLibraryItem *item = GetCacheItem(name);
 		if (item == nullptr)
 		{
-			LibraryHandle lib = LoadLibraryHandle(name);
-			dbgdynfn("CDynamicFunction: Loading library '%s' (%p)\n", name, (void *) lib);
+			LibraryHandle lib = ks::platform::load_library(name, nullptr);
 			if (lib == nullptr)
 				return nullptr;
 
@@ -77,7 +67,7 @@ public:
 		CSharedLibraryItem *item = GetCacheItem(name);
 		if (item)
 		{
-			assert(item == m_pList);
+			contract_assert( item == m_pList );
 			m_pList = item->m_next;
 			item->m_next = nullptr;
 			delete item;
@@ -96,7 +86,7 @@ private:
 		CSharedLibraryItem *item = m_pList;
 		while (item)
 		{
-			if (strcmp(item->m_name, name) == 0)
+			if (std::strcmp(item->m_name, name) == 0)
 			{
 				// move this item to the front of the list, since there will
 				//  probably be a big pile of these lookups in a row
@@ -125,12 +115,10 @@ void *VoidFnPtrLookup_Tier0(const char *libname, const char *fn, void *fallback)
 	void *retval = nullptr;
 	if (lib != nullptr)
 	{
-		retval = LookupInLibraryHandle(lib, fn);
-		dbgdynfn("CDynamicFunction: Lookup of '%s' in '%s': %p\n", fn, libname, retval);
+		retval = ks::platform::library_symbol(lib, fn);
 	}
 
 	if (retval == nullptr)
 		retval = fallback;
 	return retval;
 }
-

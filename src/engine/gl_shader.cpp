@@ -1,41 +1,19 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// main precompiled header for client rendering code
 
-#include "render_pch.h"
-#include "gl_shader.h"
-#include "const.h"
-#include "gl_cvars.h"
-#include "gl_lightmap.h"
-#include "decal_private.h"
-#include "gl_model_private.h"
-#include "r_local.h"
-#include "materialproxyfactory.h"
-#include "enginestats.h"
-#include "editor_sendcommand.h"
-#include "gl_matsysiface.h"
-#include "vmodes.h"
+import ks.tier1;
 #include "materialsystem/imaterialsystemhardwareconfig.h"
-#include "tier1/strtools.h"
-#include "filesystem.h"
-#include "traceinit.h"
-#include "sys_dll.h"
-#include "tier0/icommandline.h"
-#include "materialsystem/idebugtextureinfo.h"
-#include "common.h"
-#include "iregistry.h"
-#include "materialsystem/materialsystem_config.h"
-#include "ivideomode.h"
-#include "modes.h"
-#include "ivideomode.h"
-#include "tier2/tier2.h"
 
-#include "igame.h"
+import std;
+#include "gl_shader.h"
+#include "sysexternal.h"
+#include "gl_shader.h"
+#include "materialproxyfactory.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/idebugtextureinfo.h"
+
 
 static CMaterialProxyFactory s_MaterialProxyFactory;
 
@@ -96,7 +74,7 @@ void Shader_Disconnect( void )
 
 void Shader_SwapBuffers( void )
 {
-	assert( materials );
+	contract_assert( materials );
 	materials->SwapBuffers();
 }
 

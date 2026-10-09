@@ -1,23 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Client-side CBasePlayer
 
-#ifndef C_STUDIOFLEX_H
-#define C_STUDIOFLEX_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
-#pragma once
-
 
 #include "c_baseanimatingoverlay.h"
 #include "sceneentity_shared.h"
 
-#include "utlvector.h"
+import std;
 
 //-----------------------------------------------------------------------------
 // Purpose: Item in list of loaded scene files
@@ -48,7 +41,6 @@ class [[= ks::reflect::NetTable{ .name = "DT_BaseFlex" } ]]
 public:
 	DECLARE_CLIENTCLASS();
 	DECLARE_PREDICTABLE();
-	DECLARE_INTERPOLATION();
 
 					C_BaseFlex();
 	virtual			~C_BaseFlex();
@@ -246,9 +238,3 @@ inline bool C_BaseFlex::HasSceneEvents() const
 EXTERN_RECV_TABLE(DT_BaseFlex);
 
 float *GetVisemeWeights( int phoneme );
-
-#endif // C_STUDIOFLEX_H
-
-
-
-

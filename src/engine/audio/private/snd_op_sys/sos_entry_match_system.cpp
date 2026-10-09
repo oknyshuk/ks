@@ -1,9 +1,25 @@
- //============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
-#include "audio_pch.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+import std;
+
+
+import ks.tier1;
+
+#include "sound.h"
+#include "soundservice.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+#include "snd_wave_source.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+
+#include "audio/private/posix_stubs.h"
 
 #include "sos_system.h"
 #include "sos_entry_match_system.h"
@@ -105,7 +121,7 @@ void CSosEntryMatchList::Update()
 	{
 		if ( !( m_Free & bit ) )
 		{
-			Assert( !m_vEntryMatchList[i]->m_bFree );
+			contract_assert( !m_vEntryMatchList[i]->m_bFree );
 			if(  m_vEntryMatchList[i]->m_bTimed )
 			{
 				if ( m_vEntryMatchList[i]->m_flDuration > -1.0 && m_vEntryMatchList[i]->m_flStartTime > -1.0 )
@@ -150,7 +166,7 @@ int CSosEntryMatchList::GetFreeEntryIndex() const
 	{
 		if ( m_vEntryMatchList[i]->m_bFree )
 		{
-			Assert( m_Free & bit );
+			contract_assert( m_Free & bit );
 			m_vEntryMatchList[i]->m_bFree = false;
 			m_Free &= ~bit;
 			return i;
@@ -161,7 +177,7 @@ int CSosEntryMatchList::GetFreeEntryIndex() const
 
 CSosManagedEntryMatch *CSosEntryMatchList::GetEntryFromIndex( int nIndex ) const
 {
-	Assert( IsValidIndex( nIndex ) );
+	contract_assert( IsValidIndex( nIndex ) );
 
 	if ( IsValidIndex( nIndex ) )
 	{
@@ -202,7 +218,7 @@ bool CSosEntryMatchList::HasAMatch( CSosEntryMatch *pEntryMatch ) const
 	{
 		if ( !( m_Free & bit ) && m_vEntryMatchList[i]->m_bActive )
 		{
-			Assert( !m_vEntryMatchList[i]->m_bFree );
+			contract_assert( !m_vEntryMatchList[i]->m_bFree );
 			if ( m_vEntryMatchList[i]->IsAMatch( pEntryMatch ) )
 			{
 				return true;

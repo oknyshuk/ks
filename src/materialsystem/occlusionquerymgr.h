@@ -1,31 +1,16 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#ifndef OCCLUSIONQUERY_H
-#define OCCLUSIONQUERY_H
-
-
-#ifndef MATSYS_INTERNAL
-#error "This file is private to the implementation of IMaterialSystem/IMaterialSystemInternal"
-#endif
-
-
-
-#include <mutex>
-#include <deque>
-#include <vector>
+import std;
 #include "shaderapi/ishaderapi.h"
-
 
 class IMatRenderContextInternal;
 
 // because the GPU/driver can buffer frames we need to allow several queries to be in flight.
 // The game wants to reiusse the queries every frame so we buffer them here to avoid
 // having to block waiting for a query to be available for reissue.
-#define COUNT_OCCLUSION_QUERY_STACK 4
+inline constexpr auto COUNT_OCCLUSION_QUERY_STACK = 4;
 
 //-----------------------------------------------------------------------------
 // Dictionary of all known materials
@@ -104,6 +89,3 @@ private:
 // Singleton
 //-----------------------------------------------------------------------------
 extern COcclusionQueryMgr *g_pOcclusionQueryMgr;
-
-
-#endif // OCCLUSIONQUERY_H

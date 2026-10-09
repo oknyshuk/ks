@@ -1,12 +1,41 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -93,12 +122,12 @@ bool CFunc_LOD::KeyValue( const char *szKeyName, const char *szValue )
 	// NOTE: Backward compat
 	if ( FStrEq(szKeyName, "DisappearDist") )
 	{
-		m_nDisappearMinDist = atoi(szValue);
+		m_nDisappearMinDist = std::atoi(szValue);
 		m_nDisappearMaxDist = m_nDisappearMinDist + 800;
 	}
 	else if (FStrEq(szKeyName, "Solid"))
 	{
-		if (atoi(szValue) != 0)
+		if (std::atoi(szValue) != 0)
 		{
 			AddSolidFlags( FSOLID_NOT_SOLID );
 		}
@@ -110,4 +139,3 @@ bool CFunc_LOD::KeyValue( const char *szKeyName, const char *szValue )
 
 	return true;
 }
-			  

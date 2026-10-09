@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef BONE_SETUP_H
-#define BONE_SETUP_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "studio.h"
 #include "cmodel.h"
-#include <bitset>
-
+import std;
 
 class CBoneToWorld;
 class CIKContext;
@@ -22,7 +14,7 @@ class IPoseDebugger;
 
 // This provides access to networked arrays, so if this code actually changes a value, 
 // the entity is marked as changed.
-abstract_class IParameterAccess
+class IParameterAccess
 {
 public:
 	virtual float GetParameter( int iParam ) = 0;
@@ -387,7 +379,8 @@ const char *Studio_GetDefaultSurfaceProps( CStudioHdr *pstudiohdr );
 float Studio_GetMass( CStudioHdr *pstudiohdr );
 const char *Studio_GetKeyValueText( const CStudioHdr *pStudioHdr, int iSequence );
 
-FORWARD_DECLARE_HANDLE( memhandle_t );
+struct memhandle_t__;
+using memhandle_t = memhandle_t__ *;
 struct bonecacheparams_t
 {
 	CStudioHdr		*pStudioHdr;
@@ -477,5 +470,3 @@ void ComputeTwistBones(
 	const Quaternion &qBaseInv,
 	const float *pflWeights,
 	const Quaternion *pqTwistBinds );
-
-#endif // BONE_SETUP_H

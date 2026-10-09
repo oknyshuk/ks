@@ -1,14 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef RAGDOLLEXPLOSIONENUMERATOR_H
-#define RAGDOLLEXPLOSIONENUMERATOR_H
-
+import ks.math;
 #include "ispatialpartition.h"
+import std;
+#include "networkvar.h"
+
+class C_BaseEntity;
 
 //Enumator class for ragdolls being affected by explosive forces
 class CRagdollExplosionEnumerator : public IPartitionEnumerator
@@ -29,5 +28,3 @@ public:
 	float	m_flMagnitude;
 	float	m_flRadius;
 };
-
-#endif // RAGDOLLEXPLOSIONENUMERATOR_H

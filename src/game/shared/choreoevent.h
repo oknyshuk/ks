@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CHOREOEVENT_H
-#define CHOREOEVENT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class CChoreoActor;
 class CChoreoChannel;
@@ -18,8 +12,8 @@ namespace ks { class byte_reader; class byte_writer; class text_writer; }
 class IChoreoStringPool;
 
 
-#include "tier1/utlstring.h"
-#include "tier1/utlvector.h"
+import std;
+import ks.tier1;
 #include "expressionsample.h"
 #include "networkvar.h"
 #include "localflexcontroller.h"
@@ -357,7 +351,7 @@ public:
 	bool			RestoreFromBuffer( ks::byte_reader& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool );
 
 	// Accessors
-	EVENTTYPE		GetType( void );
+	EVENTTYPE		GetType( void ) const;
 	void			SetType( EVENTTYPE type );
 
 	void			SetName( const char *name );
@@ -711,5 +705,3 @@ public:
 	bool			m_bActive:1;
 	bool			m_bPlayOverScript:1;
 };
-
-#endif // CHOREOEVENT_H

@@ -1,9 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #include "quakedef.h"
 #include "precache.h"
 
@@ -26,9 +23,9 @@ char const *GetFlagString( int flags )
 	{
 		if ( !first )
 		{
-			Q_strncat( ret, " | ", sizeof( ret ), COPY_ALL_CHARACTERS );
+			V_strncat( ret, " | ", sizeof( ret ), COPY_ALL_CHARACTERS );
 		}
-		Q_strncat( ret, "RES_FATALIFMISSING", sizeof( ret ), COPY_ALL_CHARACTERS );
+		V_strncat( ret, "RES_FATALIFMISSING", sizeof( ret ), COPY_ALL_CHARACTERS );
 		first = false;
 	}
 
@@ -36,9 +33,9 @@ char const *GetFlagString( int flags )
 	{
 		if ( !first )
 		{
-			Q_strncat( ret, " | ", sizeof( ret ), COPY_ALL_CHARACTERS );
+			V_strncat( ret, " | ", sizeof( ret ), COPY_ALL_CHARACTERS );
 		}
-		Q_strncat( ret, "RES_PRELOAD", sizeof( ret ), COPY_ALL_CHARACTERS );
+		V_strncat( ret, "RES_PRELOAD", sizeof( ret ), COPY_ALL_CHARACTERS );
 		first = false;
 	}
 
@@ -60,10 +57,6 @@ CPrecacheItem::CPrecacheItem( void )
 void CPrecacheItem::ResetStats( void )
 {
 	m_uiRefcount = 0;
-#if DEBUG_PRECACHE
-	m_flFirst = 0.0f;
-	m_flMostRecent = 0.0f;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -72,13 +65,6 @@ void CPrecacheItem::ResetStats( void )
 void CPrecacheItem::Reference( void )
 {
 	m_uiRefcount++;
-#if DEBUG_PRECACHE
-	m_flMostRecent = realtime;
-	if ( !m_flFirst )
-	{
-		m_flFirst = realtime;
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -105,7 +91,7 @@ model_t *CPrecacheItem::GetModel( void )
 	if ( !u.model )
 		return nullptr;
 
-	Assert( m_nType == TYPE_MODEL );
+	contract_assert( m_nType == TYPE_MODEL );
 
 	Reference();
 
@@ -121,7 +107,7 @@ char const *CPrecacheItem::GetGeneric( void )
 	if ( !u.generic )
 		return nullptr;
 
-	Assert( m_nType == TYPE_GENERIC );
+	contract_assert( m_nType == TYPE_GENERIC );
 
 	Reference();
 
@@ -137,7 +123,7 @@ CSfxTable *CPrecacheItem::GetSound( void )
 	if ( !u.sound )
 		return nullptr;
 
-	Assert( m_nType == TYPE_SOUND );
+	contract_assert( m_nType == TYPE_SOUND );
 
 	Reference();
 
@@ -153,7 +139,7 @@ char const *CPrecacheItem::GetName( void )
 	if ( !u.name )
 		return nullptr;
 
-	Assert( m_nType == TYPE_SOUND );
+	contract_assert( m_nType == TYPE_SOUND );
 
 	Reference();
 
@@ -169,7 +155,7 @@ char const *CPrecacheItem::GetDecal( void )
 	if ( !u.name )
 		return nullptr;
 
-	Assert( m_nType == TYPE_DECAL );
+	contract_assert( m_nType == TYPE_DECAL );
 
 	Reference();
 
@@ -227,11 +213,7 @@ void CPrecacheItem::SetDecal( char const *decalname )
 //-----------------------------------------------------------------------------
 float CPrecacheItem::GetFirstReference( void )
 {
-#if DEBUG_PRECACHE
-	return m_flFirst;
-#else
 	return 0;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -240,11 +222,7 @@ float CPrecacheItem::GetFirstReference( void )
 //-----------------------------------------------------------------------------
 float CPrecacheItem::GetMostRecentReference( void )
 {
-#if DEBUG_PRECACHE
-	return m_flMostRecent;
-#else
 	return 0;
-#endif
 }
 
 //-----------------------------------------------------------------------------

@@ -1,14 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef TOGGLETEXTUREPROXY
-#define TOGGLETEXTUREPROXY
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "materialsystem/imaterialproxy.h"
+
+class C_BaseEntity;
 
 class IMaterial;
 class IMaterialVar;
@@ -34,5 +30,3 @@ private:
 	IMaterialVar *m_TextureFrameNumVar;
 	bool m_WrapAnimation;
 };
-
-#endif // TOGGLETEXTUREPROXY

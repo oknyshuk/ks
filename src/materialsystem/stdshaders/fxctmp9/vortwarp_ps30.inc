@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $FLASHLIGHT != 0 ) && ( $NUM_LIGHTS > 0 ) 
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
@@ -21,7 +22,7 @@ private:
 public:
 	void SetBASETEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBASETEXTURE = i;
 #ifdef _DEBUG
 		m_bBASETEXTURE = true;
@@ -29,7 +30,7 @@ public:
 	}
 	void SetBASETEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBASETEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBASETEXTURE = true;
@@ -43,7 +44,7 @@ private:
 public:
 	void SetCUBEMAP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCUBEMAP = i;
 #ifdef _DEBUG
 		m_bCUBEMAP = true;
@@ -51,7 +52,7 @@ public:
 	}
 	void SetCUBEMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCUBEMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCUBEMAP = true;
@@ -65,7 +66,7 @@ private:
 public:
 	void SetDIFFUSELIGHTING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDIFFUSELIGHTING = i;
 #ifdef _DEBUG
 		m_bDIFFUSELIGHTING = true;
@@ -73,7 +74,7 @@ public:
 	}
 	void SetDIFFUSELIGHTING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDIFFUSELIGHTING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDIFFUSELIGHTING = true;
@@ -87,7 +88,7 @@ private:
 public:
 	void SetNORMALMAPALPHAENVMAPMASK( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nNORMALMAPALPHAENVMAPMASK = i;
 #ifdef _DEBUG
 		m_bNORMALMAPALPHAENVMAPMASK = true;
@@ -95,7 +96,7 @@ public:
 	}
 	void SetNORMALMAPALPHAENVMAPMASK( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nNORMALMAPALPHAENVMAPMASK = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNORMALMAPALPHAENVMAPMASK = true;
@@ -109,7 +110,7 @@ private:
 public:
 	void SetHALFLAMBERT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nHALFLAMBERT = i;
 #ifdef _DEBUG
 		m_bHALFLAMBERT = true;
@@ -117,7 +118,7 @@ public:
 	}
 	void SetHALFLAMBERT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHALFLAMBERT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHALFLAMBERT = true;
@@ -131,7 +132,7 @@ private:
 public:
 	void SetFLASHLIGHT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLASHLIGHT = i;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -139,7 +140,7 @@ public:
 	}
 	void SetFLASHLIGHT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLASHLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLASHLIGHT = true;
@@ -153,7 +154,7 @@ private:
 public:
 	void SetTRANSLUCENT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nTRANSLUCENT = i;
 #ifdef _DEBUG
 		m_bTRANSLUCENT = true;
@@ -161,7 +162,7 @@ public:
 	}
 	void SetTRANSLUCENT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTRANSLUCENT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTRANSLUCENT = true;
@@ -206,7 +207,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bBASETEXTURE && m_bCUBEMAP && m_bDIFFUSELIGHTING && m_bNORMALMAPALPHAENVMAPMASK && m_bHALFLAMBERT && m_bFLASHLIGHT && m_bTRANSLUCENT;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 80 * m_nBASETEXTURE ) + ( 160 * m_nCUBEMAP ) + ( 320 * m_nDIFFUSELIGHTING ) + ( 640 * m_nNORMALMAPALPHAENVMAPMASK ) + ( 1280 * m_nHALFLAMBERT ) + ( 2560 * m_nFLASHLIGHT ) + ( 5120 * m_nTRANSLUCENT ) + 0;
 	}
@@ -222,7 +223,7 @@ private:
 public:
 	void SetWRITEWATERFOGTODESTALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nWRITEWATERFOGTODESTALPHA = i;
 #ifdef _DEBUG
 		m_bWRITEWATERFOGTODESTALPHA = true;
@@ -230,7 +231,7 @@ public:
 	}
 	void SetWRITEWATERFOGTODESTALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWRITEWATERFOGTODESTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWRITEWATERFOGTODESTALPHA = true;
@@ -244,7 +245,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -252,7 +253,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -266,7 +267,7 @@ private:
 public:
 	void SetWARPINGIN( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nWARPINGIN = i;
 #ifdef _DEBUG
 		m_bWARPINGIN = true;
@@ -274,7 +275,7 @@ public:
 	}
 	void SetWARPINGIN( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWARPINGIN = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWARPINGIN = true;
@@ -288,7 +289,7 @@ private:
 public:
 	void SetAMBIENT_LIGHT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nAMBIENT_LIGHT = i;
 #ifdef _DEBUG
 		m_bAMBIENT_LIGHT = true;
@@ -296,7 +297,7 @@ public:
 	}
 	void SetAMBIENT_LIGHT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nAMBIENT_LIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bAMBIENT_LIGHT = true;
@@ -310,7 +311,7 @@ private:
 public:
 	void SetNUM_LIGHTS( int i )
 	{
-		Assert( i >= 0 && i <= 4 );
+		contract_assert( i >= 0 && i <= 4 );
 		m_nNUM_LIGHTS = i;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -318,7 +319,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -355,7 +356,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bWRITEWATERFOGTODESTALPHA && m_bPIXELFOGTYPE && m_bWARPINGIN && m_bAMBIENT_LIGHT && m_bNUM_LIGHTS;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nWRITEWATERFOGTODESTALPHA ) + ( 2 * m_nPIXELFOGTYPE ) + ( 4 * m_nWARPINGIN ) + ( 8 * m_nAMBIENT_LIGHT ) + ( 16 * m_nNUM_LIGHTS ) + 0;
 	}

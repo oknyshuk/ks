@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef AMBIENTGENERIC_H
-#define AMBIENTGENERIC_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 // runtime pitch shift and volume fadein/out structure
 
@@ -57,9 +53,9 @@ typedef struct dynpitchvol
 
 } dynpitchvol_t;
 
-#define SF_AMBIENT_SOUND_EVERYWHERE			1
-#define SF_AMBIENT_SOUND_START_SILENT		16
-#define SF_AMBIENT_SOUND_NOT_LOOPING		32
+inline constexpr auto SF_AMBIENT_SOUND_EVERYWHERE = 1;
+inline constexpr auto SF_AMBIENT_SOUND_START_SILENT = 16;
+inline constexpr auto SF_AMBIENT_SOUND_NOT_LOOPING = 32;
 
 class CAmbientGeneric : public CPointEntity
 {
@@ -105,6 +101,3 @@ public:
 	EHANDLE m_hSoundSource;	// entity from which the sound comes
 	int		m_nSoundSourceEntIndex; // In case the entity goes away before we finish stopping the sound...
 };
-
-#endif // AMBIENTGENERIC_H
-

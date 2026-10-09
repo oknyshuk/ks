@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import std;
+import ks.core;
 #include "simple_physics.h"
-#include "tier0/dbg.h"
 
 CSimplePhysics::CSimplePhysics()
 {
@@ -33,7 +29,7 @@ void CSimplePhysics::Simulate(
 {
 	// Figure out how many time steps to run.
 	m_flPredictedTime += dt;
-	int newTimeStep = (int)ceil( m_flPredictedTime / m_flTimeStep );
+	int newTimeStep = (int)std::ceil( m_flPredictedTime / m_flTimeStep );
 	int nTimeSteps = newTimeStep - m_iCurTimeStep;
 	for( int iTimeStep=0; iTimeStep < nTimeSteps; iTimeStep++ )
 	{
@@ -45,7 +41,7 @@ void CSimplePhysics::Simulate(
 			// Apply forces.
 			Vector vAccel;
 			pHelper->GetNodeForces( pNodes, iNode, &vAccel );
- 			Assert( vAccel.IsValid() ); 
+ 			contract_assert( vAccel.IsValid() ); 
 
 			Vector vPrevPos = pNode->m_vPos;
 			pNode->m_vPos = pNode->m_vPos + (pNode->m_vPos - pNode->m_vPrevPos) * flDamp + vAccel * m_flTimeStepMul;
@@ -65,5 +61,3 @@ void CSimplePhysics::Simulate(
 		VectorLerp( pNode->m_vPrevPos, pNode->m_vPos, flInterpolant, pNode->m_vPredicted );
 	}
 }
-
-

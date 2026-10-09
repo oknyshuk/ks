@@ -1,21 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
-#if !defined( IVRENDERVIEW_H )
-#define IVRENDERVIEW_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "basetypes.h"
-#include "mathlib/vplane.h"
-#include "interface.h"
+import std;
+import ks.tier1;
 #include "materialsystem/imaterialsystem.h"
 #include "const.h"
-#include "mathlib/vertexcolor.h"
-#include "tier1/refcount.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -27,7 +17,6 @@ class IMaterial;
 struct model_t;
 class IClientRenderable;
 class IMatRenderContext;
-class CVolumeCuller;
 
 
 //-----------------------------------------------------------------------------
@@ -198,7 +187,7 @@ public:
 };
 
 
-#define MAX_VIS_LEAVES	32
+inline constexpr int MAX_VIS_LEAVES = 32;
 //-----------------------------------------------------------------------------
 // Purpose: Interface to client .dll to set up a rendering pass over world
 //  The client .dll can call Render multiple times to overlay one or more world
@@ -365,8 +354,6 @@ public:
 };
 
 // change this when the new version is incompatable with the old
-#define VENGINE_RENDERVIEW_INTERFACE_VERSION	"VEngineRenderView014"
+inline constexpr const char *VENGINE_RENDERVIEW_INTERFACE_VERSION = "VEngineRenderView014";
 
 extern IVRenderView *render;
-
-#endif // IVRENDERVIEW_H

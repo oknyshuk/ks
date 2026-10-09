@@ -1,26 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#if !defined( IGAMEMOVEMENT_H )
-#define IGAMEMOVEMENT_H
-
-
-#include "mathlib/vector.h"
-#include "interface.h"
+import std;
+import ks.tier1;
 #include "imovehelper.h"
 #include "const.h"
+#include "shared_classnames.h"
+
+class CBasePlayer;
+class CBaseEntity;
 
 //-----------------------------------------------------------------------------
 // Name of the class implementing the game movement.
 //-----------------------------------------------------------------------------
 
-#define INTERFACENAME_GAMEMOVEMENT	"GameMovement001"
+inline constexpr const char *INTERFACENAME_GAMEMOVEMENT = "GameMovement001";
 
 //-----------------------------------------------------------------------------
 // Forward declarations.
@@ -85,14 +80,6 @@ inline const Vector &CMoveData::GetAbsOrigin() const
 	return m_vecAbsOrigin;
 }
 
-#if !defined( CLIENT_DLL ) && defined( _DEBUG )
-// We only ever want this code path on the server side in a debug build
-//  and you have to uncomment the code below and rebuild to have the test operate.
-//#define PLAYER_GETTING_STUCK_TESTING
-
-#endif
-
-#if !defined( PLAYER_GETTING_STUCK_TESTING )
 
 // This is implemented with a more exhaustive test in gamemovement.cpp.  We check if the origin being requested is
 //  inside solid, which it never should be
@@ -101,14 +88,12 @@ inline void CMoveData::SetAbsOrigin( const Vector &vec )
 	m_vecAbsOrigin = vec;
 }
 
-#endif
-
 
 //-----------------------------------------------------------------------------
 // Purpose: The basic player movement interface
 //-----------------------------------------------------------------------------
 
-abstract_class IGameMovement
+class IGameMovement
 {
 public:
 	virtual			~IGameMovement( void ) {}
@@ -118,7 +103,7 @@ public:
 	virtual void	Reset( void ) = 0;
 	virtual void	StartTrackPredictionErrors( CBasePlayer *pPlayer ) = 0;
 	virtual void	FinishTrackPredictionErrors( CBasePlayer *pPlayer ) = 0;
-	virtual void	DiffPrint( PRINTF_FORMAT_STRING char const *fmt, ... ) = 0;
+	virtual void	DiffPrint( char const *fmt, ... ) = 0;
 
 	// Allows other parts of the engine to find out the normal and ducked player bbox sizes
 	virtual Vector const&	GetPlayerMins( bool ducked ) const = 0;
@@ -131,6 +116,3 @@ public:
 
 	virtual void SetupMovementBounds( CMoveData *pMove ) = 0;
 };
-
-
-#endif // IGAMEMOVEMENT_H

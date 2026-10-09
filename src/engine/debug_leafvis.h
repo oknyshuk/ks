@@ -1,23 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef DEBUG_LEAFVIS_H
-#define DEBUG_LEAFVIS_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import std;
+import ks.math;
 
 extern void LeafVisBuild( const Vector& p );
 extern void LeafVisDraw( void );
-
-
-#endif // DEBUG_LEAFVIS_H

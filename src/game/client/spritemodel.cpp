@@ -1,18 +1,15 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "cdll_client_int.h"
 #include "enginesprite.h"
 #include "hud.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
 #include "c_sprite.h"
-#include "tier1/callqueue.h"
-#include "tier1/keyvalues.h"
 #include "tier2/tier2.h"
 #include "filesystem.h"
 
@@ -221,9 +218,9 @@ bool CEngineSprite::Init( const char *pName )
 	m_hBIKMaterial = BIKMATERIAL_INVALID;
 	m_width = m_height = m_numFrames = 1;
 
-	const char *pExt = Q_GetFileExtension( pName );
-	bool bIsAVI = pExt && !Q_stricmp( pExt, "avi" );
-	bool bIsBIK = pExt && !Q_stricmp( pExt, "bik" );
+	const char *pExt = V_GetFileExtension( pName );
+	bool bIsAVI = pExt && !V_stricmp( pExt, "avi" );
+	bool bIsBIK = pExt && !V_stricmp( pExt, "bik" );
 	if ( bIsAVI )
 	{
 		m_hAVIMaterial = avi->CreateAVIMaterial( pName, pName, "GAME" );
@@ -259,23 +256,23 @@ bool CEngineSprite::Init( const char *pName )
 		char pTemp[MAX_PATH];
 		char pMaterialName[MAX_PATH];
 		char pMaterialPath[MAX_PATH];
-		Q_StripExtension( pName, pTemp, sizeof(pTemp) );
-		Q_strlower( pTemp );
-		Q_FixSlashes( pTemp, '/' );
+		V_StripExtension( pName, pTemp, sizeof(pTemp) );
+		V_strlower( pTemp );
+		V_FixSlashes( pTemp, '/' );
 
 		// Check to see if this is a UNC-specified material name
 		bool bIsUNC = pTemp[0] == '/' && pTemp[1] == '/' && pTemp[2] != '/';
 		if ( !bIsUNC )
 		{
-			Q_strncpy( pMaterialName, "materials/", sizeof(pMaterialName) );
-			Q_strncat( pMaterialName, pTemp, sizeof(pMaterialName), COPY_ALL_CHARACTERS );
+			V_strncpy( pMaterialName, "materials/", sizeof(pMaterialName) );
+			V_strncat( pMaterialName, pTemp, sizeof(pMaterialName), COPY_ALL_CHARACTERS );
 		}
 		else
 		{
-			Q_strncpy( pMaterialName, pTemp, sizeof(pMaterialName) );
+			V_strncpy( pMaterialName, pTemp, sizeof(pMaterialName) );
 		}
-		Q_strncpy( pMaterialPath, pMaterialName, sizeof(pMaterialPath) );
-		Q_SetExtension( pMaterialPath, ".vmt", sizeof(pMaterialPath) );
+		V_strncpy( pMaterialPath, pMaterialName, sizeof(pMaterialPath) );
+		V_SetExtension( pMaterialPath, ".vmt", sizeof(pMaterialPath) );
 
 		for ( int i = 0; i < kRenderModeCount; ++i )
 		{	
@@ -297,7 +294,7 @@ bool CEngineSprite::Init( const char *pName )
 			}
 
 			// strip possible materials/
-			Q_snprintf( pMaterialPath, sizeof(pMaterialPath), "%s_rendermode_%d", pMaterialName + ( bIsUNC ? 0 : 10 ), i );
+			V_snprintf( pMaterialPath, sizeof(pMaterialPath), "%s_rendermode_%d", pMaterialName + ( bIsUNC ? 0 : 10 ), i );
 			KeyValues *pMaterialKV = kv->MakeCopy();
 			pMaterialKV->SetInt( "$spriteRenderMode", i );
 			m_material[i] = g_pMaterialSystem->FindProceduralMaterial( pMaterialPath, TEXTURE_GROUP_CLIENT_EFFECTS, pMaterialKV );
@@ -414,8 +411,8 @@ void CEngineSprite::GetTexCoordRange( float *pMinU, float *pMinV, float *pMaxU, 
 //-----------------------------------------------------------------------------
 void CEngineSprite::SetColor( float r, float g, float b )
 {
-	Assert( (r >= 0.0) && (g >= 0.0) && (b >= 0.0) );
-	Assert( (r <= 1.0) && (g <= 1.0) && (b <= 1.0) );
+	contract_assert( (r >= 0.0) && (g >= 0.0) && (b >= 0.0) );
+	contract_assert( (r <= 1.0) && (g <= 1.0) && (b <= 1.0) );
 	m_hudSpriteColor[0] = r;
 	m_hudSpriteColor[1] = g;
 	m_hudSpriteColor[2] = b;
@@ -453,7 +450,7 @@ IMaterial *CEngineSprite::GetMaterial( RenderMode_t nRenderMode, int nFrame )
 	}
 	
 	IMaterial *pMaterial = m_material[nRenderMode];
-	Assert( pMaterial );
+	contract_assert( pMaterial );
 	if ( pMaterial == nullptr )
 		return nullptr;
 
@@ -537,7 +534,6 @@ void CEngineSprite::DrawFrame( RenderMode_t nRenderMode, int frame, int x, int y
 void CEngineSprite::DrawFrameOfSize( RenderMode_t nRenderMode, int frame, int x, int y, int iWidth, int iHeight, const wrect_t *prcSubRect )
 {
 	// FIXME: If we ever call this with AVIs, need to have it call GetTexCoordRange and make that work
-	Assert( !IsAVI() && !IsBIK() );
 
 	float fLeft = 0;
 	float fRight = 1;

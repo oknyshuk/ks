@@ -1,17 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_GOALENTITY_H
-#define AI_GOALENTITY_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
 
 #include "ai_basenpc.h"
-#include "utlvector.h"
-
+import std;
 
 //-----------------------------------------------------------------------------
 //
@@ -191,5 +186,3 @@ inline const char *CAI_GoalEntity::GetConceptModifiers()
 }
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_GOALENTITY_H

@@ -1,18 +1,34 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Implements the server side of a steam jet particle system entity.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Implements the server side of a steam jet particle system entity.
+
+import std;
+import ks.math;
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "smokestack.h"
 #include "particle_light.h"
 #include "filesystem.h"
-
 
 //Networking
 IMPLEMENT_REFLECT_SERVERCLASS( CSmokeStack, DT_SmokeStack )
@@ -33,7 +49,7 @@ IMPLEMENT_REFLECT_DATAMAP( CSmokeStack )
 //-----------------------------------------------------------------------------
 CSmokeStack::CSmokeStack()
 {
-	memset( &m_AmbientLight, 0, sizeof(m_AmbientLight) ); 
+	std::memset( &m_AmbientLight, 0, sizeof(m_AmbientLight) ); 
 	memset( &m_DirLight, 0, sizeof(m_DirLight) ); 
 
 	IMPLEMENT_NETWORKVAR_CHAIN( &m_AmbientLight );
@@ -109,32 +125,32 @@ bool CSmokeStack::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if( stricmp( szKeyName, "Wind" ) == 0 )
 	{
-		sscanf( szValue, "%f %f %f", &m_vWind.GetForModify().x, &m_vWind.GetForModify().y, &m_vWind.GetForModify().z );
+		std::sscanf( szValue, "%f %f %f", &m_vWind.GetForModify().x, &m_vWind.GetForModify().y, &m_vWind.GetForModify().z );
 		return true;
 	}
 	else if( stricmp( szKeyName, "WindAngle" ) == 0 )
 	{
-		m_WindAngle = atoi( szValue );
+		m_WindAngle = std::atoi( szValue );
 		RecalcWindVector();
 		return true;
 	}
 	else if( stricmp( szKeyName, "WindSpeed" ) == 0 )
 	{
-		m_WindSpeed = atoi( szValue );
+		m_WindSpeed = std::atoi( szValue );
 		RecalcWindVector();
 		return true;
 	}
 	else if ( stricmp( szKeyName, "SmokeMaterial" ) == 0 )
 	{
 		// Make sure we have a vmt extension.
-		if ( Q_stristr( szValue, ".vmt" ) )
+		if ( V_stristr( szValue, ".vmt" ) )
 		{
 			m_strMaterialModel = AllocPooledString( szValue );
 		}
 		else
 		{
 			char str[512];
-			Q_snprintf( str, sizeof( str ), "%s.vmt", szValue );
+			V_snprintf( str, sizeof( str ), "%s.vmt", szValue );
 			m_strMaterialModel = AllocPooledString( str );
 		}
 		
@@ -142,21 +158,21 @@ bool CSmokeStack::KeyValue( const char *szKeyName, const char *szValue )
 		char szStrippedName[512];
 
 		m_iMaterialModel = PrecacheModel( pName );
-		Q_StripExtension( pName, szStrippedName, Q_strlen(pName)+1 );
+		V_StripExtension( pName, szStrippedName, V_strlen(pName)+1 );
 
-		int iLength = Q_strlen( szStrippedName );
+		int iLength = V_strlen( szStrippedName );
 		szStrippedName[iLength-1] = '\0';
 
 		int iCount = 1;
 		char str[512];
-		Q_snprintf( str, sizeof( str ), "%s%d.vmt", szStrippedName, iCount );
+		V_snprintf( str, sizeof( str ), "%s%d.vmt", szStrippedName, iCount );
 		
 		while ( filesystem->FileExists( UTIL_VarArgs( "materials/%s", str ) ) )
 		{
 			PrecacheModel( str );
 			iCount++;
 			
-			Q_snprintf( str, sizeof( str ), "%s%d.vmt", szStrippedName, iCount );
+			V_snprintf( str, sizeof( str ), "%s%d.vmt", szStrippedName, iCount );
 		}
 
 		return true;
@@ -206,10 +222,8 @@ void CSmokeStack::InputTurnOff( inputdata_t &inputdata )
 void CSmokeStack::RecalcWindVector()
 {
 	m_vWind = Vector(  
-		cos( DEG2RAD( (float)m_WindAngle ) ) * m_WindSpeed, 
-		sin( DEG2RAD( (float)m_WindAngle ) ) * m_WindSpeed,
+		std::cos( DEG2RAD( (float)m_WindAngle ) ) * m_WindSpeed, 
+		std::sin( DEG2RAD( (float)m_WindAngle ) ) * m_WindSpeed,
 		0 );
 	
 }
-
-

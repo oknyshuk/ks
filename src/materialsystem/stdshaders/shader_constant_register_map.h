@@ -1,11 +1,10 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Purpose: Provide convenient mapping for shader constants
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef C_CODE_HACK
+// Purpose: Provide convenient mapping for shader constants
+
+#ifndef __cplusplus
 #include "common_vertexlitgeneric_dx9.h"
 #endif
 
@@ -57,7 +56,7 @@
 #define PSREG_FLESH_SUBSURFACE_PARAMS			PSREG_CONSTANT_44
 #define PSREG_FLESH_SUBSURFACE_MODULATION		PSREG_CONSTANT_45
 
-#ifndef C_CODE_HACK
+#ifndef __cplusplus
 //for fxc code, map the constants to register names.
 #define PSREG_CONSTANT_00	c0
 #define PSREG_CONSTANT_01	c1

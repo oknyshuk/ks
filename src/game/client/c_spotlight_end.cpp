@@ -1,11 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "dlight.h"
@@ -22,7 +25,6 @@ class [[= ks::reflect::NetTable{ .name = "DT_SpotlightEnd" } ]]
 public:
 	DECLARE_CLASS( C_SpotlightEnd, C_BaseEntity );
 	DECLARE_CLIENTCLASS();
-	DECLARE_INTERPOLATION();
 
 	C_SpotlightEnd();
 
@@ -114,7 +116,7 @@ void C_SpotlightEnd::ClientThink(void)
 	if ( !m_pDynamicLight || (m_pDynamicLight->key != index) )
 	{
 		m_pDynamicLight = effects->CL_AllocDlight( index );
-		assert (m_pDynamicLight);
+		contract_assert( m_pDynamicLight );
 	}
 
 	//m_pDynamicLight->flags = DLIGHT_NO_MODEL_ILLUMINATION;

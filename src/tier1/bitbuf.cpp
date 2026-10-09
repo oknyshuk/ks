@@ -1,26 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "bitbuf.h"
+import ks.tier1;
 #include "coordsize.h"
-#include "mathlib/vector.h"
-#include "mathlib/mathlib.h"
-#include "tier1/strtools.h"
-
-#ifndef NDEBUG
-static volatile char const *pDebugString;
-#define DEBUG_LINK_CHECK pDebugString = "tier1.lib built debug!"
-#else
-#define DEBUG_LINK_CHECK
-#endif
-
-#define FAST_BIT_SCAN 0
-
+import std;
 
 static BitBufErrorHandler g_BitBufErrorHandler = 0;
 
@@ -81,7 +64,6 @@ CBitWriteMasksInit g_BitWriteMasksInit;
 
 bf_write::bf_write()
 {
-	DEBUG_LINK_CHECK;
 	m_pData = nullptr;
 	m_nDataBytes = 0;
 	m_nDataBits = -1; // set to -1 so we generate overflow on any operation
@@ -93,7 +75,6 @@ bf_write::bf_write()
 
 bf_write::bf_write( const char *pDebugName, void *pData, int nBytes, int nBits )
 {
-	DEBUG_LINK_CHECK;
 	m_bAssertOnOverflow = true;
 	m_pDebugName = pDebugName;
 	StartWriting( pData, nBytes, 0, nBits );
@@ -109,9 +90,8 @@ bf_write::bf_write( void *pData, int nBytes, int nBits )
 void bf_write::StartWriting( void *pData, int nBytes, int iStartBit, int nBits )
 {
 	// Make sure it's dword aligned and padded.
-	DEBUG_LINK_CHECK;
-	Assert( (nBytes % 4) == 0 );
-	Assert(((uintp)pData & 3) == 0);
+	contract_assert( (nBytes % 4) == 0 );
+	contract_assert( ((uintp)pData & 3) == 0 );
 
 	// The writing code will overrun the end of the buffer if it isn't dword aligned, so truncate to force alignment
 	nBytes &= ~3;
@@ -125,7 +105,7 @@ void bf_write::StartWriting( void *pData, int nBytes, int iStartBit, int nBits )
 	}
 	else
 	{
-		Assert( nBits <= nBytes*8 );
+		contract_assert( nBits <= nBytes*8 );
 		m_nDataBits = nBits;
 	}
 
@@ -168,27 +148,12 @@ void bf_write::SeekToBit( int bitPos )
 void bf_write::WriteSBitLong( int data, int numbits )
 {
 	// Do we have a valid # of bits to encode with?
-	Assert( numbits >= 1 );
+	contract_assert( numbits >= 1 );
 
 	// Note: it does this wierdness here so it's bit-compatible with regular integer data in the buffer.
 	// (Some old code writes direct integers right into the buffer).
 	if(data < 0)
 	{
-#ifdef _DEBUG
-	if( numbits < 32 )
-	{
-		// Make sure it doesn't overflow.
-
-		if( data < 0 )
-		{
-			Assert( data >= -(BitForBitnum(numbits-1)) );
-		}
-		else
-		{
-			Assert( data < (BitForBitnum(numbits-1)) );
-		}
-	}
-#endif
 
 		WriteUBitLong( (unsigned int)(0x80000000 + data), numbits - 1, false );
 		WriteOneBit( 1 );
@@ -368,7 +333,7 @@ void bf_write::WriteVarInt64( uint64 data )
 			}
 		}
 
-		AssertFatalMsg( false, "Can't get here." );
+		contract_assert( false && "Can't get here." );
 
 		size10: target[9] = static_cast<uint8>((part2 >>  7) | 0x80);
 		size9 : target[8] = static_cast<uint8>((part2      ) | 0x80);
@@ -445,9 +410,6 @@ void bf_write::WriteBitLong(unsigned int data, int numbits, bool bSigned)
 
 bool bf_write::WriteBits(const void *pInData, int nBits)
 {
-#if defined( BB_PROFILING )
-	VPROF( "bf_write::WriteBits" );
-#endif
 
 	unsigned char *pIn = (unsigned char*)pInData;
 	int nBitsLeft = nBits;
@@ -456,7 +418,6 @@ bool bf_write::WriteBits(const void *pInData, int nBits)
 	if ( (m_iCurBit+nBits) > m_nDataBits )
 	{
 		SetOverflowFlag();
-		CallErrorHandler( BITBUFERROR_BUFFER_OVERRUN, GetDebugName() );
 		return false;
 	}
 
@@ -476,7 +437,7 @@ bool bf_write::WriteBits(const void *pInData, int nBits)
 			int numbytes = nBitsLeft >> 3; 
 			int numbits = numbytes << 3;
 
-			Q_memcpy( m_pData+(m_iCurBit>>3), pIn, numbytes );
+			V_memcpy( m_pData+(m_iCurBit>>3), pIn, numbytes );
 			pIn += numbytes;
 			nBitsLeft -= numbits;
 			m_iCurBit += numbits;
@@ -484,7 +445,7 @@ bool bf_write::WriteBits(const void *pInData, int nBits)
 		else 
 		{
 			const uint32 iBitsRight = (m_iCurBit & 31);
-			Assert( iBitsRight > 0 ); // should not be aligned, otherwise it would have been handled before
+			contract_assert( iBitsRight > 0 ); // should not be aligned, otherwise it would have been handled before
 			const uint32 iBitsLeft = 32 - iBitsRight; 	
 			const int iBitsChanging = 32 + iBitsLeft; // how many bits are changed during one step (not necessary written meaningful)
 			unsigned int iDWord = m_iCurBit >> 5;
@@ -495,7 +456,7 @@ bool bf_write::WriteBits(const void *pInData, int nBits)
 			// copy in DWORD blocks
 			while(nBitsLeft >= iBitsChanging )
 			{
-				uint32 curData = LittleDWord( *(uint32*)pIn );
+				uint32 curData = ( *(uint32*)pIn );
 				pIn += sizeof(uint32);
 
 				outWord |= curData << iBitsRight;
@@ -514,7 +475,7 @@ bool bf_write::WriteBits(const void *pInData, int nBits)
 			// write remaining DWORD 
 			if( nBitsLeft >= 32 )
 			{
-				WriteUBitLong( LittleDWord(*((uint32*)pIn)), 32, false );
+				WriteUBitLong( (*((uint32*)pIn)), 32, false );
 				pIn += sizeof(uint32);
 				nBitsLeft -= 32;
 			}
@@ -569,9 +530,6 @@ void bf_write::WriteBitAngle( float fAngle, int numbits )
 
 void bf_write::WriteBitCoordMP( const float f, EBitCoordType coordType )
 {
-#if defined( BB_PROFILING )
-	VPROF( "bf_write::WriteBitCoordMP" );
-#endif
 	bool bIntegral = ( coordType == kCW_Integral );
 	bool bLowPrecision = ( coordType == kCW_LowPrecision );  
 
@@ -632,11 +590,8 @@ void bf_write::WriteBitCoordMP( const float f, EBitCoordType coordType )
 
 void bf_write::WriteBitCellCoord( const float f, int bits, EBitCoordType coordType )
 {
-#if defined( BB_PROFILING )
-	VPROF( "bf_write::WriteBitCellCoord" );
-#endif
-	Assert( f >= 0.0f ); // cell coords can't be negative
-	Assert( f < ( 1 << bits ) );
+	contract_assert( f >= 0.0f ); // cell coords can't be negative
+	contract_assert( f < ( 1 << bits ) );
 
 	bool bIntegral = ( coordType == kCW_Integral );
 	bool bLowPrecision = ( coordType == kCW_LowPrecision );  
@@ -660,9 +615,6 @@ void bf_write::WriteBitCellCoord( const float f, int bits, EBitCoordType coordTy
 
 void bf_write::WriteBitCoord(const float f)
 {
-#if defined( BB_PROFILING )
-	VPROF( "bf_write::WriteBitCoord" );
-#endif
 	int		signbit = (f <= -COORD_RESOLUTION);
 	int		intval = (int)abs(f);
 	int		fractval = abs((int)(f*COORD_DENOMINATOR)) & (COORD_DENOMINATOR-1);
@@ -697,8 +649,8 @@ void bf_write::WriteBitFloat(float val)
 {
 	int32 intVal;
 
-	Assert(sizeof(int32) == sizeof(float));
-	Assert(sizeof(float) == 4);
+	contract_assert( sizeof(int32) == sizeof(float) );
+	contract_assert( sizeof(float) == 4 );
 
 	intVal = *((int32*)&val);
 	WriteUBitLong( intVal, 32 );
@@ -860,7 +812,6 @@ bool bf_write::WriteString(const wchar_t *pStr)
 
 old_bf_read::old_bf_read()
 {
-	DEBUG_LINK_CHECK;
 	m_pData = nullptr;
 	m_nDataBytes = 0;
 	m_nDataBits = -1; // set to -1 so we overflow on any operation
@@ -886,7 +837,7 @@ old_bf_read::old_bf_read( const char *pDebugName, const void *pData, int nBytes,
 void old_bf_read::StartReading( const void *pData, int nBytes, int iStartBit, int nBits )
 {
 	// Make sure we're dword aligned.
-	Assert(((uintp)pData & 3) == 0);
+	contract_assert( ((uintp)pData & 3) == 0 );
 
 	m_pData = (unsigned char*)pData;
 	m_nDataBytes = nBytes;
@@ -897,7 +848,7 @@ void old_bf_read::StartReading( const void *pData, int nBytes, int iStartBit, in
 	}
 	else
 	{
-		Assert( nBits <= nBytes*8 );
+		contract_assert( nBits <= nBytes*8 );
 		m_nDataBits = nBits;
 	}
 
@@ -944,9 +895,6 @@ unsigned int old_bf_read::CheckReadUBitLong(int numbits)
 
 void old_bf_read::ReadBits(void *pOutData, int nBits)
 {
-#if defined( BB_PROFILING )
-	VPROF( "bf_write::ReadBits" );
-#endif
 
 	unsigned char *pOut = (unsigned char*)pOutData;
 	int nBitsLeft = nBits;
@@ -1003,9 +951,6 @@ unsigned int old_bf_read::PeekUBitLong( int numbits )
 {
 	unsigned int r;
 	int i, nBitValue;
-#ifdef BIT_VERBOSE
-	int nShifts = numbits;
-#endif
 
 	old_bf_read savebf;
 
@@ -1024,10 +969,6 @@ unsigned int old_bf_read::PeekUBitLong( int numbits )
 	}
 	
 	*this = savebf;
-
-#ifdef BIT_VERBOSE
-	Con_Printf( "PeekBitLong:  %i %i\n", nShifts, (unsigned int)r );
-#endif
 
 	return r;
 }
@@ -1056,7 +997,6 @@ inline int old_bf_read::CountRunOfZeros()
 	int bits = 0;
 	if ( m_iCurBit + 32 < m_nDataBits )
 	{
-#if !FAST_BIT_SCAN
 		while (true)
 		{
 			int value = (m_pData[m_iCurBit >> 3] & g_BitMask[m_iCurBit & 7]);
@@ -1065,25 +1005,6 @@ inline int old_bf_read::CountRunOfZeros()
 				return bits;
 			++bits;
 		}
-#else
-		while (true)
-		{
-			int value = (m_pData[m_iCurBit >> 3] & g_TrailingMask[m_iCurBit & 7]);
-			if ( !value )
-			{
-				int zeros = (8-(m_iCurBit&7));
-				bits += zeros;
-				m_iCurBit += zeros;
-			}
-			else
-			{
-				int zeros = CountTrailingZeros(value) - (m_iCurBit & 7);
-				m_iCurBit += zeros + 1;
-				bits += zeros;
-				return bits;
-			}
-		}
-#endif
 	}
 	else
 	{
@@ -1100,16 +1021,16 @@ unsigned int old_bf_read::ReadUBitVar()
 	{
 		case 16:
 			ret = ( ret & 15 ) | ( ReadUBitLong( 4 ) << 4 );
-			Assert( ret >= 16);
+			contract_assert( ret >= 16 );
 			break;
 				
 		case 32:
 			ret = ( ret & 15 ) | ( ReadUBitLong( 8 ) << 4 );
-			Assert( ret >= 256);
+			contract_assert( ret >= 256 );
 			break;
 		case 48:
 			ret = ( ret & 15 ) | ( ReadUBitLong( 32 - 4 ) << 4 );
-			Assert( ret >= 4096 );
+			contract_assert( ret >= 4096 );
 			break;
 	}
 	return ret;
@@ -1139,7 +1060,7 @@ uint32 old_bf_read::ReadVarInt32()
 		{
 			// If we get here it means that the fifth bit had its
 			// high bit set, which implies corrupt data.
-			Assert( 0 );
+			contract_assert( 0 );
 			return result;
 		}
 		b = ReadUBitLong( 8 );
@@ -1182,9 +1103,6 @@ unsigned int old_bf_read::ReadBitLong(int numbits, bool bSigned)
 // Basic Coordinate Routines (these contain bit-field size AND fixed point scaling constants)
 float old_bf_read::ReadBitCoord (void)
 {
-#if defined( BB_PROFILING )
-	VPROF( "bf_write::ReadBitCoord" );
-#endif
 	int		intval=0,fractval=0,signbit=0;
 	float	value = 0.0;
 
@@ -1225,9 +1143,6 @@ float old_bf_read::ReadBitCoord (void)
 
 float old_bf_read::ReadBitCoordMP( EBitCoordType coordType )
 {
-#if defined( BB_PROFILING )
-	VPROF( "bf_write::ReadBitCoordMP" );
-#endif
 	bool bIntegral = ( coordType == kCW_Integral );
 	bool bLowPrecision = ( coordType == kCW_LowPrecision );  
 
@@ -1296,9 +1211,6 @@ float old_bf_read::ReadBitCoordMP( EBitCoordType coordType )
 
 float old_bf_read::ReadBitCellCoord( int bits, EBitCoordType coordType )
 {
-#if defined( BB_PROFILING )
-	VPROF( "bf_write::ReadBitCoordMP" );
-#endif
 	bool bIntegral = ( coordType == kCW_Integral );
 	bool bLowPrecision = ( coordType == kCW_LowPrecision );  
 
@@ -1382,7 +1294,7 @@ void old_bf_read::ReadBitVec3Normal( Vector& fa )
 
 	float fafafbfb = fa[0] * fa[0] + fa[1] * fa[1];
 	if (fafafbfb < 1.0f)
-		fa[2] = sqrt( 1.0f - fafafbfb );
+		fa[2] = std::sqrt( 1.0f - fafafbfb );
 	else
 		fa[2] = 0.0f;
 
@@ -1439,7 +1351,7 @@ int64 old_bf_read::ReadLongLong()
 float old_bf_read::ReadFloat()
 {
 	float ret;
-	Assert( sizeof(ret) == 4 );
+	contract_assert( sizeof(ret) == 4 );
 	ReadBits(&ret, 32);
 
 	// Swap the float, since ReadBits reads raw data
@@ -1455,7 +1367,7 @@ bool old_bf_read::ReadBytes(void *pOut, int nBytes)
 
 bool old_bf_read::ReadString( char *pStr, int maxLen, bool bLine, int *pOutNumChars )
 {
-	Assert( maxLen != 0 );
+	contract_assert( maxLen != 0 );
 
 	bool bTooSmall = false;
 	int iChar = 0;
@@ -1479,7 +1391,7 @@ bool old_bf_read::ReadString( char *pStr, int maxLen, bool bLine, int *pOutNumCh
 	}
 
 	// Make sure it's null-terminated.
-	Assert( iChar < maxLen );
+	contract_assert( iChar < maxLen );
 	pStr[iChar] = 0;
 
 	if ( pOutNumChars )
@@ -1490,7 +1402,7 @@ bool old_bf_read::ReadString( char *pStr, int maxLen, bool bLine, int *pOutNumCh
 
 bool old_bf_read::ReadWString( wchar_t *pStr, int maxLen, bool bLine, int *pOutNumChars )
 {
-	Assert( maxLen != 0 );
+	contract_assert( maxLen != 0 );
 
 	bool bTooSmall = false;
 	int iChar = 0;
@@ -1514,7 +1426,7 @@ bool old_bf_read::ReadWString( wchar_t *pStr, int maxLen, bool bLine, int *pOutN
 	}
 
 	// Make sure it's null-terminated.
-	Assert( iChar < maxLen );
+	contract_assert( iChar < maxLen );
 	pStr[iChar] = 0;
 
 	if ( pOutNumChars )
@@ -1561,5 +1473,3 @@ void old_bf_read::ExciseBits( int startbit, int bitstoremove )
 	m_nDataBits -= bitstoremove;
 	m_nDataBytes = m_nDataBits >> 3;
 }
-
-

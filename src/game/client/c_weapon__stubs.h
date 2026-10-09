@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef C_WEAPON__STUBS_H
-#define C_WEAPON__STUBS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "client_class.h"
 #include "reflect_predmap.h"
@@ -36,5 +30,3 @@
 	};																\
 	IMPLEMENT_REFLECT_CLIENTCLASS( C_##className, DT_##className, C##className )	\
 	STUB_WEAPON_CLASS_IMPLEMENT( entityName, C_##className );
-
-#endif // C_WEAPON__STUBS_H

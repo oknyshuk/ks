@@ -1,22 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef WEAPON_FLASHBANG_H
-#define WEAPON_FLASHBANG_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "weapon_basecsgrenade.h"
-
 
 #ifdef CLIENT_DLL
 	#define CFlashbang C_Flashbang
 #endif
-
 
 //-----------------------------------------------------------------------------
 // Fragmentation grenades
@@ -43,6 +35,3 @@ public:
 
 	CFlashbang( const CFlashbang & ) {}
 };
-
-
-#endif // WEAPON_FLASHBANG_H

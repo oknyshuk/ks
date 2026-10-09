@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2002, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2002 Valve Corporation
 
-#ifndef LIGHTMAPPEDGENERIC_DX9_HELPER_H
-#define LIGHTMAPPEDGENERIC_DX9_HELPER_H
-
-#include <string.h>
+import std;
 #include "BaseVSShader.h"
 #include "shaderlib/commandbuilder.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -27,7 +20,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct LightmappedGeneric_DX9_Vars_t
 {
-	LightmappedGeneric_DX9_Vars_t() { memset( this, 0xFF, sizeof(LightmappedGeneric_DX9_Vars_t) ); }
+	LightmappedGeneric_DX9_Vars_t() { std::memset( this, 0xFF, sizeof(LightmappedGeneric_DX9_Vars_t) ); }
 
 	int m_nBaseTexture;
 	int m_nBaseTextureFrame;
@@ -169,5 +162,3 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params,
 void DrawLightmappedGeneric_DX9_FastPath( int *dynVSIdx, int *dynPSIdx, CBaseVSShader *pShader, IMaterialVar** params, 
 										 IShaderDynamicAPI *pShaderAPI, 
 										 LightmappedGeneric_DX9_Vars_t &info, CBasePerMaterialContextData **pContextDataPtr, BOOL bCSMEnabled );
-
-#endif // LIGHTMAPPEDGENERIC_DX9_HELPER_H

@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef HUDTEXTUREHANDLE_H
-#define HUDTEXTUREHANDLE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class CHudTexture;
 
@@ -52,5 +47,3 @@ public:
 private:
 	CHudTexture *m_pValue;
 };
-
-#endif // HUDTEXTUREHANDLE_H

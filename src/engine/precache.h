@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef PRECACHE_H
-#define PRECACHE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "networkstringtabledefs.h"
 
-#define PRECACHE_USER_DATA_NUMBITS		2			// Only network two bits from flags field...
+inline constexpr auto PRECACHE_USER_DATA_NUMBITS = 2; // Only network two bits from flags field...
 
 #pragma pack(1)
 //-----------------------------------------------------------------------------
@@ -78,17 +72,11 @@ private:
 		CSfxTable	*sound;
 		char const	*name;
 	} u;
-#if DEBUG_PRECACHE
-	float			m_flFirst;
-	float			m_flMostRecent;
-#endif
 };
 
-#define MODEL_PRECACHE_TABLENAME	"modelprecache"
-#define GENERIC_PRECACHE_TABLENAME	"genericprecache"
-#define SOUND_PRECACHE_TABLENAME	"soundprecache"
-#define DECAL_PRECACHE_TABLENAME	"decalprecache"
+inline constexpr const char *MODEL_PRECACHE_TABLENAME = "modelprecache";
+inline constexpr const char *GENERIC_PRECACHE_TABLENAME = "genericprecache";
+inline constexpr const char *SOUND_PRECACHE_TABLENAME = "soundprecache";
+inline constexpr const char *DECAL_PRECACHE_TABLENAME = "decalprecache";
 
 char const *GetFlagString( int flags );
-
-#endif // PRECACHE_H

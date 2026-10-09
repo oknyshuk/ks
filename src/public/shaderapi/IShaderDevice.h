@@ -1,39 +1,28 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ISHADERDEVICE_H
-#define ISHADERDEVICE_H
-
-
-#include "tier1/interface.h"
-#include "tier1/byte_reader.h"
-#include "appframework/iappsystem.h"
+import std;
+import ks.tier1;
 #include "bitmap/imageformat.h"
 #include "materialsystem/imaterial.h"
 #include "shaderapi/ishaderdynamic.h"
-
 
 //-----------------------------------------------------------------------------
 // forward declarations
 //-----------------------------------------------------------------------------
 struct MaterialAdapterInfo_t;
 class IMesh;
-class KeyValues;
 
 
 //-----------------------------------------------------------------------------
 // Describes how to set the mode
 //-----------------------------------------------------------------------------
-#define SHADER_DISPLAY_MODE_VERSION 1
+inline constexpr auto SHADER_DISPLAY_MODE_VERSION = 1;
 
 struct ShaderDisplayMode_t
 {
-	ShaderDisplayMode_t() { memset( this, 0, sizeof(ShaderDisplayMode_t) ); m_nVersion = SHADER_DISPLAY_MODE_VERSION; }
+	ShaderDisplayMode_t() { std::memset( this, 0, sizeof(ShaderDisplayMode_t) ); m_nVersion = SHADER_DISPLAY_MODE_VERSION; }
 
 	int m_nVersion;
 	int m_nWidth;					// 0 when running windowed means use desktop resolution
@@ -47,11 +36,11 @@ struct ShaderDisplayMode_t
 //-----------------------------------------------------------------------------
 // Describes how to set the device
 //-----------------------------------------------------------------------------
-#define SHADER_DEVICE_INFO_VERSION 1
+inline constexpr auto SHADER_DEVICE_INFO_VERSION = 1;
 
 struct ShaderDeviceInfo_t
 {
-	ShaderDeviceInfo_t() { memset( this, 0, sizeof(ShaderDeviceInfo_t) ); m_nVersion = SHADER_DEVICE_INFO_VERSION; m_DisplayMode.m_nVersion = SHADER_DISPLAY_MODE_VERSION; }
+	ShaderDeviceInfo_t() { std::memset( this, 0, sizeof(ShaderDeviceInfo_t) ); m_nVersion = SHADER_DEVICE_INFO_VERSION; m_DisplayMode.m_nVersion = SHADER_DISPLAY_MODE_VERSION; }
 
 	int m_nVersion;
 	ShaderDisplayMode_t m_DisplayMode;
@@ -120,22 +109,25 @@ inline bool IsDynamicBufferType( ShaderBufferType_t type )
 //-----------------------------------------------------------------------------
 // Handle to a vertex, pixel, and geometry shader
 //-----------------------------------------------------------------------------
-DECLARE_POINTER_HANDLE( VertexShaderHandle_t );
-DECLARE_POINTER_HANDLE( GeometryShaderHandle_t );
-DECLARE_POINTER_HANDLE( PixelShaderHandle_t );
+struct VertexShaderHandle_t__ { int unused; };
+using VertexShaderHandle_t = VertexShaderHandle_t__ *;
+struct GeometryShaderHandle_t__ { int unused; };
+using GeometryShaderHandle_t = GeometryShaderHandle_t__ *;
+struct PixelShaderHandle_t__ { int unused; };
+using PixelShaderHandle_t = PixelShaderHandle_t__ *;
 
-#define VERTEX_SHADER_HANDLE_INVALID	( (VertexShaderHandle_t)0 )
-#define GEOMETRY_SHADER_HANDLE_INVALID	( (GeometryShaderHandle_t)0 )
-#define PIXEL_SHADER_HANDLE_INVALID		( (PixelShaderHandle_t)0 )
+inline constexpr auto VERTEX_SHADER_HANDLE_INVALID = ( (VertexShaderHandle_t)0 );
+inline constexpr auto GEOMETRY_SHADER_HANDLE_INVALID = ( (GeometryShaderHandle_t)0 );
+inline constexpr auto PIXEL_SHADER_HANDLE_INVALID = ( (PixelShaderHandle_t)0 );
 
 
 //-----------------------------------------------------------------------------
 // A shader buffer returns a block of memory which must be released when done with it
 //-----------------------------------------------------------------------------
-abstract_class IShaderBuffer
+class IShaderBuffer
 {
 public:
-	virtual size_t GetSize() const = 0;
+	virtual std::size_t GetSize() const = 0;
 	virtual const void* GetBits() const = 0;
 	virtual void Release() = 0;
 };
@@ -153,7 +145,7 @@ typedef void (*ShaderModeChangeCallbackFunc_t)( void );
 
 class IShaderDevice;
 
-abstract_class IShaderDeviceDependentObject
+class IShaderDeviceDependentObject
 {
 public:
 	virtual void DeviceLost( void ) = 0;
@@ -165,8 +157,8 @@ public:
 //-----------------------------------------------------------------------------
 // Methods related to discovering and selecting devices
 //-----------------------------------------------------------------------------
-#define SHADER_DEVICE_MGR_INTERFACE_VERSION		"ShaderDeviceMgr001"
-abstract_class IShaderDeviceMgr : public IAppSystem
+inline constexpr const char *SHADER_DEVICE_MGR_INTERFACE_VERSION = "ShaderDeviceMgr001";
+class IShaderDeviceMgr : public IAppSystem
 {
 public:
 	// Gets the number of adapters...
@@ -210,8 +202,8 @@ public:
 //-----------------------------------------------------------------------------
 // Methods related to control of the device
 //-----------------------------------------------------------------------------
-#define SHADER_DEVICE_INTERFACE_VERSION			"ShaderDevice001"
-abstract_class IShaderDevice
+inline constexpr const char *SHADER_DEVICE_INTERFACE_VERSION = "ShaderDevice001";
+class IShaderDevice
 {
 public:
 	// Releases/reloads resources when other apps want some memory
@@ -256,7 +248,7 @@ public:
 	virtual void SetView( void* hWnd ) = 0;
 
 	// Shader compilation
-	virtual IShaderBuffer* CompileShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion ) = 0;
+	virtual IShaderBuffer* CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion ) = 0;
 
 	// Shader creation, destruction
 	virtual VertexShaderHandle_t CreateVertexShader( IShaderBuffer* pShaderBuffer ) = 0;
@@ -268,11 +260,11 @@ public:
 
 	// Utility methods to make shader creation simpler
 	// NOTE: The span versions take a compiled shader
-	VertexShaderHandle_t CreateVertexShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion );
+	VertexShaderHandle_t CreateVertexShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion );
 	VertexShaderHandle_t CreateVertexShader( std::span< const std::byte > compiled );
-	GeometryShaderHandle_t CreateGeometryShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion );
+	GeometryShaderHandle_t CreateGeometryShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion );
 	GeometryShaderHandle_t CreateGeometryShader( std::span< const std::byte > compiled );
-	PixelShaderHandle_t CreatePixelShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion );
+	PixelShaderHandle_t CreatePixelShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion );
 	PixelShaderHandle_t CreatePixelShader( std::span< const std::byte > compiled );
 
 	// NOTE: Deprecated!! Use CreateVertexBuffer/CreateIndexBuffer instead
@@ -311,7 +303,7 @@ class ShaderByteBuffer : public IShaderBuffer
 public:
 	ShaderByteBuffer( std::span< const std::byte > bytes ) : m_bytes( bytes ) {}
 
-	virtual size_t GetSize() const
+	virtual std::size_t GetSize() const
 	{
 		return m_bytes.size();
 	}
@@ -323,7 +315,7 @@ public:
 
 	virtual void Release()
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 private:
@@ -340,7 +332,7 @@ inline VertexShaderHandle_t IShaderDevice::CreateVertexShader( std::span< const 
 	return CreateVertexShader( &shaderBuffer );
 }
 
-inline VertexShaderHandle_t IShaderDevice::CreateVertexShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion )
+inline VertexShaderHandle_t IShaderDevice::CreateVertexShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion )
 {
 	VertexShaderHandle_t hVertexShader = VERTEX_SHADER_HANDLE_INVALID;
 	IShaderBuffer* pShaderBuffer = CompileShader( pProgram, nBufLen, pShaderVersion );
@@ -358,7 +350,7 @@ inline GeometryShaderHandle_t IShaderDevice::CreateGeometryShader( std::span< co
 	return CreateGeometryShader( &shaderBuffer );
 }
 
-inline GeometryShaderHandle_t IShaderDevice::CreateGeometryShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion )
+inline GeometryShaderHandle_t IShaderDevice::CreateGeometryShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion )
 {
 	GeometryShaderHandle_t hGeometryShader = GEOMETRY_SHADER_HANDLE_INVALID;
 	IShaderBuffer* pShaderBuffer = CompileShader( pProgram, nBufLen, pShaderVersion );
@@ -376,7 +368,7 @@ inline PixelShaderHandle_t IShaderDevice::CreatePixelShader( std::span< const st
 	return CreatePixelShader( &shaderBuffer );
 }
 
-inline PixelShaderHandle_t IShaderDevice::CreatePixelShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion )
+inline PixelShaderHandle_t IShaderDevice::CreatePixelShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion )
 {
 	PixelShaderHandle_t hPixelShader = PIXEL_SHADER_HANDLE_INVALID;
 	IShaderBuffer* pShaderBuffer = CompileShader( pProgram, nBufLen, pShaderVersion );
@@ -387,6 +379,3 @@ inline PixelShaderHandle_t IShaderDevice::CreatePixelShader( const char *pProgra
 	}
 	return hPixelShader;
 }
-
-
-#endif // ISHADERDEVICE_H

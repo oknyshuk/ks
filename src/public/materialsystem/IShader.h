@@ -1,34 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef ISHADER_H
-#define ISHADER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //==================================================================================================
 // **this goes into both platforms which run the translator, either the real Mac client or
 // the Windows client running with r_emulategl mode **
 //
-// size of the VS register bank in ARB / GLSL we expose
-#define	DXABSTRACT_VS_PARAM_SLOTS	256
-#define DXABSTRACT_VS_FIRST_BONE_SLOT VERTEX_SHADER_MODEL
-#define DXABSTRACT_VS_LAST_BONE_SLOT (VERTEX_SHADER_SHADER_SPECIFIC_CONST_13-1)
 
 // user clip plane 0 goes in DXABSTRACT_VS_CLIP_PLANE_BASE... plane 1 goes in the slot after that
 // dxabstract uses these constants to check plane index limit and to deliver planes to shader for DP4 -> oCLP[n]
-#define	DXABSTRACT_VS_CLIP_PLANE_BASE (DXABSTRACT_VS_PARAM_SLOTS-2)
 
 //==================================================================================================
 
-
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/ishaderapi.h"
-
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -81,7 +66,7 @@ public:
 	uint32 m_nVarChangeID;
 	bool m_bMaterialVarsChanged;							// set by mat system when material vars change. shader should rehtink and then clear the var
 
-	FORCEINLINE CBasePerMaterialContextData( void )
+	[[gnu::always_inline]] inline CBasePerMaterialContextData( void )
 	{
 		m_bMaterialVarsChanged = true;
 		m_nVarChangeID = 0xffffffff;
@@ -162,7 +147,7 @@ enum
 	VERTEX_SHADER_MAX_FLEX_WEIGHT_COUNT = 512,
 };
 
-#define VERTEX_SHADER_BONE_TRANSFORM( k )	( VERTEX_SHADER_MODEL + 3 * (k) )
+template <typename T1> [[gnu::always_inline]] inline auto VERTEX_SHADER_BONE_TRANSFORM( T1 k ) { return ( VERTEX_SHADER_MODEL + 3 * (k) ); }
 
 //-----------------------------------------------------------------------------
 // Standard vertex shader constants
@@ -187,7 +172,7 @@ enum
 //-----------------------------------------------------------------------------
 // The public methods exposed by each shader
 //-----------------------------------------------------------------------------
-abstract_class IShader
+class IShader
 {
 public:
 	// Returns the shader name
@@ -250,4 +235,8 @@ enum
 	SHADER_FAILED_LOAD = 0x2,
 };
 
-#endif // ISHADER_H
+// size of the VS register bank in ARB / GLSL we expose
+inline constexpr auto DXABSTRACT_VS_PARAM_SLOTS = 256;
+inline constexpr auto DXABSTRACT_VS_FIRST_BONE_SLOT = VERTEX_SHADER_MODEL;
+inline constexpr auto DXABSTRACT_VS_LAST_BONE_SLOT = ( VERTEX_SHADER_SHADER_SPECIFIC_CONST_13 - 1 );
+inline constexpr auto DXABSTRACT_VS_CLIP_PLANE_BASE = (DXABSTRACT_VS_PARAM_SLOTS-2);

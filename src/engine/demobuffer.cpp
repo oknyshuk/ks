@@ -1,26 +1,19 @@
-//======= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======
-//
-// TODO:
-//  - USE A MEMPOOL OF SOME SORT
-//  - GET STALE FRAME REMOVAL WORKING
-//  - MAKE THREAD SAFE - NEED TO BE ABLE TO WRITE A .DEM FILE ON A SEP THREAD AND
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
+
+// Purpose: TODO:
+// - USE A MEMPOOL OF SOME SORT
+// - GET STALE FRAME REMOVAL WORKING
+// - MAKE THREAD SAFE - NEED TO BE ABLE TO WRITE A .DEM FILE ON A SEP THREAD AND
 //		NOT BE THROWING AWAY ELEMENTS THAT ARE BEING READ.  NEED A FLAG IN DATACHUNK
 //		FOR WHETHER AN INSTANCE IS "IN USE," IE BEING READ TO WRITE TO A DEM FILE.
-//
-//===============================================================================
 
+import ks.vstdlib;
 #include "demobuffer.h"
 #include "filesystem.h"
-#include "tier1/byte_writer.h"
-#include <algorithm>
-#include <atomic>
-#include <cstring>
-#include <vector>
+import std;
 #include "edict.h"
 #include "host.h"
-#include "vstdlib/jobthread.h"
-#include <deque>
-#include <memory>
 
 #include "replayserver.h"	// TODO: Remove
 #include "sv_client.h"
@@ -64,7 +57,7 @@ public:
 	virtual bool Init( DemoBufferInitParams_t const& params )
 	{
 		// Convert to proper type
-		StreamDemoBufferInitParams_t const* pParams = dynamic_cast< StreamDemoBufferInitParams_t const* >( &params );		Assert( pParams );
+		StreamDemoBufferInitParams_t const* pParams = dynamic_cast< StreamDemoBufferInitParams_t const* >( &params );		contract_assert( pParams );
 
 		Close();
 
@@ -122,26 +115,26 @@ public:
 
 	virtual void				WriteTick( int nTick )					{ Put( &nTick, sizeof( nTick ) ); }
 
-	virtual char				GetChar() OVERRIDE
+	virtual char				GetChar() override
 	{
 		char c = 0;
 		Get( &c, sizeof( c ) );
 		return c;
 	}
-	virtual unsigned char		GetUnsignedChar() OVERRIDE
+	virtual unsigned char		GetUnsignedChar() override
 	{
 		unsigned char uc = 0;
 		Get( &uc, sizeof( uc ) );
 		return uc;
 	}
-	virtual int					GetInt() OVERRIDE
+	virtual int					GetInt() override
 	{
 		int i = 0;
 		Get( &i, sizeof( i ) );
 		return i;
 	}
 
-	virtual void				Get( void* pMem, int size )	OVERRIDE
+	virtual void				Get( void* pMem, int size )	override
 	{
 #ifndef DEDICATED
 		if ( m_pPlaybackParams )
@@ -359,383 +352,6 @@ private:
 //-----------------------------------------------------------------------------
 // Specialty class with overrides for stream buffer
 //-----------------------------------------------------------------------------
-#if defined( REPLAY_ENABLED )
-class CMemoryDemoBuffer : public IDemoBuffer
-{
-private:
-	static int const CACHE_SIZE	= 1024 * 512;
-
-	uint8*	m_pDataCache;			// Data cache for temporary writing
-	uint8*	m_pWrite;				// Current write position (based on m_pDataCache)
-	int		m_nBufferSize;			// Total buffer size
-	int		m_nMaxPut;				// What's the most I've ever written?
-	int		m_nCurrentTickOffset;	// Offset (relative to m_pDataCache) of tick - needed so we can rewrite ticks before dumping to disk
-
-	struct DataChunk_t
-	{
-		int		nCurrentTickOffset;
-		int		nTickcount;
-		int		nDeltaTickcount;
-		int		nSize;
-		uint8	pData[1];
-	};
-
-	inline DataChunk_t* AllocDataChunk( int nSize, int nCurrentTickOffset )
-	{
-		Assert( nCurrentTickOffset >= 0 );
-
-		int nActualSize = sizeof(DataChunk_t) + nSize - 1;		Assert( nActualSize < CACHE_SIZE );
-
-		DataChunk_t* pNewFrame = (DataChunk_t*)new uint8[ nActualSize ]; 
-		pNewFrame->nSize = nSize;
-		pNewFrame->nCurrentTickOffset = nCurrentTickOffset;
-		pNewFrame->nTickcount = -1;
-
-		// TODO: pass in the delta tick - get rid of #include "replay" etc.
-		pNewFrame->nDeltaTickcount = ( replay && replay->m_MasterClient ) ? replay->m_MasterClient->m_nDeltaTick : -1;
-
-		return pNewFrame;
-	}
-
-	// Chunks are allocated as uint8 arrays.
-	struct DataChunkDeleter
-	{
-		void operator()( DataChunk_t *p ) const { delete [] reinterpret_cast< uint8 * >( p ); }
-	};
-
-	bool m_bSignonComplete;
-
-	DataChunk_t* m_pSignonData;
-
-	std::deque< std::unique_ptr< DataChunk_t, DataChunkDeleter > > m_lstFrames;	// Represents a list of demo frames
-
-	inline int GetTickCount()
-	{
-		extern CGlobalVars g_ServerGlobalVariables;
-		return g_ServerGlobalVariables.tickcount;
-	}
-
-	void RemoveStaleFrames()
-	{
-		// Don't remove any frames in the midst of a write operation
-		if ( m_nWriteCount > 0 )
-			return;
-
-		extern ConVar replay_movielength;
-
-#ifdef _DEBUG
-		int nNumFramesRemoved = 0;
-#endif
-
-		// Here we remove any frames that are beyond the length of the movie.
-		while ( !m_lstFrames.empty() )
-		{
-			if ( m_lstFrames.front()->nTickcount >= GetTickCount() - TIME_TO_TICKS( replay_movielength.GetInt() ) )
-				break;
-
-			m_lstFrames.pop_front();
-#ifdef _DEBUG
-			++nNumFramesRemoved;
-#endif
-		}
-
-#ifdef _DEBUG
-		if ( nNumFramesRemoved > 0 )
-		{
-			DevMsg( "Replay: Removed %d frames(s) from recording buffer.\n", nNumFramesRemoved );
-		}
-#endif
-	}
-
-public:
-	CMemoryDemoBuffer()
-	:	
-		m_nBufferSize( 0 ),
-		m_nMaxPut( 0 ),
-		m_nCurrentTickOffset( -1 ),
-		m_pWrite( nullptr ),
-		m_pSignonData( nullptr ),
-		m_bSignonComplete( false )
-	{
-	}
-
-	~CMemoryDemoBuffer()
-	{
-		delete [] m_pDataCache;
-		DataChunkDeleter()( m_pSignonData );
-	}
-
-	virtual bool Init( DemoBufferInitParams_t const& params )
-	{
-		m_pDataCache = new uint8[ CACHE_SIZE ];
-		m_pWrite = m_pDataCache;
-		return true;
-	}
-
-	virtual bool IsInitialized() const	{ return m_pDataCache != nullptr; }
-
-	virtual bool IsValid() const		{ return IsInitialized(); }
-
-	virtual void WriteHeader( const void *pData, int nSize )
-	{
-		// There is no need to write the header until we dump the file to disk.
-
-		/*
-		// NOTE: Byteswap happens in dump
-
-		// The header gets written twice, once at demo start, and once at demo stop.
-		// If this is the first time, just write to the beginning of the cache
-		if ( !m_bSignonComplete )
-		{
-			Assert( m_pWrite == m_pDataCache );		// Make sure this is the first thing we're writing
-			Put( pData, nSize );
-		}
-		else	// Otherwise, write to the beginning of the header
-		{
-			AssertValidWritePtr( m_pHeaderData, nSize );
-			V_memcpy( m_pHeaderData, pData, nSize );
-		}
-		*/
-	}
-
-	virtual void NotifySignonComplete()
-	{
-		Assert( !m_pSignonData );
-
-		// Compute size and allocate
-		int nSize = m_pWrite - m_pDataCache;				Assert( nSize >= 0 );
-		m_pSignonData = AllocDataChunk( nSize, -1 );
-
-		// NOTE: No need to set m_pSignonData->nTickcount.
-
-		// We're done with signon data, copy it over from the cache
-		V_memcpy( m_pSignonData->pData, m_pDataCache, nSize );
-
-		m_pWrite = nullptr;
-		m_bSignonComplete = true;
-	}
-
-	virtual void NotifyBeginFrame()
-	{
-		if ( !m_bSignonComplete )
-			return;
-
-		Assert( m_pWrite == 0 );
-		m_pWrite = m_pDataCache;
-	}
-
-	virtual void NotifyEndFrame()
-	{
-		if ( !m_bSignonComplete )
-			return;
-
- 		RemoveStaleFrames();
-
-		// Allocate a new data chunk
-		int nSize = m_pWrite - m_pDataCache;				Assert( nSize >= 0 );
-		DataChunk_t* pNewFrame = AllocDataChunk( nSize, m_nCurrentTickOffset );
-
-		// Set the time
-		pNewFrame->nTickcount = GetTickCount();
-
-		// Copy data from cache to new frame
-		V_memcpy( pNewFrame->pData, m_pDataCache, nSize );
-
-		// Add new frame to list
-		m_lstFrames.emplace_back( pNewFrame );
-
-#ifdef _DEBUG
-		m_pWrite = nullptr;
-#endif
-	}
-
-	// Change where I'm writing (put)/reading (get)
-	virtual void SeekGet( bool bAbsolute, int offset )
-	{
-		// Don't call this.
-		Assert( 0 );
-	}
-
-	virtual void SeekPut( bool bAbsolute, int nOffset )
-	{
-		// The only time this should get called is if we are about to write the header.
-		Assert( bAbsolute && nOffset == 0 );
-	}
-
-	// Where am I writing (put)/reading (get)?
-	virtual int					TellPut( ) const			{ return m_pWrite - m_pDataCache; }
-	virtual int					TellGet( ) const			{ Assert( 0 ); return 0; }
-
-	// What's the most I've ever written?
-	virtual int					TellMaxPut( ) const	{ return m_nMaxPut; }
-
-	// Get functions should never get called.
-	virtual char				GetChar()					{ Assert( 0 ); return 0; }
-	virtual unsigned char		GetUnsignedChar()			{ Assert( 0 ); return 0; }
-	virtual int					GetInt()					{ Assert( 0 ); return 0; }
-	virtual void				Get( void* pMem, int size )	{ Assert( 0 ); }
-
-	virtual void PutChar( char c )							{ Put( &c, sizeof( c ) ); }
-	virtual void PutUnsignedChar( unsigned char uc ) 		{ Put( &uc, sizeof( uc ) ); }
-	virtual void PutInt( int i )							{ Put( &i, sizeof( i ) ); }
-	virtual void Put( const void* pMem, int nSize )
-	{
-		Assert( m_pWrite - m_pDataCache + nSize < CACHE_SIZE );
-		V_memcpy( m_pWrite, pMem, nSize );
-		m_pWrite += nSize;
-		m_nBufferSize += nSize;
-		m_nMaxPut = std::max( m_nMaxPut, nSize );
-	}
-
-	virtual void WriteTick( int nTick )
-	{
-		// Cache the relative position of the tick in memory for the given frame
-		m_nCurrentTickOffset = m_pWrite - m_pDataCache;
-
-		// Write the tick
-		PutInt( nTick );
-	}
-
-	//
-	// For thread safety - this counter keeps us from removing stale frames while writing a .dem file.
-	// The idea here is that if the counter is anything but zero we should not remove stale frames.
-	// We increment before creating a new job, and decrement from within that job, at the end.  We 
-	// pass an iterator as an argument into the job's constructor so we know where to stop iterating
-	// across the frame list.
-	//
-	mutable std::atomic<int> m_nWriteCount;
-
-	//
-	// Threaded .dem file write
-	//
-	class CDemWriteJob : public CJob
-	{
-	public:
-		CDemWriteJob( const CMemoryDemoBuffer *pDemobuffer, const char *pFilename, const demoheader_t &header )
-			: m_pDemobuffer( pDemobuffer ), m_pFilename( pFilename ), m_Header( header )
-		{
-			Assert( pFilename && pFilename[0] );
-		}
-
-		virtual JobStatus_t DoExecute()
-		{
-			// TODO: Does it make sense to return JOB_OK here even on failure?
-			JobStatus_t nResult = JOB_OK;
-
-			if ( m_pFilename && m_pFilename[0] != '\0' )
-			{
-				ks::byte_writer buf;
-				{
-					// NOTE: We include the sync tick frame as part of our signon data, which makes the header signon length vary by 6 bytes
-					// (2 chars and 1 int) from our own signon data size. 
-					const int nTickSyncFrameSize = 6;
-					Assert( m_pDemobuffer->m_pSignonData->nSize == m_Header.signonlength + nTickSyncFrameSize );
-
-					// Compute adjusted time/ticks/frames, since we may have removed stale frames
-					const auto &lstFrames = m_pDemobuffer->m_lstFrames;
-					Assert( !lstFrames.empty() );
-
-					const DataChunk_t *pHead = lstFrames.front().get();
-					const DataChunk_t *pTail = lstFrames.back().get();
-
-					demoheader_t header = m_Header;
-					header.playback_time = TICKS_TO_TIME( pTail->nTickcount - pHead->nTickcount );
-					header.playback_ticks = pTail->nTickcount - pHead->nTickcount;
-					header.playback_frames = std::ssize( lstFrames );
-
-					// Write header
-					buf.write( header );
-
-					// Write signon data
-					AssertValidReadPtr( m_pDemobuffer->m_pSignonData );
-					buf.write_bytes( m_pDemobuffer->m_pSignonData->pData, m_pDemobuffer->m_pSignonData->nSize );
-
-					// Get first recording tick (NOTE: not start global tick).  Recording ticks start at 0 but
-					// when we remove stale frames the first recording tick becomes greater than zero.  We use
-					// nStartTick here to shift all frame recording ticks down nStartTick ticks.
-					int nStartTick;
-					if ( !lstFrames.empty() )
-					{
-						DataChunk_t *pFrame = lstFrames.front().get();
-						int *pTickData = reinterpret_cast< int * >( pFrame->pData + pFrame->nCurrentTickOffset );
-						V_memcpy( &nStartTick, pTickData, sizeof( int ) );
-					}
-
-					// Write frames
-					for ( const auto &frame : lstFrames )
-					{
-						DataChunk_t *pFrame = frame.get();			Assert( pFrame->nSize >= 0 );
-
-						// Overwrite the tick for the given frame if one exists
-						if ( nStartTick > 0 && pFrame->nCurrentTickOffset >= 0 )
-						{
-							int nNewTick;
-							int *pTickData = reinterpret_cast< int * >( pFrame->pData + pFrame->nCurrentTickOffset );
-							
-							// Copy tick from buffer to nNewTick
-							V_memcpy( &nNewTick, pTickData, sizeof( int ) );
-
-							// Subtract out start tick
-							nNewTick -= nStartTick;
-
-							// Copy back to buffer
-							V_memcpy( pTickData, &nNewTick, sizeof( int ) );
-						}
-
-						buf.write_bytes( pFrame->pData, pFrame->nSize );
-					}
-
-					// Write dem_stop cmd
-					buf.write< unsigned char >( dem_stop );
-					buf.write< int >( lstFrames.back()->nTickcount );
-					buf.write< char >( 0 );
-
-					if ( !g_pFullFileSystem->WriteFile( m_pFilename, nullptr, buf.bytes() ) )
-					{
-						Warning( "demobuffer: Failed to open file for writing, %s\n", m_pFilename );
-					}
-				}
-			}
-
-			// Decrement the write counter
-			m_pDemobuffer->m_nWriteCount--;
-
-			return nResult;
-		}
-
-	private:
-		const CMemoryDemoBuffer	*m_pDemobuffer;
-		const char				*m_pFilename;
-		const demoheader_t		&m_Header;
-	};
-
-	virtual void UpdateStartTick( int& nStartTick ) const
-	{
-		if ( m_lstFrames.empty() )
-			return;
-
-		nStartTick = m_lstFrames.front()->nTickcount;
-	}
-
-	virtual void DumpToFile( const char *pFilename, const demoheader_t &header ) const
-	{
-		Assert( !false );	// TODO: Not supporting 360 yet.  Need alternate thread pool setup to do so.
-
-		// HACK:
-		int n = m_nWriteCount;
-
-		// Critical section
-		m_nWriteCount++;
-
-		// Start a new thread
-		CDemWriteJob* pJob = new CDemWriteJob( this, pFilename, header );
-		g_pThreadPool->AddJob( pJob );
-
-		while ( m_nWriteCount > n )
-			DevMsg( "Waiting for file dump to complete\n" );
-	}
-};
-#endif
 
 //-----------------------------------------------------------------------------
 // Factory function
@@ -743,13 +359,6 @@ public:
 IDemoBuffer *CreateDemoBuffer( bool bMemoryBuffer, const DemoBufferInitParams_t& params )
 {
 	IDemoBuffer *pRet;
-#if defined( REPLAY_ENABLED )
-	if ( bMemoryBuffer )
-	{
-		pRet = static_cast< IDemoBuffer* >( new CMemoryDemoBuffer() );
-	}
-	else
-#endif
 	{
 		pRet = static_cast< IDemoBuffer* >( new CDiskDemoBuffer() );
 	}

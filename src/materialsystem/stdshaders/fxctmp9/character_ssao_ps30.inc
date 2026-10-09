@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -20,7 +21,7 @@ private:
 public:
 	void SetQUALITY_MODE( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nQUALITY_MODE = i;
 #ifdef _DEBUG
 		m_bQUALITY_MODE = true;
@@ -28,7 +29,7 @@ public:
 	}
 	void SetQUALITY_MODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nQUALITY_MODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bQUALITY_MODE = true;
@@ -49,7 +50,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bQUALITY_MODE;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nQUALITY_MODE ) + 0;
 	}
@@ -71,7 +72,7 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_character_ssao_ps30 0
+inline constexpr int shaderDynamicTest_character_ssao_ps30 = 0;
 
 static const ShaderComboInformation_t s_StaticComboArray_character_ssao_ps30[1] = 
 {
@@ -79,7 +80,7 @@ static const ShaderComboInformation_t s_StaticComboArray_character_ssao_ps30[1] 
 };
 static const ShaderComboSemantics_t character_ssao_ps30_combos =
 {
-	"character_ssao_ps30", NULL, 0, s_StaticComboArray_character_ssao_ps30, 1 
+	"character_ssao_ps30", nullptr, 0, s_StaticComboArray_character_ssao_ps30, 1 
 };
 
 class ConstructMe_character_ssao_ps30

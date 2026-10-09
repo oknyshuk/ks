@@ -1,27 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches a beam ring between two entities
 //-----------------------------------------------------------------------------
-#if !defined( TE_BASEBEAM_H )
-#define TE_BASEBEAM_H
 
 #include "reflect_annotations.h"
 
 #include "basetempentity.h"
 
-abstract_class [[= ks::reflect::NetTable{ .name = "DT_BaseBeam", .base = false } ]]
+class [[= ks::reflect::NetTable{ .name = "DT_BaseBeam", .base = false } ]]
       CTEBaseBeam : public CBaseTempEntity
 {
 public:
@@ -55,5 +44,3 @@ public:
 };
 
 EXTERN_SEND_TABLE(DT_BaseBeam);
-
-#endif // TE_BASEBEAM_H

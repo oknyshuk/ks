@@ -1,18 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_POINTCAMERA_H
-#define C_POINTCAMERA_H
-
+import ks.core;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 
 #include "c_baseentity.h"
-#include "basetypes.h"
+import std;
 
 class [[= ks::reflect::NetTable{ .name = "DT_PointCamera" } ]]
       C_PointCamera : public C_BaseEntity
@@ -57,5 +52,3 @@ public:
 };
 
 C_PointCamera *GetPointCameraList();
-
-#endif // C_POINTCAMERA_H

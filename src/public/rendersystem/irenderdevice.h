@@ -1,35 +1,22 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IRENDERDEVICE_H
-#define IRENDERDEVICE_H
-
-
-#include "tier1/interface.h"
-#include "tier1/byte_reader.h"
-#include "appframework/iappsystem.h"
+import ks.tier1;
 #include "bitmap/imageformat.h"
-#include "mathlib/vector4d.h"
+import std;
 #include "bitmap/colorformat.h"
 #include "rendersystem/renderstate.h"
 #include "resourcesystem/stronghandle.h"
 #include "rendersystem/schema/texture.g.h"
 #include "rendersystem/schema/renderbuffer.g.h"
 #include "rendersystem/schema/renderable.g.h"
-#include "tier0/platwindow.h"
 
 //-----------------------------------------------------------------------------
 // forward declarations
 //-----------------------------------------------------------------------------
-class KeyValues;
 struct RenderInputLayoutField_t;
 class IRenderContext;
-struct Rect_t;
 
 
 //-----------------------------------------------------------------------------
@@ -72,11 +59,11 @@ enum RenderCreateDeviceFlags_t
 //-----------------------------------------------------------------------------
 // Describes how to set the mode
 //-----------------------------------------------------------------------------
-#define RENDER_DISPLAY_MODE_VERSION 1
+inline constexpr auto RENDER_DISPLAY_MODE_VERSION = 1;
 
 struct RenderDisplayMode_t
 {
-	RenderDisplayMode_t() { memset( this, 0, sizeof(RenderDisplayMode_t) ); m_nVersion = RENDER_DISPLAY_MODE_VERSION; }
+	RenderDisplayMode_t() { std::memset( this, 0, sizeof(RenderDisplayMode_t) ); m_nVersion = RENDER_DISPLAY_MODE_VERSION; }
 
 	int m_nVersion;
 	int m_nWidth;					// 0 when running windowed means use desktop resolution
@@ -90,11 +77,11 @@ struct RenderDisplayMode_t
 //-----------------------------------------------------------------------------
 // Describes how to set the device
 //-----------------------------------------------------------------------------
-#define RENDER_DEVICE_INFO_VERSION 1
+inline constexpr auto RENDER_DEVICE_INFO_VERSION = 1;
 
 struct RenderDeviceInfo_t
 {
-	RenderDeviceInfo_t() { memset( this, 0, sizeof(RenderDeviceInfo_t) ); m_nVersion = RENDER_DEVICE_INFO_VERSION; m_DisplayMode.m_nVersion = RENDER_DISPLAY_MODE_VERSION; }
+	RenderDeviceInfo_t() { std::memset( this, 0, sizeof(RenderDeviceInfo_t) ); m_nVersion = RENDER_DEVICE_INFO_VERSION; m_DisplayMode.m_nVersion = RENDER_DISPLAY_MODE_VERSION; }
 
 	int m_nVersion;
 	RenderDisplayMode_t m_DisplayMode;
@@ -129,10 +116,10 @@ struct RenderInputLayoutField_t
 };
 
 #define DEFINE_PER_VERTEX_FIELD( _slot, _name, _index, _vertexformat, _field )	\
-	{ _name, _index, ComputeColorFormat( &(((_vertexformat*)0)->_field) ), offsetof( _vertexformat, _field ), _slot, RENDER_SLOT_PER_VERTEX, 0 },
+	{ _name, _index, ComputeColorFormat( &(((_vertexformat*)0)->_field) ), __builtin_offsetof( _vertexformat, _field ), _slot, RENDER_SLOT_PER_VERTEX, 0 },
 
 #define DEFINE_PER_INSTANCE_FIELD( _slot, _stepRate, _name, _index, _vertexformat, _field )	\
-	{ _name, _index, ComputeColorFormat( &(((_vertexformat*)0)->_field) ), offsetof( _vertexformat, _field ), _slot, RENDER_SLOT_PER_INSTANCE, _stepRate }, 
+	{ _name, _index, ComputeColorFormat( &(((_vertexformat*)0)->_field) ), __builtin_offsetof( _vertexformat, _field ), _slot, RENDER_SLOT_PER_INSTANCE, _stepRate }, 
 
 
 //-----------------------------------------------------------------------------
@@ -167,36 +154,39 @@ enum InputLayoutVariation_t
 //-----------------------------------------------------------------------------
 // Handle to a vertex format
 //-----------------------------------------------------------------------------
-DECLARE_HANDLE_32BIT( RenderInputLayout_t );
+using RenderInputLayout_t = CIntHandle32< struct RenderInputLayout_t__handle * >;
 #define RENDER_INPUT_LAYOUT_INVALID	( RenderInputLayout_t::MakeHandle( (uint32)~0 ) )
 
 
 //-----------------------------------------------------------------------------
 // Standard texture handles
 //-----------------------------------------------------------------------------
-#define RENDER_TEXTURE_DEFAULT_RENDER_TARGET	( (HRenderTexture)-1 )
+inline const HRenderTexture RENDER_TEXTURE_DEFAULT_RENDER_TARGET = reinterpret_cast<HRenderTexture>( static_cast<std::intptr_t>( -1 ) );
 
 
 //-----------------------------------------------------------------------------
 // Handle to a render resource
 //-----------------------------------------------------------------------------
-DECLARE_POINTER_HANDLE( RenderResourceHandle_t );
-#define RENDER_RESOURCE_HANDLE_INVALID	( (RenderResourceHandle_t)0 )
+struct RenderResourceHandle_t__ { int unused; };
+using RenderResourceHandle_t = RenderResourceHandle_t__ *;
+inline constexpr auto RENDER_RESOURCE_HANDLE_INVALID = ( (RenderResourceHandle_t)0 );
 
 
 //-----------------------------------------------------------------------------
 // Handle to a class that describes which render targets are in use 
 //-----------------------------------------------------------------------------
-DECLARE_DERIVED_POINTER_HANDLE( RenderTargetBinding_t, RenderResourceHandle_t );
-#define RENDER_TARGET_BINDING_INVALID ( (RenderTargetBinding_t)0 )
-#define RENDER_TARGET_BINDING_BACK_BUFFER ( (RenderTargetBinding_t)-1 )
+struct RenderTargetBinding_t__ : public RenderResourceHandle_t__ {};
+using RenderTargetBinding_t = RenderTargetBinding_t__ *;
+inline constexpr auto RENDER_TARGET_BINDING_INVALID = ( (RenderTargetBinding_t)0 );
+inline const RenderTargetBinding_t RENDER_TARGET_BINDING_BACK_BUFFER = reinterpret_cast<RenderTargetBinding_t>( static_cast<std::intptr_t>( -1 ) );
 
 
 //-----------------------------------------------------------------------------
 // Handle to a vertex, pixel, geometry, etc. shader
 //-----------------------------------------------------------------------------
-DECLARE_DERIVED_POINTER_HANDLE( RenderShaderHandle_t, RenderResourceHandle_t );
-#define RENDER_SHADER_HANDLE_INVALID	( (RenderShaderHandle_t)0 )
+struct RenderShaderHandle_t__ : public RenderResourceHandle_t__ {};
+using RenderShaderHandle_t = RenderShaderHandle_t__ *;
+inline constexpr auto RENDER_SHADER_HANDLE_INVALID = ( (RenderShaderHandle_t)0 );
 
 enum RenderShaderType_t
 {
@@ -211,26 +201,29 @@ enum RenderShaderType_t
 //-----------------------------------------------------------------------------
 // Handle to a vertex buffer/indexbuffer
 //-----------------------------------------------------------------------------
-DECLARE_DERIVED_POINTER_HANDLE( VertexBufferHandle_t, RenderResourceHandle_t );
-DECLARE_DERIVED_POINTER_HANDLE( IndexBufferHandle_t, RenderResourceHandle_t );
+struct VertexBufferHandle_t__ : public RenderResourceHandle_t__ {};
+using VertexBufferHandle_t = VertexBufferHandle_t__ *;
+struct IndexBufferHandle_t__ : public RenderResourceHandle_t__ {};
+using IndexBufferHandle_t = IndexBufferHandle_t__ *;
 
-#define VERTEX_BUFFER_HANDLE_INVALID	( (VertexBufferHandle_t)0 )
-#define INDEX_BUFFER_HANDLE_INVALID		( (IndexBufferHandle_t)0 )
+inline constexpr auto VERTEX_BUFFER_HANDLE_INVALID = ( (VertexBufferHandle_t)0 );
+inline constexpr auto INDEX_BUFFER_HANDLE_INVALID = ( (IndexBufferHandle_t)0 );
 
 //-----------------------------------------------------------------------------
 // constant buffers
 //-----------------------------------------------------------------------------
-DECLARE_DERIVED_POINTER_HANDLE( ConstantBufferHandle_t, RenderResourceHandle_t );
-#define CONSTANT_BUFFER_HANDLE_INVALID ( ( ConstantBufferHandle_t ) 0 )
+struct ConstantBufferHandle_t__ : public RenderResourceHandle_t__ {};
+using ConstantBufferHandle_t = ConstantBufferHandle_t__ *;
+inline constexpr auto CONSTANT_BUFFER_HANDLE_INVALID = ( ( ConstantBufferHandle_t ) 0 );
 
 
 //-----------------------------------------------------------------------------
 // A shader buffer returns a block of memory which must be released when done with it
 //-----------------------------------------------------------------------------
-abstract_class IRenderShaderBuffer
+class IRenderShaderBuffer
 {
 public:
-	virtual size_t GetSize() const = 0;
+	virtual std::size_t GetSize() const = 0;
 	virtual const void* GetBits() const = 0;
 	virtual void Release() = 0;
 };
@@ -239,8 +232,9 @@ public:
 //-----------------------------------------------------------------------------
 // Swap chain handle
 //-----------------------------------------------------------------------------
-DECLARE_POINTER_HANDLE( SwapChainHandle_t );
-#define SWAP_CHAIN_HANDLE_INVALID	( (SwapChainHandle_t)0 )
+struct SwapChainHandle_t__ { int unused; };
+using SwapChainHandle_t = SwapChainHandle_t__ *;
+inline constexpr auto SWAP_CHAIN_HANDLE_INVALID = ( (SwapChainHandle_t)0 );
 
 
 //-----------------------------------------------------------------------------
@@ -262,7 +256,7 @@ typedef void (*RenderModeChangeCallbackFunc_t)( void );
 // The first option is better because it lets the application do arbitrary
 // stuff after it can query information about adapters, etc.
 //-----------------------------------------------------------------------------
-abstract_class IRenderDeviceSetup
+class IRenderDeviceSetup
 {
 public:
 	// This will be called by the render device mgr after it initializes itself
@@ -273,7 +267,7 @@ public:
 //-----------------------------------------------------------------------------
 // Methods related to discovering and selecting devices
 //-----------------------------------------------------------------------------
-abstract_class IRenderDeviceMgr : public IAppSystem
+class IRenderDeviceMgr : public IAppSystem
 {
 public:
 	// Gets the number of adapters...
@@ -344,7 +338,7 @@ enum RenderSystemAssetFileLoadMode_t // controls behavior when rendersystem asse
 //-----------------------------------------------------------------------------
 // Methods related to control of the device
 //-----------------------------------------------------------------------------
-abstract_class IRenderDevice
+class IRenderDevice
 {
 public:
 	// Creates a 'swap chain' which represents a back buffer and a window.
@@ -391,7 +385,7 @@ public:
 	virtual void SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMin, float fGammaTVRangeMax, float fGammaTVExponent, bool bTVEnabled ) = 0;
 
 	// Shader compilation
-	virtual IRenderShaderBuffer* CompileShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion ) = 0;
+	virtual IRenderShaderBuffer* CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion ) = 0;
 
 	// Shader creation, destruction
 	virtual RenderShaderHandle_t CreateShader( RenderShaderType_t nType, IRenderShaderBuffer* pShaderBuffer ) = 0;
@@ -411,9 +405,9 @@ public:
 
 	// Utility methods to make shader creation simpler
 	// NOTE: The span and pointer+size versions without a shader version take a compiled shader
-	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, const char *pProgram, size_t nBufLen, const char *pShaderVersion );
+	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, const char *pProgram, std::size_t nBufLen, const char *pShaderVersion );
 	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, std::span< const std::byte > compiled );
-	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, const void *pCompiledProgram, size_t nBufLen );
+	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, const void *pCompiledProgram, std::size_t nBufLen );
 
 	// Creates render state objects
 	virtual RsRasterizerStateHandle_t FindOrCreateRasterizerState( const RsRasterizerStateDesc_t *pRsDesc ) = 0;
@@ -424,7 +418,7 @@ public:
 	// For CreateIndexBuffer, nMaxInstanceCount == 0 means we don't expect
 	// the buffer to be used w/ instanced rendering. 
 	// mNaxInstanceCount == INT_MAX means we have no idea how many instances will be rendered
-	virtual HRenderBuffer CreateRenderBuffer( const char *pGroupName, const char *pResourceName, const RenderBufferDesc_t *pDescriptor, size_t nDataSize ) = 0;
+	virtual HRenderBuffer CreateRenderBuffer( const char *pGroupName, const char *pResourceName, const RenderBufferDesc_t *pDescriptor, std::size_t nDataSize ) = 0;
 	virtual void DestroyRenderBuffer( HRenderBuffer hBuffer ) = 0;
 	virtual HRenderBuffer CreateVertexBuffer( RenderBufferType_t nType, const BufferDesc_t& desc ) = 0;
 	virtual void DestroyVertexBuffer( HRenderBuffer hVertexBuffer ) = 0;
@@ -457,7 +451,7 @@ public:
 	virtual CDependencyDescriptor *GetDependencyDescriptor( int nNumBatchesWhichWillBeSubmitted = 1, char const *pDebugString = nullptr ) =0;
 
 	// create/destroy constant buffers
-	virtual ConstantBufferHandle_t CreateConstantBuffer( size_t nNumBytes ) { return nullptr; };
+	virtual ConstantBufferHandle_t CreateConstantBuffer( std::size_t nNumBytes ) { return nullptr; };
 	virtual void DestroyConstantBuffer( ConstantBufferHandle_t hConstantBuffer ) {};
 
 	// Forces a device lost
@@ -477,7 +471,7 @@ class RenderShaderByteBuffer : public IRenderShaderBuffer
 public:
 	RenderShaderByteBuffer( std::span< const std::byte > bytes ) : m_bytes( bytes ) {}
 
-	virtual size_t GetSize() const
+	virtual std::size_t GetSize() const
 	{
 		return m_bytes.size();
 	}
@@ -489,7 +483,7 @@ public:
 
 	virtual void Release()
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 private:
@@ -505,7 +499,7 @@ inline RenderTargetBinding_t IRenderDevice::CreateRenderTargetBinding( int nFlag
 	return CreateRenderTargetBinding( nFlags, 1, &hRenderTarget, hDepthStencilTexture );
 }
 
-inline RenderShaderHandle_t IRenderDevice::CreateShader( RenderShaderType_t nType, const char *pProgram, size_t nBufLen, const char *pShaderVersion )
+inline RenderShaderHandle_t IRenderDevice::CreateShader( RenderShaderType_t nType, const char *pProgram, std::size_t nBufLen, const char *pShaderVersion )
 {
 	RenderShaderHandle_t hShader = RENDER_SHADER_HANDLE_INVALID;
 	IRenderShaderBuffer* pShaderBuffer = CompileShader( pProgram, nBufLen, pShaderVersion );
@@ -523,10 +517,7 @@ inline RenderShaderHandle_t IRenderDevice::CreateShader( RenderShaderType_t nTyp
 	return CreateShader( nType, &shaderBuffer );
 }
 
-inline RenderShaderHandle_t IRenderDevice::CreateShader( RenderShaderType_t nType, const void *pCompiledProgram, size_t nBufLen )
+inline RenderShaderHandle_t IRenderDevice::CreateShader( RenderShaderType_t nType, const void *pCompiledProgram, std::size_t nBufLen )
 {
 	return CreateShader( nType, ks::byte_view( pCompiledProgram, nBufLen ) );
 }
-
-
-#endif // IRENDERDEVICE_H

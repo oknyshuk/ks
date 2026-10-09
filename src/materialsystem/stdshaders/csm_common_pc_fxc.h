@@ -1,8 +1,10 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-// PC cascaded shadow mapping
-
+// Purpose: PC cascaded shadow mapping
 // This defines must be kept in sync with the CSM_DEFAULT_DEPTH_TEXTURE_RESOLUTION, etc. macros in c_env_cascade_light.cpp - otherwise you'll get subtle filtering artifacts.
+
 #define CSM_DEPTH_TEXTURE_RESOLUTION_VERY_LOW 		( 640*2 )
 #define CSM_DEPTH_TEXTURE_RESOLUTION_LOW 			( 768*2 )
 #define CSM_DEPTH_TEXTURE_RESOLUTION_MEDIUM_OR_HIGH ( 1024*2 )

@@ -1,11 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Volumetric dust motes.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Volumetric dust motes.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "func_dust_shared.h"
 #include "te_particlesystem.h"
@@ -14,7 +46,7 @@
 #include "reflect_annotations.h"
 #include "reflect_sendtable.h"
 
-#define DUST_LIFETIME_NETWORK_BITS 4
+constexpr auto DUST_LIFETIME_NETWORK_BITS = 4;
 
 class [[= ks::reflect::NetTable{ .name = "DT_Func_Dust", .base = false } ]]
       [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } >{} ]]
@@ -175,7 +207,7 @@ bool CFunc_Dust::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else if( stricmp( szKeyName, "Alpha" ) == 0 )
 	{
-		m_iAlpha = atoi( szValue );
+		m_iAlpha = std::atoi( szValue );
 		return true;
 	}
 	else if( stricmp( szKeyName, "Frozen" ) == 0 )
@@ -260,7 +292,7 @@ void TE_Dust( IRecipientFilter& filter, float delay,
 	g_TEDust.m_flSize		= size;
 	g_TEDust.m_flSpeed		= speed;
 
-	Assert( dir.Length() < 1.01 );	// make sure it's a normal
+	contract_assert( dir.Length() < 1.01 );	// make sure it's a normal
 
 	//Send it
 	g_TEDust.Create( filter, delay );

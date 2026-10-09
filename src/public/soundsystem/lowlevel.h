@@ -1,29 +1,26 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: This abstracts the various hardware dependent implementations of sound
 //			At the time of this writing there are Windows WAVEOUT, Direct Sound,
 //			and Null implementations.
-//
-//=====================================================================================//
 
-#ifndef SOUNDSYSTEM_LOWLEVEL_H
-#define SOUNDSYSTEM_LOWLEVEL_H
-#pragma once
+import std;
+import ks.tier1;
 
-#include "utlvector.h"
-
-#define SOUND_DEVICE_MAX_CHANNELS 8			// we support 2, 4, 6, & 8 channels currently.
+inline constexpr auto SOUND_DEVICE_MAX_CHANNELS = 8; // we support 2, 4, 6, & 8 channels currently.
 											// Long term we may build 4 & 8 as matrix mix-downs of 6 channels
-#define MIX_BUFFER_SIZE 512
+inline constexpr auto MIX_BUFFER_SIZE = 512;
 
 class IAudioDevice2;
 struct audio_device_init_params_t;
 
-class ALIGN16 CAudioMixBuffer
+class alignas(16) CAudioMixBuffer
 {
 public:
 	float m_flData[MIX_BUFFER_SIZE];
-} ALIGN16_POST;
+};
 
 const float MIX_DEFAULT_SAMPLING_RATE = 44100.0f;
 const float SECONDS_PER_SAMPLE	= (1.0f / MIX_DEFAULT_SAMPLING_RATE);
@@ -39,7 +36,7 @@ enum eSubSystems_t
 	AUDIO_SUBSYSTEM_NULL = 3,		// fake, emulated device for failure cases
 };
 
-#define AUDIO_DEVICE_NAME_MAX 256
+inline constexpr auto AUDIO_DEVICE_NAME_MAX = 256;
 struct audio_device_description_t
 {
 	wchar_t m_deviceName[AUDIO_DEVICE_NAME_MAX];
@@ -50,7 +47,7 @@ struct audio_device_description_t
 	bool m_bIsAvailable : 1;
 
 	audio_device_description_t() {}
-	explicit audio_device_description_t( eSubSystems_t nSubsystem ) : m_nSubsystemId( (uint8)nSubsystem ) { Assert( nSubsystem >= 0 && nSubsystem <= UINT8_MAX ); }
+	explicit audio_device_description_t( eSubSystems_t nSubsystem ) : m_nSubsystemId( (uint8)nSubsystem ) { contract_assert( nSubsystem >= 0 && nSubsystem <= std::numeric_limits<std::uint8_t>::max() ); }
 
 	inline void InitAsNullDevice()
 	{
@@ -75,7 +72,7 @@ public:
 	bool UpdateDeviceList();	// returns true if new devices or defaults show up
 	audio_device_description_t *FindDeviceById( const char *pId );  // returns NULL if not found
 	audio_device_description_t *GetDefaultDevice(); // returns NULL if not set
-	bool IsValid() { return !m_list.empty(); }
+	bool IsValid() const { return !m_list.empty(); }
 	IAudioDevice2 *CreateDevice( audio_device_init_params_t &params );
 	const wchar_t *GetDeviceToCreate( audio_device_init_params_t &params );
 
@@ -90,8 +87,8 @@ private:
 	int FindDeviceById( const wchar_t *pId, finddevice_t nFind );
 };
 
-#define DEFAULT_MIX_BUFFER_COUNT 4
-#define DEFAULT_MIX_BUFFER_SAMPLE_COUNT MIX_BUFFER_SIZE
+inline constexpr auto DEFAULT_MIX_BUFFER_COUNT = 4;
+inline constexpr auto DEFAULT_MIX_BUFFER_SAMPLE_COUNT = MIX_BUFFER_SIZE;
 struct audio_device_init_params_t
 {
 	const audio_device_description_t	*m_pDesc;
@@ -117,7 +114,7 @@ struct audio_device_init_params_t
 
 	inline void OverrideSpeakerConfig( int nSpeakerConfig )
 	{
-		Assert(nSpeakerConfig >= 0 && nSpeakerConfig < 8);
+		contract_assert( nSpeakerConfig >= 0 && nSpeakerConfig < 8 );
 		m_nOverrideSpeakerConfig = nSpeakerConfig;
 		m_bOverrideSpeakerConfig = true;
 	}
@@ -247,5 +244,3 @@ extern void ConvertFloat32Int16_Clamp_InterleaveStride( short *pOut, int nOutput
 
 inline void InitCOM() {}
 inline void ShutdownCOM() {}
-
-#endif // SOUNDSYSTEM_LOWLEVEL_H

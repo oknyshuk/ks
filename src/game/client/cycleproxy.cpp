@@ -1,17 +1,21 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Material proxy to get the cycle from a CBaseAnimateing derived entity.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Material proxy to get the cycle from a CBaseAnimateing derived entity.
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 // identifier was truncated to '255' characters in the debug information
 
 #include "proxyentity.h"
 #include "materialsystem/imaterialvar.h"
 #include "imaterialproxydict.h"
-
 
 class CCycleMaterialProxy: public CEntityMaterialProxy
 {
@@ -44,19 +48,19 @@ public:
 			return false;
 		}
 
-		if ( !Q_stricmp( pResult, "$alpha" ) )
+		if ( !V_stricmp( pResult, "$alpha" ) )
 		{
 			pMaterial->SetMaterialVarFlag( MATERIAL_VAR_ALPHA_MODIFIED_BY_PROXY, true );
 		}
 
 		pResult = pKeyValues->GetString( "easein", nullptr );
-		if( pResult && Q_atoi( pResult ) != 0 )
+		if( pResult && V_atoi( pResult ) != 0 )
 		{
 			m_bEaseIn = true;
 		}
 
 		pResult = pKeyValues->GetString( "easeout", nullptr );
-		if( pResult && Q_atoi( pResult ) != 0 )
+		if( pResult && V_atoi( pResult ) != 0 )
 		{
 			m_bEaseOut = true;
 		}
@@ -64,13 +68,13 @@ public:
 		pResult = pKeyValues->GetString( "start", nullptr );
 		if( pResult )
 		{
-			m_fStart = Q_atof( pResult );
+			m_fStart = V_atof( pResult );
 		}
 
 		pResult = pKeyValues->GetString( "end", nullptr );
 		if( pResult )
 		{
-			m_fEnd = Q_atof( pResult );
+			m_fEnd = V_atof( pResult );
 		}
 
 		return true;
@@ -88,11 +92,11 @@ public:
 			}
 			else if ( m_bEaseIn )
 			{
-				f = sin( M_PI * f * 0.5f );
+				f = std::sin( std::numbers::pi * f * 0.5f );
 			}
 			else if ( m_bEaseOut )
 			{
-				f = 1.0f - sin( M_PI * f * 0.5f + 0.5f * M_PI );
+				f = 1.0f - std::sin( std::numbers::pi * f * 0.5f + 0.5f * std::numbers::pi );
 			}
 			
 			MaterialVarType_t resultType;

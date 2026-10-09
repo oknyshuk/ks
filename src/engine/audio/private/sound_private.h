@@ -1,18 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef SOUND_PRIVATE_H
-#define SOUND_PRIVATE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "basetypes.h"
+import std;
+import ks.core;
 #include "snd_fixedint.h"
 #include "snd_audio_source.h"
+#include "sound.h"
+#include "soundsystem/lowlevel.h"
 
 // Forward declarations
 struct portable_samplepair_t;
@@ -25,7 +20,7 @@ class IAudioDevice;
 
 // ====================================================================
 
-#define		SAMPLE_16BIT_SHIFT		1
+inline constexpr auto SAMPLE_16BIT_SHIFT = 1;
 
 void S_Startup (void);
 void S_FlushSoundData(int rate);
@@ -65,11 +60,7 @@ extern void S_SyncClockAdjust( clocksync_index_t syncIndex );
 //=============================================================================
 
 // UNDONE: Move this global?
-#if USE_AUDIO_DEVICE_V1
-extern IAudioDevice *g_AudioDevice;
-#else
 extern IAudioDevice2 *g_AudioDevice;
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -130,5 +121,3 @@ void DSP_FreeAll(void);
 #ifdef __cplusplus
 }
 #endif // __cplusplus
-
-#endif			// SOUND_PRIVATE_H

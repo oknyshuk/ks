@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#ifndef ENTITYAPI_H
-#define ENTITYAPI_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+#include "edict.h"
+#include "server_class.h"
 
 class SendTable;
 
@@ -19,6 +15,3 @@ extern ServerClass* GetAllServerClasses();
 extern void ResetGlobalState( void );
 extern void ClearEntities( void );
 extern void FreeContainingEntity( edict_t *ed );
-
-
-#endif			// ENTITYAPI_H

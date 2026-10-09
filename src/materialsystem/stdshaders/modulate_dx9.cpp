@@ -1,17 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "convar.h"
+import std;
 
 #include "unlitgeneric_vs20.inc"
 #include "modulate_ps20.inc"
 #include "modulate_ps20b.inc"
 
-#include "cpp_shader_constant_register_map.h"
 
 	#include "modulate_ps30.inc"
 	#include "unlitgeneric_vs30.inc"
@@ -26,7 +23,7 @@ DEFINE_FALLBACK_SHADER( Modulate, Modulate_DX9 )
 BEGIN_VS_SHADER( Modulate_DX9,
 			  "Help for Modulate" )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( WRITEZ, SHADER_PARAM_TYPE_BOOL, "0", "Forces z to be written if set" )
 		SHADER_PARAM( MOD2X, SHADER_PARAM_TYPE_BOOL, "0", "forces a 2x modulate so that you can brighten and darken things" )
 

@@ -1,28 +1,27 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
+
 // Purpose: sheet code for particles and other sprite functions
-//
-//===========================================================================//
 
-#ifndef PARTICLES_INTERNAL_H
-#define PARTICLES_INTERNAL_H
-
-
-
+import ks.math;
 #include "tier2/fileutils.h"
+import std;
 
-#define MAX_WORLD_PLANAR_CONSTRAINTS ( 26 + 5 + 10 )
+class CParticleCollection;
 
-#define COLLISION_MODE_PER_PARTICLE_TRACE 0
-#define COLLISION_MODE_PER_FRAME_PLANESET 1
-#define COLLISION_MODE_INITIAL_TRACE_DOWN 2
-#define COLLISION_MODE_USE_NEAREST_TRACE 3
+inline constexpr auto MAX_WORLD_PLANAR_CONSTRAINTS = ( 26 + 5 + 10 );
 
-#define PARTICLEBLEND_DEFAULT 0
-#define PARTICLEBLEND_OVERLAY 1
-#define PARTICLEBLEND_DARKEN 2
-#define PARTICLEBLEND_LIGHTEN 3
-#define PARTICLEBLEND_MULTIPLY 4
+inline constexpr auto COLLISION_MODE_PER_PARTICLE_TRACE = 0;
+inline constexpr auto COLLISION_MODE_PER_FRAME_PLANESET = 1;
+inline constexpr auto COLLISION_MODE_INITIAL_TRACE_DOWN = 2;
+inline constexpr auto COLLISION_MODE_USE_NEAREST_TRACE = 3;
+
+inline constexpr auto PARTICLEBLEND_DEFAULT = 0;
+inline constexpr auto PARTICLEBLEND_OVERLAY = 1;
+inline constexpr auto PARTICLEBLEND_DARKEN = 2;
+inline constexpr auto PARTICLEBLEND_LIGHTEN = 3;
+inline constexpr auto PARTICLEBLEND_MULTIPLY = 4;
 
 struct CWorldCollideContextData
 {
@@ -37,8 +36,8 @@ struct CWorldCollideContextData
 	Vector m_vecLastUpdateOrigin;
 	bool m_bPlaneActive[MAX_WORLD_PLANAR_CONSTRAINTS];
 
-	void *operator new( size_t nSize );
-	void *operator new( size_t nSize, int nBlockUse, const char *pFileName, int nLine );
+	void *operator new( std::size_t nSize );
+	void *operator new( std::size_t nSize, int nBlockUse, const char *pFileName, int nLine );
 	void operator delete(void *pData);
 	void operator delete( void* p, int nBlockUse, const char *pFileName, int nLine );
 
@@ -50,7 +49,3 @@ struct CWorldCollideContextData
 
 // This is defined in the owner DLL
 extern bool UTIL_IsDedicatedServer( void );
-
-#endif // PARTICLES_INTERNAL_H	
-
-

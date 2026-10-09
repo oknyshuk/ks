@@ -1,11 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "particles_simple.h"
@@ -17,7 +24,7 @@
 #include "view.h"
 
 #define	NUM_CHILD_FLAMES	6
-#define	CHILD_SPREAD		40
+constexpr auto CHILD_SPREAD = 40;
 
 //==================================================
 // C_Plasma
@@ -209,9 +216,9 @@ float C_Plasma::GetFlickerScale( void )
 {
 	float	result = 0.0f;
 
-	result = sin( gpGlobals->curtime * 10000.0f );
+	result = std::sin( gpGlobals->curtime * 10000.0f );
 	result += 0.5f * sin( gpGlobals->curtime * 2000.0f );
-	result -= 0.5f * cos( gpGlobals->curtime * 8000.0f );
+	result -= 0.5f * std::cos( gpGlobals->curtime * 8000.0f );
 	
 	return result * 0.1f;
 }
@@ -237,10 +244,10 @@ bool C_Plasma::Simulate( void )
 	return true;
 }
 
-#define	FLAME_ALPHA_START	0.8f
-#define FLAME_ALPHA_END		1.0f
+constexpr auto FLAME_ALPHA_START = 0.8f;
+constexpr auto FLAME_ALPHA_END = 1.0f;
 
-#define	FLAME_TRANS_START	0.75f
+constexpr auto FLAME_TRANS_START = 0.75f;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -421,7 +428,7 @@ void C_Plasma::UpdateFlames( void )
 			m_entFlames[i].SetLocalOrigin( offset + ( m_entFlames[i].m_vecMoveDir * ((m_entFlames[i].GetScale())*CHILD_SPREAD) ) );
 		}
 
-		Assert( !m_entFlames[i].GetMoveParent() );
+		contract_assert( !m_entFlames[i].GetMoveParent() );
 		m_entFlames[i].SetLocalOriginDim( Z_INDEX, m_entFlames[i].GetLocalOriginDim( Z_INDEX ) + ( dScale * 64.0f ) );
 	}
 }
@@ -480,4 +487,3 @@ void C_Plasma::Update( void )
 		}
 	}
 }
-

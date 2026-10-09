@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A little helper class that computes a spline patch
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+import std;
+import ks.math;
 #include "splinepatch.h"
 
-#include "mathlib/vmatrix.h"
 
 //-----------------------------------------------------------------------------
 // Catmull rom blend weights
@@ -43,7 +36,7 @@ CSplinePatch::~CSplinePatch()
 
 void CSplinePatch::Init( int w, int h, int extraChannels )
 {
-	assert( extraChannels < MAX_CHANNELS );
+	contract_assert( extraChannels < MAX_CHANNELS );
 	m_ChannelCount = extraChannels;
 	m_Width = w;
 	m_Height = h;
@@ -272,7 +265,7 @@ float CSplinePatch::GetChannel( int channel ) const
 	// M is the patch type matrix, in my case I'm using a catmull-rom
 	// G is the array of control points. rows have constant t
 
-	assert( m_pChannel[channel] );
+	contract_assert( m_pChannel[channel] );
 
 	VMatrix controlPoints;
 	for (int i = 0; i < 4; ++i)

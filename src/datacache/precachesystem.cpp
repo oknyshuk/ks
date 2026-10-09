@@ -1,10 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier1/map_ops.h"
+import std;
+import ks.tier1;
 #include "tier2/tier2.h"
 #include "datacache/iprecachesystem.h"
 #include "datacache/iresourceaccesscontrol.h"
@@ -55,25 +53,24 @@ static const char *s_pResourceSystemName[] =
 //-----------------------------------------------------------------------------
 CPrecacheSystem g_PrecacheSystem;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CPrecacheSystem, IPrecacheSystem, 
-	PRECACHE_SYSTEM_INTERFACE_VERSION, g_PrecacheSystem );
+static InterfaceReg s_Reg_CPrecacheSystem_IPrecacheSystem( []() -> void * { return static_cast<IPrecacheSystem *>( &g_PrecacheSystem ); }, PRECACHE_SYSTEM_INTERFACE_VERSION );;
 
 //-----------------------------------------------------------------------------
 // Precaches/uncaches all resources used by a particular system
 //-----------------------------------------------------------------------------
 void CPrecacheSystem::Cache( IPrecacheHandler *pPrecacheHandler, PrecacheSystem_t nSystem, const char *pName, bool bPrecache, ResourceList_t hResourceList, bool bBuildResourceList )
 {	
-	COMPILE_TIME_ASSERT( ARRAYSIZE( s_pResourceSystemName ) == PRECACHE_SYSTEM_COUNT );
+	static_assert( std::size( s_pResourceSystemName ) == PRECACHE_SYSTEM_COUNT );
 
 	IResourcePrecacher *pPrecacher = m_pFirstPrecacher[nSystem];
 	for( ; pPrecacher; pPrecacher = pPrecacher->GetNext() )
 	{
-		if ( pName && Q_stricmp( pName, pPrecacher->GetName() ) )
+		if ( pName && V_stricmp( pName, pPrecacher->GetName() ) )
 			continue;
 		
 		if ( bBuildResourceList && g_pResourceAccessControl )
 		{
-			Assert( hResourceList == RESOURCE_LIST_INVALID );
+			contract_assert( hResourceList == RESOURCE_LIST_INVALID );
 			// a null name is never stored, so it gets a fresh list each time
 			ResourceList_t *pFound = pName ? ks::find_ptr( m_ResourceList[ nSystem ], pName ) : nullptr;
 			if ( pFound )
@@ -83,7 +80,7 @@ void CPrecacheSystem::Cache( IPrecacheHandler *pPrecacheHandler, PrecacheSystem_
 			else
 			{
 				char pDebugName[256];
-				Q_snprintf( pDebugName, sizeof(pDebugName), "%s \"%s\"", s_pResourceSystemName[nSystem], pName );
+				V_snprintf( pDebugName, sizeof(pDebugName), "%s \"%s\"", s_pResourceSystemName[nSystem], pName );
 				hResourceList = g_pResourceAccessControl->CreateResourceList( pDebugName );
 				if ( pName )
 				{

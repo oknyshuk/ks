@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_NPCSTATE_H
-#define AI_NPCSTATE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 enum NPC_STATE
 {
@@ -22,5 +15,3 @@ enum NPC_STATE
 	NPC_STATE_DEAD
 
 };
-
-#endif // AI_NPCSTATE_H

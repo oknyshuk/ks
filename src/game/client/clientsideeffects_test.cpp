@@ -1,11 +1,24 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 #include "engine/IEngineSound.h"
 #include "view.h"
 
@@ -15,7 +28,6 @@
 #include "clientsideeffects.h"
 
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "tier0/vprof.h"
 #include "collisionutils.h"
 #include "precache_register.h"
 
@@ -34,7 +46,7 @@ PRECACHE_REGISTER_END()
 void FX_AddLine( const FXLineData_t &data )
 {
 	CFXLine *t = new CFXLine( "Line", data );
-	assert( t );
+	contract_assert( t );
 
 	//Throw it into the list
 	clienteffects->AddEffect( t );
@@ -49,7 +61,7 @@ FX_AddStaticLine
 void FX_AddStaticLine( const Vector& start, const Vector& end, float scale, float life, const char *materialName, unsigned char flags )
 {
 	CFXStaticLine	*t = new CFXStaticLine( "StaticLine", start, end, scale, life, materialName, flags );
-	assert( t );
+	contract_assert( t );
 
 	//Throw it into the list
 	clienteffects->AddEffect( t );
@@ -64,7 +76,7 @@ FX_AddDiscreetLine
 void FX_AddDiscreetLine( const Vector& start, const Vector& direction, float velocity, float length, float clipLength, float scale, float life, const char *shader )
 {
 	CFXDiscreetLine	*t = new CFXDiscreetLine( "Line", start, direction, velocity, length, clipLength, scale, life, shader );
-	assert( t );
+	contract_assert( t );
 
 	//Throw it into the list
 	clienteffects->AddEffect( t );
@@ -77,7 +89,7 @@ void FX_AddQuad( const FXQuadData_t &data )
 {
 	CFXQuad *quad = new CFXQuad( data );
 
-	Assert( quad != nullptr );
+	contract_assert( quad != nullptr );
 
 	clienteffects->AddEffect( quad );
 }
@@ -134,11 +146,11 @@ FX_PlayerTracer
 ==================================================
 */
 
-#define	TRACER_BASE_OFFSET	8
+constexpr auto TRACER_BASE_OFFSET = 8;
 
 void FX_PlayerTracer( Vector& start, Vector& end )
 {
-	VPROF_BUDGET( "FX_PlayerTracer", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_PlayerTracer", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	Vector	shotDir, dStart, dEnd;
 	float	length;
 
@@ -162,7 +174,7 @@ void FX_PlayerTracer( Vector& start, Vector& end )
 	materialName = "effects/spark";
 
 	t = new CFXStaticLine( "Tracer", dStart, dEnd, random->RandomFloat( 0.5f, 0.75f ), 0.01f, materialName, 0 );
-	assert( t );
+	contract_assert( t );
 
 	//Throw it into the list
 	clienteffects->AddEffect( t );
@@ -174,9 +186,9 @@ FX_Tracer
 ==================================================
 */
 // Tracer must be this close to be considered for hearing
-#define	TRACER_MAX_HEAR_DIST	(6*12)
-#define TRACER_SOUND_TIME_MIN	0.1f
-#define TRACER_SOUND_TIME_MAX	0.1f
+constexpr auto TRACER_MAX_HEAR_DIST = (6*12);
+constexpr auto TRACER_SOUND_TIME_MIN = 0.1f;
+constexpr auto TRACER_SOUND_TIME_MAX = 0.1f;
 
 
 class CBulletWhizTimer : public CAutoGameSystem
@@ -203,7 +215,7 @@ CBulletWhizTimer g_BulletWhiz( "CBulletWhizTimer" );
 //			&vecDir - 
 //			iTracerType - 
 //-----------------------------------------------------------------------------
-#define LISTENER_HEIGHT 24
+constexpr auto LISTENER_HEIGHT = 24;
 
 ConVar cl_tracer_whiz_distance( "cl_tracer_whiz_distance", "72" );	// putting TRACER_MAX_HEAR_DIST on a cvar, so KellyT can find a good value
 
@@ -291,7 +303,7 @@ void FX_TracerSound( const Vector &start, const Vector &end, int iTracerType )
 
 void FX_Tracer( Vector& start, Vector& end, int velocity, bool makeWhiz )
 {
-	VPROF_BUDGET( "FX_Tracer", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_Tracer", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	//Don't make small tracers
 	float dist;
 	Vector dir;
@@ -302,19 +314,10 @@ void FX_Tracer( Vector& start, Vector& end, int velocity, bool makeWhiz )
 	float flMinWidth;
 	float flMaxWidth;
 
-#if defined( CSTRIKE2_DLL )
-	// we want short tracers for CS2 - mtw
-	// NOTE: should this all be done with the new particle system now?
-	minDist = 128;
-	// testing fatter tracers for CS2 - mtw
-	flMinWidth = 3.75;
-	flMaxWidth = 5.0;
-#else			
 	// Don't make short tracers.
 	minDist = 256;
 	flMinWidth = 0.75;
 	flMaxWidth = 0.9;
-#endif
 
 	if ( dist >= minDist )
 	{

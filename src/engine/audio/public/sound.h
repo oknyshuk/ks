@@ -1,27 +1,22 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: client sound i/o functions
-//
-//===========================================================================//
-#ifndef SOUND_H
-#define SOUND_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "basetypes.h"
+// Purpose: client sound i/o functions
+
+import ks.tier1;
 #include "datamap.h"
-#include "mathlib/vector.h"
-#include "mathlib/mathlib.h"
-#include "tier1/strtools.h"
+import std;
 #include "soundflags.h"
-#include "utlvector.h"
 #include "engine/SndInfo.h"
 #include "cdll_int.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 
-DECLARE_LOGGING_CHANNEL( LOG_SOUND_OPERATOR_SYSTEM );
+extern LoggingChannelID_t LOG_SOUND_OPERATOR_SYSTEM;;
 
-#define MAX_SFX  2048
+inline constexpr auto MAX_SFX = 2048;
 
-#define AUDIOSOURCE_CACHE_ROOTDIR	"maps/soundcache"
+inline constexpr const char *AUDIOSOURCE_CACHE_ROOTDIR = "maps/soundcache";
 
 class CSfxTable;
 enum soundlevel_t;
@@ -37,10 +32,8 @@ bool S_IsInitted();
 void S_StopAllSounds(bool clear);
 bool S_GetPreventSound( void );
 
-#if !USE_AUDIO_DEVICE_V1
 struct audio_device_description_t;
 void S_GetAudioDeviceList( std::vector< audio_device_description_t > &audioList );
-#endif
 
 class CAudioState
 {
@@ -309,5 +302,3 @@ void S_ValidateSoundCache( char const *pchWavFile );
 
 
 void S_PurgeSoundsDueToLanguageChange();
-
-#endif // SOUND_H

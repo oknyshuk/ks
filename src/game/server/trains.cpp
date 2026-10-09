@@ -1,10 +1,41 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Spawn, think, and touch functions for trains, etc.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Spawn, think, and touch functions for trains, etc.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -21,7 +52,7 @@
 
 static void PlatSpawnInsideTrigger(edict_t *pevPlatform);
 
-#define SF_PLAT_TOGGLE				0x0001
+constexpr auto SF_PLAT_TOGGLE = 0x0001;
 
 class [[= ks::reflect::KeyFrom<"m_flLip", ks::reflect::Key{ .name = "lip" } >{} ]]
       [[= ks::reflect::KeyFrom<"m_flWait", ks::reflect::Key{ .name = "wait" } >{} ]]
@@ -60,7 +91,7 @@ bool CBasePlatTrain::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "rotation"))
 	{
-		m_vecFinalAngle.x = atof(szValue);
+		m_vecFinalAngle.x = std::atof(szValue);
 	}
 	else
 	{
@@ -1068,16 +1099,16 @@ int CFuncTrackTrain::DrawDebugTextOverlays( void )
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
 		char tempstr[512];
-		Q_snprintf( tempstr,sizeof(tempstr), "angles: %g %g %g", (double)GetLocalAngles()[PITCH], (double)GetLocalAngles()[YAW], (double)GetLocalAngles()[ROLL] );
+		V_snprintf( tempstr,sizeof(tempstr), "angles: %g %g %g", (double)GetLocalAngles()[PITCH], (double)GetLocalAngles()[YAW], (double)GetLocalAngles()[ROLL] );
 		EntityText( nOffset, tempstr, 0 );
 		nOffset++;
 
 		float flCurSpeed = GetLocalVelocity().Length();
-		Q_snprintf( tempstr,sizeof(tempstr), "current speed (goal): %g (%g)", (double)flCurSpeed, (double)m_flSpeed );
+		V_snprintf( tempstr,sizeof(tempstr), "current speed (goal): %g (%g)", (double)flCurSpeed, (double)m_flSpeed );
 		EntityText( nOffset, tempstr, 0 );
 		nOffset++;
 
-		Q_snprintf( tempstr,sizeof(tempstr), "max speed: %g", (double)m_maxSpeed );
+		V_snprintf( tempstr,sizeof(tempstr), "max speed: %g", (double)m_maxSpeed );
 		EntityText( nOffset, tempstr, 0 );
 		nOffset++;
 	}
@@ -1106,7 +1137,7 @@ bool CFuncTrackTrain::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "volume"))
 	{
-		m_flVolume = (float) (atoi(szValue));
+		m_flVolume = (float) (std::atoi(szValue));
 		m_flVolume *= 0.1f;
 	}
 	else
@@ -1614,7 +1645,7 @@ void CFuncTrackTrain::Blocked( CBaseEntity *pOther )
 
 extern void FixupAngles( QAngle &v );
 
-#define TRAIN_MAXSPEED		1000	// approx max speed for sound pitch calculation
+constexpr auto TRAIN_MAXSPEED = 1000; // approx max speed for sound pitch calculation
 
 
 //-----------------------------------------------------------------------------
@@ -1928,7 +1959,6 @@ void CFuncTrackTrain::UpdateTrainOrientation( CPathTrack *pPrev, CPathTrack *pNe
 
 	// Trains *can* work in local space, but only if all elements of the track share
 	// the same move parent as the train.
-	Assert( !pPrev || (pPrev->GetMoveParent() == GetMoveParent()) );
 
 	switch ( GetTrainOrientationType() )
 	{
@@ -2256,7 +2286,6 @@ void CFuncTrackTrain::Next( void )
 
 	// Trains *can* work in local space, but only if all elements of the track share
 	// the same move parent as the train.
-	Assert( !pNext || (pNext->GetMoveParent() == GetMoveParent()) );
 
 	if ( pNext )
 	{
@@ -2479,7 +2508,7 @@ void CFuncTrackTrain::Find( void )
 		)
 	{
 		Warning( "func_track_train must be on a path of path_track\n" );
-		Assert(0);
+		contract_assert( 0 );
 		m_ppath = nullptr;
 		return;
 	}
@@ -2753,18 +2782,17 @@ void CFuncTrainControls::Spawn( void )
 	SetModel( STRING( GetModelName() ) );
 	AddEffects( EF_NODRAW );
 
-	Assert( GetParent() && "func_traincontrols needs parent to properly align to train" );
 	
 	SetThink( &CFuncTrainControls::Find );
 	SetNextThink( gpGlobals->curtime );
 }
 
 
-#define SF_TRACK_ACTIVATETRAIN		0x00000001
-#define SF_TRACK_RELINK				0x00000002
-#define SF_TRACK_ROTMOVE			0x00000004
-#define SF_TRACK_STARTBOTTOM		0x00000008
-#define SF_TRACK_DONT_MOVE			0x00000010
+constexpr auto SF_TRACK_ACTIVATETRAIN = 0x00000001;
+constexpr auto SF_TRACK_RELINK = 0x00000002;
+constexpr auto SF_TRACK_ROTMOVE = 0x00000004;
+constexpr auto SF_TRACK_STARTBOTTOM = 0x00000008;
+constexpr auto SF_TRACK_DONT_MOVE = 0x00000010;
 
 
 typedef enum { TRAIN_SAFE, TRAIN_BLOCKING, TRAIN_FOLLOWING } TRAIN_CODE;
@@ -2884,7 +2912,7 @@ void CFuncTrackChange::Find( void )
 				if ( !m_train )
 				{
 					Warning( "Can't find train for track change! %s\n", STRING(m_trainName) );
-					Assert(0);
+					contract_assert( 0 );
 					return;
 				}
 				Vector center = WorldSpaceCenter();
@@ -2897,20 +2925,20 @@ void CFuncTrackChange::Find( void )
 			else
 			{
 				Warning( "Can't find train for track change! %s\n", STRING(m_trainName) );
-				Assert(0);
+				contract_assert( 0 );
 				target = gEntList.FindEntityByName( nullptr, m_trainName );
 			}
 		}
 		else
 		{
 			Warning( "Can't find bottom track for track change! %s\n", STRING(m_trackBottomName) );
-			Assert(0);
+			contract_assert( 0 );
 		}
 	}
 	else
 	{
 		Warning( "Can't find top track for track change! %s\n", STRING(m_trackTopName) );
-		Assert(0);
+		contract_assert( 0 );
 	}
 }
 

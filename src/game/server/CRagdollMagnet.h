@@ -1,16 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Used to influence the initial force for a dying NPC's ragdoll. 
-//			Passive entity. Just represents position in the world, radius, force
-//
-// $NoKeywords: $
-//=============================================================================//
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CRAGDOLLMAGNET_H
-#define CRAGDOLLMAGNET_H
+// Purpose: Used to influence the initial force for a dying NPC's ragdoll.
+//			Passive entity. Just represents position in the world, radius, force
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 #define SF_RAGDOLLMAGNET_BAR	0x00000002	// this is a bar magnet.
 
@@ -43,6 +39,3 @@ private:
 	[[= ks::reflect::Key{ .name = "force" } ]] float	m_force;
 	[[= ks::reflect::Key{ .name = "axis" } ]] Vector	m_axis;
 };
-
-#endif //CRAGDOLLMAGNET_H
-

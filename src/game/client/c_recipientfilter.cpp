@@ -1,11 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "debugoverlay_shared.h"
 #include "prediction.h"
 
 static IPredictionSystem g_RecipientFilterPredictionSystem;
@@ -98,8 +108,8 @@ void C_RecipientFilter::AddRecipient( C_BasePlayer *player )
 	//  then don't send it to the local player again.
 	if ( m_bUsingPredictionRules )
 	{
-		Assert( C_BasePlayer::IsLocalPlayer( player ) );
-		Assert( prediction->InPrediction() );
+		contract_assert( C_BasePlayer::IsLocalPlayer( player ) );
+		contract_assert( prediction->InPrediction() );
 
 		// Only add local player if this is the first time doing prediction
 		if ( !g_RecipientFilterPredictionSystem.CanPredict() )
@@ -137,7 +147,7 @@ void C_RecipientFilter::AddRecipientsByTeam( C_Team *team )
 
 void C_RecipientFilter::RemoveRecipientsByTeam( C_Team *team )
 {
-	Assert ( 0 );
+	contract_assert( 0 );
 }
 
 
@@ -174,13 +184,13 @@ void C_RecipientFilter::UsePredictionRules( void )
 
 	if ( !prediction->InPrediction() )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
 	if ( !C_BasePlayer::HasAnyLocalPlayer() )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 

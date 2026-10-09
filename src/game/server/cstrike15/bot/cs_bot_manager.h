@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
-
-#ifndef CS_CONTROL_H
-#define CS_CONTROL_H
-
 
 #include "bot_manager.h"
 #include "nav_area.h"
@@ -311,11 +304,7 @@ public:
 	bool AllowMachineGuns( void ) const				{ return cv_bot_allow_machine_guns.GetBool(); }
 	bool AllowGrenades( void ) const				{ return cv_bot_allow_grenades.GetBool(); }
 	bool AllowSnipers( void ) const					{ return cv_bot_allow_snipers.GetBool(); }
-#ifdef CS_SHIELD_ENABLED
-	bool AllowTacticalShield( void ) const			{ return cv_bot_allow_shield.GetBool(); }
-#else
 	bool AllowTacticalShield( void ) const			{ return false; }
-#endif // CS_SHIELD_ENABLED
 
 	bool AllowFriendlyFireDamage( void ) const		{ return mp_friendlyfire.GetBool(); }
 
@@ -448,5 +437,3 @@ inline const CCSBotManager::Zone *CCSBotManager::GetClosestZone( const CBaseEnti
 	centroid.z += HalfHumanHeight;
 	return GetClosestZone( centroid );
 }
-
-#endif

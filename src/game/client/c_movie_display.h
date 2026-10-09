@@ -1,15 +1,15 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef C_MOVIE_DISPLAY_H
-#define C_MOVIE_DISPLAY_H
-
+#include "rocketui/rmlui.h"
+import ks.core;
 #include "reflect_annotations.h"
 
-#include "cbase.h"
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
 
 class [[= ks::reflect::NetTable{ .name = "DT_MovieDisplay" } ]]
       C_MovieDisplay : public C_BaseEntity
@@ -53,5 +53,3 @@ private:
 	[[= ks::reflect::Net{} ]] float	m_flVMin;
 	[[= ks::reflect::Net{} ]] float	m_flVMax;
 };
-
-#endif //C_MOVIE_DISPLAY_H

@@ -1,17 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SOUNDENVELOPE_H
-#define SOUNDENVELOPE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "engine/IEngineSound.h"
+#include "shareddefs.h"
+#include "string_t.h"
+#include "shared_classnames.h"
+
+class CBasePlayer;
 
 class CSoundPatch;
 
@@ -39,7 +35,7 @@ struct envelopeDescription_t
 
 class IRecipientFilter;
 
-abstract_class CSoundEnvelopeController
+class CSoundEnvelopeController
 {
 public:
 	virtual void		SystemReset( void ) = 0;
@@ -86,8 +82,3 @@ public:
 
 	virtual void		SoundSetCloseCaptionDuration( CSoundPatch *pSound, float flDuration ) = 0;
 };
-
-
-
-
-#endif // SOUNDENVELOPE_H

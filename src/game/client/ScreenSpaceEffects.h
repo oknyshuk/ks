@@ -1,22 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=====================================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.tier1;
 
-#ifndef SCREENSPACEEFFECTS_H
-#define SCREENSPACEEFFECTS_H
-
-
-class KeyValues;
 
 
 //------------------------------------------------------------------------------
 // Simple base class for screen space post-processing effects
 //------------------------------------------------------------------------------
-abstract_class IScreenSpaceEffect
+class IScreenSpaceEffect
 {
 public:
 
@@ -35,7 +27,7 @@ public:
 //------------------------------------------------------------------------------
 // Interface class for managing screen space post-processing effects
 //------------------------------------------------------------------------------
-abstract_class IScreenSpaceEffectManager
+class IScreenSpaceEffectManager
 {
 public:
 
@@ -79,7 +71,3 @@ public:
 
 #define ADD_SCREENSPACE_EFFECT( CEffect, pEffectName )			CEffect pEffectName##_effect;														\
 																CScreenSpaceEffectRegistration pEffectName##_reg( #pEffectName, &pEffectName##_effect );	
-
-
-
-#endif

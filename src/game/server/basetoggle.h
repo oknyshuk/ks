@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: For the slow removing of the CBaseToggle entity
 //			only old entities that need it for backwards-compatibility should
 //			include this file
-//=============================================================================//
-
-#ifndef BASETOGGLE_H
-#define BASETOGGLE_H
 
 #include "reflect_annotations.h"
-#pragma once
+#include "baseentity.h"
 
 class CBaseEntity;
 
@@ -75,7 +73,3 @@ public:
 							// the button will be allowed to operate. Otherwise, it will be
 							// deactivated.
 };
-
-
-
-#endif // BASETOGGLE_H

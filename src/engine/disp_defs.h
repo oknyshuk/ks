@@ -1,26 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DISPINFO_DEFS_H
-#define DISPINFO_DEFS_H
-
-
-#include "utlvector.h"
-#include <memory>
+import ks.tier1;
+import std;
 #include "materialsystem/imesh.h"
-#include "convar.h"
 #include "bspfile.h"
 #include "filesystem.h"
 #include "decal_private.h"
 #include "decal_clip.h"
-#include <bitset>
 #include "Overlay.h"
 #include "zone.h"
-
 
 extern ConVar				r_DrawDisp;
 
@@ -30,19 +20,19 @@ class CDispGroup;
 
 
 // The texture stage that displacement lightmap coordinates go in.
-#define DISP_LMCOORDS_STAGE 1
-#define DISP_MULTIBLEND_STAGE 3
+inline constexpr auto DISP_LMCOORDS_STAGE = 1;
+inline constexpr auto DISP_MULTIBLEND_STAGE = 3;
 
 
-#define MAX_STATIC_BUFFER_VERTS		(8*1024)
-#define MAX_STATIC_BUFFER_INDICES	(8*1024)
+inline constexpr auto MAX_STATIC_BUFFER_VERTS = (8*1024);
+inline constexpr auto MAX_STATIC_BUFFER_INDICES = (8*1024);
 
-#define MAX_DISP_DECALS		32
+inline constexpr auto MAX_DISP_DECALS = 32;
 
-#define MAX_EXTRA_DEPENDENCIES	8
+inline constexpr auto MAX_EXTRA_DEPENDENCIES = 8;
 #define MAX_RETESSELATE		MAX_MAP_DISPINFO	// Max number of displacements that can be retesselated per frame.
 
-#define MAX_TOTAL_DISP_DEPENDENCIES	(4*2 + 4*MAX_DISP_CORNER_NEIGHBORS + MAX_EXTRA_DEPENDENCIES)
+inline constexpr auto MAX_TOTAL_DISP_DEPENDENCIES = (4*2 + 4*MAX_DISP_CORNER_NEIGHBORS + MAX_EXTRA_DEPENDENCIES);
 
 
 
@@ -240,5 +230,3 @@ extern ConVar				r_DispBuildable;
 
 // If this is true, then no backface removal is done.
 extern bool					g_bDispOrthoRender;
-
-#endif // DISPINFO_DEFS_H

@@ -1,13 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "pch_tier0.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.core;
 
-#include "tier0_strtools.h"
+// First include standard libraries
+import std;
+
 
 //#include "tier1/strtools.h" // this is included for the definition of V_isspace()
 
@@ -188,18 +186,18 @@ const tchar* GetProcessorVendorId()
 
 	CpuIdResult_t cpuid0 = cpuid( 0 );
 	
-	memset( s_CpuVendorID, 0, sizeof(s_CpuVendorID) );
+	std::memset( s_CpuVendorID, 0, sizeof(s_CpuVendorID) );
 
 	if ( !cpuid0.eax )
 	{
 		// weird...
-		_tcscpy( s_CpuVendorID, _T( "Generic_x86" ) ); 
+		_tcscpy( s_CpuVendorID,  "Generic_x86"  ); 
 	}
 	else
 	{
-		memcpy( s_CpuVendorID + 0, &( cpuid0.ebx ), sizeof( cpuid0.ebx ) );
-		memcpy( s_CpuVendorID + 4, &( cpuid0.edx ), sizeof( cpuid0.edx ) );
-		memcpy( s_CpuVendorID + 8, &( cpuid0.ecx ), sizeof( cpuid0.ecx ) );
+		std::memcpy( s_CpuVendorID + 0, &( cpuid0.ebx ), sizeof( cpuid0.ebx ) );
+		std::memcpy( s_CpuVendorID + 4, &( cpuid0.edx ), sizeof( cpuid0.edx ) );
+		std::memcpy( s_CpuVendorID + 8, &( cpuid0.ecx ), sizeof( cpuid0.ecx ) );
 	}
 
 	return s_CpuVendorID;
@@ -213,7 +211,7 @@ const tchar* GetProcessorBrand()
 	}
 	s_bCpuBrandInitialized = true;
 
-	memset( &s_CpuBrand, 0, sizeof( s_CpuBrand ) );
+	std::memset( &s_CpuBrand, 0, sizeof( s_CpuBrand ) );
 
 	const char *pchVendor = GetProcessorVendorId();
 	if ( 0 == V_tier0_stricmp( pchVendor, "GenuineIntel" ) )
@@ -394,9 +392,9 @@ static void InterpretIntelCacheDescriptors( uint32 nPackedDesc )
 	}
 	for ( int i = 0; i < 4; ++i )
 	{
-		FindIntelCacheDesc( nPackedDesc & 0xFF, s_IntelL1DataCacheDesc, ARRAYSIZE( s_IntelL1DataCacheDesc ), s_cpuInformation.m_nL1CacheSizeKb, s_cpuInformation.m_nL1CacheDesc );
-		FindIntelCacheDesc( nPackedDesc & 0xFF, s_IntelL2DataCacheDesc, ARRAYSIZE( s_IntelL2DataCacheDesc ), s_cpuInformation.m_nL2CacheSizeKb, s_cpuInformation.m_nL2CacheDesc );
-		FindIntelCacheDesc( nPackedDesc & 0xFF, s_IntelL3DataCacheDesc, ARRAYSIZE( s_IntelL3DataCacheDesc ), s_cpuInformation.m_nL3CacheSizeKb, s_cpuInformation.m_nL3CacheDesc );
+		FindIntelCacheDesc( nPackedDesc & 0xFF, s_IntelL1DataCacheDesc, std::size( s_IntelL1DataCacheDesc ), s_cpuInformation.m_nL1CacheSizeKb, s_cpuInformation.m_nL1CacheDesc );
+		FindIntelCacheDesc( nPackedDesc & 0xFF, s_IntelL2DataCacheDesc, std::size( s_IntelL2DataCacheDesc ), s_cpuInformation.m_nL2CacheSizeKb, s_cpuInformation.m_nL2CacheDesc );
+		FindIntelCacheDesc( nPackedDesc & 0xFF, s_IntelL3DataCacheDesc, std::size( s_IntelL3DataCacheDesc ), s_cpuInformation.m_nL3CacheSizeKb, s_cpuInformation.m_nL3CacheDesc );
 		nPackedDesc >>= 8;
 	}
 }
@@ -410,7 +408,7 @@ const CPUInformation& GetCPUInformation()
 		return pi;
 
 	// Redundant, but just in case the user somehow messes with the size.
-	memset(&pi, 0x0, sizeof(pi));
+	std::memset(&pi, 0x0, sizeof(pi));
 
 	// Fill out the structure, and return it: 
 	pi.m_Size = sizeof(pi);
@@ -428,31 +426,31 @@ const CPUInformation& GetCPUInformation()
 	pi.m_nPhysicalProcessors = 0;
 	const int k_cMaxProcessors = 256;
 	bool rgbProcessors[k_cMaxProcessors];
-	memset( rgbProcessors, 0, sizeof( rgbProcessors ) );
+	std::memset( rgbProcessors, 0, sizeof( rgbProcessors ) );
 	int cMaxCoreId = 0;
 
-	FILE *fpCpuInfo = fopen( "/proc/cpuinfo", "r" );
+	std::FILE *fpCpuInfo = std::fopen( "/proc/cpuinfo", "r" );
 	if ( fpCpuInfo )
 	{
 		char rgchLine[256];
-		while ( fgets( rgchLine, sizeof( rgchLine ), fpCpuInfo ) )
+		while ( std::fgets( rgchLine, sizeof( rgchLine ), fpCpuInfo ) )
 		{
-			if ( !strncasecmp( rgchLine, "processor", strlen( "processor" ) ) )
+			if ( !__builtin_strncasecmp( rgchLine, "processor", std::strlen( "processor" ) ) )
 			{
 				pi.m_nLogicalProcessors++;
 			}
-			if ( !strncasecmp( rgchLine, "core id", strlen( "core id" ) ) )
+			if ( !__builtin_strncasecmp( rgchLine, "core id", std::strlen( "core id" ) ) )
 			{
-				char *pchValue = strchr( rgchLine, ':' );
-				cMaxCoreId = std::max( cMaxCoreId, atoi( pchValue + 1 ) );
+				char *pchValue = std::strchr( rgchLine, ':' );
+				cMaxCoreId = std::max( cMaxCoreId, std::atoi( pchValue + 1 ) );
 			}
-			if ( !strncasecmp( rgchLine, "physical id", strlen( "physical id" ) ) )
+			if ( !__builtin_strncasecmp( rgchLine, "physical id", std::strlen( "physical id" ) ) )
 			{
 				// it seems (based on survey data) that we can see
 				// processor N (N > 0) when it's the only processor in
 				// the system.  so keep track of each processor
-				char *pchValue = strchr( rgchLine, ':' );
-				int cPhysicalId = atoi( pchValue + 1 );
+				char *pchValue = std::strchr( rgchLine, ':' );
+				int cPhysicalId = std::atoi( pchValue + 1 );
 				if ( cPhysicalId < k_cMaxProcessors )
 					rgbProcessors[cPhysicalId] = true;
 			}
@@ -465,7 +463,7 @@ const CPUInformation& GetCPUInformation()
 			}
 			*/
 		}
-		fclose( fpCpuInfo );
+		std::fclose( fpCpuInfo );
 		for ( int i = 0; i < k_cMaxProcessors; i++ )
 			if ( rgbProcessors[i] )
 				pi.m_nPhysicalProcessors++;
@@ -475,7 +473,7 @@ const CPUInformation& GetCPUInformation()
 	{
 		pi.m_nLogicalProcessors = 1;
 		pi.m_nPhysicalProcessors = 1;
-		Assert( !"couldn't read cpu information from /proc/cpuinfo" );
+		contract_assert( !"couldn't read cpu information from /proc/cpuinfo" );
 	}
 
 
@@ -590,4 +588,3 @@ const CPUInformation& GetCPUInformation()
 	}
 	return pi;
 }
-

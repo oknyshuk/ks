@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <assert.h>
-#include <float.h>
+import ks.core;
 #include "cmodel_engine.h"
 #include "dispcoll_common.h"
 #include "cmodel_private.h"
 #include "builddisp.h"
 #include "collisionutils.h"
-#include "vstdlib/random.h"
-#include "tier0/fasttimer.h"
 #include "vphysics_interface.h"
 #include "vphysics/virtualmesh.h"
 #include "zone.h"
@@ -113,21 +106,21 @@ public:
 				cnode_t *pNode = &m_pBSPData->map_rootnode[nodeIndex];
 				cplane_t *pPlane = pNode->plane;
 
-				int sideResult = BOX_ON_PLANE_SIDE( mins, maxs, pPlane );
+				int sideResult = BoxOnPlaneSide( mins, maxs, pPlane );
 
 				// front side
 				if( sideResult & 1 )
 				{
 					nodeList[listWrite] = pNode->children[0];
 					listWrite = (listWrite+1)%MAX_NODES;
-					Assert(listWrite != listRead);
+					contract_assert( listWrite != listRead );
 				}
 				// back side
 				if( sideResult & 2 )
 				{
 					nodeList[listWrite] = pNode->children[1];
 					listWrite = (listWrite+1)%MAX_NODES;
-					Assert(listWrite != listRead);
+					contract_assert( listWrite != listRead );
 				}
 			}
 		}
@@ -170,7 +163,6 @@ public:
 				cleaf_t *pLeaf = &m_pBSPData->map_leafs[leafIndex];
 				int outListIndex = pLeaf->dispListStart + pLeaf->dispCount;	// output position for this leaf
 				pLeafList[outListIndex] = i;							// write the reference there
-				Assert(outListIndex < GetDispListCount());
 				pLeaf->dispCount++;										// move this leaf's output pointer
 			}
 		}
@@ -236,7 +228,7 @@ public:
 	virtual void GetVirtualMesh( void *userData, virtualmeshlist_t *pList )
 	{
 		int index = size_cast< int >( (intp) userData );
-		Assert(index >= 0 && index < g_DispCollTreeCount );
+		contract_assert( index >= 0 && index < g_DispCollTreeCount );
 		g_pDispCollTrees[index].GetVirtualMeshList( pList );
 		pList->pHull = nullptr;
 		if ( m_pDispHullData )
@@ -258,7 +250,7 @@ public:
 	virtual void GetTrianglesInSphere( void *userData, const Vector &center, float radius, virtualmeshtrianglelist_t *pList )
 	{
 		int index = size_cast< int > ( (intp) userData );
-		pList->triangleCount = g_pDispCollTrees[index].AABBTree_GetTrisInSphere( center, radius, pList->triangleIndices, ARRAYSIZE(pList->triangleIndices) );
+		pList->triangleCount = g_pDispCollTrees[index].AABBTree_GetTrisInSphere( center, radius, pList->triangleIndices, std::size( pList->triangleIndices ) );
 	}
 	void LevelInit( dphysdisp_t *pLump, int lumpSize )
 	{
@@ -269,7 +261,7 @@ public:
 		}
 		int totalHullData = 0;
 		m_dispHullOffset.assign( g_DispCollTreeCount, {} );
-		Assert(pLump->numDisplacements==g_DispCollTreeCount);
+		contract_assert( pLump->numDisplacements==g_DispCollTreeCount );
 		// count the size of the lump
 		unsigned short *pDataSize = (unsigned short *)(pLump+1);
 		for ( int i = 0; i < pLump->numDisplacements; i++ )
@@ -284,10 +276,10 @@ public:
 		}
 		m_pDispHullData = new byte[totalHullData];
 		byte *pData = (byte *)(pDataSize + pLump->numDisplacements);
-		memcpy( m_pDispHullData, pData, totalHullData );
+		std::memcpy( m_pDispHullData, pData, totalHullData );
 #if _DEBUG
 		int offset = pData - ((byte *)pLump);
-		Assert( offset + totalHullData == lumpSize );
+		contract_assert( offset + totalHullData == lumpSize );
 #endif
 	}
 	void LevelShutdown()
@@ -376,7 +368,7 @@ void CM_TestInDispTree( TraceInfo_t *pTraceInfo, const unsigned short *pDispList
 		for( int i = 0; i < dispListCount; i++ )
 		{
 			int dispIndex = pDispList[i];
-			alignedbbox_t * RESTRICT pDispBounds = &g_pDispBounds[dispIndex];
+			alignedbbox_t * __restrict__ pDispBounds = &g_pDispBounds[dispIndex];
 
 			// Respect trace contents
 			if( !(pDispBounds->GetContents() & collisionMask) )
@@ -460,7 +452,7 @@ static Vector InvDelta(const Vector &delta)
 		}
 		else
 		{
-			vecInvDelta[iAxis] = FLT_MAX;
+			vecInvDelta[iAxis] = std::numeric_limits<float>::max();
 		}
 	}
 	return vecInvDelta;
@@ -496,9 +488,6 @@ void CM_Stab( TraceInfo_t *pTraceInfo, const Vector &start, const Vector &vStabD
 	PushTraceVisits( pTraceInfo );
 
 	// increment the stab count -- statistics
-#ifdef COUNT_COLLISIONS
-	g_CollisionCounts.m_Stabs++;
-#endif
 
 	// stab
 	CM_RecursiveHullCheck( pTraceInfo, 0 /*root*/, 0.0f, 1.0f );
@@ -557,7 +546,7 @@ void CM_PostTraceToDispTree( TraceInfo_t *pTraceInfo )
 // New Collision!
 //-----------------------------------------------------------------------------
 template <bool IS_POINT>
-void FASTCALL CM_TraceToDispTree( TraceInfo_t *pTraceInfo, CDispCollTree *pDispTree, float startFrac, float endFrac )
+void CM_TraceToDispTree( TraceInfo_t *pTraceInfo, CDispCollTree *pDispTree, float startFrac, float endFrac )
 {
 	Ray_t ray;
 	ray.m_Start = pTraceInfo->m_start;
@@ -595,6 +584,6 @@ void FASTCALL CM_TraceToDispTree( TraceInfo_t *pTraceInfo, CDispCollTree *pDispT
 	//	CM_TraceToDispTreeTest( pDispTree, traceStart, traceEnd, boxMin, boxMax, startFrac, endFrac, pTrace, bRayCast );
 }
 
-template void FASTCALL CM_TraceToDispTree<true>( TraceInfo_t *pTraceInfo, CDispCollTree *pDispTree, float startFrac, float endFrac );
+template void CM_TraceToDispTree<true>( TraceInfo_t *pTraceInfo, CDispCollTree *pDispTree, float startFrac, float endFrac );
 
-template void FASTCALL CM_TraceToDispTree<false>( TraceInfo_t *pTraceInfo, CDispCollTree *pDispTree, float startFrac, float endFrac );
+template void CM_TraceToDispTree<false>( TraceInfo_t *pTraceInfo, CDispCollTree *pDispTree, float startFrac, float endFrac );

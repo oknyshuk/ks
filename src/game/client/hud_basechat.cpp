@@ -1,11 +1,18 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
 #include "hud_basechat.h"
 
 #include "iclientmode.h"
@@ -14,17 +21,12 @@
 #include "text_message.h"
 #include "localize/ilocalize.h"
 #include "uicenterprint.h"
-#include <keyvalues.h>
 #include "c_playerresource.h"
 #include "cstrike15/c_cs_playerresource.h"
 #include "multiplay_gamerules.h"
-#include "time.h"
-#include "filesystem.h"
-
-#include "steam/steam_api.h"
 
 
-#define CHAT_WIDTH_PERCENTAGE 0.6f
+constexpr auto CHAT_WIDTH_PERCENTAGE = 0.6f;
 
 ConVar hud_saytext_time( "hud_saytext_time", "12", 0 );
 ConVar cl_showtextmsg( "cl_showtextmsg", "1", 0, "Enable/disable text messages printing on the screen." );
@@ -108,7 +110,7 @@ wchar_t* ReadLocalizedString( const char *szString, wchar_t *pOut, int outSize, 
 {
 	if ( originalString )
 	{
-		Q_strncpy( originalString, szString, originalSize );
+		V_strncpy( originalString, szString, originalSize );
 	}
 
 	const wchar_t *pBuf = g_pLocalize->Find( szString );
@@ -174,7 +176,7 @@ CBaseHudChat *g_pHudChat = nullptr;
 
 CBaseHudChat *CBaseHudChat::GetHudChat( void )
 {
-	Assert( g_pHudChat );
+	contract_assert( g_pHudChat );
 	return g_pHudChat;
 }
 
@@ -185,7 +187,7 @@ int CBaseHudChat::m_nLineCounter = 1;
 CBaseHudChat::CBaseHudChat( const char *pElementName )
 : CHudElement( pElementName )
 {
-	Assert( g_pHudChat == nullptr );
+	contract_assert( g_pHudChat == nullptr );
 	g_pHudChat = this;
 
 	m_nMessageMode = MM_NONE;
@@ -260,7 +262,7 @@ bool CBaseHudChat::MsgFunc_SayText( const ks::net::CCSUsrMsg_SayText &msg )
 
 int CBaseHudChat::GetFilterForString( const char *pString )
 {
-	if ( !Q_stricmp( pString, "#HL_Name_Change" ) ) 
+	if ( !V_stricmp( pString, "#HL_Name_Change" ) ) 
 	{
 		return CHAT_FILTER_NAMECHANGE;
 	}
@@ -418,7 +420,7 @@ bool CBaseHudChat::MsgFunc_TextMsg( const ks::net::CCSUsrMsg_TextMsg &msg )
 		len = strlen( szString );
 		if ( len && szString[len-1] != '\n' && szString[len-1] != '\r' )
 		{
-			Q_strncat( szString, "\n", sizeof( szString), 1 );
+			V_strncat( szString, "\n", sizeof( szString), 1 );
 		}
 		Msg( "%s", ConvertCRtoNL( szString ) );
 		break;
@@ -429,7 +431,7 @@ bool CBaseHudChat::MsgFunc_TextMsg( const ks::net::CCSUsrMsg_TextMsg &msg )
 		len = strlen( szString );
 		if ( len && szString[len-1] != '\n' && szString[len-1] != '\r' )
 		{
-			Q_strncat( szString, "\n", sizeof( szString), 1 );
+			V_strncat( szString, "\n", sizeof( szString), 1 );
 		}
 		Printf( CHAT_FILTER_NONE, "%s", ConvertCRtoNL( szString ) );
 		break;
@@ -440,7 +442,7 @@ bool CBaseHudChat::MsgFunc_TextMsg( const ks::net::CCSUsrMsg_TextMsg &msg )
 		len = strlen( szString );
 		if ( len && szString[len-1] != '\n' && szString[len-1] != '\r' )
 		{
-			Q_strncat( szString, "\n", sizeof( szString), 1 );
+			V_strncat( szString, "\n", sizeof( szString), 1 );
 		}
 		Msg( "%s", ConvertCRtoNL( szString ) );
 		break;
@@ -472,7 +474,7 @@ void CBaseHudChat::MsgFunc_VoiceSubtitle( bf_read &msg )
 
 	CMultiplayRules *pMultiRules = dynamic_cast< CMultiplayRules * >( pGameRules );
 
-	Assert( pMultiRules );
+	contract_assert( pMultiRules );
 
 	if ( pMultiRules )
 	{
@@ -499,7 +501,7 @@ void CBaseHudChat::MsgFunc_VoiceSubtitle( bf_read &msg )
 	len = strlen( szString );
 	if ( len && szString[len-1] != '\n' && szString[len-1] != '\r' )
 	{
-		Q_strncat( szString, "\n", sizeof( szString), 1 );
+		V_strncat( szString, "\n", sizeof( szString), 1 );
 	}
 
 	const wchar_t *pVoicePrefix = g_pLocalize->Find( "#Voice" );
@@ -533,9 +535,9 @@ void CBaseHudChat::Printf( int iFilter, const char *fmt, ... )
 	va_list marker;
 	char msg[4096];
 
-	va_start( marker, fmt);
-	Q_vsnprintf( msg, sizeof( msg), fmt, marker);
-	va_end( marker);
+	__builtin_va_start( marker, fmt);
+	V_vsnprintf( msg, sizeof( msg), fmt, marker);
+	__builtin_va_end( marker);
 
 	ChatPrintf( 0, iFilter, "%s", msg );
 }
@@ -677,9 +679,8 @@ void CBaseHudChat::LevelInit( const char *newmap )
 	// are added.
 	//
 	// Also, we have to do this here instead of somewhere more sensible like the 
-	// c'tor or Init() method, because cvars are currently loaded twice: once
-	// during initialization from the local file, and later ( after HUD elements
-	// have been construction and initialized) from Steam Cloud remote storage.
+	// c'tor or Init() method, because cvars are loaded after HUD elements
+	// have been constructed and initialized.
 
 	switch ( cl_chatfilter_version.GetInt() )
 	{
@@ -733,9 +734,9 @@ void CBaseHudChat::ChatPrintf( int iPlayerIndex, int iFilter, const char *fmt, .
 	va_list marker;
 	char msg[4096];
 
-	va_start( marker, fmt);
-	Q_vsnprintf( msg, sizeof( msg), fmt, marker);
-	va_end( marker);
+	__builtin_va_start( marker, fmt);
+	V_vsnprintf( msg, sizeof( msg), fmt, marker);
+	__builtin_va_end( marker);
 
 	// Strip any trailing '\n'
 	if ( strlen( msg ) > 0 && msg[ strlen( msg )-1 ] == '\n' )
@@ -777,7 +778,7 @@ void CBaseHudChat::FireGameEvent( IGameEvent *event )
 {
 	const char *eventname = event->GetName();
 
-	if ( Q_strcmp( "hltv_chat", eventname ) == 0 )
+	if ( V_strcmp( "hltv_chat", eventname ) == 0 )
 	{
 		C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
 

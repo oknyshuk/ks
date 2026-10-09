@@ -1,24 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef ANALOGCODE_H
-#define ANALOGCODE_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "inputsystem/InputEnums.h"
-
 
 //-----------------------------------------------------------------------------
 // Macro to get at joystick codes
 //-----------------------------------------------------------------------------
 #define JOYSTICK_AXIS_INTERNAL( _joystick, _axis ) ( JOYSTICK_FIRST_AXIS + ((_joystick) * MAX_JOYSTICK_AXES) + (_axis) )
 #define JOYSTICK_AXIS( _joystick, _axis ) ( (AnalogCode_t)JOYSTICK_AXIS_INTERNAL( _joystick, _axis ) )
-
 
 //-----------------------------------------------------------------------------
 // Enumeration for analog input devices. Includes joysticks, mousewheel, mouse
@@ -36,6 +26,3 @@ enum AnalogCode_t
 
 	ANALOG_CODE_LAST,
 };
-
-
-#endif // ANALOGCODE_H

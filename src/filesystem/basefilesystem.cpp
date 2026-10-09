@@ -1,27 +1,13 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+
+
+import ks.vstdlib;
 #include "basefilesystem.h"
-#include <atomic>
-#include <mutex>
-#include "tier0/vprof.h"
-#include "tier1/characterset.h"
-#include "tier1/byte_reader.h"
-#include "tier1/convar.h"
-#include "tier1/keyvalues.h"
-#include "tier0/icommandline.h"
-#include "tier0/stacktools.h"
-#include "generichash.h"
-#include <deque>
+import std;
 #include "tier2/tier2.h"
-#include "tier1/lzmaDecoder.h"
-#include "vstdlib/vstrtools.h"
 #include "zip_utils.h"
-#include "fmtstr.h"
 
 #ifndef DEDICATED
 #include "keyvaluescompiler.h"
@@ -29,16 +15,15 @@
 #include "ifilelist.h"
 
 
-#define FS_DVDDEV_REMAP_ROOT ""
-#define FS_DVDDEV_ROOT "dvddev???:::"
-#define FS_EXCLUDE_PATHS_FILENAME "allbad_exclude_paths.txt"
+inline constexpr const char *FS_DVDDEV_REMAP_ROOT = "";
+inline constexpr const char *FS_DVDDEV_ROOT = "dvddev???:::";
+inline constexpr const char *FS_EXCLUDE_PATHS_FILENAME = "allbad_exclude_paths.txt";
 
 static bool IsDvdDevPathString( char const *szPath )
 {
 	return false;
 }
 
-#include "tier0/memalloc.h"
 
 
 
@@ -49,7 +34,6 @@ ConVar fs_warning_mode( "fs_warning_mode", "0", 0, "0:Off, 1:Warn main thread, 2
 ConVar fs_monitor_read_from_pack( "fs_monitor_read_from_pack", "0", 0, "0:Off, 1:Any, 2:Sync only" );
 
 
-#define BSPOUTPUT	0	// bsp output flag -- determines type of fs_log output to generate
 
 
 static void AddSeperatorAndFixPath( char *str );
@@ -75,19 +59,19 @@ void FixUpPathCaseForPS3(const char* pFilePath)
             *ptr='/';
             while(ptr[1]=='\\' || ptr[1] == '/') //Get rid of multiple slashes
             {
-                strcpy(ptr+1,ptr+2);
+                std::strcpy(ptr+1,ptr+2);
             }
-             if(strncmp(ptr+1,"..",2)==0 && ptr[3]!=0 && ptr[4]!=0 && last_ptr) //Some relative paths are used at runtime in Team Fortress
+             if(std::strncmp(ptr+1,"..",2)==0 && ptr[3]!=0 && ptr[4]!=0 && last_ptr) //Some relative paths are used at runtime in Team Fortress
              {
                  //printf("Changing relative path %s to ... ", pFilePathNonConst);
-                 strcpy(last_ptr+1, ptr+4); //Remove relative path
-                 if(strncmp(last_ptr+1,"..",2)==0 && last_ptr[3]!=0 && last_ptr[4]!=0 && prev_ptr) //Sometimes get /../../ strings 
+                 std::strcpy(last_ptr+1, ptr+4); //Remove relative path
+                 if(std::strncmp(last_ptr+1,"..",2)==0 && last_ptr[3]!=0 && last_ptr[4]!=0 && prev_ptr) //Sometimes get /../../ strings 
                  {
-                     strcpy(prev_ptr+1, last_ptr+4);
-                     if(strncmp(prev_ptr+1,"..",2)==0)
+                     std::strcpy(prev_ptr+1, last_ptr+4);
+                     if(std::strncmp(prev_ptr+1,"..",2)==0)
                      {
-                         printf("Error: Can't process PS3 filenames containing /../../../\n");
-                         Assert(0);
+                         std::printf("Error: Can't process PS3 filenames containing /../../../\n");
+                         contract_assert( 0 );
                      }
                  }
                  //printf("%s\n", pFilePathNonConst);
@@ -128,8 +112,8 @@ void FixUpPathCaseForPS3(const char* pFilePath)
 	    else
 	    {
 		    //Lowercase everything after second "/" 
-		    ptr=strchr(pFilePathNonConst,'/');
-		    if (ptr) ptr=strchr(ptr+1,'/');
+		    ptr=std::strchr(pFilePathNonConst,'/');
+		    if (ptr) ptr=std::strchr(ptr+1,'/');
 		    if (ptr) strlwr(ptr);
 	    }
     }
@@ -156,8 +140,6 @@ bool V_CheckDoubleSlashes( const char *pStr )
 
 //
 // Format relative filename when used under a search path
-// allows "symlinking" official workshop locations into
-// official locations in shipping depots.
 //
 // Returns passed pFileName if no symlinking occurs,
 // or pointer to temp symlink buffer containing the symlink target.
@@ -167,14 +149,6 @@ static char const * V_FormatFilenameForSymlinking( char (&tempSymlinkBuffer)[MAX
 	if ( !pFileName )
 		return nullptr;
 
-	if ( !V_strnicmp( pFileName, "maps", 4 ) &&
-		 ( ( pFileName[4] == CORRECT_PATH_SEPARATOR ) || ( pFileName[4] == INCORRECT_PATH_SEPARATOR ) ) &&
-		 !V_strnicmp( pFileName + 5, "workshop", 8 ) &&
-		 ( ( pFileName[13] == CORRECT_PATH_SEPARATOR ) || ( pFileName[13] == INCORRECT_PATH_SEPARATOR ) ) )
-	{
-		//    maps/workshop/
-	}
-
 	static bool bLoadBannedWords = ( !!CommandLine()->FindParm( "-usebanlist" ) ) || (!!CommandLine()->FindParm( "-perfectworld" ) );
 	if ( bLoadBannedWords )
 	{
@@ -183,7 +157,7 @@ static char const * V_FormatFilenameForSymlinking( char (&tempSymlinkBuffer)[MAX
 			!V_strnicmp( pFileName + 5, "ar_monastery", 12 ) )
 		{
 			//	maps/ar_monastery -> maps/ar_shoots
-			Q_snprintf( tempSymlinkBuffer, ARRAYSIZE( tempSymlinkBuffer ), "maps%car_shoots%s", pFileName[ 4 ], pFileName + 17 );
+			V_snprintf( tempSymlinkBuffer, std::size( tempSymlinkBuffer ), "maps%car_shoots%s", pFileName[ 4 ], pFileName + 17 );
 			return tempSymlinkBuffer;
 		}
 	}
@@ -193,11 +167,9 @@ static char const * V_FormatFilenameForSymlinking( char (&tempSymlinkBuffer)[MAX
 
 
 // This can be used to easily fix a filename on the stack.
-#define CHECK_DOUBLE_SLASHES( x ) Assert( V_CheckDoubleSlashes(x) == false );
+#define CHECK_DOUBLE_SLASHES( x ) contract_assert( V_CheckDoubleSlashes(x) == false );
 
 
-// Win32 dedicated.dll contains both filesystem_steam.cpp and filesystem_stdio.cpp, so it has two
-// CBaseFileSystem objects.  We'll let it manage BaseFileSystem() itself.
 static CBaseFileSystem *g_pBaseFileSystem;
 CBaseFileSystem *BaseFileSystem()
 {
@@ -229,100 +201,6 @@ struct FileOpenDuplicateTime_t
 };
 std::vector< FileOpenDuplicateTime_t* > g_FileOpenDuplicateTimes;	// Used to debug approximate time spent reading files duplicate times
 std::recursive_mutex g_FileOpenDuplicateTimesMutex;
-
-#if defined( TRACK_BLOCKING_IO )
-
-// If we hit more than 100 items in a frame, we're probably doing a level load...
-#define MAX_ITEMS	100
-
-class CBlockingFileItemList : public IBlockingFileItemList
-{
-public:
-	CBlockingFileItemList( CBaseFileSystem *fs ) 
-		: 
-		m_pFS( fs ),
-		m_bLocked( false )
-	{
-	}
-
-	// You can't call any of the below calls without calling these methods!!!!
-	virtual void	LockMutex()
-	{
-		Assert( !m_bLocked );
-		if ( m_bLocked )
-			return;
-		m_bLocked = true;
-		m_pFS->BlockingFileAccess_EnterCriticalSection();
-	}
-
-	virtual void	UnlockMutex()
-	{
-		Assert( m_bLocked );
-		if ( !m_bLocked )
-			return;
-
-		m_pFS->BlockingFileAccess_LeaveCriticalSection();
-		m_bLocked = false;
-	}
-
-	virtual int First() const
-	{
-		if ( !m_bLocked )
-		{
-			Error( "CBlockingFileItemList::First() w/o calling EnterCriticalSectionFirst!" );
-		}
-		return m_Items.empty() ? InvalidIndex() : 0;
-	}
-
-	virtual int Next( int i ) const
-	{
-		if ( !m_bLocked )
-		{
-			Error( "CBlockingFileItemList::Next() w/o calling EnterCriticalSectionFirst!" );
-		}
-		return i + 1 < std::ssize( m_Items ) ? i + 1 : InvalidIndex();
-	}
-
-	// Indices are positions; the list only changes under the lock.
-	virtual int InvalidIndex() const
-	{
-		return -1;
-	}
-
-	virtual const FileBlockingItem& Get( int index ) const
-	{
-		if ( !m_bLocked )
-		{
-			Error( "CBlockingFileItemList::Get( %d ) w/o calling EnterCriticalSectionFirst!", index );
-		}
-		return m_Items[ index ];
-	}
-
-	virtual void Reset()
-	{
-		if ( !m_bLocked )
-		{
-			Error( "CBlockingFileItemList::Reset() w/o calling EnterCriticalSectionFirst!" );
-		}
-		m_Items.clear();
-	}
-
-	void Add( const FileBlockingItem& item )
-	{
-		while ( m_Items.size() > MAX_ITEMS )
-		{
-			m_Items.pop_front();
-		}
-		m_Items.push_back( item );
-	}
-
-
-private:
-	std::deque< FileBlockingItem >		m_Items;
-	CBaseFileSystem						*m_pFS;
-	bool								m_bLocked;
-};
-#endif
 
 std::string_view	CBaseFileSystem::m_GamePathID;
 std::string_view	CBaseFileSystem::m_BSPPathID;
@@ -526,7 +404,7 @@ CBaseFileSystem::CBaseFileSystem()
 	m_WhitelistFileTrackingEnabled = -1;
 
 	// Clear out statistics
-	memset( &m_Stats, 0, sizeof(m_Stats) );
+	std::memset( &m_Stats, 0, sizeof(m_Stats) );
 
 	m_fwLevel    = FILESYSTEM_WARNING_REPORTUNCLOSED;
 	m_pfnWarning = nullptr;
@@ -536,18 +414,11 @@ CBaseFileSystem::CBaseFileSystem()
 	m_DirtyDiskReportFunc = nullptr;
 
 	m_pThreadPool = nullptr;
-#if defined( TRACK_BLOCKING_IO )
-	m_pBlockingItems = new CBlockingFileItemList( this );
-	m_bBlockingFileAccessReportingEnabled = false;
-	m_bAllowSynchronousLogging = true;
-#endif
 
 	m_iMapLoad = 0;
 
-#ifdef SUPPORT_IODELAY_MONITORING
 	m_pDelayThread = nullptr;
 	m_flDelayLimit = 0;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -556,9 +427,6 @@ CBaseFileSystem::CBaseFileSystem()
 CBaseFileSystem::~CBaseFileSystem()
 {
 	m_PathIDInfos.clear();
-#if defined( TRACK_BLOCKING_IO )
-	delete m_pBlockingItems;
-#endif
 
 	// Free the whitelist.
 	RegisterFileWhitelist( nullptr, nullptr, nullptr );
@@ -571,7 +439,7 @@ CBaseFileSystem::~CBaseFileSystem()
 void *CBaseFileSystem::QueryInterface( const char *pInterfaceName )
 {
 	// We also implement the IMatSystemSurface interface
-	if (!Q_strncmp(	pInterfaceName, BASEFILESYSTEM_INTERFACE_VERSION, Q_strlen(BASEFILESYSTEM_INTERFACE_VERSION) + 1))
+	if (!V_strncmp(	pInterfaceName, BASEFILESYSTEM_INTERFACE_VERSION, V_strlen(BASEFILESYSTEM_INTERFACE_VERSION) + 1))
 		return (IBaseFileSystem*)this;
 
 	return nullptr;
@@ -591,7 +459,7 @@ InitReturnVal_t CBaseFileSystem::Init()
 	m_BSPPathID = PathIDSymbol( "BSP" );
 	m_GamePathID = PathIDSymbol( "GAME" );
 
-	if ( getenv( "fs_debug" ) )
+	if ( std::getenv( "fs_debug" ) )
 	{
 		m_bOutputDebugString = true;
 	}
@@ -599,18 +467,18 @@ InitReturnVal_t CBaseFileSystem::Init()
 	const char *logFileName = CommandLine()->ParmValue( "-fs_log" );
 	if ( logFileName )
 	{
-		m_pLogFile = fopen( logFileName, "w" ); // STEAM OK
+		m_pLogFile = std::fopen( logFileName, "w" );
 		if ( !m_pLogFile )
 			return INIT_FAILED;
-		fprintf( m_pLogFile, "@echo off\n" );
-		fprintf( m_pLogFile, "setlocal\n" );
+		std::fprintf( m_pLogFile, "@echo off\n" );
+		std::fprintf( m_pLogFile, "setlocal\n" );
 		const char *fs_target = CommandLine()->ParmValue( "-fs_target" );
 		if( fs_target )
 		{
-			fprintf( m_pLogFile, "set fs_target=\"%s\"\n", fs_target );
+			std::fprintf( m_pLogFile, "set fs_target=\"%s\"\n", fs_target );
 		}
-		fprintf( m_pLogFile, "if \"%%fs_target%%\" == \"\" goto error\n" );
-		fprintf( m_pLogFile, "@echo on\n" );
+		std::fprintf( m_pLogFile, "if \"%%fs_target%%\" == \"\" goto error\n" );
+		std::fprintf( m_pLogFile, "@echo on\n" );
 	}
 
 	InitAsync();
@@ -630,40 +498,40 @@ void CBaseFileSystem::Shutdown()
 		if( CommandLine()->FindParm( "-fs_logbins" ) >= 0 )
 		{
 			char cwd[MAX_FILEPATH];
-			getcwd( cwd, MAX_FILEPATH-1 );
-			fprintf( m_pLogFile, "set binsrc=\"%s\"\n", cwd );
-			fprintf( m_pLogFile, "mkdir \"%%fs_target%%\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2.exe\" \"%%fs_target%%\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2.dat\" \"%%fs_target%%\"\n" );
-			fprintf( m_pLogFile, "mkdir \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\*.asi\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\materialsystem.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\shaderapidx9.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\filesystem_stdio.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\soundemittersystem.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\stdshader*.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\shader_nv*.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\launcher.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\engine.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\mss32.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\tier0.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vgui2.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vguimatsurface.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\voice_miles.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vphysics.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vstdlib.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\studiorender.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vaudio_miles.dll\" \"%%fs_target%%\\bin\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2\\resource\\*.ttf\" \"%%fs_target%%\\hl2\\resource\"\n" );
-			fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2\\bin\\gameui.dll\" \"%%fs_target%%\\hl2\\bin\"\n" );
+			ks::platform::current_directory( cwd, MAX_FILEPATH-1 );
+			std::fprintf( m_pLogFile, "set binsrc=\"%s\"\n", cwd );
+			std::fprintf( m_pLogFile, "mkdir \"%%fs_target%%\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2.exe\" \"%%fs_target%%\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2.dat\" \"%%fs_target%%\"\n" );
+			std::fprintf( m_pLogFile, "mkdir \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\*.asi\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\materialsystem.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\shaderapidx9.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\filesystem_stdio.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\soundemittersystem.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\stdshader*.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\shader_nv*.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\launcher.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\engine.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\mss32.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\tier0.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vgui2.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vguimatsurface.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\voice_miles.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vphysics.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vstdlib.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\studiorender.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\bin\\vaudio_miles.dll\" \"%%fs_target%%\\bin\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2\\resource\\*.ttf\" \"%%fs_target%%\\hl2\\resource\"\n" );
+			std::fprintf( m_pLogFile, "copy \"%%binsrc%%\\hl2\\bin\\gameui.dll\" \"%%fs_target%%\\hl2\\bin\"\n" );
 		}
-		fprintf( m_pLogFile, "goto done\n" );
-		fprintf( m_pLogFile, ":error\n" );
-		fprintf( m_pLogFile, "echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\"\n" );
-		fprintf( m_pLogFile, "echo ERROR: must set fs_target=targetpath (ie. \"set fs_target=u:\\destdir\")!\n" );
-		fprintf( m_pLogFile, "echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\"\n" );
-		fprintf( m_pLogFile, ":done\n" );
-		fclose( m_pLogFile ); // STEAM OK
+		std::fprintf( m_pLogFile, "goto done\n" );
+		std::fprintf( m_pLogFile, ":error\n" );
+		std::fprintf( m_pLogFile, "echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\"\n" );
+		std::fprintf( m_pLogFile, "echo ERROR: must set fs_target=targetpath (ie. \"set fs_target=u:\\destdir\")!\n" );
+		std::fprintf( m_pLogFile, "echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\"\n" );
+		std::fprintf( m_pLogFile, ":done\n" );
+		std::fclose( m_pLogFile );
 	}
 
 	RemoveAllSearchPaths();
@@ -684,9 +552,9 @@ void CBaseFileSystem::BuildExcludeList()
 //-----------------------------------------------------------------------------
 inline void CBaseFileSystem::ComputeFullWritePath( char* pDest, int maxlen, const char *pRelativePath, const char *pWritePathID )
 {
-	Q_strncpy( pDest, GetWritePath( pRelativePath, pWritePathID ), maxlen );
-	Q_strncat( pDest, pRelativePath, maxlen, COPY_ALL_CHARACTERS );
-	Q_FixSlashes( pDest );
+	V_strncpy( pDest, GetWritePath( pRelativePath, pWritePathID ), maxlen );
+	V_strncat( pDest, pRelativePath, maxlen, COPY_ALL_CHARACTERS );
+	V_FixSlashes( pDest );
 }
 
 
@@ -727,7 +595,7 @@ void CBaseFileSystem::LogAccessToFile( char const *accesstype, char const *fullp
 //			*options - 
 // Output : FILE
 //-----------------------------------------------------------------------------
-FILE *CBaseFileSystem::Trace_FOpen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo )
+std::FILE *CBaseFileSystem::Trace_FOpen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo )
 {
 	if ( !m_NonexistingFilesExtensions.empty() )
 	{
@@ -743,58 +611,8 @@ FILE *CBaseFileSystem::Trace_FOpen( const char *filename, const char *options, u
 		}
 	}
 
-#ifdef NONEXISTING_FILES_CACHE_SUPPORT
-	bool bReadOnlyRequest = !strchr(options,'w') && !strchr(options,'a') && !strchr(options,'+');
 
-	static bool s_bNeverCheckFS = !CommandLine()->FindParm( "-alwayscheckfs" );
-	if ( s_bNeverCheckFS )
-	{
-		std::scoped_lock lock( m_OpenedFilesMutex );
-
-		if ( double *pCacheTime = ks::find_ptr( m_NonexistingFilesCache, filename ) )
-		{
-			double &refCacheTime = *pCacheTime;
-
-			if ( bReadOnlyRequest )
-			{
-				if ( refCacheTime != 0.0 )
-				{
-					Warning( "Trace_FOpen: duplicate request for missing file: %s [was missing %.3f sec ago]\n", filename, Plat_FloatTime() - refCacheTime );
-					return nullptr;	// we looked for this file already, it doesn't exist
-				}
-				else
-				{
-					// This file was previously missing, but a write request was made and could have created the file, so this read call should fall through
-				}
-			}
-			else
-			{
-				// This is possibly a write request, so remove cached ENOENT record
-				Warning( "Trace_FOpen: possibly write request for missing file: %s [was missing %.3f sec ago]\n", filename, Plat_FloatTime() - refCacheTime );
-				refCacheTime = 0.0f;
-			}
-		}
-		else
-		{
-			// Nothing known about this file, fall through into syscall to fopen
-		}
-	}
-#endif
-
-	AUTOBLOCKREPORTER_FN( Trace_FOpen, this, true, filename, FILESYSTEM_BLOCKING_SYNCHRONOUS, FileBlockingItem::FB_ACCESS_OPEN );
-
-	FILE *fp = FS_fopen( filename, options, flags, size, pInfo );
-
-#ifdef NONEXISTING_FILES_CACHE_SUPPORT
-	if ( s_bNeverCheckFS && !fp && bReadOnlyRequest )
-	{
-		double dblNow = Plat_FloatTime();
-
-		std::scoped_lock lock( m_OpenedFilesMutex );
-		m_NonexistingFilesCache[ filename ] = dblNow;
-		Warning( "Trace_FOpen: missing file: %s [will never check again]\n", filename );
-	}
-#endif
+	std::FILE *fp = FS_fopen( filename, options, flags, size, pInfo );
 
 	if ( fp )
 	{
@@ -821,7 +639,7 @@ FILE *CBaseFileSystem::Trace_FOpen( const char *filename, const char *options, u
 	return fp;
 }
 
-void CBaseFileSystem::GetFileNameForHandle( FileHandle_t handle, char *buf, size_t buflen )
+void CBaseFileSystem::GetFileNameForHandle( FileHandle_t handle, char *buf, std::size_t buflen )
 {
 	V_strncpy( buf, "Unknown", buflen );
 	/*
@@ -835,7 +653,7 @@ void CBaseFileSystem::GetFileNameForHandle( FileHandle_t handle, char *buf, size
 	// Pack file filehandles store the underlying name for convenience
 	if ( fh->IsPack() )
 	{
-		Q_strncpy( buf, fh->Name(), buflen );
+		V_strncpy( buf, fh->Name(), buflen );
 		return;
 	}
 
@@ -848,7 +666,7 @@ void CBaseFileSystem::GetFileNameForHandle( FileHandle_t handle, char *buf, size
 	if ( result != -1 )
 	{
 		COpenedFile found = m_OpenedFiles[ result ];
-		Q_strncpy( buf, found.GetName(), buflen );
+		V_strncpy( buf, found.GetName(), buflen );
 	}
 	else
 	{
@@ -861,7 +679,7 @@ void CBaseFileSystem::GetFileNameForHandle( FileHandle_t handle, char *buf, size
 // Purpose: 
 // Input  : *fp - 
 //-----------------------------------------------------------------------------
-void CBaseFileSystem::Trace_FClose( FILE *fp )
+void CBaseFileSystem::Trace_FClose( std::FILE *fp )
 {
 	if ( fp )
 	{
@@ -882,7 +700,7 @@ void CBaseFileSystem::Trace_FClose( FILE *fp )
 		}
 		else
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 
 			if ( m_fwLevel >= FILESYSTEM_WARNING_REPORTALLACCESSES )
 			{
@@ -897,7 +715,7 @@ void CBaseFileSystem::Trace_FClose( FILE *fp )
 }
 
 
-void CBaseFileSystem::Trace_FRead( int size, FILE* fp )
+void CBaseFileSystem::Trace_FRead( int size, std::FILE* fp )
 {
 	if ( !fp || m_fwLevel < FILESYSTEM_WARNING_REPORTALLACCESSES_READ )
 		return;
@@ -922,7 +740,7 @@ void CBaseFileSystem::Trace_FRead( int size, FILE* fp )
 	}
 }
 
-void CBaseFileSystem::Trace_FWrite( int size, FILE* fp )
+void CBaseFileSystem::Trace_FWrite( int size, std::FILE* fp )
 {
 	if ( !fp || m_fwLevel < FILESYSTEM_WARNING_REPORTALLACCESSES_READWRITE )
 		return;
@@ -979,18 +797,17 @@ void CBaseFileSystem::AddVPKFile( char const *pBasename, SearchPathAdd_t addType
 	// Ensure that the passed in file name has a .vpk extension. Otherwise the check
 	// for already having the .vpk file will always fail and the same file may get
 	// added dozens of times, wasting hundreds of MB of memory.
-	const char *pExtension = strrchr( pBasename, '.' );
-	Assert( pExtension && V_strcmp( pExtension, ".vpk" ) == 0 );
+	const char *pExtension = std::strrchr( pBasename, '.' );
+	contract_assert( pExtension && V_strcmp( pExtension, ".vpk" ) == 0 );
 	if ( !pExtension || V_strcmp( pExtension, ".vpk" ) )
 	{
 		Warning( "Extensionless VPK file '%s' specified. Ignoring.\n", pBasename );
 		return;
 	}
 
-#ifdef SUPPORT_VPK
 	char nameBuf[MAX_PATH];
-	Q_MakeAbsolutePath( nameBuf, sizeof( nameBuf ), pBasename );
-	Q_FixSlashes( nameBuf );
+	V_MakeAbsolutePath( nameBuf, sizeof( nameBuf ), pBasename );
+	V_FixSlashes( nameBuf );
 	// see if we already have this vpk file
 	for( int i = 0; i < std::ssize( m_VPKFiles ); i++ )
 	{
@@ -1017,7 +834,7 @@ void CBaseFileSystem::AddVPKFile( char const *pBasename, SearchPathAdd_t addType
 			m_VPKFiles.insert( m_VPKFiles.begin(), pNew );
 		}
 		char szRelativePathName[512];
-		Assert ( V_IsAbsolutePath( pNew->FullPathName() ) );
+		contract_assert( V_IsAbsolutePath( pNew->FullPathName() ) );
 		char szBasePath[MAX_PATH];
 		V_strncpy( szBasePath, pNew->FullPathName(), sizeof(szBasePath) );
 		V_StripFilename( szBasePath );
@@ -1025,16 +842,14 @@ void CBaseFileSystem::AddVPKFile( char const *pBasename, SearchPathAdd_t addType
 		V_MakeRelativePath( pNew->FullPathName(), szBasePath, szRelativePathName, sizeof( szRelativePathName ) );
 		pNew->m_PackFileID = m_FileTracker2.NotePackFileOpened( pszFName, szRelativePathName, "GAME", 0 );		
 	}
-#endif
 }
 
 void CBaseFileSystem::RemoveVPKFile( char const *pBasename )
 {
-#ifdef SUPPORT_VPK
 	char nameBuf[MAX_PATH];
-	Q_MakeAbsolutePath( nameBuf, sizeof( nameBuf ), pBasename );
-	Q_strlower( nameBuf );
-	Q_FixSlashes( nameBuf );
+	V_MakeAbsolutePath( nameBuf, sizeof( nameBuf ), pBasename );
+	V_strlower( nameBuf );
+	V_FixSlashes( nameBuf );
 	// see if we already have this vpk file
 	for( int i = 0; i < std::ssize( m_VPKFiles ); i++ )
 	{
@@ -1045,17 +860,14 @@ void CBaseFileSystem::RemoveVPKFile( char const *pBasename )
 			break;											// already have this one
 		}
 	}
-#endif
 }
 
 void CBaseFileSystem::GetVPKFileNames( std::vector< std::string > &destVector )
 {
-#ifdef SUPPORT_VPK
 	for( int i = 0; i < std::ssize( m_VPKFiles ); i++ )
 	{
 		destVector.push_back( std::string( m_VPKFiles[i]->FullPathName() ) );
 	}
-#endif	
 }
 
 //-----------------------------------------------------------------------------
@@ -1077,10 +889,10 @@ bool CBaseFileSystem::AddPackFile( const char *pFileName, const char *pathID )
 bool CBaseFileSystem::AddPackFileFromPath( const char *pPath, const char *pakfile, bool bCheckForAppendedPack, const char *pathID )
 {
 	char fullpath[ MAX_PATH ];
-	_snprintf( fullpath, sizeof(fullpath), "%s%s", pPath, pakfile );
-	Q_FixSlashes( fullpath );
+	std::snprintf( fullpath, sizeof(fullpath), "%s%s", pPath, pakfile );
+	V_FixSlashes( fullpath );
 
-	struct	_stat buf;
+	ks::platform::file_info buf;
 	if ( FS_stat( fullpath, &buf ) == -1 )
 		return false;
 
@@ -1090,9 +902,9 @@ bool CBaseFileSystem::AddPackFileFromPath( const char *pPath, const char *pakfil
 	if ( pf->m_hPackFileHandleFS )
 	{
 		// Get the length of the pack file:
-		FS_fseek( ( FILE * )pf->m_hPackFileHandleFS, 0, FILESYSTEM_SEEK_TAIL );
-		int64 len = FS_ftell( ( FILE * )pf->m_hPackFileHandleFS );
-		FS_fseek( ( FILE * )pf->m_hPackFileHandleFS, 0, FILESYSTEM_SEEK_HEAD );
+		FS_fseek( ( std::FILE * )pf->m_hPackFileHandleFS, 0, FILESYSTEM_SEEK_TAIL );
+		int64 len = FS_ftell( ( std::FILE * )pf->m_hPackFileHandleFS );
+		FS_fseek( ( std::FILE * )pf->m_hPackFileHandleFS, 0, FILESYSTEM_SEEK_HEAD );
 
 		if ( !pf->Prepare( len ) )
 		{
@@ -1104,7 +916,6 @@ bool CBaseFileSystem::AddPackFileFromPath( const char *pPath, const char *pakfil
 			return false;
 		}
 	}
-#ifdef SUPPORT_VPK
 	else
 	{
 		pf->m_hPackFileHandleVPK = FindFileInVPKs( fullpath );
@@ -1125,7 +936,6 @@ bool CBaseFileSystem::AddPackFileFromPath( const char *pPath, const char *pakfil
 			}
 		}
 	}
-#endif
 
 	// Add this pack file to the search path:
 	CSearchPath *sp = &m_SearchPaths.emplace_back();
@@ -1159,15 +969,15 @@ int CPackFileHandle::Read( void* pBuffer, int nDestSize, int nBytes )
 // Seek around inside the pack:
 int CPackFileHandle::Seek( int nOffset, int nWhence )
 {
-	if ( nWhence == SEEK_SET )
+	if ( nWhence == k_nSeekSet )
 	{
 		m_nFilePointer = nOffset;
 	}
-	else if ( nWhence == SEEK_CUR )
+	else if ( nWhence == k_nSeekCur )
 	{
 		m_nFilePointer += nOffset;
 	}
-	else if ( nWhence == SEEK_END )
+	else if ( nWhence == k_nSeekEnd )
 	{
 		m_nFilePointer = m_nLength + nOffset;
 	}
@@ -1202,17 +1012,15 @@ int CPackFile::ReadFromPack( int nIndex, void* buffer, int nDestBytes, int nByte
 	// Seek to the start of the read area and perform the read: TODO: CHANGE THIS INTO A CFileHandle
 	if ( m_hPackFileHandleFS )
 	{
-		m_fs->FS_fseek( m_hPackFileHandleFS, m_nBaseOffset + nOffset, SEEK_SET );
+		m_fs->FS_fseek( m_hPackFileHandleFS, m_nBaseOffset + nOffset, k_nSeekSet );
 		nBytesRead = m_fs->FS_fread( buffer, nDestBytes, nBytes, m_hPackFileHandleFS );
 	}
-#ifdef SUPPORT_VPK
 	else if ( m_hPackFileHandleVPK )
 	{
 		// We're a packfile embedded in a VPK
 		m_hPackFileHandleVPK.Seek( m_nBaseOffset + nOffset, FILESYSTEM_SEEK_HEAD );
 		nBytesRead = m_hPackFileHandleVPK.Read( buffer, nBytes );
 	}
-#endif
 	else
 	{
 		Error("Failure in CPackFile::ReadFromPack(): m_hPackFileHandleFS and/or m_hPackFileHandleVPK are uninitialized - The file open call(s) likely failed\n");
@@ -1234,22 +1042,16 @@ CFileHandle *CPackFile::OpenFile( const char *pFileName, const char *pOptions )
 	if ( FindFile( pFileName, nIndex, nPosition, nLength ) )
 	{
 		m_mutex.lock();
-#ifdef SUPPORT_VPK
 		if ( m_nOpenFiles == 0 && m_hPackFileHandleFS == nullptr && !m_hPackFileHandleVPK )
-#else
-		if ( m_nOpenFiles == 0 && m_hPackFileHandleFS == nullptr )
-#endif
 		{
 			// Try to open it as a regular file first
 			m_hPackFileHandleFS = m_fs->Trace_FOpen( m_ZipName.c_str(), "rb", 0, nullptr );
 
-#ifdef SUPPORT_VPK
 			// Try opening from a VPK
 			if ( !m_hPackFileHandleFS )
 			{
 				m_hPackFileHandleVPK = m_fs->FindFileInVPKs( pFileName );
 			}
-#endif
 		}
 		m_nOpenFiles++;
 		m_mutex.unlock();
@@ -1259,7 +1061,7 @@ CFileHandle *CPackFile::OpenFile( const char *pFileName, const char *pOptions )
 		fh->m_nLength = nLength;
 
 		// The default mode for fopen is text, so require 'b' for binary
-		if ( strstr( pOptions, "b" ) == nullptr )
+		if ( std::strstr( pOptions, "b" ) == nullptr )
 		{
 			fh->m_type = FT_PACK_TEXT;
 		}
@@ -1406,7 +1208,7 @@ bool CZipPackFile::IndexToFilename( int nIndex, char *pBuffer, int nBufferSize )
 		return true;
 	}
 
-	Q_strncpy( pBuffer, "unknown", nBufferSize );
+	V_strncpy( pBuffer, "unknown", nBufferSize );
 
 	return false;
 }
@@ -1417,10 +1219,10 @@ bool CZipPackFile::IndexToFilename( int nIndex, char *pBuffer, int nBufferSize )
 bool CZipPackFile::FindFile( const char *pFilename, int &nIndex, int64 &nOffset, int &nLength )
 {
 	char szCleanName[MAX_FILEPATH];
-	Q_strncpy( szCleanName, pFilename, sizeof( szCleanName ) );
-	Q_FixSlashes( szCleanName );
+	V_strncpy( szCleanName, pFilename, sizeof( szCleanName ) );
+	V_FixSlashes( szCleanName );
  
-	if ( !Q_RemoveDotSlashes( szCleanName ) )
+	if ( !V_RemoveDotSlashes( szCleanName ) )
 	{
 		return false;
 	}
@@ -1443,7 +1245,6 @@ void CZipPackFile::SetupPreloadData()
 		return;
 	}
 
-	MEM_ALLOC_CREDIT_( "xZip" );
 
 	void *pPreload;
 	if ( m_pSection )
@@ -1528,7 +1329,7 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 			}
 		}
 	}
-	Assert( bCentralDirRecord );
+	contract_assert( bCentralDirRecord );
 	if ( !bCentralDirRecord )
 	{
 		// no zip directory, bad zip
@@ -1544,7 +1345,6 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 
 	int firstFileIdx = 0;
 
-	MEM_ALLOC_CREDIT();
 
 	// read central directory into memory and parse
 	std::vector< std::byte > zipDirData( rec.centralDirectorySize );
@@ -1597,10 +1397,10 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 			break;	
 		}
 
-		Assert( zipFileHeader.fileNameLength < sizeof( tmpString ) );
+		contract_assert( zipFileHeader.fileNameLength < sizeof( tmpString ) );
 		zipDirBuff.read_bytes( tmpString, zipFileHeader.fileNameLength );
 		tmpString[zipFileHeader.fileNameLength] = '\0';
-		Q_FixSlashes( tmpString );
+		V_FixSlashes( tmpString );
 
 		lookup.m_hDebugFilename = m_fs->FindOrAddFileName( tmpString );
 		lookup.m_HashName = HashStringCaselessConventional( tmpString );
@@ -1638,7 +1438,7 @@ CRC32_t CZipPackFile::GetKVPoolKey()
 
 bool CZipPackFile::GetStringFromKVPool( unsigned int key, char *pOutBuff, int buflen )
 {
-	return m_KVStringPool.string( (FileNameHandle_t)(uintptr_t)key, pOutBuff, buflen );
+	return m_KVStringPool.string( (FileNameHandle_t)(std::uintptr_t)key, pOutBuff, buflen );
 }
 
 //-----------------------------------------------------------------------------
@@ -1669,12 +1469,11 @@ CZipPackFile::~CZipPackFile()
 // Purpose: Search pPath for pak?.pak files and add to search path if found
 // Input  : *pPath - 
 //-----------------------------------------------------------------------------
-#define PACK_NAME_FORMAT "zip%i.zip"
+inline constexpr const char *PACK_NAME_FORMAT = "zip%i.zip";
 
 void CBaseFileSystem::AddPackFiles( const char *pPath, std::string_view pathID, SearchPathAdd_t addType, int iForceInsertIndex )
 {
-	Assert( ThreadInMainThread() );
-	DISK_INTENSIVE();
+	contract_assert( ThreadInMainThread() );
 
 	// Xbox Update and DLC zips are purposely not using the ZipN decoration so as not to interfere with the
 	// install process that wants to move zip0 to the cache partition. These zips also have other mounting
@@ -1693,15 +1492,14 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, std::string_view pathID, 
 		V_snprintf( pakfile, sizeof( pakfile ), PACK_NAME_FORMAT, i );
 		V_ComposeFileName( pPath, pakfile, fullpath, sizeof( fullpath ) );
 
-		struct _stat buf;
+		ks::platform::file_info buf;
 		if ( FS_stat( fullpath, &buf ) == -1 )
 			break;
 
-		MEM_ALLOC_CREDIT();
 
 		pakPaths.push_back( ks::nz( pPath ) );
 		pakNames.push_back( pakfile );
-		pakSizes.push_back( (int64)((unsigned int)buf.st_size) );
+		pakSizes.push_back( (int64)((unsigned int)buf.size) );
 	}
 
 
@@ -1736,7 +1534,7 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, std::string_view pathID, 
 		CPackFile *pf = nullptr;
 		for ( int iPackFile = 0; iPackFile < std::ssize( m_ZipFiles ); iPackFile++ )
 		{
-			if ( !Q_stricmp( m_ZipFiles[iPackFile]->m_ZipName.data(), fullpath ) )
+			if ( !V_stricmp( m_ZipFiles[iPackFile]->m_ZipName.data(), fullpath ) )
 			{
 				pf = m_ZipFiles[iPackFile];
 				sp->SetPackFile( pf );
@@ -1747,7 +1545,6 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, std::string_view pathID, 
 
 		if ( !pf )
 		{
-			MEM_ALLOC_CREDIT();
 
 			pf = new CZipPackFile( this );
 
@@ -1779,7 +1576,6 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, std::string_view pathID, 
 					m_SearchPaths.erase( m_SearchPaths.begin() + nIndex );
 				}
 			}
-#ifdef SUPPORT_VPK
 			else
 			{
 				pf->m_hPackFileHandleVPK = FindFileInVPKs( fullpath );
@@ -1789,7 +1585,6 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, std::string_view pathID, 
 					m_SearchPaths.erase( m_SearchPaths.begin() + nIndex );
 				} 
 			}
-#endif
 		}
 	}
 }
@@ -1823,14 +1618,14 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 
 	char newPath[ MAX_FILEPATH ];
 	// +2 for '\0' and potential slash added at end.
-	Q_strncpy( newPath, pPath, sizeof( newPath ) );
-	Q_FixSlashes( newPath );
+	V_strncpy( newPath, pPath, sizeof( newPath ) );
+	V_FixSlashes( newPath );
 
 	// Open the .bsp and find the map lump
 	char fullpath[ MAX_FILEPATH ];
-	if ( Q_IsAbsolutePath( newPath ) ) // If it's an absolute path, just use that.
+	if ( V_IsAbsolutePath( newPath ) ) // If it's an absolute path, just use that.
 	{
-		Q_strncpy( fullpath, newPath, sizeof(fullpath) );
+		V_strncpy( fullpath, newPath, sizeof(fullpath) );
 	}
 	else
 	{
@@ -1847,7 +1642,7 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 		if ( !( m_SearchPaths[i].GetPackFile() && m_SearchPaths[i].GetPackFile()->m_bIsMapPath ) )
 			continue;
 		
-		if ( Q_stricmp( m_SearchPaths[i].GetPackFile()->m_ZipName.data(), fullpath ) == 0 )
+		if ( V_stricmp( m_SearchPaths[i].GetPackFile()->m_ZipName.data(), fullpath ) == 0 )
 		{
 			// Already set as map path
 			return;
@@ -1857,14 +1652,13 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 	// Remove previous
 	RemoveAllMapSearchPaths();
 
-#ifdef SUPPORT_VPK
 	CPackedStoreFileHandle psHandle = FindFileInVPKs( pPath );
 
 	if ( psHandle )
 	{
 		// Get the .bsp file header
 		BSPHeader_t header;
-		memset( &header, 0, sizeof( header ) );
+		std::memset( &header, 0, sizeof( header ) );
 		m_Stats.nBytesRead += psHandle.Read( &header, sizeof( header ) );
 		m_Stats.nReads++;
 
@@ -1890,7 +1684,6 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 		pf->m_hPackFileHandleFS = nullptr;
 		pf->m_hPackFileHandleVPK = psHandle;
 
-		MEM_ALLOC_CREDIT();
 		pf->m_ZipName = fullpath;
 
 		if ( pf->Prepare( packfile->filelen, packfile->fileofs ) )
@@ -1929,9 +1722,8 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 		}
 	}
 	else
-#endif
 	{
-		FILE *fp = Trace_FOpen( fullpath, "rb", 0, nullptr );
+		std::FILE *fp = Trace_FOpen( fullpath, "rb", 0, nullptr );
 		if ( !fp )
 		{
 			// Couldn't open it
@@ -1941,7 +1733,7 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 
 		// Get the .bsp file header
 		BSPHeader_t header;
-		memset( &header, 0, sizeof( header ) );
+		std::memset( &header, 0, sizeof( header ) );
 		m_Stats.nBytesRead += FS_fread( &header, sizeof( header ), fp );
 		m_Stats.nReads++;
 
@@ -1967,10 +1759,7 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 
 		pf->m_bIsMapPath = true;
 		pf->m_hPackFileHandleFS = fp;
-#ifdef SUPPORT_VPK
 		pf->m_hPackFileHandleVPK = psHandle;
-#endif
-		MEM_ALLOC_CREDIT();
 		pf->m_ZipName = fullpath;
 
 		if ( pf->Prepare( packfile->filelen, packfile->fileofs ) )
@@ -2029,21 +1818,15 @@ void CBaseFileSystem::BeginMapAccess()
 			{
 				pPackFile->AddRef();
 				pPackFile->m_mutex.lock();
-#ifdef SUPPORT_VPK
 				if ( pPackFile->m_nOpenFiles == 0 && pPackFile->m_hPackFileHandleFS == nullptr && !pPackFile->m_hPackFileHandleVPK )
-#else
-				if ( pPackFile->m_nOpenFiles == 0 && pPackFile->m_hPackFileHandleFS == nullptr )
-#endif
 				{
 					// Try opening the file as a regular file 
 					pPackFile->m_hPackFileHandleFS = Trace_FOpen( pPackFile->m_ZipName.c_str(), "rb", 0, nullptr );
 
-#ifdef SUPPORT_VPK
 					if ( !pPackFile->m_hPackFileHandleFS )
 					{
 						pPackFile->m_hPackFileHandleVPK = FindFileInVPKs( pPackFile->m_ZipName.c_str() );
 					}
-#endif
 				}
 				pPackFile->m_nOpenFiles++;
 				pPackFile->m_mutex.unlock();
@@ -2123,7 +1906,7 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 {
 	AsyncFinishAll();
 
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 
 	// Map pak files have their own handler
 	if ( V_stristr( pPath, ".bsp" ) )
@@ -2140,13 +1923,13 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 	}
 	else
 	{
-		if ( Q_IsAbsolutePath( pPath ) )
+		if ( V_IsAbsolutePath( pPath ) )
 		{
-			Q_strncpy( newPath, pPath, sizeof( newPath ) );
+			V_strncpy( newPath, pPath, sizeof( newPath ) );
 		}
 		else
 		{
-			Q_MakeAbsolutePath( newPath, sizeof(newPath), pPath );
+			V_MakeAbsolutePath( newPath, sizeof(newPath), pPath );
 		}
 		AddSeperatorAndFixPath( newPath );
 	}
@@ -2200,7 +1983,7 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 	if ( addType == PATH_ADD_TO_HEAD )
 	{
 		nIndex = std::ssize( m_SearchPaths ) - nIndex;
-		Assert( nIndex >= 0 );
+		contract_assert( nIndex >= 0 );
 	}
 
 	// Grab last entry and set the path
@@ -2237,16 +2020,14 @@ void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, Sear
 	// CSGO compatibility VPKs
 	if ( const char *pActualPathID = pathID ? StringAfterPrefix( pathID, "COMPAT:" ) : nullptr )
 	{
-#ifdef SUPPORT_VPK
 		// Check if we are running with VPKs?
 		if ( !m_VPKFiles.empty() )
 		{
 			char newVPK[ MAX_PATH ] = {};
-			sprintf( newVPK, "%s/pakxv_%s.vpk", pGameName, pPath );
+			std::sprintf( newVPK, "%s/pakxv_%s.vpk", pGameName, pPath );
 			AddVPKFile( newVPK, addType );
 			return;
 		}
-#endif
 		if ( addType != PATH_ADD_TO_HEAD )
 			return;	// in non-vpk mode compatibility paths can only be added to head
 
@@ -2257,7 +2038,7 @@ void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, Sear
 	}
 
 	if ( V_stristr( pPath, pGameName ) &&
-		( !Q_stricmp( pathID, "GAME" ) || !Q_stricmp( pathID, "MOD" ) || !Q_stricmp( pathID, "PLATFORM" ) ) )
+		( !V_stricmp( pathID, "GAME" ) || !V_stricmp( pathID, "MOD" ) || !V_stricmp( pathID, "PLATFORM" ) ) )
 	{
 		char szPathHead[MAX_PATH];
 		char szUpdatePath[MAX_PATH];
@@ -2265,7 +2046,7 @@ void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, Sear
 		V_StripLastDir( szPathHead, sizeof( szPathHead ) );
 
 		// followed by update
-		struct _stat buf;
+		ks::platform::file_info buf;
 		V_ComposeFileName( szPathHead, "update", szUpdatePath, sizeof( szUpdatePath ) );
 		if ( FS_stat( szUpdatePath, &buf ) != -1 )
 		{
@@ -2274,7 +2055,7 @@ void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, Sear
 		}
 
 		// followed by dlc
-		if ( !Q_stricmp( pathID, "GAME" ) || !Q_stricmp( pathID, "MOD" ) )
+		if ( !V_stricmp( pathID, "GAME" ) || !V_stricmp( pathID, "MOD" ) )
 		{
 			// DS would have all DLC dirs
 			// find highest DLC dir available
@@ -2304,18 +2085,17 @@ void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, Sear
 				V_ComposeFileName( szPathHead, CFmtStr( "%s_dlc%d", pGameName, nHighestDLC ), szUpdatePath, sizeof( szUpdatePath ) );
 				AddSearchPathInternal( szUpdatePath, pathID, addType, true );
 
-#ifdef SUPPORT_VPK
 				// scan for vpk's
 				for( int i = 1 ; i < 99; i++ )
 				{
 					char newVPK[MAX_PATH];
-					sprintf( newVPK, "%s/pak%02d_dir.vpk", szUpdatePath, i );
+					std::sprintf( newVPK, "%s/pak%02d_dir.vpk", szUpdatePath, i );
 					// we will fopen to bypass pathing, etc
-					FILE *pstdiofile = fopen( newVPK, "rb" );
+					std::FILE *pstdiofile = std::fopen( newVPK, "rb" );
 					if ( pstdiofile )
 					{
-						fclose( pstdiofile );
-						sprintf( newVPK, "%s/pak%02d.vpk", szUpdatePath, i );
+						std::fclose( pstdiofile );
+						std::sprintf( newVPK, "%s/pak%02d.vpk", szUpdatePath, i );
 						AddVPKFile( newVPK );
 					}
 					else
@@ -2323,7 +2103,6 @@ void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, Sear
 						break;
 					}
 				}
-#endif
 			}
 		}
 	}
@@ -2332,18 +2111,17 @@ void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, Sear
 
 	AddSearchPathInternal( pPath, pathID, addType, true );
 
-#ifdef SUPPORT_VPK
 	// scan for vpk's
 	for( int i = 1 ; i < 99; i++ )
 	{
 		char newVPK[MAX_PATH];
-		sprintf( newVPK, "%s/pak%02d_dir.vpk", pPath, i );
+		std::sprintf( newVPK, "%s/pak%02d_dir.vpk", pPath, i );
 		// we will fopen to bypass pathing, etc
-		FILE *pstdiofile = fopen( newVPK, "rb" );
+		std::FILE *pstdiofile = std::fopen( newVPK, "rb" );
 		if ( pstdiofile )
 		{
-			fclose( pstdiofile );
-			sprintf( newVPK, "%s/pak%02d.vpk", pPath, i );
+			std::fclose( pstdiofile );
+			std::sprintf( newVPK, "%s/pak%02d.vpk", pPath, i );
 			AddVPKFile( newVPK );
 		}
 		else
@@ -2351,12 +2129,9 @@ void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, Sear
 			break;
 		}
 	}
-#endif
 
 	if ( currCount != std::ssize( m_SearchPaths ) )
 	{
-#if !defined( DEDICATED )
-#endif
 	}
 }
 
@@ -2414,12 +2189,12 @@ int CBaseFileSystem::GetSearchPath( const char *pathID, bool bGetPackFiles, char
 
 			if ( !pPackFile )
 			{
-				nLen += Q_strlen( pSearchPath->GetPathString() );
+				nLen += V_strlen( pSearchPath->GetPathString() );
 			}
 			else
 			{
 				// full path and slash
-				nLen += Q_strlen( pPackFile->m_ZipName.c_str() ) + 1;
+				nLen += V_strlen( pPackFile->m_ZipName.c_str() ) + 1;
 			}
 			continue;
 		}
@@ -2431,15 +2206,15 @@ int CBaseFileSystem::GetSearchPath( const char *pathID, bool bGetPackFiles, char
 
 		if ( !pPackFile )
 		{
-			Q_strncpy( &pPath[nLen], pSearchPath->GetPathString(), nMaxLen - nLen );
-			nLen += Q_strlen( pSearchPath->GetPathString() );
+			V_strncpy( &pPath[nLen], pSearchPath->GetPathString(), nMaxLen - nLen );
+			nLen += V_strlen( pSearchPath->GetPathString() );
 		}
 		else
 		{
 			// full path and slash
-			Q_strncpy( &pPath[nLen], pPackFile->m_ZipName.c_str(), nMaxLen - nLen );
+			V_strncpy( &pPath[nLen], pPackFile->m_ZipName.c_str(), nMaxLen - nLen );
 			V_AppendSlash( &pPath[nLen], nMaxLen - nLen );
-			nLen += Q_strlen( pPackFile->m_ZipName.c_str() ) + 1;
+			nLen += V_strlen( pPackFile->m_ZipName.c_str() ) + 1;
 		}
 	}
 
@@ -2472,7 +2247,7 @@ int CBaseFileSystem::GetSearchPathID( char *pPath, int nMaxLen )
 		}
 	}
 	
-	return strlen( pPath ) + 1;
+	return std::strlen( pPath ) + 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -2492,11 +2267,10 @@ bool CBaseFileSystem::RemoveSearchPath( const char *pPath, const char *pathID )
 
 	if ( const char *pActualPathID = pathID ? StringAfterPrefix( pathID, "COMPAT:" ) : nullptr )
 	{
-#ifdef SUPPORT_VPK
 		if ( !m_VPKFiles.empty() )
 		{
 			char newVPK[ MAX_PATH ] = {};
-			sprintf( newVPK, "pakxv_%s", pPath );
+			std::sprintf( newVPK, "pakxv_%s", pPath );
 			while ( !m_VPKFiles.empty() )
 			{
 				CPackedStore *pVPK = m_VPKFiles.front();
@@ -2513,13 +2287,12 @@ bool CBaseFileSystem::RemoveSearchPath( const char *pPath, const char *pathID )
 			}
 			return true;
 		}
-#endif
 		int c = std::ssize( m_SearchPaths );
 		for ( int i = c - 1; i >= 0; i-- )
 		{
 			char newCompatPath[ MAX_PATH ] = {};
-			sprintf( newCompatPath, "/csgo/compatibility/%s/", pPath );
-			Q_FixSlashes( newCompatPath );
+			std::sprintf( newCompatPath, "/csgo/compatibility/%s/", pPath );
+			V_FixSlashes( newCompatPath );
 			if ( V_strstr( m_SearchPaths[ i ].GetPathString(), newCompatPath ) )
 			{
 				m_SearchPaths.erase( m_SearchPaths.begin() + i );
@@ -2531,10 +2304,10 @@ bool CBaseFileSystem::RemoveSearchPath( const char *pPath, const char *pathID )
 	if ( pPath )
 	{
 		// +2 for '\0' and potential slash added at end.
-		Q_strncpy( newPath, pPath, sizeof( newPath ) );
+		V_strncpy( newPath, pPath, sizeof( newPath ) );
 		if ( V_stristr( newPath, ".bsp" ) )
 		{
-			Q_FixSlashes( newPath );
+			V_FixSlashes( newPath );
 		}
 		else
 		{
@@ -2577,7 +2350,7 @@ void CBaseFileSystem::RemoveSearchPaths( const char *pathID )
 	int nCount = std::ssize( m_SearchPaths );
 	for (int i = nCount - 1; i >= 0; i--)
 	{
-		if (!Q_stricmp(m_SearchPaths[ i ].GetPathIDString(), pathID))
+		if (!V_stricmp(m_SearchPaths[ i ].GetPathIDString(), pathID))
 		{
 			ks::swap_remove( m_SearchPaths, i );
 		}
@@ -2820,14 +2593,12 @@ void CBaseFileSystem::RemoveAllSearchPaths( void )
 	//m_PackFileHandles.Purge();
 
 	// Clean up all VPK files - their destructors will close opened file handles
-#ifdef SUPPORT_VPK
 	for ( int i = 0; i < std::ssize( m_VPKFiles ); i++ )
 	{
 		delete m_VPKFiles[i];
 	}
 	m_VPKFiles.clear(); m_VPKFiles.shrink_to_fit();
 	m_VPKDirectories.clear();
-#endif
 }
 
 
@@ -2838,31 +2609,26 @@ void CBaseFileSystem::LogFileAccess( const char *pFullFileName )
 		return;
 	}
 	char buf[1024];
-#if BSPOUTPUT
-	Q_snprintf( buf, sizeof( buf ), "%s\n%s\n", pShortFileName, pFullFileName);
-	fprintf( m_pLogFile, "%s", buf ); // STEAM OK
-#else
 	char cwd[MAX_FILEPATH];
-	getcwd( cwd, MAX_FILEPATH-1 );
-	Q_strcat( cwd, "\\", sizeof( cwd ) );
-	if( Q_strnicmp( cwd, pFullFileName, strlen( cwd ) ) == 0 )
+	ks::platform::current_directory( cwd, MAX_FILEPATH-1 );
+	V_strcat( cwd, "\\", sizeof( cwd ) );
+	if( V_strnicmp( cwd, pFullFileName, std::strlen( cwd ) ) == 0 )
 	{
-		const char *pFileNameWithoutExeDir = pFullFileName + strlen( cwd );
+		const char *pFileNameWithoutExeDir = pFullFileName + std::strlen( cwd );
 		char targetPath[ MAX_FILEPATH ];
-		strcpy( targetPath, "%fs_target%\\" );
-		strcat( targetPath, pFileNameWithoutExeDir );
-		Q_snprintf( buf, sizeof( buf ), "copy \"%s\" \"%s\"\n", pFullFileName, targetPath );
+		std::strcpy( targetPath, "%fs_target%\\" );
+		std::strcat( targetPath, pFileNameWithoutExeDir );
+		V_snprintf( buf, sizeof( buf ), "copy \"%s\" \"%s\"\n", pFullFileName, targetPath );
 		char tmp[ MAX_FILEPATH ];
-		Q_strncpy( tmp, targetPath, sizeof( tmp ) );
-		Q_StripFilename( tmp );
-		fprintf( m_pLogFile, "mkdir \"%s\"\n", tmp ); // STEAM OK
-		fprintf( m_pLogFile, "%s", buf ); // STEAM OK
+		V_strncpy( tmp, targetPath, sizeof( tmp ) );
+		V_StripFilename( tmp );
+		std::fprintf( m_pLogFile, "mkdir \"%s\"\n", tmp );
+		std::fprintf( m_pLogFile, "%s", buf );
 	}
 	else
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
-#endif
 }
 
 class CFileOpenInfo
@@ -2875,14 +2641,12 @@ public:
 		// That's fine, but make sure it doesn't get freed by another thread.
 		m_pWhitelist = m_pFileSystem->m_FileWhitelist.AddRef();
 		m_pFileHandle = nullptr;
-		m_bLoadedFromSteamCache = m_bSteamCacheOnly = false;
+		m_bDiskLoadDisallowed = false;
 		
 		if ( m_ppszResolvedFilename )
 			*m_ppszResolvedFilename = nullptr;
-#ifdef SUPPORT_VPK
 		m_pPackFile = nullptr;
 		m_pVPKFile = nullptr;
-#endif
 	}
 	
 	~CFileOpenInfo()
@@ -2893,10 +2657,10 @@ public:
 	
 	void SetAbsolutePath( const char *pFormat, ... )
 	{
-		va_list marker;
-		va_start( marker, pFormat );
+		std::va_list marker;
+		__builtin_va_start( marker, pFormat );
 		V_vsnprintf( m_AbsolutePath, sizeof( m_AbsolutePath ), pFormat, marker );
-		va_end( marker );
+		__builtin_va_end( marker );
 
 		V_FixSlashes( m_AbsolutePath );
 	}
@@ -2905,7 +2669,7 @@ public:
 	{
 		if ( m_ppszResolvedFilename )
 		{
-			Assert( !( *m_ppszResolvedFilename ) );
+			contract_assert( !( *m_ppszResolvedFilename ) );
 			*m_ppszResolvedFilename = MemAlloc_StrDup( pStr );
 		}
 	}
@@ -2920,19 +2684,17 @@ public:
 		
 		if ( m_pFileHandle )
 		{
-			FILE *fp = m_pFileHandle->m_pFile;
+			std::FILE *fp = m_pFileHandle->m_pFile;
 			int64 nLength = m_pFileHandle->m_nLength;
-#ifdef SUPPORT_VPK
 			if ( m_pVPKFile )
 			{
 				m_pFileSystem->m_FileTracker2.NotePackFileAccess( pRelativeFileName, m_pPath->GetPathIDString(), m_pFileHandle->m_VPKHandle );
 				return;
 			}
-#endif
 			// we always record hashes of everything we load. we may filter later.
 			m_pFileSystem->m_FileTracker2.NoteFileLoadedFromDisk( pRelativeFileName, m_pPath->GetPathIDString(), fp, nLength );
 	}
-		else if ( m_bSteamCacheOnly )
+		else if ( m_bDiskLoadDisallowed )
 		{
 			// Remember that the file failed to load. We only need to do this in the case where we forced it to ignore files
 			// on disk (in which case we'll want it to check the disk next time if sv_pure changed).
@@ -2940,19 +2702,19 @@ public:
 		}
 	}
 
-	// Decides if the file must come from Steam or if it can be allowed to come off disk.
+	// Decides if the file can be allowed to come off disk.
 	void DetermineFileLoadInfoParameters( CFileLoadInfo &fileLoadInfo, bool bIsAbsolutePath )
 	{
 
 		if ( m_bTrackCRCs && m_pWhitelist && m_pWhitelist->m_pAllowFromDiskList && !bIsAbsolutePath )
 		{
-			Assert( !V_IsAbsolutePath( m_pFileName ) ); // (This is what bIsAbsolutePath is supposed to tell us..)
-			// Ask the whitelist if this file must come from Steam.
-			fileLoadInfo.m_bSteamCacheOnly = !m_pWhitelist->m_pAllowFromDiskList->IsFileInList( m_pFileName );
+			contract_assert( !V_IsAbsolutePath( m_pFileName ) ); // (This is what bIsAbsolutePath is supposed to tell us..)
+			// Ask the whitelist if this file may come off disk.
+			fileLoadInfo.m_bDiskLoadDisallowed = !m_pWhitelist->m_pAllowFromDiskList->IsFileInList( m_pFileName );
 		}
 		else
 		{
-			fileLoadInfo.m_bSteamCacheOnly = false;
+			fileLoadInfo.m_bDiskLoadDisallowed = false;
 		}	
 	}
 
@@ -2965,10 +2727,8 @@ public:
 	char **m_ppszResolvedFilename;
 
 
-#ifdef SUPPORT_VPK
 	CPackFile *m_pPackFile;
 	CPackedStore *m_pVPKFile;
-#endif
 
 	const char *m_pFileName;
 	const CBaseFileSystem::CSearchPath *m_pPath;
@@ -2976,10 +2736,9 @@ public:
 	int m_Flags;
 	bool m_bTrackCRCs;
 
-	// Stats about how the file was opened and how we asked the stdio/steam filesystem to open it.
+	// Stats about how we asked the stdio filesystem to open the file.
 	// Used to decide whether or not we need to generate and store CRCs.
-	bool m_bLoadedFromSteamCache;	// Did it get loaded out of the Steam cache?
-	bool m_bSteamCacheOnly;			// Are we asking that this file only come from Steam?
+	bool m_bDiskLoadDisallowed;		// Are we asking that this file not come off disk?
 	
 	char m_AbsolutePath[MAX_FILEPATH];	// This is set 
 };
@@ -3008,12 +2767,10 @@ bool CBaseFileSystem::HandleOpenFromZipFile( CFileOpenInfo &openInfo )
 		{
 			CPackFile *pPackFile = m_ZipFiles[i];
 			
-			if ( Q_stricmp( pPackFile->m_ZipName.data(), openInfo.m_AbsolutePath ) == 0 )
+			if ( V_stricmp( pPackFile->m_ZipName.data(), openInfo.m_AbsolutePath ) == 0 )
 			{
 				openInfo.m_pFileHandle = pPackFile->OpenFile( pRelativeFileName, openInfo.m_pOptions );
-#ifdef SUPPORT_VPK
 				openInfo.m_pPackFile = pPackFile;
-#endif
 				openInfo.HandleFileCRCTracking( pRelativeFileName, false );
 					
 				break;
@@ -3034,36 +2791,7 @@ bool CBaseFileSystem::HandleOpenFromZipFile( CFileOpenInfo &openInfo )
 void CBaseFileSystem::HandleOpenFromPackFile( CPackFile *pPackFile, CFileOpenInfo &openInfo )
 {
 	openInfo.m_pFileHandle = pPackFile->OpenFile( openInfo.m_pFileName, openInfo.m_pOptions );
-#ifdef SUPPORT_VPK
 	openInfo.m_pPackFile = pPackFile;
-#endif
-
-	// HACK! The bsp pack's paths may be different now that we've moved it to the workshop subdir...
-	// If we're still failing to find it, remove the workshop/id subdir
-	if ( !openInfo.m_pFileHandle ) 
-	{
-		char szScratch[MAX_PATH];
-		V_strcpy_safe( szScratch, openInfo.m_pFileName );
-		CFmtStr workshopDir( "%cworkshop%c", CORRECT_PATH_SEPARATOR, CORRECT_PATH_SEPARATOR );
-		char *pStart = V_stristr( szScratch, workshopDir.Access() );
-		if ( pStart && pStart[0] && pStart[1] )
-		{
-			*pStart = 0; // null terminate the first section of the path we're keeping
-			pStart++;
-			size_t len = strlen( pStart );
-			const char *pEnd = V_strnchr( pStart, CORRECT_PATH_SEPARATOR, len ); // skip past workshop path
-			if ( pEnd && pEnd[0] && pEnd[1] )
-			{
-				len = strlen( pEnd );
-				pEnd = V_strnchr( pEnd+1, CORRECT_PATH_SEPARATOR, len ); // skip past id path
-				if ( pEnd )
-				{
-					CFmtStr pathNoWorkshop( "%s%s", szScratch, pEnd );
-					openInfo.m_pFileHandle = pPackFile->OpenFile( pathNoWorkshop.Access(), openInfo.m_pOptions );
-				}
-			}
-		}
-	}
 
 	if ( openInfo.m_pFileHandle )
 	{
@@ -3079,7 +2807,7 @@ void CBaseFileSystem::HandleOpenFromPackFile( CPackFile *pPackFile, CFileOpenInf
 
 void CBaseFileSystem::HandleOpenRegularFile( CFileOpenInfo &openInfo, bool bIsAbsolutePath )
 {
-	// Setup the parameters for the call (like to tell Steam to force the file to come out of the Steam caches or not).
+	// Setup the parameters for the call (like whether the file is allowed to come off disk).
 	CFileLoadInfo fileLoadInfo;
 	openInfo.DetermineFileLoadInfoParameters( fileLoadInfo, bIsAbsolutePath );
 	
@@ -3090,7 +2818,7 @@ void CBaseFileSystem::HandleOpenRegularFile( CFileOpenInfo &openInfo, bool bIsAb
 	char fixedFATXFilename[MAX_PATH];
 
 	int64 size;
-	FILE *fp = Trace_FOpen( bFixed ? fixedFATXFilename : pFilename, openInfo.m_pOptions, openInfo.m_Flags, &size, &fileLoadInfo );
+	std::FILE *fp = Trace_FOpen( bFixed ? fixedFATXFilename : pFilename, openInfo.m_pOptions, openInfo.m_Flags, &size, &fileLoadInfo );
 	if ( fp )
 	{
 		if ( m_pLogFile )
@@ -3100,7 +2828,7 @@ void CBaseFileSystem::HandleOpenRegularFile( CFileOpenInfo &openInfo, bool bIsAb
 
 		if ( m_bOutputDebugString )
 		{
-			fprintf(stderr, "fs_debug: %s\n", openInfo.m_AbsolutePath );
+			std::fprintf(stderr, "fs_debug: %s\n", openInfo.m_AbsolutePath );
 		}
 
 		openInfo.m_pFileHandle = new CFileHandle(this);
@@ -3110,9 +2838,8 @@ void CBaseFileSystem::HandleOpenRegularFile( CFileOpenInfo &openInfo, bool bIsAb
 
 		openInfo.SetResolvedFilename( openInfo.m_AbsolutePath );
 		
-		// Remember what was returned by the Steam filesystem and track the CRC.
-		openInfo.m_bLoadedFromSteamCache = fileLoadInfo.m_bLoadedFromSteamCache;
-		openInfo.m_bSteamCacheOnly = fileLoadInfo.m_bSteamCacheOnly;
+		// Remember how the file was loaded and track the CRC.
+		openInfo.m_bDiskLoadDisallowed = fileLoadInfo.m_bDiskLoadDisallowed;
 		openInfo.HandleFileCRCTracking( openInfo.m_pFileName, bIsAbsolutePath );
 	}
 }
@@ -3135,7 +2862,7 @@ FileHandle_t CBaseFileSystem::FindFile(
 	char **ppszResolvedFilename, 
 	bool bTrackCRCs )
 {
-	VPROF( "CBaseFileSystem::FindFile" );
+	CVProfScope _( "CBaseFileSystem::FindFile", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	char tempSymlinkBuffer[MAX_PATH];
 	pFileName = V_FormatFilenameForSymlinking( tempSymlinkBuffer, pFileName );
@@ -3144,12 +2871,10 @@ FileHandle_t CBaseFileSystem::FindFile(
 	bool bIsAbsolutePath = V_IsAbsolutePath( pFileName );
 	if ( bIsAbsolutePath )
 	{
-#ifdef SUPPORT_VPK
 		if ( std::ssize( m_VPKFiles )  && ( ! V_stristr( pFileName, ".vpk" ) ) )
 		{
 			// FileSystemWarning( FILESYSTEM_WARNING, "***VPK: FindFile Attempting to use full path with VPK file!\n\tFile: %s\n", pFileName );
 		}
-#endif
 		openInfo.SetAbsolutePath( "%s", pFileName );
 
 		// Check if it's of the form C:/a/b/c/blah.zip/materials/blah.vtf
@@ -3161,7 +2886,6 @@ FileHandle_t CBaseFileSystem::FindFile(
 	else
 	{
 		// check vpk file
-#ifdef SUPPORT_VPK
 		for( int i = 0 ; i < std::ssize( m_VPKFiles ); i++ )
 		{
 			CPackedStoreFileHandle fHandle = m_VPKFiles[i]->OpenFile( pFileName );
@@ -3173,15 +2897,13 @@ FileHandle_t CBaseFileSystem::FindFile(
 				openInfo.m_pFileHandle->m_nLength = fHandle.m_nFileSize;
 				openInfo.SetResolvedFilename( openInfo.m_AbsolutePath );
 		
-				// Remember what was returned by the Steam filesystem and track the CRC.
-				openInfo.m_bLoadedFromSteamCache = false;
-				openInfo.m_bSteamCacheOnly = false;
+				// Remember how the file was loaded and track the CRC.
+				openInfo.m_bDiskLoadDisallowed = false;
 				openInfo.m_pVPKFile = m_VPKFiles[i];
 				openInfo.HandleFileCRCTracking( openInfo.m_pFileName, false );
 				return ( FileHandle_t ) openInfo.m_pFileHandle;
 			}
 		}
-#endif
 		// Caller provided a relative path
 		if ( path->GetPackFile() )
 		{
@@ -3229,7 +2951,7 @@ FileHandle_t CBaseFileSystem::FindFileInSearchPaths(
 //-----------------------------------------------------------------------------
 FileHandle_t CBaseFileSystem::OpenForRead( const char *pFileName, const char *pOptions, unsigned flags, const char *pathID, char **ppszResolvedFilename )
 {
-	VPROF( "CBaseFileSystem::OpenForRead" );
+	CVProfScope _( "CBaseFileSystem::OpenForRead", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	return FindFileInSearchPaths( pFileName, pOptions, pathID, flags, ppszResolvedFilename, true );
 }
 
@@ -3246,7 +2968,7 @@ FileHandle_t CBaseFileSystem::OpenForWrite( const char *pFileName, const char *p
 	// Unless an absolute path is specified...
 	const char *pTmpFileName;
 	char szScratchFileName[MAX_PATH];
-	if ( Q_IsAbsolutePath( pFileName ) )
+	if ( V_IsAbsolutePath( pFileName ) )
 	{
 		pTmpFileName = pFileName;
 	}
@@ -3257,7 +2979,7 @@ FileHandle_t CBaseFileSystem::OpenForWrite( const char *pFileName, const char *p
 	}
 
 	int64 size;
-	FILE *fp = Trace_FOpen( pTmpFileName, pOptions, 0, &size );
+	std::FILE *fp = Trace_FOpen( pTmpFileName, pOptions, 0, &size );
 	if ( !fp )
 	{
 		return ( FileHandle_t )0;
@@ -3302,7 +3024,7 @@ void CBaseFileSystem::ParsePathID( const char* &pFilename, const char* &pPathID,
 
 	// They're specifying two path IDs. Ignore the one passed-in.  
 	// AND only warn if they are inconsistent
-	if ( pPathID && Q_stricmp( pPathID, tempPathID ) )
+	if ( pPathID && V_stricmp( pPathID, tempPathID ) )
 	{
 		FileSystemWarning( FILESYSTEM_WARNING, "FS: Specified two path IDs (%s, %s).\n", pFilename, pPathID );
 	}
@@ -3337,7 +3059,7 @@ FileHandle_t CBaseFileSystem::Open( const char *pFileName, const char *pOptions,
 //-----------------------------------------------------------------------------
 FileHandle_t CBaseFileSystem::OpenEx( const char *pFileName, const char *pOptions, unsigned flags, const char *pathID, char **ppszResolvedFilename )
 {
-	VPROF_BUDGET( "CBaseFileSystem::Open", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::Open", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 
 	if ( !pFileName )
 		return (FileHandle_t)0;
@@ -3391,14 +3113,14 @@ FileHandle_t CBaseFileSystem::OpenEx( const char *pFileName, const char *pOption
 	char tempPathID[MAX_PATH];
 	ParsePathID( pFileName, pathID, tempPathID );
 	char tempFileName[MAX_PATH];
-	Q_strncpy( tempFileName, pFileName, sizeof(tempFileName) );
-	Q_FixSlashes( tempFileName );
+	V_strncpy( tempFileName, pFileName, sizeof(tempFileName) );
+	V_FixSlashes( tempFileName );
 
 	FileHandle_t hFile;
 
 	// Try each of the search paths in succession
 	// FIXME: call createdirhierarchy upon opening for write.
-	if ( strstr( pOptions, "r" ) && !strstr( pOptions, "+" ) )
+	if ( std::strstr( pOptions, "r" ) && !std::strstr( pOptions, "+" ) )
 	{
 		hFile = OpenForRead( tempFileName, pOptions, flags, pathID, ppszResolvedFilename );
 	}
@@ -3413,7 +3135,7 @@ FileHandle_t CBaseFileSystem::OpenEx( const char *pFileName, const char *pOption
 		if ( hFile && pTimer )
 		{
 			pTimer->m_hFile = hFile;
-			Q_strncpy( pTimer->m_szName, pFileName, sizeof( pTimer->m_szName ) );
+			V_strncpy( pTimer->m_szName, pFileName, sizeof( pTimer->m_szName ) );
 
 			// See if we've opened this file before so we can accumulate time spent rereading files
 			FileOpenDuplicateTime_t *pFileOpenDuplicate = nullptr;
@@ -3422,7 +3144,7 @@ FileHandle_t CBaseFileSystem::OpenEx( const char *pFileName, const char *pOption
 			for ( int nFileOpenDuplicate = std::ssize( g_FileOpenDuplicateTimes ) - 1; nFileOpenDuplicate >= 0; --nFileOpenDuplicate )
 			{
 				FileOpenDuplicateTime_t *pTempFileOpenDuplicate = g_FileOpenDuplicateTimes[ nFileOpenDuplicate ];
-				if ( Q_stricmp( pFileName, pTempFileOpenDuplicate->m_szName ) == 0 )
+				if ( V_stricmp( pFileName, pTempFileOpenDuplicate->m_szName ) == 0 )
 				{
 					// Found it!
 					pFileOpenDuplicate = pTempFileOpenDuplicate;
@@ -3437,7 +3159,7 @@ FileHandle_t CBaseFileSystem::OpenEx( const char *pFileName, const char *pOption
 				if ( pFileOpenDuplicate != nullptr )
 				{
 					g_FileOpenDuplicateTimes.push_back( pFileOpenDuplicate );
-					Q_strncpy( pFileOpenDuplicate->m_szName, pFileName, sizeof( pTimer->m_szName ) );
+					V_strncpy( pFileOpenDuplicate->m_szName, pFileName, sizeof( pTimer->m_szName ) );
 				}
 			}
 
@@ -3477,7 +3199,7 @@ FileHandle_t CBaseFileSystem::OpenEx( const char *pFileName, const char *pOption
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::Close( FileHandle_t file )
 {
-	VPROF_BUDGET( "CBaseFileSystem::Close", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::Close", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 	if ( !file )
 	{
 		FileSystemWarning( FILESYSTEM_WARNING, "FS:  Tried to Close NULL file handle!\n" );
@@ -3523,7 +3245,7 @@ void CBaseFileSystem::Close( FileHandle_t file )
 				for ( int nFileOpenDuplicate = 0; nFileOpenDuplicate < std::ssize( g_FileOpenDuplicateTimes ); nFileOpenDuplicate++ )
 				{
 					FileOpenDuplicateTime_t *pFileOpenDuplicate = g_FileOpenDuplicateTimes[ nFileOpenDuplicate ];
-					if ( Q_stricmp( pTimer->m_szName, pFileOpenDuplicate->m_szName ) == 0 )
+					if ( V_stricmp( pTimer->m_szName, pFileOpenDuplicate->m_szName ) == 0 )
 					{
 						if ( pFileOpenDuplicate->m_nLoadCount > 1 )
 						{
@@ -3546,7 +3268,7 @@ void CBaseFileSystem::Close( FileHandle_t file )
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::Seek( FileHandle_t file, int pos, FileSystemSeek_t whence )
 {
-	VPROF_BUDGET( "CBaseFileSystem::Seek", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::Seek", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 	CFileHandle *fh = ( CFileHandle *)file;
 	if ( !fh )
 	{
@@ -3566,7 +3288,7 @@ void CBaseFileSystem::Seek( FileHandle_t file, int pos, FileSystemSeek_t whence 
 //-----------------------------------------------------------------------------
 unsigned int CBaseFileSystem::Tell( FileHandle_t file )
 {
-	VPROF_BUDGET( "CBaseFileSystem::Tell", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::Tell", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 
 	if ( !file )
 	{
@@ -3586,7 +3308,7 @@ unsigned int CBaseFileSystem::Tell( FileHandle_t file )
 //-----------------------------------------------------------------------------
 unsigned int CBaseFileSystem::Size( FileHandle_t file )
 {
-	VPROF_BUDGET( "CBaseFileSystem::Size", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::Size", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 
 	if ( !file )
 	{
@@ -3606,7 +3328,7 @@ unsigned int CBaseFileSystem::Size( FileHandle_t file )
 //-----------------------------------------------------------------------------
 unsigned int CBaseFileSystem::Size( const char* pFileName, const char *pPathID )
 {
-	VPROF_BUDGET( "CBaseFileSystem::Size", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::Size", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 	CHECK_DOUBLE_SLASHES( pFileName );
 	
 	// handle the case where no name passed...
@@ -3616,7 +3338,7 @@ unsigned int CBaseFileSystem::Size( const char* pFileName, const char *pPathID )
 		return 0;
 	}
 
-	// If we have a whitelist and it's forcing the file to load from Steam instead of from disk,
+	// If we have a whitelist and it's forcing the file to not load from disk,
 	// then do this the slow way, otherwise we'll get the wrong file size (i.e. the size of the file on disk).
 	CWhitelistSpecs *pWhitelist = m_FileWhitelist.AddRef();
 	if ( pWhitelist )
@@ -3663,7 +3385,7 @@ unsigned int CBaseFileSystem::Size( const char* pFileName, const char *pPathID )
 //-----------------------------------------------------------------------------
 long CBaseFileSystem::FastFileTime( const CSearchPath *path, const char *pFileName )
 {
-	struct	_stat buf;
+	ks::platform::file_info buf;
 	
 	char tempSymlinkBuffer[MAX_PATH];
 	pFileName = V_FormatFilenameForSymlinking( tempSymlinkBuffer, pFileName );
@@ -3684,26 +3406,23 @@ long CBaseFileSystem::FastFileTime( const CSearchPath *path, const char *pFileNa
 		// Is it an absolute path?
 		char tempFileName[ MAX_FILEPATH ]; 
 		
-		if ( Q_IsAbsolutePath( pFileName ) )
+		if ( V_IsAbsolutePath( pFileName ) )
 		{
-			Q_strncpy( tempFileName, pFileName, sizeof( tempFileName ) );
-#ifdef SUPPORT_VPK
+			V_strncpy( tempFileName, pFileName, sizeof( tempFileName ) );
 			if ( !m_VPKFiles.empty() )
 			{
 #ifdef _DEBUG
 				FileSystemWarning( FILESYSTEM_WARNING, "***VPK: FastFileTime Attempting to use full path with VPK file!\n\tFile: %s\n", pFileName );
 #endif
 			}
-#endif
 		}
 		else
 		{
 			bool bFileInVpk = false;
-#ifdef SUPPORT_VPK
 			if ( !m_VPKFiles.empty() )
 			{
-				Q_strncpy( tempFileName, pFileName, sizeof( tempFileName ) );
-				Q_FixSlashes( tempFileName );
+				V_strncpy( tempFileName, pFileName, sizeof( tempFileName ) );
+				V_FixSlashes( tempFileName );
 				// check vpk file
 				for ( int i = 0; i < std::ssize( m_VPKFiles ); i++ )
 				{
@@ -3717,28 +3436,27 @@ long CBaseFileSystem::FastFileTime( const CSearchPath *path, const char *pFileNa
 					}
 				}
 			}
-#endif
 
 			if ( !bFileInVpk )
 			{
-				Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", path->GetPathString(), pFileName );
+				V_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", path->GetPathString(), pFileName );
 			}
 		}
-		Q_FixSlashes( tempFileName );
+		V_FixSlashes( tempFileName );
 
 		bool bFixed = false;
 		char fixedFATXFilename[MAX_PATH];
 
 		if ( FS_stat( bFixed ? fixedFATXFilename : tempFileName, &buf ) != -1 )
 		{
-			return buf.st_mtime;
+			return buf.modified_seconds;
 		}
 		// Support Linux and its case sensitive file system
 		char realName[MAX_PATH];
 		const char *pRealName = findFileInDirCaseInsensitive( tempFileName, realName );
 		if ( pRealName && FS_stat( pRealName, &buf ) != -1 )
 		{
-			return buf.st_mtime;
+			return buf.modified_seconds;
 		}
 	}
 
@@ -3747,7 +3465,7 @@ long CBaseFileSystem::FastFileTime( const CSearchPath *path, const char *pFileNa
 
 int CBaseFileSystem::FastFindFile( const CSearchPath *path, const char *pFileName )
 {
-	struct	_stat buf;
+	ks::platform::file_info buf;
 	
 	char tempSymlinkBuffer[MAX_PATH];
 	pFileName = V_FormatFilenameForSymlinking( tempSymlinkBuffer, pFileName );
@@ -3770,9 +3488,8 @@ int CBaseFileSystem::FastFindFile( const CSearchPath *path, const char *pFileNam
 	char tempFileName[ MAX_FILEPATH ]; 
 
 	// Is it an absolute path?	
-	bool bRelativePath = !Q_IsAbsolutePath( pFileName );
+	bool bRelativePath = !V_IsAbsolutePath( pFileName );
 
-#ifdef SUPPORT_VPK
 	// NOTE: Pack files need relative paths
 	if ( !bRelativePath && std::ssize( m_VPKFiles ) )
 	{
@@ -3782,8 +3499,8 @@ int CBaseFileSystem::FastFindFile( const CSearchPath *path, const char *pFileNam
 	}
 	if ( bRelativePath )
 	{
-		Q_strncpy( tempFileName, pFileName, sizeof( tempFileName ) );
-		Q_FixSlashes( tempFileName );
+		V_strncpy( tempFileName, pFileName, sizeof( tempFileName ) );
+		V_FixSlashes( tempFileName );
 		// check vpk file
 		for( int i = 0 ; i < std::ssize( m_VPKFiles ); i++ )
 		{
@@ -3794,17 +3511,16 @@ int CBaseFileSystem::FastFindFile( const CSearchPath *path, const char *pFileNam
 			}
 		}
 	}
-#endif
 
 	if ( !bRelativePath )
 	{
-		Q_strncpy( tempFileName, pFileName, sizeof( tempFileName ) );
+		V_strncpy( tempFileName, pFileName, sizeof( tempFileName ) );
 	}
 	else
 	{
-		Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", path->GetPathString(), pFileName );
+		V_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", path->GetPathString(), pFileName );
 	}
-	Q_FixSlashes( tempFileName );
+	V_FixSlashes( tempFileName );
 
 	bool bFixed = false;
 	char fixedFATXFilename[MAX_PATH];
@@ -3812,14 +3528,14 @@ int CBaseFileSystem::FastFindFile( const CSearchPath *path, const char *pFileNam
 	if ( FS_stat( bFixed ? fixedFATXFilename : tempFileName, &buf ) != -1 )
 	{
 		LogAccessToFile( "stat", tempFileName, "" );
-		return buf.st_size;
+		return buf.size;
 	}
 
 	// Support Linux and its case sensitive file system
 	char realName[MAX_PATH];
 	if ( findFileInDirCaseInsensitive( tempFileName, realName ) && FS_stat( realName, &buf ) != -1 )
 	{
-		return buf.st_size;
+		return buf.size;
 	}
 
 	return ( -1 );
@@ -3852,7 +3568,7 @@ int CBaseFileSystem::Read( void *pOutput, int size, FileHandle_t file )
 //-----------------------------------------------------------------------------
 int CBaseFileSystem::ReadEx( void *pOutput, int destSize, int size, FileHandle_t file )
 {
-	VPROF_BUDGET( "CBaseFileSystem::Read", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::Read", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 	NoteIO();
 	if ( !file )
 	{
@@ -3923,7 +3639,7 @@ KeyValues *CBaseFileSystem::LoadKeyValues( KeyValuesPreloadType_t type, char con
 //			bufsize - 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CBaseFileSystem::LookupKeyValuesRootKeyName( char const *filename, char const *pPathID, char *rootName, size_t bufsize )
+bool CBaseFileSystem::LookupKeyValuesRootKeyName( char const *filename, char const *pPathID, char *rootName, std::size_t bufsize )
 {
 	if ( FileExists( filename, pPathID ) )
 	{
@@ -3947,10 +3663,10 @@ bool CBaseFileSystem::LookupKeyValuesRootKeyName( char const *filename, char con
 			++pStart;
 		}
 		// Then copy the rest of the string
-		Q_strncpy( rootName, pStart, bufsize );
+		V_strncpy( rootName, pStart, bufsize );
 
 		// And then strip off the \n and the " character at the end, in that order
-		int len = Q_strlen( pStart );
+		int len = V_strlen( pStart );
 		while ( len > 0 && rootName[ len - 1 ] == '\n' )
 		{
 			rootName[ len - 1 ] = 0;
@@ -4007,9 +3723,8 @@ void CBaseFileSystem::DiscardPreloadData()
 //-----------------------------------------------------------------------------
 int CBaseFileSystem::Write( void const* pInput, int size, FileHandle_t file )
 {
-	VPROF_BUDGET( "CBaseFileSystem::Write", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::Write", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 
-	AUTOBLOCKREPORTER_FH( Write, this, true, file, FILESYSTEM_BLOCKING_SYNCHRONOUS, FileBlockingItem::FB_ACCESS_WRITE );
 
 	CFileHandle *fh = ( CFileHandle *)file;
 	if ( !fh )
@@ -4026,9 +3741,9 @@ int CBaseFileSystem::Write( void const* pInput, int size, FileHandle_t file )
 //-----------------------------------------------------------------------------
 int CBaseFileSystem::FPrintf( FileHandle_t file, const char *pFormat, ... )
 {
-	va_list args;
-	va_start( args, pFormat );
-	VPROF_BUDGET( "CBaseFileSystem::FPrintf", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	std::va_list args;
+	__builtin_va_start( args, pFormat );
+	CVProfScope _( "CBaseFileSystem::FPrintf", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 	CFileHandle *fh = ( CFileHandle *)file;
 	if ( !fh )
 	{
@@ -4045,10 +3760,10 @@ int CBaseFileSystem::FPrintf( FileHandle_t file, const char *pFormat, ... )
 
 
 	char buffer[65535];
-	int len = vsnprintf( buffer, sizeof( buffer), pFormat, args );
+	int len = std::vsnprintf( buffer, sizeof( buffer), pFormat, args );
 	len = fh->Write( buffer, len );
 	//int len = FS_vfprintf( fh->GetFileHandle() , pFormat, args );
-	va_end( args );
+	__builtin_va_end( args );
 
 	
 	return len;
@@ -4088,7 +3803,7 @@ bool CBaseFileSystem::IsOk( FileHandle_t file )
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::Flush( FileHandle_t file )
 {
-	VPROF_BUDGET( "CBaseFileSystem::Flush", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::Flush", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 	CFileHandle *fh = ( CFileHandle *)file;
 	if ( !fh )
 	{
@@ -4107,7 +3822,7 @@ bool CBaseFileSystem::Precache( const char *pFileName, const char *pPathID)
 	// Allow for UNC-type syntax to specify the path ID.
 	char tempPathID[MAX_PATH];
 	ParsePathID( pFileName, pPathID, tempPathID );
-	Assert( pPathID );
+	contract_assert( pPathID );
 
 	// Really simple, just open, the file, read it all in and close it. 
 	// We probably want to use file mapping to do this eventually.
@@ -4129,7 +3844,7 @@ bool CBaseFileSystem::Precache( const char *pFileName, const char *pPathID)
 //-----------------------------------------------------------------------------
 char *CBaseFileSystem::ReadLine( char *pOutput, int maxChars, FileHandle_t file )
 {
-	VPROF_BUDGET( "CBaseFileSystem::ReadLine", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::ReadLine", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 	CFileHandle *fh = ( CFileHandle *)file;
 	if ( !fh )
 	{
@@ -4187,15 +3902,15 @@ char *CBaseFileSystem::ReadLine( char *pOutput, int maxChars, FileHandle_t file 
 //-----------------------------------------------------------------------------
 long CBaseFileSystem::GetFileTime( const char *pFileName, const char *pPathID )
 {
-	VPROF_BUDGET( "CBaseFileSystem::GetFileTime", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::GetFileTime", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 
 	CHECK_DOUBLE_SLASHES( pFileName );
 
 	CSearchPathsIterator iter( this, &pFileName, pPathID );
 
 	char tempFileName[MAX_PATH];
-	Q_strncpy( tempFileName, pFileName, sizeof(tempFileName) );
-	Q_FixSlashes( tempFileName );
+	V_strncpy( tempFileName, pFileName, sizeof(tempFileName) );
+	V_FixSlashes( tempFileName );
 
 	for ( CSearchPath *pSearchPath = iter.GetFirst(); pSearchPath != nullptr; pSearchPath = iter.GetNext() )
 	{
@@ -4205,16 +3920,16 @@ long CBaseFileSystem::GetFileTime( const char *pFileName, const char *pPathID )
 			if ( !pSearchPath->GetPackFile() && std::ssize( m_LogFuncs ) )
 			{
 				char pTmpFileName[ MAX_FILEPATH ]; 
-				if ( strchr( tempFileName, ':' ) ) // 
+				if ( std::strchr( tempFileName, ':' ) ) // 
 				{
-					Q_strncpy( pTmpFileName, tempFileName, sizeof( pTmpFileName ) );
+					V_strncpy( pTmpFileName, tempFileName, sizeof( pTmpFileName ) );
 				}
 				else
 				{
-					Q_snprintf( pTmpFileName, sizeof( pTmpFileName ), "%s%s", pSearchPath->GetPathString(), tempFileName );
+					V_snprintf( pTmpFileName, sizeof( pTmpFileName ), "%s%s", pSearchPath->GetPathString(), tempFileName );
 				}
 
-				Q_FixSlashes( pTmpFileName );
+				V_FixSlashes( pTmpFileName );
 
 				LogAccessToFile( "filetime", pTmpFileName, "" );
 			}
@@ -4227,13 +3942,13 @@ long CBaseFileSystem::GetFileTime( const char *pFileName, const char *pPathID )
 
 long CBaseFileSystem::GetPathTime( const char *pFileName, const char *pPathID )
 {
-	VPROF_BUDGET( "CBaseFileSystem::GetFileTime", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::GetFileTime", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 
 	CSearchPathsIterator iter( this, &pFileName, pPathID );
 
 	char tempFileName[MAX_PATH];
-	Q_strncpy( tempFileName, pFileName, sizeof(tempFileName) );
-	Q_FixSlashes( tempFileName );
+	V_strncpy( tempFileName, pFileName, sizeof(tempFileName) );
+	V_FixSlashes( tempFileName );
 
 	long pathTime = 0L;
 	for ( CSearchPath *pSearchPath = iter.GetFirst(); pSearchPath != nullptr; pSearchPath = iter.GetNext() )
@@ -4246,16 +3961,16 @@ long CBaseFileSystem::GetPathTime( const char *pFileName, const char *pPathID )
 			if ( !pSearchPath->GetPackFile() && std::ssize( m_LogFuncs ) )
 			{
 				char pTmpFileName[ MAX_FILEPATH ]; 
-				if ( strchr( tempFileName, ':' ) )
+				if ( std::strchr( tempFileName, ':' ) )
 				{
-					Q_strncpy( pTmpFileName, tempFileName, sizeof( pTmpFileName ) );
+					V_strncpy( pTmpFileName, tempFileName, sizeof( pTmpFileName ) );
 				}
 				else
 				{
-					Q_snprintf( pTmpFileName, sizeof( pTmpFileName ), "%s%s", pSearchPath->GetPathString(), tempFileName );
+					V_snprintf( pTmpFileName, sizeof( pTmpFileName ), "%s%s", pSearchPath->GetPathString(), tempFileName );
 				}
 
-				Q_FixSlashes( pTmpFileName );
+				V_FixSlashes( pTmpFileName );
 
 				LogAccessToFile( "filetime", pTmpFileName, "" );
 			}
@@ -4277,12 +3992,12 @@ bool CBaseFileSystem::ShouldGameReloadFile( const char *pFilename )
 
 		// They should be checking with relative filenames, but this is easy to remedy if we need to.
 		// Easy enough to remedy if we want.. just strip off the path ID prefixes until we find the file.
-		Assert( false );	
+		contract_assert( false );	
 		return true;
 	}
 
 	CFileInfo *fileInfos[256];
-	int nFileInfos = m_FileTracker.GetFileInfos( fileInfos, ARRAYSIZE( fileInfos ), pFilename );
+	int nFileInfos = m_FileTracker.GetFileInfos( fileInfos, std::size( fileInfos ), pFilename );
 	if ( nFileInfos == 0 )
 	{
 		// Ain't heard of this file. It probably came from a BSP or a pak file.
@@ -4319,42 +4034,11 @@ bool CBaseFileSystem::ShouldGameReloadFile( const char *pFilename )
 			break;
 		}
 		
-		if ( pFileInfo->m_Flags & k_eFileFlagsLoadedFromSteam )
+		if ( !bFileAllowedToComeFromDisk )
 		{
-			if ( (pFileInfo->m_Flags & k_eFileFlagsForcedLoadFromSteam) && bFileAllowedToComeFromDisk )
-			{
-				// So.. the last time we loaded this file, we forced it to come from Steam, but the new whitelist says it's ok if this
-				// file is loaded off disk. So reload it. 
-				//
-				// TODO: we could optimize this by checking if there even IS a file on disk that would override the Steam one,
-				//       and in that case, don't tell the game to reload it.
-				//
-				//       We could also optimize it if we remembered whether we told Steam to allow loads off disk or not.
-				//		 If we did allow loads and Steam still got the file from Steam, then we know that there isn't
-				//		 a file on disk here, and therefore we wouldn't have to reload it now.
-				bRet = true;
-				break;
-			}
-			else
-			{
-				// So we loaded the file from Steam last time, and the new whitelist only allows it to come from Steam, so we're ok.
-				//return false;
-			}
-		}
-		else
-		{
-			if ( bFileAllowedToComeFromDisk )
-			{
-				// No need to reload. The new whitelist says this file can come off disk, and the last time we loaded it, it was off disk.
-				// The client will still verify the CRC of the file with the server to make sure its file is legit..
-				//return false;
-			}
-			else
-			{
-				// The file was loaded off disk but the server won't allow that now.
-				bRet = true;
-				break;
-			}
+			// The file was loaded off disk but the server won't allow that now.
+			bRet = true;
+			break;
 		}
 	}
 
@@ -4505,7 +4189,6 @@ void CBaseFileSystem::EnableWhitelistFileTracking( bool bEnable, bool bCacheAllV
 
 void CBaseFileSystem::CacheAllVPKFileHashes( bool bCacheAllVPKHashes, bool bRecalculateAndCheckHashes )
 {
-#ifdef SUPPORT_VPK
 	for( int i = 0 ; i < std::ssize( m_VPKFiles ); i++ )
 	{
 		if ( !m_VPKFiles[i]->BTestDirectoryHash() )
@@ -4549,13 +4232,13 @@ void CBaseFileSystem::CacheAllVPKFileHashes( bool bCacheAllVPKHashes, bool bReca
 				{
 					Msg( "VPK hash count does not match. VPK content may be corrupt.\n" );
 				}
-				else if  ( Q_memcmp( vecChunkHash.data(), vecChunkHashFractionCopy.data(), std::ssize( vecChunkHash )*sizeof(vecChunkHash[0])) != 0 )
+				else if  ( V_memcmp( vecChunkHash.data(), vecChunkHashFractionCopy.data(), std::ssize( vecChunkHash )*sizeof(vecChunkHash[0])) != 0 )
 				{
 					Msg( "VPK hashes do not match. VPK content may be corrupt.\n" );
 					// find the actual mismatch
 					for ( int iHash = 0; iHash < std::ssize( vecChunkHashFractionCopy ); iHash++ )
 					{
-						if ( Q_memcmp( vecChunkHashFractionCopy[iHash].m_md5contents.bits, vecChunkHash[iHash].m_md5contents.bits, sizeof( vecChunkHashFractionCopy[iHash].m_md5contents.bits ) ) != 0 )
+						if ( V_memcmp( vecChunkHashFractionCopy[iHash].m_md5contents.bits, vecChunkHash[iHash].m_md5contents.bits, sizeof( vecChunkHashFractionCopy[iHash].m_md5contents.bits ) ) != 0 )
 						{
 							Msg( "VPK hash for file %d failure at offset %x.\n", vecChunkHashFractionCopy[iHash].m_nPackFileNumber, vecChunkHashFractionCopy[iHash].m_nFileFraction );
 							cFailures++;
@@ -4580,13 +4263,11 @@ void CBaseFileSystem::CacheAllVPKFileHashes( bool bCacheAllVPKHashes, bool bReca
 				Msg( "File hashes checked. %d matches. %d failures.\n", (int)std::ssize( vecChunkHash ), cFailures );
 		}
 	}
-#endif
 }
 
 
 bool CBaseFileSystem::CheckVPKFileHash( int PackFileID, int nPackFileNumber, int nFileFraction, MD5Value_t &md5Value )
 {
-#ifdef SUPPORT_VPK
 	for( int i = 0 ; i < std::ssize( m_VPKFiles ); i++ )
 	{
 		if ( m_VPKFiles[i]->m_PackFileID == PackFileID )
@@ -4601,14 +4282,14 @@ bool CBaseFileSystem::CheckVPKFileHash( int PackFileID, int nPackFileNumber, int
 				m_VPKFiles[i]->GetPackFileName( fhandle, szFileName, sizeof(szFileName) );
 
 				char hex[ 34 ];
-				Q_memset( hex, 0, sizeof( hex ) );
-				Q_binarytohex( (const byte *)md5Value.bits, sizeof( md5Value.bits ), hex, sizeof( hex ) );
+				V_memset( hex, 0, sizeof( hex ) );
+				V_binarytohex( (const byte *)md5Value.bits, sizeof( md5Value.bits ), hex, sizeof( hex ) );
 
 				char hex2[ 34 ];
-				Q_memset( hex2, 0, sizeof( hex2 ) );
-				Q_binarytohex( (const byte *)fileHashFraction.m_md5contents.bits, sizeof( fileHashFraction.m_md5contents.bits ), hex2, sizeof( hex2 ) );
+				V_memset( hex2, 0, sizeof( hex2 ) );
+				V_binarytohex( (const byte *)fileHashFraction.m_md5contents.bits, sizeof( fileHashFraction.m_md5contents.bits ), hex2, sizeof( hex2 ) );
 
-				if ( Q_memcmp( fileHashFraction.m_md5contents.bits, md5Value.bits, sizeof(md5Value.bits) ) != 0 )
+				if ( V_memcmp( fileHashFraction.m_md5contents.bits, md5Value.bits, sizeof(md5Value.bits) ) != 0 )
 				{
 					Msg( "File %s offset %x hash %s does not match ( should be %s ) \n", szFileName, nFileFraction, hex, hex2 );
 					return false;
@@ -4621,7 +4302,6 @@ bool CBaseFileSystem::CheckVPKFileHash( int PackFileID, int nPackFileNumber, int
 		}
 	}
 	return false;
-#endif
 }
 
 
@@ -4678,8 +4358,8 @@ void CBaseFileSystem::SetWhitelistSpewFlags( int flags )
 void CBaseFileSystem::FileTimeToString( char *pString, int maxCharsIncludingTerminator, long fileTime )
 {
 	{
-		time_t time = fileTime;
-		V_strncpy( pString, ctime( &time ), maxCharsIncludingTerminator );
+		std::time_t time = fileTime;
+		V_strncpy( pString, std::ctime( &time ), maxCharsIncludingTerminator );
 
 		// We see a linefeed at the end of these strings...if there is one, gobble it up
 		int len = V_strlen( pString );
@@ -4699,7 +4379,7 @@ void CBaseFileSystem::FileTimeToString( char *pString, int maxCharsIncludingTerm
 //-----------------------------------------------------------------------------
 bool CBaseFileSystem::FileExists( const char *pFileName, const char *pPathID )
 {
-	VPROF_BUDGET( "CBaseFileSystem::FileExists", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::FileExists", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 	NoteIO();
 
 	CHECK_DOUBLE_SLASHES( pFileName );
@@ -4720,19 +4400,19 @@ bool CBaseFileSystem::IsFileWritable( char const *pFileName, char const *pPathID
 {
 	CHECK_DOUBLE_SLASHES( pFileName );
 
-	struct	_stat buf;
+	ks::platform::file_info buf;
 
 	char tempPathID[MAX_PATH];
 	ParsePathID( pFileName, pPathID, tempPathID );
 
-	if ( Q_IsAbsolutePath( pFileName ) )
+	if ( V_IsAbsolutePath( pFileName ) )
 	{
 		bool bFixed = false;
 		char fixedFATXFilename[MAX_PATH];
 
 		if ( FS_stat( bFixed ? fixedFATXFilename : pFileName, &buf ) != -1 )
 		{
-			if ( buf.st_mode & S_IWRITE )
+			if ( buf.is_writable )
 			{
 				return true;
 			}
@@ -4744,15 +4424,15 @@ bool CBaseFileSystem::IsFileWritable( char const *pFileName, char const *pPathID
 	for ( CSearchPath *pSearchPath = iter.GetFirst(); pSearchPath != nullptr; pSearchPath = iter.GetNext() )
 	{
 		char tempFileName[ MAX_FILEPATH ];
-		Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFileName );
-		Q_FixSlashes( tempFileName );
+		V_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFileName );
+		V_FixSlashes( tempFileName );
 
 		bool bFixed = false;
 		char fixedFATXFilename[MAX_PATH];
 
 		if ( FS_stat( bFixed ? fixedFATXFilename : tempFileName, &buf ) != -1 )
 		{
-			if ( buf.st_mode & S_IWRITE )
+			if ( buf.is_writable )
 			{
 				return true;
 			}
@@ -4766,30 +4446,28 @@ bool CBaseFileSystem::SetFileWritable( char const *pFileName, bool writable, con
 {
 	CHECK_DOUBLE_SLASHES( pFileName );
 
-	int pmode = writable ? ( S_IWRITE | S_IREAD ) : ( S_IREAD );
-
 	char tempPathID[MAX_PATH];
 	ParsePathID( pFileName, pPathID, tempPathID );
 
-	if ( Q_IsAbsolutePath( pFileName ) )
+	if ( V_IsAbsolutePath( pFileName ) )
 	{
 		bool bFixed = false;
 		char fixedFATXFilename[MAX_PATH];
 
-		return ( FS_chmod( bFixed ? fixedFATXFilename : pFileName, pmode ) == 0 );
+		return FS_setwritable( bFixed ? fixedFATXFilename : pFileName, writable );
 	}
 
 	CSearchPathsIterator iter( this, &pFileName, pPathID, FILTER_CULLPACK );
 	for ( CSearchPath *pSearchPath = iter.GetFirst(); pSearchPath != nullptr; pSearchPath = iter.GetNext() )
 	{
 		char tempFilename[ MAX_FILEPATH ];
-		Q_snprintf( tempFilename, sizeof( tempFilename ), "%s%s", pSearchPath->GetPathString(), pFileName );
-		Q_FixSlashes( tempFilename );
+		V_snprintf( tempFilename, sizeof( tempFilename ), "%s%s", pSearchPath->GetPathString(), pFileName );
+		V_FixSlashes( tempFilename );
 
 		bool bFixed = false;
 		char fixedFATXFilename[MAX_PATH];
 
-		if ( FS_chmod( bFixed ? fixedFATXFilename : tempFilename, pmode ) == 0 )
+		if ( FS_setwritable( bFixed ? fixedFATXFilename : tempFilename, writable ) )
 		{
 			return true;
 		}
@@ -4810,23 +4488,23 @@ bool CBaseFileSystem::IsDirectory( const char *pFileName, const char *pathID )
 	CHECK_DOUBLE_SLASHES( pFileName );
 
 	// Allow for UNC-type syntax to specify the path ID.
-	struct	_stat buf;
+	ks::platform::file_info buf;
 
 	char pTempBuf[MAX_PATH];
-	Q_strncpy( pTempBuf, pFileName, sizeof(pTempBuf) );
-	Q_StripTrailingSlash( pTempBuf );
+	V_strncpy( pTempBuf, pFileName, sizeof(pTempBuf) );
+	V_StripTrailingSlash( pTempBuf );
 	pFileName = pTempBuf;
 
 	char tempPathID[MAX_PATH];
 	ParsePathID( pFileName, pathID, tempPathID );
-	if ( Q_IsAbsolutePath( pFileName ) )
+	if ( V_IsAbsolutePath( pFileName ) )
 	{
 		bool bFixed = false;
 		char fixedFATXFilename[MAX_PATH];
 
 		if ( FS_stat( bFixed ? fixedFATXFilename : pFileName, &buf ) != -1 )
 		{
-			if ( buf.st_mode & _S_IFDIR )
+			if ( buf.is_directory )
 				return true;
 		}
 		return false;
@@ -4836,20 +4514,19 @@ bool CBaseFileSystem::IsDirectory( const char *pFileName, const char *pathID )
 	for ( CSearchPath *pSearchPath = iter.GetFirst(); pSearchPath != nullptr; pSearchPath = iter.GetNext() )
 	{
 		char tempFileName[ MAX_FILEPATH ];
-		Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFileName );
-		Q_FixSlashes( tempFileName );
+		V_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFileName );
+		V_FixSlashes( tempFileName );
 
 		bool bFixed = false;
 		char fixedFATXFilename[MAX_PATH];
 
 		if ( FS_stat( bFixed ? fixedFATXFilename : tempFileName, &buf ) != -1 )
 		{
-			if ( buf.st_mode & _S_IFDIR )
+			if ( buf.is_directory )
 				return true;
 		}
 	}
 
-#ifdef SUPPORT_VPK
 	//
 	// Let's see if the directory exists in the VPK file structure
 	//
@@ -4876,9 +4553,6 @@ bool CBaseFileSystem::IsDirectory( const char *pFileName, const char *pathID )
 	V_FixSlashes( szPathWithCorrectSlashes, '/' );
 
 	return m_VPKDirectories.contains( szPathWithCorrectSlashes );
-#else
-	return ( false );
-#endif
 }
 
 
@@ -4895,19 +4569,19 @@ void CBaseFileSystem::CreateDirHierarchy( const char *pRelativePath, const char 
  	ParsePathID( pRelativePath, pathID, tempPathID );
 
 	char szScratchFileName[MAX_PATH];
-	if ( !Q_IsAbsolutePath( pRelativePath ) )
+	if ( !V_IsAbsolutePath( pRelativePath ) )
 	{
-		Assert( pathID );
+		contract_assert( pathID );
 		ComputeFullWritePath( szScratchFileName, sizeof( szScratchFileName ), pRelativePath, pathID );
 	}
 	else
 	{
-		Q_strncpy( szScratchFileName, pRelativePath, sizeof(szScratchFileName) );
+		V_strncpy( szScratchFileName, pRelativePath, sizeof(szScratchFileName) );
 	}
 
-	Q_FixSlashes( szScratchFileName );
+	V_FixSlashes( szScratchFileName );
 
-	int len = strlen( szScratchFileName ) + 1;
+	int len = std::strlen( szScratchFileName ) + 1;
 	char *end = szScratchFileName + len;
 	char *s = szScratchFileName;
 	while( s < end )
@@ -4917,13 +4591,13 @@ void CBaseFileSystem::CreateDirHierarchy( const char *pRelativePath, const char 
         {
 			char save = *s;
 			*s = '\0';
-			mkdir( szScratchFileName, S_IRWXU |  S_IRGRP |  S_IROTH );// owner has rwx, rest have r
+			ks::platform::create_directory( szScratchFileName );
 			*s = save;
         }
 		s++;
     }
 
-	mkdir( szScratchFileName, S_IRWXU |  S_IRGRP |  S_IROTH );
+	ks::platform::create_directory( szScratchFileName );
 }
 
 
@@ -4966,7 +4640,7 @@ void CBaseFileSystem::FindFileAbsoluteListHelper( std::vector< std::string > &ou
 void CBaseFileSystem::FindFileAbsoluteList( std::vector< std::string > &outAbsolutePathNames, const char *pWildCard, const char *pPathID )
 {
 	// TODO: figure out what PS3 does without VPKs
-	VPROF_BUDGET( "CBaseFileSystem::FindFileAbsoluteList", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::FindFileAbsoluteList", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 
 	outAbsolutePathNames.clear(); outAbsolutePathNames.shrink_to_fit();
 
@@ -4975,13 +4649,13 @@ void CBaseFileSystem::FindFileAbsoluteList( std::vector< std::string > &outAbsol
 	{
 		findData.m_FilterPathID = PathIDSymbol( pPathID );
 	}
-	int maxlen = strlen( pWildCard ) + 1;
+	int maxlen = std::strlen( pWildCard ) + 1;
 	findData.wildCardString.resize( findData.wildCardString.size() + maxlen );
-	Q_strncpy( findData.wildCardString.data(), pWildCard, maxlen );
-	Q_FixSlashes( findData.wildCardString.data() );
+	V_strncpy( findData.wildCardString.data(), pWildCard, maxlen );
+	V_FixSlashes( findData.wildCardString.data() );
 	findData.findHandle = INVALID_HANDLE_VALUE;
 
-	if ( Q_IsAbsolutePath( pWildCard ) )
+	if ( V_IsAbsolutePath( pWildCard ) )
 	{
 		FindFileAbsoluteListHelper( outAbsolutePathNames, findData, pWildCard );
 	}
@@ -5005,8 +4679,8 @@ void CBaseFileSystem::FindFileAbsoluteList( std::vector< std::string > &outAbsol
 				continue;
 
 			char tempFileName[ MAX_FILEPATH ];
-			Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), findData.wildCardString.data() );
-			Q_FixSlashes( tempFileName );
+			V_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), findData.wildCardString.data() );
+			V_FixSlashes( tempFileName );
 
 			FindFileAbsoluteListHelper( outAbsolutePathNames, findData, tempFileName );
 		}
@@ -5014,7 +4688,6 @@ void CBaseFileSystem::FindFileAbsoluteList( std::vector< std::string > &outAbsol
 
 	//TODO:  zips!
 
-#if defined( SUPPORT_VPK )
 	//
 	// Now that we have searched the filesystem let's look in the VPK files
 	//
@@ -5037,7 +4710,6 @@ void CBaseFileSystem::FindFileAbsoluteList( std::vector< std::string > &outAbsol
 			outAbsolutePathNames.push_back( result );
 		}
 	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -5056,24 +4728,24 @@ const char *CBaseFileSystem::FindFirstEx( const char *pWildCard, const char *pPa
 
 const char *CBaseFileSystem::FindFirstHelper( const char *pWildCard, const char *pPathID, FileFindHandle_t *pHandle, int *pFoundStoreID )
 {
-	VPROF_BUDGET( "CBaseFileSystem::FindFirst", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
- 	Assert( pWildCard );
- 	Assert( pHandle );
+	CVProfScope _( "CBaseFileSystem::FindFirst", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
+ 	contract_assert( pWildCard );
+ 	contract_assert( pHandle );
 
 	FileFindHandle_t hTmpHandle = m_FindData.emplace();
 	FindData_t *pFindData = &m_FindData[hTmpHandle];
-	Assert( pFindData );
+	contract_assert( pFindData );
 	if ( pPathID )
 	{
 		pFindData->m_FilterPathID = PathIDSymbol( pPathID );
 	}
-	int maxlen = strlen( pWildCard ) + 1;
+	int maxlen = std::strlen( pWildCard ) + 1;
 	pFindData->wildCardString.resize( pFindData->wildCardString.size() + maxlen );
-	Q_strncpy( pFindData->wildCardString.data(), pWildCard, maxlen );
-	Q_FixSlashes( pFindData->wildCardString.data() );
+	V_strncpy( pFindData->wildCardString.data(), pWildCard, maxlen );
+	V_FixSlashes( pFindData->wildCardString.data() );
 	pFindData->findHandle = INVALID_HANDLE_VALUE;
 
-	if ( Q_IsAbsolutePath( pWildCard ) )
+	if ( V_IsAbsolutePath( pWildCard ) )
 	{
 		bool bFixed = false;
 		char fixedFATXFilename[MAX_PATH];
@@ -5102,8 +4774,8 @@ const char *CBaseFileSystem::FindFirstHelper( const char *pWildCard, const char 
 				continue;
 
 			char tempFileName[ MAX_FILEPATH ];
-			Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFindData->wildCardString.data() );
-			Q_FixSlashes( tempFileName );
+			V_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFindData->wildCardString.data() );
+			V_FixSlashes( tempFileName );
 
 			bool bFixed = false;
 			char fixedFATXFilename[MAX_PATH];
@@ -5116,7 +4788,6 @@ const char *CBaseFileSystem::FindFirstHelper( const char *pWildCard, const char 
 		}
 	}
 
-#ifdef SUPPORT_VPK
 	//
 	// Now that we have searched the filesystem let's look in the VPK files
 	//
@@ -5124,7 +4795,6 @@ const char *CBaseFileSystem::FindFirstHelper( const char *pWildCard, const char 
 	{
 		m_VPKFiles[i]->GetFileAndDirLists( pWildCard, pFindData->m_dirMatchesFromVPK, pFindData->m_fileMatchesFromVPK, true );
 	}
-#endif
 
 	// We have a result from the filesystem 
 	if( pFindData->findHandle != INVALID_HANDLE_VALUE )
@@ -5138,7 +4808,6 @@ const char *CBaseFileSystem::FindFirstHelper( const char *pWildCard, const char 
 		*pHandle = hTmpHandle;
 		return pFindData->findData.cFileName;
 	}
-#ifdef SUPPORT_VPK
 	// We have a file result from the VPK file but not the filesystem
 	else if ( !pFindData->m_fileMatchesFromVPK.empty() )
 	{
@@ -5169,7 +4838,6 @@ const char *CBaseFileSystem::FindFirstHelper( const char *pWildCard, const char 
 
 		return pFindData->findData.cFileName;	
 	}
-#endif
 	// Handle failure here
 	pFindData = 0;
 	m_FindData.erase(hTmpHandle);
@@ -5227,8 +4895,8 @@ bool CBaseFileSystem::FindNextFileHelper( FindData_t *pFindData, int *pFoundStor
 			continue;
 
 		char tempFileName[ MAX_FILEPATH ];
-		Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFindData->wildCardString.data() );
-		Q_FixSlashes( tempFileName );
+		V_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFindData->wildCardString.data() );
+		V_FixSlashes( tempFileName );
 
 		bool bFixed = false;
 		char fixedFATXFilename[MAX_PATH];
@@ -5244,7 +4912,6 @@ bool CBaseFileSystem::FindNextFileHelper( FindData_t *pFindData, int *pFoundStor
 		}
 	}
 
-#ifdef SUPPORT_VPK
 	// Return the next one from the list of VPK matches if there is one
 	if ( !pFindData->m_fileMatchesFromVPK.empty() )
 	{
@@ -5264,7 +4931,6 @@ bool CBaseFileSystem::FindNextFileHelper( FindData_t *pFindData, int *pFoundStor
 
 		return true;
 	}
-#endif
 
 	return false;
 }	
@@ -5276,7 +4942,7 @@ bool CBaseFileSystem::FindNextFileHelper( FindData_t *pFindData, int *pFoundStor
 //-----------------------------------------------------------------------------
 const char *CBaseFileSystem::FindNext( FileFindHandle_t handle )
 {
-	VPROF_BUDGET( "CBaseFileSystem::FindNext", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CBaseFileSystem::FindNext", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 	FindData_t *pFindData = &m_FindData[handle];
 
 	while( 1 )
@@ -5316,7 +4982,7 @@ void CBaseFileSystem::FindClose( FileFindHandle_t handle )
 		return;
 
 	FindData_t *pFindData = &m_FindData[handle];
-	Assert(pFindData);
+	contract_assert( pFindData );
 
 	if ( pFindData->findHandle != INVALID_HANDLE_VALUE)
 	{
@@ -5325,10 +4991,8 @@ void CBaseFileSystem::FindClose( FileFindHandle_t handle )
 	pFindData->findHandle = INVALID_HANDLE_VALUE;
 
 	pFindData->wildCardString.clear(); pFindData->wildCardString.shrink_to_fit();
-#ifdef SUPPORT_VPK
 	pFindData->m_fileMatchesFromVPK.clear();
 	pFindData->m_dirMatchesFromVPK.clear();
-#endif
 	m_FindData.erase( handle );
 }
 
@@ -5341,7 +5005,6 @@ void CBaseFileSystem::GetLocalCopy( const char *pFileName )
 	// do nothing. . everything is local.
 }
 
-#ifdef SUPPORT_VPK
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : *pFileName - 
@@ -5362,7 +5025,6 @@ CPackedStoreFileHandle CBaseFileSystem::FindFileInVPKs( const char *pFileName )
 
 	return retVal;
 }
-#endif
 
 //-----------------------------------------------------------------------------
 // Converts a partial path into a full path
@@ -5374,7 +5036,7 @@ const char *CBaseFileSystem::RelativePathToFullPath( const char *pFileName, cons
 {
 	CHECK_DOUBLE_SLASHES( pFileName );
 
-	struct	_stat buf;
+	ks::platform::file_info buf;
 
 	if ( pPathType )
 	{
@@ -5383,7 +5045,7 @@ const char *CBaseFileSystem::RelativePathToFullPath( const char *pFileName, cons
 
 
 	// Fill in the default in case it's not found...
-	Q_strncpy( pFullPath, pFileName, fullPathBufferSize );
+	V_strncpy( pFullPath, pFileName, fullPathBufferSize );
 
 	if ( pathFilter == FILTER_NONE )
 	{
@@ -5422,9 +5084,9 @@ const char *CBaseFileSystem::RelativePathToFullPath( const char *pFileName, cons
 				// form an encoded absolute path that can be decoded by our FS as pak based
 				int len;
 				V_strncpy( pFullPath, pPack->m_ZipName.c_str(), fullPathBufferSize );
-				len = strlen( pFullPath );
+				len = std::strlen( pFullPath );
 				V_AppendSlash( pFullPath, fullPathBufferSize - len );
-				len = strlen( pFullPath );				
+				len = std::strlen( pFullPath );				
 				V_strncpy( pFullPath + len, pFileName, fullPathBufferSize - len ); 
 
 				return pFullPath;
@@ -5434,15 +5096,15 @@ const char *CBaseFileSystem::RelativePathToFullPath( const char *pFileName, cons
 		}
 
 		char tempFileName[ MAX_FILEPATH ];
-		Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFileName );
-		Q_FixSlashes( tempFileName );
+		V_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFileName );
+		V_FixSlashes( tempFileName );
 
 		bool bFixed = false;
 		char fixedFATXFilename[MAX_PATH];
 		bool bFound = FS_stat( bFixed ? fixedFATXFilename : tempFileName, &buf ) != -1;
 		if ( bFound )
 		{
-			Q_strncpy( pFullPath, tempFileName, fullPathBufferSize );
+			V_strncpy( pFullPath, tempFileName, fullPathBufferSize );
 			if ( pPathType && pSearchPath->m_bIsDvdDevPath )
 			{
 				*pPathType |= PATH_IS_DVDDEV;
@@ -5451,7 +5113,6 @@ const char *CBaseFileSystem::RelativePathToFullPath( const char *pFileName, cons
 		}
 	}
 
-#ifdef SUPPORT_VPK
 	// Try to find the path in the mounted VPK files
 	if ( FindFileInVPKs( pFileName ) )
 	{
@@ -5462,7 +5123,6 @@ const char *CBaseFileSystem::RelativePathToFullPath( const char *pFileName, cons
 
 		return pFullPath;
 	}
-#endif
 
 	// not found
 	return nullptr;
@@ -5484,18 +5144,18 @@ bool CBaseFileSystem::FullPathToRelativePathEx( const char *pFullPath, const cha
 {
 	CHECK_DOUBLE_SLASHES( pFullPath );
 
-	int nInlen = Q_strlen( pFullPath );
+	int nInlen = V_strlen( pFullPath );
 	if ( nInlen <= 0 )
 	{
 		pRelative[ 0 ] = 0;
 		return false;
 	}
 
-	Q_strncpy( pRelative, pFullPath, nMaxLen );
+	V_strncpy( pRelative, pFullPath, nMaxLen );
 
 	char pInPath[ MAX_FILEPATH ];
-	Q_strncpy( pInPath, pFullPath, sizeof( pInPath ) );
-	Q_FixSlashes( pInPath );
+	V_strncpy( pInPath, pFullPath, sizeof( pInPath ) );
+	V_FixSlashes( pInPath );
 
 	std::string_view lookup = PathIDSymbol( pPathId );
 
@@ -5511,13 +5171,13 @@ bool CBaseFileSystem::FullPathToRelativePathEx( const char *pFullPath, const cha
 			continue;
 
 		char pSearchBase[ MAX_FILEPATH ];
-		Q_strncpy( pSearchBase, m_SearchPaths[i].GetPathString(), sizeof( pSearchBase ) );
-		Q_FixSlashes( pSearchBase );
-		int nSearchLen = Q_strlen( pSearchBase );
-		if ( Q_strnicmp( pSearchBase, pInPath, nSearchLen ) )
+		V_strncpy( pSearchBase, m_SearchPaths[i].GetPathString(), sizeof( pSearchBase ) );
+		V_FixSlashes( pSearchBase );
+		int nSearchLen = V_strlen( pSearchBase );
+		if ( V_strnicmp( pSearchBase, pInPath, nSearchLen ) )
 			continue;
 
-		Q_strncpy( pRelative, &pInPath[ nSearchLen ], nMaxLen );
+		V_strncpy( pRelative, &pInPath[ nSearchLen ], nMaxLen );
 		return true;
 	}
 
@@ -5548,18 +5208,18 @@ void CBaseFileSystem::RemoveFile( char const* pRelativePath, const char *pathID 
 
 	// Opening for write or append uses Write Path
 	char szScratchFileName[MAX_PATH];
-	if ( Q_IsAbsolutePath( pRelativePath ) )
+	if ( V_IsAbsolutePath( pRelativePath ) )
 	{
-		Q_strncpy( szScratchFileName, pRelativePath, sizeof( szScratchFileName ) );
+		V_strncpy( szScratchFileName, pRelativePath, sizeof( szScratchFileName ) );
 	}
 	else
 	{
 		ComputeFullWritePath( szScratchFileName, sizeof( szScratchFileName ), pRelativePath, pathID );
 	}
-	int fail = unlink( szScratchFileName );
-	if ( fail != 0 && errno != ENOENT )
+	ks::platform::file_error removeError = ks::platform::file_error::none;
+	if ( !ks::platform::remove_file( szScratchFileName, &removeError ) && removeError != ks::platform::file_error::not_found )
 	{
-		FileSystemWarning( FILESYSTEM_WARNING, "Unable to remove %s! (errno %x)\n", szScratchFileName, errno );
+		FileSystemWarning( FILESYSTEM_WARNING, "Unable to remove %s! (error %d)\n", szScratchFileName, (int)removeError );
 	}
 }
 
@@ -5569,7 +5229,7 @@ void CBaseFileSystem::RemoveFile( char const* pRelativePath, const char *pathID 
 //-----------------------------------------------------------------------------
 bool CBaseFileSystem::RenameFile( char const *pOldPath, char const *pNewPath, const char *pathID )
 {
-	Assert( pOldPath && pNewPath );
+	contract_assert( pOldPath && pNewPath );
 
 	CHECK_DOUBLE_SLASHES( pOldPath );
 	CHECK_DOUBLE_SLASHES( pNewPath );
@@ -5579,18 +5239,18 @@ bool CBaseFileSystem::RenameFile( char const *pOldPath, char const *pNewPath, co
 	const char *pOldPathId = pathID;
 	if ( pathID )
 	{
-		Q_strncpy( pPathIdCopy, pathID, sizeof( pPathIdCopy ) );
+		V_strncpy( pPathIdCopy, pathID, sizeof( pPathIdCopy ) );
 		pOldPathId = pPathIdCopy;
 	}
 
 	char tempOldPathID[MAX_PATH];
 	ParsePathID( pOldPath, pOldPathId, tempOldPathID );
-	Assert( pOldPathId );
+	contract_assert( pOldPathId );
 
 	// Allow for UNC-type syntax to specify the path ID.
 	char tempNewPathID[MAX_PATH];
 	ParsePathID( pNewPath, pathID, tempNewPathID );
-	Assert( pathID );
+	contract_assert( pathID );
 
 	char pNewFileName[ MAX_PATH ];
 	char szScratchFileName[MAX_PATH];
@@ -5599,24 +5259,23 @@ bool CBaseFileSystem::RenameFile( char const *pOldPath, char const *pNewPath, co
 	RelativePathToFullPath( pOldPath, pOldPathId, szScratchFileName, sizeof( szScratchFileName ) );
 
 	// Figure out the dest path
-	if ( !Q_IsAbsolutePath( pNewPath ) )
+	if ( !V_IsAbsolutePath( pNewPath ) )
 	{
 		ComputeFullWritePath( pNewFileName, sizeof( pNewFileName ), pNewPath, pathID );
 	}
 	else
 	{
-		Q_strncpy( pNewFileName, pNewPath, sizeof(pNewFileName) );
+		V_strncpy( pNewFileName, pNewPath, sizeof(pNewFileName) );
 	}
 
 	// Make sure the directory exitsts, too
 	char pPathOnly[ MAX_PATH ];
-	Q_strncpy( pPathOnly, pNewFileName, sizeof( pPathOnly ) );
-	Q_StripFilename( pPathOnly );
+	V_strncpy( pPathOnly, pNewFileName, sizeof( pPathOnly ) );
+	V_StripFilename( pPathOnly );
 	CreateDirHierarchy( pPathOnly, pathID );
 
 	// Now copy the file over
-	int fail = rename( szScratchFileName, pNewFileName );
-	if (fail != 0)
+	if ( !ks::platform::rename_path( szScratchFileName, pNewFileName ) )
 	{
 		FileSystemWarning( FILESYSTEM_WARNING, "Unable to rename %s to %s!\n", szScratchFileName, pNewFileName );
 		return false;
@@ -5632,13 +5291,13 @@ bool CBaseFileSystem::RenameFile( char const *pOldPath, char const *pNewPath, co
 //-----------------------------------------------------------------------------
 bool CBaseFileSystem::GetCurrentDirectory( char* pDirectory, int maxlen )
 {
-	if ( !getcwd( pDirectory, maxlen ) )
+	if ( !ks::platform::current_directory( pDirectory, maxlen ) )
 		return false;
 
-	Q_FixSlashes(pDirectory);
+	V_FixSlashes(pDirectory);
 
 	// Strip the last slash
-	int len = strlen(pDirectory);
+	int len = std::strlen(pDirectory);
 	if ( pDirectory[ len-1 ] == CORRECT_PATH_SEPARATOR )
 	{
 		pDirectory[ len-1 ] = 0;
@@ -5679,7 +5338,7 @@ void CBaseFileSystem::GetVPKFileStatisticsKV( KeyValues *pKV )
 	if ( pKV && !V_strcmp( pKV->GetName(), "ForceVpkOnlyExtensions" ) )
 	{
 		std::scoped_lock lock( m_OpenedFilesMutex );	// this code will force VPK only extensions
-		FOR_EACH_SUBKEY( pKV, kvExt )
+		for ( KeyValues *kvExt = pKV->GetFirstSubKey(); kvExt != nullptr; kvExt = kvExt->GetNextKey() )
 		{
 			m_NonexistingFilesExtensions[ kvExt->GetName() ] = kvExt->GetBool();
 		}
@@ -5708,15 +5367,15 @@ void CBaseFileSystem::FileSystemWarning( FileWarningLevel_t level, const char *f
 	if ( ( fs_warning_mode.GetInt() == 1 && !ThreadInMainThread() ) || ( fs_warning_mode.GetInt() == 2 && ThreadInMainThread() ) )
 		return;
 
-	va_list argptr; 
+	std::va_list argptr; 
     char warningtext[ 4096 ];
     
-    va_start( argptr, fmt );
-    Q_vsnprintf( warningtext, sizeof( warningtext ), fmt, argptr );
-    va_end( argptr );
+    __builtin_va_start( argptr, fmt );
+    V_vsnprintf( warningtext, sizeof( warningtext ), fmt, argptr );
+    __builtin_va_end( argptr );
 
 	// Dump to stdio
-	printf( "%s", warningtext );
+	std::printf( "%s", warningtext );
 	if ( m_pfnWarning )
 	{
 		(*m_pfnWarning)( warningtext );
@@ -5815,7 +5474,7 @@ CSysModule *CBaseFileSystem::LoadModule( const char *pFileName, const char *pPat
 
 	// On POSIX, shared libraries have 'lib' prefix (e.g., libmatchmaking.so)
 	char szPosixFileName[ MAX_PATH ];
-	Q_snprintf( szPosixFileName, sizeof(szPosixFileName), "lib%s", pFileName );
+	V_snprintf( szPosixFileName, sizeof(szPosixFileName), "lib%s", pFileName );
 	pFileName = szPosixFileName;
 
 	std::string_view lookup = PathIDSymbol( pPathID );
@@ -5831,7 +5490,7 @@ CSysModule *CBaseFileSystem::LoadModule( const char *pFileName, const char *pPat
 		if ( FilterByPathID( &m_SearchPaths[i], lookup ) )
 			continue;
 
-		Q_snprintf( tempPathID, sizeof(tempPathID), "%s%s", m_SearchPaths[i].GetPathString(), pFileName ); // append the path to this dir.
+		V_snprintf( tempPathID, sizeof(tempPathID), "%s%s", m_SearchPaths[i].GetPathString(), pFileName ); // append the path to this dir.
 		CSysModule *pModule = Sys_LoadModule( tempPathID );
 		if ( pModule ) 
 		{
@@ -5841,7 +5500,7 @@ CSysModule *CBaseFileSystem::LoadModule( const char *pFileName, const char *pPat
 		else if ( bPathIsGameBin )
 		{
 			const char* plat_dir = "linux64";
-			Q_snprintf( tempPathID, sizeof( tempPathID ), "%s%s%s%s", m_SearchPaths[ i ].GetPathString(), plat_dir, CORRECT_PATH_SEPARATOR_S, pFileName ); // append the path to this dir.
+			V_snprintf( tempPathID, sizeof( tempPathID ), "%s%s%s%s", m_SearchPaths[ i ].GetPathString(), plat_dir, CORRECT_PATH_SEPARATOR_S, pFileName ); // append the path to this dir.
 			pModule = Sys_LoadModule( tempPathID );
 			if ( pModule )
 			{
@@ -5868,7 +5527,7 @@ void CBaseFileSystem::UnloadModule( CSysModule *pModule )
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::AddLoggingFunc( FileSystemLoggingFunc_t logFunc )
 {
-	Assert(!ks::is_valid_index( m_LogFuncs, ks::find_index( m_LogFuncs, logFunc ) ));
+	contract_assert( !ks::is_valid_index( m_LogFuncs, ks::find_index( m_LogFuncs, logFunc ) ) );
 	m_LogFuncs.push_back( logFunc );
 }
 
@@ -5888,13 +5547,13 @@ void CBaseFileSystem::RemoveLoggingFunc( FileSystemLoggingFunc_t logFunc )
 //-----------------------------------------------------------------------------
 static void AddSeperatorAndFixPath( char *str )
 {
-	char *lastChar = &str[strlen( str ) - 1];
+	char *lastChar = &str[std::strlen( str ) - 1];
 	if( *lastChar != CORRECT_PATH_SEPARATOR && *lastChar != INCORRECT_PATH_SEPARATOR )
 	{
 		lastChar[1] = CORRECT_PATH_SEPARATOR;
 		lastChar[2] = '\0';
 	}
-	Q_FixSlashes( str );
+	V_FixSlashes( str );
 
 }
 
@@ -5962,63 +5621,11 @@ bool CBaseFileSystem::IsFileInReadOnlySearchPath(const char *pPath, const char *
 	return false;
 }
 
-#if defined( TRACK_BLOCKING_IO )
-
-void CBaseFileSystem::EnableBlockingFileAccessTracking( bool state )
-{
-	m_bBlockingFileAccessReportingEnabled = state;
-}
-
-bool CBaseFileSystem::IsBlockingFileAccessEnabled() const
-{
-	return m_bBlockingFileAccessReportingEnabled;
-}
-
-IBlockingFileItemList *CBaseFileSystem::RetrieveBlockingFileAccessInfo()
-{
-	Assert( m_pBlockingItems );
-	return m_pBlockingItems;
-}
-
-void CBaseFileSystem::RecordBlockingFileAccess( bool synchronous, const FileBlockingItem& item )
-{
-	std::scoped_lock lock( m_BlockingFileMutex );
-
-	// Not tracking anything
-	if ( !m_bBlockingFileAccessReportingEnabled )
-		return;
-
-	if ( synchronous && !m_bAllowSynchronousLogging && ( item.m_ItemType == FILESYSTEM_BLOCKING_SYNCHRONOUS ) )
-		return;
-
-	// Track it
-	m_pBlockingItems->Add( item );
-}
-
-bool CBaseFileSystem::SetAllowSynchronousLogging( bool state )
-{
-	bool oldState = m_bAllowSynchronousLogging;
-	m_bAllowSynchronousLogging = state;
-	return oldState;
-}
-
-void CBaseFileSystem::BlockingFileAccess_EnterCriticalSection()
-{
-	m_BlockingFileMutex.lock();
-}
-
-void CBaseFileSystem::BlockingFileAccess_LeaveCriticalSection()
-{
-	m_BlockingFileMutex.unlock();
-}
-
-#endif // TRACK_BLOCKING_IO
-
-bool CBaseFileSystem::GetFileTypeForFullPath( char const *pFullPath, wchar_t *buf, size_t bufSizeInBytes )
+bool CBaseFileSystem::GetFileTypeForFullPath( char const *pFullPath, wchar_t *buf, std::size_t bufSizeInBytes )
 {
 	{
 		char ext[32];
-		Q_ExtractFileExtension( pFullPath, ext, sizeof( ext ) );
+		V_ExtractFileExtension( pFullPath, ext, sizeof( ext ) );
 		V_snwprintf( buf, ( bufSizeInBytes / sizeof( wchar_t ) ) - 1, L"%s File", V_strupr( ext ) ); // Matches what Windows does
 		buf[( bufSizeInBytes / sizeof( wchar_t ) ) - 1] = L'\0';
 	}
@@ -6050,7 +5657,7 @@ bool CBaseFileSystem::FixupFATXFilename( const char *pFilename, char *pOutFilena
 bool CBaseFileSystem::GetStringFromKVPool( CRC32_t poolKey, unsigned int key, char *pOutBuff, int buflen )
 {
 	// xbox only
-	Assert( 0 );
+	contract_assert( 0 );
 	return false;
 }
 
@@ -6066,7 +5673,7 @@ CFileHandle::CFileHandle( CBaseFileSystem* fs )
 
 CFileHandle::~CFileHandle()
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 	delete[] m_pszTrueFileName;
 
 	if ( m_pPackFileHandle )
@@ -6097,14 +5704,14 @@ void CFileHandle::Init( CBaseFileSystem *fs )
 	m_pszTrueFileName = 0;
 }
 
-bool CFileHandle::IsValid()
+bool CFileHandle::IsValid() const
 {
 	return ( m_nMagic == MAGIC );
 }
 
 int CFileHandle::GetSectorSize()
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 
 	if ( m_pFile )
 	{
@@ -6122,10 +5729,8 @@ int CFileHandle::GetSectorSize()
 
 bool CFileHandle::IsOK()
 {
-#ifdef SUPPORT_VPK
 	if ( m_VPKHandle )
 		return true;
-#endif
 	if ( m_pFile )
 	{
 		return ( IsValid() && m_fs->FS_ferror( m_pFile ) == 0 );
@@ -6141,7 +5746,7 @@ bool CFileHandle::IsOK()
 
 void CFileHandle::Flush()
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 
 	if ( m_pFile )
 	{
@@ -6151,7 +5756,7 @@ void CFileHandle::Flush()
 
 void CFileHandle::SetBufferSize( int nBytes )
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 
 	if ( m_pFile )
 	{
@@ -6165,15 +5770,14 @@ void CFileHandle::SetBufferSize( int nBytes )
 
 int CFileHandle::Read( void* pBuffer, int nLength )
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 	return Read( pBuffer, -1, nLength );
 }
 
 int CFileHandle::Read( void* pBuffer, int nDestSize, int nLength )
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 
-#ifdef SUPPORT_VPK
 	if ( m_VPKHandle )
 	{
 		if ( nDestSize >= 0 )
@@ -6182,7 +5786,6 @@ int CFileHandle::Read( void* pBuffer, int nDestSize, int nLength )
 		m_fs->m_FileTracker2.NotePackFileRead( m_VPKHandle, pBuffer, nLength );
 		return nLengthRead;
 	}
-#endif
 
 	// Is this a regular file or a pack file?  
 	if ( m_pFile )
@@ -6200,7 +5803,7 @@ int CFileHandle::Read( void* pBuffer, int nDestSize, int nLength )
 
 int CFileHandle::Write( const void* pBuffer, int nLength )
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 
 	if ( !m_pFile )
 	{
@@ -6208,7 +5811,7 @@ int CFileHandle::Write( const void* pBuffer, int nLength )
 		return 0;
 	}
 
-	size_t nBytesWritten = m_fs->FS_fwrite( (void*)pBuffer, nLength, m_pFile  );
+	std::size_t nBytesWritten = m_fs->FS_fwrite( (void*)pBuffer, nLength, m_pFile  );
 
 	m_fs->Trace_FWrite(nBytesWritten,m_pFile);
 
@@ -6217,14 +5820,12 @@ int CFileHandle::Write( const void* pBuffer, int nLength )
 
 int CFileHandle::Seek( int64 nOffset, int nWhence )
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 
-#ifdef SUPPORT_VPK
 	if ( m_VPKHandle )
 	{
 		return m_VPKHandle.Seek( nOffset, nWhence );
 	}
-#endif
 	if ( m_pFile )
 	{
 		m_fs->FS_fseek( m_pFile, nOffset, nWhence );
@@ -6241,14 +5842,12 @@ int CFileHandle::Seek( int64 nOffset, int nWhence )
 
 int CFileHandle::Tell()
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 
-#ifdef SUPPORT_VPK
 	if ( m_VPKHandle )
 	{
 		return m_VPKHandle.Tell();
 	}
-#endif
 	if ( m_pFile )
 	{
 		return m_fs->FS_ftell( m_pFile );
@@ -6263,16 +5862,14 @@ int CFileHandle::Tell()
 
 int CFileHandle::Size()
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 
 	int nReturnedSize = -1;
 
-#ifdef SUPPORT_VPK
 	if ( m_VPKHandle )
 	{
 		return m_VPKHandle.m_nFileSize;
 	}
-#endif
 	if ( m_pFile  )
 	{
 		nReturnedSize = m_nLength; 
@@ -6287,7 +5884,7 @@ int CFileHandle::Size()
 
 int64 CFileHandle::AbsoluteBaseOffset()
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 
 	if ( m_pFile )
 	{
@@ -6301,7 +5898,7 @@ int64 CFileHandle::AbsoluteBaseOffset()
 
 bool CFileHandle::EndOfFile()
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 
 	return ( Tell() >= Size() );
 }
@@ -6363,7 +5960,7 @@ void CBaseFileSystem::PrintDLCInfo()
 
 bool CBaseFileSystem::AddXLSPUpdateSearchPath( const void *pData, int nSize )
 {
-	Assert( 0 ); // should not be reached on pc
+	contract_assert( 0 ); // should not be reached on pc
 	return false;
 }
 
@@ -6371,7 +5968,6 @@ void CBaseFileSystem::MarkLocalizedPath( CSearchPath *sp )
 {
 // game console only for now
 }
-#ifdef SUPPORT_IODELAY_MONITORING
 class CIODelayAlarmThread : public CThread
 {
 public:
@@ -6422,11 +6018,8 @@ int CIODelayAlarmThread::Run( void )
 }
 
 
-#endif // SUPPORT_IODELAY_MONITORING
-
 void CBaseFileSystem::SetIODelayAlarm( float flTime )
 {
-#ifdef SUPPORT_IODELAY_MONITORING
 	m_flDelayLimit = flTime;
 	if ( m_flDelayLimit > 0. )
 	{
@@ -6438,7 +6031,6 @@ void CBaseFileSystem::SetIODelayAlarm( float flTime )
 		}
 		m_pDelayThread->WakeUp();
 	}
-#endif
 }
 
 IIoStats *CBaseFileSystem::GetIoStats()
@@ -6446,7 +6038,9 @@ IIoStats *CBaseFileSystem::GetIoStats()
 	return &s_IoStats;
 }
 
-CON_COMMAND( fs_dump_open_duplicate_times, "Set fs_report_long_reads 1 before loading to use this. Prints a list of files that were opened more than once and ~how long was spent reading from them." )
+static void fs_dump_open_duplicate_times( const CCommand &args );
+static ConCommand fs_dump_open_duplicate_times_command( "fs_dump_open_duplicate_times", fs_dump_open_duplicate_times, "Set fs_report_long_reads 1 before loading to use this. Prints a list of files that were opened more than once and ~how long was spent reading from them." );
+static void fs_dump_open_duplicate_times( const CCommand &args )
 {
 	float flTotalTime = 0.0f, flAccumulatedMilliseconds;
 
@@ -6470,7 +6064,9 @@ CON_COMMAND( fs_dump_open_duplicate_times, "Set fs_report_long_reads 1 before lo
 	DevMsg( "Total Seconds: %.5f\n", flTotalTime / 1000000.0f );
 }
 
-CON_COMMAND( fs_clear_open_duplicate_times, "Clear the list of files that have been opened." )
+static void fs_clear_open_duplicate_times( const CCommand &args );
+static ConCommand fs_clear_open_duplicate_times_command( "fs_clear_open_duplicate_times", fs_clear_open_duplicate_times, "Clear the list of files that have been opened." );
+static void fs_clear_open_duplicate_times( const CCommand &args )
 {
 	std::scoped_lock lock( g_FileOpenDuplicateTimesMutex );
 	for ( int nFileOpenDuplicate = 0; nFileOpenDuplicate< std::ssize( g_FileOpenDuplicateTimes ); nFileOpenDuplicate++ )
@@ -6485,26 +6081,32 @@ CON_COMMAND( fs_clear_open_duplicate_times, "Clear the list of files that have b
 
 
 // Fake commands for other platforms...
-CON_COMMAND( fs_fios_flush_cache, "Flushes the FIOS HDD cache." )
+static void fs_fios_flush_cache( const CCommand &args );
+static ConCommand fs_fios_flush_cache_command( "fs_fios_flush_cache", fs_fios_flush_cache, "Flushes the FIOS HDD cache." );
+static void fs_fios_flush_cache( const CCommand &args )
 {
 }
 
-CON_COMMAND( fs_fios_print_prefetches, "Displays all the prefetches currently in progress." )
+static void fs_fios_print_prefetches( const CCommand &args );
+static ConCommand fs_fios_print_prefetches_command( "fs_fios_print_prefetches", fs_fios_print_prefetches, "Displays all the prefetches currently in progress." );
+static void fs_fios_print_prefetches( const CCommand &args )
 {
 }
 
-CON_COMMAND( fs_fios_prefetch_file, "Prefetches a file: </PS3_GAME/USRDIR/filename.bin>.\nThe preftech is medium priority and persistent." )
+static void fs_fios_prefetch_file( const CCommand &args );
+static ConCommand fs_fios_prefetch_file_command( "fs_fios_prefetch_file", fs_fios_prefetch_file, "Prefetches a file: </PS3_GAME/USRDIR/filename.bin>.\nThe preftech is medium priority and persistent." );
+static void fs_fios_prefetch_file( const CCommand &args )
 {
 }
 
-CON_COMMAND( fs_fios_prefetch_file_in_pack, "Prefetches a file in a pack: <portal2/models/container_ride/fineDebris_part5.ani>.\nThe preftech is medium priority and non-persistent.")
+static void fs_fios_prefetch_file_in_pack( const CCommand &args );
+static ConCommand fs_fios_prefetch_file_in_pack_command( "fs_fios_prefetch_file_in_pack", fs_fios_prefetch_file_in_pack, "Prefetches a file in a pack: <portal2/models/container_ride/fineDebris_part5.ani>.\nThe preftech is medium priority and non-persistent." );
+static void fs_fios_prefetch_file_in_pack( const CCommand &args )
 {
 }
 
-CON_COMMAND( fs_fios_cancel_prefetches, "Cancels all the prefetches in progress." )
+static void fs_fios_cancel_prefetches( const CCommand &args );
+static ConCommand fs_fios_cancel_prefetches_command( "fs_fios_cancel_prefetches", fs_fios_cancel_prefetches, "Cancels all the prefetches in progress." );
+static void fs_fios_cancel_prefetches( const CCommand &args )
 {
 }
-
-
-
-

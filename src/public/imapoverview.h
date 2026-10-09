@@ -1,17 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( IMAPOVERVIEW_H )
-#define IMAPOVERVIEW_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // #include "interface.h"
 
@@ -21,8 +10,8 @@
 // Purpose: interface for map overview panel
 //-----------------------------------------------------------------------------
 
-#include "mathlib/vector.h"
-#include "mathlib/vector2d.h"
+import std;
+import ks.math;
 
 class IMapOverview // : public IBaseInterface
 {
@@ -51,5 +40,3 @@ public:
 	virtual	void ShowHurts(bool state) = 0;	// show player icon flashing if player is hurt
 	virtual	void ShowTracks(float seconds) = 0; // show player trails for n seconds
 };
-
-#endif // IMAPOVERVIEW_H

@@ -1,14 +1,26 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Client side C_CHostage class 
-//
-// $NoKeywords: $ 
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Client side C_CHostage class
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_cs_hostage.h"
-#include <bitbuf.h>
 #include "ragdoll_shared.h"
 #include "c_breakableprop.h"
 #include "cs_shareddefs.h"
@@ -186,7 +198,7 @@ void C_LowViolenceHostageDeathModel::Interp_Copy( VarMapping_t *pDest, CBaseEnti
 
 	if ( std::ssize( pDest->m_Entries ) != std::ssize( pSrc->m_Entries ) )
 	{
-		Assert( false );
+		contract_assert( false );
 		return;
 	}
 
@@ -372,9 +384,9 @@ void C_CHostage::Spawn( void )
 
 const char * C_CHostage::GetCustomHostageNameForMap( const char *szMapName )
 {
-	for ( int i = 0; i < ARRAYSIZE( s_HostageCharactersNames ); ++i )
+	for ( int i = 0; i < std::size( s_HostageCharactersNames ); ++i )
 	{
-		if ( Q_stricmp( s_HostageCharactersNames[i].mapname, szMapName ) == 0 )
+		if ( V_stricmp( s_HostageCharactersNames[i].mapname, szMapName ) == 0 )
 		{
 			return s_HostageCharactersNames[i].hostageName;
 		}
@@ -624,7 +636,7 @@ void C_CHostage::UpdateClientSideAnimation()
 		"head_roll"
 	};
 	CStudioHdr *pStudioHdr = GetModelPtr();
-	for ( int i=0; i < ARRAYSIZE( setToZero ); i++ )
+	for ( int i=0; i < std::size( setToZero ); i++ )
 	{
 		int index = LookupPoseParameter( pStudioHdr, setToZero[i] );
 		if ( index >= 0 )
@@ -787,4 +799,3 @@ void C_CHostage::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCus
 
 	BaseClass::ImpactTrace( pTrace, iDamageType, pCustomImpactName );
 }
-

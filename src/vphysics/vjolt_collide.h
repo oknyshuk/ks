@@ -13,6 +13,13 @@
 
 // Dummy helper class to go back and forth.
 // Does not and will not contain *any* data.
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Collision/Shape/Shape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexShape.h>
+import ks.math;
+#include "vphysics_interface.h"
+import std;
+
 class CPhysCollide
 {
 	~CPhysCollide() = delete;
@@ -148,7 +155,7 @@ public:
 	void			VCollideUnload( vcollide_t *pVCollide ) override;
 
 	IVPhysicsKeyParser	*VPhysicsKeyParserCreate( const char *pKeyData ) override;
-	IVPhysicsKeyParser	*VPhysicsKeyParserCreate( vcollide_t *pVCollide ) override_asw;
+	IVPhysicsKeyParser	*VPhysicsKeyParserCreate( vcollide_t *pVCollide ) ;
 	void				VPhysicsKeyParserDestroy( IVPhysicsKeyParser *pParser ) override;
 
 	int				CreateDebugMesh( CPhysCollide const *pCollisionModel, Vector **outVerts ) override;
@@ -172,15 +179,15 @@ public:
 	void			OutputDebugInfo( const CPhysCollide *pCollide ) override;
 	unsigned int	ReadStat( int statID ) override;
 
-	float			CollideGetRadius( const CPhysCollide *pCollide ) override_asw;
+	float			CollideGetRadius( const CPhysCollide *pCollide ) ;
 
-	void			*VCollideAllocUserData( vcollide_t *pVCollide, size_t userDataSize ) override_asw;
-	void			VCollideFreeUserData( vcollide_t *pVCollide ) override_asw;
-	void			VCollideCheck( vcollide_t *pVCollide, const char *pName ) override_asw;
+	void			*VCollideAllocUserData( vcollide_t *pVCollide, size_t userDataSize ) ;
+	void			VCollideFreeUserData( vcollide_t *pVCollide ) ;
+	void			VCollideCheck( vcollide_t *pVCollide, const char *pName ) ;
 
-	bool			TraceBoxAA( const Ray_t &ray, const CPhysCollide *pCollide, trace_t *ptr ) override_csgo;
+	bool			TraceBoxAA( const Ray_t &ray, const CPhysCollide *pCollide, trace_t *ptr ) ;
 
-	void			DuplicateAndScale( vcollide_t *pOut, const vcollide_t *pIn, float flScale ) override_csgo;
+	void			DuplicateAndScale( vcollide_t *pOut, const vcollide_t *pIn, float flScale ) ;
 
 public:
 	static JoltPhysicsCollision& GetInstance() { return s_PhysicsCollision; }

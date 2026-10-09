@@ -1,22 +1,34 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "string_t.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "recipientfilter.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "playerlocaldata.h"
 #include "player.h"
-#include "mathlib/mathlib.h"
-#include "entitylist.h"
 #include "SkyCamera.h"
 #include "playernet_vars.h"
 #include "fogcontroller.h"
-#include "tier0/vprof.h"
 
 //=============================================================================
 
@@ -37,7 +49,7 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CPlayerLocalData )
 //-----------------------------------------------------------------------------
 CPlayerLocalData::CPlayerLocalData()
 {
-	memset( m_chAreaBits.m_Value, 0, sizeof( m_chAreaBits.m_Value ) );
+	std::memset( m_chAreaBits.m_Value, 0, sizeof( m_chAreaBits.m_Value ) );
 	memset( m_chAreaPortalBits.m_Value, 0, sizeof( m_chAreaPortalBits.m_Value ) );
 
 	m_iHideHUD = 0;
@@ -99,11 +111,11 @@ void CPlayerLocalData::UpdateAreaBits( CBasePlayer *pl, unsigned char chAreaPort
 
 	unsigned char tempBits[32] = { 0 };
 
-	COMPILE_TIME_ASSERT( ( sizeof( tempBits ) % 4 ) == 0 );
+	static_assert( ( sizeof( tempBits ) % 4 ) == 0 );
 
 	int nDWords = sizeof( tempBits ) >> 2;
 
-	COMPILE_TIME_ASSERT( sizeof( tempBits ) >= sizeof( ((CPlayerLocalData*)0)->m_chAreaBits ) );
+	static_assert( sizeof( tempBits ) >= sizeof( ((CPlayerLocalData*)0)->m_chAreaBits ) );
 
 	int i;
 	int area = engine->GetArea( origin );
@@ -184,8 +196,7 @@ void ClientData_Update( CBasePlayer *pl )
 //-----------------------------------------------------------------------------
 void UpdateAllClientData( void )
 {
-	VPROF( "UpdateAllClientData" );
-	SNPROF( "UpdateAllClientData" );
+	CVProfScope _( "UpdateAllClientData", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	int i;
 	CBasePlayer *pl;
 
@@ -198,4 +209,3 @@ void UpdateAllClientData( void )
 		ClientData_Update( pl );
 	}
 }
-

@@ -1,17 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( HUDELEMENT_H )
-#define HUDELEMENT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "hud.h"
 #include "hud_element_helper.h"
 #include "networkvar.h"
 #include "GameEventListener.h"
-#include "tier0/memalloc.h"
+import std;
 #undef new
 
 class CHud;
@@ -77,19 +73,19 @@ public:
 	virtual bool				WantsHudLayoutEntry( void ) const { return true; }
 
 	// memory handling, uses calloc so members are zero'd out on instantiation
-    void *operator new( size_t stAllocateBlock )	
+    void *operator new( std::size_t stAllocateBlock )	
 	{												
-		Assert( stAllocateBlock != 0 );				
+		contract_assert( stAllocateBlock != 0 );				
 		void *pMem = MemAlloc_Alloc( stAllocateBlock );
-		memset( pMem, 0, stAllocateBlock );
+		std::memset( pMem, 0, stAllocateBlock );
 		return pMem;												
 	}
 	
-	void* operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )  
+	void* operator new( std::size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )  
 	{ 
-		Assert( stAllocateBlock != 0 );
+		contract_assert( stAllocateBlock != 0 );
 		void *pMem = MemAlloc_Alloc( stAllocateBlock, pFileName, nLine );
-		memset( pMem, 0, stAllocateBlock );
+		std::memset( pMem, 0, stAllocateBlock );
 		return pMem;												
 	}
 
@@ -156,7 +152,6 @@ private:
 	CHud						*m_pHud;
 };
 
-#include "tier1/vector_ops.h"
 
 inline bool RenderGroupLessFunc( CHudElement * const &lhs, CHudElement * const &rhs )
 {
@@ -177,5 +172,3 @@ public:
 	bool bHidden;
 	std::vector< CHudElement * >	m_pLockingElements;	// heap by RenderGroupLessFunc, highest priority first
 };
-
-#endif // HUDELEMENT_H

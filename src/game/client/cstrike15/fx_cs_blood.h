@@ -1,17 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef FX_CS_BLOOD_H
-#define FX_CS_BLOOD_H
 
+import std;
+import ks.math;
 
 void FX_CS_BloodSpray( 
 	const Vector &origin,
 	const Vector &normal,
 	float flDamage );
-
-
-#endif // FX_CS_BLOOD_H

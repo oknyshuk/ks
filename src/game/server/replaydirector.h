@@ -1,21 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef REPLAYDIRECTOR_H
-#define REPLAYDIRECTOR_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "GameEventListener.h"
 #include <igamesystem.h>
 #include <ireplaydirector.h>
 #include <ireplay.h>
-#include <set>
+import std;
+#include "ireplaydirector.h"
+#include "igamesystem.h"
+#include "baseentity.h"
+#include "shareddefs.h"
 
-#define	REPLAY_MIN_DIRECTOR_DELAY		10	// minimum delay if director is enabled
-#define	REPLAY_MAX_DELAY				120	// maximum delay
+inline constexpr auto REPLAY_MIN_DIRECTOR_DELAY = 10; // minimum delay if director is enabled
+inline constexpr auto REPLAY_MAX_DELAY = 120; // maximum delay
 
 
 #define MAX_NUM_CAMERAS				64	// support up to 64 fixed cameras per level
@@ -129,5 +127,3 @@ protected:
 
 extern IGameSystem* ReplayDirectorSystem();
 extern CReplayDirector* ReplayDirector();
-
-#endif // REPLAYDIRECTOR_H

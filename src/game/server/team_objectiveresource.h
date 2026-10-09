@@ -1,15 +1,11 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef TEAM_OBJECTIVERESOURCE_H
-#define TEAM_OBJECTIVERESOURCE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "shareddefs.h"
 #include "const.h"		// MAX_EDICT_BITS, named by the Net annotations below
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 #define TEAM_ARRAY( index, team )		(index + (team * MAX_CONTROL_POINTS))
 
@@ -60,7 +56,7 @@ public:
 	void SetPreviousPoint( int index, int iTeam, int iPrevIndex, int iPrevPoint );
 	int GetPreviousPointForPoint( int index, int team, int iPrevIndex );
 	bool TeamCanCapPoint( int index, int team );
-	void SetCapLayoutInHUD( const char *pszLayout ) { Q_strncpy(m_pszCapLayoutInHUD.GetForModify(), pszLayout, MAX_CAPLAYOUT_LENGTH ); }
+	void SetCapLayoutInHUD( const char *pszLayout ) { V_strncpy(m_pszCapLayoutInHUD.GetForModify(), pszLayout, MAX_CAPLAYOUT_LENGTH ); }
 	void SetWarnOnCap( int index, int iWarnLevel );
 	void SetWarnSound( int index, string_t iszSound );
 
@@ -75,12 +71,12 @@ public:
 
 	void AssertValidIndex( int index )
 	{
-		Assert( 0 <= index && index <= MAX_CONTROL_POINTS && index < m_iNumControlPoints );
+		contract_assert( 0 <= index && index <= MAX_CONTROL_POINTS && index < m_iNumControlPoints );
 	}
 
 	int GetBaseControlPointForTeam( int iTeam ) 
 	{ 
-		Assert( iTeam < MAX_TEAMS );
+		contract_assert( iTeam < MAX_TEAMS );
 		return m_iBaseControlPoints[iTeam]; 
 	}
 
@@ -167,5 +163,3 @@ inline CBaseTeamObjectiveResource *ObjectiveResource()
 {
 	return g_pObjectiveResource;
 }
-
-#endif // TEAM_OBJECTIVERESOURCE_H

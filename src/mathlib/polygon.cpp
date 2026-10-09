@@ -1,11 +1,11 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Utility functions for polygon simplification / convex decomposition.
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+// Purpose: Utility functions for polygon simplification / convex decomposition.
+
+import ks.math;
 #include "polygon.h"
-#include "quadric.h"
+import std;
 
 // Assumes that points are ordered clockwise when looking at the face of the polygon
 void SimplifyPolygon( std::vector< Vector > *pPoints, const Vector &vNormal, float flMaximumDeviation )
@@ -182,7 +182,7 @@ bool IsConcave( const Vector &v0, const Vector &v1, const Vector &v2, const Vect
 
 bool IsConcave( const Vector *pPolygonPoints, int nPointCount, int nVertex, const Vector &vNormal )
 {
-	Assert( nPointCount >= 3 );
+	contract_assert( nPointCount >= 3 );
 	int nPrevVertex = ( nVertex + nPointCount - 1 ) % nPointCount;
 	int nNextVertex = ( nVertex + 1 ) % nPointCount;
 
@@ -191,7 +191,7 @@ bool IsConcave( const Vector *pPolygonPoints, int nPointCount, int nVertex, cons
 
 bool IsConcave( const Vector *pPolygonPoints, int nPointCount, const Vector &vNormal )
 {
-	Assert( nPointCount >= 3 );
+	contract_assert( nPointCount >= 3 );
 
 	Vector vPrevVertex = pPolygonPoints[nPointCount - 2];
 	Vector vVertex = pPolygonPoints[nPointCount - 1];
@@ -385,7 +385,7 @@ void FindLineSegmentIntersectingDiagonal( const std::vector< Vector > &polygonPo
 
 void DecomposePolygon_Step( const std::vector< Vector > &polygonPoints, const Vector &vNormal, std::vector< SubPolygon_t > *pHoles, SubPolygon_t *pNewPartition, SubPolygon_t *pOriginalPolygon, int *pFirstIndex )
 {
-	Assert( *pFirstIndex >= 0 && *pFirstIndex < std::ssize( pOriginalPolygon->m_Indices ) );
+	contract_assert( *pFirstIndex >= 0 && *pFirstIndex < std::ssize( pOriginalPolygon->m_Indices ) );
 	
 	// Always start decomposition on a notch
 	Vector vPrev = SubPolygon_t::GetPoint( polygonPoints, pOriginalPolygon->GetVertexIndex( *pFirstIndex - 1 ) );
@@ -522,7 +522,7 @@ void DecomposePolygon_Step( const std::vector< Vector > &polygonPoints, const Ve
 					vB = SubPolygon_t::GetPoint( polygonPoints, (*pHoles)[ nHoleIndex ].GetVertexIndex( nHoleVertexIndex ) );
 					FindLineSegmentIntersectingDiagonal( polygonPoints, vNormal, *pHoles, vA, vB, &vHoleSegmentA, &vHoleSegmentB, &nHoleIndex, &nHoleVertexIndex );
 
-					Assert( nHoleIndex != -1 );
+					contract_assert( nHoleIndex != -1 );
 				} while ( nHoleIndex != nLastHoleIndex );
 			}
 			
@@ -558,7 +558,7 @@ void DecomposePolygon_Step( const std::vector< Vector > &polygonPoints, const Ve
 							nLastHoleIndex = nHoleIndex;
 							vB = SubPolygon_t::GetPoint( polygonPoints, (*pHoles)[ nHoleIndex ].GetVertexIndex( nHoleVertexIndex ) );
 							FindLineSegmentIntersectingDiagonal( polygonPoints, vNormal, *pHoles, vA, vB, &vHoleSegmentA, &vHoleSegmentB, &nHoleIndex, &nHoleVertexIndex );
-							Assert( nHoleIndex != -1 );
+							contract_assert( nHoleIndex != -1 );
 						} while ( nHoleIndex != nLastHoleIndex );
 					}
 				}
@@ -596,7 +596,7 @@ void DecomposePolygon_Step( const std::vector< Vector > &polygonPoints, const Ve
 				for ( int i = 1; i < std::ssize( pNewPartition->m_Indices ) - 1; ++ i )
 				{
 					nIndexToRemove = nIndexToRemove % std::ssize( pOriginalPolygon->m_Indices );
-					Assert( pOriginalPolygon->m_Indices[nIndexToRemove] == pNewPartition->m_Indices[i] );
+					contract_assert( pOriginalPolygon->m_Indices[nIndexToRemove] == pNewPartition->m_Indices[i] );
 					pOriginalPolygon->m_Indices.erase( pOriginalPolygon->m_Indices.begin() + nIndexToRemove );
 				}
 
@@ -637,7 +637,7 @@ void DecomposePolygon( const std::vector< Vector > &polygonPoints, const Vector 
 
 bool IsPointInPolygonPrism( const Vector *pPolygonPoints, int nPointCount, const Vector &vPoint, float flThreshold, float *pHeight )
 {
-	Assert( nPointCount >= 3 );
+	contract_assert( nPointCount >= 3 );
 
 	Vector vNormal = ( pPolygonPoints[0] - pPolygonPoints[1] ).Cross( pPolygonPoints[2] - pPolygonPoints[1] );
 	Vector vPrev = pPolygonPoints[nPointCount - 1];

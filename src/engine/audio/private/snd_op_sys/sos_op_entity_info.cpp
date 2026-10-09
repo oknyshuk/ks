@@ -1,17 +1,26 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "audio_pch.h"
-#include "tier2/interval.h"
+import std;
+
+
+
+import ks.tier1;
+#include "sound.h"
+#include "soundservice.h"
+#include "filesystem.h"
+
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+
+#include "audio/private/posix_stubs.h"
 #include "client.h"
 
 #include "sos_op.h"
 #include "sos_op_entity_info.h"
 #include "icliententitylist.h"
 #include "icliententity.h"
-
 
 extern Color OpColor;
 extern Color ConnectColor;
@@ -186,4 +195,3 @@ void CSosOperatorEntityInfo::ParseKV( CSosOperatorStack *pStack, void *pVoidMem,
 		pParams = pParams->GetNextKey();
 	}
 }
-

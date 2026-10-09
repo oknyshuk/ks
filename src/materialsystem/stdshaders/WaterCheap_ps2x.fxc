@@ -1,4 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "MULTITEXTURE"			"0..1"
 // STATIC: "FRESNEL"				"0..1"
@@ -7,7 +8,6 @@
 // STATIC: "HDRTYPE"				"0..2"
 // STATIC: "FLOWMAP"				"0..1"
 // STATIC: "FLOW_DEBUG"				"0..1"
-
 // DYNAMIC: "HDRENABLED"			"0..1"
 
 #include "common_fog_ps_fxc.h"

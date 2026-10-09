@@ -1,15 +1,42 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============
-//
-// Purpose:  CS-specific things to vote on
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: CS-specific things to vote on
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "cs_voteissues.h"
 #include "cs_player.h"
 
 #include "vote_controller.h"
-#include "fmtstr.h"
 #include "eiface.h"
 #include "cs_gamerules.h"
 #include "inetchannelinfo.h"
@@ -146,13 +173,13 @@ void CKickIssue::ExecuteCommand( void )
 
 		engine->ServerCommand( CFmtStr( "kickid_ex %d %d You have been voted off;", subject->GetUserID(), CSGameRules()->IsPlayingOffline() ? 0 : 1 ) );
 	}
-	else if ( !m_bPlayerCrashed && m_steamIDtoBan.IsValid() && ( sv_vote_kick_ban_duration.GetInt() > 0 ) )
+	else if ( !m_bPlayerCrashed && m_playerIDtoBan.IsValid() && ( sv_vote_kick_ban_duration.GetInt() > 0 ) )
 	{
 		// Player has already disconnected, but let's still ban him!
-		CSGameRules()->SendKickBanToGCforAccountId( m_steamIDtoBan.GetAccountID(), k_EMsgGCCStrike15_v2_MatchmakingKickBanReason_VotedOff );
+		CSGameRules()->SendKickBanToGCforAccountId( m_playerIDtoBan.GetAccountID(), k_EMsgGCCStrike15_v2_MatchmakingKickBanReason_VotedOff );
 
 		// Also enlist this user's SteamID in the banlist
-		engine->ServerCommand( CFmtStr( "banid %d STEAM64BITID_%llu;", sv_vote_kick_ban_duration.GetInt(), m_steamIDtoBan.ConvertToUint64() ) );
+		engine->ServerCommand( CFmtStr( "banid %d STEAM64BITID_%llu;", sv_vote_kick_ban_duration.GetInt(), m_playerIDtoBan.ConvertToUint64() ) );
 	}
 }
 
@@ -296,7 +323,7 @@ void CKickIssue::OnVoteFailed( void )
 			 m_bPlayerCrashed = true;
 		 }
 
-		 pSubject->GetSteamID( &m_steamIDtoBan );
+		 pSubject->GetPlayerID( &m_playerIDtoBan );
 	 }
  }
 
@@ -339,17 +366,17 @@ const char *CKickIssue::GetVotePassedString( void )
 const char *CKickIssue::GetDetailsString( void )
 {
 	int iUserID = 0;
-	const char *pReason = strstr( m_szDetailsString, " " );
+	const char *pReason = std::strstr( m_szDetailsString, " " );
 	if ( pReason != nullptr )
 	{
 		pReason += 1;
 		std::string userID;
 		userID.assign( m_szDetailsString, pReason - m_szDetailsString );
-		iUserID = atoi( userID.c_str() );
+		iUserID = std::atoi( userID.c_str() );
 	}
 	else
 	{
-		iUserID = atoi( m_szDetailsString );
+		iUserID = std::atoi( m_szDetailsString );
 	}	
 
 	CBasePlayer *pPlayer = UTIL_PlayerByUserId( iUserID );
@@ -369,13 +396,13 @@ const char *CKickIssue::GetDetailsString( void )
 void CKickIssue::ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSubject, uint32 *pReason )
 {
 	int iUserID = 0;
-	const char *pReasonString = strstr( pszDetails, " " );
+	const char *pReasonString = std::strstr( pszDetails, " " );
 	if ( pReasonString != nullptr )
 	{
 		pReasonString += 1;
 		std::string userID;
 		userID.assign( pszDetails, pReasonString - pszDetails );
-		iUserID = atoi( userID.c_str() );
+		iUserID = std::atoi( userID.c_str() );
 		if ( pReason )
 		{
 			//[tj] Not applicable without TF-specific GC code
@@ -384,7 +411,7 @@ void CKickIssue::ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSu
 	}
 	else
 	{
-		iUserID = atoi( pszDetails );
+		iUserID = std::atoi( pszDetails );
 	}
 
 	if ( iUserID >= 0 )
@@ -405,7 +432,7 @@ void CKickIssue::ListIssueDetails( CBasePlayer *pForWhom )
 		return;
 
 	char szBuffer[MAX_COMMAND_LENGTH];
-	Q_snprintf( szBuffer, MAX_COMMAND_LENGTH, "callvote %s <userID>\n", GetTypeString() );
+	V_snprintf( szBuffer, MAX_COMMAND_LENGTH, "callvote %s <userID>\n", GetTypeString() );
 	ClientPrint( pForWhom, HUD_PRINTCONSOLE, szBuffer );
 }
 
@@ -512,7 +539,7 @@ void CLoadBackupIssue::ListIssueDetails( CBasePlayer *pForWhom )
 		return;
 
 	char szBuffer[ MAX_COMMAND_LENGTH ];
-	Q_snprintf( szBuffer, MAX_COMMAND_LENGTH, "callvote %s <backup filename>\n", GetTypeString( ) );
+	V_snprintf( szBuffer, MAX_COMMAND_LENGTH, "callvote %s <backup filename>\n", GetTypeString( ) );
 	ClientPrint( pForWhom, HUD_PRINTCONSOLE, szBuffer );
 }
 
@@ -568,14 +595,14 @@ bool CChangeLevelIssue::CanCallVote( int iEntIndex, const char *pszTypeString, c
 		return false;
 	}
 
-	if ( !Q_strcmp( pszDetails, "" ) )
+	if ( !V_strcmp( pszDetails, "" ) )
 	{
 		nFailCode = VOTE_FAILED_MAP_NAME_REQUIRED;
 		return false;
 	}
 	else
 	{
-		if ( !g_pGameTypes->IsWorkshopMapGroup( gpGlobals->mapGroupName.ToCStr() ) && !engine->IsMapValid( pszDetails ) )
+		if ( !engine->IsMapValid( pszDetails ) )
 		{
 			nFailCode = VOTE_FAILED_MAP_NOT_FOUND;
 			return false;
@@ -640,7 +667,7 @@ void CChangeLevelIssue::ListIssueDetails( CBasePlayer *pForWhom )
 		return;
 
 	char szBuffer[MAX_COMMAND_LENGTH];
-	Q_snprintf( szBuffer, MAX_COMMAND_LENGTH, "callvote %s <mapname>\n", GetTypeString() );
+	V_snprintf( szBuffer, MAX_COMMAND_LENGTH, "callvote %s <mapname>\n", GetTypeString() );
 	ClientPrint( pForWhom, HUD_PRINTCONSOLE, szBuffer );
 }
 
@@ -665,7 +692,7 @@ ConVar sv_vote_issue_nextlevel_prevent_change( "sv_vote_issue_nextlevel_prevent_
 //-----------------------------------------------------------------------------
 void CNextLevelIssue::ExecuteCommand( void )
 {
-	if ( Q_strcmp( m_szDetailsString, "Extend current Map" ) == 0 )
+	if ( V_strcmp( m_szDetailsString, "Extend current Map" ) == 0 )
 	{
 		// Players want to extend the current map, so extend any existing limits
 		if ( mp_timelimit.GetInt() > 0 )
@@ -737,7 +764,7 @@ bool CNextLevelIssue::CanCallVote( int iEntIndex, const char *pszTypeString, con
 	if ( sv_vote_issue_nextlevel_choicesmode.GetBool() && iEntIndex == 99 )
 	{
 		// Invokes a UI down stream
-		if ( Q_strcmp( pszDetails, "" ) == 0 )
+		if ( V_strcmp( pszDetails, "" ) == 0 )
 		{
 			return true;
 		}
@@ -751,14 +778,14 @@ bool CNextLevelIssue::CanCallVote( int iEntIndex, const char *pszTypeString, con
 		return false;
 	}
 
-	if ( Q_strcmp( pszDetails, "" ) == 0 )
+	if ( V_strcmp( pszDetails, "" ) == 0 )
 	{
 		nFailCode = VOTE_FAILED_MAP_NAME_REQUIRED;
 		return false;
 	}
 	else
 	{
-		if ( !g_pGameTypes->IsWorkshopMapGroup( gpGlobals->mapGroupName.ToCStr() ) && !engine->IsMapValid( pszDetails ) )
+		if ( !engine->IsMapValid( pszDetails ) )
 		{
 			nFailCode = VOTE_FAILED_MAP_NOT_FOUND;
 			return false;
@@ -768,7 +795,7 @@ bool CNextLevelIssue::CanCallVote( int iEntIndex, const char *pszTypeString, con
 	if ( sv_vote_issue_nextlevel_prevent_change.GetBool() )
 	{
 		if ( nextlevel.GetString() && *nextlevel.GetString() && 
-			( g_pGameTypes->IsWorkshopMapGroup( gpGlobals->mapGroupName.ToCStr() ) || engine->IsMapValid( nextlevel.GetString() ) ) )
+			engine->IsMapValid( nextlevel.GetString() ) )
 		{
 			nFailCode = VOTE_FAILED_NEXTLEVEL_SET;
 			return false;
@@ -805,7 +832,7 @@ bool CNextLevelIssue::CanCallVote( int iEntIndex, const char *pszTypeString, con
 const char *CNextLevelIssue::GetDisplayString( void )
 {
 	// If we don't have a map passed in already...
-	if ( Q_strcmp( m_szDetailsString, "" ) == 0 )
+	if ( V_strcmp( m_szDetailsString, "" ) == 0 )
 	{
 		if ( sv_vote_issue_nextlevel_choicesmode.GetBool() )
 		{
@@ -821,7 +848,7 @@ const char *CNextLevelIssue::GetDisplayString( void )
 //-----------------------------------------------------------------------------
 const char *CNextLevelIssue::GetVotePassedString( void )
 {
-	if ( Q_strcmp( m_szDetailsString, STRING( gpGlobals->mapname ) ) == 0 )
+	if ( V_strcmp( m_szDetailsString, STRING( gpGlobals->mapname ) ) == 0 )
 	{
 		return "#SFUI_vote_passed_nextlevel_extend";
 	}
@@ -847,7 +874,7 @@ void CNextLevelIssue::ListIssueDetails( CBasePlayer *pForWhom )
 	if ( !sv_vote_issue_nextlevel_choicesmode.GetBool() )
 	{
 		char szBuffer[MAX_COMMAND_LENGTH];
-		Q_snprintf( szBuffer, MAX_COMMAND_LENGTH, "callvote %s <mapname>\n", GetTypeString() );
+		V_snprintf( szBuffer, MAX_COMMAND_LENGTH, "callvote %s <mapname>\n", GetTypeString() );
 		ClientPrint( pForWhom, HUD_PRINTCONSOLE, szBuffer );
 	}
 }
@@ -858,7 +885,7 @@ void CNextLevelIssue::ListIssueDetails( CBasePlayer *pForWhom )
 bool CNextLevelIssue::IsYesNoVote( void )
 {
 	// If we don't have a map name already, this will trigger a list of choices
-	if ( Q_strcmp( m_szDetailsString, "" ) == 0 )
+	if ( V_strcmp( m_szDetailsString, "" ) == 0 )
 	{
 		if ( sv_vote_issue_nextlevel_choicesmode.GetBool() )
 			return false;
@@ -873,7 +900,7 @@ bool CNextLevelIssue::IsYesNoVote( void )
 int CNextLevelIssue::GetNumberVoteOptions( void )
 {
 	// If we don't have a map name already, this will trigger a list of choices
-	if ( Q_strcmp( m_szDetailsString, "" ) == 0 )
+	if ( V_strcmp( m_szDetailsString, "" ) == 0 )
 	{
 		if ( sv_vote_issue_nextlevel_choicesmode.GetBool() )
 			return MAX_VOTE_OPTIONS;
@@ -1815,88 +1842,3 @@ void CQueuedMatchmakingContinue::ListIssueDetails( CBasePlayer *pForWhom )
 {
 	ListStandardNoArgCommand( pForWhom, GetTypeString() );
 }
-
-
-
-#ifdef TF_MVM_MODE
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CMannVsMachineStartRound::ExecuteCommand( void )
-{
-	if ( CSGameRules() && CSGameRules()->InSetup() && CSGameRules()->GetActiveRoundTimer() )
-	{
-		// need to find the current timer and set the new countdown time to 5
-		CTeamRoundTimer *pTimer = CSGameRules()->GetActiveRoundTimer();
-		if ( pTimer && pTimer->ShowInHud() && ( pTimer->GetTimerState() == RT_STATE_SETUP ) && ( pTimer->GetTimeRemaining() > 6 ) )
-		{
-			variant_t sVariant;
-			sVariant.SetInt( 6 );
-
-			pTimer->AcceptInput( "SetTime", nullptr, nullptr, sVariant, 0 );
-		}
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CMannVsMachineStartRound::IsEnabled( void )
-{
-	if ( CSGameRules() )
-	{
-		if ( !CSGameRules()->IsMannVsMachineMode() )
-			return false;
-
-		if ( !CSGameRules()->InSetup() )
-			return false;
-	}
-
-	return true;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CMannVsMachineStartRound::CanCallVote( int iEntIndex, const char *pszDetails, vote_create_failed_t &nFailCode, int &nTime )
-{
-//	if( !CBaseCSIssue::CanCallVote( iEntIndex, pszDetails, nFailCode, nTime ) )
-//		return false;
-
-	if( !IsEnabled() )
-	{
-		nFailCode = VOTE_FAILED_ISSUE_DISABLED;
-		return false;
-	}
-
-	return true;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-const char *CMannVsMachineStartRound::GetDisplayString( void )
-{
-	return "#SFUI_vote_td_start_round";
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-const char *CMannVsMachineStartRound::GetVotePassedString( void )
-{
-	return "#SFUI_vote_passed_td_start_round";
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CMannVsMachineStartRound::ListIssueDetails( CBasePlayer *pForWhom )
-{
-	if( !IsEnabled() )
-		return;
-
-	ListStandardNoArgCommand( pForWhom, GetTypeString() );
-}
-#endif // TF_MVM_MODE
-

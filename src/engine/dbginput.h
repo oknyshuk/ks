@@ -1,10 +1,9 @@
-//========= Copyright (c) , Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef DBGINPUT_HDR
-#define DBGINPUT_HDR
-
-#include "threadtools.h"
-#include <mutex>
+import ks.core;
+import std;
 
 class CDebugInputThread: public CThread
 {
@@ -35,5 +34,3 @@ public:
 };
 
 extern CDebugInputThread * g_pDebugInputThread;
-
-#endif

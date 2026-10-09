@@ -4,7 +4,12 @@
 
 #pragma once
 
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+import ks.math;
 #include "vjolt_internal_listeners.h"
+#include "vphysics_interface.h"
+import std;
 
 class JoltPhysicsFluidController final : public IPhysicsFluidController, public IJoltObjectListener, public IJoltPhysicsController
 {

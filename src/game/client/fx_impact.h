@@ -1,14 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef FX_IMPACT_H
-#define FX_IMPACT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "c_te_effect_dispatch.h"
 #include "istudiorender.h"
+#include "ispatialpartition.h"
+#include "engine/IEngineTrace.h"
+#include "cmodel.h"
 
 // Parse the impact data from the server's data block
 C_BaseEntity *ParseImpactData( const CEffectData &data, Vector *vecOrigin, Vector *vecStart, Vector *vecShotDir, short &nSurfaceProp, int &iMaterial, int &iDamageType, int &iHitbox );
@@ -62,5 +60,3 @@ private:
 	int				m_iDamageType;
 	bool			m_bHit;
 };
-
-#endif // FX_IMPACT_H

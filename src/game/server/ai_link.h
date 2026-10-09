@@ -1,16 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:		Used to deal with AI navigation
-//
-// $Workfile:     $
-// $Date:         $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_LINK_H
-#define AI_LINK_H
-
+// Purpose: Used to deal with AI navigation
 
 #include "ai_hull.h"	// For num hulls
+#include "basecombatcharacter.h"
 
 enum Link_Info_t
 {
@@ -30,7 +25,7 @@ enum Link_Info_t
 
 class CAI_DynamicLink;
 
-#define AI_MOVE_TYPE_BITS ( bits_CAP_MOVE_GROUND | bits_CAP_MOVE_JUMP | bits_CAP_MOVE_FLY | bits_CAP_MOVE_CLIMB | bits_CAP_MOVE_SWIM | bits_CAP_MOVE_CRAWL )
+inline constexpr auto AI_MOVE_TYPE_BITS = ( bits_CAP_MOVE_GROUND | bits_CAP_MOVE_JUMP | bits_CAP_MOVE_FLY | bits_CAP_MOVE_CLIMB | bits_CAP_MOVE_SWIM | bits_CAP_MOVE_CRAWL );
 
 class CAI_Link
 {
@@ -65,6 +60,3 @@ inline int	CAI_Link::DestNodeID(int srcID)
 	// hardware op for ( srcID==m_iSrcID ? m_iDestID : m_iSrcID )
 	return ieqsel( srcID, m_iSrcID, m_iDestID, m_iSrcID ); 
 }
-
-
-#endif // AI_LINK_H

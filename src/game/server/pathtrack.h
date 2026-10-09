@@ -1,27 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef PATHTRACK_H
-#define PATHTRACK_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "entityoutput.h"
-
+#include "baseentity.h"
 
 //-----------------------------------------------------------------------------
 // Spawnflag for CPathTrack
 //-----------------------------------------------------------------------------
-#define SF_PATH_DISABLED		0x00000001
+inline constexpr auto SF_PATH_DISABLED = 0x00000001;
 //#define SF_PATH_FIREONCE		0x00000002
-#define SF_PATH_ALTREVERSE		0x00000004
-#define SF_PATH_DISABLE_TRAIN	0x00000008
-#define SF_PATH_TELEPORT		0x00000010
-#define SF_PATH_ALTERNATE		0x00008000
+inline constexpr auto SF_PATH_ALTREVERSE = 0x00000004;
+inline constexpr auto SF_PATH_DISABLE_TRAIN = 0x00000008;
+inline constexpr auto SF_PATH_TELEPORT = 0x00000010;
+inline constexpr auto SF_PATH_ALTERNATE = 0x00008000;
 
 
 enum TrackOrientationType_t
@@ -127,7 +121,3 @@ public:
 	CPathTrackVisitor() { CPathTrack::BeginIteration(); }
 	~CPathTrackVisitor() { CPathTrack::EndIteration(); }
 };
-
-
-
-#endif // PATHTRACK_H

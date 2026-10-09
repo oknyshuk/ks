@@ -1,27 +1,47 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "client_pch.h"
-#include <time.h>
-#include <mutex>
+// main precompiled header for client files
+
+import ks.tier1;
+
+#include "common.h"
+
+#include "cmd.h"
+#include "render.h"
+
+
+#include "screen.h"
+
+#include "gl_shader.h"
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+
+#include "con_nprint.h"
+#include "demo.h"
+#include "host.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+#include "sys.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
+import std;
 #include "console.h"
-#include "tier1/text_writer.h"
-#include "ivideomode.h"
-#include "zone.h"
 #include "sv_main.h"
 #include "server.h"
 #include "MapReslistGenerator.h"
-#include "tier2/socketcreator.h"
 #include "toolframework/itoolframework.h"
 #include "netconsole.h"
 #include "host_cmd.h"
 #include "cmd.h"
 
-
-#define	MAXPRINTMSG	4096
+constexpr auto MAXPRINTMSG = 4096;
 
 
 bool con_debuglog = false;
@@ -94,9 +114,9 @@ ConVar con_logfile( "con_logfile", "", FCVAR_RELEASE, "Console output gets writt
 static const char *GetTimestampString( void )
 {
 	static char string[128];
-	tm today;
+	std::tm today;
 	Plat_GetLocalTime( &today );
-	Q_snprintf( string, sizeof( string ), "%02i/%02i/%04i - %02i:%02i:%02i",
+	V_snprintf( string, sizeof( string ), "%02i/%02i/%04i - %02i:%02i:%02i",
 		today.tm_mon+1, today.tm_mday, 1900 + today.tm_year,
 		today.tm_hour, today.tm_min, today.tm_sec );
 	return string;
@@ -235,7 +255,7 @@ static void Con_LogFunctionHelper( const CCommand &args, LogFunctionActionFunc c
 	for ( int nArg = 1; nArg < ( nArgs - 1 ); ++ nArg )
 	{
 		const char *pSpecifier = args.ArgV()[nArg];
-		Assert( pSpecifier[0] != '\0' );
+		contract_assert( pSpecifier[0] != '\0' );
 
 		if ( pSpecifier[0] == '+' )
 		{
@@ -283,7 +303,7 @@ static void Con_LogFunctionHelper( const CCommand &args, LogFunctionActionFunc c
 			}
 			else
 			{
-				if ( Q_stricmp( channelSpecifier[nSpecifier].m_pSpecifier, pLoggingChannel->m_Name ) == 0 )
+				if ( V_stricmp( channelSpecifier[nSpecifier].m_pSpecifier, pLoggingChannel->m_Name ) == 0 )
 				{
 					// Found the channel
 					break;
@@ -307,19 +327,19 @@ static void Con_LogFunctionHelper( const CCommand &args, LogFunctionActionFunc c
 static bool Con_LogLevelCallback( const CLoggingSystem::LoggingChannel_t *pChannel, const char *pParameter )
 {
 	LoggingSeverity_t minSeverity;
-	if ( Q_stricmp( pParameter, "all" ) == 0 )
+	if ( V_stricmp( pParameter, "all" ) == 0 )
 	{
 		minSeverity = LS_MESSAGE;
 	}
-	else if ( Q_stricmp( pParameter, "warning" ) == 0 )
+	else if ( V_stricmp( pParameter, "warning" ) == 0 )
 	{
 		minSeverity = LS_WARNING;
 	}
-	else if ( Q_stricmp( pParameter, "error" ) == 0 )
+	else if ( V_stricmp( pParameter, "error" ) == 0 )
 	{
 		minSeverity = LS_ERROR;
 	}
-	else if ( Q_stricmp( pParameter, "off" ) == 0 )
+	else if ( V_stricmp( pParameter, "off" ) == 0 )
 	{
 		minSeverity = LS_HIGHEST_SEVERITY;
 	}
@@ -337,8 +357,8 @@ static bool Con_LogLevelCallback( const CLoggingSystem::LoggingChannel_t *pChann
 static bool Con_LogColorCallback( const CLoggingSystem::LoggingChannel_t *pChannel, const char *pParameter )
 {
 	int color;
-	Q_hextobinary( pParameter, 8, ( byte * )&color, sizeof( color ) );
-	Log_Msg( LOG_CONSOLE, "Setting channel '%s' color to %08X.\n", pChannel->m_Name, SwapDWord( color ) );
+	V_hextobinary( pParameter, 8, ( byte * )&color, sizeof( color ) );
+	Log_Msg( LOG_CONSOLE, "Setting channel '%s' color to %08X.\n", pChannel->m_Name, DWordSwapC( color ) );
 	LoggingSystem_SetChannelColor( pChannel->m_ID, color );
 	return true;
 }
@@ -362,11 +382,11 @@ static bool Con_LogFlagsCallback( const CLoggingSystem::LoggingChannel_t *pChann
 
 	const char *pFlag = pParameter + 1;
 	LoggingChannelFlags_t flag;
-	if ( Q_stricmp( pFlag, "donotecho" ) == 0 )
+	if ( V_stricmp( pFlag, "donotecho" ) == 0 )
 	{
 		flag = LCF_DO_NOT_ECHO;
 	}
-	else if ( Q_stricmp( pFlag, "consoleonly" ) == 0 )
+	else if ( V_stricmp( pFlag, "consoleonly" ) == 0 )
 	{
 		flag = LCF_CONSOLE_ONLY;
 	}
@@ -422,18 +442,18 @@ void Con_LogDumpChannels_f()
 		else if ( pChannel->m_MinimumSeverity >= LS_WARNING ) pSeverity = "warning";
 		else pSeverity = "all";
 		
-		Log_Msg( LOG_CONSOLE, "%-4d    %-32s    %-10s    0x%08X    ", i, pChannel->m_Name, pSeverity, SwapDWord( *( int *)&pChannel->m_SpewColor ) );
+		Log_Msg( LOG_CONSOLE, "%-4d    %-32s    %-10s    0x%08X    ", i, pChannel->m_Name, pSeverity, DWordSwapC( *( int *)&pChannel->m_SpewColor ) );
 		
 		const int nMaxLen = 2048;
 		char buf[nMaxLen];
 		buf[0] = '\0';
 		if ( pChannel->m_Flags & LCF_CONSOLE_ONLY )
 		{
-			Q_strncat( buf, "[ConsoleOnly]", nMaxLen );
+			V_strncat( buf, "[ConsoleOnly]", nMaxLen );
 		}
 		if ( pChannel->m_Flags & LCF_DO_NOT_ECHO )
 		{
-			Q_strncat( buf, "[DoNotEcho]", nMaxLen );
+			V_strncat( buf, "[DoNotEcho]", nMaxLen );
 		}
 		Log_Msg( LOG_CONSOLE, "%-32s    ", buf );
 			
@@ -441,9 +461,9 @@ void Con_LogDumpChannels_f()
 		CLoggingSystem::LoggingTag_t *pTag = pChannel->m_pFirstTag;
 		while ( pTag != nullptr )
 		{
-			Q_strncat( buf, "[", nMaxLen );
-			Q_strncat( buf, pTag->m_pTagName, nMaxLen );
-			Q_strncat( buf, "]", nMaxLen );
+			V_strncat( buf, "[", nMaxLen );
+			V_strncat( buf, pTag->m_pTagName, nMaxLen );
+			V_strncat( buf, "]", nMaxLen );
 			pTag = pTag->m_pNextTag;
 		}
 		Log_Msg( LOG_CONSOLE, "%-32s\n", buf );
@@ -602,12 +622,12 @@ Con_DebugLog
 */
 void Con_DebugLog( const char *fmt, ...)
 {
-    va_list argptr; 
+    std::va_list argptr; 
 	char data[MAXPRINTMSG];
     
-    va_start(argptr, fmt);
-    Q_vsnprintf(data, sizeof(data), fmt, argptr);
-    va_end(argptr);
+    __builtin_va_start(argptr, fmt);
+    V_vsnprintf(data, sizeof(data), fmt, argptr);
+    __builtin_va_end(argptr);
 
 	FileHandle_t fh = GetConsoleLogManager().GetConsoleLogFileHandleForAppend();
 	if (fh != FILESYSTEM_INVALID_HANDLE )
@@ -617,7 +637,7 @@ void Con_DebugLog( const char *fmt, ...)
 			char const *prefix = MapReslistGenerator().LogPrefix();
 			if ( prefix )
 			{
-				g_pFileSystem->Write( prefix, strlen(prefix), fh );
+				g_pFileSystem->Write( prefix, std::strlen(prefix), fh );
 			}
 		}
 
@@ -627,13 +647,13 @@ void Con_DebugLog( const char *fmt, ...)
 			if ( needTimestamp )
 			{
 				const char *timestamp = GetTimestampString();
-				g_pFileSystem->Write( timestamp, strlen( timestamp ), fh );
+				g_pFileSystem->Write( timestamp, std::strlen( timestamp ), fh );
 				g_pFileSystem->Write( ": ", 2, fh );
 			}
 			needTimestamp = V_stristr( data, "\n" ) ? true : false;   
 		}
 
-		g_pFileSystem->Write( data, strlen(data), fh );
+		g_pFileSystem->Write( data, std::strlen(data), fh );
 		// Now that we don't close the file we need to flush it in order
 		// to make sure that the data makes it to the file system.
 		g_pFileSystem->Flush( fh );
@@ -652,7 +672,7 @@ Handles cursor positioning, line wrapping, etc
 */
 static bool g_fColorPrintf = false;
 static bool g_bInColorPrint = false;
-extern CTHREADLOCALINT g_bInSpew;
+extern thread_local int g_bInSpew;
 
 void Con_Printf( const char *fmt, ... );
 
@@ -676,17 +696,17 @@ void Con_ColorPrint( const Color& clr, char const *msg )
 		{
 		case 1:
 			// if line does not contain keyword do not print the line
-			if ( pszText && ( *pszText != '\0' ) && ( Q_stristr( msg, pszText ) == nullptr ))
+			if ( pszText && ( *pszText != '\0' ) && ( V_stristr( msg, pszText ) == nullptr ))
 				return;
-			if ( pszIgnoreText && *pszIgnoreText && ( Q_stristr( msg, pszIgnoreText ) != nullptr ) )
+			if ( pszIgnoreText && *pszIgnoreText && ( V_stristr( msg, pszIgnoreText ) != nullptr ) )
 				return;
 			break;
 
 		case 2:
-			if ( pszIgnoreText && *pszIgnoreText && ( Q_stristr( msg, pszIgnoreText ) != nullptr ) )
+			if ( pszIgnoreText && *pszIgnoreText && ( V_stristr( msg, pszIgnoreText ) != nullptr ) )
 				return;
 			// if line does not contain keyword print it in a darker color
-			if ( pszText && ( *pszText != '\0' ) && ( Q_stristr( msg, pszText ) == nullptr ))
+			if ( pszText && ( *pszText != '\0' ) && ( V_stristr( msg, pszText ) == nullptr ))
 			{
 				Color mycolor(200, 200, 200, 150 );
 				g_pCVar->ConsoleColorPrintf( mycolor, "%s", msg );
@@ -795,13 +815,13 @@ void Con_Print( const char *msg )
 
 void Con_Printf( const char *fmt, ... )
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		msg[MAXPRINTMSG];
 	static bool	inupdate;
 	
-	va_start( argptr, fmt );
-	Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
-	va_end( argptr );
+	__builtin_va_start( argptr, fmt );
+	V_vsnprintf( msg, sizeof( msg ), fmt, argptr );
+	__builtin_va_end( argptr );
 
 	if ( !HandleRedirectAndDebugLog( msg ) )
 	{
@@ -832,13 +852,13 @@ void Con_Printf( const char *fmt, ... )
 //-----------------------------------------------------------------------------
 void Con_ColorPrintf( const Color& clr, const char *fmt, ... )
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		msg[MAXPRINTMSG];
 	static bool	inupdate;
 
-	va_start (argptr,fmt);
-	Q_vsnprintf (msg,sizeof( msg ), fmt,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,fmt);
+	V_vsnprintf (msg,sizeof( msg ), fmt,argptr);
+	__builtin_va_end (argptr);
 
 	static std::recursive_mutex autoMutex;
 	std::scoped_lock lock( autoMutex );
@@ -862,12 +882,12 @@ A Con_Printf that only shows up if the "developer" cvar is set
 */
 void Con_DPrintf (const char *fmt, ...)
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		msg[MAXPRINTMSG];
 
-	va_start (argptr,fmt);
-	Q_vsnprintf(msg,sizeof( msg ), fmt,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,fmt);
+	V_vsnprintf(msg,sizeof( msg ), fmt,argptr);
+	__builtin_va_end (argptr);
 	
 	g_fIsDebugPrint = true;
 
@@ -898,12 +918,12 @@ Okay to call even when the screen can't be updated
 */
 void Con_SafePrintf (const char *fmt, ...)
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		msg[MAXPRINTMSG];
 		
-	va_start (argptr,fmt);
-	Q_vsnprintf(msg,sizeof( msg ), fmt,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,fmt);
+	V_vsnprintf(msg,sizeof( msg ), fmt,argptr);
+	__builtin_va_end (argptr);
 
 #ifndef DEDICATED
 	bool			temp;
@@ -926,22 +946,22 @@ bool Con_IsVisible()
 
 void Con_NPrintf( int idx, const char *fmt, ... )
 {
-	va_list argptr; 
+	std::va_list argptr; 
 	char outtext[MAXPRINTMSG];
 
-	va_start(argptr, fmt);
-    Q_vsnprintf( outtext, sizeof( outtext ), fmt, argptr);
-    va_end(argptr);
+	__builtin_va_start(argptr, fmt);
+    V_vsnprintf( outtext, sizeof( outtext ), fmt, argptr);
+    __builtin_va_end(argptr);
 }
 
 void Con_NXPrintf( const struct con_nprint_s *info, const char *fmt, ... )
 {
-	va_list argptr; 
+	std::va_list argptr; 
 	char outtext[MAXPRINTMSG];
 
-	va_start(argptr, fmt);
-    Q_vsnprintf( outtext, sizeof( outtext ), fmt, argptr);
-    va_end(argptr);
+	__builtin_va_start(argptr, fmt);
+    V_vsnprintf( outtext, sizeof( outtext ), fmt, argptr);
+    __builtin_va_end(argptr);
 }
 
 

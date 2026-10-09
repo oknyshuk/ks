@@ -1,22 +1,54 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "client_pch.h"
+// main precompiled header for client files
+
+
+#include <sys/unistd.h>
+
+import std;
+import ks.tier1;
+
+#include "common.h"
+#include "qlimits.h"
+#include "iprediction.h"
+#include "icliententitylist.h"
+
+#include "sysexternal.h"
+#include "cmd.h"
+#include "protocol.h"
+#include "render.h"
+
+
+#include "screen.h"
+
+#include "gl_shader.h"
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+
+#include "con_nprint.h"
+#include "demo.h"
+#include "host_state.h"
+#include "host.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "enginestats.h"
 #include "iprediction.h"
 #include "cl_demo.h"
 #include "cl_demoactionmanager.h"
-#include "cl_pred.h"
 
 #include "baseautocompletefilelist.h"
 #include "demofile/demoformat.h"
 #include "gl_matsysiface.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
-#include "tier0/icommandline.h"
 #include "vengineserver_impl.h"
 #include "console.h"
 #include "dt_common_eng.h"
@@ -25,45 +57,31 @@
 #include "icliententitylist.h"
 #include "icliententity.h"
 #include "materialsystem/materialsystem_config.h"
-#include "tier2/tier2.h"
-#include "engineui.h"
 #include "con_nprint.h"
-#include "networkstringtableclient.h"
 #include "host_cmd.h"
 #include "matchmaking/imatchframework.h"
-#include "tier0/perfstats.h"
 #include "GameEventManager.h"
-#include "tier1/bitbuf.h"
 #include "net_chan.h"
-#include "tier1/characterset.h"
-#include "cl_steamauth.h"
 
 #if !defined DEDICATED
 #include "sound.h"
 #endif
 
-#include <sys/unistd.h> // gethostname
 
 #ifdef DEDICATED
 #include "server.h"
 #endif
 
-#include "tier0/memalloc.h"
-#define ENABLE_DEMOS_BY_DEFAULT true
 
 static ConVar demo_recordcommands( "demo_recordcommands", "1", FCVAR_CHEAT, "Record commands typed at console into .dem files." );
 static ConVar demo_quitafterplayback( "demo_quitafterplayback", "0", 
-#if defined( ALLOW_TEXT_MODE )
-	FCVAR_RELEASE,
-#else
 	0,
-#endif
 	"Quits game after demo playback." 
 );
 ConVar demo_debug( "demo_debug", "0", 0, "Demo debug info." );
 static ConVar demo_interpolateview( "demo_interpolateview", "1", 0, "Do view interpolation during dem playback." );
 static ConVar demo_pauseatservertick( "demo_pauseatservertick", "0", 0, "Pauses demo playback at server tick" );
-static ConVar demo_enabledemos( "demo_enabledemos", ENABLE_DEMOS_BY_DEFAULT ? "1" : "0", 0, "Enable recording demos (must be set true before loading a map)" );
+static ConVar demo_enabledemos( "demo_enabledemos", true ? "1" : "0", 0, "Enable recording demos (must be set true before loading a map)" );
 extern ConVar demo_strict_validation;
 
 // singeltons:
@@ -86,7 +104,7 @@ std::vector< RegisteredDemoCustomDataCallbackPair_t > g_RegisteredDemoCustomData
 static ConVar demo_interplimit( "demo_interplimit", "4000", 0, "How much origin velocity before it's considered to have 'teleported' causing interpolation to reset." );
 static ConVar demo_avellimit( "demo_avellimit", "2000", 0, "Angular velocity limit before eyes considered snapped for demo playback." );
 
-#define DEMO_HEADER_FILE	"demoheader.tmp"
+inline constexpr const char *DEMO_HEADER_FILE = "demoheader.tmp";
 
 // Fast forward convars
 static ConVar demo_fastforwardstartspeed( "demo_fastforwardstartspeed", "2", 0, "Go this fast when starting to hold FF button." );
@@ -190,7 +208,7 @@ void DemoOverlay::Tick()
 	{
 		m_bTick = true;
 
-		float const fRealTime = Sys_FloatTime();
+		float const fRealTime = Plat_FloatTime();
 		if ( m_fLastTickTime != fRealTime )
 		{
 			m_fLastTickTime = fRealTime;
@@ -241,7 +259,7 @@ void DemoOverlay::DrawOverlay( float fSetting )
 		 OVR_NONE != m_maskDrawnOverlay )
 	{
 		con_nprint_s xprn;
-		memset( &xprn, 0, sizeof( xprn ) );
+		std::memset( &xprn, 0, sizeof( xprn ) );
 		xprn.index = idx;
 		xprn.time_to_live = -1;
 		Con_NXPrintf( &xprn, "" );
@@ -250,7 +268,7 @@ void DemoOverlay::DrawOverlay( float fSetting )
 	if ( OVR_PLAY & maskDrawnOverlay )
 	{
 		con_nprint_s xprn;
-		memset( &xprn, 0, sizeof( xprn ) );
+		std::memset( &xprn, 0, sizeof( xprn ) );
 		xprn.index = idx;
 		xprn.color[0] = 0.f;
 		xprn.color[1] = 1.f;
@@ -263,7 +281,7 @@ void DemoOverlay::DrawOverlay( float fSetting )
 	if ( OVR_REC & maskDrawnOverlay )
 	{
 		con_nprint_s xprn;
-		memset( &xprn, 0, sizeof( xprn ) );
+		std::memset( &xprn, 0, sizeof( xprn ) );
 		xprn.index = idx;
 		xprn.color[0] = 1.f;
 		xprn.color[1] = 0.f;
@@ -442,7 +460,6 @@ void CDemoRecorder::WriteBSPDecals()
 
 void CDemoRecorder::RecordServerClasses( ServerClass *pClasses )
 {
-	MEM_ALLOC_CREDIT();
 
 	if ( !m_DemoFile.IsOpen() )
 		return;
@@ -471,7 +488,6 @@ void CDemoRecorder::RecordServerClasses( ServerClass *pClasses )
 
 void CDemoRecorder::RecordStringTables()
 {
-	MEM_ALLOC_CREDIT();
 
 	if ( !m_DemoFile.IsOpen() )
 		return;
@@ -590,7 +606,6 @@ void CDemoRecorder::StartupDemoHeader( void )
 
 	m_bIsDemoHeader = true;
 
-	Assert( m_MessageData.GetBasePointer() == nullptr );
 
 	// setup writing data buffer
 	m_MessageData.StartWriting( new unsigned char[NET_MAX_PAYLOAD], NET_MAX_PAYLOAD );
@@ -602,6 +617,7 @@ void CDemoRecorder::StartupDemoHeader( void )
 //-----------------------------------------------------------------------------
 void CDemoRecorder::StartupDemoFile( void )
 {
+	ks::ScratchArena<> scratch;
 	if ( !m_bRecording )
 		return;
 
@@ -637,7 +653,6 @@ void CDemoRecorder::StartupDemoFile( void )
 		return;
 	}
 
-	Assert( m_MessageData.GetBasePointer() == nullptr );
 
 	// setup writing data buffer
 	m_MessageData.StartWriting( new unsigned char[NET_MAX_PAYLOAD], NET_MAX_PAYLOAD );
@@ -696,20 +711,20 @@ void CDemoRecorder::StartupDemoFile( void )
 		}
 
 		size_t iTotalDataSize = iCombinedStringLength + sizeof( int );
-		uint8 *pWriteBuffer = (uint8 *)stackalloc( iTotalDataSize );
+		uint8 *pWriteBuffer = (uint8 *)scratch.AllocBytes( iTotalDataSize );
 		uint8 *pWrite = pWriteBuffer;
 
-		iCustomDataCallbacks = LittleDWord( iCustomDataCallbacks );
+		iCustomDataCallbacks = ( iCustomDataCallbacks );
 		*(int *)pWrite = iCustomDataCallbacks;
 		pWrite += sizeof( int );
 		for( int i = 0; i != iCustomDataCallbacks; ++i )
 		{
 			size_t iStringLength = V_strlen( STRING( g_RegisteredDemoCustomDataCallbacks[i].szSaveID ) ) + 1;
-			memcpy( pWrite, STRING( g_RegisteredDemoCustomDataCallbacks[i].szSaveID ), iStringLength );
+			std::memcpy( pWrite, STRING( g_RegisteredDemoCustomDataCallbacks[i].szSaveID ), iStringLength );
 			pWrite += iStringLength;
 		}
 
-		Assert( pWrite == (pWriteBuffer + iTotalDataSize) );
+		contract_assert( pWrite == (pWriteBuffer + iTotalDataSize) );
 
 		m_DemoFile.WriteCustomData( -1, pWriteBuffer, iTotalDataSize, 0 );
 	}
@@ -722,34 +737,15 @@ void CDemoRecorder::StartupDemoFile( void )
 	WriteBSPDecals();
 
 	// Dump all accumulated avatar data messages into the starting portion of the demo file
-	CNETMsg_PlayerAvatarData_t *pMsgMyOwnAvatarData = GetBaseLocalClient().AllocOwnPlayerAvatarData();
 	for ( auto &[accountid, pData] : GetBaseLocalClient().m_mapPlayerAvatarData )
 	{
 		CNETMsg_PlayerAvatarData_t &msgPlayerAvatarData = *pData;
-
-		// if the server authoritative data overrides local version of avatar data then don't write local version
-		if ( pMsgMyOwnAvatarData && ( msgPlayerAvatarData.accountid == pMsgMyOwnAvatarData->accountid ) )
-		{
-			delete pMsgMyOwnAvatarData;
-			pMsgMyOwnAvatarData = nullptr;
-		}
 
 		byte		buffer[ NET_MAX_PAYLOAD ];
 		bf_write	bfWrite( "CDemoRecorder::NETMsg_PlayerAvatarData", buffer, sizeof( buffer ) );
 		msgPlayerAvatarData.WriteToBuffer( bfWrite );
 
 		WriteMessages( bfWrite );
-	}
-	if ( pMsgMyOwnAvatarData )
-	{
-		byte		buffer[ NET_MAX_PAYLOAD ];
-		bf_write	bfWrite( "CDemoRecorder::NETMsg_PlayerAvatarData", buffer, sizeof( buffer ) );
-		pMsgMyOwnAvatarData->WriteToBuffer( bfWrite );
-
-		WriteMessages( bfWrite );
-
-		delete pMsgMyOwnAvatarData;
-		pMsgMyOwnAvatarData = nullptr;
 	}
 
 	g_ClientDLL->HudReset();
@@ -836,7 +832,7 @@ void CDemoRecorder::RecordMessages(bf_read &data, int bits)
 	{
 		m_MessageData.WriteBitsFromBuffer( &data, bits );
 
-		Assert( !m_MessageData.IsOverflowed() );
+		contract_assert( !m_MessageData.IsOverflowed() );
 	}
 }
 
@@ -870,7 +866,7 @@ void CDemoRecorder::WriteMessages( bf_write &message )
 		nop.WriteToBuffer( message );
 	}
 
-	Assert( len < NET_MAX_MESSAGE );
+	contract_assert( len < NET_MAX_MESSAGE );
 
 	// if signondata read as fast as possible, no rewind
 	// and wait for packet time
@@ -975,7 +971,7 @@ struct DemoUserInfo_t
 	}
 	int userID;
 	char *name;
-	CSteamID steamID;
+	CPlayerId playerUID;
 };
 
 std::vector< DemoUserInfo_t > s_demoUserInfo;
@@ -993,7 +989,7 @@ void Callback_DemoScanUserInfoChanged( void *object, INetworkStringTable *string
 			// clear out the entry in our user info array
 			s_demoUserInfo[ stringNumber ].userID = -1;
 			s_demoUserInfo[ stringNumber ].name = nullptr;
-			s_demoUserInfo[ stringNumber ].steamID.SetFromUint64( 0 );
+			s_demoUserInfo[ stringNumber ].playerUID.SetFromUint64( 0 );
 		}
 		return; // player left the game
 	}
@@ -1007,7 +1003,7 @@ void Callback_DemoScanUserInfoChanged( void *object, INetworkStringTable *string
 
 	entry.userID = player->userID;
 	entry.name = player->name;
-	entry.steamID.SetFromUint64( player->xuid );
+	entry.playerUID.SetFromUint64( player->xuid );
 }
 
 void GetExtraDeathEventInfo( KeyValues *pKeys )
@@ -1021,17 +1017,17 @@ void GetExtraDeathEventInfo( KeyValues *pKeys )
 		if ( nAttackerID == userInfo.userID )
 		{
 			pKeys->SetString( "attacker_name", userInfo.name );
-			pKeys->SetUint64( "attacker_xuid", userInfo.steamID.ConvertToUint64() );
+			pKeys->SetUint64( "attacker_xuid", userInfo.playerUID.ConvertToUint64() );
 		}
 		else if ( nVictimID == userInfo.userID )
 		{
 			pKeys->SetString( "victim_name", userInfo.name );
-			pKeys->SetUint64( "victim_xuid", userInfo.steamID.ConvertToUint64() );
+			pKeys->SetUint64( "victim_xuid", userInfo.playerUID.ConvertToUint64() );
 		}
 		else if ( nAssisterID == userInfo.userID )
 		{
 			pKeys->SetString( "assister_name", userInfo.name );
-			pKeys->SetUint64( "assister_xuid", userInfo.steamID.ConvertToUint64() );
+			pKeys->SetUint64( "assister_xuid", userInfo.playerUID.ConvertToUint64() );
 		}
 	}
 }
@@ -1044,7 +1040,7 @@ void GetExtraEventInfo( KeyValues *pKeys )
 		if ( nUserID == userInfo.userID )
 		{
 			pKeys->SetString( "player_name", userInfo.name );
-			pKeys->SetUint64( "player_xuid", userInfo.steamID.ConvertToUint64() );
+			pKeys->SetUint64( "player_xuid", userInfo.playerUID.ConvertToUint64() );
 		}
 	}
 }
@@ -1085,10 +1081,10 @@ void GetEventInfoForScan( const char *pszMode, KeyValues *pKeys )
 }
 
 
-bool CheckKeyXuid( const CSteamID &steamID, KeyValues *pKeys, const char* pKeyWithXuid )
+bool CheckKeyXuid( const CPlayerId &playerUID, KeyValues *pKeys, const char* pKeyWithXuid )
 {
-	CSteamID playerSteamID( pKeys->GetUint64( pKeyWithXuid ) );
-	if ( steamID.GetAccountID() == playerSteamID.GetAccountID() )
+	CPlayerId playerPlayerID( pKeys->GetUint64( pKeyWithXuid ) );
+	if ( playerUID.GetAccountID() == playerPlayerID.GetAccountID() )
 	{
 		return true;
 	}
@@ -1096,11 +1092,11 @@ bool CheckKeyXuid( const CSteamID &steamID, KeyValues *pKeys, const char* pKeyWi
 	return false;
 }
 
-int GetPlayerIndex( const CSteamID &steamID )
+int GetPlayerIndex( const CPlayerId &playerUID )
 {
 	for ( int i = 0; i < std::ssize( s_demoUserInfo ); i++ )
 	{
-		if ( s_demoUserInfo[ i ].steamID.GetAccountID() == steamID.GetAccountID() )
+		if ( s_demoUserInfo[ i ].playerUID.GetAccountID() == playerUID.GetAccountID() )
 		{
 			return i + 1;
 		}
@@ -1144,7 +1140,7 @@ void CDemoPlayer::StopPlayback( void )
 	else
 	{
 		int framecount = host_framecount - m_nTimeDemoStartFrame;
-		float demotime = Sys_FloatTime() - m_flTimeDemoStartTime;
+		float demotime = Plat_FloatTime() - m_flTimeDemoStartTime;
 
 		if ( demotime > 0.0f )
 		{
@@ -1178,7 +1174,7 @@ void CDemoPlayer::StopPlayback( void )
 	m_ImportantGameEvents.clear();
 	m_highlights.clear();
 	m_nCurrentHighlight = -1;
-	m_highlightSteamID.SetFromUint64( 0 );
+	m_highlightPlayerID.SetFromUint64( 0 );
 	m_nHighlightPlayerIndex = -1;
 	m_bScanMode = false;
 	m_szScanMode[0] = 0;
@@ -1188,7 +1184,7 @@ void CDemoPlayer::StopPlayback( void )
 
 
 
-#define SKIP_TO_TICK_FLAG uint32( uint32( 0x88 ) << 24 )
+#define SKIP_TO_TICK_FLAG	uint32( uint32( 0x88 ) << 24 )
 
 bool CDemoPlayer::IsSkipping( void )const
 {
@@ -1454,7 +1450,7 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 		return nullptr;
 	}
 
-	Assert( IsPlayingBack() );
+	contract_assert( IsPlayingBack() );
 
 	if ( m_nTimeDemoCurrentFrame >= 0 )
 	{
@@ -1712,7 +1708,7 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 					uint8 *pParse = pData;
 					int iTableEntries = *(int *)pParse;
 					pParse += sizeof( int );
-					iTableEntries = LittleDWord( iTableEntries );
+					iTableEntries = ( iTableEntries );
 					m_CustomDataCallbackMap.assign( iTableEntries, {} );
 
 					for( int i = 0; i != iTableEntries; ++i )
@@ -1731,15 +1727,15 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 								break;
 							}
 						}
-						Assert( j != std::ssize( g_RegisteredDemoCustomDataCallbacks ) ); //found a match
+						contract_assert( j != std::ssize( g_RegisteredDemoCustomDataCallbacks ) ); //found a match
 					}
-					Assert( pParse == (pData + iSize) ); //properly parsed the table
+					contract_assert( pParse == (pData + iSize) ); //properly parsed the table
 				}
 				else
 				{
 					//send it off
-					Assert( iCallbackIndex < std::ssize( m_CustomDataCallbackMap ) );
-					Assert( m_CustomDataCallbackMap[iCallbackIndex].pCallback != nullptr );
+					contract_assert( iCallbackIndex < std::ssize( m_CustomDataCallbackMap ) );
+					contract_assert( m_CustomDataCallbackMap[iCallbackIndex].pCallback != nullptr );
 
 					if( m_CustomDataCallbackMap[iCallbackIndex].pCallback != nullptr )
 						m_CustomDataCallbackMap[iCallbackIndex].pCallback( pData, iSize );
@@ -1804,7 +1800,7 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 	if ( (m_nTimeDemoStartFrame < 0) && GetPlaybackTick() > 100 )
 	{
 		m_nTimeDemoStartFrame = host_framecount;
-		m_flTimeDemoStartTime = Sys_FloatTime();
+		m_flTimeDemoStartTime = Plat_FloatTime();
 		m_flTotalFPSVariability = 0.0f;
 
 		if ( m_bTimeDemo )
@@ -2085,7 +2081,7 @@ CDemoPlayer::CDemoPlayer()
 	m_pImportantEventData = nullptr;
 	m_nTickToPauseOn = -1;
 	m_bSavedInterpolateState = true;
-	m_highlightSteamID.SetFromUint64( 0 );
+	m_highlightPlayerID.SetFromUint64( 0 );
 	m_nHighlightPlayerIndex = -1;
 	m_bDoHighlightScan = false;
 	m_nCurrentHighlight = -1;
@@ -2280,7 +2276,7 @@ void ComputeTimedemoResultsFilename( CFmtStr &fileName, CFmtStr &dateString )
 	materials->GetDisplayAdapterInfo( materials->GetCurrentAdapter(), info );
 	std::string gpuName( ks::nz( info.m_pDriverName ) );
 	const char *pVendors[] = { "nvidia", "ati" };
-	for ( int i = 0; i < ARRAYSIZE( pVendors ); i++ )
+	for ( int i = 0; i < std::size( pVendors ); i++ )
 	{
 		const char *pVendor = V_stristr( gpuName.data(), pVendors[i] );
 		if ( pVendor )
@@ -2331,7 +2327,7 @@ void ComputeTimedemoResultsFilename( CFmtStr &fileName, CFmtStr &dateString )
 void CDemoPlayer::WriteTimeDemoResults( void )
 {
 	int frames = std::max( 1, ( (host_framecount - m_nTimeDemoStartFrame) - 1 ) );
-	float time = std::max<std::common_type_t<int, double>>( 1, ( Sys_FloatTime() - m_flTimeDemoStartTime ) );
+	float time = std::max<std::common_type_t<int, double>>( 1, ( Plat_FloatTime() - m_flTimeDemoStartTime ) );
 	float flVariability = m_flTotalFPSVariability / (float)frames;
 	ConMsg( "%i frames %5.3f seconds %5.2f fps (%5.2f ms/f) %5.3f fps variability\n", frames, time, frames/time, 1000*time/frames, flVariability );
 
@@ -2455,7 +2451,7 @@ void CDemoPlayer::PausePlayback( float seconds  )
 	if ( seconds > 0.0f )
 	{
 		// Use true clock since everything else is frozen
-		m_flAutoResumeTime = Sys_FloatTime() + seconds;
+		m_flAutoResumeTime = Plat_FloatTime() + seconds;
 	}
 	else
 	{
@@ -2506,7 +2502,7 @@ bool CDemoPlayer::CheckPausedPlayback()
 	if ( m_bPlaybackPaused )
 	{
 		if ( (m_flAutoResumeTime > 0.0f) &&
-			 (Sys_FloatTime() >= m_flAutoResumeTime) )
+			 (Plat_FloatTime() >= m_flAutoResumeTime) )
 		{
 			// it's time to unpause replay
 			ResumePlayback();
@@ -2617,7 +2613,7 @@ void CDemoPlayer::GetImportantGameEventIDs()
 
 void CDemoPlayer::SetHighlightXuid( uint64 xuid, bool bLowlights )
 {
-	m_highlightSteamID.SetFromUint64( xuid );
+	m_highlightPlayerID.SetFromUint64( xuid );
 	if ( xuid != 0 )
 	{
 		m_bDoHighlightScan = true;
@@ -2726,7 +2722,7 @@ void CDemoPlayer::ScanForImportantTicks()
 
 	demoScanStringTables.AllowCreation( false );
 
-	m_nHighlightPlayerIndex = GetPlayerIndex( m_highlightSteamID );
+	m_nHighlightPlayerIndex = GetPlayerIndex( m_highlightPlayerID );
 
 	democmdinfo_t	info;
 	int				dummy;
@@ -2941,7 +2937,7 @@ void CDemoPlayer::ScanForImportantTicks()
 
 void CDemoPlayer::BuildHighlightList()
 {
-	if ( m_bDoHighlightScan && m_highlightSteamID.ConvertToUint64() != 0 )
+	if ( m_bDoHighlightScan && m_highlightPlayerID.ConvertToUint64() != 0 )
 	{
 		m_highlights.clear();
 
@@ -2951,11 +2947,11 @@ void CDemoPlayer::BuildHighlightList()
 
 		const char *szKeyToCheck = m_bLowlightsMode ? "victim_xuid" : "attacker_xuid";
 
-		int nImportantTickIndex = FindNextImportantTickByXuid( 0, m_highlightSteamID );
+		int nImportantTickIndex = FindNextImportantTickByXuid( 0, m_highlightPlayerID );
 		while ( nImportantTickIndex != -1 )
 		{
-			if ( CheckKeyXuid( m_highlightSteamID, m_ImportantTicks[ nImportantTickIndex ].pKeys, szKeyToCheck ) ||
-				 CheckKeyXuid( m_highlightSteamID, m_ImportantTicks[ nImportantTickIndex ].pKeys, "player_xuid" ) )
+			if ( CheckKeyXuid( m_highlightPlayerID, m_ImportantTicks[ nImportantTickIndex ].pKeys, szKeyToCheck ) ||
+				 CheckKeyXuid( m_highlightPlayerID, m_ImportantTicks[ nImportantTickIndex ].pKeys, "player_xuid" ) )
 			{
 				entry.nSeekToTick = 
 				entry.nFastForwardToTick = Max( m_ImportantTicks[ nImportantTickIndex ].nPreviousTick - nTicksBeforeEvent, 0 ); // no need to play before the beginning of the stream
@@ -2965,20 +2961,20 @@ void CDemoPlayer::BuildHighlightList()
 
 				if ( m_bLowlightsMode )
 				{
-					CSteamID attackerSteamID( m_ImportantTicks[ nImportantTickIndex ].pKeys->GetUint64( "attacker_xuid" ) );
-					entry.unAccountID = attackerSteamID.GetAccountID();
+					CPlayerId attackerPlayerID( m_ImportantTicks[ nImportantTickIndex ].pKeys->GetUint64( "attacker_xuid" ) );
+					entry.unAccountID = attackerPlayerID.GetAccountID();
 				}
 				else
 				{
-					entry.unAccountID = m_highlightSteamID.GetAccountID();
+					entry.unAccountID = m_highlightPlayerID.GetAccountID();
 				}
 
 				// check if next event is close enough to this one to just include in this highlight entry
-				int nNextImportantTickIndex = FindNextImportantTickByXuid( m_ImportantTicks[ nImportantTickIndex ].nTick + 1, m_highlightSteamID );
+				int nNextImportantTickIndex = FindNextImportantTickByXuid( m_ImportantTicks[ nImportantTickIndex ].nTick + 1, m_highlightPlayerID );
 				while ( nNextImportantTickIndex != -1 )
 				{
-					if ( CheckKeyXuid( m_highlightSteamID, m_ImportantTicks[ nNextImportantTickIndex ].pKeys, szKeyToCheck ) ||
-						 CheckKeyXuid( m_highlightSteamID, m_ImportantTicks[ nNextImportantTickIndex ].pKeys, "player_xuid" ) )
+					if ( CheckKeyXuid( m_highlightPlayerID, m_ImportantTicks[ nNextImportantTickIndex ].pKeys, szKeyToCheck ) ||
+						 CheckKeyXuid( m_highlightPlayerID, m_ImportantTicks[ nNextImportantTickIndex ].pKeys, "player_xuid" ) )
 					{
 						if ( m_ImportantTicks[ nNextImportantTickIndex ].nPreviousTick - nTicksBeforeEvent <= entry.nPlayToTick )
 						{
@@ -2992,13 +2988,13 @@ void CDemoPlayer::BuildHighlightList()
 							break;
 						}
 					}
-					nNextImportantTickIndex = FindNextImportantTickByXuid( m_ImportantTicks[ nNextImportantTickIndex ].nTick + 1, m_highlightSteamID );
+					nNextImportantTickIndex = FindNextImportantTickByXuid( m_ImportantTicks[ nNextImportantTickIndex ].nTick + 1, m_highlightPlayerID );
 				}
 			
 				m_highlights.push_back( entry );
 			}
 
-			nImportantTickIndex = FindNextImportantTickByXuid( m_ImportantTicks[ nImportantTickIndex ].nTick + 1, m_highlightSteamID );
+			nImportantTickIndex = FindNextImportantTickByXuid( m_ImportantTicks[ nImportantTickIndex ].nTick + 1, m_highlightPlayerID );
 		}
 
 		// when we cross a round start between highlights, we include the round start in the highlight
@@ -3026,7 +3022,7 @@ void CDemoPlayer::BuildHighlightList()
 				entry.nPlayToTick = m_ImportantTicks[ nEndMatchTickIndex ].nTick;
 				entry.nActualFirstEventTick = entry.nActualLastEventTick = m_ImportantTicks[ nEndMatchTickIndex ].nTick;
 				entry.nNumEvents = 0;
-				entry.unAccountID = m_highlightSteamID.GetAccountID();
+				entry.unAccountID = m_highlightPlayerID.GetAccountID();
 
 				m_highlights.push_back( entry );
 			}
@@ -3074,14 +3070,14 @@ int CDemoPlayer::FindPreviousImportantTick( int nCurrentTick, const char *pEvent
 	return -1;
 }
 
-int CDemoPlayer::FindNextImportantTickByXuidAndEvent( int nCurrentTick, const CSteamID &steamID, const char *pKeyWithXuid, const char *pEventName /* = NULL */ )
+int CDemoPlayer::FindNextImportantTickByXuidAndEvent( int nCurrentTick, const CPlayerId &playerUID, const char *pKeyWithXuid, const char *pEventName /* = NULL */ )
 {
 	for ( int i = 0; i < std::ssize( m_ImportantTicks ); i++ )
 	{
 		if ( m_ImportantTicks[ i ].nTick > nCurrentTick )
 		{
-			CSteamID compareSteamID( m_ImportantTicks[ i ].pKeys->GetUint64( pKeyWithXuid ) );
-			if ( ( steamID.GetAccountID() == compareSteamID.GetAccountID() ) && ( pEventName == nullptr || V_stricmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, pEventName ) == 0 ) )
+			CPlayerId comparePlayerID( m_ImportantTicks[ i ].pKeys->GetUint64( pKeyWithXuid ) );
+			if ( ( playerUID.GetAccountID() == comparePlayerID.GetAccountID() ) && ( pEventName == nullptr || V_stricmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, pEventName ) == 0 ) )
 			{
 				return i;
 			}
@@ -3091,24 +3087,24 @@ int CDemoPlayer::FindNextImportantTickByXuidAndEvent( int nCurrentTick, const CS
 	return -1;
 }
 
-int CDemoPlayer::FindNextImportantTickByXuid( int nCurrentTick, const CSteamID &steamID )
+int CDemoPlayer::FindNextImportantTickByXuid( int nCurrentTick, const CPlayerId &playerUID )
 {
 	for ( int i = 0; i < std::ssize( m_ImportantTicks ); i++ )
 	{
 		if ( m_ImportantTicks[ i ].nTick > nCurrentTick )
 		{
-			CSteamID playerSteamID( m_ImportantTicks[ i ].pKeys->GetUint64( "player_xuid" ) );
-			if ( steamID.GetAccountID() == playerSteamID.GetAccountID() )
+			CPlayerId playerPlayerID( m_ImportantTicks[ i ].pKeys->GetUint64( "player_xuid" ) );
+			if ( playerUID.GetAccountID() == playerPlayerID.GetAccountID() )
 			{
 				return i;
 			}
-			CSteamID attackerSteamID( m_ImportantTicks[ i ].pKeys->GetUint64( "attacker_xuid" ) );
-			if ( steamID.GetAccountID() == attackerSteamID.GetAccountID() )
+			CPlayerId attackerPlayerID( m_ImportantTicks[ i ].pKeys->GetUint64( "attacker_xuid" ) );
+			if ( playerUID.GetAccountID() == attackerPlayerID.GetAccountID() )
 			{
 				return i;
 			}
-			CSteamID victimSteamID( m_ImportantTicks[ i ].pKeys->GetUint64( "victim_xuid" ) );
-			if ( steamID.GetAccountID() == victimSteamID.GetAccountID() )
+			CPlayerId victimPlayerID( m_ImportantTicks[ i ].pKeys->GetUint64( "victim_xuid" ) );
+			if ( playerUID.GetAccountID() == victimPlayerID.GetAccountID() )
 			{
 				return i;
 			}
@@ -3118,14 +3114,14 @@ int CDemoPlayer::FindNextImportantTickByXuid( int nCurrentTick, const CSteamID &
 	return -1;
 }
 
-int CDemoPlayer::FindPreviousImportantTickByXuidAndEvent( int nCurrentTick, const CSteamID &steamID, const char *pKeyWithXuid, const char *pEventName /* = NULL */ )
+int CDemoPlayer::FindPreviousImportantTickByXuidAndEvent( int nCurrentTick, const CPlayerId &playerUID, const char *pKeyWithXuid, const char *pEventName /* = NULL */ )
 {
 	for ( int i = (int)std::ssize( m_ImportantTicks ) - 1; i >= 0; i-- )
 	{
 		if ( m_ImportantTicks[ i ].nTick < nCurrentTick )
 		{
-			CSteamID compareSteamID( m_ImportantTicks[ i ].pKeys->GetUint64( pKeyWithXuid ) );
-			if ( ( steamID.GetAccountID() == compareSteamID.GetAccountID() ) && ( pEventName == nullptr || V_stricmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, pEventName ) == 0 ) )
+			CPlayerId comparePlayerID( m_ImportantTicks[ i ].pKeys->GetUint64( pKeyWithXuid ) );
+			if ( ( playerUID.GetAccountID() == comparePlayerID.GetAccountID() ) && ( pEventName == nullptr || V_stricmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, pEventName ) == 0 ) )
 			{
 				return i;
 			}
@@ -3290,7 +3286,9 @@ void CL_ListDemo_f( const CCommand &args )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( stop, "Finish recording demo." )
+static void stop( const CCommand &args );
+static ConCommand stop_command( "stop", stop, "Finish recording demo." );
+static void stop( const CCommand &args )
 {
 	if ( !demorecorder->IsRecording() )
 	{
@@ -3370,7 +3368,9 @@ static void DemoRecord( char const *pchDemoFileName, bool incremental )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( record, "Record a demo.", FCVAR_DONTRECORD )
+static void record( const CCommand &args );
+static ConCommand record_command( "record", record, "Record a demo.", FCVAR_DONTRECORD );
+static void record( const CCommand &args )
 {
 	if ( args.ArgC() != 2 && args.ArgC() != 3 )
 	{
@@ -3393,7 +3393,9 @@ CON_COMMAND_F( record, "Record a demo.", FCVAR_DONTRECORD )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( _record, "Record a demo incrementally.", FCVAR_DONTRECORD )
+static void _record( const CCommand &args );
+static ConCommand _record_command( "_record", _record, "Record a demo incrementally.", FCVAR_DONTRECORD );
+static void _record( const CCommand &args )
 {
 	if ( g_ClientDLL == nullptr )
 	{
@@ -3454,7 +3456,7 @@ void CL_PlayDemo_f( const CCommand &passed_args )
 	const char *szStartRoundPrefix = "startround:";
 	if ( char* szStartRoundParam = V_strstr( szCurArg, szStartRoundPrefix ) )
 	{
-		szStartRoundParam += strlen( szStartRoundPrefix );
+		szStartRoundParam += std::strlen( szStartRoundPrefix );
 		nStartRound = V_atoi( szStartRoundParam );
 		nEndNameArg--;
 	}
@@ -3467,35 +3469,26 @@ void CL_PlayDemo_f( const CCommand &passed_args )
 		nEndNameArg--;
 	}
 
-	// then check the last (or next to last if last was lowlights) to get the steam ID
-	// steam IDs  are numbers only, we just check for digits in all of it
-	int nSteamIDArg = nEndNameArg;
+	// then check the last (or next to last if last was lowlights) to get the player ID
+	// player IDs  are numbers only, we just check for digits in all of it
+	int nPlayerIDArg = nEndNameArg;
 
-	bool bSteamID_self = !V_strcmp( args[ nSteamIDArg ], "self" );
-
-	if ( bSteamID_self )
+	for ( int i = 0; i < V_strlen( args[ nPlayerIDArg ] ); i++ )
+	{
+		if ( !V_isdigit( args[ nPlayerIDArg ][ 0 ] ) )
+		{
+			nPlayerIDArg = -1;
+			break;
+		}
+	}
+	if ( nPlayerIDArg != -1 )
 	{
 		nEndNameArg--;
 	}
-	else
+	else if ( bLowlights )
 	{
-		for ( int i = 0; i < V_strlen( args[ nSteamIDArg ] ); i++ )
-		{
-			if ( !V_isdigit( args[ nSteamIDArg ][ 0 ] ) )
-			{
-				nSteamIDArg = -1;
-				break;
-			}
-		}
-		if ( nSteamIDArg != -1 )
-		{
-			nEndNameArg--;
-		}
-		else if ( bLowlights )
-		{
-			ConMsg( "Warning: lowlights argument given without valid steam id, ignoring.\n" );
-			bLowlights = false;
-		}
+		ConMsg( "Warning: lowlights argument given without valid player id, ignoring.\n" );
+		bLowlights = false;
 	}
 
 	// now take all remaining args and build them back into a path (will be multiple args if it has spaces or contains a ':'
@@ -3519,7 +3512,7 @@ void CL_PlayDemo_f( const CCommand &passed_args )
 	char *pTemp = V_strstr( name, "@" );
 	if ( pTemp != nullptr )
 	{
-		Assert( nStartRound == 0 ); // Don't specify both of these, start round will stomp
+		contract_assert( nStartRound == 0 ); // Don't specify both of these, start round will stomp
 		nStartingTick = V_atoi(&pTemp[ 1 ]);
 		if ( nStartingTick <= 0 )
 		{
@@ -3541,32 +3534,16 @@ void CL_PlayDemo_f( const CCommand &passed_args )
 
 	CDemoPlaybackParameters_t *pParams = nullptr;
 
-	if ( nSteamIDArg != -1 )
+	if ( nPlayerIDArg != -1 )
 	{
-		CSteamID steamID;
-		if ( bSteamID_self )
-		{
-			if ( ISteamUser* pSteamUser = Steam3Client().SteamUser() )
-			{
-				steamID = pSteamUser->GetSteamID();
-			}
-			else
-			{
-				ConMsg( "Cannot obtain user id\n" );
-				return;
-			}
-		}
-		else
-		{
-			steamID = CSteamID( args[ nSteamIDArg ] );
-		}
-		demoplayer->SetHighlightXuid( steamID.ConvertToUint64(), bLowlights );
+		CPlayerId playerUID = CPlayerId( args[ nPlayerIDArg ] );
+		demoplayer->SetHighlightXuid( playerUID.ConvertToUint64(), bLowlights );
 
 		V_memset( &s_DemoPlaybackParams, 0, sizeof( s_DemoPlaybackParams ) );
 
 		s_DemoPlaybackParams.m_uiHeaderPrefixLength = 0;
 		s_DemoPlaybackParams.m_bAnonymousPlayerIdentity = false;
-		s_DemoPlaybackParams.m_uiLockFirstPersonAccountID = steamID.GetAccountID();
+		s_DemoPlaybackParams.m_uiLockFirstPersonAccountID = playerUID.GetAccountID();
 		s_DemoPlaybackParams.m_numRoundSkip = 0;
 		s_DemoPlaybackParams.m_numRoundStop = 999;
 		s_DemoPlaybackParams.m_bSkipWarmup = false;
@@ -3787,7 +3764,7 @@ void CL_BenchFrame_f( const CCommand &args )
 		return;
 	}
 
-	g_pClientDemoPlayer->SetBenchframe( std::max( 0, atoi( args[2] ) ), args[3] );
+	g_pClientDemoPlayer->SetBenchframe( std::max( 0, std::atoi( args[2] ) ), args[3] );
 
 	s_bBenchframe = true;
 
@@ -3810,7 +3787,9 @@ void CL_BenchFrame_f( const CCommand &args )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( vtune, "Controls VTune's sampling." )
+static void vtune( const CCommand &args );
+static ConCommand vtune_command( "vtune", vtune, "Controls VTune's sampling." );
+static void vtune( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -3848,34 +3827,77 @@ CON_COMMAND( vtune, "Controls VTune's sampling." )
 }
 
 
-CON_COMMAND_AUTOCOMPLETEFILE( playdemo, CL_PlayDemo_f, "Play a recorded demo file (.dem ).", nullptr, dem );
-CON_COMMAND_AUTOCOMPLETEFILE( scandemo, CL_ScanDemo_f, "Scan a recorded demo file (.dem ) for specific game events and dump data.", nullptr, dem );
-CON_COMMAND_EXTERN_F( playoverwatchevidence, CL_PlayOverwatchEvidence_f, "Play evidence for an overwatch case.", FCVAR_HIDDEN );
-CON_COMMAND_AUTOCOMPLETEFILE( timedemo, CL_TimeDemo_f, "Play a demo and report performance info.", nullptr, dem );
-CON_COMMAND_AUTOCOMPLETEFILE( timedemoquit, CL_TimeDemoQuit_f, "Play a demo, report performance info, and then exit", nullptr, dem );
-CON_COMMAND_AUTOCOMPLETEFILE( listdemo, CL_ListDemo_f, "List demo file contents.", nullptr, dem );
-CON_COMMAND_AUTOCOMPLETEFILE( benchframe, CL_BenchFrame_f, "Takes a snapshot of a particular frame in a time demo.", nullptr, dem );
-CON_COMMAND_AUTOCOMPLETEFILE( timedemo_vprofrecord, CL_TimeDemo_VProfRecord_f, "Play a demo and report performance info.  Also record vprof data for the span of the demo", nullptr, dem );
+static int g_playdemo_CompletionFunc( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
+{
+	static CBaseAutoCompleteFileList playdemoComplete( "playdemo", nullptr, "dem" );
+	return playdemoComplete.AutoCompletionFunc( partial, commands );
+}
+static ConCommand playdemo_command( "playdemo", CL_PlayDemo_f, "Play a recorded demo file (.dem ).", 0, g_playdemo_CompletionFunc );
+static int g_scandemo_CompletionFunc( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
+{
+	static CBaseAutoCompleteFileList scandemoComplete( "scandemo", nullptr, "dem" );
+	return scandemoComplete.AutoCompletionFunc( partial, commands );
+}
+static ConCommand scandemo_command( "scandemo", CL_ScanDemo_f, "Scan a recorded demo file (.dem ) for specific game events and dump data.", 0, g_scandemo_CompletionFunc );
+void CL_PlayOverwatchEvidence_f( const CCommand &args );
+static ConCommand playoverwatchevidence_command( "playoverwatchevidence", CL_PlayOverwatchEvidence_f, "Play evidence for an overwatch case.", FCVAR_HIDDEN );
+void CL_PlayOverwatchEvidence_f( const CCommand &args );
+static int g_timedemo_CompletionFunc( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
+{
+	static CBaseAutoCompleteFileList timedemoComplete( "timedemo", nullptr, "dem" );
+	return timedemoComplete.AutoCompletionFunc( partial, commands );
+}
+static ConCommand timedemo_command( "timedemo", CL_TimeDemo_f, "Play a demo and report performance info.", 0, g_timedemo_CompletionFunc );
+static int g_timedemoquit_CompletionFunc( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
+{
+	static CBaseAutoCompleteFileList timedemoquitComplete( "timedemoquit", nullptr, "dem" );
+	return timedemoquitComplete.AutoCompletionFunc( partial, commands );
+}
+static ConCommand timedemoquit_command( "timedemoquit", CL_TimeDemoQuit_f, "Play a demo, report performance info, and then exit", 0, g_timedemoquit_CompletionFunc );
+static int g_listdemo_CompletionFunc( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
+{
+	static CBaseAutoCompleteFileList listdemoComplete( "listdemo", nullptr, "dem" );
+	return listdemoComplete.AutoCompletionFunc( partial, commands );
+}
+static ConCommand listdemo_command( "listdemo", CL_ListDemo_f, "List demo file contents.", 0, g_listdemo_CompletionFunc );
+static int g_benchframe_CompletionFunc( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
+{
+	static CBaseAutoCompleteFileList benchframeComplete( "benchframe", nullptr, "dem" );
+	return benchframeComplete.AutoCompletionFunc( partial, commands );
+}
+static ConCommand benchframe_command( "benchframe", CL_BenchFrame_f, "Takes a snapshot of a particular frame in a time demo.", 0, g_benchframe_CompletionFunc );
+static int g_timedemo_vprofrecord_CompletionFunc( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
+{
+	static CBaseAutoCompleteFileList timedemo_vprofrecordComplete( "timedemo_vprofrecord", nullptr, "dem" );
+	return timedemo_vprofrecordComplete.AutoCompletionFunc( partial, commands );
+}
+static ConCommand timedemo_vprofrecord_command( "timedemo_vprofrecord", CL_TimeDemo_VProfRecord_f, "Play a demo and report performance info.  Also record vprof data for the span of the demo", 0, g_timedemo_vprofrecord_CompletionFunc );
 
 
-CON_COMMAND( demo_pause, "Pauses demo playback." )
+static void demo_pause( const CCommand &args );
+static ConCommand demo_pause_command( "demo_pause", demo_pause, "Pauses demo playback." );
+static void demo_pause( const CCommand &args )
 {
 	float seconds = -1.0;
 
 	if ( args.ArgC() == 2 )
 	{
-		seconds = atof( args[1] );
+		seconds = std::atof( args[1] );
 	}
 
 	demoplayer->PausePlayback( seconds );
 }
 
-CON_COMMAND( demo_resume, "Resumes demo playback." )
+static void demo_resume( const CCommand &args );
+static ConCommand demo_resume_command( "demo_resume", demo_resume, "Resumes demo playback." );
+static void demo_resume( const CCommand &args )
 {
 	demoplayer->ResumePlayback();
 }
 
-CON_COMMAND( demo_togglepause, "Toggles demo playback." )
+static void demo_togglepause( const CCommand &args );
+static ConCommand demo_togglepause_command( "demo_togglepause", demo_togglepause, "Toggles demo playback." );
+static void demo_togglepause( const CCommand &args )
 {
 	if ( !demoplayer->IsPlayingBack() )
 		return;
@@ -3890,7 +3912,9 @@ CON_COMMAND( demo_togglepause, "Toggles demo playback." )
 	}
 }
 
-CON_COMMAND( demo_goto, "Skips to location in demo." )
+static void demo_goto( const CCommand &args );
+static ConCommand demo_goto_command( "demo_goto", demo_goto, "Skips to location in demo." );
+static void demo_goto( const CCommand &args )
 {
 	bool bRelative = false;
 	bool bPause = false;
@@ -3914,10 +3938,10 @@ CON_COMMAND( demo_goto, "Skips to location in demo." )
 
 	int iArg = 1;
 	const char *strTick = args[ iArg++ ];
-	int nTick = atoi( strTick );
+	int nTick = std::atoi( strTick );
 
 	// If they gave us "50%" or "50 %", then head to percentage of the file.
-	bool bIsPct = !!strchr( strTick, '%' );
+	bool bIsPct = !!std::strchr( strTick, '%' );
 	bool bIsMinutes = !!strchr( strTick, 'm' );
 	if ( !bIsPct && ( args[ iArg ][ 0 ] == '%' ) )
 	{
@@ -3941,7 +3965,7 @@ CON_COMMAND( demo_goto, "Skips to location in demo." )
 
 	for ( ; iArg < args.ArgC(); iArg++ )
 	{
-		switch ( toupper( args[ iArg ][ 0 ] ) )
+		switch ( std::toupper( args[ iArg ][ 0 ] ) )
 		{
 		case 'R':
 			bRelative = true;
@@ -3955,12 +3979,16 @@ CON_COMMAND( demo_goto, "Skips to location in demo." )
 	demoplayer->SkipToTick( nTick, bRelative, bPause );
 }
 
-CON_COMMAND( demo_gototick, "Skips to a tick in demo." )
+static void demo_gototick( const CCommand &args );
+static ConCommand demo_gototick_command( "demo_gototick", demo_gototick, "Skips to a tick in demo." );
+static void demo_gototick( const CCommand &args )
 {
 	demo_goto( args );
 }
 
-CON_COMMAND( demo_info, "Print information about currently playing demo." )
+static void demo_info( const CCommand &args );
+static ConCommand demo_info_command( "demo_info", demo_info, "Print information about currently playing demo." );
+static void demo_info( const CCommand &args )
 {
 	if ( !demoplayer->IsPlayingBack() )
 	{
@@ -3970,25 +3998,31 @@ CON_COMMAND( demo_info, "Print information about currently playing demo." )
 
 	ConMsg("Demo contents for %s:\n", demoplayer->GetDemoStream()->GetUrl());
 }
-CON_COMMAND( demo_timescale, "Sets demo replay speed." )
+static void demo_timescale( const CCommand &args );
+static ConCommand demo_timescale_command( "demo_timescale", demo_timescale, "Sets demo replay speed." );
+static void demo_timescale( const CCommand &args )
 {
 	float fScale = 1.0f;
 
 	if ( args.ArgC() == 2 )
 	{
-		fScale = atof( args[1] );
+		fScale = std::atof( args[1] );
 		fScale = clamp( fScale, 0.0f, 100.0f );
 	}
 
 	demoplayer->SetPlaybackTimeScale( fScale );
 }
 
-CON_COMMAND( demo_listimportantticks, "List all important ticks in the demo." )
+static void demo_listimportantticks( const CCommand &args );
+static ConCommand demo_listimportantticks_command( "demo_listimportantticks", demo_listimportantticks, "List all important ticks in the demo." );
+static void demo_listimportantticks( const CCommand &args )
 {
 	demoplayer->ListImportantTicks();
 }
 
-CON_COMMAND( demo_listhighlights, "List all highlights data for the demo." )
+static void demo_listhighlights( const CCommand &args );
+static ConCommand demo_listhighlights_command( "demo_listhighlights", demo_listhighlights, "List all highlights data for the demo." );
+static void demo_listhighlights( const CCommand &args )
 {
 	demoplayer->ListHighlightData();
 }

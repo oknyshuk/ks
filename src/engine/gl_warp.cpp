@@ -1,25 +1,33 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // gl_warp.c -- sky and water polygons
 
-#include "render_pch.h"
-#include "gl_water.h"
-#include "zone.h"
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
 #include "gl_model_private.h"
 #include "gl_matsysiface.h"
-#include "utlvector.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
 #include "tier2/tier2.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
-#include "tier0/vprof.h"
+import std;
 
-#define SQRT3INV		(0.57735f)		// a little less than 1 / sqrt(3)
+constexpr auto SQRT3INV = (0.57735f); // a little less than 1 / sqrt(3)
 
 static ConVar	r_drawskybox(  "r_drawskybox", "1", FCVAR_CHEAT	);
 
@@ -110,7 +118,7 @@ bool R_LoadNamedSkys( const char *skyname )
 		skies[i] = nullptr;
 		if ( skies[i] == nullptr )
 		{
-			Q_snprintf( name, sizeof( name ), "skybox/%s%s", skyname, skyboxsuffix[i] );
+			V_snprintf( name, sizeof( name ), "skybox/%s%s", skyname, skyboxsuffix[i] );
 			skies[i] = materials->FindMaterial( name, TEXTURE_GROUP_SKYBOX );
 		}
 		if( !IsErrorMaterial( skies[i] ) )
@@ -136,7 +144,7 @@ bool R_LoadNamedSkys( const char *skyname )
 		}
 	
 		// Use the new one
-		assert( skies[ i ] );
+		contract_assert( skies[ i ] );
 		skyboxMaterials[i] = skies[ i ];
 		skyboxMaterials[i]->IncrementReferenceCount();
 	}
@@ -172,7 +180,7 @@ void R_LoadSkys( void )
 		success = false;
 
 		// Try loading the default (if not already requested)
-		if ( Q_stricmp( skyname.GetString(), pDefault ) && R_LoadNamedSkys( pDefault ) )
+		if ( V_stricmp( skyname.GetString(), pDefault ) && R_LoadNamedSkys( pDefault ) )
 		{
 			ConDMsg( "Unable to load sky %s, but successfully loaded %s\n", skyname.GetString(), pDefault );
 			skyname.SetValue( pDefault );
@@ -180,7 +188,7 @@ void R_LoadSkys( void )
 		}
 	}
 
-	Q_strncpy( currentloadedsky, skyname.GetString(), sizeof( currentloadedsky ) );
+	V_strncpy( currentloadedsky, skyname.GetString(), sizeof( currentloadedsky ) );
 	if ( !success )
 	{
 		ConDMsg( "Unable to load sky %s\n", skyname.GetString() );
@@ -251,7 +259,7 @@ void MakeSkyVec( float s, float t, int axis, float zFar, Vector& position, Vecto
 //-----------------------------------------------------------------------------
 void R_DrawSkyBox( float zFar, int nDrawFlags /*= 0x3F*/  )
 {
-	VPROF("R_DrawSkyBox");
+	CVProfScope _( "R_DrawSkyBox", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	int		i;
 	Vector	normal;

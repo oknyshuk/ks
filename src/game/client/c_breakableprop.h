@@ -1,16 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef C_BREAKABLEPROP_H
-#define C_BREAKABLEPROP_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 
 #include "player_pickup.h" 
+#include "c_baseanimating.h"
+#include "client_class.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -51,5 +48,3 @@ protected:
 private:
 	[[= ks::reflect::Net{} ]] bool m_bClientPhysics;
 };
-
-#endif // C_BREAKABLEPROP_H

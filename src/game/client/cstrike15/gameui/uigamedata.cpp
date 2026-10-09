@@ -1,29 +1,16 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+import std;
 
+import ks.tier1;
 #include "uigamedata.h"
-
-#include <ctype.h>
 
 
 #include "./GameUI/IGameUI.h"
-#include "iengineui.h"
-#include "icommandline.h"
 #include "engineinterface.h"
-#include "tier0/dbg.h"
 #include "gameui_interface.h"
-#include "game/client/IGameClientExports.h"
-#include "fmtstr.h"
-#include "vstdlib/random.h"
-#include "tier1/tokenset.h"
 #include "filesystem.h"
-#include "inputsystem/iinputsystem.h"
-#include <time.h>
 
 // BaseModUI High-level windows
 
@@ -40,11 +27,8 @@
 // vgui controls
 #include "localize/ilocalize.h"
 #include "netmessages.h"
-#include "steam/steam_api.h"
 #include "gameui_util.h"
 #include "cdll_client_int.h"
-#include "cstrike15_gcconstants.h"
-#include "engine/inetsupport.h"
 
 
 
@@ -111,7 +95,9 @@ static void ShowMarketplaceUiForOffer()
 
 
 // Console command that's fired from the destructive action confirmation for joining a new session while already in a previous session.
-CON_COMMAND_F( confirm_join_new_session_exit_current, "Confirm that we wish to join a new session, destroying a previous session", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_HIDDEN )
+static void confirm_join_new_session_exit_current( const CCommand &args );
+static ConCommand confirm_join_new_session_exit_current_command( "confirm_join_new_session_exit_current", confirm_join_new_session_exit_current, "Confirm that we wish to join a new session, destroying a previous session", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_HIDDEN );
+static void confirm_join_new_session_exit_current( const CCommand &args )
 {
 	g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( 
 		new KeyValues( "OnInvite", "action", "join" ) );
@@ -125,21 +111,8 @@ bool CUIGameData::m_bModuleShutDown = false;
 
 //=============================================================================
 CUIGameData::CUIGameData() :
-
-	m_CallbackUserStatsStored( nullptr, nullptr ),
-	m_CallbackUserStatsReceived( nullptr, nullptr ),
-
-
-	m_CallbackPersonaStateChanged( nullptr, nullptr ),
-
-
 	m_CGameUIPostInit( false )
 {
-	// It's very dangerous to use "this" in initializer lists.  Do it this way for safety and to kill some warnings.
-	m_CallbackUserStatsStored.Register(this, &CUIGameData::Steam_OnUserStatsStored);
-	m_CallbackUserStatsReceived.Register(this, &CUIGameData::Steam_OnUserStatsReceived);
-	m_CallbackPersonaStateChanged.Register(this, &CUIGameData::Steam_OnPersonaStateChanged);
-
 	m_LookSensitivity = 1.0f;
 
 	m_flShowConnectionProblemTimer = 0.0f;
@@ -282,19 +255,6 @@ void CUIGameData::OpenInviteUI( char const *szInviteUiType )
 {
 }
 
-void CUIGameData::ExecuteOverlayCommand( char const *szCommand )
-{
-	if ( steamapicontext && steamapicontext->SteamFriends() &&
-		 steamapicontext->SteamUtils() && steamapicontext->SteamUtils()->IsOverlayEnabled() )
-	{
-		steamapicontext->SteamFriends()->ActivateGameOverlay( szCommand );
-	}
-	else
-	{
-		DisplayOkOnlyMsgBox( nullptr, "#SFUI_SteamOverlay_Title", "#SFUI_SteamOverlay_Text" );
-	}
-}
-
 //=============================================================================
 bool CUIGameData::SignedInToLive()
 {
@@ -377,14 +337,14 @@ void CUIGameData::SetLookSensitivity(float sensitivity)
 	static CGameUIConVarRef joy_yawsensitivity("joy_yawsensitivity");
 	if(joy_yawsensitivity.IsValid())
 	{
-		float defaultValue = atof(joy_yawsensitivity.GetDefault());
+		float defaultValue = std::atof(joy_yawsensitivity.GetDefault());
 		joy_yawsensitivity.SetValue(defaultValue * sensitivity);
 	}
 
 	static CGameUIConVarRef joy_pitchsensitivity("joy_pitchsensitivity");
 	if(joy_pitchsensitivity.IsValid())
 	{
-		float defaultValue = atof(joy_pitchsensitivity.GetDefault());
+		float defaultValue = std::atof(joy_pitchsensitivity.GetDefault());
 		joy_pitchsensitivity.SetValue(defaultValue * sensitivity);
 	}
 }
@@ -516,60 +476,12 @@ char const * CUIGameData::GetPlayerName( XUID playerID, char const *szPlayerName
 	if ( cl_names_debug.GetInt() )
 		return "WWWWWWWWWWWWWWW";
 
-	if ( steamapicontext && steamapicontext->SteamUtils() &&
-		steamapicontext->SteamFriends() && steamapicontext->SteamUser() )
-	{
-		auto iIndex = m_mapUserXuidToName.find( playerID );
-		if ( iIndex == m_mapUserXuidToName.end() )
-		{
-			char const *szName = steamapicontext->SteamFriends()->GetFriendPersonaName( playerID );
-			if ( szName && *szName )
-			{
-				iIndex = m_mapUserXuidToName.emplace( playerID, ks::nz( szName ) ).first;
-			}
-		}
-
-		if ( iIndex != m_mapUserXuidToName.end() )
-			return iIndex->second.data();
-	}
-
 	return szPlayerNameSpeculative;
 }
 
-void CUIGameData::Steam_OnPersonaStateChanged( PersonaStateChange_t *pParam )
-{
-	if ( !pParam->m_ulSteamID )
-		return;
-
-	if ( pParam->m_nChangeFlags & k_EPersonaChangeName )
-	{
-		auto iIndex = m_mapUserXuidToName.find( pParam->m_ulSteamID );
-		if ( iIndex != m_mapUserXuidToName.end() )
-		{
-			std::string utlName = std::move( iIndex->second );
-			m_mapUserXuidToName.erase( iIndex );
-			GetPlayerName( pParam->m_ulSteamID, utlName.data() );
-		}
-	}
-
-	if ( pParam->m_nChangeFlags & k_EPersonaChangeAvatar )
-	{
-		// DWenger - Pulled out temporarily - CAvatarImage *pImage = NULL;
-		// DWenger - Pulled out temporarily - int iIndex = m_mapUserXuidToAvatar.Find( pParam->m_ulSteamID );
-		// DWenger - Pulled out temporarily - if ( iIndex != m_mapUserXuidToAvatar.InvalidIndex() )
-		// DWenger - Pulled out temporarily - {
-			// DWenger - Pulled out temporarily - pImage = m_mapUserXuidToAvatar.Element( iIndex );
-		// DWenger - Pulled out temporarily - }
-
-		// Re-fetch the image if we have it cached
-		// DWenger - Pulled out temporarily - if ( pImage )
-		// DWenger - Pulled out temporarily - {
-			// DWenger - Pulled out temporarily - pImage->SetAvatarSteamID( pParam->m_ulSteamID );
-		// DWenger - Pulled out temporarily - }
-	}
-}
-
-CON_COMMAND_F( ui_reloadscheme, "Reloads the resource files for the active UI window", 0 )
+static void ui_reloadscheme( const CCommand &args );
+static ConCommand ui_reloadscheme_command( "ui_reloadscheme", ui_reloadscheme, "Reloads the resource files for the active UI window", 0 );
+static void ui_reloadscheme( const CCommand &args )
 {
 	g_pFullFileSystem->SyncDvdDevCache();
 	CUIGameData::Get()->ReloadScheme();
@@ -656,13 +568,14 @@ static uint64 Helper_GetServerCookie( uint64 gsid )
 
 void CUIGameData::OnEvent( KeyValues *pEvent )
 {
+	ks::ScratchArena<> scratch;
 	char const *szEvent = pEvent->GetName();
 
-	if ( !Q_stricmp( "OnSysXUIEvent", szEvent ) )
+	if ( !V_stricmp( "OnSysXUIEvent", szEvent ) )
 	{
-		m_bXUIOpen = !Q_stricmp( "opening", pEvent->GetString( "action", "" ) );
+		m_bXUIOpen = !V_stricmp( "opening", pEvent->GetString( "action", "" ) );
 	}
-	else if ( !Q_stricmp( "OnProfileUnavailable", szEvent ) )
+	else if ( !V_stricmp( "OnProfileUnavailable", szEvent ) )
 	{
 		// Activate game ui to see the dialog
 		// DWenger - Pulled out temporarily - if ( !CBaseModPanel::GetSingleton().IsVisible() )
@@ -681,10 +594,10 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 
 		// DWenger - Pulled out temporarily - confirmation->SetUsageData( data );
 	}
-	else if ( !Q_stricmp( "OnInvite", szEvent ) )
+	else if ( !V_stricmp( "OnInvite", szEvent ) )
 	{
 		// Check if the user just accepted invite
-		if ( !Q_stricmp( "accepted", pEvent->GetString( "action" ) ) )
+		if ( !V_stricmp( "accepted", pEvent->GetString( "action" ) ) )
 		{
 			// Check if we have an outstanding session
 			IMatchSession *pIMatchSession = g_pMatchFramework->GetMatchSession();
@@ -713,7 +626,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 				nullptr, 
 				nullptr );
 		}
-		else if ( !Q_stricmp( "storage", pEvent->GetString( "action" ) ) )
+		else if ( !V_stricmp( "storage", pEvent->GetString( "action" ) ) )
 		{
 			// DWenger - Pulled out temporarily - if ( !Invite_IsStorageDeviceValid() )
 			// DWenger - Pulled out temporarily - {
@@ -723,7 +636,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 				// DWenger - Pulled out temporarily - }
 			// DWenger - Pulled out temporarily - }
 		}
-		else if ( !Q_stricmp( "error", pEvent->GetString( "action" ) ) )
+		else if ( !V_stricmp( "error", pEvent->GetString( "action" ) ) )
 		{
 			char const *szReason = pEvent->GetString( "error", "" );
 
@@ -765,7 +678,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 			// DWenger - Pulled out temporarily - confirmation->SetUsageData(data);
 		}
 	}
-	else if ( !Q_stricmp( "OnSysStorageDevicesChanged", szEvent ) )
+	else if ( !V_stricmp( "OnSysStorageDevicesChanged", szEvent ) )
 	{
 
 		// If a storage device change is in progress, the simply ignore
@@ -795,7 +708,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 
 		// DWenger - Pulled out temporarily - confirmation->SetUsageData( data );
 	}
-	else if ( !Q_stricmp( "OnSysInputDevicesChanged", szEvent ) )
+	else if ( !V_stricmp( "OnSysInputDevicesChanged", szEvent ) )
 	{
 		unsigned int nInactivePlayers = 0;  // Number of users on the spectating team (ie. idle), or disconnected in this call
 		int iOldSlot = engine->GetActiveSplitScreenPlayerSlot();
@@ -845,14 +758,14 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 			// DWenger - Pulled out temporarily - confirmation->SetUsageData(data);
 		// DWenger - Pulled out temporarily - }
 	}
-	else if ( !Q_stricmp( "OnMatchPlayerMgrReset", szEvent ) )
+	else if ( !V_stricmp( "OnMatchPlayerMgrReset", szEvent ) )
 	{
 		char const *szReason = pEvent->GetString( "reason", "" );
 		bool bShowDisconnectedMsgBox = true;
-		if ( !Q_stricmp( szReason, "GuestSignedIn" ) )
+		if ( !V_stricmp( szReason, "GuestSignedIn" ) )
 		{
 			char const *szDestroyedSessionState = pEvent->GetString( "settings/game/state", "lobby" );
-			if ( !Q_stricmp( "lobby", szDestroyedSessionState ) )
+			if ( !V_stricmp( "lobby", szDestroyedSessionState ) )
 				bShowDisconnectedMsgBox = false;
 		}
 
@@ -874,7 +787,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 			// DWenger - Pulled out temporarily - data.pMessageText = "#SFUI_MsgBx_SignInChange";
 			// DWenger - Pulled out temporarily - data.bOkButtonEnabled = true;
 
-			// DWenger - Pulled out temporarily - if ( !Q_stricmp( szReason, "GuestSignedIn" ) )
+			// DWenger - Pulled out temporarily - if ( !V_stricmp( szReason, "GuestSignedIn" ) )
 			// DWenger - Pulled out temporarily - {
 				// DWenger - Pulled out temporarily - data.pWindowTitle = "#SFUI_MsgBx_DisconnectedFromSession";	// "Disconnect"
 				// DWenger - Pulled out temporarily - data.pMessageText = "#SFUI_MsgBx_SignInChange";				// "Sign-in change has occured."
@@ -884,7 +797,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 
 		// DWenger - Pulled out temporarily - }
 	}
-	else if ( !Q_stricmp( "OnEngineDisconnectReason", szEvent ) )
+	else if ( !V_stricmp( "OnEngineDisconnectReason", szEvent ) )
 	{
 		char const *szReason = pEvent->GetString( "reason", "" );
 
@@ -930,7 +843,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 
 		// DWenger - Pulled out temporarily - confirmation->SetUsageData(data);
 	}
-	else if ( !Q_stricmp( "OnEngineEndGame", szEvent ) )
+	else if ( !V_stricmp( "OnEngineEndGame", szEvent ) )
 	{
 		// If we are connected and there was no session object to handle the event
 		if ( !g_pMatchFramework->GetMatchSession() )
@@ -939,9 +852,9 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 			engine->ExecuteClientCmd( "disconnect" );
 		}
 	}
-	else if ( !Q_stricmp( "OnMatchSessionUpdate", szEvent ) )
+	else if ( !V_stricmp( "OnMatchSessionUpdate", szEvent ) )
 	{
-		if ( !Q_stricmp( "error", pEvent->GetString( "state", "" ) ) )
+		if ( !V_stricmp( "error", pEvent->GetString( "state", "" ) ) )
 		{
 			g_pMatchFramework->CloseSession();
 
@@ -961,13 +874,12 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 				{ "kicked", "#SessionError_Kicked", RemapText_t::MATCH_FULL },
 				{ "migrate", "#SessionError_Migrate", RemapText_t::MATCH_FULL },
 				{ "nomap", "#SessionError_NoMap", RemapText_t::MATCH_FULL },
-				{ "SteamServersDisconnected", "#SessionError_SteamServersDisconnected", RemapText_t::MATCH_FULL },
 				{ nullptr, nullptr, RemapText_t::MATCH_FULL }
 			};
 
 			szError = RemapText_t::RemapRawText( arrText, szError );
 
-			if ( !Q_stricmp( "turequired", szError ) )
+			if ( !V_stricmp( "turequired", szError ) )
 			{
 				// Special case for TU required message
 				// If we have a localization string for the TU message then this means that the other box
@@ -976,7 +888,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 				CFmtStr strLocKey( "#SessionError_TU_Required_%s", szTuRequiredCode );
 				if ( g_pLocalize->Find( strLocKey ) )
 				{
-					Q_strncpy( chErrorMsgBuffer, strLocKey, sizeof( chErrorMsgBuffer ) );
+					V_strncpy( chErrorMsgBuffer, strLocKey, sizeof( chErrorMsgBuffer ) );
 					szError = chErrorMsgBuffer;
 				}
 				else
@@ -999,7 +911,7 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 			// DWenger - Pulled out temporarily - data.pMessageText = szError;
 			// DWenger - Pulled out temporarily - data.bOkButtonEnabled = true;
 
-			if ( !Q_stricmp( "dlcrequired", szError ) )
+			if ( !V_stricmp( "dlcrequired", szError ) )
 			{
 				// Special case for DLC required message
 				uint64 uiDlcRequiredMask = pEvent->GetUint64( "dlcrequired" );
@@ -1027,21 +939,21 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 
 				// Determine the DLC offer ID
 				uint64 uiDlcOfferID = 0ull;
-				if ( 1 != sscanf( kvDlcDetails->GetString( CFmtStr( "dlc%d/offerid", iDlcRequired ) ), "0x%llx", &uiDlcOfferID ) )
+				if ( 1 != std::sscanf( kvDlcDetails->GetString( CFmtStr( "dlc%d/offerid", iDlcRequired ) ), "0x%llx", &uiDlcOfferID ) )
 					uiDlcOfferID = 0ull;
 				
 				// Format the strings
-				bool bKicked = !Q_stricmp( pEvent->GetString( "action" ), "kicked" );
+				bool bKicked = !V_stricmp( pEvent->GetString( "action" ), "kicked" );
 				wchar_t const *wszLine1 = g_pLocalize->Find( CFmtStr( "#SessionError_DLC_Required%s_%d", bKicked ? "Kicked" : "Join", iDlcRequired ) );
 				wchar_t const *wszLine2 = g_pLocalize->Find( CFmtStr( "#SessionError_DLC_Required%s_%d", uiDlcOfferID ? "Offer" : "Message", iDlcRequired ) );
 				
-				int numBytesTwoLines = ( Q_wcslen( wszLine1 ) + Q_wcslen( wszLine2 ) + 4 ) * sizeof( wchar_t );
-				wchar_t *pwszTwoLines = ( wchar_t * ) stackalloc( numBytesTwoLines );
-				Q_snwprintf( pwszTwoLines, numBytesTwoLines, L"%s%s", wszLine1, wszLine2 );
+				int numBytesTwoLines = ( V_wcslen( wszLine1 ) + V_wcslen( wszLine2 ) + 4 ) * sizeof( wchar_t );
+				wchar_t *pwszTwoLines = ( wchar_t * ) scratch.AllocBytes( numBytesTwoLines );
+				V_snwprintf( pwszTwoLines, numBytesTwoLines, L"%s%s", wszLine1, wszLine2 );
 				// DWenger - Pulled out temporarily - data.pMessageTextW = pwszTwoLines;
 				// DWenger - Pulled out temporarily - data.pMessageText = NULL;
 
-				Q_snprintf( chErrorTitleBuffer, sizeof( chErrorTitleBuffer ), "#SessionError_DLC_RequiredTitle_%d", iDlcRequired );
+				V_snprintf( chErrorTitleBuffer, sizeof( chErrorTitleBuffer ), "#SessionError_DLC_RequiredTitle_%d", iDlcRequired );
 				// DWenger - Pulled out temporarily - data.pWindowTitle = chErrorTitleBuffer;
 
 				if ( uiDlcOfferID )
@@ -1060,19 +972,6 @@ void CUIGameData::OnEvent( KeyValues *pEvent )
 }
 
 
-void CUIGameData::Steam_OnUserStatsStored( UserStatsStored_t *pParam )
-{
-
-
-}
-
-void CUIGameData::Steam_OnUserStatsReceived( UserStatsReceived_t *pParam )
-{
-
-
-}
-
-
 //////////////////////////////////////////////////////////////////////////
 //
 //
@@ -1084,7 +983,7 @@ void CUIGameData::Steam_OnUserStatsReceived( UserStatsReceived_t *pParam )
 
 bool GameModeHasDifficulty( char const *szGameMode )
 {
-	return !Q_stricmp( szGameMode, "coop" ) || !Q_stricmp( szGameMode, "realism" );
+	return !V_stricmp( szGameMode, "coop" ) || !V_stricmp( szGameMode, "realism" );
 }
 
 char const * GameModeGetDefaultDifficulty( char const *szGameMode )
@@ -1108,12 +1007,12 @@ char const * GameModeGetDefaultDifficulty( char const *szGameMode )
 
 bool GameModeHasRoundLimit( char const *szGameMode )
 {
-	return !Q_stricmp( szGameMode, "scavenge" ) || !Q_stricmp( szGameMode, "teamscavenge" );
+	return !V_stricmp( szGameMode, "scavenge" ) || !V_stricmp( szGameMode, "teamscavenge" );
 }
 
 bool GameModeIsSingleChapter( char const *szGameMode )
 {
-	return !Q_stricmp( szGameMode, "survival" ) || !Q_stricmp( szGameMode, "scavenge" ) || !Q_stricmp( szGameMode, "teamscavenge" );
+	return !V_stricmp( szGameMode, "survival" ) || !V_stricmp( szGameMode, "scavenge" ) || !V_stricmp( szGameMode, "teamscavenge" );
 }
 
 
@@ -1122,15 +1021,15 @@ bool GameModeIsSingleChapter( char const *szGameMode )
 const char *COM_GetModDirectory()
 {
 	static char modDir[MAX_PATH];
-	if ( Q_strlen( modDir ) == 0 )
+	if ( V_strlen( modDir ) == 0 )
 	{
 		const char *gamedir = CommandLine()->ParmValue("-game", CommandLine()->ParmValue( "-defaultgamedir", "hl2" ) );
-		Q_strncpy( modDir, gamedir, sizeof(modDir) );
+		V_strncpy( modDir, gamedir, sizeof(modDir) );
 		if ( strchr( modDir, '/' ) || strchr( modDir, '\\' ) )
 		{
-			Q_StripLastDir( modDir, sizeof(modDir) );
-			int dirlen = Q_strlen( modDir );
-			Q_strncpy( modDir, gamedir + dirlen, sizeof(modDir) - dirlen );
+			V_StripLastDir( modDir, sizeof(modDir) );
+			int dirlen = V_strlen( modDir );
+			V_strncpy( modDir, gamedir + dirlen, sizeof(modDir) - dirlen );
 		}
 	}
 
@@ -1143,7 +1042,7 @@ uint64 GetDlcInstalledMask()
 	static ConVarRef mm_dlcs_mask_fake( "mm_dlcs_mask_fake" );
 	char const *szFakeDlcsString = mm_dlcs_mask_fake.GetString();
 	if ( *szFakeDlcsString )
-		return atoi( szFakeDlcsString );
+		return std::atoi( szFakeDlcsString );
 
 	static ConVarRef mm_dlcs_mask_extras( "mm_dlcs_mask_extras" );
 	uint64 uiDLCmask = ( unsigned ) mm_dlcs_mask_extras.GetInt();

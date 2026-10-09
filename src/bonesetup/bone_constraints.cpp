@@ -1,27 +1,20 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Routines used for various prodcedural bones but meant to be called from
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+// Purpose: Routines used for various prodcedural bones but meant to be called from
 // datamodel or maya as well
-//
 // In a separate source file so linking bonesetup.lib doesn't get more than
 // needed
-//
-//===============================================================================
-
 
 // Valve includes
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include "tier1/strtools.h"
+import std;
+import ks.tier1;
 #include "bone_setup.h"
 #include "bone_constraints.h"
 #include "bone_accessor.h"
 #include "studio.h"
 
-#include "tier0/tslist.h"
-#include "tier0/miniprofiler.h"
 
-#include "bone_utils.h"
 
 //=============================================================================
 //=============================================================================
@@ -73,6 +66,7 @@ float CConstraintBones::ComputeTargetOrientation(
 	Quaternion *pqTargetOrientations,
 	Quaternion *pqTargetOffsets )
 {
+	ks::ScratchArena<> scratch;
 	// If there is only one target, for efficiency don't bother with the weighting
 	if ( nTargetCount == 1 )
 	{
@@ -87,7 +81,7 @@ float CConstraintBones::ComputeTargetOrientation(
 	if ( nTargetCount <= 0 )
 		return 0.0f;
 
-	Quaternion *pQuats = reinterpret_cast< Quaternion * >( stackalloc( nTargetCount * sizeof( Quaternion ) ) );
+	Quaternion *pQuats = reinterpret_cast< Quaternion * >( scratch.AllocBytes( nTargetCount * sizeof( Quaternion ) ) );
 
 	float flWeightSum = 0.0f;
 
@@ -118,7 +112,8 @@ float CConstraintBones::ComputeTargetPositionOrientation(
 	Quaternion *pqTargetOrientations,
 	Quaternion *pqTargetOffsets )
 {
-	Quaternion *pQuats = reinterpret_cast< Quaternion *>( stackalloc( nTargetCount * sizeof( Quaternion ) ) );
+	ks::ScratchArena<> scratch;
+	Quaternion *pQuats = reinterpret_cast< Quaternion *>( scratch.AllocBytes( nTargetCount * sizeof( Quaternion ) ) );
 
 	float flWeightSum = 0.0f;
 
@@ -171,7 +166,8 @@ float CConstraintBones::ComputeTargetPositionOrientation(
 	matrix3x4a_t *pmTargets,
 	matrix3x4a_t *pmOffsets )
 {
-	Quaternion *pQuats = reinterpret_cast< Quaternion *>( stackalloc( nTargetCount * sizeof( Quaternion ) ) );
+	ks::ScratchArena<> scratch;
+	Quaternion *pQuats = reinterpret_cast< Quaternion *>( scratch.AllocBytes( nTargetCount * sizeof( Quaternion ) ) );
 
 	float flWeightSum = 0.0f;
 
@@ -269,7 +265,7 @@ void CConstraintBones::ComputeAimConstraintAimAt(
 	const float flTr = vX.x + vY.y + vZ.z; 
 	qAim.Init( vY.z - vZ.y , vZ.x - vX.z, vX.y - vY.x, flTr + 1.0f ); 
 	const float flRadius = qAim[0] * qAim[0] + qAim[1] * qAim[1] + qAim[2] * qAim[2] + qAim[3] * qAim[3];
-	if ( flRadius > FLT_EPSILON )
+	if ( flRadius > std::numeric_limits<float>::epsilon() )
 	{
 		QuaternionNormalize( qAim ); 
 	}
@@ -389,9 +385,10 @@ float CStudioConstraintBones::ComputeTargetPosition(
 	int	nTargetCount,
 	CBoneAccessor &boneToWorld )
 {
-	float *pflTargetWeights = reinterpret_cast< float * >( stackalloc( nTargetCount * sizeof( float ) ) );
-	Vector *pvTargetPositions = reinterpret_cast< Vector * >( stackalloc( nTargetCount * sizeof( Vector ) ) );
-	Vector *pvTargetOffsets = reinterpret_cast< Vector * >( stackalloc( nTargetCount * sizeof( Vector ) ) );
+	ks::ScratchArena<> scratch;
+	float *pflTargetWeights = reinterpret_cast< float * >( scratch.AllocBytes( nTargetCount * sizeof( float ) ) );
+	Vector *pvTargetPositions = reinterpret_cast< Vector * >( scratch.AllocBytes( nTargetCount * sizeof( Vector ) ) );
+	Vector *pvTargetOffsets = reinterpret_cast< Vector * >( scratch.AllocBytes( nTargetCount * sizeof( Vector ) ) );
 
 	mstudioconstrainttarget_t *pTarget;
 
@@ -421,9 +418,10 @@ float CStudioConstraintBones::ComputeTargetOrientation(
 	int	nTargetCount,
 	CBoneAccessor &boneToWorld )
 {
-	float *pflTargetWeights = reinterpret_cast< float * >( stackalloc( nTargetCount * sizeof( float ) ) );
-	Quaternion *pqTargetOrientations = reinterpret_cast< Quaternion * >( stackalloc( nTargetCount * sizeof( Quaternion ) ) );
-	Quaternion *pqTargetOffsets = reinterpret_cast< Quaternion * >( stackalloc( nTargetCount * sizeof( Quaternion ) ) );
+	ks::ScratchArena<> scratch;
+	float *pflTargetWeights = reinterpret_cast< float * >( scratch.AllocBytes( nTargetCount * sizeof( float ) ) );
+	Quaternion *pqTargetOrientations = reinterpret_cast< Quaternion * >( scratch.AllocBytes( nTargetCount * sizeof( Quaternion ) ) );
+	Quaternion *pqTargetOffsets = reinterpret_cast< Quaternion * >( scratch.AllocBytes( nTargetCount * sizeof( Quaternion ) ) );
 
 	mstudioconstrainttarget_t *pTarget;
 
@@ -449,9 +447,10 @@ float CStudioConstraintBones::ComputeTargetPositionOrientation(
 	int	nTargetCount,
 	CBoneAccessor &boneToWorld )
 {
-	float *pflTargetWeights = reinterpret_cast< float * >( stackalloc( nTargetCount * sizeof( float ) ) );
-	matrix3x4a_t *pmTargets = reinterpret_cast< matrix3x4a_t * >( stackalloc( nTargetCount * sizeof( matrix3x4a_t ) ) );
-	matrix3x4a_t *pmOffsets = reinterpret_cast< matrix3x4a_t * >( stackalloc( nTargetCount * sizeof( matrix3x4a_t ) ) );
+	ks::ScratchArena<> scratch;
+	float *pflTargetWeights = reinterpret_cast< float * >( scratch.AllocBytes( nTargetCount * sizeof( float ) ) );
+	matrix3x4a_t *pmTargets = reinterpret_cast< matrix3x4a_t * >( scratch.AllocBytes( nTargetCount * sizeof( matrix3x4a_t ) ) );
+	matrix3x4a_t *pmOffsets = reinterpret_cast< matrix3x4a_t * >( scratch.AllocBytes( nTargetCount * sizeof( matrix3x4a_t ) ) );
 
 	mstudioconstrainttarget_t *pTarget = pTargets;
 
@@ -477,7 +476,7 @@ void CStudioConstraintBones::ComputeBaseWorldMatrix(
 	const matrix3x4_t *pmViewTransform /* = NULL */ )
 {
 	// studiomdl shouldn't create mstudioconstraintslave_t's with invalid bone indices
-	Assert( pSlave->m_nBone >= 0 && pSlave->m_nBone < MAXSTUDIOBONES );
+	contract_assert( pSlave->m_nBone >= 0 && pSlave->m_nBone < MAXSTUDIOBONES );
 
 	const int nBoneParent = pStudioHdr->boneParent( pSlave->m_nBone );
 	if ( nBoneParent < 0 )
@@ -511,7 +510,6 @@ void CStudioConstraintBones::ComputePointConstraint(
 	CBoneAccessor &boneToWorld,
 	const CStudioHdr *pStudioHdr )
 {
-	BONE_PROFILE_FUNC();
 
 	mstudiopointconstraint_t *pProc = ( mstudiopointconstraint_t * )pBones[nBone].pProcedure();
 
@@ -553,7 +551,6 @@ void CStudioConstraintBones::ComputeOrientConstraint(
 	const CStudioHdr *pStudioHdr,
 	const matrix3x4_t *pmViewTransform )
 {
-	BONE_PROFILE_FUNC();
 
 	mstudioorientconstraint_t *pProc = ( mstudioorientconstraint_t * )pBones[nBone].pProcedure();
 
@@ -603,7 +600,6 @@ void CStudioConstraintBones::ComputeAimConstraint(
 	const matrix3x4_t *pmViewTransform,
 	AimConstraintUpType_t eType )
 {
-	BONE_PROFILE_FUNC();
 
 	mstudioaimconstraint_t *pProc = ( mstudioaimconstraint_t * )pBones[nBone].pProcedure();
 
@@ -710,7 +706,6 @@ void CStudioConstraintBones::ComputeParentConstraint(
 	CBoneAccessor &boneToWorld,
 	const CStudioHdr *pStudioHdr )
 {
-	BONE_PROFILE_FUNC();
 
 	mstudioorientconstraint_t *pProc = ( mstudioorientconstraint_t * )pBones[nBone].pProcedure();
 
@@ -790,7 +785,7 @@ void ComputeTwistBones(
 	const float *pflWeights,
 	const Quaternion *pqTwistBinds )
 {
-	const float flEps = FLT_EPSILON * 10.0f;
+	const float flEps = std::numeric_limits<float>::epsilon() * 10.0f;
 	const float flEpsSq = flEps * flEps;
 
 	Vector vUpRotate;
@@ -871,7 +866,7 @@ void ComputeTwistBones(
 		CrossProduct( vUpProject, vUpRotateProject, vTmp0 );
 		VectorNormalize( vTmp0 );
 		const float flDot = DotProduct( vUpProject, vUpRotateProject );
-		const float flAngle = DotProduct( vTmp0, vRotatedTranslation ) < 0.0f ? -acos( flDot ) : acos( flDot );
+		const float flAngle = DotProduct( vTmp0, vRotatedTranslation ) < 0.0f ? -std::acos( flDot ) : std::acos( flDot );
 
 		AxisAngleQuaternion( vLocalTranslation, RAD2DEG( flAngle ), qTmp0 );
 

@@ -1,15 +1,6 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef HARDWARECONFIG_H
-#define HARDWARECONFIG_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "IHardwareConfigInternal.h"
@@ -25,9 +16,9 @@ struct ShaderDeviceInfo_t;
 //-----------------------------------------------------------------------------
 // Vendor IDs sometimes needed for vendor-specific code
 //-----------------------------------------------------------------------------
-#define VENDORID_NVIDIA	0x10DE
-#define VENDORID_ATI	0x1002
-#define VENDORID_INTEL  0x8086
+inline constexpr auto VENDORID_NVIDIA = 0x10DE;
+inline constexpr auto VENDORID_ATI = 0x1002;
+inline constexpr auto VENDORID_INTEL = 0x8086;
 
 //-----------------------------------------------------------------------------
 // ShaderAPI constants
@@ -277,6 +268,3 @@ protected:
 // Singleton hardware config
 //-----------------------------------------------------------------------------
 extern CHardwareConfig *g_pHardwareConfigDx8;
-
-
-#endif // HARDWARECONFIG_H

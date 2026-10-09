@@ -1,22 +1,16 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Revision: $
-// $NoKeywords: $
-//
-// This file contains a little interface to deal with pooled vertex buffer allocations
-// (which is used to allow multiple meshes to own sub-ranges within a single vertex buffer)
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#ifndef IPOOLEDVBALLOCATOR_H
-#define IPOOLEDVBALLOCATOR_H
+// Purpose: This file contains a little interface to deal with pooled vertex buffer allocations
+// (which is used to allow multiple meshes to own sub-ranges within a single vertex buffer)
 
 //-----------------------------------------------------------------------------
 // Pooled VB allocator abstract base class
 //-----------------------------------------------------------------------------
-abstract_class IPooledVBAllocator
+#include "materialsystem/imesh.h"
+
+class IPooledVBAllocator
 {
 public:
 
@@ -39,6 +33,3 @@ public:
 	virtual int				Allocate( int numVerts ) = 0;
 	virtual void			Deallocate( int offset, int numVerts ) = 0;
 };
-
-
-#endif	// IPOOLEDVBALLOCATOR_H

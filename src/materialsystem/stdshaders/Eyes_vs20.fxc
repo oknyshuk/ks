@@ -1,11 +1,12 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-// $SHADER_SPECIFIC_CONST_0	 = eyeball origin			
-// $SHADER_SPECIFIC_CONST_1	 = eyeball up * 0.5			
-// $SHADER_SPECIFIC_CONST_2	 = iris projection U		
-// $SHADER_SPECIFIC_CONST_3	 = iris projection V		
-// $SHADER_SPECIFIC_CONST_4	 = glint projection U		
-// $SHADER_SPECIFIC_CONST_5	 = glint projection V		
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+// Purpose: $SHADER_SPECIFIC_CONST_0	 = eyeball origin
+// $SHADER_SPECIFIC_CONST_1	 = eyeball up * 0.5
+// $SHADER_SPECIFIC_CONST_2	 = iris projection U
+// $SHADER_SPECIFIC_CONST_3	 = iris projection V
+// $SHADER_SPECIFIC_CONST_4	 = glint projection U
+// $SHADER_SPECIFIC_CONST_5	 = glint projection V
 
 // STATIC: "HALFLAMBERT"					"0..1"
 // STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..1" [vs20] [PC]
@@ -132,5 +133,3 @@ VS_OUTPUT main( const VS_INPUT v )
 
 	return o;
 }
-
-

@@ -1,65 +1,33 @@
-//====== Copyright  1996-2005, Valve Corporation, All rights reserved. =======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: An application framework
-//
-//=============================================================================//
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
+import ks.desktop;
+import ks.tier1;
 #include "appframework/ilaunchermgr.h"
-#include "appframework/sdlwindow.h"
-#include "tier1/keyvalues.h"
+import std;
 #include "filesystem.h"
 
 #include "materialsystem/imaterialsystem.h"
 #include "togl/rendermechanism.h"
-#include "tier0/fasttimer.h"
 
 
 
 static void DebugPrintf( const char *pMsg, ... )
 {
 	va_list args;
-	va_start( args, pMsg );
+	__builtin_va_start( args, pMsg );
 	char buf[2048];
 	V_vsnprintf( buf, sizeof( buf ), pMsg, args );
-	va_end( args );
+	__builtin_va_end( args );
 
-	Plat_DebugString( buf );
 }
 
 // #define SDLAPP_DEBUG
-#ifdef SDLAPP_DEBUG
-class LinuxAppFuncLogger
-{
-	public:
-		LinuxAppFuncLogger( const char *funcName ) : m_funcName( funcName )
-		{
-			printf( ">%s\n", m_funcName );
-		};
-
-		LinuxAppFuncLogger( const char *funcName, char *fmt, ... )
-		{
-			m_funcName = funcName;
-
-			va_list	vargs;
-			va_start(vargs, fmt);
-			vprintf( fmt, vargs );
-			va_end( vargs );
-		}
-
-		~LinuxAppFuncLogger( )
-		{
-			printf( "<%s\n", m_funcName );
-		};
-
-		const char *m_funcName;
-};
-#define	SDLAPP_FUNC			LinuxAppFuncLogger _logger_( __FUNCTION__ )
-#else
-#define SDLAPP_FUNC
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -85,7 +53,7 @@ public:
 	virtual bool CreateGameWindow( const char *pTitle, bool bWindowed, int width, int height, bool bDesktopFriendlyFullscreen );
 
 	// Get the next N events. The function returns the number of events that were filled into your array.
-	virtual int GetEvents( SDL_Event *pEvents, int nMaxEventsToReturn );
+	virtual int GetEvents( ks::desktop::event *pEvents, int nMaxEventsToReturn );
 
 	// Set the mouse cursor position.
 	virtual void SetCursorPosition( int x, int y );
@@ -122,7 +90,7 @@ public:
 
 	// Push the desired pointer state to SDL. Cheap to repeat: diffs against SDL first.
 	void ApplyPointerState();
-	virtual void SetMouseCursor( SDL_Cursor *hCursor );
+	virtual void SetMouseCursor( ks::desktop::cursor *hCursor );
 	virtual void SetForbidMouseGrab( bool bForbidMouseGrab ) { m_bForbidMouseGrab = bForbidMouseGrab; }
 
 	virtual void OnFrameRendered();
@@ -130,10 +98,8 @@ public:
 	// Returns all dependent libraries
 	virtual const AppSystemInfo_t* GetDependencies() {return nullptr;}
 
-#if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 	virtual void ForceSystemCursorVisible();
 	virtual void UnforceSystemCursorVisible();
-#endif
 
 	// Returns the tier
 	virtual AppSystemTier_t GetTier()
@@ -203,11 +169,9 @@ private:
 
 
 
-#if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 	int m_nForceCursorVisible;
 	int m_nForceCursorVisiblePrev;
 	SDL_Cursor* m_hSystemArrowCursor;
-#endif
 
 
 	bool m_bTextMode;
@@ -276,9 +240,11 @@ static int GetLargestDisplaySize( int& Width, int& Height )
 	return nDisplay;
 }
 
-CON_COMMAND( grab_window, "grab/ungrab window." )
+static void grab_window( const CCommand &args );
+static ConCommand grab_window_command( "grab_window", grab_window, "grab/ungrab window." );
+static void grab_window( const CCommand &args )
 {
-	SDL_Window *pWindow = GetGameSDLWindow();
+	SDL_Window *pWindow = reinterpret_cast< SDL_Window * >( ks::desktop::game_window() );
 	if ( pWindow )
 	{
 		bool bGrab;
@@ -318,16 +284,10 @@ CSDLMgr::CSDLMgr()
 
 InitReturnVal_t CSDLMgr::Init()
 {
-	SDLAPP_FUNC;
-
 	if (m_Window != nullptr)
 		return INIT_OK;  // already initialized.
 
-#if ALLOW_TEXT_MODE
-	m_bTextMode = CommandLine()->FindParm( "-textmode" );
-#else
 	m_bTextMode = false;
-#endif
 
 	SDL_SetHint( SDL_HINT_VIDEO_DRIVER, "wayland,x11" );
 	SDL_SetHint( SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1" );
@@ -380,11 +340,9 @@ InitReturnVal_t CSDLMgr::Init()
 	m_nMouseTargetY = 0;
 	m_nWarpDelta = 0;
 
-#if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 	m_nForceCursorVisible = 0;
 	m_nForceCursorVisiblePrev = 0;
 	m_hSystemArrowCursor = SDL_CreateSystemCursor( SDL_SYSTEM_CURSOR_DEFAULT );
-#endif
 
 
 	memset(m_pixelFormatAttribs, '\0', sizeof (m_pixelFormatAttribs));
@@ -413,32 +371,21 @@ InitReturnVal_t CSDLMgr::Init()
 
 bool CSDLMgr::Connect( CreateInterfaceFn factory )
 {
-	SDLAPP_FUNC;
-
 	return true;
 }
 
-void CSDLMgr::Disconnect()
-{
-	SDLAPP_FUNC;
-
-}
+void CSDLMgr::Disconnect() { }
 
 void *CSDLMgr::QueryInterface( const char *pInterfaceName )
 {
-	SDLAPP_FUNC;
-	if ( !Q_stricmp( pInterfaceName, SDLMGR_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, SDLMGR_INTERFACE_VERSION ) )
 		return this;
 	return nullptr;
 }
 
 void CSDLMgr::Shutdown()
 {
-	SDLAPP_FUNC;
-
-#if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 	SDL_DestroyCursor( m_hSystemArrowCursor );
-#endif
 
 	DestroyGameWindow();
 	SDL_Vulkan_UnloadLibrary();
@@ -447,8 +394,6 @@ void CSDLMgr::Shutdown()
 
 bool CSDLMgr::CreateGameWindow( const char *pTitle, bool bWindowed, int width, int height, bool bDesktopFriendlyFullscreen )
 {
-	SDLAPP_FUNC;
-
 	if( ( width <= 0 ) || ( height <= 0 ) )
 	{
 		// Don't mess with current width, height - use current (or sane defaults).
@@ -568,10 +513,8 @@ bool CSDLMgr::CreateHiddenGameWindow( const char *pTitle, bool bWindowed, int wi
 	if (m_Window == nullptr)
 		Error( "Failed to create SDL window: %s", SDL_GetError() );
 
-	// Publish for every other module; see appframework/sdlwindow.h.
-	SetGameSDLWindow( m_Window );
-
-	SetAssertDialogParent( m_Window );
+	// Publish for every other module.
+	ks::desktop::set_game_window( reinterpret_cast< ks::desktop::window * >( m_Window ) );
 
 	// The compositor decides the final size; latch what we actually got, since
 	// WindowToEngineCoords() divides by it.
@@ -581,10 +524,9 @@ bool CSDLMgr::CreateHiddenGameWindow( const char *pTitle, bool bWindowed, int wi
 }
 
 
-int CSDLMgr::GetEvents( SDL_Event *pEvents, int nMaxEventsToReturn )
+int CSDLMgr::GetEvents( ks::desktop::event *pOpaqueEvents, int nMaxEventsToReturn )
 {
-	SDLAPP_FUNC;
-
+	SDL_Event *pEvents = reinterpret_cast< SDL_Event * >( pOpaqueEvents );
 	const int nToWrite = std::min( m_nEventsCount, nMaxEventsToReturn );
 
 	for ( int i = 0; i < nToWrite; i++ )
@@ -600,8 +542,6 @@ int CSDLMgr::GetEvents( SDL_Event *pEvents, int nMaxEventsToReturn )
 // Set the mouse cursor position, given engine screen space coordinates.
 void CSDLMgr::SetCursorPosition( int x, int y )
 {
-	SDLAPP_FUNC;
-
 	float wx, wy;
 	EngineToWindowCoords( x, y, wx, wy );
 
@@ -682,12 +622,10 @@ void CSDLMgr::GetCursorPosition( int *px, int *py )
 
 void CSDLMgr::PostEvent( const SDL_Event &theEvent )
 {
-	SDLAPP_FUNC;
-
 	if ( m_nEventsCount >= kMaxQueuedEvents )
 	{
 		// Dropping the newest event is better than overwriting one not yet read.
-		AssertMsg( false, "CSDLMgr event queue overflow" );
+		contract_assert( false && "CSDLMgr event queue overflow" );
 		return;
 	}
 
@@ -765,8 +703,6 @@ void CSDLMgr::ApplyPointerState()
 
 void CSDLMgr::SetMouseVisible( bool bState )
 {
-	SDLAPP_FUNC;
-
 	const bool bBecameVisible = ( bState && !m_bCursorVisible );
 
 	m_bCursorVisible = bState;
@@ -788,10 +724,9 @@ void CSDLMgr::SetMouseVisible( bool bState )
 	ApplyPointerState();
 }
 
-void CSDLMgr::SetMouseCursor( SDL_Cursor *hCursor )
+void CSDLMgr::SetMouseCursor( ks::desktop::cursor *hOpaqueCursor )
 {
-	SDLAPP_FUNC;
-
+	SDL_Cursor *hCursor = reinterpret_cast< SDL_Cursor * >( hOpaqueCursor );
 	if ( m_hCursor != hCursor )
 	{
 		m_hCursor = hCursor;
@@ -806,8 +741,6 @@ void CSDLMgr::SetMouseCursor( SDL_Cursor *hCursor )
 
 void CSDLMgr::OnFrameRendered()
 {
-	SDLAPP_FUNC;
-
 	if ( !m_bHasFocus )
 	{
 		return;
@@ -818,7 +751,6 @@ void CSDLMgr::OnFrameRendered()
 		++m_nFramesCursorInvisibleFor;
 	}
 
-#if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
 	if ( m_nForceCursorVisible > 0 )
 	{
 		// Edge case: We were just asked to force the cursor visible, so do it now.
@@ -836,62 +768,39 @@ void CSDLMgr::OnFrameRendered()
 	}
 	else if ( m_nForceCursorVisiblePrev > 0 )
 	{
-		Assert( m_nForceCursorVisible == 0 );
+		contract_assert( m_nForceCursorVisible == 0 );
 
 		// Overlay let go of the cursor: put our own intent back.
 		ApplyPointerState();
 	}
 
 	m_nForceCursorVisiblePrev = m_nForceCursorVisible;
-#endif
 
 }
 
 
 void CSDLMgr::SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bool bDesktopFriendlyFullscreen )
 {
-	SDLAPP_FUNC;
-
-	// Guard fullscreen re-application: on Wayland, calling SDL_SetWindowFullscreenMode
-	// on an already-fullscreen window re-sends xdg_toplevel_set_fullscreen, which can
-	// move the window to a different output. This path is hit on every focus gain via
-	// RestoreVideo -> AdjustWindow -> ChangeDisplaySettingsToFullscreen.
-	// Only skip when already fullscreen. Windowed->windowed calls must still run
-	// to handle resolution changes (SizeWindow).
 	if ( bFullScreen && m_bFullScreen )
 		return;
 
 	if ( m_bFullScreen != bFullScreen )
 	{
-		// Display we intend to steer the window onto (0 = leave it where it is).
-		// Declared out here so the post-fullscreen sanity check (D) can use it.
 		SDL_DisplayID targetDisplay = 0;
 
 		if ( bFullScreen )
 		{
-			// Steer FULLSCREEN_DESKTOP onto the intended monitor. We keep
-			// FULLSCREEN_DESKTOP (SDL owns real fullscreen); crispness comes from
-			// the backbuffer tracking the surface pixel size, so all we need is to
-			// get the window onto the right output before going fullscreen.
-			// Otherwise we fullscreen on whatever output the window currently sits
-			// on (e.g. a smaller internal panel), producing a scaled/blurry image.
 			int dCount = 0;
 			SDL_DisplayID *dList = SDL_GetDisplays( &dCount );
 
 			if ( dList && dCount > 0 )
 			{
-				// 1. Explicit user override wins. This is the only disambiguator
-				//    for two identical-resolution monitors. sdl_displayindex is an
-				//    index into SDL_GetDisplays(), not a raw SDL_DisplayID.
 				int idx = sdl_displayindex.GetInt();
 				if ( idx >= 0 && idx < dCount )
 				{
 					targetDisplay = dList[idx];
 				}
 
-				// 2. Exact desktop-mode match for the requested resolution. If
-				//    several displays match, prefer the one the window is already
-				//    on, else the primary, else the first match.
 				if ( !targetDisplay && nWidth > 0 && nHeight > 0 )
 				{
 					SDL_DisplayID curDisplay = SDL_GetDisplayForWindow( m_Window );
@@ -917,7 +826,6 @@ void CSDLMgr::SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bo
 						targetDisplay = firstMatch;
 				}
 
-				// 3. Fall back to the largest display by area.
 				if ( !targetDisplay )
 				{
 					int bestArea = 0;
@@ -935,8 +843,6 @@ void CSDLMgr::SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bo
 				}
 			}
 
-			// 4. If we picked a specific display, move the window there. Otherwise
-			//    fullscreen on the current output (no move).
 			if ( targetDisplay )
 			{
 				SDL_SetWindowPosition( m_Window,
@@ -953,9 +859,6 @@ void CSDLMgr::SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bo
 		SDL_SetWindowFullscreen( m_Window, bFullScreen );
 		SDL_SyncWindow( m_Window );
 
-		// D. Wayland positioning is a hint, not a guarantee. If we targeted a
-		//    specific display, verify the window actually landed there so a future
-		//    silent-blur regression is diagnosable. No retry / no exclusive fallback.
 		if ( bFullScreen && targetDisplay )
 		{
 			SDL_DisplayID actual = SDL_GetDisplayForWindow( m_Window );
@@ -981,15 +884,11 @@ void CSDLMgr::SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bo
 
 void CSDLMgr::MoveWindow( int x, int y )
 {
-	SDLAPP_FUNC;
-
 	SDL_SetWindowPosition(m_Window, x, y);
 }
 
 void CSDLMgr::SizeWindow( int width, int tall )
 {
-	SDLAPP_FUNC;
-
 	SDL_SetWindowSize(m_Window, width, tall);
 	SDL_SyncWindow(m_Window);
 
@@ -1040,8 +939,6 @@ static bool IsForwardedToInputSystem( Uint32 nType )
 
 void CSDLMgr::PumpWindowsMessageLoop()
 {
-	SDLAPP_FUNC;
-
 	SDL_Event event;
 	int nEventsProcessed = 0;
 	while ( SDL_PollEvent( &event ) && nEventsProcessed < 100 )
@@ -1177,23 +1074,19 @@ void CSDLMgr::PumpWindowsMessageLoop()
 
 void CSDLMgr::DestroyGameWindow()
 {
-	SDLAPP_FUNC;
-
 	if ( m_Window )
 	{
 		SDL_SetWindowFullscreen(m_Window, false);  // just in case.
 		SDL_SetWindowMouseGrab(m_Window, false);  // just in case.
 		SDL_DestroyWindow(m_Window);
 		m_Window = nullptr;
-		SetGameSDLWindow( nullptr );
+		ks::desktop::set_game_window( nullptr );
 	}
 }
 
 
 void CSDLMgr::SetApplicationIcon( const char *pchAppIconFile )
 {
-	SDLAPP_FUNC;
-
 	SDL_Surface *icon = SDL_LoadBMP(pchAppIconFile);
 	if (icon)
 	{
@@ -1204,8 +1097,6 @@ void CSDLMgr::SetApplicationIcon( const char *pchAppIconFile )
 
 void CSDLMgr::GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta )
 {
-	SDLAPP_FUNC;
-
 	// Raw relative motion, exactly as SDL reported it. No screen-space scaling:
 	// these are pointer deltas, not positions, so a resolution ratio never applied.
 	x = m_flMouseXDelta;
@@ -1219,9 +1110,7 @@ void CSDLMgr::GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta )
 void CSDLMgr::GetNativeDisplayInfo( int nDisplay, uint &nWidth, uint &nHeight, uint &nRefreshHz )
 {
 	if ( nDisplay == -1 )
-	{
 		nDisplay = g_bSDLDisplayindexSet ? sdl_displayindex.GetInt() : -1;
-	}
 
 	// Resolve display ID: -1 uses the window's current output
 	SDL_DisplayID displayID;
@@ -1241,9 +1130,7 @@ void CSDLMgr::GetNativeDisplayInfo( int nDisplay, uint &nWidth, uint &nHeight, u
 
 	const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode( displayID );
 	if ( !mode )
-	{
 		mode = SDL_GetDesktopDisplayMode( SDL_GetPrimaryDisplay() );
-	}
 
 	if ( mode )
 	{
@@ -1259,16 +1146,12 @@ void CSDLMgr::GetNativeDisplayInfo( int nDisplay, uint &nWidth, uint &nHeight, u
 	}
 }
 
-
-
-
-
 static KeyValues *LoadCursorResource()
 {
 	static const char *pPath = "resource/cursor/cursor.res";
 	KeyValues *pKeyValues = new KeyValues( pPath );
 	const bool bLoadedCursorResource = pKeyValues->LoadFromFile( g_pFullFileSystem, pPath );
-	Assert( bLoadedCursorResource );
+	contract_assert( bLoadedCursorResource );
 	return pKeyValues;
 }
 
@@ -1278,7 +1161,7 @@ InputCursorHandle_t CSDLMgr::LoadCursorFromFile( const char *pchFileName )
 	// we expect there to be a .bmp file in the same location which will
 	// contain the image for the cursor. (This means we don't support
 	// animated or scaling cursors).
-	char path[PATH_MAX];
+	char path[k_cMaxPath];
 	V_StripExtension( pchFileName, path, sizeof( path ) );
 	V_strcat( path, ".bmp", sizeof( path ) );
 
@@ -1293,7 +1176,7 @@ InputCursorHandle_t CSDLMgr::LoadCursorFromFile( const char *pchFileName )
 	// x,y hotspot. Load it and find the x,y hotspot.
 	static KeyValues *pCursorResource = LoadCursorResource();
 
-	char pchCursorName[PATH_MAX];
+	char pchCursorName[k_cMaxPath];
 	V_FileBase( path, pchCursorName, sizeof( pchCursorName ) );
 
 	int nHotX = 0, nHotY = 0;
@@ -1326,24 +1209,16 @@ void CSDLMgr::SetCursorIcon( const InputCursorHandle_t pchCursor )
 }
 
 
-//===============================================================================
-
-#if WITH_OVERLAY_CURSOR_VISIBILITY_WORKAROUND
-//===============================================================================
 void CSDLMgr::ForceSystemCursorVisible()
 {
-	Assert( m_nForceCursorVisible >= 0 );
+	contract_assert( m_nForceCursorVisible >= 0 );
 	m_nForceCursorVisible += 1;
 }
 
-//===============================================================================
 void CSDLMgr::UnforceSystemCursorVisible()
 {
-	Assert( m_nForceCursorVisible >= 1 );
+	contract_assert( m_nForceCursorVisible >= 1 );
 	m_nForceCursorVisible -= 1;
 }
-
-#endif
-
 
 #endif  // !DEDICATED

@@ -1,14 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef PHYSDLL_H
-#define PHYSDLL_H
 #pragma once
-
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #ifdef __cplusplus
 #include "vphysics_interface.h"
@@ -26,5 +18,3 @@ void					PhysicsDLLPath( const char *pPathname );
 #ifdef __cplusplus
 }
 #endif
-
-#endif // PHYSDLL_H

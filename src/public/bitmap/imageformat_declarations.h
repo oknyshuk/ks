@@ -1,12 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ========
-
-#ifndef IMAGEFORMAT_DECLARATIONS_HDR
-#define IMAGEFORMAT_DECLARATIONS_HDR
-
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "togl/rendermechanism.h"
-
 
 enum NormalDecodeMode_t
 {
@@ -109,9 +105,3 @@ enum ImageFormat
 
 	NUM_IMAGE_FORMATS
 };
-
-
-
-
-
-#endif

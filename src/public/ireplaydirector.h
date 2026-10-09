@@ -1,17 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef IREPLAYDIRECTOR_H
-#define IREPLAYDIRECTOR_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.tier1;
 
 class IReplayServer;
-class KeyValues;
-class Vector;
 
-#define INTERFACEVERSION_REPLAYDIRECTOR			"ReplayDirector001"
+inline constexpr const char *INTERFACEVERSION_REPLAYDIRECTOR = "ReplayDirector001";
 
 class IReplayDirector
 {
@@ -30,5 +24,3 @@ public:
 
 	virtual const char**	GetModEvents() = 0;
 };
-
-#endif // IREPLAYDIRECTOR_H

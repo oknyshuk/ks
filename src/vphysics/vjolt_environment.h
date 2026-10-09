@@ -9,12 +9,25 @@
 
 #pragma once
 
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/Core/Reference.h>
+#include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/StateRecorder.h>
+#include <Jolt/Physics/Constraints/Constraint.h>
+#include <Jolt/Physics/Collision/Shape/Shape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexShape.h>
+#include <Jolt/Physics/Collision/Shape/DecoratedShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Geometry/AABox.h>
+#include <Jolt/Core/Color.h>
+import std;
+import ks.tier1;
 #include "vjolt_interface.h"
 #include "vjolt_object.h"
 #include "vjolt_constraints.h"
 #include "vjolt_listener_contact.h"
+#include "vphysics/performance.h"
 
 // StateRecorder implementation that saves to or restores from a fixed buffer
 class VJoltStateRecorder final : public JPH::StateRecorder
@@ -146,20 +159,20 @@ public:
 	void EnableConstraintNotify( bool bEnable ) override;
 	void DebugCheckContacts() override;
 
-	void SetAlternateGravity( const Vector& gravityVector ) override_asw;
-	void GetAlternateGravity( Vector* pGravityVector ) const override_asw;
+	void SetAlternateGravity( const Vector& gravityVector ) ;
+	void GetAlternateGravity( Vector* pGravityVector ) const ;
 
-	float GetDeltaFrameTime( int maxTicks ) const override_asw;
-	void ForceObjectsToSleep( IPhysicsObject** pList, int listCount ) override_asw;
+	float GetDeltaFrameTime( int maxTicks ) const ;
+	void ForceObjectsToSleep( IPhysicsObject** pList, int listCount ) ;
 
-	void SetPredicted( bool bPredicted ) override_portal2;
-	bool IsPredicted() override_portal2;
-	void SetPredictionCommandNum( int iCommandNum ) override_portal2;
-	int GetPredictionCommandNum() override_portal2;
-	void DoneReferencingPreviousCommands( int iCommandNum ) override_portal2;
-	void RestorePredictedSimulation() override_portal2;
+	void SetPredicted( bool bPredicted ) ;
+	bool IsPredicted() ;
+	void SetPredictionCommandNum( int iCommandNum ) ;
+	int GetPredictionCommandNum() ;
+	void DoneReferencingPreviousCommands( int iCommandNum ) ;
+	void RestorePredictedSimulation() ;
 
-	void DestroyCollideOnDeadObjectFlush( CPhysCollide* ) override_portal2;
+	void DestroyCollideOnDeadObjectFlush( CPhysCollide* ) ;
 
 public:
 	JPH::PhysicsSystem* GetPhysicsSystem() { return &m_PhysicsSystem; }

@@ -1,18 +1,11 @@
-//====== Copyright 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "net_ws_headers.h"
-#include <atomic>
-#include <mutex>
+import std;
 #include "net_ws_queued_packet_sender.h"
 
-#include "tier0/vprof.h"
-#include "tier1/utlvector.h"
-#include "tier1/vector_ops.h"
-#include <memory>
 
 ConVar net_queued_packet_thread( "net_queued_packet_thread", "1", 0, "Use a high priority thread to send queued packets out instead of sending them each frame." );
 ConVar net_queue_trace( "net_queue_trace", "0", FCVAR_ACCESSIBLE_FROM_THREADS );
@@ -30,7 +23,7 @@ public:
 	virtual bool IsRunning() { return CThread::IsAlive(); }
 
 	virtual void ClearQueuedPacketsForChannel( INetChannel *pChan );
-	virtual void QueuePacket( INetChannel *pChan, SOCKET s, const char FAR *buf, int len, const ns_address &to, uint32 msecDelay );
+	virtual void QueuePacket( INetChannel *pChan, SOCKET s, const char  *buf, int len, const ns_address &to, uint32 msecDelay );
 	virtual bool HasQueuedPackets( const INetChannel *pChan ) const;
 private:
 
@@ -144,7 +137,7 @@ bool CQueuedPacketSender::HasQueuedPackets( const INetChannel *pChan ) const
 	return false;
 }
 
-void CQueuedPacketSender::QueuePacket( INetChannel *pChan, SOCKET s, const char FAR *buf, int len, const ns_address &to, uint32 msecDelay )
+void CQueuedPacketSender::QueuePacket( INetChannel *pChan, SOCKET s, const char  *buf, int len, const ns_address &to, uint32 msecDelay )
 {
 	std::scoped_lock lock( m_QueuedPacketsCS );
 
@@ -176,7 +169,7 @@ void CQueuedPacketSender::QueuePacket( INetChannel *pChan, SOCKET s, const char 
 	m_hThreadEvent.Set();
 }
 
-extern int NET_SendToImpl( SOCKET s, const char FAR * buf, int len, const ns_address &to, int iGameDataLength );
+extern int NET_SendToImpl( SOCKET s, const char  * buf, int len, const ns_address &to, int iGameDataLength );
 
 int CQueuedPacketSender::Run()
 {
@@ -198,7 +191,6 @@ int CQueuedPacketSender::Run()
 
 		// OK, now send a packet.
 		{
-            SNPROF("NET_SendToImpl");
 			std::scoped_lock lock( m_QueuedPacketsCS );
 		
 			// We'll pull all packets we should have sent by now and send them out right away
@@ -245,4 +237,3 @@ int CQueuedPacketSender::Run()
 		}
 	}
 }
-

@@ -1,15 +1,9 @@
-//===== Copyright c 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef IMATCHVOICE_H
-#define IMATCHVOICE_H
-
-
-abstract_class IMatchVoice
+import ks.core;
+class IMatchVoice
 {
 public:
 	// Whether remote player talking can be visualized / audible
@@ -30,6 +24,3 @@ public:
 	// Enable or disable voice mute for a given talker
 	virtual void MuteTalker( XUID xuidTalker, bool bMute ) = 0;
 };
-
-#endif
-

@@ -1,26 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ISERVERNETWORKABLE_H
-#define ISERVERNETWORKABLE_H
-
-
+import ks.core;
 #include "ihandleentity.h"
-#include "basetypes.h"
-#include <bitset>
+import std;
 #include "const.h"
 #include "bspfile.h"
 
-
-
 // Entities can span this many clusters before we revert to a slower area checking algorithm
-#define	MAX_FAST_ENT_CLUSTERS	4
-#define	MAX_ENT_CLUSTERS	64
-#define MAX_WORLD_AREAS		8
+inline constexpr auto MAX_FAST_ENT_CLUSTERS = 4;
+inline constexpr auto MAX_ENT_CLUSTERS = 64;
+inline constexpr auto MAX_WORLD_AREAS = 8;
 
 
 class ServerClass;
@@ -114,6 +105,3 @@ protected:
 	// Should never call delete on this! 
 	virtual					~IServerNetworkable() {}
 };
-
-
-#endif // ISERVERNETWORKABLE_H

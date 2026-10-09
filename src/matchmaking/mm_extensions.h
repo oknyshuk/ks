@@ -1,13 +1,9 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef MM_EXTENSIONS_H
-#define MM_EXTENSIONS_H
-
-#include "tier1/map_ops.h"
+import std;
+import ks.tier1;
 
 #include "localize/ilocalize.h"
 #include "engine/inetsupport.h"
@@ -65,7 +61,7 @@ protected:
 	// Known extension interfaces
 	struct Exts_t
 	{
-		inline Exts_t() { memset( this, 0, sizeof( *this ) ); }
+		inline Exts_t() { std::memset( this, 0, sizeof( *this ) ); }
 
 		ILocalize *m_pILocalize;
 		INetSupport *m_pINetSupport;
@@ -81,5 +77,3 @@ protected:
 
 // Match title singleton
 extern CMatchExtensions *g_pMatchExtensions;
-
-#endif // MM_EXTENSIONS_H

@@ -1,13 +1,9 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ISERVERENGINETOOLS_H
-#define ISERVERENGINETOOLS_H
-
-#include "interface.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -48,6 +44,4 @@ public:
 	virtual bool InToolMode() = 0;
 };
 
-#define VSERVERENGINETOOLS_INTERFACE_VERSION "VSERVERENGINETOOLS001"
-
-#endif // ISERVERENGINETOOLS_H
+inline constexpr const char *VSERVERENGINETOOLS_INTERFACE_VERSION = "VSERVERENGINETOOLS001";

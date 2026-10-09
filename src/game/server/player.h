@@ -1,13 +1,9 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef PLAYER_H
-#define PLAYER_H
-
-#include <bitset>
+import std;
+import ks.core;
 #include "reflect_annotations.h"
 #include "sendprop_priorities.h"
 
@@ -19,11 +15,10 @@
 #include "hintsystem.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "simtimer.h"
-#include "vprof.h"
 #include "iclient.h"
 #include "input_device.h"
 #include "vote_controller.h"
-#include <deque>
+#include "baseplayer_shared.h"
 
 class CLogicPlayerProxy;
 
@@ -94,12 +89,13 @@ class CAI_Node;
 class CAI_Link;
 
 class CTonemapTrigger;
+class CColorCorrection;
 
 // for step sounds
 struct surfacedata_t;
 
 // !!!set this bit on guns and stuff that should never respawn.
-#define	SF_NORESPAWN	( 1 << 30 )
+inline constexpr auto SF_NORESPAWN = ( 1 << 30 );
 
 
 //
@@ -108,23 +104,23 @@ struct surfacedata_t;
 //-----------------------------------------------------
 //This is Half-Life player entity
 //-----------------------------------------------------
-#define CSUITPLAYLIST	4		// max of 4 suit sentences queued up at any time
-#define	SUIT_REPEAT_OK		0
+inline constexpr auto CSUITPLAYLIST = 4; // max of 4 suit sentences queued up at any time
+inline constexpr auto SUIT_REPEAT_OK = 0;
 
-#define SUIT_NEXT_IN_30SEC	30
-#define SUIT_NEXT_IN_1MIN	60
-#define SUIT_NEXT_IN_5MIN	300
-#define SUIT_NEXT_IN_10MIN	600
-#define SUIT_NEXT_IN_30MIN	1800
-#define SUIT_NEXT_IN_1HOUR	3600
+inline constexpr auto SUIT_NEXT_IN_30SEC = 30;
+inline constexpr auto SUIT_NEXT_IN_1MIN = 60;
+inline constexpr auto SUIT_NEXT_IN_5MIN = 300;
+inline constexpr auto SUIT_NEXT_IN_10MIN = 600;
+inline constexpr auto SUIT_NEXT_IN_30MIN = 1800;
+inline constexpr auto SUIT_NEXT_IN_1HOUR = 3600;
 
-#define CSUITNOREPEAT		32
+inline constexpr auto CSUITNOREPEAT = 32;
 
-#define TEAM_NAME_LENGTH	16
+inline constexpr auto TEAM_NAME_LENGTH = 16;
 
 // constant items
-#define ITEM_HEALTHKIT		1
-#define ITEM_BATTERY		4
+inline constexpr auto ITEM_HEALTHKIT = 1;
+inline constexpr auto ITEM_BATTERY = 4;
 
 #define AUTOAIM_2DEGREES  0.0348994967025
 #define AUTOAIM_5DEGREES  0.08715574274766
@@ -171,9 +167,6 @@ public:
 	virtual int			GetArmorValue();
 
 	virtual bool IsHLTV();
-#if defined( REPLAY_ENABLED )
-	virtual bool IsReplay();
-#endif
 	virtual bool IsPlayer();
 	virtual bool IsFakeClient();
 	virtual bool IsDead();
@@ -328,12 +321,10 @@ public:
 	// If a map clean up has been done after a respawn, this function will reassign the entity pointers to those map entities that were deleted.
 	void					UpdateMapEntityPointers( void );
 
-#if !defined( NO_ENTITY_PREDICTION )
 	void					AddToPlayerSimulationList( CBaseEntity *other );
 	void					RemoveFromPlayerSimulationList( CBaseEntity *other );
 	void					SimulatePlayerSimulatedEntities( void );
 	void					ClearPlayerSimulationList( void );
-#endif
 
 	// Physics simulation (player executes it's usercmd's here)
 	virtual void			PhysicsSimulate( void );
@@ -378,7 +369,7 @@ public:
 
 	virtual QAngle			BodyAngles();
 	virtual Vector			BodyTarget( const Vector &posSrc, bool bNoisy);
-	virtual bool			ShouldFadeOnDeath( void ) { return FALSE; }
+	virtual bool			ShouldFadeOnDeath( void ) { return false; }
 	
 	virtual const impactdamagetable_t &GetPhysicsImpactDamageTable();
 	virtual int				OnTakeDamage_Alive( const CTakeDamageInfo &info );
@@ -390,9 +381,9 @@ public:
 
 	bool					IsHLTV( void ) const { return pl.hltv; }
 	bool					IsReplay( void ) const { return pl.replay; }
-	virtual	bool			IsPlayer( void ) const { return true; }			// Spectators return TRUE for this, use IsObserver to seperate cases
-	virtual bool			IsNetClient( void ) const { return true; }		// Bots should return FALSE for this, they can't receive NET messages
-																			// Spectators should return TRUE for this
+	virtual	bool			IsPlayer( void ) const { return true; }			// Spectators return true for this, use IsObserver to seperate cases
+	virtual bool			IsNetClient( void ) const { return true; }		// Bots should return false for this, they can't receive NET messages
+																			// Spectators should return true for this
 
 	virtual bool			IsFakeClient( void ) const;
 
@@ -506,7 +497,7 @@ public:
 	virtual void			CheatImpulseCommands( int iImpulse );
 	virtual bool			ClientCommand( const CCommand &args );
 
-	static CBasePlayer*		GetPlayerBySteamID( const CSteamID &steamID );
+	static CBasePlayer*		GetPlayerByPlayerID( const CPlayerId &playerUID );
 
 	void					NotifySinglePlayerGameEnding() { m_bSinglePlayerGameEnding = true; }
 	bool					IsSinglePlayerGameEnding() { return m_bSinglePlayerGameEnding == true; }
@@ -908,9 +899,9 @@ public:
 	virtual CAI_Expresser *GetExpresser() { return nullptr; };
 
 	//----------------------------
-	// Steam handling
-	bool		GetSteamID( CSteamID *pID, bool bRequireFullyAuthenticated = false );
-	uint64		GetSteamIDAsUInt64( void );
+	// Player ID handling
+	bool		GetPlayerID( CPlayerId *pID, bool bRequireFullyAuthenticated = false );
+	uint64		GetPlayerIDAsUInt64( void );
 
 	void				IncrementEFNoInterpParity();
 	int					GetEFNoInterpParity() const;
@@ -1173,7 +1164,7 @@ private:
 
 	bool					m_fInitHUD;				// True when deferred HUD restart msg needs to be sent
 	bool					m_fGameHUDInitialized;
-	bool					m_fWeapon;				// Set this to FALSE to force a reset of the current weapon HUD info
+	bool					m_fWeapon;				// Set this to false to force a reset of the current weapon HUD info
 
 	int						m_iUpdateTime;		// stores the number of frame ticks before sending HUD update messages
 	int						m_iClientBattery;	// the Battery currently known by the client.  If this changes, send a new
@@ -1268,9 +1259,7 @@ private:
 	
 	CNetworkVar( CBaseCombatWeaponHandle, m_hLastWeapon, [[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] );
 
-#if !defined( NO_ENTITY_PREDICTION )
 	std::vector< CHandle< CBaseEntity > > m_SimulatedByThisPlayer;
-#endif
 
 	float					m_flOldPlayerZ;
 	float					m_flOldPlayerViewOffsetZ;
@@ -1316,13 +1305,8 @@ protected:
 	CNetworkVar( float,  m_flLaggedMovementValue, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .table = "DT_LocalPlayerExclusive" } ]] );
 
 	// These are generated while running usercmds, then given to UpdateVPhysicsPosition after running all queued commands.
-#if defined( DEBUG_MOTION_CONTROLLERS )
-	CNetworkVector( m_vNewVPhysicsPosition );
-	CNetworkVector( m_vNewVPhysicsVelocity );
-#else
 	Vector m_vNewVPhysicsPosition;
 	Vector m_vNewVPhysicsVelocity;
-#endif
 	
 	Vector	m_vecVehicleViewOrigin;		// Used to store the calculated view of the player while riding in a vehicle
 	QAngle	m_vecVehicleViewAngles;		// Vehicle angles
@@ -1384,7 +1368,7 @@ public:
 		{
 			return 0.0f;
 		}
-		else if ( flTimeNeeded > m_flMovementTimeForUserCmdProcessingRemaining + FLT_EPSILON )
+		else if ( flTimeNeeded > m_flMovementTimeForUserCmdProcessingRemaining + std::numeric_limits<float>::epsilon() )
 		{
 			float flResult = m_flMovementTimeForUserCmdProcessingRemaining;
 			m_flMovementTimeForUserCmdProcessingRemaining = 0.0f;
@@ -1446,11 +1430,6 @@ private:
 
 public:
 	virtual unsigned int PlayerSolidMask( bool brushOnly = false ) const;	// returns the solid mask for the given player, so bots can have a more-restrictive set
-#if defined( DEBUG_MOTION_CONTROLLERS )
-	CNetworkVector( m_Debug_vPhysPosition );
-	CNetworkVector( m_Debug_vPhysVelocity );
-	CNetworkVector( m_Debug_LinearAccel );
-#endif
 
 private:
 	// Eye/angle offsets - used for TrackIR and motion controllers
@@ -1536,7 +1515,7 @@ inline bool CBasePlayer::IsPredictingWeapons( void ) const
 
 inline int CBasePlayer::CurrentCommandNumber() const
 {
-	Assert( m_pCurrentCommand );
+	contract_assert( m_pCurrentCommand );
 	if ( !m_pCurrentCommand )
 		return 0;
 	return m_pCurrentCommand->command_number;
@@ -1544,7 +1523,7 @@ inline int CBasePlayer::CurrentCommandNumber() const
 
 inline const CUserCmd *CBasePlayer::GetCurrentUserCommand() const
 {
-	Assert( m_pCurrentCommand );
+	contract_assert( m_pCurrentCommand );
 	return m_pCurrentCommand;
 }
 
@@ -1583,7 +1562,7 @@ inline CBasePlayer *ToBasePlayer( CBaseEntity *pEntity )
 		return nullptr;
 
 #if _DEBUG
-	Assert( static_cast< CBasePlayer* >( pEntity ) == dynamic_cast< CBasePlayer* >( pEntity ) );
+	contract_assert( static_cast< CBasePlayer* >( pEntity ) == dynamic_cast< CBasePlayer* >( pEntity ) );
 #endif
 
 	return static_cast<CBasePlayer *>( pEntity );
@@ -1595,7 +1574,7 @@ inline const CBasePlayer *ToBasePlayer( const CBaseEntity *pEntity )
 		return nullptr;
 
 #if _DEBUG
-	Assert( static_cast< const CBasePlayer* >( pEntity ) == dynamic_cast< const CBasePlayer* >( pEntity ) );
+	contract_assert( static_cast< const CBasePlayer* >( pEntity ) == dynamic_cast< const CBasePlayer* >( pEntity ) );
 #endif
 
 	return static_cast< const CBasePlayer * >( pEntity );
@@ -1611,7 +1590,7 @@ inline const CBasePlayer *ToBasePlayer( const CBaseEntity *pEntity )
 template < typename Functor >
 bool ForEachPlayer( Functor &func )
 {
-	VPROF("ForEachPlayer");
+	CVProfScope _( "ForEachPlayer", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	for( int i=1; i<=gpGlobals->maxClients; ++i )
 	{
 		CBasePlayer *player = static_cast<CBasePlayer *>( UTIL_PlayerByIndex( i ) );
@@ -1659,7 +1638,7 @@ public:
 template <>
 inline bool ForEachPlayer( IPlayerFunctor &func )
 {
-	VPROF("ForEachPlayer");
+	CVProfScope _( "ForEachPlayer", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	func.OnBeginIteration();
 	
 	bool isComplete = true;
@@ -1699,8 +1678,8 @@ inline bool ForEachPlayer( IPlayerFunctor &func )
 // Collect all valid, connected players into given vector.
 // Returns number of players collected.
 //
-#define COLLECT_ONLY_LIVING_PLAYERS true
-#define APPEND_PLAYERS true
+inline constexpr auto COLLECT_ONLY_LIVING_PLAYERS = true;
+inline constexpr auto APPEND_PLAYERS = true;
 template < typename T >
 int CollectPlayers( std::vector< T * > *playerVector, int team = TEAM_ANY, bool isAlive = false, bool shouldAppend = false )
 {
@@ -1773,5 +1752,3 @@ private:
 
 	CBasePlayer	*m_pPlayer;
 };
-
-#endif // PLAYER_H

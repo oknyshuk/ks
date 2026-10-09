@@ -1,17 +1,13 @@
-//====== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-#ifndef MP_SHAREDDEFS_H
-#define MP_SHAREDDEFS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
 #include "shareddefs.h"
 
 //-----------------------------------------------------------------------------
 // TF Concepts
 //-----------------------------------------------------------------------------
-#define MP_CONCEPT_NONE		-1
+inline constexpr auto MP_CONCEPT_NONE = -1;
 
 enum
 {
@@ -85,5 +81,3 @@ enum
 
 extern const char *g_pszMPConcepts[];
 int GetMPConceptIndexFromString( const char *pszConcept );
-
-#endif // MP_SHAREDDEFS_H

@@ -1,20 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef C_BASETEMPENTITY_H
-#define C_BASETEMPENTITY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-
 
 #include "client_class.h"
 #include "iclientnetworkable.h"
 #include "c_recipientfilter.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Base class for TEs.  All TEs should derive from this and at
@@ -36,8 +28,8 @@ public:
 // IClientUnknown implementation.
 public:
 
-	virtual void SetRefEHandle( const CBaseHandle &handle )	{ Assert( false ); }
-	virtual const CBaseHandle& GetRefEHandle() const		{ Assert( false ); return *( ( CBaseHandle* )0 ); }
+	virtual void SetRefEHandle( const CBaseHandle &handle )	{ contract_assert( false ); }
+	virtual const CBaseHandle& GetRefEHandle() const		{ contract_assert( false ); return *( ( CBaseHandle* )0 ); }
 
 	virtual IClientUnknown*		GetIClientUnknown()		{ return this; }
 	virtual ICollideable*		GetCollideable()		{ return 0; }
@@ -89,7 +81,7 @@ public:
 	// Determine the color modulation amount
 	void	GetColorModulation( float* color )
 	{
-		assert(color);
+		contract_assert( color );
 		color[0] = color[1] = color[2] = 1.0f;
 	}
 
@@ -118,6 +110,3 @@ private:
 	static C_BaseTempEntity	*s_pTempEntities;
 	static C_BaseTempEntity *s_pDynamicEntities;
 };
-
-
-#endif // C_BASETEMPENTITY_H

@@ -1,10 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "proxyentity.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterial.h"
@@ -52,7 +56,7 @@ CLampBeamProxy::~CLampBeamProxy( void )
 //-----------------------------------------------------------------------------
 bool CLampBeamProxy::Init( IMaterial *pMaterial, KeyValues* pKeyValues )
 {
-	assert( pMaterial );
+	contract_assert( pMaterial );
 
 	// Need to get the color variable.
 	bool found;
@@ -65,7 +69,7 @@ bool CLampBeamProxy::Init( IMaterial *pMaterial, KeyValues* pKeyValues )
 // Purpose: 
 // Input  : *pC_BaseEntity - 
 //-----------------------------------------------------------------------------
-#define FADE_DIST	150
+constexpr auto FADE_DIST = 150;
 
 void CLampBeamProxy::OnBind( C_BaseEntity *pEnt )
 {

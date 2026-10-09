@@ -1,16 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#if !defined( IEFX_H )
-#define IEFX_H
-
-#include "interface.h"
-#include "mathlib/vector.h"
+import ks.tier1;
+import std;
 
 struct model_t;
 struct dlight_t;
@@ -21,7 +14,7 @@ class IMaterial;
 //-----------------------------------------------------------------------------
 // Purpose: Exposes effects api to client .dll
 //-----------------------------------------------------------------------------
-abstract_class IVEfx
+class IVEfx
 {
 public:
 	// Retrieve decal texture index from decal by name
@@ -58,8 +51,6 @@ public:
 	virtual dlight_t   *GetElightByKey( int key ) = 0;
 };
 
-#define VENGINE_EFFECTS_INTERFACE_VERSION "VEngineEffects001"
+inline constexpr const char *VENGINE_EFFECTS_INTERFACE_VERSION = "VEngineEffects001";
 
 extern IVEfx *effects;
-
-#endif // IEFX_H

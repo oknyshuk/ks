@@ -1,7 +1,9 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+import ks.tier1;
 #include "feagglomerator.h"
-#include <vector>
-#include "tier1/small_vector.h"
+import std;
 
 static constexpr CFeAgglomerator::LinkLessFunc_t s_LinkLess{};
 static constexpr CFeAgglomerator::ClusterLessFunc_t s_ClusterLess{};
@@ -44,7 +46,7 @@ float CFeAgglomerator::CCluster::GetBestCost()const
 	}
 	else
 	{
-		return FLT_MAX;
+		return std::numeric_limits<float>::max();
 	}
 }
 
@@ -58,7 +60,7 @@ void CFeAgglomerator::CCluster::RemoveLink( CCluster *pOtherCluster )
 			return;
 		}
 	}
-	Assert( !"Not found" );
+	contract_assert( !"Not found" );
 }
 
 const CFeAgglomerator::CLink *CFeAgglomerator::CCluster::FindLink( CCluster *pOtherCluster )
@@ -85,12 +87,6 @@ float CFeAgglomerator::CCluster::ComputeCost( const Vector &vSize, int nChildLea
 
 void CFeAgglomerator::CCluster::AddLink( CCluster *pOtherCluster )
 {
-#ifdef _DEBUG
-	for ( const CLink &link : m_Links )
-	{
-		Assert( link.m_pOtherCluster != pOtherCluster );
-	}
-#endif
 
 	CLink link;
 	link.m_pOtherCluster = pOtherCluster;
@@ -136,7 +132,7 @@ void CFeAgglomerator::LinkNodes( int nNode0, int nNode1 )
 	CCluster *pCluster1 = m_Clusters[ nNode1 ].get();
 	if ( pCluster0->FindLink( pCluster1 ) )
 	{
-		AssertDbg( pCluster1->FindLink( pCluster0 ) );
+		contract_assert( pCluster1->FindLink( pCluster0 ) );
 	}
 	else
 	{
@@ -177,62 +173,13 @@ void CFeAgglomerator::Build( bool bSingleRoot )
 		}
 
 		Process( queue2 );
-		Assert( queue2.size() == 1 );
+		contract_assert( queue2.size() == 1 );
 	}
 }
 
 
 void CFeAgglomerator::Validate( ClustersPriorityQueue_t *pQueue )
 {
-#ifdef _DEBUG
-	if ( pQueue )
-	{
-		Assert( std::is_heap( pQueue->begin(), pQueue->end(), s_ClusterLess ) );
-		std::vector< bool > used( std::ssize( m_Clusters ) );
-		for ( CCluster *pQueued : *pQueue )
-		{
-			int nCluster = pQueued->m_nIndex;
-			Assert( !used[ nCluster ] );
-			used[ nCluster ] = true;
-		}
-		for ( int i = 0; i < std::ssize( m_Clusters ); ++i )
-		{
-			CCluster *pCluster = m_Clusters[ i ].get();
-			if ( !used[ i ] )
-			{
-				Assert( pCluster->m_Links.empty() );
-			}
-		}
-	}
-
-	for ( int nIndex = 0; nIndex < std::ssize( m_Clusters ); ++nIndex )
-	{
-		CCluster *pThisCluster = m_Clusters[ nIndex ].get();
-		Assert( pThisCluster->m_nIndex == nIndex );
-		if ( pThisCluster->m_nChild[ 0 ] < 0 )
-		{
-			Assert( pThisCluster->m_nChild[ 1 ] < 0 && pThisCluster->m_nChildLeafs == 1 );
-		}
-		else
-		{
-			Assert( m_Clusters[ pThisCluster->m_nChild[ 0 ] ]->m_nChildLeafs + m_Clusters[ pThisCluster->m_nChild[ 1 ] ]->m_nChildLeafs == pThisCluster->m_nChildLeafs );
-		}
-
-		ClusterLinkQueue_t &links = pThisCluster->m_Links;
-		Assert( std::is_heap( links.begin(), links.end(), s_LinkLess ) );
-		std::vector< bool > used( std::ssize( m_Clusters ) );
-		for ( CLink &thisLink : links )
-		{
-			CLink *pThisLink = &thisLink;
-			CCluster *pOtherCluster = pThisLink->m_pOtherCluster;
-			const CLink *pOtherLink = pOtherCluster->FindLink( pThisCluster );
-			Assert( pOtherLink );
-			Assert( pOtherLink->m_pOtherCluster == pThisCluster && pThisLink->m_flCost == pOtherLink->m_flCost ); // can't have a link with self & the cost of link should be the same from both sides
-			Assert( !used[ pOtherCluster->m_nIndex ] );// can't have 2 links to the same cluster
-			used[ pOtherCluster->m_nIndex ] = true; 
-		}
-	}
-#endif
 }
 
 
@@ -248,7 +195,7 @@ void CFeAgglomerator::Process( ClustersPriorityQueue_t &queue )
 		pChild[ 1 ] = queue.front()->m_Links.front().m_pOtherCluster;
 
 		// remove the children from the queue
-		Assert( pChild[ 0 ]->m_nPriorityIndex == 0 );
+		contract_assert( pChild[ 0 ]->m_nPriorityIndex == 0 );
 		ks::heap_pop( queue, s_ClusterLess, s_ClusterSetIndex ); // removing pChild[0]
 		ks::heap_erase( queue, pChild[ 1 ]->m_nPriorityIndex, s_ClusterLess, s_ClusterSetIndex );
 
@@ -275,10 +222,10 @@ void CFeAgglomerator::Process( ClustersPriorityQueue_t &queue )
 			for ( const CLink &link : links )
 			{
 				CCluster *pOther = link.m_pOtherCluster;
-				Assert( pOther != pChild[ 0 ] );
+				contract_assert( pOther != pChild[ 0 ] );
 				if ( pOther == pChild[ 1 ] )
 					continue; // just skip the connection to the other child
-				Assert( pOther->m_nPriorityIndex >= 0 );
+				contract_assert( pOther->m_nPriorityIndex >= 0 );
 				// we see this cluster for the first time
 				float flOldDistance = pOther->GetBestCost();
 				pOther->RemoveLink( pChild[ 0 ] );
@@ -300,7 +247,7 @@ void CFeAgglomerator::Process( ClustersPriorityQueue_t &queue )
 			for ( const CLink &link : links )
 			{
 				CCluster *pOther = link.m_pOtherCluster;
-				Assert( pOther != pChild[ 1 ] );
+				contract_assert( pOther != pChild[ 1 ] );
 				if ( pOther == pChild[ 0 ] )
 					continue; // just skip the connection to the other child
 				if ( pOther->m_nPriorityIndex >= 0 )
@@ -340,8 +287,6 @@ void CFeAgglomerator::Process( ClustersPriorityQueue_t &queue )
 
 	for ( CCluster *pCluster : queue )
 	{
-		Assert( !pCluster->HasLinks() );
+		contract_assert( !pCluster->HasLinks() );
 	}
 }
-
-

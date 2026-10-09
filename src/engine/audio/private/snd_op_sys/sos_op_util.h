@@ -1,14 +1,8 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
-
-#ifndef SOS_OP_UTIL_H
-#define SOS_OP_UTIL_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "sos_op.h"
-
 
 //-----------------------------------------------------------------------------
 // basic mixgroup operator
@@ -23,5 +17,3 @@ class CSosOperatorPrintFloat : public CSosOperator
 {
 	SOS_HEADER_DESC( CSosOperatorPrintFloat )
 };
-
-#endif // SOS_OP_UTIL

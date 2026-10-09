@@ -1,20 +1,12 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: CHud handles the message, calculation, and drawing the HUD
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef HUD_H
-#define HUD_H
 
-#include "utlvector.h"
-#include "tier1/map_ops.h"
-#include <memory>
-#include "convar.h"
-#include <color.h>
-#include <bitbuf.h>
+import ks.tier1;
+import std;
 #include "usermessages.h"
-
 
 // basic rectangle struct used for drawing
 typedef struct wrect_s
@@ -33,10 +25,10 @@ class CHudTexture
 public:
 	CHudTexture()
 	{
-		Q_memset( szShortName, 0, sizeof( szShortName ) );
-		Q_memset( szTextureFile, 0, sizeof( szTextureFile ) );
-		Q_memset( texCoords, 0, sizeof( texCoords ) );
-		Q_memset( &rc, 0, sizeof( rc ) );
+		V_memset( szShortName, 0, sizeof( szShortName ) );
+		V_memset( szTextureFile, 0, sizeof( szTextureFile ) );
+		V_memset( texCoords, 0, sizeof( texCoords ) );
+		V_memset( &rc, 0, sizeof( rc ) );
 		textureId = -1;
 		bRenderUsingFont = false;
 		bPrecached = false;
@@ -48,9 +40,9 @@ public:
 		if ( this == &src )
 			return *this;
 
-		Q_strncpy( szShortName, src.szShortName, sizeof( szShortName ) );
-		Q_strncpy( szTextureFile, src.szTextureFile, sizeof( szTextureFile ) );
-		Q_memcpy( texCoords, src.texCoords, sizeof( texCoords ) );
+		V_strncpy( szShortName, src.szShortName, sizeof( szShortName ) );
+		V_strncpy( szTextureFile, src.szTextureFile, sizeof( szTextureFile ) );
+		V_memcpy( texCoords, src.texCoords, sizeof( texCoords ) );
 		textureId = src.textureId;
 		rc = src.rc;
 		bRenderUsingFont = src.bRenderUsingFont;
@@ -248,5 +240,3 @@ typedef std::multimap< std::string, std::unique_ptr< CHudTexture >, ks::iless > 
 void LoadHudTextures( CHudTextureList& list, const char *szFilenameWithoutExtension, const unsigned char *pICEKey );
 
 void GetHudSize( int& w, int &h );
-
-#endif // HUD_H

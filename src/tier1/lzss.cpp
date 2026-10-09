@@ -1,18 +1,15 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
-//
-//	LZSS Codec. Designed for fast cheap gametime encoding/decoding. Compression results
-//	are	not aggresive as other alogrithms, but gets 2:1 on most arbitrary uncompressed data.
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
-#include "tier1/lzss.h"
+// Purpose: LZSS Codec. Designed for fast cheap gametime encoding/decoding. Compression results
+// are	not aggresive as other alogrithms, but gets 2:1 on most arbitrary uncompressed data.
 
-#define LZSS_LOOKSHIFT		4
-#define LZSS_LOOKAHEAD		( 1 << LZSS_LOOKSHIFT )
+import std;
+import ks.tier1;
 
-#include "tier0/memalloc.h"
+constexpr auto LZSS_LOOKSHIFT = 4;
+constexpr auto LZSS_LOOKAHEAD = ( 1 << LZSS_LOOKSHIFT );
+
 
 //-----------------------------------------------------------------------------
 // Returns true if buffer is compressed.
@@ -38,7 +35,7 @@ unsigned int CLZSS::GetActualSize( unsigned char *pInput )
 	lzss_header_t *pHeader = (lzss_header_t *)pInput;
 	if ( pHeader && pHeader->id == LZSS_ID )
 	{
-		return LittleLong( pHeader->actualSize );
+		return ( pHeader->actualSize );
 	}
 
 	// unrecognized
@@ -84,16 +81,17 @@ void CLZSS::BuildHash( unsigned char *pData )
 
 unsigned char *CLZSS::CompressNoAlloc( unsigned char *pInput, int inputLength, unsigned char *pOutputBuf, unsigned int *pOutputSize )
 {
+	ks::ScratchArena<> scratch;
 	if ( inputLength <= sizeof( lzss_header_t ) + 8 )
 	{
 		return nullptr;
 	}
 
 	// create the compression work buffers, small enough (~64K) for stack
-	m_pHashTable = (lzss_list_t *)stackalloc( 256 * sizeof( lzss_list_t ) );
-	memset( m_pHashTable, 0, 256 * sizeof( lzss_list_t ) );
-	m_pHashTarget = (lzss_node_t *)stackalloc( m_nWindowSize * sizeof( lzss_node_t ) );
-	memset( m_pHashTarget, 0, m_nWindowSize * sizeof( lzss_node_t ) );
+	m_pHashTable = scratch.Alloc<lzss_list_t>( 256 );
+	std::memset( m_pHashTable, 0, 256 * sizeof( lzss_list_t ) );
+	m_pHashTarget = scratch.Alloc<lzss_node_t>( m_nWindowSize );
+	std::memset( m_pHashTarget, 0, m_nWindowSize * sizeof( lzss_node_t ) );
 
 	// allocate the output buffer, compressed buffer is expected to be less, caller will free
 	unsigned char *pStart = pOutputBuf;
@@ -103,7 +101,7 @@ unsigned char *CLZSS::CompressNoAlloc( unsigned char *pInput, int inputLength, u
 	// set the header
 	lzss_header_t *pHeader = (lzss_header_t *)pStart;
 	pHeader->id = LZSS_ID;
-	pHeader->actualSize = LittleLong( inputLength );
+	pHeader->actualSize = ( inputLength );
 
 	unsigned char *pOutput = pStart + sizeof (lzss_header_t);
 	unsigned char *pLookAhead = pInput; 
@@ -181,7 +179,7 @@ unsigned char *CLZSS::CompressNoAlloc( unsigned char *pInput, int inputLength, u
 	if ( inputLength != 0 )
 	{
 		// unexpected failure
-		Assert( 0 );
+		contract_assert( 0 );
 		return nullptr;
 	}
 
@@ -287,7 +285,7 @@ unsigned int CLZSS::SafeUncompress( unsigned char *pInput, unsigned char *pOutpu
 	if ( totalBytes != actualSize )
 	{
 		// unexpected failure
-		Assert( 0 );
+		contract_assert( 0 );
 		return 0;
 	}
 
@@ -348,11 +346,9 @@ unsigned int CLZSS::Uncompress( unsigned char *pInput, unsigned char *pOutput )
 	if ( totalBytes != actualSize )
 	{
 		// unexpected failure
-		Assert( 0 );
+		contract_assert( 0 );
 		return 0;
 	}
 
 	return totalBytes;
 }
-
-

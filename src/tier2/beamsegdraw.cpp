@@ -1,14 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "tier2/beamsegdraw.h"
 #include "materialsystem/imaterialvar.h"
-#include "convar.h"
-
+import std;
 
 //-----------------------------------------------------------------------------
 //
@@ -18,7 +14,7 @@
 void CBeamSegDraw::Start( IMatRenderContext *pRenderContext, int nSegs, IMaterial *pMaterial, CMeshBuilder *pMeshBuilder, int nMeshVertCount )
 {
 	m_pRenderContext = pRenderContext;
-	Assert( nSegs >= 2 );
+	contract_assert( nSegs >= 2 );
 
 	m_nSegsDrawn = 0;
 	m_nTotalSegs = nSegs;
@@ -155,9 +151,9 @@ void CBeamSegDraw::NextSeg( BeamSeg_t *pSeg )
 	}
 }
 
-void CBeamSegDraw::LoadSIMDData( FourVectors * RESTRICT pV4StartPos, FourVectors * RESTRICT pV4EndPos, FourVectors * RESTRICT pV4HalfWidth, int nV4SegCount, const BeamSeg_t *  pSegs )
+void CBeamSegDraw::LoadSIMDData( FourVectors * __restrict__ pV4StartPos, FourVectors * __restrict__ pV4EndPos, FourVectors * __restrict__ pV4HalfWidth, int nV4SegCount, const BeamSeg_t *  pSegs )
 {
-	const BeamSeg_t *RESTRICT pCurSeg = pSegs;
+	const BeamSeg_t *__restrict__ pCurSeg = pSegs;
 	for ( int i = 0; i < nV4SegCount; ++i, pCurSeg+= 4 )
 	{
 		pV4StartPos[i].LoadAndSwizzleAligned( pCurSeg[0].m_vPos, pCurSeg[1].m_vPos, pCurSeg[2].m_vPos, pCurSeg[3].m_vPos );
@@ -171,14 +167,15 @@ void CBeamSegDraw::LoadSIMDData( FourVectors * RESTRICT pV4StartPos, FourVectors
 }
 
 
-void CBeamSegDraw::ComputeRenderInfo( BeamSegRenderInfo_t * pRenderInfo, const Vector &vecCameraPos, int nSegCount, const BeamSeg_t *pSrcSegs ) RESTRICT
+void CBeamSegDraw::ComputeRenderInfo( BeamSegRenderInfo_t * pRenderInfo, const Vector &vecCameraPos, int nSegCount, const BeamSeg_t *pSrcSegs ) __restrict__
 {
+	ks::ScratchArena<> scratch;
 	int nPaddedSegCount = ( ( nSegCount + 3 ) >> 2 ) << 2;
 
 	// FIXME: Can we figure out a way of avoiding this extra copy?
 	// NOTE: We need an extra one since LoadSIMDData will load off the end
-	BeamSeg_t *pSegs = (BeamSeg_t*)stackalloc( ( nPaddedSegCount + 1 ) * sizeof(BeamSeg_t) );
-	memcpy( pSegs, pSrcSegs, nSegCount * sizeof(BeamSeg_t) );
+	BeamSeg_t *pSegs = scratch.Alloc<BeamSeg_t>( ( nPaddedSegCount + 1 ) );
+	std::memcpy( pSegs, pSrcSegs, nSegCount * sizeof(BeamSeg_t) );
 	int nEndSegCount = ( nPaddedSegCount - nSegCount + 1 );
 	BeamSeg_t endCap = pSrcSegs[nSegCount-1];
 	endCap.m_vPos += pSrcSegs[nSegCount-1].m_vPos - pSrcSegs[nSegCount-2].m_vPos;
@@ -191,10 +188,10 @@ void CBeamSegDraw::ComputeRenderInfo( BeamSegRenderInfo_t * pRenderInfo, const V
 	v4CameraPos.LoadAndSwizzle( vecCameraPos );
 
 	int nV4SegCount = nPaddedSegCount >> 2;
-	FourVectors *pV4StartPos = (FourVectors*)stackalloc( nV4SegCount * sizeof(FourVectors) );
-	FourVectors *pV4EndPos = (FourVectors*)stackalloc( nV4SegCount * sizeof(FourVectors) );
-	FourVectors *pV4HalfWidth = (FourVectors*)stackalloc( nV4SegCount * sizeof(FourVectors) );
-	FourVectors *pV4AveNormals = (FourVectors*)stackalloc( ( nV4SegCount + 2 ) * sizeof(FourVectors) );
+	FourVectors *pV4StartPos = scratch.Alloc<FourVectors>( nV4SegCount );
+	FourVectors *pV4EndPos = scratch.Alloc<FourVectors>( nV4SegCount );
+	FourVectors *pV4HalfWidth = scratch.Alloc<FourVectors>( nV4SegCount );
+	FourVectors *pV4AveNormals = scratch.Alloc<FourVectors>( ( nV4SegCount + 2 ) );
 	CBeamSegDraw::LoadSIMDData( pV4StartPos, pV4EndPos, pV4HalfWidth, nV4SegCount, pSegs );
 
 	fltx4 v4LMask =		{ 0.25f, 0.25f, 0.25f,  0.0f };
@@ -204,16 +201,14 @@ void CBeamSegDraw::ComputeRenderInfo( BeamSegRenderInfo_t * pRenderInfo, const V
 	fltx4 v4AveFactor = {  0.5f,  0.5f,  0.5f,  0.5f };
 
 	// This is the only ones that need initial data are the first two
-	memset( pV4AveNormals, 0, 2 * sizeof(FourVectors) );
+	std::memset( pV4AveNormals, 0, 2 * sizeof(FourVectors) );
 
 	// Yes, that 1 is correct. We're going to write bogus crap on either end
-	FourVectors eps( FLT_EPSILON );
+	FourVectors eps( std::numeric_limits<float>::epsilon() );
 	FourVectors *pV4CurAveNormal = &pV4AveNormals[1];
 	for ( int i = 0; i < nV4SegCount; ++i, ++pV4CurAveNormal )
 	{
 		// prefetch
-		PREFETCH360( pRenderInfo + (i << 2), 0 );
-		PREFETCH360( pRenderInfo + (i << 2) + 1, 0 );
 		FourVectors v4TangentY = pV4StartPos[i] - pV4EndPos[i];
 		FourVectors v4CameraToStart = pV4StartPos[i] - v4CameraPos;
 		FourVectors v4Normal = v4TangentY ^ v4CameraToStart;
@@ -231,15 +226,13 @@ void CBeamSegDraw::ComputeRenderInfo( BeamSegRenderInfo_t * pRenderInfo, const V
 	// FIXME: Do I need to fixup the endpoints, to clamp their normals to the unsmoothed value?
 	// Maybe I can get away with not doing that.
 	FourVectors *pV4Normals	= &pV4AveNormals[1];
-	FourVectors *pV4TangentY = (FourVectors*)stackalloc( nV4SegCount * sizeof(FourVectors) );
-	FourVectors *pV4Point1 = (FourVectors*)stackalloc( nV4SegCount * sizeof(FourVectors) );
-	FourVectors *pV4Point2 = (FourVectors*)stackalloc( nV4SegCount * sizeof(FourVectors) );
+	FourVectors *pV4TangentY = scratch.Alloc<FourVectors>( nV4SegCount );
+	FourVectors *pV4Point1 = scratch.Alloc<FourVectors>( nV4SegCount );
+	FourVectors *pV4Point2 = scratch.Alloc<FourVectors>( nV4SegCount );
 	for ( int i = 0; i < nV4SegCount; ++i )
 	{
 		// prefetch
 		// (write top half rows)
-		PREFETCH360( pRenderInfo + (i << 2) + 2, 0 );
-		PREFETCH360( pRenderInfo + (i << 2) + 3, 0 );
 
 		FourVectors v4Normal = VectorNormalizeFast( pV4Normals[i] );
 		FourVectors v4CameraToStart = pV4StartPos[i] - v4CameraPos;
@@ -252,7 +245,7 @@ void CBeamSegDraw::ComputeRenderInfo( BeamSegRenderInfo_t * pRenderInfo, const V
 		pV4Point2[i] = pV4StartPos[i] - v4Offset;
 	}
 
-	const BeamSeg_t * RESTRICT pSeg = pSrcSegs;
+	const BeamSeg_t * __restrict__ pSeg = pSrcSegs;
 	// The code below has a few load-hit-stores (due to the
 	// transform to vector for store). For an alternate 
 	// pathway that does the same thing without the LHS,

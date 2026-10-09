@@ -1,10 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Template entities are used by spawners to create copies of entities
 //			that were configured by the level designer. This allows us to spawn
 //			entities with arbitrary sets of key/value data and entity I/O
 //			connections.
-//
 //			Template entities are marked with a special spawnflag which causes
 //			them not to spawn, but to be saved as a string containing all the
 //			map data (keyvalues and I/O connections) from the BSP. Template
@@ -12,10 +12,42 @@
 //			map data into a local string (that's how the template data is saved
 //			and restored). Once all the entities in the map have been activated,
 //			the template database is freed.
-//
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "igamesystem.h"
@@ -23,10 +55,8 @@
 #include "point_template.h"
 #include "eventqueue.h"
 #include "TemplateEntities.h"
-#include "tier1/map_ops.h"
 #include "entitydefs.h"
 
-#include "tier0/memalloc.h"
 ConVar template_debug( "template_debug", "0" );
 
 // This is appended to key's values that will need to be unique in template instances
@@ -81,7 +111,7 @@ void Templates_FreeTemplate( TemplateEntityData_t *pTemplate )
 int Templates_Add(CBaseEntity *pEntity, const char *pszMapData, int nLen, int nHammerID)
 {
 	const char *pszName = STRING(pEntity->GetEntityName());
-	if ((!pszName) || (!strlen(pszName)))
+	if ((!pszName) || (!std::strlen(pszName)))
 	{
 		DevWarning(1, "RegisterTemplateEntity: template entity with no name, class %s\n", pEntity->GetClassname());
 		return -1;
@@ -94,12 +124,12 @@ int Templates_Add(CBaseEntity *pEntity, const char *pszMapData, int nLen, int nH
 	// We may modify the values of the keys in this mapdata chunk later on to fix Entity I/O
 	// connections. For this reason, we need to ensure we have enough memory to do that.
 	int iKeys = MapEntity_GetNumKeysInEntity( pszMapData );
-	int iExtraSpace = (strlen(ENTITYIO_FIXUP_STRING)+1) * iKeys;
+	int iExtraSpace = (std::strlen(ENTITYIO_FIXUP_STRING)+1) * iKeys;
 
 	// Extra 1 because the mapdata passed in isn't null terminated
 	pEntData->iMapDataLength = nLen + iExtraSpace + 1;
 	pEntData->pszMapData = (char *)MemAlloc_Alloc( pEntData->iMapDataLength );
-	memcpy(pEntData->pszMapData, pszMapData, nLen + 1);
+	std::memcpy(pEntData->pszMapData, pszMapData, nLen + 1);
 	pEntData->pszMapData[nLen] = '\0';
 
 	// We don't alloc these suckers right now because that gives us no time to
@@ -131,7 +161,7 @@ void Templates_RemoveByHammerID( int nHammerID )
 //-----------------------------------------------------------------------------
 bool Templates_IndexRequiresEntityIOFixup( int iIndex )
 {
-	Assert( iIndex < std::ssize( g_Templates ) );
+	contract_assert( iIndex < std::ssize( g_Templates ) );
 	return g_Templates[iIndex]->bNeedsEntityIOFixup;
 }
 
@@ -141,7 +171,7 @@ bool Templates_IndexRequiresEntityIOFixup( int iIndex )
 //-----------------------------------------------------------------------------
 string_t Templates_FindByIndex( int iIndex )
 {
-	Assert( iIndex < std::ssize( g_Templates ) );
+	contract_assert( iIndex < std::ssize( g_Templates ) );
 
 	// First time through we alloc the mapdata onto the pool.
 	// It's safe to do it now because this isn't called until post Entity I/O cleanup.
@@ -158,7 +188,7 @@ string_t Templates_FindByIndex( int iIndex )
 //-----------------------------------------------------------------------------
 int Templates_GetStringSize( int iIndex )
 {
-	Assert( iIndex < std::ssize( g_Templates ) );
+	contract_assert( iIndex < std::ssize( g_Templates ) );
 	return g_Templates[iIndex]->iMapDataLength;
 }
 
@@ -203,7 +233,7 @@ void Templates_ReconnectIOForGroup( CPointTemplate *pGroup )
 		grouptemplate_t newGroupTemplate;
 		newGroupTemplate.iIndex = pGroup->GetTemplateIndexForTemplate(i);
 		newGroupTemplate.pMapDataParser = new CEntityMapData( g_Templates[ newGroupTemplate.iIndex ]->pszMapData, g_Templates[ newGroupTemplate.iIndex ]->iMapDataLength );
-		Assert( newGroupTemplate.pMapDataParser );
+		contract_assert( newGroupTemplate.pMapDataParser );
 		newGroupTemplate.pMapDataParser->ExtractValue( "targetname", newGroupTemplate.pszName );
 		newGroupTemplate.bChangeTargetname = false;
 
@@ -244,16 +274,16 @@ void Templates_ReconnectIOForGroup( CPointTemplate *pGroup )
 
 				// FIXME: This is very brittle. Any key with a , will not be found.
 				char delimiter = VMF_IOPARAM_STRING_DELIMITER;
-				if( strchr( value, delimiter ) == nullptr )
+				if( std::strchr( value, delimiter ) == nullptr )
 				{
 					delimiter = ',';
 				}
 
-				char *s = strchr( value, delimiter );
+				char *s = std::strchr( value, delimiter );
 				if ( s )
 				{
 					// Grab just the targetname of the receiver
-					Q_strncpy( valueclipped, value, (s - value+1) );
+					V_strncpy( valueclipped, value, (s - value+1) );
 					sValue = valueclipped;
 				}
 
@@ -278,15 +308,15 @@ void Templates_ReconnectIOForGroup( CPointTemplate *pGroup )
 					// We need to append it if this isn't an Entity I/O value, or prepend it to the ',' if it is
 					if ( s )
 					{
-						Q_strncpy( newvalue, valueclipped, MAPKEY_MAXLENGTH );
-						Q_strncat( newvalue, ENTITYIO_FIXUP_STRING, sizeof(newvalue), COPY_ALL_CHARACTERS );
-						Q_strncat( newvalue, s, sizeof(newvalue), COPY_ALL_CHARACTERS );
+						V_strncpy( newvalue, valueclipped, MAPKEY_MAXLENGTH );
+						V_strncat( newvalue, ENTITYIO_FIXUP_STRING, sizeof(newvalue), COPY_ALL_CHARACTERS );
+						V_strncat( newvalue, s, sizeof(newvalue), COPY_ALL_CHARACTERS );
 						mapData->SetValue( keyName, newvalue, nKeyInstance );
 					}
 					else
 					{
-						Q_strncpy( newvalue, sValue, MAPKEY_MAXLENGTH );
-						Q_strncat( newvalue, ENTITYIO_FIXUP_STRING, sizeof(newvalue), COPY_ALL_CHARACTERS );
+						V_strncpy( newvalue, sValue, MAPKEY_MAXLENGTH );
+						V_strncat( newvalue, ENTITYIO_FIXUP_STRING, sizeof(newvalue), COPY_ALL_CHARACTERS );
 						mapData->SetValue( keyName, newvalue, nKeyInstance );
 					}
 					
@@ -310,7 +340,7 @@ void Templates_ReconnectIOForGroup( CPointTemplate *pGroup )
 			{
 				CEntityMapData *mapData = GroupTemplates[i].pMapDataParser;
 				mapData->ExtractValue( "targetname", value );
-				Q_strncat( value, ENTITYIO_FIXUP_STRING, sizeof(value), COPY_ALL_CHARACTERS );
+				V_strncat( value, ENTITYIO_FIXUP_STRING, sizeof(value), COPY_ALL_CHARACTERS );
 				mapData->SetValue( "targetname", value );
 			}
 		}
@@ -333,11 +363,11 @@ void Templates_StartUniqueInstance( void )
 	g_iCurrentTemplateInstance++;
 
 	// Make sure there's enough room to fit it into the string
-	int iMax = pow(10.0f, (int)((strlen(ENTITYIO_FIXUP_STRING) - 1)));	// -1 for the &
+	int iMax = std::pow(10.0f, (int)((std::strlen(ENTITYIO_FIXUP_STRING) - 1)));	// -1 for the &
 	if ( g_iCurrentTemplateInstance >= iMax )
 	{
 		// We won't hit this.
-		Assert(0);
+		contract_assert( 0 );
 		// Hopefully there were still be instance number 0 around.
 		g_iCurrentTemplateInstance = 0;
 	}
@@ -350,18 +380,18 @@ void Templates_StartUniqueInstance( void )
 //-----------------------------------------------------------------------------
 char *Templates_GetEntityIOFixedMapData( int iIndex )
 {
-	Assert( Templates_IndexRequiresEntityIOFixup( iIndex ) );
+	contract_assert( Templates_IndexRequiresEntityIOFixup( iIndex ) );
 
 	// First time through?
 	if ( !g_Templates[iIndex]->pszFixedMapData )
 	{
 		g_Templates[iIndex]->pszFixedMapData = (char *)MemAlloc_Alloc( g_Templates[iIndex]->iMapDataLength );
-		Q_strncpy( g_Templates[iIndex]->pszFixedMapData, g_Templates[iIndex]->pszMapData, g_Templates[iIndex]->iMapDataLength );
+		V_strncpy( g_Templates[iIndex]->pszFixedMapData, g_Templates[iIndex]->pszMapData, g_Templates[iIndex]->iMapDataLength );
 	}
 
-	int iFixupSize = strlen(ENTITYIO_FIXUP_STRING); // strlen("&0000\0") = 5!
+	int iFixupSize = std::strlen(ENTITYIO_FIXUP_STRING); // strlen("&0000\0") = 5!
 	char *sOurFixup = new char[iFixupSize+1]; // do alloc room here for the null terminator
-	Q_snprintf( sOurFixup, iFixupSize+1, "%c%.4d", ENTITYIO_FIXUP_STRING[0], g_iCurrentTemplateInstance );
+	V_snprintf( sOurFixup, iFixupSize+1, "%c%.4d", ENTITYIO_FIXUP_STRING[0], g_iCurrentTemplateInstance );
 
 	// Now rip through the map data string and replace any instances of the fixup string with our unique identifier
 	char *c = g_Templates[iIndex]->pszFixedMapData;
@@ -385,7 +415,7 @@ char *Templates_GetEntityIOFixedMapData( int iIndex )
 			// Stomp it with our unique string
 			if ( bValid )
 			{
-				memcpy( c, sOurFixup, iFixupSize );
+				std::memcpy( c, sOurFixup, iFixupSize );
 				c += iFixupSize;
 			}
 		}
@@ -441,4 +471,3 @@ static short TEMPLATE_SAVE_RESTORE_VERSION = 1;
 
 
 //-------------------------------------
-

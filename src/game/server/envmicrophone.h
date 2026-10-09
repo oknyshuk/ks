@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef ENVMICROPHONE_H
-#define ENVMICROPHONE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 class CBaseFilter;
 
@@ -91,5 +87,3 @@ private:
 
 	char		m_szLastSound[256];
 };
-
-#endif // ENVMICROPHONE_H

@@ -1,16 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Spatial entity.
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SPATIALENTITY_H
-#define SPATIALENTITY_H
+// Purpose: Spatial entity.
 
 #include "reflect_annotations.h"
 #include "dt_common.h"
-
+#include "baseentity.h"
 
 //------------------------------------------------------------------------------
 // Purpose : Spatial entity
@@ -67,5 +63,3 @@ private:
 
 	[[= ks::reflect::Key{ .name = "filename" } ]] string_t	m_lookupFilename;
 };
-
-#endif // SPATIALENTITY_H

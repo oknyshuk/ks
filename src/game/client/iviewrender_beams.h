@@ -1,17 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
-#if !defined( IVIEWRENDER_BEAMS_H )
-#define IVIEWRENDER_BEAMS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "mathlib/vector.h"
+import std;
+import ks.math;
 // common to server, too
 #include "beam_flags.h"
 #include "tempentity.h"
+#include "iclientrenderable.h"
+#include "engine/IEngineTrace.h"
+
+class C_BaseEntity;
 
 extern void SetBeamCreationAllowed( bool state );
 extern bool BeamCreationAllowed( void );
@@ -105,7 +104,7 @@ struct BeamInfo_t
 // Purpose: Declare client .dll beam entity interface
 //-----------------------------------------------------------------------------
 
-abstract_class IViewRenderBeams
+class IViewRenderBeams
 {
 public:
 	virtual void	InitBeams( void ) = 0;
@@ -164,5 +163,3 @@ public:
 };
 
 extern IViewRenderBeams *beams;
-
-#endif // VIEWRENDER_BEAMS_H

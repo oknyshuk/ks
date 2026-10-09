@@ -1,18 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef STRONGHANDLE_H
-#define STRONGHANDLE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "tier2/tier2.h"
 #include "resourcesystem/iresourcesystem.h"
-
 
 //-----------------------------------------------------------------------------
 // Resource pointer; 
@@ -80,20 +71,20 @@ private:
 // Constructor, destructor
 //-----------------------------------------------------------------------------
 template< class T >
-FORCEINLINE CStrongHandle< T >::CStrongHandle()
+[[gnu::always_inline]] inline CStrongHandle< T >::CStrongHandle()
 {
 	m_pBinding = nullptr;
 }
 
 template< class T >
-FORCEINLINE CStrongHandle< T >::CStrongHandle( const char *pFileName, const char *pSubResourceName )
+[[gnu::always_inline]] inline CStrongHandle< T >::CStrongHandle( const char *pFileName, const char *pSubResourceName )
 {
 	m_pBinding = nullptr;
 	Init( pFileName, pSubResourceName );
 }
 
 template< class T >
-FORCEINLINE CStrongHandle< T >::CStrongHandle( ResourceId_t nResourceId )
+[[gnu::always_inline]] inline CStrongHandle< T >::CStrongHandle( ResourceId_t nResourceId )
 {
 	m_pBinding = nullptr;
 	Init( nResourceId );
@@ -101,7 +92,7 @@ FORCEINLINE CStrongHandle< T >::CStrongHandle( ResourceId_t nResourceId )
 
 // FIXME: Do I want typed resource handles?
 template< class T >
-FORCEINLINE CStrongHandle< T >::CStrongHandle( ResourceHandleTyped_t hResource )
+[[gnu::always_inline]] inline CStrongHandle< T >::CStrongHandle( ResourceHandleTyped_t hResource )
 {
 	m_pBinding = nullptr;
 	Init( hResource );
@@ -134,7 +125,7 @@ void CStrongHandle< T >::Init( ResourceId_t nResourceId )
 
 	IResourceTypeManager *pMgr = g_pResourceSystem->GetResourceManagerForType< T >();
 	m_pBinding = (ResourceHandleTyped_t)pMgr->FindResource( nResourceId );
-	Assert( m_pBinding );
+	contract_assert( m_pBinding );
 	if ( m_pBinding )
 	{
 		++m_pBinding->m_nRefCount;
@@ -151,7 +142,7 @@ void CStrongHandle< T >::Init( const char *pFileName, const char *pSubResourceNa
 
 	IResourceTypeManager *pMgr = g_pResourceSystem->GetResourceManagerForType< T >();
 	m_pBinding = (ResourceHandleTyped_t)pMgr->FindOrCreateResource( pFileName, pSubResourceName );
-	Assert( m_pBinding );
+	contract_assert( m_pBinding );
 	if ( m_pBinding )
 	{
 		++m_pBinding->m_nRefCount;
@@ -203,7 +194,7 @@ void CStrongHandle< T >::Shutdown()
 // Assignment
 //-----------------------------------------------------------------------------
 template< class T >
-FORCEINLINE CStrongHandle< T >& CStrongHandle< T >::operator=( ResourceHandleTyped_t hResource )
+[[gnu::always_inline]] inline CStrongHandle< T >& CStrongHandle< T >::operator=( ResourceHandleTyped_t hResource )
 {
 	Init( hResource );
 	return *this;
@@ -214,41 +205,41 @@ FORCEINLINE CStrongHandle< T >& CStrongHandle< T >::operator=( ResourceHandleTyp
 // Cast operators
 //-----------------------------------------------------------------------------
 template< class T >
-FORCEINLINE const ResourceBinding_t< T > *CStrongHandle< T >::GetHandle() const
+[[gnu::always_inline]] inline const ResourceBinding_t< T > *CStrongHandle< T >::GetHandle() const
 {
-	Assert( m_pBinding );
+	contract_assert( m_pBinding );
 	m_pBinding->m_nLastBindFrame = g_nResourceFrameCount;
 	return m_pBinding;
 }
 
 template< class T >
-FORCEINLINE CStrongHandle< T >::operator const T*() const
+[[gnu::always_inline]] inline CStrongHandle< T >::operator const T*() const
 {
-	Assert( m_pBinding );
+	contract_assert( m_pBinding );
 	m_pBinding->m_nLastBindFrame = g_nResourceFrameCount;
 	return ( const T* )m_pBinding->m_pData;
 }
 
 template< class T >
-FORCEINLINE const T *CStrongHandle< T >::operator->() const
+[[gnu::always_inline]] inline const T *CStrongHandle< T >::operator->() const
 {
-	Assert( m_pBinding );
+	contract_assert( m_pBinding );
 	m_pBinding->m_nLastBindFrame = g_nResourceFrameCount;
 	return ( const T* )m_pBinding->m_pData;
 }
 
 template< class T >
-FORCEINLINE CStrongHandle< T >::operator ResourceHandleTyped_t() const
+[[gnu::always_inline]] inline CStrongHandle< T >::operator ResourceHandleTyped_t() const
 {
-	Assert( m_pBinding );
+	contract_assert( m_pBinding );
 	m_pBinding->m_nLastBindFrame = g_nResourceFrameCount;
 	return m_pBinding;
 }
 
 template< class T >
-FORCEINLINE CStrongHandle< T >::operator ResourceHandle_t() const
+[[gnu::always_inline]] inline CStrongHandle< T >::operator ResourceHandle_t() const
 {
-	Assert( m_pBinding );
+	contract_assert( m_pBinding );
 	m_pBinding->m_nLastBindFrame = g_nResourceFrameCount;
 	return (ResourceHandle_t)m_pBinding;
 }
@@ -301,7 +292,7 @@ inline bool CStrongHandle< T >::operator!=( const CStrongHandle< T > &hResource 
 template< class T >
 inline bool CStrongHandle< T >::IsCached() const
 {
-	Assert( m_pBinding );
+	contract_assert( m_pBinding );
 	return ( m_pBinding->m_nFlags & RESOURCE_BINDING_CACHED ) != 0;
 }
 
@@ -322,7 +313,7 @@ inline void CStrongHandle< T >::MarkUsed()
 template< class T >
 void CStrongHandle< T >::CacheResource()
 {
-	Assert( m_pBinding );
+	contract_assert( m_pBinding );
 	IResourceTypeManager *pMgr = g_pResourceSystem->GetResourceManagerForType< T >();
 	pMgr->CacheResource( (ResourceHandle_t)m_pBinding );
 }
@@ -330,7 +321,7 @@ void CStrongHandle< T >::CacheResource()
 template< class T >
 void CStrongHandle< T >::UncacheResource()
 {
-	Assert( m_pBinding );
+	contract_assert( m_pBinding );
 	IResourceTypeManager *pMgr = g_pResourceSystem->GetResourceManagerForType< T >();
 	pMgr->UncacheResource( (ResourceHandle_t)m_pBinding );
 }
@@ -342,11 +333,8 @@ void CStrongHandle< T >::UncacheResource()
 template< class T >
 void CStrongHandle< T >::ReloadResource()
 {
-	Assert( m_pBinding );
+	contract_assert( m_pBinding );
 	IResourceTypeManager *pMgr = g_pResourceSystem->GetResourceManagerForType< T >();
 	pMgr->UncacheResource( (ResourceHandle_t)m_pBinding );
 	pMgr->CacheResource( (ResourceHandle_t)m_pBinding );
 }
-
-
-#endif // STRONGHANDLE_H

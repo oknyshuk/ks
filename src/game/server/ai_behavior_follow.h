@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_BEHAVIOR_FOLLOW_H
-#define AI_BEHAVIOR_FOLLOW_H
-
+import ks.core;
 #include "reflect_annotations.h"
 #include "simtimer.h"
 #include "ai_behavior.h"
 #include "ai_goalentity.h"
 #include "ai_utils.h"
 #include "ai_moveshoot.h"
-#include "tier0/platform.h"
 
 
 
@@ -373,5 +368,3 @@ inline float CAI_FollowBehavior::GetGoalZRange()
 }
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_BEHAVIOR_FOLLOW_H

@@ -1,15 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
+import ks.tier1;
 #include "qlimits.h"
 #include "sys.h"
 #include "baseautocompletefilelist.h"
-#include "tier1/intern_pool.h"
+import std;
 
 //-----------------------------------------------------------------------------
 // Purpose: Fills in a list of commands based on specified subdirectory and extension into the format:
@@ -22,20 +18,20 @@ int CBaseAutoCompleteFileList::AutoCompletionFunc( char const *partial, char com
 	char const *cmdname = m_pszCommandName;
 
 	char *substring = (char *)partial;
-	if ( Q_strstr( partial, cmdname ) )
+	if ( V_strstr( partial, cmdname ) )
 	{
-		substring = (char *)partial + strlen( cmdname ) + 1;
+		substring = (char *)partial + std::strlen( cmdname ) + 1;
 	}
 
 	// Search the directory structure.
 	char searchpath[MAX_QPATH];
-	if ( m_pszSubDir && m_pszSubDir[0] && Q_strcasecmp( m_pszSubDir, "NULL" ) )
+	if ( m_pszSubDir && m_pszSubDir[0] && V_strcasecmp( m_pszSubDir, "NULL" ) )
 	{
-		Q_snprintf(searchpath,sizeof(searchpath),"%s/*.%s", m_pszSubDir, m_pszExtension );
+		V_snprintf(searchpath,sizeof(searchpath),"%s/*.%s", m_pszSubDir, m_pszExtension );
 	}
 	else
 	{
-		Q_snprintf(searchpath,sizeof(searchpath),"*.%s", m_pszExtension );
+		V_snprintf(searchpath,sizeof(searchpath),"*.%s", m_pszExtension );
 	}
 
 	ks::intern_pool entries( true );
@@ -45,13 +41,13 @@ int CBaseAutoCompleteFileList::AutoCompletionFunc( char const *partial, char com
 	while ( findfn )
 	{
 		char sz[ MAX_QPATH ];
-		Q_snprintf( sz, sizeof( sz ), "%s", findfn );
+		V_snprintf( sz, sizeof( sz ), "%s", findfn );
 
 		bool add = false;
 		// Insert into lookup
 		if ( substring[0] )
 		{
-			if ( !Q_strncasecmp( findfn, substring, strlen( substring ) ) )
+			if ( !V_strncasecmp( findfn, substring, std::strlen( substring ) ) )
 			{
 				add = true;
 			}
@@ -82,9 +78,9 @@ int CBaseAutoCompleteFileList::AutoCompletionFunc( char const *partial, char com
 	{
 		char const *filename = symbols[ i ].data();
 
-		Q_snprintf( commands[ i ], sizeof( commands[ i ] ), "%s %s", cmdname, filename );
+		V_snprintf( commands[ i ], sizeof( commands[ i ] ), "%s %s", cmdname, filename );
 		// Remove .dem
-		commands[ i ][ strlen( commands[ i ] ) - 4 ] = 0;
+		commands[ i ][ std::strlen( commands[ i ] ) - 4 ] = 0;
 	}
 
 	return std::ssize( symbols );

@@ -1,17 +1,39 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // cs_simple_hostage.cpp
 // Simple CS1.6 level hostage
 // Author: Michael S. Booth and Matt Boone, July 2004
 // Bugs Fixed by: Everyone else
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
+#include "ndebugoverlay.h"
 #include "reflect_predmap.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
@@ -19,9 +41,7 @@
 #include "cs_simple_hostage.h"
 #include "cs_player.h"
 #include "cs_gamerules.h"
-#include "game.h"
 #include "bot.h"
-#include <keyvalues.h>
 #include "obstacle_pushaway.h"
 #include "props_shared.h"
 #include "te_effect_dispatch.h"
@@ -34,19 +54,19 @@
 #include "cs_entity_spotting.h"
 #include "cs_shareddefs.h"
 
-#define HOSTAGE_THINK_INTERVAL	(1.0f/60.0f)//We increased this from 0.1 in CS:GO so that the hostages don't stutter as much.
-#define HOSTAGE_THINK_CARRIED_INTERVAL	(1.0f/45.0f)
+constexpr auto HOSTAGE_THINK_INTERVAL = (1.0f/60.0f); //We increased this from 0.1 in CS:GO so that the hostages don't stutter as much.
+constexpr auto HOSTAGE_THINK_CARRIED_INTERVAL = (1.0f/45.0f);
 
 #define DrawLine( from, to, duration, red, green, blue )		NDebugOverlay::Line( from, to, red, green, blue, true, 0.1f )
-#define HOSTAGE_PUSHAWAY_THINK_CONTEXT	"HostagePushawayThink"
+inline constexpr const char *HOSTAGE_PUSHAWAY_THINK_CONTEXT = "HostagePushawayThink";
 
-#define HOSTAGE_BBOX_VEC_MIN	Vector( -8, -8, 0 )
-#define HOSTAGE_BBOX_VEC_MAX	Vector( 8, 8, 64 )
+inline const Vector HOSTAGE_BBOX_VEC_MIN = Vector( -8, -8, 0 );
+inline const Vector HOSTAGE_BBOX_VEC_MAX = Vector( 8, 8, 64 );
 
 #define MAX_HOSTAGE_MOVE_FORCE 1024
 
-#define HOSTAGE_CARRY_PROP_MODEL		"models/hostage/hostage_carry.mdl"
-#define HOSTAGE_CARRY_VIEW_MODEL		"models/hostage/v_hostage_arm.mdl"
+inline constexpr const char *HOSTAGE_CARRY_PROP_MODEL = "models/hostage/hostage_carry.mdl";
+inline constexpr const char *HOSTAGE_CARRY_VIEW_MODEL = "models/hostage/v_hostage_arm.mdl";
 
 // amount of time a player is forced to continue defusing after not USEing. this effects other player's ability to interrupt
 const float GRAB_HOSTAGE_LOCKIN_PERIOD = 0.05f;
@@ -177,10 +197,10 @@ bool CHostage::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if ( char const *szHostageSpawnExclusionGroup = StringAfterPrefix( szKeyName, "HostageSpawnExclusionGroup" ) )
 	{
-		int iGroupId = Q_atoi( szHostageSpawnExclusionGroup );
+		int iGroupId = V_atoi( szHostageSpawnExclusionGroup );
 		if ( ( iGroupId >= 1 ) && ( iGroupId <= 32 ) )
 		{
-			bool bValue = !!Q_atoi( szValue );
+			bool bValue = !!V_atoi( szValue );
 			uint32 uiBitMaskValue = 1u << ( iGroupId - 1 );
 			if ( bValue )
 				m_uiHostageSpawnExclusionGroupMask |= uiBitMaskValue;
@@ -191,7 +211,7 @@ bool CHostage::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else if ( FStrEq( szKeyName, "HostageSpawnRandomFactor" ) )
 	{
-		int iFactor = Q_atoi( szValue );
+		int iFactor = V_atoi( szValue );
 		if ( iFactor < 1 )
 			iFactor = 1;
 		else if ( iFactor > 100 )
@@ -425,7 +445,7 @@ int CHostage::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 
 		if ( !( player->m_iDisplayHistoryBits & DHF_HOSTAGE_INJURED ) )
 		{
-			player->HintMessage( "#Hint_careful_around_hostages", FALSE );
+			player->HintMessage( "#Hint_careful_around_hostages", false );
 			player->m_iDisplayHistoryBits |= DHF_HOSTAGE_INJURED;
 		}
 
@@ -509,7 +529,7 @@ void CHostage::CheckForHostageAbuse( CCSPlayer *player )
 
 		if ( player->m_iHostagesKilled == hostageKillLimit - 1 )
 		{
-			//player->HintMessage( "#Hint_removed_for_next_hostage_killed", TRUE );
+			//player->HintMessage( "#Hint_removed_for_next_hostage_killed", true );
 			ClientPrint( player, HUD_PRINTTALK, "#Hint_removed_for_next_hostage_killed" );
 		}
 		else if ( player->m_iHostagesKilled >= hostageKillLimit )
@@ -551,7 +571,7 @@ void CHostage::Event_Killed( const CTakeDamageInfo &info )
 		CSGameRules()->ScoreHostageKilled( attacker );
 		if ( !( attacker->m_iDisplayHistoryBits & DHF_HOSTAGE_KILLED ) )
 		{
-			attacker->HintMessage( "#Hint_lost_money", FALSE );
+			attacker->HintMessage( "#Hint_lost_money", false );
 			attacker->m_iDisplayHistoryBits |= DHF_HOSTAGE_KILLED;
 		}
 
@@ -676,7 +696,7 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 		class CSimpleHostageRescueMVP : public CCSGameRules::ICalculateEndOfRoundMVPHook_t
 		{
 		public:
-			virtual CCSPlayer* CalculateEndOfRoundMVP() OVERRIDE
+			virtual CCSPlayer* CalculateEndOfRoundMVP() override
 			{
 				if( player->HasControlledBotThisRound() )
 				{ // [dkorus] if we controlled a bot this round, use standard MVP conditions
@@ -1012,7 +1032,7 @@ void CHostage::AvoidPhysicsProps( void )
 		return;
 
 	CBaseEntity *props[512];
-	int nEnts = GetPushawayEnts( this, props, ARRAYSIZE( props ), 0.0f, PARTITION_ENGINE_SOLID_EDICTS );
+	int nEnts = GetPushawayEnts( this, props, std::size( props ), 0.0f, PARTITION_ENGINE_SOLID_EDICTS );
 
 	for ( int i=0; i < nEnts; i++ )
 	{

@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef WEAPON_BASECSGRENADE_H
-#define WEAPON_BASECSGRENADE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -18,9 +13,7 @@
 
 #endif
 
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 #define GRENADE_UNDERHAND_THRESHOLD 0.33f
-#endif
 
 class [[= ks::reflect::NetTable{ .name = "DT_BaseCSGrenade" } ]]
       CBaseCSGrenade : public CWeaponCSBase
@@ -62,14 +55,12 @@ public:
 	bool			GetIsThrown( void ) { return !m_bIsHeldByPlayer; }
 
 #ifdef CLIENT_DLL
-	virtual int		DrawModel( int flags, const RenderableInstance_t &instance ) OVERRIDE;
+	virtual int		DrawModel( int flags, const RenderableInstance_t &instance ) override;
 #endif
 
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 	bool			IsThrownUnderhand( void ) { return (m_flThrowStrength <= GRENADE_UNDERHAND_THRESHOLD); }
 	float			GetThrownStrength( void ) { return m_flThrowStrength; }
 	float			ApproachThrownStrength( void );
-#endif
 
 #ifndef CLIENT_DLL
 	bool HasEmittedProjectile( void ) const { return m_bHasEmittedProjectile; }
@@ -93,15 +84,11 @@ protected:
 	CNetworkVar( float, m_fThrowTime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] ); // the time at which the grenade will be thrown.  If this value is 0 then the time hasn't been set yet.
 
 	CNetworkVar( bool, m_bLoopingSoundPlaying, [[= ks::reflect::Net{} ]] );	// Set to true when the grenade is playing a looping sound
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 	CNetworkVar( float, m_flThrowStrength, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] );
-#endif
 private:
 	CBaseCSGrenade( const CBaseCSGrenade & ) {}
 
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 	float m_flThrowStrengthClientSmooth;
-#endif
 };
 
 
@@ -109,6 +96,3 @@ inline bool CBaseCSGrenade::IsPinPulled() const
 {
 	return m_bPinPulled;
 }
-
-
-#endif // WEAPON_BASECSGRENADE_H

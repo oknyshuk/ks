@@ -1,25 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import std;
+import ks.tier1;
 #include "bonusmapsdatabase.h"
 #include "engineinterface.h"
 
-#include "tier1/convar.h"
-#include "tier1/text_writer.h"
 
 #include "filesystem.h"
-#include "modinfo.h"
 #include "engineinterface.h"
-#include "keyvalues.h"
 #include "gameui_interface.h"
 
-
 #define MOD_DIR ( "MOD" )
-
 
 const char g_pszMedalNames[4][8] =
 {
@@ -39,9 +31,9 @@ bool WriteBonusMapSavedData( KeyValues *data )
 
 	data->RecursiveSaveToFile( buf, 0 );
 
-	char	szFilename[_MAX_PATH];
+	char	szFilename[k_cMaxPath];
 
-Q_snprintf( szFilename, sizeof( szFilename ), "save/bonus_maps_data.bmd" );
+V_snprintf( szFilename, sizeof( szFilename ), "save/bonus_maps_data.bmd" );
 
 	bool bWriteSuccess = g_pFullFileSystem->WriteFile( szFilename, MOD_DIR, buf.bytes() );
 
@@ -56,11 +48,11 @@ void GetBooleanStatus( KeyValues *pBonusFilesKey, BonusMapDescription_t &map )
 
 	for ( pFileKey = pBonusFilesKey->GetFirstSubKey(); pFileKey; pFileKey = pFileKey->GetNextTrueSubKey() )
 	{
-		if ( Q_strcmp( pFileKey->GetName(), map.szFileName ) == 0 )
+		if ( V_strcmp( pFileKey->GetName(), map.szFileName ) == 0 )
 		{
 			for ( pBonusKey = pFileKey->GetFirstSubKey(); pBonusKey; pBonusKey = pBonusKey->GetNextKey() )
 			{
-				if ( Q_strcmp( pBonusKey->GetName(), map.szMapName ) == 0 )
+				if ( V_strcmp( pBonusKey->GetName(), map.szMapName ) == 0 )
 				{
 					// Found the data
 					break;
@@ -93,11 +85,11 @@ bool SetBooleanStatus( KeyValues *pBonusFilesKey, const char *pchName, const cha
 
 	for ( pFileKey = pBonusFilesKey->GetFirstSubKey(); pFileKey; pFileKey = pFileKey->GetNextTrueSubKey() )
 	{
-		if ( Q_strcmp( pFileKey->GetName(), pchFileName ) == 0 )
+		if ( V_strcmp( pFileKey->GetName(), pchFileName ) == 0 )
 		{
 			for ( pBonusKey = pFileKey->GetFirstSubKey(); pBonusKey; pBonusKey = pBonusKey->GetNextKey() )
 			{
-				if ( Q_strcmp( pBonusKey->GetName(), pchMapName ) == 0 )
+				if ( V_strcmp( pBonusKey->GetName(), pchMapName ) == 0 )
 				{
 					// Found the data
 					break;
@@ -141,11 +133,11 @@ float GetChallengeBests( KeyValues *pBonusFilesKey, BonusMapDescription_t &chall
 
 	for ( pFileKey = pBonusFilesKey->GetFirstSubKey(); pFileKey; pFileKey = pFileKey->GetNextTrueSubKey() )
 	{
-		if ( Q_strcmp( pFileKey->GetName(), challenge.szFileName ) == 0 )
+		if ( V_strcmp( pFileKey->GetName(), challenge.szFileName ) == 0 )
 		{
 			for ( pBonusKey = pFileKey->GetFirstSubKey(); pBonusKey; pBonusKey = pBonusKey->GetNextKey() )
 			{
-				if ( Q_strcmp( pBonusKey->GetName(), challenge.szMapName ) == 0 )
+				if ( V_strcmp( pBonusKey->GetName(), challenge.szMapName ) == 0 )
 				{
 					// Found the data
 					break;
@@ -192,11 +184,11 @@ bool UpdateChallengeBest( KeyValues *pBonusFilesKey, const BonusMapChallenge_t &
 
 	for ( pFileKey = pBonusFilesKey->GetFirstSubKey(); pFileKey; pFileKey = pFileKey->GetNextTrueSubKey() )
 	{
-		if ( Q_strcmp( pFileKey->GetName(), challenge.szFileName ) == 0 )
+		if ( V_strcmp( pFileKey->GetName(), challenge.szFileName ) == 0 )
 		{
 			for ( pBonusKey = pFileKey->GetFirstSubKey(); pBonusKey; pBonusKey = pBonusKey->GetNextKey() )
 			{
-				if ( Q_strcmp( pBonusKey->GetName(), challenge.szMapName ) == 0 )
+				if ( V_strcmp( pBonusKey->GetName(), challenge.szMapName ) == 0 )
 				{
 					// Found the challenge
 					break;
@@ -285,7 +277,7 @@ CBonusMapsDatabase *BonusMapsDatabase( void )
 //-----------------------------------------------------------------------------
 CBonusMapsDatabase::CBonusMapsDatabase( void )
 {
-	Assert( g_pBonusMapsDatabase == nullptr );	// There should only be 1 bonus maps database
+	contract_assert( g_pBonusMapsDatabase == nullptr );	// There should only be 1 bonus maps database
 	g_pBonusMapsDatabase = this;
 
 	RootPath();
@@ -324,9 +316,9 @@ bool CBonusMapsDatabase::ReadBonusMapSaveData( void )
 	}
 
 
-	char	szFilename[_MAX_PATH];
+	char	szFilename[k_cMaxPath];
 
-Q_snprintf( szFilename, sizeof( szFilename ), "save/bonus_maps_data.bmd" );
+V_snprintf( szFilename, sizeof( szFilename ), "save/bonus_maps_data.bmd" );
 
 	m_pBonusMapSavedData->LoadFromFile( g_pFullFileSystem, szFilename, nullptr );
 
@@ -352,13 +344,13 @@ bool CBonusMapsDatabase::WriteSaveData( void )
 void CBonusMapsDatabase::RootPath( void )
 {
 	m_iDirDepth = 0;
-	Q_strcpy( m_szCurrentPath, "." );
+	V_strcpy( m_szCurrentPath, "." );
 }
 
 void CBonusMapsDatabase::AppendPath( const char *pchAppend )
 {
 	++m_iDirDepth;
-	Q_snprintf( m_szCurrentPath, sizeof( m_szCurrentPath ), "%s/%s", m_szCurrentPath, pchAppend );
+	V_snprintf( m_szCurrentPath, sizeof( m_szCurrentPath ), "%s/%s", m_szCurrentPath, pchAppend );
 }
 
 void CBonusMapsDatabase::BackPath( void )
@@ -373,12 +365,12 @@ void CBonusMapsDatabase::BackPath( void )
 	}
 
 	--m_iDirDepth;
-	Q_strrchr( m_szCurrentPath, '/' )[ 0 ] = '\0';	// remove a dir from the end
+	V_strrchr( m_szCurrentPath, '/' )[ 0 ] = '\0';	// remove a dir from the end
 }
 
 void CBonusMapsDatabase::SetPath( const char *pchPath, int iDirDepth )
 {
-	Q_strcpy( m_szCurrentPath, pchPath );
+	V_strcpy( m_szCurrentPath, pchPath );
 	m_iDirDepth = iDirDepth;
 }
 
@@ -406,28 +398,28 @@ void CBonusMapsDatabase::ScanBonusMaps( void )
 	m_fCurrentCompletion = 0.0f;
 
 	// populate list box with all bonus maps in the current path
-	char szDirectory[_MAX_PATH];
+	char szDirectory[k_cMaxPath];
 
-	if ( Q_strcmp( m_szCurrentPath, "." ) == 0 )
+	if ( V_strcmp( m_szCurrentPath, "." ) == 0 )
 	{
 		// We're at the root, so look at the directories in the manifest
 		KeyValues *pKey = nullptr;
 		for ( pKey = m_pBonusMapsManifest->GetFirstSubKey(); pKey; pKey = pKey->GetNextKey() )
 		{
 			const char *pchType = pKey->GetName();
-			if ( Q_strcmp( pchType, "search" ) == 0 )
+			if ( V_strcmp( pchType, "search" ) == 0 )
 			{
 				// Search through the directory
-				Q_snprintf( szDirectory, sizeof( szDirectory ), "%s/", pKey->GetString() );
+				V_snprintf( szDirectory, sizeof( szDirectory ), "%s/", pKey->GetString() );
 
 				BuildSubdirectoryList( szDirectory, true );
 				BuildBonusMapsList( szDirectory, true );
 			}
-			else if ( Q_strcmp( pchType, "dir" ) == 0 )
+			else if ( V_strcmp( pchType, "dir" ) == 0 )
 			{
 				AddBonus( "", pKey->GetString(), true );
 			}
-			else if ( Q_strcmp( pchType, "map" ) == 0 )
+			else if ( V_strcmp( pchType, "map" ) == 0 )
 			{
 				AddBonus( "", pKey->GetString(), false );
 			}
@@ -436,7 +428,7 @@ void CBonusMapsDatabase::ScanBonusMaps( void )
 	else
 	{
 		// Search through the current directory
-		Q_snprintf( szDirectory, sizeof( szDirectory ), "%s/", pCurrentPath );
+		V_snprintf( szDirectory, sizeof( szDirectory ), "%s/", pCurrentPath );
 
 		BuildSubdirectoryList( szDirectory, false );
 		BuildBonusMapsList( szDirectory, false );
@@ -527,7 +519,7 @@ bool CBonusMapsDatabase::BonusesUnlocked( void )
 		for ( int iBonusMap = 0; iBonusMap < BonusMapsDatabase()->BonusCount(); ++iBonusMap )
 		{
 			BonusMapDescription_t *pMap = BonusMapsDatabase()->GetBonusData( iBonusMap );
-			if ( Q_strcmp( pMap->szMapName, "#Bonus_Map_AdvancedChambers" ) == 0 && !pMap->bLocked )
+			if ( V_strcmp( pMap->szMapName, "#Bonus_Map_AdvancedChambers" ) == 0 && !pMap->bLocked )
 			{
 				// All bonuses unlocked, remember this and set up the proper X360 scan to get info.
 				m_iX360BonusesUnlocked = 1;
@@ -541,16 +533,16 @@ bool CBonusMapsDatabase::BonusesUnlocked( void )
 
 void CBonusMapsDatabase::SetCurrentChallengeNames( const char *pchFileName, const char *pchMapName, const char *pchChallengeName )
 {
-	Q_strcpy( m_CurrentChallengeNames.szFileName, pchFileName );
-	Q_strcpy( m_CurrentChallengeNames.szMapName, pchMapName );
-	Q_strcpy( m_CurrentChallengeNames.szChallengeName, pchChallengeName );
+	V_strcpy( m_CurrentChallengeNames.szFileName, pchFileName );
+	V_strcpy( m_CurrentChallengeNames.szMapName, pchMapName );
+	V_strcpy( m_CurrentChallengeNames.szChallengeName, pchChallengeName );
 }
 
 void CBonusMapsDatabase::GetCurrentChallengeNames( char *pchFileName, char *pchMapName, char *pchChallengeName )
 {
-	Q_strcpy( pchFileName, m_CurrentChallengeNames.szFileName );
-	Q_strcpy( pchMapName, m_CurrentChallengeNames.szMapName );
-	Q_strcpy( pchChallengeName, m_CurrentChallengeNames.szChallengeName );
+	V_strcpy( pchFileName, m_CurrentChallengeNames.szFileName );
+	V_strcpy( pchMapName, m_CurrentChallengeNames.szMapName );
+	V_strcpy( pchChallengeName, m_CurrentChallengeNames.szChallengeName );
 }
 
 void CBonusMapsDatabase::SetCurrentChallengeObjectives( int iBronze, int iSilver, int iGold )
@@ -589,9 +581,9 @@ bool CBonusMapsDatabase::SetBooleanStatus( const char *pchName, int iIndex, bool
 bool CBonusMapsDatabase::UpdateChallengeBest( const char *pchFileName, const char *pchMapName, const char *pchChallengeName, int iBest )
 {
 	BonusMapChallenge_t challenge;
-	Q_strcpy( challenge.szFileName, pchFileName );
-	Q_strcpy( challenge.szMapName, pchMapName );
-	Q_strcpy( challenge.szChallengeName, pchChallengeName );
+	V_strcpy( challenge.szFileName, pchFileName );
+	V_strcpy( challenge.szMapName, pchMapName );
+	V_strcpy( challenge.szChallengeName, pchChallengeName );
 	challenge.iBest = iBest;
 
 	bool bChanged = ::UpdateChallengeBest( m_pBonusMapSavedData->FindKey( "bonusfiles", true ), challenge );
@@ -612,8 +604,8 @@ float CBonusMapsDatabase::GetCompletionPercentage( void )
 
 int CBonusMapsDatabase::NumAdvancedComplete( void )
 {
-	char szCurrentPath[_MAX_PATH];
-	Q_strcpy( szCurrentPath, m_szCurrentPath );
+	char szCurrentPath[k_cMaxPath];
+	V_strcpy( szCurrentPath, m_szCurrentPath );
 	int iDirDepth = m_iDirDepth;
 
 	BonusMapsDatabase()->ClearBonusMapsList();
@@ -627,7 +619,7 @@ int CBonusMapsDatabase::NumAdvancedComplete( void )
 	{
 		BonusMapDescription_t *pMap = BonusMapsDatabase()->GetBonusData( iBonusMap );
 
-		if ( pMap && Q_strstr( pMap->szMapName, "Advanced" ) != nullptr )
+		if ( pMap && V_strstr( pMap->szMapName, "Advanced" ) != nullptr )
 		{
 			// It's an advanced map, so check if it's complete
 			if ( pMap->bComplete )
@@ -644,8 +636,8 @@ int CBonusMapsDatabase::NumAdvancedComplete( void )
 
 void CBonusMapsDatabase::NumMedals( int piNumMedals[ 3 ] )
 {
-	char szCurrentPath[_MAX_PATH];
-	Q_strcpy( szCurrentPath, m_szCurrentPath );
+	char szCurrentPath[k_cMaxPath];
+	V_strcpy( szCurrentPath, m_szCurrentPath );
 	int iDirDepth = m_iDirDepth;
 
 	BonusMapsDatabase()->ClearBonusMapsList();
@@ -687,8 +679,8 @@ void CBonusMapsDatabase::NumMedals( int piNumMedals[ 3 ] )
 
 void CBonusMapsDatabase::AddBonus( const char *pCurrentPath, const char *pDirFileName, bool bIsFolder )
 {
-	char szFileName[_MAX_PATH];
-	Q_snprintf( szFileName, sizeof( szFileName ), "%s%s", pCurrentPath, pDirFileName );
+	char szFileName[k_cMaxPath];
+	V_snprintf( szFileName, sizeof( szFileName ), "%s%s", pCurrentPath, pDirFileName );
 
 	// Only load bonus maps from the current mod's maps dir
 	if( !g_pFullFileSystem->FileExists( szFileName, "MOD" ) )
@@ -699,8 +691,8 @@ void CBonusMapsDatabase::AddBonus( const char *pCurrentPath, const char *pDirFil
 
 void CBonusMapsDatabase::BuildSubdirectoryList( const char *pCurrentPath, bool bOutOfRoot )
 {
-	char szDirectory[_MAX_PATH];
-	Q_snprintf( szDirectory, sizeof( szDirectory ), "%s*", pCurrentPath );
+	char szDirectory[k_cMaxPath];
+	V_snprintf( szDirectory, sizeof( szDirectory ), "%s*", pCurrentPath );
 
 	FileFindHandle_t dirHandle;
 	const char *pDirFileName = g_pFullFileSystem->FindFirst( szDirectory, &dirHandle );
@@ -709,10 +701,10 @@ void CBonusMapsDatabase::BuildSubdirectoryList( const char *pCurrentPath, bool b
 	{
 		// Skip it if it's not a directory, is the root, is back, or is an invalid folder
 		if ( !g_pFullFileSystem->FindIsDirectory( dirHandle ) || 
-			 Q_strcmp( pDirFileName, "." ) == 0 || 
-			 Q_strcmp( pDirFileName, ".." ) == 0 ||
-			 Q_stricmp( pDirFileName, "soundcache" ) == 0 ||
-			 Q_stricmp( pDirFileName, "graphs" ) == 0 )
+			 V_strcmp( pDirFileName, "." ) == 0 || 
+			 V_strcmp( pDirFileName, ".." ) == 0 ||
+			 V_stricmp( pDirFileName, "soundcache" ) == 0 ||
+			 V_stricmp( pDirFileName, "graphs" ) == 0 )
 		{
 			pDirFileName = g_pFullFileSystem->FindNext( dirHandle );
 			continue;
@@ -722,8 +714,8 @@ void CBonusMapsDatabase::BuildSubdirectoryList( const char *pCurrentPath, bool b
 			AddBonus( pCurrentPath, pDirFileName, true );
 		else
 		{
-			char szFileName[_MAX_PATH];
-			Q_snprintf( szFileName, sizeof( szFileName ), "%s%s", pCurrentPath, pDirFileName );
+			char szFileName[k_cMaxPath];
+			V_snprintf( szFileName, sizeof( szFileName ), "%s%s", pCurrentPath, pDirFileName );
 			AddBonus( "", szFileName, true );
 		}
 
@@ -735,8 +727,8 @@ void CBonusMapsDatabase::BuildSubdirectoryList( const char *pCurrentPath, bool b
 
 void CBonusMapsDatabase::BuildBonusMapsList( const char *pCurrentPath, bool bOutOfRoot )
 {
-	char szDirectory[_MAX_PATH];
-	Q_snprintf( szDirectory, sizeof( szDirectory ), "%s*.bns", pCurrentPath );
+	char szDirectory[k_cMaxPath];
+	V_snprintf( szDirectory, sizeof( szDirectory ), "%s*.bns", pCurrentPath );
 
 	FileFindHandle_t mapHandle;
 	const char *pMapFileName = g_pFullFileSystem->FindFirst( szDirectory, &mapHandle );
@@ -744,7 +736,7 @@ void CBonusMapsDatabase::BuildBonusMapsList( const char *pCurrentPath, bool bOut
 	while (pMapFileName)
 	{
 		// Skip it if it's a directory or is the folder info
-		if ( g_pFullFileSystem->FindIsDirectory( mapHandle ) || Q_strstr( pMapFileName, "folderinfo.bns" ) )
+		if ( g_pFullFileSystem->FindIsDirectory( mapHandle ) || V_strstr( pMapFileName, "folderinfo.bns" ) )
 		{
 			pMapFileName = g_pFullFileSystem->FindNext( mapHandle );
 			continue;
@@ -754,8 +746,8 @@ void CBonusMapsDatabase::BuildBonusMapsList( const char *pCurrentPath, bool bOut
 			AddBonus( pCurrentPath, pMapFileName, false );
 		else
 		{
-			char szFileName[_MAX_PATH];
-			Q_snprintf( szFileName, sizeof( szFileName ), "%s%s", pCurrentPath, pMapFileName );
+			char szFileName[k_cMaxPath];
+			V_snprintf( szFileName, sizeof( szFileName ), "%s%s", pCurrentPath, pMapFileName );
 			AddBonus( "", szFileName, false );
 		}
 
@@ -773,18 +765,18 @@ void CBonusMapsDatabase::ParseBonusMapData( char const *pszFileName, char const 
 	if ( !pszFileName || !pszShortName )
 		return;
 
-	char szMapInfo[_MAX_PATH];
+	char szMapInfo[k_cMaxPath];
 
 	// if it's a directory, there's no optional info
 	if ( bIsFolder )
 	{
 		// get the folder info file name
-		Q_snprintf( szMapInfo, sizeof(szMapInfo), "%s/folderinfo.bns", pszFileName );
+		V_snprintf( szMapInfo, sizeof(szMapInfo), "%s/folderinfo.bns", pszFileName );
 	}
 	else
 	{
 		// get the map info file name
-		Q_strncpy( szMapInfo, pszFileName, sizeof(szMapInfo) );
+		V_strncpy( szMapInfo, pszFileName, sizeof(szMapInfo) );
 	}
 
 	KeyValues *kv = new KeyValues( pszShortName );
@@ -798,16 +790,16 @@ void CBonusMapsDatabase::ParseBonusMapData( char const *pszFileName, char const 
 		BonusMapDescription_t *pMap = &m_BonusMaps[ iMap ];
 
 		// set required map data
-		Q_strncpy( pMap->szFileName, pszFileName, sizeof(pMap->szFileName) );
-		Q_strncpy( pMap->szShortName, pszShortName, sizeof(pMap->szShortName) );
+		V_strncpy( pMap->szFileName, pszFileName, sizeof(pMap->szFileName) );
+		V_strncpy( pMap->szShortName, pszShortName, sizeof(pMap->szShortName) );
 		pMap->bIsFolder = bIsFolder;
 
 		// set optional map data
-		Q_strcpy( pMap->szMapName, kv->GetName() );
-		Q_strcpy( pMap->szMapFileName, kv->GetString( "map" ) );
-		Q_strcpy( pMap->szChapterName, kv->GetString( "chapter" ) );
-		Q_strcpy( pMap->szImageName, kv->GetString( "image" ) );
-		Q_strcpy( pMap->szComment, kv->GetString( "comment" ) );
+		V_strcpy( pMap->szMapName, kv->GetName() );
+		V_strcpy( pMap->szMapFileName, kv->GetString( "map" ) );
+		V_strcpy( pMap->szChapterName, kv->GetString( "chapter" ) );
+		V_strcpy( pMap->szImageName, kv->GetString( "image" ) );
+		V_strcpy( pMap->szComment, kv->GetString( "comment" ) );
 		pMap->bLocked = ( kv->GetInt( "lock", 0 ) != 0 );
 		pMap->bComplete = ( kv->GetInt( "complete", 0 ) != 0 );
 
@@ -825,8 +817,8 @@ void CBonusMapsDatabase::ParseBonusMapData( char const *pszFileName, char const 
 				int iChallenge = std::ssize( *pMap->m_pChallenges ); pMap->m_pChallenges->emplace_back();
 
 				ChallengeDescription_t *pChallenge = &(*pMap->m_pChallenges)[ iChallenge ];
-				Q_strcpy( pChallenge->szName, pChallengeKey->GetName() );
-				Q_strcpy( pChallenge->szComment, pChallengeKey->GetString( "comment" ) );
+				V_strcpy( pChallenge->szName, pChallengeKey->GetName() );
+				V_strcpy( pChallenge->szComment, pChallengeKey->GetString( "comment" ) );
 				pChallenge->iType = pChallengeKey->GetInt( "type", -1 );
 				pChallenge->iBronze = pChallengeKey->GetInt( "bronze" );
 				pChallenge->iSilver = pChallengeKey->GetInt( "silver" );
@@ -856,5 +848,3 @@ void CBonusMapsDatabase::ParseBonusMapData( char const *pszFileName, char const 
 			kv = nullptr;
 	}
 }
-
-

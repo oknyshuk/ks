@@ -1,33 +1,23 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//
-// Shader system:
-//	The shader system makes a few fundamental assumptions about when 
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
+
+// Purpose: Shader system:
+//	The shader system makes a few fundamental assumptions about when
 //	certain types of state get set.
-//
 // 1) Anything that can potentially affect vertex format must be set up
 //		during the shader shadow/snapshot phase
 // 2) Anything that we can dynamically mess with (through a material var)
 //		should happen in the dynamic/render phase
 // 3) In general, we try to cache off expensive state pre-processing in
 //		the shader shadow phase (like texture stage pipeline).
-//
-//===========================================================================//
-
-#ifndef SHADERSYSTEM_H
-#define SHADERSYSTEM_H
-
 
 #include "materialsystem/ishadersystem.h"
 #include "shaderlib/BaseShader.h"
 #include "materialsystem/materialsystem_config.h"
 #include "shaderapi/ishaderapi.h"
 #include "materialsystem_global.h"
-
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -39,7 +29,6 @@ class ShaderSystem_t;
 class IMesh;
 class IVertexBuffer;
 class IIndexBuffer;
-class Vector;
 enum MaterialPrimitiveType_t;
 enum MaterialPropertyTypes_t;
 enum MaterialIndexFormat_t;
@@ -163,7 +152,7 @@ inline bool	IsAlphaTested( ShaderRenderState_t* pRenderState )
 //-----------------------------------------------------------------------------
 // The shader system (a singleton)
 //-----------------------------------------------------------------------------
-abstract_class IShaderSystemInternal : public IShaderInit, public IShaderSystem
+class IShaderSystemInternal : public IShaderInit, public IShaderSystem
 {
 public:
 	// Initialization, shutdown
@@ -212,6 +201,3 @@ public:
 	virtual int	 ShaderCount() const = 0;
 	virtual int  GetShaders( int nFirstShader, int nCount, IShader **ppShaderList ) const = 0;
 };
-
-
-#endif // SHADERSYSTEM_H

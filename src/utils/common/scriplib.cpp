@@ -1,19 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // scriplib.c
 
-#include "tier1/strtools.h"
+
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
 #include "tier2/tier2.h"
 #include "cmdlib.h"
 #include "scriplib.h"
-#include "../../filesystem/linux_support.h"
-#include <sys/stat.h>
+#include "platform/linux/linux_support.h"
 /*
 =============================================================================
 
@@ -35,7 +38,7 @@ typedef struct
 
 } script_t;
 
-#define	MAX_INCLUDES	16
+constexpr auto MAX_INCLUDES = 16;
 script_t	scriptstack[MAX_INCLUDES];
 script_t	*script = nullptr;
 int			scriptline;
@@ -85,9 +88,9 @@ void AddScriptToStack (char *filename, ScriptPathMode_t pathMode = SCRIPT_USE_AB
 		Error ("script file exceeded MAX_INCLUDES");
 	
 	if ( pathMode == SCRIPT_USE_RELATIVE_PATH )
-		Q_strncpy( script->filename, filename, sizeof( script->filename ) );
+		V_strncpy( script->filename, filename, sizeof( script->filename ) );
 	else
-		Q_strncpy (script->filename, ExpandPath (filename), sizeof( script->filename ) );
+		V_strncpy (script->filename, ExpandPath (filename), sizeof( script->filename ) );
 
 	size = LoadFile (script->filename, (void **)&script->buffer);
 
@@ -127,7 +130,7 @@ void LoadScriptFile (char *filename, ScriptPathMode_t pathMode)
 ==============
 */
 
-#define MAX_MACROS 128
+constexpr auto MAX_MACROS = 128;
 script_t	*macrolist[MAX_MACROS];
 int nummacros;
 
@@ -206,13 +209,13 @@ void DefineVariable( char *variablename )
 {
 	variable_t v;
 
-	v.param = strdup( variablename );
+	v.param = __builtin_strdup( variablename );
 
 	GetToken( false );
 	
-	v.value = strdup( token );
+	v.value = __builtin_strdup( token );
 	
-	v.param_lcase = strlwr( strdup(v.param) );
+	v.param_lcase = strlwr( __builtin_strdup(v.param) );
 
 	for ( int i=0; i<std::ssize( g_definevariable ); i++ )
 	{
@@ -229,11 +232,11 @@ void RedefineVariable( char *variablename )
 {
 	variable_t v;
 
-	v.param = strdup( variablename );
+	v.param = __builtin_strdup( variablename );
 
 	GetToken( false );
 	
-	v.value = strdup( token );
+	v.value = __builtin_strdup( token );
 
 	int nIdx = -1;
 	for ( int i=0; i<std::ssize( g_definevariable ); i++ )
@@ -339,7 +342,7 @@ bool ExpandSubMacroToken( char *&token_p )
 		int index;
 		for (index = 0; index < std::ssize( g_definevariable ); index++)
 		{
-			if ( !Q_strcmp( g_definevariable[index].param, szPotentialVar ) )
+			if ( !V_strcmp( g_definevariable[index].param, szPotentialVar ) )
 			{
 				strcpy( token, g_definevariable[index].value );
 				return true;
@@ -432,7 +435,7 @@ bool ExpandVariableToken( char *&token_p )
 		for (index = 0; index < std::ssize( g_definevariable ); index++)
 		{
 			// [wills] just strcmp here, this was doing nearest partial comparison before which could result in a false positive variable name match. Bad!
-			if ( !Q_strcmp( g_definevariable[index].param, tp ) )
+			if ( !V_strcmp( g_definevariable[index].param, tp ) )
 				break;
 		}
 	
@@ -441,8 +444,8 @@ bool ExpandVariableToken( char *&token_p )
 		{
 			for (index = 0; index < std::ssize( g_definevariable ); index++)
 			{
-				char *tp_lower = strlwr(strdup(tp));
-				if ( !Q_strcmp( g_definevariable[index].param_lcase, tp_lower ) )
+				char *tp_lower = strlwr(__builtin_strdup(tp));
+				if ( !V_strcmp( g_definevariable[index].param_lcase, tp_lower ) )
 				{
 					Warning( "Unknown variable token fell back to case-insensitive match ( found: \"%s\", matched it to: \"%s\" ) in %s\n", tp, g_definevariable[index].param, script->filename );
 					break;
@@ -969,12 +972,6 @@ qboolean GetTokenizerStatus( char **pFilename, int *pLine )
 }
 
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 class CScriptLib : public IScriptLib
 {
@@ -1013,7 +1010,7 @@ std::optional< std::vector< std::byte > > CScriptLib::ReadFileToBuffer( const ch
 	auto data = g_pFullFileSystem->ReadFile( pSourceName, nullptr );
 	if ( !data && !bNoOpenFailureWarning )
 	{
-		Msg( "ReadFileToBuffer(): Error opening %s: %s\n", pSourceName, strerror( errno ) );
+		Msg( "ReadFileToBuffer(): Error opening %s: %s\n", pSourceName, strerror( ks::platform::last_errno() ) );
 	}
 
 	return data;
@@ -1101,7 +1098,7 @@ int CScriptLib::CompareFileTime( const char *pFilenameA, const char *pFilenameB 
 //-----------------------------------------------------------------------------
 char *CScriptLib::MakeTemporaryFilename( char const *pchModPath, char *pPath, int pathSize )
 {
-	char *pBuffer = _tempnam( pchModPath, "mgd_" );
+	char *pBuffer = tempnam( pchModPath, "mgd_" );
 	if ( pBuffer[0] == '\\' )
 	{
 		pBuffer++;
@@ -1139,7 +1136,7 @@ void CScriptLib::DeleteTemporaryFiles( const char *pFileMask )
 		FindFiles( tempPath, false, fileList );
 		for ( int i=0; i<std::ssize( fileList ); i++ )
 		{
-			_unlink( fileList[i].fileName.c_str() );
+			ks::platform::remove_file( fileList[i].fileName.c_str(), nullptr );
 		}
 	}
 }
@@ -1182,7 +1179,7 @@ int CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, std::ve
 	}
 
 	FIND_DATA findData;
-	Q_FixSlashes( fullPath );
+	V_FixSlashes( fullPath );
 	void *h = FindFirstFile( fullPath, &findData );
 	if ( (intp)h == -1 )
 	{
@@ -1195,13 +1192,13 @@ int CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, std::ve
 		if ( bFindDirs )
 		{
 			// skip non dirs
-			if ( !( findData.dwFileAttributes & S_IFDIR ) )
+			if ( !( findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) )
 				continue;
 		}
 		else
 		{
 			// skip dirs
-			if ( findData.dwFileAttributes & S_IFDIR )
+			if ( findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
 				continue;
 		}
 
@@ -1217,11 +1214,8 @@ int CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, std::ve
 
 		int j = std::ssize( fileList ); fileList.emplace_back();
 		fileList[j].fileName.assign( ks::nz( fileName ) );
-		struct stat statbuf;
-		if ( stat( fileName, &statbuf ) )
-			fileList[j].timeWrite = statbuf.st_mtime;
-		else
-			fileList[j].timeWrite = 0;
+		long long modified = ks::platform::file_modified_seconds( fileName );
+		fileList[j].timeWrite = modified >= 0 ? (int)modified : 0;
 	}
 	while ( !FindNextFile( h, &findData ) );
 

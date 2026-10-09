@@ -1,12 +1,6 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef CDLL_CLIENT_INT_H
-#define CDLL_CLIENT_INT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "iclientnetworkable.h"
 #include "cdll_int.h"
@@ -50,7 +44,6 @@ class IInputSystem;
 class ISceneFileCache;
 class IAvi;
 class IBik;
-class CSteamAPIContext;
 class IReplayHistoryManager;
 class ISoundEmitterSystemBase;
 class IGameTypes;
@@ -86,14 +79,9 @@ extern ISceneFileCache *scenefilecache;
 extern IAvi *avi;
 extern IBik *bik;
 extern IUploadGameStats *gamestatsuploader;
-extern CSteamAPIContext *steamapicontext;
 extern ISoundEmitterSystemBase *soundemitterbase;
 
 extern IGameTypes *g_pGameTypes;
-
-#if defined( REPLAY_ENABLED )
-extern IReplayHistoryManager *g_pReplayHistoryManager;
-#endif
 
 extern AchievementsAndStatsInterface* g_pAchievementsAndStatsInterface;
 
@@ -219,8 +207,6 @@ C_BasePlayer *GetSplitScreenViewPlayer( int nSlot ); //allows return of split sc
 bool IsLocalSplitScreenPlayer( int nSlot ); //true is a full splitscreen player. false is just a view of a remote player
 
 
-#if defined( SPLIT_SCREEN_STUBS )
-
 #define UI_SCREENSIZE_SPLITSCREEN_GUARD( slot ) 
 #define ACTIVE_SPLITSCREEN_PLAYER_GUARD( slot )
 #define ACTIVE_SPLITSCREEN_PLAYER_GUARD_ENT( entity )
@@ -238,69 +224,10 @@ bool IsLocalSplitScreenPlayer( int nSlot ); //true is a full splitscreen player.
 #define ASSERT_LOCAL_PLAYER_NOT_RESOLVABLE() 
 #define GET_ACTIVE_SPLITSCREEN_SLOT() ( 0 )
 
-FORCEINLINE uint32 ComputeSplitscreenRenderingFlags( IClientRenderable *pRenderable )
+[[gnu::always_inline]] inline uint32 ComputeSplitscreenRenderingFlags( IClientRenderable *pRenderable )
 {
 	return 0xFFFFFFFF;
 }
-
-#else
-
-#define UI_SCREENSIZE_SPLITSCREEN_GUARD( slot ) CUIScreenSizeSplitScreenPlayerGuard s_VGuiSSGuard( slot, engine->GetActiveSplitScreenPlayerSlot() );
-#define ACTIVE_SPLITSCREEN_PLAYER_GUARD( slot )	CSetActiveSplitScreenPlayerGuard g_SSGuard( __FILE__, __LINE__, slot, engine->GetActiveSplitScreenPlayerSlot(), false );
-#define ACTIVE_SPLITSCREEN_PLAYER_GUARD_ENT( entity )	CSetActiveSplitScreenPlayerGuard g_SSEGuard( __FILE__, __LINE__, entity, engine->GetActiveSplitScreenPlayerSlot(), false );
-
-#define ACTIVE_SPLITSCREEN_PLAYER_GUARD_UI( slot )	CSetActiveSplitScreenPlayerGuard g_SSGuardNoVgui( __FILE__, __LINE__, slot, engine->GetActiveSplitScreenPlayerSlot(), true );
-#define ACTIVE_SPLITSCREEN_PLAYER_GUARD_ENT_VGUI( entity )	CSetActiveSplitScreenPlayerGuard g_SSEGuardNoVgui( __FILE__, __LINE__, entity, engine->GetActiveSplitScreenPlayerSlot(), true );
-
-
-#define HACK_GETLOCALPLAYER_GUARD( desc )	CHackForGetLocalPlayerAccessAllowedGuard g_HackGLPGuard( desc, engine->IsLocalPlayerResolvable() );
-#define UI_ABSPOS_SPLITSCREEN_GUARD( slot ) CUIAbsPosSplitScreenPlayerGuard s_VGuiAbsPosGuard( slot, engine->GetActiveSplitScreenPlayerSlot() );
-#define UI_ABSPOS_SPLITSCREEN_GUARD_INVERT( slot ) CUIAbsPosSplitScreenPlayerGuard s_VGuiAbsPosGuard( slot, engine->GetActiveSplitScreenPlayerSlot(), true );
-
-#define FOR_EACH_VALID_SPLITSCREEN_PLAYER( iteratorName )						\
-	for ( int iteratorName = FirstValidSplitScreenSlot();				\
-				iteratorName != -1;												\
-				iteratorName = NextValidSplitScreenSlot( iteratorName ) )	
-
-// Uncomment this to be able to look for guard asserts in release builds
-// #define SS_SHIPPING_ASSERTS
-
-#if defined( SS_SHIPPING_ASSERTS )
-#define ASSERT_LOCAL_PLAYER_RESOLVABLE() _AssertMsg( engine->IsLocalPlayerResolvable(), _T("Assertion Failed: ") _T("engine->IsLocalPlayerResolvable()"), ((void)0), false )
-#else
-#define ASSERT_LOCAL_PLAYER_RESOLVABLE() Assert( engine->IsLocalPlayerResolvable() );
-#endif
-
-#if defined( SS_SHIPPING_ASSERTS )
-#define ASSERT_LOCAL_PLAYER_NOT_RESOLVABLE() _AssertMsg( !engine->IsLocalPlayerResolvable(), _T("Assertion Failed: ") _T("!engine->IsLocalPlayerResolvable()"), ((void)0), false )
-#else
-#define ASSERT_LOCAL_PLAYER_NOT_RESOLVABLE() Assert( !engine->IsLocalPlayerResolvable() );
-#endif
-
-#define GET_ACTIVE_SPLITSCREEN_SLOT() engine->GetActiveSplitScreenPlayerSlot()
-
-//-----------------------------------------------------------------------------
-// Default implementation of compute splitscreen rendering flags
-//-----------------------------------------------------------------------------
-FORCEINLINE uint32 ComputeSplitscreenRenderingFlags( IClientRenderable *pRenderable )
-{
-	if ( IsSplitScreenSupported() )
-	{
-		int nFlags = 0;
-		for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
-		{
-			if ( pRenderable->ShouldDrawForSplitScreenUser( i ) )
-			{
-				nFlags |= 1 << i;
-			}
-		}
-		return nFlags;
-	}
-
-	return 0xFFFFFFFF;
-}
-
-#endif
 
 inline C_BasePlayer *GetSplitScreenViewPlayer( void ) { return GetSplitScreenViewPlayer( GET_ACTIVE_SPLITSCREEN_SLOT() ); };
 inline bool IsLocalSplitScreenPlayer( void ) { return IsLocalSplitScreenPlayer( GET_ACTIVE_SPLITSCREEN_SLOT() ); };
@@ -309,5 +236,3 @@ inline bool IsLocalSplitScreenPlayer( void ) { return IsLocalSplitScreenPlayer( 
 int XBX_GetActiveUserId();
 
 #define XBX_GetPrimaryUserId() _Use_XBX_GetActiveUserId_Instead
-
-#endif // CDLL_CLIENT_INT_H

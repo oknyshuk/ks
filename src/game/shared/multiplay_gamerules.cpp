@@ -1,15 +1,65 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Contains the implementation of game rules for multiplayer.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Contains the implementation of game rules for multiplayer.
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "multiplay_gamerules.h"
-#include "viewport_panel_names.h"
-#include "gameeventdefs.h"
-#include <keyvalues.h>
 #include "filesystem.h"
 #include "mp_shareddefs.h"
 #include "gametypes/igametypes.h"
@@ -26,18 +76,13 @@
 	#include "items.h"
 	#include "entitylist.h"
 	#include "in_buttons.h" 
-	#include <ctype.h>
 	#include "voice_gamemgr.h"
 	#include "iscorer.h"
 	#include "hltvdirector.h"
-#if defined( REPLAY_ENABLED )
-	#include "replaydirector.h"
-#endif
 	#include "ai_criteria.h"
 	#include "sceneentity.h"
 	#include "team.h"
 	#include "usermessages.h"
-	#include "tier0/icommandline.h"
 	#include "basemultiplayerplayer.h"
 #endif
 
@@ -284,7 +329,7 @@ CMultiplayRules::CMultiplayRules()
 			char szCommand[256];
 
 			Msg( "Executing dedicated server config file\n" );
-			Q_snprintf( szCommand,sizeof(szCommand), "exec %s\n", cfgfile );
+			V_snprintf( szCommand,sizeof(szCommand), "exec %s\n", cfgfile );
 			engine->ServerCommand( szCommand );
 		}
 	}
@@ -298,7 +343,7 @@ CMultiplayRules::CMultiplayRules()
 			char szCommand[256];
 
 			Msg( "Executing listen server config file\n" );
-			Q_snprintf( szCommand,sizeof(szCommand), "exec %s\n", cfgfile );
+			V_snprintf( szCommand,sizeof(szCommand), "exec %s\n", cfgfile );
 			engine->ServerCommand( szCommand );
 		}
 	}
@@ -1111,10 +1156,6 @@ CMultiplayRules::CMultiplayRules()
 					flWaitTime = std::max( flWaitTime, HLTVDirector()->GetDelay() + 5.0f );
 				}
 			}
-#if defined( REPLAY_ENABLED )
-			else if ( ReplayDirector()->IsActive() )
-				flWaitTime = std::max( flWaitTime, ReplayDirector()->GetDelay() + 5.0f );
-#endif
 		}
 
 		return flWaitTime;
@@ -1139,7 +1180,7 @@ CMultiplayRules::CMultiplayRules()
 	void StripChar(char *szBuffer, const char cWhiteSpace )
 	{
 
-		while ( char *pSpace = strchr( szBuffer, cWhiteSpace ) )
+		while ( char *pSpace = std::strchr( szBuffer, cWhiteSpace ) )
 		{
 			char *pNextChar = pSpace + sizeof(char);
 			V_strcpy( pSpace, pNextChar );
@@ -1160,7 +1201,7 @@ CMultiplayRules::CMultiplayRules()
 		// If mapcycling is disabled, just return the same map name and bail.
 		if ( mapcycledisabled.GetBool() )
 		{
-			Q_strncpy( pszNextMap, STRING( gpGlobals->mapname ), bufsize );
+			V_strncpy( pszNextMap, STRING( gpGlobals->mapname ), bufsize );
 			if ( mp_verbose_changelevel_spew.GetBool() && pszNextMap )
 			{
 				Msg( "CHANGELEVEL: Map cycle disabled (due to convar '%s') -- not using map group, reloading current map '%s'\n", mapcycledisabled.GetName(), pszNextMap );
@@ -1182,7 +1223,7 @@ CMultiplayRules::CMultiplayRules()
 			if ( m_szNextLevelName && m_szNextLevelName[0] )
 			{
 				nextMapName = m_szNextLevelName;
-				Assert( 0 ); // Suspect this is a dead code path... remove me if possible
+				contract_assert( 0 ); // Suspect this is a dead code path... remove me if possible
 			}
 			else
 			{
@@ -1208,7 +1249,7 @@ CMultiplayRules::CMultiplayRules()
 		// we were not given a mapgroup name or we were given a mapname that was not in the mapgroup, so we fall back to the old method of cycling maps
 
 		const char *mapcfile = mapcyclefile.GetString();
-		Assert( mapcfile != nullptr );
+		contract_assert( mapcfile != nullptr );
 
 		// Check the time of the mapcycle file and re-populate the list of level names if the file has been modified
 		const int nMapCycleTimeStamp = filesystem->GetPathTime( mapcfile, "GAME" );
@@ -1305,7 +1346,7 @@ CMultiplayRules::CMultiplayRules()
 		}
 
 		// Here's the return value
-		Q_strncpy( pszNextMap, m_MapList[m_nMapCycleindex].c_str(), bufsize);
+		V_strncpy( pszNextMap, m_MapList[m_nMapCycleindex].c_str(), bufsize);
 	}
 
 	void CMultiplayRules::ChangeLevel( void )
@@ -1314,7 +1355,7 @@ CMultiplayRules::CMultiplayRules()
 
 		if ( nextlevel.GetString() && *nextlevel.GetString() && engine->IsMapValid( nextlevel.GetString() ) )
 		{
-			Q_strncpy( szNextMap, nextlevel.GetString(), sizeof( szNextMap ) );
+			V_strncpy( szNextMap, nextlevel.GetString(), sizeof( szNextMap ) );
 		}
 		else
 		{
@@ -1369,10 +1410,10 @@ CMultiplayRules::CMultiplayRules()
 					item.m_bShowSubtitle = ( menuitem->GetInt( "show_subtitle", 0 ) > 0 );
 					item.m_bDistanceBasedSubtitle = ( menuitem->GetInt( "distance_check_subtitle", 0 ) > 0 );
 
-					Q_strncpy( item.m_szGestureActivity, menuitem->GetString( "activity", "" ), sizeof( item.m_szGestureActivity ) ); 
+					V_strncpy( item.m_szGestureActivity, menuitem->GetString( "activity", "" ), sizeof( item.m_szGestureActivity ) ); 
 #else
-					Q_strncpy( item.m_szSubtitle, menuitem->GetString( "subtitle", "" ), MAX_VOICE_COMMAND_SUBTITLE );
-					Q_strncpy( item.m_szMenuLabel, menuitem->GetString( "menu_label", "" ), MAX_VOICE_COMMAND_SUBTITLE );
+					V_strncpy( item.m_szSubtitle, menuitem->GetString( "subtitle", "" ), MAX_VOICE_COMMAND_SUBTITLE );
+					V_strncpy( item.m_szMenuLabel, menuitem->GetString( "menu_label", "" ), MAX_VOICE_COMMAND_SUBTITLE );
 
 #endif
 					m_VoiceCommandMenus[ iMenuIndex ].push_back( item );
@@ -1425,7 +1466,7 @@ CMultiplayRules::CMultiplayRules()
 
 			if ( pMultiPlayerPlayer )
 			{
-				int iMenu = atoi( args[1] );
+				int iMenu = std::atoi( args[1] );
 				int iItem = atoi( args[2] );
 
 				VoiceCommand( pMultiPlayerPlayer, iMenu, iItem );
@@ -1452,14 +1493,14 @@ CMultiplayRules::CMultiplayRules()
 
 		VoiceCommandMenuItem_t *pItem = &m_VoiceCommandMenus[ iMenu ][ iItem ];
 
-		Assert( pItem );
+		contract_assert( pItem );
 
 		char szResponse[AI_Response::MAX_RESPONSE_NAME];
 
 		if ( pPlayer->CanSpeakVoiceCommand() )
 		{
 			CMultiplayer_Expresser *pExpresser = pPlayer->GetMultiplayerExpresser();
-			Assert( pExpresser );
+			contract_assert( pExpresser );
 			pExpresser->AllowMultipleScenes();
 
 			if ( pPlayer->SpeakConceptIfAllowed( pItem->m_iConcept, nullptr, szResponse, AI_Response::MAX_RESPONSE_NAME ) )
@@ -1556,17 +1597,17 @@ CMultiplayRules::CMultiplayRules()
 
 	const char *CMultiplayRules::GetVoiceCommandSubtitle( int iMenu, int iItem )
 	{
-		Assert( iMenu >= 0 && iMenu < std::ssize( m_VoiceCommandMenus ) );
+		contract_assert( iMenu >= 0 && iMenu < std::ssize( m_VoiceCommandMenus ) );
 		if ( iMenu < 0 || iMenu >= std::ssize( m_VoiceCommandMenus ) )
 			return "";
 
-		Assert( iItem >= 0 && iItem < std::ssize( m_VoiceCommandMenus[ iMenu ] ) );
+		contract_assert( iItem >= 0 && iItem < std::ssize( m_VoiceCommandMenus[ iMenu ] ) );
 		if ( iItem < 0 || iItem >= std::ssize( m_VoiceCommandMenus[ iMenu ] ) )
 			return "";
 
 		VoiceCommandMenuItem_t *pItem = &m_VoiceCommandMenus[ iMenu ][ iItem ];
 
-		Assert( pItem );
+		contract_assert( pItem );
 
 		return pItem->m_szSubtitle;
 	}
@@ -1574,7 +1615,7 @@ CMultiplayRules::CMultiplayRules()
 	// Returns false if no such menu is declared or if it's an empty menu
 	bool CMultiplayRules::GetVoiceMenuLabels( int iMenu, KeyValues *pKV )
 	{
-		Assert( iMenu >= 0 && iMenu < std::ssize( m_VoiceCommandMenus ) );
+		contract_assert( iMenu >= 0 && iMenu < std::ssize( m_VoiceCommandMenus ) );
 		if ( iMenu < 0 || iMenu >= std::ssize( m_VoiceCommandMenus ) )
 			return false;
 
@@ -1604,7 +1645,7 @@ bool CSameTeamGroup::Less( const CSameTeamGroup &p1, const CSameTeamGroup &p2 )
 }
 
 CSameTeamGroup::CSameTeamGroup() : 
-	m_nScore( INT_MIN )
+	m_nScore( std::numeric_limits<int>::min() )
 {
 }
 

@@ -1,12 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ILAGCOMPENSATIONMANAGER_H
-#define ILAGCOMPENSATIONMANAGER_H
+import std;
+import ks.math;
+class CBaseEntity;
 
 class CBasePlayer;
 class CUserCmd;
@@ -21,7 +19,7 @@ enum LagCompensationType
 //-----------------------------------------------------------------------------
 // Purpose: This is also an IServerSystem
 //-----------------------------------------------------------------------------
-abstract_class ILagCompensationManager
+class ILagCompensationManager
 {
 public:
 	// Called during player movement to set up/restore after lag compensation
@@ -39,5 +37,3 @@ public:
 };
 
 extern ILagCompensationManager *lagcompensation;
-
-#endif // ILAGCOMPENSATIONMANAGER_H

@@ -1,13 +1,19 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ====
-//
-// An entity that allows level designer control over the fog parameters.
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "cbase.h"
+// Purpose: An entity that allows level designer control over the fog parameters.
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "c_baseplayer.h"
 #include "c_env_fog_controller.h"
 #include "reflect_recvtable.h"
-#include "reflect_annotations.h"
 
 IMPLEMENT_NETWORKCLASS_ALIASED( FogController, DT_FogController )
 

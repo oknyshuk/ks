@@ -1,16 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef DISP_TESSELATE_H
-#define DISP_TESSELATE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "disp_powerinfo.h"
-
 
 inline int InternalVertIndex( const CPowerInfo *pInfo, const CVertIndex &vert )
 {
@@ -25,7 +17,7 @@ inline void InternalEndTriangle(
 	int &iCurTriVert )
 {
 	// End our current triangle here.
-	Assert( iCurTriVert == 2 );
+	contract_assert( iCurTriVert == 2 );
 	
 	// Finish the triangle.
 	pHelper->m_TempIndices[2] = (unsigned short)InternalVertIndex( pHelper->m_pPowerInfo, nodeIndex ); 
@@ -97,7 +89,7 @@ inline void TesselateDisplacement_R(
 	)
 {
 	// Here's the node info for our current node
-	Assert( iNodeBitIndex < pHelper->m_pPowerInfo->m_NodeCount );
+	contract_assert( iNodeBitIndex < pHelper->m_pPowerInfo->m_NodeCount );
 	DispNodeInfo_t& nodeInfo = pHelper->GetNodeInfo( iNodeBitIndex );
 
 	// Store off the current number of indices
@@ -158,7 +150,7 @@ inline void TesselateDisplacement_R(
 	// Now that we've tesselated, figure out how many indices we've added at this node
 	nodeInfo.m_Count = pHelper->m_nIndices - oldIndexCount;
 	nodeInfo.m_FirstTesselationIndex = oldIndexCount;
-	Assert( nodeInfo.m_Count % 3 == 0 );
+	contract_assert( nodeInfo.m_Count % 3 == 0 );
 }
 
 
@@ -199,6 +191,3 @@ inline void TesselateDisplacement( TesselateHelper *pHelper )
 		0,			// node bit indexing CDispDecal::m_NodeIntersects
 		0 );
 }
-
-
-#endif // DISP_TESSELATE_H

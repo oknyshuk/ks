@@ -1,11 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef MOVETYPE_PUSH_H
-#define MOVETYPE_PUSH_H
+import std;
+import ks.math;
+#include "ehandle.h"
+#ifdef CLIENT_DLL
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
+#else
+class CBaseEntity;
+typedef CHandle<CBaseEntity> EHANDLE;
+#endif
 
 const int MAX_PUSHED_ENTITIES = 32;
 struct physicspushlist_t
@@ -17,5 +23,3 @@ struct physicspushlist_t
 	EHANDLE	pushedEnts[MAX_PUSHED_ENTITIES];
 	Vector	pushVec[MAX_PUSHED_ENTITIES];
 };
-
-#endif // MOVETYPE_PUSH_H

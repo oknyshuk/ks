@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef HLTVDEMO_H
-#define HLTVDEMO_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <filesystem.h>
 
@@ -46,7 +41,7 @@ private: // IDemoRecorder
 	void	RecordMessages( bf_read &data, int bits );
 	void	RecordPacket( void );
 	void	RecordServerClasses( ServerClass *pClasses );
-	void	RecordCustomData( int iCallbackIndex, const void *pData, size_t iDataLength );
+	void	RecordCustomData( int iCallbackIndex, const void *pData, std::size_t iDataLength );
 
 	// These are not needed by HLTV demos, as they are for the local client; for HLTV/GOTV there
 	// is no local client playing the game.
@@ -77,7 +72,3 @@ private:
 	int				m_nLastWrittenTick;
 	CHLTVServer		*hltv;
 };
-
-
-
-#endif // HLTVDEMO_H

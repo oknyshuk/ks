@@ -1,18 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef TESTSCRIPTMGR_H
-#define TESTSCRIPTMGR_H
-
-
+import ks.tier1;
 #include "filesystem.h"
-#include "tier1/map_ops.h"
-#include <memory>
-#include <vector>
+import std;
 
 class CCommand;
 
@@ -96,6 +88,3 @@ inline CTestScriptMgr* GetTestScriptMgr()
 	extern CTestScriptMgr g_TestScriptMgr;
 	return &g_TestScriptMgr;
 }
-
-
-#endif // TESTSCRIPTMGR_H

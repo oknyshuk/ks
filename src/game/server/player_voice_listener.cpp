@@ -1,11 +1,41 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ============
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Maintain data about voice communications from various players
 //			so that the server can react to it.
-//			
-//===========================================================================
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "ndebugoverlay.h"
 #include "vscript_server.h"
 
 #include "player_voice_listener.h"
@@ -56,7 +86,7 @@ bool CPlayerVoiceListener::IsPlayerSpeaking( int nPlayerIndex )
 bool CPlayerVoiceListener::IsPlayerSpeaking( CBasePlayer *pPlayer )
 {
 	// Validate the player
-	Assert( pPlayer );
+	contract_assert( pPlayer );
 	if ( pPlayer == nullptr )
 		return false;
 
@@ -72,7 +102,7 @@ bool CPlayerVoiceListener::ScriptIsPlayerSpeaking( int nPlayerIndex )
 }
 
 
-#define SPEECH_DURATION_HACK	1.0f	// This is a total hack to guess a duration of a voice packet, this has no real value
+constexpr auto SPEECH_DURATION_HACK = 1.0f; // This is a total hack to guess a duration of a voice packet, this has no real value
 
 //---------------------------------------------------------------------------
 // Purpose:
@@ -107,7 +137,7 @@ void CPlayerVoiceListener::AddPlayerSpeakTime( int nPlayerIndex )
 void CPlayerVoiceListener::AddPlayerSpeakTime( CBasePlayer *pPlayer )
 {
 	// Validate the player
-	Assert( pPlayer );
+	contract_assert( pPlayer );
 	if ( pPlayer == nullptr )
 		return;
 
@@ -131,7 +161,7 @@ float CPlayerVoiceListener::GetPlayerLastSpeechTime( int nPlayerIndex )
 float CPlayerVoiceListener::GetPlayerLastSpeechTime( CBasePlayer *pPlayer )
 {
 	// Validate the player
-	Assert( pPlayer );
+	contract_assert( pPlayer );
 	if ( pPlayer == nullptr )
 		return -1.0f;
 
@@ -155,7 +185,7 @@ float CPlayerVoiceListener::GetPlayerSilenceDuration( int nPlayerIndex )
 float CPlayerVoiceListener::GetPlayerSilenceDuration( CBasePlayer *pPlayer )
 {
 	// Validate the player
-	Assert( pPlayer );
+	contract_assert( pPlayer );
 	if ( pPlayer == nullptr )
 		return -1.0f;
 
@@ -179,7 +209,7 @@ float CPlayerVoiceListener::GetPlayerSpeechDuration( int nPlayerIndex )
 float CPlayerVoiceListener::GetPlayerSpeechDuration( CBasePlayer *pPlayer )
 {
 	// Validate the player
-	Assert( pPlayer );
+	contract_assert( pPlayer );
 	if ( pPlayer == nullptr )
 		return -1.0f;
 
@@ -200,8 +230,8 @@ float CPlayerVoiceListener::ScriptGetPlayerSpeechDuration( int nPlayerIndex )
 void CPlayerVoiceListener::InitData( void )
 {
 	// Clear our tracking data
-	memset( m_flLastPlayerSpeechTime, 0.0f, ARRAYSIZE(m_flLastPlayerSpeechTime) );
-	memset( m_flPlayerSpeechDuration, 0.0f, ARRAYSIZE(m_flPlayerSpeechDuration) );
+	std::memset( m_flLastPlayerSpeechTime, 0.0f, std::size( m_flLastPlayerSpeechTime ) );
+	memset( m_flPlayerSpeechDuration, 0.0f, std::size( m_flPlayerSpeechDuration ) );
 }
 
 //---------------------------------------------------------------------------

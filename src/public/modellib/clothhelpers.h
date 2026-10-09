@@ -1,11 +1,9 @@
-//====== Copyright (c) Valve Corporation, All rights reserved. =======
-#ifndef MODELLIB_CLOTHHELPERS
-#define MODELLIB_CLOTHHELPERS
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-
-#include "tier1/utlstring.h"
-#include "tier1/utlvector.h"
-#include <unordered_map>
+import ks.tier1;
+import std;
 
 class CClothBoneMap
 {
@@ -124,8 +122,8 @@ inline matrix3x4_t AlignX( matrix3x4a_t &tm, const Vector &vNewX, const Vector &
 	{
 		Quaternion q = RotateBetween( tm.GetColumn( X_AXIS ).Normalized( ), vNewX / flNewXLen );
 		matrix3x4_t rot = QuaternionMatrix( q ), rotated = rot * tm;
-		AssertDbg( CrossProduct( rotated.GetColumn( X_AXIS ), vNewX ).Length( ) < 0.002f * vNewX.Length() );
-		AssertDbg( rotated.GetOrthogonalityError() < 0.001f );
+		contract_assert( CrossProduct( rotated.GetColumn( X_AXIS ), vNewX ).Length( ) < 0.002f * vNewX.Length() );
+		contract_assert( rotated.GetOrthogonalityError() < 0.001f );
 		rotated.SetOrigin( vOrigin );
 		return rotated;
 	}
@@ -141,6 +139,3 @@ inline matrix3x4_t Descale( const matrix3x4a_t &tm )
 	float flInvScale = 1.0f / tm.GetColumn( X_AXIS ).Length();
 	return ScaleMatrix3x3( tm, flInvScale );
 }
-
-
-#endif 

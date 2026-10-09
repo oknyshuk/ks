@@ -1,19 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Implements the big scary boom-boom machine Antlions fear.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Implements the big scary boom-boom machine Antlions fear.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "player.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "EnvMessage.h"
-#include "fmtstr.h"
 #include "filesystem.h"
 
-
-#define SLIDESHOW_LIST_BUFFER_MAX 8192
+constexpr auto SLIDESHOW_LIST_BUFFER_MAX = 8192;
 
 
 struct SlideKeywordList_t
@@ -115,7 +139,7 @@ bool CSlideshowDisplay::KeyValue( const char *szKeyName, const char *szValue )
 {
 	//!! temp hack, until worldcraft is fixed
 	// strip the # tokens from (duplicate) key names
-	char *s = (char *)strchr( szKeyName, '#' );
+	char *s = (char *)std::strchr( szKeyName, '#' );
 	if ( s )
 	{
 		*s = '\0';
@@ -124,7 +148,6 @@ bool CSlideshowDisplay::KeyValue( const char *szKeyName, const char *szValue )
 	// NOTE: Have to do these separate because they set two values instead of one
 	if( FStrEq( szKeyName, "angles" ) )
 	{
-		Assert( GetMoveParent() == nullptr );
 		QAngle angles;
 		UTIL_StringToVector( angles.Base(), szValue );
 
@@ -167,7 +190,7 @@ void CSlideshowDisplay::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 
 void CSlideshowDisplay::Spawn( void )
 {
-	Q_strcpy( m_szSlideshowDirectory.GetForModify(), m_String_tSlideshowDirectory.ToCStr() );
+	V_strcpy( m_szSlideshowDirectory.GetForModify(), m_String_tSlideshowDirectory.ToCStr() );
 	Precache();
 
 	BaseClass::Spawn();
@@ -242,7 +265,7 @@ void CSlideshowDisplay::InputEnable( inputdata_t &inputdata )
 
 void CSlideshowDisplay::InputSetDisplayText( inputdata_t &inputdata )
 {
-	Q_strcpy( m_szDisplayText.GetForModify(), inputdata.value.String() );
+	V_strcpy( m_szDisplayText.GetForModify(), inputdata.value.String() );
 }
 
 void CSlideshowDisplay::InputRemoveAllSlides( inputdata_t &inputdata )
@@ -258,7 +281,7 @@ void CSlideshowDisplay::InputAddSlides( inputdata_t &inputdata )
 	int iList;
 	for ( iList = 0; iList < std::ssize( m_SlideKeywordList ); ++iList )
 	{
-		if ( Q_strcmp( m_SlideKeywordList[ iList ]->szSlideKeyword, inputdata.value.String() ) == 0 )
+		if ( V_strcmp( m_SlideKeywordList[ iList ]->szSlideKeyword, inputdata.value.String() ) == 0 )
 			break;
 	}
 
@@ -326,39 +349,39 @@ void CSlideshowDisplay::RestoreControlPanels( void )
 void CSlideshowDisplay::BuildSlideShowImagesList( void )
 {
 	FileFindHandle_t matHandle;
-	char szDirectory[_MAX_PATH];
-	char szMatFileName[_MAX_PATH] = {'\0'};
+	char szDirectory[k_cMaxPath];
+	char szMatFileName[k_cMaxPath] = {'\0'};
 	char szFileBuffer[ SLIDESHOW_LIST_BUFFER_MAX ];
 	char *pchCurrentLine = nullptr;
 
 	{
-		Q_snprintf( szDirectory, sizeof( szDirectory ), "materials/vgui/%s/*.vmt", m_szSlideshowDirectory.Get() );
+		V_snprintf( szDirectory, sizeof( szDirectory ), "materials/vgui/%s/*.vmt", m_szSlideshowDirectory.Get() );
 		const char *pMatFileName = g_pFullFileSystem->FindFirst( szDirectory, &matHandle );
 
 		if ( pMatFileName )
-			Q_strncpy( szMatFileName, pMatFileName, sizeof(szMatFileName) );
+			V_strncpy( szMatFileName, pMatFileName, sizeof(szMatFileName) );
 	}
 
 	int iSlideIndex = 0;
 
 	while ( szMatFileName[ 0 ] )
 	{
-		char szFileName[_MAX_PATH];
-		Q_snprintf( szFileName, sizeof( szFileName ), "vgui/%s/%s", m_szSlideshowDirectory.Get(), szMatFileName );
-		szFileName[ Q_strlen( szFileName ) - 4 ] = '\0';
+		char szFileName[k_cMaxPath];
+		V_snprintf( szFileName, sizeof( szFileName ), "vgui/%s/%s", m_szSlideshowDirectory.Get(), szMatFileName );
+		szFileName[ V_strlen( szFileName ) - 4 ] = '\0';
 
 		PrecacheMaterial( szFileName );	
 
 		// Get material keywords
-		char szFullFileName[_MAX_PATH];
-		Q_snprintf( szFullFileName, sizeof( szFullFileName ), "materials/vgui/%s/%s", m_szSlideshowDirectory.Get(), szMatFileName );
+		char szFullFileName[k_cMaxPath];
+		V_snprintf( szFullFileName, sizeof( szFullFileName ), "materials/vgui/%s/%s", m_szSlideshowDirectory.Get(), szMatFileName );
 
 		KeyValues *pMaterialKeys = new KeyValues( "material" );
 		bool bLoaded = pMaterialKeys->LoadFromFile( g_pFullFileSystem, szFullFileName, nullptr );
 		if ( bLoaded )
 		{
 			char szKeywords[ 256 ];
-			Q_strcpy( szKeywords, pMaterialKeys->GetString( "%keywords", "" ) );
+			V_strcpy( szKeywords, pMaterialKeys->GetString( "%keywords", "" ) );
 
 			char *pchKeyword = szKeywords;
 
@@ -383,7 +406,7 @@ void CSlideshowDisplay::BuildSlideShowImagesList( void )
 				int iList;
 				for ( iList = 0; iList < std::ssize( m_SlideKeywordList ); ++iList )
 				{
-					if ( Q_strcmp( m_SlideKeywordList[ iList ]->szSlideKeyword, pchKeyword ) == 0 )
+					if ( V_strcmp( m_SlideKeywordList[ iList ]->szSlideKeyword, pchKeyword ) == 0 )
 						break;
 				}
 
@@ -391,7 +414,7 @@ void CSlideshowDisplay::BuildSlideShowImagesList( void )
 				{
 					// Couldn't find the list, so create it
 					iList = std::ssize( m_SlideKeywordList ); m_SlideKeywordList.push_back( new SlideKeywordList_t );
-					Q_strcpy( m_SlideKeywordList[ iList ]->szSlideKeyword, pchKeyword );
+					V_strcpy( m_SlideKeywordList[ iList ]->szSlideKeyword, pchKeyword );
 				}
 
 				pchKeyword = pNextKeyword;
@@ -404,7 +427,7 @@ void CSlideshowDisplay::BuildSlideShowImagesList( void )
 		int iList;
 		for ( iList = 0; iList < std::ssize( m_SlideKeywordList ); ++iList )
 		{
-			if ( Q_strcmp( m_SlideKeywordList[ iList ]->szSlideKeyword, "" ) == 0 )
+			if ( V_strcmp( m_SlideKeywordList[ iList ]->szSlideKeyword, "" ) == 0 )
 				break;
 		}
 
@@ -412,14 +435,14 @@ void CSlideshowDisplay::BuildSlideShowImagesList( void )
 		{
 			// Couldn't find the generic list, so create it
 			m_SlideKeywordList.insert( m_SlideKeywordList.begin(), new SlideKeywordList_t ); iList = 0;
-			Q_strcpy( m_SlideKeywordList[ iList ]->szSlideKeyword, "" );
+			V_strcpy( m_SlideKeywordList[ iList ]->szSlideKeyword, "" );
 		}
 
 		{
 			const char *pMatFileName = g_pFullFileSystem->FindNext( matHandle );
 
 			if ( pMatFileName )
-				Q_strncpy( szMatFileName, pMatFileName, sizeof(szMatFileName) );
+				V_strncpy( szMatFileName, pMatFileName, sizeof(szMatFileName) );
 			else
 				szMatFileName[ 0 ] = '\0';
 		}

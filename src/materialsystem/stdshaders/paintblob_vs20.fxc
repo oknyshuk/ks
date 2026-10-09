@@ -1,17 +1,16 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..1" [vs20] [PC]
 // STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..0" [CONSOLE]
-
 // DYNAMIC: "COMPRESSED_VERTS"				"0..1"
 // DYNAMIC: "SKINNING"						"0..1"
 // DYNAMIC: "NUM_LIGHTS"					"0..2" [vs20] [PC]
 // DYNAMIC: "NUM_LIGHTS"					"0..0" [vs20] [CONSOLE]
-
 // If using static control flow on Direct3D, we should use the NUM_LIGHTS=0 combo
-//  SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 ) [vs20] [PC]
-
+// SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 ) [vs20] [PC]
 // Includes
+
 #include "common_vs_fxc.h"
 
 // Globals

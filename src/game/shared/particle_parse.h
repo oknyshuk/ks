@@ -1,14 +1,13 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PARTICLE_PARSE_H
-#define PARTICLE_PARSE_H
+import ks.tier1;
+import std;
+#include "shared_classnames.h"
 
-#include "utlvector.h"
-#include "utlstring.h"
+class CBaseEntity;
+class IRecipientFilter;
 
 //-----------------------------------------------------------------------------
 // Particle attachment methods
@@ -31,9 +30,9 @@ enum ParticleAttachment_t
 
 extern int GetAttachTypeFromString( const char *pszString );
 
-#define PARTICLE_DISPATCH_FROM_ENTITY		(1<<0)
-#define PARTICLE_DISPATCH_RESET_PARTICLES	(1<<1)
-#define PARTICLE_DISPATCH_ALLOW_DORMANT		(1<<2)
+inline constexpr auto PARTICLE_DISPATCH_FROM_ENTITY = (1<<0);
+inline constexpr auto PARTICLE_DISPATCH_RESET_PARTICLES = (1<<1);
+inline constexpr auto PARTICLE_DISPATCH_ALLOW_DORMANT = (1<<2);
 
 //-----------------------------------------------------------------------------
 // Particle parsing methods
@@ -59,6 +58,3 @@ void DispatchParticleEffectLink( const char *pszParticleName, ParticleAttachment
 void DispatchParticleEffect( int iEffectIndex, const Vector &vecOrigin, const QAngle &vecAngles, ParticleAttachment_t iAttachType, CBaseEntity *pEntity = nullptr, int nSplitScreenPlayerSlot = -1 );
 void StopParticleEffects( CBaseEntity *pEntity );
 void StopParticleEffect( CBaseEntity *pEntity, const char *pszParticleName );
-
-
-#endif // PARTICLE_PARSE_H

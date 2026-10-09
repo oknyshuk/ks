@@ -1,16 +1,10 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.vstdlib;
 #include "cvar.h"
-#include "tier1/text_writer.h"
 #include "gl_cvars.h"
 
-#include "tier1/convar.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
 #include "client.h"
@@ -19,11 +13,7 @@
 #include "netmessages.h"
 #include "sv_main.h"
 #include "demo.h"
-#include <ctype.h>
-#include "vstdlib/vstrtools.h"
-#include <wctype.h>
-#include <set>
-#include "tier1/map_ops.h"
+import std;
 
 #ifndef DEDICATED
 #include "localize/ilocalize.h"
@@ -49,7 +39,7 @@ static void ConVarNetworkChangeCallback( IConVar *pConVar, const char *pOldValue
 	}
 	else
 	{
-		if ( !Q_strcmp( var.GetString(), pOldValue ) )
+		if ( !V_strcmp( var.GetString(), pOldValue ) )
 			return;
 	}
 
@@ -147,7 +137,7 @@ public:
 
 	virtual void *QueryInterface( const char *pInterfaceName )
 	{
-		if ( !Q_stricmp( pInterfaceName, CVAR_QUERY_INTERFACE_VERSION ) )
+		if ( !V_stricmp( pInterfaceName, CVAR_QUERY_INTERFACE_VERSION ) )
 			return (ICvarQuery*)this;
 		return nullptr;
 
@@ -223,7 +213,7 @@ public:
 // Singleton
 //-----------------------------------------------------------------------------
 static CCvarQuery s_CvarQuery;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CCvarQuery, ICvarQuery, CVAR_QUERY_INTERFACE_VERSION, s_CvarQuery );
+static InterfaceReg s_Reg_CCvarQuery_ICvarQuery( []() -> void * { return static_cast<ICvarQuery *>( &s_CvarQuery ); }, CVAR_QUERY_INTERFACE_VERSION );;
 void InstallConVarHook( void )
 {
 	s_CvarQuery.Init();
@@ -241,7 +231,7 @@ static bool IsAllSpaces( const wchar_t *str )
 	const wchar_t *p = str;
 	while ( p && *p )
 	{
-		if ( !iswspace( *p ) )
+		if ( !std::iswspace( *p ) )
 			return false;
 
 		++p;
@@ -304,7 +294,7 @@ void CCvarUtilities::SetDirect( ConVar *var, const char *value )
 		// Step through the string, only copying back in characters that are printable
 		while ( *pS )
 		{
-			if ( iswcntrl( *pS ) || *pS == '~' )
+			if ( std::iswcntrl( *pS ) || *pS == '~' )
 			{
 				pS++;
 				continue;
@@ -317,9 +307,9 @@ void CCvarUtilities::SetDirect( ConVar *var, const char *value )
 		*pD = L'\0';
 
 		// If it's empty or all spaces, then insert a marker string
-		if ( !wcslen( newUnicode ) || IsAllSpaces( newUnicode ) )
+		if ( !std::wcslen( newUnicode ) || IsAllSpaces( newUnicode ) )
 		{
-			wcsncpy( newUnicode, L"#empty", ( sizeof( newUnicode ) / sizeof( wchar_t ) ) - 1 );
+			std::wcsncpy( newUnicode, L"#empty", ( sizeof( newUnicode ) / sizeof( wchar_t ) ) - 1 );
 			newUnicode[ ( sizeof( newUnicode ) / sizeof( wchar_t ) ) - 1 ] = L'\0';
 		}
 
@@ -341,7 +331,7 @@ void CCvarUtilities::SetDirect( ConVar *var, const char *value )
 
 	if ( var->IsFlagSet( FCVAR_NEVER_AS_STRING ) )
 	{
-		var->SetValue( (float)atof( pszValue ) );
+		var->SetValue( (float)std::atof( pszValue ) );
 	}
 	else
 	{
@@ -374,7 +364,7 @@ bool CCvarUtilities::IsCommand( const CCommand &args, const int iSplitscreenSlot
 	if ( iSplitscreenSlot > 0 && v->IsFlagSet( FCVAR_SS ) )
 	{
 		char buf[512];
-		Q_snprintf( buf, sizeof(buf), "%s%d", args[0], iSplitscreenSlot+1 );
+		V_snprintf( buf, sizeof(buf), "%s%d", args[0], iSplitscreenSlot+1 );
 		v = g_pCVar->FindVar( buf );
 	}
 
@@ -434,9 +424,6 @@ bool CCvarUtilities::IsCommand( const CCommand &args, const int iSplitscreenSlot
 		if ( !Host_IsSinglePlayerGame() && !CanCheat() 
 #if !defined(DEDICATED)
 			&& !GetBaseLocalClient().ishltv
-#if defined( REPLAY_ENABLED )
-			&& !GetBaseLocalClient().isreplay
-#endif
 			&& !demoplayer->IsPlayingBack() 
 #endif
 			)
@@ -472,16 +459,16 @@ bool CCvarUtilities::IsCommand( const CCommand &args, const int iSplitscreenSlot
 	// except for surrounding quotes
 	char remaining[1024];
 	const char *pArgS = args.ArgS();
-	int nLen = Q_strlen( pArgS );
+	int nLen = V_strlen( pArgS );
 	bool bIsQuoted = pArgS[0] == '\"';
 	if ( !bIsQuoted )
 	{
-		Q_strncpy( remaining, args.ArgS(), sizeof(remaining) );
+		V_strncpy( remaining, args.ArgS(), sizeof(remaining) );
 	}
 	else
 	{
 		--nLen;
-		Q_strncpy( remaining, &pArgS[1], sizeof(remaining) );
+		V_strncpy( remaining, &pArgS[1], sizeof(remaining) );
 	}
 
 	// Now strip off any trailing spaces
@@ -610,7 +597,7 @@ void CCvarUtilities::ResetConVarsToDefaultValues( const char *pMatchStr )
 		ConVar *cv = (ConVar *)var;
 		
 		if ( ( ! pMatchStr ) || 							// null pattern match?
-			 ( memcmp( pMatchStr, cv->GetName(), strlen( pMatchStr ) ) == 0 ) // first chars match
+			 ( std::memcmp( pMatchStr, cv->GetName(), std::strlen( pMatchStr ) ) == 0 ) // first chars match
 			)
 		{
 			cv->Revert();
@@ -721,19 +708,27 @@ static void Cmd_SetPlayer( int slot, const CCommand &args )
 	Cbuf_AddText( (ECommandTarget_t)slot, args.ArgS() );
 }
 
-CON_COMMAND( cmd1, "sets userinfo string for split screen player in slot 1" )
+static void cmd1( const CCommand &args );
+static ConCommand cmd1_command( "cmd1", cmd1, "sets userinfo string for split screen player in slot 1" );
+static void cmd1( const CCommand &args )
 {
 	Cmd_SetPlayer( 0, args );
 }
-CON_COMMAND( cmd2, "sets userinfo string for split screen player in slot 2" )
+static void cmd2( const CCommand &args );
+static ConCommand cmd2_command( "cmd2", cmd2, "sets userinfo string for split screen player in slot 2" );
+static void cmd2( const CCommand &args )
 {
 	Cmd_SetPlayer( 1, args );
 }
-CON_COMMAND( cmd3, "sets userinfo string for split screen player in slot 3" )
+static void cmd3( const CCommand &args );
+static ConCommand cmd3_command( "cmd3", cmd3, "sets userinfo string for split screen player in slot 3" );
+static void cmd3( const CCommand &args )
 {
 	Cmd_SetPlayer( 2, args );
 }
-CON_COMMAND( cmd4, "sets userinfo string for split screen player in slot 4" )
+static void cmd4( const CCommand &args );
+static ConCommand cmd4_command( "cmd4", cmd4, "sets userinfo string for split screen player in slot 4" );
+static void cmd4( const CCommand &args )
 {
 	Cmd_SetPlayer( 3, args );
 }
@@ -803,30 +798,28 @@ struct ConVarFlags_t
 	const char	*shortdesc;
 };
 
-#define CONVARFLAG( x, y )	{ FCVAR_##x, #x, #y }
-
 static ConVarFlags_t g_ConVarFlags[]=
 {
-	//	CONVARFLAG( UNREGISTERED, "u" ),
-	CONVARFLAG( ARCHIVE, "a" ),
-	CONVARFLAG( SPONLY, "sp" ),
-	CONVARFLAG( GAMEDLL, "sv" ),
-	CONVARFLAG( CHEAT, "cheat" ),
-	CONVARFLAG( USERINFO, "user" ),
-	CONVARFLAG( NOTIFY, "nf" ),
-	CONVARFLAG( PROTECTED, "prot" ),
-	CONVARFLAG( PRINTABLEONLY, "print" ),
-	CONVARFLAG( UNLOGGED, "log" ),
-	CONVARFLAG( NEVER_AS_STRING, "numeric" ),
-	CONVARFLAG( REPLICATED, "rep" ),
-	CONVARFLAG( DEMO, "demo" ),
-	CONVARFLAG( DONTRECORD, "norecord" ),
-	CONVARFLAG( SERVER_CAN_EXECUTE, "server_can_execute" ),
-	CONVARFLAG( CLIENTCMD_CAN_EXECUTE, "clientcmd_can_execute" ),
-	CONVARFLAG( CLIENTDLL, "cl" ),
-	CONVARFLAG( SS, "ss" ),
-	CONVARFLAG( SS_ADDED, "ss_added" ),
-	CONVARFLAG( DEVELOPMENTONLY, "dev_only" ),
+	//	{ FCVAR_UNREGISTERED, "UNREGISTERED", "\"u\"" },
+	{ FCVAR_ARCHIVE, "ARCHIVE", "\"a\"" },
+	{ FCVAR_SPONLY, "SPONLY", "\"sp\"" },
+	{ FCVAR_GAMEDLL, "GAMEDLL", "\"sv\"" },
+	{ FCVAR_CHEAT, "CHEAT", "\"cheat\"" },
+	{ FCVAR_USERINFO, "USERINFO", "\"user\"" },
+	{ FCVAR_NOTIFY, "NOTIFY", "\"nf\"" },
+	{ FCVAR_PROTECTED, "PROTECTED", "\"prot\"" },
+	{ FCVAR_PRINTABLEONLY, "PRINTABLEONLY", "\"print\"" },
+	{ FCVAR_UNLOGGED, "UNLOGGED", "\"log\"" },
+	{ FCVAR_NEVER_AS_STRING, "NEVER_AS_STRING", "\"numeric\"" },
+	{ FCVAR_REPLICATED, "REPLICATED", "\"rep\"" },
+	{ FCVAR_DEMO, "DEMO", "\"demo\"" },
+	{ FCVAR_DONTRECORD, "DONTRECORD", "\"norecord\"" },
+	{ FCVAR_SERVER_CAN_EXECUTE, "SERVER_CAN_EXECUTE", "\"server_can_execute\"" },
+	{ FCVAR_CLIENTCMD_CAN_EXECUTE, "CLIENTCMD_CAN_EXECUTE", "\"clientcmd_can_execute\"" },
+	{ FCVAR_CLIENTDLL, "CLIENTDLL", "\"cl\"" },
+	{ FCVAR_SS, "SS", "\"ss\"" },
+	{ FCVAR_SS_ADDED, "SS_ADDED", "\"ss_added\"" },
+	{ FCVAR_DEVELOPMENTONLY, "DEVELOPMENTONLY", "\"dev_only\"" },
 };
 
 static void PrintListHeader( FileHandle_t& f )
@@ -835,14 +828,14 @@ static void PrintListHeader( FileHandle_t& f )
 
 	csvflagstr[ 0 ] = 0;
 
-	int c = ARRAYSIZE( g_ConVarFlags );
+	int c = std::size( g_ConVarFlags );
 	for ( int i = 0 ; i < c; ++i )
 	{
 		char csvf[ 64 ];
 
 		ConVarFlags_t & entry = g_ConVarFlags[ i ];
-		Q_snprintf( csvf, sizeof( csvf ), "\"%s\",", entry.desc );
-		Q_strncat( csvflagstr, csvf, sizeof( csvflagstr ), COPY_ALL_CHARACTERS );
+		V_snprintf( csvf, sizeof( csvf ), "\"%s\",", entry.desc );
+		V_strncat( csvflagstr, csvf, sizeof( csvflagstr ), COPY_ALL_CHARACTERS );
 	}
 
 	g_pFileSystem->FPrintf( f,"\"%s\",\"%s\",%s,\"%s\"\n", "Name", "Value", csvflagstr, "Help Text" );
@@ -861,7 +854,7 @@ static void PrintCvar( const ConVar *var, bool logging, FileHandle_t& f )
 	flagstr[ 0 ] = 0;
 	csvflagstr[ 0 ] = 0;
 
-	int c = ARRAYSIZE( g_ConVarFlags );
+	int c = std::size( g_ConVarFlags );
 	for ( int i = 0 ; i < c; ++i )
 	{
 		char f[ 32 ];
@@ -870,18 +863,18 @@ static void PrintCvar( const ConVar *var, bool logging, FileHandle_t& f )
 		ConVarFlags_t & entry = g_ConVarFlags[ i ];
 		if ( var->IsFlagSet( entry.bit ) )
 		{
-			Q_snprintf( f, sizeof( f ), ", %s", entry.shortdesc );
+			V_snprintf( f, sizeof( f ), ", %s", entry.shortdesc );
 
-			Q_strncat( flagstr, f, sizeof( flagstr ), COPY_ALL_CHARACTERS );
+			V_strncat( flagstr, f, sizeof( flagstr ), COPY_ALL_CHARACTERS );
 
-			Q_snprintf( csvf, sizeof( csvf ), "\"%s\",", entry.desc );
+			V_snprintf( csvf, sizeof( csvf ), "\"%s\",", entry.desc );
 		}
 		else
 		{
-			Q_snprintf( csvf, sizeof( csvf ), "," );
+			V_snprintf( csvf, sizeof( csvf ), "," );
 		}
 
-		Q_strncat( csvflagstr, csvf, sizeof( csvflagstr ), COPY_ALL_CHARACTERS );
+		V_strncat( csvflagstr, csvf, sizeof( csvflagstr ), COPY_ALL_CHARACTERS );
 	}
 
 
@@ -891,11 +884,11 @@ static void PrintCvar( const ConVar *var, bool logging, FileHandle_t& f )
 	// Clean up integers
 	if ( var->GetInt() == (int)var->GetFloat() )   
 	{
-		Q_snprintf(valstr, sizeof( valstr ), "%-8i", var->GetInt() );
+		V_snprintf(valstr, sizeof( valstr ), "%-8i", var->GetInt() );
 	}
 	else
 	{
-		Q_snprintf(valstr, sizeof( valstr ), "%-8.3f", var->GetFloat() );
+		V_snprintf(valstr, sizeof( valstr ), "%-8.3f", var->GetFloat() );
 	}
 
 	// Print to console
@@ -918,19 +911,19 @@ static void PrintCommand( const ConCommand *cmd, bool logging, FileHandle_t& f )
 
 		emptyflags[ 0 ] = 0;
 
-		int c = ARRAYSIZE( g_ConVarFlags );
+		int c = std::size( g_ConVarFlags );
 		for ( int i = 0; i < c; ++i )
 		{
 			char csvf[ 64 ];
-			Q_snprintf( csvf, sizeof( csvf ), "," );
-			Q_strncat( emptyflags, csvf, sizeof( emptyflags ), COPY_ALL_CHARACTERS );
+			V_snprintf( csvf, sizeof( csvf ), "," );
+			V_strncat( emptyflags, csvf, sizeof( emptyflags ), COPY_ALL_CHARACTERS );
 		}
 		// Names staring with +/- need to be wrapped in single quotes
 		char name[ 256 ];
-		Q_snprintf( name, sizeof( name ), "%s", cmd->GetName() );
+		V_snprintf( name, sizeof( name ), "%s", cmd->GetName() );
 		if ( name[ 0 ] == '+' || name[ 0 ] == '-' )
 		{
-			Q_snprintf( name, sizeof( name ), "'%s'", cmd->GetName() );
+			V_snprintf( name, sizeof( name ), "'%s'", cmd->GetName() );
 		}
 		char tempbuff[128];
 		g_pFileSystem->FPrintf( f, "\"%s\",\"%s\",%s,\"%s\"\n", name, "cmd", emptyflags, StripQuotes( cmd->GetHelpText(), tempbuff, sizeof(tempbuff) ) );
@@ -950,7 +943,7 @@ struct ConCommandBaseLess
 		if ( *right == '-' || *right == '+' )
 			right++;
 
-		return ( Q_stricmp( left, right ) < 0 );
+		return ( V_stricmp( left, right ) < 0 );
 	}
 };
 
@@ -972,16 +965,16 @@ void CCvarUtilities::CvarList( const CCommand &args )
 	iArgs = args.ArgC();		// Get count
 
 	// Print usage?
-	if ( iArgs == 2 && !Q_strcasecmp( args[1],"?" ) )
+	if ( iArgs == 2 && !V_strcasecmp( args[1],"?" ) )
 	{
 		ConMsg( "cvarlist:  [log logfile] [ partial ]\n" );
 		return;         
 	}
 
-	if ( !Q_strcasecmp( args[1],"log" ) && iArgs >= 3 )
+	if ( !V_strcasecmp( args[1],"log" ) && iArgs >= 3 )
 	{
 		char fn[256];
-		Q_snprintf( fn, sizeof( fn ), "%s", args[2] );
+		V_snprintf( fn, sizeof( fn ), "%s", args[2] );
 		f = g_pFileSystem->Open( fn,"wb" );
 		if ( f )
 		{
@@ -996,13 +989,13 @@ void CCvarUtilities::CvarList( const CCommand &args )
 		if ( iArgs == 4 )
 		{
 			partial = args[ 3 ];
-			ipLen = Q_strlen( partial );
+			ipLen = V_strlen( partial );
 		}
 	}
 	else
 	{
 		partial = args[ 1 ];   
-		ipLen = Q_strlen( partial );
+		ipLen = V_strlen( partial );
 	}
 
 	// Banner
@@ -1022,7 +1015,7 @@ void CCvarUtilities::CvarList( const CCommand &args )
 
 		if (partial)  // Partial string searching?
 		{
-			if ( !Q_strncasecmp( var->GetName(), partial, ipLen ) )
+			if ( !V_strncasecmp( var->GetName(), partial, ipLen ) )
 			{
 				print = true;
 			}
@@ -1156,7 +1149,7 @@ void CCvarUtilities::CvarDifferences( const CCommand &args )
 		if ( var->IsFlagSet(FCVAR_DEVELOPMENTONLY) || var->IsFlagSet(FCVAR_HIDDEN) )
 			continue;
 
-		if ( !Q_stricmp( ((ConVar *)var)->GetDefault(), ((ConVar *)var)->GetString() ) )
+		if ( !V_stricmp( ((ConVar *)var)->GetDefault(), ((ConVar *)var)->GetString() ) )
 			continue;
 
 		ConVar_PrintDescription( (ConVar *)var );	
@@ -1196,7 +1189,7 @@ void CCvarUtilities::CvarToggle( const CCommand &args )
 		// look for the current value in the command arguments
 		for( i = 2; i < c; i++ )
 		{
-			if ( !Q_strcmp( var->GetString(), args[ i ] ) )
+			if ( !V_strcmp( var->GetString(), args[ i ] ) )
 				break;
 		}
 
@@ -1216,32 +1209,32 @@ void CCvarUtilities::CvarToggle( const CCommand &args )
 
 int CCvarUtilities::CvarFindFlagsCompletionCallback( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
 {
-	int flagC = ARRAYSIZE( g_ConVarFlags );
+	int flagC = std::size( g_ConVarFlags );
 	char const *pcmd = "findflags ";
-	int len = Q_strlen( partial );
+	int len = V_strlen( partial );
 
-	if ( len < Q_strlen( pcmd ) )
+	if ( len < V_strlen( pcmd ) )
 	{
 		int i = 0;
 		for ( ; i < std::min( flagC, COMMAND_COMPLETION_MAXITEMS ); i++ )
 		{
-			Q_snprintf( commands[ i ], sizeof( commands[ i ] ), "%s %s", pcmd, g_ConVarFlags[i].desc );
-			Q_strlower( commands[ i ] );
+			V_snprintf( commands[ i ], sizeof( commands[ i ] ), "%s %s", pcmd, g_ConVarFlags[i].desc );
+			V_strlower( commands[ i ] );
 		}
 		return i;
 	}
 
-	char const *pSub = partial + Q_strlen( pcmd );
-	int nSubLen = Q_strlen( pSub );
+	char const *pSub = partial + V_strlen( pcmd );
+	int nSubLen = V_strlen( pSub );
 
 	int values = 0;
 	for ( int i=0; i < flagC; ++i )
 	{
-		if ( Q_strnicmp( g_ConVarFlags[i].desc, pSub, nSubLen ) )
+		if ( V_strnicmp( g_ConVarFlags[i].desc, pSub, nSubLen ) )
 			continue;
 
-		Q_snprintf( commands[ values ], sizeof( commands[ values ] ), "%s %s", pcmd, g_ConVarFlags[i].desc );
-		Q_strlower( commands[ values ] );
+		V_snprintf( commands[ values ], sizeof( commands[ values ] ), "%s %s", pcmd, g_ConVarFlags[i].desc );
+		V_strlower( commands[ values ] );
 		++values;
 
 		if ( values >= COMMAND_COMPLETION_MAXITEMS )
@@ -1257,7 +1250,7 @@ void CCvarUtilities::CvarFindFlags_f( const CCommand &args )
 		ConMsg( "Usage:  findflags <string>\n" );
 		ConMsg( "Available flags to search for: \n" );
 
-		for ( int i=0; i < ARRAYSIZE( g_ConVarFlags ); i++ )
+		for ( int i=0; i < std::size( g_ConVarFlags ); i++ )
 		{
 			ConMsg( "   - %s\n", g_ConVarFlags[i].desc );
 		}
@@ -1275,12 +1268,12 @@ void CCvarUtilities::CvarFindFlags_f( const CCommand &args )
 		if ( var->IsFlagSet(FCVAR_DEVELOPMENTONLY) || var->IsFlagSet(FCVAR_HIDDEN) )
 			continue;
 
-		for ( int j=0; j < ARRAYSIZE( g_ConVarFlags ); ++j )
+		for ( int j=0; j < std::size( g_ConVarFlags ); ++j )
 		{
 			if ( !var->IsFlagSet( g_ConVarFlags[j].bit ) )
 				continue;
 			
-			if ( Q_stricmp( g_ConVarFlags[j].desc, search ) )
+			if ( V_stricmp( g_ConVarFlags[j].desc, search ) )
 				continue;
 
 			ConVar_PrintDescription( var );	
@@ -1296,7 +1289,9 @@ int FindFlagsCompletionCallback( const char *partial, char commands[ COMMAND_COM
 //-----------------------------------------------------------------------------
 // Purpose: Hook to command
 //-----------------------------------------------------------------------------
-CON_COMMAND_F_COMPLETION( findflags, "Find concommands by flags.", 0, FindFlagsCompletionCallback )
+static void findflags( const CCommand &args );
+static ConCommand findflags_command( "findflags", findflags, "Find concommands by flags.", 0, FindFlagsCompletionCallback );
+static void findflags( const CCommand &args )
 {
 	ConVarUtilities->CvarFindFlags_f( args );
 }
@@ -1305,7 +1300,9 @@ CON_COMMAND_F_COMPLETION( findflags, "Find concommands by flags.", 0, FindFlagsC
 //-----------------------------------------------------------------------------
 // Purpose: Hook to command
 //-----------------------------------------------------------------------------
-CON_COMMAND( cvarlist, "Show the list of convars/concommands." )
+static void cvarlist( const CCommand &args );
+static ConCommand cvarlist_command( "cvarlist", cvarlist, "Show the list of convars/concommands." );
+static void cvarlist( const CCommand &args )
 {
 	ConVarUtilities->CvarList( args );
 }
@@ -1314,7 +1311,9 @@ CON_COMMAND( cvarlist, "Show the list of convars/concommands." )
 //-----------------------------------------------------------------------------
 // Purpose: Print help text for cvar
 //-----------------------------------------------------------------------------
-CON_COMMAND( help, "Find help about a convar/concommand." )
+static void help( const CCommand &args );
+static ConCommand help_command( "help", help, "Find help about a convar/concommand." );
+static void help( const CCommand &args )
 {
 	ConVarUtilities->CvarHelp( args );
 }
@@ -1322,7 +1321,9 @@ CON_COMMAND( help, "Find help about a convar/concommand." )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( differences, "Show all convars which are not at their default values." )
+static void differences( const CCommand &args );
+static ConCommand differences_command( "differences", differences, "Show all convars which are not at their default values." );
+static void differences( const CCommand &args )
 {
 	ConVarUtilities->CvarDifferences( args );
 }
@@ -1330,7 +1331,9 @@ CON_COMMAND( differences, "Show all convars which are not at their default value
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( toggle, "Toggles a convar on or off, or cycles through a set of values." )
+static void toggle( const CCommand &args );
+static ConCommand toggle_command( "toggle", toggle, "Toggles a convar on or off, or cycles through a set of values." );
+static void toggle( const CCommand &args )
 {
 	ConVarUtilities->CvarToggle( args );
 }
@@ -1340,7 +1343,9 @@ void ResetGameConVarsToDefaults( void )
 {
 }
 
-CON_COMMAND_F( reset_gameconvars, "Reset a bunch of game convars to default values", FCVAR_CHEAT )
+static void reset_gameconvars( const CCommand &args );
+static ConCommand reset_gameconvars_command( "reset_gameconvars", reset_gameconvars, "Reset a bunch of game convars to default values", FCVAR_CHEAT );
+static void reset_gameconvars( const CCommand &args )
 {
 	ResetGameConVarsToDefaults();
 }
@@ -1348,26 +1353,3 @@ CON_COMMAND_F( reset_gameconvars, "Reset a bunch of game convars to default valu
 //-----------------------------------------------------------------------------
 // Purpose: Send the cvars to VXConsole
 //-----------------------------------------------------------------------------
-#if defined( USE_VXCONSOLE )
-CON_COMMAND( getcvars, "" )
-{
-	{
-		// avoid noisy requests
-		// outer logic to prevent multiple requests more complicated than doing just this
-		static float s_flLastPublishTime = 0;
-		if ( s_flLastPublishTime && Plat_FloatTime() < s_flLastPublishTime + 2.0f )
-		{
-			return;
-		}
-		s_flLastPublishTime = Plat_FloatTime();
-	}
-
-
-	// Host_Init() will be calling us again, so defer this expensive operation until then
-	if ( host_initialized )
-	{
-		g_pCVar->PublishToVXConsole();
-	}
-}
-#endif
-

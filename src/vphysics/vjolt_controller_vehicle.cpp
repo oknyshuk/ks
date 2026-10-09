@@ -2,7 +2,43 @@
 // Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
 
 
-#include "cbase.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/JobSystemWithBarrier.h>
+#include <Jolt/Core/FixedSizeFreeList.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/PhysicsScene.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollidePointResult.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Ragdoll/Ragdoll.h>
+#include <Jolt/Physics/Collision/CollisionDispatch.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
+#include <Jolt/Physics/Constraints/ConeConstraint.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
+import std;
+import ks.core;
+#include "bspfile.h"
+#include "cmodel.h"
+#include "vphysics/collision_set.h"
+#include "vphysics/constraints.h"
+#include "vphysics/friction.h"
+#include "vphysics/performance.h"
+#include "vphysics/vehicles.h"
+#include "vjolt_interface.h"
+#include "vjolt_util.h"
 
 #include "vjolt_layers.h"
 
@@ -284,7 +320,7 @@ void JoltPhysicsVehicleController::OnPreSimulate( float flDeltaTime )
 
 	// Update the torque factors as we may be boosting and be > 1.
 	// TODO(Josh): More than 2 wheels per axle.
-	VJoltAssert( m_VehicleParams.wheelsPerAxle == 2 );
+	contract_assert( m_VehicleParams.wheelsPerAxle == 2 );
 	for ( int i = 0; i < m_VehicleParams.axleCount; i++ )
 		GetWheeledVehicleController()->GetDifferentials()[i].mEngineTorqueRatio = flTotalTorqueMultiplier * m_VehicleParams.axles[i].torqueFactor;
 
@@ -372,7 +408,7 @@ void JoltPhysicsVehicleController::CreateWheel( JPH::VehicleConstraintSettings &
 
 	// Josh: Area of a cylinder = π.h.r^2
 	// Using radius in terms of Source units as we pass this to CreateSphereObject.
-	const float wheelVolume = M_PI * wheelWidth * Cube( wheelRadius );
+	const float wheelVolume = std::numbers::pi * wheelWidth * Cube( wheelRadius );
 
 	{
 		objectparams_t wheelParams =
@@ -460,7 +496,7 @@ void JoltPhysicsVehicleController::CreateWheels( JPH::VehicleConstraintSettings 
 			CreateWheel( vehicleSettings, carBodyMtx, axle, wheel );
 
 		// TODO(Josh): More than 2 wheels per axle.
-		VJoltAssert( m_VehicleParams.wheelsPerAxle == 2 );
+		contract_assert( m_VehicleParams.wheelsPerAxle == 2 );
 		JPH::VehicleAntiRollBar rollbar;
 		rollbar.mLeftWheel	= ( axle * m_VehicleParams.wheelsPerAxle );
 		rollbar.mRightWheel	= ( axle * m_VehicleParams.wheelsPerAxle ) + 1;
@@ -475,7 +511,7 @@ JPH::WheeledVehicleControllerSettings *JoltPhysicsVehicleController::CreateVehic
 	JPH::WheeledVehicleControllerSettings *pController = new JPH::WheeledVehicleControllerSettings;
 	// Josh:
 	// T = ( 745.7 * P ) / ( 2 * PI * ( RPM / 60 ) )
-	pController->mEngine.mMaxTorque = ( HorsePowerToWatts * m_VehicleParams.engine.horsepower ) / ( 2.0f * M_PI * ( m_VehicleParams.engine.maxRPM / 60.0f ) );
+	pController->mEngine.mMaxTorque = ( HorsePowerToWatts * m_VehicleParams.engine.horsepower ) / ( 2.0f * std::numbers::pi * ( m_VehicleParams.engine.maxRPM / 60.0f ) );
 	// Josh: Fudge
 	pController->mEngine.mMinRPM = Max( m_VehicleParams.engine.shiftDownRPM - 300, 0.0f );
 	pController->mEngine.mMaxRPM = m_VehicleParams.engine.maxRPM;
@@ -496,7 +532,7 @@ JPH::WheeledVehicleControllerSettings *JoltPhysicsVehicleController::CreateVehic
 	for ( int i = 0; i < m_VehicleParams.axleCount; i++ )
 	{
 		// TODO(Josh): More than 2 wheels per axle.
-		VJoltAssert( m_VehicleParams.wheelsPerAxle == 2 );
+		contract_assert( m_VehicleParams.wheelsPerAxle == 2 );
 		JPH::VehicleDifferentialSettings differential;
 		differential.mLeftWheel			= ( i * m_VehicleParams.wheelsPerAxle );
 		differential.mRightWheel		= ( i * m_VehicleParams.wheelsPerAxle ) + 1;

@@ -1,27 +1,23 @@
-//======= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======
-//
-// Purpose: Video configuration management (split out from tier2)
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
+// Purpose: Video configuration management (split out from tier2)
+
+import ks.tier1;
 #include "tier2/fileutils.h"
 #include "tier2/tier2.h"
 #include "videocfg/videocfg.h"
-#include "tier1/tier1.h"
-#include "tier1/strtools.h"
+import std;
 #include "filesystem.h"
-#include "tier1/keyvalues.h"
-#include "tier1/text_writer.h"
 #include "mathlib/IceKey.H"
-#include "tier0/icommandline.h"
 
 
 // Video Config Filenames
-#define VIDEOCONFIG_DEFAULT_FILENAME	"cfg/videodefaults.txt"
-#define VIDEOCONFIG_FILENAME			"cfg/video.txt"
-#define VIDEOCONFIG_FILENAME_BACKUP		"cfg/video.bak"
+inline constexpr const char *VIDEOCONFIG_DEFAULT_FILENAME = "cfg/videodefaults.txt";
+inline constexpr const char *VIDEOCONFIG_FILENAME = "cfg/video.txt";
+inline constexpr const char *VIDEOCONFIG_FILENAME_BACKUP = "cfg/video.bak";
 
-#define VIDEOCONFIG_PATHID				"MOD"
+inline constexpr const char *VIDEOCONFIG_PATHID = "MOD";
 
 static const char *GetVideoCfgPathID()
 {
@@ -102,7 +98,7 @@ static VideoConfigSetting_t s_pVideoConfigSettingsWhitelist[] =
 };
 static VideoConfigSetting_t const * VideoConfigSettingFindWhitelistEntryByName( char const *szSettingName )
 {
-	for ( int k = 0; k < Q_ARRAYSIZE( s_pVideoConfigSettingsWhitelist ); ++ k )
+	for ( int k = 0; k < std::size( s_pVideoConfigSettingsWhitelist ); ++ k )
 	{
 		if ( !V_stricmp( szSettingName, s_pVideoConfigSettingsWhitelist[k].m_pSettingVar ) )
 			return &s_pVideoConfigSettingsWhitelist[k];
@@ -121,7 +117,7 @@ static RatioToAspectMode_t g_pRatioToAspectModes[] =
 //--------------------------------------------------------------------------------------------------------------
 static AspectRatioMode_t GetScreenAspectMode( int width, int height )
 {
-	for (int i = 0; i < ARRAYSIZE(g_pRatioToAspectModes); i++)
+	for (int i = 0; i < std::size( g_pRatioToAspectModes ); i++)
 	{
 		int nFactor = width / g_pRatioToAspectModes[i].m_nWidth;
 		if ( nFactor * g_pRatioToAspectModes[i].m_nHeight == height )
@@ -143,7 +139,7 @@ static inline int ReadHexValue( KeyValues *pVal, const char *pName )
 	}
 
 	char *pTemp;
-	int nVal = strtol( pString, &pTemp, 16 );
+	int nVal = std::strtol( pString, &pTemp, 16 );
 	return (pTemp != pString) ? nVal : -1;
 }
 
@@ -161,7 +157,7 @@ void AddNewKeysUsingVideoWhitelist( KeyValues *pModKeys, KeyValues *pConfigKeys 
 
 		int iVar;
 		bool bWhiteListedVar = false;
-		int nVideoConfigCount = ARRAYSIZE( s_pVideoConfigSettingsWhitelist );
+		int nVideoConfigCount = std::size( s_pVideoConfigSettingsWhitelist );
 		for ( iVar = 0; iVar < nVideoConfigCount; ++iVar )
 		{
 			if ( !V_stricmp( s_pVideoConfigSettingsWhitelist[iVar].m_pSettingVar, pSubKeyName ) )
@@ -198,7 +194,7 @@ void CopySettingKeysUsingVideoWhitelist( KeyValues *pModKeys, KeyValues *pConfig
 
 		int iVar;
 		bool bWhiteListedVar = false;
-		int nVideoConfigCount = ARRAYSIZE( s_pVideoConfigSettingsWhitelist );
+		int nVideoConfigCount = std::size( s_pVideoConfigSettingsWhitelist );
 		for ( iVar = 0; iVar < nVideoConfigCount; ++iVar )
 		{
 			if ( !V_stricmp( s_pVideoConfigSettingsWhitelist[iVar].m_pSettingVar, pSubKeyName ) )
@@ -446,7 +442,7 @@ static bool GetNearestFullscreenResolution( int& nWidth, int& nHeight, VidMatCon
 	float flDesiredArea = nWidth * nHeight;
 	int nBestWidth = 0;
 	int nBestHeight = 0;
-	float flBestDelta = FLT_MAX;
+	float flBestDelta = std::numeric_limits<float>::max();
 
 	AspectRatioMode_t nRequiredAspectMode = GetScreenAspectMode( configData.nPhysicalScreenWidth, configData.nPhysicalScreenHeight );
 
@@ -563,7 +559,7 @@ bool CreateDefaultVideoKeyValues( VidMatConfigData_t &configData )
 static bool VerifyVideoConfigSettingRequired( char const *szSetting )
 {
 	static char const * arrIgnoredSettings[] = { "setting.mem_level" };
-	for ( int j = 0; j < Q_ARRAYSIZE( arrIgnoredSettings ); ++ j )
+	for ( int j = 0; j < std::size( arrIgnoredSettings ); ++ j )
 	{
 		if ( !V_stricmp( arrIgnoredSettings[j], szSetting ) )
 			return false;
@@ -666,7 +662,7 @@ bool VerifyDefaultVideoConfig( VidMatConfigData_t &configData )
 		if ( kvPreviousVideoCfg->LoadFromFile( g_pFullFileSystem, VIDEOCONFIG_FILENAME, GetVideoCfgPathID() ) )
 		{
 			// Preserve all settings that support auto, but user had on a custom setting
-			for ( int k = 0; k < Q_ARRAYSIZE( s_pVideoConfigSettingsWhitelist ); ++ k )
+			for ( int k = 0; k < std::size( s_pVideoConfigSettingsWhitelist ); ++ k )
 			{
 				if ( !s_pVideoConfigSettingsWhitelist[k].m_bUseAutoOption ) continue;
 				int nUserPreferenceValue = kvPreviousVideoCfg->GetInt( s_pVideoConfigSettingsWhitelist[k].m_pSettingVar, 9999999 );
@@ -691,7 +687,7 @@ bool VerifyDefaultVideoConfig( VidMatConfigData_t &configData )
 		}
 		else
 		{
-			FOR_EACH_SUBKEY( configData.pConfigKeys, kvSubKey )
+			for ( KeyValues *kvSubKey = configData.pConfigKeys->GetFirstSubKey(); kvSubKey != nullptr; kvSubKey = kvSubKey->GetNextKey() )
 			{
 				if ( VideoConfigSetting_t const *pSetting = VideoConfigSettingFindWhitelistEntryByName( kvSubKey->GetName() ) )
 				{
@@ -766,7 +762,7 @@ bool CreateDefaultVideoConfig( VidMatConfigData_t &configData )
 	//
 	// Now write the file with user settings skipping the settings that support "AUTO" in options
 	//
-	FOR_EACH_SUBKEY( configData.pConfigKeys, kvSubKey )
+	for ( KeyValues *kvSubKey = configData.pConfigKeys->GetFirstSubKey(); kvSubKey != nullptr; kvSubKey = kvSubKey->GetNextKey() )
 	{
 		if ( VideoConfigSetting_t const *pSetting = VideoConfigSettingFindWhitelistEntryByName( kvSubKey->GetName() ) )
 		{
@@ -809,7 +805,7 @@ bool BLoadUserVideoConfigFileFromDisk( KeyValues *pConfigKeys )
 	}
 
 	// bloat the AUTO detected settings for compatibility as proper 'setting.' fields
-	FOR_EACH_SUBKEY( pConfigKeys, kvSubKey )
+	for ( KeyValues *kvSubKey = pConfigKeys->GetFirstSubKey(); kvSubKey != nullptr; kvSubKey = kvSubKey->GetNextKey() )
 	{
 		if ( char const *szSetting = StringAfterPrefix( kvSubKey->GetName(), "setauto." ) )
 		{
@@ -855,7 +851,7 @@ bool RecommendedVideoConfig( VidMatConfigData_t &configData )
 bool RecommendedConfig( VidMatConfigData_t &configData )
 {
 	// Verify that the file system has been created.
-	Assert( g_pFullFileSystem != nullptr );
+	contract_assert( g_pFullFileSystem != nullptr );
 
 	// If we are a video - this is a special case.
 	if ( configData.bIsVideo )
@@ -896,7 +892,7 @@ bool UpdateCurrentVideoConfig( int nWidth, int nHeight, int nAspectRatioMode, bo
 		return false;
 
 	// Go through each of the video settings and save off all necessary data.
-	int nVideoConfigCount = ARRAYSIZE( s_pVideoConfigSettingsWhitelist );
+	int nVideoConfigCount = std::size( s_pVideoConfigSettingsWhitelist );
 	for ( int iVar = 0; iVar < nVideoConfigCount; ++iVar )
 	{
 		// Do we need to save this setting?
@@ -1001,7 +997,7 @@ bool UpdateVideoConfigConVars( KeyValues *pConfigKeys )
 
 	ConVar *pVarOptionsUiCallback = g_pCVar->FindVar( "videooptions_optionsui_callback_disabled" );
 
-	int nVideoConfigCount = ARRAYSIZE( s_pVideoConfigSettingsWhitelist );
+	int nVideoConfigCount = std::size( s_pVideoConfigSettingsWhitelist );
 	for ( int iVar = 0; iVar < nVideoConfigCount; ++iVar )
 	{
 		// Do we need to save this setting?
@@ -1133,6 +1129,7 @@ const unsigned char *GetModEncryptionKey( const char *pModName )
 
 KeyValues* ReadEncryptedKVFile( const char *pRelativePath, const char *pPathID, const char *pModName )
 {
+	ks::ScratchArena<> scratch;
 	// Open the keyvalues, and abort if we can't
 	FileHandle_t f = g_pFullFileSystem->Open( pRelativePath, "rb", pPathID );
 	if ( !f )
@@ -1142,7 +1139,7 @@ KeyValues* ReadEncryptedKVFile( const char *pRelativePath, const char *pPathID, 
 
 	// load file into a null-terminated buffer
 	int fileSize = g_pFullFileSystem->Size( f );
-	char *buffer = (char*)stackalloc( fileSize + 1 );
+	char *buffer = (char*)scratch.AllocBytes( fileSize + 1 );
 	g_pFullFileSystem->Read( buffer, fileSize, f );
 	buffer[fileSize] = 0;
 	g_pFullFileSystem->Close( f );
@@ -1247,19 +1244,19 @@ void PerformSystemConfiguration( KeyValues *pResult, int nSystemLevel, const cha
 	if ( nSystemLevel == CONSOLE_SYSTEM_LEVEL_PS3 )
 	{
 		// PS3
-		Q_snprintf( pCfgFile, sizeof(pCfgFile), "cfg\\%s_ps3", pConfigFile );
+		V_snprintf( pCfgFile, sizeof(pCfgFile), "cfg\\%s_ps3", pConfigFile );
 	}
 	else
 	{
 		// everything else
-		Q_snprintf( pCfgFile, sizeof(pCfgFile), "cfg\\%s_%d", pConfigFile, nSystemLevel );
+		V_snprintf( pCfgFile, sizeof(pCfgFile), "cfg\\%s_%d", pConfigFile, nSystemLevel );
 	}
-	Q_strncat( pCfgFile, "_pc", sizeof(pCfgFile) );
+	V_strncat( pCfgFile, "_pc", sizeof(pCfgFile) );
 	if ( bUseSplitScreenCfg && bVGUIIsSplitscreen )
 	{
-		Q_strncat( pCfgFile, "_ss", sizeof(pCfgFile) );
+		V_strncat( pCfgFile, "_ss", sizeof(pCfgFile) );
 	}
-	Q_strncat( pCfgFile, ".ekv", sizeof(pCfgFile) );
+	V_strncat( pCfgFile, ".ekv", sizeof(pCfgFile) );
 
 	KeyValues *pKeyValues = ReadEncryptedKVFile( pCfgFile, "GAME", pModName );
 	if ( !pKeyValues )
@@ -1275,9 +1272,9 @@ void PerformSystemConfiguration( KeyValues *pResult, int nSystemLevel, const cha
 		// Check if legal
 		int i;
 		bool bLegalVar = false;
-		for( i=0; i < ARRAYSIZE( s_pConVarsAllowedInSystemLevel ); i++ )
+		for( i=0; i < std::size( s_pConVarsAllowedInSystemLevel ); i++ )
 		{
-			if ( !Q_stricmp( s_pConVarsAllowedInSystemLevel[i].m_pConVar, pCVarName ) )
+			if ( !V_stricmp( s_pConVarsAllowedInSystemLevel[i].m_pConVar, pCVarName ) )
 			{
 				bLegalVar = true;
 				break;

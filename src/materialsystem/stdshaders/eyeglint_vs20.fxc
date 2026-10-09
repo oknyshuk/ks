@@ -1,11 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Vertex shader to pass through texcoords needed to run the
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+// Purpose: Vertex shader to pass through texcoords needed to run the
 // procedural glint generation inner loop in the pixel shader
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
 
 #include "common_vs_fxc.h"
 
@@ -36,5 +33,3 @@ VS_OUTPUT main( const VS_INPUT v )
 	o.glintColor = v.glintColor;
 	return o;
 }
-
-

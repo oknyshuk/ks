@@ -1,23 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#undef PROTECTED_THINGS_ENABLE   // prevent warnings when windows.h gets included
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "shaderapibase.h"
 #include "shaderapi/ishaderutil.h"
-
 
 //-----------------------------------------------------------------------------
 //
 // The Base implementation of the shader render class
 //
 //-----------------------------------------------------------------------------
-
 
 //-----------------------------------------------------------------------------
 // constructor, destructor
@@ -38,5 +29,3 @@ void CShaderAPIBase::GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pIn
 {
 	g_pShaderUtil->GetCurrentColorCorrection( pInfo );
 }
-
-

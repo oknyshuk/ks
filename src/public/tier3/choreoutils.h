@@ -1,13 +1,8 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
+
 // Purpose: Helper methods + classes for choreo
-//
-//===========================================================================//
-
-#ifndef CHOREOUTILS_H
-#define CHOREOUTILS_H
-
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -30,7 +25,3 @@ const char *GetSoundForEvent( CChoreoEvent *pEvent, CStudioHdr *pStudioHdr );
 bool AutoAddGestureKeys( CChoreoEvent *e, CStudioHdr *pStudioHdr, float *pPoseParameters, bool bCheckOnly );
 bool UpdateGestureLength( CChoreoEvent *e, CStudioHdr *pStudioHdr, float *pPoseParameters, bool bCheckOnly );
 bool UpdateSequenceLength( CChoreoEvent *e, CStudioHdr *pStudioHdr, float *pPoseParameters, bool bCheckOnly, bool bVerbose );
-
-
-#endif // CHOREOUTILS_H
-

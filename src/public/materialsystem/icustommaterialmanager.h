@@ -1,18 +1,14 @@
-//========= Copyright (c) 1996-2013, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Provide interface to custom material manager
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2013 Valve Corporation
+import ks.tier1;
 
-#ifndef I_CUSTOM_MATERIAL_MANAGER_H
-#define I_CUSTOM_MATERIAL_MANAGER_H
+// Purpose: Provide interface to custom material manager
 
 #include "materialsystem/icustommaterial.h"
 #include "materialsystem/icompositetexturegenerator.h"
 
 class IVisualsDataCompare;
-class KeyValues;
 
 class ICustomMaterialManager
 {
@@ -25,5 +21,3 @@ public:
 	virtual int DebugGetNumActiveCustomMaterials() = 0;
 	virtual bool GetVMTKeyValues( const char *pszVMTName, KeyValues **ppVMTKeyValues ) = 0;
 };
-
-#endif // I_CUSTOM_MATERIAL_MANAGER_H

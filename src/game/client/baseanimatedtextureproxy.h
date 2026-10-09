@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef BASEANIMATEDTEXTUREPROXY
-#define BASEANIMATEDTEXTUREPROXY
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "materialsystem/imaterialproxy.h"
 
@@ -42,5 +36,3 @@ protected:
 	float m_FrameRate;
 	bool m_WrapAnimation;
 };
-
-#endif // BASEANIMATEDTEXTUREPROXY

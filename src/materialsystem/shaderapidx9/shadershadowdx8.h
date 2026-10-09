@@ -1,14 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef SHADERSHADOWDX8_H
-#define SHADERSHADOWDX8_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "togl/rendermechanism.h"
 #include "locald3dtypes.h"
@@ -48,7 +40,7 @@ struct DepthTestState_t
 	unsigned char m_ZBias:2;
 
 	typedef uint32 UIntAlias;
-	FORCEINLINE void Check( void ) const { COMPILE_TIME_ASSERT( sizeof( *this ) == sizeof( UIntAlias ) ); }
+	[[gnu::always_inline]] inline void Check( void ) const { static_assert( sizeof( *this ) == sizeof( UIntAlias ) ); }
 
 };
 
@@ -64,7 +56,7 @@ struct AlphaTestAndMiscState_t
 	unsigned char			m_CullEnable:1;
 
 	typedef uint32 UIntAlias;
-	FORCEINLINE void Check( void ) const { COMPILE_TIME_ASSERT( sizeof( *this ) == sizeof( UIntAlias ) ); }
+	[[gnu::always_inline]] inline void Check( void ) const { static_assert( sizeof( *this ) == sizeof( UIntAlias ) ); }
 };
 
 struct FogAndMiscState_t
@@ -77,8 +69,8 @@ struct FogAndMiscState_t
 
 	typedef uint16 UIntAlias;
 
-	FORCEINLINE ShaderFogMode_t FogMode( void ) const { return ( ShaderFogMode_t ) m_FogMode; }
-	FORCEINLINE void Check( void ) const { COMPILE_TIME_ASSERT( sizeof( *this ) == sizeof( UIntAlias ) ); }
+	[[gnu::always_inline]] inline ShaderFogMode_t FogMode( void ) const { return ( ShaderFogMode_t ) m_FogMode; }
+	[[gnu::always_inline]] inline void Check( void ) const { static_assert( sizeof( *this ) == sizeof( UIntAlias ) ); }
 };
 
 
@@ -102,7 +94,7 @@ struct AlphaBlendState_t
 	uint8 m_nPad00;
 
 	typedef uint64 UIntAlias;
-	FORCEINLINE void Check( void ) const { COMPILE_TIME_ASSERT( sizeof( *this ) == sizeof( UIntAlias ) ); }
+	[[gnu::always_inline]] inline void Check( void ) const { static_assert( sizeof( *this ) == sizeof( UIntAlias ) ); }
 };
 
 struct ShadowState_t
@@ -136,9 +128,6 @@ struct ShadowState_t
 	// Sampler state. encoded as ints so we can do mask operations for fast change detection
 	uint32 m_nFetch4Enable;
 
-#if ( defined ( PLATFORM_OPENGL ) )
-	uint32	m_nShadowFilterEnable;
-#endif
 };
 
 
@@ -167,7 +156,7 @@ struct ShadowShaderState_t
 //-----------------------------------------------------------------------------
 // The shader setup API
 //-----------------------------------------------------------------------------
-abstract_class IShaderShadowDX8 : public IShaderShadow
+class IShaderShadowDX8 : public IShaderShadow
 {
 public:
 	// Initializes it
@@ -186,5 +175,3 @@ public:
 };
 
 extern IShaderShadowDX8 *g_pShaderShadowDx8;
-
-#endif // SHADERSHADOWDX8_H

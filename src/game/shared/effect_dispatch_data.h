@@ -1,13 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef EFFECT_DISPATCH_DATA_H
-#define EFFECT_DISPATCH_DATA_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "const.h"
 #include "reflect_annotations.h"
@@ -17,6 +10,7 @@
 	#include "dt_recv.h"
 	#include "client_class.h"
 	#include "recvproxy.h"
+	#include "icliententityinternal.h"
 
 	EXTERN_RECV_TABLE( DT_EffectData );
 
@@ -34,18 +28,18 @@
 
 #endif
 
-#define EFFECTDATA_SERVER_IGNOREPREDICTIONCULL 0x4
+inline constexpr auto EFFECTDATA_SERVER_IGNOREPREDICTIONCULL = 0x4;
 // NOTE: These flags are specifically *not* networked; so it's placed above the max effect flag bits
-#define EFFECTDATA_NO_RECORD 0x80000000
+inline constexpr auto EFFECTDATA_NO_RECORD = 0x80000000;
 
-#define MAX_EFFECT_FLAG_BITS 8
+inline constexpr auto MAX_EFFECT_FLAG_BITS = 8;
 
 // Note, must match common/qlimits.h!!!
 // Must have this value in sync(-1) with qlimits.h and const.h
 #define MAX_MODEL_INDEX_BITS	12
 
-#define MAX_EFFECT_DISPATCH_STRING_BITS	10
-#define MAX_EFFECT_DISPATCH_STRINGS		( 1 << MAX_EFFECT_DISPATCH_STRING_BITS )
+inline constexpr auto MAX_EFFECT_DISPATCH_STRING_BITS = 10;
+inline constexpr auto MAX_EFFECT_DISPATCH_STRINGS = ( 1 << MAX_EFFECT_DISPATCH_STRING_BITS );
 
 // This is the class that holds whatever data we're sending down to the client to make the effect.
 class [[= ks::reflect::NetTable{ .name = "DT_EffectData", .base = false } ]]
@@ -161,5 +155,3 @@ private:
 bool SuppressingParticleEffects();
 void SuppressParticleEffects( bool bSuppress );
 #endif
-
-#endif // EFFECT_DISPATCH_DATA_H

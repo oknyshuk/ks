@@ -1,14 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: builds an intended movement command to send to the server
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=======================================================================================//
 
-
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "kbutton.h"
 #include "usercmd.h"
 #include "in_buttons.h"
@@ -16,23 +24,17 @@
 #include "iviewrender.h"
 #include "iclientmode.h"
 #include "prediction.h"
-#include "bitbuf.h"
-#include "checksum_md5.h"
 #include "hltvcamera.h"
-#if defined( REPLAY_ENABLED )
-#include "replaycamera.h"
-#endif
 #include "ivieweffects.h"
 #include "inputsystem/iinputsystem.h"
-#include <ctype.h> // isalnum()
 #include <voice_status.h>
+import ks.tier1;
+import std;
 
 extern ConVar cam_idealpitch;
 extern ConVar cam_idealyaw;
 // For showing/hiding the scoreboard
-#include <game/client/iviewport.h>
 
-#include "tier0/memalloc.h"
 int in_impulse[ MAX_SPLITSCREEN_PLAYERS ];
 static int in_cancel[ MAX_SPLITSCREEN_PLAYERS ];
 ConVar cl_anglespeedkey( "cl_anglespeedkey", "0.67", 0 );
@@ -44,7 +46,7 @@ ConVar cl_upspeed( "cl_upspeed", "320", FCVAR_CHEAT );
 ConVar lookspring( "lookspring", "0", FCVAR_ARCHIVE );
 ConVar lookstrafe( "lookstrafe", "0", FCVAR_ARCHIVE );
 
-#define MAX_LINEAR_SPEED "450"
+inline constexpr const char *MAX_LINEAR_SPEED = "450";
 
 ConVar cl_sidespeed( "cl_sidespeed", MAX_LINEAR_SPEED, FCVAR_CHEAT );
 ConVar cl_forwardspeed( "cl_forwardspeed", MAX_LINEAR_SPEED, FCVAR_CHEAT );
@@ -88,15 +90,17 @@ static void SplitScreenTeleport( int nSlot )
 	if ( C_BasePlayer::GetLocalPlayer( nOther ) )
 	{
 		char cmd[ 256 ];
-		Q_snprintf( cmd, sizeof( cmd ), "cmd%d setpos %f %f %f;setang %f %f %f\n",
+		V_snprintf( cmd, sizeof( cmd ), "cmd%d setpos %f %f %f;setang %f %f %f\n",
 			nOther + 1,
-			VectorExpand( vecOrigin ),
-			VectorExpand( angles ) );
+			vecOrigin.x, vecOrigin.y, vecOrigin.z,
+			angles.x, angles.y, angles.z );
 		engine->ClientCmd( cmd );
 	}
 }
 
-CON_COMMAND_F( ss_teleport, "Teleport other splitscreen player to my location.", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY )
+static void ss_teleport( const CCommand &args );
+static ConCommand ss_teleport_command( "ss_teleport", ss_teleport, "Teleport other splitscreen player to my location.", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+static void ss_teleport( const CCommand &args )
 {
 	SplitScreenTeleport( GET_ACTIVE_SPLITSCREEN_SLOT() );
 }
@@ -272,7 +276,7 @@ int KB_ConvertString( char *in, char **ppout )
 
 	int maxlen = strlen( sz ) + 1;
 	pOut = ( char * )MemAlloc_Alloc( maxlen );
-	Q_strncpy( pOut, sz, maxlen );
+	V_strncpy( pOut, sz, maxlen );
 	*ppout = pOut;
 
 	return 1;
@@ -291,7 +295,7 @@ kbutton_t *CInput::FindKey( const char *name )
 	p = m_pKeys;
 	while ( p )
 	{
-		if ( !Q_stricmp( name, p->name ) )
+		if ( !V_stricmp( name, p->name ) )
 		{
 			return p->pkey;
 		}
@@ -320,7 +324,7 @@ void CInput::AddKeyButton( const char *name, kbutton_t *pkb )
 
 	p = new CKeyboardKey;
 
-	Q_strncpy( p->name, name, sizeof( p->name ) );
+	V_strncpy( p->name, name, sizeof( p->name ) );
 	p->pkey = pkb;
 
 	p->next = m_pKeys;
@@ -826,7 +830,7 @@ void CInput::AdjustYaw( int nSlot, float speed, QAngle& viewangles )
 
 		if ( side || forward )
 		{
-			viewangles[YAW] = RAD2DEG(atan2(side, forward)) + user.m_vecCameraOffset[ YAW ];
+			viewangles[YAW] = RAD2DEG(std::atan2(side, forward)) + user.m_vecCameraOffset[ YAW ];
 		}
 		if ( side || forward || KeyState (&in_right) || KeyState (&in_left) )
 		{
@@ -961,8 +965,8 @@ void CInput::ComputeSideMove( int nSlot, CUserCmd *cmd )
 	if ( CAM_IsThirdPerson() && thirdperson_screenspace.GetInt() )
 	{
 		float ideal_yaw = cam_idealyaw.GetFloat();
-		float ideal_sin = sin(DEG2RAD(ideal_yaw));
-		float ideal_cos = cos(DEG2RAD(ideal_yaw));
+		float ideal_sin = std::sin(DEG2RAD(ideal_yaw));
+		float ideal_cos = std::cos(DEG2RAD(ideal_yaw));
 		
 		float movement = ideal_cos*KeyState(&in_moveright)
 			+  ideal_sin*KeyState(&in_back)
@@ -1024,8 +1028,8 @@ void CInput::ComputeForwardMove( int nSlot, CUserCmd *cmd )
 	if ( CAM_IsThirdPerson() && thirdperson_screenspace.GetInt() )
 	{
 		float ideal_yaw = cam_idealyaw.GetFloat();
-		float ideal_sin = sin(DEG2RAD(ideal_yaw));
-		float ideal_cos = cos(DEG2RAD(ideal_yaw));
+		float ideal_sin = std::sin(DEG2RAD(ideal_yaw));
+		float ideal_cos = std::cos(DEG2RAD(ideal_yaw));
 		
 		float movement = ideal_cos*KeyState(&in_forward)
 			+  ideal_sin*KeyState(&in_moveright)
@@ -1101,8 +1105,6 @@ void CInput::ControllerMove( int nSlot, float frametime, CUserCmd *cmd )
 	}
 
 	JoyStickMove( frametime, cmd);
-
-	SteamControllerMove( frametime, cmd );
 }
 
 //-----------------------------------------------------------------------------
@@ -1287,7 +1289,7 @@ void CInput::CreateMove ( int sequence_number, float input_sample_frametime, boo
 	cmd->buttons = GetButtonBits( true );
 
 	// Using joystick?
-	if ( ( g_pInputSystem->IsDeviceReadingInput( INPUT_DEVICE_GAMEPAD ) && in_joystick.GetInt() ) || g_pInputSystem->MotionControllerActive() || g_pInputSystem->IsSteamControllerActive() )
+	if ( ( g_pInputSystem->IsDeviceReadingInput( INPUT_DEVICE_GAMEPAD ) && in_joystick.GetInt() ) || g_pInputSystem->MotionControllerActive() )
 	{
 		if ( cmd->forwardmove > 0 )
 		{
@@ -1320,9 +1322,6 @@ void CInput::CreateMove ( int sequence_number, float input_sample_frametime, boo
 	cmd->random_seed = MD5_PseudoRandom( sequence_number ) & 0x7fffffff;
 
 	HLTVCamera()->CreateMove( cmd );
-#if defined( REPLAY_ENABLED )
-	ReplayCamera()->CreateMove( cmd );
-#endif
 
 
 	pVerified->m_cmd = *cmd;
@@ -1475,7 +1474,7 @@ void CInput::ValidateUserCmd( CUserCmd *usercmd, int sequence_number )
 //-----------------------------------------------------------------------------
 bool CInput::WriteUsercmdDeltaToBuffer( int nSlot, bf_write *buf, int from, int to, bool isnewcommand )
 {
-	Assert( GetPerUser( nSlot ).m_pCommands );
+	contract_assert( GetPerUser( nSlot ).m_pCommands );
 
 	CUserCmd nullcmd;
 	CUserCmd *f, *t;
@@ -1536,7 +1535,7 @@ bool CInput::WriteUsercmdDeltaToBuffer( int nSlot, bf_write *buf, int from, int 
 //-----------------------------------------------------------------------------
 CUserCmd *CInput::GetUserCmd( int nSlot, int sequence_number )
 {
-	Assert( GetPerUser( nSlot ).m_pCommands );
+	contract_assert( GetPerUser( nSlot ).m_pCommands );
 
 	CUserCmd *usercmd = &GetPerUser( nSlot ).m_pCommands[ sequence_number % MULTIPLAYER_BACKUP ];
 
@@ -1791,8 +1790,8 @@ void CInput::Init_All (void)
 
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
-		Assert( !m_PerUser[ i ].m_pCommands );
-		Assert( !m_PerUser[ i ].m_pVerifiedCommands );
+		contract_assert( !m_PerUser[ i ].m_pCommands );
+		contract_assert( !m_PerUser[ i ].m_pVerifiedCommands );
 
 		m_PerUser[ i ].m_pCommands = new CUserCmd[ MULTIPLAYER_BACKUP ];
 		m_PerUser[ i ].m_pVerifiedCommands = new CVerifiedUserCmd[ MULTIPLAYER_BACKUP ];
@@ -1801,9 +1800,9 @@ void CInput::Init_All (void)
 	m_fMouseInitialized	= false;
 	m_fRestoreSPI		= false;
 	m_fMouseActive		= false;
-	Q_memset( m_rgOrigMouseParms, 0, sizeof( m_rgOrigMouseParms ) );
-	Q_memset( m_rgNewMouseParms, 0, sizeof( m_rgNewMouseParms ) );
-	Q_memset( m_rgCheckMouseParam, 0, sizeof( m_rgCheckMouseParam ) );
+	V_memset( m_rgOrigMouseParms, 0, sizeof( m_rgOrigMouseParms ) );
+	V_memset( m_rgNewMouseParms, 0, sizeof( m_rgNewMouseParms ) );
+	V_memset( m_rgCheckMouseParam, 0, sizeof( m_rgCheckMouseParam ) );
 
 	m_rgNewMouseParms[ MOUSE_ACCEL_THRESHHOLD1 ] = 0;	// no 2x
 	m_rgNewMouseParms[ MOUSE_ACCEL_THRESHHOLD2 ] = 0;	// no 4x
@@ -1846,4 +1845,3 @@ void CInput::Shutdown_All(void)
 void CInput::LevelInit( void )
 {
 }
-

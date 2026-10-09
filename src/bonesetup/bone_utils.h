@@ -1,9 +1,8 @@
+#pragma once
 
-
-DLL_IMPORT CLinkedMiniProfiler *g_pPhysicsMiniProfilers;
-#define BONE_PROFILE(ID)   
-#define BONE_PROFILE_LOOP(ID,COUNT)
-#define BONE_PROFILE_FUNC()  
+import std;
+import ks.core;
+#include "bone_setup.h"
 
 
 
@@ -16,8 +15,8 @@ public:
 		T *p = (T *)m_FreeBlocks.Pop();
 		if ( !p )
 		{
-			p = (T *)MemAlloc_AllocAligned( sizeof( T ) * MAXSTUDIOBONES, 16 );
-			if ( ((size_t)p) % std::max(TSLIST_NODE_ALIGNMENT,16) != 0 )
+			p = (T *)MemAlloc_AllocAlignedUnattributed( sizeof( T ) * MAXSTUDIOBONES, 16 );
+			if ( ((std::size_t)p) % std::max(TSLIST_NODE_ALIGNMENT,16) != 0 )
 				DebuggerBreak();
 		}
 

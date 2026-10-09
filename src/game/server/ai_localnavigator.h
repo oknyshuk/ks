@@ -1,21 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
-
-#ifndef AI_LOCALNAVIGATOR_H
-#define AI_LOCALNAVIGATOR_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "simtimer.h"
 #include "ai_component.h"
 #include "ai_movetypes.h"
 #include "ai_obstacle_type.h"
 
-
 class CAI_PlaneSolver;
 class CAI_MoveProbe;
-FORWARD_DECLARE_HANDLE( Obstacle_t );
+struct Obstacle_t__;
+using Obstacle_t = Obstacle_t__ *;
 
 //-----------------------------------------------------------------------------
 // CAI_LocalNavigator
@@ -71,5 +66,3 @@ private:
 
 	DECLARE_SIMPLE_DATADESC();
 };
-
-#endif // AI_LOCALNAVIGATOR_H

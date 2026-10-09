@@ -1,16 +1,25 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "client_pch.h"
+// main precompiled header for client files
+
+import std;
+import ks.tier1;
+
+
+
+
+
+
+#include "client.h"
+
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "cl_localnetworkbackdoor.h"
 #include "LocalNetworkBackdoor.h"
-#include "iclientnetworkable.h"
-#include "basehandle.h"
-#include "client_class.h"
-#include "dt_localtransfer.h"
 
 static CLocalNetworkBackdoor s_LocalNetworkBackdoor;
 
@@ -36,5 +45,3 @@ void CL_SetupLocalNetworkBackDoor( bool bUseBackDoor )
 		}
 	}
 }
-
-

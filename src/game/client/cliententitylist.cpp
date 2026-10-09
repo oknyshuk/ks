@@ -1,16 +1,22 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // Purpose: a global list of all the entities in the game.  All iteration through
 //			entities is done through this object.
 //-----------------------------------------------------------------------------
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -21,7 +27,7 @@ static CClientEntityList s_EntityList;
 CBaseEntityList *g_pEntityList = &s_EntityList;
 
 // Expose list to engine
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CClientEntityList, IClientEntityList, VCLIENTENTITYLIST_INTERFACE_VERSION, s_EntityList );
+static InterfaceReg s_Reg_CClientEntityList_IClientEntityList( []() -> void * { return static_cast<IClientEntityList *>( &s_EntityList ); }, VCLIENTENTITYLIST_INTERFACE_VERSION );;
 
 // Store local pointer to interface for rest of client .dll only 
 //  (CClientEntityList instead of IClientEntityList )
@@ -85,22 +91,21 @@ void CClientEntityList::Release( void )
 
 IClientNetworkable* CClientEntityList::GetClientNetworkable( int entnum )
 {
-	Assert( entnum >= 0 );
-	Assert( entnum < MAX_EDICTS );
+	contract_assert( entnum >= 0 );
+	contract_assert( entnum < MAX_EDICTS );
 	return m_EntityCacheInfo[entnum].m_pNetworkable;
 }
 
 
 EntityCacheInfo_t *CClientEntityList::GetClientNetworkableArray()
 {
-	PREFETCH360(m_EntityCacheInfo, 0);
 	return m_EntityCacheInfo;
 }
 
 void CClientEntityList::SetDormant( int entityIndex, bool bDormant )
 {
-	Assert( entityIndex >= 0 );
-	Assert( entityIndex < MAX_EDICTS );
+	contract_assert( entityIndex >= 0 );
+	contract_assert( entityIndex < MAX_EDICTS );
 	m_EntityCacheInfo[entityIndex].m_bDormant = bDormant;
 }
 
@@ -252,7 +257,7 @@ void CClientEntityList::AddPVSNotifier( IClientUnknown *pUnknown )
 			pInfo->m_InPVSStatus = 0;
 
 			[[maybe_unused]] bool bInserted = m_PVSNotifierMap.emplace( pUnknown, index ).second;
-			Assert( bInserted );
+			contract_assert( bInserted );
 		}
 	}
 }
@@ -270,14 +275,14 @@ void CClientEntityList::RemovePVSNotifier( IClientUnknown *pUnknown )
 			if ( index == m_PVSNotifierMap.end() )
 			{
 				Warning( "PVS notifier not in m_PVSNotifierMap\n" );
-				Assert( false );
+				contract_assert( false );
 				return;
 			}
 
 			auto indexIntoPVSNotifyInfos = index->second;
 			
-			Assert( indexIntoPVSNotifyInfos->m_pNotify == pNotify );
-			Assert( indexIntoPVSNotifyInfos->m_pRenderable == pRenderable );
+			contract_assert( indexIntoPVSNotifyInfos->m_pNotify == pNotify );
+			contract_assert( indexIntoPVSNotifyInfos->m_pRenderable == pRenderable );
 			
 			m_PVSNotifyInfos.erase( indexIntoPVSNotifyInfos );
 			m_PVSNotifierMap.erase( index );
@@ -288,7 +293,7 @@ void CClientEntityList::RemovePVSNotifier( IClientUnknown *pUnknown )
 	// If it didn't report itself as a notifier, let's hope it's not in the notifier list now
 	// (which would mean that it reported itself as a notifier earlier, but not now).
 #ifdef _DEBUG
-	Assert( !m_PVSNotifierMap.contains( pUnknown ) );
+	contract_assert( !m_PVSNotifierMap.contains( pUnknown ) );
 #endif
 }
 
@@ -296,7 +301,7 @@ void CClientEntityList::AddListenerEntity( IClientEntityListener *pListener )
 {
 	if ( ks::find_index( m_entityListeners, pListener ) >= 0 )
 	{
-		AssertMsg( 0, "Can't add listeners multiple times\n" );
+		contract_assert( false && "Can't add listeners multiple times\n" );
 		return;
 	}
 	m_entityListeners.push_back( pListener );
@@ -323,8 +328,8 @@ void CClientEntityList::OnAddEntity( IHandleEntity *pEnt, CBaseHandle handle )
 
 
 		// Cache its networkable pointer.
-		Assert( dynamic_cast< IClientUnknown* >( pEnt ) );
-		Assert( ((IClientUnknown*)pEnt)->GetClientNetworkable() ); // Server entities should all be networkable.
+		contract_assert( dynamic_cast< IClientUnknown* >( pEnt ) );
+		contract_assert( ((IClientUnknown*)pEnt)->GetClientNetworkable() ); // Server entities should all be networkable.
 		pCache->m_pNetworkable = ((IClientUnknown*)pEnt)->GetClientNetworkable();
 		pCache->m_bDormant = true;
 	}

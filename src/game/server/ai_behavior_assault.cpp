@@ -1,9 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "ai_behavior_assault.h"
@@ -120,7 +147,7 @@ int CAI_AssaultBehavior::DrawDebugTextOverlays( int text_offset )
 	offset = BaseClass::DrawDebugTextOverlays( text_offset );
 	if ( GetOuter()->m_debugOverlays & OVERLAY_TEXT_BIT )
 	{	
-		Q_snprintf( tempstr, sizeof(tempstr), "Assault Point: %s %s", STRING( m_AssaultPointName ), VecToString( m_hAssaultPoint->GetAbsOrigin() ) );
+		V_snprintf( tempstr, sizeof(tempstr), "Assault Point: %s %s", STRING( m_AssaultPointName ), VecToString(m_hAssaultPoint->GetAbsOrigin()).c_str() );
 		GetOuter()->EntityText( offset, tempstr, 0 );
 		offset++;
 	}
@@ -229,7 +256,7 @@ CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointNa
 		}
 	}
 
-	Assert( iMostRecentIndex > -1 );
+	contract_assert( iMostRecentIndex > -1 );
 
 	// Remove the most recently used 
 	pClearAssaultPoints.erase( pClearAssaultPoints.begin() + iMostRecentIndex );
@@ -245,7 +272,7 @@ CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointNa
 
 	if ( m_hGoal->m_BranchMethod == BRANCH_CLOSEST )
 	{
-		distBest = FLT_MAX;
+		distBest = std::numeric_limits<float>::max();
 		for( int i = 0 ; i < std::ssize( pClearAssaultPoints ) ; i++ )
 		{
 			distCur = ( pClearAssaultPoints[i]->GetAbsOrigin() - vStart ).LengthSqr();
@@ -277,7 +304,7 @@ CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointNa
 //-----------------------------------------------------------------------------
 void CAI_AssaultBehavior::SetAssaultPoint( CAssaultPoint *pAssaultPoint )
 {
-	Assert( pAssaultPoint != nullptr );
+	contract_assert( pAssaultPoint != nullptr );
 	m_hAssaultPoint = pAssaultPoint;
 	pAssaultPoint->m_flTimeLastUsed = gpGlobals->curtime;
 }
@@ -293,7 +320,7 @@ void CAI_AssaultBehavior::ClearAssaultPoint( void )
 	// the assault behavior.
 	// This can also be happen if an assault point has ClearOnContact set, and
 	// an NPC assaulting to this point has seen an enemy.
-	Assert( m_hAssaultPoint != nullptr );
+	contract_assert( m_hAssaultPoint != nullptr );
 	if ( m_hAssaultPoint == nullptr )
 	{
 		DevMsg("**ERROR: ClearAssaultPoint called with no assault point\n" );
@@ -369,7 +396,7 @@ void CAI_AssaultBehavior::OnHitAssaultPoint( void )
 	m_bHitAssaultPoint = true;
 
 	// dvs: This was unprotected. Is a NULL assault point valid here?
-	Assert( m_hAssaultPoint != nullptr );
+	contract_assert( m_hAssaultPoint != nullptr );
 	if ( m_hAssaultPoint )
 	{
 		m_hAssaultPoint->m_OnArrival.FireOutput( GetOuter(), m_hAssaultPoint, 0 );
@@ -728,7 +755,7 @@ void CAI_AssaultBehavior::RunTask( const Task_t *pTask )
 //-----------------------------------------------------------------------------
 CRallyPoint *CAI_AssaultBehavior::FindBestRallyPointInRadius( const Vector &vecCenter, float flRadius )
 {
-	VPROF_BUDGET( "CAI_AssaultBehavior::FindBestRallyPointInRadius", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CAI_AssaultBehavior::FindBestRallyPointInRadius", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	const int RALLY_SEARCH_ENTS	= 30;
 	CBaseEntity *pEntities[RALLY_SEARCH_ENTS];
@@ -883,7 +910,7 @@ void CAI_AssaultBehavior::UnlockRallyPoint( void )
 //-----------------------------------------------------------------------------
 void CAI_AssaultBehavior::SetParameters( CBaseEntity *pRallyEnt, AssaultCue_t assaultcue )
 {
-	VPROF_BUDGET( "CAI_AssaultBehavior::SetParameters", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CAI_AssaultBehavior::SetParameters", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	// Clean up any soon to be dangling rally points
 	UnlockRallyPoint();
@@ -926,7 +953,7 @@ void CAI_AssaultBehavior::SetParameters( CBaseEntity *pRallyEnt, AssaultCue_t as
 //-----------------------------------------------------------------------------
 void CAI_AssaultBehavior::SetParameters( string_t rallypointname, AssaultCue_t assaultcue, int rallySelectMethod )
 {
-	VPROF_BUDGET( "CAI_AssaultBehavior::SetParameters", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CAI_AssaultBehavior::SetParameters", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	// Clean up any soon to be dangling rally points
 	UnlockRallyPoint();

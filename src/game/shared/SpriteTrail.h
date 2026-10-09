@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef SPRITETRAIL_H
-#define SPRITETRAIL_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -14,7 +9,6 @@
 #if defined( CLIENT_DLL )
 #define CSpriteTrail C_SpriteTrail
 #endif
-
 
 //-----------------------------------------------------------------------------
 // Sprite trail
@@ -107,5 +101,3 @@ private:
 	[[= ks::reflect::Key{ .name = "spritename" } ]] string_t m_iszSpriteName;
 	[[= ks::reflect::Key{ .name = "animate" } ]] bool	m_bAnimate;
 };
-
-#endif // SPRITETRAIL_H

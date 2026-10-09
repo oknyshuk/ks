@@ -1,23 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DT_LOCALTRANSFER_H
-#define DT_LOCALTRANSFER_H
-
-
+#include "edict.h"
 #include "dt_send.h"
 #include "dt_recv.h"
 #include "dt.h"
 
-
 // We have at most MAX_CHANGE_OFFSETS indices in an edict.
 // We need 3 entries because of SPROP_IS_A_VECTOR_ELEM (in which case we could generate 3 props for each offset).
 // Then we need 2 entries because we store up to 2 SendProp indices for each offset in PropIndicesCollection_t.
-#define MAX_PROP_OFFSET_TO_INDICES_RESULTS (MAX_CHANGE_OFFSETS * 3 * PROP_INDICES_COLLECTION_NUM_INDICES)
+inline constexpr auto MAX_PROP_OFFSET_TO_INDICES_RESULTS = (MAX_CHANGE_OFFSETS * 3 * PROP_INDICES_COLLECTION_NUM_INDICES);
 
 
 class CBaseEdict;
@@ -56,6 +49,3 @@ int MapPropOffsetsToIndices(
 
 // Call this after packing all the entities in a frame.
 void PrintPartialChangeEntsList();
-
-
-#endif // DT_LOCALTRANSFER_H

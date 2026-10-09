@@ -1,16 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Entity that propagates general data needed by clients for every player.
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PLAYER_RESOURCE_H
-#define PLAYER_RESOURCE_H
+// Purpose: Entity that propagates general data needed by clients for every player.
 
 #include "reflect_annotations.h"
 
 #include "shareddefs.h"
+#include "baseentity.h"
 
 class [[= ks::reflect::NetTable{ .name = "DT_PlayerResource", .base = false } ]]
       CPlayerResource : public CBaseEntity
@@ -45,5 +42,3 @@ protected:
 };
 
 extern CPlayerResource *g_pPlayerResource;
-
-#endif // PLAYER_RESOURCE_H

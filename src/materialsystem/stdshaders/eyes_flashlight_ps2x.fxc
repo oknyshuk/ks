@@ -1,8 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..3"	[ps20b] [PC]
 // STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..2"	[ps30]  [PC]

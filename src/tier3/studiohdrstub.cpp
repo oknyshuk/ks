@@ -1,14 +1,11 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
+
 //#include "studio.h"
 #include "studio.h"
 #include "datacache/imdlcache.h"
 #include "istudiorender.h"
 #include "tier3/tier3.h"
-
 
 //-----------------------------------------------------------------------------
 // FIXME: This trashy glue code is really not acceptable. Figure out a way of making it unnecessary.
@@ -46,4 +43,3 @@ const studiohdr_t *virtualgroup_t::GetStudioHdr( void ) const
 {
 	return g_pMDLCache->GetStudioHdr( VoidPtrToMDLHandle( cache ) );
 }
-

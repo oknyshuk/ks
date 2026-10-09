@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef MAPRESLISTGENERATOR_H
-#define MAPRESLISTGENERATOR_H
-
+import ks.tier1;
 #include "filesystem.h"
-#include "utlvector.h"
-#include "tier1/intern_pool.h"
-#include "utlstring.h"
-#include "tier1/map_ops.h"
-#include <set>
+import std;
 
 // Map list creation
 // Map entry
@@ -36,7 +28,6 @@ void MapReslistGenerator_BuildMapList();
 
 //-----------------------------------------------------------------------------
 // Purpose: Handles collating lists of resources on level load
-//			Used to generate reslists for steam
 //-----------------------------------------------------------------------------
 class CMapReslistGenerator
 {
@@ -122,6 +113,3 @@ private:
 
 // singleton accessor
 CMapReslistGenerator &MapReslistGenerator();
-
-
-#endif // MAPRESLISTGENERATOR_H

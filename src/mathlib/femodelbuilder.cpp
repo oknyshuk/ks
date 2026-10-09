@@ -1,27 +1,24 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+import ks.tier1;
 #include "mathlib/femodelbuilder.h"
-#include <unordered_map>
-#include <unordered_set>
-#include "tier1/heapsort.h"
-#include <vector>
-#include <utility>
+import std;
 #include "modellib/clothhelpers.h"
-#include "tier1/string_token.h"
 #include "mathlib/feagglomerator.h"
-#include <algorithm>
 #include "femodel.inl"
 
 // this function is exclusively for use with invM0/(invM0+invM1) type of formulae
 // if one of the particles is almost infinite mass, I don't want to see any creep in its position (mostly for debugging)
 inline float SnapWeight01( float w )
 {
-	Assert( w >= 0.0f && w <= 1.0f );
+	contract_assert( w >= 0.0f && w <= 1.0f );
 	return w < 1e-6f ? 0 : w > 0.99999f ? 1.0f : w;
 }
 
 inline float SnapWeight0( float w )
 {
-	Assert( w >= 0.0f && w <= 1.0f );
+	contract_assert( w >= 0.0f && w <= 1.0f );
 	return w < 1e-12f ? 0 : w ;
 }
 
@@ -123,7 +120,7 @@ void CFeModelBuilder::BuildKelagerBends( )
 					if ( staticNodes[ kbend.m_nNode[ j ] ] )
 						kbend.m_nFlags ^= 1 << j;
 				}
-				Assert( kbend.m_nFlags );
+				contract_assert( kbend.m_nFlags );
 				m_KelagerBends.push_back( kbend );
 				paired[ nBestB1idx ] = true;
 			}
@@ -221,12 +218,12 @@ void CFeModelBuilder::BuildRod( float flCurvatureAngle, uint v0, uint v1, uint n
 		float flSideProjDelta = flSideProj[ 0 ] - flSideProj[ 1 ];
 		Vector vSideHeight[ 2 ] = { vSide[ 0 ] - vEdge * flSideProj[ 0 ], vSide[ 1 ] - vEdge * flSideProj[ 1 ] };// orthogonal to the hinge components of the sides
 		float h[ 2 ] = { vSideHeight[ 0 ].Length( ), vSideHeight[ 1 ].Length( ) };
-		flMaxDist = sqrtf( Sqr( flSideProjDelta ) + Sqr( h[ 0 ] + h[ 1 ] ) ) + flSumSlack;
+		flMaxDist = std::sqrtf( Sqr( flSideProjDelta ) + Sqr( h[ 0 ] + h[ 1 ] ) ) + flSumSlack;
 		// min distance happens when triangles are closed like a book at angle flCurvatureAngle. THe points on triangles are running in circles, so it's a distance between points on 2 circles in 3D
-		Vector deltaMin( h[ 1 ] * cosf( flCurvatureAngle ) - h[ 0 ], h[1] * sinf( flCurvatureAngle ), flSideProjDelta );
+		Vector deltaMin( h[ 1 ] * std::cosf( flCurvatureAngle ) - h[ 0 ], h[1] * std::sinf( flCurvatureAngle ), flSideProjDelta );
 		flMinDist = Min( deltaMin.Length() - flSumSlack, flRelaxedRodLength ); // the mindist cannot be higher than relaxed pose mindist
 	}
-	Assert( flMinDist <= flMaxDist * 1.0001f + FLT_EPSILON );
+	contract_assert( flMinDist <= flMaxDist * 1.0001f + std::numeric_limits<float>::epsilon() );
 	auto itFind = edgeToRod.find( nRodV0 );
 	uint nRodVidx = 0;
 	if ( itFind == edgeToRod.end( ) )
@@ -252,7 +249,7 @@ void CFeModelBuilder::BuildRod( float flCurvatureAngle, uint v0, uint v1, uint n
 	else
 	{
 		FeRodConstraint_t &rod = m_Rods[ itFind->second ];
-		Assert( nRodVidx == 0 ? ( rod.nNode[ 0 ] == v0 && rod.nNode[ 1 ] == v1 ) : ( rod.nNode[ 0 ] == v1 && rod.nNode[ 1 ] == v0 ) );
+		contract_assert( nRodVidx == 0 ? ( rod.nNode[ 0 ] == v0 && rod.nNode[ 1 ] == v1 ) : ( rod.nNode[ 0 ] == v1 && rod.nNode[ 1 ] == v0 ) );
 		rod.flMinDist = Min( rod.flMinDist, flMinDist );
 		rod.flMaxDist = Max( rod.flMaxDist, flMaxDist );
 	}
@@ -284,7 +281,7 @@ void CFeModelBuilder::BuildSprings( std::vector< FeSpringIntegrator_t > &springs
 
 		//float flAveDamping = ( node0.integrator.flPointDamping + node1.integrator.flPointDamping ) * 0.5f;
 
-		float expd0 = expf( -node0.integrator.flPointDamping ), expd1 = expf( -node1.integrator.flPointDamping );
+		float expd0 = std::expf( -node0.integrator.flPointDamping ), expd1 = std::expf( -node1.integrator.flPointDamping );
 		// if particles are severely damped, or are massive, the spring should feel proportionally weaker: 
 		// the original Dota spring constants had dimentionality to compute force (not acceleration), so they 
 		// effectively (implicitly) were divided by mass to compute acceleration later
@@ -329,7 +326,7 @@ void CFeModelBuilder::BuildQuads( std::vector< FeQuad_t > &quads, bool bSkipTris
 		}
 
 		uint nStaticNodes = buildElem.nStaticNodes;
-		Assert( nStaticNodes <= nLastStaticNodes );	// quads should already be sorted
+		contract_assert( nStaticNodes <= nLastStaticNodes );	// quads should already be sorted
 		nLastStaticNodes = nStaticNodes;
 		FeQuad_t quad;
 		quad.flSlack = buildElem.flSlack;
@@ -420,8 +417,8 @@ FeTri_t CFeModelBuilder::BuildTri( const BuildElem_t &buildElem, int nTriStaticN
 
 	Vector vEdge1 = node[ 1 ].transform.m_vPosition - node[ 0 ].transform.m_vPosition, vEdge2 = node[ 2 ].transform.m_vPosition - node[ 0 ].transform.m_vPosition;
 	CFeTriBasis basis( vEdge1, vEdge2 );
-	AssertDbg( fabsf( DotProduct( basis.vAxisY, vEdge1 ) ) < 1e-4f * ( 1 + vEdge1.Length() ) );
-	AssertDbg( CrossProduct( basis.vAxisX, vEdge1 ).Length( ) < 1e-4f * ( 1 + vEdge1.Length() ) );
+	contract_assert( std::fabsf( DotProduct( basis.vAxisY, vEdge1 ) ) < 1e-4f * ( 1 + vEdge1.Length() ) );
+	contract_assert( CrossProduct( basis.vAxisX, vEdge1 ).Length( ) < 1e-4f * ( 1 + vEdge1.Length() ) );
 
 	tri.v1x = vEdge1.Length( );
 	tri.v2.x = DotProduct( vEdge2, basis.vAxisX );
@@ -477,7 +474,7 @@ void CFeModelBuilder::BuildFeEdgeDesc( )
 		uint16 nElem;
 	};
 	std::unordered_map< uint32, Side_t > edgeToVert;
-	uint nNodeCount = ( uint )std::ssize( m_Nodes ); NOTE_UNUSED( nNodeCount );
+	uint nNodeCount = ( uint )std::ssize( m_Nodes ); (void)nNodeCount;
 	for ( int nElement = 0; nElement < std::ssize( m_Elems ); ++nElement )
 	{
 		BuildElem_t elem = m_Elems[ nElement ];
@@ -492,7 +489,7 @@ void CFeModelBuilder::BuildFeEdgeDesc( )
 			uint nEdgeV0 = n0 | ( n1 << 16 ), nEdgeV1 = n1 | ( n0 << 16 );
 			int j2 = ( nElemEdge + 2 ) % nElemEdgeCount, j3 = ( nElemEdge + 3 ) % nElemEdgeCount;
 			uint n2 = elem.nNode[ j2 ], n3 = elem.nNode[ j3 ];
-			Assert( n3 < nNodeCount && n2 < nNodeCount && n1 < nNodeCount && n0 < nNodeCount );
+			contract_assert( n3 < nNodeCount && n2 < nNodeCount && n1 < nNodeCount && n0 < nNodeCount );
 			auto itFind = edgeToVert.find( nEdgeV0 );
 
 			uint nEdgeVidx = 0;
@@ -532,7 +529,7 @@ void CFeModelBuilder::BuildNodeSlack( float flSlackMultiplier )
 {
 	for ( int nNode = 0; nNode < std::ssize( m_Nodes ); ++nNode )
 	{
-		m_Nodes[ nNode ].flSlack = FLT_MAX;
+		m_Nodes[ nNode ].flSlack = std::numeric_limits<float>::max();
 	}
 	for ( int nElem = 0; nElem < std::ssize( m_Elems ); ++nElem )
 	{
@@ -552,7 +549,7 @@ void CFeModelBuilder::BuildNodeSlack( float flSlackMultiplier )
 	for ( int nElem = 0; nElem < std::ssize( m_Elems ); ++nElem )
 	{
 		BuildElem_t &elem = m_Elems[ nElem ];
-		elem.flSlack = FLT_MAX;
+		elem.flSlack = std::numeric_limits<float>::max();
 		for ( int i = 0; i < 4; ++i )
 		{
 			elem.flSlack = Min( elem.flSlack, m_Nodes[ elem.nNode[ i ] ].flSlack );
@@ -585,7 +582,7 @@ void CFeModelBuilder::BuildOldFeEdges( )
 		float cot0[ 5 ];
 
 		// this is the factor f to make Q = fK^t * fK, see "Discrete IBM: Implementation", page 2 of "A Quadratic Bending Model for Inextensible Surfaces"
-		float flInvAreasSqrt = sqrtf( 6.0f / ( CrossProduct( e[ 0 ], e[ 1 ] ).Length( ) + CrossProduct( e[ 0 ], e[ 2 ] ).Length( ) ) );
+		float flInvAreasSqrt = std::sqrtf( 6.0f / ( CrossProduct( e[ 0 ], e[ 1 ] ).Length( ) + CrossProduct( e[ 0 ], e[ 2 ] ).Length( ) ) );
 
 		for ( int k = 0; k < 5; ++k )
 			cot0[ k ] = DotProduct( e[ 0 ], e[ k ] ) / CrossProduct( e[ 0 ], e[ k ] ).Length( ); // ( cosine / sine ), coincidentally a stable way to find a non-zero (non-degenerate) angle..
@@ -596,8 +593,8 @@ void CFeModelBuilder::BuildOldFeEdges( )
 
 		Vector n1 = CrossProduct( e[ 0 ], e[ 1 ] ), n2 = CrossProduct( e[ 0 ], e[ 2 ] );
 		float e_sqr = e[ 0 ].LengthSqr( ), n1_len = n1.Length( ), n2_len = n2.Length( );
-		float flTheta0 = atan2f( CrossProduct( n1, n2 ).Length( ), DotProduct( n1, n2 ) );
-		edge.flThetaRelaxed = sinf( 0.5f * flTheta0 );
+		float flTheta0 = std::atan2f( CrossProduct( n1, n2 ).Length( ), DotProduct( n1, n2 ) );
+		edge.flThetaRelaxed = std::sinf( 0.5f * flTheta0 );
 		edge.flThetaFactor = e_sqr / ( n1_len + n2_len );
 		edge.t = 0.5f * DotProduct( e[ 2 ] + e[ 1 ], e[ 0 ] ) / e[ 0 ].LengthSqr( );
 		edge.invA = flInvAreasSqrt;
@@ -617,13 +614,13 @@ static inline float Compute1DInvInertiaTensor( float invM0, float x0, float invM
 {
 	if ( invM0 <= 1e-8f )
 	{
-		return invM1 <= 1e-8f || fabsf( x0 ) > 1e-6f ? 0.0f : invM1 / Sqr( x1 );
+		return invM1 <= 1e-8f || std::fabsf( x0 ) > 1e-6f ? 0.0f : invM1 / Sqr( x1 );
 	}
 	else
 	{
 		if ( invM1 <= 1e-8f )
 		{
-			return fabsf( x1 ) > 1e-6f ? 0.0f : invM0 / Sqr( x0 );
+			return std::fabsf( x1 ) > 1e-6f ? 0.0f : invM0 / Sqr( x0 );
 		}
 		else
 		{
@@ -634,7 +631,7 @@ static inline float Compute1DInvInertiaTensor( float invM0, float x0, float invM
 
 static inline float ComputeEdgeCenterOfMass( float a, float b )
 {
-	return fabsf( b ) >= 1e-8f ? a / b : 0.5f; 
+	return std::fabsf( b ) >= 1e-8f ? a / b : 0.5f; 
 }
 
 static inline float CombineInvMasses( float invM0, float invM1 )
@@ -721,7 +718,7 @@ void CFeModelBuilder::BuildAxialEdges( )
 		edge.te = f0len / e0len;
 		Vector v01 = e0dir * f0len;
 
-		Assert( fabs( DotProduct( v01 - v23, e[ 0 ] ) ) < 0.001f && fabs( DotProduct( v01 - v23, eV ) ) < 0.001f );
+		contract_assert( std::fabs( DotProduct( v01 - v23, e[ 0 ] ) ) < 0.001f && std::fabs( DotProduct( v01 - v23, eV ) ) < 0.001f );
 		edge.flDist = ( v01 - v23 ).Length( );
 
 		float c0len = ComputeEdgeCenterOfMass( e0len * invM[ 0 ], invM[ 0 ] + invM[ 1 ] ); // pretend x0 = 0, x1 = e0len, find the center of mass along that line
@@ -757,7 +754,7 @@ void CFeModelBuilder::BuildAxialEdges( )
 				//	edge.flWeight[ 3 ] *= 0.5f; // the same weight will be applied to the same node twice.. Careful! SIMD implementation doesn't need *=0.5! and scalar can easily avoid this, too
 
 
-				Assert( invM[ 0 ] == 0 || invM[ 1 ] == 0 || invM[ 2 ] == 0 || invM[ 3 ] == 0 || fabsf( edge.flWeight[ 0 ] / invM[ 0 ] + edge.flWeight[ 1 ] / invM[ 1 ] + edge.flWeight[ 2 ] / invM[ 2 ] + edge.flWeight[ 3 ] / invM[ 3 ] ) < 1e-5f / ( invM[ 0 ] + invM[ 1 ] + invM[ 2 ] + invM[ 3 ] ) );
+				contract_assert( invM[ 0 ] == 0 || invM[ 1 ] == 0 || invM[ 2 ] == 0 || invM[ 3 ] == 0 || std::fabsf( edge.flWeight[ 0 ] / invM[ 0 ] + edge.flWeight[ 1 ] / invM[ 1 ] + edge.flWeight[ 2 ] / invM[ 2 ] + edge.flWeight[ 3 ] / invM[ 3 ] ) < 1e-5f / ( invM[ 0 ] + invM[ 1 ] + invM[ 2 ] + invM[ 3 ] ) );
 
 				m_AxialEdges.push_back( edge );
 			}
@@ -769,7 +766,7 @@ void CFeModelBuilder::BuildAxialEdges( )
 			// virtual edge will move against the direction, main edge will move along
 			float flVirtEdgeReact = invM[ 2 ] * ( 1 - edge.tv ) + invM[ 3 ] * edge.tv;
 			float flTotalReaction = flEdgeInvMass + flVirtEdgeReact; // this is how much the edge and virt edge close when applying impulse 1.0
-			if ( flTotalReaction < FLT_EPSILON )
+			if ( flTotalReaction < std::numeric_limits<float>::epsilon() )
 				continue; // we have nothing to move except one of the vertices on the real edge, and that'll be taken care of by quad contraints
 			edge.flWeight[ 0 ] = edge.flWeight[ 1 ] = flEdgeInvMass / flTotalReaction;
 			edge.flWeight[ 2 ] = - invM[ 2 ] / flTotalReaction;
@@ -861,18 +858,18 @@ int CFeModelBuilder::RemoveFullyStaticElems()
 void CFeModelBuilder::BuildInvMassesAndSortNodes( )
 {
 	// we don't remap anything, because we assume everything's downstream of this call
-	Assert( m_AxialEdges.empty() && m_OldFeEdges.empty() && m_KelagerBends.empty() &&  m_FeEdgeDesc.empty() );
+	contract_assert( m_AxialEdges.empty() && m_OldFeEdges.empty() && m_KelagerBends.empty() &&  m_FeEdgeDesc.empty() );
 
 	CleanupElements();
 
-	const int nInvalidRank = INT_MAX;
+	const int nInvalidRank = std::numeric_limits<int>::max();
 	std::vector< float > nodeMass;
 	if ( m_bEnableExplicitNodeMasses )
 	{
 		nodeMass.assign( std::ssize( m_Nodes ), {} );
 		for ( int i = 0; i < std::ssize( m_Nodes ); ++i )
 		{
-			if ( m_Nodes[ i ].invMass > FLT_EPSILON )
+			if ( m_Nodes[ i ].invMass > std::numeric_limits<float>::epsilon() )
 			{
 				nodeMass[ i ] = 1.0f / m_Nodes[ i ].invMass;
 			}
@@ -928,7 +925,7 @@ void CFeModelBuilder::BuildInvMassesAndSortNodes( )
 
 		if ( CountSimulatedNodesIn( elem ) >= 1 )
 		{
-			AssertDbg( elem.nNode[ 1 ] != elem.nNode[ 0 ] && elem.nNode[ 2 ] != elem.nNode[ 1 ] && elem.nNode[ 0 ] != elem.nNode[ 2 ] && elem.nNode[ 0 ] != elem.nNode[ 3 ] );
+			contract_assert( elem.nNode[ 1 ] != elem.nNode[ 0 ] && elem.nNode[ 2 ] != elem.nNode[ 1 ] && elem.nNode[ 0 ] != elem.nNode[ 2 ] && elem.nNode[ 0 ] != elem.nNode[ 3 ] );
 
 			for ( int j = 0; j < 3; ++j )
 			{
@@ -965,7 +962,7 @@ void CFeModelBuilder::BuildInvMassesAndSortNodes( )
 		{
 			BuildNode_t &refNode = m_Nodes[ nNode ];
 			float flMassMultiplier = refNode.flMassMultiplier;
-			float flMass = nodeMass[ nNode ] * ( flMassMultiplier > FLT_EPSILON ? flMassMultiplier : 1.0f ) + refNode.flMassBias;
+			float flMass = nodeMass[ nNode ] * ( flMassMultiplier > std::numeric_limits<float>::epsilon() ? flMassMultiplier : 1.0f ) + refNode.flMassBias;
 
 			if ( flMass > 1e-8f )
 			{
@@ -1194,7 +1191,7 @@ void CFeModelBuilder::BuildInvMassesAndSortNodes( )
 		ConvertCtrlToNode( influence.nMatrixNode );
 		ConvertCtrlToNode( influence.nVertexNode );
 	}
-	Assert( std::ssize( m_ReverseOffsets ) == 0 ); // Code path not tested: do we need to convert nBoneCtrl (ctrl->nodes)?
+	contract_assert( std::ssize( m_ReverseOffsets ) == 0 ); // Code path not tested: do we need to convert nBoneCtrl (ctrl->nodes)?
 	for ( int i = 0; i < std::ssize( m_ReverseOffsets ); ++i )
 	{
 		FeNodeReverseOffset_t &revOffset = m_ReverseOffsets[ i ];
@@ -1210,27 +1207,27 @@ void CFeModelBuilder::BuildInvMassesAndSortNodes( )
 
 		if ( !m_Nodes[ m_nStaticNodes ].bFreeRotation )
 		{
-			AssertDbg( m_nRotLockStaticNodes == m_nStaticNodes ); // if this assert fires, it means there are holes in the subarray of static non-rotating nodes
+			contract_assert( m_nRotLockStaticNodes == m_nStaticNodes ); // if this assert fires, it means there are holes in the subarray of static non-rotating nodes
 			m_nRotLockStaticNodes = m_nStaticNodes + 1; // this node is locked-rotation
 		}
 	}
 
 	for ( uint i = 0; i < m_nRotLockStaticNodes; ++i )
 	{
-		AssertDbg( !m_Nodes[ i ].bFreeRotation );
+		contract_assert( !m_Nodes[ i ].bFreeRotation );
 	}
 	
 	// now that we have permuted the nodes, reindex all elements
 	for ( int i = 0; i < std::ssize( m_Elems ); ++i )
 	{
 		BuildElem_t &elem = m_Elems[ i ]; 
-		elem.nRank = INT_MAX;
+		elem.nRank = std::numeric_limits<int>::max();
 		for ( int j = 0; j < 4; ++j )
 		{
 			uint &refNodeIndex = elem.nNode[j];
 			refNodeIndex = m_CtrlToNode[ refNodeIndex ];
-			Assert( refNodeIndex  < uint( std::ssize( m_Nodes ) ) );
-			Assert( uint( j ) < ( elem.nStaticNodes == 3 && elem.nNode[2] == elem.nNode[3] ? 4 : elem.nStaticNodes ) ? ( refNodeIndex < m_nStaticNodes ) : ( refNodeIndex >= m_nStaticNodes ) );
+			contract_assert( refNodeIndex  < uint( std::ssize( m_Nodes ) ) );
+			contract_assert( uint( j ) < ( elem.nStaticNodes == 3 && elem.nNode[2] == elem.nNode[3] ? 4 : elem.nStaticNodes ) ? ( refNodeIndex < m_nStaticNodes ) : ( refNodeIndex >= m_nStaticNodes ) );
 			int nNodeRank = m_Nodes[ refNodeIndex ].nRank;
 			if ( nNodeRank < elem.nRank )
 				elem.nRank = nNodeRank;
@@ -1553,7 +1550,7 @@ public:
 				w.nDummy = 0;
 				flSumWeights += w.flWeight;
 			}
-			if ( flSumWeights <= FLT_EPSILON )
+			if ( flSumWeights <= std::numeric_limits<float>::epsilon() )
 			{
 				for ( int nNode = 0; nNode < std::ssize( nodes ); ++nNode )
 				{
@@ -1608,7 +1605,7 @@ Vector CFeModelBuilder::ComputeCenter( const FitWeightArray_t &weights )
 		vVertSum += w.flWeight * m_Nodes[ w.nNode ].transform.m_vPosition;
 		flWeightSum += w.flWeight;
 	}
-	if ( flWeightSum > FLT_EPSILON )
+	if ( flWeightSum > std::numeric_limits<float>::epsilon() )
 		return vVertSum / flWeightSum;
 	if ( std::ssize( weights ) > 0 )
 		return m_Nodes[ weights[ 0 ].nNode ].transform.m_vPosition;
@@ -1848,11 +1845,11 @@ void CFeModelBuilder::RecomputeMasses( std::vector< float >& nodeMass )
 			uint n0 = elem.nNode[ 0 ], n1 = elem.nNode[ 1 + nTriangulate ], n2 = elem.nNode[ 2 + nTriangulate ];
 			if ( n1 == n2 )
 				continue;
-			Assert( n0 != n1 && n1 != n2 && n2 != n0 );
+			contract_assert( n0 != n1 && n1 != n2 && n2 != n0 );
 			Vector p0 = m_Nodes[ n0 ].transform.m_vPosition, p1 = m_Nodes[ n1 ].transform.m_vPosition, p2 = m_Nodes[ n2 ].transform.m_vPosition;
 			Vector vCross = CrossProduct( p1 - p0, p2 - p0 );
 			float flSinArea = vCross.Length( );
-			Assert( flSinArea >= 1e-6f );
+			contract_assert( flSinArea >= 1e-6f );
 			float cot0 = DotProduct( p1 - p0, p2 - p0 ) / flSinArea;
 			float cot1 = DotProduct( p2 - p1, p0 - p1 ) / flSinArea;
 			float cot2 = DotProduct( p0 - p2, p1 - p2 ) / flSinArea;
@@ -1878,12 +1875,12 @@ void CFeModelBuilder::RecomputeMasses( std::vector< float >& nodeMass )
 				{
 					if ( cot0 < cot2 )
 					{
-						Assert( cot0 <= 0 );
+						contract_assert( cot0 <= 0 );
 						m0 *= 2;
 					}
 					else
 					{
-						Assert( cot2 <= 0 );
+						contract_assert( cot2 <= 0 );
 						m2 *= 2;
 					}
 				}
@@ -1891,12 +1888,12 @@ void CFeModelBuilder::RecomputeMasses( std::vector< float >& nodeMass )
 				{
 					if ( cot1 < cot2 )
 					{
-						Assert( cot1 <= 0 );
+						contract_assert( cot1 <= 0 );
 						m1 *= 2;
 					}
 					else
 					{
-						Assert( cot2 <= 0 );
+						contract_assert( cot2 <= 0 );
 						m2 *= 2;
 					}
 				}
@@ -2044,7 +2041,7 @@ bool CanAddToSchedule( const std::vector< T > &schedule, const T &add, int nLane
 template < typename T, typename TSimd >
 void Schedule( std::vector< TSimd > *pOutput, const T *pInput, int nInputCount, int nLanes )
 {
-	Assert( !( nLanes & ( nLanes - 1 ) ) );
+	contract_assert( !( nLanes & ( nLanes - 1 ) ) );
 	std::vector< T > schedule, delayed;
 	delayed.assign( pInput, pInput + nInputCount );
 	schedule.reserve( std::ssize( delayed ) );
@@ -2089,7 +2086,7 @@ void Schedule( std::vector< TSimd > *pOutput, const T *pInput, int nInputCount, 
 		}
 	}
 
-	Assert( !( std::ssize( schedule ) & ( nLanes - 1 ) ) );
+	contract_assert( !( std::ssize( schedule ) & ( nLanes - 1 ) ) );
 	pOutput->clear(); pOutput->resize( std::ssize( schedule ) / nLanes );
 	for ( int nScalar = 0, nSimd = std::ssize( schedule ) / nLanes; nSimd-- > 0; nScalar += nLanes )
 	{
@@ -2130,12 +2127,12 @@ void CFeModelBuilder::BuildRopes( )
 		for ( int nElem = 0; nElem < std::ssize( m_Elems ); ++nElem )
 		{
 			const BuildElem_t &elem = m_Elems[ nElem ];
-			AssertDbg( elem.nNode[ 1 ] != elem.nNode[ 0 ] && elem.nNode[ 2 ] != elem.nNode[ 1 ] && elem.nNode[ 0 ] != elem.nNode[ 2 ] );
+			contract_assert( elem.nNode[ 1 ] != elem.nNode[ 0 ] && elem.nNode[ 2 ] != elem.nNode[ 1 ] && elem.nNode[ 0 ] != elem.nNode[ 2 ] );
 			// the first 3 nodes are unique, so there's at least a triangle here (hopefully non-degenerate), so we'll try to rely on that for base generation
-			for ( int c = 0; c < ARRAYSIZE( elem.nNode ); ++c )
+			for ( int c = 0; c < std::size( elem.nNode ); ++c )
 			{
-				BuildNode_t &node = m_Nodes[ elem.nNode[ c ] ]; NOTE_UNUSED( node );
-				Assert( skip[ elem.nNode[ c ] ] || !node.bSimulated || node.bVirtual ); // should've been set when computing node bases
+				BuildNode_t &node = m_Nodes[ elem.nNode[ c ] ]; (void)node;
+				contract_assert( skip[ elem.nNode[ c ] ] || !node.bSimulated || node.bVirtual ); // should've been set when computing node bases
 			}
 		}
 	}
@@ -2170,7 +2167,7 @@ void CFeModelBuilder::BuildRopes( )
 				if ( nLink < 0 )
 				{
 					// the chain unexpectedly terminated with a (previous) dynamic: ambiguous case, because where do we start the default transform?
-					AssertDbg( !pChain->empty() );
+					contract_assert( !pChain->empty() );
 					int nRoot = pChain->back();
 					pChain->push_back( nRoot ); // just pretend the start of the chain will prime itself w.r.t. orientation.
 					break;
@@ -2200,14 +2197,14 @@ void CFeModelBuilder::BuildFreeNodes( MbaContext_t &context )
 		for ( int j = 1; j < std::ssize( *m_Ropes[ i ] ); ++j )
 		{
 			int nNode = (*m_Ropes[ i ])[ j ];
-			AssertDbg( !hasBase[ nNode ] );
+			contract_assert( !hasBase[ nNode ] );
 			hasBase[ nNode ] = true;
 		}
 	}
 	for ( int i = 0; i < std::ssize( m_NodeBases ); ++i )
 	{
 		int nNode = m_NodeBases[ i ].nNode;
-		AssertDbg( !hasBase[ nNode ] ); //
+		contract_assert( !hasBase[ nNode ] ); //
 		hasBase[ nNode ] = true;
 	}
 	for ( int i = 0; i < std::ssize( context.fitMatrices ); ++i )
@@ -2221,7 +2218,7 @@ void CFeModelBuilder::BuildFreeNodes( MbaContext_t &context )
 		{
 			if ( !hasBase[ nNode ] || m_Nodes[ nNode ].bAnimRotation )
 			{
-				AssertDbg( !hasBase[ nNode ] ); // we should have node that takes rotation from animation, and also has the rotation computed by ropes or by node bases - that'd be wasteful. but otherwise, this assert is harmless.
+				contract_assert( !hasBase[ nNode ] ); // we should have node that takes rotation from animation, and also has the rotation computed by ropes or by node bases - that'd be wasteful. but otherwise, this assert is harmless.
 				m_FreeNodes.push_back( nNode );
 			}
 		}
@@ -2234,7 +2231,7 @@ template <typename Functor >
 std::pair< int, int > FindBestPair( const std::flat_set< int > &neighbors, Functor fn )
 {
 	std::pair< int, int > best( 0, 0 );
-	float flBest = -FLT_MAX;
+	float flBest = -std::numeric_limits<float>::max();
 	auto sorted = neighbors.begin();
 	for ( int i = 0; i < std::ssize( neighbors ); ++i )
 	{
@@ -2322,7 +2319,7 @@ FeNodeBase_t CFeModelBuilder::BuildNodeBasisFast( const std::vector< BuildNode_t
 	}
 	matrix3x4_t tmPredicted;
 	tmPredicted.InitXYZ( vAxisX, vAxisY, CrossProduct( vAxisX, vAxisY ), vec3_origin );
-	Assert( IsGoodWorldTransform( tmPredicted, 1.0f ) );
+	contract_assert( IsGoodWorldTransform( tmPredicted, 1.0f ) );
 	Quaternion qPredicted = MatrixQuaternion( tmPredicted );
 	basis.qAdjust = Conjugate( qPredicted ) * nodes[ nNode ].transform.m_orientation;
 	QuaternionNormalize( basis.qAdjust );
@@ -2379,7 +2376,7 @@ void CFeModelBuilder::BuildNodeBases( const std::vector< BuildNode_t > &nodes, c
 	for ( int nElem = 0; nElem < std::ssize( elems ); ++nElem )
 	{
 		const BuildElem_t &elem = elems[ nElem ];
-		AssertDbg( elem.nNode[ 1 ] != elem.nNode[ 0 ] && elem.nNode[ 2 ] != elem.nNode[ 1 ] && elem.nNode[ 0 ] != elem.nNode[ 2 ] );
+		contract_assert( elem.nNode[ 1 ] != elem.nNode[ 0 ] && elem.nNode[ 2 ] != elem.nNode[ 1 ] && elem.nNode[ 0 ] != elem.nNode[ 2 ] );
 		int numNodes = elem.nNode[ 3 ] == elem.nNode[ 2 ] ? 3 : 4;
 		for ( int c = 0; c < numNodes; ++c )
 		{
@@ -2438,79 +2435,6 @@ int RopeIndexCount( const std::vector< std::unique_ptr< std::vector< int > > > &
 
 void CFeModelBuilder::ValidateBases( )
 {
-#ifdef DBGFLAG_ASSERT
-	int nLog = CommandLine( )->FindParm( "-log" );
-
-	std::vector< bool > hasBase( std::ssize( m_Nodes ) );
-	for ( int i = 0; i < std::ssize( m_Ropes ); ++i )
-	{
-		for ( int j = 1; j < std::ssize( *m_Ropes[ i ] ); ++j )
-		{
-			int nNode = ( *m_Ropes[ i ] )[ j ];
-			AssertDbg( !hasBase[ nNode ] );
-			hasBase[ nNode ] = true;
-		}
-	}
-	for ( int i = 0; i < std::ssize( m_NodeBases ); ++i )
-	{
-		int nNode = m_NodeBases[ i ].nNode;
-		AssertDbg( !hasBase[ nNode ] ); //
-		hasBase[ nNode ] = true;
-	}
-	for ( int i = 0; i < std::ssize( m_FreeNodes ); ++i )
-	{
-		hasBase[ m_FreeNodes[ i ] ] = true;
-	}
-
-	//--
-	for ( int nNode = 0; nNode < std::ssize( m_Nodes ); ++nNode )
-	{
-		int nHasBase = hasBase[ nNode ] ? 1 : 0; NOTE_UNUSED( nHasBase );
-		int nSimulated = m_Nodes[ nNode ].bSimulated ? 1 : 0;		NOTE_UNUSED( nSimulated );
-		//const char *pBoneName = m_Nodes[ nNode ].pName; NOTE_UNUSED( pBoneName );
-		Assert( nHasBase == nSimulated || m_Nodes[ nNode ].bVirtual || m_Nodes[ nNode ].bFreeRotation ); // we don't really care if virtual nodes have bases or not. In fact, it's probably better not to compute bases for them, but it may be necessary if real nodes' bases depend on them..
-		if ( m_Nodes[ nNode ].nParent < 0 )
-		{
-			if ( nLog )
-			{
-				PrintNodeTree( nNode, "" );
-			}
-		}
-	}
-
-	//
-	// Just print out the elements for eyeballing
-	// 
-	for ( int nElem = 0; nElem < std::ssize( m_Elems ); ++nElem )
-	{
-		ks::small_vector< const char *, 4 > names;
-		const BuildElem_t &elem = m_Elems[ nElem ];
-		int nPrefixLen = 1000;
-		for ( uint n = 0; n < elem.NumNodes( ); ++n )
-		{
-			const char *pName = m_Nodes[ elem.nNode[ n ] ].pName;
-			names.push_back( pName );
-			int nNewLen = 0;
-			for ( ; nNewLen < nPrefixLen && pName && pName[ nNewLen ] && names[ 0 ][ nNewLen ] == pName[ nNewLen ]; ++nNewLen )
-				continue;
-			nPrefixLen = nNewLen;
-		}
-		std::string list;
-		list.assign( names[ 0 ], nPrefixLen );
-		list += "( ";
-		for ( int n = 0; n < std::ssize( names ); ++n )
-		{
-			if ( n )
-				list += ", ";
-			list += names[ n ] ? names[ n ] + nPrefixLen : "null";
-		}
-		list += " )";
-		if ( nLog )
-		{
-			Msg( "%s\n", list.c_str() );
-		}
-	}
-#endif
 }
 
 
@@ -2691,7 +2615,7 @@ void CFeModelBuilder::OnAllocateMultiBuffer( Allocator &subAlloc, MbaContext_t &
 	{
 		if ( subAlloc( m_pNodeCollisionRadii, GetDynamicNodeCount() ) )
 		{
-			AssertDbg( std::ssize( m_Nodes ) == int( m_nNodeCount ) );
+			contract_assert( std::ssize( m_Nodes ) == int( m_nNodeCount ) );
 			for ( uint nNode = m_nStaticNodes; nNode < m_nNodeCount; ++nNode )
 			{
 				m_pNodeCollisionRadii[ nNode - m_nStaticNodes ] = m_Nodes[ nNode ].flCollisionRadius;
@@ -2707,7 +2631,7 @@ void CFeModelBuilder::OnAllocateMultiBuffer( Allocator &subAlloc, MbaContext_t &
 	{
 		if ( subAlloc( m_pLocalForce, GetDynamicNodeCount() ) )
 		{
-			AssertDbg( std::ssize( m_Nodes ) == int( m_nNodeCount ) );
+			contract_assert( std::ssize( m_Nodes ) == int( m_nNodeCount ) );
 			for ( uint nNode = m_nStaticNodes; nNode < m_nNodeCount; ++nNode )
 			{
 				m_pLocalForce[ nNode - m_nStaticNodes ] = m_Nodes[ nNode ].flLocalForce;
@@ -2718,7 +2642,7 @@ void CFeModelBuilder::OnAllocateMultiBuffer( Allocator &subAlloc, MbaContext_t &
 	{
 		if ( subAlloc( m_pLocalRotation, GetDynamicNodeCount() ) )
 		{
-			AssertDbg( std::ssize( m_Nodes ) == int( m_nNodeCount ) );
+			contract_assert( std::ssize( m_Nodes ) == int( m_nNodeCount ) );
 			for ( uint nNode = m_nStaticNodes; nNode < m_nNodeCount; ++nNode )
 			{
 				m_pLocalRotation[ nNode - m_nStaticNodes ] = m_Nodes[ nNode ].flLocalRotation;
@@ -2793,7 +2717,7 @@ void CFeModelBuilder::OnAllocateMultiBuffer( Allocator &subAlloc, MbaContext_t &
 			}
 			m_pRopes[ nRope ] = nRopeRunningIndex;
 		}
-		Assert( nRopeRunningIndex == m_nRopeIndexCount );
+		contract_assert( nRopeRunningIndex == m_nRopeIndexCount );
 	}
 
 	for ( uint nCtrl = 0; nCtrl < context.nCtrlNameCount; ++nCtrl )
@@ -2937,7 +2861,7 @@ void CFeModelBuilder::AdjustQuads()
 
 bool CFeModelBuilder::Finish( bool bTriangulate, float flAddCurvature, float flSlackMultiplier )
 {
-	//Schedule( , m_Elems.Base(), 4 ); NOTE_UNUSED( nElemSlack );
+	//Schedule( , m_Elems.Base(), 4 ); (void)nElemSlack;
 	MbaContext_t context;
 
 	BuildInvMassesAndSortNodes( );
@@ -2955,7 +2879,7 @@ bool CFeModelBuilder::Finish( bool bTriangulate, float flAddCurvature, float flS
 
 	BuildFeEdgeDesc( );
 	BuildNodeSlack( flSlackMultiplier );
-	BuildAndSortRods( clamp( flAddCurvature, 0.0f, 1.0f ) * M_PI, bTriangulate );
+	BuildAndSortRods( clamp( flAddCurvature, 0.0f, 1.0f ) * std::numbers::pi, bTriangulate );
 
 	//BuildKelagerBends();
 	if ( m_bRigidEdgeHinges )
@@ -3125,47 +3049,6 @@ bool CFeModelBuilder::Finish( bool bTriangulate, float flAddCurvature, float flS
 	}
 	m_nTreeDepth = ComputeCollisionTreeDepthTopDown();
 
-#ifdef DBGFLAG_ASSERTDEBUG
-	if ( m_nQuadCount[ 0 ] == m_Elems.Count() )
-	{
-		for ( uint nCtrl = 0; nCtrl < m_nQuadCount[ 2 ]; ++nCtrl )
-		{
-			Assert( m_Elems[ nCtrl ].nStaticNodes == 2 );
-		}
-
-		for ( uint nCtrl = m_nQuadCount[ 2 ]; nCtrl < m_nQuadCount[ 1 ]; ++nCtrl )
-		{
-			Assert( m_Elems[ nCtrl ].nStaticNodes == 1 );
-		}
-		for ( uint nCtrl = m_nQuadCount[ 1 ]; nCtrl < m_nQuadCount[ 0 ]; ++nCtrl )
-		{
-			Assert( m_Elems[ nCtrl ].nStaticNodes == 0 );
-		}
-	}
-
-	for ( uint nQuad = 0; nQuad < m_nQuadCount[ 2 ]; ++nQuad )
-	{
-		Assert( m_pQuads[ nQuad ].nNode[ 0 ] < m_nStaticNodes && m_pQuads[ nQuad ].nNode[ 1 ] < m_nStaticNodes && m_pQuads[ nQuad ].nNode[ 2 ] >= m_nStaticNodes && m_pQuads[ nQuad ].nNode[ 3 ] >= m_nStaticNodes );
-	}
-
-	for ( uint nQuad = m_nQuadCount[ 2 ]; nQuad < m_nQuadCount[ 1 ]; ++nQuad )
-	{
-		Assert( m_pQuads[ nQuad ].nNode[ 0 ] < m_nStaticNodes && m_pQuads[ nQuad ].nNode[ 1 ] >= m_nStaticNodes && m_pQuads[ nQuad ].nNode[ 2 ] >= m_nStaticNodes && m_pQuads[ nQuad ].nNode[ 3 ] >= m_nStaticNodes );
-	}
-	for ( uint nQuad = m_nQuadCount[ 1 ]; nQuad < m_nQuadCount[ 0 ]; ++nQuad )
-	{
-		Assert( m_pQuads[ nQuad ].nNode[ 0 ] >= m_nStaticNodes && m_pQuads[ nQuad ].nNode[ 1 ] >= m_nStaticNodes && m_pQuads[ nQuad ].nNode[ 2 ] >= m_nStaticNodes && m_pQuads[ nQuad ].nNode[ 3 ] >= m_nStaticNodes );
-	}
-
-
-	Assert( m_nQuadCount[ 0 ] >= m_nQuadCount[ 1 ] && m_nQuadCount[ 1 ] >= m_nQuadCount[ 2 ] );
-
-	for ( uint nRod = 0; nRod < m_nRodCount; ++nRod )
-	{
-		AssertDbg( Is0To1( m_pRods[ nRod ].flWeight0 ) && Is0To1( m_pRods[ nRod ].flRelaxationFactor ) );
-	}
-#endif
-
 	return true;
 }
 
@@ -3194,20 +3077,20 @@ void CFeModelBuilder::BuildTree()
 		const BuildElem_t& elem = m_Elems[ nElemIdx ];
 		if ( elem.nStaticNodes < 3 )
 		{
-			for ( int nElemIndex = elem.nStaticNodes + 1; nElemIndex < ARRAYSIZE( elem.nNode ); ++nElemIndex )
+			for ( int nElemIndex = elem.nStaticNodes + 1; nElemIndex < std::size( elem.nNode ); ++nElemIndex )
 			{
 				agg.LinkNodes( elem.nNode[ nElemIndex ] - nStaticBaseIndex, elem.nNode[ nElemIndex - 1 ] - nStaticBaseIndex );
 			}
 			if ( elem.nStaticNodes == 0 )
 			{
-				agg.LinkNodes( elem.nNode[ 0 ] - nStaticBaseIndex, elem.nNode[ ARRAYSIZE( elem.nNode ) - 1 ] - nStaticBaseIndex );
+				agg.LinkNodes( elem.nNode[ 0 ] - nStaticBaseIndex, elem.nNode[ std::size( elem.nNode ) - 1 ] - nStaticBaseIndex );
 			}
 		}
 	}
 
 	agg.Build( true );
 
-	Assert( agg.GetClusterCount() == int( nDynNodeCount * 2 - 1 ) );
+	contract_assert( agg.GetClusterCount() == int( nDynNodeCount * 2 - 1 ) );
 	
 	m_TreeParents.assign( agg.GetClusterCount(), {} );
 	for ( int nDynNode = 0; nDynNode < agg.GetClusterCount(); ++nDynNode )
@@ -3222,7 +3105,7 @@ void CFeModelBuilder::BuildTree()
 		{
 			uint nChild = agg.GetCluster( nDynNode )->m_nChild[ nChildIndex ];
 			m_TreeChildren[ nDynNode - nDynNodeCount ].nChild[ nChildIndex ] = nChild;
-			Assert( agg.GetCluster( nChild )->m_nParent == nDynNode );
+			contract_assert( agg.GetCluster( nChild )->m_nParent == nDynNode );
 		}
 	}
 

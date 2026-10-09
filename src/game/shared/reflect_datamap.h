@@ -1,3 +1,4 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
@@ -9,8 +10,6 @@
 // whose type derives from CBaseEntityOutput is an output (DEFINE_OUTPUT), anything else is a
 // keyfield (DEFINE_KEYFIELD). The map name is the only thing that cannot be derived.
 
-#ifndef KS_REFLECT_DATAMAP_H
-#define KS_REFLECT_DATAMAP_H
 
 #include "reflect.h"
 #include "reflect_fielddesc.h"
@@ -23,7 +22,7 @@
 class CBaseEntityOutput;
 #endif
 
-#include <vector>
+import std;
 
 namespace ks::reflect::dmap
 {
@@ -280,4 +279,3 @@ std::vector<typedescription_t> &fields()
 		}();                                                                                     \
 	}
 
-#endif // KS_REFLECT_DATAMAP_H

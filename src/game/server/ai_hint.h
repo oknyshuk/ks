@@ -1,36 +1,31 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Hint node utilities and functions.
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef	AI_HINT_H
-#define	AI_HINT_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Hint node utilities and functions.
 
 #include "reflect_annotations.h"
 
 #include "ai_initutils.h"
-#include <map>
+import std;
 
 //Flags for FindHintNode
-#define bits_HINT_NODE_NONE						0x00000000
-#define bits_HINT_NODE_VISIBLE					0x00000001
-#define	bits_HINT_NODE_NEAREST					0x00000002		// Choose the node nearest me
-#define bits_HINT_NODE_RANDOM					0x00000004		// Find a random hintnode meeting other criteria
-#define bits_HINT_NODE_CLEAR					0x00000008		// Only choose nodes that have clear room for my bounding box (requires NPC)
-#define bits_HINT_NODE_USE_GROUP				0x00000010		// Use the NPC's hintgroup when searching for a node (requires NPC)
-#define	bits_HINT_NODE_VISIBLE_TO_PLAYER		0x00000020
-#define	bits_HINT_NODE_NOT_VISIBLE_TO_PLAYER	0x00000040
-#define bits_HINT_NODE_REPORT_FAILURES			0x00000080
-#define bits_HINT_NODE_IN_VIEWCONE				0x00000100
-#define bits_HINT_NODE_IN_AIMCONE				0x00000200
-#define bits_HINT_NPC_IN_NODE_FOV				0x00000400		// Is the searcher inside the hint node's FOV?
-#define bits_HINT_NOT_CLOSE_TO_ENEMY			0x00000800		// Hint must not be within 30 feet of my enemy
-#define bits_HINT_HAS_LOS_TO_PLAYER				0x00001000		// Like VISIBLE_TO_PLAYER but doesn't care about player's facing
-#define bits_HAS_EYEPOSITION_LOS_TO_PLAYER		0x00002000		// Like HAS LOS TO PLAYER, but checks NPC's eye position at the node, not node origin.
-#define bits_HINT_HAS_NO_EYEPOSITION_LOS_TO_ENEMY	0x00004000		// Like an inverted HAS LOS TO PLAYER, but checks NPC's eye position at the node, not node origin.
+inline constexpr auto bits_HINT_NODE_NONE = 0x00000000;
+inline constexpr auto bits_HINT_NODE_VISIBLE = 0x00000001;
+inline constexpr auto bits_HINT_NODE_NEAREST = 0x00000002; // Choose the node nearest me
+inline constexpr auto bits_HINT_NODE_RANDOM = 0x00000004; // Find a random hintnode meeting other criteria
+inline constexpr auto bits_HINT_NODE_CLEAR = 0x00000008; // Only choose nodes that have clear room for my bounding box (requires NPC)
+inline constexpr auto bits_HINT_NODE_USE_GROUP = 0x00000010; // Use the NPC's hintgroup when searching for a node (requires NPC)
+inline constexpr auto bits_HINT_NODE_VISIBLE_TO_PLAYER = 0x00000020;
+inline constexpr auto bits_HINT_NODE_NOT_VISIBLE_TO_PLAYER = 0x00000040;
+inline constexpr auto bits_HINT_NODE_REPORT_FAILURES = 0x00000080;
+inline constexpr auto bits_HINT_NODE_IN_VIEWCONE = 0x00000100;
+inline constexpr auto bits_HINT_NODE_IN_AIMCONE = 0x00000200;
+inline constexpr auto bits_HINT_NPC_IN_NODE_FOV = 0x00000400; // Is the searcher inside the hint node's FOV?
+inline constexpr auto bits_HINT_NOT_CLOSE_TO_ENEMY = 0x00000800; // Hint must not be within 30 feet of my enemy
+inline constexpr auto bits_HINT_HAS_LOS_TO_PLAYER = 0x00001000; // Like VISIBLE_TO_PLAYER but doesn't care about player's facing
+inline constexpr auto bits_HAS_EYEPOSITION_LOS_TO_PLAYER = 0x00002000; // Like HAS LOS TO PLAYER, but checks NPC's eye position at the node, not node origin.
+inline constexpr auto bits_HINT_HAS_NO_EYEPOSITION_LOS_TO_ENEMY = 0x00004000; // Like an inverted HAS LOS TO PLAYER, but checks NPC's eye position at the node, not node origin.
 
 //-----------------------------------------------------------------------------
 //
@@ -200,7 +195,8 @@ class CAI_Node;
 // CAI_HintManager
 //-----------------------------------------------------------------------------
 
-DECLARE_POINTER_HANDLE(AIHintIter_t);
+struct AIHintIter_t__ { int unused; };
+using AIHintIter_t = AIHintIter_t__ *;
 
 class CAIHintVector : public std::vector< CAI_Hint * >
 {
@@ -355,7 +351,4 @@ private:
 	DECLARE_DATADESC();
 };
 
-#define SF_ALLOW_JUMP_UP 65536
-
-
-#endif	//AI_HINT_H
+inline constexpr auto SF_ALLOW_JUMP_UP = 65536;

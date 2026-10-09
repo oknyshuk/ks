@@ -1,18 +1,27 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "audio_pch.h"
-#include "tier2/interval.h"
+import std;
+
+
+import ks.tier1;
+
+#include "sound.h"
+#include "soundservice.h"
+#include "filesystem.h"
+
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+
+#include "audio/private/posix_stubs.h"
 
 #include "snd_dma.h"
 
 #include "sos_op.h"
 #include "sos_entry_match_system.h"
 #include "sos_op_stop_entry.h"
-
-
 
 ConVar snd_sos_show_operator_stop_entry("snd_sos_show_operator_stop_entry", "0", FCVAR_CHEAT );
 

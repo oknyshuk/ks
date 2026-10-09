@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef FILESYSTEM_PASSTHRU_H
-#define FILESYSTEM_PASSTHRU_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "filesystem.h"
-#include <stdio.h>
-#include <stdarg.h>
+import std;
 
 #ifdef AsyncRead
 #undef AsyncRead
@@ -108,10 +101,10 @@ public:
 	virtual int				FPrintf( FileHandle_t file, const char *pFormat, ... ) 
 	{ 
 		char str[8192];
-		va_list marker;
-		va_start( marker, pFormat );
-		_vsnprintf( str, sizeof( str ), pFormat, marker );
-		va_end( marker );
+		std::va_list marker;
+		__builtin_va_start( marker, pFormat );
+		std::vsnprintf( str, sizeof( str ), pFormat, marker );
+		__builtin_va_end( marker );
 		return m_pFileSystemPassThru->FPrintf( file, "%s", str );
 	}
 	virtual CSysModule 		*LoadModule( const char *pFileName, const char *pPathID, bool bValidatedDllOnly )	{ return m_pFileSystemPassThru->LoadModule( pFileName, pPathID, bValidatedDllOnly ); }
@@ -158,8 +151,6 @@ public:
 	virtual bool				String( const FileNameHandle_t& handle, char *buf, int buflen )					{ return m_pFileSystemPassThru->String( handle, buf, buflen ); }
 	virtual bool			IsOk2( FileHandle_t file )															{ return IsOk(file); }
 	virtual void			RemoveSearchPaths( const char *szPathID )											{ m_pFileSystemPassThru->RemoveSearchPaths( szPathID ); }
-	virtual bool			IsSteam() const																		{ return m_pFileSystemPassThru->IsSteam(); }
-	virtual	FilesystemMountRetval_t MountSteamContent( int nExtraAppId = -1 )									{ return m_pFileSystemPassThru->MountSteamContent( nExtraAppId ); }
 	
 	virtual const char		*FindFirstEx( 
 		const char *pWildCard, 
@@ -186,12 +177,6 @@ public:
 	virtual int				ReadEx( void* pOutput, int destSize, int size, FileHandle_t file )					{ return m_pFileSystemPassThru->ReadEx( pOutput, destSize, size, file ); }
 	virtual int				ReadFileEx( const char *pFileName, const char *pPath, void **ppBuf, bool bNullTerminate, bool bOptimalAlloc, int nMaxBytes = 0, int nStartingByte = 0, FSAllocFunc_t pfnAlloc = nullptr ) { return m_pFileSystemPassThru->ReadFileEx( pFileName, pPath, ppBuf, bNullTerminate, bOptimalAlloc, nMaxBytes, nStartingByte, pfnAlloc ); }
 
-#if defined( TRACK_BLOCKING_IO )
-	virtual void			EnableBlockingFileAccessTracking( bool state ) { m_pFileSystemPassThru->EnableBlockingFileAccessTracking( state ); }
-	virtual bool			IsBlockingFileAccessEnabled() const { return m_pFileSystemPassThru->IsBlockingFileAccessEnabled(); }
-
-	virtual IBlockingFileItemList *RetrieveBlockingFileAccessInfo() { return m_pFileSystemPassThru->RetrieveBlockingFileAccessInfo(); }
-#endif
 	virtual void			SetupPreloadData() {}
 	virtual void			DiscardPreloadData() {}
 
@@ -200,7 +185,7 @@ public:
 	virtual KeyValues		*LoadKeyValues( KeyValuesPreloadType_t type, char const *filename, char const *pPathID = 0 ) { return m_pFileSystemPassThru->LoadKeyValues( type, filename, pPathID ); }
 	virtual bool			LoadKeyValues( KeyValues& head, KeyValuesPreloadType_t type, char const *filename, char const *pPathID = 0 ) { return m_pFileSystemPassThru->LoadKeyValues( head, type, filename, pPathID ); }
 
-	virtual bool			GetFileTypeForFullPath( char const *pFullPath, OUT_Z_BYTECAP(bufSizeInBytes) wchar_t *buf, size_t bufSizeInBytes ) { return m_pFileSystemPassThru->GetFileTypeForFullPath( pFullPath, buf, bufSizeInBytes ); }
+	virtual bool			GetFileTypeForFullPath( char const *pFullPath, wchar_t *buf, std::size_t bufSizeInBytes ) { return m_pFileSystemPassThru->GetFileTypeForFullPath( pFullPath, buf, bufSizeInBytes ); }
 
 	virtual bool			GetOptimalIOConstraints( FileHandle_t hFile, unsigned *pOffsetAlign, unsigned *pSizeAlign, unsigned *pBufferAlign ) { return m_pFileSystemPassThru->GetOptimalIOConstraints( hFile, pOffsetAlign, pSizeAlign, pBufferAlign ); }
 	virtual void			*AllocOptimalReadBuffer( FileHandle_t hFile, unsigned nSize, unsigned nOffset  ) { return m_pFileSystemPassThru->AllocOptimalReadBuffer( hFile, nOffset, nSize ); }
@@ -281,6 +266,3 @@ inline void GiveMeACompileError()
 {
 	CFileSystemPassThru asdf;
 }
-
-
-#endif // FILESYSTEM_PASSTHRU_H

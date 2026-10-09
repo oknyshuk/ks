@@ -1,22 +1,48 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Utility functions used by AI code.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Utility functions used by AI code.
+
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "game.h"
-#include "vstdlib/random.h"
 #include "movevars_shared.h"
 
-#define		NUM_LATERAL_CHECKS		13  // how many checks are made on each side of a NPC looking for lateral cover
-#define		NUM_LATERAL_LOS_CHECKS		6  // how many checks are made on each side of a NPC looking for lateral cover
+constexpr auto NUM_LATERAL_CHECKS = 13; // how many checks are made on each side of a NPC looking for lateral cover
+constexpr auto NUM_LATERAL_LOS_CHECKS = 6; // how many checks are made on each side of a NPC looking for lateral cover
 
-#define		TOSS_HEIGHT_MAX		300 // altitude of initial trace done to see how high something can be tossed
+constexpr auto TOSS_HEIGHT_MAX = 300; // altitude of initial trace done to see how high something can be tossed
 
 //float flRandom = random->RandomFloat(0,1);
 
-bool g_fDrawLines = FALSE;
+bool g_fDrawLines = false;
 
 
 //=========================================================
@@ -30,7 +56,7 @@ bool FBoxVisible( CBaseEntity *pLooker, CBaseEntity *pTarget, Vector &vecTargetO
 	// don't look through water
 	if ((pLooker->GetWaterLevel() != WL_Eyes && pTarget->GetWaterLevel() == WL_Eyes) 
 		|| (pLooker->GetWaterLevel() == WL_Eyes && pTarget->GetWaterLevel() == WL_NotInWater))
-		return FALSE;
+		return false;
 
 	trace_t tr;
 	Vector	vecLookerOrigin = pLooker->EyePosition();//look through the NPC's 'eyes'
@@ -46,10 +72,10 @@ bool FBoxVisible( CBaseEntity *pLooker, CBaseEntity *pTarget, Vector &vecTargetO
 		if (tr.fraction == 1.0)
 		{
 			vecTargetOrigin = vecTarget;
-			return TRUE;// line of sight is valid.
+			return true;// line of sight is valid.
 		}
 	}
-	return FALSE;// Line of sight is not established
+	return false;// Line of sight is not established
 }
 
 
@@ -134,7 +160,7 @@ Vector VecCheckToss( CBaseEntity *pEntity, ITraceFilter *pFilter, Vector vecSpot
 	float distance2 = (vecMidPoint.z - vecSpot2.z);
 
 	// How long will it take for the object to travel this distance
-	float time1 = sqrt( distance1 / (0.5 * flGravity) );
+	float time1 = std::sqrt( distance1 / (0.5 * flGravity) );
 	float time2 = sqrt( distance2 / (0.5 * flGravity) );
 
 	if (time1 < 0.1)

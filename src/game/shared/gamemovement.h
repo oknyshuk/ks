@@ -1,17 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( GAMEMOVEMENT_H )
-#define GAMEMOVEMENT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.core;
 #include "igamemovement.h"
 #include "cmodel.h"
-#include "tier0/vprof.h"
+import std;
+#include "networkvar.h"
+#include "engine/IEngineTrace.h"
+#include "gametrace.h"
+#ifdef CLIENT_DLL
+#include "cdll_client_int.h"
+#else
+#include "enginecallback.h"
+#endif
 
 #define CTEXTURESMAX		512			// max number of textures loaded
 #define CBTEXTURENAMEMAX	13			// only load first n chars of name
@@ -20,7 +22,7 @@
 #define GAMEMOVEMENT_JUMP_TIME				510			// ms approx - based on the 21 unit height jump
 #define GAMEMOVEMENT_JUMP_HEIGHT			21.0f		// units
 #define GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS			( TIME_TO_UNDUCK_MSECS )		// ms
-#define GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS_INV		( GAMEMOVEMENT_DUCK_TIME - GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS )
+inline constexpr auto GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS_INV = ( GAMEMOVEMENT_DUCK_TIME - GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS );
 
 enum
 {
@@ -32,6 +34,7 @@ enum
 struct surfacedata_t;
 
 class CBasePlayer;
+class CBaseEntity;
 
 class CGameMovement : public IGameMovement
 {
@@ -45,7 +48,7 @@ public:
 	virtual void	Reset( void );
 	virtual void	StartTrackPredictionErrors( CBasePlayer *pPlayer );
 	virtual void	FinishTrackPredictionErrors( CBasePlayer *pPlayer );
-	virtual void	DiffPrint( PRINTF_FORMAT_STRING char const *fmt, ... );
+	virtual void	DiffPrint( char const *fmt, ... );
 	virtual const Vector&	GetPlayerMins( bool ducked ) const;
 	virtual const Vector&	GetPlayerMaxs( bool ducked ) const;
 	virtual const Vector&	GetPlayerViewOffset( bool ducked ) const;
@@ -297,7 +300,7 @@ protected:
 inline void CGameMovement::TracePlayerBBox( const Vector& start, const Vector& end, unsigned int fMask, int collisionGroup, trace_t& pm )
 {
 	++m_nTraceCount;
-	VPROF( "CGameMovement::TracePlayerBBox" );
+	CVProfScope _( "CGameMovement::TracePlayerBBox", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	Ray_t ray;
 	ray.Init( start, end, GetPlayerMins(), GetPlayerMaxs() );
@@ -327,5 +330,3 @@ inline void CGameMovement::GameMovementTraceHull( const Vector& start, const Vec
 		enginetrace->TraceRay( ray, fMask, pFilter, pTrace );
 	}
 }
-
-#endif // GAMEMOVEMENT_H

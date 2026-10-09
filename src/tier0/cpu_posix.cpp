@@ -1,32 +1,11 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: determine CPU speed under linux
-//
-// $NoKeywords: $
-//=============================================================================//
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <tier0/platform.h>
-#include <errno.h>
 
-class TimeVal
-{
-public:
-	TimeVal() {}
-	TimeVal& operator=(const TimeVal &val) { m_TimeVal = val.m_TimeVal; return *this; }
-	inline double operator-(const TimeVal &left)
-	{
-		uint64 left_us = (uint64) left.m_TimeVal.tv_sec * 1000000 + left.m_TimeVal.tv_usec;
-		uint64 right_us = (uint64) m_TimeVal.tv_sec * 1000000 + m_TimeVal.tv_usec;
-		uint64 diff_us = right_us - left_us;
-		return diff_us * ( 1.0 / 1000000.0 );
-	}
 
-	timeval m_TimeVal;
-};
+import std;
+import ks.core;
 
 // Compute the positive difference between two 64 bit numbers.
 static inline uint64 diff(uint64 v1, uint64 v2)
@@ -40,30 +19,30 @@ uint64 GetCPUFreqFromPROC()
 {
 	double mhz = 0;
 	char line[1024], *s, search_str[] = "cpu MHz";
-	FILE *fp;
+	std::FILE *fp;
 
 	/* open proc/cpuinfo */
-	if ((fp = fopen("/proc/cpuinfo", "r")) == nullptr)
+	if ((fp = std::fopen("/proc/cpuinfo", "r")) == nullptr)
 	{
 		return 0;
 	}
 
 	/* ignore all lines until we reach MHz information */
-	while (fgets(line, 1024, fp) != nullptr)
+	while (std::fgets(line, 1024, fp) != nullptr)
 	{
-		if (strstr(line, search_str) != nullptr)
+		if (std::strstr(line, search_str) != nullptr)
 		{
 			/* ignore all characters in line up to : */
 			for (s = line; *s && (*s != ':'); ++s)
 				;
 
 			/* get MHz number */
-			if (*s && (sscanf(s+1, "%lf", &mhz) == 1))
+			if (*s && (std::sscanf(s+1, "%lf", &mhz) == 1))
 				break;
 		}
 	}
 
-	if (fp!=nullptr) fclose(fp);
+	if (fp!=nullptr) std::fclose(fp);
 
 	return (uint64)(mhz*1000000);
 }
@@ -71,11 +50,11 @@ uint64 GetCPUFreqFromPROC()
 
 uint64 CalculateCPUFreq()
 {
-	char const *pFreq = getenv("CPU_MHZ");
+	char const *pFreq = std::getenv("CPU_MHZ");
 	if ( pFreq )
 	{
 		uint64 retVal = 1000000;
-		return retVal * atoi( pFreq );
+		return retVal * std::atoi( pFreq );
 	}
 
 	// Compute the period. Loop until we get 3 consecutive periods that
@@ -88,16 +67,14 @@ uint64 CalculateCPUFreq()
 
 	for (count = 0; count < max_iterations; count++)
 	{
-		TimeVal start_time, end_time;
-		uint64 start_tsc, end_tsc;
+		const uint64 start_tsc = Plat_Rdtsc();
+		const uint64 start_ns = ks::platform::monotonic_nanos();
+		ks::platform::sleep_nanos( 5000000 ); // sleep for 5 msec
+		const uint64 end_tsc = Plat_Rdtsc();
+		const uint64 end_ns = ks::platform::monotonic_nanos();
 
-		gettimeofday( &start_time.m_TimeVal, 0 );
-		start_tsc = Plat_Rdtsc();
-		usleep( 5000 ); // sleep for 5 msec
-		gettimeofday( &end_time.m_TimeVal, 0 );
-		end_tsc = Plat_Rdtsc();
-
-		period3 = ( end_tsc - start_tsc ) / ( end_time - start_time );
+		const double seconds = (double)( end_ns - start_ns ) * 1.0e-9;
+		period3 = seconds > 0.0 ? (uint64)( (double)( end_tsc - start_tsc ) / seconds ) : 0;
 
 		if (diff( period1, period2 ) <= error &&
 			diff( period2, period3 ) <= error &&
@@ -127,16 +104,3 @@ uint64 CalculateCPUFreq()
 
 	return period;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

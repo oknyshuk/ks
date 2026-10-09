@@ -1,15 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
 
-#ifndef C_FUNC_REFLECTIVE_GLASS
-#define C_FUNC_REFLECTIVE_GLASS
-
-
-struct cplane_t;
 class CViewSetup;
 
 
@@ -17,8 +10,3 @@ class CViewSetup;
 // Do we have reflective glass in view? If so, what's the reflection plane?
 //-----------------------------------------------------------------------------
 bool IsReflectiveGlassInView( const CViewSetup& view, cplane_t &plane );
-
-
-#endif // C_FUNC_REFLECTIVE_GLASS
-
-

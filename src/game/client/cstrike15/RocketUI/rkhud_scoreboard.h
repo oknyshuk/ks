@@ -1,5 +1,8 @@
-#ifndef KISAKSTRIKE_RKHUD_SCOREBOARD_H
-#define KISAKSTRIKE_RKHUD_SCOREBOARD_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include <rocketui/rmlui.h>
 
 #include <rocketui/rocketui.h>
 #include "rkhud_document.h"
@@ -28,5 +31,3 @@ public:
 private:
     void Update();
 };
-
-#endif //KISAKSTRIKE_RKHUD_SCOREBOARD_H

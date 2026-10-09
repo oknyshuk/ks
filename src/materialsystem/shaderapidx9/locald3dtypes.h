@@ -1,51 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef LOCALD3DTYPES_H
-#define LOCALD3DTYPES_H
+import ks.core;
 
-
-#include "tier0/platform.h"
-
-#if defined( DX10 ) && !defined( DX_TO_GL_ABSTRACTION )
-
-#include <d3d10.h>
-#include <d3dx10.h>
-
-struct IDirect3D10BaseTexture
-{
-	ID3D10Resource			 *m_pBaseTexture;
-	ID3D10ShaderResourceView *m_pSRView;
-	ID3D10RenderTargetView	 *m_pRTView;
-};
-
-class CDx10Types
-{
-public:
-	typedef struct IDirect3D10BaseTexture	IDirect3DTexture;
-	// FIXME: What is this called now ? 
-	// typedef ID3D10TextureCube			IDirect3DCubeTexture;
-	typedef ID3D10Texture3D					IDirect3DVolumeTexture;
-	typedef ID3D10Device					IDirect3DDevice;
-	typedef D3D10_VIEWPORT					D3DVIEWPORT;
-	typedef ID3D10Buffer					IDirect3DIndexBuffer;
-	typedef ID3D10Buffer					IDirect3DVertexBuffer;
-	typedef ID3D10VertexShader				IDirect3DVertexShader;
-	typedef ID3D10PixelShader				IDirect3DPixelShader;
-	typedef ID3D10ShaderResourceView		IDirect3DSurface;
-	typedef ID3DX10Font						ID3DXFont;
-	typedef ID3D10Query						ID3DQuery;
-
-	typedef ID3D10Device					*LPDIRECT3DDEVICE;
-	typedef ID3D10Buffer					*LPDIRECT3DINDEXBUFFER;
-	typedef ID3D10Buffer					*LPDIRECT3DVERTEXBUFFER;
-};
-
-#endif // defined( DX10 ) && !defined( POSIX )
+#include "togl/rendermechanism.h"
 
 
 #ifdef _DEBUG
@@ -116,13 +75,8 @@ typedef intp PixelShader_t;
 //-----------------------------------------------------------------------------
 // Bitpattern for an invalid shader
 //-----------------------------------------------------------------------------
-#define INVALID_SHADER	( 0xFFFFFFFF )
-#define INVALID_HARDWARE_SHADER ( nullptr )
+inline constexpr auto INVALID_SHADER = ( 0xFFFFFFFF );
+inline constexpr auto INVALID_HARDWARE_SHADER = ( nullptr );
 
-#define D3DSAMP_NOTSUPPORTED					D3DSAMP_FORCE_DWORD
-#define D3DRS_NOTSUPPORTED						D3DRS_FORCE_DWORD
-
-#include "togl/rendermechanism.h"
-
-
-#endif // LOCALD3DTYPES_H
+inline constexpr auto D3DSAMP_NOTSUPPORTED = D3DSAMP_FORCE_DWORD;
+inline constexpr auto D3DRS_NOTSUPPORTED = D3DRS_FORCE_DWORD;

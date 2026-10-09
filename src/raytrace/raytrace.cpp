@@ -3,9 +3,8 @@
 #include "raytrace.h"
 #include <filesystem_tools.h>
 #include <cmdlib.h>
-#include <stdio.h>
-#include <tier1/byte_reader.h>
-#include <tier1/byte_writer.h>
+import ks.tier1;
+import std;
 
 
 static bool SameSign(float a, float b)
@@ -206,7 +205,7 @@ void CacheOptimizedTriangle::ChangeIntoIntersectionFormat(void)
 	// now, determine which axis to drop
 	int drop_axis = 0;
 	for(int c=1 ; c<3 ; c++)
-		if ( fabs(N[c]) > fabs( N[drop_axis] ) )
+		if ( std::fabs(N[c]) > std::fabs( N[drop_axis] ) )
 			drop_axis = c;
 
 	m_Data.m_IntersectData.m_flD = N.Dot( p1 );
@@ -296,9 +295,9 @@ void CacheOptimizedTriangle::ExtractVerticesFromIntersectionFormat( Vector &v0, 
 }
 
 
-#define MAILBOX_HASH_SIZE 256
-#define MAX_TREE_DEPTH 21
-#define MAX_NODE_STACK_LEN (40*MAX_TREE_DEPTH)
+constexpr auto MAILBOX_HASH_SIZE = 256;
+constexpr auto MAX_TREE_DEPTH = 21;
+constexpr auto MAX_NODE_STACK_LEN = (40*MAX_TREE_DEPTH);
 
 struct NodeToVisit {
 	CacheOptimizedKDNode const *node;
@@ -360,7 +359,7 @@ void RayTracingEnvironment::Trace4Rays( const FourRays &rays, fltx4 TMin, fltx4 
 				// ok, now trace between 1 and 3 rays, and output the results
 				RayTracingResult tmpresults;
 				msk = tmprays.CalculateDirectionSignMask();
-				assert( msk !=- 1 );
+				contract_assert( msk !=- 1 );
 				Trace4Rays( tmprays, TMin, TMax, msk, &tmpresults, skip_id, pCallback, cullMode );
 				// now, move results to proper place
 				for( int i = 0; i < 4; i++ )
@@ -424,7 +423,7 @@ void RayTracingEnvironment::Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 T
 {
 	rays.Check();
 
-	memset( rslt_out->HitIds, 0xff, sizeof( rslt_out->HitIds ) );
+	std::memset( rslt_out->HitIds, 0xff, sizeof( rslt_out->HitIds ) );
 
 	rslt_out->HitDistance = ReplicateX4( 1.0e23 );
 
@@ -447,7 +446,7 @@ void RayTracingEnvironment::Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 T
 		return;												// missed bounding box
 
 	int32 mailboxids[MAILBOX_HASH_SIZE];					// used to avoid redundant triangle tests
-	memset( mailboxids, 0xff, sizeof( mailboxids ));				// !!speed!! keep around?
+	std::memset( mailboxids, 0xff, sizeof( mailboxids ));				// !!speed!! keep around?
 
 	int front_idx[3], back_idx[3];							// based on ray direction, whether to
 															// visit left or right node first
@@ -527,7 +526,7 @@ void RayTracingEnvironment::Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 T
 					// must push far, traverse near
  					//printf("visit %d,%d\n",CurNode->LeftChild()+front_idx[split_plane_number],
  					//	   CurNode->LeftChild()+back_idx[split_plane_number]);
-					assert( stack_ptr > NodeQueue );
+					contract_assert( stack_ptr > NodeQueue );
 					-- stack_ptr;
 					stack_ptr->node = FrontChild + back_idx[split_plane_number];
 					stack_ptr->TMin = MaxSIMD( TMin, dist_to_sep_plane );
@@ -724,8 +723,8 @@ void RayTracingEnvironment::CalculateTriangleListBounds(int32 const *tris,int nt
 // one side being devoid of triangles, the empty side is "grown" as much as possible.
 //
 
-#define COST_OF_TRAVERSAL 75								// approximate #operations
-#define COST_OF_INTERSECTION 167							// approximate #operations
+constexpr auto COST_OF_TRAVERSAL = 75; // approximate #operations
+constexpr auto COST_OF_INTERSECTION = 167; // approximate #operations
 
 
 float RayTracingEnvironment::CalculateCostsOfSplit(
@@ -794,7 +793,7 @@ float RayTracingEnvironment::CalculateCostsOfSplit(
 }
 
 
-#define NEVER_SPLIT 0
+constexpr auto NEVER_SPLIT = 0;
 
 void RayTracingEnvironment::RefineNode( int node_number, int32 const * tri_list, int ntris,
 										Vector MinBound, Vector MaxBound, int depth )
@@ -804,11 +803,6 @@ void RayTracingEnvironment::RefineNode( int node_number, int32 const * tri_list,
 		// no point in continuing
 		OptimizedKDTree[node_number].Children = KDNODE_STATE_LEAF + ( std::ssize( TriangleIndexList ) << 2 );
 		OptimizedKDTree[node_number].SetNumberOfTrianglesInLeafNode( ntris );
-
-#ifdef DEBUG_RAYTRACE
-		OptimizedKDTree[node_number].vecMins = MinBound;
-		OptimizedKDTree[node_number].vecMaxs = MaxBound;
-#endif
 
 		for( int t = 0; t < ntris; t++ )
 			TriangleIndexList.push_back( tri_list[t] );
@@ -874,10 +868,6 @@ void RayTracingEnvironment::RefineNode( int node_number, int32 const * tri_list,
 		// no benefit to splitting. just make this a leaf node
 		OptimizedKDTree[node_number].Children = KDNODE_STATE_LEAF + ( std::ssize( TriangleIndexList ) << 2 );
 		OptimizedKDTree[node_number].SetNumberOfTrianglesInLeafNode( ntris );
-#ifdef DEBUG_RAYTRACE
-		OptimizedKDTree[node_number].vecMins = MinBound;
-		OptimizedKDTree[node_number].vecMaxs = MaxBound;
-#endif
 		for( int t = 0; t < ntris; t++ )
 			TriangleIndexList.push_back( tri_list[t] );
 	}
@@ -931,10 +921,6 @@ void RayTracingEnvironment::RefineNode( int node_number, int32 const * tri_list,
 // 			   left_child,right_child);
 		OptimizedKDTree[node_number].Children = split_plane + ( left_child << 2 );
 		OptimizedKDTree[node_number].SplittingPlaneValue = best_splitvalue;
-#ifdef DEBUG_RAYTRACE
-		OptimizedKDTree[node_number].vecMins = MinBound;
-		OptimizedKDTree[node_number].vecMaxs = MaxBound;
-#endif
 		CacheOptimizedKDNode newnode;
 		OptimizedKDTree.push_back( newnode );
 		OptimizedKDTree.push_back( newnode );
@@ -976,7 +962,7 @@ void RayTracingEnvironment::AddInfinitePointLight( Vector position, Vector inten
 }
 
 
-#define RTENV_SERIALIZATION_VERSION 1
+constexpr auto RTENV_SERIALIZATION_VERSION = 1;
 
 struct RayTracingSerializationHeader
 {
@@ -1027,9 +1013,9 @@ struct RayTracingSerializationHeader
 	}
 };
 
-size_t RayTracingEnvironment::GetSerializationNumBytes( uint32 nSerializationFlags ) const
+std::size_t RayTracingEnvironment::GetSerializationNumBytes( uint32 nSerializationFlags ) const
 {
-	size_t nRet = sizeof( RayTracingSerializationHeader );
+	std::size_t nRet = sizeof( RayTracingSerializationHeader );
 	nRet += sizeof( CacheOptimizedKDNode ) * std::ssize( OptimizedKDTree );
 	nRet += sizeof( CacheOptimizedTriangle ) * std::ssize( OptimizedTriangleList );
 	nRet += sizeof( int32 ) * std::ssize( TriangleIndexList );
@@ -1068,7 +1054,7 @@ void RayTracingEnvironment::Serialize( ks::byte_writer &outbuf, uint32 nSerializ
 		outbuf.write< float >( pTri->m_flNz );
 		outbuf.write< float >( pTri->m_flD );
 		outbuf.write< float >( pTri->m_nTriangleID );
-		for( int j = 0; j < ARRAYSIZE( pTri->m_ProjectedEdgeEquations ); j++ )
+		for( int j = 0; j < std::size( pTri->m_ProjectedEdgeEquations ); j++ )
 			outbuf.write< float >( pTri->m_ProjectedEdgeEquations[j] );
 		outbuf.write< unsigned char >( pTri->m_nCoordSelect0 );
 		outbuf.write< unsigned char >( pTri->m_nCoordSelect1 );
@@ -1120,7 +1106,7 @@ void RayTracingEnvironment::UnSerialize( ks::byte_reader &inbuf )
 		pTri->m_flNz = inbuf.read< float >();
 		pTri->m_flD = inbuf.read< float >();
 		pTri->m_nTriangleID = inbuf.read< float >();
-		for( int j = 0; j < ARRAYSIZE( pTri->m_ProjectedEdgeEquations ); j++ )
+		for( int j = 0; j < std::size( pTri->m_ProjectedEdgeEquations ); j++ )
 		{
 			pTri->m_ProjectedEdgeEquations[j] = inbuf.read< float >();
 		}

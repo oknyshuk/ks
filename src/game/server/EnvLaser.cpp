@@ -1,12 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A special kind of beam effect that traces from its start position to
 //			its end position and stops if it hits anything.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "EnvLaser.h"
@@ -39,7 +62,7 @@ void CEnvLaser::Spawn( void )
 
 	if ( !m_pSprite && m_iszSpriteName != NULL_STRING )
 	{
-		m_pSprite = CSprite::SpriteCreate( STRING(m_iszSpriteName), GetAbsOrigin(), TRUE );
+		m_pSprite = CSprite::SpriteCreate( STRING(m_iszSpriteName), GetAbsOrigin(), true );
 	}
 	else
 	{
@@ -81,15 +104,15 @@ bool CEnvLaser::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "width"))
 	{
-		SetWidth( atof(szValue) );
+		SetWidth( std::atof(szValue) );
 	}
 	else if (FStrEq(szKeyName, "NoiseAmplitude"))
 	{
-		SetNoise( atoi(szValue) );
+		SetNoise( std::atoi(szValue) );
 	}
 	else if (FStrEq(szKeyName, "TextureScroll"))
 	{
-		SetScrollRate( atoi(szValue) );
+		SetScrollRate( std::atoi(szValue) );
 	}
 	else if (FStrEq(szKeyName, "texture"))
 	{
@@ -229,5 +252,3 @@ void CEnvLaser::StrikeThink( void )
 	FireAtPoint( tr );
 	SetNextThink( gpGlobals->curtime );
 }
-
-

@@ -1,19 +1,9 @@
-//======= Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.core;
 #include "bitmap/imageformat.h"
-#include "basetypes.h"
-#include "tier0/dbg.h"
-#include <malloc.h>
-#include <memory.h>
-#include "nvtc.h"
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include "tier1/strtools.h"
-#include "mathlib/compressed_vector.h"
+import std;
 
 //-----------------------------------------------------------------------------
 // Various important function types for each color format
@@ -111,8 +101,8 @@ namespace ImageLoader
 //-----------------------------------------------------------------------------
 const ImageFormatInfo_t& ImageFormatInfo( ImageFormat fmt )
 {
-	COMPILE_TIME_ASSERT( ( NUM_IMAGE_FORMATS + 1 ) == ARRAYSIZE( g_ImageFormatInfo ) );
-	Assert( unsigned( fmt + 1 ) <= ( NUM_IMAGE_FORMATS ) );
+	static_assert( ( NUM_IMAGE_FORMATS + 1 ) == std::size( g_ImageFormatInfo ) );
+	contract_assert( unsigned( fmt + 1 ) <= ( NUM_IMAGE_FORMATS ) );
 	return g_ImageFormatInfo[ fmt + 1 ];
 }
 
@@ -127,9 +117,9 @@ int GetMemRequired( int width, int height, int depth, int nMipmapCount, ImageFor
 		const ImageFormatInfo_t &fmt = ImageFormatInfo( imageFormat );
 		if ( fmt.m_bIsCompressed )
 		{
-			Assert( ( width < 4 ) || !( width % 4 ) );
-			Assert( ( height < 4 ) || !( height % 4 ) );
-			Assert( ( depth < 4 ) || !( depth % 4 ) );
+			contract_assert( ( width < 4 ) || !( width % 4 ) );
+			contract_assert( ( height < 4 ) || !( height % 4 ) );
+			contract_assert( ( depth < 4 ) || !( depth % 4 ) );
 			if ( width < 4 && width > 0 )
 			{
 				width = 4;
@@ -503,10 +493,9 @@ static D3DFORMAT s_pD3DFormats[] =
 
 D3DFORMAT ImageFormatToD3DFormat( ImageFormat format )
 {
-	COMPILE_TIME_ASSERT( ARRAYSIZE( s_pD3DFormats ) == NUM_IMAGE_FORMATS + 1 );
+	static_assert( std::size( s_pD3DFormats ) == NUM_IMAGE_FORMATS + 1 );
 	return s_pD3DFormats[ format + 1 ];
 }
 
 
 } // ImageLoader namespace ends
-

@@ -1,3 +1,4 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
@@ -7,12 +8,8 @@
 //
 // Members are ordered by field number, which is also the order they are written in.
 
-#ifndef KS_NETMESSAGES_SCHEMA_H
-#define KS_NETMESSAGES_SCHEMA_H
 
-#include <cstdint>
-#include <string>
-#include <vector>
+import std;
 
 #include "proto_types.h"
 
@@ -50,7 +47,6 @@ enum CLC_Messages : int
 
 enum VoiceDataFormat_t : int
 {
-	VOICEDATA_FORMAT_STEAM = 0,
 	VOICEDATA_FORMAT_ENGINE = 1,
 };
 
@@ -124,19 +120,19 @@ struct CMsgQAngle
 
 struct CMsgRGBA
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> r;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> g;
-	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<int32_t> b;
-	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<int32_t> a;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> r;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> g;
+	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::int32_t> b;
+	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::int32_t> a;
 };
 
 struct CNETMsg_Tick
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<uint32_t> tick;
-	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<uint32_t> host_computationtime;
-	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<uint32_t> host_computationtime_std_deviation;
-	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<uint32_t> host_framestarttime_std_deviation;
-	[[= ks::proto::Pb{ 7 }]] ks::proto::opt<uint32_t> hltv_replay_flags;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::uint32_t> tick;
+	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::uint32_t> host_computationtime;
+	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<std::uint32_t> host_computationtime_std_deviation;
+	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<std::uint32_t> host_framestarttime_std_deviation;
+	[[= ks::proto::Pb{ 7 }]] ks::proto::opt<std::uint32_t> hltv_replay_flags;
 };
 
 struct CNETMsg_StringCmd
@@ -146,9 +142,9 @@ struct CNETMsg_StringCmd
 
 struct CNETMsg_SignonState
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<uint32_t> signon_state;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<uint32_t> spawn_count;
-	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<uint32_t> num_server_players;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::uint32_t> signon_state;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::uint32_t> spawn_count;
+	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::uint32_t> num_server_players;
 	[[= ks::proto::Pb{ 4 }]] std::vector<std::string> players_networkids;
 	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<std::string> map_name;
 };
@@ -159,7 +155,7 @@ struct CMsg_CVars
 	{
 		[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::string> name;
 		[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> value;
-		[[= ks::proto::Pb{ 3 }]] ks::proto::opt<uint32_t> dictionary_name;
+		[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::uint32_t> dictionary_name;
 	};
 
 	[[= ks::proto::Pb{ 1 }]] std::vector<CMsg_CVars::CVar> cvars;
@@ -181,7 +177,7 @@ struct CNETMsg_Disconnect
 
 struct CNETMsg_File
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> transfer_id;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> transfer_id;
 	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> file_name;
 	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<bool> is_replay_demo_file;
 	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<bool> deny;
@@ -189,30 +185,30 @@ struct CNETMsg_File
 
 struct CNETMsg_SplitScreenUser
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> slot;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> slot;
 };
 
 struct CNETMsg_PlayerAvatarData
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<uint32_t> accountid;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::uint32_t> accountid;
 	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> rgb;
 };
 
 struct CCLCMsg_ClientInfo
 {
 	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<ks::proto::fixed32> send_table_crc;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<uint32_t> server_count;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::uint32_t> server_count;
 	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<bool> is_hltv;
 	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<bool> is_replay;
-	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<uint32_t> friends_id;
+	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<std::uint32_t> friends_id;
 	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<std::string> friends_name;
 	[[= ks::proto::Pb{ 7 }]] std::vector<ks::proto::fixed32> custom_files;
 };
 
 struct CCLCMsg_Move
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<uint32_t> num_backup_commands;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<uint32_t> num_new_commands;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::uint32_t> num_backup_commands;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::uint32_t> num_new_commands;
 	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::string> data;
 };
 
@@ -221,15 +217,15 @@ struct CCLCMsg_VoiceData
 	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::string> data;
 	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<ks::proto::fixed64> xuid;
 	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<VoiceDataFormat_t> format;  // default VOICEDATA_FORMAT_ENGINE
-	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<int32_t> sequence_bytes;
-	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<uint32_t> section_number;
-	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<uint32_t> uncompressed_sample_offset;
+	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::int32_t> sequence_bytes;
+	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<std::uint32_t> section_number;
+	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<std::uint32_t> uncompressed_sample_offset;
 };
 
 struct CCLCMsg_BaselineAck
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> baseline_tick;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> baseline_nr;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> baseline_tick;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> baseline_nr;
 };
 
 struct CCLCMsg_ListenEvents
@@ -239,30 +235,30 @@ struct CCLCMsg_ListenEvents
 
 struct CCLCMsg_RespondCvarValue
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> cookie;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> status_code;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> cookie;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> status_code;
 	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::string> name;
 	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::string> value;
 };
 
 struct CCLCMsg_FileCRCCheck
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> code_path;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> code_path;
 	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> path;
-	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<int32_t> code_filename;
+	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::int32_t> code_filename;
 	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::string> filename;
-	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<int32_t> file_fraction;
+	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<std::int32_t> file_fraction;
 	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<std::string> md5;
-	[[= ks::proto::Pb{ 7 }]] ks::proto::opt<uint32_t> crc;
-	[[= ks::proto::Pb{ 8 }]] ks::proto::opt<int32_t> file_hash_type;
-	[[= ks::proto::Pb{ 9 }]] ks::proto::opt<int32_t> file_len;
-	[[= ks::proto::Pb{ 10 }]] ks::proto::opt<int32_t> pack_file_id;
-	[[= ks::proto::Pb{ 11 }]] ks::proto::opt<int32_t> pack_file_number;
+	[[= ks::proto::Pb{ 7 }]] ks::proto::opt<std::uint32_t> crc;
+	[[= ks::proto::Pb{ 8 }]] ks::proto::opt<std::int32_t> file_hash_type;
+	[[= ks::proto::Pb{ 9 }]] ks::proto::opt<std::int32_t> file_len;
+	[[= ks::proto::Pb{ 10 }]] ks::proto::opt<std::int32_t> pack_file_id;
+	[[= ks::proto::Pb{ 11 }]] ks::proto::opt<std::int32_t> pack_file_number;
 };
 
 struct CCLCMsg_LoadingProgress
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> progress;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> progress;
 };
 
 struct CCLCMsg_SplitPlayerConnect
@@ -277,35 +273,34 @@ struct CCLCMsg_CmdKeyValues
 
 struct CSVCMsg_ServerInfo
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> protocol;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> server_count;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> protocol;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> server_count;
 	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<bool> is_dedicated;
 	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<bool> is_official_valve_server;
 	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<bool> is_hltv;
 	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<bool> is_replay;
-	[[= ks::proto::Pb{ 7 }]] ks::proto::opt<int32_t> c_os;
+	[[= ks::proto::Pb{ 7 }]] ks::proto::opt<std::int32_t> c_os;
 	[[= ks::proto::Pb{ 8 }]] ks::proto::opt<ks::proto::fixed32> map_crc;
 	[[= ks::proto::Pb{ 9 }]] ks::proto::opt<ks::proto::fixed32> client_crc;
 	[[= ks::proto::Pb{ 10 }]] ks::proto::opt<ks::proto::fixed32> string_table_crc;
-	[[= ks::proto::Pb{ 11 }]] ks::proto::opt<int32_t> max_clients;
-	[[= ks::proto::Pb{ 12 }]] ks::proto::opt<int32_t> max_classes;
-	[[= ks::proto::Pb{ 13 }]] ks::proto::opt<int32_t> player_slot;
+	[[= ks::proto::Pb{ 11 }]] ks::proto::opt<std::int32_t> max_clients;
+	[[= ks::proto::Pb{ 12 }]] ks::proto::opt<std::int32_t> max_classes;
+	[[= ks::proto::Pb{ 13 }]] ks::proto::opt<std::int32_t> player_slot;
 	[[= ks::proto::Pb{ 14 }]] ks::proto::opt<float> tick_interval;
 	[[= ks::proto::Pb{ 15 }]] ks::proto::opt<std::string> game_dir;
 	[[= ks::proto::Pb{ 16 }]] ks::proto::opt<std::string> map_name;
 	[[= ks::proto::Pb{ 17 }]] ks::proto::opt<std::string> map_group_name;
 	[[= ks::proto::Pb{ 18 }]] ks::proto::opt<std::string> sky_name;
 	[[= ks::proto::Pb{ 19 }]] ks::proto::opt<std::string> host_name;
-	[[= ks::proto::Pb{ 20 }]] ks::proto::opt<uint32_t> public_ip;
+	[[= ks::proto::Pb{ 20 }]] ks::proto::opt<std::uint32_t> public_ip;
 	[[= ks::proto::Pb{ 21 }]] ks::proto::opt<bool> is_redirecting_to_proxy_relay;
-	[[= ks::proto::Pb{ 22 }]] ks::proto::opt<uint64_t> ugc_map_id;
 };
 
 struct CSVCMsg_ClassInfo
 {
 	struct class_t
 	{
-		[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> class_id;
+		[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> class_id;
 		[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> data_table_name;
 		[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::string> class_name;
 	};
@@ -318,15 +313,15 @@ struct CSVCMsg_SendTable
 {
 	struct sendprop_t
 	{
-		[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> type;
+		[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> type;
 		[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> var_name;
-		[[= ks::proto::Pb{ 3 }]] ks::proto::opt<int32_t> flags;
-		[[= ks::proto::Pb{ 4 }]] ks::proto::opt<int32_t> priority;
+		[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::int32_t> flags;
+		[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::int32_t> priority;
 		[[= ks::proto::Pb{ 5 }]] ks::proto::opt<std::string> dt_name;
-		[[= ks::proto::Pb{ 6 }]] ks::proto::opt<int32_t> num_elements;
+		[[= ks::proto::Pb{ 6 }]] ks::proto::opt<std::int32_t> num_elements;
 		[[= ks::proto::Pb{ 7 }]] ks::proto::opt<float> low_value;
 		[[= ks::proto::Pb{ 8 }]] ks::proto::opt<float> high_value;
-		[[= ks::proto::Pb{ 9 }]] ks::proto::opt<int32_t> num_bits;
+		[[= ks::proto::Pb{ 9 }]] ks::proto::opt<std::int32_t> num_bits;
 	};
 
 	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<bool> is_end;
@@ -347,47 +342,47 @@ struct CSVCMsg_SetPause
 
 struct CSVCMsg_SetView
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> entity_index;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> entity_index;
 };
 
 struct CSVCMsg_CreateStringTable
 {
 	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::string> name;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> max_entries;
-	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<int32_t> num_entries;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> max_entries;
+	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::int32_t> num_entries;
 	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<bool> user_data_fixed_size;
-	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<int32_t> user_data_size;
-	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<int32_t> user_data_size_bits;
-	[[= ks::proto::Pb{ 7 }]] ks::proto::opt<int32_t> flags;
+	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<std::int32_t> user_data_size;
+	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<std::int32_t> user_data_size_bits;
+	[[= ks::proto::Pb{ 7 }]] ks::proto::opt<std::int32_t> flags;
 	[[= ks::proto::Pb{ 8 }]] ks::proto::opt<std::string> string_data;
 };
 
 struct CSVCMsg_UpdateStringTable
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> table_id;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> num_changed_entries;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> table_id;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> num_changed_entries;
 	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::string> string_data;
 };
 
 struct CSVCMsg_VoiceInit
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> quality;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> quality;
 	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> codec;
-	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<int32_t> version;  // default 0
+	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::int32_t> version;  // default 0
 };
 
 struct CSVCMsg_VoiceData
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> client;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> client;
 	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<bool> proximity;
 	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<ks::proto::fixed64> xuid;
-	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<int32_t> audible_mask;
+	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::int32_t> audible_mask;
 	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<std::string> voice_data;
 	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<bool> caster;
 	[[= ks::proto::Pb{ 7 }]] ks::proto::opt<VoiceDataFormat_t> format;  // default VOICEDATA_FORMAT_ENGINE
-	[[= ks::proto::Pb{ 8 }]] ks::proto::opt<int32_t> sequence_bytes;
-	[[= ks::proto::Pb{ 9 }]] ks::proto::opt<uint32_t> section_number;
-	[[= ks::proto::Pb{ 10 }]] ks::proto::opt<uint32_t> uncompressed_sample_offset;
+	[[= ks::proto::Pb{ 8 }]] ks::proto::opt<std::int32_t> sequence_bytes;
+	[[= ks::proto::Pb{ 9 }]] ks::proto::opt<std::uint32_t> section_number;
+	[[= ks::proto::Pb{ 10 }]] ks::proto::opt<std::uint32_t> uncompressed_sample_offset;
 };
 
 struct CSVCMsg_FixAngle
@@ -403,42 +398,42 @@ struct CSVCMsg_CrosshairAngle
 
 struct CSVCMsg_Prefetch
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> sound_index;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> sound_index;
 };
 
 struct CSVCMsg_BSPDecal
 {
 	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<CMsgVector> pos;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> decal_texture_index;
-	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<int32_t> entity_index;
-	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<int32_t> model_index;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> decal_texture_index;
+	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::int32_t> entity_index;
+	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::int32_t> model_index;
 	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<bool> low_priority;
 };
 
 struct CSVCMsg_SplitScreen
 {
 	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<ESplitScreenMessageType> type;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> slot;
-	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<int32_t> player_index;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> slot;
+	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::int32_t> player_index;
 };
 
 struct CSVCMsg_GetCvarValue
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> cookie;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> cookie;
 	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> cvar_name;
 };
 
 struct CSVCMsg_Menu
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> dialog_type;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> dialog_type;
 	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> menu_key_values;
 };
 
 struct CSVCMsg_UserMessage
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> msg_type;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> msg_type;
 	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> msg_data;
-	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<int32_t> passthrough;
+	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::int32_t> passthrough;
 };
 
 struct CSVCMsg_PaintmapData
@@ -450,34 +445,34 @@ struct CSVCMsg_GameEvent
 {
 	struct key_t
 	{
-		[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> type;
+		[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> type;
 		[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> val_string;
 		[[= ks::proto::Pb{ 3 }]] ks::proto::opt<float> val_float;
-		[[= ks::proto::Pb{ 4 }]] ks::proto::opt<int32_t> val_long;
-		[[= ks::proto::Pb{ 5 }]] ks::proto::opt<int32_t> val_short;
-		[[= ks::proto::Pb{ 6 }]] ks::proto::opt<int32_t> val_byte;
+		[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::int32_t> val_long;
+		[[= ks::proto::Pb{ 5 }]] ks::proto::opt<std::int32_t> val_short;
+		[[= ks::proto::Pb{ 6 }]] ks::proto::opt<std::int32_t> val_byte;
 		[[= ks::proto::Pb{ 7 }]] ks::proto::opt<bool> val_bool;
-		[[= ks::proto::Pb{ 8 }]] ks::proto::opt<uint64_t> val_uint64;
+		[[= ks::proto::Pb{ 8 }]] ks::proto::opt<std::uint64_t> val_uint64;
 		[[= ks::proto::Pb{ 9 }]] ks::proto::opt<std::string> val_wstring;
 	};
 
 	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::string> event_name;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> eventid;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> eventid;
 	[[= ks::proto::Pb{ 3 }]] std::vector<CSVCMsg_GameEvent::key_t> keys;
-	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<int32_t> passthrough;
+	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::int32_t> passthrough;
 };
 
 struct CSVCMsg_GameEventList
 {
 	struct key_t
 	{
-		[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> type;
+		[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> type;
 		[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> name;
 	};
 
 	struct descriptor_t
 	{
-		[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> eventid;
+		[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> eventid;
 		[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::string> name;
 		[[= ks::proto::Pb{ 3 }]] std::vector<CSVCMsg_GameEventList::key_t> keys;
 	};
@@ -488,18 +483,18 @@ struct CSVCMsg_GameEventList
 struct CSVCMsg_TempEntities
 {
 	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<bool> reliable;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> num_entries;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> num_entries;
 	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::string> entity_data;
 };
 
 struct CSVCMsg_PacketEntities
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> max_entries;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> updated_entries;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> max_entries;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> updated_entries;
 	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<bool> is_delta;
 	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<bool> update_baseline;
-	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<int32_t> baseline;
-	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<int32_t> delta_from;
+	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<std::int32_t> baseline;
+	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<std::int32_t> delta_from;
 	[[= ks::proto::Pb{ 7 }]] ks::proto::opt<std::string> entity_data;
 };
 
@@ -510,18 +505,18 @@ struct CSVCMsg_Sounds
 		[[= ks::proto::Pb{ 1 }]] ks::proto::opt<ks::proto::sint32> origin_x;
 		[[= ks::proto::Pb{ 2 }]] ks::proto::opt<ks::proto::sint32> origin_y;
 		[[= ks::proto::Pb{ 3 }]] ks::proto::opt<ks::proto::sint32> origin_z;
-		[[= ks::proto::Pb{ 4 }]] ks::proto::opt<uint32_t> volume;
+		[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::uint32_t> volume;
 		[[= ks::proto::Pb{ 5 }]] ks::proto::opt<float> delay_value;
-		[[= ks::proto::Pb{ 6 }]] ks::proto::opt<int32_t> sequence_number;
-		[[= ks::proto::Pb{ 7 }]] ks::proto::opt<int32_t> entity_index;
-		[[= ks::proto::Pb{ 8 }]] ks::proto::opt<int32_t> channel;
-		[[= ks::proto::Pb{ 9 }]] ks::proto::opt<int32_t> pitch;
-		[[= ks::proto::Pb{ 10 }]] ks::proto::opt<int32_t> flags;
-		[[= ks::proto::Pb{ 11 }]] ks::proto::opt<uint32_t> sound_num;
+		[[= ks::proto::Pb{ 6 }]] ks::proto::opt<std::int32_t> sequence_number;
+		[[= ks::proto::Pb{ 7 }]] ks::proto::opt<std::int32_t> entity_index;
+		[[= ks::proto::Pb{ 8 }]] ks::proto::opt<std::int32_t> channel;
+		[[= ks::proto::Pb{ 9 }]] ks::proto::opt<std::int32_t> pitch;
+		[[= ks::proto::Pb{ 10 }]] ks::proto::opt<std::int32_t> flags;
+		[[= ks::proto::Pb{ 11 }]] ks::proto::opt<std::uint32_t> sound_num;
 		[[= ks::proto::Pb{ 12 }]] ks::proto::opt<ks::proto::fixed32> sound_num_handle;
-		[[= ks::proto::Pb{ 13 }]] ks::proto::opt<int32_t> speaker_entity;
-		[[= ks::proto::Pb{ 14 }]] ks::proto::opt<int32_t> random_seed;
-		[[= ks::proto::Pb{ 15 }]] ks::proto::opt<int32_t> sound_level;
+		[[= ks::proto::Pb{ 13 }]] ks::proto::opt<std::int32_t> speaker_entity;
+		[[= ks::proto::Pb{ 14 }]] ks::proto::opt<std::int32_t> random_seed;
+		[[= ks::proto::Pb{ 15 }]] ks::proto::opt<std::int32_t> sound_level;
 		[[= ks::proto::Pb{ 16 }]] ks::proto::opt<bool> is_sentence;
 		[[= ks::proto::Pb{ 17 }]] ks::proto::opt<bool> is_ambient;
 	};
@@ -532,8 +527,8 @@ struct CSVCMsg_Sounds
 
 struct CSVCMsg_EntityMsg
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> ent_index;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> class_id;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> ent_index;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> class_id;
 	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::string> ent_data;
 };
 
@@ -545,26 +540,26 @@ struct CSVCMsg_CmdKeyValues
 struct CSVCMsg_EncryptedData
 {
 	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::string> encrypted;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> key_type;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> key_type;
 };
 
 struct CSVCMsg_HltvReplay
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> delay;
-	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<int32_t> primary_target;
-	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<int32_t> replay_stop_at;
-	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<int32_t> replay_start_at;
-	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<int32_t> replay_slowdown_begin;
-	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<int32_t> replay_slowdown_end;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> delay;
+	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<std::int32_t> primary_target;
+	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<std::int32_t> replay_stop_at;
+	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::int32_t> replay_start_at;
+	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<std::int32_t> replay_slowdown_begin;
+	[[= ks::proto::Pb{ 6 }]] ks::proto::opt<std::int32_t> replay_slowdown_end;
 	[[= ks::proto::Pb{ 7 }]] ks::proto::opt<float> replay_slowdown_rate;
 };
 
 struct CCLCMsg_HltvReplay
 {
-	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<int32_t> request;
+	[[= ks::proto::Pb{ 1 }]] ks::proto::opt<std::int32_t> request;
 	[[= ks::proto::Pb{ 2 }]] ks::proto::opt<float> slowdown_length;
 	[[= ks::proto::Pb{ 3 }]] ks::proto::opt<float> slowdown_rate;
-	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<int32_t> primary_target_ent_index;
+	[[= ks::proto::Pb{ 4 }]] ks::proto::opt<std::int32_t> primary_target_ent_index;
 	[[= ks::proto::Pb{ 5 }]] ks::proto::opt<float> event_time;
 };
 
@@ -632,4 +627,3 @@ struct CSVCMsg_Broadcast_Command
 	X( CCLCMsg_HltvReplay ) \
 	X( CSVCMsg_Broadcast_Command )
 
-#endif // KS_NETMESSAGES_SCHEMA_H

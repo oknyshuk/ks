@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef CSGO_PLAYERANIMSTATE_H
-#define CSGO_PLAYERANIMSTATE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "iplayeranimstate.h"
 #include "studio.h"
@@ -35,7 +30,7 @@ enum animstate_layer_t
 	ANIMATION_LAYER_COUNT,
 };
 
-#define USE_ANIMLAYER_RAW_INDEX false
+inline constexpr auto USE_ANIMLAYER_RAW_INDEX = false;
 typedef const int* animlayerpreset;
 #define get_animlayerpreset( _n ) s_animLayerOrder ## _n
 #define REGISTER_ANIMLAYER_ORDER( _n ) static const int s_animLayerOrder ## _n [ANIMATION_LAYER_COUNT]
@@ -105,10 +100,10 @@ struct animstate_pose_param_cache_t
 	bool	Init( CCSPlayer* pPlayer, const char* szPoseParamName );
 };
 
-#define MAX_ANIMSTATE_ANIMNAME_CHARS 64
+inline constexpr auto MAX_ANIMSTATE_ANIMNAME_CHARS = 64;
 
-#define ANIM_TRANSITION_WALK_TO_RUN 0
-#define ANIM_TRANSITION_RUN_TO_WALK 1
+inline constexpr auto ANIM_TRANSITION_WALK_TO_RUN = 0;
+inline constexpr auto ANIM_TRANSITION_RUN_TO_WALK = 1;
 
 //these correlate to the CSWeaponType enum
 const char* const g_szWeaponPrefixLookupTable[] = {
@@ -436,6 +431,3 @@ private:
 };
 
 CCSGOPlayerAnimState *CreateCSGOPlayerAnimstate( CBaseAnimatingOverlay *pEntity );
-
-#endif // CSGO_PLAYERANIMSTATE_H
-

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 oknyshuk
+
 add_library(responserules_runtime STATIC
     rrrlib.cpp
     response_types.cpp

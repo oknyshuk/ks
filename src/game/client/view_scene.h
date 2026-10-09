@@ -1,20 +1,15 @@
-	//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef VIEW_SCENE_H
-#define VIEW_SCENE_H
-
-
-#include "convar.h"
+import std;
+import ks.tier1;
 #include "iviewrender.h"
 #include "view_shared.h"
 #include "rendertexture.h"
 #include "materialsystem/itexture.h"
-
+#include "cdll_client_int.h"
+#include "networkvar.h"
 
 extern ConVar mat_wireframe;
 extern ConVar building_cubemaps;
@@ -36,7 +31,7 @@ bool DrawingShadowDepthView( void );
 
 inline void UpdateRefractTexture( int x, int y, int w, int h, bool bForceUpdate = false )
 {
-	Assert( !DrawingShadowDepthView() );
+	contract_assert( !DrawingShadowDepthView() );
 
 	if ( !r_updaterefracttexture.GetBool() )
 		return;
@@ -59,7 +54,7 @@ inline void UpdateRefractTexture( int x, int y, int w, int h, bool bForceUpdate 
 
 inline void UpdateRefractTexture( bool bForceUpdate = false )
 {
-	Assert( !DrawingShadowDepthView() );
+	contract_assert( !DrawingShadowDepthView() );
 
 	CMatRenderContextPtr pRenderContext( materials );
 
@@ -132,7 +127,7 @@ inline void DrawScreenEffectMaterial( IMaterial *pMaterial, int x, int y, int w,
 //intended for use by dynamic meshes to naively update front buffer textures needed by a material
 inline void UpdateFrontBufferTexturesForMaterial( IMaterial *pMaterial, bool bForce = false )
 {
-	Assert( !DrawingShadowDepthView() );
+	contract_assert( !DrawingShadowDepthView() );
 
 	if( pMaterial->NeedsPowerOfTwoFrameBufferTexture() )
 	{
@@ -147,7 +142,7 @@ inline void UpdateFrontBufferTexturesForMaterial( IMaterial *pMaterial, bool bFo
 
 inline void UpdateScreenEffectTexture( void )
 {
-	Assert( !DrawingShadowDepthView() );
+	contract_assert( !DrawingShadowDepthView() );
 
 	const CViewSetup *pViewSetup = view->GetViewSetup();
 	UpdateScreenEffectTexture( 0, pViewSetup->x, pViewSetup->y, pViewSetup->width, pViewSetup->height);
@@ -157,5 +152,3 @@ inline void UpdateScreenEffectTexture( void )
 void ResetToneMapping(float value);
 
 void UpdateFullScreenDepthTexture( void );
-
-#endif // VIEW_SCENE_H

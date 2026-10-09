@@ -1,13 +1,10 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
-
-#ifndef VERTEXSHADERDX8_H
-#define VERTEXSHADERDX8_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "shaderapi/ishaderapi.h"
 #include "datacache/idatacache.h"
 #include "locald3dtypes.h"
-
 
 // uncomment to get dynamic compilation for HLSL shaders
 // **IMPORTANT**: if you are trying to use DYNAMIC_SHADER_COMPILE in a RELEASE build, you *must* modify the .vpc file to re-enable the /FC compiler option, otherwise the __FILE__ macro won't work properly in
@@ -39,12 +36,10 @@
 // uncomment to get disassembled (asm) shader code in your game dir as *.asm
 //#define WRITE_ASSEMBLY
 
-
-
 //-----------------------------------------------------------------------------
 // Vertex + pixel shader manager
 //-----------------------------------------------------------------------------
-abstract_class IShaderManager
+class IShaderManager
 {
 protected:
 
@@ -58,7 +53,7 @@ public:
 	virtual void Shutdown() = 0;
 
 	// Compiles vertex shaders
-	virtual IShaderBuffer *CompileShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion ) = 0;
+	virtual IShaderBuffer *CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion ) = 0;
 
 	// New version of these methods	[dx10 port]
 	virtual VertexShaderHandle_t CreateVertexShader( IShaderBuffer* pShaderBuffer ) = 0;
@@ -71,8 +66,8 @@ public:
 	virtual PixelShader_t CreatePixelShader( const char *pPixelShaderFile, int nStaticPshIndex = 0, char *debugLabel = nullptr ) = 0;
 
 	// Sets which dynamic version of the vertex + pixel shader to use
-	FORCEINLINE void SetVertexShaderIndex( int vshIndex );
-	FORCEINLINE void SetPixelShaderIndex( int pshIndex );
+	[[gnu::always_inline]] inline void SetVertexShaderIndex( int vshIndex );
+	[[gnu::always_inline]] inline void SetPixelShaderIndex( int pshIndex );
 
 	// Sets the vertex + pixel shader render state
 	virtual void SetVertexShader( VertexShader_t shader ) = 0;
@@ -111,16 +106,14 @@ public:
 // Methods related to setting vertex + pixel shader state
 //
 //-----------------------------------------------------------------------------
-FORCEINLINE void IShaderManager::SetVertexShaderIndex( int vshIndex )
+[[gnu::always_inline]] inline void IShaderManager::SetVertexShaderIndex( int vshIndex )
 {
 	m_nVertexShaderIndex = vshIndex;
 }
 
-FORCEINLINE void IShaderManager::SetPixelShaderIndex( int pshIndex )
+[[gnu::always_inline]] inline void IShaderManager::SetPixelShaderIndex( int pshIndex )
 {
 	m_nPixelShaderIndex = pshIndex;
 }
 
 extern void DestroyAllVertexAndPixelShaders( void );
-
-#endif // VERTEXSHADERDX8_H

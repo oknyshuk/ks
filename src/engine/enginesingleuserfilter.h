@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ENGINESINGLEUSERFILTER_H
-#define ENGINESINGLEUSERFILTER_H
-
+import ks.tier1;
 #include "irecipientfilter.h"
-#include <bitset>
-#include "utlvector.h"
+import std;
+#include "const.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -89,5 +84,3 @@ private:
 	int				m_nClientIndex;
 	bool			m_bReliable;
 };
-
-#endif // ENGINESINGLEUSERFILTER_H

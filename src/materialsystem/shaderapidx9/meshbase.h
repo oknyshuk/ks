@@ -1,19 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef MESHBASE_H
-#define MESHBASE_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
-
 
 struct VertexStreamSpec_t;
 
@@ -21,7 +11,7 @@ struct VertexStreamSpec_t;
 //-----------------------------------------------------------------------------
 // Base vertex buffer
 //-----------------------------------------------------------------------------
-abstract_class CVertexBufferBase : public IVertexBuffer
+class CVertexBufferBase : public IVertexBuffer
 {
 	// Methods of IVertexBuffer
 public:
@@ -50,7 +40,7 @@ protected:
 //-----------------------------------------------------------------------------
 // Base index buffer
 //-----------------------------------------------------------------------------
-abstract_class CIndexBufferBase : public IIndexBuffer
+class CIndexBufferBase : public IIndexBuffer
 {
 	// Methods of IIndexBuffer
 public:
@@ -98,11 +88,7 @@ public:
 	virtual bool IsUsingVertexID() const = 0;
 
 	// Is it using tessellation for higher-order surfaces?
-#if ENABLE_TESSELLATION
-	virtual TessellationMode_t GetTessellationType() const = 0;
-#else
 	TessellationMode_t GetTessellationType() const { return TESSELLATION_MODE_DISABLED; }
-#endif
 
 	// Are vertex data streams specified in a custom manner?
 	virtual VertexStreamSpec_t *GetVertexStreamSpec() const = 0;
@@ -133,7 +119,7 @@ inline int ComputeVertexDesc( unsigned char * pBuffer, VertexFormat_t vertexForm
 	int i;
 	int *pVertexSizesToSet[64];
 	int nVertexSizesToSet = 0;
-	static ALIGN32 ModelVertexDX8_t temp[4];
+	static ModelVertexDX8_t temp[4];
 	float *dummyData = (float*)&temp; // should be larger than any CMeshBuilder command can set.
 
 	// Determine which vertex compression type this format specifies (affects element sizes/decls):
@@ -150,7 +136,7 @@ inline int ComputeVertexDesc( unsigned char * pBuffer, VertexFormat_t vertexForm
 	// vertex structure to optimize performance
 	int offset = 0;
 	// NOTE: At the moment, we assume that if you specify wrinkle, you also specify position
-	Assert( ( ( vertexFormat & VERTEX_WRINKLE ) == 0 ) || ( ( vertexFormat & VERTEX_POSITION ) != 0 ) );
+	contract_assert( ( ( vertexFormat & VERTEX_WRINKLE ) == 0 ) || ( ( vertexFormat & VERTEX_POSITION ) != 0 ) );
 	if ( vertexFormat & VERTEX_POSITION )
 	{
 		if ( !bSizeOnly )
@@ -188,10 +174,10 @@ inline int ComputeVertexDesc( unsigned char * pBuffer, VertexFormat_t vertexForm
 	}
 
 	// Bone weights/matrix indices
-	Assert( ( nNumBoneWeights == 2 ) || ( nNumBoneWeights == 0 ) );
+	contract_assert( ( nNumBoneWeights == 2 ) || ( nNumBoneWeights == 0 ) );
 
 	// We assume that if you have any indices/weights, you have exactly two of them
-	Assert( ( ( nNumBoneWeights == 2 ) && ( ( vertexFormat & VERTEX_BONE_INDEX ) != 0 ) ) ||
+	contract_assert( ( ( nNumBoneWeights == 2 ) && ( ( vertexFormat & VERTEX_BONE_INDEX ) != 0 ) ) ||
 		( ( nNumBoneWeights == 0 ) && ( ( vertexFormat & VERTEX_BONE_INDEX ) == 0 ) ) );
 
 	if ( ( vertexFormat & VERTEX_BONE_INDEX ) != 0 )
@@ -199,7 +185,7 @@ inline int ComputeVertexDesc( unsigned char * pBuffer, VertexFormat_t vertexForm
 		if ( nNumBoneWeights > 0 )
 		{
 			// Always exactly two weights
-			Assert( nNumBoneWeights == 2 );
+			contract_assert( nNumBoneWeights == 2 );
 			if ( !bSizeOnly )
 			{
 				desc.m_pBoneWeight = reinterpret_cast<float*>(pBuffer + offset);
@@ -373,7 +359,7 @@ inline int ComputeVertexDesc( unsigned char * pBuffer, VertexFormat_t vertexForm
 	if ( !bSizeOnly )
 	{
 		// Now set the m_VertexSize for all the members that were actually valid.
-		Assert( nVertexSizesToSet < sizeof(pVertexSizesToSet)/sizeof(pVertexSizesToSet[0]) );
+		contract_assert( nVertexSizesToSet < sizeof(pVertexSizesToSet)/sizeof(pVertexSizesToSet[0]) );
 		for ( int iElement=0; iElement < nVertexSizesToSet; iElement++ )
 		{
 			*pVertexSizesToSet[iElement] = offset;
@@ -382,5 +368,3 @@ inline int ComputeVertexDesc( unsigned char * pBuffer, VertexFormat_t vertexForm
 
 	return offset;
 }
-
-#endif // MESHBASE_H

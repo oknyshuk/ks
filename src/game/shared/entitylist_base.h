@@ -1,17 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef ENTITYLIST_BASE_H
-#define ENTITYLIST_BASE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "const.h"
+#include "string_t.h"
 #include "basehandle.h"
 #include "ihandleentity.h"
-
 
 class CEntInfo
 {
@@ -121,15 +115,15 @@ private:
 
 inline int CBaseEntityList::GetEntInfoIndex( const CEntInfo *pEntInfo ) const
 {
-	Assert( pEntInfo );
+	contract_assert( pEntInfo );
 	int index = (int)(pEntInfo - m_EntPtrArray);
-	Assert( index >= 0 && index < NUM_ENT_ENTRIES );
+	contract_assert( index >= 0 && index < NUM_ENT_ENTRIES );
 	return index;
 }
 
 inline CBaseHandle CBaseEntityList::GetNetworkableHandle( int iEntity ) const
 {
-	Assert( iEntity >= 0 && iEntity < MAX_EDICTS );
+	contract_assert( iEntity >= 0 && iEntity < MAX_EDICTS );
 	if ( m_EntPtrArray[iEntity].m_pEntity )
 		return CBaseHandle( iEntity, m_EntPtrArray[iEntity].m_SerialNumber );
 	else
@@ -165,7 +159,7 @@ inline IHandleEntity* CBaseEntityList::LookupEntityByNetworkIndex( int edictInde
 	if ( edictIndex < 0 )
 		return nullptr;
 
-	Assert( edictIndex < NUM_ENT_ENTRIES );
+	contract_assert( edictIndex < NUM_ENT_ENTRIES );
 	return m_EntPtrArray[edictIndex].m_pEntity;
 }
 
@@ -223,5 +217,3 @@ inline void CBaseEntityList::ForceEntSerialNumber( int iEntIndex, int iSerialNum
 }
 
 extern CBaseEntityList *g_pEntityList;
-
-#endif // ENTITYLIST_BASE_H

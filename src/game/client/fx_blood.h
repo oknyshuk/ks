@@ -1,11 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef FX_BLOOD_H
-#define FX_BLOOD_H
+
+#include "particles_simple.h"
 
 class CBloodSprayEmitter : public CSimpleEmitter
 {
@@ -65,5 +63,3 @@ private:
 
 	CBloodSprayEmitter( const CBloodSprayEmitter & );
 };
-
-#endif // FX_BLOOD_H

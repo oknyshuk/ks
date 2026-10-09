@@ -1,12 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Defines the tasks for default AI.
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_TASK_H
-#define AI_TASK_H
+import ks.core;
+
+// Purpose: Defines the tasks for default AI.
 
 class CStringRegistry;
 
@@ -501,5 +499,3 @@ enum sharedtasks_e
 		LAST_SHARED_TASK
 
 };
-
-#endif // AI_TASK_H

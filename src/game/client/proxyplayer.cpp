@@ -1,12 +1,21 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <keyvalues.h>
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/itexture.h"
@@ -16,7 +25,6 @@
 #include "weapon_csbase.h"
 #include "predicted_viewmodel.h"
 #include "cs_client_gamestats.h"
-#include "cstrike15_gcconstants.h"
 
 #include "imaterialproxydict.h"
 
@@ -57,7 +65,7 @@ void CPlayerProximityProxy::OnBind( void *pC_BaseEntity )
 	Vector delta;
 	VectorSubtract( pEntity->WorldSpaceCenter(), pPlayer->WorldSpaceCenter(), delta );
 
-	Assert( m_pResult );
+	contract_assert( m_pResult );
 	SetFloatResult( delta.Length() * m_Factor );
 }
 
@@ -96,7 +104,7 @@ void CPlayerTeamMatchProxy::OnBind( void *pC_BaseEntity )
 	if (!pPlayer)
 		return;
 
-	Assert( m_pResult );
+	contract_assert( m_pResult );
 	SetFloatResult( (pEntity->GetTeamNumber() == pPlayer->GetTeamNumber()) ? 1.0 : 0.0 );
 }
 
@@ -143,7 +151,7 @@ void CPlayerViewProxy::OnBind( void *pC_BaseEntity )
 	Vector forward;
 	AngleVectors( pPlayer->GetAbsAngles(), &forward );
 
-	Assert( m_pResult );
+	contract_assert( m_pResult );
 	SetFloatResult( DotProduct( forward, delta ) * m_Factor );
 }
 
@@ -179,7 +187,7 @@ void CPlayerSpeedProxy::OnBind( void *pC_BaseEntity )
 	if (!pPlayer)
 		return;
 
-	Assert( m_pResult );
+	contract_assert( m_pResult );
 	SetFloatResult( pPlayer->GetLocalVelocity().Length() * m_Factor );
 }
 
@@ -216,7 +224,7 @@ void CPlayerPositionProxy::OnBind( void *pC_BaseEntity )
 		return;
 
 	// This is actually a vector...
-	Assert( m_pResult );
+	contract_assert( m_pResult );
 	Vector res;
 	VectorMultiply( pPlayer->WorldSpaceCenter(), m_Factor, res ); 
 	m_pResult->SetVecValue( res.Base(), 3 );
@@ -243,7 +251,7 @@ void CEntitySpeedProxy::OnBind( void *pC_BaseEntity )
 	// Find the view angle between the player and this entity....
 	C_BaseEntity *pEntity = BindArgToEntity( pC_BaseEntity );
 
-	Assert( m_pResult );
+	contract_assert( m_pResult );
 	m_pResult->SetFloatValue( pEntity->GetLocalVelocity().Length() );
 }
 
@@ -283,7 +291,7 @@ void CEntityRandomProxy::OnBind( void *pC_BaseEntity )
 	// Find the view angle between the player and this entity....
 	C_BaseEntity *pEntity = BindArgToEntity( pC_BaseEntity );
 
-	Assert( m_pResult );
+	contract_assert( m_pResult );
 	m_pResult->SetFloatValue( pEntity->ProxyRandomValue() * m_Factor.GetFloat() );
 }
 
@@ -364,7 +372,7 @@ void CStatTrakDigitProxy::OnBind( void *pC_BaseEntity )
 	bool bHasScoreToDisplay = HelperOnBindGetStatTrakScore( pC_BaseEntity, &nKillEaterAltScore );
 	if ( !bHasScoreToDisplay )
 	{	// Force flashing numbers
-		SetFloatResult( (int) fmod( gpGlobals->curtime, 10.0f ) );
+		SetFloatResult( (int) std::fmod( gpGlobals->curtime, 10.0f ) );
 		return;
 	}
 
@@ -373,7 +381,7 @@ void CStatTrakDigitProxy::OnBind( void *pC_BaseEntity )
 	// trim preceding zeros
 	if ( m_flTrimZeros.GetFloat() > 0 )
 	{
-		if ( pow( 10.0f, iDesiredDigit ) > nKillEaterAltScore )
+		if ( std::pow( 10.0f, iDesiredDigit ) > nKillEaterAltScore )
 		{
 			SetFloatResult( 10.0f ); //assumed blank frame
 			return;
@@ -400,7 +408,7 @@ EXPOSE_MATERIAL_PROXY( CStatTrakDigitProxy, StatTrakDigit );
 class CStatTrakDigitProxyForModelWeaponPreviewPanel : public CStatTrakDigitProxy
 {
 public:
-	virtual bool HelperOnBindGetStatTrakScore( void *pC_BaseEntity, int *puiScore ) OVERRIDE
+	virtual bool HelperOnBindGetStatTrakScore( void *pC_BaseEntity, int *puiScore ) override
 	{
 		/* Removed for partner depot */
 		return false;
@@ -604,7 +612,7 @@ void CWeaponLabelTextProxy::OnBind( void *pC_BaseEntity )
 		nCharIndex = p_szLabel[nDigit] - 32;
 	}
 
-	int nIndexHoriz = fmod( nCharIndex, 12.0f );
+	int nIndexHoriz = std::fmod( nCharIndex, 12.0f );
 	int nIndexVertical = nCharIndex / 12;
 
 	float flOffsetX = 0.083333f * nIndexHoriz;
@@ -796,9 +804,8 @@ bool CEconInspectPreviewTimeProxy::Init( IMaterial *pMaterial, KeyValues *pKeyVa
 
 void CEconInspectPreviewTimeProxy::OnBind( void *pC_BaseEntity )
 {
-	Assert( m_pResult );
+	contract_assert( m_pResult );
 	SetFloatResult( gpGlobals->curtime - g_flEconInspectPreviewTime );
 }
 
 EXPOSE_MATERIAL_PROXY( CEconInspectPreviewTimeProxy, EconInspectPreviewTime );
-

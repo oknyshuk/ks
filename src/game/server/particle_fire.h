@@ -1,19 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef PARTICLE_FIRE_H
-#define PARTICLE_FIRE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "baseparticleentity.h"
-
 
 class [[= ks::reflect::NetTable{ .name = "DT_ParticleFire", .base = false } ]]
       CParticleFire : public CBaseParticleEntity
@@ -30,9 +21,3 @@ public:
 	CNetworkVector( m_vOrigin, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_COORD, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVector( m_vDirection, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 };
-
-
-#endif
-
-
-

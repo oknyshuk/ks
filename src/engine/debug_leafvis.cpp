@@ -1,11 +1,26 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#include "render_pch.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+import std;
+#include "gl_model.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
+#include "view.h"
+#include "worldsize.h"
+#include "sysexternal.h"
 
 #include "r_areaportal.h"
 #include "coordsize.h"
@@ -30,7 +45,7 @@ struct leafvis_t
 {
 	leafvis_t()
 	{
-		memset( &m_Colors, 0, sizeof( m_Colors ) );
+		std::memset( &m_Colors, 0, sizeof( m_Colors ) );
 		leafIndex = 0;
 		CCollisionBSPData *pBSP = GetCollisionBSPData();
 		if ( pBSP )
@@ -255,7 +270,7 @@ void LeafVisBuild( const Vector &p )
 {
 	if ( !mat_leafvis.GetInt() )
 	{
-		Assert( !g_LeafVis );
+		contract_assert( !g_LeafVis );
 		return;
 	}
 	else

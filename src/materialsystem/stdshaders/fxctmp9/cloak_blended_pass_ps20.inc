@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -15,7 +16,7 @@ private:
 public:
 	void SetBUMPMAP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBUMPMAP = i;
 #ifdef _DEBUG
 		m_bBUMPMAP = true;
@@ -23,7 +24,7 @@ public:
 	}
 	void SetBUMPMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBUMPMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBUMPMAP = true;
@@ -44,7 +45,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bBUMPMAP;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nBUMPMAP ) + 0;
 	}
@@ -66,7 +67,7 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_cloak_blended_pass_ps20 0
+inline constexpr int shaderDynamicTest_cloak_blended_pass_ps20 = 0;
 
 static const ShaderComboInformation_t s_StaticComboArray_cloak_blended_pass_ps20[1] = 
 {
@@ -74,7 +75,7 @@ static const ShaderComboInformation_t s_StaticComboArray_cloak_blended_pass_ps20
 };
 static const ShaderComboSemantics_t cloak_blended_pass_ps20_combos =
 {
-	"cloak_blended_pass_ps20", NULL, 0, s_StaticComboArray_cloak_blended_pass_ps20, 1 
+	"cloak_blended_pass_ps20", nullptr, 0, s_StaticComboArray_cloak_blended_pass_ps20, 1 
 };
 
 class ConstructMe_cloak_blended_pass_ps20

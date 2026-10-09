@@ -1,18 +1,8 @@
-//====== Copyright c 1996-2007, Valve Corporation, All rights reserved. =======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include <bitset>
-#include "tier0/dbg.h"
-#include "tier0/platform.h"
-#include "mathlib/mathlib.h"
-#include "tier0/tslist.h"
-#include "tier1/map_ops.h"
-#include "tier1/convar.h"
+import std;
+import ks.tier1;
 
 #include "bone_setup.h"
 
@@ -94,7 +84,7 @@ public:
 
 	struct InfoText
 	{
-		InfoText() { memset( this, 0, sizeof( *this ) ); }
+		InfoText() { std::memset( this, 0, sizeof( *this ) ); }
 
 		// Flags
 		uint32 m_uiFlags;
@@ -368,14 +358,14 @@ void CPoseDebuggerImpl::ShowAllModels( bool bShow )
 
 void CPoseDebuggerImpl::ShowModel( int iEntNum, bool bShow )
 {
-	Assert( iEntNum < MAX_EDICTS );
+	contract_assert( iEntNum < MAX_EDICTS );
 	if ( iEntNum < MAX_EDICTS )
 		m_uiMaskShowModels.set( iEntNum, bShow );
 }
 
 bool CPoseDebuggerImpl::IsModelShown( int iEntNum ) const
 {
-	Assert( iEntNum < MAX_EDICTS );
+	contract_assert( iEntNum < MAX_EDICTS );
 	if ( iEntNum >= 0 && iEntNum < MAX_EDICTS )
 		return m_uiMaskShowModels[iEntNum];
 	else
@@ -390,7 +380,7 @@ void CPoseDebuggerImpl::StartBlending( IClientNetworkable *pEntity, const CStudi
 
 	if ( !ThreadInMainThread() )
 	{
-		ExecuteOnce( "Turn of threading when using pose debugger\n" );
+		ExecuteOnce( [&]{ "Turn of threading when using pose debugger\n"; } );
 		return;
 	}
 
@@ -510,8 +500,8 @@ void CPoseDebuggerImpl::AccumulatePose( const CStudioHdr *pStudioHdr, CIKContext
 	int numLines = 0;
 	
 	txt.m_iActivity = seqdesc.activity;
-	Q_snprintf( txt.m_chActivity, ARRAYSIZE( txt.m_chActivity ), "%s", seqdesc.pszActivityName() );
-	Q_snprintf( txt.m_chLabel, ARRAYSIZE( txt.m_chLabel ), "%s", seqdesc.pszLabel() );
+	V_snprintf( txt.m_chActivity, std::size( txt.m_chActivity ), "%s", seqdesc.pszActivityName() );
+	V_snprintf( txt.m_chLabel, std::size( txt.m_chLabel ), "%s", seqdesc.pszLabel() );
 
 	if ( !txt.m_chActivity[0] )
 	{
@@ -522,7 +512,7 @@ void CPoseDebuggerImpl::AccumulatePose( const CStudioHdr *pStudioHdr, CIKContext
 			if ( lastSeenTxt.m_uiFlags & ModelPoseDebugInfo::F_SEEN_THIS_FRAME &&
 				 lastSeenTxt.m_chActivity[0] )
 			{
-				Q_snprintf( txt.m_chActivity, ARRAYSIZE( txt.m_chActivity ), "%s", lastSeenTxt.m_chActivity );
+				V_snprintf( txt.m_chActivity, std::size( txt.m_chActivity ), "%s", lastSeenTxt.m_chActivity );
 				break;
 			}
 		}
@@ -530,8 +520,8 @@ void CPoseDebuggerImpl::AccumulatePose( const CStudioHdr *pStudioHdr, CIKContext
 
 	// The layer information
 	ModelPoseDebugInfo::InfoText *pOldTxt = pMpiOld ? pMpiOld->LookupInfoText( &txt ) : nullptr;
-	Q_snprintf( txt.m_chTextLines[numLines],
-		ARRAYSIZE( txt.m_chTextLines[numLines] ),
+	V_snprintf( txt.m_chTextLines[numLines],
+		std::size( txt.m_chTextLines[numLines] ),
 		"%-*s  %-*s  %*.2f  %*.1f/%-*d  %*.0f%% ",
 		widthActivity,
 		seqdesc.pszActivityName(),
@@ -550,8 +540,8 @@ void CPoseDebuggerImpl::AccumulatePose( const CStudioHdr *pStudioHdr, CIKContext
 
 	if ( seqdesc.numiklocks )
 	{
-		Q_snprintf( chBuffer,
-			ARRAYSIZE( chBuffer ),
+		V_snprintf( chBuffer,
+			std::size( chBuffer ),
 			"iklocks : %-2d : ",
 			seqdesc.numiklocks );
 
@@ -560,13 +550,13 @@ void CPoseDebuggerImpl::AccumulatePose( const CStudioHdr *pStudioHdr, CIKContext
 			mstudioiklock_t *plock = seqdesc.pIKLock( k );
 			mstudioikchain_t *pchain = pStudioHdr->pIKChain( plock->chain );
 
-			Q_snprintf( chBuffer + strlen( chBuffer ), ARRAYSIZE( chBuffer ) - strlen( chBuffer ), "%s ", pchain->pszName() );
+			V_snprintf( chBuffer + std::strlen( chBuffer ), std::size( chBuffer ) - strlen( chBuffer ), "%s ", pchain->pszName() );
 			// plock->flPosWeight;
 			// plock->flLocalQWeight;
 		}
 
-		Q_snprintf( txt.m_chTextLines[numLines],
-			ARRAYSIZE( txt.m_chTextLines[numLines] ),
+		V_snprintf( txt.m_chTextLines[numLines],
+			std::size( txt.m_chTextLines[numLines] ),
 			"%-*s",
 			widthIks,
 			chBuffer
@@ -576,11 +566,11 @@ void CPoseDebuggerImpl::AccumulatePose( const CStudioHdr *pStudioHdr, CIKContext
 
 	if ( seqdesc.numikrules )
 	{
-		Q_snprintf( chBuffer, ARRAYSIZE( chBuffer ), "ikrules : %-2d",
+		V_snprintf( chBuffer, std::size( chBuffer ), "ikrules : %-2d",
 			seqdesc.numikrules );
 
-		Q_snprintf( txt.m_chTextLines[numLines],
-			ARRAYSIZE( txt.m_chTextLines[numLines] ),
+		V_snprintf( txt.m_chTextLines[numLines],
+			std::size( txt.m_chTextLines[numLines] ),
 			"%-*s",
 			widthIks,
 			chBuffer

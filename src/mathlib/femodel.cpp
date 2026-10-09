@@ -1,21 +1,19 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-// 
-// Quat-dominant finite element mesh simulation, a distillation of experiments made in femodel-v0
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+// Purpose: Quat-dominant finite element mesh simulation, a distillation of experiments made in femodel-v0
 // Multigrid didn't work as well as advertised, so I dropped it - this is a single-level solver without hierarchy
-// CG works really well, but is not very stable due to linearization issues, so it may make it here eventually as an auxiliary pass 
+// CG works really well, but is not very stable due to linearization issues, so it may make it here eventually as an auxiliary pass
 // Warmstarting works well, but doesn't offer any advantages in extreme cases (it can even add energy sometimes), so I don't see it as high value add-on
 // The latest simple axial bend model ( distribute parallel impulses across 4 vertices of 2 adjacent triangles, precompute proportions) worked very well
 // 2D LSq shape matching for triangles worked really well, too.
-// So I found an fast approximate solution to Wahba's problem, which allows me to quickly shape-match 
+// So I found an fast approximate solution to Wahba's problem, which allows me to quickly shape-match
 // more than 3 vertices, with different masses. 2D LSq is still used for 2-vert-constrained elements
-//
-#include "mathlib/femodel.h"
-#include "mathlib/cholesky.h"
-#include "mathlib/ssecholesky.h"
-#include "tier0/microprofiler.h"
-#include "mathlib/svd.h"
-#include "mathlib/femodel.inl"
 
+import ks.math;
+#include "mathlib/femodel.h"
+import std;
+#include "mathlib/femodel.inl"
 
 const fltx4 Four_SinCosRotation2DMinWeights = { 1e-14f, 1e-14f, 1e-14f, 1e-14f };
 
@@ -128,7 +126,7 @@ void CFeModel::RelaxSimdRods( fltx4 *pPos, float flStiffness, float flModelScale
 	for ( uint i = 0; i < m_nSimdRodCount; ++i )
 	{
 		const FeSimdRodConstraint_t &c = m_pSimdRods[ i ];
-		AssertDbg( c.nNode[ 0 ][ 0 ] < m_nNodeCount && c.nNode[ 1 ][ 0 ] < m_nNodeCount && c.nNode[ 0 ][ 1 ] < m_nNodeCount && c.nNode[ 1 ][ 1 ] < m_nNodeCount &&  c.nNode[ 0 ][ 2 ] < m_nNodeCount && c.nNode[ 1 ][ 2 ] < m_nNodeCount && c.nNode[ 0 ][ 3 ] < m_nNodeCount && c.nNode[ 1 ][ 3 ] < m_nNodeCount );
+		contract_assert( c.nNode[ 0 ][ 0 ] < m_nNodeCount && c.nNode[ 1 ][ 0 ] < m_nNodeCount && c.nNode[ 0 ][ 1 ] < m_nNodeCount && c.nNode[ 1 ][ 1 ] < m_nNodeCount &&  c.nNode[ 0 ][ 2 ] < m_nNodeCount && c.nNode[ 1 ][ 2 ] < m_nNodeCount && c.nNode[ 0 ][ 3 ] < m_nNodeCount && c.nNode[ 1 ][ 3 ] < m_nNodeCount );
 		FourVectors a, b;
 		LOAD_NODES( a, c.nNode[ 0 ] );
 		LOAD_NODES( b, c.nNode[ 1 ] );
@@ -147,7 +145,7 @@ void CFeModel::RelaxSimdRods( fltx4 *pPos, float flStiffness, float flModelScale
 		a -= vDelta * c.f4Weight0;
 		b += vDelta * ( Four_Ones - c.f4Weight0 );
 
-		AssertDbg( IsAllGreaterThan( Four_MaxWorldSize, a.Length( ) + b.Length( ) ) );
+		contract_assert( IsAllGreaterThan( Four_MaxWorldSize, a.Length( ) + b.Length( ) ) );
 
 		SAVE_NODES( a, c.nNode[ 0 ] );
 		SAVE_NODES( b, c.nNode[ 1 ] );
@@ -163,7 +161,7 @@ void CFeModel::RelaxSimdRodsFtl( fltx4 *pPos, float flStiffness, float flModelSc
 	for ( uint i = 0; i < m_nSimdRodCount; ++i )
 	{
 		const FeSimdRodConstraint_t &c = m_pSimdRods[ i ];
-		AssertDbg( c.nNode[ 0 ][ 0 ] < m_nNodeCount && c.nNode[ 1 ][ 0 ] < m_nNodeCount && c.nNode[ 0 ][ 1 ] < m_nNodeCount && c.nNode[ 1 ][ 1 ] < m_nNodeCount &&  c.nNode[ 0 ][ 2 ] < m_nNodeCount && c.nNode[ 1 ][ 2 ] < m_nNodeCount && c.nNode[ 0 ][ 3 ] < m_nNodeCount && c.nNode[ 1 ][ 3 ] < m_nNodeCount );
+		contract_assert( c.nNode[ 0 ][ 0 ] < m_nNodeCount && c.nNode[ 1 ][ 0 ] < m_nNodeCount && c.nNode[ 0 ][ 1 ] < m_nNodeCount && c.nNode[ 1 ][ 1 ] < m_nNodeCount &&  c.nNode[ 0 ][ 2 ] < m_nNodeCount && c.nNode[ 1 ][ 2 ] < m_nNodeCount && c.nNode[ 0 ][ 3 ] < m_nNodeCount && c.nNode[ 1 ][ 3 ] < m_nNodeCount );
 		FourVectors a, b;
 		LOAD_NODES( a, c.nNode[ 0 ] );
 		LOAD_NODES( b, c.nNode[ 1 ] );
@@ -181,7 +179,7 @@ void CFeModel::RelaxSimdRodsFtl( fltx4 *pPos, float flStiffness, float flModelSc
 		FourVectors vDelta = vDist * ( c.f4RelaxationFactor * ( f4ReqDist * f4DistRcp - Four_Ones ) );
 		b += vDelta;
 
-		AssertDbg( IsAllGreaterThan( Four_MaxWorldSize, a.Length( ) + b.Length( ) ) );
+		contract_assert( IsAllGreaterThan( Four_MaxWorldSize, a.Length( ) + b.Length( ) ) );
 
 		SAVE_NODES( b, c.nNode[ 1 ] );
 	}
@@ -328,7 +326,7 @@ float CFeModel::RelaxTri2( float flStiffness, float flModelScale, const FeTri_t 
 
 
 
-FORCEINLINE float CrossProductZ( float v1x, float v1y, float v2x, float v2y )
+[[gnu::always_inline]] inline float CrossProductZ( float v1x, float v1y, float v2x, float v2y )
 {
 	return v1x * v2y - v1y * v2x;
 }
@@ -370,26 +368,6 @@ float CFeModel::RelaxTri0( float flStiffness, float flModelScale, const FeTri_t 
 		tri.w2 * CrossProductZ( r2, x2 ) - tri.w1 * CrossProductZ( r1x, r0neg.y, x1x, x0neg.y ) + w0 * CrossProductZ( r0neg, x0neg )
 	);
 
-#ifdef _DEBUG
-	Vector2D x0 = -x0neg, x1 = Vector2D( basis.v1x, 0 ) + x0;
-	Vector2D r0 = -r0neg, r1 = Vector2D( tri_v1x, 0 ) + r0;
-
-	CSinCosRotation2D rotation2(
-		tri.w2 * DotProduct2D( x2, r2 ) + tri.w1 * DotProduct2D( x1, r1 ) + w0 * DotProduct2D( x0, r0 ),
-		tri.w2 * CrossProductZ( r2, x2 ) + tri.w1 * CrossProductZ( r1, x1 ) + w0 * CrossProductZ( r0, x0 )
-		);
-
-	Assert( Diff( rotation, rotation2 ) < 1e-4f );
-
-	Vector2D y0 = rotation * r0, y1 = rotation * r1, y2 = rotation * r2;
-
-	CSinCosRotation2D rotation3(
-		tri.w2 * DotProduct2D( y2, x2 ) + tri.w1 * DotProduct2D( y1, x1 ) + w0 * DotProduct2D( y0, x0 ),
-		tri.w2 * CrossProductZ( y2, x2 ) + tri.w1 * CrossProductZ( y1, x1 ) + w0 * CrossProductZ( y0, x0 )
-		);
-	Assert( fabsf( rotation3.m_flSin ) < 1e-5f );
-
-#endif
 
 	Vector2D dX0 = x0neg - rotation * r0neg;
 
@@ -478,9 +456,6 @@ float CFeModel::RelaxQuad0( float flStiffness, float flModelScale, const FeQuad_
 // 	for ( int i = 0; i < 3; ++i )
 	{
 
-#ifdef _DEBUG
-		Vector q[ 4 ] = { basis.WorldToLocal( x[ 0 ] ), basis.WorldToLocal( x[ 1 ] ), basis.WorldToLocal( x[ 2 ] ), basis.WorldToLocal( x[ 3 ] ) }; NOTE_UNUSED( q );
-#endif
 
 		// refer to wahba.nb
 		Vector rhs = - ( m[ 0 ] * CrossProduct( x[ 0 ], r[ 0 ] ) + m[ 1 ] * CrossProduct( x[ 1 ], r[ 1 ] ) + m[ 2 ] * CrossProduct( x[ 2 ], r[ 2 ] ) + m[ 3 ] * CrossProduct( x[ 3 ], r[ 3 ] ) ); // ~27 flops
@@ -496,9 +471,6 @@ float CFeModel::RelaxQuad0( float flStiffness, float flModelScale, const FeQuad_
 		CSinCosRotation rotation( chol.Solve( rhs ) );  // ~20 flops to solve and init rotation
 		// yay! we computed omega (sin), apply it..
 		r[ 0 ] = rotation * r[ 0 ]; r[ 1 ] = rotation * r[ 1 ]; r[ 2 ] = rotation * r[ 2 ]; r[ 3 ] = rotation * r[ 3 ];
-#ifdef _DEBUG
-		Vector s[ 4 ] = { basis.WorldToLocal( r[ 0 ] ), basis.WorldToLocal( r[ 1 ] ), basis.WorldToLocal( r[ 2 ] ), basis.WorldToLocal( r[ 3 ] ) }; NOTE_UNUSED( s );
-#endif
 		flError = ( r[ 0 ] - x[ 0 ] ).LengthSqr() + ( r[ 1 ] - x[ 1 ] ).LengthSqr() + ( r[ 2 ] - x[ 2 ] ).LengthSqr() + ( r[ 3 ] - x[ 3 ] ).LengthSqr();
 	} // ~24 flops
 	
@@ -559,7 +531,7 @@ fltx4 CFeModel::RelaxSimdQuad2( const fltx4& fl4Stiffness, const fltx4 &fl4Model
 	p2 = vCoM + r2 * wr + x2 * wx;
 	p3 = vCoM + r3 * wr + x3 * wx;
 
-	AssertDbg( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length( ) + p3.Length( ) ) );
+	contract_assert( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length( ) + p3.Length( ) ) );
 
 	SAVE_NODES( p2, quad.nNode[ 2 ] );
 	SAVE_NODES( p3, quad.nNode[ 3 ] );
@@ -597,7 +569,7 @@ fltx4 CFeModel::RelaxSimdQuad1( const fltx4& fl4Stiffness, const fltx4 &fl4Model
 	fltx4 flError = ( r1 - x1 ).LengthSqr( ) + ( r2 - x2 ).LengthSqr( ) + ( r3 - x3 ).LengthSqr( );
 	p1 = r1 + vCoM; p2 = r2 + vCoM; p3 = r3 + vCoM;
 
-	AssertDbg( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length( ) + p3.Length( ) ) );
+	contract_assert( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length( ) + p3.Length( ) ) );
 
 	SAVE_NODES( p1, quad.nNode[ 1 ] );
 	SAVE_NODES( p2, quad.nNode[ 2 ] );
@@ -624,9 +596,6 @@ fltx4 CFeModel::RelaxSimdQuad0( const fltx4& flStiffness, const fltx4 &fl4ModelS
 	// 	for ( int i = 0; i < 3; ++i )
 	{
 
-#ifdef _DEBUG
-		//FourVectors q[ 4 ] = { basis.WorldToLocal( x[ 0 ] ), basis.WorldToLocal( x[ 1 ] ), basis.WorldToLocal( x[ 2 ] ), basis.WorldToLocal( x[ 3 ] ) }; NOTE_UNUSED( q );
-#endif
 
 		// refer to wahba.nb
 		FourVectors rhs = ( m[ 0 ] * CrossProduct( x[ 0 ], r[ 0 ] ) + m[ 1 ] * CrossProduct( x[ 1 ], r[ 1 ] ) + m[ 2 ] * CrossProduct( x[ 2 ], r[ 2 ] ) + m[ 3 ] * CrossProduct( x[ 3 ], r[ 3 ] ) ); // ~27 flops
@@ -644,11 +613,6 @@ fltx4 CFeModel::RelaxSimdQuad0( const fltx4& flStiffness, const fltx4 &fl4ModelS
 		r[ 0 ] = rotation.Unrotate( r[ 0 ] ); r[ 1 ] = rotation.Unrotate( r[ 1 ] ); r[ 2 ] = rotation.Unrotate( r[ 2 ] ); r[ 3 ] = rotation.Unrotate( r[ 3 ] );
 		fl4Error = ( r[ 0 ] - x[ 0 ] ).LengthSqr( ) + ( r[ 1 ] - x[ 1 ] ).LengthSqr( ) + ( r[ 2 ] - x[ 2 ] ).LengthSqr( ) + ( r[ 3 ] - x[ 3 ] ).LengthSqr( );
 
-#ifdef _DEBUG
-		//FourVectors s[ 4 ] = { basis.WorldToLocal( r[ 0 ] ), basis.WorldToLocal( r[ 1 ] ), basis.WorldToLocal( r[ 2 ] ), basis.WorldToLocal( r[ 3 ] ) }; NOTE_UNUSED( s );
-		//const fltx4 fl4MaxExpectedError = { 64, 64, 64, 64 };
-		//AssertDbg( IsAllGreaterThan( fl4MaxExpectedError, fl4Error ) );
-#endif
 	} // ~24 flops
 
 	fltx4 flUnStiffness = Four_Ones - flStiffness;
@@ -658,7 +622,7 @@ fltx4 CFeModel::RelaxSimdQuad0( const fltx4& flStiffness, const fltx4 &fl4ModelS
 	p2 = r[ 2 ] * flStiffness + x[ 2 ] * flUnStiffness + vCoM;
 	p3 = r[ 3 ] * flStiffness + x[ 3 ] * flUnStiffness + vCoM; // 33 flops
 
-	AssertDbg( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length( ) + p3.Length() ) );
+	contract_assert( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length( ) + p3.Length() ) );
 
 	SAVE_NODES( p0, quad.nNode[ 0 ] );
 	SAVE_NODES( p1, quad.nNode[ 1 ] );
@@ -668,7 +632,7 @@ fltx4 CFeModel::RelaxSimdQuad0( const fltx4& flStiffness, const fltx4 &fl4ModelS
 }
 
 
-FORCEINLINE fltx4 DotProduct( const FourVectors &v1, const FourVectors2D &v2 )
+[[gnu::always_inline]] inline fltx4 DotProduct( const FourVectors &v1, const FourVectors2D &v2 )
 {
 	return v1.x * v2.x + v1.y * v2.y;
 }
@@ -694,7 +658,7 @@ fltx4 CFeModel::RelaxSimdQuad0flat( const fltx4& flStiffness, const fltx4 &fl4Mo
 
 	p0 = r[ 0 ] + vCoM;	p1 = r[ 1 ] + vCoM; p2 = r[ 2 ] + vCoM; p3 = r[ 3 ] + vCoM; // 33 flops
 
-	AssertDbg( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length( ) + p3.Length( ) ) );
+	contract_assert( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length( ) + p3.Length( ) ) );
 
 	SAVE_NODES( p0, quad.nNode[ 0 ] );
 	SAVE_NODES( p1, quad.nNode[ 1 ] );
@@ -717,24 +681,24 @@ fltx4 CFeModel::RelaxSimdTri2( const fltx4& flStiffness, const fltx4 &fl4ModelSc
 	CFeSimdTriBasis basis( p1 - p0, p2 - p0 ); // p1-p0 is the best choice for the axis, because we're rotating around it
 	p2 = p0 + basis.LocalXYToWorld( fl4ModelScale * ( tri.v2.x + Four_PointFives * ( basis.v1x - tri.v1x ) ), fl4ModelScale * tri.v2.y );
 	
-	AssertDbg( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length( ) ) );
+	contract_assert( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length( ) ) );
 	SAVE_NODES( p2, tri.nNode[ 2 ] );
 	return Four_Zeros;
 }
 
 
 
-FORCEINLINE fltx4 CrossProductZ( const fltx4& v1x, const fltx4& v1y, const fltx4& v2x, const fltx4& v2y )
+[[gnu::always_inline]] inline fltx4 CrossProductZ( const fltx4& v1x, const fltx4& v1y, const fltx4& v2x, const fltx4& v2y )
 {
 	return v1x * v2y - v1y * v2x;
 }
 
-FORCEINLINE fltx4 DotProduct2D( const FourVectors2D &v1, const FourVectors2D &v2 )
+[[gnu::always_inline]] inline fltx4 DotProduct2D( const FourVectors2D &v1, const FourVectors2D &v2 )
 {
 	return v1.x * v2.x + v1.y * v2.y;
 }
 
-FORCEINLINE fltx4 CrossProductZ( const FourVectors2D &v1, const FourVectors2D &v2 )
+[[gnu::always_inline]] inline fltx4 CrossProductZ( const FourVectors2D &v1, const FourVectors2D &v2 )
 {
 	return v1.x * v2.y - v1.y * v2.x;
 }
@@ -754,7 +718,7 @@ fltx4 CFeModel::RelaxSimdTri1( const fltx4& flStiffness, const fltx4 &fl4ModelSc
 	p1 = p0 + basis.LocalXYToWorld( fl4ModelScale * ( rotation.m_fl4Cos * tri.v1x ), fl4ModelScale * ( rotation.m_fl4Sin * tri.v1x ) );
 	p2 = p0 + basis.LocalXYToWorld( fl4ModelScale * ( rotation * tri.v2 ) );
 
-	AssertDbg( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length( ) ) );
+	contract_assert( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length( ) ) );
 	SAVE_NODES( p1, tri.nNode[ 1 ] );
 	SAVE_NODES( p2, tri.nNode[ 2 ] );
 	return Four_Ones - rotation.m_fl4Cos;
@@ -793,7 +757,7 @@ fltx4 CFeModel::RelaxSimdTri0( const fltx4& flStiffness, const fltx4 &fl4ModelSc
 	p1 = p0 + basis.LocalXYToWorld( rotation.m_fl4Cos * tri_v1x, rotation.m_fl4Sin * tri_v1x );
 	p2 = p0 + basis.LocalXYToWorld( rotation * tri_v2 );
 
-	AssertDbg( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length() ) );
+	contract_assert( IsAllGreaterThan( Four_MaxWorldSize, p0.Length( ) + p1.Length( ) + p2.Length() ) );
 
 	SAVE_NODES( p0, tri.nNode[ 0 ] );
 	SAVE_NODES( p1, tri.nNode[ 1 ] );
@@ -829,7 +793,7 @@ void CFeModel::RelaxBend( VectorAligned *pPos, float flStiffness )const
 			// recover from intersecting edges; not necessary for high curvatures if there are rigid rods that enforce some bend, but crucial to maintain low or zero angles of curvature
 			// generally, rods are better for high curvature and useless for low; bends are better for low curvature and useless for high
 			float flCrossEdges = vCrossEdges.Length();
-			if ( flCrossEdges > FLT_EPSILON )
+			if ( flCrossEdges > std::numeric_limits<float>::epsilon() )
 			{
 				vAxis = vCrossEdges;
 				flCorrection = edge.flDist / flCrossEdges;
@@ -914,29 +878,29 @@ void CFeModel::IntegrateSprings( VectorAligned *pPos0, VectorAligned *pPos1, flo
 float CFeModel::ComputeElasticEnergyQuads( const VectorAligned *pPos, float flModelScale )const
 {
 	float flStiffness = 1.0f, flSumEnergy = 0;
-#define QUAD_ENERGY(FUNC)																													 \
-	const FeQuad_t &quad = m_pQuads[ i ];																									 \
-	VectorAligned pos[ 4 ] = { pPos[ quad.nNode[ 0 ] ], pPos[ quad.nNode[ 1 ] ], pPos[ quad.nNode[ 2 ] ], pPos[ quad.nNode[ 3 ] ] };	     \
-	FUNC( flStiffness, flModelScale, quad, pos[ 0 ], pos[ 1 ], pos[ 2 ], pos[ 3 ] );												 		 \
-	for ( int j = 0; j < 4; ++j )																											 \
-		if ( m_pNodeInvMasses[ quad.nNode[ j ] ] > 0 )																						 \
-			flSumEnergy += ( pos[ j ] - pPos[ quad.nNode[ j ] ] ).LengthSqr( ) * 0.5f / m_pNodeInvMasses[ quad.nNode[ j ] ];				 
-
+	auto quadEnergy = [&]( auto relaxFunc, uint i )
+	{
+		const FeQuad_t &quad = m_pQuads[ i ];
+		VectorAligned pos[ 4 ] = { pPos[ quad.nNode[ 0 ] ], pPos[ quad.nNode[ 1 ] ], pPos[ quad.nNode[ 2 ] ], pPos[ quad.nNode[ 3 ] ] };
+		( this->*relaxFunc )( flStiffness, flModelScale, quad, pos[ 0 ], pos[ 1 ], pos[ 2 ], pos[ 3 ] );
+		for ( int j = 0; j < 4; ++j )
+			if ( m_pNodeInvMasses[ quad.nNode[ j ] ] > 0 )
+				flSumEnergy += ( pos[ j ] - pPos[ quad.nNode[ j ] ] ).LengthSqr( ) * 0.5f / m_pNodeInvMasses[ quad.nNode[ j ] ];
+	};
 	// first the simplest case of quads hanging on the edge 0-1: this is a 2D case with 2 moving nodes and only 1 DOF (rotation around edge 0-1)
 	for ( uint i = 0; i < m_nQuadCount[ 2 ]; ++i )
 	{
-		QUAD_ENERGY( RelaxQuad2 );
+		quadEnergy( &CFeModel::RelaxQuad2, i );
 	}
 
 	for ( uint i = m_nQuadCount[ 2 ]; i < m_nQuadCount[ 1 ]; ++i )
 	{
-		QUAD_ENERGY( RelaxQuad1 );
+		quadEnergy( &CFeModel::RelaxQuad1, i );
 	}
 	for ( uint i = m_nQuadCount[ 1 ]; i < m_nQuadCount[ 0 ]; ++i )
 	{
-		QUAD_ENERGY( RelaxQuad0 );
+		quadEnergy( &CFeModel::RelaxQuad0, i );
 	}
-#undef QUAD_ENERGY
 	return flSumEnergy;
 }
 
@@ -1040,11 +1004,11 @@ uint CFeModel::ComputeCollisionTreeDepthTopDown( uint16 *pLevels ) const
 		// we should've filled out everything
 		for ( int nCluster = 2 * nDynCount - 1; nCluster-- > 0; )
 		{
-			Assert( pLevels[ nCluster ] != nInvalidLevel );
+			contract_assert( pLevels[ nCluster ] != nInvalidLevel );
 		}
 		for ( uint i = 0; i < 2 * nDynCount - 2; ++i )
 		{
-			Assert( pLevels[ i ] == 1 + pLevels[ m_pTreeParents[ i ] ] );
+			contract_assert( pLevels[ i ] == 1 + pLevels[ m_pTreeParents[ i ] ] );
 		}
 	}
 	return nLevel;
@@ -1084,7 +1048,7 @@ uint CFeModel::ComputeCollisionTreeHeightBottomUp( uint16 *pLevels ) const
 	uint nLevel = 0;
 	for ( uint i = 0; i < nDynCount - 2; ++i )
 	{
-		AssertDbg( m_pTreeParents[ i + nDynCount ] > i + nDynCount && m_pTreeParents[ i + nDynCount ] < 2 * nDynCount - 1 ); // nodes and clusters go strictly child-to-parent
+		contract_assert( m_pTreeParents[ i + nDynCount ] > i + nDynCount && m_pTreeParents[ i + nDynCount ] < 2 * nDynCount - 1 ); // nodes and clusters go strictly child-to-parent
 		uint16 &refParentLevel = pLevels[ m_pTreeParents[ i + nDynCount ] - nDynCount ];
 		uint nChildLevel = pLevels[ i ];
 		refParentLevel = Max< uint >( refParentLevel, nChildLevel + 1 );
@@ -1101,7 +1065,7 @@ uint CFeModel::ComputeCollisionTreeHeightBottomUp( uint16 *pLevels ) const
 			{
 				nChildLevel[ j ] = tc.nChild[ j ] < nDynCount ? 0 : pLevels[ tc.nChild[ j ] - nDynCount ];
 			}
-			Assert( pLevels[ i ] == Max( nChildLevel[ 0 ], nChildLevel[ 1 ] ) + 1 );
+			contract_assert( pLevels[ i ] == Max( nChildLevel[ 0 ], nChildLevel[ 1 ] ) + 1 );
 		}
 	}
 
@@ -1124,7 +1088,7 @@ void CFeModel::ComputeCollisionTreeBounds( const fltx4 *pDynPos, FeAabb_t *pClus
 		for ( uint i = 0; i < nDynCount; ++i )
 		{
 			uint nParent = m_pTreeParents[ i ] - nDynCount;
-			Assert( nParent < nDynCount - 1 );
+			contract_assert( nParent < nDynCount - 1 );
 			pClusters[ nParent ].AddCenterAndExtents( pDynPos[ i ], ReplicateX4( m_pNodeCollisionRadii[ i ] ) );
 		}
 	}
@@ -1133,7 +1097,7 @@ void CFeModel::ComputeCollisionTreeBounds( const fltx4 *pDynPos, FeAabb_t *pClus
 		for ( uint i = 0; i < nDynCount; ++i )
 		{
 			uint nParent = m_pTreeParents[ i ] - nDynCount;
-			Assert( nParent < nDynCount - 1 );
+			contract_assert( nParent < nDynCount - 1 );
 			pClusters[ nParent ] |= pDynPos[ i ];
 		}
 	}
@@ -1141,7 +1105,7 @@ void CFeModel::ComputeCollisionTreeBounds( const fltx4 *pDynPos, FeAabb_t *pClus
 	for ( uint i = 0; i < nDynCount - 2; ++i )
 	{
 		uint nParent = m_pTreeParents[ i + nDynCount ] - nDynCount;
-		Assert( nParent < nDynCount - 1 );
+		contract_assert( nParent < nDynCount - 1 );
 		pClusters[ nParent ] |= pClusters[ i ];
 	}
 }
@@ -1157,7 +1121,7 @@ float CFeModel::ComputeCollisionTreeBoundsError( const fltx4 *pDynPos, const FeA
 		for ( uint i = 0; i < nDynCount; ++i )
 		{
 			uint nParent = m_pTreeParents[ i ] - nDynCount;
-			Assert( nParent < nDynCount - 1 );
+			contract_assert( nParent < nDynCount - 1 );
 			f4Error = MaxSIMD( f4Error, pClusters[ nParent ].GetDistVector( pDynPos[ i ] - ReplicateX4( m_pNodeCollisionRadii[ i ] ) ) );
 			f4Error = MaxSIMD( f4Error, pClusters[ nParent ].GetDistVector( pDynPos[ i ] + ReplicateX4( m_pNodeCollisionRadii[ i ] ) ) );
 		}
@@ -1167,7 +1131,7 @@ float CFeModel::ComputeCollisionTreeBoundsError( const fltx4 *pDynPos, const FeA
 		for ( uint i = 0; i < nDynCount; ++i )
 		{
 			uint nParent = m_pTreeParents[ i ] - nDynCount;
-			Assert( nParent < nDynCount - 1 );
+			contract_assert( nParent < nDynCount - 1 );
 			f4Error = MaxSIMD( f4Error, pClusters[ nParent ].GetDistVector( pDynPos[ i ] ) );
 		}
 	}
@@ -1175,7 +1139,7 @@ float CFeModel::ComputeCollisionTreeBoundsError( const fltx4 *pDynPos, const FeA
 	for ( uint i = 0; i < nDynCount - 2; ++i )
 	{
 		uint nParent = m_pTreeParents[ i + nDynCount ] - nDynCount;
-		Assert( nParent < nDynCount - 1 );
+		contract_assert( nParent < nDynCount - 1 );
 		f4Error = MaxSIMD( f4Error, pClusters[ nParent ].GetDistVector( pClusters[ i ].m_vMinBounds ) );
 		f4Error = MaxSIMD( f4Error, pClusters[ nParent ].GetDistVector( pClusters[ i ].m_vMaxBounds ) );
 	}
@@ -1195,16 +1159,16 @@ uint CFeModel::ComputeCollisionTreeNodeCount( uint16 *pCounts ) const
 	for ( uint i = 0; i < nDynCount; ++i )
 	{
 		uint nParent = m_pTreeParents[ i ] - nDynCount;
-		AssertDbg( nParent < nDynCount - 1 );
+		contract_assert( nParent < nDynCount - 1 );
 		pCounts[ nParent ]++;
 	}
 	for ( uint i = nDynCount; i < 2 * nDynCount - 2; ++i )
 	{
 		uint nParent = m_pTreeParents[ i ] - nDynCount;
-		AssertDbg( nParent < nDynCount - 1 );
+		contract_assert( nParent < nDynCount - 1 );
 		pCounts[ nParent ] += pCounts[ i - nDynCount ];
 	}
-	AssertDbg( nDynCount == pCounts[ nDynCount - 2 ] );
+	contract_assert( nDynCount == pCounts[ nDynCount - 2 ] );
 	return nDynCount;
 }
 
@@ -1222,7 +1186,7 @@ void CFeModel::ApplyAirDrag( VectorAligned *pPos0, const VectorAligned *pPos1, f
 	}
 }
 
-FORCEINLINE FourVectors ComputeQuadAirDrag( const FourVectors &vAn, const FourVectors &d, const fltx4 &f4ExpDrag, const fltx4 &f4VelDrag, const fltx4 &lenSqInvAn )
+[[gnu::always_inline]] inline FourVectors ComputeQuadAirDrag( const FourVectors &vAn, const FourVectors &d, const fltx4 &f4ExpDrag, const fltx4 &f4VelDrag, const fltx4 &lenSqInvAn )
 {
 	//return MinSIMD( AbsSIMD( DotProduct( vAxisZ, q0 - p0 ) * f4VelDrag ), Four_Ones ) * ( q0 - p0 );
 	fltx4 An_d = DotProduct( vAn, d );
@@ -1392,12 +1356,10 @@ void CFeModel::SmoothRodVelocityField( fltx4 *pPos0, const fltx4 *pPos1, float f
 	for ( uint i = 0; i < m_nSimdRodCount; ++i )
 	{
 		const FeSimdRodConstraint_t &rod = m_pSimdRods[ i ];
-		AssertDbg(
-			   rod.nNode[ 0 ][ 0 ] < m_nNodeCount && rod.nNode[ 1 ][ 0 ] < m_nNodeCount
+		contract_assert( rod.nNode[ 0 ][ 0 ] < m_nNodeCount && rod.nNode[ 1 ][ 0 ] < m_nNodeCount
 			&& rod.nNode[ 0 ][ 1 ] < m_nNodeCount && rod.nNode[ 1 ][ 1 ] < m_nNodeCount
 			&& rod.nNode[ 0 ][ 2 ] < m_nNodeCount && rod.nNode[ 1 ][ 2 ] < m_nNodeCount
-			&& rod.nNode[ 0 ][ 3 ] < m_nNodeCount && rod.nNode[ 1 ][ 3 ] < m_nNodeCount
-			);
+			&& rod.nNode[ 0 ][ 3 ] < m_nNodeCount && rod.nNode[ 1 ][ 3 ] < m_nNodeCount );
 		FourVectors p0, p1, q0, q1;
 		LOAD_NODES_POS( pPos0, p0, rod.nNode[ 0 ] );
 		LOAD_NODES_POS( pPos0, p1, rod.nNode[ 1 ] );
@@ -1470,7 +1432,7 @@ void CFeModel::FitCenters( fltx4 *pPos )const
 	{
 		//AssertDbg( nRunningWeight == fm.nBegin );
 		const FeFitMatrix_t &fm = m_pFitMatrices[ nMatrix ];
-		AssertDbg( nRunningWeight + 2 <= fm.nEnd );
+		contract_assert( nRunningWeight + 2 <= fm.nEnd );
 		const FeFitWeight_t *w = m_pFitWeights + nRunningWeight;
 
 		// weights don't matter, because we'll just use the line between the two nodes as a hinge
@@ -1617,7 +1579,7 @@ void CFeModel::FitTransform( matrix3x4a_t*pOut, const FeFitMatrix_t &fm, const V
 	SVD::SvdIterator<float> svd;
 	//SVD::Matrix3<float> a = Apq * SVD::Matrix3<float>( AsSymMatrix3( fm.AqqInv ) ); // optimal but skewed fitting matrix; Aqq is not really necessary except when we clamp the singular values (allow some stretch)
 	svd.Init( Apq );
-	svd.Iterate( 6, FLT_EPSILON ); // the epsilon is the sum of squares of sines of Givens rotations, I think it's a very good measure of quality in this case
+	svd.Iterate( 6, std::numeric_limits<float>::epsilon() ); // the epsilon is the sum of squares of sines of Givens rotations, I think it's a very good measure of quality in this case
 	SVD::Matrix3< float > v = svd.ComputeV();
 	// B = US = AV
 	SVD::Matrix3< float > us = Apq * v;
@@ -1657,16 +1619,12 @@ void CFeModel::FitTransform( matrix3x4a_t*pOut, const FeFitMatrix_t &fm, const V
 			nLarge = 1; nMedium = 2; nSmall = 0; flSmallAxisParity = 1.0f;
 		}
 	}
-#if defined( _DEBUG ) && defined( DBGFLAG_ASSERT )
-	float s[ 3 ] = { svd.ata.m00(), svd.ata.m11(), svd.ata.m22() };
-	Assert( s[ nLarge ] >= s[ nMedium ] && s[ nMedium ] >= s[ nSmall ] );
-#endif
 
 	matrix3x4a_t u;
 	Vector vMainAxis( us.m[0][nLarge], us.m[1][nLarge], us.m[2][nLarge ] );
 	float flMainAxisLength = vMainAxis.Length();
 
-	if ( flMainAxisLength < FLT_EPSILON )
+	if ( flMainAxisLength < std::numeric_limits<float>::epsilon() )
 	{
 		// really, really small - very undefined matrix
 		pOut->SetToIdentity();
@@ -1679,7 +1637,7 @@ void CFeModel::FitTransform( matrix3x4a_t*pOut, const FeFitMatrix_t &fm, const V
 	Vector vMedAxis( us.m[0][nMedium], us.m[1][nMedium], us.m[2][nMedium ] );
 	vMedAxis -= DotProduct( vMainAxis, vMedAxis ) * vMainAxis;
 	float flMedAxisLength = vMedAxis.Length();
-	if( flMedAxisLength > FLT_EPSILON)
+	if( flMedAxisLength > std::numeric_limits<float>::epsilon())
 	{
 		vMedAxis /= flMedAxisLength;
 	}
@@ -1730,4 +1688,3 @@ void CFeModel::FitTransform2D( matrix3x4a_t *pOut, const FeFitMatrix_t &fm, cons
 	CSinCosRotation2D rotation( flCos, flSin );
 */
 }
-

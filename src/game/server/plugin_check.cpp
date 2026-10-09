@@ -1,15 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// This class allows the game dll to control what functions 3rd party plugins can 
-//  call on clients.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: This class allows the game dll to control what functions 3rd party plugins can
+// call on clients.
+
+import std;
+import ks.core;
 #include "eiface.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: An implementation 
@@ -21,11 +18,10 @@ public:
 };
 
 CPluginHelpersCheck s_PluginCheck;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CPluginHelpersCheck, IPluginHelpersCheck, INTERFACEVERSION_PLUGINHELPERSCHECK, s_PluginCheck);
+static InterfaceReg s_Reg_CPluginHelpersCheck_IPluginHelpersCheck( []() -> void * { return static_cast<IPluginHelpersCheck *>( &s_PluginCheck ); }, INTERFACEVERSION_PLUGINHELPERSCHECK );;
 
 bool CPluginHelpersCheck::CreateMessage( const char *plugin, edict_t *pEntity, DIALOG_TYPE type, KeyValues *data )
 {
 	// return false here to disallow a plugin from running this command on this client
 	return true;
 }
-

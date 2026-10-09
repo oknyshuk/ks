@@ -1,50 +1,32 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <stdlib.h>
-#include <malloc.h>
+import std;
+import ks.tier1;
 #include "materialsystem_global.h"
-#include "string.h"
 #include "shaderapi/ishaderapi.h"
 #include "materialsystem/materialsystem_config.h"
 #include "IHardwareConfigInternal.h"
 #include "texturemanager.h"
 #include "materialsystem/imaterialvar.h"
-#include "materialsystem/IColorCorrection.h"
-#include "tier1/strtools.h"
-#include "utlvector.h"
-#include "tier1/map_ops.h"
 #include "itextureinternal.h"
 #include "vtf/vtf.h"
 #include "pixelwriter.h"
-#include "basetypes.h"
 #include "filesystem.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/ishaderapi.h"
-#include "vstdlib/random.h"
 #include "imorphinternal.h"
 #include "isubdinternal.h"
-#include "ctype.h"
-#include "tier1/text_reader.h"
-#include <algorithm>
-#include "tier0/icommandline.h"
 
-// Need lightmaps access here
-#define MATSYS_INTERNAL
 #include "cmatlightmaps.h"
 #include "cmaterialsystem.h"
-#undef MATSYS_INTERNAL
 
-#define ERROR_TEXTURE_SIZE				32
-#define WHITE_TEXTURE_SIZE				1
-#define BLACK_TEXTURE_SIZE				1
-#define GREY_TEXTURE_SIZE				1
-#define NORMALIZATION_CUBEMAP_SIZE		32
-#define SSAO_NOISE_TEXTURE_SIZE			32
-#define ERROR_TEXTURE_IS_SOLID
+constexpr auto ERROR_TEXTURE_SIZE = 32;
+constexpr auto WHITE_TEXTURE_SIZE = 1;
+constexpr auto BLACK_TEXTURE_SIZE = 1;
+constexpr auto GREY_TEXTURE_SIZE = 1;
+constexpr auto NORMALIZATION_CUBEMAP_SIZE = 32;
+constexpr auto SSAO_NOISE_TEXTURE_SIZE = 32;
 
 //-----------------------------------------------------------------------------
 //
@@ -204,7 +186,7 @@ public:
 				for (int x = 0; x < nWidth; ++x)
 				{
 					float u = x * flInvWidth - 1.0f;
-					float oow = 1.0f / sqrt( 1.0f + u*u + v*v );
+					float oow = 1.0f / std::sqrt( 1.0f + u*u + v*v );
 
 					int ix = (int)(255.0f * 0.5f * (u*oow + 1.0f) + 0.5f);
 					ix = clamp( ix, 0, 255 );
@@ -279,7 +261,7 @@ public:
 				for (int x = 0; x < nWidth; ++x)
 				{
 					float u = x * flInvWidth - 1.0f;
-					float oow = 1.0f / sqrt( 1.0f + u*u + v*v );
+					float oow = 1.0f / std::sqrt( 1.0f + u*u + v*v );
 
 					int ix = (int)(255 * 0.5 * (u*oow + 1.0f) + 0.5f);
 					ix = clamp( ix, 0, 255 );
@@ -320,9 +302,9 @@ public:
 					iy -= 128;
 					iz -= 128;
 
-					Assert( ix >= -128 && ix <= 127 );
-					Assert( iy >= -128 && iy <= 127 );
-					Assert( iz >= -128 && iz <= 127 );
+					contract_assert( ix >= -128 && ix <= 127 );
+					contract_assert( iy >= -128 && iy <= 127 );
+					contract_assert( iz >= -128 && iz <= 127 );
 
 					switch (iFace)
 					{
@@ -510,11 +492,7 @@ protected:
 	ITextureInternal *m_pStereoParamTexture;
 
 	// Used to generate various error texture patterns when necessary
-#ifdef ERROR_TEXTURE_IS_SOLID
 	CSolidTexture *m_pErrorRegen;
-#else
-	CCheckerboardTexture *m_pErrorRegen;
-#endif
 
 private:
 	bool ParseTextureExcludeScript( const char *pScriptName );
@@ -564,21 +542,13 @@ void CTextureManager::Init( int nFlags )
 	color.r = color.g = color.b = 0; color.a = 128;
 	color2.r = color2.b = color2.a = 255; color2.g = 0;
 	
-#ifdef ERROR_TEXTURE_IS_SOLID
 	color32 color_black; color_black.r = color_black.g = color_black.b = 0; color_black.a = 255;
 	m_pErrorRegen = new CSolidTexture( color_black );
-#else
-	m_pErrorRegen = new CCheckerboardTexture( 4, color, color2 );
-#endif
 
 	// Create an error texture
 	m_pErrorTexture = CreateProceduralTexture( "error", TEXTURE_GROUP_OTHER,
 		ERROR_TEXTURE_SIZE, ERROR_TEXTURE_SIZE, 1, IMAGE_FORMAT_BGRA8888, TEXTUREFLAGS_NOMIP | TEXTUREFLAGS_SINGLECOPY | TEXTUREFLAGS_SRGB );
-#ifdef ERROR_TEXTURE_IS_SOLID
 	CreateSolidTexture( m_pErrorTexture, color_black );
-#else
-	CreateCheckerboardTexture( m_pErrorTexture, 4, color, color2 );
-#endif
 
 	// Create a white texture
 	m_pWhiteTexture = CreateProceduralTexture( "white", TEXTURE_GROUP_OTHER,
@@ -782,9 +752,6 @@ void CTextureManager::FreeStandardRenderTargets()
 	g_pMorphMgr->FreeMaterials();
 	g_pMorphMgr->FreeScratchTextures();
 
-#if defined( FEATURE_SUBD_SUPPORT )
-	g_pSubDMgr->FreeTextures();
-#endif
 }
 
 
@@ -807,13 +774,13 @@ void CTextureManager::GenerateErrorTexture( ITexture *pTexture, IVTFTexture *pVT
 //-----------------------------------------------------------------------------
 ITextureInternal *CTextureManager::ColorCorrectionTexture( int i )
 {
-	Assert( i<COLOR_CORRECTION_MAX_TEXTURES );
+	contract_assert( i<COLOR_CORRECTION_MAX_TEXTURES );
 	return m_pColorCorrectionTextures[ i ];
 }
 
 void CTextureManager::SetColorCorrectionTexture( int i, ITextureInternal *pTexture )
 {
-	Assert( i<COLOR_CORRECTION_MAX_TEXTURES );
+	contract_assert( i<COLOR_CORRECTION_MAX_TEXTURES );
 
 	if( m_pColorCorrectionTextures[i] )
 	{
@@ -1101,7 +1068,7 @@ ITextureInternal *CTextureManager::FindTexture( const char *pTextureName )
 	// Special handling: lightmaps
 	if ( char const *szLightMapNum = StringAfterPrefix( szCleanName, "[lightmap" ) )
 	{
-		int iLightMapNum = atoi( szLightMapNum );
+		int iLightMapNum = std::atoi( szLightMapNum );
 		extern CMaterialSystem g_MaterialSystem;
 		CMatLightmaps *plm = g_MaterialSystem.GetLightmaps();
 		if ( iLightMapNum >= 0 &&
@@ -1131,7 +1098,7 @@ void CTextureManager::AddTextureAlias( const char *pAlias, const char *pRealName
 
 	if	( it != m_TextureAliases.end() )
 	{
-		AssertMsg( Q_stricmp( pRealName, it->second.c_str() ) == 0, "Trying to use one name to alias two different textures." );
+		contract_assert( ( V_stricmp( pRealName, it->second.c_str() ) == 0 ) && "Trying to use one name to alias two different textures." );
 	}
 
 	// replaces any old alias
@@ -1173,10 +1140,10 @@ bool CTextureManager::ParseTextureExcludeScript( const char *pScriptName )
 			}
 		}
 		const std::string_view line = excludeBuffer.read_line();
-		const size_t nLineChars = std::min( line.size(), sizeof( szToken ) - 1 );
-		memcpy( szToken, line.data(), nLineChars );
+		const std::size_t nLineChars = std::min( line.size(), sizeof( szToken ) - 1 );
+		std::memcpy( szToken, line.data(), nLineChars );
 		szToken[nLineChars] = '\0';
-		int tokenLength = strlen( szToken );
+		int tokenLength = std::strlen( szToken );
 		if ( !tokenLength )
 		{
 			// end of list
@@ -1199,7 +1166,7 @@ bool CTextureManager::ParseTextureExcludeScript( const char *pScriptName )
 		char *pTextureName = szToken;
 		if ( pTextureName[0] != 0 && V_isdigit( pTextureName[0] ) )
 		{
-			nDimensionsLimit = atoi( pTextureName );
+			nDimensionsLimit = std::atoi( pTextureName );
 			
 			// skip forward to name
 			for ( ;; )
@@ -1225,7 +1192,6 @@ bool CTextureManager::ParseTextureExcludeScript( const char *pScriptName )
 
 void CTextureManager::SetExcludedTextures( const char *pScriptName, bool bUsingWeaponModelCache )
 {
-	MEM_ALLOC_CREDIT();
 
 	m_bUsingWeaponModelCache = false;
 
@@ -1289,13 +1255,6 @@ ITextureInternal *CTextureManager::FindOrLoadTexture( const char *pTextureName, 
 	ITextureInternal *pTexture = FindTexture( pTextureName );
 	if ( !pTexture )
 	{
-#if defined( DEVELOPMENT_ONLY ) || defined( ALLOW_TEXT_MODE )
-		static bool s_bTextMode = CommandLine()->HasParm( "-textmode" );
-		if ( s_bTextMode )
-		{
-			return m_pErrorTexture;
-		}
-#endif
 			
 		pTexture = LoadTexture( pTextureName, pTextureGroupName, nAdditionalCreationFlags );
 		if ( pTexture )
@@ -1335,7 +1294,6 @@ ITextureInternal *CTextureManager::CreateRenderTargetTexture(
 	unsigned int renderTargetFlags,
 	bool bMultipleTargets )
 {
-	MEM_ALLOC_CREDIT_( __FILE__ ": Render target" );
 
 	ITextureInternal *pTexture;
 
@@ -1412,7 +1370,7 @@ void CTextureManager::RemoveUnusedTextures( void )
 
 void CTextureManager::RemoveTexture( ITextureInternal *pTexture )
 {
-	Assert( pTexture->GetReferenceCount() <= 0 );
+	contract_assert( pTexture->GetReferenceCount() <= 0 );
 
 	for ( auto it = m_TextureList.begin(); it != m_TextureList.end(); ++it )
 	{
@@ -1467,4 +1425,3 @@ void CTextureManager::DebugPrintUsedTextures( void )
 		}
 	}
 }
-

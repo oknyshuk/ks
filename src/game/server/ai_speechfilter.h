@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef AI_SPEECHFILTER_H
-#define AI_SPEECHFILTER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -43,5 +39,3 @@ protected:
 	[[= ks::reflect::Key{ .name = "NeverSayHello" } ]] bool		m_bNeverSayHello;	// If set, the NPC never says hello to the player
 	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool		m_bDisabled;
 };
-
-#endif // AI_SPEECHFILTER_H

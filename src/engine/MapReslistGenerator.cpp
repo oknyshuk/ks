@@ -1,10 +1,7 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+import ks.tier1;
 #include "MapReslistGenerator.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
@@ -13,20 +10,12 @@
 #include "common.h"
 #include "quakedef.h"
 #include "vengineserver_impl.h"
-#include "tier1/strtools.h"
-#include "tier0/icommandline.h"
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <tier0/dbg.h>
+import std;
 #include "host.h"
 #include "host_state.h"
-#include "tier1/text_reader.h"
-#include "characterset.h"
-#include "tier1/fmtstr.h"
 
-#define PAUSE_FRAMES_BETWEEN_MAPS	300
-#define PAUSE_TIME_BETWEEN_MAPS		2.0f
+constexpr auto PAUSE_FRAMES_BETWEEN_MAPS = 300;
+constexpr auto PAUSE_TIME_BETWEEN_MAPS = 2.0f;
 
 extern engineparms_t host_parms;
 
@@ -102,7 +91,6 @@ CMapReslistGenerator::CMapReslistGenerator() :
 	m_AlreadyWrittenFileNames( true ),
 	m_bAutoQuit( false )
 {
-	MEM_ALLOC_CREDIT_CLASS();
 
 	m_bUsingMapList = false;
 	m_bTrackingDeletions = false;
@@ -167,7 +155,7 @@ bool BuildGeneralMapList( std::vector< maplist_map_t > *aMaps, bool bUseMapListF
 			{
 				// add to list
 				maplist_map_t newMap;
-				Q_strncpy(newMap.name, pMapName, sizeof(newMap.name));
+				V_strncpy(newMap.name, pMapName, sizeof(newMap.name));
 				aMaps->push_back( newMap );
 			}
 
@@ -190,8 +178,8 @@ bool BuildGeneralMapList( std::vector< maplist_map_t > *aMaps, bool bUseMapListF
 
 				// strip extension
 				char sz[ MAX_PATH ];
-				Q_strncpy( sz, findfn, sizeof( sz ) );
-				char *ext = strchr( sz, '.' );
+				V_strncpy( sz, findfn, sizeof( sz ) );
+				char *ext = std::strchr( sz, '.' );
 				if (ext)
 				{
 					ext[0] = 0;
@@ -206,7 +194,7 @@ bool BuildGeneralMapList( std::vector< maplist_map_t > *aMaps, bool bUseMapListF
 
 				// add to list
 				maplist_map_t newMap;
-				Q_strncpy(newMap.name, sz, sizeof(newMap.name));
+				V_strncpy(newMap.name, sz, sizeof(newMap.name));
 				aMaps->push_back( newMap );
 			}
 
@@ -238,10 +226,10 @@ bool BuildGeneralMapList( std::vector< maplist_map_t > *aMaps, bool bUseMapListF
 							char szMap[ MAX_OSPATH ];
 
 							pFileList = COM_Parse( pFileList );
-							if ( strlen( com_token ) <= 0 )
+							if ( std::strlen( com_token ) <= 0 )
 								break;
 
-							Q_strncpy(szMap, com_token, sizeof(szMap));
+							V_strncpy(szMap, com_token, sizeof(szMap));
 
 							// ensure validity
 							if (!g_pVEngineServer->IsMapValid(szMap))
@@ -254,7 +242,7 @@ bool BuildGeneralMapList( std::vector< maplist_map_t > *aMaps, bool bUseMapListF
 							}
 
 							maplist_map_t newMap;
-							Q_strncpy(newMap.name, szMap, sizeof(newMap.name));
+							V_strncpy(newMap.name, szMap, sizeof(newMap.name));
 							aMaps->push_back( newMap );
 						}
 					}
@@ -293,7 +281,7 @@ bool BuildGeneralMapList( std::vector< maplist_map_t > *aMaps, bool bUseMapListF
 	{
 		for ( int i = 0 ; i < c; ++i )
 		{
-			if ( !Q_stricmp( (*aMaps)[ i ].name, startmap ) )
+			if ( !V_stricmp( (*aMaps)[ i ].name, startmap ) )
 			{
 				*iCurrentMap = i;
 			}
@@ -365,7 +353,7 @@ void CMapReslistGenerator::LogToEngineReslist( char const *pLine )
 	if ( fh != FILESYSTEM_INVALID_HANDLE )
 	{
 		g_pFileSystem->Write( "\"", 1, fh );
-		g_pFileSystem->Write( pLine, Q_strlen( pLine  ), fh );
+		g_pFileSystem->Write( pLine, V_strlen( pLine  ), fh );
 		g_pFileSystem->Write( "\"\n", 2, fh );
 		g_pFileSystem->Close( fh );
 	}
@@ -377,7 +365,7 @@ void CMapReslistGenerator::LogToEngineReslist( char const *pLine )
 void CMapReslistGenerator::EnableReslistGeneration( bool usemaplistfile )
 {
 	// hackhack !!!! This is a work-around until CS precaches things on level start, not player spawn 
-	if ( !Q_stricmp( "cstrike", GetCurrentMod() ) || !Q_stricmp( "csgo", GetCurrentMod() ) )
+	if ( !V_stricmp( "cstrike", GetCurrentMod() ) || !V_stricmp( "csgo", GetCurrentMod() ) )
 	{
 		// the CS UI basically broke this, all sorts of waiting for team selection player input in UI
 		// 5 for the loading map screen, 10 for team selection, 15 for loading in general.
@@ -392,12 +380,12 @@ void CMapReslistGenerator::EnableReslistGeneration( bool usemaplistfile )
 	if ( CommandLine()->CheckParm( "-reslistdir", &pszDir ) && pszDir )
 	{
 		char szDir[ MAX_PATH ];
-		Q_strncpy( szDir, pszDir, sizeof( szDir ) );
-		Q_StripTrailingSlash( szDir );
-		Q_strlower( szDir );
-		Q_FixSlashes( szDir );
+		V_strncpy( szDir, pszDir, sizeof( szDir ) );
+		V_StripTrailingSlash( szDir );
+		V_strlower( szDir );
+		V_FixSlashes( szDir );
 
-		if ( Q_strlen( szDir ) > 0 )
+		if ( V_strlen( szDir ) > 0 )
 		{
 			m_sResListDir = szDir;
 		}
@@ -429,7 +417,7 @@ void CMapReslistGenerator::StartReslistGeneration()
 {
 	// wait for the main menu to stabilize then start the first map loading
 	m_iCurrentMap = 0;
-	m_flNextMapRunTime = Sys_FloatTime() + 10;
+	m_flNextMapRunTime = Plat_FloatTime() + 10;
 }
 
 //-----------------------------------------------------------------------------
@@ -438,7 +426,7 @@ void CMapReslistGenerator::StartReslistGeneration()
 //-----------------------------------------------------------------------------
 void CMapReslistGenerator::SetPrefix( char const *mapname )
 {
-	Q_snprintf( m_szPrefix, sizeof( m_szPrefix ), "%s:  ", mapname );
+	V_snprintf( m_szPrefix, sizeof( m_szPrefix ), "%s:  ", mapname );
 }
 
 void CMapReslistGenerator::OnLevelShutdown()
@@ -473,8 +461,8 @@ void CMapReslistGenerator::OnLevelLoadStart(const char *levelName)
 	if ( !IsEnabled() )
 	{
 		char basename[ MAX_PATH ];
-		Q_FileBase( levelName, basename, sizeof( basename ) );
-		Q_strlower( basename );
+		V_FileBase( levelName, basename, sizeof( basename ) );
+		V_strlower( basename );
 		SetPrefix( basename );
 		return;
 	}
@@ -486,7 +474,7 @@ void CMapReslistGenerator::OnLevelLoadStart(const char *levelName)
 
 	// add in the bsp file to the list, and its node graph
 	char path[MAX_PATH];
-	Q_snprintf( path, sizeof( path ), "maps\\%s.bsp", levelName );
+	V_snprintf( path, sizeof( path ), "maps\\%s.bsp", levelName );
 	OnResourcePrecached( path );
 
 	bool useNodeGraph = true;
@@ -499,7 +487,7 @@ void CMapReslistGenerator::OnLevelLoadStart(const char *levelName)
 
 	if ( useNodeGraph )
 	{
-		Q_snprintf(path, sizeof(path), "maps\\graphs\\%s.ain", levelName);
+		V_snprintf(path, sizeof(path), "maps\\graphs\\%s.ain", levelName);
 		OnResourcePrecached(path);
 	}
 }
@@ -521,7 +509,7 @@ void CMapReslistGenerator::OnFullyConnected()
 		return;
 
 	// initiate the next level
-	m_flNextMapRunTime = Sys_FloatTime() + m_iPauseTimeBetweenMaps;
+	m_flNextMapRunTime = Plat_FloatTime() + m_iPauseTimeBetweenMaps;
 }
 
 bool CMapReslistGenerator::ShouldRebuildCaches()
@@ -564,7 +552,7 @@ void CMapReslistGenerator::RunFrame()
 		return;
 	}
 
-	if ( m_flNextMapRunTime && m_flNextMapRunTime < Sys_FloatTime() )
+	if ( m_flNextMapRunTime && m_flNextMapRunTime < Plat_FloatTime() )
 	{
 		// about to transition or terminate, emit the current map log
 		WriteMapLog();
@@ -620,19 +608,19 @@ void CMapReslistGenerator::OnModelPrecached(const char *relativePathFileName)
 	if ( !IsEnabled() )
 		return;
 
-	if (strstr(relativePathFileName, ".vmt"))
+	if (std::strstr(relativePathFileName, ".vmt"))
 	{
 		// it's a materials file, make sure that it starts in the materials directory, and we get the .vtf
-		char file[_MAX_PATH];
+		char file[k_cMaxPath];
 
 		if ( StringHasPrefix( relativePathFileName, "materials" ) )
 		{
-			Q_strncpy(file, relativePathFileName, sizeof(file));
+			V_strncpy(file, relativePathFileName, sizeof(file));
 		}
 		else
 		{
 			// prepend the materials directory
-			Q_snprintf(file, sizeof(file), "materials\\%s", relativePathFileName);
+			V_snprintf(file, sizeof(file), "materials\\%s", relativePathFileName);
 		}
 		OnResourcePrecached(file);
 
@@ -640,7 +628,7 @@ void CMapReslistGenerator::OnModelPrecached(const char *relativePathFileName)
 		char *ext = strstr(file, ".vmt");
 		if (ext)
 		{
-			Q_strncpy(ext, ".vtf", 5);
+			V_strncpy(ext, ".vtf", 5);
 			OnResourcePrecached(file);
 		}
 	}
@@ -662,15 +650,15 @@ void CMapReslistGenerator::OnSoundPrecached(const char *relativePathFileName)
 	}
 
 	// prepend the sound/ directory if necessary
-	char file[_MAX_PATH];
+	char file[k_cMaxPath];
 	if ( StringHasPrefix( relativePathFileName, "sound" ) )
 	{
-		Q_strncpy(file, relativePathFileName, sizeof(file));
+		V_strncpy(file, relativePathFileName, sizeof(file));
 	}
 	else
 	{
 		// prepend the sound directory
-		Q_snprintf(file, sizeof(file), "sound\\%s", relativePathFileName);
+		V_snprintf(file, sizeof(file), "sound\\%s", relativePathFileName);
 	}
 
 	OnResourcePrecached(file);
@@ -692,7 +680,7 @@ void CMapReslistGenerator::OnResourcePrecached(const char *relativePathFileName)
 	if (relativePathFileName[0] == '*')
 		return;
 
-	char fullPath[_MAX_PATH];
+	char fullPath[k_cMaxPath];
 	if (g_pFileSystem->GetLocalPath(relativePathFileName, fullPath, sizeof(fullPath)))
 	{
 		OnResourcePrecachedFullPath(fullPath);
@@ -705,9 +693,9 @@ void CMapReslistGenerator::OnResourcePrecached(const char *relativePathFileName)
 void CMapReslistGenerator::OnResourcePrecachedFullPath(const char *fullPathFileName)
 {
 	char fixed[ MAX_PATH ];
-	Q_strncpy( fixed, fullPathFileName, sizeof( fixed ) );
-	Q_strlower( fixed );
-	Q_FixSlashes( fixed );
+	V_strncpy( fixed, fullPathFileName, sizeof( fixed ) );
+	V_strlower( fixed );
+	V_FixSlashes( fixed );
 
 	// make sure the filename hasn't already been written
 	if ( m_AlreadyWrittenFileNames.contains( fixed ) )
@@ -717,31 +705,31 @@ void CMapReslistGenerator::OnResourcePrecachedFullPath(const char *fullPathFileN
 	m_AlreadyWrittenFileNames.intern( fixed );
 
 	// add extras for mdl's
-	if (strstr(fixed, ".mdl"))
+	if (std::strstr(fixed, ".mdl"))
 	{
 		// it's a model, get it's other files as well
-		char file[_MAX_PATH];
-		Q_strncpy(file, fixed, sizeof(file) - 10);
+		char file[k_cMaxPath];
+		V_strncpy(file, fixed, sizeof(file) - 10);
 		char *ext = strstr(file, ".mdl");
 
-		Q_strncpy(ext, ".vvd", 10);
+		V_strncpy(ext, ".vvd", 10);
 		OnResourcePrecachedFullPath(file);
-		Q_strncpy(ext, ".ani", 10);
+		V_strncpy(ext, ".ani", 10);
 		OnResourcePrecachedFullPath(file);
-		Q_strncpy(ext, ".dx90.vtx", 10);
+		V_strncpy(ext, ".dx90.vtx", 10);
 		OnResourcePrecachedFullPath(file);
-		Q_strncpy(ext, ".phy", 10);
+		V_strncpy(ext, ".phy", 10);
 		OnResourcePrecachedFullPath(file);
-		Q_strncpy(ext, ".jpg", 10);
+		V_strncpy(ext, ".jpg", 10);
 		OnResourcePrecachedFullPath(file);
 	}
 
-	// strip it down relative to the root directory of the game (for steam)
-	char const *relativeFileName = Q_stristr( fixed, GetBaseDirectory() );
+	// strip it down relative to the root directory of the game
+	char const *relativeFileName = V_stristr( fixed, GetBaseDirectory() );
 	if ( relativeFileName )
 	{
 		// Skip the basedir and slash
-		relativeFileName += ( Q_strlen( GetBaseDirectory() ) + 1 );
+		relativeFileName += ( V_strlen( GetBaseDirectory() ) + 1 );
 	}
 
 	if ( !relativeFileName )
@@ -769,8 +757,8 @@ void CMapReslistGenerator::WriteMapLog()
 	}
 
 	// write the sorted map log, allows for easier diffs between revisions
-	char path[_MAX_PATH];
-	Q_snprintf( path, sizeof( path ), "%s\\%s.lst", m_sResListDir.c_str(), m_szLevelName );
+	char path[k_cMaxPath];
+	V_snprintf( path, sizeof( path ), "%s\\%s.lst", m_sResListDir.c_str(), m_szLevelName );
 	FileHandle_t fh = g_pFileSystem->Open( path, "wt", "DEFAULT_WRITE_PATH" );
 	if ( FILESYSTEM_INVALID_HANDLE != fh )
 	{
@@ -778,7 +766,7 @@ void CMapReslistGenerator::WriteMapLog()
 		{
 			const char *pLine = line.c_str();
 			g_pFileSystem->Write( "\"", 1, fh );
-			g_pFileSystem->Write( pLine, Q_strlen( pLine ), fh );
+			g_pFileSystem->Write( pLine, V_strlen( pLine ), fh );
 			g_pFileSystem->Write( "\"\n", 2, fh );
 		}
 		g_pFileSystem->Close( fh );
@@ -793,8 +781,8 @@ void CMapReslistGenerator::FileSystemLoggingFunc(const char *fullPathFileName, c
 	g_MapReslistGenerator.OnResourcePrecachedFullPath(fullPathFileName);
 }
 
-#define DELETIONS_BATCH_FILE		"deletions.bat"
-#define DELETIONS_WARNINGS_FILE		"undelete.lst"
+inline constexpr const char *DELETIONS_BATCH_FILE = "deletions.bat";
+inline constexpr const char *DELETIONS_WARNINGS_FILE = "undelete.lst";
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -828,13 +816,13 @@ void CMapReslistGenerator::EnableDeletionsTracking()
 					char filename[ MAX_OSPATH ];
 
 					pFileList = COM_Parse( pFileList );
-					if ( strlen( com_token ) <= 0 )
+					if ( std::strlen( com_token ) <= 0 )
 						break;
 
-					if ( !Q_stricmp( com_token, "del" ) )
+					if ( !V_stricmp( com_token, "del" ) )
 						continue;
 
-					Q_snprintf(filename, sizeof( filename ), "%s/%s", com_gamedir, com_token );
+					V_snprintf(filename, sizeof( filename ), "%s/%s", com_gamedir, com_token );
 
 					// Any more tokens on this line?
 					while ( COM_TokenWaiting( pFileList ) )
@@ -842,8 +830,8 @@ void CMapReslistGenerator::EnableDeletionsTracking()
 						pFileList = COM_Parse( pFileList );
 					}
 
-					Q_FixSlashes( filename );
-					Q_strlower( filename );
+					V_FixSlashes( filename );
+					V_strlower( filename );
 	
 					m_DeletionList.intern( filename );
 
@@ -878,11 +866,11 @@ void CMapReslistGenerator::EnableDeletionsTracking()
 				while ( 1 )
 				{
 					pFileList = COM_Parse( pFileList );
-					if ( strlen( com_token ) <= 0 )
+					if ( std::strlen( com_token ) <= 0 )
 						break;
 
-					Q_FixSlashes( com_token );
-					Q_strlower( com_token );
+					V_FixSlashes( com_token );
+					V_strlower( com_token );
 	
 					if ( !m_DeletionListWarningsSymbols.contains( com_token ) )
 					{
@@ -910,12 +898,11 @@ void CMapReslistGenerator::EnableDeletionsTracking()
 //-----------------------------------------------------------------------------
 void CMapReslistGenerator::TrackDeletions( const char *fullPathFileName )
 {
-	Assert( m_bTrackingDeletions );
 
-	char test[ _MAX_PATH ];
-	Q_strncpy( test, fullPathFileName, sizeof( test ) );
-	Q_FixSlashes( test );
-	Q_strlower( test );
+	char test[ k_cMaxPath ];
+	V_strncpy( test, fullPathFileName, sizeof( test ) );
+	V_FixSlashes( test );
+	V_strlower( test );
 
 	if ( m_DeletionList.contains( test ) )
 	{
@@ -927,26 +914,26 @@ void CMapReslistGenerator::TrackDeletions( const char *fullPathFileName )
 	}
 
 	// add extras for mdl's
-	if (strstr(test, ".mdl"))
+	if (std::strstr(test, ".mdl"))
 	{
 		// it's a model, get it's other files as well
-		char file[_MAX_PATH];
-		Q_strncpy(file, test, sizeof(file) - 10);
+		char file[k_cMaxPath];
+		V_strncpy(file, test, sizeof(file) - 10);
 		char *ext = strstr(file, ".mdl");
 
-		Q_strncpy(ext, ".vvd", 10);
+		V_strncpy(ext, ".vvd", 10);
 		TrackDeletions(file);
-		Q_strncpy(ext, ".ani", 10);
+		V_strncpy(ext, ".ani", 10);
 		TrackDeletions(file);
-		Q_strncpy(ext, ".dx80.vtx", 10);
+		V_strncpy(ext, ".dx80.vtx", 10);
 		TrackDeletions(file);
-		Q_strncpy(ext, ".dx90.vtx", 10);
+		V_strncpy(ext, ".dx90.vtx", 10);
 		TrackDeletions(file);
-		Q_strncpy(ext, ".sw.vtx", 10);
+		V_strncpy(ext, ".sw.vtx", 10);
 		TrackDeletions(file);
-		Q_strncpy(ext, ".phy", 10);
+		V_strncpy(ext, ".phy", 10);
 		TrackDeletions(file);
-		Q_strncpy(ext, ".jpg", 10);
+		V_strncpy(ext, ".jpg", 10);
 		TrackDeletions(file);
 	}
 }
@@ -996,4 +983,3 @@ void CMapReslistGenerator::SpewTrackedDeletionsLog()
 
 	g_pFileSystem->Close( hUndeleteFile );
 }
-

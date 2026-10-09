@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SHOT_MANIPULATOR_H
-#define SHOT_MANIPULATOR_H
-
-
-#include "mathlib/vector.h"
-
+import std;
+import ks.vstdlib;
+#include "sharedInterface.h"
 
 extern ConVar ai_shot_bias_min;
 extern ConVar ai_shot_bias_max;
@@ -70,7 +65,7 @@ inline const Vector &CShotManipulator::ApplySpread( const Vector &vecSpread, flo
 	// 1.0 gaussian, 0.0 is flat, -1.0 is inverse gaussian
 	float shotBias = ( ( shotBiasMax - shotBiasMin ) * bias ) + shotBiasMin;
 
-	float flatness = ( fabsf(shotBias) * 0.5 );
+	float flatness = ( std::fabsf(shotBias) * 0.5 );
 
 	do
 	{
@@ -102,5 +97,3 @@ inline const Vector &CShotManipulator::ApplyAngularSpread( const Vector &vecSpre
 	VectorTransform(m_vecShotDirection, matrix, m_vecResult);
 	return m_vecResult;
 }
-
-#endif // SHOT_MANIPULATOR_H

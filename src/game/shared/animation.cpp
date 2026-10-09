@@ -1,21 +1,63 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#endif
 #include "studio.h"
 #include "activitylist.h"
-#include "engine/IEngineSound.h"
 #include "ai_activity.h"
 #include "animation.h"
 #include "bone_setup.h"
-#include "scriptevent.h"
 #include "npcevent.h"
 #include "eventlist.h"
-#include "tier0/vprof.h"
 
 #if !defined( CLIENT_DLL ) && !defined( MAKEXVCD )
 #include "util.h"
@@ -180,7 +222,7 @@ void SetActivityForSequence( CStudioHdr *pstudiohdr, int i )
 
 void IndexModelSequences( CStudioHdr *pstudiohdr )
 {
-	VPROF_2( "IndexModelSequences",  IsServerDll() ? VPROF_BUDGETGROUP_SERVER_ANIM : VPROF_BUDGETGROUP_CLIENT_ANIMATION, false, BUDGETFLAG_ALL );
+	CVProfScope _( "IndexModelSequences", 2, IsServerDll() ? VPROF_BUDGETGROUP_SERVER_ANIM : VPROF_BUDGETGROUP_CLIENT_ANIMATION, false, BUDGETFLAG_ALL );
 	int i;
 
 	if (! pstudiohdr)
@@ -237,7 +279,7 @@ bool DebugValidateActivityIndexes( CStudioHdr *pstudiohdr )
 			if ( pszActivityName[0] != '\0' )
 			{
 				int iActIdx = ActivityList_IndexForName( pszActivityName );
-				AssertMsg1( iActIdx == seqdesc.activity, "Client and server sequence activity index numbers differ for %s", pstudiohdr->pszName() );
+				contract_assert( ( iActIdx == seqdesc.activity ) && "Client and server sequence activity index numbers differ for %s" );
 				bGood = bGood && iActIdx == seqdesc.activity;
 			}
 		}
@@ -263,7 +305,7 @@ bool DebugValidateActivityIndexes( CStudioHdr *pstudiohdr )
 
 					int iEventIndex = EventList_IndexForName( pEventName );
 
-					AssertMsg1( iEventIndex == pevent->event_newsystem, "Client and server sequence event index numbers differ for %s", pstudiohdr->pszName() );
+					contract_assert( ( iEventIndex == pevent->event_newsystem ) && "Client and server sequence event index numbers differ for %s" );
 					bGood = bGood && iEventIndex == pevent->event_newsystem;
 				}
 			}
@@ -289,7 +331,6 @@ void VerifySequenceIndex( CStudioHdr *pstudiohdr )
 
 
 
-#if !defined( MAKEXVCD )
 bool IsInPrediction()
 {
 	return CBaseEntity::GetPredictionPlayer() != nullptr;
@@ -297,11 +338,11 @@ bool IsInPrediction()
 
 int SelectWeightedSequence( CStudioHdr *pstudiohdr, int activity, int curSequence )
 {
-	VPROF( "SelectWeightedSequence" );
+	CVProfScope _( "SelectWeightedSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 #ifdef CLIENT_DLL
-	VPROF_INCREMENT_COUNTER( "Client SelectWeightedSequence", 1 );
+	VProfIncrementCounter<"Client SelectWeightedSequence">( 1 );
 #else // ifdef GAME_DLL
-	VPROF_INCREMENT_COUNTER( "Server SelectWeightedSequence", 1 );
+	VProfIncrementCounter<"Server SelectWeightedSequence">( 1 );
 #endif
 
 	if (! pstudiohdr)
@@ -344,14 +385,14 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequence( CStudioHdr *
 
 	if ( pstudiohdr->GetNumSeq() == 1 )
 	{
-		AssertMsg( 0, "Expected single sequence case to be handled in ::SelectWeightedSequence()" );
+		contract_assert( false && "Expected single sequence case to be handled in ::SelectWeightedSequence()" );
 		return ACTIVITY_NOT_AVAILABLE;
 	}
 
 	if (!ValidateAgainst(pstudiohdr))
 	{
-		AssertMsg1(false, "CStudioHdr %s has changed its vmodel pointer without reinitializing its activity mapping! Now performing emergency reinitialization.", pstudiohdr->pszName());
-		ExecuteOnce(DebuggerBreakIfDebugging());
+		contract_assert( false && "CStudioHdr %s has changed its vmodel pointer without reinitializing its activity mapping! Now performing emergency reinitialization." );
+		ExecuteOnce( [&]{ DebuggerBreakIfDebugging(); } );
 		Reinitialize(pstudiohdr);
 	}
 
@@ -366,8 +407,7 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequence( CStudioHdr *
 		return ACTIVITY_NOT_AVAILABLE;
 	}
 
-	AssertMsg2( actData->totalWeight > 0, "Activity %d has total weight of %d!",
-		activity, actData->totalWeight );
+	contract_assert( ( actData->totalWeight > 0 ) && "Activity %d has total weight of %d!" );
 	int weighttotal = actData->totalWeight;
 
 	// failsafe if the weight is 0: assume the artist screwed up and that the first sequence
@@ -431,8 +471,8 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers(
 
 	if (!ValidateAgainst(pstudiohdr))
 	{
-		AssertMsg1(false, "CStudioHdr %s has changed its vmodel pointer without reinitializing its activity mapping! Now performing emergency reinitialization.", pstudiohdr->pszName());
-		ExecuteOnce(DebuggerBreakIfDebugging());
+		contract_assert( false && "CStudioHdr %s has changed its vmodel pointer without reinitializing its activity mapping! Now performing emergency reinitialization." );
+		ExecuteOnce( [&]{ DebuggerBreakIfDebugging(); } );
 		Reinitialize(pstudiohdr);
 	}
 
@@ -511,8 +551,6 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers(
 }
 
 
-#endif
-
 int SelectHeaviestSequence( CStudioHdr *pstudiohdr, int activity )
 {
 	if ( !pstudiohdr )
@@ -558,7 +596,7 @@ void GetEyePosition ( CStudioHdr *pstudiohdr, Vector &vecEyePosition )
 //-----------------------------------------------------------------------------
 int LookupActivity( CStudioHdr *pstudiohdr, const char *label )
 {
-	VPROF( "LookupActivity" );
+	CVProfScope _( "LookupActivity", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( !pstudiohdr )
 	{
@@ -577,7 +615,6 @@ int LookupActivity( CStudioHdr *pstudiohdr, const char *label )
 	return ACT_INVALID;
 }
 
-#if !defined( MAKEXVCD )
 //-----------------------------------------------------------------------------
 // Purpose: Looks up a sequence by sequence name first, then by activity name.
 // Input  : label - The sequence name or activity name to look up.
@@ -585,7 +622,7 @@ int LookupActivity( CStudioHdr *pstudiohdr, const char *label )
 //-----------------------------------------------------------------------------
 int LookupSequence( CStudioHdr *pstudiohdr, const char *label )
 {
-	VPROF( "LookupSequence" );
+	CVProfScope _( "LookupSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if (! pstudiohdr)
 		return 0;
@@ -670,8 +707,6 @@ float GetSequenceLinearMotionAndDuration( CStudioHdr *pstudiohdr, int iSequence,
 
 	return Studio_SeqMovementAndDuration( pstudiohdr, iSequence, 0, 1.0, poseParameter, (*pVec) );
 }
-
-#endif
 
 const char *GetSequenceName( CStudioHdr *pstudiohdr, int iSequence )
 {
@@ -918,11 +953,7 @@ int GetAnimationEvent( CStudioHdr *pstudiohdr, int sequence, animevent_t *pNPCEv
 		{
 			pNPCEvent->pSource = nullptr;
 			pNPCEvent->cycle = pevent[index].cycle;
-#if !defined( MAKEXVCD )
 			pNPCEvent->eventtime = gpGlobals->curtime;
-#else
-			pNPCEvent->eventtime = 0.0f;
-#endif
 			pNPCEvent->type	= pevent[index].type;
 			pNPCEvent->Event( pevent[index].Event() );
 			pNPCEvent->options = pevent[index].pszOptions();
@@ -948,7 +979,7 @@ int FindTransitionSequence( CStudioHdr *pstudiohdr, int iCurrentSequence, int iG
 	if ( ( iGoalSequence < 0 ) || ( iGoalSequence >= pstudiohdr->GetNumSeq() ) )
 	{
 		// asking for a bogus sequence.  Punt.
-		Assert( 0 );
+		contract_assert( 0 );
 		return iGoalSequence;
 	}
 
@@ -1034,7 +1065,7 @@ bool GotoSequence( CStudioHdr *pstudiohdr, int iCurrentSequence, float flCurrent
 	if ( ( iGoalSequence < 0 ) || ( iGoalSequence >= pstudiohdr->GetNumSeq() ) )
 	{
 		// asking for a bogus sequence.  Punt.
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
@@ -1223,7 +1254,7 @@ int FindBodygroupByName( CStudioHdr *pstudiohdr, const char *name )
 	for ( group = 0; group < pstudiohdr->numbodyparts(); group++ )
 	{
 		mstudiobodyparts_t *pbodypart = pstudiohdr->pBodypart( group );
-		if ( !Q_strcasecmp( name, pbodypart->pszName() ) )
+		if ( !V_strcasecmp( name, pbodypart->pszName() ) )
 		{
 			return group;
 		}
@@ -1261,7 +1292,7 @@ int GetSequenceActivity( CStudioHdr *pstudiohdr, int sequence, int *pweight )
 		return 0;
 	}
 
-	Assert(sequence >= 0 && sequence < pstudiohdr->GetNumSeq());
+	contract_assert( sequence >= 0 && sequence < pstudiohdr->GetNumSeq() );
 	mstudioseqdesc_t &seqdesc = pstudiohdr->pSeqdesc( sequence );
 
 	if (!(seqdesc.flags & STUDIO_ACTIVITY))

@@ -1,4 +1,6 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 void GetBaseTextureAndNormal( sampler base, sampler base2, sampler base3, sampler base4, sampler bump, bool bBump,
 							  float3 coords, float2 bumpcoords, float4 uvScales23, float2 uvScales4, HALF3 vWeights,

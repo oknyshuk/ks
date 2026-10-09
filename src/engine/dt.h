@@ -1,23 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DATATABLE_H
-#define DATATABLE_H
-
-
+import ks.tier1;
 #include "dt_common.h"
 #include "dt_recv_eng.h"
 #include "dt_send_eng.h"
-#include "utlvector.h"
 #include "dt_encode.h"
-#include <map>
-#include "tier1/bitbuf.h"
-#include <algorithm>
-
+import std;
 
 class SendTable;
 class RecvTable;
@@ -26,9 +16,9 @@ class CDTISendTable;
 
 // (Temporary.. switch to something more efficient). Number of bits to
 // encode property indices in the delta bits.
-#define PROP_SENTINEL	0x7FFFFFFF
+inline constexpr auto PROP_SENTINEL = 0x7FFFFFFF;
 
-#define MAX_EXCLUDE_PROPS		512
+inline constexpr auto MAX_EXCLUDE_PROPS = 512;
 
 class ExcludeProp
 {
@@ -38,7 +28,7 @@ public:
 };
 
 
-#define PROP_INDICES_COLLECTION_NUM_INDICES 2
+inline constexpr auto PROP_INDICES_COLLECTION_NUM_INDICES = 2;
 struct PropIndicesCollection_t
 {
 	unsigned short m_Indices[PROP_INDICES_COLLECTION_NUM_INDICES];
@@ -192,7 +182,7 @@ inline bool CSendNode::IsPropInRecursiveProps( int i ) const
 
 inline unsigned short CSendNode::GetDataTableProxyIndex() const
 {
-	Assert( m_DataTableProxyIndex != DATATABLE_PROXY_INDEX_INVALID );	// Make sure it's been set before.
+	contract_assert( m_DataTableProxyIndex != DATATABLE_PROXY_INDEX_INVALID );	// Make sure it's been set before.
 	return m_DataTableProxyIndex;
 }
 
@@ -386,7 +376,7 @@ inline int CSendTablePrecalc::GetPropertyIndexFromOffset( uint16 nOffset, int pr
 
 		if ( numMatchingProps == MAX_PROP_INDEX_OFFSETS )
 		{
-			AssertMsg( false, "Too many properties matching same offset!" );
+			contract_assert( false && "Too many properties matching same offset!" );
 			return numMatchingProps;
 		}
 
@@ -401,7 +391,7 @@ inline int CSendTablePrecalc::GetPropertyIndexFromOffset( uint16 nOffset, int pr
 // ------------------------------------------------------------------------ //
 
 // Used internally by various datatable modules.
-void DataTable_Warning( PRINTF_FORMAT_STRING const char *pInMessage, ... ) FMTFUNCTION( 1, 2 );
+void DataTable_Warning( const char *pInMessage, ... ) [[gnu::format(printf, 1, 2)]];
 bool ShouldWatchThisProp( const SendTable *pTable, int objectID, const char *pPropName );
 bool ShouldWatchThisProp( const RecvTable *pTable, int objectID, const char *pPropName );
 
@@ -458,9 +448,7 @@ void SetupArrayProps_R( TableType *pTable )
 
 		if ( pProp->GetType() == DPT_Array )
 		{
-			ErrorIfNot( i >= 1,
-				("SetupArrayProps_R: array prop '%s' is at index zero.", pProp->GetName())
-			);
+			if ( !( i >= 1 ) ) Error("SetupArrayProps_R: array prop '%s' is at index zero.", pProp->GetName());
 
 			// Get the property defining the elements in the array.
 			PropType *pArrayProp = pTable->GetProp( i-1 );
@@ -478,5 +466,3 @@ void SetupArrayProps_R( TableType *pTable )
 
 void FlushDeltaBitsTrackingData();
 bool Sendprop_UsingDebugWatch();
-
-#endif // DATATABLE_H

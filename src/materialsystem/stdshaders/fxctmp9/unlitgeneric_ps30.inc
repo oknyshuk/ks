@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -21,7 +22,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_unlitgeneric_ps30 0
+inline constexpr int shaderStaticTest_unlitgeneric_ps30 = 0;
 class unlitgeneric_ps30_Dynamic_Index
 {
 public:
@@ -38,10 +39,10 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_unlitgeneric_ps30 0
+inline constexpr int shaderDynamicTest_unlitgeneric_ps30 = 0;
 static const ShaderComboSemantics_t unlitgeneric_ps30_combos =
 {
-	"unlitgeneric_ps30", NULL, 0, NULL, 0 
+	"unlitgeneric_ps30", nullptr, 0, nullptr, 0 
 };
 
 class ConstructMe_unlitgeneric_ps30

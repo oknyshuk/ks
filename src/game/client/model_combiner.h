@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2010, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef MODEL_COMBINER_H
-#define MODEL_COMBINER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2010 Valve Corporation
 
 // Anyone requesting model combines needs to derive from this to get completion callbacks.
-abstract_class IModelCombinerRequesterInterface
+
+import std;
+#include "datacache/imdlcache.h"
+
+class IModelCombinerRequesterInterface
 {
 public:
 	// Called when a requested model combine has finished.
@@ -31,6 +29,3 @@ bool	ModelCombiner_CombineModel( IModelCombinerRequesterInterface *pRequester, c
 
 // Call this when you're being destroyed. It'll remove you from any pending callback lists.
 void	ModelCombiner_AbortCombineModelFor( IModelCombinerRequesterInterface *pRequester );
-
-
-#endif	// MODEL_COMBINER_H

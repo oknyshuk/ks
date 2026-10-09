@@ -1,19 +1,45 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 
 #include "trains.h"
 #include "ai_trackpather.h"
 
-#define	TRACKPATHER_DEBUG_LEADING	1
-#define	TRACKPATHER_DEBUG_PATH		2
-#define TRACKPATHER_DEBUG_TRACKS	3
+constexpr auto TRACKPATHER_DEBUG_LEADING = 1;
+constexpr auto TRACKPATHER_DEBUG_PATH = 2;
+constexpr auto TRACKPATHER_DEBUG_TRACKS = 3;
 ConVar g_debug_trackpather( "g_debug_trackpather", "0", FCVAR_CHEAT );
 
 //------------------------------------------------------------------------------
@@ -184,7 +210,7 @@ CPathTrack *CAI_TrackPather::BestPointOnPath( CPathTrack *pPath, const Vector &t
 	if ( CPathTrack::ValidPath( pPath ) == nullptr )
 	{
 		//FIXME: Implement
-		Assert(0);
+		contract_assert( 0 );
 		return nullptr;
 	}
 
@@ -342,7 +368,7 @@ float CAI_TrackPather::ComputeDistanceAlongPathToPoint( CPathTrack *pStartTrack,
 
 		pNextPath = bMovingForward ? pTravPath->GetNext() : pTravPath->GetPrevious();
 		pTestPath = pTravPath;
-		Assert( pTestPath );
+		contract_assert( pTestPath );
 
 		if ( pTravPath == pDestTrack )
 		{
@@ -532,7 +558,7 @@ float CAI_TrackPather::ComputeDistanceToLeadingPosition()
 //-----------------------------------------------------------------------------
 float CAI_TrackPather::ComputeDistanceToTargetPosition()
 {
-	Assert( m_pTargetNearestPath );
+	contract_assert( m_pTargetNearestPath );
 
 	CPathTrack *pDest = m_bMovingForward ? m_pTargetNearestPath.Get() : m_pTargetNearestPath->GetPrevious();
 	if ( !pDest )
@@ -724,7 +750,7 @@ CPathTrack *CAI_TrackPather::FindClosestPointOnPath( CPathTrack *pPath,
 	if ( CPathTrack::ValidPath( pPath ) == nullptr )
 	{
 		//FIXME: Implement
-		Assert(0);
+		contract_assert( 0 );
 		return nullptr;
 	}
 
@@ -1083,7 +1109,7 @@ void CAI_TrackPather::UpdateTargetPositionLeading( void )
 		if ( bMovingForward != m_bMovingForward )
 		{
 			// As a result of the tricky note above, this should never occur
-			Assert( pAdjustedDest != m_pCurrentPathTarget );
+			contract_assert( pAdjustedDest != m_pCurrentPathTarget );
 
 			// Oops! Need to reverse direction
 			m_bMovingForward = bMovingForward;
@@ -1281,7 +1307,7 @@ void CAI_TrackPather::SetFarthestPathDist( float flMaxPathDist )
 //------------------------------------------------------------------------------
 void CAI_TrackPather::SetupNewCurrentTarget( CPathTrack *pTrack )
 {
-	Assert( pTrack );
+	contract_assert( pTrack );
 	m_vecSegmentStartPoint = GetAbsOrigin();
 	VectorMA( m_vecSegmentStartPoint, -2.0f, GetAbsVelocity(), m_vecSegmentStartSplinePoint );
 
@@ -1422,7 +1448,7 @@ float CAI_TrackPather::ComputePathDistance( CPathTrack *pPath, CPathTrack *pDest
 	{
 		// Ciruclar loop checking
 		if ( pPath->HasBeenVisited() )
-			return FLT_MAX;
+			return std::numeric_limits<float>::max();
 
 		pPath->Visit();
 
@@ -1435,7 +1461,7 @@ float CAI_TrackPather::ComputePathDistance( CPathTrack *pPath, CPathTrack *pDest
 		pPath = bForward ? pPath->GetNext() : pPath->GetPrevious();
 	}
 
-	return FLT_MAX;
+	return std::numeric_limits<float>::max();
 }
 
 
@@ -1448,7 +1474,7 @@ bool CAI_TrackPather::IsForwardAlongPath( CPathTrack *pPath, CPathTrack *pPathTe
 	float flForwardDist = ComputePathDistance( pPath, pPathTest, true );
 	float flReverseDist = ComputePathDistance( pPath, pPathTest, false );
 
-	Assert( ( flForwardDist != FLT_MAX ) || ( flReverseDist != FLT_MAX ) );
+	contract_assert( ( flForwardDist != std::numeric_limits<float>::max() ) || ( flReverseDist != std::numeric_limits<float>::max() ) );
 	return ( flForwardDist <= flReverseDist );
 }
 

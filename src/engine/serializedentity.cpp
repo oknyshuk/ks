@@ -1,17 +1,12 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
-//
-//
-//
-//==================================================================================================
-#include "tier0/memalloc.h"
-#include <mutex>
-#include <atomic>
-#include "tier1/bitbuf.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+import std;
+import ks.tier1;
 #include "serializedentity.h"
-#include <set>
 
 //-----------------------------------------------------------------------------
-DEFINE_FIXEDSIZE_ALLOCATOR_MT( CSerializedEntity, 2048, ks::fixed_pool::grow::fast );
+ks::fixed_pool_mt CSerializedEntity::s_Allocator( sizeof(CSerializedEntity), 2048, ks::fixed_pool::grow::fast, "CSerializedEntity pool", alignof(CSerializedEntity) );
 
 //-----------------------------------------------------------------------------
 CSerializedEntity::CSerializedEntity()	
@@ -31,7 +26,7 @@ CSerializedEntity::~CSerializedEntity()
 
 void CSerializedEntity::SetupPackMemory( int nNumFields, int nDataBits )
 {
-	AssertMsg( !IsPacked(), "Attempted to pack the memory inside of a Serialized entity that was already allocated. This is a memory leak." );
+	contract_assert( ( !IsPacked() ) && "Attempted to pack the memory inside of a Serialized entity that was already allocated. This is a memory leak." );
 
 	//determine the total size for the buffer
 	int fieldSize = PAD_NUMBER( nNumFields * sizeof( *m_pFields ), 4 );
@@ -67,9 +62,9 @@ void CSerializedEntity::Pack( short *pFields, uint32 *pFieldDataOffsets, int fie
 	//setup the memory appropriately
 	SetupPackMemory( fieldCount, nFieldDataBits );
 
-	memcpy( m_pFields, pFields, m_nFieldCount * sizeof( *m_pFields ) );
-	memcpy( m_pFieldDataOffsets, pFieldDataOffsets, m_nFieldCount * sizeof( *m_pFieldDataOffsets ) );
-	memcpy( m_pFieldData, pFieldData, Bits2Bytes( nFieldDataBits ) );
+	std::memcpy( m_pFields, pFields, m_nFieldCount * sizeof( *m_pFields ) );
+	std::memcpy( m_pFieldDataOffsets, pFieldDataOffsets, m_nFieldCount * sizeof( *m_pFieldDataOffsets ) );
+	std::memcpy( m_pFieldData, pFieldData, Bits2Bytes( nFieldDataBits ) );
 }
 
 void CSerializedEntity::Copy( const CSerializedEntity &other )
@@ -91,10 +86,6 @@ void CSerializedEntity::Swap( CSerializedEntity& other )
 	V_swap(m_nFieldCount, other.m_nFieldCount);
 	V_swap(m_nNumReservedFields, other.m_nNumReservedFields);
 
-	#ifdef PARANOID_SERIALIZEDENTITY
-		V_swap(m_File, other.m_File);
-		V_swap(m_Line, other.m_Line);
-	#endif
 }
 
 void CSerializedEntity::Clear()
@@ -121,7 +112,7 @@ void CSerializedEntity::Clear()
 
 void CSerializedEntity::ReservePathAndOffsetMemory( uint32 nNumElements )
 {
-	Assert( !IsPacked() );
+	contract_assert( !IsPacked() );
 
 	//don't allow them to reserve less memory than what we have already allocated
 	m_nNumReservedFields = std::max<std::common_type_t<uint32, uint16>>( nNumElements, m_nFieldCount );
@@ -146,8 +137,8 @@ void CSerializedEntity::ReservePathAndOffsetMemory( uint32 nNumElements )
 		//copy over the old data
 		if( pOldFields )
 		{	
-			memcpy( m_pFields, pOldFields, sizeof( short ) * m_nFieldCount );
-			memcpy( m_pFieldDataOffsets, pOldOffsets, sizeof( uint32 ) * m_nFieldCount );
+			std::memcpy( m_pFields, pOldFields, sizeof( short ) * m_nFieldCount );
+			std::memcpy( m_pFieldDataOffsets, pOldOffsets, sizeof( uint32 ) * m_nFieldCount );
 		}
 	}
 	else
@@ -163,7 +154,7 @@ void CSerializedEntity::ReservePathAndOffsetMemory( uint32 nNumElements )
 
 void CSerializedEntity::Grow()
 {
-	Assert( !IsPacked() );
+	contract_assert( !IsPacked() );
 
 	//determine our updated size (start at 2, grow in multiples of 2)
 	if ( !m_pFields )
@@ -176,7 +167,7 @@ void CSerializedEntity::Grow()
 // pvecFieldPathBits is used by DTI mode
 bool CSerializedEntity::ReadFieldPaths( bf_read *pBuf, std::vector< int > *pvecFieldPathBits /*= NULL*/ )
 {
-	Assert( !IsPacked() );
+	contract_assert( !IsPacked() );
 
 	CDeltaBitsReader reader( pBuf );
 	int iProp;
@@ -213,8 +204,8 @@ void ClearRemainingBits( uint32 nNumBits, uint8* pBitData )
 
 void CSerializedEntity::PackWithFieldData( void *pData, int nDataBits )
 {
-	Assert( !IsPacked() );
-	Assert( m_pFieldData == nullptr );
+	contract_assert( !IsPacked() );
+	contract_assert( m_pFieldData == nullptr );
 
 	short *pStartFields = m_pFields;
 	uint32 *pStartDataOffsets = m_pFieldDataOffsets;
@@ -222,9 +213,9 @@ void CSerializedEntity::PackWithFieldData( void *pData, int nDataBits )
 	//setup the memory appropriately
 	SetupPackMemory( m_nFieldCount, nDataBits );
 
-	memcpy( m_pFields, pStartFields, m_nFieldCount * sizeof( *m_pFields ) );
-	memcpy( m_pFieldDataOffsets, pStartDataOffsets, m_nFieldCount * sizeof( *m_pFieldDataOffsets ) );
-	memcpy( m_pFieldData, pData, Bits2Bytes( nDataBits ) );
+	std::memcpy( m_pFields, pStartFields, m_nFieldCount * sizeof( *m_pFields ) );
+	std::memcpy( m_pFieldDataOffsets, pStartDataOffsets, m_nFieldCount * sizeof( *m_pFieldDataOffsets ) );
+	std::memcpy( m_pFieldData, pData, Bits2Bytes( nDataBits ) );
 	ClearRemainingBits( nDataBits, m_pFieldData );
 
 	//free our original memory
@@ -233,8 +224,8 @@ void CSerializedEntity::PackWithFieldData( void *pData, int nDataBits )
 
 void CSerializedEntity::PackWithFieldData( bf_read &buf, int nDataBits )
 {
-	Assert( !IsPacked() );
-	Assert( m_pFieldData == nullptr );
+	contract_assert( !IsPacked() );
+	contract_assert( m_pFieldData == nullptr );
 
 	short *pStartFields = m_pFields;
 	uint32 *pStartDataOffsets = m_pFieldDataOffsets;
@@ -242,8 +233,8 @@ void CSerializedEntity::PackWithFieldData( bf_read &buf, int nDataBits )
 	//setup the memory appropriately
 	SetupPackMemory( m_nFieldCount, nDataBits );
 
-	memcpy( m_pFields, pStartFields, m_nFieldCount * sizeof( *m_pFields ) );
-	memcpy( m_pFieldDataOffsets, pStartDataOffsets, m_nFieldCount * sizeof( *m_pFieldDataOffsets ) );
+	std::memcpy( m_pFields, pStartFields, m_nFieldCount * sizeof( *m_pFields ) );
+	std::memcpy( m_pFieldDataOffsets, pStartDataOffsets, m_nFieldCount * sizeof( *m_pFieldDataOffsets ) );
 	buf.ReadBits( m_pFieldData, nDataBits );
 	ClearRemainingBits( nDataBits, m_pFieldData );
 
@@ -273,51 +264,17 @@ class CSerializedEntities : public ISerializedEntities
 {
 public:
 
-#ifdef PARANOID_SERIALIZEDENTITY
-	std::set< CSerializedEntity * > m_Current;
-	std::recursive_mutex m_Mutex;
-	std::atomic<int> m_Allocated;
-
-	void Report()
-	{
-		if ( m_Allocated > 0 )
-		{
-			// If you see this, uncomment the #define PARANOID above and run again to see what's causing leaks
-			Msg( "%d CSerializedEntity object leaked!!!\n", (int)m_Allocated );
-		}
-	}
-#endif //PARANOID_SERIALIZEDENTITY
-
 	CSerializedEntities() 
-#ifdef PARANOID_SERIALIZEDENTITY
-	: m_Allocated( 0 )
-#endif
 	{
 	}
 
 	~CSerializedEntities()
 	{
-#ifdef PARANOID_SERIALIZEDENTITY
-		Report();
-		for ( CSerializedEntity *pEntity : m_Current )
-		{
-			Msg( "Leak %s:%d\n", pEntity->m_File, pEntity->m_Line );
-		}
-#endif
 	}
 
 	virtual SerializedEntityHandle_t AllocateSerializedEntity(char const *pFile, int nLine )
 	{
 		CSerializedEntity *pEntity = new CSerializedEntity();
-#ifdef PARANOID_SERIALIZEDENTITY
-		pEntity->m_File = pFile;
-		pEntity->m_Line = nLine;
-		m_Allocated++;
-		{
-			std::scoped_lock lock( m_Mutex );
-			m_Current.insert( pEntity );
-		}
-#endif
 		return reinterpret_cast< SerializedEntityHandle_t >( pEntity );
 	}
 
@@ -327,13 +284,6 @@ public:
 			return;
 
 		CSerializedEntity *pEntity = reinterpret_cast< CSerializedEntity * >( handle );
-#ifdef PARANOID_SERIALIZEDENTITY
-		m_Allocated--;
-		{
-			std::scoped_lock lock( m_Mutex );
-			m_Current.erase( pEntity );
-		}
-#endif
 		delete pEntity;
 	}
 
@@ -341,12 +291,12 @@ public:
 	{
 		if ( handle == SERIALIZED_ENTITY_HANDLE_INVALID )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			return SERIALIZED_ENTITY_HANDLE_INVALID;
 		}
 
 		CSerializedEntity *pSrc = reinterpret_cast< CSerializedEntity * >( handle );
-		Assert( pSrc );
+		contract_assert( pSrc );
 
 		CSerializedEntity *pDest = reinterpret_cast< CSerializedEntity * >( AllocateSerializedEntity(pFile, nLine) );
 		pDest->Copy( *pSrc );
@@ -358,44 +308,10 @@ public:
 static CSerializedEntities g_SerializedEntities;
 ISerializedEntities *g_pSerializedEntities = &g_SerializedEntities;
 
-CON_COMMAND( sv_dump_serialized_entities_mem, "Dump serialized entity allocations stats." )
+static void sv_dump_serialized_entities_mem( const CCommand &args );
+static ConCommand sv_dump_serialized_entities_mem_command( "sv_dump_serialized_entities_mem", sv_dump_serialized_entities_mem, "Dump serialized entity allocations stats." );
+static void sv_dump_serialized_entities_mem( const CCommand &args )
 {
 	CSerializedEntity::DumpMemInfo();
 
-#ifdef PARANOID_SERIALIZEDENTITY
-	// Use int64 to avoid integer overflow when we do the calculations incorrectly.
-	int64 totalBytes = 0;
-
-	for ( CSerializedEntity *pEntity : g_SerializedEntities.m_Current )
-	{
-		// m_nNumReservedFields indicates whether the entity is packed, which then determines how
-		// we retrieve the size.
-		int numFields = pEntity->IsPacked() ? pEntity->m_nFieldCount : pEntity->m_nNumReservedFields;
-		int fieldSize = PAD_NUMBER( numFields * sizeof( *pEntity->m_pFields ), 4 );
-		int dataOffsetsSize = PAD_NUMBER( numFields * sizeof( *pEntity->m_pFieldDataOffsets ), 4 );
-		int fieldDataSize = PAD_NUMBER( Bits2Bytes( pEntity->m_nFieldDataBits ), 4 );
-		int size = fieldSize + dataOffsetsSize + fieldDataSize;
-
-		totalBytes += size;
-	}
-
-	double totalKB = totalBytes / 1024.0;
-	unsigned int count = (unsigned int)g_SerializedEntities.m_Current.size();
-	Msg( "SerializedEntity: %u, %1.1f KB, %1.1f KB/CSerializedEntity,\n", count, totalKB, totalKB / count );
-#endif
 }
-
-#ifdef PARANOID_SERIALIZEDENTITY
-CON_COMMAND( sv_dump_serialized_entities, "Dump serialized entity allocations." )
-{
-	for ( CSerializedEntity *pEntity : g_SerializedEntities.m_Current )
-	{
-		Msg( "SerializedEntity from %s:%d: %d fields, %d bits\n", 
-			 pEntity->m_File, 
-			 pEntity->m_Line, 
-			 pEntity->m_nFieldCount, 
-			 pEntity->m_nFieldDataBits );
-	}
-}
-#endif
-

@@ -1,10 +1,37 @@
-//======= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======
-//
-// Purpose: client/server game specific stuff
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#include "cbase.h"
+// Purpose: client/server game specific stuff
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "player.h"
@@ -19,8 +46,6 @@
 #include "event_tempentity_tester.h"
 #include "ndebugoverlay.h"
 #include "engine/IEngineSound.h"
-#include <ctype.h>
-#include "tier1/strtools.h"
 #include "te_effect_dispatch.h"
 #include "globals.h"
 #include "nav_mesh.h"
@@ -29,13 +54,10 @@
 #include "datacache/imdlcache.h"
 #include "basemultiplayerplayer.h"
 #include "voice_gamemgr.h"
-#include "fmtstr.h"
 #include "videocfg/videocfg.h"
 
 #include "cs_gamerules.h"
 #include "cs_team.h"
-
-
 
 extern int giPrecacheGrunt;
 
@@ -56,7 +78,7 @@ char * CheckChatText( CBasePlayer *pPlayer, char *text )
 	if ( !text || !text[0] )
 		return nullptr;
 
-	int length = Q_strlen( text );
+	int length = V_strlen( text );
 
 	// remove quotes (leading & trailing) if present
 	if (*p == '"')
@@ -113,12 +135,12 @@ void Host_Say( edict_t *pEdict, const CCommand &args, bool teamonly )
 	{
 		if ( args.ArgC() >= 2 )
 		{
-			Q_snprintf( szTemp,sizeof(szTemp), "%s %s", ( char * )pcmd, (char *)args.ArgS() );
+			V_snprintf( szTemp,sizeof(szTemp), "%s %s", ( char * )pcmd, (char *)args.ArgS() );
 		}
 		else
 		{
 			// Just a one word command, use the first word...sigh
-			Q_snprintf( szTemp,sizeof(szTemp), "%s", ( char * )pcmd );
+			V_snprintf( szTemp,sizeof(szTemp), "%s", ( char * )pcmd );
 		}
 		p = szTemp;
 	}
@@ -127,7 +149,7 @@ void Host_Say( edict_t *pEdict, const CCommand &args, bool teamonly )
 	if ( pEdict )
 	{
 		pPlayer = ((CBasePlayer *)CBaseEntity::Instance( pEdict ));
-		Assert( pPlayer );
+		contract_assert( pPlayer );
 
 		// make sure the text has valid content
 		p = CheckChatText( pPlayer, p );
@@ -151,7 +173,7 @@ void Host_Say( edict_t *pEdict, const CCommand &args, bool teamonly )
 		if ( !p )
 			return;
 
-		Assert( strlen( pPlayer->GetPlayerName() ) > 0 );
+		contract_assert( std::strlen( pPlayer->GetPlayerName() ) > 0 );
 
 		bSenderDead = ( pPlayer->m_lifeState != LIFE_ALIVE );
 	}
@@ -172,28 +194,28 @@ void Host_Say( edict_t *pEdict, const CCommand &args, bool teamonly )
 
 	const char *pszPlayerName = pPlayer ? pPlayer->GetPlayerName():"Console";
 
-	if ( pszPrefix && strlen( pszPrefix ) > 0 )
+	if ( pszPrefix && std::strlen( pszPrefix ) > 0 )
 	{
 		if ( pszLocation && strlen( pszLocation ) )
 		{
-			Q_snprintf( text, sizeof(text), "%s %s @ %s: ", pszPrefix, pszPlayerName, pszLocation );
+			V_snprintf( text, sizeof(text), "%s %s @ %s: ", pszPrefix, pszPlayerName, pszLocation );
 		}
 		else
 		{
-			Q_snprintf( text, sizeof(text), "%s %s: ", pszPrefix, pszPlayerName );
+			V_snprintf( text, sizeof(text), "%s %s: ", pszPrefix, pszPlayerName );
 		}
 	}
 	else
 	{
-		Q_snprintf( text, sizeof(text), "%s: ", pszPlayerName );
+		V_snprintf( text, sizeof(text), "%s: ", pszPlayerName );
 	}
 
-	j = sizeof(text) - 2 - strlen(text);  // -2 for /n and null terminator
+	j = sizeof(text) - 2 - std::strlen(text);  // -2 for /n and null terminator
 	if ( (int)strlen(p) > j )
 		p[j] = 0;
 
-	Q_strncat( text, p, sizeof( text ), COPY_ALL_CHARACTERS );
-	Q_strncat( text, "\n", sizeof( text ), COPY_ALL_CHARACTERS );
+	V_strncat( text, p, sizeof( text ), COPY_ALL_CHARACTERS );
+	V_strncat( text, "\n", sizeof( text ), COPY_ALL_CHARACTERS );
  
 	// loop through all players
 	// Start with the first player.
@@ -272,7 +294,7 @@ void Host_Say( edict_t *pEdict, const CCommand &args, bool teamonly )
 	if ( engine->IsDedicatedServer() )
 		 Msg( "%s", text );
 
-	Assert( p );
+	contract_assert( p );
 
 	int userid = 0;
 	const char *networkID = "Console";
@@ -372,27 +394,27 @@ void ClientPrecache( void )
 	char pBuf[MAX_PATH];
 	for ( int i = 0; i < CPU_LEVEL_PC_COUNT; ++i )
 	{
-		Q_snprintf( pBuf, sizeof(pBuf), "cfg/cpu_level_%d_pc.ekv", i );
+		V_snprintf( pBuf, sizeof(pBuf), "cfg/cpu_level_%d_pc.ekv", i );
 		engine->ForceExactFile( pBuf );
-		Q_snprintf( pBuf, sizeof(pBuf), "cfg/cpu_level_%d_pc_ss.ekv", i );
+		V_snprintf( pBuf, sizeof(pBuf), "cfg/cpu_level_%d_pc_ss.ekv", i );
 		engine->ForceExactFile( pBuf );
 	}
 
 	for ( int i = 0; i < GPU_LEVEL_PC_COUNT; ++i )
 	{
-		Q_snprintf( pBuf, sizeof(pBuf), "cfg/gpu_level_%d_pc.ekv", i );
+		V_snprintf( pBuf, sizeof(pBuf), "cfg/gpu_level_%d_pc.ekv", i );
 		engine->ForceExactFile( pBuf );
 	}
 
 	for ( int i = 0; i < MEM_LEVEL_PC_COUNT; ++i )
 	{
-		Q_snprintf( pBuf, sizeof(pBuf), "cfg/mem_level_%d_pc.ekv", i );
+		V_snprintf( pBuf, sizeof(pBuf), "cfg/mem_level_%d_pc.ekv", i );
 		engine->ForceExactFile( pBuf );
 	}
 
 	for ( int i = 0; i < GPU_MEM_LEVEL_PC_COUNT; ++i )
 	{
-		Q_snprintf( pBuf, sizeof(pBuf), "cfg/gpu_mem_level_%d_pc.ekv", i );
+		V_snprintf( pBuf, sizeof(pBuf), "cfg/gpu_mem_level_%d_pc.ekv", i );
 		engine->ForceExactFile( pBuf );
 	}
 
@@ -401,7 +423,9 @@ void ClientPrecache( void )
 	engine->ForceExactFile( "scripts/mod_lessons.txt" );
 }
 
-CON_COMMAND_F( cast_ray, "Tests collision detection", FCVAR_CHEAT )
+static void cast_ray( const CCommand &args );
+static ConCommand cast_ray_command( "cast_ray", cast_ray, "Tests collision detection", FCVAR_CHEAT );
+static void cast_ray( const CCommand &args )
 {
 	CBasePlayer *pPlayer = UTIL_GetCommandClient();
 	
@@ -423,7 +447,9 @@ CON_COMMAND_F( cast_ray, "Tests collision detection", FCVAR_CHEAT )
 	}
 }
 
-CON_COMMAND_F( cast_hull, "Tests hull collision detection", FCVAR_CHEAT )
+static void cast_hull( const CCommand &args );
+static ConCommand cast_hull_command( "cast_hull", cast_hull, "Tests hull collision detection", FCVAR_CHEAT );
+static void cast_hull( const CCommand &args )
 {
 	CBasePlayer *pPlayer = UTIL_GetCommandClient();
 	
@@ -468,7 +494,7 @@ CBaseEntity *GetNextCommandEntity( CBasePlayer *pPlayer, const char *name, CBase
 		return pPlayer ? pPlayer->FindPickerEntity() : nullptr;
 	}
 
-	int index = atoi( name );
+	int index = std::atoi( name );
 	if ( index )
 	{
 		// If we've already found an entity, return NULL. 
@@ -632,7 +658,7 @@ void CPointServerCommand::InputCommand( inputdata_t& inputdata )
 		// Parse the text into distinct commands
 		const char *pCurrentCommand = inputdata.value.String();
 		int nOffsetToNextCommand;
-		int	nLen = Q_strlen( inputdata.value.String() );
+		int	nLen = V_strlen( inputdata.value.String() );
 		for( ; nLen > 0; nLen -= nOffsetToNextCommand+1, pCurrentCommand += nOffsetToNextCommand+1 )
 		{
 			// find a \n or ; line break
@@ -702,7 +728,7 @@ void CC_DrawLine( const CCommand &args )
 	Vector startPos;
 	Vector endPos;
 
-	startPos.x = clamp( atof(args[1]), MIN_COORD_FLOAT, MAX_COORD_FLOAT );
+	startPos.x = clamp( std::atof(args[1]), MIN_COORD_FLOAT, MAX_COORD_FLOAT );
 	startPos.y = clamp( atof(args[2]), MIN_COORD_FLOAT, MAX_COORD_FLOAT );
 	startPos.z = clamp( atof(args[3]), MIN_COORD_FLOAT, MAX_COORD_FLOAT );
 	endPos.x = clamp( atof(args[4]), MIN_COORD_FLOAT, MAX_COORD_FLOAT );
@@ -722,7 +748,7 @@ void CC_DrawCross( const CCommand &args )
 {
 	Vector vPosition;
 
-	vPosition.x = clamp( atof(args[1]), MIN_COORD_FLOAT, MAX_COORD_FLOAT );
+	vPosition.x = clamp( std::atof(args[1]), MIN_COORD_FLOAT, MAX_COORD_FLOAT );
 	vPosition.y = clamp( atof(args[2]), MIN_COORD_FLOAT, MAX_COORD_FLOAT );
 	vPosition.z = clamp( atof(args[3]), MIN_COORD_FLOAT, MAX_COORD_FLOAT );
 
@@ -764,7 +790,7 @@ void kill_helper( const CCommand &args, bool bVector, bool bExplode )
 		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 		{
 			pPlayer = ToBasePlayer( UTIL_PlayerByIndex(i) );
-			if ( pPlayer && Q_strstr( pPlayer->GetPlayerName(), args[1] ) )
+			if ( pPlayer && V_strstr( pPlayer->GetPlayerName(), args[1] ) )
 				break;
 			pPlayer = nullptr;
 		}
@@ -795,7 +821,7 @@ void kill_helper( const CCommand &args, bool bVector, bool bExplode )
 	{
 		int i = bKillOther ? 2 : 1;
 		Vector vecForce;
-		vecForce.x = atof( args[i++] );
+		vecForce.x = std::atof( args[i++] );
 		vecForce.y = atof( args[i++] );
 		vecForce.z = atof( args[i++] );
 
@@ -809,28 +835,36 @@ void kill_helper( const CCommand &args, bool bVector, bool bExplode )
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-CON_COMMAND_F( kill, "Kills the player with generic damage", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+static void kill( const CCommand &args );
+static ConCommand kill_command( "kill", kill, "Kills the player with generic damage", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void kill( const CCommand &args )
 {
 	kill_helper( args, false, false );
 }
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-CON_COMMAND_F( explode, "Kills the player with explosive damage", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+static void explode( const CCommand &args );
+static ConCommand explode_command( "explode", explode, "Kills the player with explosive damage", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void explode( const CCommand &args )
 {
 	kill_helper( args, false, true );
 }
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-CON_COMMAND_F( killvector, "Kills a player applying force. Usage: killvector <player> <x value> <y value> <z value>", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+static void killvector( const CCommand &args );
+static ConCommand killvector_command( "killvector", killvector, "Kills a player applying force. Usage: killvector <player> <x value> <y value> <z value>", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void killvector( const CCommand &args )
 {
 	kill_helper( args, true, false );
 }
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-CON_COMMAND_F( explodevector, "Kills a player applying an explosive force. Usage: explodevector <player> <x value> <y value> <z value>", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+static void explodevector( const CCommand &args );
+static ConCommand explodevector_command( "explodevector", explodevector, "Kills a player applying an explosive force. Usage: explodevector <player> <x value> <y value> <z value>", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void explodevector( const CCommand &args )
 {
 	kill_helper( args, true, true );
 }
@@ -838,7 +872,9 @@ CON_COMMAND_F( explodevector, "Kills a player applying an explosive force. Usage
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-CON_COMMAND_F( buddha, "Toggle.  Player takes damage but won't die. (Shows red cross when health is zero)", FCVAR_CHEAT )
+static void buddha( const CCommand &args );
+static ConCommand buddha_command( "buddha", buddha, "Toggle.  Player takes damage but won't die. (Shows red cross when health is zero)", FCVAR_CHEAT );
+static void buddha( const CCommand &args )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( UTIL_GetCommandClient() ); 
 	if ( pPlayer )
@@ -857,10 +893,12 @@ CON_COMMAND_F( buddha, "Toggle.  Player takes damage but won't die. (Shows red c
 }
 
 
-#define TALK_INTERVAL 0.66 // min time between say commands from a client
+constexpr auto TALK_INTERVAL = 0.66; // min time between say commands from a client
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-CON_COMMAND_F( say, "Display player message", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+static void say( const CCommand &args );
+static ConCommand say_command( "say", say, "Display player message", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void say( const CCommand &args )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( UTIL_GetCommandClient() ); 
 	if ( pPlayer )
@@ -880,7 +918,9 @@ CON_COMMAND_F( say, "Display player message", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-CON_COMMAND_F( say_team, "Display player message to team", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+static void say_team( const CCommand &args );
+static ConCommand say_team_command( "say_team", say_team, "Display player message to team", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void say_team( const CCommand &args )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( UTIL_GetCommandClient() ); 
 	if (pPlayer)
@@ -896,7 +936,9 @@ CON_COMMAND_F( say_team, "Display player message to team", FCVAR_GAMEDLL_FOR_REM
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-CON_COMMAND_F( give, "Give item to player.\n\tArguments: <item_name>", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+static void give( const CCommand &args );
+static ConCommand give_command( "give", give, "Give item to player.\n\tArguments: <item_name>", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void give( const CCommand &args )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( UTIL_GetCommandClient() ); 
 	if ( pPlayer 
@@ -904,11 +946,11 @@ CON_COMMAND_F( give, "Give item to player.\n\tArguments: <item_name>", FCVAR_GAM
 		&& args.ArgC() >= 2 )
 	{
 		char item_to_give[ 256 ];
-		Q_strncpy( item_to_give, args[1], sizeof( item_to_give ) );
-		Q_strlower( item_to_give );
+		V_strncpy( item_to_give, args[1], sizeof( item_to_give ) );
+		V_strlower( item_to_give );
 
 		// Dirty hack to avoid suit playing it's pickup sound
-		if ( !Q_stricmp( item_to_give, "item_suit" ) )
+		if ( !V_stricmp( item_to_give, "item_suit" ) )
 		{
 			pPlayer->EquipSuit( false );
 			return;
@@ -930,7 +972,7 @@ void CC_Player_SetModel( const CCommand &args )
 	if ( pPlayer && args.ArgC() == 2)
 	{
 		static char szName[256];
-		Q_snprintf( szName, sizeof( szName ), "models/%s.mdl", args[1] );
+		V_snprintf( szName, sizeof( szName ), "models/%s.mdl", args[1] );
 		pPlayer->SetModel( szName );
 		UTIL_SetSize(pPlayer, VEC_HULL_MIN, VEC_HULL_MAX);
 	}
@@ -957,28 +999,28 @@ void CC_Player_TestDispatchEffect( const CCommand &args )
 	float flDistance = 1024;
 	if ( args.ArgC() >= 3 )
 	{
-		flDistance = atoi( args[ 2 ] );
+		flDistance = std::atoi( args[ 2 ] );
 	}
 
 	// Optional flags
 	float flags = 0;
 	if ( args.ArgC() >= 4 )
 	{
-		flags = atoi( args[ 3 ] );
+		flags = std::atoi( args[ 3 ] );
 	}
 
 	// Optional magnitude
 	float magnitude = 0;
 	if ( args.ArgC() >= 5 )
 	{
-		magnitude = atof( args[ 4 ] );
+		magnitude = std::atof( args[ 4 ] );
 	}
 
 	// Optional scale
 	float scale = 0;
 	if ( args.ArgC() >= 6 )
 	{
-		scale = atof( args[ 5 ] );
+		scale = std::atof( args[ 5 ] );
 	}
 
 	Vector vecForward;
@@ -1035,7 +1077,7 @@ void CC_Player_BugBaitSwap( void )
 
 			const char *strWeaponName = pWeapon->GetName();
 
-			if ( !Q_stricmp( strWeaponName, "weapon_bugbait" ) )
+			if ( !V_stricmp( strWeaponName, "weapon_bugbait" ) )
 			{
 				pPlayer->SelectLastItem();
 			}
@@ -1180,7 +1222,7 @@ void EnableNoClip( CBasePlayer *pPlayer )
 void DisableNoClip( CBasePlayer *pPlayer )
 {
 	CPlayerState *pl = pPlayer->PlayerData();
-	Assert( pl );
+	contract_assert( pl );
 
 	pPlayer->RemoveEFlags( EFL_NOCLIP_ACTIVE );
 	pPlayer->SetMoveType( MOVETYPE_WALK );
@@ -1209,7 +1251,9 @@ void DisableNoClip( CBasePlayer *pPlayer )
 	UTIL_LogPrintf( "%s left NOCLIP mode\n", GameLogSystem()->FormatPlayer( pPlayer ) );
 }
 
-CON_COMMAND_F( noclip, "Toggle. Player becomes non-solid and flies.  Optional argument of 0 or 1 to force enable/disable", FCVAR_CHEAT )
+static void noclip( const CCommand &args );
+static ConCommand noclip_command( "noclip", noclip, "Toggle. Player becomes non-solid and flies.  Optional argument of 0 or 1 to force enable/disable", FCVAR_CHEAT );
+static void noclip( const CCommand &args )
 {
 	if ( !sv_cheats->GetBool() )
 		return;
@@ -1220,7 +1264,7 @@ CON_COMMAND_F( noclip, "Toggle. Player becomes non-solid and flies.  Optional ar
 
 	if ( args.ArgC() >= 2 )
 	{
-		bool bEnable = Q_atoi( args.Arg( 1 ) ) ? true : false;
+		bool bEnable = V_atoi( args.Arg( 1 ) ) ? true : false;
 		if ( bEnable && pPlayer->GetMoveType() != MOVETYPE_NOCLIP )
 		{
 			EnableNoClip( pPlayer );
@@ -1300,7 +1344,9 @@ void CC_Gods_f (void)
 static ConCommand god("god", CC_God_f, "Toggle. Player becomes invulnerable.", FCVAR_CHEAT );
 static ConCommand gods("gods", CC_Gods_f, "Toggle. All players become invulnerable.", FCVAR_CHEAT );
 
-CON_COMMAND_F( ent_setpos, "Move entity to position", FCVAR_CHEAT )
+static void ent_setpos( const CCommand &args );
+static ConCommand ent_setpos_command( "ent_setpos", ent_setpos, "Move entity to position", FCVAR_CHEAT );
+static void ent_setpos( const CCommand &args )
 {
 	if ( !sv_cheats->GetBool() )
 		return;
@@ -1315,7 +1361,7 @@ CON_COMMAND_F( ent_setpos, "Move entity to position", FCVAR_CHEAT )
 		return;
 	}
 
-	int nIndex = Q_atoi( args[ 1 ] );
+	int nIndex = V_atoi( args[ 1 ] );
 	CBaseEntity *ent = CBaseEntity::Instance( nIndex );
 	if ( !ent )
 	{
@@ -1326,14 +1372,16 @@ CON_COMMAND_F( ent_setpos, "Move entity to position", FCVAR_CHEAT )
 	Vector oldorigin = ent->GetAbsOrigin();
 
 	Vector newpos;
-	newpos.x = atof( args[2] );
+	newpos.x = std::atof( args[2] );
 	newpos.y = atof( args[3] );
 	newpos.z = args.ArgC() == 5 ? atof( args[4] ) : oldorigin.z;
 
 	ent->SetAbsOrigin( newpos );
 }
 
-CON_COMMAND_F( ent_setang, "Set entity angles", FCVAR_CHEAT )
+static void ent_setang( const CCommand &args );
+static ConCommand ent_setang_command( "ent_setang", ent_setang, "Set entity angles", FCVAR_CHEAT );
+static void ent_setang( const CCommand &args )
 {
 	if ( !sv_cheats->GetBool() )
 		return;
@@ -1348,7 +1396,7 @@ CON_COMMAND_F( ent_setang, "Set entity angles", FCVAR_CHEAT )
 		return;
 	}
 
-	int nIndex = Q_atoi( args[ 1 ] );
+	int nIndex = V_atoi( args[ 1 ] );
 	CBaseEntity *ent = CBaseEntity::Instance( nIndex );
 	if ( !ent )
 	{
@@ -1359,7 +1407,7 @@ CON_COMMAND_F( ent_setang, "Set entity angles", FCVAR_CHEAT )
 	QAngle old = ent->GetAbsAngles();
 
 	QAngle newAng;
-	newAng.x = atof( args[2] );
+	newAng.x = std::atof( args[2] );
 	newAng.y = atof( args[3] );
 	newAng.z = args.ArgC() == 5 ? atof( args[4] ) : old.z;
 
@@ -1369,7 +1417,9 @@ CON_COMMAND_F( ent_setang, "Set entity angles", FCVAR_CHEAT )
 //------------------------------------------------------------------------------
 // Sets client to godmode
 //------------------------------------------------------------------------------
-CON_COMMAND_F( setpos, "Move player to specified origin (must have sv_cheats).", FCVAR_CHEAT )
+static void setpos( const CCommand &args );
+static ConCommand setpos_command( "setpos", setpos, "Move player to specified origin (must have sv_cheats).", FCVAR_CHEAT );
+static void setpos( const CCommand &args )
 {
 	if ( !sv_cheats->GetBool() )
 		return;
@@ -1387,7 +1437,7 @@ CON_COMMAND_F( setpos, "Move player to specified origin (must have sv_cheats).",
 	Vector oldorigin = pPlayer->GetAbsOrigin();
 
 	Vector newpos;
-	newpos.x = clamp( atof( args[1] ), MIN_COORD_FLOAT, MAX_COORD_FLOAT );
+	newpos.x = clamp( std::atof( args[1] ), MIN_COORD_FLOAT, MAX_COORD_FLOAT );
 	newpos.y = clamp( atof( args[2] ), MIN_COORD_FLOAT, MAX_COORD_FLOAT );
 	newpos.z = args.ArgC() == 4 ?  clamp( atof( args[3] ), MIN_COORD_FLOAT, MAX_COORD_FLOAT ) : oldorigin.z;
 
@@ -1403,7 +1453,9 @@ CON_COMMAND_F( setpos, "Move player to specified origin (must have sv_cheats).",
 //------------------------------------------------------------------------------
 // Sets client to godmode
 //------------------------------------------------------------------------------
-CON_COMMAND_F( setpos_player, "Move specified player to specified origin (must have sv_cheats).", FCVAR_CHEAT )
+static void setpos_player( const CCommand &args );
+static ConCommand setpos_player_command( "setpos_player", setpos_player, "Move specified player to specified origin (must have sv_cheats).", FCVAR_CHEAT );
+static void setpos_player( const CCommand &args )
 {
 	if ( !sv_cheats->GetBool() )
 		return;
@@ -1418,14 +1470,14 @@ CON_COMMAND_F( setpos_player, "Move specified player to specified origin (must h
 		return;
 	}
 
-	CBasePlayer *pPlayer = ToBasePlayer( UTIL_PlayerByIndex( atoi( args[1] ) ) ); 
+	CBasePlayer *pPlayer = ToBasePlayer( UTIL_PlayerByIndex( std::atoi( args[1] ) ) ); 
 	if ( !pPlayer )
 		return;
 
 	Vector oldorigin = pPlayer->GetAbsOrigin();
 
 	Vector newpos;
-	newpos.x = atof( args[2] );
+	newpos.x = std::atof( args[2] );
 	newpos.y = atof( args[3] );
 	newpos.z = args.ArgC() == 5 ? atof( args[4] ) : oldorigin.z;
 
@@ -1459,7 +1511,7 @@ void CC_setang_f (const CCommand &args)
 	QAngle oldang = pPlayer->GetAbsAngles();
 
 	QAngle newang;
-	newang.x = atof( args[1] );
+	newang.x = std::atof( args[1] );
 	newang.y = atof( args[2] );
 	newang.z = args.ArgC() == 4 ? atof( args[3] ) : oldang.z;
 
@@ -1472,7 +1524,9 @@ static ConCommand setang("setang", CC_setang_f, "Snap player eyes to specified p
 //------------------------------------------------------------------------------
 // Move position
 //------------------------------------------------------------------------------
-CON_COMMAND_F( setpos_exact, "Move player to an exact specified origin (must have sv_cheats).", FCVAR_CHEAT )
+static void setpos_exact( const CCommand &args );
+static ConCommand setpos_exact_command( "setpos_exact", setpos_exact, "Move player to an exact specified origin (must have sv_cheats).", FCVAR_CHEAT );
+static void setpos_exact( const CCommand &args )
 {
 	if ( !sv_cheats->GetBool() )
 		return;
@@ -1490,7 +1544,7 @@ CON_COMMAND_F( setpos_exact, "Move player to an exact specified origin (must hav
 	Vector oldorigin = pPlayer->GetAbsOrigin();
 
 	Vector newpos;
-	newpos.x = atof( args[1] );
+	newpos.x = std::atof( args[1] );
 	newpos.y = atof( args[2] );
 	newpos.z = args.ArgC() == 4 ? atof( args[3] ) : oldorigin.z;
 
@@ -1507,7 +1561,9 @@ CON_COMMAND_F( setpos_exact, "Move player to an exact specified origin (must hav
 	}
 }
 
-CON_COMMAND_F( setang_exact, "Snap player eyes and orientation to specified pitch yaw <roll:optional> (must have sv_cheats).", FCVAR_CHEAT )
+static void setang_exact( const CCommand &args );
+static ConCommand setang_exact_command( "setang_exact", setang_exact, "Snap player eyes and orientation to specified pitch yaw <roll:optional> (must have sv_cheats).", FCVAR_CHEAT );
+static void setang_exact( const CCommand &args )
 {
 	if ( !sv_cheats->GetBool() )
 		return;
@@ -1525,7 +1581,7 @@ CON_COMMAND_F( setang_exact, "Snap player eyes and orientation to specified pitc
 	QAngle oldang = pPlayer->GetAbsAngles();
 
 	QAngle newang;
-	newang.x = atof( args[1] );
+	newang.x = std::atof( args[1] );
 	newang.y = atof( args[2] );
 	newang.z = args.ArgC() == 4 ? atof( args[3] ) : oldang.z;
 
@@ -1574,7 +1630,7 @@ void CC_HurtMe_f(const CCommand &args)
 	int iDamage = 10;
 	if ( args.ArgC() >= 2 )
 	{
-		iDamage = atoi( args[ 1 ] );
+		iDamage = std::atoi( args[ 1 ] );
 	}
 
 	pPlayer->TakeDamage( CTakeDamageInfo( pPlayer, pPlayer, iDamage, DMG_PREVENT_PHYSICS_FORCE ) );
@@ -1627,13 +1683,13 @@ static int DescribeGroundList( CBaseEntity *ent )
 
 				if ( other->GetGroundEntity() != ent )
 				{
-					Assert( 0 );
+					contract_assert( 0 );
 					Msg( "   mismatched!!!\n" );
 				}
 			}
 			else
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				Msg( "  %02i:  NULL link\n", c++ );
 			}
 			link = link->nextLink;
@@ -1642,7 +1698,7 @@ static int DescribeGroundList( CBaseEntity *ent )
 
 	if ( ent->GetGroundEntity() != nullptr )
 	{
-		Assert( IsInGroundList( ent, ent->GetGroundEntity() ) );
+		contract_assert( IsInGroundList( ent, ent->GetGroundEntity() ) );
 	}
 
 	return c - 1;
@@ -1655,7 +1711,7 @@ void CC_GroundList_f(const CCommand &args)
 
 	if ( args.ArgC() == 2 )
 	{
-		int idx = atoi( args[1] );
+		int idx = std::atoi( args[1] );
 
 		CBaseEntity *ground = CBaseEntity::Instance( idx );
 		if ( ground )
@@ -1673,7 +1729,7 @@ void CC_GroundList_f(const CCommand &args)
 		}
 
 		extern int groundlinksallocated;
-		Assert( linkCount == groundlinksallocated );
+		contract_assert( linkCount == groundlinksallocated );
 
 		Msg( "--- %i links\n", groundlinksallocated );
 	}
@@ -1768,7 +1824,7 @@ void ClientCommand( CBasePlayer *pPlayer, const CCommand &args )
 	{
 		if ( !g_pGameRules->ClientCommand( pPlayer, args ) )
 		{
-			if ( Q_strlen( pCmd ) > 128 )
+			if ( V_strlen( pCmd ) > 128 )
 			{
 				ClientPrint( pPlayer, HUD_PRINTCONSOLE, "Console command too long.\n" );
 			}

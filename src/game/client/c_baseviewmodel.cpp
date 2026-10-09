@@ -1,27 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Client side view model implementation. Responsible for drawing
 //			the view model.
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
-#include <ranges>
-#include "tier1/bit_ops.h"
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "engine/ivmodelinfo.h"
 #include "c_baseviewmodel.h"
 #include "model_types.h"
 #include "hud.h"
 #include "view_shared.h"
 #include "iviewrender.h"
 #include "view.h"
-#include "mathlib/vmatrix.h"
 #include "cl_animevent.h"
 #include "eventlist.h"
 #include "tools/bonelist.h"
-#include <keyvalues.h>
 #include "hltvcamera.h"
-#include "r_efx.h"
-#include "dlight.h"
 #include "clientalphaproperty.h"
 #include "iinput.h"
 #include "cs_shareddefs.h"
@@ -34,11 +43,6 @@
 #include "platforminputdevice.h"
 #include "inputsystem/iinputsystem.h"
 
-#include "materialsystem/imaterialvar.h"
-
-#if defined( REPLAY_ENABLED )
-#include "replaycamera.h"
-#endif
 
 #ifdef CSTRIKE_DLL
 	ConVar cl_righthand( "cl_righthand", "1", FCVAR_ARCHIVE | FCVAR_SS, "Use right-handed view models." );
@@ -62,7 +66,7 @@ extern ConVar cl_righthand;
 ConVar mat_preview( "mat_preview", "", FCVAR_CLIENTDLL | FCVAR_CHEAT );
 
 // [mlowrance] used for flame effect when pin pulled
-#define MOLOTOV_PARTICLE_EFFECT_NAME "weapon_molotov_fp"
+inline constexpr const char *MOLOTOV_PARTICLE_EFFECT_NAME = "weapon_molotov_fp";
 
 void FormatViewModelAttachment( C_BasePlayer *pPlayer, Vector &vOrigin, bool bInverse )
 {
@@ -80,13 +84,13 @@ void FormatViewModelAttachment( C_BasePlayer *pPlayer, Vector &vOrigin, bool bIn
 		}
 	}
 
-	Assert( nSlot != -1 );
+	contract_assert( nSlot != -1 );
 
 	// Presumably, SetUpView has been called so we know our FOV and render origin.
 	const CViewSetup *pViewSetup = view->GetPlayerViewSetup( nSlot );
 	
-	float worldx = tan( pViewSetup->fov * M_PI/360.0 );
-	float viewx = tan( pViewSetup->fovViewmodel * M_PI/360.0 );
+	float worldx = std::tan( pViewSetup->fov * std::numbers::pi/360.0 );
+	float viewx = tan( pViewSetup->fovViewmodel * std::numbers::pi/360.0 );
 
 	// aspect ratio cancels out, so only need one factor
 	// the difference between the screen coordinates of the 2 systems is the ratio
@@ -320,7 +324,7 @@ bool C_BaseViewModel::Interpolate( float currentTime )
 	// Predicted viewmodels have fixed up interval
 	if ( GetPredictable() || IsClientCreated() )
 	{
-		Assert( pPlayer );
+		contract_assert( pPlayer );
 		float curtime = pPlayer ? pPlayer->GetFinalPredictedTime() : gpGlobals->curtime;
 		elapsed_time = curtime - m_flAnimTime;
 		// Adjust for interpolated partial frame
@@ -351,7 +355,7 @@ bool C_BaseViewModel::Interpolate( float currentTime )
 		}
 		else
 		{
-			dt = fmod( dt, 1.0f );
+			dt = std::fmod( dt, 1.0f );
 		}
 	}
 
@@ -473,16 +477,9 @@ bool C_BaseViewModel::ShouldDraw()
 		return ( HLTVCamera()->GetMode() == OBS_MODE_IN_EYE &&
 				 HLTVCamera()->GetPrimaryTarget() == GetOwner()	);
 	}
-#if defined( REPLAY_ENABLED )
-	else if ( engine->IsReplay() )
-	{
-		return ( ReplayCamera()->GetMode() == OBS_MODE_IN_EYE &&
-				 ReplayCamera()->GetPrimaryTarget() == GetOwner() );
-	}
-#endif
 	else
 	{
-		Assert(	GetRenderMode() != kRenderNone );
+		contract_assert( GetRenderMode() != kRenderNone );
 
 		if ( vm_draw_always.GetBool() )
 			return true;
@@ -600,8 +597,6 @@ int C_BaseViewModel::DrawModel( int flags, const RenderableInstance_t &instance 
 			//			pMatPreview = materials->GetMaterial(i);
 			//			break;
 			//		}
-			//	}
-			//}
 			
 			if ( pMatPreview )
 			{
@@ -1012,9 +1007,9 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	pItem->GetKillEaterTypes( vTypes );
 	if ( (!vTypes.empty()) && ( pItem->GetKillEaterValueByType( *vTypes.rbegin() ) >= 0 ) )
 	{
-		CSteamID HolderSteamID;
-		pPlayer->GetSteamID( &HolderSteamID );
-		AddViewmodelStatTrak( pItem, *vTypes.rbegin(), weaponID, HolderSteamID.GetAccountID() );
+		CPlayerId HolderPlayerID;
+		pPlayer->GetPlayerID( &HolderPlayerID );
+		AddViewmodelStatTrak( pItem, *vTypes.rbegin(), weaponID, HolderPlayerID.GetAccountID() );
 	}
 	else
 	{

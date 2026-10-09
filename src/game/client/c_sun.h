@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef C_SUN_H
-#define C_SUN_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "c_baseentity.h"
 #include "glow_overlay.h"
@@ -84,6 +78,3 @@ public:
 	[[= ks::reflect::Net{} ]] int					m_nMaterial;
 	[[= ks::reflect::Net{} ]] int					m_nOverlayMaterial;
 };
-
-
-#endif // C_SUN_H

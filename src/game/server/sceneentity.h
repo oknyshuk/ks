@@ -1,16 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef SCENEENTITY_H
-#define SCENEENTITY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "baseflex.h"
 
 // List of the last 5 lines of speech from NPCs for bug reports
-#define SPEECH_LIST_MAX_SOUNDS	5
+inline constexpr auto SPEECH_LIST_MAX_SOUNDS = 5;
 
 
 struct recentNPCSpeech_t
@@ -41,6 +37,3 @@ HSCRIPT ScriptCreateSceneEntity( char const *pszScene );
 
 char const *GetSceneFilename( CBaseEntity *ent );
 void ReloadSceneFromDisk( CBaseEntity *ent );
-
-
-#endif // SCENEENTITY_H

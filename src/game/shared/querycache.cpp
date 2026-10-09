@@ -1,25 +1,45 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
 #include "querycache.h"
-#include "tier0/vprof.h"
-#include "tier1/intrusive_list.h"
 #include "datacache/imdlcache.h"
-#include "vstdlib/jobthread.h"
 
-
-
-
-#define QUERYCACHE_SIZE 1024
+constexpr auto QUERYCACHE_SIZE = 1024;
 
 static QueryCacheEntry_t s_QCache[QUERYCACHE_SIZE];
 
-#define QUERYCACHE_HASH_SIZE ( QUERYCACHE_SIZE  * 2 )
+constexpr auto QUERYCACHE_HASH_SIZE = ( QUERYCACHE_SIZE  * 2 );
 
 // elements available for cache reuse
 static ks::intrusive_dlist<QueryCacheEntry_t> s_VictimList;
@@ -209,7 +229,7 @@ void ProcessQueryCacheUpdate( QueryCacheUpdateRecord_t &workItem )
 }
 
 
-#define N_WAYS_TO_SPLIT_CACHE_UPDATE 8
+constexpr auto N_WAYS_TO_SPLIT_CACHE_UPDATE = 8;
 
 static void PreUpdateQueryCache()
 {
@@ -233,12 +253,12 @@ void UpdateQueryCache( void )
 	{
 		workList[i].m_nStartHashChain = nCurEntry;
 		if ( i != N_WAYS_TO_SPLIT_CACHE_UPDATE -1 )
-			workList[i].m_nNumHashChainsToUpdate = ARRAYSIZE( s_HashChains ) / N_WAYS_TO_SPLIT_CACHE_UPDATE;
+			workList[i].m_nNumHashChainsToUpdate = std::size( s_HashChains ) / N_WAYS_TO_SPLIT_CACHE_UPDATE;
 		else
-			workList[i].m_nNumHashChainsToUpdate = ARRAYSIZE( s_HashChains ) - nCurEntry;
-		nCurEntry += ARRAYSIZE( s_HashChains ) / N_WAYS_TO_SPLIT_CACHE_UPDATE;
+			workList[i].m_nNumHashChainsToUpdate = std::size( s_HashChains ) - nCurEntry;
+		nCurEntry += std::size( s_HashChains ) / N_WAYS_TO_SPLIT_CACHE_UPDATE;
 	}
-	ParallelProcess( workList, N_WAYS_TO_SPLIT_CACHE_UPDATE, ProcessQueryCacheUpdate, PreUpdateQueryCache, PostUpdateQueryCache, ( sv_disable_querycache.GetBool() ) ? 0 : INT_MAX );
+	ParallelProcess( workList, N_WAYS_TO_SPLIT_CACHE_UPDATE, ProcessQueryCacheUpdate, PreUpdateQueryCache, PostUpdateQueryCache, ( sv_disable_querycache.GetBool() ) ? 0 : std::numeric_limits<int>::max() );
 	// now, we need to take all of the obsolete cache entries each thread generated and add them to
 	// the victim cache
 	for( int i = 0 ; i < N_WAYS_TO_SPLIT_CACHE_UPDATE; i++ )
@@ -250,10 +270,10 @@ void UpdateQueryCache( void )
 void InvalidateQueryCache( void )
 {
 	s_VictimList.clear();
-	for( int i = 0; i < ARRAYSIZE( s_HashChains); i++ )
+	for( int i = 0; i < std::size( s_HashChains ); i++ )
 		s_HashChains[i].clear();
 	// now, invalidate all cache entries and add them to the victims
-	for( int i = 0; i < ARRAYSIZE( s_QCache ); i++ )
+	for( int i = 0; i < std::size( s_QCache ); i++ )
 	{
 		s_QCache[i].m_QueryParams.m_Type = EQUERY_INVALID;
 		s_VictimList.push_front( s_QCache + i );
@@ -321,15 +341,16 @@ bool IsLineOfSightBetweenTwoEntitiesClear( CBaseEntity *pSrcEntity,
 
 
 #if defined( CLIENT_DLL )
-CON_COMMAND_F( cl_querycache_stats, "Display status of the query cache (client only)", FCVAR_CHEAT )
+static void cl_querycache_stats( const CCommand &args );
+static ConCommand cl_querycache_stats_command( "cl_querycache_stats", cl_querycache_stats, "Display status of the query cache (client only)", FCVAR_CHEAT );
+static void cl_querycache_stats( const CCommand &args )
 #else
-CON_COMMAND( sv_querycache_stats, "Display status of the query cache (client only)" )
+static void sv_querycache_stats( const CCommand &args );
+static ConCommand sv_querycache_stats_command( "sv_querycache_stats", sv_querycache_stats, "Display status of the query cache (client only)" );
+static void sv_querycache_stats( const CCommand &args )
 #endif
 {
 	Warning( "%d queries, %d misses (%d free) suc spec = %d wasted spec=%d\n",
 			 s_nNumCacheQueries, s_nNumCacheMisses, (int)s_VictimList.size(),
 			 s_SuccessfulSpeculatives, s_WastedSpeculativeUpdates );
 }
-
-
-

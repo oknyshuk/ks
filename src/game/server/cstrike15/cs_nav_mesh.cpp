@@ -1,15 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // NavMesh.cpp
 // Implementation of Navigation Mesh interface
 // Author: Michael S. Booth, 2003-2004
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "filesystem.h"
 #include "cs_nav_mesh.h"
 #include "cs_nav_node.h"
@@ -17,9 +40,7 @@
 #include "cs_nav_pathfind.h"
 #include "cs_shareddefs.h"
 #include "cs_gamerules.h"
-#include "fmtstr.h"
 #include "bot_util.h"
-#include "tier0/vprof.h"
 #include "cs_bot_manager.h"
 
 #ifndef CLIENT_DLL
@@ -271,7 +292,9 @@ NavErrorType CSNavMesh::PostLoad( unsigned int version )
 	return CNavMesh::PostLoad(version);
 }
 
-CON_COMMAND( dm_reset_spawns, "" )
+static void dm_reset_spawns( const CCommand &args );
+static ConCommand dm_reset_spawns_command( "dm_reset_spawns", dm_reset_spawns, "" );
+static void dm_reset_spawns( const CCommand &args )
 {
 	( dynamic_cast< CSNavMesh* >( TheNavMesh ) )->ResetDMSpawns();
 	DevMsg( "Manually resetting deathmatch spawns.\n");

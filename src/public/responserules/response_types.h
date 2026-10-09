@@ -1,21 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Core types for the response rules -- criteria, responses, rules, and matchers.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef RESPONSE_TYPES_H
-#define RESPONSE_TYPES_H
-
-#include <algorithm>
-#include <functional>
-#include <string_view>
-#include <vector>
-#include "tier1/intern_pool.h"
-#include "tier1/string_ops.h"
+import std;
+import ks.tier1;
 #include "tier2/interval.h"
-#include "mathlib/compressed_vector.h"
 #include "datamap.h"
 #include "soundflags.h"
 
@@ -24,14 +15,6 @@ namespace ResponseRules
 	/// Custom symbol table for the response rules.
 	extern ks::intern_pool g_RS;
 };
-
-#ifdef _MANAGED
-// forward declare some editor types just so we can friend them.
-namespace ResponseRulesCLI
-{
-	ref class ResponseQueryResult;
-}
-#endif
 
 namespace ResponseRules 
 {
@@ -210,8 +193,8 @@ namespace ResponseRules
 		/// entity, subsequent to the match but BEFORE the dispatch.
 		/// Returns the number of contexts modified. If it returns 0, then 
 		/// pSetOnWorld is empty.
-	    static int InterceptWorldSetContexts( CriteriaSet * RESTRICT pFrom, 
-		    CriteriaSet * RESTRICT pSetOnWorld );
+	    static int InterceptWorldSetContexts( CriteriaSet * __restrict__ pFrom, 
+		    CriteriaSet * __restrict__ pSetOnWorld );
 
 	private:
 	void		RemoveCriteria( int idx, bool bTestForPrefix );
@@ -252,7 +235,7 @@ namespace ResponseRules
 			}
 			else
 			{
-				Q_strncpy( value, str, sizeof( value ) );
+				V_strncpy( value, str, sizeof( value ) );
 			}
 		}
 
@@ -299,8 +282,8 @@ namespace ResponseRules
 
 		// void	Release(); // we no longer encourage new and delete on these things
 
-		void			GetName( char *buf, size_t buflen ) const;
-		void			GetResponse( char *buf, size_t buflen ) const;
+		void			GetName( char *buf, std::size_t buflen ) const;
+		void			GetResponse( char *buf, std::size_t buflen ) const;
 		const ResponseParams *GetParams() const { return &m_Params; }
 		ResponseType_t	GetType() const { return (ResponseType_t)m_Type; }
 		soundlevel_t	GetSoundLevel() const;
@@ -355,20 +338,17 @@ namespace ResponseRules
 		char *			m_szContext; // context data we apply to character after running
 		bool			m_bApplyContextToWorld;
 
-#ifdef _MANAGED
-		friend ref class ResponseRulesCLI::ResponseQueryResult;
-#endif
 	};
 
 
 
-	abstract_class IResponseFilter
+	class IResponseFilter
 	{
 	public:
 		virtual bool IsValidResponse( ResponseType_t type, const char *pszValue ) = 0;
 	};
 
-	abstract_class IResponseSystem
+	class IResponseSystem
 	{
 	public:
 		virtual ~IResponseSystem() {}
@@ -412,5 +392,3 @@ namespace ResponseRules
 
 #include "rr_speechconcept.h"
 #include "response_host_interface.h"
-
-#endif

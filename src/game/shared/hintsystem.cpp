@@ -1,10 +1,59 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "hintsystem.h"
 #include "hintmessage.h"
 
@@ -87,8 +136,8 @@ void CHintSystem::Update( void )
 //-----------------------------------------------------------------------------
 bool CHintSystem::HintMessage( int hint, bool bForce /* = false */, bool bOnlyIfClear /* = false */ )
 {
-	Assert( m_pPlayer );
-	Assert( hint < static_cast< int >( m_HintHistory.size() ) );
+	contract_assert( m_pPlayer );
+	contract_assert( hint < static_cast< int >( m_HintHistory.size() ) );
 
 	// Not really an optimal solution, but saves us querying the hud element,
 	// which wouldn't be easy with derived versions in different mods.
@@ -112,7 +161,7 @@ bool CHintSystem::HintMessage( int hint, bool bForce /* = false */, bool bOnlyIf
 //-----------------------------------------------------------------------------
 void CHintSystem::HintMessage( const char *pMessage )
 {
-	Assert( m_pPlayer );
+	contract_assert( m_pPlayer );
 
 #ifdef GAME_DLL
 	// On the server, we send it down to the queue who sends it to the client
@@ -167,8 +216,8 @@ void CHintSystem::ResetHints( void )
 //-----------------------------------------------------------------------------
 void CHintSystem::RegisterHintTimer( int iHintID, float flTimerDuration, bool bOnlyIfClear /* = false */, HintTimerCallback pfnCallback )
 {
-	Assert( m_pPlayer );
-	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
+	contract_assert( m_pPlayer );
+	contract_assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
 
 	onresethints_t newHint;
 	newHint.iHintID = iHintID;
@@ -183,7 +232,7 @@ void CHintSystem::RegisterHintTimer( int iHintID, float flTimerDuration, bool bO
 //-----------------------------------------------------------------------------
 void CHintSystem::ReAddHintTimerIfNotDisplayed( int iHintID, float flTimerDuration )
 {
-	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
+	contract_assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
 	if ( m_HintHistory[iHintID] == 0 )
 	{
 		m_pHintMessageTimers->AddTimer( iHintID, flTimerDuration );
@@ -195,9 +244,9 @@ void CHintSystem::ReAddHintTimerIfNotDisplayed( int iHintID, float flTimerDurati
 //-----------------------------------------------------------------------------
 void CHintSystem::StartHintTimer( int iHintID )
 {
-	Assert( m_pPlayer );
-	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
-	Assert(m_pHintMessageTimers);
+	contract_assert( m_pPlayer );
+	contract_assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
+	contract_assert( m_pHintMessageTimers );
 	m_pHintMessageTimers->StartTimer( iHintID );
 }
 
@@ -206,9 +255,9 @@ void CHintSystem::StartHintTimer( int iHintID )
 //-----------------------------------------------------------------------------
 void CHintSystem::StopHintTimer( int iHintID )
 {
-	Assert( m_pPlayer );
-	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
-	Assert(m_pHintMessageTimers);
+	contract_assert( m_pPlayer );
+	contract_assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
+	contract_assert( m_pHintMessageTimers );
 	m_pHintMessageTimers->StopTimer( iHintID );
 }
 
@@ -217,8 +266,8 @@ void CHintSystem::StopHintTimer( int iHintID )
 //-----------------------------------------------------------------------------
 void CHintSystem::ResetHintTimers( void )
 {
-	Assert( m_pPlayer );
-	Assert(m_pHintMessageTimers);
+	contract_assert( m_pPlayer );
+	contract_assert( m_pHintMessageTimers );
 	m_pHintMessageTimers->Reset();
 }
 
@@ -227,9 +276,9 @@ void CHintSystem::ResetHintTimers( void )
 //-----------------------------------------------------------------------------
 void CHintSystem::RemoveHintTimer( int iHintID )
 {
-	Assert( m_pPlayer );
-	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
-	Assert(m_pHintMessageTimers);
+	contract_assert( m_pPlayer );
+	contract_assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
+	contract_assert( m_pHintMessageTimers );
 	m_pHintMessageTimers->RemoveTimer( iHintID );
 
 	// Mark us as having heard this hint
@@ -282,8 +331,8 @@ void CHintSystem::PlayedAHint( void )
 //-----------------------------------------------------------------------------
 bool CHintSystem::HasPlayedHint( int iHintID )
 {
-	Assert( m_pPlayer );
-	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
+	contract_assert( m_pPlayer );
+	contract_assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
 	return ( m_HintHistory[iHintID] > 0 );
 }
 
@@ -292,8 +341,8 @@ bool CHintSystem::HasPlayedHint( int iHintID )
 //-----------------------------------------------------------------------------
 void CHintSystem::SetHintPlayed( int iHintID )
 {
-	Assert( m_pPlayer );
-	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
+	contract_assert( m_pPlayer );
+	contract_assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
 	m_HintHistory[iHintID] = true;
 }
 

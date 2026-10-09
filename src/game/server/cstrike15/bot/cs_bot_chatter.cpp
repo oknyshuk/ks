@@ -1,18 +1,42 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "cs_gamerules.h"
 #include "cs_player.h"
 #include "shared_util.h"
 #include "engine/IEngineSound.h"
-#include "keyvalues.h"
 
 #include "bot.h"
 #include "bot_util.h"
@@ -593,8 +617,8 @@ bool BotPhraseManager::Initialize( const char *filename, int bankIndex )
 				return false;
 			}
 			char *token = SharedGetToken();
-			Q_strncpy( baseDir, token, RadioPathLen );
-			Q_strncat( baseDir, "\\", RadioPathLen, -1 );
+			V_strncpy( baseDir, token, RadioPathLen );
+			V_strncat( baseDir, "\\", RadioPathLen, -1 );
 			baseDir[RadioPathLen-1] = 0;
 		}
 		else if (!stricmp( token, "Place" ) || !stricmp( token, "Chatter" ))
@@ -702,7 +726,7 @@ bool BotPhraseManager::Initialize( const char *filename, int bankIndex )
 					if (!stricmp( token, "Many" ))
 						countCriteria = COUNT_MANY;
 					else 
-						countCriteria = atoi( token );
+						countCriteria = std::atoi( token );
 
 					continue;
 				}
@@ -747,7 +771,7 @@ bool BotPhraseManager::Initialize( const char *filename, int bankIndex )
 				BotSpeakable *speak = new BotSpeakable;
 				if ( baseDir[0] )
 				{
-					Q_snprintf( compositeFilename, RadioPathLen, "%s%s", baseDir, token );
+					V_snprintf( compositeFilename, RadioPathLen, "%s%s", baseDir, token );
 					speak->m_phrase = CloneString( compositeFilename );
 				}
 				else
@@ -756,8 +780,8 @@ bool BotPhraseManager::Initialize( const char *filename, int bankIndex )
 				}
 				speak->m_place = placeCriteria;
 				speak->m_count = countCriteria;
-				Q_FixSlashes( speak->m_phrase );
-				Q_strlower( speak->m_phrase );
+				V_FixSlashes( speak->m_phrase );
+				V_strlower( speak->m_phrase );
 
 				// cstrike15 doesn't use bot chatter this way, the system redirects to RR, so no need to do anything other than slam this
 				speak->m_duration = 1.0f;

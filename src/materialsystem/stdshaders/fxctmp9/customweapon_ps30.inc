@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $PAINTSTYLE == 0 )
 // ( ( $CHEAPMODE == 1 ) && !( ( $PAINTSTYLE == 3 ) || ( $PAINTSTYLE == 6 ) ) )
@@ -31,7 +32,7 @@ private:
 public:
 	void SetPAINTSTYLE( int i )
 	{
-		Assert( i >= 0 && i <= 9 );
+		contract_assert( i >= 0 && i <= 9 );
 		m_nPAINTSTYLE = i;
 #ifdef _DEBUG
 		m_bPAINTSTYLE = true;
@@ -39,7 +40,7 @@ public:
 	}
 	void SetPAINTSTYLE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 9 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 9 );
 		m_nPAINTSTYLE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPAINTSTYLE = true;
@@ -53,7 +54,7 @@ private:
 public:
 	void SetEXPONENTMODE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nEXPONENTMODE = i;
 #ifdef _DEBUG
 		m_bEXPONENTMODE = true;
@@ -61,7 +62,7 @@ public:
 	}
 	void SetEXPONENTMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nEXPONENTMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bEXPONENTMODE = true;
@@ -75,7 +76,7 @@ private:
 public:
 	void SetCHEAPMODE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCHEAPMODE = i;
 #ifdef _DEBUG
 		m_bCHEAPMODE = true;
@@ -83,7 +84,7 @@ public:
 	}
 	void SetCHEAPMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCHEAPMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCHEAPMODE = true;
@@ -97,7 +98,7 @@ private:
 public:
 	void SetPREVIEW( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPREVIEW = i;
 #ifdef _DEBUG
 		m_bPREVIEW = true;
@@ -105,7 +106,7 @@ public:
 	}
 	void SetPREVIEW( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPREVIEW = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPREVIEW = true;
@@ -119,7 +120,7 @@ private:
 public:
 	void SetPREVIEWPHONGALBEDOTINT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPREVIEWPHONGALBEDOTINT = i;
 #ifdef _DEBUG
 		m_bPREVIEWPHONGALBEDOTINT = true;
@@ -127,7 +128,7 @@ public:
 	}
 	void SetPREVIEWPHONGALBEDOTINT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPREVIEWPHONGALBEDOTINT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPREVIEWPHONGALBEDOTINT = true;
@@ -141,7 +142,7 @@ private:
 public:
 	void SetPHONGALBEDOFACTORMODE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPHONGALBEDOFACTORMODE = i;
 #ifdef _DEBUG
 		m_bPHONGALBEDOFACTORMODE = true;
@@ -149,7 +150,7 @@ public:
 	}
 	void SetPHONGALBEDOFACTORMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPHONGALBEDOFACTORMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPHONGALBEDOFACTORMODE = true;
@@ -190,7 +191,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bPAINTSTYLE && m_bEXPONENTMODE && m_bCHEAPMODE && m_bPREVIEW && m_bPREVIEWPHONGALBEDOTINT && m_bPHONGALBEDOFACTORMODE;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 5 * m_nPAINTSTYLE ) + ( 50 * m_nEXPONENTMODE ) + ( 100 * m_nCHEAPMODE ) + ( 200 * m_nPREVIEW ) + ( 400 * m_nPREVIEWPHONGALBEDOTINT ) + ( 800 * m_nPHONGALBEDOFACTORMODE ) + 0;
 	}
@@ -206,7 +207,7 @@ private:
 public:
 	void SetNUM_LIGHTS( int i )
 	{
-		Assert( i >= 0 && i <= 4 );
+		contract_assert( i >= 0 && i <= 4 );
 		m_nNUM_LIGHTS = i;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -214,7 +215,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -235,7 +236,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bNUM_LIGHTS;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nNUM_LIGHTS ) + 0;
 	}

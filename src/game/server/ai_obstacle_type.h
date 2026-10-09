@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
-
-#ifndef AI_OBSTACLE_TYPE_H
-#define AI_OBSTACLE_TYPE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //-------------------------------------
 // AI_MoveSuggType_t
@@ -29,5 +23,3 @@ enum AI_MoveSuggType_t
 
 	AIMS_INVALID
 };
-
-#endif // AI_OBSTACLE_TYPE_H

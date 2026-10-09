@@ -1,11 +1,6 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef ENV_DEBUGHISTORY_H
-#define ENV_DEBUGHISTORY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 enum debughistorycategories_t
 {
@@ -32,5 +27,3 @@ void AddDebugHistoryLine( int iCategory, const char *pszLine );
 #endif
 
 void ClearDebugHistory();
-
-#endif // ENV_DEBUGHISTORY_H

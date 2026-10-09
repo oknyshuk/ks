@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef OBJECT_HASH_H
-#define OBJECT_HASH_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class IPhysicsObjectPairHash
 {
@@ -21,6 +16,3 @@ public:
 	virtual int GetPairCountForObject( void *pObject0 ) = 0;
 	virtual int GetPairListForObject( void *pObject0, int nMaxCount, void **ppObjectList ) = 0;
 };
-
-
-#endif // OBJECT_HASH_H

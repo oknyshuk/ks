@@ -1,10 +1,5 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "shaderlib/cshader.h"
 
@@ -12,10 +7,9 @@
 #include "debugluxel_ps20.inc"
 #include "debugluxel_vs20.inc"
 
-
 BEGIN_SHADER_FLAGS( DebugLuxels, "Help for DebugLuxels", SHADER_NOT_EDITABLE )
 			  
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( NOSCALE, SHADER_PARAM_TYPE_BOOL, "0", "fixme" )
 	END_SHADER_PARAMS
 

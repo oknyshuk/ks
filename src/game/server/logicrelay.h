@@ -1,16 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#ifndef LOGICRELAY_H
-#define LOGICRELAY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.math;
 #include "reflect_annotations.h"
 
-#include "cbase.h"
+import std;
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
 #include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
@@ -44,5 +50,3 @@ private:
 	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool m_bDisabled;
 	bool m_bWaitForRefire;			// Set to disallow a refire while we are waiting for our outputs to finish firing.
 };
-
-#endif //LOGICRELAY_H

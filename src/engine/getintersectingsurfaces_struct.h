@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef GETINTERSECTINGSURFACES_STRUCT_H
-#define GETINTERSECTINGSURFACES_STRUCT_H
+import ks.math;
 
 struct model_t;
-class Vector;
 class SurfInfo;
 
 
@@ -27,6 +22,3 @@ public:
 	int				m_nMaxInfos;
 	int				m_nSetInfos;
 };
-
-
-#endif // GETINTERSECTINGSURFACES_STRUCT_H

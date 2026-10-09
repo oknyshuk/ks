@@ -1,11 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:	Squad classes
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include <set>
+// Purpose: Squad classes
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "ai_squad.h"
@@ -119,18 +145,13 @@ void CAI_SquadManager::DeleteAllSquads(void)
 //
 //-----------------------------------------------------------------------------
 
-#ifdef PER_ENEMY_SQUADSLOTS
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AISquadEnemyInfo_t )
-#endif
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_Squad )
 
 //-------------------------------------
 
 CAI_Squad::CAI_Squad(string_t newName) 
-#ifndef PER_ENEMY_SQUADSLOTS
- :	m_squadSlotsUsed(MAX_SQUADSLOTS)
-#endif
 {
 	Init( newName );
 }
@@ -138,9 +159,6 @@ CAI_Squad::CAI_Squad(string_t newName)
 //-------------------------------------
 
 CAI_Squad::CAI_Squad() 
-#ifndef PER_ENEMY_SQUADSLOTS
- :	m_squadSlotsUsed(MAX_SQUADSLOTS)
-#endif
 {
 	Init( NULL_STRING );
 }
@@ -158,10 +176,8 @@ void CAI_Squad::Init(string_t newName)
 
 	SetSquadInflictor( nullptr );
 
-#ifdef PER_ENEMY_SQUADSLOTS
 	m_flEnemyInfoCleanupTime = 0;
 	m_pLastFoundEnemyInfo = nullptr;
-#endif
 
 }
 
@@ -223,7 +239,7 @@ void CAI_Squad::AddToSquad(CAI_BaseNPC *pNPC)
 {
 	if ( !pNPC || !pNPC->IsAlive() )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 
@@ -248,7 +264,7 @@ void CAI_Squad::AddToSquad(CAI_BaseNPC *pNPC)
 	if ( std::ssize( m_SquadMembers ) > 1 )
 	{
 		CAI_BaseNPC *pCopyFrom = m_SquadMembers[0];
-		Assert( pCopyFrom != nullptr );
+		contract_assert( pCopyFrom != nullptr );
 		CAI_Enemies *pEnemies = pCopyFrom->GetEnemies();
 		AIEnemiesIter_t iter;
 		AI_EnemyInfo_t *pInfo = pEnemies->GetFirst( &iter );
@@ -326,7 +342,7 @@ int	CAI_Squad::GetVisibleSquadMembers( CAI_BaseNPC *pMember )
 CAI_BaseNPC *CAI_Squad::GetSquadMemberNearestTo( const Vector &vecLocation )
 {
 	CAI_BaseNPC *pNearest = nullptr;
-	float		flNearest = FLT_MAX;
+	float		flNearest = std::numeric_limits<float>::max();
 
 	for ( int i = 0; i < std::ssize( m_SquadMembers ); i++ )
 	{
@@ -340,7 +356,7 @@ CAI_BaseNPC *CAI_Squad::GetSquadMemberNearestTo( const Vector &vecLocation )
 		}
 	}
 
-	Assert( pNearest != nullptr );
+	contract_assert( pNearest != nullptr );
 	return pNearest;
 }
 
@@ -577,16 +593,6 @@ void CAI_Squad::JustMadeSound( int soundPriority, float time )
 //-----------------------------------------------------------------------------
 bool CAI_Squad::OccupyStrategySlotRange( CBaseEntity *pEnemy, int slotIDStart, int slotIDEnd, int *pSlot )
 {
-#ifndef PER_ENEMY_SQUADSLOTS
-	// FIXME: combat slots need to be per enemy, not per squad.  
-	// As it is, once a squad is occupied it stops making even simple attacks to other things nearby.
-	// This code may make soldiers too aggressive
-	if (GetLeader() && pEnemy != GetLeader()->GetEnemy())
-	{
-		*pSlot = SQUAD_SLOT_NONE;
-		return true;
-	}
-#endif
 
 	// If I'm already occupying this slot
 	if ( *pSlot >= slotIDStart && *pSlot <= slotIDEnd)
@@ -665,8 +671,6 @@ void CAI_Squad::UpdateEnemyMemory( CAI_BaseNPC *pUpdater, CBaseEntity *pEnemy, c
 
 //------------------------------------------------------------------------------
 
-#ifdef PER_ENEMY_SQUADSLOTS
-
 AISquadEnemyInfo_t *CAI_Squad::FindEnemyInfo( CBaseEntity *pEnemy )
 {
 	int i;
@@ -720,42 +724,28 @@ AISquadEnemyInfo_t *CAI_Squad::FindEnemyInfo( CBaseEntity *pEnemy )
 	return &m_EnemyInfos[i];
 }
 
-#endif
-	
 //------------------------------------------------------------------------------
 
 void CAI_Squad::OccupySlot( CBaseEntity *pEnemy, int i )			
 { 
-#ifdef PER_ENEMY_SQUADSLOTS
 	AISquadEnemyInfo_t *pInfo = FindEnemyInfo( pEnemy );
 	pInfo->slots.set(i);
-#else
-	m_squadSlotsUsed.set(i); 
-#endif
 }
 
 //------------------------------------------------------------------------------
 
 void CAI_Squad::VacateSlot( CBaseEntity *pEnemy, int i )			
 { 
-#ifdef PER_ENEMY_SQUADSLOTS
 	AISquadEnemyInfo_t *pInfo = FindEnemyInfo( pEnemy );
 	pInfo->slots.reset(i);
-#else
-	m_squadSlotsUsed.reset(i); 
-#endif
 }
 
 //------------------------------------------------------------------------------
 
 bool CAI_Squad::IsSlotOccupied( CBaseEntity *pEnemy, int i ) const	
 { 
-#ifdef PER_ENEMY_SQUADSLOTS
 	const AISquadEnemyInfo_t *pInfo = FindEnemyInfo( pEnemy );
 	return pInfo->slots[i];
-#else
-	return m_squadSlotsUsed[i]; 
-#endif
 }
 
 void CAI_Squad::SquadRemember( int iMemory )
@@ -782,4 +772,3 @@ bool CAI_Squad::IsSquadInflictor( CBaseEntity *pInflictor )
 }
 
 //=============================================================================
-

@@ -1,17 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-
-#include <malloc.h>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+#if defined(CLIENT_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+#endif
 #include "vallocator.h"
-#include "basetypes.h"
 
-#include "tier0/memalloc.h"
 VStdAllocator g_StdAllocator;
 
 void* VStdAllocator::Alloc(unsigned long size)
@@ -29,4 +25,3 @@ void VStdAllocator::Free(void *ptr)
 {
 	g_pMemAlloc->Free(ptr);
 }
-

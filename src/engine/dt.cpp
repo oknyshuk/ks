@@ -1,34 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //#define LOG_DELTA_BITS_TO_FILE
-#ifdef LOG_DELTA_BITS_TO_FILE
-#undef fopen
-#endif
 
-#include "tier1/tokenset.h"
 
-#include <algorithm>
-#include <stdarg.h>
+import std;
+import ks.tier1;
 #include "dt_send.h"
 #include "dt.h"
 #include "dt_recv.h"
-#include "dt_encode.h"
-#include "convar.h"
-#include "commonmacros.h"
-#include "tier1/strtools.h"
-#include "tier0/dbg.h"
 #include "dt_stack.h"
-#include "filesystem_engine.h"
-#include "filesystem.h"
 
-#define PROPINDEX_NUMBITS 12
-#define MAX_TOTAL_SENDTABLE_PROPS	( (1 << PROPINDEX_NUMBITS) - 1 ) // one value reserved for end marker
-#define PROPINDEX_END_MARKER ( ( 1 << PROPINDEX_NUMBITS ) - 1 )
+constexpr auto PROPINDEX_NUMBITS = 12;
+constexpr auto MAX_TOTAL_SENDTABLE_PROPS = ( (1 << PROPINDEX_NUMBITS) - 1 ); // one value reserved for end marker
+constexpr auto PROPINDEX_END_MARKER = ( ( 1 << PROPINDEX_NUMBITS ) - 1 );
 
 
 ConVar g_CV_DTWatchEnt( "dtwatchent", "-1", 0, "Watch this entities data table encoding." );
@@ -40,70 +25,10 @@ ConVar g_CV_DTDecode( "dtwatchdecode", "1", 0, "When watching show decode." );
 ConVar sv_new_delta_bits( "sv_new_delta_bits", "1" );
 
 
-#ifdef LOG_DELTA_BITS_TO_FILE
-
-class CDeltaBitsRun
-{
-public:
-	std::vector< int > m_Props;
-	std::vector< int > m_BitCounts;
-};
-
-std::vector< CDeltaBitsRun* > g_DeltaBitsRuns;
-CDeltaBitsRun *g_pDeltaBitsRun = nullptr;
-
-inline void LogDeltaBitsStart()
-{
-	if ( g_pDeltaBitsRun )
-		Error( "LogDeltaBitsStart" );
-
-	g_pDeltaBitsRun = new CDeltaBitsRun;
-	g_DeltaBitsRuns.AddToTail( g_pDeltaBitsRun );
-}
-
-inline void LogDeltaBitsEnd()
-{
-	if ( !g_pDeltaBitsRun )
-		Error( "LogDeltaBitsEnd" );
-
-	g_pDeltaBitsRun = nullptr;
-}
-
-inline void LogDeltaBitsEntry( int iProp, int nBits )
-{
-	g_pDeltaBitsRun->m_Props.AddToTail( iProp );
-	g_pDeltaBitsRun->m_BitCounts.AddToTail( nBits );
-}
-
-
-void FlushDeltaBitsTrackingData()
-{
-	FILE *fp = fopen( "c:\\deltabits.txt", "wt" );
-	fprintf( fp, "%d\n", g_DeltaBitsRuns.Count() );
-
-	for ( int i=0; i < g_DeltaBitsRuns.Count(); i++ )
-	{
-		CDeltaBitsRun *pRun = g_DeltaBitsRuns[i];
-
-		fprintf( fp, "%d ", pRun->m_Props.Count() );
-		for ( int z=0; z < pRun->m_Props.Count(); z++ )
-		{
-			fprintf( fp, "%d %d ", pRun->m_Props[z], pRun->m_BitCounts[z] );
-		}
-		fprintf( fp, "\n" );
-	}
-
-	fclose( fp );
-}
-
-#else
-
 inline void LogDeltaBitsStart() {}
 inline void LogDeltaBitsEnd() {}
 inline void LogDeltaBitsEntry( int iProp, int nBits ) {}
 void FlushDeltaBitsTrackingData() {}
-
-#endif
 
 
 
@@ -136,7 +61,7 @@ public:
 // CDeltaBitsWriter.
 // ------------------------------------------------------------------------------------ //
 
-static FORCEINLINE unsigned int ReadPropIndex( bf_read *pBuf, bool bNewScheme )
+[[gnu::always_inline]] static inline unsigned int ReadPropIndex( bf_read *pBuf, bool bNewScheme )
 {
 	if ( bNewScheme )
 	{
@@ -151,26 +76,26 @@ static FORCEINLINE unsigned int ReadPropIndex( bf_read *pBuf, bool bNewScheme )
 	{
 		case 32:
 			ret = ( ret &~96 ) | ( pBuf->ReadUBitLong( 2 ) << 5 );
-			Assert( ret >= 32);
+			contract_assert( ret >= 32 );
 			break;
 				
 		case 64:
 			ret = ( ret &~96 ) | ( pBuf->ReadUBitLong( 4 ) << 5 );
-			Assert( ret >= 128);
+			contract_assert( ret >= 128 );
 			break;
 		case 96:
 			ret = ( ret &~96 ) | ( pBuf->ReadUBitLong( 7 ) << 5 );
-			Assert( ret >= 512);
+			contract_assert( ret >= 512 );
 			break;
 	}
 
 	return ret;
 }
 
-FORCEINLINE void WritePropIndex( bf_write *pBuf, unsigned int n, bool bNewScheme )
+[[gnu::always_inline]] inline void WritePropIndex( bf_write *pBuf, unsigned int n, bool bNewScheme )
 {
-	Assert( n < (1 << PROPINDEX_NUMBITS ) );
-	Assert( ( n & 0xfff ) == n );
+	contract_assert( n < (1 << PROPINDEX_NUMBITS ) );
+	contract_assert( ( n & 0xfff ) == n );
 
 	if ( bNewScheme )
 	{
@@ -234,8 +159,8 @@ void CDeltaBitsWriter::WritePropIndex( int iProp )
 	int diff = iProp - m_iLastProp;
 	m_iLastProp = iProp;
 
-	Assert( iProp < MAX_DATATABLE_PROPS );
-	Assert( diff > 0 && diff < MAX_DATATABLE_PROPS );
+	contract_assert( iProp < MAX_DATATABLE_PROPS );
+	contract_assert( diff > 0 && diff < MAX_DATATABLE_PROPS );
 	--diff; // It's always at least 1 so subtract 1.
 
 	int startbit = m_pBuf->GetNumBitsWritten();
@@ -285,7 +210,7 @@ CDeltaBitsReader::~CDeltaBitsReader()
 	// Make sure they read to the end unless they specifically said they don't care.
 	if ( m_pBuf )
 	{
-		Assert( m_bFinished );
+		contract_assert( m_bFinished );
 	}
 }
 
@@ -296,7 +221,7 @@ int CDeltaBitsReader::GetFieldPathBits() const
 
 int CDeltaBitsReader::ReadNextPropIndex()
 {
-	Assert( !m_bFinished );
+	contract_assert( !m_bFinished );
 
 	if ( m_bUsingNewScheme )
 	{
@@ -321,7 +246,7 @@ int CDeltaBitsReader::ReadNextPropIndex()
 	prop += m_iLastProp;
 	m_iLastProp = prop;
 
-	Assert( m_iLastProp < MAX_DATATABLE_PROPS );
+	contract_assert( m_iLastProp < MAX_DATATABLE_PROPS );
 
 	return prop;
 }
@@ -404,13 +329,9 @@ static bool SendTable_GetPropsExcluded( const SendTable *pTable, ExcludeProp *pE
 		{
 			char const *pName = pProp->GetExcludeDTName();
 
-			ErrorIfNot( pName,
-				("Found an exclude prop missing a name.")
-			);
+			if ( !( pName ) ) Error("Found an exclude prop missing a name.");
 			
-			ErrorIfNot( nExcludeProps < nMaxExcludeProps,
-				("SendTable_GetPropsExcluded: Overflowed max exclude props with %s.", pName)
-			);
+			if ( !( nExcludeProps < nMaxExcludeProps ) ) Error("SendTable_GetPropsExcluded: Overflowed max exclude props with %s.", pName);
 
 			pExcludeProps[nExcludeProps].m_pTableName = pName;
 			pExcludeProps[nExcludeProps].m_pPropName = pProp->GetName();
@@ -518,7 +439,7 @@ void SendTable_BuildHierarchy_IterateProps(
 
 				// Setup a datatable prop for this node to reference (so the recursion
 				// routines can get at the proxy).
-				if ( bhs->m_nDatatableProps >= ARRAYSIZE( bhs->m_pDatatableProps ) )
+				if ( bhs->m_nDatatableProps >= std::size( bhs->m_pDatatableProps ) )
 					Error( "Overflowed datatable prop list in SendTable '%s'.", pTable->GetName() );
 				
 				bhs->m_pDatatableProps[bhs->m_nDatatableProps] = pProp;
@@ -575,9 +496,7 @@ void SendTable_BuildHierarchy(
 	// Now add the properties.
 
 	// Make sure there's room, then just copy the pointers from the loop above.
-	ErrorIfNot( bhs->m_nProps + nNonDatatableProps < ARRAYSIZE( bhs->m_pProps ),
-		("SendTable_BuildHierarchy: overflowed prop buffer.")
-	);
+	if ( !( bhs->m_nProps + nNonDatatableProps < std::size( bhs->m_pProps ) ) ) Error("SendTable_BuildHierarchy: overflowed prop buffer.");
 	
 	for ( int i=0; i < nNonDatatableProps; i++ )
 	{
@@ -706,7 +625,7 @@ void SendTable_GenerateProxyPaths( CSendTablePrecalc *pPrecalc, int nProxyIndice
 	int totalPathLengths = 0;
 	std::vector< int > pathLengths;
 	pathLengths.assign( nProxyIndices, {} );
-	memset( pathLengths.data(), 0, sizeof( pathLengths[0] ) * nProxyIndices );
+	std::memset( pathLengths.data(), 0, sizeof( pathLengths[0] ) * nProxyIndices );
 	CalcPathLengths_R( pPrecalc->GetRootNode(), pathLengths, 0, totalPathLengths );
 	
 	// 
@@ -740,7 +659,6 @@ bool CSendTablePrecalc::SetupFlatPropertyArray()
 	SendTable_SortByPriority( &bhs );
 
 	// Copy the SendProp pointers into the precalc.	
-	MEM_ALLOC_CREDIT();
 	m_Props.assign( bhs.m_pProps, bhs.m_pProps + bhs.m_nProps );
 	m_DatatableProps.assign( bhs.m_pDatatableProps, bhs.m_pDatatableProps + bhs.m_nDatatableProps );
 	m_PropProxyIndices.assign( bhs.m_PropProxyIndices, bhs.m_PropProxyIndices + bhs.m_nProps );
@@ -776,7 +694,7 @@ bool AreBitArraysEqual(
 
 	// Compare bytes.
 	nBytes = nBits >> 3;
-	if( memcmp( pBits1, pBits2, nBytes ) != 0 )
+	if( std::memcmp( pBits1, pBits2, nBytes ) != 0 )
 		return false;
 
 	// Compare remaining bits.
@@ -839,7 +757,7 @@ bool ShouldWatchThisProp( const SendTable *pTable, int objectID, const char *pPr
 		}
 	}
 
-	if ( g_CV_DTWatchClass.GetString()[ 0 ] && Q_stristr( pTable->GetName(), g_CV_DTWatchClass.GetString() ) )
+	if ( g_CV_DTWatchClass.GetString()[ 0 ] && V_stristr( pTable->GetName(), g_CV_DTWatchClass.GetString() ) )
 		return true;
 
 	return false;
@@ -868,7 +786,7 @@ bool ShouldWatchThisProp( const RecvTable *pTable, int objectID, const char *pPr
 		}
 	}
 
-	if ( g_CV_DTWatchClass.GetString()[ 0 ] && Q_stristr( pTable->GetName(), g_CV_DTWatchClass.GetString() ) )
+	if ( g_CV_DTWatchClass.GetString()[ 0 ] && V_stristr( pTable->GetName(), g_CV_DTWatchClass.GetString() ) )
 		return true;
 
 	return false;
@@ -890,18 +808,12 @@ bool Sendprop_UsingDebugWatch()
 void DataTable_Warning( const char *pInMessage, ... )
 {
 	char msg[4096];
-	va_list marker;
+	std::va_list marker;
 	
 
-	va_start(marker, pInMessage);
-	Q_vsnprintf( msg, sizeof( msg ), pInMessage, marker);
-	va_end(marker);
+	__builtin_va_start(marker, pInMessage);
+	V_vsnprintf( msg, sizeof( msg ), pInMessage, marker);
+	__builtin_va_end(marker);
 
 	Warning( "DataTable warning: %s", msg );
 }
-
-
-
-
-
-

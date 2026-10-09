@@ -1,21 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef INFO_H
-#define INFO_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "filesystem.h"
 
-#define	MAX_INFO_STRING			256
+inline constexpr auto MAX_INFO_STRING = 256;
 
 void			Info_SetValueForStarKey ( char *s, const char *key, const char *value, int maxsize);
 // userinfo functions
@@ -26,5 +15,3 @@ void			Info_SetValueForKey ( char *s, const char *key, const char *value, int ma
 void			Info_Print ( const char *s );
 
 void			Info_WriteVars( char *s, FileHandle_t fp );
-
-#endif // INFO_H

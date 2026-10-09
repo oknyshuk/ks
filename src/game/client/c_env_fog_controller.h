@@ -1,12 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_ENV_FOG_CONTROLLER_H
-#define C_ENV_FOG_CONTROLLER_H
+
+#include "reflect_annotations.h"
+#include "c_baseentity.h"
+#include "client_class.h"
+#include "playernet_vars.h"
 
 #define CFogController C_FogController
 
@@ -47,6 +47,3 @@ public:
 
 	fogparams_t				m_fog;
 };
-
-
-#endif // C_ENV_FOG_CONTROLLER_H

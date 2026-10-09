@@ -1,11 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
-#include <keyvalues.h>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/itexture.h"
@@ -14,8 +17,8 @@
 
 #include "imaterialproxydict.h"
 
-#define DEFAULT_OPEN_PUPIL_RATE 0.03
-#define DEFAULT_CLOSE_PUPIL_RATE 0.1
+constexpr auto DEFAULT_OPEN_PUPIL_RATE = 0.03;
+constexpr auto DEFAULT_CLOSE_PUPIL_RATE = 0.1;
 
 //-----------------------------------------------------------------------------
 // Returns the proximity of the player to the entity

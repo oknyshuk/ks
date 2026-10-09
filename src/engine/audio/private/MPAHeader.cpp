@@ -1,10 +1,7 @@
-//====== Copyright 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
+import ks.core;
 #include "MPAFile.h"
 
 
@@ -47,8 +44,8 @@ const uint32 CMPAHeader::m_dwBitrates[2][3][15] =
 	},
 	{	// MPEG 2, 2.5		
 		{0,32,48,56,64,80,96,112,128,144,160,176,192,224,256,},		// Layer1
-		{0,8,16,24,32,40,48,56,64,80,96,112,128,144,160,},			// Layer2
-		{0,8,16,24,32,40,48,56,64,80,96,112,128,144,160,}			// Layer3
+	1,	// Layer2
+	1	// Layer3
 	}
 };
 

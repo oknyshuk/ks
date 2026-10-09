@@ -1,12 +1,8 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-#include "glow_outline_effect.h"
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_PROPS_H
-#define C_PROPS_H
+#include "glow_outline_effect.h"
 
 #include "reflect_annotations.h"
 
@@ -78,5 +74,3 @@ private:
 	C_BasePropDoor( const C_BasePropDoor & );
 	bool m_modelChanged;
 };
-
-#endif // C_PROPS_H

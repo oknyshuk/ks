@@ -1,11 +1,7 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Base class for simple projectiles that use studio models
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
+
+// Purpose: Base class for simple projectiles that use studio models
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // This file was made before I
@@ -19,9 +15,33 @@
 // demand for this feature (sjb) 11/27/07
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "player.h"
 #include "cbaseprojectile.h"
 
 LINK_ENTITY_TO_CLASS( baseprojectile, CBaseProjectile );
@@ -120,4 +140,3 @@ void CBaseProjectile::Think()
 void CBaseProjectile::HandleThink()
 {
 }
-

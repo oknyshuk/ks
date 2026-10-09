@@ -1,31 +1,74 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ====
-//
-//=============================================================================
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "physics.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "gamemovement.h"
 #include "in_buttons.h"
-#include <stdarg.h>
 #include "movevars_shared.h"
 #include "engine/IEngineTrace.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "decals.h"
 #include "coordsize.h"
 #include "rumble_shared.h"
-#include "tier1/map_ops.h"
 #include "cstrike15/basecsgrenade_projectile.h"
 
-
-
-#if (PREDICTION_ERROR_CHECK_LEVEL > 0) && (PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0)
-#include "tier0/stacktools.h"
-#endif
-
-
-#define	STOP_EPSILON		0.1
-#define	MAX_CLIP_PLANES		5
+constexpr auto STOP_EPSILON = 0.1;
+constexpr auto MAX_CLIP_PLANES = 5;
 
 #include "filesystem.h"
-#include <stdarg.h>
 
 extern IFileSystem *filesystem;
 
@@ -39,7 +82,6 @@ extern IFileSystem *filesystem;
 // gpGlobals->frametime are. We should probably set tickcount (to player->m_nTickBase),
 // but we're REALLY close to shipping, so we can change that later and people can use
 // player->CurrentCommandNumber() in the meantime.
-#define tickcount USE_PLAYER_CURRENT_COMMAND_NUMBER__INSTEAD_OF_TICKCOUNT
 
 
 
@@ -48,26 +90,26 @@ bool g_bMovementOptimizations = true;
 
 // Roughly how often we want to update the info about the ground surface we're on.
 // We don't need to do this very often.
-#define CATEGORIZE_GROUND_SURFACE_INTERVAL			0.3f
-#define CATEGORIZE_GROUND_SURFACE_TICK_INTERVAL   ( (int)( CATEGORIZE_GROUND_SURFACE_INTERVAL / TICK_INTERVAL ) )
+constexpr auto CATEGORIZE_GROUND_SURFACE_INTERVAL = 0.3f;
+inline int CATEGORIZE_GROUND_SURFACE_TICK_INTERVAL() { return ( (int)( CATEGORIZE_GROUND_SURFACE_INTERVAL / TICK_INTERVAL ) ); }
 
-#define CHECK_STUCK_INTERVAL			1.0f
-#define CHECK_STUCK_TICK_INTERVAL		( (int)( CHECK_STUCK_INTERVAL / TICK_INTERVAL ) )
+constexpr auto CHECK_STUCK_INTERVAL = 1.0f;
+inline int CHECK_STUCK_TICK_INTERVAL() { return ( (int)( CHECK_STUCK_INTERVAL / TICK_INTERVAL ) ); }
 
-#define CHECK_STUCK_INTERVAL_SP			0.2f
-#define CHECK_STUCK_TICK_INTERVAL_SP	( (int)( CHECK_STUCK_INTERVAL_SP / TICK_INTERVAL ) )
+constexpr auto CHECK_STUCK_INTERVAL_SP = 0.2f;
+inline int CHECK_STUCK_TICK_INTERVAL_SP() { return ( (int)( CHECK_STUCK_INTERVAL_SP / TICK_INTERVAL ) ); }
 
 //#define CHECK_LADDER_INTERVAL			0.2f
 //#define CHECK_LADDER_TICK_INTERVAL		( (int)( CHECK_LADDER_INTERVAL / TICK_INTERVAL ) )
-#define	 CHECK_LADDER_TICK_INTERVAL		2	// every other tick
+constexpr auto CHECK_LADDER_TICK_INTERVAL = 2; // every other tick
 
-#define CHECK_LADDER_WEDGE_INTERVAL			0.5f
-#define CHECK_LADDER_WEDGE_TICK_INTERVAL		( (int)( CHECK_LADDER_WEDGE_INTERVAL / TICK_INTERVAL ) )
+constexpr auto CHECK_LADDER_WEDGE_INTERVAL = 0.5f;
+inline int CHECK_LADDER_WEDGE_TICK_INTERVAL() { return ( (int)( CHECK_LADDER_WEDGE_INTERVAL / TICK_INTERVAL ) ); }
 
-#define	NUM_CROUCH_HINTS	3
+constexpr auto NUM_CROUCH_HINTS = 3;
 
-#define MINIMUM_MOVE_FRACTION			0.0001f
-#define EFFECTIVELY_HORIZONTAL_NORMAL_Z	0.0001f
+constexpr auto MINIMUM_MOVE_FRACTION = 0.0001f;
+constexpr auto EFFECTIVELY_HORIZONTAL_NORMAL_Z = 0.0001f;
 
 extern IGameMovement *g_pGameMovement;
 
@@ -117,457 +159,7 @@ public:
 };
 
 
-#if defined( PLAYER_GETTING_STUCK_TESTING )
-
-// If you ever get stuck walking around, then you can run this code to find the code which would leave the player in a bad spot
-void CMoveData::SetAbsOrigin( const Vector &vec )
-{
-	CGameMovement *gm = dynamic_cast< CGameMovement * >( g_pGameMovement );
-	if ( gm && gm->GetMoveData() &&
-		 gm->player && 
-		 gm->player->entindex() == 1 && 
-		 gm->player->GetMoveType() == MOVETYPE_WALK )
-	{
-		trace_t pm;
-		gm->TracePlayerBBox( vec, vec, gm->PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, pm );
-		if ( pm.startsolid || pm.allsolid || pm.fraction != 1.0f )
-		{
-			Msg( "Player will become stuck at %f %f %f\n", VectorExpand( vec ) );
-		}
-	}
-
-	m_vecAbsOrigin = vec;
-}
-
-#endif
-
 // See shareddefs.h
-#if PREDICTION_ERROR_CHECK_LEVEL > 0
-
-static ConVar diffcheck( "diffcheck", "0", FCVAR_REPLICATED );
-static ConVar diffcheck_playerslot( "diffcheck_playerslot", "0", FCVAR_REPLICATED );
-static ConVar diffcheck_spew( "diffcheck_spew", "1", FCVAR_REPLICATED, "Actually show diffcheck results." );
-class IDiffMgr
-{
-public:
-	virtual void StartCommand( int nSlot, bool bServer, int nCommandNumber ) = 0;
-	virtual void AddToDiff( int nSlot, bool bServer, int nCommandNumber, char const *string ) = 0;
-	virtual void Validate( int nSlot, bool bServer, int nCommandNumber ) = 0;
-};
-
-static IDiffMgr *g_pDiffMgr = nullptr;
-
-class CDiffStr
-{
-public:
-	CDiffStr()
-	{
-		m_str[ 0 ] = 0;
-#if PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0
-		m_stackEntries = 0;
-#endif
-	}
-
-	CDiffStr( char const *str )
-	{
-		Q_strncpy( m_str, str, sizeof( m_str ) );
-#if PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0
-		m_stackEntries = GetCallStack( m_stackAddresses, ARRAYSIZE(m_stackAddresses), 4 ); //skip this constructor, IDiffMgr::AddToDiff(), DiffPrint(), and IGameMovement::DiffPrint() 
-#endif
-	}
-
-	CDiffStr( const CDiffStr &src )
-	{
-		Q_strncpy( m_str, src.m_str, sizeof( m_str ) );
-#if PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0
-		memcpy( m_stackAddresses, src.m_stackAddresses, sizeof( m_stackAddresses ) );
-		m_stackEntries = src.m_stackEntries;
-#endif
-	}
-
-	char const *String()
-	{
-		return m_str;
-	}
-
-#if PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0
-	void **StackAddresses( void )
-	{
-		return m_stackAddresses;
-	}
-
-	const int StackEntries( void )
-	{
-		return m_stackEntries;
-	}
-#endif
-
-private:
-
-	char m_str[ 128 ];
-#if PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0
-	void *m_stackAddresses[8];
-	int m_stackEntries;
-#endif
-};
-
-// Per tick data
-class CDiffInfo
-{
-public:
-	CDiffInfo() : m_nCommandNumber( 0 ) {}
-
-	int							m_nCommandNumber;
-	std::vector< CDiffStr >	m_Lines;
-	bool						m_bChecked;
-};
-
-class CDiffManager : public IDiffMgr
-{
-	// keyed by command number
-	using DiffMap_t = std::map< int, CDiffInfo >;
-
-public:
-	CDiffManager() : 
-		m_flLastSpew( -1.0f )
-	{
-		g_pDiffMgr = this;
-	}
-
-	virtual void StartCommand( int nSlot, bool bServer, int nCommandNumber )
-	{
-#if defined( CLIENT_DLL )
-
-		if ( !diffcheck.GetInt() )
-			return;
-
-		g_pDiffMgr = reinterpret_cast< IDiffMgr * >( diffcheck.GetInt() );
-		g_pDiffMgr->StartCommand( nSlot, bServer, nCommandNumber );
-		return;
-#endif
-
-		// Msg( "%s Startcommand %d\n", bServer ? "sv" : "cl", nCommandNumber );
-
-		diffcheck.SetValue( reinterpret_cast< int >( this ) );
-
-		Assert( CBaseEntity::IsServer() );
-
-		DiffMap_t& rb = bServer ? m_Data[ nSlot ].m_Server : m_Data[ nSlot ].m_Client;
-
-		CDiffInfo *slot = &rb[ nCommandNumber ];
-		slot->m_nCommandNumber = nCommandNumber;
-		slot->m_Lines.clear();
-	}
-
-	virtual void AddToDiff( int nSlot, bool bServer, int nCommandNumber, char const *string )
-	{
-#if defined( CLIENT_DLL )
-
-		if ( !diffcheck.GetInt() )
-			return;
-
-		g_pDiffMgr = reinterpret_cast< IDiffMgr * >( diffcheck.GetInt() );
-		g_pDiffMgr->AddToDiff( nSlot, bServer, nCommandNumber, string );
-		return;
-#endif
-		Assert( CBaseEntity::IsServer() );
-
-		// Msg( "%s Add %d %s\n", bServer ? "sv" : "cl", nCommandNumber, string );
-
-		DiffMap_t& rb = bServer ? m_Data[ nSlot ].m_Server : m_Data[ nSlot ].m_Client;
-
-		Assert( rb.contains( nCommandNumber ) );
-		CDiffInfo *slot = &rb[ nCommandNumber ];
-		slot->m_nCommandNumber = nCommandNumber;
-		CDiffStr line( string );
-		slot->m_Lines.push_back( line );
-	}
-
-	enum EMismatched
-	{
-		DIFFCHECK_NOTREADY = 0,
-		DIFFCHECK_MATCHED,
-		DIFFCHECK_DIFFERS
-	};
-
-	bool ClientRecordExists( int nSlot, int cmd )
-	{
-		return m_Data[ nSlot ].m_Client.contains( cmd );
-	}
-
-	EMismatched IsMismatched( int nSlot, DiffMap_t::iterator svidx )
-	{
-		CDiffInfo *serverslot = &svidx->second;
-
-		// Now find the client version of this one
-		CDiffInfo *clientslot = ks::find_ptr( m_Data[ nSlot ].m_Client, serverslot->m_nCommandNumber );
-		if ( !clientslot )
-			return DIFFCHECK_NOTREADY;
-
-		// Now compare them
-		bool bSpew = false;
-		if ( serverslot->m_Lines.size() != 
-			clientslot->m_Lines.size() )
-		{
-			return DIFFCHECK_DIFFERS;
-		}
-
-		int maxSlot = (int)std::max( serverslot->m_Lines.size(), clientslot->m_Lines.size() );
-		if ( !bSpew )
-		{
-			for ( int i = 0; i < maxSlot; ++i )
-			{
-				CDiffStr *sv = nullptr;
-				CDiffStr *cl = nullptr;
-				if ( i < (int)serverslot->m_Lines.size() )
-				{
-					sv = &serverslot->m_Lines[ i ];
-				}
-				if ( i < (int)clientslot->m_Lines.size() )
-				{
-					cl = &clientslot->m_Lines[ i ];
-				}
-
-				if ( Q_stricmp( sv ? sv->String() : "(missing)", cl ? cl->String() : "(missing)" ) )
-				{
-					return DIFFCHECK_DIFFERS;
-				}
-			}
-		}
-
-		return DIFFCHECK_MATCHED;
-	}
-
-	virtual void Validate( int nSlot, bool bServer, int nCommandNumber )
-	{
-#if defined( CLIENT_DLL )
-
-		if ( !diffcheck.GetInt() )
-			return;
-
-		g_pDiffMgr = reinterpret_cast< IDiffMgr * >( diffcheck.GetInt() );
-		g_pDiffMgr->Validate( nSlot, bServer, nCommandNumber );
-		return;
-#endif
-		Assert( CBaseEntity::IsServer() );
-
-		// Only do this on the client
-		if ( !bServer )
-			return;
-
-		if ( !diffcheck_spew.GetBool() )
-			return;
-
-		// Don't care about this player slot
-		if ( diffcheck_playerslot.GetInt() != nSlot )
-			return;
-
-		// Find the last server command number
-		if ( m_Data[ nSlot ].m_Server.empty() )
-			return;
-
-		DiffMap_t::iterator svidx = std::prev( m_Data[ nSlot ].m_Server.end() );
-		EMismatched eMisMatched = IsMismatched( nSlot, svidx );
-		if ( eMisMatched == DIFFCHECK_NOTREADY )
-		{
-			return;
-		}
-
-		if ( eMisMatched == DIFFCHECK_DIFFERS )
-		{
-			std::vector< DiffMap_t::iterator > vecPrev;
-
-			DiffMap_t::iterator nCur = svidx;
-			do 
-			{
-				if ( nCur != m_Data[ nSlot ].m_Server.begin() && 
-					ClientRecordExists( nSlot, std::prev( nCur )->second.m_nCommandNumber ) )
-				{
-					DiffMap_t::iterator prev = std::prev( nCur );
-					//SpewRecords( "prev", prev );
-					vecPrev.insert( vecPrev.begin(), prev );
-					nCur = prev;
-				}
-				else
-				{
-					break;
-				}
-			} while ( vecPrev.size() < 10 );
-
-			Msg( "-----\n" );
-
-			for ( DiffMap_t::iterator prev : vecPrev )
-			{
-				SpewRecords( nSlot, "prev", prev );
-			}
-
-			SpewRecords( nSlot, "bad ", svidx );
-		}
-	}
-
-	void SpewRecords( int nSlot, char const *prefix, DiffMap_t::iterator svidx )
-	{
-		CDiffInfo *serverslot = &svidx->second;
-
-		// Now find the client version of this one
-		CDiffInfo *clientslot = ks::find_ptr( m_Data[ nSlot ].m_Client, serverslot->m_nCommandNumber );
-		if ( !clientslot )
-			return;
-
-		// Now compare them
-		int maxSlot = (int)std::max( serverslot->m_Lines.size(), clientslot->m_Lines.size() );
-
-		for ( int i = 0; i < maxSlot; ++i )
-		{
-			char const *sv = "(missing)";
-			char const *cl = "(missing)";
-
-#if PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0
-			int iHaveString = 0;
-#endif
-
-			if ( i < (int)serverslot->m_Lines.size() )
-			{
-				sv = serverslot->m_Lines[ i ].String();
-#if PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0
-				iHaveString |= 1;
-#endif
-			}
-			if ( i < (int)clientslot->m_Lines.size() )
-			{
-				cl = clientslot->m_Lines[ i ].String();
-#if PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0
-				iHaveString |= 2;
-#endif
-			}
-
-			bool bDiffers = Q_stricmp( sv, cl ) ? true : false;
-
-			Msg( "%s%s%d:  sv[%100.100s] cl[%100.100s]\n",
-				prefix,
-				bDiffers ? "+++" : "   ",
-				serverslot->m_nCommandNumber, 
-				sv,
-				cl );
-
-#if PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0
-			if( (iHaveString > 0) && (iHaveString < 3) )
-			{
-				CDiffStr *pHaveString = (iHaveString == 1) ? &serverslot->m_Lines[ i ] : &clientslot->m_Lines[ i ];
-				char szFormattedStack[4096];
-				szFormattedStack[0] = '\0';
-				TranslateStackInfo( pHaveString->StackAddresses(), pHaveString->StackEntries(), szFormattedStack, ARRAYSIZE( szFormattedStack ), "\n\t" );
-				Msg( "Stack for existing side:\n\t%s\n", szFormattedStack );
-			}
-#endif
-		}
-	}
-private:
-
-	struct User_t
-	{
-		DiffMap_t	m_Server;
-		DiffMap_t	m_Client;
-	};
-
-	User_t							m_Data[ MAX_SPLITSCREEN_PLAYERS ];
-	float							m_flLastSpew;
-};
-
-static CDiffManager g_DiffMgr;
-
-bool IsValidForErrorCheck( CBasePlayer *pl )
-{
-	Assert( pl );
-	if ( !pl->GetCurrentUserCommand() )
-		return false;
-	if ( pl->entindex() == 1 )
-		return true;
-	if ( pl->IsSplitScreenPlayer() )
-		return true;
-	return false;
-}
-
-void DiffPrint( bool bServer, int nCommandNumber, char const *fmt, ... )
-{
-	// Only track stuff for local player
-	CBasePlayer *player = CBaseEntity::GetPredictionPlayer();
-	if ( !player || !IsValidForErrorCheck( player ) )
-	{
-		return;
-	}
-
-	va_list		argptr;
-	char		string[1024];
-	va_start (argptr,fmt);
-	int len = Q_vsnprintf(string, sizeof( string ), fmt,argptr);
-	va_end (argptr);
-
-	if ( g_pDiffMgr )
-	{
-		// Strip any \n at the end that the user accidently put int
-		if ( len > 0 && string[ len -1 ] == '\n' )
-		{
-			string[ len - 1 ] = 0;
-		}
-		
-		g_pDiffMgr->AddToDiff( player->GetSplitScreenPlayerSlot(), bServer, nCommandNumber, string );
-	}
-}
-
-void _CheckV( int tick, char const *ctx, const Vector &vel )
-{
-	DiffPrint( CBaseEntity::IsServer(), tick, "%20.20s %f %f %f", ctx, vel.x, vel.y, vel.z );
-}
-
-#define CheckV( tick, ctx, vel ) _CheckV( tick, ctx, vel );
-
-static void StartCommand( bool bServer, int nCommandNumber )
-{
-	// Only track stuff for local player
-	CBasePlayer *player = CBaseEntity::GetPredictionPlayer();
-	if ( !player || !IsValidForErrorCheck( player ) )
-	{
-		return;
-	}
-
-	if ( g_pDiffMgr )
-	{
-		g_pDiffMgr->StartCommand( player->GetSplitScreenPlayerSlot(), bServer, nCommandNumber );
-	}
-}
-
-static void Validate( bool bServer, int nCommandNumber )
-{
-	// Only track stuff for local player
-	CBasePlayer *player = CBaseEntity::GetPredictionPlayer();
-	if ( !player || !IsValidForErrorCheck( player ) )
-	{
-		return;
-	}
-
-
-	if ( g_pDiffMgr )
-	{
-		g_pDiffMgr->Validate( player->GetSplitScreenPlayerSlot(), bServer, nCommandNumber );
-	}
-}
-
-void CGameMovement::DiffPrint( char const *fmt, ... )
-{
-	if ( !player || !player->GetCurrentUserCommand() )
-		return;
-
-	va_list		argptr;
-	char		string[1024];
-	va_start (argptr,fmt);
-	Q_vsnprintf(string, sizeof( string ), fmt,argptr);
-	va_end (argptr);
-
-	::DiffPrint( CBaseEntity::IsServer(), player->CurrentCommandNumber(), "%s", string );
-}
-
-#else
 void DiffPrint( bool bServer, int nCommandNumber, char const *fmt, ... )
 {
 	// Nothing
@@ -586,11 +178,9 @@ void CGameMovement::DiffPrint( char const *fmt, ... )
 {
 }
 
-#endif // !PREDICTION_ERROR_CHECK_LEVEL
-
 void COM_Log( const char *pszFile, const char *fmt, ...)
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		string[1024];
 	FileHandle_t fp;
 	const char *pfilename;
@@ -603,9 +193,9 @@ void COM_Log( const char *pszFile, const char *fmt, ...)
 	{
 		pfilename = pszFile;
 	}
-	va_start (argptr,fmt);
-	Q_vsnprintf(string, sizeof( string ), fmt,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,fmt);
+	V_vsnprintf(string, sizeof( string ), fmt,argptr);
+	__builtin_va_end (argptr);
 
 	fp = filesystem->Open( pfilename, "a+t");
 	if (fp)
@@ -683,7 +273,7 @@ CGameMovement::CGameMovement( void )
 
 	mv					= nullptr;
 
-	memset( m_flStuckCheckTime, 0, sizeof(m_flStuckCheckTime) );
+	std::memset( m_flStuckCheckTime, 0, sizeof(m_flStuckCheckTime) );
 	m_pTraceListData = nullptr;
 }
 
@@ -710,7 +300,7 @@ static int s_nTraceFilterCount = 0;
 ITraceFilter *CGameMovement::LockTraceFilter( int collisionGroup )
 {
 	// If this assertion triggers, you forgot to call UnlockTraceFilter
-	Assert( s_nTraceFilterCount < MAX_NESTING );
+	contract_assert( s_nTraceFilterCount < MAX_NESTING );
 	if ( s_nTraceFilterCount >= MAX_NESTING )
 		return nullptr;
 
@@ -723,9 +313,9 @@ ITraceFilter *CGameMovement::LockTraceFilter( int collisionGroup )
 
 void CGameMovement::UnlockTraceFilter( ITraceFilter *&pFilter )
 {
-	Assert( s_nTraceFilterCount > 0 );
+	contract_assert( s_nTraceFilterCount > 0 );
 	--s_nTraceFilterCount;
-	Assert( &s_TraceFilter[s_nTraceFilterCount] == pFilter );
+	contract_assert( &s_TraceFilter[s_nTraceFilterCount] == pFilter );
 	pFilter = nullptr;
 }
 
@@ -752,7 +342,7 @@ int CGameMovement::GetCheckInterval( IntervalType_t type )
 		tickInterval = 1;
 		break;
 	case GROUND:
-		tickInterval = CATEGORIZE_GROUND_SURFACE_TICK_INTERVAL;
+		tickInterval = CATEGORIZE_GROUND_SURFACE_TICK_INTERVAL();
 		break;
 	case STUCK:
 		// If we are in the process of being "stuck", then try a new position every command tick until m_StuckLast gets reset back down to zero
@@ -764,11 +354,11 @@ int CGameMovement::GetCheckInterval( IntervalType_t type )
 		{
 			if ( gpGlobals->maxClients == 1 )
 			{
-				tickInterval = CHECK_STUCK_TICK_INTERVAL_SP;
+				tickInterval = CHECK_STUCK_TICK_INTERVAL_SP();
 			}
 			else
 			{
-				tickInterval = CHECK_STUCK_TICK_INTERVAL;
+				tickInterval = CHECK_STUCK_TICK_INTERVAL();
 			}
 		}
 		break;
@@ -776,7 +366,7 @@ int CGameMovement::GetCheckInterval( IntervalType_t type )
 		tickInterval = CHECK_LADDER_TICK_INTERVAL;
 		break;
 	case LADDER_WEDGE:
-		tickInterval = CHECK_LADDER_WEDGE_TICK_INTERVAL;
+		tickInterval = CHECK_LADDER_WEDGE_TICK_INTERVAL();
 		break;
 	}
 	return tickInterval;
@@ -892,7 +482,7 @@ bool CGameMovement::IsWet() const
 // Plants player footprint decals
 //-----------------------------------------------------------------------------
 
-#define PLAYER_HALFWIDTH 12
+constexpr auto PLAYER_HALFWIDTH = 12;
 void CGameMovement::PlantFootprint( surfacedata_t *psurface )
 {
 	// Can't plant footprints on fake materials (ladders, wading)
@@ -948,8 +538,8 @@ void CGameMovement::PlantFootprint( surfacedata_t *psurface )
 	m_IsFootprintOnLeft = !m_IsFootprintOnLeft;
 }
 
-#define WET_TIME			    5.f	// how many seconds till we're completely wet/dry
-#define DRY_TIME			   20.f	// how many seconds till we're completely wet/dry
+constexpr auto WET_TIME = 5.f; // how many seconds till we're completely wet/dry
+constexpr auto DRY_TIME = 20.f; // how many seconds till we're completely wet/dry
 
 void CBasePlayer::UpdateWetness()
 {
@@ -1055,7 +645,7 @@ float CGameMovement::ComputeConstraintSpeedFactor( void )
 	if (DotProduct( vecDelta, vecDesired ) < 0.0f)
 		return 1.0f;
 
-	float flFrac = (sqrt(flDistSq) - (mv->m_flConstraintRadius - mv->m_flConstraintWidth)) / mv->m_flConstraintWidth;
+	float flFrac = (std::sqrt(flDistSq) - (mv->m_flConstraintRadius - mv->m_flConstraintWidth)) / mv->m_flConstraintWidth;
 
 	float flSpeedFactor = Lerp( flFrac, 1.0f, mv->m_flConstraintSpeedFactor ); 
 	return flSpeedFactor;
@@ -1104,7 +694,7 @@ void CGameMovement::CheckParameters( void )
 			// Same thing but only do the sqrt if we have to.
 			if ( ( spd != 0.0 ) && ( spd > mv->m_flMaxSpeed*mv->m_flMaxSpeed ) )
 			{
-				float fRatio = mv->m_flMaxSpeed / sqrt( spd );
+				float fRatio = mv->m_flMaxSpeed / std::sqrt( spd );
 				mv->m_flForwardMove *= fRatio;
 				mv->m_flSideMove    *= fRatio;
 				mv->m_flUpMove      *= fRatio;
@@ -1112,7 +702,7 @@ void CGameMovement::CheckParameters( void )
 		}
 		else
 		{
-			spd = sqrt( spd );
+			spd = std::sqrt( spd );
 			if ( ( spd != 0.0 ) && ( spd > mv->m_flMaxSpeed ) )
 			{
 				float fRatio = mv->m_flMaxSpeed / spd;
@@ -1256,7 +846,7 @@ void CGameMovement::ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove )
 {
 	m_nTraceCount = 0;
 
-	Assert( pMove && pPlayer );
+	contract_assert( pMove && pPlayer );
 
 	float flStoreFrametime = gpGlobals->frametime;
 
@@ -1272,7 +862,7 @@ void CGameMovement::ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove )
 	m_iSpeedCropped = SPEED_CROPPED_RESET;
 	
 	// StartTrackPredictionErrors should have set this
-	Assert( pPlayer->IsBot() ||  player == pPlayer );
+	contract_assert( pPlayer->IsBot() ||  player == pPlayer );
 	player = pPlayer;
 
 	mv = pMove;
@@ -1301,7 +891,7 @@ void CGameMovement::ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove )
 #if !defined( CLIENT_DLL )
 	if ( !player->IsBot() )
 	{
-		VPROF_INCREMENT_COUNTER( "PlayerMovementTraces", m_nTraceCount );
+		VProfIncrementCounter<"PlayerMovementTraces">( m_nTraceCount );
 	}
 #endif
 }
@@ -1318,9 +908,6 @@ void CGameMovement::StartTrackPredictionErrors( CBasePlayer *pPlayer )
 
 	player = pPlayer;
 
-#if PREDICTION_ERROR_CHECK_LEVEL > 0
-	StartCommand( CBaseEntity::IsServer(), player->CurrentCommandNumber() );
-#endif
 }
 
 void CGameMovement::FinishTrackPredictionErrors( CBasePlayer *pPlayer )
@@ -1328,14 +915,8 @@ void CGameMovement::FinishTrackPredictionErrors( CBasePlayer *pPlayer )
 	if ( pPlayer->IsBot() )
 		return;
 
-	Assert( player == pPlayer );
+	contract_assert( player == pPlayer );
 
-#if PREDICTION_ERROR_CHECK_LEVEL > 0
-	// DiffPrint( "end %f", player->m_Local.m_vecPunchAngleVel.m_Value.x );
-
-	// Call validate at end of checking
-	Validate( CBaseEntity::IsServer(), player->CurrentCommandNumber() );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1346,9 +927,9 @@ void CGameMovement::FinishMove( void )
 	mv->m_nOldButtons = mv->m_nButtons;
 }
 
-#define PUNCH_DAMPING		9.0f		// bigger number makes the response more damped, smaller is less damped
+constexpr auto PUNCH_DAMPING = 9.0f; // bigger number makes the response more damped, smaller is less damped
 										// currently the system will overshoot, with larger damping values it won't
-#define PUNCH_SPRING_CONSTANT	65.0f	// bigger number increases the speed at which the view corrects
+constexpr auto PUNCH_SPRING_CONSTANT = 65.0f; // bigger number increases the speed at which the view corrects
 
 
 void CGameMovement::DecayAngles( QAngle& v, float fExp, float fLin, float dT )
@@ -1356,7 +937,7 @@ void CGameMovement::DecayAngles( QAngle& v, float fExp, float fLin, float dT )
 	fExp *= dT;
 	fLin *= dT;
 
-	v *= expf(-fExp);
+	v *= std::expf(-fExp);
 
 	float fMag = v.Length();
 	if ( fMag > fLin )
@@ -2616,13 +2197,13 @@ bool CGameMovement::CheckJumpButton( void )
 	float flMul;
 	if ( g_bMovementOptimizations )
 	{
-		Assert( sv_gravity.GetFloat() == 800.0f );
+		contract_assert( sv_gravity.GetFloat() == 800.0f );
 		flMul = 268.3281572999747f;
 
 	}
 	else
 	{
-		flMul = sqrt(2 * sv_gravity.GetFloat() * GAMEMOVEMENT_JUMP_HEIGHT);
+		flMul = std::sqrt(2 * sv_gravity.GetFloat() * GAMEMOVEMENT_JUMP_HEIGHT);
 	}
 
 	// Acclerate upward
@@ -2744,14 +2325,6 @@ int CGameMovement::TryPlayerMove( Vector *pFirstDest, trace_t *pFirstTrace )
 			}
 			else
 			{
-#if defined( PLAYER_GETTING_STUCK_TESTING )
-				trace_t foo;
-				TracePlayerBBox( mv->GetAbsOrigin(), mv->GetAbsOrigin(), PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, foo );
-				if ( foo.startsolid || foo.fraction != 1.0f )
-				{
-					Msg( "bah\n" );
-				}
-#endif
 				TracePlayerBBox( mv->GetAbsOrigin(), end, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, pm );
 			}
 		}
@@ -2799,14 +2372,6 @@ int CGameMovement::TryPlayerMove( Vector *pFirstDest, trace_t *pFirstTrace )
 				}
 			}
 
-#if defined( PLAYER_GETTING_STUCK_TESTING )
-			trace_t foo;
-			TracePlayerBBox( pm.endpos, pm.endpos, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, foo );
-			if ( foo.startsolid || foo.fraction != 1.0f )
-			{
-				Msg( "Player will become stuck!!!\n" );
-			}
-#endif
 			// actually covered some distance
 			mv->SetAbsOrigin( pm.endpos);
 			VectorCopy (mv->m_vecVelocity, original_velocity);
@@ -2995,7 +2560,7 @@ ConVar sv_ladder_scale_speed( "sv_ladder_scale_speed", "0.78", FCVAR_REPLICATED 
 #endif
 
 // note, this lets us do some specific code when we start using the ladder Movetype
-#define IGNORE_JUMP_TIME 0.2f
+constexpr auto IGNORE_JUMP_TIME = 0.2f;
 void CGameMovement::OnStartMoveTypeLadder()
 {
 	player->m_ignoreLadderJumpTime = gpGlobals->curtime + IGNORE_JUMP_TIME; // ignore jumpping for IGNORE_JUMP_TIME seconds to give us a chance to catch the ladder without bouncing off
@@ -3059,8 +2624,8 @@ bool CGameMovement::LadderMove( void )
 			)
 		{
 
-			#define LADDER_EDGE_GRAB_DISTACE 24.0f
-			#define LADDER_EDGE_GRAB_HEIGHT_DELTA 6.0f
+			constexpr auto LADDER_EDGE_GRAB_DISTACE = 24.0f;
+			constexpr auto LADDER_EDGE_GRAB_HEIGHT_DELTA = 6.0f;
 
 			Vector vecTraceFrom = mv->GetAbsOrigin(); vecTraceFrom.z -= LADDER_EDGE_GRAB_HEIGHT_DELTA;
 			Vector vecTraceTo = mv->GetAbsOrigin() - mv->m_vecVelocity.Normalized() * LADDER_EDGE_GRAB_DISTACE;
@@ -3236,14 +2801,14 @@ const char *DescribeAxis( int axis )
 	switch ( axis )
 	{
 	case 0:
-		Q_strncpy( sz, "X", sizeof( sz ) );
+		V_strncpy( sz, "X", sizeof( sz ) );
 		break;
 	case 1:
-		Q_strncpy( sz, "Y", sizeof( sz ) );
+		V_strncpy( sz, "Y", sizeof( sz ) );
 		break;
 	case 2:
 	default:
-		Q_strncpy( sz, "Z", sizeof( sz ) );
+		V_strncpy( sz, "Z", sizeof( sz ) );
 		break;
 	}
 
@@ -3420,7 +2985,7 @@ float CGameMovement::CalcRoll ( const QAngle &angles, const Vector &velocity, fl
 	return side*sign;
 }
 
-#define CHECKSTUCK_MINTIME 0.05  // Don't check again too quickly.
+constexpr auto CHECKSTUCK_MINTIME = 0.05; // Don't check again too quickly.
 
 Vector rgv3tStuckTable[54];
 
@@ -3440,7 +3005,7 @@ void CreateStuckTable( void )
 
 	firsttime = 0;
 
-	memset(rgv3tStuckTable, 0, sizeof(rgv3tStuckTable));
+	std::memset(rgv3tStuckTable, 0, sizeof(rgv3tStuckTable));
 
 	idx = 0;
 	// Little Moves.
@@ -3539,7 +3104,7 @@ void CreateStuckTable( void )
 			}
 		}
 	}
-	Assert( idx < sizeof(rgv3tStuckTable)/sizeof(rgv3tStuckTable[0]));
+	contract_assert( idx < sizeof(rgv3tStuckTable)/sizeof(rgv3tStuckTable[0]) );
 }
 
 //-----------------------------------------------------------------------------
@@ -3723,8 +3288,8 @@ int CGameMovement::GetWaterContentsForPointCached( const Vector &point, int slot
 {
 	if ( g_bMovementOptimizations ) 
 	{
-		Assert( player );
-		Assert( slot >= 0 && slot < MAX_PC_CACHE_SLOTS );
+		contract_assert( player );
+		contract_assert( slot >= 0 && slot < MAX_PC_CACHE_SLOTS );
 
 		int idx = player->entindex() - 1;
 
@@ -3888,7 +3453,7 @@ void TracePlayerBBoxForGround( ITraceListData *pTraceListData, const Vector& sta
 							  const Vector& maxsSrc, unsigned int fMask,
 							  ITraceFilter *filter, trace_t& pm, float minGroundNormalZ, bool overwriteEndpos, int *pCounter )
 {
-	VPROF( "TracePlayerBBoxForGround" );
+	CVProfScope _( "TracePlayerBBoxForGround", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	Ray_t ray;
 	Vector mins, maxs;
@@ -4018,7 +3583,7 @@ void CGameMovement::CategorizePosition( void )
 	// Shooting up really fast.  Definitely not on ground.
 	// On ladder moving up, so not on ground either
 	// NOTE: 145 is a jump.
-#define NON_JUMP_VELOCITY 140.0f
+constexpr auto NON_JUMP_VELOCITY = 140.0f;
 
 	float zvel = mv->m_vecVelocity[2];
 	bool bMovingUp = zvel > 0.0f;
@@ -4635,8 +4200,6 @@ void CGameMovement::Duck( void )
 		if ( ( mv->m_nButtons & IN_DUCK ) || bDuckJump )
 		{
 // XBOX SERVER ONLY
-#if !defined(CLIENT_DLL)
-#endif
 			// Have the duck button pressed, but the player currently isn't in the duck position.
 			if ( ( buttonsPressed & IN_DUCK ) && !bInDuck && !bDuckJump && !bDuckJumpTime )
 			{
@@ -4788,7 +4351,7 @@ void CGameMovement::Duck( void )
 		if ( ( player->m_Local.m_nDuckJumpTimeMsecs == 0 ) && ( fabs(player->GetViewOffset().z - GetPlayerViewOffset( false ).z) > 0.1 ) )
 		{
 			// we should rarely ever get here, so assert so a coder knows when it happens
-			AssertMsgOnce( 0, "Restoring player view height\n" );
+			contract_assert( false && "Restoring player view height\n" );
 
 			// set the eye height to the non-ducked height
 			SetDuckedEyeOffset(0.0f);
@@ -4803,7 +4366,7 @@ static ConVar sv_optimizedmovement( "sv_optimizedmovement", "1", FCVAR_REPLICATE
 //-----------------------------------------------------------------------------
 void CGameMovement::PlayerMove( void )
 {
-	VPROF( "CGameMovement::PlayerMove" );
+	CVProfScope _( "CGameMovement::PlayerMove", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CheckParameters();
 	
@@ -4945,7 +4508,7 @@ void CGameMovement::PerformFlyCollisionResolution( trace_t &pm, Vector &move )
 		// where collision resolution do *not* in fact occur
 
 		// Should this ever occur for players!?
-		Assert(0);
+		contract_assert( 0 );
 		break;
 
 	case MOVECOLLIDE_FLY_BOUNCE:	
@@ -4962,7 +4525,7 @@ void CGameMovement::PerformFlyCollisionResolution( trace_t &pm, Vector &move )
 
 	default:
 		// Invalid collide type!
-		Assert(0);
+		contract_assert( 0 );
 		break;
 	}
 
@@ -5141,19 +4704,3 @@ bool CGameMovement::GameHasLadders() const
 {
 	return true;
 }
-
-
-#if (PREDICTION_ERROR_CHECK_LEVEL > 0)
-void _Easy_DiffPrint( CBaseEntity *pEntity, const char *szFormatSTring, ... )
-{
-	va_list args;
-	va_start( args, szFormatSTring );
-
-	//convert the va_list into something we can pass to diffprint
-	char szText[4096];
-	Q_vsnprintf( szText, sizeof( szText ), szFormatSTring, args );
-	
-	g_pGameMovement->DiffPrint( "%s", szText );
-	va_end( args );
-}
-#endif

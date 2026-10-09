@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CPLANE_H
-#define CPLANE_H
+import std;
+import ks.math;
 
 //=========================================================
 // Plane
@@ -40,5 +35,3 @@ private:
 	float	m_flDist;
 	bool	m_fInitialized;
 };
-
-#endif //CPLANE_H

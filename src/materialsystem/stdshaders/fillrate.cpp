@@ -1,10 +1,5 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 
@@ -13,7 +8,7 @@
 #include "fillrate_ps20b.inc"
 
 BEGIN_VS_SHADER_FLAGS( Fillrate, "Help for Fillrate", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( PASSCOUNT, SHADER_PARAM_TYPE_INTEGER, "1", "Number of passes for this material" )
 	END_SHADER_PARAMS
 
@@ -145,5 +140,3 @@ BEGIN_VS_SHADER_FLAGS( Fillrate, "Help for Fillrate", SHADER_NOT_EDITABLE )
 		Draw();
 	}
 END_SHADER
-
-

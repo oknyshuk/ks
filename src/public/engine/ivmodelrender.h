@@ -1,17 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IVMODELRENDER_H
-#define IVMODELRENDER_H
-
-
-#include "interface.h"
-#include "mathlib/mathlib.h"
+import ks.tier1;
+import std;
 #include "istudiorender.h"
 #include "datacache/idatacache.h"
 
@@ -22,13 +14,13 @@ struct mstudioanimdesc_t;
 struct mstudioseqdesc_t;
 struct model_t;
 class IClientRenderable;
-class Vector;
 struct studiohdr_t;
 class IMaterial;
 class CStudioHdr;
 struct MaterialLightingState_t;
 
-FORWARD_DECLARE_HANDLE( LightCacheHandle_t ); 
+struct LightCacheHandle_t__;
+using LightCacheHandle_t = LightCacheHandle_t__ *; 
 
 
 //-----------------------------------------------------------------------------
@@ -51,7 +43,7 @@ struct DrawModelState_t
 //-----------------------------------------------------------------------------
 
 // change this when the new version is incompatable with the old
-#define VENGINE_HUDMODEL_INTERFACE_VERSION	"VEngineModel016"
+inline constexpr const char *VENGINE_HUDMODEL_INTERFACE_VERSION = "VEngineModel016";
 
 typedef unsigned short ModelInstanceHandle_t;
 
@@ -109,7 +101,7 @@ struct StaticLightingQuery_t : public LightingQuery_t
 
 
 // UNDONE: Move this to hud export code, subsume previous functions
-abstract_class IVModelRender
+class IVModelRender
 {
 public:
 	virtual int		DrawModel(	int flags,
@@ -212,6 +204,3 @@ public:
 	// the color meshes return from ComputeStaticLightingState has been issued
 	virtual void CleanupStaticLightingState( int nCount, DataCacheHandle_t *pColorMeshHandles ) = 0;
 };
-
-
-#endif // IVMODELRENDER_H

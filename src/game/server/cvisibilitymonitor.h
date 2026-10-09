@@ -1,17 +1,19 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: System to generate events as specified entities become visible to players.
-//
-// $NoKeywords: $
-//=====================================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+// Purpose: System to generate events as specified entities become visible to players.
+
+import std;
+import ks.math;
+#include "shareddefs.h"
+#include "util.h"
 
 // A callback which will automatically be used instead of generating the generic
 // 'on_entity_visible' game event. Often used so that the entity can generate
 // its own, more unique game event. 
-// Return TRUE if you want the generic event generated after the callback
-// Return FALSE if you do not want the generic event generated
+// Return true if you want the generic event generated after the callback
+// Return false if you do not want the generic event generated
 typedef bool (*VisibilityMonitorCallback)( CBaseEntity *pVisibleEntity, CBasePlayer *pViewingPlayer );
 
 // This callback tells us which object is being seen, and by which client. The callback returns 'true'

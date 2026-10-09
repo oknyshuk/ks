@@ -1,17 +1,15 @@
-//====== Copyright c 1996-2007, Valve Corporation, All rights reserved. =======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#ifndef POSEDEBUGGER_H
-#define POSEDEBUGGER_H
+import std;
+import ks.math;
 
 class IClientNetworkable;
+class CStudioHdr;
+class CIKContext;
 
-abstract_class IPoseDebugger
+class IPoseDebugger
 {
 public:
 	virtual void StartBlending( IClientNetworkable *pEntity, const CStudioHdr *pStudioHdr ) = 0;
@@ -31,5 +29,3 @@ public:
 };
 
 extern IPoseDebugger *g_pPoseDebugger;
-
-#endif // #ifndef POSEDEBUGGER_H

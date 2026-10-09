@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SND_WAVE_DATA_H
-#define SND_WAVE_DATA_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "snd_audio_source.h"
 
@@ -14,7 +8,7 @@
 // Purpose: Linear iterator over source data.
 //			Keeps track of position in source, and maintains necessary buffers
 //-----------------------------------------------------------------------------
-abstract_class IWaveData
+class IWaveData
 {
 public:
 	virtual						~IWaveData( void ) {}
@@ -24,7 +18,7 @@ public:
 	virtual void				UpdateLoopPosition( int nLoopPosition ) = 0;
 };
 
-abstract_class IWaveStreamSource
+class IWaveStreamSource
 {
 public:
 	virtual int64	UpdateLoopingSamplePosition( int64 samplePosition ) = 0;
@@ -39,5 +33,3 @@ extern IWaveData *CreateWaveDataStream( CAudioSource &source, IWaveStreamSource 
 extern IWaveData *CreateWaveDataMemory( CAudioSource &source );
 
 void PrefetchDataStream( const char *pFileName, int dataOffset, int dataSize );
-
-#endif // SND_WAVE_DATA_H

@@ -1,14 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#if !defined( MOLOTOV_PROJECTILE_H )
-#define MOLOTOV_PROJECTILE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-
 
 #include "basecsgrenade_projectile.h"
 
@@ -86,5 +80,3 @@ private:
 };
 
 #endif // GAME_DLL
-
-#endif // MOLOTOV_PROJECTILE_H

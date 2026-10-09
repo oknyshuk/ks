@@ -1,12 +1,24 @@
-//====== Copyright (c) 1996-2003, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-#include "client_pch.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2003 Valve Corporation
+
+// main precompiled header for client files
+
+import std;
+import ks.tier1;
+
+
+
+
+
+
+
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 
 #include "icolorcorrectiontools.h"
-#include "materialsystem/imaterialsystem.h"
 #include "materialsystem/IColorCorrection.h"
 
 const int g_nPreviewImageWidth  = 128;

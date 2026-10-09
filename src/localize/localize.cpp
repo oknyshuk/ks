@@ -1,32 +1,18 @@
-//======= Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 
-#include <iconv.h>
 
-#include <wchar.h>
+import std;
 
+import ks.vstdlib;
 #include "filesystem.h"
 
 #include "localize/ilocalize.h"
-#include "tier1/utlvector.h"
-#include "tier1/map_ops.h"
-#include "tier1/intern_pool.h"
-#include "tier1/string_ops.h"
-#include "tier1/utlstring.h"
-#include <vector>
 #include "UnicodeFileHelpers.h"
-#include "tier0/icommandline.h"
-#include "exprevaluator.h"
-#include "iregistry.h"
-#include <vstdlib/vstrtools.h>
 
 
-#define MAX_LOCALIZED_CHARS	4096
+constexpr auto MAX_LOCALIZED_CHARS = 4096;
 
 
 //-----------------------------------------------------------------------------
@@ -76,8 +62,8 @@ public:
 
 protected:
 	// internal "interface"
-	virtual void ConstructStringVArgsInternal(char *unicodeOutput, int unicodeBufferSizeInBytes, const char *formatString, int numFormatParameters, va_list argList);
-	virtual void ConstructStringVArgsInternal(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const wchar_t *formatString, int numFormatParameters, va_list argList);
+	virtual void ConstructStringVArgsInternal(char *unicodeOutput, int unicodeBufferSizeInBytes, const char *formatString, int numFormatParameters, std::va_list argList);
+	virtual void ConstructStringVArgsInternal(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const wchar_t *formatString, int numFormatParameters, std::va_list argList);
 
 	virtual void ConstructStringKeyValuesInternal(char *unicodeOutput, int unicodeBufferSizeInBytes, const char *formatString, KeyValues *localizationVariables);
 	virtual void ConstructStringKeyValuesInternal(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const wchar_t *formatString, KeyValues *localizationVariables);
@@ -106,13 +92,13 @@ private:
 
 		static bool LessFunc( const LocalizationFileInfo_t& lhs, const LocalizationFileInfo_t& rhs )
 		{
-			int iresult = Q_stricmp( lhs.symPathID.c_str(), rhs.symPathID.c_str() );
+			int iresult = V_stricmp( lhs.symPathID.c_str(), rhs.symPathID.c_str() );
 			if ( iresult != 0 )
 			{
 				return iresult == -1;
 			}
 
-			return Q_stricmp( lhs.symName.c_str(), rhs.symName.c_str() ) < 0;
+			return V_stricmp( lhs.symName.c_str(), rhs.symName.c_str() ) < 0;
 		}
 	};
 
@@ -122,9 +108,9 @@ private:
 		using is_transparent = void;
 		const std::vector< wchar_t > *m_pValues;
 		const wchar_t *Str( int i ) const { return &( *m_pValues )[ i ]; }
-		bool operator()( int a, int b ) const { return wcscmp( Str( a ), Str( b ) ) < 0; }
-		bool operator()( int a, const wchar_t *b ) const { return wcscmp( Str( a ), b ) < 0; }
-		bool operator()( const wchar_t *a, int b ) const { return wcscmp( a, Str( b ) ) < 0; }
+		bool operator()( int a, int b ) const { return std::wcscmp( Str( a ), Str( b ) ) < 0; }
+		bool operator()( int a, const wchar_t *b ) const { return std::wcscmp( Str( a ), b ) < 0; }
+		bool operator()( const wchar_t *a, int b ) const { return std::wcscmp( a, Str( b ) ) < 0; }
 	};
 
 private:
@@ -134,8 +120,8 @@ private:
 	int FindExistingValueIndex( const wchar_t *value );
 	bool ReadLocalizationFile( const char *pRelativePath, const char *pPathID );
 	void InvokeChangeCallbacks( );
-	virtual int ConvertANSIToUCS2(const char *ansi, OUT_Z_BYTECAP(unicodeBufferSizeInBytes) ucs2 *unicode, int unicodeBufferSizeInBytes);
-	virtual int ConvertUCS2ToANSI(const ucs2 *unicode, OUT_Z_BYTECAP(ansiBufferSize) char *ansi, int ansiBufferSize);
+	virtual int ConvertANSIToUCS2(const char *ansi, ucs2 *unicode, int unicodeBufferSizeInBytes);
+	virtual int ConvertUCS2ToANSI(const ucs2 *unicode, char *ansi, int ansiBufferSize);
 	virtual void AddString(const char *tokenName, ucs2 *unicodeString, const char *fileName);
 	char m_szLanguage[64];
 	bool m_bUseOnlyLongestLanguageString;
@@ -166,7 +152,7 @@ private:
 static CLocalize s_Localize;
 
 // expose the interface
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CLocalize, ILocalize, LOCALIZE_INTERFACE_VERSION, s_Localize);
+static InterfaceReg s_Reg_CLocalize_ILocalize( []() -> void * { return static_cast<ILocalize *>( &s_Localize ); }, LOCALIZE_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -245,7 +231,7 @@ const char *CLocalize::FindAsUTF8( const char *pchTokenName )
 		return pchTokenName;
 
 	static char rgchT[2048];
-	Q_UnicodeToUTF8( pwch, rgchT, sizeof( rgchT ) );
+	V_UnicodeToUTF8( pwch, rgchT, sizeof( rgchT ) );
 	return rgchT;
 }
 
@@ -322,7 +308,7 @@ bool CLocalize::ReadLocalizationFile( const char *pRelativePath, const char *pPa
 
 	// check the first character, make sure this a little-endian unicode file
 	ucs2 *data = memBlock;
-	ucs2 signature = LittleShort( data[0] );
+	ucs2 signature = ( data[0] );
 	if ( !bReadOK || signature != 0xFEFF )
 	{
 		Msg( "Ignoring non-unicode close caption file %s\n", pRelativePath );
@@ -345,7 +331,7 @@ bool CLocalize::ReadLocalizationFile( const char *pRelativePath, const char *pPa
 
 	bool bQuoted;
 	bool bEnglishFile = false;
-	if ( Q_stristr(pRelativePath, "_english.txt") )
+	if ( V_stristr(pRelativePath, "_english.txt") )
 	{
 		bEnglishFile = true;
 	}
@@ -406,7 +392,7 @@ bool CLocalize::ReadLocalizationFile( const char *pRelativePath, const char *pPa
 				// copy out our language setting
 				char value[MAX_LOCALIZED_CHARS];
 				ConvertUCS2ToANSI(valuetoken, value, sizeof(value));
-				strncpy(m_szLanguage, value, sizeof(m_szLanguage) - 1);
+				std::strncpy(m_szLanguage, value, sizeof(m_szLanguage) - 1);
 			}
 			else if (!stricmp(key, "Tokens"))
 			{
@@ -436,7 +422,7 @@ bool CLocalize::ReadLocalizationFile( const char *pRelativePath, const char *pPa
 					ucs2 *tempData = ReadUnicodeToken(data, conditional, MAX_LOCALIZED_CHARS, bQuoted);
 					char cond[MAX_LOCALIZED_CHARS];
  					V_UCS2ToUTF8( conditional, cond, sizeof(cond) );
-					if ( !bQuoted && (strstr( cond, "[$" )||strstr( cond, "[!$" )) )
+					if ( !bQuoted && (std::strstr( cond, "[$" )||std::strstr( cond, "[!$" )) )
 					{
 						// Evaluate the conditional tag
 						char cond[MAX_LOCALIZED_CHARS];
@@ -474,15 +460,15 @@ bool CLocalize::AddFile( const char *szFileName, const char *pPathID, bool bIncl
 	bool success = false;
 
 	char language[MAX_LANGUAGE_NAME_LENGTH];
-	memset( language, 0, sizeof(language) );
+	std::memset( language, 0, sizeof(language) );
 
-	if ( Q_IsAbsolutePath( szFileName ) )
+	if ( V_IsAbsolutePath( szFileName ) )
 	{
 		Warning( "Full paths not allowed in localization file specificaton %s\n", szFileName );
 		return false;
 	}
 
-	const char *langptr = strstr(szFileName, LANGUAGE_STRING);
+	const char *langptr = std::strstr(szFileName, LANGUAGE_STRING);
 	if (langptr)
 	{
 		// LOAD THE ENGLISH FILE FIRST
@@ -490,7 +476,7 @@ bool CLocalize::AddFile( const char *szFileName, const char *pPathID, bool bIncl
 		// copy out the initial part of the string
 		offs = langptr - szFileName;
 		char fileName[MAX_PATH];
-		strncpy(fileName, szFileName, offs);
+		std::strncpy(fileName, szFileName, offs);
 		fileName[offs] = 0;
 
 		if ( m_bUseOnlyLongestLanguageString )
@@ -499,25 +485,25 @@ bool CLocalize::AddFile( const char *szFileName, const char *pPathID, bool bIncl
 		}
 
 		// append "english" as our default language
-		Q_strncat(fileName, ENGLISH_STRING, sizeof( fileName ), COPY_ALL_CHARACTERS );
+		V_strncat(fileName, ENGLISH_STRING, sizeof( fileName ), COPY_ALL_CHARACTERS );
 
 		// append the end of the initial string
-		offs += strlen(LANGUAGE_STRING);
-		Q_strncat(fileName, szFileName + offs, sizeof( fileName ), COPY_ALL_CHARACTERS);
+		offs += std::strlen(LANGUAGE_STRING);
+		V_strncat(fileName, szFileName + offs, sizeof( fileName ), COPY_ALL_CHARACTERS);
 
 		success = AddFile( fileName, pPathID, bIncludeFallbackSearchPaths );
 
 		bool bValid = true;
 		if ( CommandLine()->CheckParm( "-language" ) )
 		{
-			Q_strncpy( language, CommandLine()->ParmValue( "-language", "english" ), sizeof( language ) );
+			V_strncpy( language, CommandLine()->ParmValue( "-language", "english" ), sizeof( language ) );
 			bValid = true;
 		}
 		else
 		{
 			bValid = false;
 		}
-		if ( bValid && !Q_stricmp( language, "unknown" ) )
+		if ( bValid && !V_stricmp( language, "unknown" ) )
 		{
 			// Fall back to english
 			bValid = false;
@@ -527,18 +513,18 @@ bool CLocalize::AddFile( const char *szFileName, const char *pPathID, bool bIncl
 		// append the language
 		if ( bValid )
 		{
-			if ( strlen(language) != 0 && stricmp(language, ENGLISH_STRING) != 0 )
+			if ( std::strlen(language) != 0 && stricmp(language, ENGLISH_STRING) != 0 )
 			{
 				// copy out the initial part of the string
 				offs = langptr - szFileName;
-				strncpy(fileName, szFileName, offs);
+				std::strncpy(fileName, szFileName, offs);
 				fileName[offs] = 0;
 
-				Q_strncat(fileName, language, sizeof( fileName ), COPY_ALL_CHARACTERS);
+				V_strncat(fileName, language, sizeof( fileName ), COPY_ALL_CHARACTERS);
 
 				// append the end of the initial string
-				offs += strlen(LANGUAGE_STRING);
-				Q_strncat(fileName, szFileName + offs, sizeof( fileName ), COPY_ALL_CHARACTERS );
+				offs += std::strlen(LANGUAGE_STRING);
+				V_strncat(fileName, szFileName + offs, sizeof( fileName ), COPY_ALL_CHARACTERS );
 
 				success &= AddFile( fileName, pPathID, bIncludeFallbackSearchPaths );
 			}
@@ -556,7 +542,7 @@ bool CLocalize::AddFile( const char *szFileName, const char *pPathID, bool bIncl
 	for ( int lf = 0; lf < lfc; ++lf )
 	{
 		LocalizationFileInfo_t& entry = m_LocalizationFiles[ lf ];
-		if ( !Q_stricmp( entry.symName.c_str(), szFileName ) )
+		if ( !V_stricmp( entry.symName.c_str(), szFileName ) )
 		{
 			m_LocalizationFiles.erase( m_LocalizationFiles.begin() + lf );
 			break;
@@ -588,11 +574,11 @@ bool CLocalize::AddAllLanguageFiles( const char *baseFileName )
 	{
 		// work out the path the files are in
 		char szFilePath[MAX_PATH];
-		Q_strncpy( szFilePath, baseFileName, sizeof(szFilePath) );
-		char *pLastSlash = strrchr( szFilePath, '\\' );
+		V_strncpy( szFilePath, baseFileName, sizeof(szFilePath) );
+		char *pLastSlash = std::strrchr( szFilePath, '\\' );
 		if ( !pLastSlash )
 		{
-			pLastSlash = strrchr( szFilePath, '/' );
+			pLastSlash = std::strrchr( szFilePath, '/' );
 		}
 		if ( pLastSlash )
 		{
@@ -606,7 +592,7 @@ bool CLocalize::AddAllLanguageFiles( const char *baseFileName )
 		// iterate through and add all the languages (for development)
 		// the longest string out of all the languages will be used
 		char szSearchPath[MAX_PATH];
-		Q_snprintf( szSearchPath, sizeof(szSearchPath), "%s*.txt", baseFileName );
+		V_snprintf( szSearchPath, sizeof(szSearchPath), "%s*.txt", baseFileName );
 
 		FileFindHandle_t hFind = 0;
 		const char *file = g_pFullFileSystem->FindFirst( szSearchPath, &hFind );
@@ -650,7 +636,7 @@ bool CLocalize::SaveToFile( const char *szFileName )
 
 	// write litte-endian unicode marker
 	unsigned short marker = 0xFEFF;
-	marker = LittleShort( marker );
+	marker = ( marker );
 	g_pFullFileSystem->Write(&marker, sizeof( marker ), file);
 
 	const char *startStr = "\"lang\"\r\n{\r\n\"Language\" \"English\"\r\n\"Tokens\"\r\n{\r\n";
@@ -662,7 +648,7 @@ bool CLocalize::SaveToFile( const char *szFileName )
 	if (!strLength)
 		return false;
 
-	g_pFullFileSystem->Write(unicodeString, strlen(startStr) * sizeof(ucs2), file);
+	g_pFullFileSystem->Write(unicodeString, std::strlen(startStr) * sizeof(ucs2), file);
 
 	// convert our spacing characters to unicode
 //	wchar_t unicodeSpace = L' '; 
@@ -688,7 +674,7 @@ bool CLocalize::SaveToFile( const char *szFileName )
 
 		// write out
 		g_pFullFileSystem->Write(&unicodeQuote, sizeof(ucs2), file);
-		g_pFullFileSystem->Write(unicodeString, strlen(name) * sizeof(ucs2), file);
+		g_pFullFileSystem->Write(unicodeString, std::strlen(name) * sizeof(ucs2), file);
 		g_pFullFileSystem->Write(&unicodeQuote, sizeof(ucs2), file);
 
 		g_pFullFileSystem->Write(&unicodeTab, sizeof(ucs2), file);
@@ -696,8 +682,8 @@ bool CLocalize::SaveToFile( const char *szFileName )
 
 		g_pFullFileSystem->Write(&unicodeQuote, sizeof(ucs2), file);
 		ucs2 ucs2Value[MAX_LOCALIZED_CHARS];
-		V_UnicodeToUCS2( value, wcslen(value)*sizeof(wchar_t), (char *)ucs2Value, sizeof(ucs2Value) );
-		g_pFullFileSystem->Write(ucs2Value, wcslen(value) * sizeof(ucs2), file);
+		V_UnicodeToUCS2( value, std::wcslen(value)*sizeof(wchar_t), (char *)ucs2Value, sizeof(ucs2Value) );
+		g_pFullFileSystem->Write(ucs2Value, std::wcslen(value) * sizeof(ucs2), file);
 		g_pFullFileSystem->Write(&unicodeQuote, sizeof(ucs2), file);
 
 		g_pFullFileSystem->Write(&unicodeCR, sizeof(ucs2), file);
@@ -797,15 +783,14 @@ void CLocalize::AddString(const char *pString, wchar_t *pValue, const char *file
 	if (!pString) 
 		return;
 
-	MEM_ALLOC_CREDIT();
 
 	// see if the value is already in our string table
 	int valueIndex = FindExistingValueIndex( pValue );
 	if ( valueIndex == LOCALIZE_INVALID_STRING_INDEX )
 	{
-		int len = wcslen( pValue ) + 1;
+		int len = std::wcslen( pValue ) + 1;
 		valueIndex = std::ssize( m_Values ); m_Values.resize( m_Values.size() + len );
-		memcpy( &m_Values[valueIndex], pValue, len * sizeof(wchar_t) );
+		std::memcpy( &m_Values[valueIndex], pValue, len * sizeof(wchar_t) );
 	}
 
 	// see if the key is already in the table
@@ -816,9 +801,9 @@ void CLocalize::AddString(const char *pString, wchar_t *pValue, const char *file
 	if ( stridx == LOCALIZE_INVALID_STRING_INDEX )
 	{
 		// didn't find, insert the string into the vector.
-		int len = strlen(pString) + 1;
+		int len = std::strlen(pString) + 1;
 		stridx = std::ssize( m_Names ); m_Names.resize( m_Names.size() + len );
-		memcpy( &m_Names[stridx], pString, len * sizeof(char) );
+		std::memcpy( &m_Names[stridx], pString, len * sizeof(char) );
 
 		item.nameIndex = stridx;
 		item.valueIndex = valueIndex;
@@ -968,19 +953,19 @@ void CLocalize::SetValueByIndex(LocalizeStringIndex_t index, wchar_t *newValue)
 	wchar_t *wstr = &m_Values[lstr.valueIndex];
 
 	// see if the new string will fit within the old memory
-	int newLen = wcslen(newValue);
-	int oldLen = wcslen(wstr);
+	int newLen = std::wcslen(newValue);
+	int oldLen = std::wcslen(wstr);
 
 	if (newLen > oldLen)
 	{
 		// it won't fit, so allocate new memory - this is wasteful, but only happens in edit mode
 		lstr.valueIndex = std::ssize( m_Values ); m_Values.resize( m_Values.size() + ( newLen + 1 ) );
-		memcpy(&m_Values[lstr.valueIndex], newValue, (newLen + 1) * sizeof(wchar_t));
+		std::memcpy(&m_Values[lstr.valueIndex], newValue, (newLen + 1) * sizeof(wchar_t));
 	}
 	else
 	{
 		// copy the string into the old position
-		wcscpy(wstr, newValue);		
+		std::wcscpy(wstr, newValue);		
 	}
 
 	InvokeChangeCallbacks();
@@ -1010,7 +995,7 @@ bool CLocalize::LocalizationFileIsLoaded(const char *name)
 	int c = std::ssize( m_LocalizationFiles );
 	for ( int i = 0; i < c; ++i )
 	{
-		if ( !Q_stricmp( m_LocalizationFiles[ i ].symName.c_str(), name ) )
+		if ( !V_stricmp( m_LocalizationFiles[ i ].symName.c_str(), name ) )
 			return true;
 	}
 
@@ -1036,15 +1021,15 @@ int CLocalize::ConvertUnicodeToANSI(const wchar_t *unicode, char *ansi, int ansi
 //-----------------------------------------------------------------------------
 // Purpose: converts an english string to unicode
 //-----------------------------------------------------------------------------
-int CLocalize::ConvertANSIToUCS2(const char *ansi, OUT_Z_BYTECAP(unicodeBufferSizeInBytes) ucs2 *unicode, int unicodeBufferSizeInBytes)
+int CLocalize::ConvertANSIToUCS2(const char *ansi, ucs2 *unicode, int unicodeBufferSizeInBytes)
 {
-	return V_UTF8ToUCS2(ansi, strlen(ansi)*sizeof(char), unicode, unicodeBufferSizeInBytes);
+	return V_UTF8ToUCS2(ansi, std::strlen(ansi)*sizeof(char), unicode, unicodeBufferSizeInBytes);
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: converts an unicode string to an english string
 //-----------------------------------------------------------------------------
-int CLocalize::ConvertUCS2ToANSI(const ucs2 *unicode, OUT_Z_BYTECAP(ansiBufferSize) char *ansi, int ansiBufferSize)
+int CLocalize::ConvertUCS2ToANSI(const ucs2 *unicode, char *ansi, int ansiBufferSize)
 {
 	return V_UCS2ToUTF8(unicode, ansi, ansiBufferSize);
 }
@@ -1081,7 +1066,7 @@ void CLocalize::ConstructString(wchar_t *unicodeOutput, int unicodeBufferSizeInB
 	const wchar_t *searchPos = GetValueByIndex(unlocalizedTextSymbol);
 	if (!searchPos)
 	{
-		wcsncpy(unicodeOutput, L"[unknown string]", unicodeBufferSizeInBytes / sizeof(wchar_t));
+		std::wcsncpy(unicodeOutput, L"[unknown string]", unicodeBufferSizeInBytes / sizeof(wchar_t));
 		return;
 	}
 
@@ -1111,13 +1096,13 @@ void CLocalize::ConstructString(wchar_t *unicodeOutput, int unicodeBufferSizeInB
 				// look up the variable name
 				const wchar_t *value = localizationVariables->GetWString( variableName, L"[unknown]" );
 
-				int paramSize = wcslen(value);
+				int paramSize = std::wcslen(value);
 				if (paramSize >= unicodeBufferSize)
 				{
 					paramSize = std::max( 0, unicodeBufferSize - 1 );
 				}
 
-				wcsncpy(outputPos, value, paramSize);
+				std::wcsncpy(outputPos, value, paramSize);
 
 				unicodeBufferSize -= paramSize;
 				outputPos += paramSize;
@@ -1134,9 +1119,9 @@ void CLocalize::ConstructString(wchar_t *unicodeOutput, int unicodeBufferSizeInB
 				const wchar_t *varStart = searchPos + 1;
 
 				// first letter of a valid variable MUST be alphanumeric, otherwise this isn't a variable
-				if ( iswalnum(*varStart) )
+				if ( std::iswalnum(*varStart) )
 				{
-					const wchar_t *varEnd = wcschr( varStart, '%' );
+					const wchar_t *varEnd = std::wcschr( varStart, '%' );
 
 					if ( varEnd && *varEnd == '%' )
 					{
@@ -1154,13 +1139,13 @@ void CLocalize::ConstructString(wchar_t *unicodeOutput, int unicodeBufferSizeInB
 						// look up the variable name
 						const wchar_t *value = localizationVariables->GetWString( variableName, L"[unknown]" );
 					
-						int paramSize = wcslen(value);
+						int paramSize = std::wcslen(value);
 						if (paramSize >= unicodeBufferSize)
 						{
 							paramSize = std::max( 0, unicodeBufferSize - 1 );
 						}
 
-						wcsncpy(outputPos, value, paramSize);
+						std::wcsncpy(outputPos, value, paramSize);
 
 						unicodeBufferSize -= paramSize;
 						outputPos += paramSize;
@@ -1234,8 +1219,9 @@ wchar_t* CLocalize::GetAsianFrequencySequence( const char * pLanguage )
 // Purpose: construct string helper
 //-----------------------------------------------------------------------------
 template < typename T >
-void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeInBytes, const T *formatString, int numFormatParameters, va_list argList)
+void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeInBytes, const T *formatString, int numFormatParameters, std::va_list argList)
 {
+	ks::ScratchArena<> scratch;
 	// Safety check
 	if ( unicodeOutput == nullptr || unicodeBufferSizeInBytes < 1 )
 	{
@@ -1257,10 +1243,10 @@ void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeIn
 
 	// On 64 bits, va_list does not just point to a contiguous blob of parameters
 	// so extract into an array here.
-	T** arguments = (T**)stackalloc( sizeof(T*)*numFormatParameters );
+	T** arguments = scratch.Alloc<T*>( numFormatParameters );
 	for ( int i = 0; i < numFormatParameters; ++i )
 	{
-		arguments[i] = va_arg( argList, T* );
+		arguments[i] = __builtin_va_arg( argList, T* );
 	}
 
 #ifdef _DEBUG
@@ -1289,7 +1275,7 @@ void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeIn
 
 				if (!param)
 				{
-					Assert( !("ConstructStringVArgsInternal_Impl() - Found a %s# escape sequence whose index was more than the number of args.") );
+					contract_assert( !("ConstructStringVArgsInternal_Impl() - Found a %s# escape sequence whose index was more than the number of args.") );
 					*outputPos = '\0';
 					return;
 				}
@@ -1301,7 +1287,7 @@ void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeIn
 					paramSize = unicodeBufferSize - 1;
 				}
 
-				memcpy(outputPos, param, paramSize * sizeof(T));
+				std::memcpy(outputPos, param, paramSize * sizeof(T));
 
 				unicodeBufferSize -= paramSize;
 				outputPos += paramSize;
@@ -1335,16 +1321,16 @@ void ConstructStringVArgsInternal_Impl(T *unicodeOutput, int unicodeBufferSizeIn
 	}
 
 	// ensure null termination
-	Assert( outputPos - unicodeOutput < unicodeBufferSizeInBytes/sizeof(T) );
+	contract_assert( outputPos - unicodeOutput < unicodeBufferSizeInBytes/sizeof(T) );
 	*outputPos = L'\0';
 }
 
-void CLocalize::ConstructStringVArgsInternal(char *unicodeOutput, int unicodeBufferSizeInBytes, const char *formatString, int numFormatParameters, va_list argList)
+void CLocalize::ConstructStringVArgsInternal(char *unicodeOutput, int unicodeBufferSizeInBytes, const char *formatString, int numFormatParameters, std::va_list argList)
 {
 	ConstructStringVArgsInternal_Impl<char>( unicodeOutput, unicodeBufferSizeInBytes, formatString, numFormatParameters, argList );
 }
 
-void CLocalize::ConstructStringVArgsInternal(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const wchar_t *formatString, int numFormatParameters, va_list argList)
+void CLocalize::ConstructStringVArgsInternal(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const wchar_t *formatString, int numFormatParameters, std::va_list argList)
 {
 	ConstructStringVArgsInternal_Impl<wchar_t>( unicodeOutput, unicodeBufferSizeInBytes, formatString, numFormatParameters, argList );
 }

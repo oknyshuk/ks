@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef SHADER_VCS_VERSION_H
-#define SHADER_VCS_VERSION_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // 1 = hl2 shipped
 // 2 = compressed with diffs version (lostcoast)
@@ -13,10 +8,12 @@
 // 4 = v2 + crc32
 // 5 = v3 + crc32
 // 6 = v5 + duplicate static combo records
-#define SHADER_VCS_VERSION_NUMBER		6
+import ks.core;
 
-#define MAX_SHADER_UNPACKED_BLOCK_SIZE	(1<<17)
-#define MAX_SHADER_PACKED_SIZE			(1+MAX_SHADER_UNPACKED_BLOCK_SIZE)
+inline constexpr auto SHADER_VCS_VERSION_NUMBER = 6;
+
+inline constexpr auto MAX_SHADER_UNPACKED_BLOCK_SIZE = (1<<17);
+inline constexpr auto MAX_SHADER_PACKED_SIZE = (1+MAX_SHADER_UNPACKED_BLOCK_SIZE);
 
 #pragma pack(1)
 struct ShaderHeader_t
@@ -64,9 +61,3 @@ struct StaticComboAliasRecord_t								// for duplicate static combos
 	uint32 m_nStaticComboID;								// this combo
 	uint32 m_nSourceStaticCombo;							// the combo it is the same as
 };
-
-
-
-
-#endif // SHADER_VCS_VERSION_H
-	

@@ -1,14 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.core;
+#include "cdll_client_int.h"
 #include "usermessages.h"
-#include <bitbuf.h>
 
-#include "tier0/microprofiler.h"
 
 static ConVar cl_show_usermessage( "cl_show_usermessage", "0", 0, "Shows the incoming user messages for this client and dumps them out the type and size of the messages to the console. Setting this to 2 will display message contents as well" ); // filter incoming voice data
 
@@ -74,7 +71,7 @@ bool CUserMessages::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, 
 	if ( !pMsg )
 	{
 		DevMsg( "CUserMessages::DispatchUserMessage:  Parse error msg type=%i\n", msg_type );
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
@@ -168,4 +165,3 @@ CUserMessages *UserMessages()
 	static CUserMessages g_UserMessages;
 	return &g_UserMessages;
 }
-

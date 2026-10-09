@@ -1,9 +1,9 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "SFM"						"0..0" [ps20] [ps20b] [PC]
 // STATIC: "SFM"						"0..1" [ps30] [PC]
 // STATIC: "SFM"						"0..0" [CONSOLE]
-
 // STATIC: "DETAILTEXTURE"				"0..1"
 // STATIC: "CUBEMAP"					"0..1"
 // STATIC: "DIFFUSELIGHTING"			"0..1"
@@ -14,7 +14,6 @@
 // STATIC: "FLASHLIGHT"					"0..1"
 // STATIC: "SELFILLUM_ENVMAPMASK_ALPHA" "0..1"
 // STATIC: "DETAIL_BLEND_MODE"          "0..9"
-
 // disable outline, glow, soft edges, seamless base/detail(doesn't seem to be used)
 // STATIC: "OUTLINE"                    "0..0"
 // STATIC: "OUTER_GLOW"                 "0..0"
@@ -23,7 +22,6 @@
 // STATIC: "SEAMLESS_DETAIL"            "0..0"
 // STATIC: "DISTANCEALPHA"              "0..0"
 // STATIC: "DISTANCEALPHAFROMDETAIL"    "0..0"
-
 // STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..3"	[ps20b] [PC]
 // STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..2"	[ps30]  [PC]
 // STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..1"	[ps20b] [CONSOLE]
@@ -35,39 +33,28 @@
 // STATIC: "LIGHTING_PREVIEW"			"0..0"	[CONSOLE]
 // STATIC: "ENVMAPFRESNEL"				"0..1"
 // STATIC: "SRGB_INPUT_ADAPTER"			"0..1"	[ps20b]
-
 // STATIC: "CASCADED_SHADOW_MAPPING"	"0..1"	[CONSOLE]
 // STATIC: "CASCADED_SHADOW_MAPPING"	"0..0"	[ps20] [PC]
 // STATIC: "CASCADED_SHADOW_MAPPING"	"0..1"	[ps20b] [ps30] [PC]
 // STATIC: "CSM_MODE"					"0..0"	[CONSOLE]
 // STATIC: "CSM_MODE"					"0..0"	[ps20] [ps20b] [PC]
 // STATIC: "CSM_MODE"					"0..3"	[ps30] [PC]
-
 // STATIC: "CSM_BLENDING"				"0..1"
-
 // STATIC: "DECAL_BLEND_MODE"           "0..2"
-
 // STATIC: "TINTMASKTEXTURE"			"0..1"	[ps30] // not enough combos to support this - use vertexlit..bump or phong
 // STATIC: "TINTMASKTEXTURE"			"0..0"	[ps20] [ps20b]
 // STATIC: "TINTMASKTEXTURE"			"0..0"	[CONSOLE]
-
-
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"	[ps20b]
 // DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1"	[ps30]
 // DYNAMIC: "WRITEWATERFOGTODESTALPHA"	"0..1"
 // DYNAMIC: "UBERLIGHT"					"0..1"	[ps30] [PC]
-
 // DYNAMIC: "CASCADE_SIZE"				"0..1"	[CONSOLE]
 // DYNAMIC: "CASCADE_SIZE"				"0..1"	[ps20b] [PC]
 // DYNAMIC: "CASCADE_SIZE"				"0..0"  [ps20] [ps30] [PC]
-
 // DYNAMIC: "SMOKEGRENADEBLEND"			"0..1"
-
 // SKIP: ( $SFM == 0 ) && ( $UBERLIGHT == 1 )
-
 // detail blend mode 6 = ps20b only
 // SKIP: $DETAIL_BLEND_MODE == 6				[ps20]
-
 // SKIP: ( $FLASHLIGHT == 1 ) && ( $CUBEMAP == 1 ) [PC]
 // SKIP: ($DETAILTEXTURE == 0 ) && ( $DETAIL_BLEND_MODE != 0 )
 // SKIP: ($DETAILTEXTURE == 0 ) && ( $SEAMLESS_DETAIL )
@@ -78,12 +65,12 @@
 // SKIP: $SELFILLUM_ENVMAPMASK_ALPHA && (! $ENVMAPMASK)
 // SKIP: $BASEALPHAENVMAPMASK && ($SEAMLESS_BASE || $SEAMLESS_DETAIL)
 // SKIP: ($DISTANCEALPHA == 0) && ($DISTANCEALPHAFROMDETAIL || $SOFT_MASK || $OUTLINE || $OUTER_GLOW)
+
 // SKIP: ($DETAILTEXTURE == 0) && ($DISTANCEALPHAFROMDETAIL)
 
 // envmap stuff is meaningless if we're not using a cubemap
 // SKIP: ( $CUBEMAP == 0 ) && ( ( $ENVMAPFRESNEL == 1 ) || ( $BASEALPHAENVMAPMASK == 1 ) )
 // SKIP: ( $CUBEMAP == 0 ) && ( $ENVMAPMASK == 1 ) && ( $SELFILLUM_ENVMAPMASK_ALPHA == 0 )
-
 
 // We don't care about flashlight depth unless the flashlight is on
 // SKIP: ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTSHADOWS == 1 )	[ps20b]
@@ -124,8 +111,6 @@
 #include "common_flashlight_fxc.h"
 #include "common_vertexlitgeneric_dx9.h"
 #include "common_decaltexture_fxc.h"
-
- 
 
 const float4 g_EnvmapTint_SPF					: register( c0 ); //SPF=Single Pass Flashlight, stored in previously unused alpha.
 const float4 g_DiffuseModulation				: register( c1 );
@@ -735,4 +720,3 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
     return float4( normalize( i.vWorldNormal_fogFactorW.xyz ), i.vProjPos.z );
 #endif
 }
-

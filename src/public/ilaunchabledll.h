@@ -1,14 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ILAUNCHABLEDLL_H
-#define ILAUNCHABLEDLL_H
-
-
-#define LAUNCHABLE_DLL_INTERFACE_VERSION "launchable_dll_1"
+inline constexpr const char *LAUNCHABLE_DLL_INTERFACE_VERSION = "launchable_dll_1";
 
 
 // vmpi_service can use this to debug worker apps in-process,
@@ -19,7 +13,3 @@ public:
 	// All vrad.exe does is load the VRAD DLL and run this.
 	virtual int			main( int argc, char **argv ) = 0;
 };
-
-
-
-#endif // ILAUNCHABLEDLL_H

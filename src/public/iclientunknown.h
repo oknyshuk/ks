@@ -1,15 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ICLIENTUNKNOWN_H
-#define ICLIENTUNKNOWN_H
-
-
-#include "tier0/platform.h"
+import ks.core;
 #include "ihandleentity.h"
 
 class IClientNetworkable;
@@ -25,7 +18,7 @@ class IClientAlphaProperty;
 
 // This is the client's version of IUnknown. We may want to use a QueryInterface-like
 // mechanism if this gets big.
-abstract_class IClientUnknown : public IHandleEntity
+class IClientUnknown : public IHandleEntity
 {
 public:
 	virtual ICollideable*		GetCollideable() = 0;
@@ -36,6 +29,3 @@ public:
 	virtual IClientThinkable*	GetClientThinkable() = 0;
 	virtual IClientAlphaProperty*	GetClientAlphaProperty() = 0;
 };
-
-
-#endif // ICLIENTUNKNOWN_H

@@ -1,23 +1,19 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
-#ifndef URLRETRIEVETHREAD_H
-#define URLRETRIEVETHREAD_H
-
-#include "keyvalues.h"
+import std;
+import ks.tier1;
 #include "cs_weapon_parse.h"
 
 bool BlackMarket_DownloadPrices( void );
 
-#define MED_BUFFER_SIZE 1024
-#define SMALL_BUFFER_SIZE 255
-#define MAX_DNS_NAME 255
+inline constexpr auto MED_BUFFER_SIZE = 1024;
+inline constexpr auto SMALL_BUFFER_SIZE = 255;
+inline constexpr auto MAX_DNS_NAME = 255;
 
-#define PRICE_BLOB_VERSION 1
-#define PRICE_BLOB_NAME "weeklyprices.dat"
+inline constexpr auto PRICE_BLOB_VERSION = 1;
+inline constexpr const char *PRICE_BLOB_NAME = "weeklyprices.dat";
 
 struct weeklyprice_t
 {
@@ -25,5 +21,3 @@ struct weeklyprice_t
 	short iPreviousPrice[WEAPON_MAX];
 	short iCurrentPrice[WEAPON_MAX];
 };
-
-#endif // URLRETRIEVETHREAD_H

@@ -1,13 +1,9 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
-//
-//
-//
-//==================================================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef SERIALIZEDENTITY_H
-#define SERIALIZEDENTITY_H
-
-#include "tier1/utlvector.h"
+import std;
+import ks.tier1;
 #include "dt.h"
 #include "iclientnetworkable.h"
 #include "ents_shared.h"
@@ -16,7 +12,7 @@ typedef int CFieldPath; // It's just an index into the flattened SendProp list!!
 
 //#define PARANOID_SERIALIZEDENTITY
 
-class CSerializedEntity
+class CSerializedEntity : public ks::pooled< CSerializedEntity >
 {
 public:
 	CSerializedEntity();
@@ -30,13 +26,13 @@ public:
 	bool	IsPacked() const								{ return ( m_nNumReservedFields == knPacked ); }
 
 	//given an index, this will return the 'path' or identifier for that field
-	CFieldPath	GetFieldPath( int nIndex ) const			{ Assert( nIndex < m_nFieldCount ); return m_pFields[ nIndex ]; }
-	void		SetFieldPath( int nIndex, CFieldPath path ) { Assert( nIndex < m_nFieldCount ); m_pFields[ nIndex ] = path; }
+	CFieldPath	GetFieldPath( int nIndex ) const			{ contract_assert( nIndex < m_nFieldCount ); return m_pFields[ nIndex ]; }
+	void		SetFieldPath( int nIndex, CFieldPath path ) { contract_assert( nIndex < m_nFieldCount ); m_pFields[ nIndex ] = path; }
 
 	//given a field index, this will return the starting bit within the field data for that field
-	uint32		GetFieldDataBitOffset( int nIndex ) const			{ Assert( nIndex < m_nFieldCount ); return m_pFieldDataOffsets[ nIndex ]; }
-	uint32		GetFieldDataBitEndOffset( int nIndex ) const		{ Assert( nIndex < m_nFieldCount ); return ( nIndex + 1 < m_nFieldCount ) ? m_pFieldDataOffsets[ nIndex + 1 ] : m_nFieldDataBits; }
-	void		SetFieldDataBitOffset( int nIndex, uint32 nOffset ) { Assert( nIndex < m_nFieldCount ); m_pFieldDataOffsets[ nIndex ] = nOffset; }
+	uint32		GetFieldDataBitOffset( int nIndex ) const			{ contract_assert( nIndex < m_nFieldCount ); return m_pFieldDataOffsets[ nIndex ]; }
+	uint32		GetFieldDataBitEndOffset( int nIndex ) const		{ contract_assert( nIndex < m_nFieldCount ); return ( nIndex + 1 < m_nFieldCount ) ? m_pFieldDataOffsets[ nIndex + 1 ] : m_nFieldDataBits; }
+	void		SetFieldDataBitOffset( int nIndex, uint32 nOffset ) { contract_assert( nIndex < m_nFieldCount ); m_pFieldDataOffsets[ nIndex ] = nOffset; }
 
 	//access to the direct memory buffers for those that need direct access
 	uint8*			GetFieldData()							{ return m_pFieldData; }
@@ -77,7 +73,7 @@ public:
 	void AddPathAndOffset( const CFieldPath &path, int nStartBit )
 	{
 		//inlined for performance when packing snapshots for networking (called for EVERY property)
-		Assert( !IsPacked() );
+		contract_assert( !IsPacked() );
 		if ( m_nFieldCount == m_nNumReservedFields )
 			Grow();
 
@@ -126,10 +122,8 @@ public:
 		return true;
 	}
 
-#ifndef PARANOID_SERIALIZEDENTITY
 // Hack to make these accessible to helper classes/functions when using PARANOID_SERIALIZEDENTITY
 private:
-#endif
 
 	//constant used to designate when this entity is in a packed state or not
 	static const uint16 knPacked = (uint16)0xFFFF;
@@ -146,18 +140,17 @@ private:
 	uint8	*m_pFieldData;		
 
 	//memory tracking information for development builds
-	#ifdef PARANOID_SERIALIZEDENTITY
-		char const *m_File;
-		int		m_Line;
-	#endif
 
 	void Grow();
 	void Pack( short *pFields, uint32 *pFieldDataOffsets, int fieldCount, uint32 nFieldDataBits, uint8 *pFieldData );
 
 	CSerializedEntity( const CSerializedEntity &other );
-	DISALLOW_OPERATOR_EQUAL( CSerializedEntity );
+	CSerializedEntity &operator=( const CSerializedEntity & ) = delete;
+public:;
 
-	DECLARE_FIXEDSIZE_ALLOCATOR_MT( CSerializedEntity );
+	private:
+		static ks::fixed_pool_mt s_Allocator;
+		friend class ks::pooled< CSerializedEntity >;
 };
 
 class CSerializedEntityFieldIterator
@@ -263,7 +256,7 @@ private:
 	{
 		if ( !IsValid() )
 		{
-			Assert( m_Sentinel == PROP_SENTINEL );
+			contract_assert( m_Sentinel == PROP_SENTINEL );
 			m_pCurrent = &m_Sentinel;
 			m_nOffset = m_nNextOffset = -1;
 		}
@@ -285,5 +278,3 @@ private:
 	int					m_nOffset;
 	int					m_nNextOffset;
 };
-
-#endif // SERIALIZEDENTITY_H

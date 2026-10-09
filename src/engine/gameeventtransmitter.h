@@ -1,16 +1,13 @@
-//======= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======
-//
-//	Forwards game events to remote IP address. This is to facilitate the recording
-//	of the play tests and to be able to index into the recorded video based on events.
-//
-//===============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
+// Purpose: Forwards game events to remote IP address. This is to facilitate the recording
+// of the play tests and to be able to index into the recorded video based on events.
 
-#ifndef GAMEEVENTTRANSMITTER_H
-#define GAMEEVENTTRANSMITTER_H
-
+import ks.tier1;
 #include "igameevents.h"
-#include "tier1/netadr.h"
+import std;
 
 class CGameEventTransmitter
 {
@@ -29,5 +26,3 @@ private:
 };
 
 extern CGameEventTransmitter &g_GameEventTransmitter;
-
-#endif // GAMEEVENTTRANSMITTER_H

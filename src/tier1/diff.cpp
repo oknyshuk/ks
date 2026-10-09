@@ -1,14 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
-#include "tier1/diff.h"
-#include "mathlib/mathlib.h"
+import ks.tier1;
+import std;
 
 
 // format of diff output:
@@ -26,8 +20,8 @@
 // note - this algorithm uses storage equal to 8* the old buffer size. 64k=.5mb
 
 
-#define MIN_MATCH_LEN 8
-#define ACCEPTABLE_MATCH_LEN 4096
+constexpr auto MIN_MATCH_LEN = 8;
+constexpr auto ACCEPTABLE_MATCH_LEN = 4096;
 
 struct BlockPtr
 {
@@ -43,7 +37,7 @@ template<class T,class V> static inline void AddToHead(T * & head, V * node)
 
 void Fail(char const *msg)
 {
-	Assert(0);
+	contract_assert( 0 );
 }
 
 void ApplyDiffs(uint8 const *OldBlock, uint8 const *DiffList,
@@ -64,7 +58,7 @@ void ApplyDiffs(uint8 const *OldBlock, uint8 const *DiffList,
         copy_ofs|=0xffff0000;
     //    printf("long cp from %x to %x len=%d\n", copy_src+copy_ofs-OldBlock,Output-obuf,copy_sz);
       
-      memcpy(Output,copy_src+copy_ofs,copy_sz);
+      std::memcpy(Output,copy_src+copy_ofs,copy_sz);
       Output+=copy_sz;
       copy_src=copy_src+copy_ofs+copy_sz;
       DiffList+=4;
@@ -82,7 +76,7 @@ void ApplyDiffs(uint8 const *OldBlock, uint8 const *DiffList,
           {
             // big raw copy
             copy_sz=DiffList[1]+256*DiffList[2]+65536*DiffList[3];
-            memcpy(Output,DiffList+4,copy_sz);
+            std::memcpy(Output,DiffList+4,copy_sz);
     //          printf("big rawcopy to %x len=%d\n", Output-obuf,copy_sz);
             
             DiffList+=copy_sz+4;
@@ -95,7 +89,7 @@ void ApplyDiffs(uint8 const *OldBlock, uint8 const *DiffList,
               copy_ofs|=0xffff0000;
     //          printf("long ofs cp from %x to %x len=%d\n", copy_src+copy_ofs-OldBlock,Output-obuf,copy_sz);
             
-            memcpy(Output,copy_src+copy_ofs,copy_sz);
+            std::memcpy(Output,copy_src+copy_ofs,copy_sz);
             Output+=copy_sz;
             copy_src=copy_src+copy_ofs+copy_sz;
             DiffList+=3;
@@ -108,7 +102,7 @@ void ApplyDiffs(uint8 const *OldBlock, uint8 const *DiffList,
             copy_ofs|=0xffffff80;
     //        printf("cp from %x to %x len=%d\n", copy_src+copy_ofs-OldBlock,Output-obuf,copy_sz);
           
-          memcpy(Output,copy_src+copy_ofs,copy_sz);
+          std::memcpy(Output,copy_src+copy_ofs,copy_sz);
           Output+=copy_sz;
           copy_src=copy_src+copy_ofs+copy_sz;
           DiffList++;
@@ -117,7 +111,7 @@ void ApplyDiffs(uint8 const *OldBlock, uint8 const *DiffList,
       else
       {
     //      printf("raw copy %d to %x\n",op & 127,Output-obuf);
-        memcpy(Output,DiffList,op & 127);
+        std::memcpy(Output,DiffList,op & 127);
         Output+=op & 127;
         DiffList+=(op & 127);
       }
@@ -135,7 +129,7 @@ static void CopyPending(int len, uint8 const *rawbytes,uint8 * &outbuf, uint8 co
     if (limit-outbuf < len+1)
       Fail("diff buffer overrun");
     *(outbuf++)=len;
-    memcpy(outbuf,rawbytes,len);
+    std::memcpy(outbuf,rawbytes,len);
     outbuf+=len;
   }
   else
@@ -147,7 +141,7 @@ static void CopyPending(int len, uint8 const *rawbytes,uint8 * &outbuf, uint8 co
     *(outbuf++)=(len & 255);
     *(outbuf++)=((len>>8) & 255);
     *(outbuf++)=((len>>16) & 255);
-    memcpy(outbuf,rawbytes,len);
+    std::memcpy(outbuf,rawbytes,len);
     outbuf+=len;
   }
 }
@@ -175,7 +169,7 @@ int FindDiffsForLargeFiles(uint8 const *NewBlock, uint8 const *OldBlock,
     ret=1;
   // first, build the hash table
   BlockPtr **HashedMatches=new BlockPtr* [hashsize];
-  memset(HashedMatches,0,sizeof(HashedMatches[0])*hashsize);
+  std::memset(HashedMatches,0,sizeof(HashedMatches[0])*hashsize);
   BlockPtr *Blocks=0;
   if (OldSize)
     Blocks=new BlockPtr[OldSize];
@@ -313,7 +307,7 @@ int FindDiffs(uint8 const *NewBlock, uint8 const *OldBlock,
     ret=1;
   // first, build the hash table
   BlockPtr *HashedMatches[65536];
-  memset(HashedMatches,0,sizeof(HashedMatches));
+  std::memset(HashedMatches,0,sizeof(HashedMatches));
   BlockPtr *Blocks=0;
   if (OldSize)
     Blocks=new BlockPtr[OldSize];
@@ -442,7 +436,7 @@ int FindDiffsLowMemory(uint8 const *NewBlock, uint8 const *OldBlock,
   if (OldSize!=NewSize)
     ret=1;
   uint8 const *old_data_hash[256];
-  memset(old_data_hash,0,sizeof(old_data_hash));
+  std::memset(old_data_hash,0,sizeof(old_data_hash));
   int pending_raw_len=0;
   uint8 const *walk=NewBlock;
   uint8 const *oldptr=OldBlock;
@@ -540,5 +534,3 @@ int FindDiffsLowMemory(uint8 const *NewBlock, uint8 const *OldBlock,
   DiffListSize=outbuf-Output;
   return ret;
 }
-
-

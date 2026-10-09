@@ -1,20 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Combat behaviors for AIs in a relatively self-preservationist mode.
 //			Lots of cover taking and attempted shots out of cover.
-//
-//=============================================================================//
 
-#ifndef AI_BEHAVIOR_STANDOFF_H
-#define AI_BEHAVIOR_STANDOFF_H
-
-#include "utlvector.h"
-#include <map>
+import ks.tier1;
+import std;
 
 #include "ai_behavior.h"
 #include "ai_utils.h"
 #include "ai_hint.h"
-
 
 //-----------------------------------------------------------------------------
 
@@ -223,5 +219,3 @@ inline AI_Posture_t CAI_StandoffBehavior::GetPosture()
 }
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_BEHAVIOR_STANDOFF_H

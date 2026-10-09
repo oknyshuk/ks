@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef ENTITYFREEZING_H
-#define ENTITYFREEZING_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 class [[= ks::reflect::NetTable{ .name = "DT_EntityFreezing" } ]] CEntityFreezing : public CBaseEntity 
 {
@@ -42,5 +36,3 @@ public:
 	// reorder members, and the name-keyed gate proves that is safe.
 	CNetworkArray( float, m_flFrozenPerHitbox, 50, [[= ks::reflect::Net{} ]] );
 };
-
-#endif // ENTITYFREEZING_H

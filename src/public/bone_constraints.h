@@ -1,17 +1,13 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Generic constraint functions to compute bone constraints
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+import std;
+import ks.math;
+
+// Purpose: Generic constraint functions to compute bone constraints
 // Used by studio/engine, SFM & Maya
-//
 // Studio interface functions to the generic constraint functions
-//
-//===============================================================================
-
-
-#ifndef BONE_CONSTRAINTS_H
-#define BONE_CONSTRAINTS_H
-
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -193,5 +189,3 @@ public:
 		const CStudioHdr *pStudioHdr );
 
 };
-
-#endif // BONE_CONSTRAINTS_H

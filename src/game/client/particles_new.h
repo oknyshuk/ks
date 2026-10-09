@@ -1,19 +1,21 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
+
 // Purpose: provide client-side access to the new particle system, with similar
 // usage to CSimpleEmitter
-//
-// $NoKeywords: $
-//===========================================================================//
 
-#ifndef PARTICLES_NEW_H
-#define PARTICLES_NEW_H
-
+import ks.tier1;
 #include "particlemgr.h"
 #include "particles/particles.h"
 #include "particlesphererenderer.h"
 #include "particles_simple.h"
-#include "tier1/tracked_ref.h"
+import std;
+#include "ehandle.h"
+#include "shared_classnames.h"
+
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
 
 
 //-----------------------------------------------------------------------------
@@ -23,7 +25,9 @@ class CNewParticleEffect : public IParticleEffect, public CParticleCollection, p
 {
 public:
 	DECLARE_CLASS_NOBASE( CNewParticleEffect );
-	KS_TRACKED_CLASS( CNewParticleEffect );
+	private:
+		ks::tracked_ref_list< CNewParticleEffect > m_References;
+		template < class T > friend class ks::tracked_ref;;
 
 public:
 	template < class > friend class ks::intrusive_ptr;
@@ -103,7 +107,7 @@ public:
 	void SetControlPointUpVector( int nWhichPoint, const Vector &v );
 	void SetControlPointRightVector( int nWhichPoint, const Vector &v );
 
-	FORCEINLINE EHANDLE const &GetControlPointEntity( int nWhichPoint )
+	[[gnu::always_inline]] inline EHANDLE const &GetControlPointEntity( int nWhichPoint )
 	{
 		return m_hControlPointOwners[ nWhichPoint ];
 	}
@@ -250,14 +254,14 @@ inline Vector const &CNewParticleEffect::GetRenderOrigin( void )
 inline PMaterialHandle CNewParticleEffect::GetPMaterial(const char *name)
 {
 	//!!
-	Assert( 0 );
+	contract_assert( 0 );
 	return nullptr;
 }
 
 inline Particle* CNewParticleEffect::AddParticle( unsigned int particleSize, PMaterialHandle material, const Vector &origin )
 {
 	//!!
-	Assert( 0 );
+	contract_assert( 0 );
 	return nullptr;
 }
 
@@ -362,6 +366,3 @@ inline CNewParticleEffect *CNewParticleEffect::CreatePrecached( CBaseEntity *pOw
 // which will go to null when the effect is deleted
 //--------------------------------------------------------------------------------
 typedef ks::tracked_ref<CNewParticleEffect> HPARTICLEFFECT;
-
-
-#endif // PARTICLES_NEW_H

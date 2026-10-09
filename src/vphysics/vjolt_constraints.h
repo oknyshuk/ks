@@ -9,7 +9,13 @@
 
 #pragma once
 
+#include <Jolt/Jolt.h>
+#include <Jolt/Core/Reference.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Constraints/Constraint.h>
 #include "vjolt_internal_listeners.h"
+#include "vphysics_interface.h"
+#include "vphysics/constraints.h"
 
 enum constraintType_t
 {

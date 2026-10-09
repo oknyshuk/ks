@@ -1,27 +1,22 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
 #include "vertexlitgeneric_dx9_helper.h"
 #include "vortwarp_vs20.inc"
 #include "vortwarp_ps20.inc"
 #include "vortwarp_ps20b.inc"
-#include "convar.h"
+import std;
 
 #include "vortwarp_vs30.inc"
 #include "vortwarp_ps30.inc"
-
 
 DEFINE_FALLBACK_SHADER( VortWarp, VortWarp_dx9 )
 
 struct VortWarp_DX9_Vars_t : public VertexLitGeneric_DX9_Vars_t
 {
-	VortWarp_DX9_Vars_t() { memset( this, 0xFF, sizeof(*this) ); }
+	VortWarp_DX9_Vars_t() { std::memset( this, 0xFF, sizeof(*this) ); }
 	int m_nEntityOrigin;
 	int m_nWarpParam;
 	int m_nFlowMap;
@@ -178,7 +173,7 @@ void DrawVortWarp_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 
 		pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, nullptr, userDataSize );
 
-		Assert( hasBump );
+		contract_assert( hasBump );
 	
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
 		{
@@ -310,7 +305,7 @@ void DrawVortWarp_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 
 		if( hasFlashlight )
 		{
-			Assert( info.m_nFlashlightTexture >= 0 && info.m_nFlashlightTextureFrame >= 0 );
+			contract_assert( info.m_nFlashlightTexture >= 0 && info.m_nFlashlightTextureFrame >= 0 );
 			pShader->BindTexture( SHADER_SAMPLER7, TEXTURE_BINDFLAGS_NONE, info.m_nFlashlightTexture, info.m_nFlashlightTextureFrame );
 			VMatrix worldToTexture;
 			ITexture *pFlashlightDepthTexture;
@@ -328,7 +323,7 @@ void DrawVortWarp_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 		MaterialFogMode_t fogType = pShaderAPI->GetSceneFogMode();
 		int numBones = pShaderAPI->GetCurrentNumBones();
 
-		Assert( hasBump );
+		contract_assert( hasBump );
 
 		if ( !g_pHardwareConfig->HasFastVertexTextures() )
 		{
@@ -393,12 +388,12 @@ void DrawVortWarp_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 		if( hasDetailTexture )
 		{
 			pShader->SetVertexShaderTextureScaledTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_2, info.m_nBaseTextureTransform, info.m_nDetailScale );
-			Assert( !hasBump );
+			contract_assert( !hasBump );
 		}
 		if( hasBump )
 		{
 			pShader->SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_2, info.m_nBumpTransform );
-			Assert( !hasDetailTexture );
+			contract_assert( !hasDetailTexture );
 		}
 		if( hasEnvmapMask )
 		{
@@ -437,7 +432,7 @@ void DrawVortWarp_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 		// dynamic drawing code that extends vertexlitgeneric
 		float curTime = params[info.m_nWarpParam]->GetFloatValue();
 		float timeVec[4] = { 0.0f, 0.0f, 0.0f, curTime };
-		Assert( params[info.m_nEntityOrigin]->IsDefined() );
+		contract_assert( params[info.m_nEntityOrigin]->IsDefined() );
 		params[info.m_nEntityOrigin]->GetVecValue( timeVec, 3 );
 		pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_4, timeVec, 1 );
 
@@ -479,7 +474,7 @@ void DrawVortWarp_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyn
 
 BEGIN_VS_SHADER( VortWarp_DX9, 
 				"Help for VortWarp_DX9" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( ALBEDO, SHADER_PARAM_TYPE_TEXTURE, "shadertest/BaseTexture", "albedo (Base texture with no baked lighting)" )
 		SHADER_PARAM( SELFILLUMTINT, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Self-illumination tint" )
 		SHADER_PARAM( DETAIL, SHADER_PARAM_TYPE_TEXTURE, "shadertest/detail", "detail texture" )

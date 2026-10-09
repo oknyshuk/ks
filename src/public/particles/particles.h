@@ -1,11 +1,8 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: particle system definitions
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#ifndef PARTICLES_H
-#define PARTICLES_H
+// Purpose: particle system definitions
 
 // Suppress GCC warning about SIMD type attributes in templates
 #if defined(__GNUC__) && !defined(__clang__)
@@ -13,22 +10,13 @@
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif
 
-#include <atomic>
-#include <memory>
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include "mathlib/ssemath.h"
-#include "appframework/iappsystem.h"
+import std;
+import ks.vstdlib;
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/MaterialSystemUtil.h"
 
 #include "dmxloader/dmxelement.h"
-#include "tier1/intrusive_list.h"
-#include "vstdlib/random.h"
-#include "tier1/tracked_ref.h"
-#include "tier1/map_ops.h"
 #include "trace.h"
-#include "tier1/utlsoacontainer.h"
 #include "raytrace.h"
 #include "materialsystem/imesh.h"
 #if defined( CLIENT_DLL )
@@ -72,7 +60,7 @@ void GetParticleManifest( std::vector< std::string >& list, const char *pFile );
 //-----------------------------------------------------------------------------
 // Particle attributes
 //-----------------------------------------------------------------------------
-#define MAX_PARTICLE_ATTRIBUTES 24
+inline constexpr auto MAX_PARTICLE_ATTRIBUTES = 24;
 
 #define DEFPARTICLE_ATTRIBUTE( name, bit, datatype )			\
 	const int PARTICLE_ATTRIBUTE_##name##_MASK = (1 << bit);	\
@@ -139,37 +127,36 @@ DEFPARTICLE_ATTRIBUTE( NORMAL, 21, ATTRDATATYPE_4V );			// 0 0 0 if none
 DEFPARTICLE_ATTRIBUTE( GLOW_RGB, 22, ATTRDATATYPE_4V );			// glow color
 DEFPARTICLE_ATTRIBUTE( GLOW_ALPHA, 23, ATTRDATATYPE_FLOAT );	// glow alpha
 
-#define MAX_PARTICLE_CONTROL_POINTS 64
+inline constexpr auto MAX_PARTICLE_CONTROL_POINTS = 64;
 
 #define ATTRIBUTES_WHICH_ARE_VEC3S_MASK ( PARTICLE_ATTRIBUTE_SCRATCH_VEC_MASK | PARTICLE_ATTRIBUTE_XYZ_MASK | \
                                           PARTICLE_ATTRIBUTE_PREV_XYZ_MASK | PARTICLE_ATTRIBUTE_TINT_RGB_MASK | \
                                           PARTICLE_ATTRIBUTE_HITBOX_RELATIVE_XYZ_MASK  | PARTICLE_ATTRIBUTE_NORMAL_MASK | \
 	                                      PARTICLE_ATTRIBUTE_GLOW_RGB_MASK )
 
-#define ATTRIBUTES_WHICH_ARE_0_TO_1 (PARTICLE_ATTRIBUTE_ALPHA_MASK | PARTICLE_ATTRIBUTE_ALPHA2_MASK)
+inline constexpr auto ATTRIBUTES_WHICH_ARE_0_TO_1 = (PARTICLE_ATTRIBUTE_ALPHA_MASK | PARTICLE_ATTRIBUTE_ALPHA2_MASK);
 #define ATTRIBUTES_WHICH_ARE_ANGLES (PARTICLE_ATTRIBUTE_ROTATION_MASK | PARTICLE_ATTRIBUTE_YAW_MASK | PARTICLE_ATTRIBUTE_PITCH_MASK )
-#define ATTRIBUTES_WHICH_ARE_INTS (PARTICLE_ATTRIBUTE_PARTICLE_ID_MASK | PARTICLE_ATTRIBUTE_HITBOX_INDEX_MASK )
+inline constexpr auto ATTRIBUTES_WHICH_ARE_INTS = (PARTICLE_ATTRIBUTE_PARTICLE_ID_MASK | PARTICLE_ATTRIBUTE_HITBOX_INDEX_MASK );
 
 // Auto filters
-#define ATTRIBUTES_WHICH_ARE_POSITION_AND_VELOCITY (PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_PREV_XYZ_MASK)
-#define ATTRIBUTES_WHICH_ARE_LIFE_DURATION (PARTICLE_ATTRIBUTE_LIFE_DURATION_MASK | PARTICLE_ATTRIBUTE_CREATION_TIME_MASK)
+inline constexpr auto ATTRIBUTES_WHICH_ARE_POSITION_AND_VELOCITY = (PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_PREV_XYZ_MASK);
+inline constexpr auto ATTRIBUTES_WHICH_ARE_LIFE_DURATION = (PARTICLE_ATTRIBUTE_LIFE_DURATION_MASK | PARTICLE_ATTRIBUTE_CREATION_TIME_MASK);
 #define ATTRIBUTES_WHICH_ARE_ROTATION (PARTICLE_ATTRIBUTE_ROTATION_MASK | PARTICLE_ATTRIBUTE_YAW_MASK | PARTICLE_ATTRIBUTE_ROTATION_SPEED_MASK | PARTICLE_ATTRIBUTE_PITCH_MASK )
-#define ATTRIBUTES_WHICH_ARE_SIZE (PARTICLE_ATTRIBUTE_RADIUS_MASK | PARTICLE_ATTRIBUTE_TRAIL_LENGTH_MASK)
+inline constexpr auto ATTRIBUTES_WHICH_ARE_SIZE = (PARTICLE_ATTRIBUTE_RADIUS_MASK | PARTICLE_ATTRIBUTE_TRAIL_LENGTH_MASK);
 #define ATTRIBUTES_WHICH_ARE_COLOR_AND_OPACITY (PARTICLE_ATTRIBUTE_TINT_RGB_MASK | PARTICLE_ATTRIBUTE_GLOW_RGB_MASK | PARTICLE_ATTRIBUTE_ALPHA_MASK | PARTICLE_ATTRIBUTE_ALPHA2_MASK | PARTICLE_ATTRIBUTE_GLOW_ALPHA_MASK )
-#define ATTRIBUTES_WHICH_ARE_ANIMATION_SEQUENCE (PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER_MASK | PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER1_MASK)
-#define ATTRIBUTES_WHICH_ARE_HITBOX (PARTICLE_ATTRIBUTE_HITBOX_INDEX_MASK | PARTICLE_ATTRIBUTE_HITBOX_RELATIVE_XYZ_MASK)
-#define ATTRIBUTES_WHICH_ARE_NORMAL (PARTICLE_ATTRIBUTE_NORMAL_MASK)
+inline constexpr auto ATTRIBUTES_WHICH_ARE_ANIMATION_SEQUENCE = (PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER_MASK | PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER1_MASK);
+inline constexpr auto ATTRIBUTES_WHICH_ARE_HITBOX = (PARTICLE_ATTRIBUTE_HITBOX_INDEX_MASK | PARTICLE_ATTRIBUTE_HITBOX_RELATIVE_XYZ_MASK);
+inline constexpr auto ATTRIBUTES_WHICH_ARE_NORMAL = (PARTICLE_ATTRIBUTE_NORMAL_MASK);
 
-#define MAX_PARTICLES_IN_A_SYSTEM 5000
+inline constexpr auto MAX_PARTICLES_IN_A_SYSTEM = 5000;
 
 // Set this to 1 or 0 to enable or disable particle profiling.
 // Note that this profiling is expensive on Linux, and some anti-virus
 // products can make this very expensive on Windows.
-#define MEASURE_PARTICLE_PERF 0
 
-#define MIN_PARTICLE_SPEED 0.001
+inline constexpr auto MIN_PARTICLE_SPEED = 0.001;
 
-#define MAX_PARTICLE_ORIENTATION_TYPES 3
+inline constexpr auto MAX_PARTICLE_ORIENTATION_TYPES = 3;
 
 //-----------------------------------------------------------------------------
 // Particle function types
@@ -285,10 +272,10 @@ public:
 //-----------------------------------------------------------------------------
 // Particle kill list
 //-----------------------------------------------------------------------------
-#define KILL_LIST_INDEX_BITS 24
-#define KILL_LIST_FLAGS_BITS ( 32 - KILL_LIST_INDEX_BITS )
-#define KILL_LIST_INDEX_MASK ( ( 1 << KILL_LIST_INDEX_BITS ) - 1 )
-#define KILL_LIST_FLAGS_MASK ( ( 1 << KILL_LIST_FLAGS_BITS ) - 1 )
+inline constexpr auto KILL_LIST_INDEX_BITS = 24;
+inline constexpr auto KILL_LIST_FLAGS_BITS = ( 32 - KILL_LIST_INDEX_BITS );
+inline constexpr auto KILL_LIST_INDEX_MASK = ( ( 1 << KILL_LIST_INDEX_BITS ) - 1 );
+inline constexpr auto KILL_LIST_FLAGS_MASK = ( ( 1 << KILL_LIST_FLAGS_BITS ) - 1 );
 struct KillListItem_t
 {
 	unsigned int nIndex : KILL_LIST_INDEX_BITS;
@@ -305,7 +292,7 @@ enum KillListFlags
 // Interface to allow the particle system to call back into the client
 //-----------------------------------------------------------------------------
 
-#define PARTICLE_SYSTEM_QUERY_INTERFACE_VERSION "VParticleSystemQuery004"
+inline constexpr const char *PARTICLE_SYSTEM_QUERY_INTERFACE_VERSION = "VParticleSystemQuery004";
 
 class IParticleSystemQuery : public IAppSystem
 {
@@ -727,32 +714,9 @@ public:
 	virtual uint32 GetFilter() const = 0;
 	virtual bool IsObsolete() const = 0;
 
-#if MEASURE_PARTICLE_PERF
-	// performance monitoring
-	float m_flMaxExecutionTime;
-	float m_flTotalExecutionTime;
-	float m_flUncomittedTime;
-
-	FORCEINLINE void RecordExecutionTime( float flETime )
-	{
-		m_flUncomittedTime += flETime;
-		m_flMaxExecutionTime = std::max( m_flMaxExecutionTime, flETime );
-	}
-
-	FORCEINLINE float TotalRecordedExecutionTime( void ) const
-	{
-		return m_flTotalExecutionTime;
-	}
-
-	FORCEINLINE float MaximumRecordedExecutionTime( void ) const
-	{
-		return m_flMaxExecutionTime;
-	}
-#else
-	FORCEINLINE void RecordExecutionTime( float flETime )
+	[[gnu::always_inline]] inline void RecordExecutionTime( float flETime )
 	{
 	}
-#endif
 };
 
 
@@ -763,8 +727,8 @@ class CParticleOperatorInstance
 {
 public:
 	// custom allocators so we can be simd aligned
-	void *operator new( size_t nSize );
-	void* operator new( size_t size, int nBlockUse, const char *pFileName, int nLine );
+	void *operator new( std::size_t nSize );
+	void* operator new( std::size_t size, int nBlockUse, const char *pFileName, int nLine );
 	void operator delete( void *pData );
 	void operator delete( void* p, int nBlockUse, const char *pFileName, int nLine );
 
@@ -773,7 +737,7 @@ public:
 	{
 	}
 
-	virtual size_t GetRequiredContextBytes( ) const 
+	virtual std::size_t GetRequiredContextBytes( ) const 
 	{
 		return 0;
 	}
@@ -1004,21 +968,21 @@ public:
 	int RandomInt( int nMin, int nMax )
 	{
 		// NOTE: Use CParticleCollection::RandomInt! 
-		Assert(0);
+		contract_assert( 0 );
 		return 0;
 	}
 
 	float RandomFloat( float flMinVal = 0.0f, float flMaxVal = 1.0f )
 	{
 		// NOTE: Use CParticleCollection::RandomFloat! 
-		Assert(0);
+		contract_assert( 0 );
 		return 0.0f;
 	}
 
 	float RandomFloatExp( float flMinVal = 0.0f, float flMaxVal = 1.0f, float flExponent = 1.0f )
 	{
 		// NOTE: Use CParticleCollection::RandomFloatExp! 
-		Assert(0);
+		contract_assert( 0 );
 		return 0.0f;
 	}
 
@@ -1120,11 +1084,6 @@ class CParticleOperatorDefinition : public IParticleOperatorDefinition
 public:
 	CParticleOperatorDefinition( const char *pFactoryName, ParticleOperatorId_t id, bool bIsObsolete ) : m_pFactoryName( pFactoryName ), m_Id( id )
 	{
-#if MEASURE_PARTICLE_PERF
-		m_flTotalExecutionTime = 0.0f;
-		m_flMaxExecutionTime = 0.0f;
-		m_flUncomittedTime = 0.0f;
-#endif
 		m_bIsObsolete = bIsObsolete;
 	}
 
@@ -1233,7 +1192,7 @@ enum
 
 
 
-#define DEBUG_PARTICLE_SORT 0
+inline constexpr auto DEBUG_PARTICLE_SORT = 0;
 
 //------------------------------------------------------------------------------
 // particle render helpers
@@ -1253,14 +1212,8 @@ struct ParticleRenderData_t
 	float m_flSortKey;					// what we sort by
 	int   m_nIndex;						// index or fudged index (for child particles)
 	float m_flRadius;					// effective radius, using visibility
-#if PLAT_LITTLE_ENDIAN
 	uint8 m_nAlpha;						// effective alpha, combining alpha and alpha2 and vis. 0 - 255
 	uint8 m_nAlphaPad[3];				// this will be written to
-#endif
-#if PLAT_BIG_ENDIAN
-	uint8 m_nAlphaPad[3];				// this will be written to
-	uint8 m_nAlpha;						// effective alpha, combining alpha and alpha2 and vis. 0 - 255
-#endif
 };
 
 struct ExtendedParticleRenderData_t : ParticleRenderData_t
@@ -1272,10 +1225,11 @@ struct ExtendedParticleRenderData_t : ParticleRenderData_t
 };
 
 
-typedef struct ALIGN16 _FourInts
+struct alignas( 16 ) _FourInts
 {
 	int32 m_nValue[4];
-} ALIGN16_POST FourInts;
+};
+using FourInts = _FourInts;
 
 
 struct ParticleBaseRenderData_SIMD_View
@@ -1297,11 +1251,11 @@ struct ParticleFullRenderData_SIMD_View : public ParticleBaseRenderData_SIMD_Vie
 	fltx4 m_fl4Yaw;
 
 	// no-op operation so templates can compile
-	FORCEINLINE void SetARGB2( fltx4 const &fl4Red, fltx4 const &fl4Green, fltx4 const &fl4Blue, fltx4 const &fl4Alpha )
+	[[gnu::always_inline]] inline void SetARGB2( fltx4 const &fl4Red, fltx4 const &fl4Green, fltx4 const &fl4Blue, fltx4 const &fl4Alpha )
 	{
 	}
 
-	FORCEINLINE void SetNormal( fltx4 const &fl4NormalX, fltx4 const &fl4NormalY, fltx4 const &fl4NormalZ )
+	[[gnu::always_inline]] inline void SetNormal( fltx4 const &fl4NormalX, fltx4 const &fl4NormalY, fltx4 const &fl4NormalZ )
 	{
 	}
 };
@@ -1311,7 +1265,7 @@ struct ParticleRenderDataWithOutlineInformation_SIMD_View : public ParticleFullR
 	FourVectors m_v4Color2;
 	fltx4 m_fl4Alpha2;
 
-	FORCEINLINE void SetARGB2( fltx4 const &fl4Red, fltx4 const &fl4Green, fltx4 const &fl4Blue, fltx4 const &fl4Alpha )
+	[[gnu::always_inline]] inline void SetARGB2( fltx4 const &fl4Red, fltx4 const &fl4Green, fltx4 const &fl4Blue, fltx4 const &fl4Alpha )
 	{
 		m_v4Color2.x = fl4Red;
 		m_v4Color2.y = fl4Green;
@@ -1324,7 +1278,7 @@ struct ParticleRenderDataWithNormal_SIMD_View : public ParticleFullRenderData_SI
 {
 	FourVectors m_v4Normal;
 
-	FORCEINLINE void SetNormal( fltx4 const &fl4NormalX, fltx4 const &fl4NormalY, fltx4 const &fl4NormalZ )
+	[[gnu::always_inline]] inline void SetNormal( fltx4 const &fl4NormalX, fltx4 const &fl4NormalY, fltx4 const &fl4NormalZ )
 	{
 		m_v4Normal.x = fl4NormalX;
 		m_v4Normal.y = fl4NormalY;
@@ -1336,18 +1290,9 @@ struct ParticleRenderDataWithNormal_SIMD_View : public ParticleFullRenderData_SI
 
 
 // definitions for byte fields ( colors ). endian-ness matters here.
-#if PLAT_LITTLE_ENDIAN
 #define BYTE_FIELD(x)							\
     uint8 x;									\
     uint8 x##_Pad[3 + 3 * 4 ];
-#endif
-
-#if PLAT_BIG_ENDIAN
-#define BYTE_FIELD(x)							\
-    uint8 x##_Pad0[3];							\
-	uint8 x;									\
-    uint8 x##_Pad[3 * 4 ];
-#endif
 
 #define FLOAT_FIELD( x )						\
     float x;									\
@@ -1368,17 +1313,9 @@ struct ParticleBaseRenderData_Scalar_View
 
 	FLOAT_FIELD( m_flRadius );
 	FLOAT_FIELD( m_flAnimationTimeValue );
-#if PLAT_LITTLE_ENDIAN
 	uint8 m_nSequenceID;
 	uint8 m_nSequenceID1;
 	uint8 m_nPadSequence[2 + 3 * 4];
-#endif
-#if PLAT_BIG_ENDIAN
-	uint8 m_nPadSequence[2];
-	uint8 m_nSequenceID1;
-	uint8 m_nSequenceID;
-	uint8 m_nPadSequence1[ 3 * 4];
-#endif
 };
 struct ParticleFullRenderData_Scalar_View : public ParticleBaseRenderData_Scalar_View
 {
@@ -1502,7 +1439,7 @@ public:
 	// Does the snapshot have data (of the appropriate type) for the given particle attribute?
 	bool HasAttribute( int nParticleAttribute, EAttributeDataType nDataType ) const
 	{
-		Assert( ( nParticleAttribute >= 0 ) && ( nParticleAttribute < MAX_PARTICLE_ATTRIBUTES ) );
+		contract_assert( ( nParticleAttribute >= 0 ) && ( nParticleAttribute < MAX_PARTICLE_ATTRIBUTES ) );
 		int nContainerIndex = m_ParticleAttributeToContainerAttribute[ nParticleAttribute ];
 		return ( ( nContainerIndex != -1 ) && ( m_pContainer->GetAttributeType( nContainerIndex ) == nDataType ) );
 	}
@@ -1514,14 +1451,14 @@ public:
 	// Read data from the container for the given particle attribute, at index (nIndex,0,0)
 	template<class T> T *ElementPointer( int nParticleAttribute, int nX = 0, int nY = 0, int nZ = 0 ) const
 	{
-		Assert( ( nParticleAttribute >= 0 ) && ( nParticleAttribute < MAX_PARTICLE_ATTRIBUTES ) );
-		Assert( m_ParticleAttributeToContainerAttribute[ nParticleAttribute ] != -1 );
+		contract_assert( ( nParticleAttribute >= 0 ) && ( nParticleAttribute < MAX_PARTICLE_ATTRIBUTES ) );
+		contract_assert( m_ParticleAttributeToContainerAttribute[ nParticleAttribute ] != -1 );
 		return m_pContainer->ElementPointer<T>( m_ParticleAttributeToContainerAttribute[ nParticleAttribute ], nX, nY, nZ );
 	}
 	FourVectors *ElementPointer4V( int nParticleAttribute, int nX = 0, int nY = 0, int nZ = 0 ) const
 	{
-		Assert( ( nParticleAttribute >= 0 ) && ( nParticleAttribute < MAX_PARTICLE_ATTRIBUTES ) );
-		Assert( m_ParticleAttributeToContainerAttribute[ nParticleAttribute ] != -1 );
+		contract_assert( ( nParticleAttribute >= 0 ) && ( nParticleAttribute < MAX_PARTICLE_ATTRIBUTES ) );
+		contract_assert( m_ParticleAttributeToContainerAttribute[ nParticleAttribute ] != -1 );
 		return m_pContainer->ElementPointer4V( m_ParticleAttributeToContainerAttribute[ nParticleAttribute ], nX, nY, nZ );
 	}
 	// ---------- Wrappers for CSOAContainer members ---------- 
@@ -1611,7 +1548,7 @@ struct CParticleSIMDTransformation
 	FourVectors m_v4Right;
 
 
-	FORCEINLINE void VectorRotate( FourVectors &InPnt )
+	[[gnu::always_inline]] inline void VectorRotate( FourVectors &InPnt )
 	{
 		fltx4 fl4OutX = SubSIMD( AddSIMD( MulSIMD( InPnt.x, m_v4Fwd.x ), MulSIMD( InPnt.z, m_v4Up.x ) ), MulSIMD( InPnt.y, m_v4Right.x ) );
 		fltx4 fl4OutY = SubSIMD( AddSIMD( MulSIMD( InPnt.x, m_v4Fwd.y ), MulSIMD( InPnt.z, m_v4Up.y ) ), MulSIMD( InPnt.y, m_v4Right.y ) );
@@ -1620,7 +1557,7 @@ struct CParticleSIMDTransformation
 		InPnt.y = fl4OutY;
 	}
 
-	FORCEINLINE void VectorTransform( FourVectors &InPnt )
+	[[gnu::always_inline]] inline void VectorTransform( FourVectors &InPnt )
 	{
 		VectorRotate( InPnt );
 		InPnt.x = AddSIMD( InPnt.x, m_v4Origin.x );
@@ -1629,7 +1566,7 @@ struct CParticleSIMDTransformation
 	}
 };
 
-#define NUM_COLLISION_CACHE_MODES 4
+inline constexpr auto NUM_COLLISION_CACHE_MODES = 4;
 
 //-----------------------------------------------------------------------------
 //
@@ -1647,24 +1584,24 @@ enum EParticleRestartMode_t
 struct CParticleAttributeAddressTable
 {
 	float *m_pAttributes[MAX_PARTICLE_ATTRIBUTES];
-	size_t m_nFloatStrides[MAX_PARTICLE_ATTRIBUTES];
+	std::size_t m_nFloatStrides[MAX_PARTICLE_ATTRIBUTES];
 
-	FORCEINLINE size_t Stride( int nAttr ) const
+	[[gnu::always_inline]] inline std::size_t Stride( int nAttr ) const
 	{
 		return m_nFloatStrides[nAttr];
 	}
 
-	FORCEINLINE float *Address( int nAttr ) const
+	[[gnu::always_inline]] inline float *Address( int nAttr ) const
 	{
 		return m_pAttributes[nAttr];
 	}
 
-	FORCEINLINE uint8 *ByteAddress( int nAttr ) const
+	[[gnu::always_inline]] inline uint8 *ByteAddress( int nAttr ) const
 	{
 		return ( uint8 * ) m_pAttributes[nAttr];
 	}
 
-	FORCEINLINE float *FloatAttributePtr( int nAttribute, int nParticleNumber ) const
+	[[gnu::always_inline]] inline float *FloatAttributePtr( int nAttribute, int nParticleNumber ) const
 	{
 		int block_ofs = nParticleNumber / 4;
 		return m_pAttributes[ nAttribute ] + 
@@ -1689,7 +1626,7 @@ struct CParticleAttributeAddressTable
 // frame.
 //-----------------------------------------------------------------------------
 
-#define MAX_CACHED_PARTICLE_BATCHES 8
+inline constexpr auto MAX_CACHED_PARTICLE_BATCHES = 8;
 class CCachedParticleBatches
 {
 public:
@@ -1699,14 +1636,14 @@ public:
 
 	CCachedParticleBatches() : m_nLastValidParticleCacheFrame( (uint32)-1 ), m_nCachedRenderListCount( 0 )
 	{
-		Q_memset( m_pCachedBatches, 0, sizeof( ICachedPerFrameMeshData* ) * MAX_CACHED_PARTICLE_BATCHES );
+		V_memset( m_pCachedBatches, 0, sizeof( ICachedPerFrameMeshData* ) * MAX_CACHED_PARTICLE_BATCHES );
 	}
 	~CCachedParticleBatches()
 	{
 		ClearBatches();
 	}
 
-	FORCEINLINE void ClearBatches()
+	[[gnu::always_inline]] inline void ClearBatches()
 	{
 		m_nCachedRenderListCount = 0;
 		for ( int i=0; i<MAX_CACHED_PARTICLE_BATCHES; ++i )
@@ -1717,7 +1654,7 @@ public:
 		}
 	}
 
-	FORCEINLINE void SetCachedBatch( int nBatch, ICachedPerFrameMeshData* pBatch )
+	[[gnu::always_inline]] inline void SetCachedBatch( int nBatch, ICachedPerFrameMeshData* pBatch )
 	{
 		if ( nBatch >= MAX_CACHED_PARTICLE_BATCHES )
 			return;
@@ -1725,7 +1662,7 @@ public:
 		m_pCachedBatches[ nBatch ] = pBatch;
 	}
 
-	FORCEINLINE ICachedPerFrameMeshData *GetCachedBatch( int nBatch )
+	[[gnu::always_inline]] inline ICachedPerFrameMeshData *GetCachedBatch( int nBatch )
 	{
 		if ( nBatch >= MAX_CACHED_PARTICLE_BATCHES )
 			return nullptr;
@@ -1733,12 +1670,12 @@ public:
 		return m_pCachedBatches[ nBatch ];
 	}
 
-	FORCEINLINE void SetCachedRenderListCount( int nParticleCount )
+	[[gnu::always_inline]] inline void SetCachedRenderListCount( int nParticleCount )
 	{
 		m_nCachedRenderListCount = nParticleCount;
 	}
 
-	FORCEINLINE int GetCachedRenderListCount()
+	[[gnu::always_inline]] inline int GetCachedRenderListCount()
 	{
 		return m_nCachedRenderListCount;
 	}
@@ -1775,10 +1712,10 @@ public:
 	// and will have bad perf.
 	const float *GetFloatAttributePtr( int nAttribute, int nParticleNumber ) const;
 	const int *GetIntAttributePtr( int nAttribute, int nParticleNumber ) const;
-	const fltx4 *GetM128AttributePtr( int nAttribute, size_t *pStrideOut ) const;
-	const FourVectors *Get4VAttributePtr( int nAttribute, size_t *pStrideOut ) const;
-	const FourInts *Get4IAttributePtr( int nAttribute, size_t *pStrideOut ) const;
-	const int *GetIntAttributePtr( int nAttribute, size_t *pStrideOut ) const;
+	const fltx4 *GetM128AttributePtr( int nAttribute, std::size_t *pStrideOut ) const;
+	const FourVectors *Get4VAttributePtr( int nAttribute, std::size_t *pStrideOut ) const;
+	const FourInts *Get4IAttributePtr( int nAttribute, std::size_t *pStrideOut ) const;
+	const int *GetIntAttributePtr( int nAttribute, std::size_t *pStrideOut ) const;
 
 	Vector GetVectorAttributeValue( int nAttribute, int nParticleNumber ) const;
 	float GetFloatAttributeValue( int nAttribute, int nParticleNumber ) const;
@@ -1786,14 +1723,14 @@ public:
 	int *GetIntAttributePtrForWrite( int nAttribute, int nParticleNumber );
 
 	float *GetFloatAttributePtrForWrite( int nAttribute, int nParticleNumber );
-	fltx4 *GetM128AttributePtrForWrite( int nAttribute, size_t *pStrideOut );
-	FourVectors *Get4VAttributePtrForWrite( int nAttribute, size_t *pStrideOut );
+	fltx4 *GetM128AttributePtrForWrite( int nAttribute, std::size_t *pStrideOut );
+	FourVectors *Get4VAttributePtrForWrite( int nAttribute, std::size_t *pStrideOut );
 
 	const float *GetInitialFloatAttributePtr( int nAttribute, int nParticleNumber ) const;
-	const fltx4 *GetInitialM128AttributePtr( int nAttribute, size_t *pStrideOut ) const;
-	const FourVectors *GetInitial4VAttributePtr( int nAttribute, size_t *pStrideOut ) const;
+	const fltx4 *GetInitialM128AttributePtr( int nAttribute, std::size_t *pStrideOut ) const;
+	const FourVectors *GetInitial4VAttributePtr( int nAttribute, std::size_t *pStrideOut ) const;
 	float *GetInitialFloatAttributePtrForWrite( int nAttribute, int nParticleNumber );
-	fltx4 *GetInitialM128AttributePtrForWrite( int nAttribute, size_t *pStrideOut );
+	fltx4 *GetInitialM128AttributePtrForWrite( int nAttribute, std::size_t *pStrideOut );
 
 	void Simulate( float dt );
 	void SkipToTime( float t );
@@ -1930,17 +1867,17 @@ public:
 	// Used by particle system definitions to manage particle collection lists
 	void UnlinkFromDefList( );
 
-	FORCEINLINE uint8 const *GetPrevAttributeMemory( void ) const
+	[[gnu::always_inline]] inline uint8 const *GetPrevAttributeMemory( void ) const
 	{
 		return m_pPreviousAttributeMemory;
 	}
 
-	FORCEINLINE uint8 const *GetAttributeMemory( void ) const
+	[[gnu::always_inline]] inline uint8 const *GetAttributeMemory( void ) const
 	{
 		return m_pParticleMemory;
 	}
 	
-	FORCEINLINE bool IsUsingInterpolatedRendering( void ) const
+	[[gnu::always_inline]] inline bool IsUsingInterpolatedRendering( void ) const
 	{
 		return (
 			( m_flTargetDrawTime < m_flCurTime ) &&
@@ -2082,9 +2019,9 @@ public:
 	int m_nNumControlPointsAllocated;
 	CParticleCPInfo *m_pCPInfo;
 
-	FORCEINLINE CParticleControlPoint &ControlPoint( int nIdx ) const;
+	[[gnu::always_inline]] inline CParticleControlPoint &ControlPoint( int nIdx ) const;
 
-	FORCEINLINE CModelHitBoxesInfo &ControlPointHitBox( int nIdx ) const;
+	[[gnu::always_inline]] inline CModelHitBoxesInfo &ControlPointHitBox( int nIdx ) const;
 
 
 	// public so people can call methods
@@ -2101,8 +2038,8 @@ public:
 	void *m_pRenderable;									// for use by client
 
 
-	void *operator new(size_t nSize);
-	void *operator new( size_t size, int nBlockUse, const char *pFileName, int nLine );
+	void *operator new(std::size_t nSize);
+	void *operator new( std::size_t size, int nBlockUse, const char *pFileName, int nLine );
 	void operator delete(void *pData);
 	void operator delete( void* p, int nBlockUse, const char *pFileName, int nLine );
 
@@ -2197,7 +2134,7 @@ private:
 class CM128InitialAttributeIterator : public CStridedConstPtr<fltx4>
 {
 public:
-	FORCEINLINE CM128InitialAttributeIterator( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline CM128InitialAttributeIterator( int nAttribute, CParticleCollection *pParticles )
 	{
 		m_pData = pParticles->GetInitialM128AttributePtr( nAttribute, &m_nStride );
 	}
@@ -2207,11 +2144,11 @@ public:
 class CM128AttributeIterator : public CStridedConstPtr<fltx4>
 {
 public:
-	FORCEINLINE void Init( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline void Init( int nAttribute, CParticleCollection *pParticles )
 	{
 		m_pData = pParticles->GetM128AttributePtr( nAttribute, &m_nStride );
 	}
-	FORCEINLINE CM128AttributeIterator( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline CM128AttributeIterator( int nAttribute, CParticleCollection *pParticles )
 	{
 		Init( nAttribute, pParticles );
 	}
@@ -2219,7 +2156,7 @@ public:
 	{
 	}
 
-	FORCEINLINE fltx4 operator()( fltx4 fl4T ) const
+	[[gnu::always_inline]] inline fltx4 operator()( fltx4 fl4T ) const
 	{
 		return *( m_pData );
 	}
@@ -2228,15 +2165,15 @@ public:
 class C4IAttributeIterator : public CStridedConstPtr<FourInts>
 {
 public:
-	FORCEINLINE void Init( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline void Init( int nAttribute, CParticleCollection *pParticles )
 	{
 		m_pData = pParticles->Get4IAttributePtr( nAttribute, &m_nStride );
 	}
-	FORCEINLINE C4IAttributeIterator( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline C4IAttributeIterator( int nAttribute, CParticleCollection *pParticles )
 	{
 		Init( nAttribute, pParticles );
 	}
-	FORCEINLINE C4IAttributeIterator( void )
+	[[gnu::always_inline]] inline C4IAttributeIterator( void )
 	{
 	}
 };
@@ -2244,14 +2181,14 @@ public:
 class CM128AttributeWriteIterator : public CStridedPtr<fltx4>
 {
 public:
-	FORCEINLINE CM128AttributeWriteIterator( void )
+	[[gnu::always_inline]] inline CM128AttributeWriteIterator( void )
 	{
 	}
-	FORCEINLINE void Init ( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline void Init ( int nAttribute, CParticleCollection *pParticles )
 	{
 		m_pData = pParticles->GetM128AttributePtrForWrite( nAttribute, &m_nStride );
 	}
-	FORCEINLINE CM128AttributeWriteIterator( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline CM128AttributeWriteIterator( int nAttribute, CParticleCollection *pParticles )
 	{
 		Init( nAttribute, pParticles );
 	}
@@ -2260,30 +2197,30 @@ public:
 class C4VAttributeIterator : public CStridedConstPtr<FourVectors>
 {
 public:
-	FORCEINLINE void Init( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline void Init( int nAttribute, CParticleCollection *pParticles )
 	{
 		m_pData = pParticles->Get4VAttributePtr( nAttribute, &m_nStride );
 	}
-	FORCEINLINE C4VAttributeIterator( void )
+	[[gnu::always_inline]] inline C4VAttributeIterator( void )
 	{
 	}
 
-	FORCEINLINE C4VAttributeIterator( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline C4VAttributeIterator( int nAttribute, CParticleCollection *pParticles )
 	{
 		Init( nAttribute, pParticles );
 	}
 
-	FORCEINLINE fltx4 X( fltx4 T )
+	[[gnu::always_inline]] inline fltx4 X( fltx4 T )
 	{
 		return m_pData->x;
 	}
 
-	FORCEINLINE fltx4 Y( fltx4 T )
+	[[gnu::always_inline]] inline fltx4 Y( fltx4 T )
 	{
 		return m_pData->y;
 	}
 
-	FORCEINLINE fltx4 Z( fltx4 T )
+	[[gnu::always_inline]] inline fltx4 Z( fltx4 T )
 	{
 		return m_pData->z;
 	}
@@ -2295,16 +2232,16 @@ class CM128InterpolatedAttributeIterator : public CM128AttributeIterator
 protected:
 	intp m_nOldDataOffset;
 
-	FORCEINLINE fltx4 const *PreviousData( void ) const
+	[[gnu::always_inline]] inline fltx4 const *PreviousData( void ) const
 	{
 		return ( fltx4 const * ) ( ( ( uint8 const * ) m_pData ) + m_nOldDataOffset );
 	}
 
 public:
-	FORCEINLINE void Init( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline void Init( int nAttribute, CParticleCollection *pParticles )
 	{
 		m_pData = pParticles->GetM128AttributePtr( nAttribute, &m_nStride );
-		Assert( pParticles->GetPrevAttributeMemory() );
+		contract_assert( pParticles->GetPrevAttributeMemory() );
 		if ( m_nStride )
 		{
 			m_nOldDataOffset = 
@@ -2316,7 +2253,7 @@ public:
 		}
 
 	}
-	FORCEINLINE CM128InterpolatedAttributeIterator( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline CM128InterpolatedAttributeIterator( int nAttribute, CParticleCollection *pParticles )
 	{
 		Init( nAttribute, pParticles );
 	}
@@ -2325,7 +2262,7 @@ public:
 	{
 	}
 
-	FORCEINLINE fltx4 operator()( fltx4 fl4T ) const
+	[[gnu::always_inline]] inline fltx4 operator()( fltx4 fl4T ) const
 	{
 		fltx4 fl4Ret = *( PreviousData() );
 		return AddSIMD( fl4Ret, MulSIMD( fl4T, SubSIMD( *m_pData, fl4Ret ) ) );
@@ -2335,9 +2272,9 @@ public:
 class C4VInterpolatedAttributeIterator : public C4VAttributeIterator
 {
 protected:
-	ptrdiff_t m_nOldDataOffset;
+	std::ptrdiff_t m_nOldDataOffset;
 
-	FORCEINLINE FourVectors const *PreviousData( void ) const
+	[[gnu::always_inline]] inline FourVectors const *PreviousData( void ) const
 	{
 		return ( FourVectors const * ) ( ( ( uint8 const * ) m_pData ) + m_nOldDataOffset );
 	}
@@ -2346,28 +2283,28 @@ public:
 	void Init( int nAttribute, CParticleCollection *pParticles );
 
 
-	FORCEINLINE C4VInterpolatedAttributeIterator( void )
+	[[gnu::always_inline]] inline C4VInterpolatedAttributeIterator( void )
 	{
 	}
 
-	FORCEINLINE C4VInterpolatedAttributeIterator( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline C4VInterpolatedAttributeIterator( int nAttribute, CParticleCollection *pParticles )
 	{
 		Init( nAttribute, pParticles );
 	}
 
-	FORCEINLINE fltx4 X( fltx4 fl4T ) const
+	[[gnu::always_inline]] inline fltx4 X( fltx4 fl4T ) const
 	{
 		fltx4 fl4Ret = PreviousData()->x;
 		return AddSIMD( fl4Ret, MulSIMD( fl4T, SubSIMD( m_pData->x, fl4Ret ) ) );
 	}
 
-	FORCEINLINE fltx4 Y( fltx4 fl4T ) const
+	[[gnu::always_inline]] inline fltx4 Y( fltx4 fl4T ) const
 	{
 		fltx4 fl4Ret = PreviousData()->y;
 		return AddSIMD( fl4Ret, MulSIMD( fl4T, SubSIMD( m_pData->y, fl4Ret ) ) );
 	}
 
-	FORCEINLINE fltx4 Z( fltx4 fl4T ) const
+	[[gnu::always_inline]] inline fltx4 Z( fltx4 fl4T ) const
 	{
 		fltx4 fl4Ret = PreviousData()->z;
 		return AddSIMD( fl4Ret, MulSIMD( fl4T, SubSIMD( m_pData->z, fl4Ret ) ) );
@@ -2378,7 +2315,7 @@ public:
 class C4VInitialAttributeIterator : public CStridedConstPtr<FourVectors>
 {
 public:
-	FORCEINLINE C4VInitialAttributeIterator( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline C4VInitialAttributeIterator( int nAttribute, CParticleCollection *pParticles )
 	{
 		m_pData = pParticles->GetInitial4VAttributePtr( nAttribute, &m_nStride );
 	}
@@ -2387,7 +2324,7 @@ public:
 class C4VAttributeWriteIterator : public CStridedPtr<FourVectors>
 {
 public:
-	FORCEINLINE C4VAttributeWriteIterator( int nAttribute, CParticleCollection *pParticles )
+	[[gnu::always_inline]] inline C4VAttributeWriteIterator( int nAttribute, CParticleCollection *pParticles )
 	{
 		m_pData = pParticles->Get4VAttributePtrForWrite( nAttribute, &m_nStride );
 	}
@@ -2418,7 +2355,7 @@ inline bool CParticleCollection::IsNonPositionalControlPoint( int nPoint ) const
 
 inline void CParticleCollection::SetNActiveParticles( int nCount )
 {
-	Assert( nCount >= 0 && nCount <= m_nMaxAllowedParticles );
+	contract_assert( nCount >= 0 && nCount <= m_nMaxAllowedParticles );
 	m_nActiveParticles = nCount;
 	m_nPaddedActiveParticles = ( nCount+3 )/4;
 }
@@ -2426,24 +2363,24 @@ inline void CParticleCollection::SetNActiveParticles( int nCount )
 inline void CParticleCollection::SwapPosAndPrevPos( void )
 {
 	// strides better be the same!
-	Assert( m_ParticleAttributes.Stride( PARTICLE_ATTRIBUTE_XYZ ) == m_ParticleAttributes.Stride( PARTICLE_ATTRIBUTE_PREV_XYZ  ) );
+	contract_assert( m_ParticleAttributes.Stride( PARTICLE_ATTRIBUTE_XYZ ) == m_ParticleAttributes.Stride( PARTICLE_ATTRIBUTE_PREV_XYZ  ) );
 	V_swap( m_ParticleAttributes.m_pAttributes[ PARTICLE_ATTRIBUTE_XYZ ], m_ParticleAttributes.m_pAttributes[ PARTICLE_ATTRIBUTE_PREV_XYZ ] );
 }
 
-FORCEINLINE CParticleControlPoint &CParticleCollection::ControlPoint( int nIdx ) const
+[[gnu::always_inline]] inline CParticleControlPoint &CParticleCollection::ControlPoint( int nIdx ) const
 {
-	Assert( nIdx >= 0 && nIdx < m_nNumControlPointsAllocated );
+	contract_assert( nIdx >= 0 && nIdx < m_nNumControlPointsAllocated );
 	return m_pCPInfo[ std::max(0, std::min( nIdx, m_nNumControlPointsAllocated - 1 )) ].m_ControlPoint;
 }
 
-FORCEINLINE CModelHitBoxesInfo &CParticleCollection::ControlPointHitBox( int nIdx ) const
+[[gnu::always_inline]] inline CModelHitBoxesInfo &CParticleCollection::ControlPointHitBox( int nIdx ) const
 {
 	return m_pCPInfo[ std::max(0, std::min( nIdx, m_nNumControlPointsAllocated - 1 )) ].m_CPHitBox;
 }
 
 inline void CParticleCollection::LoanKillListTo( CParticleCollection *pBorrower ) const
 {
-	Assert(! pBorrower->m_pParticleKillList );
+	contract_assert( ! pBorrower->m_pParticleKillList );
 	pBorrower->m_nNumParticlesToKill = 0;
 	pBorrower->m_pParticleKillList = m_pParticleKillList;
 }
@@ -2464,7 +2401,7 @@ inline void CParticleCollection::SetAttributeToConstant( int nAttribute, float f
 
 inline void CParticleCollection::SetControlPoint( int nWhichPoint, const Vector &v )
 {
-	Assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
+	contract_assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
 	if ( nWhichPoint < m_nNumControlPointsAllocated )
 	{
 		ControlPoint( nWhichPoint ).m_Position = v;
@@ -2478,7 +2415,7 @@ inline void CParticleCollection::SetControlPoint( int nWhichPoint, const Vector 
 
 inline void CParticleCollection::SetControlPointObject( int nWhichPoint, void *pObject )
 {
-	Assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
+	contract_assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
 	if ( nWhichPoint < m_nNumControlPointsAllocated ) 
 	{
 		ControlPoint( nWhichPoint ).m_pObject = pObject;
@@ -2493,12 +2430,12 @@ inline void CParticleCollection::SetControlPointObject( int nWhichPoint, void *p
 inline void CParticleCollection::SetControlPointOrientation( int nWhichPoint, const Vector &forward,
 															 const Vector &right, const Vector &up )
 {
-	Assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
+	contract_assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
 
 	// check perpendicular
-	Assert( fabs( DotProduct( forward, up ) ) <= 0.1f );
-	Assert( fabs( DotProduct( forward, right ) ) <= 0.1f );
-	Assert( fabs( DotProduct( right, up ) ) <= 0.1f );
+	contract_assert( fabs( DotProduct( forward, up ) ) <= 0.1f );
+	contract_assert( fabs( DotProduct( forward, right ) ) <= 0.1f );
+	contract_assert( fabs( DotProduct( right, up ) ) <= 0.1f );
 
 	if ( nWhichPoint < m_nNumControlPointsAllocated ) 
 	{
@@ -2540,7 +2477,7 @@ inline void CParticleCollection::SetControlPointOrientation( int nWhichPoint, co
 
 inline void CParticleCollection::SetControlPointForwardVector( int nWhichPoint, const Vector &v )
 {
-	Assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
+	contract_assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
 	if ( nWhichPoint < m_nNumControlPointsAllocated ) 
 	{
 		ControlPoint( nWhichPoint ).m_ForwardVector = v;
@@ -2554,7 +2491,7 @@ inline void CParticleCollection::SetControlPointForwardVector( int nWhichPoint, 
 
 inline void CParticleCollection::SetControlPointUpVector( int nWhichPoint, const Vector &v )
 {
-	Assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
+	contract_assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
 	if ( nWhichPoint < m_nNumControlPointsAllocated ) 
 	{
 		ControlPoint( nWhichPoint ).m_UpVector = v;
@@ -2568,7 +2505,7 @@ inline void CParticleCollection::SetControlPointUpVector( int nWhichPoint, const
 
 inline void CParticleCollection::SetControlPointRightVector( int nWhichPoint, const Vector &v)
 {
-	Assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
+	contract_assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
 	if ( nWhichPoint < m_nNumControlPointsAllocated )
 	{
 		ControlPoint( nWhichPoint ).m_RightVector = v;
@@ -2582,7 +2519,7 @@ inline void CParticleCollection::SetControlPointRightVector( int nWhichPoint, co
 
 inline void CParticleCollection::SetControlPointParent( int nWhichPoint, int n )
 {
-	Assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
+	contract_assert( ( nWhichPoint >= 0) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
 	if ( nWhichPoint < m_nNumControlPointsAllocated )
 	{
 		ControlPoint( nWhichPoint ).m_nParent = n;
@@ -2596,7 +2533,7 @@ inline void CParticleCollection::SetControlPointParent( int nWhichPoint, int n )
 
 inline void CParticleCollection::SetControlPointSnapshot( int nWhichPoint, CParticleSnapshot *pSnapshot )
 {
-	Assert( ( nWhichPoint >= 0 ) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
+	contract_assert( ( nWhichPoint >= 0 ) && ( nWhichPoint < MAX_PARTICLE_CONTROL_POINTS ) );
 	if ( nWhichPoint < m_nNumControlPointsAllocated )
 	{
 		ControlPoint( nWhichPoint ).m_pSnapshot = pSnapshot;
@@ -2655,7 +2592,7 @@ inline float CParticleCollection::RandomFloatExp( int nRandomSampleId, float flM
 {
 	// do not call
 	float flRand = s_pRandomFloats[ ( m_nRandomSeed + nRandomSampleId ) & RANDOM_FLOAT_MASK ];
-	flRand = powf( flRand, flExponent );
+	flRand = std::powf( flRand, flExponent );
 	flRand *= ( flMax - flMin );
 	flRand += flMin;
 	return flRand;
@@ -2736,7 +2673,7 @@ inline float CParticleCollection::RandomVectorInUnitSphere( Vector *pVector )
 // well and will have bad perf.
 inline const float *CParticleCollection::GetFloatAttributePtr( int nAttribute, int nParticleNumber ) const
 {
-	Assert( nParticleNumber < m_nAllocatedParticles );
+	contract_assert( nParticleNumber < m_nAllocatedParticles );
 	return m_ParticleAttributes.FloatAttributePtr( nAttribute, nParticleNumber );
 }
 
@@ -2750,37 +2687,37 @@ inline const int *CParticleCollection::GetIntAttributePtr( int nAttribute, int n
 	return (int*)GetFloatAttributePtr( nAttribute, nParticleNumber );
 }
 
-inline const fltx4 *CParticleCollection::GetM128AttributePtr( int nAttribute, size_t *pStrideOut ) const
+inline const fltx4 *CParticleCollection::GetM128AttributePtr( int nAttribute, std::size_t *pStrideOut ) const
 {
 	*(pStrideOut) = m_ParticleAttributes.Stride( nAttribute ) / 4;
 	return reinterpret_cast<fltx4 *>( m_ParticleAttributes.Address( nAttribute ) );
 }
 
-inline const FourInts *CParticleCollection::Get4IAttributePtr( int nAttribute, size_t *pStrideOut ) const
+inline const FourInts *CParticleCollection::Get4IAttributePtr( int nAttribute, std::size_t *pStrideOut ) const
 {
 	*(pStrideOut) = m_ParticleAttributes.Stride( nAttribute ) / 4;
 	return reinterpret_cast<FourInts *>( m_ParticleAttributes.Address( nAttribute ) );
 }
 
-inline const int32 *CParticleCollection::GetIntAttributePtr( int nAttribute, size_t *pStrideOut ) const
+inline const int32 *CParticleCollection::GetIntAttributePtr( int nAttribute, std::size_t *pStrideOut ) const
 {
 	*(pStrideOut) = m_ParticleAttributes.Stride( nAttribute );
 	return reinterpret_cast<int32 *>( m_ParticleAttributes.Address( nAttribute ) );
 }
 
-inline const FourVectors *CParticleCollection::Get4VAttributePtr( int nAttribute, size_t *pStrideOut ) const
+inline const FourVectors *CParticleCollection::Get4VAttributePtr( int nAttribute, std::size_t *pStrideOut ) const
 {
 	*(pStrideOut) = m_ParticleAttributes.Stride( nAttribute ) / 12;
 	return reinterpret_cast<const FourVectors *>( m_ParticleAttributes.Address( nAttribute ) );
 }
 
-inline FourVectors *CParticleCollection::Get4VAttributePtrForWrite( int nAttribute, size_t *pStrideOut ) 
+inline FourVectors *CParticleCollection::Get4VAttributePtrForWrite( int nAttribute, std::size_t *pStrideOut ) 
 {
 	*( pStrideOut ) = m_ParticleAttributes.Stride( nAttribute ) / 12;
 	return reinterpret_cast<FourVectors *>( m_ParticleAttributes.Address( nAttribute ) );
 }
 
-inline const FourVectors *CParticleCollection::GetInitial4VAttributePtr( int nAttribute, size_t *pStrideOut ) const
+inline const FourVectors *CParticleCollection::GetInitial4VAttributePtr( int nAttribute, std::size_t *pStrideOut ) const
 {
 	*(pStrideOut) = m_ParticleInitialAttributes.Stride( nAttribute )/12;
 	return reinterpret_cast<FourVectors *>( m_ParticleInitialAttributes.Address( nAttribute ) );
@@ -2788,8 +2725,8 @@ inline const FourVectors *CParticleCollection::GetInitial4VAttributePtr( int nAt
 
 inline Vector CParticleCollection::GetVectorAttributeValue( int nAttribute, int nParticleNumber ) const
 {
-	Assert( nParticleNumber < m_nAllocatedParticles );
-	size_t nStride;
+	contract_assert( nParticleNumber < m_nAllocatedParticles );
+	std::size_t nStride;
 	float const *pData = ( float const * ) Get4VAttributePtr( nAttribute, &nStride );
 	int nOfs = nParticleNumber / 4;
 	int nRemainder = nParticleNumber & 3;
@@ -2800,7 +2737,7 @@ inline Vector CParticleCollection::GetVectorAttributeValue( int nAttribute, int 
 
 inline float CParticleCollection::GetFloatAttributeValue( int nAttribute, int nParticleNumber ) const
 {
-	Assert( nParticleNumber < m_nAllocatedParticles );
+	contract_assert( nParticleNumber < m_nAllocatedParticles );
 	float const *pData = GetFloatAttributePtr( nAttribute, nParticleNumber );
 	return *pData;
 }
@@ -2810,22 +2747,22 @@ inline float *CParticleCollection::GetFloatAttributePtrForWrite( int nAttribute,
 {
 	// NOTE: If you hit this assertion, it means your particle operator isn't returning
 	// the appropriate fields in the RequiredAttributesMask call
-	Assert( !m_bIsRunningInitializers || ( m_nPerParticleInitializedAttributeMask & (1 << nAttribute) ) );
-	Assert( !m_bIsRunningOperators || ( m_nPerParticleUpdatedAttributeMask & (1 << nAttribute) ) );
+	contract_assert( !m_bIsRunningInitializers || ( m_nPerParticleInitializedAttributeMask & (1 << nAttribute) ) );
+	contract_assert( !m_bIsRunningOperators || ( m_nPerParticleUpdatedAttributeMask & (1 << nAttribute) ) );
 
-	Assert( m_ParticleAttributes.Stride( nAttribute ) != 0 );
+	contract_assert( m_ParticleAttributes.Stride( nAttribute ) != 0 );
 
-	Assert( nParticleNumber < m_nAllocatedParticles );
+	contract_assert( nParticleNumber < m_nAllocatedParticles );
 	return m_ParticleAttributes.FloatAttributePtr( nAttribute, nParticleNumber );
 }
 
-inline fltx4 *CParticleCollection::GetM128AttributePtrForWrite( int nAttribute, size_t *pStrideOut )
+inline fltx4 *CParticleCollection::GetM128AttributePtrForWrite( int nAttribute, std::size_t *pStrideOut )
 {
 	// NOTE: If you hit this assertion, it means your particle operator isn't returning
 	// the appropriate fields in the RequiredAttributesMask call
-	Assert( !m_bIsRunningInitializers || ( m_nPerParticleInitializedAttributeMask & (1 << nAttribute) ) );
-	Assert( !m_bIsRunningOperators || ( m_nPerParticleUpdatedAttributeMask & (1 << nAttribute) ) );
-	Assert( m_ParticleAttributes.Stride( nAttribute ) != 0 );
+	contract_assert( !m_bIsRunningInitializers || ( m_nPerParticleInitializedAttributeMask & (1 << nAttribute) ) );
+	contract_assert( !m_bIsRunningOperators || ( m_nPerParticleUpdatedAttributeMask & (1 << nAttribute) ) );
+	contract_assert( m_ParticleAttributes.Stride( nAttribute ) != 0 );
 
 	*( pStrideOut ) = m_ParticleAttributes.Stride( nAttribute ) / 4;
 	return reinterpret_cast<fltx4 *>( m_ParticleAttributes.Address( nAttribute ) );
@@ -2833,11 +2770,11 @@ inline fltx4 *CParticleCollection::GetM128AttributePtrForWrite( int nAttribute, 
 
 inline const float *CParticleCollection::GetInitialFloatAttributePtr( int nAttribute, int nParticleNumber ) const
 {
-	Assert( nParticleNumber < m_nAllocatedParticles );
+	contract_assert( nParticleNumber < m_nAllocatedParticles );
 	return m_ParticleInitialAttributes.FloatAttributePtr( nAttribute, nParticleNumber );
 }
 
-inline const fltx4 *CParticleCollection::GetInitialM128AttributePtr( int nAttribute, size_t *pStrideOut ) const
+inline const fltx4 *CParticleCollection::GetInitialM128AttributePtr( int nAttribute, std::size_t *pStrideOut ) const
 {
 	*( pStrideOut ) = m_ParticleInitialAttributes.Stride( nAttribute ) / 4;
 	return reinterpret_cast<fltx4 *>( m_ParticleInitialAttributes.Address( nAttribute ) );
@@ -2845,14 +2782,14 @@ inline const fltx4 *CParticleCollection::GetInitialM128AttributePtr( int nAttrib
 
 inline float *CParticleCollection::GetInitialFloatAttributePtrForWrite( int nAttribute, int nParticleNumber )
 {
-	Assert( nParticleNumber < m_nAllocatedParticles );
-	Assert( m_nPerParticleReadInitialAttributeMask & ( 1 << nAttribute ) );
+	contract_assert( nParticleNumber < m_nAllocatedParticles );
+	contract_assert( m_nPerParticleReadInitialAttributeMask & ( 1 << nAttribute ) );
 	return m_ParticleInitialAttributes.FloatAttributePtr( nAttribute, nParticleNumber );
 }
 
-inline fltx4 *CParticleCollection::GetInitialM128AttributePtrForWrite( int nAttribute, size_t *pStrideOut )
+inline fltx4 *CParticleCollection::GetInitialM128AttributePtrForWrite( int nAttribute, std::size_t *pStrideOut )
 {
-	Assert( m_nPerParticleReadInitialAttributeMask & ( 1 << nAttribute ) );
+	contract_assert( m_nPerParticleReadInitialAttributeMask & ( 1 << nAttribute ) );
 	*( pStrideOut ) = m_ParticleInitialAttributes.Stride( nAttribute ) / 4;
 	return reinterpret_cast<fltx4 *>( m_ParticleInitialAttributes.Address( nAttribute ) );
 }
@@ -2863,38 +2800,38 @@ inline bool CParticleCollection::IsValidAttributePtr( int nAttribute, const void
 	if ( pPtr < m_ParticleAttributes.Address( nAttribute ) )
 		return false;
 
-	size_t nArraySize = m_ParticleAttributes.Stride( nAttribute ) * m_nAllocatedParticles / 4;
+	std::size_t nArraySize = m_ParticleAttributes.Stride( nAttribute ) * m_nAllocatedParticles / 4;
 	void *pMaxPtr = m_ParticleAttributes.Address( nAttribute ) + nArraySize;
 	return ( pPtr <= pMaxPtr );
 }
 
 
-FORCEINLINE void CParticleCollection::KillParticle( int nPidx, unsigned int nKillFlags )
+[[gnu::always_inline]] inline void CParticleCollection::KillParticle( int nPidx, unsigned int nKillFlags )
 {
 	// add a particle to the sorted kill list. entries must be added in sorted order.
 	// within a particle operator, this is safe to call. Outside of one, you have to call
 	// the ApplyKillList() method yourself. The storage for the kill list is global between
 	// all particle systems, so you can't kill a particle in 2 different CParticleCollections
 	// w/o calling ApplyKillList
-	Assert( !m_nNumParticlesToKill || ( nPidx > (int)m_pParticleKillList[ m_nNumParticlesToKill - 1 ].nIndex ) );
+	contract_assert( !m_nNumParticlesToKill || ( nPidx > (int)m_pParticleKillList[ m_nNumParticlesToKill - 1 ].nIndex ) );
 
 	// note that it is permissible to kill particles with indices>the number of active
 	// particles, in order to faciliate easy sse coding (that said, we only expect the
 	// particle index to be at most more than 3 larger than the particle count)
-	Assert( nPidx < m_nActiveParticles + 4 );
+	contract_assert( nPidx < m_nActiveParticles + 4 );
 
-	COMPILE_TIME_ASSERT( ( sizeof( KillListItem_t ) == 4 ) && ( MAX_PARTICLES_IN_A_SYSTEM < ( 1 << KILL_LIST_INDEX_BITS ) ) );
-	Assert( !( nPidx & ~KILL_LIST_INDEX_MASK ) && !( nKillFlags & ~KILL_LIST_FLAGS_MASK ) );
+	static_assert( ( sizeof( KillListItem_t ) == 4 ) && ( MAX_PARTICLES_IN_A_SYSTEM < ( 1 << KILL_LIST_INDEX_BITS ) ) );
+	contract_assert( !( nPidx & ~KILL_LIST_INDEX_MASK ) && !( nKillFlags & ~KILL_LIST_FLAGS_MASK ) );
 	KillListItem_t killItem = { (unsigned int)nPidx, nKillFlags };
 
-	Assert( m_nNumParticlesToKill < MAX_PARTICLES_IN_A_SYSTEM );
+	contract_assert( m_nNumParticlesToKill < MAX_PARTICLES_IN_A_SYSTEM );
 	m_pParticleKillList[ m_nNumParticlesToKill++ ] = killItem;
 }
 
 // initialize this attribute for all active particles
 inline void CParticleCollection::FillAttributeWithConstant( int nAttribute, float fValue )
 {
-	size_t stride;
+	std::size_t stride;
 	fltx4 *pAttr = GetM128AttributePtrForWrite( nAttribute, &stride );
 	fltx4 fill=ReplicateX4( fValue );
 	for( int i = 0; i < m_nPaddedActiveParticles; i++ )
@@ -2908,21 +2845,21 @@ inline void CParticleCollection::FillAttributeWithConstant( int nAttribute, floa
 //-----------------------------------------------------------------------------
 // Helper to set vector attribute values
 //-----------------------------------------------------------------------------
-FORCEINLINE void SetVectorAttribute( float *pAttribute, float x, float y, float z )
+[[gnu::always_inline]] inline void SetVectorAttribute( float *pAttribute, float x, float y, float z )
 {
 	pAttribute[0] = x;
 	pAttribute[4] = y;
 	pAttribute[8] = z;
 }
 
-FORCEINLINE void SetVectorAttribute( float *pAttribute, const Vector &v )
+[[gnu::always_inline]] inline void SetVectorAttribute( float *pAttribute, const Vector &v )
 {
 	pAttribute[0] = v.x;
 	pAttribute[4] = v.y;
 	pAttribute[8] = v.z;
 }
 
-FORCEINLINE void SetVectorFromAttribute( Vector &v, const float *pAttribute )
+[[gnu::always_inline]] inline void SetVectorFromAttribute( Vector &v, const float *pAttribute )
 {
 	v.x = pAttribute[0];
 	v.y = pAttribute[4];
@@ -2933,7 +2870,7 @@ FORCEINLINE void SetVectorFromAttribute( Vector &v, const float *pAttribute )
 //-----------------------------------------------------------------------------
 // Computes the sq distance to a particle position
 //-----------------------------------------------------------------------------
-FORCEINLINE float CParticleCollection::ComputeSqrDistanceToParticle( int hParticle, const Vector &vecPosition ) const
+[[gnu::always_inline]] inline float CParticleCollection::ComputeSqrDistanceToParticle( int hParticle, const Vector &vecPosition ) const
 {
 	const float *xyz = GetFloatAttributePtr( PARTICLE_ATTRIBUTE_XYZ, hParticle );
 	Vector vecParticlePosition( xyz[0], xyz[4], xyz[8] );
@@ -2944,7 +2881,7 @@ FORCEINLINE float CParticleCollection::ComputeSqrDistanceToParticle( int hPartic
 //-----------------------------------------------------------------------------
 // Grows the dist sq range for all particles
 //-----------------------------------------------------------------------------
-FORCEINLINE void CParticleCollection::GrowDistSqrBounds( float flDistSqr )
+[[gnu::always_inline]] inline void CParticleCollection::GrowDistSqrBounds( float flDistSqr )
 {
 	if ( m_flLastMinDistSqr > flDistSqr )
 	{
@@ -2978,7 +2915,9 @@ struct ParticleChildrenInfo_t
 class CParticleSystemDefinition
 {
 	DECLARE_DMXELEMENT_UNPACK();
-	KS_TRACKED_CLASS( CParticleSystemDefinition );
+	private:
+		ks::tracked_ref_list< CParticleSystemDefinition > m_References;
+		template < class T > friend class ks::tracked_ref;;
 
 	
 public:
@@ -3126,7 +3065,7 @@ private:
 
 	int m_nSheetIndex;
 
-	size_t m_nContextDataSize;
+	std::size_t m_nContextDataSize;
 	DmObjectId_t m_Id;
 
 public:
@@ -3157,22 +3096,13 @@ public:
 	ParticleOperatorList_t m_Constraints;
 	std::vector< ParticleChildrenInfo_t > m_Children;
 
-	std::vector< size_t > m_nOperatorsCtxOffsets;
-	std::vector< size_t > m_nRenderersCtxOffsets;
-	std::vector< size_t > m_nInitializersCtxOffsets;
-	std::vector< size_t > m_nEmittersCtxOffsets;
-	std::vector< size_t > m_nForceGeneratorsCtxOffsets;
-	std::vector< size_t > m_nConstraintsCtxOffsets;
+	std::vector< std::size_t > m_nOperatorsCtxOffsets;
+	std::vector< std::size_t > m_nRenderersCtxOffsets;
+	std::vector< std::size_t > m_nInitializersCtxOffsets;
+	std::vector< std::size_t > m_nEmittersCtxOffsets;
+	std::vector< std::size_t > m_nForceGeneratorsCtxOffsets;
+	std::vector< std::size_t > m_nConstraintsCtxOffsets;
 
-
-#if MEASURE_PARTICLE_PERF
-	float m_flTotalSimTime;
-	float m_flUncomittedTotalSimTime;
-	float m_flMaxMeasuredSimTime;
-	float m_flTotalRenderTime;
-	float m_flMaxMeasuredRenderTime;
-	float m_flUncomittedTotalRenderTime;
-#endif
 
 	uint m_nPerParticleOutlineMaterialVarToken;
 
@@ -3206,14 +3136,6 @@ inline CParticleSystemDefinition::CParticleSystemDefinition( void )
 	m_nAttributeReadMask = 0;
 	m_nNumIntersectionTests = 0;
 	m_nNumActualRayTraces = 0;
-#if MEASURE_PARTICLE_PERF
-	m_flTotalSimTime = 0.0;
-	m_flMaxMeasuredSimTime = 0.0;
-	m_flMaxMeasuredRenderTime = 0.0f;
-	m_flTotalRenderTime = 0.0f;
-	m_flUncomittedTotalRenderTime = 0.0f;
-	m_flUncomittedTotalSimTime = 0.0f;
-#endif
 	m_nMaximumActiveParticles = 0;
 	m_bIsPrecached = false;
 	m_bAlwaysPrecache = false;
@@ -3354,16 +3276,16 @@ inline int CParticleCollection::GetGroupID( void ) const
 	return m_pDef->m_nGroupID;
 }
 
-FORCEINLINE const Vector& CParticleCollection::GetControlPointAtCurrentTime( int nControlPoint ) const
+[[gnu::always_inline]] inline const Vector& CParticleCollection::GetControlPointAtCurrentTime( int nControlPoint ) const
 {
-	Assert( !m_pDef || m_pDef->ReadsControlPoint( nControlPoint ) );
+	contract_assert( !m_pDef || m_pDef->ReadsControlPoint( nControlPoint ) );
 	return ControlPoint( nControlPoint ).m_Position;
 }
 
-FORCEINLINE void CParticleCollection::GetControlPointOrientationAtCurrentTime( int nControlPoint, Vector *pForward, Vector *pRight, Vector *pUp ) const
+[[gnu::always_inline]] inline void CParticleCollection::GetControlPointOrientationAtCurrentTime( int nControlPoint, Vector *pForward, Vector *pRight, Vector *pUp ) const
 {
-	Assert( nControlPoint <= GetHighestControlPoint() );
-	Assert( !m_pDef || m_pDef->ReadsControlPoint( nControlPoint ) );
+	contract_assert( nControlPoint <= GetHighestControlPoint() );
+	contract_assert( !m_pDef || m_pDef->ReadsControlPoint( nControlPoint ) );
 
 	// FIXME: Use quaternion lerp to get control point transform at time
 	*pForward = ControlPoint( nControlPoint).m_ForwardVector;
@@ -3371,16 +3293,16 @@ FORCEINLINE void CParticleCollection::GetControlPointOrientationAtCurrentTime( i
 	*pUp = ControlPoint( nControlPoint ).m_UpVector;
 }
 
-FORCEINLINE int CParticleCollection::GetControlPointParent( int nControlPoint ) const
+[[gnu::always_inline]] inline int CParticleCollection::GetControlPointParent( int nControlPoint ) const
 {
-	Assert( nControlPoint <= GetHighestControlPoint() );
-	Assert( !m_pDef || m_pDef->ReadsControlPoint( nControlPoint ) );
+	contract_assert( nControlPoint <= GetHighestControlPoint() );
+	contract_assert( !m_pDef || m_pDef->ReadsControlPoint( nControlPoint ) );
 	return ControlPoint( nControlPoint ).m_nParent;
 }
 
-FORCEINLINE CParticleSnapshot *CParticleCollection::GetControlPointSnapshot( int nControlPoint ) const
+[[gnu::always_inline]] inline CParticleSnapshot *CParticleCollection::GetControlPointSnapshot( int nControlPoint ) const
 {
-	Assert( nControlPoint <= GetHighestControlPoint() );
+	contract_assert( nControlPoint <= GetHighestControlPoint() );
 	if ( nControlPoint == -1 )
 		return nullptr;
 	return ControlPoint( nControlPoint ).m_pSnapshot;
@@ -3389,5 +3311,3 @@ FORCEINLINE CParticleSnapshot *CParticleCollection::GetControlPointSnapshot( int
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
-
-#endif	// PARTICLES_H

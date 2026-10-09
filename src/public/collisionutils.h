@@ -1,30 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Common collision utility methods
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef COLLISIONUTILS_H
-#define COLLISIONUTILS_H
-
-#include "tier0/platform.h"
 
 
-#include "mathlib/ssemath.h"
+
+import std;
+import ks.math;
 
 //-----------------------------------------------------------------------------
 // forward declarations
 //-----------------------------------------------------------------------------
 struct Ray_t;
-class Vector;
-class Vector2D;
-class Vector4D;
-struct cplane_t;
-class QAngle;
 class CBaseTrace;
-struct matrix3x4_t;
 
 
 //-----------------------------------------------------------------------------
@@ -192,7 +181,7 @@ bool IsBoxIntersectingSphereExtents( const Vector& boxCenter, const Vector& boxH
 // Returns true if a box intersects with a sphere
 // NOTE: f4RadiusSq must have the radius sq in all components
 //-----------------------------------------------------------------------------
-FORCEINLINE bool IsBoxIntersectingSphere( const Vector& boxMin, const Vector& boxMax, 
+[[gnu::always_inline]] inline bool IsBoxIntersectingSphere( const Vector& boxMin, const Vector& boxMax, 
 											 const fltx4& f4Center, const fltx4& f4RadiusSq )
 {
 	// See Graphics Gems, box-sphere intersection
@@ -260,32 +249,32 @@ bool IsOBBIntersectingOBB( const Vector &vecOrigin1, const QAngle &vecAngles1, c
 //
 //-----------------------------------------------------------------------------
 
-bool FASTCALL IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, 
+bool IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, 
 									const Vector& origin, const Vector& delta, float flTolerance = 0.0f );
 
-bool FASTCALL IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, 
+bool IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, 
 									const Ray_t& ray, float flTolerance );
 
-bool FASTCALL IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, 
+bool IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, 
 									const Vector& origin, const Vector& delta,
 									const Vector& invDelta, float flTolerance = 0.0f );
 
 
-bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
+bool IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
 								   fltx4 origin, fltx4 delta, fltx4 invDelta, // ray parameters
 								   fltx4 vTolerance = LoadZeroSIMD() ///< eg from ReplicateX4(flTolerance)
 								   );
 
-bool inline FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
+bool inline IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
 								   fltx4 origin, fltx4 delta, float flTolerance = 0.0f )
 {
 	return IsBoxIntersectingRay( boxMin, boxMax, origin, delta, ReciprocalSIMD(delta), ReplicateX4(flTolerance) );
 }
 
-bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
+bool IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
 								   const Ray_t& ray, fltx4 fl4Tolerance = LoadZeroSIMD() );
 
-FORCEINLINE bool IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, const Ray_t& ray )
+[[gnu::always_inline]] inline bool IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, const Ray_t& ray )
 {
 	return IsBoxIntersectingRay( LoadVector3SIMD(boxMin), LoadVector3SIMD(boxMax), ray, LoadZeroSIMD() );
 }
@@ -302,7 +291,7 @@ bool IsPointInBox( const Vector& pt, const Vector& boxMin, const Vector& boxMax 
 
 
 // SIMD version
-FORCEINLINE bool IsPointInBox( const fltx4& pt, const fltx4& boxMin, const fltx4& boxMax )
+[[gnu::always_inline]] inline bool IsPointInBox( const fltx4& pt, const fltx4& boxMin, const fltx4& boxMax )
 {
 	bi32x4 greater = CmpGtSIMD( pt,boxMax );
 	bi32x4 less = CmpLtSIMD( pt, boxMin );
@@ -452,8 +441,3 @@ bool IntersectRayWithAACylinder( const Ray_t &ray,
 //-----------------------------------------------------------------------------
 // INLINES
 //-----------------------------------------------------------------------------
-
-
-
-
-#endif // COLLISIONUTILS_H

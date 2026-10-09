@@ -1,14 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef VPHYSICS_SOUND_H
-#define VPHYSICS_SOUND_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "SoundEmitterSystem/isoundemittersystembase.h"
+#include "vphysics_interface.h"
+#include "physics_shared.h"
+#include "shareddefs.h"
+#ifdef CLIENT_DLL
+#include "c_baseentity.h"
+#include "c_recipientfilter.h"
+#else
+#include "baseentity.h"
+#include "recipientfilter.h"
+#endif
 
 namespace physicssound
 {
@@ -174,6 +178,3 @@ namespace physicssound
 		list.clear();
 	}
 };
-
-
-#endif // VPHYSICS_SOUND_H

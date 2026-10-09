@@ -1,38 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Includes all the headers/declarations necessary to access the
 //			engine interface
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ENGINEINTERFACE_H
-#define ENGINEINTERFACE_H
-
 
 // these stupid set of includes are required to use the cdll_int interface
-#include "mathlib/vector.h"
+import std;
 //#include "wrect.h"
-#define IN_BUTTONS_H
 
 // engine interface
+import ks.tier1;
 #include "cdll_int.h"
 #include "eiface.h"
-#include "icvar.h"
 #include "tier2/tier2.h"
 #include "matchmaking/imatchframework.h"
-
-
-#ifdef PORTAL2_UITEST_DLL
-class IMatchExtPortal2
-{
-public:
-	inline KeyValues * GetAllMissions() { return nullptr; }
-	inline KeyValues * GetMapInfoByBspName( KeyValues *, char const *, KeyValues ** = nullptr ) { return nullptr; }
-	inline KeyValues * GetMapInfo( KeyValues *, KeyValues ** = nullptr ) { return nullptr; }
-};
-extern class IMatchExtPortal2 *g_pMatchExtPortal2;
-#endif
 
 // engine interface singleton accessors
 extern IVEngineClient *engine;
@@ -41,6 +23,3 @@ extern class IEngineUI *engineuifuncs;
 extern class IGameUIFuncs *gameuifuncs;
 extern class IEngineSound *enginesound;
 extern class IAchievementMgr *achievementmgr; 
-extern class CSteamAPIContext *steamapicontext;
-
-#endif // ENGINEINTERFACE_H

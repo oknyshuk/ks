@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef MAPINFO_H
-#define MAPINFO_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "baseentity.h"
-
 
 class CMapInfo : public CPointEntity
 {
@@ -41,6 +34,3 @@ public:
 
 // The info_map_parameters entity in this map (only one is allowed for).
 extern CMapInfo *g_pMapInfo;
-
-
-#endif // MAPINFO_H

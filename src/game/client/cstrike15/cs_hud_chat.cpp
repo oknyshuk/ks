@@ -1,20 +1,28 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "engine/ivmodelinfo.h"
 #include "cs_hud_chat.h"
 #include "c_cs_player.h"
 #include "c_cs_playerresource.h"
 #include "hud_macros.h"
-#include "text_message.h"
-#include "uicenterprint.h"
 #include "localize/ilocalize.h"
 #include "engine/IEngineSound.h"
 #include "radio_status.h"
-#include "bot/shared_util.h"
 #include "voice_status.h"
 
 DECLARE_HUDELEMENT(CHudChat);
@@ -58,9 +66,9 @@ void CHudChat::ChatPrintf(int iPlayerIndex, int iFilter, const char* fmt, ...)
 	va_list marker;
 	char msg[4096];
 
-	va_start(marker, fmt);
-	Q_vsnprintf(msg, sizeof(msg), fmt, marker);
-	va_end(marker);
+	__builtin_va_start(marker, fmt);
+	V_vsnprintf(msg, sizeof(msg), fmt, marker);
+	__builtin_va_end(marker);
 
 	// Strip any trailing '\n'
 	if (strlen(msg) > 0 && msg[strlen(msg) - 1] == '\n')
@@ -309,7 +317,7 @@ int CHudChat::GetFilterForString( const char *pString )
 
 	if ( iFilter == CHAT_FILTER_NONE )
 	{
-		if ( !Q_stricmp( pString, "#CStrike_Name_Change" ) ) 
+		if ( !V_stricmp( pString, "#CStrike_Name_Change" ) ) 
 		{
 			return CHAT_FILTER_NAMECHANGE;
 		}

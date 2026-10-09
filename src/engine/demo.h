@@ -1,13 +1,9 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef DEMO_H
-#define DEMO_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "utlvector.h"
+import std;
+import ks.tier1;
 
 #include "net.h"
 #include "demofile/demoformat.h"
@@ -22,7 +18,7 @@ struct DemoImportantGameEvent_t;
 class IDemoStream;
 
 
-abstract_class IDemoRecorder 
+class IDemoRecorder 
 {
 public:
 	~IDemoRecorder() {} // TODO: Should be virtual?
@@ -51,7 +47,7 @@ public:
 	// You should use protocol buffers instead, with RecordMessages().  This way all
 	// cross-version stuff is handled for you and backwards compatibility is a lot
 	// simpler.
-	virtual void	RecordCustomData( int iCallbackIndex, const void *pData, size_t iDataLength ) = 0; //record a chunk of custom data
+	virtual void	RecordCustomData( int iCallbackIndex, const void *pData, std::size_t iDataLength ) = 0; //record a chunk of custom data
 
 	// Notify the demo recorder that an entity is about to teleport, and
 	// stop it from being interpolated between its old and new positions.
@@ -102,7 +98,7 @@ public:
 };
 
 
-abstract_class IDemoPlayer
+class IDemoPlayer
 {
 public:
 	virtual ~IDemoPlayer() {};
@@ -152,5 +148,3 @@ public:
 extern IDemoPlayer *demoplayer;	// reference to current demo player
 extern IDemoRecorder *demorecorder; // reference to current demo recorder
 #endif
-
-#endif // DEMO_H

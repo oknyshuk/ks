@@ -1,13 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "mathlib/ssemath.h"
-#include "mathlib/ssequaternion.h"
-#include "mathlib/compressed_vector.h"
+import std;
+import ks.math;
 
 const fltx4 Four_PointFives={0.5,0.5,0.5,0.5};
 const fltx4 Four_Zeros={0.0,0.0,0.0,0.0};
@@ -25,11 +20,11 @@ const fltx4 Four_2ToThe24s={ (float) (1<<24), (float) (1<<24), (float) (1<<24), 
 const fltx4 Four_Thirds={ 0.33333333, 0.33333333, 0.33333333, 0.33333333 };
 const fltx4 Four_TwoThirds={ 0.66666666, 0.66666666, 0.66666666, 0.66666666 };
 const fltx4 Four_Point225s={ .225, .225, .225, .225 };
-const fltx4 Four_Epsilons={FLT_EPSILON,FLT_EPSILON,FLT_EPSILON,FLT_EPSILON};
+const fltx4 Four_Epsilons={std::numeric_limits<float>::epsilon(),std::numeric_limits<float>::epsilon(),std::numeric_limits<float>::epsilon(),std::numeric_limits<float>::epsilon()};
 const fltx4 Four_DegToRad= { ((float)(M_PI_F / 180.f)), ((float)(M_PI_F / 180.f)), ((float)(M_PI_F / 180.f)), ((float)(M_PI_F / 180.f))};
 
-const fltx4 Four_FLT_MAX={FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
-const fltx4 Four_Negative_FLT_MAX={-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX};
+const fltx4 Four_FLT_MAX={std::numeric_limits<float>::max(),std::numeric_limits<float>::max(),std::numeric_limits<float>::max(),std::numeric_limits<float>::max()};
+const fltx4 Four_Negative_FLT_MAX={-std::numeric_limits<float>::max(),-std::numeric_limits<float>::max(),-std::numeric_limits<float>::max(),-std::numeric_limits<float>::max()};
 const fltx4 g_SIMD_0123 = { 0., 1., 2., 3. };
 
 const fltx4 Four_LinearToGammaCoefficients_A = { -3.7295, -3.7295, -3.7295, -3.7295 };
@@ -52,15 +47,15 @@ const fltx4 g_QuatMultRowSign[4] =
 };
 
 
-const int32 ALIGN16 g_SIMD_clear_signmask[4] ALIGN16_POST = { (int)0x7fffffff, (int)0x7fffffff, (int)0x7fffffff, (int)0x7fffffff };
-const int32 ALIGN16 g_SIMD_signmask[4] ALIGN16_POST = { (int)0x80000000, (int)0x80000000, (int)0x80000000, (int)0x80000000 };
-const int32 ALIGN16 g_SIMD_lsbmask[4] ALIGN16_POST = { (int)0xfffffffe, (int)0xfffffffe, (int)0xfffffffe, (int)0xfffffffe };
-const int32 ALIGN16 g_SIMD_clear_wmask[4] ALIGN16_POST = { (int)0xffffffff, (int)0xffffffff, (int)0xffffffff, 0 };
-const int32 ALIGN16 g_SIMD_AllOnesMask[4] ALIGN16_POST = { (int)0xffffffff, (int)0xffffffff, (int)0xffffffff, (int)0xffffffff }; // ~0,~0,~0,~0
-const int32 ALIGN16 g_SIMD_Low16BitsMask[4] ALIGN16_POST = { 0xffff, 0xffff, 0xffff, 0xffff }; // 0xffff x 4
+const int32 g_SIMD_clear_signmask[4] [[gnu::aligned(16)]] = { (int)0x7fffffff, (int)0x7fffffff, (int)0x7fffffff, (int)0x7fffffff };
+const int32 g_SIMD_signmask[4] [[gnu::aligned(16)]] = { (int)0x80000000, (int)0x80000000, (int)0x80000000, (int)0x80000000 };
+const int32 g_SIMD_lsbmask[4] [[gnu::aligned(16)]] = { (int)0xfffffffe, (int)0xfffffffe, (int)0xfffffffe, (int)0xfffffffe };
+const int32 g_SIMD_clear_wmask[4] [[gnu::aligned(16)]] = { (int)0xffffffff, (int)0xffffffff, (int)0xffffffff, 0 };
+const int32 g_SIMD_AllOnesMask[4] [[gnu::aligned(16)]] = { (int)0xffffffff, (int)0xffffffff, (int)0xffffffff, (int)0xffffffff }; // ~0,~0,~0,~0
+const int32 g_SIMD_Low16BitsMask[4] [[gnu::aligned(16)]] = { 0xffff, 0xffff, 0xffff, 0xffff }; // 0xffff x 4
 
 
-const int32 ALIGN16 g_SIMD_ComponentMask[4][4] ALIGN16_POST =
+const int32 g_SIMD_ComponentMask[4][4] [[gnu::aligned(16)]] =
 {
 	{ (int)0xFFFFFFFF, 0, 0, 0 }, { 0, (int)0xFFFFFFFF, 0, 0 }, { 0, 0, (int)0xFFFFFFFF, 0 }, { 0, 0, 0, (int)0xFFFFFFFF }
 };
@@ -70,7 +65,7 @@ const fltx4 g_SIMD_Identity[4] =
 	{ 1.0, 0, 0, 0 }, { 0, 1.0, 0, 0 }, { 0, 0, 1.0, 0 }, { 0, 0, 0, 1.0 }
 };
 
-const int32 ALIGN16 g_SIMD_SkipTailMask[4][4] ALIGN16_POST =
+const int32 g_SIMD_SkipTailMask[4][4] [[gnu::aligned(16)]] =
 {
 	{ (int)0xffffffff, (int)0xffffffff, (int)0xffffffff, (int)0xffffffff },
 	{ (int)0xffffffff, 0x00000000, 0x00000000, 0x00000000 },
@@ -78,7 +73,7 @@ const int32 ALIGN16 g_SIMD_SkipTailMask[4][4] ALIGN16_POST =
 	{ (int)0xffffffff, (int)0xffffffff, (int)0xffffffff, 0x00000000 },
 };
 
-const int32 ALIGN16 g_SIMD_EveryOtherMask[4] = { 0, ~0, 0, ~0 };
+const int32 g_SIMD_EveryOtherMask[4] = { 0, ~0, 0, ~0 };
 
 
 
@@ -110,9 +105,9 @@ const int32 ALIGN16 g_SIMD_EveryOtherMask[4] = { 0, ~0, 0, ~0 };
 /// You can use this to rotate a long array of FourVectors all by the same
 /// matrix. The first parameter is the head of the array. The second is the
 /// number of vectors to rotate. The third is the matrix.
-void FourVectors::RotateManyBy(FourVectors * RESTRICT pVectors, unsigned int numVectors, const matrix3x4_t& rotationMatrix )
+void FourVectors::RotateManyBy(FourVectors * __restrict__ pVectors, unsigned int numVectors, const matrix3x4_t& rotationMatrix )
 {
-	Assert(numVectors > 0);
+	contract_assert( numVectors > 0 );
 	if ( numVectors == 0 )
 		return;
 
@@ -183,7 +178,7 @@ void FourVectors::CalcClosestPointOnLineSIMD( const FourVectors &P, const FourVe
 
 fltx4 FourVectors::CalcClosestPointToLineTSIMD( const FourVectors &P, const FourVectors &vLineA, const FourVectors &vLineB, FourVectors &vDir )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	vDir = vLineB;
 	vDir -= vLineA;
 
@@ -199,9 +194,9 @@ fltx4 FourVectors::CalcClosestPointToLineTSIMD( const FourVectors &P, const Four
 	return result;
 }
 
-void FourVectors::RotateManyBy(FourVectors * RESTRICT pVectors, unsigned int numVectors, const matrix3x4_t& rotationMatrix, FourVectors * RESTRICT pOut )
+void FourVectors::RotateManyBy(FourVectors * __restrict__ pVectors, unsigned int numVectors, const matrix3x4_t& rotationMatrix, FourVectors * __restrict__ pOut )
 {
-	Assert(numVectors > 0);
+	contract_assert( numVectors > 0 );
 	if ( numVectors == 0 )
 		return;
 
@@ -262,6 +257,3 @@ void FourVectors::RotateManyBy(FourVectors * RESTRICT pVectors, unsigned int num
 // here already loaded onto three fltx4 registers but not transposed. 
 // The points must be stored as 16-byte aligned. They are points
 // and not vectors because we assume the w-component to be 1. 
-
-
-

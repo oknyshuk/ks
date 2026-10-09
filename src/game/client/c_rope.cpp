@@ -1,11 +1,21 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
-#include <mutex>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_rope.h"
@@ -15,16 +25,9 @@
 #include "input.h"
 #include "rope_helpers.h"
 #include "engine/ivmodelinfo.h"
-#include "tier0/vprof.h"
 #include "c_te_effect_dispatch.h"
 #include "collisionutils.h"
-#include <keyvalues.h>
-#include <bitbuf.h>
-#include "tier1/vector_ops.h"
-#include <deque>
 #include "materialsystem/imaterialsystemhardwareconfig.h"
-#include "tier1/callqueue.h"
-#include "tier1/memstack.h"
 
 //int		g_sModelXmasBulb;	// holds the sprite index for splattered blood
 
@@ -46,8 +49,8 @@ void RecvProxy_RecomputeSprings( const CRecvProxyData *pData, void *pStruct, voi
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_RopeKeyframe, DT_RopeKeyframe, CRopeKeyframe )
 
-#define ROPE_IMPULSE_SCALE	20
-#define ROPE_IMPULSE_DECAY	0.95
+constexpr auto ROPE_IMPULSE_SCALE = 20;
+constexpr auto ROPE_IMPULSE_DECAY = 0.95;
 
 static ConVar rope_shake( "rope_shake", "0" );
 static ConVar rope_subdiv( "rope_subdiv", "2", FCVAR_MATERIAL_SYSTEM_THREAD, "Rope subdivision amount", true, 0, true, MAX_ROPE_SUBDIVS );
@@ -268,7 +271,7 @@ void CRopeManager::AddToRenderCache( C_RopeKeyframe *pRope )
 
 void CRopeManager::DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_t *pRenderCache, int nRenderCacheCount, const Vector &vCurrentViewForward, const Vector &vCurrentViewOrigin, C_RopeKeyframe::BuildRopeQueuedData_t *pBuildRopeQueuedData, std::recursive_mutex *pRopeDataMutex )
 {
-	VPROF_BUDGET( "CRopeManager::DrawRenderCache", VPROF_BUDGETGROUP_ROPES );
+	CVProfScope _( "CRopeManager::DrawRenderCache", 0, VPROF_BUDGETGROUP_ROPES, false, BUDGETFLAG_OTHER );
 	
 	std::recursive_mutex dummyMutex;
 	if( pRopeDataMutex == nullptr )
@@ -312,7 +315,7 @@ void CRopeManager::DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_
 			IMaterial *pMaterial = bShadowDepth ? g_pSplineCableShadowdepth : pRenderCache[iRenderCache].m_pSolidMaterial;
 
 			// Need to make sure that all rope materials use the splinerope shader since there are a lot of assumptions about how the shader interfaces with this code.
-			AssertOnce( V_stricmp( pMaterial->GetShaderName(), "splinerope" ) == 0 );
+			contract_assert( V_stricmp( pMaterial->GetShaderName(), "splinerope" ) == 0 );
 
 			pRenderContext->Bind( pMaterial );
 
@@ -646,7 +649,7 @@ void CRopeManager::DrawRenderCache( IMatRenderContext *pRenderContext, bool bSha
 		std::recursive_mutex *pRopeDataMutex = m_RopeQueuedRenderCaches.back().m_pRopeDataMutex;
 		m_RopeQueuedRenderCaches_Mutex.unlock();
 
-		Assert( ((void *)pVectorWrite == (void *)(((uint8 *)pMemory) + iMemoryNeeded)) && ((void *)pWriteRopeQueuedData == (void *)pVectorDataStart));		
+		contract_assert( ((void *)pVectorWrite == (void *)(((uint8 *)pMemory) + iMemoryNeeded)) && ((void *)pWriteRopeQueuedData == (void *)pVectorDataStart) );		
 		pCallQueue->QueueCall( this, &CRopeManager::DrawRenderCache_NonQueued, bShadowDepth, pRenderCachesStart, iRenderCacheCount, vForward, vOrigin, pBuildRopeQueuedDataStart, pRopeDataMutex );
 
 // 		if ( IsHolidayLightMode() )
@@ -731,7 +734,7 @@ DECLARE_CLIENT_EFFECT( ShakeRopes, ShakeRopesCallback )
 // ------------------------------------------------------------------------------------ //
 // C_RopeKeyframe::CPhysicsDelegate
 // ------------------------------------------------------------------------------------ //
-#define WIND_FORCE_FACTOR 10
+constexpr auto WIND_FORCE_FACTOR = 10;
 
 void C_RopeKeyframe::CPhysicsDelegate::GetNodeForces( CSimplePhysics::CNode *pNodes, int iNode, Vector *pAccel )
 {
@@ -755,7 +758,7 @@ void C_RopeKeyframe::CPhysicsDelegate::GetNodeForces( CSimplePhysics::CNode *pNo
 			if ( ( m_pKeyframe->m_flCurrentGustLifetime != 0.0f ) && ( m_pKeyframe->m_flCurrentGustTimer < m_pKeyframe->m_flCurrentGustLifetime ) )
 			{
 				float div = m_pKeyframe->m_flCurrentGustTimer / m_pKeyframe->m_flCurrentGustLifetime;
-				float scale = 1 - cos( div * M_PI );
+				float scale = 1 - std::cos( div * std::numbers::pi );
 
 				*pAccel += m_pKeyframe->m_vWindDir * scale;
 			}
@@ -810,7 +813,7 @@ void LockNodeDirection(
 
 void C_RopeKeyframe::CPhysicsDelegate::ApplyConstraints( CSimplePhysics::CNode *pNodes, int nNodes )
 {
-	VPROF( "CPhysicsDelegate::ApplyConstraints" );
+	CVProfScope _( "CPhysicsDelegate::ApplyConstraints", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Collide with the world.
 	if( ((m_pKeyframe->m_RopeFlags & ROPE_COLLIDE) && 
@@ -1158,16 +1161,16 @@ void C_RopeKeyframe::OnDataChanged( DataUpdateType_t updateType )
 	const model_t *pModel = modelinfo->GetModel( m_iRopeMaterialModelIndex );
 	if ( pModel )
 	{
-		Q_strncpy( str, modelinfo->GetModelName( pModel ), sizeof( str ) );
+		V_strncpy( str, modelinfo->GetModelName( pModel ), sizeof( str ) );
 
 		// Get rid of the extension because the material system doesn't want it.
-		char *pExt = Q_stristr( str, ".vmt" );
+		char *pExt = V_stristr( str, ".vmt" );
 		if ( pExt )
 			pExt[0] = 0;
 	}
 	else
 	{
-		Q_strncpy( str, "missing_rope_material", sizeof( str ) );
+		V_strncpy( str, "missing_rope_material", sizeof( str ) );
 	}
 	
 	FinishInit( str );
@@ -1314,7 +1317,7 @@ void C_RopeKeyframe::ClientThink()
 
 int C_RopeKeyframe::DrawModel( int flags, const RenderableInstance_t &instance )
 {
-	VPROF_BUDGET( "C_RopeKeyframe::DrawModel", VPROF_BUDGETGROUP_ROPES );
+	CVProfScope _( "C_RopeKeyframe::DrawModel", 0, VPROF_BUDGETGROUP_ROPES, false, BUDGETFLAG_OTHER );
 	if( !InitRopePhysics() )
 		return 0;
 
@@ -1412,7 +1415,7 @@ bool C_RopeKeyframe::GetAttachment( int number, Vector &origin )
 
 bool C_RopeKeyframe::GetAttachmentVelocity( int number, Vector &originVel, Quaternion &angleVel )
 {
-	Assert(0);
+	contract_assert( 0 );
 	return false;
 }
 
@@ -1522,7 +1525,7 @@ bool C_RopeKeyframe::DetectRestingState( bool &bApplyWind )
 	if ( m_RopeFlags & ROPE_USE_WIND )
 	{
 		// Don't apply wind if more than half of the nodes are touching something.
-		float flDist1 = FLT_MAX;
+		float flDist1 = std::numeric_limits<float>::max();
 		FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 		{
 			// ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
@@ -1568,10 +1571,10 @@ void Catmull_Rom_Spline_Matrix( const Vector &p1, const Vector &p2, const Vector
 // evaluate one point on the spline, t is a vector of (t, t^2, t^3)
 inline void Catmull_Rom_Eval( const catmull_t &spline, const Vector &t, Vector &output )
 {
-	Assert(spline.c.IsValid());
-	Assert(spline.t.IsValid());
-	Assert(spline.t2.IsValid());
-	Assert(spline.t3.IsValid());
+	contract_assert( spline.c.IsValid() );
+	contract_assert( spline.t.IsValid() );
+	contract_assert( spline.t2.IsValid() );
+	contract_assert( spline.t3.IsValid() );
 	output = spline.c + (t.x * spline.t) + (t.y*spline.t2) + (t.z * spline.t3);
 }
 
@@ -1655,7 +1658,7 @@ bool C_RopeKeyframe::InitRopePhysics()
 
 bool C_RopeKeyframe::CalculateEndPointAttachment( C_BaseEntity *pEnt, int iAttachment, Vector &vPos, QAngle *pAngles )
 {
-	VPROF_BUDGET( "C_RopeKeyframe::CalculateEndPointAttachment", VPROF_BUDGETGROUP_ROPES );
+	CVProfScope _( "C_RopeKeyframe::CalculateEndPointAttachment", 0, VPROF_BUDGETGROUP_ROPES, false, BUDGETFLAG_OTHER );
 
 	if( !pEnt )
 		return false;
@@ -1709,7 +1712,7 @@ bool C_RopeKeyframe::GetEndPointPos( int iPt, Vector &vPos )
 		m_bEndPointAttachmentPositionsDirty = false;
 	}
 
-	Assert( iPt == 0 || iPt == 1 );
+	contract_assert( iPt == 0 || iPt == 1 );
 	vPos = m_vCachedEndPointAttachmentPos[iPt];
 	return true;
 }
@@ -1725,7 +1728,7 @@ bool C_RopeKeyframe::GetEndPointAttachment( int iPt, Vector &vPos, QAngle &angle
 		m_bEndPointAttachmentAnglesDirty = false;
 	}
 
-	Assert( iPt == 0 || iPt == 1 );
+	contract_assert( iPt == 0 || iPt == 1 );
 	vPos = m_vCachedEndPointAttachmentPos[iPt];
 	angle = m_vCachedEndPointAttachmentAngle[iPt];
 	return true;
@@ -1798,4 +1801,3 @@ void C_RopeKeyframe::ReceiveMessage( int classID, bf_read &msg )
 	m_vecImpulse.y   = msg.ReadFloat();
 	m_vecImpulse.z   = msg.ReadFloat();
 }
-

@@ -1,15 +1,13 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Helper methods + classes for file access
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
+// Purpose: Helper methods + classes for file access
+
+import ks.tier1;
 #include "tier2/fileutils.h"
-#include <algorithm>
+import std;
 #include "tier2/tier2.h"
-#include "tier1/strtools.h"
 #include "filesystem.h"
-#include "tier0/icommandline.h"
 
 //-----------------------------------------------------------------------------
 // Builds a directory which is a subdirectory of the current mod
@@ -17,23 +15,23 @@
 void GetModSubdirectory( const char *pSubDir, char *pBuf, int nBufLen )
 {
 	// Compute starting directory
-	Assert( g_pFullFileSystem->GetSearchPath( "MOD", false, nullptr, 0 ) < nBufLen );
+	contract_assert( g_pFullFileSystem->GetSearchPath( "MOD", false, nullptr, 0 ) < nBufLen );
 	g_pFullFileSystem->GetSearchPath( "MOD", false, pBuf, nBufLen );
-	char *pSemi = strchr( pBuf, ';' );
+	char *pSemi = std::strchr( pBuf, ';' );
 	if ( pSemi )
 	{
 		*pSemi = 0;
 	}
 
-	Q_StripTrailingSlash( pBuf );
+	V_StripTrailingSlash( pBuf );
 	if ( pSubDir )
 	{
-		int nLen = Q_strlen( pSubDir );
-		Q_strncat( pBuf, "\\", nBufLen, 1 );
-		Q_strncat( pBuf, pSubDir, nBufLen, nLen );
+		int nLen = V_strlen( pSubDir );
+		V_strncat( pBuf, "\\", nBufLen, 1 );
+		V_strncat( pBuf, pSubDir, nBufLen, nLen );
 	}
 
-	Q_FixSlashes( pBuf );
+	V_FixSlashes( pBuf );
 }
 
 
@@ -51,48 +49,48 @@ void GetModContentSubdirectory( const char *pSubDir, char *pBuf, int nBufLen )
 //-----------------------------------------------------------------------------
 // Generates a filename under the 'game' subdirectory given a subdirectory of 'content'
 //-----------------------------------------------------------------------------
-void ComputeModFilename( const char *pContentFileName, char *pBuf, size_t nBufLen )
+void ComputeModFilename( const char *pContentFileName, char *pBuf, std::size_t nBufLen )
 {
 	char pRelativePath[ MAX_PATH ];
 	if ( !g_pFullFileSystem->FullPathToRelativePathEx( pContentFileName, "CONTENT", pRelativePath, sizeof(pRelativePath) ) )
 	{
-		Q_strncpy( pBuf, pContentFileName, nBufLen );
+		V_strncpy( pBuf, pContentFileName, nBufLen );
 		return;
 	}
 
 	char pGameRoot[ MAX_PATH ];
 	g_pFullFileSystem->GetSearchPath( "GAME", false, pGameRoot, sizeof(pGameRoot) );
-	char *pSemi = strchr( pGameRoot, ';' );
+	char *pSemi = std::strchr( pGameRoot, ';' );
 	if ( pSemi )
 	{
 		*pSemi = 0;
 	}
 
-	Q_ComposeFileName( pGameRoot, pRelativePath, pBuf, nBufLen );
+	V_ComposeFileName( pGameRoot, pRelativePath, pBuf, nBufLen );
 }
 
 
 //-----------------------------------------------------------------------------
 // Generates a filename under the 'content' subdirectory given a subdirectory of 'game'
 //-----------------------------------------------------------------------------
-void ComputeModContentFilename( const char *pGameFileName, char *pBuf, size_t nBufLen )
+void ComputeModContentFilename( const char *pGameFileName, char *pBuf, std::size_t nBufLen )
 {
 	char pRelativePath[ MAX_PATH ];
 	if ( !g_pFullFileSystem->FullPathToRelativePathEx( pGameFileName, "GAME", pRelativePath, sizeof(pRelativePath) ) )
 	{
-		Q_strncpy( pBuf, pGameFileName, nBufLen );
+		V_strncpy( pBuf, pGameFileName, nBufLen );
 		return;
 	}
 
 	char pContentRoot[ MAX_PATH ];
 	g_pFullFileSystem->GetSearchPath( "CONTENT", false, pContentRoot, sizeof(pContentRoot) );
-	char *pSemi = strchr( pContentRoot, ';' );
+	char *pSemi = std::strchr( pContentRoot, ';' );
 	if ( pSemi )
 	{
 		*pSemi = 0;
 	}
 
-	Q_ComposeFileName( pContentRoot, pRelativePath, pBuf, nBufLen );
+	V_ComposeFileName( pContentRoot, pRelativePath, pBuf, nBufLen );
 }
 
 
@@ -101,11 +99,11 @@ void ComputeModContentFilename( const char *pGameFileName, char *pBuf, size_t nB
 //-----------------------------------------------------------------------------
 char *CreatePlatformFilename( const char *pSourceName, char *pTargetName, int targetLen )
 {
-	Q_StripExtension( pSourceName, pTargetName, targetLen );
-	int idx = Q_strlen( pTargetName );
+	V_StripExtension( pSourceName, pTargetName, targetLen );
+	int idx = V_strlen( pTargetName );
 
 	// restore extension
-	Q_snprintf( pTargetName, targetLen, "%s" PLATFORM_EXT "%s", pTargetName, &pSourceName[idx] );
+	V_snprintf( pTargetName, targetLen, "%s""%s", pTargetName, &pSourceName[idx] );
 
 	return pTargetName;
 }
@@ -174,12 +172,13 @@ int UpdateOrCreate( const char *pSourceName, char *pTargetName, int targetLen, c
 //-----------------------------------------------------------------------------
 void GetSearchPath( std::vector< std::string > &path, const char *pPathID )
 {
+	ks::ScratchArena<> scratch;
 	int nMaxLen = g_pFullFileSystem->GetSearchPath( pPathID, false, nullptr, 0 );
-	char *pBuf = (char*)stackalloc( nMaxLen );
+	char *pBuf = (char*)scratch.AllocBytes( nMaxLen );
 	g_pFullFileSystem->GetSearchPath( pPathID, false, pBuf, nMaxLen );
 
 	char *pSemi;
-	while ( nullptr != ( pSemi = strchr( pBuf, ';' ) ) )
+	while ( nullptr != ( pSemi = std::strchr( pBuf, ';' ) ) )
 	{
 		*pSemi = 0;
 		path.push_back( ks::nz( pBuf ) );
@@ -200,7 +199,7 @@ bool GenerateFullPath( const char *pFileName, char const *pPathID, char *pBuf, i
 	}
 
 	const char *pFullPath = g_pFullFileSystem->RelativePathToFullPath( pFileName, pPathID, pBuf, nBufLen );
-	if ( pFullPath && Q_IsAbsolutePath( pFullPath ) )
+	if ( pFullPath && V_IsAbsolutePath( pFullPath ) )
 		return true;
 
 	char pDir[ MAX_PATH ];
@@ -218,8 +217,8 @@ bool GenerateFullPath( const char *pFileName, char const *pPathID, char *pBuf, i
 void RecursiveFindFilesMatchingName( std::vector< std::string > *outFileList, const char* szStartDirectory, const char* szTargetFileName, const char *pathID )
 {
 	char searchString[MAX_PATH];
-	Q_snprintf( searchString, sizeof( searchString ), "%s/*.*", szStartDirectory );
-	Q_FixSlashes( searchString );
+	V_snprintf( searchString, sizeof( searchString ), "%s/*.*", szStartDirectory );
+	V_FixSlashes( searchString );
 	
 	FileFindHandle_t handle;
 	const char* curFile = g_pFullFileSystem->FindFirstEx( searchString, pathID, &handle );
@@ -228,14 +227,14 @@ void RecursiveFindFilesMatchingName( std::vector< std::string > *outFileList, co
 		if ( *curFile != '.' && g_pFullFileSystem->FindIsDirectory( handle ) )
 		{	
 			char newSearchPath[MAX_PATH];
-			Q_snprintf( newSearchPath, sizeof( newSearchPath ), "%s/%s", szStartDirectory, curFile );
+			V_snprintf( newSearchPath, sizeof( newSearchPath ), "%s/%s", szStartDirectory, curFile );
 			RecursiveFindFilesMatchingName( outFileList, newSearchPath, szTargetFileName, pathID );
 		}
 		else if ( V_StringMatchesPattern( curFile, szTargetFileName ) )
 		{
 			std::string outFile;
 			outFile = ks::format_printf( "%s/%s", szStartDirectory, curFile );
-			Q_FixSlashes( outFile.data() );
+			V_FixSlashes( outFile.data() );
 			outFileList->push_back( outFile );
 		}
 
@@ -251,9 +250,9 @@ void RecursiveFindFilesMatchingName( std::vector< std::string > *outFileList, co
 void AddFilesToList( std::vector< std::string > &list, const char *pDirectory, const char *pPathID, const char *pExtension )
 {
 	char pSearchString[MAX_PATH];
-	Q_snprintf( pSearchString, MAX_PATH, "%s\\*", pDirectory );
+	V_snprintf( pSearchString, MAX_PATH, "%s\\*", pDirectory );
 
-	bool bIsAbsolute = Q_IsAbsolutePath( pDirectory );
+	bool bIsAbsolute = V_IsAbsolutePath( pDirectory );
 
 	// get the list of files
 	FileFindHandle_t hFind;
@@ -264,11 +263,11 @@ void AddFilesToList( std::vector< std::string > &list, const char *pDirectory, c
 	for ( ; pFoundFile; pFoundFile = g_pFullFileSystem->FindNext( hFind ) )
 	{
 		char pChildPath[MAX_PATH];
-		Q_snprintf( pChildPath, MAX_PATH, "%s\\%s", pDirectory, pFoundFile );
+		V_snprintf( pChildPath, MAX_PATH, "%s\\%s", pDirectory, pFoundFile );
 
 		if ( g_pFullFileSystem->FindIsDirectory( hFind ) )
 		{
-			if ( Q_strnicmp( pFoundFile, ".", 2 ) && Q_strnicmp( pFoundFile, "..", 3 ) )
+			if ( V_strnicmp( pFoundFile, ".", 2 ) && V_strnicmp( pFoundFile, "..", 3 ) )
 			{
 				subDirs.push_back( pChildPath );
 			}
@@ -276,7 +275,7 @@ void AddFilesToList( std::vector< std::string > &list, const char *pDirectory, c
 		}
 
 		// Check the extension matches
-		if ( Q_stricmp( Q_GetFileExtension( pFoundFile ), pExtension ) )
+		if ( V_stricmp( V_GetFileExtension( pFoundFile ), pExtension ) )
 			continue;
 
 		char pFullPathBuf[MAX_PATH];
@@ -291,7 +290,7 @@ void AddFilesToList( std::vector< std::string > &list, const char *pDirectory, c
 		}
 
 		V_strlower( pFullPath );
-		Q_FixSlashes( pFullPath );
+		V_FixSlashes( pFullPath );
 		list.push_back( ks::nz( pFullPath ) );
 	}
 
@@ -306,10 +305,11 @@ void AddFilesToList( std::vector< std::string > &list, const char *pDirectory, c
 
 void CBaseFile::ReadLines( std::vector< std::string > &lineList, int nMaxLineLength )
 {
-	char *pLine = ( char * ) stackalloc( nMaxLineLength );
+	ks::ScratchArena<> scratch;
+	char *pLine = ( char * ) scratch.AllocBytes( nMaxLineLength );
 	while( ReadLine( pLine, nMaxLineLength ) )
 	{
-		char *pEOL = strchr( pLine, '\n' );					// kill the \n
+		char *pEOL = std::strchr( pLine, '\n' );					// kill the \n
 		if ( pEOL )
 			*pEOL = 0;
 		lineList.emplace_back( pLine );
@@ -329,15 +329,15 @@ std::vector< std::byte > CBaseFile::ReadFile()
 const char *COM_GetModDirectory()
 {
 	static char modDir[MAX_PATH];
-	if ( Q_strlen( modDir ) == 0 )
+	if ( V_strlen( modDir ) == 0 )
 	{
 		const char *gamedir = CommandLine()->ParmValue("-game", CommandLine()->ParmValue( "-defaultgamedir", "hl2" ) );
-		Q_strncpy( modDir, gamedir, sizeof(modDir) );
-		if ( strchr( modDir, '/' ) || strchr( modDir, '\\' ) )
+		V_strncpy( modDir, gamedir, sizeof(modDir) );
+		if ( std::strchr( modDir, '/' ) || std::strchr( modDir, '\\' ) )
 		{
-			Q_StripLastDir( modDir, sizeof(modDir) );
-			int dirlen = Q_strlen( modDir );
-			Q_strncpy( modDir, gamedir + dirlen, sizeof(modDir) - dirlen );
+			V_StripLastDir( modDir, sizeof(modDir) );
+			int dirlen = V_strlen( modDir );
+			V_strncpy( modDir, gamedir + dirlen, sizeof(modDir) - dirlen );
 		}
 	}
 

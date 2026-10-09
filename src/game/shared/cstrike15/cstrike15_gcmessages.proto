@@ -1,6 +1,5 @@
 // LWSS: Grabbed from retail November 17th 2020
 
-import "steammessages.proto";
 import "engine_gcmessages.proto";
 
 option optimize_for = SPEED;
@@ -44,8 +43,6 @@ enum ECsgoGCMsg {
 	k_EMsgGCCStrike15_v2_ClientVarValueNotificationInfo = 9144;
 	k_EMsgGCCStrike15_v2_MatchListRequestTournamentGames = 9146;
 	k_EMsgGCCStrike15_v2_MatchListRequestFullGameInfo = 9147;
-	k_EMsgGCCStrike15_v2_GiftsLeaderboardRequest = 9148;
-	k_EMsgGCCStrike15_v2_GiftsLeaderboardResponse = 9149;
 	k_EMsgGCCStrike15_v2_ServerVarValueNotificationInfo = 9150;
 	k_EMsgGCCStrike15_v2_ClientSubmitSurveyVote = 9152;
 	k_EMsgGCCStrike15_v2_Server2GCClientValidate = 9153;
@@ -70,8 +67,6 @@ enum ECsgoGCMsg {
 	k_EMsgGCCStrike15_v2_Client2GCStreamUnlock = 9174;
 	k_EMsgGCCStrike15_v2_FantasyRequestClientData = 9175;
 	k_EMsgGCCStrike15_v2_FantasyUpdateClientData = 9176;
-	k_EMsgGCCStrike15_v2_GCToClientSteamdatagramTicket = 9177;
-	k_EMsgGCCStrike15_v2_ClientToGCRequestTicket = 9178;
 	k_EMsgGCCStrike15_v2_ClientToGCRequestElevate = 9179;
 	k_EMsgGCCStrike15_v2_GlobalChat = 9180;
 	k_EMsgGCCStrike15_v2_GlobalChat_Subscribe = 9181;
@@ -99,12 +94,6 @@ enum ECsgoGCMsg {
 	k_EMsgGCCStrike15_v2_ClientReportValidation = 9205;
 	k_EMsgGCCStrike15_v2_GC2ClientRefuseSecureMode = 9206;
 	k_EMsgGCCStrike15_v2_GC2ClientRequestValidation = 9207;
-}
-
-enum ECsgoSteamUserStat {
-	k_ECsgoSteamUserStat_XpEarnedGames = 1;
-	k_ECsgoSteamUserStat_MatchWinsCompetitive = 2;
-	k_ECsgoSteamUserStat_SurvivedDangerZone = 3;
 }
 
 enum EClientReportingVersion {
@@ -260,12 +249,6 @@ message IpAddressMask {
 	optional uint32 token = 6;
 }
 
-message CMsgCsgoSteamUserStatChange {
-	optional int32 ecsgosteamuserstat = 1;
-	optional int32 delta = 2;
-	optional bool absolute = 3;
-}
-
 message XpProgressData {
 	optional uint32 xp_points = 1;
 	optional int32 xp_category = 2;
@@ -308,7 +291,6 @@ message PlayerQuestData {
 	optional uint32 mm_game_mode = 5;
 	repeated .MatchEndItemUpdates item_updates = 6;
 	optional bool operation_points_eligible = 7;
-	repeated .CMsgCsgoSteamUserStatChange userstatchanges = 8;
 }
 
 message CMsgGC_ServerQuestUpdateData {
@@ -449,8 +431,6 @@ message CMsgGCCStrike15_v2_MatchmakingServerReservationResponse {
 	optional uint32 reward_item_attr_reward_idx = 11;
 	optional uint32 reward_drop_list = 12;
 	optional string tournament_tag = 13;
-	optional uint32 legacy_steamdatagram_port = 14;
-	optional uint32 steamdatagram_routing = 17;
 	optional fixed32 test_token = 15;
 	optional uint32 flags = 16;
 }
@@ -901,22 +881,6 @@ message CMsgGCCStrike15_v2_ServerVarValueNotificationInfo {
 	optional uint32 type = 3;
 }
 
-message CMsgGCCStrike15_v2_GiftsLeaderboardRequest {
-}
-
-message CMsgGCCStrike15_v2_GiftsLeaderboardResponse {
-	message GiftLeaderboardEntry {
-		optional uint32 accountid = 1;
-		optional uint32 gifts = 2;
-	}
-
-	optional uint32 servertime = 1;
-	optional uint32 time_period_seconds = 2;
-	optional uint32 total_gifts_given = 3;
-	optional uint32 total_givers = 4;
-	repeated .CMsgGCCStrike15_v2_GiftsLeaderboardResponse.GiftLeaderboardEntry entries = 5;
-}
-
 message CMsgGCCStrike15_v2_ClientSubmitSurveyVote {
 	optional uint32 survey_id = 1;
 	optional uint32 vote = 2;
@@ -1094,17 +1058,6 @@ message CMsgGCCStrike15_v2_Account_RequestCoPlays {
 
 	repeated .CMsgGCCStrike15_v2_Account_RequestCoPlays.Player players = 1;
 	optional uint32 servertime = 2;
-}
-
-message CMsgGCCStrike15_v2_ClientToGCRequestTicket {
-	optional fixed64 authorized_steam_id = 1;
-	optional fixed32 authorized_public_ip = 2;
-	optional fixed64 gameserver_steam_id = 3;
-	optional string gameserver_sdr_routing = 5;
-}
-
-message CMsgGCToClientSteamDatagramTicket {
-	optional bytes serialized_ticket = 16;
 }
 
 message CMsgGCCStrike15_v2_ClientRequestOffers {

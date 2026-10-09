@@ -1,18 +1,12 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include "tier1/commandbuffer.h"
-#include "tier1/text_reader.h"
-#include "tier1/strtools.h"
+import ks.tier1;
+import std;
+import ks.tier1;
 
-#define	MAX_ALIAS_NAME	32
-#define MAX_COMMAND_LENGTH 1024
+constexpr auto MAX_ALIAS_NAME = 32;
+constexpr auto MAX_COMMAND_LENGTH = 1024;
 
 struct cmdalias_t
 {
@@ -46,7 +40,7 @@ CCommandBuffer::~CCommandBuffer()
 //-----------------------------------------------------------------------------
 void CCommandBuffer::SetWaitDelayTime( int nTickDelay )
 {
-	Assert( nTickDelay >= 0 );
+	contract_assert( nTickDelay >= 0 );
 	m_nWaitDelayTicks = nTickDelay;
 }
 
@@ -84,7 +78,7 @@ bool CCommandBuffer::ParseArgV0( ks::text_reader &buf, char *pArgV0, int nMaxLen
 	if ( nMaxLen > 0 )
 	{
 		const int nCopy = std::min( nSize, nMaxLen - 1 );
-		memcpy( pArgV0, token->data(), nCopy );
+		std::memcpy( pArgV0, token->data(), nCopy );
 		pArgV0[nCopy] = 0;
 	}
 	if ( ( nSize <= 0 ) || ( nMaxLen <= nSize ) )
@@ -139,7 +133,7 @@ bool CCommandBuffer::InsertCommand( const char *pArgS, int nCommandSize, int nTi
 			return false;
 	}
 	
-	memcpy( &m_pArgSBuffer[m_nArgSBufferSize], pArgS, nCommandSize );
+	std::memcpy( &m_pArgSBuffer[m_nArgSBufferSize], pArgS, nCommandSize );
 	m_pArgSBuffer[m_nArgSBufferSize + nCommandSize] = 0;
 	++nCommandSize;
 
@@ -214,9 +208,10 @@ void CCommandBuffer::GetNextCommandLength( const char *pText, int nMaxLen, int *
 //-----------------------------------------------------------------------------
 bool CCommandBuffer::AddText( const char *pText, cmd_source_t cmdSource, int nTickDelay )
 {
-	Assert( nTickDelay >= 0 );
+	ks::ScratchArena<> scratch;
+	contract_assert( nTickDelay >= 0 );
 
-	int	nLen = Q_strlen( pText );
+	int	nLen = V_strlen( pText );
 	int nTick = m_nCurrentTick + nTickDelay;
 
 	// Parse the text into distinct commands
@@ -231,16 +226,16 @@ bool CCommandBuffer::AddText( const char *pText, cmd_source_t cmdSource, int nTi
 			continue;
 
 		const char *pArgS;
-		char *pArgV0 = (char*)stackalloc( nCommandLength+1 );
+		char *pArgV0 = (char*)scratch.AllocBytes( nCommandLength+1 );
 		ks::text_reader bufParse( pCurrentCommand, nCommandLength );
 		ParseArgV0( bufParse, pArgV0, nCommandLength+1, &pArgS );
 		if ( pArgV0[0] == 0 )
 			continue;
 
 		// Deal with the special 'wait' command
-		if ( !Q_stricmp( pArgV0, "wait" ) && IsWaitEnabled() )
+		if ( !V_stricmp( pArgV0, "wait" ) && IsWaitEnabled() )
 		{
-			int nDelay = pArgS ? atoi( pArgS ) : m_nWaitDelayTicks;
+			int nDelay = pArgS ? std::atoi( pArgS ) : m_nWaitDelayTicks;
 			nTick += nDelay;
 			continue;
 		}
@@ -285,7 +280,7 @@ void CCommandBuffer::BeginProcessingCommands( int nDeltaTicks )
 	if ( nDeltaTicks == 0 )
 		return;
 
-	Assert( !m_bIsProcessingCommands );
+	contract_assert( !m_bIsProcessingCommands );
 	m_bIsProcessingCommands = true;
 	m_nLastTickToProcess = m_nCurrentTick + nDeltaTicks - 1;
 
@@ -301,7 +296,7 @@ bool CCommandBuffer::DequeueNextCommand( CCommand* pCommand )
 {
 	pCommand->Reset();
 
-	Assert( m_bIsProcessingCommands );
+	contract_assert( m_bIsProcessingCommands );
 	if ( m_Commands.empty() )
 		return false;
 
@@ -349,7 +344,7 @@ void CCommandBuffer::Compact()
 	char pTempBuffer[ ARGS_BUFFER_LENGTH ];
 	for ( Command_t &command : m_Commands )
 	{
-		memcpy( &pTempBuffer[m_nArgSBufferSize], &m_pArgSBuffer[command.m_nFirstArgS], command.m_nBufferSize );
+		std::memcpy( &pTempBuffer[m_nArgSBufferSize], &m_pArgSBuffer[command.m_nFirstArgS], command.m_nBufferSize );
 		command.m_nFirstArgS = m_nArgSBufferSize;
 		m_nArgSBufferSize += command.m_nBufferSize;
 	}
@@ -357,7 +352,7 @@ void CCommandBuffer::Compact()
 	// NOTE: We could also store 2 buffers in the command buffer and switch
 	// between the two to avoid the 2nd memcpy; but again I'm guessing the memory
 	// tradeoff isn't worth it
-	memcpy( m_pArgSBuffer, pTempBuffer, m_nArgSBufferSize );
+	std::memcpy( m_pArgSBuffer, pTempBuffer, m_nArgSBufferSize );
 }
 
 
@@ -366,7 +361,7 @@ void CCommandBuffer::Compact()
 //-----------------------------------------------------------------------------
 void CCommandBuffer::EndProcessingCommands()
 {
-	Assert( m_bIsProcessingCommands );
+	contract_assert( m_bIsProcessingCommands );
 	m_bIsProcessingCommands = false;
 	m_nCurrentTick = m_nLastTickToProcess + 1;
 	m_itNextCommand = m_Commands.end();
@@ -385,7 +380,7 @@ void CCommandBuffer::EndProcessingCommands()
 		if ( command.m_nTick >= m_nCurrentTick )
 			break;
 
-		AssertMsgOnce( false, "CCommandBuffer::EndProcessingCommands() called before all appropriate commands were dequeued.\n" );
+		contract_assert( false && "CCommandBuffer::EndProcessingCommands() called before all appropriate commands were dequeued.\n" );
 		Msg( "Warning: Skipping command %s\n", &m_pArgSBuffer[ command.m_nFirstArgS ] );
 		m_Commands.pop_front();
 	}
@@ -399,10 +394,7 @@ void CCommandBuffer::EndProcessingCommands()
 //-----------------------------------------------------------------------------
 CommandHandle_t CCommandBuffer::GetNextCommandHandle()
 {
-	Assert( m_bIsProcessingCommands );
+	contract_assert( m_bIsProcessingCommands );
 	// Identity of the head command; stable while it stays queued
 	return m_Commands.empty() ? COMMAND_BUFFER_INVALID_COMMAND_HANDLE : (CommandHandle_t)&m_Commands.front();
 }
-
-
-

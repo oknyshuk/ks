@@ -1,17 +1,44 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "basetempentity.h"
 #include "event_tempentity_tester.h"
-#include "tier1/strtools.h"
 
-#define TEMPENT_TEST_GAP		1.0f
+constexpr auto TEMPENT_TEST_GAP = 1.0f;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -26,7 +53,7 @@ CBaseEntity *CTempEntTester::Create( const Vector &vecOrigin, const QAngle &vecA
 	char classname[ 128 ];
 	if ( lifetime && lifetime[0] )
 	{
-		life = atoi( lifetime );
+		life = std::atoi( lifetime );
 		life = std::max<std::common_type_t<double, float>>( 1.0, life );
 		life = std::min<std::common_type_t<double, float>>( 1000.0, life );
 
@@ -40,7 +67,7 @@ CBaseEntity *CTempEntTester::Create( const Vector &vecOrigin, const QAngle &vecA
 
 	if ( single_te && single_te[0] )
 	{
-		Q_strncpy( classname, single_te ,sizeof(classname));
+		V_strncpy( classname, single_te ,sizeof(classname));
 		strlwr( classname );
 	}
 	else
@@ -55,7 +82,7 @@ CBaseEntity *CTempEntTester::Create( const Vector &vecOrigin, const QAngle &vecA
 		return nullptr;
 	}
 
-	Q_strncpy( p->m_szClass, classname ,sizeof(p->m_szClass));
+	V_strncpy( p->m_szClass, classname ,sizeof(p->m_szClass));
 	p->m_fLifeTime = life;
 
 	p->Spawn();
@@ -77,9 +104,9 @@ void CTempEntTester::Spawn( void )
 	while ( m_pCurrent )
 	{
 		char name[ 128 ];
-		Q_strncpy( name, m_pCurrent->GetName() ,sizeof(name));
+		V_strncpy( name, m_pCurrent->GetName() ,sizeof(name));
 		strlwr( name );
-		if ( strstr( name, m_szClass ) )
+		if ( std::strstr( name, m_szClass ) )
 		{
 			break;
 		}

@@ -1,14 +1,9 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =====//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DEFORMATIONS_H
-#define DEFORMATIONS_H
-
-
-#include "tier0/platform.h"
+import std;
+import ks.math;
 
 // nonlinear transformations which may be applied to model vertices when rendering. must be powers of two
 enum DeformationType_t	
@@ -36,7 +31,7 @@ struct BoxDeformation_t : DeformationBase_t
 	Vector m_ClampMaxes;
 	float m_flPad3;
 
-	FORCEINLINE BoxDeformation_t( void )
+	[[gnu::always_inline]] inline BoxDeformation_t( void )
 	{
 		m_eType = DEFORMATION_CLAMP_TO_BOX_IN_WORLDSPACE;
 		// invalid cube
@@ -44,12 +39,8 @@ struct BoxDeformation_t : DeformationBase_t
 		m_SourceMaxes.Init( -1, -1, -1 );
 
 		// no clamp
-		m_ClampMins.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
-		m_ClampMaxes.Init( FLT_MAX, FLT_MAX, FLT_MAX );
+		m_ClampMins.Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
+		m_ClampMaxes.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
 	}
 
 };
-
-
-
-#endif

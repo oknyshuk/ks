@@ -1,18 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ICLIENTALPHAPROPERTY_H
-#define ICLIENTALPHAPROPERTY_H
-
-#include "interface.h"
+import std;
+import ks.tier1;
 #include "iclientunknown.h"
-#include "appframework/iappsystem.h"
 #include "const.h"
-
 
 enum ClientAlphaDistanceFadeMode_t
 {
@@ -29,7 +22,7 @@ enum ClientAlphaDistanceFadeMode_t
 // Instead, these are managed completely by the client DLL.
 // Use the IClientTranslucency manager to allocate + free IClientTranslucency objects
 //-----------------------------------------------------------------------------
-abstract_class IClientAlphaProperty
+class IClientAlphaProperty
 {
 public:
 	// Gets at the containing class...
@@ -42,7 +35,7 @@ public:
 	// NOTE: kRenderFxFadeSlow, kRenderFxFadeFast, kRenderFxSolidSlow, kRenderFxSolidFast all need a start time only.
 	// kRenderFxFadeIn/kRenderFxFadeOut needs start time + duration
 	// All other render fx require no parameters
-	virtual void SetRenderFX( RenderFx_t nRenderFx, RenderMode_t nRenderMode, float flStartTime = FLT_MAX, float flDuration = 0.0f ) = 0;
+	virtual void SetRenderFX( RenderFx_t nRenderFx, RenderMode_t nRenderMode, float flStartTime = std::numeric_limits<float>::max(), float flDuration = 0.0f ) = 0;
 
 	// Sets fade parameters
 	virtual void SetFade( float flGlobalFadeScale, float flDistFadeStart, float flDistFadeEnd ) = 0;	
@@ -68,9 +61,9 @@ public:
 //-----------------------------------------------------------------------------
 // Manager used to deal with client translucency
 //-----------------------------------------------------------------------------
-#define CLIENT_ALPHA_PROPERTY_MGR_INTERFACE_VERSION "ClientAlphaPropertyMgrV001"
+inline constexpr const char *CLIENT_ALPHA_PROPERTY_MGR_INTERFACE_VERSION = "ClientAlphaPropertyMgrV001";
 
-abstract_class IClientAlphaPropertyMgr
+class IClientAlphaPropertyMgr
 {
 public:
 	// Class factory
@@ -79,6 +72,3 @@ public:
 };
 
 extern IClientAlphaPropertyMgr *g_pClientAlphaPropertyMgr;
-
-
-#endif // ICLIENTALPHAPROPERTY_H

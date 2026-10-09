@@ -1,13 +1,15 @@
-//====== Copyright 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "audio_pch.h"
-#include "tier0/platform.h"
+import std;
+
+
+
+import ks.tier1;
+
+
+#include "audio/private/posix_stubs.h"
 #include "MPAFile.h"		// also includes vbrheader.h
-#include "tier0/dbg.h"
 
 
 #ifndef MAKEFOURCC
@@ -28,7 +30,7 @@ uint32 CVBRHeader::m_dwXINGOffsets[2][2] =
 // first test with this static method, if it does exist
 bool CVBRHeader::IsVBRHeaderAvailable( CMPAFile* pMPAFile, VBRHeaderType& HeaderType, uint32& dwOffset )
 {
-	Assert(pMPAFile);
+	contract_assert( pMPAFile );
 	
 	// where does VBR header begin (XING)
 	uint32 dwNewOffset = dwOffset + m_dwXINGOffsets[pMPAFile->m_pMPAHeader->IsLSF()][pMPAFile->m_pMPAHeader->IsMono()];
@@ -302,4 +304,3 @@ uint32 CVBRHeader::SeekPointByTimeVBRI(float fEntryTimeMS) const
 
 	return dwSeekPoint;
 }
-

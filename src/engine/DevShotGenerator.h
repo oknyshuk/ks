@@ -1,14 +1,10 @@
-//====== Copyright (c) 1996-2003, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2003 Valve Corporation
 
-#ifndef DEVSHOTGENERATOR_H
-#define DEVSHOTGENERATOR_H
-
+import ks.tier1;
 #include "filesystem.h"
-#include "utlvector.h"
+import std;
 #include "MapReslistGenerator.h"
 
 // initialization
@@ -49,6 +45,3 @@ private:
 
 // singleton accessor
 CDevShotGenerator &DevShotGenerator();
-
-
-#endif // DEVSHOTGENERATOR_H

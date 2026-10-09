@@ -1,11 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
 
 #include "stringregistry.h"
 #include "ai_namespaces.h"
@@ -39,14 +36,13 @@ void CAI_GlobalNamespace::Clear()
 
 void CAI_GlobalNamespace::AddSymbol( const char *pszSymbol, int symbolID )
 {
-	MEM_ALLOC_CREDIT();
-	AssertMsg( symbolID != -1, "Invalid symbol id passed to CAI_GlobalNamespace::AddSymbol()" );
+	contract_assert( ( symbolID != -1 ) && "Invalid symbol id passed to CAI_GlobalNamespace::AddSymbol()" );
 	if (symbolID == -1 )
 		return;
 
-	AssertMsg( AI_IdIsGlobal( symbolID ), ("Local symbol ID passed to CAI_GlobalNamespace::AddSymbol()") );
-	AssertMsg( !IdToSymbol( symbolID ) , ("Duplicate symbol ID passed to CAI_GlobalNamespace::AddSymbol()") );
-	AssertMsg( SymbolToId( pszSymbol ) == -1, ("Duplicate symbol passed to CAI_GlobalNamespace::AddSymbol()") );
+	contract_assert( AI_IdIsGlobal( symbolID ) );
+	contract_assert( !IdToSymbol( symbolID ) );
+	contract_assert( SymbolToId( pszSymbol ) == -1 );
 
 	m_pSymbols->AddString( pszSymbol, symbolID );
 
@@ -58,7 +54,7 @@ void CAI_GlobalNamespace::AddSymbol( const char *pszSymbol, int symbolID )
 
 const char *CAI_GlobalNamespace::IdToSymbol( int symbolID ) const
 {
-	AssertMsg( AI_IdIsGlobal( symbolID ), ("Local symbol ID passed to CAI_GlobalNamespace::IdToSymbol()") );
+	contract_assert( AI_IdIsGlobal( symbolID ) );
 	if ( symbolID == -1 )
 		return "<<null>>";
 	return (const_cast<CStringRegistry *>(m_pSymbols))->GetStringText( symbolID );
@@ -118,7 +114,7 @@ bool CAI_LocalIdSpace::Init( CAI_GlobalNamespace *pGlobalNamespace, CAI_LocalIdS
 
 bool CAI_LocalIdSpace::AddSymbol( const char *pszSymbol, int localId, const char *pszDebugSymbolType, const char *pszDebugOwner )
 {
-	AssertMsg( AI_IdIsLocal( localId ), ("Global symbol ID passed to CAI_LocalIdSpace::AddSymbol()") );
+	contract_assert( AI_IdIsLocal( localId ) );
 	
 	if ( !m_pGlobalNamespace )
 	{
@@ -137,8 +133,8 @@ bool CAI_LocalIdSpace::AddSymbol( const char *pszSymbol, int localId, const char
 		return false;
 	}
 
-	AssertMsg3( LocalToGlobal( localId ) == -1 || !m_pGlobalNamespace->IdToSymbol( LocalToGlobal( localId ) ) , "Duplicate symbol ID passed to CAI_LocalIdSpace::AddSymbol(): %s (%d), had %s", pszSymbol, localId, m_pGlobalNamespace->IdToSymbol( LocalToGlobal( localId ) ) );
-	AssertMsg( m_pGlobalNamespace->SymbolToId( pszSymbol ) == -1, "Duplicate symbol passed to CAI_LocalIdSpace::AddSymbol()" );
+	contract_assert( ( LocalToGlobal( localId ) == -1 || !m_pGlobalNamespace->IdToSymbol( LocalToGlobal( localId ) ) ) && "Duplicate symbol ID passed to CAI_LocalIdSpace::AddSymbol(): %s (%d), had %s" );
+	contract_assert( ( m_pGlobalNamespace->SymbolToId( pszSymbol ) == -1 ) && "Duplicate symbol passed to CAI_LocalIdSpace::AddSymbol()" );
 
 	if ( m_localTop != -1 )
 	{
@@ -162,7 +158,7 @@ bool CAI_LocalIdSpace::AddSymbol( const char *pszSymbol, int localId, const char
 
 bool CAI_LocalIdSpace::SetLocalBase( int newBase )
 {
-	AssertMsg( AI_IdIsLocal( newBase ), ("Global symbol ID passed to CAI_LocalIdSpace::SetLocalBase()") );
+	contract_assert( AI_IdIsLocal( newBase ) );
 
 	if (m_localBase == MAX_STRING_INDEX)
 	{
@@ -181,7 +177,7 @@ int CAI_LocalIdSpace::GlobalToLocal( int globalID ) const
 	if ( globalID == -1 )
 		return -1;
 
-	AssertMsg( AI_IdIsGlobal( globalID ), ("Local symbol ID passed to CAI_LocalIdSpace::GlobalToLocal()") );
+	contract_assert( AI_IdIsGlobal( globalID ) );
 
 	const CAI_LocalIdSpace *pCurrentMap = this;
 	
@@ -203,7 +199,7 @@ int CAI_LocalIdSpace::LocalToGlobal( int localID ) const
 	if ( localID == -1 )
 		return -1;
 
-	AssertMsg( AI_IdIsLocal( localID ), ("Global symbol ID passed to CAI_LocalIdSpace::LocalToGlobal()") );
+	contract_assert( AI_IdIsLocal( localID ) );
 
 	const CAI_LocalIdSpace *pCurrentMap = this;
 	

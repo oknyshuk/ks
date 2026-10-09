@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef DT_RECV_DECODER_H
-#define DT_RECV_DECODER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "dt.h"
-#include <string>
-
+import std;
 
 class CDTIRecvTable;
 class RecvProp;
@@ -164,6 +157,3 @@ inline const RecvProp* CRecvDecoder::GetDatatableProp( int i ) const
 {
 	return m_DatatableProps[i]; 
 }
-
-
-#endif // DT_RECV_DECODER_H

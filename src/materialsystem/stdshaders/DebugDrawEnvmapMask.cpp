@@ -1,8 +1,5 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "debugdrawenvmapmask_vs20.inc"
@@ -11,7 +8,7 @@
 
 BEGIN_VS_SHADER_FLAGS( DebugDrawEnvmapMask, "Help for DebugDrawEnvmapMask", SHADER_NOT_EDITABLE )
 			  
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( SHOWALPHA, SHADER_PARAM_TYPE_INTEGER, "0", "" )
 	END_SHADER_PARAMS
 

@@ -1,35 +1,49 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include <set>
-#include <vector>
-#include <algorithm>
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "ndebugoverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
-#include <list>
-#include "bitstring.h"
-#include "utlvector.h"
 #include "ai_navigator.h"
 #include "scripted.h"
 #include "ai_hint.h"
 #include "ai_behavior_follow.h"
 #include "ai_memory.h"
 #include "ai_squad.h"
-#include "ai_tacticalservices.h"
 #include "ndebugoverlay.h"
 #include "ai_senses.h"
-
 
 ConVar	ai_debug_follow( "ai_debug_follow", "0" );
 ConVar	ai_follow_use_points( "ai_follow_use_points", "1" );
 ConVar	ai_follow_use_points_when_moving( "ai_follow_use_points_when_moving", "1" );
 #define FollowMsg(s) if ( !GetOuter() || !ai_debug_follow.GetBool() ) ; else DevMsg( GetOuter(), "Follow: " s )
 
-#define WAIT_HINT_MIN_DIST		(16*16)		// Was: Square(GetHullWidth())
+constexpr auto WAIT_HINT_MIN_DIST = (16*16); // Was: Square(GetHullWidth())
 
 //-----------------------------------------------------------------------------
 //
@@ -47,7 +61,7 @@ struct AI_Follower_t
 	AI_Follower_t()
 	{
 		slot = -1;
-		memset( &navInfo, 0, sizeof(navInfo) );
+		std::memset( &navInfo, 0, sizeof(navInfo) );
 		pGroup = nullptr;
 	}
 
@@ -182,7 +196,7 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AI_FollowParams_t )
 
 CAI_FollowBehavior::CAI_FollowBehavior( const AI_FollowParams_t &params )
 {
-	memset( &m_FollowNavGoal, 0, sizeof( m_FollowNavGoal ) );
+	std::memset( &m_FollowNavGoal, 0, sizeof( m_FollowNavGoal ) );
 	
 	m_FollowDelay.Set( 1.0, 3.0 );
 	m_hFollowManagerInfo.m_pGroup = nullptr;
@@ -204,7 +218,7 @@ CAI_FollowBehavior::CAI_FollowBehavior( const AI_FollowParams_t &params )
 
 CAI_FollowBehavior::~CAI_FollowBehavior()
 {
-	Assert( !m_hFollowManagerInfo.m_pGroup );
+	contract_assert( !m_hFollowManagerInfo.m_pGroup );
 }
 
 //-----------------------------------------------------------------------------
@@ -224,11 +238,11 @@ int CAI_FollowBehavior::DrawDebugTextOverlays( int text_offset )
 		followEnt = GetFollowTarget();
 		if ( followEnt != nullptr )
 		{
-			Q_snprintf( tempstr, sizeof(tempstr), "Follow: (%d) %s (%s)", followEnt->entindex(), followEnt->GetDebugName(), followEnt->GetClassname() );
+			V_snprintf( tempstr, sizeof(tempstr), "Follow: (%d) %s (%s)", followEnt->entindex(), followEnt->GetDebugName(), followEnt->GetClassname() );
 		}
 		else 
 		{
-			Q_snprintf( tempstr, sizeof(tempstr), "Follow: NULL" );
+			V_snprintf( tempstr, sizeof(tempstr), "Follow: NULL" );
 		}
 		GetOuter()->EntityText( offset, tempstr, 0 );
 		offset++;
@@ -353,7 +367,7 @@ bool CAI_FollowBehavior::SetFollowGoal( CAI_FollowGoal *pGoal, bool fFinishCurSc
 		}
 
 		SetFollowTarget( pGoal->GetGoalEntity() );
-		Assert( pGoal->m_iFormation == AIF_SIMPLE || pGoal->m_iFormation == AIF_WIDE || pGoal->m_iFormation == AIF_MEDIUM || pGoal->m_iFormation == AIF_SIDEKICK || pGoal->m_iFormation == AIF_VORTIGAUNT );
+		contract_assert( pGoal->m_iFormation == AIF_SIMPLE || pGoal->m_iFormation == AIF_WIDE || pGoal->m_iFormation == AIF_MEDIUM || pGoal->m_iFormation == AIF_SIDEKICK || pGoal->m_iFormation == AIF_VORTIGAUNT );
 		SetParameters( AI_FollowParams_t( (AI_Formations_t)pGoal->m_iFormation ) );
 		m_hFollowGoalEnt = pGoal;
 		m_flTimeUpdatedFollowPosition = 0;
@@ -379,7 +393,6 @@ void CAI_FollowBehavior::ClearFollowGoal( CAI_FollowGoal *pGoal )
 
 bool CAI_FollowBehavior::UpdateFollowPosition()
 {
-	AI_PROFILE_SCOPE( CAI_FollowBehavior_UpdateFollowPosition );
 
 	if ( m_flTimeUpdatedFollowPosition == gpGlobals->curtime )
 	{
@@ -405,13 +418,6 @@ bool CAI_FollowBehavior::UpdateFollowPosition()
 		}
 	}
 
-#if TODO
-	// @TODO (toml 07-27-03): this is too simplistic. fails when the new point is an inappropriate target
-	CBasePlayer *pPlayer = dynamic_cast<CBasePlayer *>(m_hFollowTarget.Get());
-	Vector targetVelocity = pPlayer->GetSmoothedVelocity();
-	m_FollowNavGoal.position += targetVelocity * 0.5;
-#endif
-	
 	m_flTimeUpdatedFollowPosition = gpGlobals->curtime;
 
 	return true;
@@ -524,7 +530,7 @@ bool CAI_FollowBehavior::IsChaseGoalInRange()
 void CAI_FollowBehavior::NoteFailedFollow()
 {
 	m_nFailedFollowAttempts++;
-	if ( m_flTimeFailFollowStarted == FLT_MAX )
+	if ( m_flTimeFailFollowStarted == std::numeric_limits<float>::max() )
 		m_flTimeFailFollowStarted = gpGlobals->curtime;
 
 	if ( GetOuter() && ai_debug_follow.GetBool() ) 
@@ -536,7 +542,7 @@ void CAI_FollowBehavior::NoteFailedFollow()
 void CAI_FollowBehavior::NoteSuccessfulFollow()
 {
 	m_nFailedFollowAttempts = 0;
-	m_flTimeFailFollowStarted = FLT_MAX;
+	m_flTimeFailFollowStarted = std::numeric_limits<float>::max();
 	FollowMsg( "NoteSuccessfulFollow()\n" );
 }
 
@@ -563,7 +569,7 @@ void CAI_FollowBehavior::BeginScheduleSelection()
 	m_SavedDistTooFar = GetOuter()->m_flDistTooFar;
 	if ( GetFollowTarget() && GetFollowTarget()->IsPlayer() )
 	{
-		GetOuter()->m_flDistTooFar = FLT_MAX;
+		GetOuter()->m_flDistTooFar = std::numeric_limits<float>::max();
 	}
 
 	BaseClass::BeginScheduleSelection();
@@ -890,7 +896,7 @@ void CAI_FollowBehavior::SetFollowPoint( CAI_Hint *pHintNode )
 	if ( !pHintNode )
 		return;
 
-	Assert( pHintNode->HintType() == HINT_FOLLOW_WAIT_POINT );
+	contract_assert( pHintNode->HintType() == HINT_FOLLOW_WAIT_POINT );
 	
 	if ( GetHintNode() == pHintNode )
 		return;
@@ -912,7 +918,7 @@ void CAI_FollowBehavior::SetFollowPoint( CAI_Hint *pHintNode )
 int CAI_FollowBehavior::SelectScheduleFollowPoints()
 {
 	bool bShouldUseFollowPoints = ( ShouldUseFollowPoints() && IsFollowGoalInRange( m_FollowNavGoal.followPointTolerance + 0.1, GetGoalZRange(), GetGoalFlags() ) );
-	float distSqToPoint = FLT_MAX;
+	float distSqToPoint = std::numeric_limits<float>::max();
 	bool bHasFollowPoint = HasFollowPoint();
 
 	if ( bHasFollowPoint )
@@ -1246,7 +1252,6 @@ bool CAI_FollowBehavior::FindCoverFromEnemyAtFollowTarget( float coverRadius, Ve
 
 void CAI_FollowBehavior::StartTask( const Task_t *pTask )
 {
-	AI_PROFILE_SCOPE( CAI_FollowBehavior_StartTask );
 
 	switch ( pTask->iTask )
 	{
@@ -1365,7 +1370,7 @@ void CAI_FollowBehavior::StartTask( const Task_t *pTask )
 
 			if ( ValidateFaceTarget( &faceTarget ) )
 			{
-				Assert( faceTarget != vec3_invalid );
+				contract_assert( faceTarget != vec3_invalid );
 
 				if ( !GetOuter()->FInAimCone( faceTarget ) )
 				{
@@ -1519,7 +1524,7 @@ void CAI_FollowBehavior::RunTask( const Task_t *pTask )
 				{
 					if ( GetEnemy() )
 					{
-						Assert( GetOuter()->m_vInterruptSavePosition == vec3_invalid );
+						contract_assert( GetOuter()->m_vInterruptSavePosition == vec3_invalid );
 						Vector coverPos = vec3_invalid;
 						float coverRadius = std::min( (float)12*12, m_FollowNavGoal.coverTolerance );
 						if ( FindCoverFromEnemyAtFollowTarget( coverRadius, &coverPos ) )
@@ -1553,7 +1558,7 @@ void CAI_FollowBehavior::RunTask( const Task_t *pTask )
 
 			case 2:
 				{
-					Assert( !m_bMovingToCover );
+					contract_assert( !m_bMovingToCover );
 					Vector vGoalPosition;
 					if ( HasFollowPoint() && IsFollowPointInRange() )
 						vGoalPosition = GetFollowPoint();
@@ -2132,7 +2137,7 @@ static AI_FollowFormation_t g_SimpleFollowFormation =
 {
 	"Simple",
 	AIFF_DEFAULT | AIFF_USE_FOLLOW_POINTS,
-	ARRAYSIZE(g_SimpleFollowFormationSlots),
+	std::size( g_SimpleFollowFormationSlots ),
 	168,						// followPointTolerance
 	36,							// targetMoveTolerance
 	60,							// repathOnRouteTolerance
@@ -2170,7 +2175,7 @@ static AI_FollowFormation_t g_WideFollowFormation =
 {
 	"Wide",
 	AIFF_DEFAULT | AIFF_USE_FOLLOW_POINTS,
-	ARRAYSIZE(g_WideFollowFormationSlots),
+	std::size( g_WideFollowFormationSlots ),
 	168,						// followPointTolerance
 	72,							// targetMoveTolerance
 	60,							// repathOnRouteTolerance
@@ -2202,7 +2207,7 @@ static AI_FollowFormation_t g_AntlionFollowFormation =
 {
 	"Antlion",
 	AIFF_DEFAULT | AIFF_USE_FOLLOW_POINTS,
-	ARRAYSIZE(g_AntlionFollowFormationSlots),
+	std::size( g_AntlionFollowFormationSlots ),
 	168,						// followPointTolerance
 	36,							// targetMoveTolerance
 	60,							// repathOnRouteTolerance
@@ -2215,7 +2220,7 @@ static AI_FollowFormation_t g_AntlionFollowFormation =
 
 //-------------------------------------
 
-#define COMMANDER_TOLERANCE (13.0 * 1.415)
+constexpr auto COMMANDER_TOLERANCE = (13.0 * 1.415);
 
 static AI_FollowSlot_t g_CommanderFollowFormationSlots[] = 
 {
@@ -2229,7 +2234,7 @@ static AI_FollowFormation_t g_CommanderFollowFormation =
 {
 	"Commander",
 	AIFF_DEFAULT | AIFF_USE_FOLLOW_POINTS,
-	ARRAYSIZE(g_CommanderFollowFormationSlots),
+	std::size( g_CommanderFollowFormationSlots ),
 	168,						// followPointTolerance
 	6,							// targetMoveTolerance
 	60,							// repathOnRouteTolerance
@@ -2254,7 +2259,7 @@ static AI_FollowFormation_t g_TightFollowFormation =
 {
 	"Tight",
 	AIFF_DEFAULT | AIFF_USE_FOLLOW_POINTS,
-	ARRAYSIZE(g_CommanderFollowFormationSlots),
+	std::size( g_CommanderFollowFormationSlots ),
 	48,							// followPointTolerance
 	6,							// targetMoveTolerance
 	60,							// repathOnRouteTolerance
@@ -2291,7 +2296,7 @@ static AI_FollowFormation_t g_MediumFollowFormation =
 {
 	"Medium",
 	AIFF_DEFAULT | AIFF_USE_FOLLOW_POINTS,
-	ARRAYSIZE(g_MediumFollowFormationSlots),
+	std::size( g_MediumFollowFormationSlots ),
 	168,						// followPointTolerance
 	36,							// targetMoveTolerance
 	60,							// repathOnRouteTolerance
@@ -2328,7 +2333,7 @@ static AI_FollowFormation_t g_SidekickFollowFormation =
 {
 	"Sidekick",
 	AIFF_DEFAULT | AIFF_USE_FOLLOW_POINTS | AIFF_REQUIRE_LOS_OUTSIDE_COMBAT,
-	ARRAYSIZE(g_SidekickFollowFormationSlots),
+	std::size( g_SidekickFollowFormationSlots ),
 	168,						// followPointTolerance
 	36,							// targetMoveTolerance
 	60,							// repathOnRouteTolerance
@@ -2355,7 +2360,7 @@ static AI_FollowFormation_t g_HunterFollowFormation =
 {
 	"Hunter",
 	AIFF_DEFAULT | AIFF_USE_FOLLOW_POINTS,
-	ARRAYSIZE(g_HunterFollowFormationSlots),
+	std::size( g_HunterFollowFormationSlots ),
 	48,							// followPointTolerance
 	48,							// targetMoveTolerance
 	60,//180,						// repathOnRouteTolerance
@@ -2370,9 +2375,9 @@ static AI_FollowFormation_t g_HunterFollowFormation =
 // Infested used this for marines in Follow order mode
 //-------------------------------------
 // follow tolerances
-#define ASW_TIGHT_MIN 60
-#define ASW_TIGHT_MAX 80
-#define ASW_TIGHT_TOL 48
+constexpr auto ASW_TIGHT_MIN = 60;
+constexpr auto ASW_TIGHT_MAX = 80;
+constexpr auto ASW_TIGHT_TOL = 48;
 static AI_FollowSlot_t g_TopDownTightFollowFormationSlots[] = 
 {
 	// asw version
@@ -2386,7 +2391,7 @@ static AI_FollowFormation_t g_TopDownTightFollowFormation =
 {
 	"TopDownTight",
 	AIFF_DEFAULT | AIFF_USE_FOLLOW_POINTS,
-	ARRAYSIZE(g_CommanderFollowFormationSlots),
+	std::size( g_CommanderFollowFormationSlots ),
 	48,							// followPointTolerance		// asw (was 48)
 	6,							// targetMoveTolerance	// asw was 6
 	60,							// repathOnRouteTolerance
@@ -2425,7 +2430,7 @@ static AI_FollowFormation_t g_VortigauntFollowFormation =
 {
 	"Vortigaunt",
 	AIFF_DEFAULT | AIFF_USE_FOLLOW_POINTS | AIFF_REQUIRE_LOS_OUTSIDE_COMBAT,
-	ARRAYSIZE(g_VortigauntFollowFormationSlots),
+	std::size( g_VortigauntFollowFormationSlots ),
 	168,						// followPointTolerance
 	36,							// targetMoveTolerance
 	60,							// repathOnRouteTolerance
@@ -2458,8 +2463,8 @@ AI_FollowFormation_t *AIGetFormation( AI_Formations_t formation )
 {
 	if ( formation < 0 )
 		formation = (AI_Formations_t)0;
-	else if ( formation >= ARRAYSIZE( g_AI_Formations ) )
-		formation = (AI_Formations_t)(ARRAYSIZE( g_AI_Formations ) - 1 );
+	else if ( formation >= std::size( g_AI_Formations ) )
+		formation = (AI_Formations_t)(std::size( g_AI_Formations ) - 1 );
 		
 	return g_AI_Formations[formation];
 }
@@ -2473,7 +2478,6 @@ bool CAI_FollowManager::AddFollower( CBaseEntity *pTarget, CAI_BaseNPC *pFollowe
 
 	if ( slot != -1 )
 	{
-		MEM_ALLOC_CREDIT();
 
 		AI_FollowSlot_t *pSlot 		= &pGroup->pFormation->pSlots[slot];
 
@@ -2503,7 +2507,7 @@ bool CAI_FollowManager::CalcFollowPosition( AI_FollowManagerInfoHandle_t& hInfo,
 	if ( hInfo.m_pGroup && hInfo.m_pFollower )
 	{
 		AI_FollowGroup_t *pGroup = hInfo.m_pGroup;
-		Assert( pGroup->hFollowTarget.Get() );
+		contract_assert( pGroup->hFollowTarget.Get() );
 		CBaseEntity *pTarget = pGroup->hFollowTarget;
 
 		AI_Follower_t *iterNode = hInfo.m_pFollower;
@@ -2555,7 +2559,7 @@ bool CAI_FollowManager::RedistributeSlots( AI_FollowGroup_t *pGroup )
 		AI_FollowSlot_t *  pSlot 	  = &pGroup->pFormation->pSlots[bestSlot];
 		Vector			   slotPos	  = originFollowed + pSlot->position;
 		AI_Follower_t *	   pBest	  = nullptr;
-		float 			   distSqBest = FLT_MAX;
+		float 			   distSqBest = std::numeric_limits<float>::max();
 		
 		for ( AI_Follower_t &follower : pGroup->followers )
 		{
@@ -2607,7 +2611,7 @@ void CAI_FollowManager::ChangeFormation( AI_FollowManagerInfoHandle_t& hInfo, AI
 		AI_Follower_t *p = &follower;
 		p->slot = -1;
 		p->hFollower->GetBehavior( &pFollowBehavior );
-		Assert( pFollowBehavior );
+		contract_assert( pFollowBehavior );
 		if ( pFollowBehavior )
 		{
 			pFollowBehavior->m_params.formation = formation;
@@ -2626,7 +2630,7 @@ void CAI_FollowManager::ChangeFormation( AI_FollowManagerInfoHandle_t& hInfo, AI
 #ifdef DEBUG
 	for ( const AI_Follower_t &follower : pGroup->followers )
 	{
-		Assert( follower.slot != -1 );
+		contract_assert( follower.slot != -1 );
 	}
 #endif
 }
@@ -2683,7 +2687,7 @@ int CAI_FollowManager::FindBestSlot( AI_FollowGroup_t *pGroup )
 void CAI_FollowManager::CalculateFieldsFromSlot( AI_FollowSlot_t *pSlot, AI_FollowNavInfo_t *pFollowerInfo )
 {
 	// @TODO (toml 02-28-03): placeholder. Force break if someone tries to actually use
-	Assert( pSlot->positionVariability == 0.0 );
+	contract_assert( pSlot->positionVariability == 0.0 );
 	//Assert( pSlot->tolerance == AIN_DEF_TOLERANCE );
 
 	pFollowerInfo->position		= pSlot->position;
@@ -2701,7 +2705,6 @@ AI_FollowGroup_t *CAI_FollowManager::FindCreateGroup( CBaseEntity *pTarget, AI_F
 	if ( !pGroup )
 	{
 		{
-		MEM_ALLOC_CREDIT();
 		pGroup = new AI_FollowGroup_t;
 		}
 		

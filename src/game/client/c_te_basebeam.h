@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( C_TE_BASEBEAM_H )
-#define C_TE_BASEBEAM_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -53,5 +46,3 @@ public:
 };
 
 EXTERN_RECV_TABLE(DT_BaseBeam);
-
-#endif // C_TE_BASEBEAM_H

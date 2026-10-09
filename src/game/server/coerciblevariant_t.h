@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef COERCIBLEVARIANT_T_H
-#define COERCIBLEVARIANT_T_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ehandle.h"
+#include "datamap.h"
+#include "entitylist.h"
 
 class CBaseEntity;
 
@@ -171,5 +166,3 @@ const CHandle<CBaseEntity> &coerciblevariant_t::Entity( void )
 
 
 typedef coerciblevariant_t cvariant_t; // easier typing!
-
-#endif // VARIANT_T_H

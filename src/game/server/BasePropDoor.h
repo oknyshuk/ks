@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A base class for model-based doors. The exact movement required to
 //			open or close the door is not dictated by this class, only that
 //			the door has open, closed, opening, and closing states.
-//
 //			Doors must satisfy these requirements:
-//
 //			- Derived classes must support being opened by NPCs.
 //			- Never autoclose in the face of a player.
 //			- Never close into an NPC.
-//
-//=============================================================================//
-
-#ifndef BASEPROPDOOR_H
-#define BASEPROPDOOR_H
 
 #include "reflect_annotations.h"
 
@@ -32,7 +27,7 @@ struct opendata_t
 };
 
 
-abstract_class [[= ks::reflect::NetTable{ .name = "DT_BasePropDoor" } ]]
+class [[= ks::reflect::NetTable{ .name = "DT_BasePropDoor" } ]]
       [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_flPoseParameter" } ]]
       [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_flPlaybackRate" } ]]
       [[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_nMuzzleFlashParity" } ]]
@@ -489,5 +484,3 @@ class CPropDoorRotatingBreakable : public CPropDoorRotating
 	bool m_isBlockingNav[MAX_NAV_TEAMS];
 	std::vector< string_t > m_damageStates;
 };
-
-#endif // BASEPROPDOOR_H

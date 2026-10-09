@@ -1,14 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Common pixel shader code for decaltexture usage
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef COMMON_DECALTEXTURE_FXC_H_
-#define COMMON_DECALTEXTURE_FXC_H_
-
 
 // decal blend modes
 float3 TextureCombineDecal( float3 baseColor, float4 decalColor, float3 decalLighting )
@@ -25,6 +19,3 @@ float3 TextureCombineDecal( float3 baseColor, float4 decalColor, float3 decalLig
 
 	return baseColor;
 }
-
-
-#endif // COMMON_DECALTEXTURE_FXC_H_

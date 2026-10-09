@@ -1,19 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef STUDIORENDERCONTEXT_H
-#define STUDIORENDERCONTEXT_H
-
+import ks.tier1;
 #include "istudiorender.h"
 #include "tier3/tier3.h"
 #include "studio.h"
-#include "tier1/delegates.h"
-#include "tier1/memstack.h"
+import std;
 #include "studiorender.h"
-
 
 //-----------------------------------------------------------------------------
 // Foward declarations
@@ -143,7 +137,7 @@ public:
 	virtual void DrawStaticPropShadows( const DrawModelInfo_t &drawInfo, const matrix3x4_t &modelToWorld, int flags );
 	virtual void ForcedMaterialOverride( IMaterial *newMaterial, OverrideType_t nOverrideType = OVERRIDE_NORMAL, int nMaterialIndex = -1 );
 	virtual bool IsForcedMaterialOverride();
-	DELEGATE_TO_OBJECT_1( StudioDecalHandle_t, CreateDecalList, studiohwdata_t *, g_pStudioRenderImp );
+	StudioDecalHandle_t CreateDecalList( studiohwdata_t * a1 )	{ return (g_pStudioRenderImp)->CreateDecalList( a1 ); };
 	virtual void DestroyDecalList( StudioDecalHandle_t handle );
 	virtual void AddDecal( StudioDecalHandle_t handle, studiohdr_t *pStudioHdr, matrix3x4_t *pBoneToWorld, const Ray_t & ray, const Vector& decalUp, IMaterial* pDecalMaterial, float radius, int body, bool noPokethru, int maxLODToDecal = ADDDECAL_TO_ALL_LODS, void *pvProxyUserData = nullptr, int nAdditionalDecalFlags = 0 );
 	virtual void ComputeLighting( const Vector* pAmbient, int lightCount, LightDesc_t* pLights, const Vector& pt, const Vector& normal, Vector& lighting );
@@ -237,6 +231,3 @@ inline int CStudioRenderContext::ComputeModelLod( studiohwdata_t *pHardwareData,
 {
 	return ComputeModelLODAndMetric( pHardwareData, flUnitSphereSize, pMetric );
 }
-
-
-#endif // STUDIORENDERCONTEXT_H

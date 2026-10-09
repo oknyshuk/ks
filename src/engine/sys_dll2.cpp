@@ -1,13 +1,10 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-// fopen is needed to write steam_appid.txt
-#undef fopen
-#include <stdio.h>
+
+
+import std;
+import ks.core;
 
 	#include "appframework/ilaunchermgr.h"
 
@@ -22,10 +19,8 @@
 #include "traceinit.h"
 #include "iengine.h"
 #include "igame.h"
-#include "tier1/fmtstr.h"
 #include "engine_hlds_api.h"
 #include "filesystem_engine.h"
-#include "tier0/icommandline.h"
 #include "cl_main.h"
 #include "client.h"
 #include "tier3/tier3.h"
@@ -43,8 +38,6 @@
 #include "vphysics_interface.h"
 #include "inputsystem/iinputsystem.h"
 #include "appframework/IAppSystemGroup.h"
-#include "tier0/systeminformation.h"
-#include "steam/steam_api.h"
 
 // This is here just for legacy support of older .dlls!!!
 #include "SoundEmitterSystem/isoundemittersystembase.h"
@@ -57,7 +50,6 @@
 #ifndef DEDICATED
 #include "sys_mainwind.h"
 #include "IGameUIFuncs.h"
-#include "cl_steamauth.h"
 
 #endif // DEDICATED
 
@@ -68,7 +60,6 @@
 
 
 
-#include "tier0/memalloc.h"
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -84,7 +75,6 @@ extern CreateInterfaceFn g_ClientFactory;
 #endif
 
 bool g_bRunningFromPerforce;
-AppId_t g_unSteamAppID = k_uAppIdInvalid;
 
 CreateInterfaceFn g_pfnMatchmakingFactory = nullptr;
 
@@ -117,7 +107,7 @@ static ConCommand editor_toggle( "editor_toggle", EditorToggle_f, "Disables the 
 // Purpose: exports an interface that can be used by the launcher to run the engine
 //			this is the exported function when compiled as a blob
 //-----------------------------------------------------------------------------
-void EXPORT F( IEngineAPI **api )
+void F( IEngineAPI **api )
 {
 	CreateInterfaceFn factory = Sys_GetFactoryThis();	// This silly construction is necessary to prevent the LTCG compiler from crashing.
 	*api = ( IEngineAPI * )(factory(VENGINE_LAUNCHER_API_VERSION, nullptr));
@@ -137,42 +127,6 @@ extern bool g_bPrintingKeepAliveDots;
 
 void Sys_ShowProgressTicks(char* specialProgressMsg)
 {
-#ifdef LATER
-#define MAX_NUM_TICS 40
-
-	static long numTics = 0;
-
-	// Nothing to do if not using Steam
-	if ( !g_pFileSystem->IsSteam() )
-		return;
-
-	// Update number of tics to show...
-	numTics++;
-	if ( isDedicated )
-	{
-		if ( g_bMajorMapChange )
-		{
-			g_bPrintingKeepAliveDots = TRUE;
-			Msg(".");
-		}
-	}
-	else
-	{
-		int i;
-		int numTicsToPrint = numTics % (MAX_NUM_TICS-1);
-		char msg[MAX_NUM_TICS+1];
-
-		Q_strncpy(msg, ".", sizeof(msg));
-
-		// Now add in the growing number of tics...
-		for ( i = 1 ; i < numTicsToPrint ; i++ )
-		{
-			Q_strncat(msg, ".", sizeof(msg), COPY_ALL_CHARACTERS);
-		}
-
-		SCR_UpdateScreen();
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -265,14 +219,14 @@ void EatTextModeKeyPresses()
 				Cbuf_AddText( Cbuf_GetCurrentPlayer(), g_TextModeLine.data() );
 				g_TextModeLine.clear(); g_TextModeLine.shrink_to_fit();
 			}
-			printf( "\n" );
+			std::printf( "\n" );
 		}
 		else
 		{
 			g_TextModeLine.push_back( ch );
 		}
 
-		printf( "%c", ch );
+		std::printf( "%c", ch );
 	}	
 }
 
@@ -283,12 +237,12 @@ void EatTextModeKeyPresses()
 //-----------------------------------------------------------------------------
 const char *GetModDirFromPath( const char *pszPath )
 {
-	char *pszSlash = Q_strrchr( pszPath, '\\' );
+	char *pszSlash = V_strrchr( pszPath, '\\' );
 	if ( pszSlash )
 	{
 		return pszSlash + 1;
 	}
-	else if ( ( pszSlash  = Q_strrchr( pszPath, '/' ) ) != nullptr )
+	else if ( ( pszSlash  = V_strrchr( pszPath, '/' ) ) != nullptr )
 	{
 		return pszSlash + 1;
 	}
@@ -305,7 +259,7 @@ const char *GetModDirFromPath( const char *pszPath )
 #endif
 
 //-----------------------------------------------------------------------------
-// Inner loop: initialize, shutdown main systems, load steam to 
+// Inner loop: initialize, shutdown main systems
 //-----------------------------------------------------------------------------
 class CModAppSystemGroup : public CAppSystemGroup
 {
@@ -423,7 +377,7 @@ private:
 // Singleton interface
 //-----------------------------------------------------------------------------
 static CEngineAPI s_EngineAPI;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CEngineAPI, IEngineAPI, VENGINE_LAUNCHER_API_VERSION, s_EngineAPI );
+static InterfaceReg s_Reg_CEngineAPI_IEngineAPI( []() -> void * { return static_cast<IEngineAPI *>( &s_EngineAPI ); }, VENGINE_LAUNCHER_API_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -441,9 +395,7 @@ bool CEngineAPI::Connect( CreateInterfaceFn factory )
 	if ( !g_pFileSystem )
 		return false;
 
-#ifndef DBGFLAG_STRINGS_STRIP
 	g_pFileSystem->SetWarningFunc( Warning );
-#endif
 
 	if ( !Shader_Connect( true ) )
 		return false;
@@ -453,12 +405,6 @@ bool CEngineAPI::Connect( CreateInterfaceFn factory )
 	g_pSoundEmitterSystem = (ISoundEmitterSystemBase *)factory(SOUNDEMITTERSYSTEM_INTERFACE_VERSION, nullptr);
 	
 	g_pRocketUI = ( IRocketUI* ) factory( ROCKETUI_INTERFACE_VERSION, nullptr );
-
-#if ( !defined( BINK_ENABLED_FOR_CONSOLE ) ) && defined( BINK_VIDEO )
-	bik = (IBik*)factory( BIK_INTERFACE_VERSION, nullptr );
-	if ( !bik )
-		return false;
-#endif
 
 
 	if ( !g_pStudioRender || !g_pDataCache || !g_pPhysics || !g_pMDLCache || !g_pInputSystem || !g_pSoundEmitterSystem)
@@ -572,12 +518,8 @@ bool CEngineAPI::SetStartupInfo( StartupInfo_t &info )
 	// Configure breakpad
 	//
 
-	// Parse AppID from steam.inf file
 	extern void Sys_Version( bool bDedicated );
 	Sys_Version( false );
-
-
-	// turn on the Steam3 API early so we can query app data up front
 
 	return true;
 }
@@ -617,15 +559,6 @@ InitReturnVal_t CEngineAPI::Init()
 		return HandleSetModeError();
 	}
 
-    // on OSX by the time we've initialized cl_language we've already initialized the 
-    // font manager and made a bunch of language-related decisions.
-    // on windows, the code sniffs the registry directly (slightly evil) and doesn't have
-    // this problem.
-    if ( Steam3Client().SteamApps() )
-    {
-        extern ConVar cl_language;
-        cl_language.SetValue( Steam3Client().SteamApps()->GetCurrentGameLanguage() );
-    }
 	return INIT_OK; 
 }
 
@@ -657,7 +590,7 @@ void CEngineAPI::SetEngineWindow( void *hWnd )
 //-----------------------------------------------------------------------------
 void CEngineAPI::PostConsoleCommand( const char *pCommand )
 {
-	Assert( 0 ); // This isn't being used, but I'm assuming it would be for a dedicated server type console, so issueing the command into the server's buffer may make sense.
+	contract_assert( 0 ); // This isn't being used, but I'm assuming it would be for a dedicated server type console, so issueing the command into the server's buffer may make sense.
 	Cbuf_AddText( CBUF_SERVER, pCommand );
 }
 
@@ -676,11 +609,11 @@ bool CEngineAPI::IsRunningSimulation() const
 //-----------------------------------------------------------------------------
 void CEngineAPI::SetMap( const char *pMapName )
 {
-//	if ( !Q_stricmp( sv.mapname, pMapName ) )
+//	if ( !V_stricmp( sv.mapname, pMapName ) )
 //		return;
 
 	char buf[MAX_PATH];
-	Q_snprintf( buf, MAX_PATH, "map %s", pMapName );
+	V_snprintf( buf, MAX_PATH, "map %s", pMapName );
 	Cbuf_AddText( Cbuf_GetCurrentPlayer(), buf );
 }
 
@@ -771,7 +704,7 @@ bool CEngineAPI::MainLoop()
 bool CEngineAPI::InitRegistry( const char *pModName )
 {
 	char szRegSubPath[MAX_PATH];
-	Q_snprintf( szRegSubPath, sizeof(szRegSubPath), "%s\\%s", "Source", pModName );
+	V_snprintf( szRegSubPath, sizeof(szRegSubPath), "%s\\%s", "Source", pModName );
 	return registry->Init( szRegSubPath );
 	return true;
 }
@@ -879,12 +812,12 @@ void CEngineAPI::OnShutdown()
 static bool IsValveMod( const char *pModName )
 {
 	// Figure out if we're running a Valve mod or not.
-	return ( Q_stricmp( pModName, "cstrike" ) == 0 ||
-		Q_stricmp( pModName, "dod" ) == 0 ||
-		Q_stricmp( pModName, "hl1mp" ) == 0 ||
-		Q_stricmp( pModName, "tf" ) == 0 ||
-		Q_stricmp( pModName, "hl2mp" ) == 0 ||
-		Q_stricmp( pModName, "csgo" ) == 0 );
+	return ( V_stricmp( pModName, "cstrike" ) == 0 ||
+		V_stricmp( pModName, "dod" ) == 0 ||
+		V_stricmp( pModName, "hl1mp" ) == 0 ||
+		V_stricmp( pModName, "tf" ) == 0 ||
+		V_stricmp( pModName, "hl2mp" ) == 0 ||
+		V_stricmp( pModName, "csgo" ) == 0 );
 }
 
 //-----------------------------------------------------------------------------
@@ -991,10 +924,6 @@ int CEngineAPI::RunListenServer()
 	{
 		CModAppSystemGroup modAppSystemGroup( false, m_StartupInfo.m_pParentAppSystemGroup );
 
-#ifdef USE_HACKY_MATERIAL_SYSTEM_TEST
-		RunMaterialSystemTest();
-#endif
-
 		// Store off the app system factory...
 		g_AppSystemFactory = modAppSystemGroup.GetFactory();
 
@@ -1019,11 +948,13 @@ int CEngineAPI::RunListenServer()
 
 
 
-CON_COMMAND( render_blanks, "render N blank frames" )
+static void render_blanks( const CCommand &args );
+static ConCommand render_blanks_command( "render_blanks", render_blanks, "render N blank frames" );
+static void render_blanks( const CCommand &args )
 {
 	uint nFrames = 0;
 	if( *args[1] )
-		nFrames = atoi( args[1] );
+		nFrames = std::atoi( args[1] );
 	if( !nFrames || nFrames > 1000 )
 	{
 		nFrames = 10;
@@ -1039,10 +970,10 @@ extern void S_ClearBuffer();
 #endif // #ifndef DEDICATED
 
 extern bool g_bUpdateMinidumpComment;
-void GetSpew( char *buf, size_t buflen );
+void GetSpew( char *buf, std::size_t buflen );
 
 // should not exceed 32K, since current breakpad minidump reading code limits total comment size to 32k.
-#define DUMP_COMMENT_SIZE 32768
+constexpr auto DUMP_COMMENT_SIZE = 32768;
 
 // Turn this to 1 to allow for > 3kb of comments in dumps
 static ConVar sys_minidumpexpandedspew( "sys_minidumpexpandedspew", "0" );
@@ -1059,7 +990,7 @@ public:
 		m_Size( size ),
 		m_errorText( new char[ size ] )
 	{
-		Q_memset( m_errorText, 0x00, m_Size );
+		V_memset( m_errorText, 0x00, m_Size );
 	}
 
 	~CErrorText()
@@ -1075,13 +1006,13 @@ public:
 			int nSize = m_Size;
 			nSize = std::min( nSize, DUMP_COMMENT_SIZE );
 
-			Q_memset( m_errorText, 0x00, nSize );
+			V_memset( m_errorText, 0x00, nSize );
 
 			if ( pchSysErrorText )
 			{
 				// Strip trailing return character (note this overwrites the return character built into the string)
 				char *pchFixup = (char *)pchSysErrorText;
-				int lenFixed = Q_strlen( pchFixup );
+				int lenFixed = V_strlen( pchFixup );
 				if ( pchFixup[ lenFixed - 1 ] == '\n' )
 				{
 					pchFixup[ lenFixed - 1 ] = 0;
@@ -1130,15 +1061,15 @@ public:
 								char var1[ MAX_OSPATH ];
 								char var2[ MAX_OSPATH ];
 
-								Q_strncpy( var1, Host_CleanupConVarStringValue( cvar->GetString() ), sizeof( var1 ) );
-								Q_strncpy( var2, Host_CleanupConVarStringValue( cvar->GetDefault() ), sizeof( var2 ) );
+								V_strncpy( var1, Host_CleanupConVarStringValue( cvar->GetString() ), sizeof( var1 ) );
+								V_strncpy( var2, Host_CleanupConVarStringValue( cvar->GetDefault() ), sizeof( var2 ) );
 
-								if ( !Q_stricmp( var1, var2 ) )
+								if ( !V_stricmp( var1, var2 ) )
 									continue;
 							}
 							else
 							{
-								if ( cvar->GetFloat() == Q_atof( cvar->GetDefault() ) )
+								if ( cvar->GetFloat() == V_atof( cvar->GetDefault() ) )
 									continue;
 							}
 
@@ -1147,20 +1078,20 @@ public:
 							int add = 0;
 							if ( !( cvar->GetFlags() & FCVAR_NEVER_AS_STRING ) )
 							{
-								add = Q_snprintf( cvarcmd, sizeof(cvarcmd),"%25.25s %25.25s %25.25s\n",
+								add = V_snprintf( cvarcmd, sizeof(cvarcmd),"%25.25s %25.25s %25.25s\n",
 									cvar->GetName(), Host_CleanupConVarStringValue( cvar->GetString() ), cvar->GetDefault() );
 							}
 							else
 							{
-								add = Q_snprintf( cvarcmd, sizeof(cvarcmd),"%25.25s %25.25f %25.25f\n",
-								cvar->GetName(), cvar->GetFloat(), Q_atof( cvar->GetDefault() ) );
+								add = V_snprintf( cvarcmd, sizeof(cvarcmd),"%25.25s %25.25f %25.25f\n",
+								cvar->GetName(), cvar->GetFloat(), V_atof( cvar->GetDefault() ) );
 							}
 
 							int toCopy = std::min( add, remainder );
 							if ( toCopy <= 0 )
 								break;
 
-							Q_memcpy( pbuf, cvarcmd, toCopy );
+							V_memcpy( pbuf, cvarcmd, toCopy );
 
 							pbuf += toCopy;
 							remainder -= toCopy;
@@ -1182,7 +1113,7 @@ public:
 				}
 				catch ( ... )
 				{
-					Q_strncat( m_errorText, "exception thrown building console/convar history!!!\n", nSize );
+					V_strncat( m_errorText, "exception thrown building console/convar history!!!\n", nSize );
 				}
 
 			}
@@ -1221,13 +1152,7 @@ extern "C" void WriteMiniDump( void	);
 //-----------------------------------------------------------------------------
 int CEngineAPI::Run()
 {
-	if ( CommandLine()->FindParm("-insecure") )
-	{
-		extern void Host_DisallowSecureServers();
-		Host_DisallowSecureServers();
-	}
-
-	Assert( !"Impl minidump handling on Posix" );
+	contract_assert( !"Impl minidump handling on Posix" );
 	return RunListenServer();
 }
 #endif // DEDICATED
@@ -1240,7 +1165,7 @@ bool CModAppSystemGroup::AddLegacySystems()
 
 	AppSystemInfo_t appSystems[] = 
 	{
-		{ "engine"  DLL_EXT_STRING, SOUNDEMITTERSYSTEM_INTERFACE_VERSION },
+		{ "engine.so", SOUNDEMITTERSYSTEM_INTERFACE_VERSION },
 		{ "", "" }					// Required to terminate the list
 	};
 
@@ -1258,7 +1183,7 @@ static int VerToInt( const char *pszVersion )
 	const char *pIn = pszVersion;
 	char *pOut = szOut;
 
-	if ( !pszVersion || strlen( pszVersion ) > sizeof( szOut ) ) // double check we won't overflow the buffer
+	if ( !pszVersion || std::strlen( pszVersion ) > sizeof( szOut ) ) // double check we won't overflow the buffer
 	{
 		return 0;
 	}
@@ -1273,18 +1198,17 @@ static int VerToInt( const char *pszVersion )
 	}
 	*pOut = '\0';
 
-	return atoi( szOut );
+	return std::atoi( szOut );
 }
 
 
-#define VERSION_KEY "PatchVersion="
-#define CLIENT_VERSION_KEY "ClientVersion="
-#define SERVER_VERSION_KEY "ServerVersion="
-#define PRODUCT_KEY "ProductName="
-#define APPID_KEY "AppID="
-#define PRODUCT_STRING "valve"
-#define VERSION_STRING "1.0.1.0"
-#define FS_MAGIC_NUM_KEY "FSKey="
+inline constexpr const char *VERSION_KEY = "PatchVersion=";
+inline constexpr const char *CLIENT_VERSION_KEY = "ClientVersion=";
+inline constexpr const char *SERVER_VERSION_KEY = "ServerVersion=";
+inline constexpr const char *PRODUCT_KEY = "ProductName=";
+inline constexpr const char *PRODUCT_STRING = "valve";
+inline constexpr const char *VERSION_STRING = "1.0.1.0";
+inline constexpr const char *FS_MAGIC_NUM_KEY = "FSKey=";
 
 static std::string g_sVersionString;
 static std::string g_sProductString;
@@ -1341,22 +1265,23 @@ const char *Sys_GetProductString()
 	return g_sProductString.c_str();
 }
 
-static bool ParseSteamInfFile( const char *szFileName, AppId_t &unSteamAppID )
+static bool ParseVersionInfFile( const char *szFileName )
 {
+	ks::ScratchArena<> scratch;
 	char *buffer;
 	int bufsize = 0;
 	FileHandle_t fp = nullptr;
 	const char *pbuf = nullptr;
-	const int numKeysExpected = 5; // number of expected keys
+	const int numKeysExpected = 4; // number of expected keys
 	int gotKeys = 0;
 
-	// Mod's steam.inf is first option, the the steam.inf in the game GCF. 
+	// Mod's copy of the file is the first option.
 	fp = g_pFileSystem->Open( szFileName, "r" );
 	if ( fp )
 	{
 		bufsize = g_pFileSystem->Size( fp );
-		buffer = ( char * )stackalloc( bufsize + 1 );
-		Assert( buffer );
+		buffer = ( char * )scratch.AllocBytes( bufsize + 1 );
+		contract_assert( buffer );
 
 		int iBytesRead = g_pFileSystem->Read( buffer, bufsize, fp );
 		g_pFileSystem->Close( fp );
@@ -1372,14 +1297,14 @@ static bool ParseSteamInfFile( const char *szFileName, AppId_t &unSteamAppID )
 			if ( !pbuf )
 				break;
 
-			if ( Q_strlen( com_token )  <= 0 )
+			if ( V_strlen( com_token )  <= 0 )
 				break;
 
 
-			if ( !Q_strnicmp( com_token, VERSION_KEY, Q_strlen( VERSION_KEY ) ) )
+			if ( !V_strnicmp( com_token, VERSION_KEY, V_strlen( VERSION_KEY ) ) )
 			{
 				char buf[ 256 ];
-				Q_strncpy( buf, com_token+Q_strlen( VERSION_KEY ), sizeof( buf ) - 1 );
+				V_strncpy( buf, com_token+V_strlen( VERSION_KEY ), sizeof( buf ) - 1 );
 				buf[ sizeof( buf ) - 1 ] = '\0';
 
 				g_sVersionString = buf;
@@ -1389,34 +1314,34 @@ static bool ParseSteamInfFile( const char *szFileName, AppId_t &unSteamAppID )
 				continue;
 			}
 
-			if ( !Q_strnicmp( com_token, CLIENT_VERSION_KEY, Q_strlen( CLIENT_VERSION_KEY ) ) )
+			if ( !V_strnicmp( com_token, CLIENT_VERSION_KEY, V_strlen( CLIENT_VERSION_KEY ) ) )
 			{
 				char buf[ 256 ];
-				Q_strncpy( buf, com_token+Q_strlen( CLIENT_VERSION_KEY ), sizeof( buf ) - 1 );
+				V_strncpy( buf, com_token+V_strlen( CLIENT_VERSION_KEY ), sizeof( buf ) - 1 );
 				buf[ sizeof( buf ) - 1 ] = '\0';
 
-				sClientVersion = atoi( buf );
+				sClientVersion = std::atoi( buf );
 
 				gotKeys++;
 				continue;
 			}
 
-			if ( !Q_strnicmp( com_token, SERVER_VERSION_KEY, Q_strlen( SERVER_VERSION_KEY ) ) )
+			if ( !V_strnicmp( com_token, SERVER_VERSION_KEY, V_strlen( SERVER_VERSION_KEY ) ) )
 			{
 				char buf[ 256 ];
-				Q_strncpy( buf, com_token+Q_strlen( SERVER_VERSION_KEY ), sizeof( buf ) - 1 );
+				V_strncpy( buf, com_token+V_strlen( SERVER_VERSION_KEY ), sizeof( buf ) - 1 );
 				buf[ sizeof( buf ) - 1 ] = '\0';
 
-				sServerVersion = atoi( buf );
+				sServerVersion = std::atoi( buf );
 
 				gotKeys++;
 				continue;
 			}
 
-			if ( !Q_strnicmp( com_token, PRODUCT_KEY, Q_strlen( PRODUCT_KEY ) ) )
+			if ( !V_strnicmp( com_token, PRODUCT_KEY, V_strlen( PRODUCT_KEY ) ) )
 			{
 				char buf[ 256 ];
-				Q_strncpy( buf, com_token+Q_strlen( PRODUCT_KEY ), sizeof( buf ) - 1 );
+				V_strncpy( buf, com_token+V_strlen( PRODUCT_KEY ), sizeof( buf ) - 1 );
 				buf[ sizeof( buf ) - 1 ] = '\0';
 
 				g_sProductString = buf;
@@ -1425,15 +1350,6 @@ static bool ParseSteamInfFile( const char *szFileName, AppId_t &unSteamAppID )
 				continue;
 			}
 
-			// Steam reads the AppID out of steam_appid.txt
-			if ( !Q_strnicmp( com_token, APPID_KEY, Q_strlen( APPID_KEY ) ) )
-			{
-				char szAppID[32];
-				Q_strncpy( szAppID, com_token + Q_strlen( APPID_KEY ), sizeof( szAppID ) - 1 );
-				unSteamAppID = atoi(szAppID);
-				gotKeys++;
-				continue;
-			}
 		}
 	}
 
@@ -1448,13 +1364,13 @@ static bool ParsePerforceInfFile( const char *szFileName, uint64 &unFileSystemMa
 	int bufsize = 0;
 	FileHandle_t fp = nullptr;
 
-	// Mod's steam.inf is first option, the the steam.inf in the game GCF. 
+	// Mod's copy of the file is the first option.
 	fp = g_pFileSystem->Open( szFileName, "r" );
 	if ( fp )
 	{
 		bufsize = g_pFileSystem->Size( fp );
-		buffer = ( char * )_alloca( bufsize + 1 );
-		Assert( buffer );
+		buffer = ( char * )__builtin_alloca( bufsize + 1 );
+		contract_assert( buffer );
 
 		int iBytesRead = g_pFileSystem->Read( buffer, bufsize, fp );
 		g_pFileSystem->Close( fp );
@@ -1470,16 +1386,16 @@ static bool ParsePerforceInfFile( const char *szFileName, uint64 &unFileSystemMa
 			if ( !pbuf )
 				break;
 
-			if ( Q_strlen( com_token )  <= 0 )
+			if ( V_strlen( com_token )  <= 0 )
 				break;
 
-			// Get the magic number that allows us to run without Steam internally. This magic number should only live in the Perforce.inf
+			// Get the magic number that allows us to run internally. This magic number should only live in the Perforce.inf
 			// file which is never shipped. 
-			if ( !Q_strnicmp( com_token, FS_MAGIC_NUM_KEY, Q_strlen( FS_MAGIC_NUM_KEY ) ) )
+			if ( !V_strnicmp( com_token, FS_MAGIC_NUM_KEY, V_strlen( FS_MAGIC_NUM_KEY ) ) )
 			{
 				char szFSKey[64];
-				Q_strncpy( szFSKey, com_token + Q_strlen( FS_MAGIC_NUM_KEY ), sizeof( szFSKey ) - 1 );
-				unFileSystemMagicNumber = atoi(szFSKey);
+				V_strncpy( szFSKey, com_token + V_strlen( FS_MAGIC_NUM_KEY ), sizeof( szFSKey ) - 1 );
+				unFileSystemMagicNumber = std::atoi(szFSKey);
 				return true;
 			}
 		}
@@ -1496,90 +1412,18 @@ void Sys_Version( bool bDedicated )
 
 	uint64 unFSMagicNumber = 0;
 
-	if ( !ParseSteamInfFile( "steam.inf", g_unSteamAppID ) )
+	if ( !ParseVersionInfFile( "steam.inf" ) )
 	{
 		Sys_Error( "Unable to load version from steam.inf" );
 	}
 
-	// if we aren't launched by Steam try reading a local perforce inf file
-	// this lets us tell the internal staging/main builds to use the right app ids
-	// if we arent launched by steam - we havent resolved our universe yet so we dont know
-	// what it is - so check perforce.inf always for now
-	if ( !g_pFileSystem->IsSteam() )
-		ParsePerforceInfFile( "perforce.inf", unFSMagicNumber );
+	ParsePerforceInfFile( "perforce.inf", unFSMagicNumber );
 
 	// If the magic number is found in the perforce.inf then we are running from Perforce
 	g_bRunningFromPerforce = ( unFSMagicNumber == 2190015756ull / 2 );
 
-	if ( g_unSteamAppID != k_uAppIdInvalid && ( !g_pFileSystem->IsSteam() || bDedicated || g_bRunningFromPerforce ) )
-	{
-		// steamclient.dll doesn't know about steam.inf files in mod folder,
-		// it excepts a steam_appid.txt in the root directory if the game is
-		// not started through Steam. So we create one there containing the
-		// current AppID 
-		FILE *f = fopen( "steam_appid.txt", "wb" );
-		if ( f )
-		{
-			char rgchAppID[256];
-			Q_snprintf( rgchAppID, sizeof(rgchAppID), "%u\n", g_unSteamAppID );
-			fwrite( rgchAppID, Q_strlen(rgchAppID)+1, 1, f );
-			fclose( f );
-		}
-	}
-
 }
 
-
-#ifdef ENGINE_MANAGES_VJOBS
-void LoadVjobsModule()
-{
-	Assert( !g_pVjobsDllModule );
-	g_pVjobsDllModule = g_pFileSystem->LoadModule( "vjobs" DLL_EXT_STRING, "EXECUTABLE_PATH", false );
-	if( !g_pVjobsDllModule )
-	{
-		Sys_Error( "Could not load vjobs library\n" );
-	}
-	g_pfnVjobsFactory = Sys_GetFactory( g_pVjobsDllModule );
-	if( !g_pfnVjobsFactory )
-	{
-		Sys_Error( "Could not get vjobs factory\n" );
-	}
-	IVJobs * pVJobs = ( IVJobs* )( *g_pfnVjobsFactory )( VJOBS_INTERFACE_VERSION, nullptr );
-	Assert( g_pVJobs == pVJobs || !g_pVJobs );
-	g_pVJobs = pVJobs;
-}
-
-void ReloadDlls()
-{
-// 	if( g_bVjobsTest )
-// 	{
-// 		g_pVJobs->SetRunTarget( RUN_TARGET_SATELLITE_CPU );
-// 		g_pVJobs->StartTest();
-// 		g_pVJobs->SetRunTarget( RUN_TARGET_MAIN_CPU );
-// 		g_pVJobs->StartTest();
-// 		g_bVjobsTest = false;
-// 	}
-	if( g_bVjobsReload )
-	{
-		g_bVjobsReload = false;
-		if( g_pVJobs )
-		{
-			g_pVJobs->BeforeReload();
-		}
-		if( g_pVjobsDllModule )
-		{
-			g_pFileSystem->UnloadModule( g_pVjobsDllModule );
-			g_pVjobsDllModule = nullptr;
-		}
-		LoadVjobsModule();
-		if( g_pVJobs )
-		{
-			g_pVJobs->AfterReload();
-		}
-	}
-}
-
-#endif
 
 //-----------------------------------------------------------------------------
 // Instantiate all main libraries
@@ -1588,20 +1432,6 @@ bool CModAppSystemGroup::Create()
 {
 	COM_TimestampedLog( "CModAppSystemGroup::Create() - Start" );
 
-	// If we're not running from Perforce check if we need to restart under Steam
-	if ( !g_bRunningFromPerforce && g_unSteamAppID != k_uAppIdInvalid && SteamAPI_RestartAppIfNecessary( g_unSteamAppID ) )
-	{
-		Plat_ExitProcess( EXIT_SUCCESS );
-	}
-	
-#ifdef ENGINE_MANAGES_VJOBS
-	//////////////////////////////////////////////////////////////////////////
-	//
-	// Vjobs
-	//
-	LoadVjobsModule();	
-	AddSystem( g_pVJobs, VJOBS_INTERFACE_VERSION ); // this is done only once; g_pVJobs doesn't change even after multiple reloads of VJobs.prx
-#endif
 	//////////////////////////////////////////////////////////////////////////
 	//
 	// Matchmaking
@@ -1660,7 +1490,7 @@ bool CModAppSystemGroup::Create()
 	IServerDLLSharedAppSystems *serverSharedSystems = ( IServerDLLSharedAppSystems * )g_ServerFactory( SERVER_DLL_SHARED_APPSYSTEMS, nullptr );
 	if ( !serverSharedSystems )
 	{
-		Assert( !"Expected both game and client .dlls to have or not have shared app systems interfaces!!!" );
+		contract_assert( !"Expected both game and client .dlls to have or not have shared app systems interfaces!!!" );
 		return AddLegacySystems();
 	}
 
@@ -1724,8 +1554,8 @@ bool CModAppSystemGroup::ModuleAlreadyInList( std::vector< AppSystemInfo_t >& li
 {
 	for ( int i = 0; i < std::ssize( list ); ++i )
 	{
-		if ( !Q_stricmp( list[ i ].m_pModuleName, moduleName ) &&
-			 !Q_stricmp( list[ i ].m_pInterfaceName, interfaceName ) )
+		if ( !V_stricmp( list[ i ].m_pModuleName, moduleName ) &&
+			 !V_stricmp( list[ i ].m_pInterfaceName, interfaceName ) )
 			return true;
 	}
 
@@ -1747,21 +1577,6 @@ int CModAppSystemGroup::Main()
 		// Start up the game engine
 		if ( eng->Load( true, host_parms.basedir ) )
 		{
-			// If we're using STEAM, pass the map cycle list as resource hints...
-#if LATER
-			if ( g_pFileSystem->IsSteam() )
-			{
-				char *hints;
-				if ( BuildMapCycleListHints(&hints) )
-				{
-					g_pFileSystem->HintResourceNeed(hints, true);
-				}
-				if ( hints )
-				{
-					g_pMemAlloc->Free(hints);
-				}
-			}
-#endif
 			// Dedicated server drives frame loop manually
 			dedicated->RunServer();
 
@@ -1828,15 +1643,6 @@ void CModAppSystemGroup::Destroy()
 
 	/// vjobs
 
-#ifdef ENGINE_MANAGES_VJOBS
-	if( g_pVjobsDllModule )
-	{
-		g_pFileSystem->UnloadModule( g_pVjobsDllModule );
-		g_pVjobsDllModule = nullptr;
-		g_pfnVjobsFactory = nullptr;
-		g_pVJobs = nullptr;
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1880,7 +1686,7 @@ public:
 	virtual void UpdateStatus(float *fps, int *nActive, int *nMaxPlayers, char *pszMap, int maxlen );
 	virtual void UpdateHostname(char *pszHostname, int maxlen);
 
-	virtual void SetSubProcessID( int nID, int nChildSocketHandle );
+	virtual void SetSubProcessID( int nID, ks::platform::socket *pSocketToParent ) override;
 
 	static void PreMinidumpCallback( void *pvContext );
 	void PreMinidumpCallbackImpl();
@@ -1891,10 +1697,11 @@ private:
 	CModAppSystemGroup *m_pDedicatedServer;
 };
 
-void CDedicatedServerAPI::SetSubProcessID( int nId, int nChildSocketHandle )
+void CDedicatedServerAPI::SetSubProcessID( int nId, ks::platform::socket *pSocketToParent )
 {
 	g_nForkID = nId;
-	g_nSocketToParentProcess = nChildSocketHandle;
+	g_nSocketToParentProcess = pSocketToParent;
+	ks::platform::set_nonblocking( pSocketToParent, nullptr );
 
 }
 
@@ -1915,7 +1722,7 @@ void CDedicatedServerAPI::PreMinidumpCallbackImpl()
 	EndWatchdogTimer(); // Uploading the dump can take a while, turn off our watchdog
 
 	// Win32 dedicated servers build a minidump comment in the exception handler itself
-	fprintf( stderr, "PreMinidumpCallback: updating dump comment\n" );
+	std::fprintf( stderr, "PreMinidumpCallback: updating dump comment\n" );
 	BuildMinidumpComment( nullptr );
 }
 
@@ -1923,7 +1730,8 @@ void CDedicatedServerAPI::PreMinidumpCallbackImpl()
 //-----------------------------------------------------------------------------
 // Singleton
 //-----------------------------------------------------------------------------
-EXPOSE_SINGLE_INTERFACE( CDedicatedServerAPI, IDedicatedServerAPI, VENGINE_HLDS_API_VERSION );
+static CDedicatedServerAPI s_Singleton_CDedicatedServerAPI;
+static InterfaceReg s_Reg_CDedicatedServerAPI_IDedicatedServerAPI( []() -> void * { return static_cast<IDedicatedServerAPI *>( &s_Singleton_CDedicatedServerAPI ); }, VENGINE_HLDS_API_VERSION );;
 
 bool g_bIsVGuiBasedDedicatedServer = false; // Assume use convar
 //-----------------------------------------------------------------------------
@@ -1948,9 +1756,7 @@ bool CDedicatedServerAPI::Connect( CreateInterfaceFn factory )
 
 	g_pFileSystem = g_pFullFileSystem;
 
-#ifndef DBGFLAG_STRINGS_STRIP
 	g_pFileSystem->SetWarningFunc( Warning );
-#endif
 
 	if ( !Shader_Connect( false ) )
 		return false;
@@ -2035,11 +1841,11 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 	char szMod[MAX_OSPATH];
 
 	// Determine the mod directory.
-	Q_FileBase(com_gamedir, szMod, sizeof( szMod ) );
+	V_FileBase(com_gamedir, szMod, sizeof( szMod ) );
 
 	// Open mapcycle.txt
 	char cszMapCycleTxtFile[MAX_OSPATH];
-	Q_snprintf(cszMapCycleTxtFile, sizeof( cszMapCycleTxtFile ), "%s\\mapcycle.txt", szMod);
+	V_snprintf(cszMapCycleTxtFile, sizeof( cszMapCycleTxtFile ), "%s\\mapcycle.txt", szMod);
 	FileHandle_t pFile = g_pFileSystem->Open(cszMapCycleTxtFile, "rb");
 	if ( pFile == FILESYSTEM_INVALID_HANDLE )
 	{
@@ -2048,8 +1854,8 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 	}
 
 	// Start off with the common preloads.
-	Q_snprintf(szMap, sizeof( szMap ), "%s\\%s\\%s%s\r\n", szReslistsBaseDir, szMod, szCommonPreloads, szReslistsExt);
-	int hintsSize = strlen(szMap) + 1;
+	V_snprintf(szMap, sizeof( szMap ), "%s\\%s\\%s%s\r\n", szReslistsBaseDir, szMod, szCommonPreloads, szReslistsExt);
+	int hintsSize = std::strlen(szMap) + 1;
 	*hints = (char*)MemAlloc_Alloc( hintsSize );
 	if ( *hints == nullptr )
 	{
@@ -2057,7 +1863,7 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 		g_pFileSystem->Close( pFile );
 		return 0;
 	}
-	Q_strncpy( *hints, szMap, hintsSize );
+	V_strncpy( *hints, szMap, hintsSize );
 		
 	// Read in and parse mapcycle.txt
 	length = g_pFileSystem->Size(pFile);
@@ -2075,7 +1881,7 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 				if ( strlen( com_token ) <= 0 )
 					break;
 
-				Q_strncpy(szMap, com_token, sizeof(szMap));
+				V_strncpy(szMap, com_token, sizeof(szMap));
 
 				// Any more tokens on this line?
 				if ( COM_TokenWaiting( pFileList ) )
@@ -2084,7 +1890,7 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 				}
 
 				char mapLine[sizeof(szMap)];
-				Q_snprintf(mapLine, sizeof(mapLine), "%s\\%s\\%s%s\r\n", szReslistsBaseDir, szMod, szMap, szReslistsExt);
+				V_snprintf(mapLine, sizeof(mapLine), "%s\\%s\\%s%s\r\n", szReslistsBaseDir, szMod, szMap, szReslistsExt);
 				*hints = (char*)g_pMemAlloc->Realloc(*hints, strlen(*hints) + 1 + strlen(mapLine) + 1); // count NULL string terminators
 				if ( *hints == nullptr )
 				{
@@ -2092,7 +1898,7 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 					g_pFileSystem->Close( pFile );
 					return 0;
 				}
-				Q_strncat(*hints, mapLine, hintsSize, COPY_ALL_CHARACTERS);
+				V_strncat(*hints, mapLine, hintsSize, COPY_ALL_CHARACTERS);
 			}
 		}
 	}
@@ -2100,9 +1906,9 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 	g_pFileSystem->Close(pFile);
 
 	// Tack on <moddir>\mp_maps.txt to the end to make sure we load reslists for all multiplayer maps we know of
-	Q_snprintf(szMap, sizeof( szMap ), "%s\\%s\\mp_maps.txt\r\n", szReslistsBaseDir, szMod);
+	V_snprintf(szMap, sizeof( szMap ), "%s\\%s\\mp_maps.txt\r\n", szReslistsBaseDir, szMod);
 	*hints = (char*)g_pMemAlloc->Realloc(*hints, strlen(*hints) + 1 + strlen(szMap) + 1); // count NULL string terminators
-	Q_strncat( *hints, szMap, hintsSize, COPY_ALL_CHARACTERS );
+	V_strncat( *hints, szMap, hintsSize, COPY_ALL_CHARACTERS );
 
 	return 1;
 }
@@ -2115,7 +1921,6 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 //			*cmdline - 
 //			launcherFactory - 
 //-----------------------------------------------------------------------------
-AppId_t g_nDedicatedServerAppIdBreakpad = 0;
 bool CDedicatedServerAPI::ModInit( ModInfo_t &info )
 {
 	g_bIsVGuiBasedDedicatedServer = dedicated->IsGuiDedicatedServer();
@@ -2125,7 +1930,6 @@ bool CDedicatedServerAPI::ModInit( ModInfo_t &info )
 	// Configure breakpad
 	// this must be done after mod search path chain is configured
 	//
-	// Parse AppID from steam.inf file
 	Sys_Version( true );
 
 
@@ -2160,7 +1964,7 @@ bool CDedicatedServerAPI::ModInit( ModInfo_t &info )
 			"lowviolence",
 			"perfectworld"
 		};
-		for ( int j = 0; j < Q_ARRAYSIZE( szCompatibilityVPKs ); ++ j )
+		for ( int j = 0; j < std::size( szCompatibilityVPKs ); ++ j )
 		{	// Add in same order listed to tail
 			g_pFullFileSystem->AddSearchPath( szCompatibilityVPKs[ j ], "COMPAT:GAME", PATH_ADD_TO_TAIL );
 		}
@@ -2239,7 +2043,7 @@ void CDedicatedServerAPI::UpdateHostname(char *pszHostname, int maxlen)
 {
 	if ( pszHostname && ( maxlen > 0 ) )
 	{
-		Q_strncpy( pszHostname, sv.GetName(), maxlen );
+		V_strncpy( pszHostname, sv.GetName(), maxlen );
 	}
 }
 
@@ -2294,15 +2098,9 @@ public:
 	{
 		GetLocalClient().SetFriendsID( friendsID, friendsName );
 	}
-
-	bool IsConnectedToVACSecureServer()
-	{
-		if ( GetBaseLocalClient().IsConnected() )
-			return Steam3Client().BGSSecure();
-		return false;
-	}
 };
 
-EXPOSE_SINGLE_INTERFACE( CGameUIFuncs, IGameUIFuncs, VENGINE_GAMEUIFUNCS_VERSION );
+static CGameUIFuncs s_Singleton_CGameUIFuncs;
+static InterfaceReg s_Reg_CGameUIFuncs_IGameUIFuncs( []() -> void * { return static_cast<IGameUIFuncs *>( &s_Singleton_CGameUIFuncs ); }, VENGINE_GAMEUIFUNCS_VERSION );;
 
 #endif

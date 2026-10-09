@@ -1,11 +1,26 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "npcevent.h"
+#include "debugoverlay_shared.h"
 #include "reflect_recvtable.h"
 
 #include "iviewrender.h"
@@ -506,7 +521,7 @@ void C_EntityDissolve::ClientThink( void )
 	if (( !m_pController ) && ( m_nDissolveType == ENTITY_DISSOLVE_NORMAL ) && pAnimating->IsRagdoll())
 	{
 		IPhysicsObject *ppList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-		int nCount = pAnimating->VPhysicsGetObjectList( ppList, ARRAYSIZE(ppList) );
+		int nCount = pAnimating->VPhysicsGetObjectList( ppList, std::size( ppList ) );
 		if ( nCount > 0 )
 		{
 			m_pController = physenv->CreateMotionController( this );

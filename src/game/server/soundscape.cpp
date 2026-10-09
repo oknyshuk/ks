@@ -1,10 +1,34 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "soundscape.h"
@@ -46,7 +70,7 @@ void CEnvSoundscapeProxy::Activate()
 		// Copy the relevant parameters from our main soundscape.
 		m_soundscapeIndex = m_hProxySoundscape->m_soundscapeIndex;
 
-		for ( int i=0; i < ARRAYSIZE( m_positionNames ); i++ )
+		for ( int i=0; i < std::size( m_positionNames ); i++ )
 			m_positionNames[i] = m_hProxySoundscape->m_positionNames[i];
 	}
 	else
@@ -186,7 +210,7 @@ void CEnvSoundscape::WriteAudioParamsTo( audioparams_t &audio )
 	audio.entIndex = m_soundscapeEntityId;
 	audio.soundscapeIndex = m_soundscapeIndex;
 	audio.localBits = 0;
-	for ( int i = 0; i < ARRAYSIZE(m_positionNames); i++ )
+	for ( int i = 0; i < std::size( m_positionNames ); i++ )
 	{
 		if ( m_positionNames[i] != NULL_STRING )
 		{
@@ -301,7 +325,7 @@ void CEnvSoundscape::UpdateForPlayer( ss_update_t &update )
 				// also draw lines to each sound position.
 				// we don't store the number of local sound positions, just a bitvector of which ones are on.
 				unsigned int soundbits = audio.localBits.Get();
-				float periodic = 2.0f * sin((fmod(gpGlobals->curtime,2.0f) - 1.0f) * M_PI); // = -4f .. 4f
+				float periodic = 2.0f * std::sin((std::fmod(gpGlobals->curtime,2.0f) - 1.0f) * std::numbers::pi); // = -4f .. 4f
 				for (int ii = 0 ; ii < NUM_AUDIO_LOCAL_SOUNDS ; ++ii )
 				{
 					if ( soundbits & (1 << ii) )

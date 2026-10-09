@@ -1,19 +1,12 @@
-//===== Copyright c 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef IMATCHEXT_CSTRIKE15_H
-#define IMATCHEXT_CSTRIKE15_H
-
-
+import ks.core;
 #define STORAGE_COUNT_FOR_BITS( aStorageType, numBits ) ( ( (numBits) + 8*sizeof( aStorageType ) - 1 ) / sizeof( aStorageType ) )
 
-
 // Matchmaking data for CSS1.5
-#define MM_AVG_CONST 100.0f
+inline constexpr auto MM_AVG_CONST = 100.0f;
 
 // MatchmakingDataMode
 // We keep seperate matchmaking data for a different kinds of types.  Types that
@@ -200,19 +193,9 @@ struct TitleData3
 
 		//we are using an array so we can pack this info as tight as possible to fit into the 1K block
 
-#if defined( LOCAL_ELO_DATA )
-	// array of player skill rankings
-	PlayerELORank_t playerRankingsData[ ELOTitleData360::TOTAL_NUM_ELO_RANKS_STORED ];
-
-	PlayerELOBracketInfo_t EloBracketInfo[ ELOTitleData::NUM_GAME_MODES_ELO_RANKED ];
-#endif
-
 	struct usrMMData_t
 	{
 	};
 	usrMMData_t usrMMData;
 	
 };
-
-
-#endif // IMATCHEXT_CSTRIKE15_H

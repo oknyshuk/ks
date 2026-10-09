@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef ISERVER_H
-#define ISERVER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <inetmsghandler.h>
 #include <const.h>
@@ -16,7 +11,7 @@ class IClient;
 
 typedef struct player_info_s player_info_t;
 
-abstract_class IServer : public IConnectionlessPacketHandler
+class IServer : public IConnectionlessPacketHandler
 {
 public:
 	virtual	~IServer() {}
@@ -61,6 +56,3 @@ public:
 
 	virtual void	DisconnectClient( IClient *client, const char *reason ) = 0;
 };
-
-
-#endif // ISERVER_H

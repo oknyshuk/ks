@@ -1,17 +1,10 @@
-//=========== Copyright (c) Valve Corporation, All rights reserved. =============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CS_CUSTOM_EMBROIDER_VISUALSDATA_PROCESSOR_H
-#define CS_CUSTOM_EMBROIDER_VISUALSDATA_PROCESSOR_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "cs_shareddefs.h"
 #include "materialsystem/base_visuals_data_processor.h"
 #include "materialsystem/icustommaterialmanager.h"
-
 
 struct CCSEmbroiderData_t
 {
@@ -63,5 +56,3 @@ private:
 
 	char *m_pCompositingShaderName;
 };
-
-#endif // CS_CUSTOM_EMBROIDER_VISUALSDATA_PROCESSOR_H

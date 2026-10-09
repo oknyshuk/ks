@@ -1,8 +1,7 @@
+#pragma once
 //--------------------------------------------------------------------------------------------------------
 // Copyright (c) 2007 Turtle Rock Studios, Inc.
 
-#if !defined( C_BASETOGGLE_H )
-#define C_BASETOGGLE_H
 
 #include "reflect_annotations.h"
 
@@ -97,4 +96,3 @@ private:
 
 
 
-#endif // C_BASETOGGLE_H

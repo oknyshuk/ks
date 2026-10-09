@@ -1,29 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "quakedef.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #include "networkstringtable.h"
-#include "utlvector.h"
 #include "eiface.h"
 #include "server.h"
-#include "framesnapshot.h"
-#include "host.h"
 #include "LocalNetworkBackdoor.h"
-#include "demo.h"
 
 static CNetworkStringTableContainer s_NetworkStringTableServer;
 CNetworkStringTableContainer *networkStringTableContainerServer = &s_NetworkStringTableServer;
 
 // Expose interface
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CNetworkStringTableContainer, INetworkStringTableContainer, INTERFACENAME_NETWORKSTRINGTABLESERVER, s_NetworkStringTableServer );
-
-#ifdef SHARED_NET_STRING_TABLES
-	// Expose same interface to client .dll as client string tables
-	EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CNetworkStringTableContainer, INetworkStringTableContainer, INTERFACENAME_NETWORKSTRINGTABLECLIENT, s_NetworkStringTableServer );
-#endif
+static InterfaceReg s_Reg_CNetworkStringTableContainer_INetworkStringTableContainer( []() -> void * { return static_cast<INetworkStringTableContainer *>( &s_NetworkStringTableServer ); }, INTERFACENAME_NETWORKSTRINGTABLESERVER );;
 
 //-----------------------------------------------------------------------------
 // Purpose: 

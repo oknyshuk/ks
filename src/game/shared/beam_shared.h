@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BEAM_H
-#define BEAM_H
+import std;
 
 #include "baseentity_shared.h"
 #include "baseplayer_shared.h"
@@ -20,24 +16,24 @@
 #include "dt_recv.h"
 #include "worldsize.h"
 
-#define MAX_BEAM_WIDTH			102.3f
-#define MAX_BEAM_SCROLLSPEED	100.0f
-#define MAX_BEAM_NOISEAMPLITUDE		64
+inline constexpr auto MAX_BEAM_WIDTH = 102.3f;
+inline constexpr auto MAX_BEAM_SCROLLSPEED = 100.0f;
+inline constexpr auto MAX_BEAM_NOISEAMPLITUDE = 64;
 
-#define SF_BEAM_STARTON			0x0001
-#define SF_BEAM_TOGGLE			0x0002
-#define SF_BEAM_RANDOM			0x0004
-#define SF_BEAM_RING			0x0008
-#define SF_BEAM_SPARKSTART		0x0010
-#define SF_BEAM_SPARKEND		0x0020
-#define SF_BEAM_DECALS			0x0040
-#define SF_BEAM_SHADEIN			0x0080
-#define SF_BEAM_SHADEOUT		0x0100
-#define	SF_BEAM_TAPEROUT		0x0200	// Tapers to zero
-#define SF_BEAM_TEMPORARY		0x8000
+inline constexpr auto SF_BEAM_STARTON = 0x0001;
+inline constexpr auto SF_BEAM_TOGGLE = 0x0002;
+inline constexpr auto SF_BEAM_RANDOM = 0x0004;
+inline constexpr auto SF_BEAM_RING = 0x0008;
+inline constexpr auto SF_BEAM_SPARKSTART = 0x0010;
+inline constexpr auto SF_BEAM_SPARKEND = 0x0020;
+inline constexpr auto SF_BEAM_DECALS = 0x0040;
+inline constexpr auto SF_BEAM_SHADEIN = 0x0080;
+inline constexpr auto SF_BEAM_SHADEOUT = 0x0100;
+inline constexpr auto SF_BEAM_TAPEROUT = 0x0200; // Tapers to zero
+inline constexpr auto SF_BEAM_TEMPORARY = 0x8000;
 
-#define ATTACHMENT_INDEX_BITS	5
-#define ATTACHMENT_INDEX_MASK	((1 << ATTACHMENT_INDEX_BITS) - 1)
+inline constexpr auto ATTACHMENT_INDEX_BITS = 5;
+inline constexpr auto ATTACHMENT_INDEX_MASK = ((1 << ATTACHMENT_INDEX_BITS) - 1);
 
 #if defined( CLIENT_DLL )
 #define CBeam C_Beam
@@ -324,13 +320,13 @@ inline const Vector &CBeam::WorldSpaceCenter( void ) const
 
 inline void CBeam::SetStartAttachment( int attachment )	
 {
-	Assert( (attachment & ~ATTACHMENT_INDEX_MASK) == 0 );
+	contract_assert( (attachment & ~ATTACHMENT_INDEX_MASK) == 0 );
 	m_nAttachIndex.Set( 0, attachment );
 }
 
 inline void CBeam::SetEndAttachment( int attachment )		
 { 
-	Assert( (attachment & ~ATTACHMENT_INDEX_MASK) == 0 );
+	contract_assert( (attachment & ~ATTACHMENT_INDEX_MASK) == 0 );
 	m_nAttachIndex.Set( m_nNumBeamEnts-1, attachment );
 }
 
@@ -351,13 +347,13 @@ inline void CBeam::SetHaloScale( float haloScale )
 
 inline void CBeam::SetWidth( float width )				
 {
-	Assert( width <= MAX_BEAM_WIDTH );
+	contract_assert( width <= MAX_BEAM_WIDTH );
 	m_fWidth = std::min( MAX_BEAM_WIDTH, width );
 }
 
 inline void CBeam::SetEndWidth( float endWidth )		
 { 
-	Assert( endWidth <= MAX_BEAM_WIDTH );
+	contract_assert( endWidth <= MAX_BEAM_WIDTH );
 	m_fEndWidth	= std::min( MAX_BEAM_WIDTH, endWidth );
 }
 
@@ -494,11 +490,17 @@ inline void	CBeam::BeamDamageInstant( trace_t *ptr, float damage )
 bool IsStaticPointEntity( CBaseEntity *pEnt );
 
 // Macro to wrap creation
-#define BEAM_CREATE_PREDICTABLE( name, width, player ) \
-	CBeam::BeamCreatePredictable( __FILE__, __LINE__, false, name, width, player )
+template <typename T1, typename T2, typename T3>
+inline auto BEAM_CREATE_PREDICTABLE( T1 name, T2 width, T3 player, std::source_location loc = std::source_location::current() )
+{
+	return CBeam::BeamCreatePredictable( loc.file_name(), static_cast<int>( loc.line() ), false, name, width, player );
+}
 
-#define BEAM_CREATE_PREDICTABLE_PERSIST( name, width, player ) \
-	CBeam::BeamCreatePredictable( __FILE__, __LINE__, true, name, width, player )
+template <typename T1, typename T2, typename T3>
+inline auto BEAM_CREATE_PREDICTABLE_PERSIST( T1 name, T2 width, T3 player, std::source_location loc = std::source_location::current() )
+{
+	return CBeam::BeamCreatePredictable( loc.file_name(), static_cast<int>( loc.line() ), true, name, width, player );
+}
 
 // Start/End Entity is encoded as 12 bits of entity index, and 4 bits of attachment (4:12)
 #define BEAMENT_ENTITY(x)		((x)&0xFFF)
@@ -516,6 +518,3 @@ enum
 	BEAM_LASER,
 	NUM_BEAM_TYPES
 };
-
-
-#endif // BEAM_H

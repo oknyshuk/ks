@@ -1,16 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "convar.h"
+import std;
 
 #include "lightmappedgeneric_dx9_helper.h"
-
 
 static LightmappedGeneric_DX9_Vars_t s_info;
 
@@ -19,7 +14,7 @@ DEFINE_FALLBACK_SHADER( WorldVertexTransition, WorldVertexTransition_DX9 )
 
 BEGIN_VS_SHADER( WorldVertexTransition_DX9, "Help for WorldVertexTransition" )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( SELFILLUMTINT, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Self-illumination tint" )
 		SHADER_PARAM( DETAIL, SHADER_PARAM_TYPE_TEXTURE, "shadertest/detail", "detail texture" )
 		SHADER_PARAM( DETAILFRAME, SHADER_PARAM_TYPE_INTEGER, "0", "frame number for $detail" )
@@ -216,4 +211,3 @@ BEGIN_VS_SHADER( WorldVertexTransition_DX9, "Help for WorldVertexTransition" )
 		DrawLightmappedGeneric_DX9( this, params, pShaderAPI, pShaderShadow, s_info, pContextDataPtr );
 	}
 END_SHADER
-

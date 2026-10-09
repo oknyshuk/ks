@@ -1,20 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "common_hlsl_cpp_consts.h"
 #include "screenspaceeffect_vs20.inc"
 #include "accumbuff5sample_ps20.inc"
 #include "accumbuff5sample_ps20b.inc"
-#include "convar.h"
-
+import std;
 
 BEGIN_VS_SHADER_FLAGS( accumbuff5sample, "Help for AccumBuff5Sample", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 
 		// Four textures to sample
 		SHADER_PARAM( TEXTURE0, SHADER_PARAM_TYPE_TEXTURE, "", "" )

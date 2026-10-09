@@ -1,9 +1,9 @@
 /* see copyright notice in squirrel.h */
+
+#include <assert.h>
+
 #include <squirrel.h>
 #include <sqstdaux.h>
-#include <assert.h>
-#if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#endif
 
 void sqstd_printcallstack(HSQUIRRELVM v)
 {
@@ -90,7 +90,7 @@ void sqstd_printcallstack(HSQUIRRELVM v)
 					pf(v,_SC("[%s] %s\n"),name,b?_SC("true"):_SC("false"));
 							 }
 					break;
-				default: Assert(0); break;
+				default: contract_assert( 0 ); break;
 				}
 				sq_pop(v,1);
 			}

@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#if !defined( PROTO_OOB_H )
-#define PROTO_OOB_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // This is used, unless overridden in the registry
-#define VALVE_MASTER_ADDRESS "207.173.177.10:27011"
+inline constexpr const char *VALVE_MASTER_ADDRESS = "207.173.177.10:27011";
 
 #define PORT_RCON			27015	// Default RCON port, TCP
 #define	PORT_MASTER			27011	// Default master port, UDP
@@ -20,10 +14,6 @@
 
 #define PORT_X360_RESERVED_FIRST	27026	// X360 reserved port first
 #define PORT_X360_RESERVED_LAST		27034	// X360 reserved port last
-#ifdef ENABLE_RPT
-#define PORT_RPT			27035	// default RPT (remote perf testing) port, TCP
-#define PORT_RPT_LISTEN		27036	// RPT connection listener (remote perf testing) port, TCP
-#endif // ENABLE_RPT
 #define PORT_REPLAY			27040	// Default replay port
 
 // out of band message id bytes
@@ -70,9 +60,6 @@
 #define S2A_RESERVE_RESPONSE	'p' // server response to reservation request
 
 // Another user is requesting a challenge value from this machine
-// NOTE: this is currently duplicated in SteamClient.dll but for a different purpose,
-// so these can safely diverge anytime. SteamClient will be using a different protocol
-// to update the master servers anyway.
 #define A2S_GETCHALLENGE		'q'	// Request challenge # from another machine
 
 #define A2S_RCON				'r'	// client rcon command
@@ -137,26 +124,23 @@
 #define C2S_AUTHCONNECT         '7'  // Unused, signals that the client has
 									 // authenticated the server
 
-#define C2S_VALIDATE_SESSION    '8'
+inline constexpr char C2S_VALIDATE_SESSION = '8';
 // #define UNUSED_A2S_LANSEARCH			'C'	 // LAN game details searches
 // #define UNUSED_S2A_LANSEARCHREPLY		'F'	 // LAN game details reply
 
 #define S2C_CONNREJECT			'9'  // Special protocol for rejected connections.
 
 #define MAX_OOB_KEYVALUES		600		// max size in bytes for keyvalues included in an OOB msg
-#define MAKE_4BYTES( a, b, c, d ) ( ( ((unsigned char)(d)) << 24 ) | ( ((unsigned char)(c)) << 16 ) | ( ((unsigned char)(b)) << 8 ) | ( ((unsigned char)(a)) << 0 ) )
+inline constexpr unsigned MAKE_4BYTES( unsigned char a, unsigned char b, unsigned char c, unsigned char d )
+{
+	return ( ( (unsigned)d ) << 24 ) | ( ( (unsigned)c ) << 16 ) | ( ( (unsigned)b ) << 8 ) | ( ( (unsigned)a ) << 0 );
+}
 
 #define A2A_KV_CMD				'?'	// generic KeyValues command [1 byte: version] [version dependent data...]
 #define A2A_KV_VERSION			1	// version of generic KeyValues command
 									// [4 bytes: header] [4 bytes: replyid] [4 bytes: challenge] [4 bytes: extra] [4 bytes: numbytes] [numbytes: serialized KV]
 
-// These can be owned by Steam after we get rid of this legacy code.
 #define S2A_INFO_SRC			'I'	// + Address, hostname, map, gamedir, gamedescription, active players, maxplayers, protocol
-#define	S2M_HEARTBEAT			'a'	// + challeange + sequence + active + #channels + channels
-#define S2M_HEARTBEAT2			'0' // New style heartbeat
-#define	S2M_SHUTDOWN			'b' // no params
-#define M2A_CHALLENGE			's'	// + challenge value 
-#define M2S_REQUESTRESTART		'O' // HLMaster rejected a server's connection because the server needs to be updated
 #define A2S_RULES				'V'	// request rules list from server
 #define S2A_RULES				'E' // + number of rules + string key and string value pairs
 #define A2S_INFO				'T' // server info request - this must match the Goldsrc engine
@@ -173,14 +157,10 @@
 #define S2A_EXTRA_DATA_HAS_GAME_PORT				0x80		// Next 2 bytes include the game port.
 #define S2A_EXTRA_DATA_HAS_SPECTATOR_DATA			0x40		// Next 2 bytes include the spectator port, then the spectator server name.
 #define S2A_EXTRA_DATA_HAS_GAMETAG_DATA				0x20		// Next bytes are the game tag string
-#define S2A_EXTRA_DATA_HAS_STEAMID					0x10		// Next 8 bytes are the steamID
 #define S2A_EXTRA_DATA_GAMEID						0x01		// Next 8 bytes are the gameID of the server
 
 #define A2S_RESERVE_CHECK			'!' // check if server reservation cookie is same as the one we are holding
 #define S2A_RESERVE_CHECK_RESPONSE	'%' // server response to reservation request
 
-#define A2S_PING					'$'
-#define S2A_PING_RESPONSE			'^'
-
-#endif
-
+inline constexpr char A2S_PING = '$';
+inline constexpr char S2A_PING_RESPONSE = '^';

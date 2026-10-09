@@ -1,13 +1,8 @@
-//======= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Shared code for XBox Rumble Effects
-//
-// $NoKeywords: $
-//
-//=============================================================================//
 #pragma once
-#ifndef RUMBLE_SHARED_H
-#define RUMBLE_SHARED_H
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Shared code for XBox Rumble Effects
 
 #define RUMBLE_FLAGS_NONE				0x0000
 #define RUMBLE_FLAG_STOP				0x0001 // Stop any instance of this type of effect that's already playing.
@@ -69,5 +64,3 @@ enum
 
 	NUM_RUMBLE_EFFECTS, // THIS MUST BE LAST!!!
 };
-
-#endif//RUMBLE_SHARED_H

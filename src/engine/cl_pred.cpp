@@ -1,18 +1,27 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "client_pch.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// main precompiled header for client files
+
+import std;
+import ks.tier1;
+
+#include "iprediction.h"
+
+
+
+
+
+#include "client.h"
+#include "cl_pred.h"
+
 #include "demo.h"
-#include "host.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
+#include "demo.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 

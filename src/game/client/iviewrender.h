@@ -1,23 +1,15 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#if !defined( IVIEWRENDER_H )
-#define IVIEWRENDER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.core;
 
 #include "ivrenderview.h"
 
+inline constexpr int MAX_DEPTH_TEXTURE_SHADOWS = 1;
+inline constexpr int MAX_DEPTH_TEXTURE_HIGHRES_SHADOWS = 0;
 
-#define MAX_DEPTH_TEXTURE_SHADOWS 1
-#define MAX_DEPTH_TEXTURE_HIGHRES_SHADOWS 0
-
-#define MAX_DEPTH_TEXTURE_SHADOWS_TOOLS 8
-#define MAX_DEPTH_TEXTURE_HIGHRES_SHADOWS_TOOLS 0
+inline constexpr int MAX_DEPTH_TEXTURE_SHADOWS_TOOLS = 8;
+inline constexpr int MAX_DEPTH_TEXTURE_HIGHRES_SHADOWS_TOOLS = 0;
 
 
 // These are set as it draws reflections, refractions, etc, so certain effects can avoid 
@@ -65,10 +57,9 @@ enum DrawFlags_t
 //-----------------------------------------------------------------------------
 class CViewSetup;
 class C_BaseEntity;
-struct vrect_t;
 class C_BaseViewModel;
 
-abstract_class IViewRender
+class IViewRender
 {
 public:
 	// SETUP
@@ -148,5 +139,3 @@ public:
 };
 
 extern IViewRender *view;
-
-#endif // IVIEWRENDER_H

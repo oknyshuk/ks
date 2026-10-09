@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 oknyshuk
+
 add_library(particles STATIC
     builtin_constraints.cpp
     builtin_initializers.cpp

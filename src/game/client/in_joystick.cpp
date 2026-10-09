@@ -1,14 +1,23 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Joystick handling function
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
-#include "basehandle.h"
-#include "utlvector.h"
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
 #include "cdll_client_int.h"
 #include "cdll_util.h"
 #include "kbutton.h"
@@ -18,13 +27,8 @@
 #include "input.h"
 #include "iviewrender.h"
 #include "iclientmode.h"
-#include "convar.h"
 #include "hud.h"
-#include "tier0/icommandline.h"
 #include "inputsystem/iinputsystem.h"
-#include "inputsystem/ButtonCode.h"
-#include "math.h"
-#include "tier1/convar_serverbounded.h"
 #include "c_baseplayer.h"
 #include "iengineui.h"
 #include "inputsystem/iinputstacksystem.h"
@@ -37,9 +41,9 @@
 
 
 // Control like a joystick
-#define JOY_ABSOLUTE_AXIS	0x00000000		
+constexpr auto JOY_ABSOLUTE_AXIS = 0x00000000;
 // Control like a mouse, spinner, trackball
-#define JOY_RELATIVE_AXIS	0x00000010		
+constexpr auto JOY_RELATIVE_AXIS = 0x00000010;
 
 // Set the joystick being force disabled just as we write the config
 // This allows us to chose this option in the menu with a controller without accidentally disabling our only mode of input
@@ -227,7 +231,7 @@ static float ResponseCurve( int curve, float x, int axis, float sensitivity )
 				flScale = -flScale;
 			}
 
-			float retval = clamp( powf( fabs( x ), oneOverSens ), 0.0f, 1.0f );
+			float retval = clamp( std::powf( fabs( x ), oneOverSens ), 0.0f, 1.0f );
 			return retval * flScale;
 		}
 		break;
@@ -431,7 +435,7 @@ static bool IsJoystickPegged( float input, float otherAxis )
 	float algorythmX = abs(input); 
 	float algorythmY = std::max( abs(otherAxis),fMinimumVal ); 
 
-	float fltempAlgorythmSample = pow(  pow(algorythmX,fPower)+pow(algorythmY,fPower),fPower); 
+	float fltempAlgorythmSample = std::pow(  std::pow(algorythmX,fPower)+pow(algorythmY,fPower),fPower); 
 
 	float flJoyAddititiveDistComparison = 0.94f;
 	bool result = fltempAlgorythmSample >= flJoyAddititiveDistComparison;
@@ -536,16 +540,16 @@ float CInput::ResponseCurveLookDefault( int nSlot, float x, int axis, float othe
 		{
 			float input = x / dist;
 			input = clamp( input, -1.0f, 1.0f );
-			float theta = acos( input );
-			newX = cos( theta ) * tmpDist;
+			float theta = std::acos( input );
+			newX = std::cos( theta ) * tmpDist;
 			//Msg( "input: %f, theta:%f, x: %f\n", input, theta, newX );
 		}
 		else
 		{
 			float input = x / dist;
 			input = clamp( input, -1.0f, 1.0f );
-			float theta = asin( input );
-			newX = sin( theta ) * tmpDist;
+			float theta = std::asin( input );
+			newX = std::sin( theta ) * tmpDist;
 			//Msg( "input: %f, theta:%f, x: %f\n", input, theta, newX );
 		}
 		x = newX;
@@ -629,7 +633,7 @@ float CInput::ResponseCurveLookAccelerated( int nSlot, float x, int axis, float 
 
 	float input = x;
 
-	float flJoyDist = ( sqrt(x*x + otherAxis * otherAxis) );
+	float flJoyDist = ( std::sqrt(x*x + otherAxis * otherAxis) );
 	bool bIsPegged = ( flJoyDist>= joy_pegged.GetFloat() );
 	if ( joy_useNewAcecelMethod.GetBool() || joy_useNewJoystickPegged.GetBool() )
 	{
@@ -742,7 +746,7 @@ float CInput::ResponseCurveLookPolynomial( int nSlot, float x, int axis, float o
 
 	envelope_t &envelope = controlEnvelope[ std::max( nSlot, 0 ) ];
 	float input = x;
-	float scale = std::min( 1.0f, sqrt(x*x+otherAxis*otherAxis) );
+	float scale = std::min( 1.0f, std::sqrt(x*x+otherAxis*otherAxis) );
 	bool bPegged = ( scale >= joy_pegged.GetFloat() ) || IsJoystickPegged( x, otherAxis );
 
 	if( axis == YAW && joy_virtual_peg.GetBool() )
@@ -897,7 +901,7 @@ void CInput::Joystick_Advanced( bool bSilent )
 		else
 		{
 			if ( !bSilent && 
-				hh == 0 && Q_stricmp( joy_name.GetString(), "joystick") )
+				hh == 0 && V_stricmp( joy_name.GetString(), "joystick") )
 			{
 				// notify user of advanced controller
 				Msg( "Using joystick '%s' configuration\n", joy_name.GetString() );
@@ -959,7 +963,7 @@ void CInput::Joystick_Advanced( bool bSilent )
 		{
 			for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 			{
-				engine->ClientCmd_Unrestricted( "exec controller" PLATFORM_EXT ".cfg", false, i, false );
+				engine->ClientCmd_Unrestricted( "exec controller"".cfg", false, i, false );
 			}
 			joy_xcontroller_cfg_loaded.SetValue( 1 );
 		}
@@ -1159,7 +1163,7 @@ void CInput::JoyStickSampleAxes( float &forward, float &side, float &pitch, floa
 			// y=ax^b; where a = 300 and b = 1.3
 			// also x values are in increments of 800 (so this is factored out)
 			// then bounds check result to level out excessively high spin rates
-			float fTemp = 300.0 * pow(abs(fAxisValue) / 800.0, 1.3);
+			float fTemp = 300.0 * std::pow(abs(fAxisValue) / 800.0, 1.3);
 			if (fTemp > 14000.0)
 				fTemp = 14000.0;
 			// restore direction information
@@ -1174,7 +1178,7 @@ void CInput::JoyStickSampleAxes( float &forward, float &side, float &pitch, floa
 	// Before these axes are allowed to return values must bring them back to mostly centered
 	if ( user.m_bForceJoystickRecentering[ 0 ] )
 	{
-		if ( fabsf( gameAxes[GAME_AXIS_FORWARD].value ) < 0.1f && fabsf( gameAxes[GAME_AXIS_SIDE].value ) < 0.1f )
+		if ( std::fabsf( gameAxes[GAME_AXIS_FORWARD].value ) < 0.1f && fabsf( gameAxes[GAME_AXIS_SIDE].value ) < 0.1f )
 		{
 			user.m_bForceJoystickRecentering[ 0 ] = false;
 		}
@@ -1186,7 +1190,7 @@ void CInput::JoyStickSampleAxes( float &forward, float &side, float &pitch, floa
 	// Before these axes are allowed to return values must bring them back to mostly centered
 	if ( user.m_bForceJoystickRecentering[ 1 ] )
 	{
-		if ( fabsf( gameAxes[GAME_AXIS_PITCH].value ) < 0.1f && fabsf( gameAxes[GAME_AXIS_YAW].value ) < 0.1f )
+		if ( std::fabsf( gameAxes[GAME_AXIS_PITCH].value ) < 0.1f && fabsf( gameAxes[GAME_AXIS_YAW].value ) < 0.1f )
 		{
 			user.m_bForceJoystickRecentering[ 1 ] = false;
 		}
@@ -1259,7 +1263,7 @@ void CInput::JoyStickThirdPersonPlatformer( CUserCmd *cmd, float &forward, float
 	{
 		// apply turn control [ YAW ]
 		// factor in the camera offset, so that the move direction is relative to the thirdperson camera
-		viewangles[ YAW ] = RAD2DEG(atan2(-side, -forward)) + user.m_vecCameraOffset[ YAW ];
+		viewangles[ YAW ] = RAD2DEG(std::atan2(-side, -forward)) + user.m_vecCameraOffset[ YAW ];
 		engine->SetViewAngles( viewangles );
 
 		// apply movement
@@ -1382,7 +1386,7 @@ void CInput::JoyStickForwardSideControl( float forward, float side, float &joyFo
 		// so diagonal needs to be scaled properly to full speed.
 
 		bool bInWalk = true;
-		float scale = std::min(1.0f,sqrt(forward*forward+side*side));
+		float scale = std::min(1.0f,std::sqrt(forward*forward+side*side));
 		if ( scale > 0.01f )
 		{
 			float val;
@@ -1390,7 +1394,7 @@ void CInput::JoyStickForwardSideControl( float forward, float side, float &joyFo
 			{
 				bInWalk = false;
 			}
-			float scaledVal = ResponseCurve( joy_response_move.GetInt(), scale, PITCH, fabsf( joy_forwardsensitivity.GetFloat() ) );
+			float scaledVal = ResponseCurve( joy_response_move.GetInt(), scale, PITCH, std::fabsf( joy_forwardsensitivity.GetFloat() ) );
 			val = scaledVal * ( ( forward * Sign( joy_forwardsensitivity.GetFloat() ) ) / scale );
 			joyForwardMove += val * cl_forwardspeed.GetFloat();
 
@@ -1487,7 +1491,7 @@ void CInput::MotionControllerMove( float frametime, CUserCmd *cmd )
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 
 	C_CSPlayer* pPlayer = C_CSPlayer::GetLocalCSPlayer();
-	Assert( pPlayer );
+	contract_assert( pPlayer );
 
 	// [dkorus] make sure our max turn rate is based on our zoom level sensitivity
 	float flDeadZonePct = mc_dead_zone_radius.GetFloat();
@@ -1531,7 +1535,7 @@ void CInput::MotionControllerMove( float frametime, CUserCmd *cmd )
 		fTargetDampening = mc_max_dampening.GetFloat();
 	}
 	// This little bit of code gives us a frame rate independent blend value.
-	float blend_t = 1.0f - pow( mc_dampening_blend_amount.GetFloat(), frametime );
+	float blend_t = 1.0f - std::pow( mc_dampening_blend_amount.GetFloat(), frametime );
 	s_fDampeningValue += ( fTargetDampening - s_fDampeningValue )*blend_t;
 
 
@@ -1687,7 +1691,7 @@ void CInput::MotionControllerMove( float frametime, CUserCmd *cmd )
 	// dist is the distance from the camera to the screen.
 	// NOTE!  GAME_FOV_YAW needs to be the same value returned from CCSGameRules::DefaultFOV().
 	const float GAME_FOV_YAW = 90.0f;
-	float dist = ( width * 0.5f ) / tanf( GAME_FOV_YAW*0.5f );
+	float dist = ( width * 0.5f ) / std::tanf( GAME_FOV_YAW*0.5f );
 	Vector aimDirection = forward*dist + up*height*0.5f*adjustedY + right*width*0.5f*adjustedX;
 	aimDirection.NormalizeInPlace();
 	pPlayer->SetAimDirection( aimDirection );
@@ -1783,7 +1787,7 @@ void CInput::JoyStickMove( float frametime, CUserCmd *cmd )
 		
 		if ( !m_bControllerMode )
 		{
-			if ( fabsf(forward) > 0.1f || fabsf(side) > 0.1f || fabsf(pitch) > 0.1f || fabsf(yaw) > 0.1f )
+			if ( std::fabsf(forward) > 0.1f || fabsf(side) > 0.1f || fabsf(pitch) > 0.1f || fabsf(yaw) > 0.1f )
 			{
 				m_bControllerMode = true;
 			}
@@ -1839,8 +1843,8 @@ void CInput::JoyStickApplyMovement( CUserCmd *cmd, float joyForwardMove, float j
 	if ( CAM_IsThirdPerson() && thirdperson_screenspace.GetInt() )
 	{
 		float ideal_yaw = cam_idealyaw.GetFloat();
-		float ideal_sin = sin(DEG2RAD(ideal_yaw));
-		float ideal_cos = cos(DEG2RAD(ideal_yaw));
+		float ideal_sin = std::sin(DEG2RAD(ideal_yaw));
+		float ideal_cos = std::cos(DEG2RAD(ideal_yaw));
 		float side_movement = ideal_cos*joySideMove - ideal_sin*joyForwardMove;
 		float forward_movement = ideal_cos*joyForwardMove + ideal_sin*joySideMove;
 		cmd->forwardmove += forward_movement;

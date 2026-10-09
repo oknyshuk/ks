@@ -1,21 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#if !defined( USERCMD_H )
-#define USERCMD_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "mathlib/vector.h"
-#include "utlvector.h"
+import std;
+import ks.tier1;
 #include "imovehelper.h"
-#include "checksum_crc.h"
 
-
-class bf_read;
-class bf_write;
 
 class CEntityGroundContact
 {
@@ -71,9 +61,6 @@ public:
 
 
 
-#if defined( KEEP_COMMAND_REPREDICTION_COUNT )
-		debug_RepredictionCount = 0;
-#endif
 	}
 
 	CUserCmd& operator =( const CUserCmd& src )
@@ -110,10 +97,6 @@ public:
 
 
 
-
-#if defined( KEEP_COMMAND_REPREDICTION_COUNT )
-		debug_RepredictionCount		= src.debug_RepredictionCount;
-#endif
 
 		return *this;
 	}
@@ -197,12 +180,7 @@ public:
 
 
 
-#if defined( KEEP_COMMAND_REPREDICTION_COUNT )
-	unsigned int debug_RepredictionCount;
-#endif
 };
 
 void ReadUsercmd( bf_read *buf, CUserCmd *move, CUserCmd *from );
 void WriteUsercmd( bf_write *buf, const CUserCmd *to, const CUserCmd *from );
-
-#endif // USERCMD_H

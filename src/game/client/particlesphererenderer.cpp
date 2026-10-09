@@ -1,17 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.core;
 #include "particlesphererenderer.h"
 #include "materialsystem/imaterialvar.h"
 
 CParticleSphereRenderer::CParticleSphereRenderer()
 {
 	m_vBaseColor.Init();
-	memset( &m_AmbientLight, 0, sizeof( m_AmbientLight ) );
+	std::memset( &m_AmbientLight, 0, sizeof( m_AmbientLight ) );
 	memset( &m_DirectionalLight, 0, sizeof( m_DirectionalLight ) );
 
 	m_bUsingPixelShaders = false;

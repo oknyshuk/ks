@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef ENV_PLAYER_SURFACE_TRIGGER_H
-#define ENV_PLAYER_SURFACE_TRIGGER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -44,5 +39,3 @@ private:
 	[[= ks::reflect::Key{ .name = "OnSurfaceChangedToTarget" } ]] COutputEvent m_OnSurfaceChangedToTarget;
 	[[= ks::reflect::Key{ .name = "OnSurfaceChangedFromTarget" } ]] COutputEvent m_OnSurfaceChangedFromTarget;
 };
-
-#endif // ENV_PLAYER_SURFACE_TRIGGER_H

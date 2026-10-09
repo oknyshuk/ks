@@ -1,13 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "igameevents.h"
+#include "ndebugoverlay.h"
 #include "cs_bot.h"
 #include "datacache/imdlcache.h"
 #include "../../../shared/cstrike15/cs_gamerules.h"
@@ -167,7 +168,7 @@ void CCSBot::ComputeLadderAngles( float *yaw, float *pitch )
  */
 void CCSBot::UpdateLookAngles( void )
 {
-	VPROF_BUDGET( "CCSBot::UpdateLookAngles", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CCSBot::UpdateLookAngles", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	const float deltaT = g_BotUpkeepInterval;
 	float maxAccel;
@@ -242,7 +243,7 @@ void CCSBot::UpdateLookAngles( void )
 
 	// if almost at target angle, snap to it
 	const float onTargetTolerance = 0; // 1.0f;		// 3
-	if ( fabsf(angleDiff) < onTargetTolerance )
+	if ( std::fabsf(angleDiff) < onTargetTolerance )
 	{
 		m_lookYawVel = 0.0f;
 		viewAngles.y = useYaw;
@@ -322,8 +323,7 @@ void CCSBot::UpdateLookAngles( void )
  */
 bool CCSBot::IsVisible( const Vector &pos, bool testFOV, const CBaseEntity *ignore ) const
 {
-	VPROF_BUDGET( "CCSBot::IsVisible( pos )", VPROF_BUDGETGROUP_NPCS );
-	SNPROF( "CCSBot::IsVisible( pos )");
+	CVProfScope _( "CCSBot::IsVisible( pos )", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	// we can't see anything if we're blind
 	if (IsBlind())
@@ -405,8 +405,7 @@ bool CCSBot::IsBeyondBotMaxVisionDistance(const Vector &vecTargetPosition) const
 
 bool CCSBot::IsVisible( CCSPlayer *player, bool testFOV, unsigned char *visParts ) const
 {
-	VPROF_BUDGET( "CCSBot::IsVisible( player )", VPROF_BUDGETGROUP_NPCS );
-	SNPROF( "CCSBot::IsVisible( player )");
+	CVProfScope _( "CCSBot::IsVisible( player )", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	if ( bot_ignore_players.GetBool() && !player->IsBot() )
 		return false;
@@ -509,8 +508,7 @@ void CCSBot::ComputePartPositions( CCSPlayer *player )
 
 	const int maxBoxIndex = rightElbowBox;
 
-	VPROF_BUDGET( "CCSBot::ComputePartPositions", VPROF_BUDGETGROUP_NPCS );
-	SNPROF( "CCSBot::ComputePartPositions" );
+	CVProfScope _( "CCSBot::ComputePartPositions", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	// which PartInfo corresponds to the given player
 	PartInfo *info = &m_partInfo[ player->entindex() % MAX_PLAYERS ];
@@ -579,8 +577,7 @@ void CCSBot::ComputePartPositions( CCSPlayer *player )
  */
 const Vector &CCSBot::GetPartPosition( CCSPlayer *player, VisiblePartType part ) const
 {
-	VPROF_BUDGET( "CCSBot::GetPartPosition", VPROF_BUDGETGROUP_NPCS );
-	SNPROF( "CCSBot::GetPartPosition" );
+	CVProfScope _( "CCSBot::GetPartPosition", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	// which PartInfo corresponds to the given player
 	PartInfo *info = &m_partInfo[ player->entindex() % MAX_PLAYERS ];
@@ -597,7 +594,7 @@ const Vector &CCSBot::GetPartPosition( CCSPlayer *player, VisiblePartType part )
 	{
 		default:
 		{
-			AssertMsg( false, "GetPartPosition: Invalid part" );
+			contract_assert( false && "GetPartPosition: Invalid part" );
 			// fall thru to GUT
 		}
 
@@ -690,7 +687,7 @@ void CCSBot::InhibitLookAround( float duration )
  */
 void CCSBot::UpdatePeripheralVision()
 {
-	VPROF_BUDGET( "CCSBot::UpdatePeripheralVision", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CCSBot::UpdatePeripheralVision", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	const float peripheralUpdateInterval = 0.29f;		// if we update at 10Hz, this ensures we test once every three
 	if (gpGlobals->curtime - m_peripheralTimestamp < peripheralUpdateInterval)
@@ -729,8 +726,7 @@ void CCSBot::UpdatePeripheralVision()
  */
 void CCSBot::UpdateLookAround( bool updateNow )
 {
-	VPROF_BUDGET( "CCSBot::UpdateLookAround", VPROF_BUDGETGROUP_NPCS );
-	SNPROF( "CCSBot::UpdateLookAround" );
+	CVProfScope _( "CCSBot::UpdateLookAround", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	//
 	// If we recently saw an enemy, look towards where we last saw them
@@ -815,7 +811,7 @@ void CCSBot::UpdateLookAround( bool updateNow )
 			m_lookAroundStateTimestamp = gpGlobals->curtime + RandomFloat( 1.0f, 2.0f );	// 0.5, 1.0
 
 
-		#define MAX_APPROACHES 16
+		constexpr auto MAX_APPROACHES = 16;
 		Vector validSpot[ MAX_APPROACHES ];
 		int validSpotCount = 0;
 
@@ -915,7 +911,7 @@ void CCSBot::UpdateLookAround( bool updateNow )
 				t = 1.0f;
 
 			// collect the unchecked spots so far
-			#define MAX_DANGER_SPOTS 16
+			constexpr auto MAX_DANGER_SPOTS = 16;
 			HidingSpot *dangerSpot[MAX_DANGER_SPOTS];
 			int dangerSpotCount = 0;
 			int dangerIndex = 0;
@@ -971,7 +967,7 @@ void CCSBot::UpdateLookAround( bool updateNow )
  */
 bool CCSBot::BendLineOfSight( const Vector &eye, const Vector &target, Vector *bend, float angleLimit ) const
 {
-	VPROF_BUDGET( "CCSBot::BendLineOfSight", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CCSBot::BendLineOfSight", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	bool doDebug = false;
 	const float debugDuration = 0.04f;
@@ -1026,8 +1022,8 @@ bool CCSBot::BendLineOfSight( const Vector &eye, const Vector &target, Vector *b
 		{
 			float actualAngle = (side) ? (startAngle + angle) : (startAngle - angle);
 
-			float dx = cos( 3.141592f * actualAngle / 180.0f );
-			float dy = sin( 3.141592f * actualAngle / 180.0f );
+			float dx = std::cos( 3.141592f * actualAngle / 180.0f );
+			float dy = std::sin( 3.141592f * actualAngle / 180.0f );
 
 			// compute rotated point ray endpoint
 			Vector rotPoint( eye.x + length * dx, eye.y + length * dy, target.z );
@@ -1260,9 +1256,8 @@ bool CCSBot::IsNoticable( const CCSPlayer *player, unsigned char visParts ) cons
  */
 CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 {
-	VPROF_BUDGET( "CCSBot::FindMostDangerousThreat", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CCSBot::FindMostDangerousThreat", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
-	SNPROF("CCSBot::FindMostDangerousThreat");
 
 	if (IsBlind())
 	{
@@ -1301,7 +1296,7 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 	int i;
 
 	{
-		VPROF_BUDGET( "CCSBot::Collect Threats", VPROF_BUDGETGROUP_NPCS );
+		CVProfScope _( "CCSBot::Collect Threats", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 		for( i = 1; i <= gpGlobals->maxClients; ++i )
 		{
@@ -1316,11 +1311,6 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 
 			CCSPlayer *player = static_cast<CCSPlayer *>( entity );
 
-#ifdef OPT_VIS_CSGO
-			int thisIdx = entindex();
-			int playerIdx = player->entindex();
-#endif
-
 			// ignore self
 			if (player->entindex() == entindex())
 				continue;
@@ -1332,10 +1322,6 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 			// is it an enemy?
 			if ( !IsOtherEnemy( player ) )
 			{
-
-#ifdef OPT_VIS_CSGO
-				if ( ((thisIdx>>1) + gpGlobals->tickcount) % 5 ) continue;
-#endif
 
 				// keep track of nearby friends - use less exact visibility check
 				if (IsVisible( entity->WorldSpaceCenter(), false, this ))
@@ -1367,32 +1353,9 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 
 			// check if this enemy is fully or partially visible
 
-#ifdef OPT_VIS_CSGO
-			// We don't update the vis every other frame on PS3 for perf
-
-			bool		  bVis;
-			unsigned char visParts;
-
-			if ( ( ((thisIdx>>1) + gpGlobals->tickcount) % 5 ) == 0 )
-			{
-				bVis = IsVisible( player, CHECK_FOV, &visParts );
-
-				m_bVis[playerIdx] = bVis;
-				m_aVisParts[playerIdx] = visParts;		
-			}
-			else
-			{
-				bVis = m_bVis[playerIdx];
-				visParts = m_aVisParts[playerIdx];
-			}
-
-			if (!bVis) continue;
-#else
 			unsigned char visParts;
 			if (!IsVisible( player, CHECK_FOV, &visParts ))
 				continue;
-
-#endif
 
 			// do we notice this enemy? (always notice current enemy)
 			if (player != currentThreat)
@@ -1468,7 +1431,7 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 
 
 			{
-				VPROF_BUDGET( "CCSBot::Sort Threats", VPROF_BUDGETGROUP_NPCS );
+				CVProfScope _( "CCSBot::Sort Threats", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 				// maintain set of visible threats, sorted by increasing distance
 				if (threatCount == 0)
@@ -1504,7 +1467,7 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 
 
 	{
-		VPROF_BUDGET( "CCSBot::Count nearby Friends & Enemies", VPROF_BUDGETGROUP_NPCS );
+		CVProfScope _( "CCSBot::Count nearby Friends & Enemies", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 		// track the maximum enemy and friend counts we've seen recently
 		int prevEnemies = m_nearbyEnemyCount;
@@ -1534,7 +1497,7 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 
 
 	{
-		VPROF_BUDGET( "CCSBot::Track enemy Place", VPROF_BUDGETGROUP_NPCS );
+		CVProfScope _( "CCSBot::Track enemy Place", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 		//
 		// Track the place where we saw most of our enemies
@@ -1610,7 +1573,7 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 
 
 	{
-		VPROF_BUDGET( "CCSBot::Select Threat", VPROF_BUDGETGROUP_NPCS );
+		CVProfScope _( "CCSBot::Select Threat", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 		if (threatCount == 0)
 			return nullptr;
@@ -1676,8 +1639,7 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
  */
 void CCSBot::UpdateReactionQueue( void )
 {
-	VPROF_BUDGET( "CCSBot::UpdateReactionQueue", VPROF_BUDGETGROUP_NPCS );
-	SNPROF( "CCSBot::UpdateReactionQueue" );
+	CVProfScope _( "CCSBot::UpdateReactionQueue", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	// zombies dont see any threats
 	if (cv_bot_zombie.GetBool())

@@ -1,33 +1,14 @@
-//================ Copyright (c) 1996-2009 Valve Corporation. All Rights Reserved. =================
-//
-//
-//
-//==================================================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-
-
-#ifndef DXABSTRACT_H
-#define DXABSTRACT_H
-
+import ks.core;
 #include "materialsystem/IShader.h"
 
 // Uncomment this on Windows if you want to compile the Windows GL version.
 // #undef USE_ACTUAL_DX
 
-#ifdef USE_ACTUAL_DX
 
-#error sorry man
-#include <windows.h>
-#include "../../dx9sdk/include/d3d9.h"
-#include "../../dx9sdk/include/d3dx9.h"
-typedef HWND VD3DHWND;
-
-#else
-
-
-#include "tier0/platform.h"
-
-#define DX_TO_GL_ABSTRACTION
 
 #include "bitmap/imageformat.h"
 #include "glmgr/glmgr.h"
@@ -46,9 +27,6 @@ typedef void* VD3DHANDLE;
 // Stuff that would be in windows.h
 //
 //
-#ifdef _WINNT_
-#error "No interoperability with windows.h!"
-#else
 
 	typedef int INT;
 	typedef unsigned long ULONG;
@@ -60,7 +38,6 @@ typedef void* VD3DHANDLE;
 	typedef unsigned int UINT;
 	typedef long HRESULT;
 	typedef unsigned char BYTE;
-	#define CONST const
 	typedef unsigned long ULONG_PTR;
 	typedef ULONG_PTR SIZE_T;
 
@@ -68,8 +45,8 @@ typedef void* VD3DHANDLE;
 	typedef char* LPSTR;
 	typedef DWORD* LPDWORD;
 
-	#define ZeroMemory RtlZeroMemory
-	#define RtlZeroMemory(Destination,Length) memset((Destination),0,(Length))
+inline void RtlZeroMemory( void *Destination, size_t Length ) { memset( Destination, 0, Length ); }
+inline void ZeroMemory( void *Destination, size_t Length ) { memset( Destination, 0, Length ); }
 
 	typedef union _LARGE_INTEGER {
 		struct {
@@ -102,8 +79,8 @@ typedef void* VD3DHANDLE;
 
 		// turn this on to get refcount logging from IUnknown
 		
-	#define	IUNKNOWN_ALLOC_SPEW 0
-	#define	IUNKNOWN_ALLOC_SPEW_MARK_ALL 0	
+inline constexpr auto IUNKNOWN_ALLOC_SPEW = 0;
+	inline constexpr auto IUNKNOWN_ALLOC_SPEW_MARK_ALL = 0;
 
 	struct IUnknown
 	{
@@ -117,46 +94,24 @@ typedef void* VD3DHANDLE;
 			m_refcount[1] = 0;
 			m_mark = (IUNKNOWN_ALLOC_SPEW_MARK_ALL != 0);	// either all are marked, or only the ones that have SetMark(true) called on them
 
-			#if IUNKNOWN_ALLOC_SPEW
-				if (m_mark)
-				{
-					GLMPRINTF(("-A- IUnew (%08x) refc -> (%d,%d) ",this,m_refcount[0],m_refcount[1]));
-				}
-			#endif
 		};
 				
 		virtual	~IUnknown( void )
 		{
-			#if IUNKNOWN_ALLOC_SPEW
-				if (m_mark)
-				{
-					GLMPRINTF(("-A- IUdel (%08x) ",this ));
-				}
-			#endif
 		};
 		
 		void	AddRef( int which=0, char *comment = nullptr )
 		{
-			Assert( which >= 0 );
-			Assert( which < 2 );
+			contract_assert( which >= 0 );
+			contract_assert( which < 2 );
 			m_refcount[which]++;
 			
-			#if IUNKNOWN_ALLOC_SPEW
-				if (m_mark)
-				{
-					GLMPRINTF(("-A- IUAddRef  (%08x,%d) refc -> (%d,%d) [%s]",this,which,m_refcount[0],m_refcount[1],comment?comment:"..."))	;
-					if (!comment)
-					{
-						GLMPRINTF((""))	;	// place to hang a breakpoint
-					}
-				}
-			#endif
 		};
 		
 		ULONG Release( int which=0, char *comment = nullptr )
 		{
-			Assert( which >= 0 );
-			Assert( which < 2 );
+			contract_assert( which >= 0 );
+			contract_assert( which < 2 );
 			
 			//int oldrefcs[2] = { m_refcount[0], m_refcount[1] };
 			bool deleting = false;
@@ -167,17 +122,6 @@ typedef void* VD3DHANDLE;
 				deleting = true;
 			}
 			
-			#if IUNKNOWN_ALLOC_SPEW
-				if (m_mark)
-				{
-					GLMPRINTF(("-A- IURelease (%08x,%d) refc -> (%d,%d) [%s] %s",this,which,m_refcount[0],m_refcount[1],comment?comment:"...",deleting?"->DELETING":""));
-					if (!comment)
-					{
-						GLMPRINTF((""))	;	// place to hang a breakpoint
-					}
-				}
-			#endif
-
 			if (deleting)
 			{
 				if (m_mark)
@@ -195,14 +139,6 @@ typedef void* VD3DHANDLE;
 		
 		void	SetMark( bool markValue, char *comment=nullptr )
 		{
-			#if IUNKNOWN_ALLOC_SPEW
-				if (!m_mark && markValue)	// leading edge detect
-				{
-					// print the same thing that the constructor would have printed if it had been marked from the beginning
-					// i.e. it's anticipated that callers asking for marking will do so right at create time
-					GLMPRINTF(("-A- IUSetMark (%08x) refc -> (%d,%d) (%s) ",this,m_refcount[0],m_refcount[1],comment?comment:"..."));
-				}
-			#endif
 
 			m_mark = markValue;
 		}
@@ -221,21 +157,23 @@ typedef void* VD3DHANDLE;
 
 
 	typedef DWORD   COLORREF;
-	#define RGB(r,g,b)          ((COLORREF)(((BYTE)(r)|((WORD)((BYTE)(g))<<8))|(((DWORD)(BYTE)(b))<<16)))
+inline constexpr COLORREF RGB( int r, int g, int b )
+{
+	return (COLORREF)( ( (BYTE)r | ( (WORD)( (BYTE)g ) << 8 ) ) | ( ( (DWORD)(BYTE)b ) << 16 ) );
+}
 
-	#define MAKE_HRESULT(sev,fac,code) \
-		((HRESULT) (((unsigned long)(sev)<<31) | ((unsigned long)(fac)<<16) | ((unsigned long)(code))) )
+inline constexpr HRESULT MAKE_HRESULT( unsigned long sev, unsigned long fac, unsigned long code )
+{
+	return (HRESULT)( ( sev << 31 ) | ( fac << 16 ) | code );
+}
 
-	#define S_FALSE                                ((HRESULT)0x00000001L)
-	#define S_OK 0
-	#define E_OUTOFMEMORY                    ((HRESULT)(0x8007000EL))
+inline constexpr auto S_FALSE = ((HRESULT)0x00000001L);
+inline constexpr auto S_OK = 0;
+inline constexpr auto E_OUTOFMEMORY = ((HRESULT)(0x8007000EL));
 
-	#define FAILED(hr) ((HRESULT)(hr) < 0)
-	#define SUCCEEDED(hr) ((HRESULT)(hr) >= 0)
+inline constexpr bool FAILED( HRESULT hr ) { return hr < 0; }
+inline constexpr bool SUCCEEDED( HRESULT hr ) { return hr >= 0; }
 
-	#define MAKEFOURCC(ch0, ch1, ch2, ch3)                              \
-					((DWORD)(BYTE)(ch0) | ((DWORD)(BYTE)(ch1) << 8) |   \
-					((DWORD)(BYTE)(ch2) << 16) | ((DWORD)(BYTE)(ch3) << 24 ))
 
 	struct RGNDATA
 	{
@@ -254,45 +192,43 @@ typedef void* VD3DHANDLE;
 	void GlobalMemoryStatus( MEMORYSTATUS *pOut );
 
 
-#endif
+inline constexpr auto D3DSI_OPCODE_MASK = 0x0000FFFF;
+inline constexpr auto D3DSP_TEXTURETYPE_MASK = 0x78000000;
 
-#define D3DSI_OPCODE_MASK       0x0000FFFF
-#define D3DSP_TEXTURETYPE_MASK  0x78000000
+inline constexpr auto D3DUSAGE_AUTOGENMIPMAP = (0x00000400L);
+inline constexpr auto D3DSP_DCL_USAGE_MASK = 0x0000000f;
 
-#define D3DUSAGE_AUTOGENMIPMAP      (0x00000400L)
-#define D3DSP_DCL_USAGE_MASK  0x0000000f
-
-#define D3DSP_OPCODESPECIFICCONTROL_MASK  0x00ff0000
-#define D3DSP_OPCODESPECIFICCONTROL_SHIFT 16
+inline constexpr auto D3DSP_OPCODESPECIFICCONTROL_MASK = 0x00ff0000;
+inline constexpr auto D3DSP_OPCODESPECIFICCONTROL_SHIFT = 16;
 
 
 /* Flags to construct D3DRS_COLORWRITEENABLE */
-#define D3DCOLORWRITEENABLE_RED     (1L<<0)
-#define D3DCOLORWRITEENABLE_GREEN   (1L<<1)
-#define D3DCOLORWRITEENABLE_BLUE    (1L<<2)
-#define D3DCOLORWRITEENABLE_ALPHA   (1L<<3)
+inline constexpr auto D3DCOLORWRITEENABLE_RED = (1L<<0);
+inline constexpr auto D3DCOLORWRITEENABLE_GREEN = (1L<<1);
+inline constexpr auto D3DCOLORWRITEENABLE_BLUE = (1L<<2);
+inline constexpr auto D3DCOLORWRITEENABLE_ALPHA = (1L<<3);
 
-#define D3DSGR_NO_CALIBRATION                  0x00000000L
-
-
-#define D3DXINLINE inline
-
-#define D3D_SDK_VERSION   32
-
-#define _FACD3D  0x876
-#define MAKE_D3DHRESULT( code )  MAKE_HRESULT( 1, _FACD3D, code )
+inline constexpr auto D3DSGR_NO_CALIBRATION = 0x00000000L;
 
 
-#define D3DERR_NOTFOUND							MAKE_D3DHRESULT(2150)
-#define D3DERR_DEVICELOST                       MAKE_D3DHRESULT(2152)
-#define D3DERR_NOTAVAILABLE                     MAKE_D3DHRESULT(2154)
-#define D3DERR_DEVICENOTRESET                   MAKE_D3DHRESULT(2153)
-#define D3DERR_INVALIDCALL                      MAKE_D3DHRESULT(2156)
-#define D3DERR_DRIVERINTERNALERROR              MAKE_D3DHRESULT(2087)
-#define D3DERR_OUTOFVIDEOMEMORY                 MAKE_D3DHRESULT(380)
-#define D3D_OK									S_OK
+inline constexpr auto D3DXINLINE = inline;
 
-#define D3DPRESENT_RATE_DEFAULT         0x00000000
+inline constexpr auto D3D_SDK_VERSION = 32;
+
+inline constexpr auto _FACD3D = 0x876;
+inline constexpr HRESULT MAKE_D3DHRESULT( unsigned long code ) { return MAKE_HRESULT( 1, _FACD3D, code ); }
+
+
+inline constexpr auto D3DERR_NOTFOUND = MAKE_D3DHRESULT(2150);
+inline constexpr auto D3DERR_DEVICELOST = MAKE_D3DHRESULT(2152);
+inline constexpr auto D3DERR_NOTAVAILABLE = MAKE_D3DHRESULT(2154);
+inline constexpr auto D3DERR_DEVICENOTRESET = MAKE_D3DHRESULT(2153);
+inline constexpr auto D3DERR_INVALIDCALL = MAKE_D3DHRESULT(2156);
+inline constexpr auto D3DERR_DRIVERINTERNALERROR = MAKE_D3DHRESULT(2087);
+inline constexpr auto D3DERR_OUTOFVIDEOMEMORY = MAKE_D3DHRESULT(380);
+inline constexpr auto D3D_OK = S_OK;
+
+inline constexpr auto D3DPRESENT_RATE_DEFAULT = 0x00000000;
 
 //
 // DevCaps
@@ -318,27 +254,27 @@ typedef void* VD3DHANDLE;
 //
 // PrimitiveMiscCaps
 //
-#define D3DPMISCCAPS_MASKZ              0x00000002L
-#define D3DPMISCCAPS_CULLNONE           0x00000010L
-#define D3DPMISCCAPS_CULLCW             0x00000020L
-#define D3DPMISCCAPS_CULLCCW            0x00000040L
-#define D3DPMISCCAPS_COLORWRITEENABLE   0x00000080L
-#define D3DPMISCCAPS_CLIPPLANESCALEDPOINTS 0x00000100L /* Device correctly clips scaled points to clip planes */
-#define D3DPMISCCAPS_CLIPTLVERTS        0x00000200L /* device will clip post-transformed vertex primitives */
-#define D3DPMISCCAPS_TSSARGTEMP         0x00000400L /* device supports D3DTA_TEMP for temporary register */
-#define D3DPMISCCAPS_BLENDOP            0x00000800L /* device supports D3DRS_BLENDOP */
-#define D3DPMISCCAPS_NULLREFERENCE      0x00001000L /* Reference Device that doesnt render */
-#define D3DPMISCCAPS_PERSTAGECONSTANT   0x00008000L /* Device supports per-stage constants */
-#define D3DPMISCCAPS_MRTINDEPENDENTBITDEPTHS    0x00040000L /* Device supports different bit depths for MRT */
-#define D3DPMISCCAPS_FOGVERTEXCLAMPED           0x00100000L /* Device clamps fog blend factor per vertex */
+inline constexpr auto D3DPMISCCAPS_MASKZ = 0x00000002L;
+inline constexpr auto D3DPMISCCAPS_CULLNONE = 0x00000010L;
+inline constexpr auto D3DPMISCCAPS_CULLCW = 0x00000020L;
+inline constexpr auto D3DPMISCCAPS_CULLCCW = 0x00000040L;
+inline constexpr auto D3DPMISCCAPS_COLORWRITEENABLE = 0x00000080L;
+inline constexpr auto D3DPMISCCAPS_CLIPPLANESCALEDPOINTS = 0x00000100L;	/* Device correctly clips scaled points to clip planes */
+inline constexpr auto D3DPMISCCAPS_CLIPTLVERTS = 0x00000200L;	/* device will clip post-transformed vertex primitives */
+inline constexpr auto D3DPMISCCAPS_TSSARGTEMP = 0x00000400L;	/* device supports D3DTA_TEMP for temporary register */
+inline constexpr auto D3DPMISCCAPS_BLENDOP = 0x00000800L;	/* device supports D3DRS_BLENDOP */
+inline constexpr auto D3DPMISCCAPS_NULLREFERENCE = 0x00001000L;	/* Reference Device that doesnt render */
+inline constexpr auto D3DPMISCCAPS_PERSTAGECONSTANT = 0x00008000L;	/* Device supports per-stage constants */
+inline constexpr auto D3DPMISCCAPS_MRTINDEPENDENTBITDEPTHS = 0x00040000L;	/* Device supports different bit depths for MRT */
+inline constexpr auto D3DPMISCCAPS_FOGVERTEXCLAMPED = 0x00100000L;	/* Device clamps fog blend factor per vertex */
 
 // Flags field for Issue
-#define D3DISSUE_END (1 << 0) // Tells the runtime to issue the end of a query, changing it's state to "non-signaled".
-#define D3DISSUE_BEGIN (1 << 1) // Tells the runtime to issue the beginng of a query.
+inline constexpr auto D3DISSUE_END = (1 << 0);	// Tells the runtime to issue the end of a query, changing it's state to "non-signaled".
+inline constexpr auto D3DISSUE_BEGIN = (1 << 1);	// Tells the runtime to issue the beginng of a query.
 
 
-#define D3DPRESENT_INTERVAL_ONE         0x00000001L
-#define D3DPRESENT_INTERVAL_IMMEDIATE   0x80000000L
+inline constexpr auto D3DPRESENT_INTERVAL_ONE = 0x00000001L;
+inline constexpr auto D3DPRESENT_INTERVAL_IMMEDIATE = 0x80000000L;
 
 /*
  * Options for clearing
@@ -348,150 +284,143 @@ typedef void* VD3DHANDLE;
 #define D3DCLEAR_STENCIL           0x00000004l  /* Clear stencil planes */
 
 
-#define D3DENUM_WHQL_LEVEL                      0x00000002L
+inline constexpr auto D3DENUM_WHQL_LEVEL = 0x00000002L;
 
 
 
 
-#define D3DPTEXTURECAPS_NOPROJECTEDBUMPENV  0x00200000L /* Device does not support projected bump env lookup operation 
+inline constexpr auto D3DPTEXTURECAPS_NOPROJECTEDBUMPENV = 0x00200000L;	/* Device does not support projected bump env lookup operation
                                                            in programmable and fixed function pixel shaders */
 #define D3DDEVCAPS2_STREAMOFFSET                        0x00000001L /* Device supports offsets in streams. Must be set by DX9 drivers */
 
 #define D3DDEVCAPS_PUREDEVICE           0x00100000L /* Device supports D3DCREATE_PUREDEVICE */
 
-#define D3DCREATE_PUREDEVICE                    0x00000010L
-#define D3DCREATE_SOFTWARE_VERTEXPROCESSING     0x00000020L
-#define D3DCREATE_HARDWARE_VERTEXPROCESSING     0x00000040L
-#define D3DCREATE_FPU_PRESERVE                  0x00000002L
-#define D3DPRASTERCAPS_FOGRANGE               0x00010000L
-#define D3DPRASTERCAPS_FOGTABLE               0x00000100L
-#define D3DPRASTERCAPS_FOGVERTEX              0x00000080L
-#define D3DPRASTERCAPS_WFOG                   0x00100000L
-#define D3DPRASTERCAPS_ZFOG                   0x00200000L
-#define D3DPRASTERCAPS_MIPMAPLODBIAS          0x00002000L
-#define D3DPRASTERCAPS_WBUFFER                0x00040000L
-#define D3DPRASTERCAPS_ZTEST                  0x00000010L
+inline constexpr auto D3DCREATE_PUREDEVICE = 0x00000010L;
+inline constexpr auto D3DCREATE_SOFTWARE_VERTEXPROCESSING = 0x00000020L;
+inline constexpr auto D3DCREATE_HARDWARE_VERTEXPROCESSING = 0x00000040L;
+inline constexpr auto D3DCREATE_FPU_PRESERVE = 0x00000002L;
+inline constexpr auto D3DPRASTERCAPS_FOGRANGE = 0x00010000L;
+inline constexpr auto D3DPRASTERCAPS_FOGTABLE = 0x00000100L;
+inline constexpr auto D3DPRASTERCAPS_FOGVERTEX = 0x00000080L;
+inline constexpr auto D3DPRASTERCAPS_WFOG = 0x00100000L;
+inline constexpr auto D3DPRASTERCAPS_ZFOG = 0x00200000L;
+inline constexpr auto D3DPRASTERCAPS_MIPMAPLODBIAS = 0x00002000L;
+inline constexpr auto D3DPRASTERCAPS_WBUFFER = 0x00040000L;
+inline constexpr auto D3DPRASTERCAPS_ZTEST = 0x00000010L;
 
 //
 // Caps2
 //
-#define D3DCAPS2_CANCALIBRATEGAMMA      0x00100000L
-#define D3DPRASTERCAPS_SCISSORTEST            0x01000000L
+inline constexpr auto D3DCAPS2_CANCALIBRATEGAMMA = 0x00100000L;
+inline constexpr auto D3DPRASTERCAPS_SCISSORTEST = 0x01000000L;
 #define D3DPTEXTURECAPS_MIPCUBEMAP          0x00010000L /* Device can do mipmapped cube maps */
 #define D3DPTEXTURECAPS_ALPHA               0x00000004L /* Alpha in texture pixels is supported */
 #define D3DPTEXTURECAPS_SQUAREONLY          0x00000020L /* Only square textures are supported */
-#define D3DCREATE_MULTITHREADED                 0x00000004L
+inline constexpr auto D3DCREATE_MULTITHREADED = 0x00000004L;
 #define D3DDEVCAPS_HWTRANSFORMANDLIGHT  0x00010000L /* Device can support transformation and lighting in hardware and DRAWPRIMITIVES2EX must be also */
-#define D3DPTFILTERCAPS_MINFANISOTROPIC     0x00000400L
-#define D3DPTFILTERCAPS_MAGFANISOTROPIC     0x04000000L
+inline constexpr auto D3DPTFILTERCAPS_MINFANISOTROPIC = 0x00000400L;
+inline constexpr auto D3DPTFILTERCAPS_MAGFANISOTROPIC = 0x04000000L;
 #define D3DPTEXTURECAPS_CUBEMAP             0x00000800L /* Device can do cubemap textures */
 #define D3DPTEXTURECAPS_POW2                0x00000002L /* Power-of-2 texture dimensions are required - applies to non-Cube/Volume textures only. */
-#define D3DPTEXTURECAPS_NONPOW2CONDITIONAL  0x00000100L
+inline constexpr auto D3DPTEXTURECAPS_NONPOW2CONDITIONAL = 0x00000100L;
 #define D3DPTEXTURECAPS_PROJECTED           0x00000400L /* Device can do D3DTTFF_PROJECTED */
-#define D3DTEXOPCAPS_ADD                        0x00000040L
-#define D3DTEXOPCAPS_MODULATE2X                 0x00000010L
-#define D3DPRASTERCAPS_DEPTHBIAS              0x04000000L 
-#define D3DPRASTERCAPS_SLOPESCALEDEPTHBIAS    0x02000000L
-#define D3DVTXPCAPS_TEXGEN_SPHEREMAP    0x00000100L /* device supports D3DTSS_TCI_SPHEREMAP */
-#define D3DCAPS2_DYNAMICTEXTURES        0x20000000L
+inline constexpr auto D3DTEXOPCAPS_ADD = 0x00000040L;
+inline constexpr auto D3DTEXOPCAPS_MODULATE2X = 0x00000010L;
+inline constexpr auto D3DPRASTERCAPS_DEPTHBIAS = 0x04000000L;
+inline constexpr auto D3DPRASTERCAPS_SLOPESCALEDEPTHBIAS = 0x02000000L;
+inline constexpr auto D3DVTXPCAPS_TEXGEN_SPHEREMAP = 0x00000100L;	/* device supports D3DTSS_TCI_SPHEREMAP */
+inline constexpr auto D3DCAPS2_DYNAMICTEXTURES = 0x20000000L;
 
 // The following usages are valid only for querying CheckDeviceFormat
-#define D3DUSAGE_QUERY_SRGBREAD                 (0x00010000L)
-#define D3DUSAGE_QUERY_FILTER                   (0x00020000L)
-#define D3DUSAGE_QUERY_SRGBWRITE                (0x00040000L)
-#define D3DUSAGE_QUERY_POSTPIXELSHADER_BLENDING (0x00080000L)
-#define D3DUSAGE_QUERY_VERTEXTEXTURE            (0x00100000L)
+inline constexpr auto D3DUSAGE_QUERY_SRGBREAD = (0x00010000L);
+inline constexpr auto D3DUSAGE_QUERY_FILTER = (0x00020000L);
+inline constexpr auto D3DUSAGE_QUERY_SRGBWRITE = (0x00040000L);
+inline constexpr auto D3DUSAGE_QUERY_POSTPIXELSHADER_BLENDING = (0x00080000L);
+inline constexpr auto D3DUSAGE_QUERY_VERTEXTEXTURE = (0x00100000L);
 
 /* Usages for Vertex/Index buffers */
-#define D3DUSAGE_WRITEONLY          (0x00000008L)
-#define D3DUSAGE_SOFTWAREPROCESSING (0x00000010L)
-#define D3DUSAGE_DONOTCLIP          (0x00000020L)
-#define D3DUSAGE_POINTS             (0x00000040L)
-#define D3DUSAGE_RTPATCHES          (0x00000080L)
-#define D3DUSAGE_NPATCHES           (0x00000100L)
+inline constexpr auto D3DUSAGE_WRITEONLY = (0x00000008L);
+inline constexpr auto D3DUSAGE_SOFTWAREPROCESSING = (0x00000010L);
+inline constexpr auto D3DUSAGE_DONOTCLIP = (0x00000020L);
+inline constexpr auto D3DUSAGE_POINTS = (0x00000040L);
+inline constexpr auto D3DUSAGE_RTPATCHES = (0x00000080L);
+inline constexpr auto D3DUSAGE_NPATCHES = (0x00000100L);
 
 
 // Flags field for GetData
-#define D3DGETDATA_FLUSH (1 << 0) // Tells the runtime to flush if the query is outstanding.
+inline constexpr auto D3DGETDATA_FLUSH = (1 << 0);	// Tells the runtime to flush if the query is outstanding.
 
-#define D3DFVF_XYZ              0x002
-
-
-#define D3DTA_SELECTMASK        0x0000000f  // mask for arg selector
-#define D3DTA_DIFFUSE           0x00000000  // select diffuse color (read only)
-#define D3DTA_CURRENT           0x00000001  // select stage destination register (read/write)
-#define D3DTA_TEXTURE           0x00000002  // select texture color (read only)
-#define D3DTA_TFACTOR           0x00000003  // select D3DRS_TEXTUREFACTOR (read only)
-#define D3DTA_SPECULAR          0x00000004  // select specular color (read only)
-#define D3DTA_TEMP              0x00000005  // select temporary register color (read/write)
-#define D3DTA_CONSTANT          0x00000006  // select texture stage constant
-#define D3DTA_COMPLEMENT        0x00000010  // take 1.0 - x (read modifier)
-#define D3DTA_ALPHAREPLICATE    0x00000020  // replicate alpha to color components (read modifier)
+inline constexpr auto D3DFVF_XYZ = 0x002;
 
 
-#define D3DUSAGE_RENDERTARGET			(0x00000001L)
-#define D3DUSAGE_QUERY_VERTEXTEXTURE    (0x00100000L)
-#define D3DUSAGE_QUERY_FILTER           (0x00020000L)
-#define D3DUSAGE_DEPTHSTENCIL			(0x00000002L)
-#define D3DUSAGE_WRITEONLY          (0x00000008L)
-#define D3DUSAGE_SOFTWAREPROCESSING (0x00000010L)
-#define D3DUSAGE_DYNAMIC            (0x00000200L)
+inline constexpr auto D3DTA_SELECTMASK = 0x0000000f;	// mask for arg selector
+inline constexpr auto D3DTA_DIFFUSE = 0x00000000;	// select diffuse color (read only)
+inline constexpr auto D3DTA_CURRENT = 0x00000001;	// select stage destination register (read/write)
+inline constexpr auto D3DTA_TEXTURE = 0x00000002;	// select texture color (read only)
+inline constexpr auto D3DTA_TFACTOR = 0x00000003;	// select D3DRS_TEXTUREFACTOR (read only)
+inline constexpr auto D3DTA_SPECULAR = 0x00000004;	// select specular color (read only)
+inline constexpr auto D3DTA_TEMP = 0x00000005;	// select temporary register color (read/write)
+inline constexpr auto D3DTA_CONSTANT = 0x00000006;	// select texture stage constant
+inline constexpr auto D3DTA_COMPLEMENT = 0x00000010;	// take 1.0 - x (read modifier)
+inline constexpr auto D3DTA_ALPHAREPLICATE = 0x00000020;	// replicate alpha to color components (read modifier)
 
-#define D3DSI_INSTLENGTH_MASK   0x0F000000
-#define D3DSI_INSTLENGTH_SHIFT  24
-#define D3DSP_TEXTURETYPE_SHIFT 27
-#define D3DSP_REGTYPE_SHIFT     28
-#define D3DSP_REGTYPE_SHIFT2    8
-#define D3DSP_REGTYPE_MASK      0x70000000
-#define D3DSP_REGTYPE_MASK2     0x00001800
 
-#define D3DSP_REGNUM_MASK       0x000007FF
+inline constexpr auto D3DUSAGE_RENDERTARGET = (0x00000001L);
+inline constexpr auto D3DUSAGE_QUERY_VERTEXTEXTURE = (0x00100000L);
+inline constexpr auto D3DUSAGE_QUERY_FILTER = (0x00020000L);
+inline constexpr auto D3DUSAGE_DEPTHSTENCIL = (0x00000002L);
+inline constexpr auto D3DUSAGE_WRITEONLY = (0x00000008L);
+inline constexpr auto D3DUSAGE_SOFTWAREPROCESSING = (0x00000010L);
+inline constexpr auto D3DUSAGE_DYNAMIC = (0x00000200L);
 
-#define D3DSP_DSTMOD_SHIFT      20
-#define D3DSP_DSTMOD_MASK       0x00F00000
-#define    D3DSPDM_MSAMPCENTROID        (4<<D3DSP_DSTMOD_SHIFT) // Relevant to multisampling only:
+inline constexpr auto D3DSI_INSTLENGTH_MASK = 0x0F000000;
+inline constexpr auto D3DSI_INSTLENGTH_SHIFT = 24;
+inline constexpr auto D3DSP_TEXTURETYPE_SHIFT = 27;
+inline constexpr auto D3DSP_REGTYPE_SHIFT = 28;
+inline constexpr auto D3DSP_REGTYPE_SHIFT2 = 8;
+inline constexpr auto D3DSP_REGTYPE_MASK = 0x70000000;
+inline constexpr auto D3DSP_REGTYPE_MASK2 = 0x00001800;
+
+inline constexpr auto D3DSP_REGNUM_MASK = 0x000007FF;
+
+inline constexpr auto D3DSP_DSTMOD_SHIFT = 20;
+inline constexpr auto D3DSP_DSTMOD_MASK = 0x00F00000;
+inline constexpr auto D3DSPDM_MSAMPCENTROID = (4<<D3DSP_DSTMOD_SHIFT);	// Relevant to multisampling only:
                                                                 //      When the pixel center is not covered, sample
                                                                 //      attribute or compute gradients/LOD
                                                                 //      using multisample "centroid" location.
                                                                 //      "Centroid" is some location within the covered
                                                                 //      region of the pixel.
 
-#define D3DXSHADER_DEBUG                    (1 << 0)
-#define D3DXSHADER_AVOID_FLOW_CONTROL       (1 << 9)
+inline constexpr auto D3DXSHADER_DEBUG = (1 << 0);
+inline constexpr auto D3DXSHADER_AVOID_FLOW_CONTROL = (1 << 9);
 
 
-#define D3DLOCK_READONLY           0x00000010L
-#define D3DLOCK_DISCARD            0x00002000L
-#define D3DLOCK_NOOVERWRITE        0x00001000L
-#define D3DLOCK_NOSYSLOCK          0x00000800L
+inline constexpr auto D3DLOCK_READONLY = 0x00000010L;
+inline constexpr auto D3DLOCK_DISCARD = 0x00002000L;
+inline constexpr auto D3DLOCK_NOOVERWRITE = 0x00001000L;
+inline constexpr auto D3DLOCK_NOSYSLOCK = 0x00000800L;
 
-#define D3DLOCK_NO_DIRTY_UPDATE     0x00008000L
-
-
-#define D3DDMAPSAMPLER 256
-#define D3DVERTEXTEXTURESAMPLER0 (D3DDMAPSAMPLER+1)
-#define D3DSP_SRCMOD_SHIFT      24
+inline constexpr auto D3DLOCK_NO_DIRTY_UPDATE = 0x00008000L;
 
 
-#define D3DCOLOR_ARGB(a,r,g,b) \
-    ((D3DCOLOR)((((a)&0xff)<<24)|(((r)&0xff)<<16)|(((g)&0xff)<<8)|((b)&0xff)))
-#define D3DCOLOR_RGBA(r,g,b,a) D3DCOLOR_ARGB(a,r,g,b)
-#define D3DCOLOR_XRGB(r,g,b)   D3DCOLOR_ARGB(0xff,r,g,b)
+inline constexpr auto D3DDMAPSAMPLER = 256;
+inline constexpr auto D3DVERTEXTEXTURESAMPLER0 = (D3DDMAPSAMPLER+1);
+inline constexpr auto D3DSP_SRCMOD_SHIFT = 24;
+
+
 
 // maps floating point channels (0.f to 1.f range) to D3DCOLOR
-#define D3DCOLOR_COLORVALUE(r,g,b,a) \
-    D3DCOLOR_RGBA((DWORD)((r)*255.f),(DWORD)((g)*255.f),(DWORD)((b)*255.f),(DWORD)((a)*255.f))
 
-#define D3DDECL_END() {0xFF,0,D3DDECLTYPE_UNUSED,0,0,0}
 
-#define D3DSP_DCL_USAGEINDEX_SHIFT 16
-#define D3DSP_DCL_USAGEINDEX_MASK  0x000f0000
+inline constexpr auto D3DSP_DCL_USAGEINDEX_SHIFT = 16;
+inline constexpr auto D3DSP_DCL_USAGEINDEX_MASK = 0x000f0000;
 
 // Bit masks for destination parameter modifiers
-#define    D3DSPDM_NONE                 (0<<D3DSP_DSTMOD_SHIFT) // nop
-#define    D3DSPDM_SATURATE             (1<<D3DSP_DSTMOD_SHIFT) // clamp to 0. to 1. range
-#define    D3DSPDM_PARTIALPRECISION     (2<<D3DSP_DSTMOD_SHIFT) // Partial precision hint
-#define    D3DSPDM_MSAMPCENTROID        (4<<D3DSP_DSTMOD_SHIFT) // Relevant to multisampling only:
+inline constexpr auto D3DSPDM_NONE = (0<<D3DSP_DSTMOD_SHIFT); // nop
+inline constexpr auto D3DSPDM_SATURATE = (1<<D3DSP_DSTMOD_SHIFT); // clamp to 0. to 1. range
+inline constexpr auto D3DSPDM_PARTIALPRECISION = (2<<D3DSP_DSTMOD_SHIFT); // Partial precision hint
+inline constexpr auto D3DSPDM_MSAMPCENTROID = (4<<D3DSP_DSTMOD_SHIFT);	// Relevant to multisampling only:
                                                                 //      When the pixel center is not covered, sample
                                                                 //      attribute or compute gradients/LOD
                                                                 //      using multisample "centroid" location.
@@ -501,63 +430,60 @@ typedef void* VD3DHANDLE;
 // Value when there is no swizzle (X is taken from X, Y is taken from Y,
 // Z is taken from Z, W is taken from W
 //
-#define D3DVS_NOSWIZZLE (D3DVS_X_X | D3DVS_Y_Y | D3DVS_Z_Z | D3DVS_W_W)
+inline constexpr auto D3DVS_NOSWIZZLE = (D3DVS_X_X | D3DVS_Y_Y | D3DVS_Z_Z | D3DVS_W_W);
 
 // extract major/minor from version cap
-#define D3DSHADER_VERSION_MAJOR(_Version) (((_Version)>>8)&0xFF)
-#define D3DSHADER_VERSION_MINOR(_Version) (((_Version)>>0)&0xFF)
 
-#define D3DSHADER_ADDRESSMODE_SHIFT 13
-#define D3DSHADER_ADDRESSMODE_MASK  (1 << D3DSHADER_ADDRESSMODE_SHIFT)
+inline constexpr auto D3DSHADER_ADDRESSMODE_SHIFT = 13;
+inline constexpr auto D3DSHADER_ADDRESSMODE_MASK = (1 << D3DSHADER_ADDRESSMODE_SHIFT);
 
-#define D3DPS_END()  0x0000FFFF
 
 // ps_2_0 texld controls
-#define D3DSI_TEXLD_PROJECT (0x01 << D3DSP_OPCODESPECIFICCONTROL_SHIFT)
-#define D3DSI_TEXLD_BIAS    (0x02 << D3DSP_OPCODESPECIFICCONTROL_SHIFT)
+inline constexpr auto D3DSI_TEXLD_PROJECT = (0x01 << D3DSP_OPCODESPECIFICCONTROL_SHIFT);
+inline constexpr auto D3DSI_TEXLD_BIAS = (0x02 << D3DSP_OPCODESPECIFICCONTROL_SHIFT);
 
 
 // destination parameter write mask
-#define D3DSP_WRITEMASK_0       0x00010000  // Component 0 (X;Red)
-#define D3DSP_WRITEMASK_1       0x00020000  // Component 1 (Y;Green)
-#define D3DSP_WRITEMASK_2       0x00040000  // Component 2 (Z;Blue)
-#define D3DSP_WRITEMASK_3       0x00080000  // Component 3 (W;Alpha)
-#define D3DSP_WRITEMASK_ALL     0x000F0000  // All Components
+inline constexpr auto D3DSP_WRITEMASK_0 = 0x00010000;	// Component 0 (X;Red)
+inline constexpr auto D3DSP_WRITEMASK_1 = 0x00020000;	// Component 1 (Y;Green)
+inline constexpr auto D3DSP_WRITEMASK_2 = 0x00040000;	// Component 2 (Z;Blue)
+inline constexpr auto D3DSP_WRITEMASK_3 = 0x00080000;	// Component 3 (W;Alpha)
+inline constexpr auto D3DSP_WRITEMASK_ALL = 0x000F0000;	// All Components
 
-#define D3DVS_SWIZZLE_SHIFT     16
-#define D3DVS_SWIZZLE_MASK      0x00FF0000
+inline constexpr auto D3DVS_SWIZZLE_SHIFT = 16;
+inline constexpr auto D3DVS_SWIZZLE_MASK = 0x00FF0000;
 
 // The following bits define where to take component X from:
 
-#define D3DVS_X_X       (0 << D3DVS_SWIZZLE_SHIFT)
-#define D3DVS_X_Y       (1 << D3DVS_SWIZZLE_SHIFT)
-#define D3DVS_X_Z       (2 << D3DVS_SWIZZLE_SHIFT)
-#define D3DVS_X_W       (3 << D3DVS_SWIZZLE_SHIFT)
+inline constexpr auto D3DVS_X_X = (0 << D3DVS_SWIZZLE_SHIFT);
+inline constexpr auto D3DVS_X_Y = (1 << D3DVS_SWIZZLE_SHIFT);
+inline constexpr auto D3DVS_X_Z = (2 << D3DVS_SWIZZLE_SHIFT);
+inline constexpr auto D3DVS_X_W = (3 << D3DVS_SWIZZLE_SHIFT);
 
 // The following bits define where to take component Y from:
 
-#define D3DVS_Y_X       (0 << (D3DVS_SWIZZLE_SHIFT + 2))
-#define D3DVS_Y_Y       (1 << (D3DVS_SWIZZLE_SHIFT + 2))
-#define D3DVS_Y_Z       (2 << (D3DVS_SWIZZLE_SHIFT + 2))
-#define D3DVS_Y_W       (3 << (D3DVS_SWIZZLE_SHIFT + 2))
+inline constexpr auto D3DVS_Y_X = (0 << (D3DVS_SWIZZLE_SHIFT + 2));
+inline constexpr auto D3DVS_Y_Y = (1 << (D3DVS_SWIZZLE_SHIFT + 2));
+inline constexpr auto D3DVS_Y_Z = (2 << (D3DVS_SWIZZLE_SHIFT + 2));
+inline constexpr auto D3DVS_Y_W = (3 << (D3DVS_SWIZZLE_SHIFT + 2));
 
 // The following bits define where to take component Z from:
 
-#define D3DVS_Z_X       (0 << (D3DVS_SWIZZLE_SHIFT + 4))
-#define D3DVS_Z_Y       (1 << (D3DVS_SWIZZLE_SHIFT + 4))
-#define D3DVS_Z_Z       (2 << (D3DVS_SWIZZLE_SHIFT + 4))
-#define D3DVS_Z_W       (3 << (D3DVS_SWIZZLE_SHIFT + 4))
+inline constexpr auto D3DVS_Z_X = (0 << (D3DVS_SWIZZLE_SHIFT + 4));
+inline constexpr auto D3DVS_Z_Y = (1 << (D3DVS_SWIZZLE_SHIFT + 4));
+inline constexpr auto D3DVS_Z_Z = (2 << (D3DVS_SWIZZLE_SHIFT + 4));
+inline constexpr auto D3DVS_Z_W = (3 << (D3DVS_SWIZZLE_SHIFT + 4));
 
 // The following bits define where to take component W from:
 
-#define D3DVS_W_X       (0 << (D3DVS_SWIZZLE_SHIFT + 6))
-#define D3DVS_W_Y       (1 << (D3DVS_SWIZZLE_SHIFT + 6))
-#define D3DVS_W_Z       (2 << (D3DVS_SWIZZLE_SHIFT + 6))
-#define D3DVS_W_W       (3 << (D3DVS_SWIZZLE_SHIFT + 6))
+inline constexpr auto D3DVS_W_X = (0 << (D3DVS_SWIZZLE_SHIFT + 6));
+inline constexpr auto D3DVS_W_Y = (1 << (D3DVS_SWIZZLE_SHIFT + 6));
+inline constexpr auto D3DVS_W_Z = (2 << (D3DVS_SWIZZLE_SHIFT + 6));
+inline constexpr auto D3DVS_W_W = (3 << (D3DVS_SWIZZLE_SHIFT + 6));
 
 // source parameter modifiers
-#define D3DSP_SRCMOD_SHIFT      24
-#define D3DSP_SRCMOD_MASK       0x0F000000
+inline constexpr auto D3DSP_SRCMOD_SHIFT = 24;
+inline constexpr auto D3DSP_SRCMOD_MASK = 0x0F000000;
 
 
 struct IDirect3DSurface9;
@@ -966,11 +892,10 @@ typedef enum _D3DBACKBUFFER_TYPE
     D3DBACKBUFFER_TYPE_FORCE_DWORD  = 0x7fffffff
 } D3DBACKBUFFER_TYPE;
 
-#define D3DTS_WORLDMATRIX(index) (D3DTRANSFORMSTATETYPE)(index + 256)
-#define D3DTS_WORLD  D3DTS_WORLDMATRIX(0)
-#define D3DTS_WORLD1 D3DTS_WORLDMATRIX(1)
-#define D3DTS_WORLD2 D3DTS_WORLDMATRIX(2)
-#define D3DTS_WORLD3 D3DTS_WORLDMATRIX(3)
+inline constexpr auto D3DTS_WORLD = D3DTS_WORLDMATRIX(0);
+inline constexpr auto D3DTS_WORLD1 = D3DTS_WORLDMATRIX(1);
+inline constexpr auto D3DTS_WORLD2 = D3DTS_WORLDMATRIX(2);
+inline constexpr auto D3DTS_WORLD3 = D3DTS_WORLDMATRIX(3);
 
 typedef enum _D3DCMPFUNC {
     D3DCMP_NEVER                = 1,
@@ -1262,7 +1187,7 @@ typedef struct _D3DVERTEXELEMENT9
 } D3DVERTEXELEMENT9, *LPD3DVERTEXELEMENT9;
 
 
-#define MAX_DEVICE_IDENTIFIER_STRING        512
+inline constexpr auto MAX_DEVICE_IDENTIFIER_STRING = 512;
 typedef struct _D3DADAPTER_IDENTIFIER9
 {
     char            Driver[MAX_DEVICE_IDENTIFIER_STRING];
@@ -1489,7 +1414,7 @@ class D3DXVECTOR2
 {
 public:
     operator FLOAT* ();
-    operator CONST FLOAT* () const;
+    operator const FLOAT* () const;
 
 	float x,y;
 };
@@ -1500,7 +1425,7 @@ public:
 	D3DXVECTOR3() {}
 	D3DXVECTOR3( float a, float b, float c );
     operator FLOAT* ();
-    operator CONST FLOAT* () const;
+    operator const FLOAT* () const;
 };
 
 typedef enum _D3DXINCLUDE_TYPE
@@ -1697,7 +1622,7 @@ struct IDirect3DTexture9 : public IDirect3DBaseTexture9							// "Texture 2D"
 
 	virtual					~IDirect3DTexture9();
 
-    HRESULT					LockRect(UINT Level,D3DLOCKED_RECT* pLockedRect,CONST RECT* pRect,DWORD Flags);
+    HRESULT					LockRect(UINT Level,D3DLOCKED_RECT* pLockedRect,const RECT* pRect,DWORD Flags);
     HRESULT					UnlockRect(UINT Level);
     HRESULT					GetSurfaceLevel(UINT Level,IDirect3DSurface9** ppSurfaceLevel);
 };
@@ -1719,7 +1644,7 @@ struct IDirect3DVolumeTexture9 : public IDirect3DBaseTexture9					// "Texture 3D
 
 	virtual					~IDirect3DVolumeTexture9();
 
-    HRESULT					LockBox(UINT Level,D3DLOCKED_BOX* pLockedVolume,CONST D3DBOX* pBox,DWORD Flags);
+    HRESULT					LockBox(UINT Level,D3DLOCKED_BOX* pLockedVolume,const D3DBOX* pBox,DWORD Flags);
     HRESULT					UnlockBox(UINT Level);
 	HRESULT					GetLevelDesc( UINT level, D3DVOLUME_DESC *pDesc );
 };
@@ -1732,7 +1657,7 @@ struct IDirect3DSurface9 : public IDirect3DResource9
 {
 	virtual					~IDirect3DSurface9();
 
-    HRESULT					LockRect(D3DLOCKED_RECT* pLockedRect,CONST RECT* pRect,DWORD Flags);
+    HRESULT					LockRect(D3DLOCKED_RECT* pLockedRect,const RECT* pRect,DWORD Flags);
     HRESULT					UnlockRect();
 	HRESULT					GetDesc(D3DSURFACE_DESC *pDesc);
 
@@ -1872,7 +1797,7 @@ struct IDirect3DSwapChain9 : public IUnknown
 	//		BYTE    UsageIndex; // Semantic index
 	//	} D3DVERTEXELEMENT9, *LPD3DVERTEXELEMENT9;
 
-#define MAX_D3DVERTEXELEMENTS	16
+inline constexpr auto MAX_D3DVERTEXELEMENTS = 16;
 
 struct D3DVERTEXELEMENT9_GL
 {
@@ -1985,7 +1910,7 @@ struct ID3DXMatrixStack : public IUnknown
 	// Left multiply the current matrix with the computed rotation
     // matrix, counterclockwise about the given axis with the given angle.
     // (rotation is about the local origin of the object)
-    HRESULT RotateAxisLocal(CONST D3DXVECTOR3* pV, FLOAT Angle);
+    HRESULT RotateAxisLocal(const D3DXVECTOR3* pV, FLOAT Angle);
 
 	// Left multiply the current matrix with the computed translation
     // matrix. (transformation is about the local origin of the object)
@@ -2002,7 +1927,7 @@ struct IDirect3DDevice9Params
 	D3DPRESENT_PARAMETERS	m_presentationParameters;
 };
 
-#define	D3D_MAX_STREAMS	16
+inline constexpr auto D3D_MAX_STREAMS = 16;
 struct D3DStreamDesc
 {
 	IDirect3DVertexBuffer9	*m_vtxBuffer;
@@ -2125,11 +2050,11 @@ public:
 	// Basics
 	//
 	HRESULT Reset(D3DPRESENT_PARAMETERS* pPresentationParameters);
-	HRESULT SetViewport(CONST D3DVIEWPORT9* pViewport);
+	HRESULT SetViewport(const D3DVIEWPORT9* pViewport);
     HRESULT BeginScene();
-	HRESULT Clear(DWORD Count,CONST D3DRECT* pRects,DWORD Flags,D3DCOLOR Color,float Z,DWORD Stencil);
+	HRESULT Clear(DWORD Count,const D3DRECT* pRects,DWORD Flags,D3DCOLOR Color,float Z,DWORD Stencil);
     HRESULT EndScene();
-    HRESULT Present(CONST RECT* pSourceRect,CONST RECT* pDestRect,VD3DHWND hDestWindowOverride,CONST RGNDATA* pDirtyRegion);
+    HRESULT Present(const RECT* pSourceRect,const RECT* pDestRect,VD3DHWND hDestWindowOverride,const RGNDATA* pDirtyRegion);
 
 	// textures
 	HRESULT CreateTexture(UINT Width,UINT Height,UINT Levels,DWORD Usage,D3DFORMAT Format,D3DPOOL Pool,IDirect3DTexture9** ppTexture,VD3DHANDLE* pSharedHandle, char *debugLabel=nullptr);
@@ -2152,27 +2077,27 @@ public:
 
 	HRESULT GetRenderTargetData(IDirect3DSurface9* pRenderTarget,IDirect3DSurface9* pDestSurface);	// ? is anyone using this ?
     HRESULT GetFrontBufferData(UINT iSwapChain,IDirect3DSurface9* pDestSurface);
-    HRESULT StretchRect(IDirect3DSurface9* pSourceSurface,CONST RECT* pSourceRect,IDirect3DSurface9* pDestSurface,CONST RECT* pDestRect,D3DTEXTUREFILTERTYPE Filter);
+    HRESULT StretchRect(IDirect3DSurface9* pSourceSurface,const RECT* pSourceRect,IDirect3DSurface9* pDestSurface,const RECT* pDestRect,D3DTEXTUREFILTERTYPE Filter);
 
 	// pixel shaders
-    HRESULT CreatePixelShader(CONST DWORD* pFunction,IDirect3DPixelShader9** ppShader, const char *pShaderName, char *debugLabel = nullptr);
+    HRESULT CreatePixelShader(const DWORD* pFunction,IDirect3DPixelShader9** ppShader, const char *pShaderName, char *debugLabel = nullptr);
 	HRESULT SetPixelShader(IDirect3DPixelShader9* pShader);
-    HRESULT SetPixelShaderConstantF(UINT StartRegister,CONST float* pConstantData,UINT Vector4fCount);
-    HRESULT SetPixelShaderConstantB(UINT StartRegister,CONST BOOL* pConstantData,UINT  BoolCount);
-    HRESULT SetPixelShaderConstantI(UINT StartRegister,CONST int* pConstantData,UINT Vector4iCount);
+    HRESULT SetPixelShaderConstantF(UINT StartRegister,const float* pConstantData,UINT Vector4fCount);
+    HRESULT SetPixelShaderConstantB(UINT StartRegister,const BOOL* pConstantData,UINT  BoolCount);
+    HRESULT SetPixelShaderConstantI(UINT StartRegister,const int* pConstantData,UINT Vector4iCount);
 
 	// vertex shaders
-    HRESULT CreateVertexShader(CONST DWORD* pFunction,IDirect3DVertexShader9** ppShader, const char *pShaderName, char *debugLabel = nullptr);
+    HRESULT CreateVertexShader(const DWORD* pFunction,IDirect3DVertexShader9** ppShader, const char *pShaderName, char *debugLabel = nullptr);
     HRESULT SetVertexShader(IDirect3DVertexShader9* pShader);
-    HRESULT SetVertexShaderConstantF(UINT StartRegister,CONST float* pConstantData,UINT Vector4fCount);
-    HRESULT SetVertexShaderConstantB(UINT StartRegister,CONST BOOL* pConstantData,UINT  BoolCount);
-    HRESULT SetVertexShaderConstantI(UINT StartRegister,CONST int* pConstantData,UINT Vector4iCount);
+    HRESULT SetVertexShaderConstantF(UINT StartRegister,const float* pConstantData,UINT Vector4fCount);
+    HRESULT SetVertexShaderConstantB(UINT StartRegister,const BOOL* pConstantData,UINT  BoolCount);
+    HRESULT SetVertexShaderConstantI(UINT StartRegister,const int* pConstantData,UINT Vector4iCount);
 
 	HRESULT LinkShaderPair( IDirect3DVertexShader9* vs, IDirect3DPixelShader9* ps );
 	HRESULT QueryShaderPair( int index, GLMShaderPairInfo *infoOut );
 	
 	// vertex buffers
-    HRESULT CreateVertexDeclaration(CONST D3DVERTEXELEMENT9* pVertexElements,IDirect3DVertexDeclaration9** ppDecl);
+    HRESULT CreateVertexDeclaration(const D3DVERTEXELEMENT9* pVertexElements,IDirect3DVertexDeclaration9** ppDecl);
 	HRESULT SetVertexDeclaration(IDirect3DVertexDeclaration9* pDecl);
 
     HRESULT SetFVF(DWORD FVF);		// we might not be using these ?
@@ -2208,30 +2133,30 @@ public:
 	// Draw.
     HRESULT DrawPrimitive(D3DPRIMITIVETYPE PrimitiveType,UINT StartVertex,UINT PrimitiveCount);
     HRESULT DrawIndexedPrimitive(D3DPRIMITIVETYPE PrimitiveType,INT BaseVertexIndex,UINT MinVertexIndex,UINT NumVertices,UINT startIndex,UINT primCount);
-	HRESULT DrawIndexedPrimitiveUP(D3DPRIMITIVETYPE PrimitiveType,UINT MinVertexIndex,UINT NumVertices,UINT PrimitiveCount,CONST void* pIndexData,D3DFORMAT IndexDataFormat,CONST void* pVertexStreamZeroData,UINT VertexStreamZeroStride);
+	HRESULT DrawIndexedPrimitiveUP(D3DPRIMITIVETYPE PrimitiveType,UINT MinVertexIndex,UINT NumVertices,UINT PrimitiveCount,const void* pIndexData,D3DFORMAT IndexDataFormat,const void* pVertexStreamZeroData,UINT VertexStreamZeroStride);
 
 	// misc
     BOOL ShowCursor(BOOL bShow);
     HRESULT ValidateDevice(DWORD* pNumPasses);
-    HRESULT SetMaterial(CONST D3DMATERIAL9* pMaterial);
+    HRESULT SetMaterial(const D3DMATERIAL9* pMaterial);
     HRESULT LightEnable(DWORD Index,BOOL Enable);
-    HRESULT SetScissorRect(CONST RECT* pRect);
+    HRESULT SetScissorRect(const RECT* pRect);
 	HRESULT CreateQuery(D3DQUERYTYPE Type,IDirect3DQuery9** ppQuery);
     HRESULT GetDeviceCaps(D3DCAPS9* pCaps);
     HRESULT TestCooperativeLevel();
     HRESULT EvictManagedResources();
-    HRESULT SetLight(DWORD Index,CONST D3DLIGHT9*);
-    void SetGammaRamp(UINT iSwapChain,DWORD Flags,CONST D3DGAMMARAMP* pRamp);
+    HRESULT SetLight(DWORD Index,const D3DLIGHT9*);
+    void SetGammaRamp(UINT iSwapChain,DWORD Flags,const D3DGAMMARAMP* pRamp);
 
 	// Talk to JasonM about this one. It's tricky in GL.
-    HRESULT SetClipPlane(DWORD Index,CONST float* pPlane);
+    HRESULT SetClipPlane(DWORD Index,const float* pPlane);
 
 	//
 	//
 	// **** FIXED FUNCTION STUFF - None of this stuff needs support in GL.
 	//
 	//
-    HRESULT SetTransform(D3DTRANSFORMSTATETYPE State,CONST D3DMATRIX* pMatrix);
+    HRESULT SetTransform(D3DTRANSFORMSTATETYPE State,const D3DMATRIX* pMatrix);
     HRESULT SetTextureStageState(DWORD Stage,D3DTEXTURESTAGESTATETYPE Type,DWORD Value);	
 };
 
@@ -2265,13 +2190,13 @@ typedef ID3DXConstantTable* LPD3DXCONSTANTTABLE;
 const char* D3DXGetPixelShaderProfile( IDirect3DDevice9 *pDevice );
 
 
-D3DXMATRIX* D3DXMatrixMultiply( D3DXMATRIX *pOut, CONST D3DXMATRIX *pM1, CONST D3DXMATRIX *pM2 );
-D3DXVECTOR3* D3DXVec3TransformCoord( D3DXVECTOR3 *pOut, CONST D3DXVECTOR3 *pV, CONST D3DXMATRIX *pM );
+D3DXMATRIX* D3DXMatrixMultiply( D3DXMATRIX *pOut, const D3DXMATRIX *pM1, const D3DXMATRIX *pM2 );
+D3DXVECTOR3* D3DXVec3TransformCoord( D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM );
 
 HRESULT D3DXCreateMatrixStack( DWORD Flags, LPD3DXMATRIXSTACK* ppStack);
 void D3DXMatrixIdentity( D3DXMATRIX * );
 
-D3DXINLINE D3DXVECTOR3* D3DXVec3Subtract( D3DXVECTOR3 *pOut, CONST D3DXVECTOR3 *pV1, CONST D3DXVECTOR3 *pV2 )
+D3DXINLINE D3DXVECTOR3* D3DXVec3Subtract( D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2 )
 {
     pOut->x = pV1->x - pV2->x;
     pOut->y = pV1->y - pV2->y;
@@ -2279,7 +2204,7 @@ D3DXINLINE D3DXVECTOR3* D3DXVec3Subtract( D3DXVECTOR3 *pOut, CONST D3DXVECTOR3 *
     return pOut;
 }
 
-D3DXINLINE D3DXVECTOR3* D3DXVec3Cross( D3DXVECTOR3 *pOut, CONST D3DXVECTOR3 *pV1, CONST D3DXVECTOR3 *pV2 )
+D3DXINLINE D3DXVECTOR3* D3DXVec3Cross( D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2 )
 {
     D3DXVECTOR3 v;
 
@@ -2291,21 +2216,21 @@ D3DXINLINE D3DXVECTOR3* D3DXVec3Cross( D3DXVECTOR3 *pOut, CONST D3DXVECTOR3 *pV1
     return pOut;
 }
 
-D3DXINLINE FLOAT D3DXVec3Dot( CONST D3DXVECTOR3 *pV1, CONST D3DXVECTOR3 *pV2 )
+D3DXINLINE FLOAT D3DXVec3Dot( const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2 )
 {
     return pV1->x * pV2->x + pV1->y * pV2->y + pV1->z * pV2->z;
 }
 
-D3DXMATRIX* D3DXMatrixInverse( D3DXMATRIX *pOut, FLOAT *pDeterminant, CONST D3DXMATRIX *pM );
+D3DXMATRIX* D3DXMatrixInverse( D3DXMATRIX *pOut, FLOAT *pDeterminant, const D3DXMATRIX *pM );
 
-D3DXMATRIX* D3DXMatrixTranspose( D3DXMATRIX *pOut, CONST D3DXMATRIX *pM );
+D3DXMATRIX* D3DXMatrixTranspose( D3DXMATRIX *pOut, const D3DXMATRIX *pM );
 
-D3DXPLANE* D3DXPlaneNormalize( D3DXPLANE *pOut, CONST D3DXPLANE *pP);
+D3DXPLANE* D3DXPlaneNormalize( D3DXPLANE *pOut, const D3DXPLANE *pP);
 
-D3DXVECTOR4* D3DXVec4Transform( D3DXVECTOR4 *pOut, CONST D3DXVECTOR4 *pV, CONST D3DXMATRIX *pM );
+D3DXVECTOR4* D3DXVec4Transform( D3DXVECTOR4 *pOut, const D3DXVECTOR4 *pV, const D3DXMATRIX *pM );
 
 
-D3DXVECTOR4* D3DXVec4Normalize( D3DXVECTOR4 *pOut, CONST D3DXVECTOR4 *pV );
+D3DXVECTOR4* D3DXVec4Normalize( D3DXVECTOR4 *pOut, const D3DXVECTOR4 *pV );
 
 D3DXMATRIX* D3DXMatrixTranslation( D3DXMATRIX *pOut, FLOAT x, FLOAT y, FLOAT z );
 
@@ -2318,7 +2243,7 @@ D3DXMATRIX* D3DXMatrixPerspectiveOffCenterRH( D3DXMATRIX *pOut, FLOAT l, FLOAT r
 
 // Transform a plane by a matrix.  The vector (a,b,c) must be normal.
 // M should be the inverse transpose of the transformation desired.
-D3DXPLANE* D3DXPlaneTransform( D3DXPLANE *pOut, CONST D3DXPLANE *pP, CONST D3DXMATRIX *pM );
+D3DXPLANE* D3DXPlaneTransform( D3DXPLANE *pOut, const D3DXPLANE *pP, const D3DXMATRIX *pM );
 
 IDirect3D9 *Direct3DCreate9(UINT SDKVersion);
 
@@ -2327,7 +2252,7 @@ void D3DPERF_SetOptions( DWORD dwOptions );
 HRESULT D3DXCompileShader(
         LPCSTR                          pSrcData,
         UINT                            SrcDataLen,
-        CONST D3DXMACRO*                pDefines,
+        const D3DXMACRO*                pDefines,
         LPD3DXINCLUDE                   pInclude,
         LPCSTR                          pFunctionName,
         LPCSTR                          pProfile,
@@ -2336,15 +2261,50 @@ HRESULT D3DXCompileShader(
         LPD3DXBUFFER*                   ppErrorMsgs,
         LPD3DXCONSTANTTABLE*            ppConstantTable);
 
-#endif // USE_ACTUAL_DX
-
 // fake D3D usage constant for SRGB tex creation
-#define D3DUSAGE_TEXTURE_SRGB			(0x80000000L)
+inline constexpr auto D3DUSAGE_TEXTURE_SRGB = (0x80000000L);
 // fake D3D usage constant for deferred tex bits allocation
-#define D3DUSAGE_TEXTURE_NOD3DMEMORY	(0x40000000L)
+inline constexpr auto D3DUSAGE_TEXTURE_NOD3DMEMORY = (0x40000000L);
 
-#endif // DXABSTRACT_H
+// These were macros. They are defined at the end of the header rather than where the macros sat,
+// because they name types (D3DCOLOR, D3DVERTEXELEMENT9, D3DTRANSFORMSTATETYPE) that are declared
+// further down the file -- a macro body is only expanded at the call site, but a function needs its
+// return type complete at the definition.
+inline constexpr DWORD MAKEFOURCC( unsigned char ch0, unsigned char ch1, unsigned char ch2, unsigned char ch3 )
+{
+	return (DWORD)ch0 | ( (DWORD)ch1 << 8 ) | ( (DWORD)ch2 << 16 ) | ( (DWORD)ch3 << 24 );
+}
 
+inline constexpr D3DCOLOR D3DCOLOR_ARGB( unsigned long a, unsigned long r, unsigned long g, unsigned long b )
+{
+	return (D3DCOLOR)( ( ( a & 0xff ) << 24 ) | ( ( r & 0xff ) << 16 ) | ( ( g & 0xff ) << 8 ) | ( b & 0xff ) );
+}
 
+inline constexpr D3DCOLOR D3DCOLOR_RGBA( unsigned long r, unsigned long g, unsigned long b, unsigned long a )
+{
+	return D3DCOLOR_ARGB( a, r, g, b );
+}
 
+inline constexpr D3DCOLOR D3DCOLOR_XRGB( unsigned long r, unsigned long g, unsigned long b )
+{
+	return D3DCOLOR_ARGB( 0xff, r, g, b );
+}
 
+inline constexpr D3DCOLOR D3DCOLOR_COLORVALUE( float r, float g, float b, float a )
+{
+	return D3DCOLOR_RGBA( (DWORD)( r * 255.f ), (DWORD)( g * 255.f ), (DWORD)( b * 255.f ), (DWORD)( a * 255.f ) );
+}
+
+inline constexpr D3DVERTEXELEMENT9 D3DDECL_END()
+{
+	return D3DVERTEXELEMENT9{ 0xFF, 0, D3DDECLTYPE_UNUSED, 0, 0, 0 };
+}
+
+inline constexpr DWORD D3DSHADER_VERSION_MAJOR( DWORD version ) { return ( version >> 8 ) & 0xFF; }
+inline constexpr DWORD D3DSHADER_VERSION_MINOR( DWORD version ) { return ( version >> 0 ) & 0xFF; }
+inline constexpr DWORD D3DPS_END() { return 0x0000FFFF; }
+
+inline constexpr D3DTRANSFORMSTATETYPE D3DTS_WORLDMATRIX( int index )
+{
+	return (D3DTRANSFORMSTATETYPE)( index + 256 );
+}

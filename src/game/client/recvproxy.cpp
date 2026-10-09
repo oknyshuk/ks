@@ -1,10 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: implements various common send proxies
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "recvproxy.h"
 
 void RecvProxy_IntSubOne( const CRecvProxyData *pData, void *pStruct, void *pOut )
@@ -71,7 +77,7 @@ RecvProp RecvPropBool(
 	int offset, 
 	int sizeofVar )
 {
-	Assert( sizeofVar == sizeof( bool ) );
+	contract_assert( sizeofVar == sizeof( bool ) );
 	return RecvPropInt( pVarName, offset, sizeofVar );
 }
 
@@ -117,7 +123,7 @@ static void RecvProxy_Time( const CRecvProxyData *pData, void *pStruct, void *pO
 	offset	= ( float )pData->m_Value.m_Int / 1000.0f;
 
 	// Get base
-	clock_base = floor( engine->GetLastTimeStamp() );
+	clock_base = std::floor( engine->GetLastTimeStamp() );
 
 	// Add together and clamp to msec precision
 	t = ClampToMsec( clock_base + offset );
@@ -153,25 +159,3 @@ RecvProp RecvPropTime(
 //			*pStruct - 
 //			*pOut - 
 //-----------------------------------------------------------------------------
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-static void RecvProxy_IntToPredictableId( const CRecvProxyData *pData, void *pStruct, void *pOut )
-{
-	CPredictableId *pId = (CPredictableId*)pOut;
-	Assert( pId );
-	pId->SetRaw( pData->m_Value.m_Int );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *pVarName - 
-//			sizeofVar - 
-// Output : RecvProp
-//-----------------------------------------------------------------------------
-RecvProp RecvPropPredictableId(
-	const char *pVarName,
-	int offset, 
-	int sizeofVar/*=kSizeofIgnore*/ )
-{
-	return RecvPropInt( pVarName, offset, sizeofVar, 0, RecvProxy_IntToPredictableId );
-}
-#endif

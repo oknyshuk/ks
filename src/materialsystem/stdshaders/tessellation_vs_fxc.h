@@ -1,14 +1,9 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Common code for tessellation
-//
-// $NoKeywords: $
-//
-//===========================================================================//
 
-
-#ifndef TESSELLATION_VS_FXC_H_
-#define TESSELLATION_VS_FXC_H_
 #ifdef SHADER_MODEL_VS_3_0
 
 #define TESSELLATION_MODE_ACC_PATCHES_EXTRA	1
@@ -379,5 +374,3 @@ void EvaluateSubdivisionSurface( VS_INPUT v, float flOneOverSubDHeight, float fl
 
 
 #endif // SHADER_MODEL_VS_3_0
-
-#endif //#ifndef TESSELLATION_VS_FXC_H_

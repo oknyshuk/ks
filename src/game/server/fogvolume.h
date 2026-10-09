@@ -1,10 +1,10 @@
+#pragma once
 //--------------------------------------------------------------------------------------------------------
 // Copyright (c) 2007 Turtle Rock Studios, Inc. - All Rights Reserved
 
-#ifndef FOG_VOLUME_H
-#define FOG_VOLUME_H
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 
 
@@ -70,4 +70,3 @@ private:
 extern std::vector< CFogVolume * > TheFogVolumes;
 
 
-#endif // FOG_VOLUME_H

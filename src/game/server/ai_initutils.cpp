@@ -1,17 +1,30 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		AI Utility classes for building the initial AI Networks
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: AI Utility classes for building the initial AI Networks
+
+import std;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "ai_node.h"
@@ -95,7 +108,7 @@ CAI_TestHull* CAI_TestHull::GetTestHull(void)
 	if (CAI_TestHull::pTestHull->bInUse == true)
 	{
 		DevMsg("WARNING: TestHull used and never returned!\n");
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 	CAI_TestHull::pTestHull->RemoveSolidFlags( FSOLID_NOT_SOLID );
@@ -322,6 +335,3 @@ CNodeEnt::CNodeEnt( void )
 {
 	m_debugOverlays = 0;
 }
-
-
-

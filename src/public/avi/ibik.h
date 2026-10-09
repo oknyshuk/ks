@@ -1,23 +1,15 @@
-//====== Copyright 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// The copyright to the contents herein is the property of Valve, L.L.C.
-// The contents may be used and/or copied only with the written permission of
-// Valve, L.L.C., or in accordance with the terms and conditions stipulated in
-// the agreement/contract under which the contents have been supplied.
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IBIK_H
-#define IBIK_H
+import std;
+import ks.tier1;
 
+inline constexpr auto BIK_LOOP = 0x00000001; // play endlessly
+inline constexpr auto BIK_PRELOAD = 0x00000002; // causes the entire move to load into memory
+inline constexpr auto BIK_NO_AUDIO = 0x00000004; // video doesn't have audio
 
-#include "appframework/iappsystem.h"
-
-#define BIK_LOOP		0x00000001	// play endlessly
-#define BIK_PRELOAD		0x00000002	// causes the entire move to load into memory
-#define BIK_NO_AUDIO	0x00000004	// video doesn't have audio
-
-#define ENABLE_BIK_PERF_SPEW 0
+inline constexpr auto ENABLE_BIK_PERF_SPEW = 0;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -133,5 +125,3 @@ public:
 };
 
 extern IBik *g_pBIK;
-
-#endif // IBIK_H

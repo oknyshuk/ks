@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 oknyshuk
+
 add_library(choreoobjects STATIC
     ../game/shared/choreoactor.cpp
     ../game/shared/choreochannel.cpp

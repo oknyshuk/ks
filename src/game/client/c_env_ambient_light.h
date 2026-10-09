@@ -1,9 +1,9 @@
-#ifndef _INCLUDED_C_ENV_AMBIENT_LIGHT_H
-#define _INCLUDED_C_ENV_AMBIENT_LIGHT_H
+#pragma once
 
 #include "reflect_annotations.h"
 
 #include "c_spatialentity.h"
+#include "util_shared.h"
 
 //------------------------------------------------------------------------------
 // Purpose : Ambient light controller entity with radial falloff
@@ -31,4 +31,3 @@ protected:
 	CountdownTimer m_colorTimer;
 };
 
-#endif // _INCLUDED_C_ENV_AMBIENT_LIGHT_H

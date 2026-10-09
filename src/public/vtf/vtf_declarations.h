@@ -1,20 +1,14 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//==================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef VTF_DECLARATIONS_H
-#define VTF_DECLARATIONS_H
-
+import ks.math;
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
 namespace ks { class byte_reader; class byte_writer; }
-class Vector;
-struct Rect_t;
 class IFileSystem;
 
 //-----------------------------------------------------------------------------
@@ -159,5 +153,3 @@ enum LookDir_t
 	LOOK_DOWN_Z,
 	LOOK_DOWN_NEGZ,
 };
-
-#endif // VTF_H

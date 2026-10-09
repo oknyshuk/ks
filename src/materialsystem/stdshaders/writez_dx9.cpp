@@ -1,12 +1,7 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "BaseVSShader.h"
-
 
 #include "writez_vs20.inc"
 #include "white_ps20.inc"
@@ -15,7 +10,7 @@ DEFINE_FALLBACK_SHADER( WriteZ, WriteZ_DX9 )
 
 BEGIN_VS_SHADER_FLAGS( WriteZ_DX9, "Help for WriteZ", SHADER_NOT_EDITABLE )
 
-	BEGIN_SHADER_PARAMS
+	
 	END_SHADER_PARAMS
 
 	SHADER_INIT_PARAMS()
@@ -89,4 +84,3 @@ BEGIN_VS_SHADER_FLAGS( WriteZ_DX9, "Help for WriteZ", SHADER_NOT_EDITABLE )
 	}
 
 END_SHADER
-

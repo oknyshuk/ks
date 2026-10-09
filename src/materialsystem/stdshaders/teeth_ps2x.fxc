@@ -1,10 +1,10 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "common_fog_ps_fxc.h"
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"		"0..1"	[ps20b] [PC]
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"		"0..0"	[ps20b] [CONSOLE]
 // DYNAMIC: "WRITE_DEPTH_TO_DESTALPHA"		"0..1"	[ps30]
-
 
 #if defined( SHADER_MODEL_PS_2_0 )
 #	define WRITE_DEPTH_TO_DESTALPHA 0

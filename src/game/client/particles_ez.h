@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef PARTICLES_EZ_H
-#define PARTICLES_EZ_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "particles_simple.h"
 #include "particle_litsmokeemitter.h"
-
 
 // Use these to fire and forget particles.
 // pParticle should be ON THE STACK - ie: don't allocate it from a CSimpleEmitter or from the particle manager.
@@ -23,6 +16,3 @@ void AddFireParticle( const SimpleParticle *pParticle, PMaterialHandle hMaterial
 
 // Called by the renderer to draw all the particles.
 void DrawParticleSingletons( bool bInSkybox );
-
-
-#endif // PARTICLES_EZ_H

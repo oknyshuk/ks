@@ -1,11 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ENTITYBLOCKER_H
-#define ENTITYBLOCKER_H
+#include "baseentity.h"
 
 //==================================================================================================================
 // Entity Blocker
@@ -21,5 +18,3 @@ public:
 	void Spawn( void );
 	bool TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace );
 };
-
-#endif // ENTITYBLOCKER_H

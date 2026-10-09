@@ -1,22 +1,15 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-// An interface that should not ever be accessed directly from shaders
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: An interface that should not ever be accessed directly from shaders
 // but instead is visible only to shaderlib.
-//===========================================================================//
 
-#ifndef ISHADERSYSTEM_H
-#define ISHADERSYSTEM_H
-
-
-#include "interface.h"
 #include <materialsystem/IShader.h>
 #include <materialsystem/ishadersystem_declarations.h>
+import std;
+import ks.tier1;
 #include "shaderlib/shadercombosemantics.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -29,14 +22,14 @@ struct ShaderComboSemantics_t;
 //-----------------------------------------------------------------------------
 // The Shader system interface version
 //-----------------------------------------------------------------------------
-#define SHADERSYSTEM_INTERFACE_VERSION		"ShaderSystem002"
+inline constexpr const char *SHADERSYSTEM_INTERFACE_VERSION = "ShaderSystem002";
 
 
 
 //-----------------------------------------------------------------------------
 // The shader system (a singleton)
 //-----------------------------------------------------------------------------
-abstract_class IShaderSystem
+class IShaderSystem
 {
 public:
 	virtual ShaderAPITextureHandle_t GetShaderAPITextureBindHandle( ITexture *pTexture, int nFrameVar, int nTextureChannel = 0 ) =0;
@@ -67,13 +60,13 @@ public:
 //-----------------------------------------------------------------------------
 // The Shader plug-in DLL interface version
 //-----------------------------------------------------------------------------
-#define SHADER_DLL_INTERFACE_VERSION	"ShaderDLL004"
+inline constexpr const char *SHADER_DLL_INTERFACE_VERSION = "ShaderDLL004";
 
 
 //-----------------------------------------------------------------------------
 // The Shader interface versions
 //-----------------------------------------------------------------------------
-abstract_class IShaderDLLInternal
+class IShaderDLLInternal
 {
 public:
 	// Here's where the app systems get to learn about each other 
@@ -96,8 +89,3 @@ public:
 // Singleton interface
 //-----------------------------------------------------------------------------
 IShaderDLLInternal *GetShaderDLLInternal();
-
-
-
-
-#endif // ISHADERSYSTEM_H

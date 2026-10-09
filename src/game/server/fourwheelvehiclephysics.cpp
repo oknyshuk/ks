@@ -1,11 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: A moving vehicle that is used as a battering ram
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: A moving vehicle that is used as a battering ram
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "player.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "fourwheelvehiclephysics.h"
@@ -19,16 +44,16 @@
 #include "te_effect_dispatch.h"
 #include "particle_parse.h"
 
-#define STICK_EXTENTS	400.0f
+constexpr auto STICK_EXTENTS = 400.0f;
 
 
-#define DUST_SPEED			5		// speed at which dust starts
-#define REAR_AXLE			1		// indexes of axlex
-#define	FRONT_AXLE			0
-#define MAX_GUAGE_SPEED		100.0	// 100 mph is max speed shown on guage
+constexpr auto DUST_SPEED = 5; // speed at which dust starts
+constexpr auto REAR_AXLE = 1; // indexes of axlex
+constexpr auto FRONT_AXLE = 0;
+constexpr auto MAX_GUAGE_SPEED = 100.0; // 100 mph is max speed shown on guage
 
-#define BRAKE_MAX_VALUE				1.0f
-#define BRAKE_BACK_FORWARD_SCALAR	2.0f
+constexpr auto BRAKE_MAX_VALUE = 1.0f;
+constexpr auto BRAKE_BACK_FORWARD_SCALAR = 2.0f;
 
 ConVar r_vehicleBrakeRate( "r_vehicleBrakeRate", "1.5", FCVAR_CHEAT );
 
@@ -122,7 +147,7 @@ inline float CFourWheelVehiclePhysics::GetPoseParameter( int iParameter )
 
 inline float CFourWheelVehiclePhysics::SetPoseParameter( int iParameter, float flValue )
 {
-	Assert(IsFinite(flValue));
+	contract_assert( IsFinite(flValue) );
 	return m_pOuter->SetPoseParameter( iParameter, flValue );
 }
 
@@ -295,7 +320,7 @@ void CFourWheelVehiclePhysics::Precache()
 //-----------------------------------------------------------------------------
 void CFourWheelVehiclePhysics::Spawn( )
 {
-	Assert( m_pOuter );
+	contract_assert( m_pOuter );
 
 	m_actionValue = 0;
 	m_actionSpeed = 0;
@@ -506,9 +531,8 @@ void CFourWheelVehiclePhysics::Teleport( matrix3x4_t& relativeTransform )
 }
 
 // For the #if 0 debug code below!
-#define HL2IVP_FACTOR	METERS_PER_INCH
-#define IVP2HL(x)		(float)(x * (1.0f/HL2IVP_FACTOR))
-#define HL2IVP(x)		(double)(x * HL2IVP_FACTOR)		
+template <typename T1> [[gnu::always_inline]] inline auto IVP2HL( T1 x ) { return (float)(x * (1.0f/METERS_PER_INCH)); }
+template <typename T1> [[gnu::always_inline]] inline auto HL2IVP( T1 x ) { return (double)(x * METERS_PER_INCH); }
 
 //-----------------------------------------------------------------------------
 // Debugging methods
@@ -592,12 +616,12 @@ int CFourWheelVehiclePhysics::DrawDebugTextOverlays( int nOffset )
 {
 	const vehicle_operatingparams_t &params = m_pVehicle->GetOperatingParams();
 	char tempstr[512];
-	Q_snprintf( tempstr,sizeof(tempstr), "Speed %.1f  T/S/B (%.0f/%.0f/%.1f)", params.speed, m_controls.throttle, m_controls.steering, m_controls.brake );
+	V_snprintf( tempstr,sizeof(tempstr), "Speed %.1f  T/S/B (%.0f/%.0f/%.1f)", params.speed, m_controls.throttle, m_controls.steering, m_controls.brake );
 	m_pOuter->EntityText( nOffset, tempstr, 0 );
 	nOffset++;
 	Msg( "%s", tempstr );
 
-	Q_snprintf( tempstr,sizeof(tempstr), "Gear: %d, RPM %4d", params.gear, (int)params.engineRPM );
+	V_snprintf( tempstr,sizeof(tempstr), "Gear: %d, RPM %4d", params.gear, (int)params.engineRPM );
 	m_pOuter->EntityText( nOffset, tempstr, 0 );
 	nOffset++;
 	Msg( " %s\n", tempstr );
@@ -730,7 +754,7 @@ bool CFourWheelVehiclePhysics::Think()
 	}
 
 	// Make the steering wheel match the input, with a little dampening.
-	#define STEER_DAMPING	0.8
+	constexpr auto STEER_DAMPING = 0.8;
 	float flSteer = GetPoseParameter( m_poseParameters[VEH_STEER] );
 	float flPhysicsSteer = carState.steeringAngle / vehicleData.steering.degreesSlow;
 	SetPoseParameter( m_poseParameters[VEH_STEER], (STEER_DAMPING * flSteer) + ((1 - STEER_DAMPING) * flPhysicsSteer) );

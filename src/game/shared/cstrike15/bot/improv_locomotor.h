@@ -1,16 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.math;
+#include "nav.h"
+
+class CNavArea;
+class CNavLadder;
+
 // improv_locomotor.h
 // Interface for moving Improvs along computed paths
 // Author: Michael Booth, July 2004
-
-#ifndef _IMPROV_LOCOMOTOR_H_
-#define _IMPROV_LOCOMOTOR_H_
 
 // TODO: Remove duplicate methods from CImprov, and update CImprov to use this class
 
@@ -53,5 +54,3 @@ public:
 	virtual void OnMoveToSuccess( const Vector &goal ) { }				///< invoked when an improv reaches its MoveTo goal
 	virtual void OnMoveToFailure( const Vector &goal, MoveToFailureType reason ) { }	///< invoked when an improv fails to reach a MoveTo goal
 };
-
-#endif // _IMPROV_LOCOMOTOR_H_

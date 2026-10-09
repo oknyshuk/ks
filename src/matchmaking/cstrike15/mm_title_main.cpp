@@ -1,13 +1,9 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "mm_title.h"
 #include "../mm_title_main.h"
 
-#include "fmtstr.h"
 
 LINK_MATCHMAKING_LIB();
 
@@ -33,5 +29,3 @@ void MM_Title_Shutdown()
 	if ( g_pMatchTitle )
 		g_pMatchTitle->Shutdown();
 }
-
-

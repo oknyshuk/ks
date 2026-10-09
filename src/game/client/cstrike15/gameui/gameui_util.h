@@ -1,17 +1,13 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef GAMEUI_UTIL_H
-#define GAMEUI_UTIL_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Set by the player who "owns" the gameui/settings/etc.
 void SetGameUIActiveSplitScreenPlayerSlot( int nSlot );
 int GetGameUIActiveSplitScreenPlayerSlot();
 
-#include "tier1/convar.h"
+import std;
+import ks.tier1;
 
 void GameUI_MakeSafeName( const char *oldName, char *newName, int newNameBufSize );
 
@@ -64,7 +60,7 @@ private:
 // In GAMUI we should never use the regular ConVarRef
 #define ConVarRef CGameUIConVarRef
 
-FORCEINLINE int CGameUIConVarRef::GetActiveSplitScreenPlayerSlot() const
+[[gnu::always_inline]] inline int CGameUIConVarRef::GetActiveSplitScreenPlayerSlot() const
 {
 	return GetGameUIActiveSplitScreenPlayerSlot();
 }
@@ -72,18 +68,18 @@ FORCEINLINE int CGameUIConVarRef::GetActiveSplitScreenPlayerSlot() const
 //-----------------------------------------------------------------------------
 // Did we find an existing convar of that name?
 //-----------------------------------------------------------------------------
-FORCEINLINE bool CGameUIConVarRef::IsFlagSet( int nFlags ) const
+[[gnu::always_inline]] inline bool CGameUIConVarRef::IsFlagSet( int nFlags ) const
 {
 	return ( m_Info[ 0 ].m_pConVar->IsFlagSet( nFlags ) != 0 );
 }
 
-FORCEINLINE const char *CGameUIConVarRef::GetName( int iSlot ) const
+[[gnu::always_inline]] inline const char *CGameUIConVarRef::GetName( int iSlot ) const
 {
 	int nSlot = iSlot == -1 ? GetActiveSplitScreenPlayerSlot() : iSlot;
 	return m_Info[ nSlot ].m_pConVar->GetName();
 }
 
-FORCEINLINE const char *CGameUIConVarRef::GetBaseName() const
+[[gnu::always_inline]] inline const char *CGameUIConVarRef::GetBaseName() const
 {
 	return m_Info[ 0 ].m_pConVar->GetBaseName();
 }
@@ -91,7 +87,7 @@ FORCEINLINE const char *CGameUIConVarRef::GetBaseName() const
 //-----------------------------------------------------------------------------
 // Purpose: Return ConVar value as a float
 //-----------------------------------------------------------------------------
-FORCEINLINE float CGameUIConVarRef::GetFloat( int iSlot ) const
+[[gnu::always_inline]] inline float CGameUIConVarRef::GetFloat( int iSlot ) const
 {
 	int nSlot = iSlot == -1 ? GetActiveSplitScreenPlayerSlot() : iSlot;
 	return m_Info[ nSlot ].m_pConVarState->GetFloat();
@@ -100,7 +96,7 @@ FORCEINLINE float CGameUIConVarRef::GetFloat( int iSlot ) const
 //-----------------------------------------------------------------------------
 // Purpose: Return ConVar value as an int
 //-----------------------------------------------------------------------------
-FORCEINLINE int CGameUIConVarRef::GetInt( int iSlot ) const 
+[[gnu::always_inline]] inline int CGameUIConVarRef::GetInt( int iSlot ) const 
 {
 	int nSlot = iSlot == -1 ? GetActiveSplitScreenPlayerSlot() : iSlot;
 	return m_Info[ nSlot ].m_pConVarState->GetInt();
@@ -109,52 +105,52 @@ FORCEINLINE int CGameUIConVarRef::GetInt( int iSlot ) const
 //-----------------------------------------------------------------------------
 // Purpose: Return ConVar value as a string, return "" for bogus string pointer, etc.
 //-----------------------------------------------------------------------------
-FORCEINLINE const char *CGameUIConVarRef::GetString( int iSlot ) const 
+[[gnu::always_inline]] inline const char *CGameUIConVarRef::GetString( int iSlot ) const 
 {
-	Assert( !IsFlagSet( FCVAR_NEVER_AS_STRING ) );
+	contract_assert( !IsFlagSet( FCVAR_NEVER_AS_STRING ) );
 	int nSlot = iSlot == -1 ? GetActiveSplitScreenPlayerSlot() : iSlot;
 	return m_Info[ nSlot ].m_pConVarState->GetString();
 }
 
-FORCEINLINE_CVAR  float CGameUIConVarRef::GetMax( int iSlot ) const
+inline  float CGameUIConVarRef::GetMax( int iSlot ) const
 {
 	int nSlot = iSlot == -1 ? GetActiveSplitScreenPlayerSlot() : iSlot;
 	return m_Info[ nSlot ].m_pConVarState->GetMaxValue();
 }
 
 // [jbright] - Convenience function for retrieving the min value of the convar
-FORCEINLINE_CVAR  float CGameUIConVarRef::GetMin( int iSlot ) const
+inline  float CGameUIConVarRef::GetMin( int iSlot ) const
 {
 	int nSlot = iSlot == -1 ? GetActiveSplitScreenPlayerSlot() : iSlot;
 	return m_Info[ nSlot ].m_pConVarState->GetMinValue();
 }
 
 
-FORCEINLINE void CGameUIConVarRef::SetValue( const char *pValue, int iSlot )
+[[gnu::always_inline]] inline void CGameUIConVarRef::SetValue( const char *pValue, int iSlot )
 {
 	int nSlot = iSlot == -1 ? GetActiveSplitScreenPlayerSlot() : iSlot;
 	m_Info[ nSlot ].m_pConVar->SetValue( pValue );
 }
 
-FORCEINLINE void CGameUIConVarRef::SetValue( float flValue, int iSlot )
+[[gnu::always_inline]] inline void CGameUIConVarRef::SetValue( float flValue, int iSlot )
 {
 	int nSlot = iSlot == -1 ? GetActiveSplitScreenPlayerSlot() : iSlot;
 	m_Info[ nSlot ].m_pConVar->SetValue( flValue );
 }
 
-FORCEINLINE void CGameUIConVarRef::SetValue( int nValue, int iSlot )
+[[gnu::always_inline]] inline void CGameUIConVarRef::SetValue( int nValue, int iSlot )
 {
 	int nSlot = iSlot == -1 ? GetActiveSplitScreenPlayerSlot() : iSlot;
 	m_Info[ nSlot ].m_pConVar->SetValue( nValue );
 }
 
-FORCEINLINE void CGameUIConVarRef::SetValue( bool bValue, int iSlot )
+[[gnu::always_inline]] inline void CGameUIConVarRef::SetValue( bool bValue, int iSlot )
 {
 	int nSlot = iSlot == -1 ? GetActiveSplitScreenPlayerSlot() : iSlot;
 	m_Info[ nSlot ].m_pConVar->SetValue( bValue ? 1 : 0 );
 }
 
-FORCEINLINE const char *CGameUIConVarRef::GetDefault() const
+[[gnu::always_inline]] inline const char *CGameUIConVarRef::GetDefault() const
 {
 	return m_Info[ 0 ].m_pConVarState->GetDefault();
 }
@@ -171,5 +167,3 @@ private:
 };
 
 #define GAMEUI_ACTIVE_SPLITSCREEN_PLAYER_GUARD( slot )	CGameUiSetActiveSplitScreenPlayerGuard g_UISSGuard( slot );
-
-#endif // GAMEUI_UTIL_H

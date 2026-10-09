@@ -1,17 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
+
 // Purpose: Defines an interface to the map editor for the execution of
 //			editor shell commands from another application. Commands allow the
 //			creation and deletion of entities, AI nodes, and AI node connections.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef EDITOR_SENDCOMMAND_H
-#define EDITOR_SENDCOMMAND_H
-#pragma once
-
-class QAngle;
 
 //
 // Result codes from Worldcraft_SendCommand.
@@ -47,6 +42,3 @@ EditorSendResult_t Editor_DeleteNodeLink(int nStartID, int nEndID, bool bShowUI 
 // Actually does the work. All the above commands route through this.
 //
 EditorSendResult_t Editor_SendCommand(const char *pszCommand, bool bShowUI);
-
-
-#endif // EDITOR_SENDCOMMAND_H

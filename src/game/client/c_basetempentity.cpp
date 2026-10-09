@@ -1,12 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Core Temp Entity client implementation.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
 #include "reflect_recvtable.h"
-#include "reflect_annotations.h"
 #include "c_basetempentity.h"
 
 IMPLEMENT_CLIENTCLASS(C_BaseTempEntity, DT_BaseTempEntity, CBaseTempEntity);
@@ -151,7 +154,7 @@ bool C_BaseTempEntity::Init( int entnum, int iSerialNum )
 {
 	if ( entnum != -1 )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 	// Link into dynamic entity list
@@ -164,7 +167,7 @@ bool C_BaseTempEntity::Init( int entnum, int iSerialNum )
 
 void C_BaseTempEntity::Release()
 {
-	Assert( !"C_BaseTempEntity::Release should never be called" );
+	contract_assert( !"C_BaseTempEntity::Release should never be called" );
 }
 
 
@@ -183,17 +186,16 @@ void C_BaseTempEntity::PreDataUpdate( DataUpdateType_t updateType )
 }
 
 
-int C_BaseTempEntity::entindex( void ) const { Assert( 0 ); return 0; }
-void C_BaseTempEntity::PostDataUpdate( DataUpdateType_t updateType ) { Assert( 0 ); }
-void C_BaseTempEntity::OnPreDataChanged( DataUpdateType_t updateType ) { Assert( 0 ); }
-void C_BaseTempEntity::OnDataChanged( DataUpdateType_t updateType ) { Assert( 0 ); }
-void C_BaseTempEntity::SetDormant( bool bDormant ) { Assert( 0 ); }
-bool C_BaseTempEntity::IsDormant( void ) const { Assert( 0 ); return false; };
-void C_BaseTempEntity::ReceiveMessage( int classID, bf_read &msg ) { Assert( 0 ); }
-void C_BaseTempEntity::SetDestroyedOnRecreateEntities( void ) { Assert(0); }
+int C_BaseTempEntity::entindex( void ) const { contract_assert( 0 ); return 0; }
+void C_BaseTempEntity::PostDataUpdate( DataUpdateType_t updateType ) { contract_assert( 0 ); }
+void C_BaseTempEntity::OnPreDataChanged( DataUpdateType_t updateType ) { contract_assert( 0 ); }
+void C_BaseTempEntity::OnDataChanged( DataUpdateType_t updateType ) { contract_assert( 0 ); }
+void C_BaseTempEntity::SetDormant( bool bDormant ) { contract_assert( 0 ); }
+bool C_BaseTempEntity::IsDormant( void ) const { contract_assert( 0 ); return false; };
+void C_BaseTempEntity::ReceiveMessage( int classID, bf_read &msg ) { contract_assert( 0 ); }
+void C_BaseTempEntity::SetDestroyedOnRecreateEntities( void ) { contract_assert( 0 ); }
 
 void* C_BaseTempEntity::GetDataTableBasePtr()
 {
 	return this;
 }
-

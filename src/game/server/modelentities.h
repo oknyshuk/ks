@@ -1,20 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef MODELENTITIES_H
-#define MODELENTITIES_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
 #include "positionwatcher.h"
+#include "baseentity.h"
 
 //!! replace this with generic start enabled/disabled
 #define SF_WALL_START_OFF		0x0001
-#define SF_IGNORE_PLAYERUSE		0x0002
+inline constexpr auto SF_IGNORE_PLAYERUSE = 0x0002;
 
 //-----------------------------------------------------------------------------
 // Purpose: basic solid geometry
@@ -62,6 +57,3 @@ public:
 
 	virtual bool IsOn( void );
 };
-
-
-#endif // MODELENTITIES_H

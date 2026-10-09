@@ -1,13 +1,31 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_simplify.cpp
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "player.h"
 #include "nav_mesh.h"
 #include "nav_node.h"
 
@@ -86,7 +104,9 @@ static bool ReduceToComponentAreas( CNavArea *area, bool addToSelectedSet )
 
 
 //--------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_chop_selected, "Chops all selected areas into their component 1x1 areas", FCVAR_CHEAT )
+static void nav_chop_selected( const CCommand &args );
+static ConCommand nav_chop_selected_command( "nav_chop_selected", nav_chop_selected, "Chops all selected areas into their component 1x1 areas", FCVAR_CHEAT );
+static void nav_chop_selected( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() || engine->IsDedicatedServer() )
 		return;
@@ -125,7 +145,7 @@ void CNavMesh::GenerateNodes( const Extent &bounds )
 	m_simplifyGenerationExtent = bounds;
 	m_seedIdx = 0;
 
-	Assert( m_generationMode == GENERATE_SIMPLIFY );
+	contract_assert( m_generationMode == GENERATE_SIMPLIFY );
 	while ( SampleStep() )
 	{
 		// do nothing
@@ -161,8 +181,8 @@ void CNavMesh::SimplifySelectedAreas( void )
 	ClearWalkableSeeds();
 
 	Extent bounds;
-	bounds.lo.Init( FLT_MAX, FLT_MAX, FLT_MAX );
-	bounds.hi.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
+	bounds.lo.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+	bounds.hi.Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 	for ( int i=0; i<std::ssize( collector.m_area ); ++i )
 	{
 		Extent areaExtent;
@@ -219,7 +239,7 @@ void CNavMesh::SimplifySelectedAreas( void )
 			}
 		}
 
-		Assert ( area->m_node[ NORTH_EAST ] && area->m_node[ NORTH_WEST ] && area->m_node[ SOUTH_EAST ] && area->m_node[ SOUTH_WEST ] );
+		contract_assert( area->m_node[ NORTH_EAST ] && area->m_node[ NORTH_WEST ] && area->m_node[ SOUTH_EAST ] && area->m_node[ SOUTH_WEST ] );
 		if ( !( area->m_node[ NORTH_EAST ] && area->m_node[ NORTH_WEST ] && area->m_node[ SOUTH_EAST ] && area->m_node[ SOUTH_WEST ] ) )
 		{
 			Warning( "Area %d didn't get any nodes!\n", area->GetID() );
@@ -260,7 +280,9 @@ void CNavMesh::SimplifySelectedAreas( void )
 
 
 //--------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_simplify_selected, "Chops all selected areas into their component 1x1 areas and re-merges them together into larger areas", FCVAR_CHEAT )
+static void nav_simplify_selected( const CCommand &args );
+static ConCommand nav_simplify_selected_command( "nav_simplify_selected", nav_simplify_selected, "Chops all selected areas into their component 1x1 areas and re-merges them together into larger areas", FCVAR_CHEAT );
+static void nav_simplify_selected( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() || engine->IsDedicatedServer() )
 		return;
@@ -276,4 +298,3 @@ CON_COMMAND_F( nav_simplify_selected, "Chops all selected areas into their compo
 
 	Msg( "%d areas simplified - %d remain\n", selectedSetSize, TheNavMesh->GetSelecteSetSize() );
 }
-

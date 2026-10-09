@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2013, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Provide interface to the custom texture generator
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2013 Valve Corporation
 
-#ifndef I_COMPOSITE_TEXTURE_GENERATOR_H
-#define I_COMPOSITE_TEXTURE_GENERATOR_H
+// Purpose: Provide interface to the custom texture generator
 
 #include "materialsystem/icompositetexture.h"
 
@@ -44,5 +40,3 @@ public:
 	virtual ICompositeTexture *GetCompositeTexture( const SCompositeTextureInfo &textureInfo, bool bIgnorePicMip = false , bool bAllowCreate = true ) = 0;
 	virtual bool ForceRegenerate( ICompositeTexture *pTexture ) = 0;
 };
-
-#endif // I_COMPOSITE_TEXTURE_GENERATOR_H

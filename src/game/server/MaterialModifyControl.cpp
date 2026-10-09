@@ -1,10 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Material modify control entity.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Material modify control entity.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "reflect_sendtable.h"
@@ -14,7 +47,7 @@
 //------------------------------------------------------------------------------
 
 #define MATERIAL_MODIFY_STRING_SIZE			255
-#define MATERIAL_MODIFY_ANIMATION_UNSET		-1
+constexpr auto MATERIAL_MODIFY_ANIMATION_UNSET = -1;
 
 // Must match C_MaterialModifyControl.cpp
 enum MaterialModifyMode_t
@@ -97,13 +130,13 @@ bool CMaterialModifyControl::KeyValue( const char *szKeyName, const char *szValu
 {
 	if ( FStrEq( szKeyName, "materialName" ) )
 	{
-		Q_strncpy( m_szMaterialName.GetForModify(), szValue, MATERIAL_MODIFY_STRING_SIZE );
+		V_strncpy( m_szMaterialName.GetForModify(), szValue, MATERIAL_MODIFY_STRING_SIZE );
 		return true;
 	}
 
 	if ( FStrEq( szKeyName, "materialVar" ) )
 	{
-		Q_strncpy( m_szMaterialVar.GetForModify(), szValue, MATERIAL_MODIFY_STRING_SIZE );
+		V_strncpy( m_szMaterialVar.GetForModify(), szValue, MATERIAL_MODIFY_STRING_SIZE );
 		return true;
 	}
 
@@ -139,12 +172,12 @@ int CMaterialModifyControl::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 //-----------------------------------------------------------------------------
 void CMaterialModifyControl::SetMaterialVar( inputdata_t &inputdata )
 {
-	//if( debug_materialmodifycontrol.GetBool() && Q_stristr( GetDebugName(), "alyx" ) )
+	//if( debug_materialmodifycontrol.GetBool() && V_stristr( GetDebugName(), "alyx" ) )
 	//{
 		//DevMsg( 1, "CMaterialModifyControl::SetMaterialVar %s %s %s=\"%s\"\n", 
 			//GetDebugName(), m_szMaterialName.Get(), m_szMaterialVar.Get(), inputdata.value.String() );
 	//}
-	Q_strncpy( m_szMaterialVarValue.GetForModify(), inputdata.value.String(), MATERIAL_MODIFY_STRING_SIZE );
+	V_strncpy( m_szMaterialVarValue.GetForModify(), inputdata.value.String(), MATERIAL_MODIFY_STRING_SIZE );
 	m_nModifyMode = MATERIAL_MODIFY_MODE_SETVAR;
 }
 
@@ -154,8 +187,8 @@ void CMaterialModifyControl::SetMaterialVar( inputdata_t &inputdata )
 void CMaterialModifyControl::SetMaterialVarToCurrentTime( inputdata_t &inputdata )
 {
 	char temp[32];
-	Q_snprintf( temp, 32, "%f", gpGlobals->curtime );
-	Q_strncpy( m_szMaterialVarValue.GetForModify(), temp, MATERIAL_MODIFY_STRING_SIZE );
+	V_snprintf( temp, 32, "%f", gpGlobals->curtime );
+	V_strncpy( m_szMaterialVarValue.GetForModify(), temp, MATERIAL_MODIFY_STRING_SIZE );
 	m_nModifyMode = MATERIAL_MODIFY_MODE_SETVAR;
 }
 
@@ -165,13 +198,13 @@ void CMaterialModifyControl::SetMaterialVarToCurrentTime( inputdata_t &inputdata
 void CMaterialModifyControl::InputStartAnimSequence( inputdata_t &inputdata )
 {
 	char parseString[255];
-	Q_strncpy(parseString, inputdata.value.String(), sizeof(parseString));
+	V_strncpy(parseString, inputdata.value.String(), sizeof(parseString));
 
 	// Get the start & end frames
-	char *pszParam = strtok(parseString," ");
+	char *pszParam = std::strtok(parseString," ");
 	if ( pszParam && pszParam[0] )
 	{
-		int iFrameStart = atoi(pszParam);
+		int iFrameStart = std::atoi(pszParam);
 
 		pszParam = strtok(nullptr," ");
 		if ( pszParam && pszParam[0] )
@@ -181,7 +214,7 @@ void CMaterialModifyControl::InputStartAnimSequence( inputdata_t &inputdata )
 			pszParam = strtok(nullptr," ");
 			if ( pszParam && pszParam[0] )
 			{
-				float flFramerate = atof(pszParam);
+				float flFramerate = std::atof(pszParam);
 
 				pszParam = strtok(nullptr," ");
 				if ( pszParam && pszParam[0] )
@@ -210,19 +243,19 @@ void CMaterialModifyControl::InputStartAnimSequence( inputdata_t &inputdata )
 void CMaterialModifyControl::InputStartFloatLerp( inputdata_t &inputdata )
 {
 	char parseString[255];
-	Q_strncpy(parseString, inputdata.value.String(), sizeof(parseString));
+	V_strncpy(parseString, inputdata.value.String(), sizeof(parseString));
 
-//	if( debug_materialmodifycontrol.GetBool() )//&& Q_stristr( GetDebugName(), "alyx" ) )
+//	if( debug_materialmodifycontrol.GetBool() )//&& V_stristr( GetDebugName(), "alyx" ) )
 //	{
 //		DevMsg( 1, "CMaterialModifyControl::InputStartFloatLerp %s %s %s \"%s\"\n", 
 //			GetDebugName(), m_szMaterialName.Get(), m_szMaterialVar.Get(), inputdata.value.String() );
 //	}
 
 	// Get the start & end values
-	char *pszParam = strtok(parseString," ");
+	char *pszParam = std::strtok(parseString," ");
 	if ( pszParam && pszParam[0] )
 	{
-		float flStartValue = atof(pszParam);
+		float flStartValue = std::atof(pszParam);
 
 		pszParam = strtok(nullptr," ");
 		if ( pszParam && pszParam[0] )
@@ -237,7 +270,7 @@ void CMaterialModifyControl::InputStartFloatLerp( inputdata_t &inputdata )
 				pszParam = strtok(nullptr," ");
 				if ( pszParam && pszParam[0] )
 				{
-					bool bWrap = atoi(pszParam) != 0;
+					bool bWrap = std::atoi(pszParam) != 0;
 					// We don't implement wrap currently.
 					bWrap = bWrap;
 

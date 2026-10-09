@@ -1,18 +1,13 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ITOOLSYSTEM_H
-#define ITOOLSYSTEM_H
-
+import ks.tier1;
 #include "itoolentity.h"
-#include "interface.h"
+import std;
 #include "materialsystem/imaterialproxy.h"
 #include "inputsystem/iinputsystem.h"
 
-class KeyValues;
 struct SpatializationInfo_t;
 struct AudioState_t;
 
@@ -147,5 +142,3 @@ public:
 // Pointer to a member method of IGameSystem
 typedef void (IToolSystem::*ToolSystemFunc_t)();
 typedef void (IToolSystem::*ToolSystemFunc_Int_t)( int arg );
-
-#endif // ITOOLSYSTEM_H

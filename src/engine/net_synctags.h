@@ -1,16 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef NET_SYNCTAGS_H
-#define NET_SYNCTAGS_H
+import std;
+import ks.tier1;
 
 #ifdef _DEBUG
 
-#include <bitbuf.h>
 
 extern ConVar net_synctags;
 
@@ -44,8 +40,3 @@ inline void SyncTag_Read( bf_read *pBuf, const char *pWantedTag )
 	inline void SyncTag_Read( bf_read *pBuf, const char *pWantedTag ) {}
 
 #endif
-
-
-
-
-#endif // NET_SYNCTAGS_H

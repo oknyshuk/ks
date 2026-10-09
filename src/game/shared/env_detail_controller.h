@@ -1,11 +1,13 @@
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#ifdef CLIENT_DLL
+#include "c_baseentity.h"
+#else
+#include "baseentity.h"
+#endif
 
 #ifdef CLIENT_DLL
 	#define CEnvDetailController C_EnvDetailController

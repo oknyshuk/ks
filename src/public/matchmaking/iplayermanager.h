@@ -1,21 +1,15 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef _IPLAYERMANAGER_H_
-#define _IPLAYERMANAGER_H_
-
+import ks.core;
 class IPlayer;
 class IPlayerFriend;
 class IPlayerLocal;
 
-abstract_class IPlayerManager
+class IPlayerManager
 {
 public:
-	//
-	// EnableServersUpdate
-	//	controls whether friends data is being updated in the background
-	//
-	virtual void EnableFriendsUpdate( bool bEnable ) = 0;
-
 	//
 	// GetLocalPlayer
 	//	returns a local player interface for a given controller index
@@ -23,16 +17,9 @@ public:
 	virtual IPlayerLocal * GetLocalPlayer( int iController ) = 0;
 
 	//
-	// GetNumFriends
-	//	returns number of friends discovered and for which data is available
-	//
-	virtual int GetNumFriends() = 0;
-
-	//
 	// GetFriend
 	//	returns player interface to the given friend or NULL if friend not found or not available
 	//
-	virtual IPlayerFriend * GetFriendByIndex( int index ) = 0;
 	virtual IPlayerFriend * GetFriendByXUID( XUID xuid ) = 0;
 
 	//
@@ -41,6 +28,3 @@ public:
 	//
 	virtual IPlayer * FindPlayer( XUID xuid ) = 0;
 };
-
-
-#endif

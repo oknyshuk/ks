@@ -1,10 +1,40 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 
@@ -12,7 +42,6 @@
 #include "datacache/imdlcache.h"
 #include "game.h"
 #include "env_debughistory.h"
-#include "checksum_crc.h"
 
 #include "IEffects.h"
 
@@ -52,7 +81,7 @@ void CAI_Agent::SetCondition( int iCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 	
@@ -67,7 +96,7 @@ bool CAI_Agent::HasCondition( int iCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	
@@ -86,7 +115,7 @@ bool CAI_Agent::HasCondition( int iCondition, bool bUseIgnoreConditions )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	
@@ -102,7 +131,7 @@ void CAI_Agent::ClearCondition( int iCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 	
@@ -120,7 +149,7 @@ void CAI_Agent::ClearConditions( int *pConditions, int nConditions )
 		
 		if ( interrupt == -1 )
 		{
-			Assert(0);
+			contract_assert( 0 );
 			continue;
 		}
 		
@@ -139,7 +168,7 @@ void CAI_Agent::SetIgnoreConditions( int *pConditions, int nConditions )
 		
 		if ( interrupt == -1 )
 		{
-			Assert(0);
+			contract_assert( 0 );
 			continue;
 		}
 		
@@ -156,7 +185,7 @@ void CAI_Agent::ClearIgnoreConditions( int *pConditions, int nConditions )
 		
 		if ( interrupt == -1 )
 		{
-			Assert(0);
+			contract_assert( 0 );
 			continue;
 		}
 		
@@ -177,7 +206,7 @@ bool CAI_Agent::HasInterruptCondition( int iCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	return ( m_Conditions[interrupt] && GetCurSchedule()->HasInterrupt( interrupt ) );
@@ -196,7 +225,7 @@ bool CAI_Agent::ConditionInterruptsCurSchedule( int iCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	return ( GetCurSchedule()->HasInterrupt( interrupt ) );
@@ -214,7 +243,7 @@ bool CAI_Agent::ConditionInterruptsSchedule( int localScheduleID, int iCondition
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	return ( pSchedule->HasInterrupt( interrupt ) );
@@ -249,7 +278,7 @@ bool CAI_Agent::IsCustomInterruptConditionSet( int nCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	
@@ -266,7 +295,7 @@ void CAI_Agent::SetCustomInterruptCondition( int nCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 	
@@ -283,7 +312,7 @@ void CAI_Agent::ClearCustomInterruptCondition( int nCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 	
@@ -350,7 +379,6 @@ void CAI_Agent::PrescheduleThink( void )
 
 void CAI_Agent::RunAI( void )
 {
-	AI_PROFILE_SCOPE(CAI_Agent_RunAI);
 	g_AIRunTimer.Start();
 
 	m_bConditionsGathered = false;
@@ -524,7 +552,7 @@ int CAI_Agent::DrawDebugTextOverlays( int text_offset )
 			{
 				pName = "Unknown";
 			}
-			Q_snprintf(tempstr,sizeof(tempstr),"Schd: %s, ", pName );
+			V_snprintf(tempstr,sizeof(tempstr),"Schd: %s, ", pName );
 			EntityText(text_offset,tempstr,0);
 			text_offset++;
 
@@ -532,7 +560,7 @@ int CAI_Agent::DrawDebugTextOverlays( int text_offset )
 			{
 				for (int i = 0 ; i < GetCurSchedule()->NumTasks(); i++)
 				{
-					Q_snprintf(tempstr,sizeof(tempstr),"%s%s%s%s",
+					V_snprintf(tempstr,sizeof(tempstr),"%s%s%s%s",
 						((i==0)					? "Task:":"       "),
 						((i==GetScheduleCurTaskIndex())	? "->"   :"   "),
 						TaskName(GetCurSchedule()->GetTaskList()[i].iTask),
@@ -547,11 +575,11 @@ int CAI_Agent::DrawDebugTextOverlays( int text_offset )
 				const Task_t *pTask = GetTask();
 				if ( pTask )
 				{
-					Q_snprintf(tempstr,sizeof(tempstr),"Task: %s (#%d), ", TaskName(pTask->iTask), GetScheduleCurTaskIndex() );
+					V_snprintf(tempstr,sizeof(tempstr),"Task: %s (#%d), ", TaskName(pTask->iTask), GetScheduleCurTaskIndex() );
 				}
 				else
 				{
-					Q_strncpy(tempstr,"Task: None",sizeof(tempstr));
+					V_strncpy(tempstr,"Task: None",sizeof(tempstr));
 				}
 				EntityText(text_offset,tempstr,0);
 				text_offset++;
@@ -568,7 +596,7 @@ int CAI_Agent::DrawDebugTextOverlays( int text_offset )
 			{
 				if (m_Conditions[i])
 				{
-					Q_snprintf(tempstr, sizeof(tempstr), "Cond: %s\n", ConditionName(AI_RemapToGlobal(i)));
+					V_snprintf(tempstr, sizeof(tempstr), "Cond: %s\n", ConditionName(AI_RemapToGlobal(i)));
 					EntityText(text_offset, tempstr, 0);
 					text_offset++;
 					bHasConditions = true;
@@ -576,7 +604,7 @@ int CAI_Agent::DrawDebugTextOverlays( int text_offset )
 			}
 			if (!bHasConditions)
 			{
-				Q_snprintf(tempstr,sizeof(tempstr),"(no conditions)");
+				V_snprintf(tempstr,sizeof(tempstr),"(no conditions)");
 				EntityText(text_offset,tempstr,0);
 				text_offset++;
 			}
@@ -594,7 +622,7 @@ int CAI_Agent::DrawDebugTextOverlays( int text_offset )
 				pName = "Unknown";
 			}
 
-			Q_snprintf(tempstr,sizeof(tempstr),"Intr: %s (%s)\n", pName, m_interruptText );
+			V_snprintf(tempstr,sizeof(tempstr),"Intr: %s (%s)\n", pName, m_interruptText );
 			EntityText(text_offset,tempstr,0);
 			text_offset++;
 		}
@@ -610,7 +638,7 @@ int CAI_Agent::DrawDebugTextOverlays( int text_offset )
 			{
 				pName = "Unknown";
 			}
-			Q_snprintf(tempstr,sizeof(tempstr),"Fail: %s (%s)\n", pName,m_failText );
+			V_snprintf(tempstr,sizeof(tempstr),"Fail: %s (%s)\n", pName,m_failText );
 			EntityText(text_offset,tempstr,0);
 			text_offset++;
 		}
@@ -747,7 +775,6 @@ CAI_Agent::~CAI_Agent(void)
 
 
 //-----------------------------------------------------------------------------
-#ifndef DBGFLAG_STRINGS_STRIP
 static void AIMsgGuts( CAI_Agent *pAI, unsigned flags, const char *pszMsg )
 {
 // 	int			len		= strlen( pszMsg );
@@ -786,7 +813,6 @@ void DevMsg( CAI_Agent *pAI, const char *pszFormat, ... )
 		AIMsgGuts( pAI, 0, CFmtStr( &pszFormat ) );
 	}
 }
-#endif
 
 
 //=========================================================
@@ -868,7 +894,7 @@ extern ConVar ai_use_think_optimizations;
 
 extern ConVar	ai_simulate_task_overtime;
 
-#define MAX_TASKS_RUN 10
+constexpr auto MAX_TASKS_RUN = 10;
 
 struct AgentTaskTimings
 {
@@ -940,7 +966,6 @@ void CAI_Agent::ClearSchedule( const char *szReason )
 //=========================================================
 bool CAI_Agent::FScheduleDone ( void )
 {
-	Assert( GetCurSchedule() != nullptr );
 
 	if ( GetScheduleCurTaskIndex() == GetCurSchedule()->NumTasks() )
 	{
@@ -970,7 +995,7 @@ bool CAI_Agent::SetSchedule( int localScheduleID )
 // with the passed pointer, and sets the ScheduleIndex back
 // to 0
 //=========================================================
-#define SCHEDULE_HISTORY_SIZE	10
+constexpr auto SCHEDULE_HISTORY_SIZE = 10;
 void CAI_Agent::SetSchedule( CAI_Schedule *pNewSchedule )
 {
 	//Assert( pNewSchedule != NULL );
@@ -1005,7 +1030,6 @@ void CAI_Agent::SetSchedule( CAI_Schedule *pNewSchedule )
 //=========================================================
 void CAI_Agent::NextScheduledTask ( void )
 {
-	Assert( GetCurSchedule() != nullptr );
 
 	SetTaskStatus( TASKSTATUS_NEW );
 	IncScheduleCurTaskIndex();
@@ -1158,8 +1182,8 @@ CAI_Schedule *CAI_Agent::GetFailSchedule( void )
 	else
 		failedTask = TASK_INVALID;
 
-	Assert( AI_IdIsLocal( prevSchedule ) );
-	Assert( AI_IdIsLocal( failedTask ) );
+	contract_assert( AI_IdIsLocal( prevSchedule ) );
+	contract_assert( AI_IdIsLocal( failedTask ) );
 
 	int scheduleType = SelectFailSchedule( prevSchedule, failedTask, m_ScheduleState.taskFailureCode );
 	return GetScheduleOfType( scheduleType );
@@ -1185,7 +1209,6 @@ static bool ShouldStopProcessingTasks( CAI_Agent *pNPC, int taskTime, int timeLi
 
 void CAI_Agent::MaintainSchedule ( void )
 {
-	AI_PROFILE_SCOPE(CAI_Agent_RunAI_MaintainSchedule);
 	extern CFastTimer g_AIMaintainScheduleTimer;
 	CTimeScope timeScope(&g_AIMaintainScheduleTimer);
 
@@ -1195,17 +1218,13 @@ void CAI_Agent::MaintainSchedule ( void )
 	int			i;
 	bool		runTask = true;
 
-#if defined( VPROF_ENABLED )
 #if defined(DISABLE_DEBUG_HISTORY)
 	bool bDebugTaskNames = ( developer.GetBool() || ( VProfAI() && g_VProfCurrentProfile.IsEnabled() ) );
 #else
 	bool bDebugTaskNames = true;
 #endif
-#else
-	bool bDebugTaskNames = false;
-#endif
 
-	memset( g_AIAgentTaskTimings, 0, sizeof(g_AIAgentTaskTimings) );
+	std::memset( g_AIAgentTaskTimings, 0, sizeof(g_AIAgentTaskTimings) );
 
 	g_nAIAgentTasksRun = 0;
 
@@ -1325,7 +1344,7 @@ void CAI_Agent::MaintainSchedule ( void )
 			g_AIAgentTaskTimings[curTiming].startTimer.Start();
 			const Task_t *pTask = GetTask();
 			const char *pszTaskName = ( bDebugTaskNames ) ? TaskName( pTask->iTask ) : "ai_task";
-			Assert( pTask != nullptr );
+			contract_assert( pTask != nullptr );
 			g_AIAgentTaskTimings[i].pszTask = pszTaskName;
 
 			if (GetDebugOverlayFlags() & OVERLAY_TASK_TEXT_BIT)
@@ -1368,7 +1387,7 @@ void CAI_Agent::MaintainSchedule ( void )
 			{
 				const Task_t *pTask = GetTask();
 				const char *pszTaskName = ( bDebugTaskNames ) ? TaskName( pTask->iTask ) : "ai_task";
-				Assert( pTask != nullptr );
+				contract_assert( pTask != nullptr );
 				g_AIAgentTaskTimings[i].pszTask = pszTaskName;
 				// DevMsg( "%.2f RunTask( %s )\n", gpGlobals->curtime, m_pTaskSR->GetStringText( pTask->iTask ) );
 				g_AIAgentTaskTimings[curTiming].runTimer.Start();
@@ -1390,7 +1409,7 @@ void CAI_Agent::MaintainSchedule ( void )
 						break;
 					}
 				}
-				AssertMsg( j < 8, "Runaway task interrupt\n" );
+				contract_assert( ( j < 8 ) && "Runaway task interrupt\n" );
 
 				AI_PROFILE_SCOPE_END();
 				AI_PROFILE_SCOPE_END();

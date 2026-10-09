@@ -1,18 +1,13 @@
-//====== Copyright 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef VBRHEADER_H
-#define VBRHEADER_H
-
-#include "tier0/platform.h"
+import ks.core;
 // for XING VBR Header flags
-#define FRAMES_FLAG     0x0001
-#define BYTES_FLAG      0x0002
-#define TOC_FLAG        0x0004
-#define VBR_SCALE_FLAG  0x0008
+inline constexpr auto FRAMES_FLAG = 0x0001;
+inline constexpr auto BYTES_FLAG = 0x0002;
+inline constexpr auto TOC_FLAG = 0x0004;
+inline constexpr auto VBR_SCALE_FLAG = 0x0008;
 
 class CMPAFile;
 
@@ -66,5 +61,3 @@ public:
     uint32 m_dwFramesPerEntry;
 	uint32 m_dwVersion;
 };
-
-#endif // VBRHEADER_H

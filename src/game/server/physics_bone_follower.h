@@ -1,13 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef PHYSICS_BONE_FOLLOWER_H
-#define PHYSICS_BONE_FOLLOWER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "ehandle.h"
+#include "baseentity.h"
+#include "vcollide_parse.h"
+class CBaseAnimating;
 
 class CBoneFollower;
 
@@ -99,5 +98,3 @@ private:
 	int		m_physicsBone;
 	int		m_hitGroup;
 };
-
-#endif // PHYSICS_BONE_FOLLOWER_H

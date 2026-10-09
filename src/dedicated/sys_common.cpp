@@ -1,19 +1,12 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//===========================================================================//
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
+import std;
+import ks.tier1;
 #include "isys.h"
 #include "dedicated.h"
 #include "engine_hlds_api.h"
-#include "filesystem.h"
-#include "tier0/dbg.h"
-#include "tier1/strtools.h"
-#include "tier0/icommandline.h"
 #include "idedicatedexports.h"
 #include "mathlib/expressioncalculator.h"
 
@@ -47,7 +40,7 @@ void ProcessConsoleInput( void )
 		if (s)
 		{
 			char szBuf[ 256 ];
-			Q_snprintf( szBuf, sizeof( szBuf ), "%s\n", s );
+			V_snprintf( szBuf, sizeof( szBuf ), "%s\n", s );
 			engine->AddConsoleText ( szBuf );
 		}
 	} while (s);
@@ -91,7 +84,7 @@ void PerformCommandLineSubstitutions( int nIndex )
 			pReplace[1] = '0' + ( nIndex % 10 );
 			bDidReplace = true;
 			if ( ( pReplace != newBuf ) &&
-				 ( strchr( "+-/*", pReplace[-1] ) ) )		// is this an expression involving "##"?
+				 ( std::strchr( "+-/*", pReplace[-1] ) ) )		// is this an expression involving "##"?
 			{
 				bWasExpression = true;
 			}
@@ -101,9 +94,9 @@ void PerformCommandLineSubstitutions( int nIndex )
 		{
 			if ( bWasExpression )
 			{
-				sprintf( newBuf, "%d", ( int ) ( EvaluateExpression( newBuf, -1 ) ) );
+				std::sprintf( newBuf, "%d", ( int ) ( EvaluateExpression( newBuf, -1 ) ) );
 			}
-			printf("setparm %d %s\n", i, newBuf );
+			std::printf("setparm %d %s\n", i, newBuf );
 			CommandLine()->SetParm( i, newBuf );
 		}
 
@@ -117,7 +110,7 @@ void CDedicatedExports::RunServer( void )
 	char const *pForkParam = CommandLine()->ParmValue( "-fork" );
 	if ( pForkParam )
 	{
-		int nNumChildInstances = atoi( pForkParam );
+		int nNumChildInstances = std::atoi( pForkParam );
 		if ( nNumChildInstances >= 1 )
 		{
 			RunServerSubProcesses( nNumChildInstances );
@@ -134,12 +127,13 @@ bool CDedicatedExports::IsGuiDedicatedServer()
 	return false;
 }
 
-EXPOSE_SINGLE_INTERFACE( CDedicatedExports, IDedicatedExports, VENGINE_DEDICATEDEXPORTS_API_VERSION );
+static CDedicatedExports s_Singleton_CDedicatedExports;
+static InterfaceReg s_Reg_CDedicatedExports_IDedicatedExports( []() -> void * { return static_cast<IDedicatedExports *>( &s_Singleton_CDedicatedExports ); }, VENGINE_DEDICATEDEXPORTS_API_VERSION );;
 
 int Sys_GetExecutableName( char *out )
 {
 	extern char g_szEXEName[ 256 ];
-	strcpy( out, g_szEXEName );
+	std::strcpy( out, g_szEXEName );
 	return 1;
 }
 
@@ -157,8 +151,8 @@ const char *UTIL_GetExecutableDir( )
 
 	char *pSlash;
 	char *pSlash2;
-	pSlash = strrchr( exedir,'\\' );
-	pSlash2 = strrchr( exedir,'/' );
+	pSlash = std::strrchr( exedir,'\\' );
+	pSlash2 = std::strrchr( exedir,'/' );
 	if ( pSlash2 > pSlash )
 	{
 		pSlash = pSlash2;
@@ -170,14 +164,14 @@ const char *UTIL_GetExecutableDir( )
 
 	// Return the bin directory as the executable dir if it's not in there
 	// because that's really where we're running from...
-	int exeLen = strlen(exedir);
+	int exeLen = std::strlen(exedir);
 	if ( 	exedir[exeLen-4] != CORRECT_PATH_SEPARATOR ||
 		exedir[exeLen-3] != 'b' ||
 		exedir[exeLen-2] != 'i' ||
 		exedir[exeLen-1] != 'n' )
 	{
-		Q_strncat( exedir, "\\bin", sizeof( exedir ), COPY_ALL_CHARACTERS );
-		Q_FixSlashes( exedir );
+		V_strncat( exedir, "\\bin", sizeof( exedir ), COPY_ALL_CHARACTERS );
+		V_FixSlashes( exedir );
 	}
 
 	return exedir;
@@ -200,8 +194,8 @@ const char *UTIL_GetBaseDir( void )
 	const char *pExeDir = UTIL_GetExecutableDir( );
 	if ( pExeDir )
 	{
-		strcpy( basedir, pExeDir );
-                int dirlen = strlen( basedir );
+		std::strcpy( basedir, pExeDir );
+                int dirlen = std::strlen( basedir );
                 if ( basedir[ dirlen - 3 ] == 'b' &&
                      basedir[ dirlen - 2 ] == 'i' &&
                      basedir[ dirlen - 1 ] == 'n' )

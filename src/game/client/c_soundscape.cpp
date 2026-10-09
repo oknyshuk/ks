@@ -1,24 +1,31 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Soundscapes.txt resource file processor
-//
-//=============================================================================//
 
-
-#include "cbase.h"
-#include <keyvalues.h>
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
 #include "engine/IEngineSound.h"
 #include "filesystem.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "soundchars.h"
 #include "view.h"
-#include "engine/ivdebugoverlay.h"
-#include "tier0/icommandline.h"
-#include "strtools.h"
 
 // Only allow recursive references to be 8 levels deep.
 // This test will flag any circular references and bail.
-#define MAX_SOUNDSCAPE_RECURSION	8
+constexpr auto MAX_SOUNDSCAPE_RECURSION = 8;
 
 const float DEFAULT_SOUND_RADIUS = 36.0f;
 // Keep an array of all looping sounds so they can be faded in/out
@@ -78,11 +85,11 @@ struct soundfader_t
 		case FADE_VOLUME_SINE:
 			if ( flDelta >= 0 )
 			{
-				flFactor = sin( m_flFadeT * M_PI * 0.5f );
+				flFactor = std::sin( m_flFadeT * std::numbers::pi * 0.5f );
 			}
 			else
 			{
-				flFactor = 1.0f - cos( m_flFadeT * M_PI * 0.5f );
+				flFactor = 1.0f - std::cos( m_flFadeT * std::numbers::pi * 0.5f );
 			}
 			break;
 		}
@@ -155,7 +162,7 @@ struct subsoundscapeparams_t
 Vector getVectorFromString(const char *pString)
 {
 	char tempString[128];
-	Q_strncpy( tempString, pString, sizeof(tempString) );
+	V_strncpy( tempString, pString, sizeof(tempString) );
 
 	Vector result;
 	int i = 0;
@@ -439,7 +446,7 @@ bool C_SoundscapeSystem::Init()
 	{
 		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != nullptr; sub = sub->GetNextKey() )
 		{
-			if ( !Q_stricmp( sub->GetName(), "file" ) )
+			if ( !V_stricmp( sub->GetName(), "file" ) )
 			{
 				// Add
 				AddSoundScapeFile( sub->GetString() );
@@ -475,7 +482,7 @@ int C_SoundscapeSystem::FindSoundscapeByName( const char *pSoundscapeName )
 	// UNDONE: Bad perf, linear search!
 	for ( int i = std::ssize( m_soundscapes )-1; i >= 0; --i )
 	{
-		if ( !Q_stricmp( m_soundscapes[i]->GetName(), pSoundscapeName ) )
+		if ( !V_stricmp( m_soundscapes[i]->GetName(), pSoundscapeName ) )
 			return i;
 	}
 
@@ -532,7 +539,9 @@ void C_SoundscapeSystem::Shutdown()
 
 // NOTE: This will not flush the server side so you cannot add or remove
 // soundscapes from the list, only change their parameters!!!!
-CON_COMMAND_F(cl_soundscape_flush, "Flushes the client side soundscapes", FCVAR_SERVER_CAN_EXECUTE|FCVAR_CHEAT)
+static void cl_soundscape_flush( const CCommand &args );
+static ConCommand cl_soundscape_flush_command( "cl_soundscape_flush", cl_soundscape_flush, "Flushes the client side soundscapes", FCVAR_SERVER_CAN_EXECUTE|FCVAR_CHEAT );
+static void cl_soundscape_flush( const CCommand &args )
 {
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 	{
@@ -562,7 +571,7 @@ static int SoundscapeCompletion( const char *partial, char commands[ COMMAND_COM
 	const char *cmdname = "playsoundscape";
 	char *substring = nullptr;
 	int substringLen = 0;
-	if ( Q_strstr( partial, cmdname ) && strlen(partial) > strlen(cmdname) + 1 )
+	if ( V_strstr( partial, cmdname ) && strlen(partial) > strlen(cmdname) + 1 )
 	{
 		substring = (char *)partial + strlen( cmdname ) + 1;
 		substringLen = strlen(substring);
@@ -572,9 +581,9 @@ static int SoundscapeCompletion( const char *partial, char commands[ COMMAND_COM
 	const char *pSoundscapeName = GetClientSoundscapeSystem()->SoundscapeNameByIndex( i );
 	while ( pSoundscapeName && current < COMMAND_COMPLETION_MAXITEMS )
 	{
-		if ( !substring || !Q_strncasecmp( pSoundscapeName, substring, substringLen ) )
+		if ( !substring || !V_strncasecmp( pSoundscapeName, substring, substringLen ) )
 		{
-			Q_snprintf( commands[ current ], sizeof( commands[ current ] ), "%s %s", cmdname, pSoundscapeName );
+			V_snprintf( commands[ current ], sizeof( commands[ current ] ), "%s %s", cmdname, pSoundscapeName );
 			current++;
 		}
 		i++;
@@ -584,7 +593,9 @@ static int SoundscapeCompletion( const char *partial, char commands[ COMMAND_COM
 	return current;
 }
 
-CON_COMMAND_F_COMPLETION( playsoundscape, "Forces a soundscape to play", FCVAR_CHEAT, SoundscapeCompletion )
+static void playsoundscape( const CCommand &args );
+static ConCommand playsoundscape_command( "playsoundscape", playsoundscape, "Forces a soundscape to play", FCVAR_CHEAT, SoundscapeCompletion );
+static void playsoundscape( const CCommand &args )
 {
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 	{
@@ -601,7 +612,9 @@ CON_COMMAND_F_COMPLETION( playsoundscape, "Forces a soundscape to play", FCVAR_C
 }
 
 
-CON_COMMAND_F( stopsoundscape, "Stops all soundscape processing and fades current looping sounds", FCVAR_CHEAT )
+static void stopsoundscape( const CCommand &args );
+static ConCommand stopsoundscape_command( "stopsoundscape", stopsoundscape, "Stops all soundscape processing and fades current looping sounds", FCVAR_CHEAT );
+static void stopsoundscape( const CCommand &args )
 {
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 	{
@@ -840,21 +853,21 @@ void C_SoundscapeSystem::StartSubSoundscape( KeyValues *pSoundscape, subsoundsca
 	KeyValues *pKey = pSoundscape->GetFirstSubKey();
 	while ( pKey )
 	{
-		if ( !Q_strcasecmp( pKey->GetName(), "dsp" ) )
+		if ( !V_strcasecmp( pKey->GetName(), "dsp" ) )
 		{
 			if ( params.allowDSP )
 			{
 				ProcessDSP( pKey );
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "dsp_player" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "dsp_player" ) )
 		{
 			if ( params.allowDSP )
 			{
 				ProcessDSPPlayer( pKey );
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "fadetime" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "fadetime" ) )
 		{
 			// don't allow setting these recursively since they are order dependent
 			if ( params.recurseLevel < 1 )
@@ -862,26 +875,26 @@ void C_SoundscapeSystem::StartSubSoundscape( KeyValues *pSoundscape, subsoundsca
 				ProcessSoundscapeFadetime( pKey, params );
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "playlooping" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "playlooping" ) )
 		{
 			ProcessPlayLooping( pKey, params );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "playrandom" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "playrandom" ) )
 		{
 			ProcessPlayRandom( pKey, params );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "playsoundscape" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "playsoundscape" ) )
 		{
 			ProcessPlaySoundscape( pKey, params );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "Soundmixer" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "Soundmixer" ) )
 		{
 			if ( params.allowDSP )
 			{
 				ProcessSoundMixer( pKey, params );
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "dsp_volume" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "dsp_volume" ) )
 		{
 			if ( params.allowDSP )
 			{
@@ -963,26 +976,26 @@ void C_SoundscapeSystem::ProcessPlayLooping( KeyValues *pAmbient, const subsound
 	KeyValues *pKey = pAmbient->GetFirstSubKey();
 	while ( pKey )
 	{
-		if ( !Q_strcasecmp( pKey->GetName(), "volume" ) )
+		if ( !V_strcasecmp( pKey->GetName(), "volume" ) )
 		{
 			volume = params.masterVolume * RandomInterval( ReadInterval( pKey->GetString() ) );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "pitch" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "pitch" ) )
 		{
 			pitch = RandomInterval( ReadInterval( pKey->GetString() ) );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "wave" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "wave" ) )
 		{
 			pSoundName = pKey->GetString();
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "origin" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "origin" ) )
 		{
 			textOrigin = getVectorFromString(pKey->GetString());
 			useTextOrigin = true;
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "position" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "position" ) )
 		{
-			if ( !Q_strcasecmp( pKey->GetString(), "random" ) )
+			if ( !V_strcasecmp( pKey->GetString(), "random" ) )
 			{
 				randomPosition = true;
 			}
@@ -992,13 +1005,13 @@ void C_SoundscapeSystem::ProcessPlayLooping( KeyValues *pAmbient, const subsound
 			}
 		//	positionIndex = params.startingPosition + pKey->GetInt();
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "attenuation" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "attenuation" ) )
 		{
 			soundlevel = ATTN_TO_SNDLVL( RandomInterval( ReadInterval( pKey->GetString() ) ) );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "soundlevel" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "soundlevel" ) )
 		{
-			if ( !Q_strncasecmp( pKey->GetString(), "SNDLVL_", strlen( "SNDLVL_" ) ) )
+			if ( !V_strncasecmp( pKey->GetString(), "SNDLVL_", strlen( "SNDLVL_" ) ) )
 			{
 				soundlevel = TextToSoundLevel( pKey->GetString() );
 			}
@@ -1007,11 +1020,11 @@ void C_SoundscapeSystem::ProcessPlayLooping( KeyValues *pAmbient, const subsound
 				soundlevel = (soundlevel_t)((int)RandomInterval( ReadInterval( pKey->GetString() ) ));
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "suppress_on_restore" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "suppress_on_restore" ) )
 		{
-			suppress = Q_atoi( pKey->GetString() ) != 0 ? true : false;
+			suppress = V_atoi( pKey->GetString() ) != 0 ? true : false;
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "radius" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "radius" ) )
 		{
 			radius = (float) atof( pKey->GetString() );
 		}
@@ -1080,7 +1093,7 @@ void C_SoundscapeSystem::TouchPlayLooping( KeyValues *pAmbient )
 	KeyValues *pKey = pAmbient->GetFirstSubKey();
 	while ( pKey )
 	{
-		if ( !Q_strcasecmp( pKey->GetName(), "wave" ) )
+		if ( !V_strcasecmp( pKey->GetName(), "wave" ) )
 		{
 			char const *pSoundName = pKey->GetString();
 
@@ -1128,11 +1141,11 @@ void C_SoundscapeSystem::TouchWaveFiles( KeyValues *pSoundScape )
 	KeyValues *pKey = pSoundScape->GetFirstSubKey();
 	while ( pKey )
 	{
-		if ( !Q_strcasecmp( pKey->GetName(), "playlooping" ) )
+		if ( !V_strcasecmp( pKey->GetName(), "playlooping" ) )
 		{
 			TouchPlayLooping( pKey );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "playrandom" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "playrandom" ) )
 		{
 			TouchPlayRandom( pKey );
 		}
@@ -1148,7 +1161,7 @@ void C_SoundscapeSystem::TouchPlayRandom( KeyValues *pPlayRandom )
 	KeyValues *pKey = pPlayRandom->GetFirstSubKey();
 	while ( pKey )
 	{
-		if ( !Q_strcasecmp( pKey->GetName(), "rndwave" ) )
+		if ( !V_strcasecmp( pKey->GetName(), "rndwave" ) )
 		{
 			KeyValues *pWaves = pKey->GetFirstSubKey();
 			while ( pWaves )
@@ -1179,23 +1192,23 @@ void C_SoundscapeSystem::ProcessPlayRandom( KeyValues *pPlayRandom, const subsou
 	KeyValues *pKey = pPlayRandom->GetFirstSubKey();
 	while ( pKey )
 	{
-		if ( !Q_strcasecmp( pKey->GetName(), "volume" ) )
+		if ( !V_strcasecmp( pKey->GetName(), "volume" ) )
 		{
 			sound.volume = ReadInterval( pKey->GetString() );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "pitch" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "pitch" ) )
 		{
 			sound.pitch = ReadInterval( pKey->GetString() );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "attenuation" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "attenuation" ) )
 		{
 			interval_t atten = ReadInterval( pKey->GetString() );
 			sound.soundlevel.start = ATTN_TO_SNDLVL( atten.start );
 			sound.soundlevel.range = ATTN_TO_SNDLVL( atten.start + atten.range ) - sound.soundlevel.start;
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "soundlevel" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "soundlevel" ) )
 		{
-			if ( !Q_strncasecmp( pKey->GetString(), "SNDLVL_", strlen( "SNDLVL_" ) ) )
+			if ( !V_strncasecmp( pKey->GetString(), "SNDLVL_", strlen( "SNDLVL_" ) ) )
 			{
 				sound.soundlevel.start = TextToSoundLevel( pKey->GetString() );
 				sound.soundlevel.range = 0;
@@ -1205,11 +1218,11 @@ void C_SoundscapeSystem::ProcessPlayRandom( KeyValues *pPlayRandom, const subsou
 				sound.soundlevel = ReadInterval( pKey->GetString() );
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "time" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "time" ) )
 		{
 			sound.time = ReadInterval( pKey->GetString() );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "rndwave" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "rndwave" ) )
 		{
 			KeyValues *pWaves = pKey->GetFirstSubKey();
 			sound.pWaves = pWaves;
@@ -1220,9 +1233,9 @@ void C_SoundscapeSystem::ProcessPlayRandom( KeyValues *pPlayRandom, const subsou
 				pWaves = pWaves->GetNextKey();
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "position" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "position" ) )
 		{
-			if ( !Q_strcasecmp( pKey->GetString(), "random" ) )
+			if ( !V_strcasecmp( pKey->GetString(), "random" ) )
 			{
 				randomPosition = true;
 			}
@@ -1231,15 +1244,15 @@ void C_SoundscapeSystem::ProcessPlayRandom( KeyValues *pPlayRandom, const subsou
 				positionIndex = params.startingPosition + pKey->GetInt();
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "origin" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "origin" ) )
 		{
 			const char *originString = pKey->GetString();
 			textOrigin = getVectorFromString(originString);	
 			useTextOrigin = true;
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "suppress_on_restore" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "suppress_on_restore" ) )
 		{
-			suppress = Q_atoi( pKey->GetString() ) != 0 ? true : false;
+			suppress = V_atoi( pKey->GetString() ) != 0 ? true : false;
 		}
 		else
 		{
@@ -1320,15 +1333,15 @@ void C_SoundscapeSystem::ProcessPlaySoundscape( KeyValues *pPlaySoundscape, subs
 	const char *pSoundscapeName = nullptr;
 	while ( pKey )
 	{
-		if ( !Q_strcasecmp( pKey->GetName(), "volume" ) )
+		if ( !V_strcasecmp( pKey->GetName(), "volume" ) )
 		{
 			subParams.masterVolume = paramsIn.masterVolume * RandomInterval( ReadInterval( pKey->GetString() ) );
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "position" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "position" ) )
 		{
 			subParams.startingPosition = paramsIn.startingPosition + pKey->GetInt();
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "positionoverride" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "positionoverride" ) )
 		{
 			if ( paramsIn.positionOverride < 0 )
 			{
@@ -1338,23 +1351,23 @@ void C_SoundscapeSystem::ProcessPlaySoundscape( KeyValues *pPlaySoundscape, subs
 				subParams.ambientPositionOverride = paramsIn.startingPosition + pKey->GetInt();
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "ambientpositionoverride" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "ambientpositionoverride" ) )
 		{
 			if ( paramsIn.ambientPositionOverride < 0 )
 			{
 				subParams.ambientPositionOverride = paramsIn.startingPosition + pKey->GetInt();
 			}
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "ambientoriginoverride" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "ambientoriginoverride" ) )
 		{
 			subParams.vForcedTextOriginAmbient = getVectorFromString(pKey->GetString());
 			subParams.bForceTextOriginAmbient = true;
 		}
-		else if ( !Q_strcasecmp( pKey->GetName(), "name" ) )
+		else if ( !V_strcasecmp( pKey->GetName(), "name" ) )
 		{
 			pSoundscapeName = pKey->GetString();
 		}
-		else if ( !Q_strcasecmp(pKey->GetName(), "soundlevel") )
+		else if ( !V_strcasecmp(pKey->GetName(), "soundlevel") )
 		{
 			DevMsg(1,"soundlevel not supported on sub-soundscapes\n");
 		}
@@ -1402,7 +1415,7 @@ int C_SoundscapeSystem::AddLoopingSound( const char *pSoundName, bool isAmbient,
 		// NOTE: Will always restart/crossfade positional sounds
 		if ( sound.id != slot.m_loopingSoundId && 
 			sound.pitch == pitch && 
-			!Q_strcasecmp( pSoundName, sound.pWaveName ) )
+			!V_strcasecmp( pSoundName, sound.pWaveName ) )
 		{
 			// Ambient sounds can reuse the slots.
 			if ( isAmbient == true && 
@@ -1531,7 +1544,7 @@ int C_SoundscapeSystem::AddRandomSound( const randomsound_t &sound )
 // play a random sound randomly from this parameterization table
 void C_SoundscapeSystem::PlayRandomSound( randomsound_t &sound )
 {
-	Assert( sound.waveCount > 0 );
+	contract_assert( sound.waveCount > 0 );
 
 	int waveId = random->RandomInt( 0, sound.waveCount-1 );
 	KeyValues *pWaves = sound.pWaves;
@@ -1605,7 +1618,9 @@ void C_SoundscapeSystem::UpdateRandomSounds( float gameTime )
 
 
 
-CON_COMMAND(cl_soundscape_printdebuginfo, "print soundscapes")
+static void cl_soundscape_printdebuginfo( const CCommand &args );
+static ConCommand cl_soundscape_printdebuginfo_command( "cl_soundscape_printdebuginfo", cl_soundscape_printdebuginfo, "print soundscapes" );
+static void cl_soundscape_printdebuginfo( const CCommand &args )
 {
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 	{
@@ -1615,7 +1630,9 @@ CON_COMMAND(cl_soundscape_printdebuginfo, "print soundscapes")
 }
 
 
-CON_COMMAND(cl_ss_origin, "print origin in script format")
+static void cl_ss_origin( const CCommand &args );
+static ConCommand cl_ss_origin_command( "cl_ss_origin", cl_ss_origin, "print origin in script format" );
+static void cl_ss_origin( const CCommand &args )
 {
 	Vector org = MainViewOrigin( GET_ACTIVE_SPLITSCREEN_SLOT() );
 	Warning("\"origin\"\t\"%.1f, %.1f, %.1f\"\n", org.x, org.y, org.z );

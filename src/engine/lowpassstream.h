@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef LOWPASSSTREAM_H
-#define LOWPASSSTREAM_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // ------------------------------------------------------------------ //
 // Default implementations of the operators used for averaging.
@@ -90,6 +83,3 @@ inline DataType CLowPassStream<DataType, nSamples>::GetCurrentAverage()
 
 	return DivideSample( data, m_nSamplesGotten );
 }
-
-
-#endif // LOWPASSSTREAM_H

@@ -1,17 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: CS's custom C_PlayerResource
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_CS_PLAYERRESOURCE_H
-#define C_CS_PLAYERRESOURCE_H
+// Purpose: CS's custom C_PlayerResource
 
 #include "cs_shareddefs.h"
 #include "c_playerresource.h"
 
-#define MAX_DECORATED_PLAYER_NAME_LENGTH ( ( MAX_NETWORKID_LENGTH * 10 ) + 20 )
+inline constexpr auto MAX_DECORATED_PLAYER_NAME_LENGTH = ( ( MAX_NETWORKID_LENGTH * 10 ) + 20 );
 
 
 enum EDecoratedPlayerNameFlag_t
@@ -67,25 +63,19 @@ public:
 	int				GetEndMatchNextMapVote( int iIndex );
 	bool			EndMatchNextMapAllVoted( void );
 
-	const wchar_t*		GetDecoratedPlayerName( int name, OUT_Z_BYTECAP(bufflen) wchar_t* buffer, int bufflen, EDecoratedPlayerNameFlag_t flags );
+	const wchar_t*		GetDecoratedPlayerName( int name, wchar_t* buffer, int bufflen, EDecoratedPlayerNameFlag_t flags );
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
-	virtual const char *GetPlayerName( int index ) OVERRIDE;
+	virtual const char *GetPlayerName( int index ) override;
 	bool			IsControllingBot( int index );
 	int				GetControlledPlayer( int index );
 	int				GetControlledByPlayer( int index );
-#endif
 	bool			IsAssassinationTarget( int index );
 
 	int				GetBotDifficulty( int index );
 
-#if defined ENABLE_CLIENT_INVENTORIES_FOR_OTHER_PLAYERS
-	CCSPlayerInventory * GetInventory( int index );
-#endif
-
 protected:
 
-	virtual void	UpdatePlayerName( int slot ) OVERRIDE;
+	virtual void	UpdatePlayerName( int slot ) override;
 
 	bool	m_bDisableAssassinationTargetNameOverride;
 
@@ -112,12 +102,10 @@ protected:
 	[[= ks::reflect::Net{} ]] int		m_iCompTeammateColor[MAX_PLAYERS + 1];
 
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::Int } ]] bool	m_bControllingBot[ MAX_PLAYERS + 1 ];
 	[[= ks::reflect::Net{} ]] int		m_iControlledPlayer[ MAX_PLAYERS + 1 ];
 	[[= ks::reflect::Net{} ]] int		m_iControlledByPlayer[ MAX_PLAYERS + 1 ];
 	char	m_szPlayerNames[ MAX_PLAYERS + 1 ][ MAX_PLAYER_NAME_LENGTH ];
-#endif
 
 	[[= ks::reflect::Net{} ]] int		m_iBotDifficulty[ MAX_PLAYERS + 1 ];	// Difficulty level of a bot ( -1 if not applicable )
 	[[= ks::reflect::Net{ .enc = ks::reflect::WireEnc::String } ]] char	m_szClan[MAX_PLAYERS+1][MAX_CLAN_TAG_LENGTH];
@@ -135,11 +123,6 @@ protected:
 	[[= ks::reflect::Net{} ]] int m_nPersonaDataPublicCommendsTeacher[ MAX_PLAYERS + 1 ];
 	[[= ks::reflect::Net{} ]] int m_nPersonaDataPublicCommendsFriendly[ MAX_PLAYERS + 1 ];
 
-#if defined ENABLE_CLIENT_INVENTORIES_FOR_OTHER_PLAYERS
-	CCSPlayerInventory m_Inventory[ MAX_PLAYERS + 1 ];
-#endif
 };
 
 C_CS_PlayerResource *GetCSResources( void );
-
-#endif // C_CS_PLAYERRESOURCE_H

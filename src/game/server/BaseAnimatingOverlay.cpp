@@ -1,12 +1,35 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -281,7 +304,7 @@ void CBaseAnimatingOverlay::VerifyOrder( void )
 		if (m_AnimOverlay[ i ].m_nOrder < MAX_OVERLAYS)
 		{
 			j = m_AnimOverlay[ i ].m_nOrder;
-			Assert( layer[j] == MAX_OVERLAYS );
+			contract_assert( layer[j] == MAX_OVERLAYS );
 			layer[j] = i;
 			if (j > maxOrder)
 				maxOrder = j;
@@ -302,7 +325,7 @@ void CBaseAnimatingOverlay::VerifyOrder( void )
 		if (j != MAX_OVERLAYS)
 		{
 			char tempstr[512];
-			Q_snprintf( tempstr, sizeof( tempstr ),"%d : %d :%.2f :%d:%d:%.1f", 
+			V_snprintf( tempstr, sizeof( tempstr ),"%d : %d :%.2f :%d:%d:%.1f", 
 				j, 
 				m_AnimOverlay[ j ].m_nSequence, 
 				m_AnimOverlay[ j ].m_flWeight,
@@ -448,7 +471,7 @@ void CAnimationLayer::DispatchAnimEvents( CBaseAnimating *eventHandler, CBaseAni
 
 	if ( !pstudiohdr )
 	{
-		Assert(!"CBaseAnimating::DispatchAnimEvents: model missing");
+		contract_assert( !"CBaseAnimating::DispatchAnimEvents: model missing" );
 		return;
 	}
 
@@ -522,7 +545,7 @@ void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, BoneVector pos[
 {
 	if(!pStudioHdr)
 	{
-		Assert(!"CBaseAnimating::GetSkeleton() without a model");
+		contract_assert( !"CBaseAnimating::GetSkeleton() without a model" );
 		return;
 	}
 
@@ -727,7 +750,7 @@ int CBaseAnimatingOverlay::AddGestureSequence( int sequence, bool autokill /*= t
 int CBaseAnimatingOverlay::AddGestureSequence( int nSequence, float flDuration, bool autokill /*= true*/ )
 {
 	int iLayer = AddGestureSequence( nSequence, autokill );
-	Assert( iLayer != -1 );
+	contract_assert( iLayer != -1 );
 
 	if (iLayer >= 0 && flDuration > 0)
 	{
@@ -758,7 +781,7 @@ int CBaseAnimatingOverlay::AddGesture( Activity activity, bool autokill /*= true
 	}
 
 	int i = AddGestureSequence( seq, autokill );
-	Assert( i != -1 );
+	contract_assert( i != -1 );
 	if ( i != -1 )
 	{
 		m_AnimOverlay[ i ].m_nActivity = activity;
@@ -1129,7 +1152,7 @@ void CBaseAnimatingOverlay::SetLayerPlaybackRate( int iLayer, float flPlaybackRa
 	if (!IsValidLayer( iLayer ))
 		return;
 
-	Assert( flPlaybackRate > -1.0 && flPlaybackRate < 40.0);
+	contract_assert( flPlaybackRate > -1.0 && flPlaybackRate < 40.0 );
 
 	m_AnimOverlay[iLayer].m_flPlaybackRate = flPlaybackRate;
 }

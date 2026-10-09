@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
@@ -11,7 +12,7 @@ private:
 public:
 	void SetHASALPHAMASK( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nHASALPHAMASK = i;
 #ifdef _DEBUG
 		m_bHASALPHAMASK = true;
@@ -19,7 +20,7 @@ public:
 	}
 	void SetHASALPHAMASK( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHASALPHAMASK = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHASALPHAMASK = true;
@@ -33,7 +34,7 @@ private:
 public:
 	void SetHASSTATICTEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nHASSTATICTEXTURE = i;
 #ifdef _DEBUG
 		m_bHASSTATICTEXTURE = true;
@@ -41,7 +42,7 @@ public:
 	}
 	void SetHASSTATICTEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHASSTATICTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHASSTATICTEXTURE = true;
@@ -55,7 +56,7 @@ private:
 public:
 	void SetUSEALTERNATEVIEW( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nUSEALTERNATEVIEW = i;
 #ifdef _DEBUG
 		m_bUSEALTERNATEVIEW = true;
@@ -63,7 +64,7 @@ public:
 	}
 	void SetUSEALTERNATEVIEW( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nUSEALTERNATEVIEW = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUSEALTERNATEVIEW = true;
@@ -92,7 +93,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bHASALPHAMASK && m_bHASSTATICTEXTURE && m_bUSEALTERNATEVIEW;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 4 * m_nHASALPHAMASK ) + ( 8 * m_nHASSTATICTEXTURE ) + ( 16 * m_nUSEALTERNATEVIEW ) + 0;
 	}
@@ -108,7 +109,7 @@ private:
 public:
 	void SetSKINNING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSKINNING = i;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -116,7 +117,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -130,7 +131,7 @@ private:
 public:
 	void SetADDSTATIC( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nADDSTATIC = i;
 #ifdef _DEBUG
 		m_bADDSTATIC = true;
@@ -138,7 +139,7 @@ public:
 	}
 	void SetADDSTATIC( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nADDSTATIC = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bADDSTATIC = true;
@@ -163,7 +164,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bSKINNING && m_bADDSTATIC;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nSKINNING ) + ( 2 * m_nADDSTATIC ) + 0;
 	}

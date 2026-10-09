@@ -1,15 +1,41 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: An entity that spawns and controls a particle system
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: An entity that spawns and controls a particle system
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "particles/particles.h"
-#include "networkstringtable_gamedll.h"
 #include "particle_system.h"
 
 extern void SendProxy_Origin( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID );
@@ -81,7 +107,7 @@ bool CParticleSystem::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq( szKeyName, "snapshot_file" ) )
 	{
-		Q_strncpy( m_szSnapshotFileName.GetForModify(), szValue, MAX_PATH );
+		V_strncpy( m_szSnapshotFileName.GetForModify(), szValue, MAX_PATH );
 		return true;
 	}
 	return BaseClass::KeyValue( szKeyName, szValue );
@@ -94,7 +120,7 @@ bool CParticleSystem::GetKeyValue( const char *szKeyName, char *szValue, int iMa
 {
 	if ( FStrEq( szKeyName, "snapshot_file" ) )
 	{
-		Q_snprintf( szValue, iMaxLen, "%s", m_szSnapshotFileName.Get() );
+		V_snprintf( szValue, iMaxLen, "%s", m_szSnapshotFileName.Get() );
 		return true;
 	}
 	return BaseClass::GetKeyValue( szKeyName, szValue, iMaxLen );
@@ -178,7 +204,7 @@ void CParticleSystem::ReadControlPointEnts( void )
 			continue;
 
 		CBaseEntity *pPointEnt = gEntList.FindEntityGeneric( nullptr, STRING( m_iszControlPointNames[i] ), this );
-		Assert( pPointEnt != nullptr );
+		contract_assert( pPointEnt != nullptr );
 		if ( pPointEnt == nullptr )
 		{
 			Warning("Particle system %s could not find control point entity (%s)\n", GetEntityName().ToCStr(), m_iszControlPointNames[i].ToCStr() );

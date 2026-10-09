@@ -1,19 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IDATACACHE_H
-#define IDATACACHE_H
-
-
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
-#include "appframework/iappsystem.h"
+import std;
+import ks.tier1;
 #include "tier3/tier3.h"
 
 class IDataCache;
@@ -37,9 +27,10 @@ typedef uintp DataCacheClientID_t;
 //---------------------------------------------------------
 // Cache-defined handle for a cache item
 //---------------------------------------------------------
-FORWARD_DECLARE_HANDLE( memhandle_t );
+struct memhandle_t__;
+using memhandle_t = memhandle_t__ *;
 typedef memhandle_t DataCacheHandle_t;
-#define DC_INVALID_HANDLE ((DataCacheHandle_t)0)
+inline constexpr auto DC_INVALID_HANDLE = ((DataCacheHandle_t)0);
 
 //---------------------------------------------------------
 // Cache Limits
@@ -173,7 +164,7 @@ enum DataCacheAddFlags_t
 //			areas of the cache with thier own memory constraints and common
 //			management.
 //-----------------------------------------------------------------------------
-abstract_class IDataCacheSection
+class IDataCacheSection
 {
 public:
     virtual ~IDataCacheSection() { };
@@ -321,7 +312,7 @@ public:
 // Purpose: Connection between the cache and the owner of a cache section
 //
 //-----------------------------------------------------------------------------
-abstract_class IDataCacheClient
+class IDataCacheClient
 {
 public:
     virtual ~IDataCacheClient() { };
@@ -351,7 +342,7 @@ public:
 		case DC_FLUSH_DISCARD:
 		case DC_REMOVED:
 		default:
-			Assert ( 0 );
+			contract_assert( 0 );
 			return false;
         case DC_NONE:
         case DC_RELOCATE:
@@ -374,7 +365,7 @@ public:
 // Purpose: The global shared cache. Manages sections and overall budgets.
 //
 //-----------------------------------------------------------------------------
-abstract_class IDataCache : public IAppSystem
+class IDataCache : public IAppSystem
 {
 public:
 	//--------------------------------------------------------
@@ -575,5 +566,3 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-
-#endif // IDataCache

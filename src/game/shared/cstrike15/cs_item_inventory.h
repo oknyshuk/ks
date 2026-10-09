@@ -1,23 +1,23 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Container that allows client & server access to data in player inventories & loadouts
-//
-//=============================================================================
 
-#ifndef CS_ITEM_INVENTORY_H
-#define CS_ITEM_INVENTORY_H
-
+import ks.tier1;
+#include "networkvar.h"
+import std;
 #include "item_inventory.h"
 #include "cs_shareddefs.h"
 #include "weapon_parse.h"
 
-#define LOADOUT_SLOT_USE_BASE_ITEM		0
+inline constexpr auto LOADOUT_SLOT_USE_BASE_ITEM = 0;
 
 //===============================================================================================================
 // POSITION HANDLING
 //===============================================================================================================
 // Items at this position have been found, but not presented to the player
-#define BACKEND_POSITION_FOR_NEW_ITEM	0
+inline constexpr auto BACKEND_POSITION_FOR_NEW_ITEM = 0;
 
 // We store a bag index in the highbits of the inventory position.
 // The lowbit stores the position of the item within the bag.
@@ -29,7 +29,7 @@ enum inventory_bags_t
 	BAG_TEAM_BASE = 1000,
 };
 
-#define MAX_BACKPACK_SLOTS		50
+inline constexpr auto MAX_BACKPACK_SLOTS = 50;
 
 inline uint32 GetBackendPositionFor( int iBag, int iSlot )
 {
@@ -94,7 +94,6 @@ public:
 	// Stub for loadout item lookup
 	CEconItemView		*GetItemInLoadout( int iTeam, int iSlot ) { return nullptr; }
 	CEconItemView		*GetItemInLoadoutFilteredByProhibition( int iTeam, int iSlot ) { return nullptr; }
-	bool				InventoryRetrievedFromSteamAtLeastOnce() const { return false; }
 
 protected:
 	// Item movement functions that are called by the inventory manager
@@ -109,8 +108,7 @@ protected:
 	virtual bool		MoveItemToBackpack( globalindex_t iGlobalIndex );
 #endif
 
-	// Inventory updating, called by the Inventory Manager only. If you want an inventory updated,
-	// use the SteamRequestX functions in CInventoryManager.
+	// Inventory updating, called by the Inventory Manager only.
 	virtual void		InventoryReceived( EItemRequestResult eResult, int iItems );
 
 	// Debugging
@@ -162,8 +160,7 @@ protected:
 #endif
 
 protected:
-	// Inventory updating, called by the Inventory Manager only. If you want an inventory updated,
-	// use the SteamRequestX functions in CInventoryManager.
+	// Inventory updating, called by the Inventory Manager only.
 	virtual void		InventoryReceived( EItemRequestResult eResult, int iItems );
 
 	// Derived inventory hooks
@@ -224,21 +221,18 @@ public:
 	CEconItemView	*GetBaseItemForTeam( int iTeam, int iSlot ) { return nullptr; }
 	void				GenerateBaseItems( void );
 
-	// Gets the specified inventory for the steam ID
-	CCSPlayerInventory	*GetBagForPlayer( CSteamID &playerID, inventory_bags_t iBag );
+	// Gets the specified inventory for the player ID
+	CCSPlayerInventory	*GetBagForPlayer( CPlayerId &playerID, inventory_bags_t iBag );
 
 	// Returns the item in the specified loadout slot for a given class
-	CScriptCreatedItem	*GetItemInLoadoutForClass( int iClass, int iSlot, CSteamID *pID = nullptr );
-	CEconItemView		*GetItemInLoadoutForTeam( int iTeam, int iSlot, CSteamID *pID = nullptr ) { return nullptr; }
-
-	// Request inventory from Steam (stub - econ removed)
-	void				SteamRequestInventory( CCSPlayerInventory *pInventory, CSteamID steamID ) {}
+	CScriptCreatedItem	*GetItemInLoadoutForClass( int iClass, int iSlot, CPlayerId *pID = nullptr );
+	CEconItemView		*GetItemInLoadoutForTeam( int iTeam, int iSlot, CPlayerId *pID = nullptr ) { return nullptr; }
 
 	// Stub for finding or creating reference items
 	CEconItemView		*FindOrCreateReferenceEconItem( uint64 itemID ) { return nullptr; }
 
 	// Stub for inventory lookup by player
-	CCSPlayerInventory	*GetInventoryForPlayer( const CSteamID& steamID ) { return nullptr; }
+	CCSPlayerInventory	*GetInventoryForPlayer( const CPlayerId& playerUID ) { return nullptr; }
 
 private:
 	// Base items, returned for slots that the player doesn't have anything in
@@ -268,5 +262,3 @@ private:
 };
 
 CCSInventoryManager *CSInventoryManager( void );
-
-#endif // CS_ITEM_INVENTORY_H

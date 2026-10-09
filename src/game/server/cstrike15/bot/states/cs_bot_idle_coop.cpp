@@ -1,10 +1,10 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Idle update function for coop mode. Split into different file for clarity
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
+// Purpose: Idle update function for coop mode. Split into different file for clarity
+
+import std;
+import ks.core;
 #include "cs_bot.h"
 #include "cs_team.h"
 
@@ -150,7 +150,7 @@ void IdleState::UpdateCoop( CCSBot *me )
 {
 	if ( CSGameRules()->IsPlayingCoopGuardian() )
 	{
-		Assert( mp_guardian_target_site.GetInt() >= 0 );
+		contract_assert( mp_guardian_target_site.GetInt() >= 0 );
 		// if this is a bomb game and we have the bomb, go plant it
 		if ( me->GetTeamNumber() == TEAM_TERRORIST )
 		{

@@ -1,19 +1,28 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "view.h"
 #include "viewrender.h"
 #include "c_tracer.h"
 #include "dlight.h"
-#include "precache_register.h"
 #include "fx_sparks.h"
 #include "iefx.h"
 #include "c_te_effect_dispatch.h"
-#include "tier0/vprof.h"
 #include "fx_quad.h"
 #include "fx.h"
 #include "c_pixel_visibility.h"
@@ -289,20 +298,20 @@ void CTrailParticles::SimulateParticles( CParticleSimulateIterator *pIterator )
 // Purpose: Electric spark
 // Input  : &pos - origin point of effect
 //-----------------------------------------------------------------------------
-#define	SPARK_ELECTRIC_SPREAD	0.0f
-#define	SPARK_ELECTRIC_MINSPEED	64.0f
-#define	SPARK_ELECTRIC_MAXSPEED	300.0f
-#define	SPARK_ELECTRIC_GRAVITY	800.0f
-#define	SPARK_ELECTRIC_DAMPEN	0.3f
+constexpr auto SPARK_ELECTRIC_SPREAD = 0.0f;
+constexpr auto SPARK_ELECTRIC_MINSPEED = 64.0f;
+constexpr auto SPARK_ELECTRIC_MAXSPEED = 300.0f;
+constexpr auto SPARK_ELECTRIC_GRAVITY = 800.0f;
+constexpr auto SPARK_ELECTRIC_DAMPEN = 0.3f;
 
 void FX_ElectricSpark( const Vector &pos, int nMagnitude, int nTrailLength, const Vector *vecDir )
 {
-	VPROF_BUDGET( "FX_ElectricSpark", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_ElectricSpark", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	ks::intrusive_ptr<CTrailParticles> pSparkEmitter	= CTrailParticles::Create( "FX_ElectricSpark 1" );
 
 	if ( !pSparkEmitter )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 
@@ -366,7 +375,7 @@ void FX_ElectricSpark( const Vector &pos, int nMagnitude, int nTrailLength, cons
 
 	if ( !pSparkEmitter2 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 
@@ -509,15 +518,15 @@ void FX_ElectricSpark( const Vector &pos, int nMagnitude, int nTrailLength, cons
 //			&normal - direction of spark travel
 //-----------------------------------------------------------------------------
 
-#define	METAL_SCRAPE_MINSPEED	128.0f
-#define METAL_SCRAPE_MAXSPEED	512.0f
-#define METAL_SCRAPE_SPREAD		0.3f
-#define METAL_SCRAPE_GRAVITY	800.0f
-#define METAL_SCRAPE_DAMPEN		0.4f
+constexpr auto METAL_SCRAPE_MINSPEED = 128.0f;
+constexpr auto METAL_SCRAPE_MAXSPEED = 512.0f;
+constexpr auto METAL_SCRAPE_SPREAD = 0.3f;
+constexpr auto METAL_SCRAPE_GRAVITY = 800.0f;
+constexpr auto METAL_SCRAPE_DAMPEN = 0.4f;
 
 void FX_MetalScrape( Vector &position, Vector &normal )
 {
-	VPROF_BUDGET( "FX_MetalScrape", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_MetalScrape", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	Vector	offset = position + ( normal * 1.0f );
 
 	ks::intrusive_ptr<CTrailParticles> sparkEmitter = CTrailParticles::Create( "FX_MetalScrape 1" );
@@ -579,15 +588,15 @@ void FX_MetalScrape( Vector &position, Vector &normal )
 // Input  : &position - origin of effect
 //			&normal - normal of the surface struck
 //-----------------------------------------------------------------------------
-#define	METAL_SPARK_SPREAD		0.5f
-#define	METAL_SPARK_MINSPEED	128.0f
-#define	METAL_SPARK_MAXSPEED	512.0f
-#define	METAL_SPARK_GRAVITY		400.0f
-#define	METAL_SPARK_DAMPEN		0.25f
+constexpr auto METAL_SPARK_SPREAD = 0.5f;
+constexpr auto METAL_SPARK_MINSPEED = 128.0f;
+constexpr auto METAL_SPARK_MAXSPEED = 512.0f;
+constexpr auto METAL_SPARK_GRAVITY = 400.0f;
+constexpr auto METAL_SPARK_DAMPEN = 0.25f;
 
 void FX_MetalSpark( const Vector &position, const Vector &direction, const Vector &surfaceNormal, int iScale )
 {
-	VPROF_BUDGET( "FX_MetalSpark", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_MetalSpark", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	if ( !fx_drawmetalspark.GetBool() )
 		return;
@@ -682,18 +691,18 @@ void FX_MetalSpark( const Vector &position, const Vector &direction, const Vecto
 // Purpose: Spark effect. Nothing but sparks.
 // Input  : &pos - origin point of effect
 //-----------------------------------------------------------------------------
-#define	SPARK_SPREAD	3.0f
-#define	SPARK_GRAVITY	800.0f
-#define	SPARK_DAMPEN	0.3f
+constexpr auto SPARK_SPREAD = 3.0f;
+constexpr auto SPARK_GRAVITY = 800.0f;
+constexpr auto SPARK_DAMPEN = 0.3f;
 
 void FX_Sparks( const Vector &pos, int nMagnitude, int nTrailLength, const Vector &vecDir, float flWidth, float flMinSpeed, float flMaxSpeed, char *pSparkMaterial )
 {
-	VPROF_BUDGET( "FX_Sparks", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_Sparks", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	ks::intrusive_ptr<CTrailParticles> pSparkEmitter	= CTrailParticles::Create( "FX_Sparks 1" );
 
 	if ( !pSparkEmitter )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 
@@ -760,7 +769,7 @@ void FX_Sparks( const Vector &pos, int nMagnitude, int nTrailLength, const Vecto
 
 	if ( !pSparkEmitter2 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 
@@ -813,15 +822,15 @@ void FX_Sparks( const Vector &pos, int nMagnitude, int nTrailLength, const Vecto
 // Purpose: Energy splash for plasma/beam weapon impacts
 // Input  : &pos - origin point of effect
 //-----------------------------------------------------------------------------
-#define	ENERGY_SPLASH_SPREAD	0.7f
-#define	ENERGY_SPLASH_MINSPEED	128.0f
-#define	ENERGY_SPLASH_MAXSPEED	160.0f
-#define	ENERGY_SPLASH_GRAVITY	800.0f
-#define	ENERGY_SPLASH_DAMPEN	0.3f
+constexpr auto ENERGY_SPLASH_SPREAD = 0.7f;
+constexpr auto ENERGY_SPLASH_MINSPEED = 128.0f;
+constexpr auto ENERGY_SPLASH_MAXSPEED = 160.0f;
+constexpr auto ENERGY_SPLASH_GRAVITY = 800.0f;
+constexpr auto ENERGY_SPLASH_DAMPEN = 0.3f;
 
 void FX_EnergySplash( const Vector &pos, const Vector &normal, int nFlags )
 {
-	VPROF_BUDGET( "FX_EnergySplash", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_EnergySplash", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	Vector	offset = pos + ( normal * 2.0f );
 
 	// Quick flash
@@ -911,15 +920,15 @@ void FX_EnergySplash( const Vector &pos, const Vector &normal, int nFlags )
 //			&normal - normal of the surface struck
 //-----------------------------------------------------------------------------
 
-#define	MICRO_EXPLOSION_MINSPEED	100.0f
-#define MICRO_EXPLOSION_MAXSPEED	150.0f
-#define MICRO_EXPLOSION_SPREAD		1.0f
-#define MICRO_EXPLOSION_GRAVITY		0.0f
-#define MICRO_EXPLOSION_DAMPEN		0.4f
+constexpr auto MICRO_EXPLOSION_MINSPEED = 100.0f;
+constexpr auto MICRO_EXPLOSION_MAXSPEED = 150.0f;
+constexpr auto MICRO_EXPLOSION_SPREAD = 1.0f;
+constexpr auto MICRO_EXPLOSION_GRAVITY = 0.0f;
+constexpr auto MICRO_EXPLOSION_DAMPEN = 0.4f;
 
 void FX_MicroExplosion( Vector &position, Vector &normal )
 {
-	VPROF_BUDGET( "FX_MicroExplosion", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_MicroExplosion", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	Vector	offset = position + ( normal * 2.0f );
 
 	ks::intrusive_ptr<CTrailParticles> sparkEmitter = CTrailParticles::Create( "FX_MicroExplosion 1" );
@@ -1005,21 +1014,21 @@ void FX_MicroExplosion( Vector &position, Vector &normal )
 //-----------------------------------------------------------------------------
 // Purpose: Ugly prototype explosion effect
 //-----------------------------------------------------------------------------
-#define	EXPLOSION_MINSPEED		300.0f
-#define EXPLOSION_MAXSPEED		300.0f
-#define EXPLOSION_SPREAD		0.8f
-#define EXPLOSION_GRAVITY		800.0f
-#define EXPLOSION_DAMPEN		0.4f
+constexpr auto EXPLOSION_MINSPEED = 300.0f;
+constexpr auto EXPLOSION_MAXSPEED = 300.0f;
+constexpr auto EXPLOSION_SPREAD = 0.8f;
+constexpr auto EXPLOSION_GRAVITY = 800.0f;
+constexpr auto EXPLOSION_DAMPEN = 0.4f;
 
-#define	EXPLOSION_FLECK_MIN_SPEED		150.0f
-#define	EXPLOSION_FLECK_MAX_SPEED		350.0f
-#define	EXPLOSION_FLECK_GRAVITY			800.0f
-#define	EXPLOSION_FLECK_DAMPEN			0.3f
-#define	EXPLOSION_FLECK_ANGULAR_SPRAY	0.8f
+constexpr auto EXPLOSION_FLECK_MIN_SPEED = 150.0f;
+constexpr auto EXPLOSION_FLECK_MAX_SPEED = 350.0f;
+constexpr auto EXPLOSION_FLECK_GRAVITY = 800.0f;
+constexpr auto EXPLOSION_FLECK_DAMPEN = 0.3f;
+constexpr auto EXPLOSION_FLECK_ANGULAR_SPRAY = 0.8f;
 
 void FX_Explosion( Vector& origin, Vector& normal, char materialType )
 {
-	VPROF_BUDGET( "FX_Explosion", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_Explosion", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	Vector	offset = origin + ( normal * 2.0f );
 
 	ks::intrusive_ptr<CTrailParticles> pSparkEmitter = CTrailParticles::Create( "FX_Explosion 1" );
@@ -1031,7 +1040,7 @@ void FX_Explosion( Vector& origin, Vector& normal, char materialType )
 	Vector		diffuseColor, baseColor;
 	pTraceMaterial = engine->TraceLineMaterialAndLighting( origin, normal * -16.0f, diffuseColor, baseColor );
 	// Get final light value
-	float r = pow( diffuseColor[0], 1.0f/2.2f ) * baseColor[0];
+	float r = std::pow( diffuseColor[0], 1.0f/2.2f ) * baseColor[0];
 	float g = pow( diffuseColor[1], 1.0f/2.2f ) * baseColor[1];
 	float b = pow( diffuseColor[2], 1.0f/2.2f ) * baseColor[2];
 
@@ -1167,9 +1176,9 @@ void FX_Explosion( Vector& origin, Vector& normal, char materialType )
 			pParticle->m_uchStartSize	= 16.0;
 			pParticle->m_uchEndSize		= 64.0;
 
-			float flAngle = ((float)i * M_PI * 2) / numBalls;
-			float x = cos( flAngle );
-			float y = sin( flAngle );
+			float flAngle = ((float)i * std::numbers::pi * 2) / numBalls;
+			float x = std::cos( flAngle );
+			float y = std::sin( flAngle );
 			pParticle->m_vecVelocity = (vecRight*x + vecUp*y) * 1024.0;
 
 			float colorRamp = random->RandomFloat( 0.75f, 1.5f );
@@ -1215,7 +1224,7 @@ void FX_Explosion( Vector& origin, Vector& normal, char materialType )
 //-----------------------------------------------------------------------------
 void FX_ConcussiveExplosion( Vector &origin, Vector &normal )
 {
-	VPROF_BUDGET( "FX_ConcussiveExplosion", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_ConcussiveExplosion", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	Vector	offset = origin + ( normal * 2.0f );
 	Vector	dir;
 	int		i;

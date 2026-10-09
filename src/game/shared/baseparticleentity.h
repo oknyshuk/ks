@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Particle system entities can derive from this to handle some of the mundane
 // functionality of hooking into the engine's entity system.
-
-#ifndef PARTICLE_BASEEFFECT_H
-#define PARTICLE_BASEEFFECT_H
 
 #include "reflect_annotations.h"
 
@@ -97,7 +90,3 @@ inline int CBaseParticleEntity::AllocateToolParticleEffectId()
 }
 
 #endif // CLIENT_DLL
-
-#endif
-
-

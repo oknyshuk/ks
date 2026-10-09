@@ -1,20 +1,25 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef BASEPLAYER_SHARED_H
-#define BASEPLAYER_SHARED_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // PlayerUse defines
-#define	PLAYER_USE_RADIUS	80.f
-#define	PLAYER_USE_BOT_RADIUS	140.f
 
-#define CONE_45_DEGREES		0.707f
-#define CONE_15_DEGREES		0.9659258f
-#define CONE_90_DEGREES		0
+import std;
+import ks.math;
+#include "ehandle.h"
+#ifdef CLIENT_DLL
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
+#else
+class CBaseEntity;
+typedef CHandle<CBaseEntity> EHANDLE;
+#endif
+inline constexpr auto PLAYER_USE_RADIUS = 80.f;
+inline constexpr auto PLAYER_USE_BOT_RADIUS = 140.f;
+
+inline constexpr auto CONE_45_DEGREES = 0.707f;
+inline constexpr auto CONE_15_DEGREES = 0.9659258f;
+inline constexpr auto CONE_90_DEGREES = 0;
 
 #define TRAIN_ACTIVE	0x80 
 #define TRAIN_NEW		0xc0
@@ -26,13 +31,13 @@
 #define TRAIN_BACK		0x05
 
 // entity messages
-#define UPDATE_PLAYER_RADAR	2
+inline constexpr auto UPDATE_PLAYER_RADAR = 2;
 
-#define DEATH_ANIMATION_TIME	3.0f
+inline constexpr auto DEATH_ANIMATION_TIME = 3.0f;
 
 // multiplayer only
-#define NOINTERP_PARITY_MAX			4
-#define NOINTERP_PARITY_MAX_BITS	2
+inline constexpr auto NOINTERP_PARITY_MAX = 4;
+inline constexpr auto NOINTERP_PARITY_MAX_BITS = 2;
 
 struct autoaim_params_t
 {
@@ -87,21 +92,21 @@ enum
 };
 
 // useful cosines
-#define DOT_1DEGREE   0.9998476951564
-#define DOT_2DEGREE   0.9993908270191
-#define DOT_3DEGREE   0.9986295347546
-#define DOT_4DEGREE   0.9975640502598
-#define DOT_5DEGREE   0.9961946980917
-#define DOT_6DEGREE   0.9945218953683
-#define DOT_7DEGREE   0.9925461516413
-#define DOT_8DEGREE   0.9902680687416
-#define DOT_9DEGREE   0.9876883405951
-#define DOT_10DEGREE  0.9848077530122
-#define DOT_15DEGREE  0.9659258262891
-#define DOT_20DEGREE  0.9396926207859
-#define DOT_25DEGREE  0.9063077870367
-#define DOT_30DEGREE  0.866025403784
-#define DOT_45DEGREE  0.707106781187
+inline constexpr auto DOT_1DEGREE = 0.9998476951564;
+inline constexpr auto DOT_2DEGREE = 0.9993908270191;
+inline constexpr auto DOT_3DEGREE = 0.9986295347546;
+inline constexpr auto DOT_4DEGREE = 0.9975640502598;
+inline constexpr auto DOT_5DEGREE = 0.9961946980917;
+inline constexpr auto DOT_6DEGREE = 0.9945218953683;
+inline constexpr auto DOT_7DEGREE = 0.9925461516413;
+inline constexpr auto DOT_8DEGREE = 0.9902680687416;
+inline constexpr auto DOT_9DEGREE = 0.9876883405951;
+inline constexpr auto DOT_10DEGREE = 0.9848077530122;
+inline constexpr auto DOT_15DEGREE = 0.9659258262891;
+inline constexpr auto DOT_20DEGREE = 0.9396926207859;
+inline constexpr auto DOT_25DEGREE = 0.9063077870367;
+inline constexpr auto DOT_30DEGREE = 0.866025403784;
+inline constexpr auto DOT_45DEGREE = 0.707106781187;
 
 //#define DEBUG_MOTION_CONTROLLERS  //uncomment to spew debug data while in a motion controller
 
@@ -126,5 +131,3 @@ enum HltvUiType_t
 #else
 #include "player.h"
 #endif
-
-#endif // BASEPLAYER_SHARED_H

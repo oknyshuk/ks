@@ -1,12 +1,12 @@
+#pragma once
 //--------------------------------------------------------------------------------------------------------
 // Copyright 2007 Turtle Rock Studios, Inc.
 
-#ifndef ENV_TONEMAP_CONTROLLER_H
-#define ENV_TONEMAP_CONTROLLER_H
 
 #include "reflect_annotations.h"
 
 #include "triggers.h"
+#include "igamesystem.h"
 
 //--------------------------------------------------------------------------------------------------------
 class CTonemapTrigger : public CBaseTrigger
@@ -71,4 +71,3 @@ inline CBaseEntity *CTonemapSystem::GetMasterTonemapController( void ) const
 CTonemapSystem *TheTonemapSystem( void );
 
 
-#endif //ENV_TONEMAP_CONTROLLER_H

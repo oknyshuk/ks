@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef VEHICLE_BASE_H
-#define VEHICLE_BASE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -300,6 +294,3 @@ inline bool CPropVehicleDriveable::HasGun()
 {
 	return m_bHasGun;
 }
-
-
-#endif // VEHICLE_BASE_H

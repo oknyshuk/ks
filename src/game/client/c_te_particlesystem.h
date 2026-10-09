@@ -1,29 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // This file defines the C_TEParticleSystem class, which handles most of the
 // interfacing with the particle manager, simulation, and rendering.
 
 // NOTE: most tempents are singletons.
 
-#ifndef C_TE_PARTICLESYSTEM_H
-#define C_TE_PARTICLESYSTEM_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
-
 
 #include "particlemgr.h"
 #include "c_basetempentity.h"
 #include "particles_simple.h"
-#include "tier1/intrusive_ptr.h"
+import std;
 
-
-#define SIMSHIFT	10
+inline constexpr auto SIMSHIFT = 10;
 
 
 typedef enum {
@@ -129,9 +121,3 @@ inline float CTEParticleRenderer::GetParticleLifetime(StandardParticle_t *pParti
 {
 	return pParticle->m_Lifetime;
 }
-
-
-#endif
-
-
-

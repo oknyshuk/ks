@@ -1,21 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ICLIENTRENDERABLE_H
-#define ICLIENTRENDERABLE_H
-
-#include "mathlib/mathlib.h"
-#include "interface.h"
+import std;
+import ks.tier1;
 #include "iclientunknown.h"
 #include "client_render_handle.h"
 #include "engine/ivmodelrender.h"
 
 struct model_t;
-struct matrix3x4_t;
 
 extern void DefaultRenderBoundsWorldspace( IClientRenderable *pRenderable, Vector &absMins, Vector &absMaxs );
 
@@ -51,7 +44,7 @@ enum ShadowType_t
 // number of views.
 //
 // If no views had the entity, then it is called with bInPVS=false after rendering.
-abstract_class IPVSNotify
+class IPVSNotify
 {
 public:
 	virtual void OnPVSStatusChanged( bool bInPVS ) = 0;
@@ -68,14 +61,14 @@ struct RenderableInstance_t
 
 
 // client renderable frame buffer usage flags
-#define ERENDERFLAGS_NEEDS_POWER_OF_TWO_FB  1				// needs refract texture
-#define ERENDERFLAGS_NEEDS_FULL_FB          2				// needs full framebuffer texture
-#define ERENDERFLAGS_REFRACT_ONLY_ONCE_PER_FRAME 4 // even if it needs a the refract texture, don't update it >once/ frame
+inline constexpr auto ERENDERFLAGS_NEEDS_POWER_OF_TWO_FB = 1; // needs refract texture
+inline constexpr auto ERENDERFLAGS_NEEDS_FULL_FB = 2; // needs full framebuffer texture
+inline constexpr auto ERENDERFLAGS_REFRACT_ONLY_ONCE_PER_FRAME = 4; // even if it needs a the refract texture, don't update it >once/ frame
 
 //-----------------------------------------------------------------------------
 // Purpose: All client entities must implement this interface.
 //-----------------------------------------------------------------------------
-abstract_class IClientRenderable
+class IClientRenderable
 {
 public:
 	// Gets at the containing class...
@@ -215,7 +208,7 @@ enum ModelDataCategory_t
 };
 
 
-abstract_class IClientModelRenderable
+class IClientModelRenderable
 {
 public:
 	virtual bool GetRenderData( void *pData, ModelDataCategory_t nCategory ) = 0;
@@ -224,7 +217,7 @@ public:
 
 // This class can be used to implement default versions of some of the 
 // functions of IClientRenderable.
-abstract_class CDefaultClientRenderable : public IClientUnknown, public IClientRenderable
+class CDefaultClientRenderable : public IClientUnknown, public IClientRenderable
 {
 public:
 	CDefaultClientRenderable()
@@ -265,7 +258,7 @@ public:
 	// Determine the color modulation amount
 	virtual void	GetColorModulation( float* color )
 	{
-		Assert(color);
+		contract_assert( color );
 		color[0] = color[1] = color[2] = 1.0f;
 	}
 
@@ -312,8 +305,8 @@ public:
 
 // IClientUnknown implementation.
 public:
-	virtual void SetRefEHandle( const CBaseHandle &handle )	{ Assert( false ); }
-	virtual const CBaseHandle& GetRefEHandle() const		{ Assert( false ); return *((CBaseHandle*)0); }
+	virtual void SetRefEHandle( const CBaseHandle &handle )	{ contract_assert( false ); }
+	virtual const CBaseHandle& GetRefEHandle() const		{ contract_assert( false ); return *((CBaseHandle*)0); }
 
 	virtual IClientUnknown*		GetIClientUnknown()		{ return this; }
 	virtual ICollideable*		GetCollideable()		{ return 0; }
@@ -327,6 +320,3 @@ public:
 public:
 	ClientRenderHandle_t m_hRenderHandle;
 };
-
-
-#endif // ICLIENTRENDERABLE_H

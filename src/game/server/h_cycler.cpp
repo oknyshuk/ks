@@ -1,10 +1,41 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: The Halflife Cycler NPCs
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: The Halflife Cycler NPCs
+
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "player.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -12,7 +43,6 @@
 #include "ai_motor.h"
 #include "basecombatweapon.h"
 #include "animation.h"
-#include "vstdlib/random.h"
 #include "h_cycler.h"
 #include "Sprite.h"
 
@@ -97,12 +127,8 @@ void CCycler::Spawn( )
 
 	if (GetSequence() != 0 || m_flCycle != 0)
 	{
-#ifdef TF2_DLL
-		m_animate = 1;
-#else
 		m_animate = 0;
 		m_flPlaybackRate = 0;
-#endif
 	}
 	else
 	{
@@ -187,7 +213,7 @@ void CCycler::InputSetSequence( inputdata_t &inputdata )
 	{
 		// Legacy support: Try it as a number, and support '0'
 		const char *sChar = inputdata.value.String();
-		int iSeqNum = atoi( sChar );
+		int iSeqNum = std::atoi( sChar );
 		if ( !iSeqNum && sChar[0] != '0' )
 		{
 			// Treat it as a sequence name
@@ -432,15 +458,15 @@ bool CBlendingCycler::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "lowboundary"))
 	{
-		m_iLowerBound = atoi(szValue);
+		m_iLowerBound = std::atoi(szValue);
 	}
 	else if (FStrEq(szKeyName, "highboundary"))
 	{
-		m_iUpperBound = atoi(szValue);
+		m_iUpperBound = std::atoi(szValue);
 	}
 	else if (FStrEq(szKeyName, "blendspeed"))
 	{
-		m_iBlendspeed = atoi(szValue);
+		m_iBlendspeed = std::atoi(szValue);
 	}
 	else if (FStrEq(szKeyName, "blendsequence"))
 	{
@@ -482,5 +508,3 @@ void CBlendingCycler::Think( void )
 		}
 	}
 }
-
-

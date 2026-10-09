@@ -1,16 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // This defines the client-side SmokeTrail entity. It can also be used without
 // an entity, in which case you must pass calls to it and set its position each frame.
 
-#ifndef PARTICLE_SMOKETRAIL_H
-#define PARTICLE_SMOKETRAIL_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
 
 #include "particlemgr.h"
@@ -21,7 +16,7 @@
 #include "baseparticleentity.h"
 
 #include "fx_trail.h"
-#include "tier1/intrusive_ptr.h"
+import std;
 
 //
 // Smoke Trail
@@ -332,7 +327,7 @@ public:
 	//Alpha
 	virtual float UpdateAlpha( const SimpleParticle *pParticle )
 	{
-		return ( ((float)pParticle->m_uchStartAlpha/255.0f) * sin( M_PI * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
+		return ( ((float)pParticle->m_uchStartAlpha/255.0f) * std::sin( std::numbers::pi * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
 	}
 
 	virtual	void	UpdateVelocity( SimpleParticle *pParticle, float timeDelta )
@@ -436,5 +431,3 @@ private:
 	CParticleMgr	*m_pParticleMgr;
 	ks::intrusive_ptr<CSimpleEmitter> m_pDustEmitter;
 };
-
-#endif

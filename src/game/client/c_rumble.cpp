@@ -1,17 +1,25 @@
-//======= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Rumble effects mixer for XBox
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Rumble effects mixer for XBox
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
 #include "c_rumble.h"
 #include "rumble_shared.h"
 #include "inputsystem/iinputsystem.h"
 #include "iinput.h"
-
 
 void StopAllRumbleEffects( int userID );
 
@@ -19,8 +27,8 @@ void StopAllRumbleEffects( int userID );
 ConVar cl_rumblescale( "cl_rumblescale", "1.0", FCVAR_ARCHIVE | FCVAR_SS, "Scale sensitivity of rumble effects (0 to 1.0)" ); 
 ConVar cl_debugrumble( "cl_debugrumble", "0", FCVAR_ARCHIVE, "Turn on rumble debugging spew" );
 
-#define MAX_RUMBLE_CHANNELS 3	// Max concurrent rumble effects per player
-#define NUM_WAVE_SAMPLES 30		// Effects play at 10hz
+constexpr auto MAX_RUMBLE_CHANNELS = 3; // Max concurrent rumble effects per player
+constexpr auto NUM_WAVE_SAMPLES = 30; // Effects play at 10hz
 
 typedef struct
 {
@@ -228,7 +236,7 @@ void GenerateSineWaveEffect( RumbleWaveform_t *pWaveform, const WaveGenParams_t 
 	for( int i = 0 ; i < NUM_WAVE_SAMPLES ; i++ )
 	{
 		float radians = DEG2RAD(degrees);
-		float value = fabs( sin(radians) );
+		float value = fabs( std::sin(radians) );
 
 		value *= params.amplitudescale;
 
@@ -491,7 +499,7 @@ RumbleChannel_t	*CRumbleEffects::FindAvailableChannel( int userID, int priority 
 
 	int lowestPriority = priority;
 	RumbleChannel_t	*pBestChannel = nullptr;
-	float oldestChannel = FLT_MAX;
+	float oldestChannel = std::numeric_limits<float>::max();
 
 	// All channels already in use. Find a channel to slam. Make sure it belongs to this userID
 	for( i = 0 ; i < MAX_RUMBLE_CHANNELS ; i++ )

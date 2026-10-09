@@ -1,37 +1,34 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef FUNC_TANK_H
-#define FUNC_TANK_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
 #include "triggers.h"
+#include "baseentity.h"
+#include "basecombatcharacter.h"
 
-#define SF_TANK_ACTIVE						0x0001
-#define SF_TANK_PLAYER						0x0002
-#define SF_TANK_HUMANS						0x0004
-#define SF_TANK_ALIENS						0x0008
-#define SF_TANK_LINEOFSIGHT					0x0010
-#define SF_TANK_CANCONTROL					0x0020
-#define	SF_TANK_DAMAGE_KICK					0x0040	// Kick when take damage
-#define	SF_TANK_AIM_AT_POS					0x0080	// Aim at a particular position
-#define SF_TANK_AIM_ASSISTANCE				0x0100
-#define SF_TANK_NPC							0x0200		
-#define SF_TANK_NPC_CONTROLLABLE			0x0400		// 1024
-#define SF_TANK_NPC_SET_CONTROLLER			0x0800		// 2048
-#define SF_TANK_ALLOW_PLAYER_HITS			0x1000		// 4096		Allow friendly NPCs to fire upon enemies near the player
-#define SF_TANK_IGNORE_RANGE_IN_VIEWCONE	0x2000		// 8192		Don't use range as a factor in determining if something is in view cone
-#define SF_TANK_NOTSOLID					0x8000		// 32768
-#define SF_TANK_SOUNDON						0x10000		// FIXME: This is not really a spawnflag! It holds transient state!!!
+inline constexpr auto SF_TANK_ACTIVE = 0x0001;
+inline constexpr auto SF_TANK_PLAYER = 0x0002;
+inline constexpr auto SF_TANK_HUMANS = 0x0004;
+inline constexpr auto SF_TANK_ALIENS = 0x0008;
+inline constexpr auto SF_TANK_LINEOFSIGHT = 0x0010;
+inline constexpr auto SF_TANK_CANCONTROL = 0x0020;
+inline constexpr auto SF_TANK_DAMAGE_KICK = 0x0040; // Kick when take damage
+inline constexpr auto SF_TANK_AIM_AT_POS = 0x0080; // Aim at a particular position
+inline constexpr auto SF_TANK_AIM_ASSISTANCE = 0x0100;
+inline constexpr auto SF_TANK_NPC = 0x0200;
+inline constexpr auto SF_TANK_NPC_CONTROLLABLE = 0x0400; // 1024
+inline constexpr auto SF_TANK_NPC_SET_CONTROLLER = 0x0800; // 2048
+inline constexpr auto SF_TANK_ALLOW_PLAYER_HITS = 0x1000; // 4096		Allow friendly NPCs to fire upon enemies near the player
+inline constexpr auto SF_TANK_IGNORE_RANGE_IN_VIEWCONE = 0x2000; // 8192		Don't use range as a factor in determining if something is in view cone
+inline constexpr auto SF_TANK_NOTSOLID = 0x8000; // 32768
+inline constexpr auto SF_TANK_SOUNDON = 0x10000; // FIXME: This is not really a spawnflag! It holds transient state!!!
 
-#define FUNCTANK_DISTANCE_MAX				1200			// 100 ft.
-#define FUNCTANK_DISTANCE_MIN_TO_ENEMY		180
-#define FUNCTANK_FIREVOLUME					1000
-#define FUNCTANK_NPC_ROUTE_TIME				5.0f
+inline constexpr auto FUNCTANK_DISTANCE_MAX = 1200; // 100 ft.
+inline constexpr auto FUNCTANK_DISTANCE_MIN_TO_ENEMY = 180;
+inline constexpr auto FUNCTANK_FIREVOLUME = 1000;
+inline constexpr auto FUNCTANK_NPC_ROUTE_TIME = 5.0f;
 
 // Effect handling
 // If the func_tank has a chosen method of handling effects, use that 
@@ -50,7 +47,7 @@ enum TANKBULLET
 	TANK_BULLET_LARGE	= 3,
 };
 
-#define MORTAR_BLAST_RADIUS	350
+inline constexpr auto MORTAR_BLAST_RADIUS = 350;
 
 
 //			Custom damage
@@ -329,5 +326,3 @@ private:
 
 	[[= ks::reflect::Key{ .name = "effecthandling" } ]] int						m_iEffectHandling;
 };
-
-#endif // FUNC_TANK_H

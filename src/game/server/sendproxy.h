@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: implements various common send proxies
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SENDPROXY_H
-#define SENDPROXY_H
-
 
 #include "dt_send.h"
-
 
 class DVariant;
 
@@ -40,13 +34,6 @@ SendProp SendPropTime(
 	int offset,
 	int sizeofVar=kSizeofIgnore );
 
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-SendProp SendPropPredictableId(
-	const char *pVarName,
-	int offset,
-	int sizeofVar=kSizeofIgnore	);
-#endif
-
 SendProp SendPropIntWithMinusOneFlag(
 	const char *pVarName,
 	int offset,
@@ -62,6 +49,3 @@ SendProp SendPropStringT( const char *pVarName, int offset, int sizeofVar );
 // Purpose: Proxy that only sends data to team members
 //-----------------------------------------------------------------------------
 void* SendProxy_OnlyToTeam( const SendProp *pProp, const void *pStruct, const void *pVarData, CSendProxyRecipients *pRecipients, int objectID );
-
-
-#endif // SENDPROXY_H

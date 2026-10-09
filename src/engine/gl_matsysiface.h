@@ -1,22 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // wrapper for the material system for the engine.
 
-#ifndef GL_MATSYSIFACE_H
-#define GL_MATSYSIFACE_H
-
-
+import ks.tier1;
 #include "ivrenderview.h"
-#include "convar.h"
 #include "surfacehandle.h"
-#include "utlvector.h"
-
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -25,7 +16,6 @@ class IMaterialSystemHardwareConfig;
 struct MaterialSystem_Config_t;
 class IMaterial;
 class IDebugTextureInfo;
-class Vector;
 struct mprimitive_t;
 class CMeshBuilder;
 struct model_t;
@@ -65,11 +55,7 @@ void ShutdownWellKnownRenderTargets( void );
 void InitMaterialSystemConfig( bool bInEditMode );
 
 #ifndef DEDICATED
-#	ifdef NEWMESH
-extern std::vector< IVertexBuffer * > g_WorldStaticMeshes;
-#	else
 extern std::vector< IMesh * > g_WorldStaticMeshes;
-#	endif
 #endif
 
 extern std::vector< IMesh * > g_DepthMeshForSortID;
@@ -105,7 +91,7 @@ public:
 	void GetSurfaceListForGroup( std::vector< msurface2_t * > &list, const surfacesortgroup_t &group ) const;
 	inline int GetIndexForSortID( int nSortGroup, int sortID ) const
 	{
-		Assert(sortID<m_maxSortIDs);
+		contract_assert( sortID<m_maxSortIDs );
 		return groupOffset[nSortGroup] + sortID;
 	}
 
@@ -223,12 +209,10 @@ struct SurfaceCtx_t
 void SurfSetupSurfaceContext( SurfaceCtx_t& ctx, SurfaceHandle_t surfID );
 
 // Compute texture and lightmap coordinates
-void SurfComputeTextureCoordinate( SurfaceHandle_t surfID, Vector const& vec, float * RESTRICT uv );
+void SurfComputeTextureCoordinate( SurfaceHandle_t surfID, Vector const& vec, float * __restrict__ uv );
 void SurfComputeLightmapCoordinate( SurfaceCtx_t const& ctx, SurfaceHandle_t surfID, 
 										 Vector const& vec, Vector2D& uv );
 
 extern ConVar mat_fastspecular;
 
 void MaterialSystem_RegisterPalettedLightmapSurfaces( int numPages, void *pLightmaps );
-
-#endif // GL_MATSYSIFACE_H

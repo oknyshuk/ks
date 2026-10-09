@@ -1,57 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_DEBUG_H
-#define AI_DEBUG_H
-
-#include "fmtstr.h"
+import ks.tier1;
 #include "ai_debug_shared.h"
+import std;
+#include "gametrace.h"
+#include "engine/IEngineTrace.h"
 
+class CAI_BaseNPC;
+class CBaseEntity;
 
 // This dumps a summary result on exit
 //#define PROFILE_AI 1
 
-#define AI_PROFILE_SCOPE_BEGIN( tag )	if (0) ; else { AI_PROFILE_SCOPE( tag )
+#define AI_PROFILE_SCOPE_BEGIN( tag )	if (0) ; else { 
 #define AI_PROFILE_SCOPE_BEGIN_( pszName )	if (0) ; else { AI_PROFILE_SCOPE_( pszName )
 #define AI_PROFILE_SCOPE_END()			} do {} while (0)
 
-#if defined(VPROF_AI)
-#define VProfAI() true
-#else
 #define VProfAI() false
-#endif
-#if defined(VPROF_AI)
-#include "tier0/vprof.h"
-#define AI_PROFILE_SCOPE( tag )			VPROF( #tag )
-#define AI_PROFILE_SCOPE_( pszName )	VPROF( pszName )
-#define AI_PROFILE_MEASURE_SCOPE( tag )	VPROF( #tag )
-#elif defined(PROFILE_AI)
-#include "tier0/fasttimer.h"
-#define AI_PROFILE_SCOPE( tag )			PROFILE_SCOPE( tag )
-#define AI_PROFILE_MEASURE_SCOPE( tag )	PROFILE_SCOPE( tag )
-#else
-#define AI_PROFILE_MEASURE_SCOPE( tag )	((void)0)
-#define AI_PROFILE_SCOPE( tag )			((void)0)
-#endif
 
 #ifndef AI_PROFILE_SCOPE_
 #define AI_PROFILE_SCOPE_( pszName ) 	((void)0)
 #endif
-
 
 enum AIMsgFlags
 {
 	AIMF_IGNORE_SELECTED = 0x01
 };
 
-#ifndef DBGFLAG_STRINGS_STRIP
-void DevMsg( CAI_BaseNPC *pAI, unsigned flags, PRINTF_FORMAT_STRING const char *pszFormat, ... ) FMTFUNCTION( 3, 4 );
-void DevMsg( CAI_BaseNPC *pAI, PRINTF_FORMAT_STRING const char *pszFormat, ... ) FMTFUNCTION( 2, 3 );
-#endif
+void DevMsg( CAI_BaseNPC *pAI, unsigned flags, const char *pszFormat, ... ) [[gnu::format(printf, 3, 4)]];
+void DevMsg( CAI_BaseNPC *pAI, const char *pszFormat, ... ) [[gnu::format(printf, 2, 3)]];
 
 
 //-----------------------------------------------------------------------------
@@ -83,5 +62,3 @@ extern ConVar ai_debug_doors;
 
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_DEBUG_H

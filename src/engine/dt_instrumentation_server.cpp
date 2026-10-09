@@ -1,20 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #include "filesystem_engine.h"
 #include "filesystem.h"
 #include "dt_instrumentation_server.h"
 #include "dt_send.h"
-#include "tier1/utlstring.h"
-#include <memory>
-#include <vector>
+import std;
 #include "dt.h"
 
-#define DELTA_DISTANCE_BAND			200
-#define NUM_DELTA_DISTANCE_BANDS	(8000/DELTA_DISTANCE_BAND)
+constexpr auto DELTA_DISTANCE_BAND = 200;
+constexpr auto NUM_DELTA_DISTANCE_BANDS = (8000/DELTA_DISTANCE_BAND);
 
 
 // Data we track per SendTable on the server.
@@ -347,4 +342,3 @@ void _ServerDTI_RegisterNetworkStateChange( SendTable *pSendTable, bool bStateCh
 	else
 		++pTable->m_nNoChanges;
 }
-

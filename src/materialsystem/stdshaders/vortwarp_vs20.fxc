@@ -1,10 +1,11 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "HALFLAMBERT"					"0..1"
 // STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..1" [vs20] [PC]
 // STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..0" [CONSOLE]
-
 // DYNAMIC: "COMPRESSED_VERTS"				"0..1"
+
 #include "common_fog_vs_fxc.h"
 // DYNAMIC: "SKINNING"						"0..1"
 
@@ -173,5 +174,3 @@ VS_OUTPUT main( const VS_INPUT v )
 
 	return o;
 }
-
-

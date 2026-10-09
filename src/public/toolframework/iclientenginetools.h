@@ -1,19 +1,14 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ICLIENTENGINETOOLS_H
-#define ICLIENTENGINETOOLS_H
-
-#include "interface.h"
+import std;
+import ks.tier1;
 #include "toolframework/itoolentity.h" // HTOOLHANDLE
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class KeyValues;
 struct AudioState_t;
 
 
@@ -51,6 +46,4 @@ public:
 	virtual bool InToolMode() = 0;
 };
 
-#define VCLIENTENGINETOOLS_INTERFACE_VERSION "VCLIENTENGINETOOLS001"
-
-#endif // ICLIENTENGINETOOLS_H
+inline constexpr const char *VCLIENTENGINETOOLS_INTERFACE_VERSION = "VCLIENTENGINETOOLS001";

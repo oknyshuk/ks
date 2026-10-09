@@ -1,56 +1,45 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "SFM"						"0..0" [vs20] [PC]
 // STATIC: "SFM"						"0..1" [vs30] [PC]
 // STATIC: "SFM"						"0..0" [CONSOLE]
-
 // STATIC: "VERTEXCOLOR"					"0..1"
 // STATIC: "CUBEMAP"						"0..1"
 // STATIC: "HALFLAMBERT"					"0..1"
 // STATIC: "FLASHLIGHT"						"0..1"
-
 // disable separate detail UVs & seamless base/detail (does not appear to be used)
 // STATIC: "SEPARATE_DETAIL_UVS"			"0..0"
 // STATIC: "SEAMLESS_BASE"					"0..0"
 // STATIC: "SEAMLESS_DETAIL"				"0..0"
-
 // STATIC: "DECAL"							"0..1"
 // STATIC: "LIGHTING_PREVIEW"				"0..1"	[PC]		// Disabled. Unused on CS:GO --Thorsten
 // STATIC: "LIGHTING_PREVIEW"				"0..0" [CONSOLE]
-
 // STATIC: "TREESWAY"						"0..0" [vs20] [PC]
 // STATIC: "TREESWAY"						"0..2" [vs30] [PC]
 // STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..1" [vs20] [PC]
 // STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..0" [CONSOLE]
-
 // STATIC: "CASCADED_SHADOW_MAPPING"		"0..1" [vs20] [PC]
 // STATIC: "CASCADED_SHADOW_MAPPING"		"0..0" [vs30] [PC]
-
 // STATIC: "CSM_BLENDING"					"0..1"
-
 // DYNAMIC: "COMPRESSED_VERTS"				"0..1"
 // DYNAMIC: "DYNAMIC_LIGHT"					"0..1"
 // DYNAMIC: "SKINNING"						"0..1"
-
 // DYNAMIC: "MORPHING"						"0..0" [ = false ]
 // DYNAMIC: "TESSELLATION"					"0..0" [vs30] [PC]
 // DYNAMIC: "TESSELLATION"					"0..0" [CONSOLE]
 // DYNAMIC: "TESSELLATION"					"0..0" [vs20] [PC]
 // DYNAMIC: "NUM_LIGHTS"					"0..2" [vs20] [PC]
 // DYNAMIC: "NUM_LIGHTS"					"0..0" [vs20] [CONSOLE]
-// DYNAMIC: "STATICLIGHT3"					"0..2" 
-
+// DYNAMIC: "STATICLIGHT3"					"0..2"
 // If using static control flow on Direct3D, we should use the NUM_LIGHTS=0 combo
-//  SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 ) [vs20] [PC]
-
+// SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 ) [vs20] [PC]
 //	SKIP: ($SEPARATE_DETAIL_UVS) && ($SEAMLESS_DETAIL)
 //	SKIP: ($TREESWAY) && ($MORPHING)
 //	SKIP: ($TREESWAY) && ($TESSELLATION)
 //	SKIP: ( $TREESWAY ) && ( $SEAMLESS_DETAIL || $SEAMLESS_BASE )
-
 //	SKIP: ( $SFM == 0 ) && ( $MORPHING )
 //	SKIP: ( $SFM == 0 ) && ( $TESSELLATION )
-
 // This blows instruction limits and isn't used
 // That is, non-static-control flow is only on MacOS, which doesn't use HARDWAREFOGBLEND
 // SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 1 ) && ( $HARDWAREFOGBLEND )

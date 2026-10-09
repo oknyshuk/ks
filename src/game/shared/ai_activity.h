@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_ACTIVITY_H
-#define AI_ACTIVITY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #define ACTIVITY_NOT_AVAILABLE		-1
 
@@ -1219,7 +1213,3 @@ typedef enum
 	// this is the end of the global activities, private per-monster activities start here.
 	LAST_SHARED_ACTIVITY,
 } Activity;
-
-
-#endif // AI_ACTIVITY_H
-

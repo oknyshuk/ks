@@ -1,14 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Circular Buffer
-//
-//=============================================================================//
 
-#include "tier0/dbg.h"
-#include "tier1/fixed_pool.h"
-#include "circularbuffer.h"
+import ks.tier1;
 
-#include "tier0/memalloc.h"
+import std;
 CCircularBuffer::CCircularBuffer()
 {
 	SetSize( 0 );
@@ -26,7 +23,7 @@ CCircularBuffer::CCircularBuffer(int size)
 //------------------------------------------------------------------------------
 void CCircularBuffer::SetSize(int size)
 {
-	Assert( this );
+	contract_assert( this );
 
 	m_nSize = size;
 	m_nRead = 0;
@@ -114,16 +111,16 @@ int CCircularBuffer::Peek(char *pchDest, int nCount)
 	if (m_nRead + nCount > m_nSize)
 	{
 		int nCount1 = m_nSize - m_nRead;
-		memcpy(pchDest, &m_chData[m_nRead], nCount1);
+		std::memcpy(pchDest, &m_chData[m_nRead], nCount1);
 		pchDest += nCount1;
 
 		int nCount2 = nCount - nCount1;
-		memcpy(pchDest, m_chData, nCount2);
+		std::memcpy(pchDest, m_chData, nCount2);
 	}
 	// Otherwise copy it in one go.
 	else
 	{
-		memcpy(pchDest, &m_chData[m_nRead], nCount);
+		std::memcpy(pchDest, &m_chData[m_nRead], nCount);
 	}
 	
 	AssertValid();
@@ -193,7 +190,7 @@ int CCircularBuffer::Read(void *pchDestIn, int nCount)
 	{
 		m_nRead = Advance(nPeeked);
 
-		Assert(m_nRead == nPeeked);
+		contract_assert( m_nRead == nPeeked );
 	}
 	else
 	{
@@ -230,7 +227,7 @@ int CCircularBuffer::Write(void *pData, int nBytesRequested)
 			to = m_nSize;
 		}
 
-		memcpy(&m_chData[from], pDataToWrite, to - from);
+		std::memcpy(&m_chData[from], pDataToWrite, to - from);
 		pDataToWrite += to - from;
 
 		m_nWrite = to % m_nSize;
@@ -302,4 +299,3 @@ void FreeCircularBuffer( CCircularBuffer *pCircularBuffer )
 		g_pMemAlloc->Free( pCircularBuffer );
 	}
 }
-

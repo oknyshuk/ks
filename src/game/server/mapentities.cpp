@@ -1,10 +1,33 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Controls the loading, parsing and creation of the entities from the BSP.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Controls the loading, parsing and creation of the entities from the BSP.
+
+import std;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
 #include "entitylist.h"
 #include "mapentities_shared.h"
 #include "soundent.h"
@@ -20,7 +43,6 @@
 #include "toolframework/iserverenginetools.h"
 #include "cs_gamerules.h"
 #include "weapon_csbase.h"
-
 
 static CStringRegistry *g_pClassnameSpawnPriority = nullptr;
 extern edict_t *g_pForceAttachEdict;
@@ -44,7 +66,7 @@ CBaseEntity *CreateEntityByName( const char *className, int iForceEdictIndex, bo
 		return nullptr;
 
 	CBaseEntity *pEntity = pNetwork->GetBaseEntity();
-	Assert( pEntity );
+	contract_assert( pEntity );
 	if ( bNotify )
 	{
 		gEntList.NotifyCreateEntity( pEntity );
@@ -59,7 +81,7 @@ CBaseNetworkable *CreateNetworkableByName( const char *className )
 		return nullptr;
 
 	CBaseNetworkable *pNetworkable = pNetwork->GetBaseNetworkable();
-	Assert( pNetworkable );
+	contract_assert( pNetworkable );
 	return pNetworkable;
 }
 
@@ -81,7 +103,7 @@ void FreeContainingEntity( edict_t *ed )
 // parent name may have a , in it to include an attachment point
 string_t ExtractParentName(string_t parentName)
 {
-	if ( !strchr(STRING(parentName), ',') )
+	if ( !std::strchr(STRING(parentName), ',') )
 		return parentName;
 
 	char szToken[256];
@@ -165,7 +187,6 @@ static void ComputeSpawnHierarchyDepth( int nEntities, HierarchicalSpawn_t *pSpa
 
 static void SortSpawnListByHierarchy( int nEntities, HierarchicalSpawn_t *pSpawnList )
 {
-	MEM_ALLOC_CREDIT();
 	g_pClassnameSpawnPriority = new CStringRegistry;
 	// this will cause the entities to be spawned in the indicated order
 	// Highest string ID spawns first.  String ID is spawn priority.
@@ -187,7 +208,7 @@ static void SortSpawnListByHierarchy( int nEntities, HierarchicalSpawn_t *pSpawn
 	// Sort the entities (other than the world) by hierarchy depth, in order to spawn them in
 	// that order. This insures that each entity's parent spawns before it does so that
 	// it can properly set up anything that relies on hierarchy.
-	qsort(&pSpawnList[0], nEntities, sizeof(pSpawnList[0]), (int (*)(const void *, const void *))CompareSpawnOrder);
+	std::qsort(&pSpawnList[0], nEntities, sizeof(pSpawnList[0]), (int (*)(const void *, const void *))CompareSpawnOrder);
 	delete g_pClassnameSpawnPriority;
 	g_pClassnameSpawnPriority = nullptr;
 }
@@ -200,7 +221,7 @@ void SetupParentsForSpawnList( int nEntities, HierarchicalSpawn_t *pSpawnList )
 		CBaseEntity *pEntity = pSpawnList[nEntity].m_pEntity;
 		if ( pEntity )
 		{
-			if ( strchr(STRING(pEntity->m_iParent), ',') )
+			if ( std::strchr(STRING(pEntity->m_iParent), ',') )
 			{
 				char szToken[256];
 				const char *pAttachmentName = nexttoken(szToken, STRING(pEntity->m_iParent), ',');
@@ -244,7 +265,7 @@ void SpawnAllEntities( int nEntities, HierarchicalSpawn_t *pSpawnList, bool bAct
 	int nEntity;
 	for (nEntity = 0; nEntity < nEntities; nEntity++)
 	{
-		VPROF( "MapEntity_ParseAllEntities_Spawn");
+		CVProfScope _( "MapEntity_ParseAllEntities_Spawn", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		CBaseEntity *pEntity = pSpawnList[nEntity].m_pEntity;
 
 		if ( pSpawnList[nEntity].m_pDeferredParent )
@@ -284,7 +305,7 @@ void SpawnAllEntities( int nEntities, HierarchicalSpawn_t *pSpawnList, bool bAct
 
 	if ( bActivateEntities )
 	{
-		VPROF( "MapEntity_ParseAllEntities_Activate");
+		CVProfScope _( "MapEntity_ParseAllEntities_Activate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		bool bAsyncAnims = mdlcache->SetAsyncLoad( MDLCACHE_ANIMBLOCK, false );
 		for (nEntity = 0; nEntity < nEntities; nEntity++)
 		{
@@ -339,8 +360,8 @@ void CMapEntitySpawner::AddEntity( CBaseEntity *pEntity, const char *pCurMapData
 	// To 
 	if ( dynamic_cast<CWorld*>( pEntity ) )
 	{
-		Assert( !m_bFoundryMode );
-		VPROF( "MapEntity_ParseAllEntities_SpawnWorld");
+		contract_assert( !m_bFoundryMode );
+		CVProfScope _( "MapEntity_ParseAllEntities_SpawnWorld", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		pEntity->m_iParent = NULL_STRING;	// don't allow a parent on the first entity (worldspawn)
 
@@ -351,7 +372,7 @@ void CMapEntitySpawner::AddEntity( CBaseEntity *pEntity, const char *pCurMapData
 	CNodeEnt *pNode = dynamic_cast<CNodeEnt*>(pEntity);
 	if ( pNode )
 	{
-		VPROF( "MapEntity_ParseAllEntities_SpawnTransients");
+		CVProfScope _( "MapEntity_ParseAllEntities_SpawnTransients", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		// We overflow the max edicts on large maps that have lots of entities.
 		// Nodes & Lights remove themselves immediately on Spawn(), so dispatch their
@@ -370,7 +391,7 @@ void CMapEntitySpawner::AddEntity( CBaseEntity *pEntity, const char *pCurMapData
 
 	if ( dynamic_cast<CLight*>(pEntity) )
 	{
-		VPROF( "MapEntity_ParseAllEntities_SpawnTransients");
+		CVProfScope _( "MapEntity_ParseAllEntities_SpawnTransients", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		// We overflow the max edicts on large maps that have lots of entities.
 		// Nodes & Lights remove themselves immediately on Spawn(), so dispatch their
@@ -408,7 +429,7 @@ void MapEntity_ParseAllEntites_SpawnTemplates( CPointTemplate **pTemplates, int 
 	// Now loop through all our point_template entities and tell them to make templates of everything they're pointing to
 	for ( int i = 0; i < iTemplateCount; i++ )
 	{
-		VPROF( "MapEntity_ParseAllEntities_SpawnTemplates");
+		CVProfScope _( "MapEntity_ParseAllEntities_SpawnTemplates", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		CPointTemplate *pPointTemplate = pTemplates[i];
 
 		// First, tell the Point template to Spawn
@@ -454,10 +475,11 @@ void MapEntity_ParseAllEntites_SpawnTemplates( CPointTemplate **pTemplates, int 
 
 void CMapEntitySpawner::HandleTemplates()
 {
+	ks::ScratchArena<> scratch;
 	if( m_PointTemplates.empty() )
 		return;
 
-	CBaseEntity **pSpawnedEntities = (CBaseEntity **)stackalloc( sizeof(CBaseEntity *) * m_nEntities );
+	CBaseEntity **pSpawnedEntities = scratch.Alloc<CBaseEntity *>( m_nEntities );
 	for( int i = 0; i != m_nEntities; ++i )
 	{
 		pSpawnedEntities[i] = m_pSpawnList[i].m_pEntity;
@@ -507,7 +529,7 @@ void CMapEntitySpawner::PurgeRemovedEntities()
 //-----------------------------------------------------------------------------
 void MapEntity_ParseAllEntities(const char *pMapData, IMapEntityFilter *pFilter, bool bActivateEntities)
 {
-	VPROF("MapEntity_ParseAllEntities");
+	CVProfScope _( "MapEntity_ParseAllEntities", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CMapEntitySpawner spawner;
 
@@ -672,5 +694,3 @@ const char *MapEntity_ParseEntity(CBaseEntity *&pEntity, const char *pEntData, I
 	//
 	return entData.CurrentBufferPosition();
 }
-
-

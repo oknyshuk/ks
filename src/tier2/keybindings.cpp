@@ -1,16 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "tier2/keybindings.h"
 #include "tier2/tier2.h"
 #include "inputsystem/iinputsystem.h"
-
-
 
 //-----------------------------------------------------------------------------
 // Set a key binding
@@ -24,7 +17,7 @@ void CKeyBindings::SetBinding( ButtonCode_t code, const char *pBinding )
 	if ( !m_KeyInfo[code].empty() )
 	{
 		// Exactly the same, don't re-bind and fragment memory
-		if ( !Q_stricmp( m_KeyInfo[code].c_str(), pBinding ) )
+		if ( !V_stricmp( m_KeyInfo[code].c_str(), pBinding ) )
 			return;
 	}
 			
@@ -114,12 +107,12 @@ const char *CKeyBindings::ButtonNameForBinding( const char *pBinding )
 
 		if ( m_KeyInfo[i][0] == '+' )
 		{
-			if ( !Q_stricmp( &m_KeyInfo[i][1], pBind ) )
+			if ( !V_stricmp( &m_KeyInfo[i][1], pBind ) )
 				return g_pInputSystem->ButtonCodeToString( (ButtonCode_t)i );
 		}
 		else
 		{
-			if ( !Q_stricmp( m_KeyInfo[i].c_str(), pBind ) )
+			if ( !V_stricmp( m_KeyInfo[i].c_str(), pBind ) )
 				return g_pInputSystem->ButtonCodeToString( (ButtonCode_t)i );
 		}
 	}
@@ -134,6 +127,3 @@ const char *CKeyBindings::GetBindingForButton( ButtonCode_t code )
 
 	return m_KeyInfo[ code ].c_str();
 }
-
-
-

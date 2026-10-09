@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SPRITE_H
-#define SPRITE_H
+import std;
 
 #include "reflect_annotations.h"
 #include "dt_recv.h"
@@ -14,9 +10,9 @@
 #include "predictable_entity.h"
 #include "baseentity_shared.h"
 
-#define SF_SPRITE_STARTON		0x0001
-#define SF_SPRITE_ONCE			0x0002
-#define SF_SPRITE_TEMPORARY		0x8000
+inline constexpr auto SF_SPRITE_STARTON = 0x0001;
+inline constexpr auto SF_SPRITE_ONCE = 0x0002;
+inline constexpr auto SF_SPRITE_TEMPORARY = 0x8000;
 
 constexpr float MAX_GLOW_PROXY_SIZE = 64.0f;
 
@@ -312,7 +308,8 @@ public:
 
 
 // Macro to wrap creation
-#define SPRITE_CREATE_PREDICTABLE( name, origin, animate ) \
-	CSprite::SpriteCreatePredictable( __FILE__, __LINE__, name, origin, animate )
-
-#endif // SPRITE_H
+template <typename T1, typename T2, typename T3>
+inline auto SPRITE_CREATE_PREDICTABLE( T1 name, T2 origin, T3 animate, std::source_location loc = std::source_location::current() )
+{
+	return CSprite::SpriteCreatePredictable( loc.file_name(), static_cast<int>( loc.line() ), name, origin, animate );
+}

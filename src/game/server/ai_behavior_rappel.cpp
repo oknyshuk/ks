@@ -1,16 +1,42 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "ai_motor.h"
 #include "ai_behavior_rappel.h"
 #include "beam_shared.h"
 #include "rope.h"
 #include "eventqueue.h"
-
 
 //=========================================================
 //=========================================================
@@ -31,7 +57,7 @@ LINK_ENTITY_TO_CLASS( rope_anchor, CRopeAnchor );
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-#define RAPPEL_ROPE_WIDTH 1
+constexpr auto RAPPEL_ROPE_WIDTH = 1;
 void CRopeAnchor::Spawn()
 {
 	BaseClass::Spawn();
@@ -99,7 +125,7 @@ bool CAI_RappelBehavior::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if( FStrEq( szKeyName, "waitingtorappel" ) )
 	{
-		m_bWaitingToRappel = ( atoi(szValue) != 0);
+		m_bWaitingToRappel = ( std::atoi(szValue) != 0);
 		m_bOnGround = !m_bWaitingToRappel;
 		return true;
 	}
@@ -114,9 +140,9 @@ void CAI_RappelBehavior::Precache()
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-#define RAPPEL_MAX_SPEED	600	// Go this fast if you're really high.
-#define RAPPEL_MIN_SPEED	60 // Go no slower than this.
-#define RAPPEL_DECEL_DIST	(20.0f * 12.0f)	// Start slowing down when you're this close to the ground.
+constexpr auto RAPPEL_MAX_SPEED = 600; // Go this fast if you're really high.
+constexpr auto RAPPEL_MIN_SPEED = 60; // Go no slower than this.
+constexpr auto RAPPEL_DECEL_DIST = (20.0f * 12.0f); // Start slowing down when you're this close to the ground.
 void CAI_RappelBehavior::SetDescentSpeed()
 {
 	// Trace to the floor and see how close we're getting. Slow down if we're close.
@@ -287,7 +313,7 @@ void CAI_RappelBehavior::GatherConditions()
 		if( (GetAbsOrigin().z - GetEnemy()->GetAbsOrigin().z >= 36.0f) && GetOuter()->GetShotRegulator()->ShouldShoot() )
 		{
 			Activity activity = GetOuter()->TranslateActivity( ACT_GESTURE_RANGE_ATTACK1 );
-			Assert( activity != ACT_INVALID );
+			contract_assert( activity != ACT_INVALID );
 			GetOuter()->AddGesture( activity );
 			// FIXME: this seems a bit wacked
 			GetOuter()->Weapon_SetActivity( GetOuter()->Weapon_TranslateActivity( ACT_RANGE_ATTACK1 ), 0 );

@@ -1,12 +1,11 @@
-//====== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-#ifndef PUSHENTITY_H
-#define PUSHENTITY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #include "movetype_push.h"
+#include "baseentity.h"
+#include "util_shared.h"
+#include "vphysics_interface.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Keeps track of original positions of any entities that are being possibly pushed
@@ -144,7 +143,7 @@ public:
 
 	bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
 	{
-		Assert( dynamic_cast<CBaseEntity*>(pHandleEntity) );
+		contract_assert( dynamic_cast<CBaseEntity*>(pHandleEntity) );
 		CBaseEntity *pTestEntity = static_cast<CBaseEntity*>(pHandleEntity);
 
 		if ( UTIL_EntityHasMatchingRootParent( m_pRootParent, pTestEntity ) )
@@ -163,5 +162,3 @@ private:
 };
 
 extern CPhysicsPushedEntities *g_pPushedEntities;
-
-#endif  // PUSHENTITY_H

@@ -1,8 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "quakedef.h"
 #include "filetransfermgr.h"
@@ -60,6 +57,3 @@ int CFileTransferMgr::InvalidIncoming() const
 void CFileTransferMgr::GetIncomingUserData( int i, const void* &pData, int &dataLen )
 {
 }
-
-
-

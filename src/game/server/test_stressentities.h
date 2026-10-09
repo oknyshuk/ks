@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef TEST_STRESSENTITIES_H
-#define TEST_STRESSENTITIES_H
-
+import std;
+import ks.math;
 
 class CBaseEntity;
 
@@ -48,6 +44,3 @@ private:
 // Moves the entity to a random place in the level and returns the entity.
 CBaseEntity*	MoveToRandomSpot( CBaseEntity *pEnt );
 Vector			GetRandomSpot();
-
-
-#endif // TEST_STRESSENTITIES_H

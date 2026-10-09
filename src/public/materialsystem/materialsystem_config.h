@@ -1,17 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef MATERIALSYSTEM_CONFIG_H
-#define MATERIALSYSTEM_CONFIG_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "materialsystem/imaterialsystem.h"
 
-#define MATERIALSYSTEM_CONFIG_VERSION "VMaterialSystemConfig004"
+inline constexpr const char *MATERIALSYSTEM_CONFIG_VERSION = "VMaterialSystemConfig004";
 
 enum MaterialSystem_Config_Flags_t
 {
@@ -133,7 +126,7 @@ struct MaterialSystem_Config_t
 				
 	MaterialSystem_Config_t()
 	{
-		memset( this, 0, sizeof( *this ) );
+		std::memset( this, 0, sizeof( *this ) );
 
 		// video config defaults
 		SetFlag( MATSYS_VIDCFG_FLAGS_WINDOWED, false );
@@ -210,6 +203,3 @@ struct MaterialSystem_Config_t
 		m_bCSMAccurateBlending = true;
 	}
 };
-
-
-#endif // MATERIALSYSTEM_CONFIG_H

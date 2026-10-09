@@ -1,63 +1,39 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifdef PROTECTED_THINGS_ENABLE
-	#undef PROTECTED_THINGS_ENABLE
-#endif
-
-#include "platform.h"
-#include <atomic>
+import std;
 
 // HACK: Need ShellExecute for PSD updates
 
+import ks.vstdlib;
 #include "shaderapi/ishaderapi.h"
 #include "materialsystem_global.h"
 #include "itextureinternal.h"
-#include "tier1/intern_pool.h"
-#include "tier1/string_ops.h"
-#include "time.h"
-#include <sys/types.h>
-#include <sys/stat.h>
 #include "bitmap/imageformat.h"
 #include "bitmap/tgaloader.h"
 #include "bitmap/tgawriter.h"
 #include "colorspace.h"
-#include "string.h"
-#include <malloc.h>
-#include <stdlib.h>
 #include "IHardwareConfigInternal.h"
 #include "filesystem.h"
-#include "tier1/strtools.h"
 #include "vtf/vtf.h"
 #include "materialsystem/materialsystem_config.h"
 #include "texturemanager.h"
-#include "tier1/byte_reader.h"
 #include "pixelwriter.h"
-#include "tier1/callqueue.h"
-#include "tier1/map_ops.h"
 #include "tier2/fileutils.h"
 #include "filesystem.h"
 #include "tier2/tier2.h"
-#include "ctype.h"
 #include "ifilelist.h"
-#include "tier0/icommandline.h"
 #include "datacache/imdlcache.h"
-#include "tier0/vprof.h"
 
-#define MATSYS_INTERNAL
 
 #include "cmaterialsystem.h"
 
-#include "tier0/memalloc.h"
 // this allows the command line to force the "all mips" flag to on for all textures
 bool g_bForceTextureAllMips = false;
 
-#define TEXTURE_FNAME_EXTENSION			PLATFORM_EXT ".vtf"
-#define TEXTURE_FNAME_EXTENSION_NORMAL	"_normal" PLATFORM_EXT ".vtf"
-#define TEXTURE_FNAME_EXTENSION_LEN		( sizeof( TEXTURE_FNAME_EXTENSION ) - 1 )
+inline constexpr char TEXTURE_FNAME_EXTENSION[] = ".vtf";
+inline constexpr char TEXTURE_FNAME_EXTENSION_NORMAL[] = "_normal"".vtf";
+inline constexpr auto TEXTURE_FNAME_EXTENSION_LEN = ( sizeof( TEXTURE_FNAME_EXTENSION ) - 1 );
 
 ConVar mat_spewalloc( "mat_spewalloc", "0", FCVAR_ARCHIVE );
 
@@ -274,7 +250,7 @@ public:
 	// Returns:
 	//		pointer to the resource data, or NULL. Note that the data from this pointer can disappear when
 	// the texture goes away - you want to copy this data!
-	virtual void *GetResourceData( uint32 eDataType, size_t *pNumBytes ) const;
+	virtual void *GetResourceData( uint32 eDataType, std::size_t *pNumBytes ) const;
 
 	virtual int GetApproximateVidMemBytes( void ) const;
 
@@ -539,8 +515,8 @@ public:
 
 	virtual void Bind( Sampler_t sampler, TextureBindFlags_t nBindFlags )
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
-		Assert( m_nActiveTarget < std::ssize( m_Targets ) );
+		contract_assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
+		contract_assert( m_nActiveTarget < std::ssize( m_Targets ) );
 
 		if( m_nActiveTarget < 0 )
 			return BaseClass::Bind( sampler, nBindFlags );
@@ -557,8 +533,8 @@ public:
 
 	virtual void Bind( Sampler_t sampler1, TextureBindFlags_t nBindFlags, int nFrame, Sampler_t sampler2 = SHADER_SAMPLER_INVALID )
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
-		Assert( m_nActiveTarget < std::ssize( m_Targets ) );
+		contract_assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
+		contract_assert( m_nActiveTarget < std::ssize( m_Targets ) );
 		if( m_nActiveTarget < 0 )
 			return BaseClass::Bind( sampler1, nBindFlags, nFrame, sampler2 );
 
@@ -577,8 +553,8 @@ public:
 
 	virtual ShaderAPITextureHandle_t GetTextureHandle( int nFrame, int nTextureChannel =0 )
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
-		Assert( m_nActiveTarget < std::ssize( m_Targets ) );
+		contract_assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
+		contract_assert( m_nActiveTarget < std::ssize( m_Targets ) );
 
 		if( m_nActiveTarget < 0 )
 			return BaseClass::GetTextureHandle( nFrame, nTextureChannel );
@@ -605,7 +581,7 @@ public:
 		temp.bHasSeparateDepth = (depth == MATERIAL_RT_DEPTH_SEPARATE) || (depth == MATERIAL_RT_DEPTH_ONLY);
 
 		{
-			Assert( HasBeenAllocated() );
+			contract_assert( HasBeenAllocated() );
 		}
 
 		m_Targets.push_back( temp );
@@ -667,7 +643,7 @@ public:
 		ICallQueue *pCallQueue = materials->GetRenderContext()->GetCallQueue();
 		if ( pCallQueue )
 		{
-			Assert( m_nQueuedActiveTarget < std::ssize( m_Targets ) );
+			contract_assert( m_nQueuedActiveTarget < std::ssize( m_Targets ) );
 			if( (m_nQueuedActiveTarget >= 0) && (m_nQueuedActiveTarget < std::ssize( m_Targets )) )
 			{
 				iDownSize = m_Targets[m_nQueuedActiveTarget].iDownSizePow2;
@@ -675,7 +651,7 @@ public:
 		}
 		else
 		{
-			Assert( m_nActiveTarget < std::ssize( m_Targets ) );
+			contract_assert( m_nActiveTarget < std::ssize( m_Targets ) );
 			if( (m_nActiveTarget >= 0) && (m_nActiveTarget < std::ssize( m_Targets )) )
 			{
 				iDownSize = m_Targets[m_nActiveTarget].iDownSizePow2;
@@ -692,7 +668,7 @@ public:
 		ICallQueue *pCallQueue = materials->GetRenderContext()->GetCallQueue();
 		if ( pCallQueue )
 		{
-			Assert( m_nQueuedActiveTarget < std::ssize( m_Targets ) );
+			contract_assert( m_nQueuedActiveTarget < std::ssize( m_Targets ) );
 			if( (m_nQueuedActiveTarget >= 0) && (m_nQueuedActiveTarget < std::ssize( m_Targets )) )
 			{
 				iDownSize = m_Targets[m_nQueuedActiveTarget].iDownSizePow2;
@@ -700,7 +676,7 @@ public:
 		}
 		else
 		{
-			Assert( m_nActiveTarget < std::ssize( m_Targets ) );
+			contract_assert( m_nActiveTarget < std::ssize( m_Targets ) );
 			if( (m_nActiveTarget >= 0) && (m_nActiveTarget < std::ssize( m_Targets )) )
 			{
 				iDownSize = m_Targets[m_nActiveTarget].iDownSizePow2;
@@ -712,8 +688,8 @@ public:
 
 	virtual bool AllocateShaderAPITextures()
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
-		Assert( !HasBeenAllocated() );
+		contract_assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
+		contract_assert( !HasBeenAllocated() );
 
 		if ( !BaseClass::AllocateShaderAPITextures() )
 			return false;
@@ -739,10 +715,9 @@ public:
 			// Create the depth render target buffer
 			if ( m_Targets[i].bHasSeparateDepth )
 			{
-				MEM_ALLOC_CREDIT();
 
 				char debugName[128];
-				sprintf( debugName, "%s_ZBuffer", GetName() );
+				std::sprintf( debugName, "%s_ZBuffer", GetName() );
 
 				m_Targets[i].depthHandle = g_pShaderAPI->CreateDepthTexture(
 					m_ImageFormat,
@@ -759,7 +734,7 @@ public:
 
 	virtual void FreeShaderAPITextures()
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
+		contract_assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
 		for( int i = 0; i != std::ssize( m_Targets ); ++i )
 		{
 			if ( g_pShaderAPI->IsTexture( m_Targets[i].handle ) )
@@ -783,7 +758,7 @@ public:
 	//-----------------------------------------------------------------------------
 	virtual bool SetRenderTarget( int nRenderTargetID )
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
+		contract_assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
 		return SetRenderTarget( nRenderTargetID, nullptr );
 	}
 
@@ -793,8 +768,8 @@ public:
 	//-----------------------------------------------------------------------------
 	bool SetRenderTarget( int nRenderTargetID, ITexture *pDepthTexture )
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
-		Assert( m_nActiveTarget < std::ssize( m_Targets ) );
+		contract_assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
+		contract_assert( m_nActiveTarget < std::ssize( m_Targets ) );
 		if( (m_nActiveTarget < 0) || (m_nActiveTarget >= std::ssize( m_Targets )) )
 			return BaseClass::SetRenderTarget( nRenderTargetID, pDepthTexture );
 
@@ -802,7 +777,7 @@ public:
 			return false;
 
 		// Make sure we've actually allocated the texture handles
-		Assert( HasBeenAllocated() );
+		contract_assert( HasBeenAllocated() );
 
 		ShaderAPITextureHandle_t textureHandle = m_Targets[m_nActiveTarget].handle;
 		ShaderAPITextureHandle_t depthTextureHandle = (unsigned int)SHADER_RENDERTARGET_DEPTHBUFFER;
@@ -829,12 +804,12 @@ public:
 	// Stretch blit the framebuffer into this texture.
 	virtual void CopyFrameBufferToMe( int nRenderTargetID = 0, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr )
 	{
-		Assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
-		Assert( m_nActiveTarget < std::ssize( m_Targets ) );
+		contract_assert( materials->GetRenderContext()->GetCallQueue() == nullptr );
+		contract_assert( m_nActiveTarget < std::ssize( m_Targets ) );
 		if( (m_nActiveTarget < 0) || (m_nActiveTarget >= std::ssize( m_Targets )) )
 			return BaseClass::CopyFrameBufferToMe( nRenderTargetID, pSrcRect, pDstRect );
 
-		Assert( m_pTextureHandles && m_nFrameCount >= 1 );
+		contract_assert( m_pTextureHandles && m_nFrameCount >= 1 );
 
 		if ( m_pTextureHandles && m_nFrameCount >= 1 )
 		{
@@ -930,7 +905,7 @@ public:
 	// Returns:
 	//		pointer to the resource data, or NULL. Note that the data from this pointer can disappear when
 	// the texture goes away - you want to copy this data!
-	virtual void *GetResourceData( uint32 eDataType, size_t *pNumBytes ) const { return nullptr; }
+	virtual void *GetResourceData( uint32 eDataType, std::size_t *pNumBytes ) const { return nullptr; }
 
 	virtual int GetApproximateVidMemBytes( void ) const { return 32; }
 
@@ -1261,7 +1236,7 @@ CTexture::~CTexture()
 //-----------------------------------------------------------------------------
 void CTexture::Init( int w, int h, int d, ImageFormat fmt, int iFlags, int iFrameCount )
 {
-	Assert( iFrameCount > 0 );
+	contract_assert( iFrameCount > 0 );
 
 	// This is necessary to prevent blowing away the allocated state,
 	// which is necessary for the ReleaseTextureHandles call below to work.
@@ -1431,8 +1406,8 @@ void CTexture::ApplyRenderTargetSizeMode( int &width, int &height, ImageFormat f
 		case RT_SIZE_DEFAULT:
 		{
 			// Assume that the input is pow2.
-			Assert( ( width & ( width - 1 ) ) == 0 );
-			Assert( ( height & ( height - 1 ) ) == 0 );
+			contract_assert( ( width & ( width - 1 ) ) == 0 );
+			contract_assert( ( height & ( height - 1 ) ) == 0 );
 			int fbWidth, fbHeight;
 			MaterialSystem()->GetBackBufferDimensions( fbWidth, fbHeight );
 			while( width > fbWidth )
@@ -1471,10 +1446,10 @@ void CTexture::ApplyRenderTargetSizeMode( int &width, int &height, ImageFormat f
 
 		default:
 		{
-			Assert( m_RenderTargetSizeMode == RT_SIZE_NO_CHANGE );
+			contract_assert( m_RenderTargetSizeMode == RT_SIZE_NO_CHANGE );
 			
 			// Cannot use RT_SIZE_NO_CHANGE if they are sharing the depth buffer.
-			Assert( m_nOriginalRenderTargetType != RENDER_TARGET );
+			contract_assert( m_nOriginalRenderTargetType != RENDER_TARGET );
 		}
 		break;
 	}
@@ -1503,7 +1478,7 @@ void CTexture::InitRenderTarget(
 	{
 		static int id = 0;
 		char pName[128];
-		Q_snprintf( pName, sizeof( pName ), "__render_target_%d", id );
+		V_snprintf( pName, sizeof( pName ), "__render_target_%d", id );
 		++id;
 		SetName( pName );
 	}
@@ -1577,13 +1552,13 @@ void CTexture::OnRestore()
 				int iFrameCount = m_nFrameCount;
 				if ( bShouldForce )
 				{
-					Assert( !( nFlags & TEXTUREFLAGS_DEPTHRENDERTARGET ) );
+					contract_assert( !( nFlags & TEXTUREFLAGS_DEPTHRENDERTARGET ) );
 					iFrameCount = 2;
 					nFlags |= TEXTUREFLAGS_DEPTHRENDERTARGET;
 				}
 				else
 				{
-					Assert( ( nFlags & TEXTUREFLAGS_DEPTHRENDERTARGET ) );
+					contract_assert( ( nFlags & TEXTUREFLAGS_DEPTHRENDERTARGET ) );
 					iFrameCount = 1;
 					nFlags &= ~TEXTUREFLAGS_DEPTHRENDERTARGET;
 				}
@@ -1618,10 +1593,10 @@ void CTexture::OnRestore()
 void CTexture::InitProceduralTexture( const char *pTextureName, const char *pTextureGroupName, int w, int h, int d, ImageFormat fmt, int nFlags )
 {
 	// Compressed textures aren't allowed for procedural textures, except the runtime ones
-	Assert( !ImageLoader::IsCompressed( fmt ) || ImageLoader::IsRuntimeCompressed( fmt ) );
+	contract_assert( !ImageLoader::IsCompressed( fmt ) || ImageLoader::IsRuntimeCompressed( fmt ) );
 
 	// We shouldn't be asking for render targets here
-	Assert( (nFlags & (TEXTUREFLAGS_RENDERTARGET | TEXTUREFLAGS_DEPTHRENDERTARGET)) == 0 );
+	contract_assert( (nFlags & (TEXTUREFLAGS_RENDERTARGET | TEXTUREFLAGS_DEPTHRENDERTARGET)) == 0 );
 
 	SetName( pTextureName );
 
@@ -1665,11 +1640,11 @@ void CTexture::InitFileTexture( const char *pTextureFile, const char *pTextureGr
 //-----------------------------------------------------------------------------
 void CTexture::AllocateTextureHandles()
 {
-	Assert( !m_pTextureHandles );
+	contract_assert( !m_pTextureHandles );
 
 	if ( m_nFrameCount <= 0 )
 	{
-		AssertMsg( false, "CTexture::AllocateTextureHandles attempted to allocate 0 frames of texture handles!" );
+		contract_assert( false && "CTexture::AllocateTextureHandles attempted to allocate 0 frames of texture handles!" );
 		Warning( "CTexture::AllocateTextureHandles \"%s\" attempted to allocate 0 frames of texture handles!", GetName() );
 		m_nFrameCount = 1;
 	}
@@ -1758,7 +1733,7 @@ int GetCreationFlags( int iTextureFlags, int iInternalTextureFlags, ImageFormat 
 //-----------------------------------------------------------------------------
 bool CTexture::AllocateShaderAPITextures()
 {
-	Assert( !HasBeenAllocated() );
+	contract_assert( !HasBeenAllocated() );
 
 	if ( !g_pShaderAPI->CanDownloadTextures() )
 		return false;
@@ -1816,11 +1791,10 @@ bool CTexture::AllocateShaderAPITextures()
 	// Create the depth render target buffer
 	if ( m_nFlags & TEXTUREFLAGS_DEPTHRENDERTARGET )
 	{
-		MEM_ALLOC_CREDIT();
-		Assert( nCount == 1 );
+		contract_assert( nCount == 1 );
 
 		char debugName[128];
-		sprintf( debugName, "%s_ZBuffer", GetName() );
+		std::sprintf( debugName, "%s_ZBuffer", GetName() );
 
 		m_pTextureHandles[1] = g_pShaderAPI->CreateDepthTexture(
 				m_ImageFormat,
@@ -1874,7 +1848,7 @@ ImageFormat CTexture::ComputeActualFormat( ImageFormat srcFormat )
 
 		// don't do anything since we are already in a compressed format.
 		dstFormat = g_pShaderAPI->GetNearestSupportedFormat( srcFormat );
-		Assert( dstFormat == srcFormat );
+		contract_assert( dstFormat == srcFormat );
 		return dstFormat;
 	}
 
@@ -2005,7 +1979,7 @@ int CTexture::ComputeActualSize( bool bIgnorePicmip, IVTFTexture *pVTFTexture )
 	//
 	// Fetch LOD settings from the VTF if available
 	TextureLODControlSettings_t lcs;
-	memset( &lcs, 0, sizeof( lcs ) );
+	std::memset( &lcs, 0, sizeof( lcs ) );
 	TextureLODControlSettings_t const *pLODInfo = nullptr;
 	if ( pVTFTexture )
 	{
@@ -2164,7 +2138,7 @@ int CTexture::ComputeActualSize( bool bIgnorePicmip, IVTFTexture *pVTFTexture )
 	nClampY = std::min( nClampY, std::max( iHwHeight, 4 ) );
 	nClampZ = std::min( nClampZ, std::max( iHwDepth, 1 ) );
 
-	Assert( nClampZ >= 1 );
+	contract_assert( nClampZ >= 1 );
 
 	// In case clamp values exceed texture dimensions, then fix up
 	// the clamping values.
@@ -2189,7 +2163,7 @@ int CTexture::ComputeActualSize( bool bIgnorePicmip, IVTFTexture *pVTFTexture )
 		++ numMipsSkipped;
 	}
 
-	Assert( m_nActualWidth > 0 && m_nActualHeight > 0 && m_nActualDepth > 0 );
+	contract_assert( m_nActualWidth > 0 && m_nActualHeight > 0 && m_nActualDepth > 0 );
 
 	// Now that we've got the actual size, we can figure out the mip count
 	m_nActualMipCount = ComputeActualMipCount();
@@ -2205,7 +2179,7 @@ int CTexture::ComputeActualSize( bool bIgnorePicmip, IVTFTexture *pVTFTexture )
 void CTexture::SetTextureRegenerator( ITextureRegenerator *pTextureRegen, bool releaseExisting )
 {
 	// NOTE: These can only be used by procedural textures
-	Assert( IsProcedural() );
+	contract_assert( IsProcedural() );
 
 	if ( m_pTextureRegenerator && releaseExisting )
 	{
@@ -2220,8 +2194,8 @@ void CTexture::SetTextureRegenerator( ITextureRegenerator *pTextureRegen, bool r
 //-----------------------------------------------------------------------------
 void CTexture::Modify( int iFrame )
 {
-	Assert( iFrame >= 0 && iFrame < m_nFrameCount );
-	Assert( HasBeenAllocated() );
+	contract_assert( iFrame >= 0 && iFrame < m_nFrameCount );
+	contract_assert( HasBeenAllocated() );
 
 	g_pShaderAPI->ModifyTexture( m_pTextureHandles[iFrame] );
 }
@@ -2401,7 +2375,7 @@ void CTexture::DownloadTexture( Rect_t *pRect, void *pSourceData, int nSourceDat
 			{
 				// crash will be imminent, the handles have changed and they should not have
 				// shaderapi will crash on next texture access because stored handles reference the freed texture handles, not the valid allocated ones
-				Assert( 0 );
+				contract_assert( 0 );
 				Warning( "ERROR! - Crash Expected. DownloadTexture(): Texture Handle Difference: %d expected:0x%8.8x actual:0x%8.8x\n", i, m_pTempTextureHandles[i], m_pTextureHandles[i] );
 			}
 		}
@@ -2430,10 +2404,10 @@ bool CTexture::DownloadAsyncTexture( AsyncTextureContext_t *pContext, void *pSou
 	if (!g_pShaderDevice->IsUsingGraphics())
 		return true;
 	
-	Assert( m_nFlags & TEXTUREFLAGS_ASYNC_DOWNLOAD );
-	Assert( !IsRenderTarget() );
-	Assert( !IsTempRenderTarget() );
-	Assert( !IsProcedural() );
+	contract_assert( m_nFlags & TEXTUREFLAGS_ASYNC_DOWNLOAD );
+	contract_assert( !IsRenderTarget() );
+	contract_assert( !IsTempRenderTarget() );
+	contract_assert( !IsProcedural() );
 
 	if ( !pContext->m_pVTFTexture )
 	{
@@ -2563,7 +2537,7 @@ void CTexture::BindVertexTexture( VertexTextureSampler_t sampler, int nFrame )
 		}
 
 		// Make sure we've actually allocated the texture
-		Assert( HasBeenAllocated() );
+		contract_assert( HasBeenAllocated() );
 
 		g_pShaderAPI->BindVertexTexture( sampler, m_pTextureHandles[nFrame] );
 	}
@@ -2588,7 +2562,7 @@ bool CTexture::SetRenderTarget( int nRenderTargetID, ITexture *pDepthTexture )
 		return false;
 
 	// Make sure we've actually allocated the texture handles
-	Assert( HasBeenAllocated() );
+	contract_assert( HasBeenAllocated() );
 
 	ShaderAPITextureHandle_t textureHandle;
 	textureHandle = m_pTextureHandles[0];
@@ -2597,7 +2571,7 @@ bool CTexture::SetRenderTarget( int nRenderTargetID, ITexture *pDepthTexture )
 
 	if ( m_nFlags & TEXTUREFLAGS_DEPTHRENDERTARGET )
 	{
-		Assert( m_nFrameCount >= 2 );
+		contract_assert( m_nFrameCount >= 2 );
 		depthTextureHandle = m_pTextureHandles[1];
 	} 
 	else if ( m_nFlags & TEXTUREFLAGS_NODEPTHBUFFER )
@@ -2829,7 +2803,7 @@ void CTexture::Precache()
 		return;
 
 	// Blow off env_cubemap too...
-	if ( !Q_strnicmp( m_Name.data(), "env_cubemap", 12 ))
+	if ( !V_strnicmp( m_Name.data(), "env_cubemap", 12 ))
 		return;
 	
 
@@ -2839,7 +2813,7 @@ void CTexture::Precache()
 	// It's assumed to have already been set by this point
 	// Compute the cache name
 	char pCacheFileName[MATERIAL_MAX_PATH];
-	Q_snprintf( pCacheFileName, sizeof( pCacheFileName ), "materials/%s" TEXTURE_FNAME_EXTENSION, m_Name.data() );
+	V_snprintf( pCacheFileName, sizeof( pCacheFileName ), ks::Concat( "materials/%s", TEXTURE_FNAME_EXTENSION ).c_str(), m_Name.data() );
 
 	int nVersion = VTF_MAJOR_VERSION;
 
@@ -2861,7 +2835,7 @@ void CTexture::Precache()
 	}
 
 	// FIXME: Hack for L4D
-	if ( !Q_strnicmp( pCacheFileName, "materials/graffiti/", 19 ) )
+	if ( !V_strnicmp( pCacheFileName, "materials/graffiti/", 19 ) )
 	{
 		nHackExtraFlags = TEXTUREFLAGS_NOLOD; 
 	}
@@ -2912,11 +2886,11 @@ void CTexture::LoadLowResTexture( IVTFTexture *pTexture )
 		ImageLoader::ConvertImageFormat( pTexture->LowResImageData(), pTexture->LowResFormat(),
 			m_pLowResImage, IMAGE_FORMAT_RGB888, m_LowResImageWidth, m_LowResImageHeight );
 #ifdef _DEBUG
-	Assert( retVal );
+	contract_assert( retVal );
 #endif
 }
 
-void *CTexture::GetResourceData( uint32 eDataType, size_t *pnumBytes ) const
+void *CTexture::GetResourceData( uint32 eDataType, std::size_t *pnumBytes ) const
 {
 	for ( DataChunk const *pDataChunk = m_arrDataChunks.data(),
 		  *pDataChunkEnd = pDataChunk + std::ssize( m_arrDataChunks );
@@ -2958,13 +2932,14 @@ void CTexture::FreeResourceData()
 
 void CTexture::LoadResourceData( IVTFTexture *pVTFTexture )
 {
+	ks::ScratchArena<> scratch;
 	// purge any prior resource data
 	FreeResourceData();
 
 	// Load the resources
 	if ( unsigned int uiRsrcCount = pVTFTexture->GetResourceTypes( nullptr, 0 ) )
 	{
-		uint32 *arrRsrcTypes = ( uint32 * )stackalloc( uiRsrcCount * sizeof( unsigned int ) );
+		uint32 *arrRsrcTypes = ( uint32 * )scratch.AllocBytes( uiRsrcCount * sizeof( unsigned int ) );
 		pVTFTexture->GetResourceTypes( arrRsrcTypes, uiRsrcCount );
 
 		m_arrDataChunks.reserve( uiRsrcCount );
@@ -2984,20 +2959,20 @@ void CTexture::LoadResourceData( IVTFTexture *pVTFTexture )
 					dc.m_eType = *arrRsrcTypes;
 					dc.m_eType &= ~RSRCF_MASK;
 
-					size_t numBytes;
+					std::size_t numBytes;
 					if ( void *pvData = pVTFTexture->GetResourceData( dc.m_eType, &numBytes ) )
 					{
-						Assert( numBytes >= sizeof( uint32 ) );
+						contract_assert( numBytes >= sizeof( uint32 ) );
 						if ( numBytes == sizeof( dc.m_numBytes ) )
 						{
 							dc.m_eType |= RSRCF_HAS_NO_DATA_CHUNK;
 							dc.m_pvData = nullptr;
-							memcpy( &dc.m_numBytes, pvData, numBytes );
+							std::memcpy( &dc.m_numBytes, pvData, numBytes );
 						}
 						else
 						{
 							dc.Allocate( numBytes );
-							memcpy( dc.m_pvData, pvData, numBytes );
+							std::memcpy( dc.m_pvData, pvData, numBytes );
 						}
 
 						m_arrDataChunks.push_back( dc );
@@ -3032,9 +3007,9 @@ struct DXTAlphaBlock3BitLinear
 static void FillCompressedTextureWithSingleColor( int red, int green, int blue, int alpha, unsigned char *pImageData, 
 												 int width, int height, int depth, ImageFormat imageFormat )
 {
-	Assert( ( width < 4 ) || !( width % 4 ) );
-	Assert( ( height < 4 ) || !( height % 4 ) );
-	Assert( ( depth < 4 ) || !( depth % 4 ) );
+	contract_assert( ( width < 4 ) || !( width % 4 ) );
+	contract_assert( ( height < 4 ) || !( height % 4 ) );
+	contract_assert( ( depth < 4 ) || !( depth % 4 ) );
 
 	if ( width < 4 && width > 0 )
 	{
@@ -3052,7 +3027,7 @@ static void FillCompressedTextureWithSingleColor( int red, int green, int blue, 
 	numBlocks *= depth;
 	
 	DXTColBlock colorBlock;
-	memset( &colorBlock, 0, sizeof( colorBlock ) );
+	std::memset( &colorBlock, 0, sizeof( colorBlock ) );
 	( ( BGR565_t * )&( colorBlock.col0 ) )->Set( red, green, blue );
 	( ( BGR565_t * )&( colorBlock.col1 ) )->Set( red, green, blue );
 
@@ -3064,7 +3039,7 @@ static void FillCompressedTextureWithSingleColor( int red, int green, int blue, 
 			int i;
 			for( i = 0; i < numBlocks; i++ )
 			{
-				memcpy( pImageData + i * 8, &colorBlock, sizeof( colorBlock ) );
+				std::memcpy( pImageData + i * 8, &colorBlock, sizeof( colorBlock ) );
 			}
 		}
 		break;
@@ -3075,13 +3050,13 @@ static void FillCompressedTextureWithSingleColor( int red, int green, int blue, 
 			for( i = 0; i < numBlocks; i++ )
 			{
 //				memset( pImageData + i * 16, 0, 16 );
-				memcpy( pImageData + i * 16 + 8, &colorBlock, sizeof( colorBlock ) );
+				std::memcpy( pImageData + i * 16 + 8, &colorBlock, sizeof( colorBlock ) );
 //				memset( pImageData + i * 16 + 8, 0xffff, 8 ); // alpha block
 			}
 		}
 		break;
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		break;
 	}
 }
@@ -3224,7 +3199,7 @@ void CTexture::CopyLowResImageToTexture( IVTFTexture *pTexture )
 	nFlags &= ~(TEXTUREFLAGS_NORMAL | TEXTUREFLAGS_ENVMAP);
 	nFlags &= ~(TEXTUREFLAGS_ONEBITALPHA | TEXTUREFLAGS_EIGHTBITALPHA);
 
-	Assert( pTexture->FrameCount() == 1 );
+	contract_assert( pTexture->FrameCount() == 1 );
 
 	Init( pTexture->Width(), pTexture->Height(), 1, IMAGE_FORMAT_BGR888, nFlags, 1 );
 	pTexture->Init( m_LowResImageWidth, m_LowResImageHeight, 1, IMAGE_FORMAT_BGR888, nFlags, 1 );
@@ -3337,12 +3312,12 @@ void CTexture::GetFilename( char *pOut, int maxLen ) const
 
 	if ( !bIsUNCName )
 	{
-		Q_snprintf( pOut, maxLen, 
-			"materials/%s" TEXTURE_FNAME_EXTENSION, pName );
+		V_snprintf( pOut, maxLen, 
+			ks::Concat( "materials/%s", TEXTURE_FNAME_EXTENSION ).c_str(), pName );
 	}
 	else
 	{
-		Q_snprintf( pOut, maxLen, "%s" TEXTURE_FNAME_EXTENSION, pName );
+		V_snprintf( pOut, maxLen, ks::Concat( "%s", TEXTURE_FNAME_EXTENSION ).c_str(), pName );
 	}
 }
 
@@ -3386,11 +3361,11 @@ IVTFTexture *CTexture::LoadTexttureBitsFromFileOrData( void *pSourceData, int nS
 	bool bIsUNCName = (pName[0] == '/' && pName[1] == '/' && pName[2] != '/');
 	if (!bIsUNCName)
 	{
-		Q_snprintf( pCacheFileName, sizeof( pCacheFileName ), "materials/%s" TEXTURE_FNAME_EXTENSION, pName );
+		V_snprintf( pCacheFileName, sizeof( pCacheFileName ), ks::Concat( "materials/%s", TEXTURE_FNAME_EXTENSION ).c_str(), pName );
 	}
 	else
 	{
-		Q_snprintf( pCacheFileName, sizeof( pCacheFileName ), "%s" TEXTURE_FNAME_EXTENSION, pName );
+		V_snprintf( pCacheFileName, sizeof( pCacheFileName ), ks::Concat( "%s", TEXTURE_FNAME_EXTENSION ).c_str(), pName );
 	}
 
 	if (!pSourceData || !nSourceDataSize)
@@ -3439,12 +3414,12 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 			if ( fileHandle == FILESYSTEM_INVALID_HANDLE )
 			{
 				// try any fallbacks.
-				char *pHdrExt = Q_stristr( pCacheFileName, ".hdr" TEXTURE_FNAME_EXTENSION );
+				char *pHdrExt = V_stristr( pCacheFileName, ks::Concat( ".hdr", TEXTURE_FNAME_EXTENSION ).c_str() );
 				if ( pHdrExt )
 				{
 					//DevWarning( "A custom HDR cubemap \"%s\": cannot be found on disk.\n"
 					//			"This really should have a HDR version, trying a fall back to a non-HDR version.\n", pCacheFileName );
-					strcpy( pHdrExt, TEXTURE_FNAME_EXTENSION );
+					std::strcpy( pHdrExt, TEXTURE_FNAME_EXTENSION );
 				}
 				else
 				{
@@ -3473,7 +3448,7 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 		nBytesRead = g_pFullFileSystem->ReadEx( optimalBuffer.data(), nBytesOptimalRead, Min( nHeaderSize, (int)g_pFullFileSystem->Size(fileHandle) ), fileHandle ); // only read as much as the file has
 		nBytesRead = nHeaderSize = ((VTFFileBaseHeader_t *)optimalBuffer.data())->headerSize;
 		g_pFullFileSystem->Seek( fileHandle, nHeaderSize, FILESYSTEM_SEEK_HEAD );
-		data = optimalBuffer.first( std::min< size_t >( nBytesRead, optimalBuffer.size() ) );
+		data = optimalBuffer.first( std::min< std::size_t >( nBytesRead, optimalBuffer.size() ) );
 	}
 
 	// Unserialize the header only
@@ -3490,7 +3465,7 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 
 	// FIXME: Hack for L4D
 	int nHackExtraFlags = 0;
-	if ( !Q_strnicmp( pCacheFileName, "materials/graffiti/", 19 ) )
+	if ( !V_strnicmp( pCacheFileName, "materials/graffiti/", 19 ) )
 	{
 		nHackExtraFlags = TEXTUREFLAGS_NOLOD; 
 	}
@@ -3531,7 +3506,7 @@ IVTFTexture *CTexture::LoadTextureBitsFromFile( char *pCacheFileName, char **ppR
 	nBytesOptimalRead = GetOptimalReadBuffer( fileHandle, nFileSize, optimalBuffer );
 	nBytesRead = g_pFullFileSystem->ReadEx( optimalBuffer.data(), nBytesOptimalRead, nFileSize, fileHandle );
 	g_pFullFileSystem->Close( fileHandle );
-	data = optimalBuffer.first( std::min< size_t >( nBytesRead, optimalBuffer.size() ) );
+	data = optimalBuffer.first( std::min< std::size_t >( nBytesRead, optimalBuffer.size() ) );
 
 	// NOTE: Skipping mip levels here will cause the size to be changed...
 	ks::byte_reader reader( data );
@@ -3589,7 +3564,7 @@ IVTFTexture *CTexture::LoadTextureBitsFromData( char *pCacheFileName, void *pSou
 
 	// FIXME: Hack for L4D
 	int nHackExtraFlags = 0;
-	if ( !Q_strnicmp( pCacheFileName, "materials/graffiti/", 19 ) )
+	if ( !V_strnicmp( pCacheFileName, "materials/graffiti/", 19 ) )
 	{
 		nHackExtraFlags = TEXTUREFLAGS_NOLOD; 
 	}
@@ -3691,7 +3666,7 @@ void CTexture::ComputeMipLevelSubRect( const Rect_t* pSrcRect, int nMipLevel, Re
 	float flInvShrink = 1.0f / (float)(1 << nMipLevel);
 	pSubRect->x = pSrcRect->x * flInvShrink;
 	pSubRect->y = pSrcRect->y * flInvShrink;
-	pSubRect->width = (int)ceil( (pSrcRect->x + pSrcRect->width) * flInvShrink ) - pSubRect->x;
+	pSubRect->width = (int)std::ceil( (pSrcRect->x + pSrcRect->width) * flInvShrink ) - pSubRect->x;
 	pSubRect->height = (int)ceil( (pSrcRect->y + pSrcRect->height) * flInvShrink ) - pSubRect->y;
 }
 
@@ -3767,17 +3742,17 @@ IVTFTexture *CTexture::ReconstructPartialProceduralBits( const Rect_t *pRect, Re
 void CTexture::ReconstructPartialTexture( const Rect_t *pRect )
 {
 	// FIXME: for now, only procedural textures can handle sub-rect specification.
-	Assert( IsProcedural() );
+	contract_assert( IsProcedural() );
 
 	// Also, we need procedural textures that have only a single copy!!
 	// Otherwise this partial upload will not occur on all copies
-	Assert( m_nFlags & TEXTUREFLAGS_SINGLECOPY );
+	contract_assert( m_nFlags & TEXTUREFLAGS_SINGLECOPY );
 
 	Rect_t vtfRect;
 	IVTFTexture *pVTFTexture = ReconstructPartialProceduralBits( pRect, &vtfRect );
 
 	// FIXME: for now, depth textures do not work with this.
-	Assert( pVTFTexture->Depth() == 1 );
+	contract_assert( pVTFTexture->Depth() == 1 );
 
 	// Make sure we've allocated the API textures
 	if ( !HasBeenAllocated() )
@@ -3984,13 +3959,13 @@ ShaderAPITextureHandle_t CTexture::GetTextureHandle( int nFrame, int nTextureCha
 	if ( nFrame >= m_nFrameCount )
 	{
 		// NOTE: This can happen during alt-tab.  If you alt-tab while loading a level then the first local cubemap bind will do this, for example.
-		Assert( nFrame < m_nFrameCount );
+		contract_assert( nFrame < m_nFrameCount );
 		return INVALID_SHADERAPI_TEXTURE_HANDLE;
 	}
-	Assert( nTextureChannel < 2 );
+	contract_assert( nTextureChannel < 2 );
 
 	// Make sure we've actually allocated the texture handles
-	Assert( HasBeenAllocated() );
+	contract_assert( HasBeenAllocated() );
 	if ( m_pTextureHandles == nullptr || !HasBeenAllocated() )
 	{
 		return INVALID_SHADERAPI_TEXTURE_HANDLE;
@@ -4066,7 +4041,7 @@ int CTexture::GetApproximateVidMemBytes( void ) const
 
 void CTexture::CopyFrameBufferToMe( int nRenderTargetID, Rect_t *pSrcRect, Rect_t *pDstRect )
 {
-	Assert( m_pTextureHandles && m_nFrameCount >= 1 );
+	contract_assert( m_pTextureHandles && m_nFrameCount >= 1 );
 
 	if ( m_pTextureHandles && m_nFrameCount >= 1 )
 	{
@@ -4076,7 +4051,7 @@ void CTexture::CopyFrameBufferToMe( int nRenderTargetID, Rect_t *pSrcRect, Rect_
 
 void CTexture::CopyMeToFrameBuffer( int nRenderTargetID, Rect_t *pSrcRect, Rect_t *pDstRect )
 {
-	Assert( m_pTextureHandles && m_nFrameCount >= 1 );
+	contract_assert( m_pTextureHandles && m_nFrameCount >= 1 );
 
 	if ( m_pTextureHandles && m_nFrameCount >= 1 )
 	{
@@ -4100,6 +4075,7 @@ void CTexture::DeleteIfUnreferenced()
 //Swap everything about a texture except the name. Created to support Portal mod's need for swapping out water render targets in recursive stencil views
 void CTexture::SwapContents( ITexture *pOther )
 {
+	ks::ScratchArena<> scratch;
 	if( (pOther == nullptr) || (pOther == this) )
 		return;
 
@@ -4110,14 +4086,14 @@ void CTexture::SwapContents( ITexture *pOther )
 		return;
 	}
 
-	AssertMsg( dynamic_cast<CTexture *>(pOther) != nullptr, "Texture swapping broken" );
+	contract_assert( ( dynamic_cast<CTexture *>(pOther) != nullptr ) && "Texture swapping broken" );
 
 	CTexture *pOtherAsCTexture = (CTexture *)pOther;
 
-	CTexture *pTemp = (CTexture *)stackalloc( sizeof( CTexture ) );
+	CTexture *pTemp = (CTexture *)scratch.AllocBytes( sizeof( CTexture ) );
 	
 	//swap everything
-	memcpy( (void *)pTemp, (void *)this, sizeof( CTexture ) );
+	std::memcpy( (void *)pTemp, (void *)this, sizeof( CTexture ) );
 	memcpy( (void *)this, (void *)pOtherAsCTexture, sizeof( CTexture ) );
 	memcpy( (void *)pOtherAsCTexture, (void *)pTemp, sizeof( CTexture ) );
 
@@ -4315,7 +4291,7 @@ bool CTexture::ScheduleAsyncDownload()
 	if ( !( m_nFlags & TEXTUREFLAGS_ASYNC_DOWNLOAD ) )
 	{
 		// only textures flagged of Async Download can be Async downloaded
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
@@ -4334,11 +4310,11 @@ bool CTexture::ScheduleAsyncDownload()
 	bool bIsUNCName = ( pName[0] == '/' && pName[1] == '/' && pName[2] != '/' );
 	if ( !bIsUNCName )
 	{
-		Q_snprintf( cacheFileName, sizeof( cacheFileName ), "materials/%s" TEXTURE_FNAME_EXTENSION, pName );
+		V_snprintf( cacheFileName, sizeof( cacheFileName ), ks::Concat( "materials/%s", TEXTURE_FNAME_EXTENSION ).c_str(), pName );
 	}
 	else
 	{
-		Q_snprintf( cacheFileName, sizeof( cacheFileName ), "%s" TEXTURE_FNAME_EXTENSION, pName );
+		V_snprintf( cacheFileName, sizeof( cacheFileName ), ks::Concat( "%s", TEXTURE_FNAME_EXTENSION ).c_str(), pName );
 	}
 
 	bool bExists = g_pFullFileSystem->FileExists( cacheFileName, MaterialSystem()->GetForcedTextureLoadPathID() );
@@ -4379,7 +4355,7 @@ bool CTexture::ScheduleExcludeAsyncDownload()
 	{
 		// NOOOOO!!!!! This cannot be used for any textures except highly constrained temp excludes that have been properly qualified.
 		// It cannot be re-purposed into pushing textures in.
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
@@ -4435,11 +4411,11 @@ bool CTexture::ScheduleExcludeAsyncDownload()
 		bool bIsUNCName = ( pName[0] == '/' && pName[1] == '/' && pName[2] != '/' );
 		if ( !bIsUNCName )
 		{
-			Q_snprintf( cacheFileName, sizeof( cacheFileName ), "materials/%s" TEXTURE_FNAME_EXTENSION, pName );
+			V_snprintf( cacheFileName, sizeof( cacheFileName ), ks::Concat( "materials/%s", TEXTURE_FNAME_EXTENSION ).c_str(), pName );
 		}
 		else
 		{
-			Q_snprintf( cacheFileName, sizeof( cacheFileName ), "%s" TEXTURE_FNAME_EXTENSION, pName );
+			V_snprintf( cacheFileName, sizeof( cacheFileName ), ks::Concat( "%s", TEXTURE_FNAME_EXTENSION ).c_str(), pName );
 		}
 
 		// all 360 files are expected to be in zip, no need to search outside of zip
@@ -4502,7 +4478,7 @@ bool CTexture::FinishAsyncDownload( AsyncTextureContext_t *pContext, void *pData
 	// and end of any current QMS jobs before QMS queues and start on it's next frame. Texture downloading is not thead safe
 	// and does not need to be made so. Instead, while the texture access pattens are quiescent and stable, the download
 	// (expected to be few in number) is deferred to this safe interval.
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 
 	// For non-exclude async downloads, never abort
 	if ( m_nFlags & TEXTUREFLAGS_ASYNC_DOWNLOAD )
@@ -4584,4 +4560,3 @@ bool CTextureImpl_GetTextureInformation( char const *szTextureName, MaterialText
 	return false;
 
 }
-

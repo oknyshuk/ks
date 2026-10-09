@@ -1,39 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
-
-#include <unistd.h>
-#include <string.h>
-#include <dlfcn.h>
-#include <stdarg.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <malloc.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <dlfcn.h>
+import std;
+import ks.tier1;
 #include "isys.h"
 #include "dedicated.h"
 #include "engine_hlds_api.h"
-#include "checksum_md5.h"
 #include "idedicatedexports.h"
-#include "tier0/dbg.h"
-#include "mathlib/mathlib.h"
-#include "interface.h"
-#include "tier1/strtools.h"
-#include "tier0/stacktools.h"
-#include "tier0/icommandline.h"
 #include "materialsystem/imaterialsystem.h"
 #include "istudiorender.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "datacache/idatacache.h"
 #include "datacache/imdlcache.h"
 #include "vphysics_interface.h"
-#include "icvar.h"
 #include "vscript/ivscript.h"
 
 bool InitInstance( );
@@ -96,7 +76,7 @@ CSys::~CSys()
 //-----------------------------------------------------------------------------
 void CSys::Sleep( int msec )
 {
-    usleep(msec * 1000);
+    ks::platform::sleep_nanos( (unsigned long long)msec * 1000000ull );
 }
 
 //-----------------------------------------------------------------------------
@@ -106,7 +86,7 @@ void CSys::Sleep( int msec )
 //-----------------------------------------------------------------------------
 void *CSys::GetProcAddress( long library, const char *name )
 {
-	return dlsym( library, name );
+	return ks::platform::library_symbol( reinterpret_cast<ks::platform::library *>( library ), name );
 }
 
 //-----------------------------------------------------------------------------
@@ -116,23 +96,23 @@ void *CSys::GetProcAddress( long library, const char *name )
 //-----------------------------------------------------------------------------
 long CSys::LoadLibrary( const char *lib )
 {
-	void *hDll = nullptr;
+	ks::platform::library *hDll = nullptr;
 
     char    cwd[1024];
     char    absolute_lib[1024];
     
-    if (!getcwd(cwd, sizeof(cwd)))
+    if (!ks::platform::current_directory(cwd, sizeof(cwd)))
         ErrorMessage(1, "Sys_LoadLibrary: Couldn't determine current directory.");
         
-    if (cwd[strlen(cwd)-1] == '/')
+    if (cwd[std::strlen(cwd)-1] == '/')
         cwd[strlen(cwd)-1] = 0;
         
-    Q_snprintf(absolute_lib, sizeof( absolute_lib ), "%s/%s", cwd, lib);
+    V_snprintf(absolute_lib, sizeof( absolute_lib ), "%s/%s", cwd, lib);
     
-    hDll = dlopen( absolute_lib, RTLD_NOW );
+    hDll = ks::platform::load_library( absolute_lib, nullptr );
     if ( !hDll )
     {
-        ErrorMessage( 1, dlerror() );
+        ErrorMessage( 1, ks::platform::library_error() );
     }
 	else
 	{
@@ -146,15 +126,15 @@ void CSys::FreeLibrary( long library )
 	if ( !library )
 		return;
 
-	dlclose( (void *)library );
+	ks::platform::close_library( reinterpret_cast<ks::platform::library *>( library ) );
 }
 
 bool CSys::GetExecutableName( char *out )
 {
-	char *name = strrchr(g_szEXEName, '/' );
+	char *name = std::strrchr(g_szEXEName, '/' );
 	if ( name )
 	{
-		strcpy( out, name + 1);
+		std::strcpy( out, name + 1);
 		return true;
 	}
 	else
@@ -173,7 +153,7 @@ Engine is erroring out, display error in message box
 void CSys::ErrorMessage( int level, const char *msg )
 {
 	Error( "%s\n", msg );
-	exit( -1 );
+	std::exit( -1 );
 }
 
 void CSys::UpdateStatus( int force )
@@ -202,12 +182,12 @@ Engine is printing to console
 void CSys::Printf(const char *fmt, ...)
 {
 	// Dump text to debugging console.
-	va_list argptr;
+	std::va_list argptr;
 	char szText[1024];
 
-	va_start (argptr, fmt);
-	Q_vsnprintf (szText, sizeof( szText ), fmt, argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr, fmt);
+	V_vsnprintf (szText, sizeof( szText ), fmt, argptr);
+	__builtin_va_end (argptr);
 
 	// Get Current text and append it.
 	ConsoleOutput( szText );
@@ -268,14 +248,14 @@ bool CSys::LoadModules( CDedicatedAppSystemGroup *pAppSystemGroup )
 															// obsolete i think SetCVarIF( (ICvar*)pAppSystemGroup->FindSystem( VENGINE_CVAR_INTERFACE_VERSION ) );
 
 	IMaterialSystem* pMaterialSystem = (IMaterialSystem*)pAppSystemGroup->FindSystem( MATERIAL_SYSTEM_INTERFACE_VERSION );
-	pMaterialSystem->SetShaderAPI( "shaderapiempty" DLL_EXT_STRING );
+	pMaterialSystem->SetShaderAPI( "shaderapiempty.so" );
 
 
 	return true;
 }
 
 extern int main(int argc, char *argv[]);
-DLL_EXPORT int DedicatedMain( int argc, char *argv[] );
+extern "C" int DedicatedMain( int argc, char *argv[] );
 
 int DedicatedMain( int argc, char *argv[] )
 {

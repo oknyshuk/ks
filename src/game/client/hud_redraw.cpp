@@ -1,17 +1,27 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 //
 // hud_redraw.cpp
 //
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "hudelement.h"
 #include "iclientmode.h"
-
 
 //For progress bar orientations
 const int CHud::HUDPB_HORIZONTAL = 0;
@@ -110,7 +120,6 @@ void CHud::OnTimeJump(void)
 }
 void CHud::LateThink( void )
 {
-	SNPROF("LateThink");
 
 	std::vector< CHudElement * > & list = GetHudList();
 
@@ -194,5 +203,3 @@ void CHud::DrawIconProgressBar( int x, int y, CHudTexture *icon, CHudTexture *ic
 			clr );
 	}
 }
-
-

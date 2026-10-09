@@ -1,18 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <stdio.h>
+import std;
+import ks.tier1;
 #include "bitmap/tgaloader.h"
-#include "tier0/dbg.h"
-#include "basetypes.h"
-#include <math.h>
-#include "tier1/utlvector.h"
-#include "tier1/vector_ops.h"
-#include "tier1/small_vector.h"
-#include "tier1/byte_reader.h"
 #include "filesystem.h"
 #include "tier2/tier2.h"
 
@@ -60,8 +51,7 @@ typedef void (*OutputRowFunc_t)( ks::byte_reader &buf, TGAHeader_t const& header
 // Important constants
 //-----------------------------------------------------------------------------
 
-#define TGA_MAX_COLORMAP_SIZE ( 256 * 4 )
-#define TGA_MAX_ROW_LENGTH_IN_PIXELS IMAGE_MAX_DIM
+constexpr auto TGA_MAX_COLORMAP_SIZE = ( 256 * 4 );
 
 
 //-----------------------------------------------------------------------------
@@ -85,8 +75,8 @@ typedef std::vector<unsigned char> CTempImage;
 
 static bool ReadFile( char const* pFileName, CTempImage& image, int maxbytes = -1 )
 {
-	Assert( pFileName );
-	Assert( g_pFullFileSystem );
+	contract_assert( pFileName );
+	contract_assert( g_pFullFileSystem );
 	if( !g_pFullFileSystem )
 	{
 		return false;
@@ -265,7 +255,7 @@ void OutputRowBGR888( ks::byte_reader &buf, TGAHeader_t const& header, unsigned 
 
 void OutputRowRGB565( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 }
 
 void OutputRowI8( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
@@ -521,7 +511,7 @@ void ReadRow8BitUncompressedWithColormap( ks::byte_reader &buf,
 		break;
 
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		break;
 	}
 }
@@ -584,10 +574,6 @@ static void DecompressRow( ks::byte_reader &buf, TGAHeader_t const& header, unsi
 	int pixelsLeftInRow = header.width;
 	int numPixelsToProcess;
 
-#ifdef DBGFLAG_ASSERT
-	unsigned char *pLast = pDst + header.width * bytesPerPixel;
-#endif
-
 	unsigned char repeat[4] = {};
 	do
 	{
@@ -639,7 +625,6 @@ static void DecompressRow( ks::byte_reader &buf, TGAHeader_t const& header, unsi
 
 	} while( pixelsLeftInRow );
 
-	Assert( pDst == pLast );
 }
 
 
@@ -649,11 +634,11 @@ static void DecompressRow( ks::byte_reader &buf, TGAHeader_t const& header, unsi
 void ReadRow8BitCompressedWithColormap( ks::byte_reader &buf, 
 		TGAHeader_t const& header, unsigned char* pDst )
 {
-	unsigned char rowI_8[TGA_MAX_ROW_LENGTH_IN_PIXELS];
+	unsigned char rowI_8[IMAGE_MAX_DIM];
 
 	DecompressRow( buf, header, rowI_8 );
 
-	ks::byte_reader uncompressedBuf( rowI_8, TGA_MAX_ROW_LENGTH_IN_PIXELS );
+	ks::byte_reader uncompressedBuf( rowI_8, IMAGE_MAX_DIM );
 	ReadRow8BitUncompressedWithColormap( uncompressedBuf, header, pDst );
 }
 
@@ -664,11 +649,11 @@ void ReadRow8BitCompressedWithColormap( ks::byte_reader &buf,
 void ReadRow8BitCompressedWithoutColormap( ks::byte_reader &buf, 
 		TGAHeader_t const& header, unsigned char* pDst )
 {
-	unsigned char rowI_8[TGA_MAX_ROW_LENGTH_IN_PIXELS];
+	unsigned char rowI_8[IMAGE_MAX_DIM];
 
 	DecompressRow( buf, header, rowI_8 );
 
-	ks::byte_reader uncompressedBuf( rowI_8, TGA_MAX_ROW_LENGTH_IN_PIXELS );
+	ks::byte_reader uncompressedBuf( rowI_8, IMAGE_MAX_DIM );
 	ReadRow8BitUncompressedWithoutColormap( uncompressedBuf, header, pDst );
 }
 
@@ -679,11 +664,11 @@ void ReadRow8BitCompressedWithoutColormap( ks::byte_reader &buf,
 void ReadRow24BitCompressedWithoutColormap( ks::byte_reader &buf, 
 		TGAHeader_t const& header, unsigned char* pDst )
 {
-	unsigned char rowBGR_888[TGA_MAX_ROW_LENGTH_IN_PIXELS * 3];
+	unsigned char rowBGR_888[IMAGE_MAX_DIM * 3];
 
 	DecompressRow( buf, header, rowBGR_888 );
 
-	ks::byte_reader uncompressedBuf( rowBGR_888, TGA_MAX_ROW_LENGTH_IN_PIXELS * 3 );
+	ks::byte_reader uncompressedBuf( rowBGR_888, IMAGE_MAX_DIM * 3 );
 	ReadRow24BitUncompressedWithoutColormap( uncompressedBuf, header, pDst );
 }
 
@@ -694,11 +679,11 @@ void ReadRow24BitCompressedWithoutColormap( ks::byte_reader &buf,
 void ReadRow32BitCompressedWithoutColormap( ks::byte_reader &buf, 
 		TGAHeader_t const& header, unsigned char* pDst )
 {
-	unsigned char rowBGRA_8888[TGA_MAX_ROW_LENGTH_IN_PIXELS << 2];
+	unsigned char rowBGRA_8888[IMAGE_MAX_DIM << 2];
 
 	DecompressRow( buf, header, rowBGRA_8888 );
 
-	ks::byte_reader uncompressedBuf( rowBGRA_8888, TGA_MAX_ROW_LENGTH_IN_PIXELS << 2 );
+	ks::byte_reader uncompressedBuf( rowBGRA_8888, IMAGE_MAX_DIM << 2 );
 	ReadRow32BitUncompressedWithoutColormap( uncompressedBuf, header, pDst );
 }
 
@@ -913,7 +898,7 @@ bool Load( unsigned char *pOutputImage, ks::byte_reader &buf, int width,
 bool Load( unsigned char *pOutputImage, const char *pFileName, int width, int height, 
 			ImageFormat imageFormat, float targetGamma, bool mipmap )
 {
-	Assert( pOutputImage && pFileName );
+	contract_assert( pOutputImage && pFileName );
 
 	// memory for the file
 	CTempImage vec;
@@ -973,7 +958,7 @@ bool LoadRGBA8888( ks::byte_reader &buf, std::vector<unsigned char> &outputData,
 
 bool LoadRGBA8888( const char *pFileName, std::vector<unsigned char> &outputData, int &outWidth, int &outHeight )
 {
-	Assert( pFileName );
+	contract_assert( pFileName );
 
 	// memory for the file
 	CTempImage vec;
@@ -990,4 +975,3 @@ bool LoadRGBA8888( const char *pFileName, std::vector<unsigned char> &outputData
 }
 
 } // end namespace TGALoader
-

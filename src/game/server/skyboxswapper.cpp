@@ -1,13 +1,44 @@
-//=========== Copyright (c) Valve Corporation, All rights reserved. ===========
-//
-// Simple entity to switch the map's 2D skybox texture when triggered.
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
+// Purpose: Simple entity to switch the map's 2D skybox texture when triggered.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
-
 
 //-----------------------------------------------------------------------------
 // CSkyboxSwapper
@@ -45,7 +76,7 @@ void CSkyboxSwapper::Spawn( void )
 //-----------------------------------------------------------------------------
 void CSkyboxSwapper::Precache( void )
 {
-	if ( Q_strlen( m_iszSkyboxName.ToCStr() ) == 0 )
+	if ( V_strlen( m_iszSkyboxName.ToCStr() ) == 0 )
 	{
 		Warning( "skybox_swapper (%s) has no skybox specified!\n", GetEntityName().ToCStr() );
 		return;
@@ -55,7 +86,7 @@ void CSkyboxSwapper::Precache( void )
 	const char *skyboxsuffix[ 6 ] = { "rt", "bk", "lf", "ft", "up", "dn" };
 	for ( int i = 0; i < 6; i++ )
 	{
-		Q_snprintf( name, sizeof( name ), "skybox/%s%s", m_iszSkyboxName.ToCStr(), skyboxsuffix[i] );
+		V_snprintf( name, sizeof( name ), "skybox/%s%s", m_iszSkyboxName.ToCStr(), skyboxsuffix[i] );
 		PrecacheMaterial( name );
 	}
 }

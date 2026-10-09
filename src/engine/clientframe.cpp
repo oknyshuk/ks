@@ -1,11 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
+import ks.core;
 #include "clientframe.h"
 #include "packed_entity.h"
 #include "framesnapshot.h"
@@ -88,7 +84,7 @@ void CClientFrame::CopyFrame( CClientFrame &frame )
 
 	if ( frame.transmit_always )
 	{
-		Assert( transmit_always == nullptr );
+		contract_assert( transmit_always == nullptr );
 		transmit_always = new std::bitset<MAX_EDICTS>;
 		*transmit_always = *(frame.transmit_always);
 	}
@@ -146,7 +142,7 @@ int	CClientFrameManager::CountClientFrames( void )
 //-----------------------------------------------------------------------------
 int CClientFrameManager::AddClientFrame( CClientFrame *frame)
 {
-	Assert( frame->tick_count > 0 );
+	contract_assert( frame->tick_count > 0 );
 
 	if ( !m_Frames )
 	{
@@ -230,7 +226,7 @@ bool CClientFrameManager::DeleteUnusedClientFrame( CClientFrame* pFrameToDelete 
 	{
 		if ( *ppFrame == pFrameToDelete )
 		{
-			Assert( !"ERROR: DeleteUnusedClientFrame called incorrectly...\n" );
+			contract_assert( !"ERROR: DeleteUnusedClientFrame called incorrectly...\n" );
 			return false;
 		}
 		ppFrame = &( (*ppFrame)->m_pNext );

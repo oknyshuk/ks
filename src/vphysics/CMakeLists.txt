@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 oknyshuk
+
 add_library(vphysics OBJECT
     vjolt_collide.cpp
     vjolt_collide_trace.cpp
@@ -21,4 +24,3 @@ add_library(vphysics OBJECT
 target_link_libraries(vphysics PRIVATE ks_common tier0 memoverride public_common tier1 tier2 interfaces vstdlib mathlib joltphysics)
 target_compile_definitions(vphysics PRIVATE GAME_PORTAL2=1)
 
-target_precompile_headers(vphysics PRIVATE cbase.h)

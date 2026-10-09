@@ -1,15 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.tier1;
 
-#ifndef SV_UPLOADDATA_H
-#define SV_UPLOADDATA_H
-
-
-class KeyValues;
 
 bool UploadData( char const *cserIP, char const *tablename, KeyValues *fields );
-
-#endif // SV_UPLOADDATA_H

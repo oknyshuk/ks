@@ -1,15 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // bot_hide.cpp
 // Mechanisms for using Hiding Spots in the Navigation Mesh
 // Author: Michael Booth, 2003-2004
 
-#include "cbase.h"
+import std;
+import ks.core;
 #include "bot.h"
 #include "cs_nav_pathfind.h"
 
@@ -409,7 +406,7 @@ public:
 
 			if(!spot->GetArea())
 			{
-				AssertMsg(false, "Check console spew for Hiding Spot off the Nav Mesh errors.");
+				contract_assert( false && "Check console spew for Hiding Spot off the Nav Mesh errors." );
 				continue;
 			}
 
@@ -486,4 +483,3 @@ const HidingSpot *FindInitialEncounterSpot( CBaseEntity *me, const Vector &searc
 	int which = RandomInt( 0, collector.m_count-1 );
 	return collector.m_hidingSpot[ which ];
 }
-

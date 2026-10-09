@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ICLIENTNETWORKABLE_H
-#define ICLIENTNETWORKABLE_H
-
-
+import ks.tier1;
 #include "iclientunknown.h"
-#include "tier1/bitbuf.h"
-
+import std;
 
 class IClientEntity;
 class ClientClass;
@@ -39,7 +32,7 @@ enum DataUpdateType_t
 	DATA_UPDATE_POST_UPDATE,
 };
 
-abstract_class IClientNetworkable
+class IClientNetworkable
 {
 public:
 	// Gets at the containing class...
@@ -99,6 +92,3 @@ public:
 	// an uncompressed update that's caused it to destroy all entities & recreate them.
 	virtual void			SetDestroyedOnRecreateEntities( void ) = 0;
 };
-
-
-#endif // ICLIENTNETWORKABLE_H

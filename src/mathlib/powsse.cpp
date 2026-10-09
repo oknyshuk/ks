@@ -1,16 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "mathlib/ssemath.h"
-
+import std;
+import ks.math;
 
 fltx4 Pow_FixedPoint_Exponent_SIMD( const fltx4 & x, int exponent)
 {
 	fltx4 rslt=Four_Ones;									// x^0=1.0
-	int xp=abs(exponent);
+	int xp=std::abs(exponent);
 	if (xp & 3)												// fraction present?
 	{
 		fltx4 sq_rt=SqrtEstSIMD(x);
@@ -62,7 +59,7 @@ float FastLog2(float i)
 	x*= OOshift23; //1/pow(2,23);
 	x=x-127;
 
-	y=x-floorf(x);
+	y=x-std::floorf(x);
 	y=(y-y*y)*LogBodge;
 	return x+y;
 }
@@ -70,7 +67,7 @@ float FastPow2(float i)
 {
 	float PowBodge=0.33971f;
 	float x;
-	float y=i-floorf(i);
+	float y=i-std::floorf(i);
 	y=(y-y*y)*PowBodge;
 
 	x=i+127-y;
@@ -90,4 +87,3 @@ float FastPow10( float i )
 {
 	return FastPow2( i * 3.321928f );
 }
-

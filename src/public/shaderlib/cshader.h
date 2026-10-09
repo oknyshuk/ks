@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #ifndef CSHADER_H
 #define CSHADER_H
-
 
 // uncomment this if you want to build for nv3x
 //#define NV3X 1
@@ -15,7 +10,8 @@
 // This is what all shaders include.
 // CBaseShader will become CShader in this file.
 #include "materialsystem/ishaderapi.h"
-#include "utlvector.h"
+import std;
+import ks.tier1;
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterial.h"
 #include "BaseShader.h"
@@ -134,7 +130,7 @@ inline bool CShader_IsFlag2Set( IMaterialVar **params, MaterialVarFlags2_t _flag
 				m_Info.m_pDefaultValue = pDefaultParam;\
 				m_Info.m_pHelp = pHelp;\
 				m_Info.m_nFlags = nFlags;\
-				AssertMsg( !s_pShaderParamOverrides[var], ( "Shader parameter override duplicately defined!" ) );\
+				contract_assert( !s_pShaderParamOverrides[var] );\
 				s_pShaderParamOverrides[var] = this;\
 				m_Index = var;\
 			}\
@@ -148,7 +144,7 @@ inline bool CShader_IsFlag2Set( IMaterialVar **params, MaterialVarFlags2_t _flag
 				m_Index = NUM_SHADER_MATERIAL_VARS + std::ssize( s_ShaderParams );\
 				s_ShaderParams.push_back( this );\
 			}\
-			operator int()	\
+			operator int() const	\
 			{\
 				return m_Index;\
 			}\
@@ -319,7 +315,7 @@ inline bool CShader_IsFlag2Set( IMaterialVar **params, MaterialVarFlags2_t _flag
 #define SET_DYNAMIC_PIXEL_SHADER_COMBO( var, val ) \
 	int dynpixshadercombo_ ## var ## _missingcurlybraces = 0; \
 	dynpixshadercombo_ ## var ## _missingcurlybraces = dynpixshadercombo_ ## var ## _missingcurlybraces; \
-	_pshIndex.Set ## var( ( val ) );  if(g_shaderConfigDumpEnable){printf("\n   PS dyn  var %s = %d (%s)", #var, (int) val, #val );}; \
+	_pshIndex.Set ## var( ( val ) );  if(g_shaderConfigDumpEnable){std::printf("\n   PS dyn  var %s = %d (%s)", #var, (int) val, #val );}; \
 	int psh_forgot_to_set_dynamic_ ## var = 0
 
 // Same as SET_DYNAMIC_PIXEL_SHADER_COMBO, except doesn't set "psh_forgot_to_set_dynamic_*" since 
@@ -335,7 +331,7 @@ inline bool CShader_IsFlag2Set( IMaterialVar **params, MaterialVarFlags2_t _flag
 #define SET_DYNAMIC_VERTEX_SHADER_COMBO( var, val ) \
 	int dynvertshadercombo_ ## var ## _missingcurlybraces = 0; \
 	dynvertshadercombo_ ## var ## _missingcurlybraces = dynvertshadercombo_ ## var ## _missingcurlybraces; \
-	_vshIndex.Set ## var( ( val ) );  if(g_shaderConfigDumpEnable){printf("\n   VS dyn  var %s = %d (%s)", #var, (int) val, #val );}; \
+	_vshIndex.Set ## var( ( val ) );  if(g_shaderConfigDumpEnable){std::printf("\n   VS dyn  var %s = %d (%s)", #var, (int) val, #val );}; \
 	int vsh_forgot_to_set_dynamic_ ## var = 0
 
 
@@ -345,7 +341,7 @@ inline bool CShader_IsFlag2Set( IMaterialVar **params, MaterialVarFlags2_t _flag
 #define SET_STATIC_PIXEL_SHADER_COMBO( var, val ) \
 	int staticpixshadercombo_ ## var ## _missingcurlybraces = 0; \
 	staticpixshadercombo_ ## var ## _missingcurlybraces = staticpixshadercombo_ ## var ## _missingcurlybraces; \
-	_pshIndex.Set ## var( ( val ) ); if(g_shaderConfigDumpEnable){printf("\n   PS stat var %s = %d (%s)", #var, (int) val, #val );}; \
+	_pshIndex.Set ## var( ( val ) ); if(g_shaderConfigDumpEnable){std::printf("\n   PS stat var %s = %d (%s)", #var, (int) val, #val );}; \
 	int psh_forgot_to_set_static_ ## var = 0
 
 // vsh_forgot_to_set_static_ ## var is used to make sure that you set all
@@ -354,7 +350,7 @@ inline bool CShader_IsFlag2Set( IMaterialVar **params, MaterialVarFlags2_t _flag
 #define SET_STATIC_VERTEX_SHADER_COMBO( var, val ) \
 	int staticvertshadercombo_ ## var ## _missingcurlybraces = 0; \
 	staticvertshadercombo_ ## var ## _missingcurlybraces = staticvertshadercombo_ ## var ## _missingcurlybraces; \
-	_vshIndex.Set ## var( ( val ) ); if(g_shaderConfigDumpEnable){printf("\n   VS stat var %s = %d (%s)", #var, (int) val, #val );}; \
+	_vshIndex.Set ## var( ( val ) ); if(g_shaderConfigDumpEnable){std::printf("\n   VS stat var %s = %d (%s)", #var, (int) val, #val );}; \
 	int vsh_forgot_to_set_static_ ## var = 0
 
 #define SET_STATIC_VERTEX_SHADER_COMBO_HAS_DEFAULT( var, val ) \

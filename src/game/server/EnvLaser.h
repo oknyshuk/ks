@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ENVLASER_H
-#define ENVLASER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
 #include "baseentity.h"
 #include "beam_shared.h"
 #include "entityoutput.h"
-
 
 class CSprite;
 
@@ -46,5 +39,3 @@ public:
 
 	[[= ks::reflect::Key{ .name = "framestart" } ]] float	m_flStartFrame;
 };
-
-#endif // ENVLASER_H

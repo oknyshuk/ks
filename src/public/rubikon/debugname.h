@@ -1,6 +1,8 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-#ifndef RNDEBUGNAME_HDR
-#define RNDEBUGNAME_HDR
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+import std;
 
 #ifdef _DEBUG
 #define RUBIKON_DEBUG_NAMES 1
@@ -14,7 +16,7 @@ public:
 	CRnDebugName() { Init( ); }
 	~CRnDebugName();
 public:
-	void SetV( const char* pNameFormat, va_list args );
+	void SetV( const char* pNameFormat, std::va_list args );
 	const char *Get() const;
 	const char *GetSafe( ) const; // return either name or "", but not NULL
 	void Init();
@@ -42,7 +44,7 @@ inline CRnDebugName::~CRnDebugName()
 }
 
 //---------------------------------------------------------------------------------------
-inline void CRnDebugName::SetV( const char *pNameFormat, va_list args )
+inline void CRnDebugName::SetV( const char *pNameFormat, std::va_list args )
 {
 #if RUBIKON_DEBUG_NAMES
 	if( m_pName )
@@ -61,7 +63,7 @@ inline void CRnDebugName::SetV( const char *pNameFormat, va_list args )
 			m_pName[nLen] = '\xFF';
 			m_pName[nLen + 1] = '\xFF';
 			vsnprintf( m_pName, nLen + 1, pNameFormat, args );
-			AssertDbg( m_pName[nLen + 1] == '\xFF' && m_pName[nLen] == '\0' );
+			contract_assert( m_pName[nLen + 1] == '\xFF' && m_pName[nLen] == '\0' );
 		}
 	}
 #endif
@@ -82,6 +84,3 @@ inline const char *CRnDebugName::GetSafe() const
 	const char *p = Get( );
 	return p ? p : "";
 }
-
-
-#endif

@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef PHYSICS_PROP_STATUE_H
-#define PHYSICS_PROP_STATUE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
 #include "props.h"
-
 
 struct outer_collision_obb_t
 {
@@ -75,6 +69,3 @@ public:
 
 CBaseEntity *CreateServerStatue( CBaseAnimating *pAnimating, int collisionGroup );
 CBaseEntity *CreateServerStatueFromOBBs( const std::vector< outer_collision_obb_t > &vecSphereOrigins, CBaseAnimating *pChildEntity );
-
-
-#endif // PHYSICS_PROP_STATUE_H

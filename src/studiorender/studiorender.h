@@ -1,27 +1,16 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CSTUDIORENDER_H
-#define CSTUDIORENDER_H
-
-#include <mutex>
+import std;
+import ks.tier1;
 #include "istudiorender.h"
 #include "studio.h"
 #include "materialsystem/imaterialsystem.h" // for LightDesc_t
 // wouldn't have to include these if it weren't for inlines.
 #include "materialsystem/imaterial.h"
-#include "mathlib/mathlib.h"
-#include "utlvector.h"
-#include <deque>
-#include <list>
 #include "flexrenderdata.h"
-#include "mathlib/compressed_vector.h"
 #include "r_studiolight.h"
-#include "tier0/dbg.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -70,8 +59,8 @@ extern CStudioRender g_StudioRender;
 // Defines + structs
 //-----------------------------------------------------------------------------
 #define MAXLOCALLIGHTS 4
-#define MAXLIGHTCOMPUTE 16
-#define MAX_MAT_OVERRIDES 4
+inline constexpr auto MAXLIGHTCOMPUTE = 16;
+inline constexpr auto MAX_MAT_OVERRIDES = 4;
 
 enum StudioModelLighting_t
 {
@@ -125,8 +114,8 @@ struct DecalVertex_t
 		if ((m_Body == 0xFFFF) || (m_Model == 0xFFFF) || (m_Mesh == 0xFFFF))
 			return nullptr;
 
-		mstudiobodyparts_t * RESTRICT pBody = pHdr->pBodypart( m_Body );
-		mstudiomodel_t * RESTRICT pModel = pBody->pModel( m_Model );
+		mstudiobodyparts_t * __restrict__ pBody = pHdr->pBodypart( m_Body );
+		mstudiomodel_t * __restrict__ pModel = pBody->pModel( m_Model );
 		return pModel->pMesh( m_Mesh );
 	}
 
@@ -146,18 +135,6 @@ struct DecalVertex_t
 	// NOTE: m_Group + m_GroupIndex is necessary only for decals on
 	// hardware morphs. If COMPACT_DECAL_VERT is for console, we
 	// could remove group index + group
-#ifdef COMPACT_DECAL_VERT
-	Vector			m_Position;			// 12
-	Vector2d32		m_TexCoord;			// 16
-	Vector48		m_Normal;			// 22 (packed to m_Body)
-
-	byte			m_Body;				// 24
-	byte			m_Model;
-	unsigned short	m_MeshVertexIndex;	// index into the mesh's vertex list
-	unsigned short	m_Mesh;
-	unsigned short	m_GroupIndex;		// index into the mesh's vertex list
-	unsigned short	m_Group;
-#else
 	Vector m_Position;
 	Vector m_Normal;
 	Vector2D m_TexCoord;
@@ -168,7 +145,6 @@ struct DecalVertex_t
 	unsigned short	m_Mesh;
 	unsigned short	m_GroupIndex;		// index into the group's index list
 	unsigned short	m_Group;
-#endif
 
 	DecalVertex_t() {}
 	DecalVertex_t( const DecalVertex_t& src )
@@ -521,7 +497,7 @@ private:
 public:
 	// NJS: Messy, but needed for an externally optimized routine to set up the lighting.
 	void R_InitLightEffectsWorld3();
-	void (FASTCALL *R_LightEffectsWorld3)( const LightDesc_t *pLightDesc, const lightpos_t *light, const Vector& normal, Vector &dest );
+	void (*R_LightEffectsWorld3)( const LightDesc_t *pLightDesc, const lightpos_t *light, const Vector& normal, Vector &dest );
 
 private:
 	inline float R_WorldLightAngle( const LightDesc_t *wl, const Vector& lnormal, const Vector& snormal, const Vector& delta );
@@ -852,7 +828,7 @@ template< int nLightType >
 class CWorldLightAngleWrapper
 {
 public:
-	FORCEINLINE static float WorldLightAngle( const LightDesc_t *wl, const Vector& lnormal, const Vector& snormal, const Vector& delta )
+	[[gnu::always_inline]] inline static float WorldLightAngle( const LightDesc_t *wl, const Vector& lnormal, const Vector& snormal, const Vector& delta )
 	{
 		float dot, dot2, ratio;
 
@@ -885,7 +861,7 @@ public:
  				}
  				else
  				{
- 					ratio *= pow((dot2 - wl->m_PhiDot) / (wl->m_ThetaDot - wl->m_PhiDot), wl->m_Falloff );
+ 					ratio *= std::pow((dot2 - wl->m_PhiDot) / (wl->m_ThetaDot - wl->m_PhiDot), wl->m_Falloff );
  				}
 				return ratio;
 
@@ -899,7 +875,7 @@ public:
 			case MATERIAL_LIGHT_DISABLE:
 				return 0.f;
 
-			NO_DEFAULT;
+			default: UNREACHABLE();;
 		} 
 	}
 };
@@ -908,7 +884,7 @@ template< int nLightType >
 class CWorldLightAngleWrapperConstDirectional
 {
 public:
-	FORCEINLINE static float WorldLightAngle( const LightDesc_t *wl, const Vector& lnormal, const Vector& snormal, const Vector& delta, float directionalamount )
+	[[gnu::always_inline]] inline static float WorldLightAngle( const LightDesc_t *wl, const Vector& lnormal, const Vector& snormal, const Vector& delta, float directionalamount )
 	{
 		float dot, dot2, ratio;
 
@@ -938,14 +914,14 @@ public:
 			}
 			else
 			{
-				ratio *= pow((dot2 - wl->m_PhiDot) / (wl->m_ThetaDot - wl->m_PhiDot), wl->m_Falloff );
+				ratio *= std::pow((dot2 - wl->m_PhiDot) / (wl->m_ThetaDot - wl->m_PhiDot), wl->m_Falloff );
 			}
 			return ratio;
 
 		case MATERIAL_LIGHT_DISABLE:
 			return 0.f;
 
-			NO_DEFAULT;
+			default: UNREACHABLE();;
 		} 
 	}
 };
@@ -958,7 +934,7 @@ inline float CStudioRender::R_WorldLightAngle( const LightDesc_t *wl, const Vect
 		case MATERIAL_LIGHT_POINT:			return CWorldLightAngleWrapper<MATERIAL_LIGHT_POINT>::WorldLightAngle( wl, lnormal, snormal, delta );
 		case MATERIAL_LIGHT_DIRECTIONAL:	return CWorldLightAngleWrapper<MATERIAL_LIGHT_DIRECTIONAL>::WorldLightAngle( wl, lnormal, snormal, delta );
 		case MATERIAL_LIGHT_SPOT:			return CWorldLightAngleWrapper<MATERIAL_LIGHT_SPOT>::WorldLightAngle( wl, lnormal, snormal, delta );
-		NO_DEFAULT;
+		default: UNREACHABLE();;
 	}
 }
 
@@ -1003,6 +979,3 @@ inline int ComputeModelLODAndMetric( studiohwdata_t *pHardwareData, float flUnit
 
 // Helper to determine which material type to use depending on what strip header flags are set.
 MaterialPrimitiveType_t GetPrimitiveTypeForStripHeaderFlags( unsigned char Flags );
-
-
-#endif // CSTUDIORENDER_H

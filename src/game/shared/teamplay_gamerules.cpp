@@ -1,11 +1,61 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
-#include "keyvalues.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "gamerules.h"
 #include "teamplay_gamerules.h"
 
@@ -40,7 +90,7 @@ CTeamplayRules::CTeamplayRules()
 	m_bSwitchTeams = false;
 	m_bScrambleTeams = false;
 
-	memset( team_names, 0, sizeof(team_names) );
+	std::memset( team_names, 0, sizeof(team_names) );
 	memset( team_scores, 0, sizeof(team_scores) );
 	num_teams = 0;
 
@@ -160,15 +210,15 @@ void CTeamplayRules::InitHUD( CBasePlayer *pPlayer )
 	char text[1024];
 	if ( !strcmp( mdls, pPlayer->TeamName() ) )
 	{
-		Q_snprintf( text,sizeof(text), "You are on team \'%s\'\n", pPlayer->TeamName() );
+		V_snprintf( text,sizeof(text), "You are on team \'%s\'\n", pPlayer->TeamName() );
 	}
 	else
 	{
-		Q_snprintf( text,sizeof(text), "You were assigned to team %s\n", pPlayer->TeamName() );
+		V_snprintf( text,sizeof(text), "You were assigned to team %s\n", pPlayer->TeamName() );
 	}
 
 	ChangePlayerTeam( pPlayer, pPlayer->TeamName(), false, false );
-	if ( Q_strlen( pPlayer->TeamName() ) > 0 )
+	if ( V_strlen( pPlayer->TeamName() ) > 0 )
 	{
 		UTIL_SayText( text, pPlayer );
 	}
@@ -227,8 +277,8 @@ void CTeamplayRules::ClientSettingsChanged( CBasePlayer *pPlayer )
   	char text[1024];
 
 	// skin/color/model changes
-	int iTeam = Q_atoi( engine->GetClientConVarValue( pPlayer->entindex(), "cl_team" ) );
-	int iClass = Q_atoi( engine->GetClientConVarValue( pPlayer->entindex(), "cl_class" ) );
+	int iTeam = V_atoi( engine->GetClientConVarValue( pPlayer->entindex(), "cl_team" ) );
+	int iClass = V_atoi( engine->GetClientConVarValue( pPlayer->entindex(), "cl_class" ) );
 
 	if ( defaultteam.GetBool() )
 	{
@@ -245,9 +295,9 @@ void CTeamplayRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 		// int clientIndex = pPlayer->entindex();
 
 		// engine->SetClientKeyValue( clientIndex, "model", pPlayer->TeamName() );
-		Q_snprintf( text,sizeof(text), "Can't change team to \'%s\'\n", mdls );
+		V_snprintf( text,sizeof(text), "Can't change team to \'%s\'\n", mdls );
 		UTIL_SayText( text, pPlayer );
-		Q_snprintf( text,sizeof(text), "Server limits teams to \'%s\'\n", m_szTeamList );
+		V_snprintf( text,sizeof(text), "Server limits teams to \'%s\'\n", m_szTeamList );
 		UTIL_SayText( text, pPlayer );
 		return;
 	}
@@ -262,7 +312,7 @@ void CTeamplayRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 
 	// msg everyone if someone changes their name,  and it isn't the first time (changing no name to current name)
 	// Note, this is case sensitive
-	if ( ( Q_strcmp( pszOldName, pszName ) != 0 ) &&
+	if ( ( V_strcmp( pszOldName, pszName ) != 0 ) &&
 		CanClientCustomizeOwnIdentity() )
 	{
 		if ( pszOldName[0] != '\0' )
@@ -479,7 +529,7 @@ const char *CTeamplayRules::TeamWithFewestPlayers( void )
 	int teamCount[ MAX_TEAMS ];
 	char *pTeamName = nullptr;
 
-	memset( teamCount, 0, MAX_TEAMS * sizeof(int) );
+	std::memset( teamCount, 0, MAX_TEAMS * sizeof(int) );
 	
 	// loop through all clients, count number of players on each team
 	for ( i = 1; i <= gpGlobals->maxClients; i++ )
@@ -520,14 +570,14 @@ void CTeamplayRules::RecountTeams( void )
 
 	// Copy all of the teams from the teamlist
 	// make a copy because strtok is destructive
-	Q_strncpy( teamlist, m_szTeamList, sizeof(teamlist) );
+	V_strncpy( teamlist, m_szTeamList, sizeof(teamlist) );
 	pName = teamlist;
-	pName = strtok( pName, ";" );
+	pName = std::strtok( pName, ";" );
 	while ( pName != nullptr && *pName )
 	{
 		if ( GetTeamIndex( pName ) < 0 )
 		{
-			Q_strncpy( team_names[num_teams], pName, sizeof(team_names[num_teams]));
+			V_strncpy( team_names[num_teams], pName, sizeof(team_names[num_teams]));
 			num_teams++;
 		}
 		pName = strtok( nullptr, ";" );
@@ -540,7 +590,7 @@ void CTeamplayRules::RecountTeams( void )
 	}
 
 	// Sanity check
-	memset( team_scores, 0, sizeof(team_scores) );
+	std::memset( team_scores, 0, sizeof(team_scores) );
 
 	// loop through all clients
 	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
@@ -561,7 +611,7 @@ void CTeamplayRules::RecountTeams( void )
 					tm = num_teams;
 					num_teams++;
 					team_scores[tm] = 0;
-					Q_strncpy( team_names[tm], pTeamName, MAX_TEAMNAME_LENGTH );
+					V_strncpy( team_names[tm], pTeamName, MAX_TEAMNAME_LENGTH );
 				}
 			}
 

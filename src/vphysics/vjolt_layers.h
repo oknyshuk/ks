@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <Jolt/Jolt.h>
 #include <Jolt/Physics/Collision/ObjectLayerPairFilterTable.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayerInterfaceTable.h>
 #include <Jolt/Physics/Collision/BroadPhase/ObjectVsBroadPhaseLayerFilterTable.h>
@@ -70,9 +71,6 @@ private:
 		for ( JPH::ObjectLayer layer = 0; layer < Layers::NUM_LAYERS; ++layer )
 		{
 			table.MapObjectToBroadPhaseLayer( layer, Layers::BroadPhase( layer ) );
-		#if defined( JPH_EXTERNAL_PROFILE ) || defined( JPH_PROFILE_ENABLED )
-			table.SetBroadPhaseLayerName( Layers::BroadPhase( layer ), Layers::Names[ layer ] );
-		#endif
 		}
 		return table;
 	}

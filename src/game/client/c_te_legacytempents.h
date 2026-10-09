@@ -1,20 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( C_TE_LEGACYTEMPENTS_H )
-#define C_TE_LEGACYTEMPENTS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+
+import ks.tier1;
+#include "icliententityinternal.h"
+#include "shared_classnames.h"
+#include "particlemgr.h"
 
 class C_BaseEntity;
 class C_LocalTempEntity;
 struct model_t;
 
-#include "tier1/fixed_pool.h"
-#include <list>
+import std;
 
 extern color24 white24;
 #if defined( CSTRIKE_DLL ) || defined( SDK_DLL )
@@ -32,7 +30,7 @@ enum
 //-----------------------------------------------------------------------------
 // Purpose: Interface for lecacy temp entities
 //-----------------------------------------------------------------------------
-abstract_class ITempEnts
+class ITempEnts
 {
 public:
 	virtual						~ITempEnts() {}
@@ -201,6 +199,3 @@ private:
 
 
 extern ITempEnts *tempents;
-
-
-#endif // C_TE_LEGACYTEMPENTS_H

@@ -1,23 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: This module defines the IVoiceServer interface, which is used by
 //			game code to control which clients are listening to which other
 //			clients' voice streams.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef IVOICESERVER_H
-#define IVOICESERVER_H
+import std;
+import ks.tier1;
 
-
-#include "interface.h"
+inline constexpr const char *INTERFACEVERSION_VOICESERVER = "VoiceServer002";
 
 
-#define INTERFACEVERSION_VOICESERVER	"VoiceServer002"
-
-
-abstract_class IVoiceServer
+class IVoiceServer
 {
 public:
 	virtual			~IVoiceServer()	{}
@@ -28,7 +23,3 @@ public:
 	virtual bool	SetClientListening(int iReceiver, int iSender, bool bListen) = 0;
 	virtual bool	SetClientProximity(int iReceiver, int iSender, bool bUseProximity) = 0;
 };
-
-
-#endif
-

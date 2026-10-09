@@ -1,15 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <tier0/dbg.h>
-#include <tier0/vprof.h>
-#include <tier0/icommandline.h>
-#include <commonmacros.h>
-#include <checksum_crc.h>
+import ks.tier1;
 
 #include "dt_send_eng.h"
 #include "dt_encode.h"
@@ -20,28 +12,21 @@
 #include "serializedentity.h"
 #include "edict.h"
 #include "netmessages.h"
-#include <algorithm>
+import std;
 
 // Define this to get a report on which props are being sent frequently and
 // have high-numbered indices. Marking these with SPROP_CHANGES_OFTEN can
 // improve CPU and network efficiency.
 //#define PROP_SKIPPED_REPORT
-#ifdef PROP_SKIPPED_REPORT
-#include <map>
-#include <string>
-#endif
 
 extern int host_framecount;
 CRC32_t SendTable_ComputeCRC();
 
-#define CRC_SEND_TABLE_VERBOSE 0
 
-#if CRC_SEND_TABLE_VERBOSE
-#define CRCMSG DevMsg
-#else
-#define CRCMSG (void)
-#endif
-#define CRCMEMx( var, nByte ) ( unsigned int )( ( reinterpret_cast< unsigned char * >( &var ) )[nByte] )
+// Verbose send-table CRC logging is off; the no-op keeps the call sites unchanged.
+template <typename... Args>
+inline void CRCMSG( Args &&... ) {}
+template <typename T1, typename T2> [[gnu::always_inline]] inline constexpr auto CRCMEMx( T1 var, T2 nByte ) { return ( unsigned int )( ( reinterpret_cast< unsigned char * >( &var ) )[nByte] ); }
 #define CRCMEM4( var ) CRCMEMx( var, 0 ), CRCMEMx( var, 1 ), CRCMEMx( var, 2 ), CRCMEMx( var, 3 )
 #define CRCFMT4 "%02X%02X%02X%02X"
 
@@ -80,12 +65,12 @@ public:
 		}
 		else
 		{
-			Assert( pNode->GetDataTableProxyIndex() < m_nNewStateProxies );
+			contract_assert( pNode->GetDataTableProxyIndex() < m_nNewStateProxies );
 			bool bCur = m_pNewStateProxies[ pNode->GetDataTableProxyIndex() ].m_Bits[m_iClient];
 
 			if ( m_pOldStateProxies )
 			{
-				Assert( pNode->GetDataTableProxyIndex() < m_nOldStateProxies );
+				contract_assert( pNode->GetDataTableProxyIndex() < m_nOldStateProxies );
 				bool bPrev = m_pOldStateProxies[ pNode->GetDataTableProxyIndex() ].m_Bits[m_iClient];
 				if ( bPrev != bCur )
 				{
@@ -99,7 +84,7 @@ public:
 						// Add ALL properties under this proxy because the previous state didn't have any of them.
 						for ( int i=0; i < pNode->m_nRecursiveProps; i++ )
 						{
-							if ( m_nNewProxyProps < ARRAYSIZE( m_NewProxyProps ) )
+							if ( m_nNewProxyProps < std::size( m_NewProxyProps ) )
 							{
 								m_NewProxyProps[m_nNewProxyProps] = pNode->m_iFirstRecursiveProp + i;
 							}
@@ -314,20 +299,11 @@ CDeltaCalculator::CDeltaCalculator(
 CDeltaCalculator::~CDeltaCalculator()
 {
 	// Make sure we didn't overflow.
-	ErrorIfNot( 
-		m_nDeltaProps <= m_nMaxDeltaProps, 
-		( "SendTable_CalcDelta: overflowed props %d max %d on datatable '%s'.", m_nDeltaProps, m_nMaxDeltaProps, m_pPrecalc->GetSendTable()->GetName() ) 
-		);
+	if ( !( m_nDeltaProps <= m_nMaxDeltaProps ) ) Error( "SendTable_CalcDelta: overflowed props %d max %d on datatable '%s'.", m_nDeltaProps, m_nMaxDeltaProps, m_pPrecalc->GetSendTable()->GetName() );
 
-	ErrorIfNot( 
-		!m_bfFromState.IsOverflowed(), 
-		( "SendTable_CalcDelta: m_bfFromState overflowed %d max %d on datatable '%s'.", m_nDeltaProps, m_nMaxDeltaProps, m_pPrecalc->GetSendTable()->GetName() ) 
-		);
+	if ( !( !m_bfFromState.IsOverflowed() ) ) Error( "SendTable_CalcDelta: m_bfFromState overflowed %d max %d on datatable '%s'.", m_nDeltaProps, m_nMaxDeltaProps, m_pPrecalc->GetSendTable()->GetName() );
 
-	ErrorIfNot( 
-		!m_bfToState.IsOverflowed(), 
-		( "SendTable_CalcDelta: m_bfToState overflowed %d max %d on datatable '%s'.", m_nDeltaProps, m_nMaxDeltaProps, m_pPrecalc->GetSendTable()->GetName() ) 
-		);
+	if ( !( !m_bfToState.IsOverflowed() ) ) Error( "SendTable_CalcDelta: m_bfToState overflowed %d max %d on datatable '%s'.", m_nDeltaProps, m_nMaxDeltaProps, m_pPrecalc->GetSendTable()->GetName() );
 
 	// We may not have read to the end of our input bits, but we don't care.
 	m_FromBitsReader.ForceFinished();
@@ -344,7 +320,7 @@ inline int CDeltaCalculator::SeekToNextProp()
 
 inline void CDeltaCalculator::PropSkip()
 {
-	Assert( m_iToProp != -1 );
+	contract_assert( m_iToProp != -1 );
 	SkipPropData( &m_bfToState, m_pPrecalc->GetProp( m_iToProp ) );
 }
 
@@ -453,9 +429,6 @@ public:
 // ------------------------------------------------------------------------ //
 
 std::vector< SendTable* > g_SendTables;
-#if CRC_SEND_TABLE_VERBOSE
-std::vector< SendTable* > g_SendTablesReferenced;
-#endif
 CRC32_t	g_SendTableCRC = 0;
 
 
@@ -581,12 +554,12 @@ int SendTable_CullPropsFromProxies(
 	CalcDeltaResultsList_t &outProps
 	)
 {
-	Assert( !( nNewStateProxies && !pNewStateProxies ) );
+	contract_assert( !( nNewStateProxies && !pNewStateProxies ) );
 	CPropCullStack stack( pTable->m_pPrecalc, iClient, pOldStateProxies, nOldStateProxies, pNewStateProxies, nNewStateProxies );
 	
 	stack.CullPropsFromProxies( startProps, outProps );
 
-	ErrorIfNot( stack.GetNumOutProps() <= MAX_DATATABLE_PROPS, ("CullPropsFromProxies: overflow in '%s'.", pTable->GetName()) );
+	if ( !( stack.GetNumOutProps() <= MAX_DATATABLE_PROPS ) ) Error("CullPropsFromProxies: overflow in '%s'.", pTable->GetName());
 	return stack.GetNumOutProps();
 }
 
@@ -624,17 +597,17 @@ bool SendTable_Encode(
 	)
 {
 	CSerializedEntity *pEntity = reinterpret_cast< CSerializedEntity * >( handle );
-	Assert( pEntity );
+	contract_assert( pEntity );
 	pEntity->Clear();
 
 	CSendTablePrecalc *pPrecalc = pTable->m_pPrecalc;
-	ErrorIfNot( pPrecalc, ("SendTable_Encode: Missing m_pPrecalc for SendTable %s.", pTable->m_pNetTableName) );
+	if ( !( pPrecalc ) ) Error("SendTable_Encode: Missing m_pPrecalc for SendTable %s.", pTable->m_pNetTableName);
 	if ( !pRecipients.empty() )
 	{
-		ErrorIfNot(	std::ssize( pRecipients ) >= pPrecalc->GetNumDataTableProxies(), ("SendTable_Encode: pRecipients array too small.") );
+		if ( !( std::ssize( pRecipients ) >= pPrecalc->GetNumDataTableProxies() ) ) Error("SendTable_Encode: pRecipients array too small.");
 	}
 
-	VPROF( "SendTable_Encode" );
+	CVProfScope _( "SendTable_Encode", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	uint8 packedData[MAX_PACKEDENTITY_DATA];
 	bf_write writeBuf( "CFlattenedSerializer::Encode writeBuf", packedData, sizeof( packedData ) );
@@ -671,49 +644,9 @@ bool SendTable_Encode(
 	return !writeBuf.IsOverflowed();
 }
 
-#ifdef PROP_SKIPPED_REPORT
-static int s_skippedProps;
-static int s_frameCount;
-
-std::map<std::string, int> s_highProps;
-
-const int kFrameReportInterval = 128;
-const int kMinPropOffset = 200;
-const int kReportLength = 10;
-const bool bReportDetails = true;
-
-void PrintPropSkippedReport()
-{
-	++s_frameCount;
-	if ( s_frameCount < kFrameReportInterval )
-		return;
-
-	Msg( "%5d skipped props per frame\n", s_skippedProps / s_frameCount );
-	s_frameCount = 0;
-	s_skippedProps = 0;
-
-	// Copy the data from s_highProps to a vector so that we can sort it by frequency.
-	std::vector<std::pair<int, std::string>> sorted;
-	for( auto data : s_highProps )
-		sorted.push_back(std::pair<int, std::string>( data.second, data.first));
-	std::sort( sorted.begin(), sorted.end() );
-	std::reverse( sorted.begin(), sorted.end() );
-
-	if ( bReportDetails )
-	{
-		for ( int i = 0; i < kReportLength && i < (int)sorted.size(); ++i )
-		{
-			Msg("      Sent %4d times, %s\n", sorted[i].first, sorted[i].second.c_str());
-		}
-	}
-
-	s_highProps.clear();
-}
-#else
 void PrintPropSkippedReport()
 {
 }
-#endif
 
 template< bool bDebugWatch >
 void SendTable_WritePropList_Guts(
@@ -760,9 +693,6 @@ void SendTable_WritePropList_Guts(
 				int nextElement = (*pVecChanges)[ i ];
 				while ( toField < nextElement )
 				{
-#ifdef PROP_SKIPPED_REPORT
-					++s_skippedProps;
-#endif
 					++nFieldIndex;
 					if ( nFieldIndex >= nFieldCount )
 						break;
@@ -781,23 +711,13 @@ void SendTable_WritePropList_Guts(
 			{
 				// See how many bits the data for this property takes up.
 				int nTotalBits = iterator.GetLength();
-				Assert( nTotalBits > 0 );
+				contract_assert( nTotalBits > 0 );
 				inputFieldData.Seek( iterator.GetOffset() );
-
-#ifdef PROP_SKIPPED_REPORT
-					if ( toField > kMinPropOffset && pVecChanges && pVecChanges->Count() < 20 )
-					{
-						const SendProp *pProp = pPrecalc->GetProp( toField );
-						char buffer[1000];
-						V_sprintf_safe( buffer, "%s, field %d", pProp->GetName(), toField );
-						s_highProps[ buffer ] += 1;
-					}
-#endif
 
 				if ( bDebugWatch )
 				{
 					const SendProp *pProp = pPrecalc->GetProp( toField );
-					Assert( pProp );
+					contract_assert( pProp );
 					ShowEncodeDeltaWatchInfo( pTable, pProp, inputFieldData, objectID, toField );
 				}
 
@@ -851,7 +771,7 @@ void SendTable_WritePropList(
 
 
 //given two data pointers and a bit range, this will determine if there is any difference between the bits. Note that this assumes that these can be interpreted as valid uint32's for speed
-static inline bool DoesBitRangeMatch( const uint32* RESTRICT pOld, const uint32* RESTRICT pNew, uint32 nStartBit, uint32 nEndBit )
+static inline bool DoesBitRangeMatch( const uint32* __restrict__ pOld, const uint32* __restrict__ pNew, uint32 nStartBit, uint32 nEndBit )
 {
 	//determine the starting index
 	const uint32 nStartIndex	= nStartBit / 32;
@@ -892,7 +812,7 @@ static inline bool DoesBitRangeMatch( const uint32* RESTRICT pOld, const uint32*
 //given a serialized entity and a property field, this will attempt to find the property field within that entity using the fact that field = index in nearly all cases. This will account for minor adjustments. If the
 //serialized entities ever become sparse though, this should likely be replaced with a sorted iteration over the field, rather than this sparse lookup, but for now this is significantly faster. This will return -1 if
 //the field is not in the entity
-static inline int32 GetFieldIndex( const short* RESTRICT pFieldStart, const short* RESTRICT pFieldEnd, short nDesiredField )
+static inline int32 GetFieldIndex( const short* __restrict__ pFieldStart, const short* __restrict__ pFieldEnd, short nDesiredField )
 {
 	//determine our starting pointer (likely to be the field itself)
 	const short* pCurr = std::min( pFieldEnd - 1, pFieldStart + nDesiredField );
@@ -929,7 +849,7 @@ static inline int32 GetFieldIndex( const short* RESTRICT pFieldStart, const shor
 //return false if a delta table is not applicable and instead a full pack needs to be done
 SerializedEntityHandle_t SendTable_BuildDeltaProperties( edict_t *pEdict, int nObjectID, const SendTable* pTable, SerializedEntityHandle_t oldProps, CalcDeltaResultsList_t &deltaProps, std::span<CSendProxyRecipients> pRecipients, bool& bCanReuseOldData )
 {
-	const CSerializedEntity* RESTRICT pOldProps = ( const CSerializedEntity* )oldProps;
+	const CSerializedEntity* __restrict__ pOldProps = ( const CSerializedEntity* )oldProps;
 	
 	//assume that we can't reuse the old frame for now
 	bCanReuseOldData = false;
@@ -940,16 +860,16 @@ SerializedEntityHandle_t SendTable_BuildDeltaProperties( edict_t *pEdict, int nO
 	info.Init( false, false );
 
 	//get the change list associated with this object
-	const CEdictChangeInfo * RESTRICT pCI = &g_pSharedChangeInfo->m_ChangeInfos[ pEdict->GetChangeInfo() ];
+	const CEdictChangeInfo * __restrict__ pCI = &g_pSharedChangeInfo->m_ChangeInfos[ pEdict->GetChangeInfo() ];
 
 	//cache our indices for our fields
 	const uint32 nOldProps = pOldProps->GetFieldCount();
-	const short* RESTRICT pFieldListStart	= pOldProps->GetFieldPaths();
-	const short* RESTRICT pFieldListEnd		= pFieldListStart + nOldProps;
+	const short* __restrict__ pFieldListStart	= pOldProps->GetFieldPaths();
+	const short* __restrict__ pFieldListEnd		= pFieldListStart + nOldProps;
 	
 	//now copy over the old property block into our new buffer
 	uint8 packedData[MAX_PACKEDENTITY_DATA];
-	memcpy( packedData, pOldProps->GetFieldData(), Bits2Bytes( pOldProps->GetFieldDataBitCount() ) );
+	std::memcpy( packedData, pOldProps->GetFieldData(), Bits2Bytes( pOldProps->GetFieldDataBitCount() ) );
 	bf_write fieldDataBuf( "BuildDeltaProperties fieldDataBuf", packedData, sizeof( packedData ) );
 
 	//we now need to build a list of the properties that have changed, converting them over to indices, and sorting them
@@ -983,7 +903,7 @@ SerializedEntityHandle_t SendTable_BuildDeltaProperties( edict_t *pEdict, int nO
 			fieldDataBuf.SeekToBit( nPropBitStart );
 			info.SeekToProp( nPropField );
 
-			const SendProp* RESTRICT pProp = pTable->m_pPrecalc->GetProp( nPropField );
+			const SendProp* __restrict__ pProp = pTable->m_pPrecalc->GetProp( nPropField );
 
 			// Call their proxy to get the property's value.
 			DVariant var;
@@ -1014,13 +934,13 @@ SerializedEntityHandle_t SendTable_BuildDeltaProperties( edict_t *pEdict, int nO
 	}
 
 	//at this point, we have all of our new data. So setup our new serialized version to return
-	CSerializedEntity* RESTRICT pNewProps = (CSerializedEntity*)g_pSerializedEntities->AllocateSerializedEntity(__FILE__, __LINE__);
+	CSerializedEntity* __restrict__ pNewProps = (CSerializedEntity*)g_pSerializedEntities->AllocateSerializedEntity(__FILE__, __LINE__);
 	pNewProps->SetupPackMemory( nOldProps, pOldProps->GetFieldDataBitCount() );
 
 	//and blit on over
-	memcpy( pNewProps->GetFieldPaths(), pOldProps->GetFieldPaths(), sizeof( uint16 ) * nOldProps );
-	memcpy( pNewProps->GetFieldDataBitOffsets(), pOldProps->GetFieldDataBitOffsets(), sizeof( uint32 ) * nOldProps );
-	memcpy( pNewProps->GetFieldData(), packedData, Bits2Bytes( pNewProps->GetFieldDataBitCount() ) );
+	std::memcpy( pNewProps->GetFieldPaths(), pOldProps->GetFieldPaths(), sizeof( uint16 ) * nOldProps );
+	std::memcpy( pNewProps->GetFieldDataBitOffsets(), pOldProps->GetFieldDataBitOffsets(), sizeof( uint32 ) * nOldProps );
+	std::memcpy( pNewProps->GetFieldData(), packedData, Bits2Bytes( pNewProps->GetFieldDataBitCount() ) );
 
 	return ( SerializedEntityHandle_t )pNewProps;
 }
@@ -1051,11 +971,11 @@ static void BuildNonZeroDelta( const SendTable *pTable,
 }
 
 //given data, this will continue to advance the pointers so long as from = to, and will update the necessary values
-static FORCEINLINE void AdvanceToNextChange( const uint32* RESTRICT pFrom, const uint32* RESTRICT pTo, uint32 nMaxInts, uint32* RESTRICT pnIntOffset, uint32* RESTRICT pnDataDiff, uint32* RESTRICT pnDataStartBit )
+[[gnu::always_inline]] static inline void AdvanceToNextChange( const uint32* __restrict__ pFrom, const uint32* __restrict__ pTo, uint32 nMaxInts, uint32* __restrict__ pnIntOffset, uint32* __restrict__ pnDataDiff, uint32* __restrict__ pnDataStartBit )
 {
-	const uint32* RESTRICT pEndFrom	= pFrom + nMaxInts;
-	const uint32* RESTRICT pCurrFrom = pFrom + *pnIntOffset;
-	const uint32* RESTRICT pCurrTo	= pTo + *pnIntOffset;
+	const uint32* __restrict__ pEndFrom	= pFrom + nMaxInts;
+	const uint32* __restrict__ pCurrFrom = pFrom + *pnIntOffset;
+	const uint32* __restrict__ pCurrTo	= pTo + *pnIntOffset;
 
 	for( ; pCurrFrom != pEndFrom; ++pCurrFrom, ++pCurrTo )
 	{
@@ -1071,19 +991,19 @@ static FORCEINLINE void AdvanceToNextChange( const uint32* RESTRICT pFrom, const
 }
 
 //given a starting bit index, the dirty bit window, and the range that the property covers, this will determine if this property overlaps the dirty bit
-static FORCEINLINE bool DoesPropertyOverlapDirtyBit( uint32 nDataStartBit, uint32 nFieldStartBit, uint32 nFieldEndBit, uint32 nDataDiff )
+[[gnu::always_inline]] static inline bool DoesPropertyOverlapDirtyBit( uint32 nDataStartBit, uint32 nFieldStartBit, uint32 nFieldEndBit, uint32 nDataDiff )
 {
 	//Note, we assume that any properties that share this integer with us have been tested prior, and as a result, also cleared out the data diff
 	//when they checked so we do not need to mask off the lower bound
-	Assert( nFieldEndBit > nDataStartBit );
-	Assert( nDataStartBit + 32 > nFieldStartBit );
+	contract_assert( nFieldEndBit > nDataStartBit );
+	contract_assert( nDataStartBit + 32 > nFieldStartBit );
 
 	//see if this integer spans the boundary where we end, if so, we need to only check the area that we cover
 	uint32 nDataEndBit = nDataStartBit + 32;
 	if( nFieldEndBit < nDataEndBit )
 	{
 		uint32 nEndBits = ( nDataEndBit - nFieldEndBit );
-		Assert( nEndBits < 32 );
+		contract_assert( nEndBits < 32 );
 		uint32 nEndMask = ( 0xFFFFFFFF >> nEndBits );
 		nDataDiff &= nEndMask;
 	}
@@ -1100,8 +1020,8 @@ static inline uint32 FastPathCalcDelta( const CSerializedEntity *pFromEntity, co
 	const uint32 nFromFieldCount	= pFromEntity->GetFieldCount();
 	const uint32 nToFieldCount		= pToEntity->GetFieldCount();
 
-	const uint32* RESTRICT pFromData = (const uint32*)pFromEntity->GetFieldData();
-	const uint32* RESTRICT pToData	= (const uint32*)pToEntity->GetFieldData();
+	const uint32* __restrict__ pFromData = (const uint32*)pFromEntity->GetFieldData();
+	const uint32* __restrict__ pToData	= (const uint32*)pToEntity->GetFieldData();
 
 	//determine how many integers we have in our buffer
 	const uint32 nEndDataInts = ( std::min( pToEntity->GetFieldDataBitCount(), pFromEntity->GetFieldDataBitCount() ) + 31 ) / 32;
@@ -1130,12 +1050,12 @@ static inline uint32 FastPathCalcDelta( const CSerializedEntity *pFromEntity, co
 		return 0;
 
 	//pointers to each of the data blocks we are reading from
-	const short* RESTRICT pFromPath		= pFromEntity->GetFieldPaths();
-	const short* RESTRICT pToPath		= pToEntity->GetFieldPaths();
+	const short* __restrict__ pFromPath		= pFromEntity->GetFieldPaths();
+	const short* __restrict__ pToPath		= pToEntity->GetFieldPaths();
 	//since we want the END of the properties for most operations
-	const uint32* RESTRICT pFromStartOffset	= pFromEntity->GetFieldDataBitOffsets();
-	const uint32* RESTRICT pFromEndOffset	= pFromEntity->GetFieldDataBitOffsets() + 1;
-	const uint32* RESTRICT pToEndOffset		= pToEntity->GetFieldDataBitOffsets() + 1;
+	const uint32* __restrict__ pFromStartOffset	= pFromEntity->GetFieldDataBitOffsets();
+	const uint32* __restrict__ pFromEndOffset	= pFromEntity->GetFieldDataBitOffsets() + 1;
+	const uint32* __restrict__ pToEndOffset		= pToEntity->GetFieldDataBitOffsets() + 1;
 
 
 	//run through all the properties...except the last one. The reason for this is because we don't want to have to range check on all of our property bit offsets
@@ -1174,7 +1094,7 @@ static inline uint32 FastPathCalcDelta( const CSerializedEntity *pFromEntity, co
 		{
 			//clear any portion of this integer that we overlap with
 			uint32 nOverlapBits = nFromEnd - nDataStartBit;
-			Assert( nOverlapBits < 32 );
+			contract_assert( nOverlapBits < 32 );
 			uint32 nKeepMask	= 0xFFFFFFFFF << nOverlapBits;
 			nDataDiff &= nKeepMask;
 
@@ -1296,7 +1216,7 @@ bool SendTable_WriteInfos( const SendTable *pTable, bf_write& bfWrite, bool bNee
 	if( !pTable || bIsEnd )
 	{
 		// Write the end bit to signal no more send tables
-		Assert( !pTable && bIsEnd );
+		contract_assert( !pTable && bIsEnd );
 		msg.is_end = true;
 		return msg.WriteToBuffer( bfWrite );
 	}
@@ -1363,7 +1283,7 @@ static void SendTable_Validate( CSendTablePrecalc *pPrecalc )
 		}
 		else
 		{
-			ErrorIfNot( pProp->GetNumElements() == 1, ("Prop %s/%s has an invalid element count for a non-array.", pTable->m_pNetTableName, pProp->GetName()) );
+			if ( !( pProp->GetNumElements() == 1 ) ) Error("Prop %s/%s has an invalid element count for a non-array.", pTable->m_pNetTableName, pProp->GetName());
 		}
 			
 		// Check for 1-bit signed properties (their value doesn't get down to the client).
@@ -1501,25 +1421,23 @@ static void SendTable_TermTable( SendTable *pTable )
 		return;
 
 	delete pTable->m_pPrecalc;
-	Assert( !pTable->m_pPrecalc ); // Make sure it unbound itself.
+	contract_assert( !pTable->m_pPrecalc ); // Make sure it unbound itself.
 }
 
 
 int SendTable_GetNumFlatProps( const SendTable *pSendTable )
 {
 	const CSendTablePrecalc *pPrecalc = pSendTable->m_pPrecalc;
-	ErrorIfNot( pPrecalc,
-		("SendTable_GetNumFlatProps: missing pPrecalc.")
-	);
+	if ( !( pPrecalc ) ) Error("SendTable_GetNumFlatProps: missing pPrecalc.");
 	return pPrecalc->GetNumProps();
 }
 
 CRC32_t SendTable_CRCTable( CRC32_t &crc, SendTable *pTable )
 {
-	CRC32_ProcessBuffer( &crc, (void *)pTable->m_pNetTableName, Q_strlen( pTable->m_pNetTableName) );
+	CRC32_ProcessBuffer( &crc, (void *)pTable->m_pNetTableName, V_strlen( pTable->m_pNetTableName) );
 	CRCMSG( "Table: %s\n", pTable->m_pNetTableName );
 
-	int nProps = LittleLong( pTable->m_nProps );
+	int nProps = ( pTable->m_nProps );
 	CRC32_ProcessBuffer( &crc, (void *)&nProps, sizeof( pTable->m_nProps ) );
 	CRCMSG( "  nProps: " CRCFMT4 "\n", CRCMEM4( nProps ) );
 
@@ -1528,11 +1446,11 @@ CRC32_t SendTable_CRCTable( CRC32_t &crc, SendTable *pTable )
 	{
 		const SendProp *pProp = &pTable->m_pProps[iProp];
 
-		int type = LittleLong( pProp->m_Type );
+		int type = ( pProp->m_Type );
 		CRC32_ProcessBuffer( &crc, (void *)&type, sizeof( type ) );
-		CRC32_ProcessBuffer( &crc, (void *)pProp->GetName() , Q_strlen( pProp->GetName() ) );
+		CRC32_ProcessBuffer( &crc, (void *)pProp->GetName() , V_strlen( pProp->GetName() ) );
 
-		int flags = LittleLong( pProp->GetFlags() );
+		int flags = ( pProp->GetFlags() );
 		CRC32_ProcessBuffer( &crc, (void *)&flags, sizeof( flags ) );
 
 		CRCMSG( "  %d. %s : type = " CRCFMT4 ", flags = " CRCFMT4 ", bits = %d\n",
@@ -1541,7 +1459,7 @@ CRC32_t SendTable_CRCTable( CRC32_t &crc, SendTable *pTable )
 
 		if( pProp->m_Type == DPT_DataTable )
 		{
-			CRC32_ProcessBuffer( &crc, (void *)pProp->GetDataTable()->m_pNetTableName, Q_strlen( pProp->GetDataTable()->m_pNetTableName ) );
+			CRC32_ProcessBuffer( &crc, (void *)pProp->GetDataTable()->m_pNetTableName, V_strlen( pProp->GetDataTable()->m_pNetTableName ) );
 			CRCMSG( "      DPT_DataTable: %s\n", pProp->GetDataTable()->m_pNetTableName );
 			
 			if ( SendProp *pArrayPropInside = pProp->GetArrayProp() )
@@ -1554,37 +1472,17 @@ CRC32_t SendTable_CRCTable( CRC32_t &crc, SendTable *pTable )
 				CRCMSG( "      ArrayPropData: type = " CRCFMT4 ", flags = " CRCFMT4 ", bits = %d, size = %d\n",
 					CRCMEM4( arPropType ), CRCMEM4( arPropFlags ), pArrayPropInside->m_nBits, arElementsCount );
 			}
-			#if CRC_SEND_TABLE_VERBOSE
-			else if ( StringHasPrefixCaseSensitive( pProp->GetDataTable()->m_pNetTableName, "_ST_" ) )
-			{
-				SendProp *pArrayPropInside = pProp->GetDataTable()->GetProp( 1 );
-				int arPropType = pArrayPropInside->m_Type;
-				int arPropFlags = pArrayPropInside->GetFlags();
-				int arElementsCount = pProp->GetDataTable()->m_nProps - 1; // first is length proxy
-				CRC32_ProcessBuffer( &crc, ( void * ) &arPropType, sizeof( arPropType ) );
-				CRC32_ProcessBuffer( &crc, ( void * ) &arPropFlags, sizeof( arPropFlags ) );
-				CRCMSG( "      UtlVectorData: type = " CRCFMT4 ", flags = " CRCFMT4 ", bits = %d, size = %d\n",
-					CRCMEM4( arPropType ), CRCMEM4( arPropFlags ), pArrayPropInside->m_nBits, arElementsCount );
-			}
-			else
-			{
-				SendTable *pSendTableReferenced = pProp->GetDataTable();
-				if ( ( g_SendTables.Find( pSendTableReferenced ) == g_SendTables.InvalidIndex() )
-					&& ( g_SendTablesReferenced.Find( pSendTableReferenced ) == g_SendTablesReferenced.InvalidIndex() ) )
-					g_SendTablesReferenced.AddToTail( pSendTableReferenced );
-			}
-			#endif
 		}
 		else
 		{
 			if ( pProp->IsExcludeProp() )
 			{
-				CRC32_ProcessBuffer( &crc, (void *)pProp->GetExcludeDTName(), Q_strlen( pProp->GetExcludeDTName() ) );
+				CRC32_ProcessBuffer( &crc, (void *)pProp->GetExcludeDTName(), V_strlen( pProp->GetExcludeDTName() ) );
 				CRCMSG( "      ExcludeProp: %s\n", pProp->GetExcludeDTName() );
 			}
 			else if ( pProp->GetType() == DPT_Array )
 			{
-				int numelements = LittleLong( pProp->GetNumElements() );
+				int numelements = ( pProp->GetNumElements() );
 				CRC32_ProcessBuffer( &crc, (void *)&numelements, sizeof( numelements ) );
 				CRCMSG( "      DPT_Array: " CRCFMT4 "\n", CRCMEM4( numelements ) );
 			}
@@ -1598,7 +1496,7 @@ CRC32_t SendTable_CRCTable( CRC32_t &crc, SendTable *pTable )
 				LittleFloat( &highvalue, &pProp->m_fHighValue );
 				CRC32_ProcessBuffer( &crc, (void *)&highvalue, sizeof( highvalue ) );
 
-				int	bits = LittleLong( pProp->m_nBits );
+				int	bits = ( pProp->m_nBits );
 				CRC32_ProcessBuffer( &crc, (void *)&bits, sizeof( bits ) );
 
 				CRCMSG( "      DPT: lv " CRCFMT4 ", hv " CRCFMT4 ", bits " CRCFMT4 "\n",
@@ -1676,9 +1574,7 @@ void SendTable_PrintStats( void )
 
 bool SendTable_Init( SendTable **pTables, int nTables )
 {
-	ErrorIfNot( g_SendTables.empty(),
-		("SendTable_Init: called twice.")
-	);
+	if ( !( g_SendTables.empty() ) ) Error("SendTable_Init: called twice.");
 
 	bool bFullSendTableInfo = false;
 	if ( !IsRetail() )
@@ -1740,14 +1636,6 @@ CRC32_t SendTable_ComputeCRC()
 		result = SendTable_CRCTable( result, st );
 	}
 
-#if CRC_SEND_TABLE_VERBOSE
-	for ( int i = 0; i < g_SendTablesReferenced.Count(); i++ )
-	{
-		SendTable *st = g_SendTablesReferenced[ i ];
-		result = SendTable_CRCTable( result, st );
-	}
-#endif
-
 	CRC32_Final( &result );
 	
 	CRCMSG( "-----------------------------------------------------\n" );
@@ -1794,46 +1682,41 @@ bool SendTable_CheckIntegrity( SendTable *pTable, const void *pData, const int n
 	int nMaxProps = pTable->m_pPrecalc->GetNumProps();
 	int nPropCount = 0;
 
-	Assert( nMaxProps > 0 && nMaxProps < MAX_DATATABLE_PROPS );
+	contract_assert( nMaxProps > 0 && nMaxProps < MAX_DATATABLE_PROPS );
 
 	while( -1 != (iProp = bitsReader.ReadNextPropIndex()) )
 	{
-		Assert( (iProp>=0) && (iProp<nMaxProps) );
+		contract_assert( (iProp>=0) && (iProp<nMaxProps) );
 
 		// must be larger
-		Assert( iProp > iLastProp );
+		contract_assert( iProp > iLastProp );
 
 		const SendProp *pProp = pTable->m_pPrecalc->GetProp( iProp );
 
-		Assert( pProp );
+		contract_assert( pProp );
 
 		// ok check that SkipProp & IsEncodedZero read the same bit length
 		int iStartBit = bfRead.GetNumBitsRead();
 		g_PropTypeFns[ pProp->GetType() ].SkipProp( pProp, &bfRead );
 		int nLength = bfRead.GetNumBitsRead() - iStartBit;
 
-		Assert( nLength > 0 ); // a prop must have some bits
+		contract_assert( nLength > 0 ); // a prop must have some bits
 
 		bfRead.Seek( iStartBit ); // read it again
 
 		g_PropTypeFns[ pProp->GetType() ].IsEncodedZero( pProp, &bfRead );
 
-		Assert( nLength == (bfRead.GetNumBitsRead() - iStartBit) ); 
+		contract_assert( nLength == (bfRead.GetNumBitsRead() - iStartBit) ); 
 
 		nPropCount++;
 		iLastProp = iProp;
 	}
 
-	Assert( nPropCount <= nMaxProps );
-	Assert( bfRead.GetNumBytesLeft() < 4 ); 
-	Assert( !bfRead.IsOverflowed() );
+	contract_assert( nPropCount <= nMaxProps );
+	contract_assert( bfRead.GetNumBytesLeft() < 4 ); 
+	contract_assert( !bfRead.IsOverflowed() );
 
 #endif
 
 	return true;
 }
-
-
-
-
-

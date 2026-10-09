@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // view.h
-
-#ifndef VIEW_H
-#define VIEW_H
-
 
 class CViewSetup;
 class CViewSetupV1;
@@ -18,5 +11,3 @@ class CViewSetupV1;
 void V_Init (void);
 void V_Shutdown( void );
 void ConvertViewSetup( const CViewSetup &setup, CViewSetupV1 &setupV1, int nFlags );
-
-#endif // VIEW_H

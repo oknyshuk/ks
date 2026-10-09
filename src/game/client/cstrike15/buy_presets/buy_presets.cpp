@@ -1,22 +1,29 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
 
 #include "buy_preset_debug.h"
 #include "buy_presets.h"
 #include "weapon_csbase.h"
-#include "game/client/iviewport.h"
 #include "filesystem.h"
 #include "localize/ilocalize.h"
 #include "c_cs_player.h"
 
 BuyPresetManager *TheBuyPresets = nullptr;
 
-#if USE_BUY_PRESETS
 //--------------------------------------------------------------------------------------------------------------
 ConVar cl_buy_favorite_quiet( "cl_buy_favorite_quiet", "0", FCVAR_ARCHIVE | FCVAR_CLIENTCMD_CAN_EXECUTE, "Skips the prompt when saving a buy favorite in the buy menu" );
 ConVar cl_buy_favorite_nowarn( "cl_buy_favorite_nowarn", "0", FCVAR_ARCHIVE | FCVAR_CLIENTCMD_CAN_EXECUTE, "Skips the error prompt when saving an invalid buy favorite" );
@@ -49,7 +56,9 @@ static void PrintBuyPresetUsage( void )
 /**
  *  Callback function for handling the "cl_buy_favorite" command
  */
-CON_COMMAND_F( cl_buy_favorite, "Purchase a favorite weapon/equipment loadout", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void cl_buy_favorite( const CCommand &args );
+static ConCommand cl_buy_favorite_command( "cl_buy_favorite", cl_buy_favorite, "Purchase a favorite weapon/equipment loadout", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void cl_buy_favorite( const CCommand &args )
 {
 	if ( !engine->IsConnected() )
 		return;
@@ -80,7 +89,9 @@ CON_COMMAND_F( cl_buy_favorite, "Purchase a favorite weapon/equipment loadout", 
 /**
  *  Callback function for handling the "cl_buy_favorite_set" command
  */
-CON_COMMAND_F( cl_buy_favorite_set, "Saves the current loadout as a favorite", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void cl_buy_favorite_set( const CCommand &args );
+static ConCommand cl_buy_favorite_set_command( "cl_buy_favorite_set", cl_buy_favorite_set, "Saves the current loadout as a favorite", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void cl_buy_favorite_set( const CCommand &args )
 {
 	if ( !engine->IsConnected() )
 		return;
@@ -148,7 +159,6 @@ void __CmdFunc_BuyPresetsReset(void)
 	TheBuyPresets->Save();
 }
 ConCommand cl_buy_favorite_reset( "cl_buy_favorite_reset", __CmdFunc_BuyPresetsReset, "Reset favorite loadouts to the default", FCVAR_CLIENTCMD_CAN_EXECUTE );
-#endif // USE_BUY_PRESETS
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -169,7 +179,6 @@ BuyPresetManager::BuyPresetManager()
  */
 void BuyPresetManager::VerifyLoadedTeam( void )
 {
-#if USE_BUY_PRESETS
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if ( !pPlayer )
 		return;
@@ -243,7 +252,6 @@ void BuyPresetManager::VerifyLoadedTeam( void )
 
 	if ( !fileExists )
 		Save();
-#endif // USE_BUY_PRESETS
 }
 
 
@@ -253,7 +261,6 @@ void BuyPresetManager::VerifyLoadedTeam( void )
  */
 void BuyPresetManager::ResetEditToDefaults( void )
 {
-#if USE_BUY_PRESETS
 	VerifyLoadedTeam();
 
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
@@ -289,7 +296,6 @@ void BuyPresetManager::ResetEditToDefaults( void )
 	}
 
 	data->deleteThis();
-#endif // USE_BUY_PRESETS
 }
 
 
@@ -299,7 +305,6 @@ void BuyPresetManager::ResetEditToDefaults( void )
  */
 void BuyPresetManager::Save()
 {
-#if USE_BUY_PRESETS
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if ( !pPlayer )
 		return;
@@ -324,7 +329,6 @@ void BuyPresetManager::Save()
 	}
 	data->SaveToFile( filesystem, filename, nullptr );
 	data->deleteThis();
-#endif // USE_BUY_PRESETS
 }
 
 

@@ -1,11 +1,7 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
 #include "sky_vs20.inc"
 #include "sky_ps20.inc"
@@ -15,15 +11,14 @@
 #include "sky_hdr_compressed_rgbs_ps20.inc"
 #include "sky_hdr_compressed_rgbs_ps20b.inc"
 
-#include "convar.h"
-
+import std;
 
 static ConVar mat_use_compressed_hdr_textures( "mat_use_compressed_hdr_textures", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 DEFINE_FALLBACK_SHADER( Sky, Sky_HDR_DX9 )
 
 BEGIN_VS_SHADER( Sky_HDR_DX9, "Help for Sky_HDR_DX9 shader" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( HDRBASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "base texture when running with HDR enabled" )
 		SHADER_PARAM( HDRCOMPRESSEDTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "base texture (compressed) for hdr compression method A" )
 		SHADER_PARAM( HDRCOMPRESSEDTEXTURE0, SHADER_PARAM_TYPE_TEXTURE, "", "compressed base texture0 for hdr compression method B" )
@@ -202,7 +197,7 @@ BEGIN_VS_SHADER( Sky_HDR_DX9, "Help for Sky_HDR_DX9 shader" )
 			float c0[4]={1,1,1,1};
 			if (params[COLOR]->IsDefined())
 			{
-				memcpy(c0,params[COLOR]->GetVecValue(),3*sizeof(float));
+				std::memcpy(c0,params[COLOR]->GetVecValue(),3*sizeof(float));
 			}
 			if ( 
 				params[HDRCOMPRESSEDTEXTURE]->IsDefined() &&

@@ -1,10 +1,5 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 
@@ -12,10 +7,9 @@
 #include "debugmrttexture_ps20b.inc"
 #include "debugmrttexture_vs20.inc"
 
-
 BEGIN_VS_SHADER_FLAGS( DebugMRTTexture, "Help for DebugMRTTexture", SHADER_NOT_EDITABLE )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( MRTINDEX, SHADER_PARAM_TYPE_INTEGER, "", "" )
 	END_SHADER_PARAMS
 
@@ -80,4 +74,3 @@ BEGIN_VS_SHADER_FLAGS( DebugMRTTexture, "Help for DebugMRTTexture", SHADER_NOT_E
 		Draw();
 	}
 END_SHADER
-

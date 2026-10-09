@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef FX_TRAIL_H
-#define FX_TRAIL_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "particle_util.h"
 #include "baseparticleentity.h"
@@ -49,5 +44,3 @@ private:
 
 	C_ParticleTrail( const C_ParticleTrail & );
 };
-
-#endif // FX_TRAIL_H

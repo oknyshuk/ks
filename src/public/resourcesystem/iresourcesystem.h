@@ -1,22 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IRESOURCESYSTEM_H
-#define IRESOURCESYSTEM_H
-
-
-#include "appframework/iappsystem.h"
+import std;
+import ks.tier1;
 #include "resourcefile/resourceintrospection.h"
 #include "resourcefile/resourcedictionary.h"
 #include "resourcefile/resourcetype.h"
 #include "tier2/tier2.h"
 
-				
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
@@ -28,27 +20,27 @@ class IResourceTypeManager;
 // on raw data. Needs to be installed into resource type managers based on
 // resource type
 //-----------------------------------------------------------------------------
-abstract_class IResourceTypeConstructor
+class IResourceTypeConstructor
 {
 public:
 	virtual bool Init( IResourceTypeManager *pTypeManager ) = 0;
 	virtual void Shutdown() = 0;
 
 	// Returns a structure type associated with the permanent data
-	virtual void *AllocatePermanentData( const void *pDataFromDisk, size_t nDataSize ) = 0;
+	virtual void *AllocatePermanentData( const void *pDataFromDisk, std::size_t nDataSize ) = 0;
 	virtual void DeallocatePermanentData( void *pData ) = 0;
 
 	// Returns the default memory limit
-	virtual size_t GetDefaultMemoryLimit() = 0;
+	virtual std::size_t GetDefaultMemoryLimit() = 0;
 
 	// Allows the system to compute the actual size of the constructed class
 	// based on the permanent data in in the resource system. If the system
 	// doesn't know/care, return 0 here.
-	virtual size_t ComputeActualSize( void *pPermanentData ) = 0;
+	virtual std::size_t ComputeActualSize( void *pPermanentData ) = 0;
 
 	// NOTE: Resource references in pResourceData have been fixed up to 
 	// be resource handles at this point
-	virtual void *Allocate( const void *pPermanentData, const void *pResourceData, size_t nDataSize, ResourceHandle_t hResourceHandle ) = 0;
+	virtual void *Allocate( const void *pPermanentData, const void *pResourceData, std::size_t nDataSize, ResourceHandle_t hResourceHandle ) = 0;
 	virtual void Deallocate( void *pClass ) = 0;
 
 	// Fallbacks + errors..
@@ -60,11 +52,11 @@ public:
 //-----------------------------------------------------------------------------
 // A resource dictionary to look up resources
 //-----------------------------------------------------------------------------
-abstract_class IResourceTypeManager
+class IResourceTypeManager
 {
 public:
 	virtual ResourceHandle_t FindOrCreateResource( const char *pFileName, const char *pSubResourceName ) = 0;
-	virtual ResourceHandle_t FindOrCreateProceduralResource( const char *pGroupName, const char *pResourceName, const void *pPermanentData, size_t nDataSize ) = 0;
+	virtual ResourceHandle_t FindOrCreateProceduralResource( const char *pGroupName, const char *pResourceName, const void *pPermanentData, std::size_t nDataSize ) = 0;
 	virtual void DeleteResource( ResourceHandle_t hResource ) = 0;
 	virtual ResourceHandle_t FindResource( ResourceId_t nResourceId ) = 0;
 	virtual ResourceType_t GetResourceType() = 0;
@@ -86,7 +78,7 @@ public:
 //-----------------------------------------------------------------------------
 // Methods related to managing resources
 //-----------------------------------------------------------------------------
-abstract_class IResourceSystem : public IAppSystem
+class IResourceSystem : public IAppSystem
 {
 public:
 	// Used to indicate globals to update to the current frame counter
@@ -126,7 +118,7 @@ public:
 	virtual const CResourceStructIntrospection* FindStructIntrospectionForResourceType( ResourceType_t nType ) const = 0;
 	virtual const CResourceStructIntrospection* FindPermanentStructIntrospectionForResourceType( ResourceType_t nType ) const = 0;
 
-	virtual bool UnpackIntrospectedBlock( const void *pResourceData, size_t nSrcDataSize,
+	virtual bool UnpackIntrospectedBlock( const void *pResourceData, std::size_t nSrcDataSize,
 										  const CResourceIntrospection *pSrcIntro, const CResourceStructIntrospection* pSrcStructIntro,
 										  const CResourceStructIntrospection* pDstStructIntro,
 										  void const **pOutResult, int *pOutResultSize, IntrospectionCompatibilityType_t* pOutCompat ) const = 0;
@@ -168,6 +160,3 @@ inline void IResourceSystem::MarkFinishedFrameCounter( uint32 *pFrameCounter )
 {
 	*pFrameCounter = g_nResourceFrameCount;
 }
-
-
-#endif // IRESOURCESYSTEM_H

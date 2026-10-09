@@ -1,4 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "BASETEXTURE"					"0..1"
 // STATIC: "MULTITEXTURE"					"0..1"
@@ -16,24 +17,17 @@
 // STATIC: "SIMPLEOVERLAY"					"0..1"
 // DYNAMIC: "FLASHLIGHTSHADOWS"             "0..1"  [ps20b]
 // DYNAMIC: "FLASHLIGHTSHADOWS"             "0..0"  [ps20] [ = 0; ]
-// DYNAMIC: "BUILDWORLDIMPOSTER"			"0..1" [ = r_buildingmapforworld.GetBool() ? 1 : 0 ] 
-
+// DYNAMIC: "BUILDWORLDIMPOSTER"			"0..1" [ = r_buildingmapforworld.GetBool() ? 1 : 0 ]
 // Multitexture and basetexture are mutually exclusive.
 // SKIP: $MULTITEXTURE && $BASETEXTURE
-
 // SKIP: $SIMPLEOVERLAY && $BASETEXTURE
 // SKIP: $SIMPLEOVERLAY && !$FLOWMAP
-
 // flowmap doesn't play with multitexture
 // SKIP: $FLOWMAP && $MULTITEXTURE
-
 // Have to have the flashlight on to get flashlightshadows.
 // SKIP: ( $FLASHLIGHT == 0 ) && ( $FLASHLIGHTSHADOWS == 1 )
-
 // basetexture doesn't work with flashlight or lightmapwaterfog.  multitexture doesn't either.  We don't use basetexture or multitexture in newer code and instead use flowmap and flashlight.
 // SKIP: ( $FLASHLIGHT || $LIGHTMAPWATERFOG ) && ( ( $BASETEXTURE && !$FLOWMAP ) || $MULTITEXTURE )
-
-
 
 #include "common_ps_fxc.h"
 #include "common_fog_ps_fxc.h"

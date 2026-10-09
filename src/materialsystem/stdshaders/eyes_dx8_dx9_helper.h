@@ -1,14 +1,9 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef EYES_DX8_DX9_HELPER_H
-#define EYES_DX8_DX9_HELPER_H
-
-#include <string.h>
-
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -24,7 +19,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct Eyes_DX8_DX9_Vars_t
 {
-	Eyes_DX8_DX9_Vars_t() { memset( this, 0xFF, sizeof(Eyes_DX8_DX9_Vars_t) ); }
+	Eyes_DX8_DX9_Vars_t() { std::memset( this, 0xFF, sizeof(Eyes_DX8_DX9_Vars_t) ); }
 
 	int m_nBaseTexture;
 	int m_nFrame;
@@ -46,5 +41,3 @@ void InitParamsEyes_DX8_DX9( CBaseVSShader *pShader, IMaterialVar** params, cons
 void InitEyes_DX8_DX9( CBaseVSShader *pShader, IMaterialVar** params, Eyes_DX8_DX9_Vars_t &info );
 void DrawEyes_DX8_DX9( bool bDX9, CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 					  IShaderShadow* pShaderShadow, Eyes_DX8_DX9_Vars_t &info, VertexCompressionType_t vertexCompression );
-
-#endif // EYES_DX8_DX9_HELPER_H

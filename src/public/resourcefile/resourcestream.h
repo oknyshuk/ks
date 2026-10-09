@@ -1,30 +1,20 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Resource Stream is conceptually memory file where you write the data
-//          that you want to live both on disk and in memory. The constraint then is
-//          that the data must be movable in memory, since you don't know in advance,
-//          when you're creating the data, what will be its start address once it gets
-//          loaded. To accomplish this, we use CResourcePointer and CResourceArray
-//          in places of pointers and dynamic arrays. They store offsets rather than
-//          absolute addresses of the referenced objects, thus they are moveable.
-//          On Intel, the available addressing modes make the access to CResourcePointer
-//          as fast as pointer dereferencing in most cases. On architectures with
-//          rigid addressing, adding the base address is still virtually free.
-//
-// $NoKeywords: $
-//===========================================================================//
+//         that you want to live both on disk and in memory. The constraint then is
+//         that the data must be movable in memory, since you don't know in advance,
+//         when you're creating the data, what will be its start address once it gets
+//         loaded. To accomplish this, we use CResourcePointer and CResourceArray
+//         in places of pointers and dynamic arrays. They store offsets rather than
+//         absolute addresses of the referenced objects, thus they are moveable.
+//         On Intel, the available addressing modes make the access to CResourcePointer
+//         as fast as pointer dereferencing in most cases. On architectures with
+//         rigid addressing, adding the base address is still virtually free.
 
-#include "resourcefile/schema.h"
-
-#ifndef RESOURCESTREAM_H
-#define RESOURCESTREAM_H
-
-
-
-#include "tier0/platform.h"
-#include "tier0/basetypes.h"
-#include "tier0/dbg.h"
-#include "tier1/strtools.h"
+import std;
+import ks.tier1;
 
 class CResourceStream;
 
@@ -38,7 +28,7 @@ inline byte *ResolveOffset( const int32 *pOffset )
 inline byte *ResolveOffsetFast( const int32 *pOffset )
 {
 	int offset = *pOffset;
-	AssertDbg( offset != 0 );
+	contract_assert( offset != 0 );
 	return ( ( byte* )pOffset ) + offset;
 }
 
@@ -56,7 +46,7 @@ public:
 	CLockedResource( T *pData, uint nCount ): m_pData( pData ), m_nCount( nCount )  {}
 
 	// emulates pointer arithmetics
-	CLockedResource<T> operator + ( int nOffset ) { Assert( m_nCount <= (uint)nOffset); return CLockedResource<T>( m_pData + nOffset, m_nCount - (uint)nOffset ); }
+	CLockedResource<T> operator + ( int nOffset ) { contract_assert( m_nCount <= (uint)nOffset ); return CLockedResource<T>( m_pData + nOffset, m_nCount - (uint)nOffset ); }
 
 	operator const T* ()const { return m_pData; }
 	operator T* () { return m_pData; }
@@ -87,7 +77,7 @@ public:
 	// emulates pointer arithmetics
 	CUnlockedResource<T> operator + ( int nOffset )
 	{
-		Assert( m_nCount <= ( uint ) nOffset );
+		contract_assert( m_nCount <= ( uint ) nOffset );
 		return CUnlockedResource<T>( m_pStream, GetPtr() + nOffset, m_nCount - ( uint ) nOffset );
 	}
 
@@ -116,7 +106,7 @@ public:
 
 	bool operator == ( int zero )const
 	{
-		AssertDbg( zero == 0 );
+		contract_assert( zero == 0 );
 		return m_nOffset == zero;
 	}
 
@@ -167,7 +157,7 @@ public:
 		{
 			intp nOffset = ( intp )p - ( intp )&m_nOffset;
 			m_nOffset = ( int32 )nOffset;
-			AssertDbg( m_nOffset == nOffset );
+			contract_assert( m_nOffset == nOffset );
 		}
 	}
 
@@ -181,26 +171,26 @@ template <typename T>
 class CResourcePointer: public CResourcePointerBase
 {
 public:
-	FORCEINLINE const T* GetUncheckedPtr() const
+	[[gnu::always_inline]] inline const T* GetUncheckedPtr() const
 	{
 		// assumes non-null; returns garbage if this is a null pointer
-		AssertDbg( m_nOffset != 0 );
+		contract_assert( m_nOffset != 0 );
 		byte *ptr = ResolveOffsetFast( &m_nOffset );
 		return ( const T* )ptr;
 	}
 
-	FORCEINLINE const T* GetPtr() const
+	[[gnu::always_inline]] inline const T* GetPtr() const
 	{
 		byte *ptr = ResolveOffset( &m_nOffset );
 		return ( const T* )ptr;
 	}
 
-	FORCEINLINE operator const T*() const
+	[[gnu::always_inline]] inline operator const T*() const
 	{
 		return GetPtr();
 	}
 
-	FORCEINLINE const T* operator->() const
+	[[gnu::always_inline]] inline const T* operator->() const
 	{
 		return GetPtr();
 	}
@@ -219,26 +209,26 @@ public:
 	//			There are plenty of cases where we know that a CResourcePointer should be read-only
 
 public:
-	FORCEINLINE T* GetUncheckedPtr()
+	[[gnu::always_inline]] inline T* GetUncheckedPtr()
 	{
 		// assumes non-null; returns garbage if this is a null pointer
-		Assert( m_nOffset != 0 );
+		contract_assert( m_nOffset != 0 );
 		byte *ptr = ResolveOffsetFast( &m_nOffset );
 		return ( T* )ptr;
 	}
 
-	FORCEINLINE T* GetPtr()
+	[[gnu::always_inline]] inline T* GetPtr()
 	{
 		byte *ptr = ResolveOffset( &m_nOffset );
 		return ( T* )ptr;
 	}
 
-	FORCEINLINE operator T*()
+	[[gnu::always_inline]] inline operator T*()
 	{
 		return GetPtr();
 	}
 
-	FORCEINLINE T* operator->()
+	[[gnu::always_inline]] inline T* operator->()
 	{
 		return GetPtr();
 	}
@@ -273,7 +263,7 @@ public:
 
 	bool operator == ( int zero )const
 	{
-		AssertDbg( zero == 0 );
+		contract_assert( zero == 0 );
 		return m_nOffset == zero;
 	}
 
@@ -308,7 +298,7 @@ public:
 	{
 		if ( pData == nullptr )
 		{
-			AssertDbg( nCount == 0 );
+			contract_assert( nCount == 0 );
 			m_nOffset = 0;
 			m_nCount = 0;
 		}
@@ -343,25 +333,25 @@ private:
 public:
 	const T& operator []( int nIndex ) const
 	{
-		AssertDbg( (uint)nIndex < m_nCount );
+		contract_assert( (uint)nIndex < m_nCount );
 		return this->GetPtr()[nIndex];
 	}
 
 	T& operator []( int nIndex ) 
 	{
-		AssertDbg( (uint)nIndex < m_nCount );
+		contract_assert( (uint)nIndex < m_nCount );
 		return this->GetPtr()[nIndex];
 	}
 
 	const T& Element( int nIndex ) const
 	{
-		AssertDbg( (uint)nIndex < m_nCount );
+		contract_assert( (uint)nIndex < m_nCount );
 		return this->GetPtr()[nIndex];
 	}
 
 	T& Element( int nIndex ) 
 	{
-		AssertDbg( (uint)nIndex < m_nCount );
+		contract_assert( (uint)nIndex < m_nCount );
 		return this->GetPtr()[nIndex];
 	}
 
@@ -528,7 +518,7 @@ public:
 protected:
 	void EnsureAvailable( uint nAddCapacity )
 	{
-		Assert( nAddCapacity < 0x40000000 ); // we don't support >1Gb of data yet
+		contract_assert( nAddCapacity < 0x40000000 ); // we don't support >1Gb of data yet
 		uint nNewCommit = m_nUsed + nAddCapacity;
 		if ( nNewCommit > m_nCommitted )
 		{
@@ -557,10 +547,10 @@ class CResourceStreamVM: public CResourceStream
 public:
 	// Constructor, destructor
 	CResourceStreamVM( uint nReserveSize = 16 * 1024 * 1024 );
-	virtual ~CResourceStreamVM( ) OVERRIDE;
+	virtual ~CResourceStreamVM( ) override;
 	void CloneStream( CResourceStreamVM& copyFromStream );
 protected:
-	virtual void Commit( uint nNewCommit ) OVERRIDE;
+	virtual void Commit( uint nNewCommit ) override;
 	void ReserveVirtualMemory( uint nAddressSize );
 	void ReleaseVirtualMemory( );
 	enum
@@ -569,6 +559,7 @@ protected:
 	};
 protected:
 	uint m_nReserved; // the reserved virtual address space for the block of data
+	ks::platform::virtual_memory *m_pMapping = nullptr;
 };
 
 
@@ -581,7 +572,7 @@ private:
 public:
 	CResourceStreamFixed( uint nPreallocateDataSize );// NOTE: the preallocated data is Zeroed in this constructor
 	CResourceStreamFixed( void *pPreallocatedData, uint nPreallocatedDataSize ); // NOTE: the preallocated data is Zeroed in this constructor
-	virtual ~CResourceStreamFixed() OVERRIDE;
+	virtual ~CResourceStreamFixed() override;
 
 	int GetSlack(); // remaining bytes
 	virtual void Commit( uint nNewCommit );
@@ -714,7 +705,7 @@ template <typename T>
 inline CLockedResource<T> CResourceStream::Allocate( uint nCount )
 {
 	// TODO: insert reflection code here
-	uint nAlignment = VALIGNOF( T );
+	uint nAlignment = __alignof( T );
 	Align( nAlignment );
 	T *ptr = AllocateUnaligned< T >( nCount );
 	// Construct
@@ -792,7 +783,7 @@ inline CLockedResource<char> CResourceStream::WriteString( const char *pString )
 	else
 	{
 		CLockedResource<char> memory = Allocate<char>(nLength+1);
-		memcpy( (char*)memory, pString, nLength+1 );
+		std::memcpy( (char*)memory, pString, nLength+1 );
 		return memory;
 	}
 }
@@ -812,7 +803,7 @@ inline CLockedResource<char> CResourceStream::WriteStringMaxLen( const char *pSt
 	else
 	{
 		CLockedResource<char> memory = Allocate<char>( nStrLen + 1 ); // +1 for null term
-		memcpy( (char*)memory, pString, nStrLen );
+		std::memcpy( (char*)memory, pString, nStrLen );
 		((char*)memory)[nStrLen] = '\0';
 		return memory;
 	}
@@ -826,13 +817,13 @@ inline uint32 CResourceStream::Tell() const
 
 inline void CResourceStream::Rollback( uint32 nPreviousTell )
 {
-	Assert( nPreviousTell <= m_nUsed );
+	contract_assert( nPreviousTell <= m_nUsed );
 	m_nUsed = nPreviousTell;
 }
 
 inline void CResourceStream::Rollback( const void *pPreviousTell )
 {
-	Assert( pPreviousTell > m_pData && pPreviousTell <= m_pData + m_nUsed );
+	contract_assert( pPreviousTell > m_pData && pPreviousTell <= m_pData + m_nUsed );
 	m_nUsed = ( ( uint8* ) pPreviousTell ) - m_pData;
 }
 
@@ -841,7 +832,7 @@ inline uint32 CResourceStream::Tell( const void * pPast )const
 {
 	// we do not reallocate the reserved memory , so the pointers do not invalidate and m_pData stays the same, and all absolute addresses stay the same in memory
 	uint nTell = uintp( pPast ) - uintp( m_pData );
-	AssertDbg( nTell <= m_nUsed );
+	contract_assert( nTell <= m_nUsed );
 	return nTell;
 }
 
@@ -895,7 +886,7 @@ inline void CResourceStream::Clear()
 template <typename T> 
 inline T* CResourceStream::GetDataPtrTypeAligned( uint Offset )
 {
-	uint nAlignment = VALIGNOF( T );
+	uint nAlignment = __alignof( T );
 	Offset += ( ( 0 - Offset ) & ( nAlignment - 1 ) );
 	return ( T* ) GetDataPtr( Offset );
 }
@@ -940,8 +931,8 @@ CUnlockedResource< T >::CUnlockedResource( CResourceStream *pStream, T *pData, u
 	m_nOffset( ( ( uint8* ) pData ) - pStream->m_pData ),
 	m_nCount( nCount )
 {
-	AssertDbg( ( ( uint8* ) pData ) >= pStream->m_pData && ( ( uint8* ) ( pData + nCount ) <= pStream->m_pData + pStream->m_nUsed ) );
-	AssertDbg( m_nOffset <= pStream->m_nUsed && m_nOffset + nCount * sizeof( T ) <= pStream->m_nUsed );
+	contract_assert( ( ( uint8* ) pData ) >= pStream->m_pData && ( ( uint8* ) ( pData + nCount ) <= pStream->m_pData + pStream->m_nUsed ) );
+	contract_assert( m_nOffset <= pStream->m_nUsed && m_nOffset + nCount * sizeof( T ) <= pStream->m_nUsed );
 }
 
 template < typename T >
@@ -956,8 +947,6 @@ inline const T* CUnlockedResource< T >::GetPtr( )const
 	return ( const T * )m_pStream->GetDataPtr( m_nOffset );
 }
 
-
-
-
-
-#endif // RESOURCESTREAM_H
+// Included at the end: schema.h in turn includes resourcefile.h, which uses the
+// classes defined above. Including it here keeps the three headers acyclic.
+#include "resourcefile/schema.h"

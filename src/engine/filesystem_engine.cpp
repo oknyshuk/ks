@@ -1,22 +1,17 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//==================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "quakedef.h" // for max_ospath
-#include <stdlib.h>
-#include <assert.h>
 #include "filesystem.h"
 #include "bitmap/tgawriter.h"
 #include <tier2/tier2.h>
+import ks.tier1;
+import std;
 #include "filesystem_init.h"
-#include "keyvalues.h"
 #include "host.h"
 
-#define ADDONLIST_FILENAME			"addonlist.txt"
-#define ADDONS_DIRNAME				"addons"
+inline constexpr const char *ADDONLIST_FILENAME = "addonlist.txt";
+inline constexpr const char *ADDONS_DIRNAME = "addons";
 
 IFileSystem *g_pFileSystem = nullptr;
 
@@ -41,7 +36,9 @@ ConVar fs_whitelist_spew_flags( "fs_whitelist_spew_flags", "0", 0,
 	fs_whitelist_spew_flags_changefn );
 #endif
 
-CON_COMMAND( path, "Show the engine filesystem path." )
+static void path( const CCommand &args );
+static ConCommand path_command( "path", path, "Show the engine filesystem path." );
+static void path( const CCommand &args )
 {
 	if( g_pFileSystem )
 	{
@@ -49,7 +46,9 @@ CON_COMMAND( path, "Show the engine filesystem path." )
 	}
 }
 
-CON_COMMAND( fs_printopenfiles, "Show all files currently opened by the engine." )
+static void fs_printopenfiles( const CCommand &args );
+static ConCommand fs_printopenfiles_command( "fs_printopenfiles", fs_printopenfiles, "Show all files currently opened by the engine." );
+static void fs_printopenfiles( const CCommand &args )
 {
 	if( g_pFileSystem )
 	{
@@ -57,7 +56,9 @@ CON_COMMAND( fs_printopenfiles, "Show all files currently opened by the engine."
 	}
 }
 
-CON_COMMAND( fs_warning_level, "Set the filesystem warning level." )
+static void fs_warning_level( const CCommand &args );
+static ConCommand fs_warning_level_command( "fs_warning_level", fs_warning_level, "Set the filesystem warning level." );
+static void fs_warning_level( const CCommand &args )
 {
 	if( args.ArgC() != 2 )
 	{
@@ -72,7 +73,7 @@ CON_COMMAND( fs_warning_level, "Set the filesystem warning level." )
 		return;
 	}
 
-	int level = atoi( args[ 1 ] );
+	int level = std::atoi( args[ 1 ] );
 	switch( level )
 	{
 	case FILESYSTEM_WARNING_QUIET:
@@ -108,7 +109,7 @@ CON_COMMAND( fs_warning_level, "Set the filesystem warning level." )
 
 //-----------------------------------------------------------------------------
 // Purpose: Wrap Sys_LoadModule() with a filesystem GetLocalCopy() call to
-//			ensure have the file to load when running Steam.
+//			ensure have the file to load.
 //-----------------------------------------------------------------------------
 CSysModule *FileSystem_LoadModule(const char *path)
 {
@@ -132,7 +133,7 @@ void FileSystem_SetWhitelistSpewFlags()
 #if defined( _DEBUG )
 	if ( !g_pFileSystem )
 	{
-		Assert( !"FileSystem_InitSpewFlags - no filesystem." );
+		contract_assert( !"FileSystem_InitSpewFlags - no filesystem." );
 		return;
 	}
 	
@@ -140,7 +141,9 @@ void FileSystem_SetWhitelistSpewFlags()
 #endif
 }
 
-CON_COMMAND( fs_syncdvddevcache, "Force the 360 to get updated files that are in your p4 changelist(s) from the host PC when running with -dvddev." )
+static void fs_syncdvddevcache( const CCommand &args );
+static ConCommand fs_syncdvddevcache_command( "fs_syncdvddevcache", fs_syncdvddevcache, "Force the 360 to get updated files that are in your p4 changelist(s) from the host PC when running with -dvddev." );
+static void fs_syncdvddevcache( const CCommand &args )
 {
 	if( g_pFileSystem )
 	{
@@ -160,13 +163,6 @@ bool LoadAddonListFile( const char *pDirectoryName, KeyValues *&pAddons )
 	pAddons = ReadKeyValuesFile( addoninfoFilename );
 
 	return ( pAddons != nullptr );
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-// Copies any addons staged under <STEAMDIR>\steamapps\SourceMods\addons\<APPID> to the addons directory
-//---------------------------------------------------------------------------------------------------------------------
-void CopyStagedAddons( IFileSystem *pFileSystem, const char *pModPath )
-{
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -349,11 +345,6 @@ void FileSystem_UpdateAddonSearchPaths( IFileSystem *pFileSystem )
 	}
 
 	//
-	// Copy over any addons that were staged by the addon installer
-	//
-	CopyStagedAddons( pFileSystem, modPath );
-
-	//
 	// Reconcile the addons file and add any newly added ones to the list
 	//
 	ReconcileAddonListFile( pFileSystem, modPath );
@@ -392,7 +383,9 @@ void FileSystem_UpdateAddonSearchPaths( IFileSystem *pFileSystem )
 	modelloader->Studio_ReloadModels( IModelLoader::RELOAD_EVERYTHING );
 	materials->UncacheAllMaterials();
 }
-CON_COMMAND( update_addon_paths, "Reloads the search paths for game addons." )
+static void update_addon_paths( const CCommand &args );
+static ConCommand update_addon_paths_command( "update_addon_paths", update_addon_paths, "Reloads the search paths for game addons." );
+static void update_addon_paths( const CCommand &args )
 {
 	if( g_pFileSystem )
 	{
@@ -400,7 +393,9 @@ CON_COMMAND( update_addon_paths, "Reloads the search paths for game addons." )
 	}
 }
 
-CON_COMMAND( unload_all_addons, "Reloads the search paths for game addons." )
+static void unload_all_addons( const CCommand &args );
+static ConCommand unload_all_addons_command( "unload_all_addons", unload_all_addons, "Reloads the search paths for game addons." );
+static void unload_all_addons( const CCommand &args )
 {
 	//
 	// Unmount any VPK addons
@@ -428,5 +423,3 @@ CON_COMMAND( unload_all_addons, "Reloads the search paths for game addons." )
 		}
 	}
 }
-
-

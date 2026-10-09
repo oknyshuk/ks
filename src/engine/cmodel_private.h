@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CMODEL_PRIVATE_H
-#define CMODEL_PRIVATE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "qlimits.h"
 #include "bspfile.h"
-#include <vector>
+import std;
 
 #include "filesystem.h"
 #include "filesystem_engine.h"
@@ -22,7 +15,7 @@ class CDispCollTree;
 class CCollisionBSPData;
 struct cbrush_t;
 
-#define MAX_CHECK_COUNT_DEPTH 2
+inline constexpr auto MAX_CHECK_COUNT_DEPTH = 2;
 
 struct TraceVisits_t
 {
@@ -37,7 +30,7 @@ struct TraceInfo_t
 {
 	TraceInfo_t()
 	{
-		memset( this, 0, sizeof( TraceInfo_t ) );
+		std::memset( this, 0, sizeof( TraceInfo_t ) );
 		m_nCheckDepth = -1;
 	}
 
@@ -94,7 +87,7 @@ struct COcclusionInfo
 
 	bool PrepareCheckBrush( uint16 nBrush )
 	{
-		const uint nMask = ARRAYSIZE( m_nBrushesChecked ) - 1;
+		const uint nMask = std::size( m_nBrushesChecked ) - 1;
 		uint16 * pLine = &m_nBrushesChecked[ nBrush & nMask ];
 		if ( pLine[ 0 ] == nBrush /*|| pLine[ 1 ] == nBrush*/ )
 		{
@@ -113,14 +106,14 @@ struct COcclusionInfo
 	fltx4 m_EndXnXYnY;// {p1+X1,p1-X1,p1+Y1,p1-Y1}
 	fltx4 m_StartEndZnZ; // {p0+Z0,p0-Z0,p1+Z1,p1-Z1}
 
-	FORCEINLINE fltx4 GetStartX()const { return ShuffleXYXY( m_StartXnXYnY ); }    // {p0+X0, p0-X0,p0+X0,p0-X0}
-	FORCEINLINE fltx4 GetStartY()const { return ShuffleZZWW( m_StartXnXYnY ); }    // {p1+Y1, p1+Y1,p1-Y1,p1-Y1}
-	FORCEINLINE fltx4 GetEndX()const  { return ShuffleXYXY( m_EndXnXYnY ); }       // {p0+X0, p0-X0,p0+X0,p0-X0}
-	FORCEINLINE fltx4 GetEndY()const { return ShuffleZZWW( m_EndXnXYnY ); }        // {p1+Y1, p1+Y1,p1-Y1,p1-Y1}
-	FORCEINLINE fltx4 GetStartZ0()const { return SplatXSIMD( m_StartEndZnZ ); }
-	FORCEINLINE fltx4 GetStartZ1()const { return SplatYSIMD( m_StartEndZnZ ); }
-	FORCEINLINE fltx4 GetEndZ0()const { return SplatZSIMD( m_StartEndZnZ ); }
-	FORCEINLINE fltx4 GetEndZ1()const { return SplatWSIMD( m_StartEndZnZ ); }
+	[[gnu::always_inline]] inline fltx4 GetStartX()const { return ShuffleXYXY( m_StartXnXYnY ); }    // {p0+X0, p0-X0,p0+X0,p0-X0}
+	[[gnu::always_inline]] inline fltx4 GetStartY()const { return ShuffleZZWW( m_StartXnXYnY ); }    // {p1+Y1, p1+Y1,p1-Y1,p1-Y1}
+	[[gnu::always_inline]] inline fltx4 GetEndX()const  { return ShuffleXYXY( m_EndXnXYnY ); }       // {p0+X0, p0-X0,p0+X0,p0-X0}
+	[[gnu::always_inline]] inline fltx4 GetEndY()const { return ShuffleZZWW( m_EndXnXYnY ); }        // {p1+Y1, p1+Y1,p1-Y1,p1-Y1}
+	[[gnu::always_inline]] inline fltx4 GetStartZ0()const { return SplatXSIMD( m_StartEndZnZ ); }
+	[[gnu::always_inline]] inline fltx4 GetStartZ1()const { return SplatYSIMD( m_StartEndZnZ ); }
+	[[gnu::always_inline]] inline fltx4 GetEndZ0()const { return SplatZSIMD( m_StartEndZnZ ); }
+	[[gnu::always_inline]] inline fltx4 GetEndZ1()const { return SplatWSIMD( m_StartEndZnZ ); }
 
 	uint16 m_nBrushesChecked[ 64 ]/*[ 2 ]*/; // associative array of brushes that have already been checked
 	VectorAligned m_traceMins;
@@ -150,7 +143,7 @@ struct COcclusionInfo
 
 extern TraceInfo_t g_PrimaryTraceInfo;
 
-#define		NEVER_UPDATED		-99999
+inline constexpr auto NEVER_UPDATED = -99999;
 
 //=============================================================================
 //
@@ -165,7 +158,7 @@ struct cbrushside_t
 	byte			bThin;			// is a thin brush side?
 };
 
-#define NUMSIDES_BOXBRUSH	0xFFFF
+inline constexpr auto NUMSIDES_BOXBRUSH = 0xFFFF;
 
 struct cbrush_t
 {
@@ -247,22 +240,17 @@ public:
 private:
 	T *m_pArray;
 
-#ifdef DBGFLAG_ASSERT
-	int m_nCount;
-#endif
 };
 
 template <class T>
 inline T &CRangeValidatedArray<T>::operator[]( int i )
 {
-	Assert( (i >= 0) && (i < m_nCount) );
 	return m_pArray[i];
 }
 
 template <class T>
 inline const T &CRangeValidatedArray<T>::operator[]( int i ) const
 {
-	Assert( (i >= 0) && (i < m_nCount) );
 	return m_pArray[i];
 }
 
@@ -271,9 +259,6 @@ inline void CRangeValidatedArray<T>::Attach( int nCount, T* pData )
 {
 	m_pArray = pData;
 
-#ifdef DBGFLAG_ASSERT
-	m_nCount = nCount;
-#endif
 }
 
 template <class T>
@@ -281,9 +266,6 @@ inline void CRangeValidatedArray<T>::Detach()
 {
 	m_pArray = nullptr;
 
-#ifdef DBGFLAG_ASSERT
-	m_nCount = 0;
-#endif
 }
 
 template <class T>
@@ -303,7 +285,7 @@ public:
 	{
 		m_nCount = 0;
 		m_nOffset = -1;
-		memset( m_pFilename, 0, sizeof( m_pFilename ) );
+		std::memset( m_pFilename, 0, sizeof( m_pFilename ) );
 	}
 
 	~CDiscardableArray()
@@ -334,7 +316,6 @@ public:
 	{
 		if ( m_data.empty() )
 		{
-			MEM_ALLOC_CREDIT();
 
 			auto data = g_pFileSystem->ReadFile( m_pFilename, nullptr, sizeof(T) * m_nCount, m_nOffset );
 			if ( !data )
@@ -467,21 +448,6 @@ inline CCollisionBSPData *GetCollisionBSPData( void /*int ndxBSP*/ )
 //
 // Collision Model Counts
 //
-#ifdef COUNT_COLLISIONS
-class CCollisionCounts
-{
-public:
-	int		m_PointContents;
-	int		m_Traces;
-	int		m_BrushTraces;
-	int		m_DispTraces;
-	int		m_Stabs;
-};
-
-void CollisionCounts_Init( CCollisionCounts *pCounts );
-
-extern CCollisionCounts g_CollisionCounts;
-#endif
 
 
 //=============================================================================
@@ -527,9 +493,9 @@ struct alignedbbox_t
 	}
 };
 
-#define TLD_DEF_BRUSH_MAX	64
-#define TLD_DEF_DISP_MAX	32
-#define TLD_DEF_ENTITY_MAX	64
+inline constexpr auto TLD_DEF_BRUSH_MAX = 64;
+inline constexpr auto TLD_DEF_DISP_MAX = 32;
+inline constexpr auto TLD_DEF_ENTITY_MAX = 64;
 
 class ICollideable;
 class IHandleEntity;
@@ -599,7 +565,7 @@ void CM_DispTreeLeafnum( CCollisionBSPData *pBSPData );
 void CM_TestInDispTree( TraceInfo_t *pTraceInfo, const unsigned short *pDispList, int dispListCount, const Vector &traceStart, 
 				const Vector &boxMin, const Vector &boxMax, int collisionMask, trace_t *pTrace );
 template <bool IS_POINT>
-void FASTCALL CM_TraceToDispTree( TraceInfo_t *pTraceInfo, CDispCollTree *pDispTree, float startFrac, float endFrac );
+void CM_TraceToDispTree( TraceInfo_t *pTraceInfo, CDispCollTree *pDispTree, float startFrac, float endFrac );
 void CM_PostTraceToDispTree( TraceInfo_t *pTraceInfo );
 
 //=============================================================================
@@ -609,9 +575,9 @@ void CM_PostTraceToDispTree( TraceInfo_t *pTraceInfo );
 
 void CM_TestBoxInBrush ( const Vector& mins, const Vector& maxs, const Vector& p1,
 					  trace_t *trace, cbrush_t *brush, BOOL bDispSurf );
-void FASTCALL CM_TestBoxInBrush( TraceInfo_t *pTraceInfo, const cbrush_t *brush );
-void FASTCALL CM_RecursiveHullCheck ( TraceInfo_t *pTraceInfo, int num, const float p1f, const float p2f );
-bool FASTCALL CM_RecursiveOcclusionPass( COcclusionInfo &oi, int num, const float p1f, const float p2f, const Vector& p1, const Vector& p2 );
+void CM_TestBoxInBrush( TraceInfo_t *pTraceInfo, const cbrush_t *brush );
+void CM_RecursiveHullCheck ( TraceInfo_t *pTraceInfo, int num, const float p1f, const float p2f );
+bool CM_RecursiveOcclusionPass( COcclusionInfo &oi, int num, const float p1f, const float p2f, const Vector& p1, const Vector& p2 );
 void CM_GetTraceDataForBSP( const Vector &mins, const Vector &maxs, CTraceListData &traceData );
 
 
@@ -619,7 +585,7 @@ void CM_GetTraceDataForBSP( const Vector &mins, const Vector &maxs, CTraceListDa
 
 inline bool TraceInfo_t::Visit( cbrush_t *pBrush, int ndxBrush, TraceCounter_t cachedCount, TraceCounter_t *pCachedCounters )
 {
-	TraceCounter_t * RESTRICT pCounter = pCachedCounters + ndxBrush;
+	TraceCounter_t * __restrict__ pCounter = pCachedCounters + ndxBrush;
 
 	if ( *pCounter == cachedCount )
 	{
@@ -630,9 +596,9 @@ inline bool TraceInfo_t::Visit( cbrush_t *pBrush, int ndxBrush, TraceCounter_t c
 	return true;
 }
 
-FORCEINLINE bool TraceInfo_t::Visit( int dispCounter, TraceCounter_t cachedCount, TraceCounter_t *pCachedCounters )
+[[gnu::always_inline]] inline bool TraceInfo_t::Visit( int dispCounter, TraceCounter_t cachedCount, TraceCounter_t *pCachedCounters )
 {
-	TraceCounter_t * RESTRICT pCounter = pCachedCounters + dispCounter;
+	TraceCounter_t * __restrict__ pCounter = pCachedCounters + dispCounter;
 
 	if ( *pCounter == cachedCount )
 	{
@@ -643,14 +609,12 @@ FORCEINLINE bool TraceInfo_t::Visit( int dispCounter, TraceCounter_t cachedCount
 	return true;
 }
 
-FORCEINLINE bool TraceInfo_t::Visit( cbrush_t *pBrush, int ndxBrush )
+[[gnu::always_inline]] inline bool TraceInfo_t::Visit( cbrush_t *pBrush, int ndxBrush )
 {
 	return Visit( pBrush, ndxBrush, GetCount(), GetBrushCounters() );
 }
 
-FORCEINLINE bool TraceInfo_t::Visit( int dispIndex )
+[[gnu::always_inline]] inline bool TraceInfo_t::Visit( int dispIndex )
 {
 	return Visit( dispIndex, GetCount(), GetDispCounters() );
 }
-
-#endif // CMODEL_PRIVATE_H

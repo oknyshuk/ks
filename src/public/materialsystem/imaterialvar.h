@@ -1,24 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IMATERIALVAR_H
-#define IMATERIALVAR_H
-
-
-#include "tier0/platform.h"
-#include "mathlib/vector4d.h"
+import std;
+import ks.math;
 class IMaterial;
-class VMatrix;
 class ITexture;
 
-#define MAKE_MATERIALVAR_FOURCC(ch0, ch1, ch2, ch3)             \
-		((unsigned long)(ch0) | ((unsigned long)(ch1) << 8) |   \
-		((unsigned long)(ch2) << 16) | ((unsigned long)(ch3) << 24 ))
+template <typename T1, typename T2, typename T3, typename T4> [[gnu::always_inline]] inline constexpr auto MAKE_MATERIALVAR_FOURCC( T1 ch0, T2 ch1, T3 ch2, T4 ch3 ) { return ((unsigned long)(ch0) | ((unsigned long)(ch1) << 8) |    		((unsigned long)(ch2) << 16) | ((unsigned long)(ch3) << 24 )); }
 
 // This fourcc is reserved.
 #define FOURCC_UNKNOWN	MAKE_MATERIALVAR_FOURCC('U','N','K','N')
@@ -133,111 +122,109 @@ protected:
 	virtual int				VectorSizeInternal() const = 0;
 
 public:
-	FORCEINLINE MaterialVarType_t GetType( void ) const
+	[[gnu::always_inline]] inline MaterialVarType_t GetType( void ) const
 	{
 		return ( MaterialVarType_t )m_Type;
 	}
 
-	FORCEINLINE bool IsTexture() const
+	[[gnu::always_inline]] inline bool IsTexture() const
 	{
 		return m_Type == MATERIAL_VAR_TYPE_TEXTURE;
 	}
 
-	FORCEINLINE operator ITexture*()
+	[[gnu::always_inline]] inline operator ITexture*()
 	{
 		return GetTextureValue();
 	}
 
 	// NOTE: Fast methods should only be called in thread-safe situations
-	FORCEINLINE int GetIntValueFast( void ) const
+	[[gnu::always_inline]] inline int GetIntValueFast( void ) const
 	{
 		// Set methods for float and vector update this
 		return m_intVal;
 	}
 
-	FORCEINLINE float GetFloatValueFast( void ) const
+	[[gnu::always_inline]] inline float GetFloatValueFast( void ) const
 	{
 		return m_VecVal[0];
 	}
 
-	FORCEINLINE float const* GetVecValueFast( ) const
+	[[gnu::always_inline]] inline float const* GetVecValueFast( ) const
 	{
 		return m_VecVal.Base();
 	}
 
-	FORCEINLINE void GetVecValueFast( float *val, int numcomps ) const 
+	[[gnu::always_inline]] inline void GetVecValueFast( float *val, int numcomps ) const 
 	{
-		Assert( ( numcomps >0 ) && ( numcomps <= 4 ) );
+		contract_assert( ( numcomps >0 ) && ( numcomps <= 4 ) );
 		for( int i=0 ; i < numcomps; i++ )
 		{
 			val[i] = m_VecVal[ i ];
 		}
 	}
 
-	FORCEINLINE int VectorSizeFast() const
+	[[gnu::always_inline]] inline int VectorSizeFast() const
 	{
 		return m_nNumVectorComps;
 	}
 
 #ifdef FAST_MATERIALVAR_ACCESS
-	FORCEINLINE int GetIntValue( void ) const
+	[[gnu::always_inline]] inline int GetIntValue( void ) const
 	{
 		return GetIntValueFast();
 	}
 
-	FORCEINLINE float GetFloatValue( void ) const
+	[[gnu::always_inline]] inline float GetFloatValue( void ) const
 	{
 		return GetFloatValueFast();
 	}
 
-	FORCEINLINE float const* GetVecValue( ) const
+	[[gnu::always_inline]] inline float const* GetVecValue( ) const
 	{
 		return GetVecValueFast();
 	}
 
-	FORCEINLINE void GetVecValue( float *val, int numcomps ) const 
+	[[gnu::always_inline]] inline void GetVecValue( float *val, int numcomps ) const 
 	{
 		GetVecValueFast( val, numcomps );
 	}
 
-	FORCEINLINE int VectorSize() const
+	[[gnu::always_inline]] inline int VectorSize() const
 	{
 		return VectorSizeFast();
 	}
 #else // !FAST_MATERIALVAR_ACCESS
-	FORCEINLINE int GetIntValue( void ) const
+	[[gnu::always_inline]] inline int GetIntValue( void ) const
 	{
 		return GetIntValueInternal();
 	}
 
-	FORCEINLINE float GetFloatValue( void ) const
+	[[gnu::always_inline]] inline float GetFloatValue( void ) const
 	{
 		return GetFloatValueInternal();
 	}
 
-	FORCEINLINE float const* GetVecValue( ) const
+	[[gnu::always_inline]] inline float const* GetVecValue( ) const
 	{
 		return GetVecValueInternal();
 	}
 
-	FORCEINLINE void GetVecValue( float *val, int numcomps ) const 
+	[[gnu::always_inline]] inline void GetVecValue( float *val, int numcomps ) const 
 	{
 		return GetVecValueInternal( val, numcomps );
 	}
 
-	FORCEINLINE int VectorSize() const
+	[[gnu::always_inline]] inline int VectorSize() const
 	{
 		return VectorSizeInternal();
 	}
 #endif
 
 private:
-	FORCEINLINE void SetTempIndex( int nIndex )
+	[[gnu::always_inline]] inline void SetTempIndex( int nIndex )
 	{
 		m_nTempIndex = nIndex;
 	}
 
 	friend void EnableThreadedMaterialVarAccess( bool bEnable, IMaterialVar **ppParams, int nVarCount );
 };
-
-#endif // IMATERIALVAR_H

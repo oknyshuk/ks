@@ -1,17 +1,31 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#include "pch_materialsystem.h"
+import std;
+
+
+import ks.tier1;
+
+#include "tier2/tier2.h"
+#include "bitmap/imageformat.h"
+#include "bitmap/tgawriter.h"
+#include "bitmap/tgaloader.h"
+#include "datacache/idatacache.h"
+#include "filesystem.h"
+#include "pixelwriter.h"
+
+#include "materialsystem_global.h"
+#include "materialsystem/imaterialvar.h"
+#include "materialsystem/imesh.h"
+#include "materialsystem/IColorCorrection.h"
+
+#include "imaterialinternal.h"
+#include "imaterialsysteminternal.h"
 
 #include "cmatnullrendercontext.h"
 
-#define MATSYS_INTERNAL
 #include "cmatrendercontext.h"
 #include "itextureinternal.h"
-
 
 class CMatNullRenderContext : public CMatRenderContextBase
 {
@@ -38,79 +52,79 @@ public:
 
 	void Flush(bool)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void GetRenderTargetDimensions(int &,int &) const
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void DepthRange(float,float)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void ClearBuffers(bool,bool,bool)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void ReadPixels(int,int,int,int,unsigned char *,ImageFormat, ITexture *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void ReadPixelsAsync(int,int,int,int,unsigned char *,ImageFormat, ITexture *, CThreadEvent *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void ReadPixelsAsyncGetResult(int,int,int,int,unsigned char *,ImageFormat,CThreadEvent *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	virtual void SetLightingState( const MaterialLightingState_t &state )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetLights( int nCount, const LightDesc_t *pDesc )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetLightingOrigin( Vector vLightingOrigin )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetAmbientLightCube(Vector4D [])
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void CopyRenderTargetToTexture(ITexture *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetFrameBufferCopyTexture(ITexture *,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	ITexture *GetFrameBufferCopyTexture(int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return nullptr;
 	}
 
 	void GetViewport( int& x, int& y, int& width, int& height ) const
 	{
 		// Verify valid top of RT stack
-		Assert ( !m_RenderTargetStack.empty() );
+		contract_assert( !m_RenderTargetStack.empty() );
 
 		// Grab the top of stack
 		const RenderTargetStackElement_t& element = m_RenderTargetStack.back();
@@ -144,269 +158,269 @@ public:
 
 	void BeginGeneratingCSMs()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void EndGeneratingCSMs()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void PerpareForCascadeDraw( int cascade, float fShadowSlopeScaleDepthBias, float fShadowDepthBias )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void CullMode(MaterialCullMode_t)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void FlipCullMode( void )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void FogMode(MaterialFogMode_t)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void FogStart(float)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void FogEnd(float)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetFogZ(float)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	MaterialFogMode_t GetFogMode()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return MATERIAL_FOG_NONE;
 	}
 
 	int	GetCurrentNumBones( ) const
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return 0;
 	}
 
 	void FogColor3f(float,float,float)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void FogColor3fv(const float *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void FogColor3ub(unsigned char,unsigned char,unsigned char)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void FogColor3ubv(const unsigned char *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void GetFogColor(unsigned char *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetNumBoneWeights(int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	IMesh *CreateStaticMesh(VertexFormat_t,const char *,IMaterial *,VertexStreamSpec_t *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return nullptr;
 	}
 
 	void DestroyStaticMesh(IMesh *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	IMesh *GetDynamicMesh(bool,IMesh *,IMesh *,IMaterial *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return nullptr;
 	}
 
 	virtual IMesh* GetDynamicMeshEx( VertexFormat_t, bool, IMesh*, IMesh*, IMaterial * )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return nullptr;
 	}
 
 	int SelectionMode(bool)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return 0;
 	}
 
 	void SelectionBuffer(unsigned int *,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void ClearSelectionNames()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void LoadSelectionName(int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void PushSelectionName(int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void PopSelectionName()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void ClearColor3ub(unsigned char,unsigned char,unsigned char)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void ClearColor4ub(unsigned char,unsigned char,unsigned char,unsigned char)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void OverrideDepthEnable( bool, bool, bool )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void OverrideAlphaWriteEnable( bool, bool )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void OverrideColorWriteEnable( bool, bool )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void DrawScreenSpaceQuad(IMaterial *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SyncToken(const char *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	OcclusionQueryObjectHandle_t CreateOcclusionQueryObject()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return nullptr;
 	}
 
 	void DestroyOcclusionQueryObject(OcclusionQueryObjectHandle_t)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void ResetOcclusionQueryObject( OcclusionQueryObjectHandle_t hOcclusionQuery )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void BeginOcclusionQueryDrawing(OcclusionQueryObjectHandle_t)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void EndOcclusionQueryDrawing(OcclusionQueryObjectHandle_t)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	int OcclusionQuery_GetNumPixelsRendered(OcclusionQueryObjectHandle_t)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return 1;
 	}
 
 	virtual void SetFlashlightMode(bool)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 	virtual bool GetFlashlightMode( void ) const
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return false;
 	}
 
 	virtual bool IsCullingEnabledForSinglePassFlashlight( void ) const
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return false;
 	}
 
 	virtual void EnableCullingForSinglePassFlashlight( bool )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	virtual void SetRenderingPaint( bool bEnable )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetFlashlightState(const FlashlightState_t &,const VMatrix &)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	virtual bool IsCascadedShadowMapping() const
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return false;
 	}
 
 	virtual void SetCascadedShadowMapping( bool bEnable )
 	{
 		bEnable;
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	virtual void SetCascadedShadowMappingState( const CascadedShadowMappingState_t &state, ITexture *pDepthTextureAtlas )
 	{
 		state, pDepthTextureAtlas;
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void PushScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom  )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void PopScissorRect()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	virtual void PushDeformation( DeformationBase_t const *Deformation )
@@ -424,348 +438,348 @@ public:
 
 	void EnableUserClipTransformOverride(bool)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void UserClipTransform(const VMatrix &)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	IMorph *CreateMorph(MorphFormat_t, const char *pDebugName)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return nullptr;
 	}
 
 	void DestroyMorph(IMorph *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void BindMorph(IMorph *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetMorphTargetFactors(int,float *,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void ReadPixelsAndStretch(Rect_t *,Rect_t *,unsigned char *,ImageFormat,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void GetWindowSize(int &,int &) const
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void DrawScreenSpaceRectangle(IMaterial *,int,int,int,int,float,float,float,float,int,int,void*,int,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void LoadBoneMatrix(int,const matrix3x4_t &)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void BindLightmapTexture(ITexture *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void CopyRenderTargetToTextureEx(ITexture *,int,Rect_t *,Rect_t *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void CopyTextureToRenderTargetEx(int,ITexture *,Rect_t *,Rect_t *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetFloatRenderingParameter(int,float)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetIntRenderingParameter(int,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetTextureRenderingParameter( int, ITexture * )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetVectorRenderingParameter(int,const Vector &)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	virtual void SetStencilState( const ShaderStencilState_t & )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void ClearStencilBufferRectangle(int,int,int,int,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void PushCustomClipPlane(const float *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void PopCustomClipPlane()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void GetMaxToRender(IMesh *,bool,int *,int *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	int GetMaxVerticesToRender(IMaterial *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return 0;
 	}
 
 	int GetMaxIndicesToRender()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return 0;
 	}
 
 	void DisableAllLocalLights()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	int CompareMaterialCombos(IMaterial *,IMaterial *,int,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return 0;
 	}
 
 	IMesh *GetFlexMesh()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return nullptr;
 	}
 
 	void SetFlashlightStateEx(const FlashlightState_t &,const VMatrix &,ITexture *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	ITexture *GetLocalCubemap()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return nullptr;
 	}
 
 	void ClearBuffersObeyStencil(bool,bool)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void ClearBuffersObeyStencilEx( bool bClearColor, bool bClearAlpha, bool bClearDepth )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void PerformFullScreenStencilOperation( void )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	bool GetUserClipTransform(VMatrix &)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return true;
 	}
 
 	void GetFogDistances(float *,float *,float *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void BeginPIXEvent(unsigned long,const char *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void EndPIXEvent()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetPIXMarker(unsigned long,const char *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void BeginBatch(IMesh *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void BindBatch(IMesh *,IMaterial *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void DrawBatch(MaterialPrimitiveType_t, int,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void EndBatch()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetToneMappingScaleLinear(const Vector &)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	float GetFloatRenderingParameter(int) const
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return 0;
 	}
 
 	int GetIntRenderingParameter(int) const
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return 0;
 	}
 
 	ITexture *GetTextureRenderingParameter(int) const
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return 0;
 	}
 
 	Vector GetVectorRenderingParameter(int) const
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return Vector(0,0,0);
 	}
 
 	void SwapBuffers()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void ForceDepthFuncEquals(bool)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	bool InFlashlightMode() const
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return true;
 	}
 
 	bool IsRenderingPaint() const
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return true;
 	}
 
 	void GetLightmapDimensions(int *,int *)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	MorphFormat_t GetBoundMorphFormat()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return 0;
 	}
 
 	void DrawClearBufferQuad(unsigned char,unsigned char,unsigned char,unsigned char,bool,bool,bool)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 
 	bool OnDrawMesh(IMesh *,CPrimList *,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return true;
 	}
 
 	bool OnDrawMesh(IMesh *,int,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return true;
 	}
 
 	bool OnDrawMeshModulated(IMesh *, const Vector4D&, int,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return true;
 	}
 
 	bool OnSetFlexMesh(IMesh *,IMesh *,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return true;
 	}
 
 	bool OnSetColorMesh(IMesh *,IMesh *,int)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return true;
 	}
 
 	bool OnSetPrimitiveType(IMesh *,MaterialPrimitiveType_t)
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 		return true;
 	}
 
 	void ForceHardwareSync()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void BeginFrame()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void EndFrame()
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void SetShadowDepthBiasFactors( float fSlopeScaleDepthBias, float fDepthBias )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 	
 	void BindStandardTexture( Sampler_t, TextureBindFlags_t nBindFlags, StandardTextureId_t )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	void EvictManagedResources()
 	{
-		AssertMsg( 0, "EvictManagedResources only provides base features, not a stub (right now)" );
+		contract_assert( false && "EvictManagedResources only provides base features, not a stub (right now)" );
 	}
 
 // ------------ New Vertex/Index Buffer interface ----------------------------
@@ -773,89 +787,89 @@ public:
 	// I don't think we use bSoftwareVertexShader anymore. .need to look into bForceTempMesh.
 	IVertexBuffer *CreateStaticVertexBuffer( VertexFormat_t fmt, int nVertexCount, const char *pBudgetGroup )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return nullptr;
 	}
 	IIndexBuffer *CreateStaticIndexBuffer( MaterialIndexFormat_t fmt, int nIndexCount, const char *pBudgetGroup )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return nullptr;
 	}
 	void DestroyVertexBuffer( IVertexBuffer * )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 	void DestroyIndexBuffer( IIndexBuffer * )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 	// Do we need to specify the stream here in the case of locking multiple dynamic VBs on different streams?
 	IVertexBuffer *GetDynamicVertexBuffer( int streamID, VertexFormat_t vertexFormat, bool bBufferedtrue )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return nullptr;
 	}
 	IIndexBuffer *GetDynamicIndexBuffer( )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return nullptr;
 	}
 	void BindVertexBuffer( int streamID, IVertexBuffer *pVertexBuffer, int nOffsetInBytes, int nFirstVertex, int nVertexCount, VertexFormat_t fmt, int nRepetitions1 )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 	void BindIndexBuffer( IIndexBuffer *pIndexBuffer, int nOffsetInBytes )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 	void Draw( MaterialPrimitiveType_t primitiveType, int firstIndex, int numIndices )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 	virtual void BeginMorphAccumulation()
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 	virtual void EndMorphAccumulation()
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 	virtual void AccumulateMorph( IMorph* pMorph, int nMorphCount, const MorphWeight_t* pWeights )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 	virtual bool GetMorphAccumulatorTexCoord( Vector2D *pTexCoord, IMorph *pMorph, int nVertex )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		pTexCoord->Init();
 		return false;
 	}
 
 	virtual int GetSubDBufferWidth()
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return 0;
 	}
 	virtual float* LockSubDBuffer( int nNumRows )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return nullptr;
 	}
 	virtual void UnlockSubDBuffer()
 	{
-		Assert(0);
+		contract_assert( 0 );
 	}
 
 	virtual void SetFlexWeights( int nFirstWeight, int nCount, const MorphWeight_t* pWeights ) {}
 
 	virtual void FogMaxDensity( float flMaxDensity )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	virtual void DrawInstances( int nInstanceCount, const MeshInstanceData_t *pInstance )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	virtual void EnableColorCorrection( bool bEnable ) {}
@@ -882,23 +896,23 @@ public:
 
 	virtual void AntiAliasingHint(int )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 	
 	virtual void EnableSinglePassFlashlightMode( bool bEnable )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 	virtual bool SinglePassFlashlightModeEnabled( void ) const
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
 	void UpdateGameTime( float )
 	{
-		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+		contract_assert( false && "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
 	// RocketUI stubs - null context doesn't render
@@ -909,7 +923,7 @@ public:
 	// debug logging - no-op in queued context
 	//--------------------------------------------------------
 	virtual void							Printf( char *fmt, ... ) {};
-	virtual void							PrintfVA( char *fmt, va_list vargs ){};
+	virtual void							PrintfVA( char *fmt, std::va_list vargs ){};
 	virtual float							Knob( char *knobname, float *setvalue=nullptr ) { return 0.0f; };	
 
 

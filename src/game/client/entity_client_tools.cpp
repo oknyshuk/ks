@@ -1,24 +1,28 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "toolframework/itoolentity.h"
-#include "tier1/keyvalues.h"
 #include "Sprite.h"
 #include "enginesprite.h"
 #include "beamdraw.h"
 #include "toolframework_client.h"
 #include "particles/particles.h"
-#include "particle_parse.h"
 #include "rendertexture.h"
-#include "model_types.h"
-#include "vstdlib/ikeyvaluessystem.h"
-
-
-
 
 class CClientTools;
 
@@ -237,7 +241,7 @@ int CClientTools::GetEntIndex( EntitySearchResult entityToAttach )
 
 void CClientTools::AddClientRenderable( IClientRenderable *pRenderable, bool bRenderWithViewModels, RenderableTranslucencyType_t nType, RenderableModelType_t nModelType )
 {
-	Assert( pRenderable );
+	contract_assert( pRenderable );
 
 	cl_entitylist->AddNonNetworkableEntity( pRenderable->GetIClientUnknown() );
 
@@ -348,7 +352,7 @@ bool CClientTools::DrawSprite( IClientRenderable *pRenderable, float scale, floa
 HTOOLHANDLE CClientTools::AttachToEntity( EntitySearchResult entityToAttach )
 {
 	C_BaseEntity *ent = reinterpret_cast< C_BaseEntity * >( entityToAttach );
-	Assert( ent );
+	contract_assert( ent );
 	if ( !ent )
 		return (HTOOLHANDLE)0;
 
@@ -367,7 +371,7 @@ HTOOLHANDLE CClientTools::AttachToEntity( EntitySearchResult entityToAttach )
 void CClientTools::DetachFromEntity( EntitySearchResult entityToDetach )
 {
 	C_BaseEntity *ent = reinterpret_cast< C_BaseEntity * >( entityToDetach );
-	Assert( ent );
+	contract_assert( ent );
 	if ( !ent )
 		return;
 
@@ -376,14 +380,14 @@ void CClientTools::DetachFromEntity( EntitySearchResult entityToDetach )
 
 	if ( handle == (HTOOLHANDLE)0 ) 
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
 	auto idx = m_Handles.find( handle );
 	if ( idx == m_Handles.end() )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
@@ -415,7 +419,7 @@ HTOOLHANDLE CClientTools::GetRecordable( int index )
 {
 	if ( index < 0 || index >= std::ssize( m_ActiveHandles ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return (HTOOLHANDLE)0;
 	}
 
@@ -451,7 +455,7 @@ void CClientTools::SetEnabled( HTOOLHANDLE handle, bool enabled )
 		return;
 
 	HToolEntry_t *slot = &idx->second;
-	Assert( slot );
+	contract_assert( slot );
 	if ( slot == nullptr )
 		return;
 
@@ -504,7 +508,7 @@ int CClientTools::GetModelIndex( HTOOLHANDLE handle )
 	{
 		return entry.m_hEntity->GetModelIndex();
 	}
-	Assert( 0 );
+	contract_assert( 0 );
 	return 0;
 }
 
@@ -523,7 +527,7 @@ const char* CClientTools::GetModelName( HTOOLHANDLE handle )
 	{
 		return STRING( entry.m_hEntity->GetModelName() );
 	}
-	Assert( 0 );
+	contract_assert( 0 );
 	return nullptr;
 }
 
@@ -542,7 +546,7 @@ const char* CClientTools::GetClassname( HTOOLHANDLE handle )
 	{
 		return STRING( entry.m_hEntity->GetClassname() );
 	}
-	Assert( 0 );
+	contract_assert( 0 );
 	return nullptr;
 }
 
@@ -553,7 +557,7 @@ EntitySearchResult CClientTools::GetEntity( HTOOLHANDLE handle )
 		return reinterpret_cast< EntitySearchResult >( 0 );
 
 	HToolEntry_t *slot = &idx->second;
-	Assert( slot );
+	contract_assert( slot );
 	if ( slot == nullptr )
 		return reinterpret_cast< EntitySearchResult >( 0 );
 
@@ -649,7 +653,7 @@ ParticleSystemSearchResult CClientTools::NextParticleSystem( ParticleSystemSearc
 
 void CClientTools::SetRecording( ParticleSystemSearchResult sr, bool bRecord )
 {
-	Assert( sr );
+	contract_assert( sr );
 	if ( sr == nullptr )
 		return;
 
@@ -795,7 +799,7 @@ Vector CClientTools::GetAbsOrigin( HTOOLHANDLE handle )
 	{
 		return entry.m_hEntity->GetAbsOrigin();
 	}
-	Assert( 0 );
+	contract_assert( 0 );
 	return vec3_origin;
 }
 
@@ -810,7 +814,7 @@ QAngle CClientTools::GetAbsAngles( HTOOLHANDLE handle )
 	{
 		return entry.m_hEntity->GetAbsAngles();
 	}
-	Assert( 0 );
+	contract_assert( 0 );
 	return vec3_angle;
 }
 
@@ -820,7 +824,7 @@ QAngle CClientTools::GetAbsAngles( HTOOLHANDLE handle )
 //-----------------------------------------------------------------------------
 void CClientTools::PostToolMessage( KeyValues *pKeyValues )
 {
-	if ( !Q_stricmp( pKeyValues->GetName(), "QueryParticleManifest" ) )
+	if ( !V_stricmp( pKeyValues->GetName(), "QueryParticleManifest" ) )
 	{
 		// NOTE: This cannot be done during particle system init because tools aren't set up at that point
 		std::vector< std::string > files;
@@ -829,21 +833,21 @@ void CClientTools::PostToolMessage( KeyValues *pKeyValues )
 		for ( int i = 0; i < nCount; ++i )
 		{
 			char pTemp[256];
-			Q_snprintf( pTemp, sizeof(pTemp), "%d", i );
+			V_snprintf( pTemp, sizeof(pTemp), "%d", i );
 			KeyValues *pSubKey = pKeyValues->FindKey( pTemp, true );
 			pSubKey->SetString( "file", files[i].c_str() );
 		}
 		return;
 	}
 
-	if ( !Q_stricmp( pKeyValues->GetName(), "QueryMonitorTexture" ) )
+	if ( !V_stricmp( pKeyValues->GetName(), "QueryMonitorTexture" ) )
 	{
 		pKeyValues->SetPtr( "texture", GetCameraTexture() );
 		return;
 	}
 
 
-	if ( !Q_strcmp( pKeyValues->GetName(), "Game Entity KeyValues" ) )
+	if ( !V_strcmp( pKeyValues->GetName(), "Game Entity KeyValues" ) )
 	{
 		HandleGameEntityKeyValues( pKeyValues );
 	}
@@ -931,7 +935,7 @@ void CClientTools::ReloadParticleDefintions( const char *pFileName, const void *
 
 	//////////////
 	// Now replace all of the systems with their new versions
-	Assert( std::ssize( toReplaceEffects ) == std::ssize( toReplaceNames ) );
+	contract_assert( std::ssize( toReplaceEffects ) == std::ssize( toReplaceNames ) );
 
 	for( int i = 0; i < std::ssize( toReplaceNames ); ++i )
 	{
@@ -952,14 +956,6 @@ void CClientTools::ReloadParticleDefintions( const char *pFileName, const void *
 CIFM_EntityKeyValuesHandler_AutoRegister::CIFM_EntityKeyValuesHandler_AutoRegister( const char *szHandlerID )
 : m_szHandlerID( szHandlerID )
 {
-#if defined( DBGFLAG_ASSERT )
-	const CIFM_EntityKeyValuesHandler_AutoRegister *pWalk = s_pRegisteredHandlers;
-	while( pWalk )
-	{
-		AssertMsg( strcmp( szHandlerID, pWalk->m_szHandlerID ) != 0, "Handler already registered for this ID" );
-		pWalk = pWalk->m_pNext;
-	}
-#endif
 	m_pNext = s_pRegisteredHandlers;
 	s_pRegisteredHandlers = this;
 }
@@ -987,7 +983,7 @@ void CIFM_EntityKeyValuesHandler_AutoRegister::FindAndCallHandler( const char *s
 		pWalk = pWalk->m_pNext;
 	}
 
-	AssertMsg( false, "Unhandled NonConformantData update" );
+	contract_assert( false && "Unhandled NonConformantData update" );
 }
 
 void CIFM_EntityKeyValuesHandler_AutoRegister::AllHandlers_PostUpdate( void )
@@ -1105,7 +1101,7 @@ void CIFM_EntityKeyValuesHandler_RecreateEntities::HandleData_PostUpdate( void )
 void CIFM_EntityKeyValuesHandler_RecreateEntities::HandleData( KeyValues *pKeyValues )
 {
 	int iEntIndex = pKeyValues->GetInt( "entIndex", -1 );
-	Assert( iEntIndex != -1 );
+	contract_assert( iEntIndex != -1 );
 	if( iEntIndex == -1 )
 		return;
 
@@ -1138,10 +1134,3 @@ void CIFM_EntityKeyValuesHandler_RecreateEntities::HandleData_RemoveAll( void )
 	}
 	m_PlaybackEntities.clear();
 }
-
-
-	
-
-
-
-

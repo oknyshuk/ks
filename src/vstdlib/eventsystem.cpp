@@ -1,20 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "vstdlib/ieventsystem.h"
-#include "tier1/generichash.h"
-#include "tier0/tslist.h"
-#include "tier1/tier1.h"
-#include <atomic>
-#include <mutex>
-#include <shared_mutex>
-#include <unordered_map>
-
+import ks.vstdlib;
+import std;
 
 //-----------------------------------------------------------------------------
 // A hash of the event name
@@ -64,10 +52,6 @@ private:
 	CTSQueue< QueuedEvent_t > m_Queue;
 	std::atomic<int> m_nRefCount;
 
-#ifdef _DEBUG
-	bool m_bIsProcessingEvents;
-	bool m_bIsDiscardingEvents;
-#endif
 };
 
 
@@ -76,16 +60,10 @@ private:
 //-----------------------------------------------------------------------------
 CEventQueue::CEventQueue()
 {
-#ifdef _DEBUG
-	m_bIsProcessingEvents = false;
-	m_bIsDiscardingEvents = false;
-#endif
 }
 
 CEventQueue::~CEventQueue()
 {
-	Assert( !m_bIsProcessingEvents );
-	Assert( !m_bIsDiscardingEvents );
 	Cleanup();
 }
 
@@ -123,17 +101,10 @@ void CEventQueue::PostEvent( CFunctorCallback *pCallback, CFunctorData *pData )
 //-----------------------------------------------------------------------------
 void CEventQueue::DiscardEvents( CFunctorCallback *pCallback )
 {
-	Assert( !m_bIsProcessingEvents );
 
-#ifdef _DEBUG
-	m_bIsDiscardingEvents = true;
-#endif
 
 	m_QueuedEventDiscards.PushItem( pCallback );
 
-#ifdef _DEBUG
-	m_bIsDiscardingEvents = false;
-#endif
 }
 
 
@@ -142,12 +113,7 @@ void CEventQueue::DiscardEvents( CFunctorCallback *pCallback )
 //-----------------------------------------------------------------------------
 void CEventQueue::ProcessEvents( )
 {
-	Assert( !m_bIsProcessingEvents );
-	Assert( !m_bIsDiscardingEvents );
 
-#ifdef _DEBUG
-	m_bIsProcessingEvents = true;
-#endif
 
 	if ( m_QueuedEventDiscards.Count() == 0 )
 	{
@@ -194,9 +160,6 @@ void CEventQueue::ProcessEvents( )
 		}
 	}
 
-#ifdef _DEBUG
-	m_bIsProcessingEvents = false;
-#endif
 }
 
 
@@ -371,8 +334,7 @@ private:
 // Globals
 //-----------------------------------------------------------------------------
 static CEventSystem s_EventSystem;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CEventSystem, IEventSystem, 
-	EVENTSYSTEM_INTERFACE_VERSION, s_EventSystem )
+static InterfaceReg s_Reg_CEventSystem_IEventSystem( []() -> void * { return static_cast<IEventSystem *>( &s_EventSystem ); }, EVENTSYSTEM_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -432,7 +394,7 @@ void CEventSystem::DestroyEventQueue( EventQueue_t hQueue )
 //-----------------------------------------------------------------------------
 EventId_t CEventSystem::RegisterEvent( const char *pEventName )
 {
-	EventNameHash_t hId = (EventNameHash_t)MurmurHash2( pEventName, Q_strlen(pEventName), 0xE1E47644 );
+	EventNameHash_t hId = (EventNameHash_t)MurmurHash2( pEventName, V_strlen(pEventName), 0xE1E47644 );
 	std::lock_guard lock( m_EventIdsMutex );
 	return ( EventId_t )( &m_EventIds.try_emplace( hId ).first->second );
 }

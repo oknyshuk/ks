@@ -1,14 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BASEAUTOCOMPLETEFILELIST_H
-#define BASEAUTOCOMPLETEFILELIST_H
-
-#include "tier1/convar.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Purpose: Simple helper class for doing autocompletion of all files in a specific directory by extension
@@ -30,23 +25,3 @@ private:
 	const char	*m_pszSubDir;
 	const char	*m_pszExtension;
 };
-
-#define DECLARE_AUTOCOMPLETION_FUNCTION( command, subdirectory, extension )							\
-	static int g_##command##_CompletionFunc( const char *partial,									\
-			char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )		\
-	{																								\
-		static CBaseAutoCompleteFileList command##Complete( #command, subdirectory, #extension );	\
-		return command##Complete.AutoCompletionFunc( partial, commands );							\
-	}
-
-#define AUTOCOMPLETION_FUNCTION( command )	\
-	g_##command##_CompletionFunc
-
-//-----------------------------------------------------------------------------
-// Purpose: Utility to quicky generate a simple console command with file name autocompletion
-//-----------------------------------------------------------------------------
-#define CON_COMMAND_AUTOCOMPLETEFILE( name, func, description, subdirectory, extension )				\
-   DECLARE_AUTOCOMPLETION_FUNCTION( name, subdirectory, extension )										\
-   static ConCommand name##_command( #name, func, description, 0, AUTOCOMPLETION_FUNCTION( name ) ); 
-
-#endif // BASEAUTOCOMPLETEFILELIST_H

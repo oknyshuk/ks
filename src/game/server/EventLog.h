@@ -1,16 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #if !defined EVENTLOG_H
 #define EVENTLOG_H
 
-
 #include "GameEventListener.h"
+#include "baseentity.h"
 #include <igamesystem.h>
 
 class CEventLog : public CGameEventListener, public CBaseGameSystem

@@ -15,7 +15,50 @@
 //
 //=================================================================================================
 
-#include "cbase.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/JobSystemWithBarrier.h>
+#include <Jolt/Core/FixedSizeFreeList.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/PhysicsScene.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollidePointResult.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Ragdoll/Ragdoll.h>
+#include <Jolt/Physics/Collision/CollisionDispatch.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
+#include <Jolt/Physics/Constraints/ConeConstraint.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
+#include <Jolt/Physics/Constraints/FixedConstraint.h>
+#include <Jolt/Physics/Constraints/SixDOFConstraint.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
+#include <Jolt/Physics/Constraints/SliderConstraint.h>
+#include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
+import std;
+import ks.tier1;
+#include "bspfile.h"
+#include "cmodel.h"
+#include "vcollide_parse.h"
+#include "vphysics/collision_set.h"
+#include "vphysics/constraints.h"
+#include "vphysics/performance.h"
+#include "vphysics/player_controller.h"
+#include "vphysics/stats.h"
+#include "vphysics/vehicles.h"
+#include "vjolt_interface.h"
+#include "vjolt_util.h"
 
 #include "vjolt_callstack.h"
 #include "vjolt_collide.h"
@@ -62,13 +105,17 @@ static char s_szNextEnvironmentDumpPath[ MAX_PATH ];
 static bool s_bShouldDumpEnvironmentClient = false;
 static bool s_bShouldDumpEnvironmentServer = false;
 
-CON_COMMAND( vjolt_environment_dump_client, "Dumps the next simulated environment to a .bin file" )
+static void vjolt_environment_dump_client( const CCommand &args );
+static ConCommand vjolt_environment_dump_client_command( "vjolt_environment_dump_client", vjolt_environment_dump_client, "Dumps the next simulated environment to a .bin file" );
+static void vjolt_environment_dump_client( const CCommand &args )
 {
 	s_bShouldDumpEnvironmentClient = true;
 	V_strncpy( s_szNextEnvironmentDumpPath, args.Arg( 1 ), MAX_PATH );
 }
 
-CON_COMMAND( vjolt_environment_dump_server, "Dumps the next simulated environment to a .bin file" )
+static void vjolt_environment_dump_server( const CCommand &args );
+static ConCommand vjolt_environment_dump_server_command( "vjolt_environment_dump_server", vjolt_environment_dump_server, "Dumps the next simulated environment to a .bin file" );
+static void vjolt_environment_dump_server( const CCommand &args )
 {
 	s_bShouldDumpEnvironmentServer = true;
 	V_strncpy( s_szNextEnvironmentDumpPath, args.Arg( 1 ), MAX_PATH );
@@ -170,7 +217,7 @@ void JoltPhysicsEnvironment::SetGravity( const Vector &gravityVector )
 
 void JoltPhysicsEnvironment::GetGravity( Vector *pGravityVector ) const
 {
-	VJoltAssert( pGravityVector );
+	contract_assert( pGravityVector );
 	*pGravityVector = JoltToSource::Distance( m_PhysicsSystem.GetGravity() );
 }
 
@@ -181,12 +228,10 @@ void JoltPhysicsEnvironment::SetAirDensity( float density )
 	// Josh: This is linear damping there is also angular damping...
 	// Slart: Maybe we should set both to this value
 	m_flAirDensity = density;
-	Log_Stub( LOG_VJolt );
 }
 
 float JoltPhysicsEnvironment::GetAirDensity() const
 {
-	Log_Stub( LOG_VJolt );
 	return m_flAirDensity;
 }
 
@@ -291,7 +336,7 @@ void JoltPhysicsEnvironment::DestroyObject( IPhysicsObject *pObject )
 	if ( pJoltObject->GetCallbackFlags() & CALLBACK_MARKED_FOR_DELETE )
 	{
 		// Object deleted twice.
-		VJoltAssertMsg( 0, "Object deleted twice.\n" );
+		contract_assert( false && "Object deleted twice.\n" );
 		return;
 	}
 
@@ -397,7 +442,6 @@ JoltPhysicsSpring::~JoltPhysicsSpring()
 void JoltPhysicsSpring::GetEndpoints( Vector *worldPositionStart, Vector *worldPositionEnd )
 {
 	// TODO(Josh): Implement this.
-	Log_Stub( LOG_VJolt );
 
 	if ( worldPositionStart )
 		*worldPositionStart = vec3_origin;
@@ -511,7 +555,6 @@ IPhysicsConstraint *JoltPhysicsEnvironment::CreateBallsocketConstraint( IPhysics
 
 IPhysicsConstraint *JoltPhysicsEnvironment::CreatePulleyConstraint( IPhysicsObject *pReferenceObject, IPhysicsObject *pAttachedObject, IPhysicsConstraintGroup *pGroup, const constraint_pulleyparams_t &pulley )
 {
-	Log_Stub( LOG_VJolt );
 	return nullptr;
 }
 
@@ -739,18 +782,15 @@ void JoltPhysicsEnvironment::SetSimulationTimestep( float timestep )
 
 float JoltPhysicsEnvironment::GetSimulationTime() const
 {
-	Log_Stub( LOG_VJolt );
 	return 0.0f;
 }
 
 void JoltPhysicsEnvironment::ResetSimulationClock()
 {
-	Log_Stub( LOG_VJolt );
 }
 
 float JoltPhysicsEnvironment::GetNextFrameTime() const
 {
-	Log_Stub( LOG_VJolt );
 	return 0.0f;
 }
 
@@ -763,7 +803,6 @@ void JoltPhysicsEnvironment::SetCollisionEventHandler( IPhysicsCollisionEvent *p
 
 void JoltPhysicsEnvironment::SetObjectEventHandler( IPhysicsObjectEvent *pObjectEvents )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 void JoltPhysicsEnvironment::SetConstraintEventHandler( IPhysicsConstraintEvent *pConstraintEvents )
@@ -911,12 +950,10 @@ void JoltPhysicsEnvironment::SetPerformanceSettings( const physics_performancepa
 
 void JoltPhysicsEnvironment::ReadStats( physics_stats_t *pOutput )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 void JoltPhysicsEnvironment::ClearStats()
 {
-	Log_Stub( LOG_VJolt );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1006,26 +1043,22 @@ void JoltPhysicsEnvironment::EnableConstraintNotify( bool bEnable )
 
 void JoltPhysicsEnvironment::DebugCheckContacts()
 {
-	Log_Stub( LOG_VJolt );
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void JoltPhysicsEnvironment::SetAlternateGravity( const Vector &gravityVector )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 void JoltPhysicsEnvironment::GetAlternateGravity( Vector *pGravityVector ) const
 {
-	Log_Stub( LOG_VJolt );
 }
 
 //-------------------------------------------------------------------------------------------------
 
 float JoltPhysicsEnvironment::GetDeltaFrameTime( int maxTicks ) const
 {
-	Log_Stub( LOG_VJolt );
 	// TODO(Josh): wtf to do here?
 	return m_flStepTime * maxTicks;
 }
@@ -1040,34 +1073,28 @@ void JoltPhysicsEnvironment::ForceObjectsToSleep( IPhysicsObject **pList, int li
 
 void JoltPhysicsEnvironment::SetPredicted( bool bPredicted )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 bool JoltPhysicsEnvironment::IsPredicted()
 {
-	Log_Stub( LOG_VJolt );
 	return false;
 }
 
 void JoltPhysicsEnvironment::SetPredictionCommandNum( int iCommandNum )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 int JoltPhysicsEnvironment::GetPredictionCommandNum()
 {
-	Log_Stub( LOG_VJolt );
 	return 0;
 }
 
 void JoltPhysicsEnvironment::DoneReferencingPreviousCommands( int iCommandNum )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 void JoltPhysicsEnvironment::RestorePredictedSimulation()
 {
-	Log_Stub( LOG_VJolt );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1157,7 +1184,7 @@ void JoltPhysicsEnvironment::HandleDebugDumpingEnvironment( void *pReturnAddress
 	bool bIsServerDumping = StringHasPrefix( pszModuleFileName, "server" ) && s_bShouldDumpEnvironmentServer;
 	bool bIsClientDumping = StringHasPrefix( pszModuleFileName, "client" ) && s_bShouldDumpEnvironmentClient;
 
-	VJoltAssertMsg( !StringHasPrefix( pszModuleFileName, "vphysics" ), "Should never get vphysics as the calling module, this only looks up 1 call in the stack." );
+	contract_assert( ( !StringHasPrefix( pszModuleFileName, "vphysics" ) ) && "Should never get vphysics as the calling module, this only looks up 1 call in the stack." );
 
 	if ( !bIsServerDumping && !bIsClientDumping )
 		return;

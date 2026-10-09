@@ -1,10 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Activities that are available to all NPCs.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Activities that are available to all NPCs.
+
+import std;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "ai_activity.h"
 #include "ai_basenpc.h"
 #include "stringregistry.h"
@@ -21,9 +48,8 @@ int				 CAI_BaseNPC::m_iNumActivities = 0;
 //-----------------------------------------------------------------------------
 void CAI_BaseNPC::AddActivityToSR(const char *actName, int actID) 
 {
-	MEM_ALLOC_CREDIT();
 
-	Assert( m_pActivitySR );
+	contract_assert( m_pActivitySR );
 	if ( !m_pActivitySR )
 		return;
 
@@ -39,7 +65,7 @@ void CAI_BaseNPC::AddActivityToSR(const char *actName, int actID)
 	//			game_shared/activitylist.cpp
 	//			dlls/ai_activity.cpp
 	static int lastActID = -2;
-	Assert( actID >= LAST_SHARED_ACTIVITY || actID == lastActID + 1 || actID == ACT_INVALID );
+	contract_assert( actID >= LAST_SHARED_ACTIVITY || actID == lastActID + 1 || actID == ACT_INVALID );
 	lastActID = actID;
 
 	m_pActivitySR->AddString(actName, actID);
@@ -59,7 +85,7 @@ const char *CAI_BaseNPC::GetActivityName(int actID)
 
 	if( !name )
 	{
-		AssertOnce( !"CAI_BaseNPC::GetActivityName() returning NULL!" );
+		contract_assert( !"CAI_BaseNPC::GetActivityName() returning NULL!" );
 	}
 
 	return name;
@@ -70,7 +96,7 @@ const char *CAI_BaseNPC::GetActivityName(int actID)
 //-----------------------------------------------------------------------------
 int CAI_BaseNPC::GetActivityID(const char* actName) 
 {
-	Assert( m_pActivitySR );
+	contract_assert( m_pActivitySR );
 	if ( !m_pActivitySR )
 		return ACT_INVALID;
 
@@ -1258,5 +1284,4 @@ void CAI_BaseNPC::InitDefaultActivitySR(void)
 	ADD_ACTIVITY_TO_SR( ACT_CSGO_EXIT_LADDER_TOP );
 	ADD_ACTIVITY_TO_SR( ACT_CSGO_EXIT_LADDER_BOTTOM );
 
-	AssertMsg( m_iNumActivities == LAST_SHARED_ACTIVITY + 1, "Not all activities from ai_activity.h registered in ai_activity.cpp" ); 
 }

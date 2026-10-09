@@ -1,10 +1,22 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "c_sprite.h"
 #include "model_types.h"
 #include "iviewrender.h"
@@ -12,12 +24,10 @@
 #include "enginesprite.h"
 #include "engine/ivmodelinfo.h"
 #include "util_shared.h"
-#include "tier0/vprof.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
 #include "view_shared.h"
 #include "viewrender.h"
-#include "tier1/keyvalues.h"
 #include "toolframework/itoolframework.h"
 #include "toolframework_client.h"
 #include "mapentities_shared.h"
@@ -193,7 +203,7 @@ static float SpriteAspect( CEngineSprite *pSprite )
 {
 	if ( pSprite )
 	{
-		float x = fabsf(pSprite->GetRight() - pSprite->GetLeft());
+		float x = std::fabsf(pSprite->GetRight() - pSprite->GetLeft());
 		float y = fabsf(pSprite->GetDown() - pSprite->GetUp());
 		if ( y != 0 && x != 0 )
 		{
@@ -335,7 +345,7 @@ void C_SpriteRenderer::GetSpriteAxes( SPRITETYPE type,
 			// generate the sprite's axes, parallel to the viewplane, but rotated in
 			// that plane around the center according to the sprite entity's roll
 			// angle. So vpn stays the same, but vright and vup rotate
-			angle = angles[ROLL] * (M_PI*2.0f/360.0f);
+			angle = angles[ROLL] * (std::numbers::pi*2.0f/360.0f);
 			SinCos( angle, &sr, &cr );
 			
 			for (i=0 ; i<3 ; i++)
@@ -375,7 +385,7 @@ int C_SpriteRenderer::DrawSprite(
 	float flHDRColorScale
 	)
 {
-	VPROF_BUDGET( "C_SpriteRenderer::DrawSprite", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "C_SpriteRenderer::DrawSprite", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	if ( !r_drawsprites.GetBool() || !model || modelinfo->GetModelType( model ) != mod_sprite )
 	{
@@ -461,7 +471,7 @@ void CSprite::GetToolRecordingState( KeyValues *msg )
 	if ( !ToolsEnabled() )
 		return;
 
-	VPROF_BUDGET( "CSprite::GetToolRecordingState", VPROF_BUDGETGROUP_TOOLS );
+	CVProfScope _( "CSprite::GetToolRecordingState", 0, VPROF_BUDGETGROUP_TOOLS, false, BUDGETFLAG_OTHER );
 
 	BaseClass::GetToolRecordingState( msg );
 
@@ -567,7 +577,7 @@ const char *CSprite::ParseClientsideEntity( const char *pEntData )
 		Error( "classname missing from entity!\n" );
 	}
 
-	if ( !Q_strcmp( className, "env_sprite_clientside" ))
+	if ( !V_strcmp( className, "env_sprite_clientside" ))
 	{
 		// always force clientside entities placed in maps
 		CSprite *pEntity = new CSprite(); 

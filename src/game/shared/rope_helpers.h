@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ROPE_HELPERS_H
-#define ROPE_HELPERS_H
-
-
-#include "mathlib/vector.h"
-
+import std;
+import ks.math;
 
 //
 // This function can help you choose starting conditions for your rope. It is fairly
@@ -34,6 +27,3 @@ void CalcRopeStartingConditions(
 	float *pOutputLength,
 	float *pOutputSlack
 	);
-
-
-#endif // ROPE_HELPERS_H

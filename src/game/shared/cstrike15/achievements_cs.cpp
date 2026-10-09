@@ -1,11 +1,53 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include <time.h>
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "npcevent.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#endif
 
 #include "achievementmgr.h"
 
@@ -54,7 +96,7 @@ CAchievementMgr * CAchievementMgr::GetInstance()
 {
 #ifdef _DEBUG
 	IAchievementMgr *pMgr = engine->GetAchievementMgr();
-	Assert( !pMgr || ( pMgr == &g_IAchievementMgrImpl ) );
+	contract_assert( !pMgr || ( pMgr == &g_IAchievementMgrImpl ) );
 #endif
 	return &g_AchievementMgrCS;
 }
@@ -62,8 +104,8 @@ IAchievementMgr * CAchievementMgr::GetInstanceInterface()
 {
 #ifdef _DEBUG
 	IAchievementMgr *pMgr = engine->GetAchievementMgr();
-	Assert( !pMgr || ( pMgr == &g_IAchievementMgrImpl ) );
-	Assert( ((uintp)static_cast<IAchievementMgr*>(&g_IAchievementMgrImpl)) == ((uintp)(&g_IAchievementMgrImpl)) );
+	contract_assert( !pMgr || ( pMgr == &g_IAchievementMgrImpl ) );
+	contract_assert( ((uintp)static_cast<IAchievementMgr*>(&g_IAchievementMgrImpl)) == ((uintp)(&g_IAchievementMgrImpl)) );
 #endif
 	return &g_IAchievementMgrImpl;
 }
@@ -128,19 +170,13 @@ void CCSBaseAchievement::ApplySettings( /* const */ KeyValues* pNodeIn )
 /**
 * Meta Achievement base class methods
 */
-CAchievement_Meta::CAchievement_Meta() :
-	m_CallbackUserAchievement( this, &CAchievement_Meta::Steam_OnUserAchievementStored )
-{
-}
-
 void CAchievement_Meta::Init()
 {
 	SetFlags( ACH_SAVE_GLOBAL );
 	SetGoal( 1 );
 }
 
-// $FIXME(hpe) how do we award achievements in the no steam case on X360
-void CAchievement_Meta::Steam_OnUserAchievementStored( UserAchievementStored_t *pUserAchievementStored )
+void CAchievement_Meta::OnAchievementAwarded()
 {
 	if ( IsAchieved() )
 		return;
@@ -150,7 +186,7 @@ void CAchievement_Meta::Steam_OnUserAchievementStored( UserAchievementStored_t *
 	for ( int nRequirement : m_requirements )
 	{
 		IAchievement* pAchievement = (IAchievement*)m_pAchievementMgr->GetAchievementByID(nRequirement, m_nUserSlot);
-		Assert ( pAchievement );
+		contract_assert( pAchievement );
 
 		if ( pAchievement->IsAchieved() )
 			iAchieved++;
@@ -626,7 +662,7 @@ class CAchievementCS_KillWithAllWeapons : public CCSBaseAchievement
 			CSSTAT_KILLS_SG556,		
 			CSSTAT_KILLS_SSG08,		
 		};
-		const int numKillStats = ARRAYSIZE( weaponKillStats );
+		const int numKillStats = std::size( weaponKillStats );
 
 		//Loop through all weapons we care about and make sure we got a kill with each.
 		for (int i = 0; i < numKillStats; ++i)
@@ -753,7 +789,7 @@ class CAchievementCS_FriendsSameUniform : public CCSBaseAchievement
 
 	void FireGameEvent_Internal( IGameEvent *event )
 	{
-		if ( Q_strcmp( event->GetName(), "round_start" ) == 0 )
+		if ( V_strcmp( event->GetName(), "round_start" ) == 0 )
 		{
 			int localPlayerIndex = GetLocalPlayerIndex();
 			C_CSPlayer* pLocalPlayer = ToCSPlayer(UTIL_PlayerByIndex(localPlayerIndex));
@@ -816,7 +852,7 @@ class CAchievementCS_AvengeFriend : public CCSBaseAchievement
 
 	void FireGameEvent_Internal( IGameEvent *event )
 	{
-		if ( Q_strcmp( event->GetName(), "player_avenged_teammate" ) == 0 )
+		if ( V_strcmp( event->GetName(), "player_avenged_teammate" ) == 0 )
 		{
 			int localPlayerIndex = GetLocalPlayerIndex();
 			C_CSPlayer* pLocalPlayer = ToCSPlayer(UTIL_PlayerByIndex(localPlayerIndex));
@@ -865,7 +901,7 @@ class CAchievementCS_Medalist : public CCSBaseAchievement
 
 	void FireGameEvent_Internal( IGameEvent *event )
 	{
-		if ( Q_strcmp( event->GetName(), "achievement_earned_local" ) == 0 )
+		if ( V_strcmp( event->GetName(), "achievement_earned_local" ) == 0 )
 		{
 			int splitScreenPlayer = event->GetInt( "splitscreenplayer" );
 
@@ -890,4 +926,3 @@ DECLARE_ACHIEVEMENT( CAchievementCS_Medalist, CSMedalist, "MEDALIST", 5 );
 
 
 #endif // CLIENT_DLL
-

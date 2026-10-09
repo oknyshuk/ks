@@ -1,7 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // STATIC: "VERTEXCOLOR" "0..1" [=0]
 // STATIC: "TRANSFORMVERTS" "0..1" [=0]
-
 
 #include "common_vs_fxc.h"
 

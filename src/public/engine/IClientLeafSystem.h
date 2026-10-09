@@ -1,24 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Revision: $
-// $NoKeywords: $
-//
-// This file contains code to allow us to associate client data with bsp leaves.
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#if !defined( ICLIENTLEAFSYSTEM_H )
-#define ICLIENTLEAFSYSTEM_H
+// Purpose: This file contains code to allow us to associate client data with bsp leaves.
 
-
-#include "tier0/platform.h"
+import ks.core;
 #include "client_render_handle.h"
 #include "engine/ivmodelinfo.h"
 
 
-#define CLIENTLEAFSYSTEM_INTERFACE_VERSION	"ClientLeafSystem002"
+inline constexpr const char *CLIENTLEAFSYSTEM_INTERFACE_VERSION = "ClientLeafSystem002";
 
 
 enum RenderableModelType_t
@@ -34,7 +25,7 @@ enum RenderableModelType_t
 //-----------------------------------------------------------------------------
 // The client leaf system
 //-----------------------------------------------------------------------------
-abstract_class IClientLeafSystemEngine
+class IClientLeafSystemEngine
 {
 public:
 	// Adds and removes renderables from the leaf lists
@@ -47,8 +38,3 @@ public:
 	virtual void DisableShadowDepthRendering( ClientRenderHandle_t handle, bool bDisable ) = 0;
 	virtual void DisableCSMRendering( ClientRenderHandle_t handle, bool bDisable ) = 0;
 };
-
-
-#endif	// ICLIENTLEAFSYSTEM_H
-
-

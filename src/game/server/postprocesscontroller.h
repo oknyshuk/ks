@@ -1,19 +1,17 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef POSTPROCESSCONTROLLER_H
-#define POSTPROCESSCONTROLLER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #include "reflect_annotations.h"
 
 #include "GameEventListener.h"
 #include "postprocess_shared.h"
+#include "baseentity.h"
+#include "igamesystem.h"
+#include "fogcontroller.h"
 
 // Spawn Flags
-#define SF_POSTPROCESS_MASTER		0x0001
+inline constexpr auto SF_POSTPROCESS_MASTER = 0x0001;
 
 //=============================================================================
 //
@@ -91,6 +89,3 @@ private:
 };
 
 CPostProcessSystem *PostProcessSystem( void );
-
-
-#endif // POSTPROCESSCONTROLLER_H

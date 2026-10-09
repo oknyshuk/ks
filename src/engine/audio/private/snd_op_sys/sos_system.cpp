@@ -1,9 +1,21 @@
- //============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
-#include "audio_pch.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+import std;
+
+
+import ks.tier1;
+
+#include "sound.h"
+#include "soundservice.h"
+#include "filesystem.h"
+
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+
+#include "audio/private/posix_stubs.h"
 
 #include "snd_dma.h"
 #include "sos_system.h"
@@ -11,8 +23,6 @@
 #include "sound.h"
 #include "../../debugoverlay.h"
 
-
-#include "tier0/memalloc.h"
 
 Color CollectionColor( 245, 245, 245, 255 );
 Color StackColor( 225, 225, 245, 255 );
@@ -78,7 +88,7 @@ void CSosOperatorStack::AddToTail( CSosOperator *pOperator, const char *pName )
 	m_vOperatorNames.push_back( it->first.c_str() );
 }
 
-int CSosOperatorStack::FindOperatorViaOffset( size_t nOffset )
+int CSosOperatorStack::FindOperatorViaOffset( std::size_t nOffset )
 {
 	size_t memOffset = 0;
 	int i;
@@ -102,7 +112,7 @@ CSosOperator *CSosOperatorStack::FindOperator( const char *pName, void **pStruct
 {
 	auto itOp = m_vOperatorMap.find( pName );
 	int nOpIndex = itOp != m_vOperatorMap.end() ? itOp->second : -1;
-	size_t memOffset = 0;
+	std::size_t memOffset = 0;
 	*pStructHandle = m_pMemPool;
 	for( int i = 0; i < nOpIndex; i++ )
 	{
@@ -142,7 +152,7 @@ int CSosOperatorStack::GetOperatorOffset( int nIndex )
 		return -1;
 	}
 
-	size_t memOffset = 0;
+	std::size_t memOffset = 0;
 	for ( int i = 0; i < nIndex; i++ )
 	{
 		CSosOperator *pOp = m_vStack[i];
@@ -163,7 +173,7 @@ int CSosOperatorStack::GetOperatorOutputOffset( const char *pOperatorName, const
 		return -1;
 	}
 	CSosOperator *pOperator = m_vStack[ nOpIndex ];
-	size_t nOpOffset = GetOperatorOffset( nOpIndex );
+	std::size_t nOpOffset = GetOperatorOffset( nOpIndex );
 	size_t nOutputOffset = pOperator->GetOutputOffset( pOutputName );
 
 	return nOpOffset + nOutputOffset;
@@ -171,7 +181,7 @@ int CSosOperatorStack::GetOperatorOutputOffset( const char *pOperatorName, const
 }
 void CSosOperatorStack::Init( )
 {
-	size_t TotalSize = 0;
+	std::size_t TotalSize = 0;
 	for( int i = 0 ; i < std::ssize( m_vStack ); i++ )
 	{
 		char *pCharMem = ((char *)m_pMemPool) + TotalSize;
@@ -192,7 +202,7 @@ void CSosOperatorStack::Shutdown( )
 	// 		Log_Msg( LOG_SND_OPERATORS, StackColor, "Operator Stack: %s\n", m_nName );
 	// 	}
 
-	size_t TotalSize = 0;
+	std::size_t TotalSize = 0;
 	for( int i = 0 ; i < std::ssize( m_vStack ); i++ )
 	{
 		char *pCharMem = ((char *)m_pMemPool) + TotalSize;
@@ -230,7 +240,7 @@ bool CSosOperatorStack::ShouldPrintOperatorUpdates( ) const
 }
 void CSosOperatorStack::Execute( channel_t *pChannel, CScratchPad *pScratchPad )
 {
-	VPROF ( "CSosOperatorStack::Execute" );
+	CVProfScope _( "CSosOperatorStack::Execute", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( ShouldPrintOperatorUpdates( ) || snd_sos_list_operator_updates.GetInt() )
 	{
@@ -243,7 +253,7 @@ void CSosOperatorStack::Execute( channel_t *pChannel, CScratchPad *pScratchPad )
 		pChannel = S_FindChannelByGuid( m_nChannelGuid );
 	}
 
-	size_t TotalSize = 0;
+	std::size_t TotalSize = 0;
 	for( int i = 0 ; i < std::ssize( m_vStack ); i++ )
 	{
 		char *pCharMem = ((char *)m_pMemPool) + TotalSize;
@@ -295,10 +305,9 @@ void CSosOperatorStack::ExecuteIterator( channel_t *pChannel, CScratchPad *pScra
 	}
 	else
 	{
-		Assert( nIndex == FindOperator( pOperatorName ) );
 	}
 
-	size_t TotalSize = 0;
+	std::size_t TotalSize = 0;
 	for( int i = 0; i < std::ssize( m_vStack ); i++ )
 	{
 		char *pCharMem = ((char *)m_pMemPool) + TotalSize;
@@ -337,12 +346,12 @@ void CSosOperatorStack::ExecuteIterator( channel_t *pChannel, CScratchPad *pScra
 	}
 }
 
-void CSosOperatorStack::Copy( CSosOperatorStack *pSrcStack, size_t nMemOffset )
+void CSosOperatorStack::Copy( CSosOperatorStack *pSrcStack, std::size_t nMemOffset )
 {
 	// copy first so we can alter
 	V_memcpy((char *)m_pMemPool + nMemOffset, pSrcStack->m_pMemPool, pSrcStack->m_nMemSize );
 	
-	size_t nTotalOffset = 0;
+	std::size_t nTotalOffset = 0;
 
 	// UGLY, MAKE POINTERS!
 	for ( int i = 0; i < std::ssize( pSrcStack->m_vStack ); i++ )
@@ -370,7 +379,7 @@ void CSosOperatorStack::Print( int nLevel )
 		return;
 	}
 	Log_Msg( LOG_SND_OPERATORS, StackColor, "\n%*sOperator Stack: %s\n%*sSize: %i\n", nLevel, "    ", m_nName, nLevel, "    ", static_cast<int>( m_nMemSize ) );
-	size_t TotalSize = 0;
+	std::size_t TotalSize = 0;
 	for ( int i = 0 ; i < std::ssize( m_vStack ); i++ )
 	{
 		m_vStack[i]->Print( (void *)((char *)m_pMemPool + TotalSize), this, i, nLevel );
@@ -388,7 +397,7 @@ enum sosStackCreationPasses_t
 
 void CSosOperatorStack::ParseKV( KeyValues *pOperatorsKV )
 {
-	size_t TotalSize = 0;
+	std::size_t TotalSize = 0;
 	KeyValues *pOperator = pOperatorsKV->GetFirstSubKey();
 
 	std::set< std::string, ks::iless > testDict;
@@ -1318,7 +1327,7 @@ CSosOperatorSystem::~CSosOperatorSystem()
 {
 }
 
-#define SOUND_OPERATORS_FILE "scripts/sound_operator_stacks.txt"
+inline constexpr const char *SOUND_OPERATORS_FILE = "scripts/sound_operator_stacks.txt";
 void CSosOperatorSystem::Flush()
 {
 	m_MasterStackCollection.Clear();
@@ -1642,7 +1651,7 @@ void CSosOperatorSystem::DEBUG_ShowTrackList( void )
 	for ( const auto &[name, pChannel] : m_vTrackDict )
 	{
 		char chanStr[128];
-		sprintf( chanStr, "Channel %i : %s = %s", i, name.c_str(),  pChannel ? g_pSoundEmitterSystem->GetSoundNameForHash( pChannel->m_nSoundScriptHash ) : "empty" );
+		std::sprintf( chanStr, "Channel %i : %s = %s", i, name.c_str(),  pChannel ? g_pSoundEmitterSystem->GetSoundNameForHash( pChannel->m_nSoundScriptHash ) : "empty" );
 		CDebugOverlay::AddScreenTextOverlay( 0.01, 0.2 + (0.012 * (float)  i) , 0.5, 200, 200, 200, 255, chanStr );
 		++i;
 	}
@@ -1712,7 +1721,7 @@ void CSosOperatorSystem::DEBUG_ShowOpvarList( void )
 	int nCount = (int)m_sosOpVarFloatMap.size();
 
 	char opVarStr[128];
-	sprintf( opVarStr, "Opvars %i", nCount );
+	std::sprintf( opVarStr, "Opvars %i", nCount );
 
 	CDebugOverlay::AddScreenTextOverlay( 0.01, 0.5, 0.5, 200, 200, 200, 255, opVarStr );
 

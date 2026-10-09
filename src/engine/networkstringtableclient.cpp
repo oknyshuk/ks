@@ -1,20 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "quakedef.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #include "networkstringtable.h"
 #include "client.h"
 
-#ifndef SHARED_NET_STRING_TABLES
  	static CNetworkStringTableContainer s_NetworkStringTableClient;
 	CNetworkStringTableContainer *networkStringTableContainerClient = &s_NetworkStringTableClient;
 
 	// Expose to client .dll
-	EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CNetworkStringTableContainer, INetworkStringTableContainer, INTERFACENAME_NETWORKSTRINGTABLECLIENT, s_NetworkStringTableClient );
-#endif
+	static InterfaceReg s_Reg_CNetworkStringTableContainer_INetworkStringTableContainer( []() -> void * { return static_cast<INetworkStringTableContainer *>( &s_NetworkStringTableClient ); }, INTERFACENAME_NETWORKSTRINGTABLECLIENT );;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -28,4 +22,3 @@ void CL_PrintStringTables( void )
 	}
 #endif
 }
-

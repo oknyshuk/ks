@@ -1,15 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-// Dummy build counter (used to force all shaders to be rebuilt): 33
-//
-//===========================================================================//
-#ifndef COMMON_FXC_H_
-#define COMMON_FXC_H_
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+// Purpose: Dummy build counter (used to force all shaders to be rebuilt): 33
 
 #include "common_pragmas.h"
 #include "common_hlsl_cpp_consts.h"
@@ -37,7 +30,6 @@
 #   define h3texCUBE texCUBE
 #   define h4texCUBE texCUBE
 #endif
-
 
 #define FP16_MAX	65504.0f
 
@@ -445,5 +437,3 @@ float4 TransformFlashlightWorldToTexture( float3 vWorldPos, float4x4 vFlashlight
 
 	return vSpotTexCoord;
 }
-
-#endif //#ifndef COMMON_FXC_H_

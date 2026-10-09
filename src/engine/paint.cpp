@@ -1,26 +1,21 @@
-//========= Copyright  Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//==========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+import ks.vstdlib;
 #include "paint.h"
 #include "materialsystem/imaterial.h"
 #include "pixelwriter.h"
 #include "gl_model_private.h"
 #include "gl_matsysiface.h"
-#include "dt_common.h"
-#include "keyvalues.h"
-#include <vstdlib/random.h> // RandomFloat
+import std;
 #include "collisionutils.h" // ray triangle test
 #include "cmodel_private.h"
 // debug stuff
-#include "debugoverlay.h"
 #include "con_nprint.h"
 
 // src/public/
 #include "game/shared/portal2/paint_enum.h"
 
-#include "tier1/callqueue.h"
 
 extern ConVar r_redownloadallpaintmaps;
 
@@ -159,7 +154,7 @@ void CPaintmapDataManager::UpdatePaintmapTextures()
 		{
 			ks::small_vector< Rect_t, 1024 > *pRects = m_pPaintTextureDataArray[paintmap].GetDirtyRectList();
 			int count = std::ssize( *pRects );
-			Assert( count > 0 );
+			contract_assert( count > 0 );
 			R_UpdatePaintmap( pCallQueue, paintmap, m_pPaintTextureDataArray[paintmap].GetPaintmapData(), count,  pRects->data() );
 		}
 
@@ -222,11 +217,11 @@ void CPaintmapDataManager::RemoveAllPaint( void )
 
 void CPaintmapDataManager::RemovePaint( const model_t *pModel )
 {
-	Assert( pModel );
+	contract_assert( pModel );
 	if ( !pModel )
 		return;
 
-	Assert( m_pPaintTextureDataArray );
+	contract_assert( m_pPaintTextureDataArray );
 	if ( !m_pPaintTextureDataArray )
 		return;
 
@@ -261,7 +256,7 @@ void CPaintmapDataManager::RemovePaint( const model_t *pModel )
 
 void CPaintmapDataManager::PaintAllSurfaces( BYTE color )
 {
-	AssertMsg( m_pPaintTextureDataArray, "Failed to paint all surfaces. Paint textures are not allocated." );
+	contract_assert( m_pPaintTextureDataArray && "Failed to paint all surfaces. Paint textures are not allocated." );
 
 	if( m_pPaintTextureDataArray )
 	{
@@ -320,7 +315,7 @@ bool CPaintTextureData::Init( int width, int height, int lightmapPageID )
 	m_lightmapPageID = lightmapPageID;
 
 	m_backbuffer = new BYTE[ m_nPaintWidth * m_nPaintHeight ];
-	AssertMsg( m_backbuffer, "Failed to allocate paint texture data array" );
+	contract_assert( m_backbuffer && "Failed to allocate paint texture data array" );
 	ClearBuffer();
 
 	return true;
@@ -808,7 +803,7 @@ void CPaintTextureData::GetSurfacePaintData( SurfaceHandle_t surfID, std::vector
 
 	// make sure alloc number is divisible by 4
 	uint nAllocSize = nDataCount + ( ( 4 - ( nDataCount % 4 ) ) % 4 );
-	Assert( ( nAllocSize % 4 ) == 0 );
+	contract_assert( ( nAllocSize % 4 ) == 0 );
 
 	ks::ensure_size( data, nAllocSize );
 
@@ -821,7 +816,7 @@ void CPaintTextureData::GetSurfacePaintData( SurfaceHandle_t surfID, std::vector
 		pOut += width;
 		pRead += m_nPaintWidth;
 	}
-	Assert( pOut == pEnd );
+	contract_assert( pOut == pEnd );
 }
 
 
@@ -958,7 +953,7 @@ void EncodeDataRLE( const uint32* pBuffer, uint32 nDwordCount, std::vector< uint
 	}
 
 	// make sure our buffer contains exactly what the records predicted
-	Assert( (uint32)(pOut - data.data()) == nRLESize );
+	contract_assert( (uint32)(pOut - data.data()) == nRLESize );
 }
 
 
@@ -1021,8 +1016,7 @@ void DecodeDataRLE( const uint32* pRLEStart, uint rleCount, SurfaceHandle_t surf
 		}
 	}
 
-	Assert( pRLE == pEndOfData );
-	Assert( pOutput - pOutStart == nDwordCount );
+	contract_assert( pRLE == pEndOfData );
 }
 
 
@@ -1046,7 +1040,7 @@ void CPaintmapDataManager::LoadPaintmapDataRLE( const std::vector< uint32 > &dat
 		int height	= MSurf_LightmapExtents( surfID )[1] + 1;
 		int nByteCount = width * height;
 		uint nAllocSize = nByteCount + ( ( 4 - ( nByteCount % 4 ) ) % 4 );
-		Assert( ( nAllocSize % 4 ) == 0 );
+		contract_assert( ( nAllocSize % 4 ) == 0 );
 		rawPaintData.assign( nAllocSize, {} );
 		uint nDWord = nAllocSize / 4;
 		DecodeDataRLE( pCurrent, nRLESize, surfID, (uint32*)rawPaintData.data(), nDWord );
@@ -1417,14 +1411,14 @@ bool ShootPaintSphere( const model_t *pModel, const Vector& vPosition, BYTE colo
 		return false;
 	}
 
-	Assert( pModel );
+	contract_assert( pModel );
 	if ( !pModel )
 		return false; 
 
 	paintinfo_t paintinfo;
 	paintinfo.m_vPosition = vPosition;
 	paintinfo.m_flSize = flSphereRadius;
-	paintinfo.m_flCurrentDistance = FLT_MAX;
+	paintinfo.m_flCurrentDistance = std::numeric_limits<float>::max();
 	paintinfo.m_pBrush = pModel->brush.pShared;
 	paintinfo.m_aApplySurfs.clear();
 	paintinfo.m_bPainting = true;
@@ -1480,7 +1474,7 @@ void TracePaintSphere( const model_t *pModel, const Vector& vPosition, const Vec
 		return;
 	}
 
-	Assert( pModel );
+	contract_assert( pModel );
 	if ( !pModel )
 		return;
 
@@ -1490,7 +1484,7 @@ void TracePaintSphere( const model_t *pModel, const Vector& vPosition, const Vec
 	paintinfo_t paintinfo;
 	paintinfo.m_vPosition = vPosition;
 	paintinfo.m_flSize = flSphereRadius;
-	paintinfo.m_flCurrentDistance = FLT_MAX;
+	paintinfo.m_flCurrentDistance = std::numeric_limits<float>::max();
 	paintinfo.m_pBrush = pModel->brush.pShared;
 	paintinfo.m_aApplySurfs.clear();
 	paintinfo.m_bPainting = false;
@@ -1518,5 +1512,3 @@ void R_RedownloadAllPaintmaps()
 		g_PaintManager.UpdatePaintmapTextures();
 	}
 }
-
-

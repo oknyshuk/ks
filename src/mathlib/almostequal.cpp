@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Fast ways to compare equality of two floats.  Assumes 
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
+// Purpose: Fast ways to compare equality of two floats.  Assumes
 // sizeof(float) == sizeof(int) and we are using IEEE format.
-//
 // Source:  http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm
-//=====================================================================================//
 
-#include <float.h>
-#include <math.h>
+import std;
 
-#include "mathlib/mathlib.h"
+import ks.math;
 
 static inline bool AE_IsInfinite(float a)
 {
@@ -88,10 +86,8 @@ bool AlmostEqual(float a, float b, int maxUlps)
 
     // Now we can compare aInt and bInt to find out how far apart a and b
     // are.
-    int intDiff = abs(aInt - bInt);
+    int intDiff = std::abs(aInt - bInt);
     if (intDiff <= maxUlps)
         return true;
     return false;
 }
-
-

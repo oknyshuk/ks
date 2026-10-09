@@ -1,16 +1,11 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
 // Vocabulary for proto2 messages.
 
-#ifndef KS_PROTO_TYPES_H
-#define KS_PROTO_TYPES_H
 
-#include <concepts>
-#include <cstddef>
-#include <cstdint>
-#include <string>
-#include <utility>
+import std;
 
 namespace ks::proto
 {
@@ -95,12 +90,12 @@ private:
 	bool m_set = false;
 };
 
-using sint32   = zigzag<int32_t>;
-using sint64   = zigzag<int64_t>;
-using fixed32  = fixed<uint32_t>;
-using fixed64  = fixed<uint64_t>;
-using sfixed32 = fixed<int32_t>;
-using sfixed64 = fixed<int64_t>;
+using sint32   = zigzag<std::int32_t>;
+using sint64   = zigzag<std::int64_t>;
+using fixed32  = fixed<std::uint32_t>;
+using fixed64  = fixed<std::uint64_t>;
+using sfixed32 = fixed<std::int32_t>;
+using sfixed64 = fixed<std::int64_t>;
 
 // Declared here and defined in proto.h, which needs <meta>. Schemas and their users get
 // these four operations without paying for reflection in every translation unit; the
@@ -113,4 +108,3 @@ template <class T> std::string to_text( const T & );
 
 } // namespace ks::proto
 
-#endif // KS_PROTO_TYPES_H

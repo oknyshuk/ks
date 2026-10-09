@@ -1,9 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "decal_clip.h"
 
@@ -43,8 +39,8 @@ public:
 // --------------------------------------------------------------------------- //
 // Globals.
 // --------------------------------------------------------------------------- //
-CDecalVert ALIGN16 g_DecalClipVerts[MAX_DECALCLIPVERT];
-static CDecalVert ALIGN16 g_DecalClipVerts2[MAX_DECALCLIPVERT];
+CDecalVert g_DecalClipVerts[MAX_DECALCLIPVERT];
+static CDecalVert g_DecalClipVerts2[MAX_DECALCLIPVERT];
 
 
 
@@ -66,7 +62,7 @@ static inline int SHClip( CDecalVert *pDecalClipVerts, int vertCount, CDecalVert
 	int j, outCount;
 	CDecalVert *s, *p;
 
-	Assert( vertCount <= MAX_DECALCLIPVERT );
+	contract_assert( vertCount <= MAX_DECALCLIPVERT );
 
 	outCount = 0;
 
@@ -155,12 +151,12 @@ CDecalVert* R_DoDecalSHClip( CDecalVert *pInVerts, CDecalVert *pOutVerts, decal_
 
 // Build the initial list of vertices from the surface verts into the global array, 'verts'.
 void R_SetupDecalVertsForMSurface( 
-	decal_t * RESTRICT pDecal, 
+	decal_t * __restrict__ pDecal, 
 	SurfaceHandle_t surfID, 
-	Vector * RESTRICT pTextureSpaceBasis,
-	CDecalVert * RESTRICT pVerts )
+	Vector * __restrict__ pTextureSpaceBasis,
+	CDecalVert * __restrict__ pVerts )
 {
-	unsigned short * RESTRICT pIndices = &host_state.worldbrush->vertindices[MSurf_FirstVertIndex( surfID )];
+	unsigned short * __restrict__ pIndices = &host_state.worldbrush->vertindices[MSurf_FirstVertIndex( surfID )];
 	int count = MSurf_VertCount( surfID );
 	float uOffset = 0.5f - pDecal->dx;
 	float vOffset = 0.5f - pDecal->dy;
@@ -182,7 +178,7 @@ void R_SetupDecalVertsForMSurface(
 // compute the decal basis based on surface normal, and preferred saxis
 //-----------------------------------------------------------------------------
 
-#define SIN_45_DEGREES ( 0.70710678118654752440084436210485f )
+constexpr auto SIN_45_DEGREES = ( 0.70710678118654752440084436210485f );
 
 void R_DecalComputeBasis( Vector const& surfaceNormal, Vector const* pSAxis, 
 								 Vector* textureSpaceBasis )
@@ -253,7 +249,7 @@ void R_DecalComputeBasis( Vector const& surfaceNormal, Vector const* pSAxis,
 	VectorNormalizeFast( textureSpaceBasis[1] );
 }
 
-#define MAX_PLAYERSPRAY_SIZE		64
+constexpr auto MAX_PLAYERSPRAY_SIZE = 64;
 
 void R_SetupDecalTextureSpaceBasis(
 	decal_t *pDecal,

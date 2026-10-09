@@ -10,25 +10,20 @@
 #ifndef _SQ_PLUS_H_
 #define _SQ_PLUS_H_
 
-#if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "platform.h"
-#include "dbg.h"
-#endif
-
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <malloc.h>
 
-#ifdef __APPLE__
-  #include <malloc/malloc.h>
-#else
-  #include <malloc.h>
+#if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
+import std;
+import ks.core;
 #endif
-#include <memory.h>
   #ifdef _T
   #undef _T
   #endif
-  #define _T(n) n
+  #define n n
   #define SCSNPRINTF snprintf
-  #include <stdio.h> // for snprintf
   #define SCPUTS puts
 
 #ifndef _WINDEF_
@@ -165,7 +160,7 @@ struct TypeInfo {
 template<>
 struct TypeInfo<INT> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("int")) {}
+  TypeInfo() : typeName("int") {}
   enum {TypeID=VAR_TYPE_INT,Size=sizeof(INT)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -173,7 +168,7 @@ struct TypeInfo<INT> {
 template<>
 struct TypeInfo<FLOAT> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("float")) {}
+  TypeInfo() : typeName("float") {}
   enum {TypeID=VAR_TYPE_FLOAT,Size=sizeof(FLOAT)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -181,7 +176,7 @@ struct TypeInfo<FLOAT> {
 template<>
 struct TypeInfo<bool> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("bool")) {}
+  TypeInfo() : typeName("bool") {}
   enum {TypeID=VAR_TYPE_BOOL,Size=sizeof(bool)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -189,7 +184,7 @@ struct TypeInfo<bool> {
 template<>
 struct TypeInfo<SQUserPointer> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("SQUserPointer")) {}
+  TypeInfo() : typeName("SQUserPointer") {}
   enum {TypeID=VAR_TYPE_USER_POINTER,Size=sizeof(SQUserPointer)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -197,7 +192,7 @@ struct TypeInfo<SQUserPointer> {
 template<>
 struct TypeInfo<SQAnything> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("SQUserPointer")) {}
+  TypeInfo() : typeName("SQUserPointer") {}
   enum {TypeID=VAR_TYPE_USER_POINTER,Size=sizeof(SQUserPointer)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -205,7 +200,7 @@ struct TypeInfo<SQAnything> {
 template<>
 struct TypeInfo<const SQChar *> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("const SQChar *")) {}
+  TypeInfo() : typeName("const SQChar *") {}
   enum {TypeID=VAR_TYPE_CONST_STRING,Size=sizeof(const SQChar *)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -213,7 +208,7 @@ struct TypeInfo<const SQChar *> {
 template<>
 struct TypeInfo<ScriptStringVarBase> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("ScriptStringVarBase")) {}
+  TypeInfo() : typeName("ScriptStringVarBase") {}
   enum {TypeID=VAR_TYPE_STRING,Size=sizeof(ScriptStringVarBase)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -223,7 +218,7 @@ struct TypeInfo<ScriptStringVarBase> {
 template<>
 struct TypeInfo<ScriptStringVar8> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("ScriptStringVar8")) {}
+  TypeInfo() : typeName("ScriptStringVar8") {}
   enum {TypeID=VAR_TYPE_STRING,Size=sizeof(ScriptStringVar8)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -231,7 +226,7 @@ struct TypeInfo<ScriptStringVar8> {
 template<>
 struct TypeInfo<ScriptStringVar16> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("ScriptStringVar16")) {}
+  TypeInfo() : typeName("ScriptStringVar16") {}
   enum {TypeID=VAR_TYPE_STRING,Size=sizeof(ScriptStringVar16)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -239,7 +234,7 @@ struct TypeInfo<ScriptStringVar16> {
 template<>
 struct TypeInfo<ScriptStringVar32> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("ScriptStringVar32")) {}
+  TypeInfo() : typeName("ScriptStringVar32") {}
   enum {TypeID=VAR_TYPE_STRING,Size=sizeof(ScriptStringVar32)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -247,7 +242,7 @@ struct TypeInfo<ScriptStringVar32> {
 template<>
 struct TypeInfo<ScriptStringVar64> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("ScriptStringVar64")) {}
+  TypeInfo() : typeName("ScriptStringVar64") {}
   enum {TypeID=VAR_TYPE_STRING,Size=sizeof(ScriptStringVar64)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -255,7 +250,7 @@ struct TypeInfo<ScriptStringVar64> {
 template<>
 struct TypeInfo<ScriptStringVar128> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("ScriptStringVar128")) {}
+  TypeInfo() : typeName("ScriptStringVar128") {}
   enum {TypeID=VAR_TYPE_STRING,Size=sizeof(ScriptStringVar128)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -263,7 +258,7 @@ struct TypeInfo<ScriptStringVar128> {
 template<>
 struct TypeInfo<ScriptStringVar256> {
   const SQChar * typeName;
-  TypeInfo() : typeName(_T("ScriptStringVar256")) {}
+  TypeInfo() : typeName("ScriptStringVar256") {}
   enum {TypeID=VAR_TYPE_STRING,Size=sizeof(ScriptStringVar256)};
   operator ScriptVarType() { return ScriptVarType(TypeID); }
 };
@@ -275,7 +270,7 @@ typedef void (*CopyVarFunc)(void * dst,void * src);
 
 // === Variable references for script access ===
 
-#define SQ_PLUS_TYPE_TABLE _T("__SqTypes")
+#define SQ_PLUS_TYPE_TABLE "__SqTypes"
 
 struct VarRef {
   // In this case 'offsetOrAddrOrConst' is simpler than using an anonymous union.
@@ -287,8 +282,8 @@ struct VarRef {
   short access;               // VarAccessType.
   const SQChar * typeName;    // Type name string (to create instances by name).
   VarRef() : offsetOrAddrOrConst(0), type(VAR_TYPE_NONE), instanceType((SQUserPointer)-1), copyFunc(0), size(0), access(VAR_ACCESS_READ_WRITE) {}
-  VarRef(void * _offsetOrAddrOrConst, ScriptVarType _type, SQUserPointer _instanceType, CopyVarFunc _copyFunc, int _size,VarAccessType _access,const SQChar * _typeName) : 
-         offsetOrAddrOrConst(_offsetOrAddrOrConst), type(_type), instanceType(_instanceType), copyFunc(_copyFunc), size(_size), access(_access), typeName(_typeName) {
+  VarRef(void * _offsetOrAddrOrConst, ScriptVarType _type, SQUserPointer _instanceType, CopyVarFunc _copyFunc, int _size,VarAccessType access,const SQChar * _typeName) : 
+         offsetOrAddrOrConst(_offsetOrAddrOrConst), type(_type), instanceType(_instanceType), copyFunc(_copyFunc), size(_size), access(access), typeName(_typeName) {
 #ifdef SQ_SUPPORT_INSTANCE_TYPE_INFO
     SquirrelObject typeTable = SquirrelVM::GetRootTable().GetValue(SQ_PLUS_TYPE_TABLE);
     if (typeTable.IsNull()) {
@@ -329,10 +324,10 @@ SQInteger getInstanceVarFunc(HSQUIRRELVM v);
 
 inline void createTableSetGetHandlers(SquirrelObject & so) {
   SquirrelObject delegate = so.GetDelegate();
-  if (!delegate.Exists(_T("_set"))) {
+  if (!delegate.Exists("_set")) {
     delegate = SquirrelVM::CreateTable();
-    SquirrelVM::CreateFunction(delegate,setVarFunc,_T("_set"),_T("sn|b|s")); // String var name = number(int or float) or bool or string.
-    SquirrelVM::CreateFunction(delegate,getVarFunc,_T("_get"),_T("s"));      // String var name.
+    SquirrelVM::CreateFunction(delegate,setVarFunc,"_set","sn|b|s"); // String var name = number(int or float) or bool or string.
+    SquirrelVM::CreateFunction(delegate,getVarFunc,"_get","s");      // String var name.
     so.SetDelegate(delegate);
   } // if
 } // createTableSetGetHandlers
@@ -342,7 +337,7 @@ inline VarRefPtr createVarRef(SquirrelObject & so,const SQChar * scriptVarName) 
   ScriptStringVar256 scriptVarTagName; getVarNameTag(scriptVarTagName,sizeof(scriptVarTagName),scriptVarName);
   if (!so.GetUserData(scriptVarTagName,(SQUserPointer *)&pvr)) {
     so.NewUserData(scriptVarTagName,sizeof(*pvr));
-    if (!so.GetUserData(scriptVarTagName,(SQUserPointer *)&pvr)) throw SquirrelError(_T("Could	not create UserData."));
+    if (!so.GetUserData(scriptVarTagName,(SQUserPointer *)&pvr)) throw SquirrelError("Could	not create UserData.");
   } // if
   return pvr;
 } // createVarRef
@@ -356,14 +351,14 @@ void validateConstantType(T constant) {
   case VAR_TYPE_CONST_STRING:
     break;
   default:
-    throw SquirrelError(_T("validateConstantType(): type must be INT, FLOAT, BOOL, or CONST CHAR *."));
+    throw SquirrelError("validateConstantType(): type must be INT, FLOAT, BOOL, or const CHAR *.");
   } // case
 } // validateConstantType
 
 inline void createInstanceSetGetHandlers(SquirrelObject & so) {
-  if (!so.Exists(_T("_set"))) {
-    SquirrelVM::CreateFunction(so,setInstanceVarFunc,_T("_set"),_T("sn|b|s|x")); // String var name = number(int or float) or bool or string or instance.
-    SquirrelVM::CreateFunction(so,getInstanceVarFunc,_T("_get"),_T("s"));      // String var name.
+  if (!so.Exists("_set")) {
+    SquirrelVM::CreateFunction(so,setInstanceVarFunc,"_set","sn|b|s|x"); // String var name = number(int or float) or bool or string or instance.
+    SquirrelVM::CreateFunction(so,getInstanceVarFunc,"_get","s");      // String var name.
   } // if
 } // createInstanceSetGetHandlers
 
@@ -452,17 +447,17 @@ inline BOOL CreateConstructNativeClassInstance(HSQUIRRELVM v,const SQChar * clas
   sq_pushstring(v,className,-1);
   if (SQ_FAILED(sq_rawget(v,-2))) { // Get the class (created with sq_newclass()).
     sq_settop(v,oldtop);
-    return FALSE;
+    return false;
   } // if
   sq_remove(v,-2); // Remove the root table. 
   sq_pushroottable(v); // Push the 'this'.
   if (SQ_FAILED(sq_call(v,1,SQTrue,SQ_CALL_RAISE_ERROR))) { // Call ClassName(): creates new instance and calls constructor (instead of sq_createinstance() where constructor is not called).
     sq_settop(v,oldtop);
-    return FALSE;
+    return false;
   } // if
   sq_remove(v,-2); // Remove the class.
   //  int newtop = sq_gettop(v);
-  return TRUE;
+  return true;
 } // CreateConstructNativeClassInstance
 
 // Create new instance, copy 'classToCopy', and store result on stack.
@@ -470,14 +465,14 @@ template<typename T>
 inline BOOL CreateCopyInstance(const SQChar * className,const T & classToCopy) {
   HSQUIRRELVM v = SquirrelVM::GetVMPtr();
   if (!CreateConstructNativeClassInstance(v,className)) {
-    return FALSE;
+    return false;
   } // if
   SQUserPointer up=0;
   sq_getinstanceup(v,-1,&up,ClassType<T>::type());
-  if (!up) return FALSE;
+  if (!up) return false;
   T * newClass = (T *)up;
   *newClass = classToCopy; // <TODO> Optimized version that uses the copy constructor.
-  return TRUE;
+  return true;
 } // CreateCopyInstance
 
 // Create a new copy of type 'className' and copy 'classToCopy', return result via SquirrelObject.
@@ -488,7 +483,7 @@ inline SquirrelObject NewClassCopy(const SQChar * className,const T & classToCop
     ret.AttachToStackObject(-1);
     sq_poptop(SquirrelVM::GetVMPtr());
   } else {
-    throw SquirrelError(_T("NewClassCopy(): could not create class"));
+    throw SquirrelError("NewClassCopy(): could not create class");
   } // if
   return ret;
 } // NewClassCopy
@@ -508,7 +503,7 @@ T * GetInstance(HSQUIRRELVM v,SQInteger idx) {
   SQUserPointer up=0;
   sq_getinstanceup(v,idx,&up,ClassType<T>::type());
   if (ExceptionOnError) { // This code block should be compiled out when ExceptionOnError is false. In any case, the compiler should not generate a test condition (include or exclude the enclosed code block).
-    if (!up) throw SquirrelError(_T("GetInstance: Invalid argument type"));
+    if (!up) throw SquirrelError("GetInstance: Invalid argument type");
   } // if
   return (T *)up;
 } // GetInstance
@@ -519,12 +514,12 @@ T * GetInstance(HSQUIRRELVM v,SQInteger idx) {
 #ifdef SQPLUS_SUPPORT_NULL_INSTANCES
 
 #define DECLARE_INSTANCE_TYPE_NAME_(TYPE,NAME) namespace SqPlus { \
-  inline const SQChar * GetTypeName(const TYPE & n) { return _T(#NAME); } \
+  inline const SQChar * GetTypeName(const TYPE & n) { return #NAME; } \
   inline void Push(HSQUIRRELVM v,TYPE * value) { \
     if (!value)  sq_pushnull(v); \
     else if (!CreateNativeClassInstance(v,GetTypeName(*value),value,0)) \
-      throw SquirrelError(_T("Push(): could not create INSTANCE (check registration name)")); } \
-  inline void Push(HSQUIRRELVM v,TYPE & value) { if (!CreateCopyInstance(GetTypeName(value),value)) throw SquirrelError(_T("Push(): could not create INSTANCE copy (check registration name)")); } \
+      throw SquirrelError("Push(): could not create INSTANCE (check registration name)"); } \
+  inline void Push(HSQUIRRELVM v,TYPE & value) { if (!CreateCopyInstance(GetTypeName(value),value)) throw SquirrelError("Push(): could not create INSTANCE copy (check registration name)"); } \
   inline bool Match(TypeWrapper<TYPE &>,HSQUIRRELVM v,int idx) { return  GetInstance<TYPE,false>(v,idx) != nullptr; } \
   inline bool Match(TypeWrapper<TYPE *>,HSQUIRRELVM v,int idx) { \
     return (sq_gettype(v,idx)==OT_NULL) || (GetInstance<TYPE,false>(v,idx) != nullptr); } \
@@ -535,7 +530,7 @@ T * GetInstance(HSQUIRRELVM v,SQInteger idx) {
   template<> \
   struct TypeInfo<TYPE> { \
     const SQChar * typeName; \
-    TypeInfo() : typeName(_T(#NAME)) {} \
+    TypeInfo() : typeName(#NAME) {} \
     enum {TypeID=VAR_TYPE_INSTANCE,Size=sizeof(TYPE)}; \
     operator ScriptVarType() { return ScriptVarType(TypeID); } \
   }; \
@@ -544,9 +539,9 @@ T * GetInstance(HSQUIRRELVM v,SQInteger idx) {
 #else
 
 #define DECLARE_INSTANCE_TYPE_NAME_(TYPE,NAME) namespace SqPlus { \
-  inline const SQChar * GetTypeName(const TYPE & n)            { return _T(#NAME); } \
-  inline void Push(HSQUIRRELVM v,TYPE * value)                 { if (!CreateNativeClassInstance(v,GetTypeName(*value),value,0)) throw SquirrelError(_T("Push(): could not create INSTANCE (check registration name)")); } \
-  inline void Push(HSQUIRRELVM v,TYPE & value)                 { if (!CreateCopyInstance(GetTypeName(value),value)) throw SquirrelError(_T("Push(): could not create INSTANCE copy (check registration name)")); } \
+  inline const SQChar * GetTypeName(const TYPE & n)            { return #NAME; } \
+  inline void Push(HSQUIRRELVM v,TYPE * value)                 { if (!CreateNativeClassInstance(v,GetTypeName(*value),value,0)) throw SquirrelError("Push(): could not create INSTANCE (check registration name)"); } \
+  inline void Push(HSQUIRRELVM v,TYPE & value)                 { if (!CreateCopyInstance(GetTypeName(value),value)) throw SquirrelError("Push(): could not create INSTANCE copy (check registration name)"); } \
   inline bool	Match(TypeWrapper<TYPE &>,HSQUIRRELVM v,int idx) { return  GetInstance<TYPE,false>(v,idx) != nullptr; } \
   inline bool	Match(TypeWrapper<TYPE *>,HSQUIRRELVM v,int idx) { return  GetInstance<TYPE,false>(v,idx) != nullptr; } \
   inline TYPE & Get(TypeWrapper<TYPE &>,HSQUIRRELVM v,int idx) { return *GetInstance<TYPE,true>(v,idx); } \
@@ -554,7 +549,7 @@ T * GetInstance(HSQUIRRELVM v,SQInteger idx) {
   template<> \
   struct TypeInfo<TYPE> { \
     const SQChar * typeName; \
-    TypeInfo() : typeName(_T(#NAME)) {} \
+    TypeInfo() : typeName(#NAME) {} \
     enum {TypeID=VAR_TYPE_INSTANCE,Size=sizeof(TYPE)}; \
     operator ScriptVarType() { return ScriptVarType(TypeID); } \
   }; \
@@ -576,7 +571,7 @@ T * GetInstance(HSQUIRRELVM v,SQInteger idx) {
 //////////////////////////////////////////////////////////////////////////
 
 #ifndef SQ_SKIP_ARG_ASSERT
-  #define sq_argassert(arg,_index_) if (!Match(TypeWrapper<P##arg>(),v,_index_)) return sq_throwerror(v,_T("Incorrect function argument"))
+  #define sq_argassert(arg,_index_) if (!Match(TypeWrapper<P##arg>(),v,_index_)) return sq_throwerror(v,"Incorrect function argument")
 #else
   #define sq_argassert(arg,_index_)
 #endif
@@ -1187,8 +1182,8 @@ public:
 
 // === Direct Call Instance Member Function handler ===
 
-#define SQ_CLASS_OBJECT_TABLE_NAME _T("__ot")
-#define SQ_CLASS_HIER_ARRAY _T("__ca")
+#define SQ_CLASS_OBJECT_TABLE_NAME "__ot"
+#define SQ_CLASS_HIER_ARRAY "__ca"
 
 template<typename Callee,typename Func>
 class DirectCallInstanceMemberFunction {
@@ -1206,7 +1201,7 @@ public:
       SquirrelObject typeTable = so.GetValue(SQ_CLASS_OBJECT_TABLE_NAME);
       instance = (Callee *)typeTable.GetUserPointer(INT((size_t)ClassType<Callee>::type())); // <TODO> 64-bit compatible version.
       if (!instance) {
-        return sq_throwerror(v,_T("Invalid Instance Type"));
+        return sq_throwerror(v,"Invalid Instance Type");
       } // if
     } // if
 #endif
@@ -1233,7 +1228,7 @@ public:
       SquirrelObject typeTable = so.GetValue(SQ_CLASS_OBJECT_TABLE_NAME);
       instance = (Callee *)typeTable.GetUserPointer(INT((size_t)ClassType<Callee>::type())); // <TODO> 64-bit compatible version.
       if (!instance) {
-        return sq_throwerror(v,_T("Invalid Instance Type"));
+        return sq_throwerror(v,"Invalid Instance Type");
       } // if
     } // if
 #endif
@@ -1366,7 +1361,7 @@ inline void RegisterInstance(HSQUIRRELVM v,HSQOBJECT hclass,Callee & callee,Func
 // All the other Squirrel type-masks are passed normally.
 
 template<typename Callee>
-inline void RegisterInstanceVarArgs(HSQUIRRELVM v,HSQOBJECT hclass,Callee & callee,int (Callee::*func)(HSQUIRRELVM),const SQChar * name,const SQChar * typeMask=_T("*")) {
+inline void RegisterInstanceVarArgs(HSQUIRRELVM v,HSQOBJECT hclass,Callee & callee,int (Callee::*func)(HSQUIRRELVM),const SQChar * name,const SQChar * typeMask="*") {
   sq_pushobject(v,hclass);
   sq_pushstring(v,name,-1);
   sq_pushdirectinstanceclosurevarargs(v,callee,func,0);
@@ -1378,8 +1373,8 @@ inline void RegisterInstanceVarArgs(HSQUIRRELVM v,HSQOBJECT hclass,Callee & call
       ptm       = 0; // Variable args: don't check parameters.
 //      numParams = 0; // Clear SQ_MATCHTYPEMASKSTRING (does not mean match 0 params. See sq_setparamscheck()).
     } else {
-      if (SCSNPRINTF(tm,sizeof(tm),_T("x%s"),typeMask) < 0) { // Must be an instance.
-        throw SquirrelError(_T("RegisterInstanceVarArgs: typeMask string too long."));
+      if (SCSNPRINTF(tm,sizeof(tm),"x%s",typeMask) < 0) { // Must be an instance.
+        throw SquirrelError("RegisterInstanceVarArgs: typeMask string too long.");
       } // if
     } // if
   } else { // <TODO> Need to check object type on stack: table, class, instance, etc.
@@ -1428,7 +1423,7 @@ struct SquirrelFunction {
     object.Reset();
   } // Reset
 
-#define SQPLUS_CHECK_FNCALL(res) if (!SQ_SUCCEEDED(res)) throw SquirrelError(_T("SquirrelFunction<> call failed"))
+#define SQPLUS_CHECK_FNCALL(res) if (!SQ_SUCCEEDED(res)) throw SquirrelError("SquirrelFunction<> call failed")
 
   RT operator()(void) {
     sq_pushobject(v,func.GetObjectHandle());
@@ -1555,7 +1550,7 @@ struct ReleaseClassPtr {
 
 BOOL CreateClass(HSQUIRRELVM v,SquirrelObject & newClass,SQUserPointer classType,const SQChar * name,const SQChar * baseName=0);
 
-#define SQ_ANCESTOR_CLASS_INDEX _T("__ci")
+#define SQ_ANCESTOR_CLASS_INDEX "__ci"
 
 // Call PostConstruct() at the end of custom constructors.
 template<typename T>
@@ -1587,7 +1582,7 @@ inline int PostConstruct(HSQUIRRELVM v,T * newClass,SQRELEASEHOOK hook) {
         instance.SetValue(SQ_ANCESTOR_CLASS_INDEX,i); // Store ancestor class index for recursive constructor calls to come.
         INT top = sq_gettop(v);
         SquirrelObject so = classHierArray.GetValue(i); // Need to create UserData struct: store pointer to class, set release hook.
-        SquirrelObject func = so.GetValue(_T("constructor"));
+        SquirrelObject func = so.GetValue("constructor");
         sq_pushobject(v,func.GetObjectHandle());
         sq_pushobject(v,instance.GetObjectHandle()); // The 'instance' is the real Squirrel 'this' for all ancestors (as opposed to an instance created from the defining class, which does not happen).
         sq_call(v,1,SQFalse,SQ_CALL_RAISE_ERROR); // Call constructor: no arguments are passed other than the 'instance'.
@@ -1610,7 +1605,7 @@ inline int PostConstruct(HSQUIRRELVM v,T * newClass,SQRELEASEHOOK hook) {
     SquirrelObject classHierArray = instance.GetValue(SQ_CLASS_HIER_ARRAY);
     classHierArray.SetValue(classIndex,userData); // Replace the class entry with UserData: will be freed during most-derived class destruction.
     sq_settop(v,top);
-    return TRUE;
+    return true;
   } // if
 #endif
   sq_setinstanceup(v,1,newClass);
@@ -1650,7 +1645,7 @@ inline SquirrelObject RegisterClassType(HSQUIRRELVM v,const SQChar * scriptClass
   int top = sq_gettop(v);
   SquirrelObject newClass;
   if (CreateClass(v,newClass,(SQUserPointer)ClassType<T>::type(),scriptClassName,baseScriptClassName)) {
-    SquirrelVM::CreateFunction(newClass,&ConstructReleaseClass<T>::construct,_T("constructor"));
+    SquirrelVM::CreateFunction(newClass,&ConstructReleaseClass<T>::construct,"constructor");
 #ifdef SQ_USE_CLASS_INHERITANCE
     setupClassHierarchy(newClass);
 #endif
@@ -1706,7 +1701,7 @@ struct SQClassDefBase {
   // typeMask: "*" means don't check parameters, typeMask=0 means function takes no arguments (and is type checked for that case).
   // All the other Squirrel type-masks are passed normally.
   template<typename Func>
-  SQClassDefBase & funcVarArgs(Func pfunc,const SQChar * name,const SQChar * typeMask=_T("*")) {
+  SQClassDefBase & funcVarArgs(Func pfunc,const SQChar * name,const SQChar * typeMask="*") {
     RegisterInstanceVarArgs(v,newClass.GetObjectHandle(),*(TClassType *)0,pfunc,name,typeMask);
     return *this;
   } // funcVarArgs
@@ -1718,7 +1713,7 @@ struct SQClassDefBase {
   // All the other Squirrel type-masks are passed normally.
 
   template<typename Func>
-  SQClassDefBase & staticFuncVarArgs(Func pfunc,const SQChar * name,const SQChar * typeMask=_T("*")) {
+  SQClassDefBase & staticFuncVarArgs(Func pfunc,const SQChar * name,const SQChar * typeMask="*") {
     SquirrelVM::PushObject(newClass);
     SquirrelVM::CreateFunction(pfunc,name,typeMask);
     SquirrelVM::Pop(1);
@@ -1864,7 +1859,7 @@ inline void Push(HSQUIRRELVM v,const SQUserPointer & value) { sq_pushuserpointer
 // === END Argument Dependent Overloads ===
 #endif
 
-#define SQPLUS_CHECK_GET(res) if (!SQ_SUCCEEDED(res)) throw SquirrelError(_T("sq_get*() failed (type error)"))
+#define SQPLUS_CHECK_GET(res) if (!SQ_SUCCEEDED(res)) throw SquirrelError("sq_get*() failed (type error)")
 
 inline bool	Match(TypeWrapper<bool>,HSQUIRRELVM v,int idx)           { return sq_gettype(v,idx) == OT_BOOL; }
 inline bool	Match(TypeWrapper<char>,HSQUIRRELVM v,int idx)           { return sq_gettype(v,idx) == OT_INTEGER; }
@@ -1944,16 +1939,16 @@ static int _##CLASSNAME##_constructor(HSQUIRRELVM v) {               \
 }
 
 #define SQ_REGISTER_CLASS(CLASSNAME)                                 \
-  RegisterClassType(SquirrelVM::GetVMPtr(),_T(#CLASSNAME),_##CLASSNAME##_constructor)
+  RegisterClassType(SquirrelVM::GetVMPtr(),#CLASSNAME,_##CLASSNAME##_constructor)
 
 #define SQ_REGISTER_INSTANCE(NEWSQCLASS,CCLASS,FUNCNAME)             \
-  RegisterInstance(SquirrelVM::GetVMPtr(),NEWSQCLASS.GetObjectHandle(),*(CCLASS *)0,&CCLASS::FUNCNAME,_T(#FUNCNAME));
+  RegisterInstance(SquirrelVM::GetVMPtr(),NEWSQCLASS.GetObjectHandle(),*(CCLASS *)0,&CCLASS::FUNCNAME,#FUNCNAME);
 
 #define SQ_REGISTER_INSTANCE_VARARGS(NEWSQCLASS,CCLASS,FUNCNAME)     \
-  RegisterInstanceVarArgs(SquirrelVM::GetVMPtr(),NEWSQCLASS.GetObjectHandle(),*(CCLASS *)0,&CCLASS::FUNCNAME,_T(#FUNCNAME));
+  RegisterInstanceVarArgs(SquirrelVM::GetVMPtr(),NEWSQCLASS.GetObjectHandle(),*(CCLASS *)0,&CCLASS::FUNCNAME,#FUNCNAME);
 
 #define SQ_REGISTER_INSTANCE_VARIABLE(NEWSQCLASS,CCLASS,VARNAME)     \
-  RegisterInstanceVariable(NEWSQCLASS,&((CCLASS *)0)->VARNAME,_T(#VARNAME));
+  RegisterInstanceVariable(NEWSQCLASS,&((CCLASS *)0)->VARNAME,#VARNAME);
 
 
 }; // namespace SqPlus

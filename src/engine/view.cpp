@@ -1,14 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.vstdlib;
 #include "quakedef.h"
 #include "gl_model_private.h"
 #include "console.h"
 #include "cdll_engine_int.h"
-#include "gl_cvars.h"
 #include "ivrenderview.h"
 #include "gl_matsysiface.h"
 #include "gl_drawlights.h"
@@ -20,7 +17,7 @@
 #include "demo.h"
 #include "istudiorender.h"
 #include "materialsystem/imesh.h"
-#include "tier0/vprof.h"
+import std;
 #include "host.h"
 #include "view.h"
 #include "client.h"
@@ -32,12 +29,9 @@
 #include "ivideomode.h"
 #include "gl_shader.h"
 #include "gl_rmain.h"
-#include "engine/view_sharedv1.h"
 #include "ispatialpartitioninternal.h"
 #include "toolframework/itoolframework.h"
-#include "tier1/callqueue.h"
 #include "r_decal.h"
-
 
 #include "rocketui/rocketui.h"
 
@@ -162,7 +156,7 @@ void V_RenderUIOnly( void )
 //-----------------------------------------------------------------------------
 void V_RenderView( void )
 {
-	VPROF( "V_RenderView" );
+	CVProfScope _( "V_RenderView", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	MDLCACHE_COARSE_LOCK_(g_pMDLCache);
 
 	bool bCanRenderWorld = ( host_state.worldmodel != nullptr ) && GetBaseLocalClient().IsActive();
@@ -259,7 +253,7 @@ public:
 #ifdef _DEBUG
 		for ( int i = 0; i < nCount; ++i )
 		{
-			Assert( pRenderContext->IsRenderData( pInstanceData[i].m_pBrushToWorld ) );
+			contract_assert( pRenderContext->IsRenderData( pInstanceData[i].m_pBrushToWorld ) );
 		}
 #endif
 
@@ -276,7 +270,7 @@ public:
 				pInstanceData = brushArrayData.Lock( nCount, pInstanceData );
 			}
 
-			pCallQueue->QueueCall( R_DrawBrushModelArray, nCount, pInstanceData, nModelTypeFlags );
+			pCallQueue->QueueCall( static_cast<void (*)( int, const BrushArrayInstanceData_t *, int )>( R_DrawBrushModelArray ), nCount, pInstanceData, nModelTypeFlags );
 		}
 	}
 
@@ -304,7 +298,7 @@ public:
 		OcclusionSystem()->DrawDebugOverlays();
 	}
 
-	FORCEINLINE void CheckBlend( void )
+	[[gnu::always_inline]] inline void CheckBlend( void )
 	{
 		g_bIsBlendingOrModulating = ( r_blend != 1.0 ) || 
 			( r_colormod[0] != 1.0 ) || ( r_colormod[1] != 1.0 ) || ( r_colormod[2] != 1.0 );
@@ -450,7 +444,7 @@ public:
 
 	void ViewDrawFade( byte *color, IMaterial* pFadeMaterial, bool mapFullTextureToScreen )
 	{
-		VPROF_BUDGET( "ViewDrawFade", VPROF_BUDGETGROUP_WORLD_RENDERING );
+		CVProfScope _( "ViewDrawFade", 0, VPROF_BUDGETGROUP_WORLD_RENDERING, false, BUDGETFLAG_OTHER );
 		g_EngineRenderer->ViewDrawFade( color, pFadeMaterial, mapFullTextureToScreen );
 	}
 
@@ -505,7 +499,7 @@ public:
 			unsigned char chAreaPortalBits[MAX_AREA_PORTAL_STATE_BYTES] )
 	{
 		*GetBaseLocalClient().GetAreaBits_BackwardCompatibility() = 0; // Clear the b/w compatibiltiy thing.
-		memcpy( GetBaseLocalClient().m_chAreaBits, chAreaBits, MAX_AREA_STATE_BYTES );
+		std::memcpy( GetBaseLocalClient().m_chAreaBits, chAreaBits, MAX_AREA_STATE_BYTES );
 		memcpy( GetBaseLocalClient().m_chAreaPortalBits, chAreaPortalBits, MAX_AREA_PORTAL_STATE_BYTES );
 		GetBaseLocalClient().m_bAreaBitsValid = true;
 	}
@@ -618,7 +612,4 @@ public:
 };
 
 static CVRenderView s_RenderView;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CVRenderView, IVRenderView, VENGINE_RENDERVIEW_INTERFACE_VERSION, s_RenderView );
-
-
-
+static InterfaceReg s_Reg_CVRenderView_IVRenderView( []() -> void * { return static_cast<IVRenderView *>( &s_RenderView ); }, VENGINE_RENDERVIEW_INTERFACE_VERSION );;

@@ -1,13 +1,23 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Utility code.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
 #include "IEffects.h"
 #include "fx.h"
-#include "c_te_legacytempents.h"
 
 //-----------------------------------------------------------------------------
 // Client-server neutral effects interface
@@ -68,7 +78,7 @@ private:
 // Client-server neutral effects interface accessor
 //-----------------------------------------------------------------------------
 static CEffectsClient s_EffectClient;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CEffectsClient, IEffects, IEFFECTS_INTERFACE_VERSION, s_EffectClient);
+static InterfaceReg s_Reg_CEffectsClient_IEffects( []() -> void * { return static_cast<IEffects *>( &s_EffectClient ); }, IEFFECTS_INTERFACE_VERSION );;
 IEffects *g_pEffects = &s_EffectClient;
 
 ConVar r_decals( "r_decals", "2048" );
@@ -104,7 +114,7 @@ void CEffectsClient::Beam( const Vector &vecStartPoint, const Vector &vecEndPoin
 	unsigned char noise, unsigned char r, unsigned char g,
 	unsigned char b, unsigned char brightness, unsigned char nSpeed)
 {
-	Assert(0);
+	contract_assert( 0 );
 //	CBroadcastRecipientFilter filter;
 //	if ( !SuppressTE( filter ) )
 //	{
@@ -224,5 +234,3 @@ bool CEffectsClient::IsServer()
 {
 	return false;
 }
-
-

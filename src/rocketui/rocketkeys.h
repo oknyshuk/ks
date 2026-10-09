@@ -1,4 +1,6 @@
 #pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
 
 #include <RmlUi/Core/Input.h>
 #include <inputsystem/ButtonCode.h>

@@ -1,25 +1,23 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "dt_utlvector_common.h"
-#include "tier1/map_ops.h"
+import std;
 
 static ks::idict<int> *g_STDict = 0;
 static ks::idict<int> *g_RTDict = 0;
 
 
-char* AllocateStringHelper2( const char *pFormat, va_list marker )
+char* AllocateStringHelper2( const char *pFormat, std::va_list marker )
 {
 	char str[512];
-	_vsnprintf( str, sizeof( str ), pFormat, marker );
+	std::vsnprintf( str, sizeof( str ), pFormat, marker );
 	str[ sizeof(str) - 1 ] = 0;
 	
-	int len = strlen( str ) + 1;
+	int len = std::strlen( str ) + 1;
 	char *pRet = new char[len];
-	memcpy( pRet, str, len );
+	std::memcpy( pRet, str, len );
 
 	return pRet;
 }
@@ -27,10 +25,10 @@ char* AllocateStringHelper2( const char *pFormat, va_list marker )
 
 char* AllocateStringHelper( const char *pFormat, ... )
 {
-	va_list marker;
-	va_start( marker, pFormat );
+	std::va_list marker;
+	__builtin_va_start( marker, pFormat );
 	char *pRet = AllocateStringHelper2( pFormat, marker );
-	va_end( marker );
+	__builtin_va_end( marker );
 
 	return pRet;
 }
@@ -39,10 +37,10 @@ char* AllocateStringHelper( const char *pFormat, ... )
 char* AllocateUniqueDataTableName( bool bSendTable, const char *pFormat, ... )
 {
 	// Setup the string.
-	va_list marker;
-	va_start( marker, pFormat );
+	std::va_list marker;
+	__builtin_va_start( marker, pFormat );
 	char *pRet = AllocateStringHelper2( pFormat, marker );
-	va_end( marker );
+	__builtin_va_end( marker );
 
 	// Make sure it's unique.
 #ifdef _DEBUG
@@ -59,7 +57,7 @@ char* AllocateUniqueDataTableName( bool bSendTable, const char *pFormat, ... )
 	{
 		// If it hits this, then they have 2 utlvectors in different data tables with the same name and the
 		// same size limit. The names of 
-		Assert( false );
+		contract_assert( false );
 	}
 #endif
 

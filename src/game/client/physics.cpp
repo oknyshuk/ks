@@ -1,11 +1,23 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
 #include "vcollide_parse.h"
 #include "filesystem.h"
 #include "engine/IStaticPropMgr.h"
@@ -15,7 +27,6 @@
 #include "movevars_shared.h"
 #include "engine/ivmodelinfo.h"
 #include "fx.h"
-#include "tier0/vprof.h"
 #include "c_world.h"
 #include "vphysics/object_hash.h"
 #include "vphysics/collision_set.h"
@@ -23,17 +34,9 @@
 #include "fx_water.h"
 #include "positionwatcher.h"
 #include "vphysics/constraints.h"
-#include "tier0/miniprofiler.h"
 #include "engine/ivdebugoverlay.h"
-#ifdef IVP_MINIPROFILER
-#include "../ivp/ivp_utility/ivu_miniprofiler.h"
-#else
-#define PHYS_PROFILE(ID)
-#endif
-#include "tier1/fmtstr.h"
 #include "vphysics/friction.h"
 #include "prediction.h"
-#include "tier1/vector_ops.h"
 
 // file system interface
 extern IFileSystem *filesystem;
@@ -215,14 +218,13 @@ ConVar cl_predictphysics( "cl_predictphysics", "0", 0, "Use a prediction-friendl
 void PhysicsLevelInit( void )
 {
 	physenv = physics->CreateEnvironment();
-	assert( physenv );
+	contract_assert( physenv );
 	if( gpGlobals->IsRemoteClient() && g_pGameRules->IsMultiplayer() && cl_predictphysics.GetBool() )
 	{
 		physenv->SetPredicted( true );
 	}
 
 	{
-	MEM_ALLOC_CREDIT();
 	g_EntityCollisionHash = physics->CreateObjectPairHash();
 	}
 
@@ -291,7 +293,7 @@ int CCollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject *pObj1
 {
 	int x0 = ShouldCollide_2(pObj0, pObj1, pGameData0, pGameData1);
 	int x1 = ShouldCollide_2(pObj1, pObj0, pGameData1, pGameData0);
-	Assert(x0==x1);
+	contract_assert( x0==x1 );
 	return x0;
 }
 int CCollisionEvent::ShouldCollide_2( IPhysicsObject *pObj0, IPhysicsObject *pObj1, void *pGameData0, void *pGameData1 )
@@ -326,7 +328,7 @@ int CCollisionEvent::ShouldCollide_2( IPhysicsObject *pObj0, IPhysicsObject *pOb
 	}
 
 	// Obey collision group rules
-	Assert(GameRules());
+	contract_assert( GameRules() );
 	if ( GameRules() )
 	{
 		if (!GameRules()->ShouldCollide( pEntity0->GetCollisionGroup(), pEntity1->GetCollisionGroup() ))
@@ -555,12 +557,8 @@ void CPhysicsSystem::Update( float frametime )
 }
 
 //#ifdef _LINUX
-//DLL_IMPORT CLinkedMiniProfiler *g_pPhysicsMiniProfilers;
 //#else
-CLinkedMiniProfiler *g_pPhysicsMiniProfilers;
 //#endif
-CLinkedMiniProfiler g_mp_PhysicsSimulate("PhysicsSimulate",&g_pPhysicsMiniProfilers);
-CLinkedMiniProfiler g_mp_active_object_count("active_object_count",&g_pPhysicsMiniProfilers);
 
 //ConVar cl_visualize_physics_shadows("cl_visualize_physics_shadows","0");
 
@@ -574,7 +572,7 @@ static blocklist_t g_BlockList[4];
 
 bool IsBlockedShouldDisableCollisions( C_BaseEntity *pEntity )
 {
-	int listCount = ARRAYSIZE(g_BlockList);
+	int listCount = std::size( g_BlockList );
 	int available = -1;
 	for ( int i = 0; i < listCount; i++ )
 	{
@@ -607,8 +605,8 @@ ConVar cl_phys_show_active( "cl_phys_show_active", "0", FCVAR_CHEAT );
 
 void CPhysicsSystem::PhysicsSimulate()
 {
-	CMiniProfilerGuard mpg(&g_mp_PhysicsSimulate);
-	VPROF_BUDGET( "CPhysicsSystem::PhysicsSimulate", VPROF_BUDGETGROUP_PHYSICS );
+	ks::ScratchArena<> scratch;
+	CVProfScope _( "CPhysicsSystem::PhysicsSimulate", 0, VPROF_BUDGETGROUP_PHYSICS, false, BUDGETFLAG_OTHER );
 	float frametime = gpGlobals->frametime;
 
 	if ( physenv )
@@ -627,7 +625,7 @@ void CPhysicsSystem::PhysicsSimulate()
 				if ( activeCount )
 				{
 					IPhysicsObject **pActiveList = nullptr;
-					pActiveList = (IPhysicsObject **)stackalloc( sizeof(IPhysicsObject *)*activeCount );
+					pActiveList = scratch.Alloc<IPhysicsObject *>( activeCount );
 					physenv->GetActiveObjects( pActiveList );
 
 					for ( int i = 0; i < activeCount; i++ )
@@ -642,12 +640,11 @@ void CPhysicsSystem::PhysicsSimulate()
 							pEntity->VPhysicsUpdate( pActiveList[i] );
 						}
 					}
-					stackfree( pActiveList );
 				}
 
 				if( !g_ShadowEntities.empty() )
 				{
-					VPROF( "PhysFrame VPhysicsShadowUpdate" );
+					CVProfScope _( "PhysFrame VPhysicsShadowUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 					for ( size_t i = 0; i < g_ShadowEntities.size(); i++ )
 					{
 						CBaseEntity *pEntity = g_ShadowEntities[i];
@@ -682,12 +679,10 @@ void CPhysicsSystem::PhysicsSimulate()
 		physenv->Simulate( frametime );
 
 		int activeCount = physenv->GetActiveObjectCount();
-		g_mp_active_object_count.Add(activeCount);
 		IPhysicsObject **pActiveList = nullptr;
 		if ( activeCount )
 		{
-			PHYS_PROFILE(aUpdateActiveObjects)
-			pActiveList = (IPhysicsObject **)stackalloc( sizeof(IPhysicsObject *)*activeCount );
+			pActiveList = scratch.Alloc<IPhysicsObject *>( activeCount );
 			physenv->GetActiveObjects( pActiveList );
 
 			for ( int i = 0; i < activeCount; i++ )
@@ -728,7 +723,7 @@ void CPhysicsSystem::PhysicsSimulate()
 						Vector targetAxis;
 						float deltaTargetAngle;
 						RotationDeltaAxisAngle( rot, targetAngles, targetAxis, deltaTargetAngle );
-						if ( fabsf(deltaTargetAngle) > 0.5f )
+						if ( std::fabsf(deltaTargetAngle) > 0.5f )
 						{
 							AngularImpulse angVel;
 							pActiveList[i]->GetImplicitVelocity( nullptr, &angVel );
@@ -773,7 +768,7 @@ void CPhysicsSystem::PhysicsSimulate()
 
 		if( !g_ShadowEntities.empty() )
 		{
-			VPROF( "PhysFrame VPhysicsShadowUpdate" );
+			CVProfScope _( "PhysFrame VPhysicsShadowUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			for ( size_t i = 0; i < g_ShadowEntities.size(); i++ )
 			{
 				CBaseEntity *pEntity = g_ShadowEntities[i];
@@ -1075,7 +1070,7 @@ friction_t *CCollisionEvent::FindFriction( CBaseEntity *pObject )
 {
 	friction_t *pFree = nullptr;
 
-	for ( int i = 0; i < ARRAYSIZE(m_current); i++ )
+	for ( int i = 0; i < std::size( m_current ); i++ )
 	{
 		if ( !m_current[i].pObject && !pFree )
 			pFree = &m_current[i];
@@ -1097,7 +1092,7 @@ void CCollisionEvent::ShutdownFriction( friction_t &friction )
 
 void CCollisionEvent::UpdateFrictionSounds( void )
 {
-	for ( int i = 0; i < ARRAYSIZE(m_current); i++ )
+	for ( int i = 0; i < std::size( m_current ); i++ )
 	{
 		if ( m_current[i].patch )
 		{
@@ -1472,4 +1467,3 @@ void VPhysicsShadowDataChanged( bool bCreate, C_BaseEntity *pEntity )
 		pEntity->VPhysicsGetObject()->UpdateShadow( pEntity->GetNetworkOrigin(), pEntity->GetNetworkAngles(), false, arrivalTime );
 	}
 }
-

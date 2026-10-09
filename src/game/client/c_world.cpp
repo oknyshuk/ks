@@ -1,20 +1,29 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
-#include "reflect_annotations.h"
 #include "c_world.h"
 #include "ivmodemanager.h"
-#include "decals.h"
 #include "engine/ivmodelinfo.h"
 #include "ivieweffects.h"
 #include "shake.h"
 #include "precache_register.h"
-
 
 #ifdef CWorld
 #undef CWorld
@@ -37,7 +46,7 @@ void ClientWorldFactoryShutdown()
 
 static IClientNetworkable* ClientWorldFactory( int entnum, int serialNum )
 {
-	Assert( g_pClientWorld != nullptr );
+	contract_assert( g_pClientWorld != nullptr );
 
 	g_pClientWorld->Init( entnum, serialNum );
 	return g_pClientWorld;
@@ -158,7 +167,6 @@ void C_World::Spawn( void )
 
 C_World *GetClientWorldEntity()
 {
-	Assert( g_pClientWorld != nullptr );
+	contract_assert( g_pClientWorld != nullptr );
 	return g_pClientWorld;
 }
-

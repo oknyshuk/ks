@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef MAPRULES_H
-#define MAPRULES_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 class CRuleEntity : public CBaseEntity
 {
@@ -71,10 +65,10 @@ class CGameCoopMissionManager : public CRulePointEntity
 	[[= ks::reflect::Key{ .name = "OnMissionCompleted" } ]] COutputEvent	m_OnMissionCompleted;
 };
 
-#define SF_PLAYEREQUIP_USEONLY				0x0001
-#define SF_PLAYEREQUIP_STRIPFIRST			0x0002
-#define SF_PLAYEREQUIP_ONLYSTRIPSAME		0x0004
-#define MAX_EQUIP		32
+inline constexpr auto SF_PLAYEREQUIP_USEONLY = 0x0001;
+inline constexpr auto SF_PLAYEREQUIP_STRIPFIRST = 0x0002;
+inline constexpr auto SF_PLAYEREQUIP_ONLYSTRIPSAME = 0x0004;
+inline constexpr auto MAX_EQUIP = 32;
 
 class CGamePlayerEquip : public CRulePointEntity
 {
@@ -104,6 +98,3 @@ class CGamePlayerEquip : public CRulePointEntity
 	string_t	m_weaponNames[MAX_EQUIP];
 	int			m_weaponCount[MAX_EQUIP];
 };
-
-#endif		// MAPRULES_H
-

@@ -1,22 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <mutex>
+import std;
+import ks.tier1;
 #include "cmodel.h"
 #include "dispcoll_common.h"
 #include "collisionutils.h"
-#include "tier1/strtools.h"
-#include "tier0/vprof.h"
-#include "tier1/fmtstr.h"
-#include "tier1/generichash.h"
-#include "tier0/fasttimer.h"
 #include "vphysics/virtualmesh.h"
-#include "tier1/datamanager.h"
-#include <unordered_set>
 
 //=============================================================================
 //	Cache
@@ -40,7 +30,7 @@ struct CPlaneIndexHashFuncs
 		return ( lhs.vecPlane == rhs.vecPlane || lhs.vecPlane == -rhs.vecPlane );
 	}
 
-	size_t operator()( const DispCollPlaneIndex_t &item ) const
+	std::size_t operator()( const DispCollPlaneIndex_t &item ) const
 	{
 		return HashItem( item.vecPlane ) ^ HashItem( -item.vecPlane );
 	}
@@ -144,7 +134,7 @@ void CDispCollTri::FindMinMax( CDispVector<Vector> &m_aVerts )
 
 
 // SIMD Routines for intersecting with the quad tree
-FORCEINLINE int IntersectRayWithFourBoxes( const FourVectors &rayStart, const FourVectors &invDelta, const FourVectors &rayExtents, const FourVectors &boxMins, const FourVectors &boxMaxs )
+[[gnu::always_inline]] inline int IntersectRayWithFourBoxes( const FourVectors &rayStart, const FourVectors &invDelta, const FourVectors &rayExtents, const FourVectors &boxMins, const FourVectors &boxMaxs )
 {
 	// SIMD Test ray against all four boxes at once
 	// each node stores the bboxes of its four children
@@ -186,7 +176,7 @@ FORCEINLINE int IntersectRayWithFourBoxes( const FourVectors &rayStart, const Fo
 
 // This does 4 simultaneous box intersections
 // NOTE: This can be used as a 1 vs 4 test by replicating a single box into the one side
-FORCEINLINE int IntersectFourBoxPairs( const FourVectors &mins0, const FourVectors &maxs0, const FourVectors &mins1, const FourVectors &maxs1 )
+[[gnu::always_inline]] inline int IntersectFourBoxPairs( const FourVectors &mins0, const FourVectors &maxs0, const FourVectors &mins1, const FourVectors &maxs1 )
 {
 	// find the max mins and min maxs in each dimension
 	FourVectors intersectMins = maximum(mins0,mins1);
@@ -207,7 +197,7 @@ FORCEINLINE int IntersectFourBoxPairs( const FourVectors &mins0, const FourVecto
 
 // This does 4 simultaneous box vs. sphere intersections
 // NOTE: This can be used as a 1 vs 4 test by replicating a single sphere/box into one side
-FORCEINLINE int IntersectFourBoxSpherePairs( const FourVectors &center, const fltx4 &radiusSq, const FourVectors &mins, const FourVectors &maxs )
+[[gnu::always_inline]] inline int IntersectFourBoxSpherePairs( const FourVectors &center, const fltx4 &radiusSq, const FourVectors &mins, const FourVectors &maxs )
 {
 	// for each dimension of each box, compute the clamped distance from the mins side to the center (must be >= 0)
 	FourVectors minDist = mins;
@@ -239,7 +229,7 @@ FORCEINLINE int IntersectFourBoxSpherePairs( const FourVectors &center, const fl
 }
 
 
-int FORCEINLINE CDispCollTree::BuildRayLeafList( int iNode, rayleaflist_t &list )
+[[gnu::always_inline]] inline int CDispCollTree::BuildRayLeafList( int iNode, rayleaflist_t &list )
 {
 	list.nodeList[0] = iNode;
 	int listIndex = 0;
@@ -276,7 +266,7 @@ int FORCEINLINE CDispCollTree::BuildRayLeafList( int iNode, rayleaflist_t &list 
 				++list.maxIndex;
 				list.nodeList[list.maxIndex] = child+3;
 			}
-			Assert(list.maxIndex < MAX_AABB_LIST);
+			contract_assert( list.maxIndex < MAX_AABB_LIST );
 		}
 	}
 
@@ -323,7 +313,6 @@ void CDispCollTree::AABBTree_CopyDispData( CCoreDispInfo *pDisp )
 	}
 
 	// Allocate collision tree data.
-	MEM_ALLOC_CREDIT_( "AABBTree_CopyDispData" );
 	m_aVerts.assign( GetSize(), {} );
 	m_aTris.assign( GetTriSize(), {} );
 	int numLeaves = (GetWidth()-1) * (GetHeight()-1);
@@ -336,9 +325,6 @@ void CDispCollTree::AABBTree_CopyDispData( CCoreDispInfo *pDisp )
 	m_nSize = sizeof( this );
 	m_nSize += sizeof( Vector ) * GetSize();
 	m_nSize += sizeof( CDispCollTri ) * GetTriSize();
-#if OLD_DISP_AABB
-	m_nSize += sizeof( CDispCollAABBNode ) * Nodes_CalcCount( m_nPower );
-#endif
 	m_nSize += sizeof(m_nodes[0]) * std::ssize( m_nodes );
 	m_nSize += sizeof(m_leaves[0]) * std::ssize( m_leaves );
 	m_nSize += sizeof( CDispCollTri* ) * DISPCOLL_TREETRI_SIZE;
@@ -490,15 +476,6 @@ void CDispCollTree::AABBTree_CalcBounds( void )
 
 	AABBTree_GenerateBoxes_r( 0, &m_mins, &m_maxs );
 
-#if INCLUDE_SURFACE_IN_BOUNDS
-	// Add surface points to bounds.
-	for ( int iPoint = 0; iPoint < 4; ++iPoint )
-	{
-		VectorMin( m_vecSurfPoints[iPoint], m_mins, m_mins );
-		VectorMax( m_vecSurfPoints[iPoint], m_maxs, m_maxs );
-	}
-#endif
-
 	// Bloat a little.
 	for ( int iAxis = 0; iAxis < 3; ++iAxis )
 	{
@@ -548,13 +525,12 @@ void CDispCollTree::Cache( void )
 		return;
 	}
 
-	VPROF( "CDispCollTree::Cache" );
+	CVProfScope _( "CDispCollTree::Cache", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Alloc.
 //	int nSize = sizeof( CDispCollTriCache ) * GetTriSize();
 	int nTriCount = GetTriSize();
 	{
-	MEM_ALLOC_CREDIT();
 	m_aTrisCache.assign( nTriCount, {} );
 	}
 
@@ -580,7 +556,7 @@ bool CDispCollTree::AABBTree_Ray( const Ray_t &ray, RayDispOutput_t &output )
 
 bool CDispCollTree::AABBTree_Ray( const Ray_t &ray, const Vector &vecInvDelta, RayDispOutput_t &output )
 {
-	VPROF( "DispRayTest" );
+	CVProfScope _( "DispRayTest", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Check for ray test.
 	if ( CheckFlags( CCoreDispInfo::SURF_NORAY_COLL ) )
@@ -602,8 +578,8 @@ bool CDispCollTree::AABBTree_Ray( const Ray_t &ray, const Vector &vecInvDelta, R
 		output.ndxVerts[1] = pImpactTri->GetVert( 2 );
 		output.ndxVerts[2] = pImpactTri->GetVert( 1 );
 
-		Assert( (output.u <= 1.0f ) && ( output.v <= 1.0f ) );
-		Assert( (output.u >= 0.0f ) && ( output.v >= 0.0f ) );
+		contract_assert( (output.u <= 1.0f ) && ( output.v <= 1.0f ) );
+		contract_assert( (output.u >= 0.0f ) && ( output.v >= 0.0f ) );
 
 		return true;
 	}
@@ -665,7 +641,7 @@ void CDispCollTree::AABBTree_TreeTrisRayBarycentricTest( const Ray_t &ray, const
 //-----------------------------------------------------------------------------
 bool CDispCollTree::AABBTree_Ray( const Ray_t &ray, const Vector &vecInvDelta, CBaseTrace *pTrace, bool bSide )
 {
-	VPROF("AABBTree_Ray");
+	CVProfScope _( "AABBTree_Ray", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 //	VPROF_BUDGET( "DispRayTraces", VPROF_BUDGETGROUP_DISP_RAYTRACES );
 
@@ -756,7 +732,7 @@ int CDispCollTree::AABBTree_BuildTreeTrisInSphere_r( const Vector &center, float
 		// the rest are all leaves
 		if ( IsLeafNode(iNode) )
 		{
-			VPROF("Tris");
+			CVProfScope _( "Tris", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			for ( --listIndex; listIndex <= maxIndex; listIndex++ )
 			{
 				if ( (nTriCount+2) <= indexMax )
@@ -796,7 +772,7 @@ int CDispCollTree::AABBTree_BuildTreeTrisInSphere_r( const Vector &center, float
 					++maxIndex;
 					nodeList[maxIndex] = child+3;
 				}
-				Assert(maxIndex < MAX_AABB_LIST);
+				contract_assert( maxIndex < MAX_AABB_LIST );
 			}
 		}
 	}
@@ -834,7 +810,7 @@ bool CDispCollTree::AABBTree_IntersectAABB( const Vector &absMins, const Vector 
 		// the rest are all leaves
 		if ( IsLeafNode(iNode) )
 		{
-			VPROF("Tris");
+			CVProfScope _( "Tris", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			for ( --listIndex; listIndex <= maxIndex; listIndex++ )
 			{
 				int leafIndex = nodeList[listIndex] - std::ssize( m_nodes );
@@ -893,7 +869,7 @@ bool CDispCollTree::AABBTree_IntersectAABB( const Vector &absMins, const Vector 
 					++maxIndex;
 					nodeList[maxIndex] = child+3;
 				}
-				Assert(maxIndex < MAX_AABB_LIST);
+				contract_assert( maxIndex < MAX_AABB_LIST );
 			}
 		}
 	}
@@ -908,7 +884,7 @@ static const Vector g_Vec3DispCollEpsilons(DISPCOLL_DIST_EPSILON,DISPCOLL_DIST_E
 //-----------------------------------------------------------------------------
 bool CDispCollTree::AABBTree_SweepAABB( const Ray_t &ray, const Vector &vecInvDelta, CBaseTrace *pTrace )
 {
-	VPROF( "Disp_AABBTree_SweepAABB" );
+	CVProfScope _( "Disp_AABBTree_SweepAABB", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	//	VPROF_BUDGET( "DispHullTraces", VPROF_BUDGETGROUP_DISP_HULLTRACES );
 	// Check for hull test.
 	if ( CheckFlags( CCoreDispInfo::SURF_NOHULL_COLL ) )
@@ -931,7 +907,7 @@ bool CDispCollTree::AABBTree_SweepAABB( const Ray_t &ray, const Vector &vecInvDe
 
 	if ( listIndex <= list.maxIndex )
 	{
-		VPROF( "DispHullTest_Tris" );
+		CVProfScope _( "DispHullTest_Tris", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		LockCache();
 		for ( ; listIndex <= list.maxIndex; listIndex++ )
 		{
@@ -1011,7 +987,7 @@ inline bool CDispCollTree::FacePlane( const Ray_t &ray, const Vector &rayDir, CD
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool FORCEINLINE CDispCollTree::AxisPlanesXYZ( const Ray_t &ray, CDispCollTri *pTri, CDispCollHelper *pHelper )
+[[gnu::always_inline]] inline bool CDispCollTree::AxisPlanesXYZ( const Ray_t &ray, CDispCollTri *pTri, CDispCollHelper *pHelper )
 {
 	static const TableVector g_ImpactNormalVecs[2][3] = 
 	{
@@ -1066,7 +1042,6 @@ bool FORCEINLINE CDispCollTree::AxisPlanesXYZ( const Ray_t &ray, CDispCollTri *p
 //-----------------------------------------------------------------------------
 void CDispCollTree::Cache_Create( CDispCollTri *pTri, int iTri )
 {
-	MEM_ALLOC_CREDIT();
 	Vector *pVerts[3];
 	pVerts[0] = &m_aVerts[pTri->GetVert( 0 )];
 	pVerts[1] = &m_aVerts[pTri->GetVert( 1 )];
@@ -1429,8 +1404,8 @@ CDispCollTree::CDispCollTree()
 	m_nSurfaceProps[3] = 0;
 
 	m_vecStabDir.Init();
-	m_mins.Init( FLT_MAX, FLT_MAX, FLT_MAX );
-	m_maxs.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
+	m_mins.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+	m_maxs.Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 
 	m_iCounter = 0;
 

@@ -1,11 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: This module implements the IVoiceServer interface.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "quakedef.h"
+// Purpose: This module implements the IVoiceServer interface.
+
 #include "server.h"
 #include "ivoiceserver.h"
 
@@ -64,4 +61,5 @@ public:
 };
 
 
-EXPOSE_SINGLE_INTERFACE(CVoiceServer, IVoiceServer, INTERFACEVERSION_VOICESERVER);
+static CVoiceServer s_Singleton_CVoiceServer;
+static InterfaceReg s_Reg_CVoiceServer_IVoiceServer( []() -> void * { return static_cast<IVoiceServer *>( &s_Singleton_CVoiceServer ); }, INTERFACEVERSION_VOICESERVER );;

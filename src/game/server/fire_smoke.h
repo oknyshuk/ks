@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#ifndef FIRE_SMOKE_H
-#define FIRE_SMOKE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-#pragma once
 
 #include "baseparticleentity.h"
 
@@ -18,8 +11,8 @@
 //==================================================
 
 //NOTENOTE: Reserved for all descendants
-#define	bitsFIRE_NONE	0x00000000
-#define	bitsFIRE_ACTIVE	0x00000001
+inline constexpr auto bitsFIRE_NONE = 0x00000000;
+inline constexpr auto bitsFIRE_ACTIVE = 0x00000001;
 
 class CBaseFire : public CBaseEntity
 {
@@ -79,5 +72,3 @@ public:
 
 	//Server-side
 };
-
-#endif	//FIRE_SMOKE_H

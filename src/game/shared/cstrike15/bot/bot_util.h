@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BOT_UTIL_H
-#define BOT_UTIL_H
-
-
-#include "convar.h"
+import std;
+import ks.tier1;
 #include "util.h"
+#include "baseentity.h"
 
 //--------------------------------------------------------------------------------------------------------------
 enum PriorityType
@@ -50,12 +45,10 @@ extern ConVar cv_bot_dont_shoot;
 extern ConVar cv_bot_eco_limit;
 extern ConVar cv_bot_auto_follow;
 extern ConVar cv_bot_flipout;
-#if CS_CONTROLLABLE_BOTS_ENABLED
 extern ConVar cv_bot_controllable;
-#endif
 
-#define RAD_TO_DEG( deg ) ((deg) * 180.0 / M_PI)
-#define DEG_TO_RAD( rad ) ((rad) * M_PI / 180.0)
+template <typename T1> [[gnu::always_inline]] inline auto RAD_TO_DEG( T1 deg ) { return ((deg) * 180.0 / std::numbers::pi); }
+template <typename T1> [[gnu::always_inline]] inline auto DEG_TO_RAD( T1 rad ) { return ((rad) * std::numbers::pi / 180.0); }
 
 #define SIGN( num )	      (((num) < 0) ? -1 : 1)
 #define ABS( num )        (SIGN(num) * (num))
@@ -73,7 +66,7 @@ extern int		UTIL_ClientsInGame( void );
 
 extern bool UTIL_IsNameTaken( const char *name, bool ignoreHumans = false );		///< return true if given name is already in use by another player
 
-#define IS_ALIVE true
+inline constexpr auto IS_ALIVE = true;
 extern int UTIL_HumansOnTeam( int teamID, bool isAlive = false );
 
 extern int		UTIL_BotsInGame( void );
@@ -161,6 +154,3 @@ inline bool IsIntersecting2D( const Vector &startA, const Vector &endA,
 
 	return true;
 }
-
-
-#endif

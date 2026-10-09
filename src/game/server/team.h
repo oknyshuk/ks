@@ -1,16 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Team management class. Contains all the details for a specific team
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef TEAM_H
-#define TEAM_H
-
+import ks.tier1;
 #include "shareddefs.h"
-#include "utlvector.h"
+import std;
 #include "cs_player.h"
+#include "baseentity.h"
 
 class CBasePlayer;
 class CTeamSpawnPoint;
@@ -152,4 +150,3 @@ extern std::vector< CTeam * > g_Teams;
 extern CTeam *GetGlobalTeam( int iIndex );
 extern int GetNumberOfTeams( void );
 extern const char* GetTeamName( int iTeam );
-#endif // TEAM_H

@@ -1,25 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Stateless light computation routines 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef R_STUDIOLIGHT_H
-#define R_STUDIOLIGHT_H
+// Purpose: Stateless light computation routines
 
-
-#include "tier0/platform.h"
+import ks.math;
 
 
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class Vector;
-class Vector4D;
-class FourVectors;
 struct lightpos_t;
-struct LightDesc_t;
 
 
 //-----------------------------------------------------------------------------
@@ -29,10 +21,7 @@ struct LightDesc_t;
 // Computes the ambient term
 void R_LightAmbient_4D( const Vector& normal, Vector4D* pLightBoxColor, Vector &lv );
 void R_LightStrengthWorld( const Vector& vert, int lightcount, LightDesc_t* pLightDesc, lightpos_t *light );
-float FASTCALL R_WorldLightDistanceFalloff( const LightDesc_t *wl, const Vector& delta );
+float R_WorldLightDistanceFalloff( const LightDesc_t *wl, const Vector& delta );
 
 // Copies lighting state into a buffer, returns number of lights copied
 int CopyLocalLightingState( int nMaxLights, LightDesc_t *pDest, int nLightCount, const LightDesc_t *pSrc );
-
-
-#endif // R_STUDIOLIGHT_H

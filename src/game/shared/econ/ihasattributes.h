@@ -1,11 +1,8 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Stub for IHasAttributes interface (econ system removed)
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef IHASATTRIBUTES_H
-#define IHASATTRIBUTES_H
+// Purpose: Stub for IHasAttributes interface (econ system removed)
 
 // Stub interface - econ system removed
 class IHasAttributes
@@ -13,5 +10,3 @@ class IHasAttributes
 public:
 	virtual ~IHasAttributes() {}
 };
-
-#endif // IHASATTRIBUTES_H

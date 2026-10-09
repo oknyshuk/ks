@@ -1,17 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Spatial entity with simple radial falloff
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_SPATIALENTITY_H
-#define C_SPATIALENTITY_H
+// Purpose: Spatial entity with simple radial falloff
 
 #include "reflect_annotations.h"
+#include "c_baseentity.h"
+#include "client_class.h"
 
-
-#define SPATIAL_ENTITY_FORCED_VALUE_BLEND_DISTANCE 128.0f
+inline constexpr auto SPATIAL_ENTITY_FORCED_VALUE_BLEND_DISTANCE = 128.0f;
 
 //------------------------------------------------------------------------------
 // Purpose : Spatial entity with radial falloff
@@ -140,5 +137,3 @@ inline void C_SpatialEntityTemplate<Vector>::ResetAccumulation( void )
 	m_ForcedMinFalloff = GetMinFalloff();
 	m_ForcedInfluence = 0.0f;
 }
-
-#endif // C_SPATIALENTITY_H

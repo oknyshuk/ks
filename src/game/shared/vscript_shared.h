@@ -1,16 +1,10 @@
-//========== Copyright (c) 2008, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
-
-#ifndef VSCRIPT_SHARED_H
-#define VSCRIPT_SHARED_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2008 Valve Corporation
 
 #include "vscript/ivscript.h"
 
-
-DECLARE_LOGGING_CHANNEL( LOG_VScript );
+extern LoggingChannelID_t LOG_VScript;;
 
 extern IScriptVM * g_pScriptVM;
 
@@ -29,5 +23,3 @@ inline bool VScriptRunScript( const char *pszScriptName, bool bWarnMissing = fal
 
 // Only allow scripts to create entities during map initialization
 bool IsEntityCreationAllowedInScripts( void );
-
-#endif // VSCRIPT_SHARED_H

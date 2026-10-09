@@ -1,24 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef PARTICLE_SMOKEGRENADE_H
-#define PARTICLE_SMOKEGRENADE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "baseparticleentity.h"
 
+inline constexpr const char *PARTICLESMOKEGRENADE_ENTITYNAME = "env_particlesmokegrenade";
 
-#define PARTICLESMOKEGRENADE_ENTITYNAME	"env_particlesmokegrenade"
-
-#define MIN_SMOKE_TINT 0.5f
-#define MAX_SMOKE_TINT 0.6f
+inline constexpr auto MIN_SMOKE_TINT = 0.5f;
+inline constexpr auto MAX_SMOKE_TINT = 0.6f;
 
 class [[= ks::reflect::NetTable{ .name = "DT_ParticleSmokeGrenade" } ]]
       ParticleSmokeGrenade : public CBaseParticleEntity
@@ -70,8 +61,3 @@ protected:
     
 	EHANDLE m_creatorPlayer;
 };
-
-
-#endif
-
-

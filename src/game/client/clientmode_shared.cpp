@@ -1,14 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Normal HUD mode
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
 
-
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
 #include "clientmode_shared.h"
 #include "iinput.h"
 #include "view_shared.h"
@@ -17,29 +24,22 @@
 #include "weapon_selection.h"
 #include "localize/ilocalize.h"
 #include "engine/IEngineSound.h"
-#include <keyvalues.h>
 #include "clientui.h"
 #include "hud_macros.h"
 #include "hltvcamera.h"
 #include "hud.h"
 #include "hud_element_helper.h"
-#include "hltvreplaysystem.h"
 #include "netmessages.h"
-#if defined( REPLAY_ENABLED )
-#include "replaycamera.h"
-#endif
 #include "particlemgr.h"
 #include "c_team.h"
 #include "c_rumble.h"
-#include "fmtstr.h"
 #include "c_playerresource.h"
 #include <localize/ilocalize.h>
+import ks.tier1;
+import std;
 #include "gameui_interface.h"
 #include "menu.h" // CHudMenu
-#include "matchmaking/imatchframework.h"
 #include "clientmode_csnormal.h"
-
-
 
 #include "c_cs_playerresource.h"
 
@@ -102,7 +102,7 @@ static bool __MsgFunc_VGUIMenu( const ks::net::CCSUsrMsg_VGUIMenu &msg )
 	// keys->deleteThis();
 
 	// is the server telling us to show the scoreboard (at the end of a map)?
-	if ( Q_stricmp( msg.name->c_str(), "scores" ) == 0 )
+	if ( V_stricmp( msg.name->c_str(), "scores" ) == 0 )
 	{
 		if ( hud_takesshots.GetBool() == true )
 		{
@@ -130,7 +130,7 @@ ClientModeShared::ClientModeShared()
 ClientModeShared::~ClientModeShared()
 {
 	// UI_Shutdown() should have deleted/NULL'd
-	Assert( !m_pViewport );
+	contract_assert( !m_pViewport );
 }
 
 //-----------------------------------------------------------------------------
@@ -143,7 +143,7 @@ void ClientModeShared::Init()
 	InitWeaponSelectionHudElement();
 
 	// Derived ClientMode class must make sure m_Viewport is instantiated
-	Assert( m_pViewport );
+	contract_assert( m_pViewport );
 	m_pViewport->LoadHudLayout();
 
 	ListenForGameEvent( "player_connect_full" );
@@ -153,7 +153,6 @@ void ClientModeShared::Init()
 	ListenForGameEvent( "server_cvar" );
 	ListenForGameEvent( "player_changename" );
 	ListenForGameEvent( "teamplay_broadcast_audio" );
-	ListenForGameEvent( "achievement_earned" );
 
 #if defined( TF_CLIENT_DLL ) || defined( CSTRIKE_CLIENT_DLL )
 	ListenForGameEvent( "item_found" );
@@ -165,9 +164,6 @@ void ClientModeShared::Init()
 
 
 	HLTVCamera()->Init();
-#if defined( REPLAY_ENABLED )
-	ReplayCamera()->Init();
-#endif
 
 	HOOK_MESSAGE( VGUIMenu );
 	HOOK_MESSAGE( Rumble );
@@ -176,13 +172,13 @@ void ClientModeShared::Init()
 void ClientModeShared::InitChatHudElement()
 {
 	m_pChatElement = CBaseHudChat::GetHudChat();
-	Assert( m_pChatElement );
+	contract_assert( m_pChatElement );
 }
 
 void ClientModeShared::InitWeaponSelectionHudElement()
 {
 	m_pWeaponSelection = ( CBaseHudWeaponSelection * )GET_HUDELEMENT( CHudWeaponSelection );
-	Assert( m_pWeaponSelection );
+	contract_assert( m_pWeaponSelection );
 }
 
 void ClientModeShared::InitViewport()
@@ -268,7 +264,7 @@ void ClientModeShared::OverrideView( CViewSetup *pSetup )
 			VectorMA( pSetup->origin, c_thirdpersonshoulderheight.GetFloat(), camUp, pSetup->origin );
 
 			// adjust the yaw to the aim-point
-			camAngles[ YAW ] += RAD2DEG( atan(c_thirdpersonshoulderoffset.GetFloat() / (c_thirdpersonshoulderaimdist.GetFloat() + cam_ofs[ ROLL ])) );
+			camAngles[ YAW ] += RAD2DEG( std::atan(c_thirdpersonshoulderoffset.GetFloat() / (c_thirdpersonshoulderaimdist.GetFloat() + cam_ofs[ ROLL ])) );
 
 			// adjust the pitch to the aim-point
 			camAngles[ PITCH ] += RAD2DEG( atan(c_thirdpersonshoulderheight.GetFloat() / (c_thirdpersonshoulderaimdist.GetFloat() + cam_ofs[ ROLL ])) );
@@ -413,8 +409,8 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 
 	// Should we start typing a message?
 	if ( pszCurrentBinding &&
-		( Q_strcmp( pszCurrentBinding, "messagemode" ) == 0 ||
-		Q_strcmp( pszCurrentBinding, "say" ) == 0 ) )
+		( V_strcmp( pszCurrentBinding, "messagemode" ) == 0 ||
+		V_strcmp( pszCurrentBinding, "say" ) == 0 ) )
 	{
 		if ( down )
 		{
@@ -423,8 +419,8 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 		return 0;
 	}
 	else if ( pszCurrentBinding &&
-		( Q_strcmp( pszCurrentBinding, "messagemode2" ) == 0 ||
-		Q_strcmp( pszCurrentBinding, "say_team" ) == 0 ) )
+		( V_strcmp( pszCurrentBinding, "messagemode2" ) == 0 ||
+		V_strcmp( pszCurrentBinding, "say_team" ) == 0 ) )
 	{
 		if ( down )
 		{
@@ -479,7 +475,7 @@ bool ContainsBinding( const char *pszBindingString, const char *pszBinding, bool
 {
 	if ( !strchr( pszBindingString, ';' ) && !bSearchAliases )
 	{
-		return !Q_stricmp( pszBindingString, pszBinding );
+		return !V_stricmp( pszBindingString, pszBinding );
 	}
 	else
 	{
@@ -504,7 +500,7 @@ bool ContainsBinding( const char *pszBindingString, const char *pszBinding, bool
 				}
 			}
 
-			if ( !Q_stricmp( pszBinding, szCmd ) )
+			if ( !V_stricmp( pszBinding, szCmd ) )
 			{
 				return true;
 			}
@@ -753,7 +749,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 
 	const char *eventname = event->GetName();
 
-	if ( Q_strcmp( "player_connect", eventname ) == 0 )
+	if ( V_strcmp( "player_connect", eventname ) == 0 )
 	{
 
 		if ( this == GetFullscreenClientMode() )
@@ -775,13 +771,13 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			hudChat->Printf( CHAT_FILTER_JOINLEAVE, "%s", szLocalized );
 		}
 	}
-	else if ( Q_strcmp( "player_connect_full", eventname ) == 0 )
+	else if ( V_strcmp( "player_connect_full", eventname ) == 0 )
 	{
 		CLocalPlayerFilter filter;
 		C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Music.StopMenuMusic" );
 		GameUI().SetBackgroundMusicDesired( false );
 	}
-	else if ( Q_strcmp( "player_disconnect", eventname ) == 0 )
+	else if ( V_strcmp( "player_disconnect", eventname ) == 0 )
 	{
 
 		if ( this == GetFullscreenClientMode() )
@@ -823,7 +819,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			hudChat->Printf( CHAT_FILTER_JOINLEAVE, "%s", szLocalized );
 		}
 	}
-	else if ( Q_strcmp( "player_fullyjoined", eventname ) == 0 )
+	else if ( V_strcmp( "player_fullyjoined", eventname ) == 0 )
 	{
 		if ( !hudChat )
 			return;
@@ -840,7 +836,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 
 		hudChat->Printf( CHAT_FILTER_JOINLEAVE, "%s", szLocalized );
 	}
-	else if ( Q_strcmp( "player_team", eventname ) == 0 )
+	else if ( V_strcmp( "player_team", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -877,7 +873,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			}
 			else
 			{
-				Q_snwprintf ( wszTeam, sizeof( wszTeam ) / sizeof( wchar_t ), L"%d", team );
+				V_snwprintf ( wszTeam, sizeof( wszTeam ) / sizeof( wchar_t ), L"%d", team );
 			}
 
 			{
@@ -906,7 +902,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			pPlayer->TeamChange( team );
 		}
 	}
-	else if ( Q_strcmp( "player_changename", eventname ) == 0 )
+	else if ( V_strcmp( "player_changename", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -932,7 +928,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 
 		hudChat->Printf( CHAT_FILTER_NAMECHANGE, "%s", szLocalized );
 	}
-	else if ( Q_strcmp( "teamplay_broadcast_audio", eventname ) == 0 )
+	else if ( V_strcmp( "teamplay_broadcast_audio", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -979,7 +975,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, pszSoundName );
 		}
 	}
-	else if ( Q_strcmp( "teamplay_broadcast_audio", eventname ) == 0 )
+	else if ( V_strcmp( "teamplay_broadcast_audio", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -992,7 +988,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, pszSoundName );
 		}
 	}
-	else if ( Q_strcmp( "server_cvar", eventname ) == 0 )
+	else if ( V_strcmp( "server_cvar", eventname ) == 0 )
 	{
 
 		if ( this == GetFullscreenClientMode() )
@@ -1005,7 +1001,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		char const *szCvarName = event->GetString("cvarname");
 		char const * arrIgnoredCvars[] = { "nextlevel" };
 		bool bIgnoredCvar = false;
-		for ( int ii = 0; ii < Q_ARRAYSIZE( arrIgnoredCvars ); ++ ii )
+		for ( int ii = 0; ii < std::size( arrIgnoredCvars ); ++ ii )
 		{
 			if ( !V_stricmp( szCvarName, arrIgnoredCvars[ii] ) )
 			{
@@ -1031,56 +1027,8 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			hudChat->Printf( CHAT_FILTER_SERVERMSG, "%s", szLocalized );
 		}
 	}
-	else if ( Q_strcmp( "achievement_earned", eventname ) == 0 )
-	{
-		if ( this == GetFullscreenClientMode() )
-			return;
-
-		int iPlayerIndex = event->GetInt( "player" );
-		C_BasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
-		int iAchievement = event->GetInt( "achievement" );
-
-		if ( !hudChat || !pPlayer )
-			return;
-
-		{
-			char const *szAchievementName = nullptr; // should arrive as part of event instead of achievement ID
-			if ( szAchievementName )
-			{
-				if ( !pPlayer->IsDormant() )
-				{
-					// no particle effect if the local player is the one with the achievement or the player is dead
-					if ( !C_BasePlayer::IsLocalPlayer( pPlayer ) && pPlayer->IsAlive() ) 
-					{
-						//tagES using the "head" attachment won't work for CS and DoD
-						pPlayer->ParticleProp()->Create( "achieved", PATTACH_POINT_FOLLOW, "head" );
-					}
-
-					pPlayer->OnAchievementAchieved( iAchievement );
-				}
-
-				if ( g_PR )
-				{
-					wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
-					g_pLocalize->ConvertANSIToUnicode( g_PR->GetPlayerName( iPlayerIndex ), wszPlayerName, sizeof( wszPlayerName ) );
-
-					const wchar_t *pchLocalizedAchievement = g_pLocalize->Find( CFmtStr( "#%s_T", szAchievementName ) );
-					if ( pchLocalizedAchievement )
-					{
-						wchar_t wszLocalizedString[128];
-						g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pLocalize->Find( "#Achievement_Earned" ), 2, wszPlayerName, pchLocalizedAchievement );
-
-						char szLocalized[128];
-						g_pLocalize->ConvertUnicodeToANSI( wszLocalizedString, szLocalized, sizeof( szLocalized ) );
-
-						hudChat->ChatPrintf( iPlayerIndex, CHAT_FILTER_SERVERMSG, "%s", szLocalized );
-					}
-				}
-			}
-		}
-	}
 #if defined( TF_CLIENT_DLL ) || defined( CSTRIKE_CLIENT_DLL )
-	else if ( Q_strcmp( "item_found", eventname ) == 0 )
+	else if ( V_strcmp( "item_found", eventname ) == 0 )
 	{
 		int iPlayerIndex = event->GetInt( "player" );
 		//entityquality_t iItemQuality = event->GetInt( "quality" );
@@ -1097,7 +1045,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			wchar_t wszPlayerName[MAX_PLAYER_NAME_LENGTH];
 			g_pLocalize->ConvertANSIToUnicode( g_PR->GetPlayerName( iPlayerIndex ), wszPlayerName, sizeof( wszPlayerName ) );
 
-			if ( iMethod < 0 || iMethod >= ARRAYSIZE( g_pszItemFoundMethodStrings ) )
+			if ( iMethod < 0 || iMethod >= std::size( g_pszItemFoundMethodStrings ) )
 			{
 				iMethod = 0;
 			}

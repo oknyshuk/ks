@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef GLOBALSTATE_H
-#define GLOBALSTATE_H
+#include "string_t.h"
 
 typedef enum { GLOBAL_OFF = 0, GLOBAL_ON = 1, GLOBAL_DEAD = 2 } GLOBALESTATE;
 
@@ -148,5 +144,3 @@ inline GLOBALESTATE GlobalEntity_GetStateByIndex( int iIndex )
 }
 
 void ResetGlobalState( void );
-
-#endif // GLOBALSTATE_H

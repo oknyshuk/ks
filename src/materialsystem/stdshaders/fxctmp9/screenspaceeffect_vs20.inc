@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
@@ -11,7 +12,7 @@ private:
 public:
 	void SetVERTEXCOLOR( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nVERTEXCOLOR = i;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -19,7 +20,7 @@ public:
 	}
 	void SetVERTEXCOLOR( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nVERTEXCOLOR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -33,7 +34,7 @@ private:
 public:
 	void SetTRANSFORMVERTS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nTRANSFORMVERTS = i;
 #ifdef _DEBUG
 		m_bTRANSFORMVERTS = true;
@@ -41,7 +42,7 @@ public:
 	}
 	void SetTRANSFORMVERTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTRANSFORMVERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTRANSFORMVERTS = true;
@@ -66,12 +67,12 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bVERTEXCOLOR && m_bTRANSFORMVERTS;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nVERTEXCOLOR ) + ( 2 * m_nTRANSFORMVERTS ) + 0;
 	}
 };
-#define shaderStaticTest_screenspaceeffect_vs20 0
+inline constexpr int shaderStaticTest_screenspaceeffect_vs20 = 0;
 class screenspaceeffect_vs20_Dynamic_Index
 {
 public:
@@ -88,7 +89,7 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_screenspaceeffect_vs20 0
+inline constexpr int shaderDynamicTest_screenspaceeffect_vs20 = 0;
 
 static const ShaderComboInformation_t s_StaticComboArray_screenspaceeffect_vs20[2] = 
 {
@@ -97,7 +98,7 @@ static const ShaderComboInformation_t s_StaticComboArray_screenspaceeffect_vs20[
 };
 static const ShaderComboSemantics_t screenspaceeffect_vs20_combos =
 {
-	"screenspaceeffect_vs20", NULL, 0, s_StaticComboArray_screenspaceeffect_vs20, 2 
+	"screenspaceeffect_vs20", nullptr, 0, s_StaticComboArray_screenspaceeffect_vs20, 2 
 };
 
 class ConstructMe_screenspaceeffect_vs20

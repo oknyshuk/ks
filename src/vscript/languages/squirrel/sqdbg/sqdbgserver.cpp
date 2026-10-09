@@ -1,17 +1,16 @@
 
-#include "tier0/basetypes.h"
-#include "tier1/strtools.h"
-#include "tier0/threadtools.h"
+
+#include <string.h>
+#include <assert.h>
+
 
 #include <squirrel.h>
-#include <assert.h>
 #include <sqstdblob.h>
+import std;
+import ks.tier1;
 #include "sqrdbg.h"
 #include "sqdbgserver.h"
-#if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#endif
 
-#define scstrcpy strcpy
 struct XMLEscape{
 	const SQChar c;
 	const SQChar *esc;
@@ -81,7 +80,7 @@ const SQChar *EscapeXMLString(HSQUIRRELVM v,const SQChar *s)
 		bool escaped=false;
 		while(g_escapes[i].esc!=nullptr){
 			if(*s==g_escapes[i].c){
-				scstrcpy(dest,g_escapes[i].esc);
+				strcpy(dest,g_escapes[i].esc);
 				dest+=scstrlen(g_escapes[i].esc);
 				escaped=true;
 				break;
@@ -102,8 +101,8 @@ SQDbgServer::SQDbgServer(HSQUIRRELVM v)
 	_autoupdate = false;
 	_v = v;
 	_state = eDBG_Running;
-	_accept = INVALID_SOCKET;
-	_endpoint = INVALID_SOCKET;
+	_accept = nullptr;
+	_endpoint = nullptr;
 	_maxrecursion = 10;
 	sq_resetobject(&_debugroot);
 	sq_resetobject(&_serializefunc);
@@ -116,9 +115,9 @@ SQDbgServer::~SQDbgServer()
 	sq_pushnull(_v);
 	sq_seterrorhandler(_v);
 	sq_release(_v,&_debugroot);
-	if(_accept != INVALID_SOCKET)
+	if(_accept != nullptr)
 		sqdbg_closesocket(_accept);
-	if(_endpoint != INVALID_SOCKET)
+	if(_endpoint != nullptr)
 		sqdbg_closesocket(_endpoint);
 }
 
@@ -178,18 +177,7 @@ bool SQDbgServer::Init()
 
 bool SQDbgServer::IsConnected()
 {
-	if ( _endpoint != INVALID_SOCKET )
-	{
-		fd_set set;
-		FD_SET( _endpoint, &set );
-		timeval timeVal = { 0,0 };
-		if ( select( 0, &set, nullptr, nullptr, &timeVal ) != SOCKET_ERROR )
-		{
-			return true;
-		}
-		DevMsg( "Script debugger disconnected\n" );
-	}
-	return false;
+	return _endpoint != nullptr;
 }
 
 
@@ -210,7 +198,7 @@ void SQDbgServer::SendChunk(const SQChar *chunk)
 	int buf_len=0;
 	buf_len=(int)scstrlen(chunk);
 	buf=(char *)chunk;
-	send(_endpoint,(const char*)buf,(int)strlen((const char *)buf),0);
+	ks::platform::send_bytes(_endpoint,buf,strlen((const char *)buf),nullptr);
 }
 
 
@@ -383,7 +371,7 @@ void SQDbgServer::ParseMsg(const char *msg)
 			{
 				scprintf(_SC("terminate from user\n"));
 				sqdbg_closesocket(_endpoint);
-				_endpoint = INVALID_SOCKET;
+				_endpoint = nullptr;
 			}
 			break;
 		case MSG_ID('r','d'):
@@ -403,7 +391,7 @@ bool SQDbgServer::ParseBreakpoint(const char *msg,BreakPoint &out)
 {
 	static char stemp[MAX_BP_PATH];
 	char *ep=nullptr;
-	out._line=strtoul(msg,&ep,16);
+	out._line=std::strtoul(msg,&ep,16);
 	if(ep==msg || (*ep)!=':')return false;
 
 	char *dest=stemp;
@@ -423,7 +411,7 @@ bool SQDbgServer::ParseBreakpoint(const char *msg,BreakPoint &out)
 bool SQDbgServer::ParseWatch(const char *msg,Watch &out)
 {
 	char *ep=nullptr;
-	out._id=strtoul(msg,&ep,16);
+	out._id=std::strtoul(msg,&ep,16);
 	if(ep==msg || (*ep)!=':')return false;
 
 	//char *dest=out._src;
@@ -439,7 +427,7 @@ bool SQDbgServer::ParseWatch(const char *msg,Watch &out)
 bool SQDbgServer::ParseRemoveWatch(const char *msg,int &id)
 {
 	char *ep=nullptr;
-	id=strtoul(msg,&ep,16);
+	id=std::strtoul(msg,&ep,16);
 	if(ep==msg)return false;
 	return true;
 }
@@ -586,7 +574,7 @@ void SQDbgServer::BeginElement(const SQChar *name)
 // 	}
 // 	printf( "BeginElement( %s )\n", name );
 	XMLElementState *self = &xmlstate[_xmlcurrentement];
-	scstrcpy(self->name,name);
+	strcpy(self->name,name);
 	self->haschildren = false;
 	if(_xmlcurrentement > 0) {
 		XMLElementState *parent = &xmlstate[_xmlcurrentement-1];
@@ -603,7 +591,7 @@ void SQDbgServer::BeginElement(const SQChar *name)
 void SQDbgServer::Attribute(const SQChar *name,const SQChar *value)
 {
 	XMLElementState *self = &xmlstate[_xmlcurrentement];
-	Assert(!self->haschildren); //cannot have attributes if already has children
+	contract_assert( !self->haschildren ); //cannot have attributes if already has children
 	const SQChar *escval = escape_xml(value);
 	_scratchstring.resize(5+scstrlen(name)+scstrlen(escval));
 	scsprintf(&_scratchstring[0],_SC(" %s=\"%s\""),name,escval);
@@ -618,7 +606,7 @@ void SQDbgServer::EndElement(const SQChar *name)
 // 	}
 // 	printf( "EndElement( %s )\n", name );
 	XMLElementState *self = &xmlstate[_xmlcurrentement];
-	Assert(scstrcmp(self->name,name) == 0);
+	contract_assert( scstrcmp(self->name,name) == 0 );
 	if(self->haschildren) {
 		_scratchstring.resize(4+scstrlen(name));
 		scsprintf(&_scratchstring[0],_SC("</%s>"),name);
@@ -646,7 +634,7 @@ const SQChar *SQDbgServer::escape_xml(const SQChar *s)
 		bool escaped=false;
 		while(g_escapes[i].esc!=nullptr){
 			if(*s==g_escapes[i].c){
-				scstrcpy(dest,g_escapes[i].esc);
+				strcpy(dest,g_escapes[i].esc);
 				dest+=scstrlen(g_escapes[i].esc);
 				escaped=true;
 				break;

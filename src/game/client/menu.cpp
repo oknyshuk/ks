@@ -1,25 +1,28 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 //
 // menu.cpp
 //
 // generic menu handler
 //
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "cdll_client_int.h"
 #include "text_message.h"
 #include "hud_macros.h"
 #include "iclientmode.h"
 #include "weapon_selection.h"
 
 #include "localize/ilocalize.h"
-#include <keyvalues.h>
 
-#define MAX_MENU_STRING	512
+constexpr auto MAX_MENU_STRING = 512;
 wchar_t g_szMenuString[MAX_MENU_STRING];
 char g_szPrelocalisedMenuString[MAX_MENU_STRING];
 
@@ -140,7 +143,7 @@ void CHudMenu::SelectMenuItem( int menu_item )
 	if ( (menu_item > 0) && (m_bitsValidSlots & (1 << (menu_item-1))) )
 	{
 		char szbuf[32];
-		Q_snprintf( szbuf, sizeof( szbuf ), "menuselect %d\n", menu_item );
+		V_snprintf( szbuf, sizeof( szbuf ), "menuselect %d\n", menu_item );
 		engine->ClientCmd( szbuf );
 
 		m_nSelectedItem = menu_item;
@@ -246,7 +249,7 @@ void CHudMenu::ShowMenu( const char * menuName, int validSlots )
 	m_flShutoffTime = -1;
 	m_bitsValidSlots = validSlots;
 
-	Q_strncpy( g_szPrelocalisedMenuString, menuName, sizeof( g_szPrelocalisedMenuString ) );
+	V_strncpy( g_szPrelocalisedMenuString, menuName, sizeof( g_szPrelocalisedMenuString ) );
 
 	GetClientMode()->GetViewportAnimationController()->StartAnimationSequence("MenuOpen");
 	m_nSelectedItem = -1;
@@ -289,9 +292,9 @@ void CHudMenu::ShowMenu_KeyValueItems( KeyValues *pKV )
 		const char *pszItem = item->GetName();
 		const wchar_t *wLocalizedItem = g_pLocalize->Find( pszItem );
 
-		Q_snwprintf( wItem, sizeof( wItem )/ sizeof( wchar_t ), L"%d. %ls\n", i+1, wLocalizedItem );
+		V_snwprintf( wItem, sizeof( wItem )/ sizeof( wchar_t ), L"%d. %ls\n", i+1, wLocalizedItem );
 
-		Q_snwprintf( g_szMenuString, sizeof( g_szMenuString )/ sizeof( wchar_t ), L"%ls%ls", g_szMenuString, wItem );
+		V_snwprintf( g_szMenuString, sizeof( g_szMenuString )/ sizeof( wchar_t ), L"%ls%ls", g_szMenuString, wItem );
 
 		i++;
 	}
@@ -299,9 +302,9 @@ void CHudMenu::ShowMenu_KeyValueItems( KeyValues *pKV )
 	// put a cancel on the end
 	m_bitsValidSlots |= (1<<9);
 
-	Q_snwprintf( wItem, sizeof( wItem )/ sizeof( wchar_t ), L"0. %ls", g_pLocalize->Find( "#Cancel" ) );
+	V_snwprintf( wItem, sizeof( wItem )/ sizeof( wchar_t ), L"0. %ls", g_pLocalize->Find( "#Cancel" ) );
 
-	Q_snwprintf( g_szMenuString, sizeof( g_szMenuString )/ sizeof( wchar_t ), L"%ls\n%ls", g_szMenuString, wItem );
+	V_snwprintf( g_szMenuString, sizeof( g_szMenuString )/ sizeof( wchar_t ), L"%ls\n%ls", g_szMenuString, wItem );
 
 	ProcessText();
 
@@ -316,7 +319,7 @@ void CHudMenu::ShowMenu_KeyValueItems( KeyValues *pKV )
 //   takes four values:
 //		short: a bitfield of keys that are valid input
 //		char : the duration, in seconds, the menu should stay up. -1 means is stays until something is chosen.
-//		byte : a boolean, TRUE if there is more string yet to be received before displaying the menu, false if it's the last string
+//		byte : a boolean, true if there is more string yet to be received before displaying the menu, false if it's the last string
 //		string: menu string to display
 //  if this message is never received, then scores will simply be the combined totals of the players.
 //-----------------------------------------------------------------------------
@@ -337,7 +340,7 @@ bool CHudMenu::MsgFunc_ShowMenu( const ks::net::CCSUsrMsg_ShowMenu &msg)
 
 	if ( m_bitsValidSlots )
 	{
-		Q_strncpy( g_szPrelocalisedMenuString, msg.menu_string->c_str(), sizeof( g_szPrelocalisedMenuString ) );
+		V_strncpy( g_szPrelocalisedMenuString, msg.menu_string->c_str(), sizeof( g_szPrelocalisedMenuString ) );
 
 		GetClientMode()->GetViewportAnimationController()->StartAnimationSequence("MenuOpen");
 		m_nSelectedItem = -1;

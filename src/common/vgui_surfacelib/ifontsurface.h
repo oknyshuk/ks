@@ -1,20 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IFONTSURFACE_H
-#define IFONTSURFACE_H
-
-
-#include "mathlib/vector2d.h"  // must be before the namespace line
+import std;
+import ks.math;
 
 #ifdef CreateFont
 #undef CreateFont
 #endif
-
 
 // returns true if the surface supports minimize & maximize capabilities
 // Numbered this way to prevent interface change in surface.
@@ -98,7 +91,3 @@ struct FontCharRenderInfo
 	// In/Out (true by default)
 	bool			shouldclip;
 };	
-
-
-
-#endif // IFONTSURFACE_H

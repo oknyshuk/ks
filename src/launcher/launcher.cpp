@@ -1,83 +1,55 @@
-//===== Copyright  Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-// Defines the entry point for the application.
-//
-//==================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#define O_EXLOCK 0
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+// Purpose: Defines the entry point for the application.
+
+
 #include <locale.h>
 
+constexpr auto O_EXLOCK = 0;
+import std;
+import ks.desktop;
+
+import ks.vstdlib;
 #include "appframework/ilaunchermgr.h"
-#include <stdio.h>
-#include "tier0/icommandline.h"
 #include "engine_launcher_api.h"
-#include "ifilesystem.h"
-#include "tier1/interface.h"
-#include "tier0/dbg.h"
-#include "iregistry.h"
-#include "appframework/iappsystem.h"
 #include "appframework/AppFramework.h"
-#include "tier0/platform.h"
-#include "tier0/memalloc.h"
 #include "datacache/iresourceaccesscontrol.h"
 #include "filesystem.h"
-#include "tier1/map_ops.h"
 #include "materialsystem/imaterialsystem.h"
 #include "istudiorender.h"
 #include "datacache/idatacache.h"
 #include "datacache/imdlcache.h"
 #include "vphysics_interface.h"
 #include "filesystem_init.h"
-#include "vstdlib/iprocessutils.h"
 #include "avi/iavi.h"
 #include "avi/ibik.h"
 #include "avi/iquicktime.h"
-#include "tier1/tier1.h"
 #include "tier2/tier2.h"
 #include "tier3/tier3.h"
 #include "inputsystem/iinputsystem.h"
 #include "inputsystem/iinputstacksystem.h"
 #include "reslistgenerator.h"
-#include "tier1/fmtstr.h"
-#include "tier1/text_writer.h"
-#include "steam/steam_api.h"
 #include "vscript/ivscript.h"
-#include "tier0/miniprofiler.h"
 #include "networksystem/inetworksystem.h"
-#include "tier1/fmtstr.h"
-#include "vstdlib/jobthread.h"
 #include "rocketui/rocketui.h"
 
-#include <SDL3/SDL.h>
 
-#define MB_OK 			0x00000001
-#define MB_SYSTEMMODAL	0x00000002
-#define MB_ICONERROR	0x00000004
+constexpr auto MB_OK = 0x00000001;
+constexpr auto MB_SYSTEMMODAL = 0x00000002;
+constexpr auto MB_ICONERROR = 0x00000004;
 int MessageBox( HWND hWnd, const char *message, const char *header, unsigned uType );
 
 
-#if defined( DEVELOPMENT_ONLY ) || defined( ALLOW_TEXT_MODE )
-#define ALLOW_MULTI_CLIENTS_PER_MACHINE 1
-#endif
-
-
-#define DEFAULT_HL2_GAMEDIR	"csgo"
+inline constexpr const char *DEFAULT_HL2_GAMEDIR = "csgo";
 
 
 // A logging channel used during engine initialization
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_EngineInitialization, "EngineInitialization" );
+LoggingChannelID_t LOG_EngineInitialization = LoggingSystem_RegisterLoggingChannel( "EngineInitialization", nullptr );;
 extern void* CreateSDLMgr();
 
 
-#define SIXENSE
-#ifdef SIXENSE
 extern bool DoesFileExistIn( const char *pDirectoryName, const char *pFilename );
-#endif
 
 //-----------------------------------------------------------------------------
 // Modules...
@@ -154,7 +126,7 @@ char *GetGameDirectory( void )
 
 void SetGameDirectory( const char *game )
 {
-	Q_strncpy( g_szGamedir, game, sizeof(g_szGamedir) );
+	V_strncpy( g_szGamedir, game, sizeof(g_szGamedir) );
 }
 
 //-----------------------------------------------------------------------------
@@ -197,13 +169,13 @@ void UTIL_ComputeBaseDir()
 
 	if ( !g_szBasedir[0] && GetExecutableName( g_szBasedir, sizeof( g_szBasedir ) ) )
 	{
-		char *pBuffer = strrchr( g_szBasedir, '\\' );
+		char *pBuffer = std::strrchr( g_szBasedir, '\\' );
 		if ( *pBuffer )
 		{
 			*(pBuffer+1) = '\0';
 		}
 
-		int j = strlen( g_szBasedir );
+		int j = std::strlen( g_szBasedir );
 		if (j > 0)
 		{
 			if ( ( g_szBasedir[j-1] == '\\' ) ||
@@ -217,10 +189,10 @@ void UTIL_ComputeBaseDir()
 	char const *pOverrideDir = CommandLine()->CheckParm( "-basedir" );
 	if ( pOverrideDir )
 	{
-		strcpy( g_szBasedir, pOverrideDir );
+		std::strcpy( g_szBasedir, pOverrideDir );
 	}
 
-	Q_FixSlashes( g_szBasedir );
+	V_FixSlashes( g_szBasedir );
 
 }
 
@@ -231,7 +203,7 @@ void InitTextMode()
 
 void SortResList( char const *pchFileName, char const *pchSearchPath );
 
-#define ALL_RESLIST_FILE	"all.lst"
+inline constexpr const char *ALL_RESLIST_FILE = "all.lst";
 #define ENGINE_RESLIST_FILE  "engine.lst"
 
 
@@ -249,7 +221,7 @@ private:
 	void LogToAllReslist( char const *line );
 
 	bool		m_bActive;
-	char		m_szCurrentDir[_MAX_PATH];
+	char		m_szCurrentDir[k_cMaxPath];
 
 	// persistent across restarts
 	std::set< std::string, ks::iless > m_Logged;
@@ -262,7 +234,6 @@ static CLogAllFiles g_LogFiles;
 CLogAllFiles::CLogAllFiles() :
 	m_bActive( false )
 {
-	MEM_ALLOC_CREDIT();
 	m_sResListDir = "reslists";
 }
 
@@ -286,10 +257,10 @@ void CLogAllFiles::Init()
 	if ( CommandLine()->CheckParm( "-reslistdir", &pszDir ) && pszDir )
 	{
 		char szDir[ MAX_PATH ];
-		Q_strncpy( szDir, pszDir, sizeof( szDir ) );
-		Q_StripTrailingSlash( szDir );
-		Q_FixSlashes( szDir );
-		if ( Q_strlen( szDir ) > 0 )
+		V_strncpy( szDir, pszDir, sizeof( szDir ) );
+		V_StripTrailingSlash( szDir );
+		V_FixSlashes( szDir );
+		if ( V_strlen( szDir ) > 0 )
 		{
 			m_sResListDir = szDir;
 		}
@@ -297,8 +268,8 @@ void CLogAllFiles::Init()
 
 	// game directory has not been established yet, must derive ourselves
 	char path[MAX_PATH];
-	Q_snprintf( path, sizeof(path), "%s/%s", GetBaseDirectory(), CommandLine()->ParmValue( "-game", "hl2" ) );
-	Q_FixSlashes( path );
+	V_snprintf( path, sizeof(path), "%s/%s", GetBaseDirectory(), CommandLine()->ParmValue( "-game", "hl2" ) );
+	V_FixSlashes( path );
 	m_sFullGamePath = path;
 
 	// create file to dump out to
@@ -314,8 +285,8 @@ void CLogAllFiles::Init()
 		g_pFullFileSystem->RemoveFile( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.c_str(), m_sResListDir.c_str(), ALL_RESLIST_FILE ), "GAME" );
 	}
 
-	getcwd( m_szCurrentDir, sizeof(m_szCurrentDir) );
-	Q_strncat( m_szCurrentDir, "/", sizeof(m_szCurrentDir), 1 );
+	ks::platform::current_directory( m_szCurrentDir, sizeof(m_szCurrentDir) );
+	V_strncat( m_szCurrentDir, "/", sizeof(m_szCurrentDir), 1 );
 }
 
 void CLogAllFiles::Shutdown()
@@ -345,7 +316,7 @@ void CLogAllFiles::LogToAllReslist( char const *line )
 	if ( fh != FILESYSTEM_INVALID_HANDLE )
 	{
 		g_pFullFileSystem->Write("\"", 1, fh);
-		g_pFullFileSystem->Write( line, Q_strlen(line), fh );
+		g_pFullFileSystem->Write( line, V_strlen(line), fh );
 		g_pFullFileSystem->Write("\"\n", 2, fh);
 		g_pFullFileSystem->Close( fh );
 	}
@@ -355,12 +326,12 @@ void CLogAllFiles::LogFile(const char *fullPathFileName, const char *options)
 {
 	if ( !m_bActive )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
 	// write out to log file
-	Assert( fullPathFileName[1] == ':' );
+	contract_assert( fullPathFileName[1] == ':' );
 
 	if ( !m_Logged.insert( ks::nz( fullPathFileName ) ).second )
 	{
@@ -368,14 +339,14 @@ void CLogAllFiles::LogFile(const char *fullPathFileName, const char *options)
 	}
 
 	// make it relative to our root directory
-	const char *relative = Q_stristr( fullPathFileName, GetBaseDirectory() );
+	const char *relative = V_stristr( fullPathFileName, GetBaseDirectory() );
 	if ( relative )
 	{
-		relative += ( Q_strlen( GetBaseDirectory() ) + 1 );
+		relative += ( V_strlen( GetBaseDirectory() ) + 1 );
 
 		char rel[ MAX_PATH ];
-		Q_strncpy( rel, relative, sizeof( rel ) );
-		Q_FixSlashes( rel );
+		V_strncpy( rel, relative, sizeof( rel ) );
+		V_FixSlashes( rel );
 
 		LogToAllReslist( rel );
 	}
@@ -403,17 +374,9 @@ static bool IsWin98OrOlder()
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Figure out if Steam is running, then load the GameOverlayRenderer.dll
+// Inner loop: initialize, shutdown main systems, load the file system
 //-----------------------------------------------------------------------------
-void TryToLoadSteamOverlayDLL()
-{
-}
-
-
-//-----------------------------------------------------------------------------
-// Inner loop: initialize, shutdown main systems, load steam to
-//-----------------------------------------------------------------------------
-class CSourceAppSystemGroup : public CSteamAppSystemGroup
+class CSourceAppSystemGroup : public CFSAppSystemGroup
 {
 public:
 	// Methods of IApplication
@@ -470,6 +433,11 @@ bool CSourceAppSystemGroup::Create()
 
     AddSystem( (IAppSystem *)CreateSDLMgr(),	SDLMGR_INTERFACE_VERSION );
 
+	SetAssertDialogHandler( []( const char *pszTitle, const char *pszText, const char *const *pLabels, int nLabels, int nDefault, int nEscape )
+	{
+		return ks::desktop::message_box( ks::desktop::game_window(), pszTitle, pszText, pLabels, nLabels, nDefault, nEscape );
+	} );
+
 	AppModule_t builtinModule = LoadModule( Sys_GetFactoryThis() );
 	for ( const char *pInterfaceName : pBuiltinSystems )
 	{
@@ -494,11 +462,11 @@ bool CSourceAppSystemGroup::Create()
 
 	// Load up the appropriate shader DLL
 	// This has to be done before connection.
-	char const *pDLLName = "shaderapidx9" DLL_EXT_STRING;
+	char const *pDLLName = "shaderapidx9.so";
 	const char* pArg = nullptr;
 	if ( CommandLine()->FindParm( "-noshaderapi" ) )
 	{
-		pDLLName = "shaderapiempty" DLL_EXT_STRING;
+		pDLLName = "shaderapiempty.so";
 	}
 	if ( CommandLine()->CheckParm( "-shaderapi", &pArg ))
 	{
@@ -523,40 +491,31 @@ bool CSourceAppSystemGroup::PreInit()
 	if ( !g_pFullFileSystem || !g_pMaterialSystem )
 		return false;
 
-	CFSSteamSetupInfo steamInfo;
-	steamInfo.m_bToolsMode = false;
-	steamInfo.m_bSetSteamDLLPath = false;
-	steamInfo.m_bSteam = g_pFullFileSystem->IsSteam();
-	steamInfo.m_bOnlyUseDirectoryName = true;
-	steamInfo.m_pDirectoryName = DetermineDefaultMod();
-	if ( !steamInfo.m_pDirectoryName )
+	CFSSetupInfo setupInfo;
+	setupInfo.m_bOnlyUseDirectoryName = true;
+	setupInfo.m_pDirectoryName = DetermineDefaultMod();
+	if ( !setupInfo.m_pDirectoryName )
 	{
-		steamInfo.m_pDirectoryName = DetermineDefaultGame();
-		if ( !steamInfo.m_pDirectoryName )
+		setupInfo.m_pDirectoryName = DetermineDefaultGame();
+		if ( !setupInfo.m_pDirectoryName )
 		{
 			Error( "FileSystem_LoadFileSystemModule: no -defaultgamedir or -game specified." );
 		}
 	}
-	if ( FileSystem_SetupSteamEnvironment( steamInfo ) != FS_OK )
+	if ( FileSystem_SetupEnvironment( setupInfo ) != FS_OK )
 		return false;
 
-	CFSMountContentInfo fsInfo;
-	fsInfo.m_pFileSystem = g_pFullFileSystem;
-	fsInfo.m_bToolsMode = false;
-	fsInfo.m_pDirectoryName = steamInfo.m_GameInfoPath;
-	if ( FileSystem_MountContent( fsInfo ) != FS_OK )
+	if ( FileSystem_SetBasePaths( g_pFullFileSystem ) != FS_OK )
 		return false;
 
-#if defined( SUPPORT_VPK )
 	Msg( "start timing %f\n", Plat_FloatTime() );
 	char const *pVPKName = CommandLine()->ParmValue( "-vpk" );
 	if ( pVPKName )
 	{
-		fsInfo.m_pFileSystem->AddVPKFile( pVPKName );
+		g_pFullFileSystem->AddVPKFile( pVPKName );
 	}
-#endif
 
-	fsInfo.m_pFileSystem->AddSearchPath( "platform", "PLATFORM" );
+	g_pFullFileSystem->AddSearchPath( "platform", "PLATFORM" );
 
 	// This will get called multiple times due to being here, but only the first one will do anything
 	reslistgenerator->Init( GetBaseDirectory(), CommandLine()->ParmValue( "-game", "hl2" ) );
@@ -624,7 +583,8 @@ const char *CSourceAppSystemGroup::DetermineDefaultGame()
 
 int MessageBox( HWND hWnd, const char *message, const char *header, unsigned uType )
 {
-	SDL_ShowSimpleMessageBox( 0, header, message, GetAssertDialogParent() );
+	static const char *const labels[] = { "OK" };
+	ks::desktop::message_box( ks::desktop::game_window(), header, message, labels, 1, 0, 0 );
 	return 0;
 }
 
@@ -632,7 +592,7 @@ int MessageBox( HWND hWnd, const char *message, const char *header, unsigned uTy
 //-----------------------------------------------------------------------------
 // Allow only one windowed source app to run at a time
 //-----------------------------------------------------------------------------
-int g_lockfd = -1;
+ks::platform::file *g_lockfd = nullptr;
 char g_lockFilename[MAX_PATH];
 
 bool GrabSourceMutex()
@@ -641,7 +601,7 @@ bool GrabSourceMutex()
 	const char *pchGameParam = CommandLine()->ParmValue( "-game", DEFAULT_HL2_GAMEDIR );
 	CRC32_t gameCRC;
 	CRC32_Init(&gameCRC);
-	CRC32_ProcessBuffer( &gameCRC, (void *)pchGameParam, Q_strlen( pchGameParam ) );
+	CRC32_ProcessBuffer( &gameCRC, (void *)pchGameParam, V_strlen( pchGameParam ) );
 	CRC32_Final( &gameCRC );
 
 	/*
@@ -649,36 +609,29 @@ bool GrabSourceMutex()
 	 */
 
 	// Check TMPDIR environment variable for temp directory.
-	const char *tmpdir = getenv( "TMPDIR" );
+	const char *tmpdir = std::getenv( "TMPDIR" );
 
 	// If it's NULL, or it doesn't exist, or it isn't a directory, fallback to /tmp.
-	struct stat buf;
-	if( !tmpdir || stat( tmpdir, &buf ) || !S_ISDIR ( buf.st_mode ) )
+	if( !tmpdir || !ks::platform::path_is_directory( tmpdir ) )
 		tmpdir = "/tmp";
 
 	V_snprintf( g_lockFilename, sizeof(g_lockFilename), "%s/source_engine_%lu.lock", tmpdir, gameCRC );
 
-	g_lockfd = open( g_lockFilename, O_WRONLY | O_CREAT, 0666 );
-	if ( g_lockfd == -1 )
+	g_lockfd = ks::platform::open_file( g_lockFilename, ks::platform::file_mode::read_write, nullptr );
+	if ( g_lockfd == nullptr )
 	{
-		printf( "open(%s) failed\n", g_lockFilename );
+		std::printf( "open(%s) failed\n", g_lockFilename );
 		return false;
 	}
 
 	// In case we have a umask setting creation to something other than 0666,
 	// force it to 0666 so we don't lock other users out of the game if
 	// the game dies etc.
-	fchmod(g_lockfd, 0666);
+	ks::platform::set_file_mode( g_lockfd, 0666 );
 
-	struct flock fl;
-	fl.l_type = F_WRLCK;
-	fl.l_whence = SEEK_SET;
-	fl.l_start = 0;
-	fl.l_len = 1;
-
-	if ( fcntl ( g_lockfd, F_SETLK, &fl ) == -1 )
+	if ( !ks::platform::lock_file( g_lockfd, true ) )
 	{
-		printf( "fcntl(%d) for %s failed\n", g_lockfd, g_lockFilename );
+		std::printf( "lock for %s failed\n", g_lockFilename );
 		return false;
 	}
 
@@ -695,38 +648,11 @@ void ReleaseSourceMutex()
 		return;
 	}
 
-	if ( g_lockfd != -1 )
+	if ( g_lockfd != nullptr )
 	{
-		close( g_lockfd );
-		g_lockfd = -1;
-		unlink( g_lockFilename );
-	}
-}
-
-// Remove all but the last -game parameter.
-// This is for mods based off something other than Half-Life 2 (like HL2MP mods).
-// The Steam UI does 'steam -applaunch 320 -game c:\steam\steamapps\sourcemods\modname', but applaunch inserts
-// its own -game parameter, which would supercede the one we really want if we didn't intercede here.
-void RemoveSpuriousGameParameters()
-{
-	// Find the last -game parameter.
-	int nGameArgs = 0;
-	char lastGameArg[MAX_PATH];
-	for ( int i=0; i < CommandLine()->ParmCount()-1; i++ )
-	{
-		if ( Q_stricmp( CommandLine()->GetParm( i ), "-game" ) == 0 )
-		{
-			Q_snprintf( lastGameArg, sizeof( lastGameArg ), "\"%s\"", CommandLine()->GetParm( i+1 ) );
-			++nGameArgs;
-			++i;
-		}
-	}
-
-	// We only care if > 1 was specified.
-	if ( nGameArgs > 1 )
-	{
-		CommandLine()->RemoveParm( "-game" );
-		CommandLine()->AppendParm( "-game", lastGameArg );
+		ks::platform::close_file( g_lockfd );
+		g_lockfd = nullptr;
+		ks::platform::remove_file( g_lockFilename, nullptr );
 	}
 }
 
@@ -741,27 +667,27 @@ static char const *Cmd_TranslateFileAssociation(char const *param )
 	char *retval = nullptr;
 
 	char temp[ 512 ];
-	Q_strncpy( temp, param, sizeof( temp ) );
-	Q_FixSlashes( temp );
+	V_strncpy( temp, param, sizeof( temp ) );
+	V_FixSlashes( temp );
 	const char *extension = V_GetFileExtension(temp);
 	// must have an extension to map
 	if (!extension)
 		return retval;
 	extension--; // back up so we have the . in the extension
 
-	int c = ARRAYSIZE( g_FileAssociations );
+	int c = std::size( g_FileAssociations );
 	for ( int i = 0; i < c; i++ )
 	{
 		FileAssociationInfo& info = g_FileAssociations[ i ];
 
-		if ( ! Q_strcmp( extension, info.extension ) &&
+		if ( ! V_strcmp( extension, info.extension ) &&
 			! CommandLine()->FindParm(CFmtStr( "+%s", info.command_to_issue ) ) )
 		{
 			// Translate if haven't already got one of these commands
-			Q_strncpy( sz, temp, sizeof( sz ) );
-			Q_FileBase( sz, temp, sizeof( sz ) );
+			V_strncpy( sz, temp, sizeof( sz ) );
+			V_FileBase( sz, temp, sizeof( sz ) );
 
-			Q_snprintf( sz, sizeof( sz ), "%s %s", info.command_to_issue, temp );
+			V_snprintf( sz, sizeof( sz ), "%s %s", info.command_to_issue, temp );
 			retval = sz;
 			break;
 		}
@@ -824,9 +750,6 @@ static const char *BuildCommand()
 	return build.c_str();
 }
 
-DLL_IMPORT CLinkedMiniProfiler *g_pPhysicsMiniProfilers;
-DLL_IMPORT CLinkedMiniProfiler *g_pOtherMiniProfilers;
-
 CLauncherLoggingListener g_LauncherLoggingListener;
 
 
@@ -836,101 +759,6 @@ CLauncherLoggingListener g_LauncherLoggingListener;
 // intervals from the moment the thread pool is initialized until the
 // game halts. LOADING_MEMORY_WATCHDOG, if defined, specifies the
 // interval in milliseconds
-#if LOADING_MEMORY_WATCHDOG
-namespace
-{
-	/// a thread that's meant to run intermittently at regular intervals
-	class CThreadWatchdog : public CThread
-	{
-	public:
-		CThreadWatchdog( unsigned nIntervalInMilliseconds, const char *pszName, int nAffinity );
-
-		// You will need to call Start() and Stop() on this class externally.
-
-
-
-		// for debugging purposes -- record how long it took the payload to execute.
-		// (circular buffer of four samples)
-		CCycleCount m_nPayloadTimers[4];
-		unsigned int m_nPayloadTimersNextIdx; //< next timer to write into.
-
-	protected:
-		virtual bool Init();
-
-		// the "run" function for this thread, gets called once every nIntervalInMilliseconds.
-		// return true to keep running, false to stop.
-		virtual bool Payload() = 0;
-
-		unsigned m_nIntervalMsec; /// the watchdog will run once every this many msec
-		int m_nAffinityMask;
-
-	private:
-		// from CThread. !!DO NOT!! override this in inheritors -- your work should be done in Payload().
-		virtual int Run();
-	};
-
-	CThreadWatchdog::CThreadWatchdog( unsigned nIntervalInMilliseconds, const char *pszName, int nAffinity ) :
-	m_nIntervalMsec(nIntervalInMilliseconds),
-		m_nAffinityMask(nAffinity),
-		m_nPayloadTimersNextIdx(0)
-	{
-		SetName( pszName ); // the thread name must be set before calling Start(), or subsequent thread management calls will crash. I don't know why. That's just what happens.
-	}
-
-	bool CThreadWatchdog::Init()
-	{
-		if (!CThread::Init())
-			return false;
-
-		ThreadSetAffinity( GetThreadHandle(), m_nAffinityMask );
-		return true;
-
-	}
-
-	int CThreadWatchdog::Run()
-	{
-		bool bContinue;
-		do
-		{
-			CFastTimer payloadtime;
-			payloadtime.Start();
-
-			bContinue = Payload();
-
-			payloadtime.End();
-			m_nPayloadTimers[ m_nPayloadTimersNextIdx++ & 3 ] = payloadtime.GetDuration();
-
-			Sleep( m_nIntervalMsec );
-		} while ( bContinue );
-		return 0;
-	}
-
-	class CLoadMemoryWatchdog : public CThreadWatchdog
-	{
-	public:
-		CLoadMemoryWatchdog( unsigned nIntervalInMilliseconds, const char *pszFilename ); // filename is assumed to be into a static COMDAT (don't make it in a temp buffer)
-
-	private:
-		bool Payload();
-
-		const char *m_pszFilename;
-	};
-
-	CLoadMemoryWatchdog::CLoadMemoryWatchdog( unsigned nIntervalInMilliseconds, const char *pszFilename ) :
-	CThreadWatchdog( nIntervalInMilliseconds, "LoadMemWatchdog", false ? XBOX_CORE_0_HWTHREAD_1 : 0 ),
-		m_pszFilename(pszFilename)
-	{
-	}
-
-	bool CLoadMemoryWatchdog::Payload()
-	{
-		g_pMemAlloc->DumpStatsFileBase( m_pszFilename );
-		return true;
-	}
-
-	CLoadMemoryWatchdog g_MemWatchdog( LOADING_MEMORY_WATCHDOG, "loadingmemory" );
-}
-#endif
 
 // this class automatically handles the initialization and uninitialization
 // of the vpbdm library. It's RAII because we absolutely positively have
@@ -945,7 +773,7 @@ namespace
 //			nCmdShow -
 // Output : int APIENTRY
 //-----------------------------------------------------------------------------
-extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
+extern "C" int LauncherMain( int argc, char **argv )
 {
 
 	// must precede any thread creation: children inherit the affinity mask
@@ -961,11 +789,11 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 	// It looks like it's only installed on Debian distros right now though.
         const char en_US[] = "en_US.UTF-8";
 
-        setenv( "LC_ALL", en_US, 1 );
+        ks::platform::set_environment( "LC_ALL", en_US, true );
         setlocale( LC_ALL, en_US );
 
         const char *CurrentLocale = setlocale( LC_ALL, nullptr );
-        if ( Q_stricmp( CurrentLocale, en_US ) )
+        if ( V_stricmp( CurrentLocale, en_US ) )
         {
                 Warning( "WARNING: setlocale('%s') failed, using locale:'%s'. International characters may not work.\n", en_US, CurrentLocale );
         }
@@ -995,14 +823,9 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 	bWaitForConsole = CommandLine()->CheckParm( "-vxconsole" ) != nullptr;
 
 
-#if LOADING_MEMORY_WATCHDOG
-	g_MemWatchdog.Start();
-#endif
-
-
 	// check for a named executable
 	const char *exeFilename = GetExecutableFilename();
-	if ( exeFilename[0] && Q_strcmp( exeFilename, "hl2" ) && !CommandLine()->FindParm( "-game" ) )
+	if ( exeFilename[0] && V_strcmp( exeFilename, "hl2" ) && !CommandLine()->FindParm( "-game" ) )
 	{
 		CommandLine()->RemoveParm( "-game" );
 		CommandLine()->AppendParm( "-game", exeFilename );
@@ -1010,12 +833,11 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 
 	// Uncomment the following code to allow multiplayer on the Xbox 360 for trade shows.
 
-#ifdef SIXENSE
 	// If the game arg is currently portal2
 	char const *game_param_val = nullptr;
 	CommandLine()->CheckParm( "-game", &game_param_val );
 
-	if( game_param_val && !Q_strcmp( game_param_val, "portal2" ) )
+	if( game_param_val && !V_strcmp( game_param_val, "portal2" ) )
 	{
 		// and if there is a portal2_sixense dir that contains a valid gameinfo.txt, then override the game parameter to use that instead
 		if( !CommandLine()->CheckParm( "-nosixense" ) && DoesFileExistIn( ".", "portal2_sixense/gameinfo.txt" ) )
@@ -1024,7 +846,6 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 			CommandLine()->AppendParm( "-game", "portal2_sixense" );
 		}
 	}
-#endif
 
 
 	if ( CommandLine()->CheckParm( "-tslist" ) )
@@ -1039,22 +860,10 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 		RunThreadPoolTests();
 	}
 
-	// This call is to emulate steam's injection of the GameOverlay DLL into our process if we
-	// are running from the command line directly, this allows the same experience the user gets
-	// to be present when running from perforce, the call has no effect on X360
-	TryToLoadSteamOverlayDLL();
-
-	// See the function for why we do this.
-	RemoveSpuriousGameParameters();
-
 
  	// Run in text mode? (No graphics or sound).
  	if ( CommandLine()->CheckParm( "-textmode" ) )
  	{
-#if defined( DEVELOPMENT_ONLY ) || defined( ALLOW_TEXT_MODE )
- 		g_bTextMode = true;
- 		InitTextMode();
-#endif
  	}
 	else
 	{
@@ -1066,11 +875,8 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 	}
 
 
-	// If game is not run from Steam then add -insecure in order to avoid client timeout message
-	if ( nullptr == CommandLine()->CheckParm( "-steam" ) )
-	{
-		CommandLine()->AppendParm( "-insecure", nullptr );
-	}
+	// Add -insecure in order to avoid client timeout message
+	CommandLine()->AppendParm( "-insecure", nullptr );
 
 	// Figure out the directory the executable is running from
 	// and make that be the current working directory
@@ -1092,16 +898,10 @@ extern "C" DLL_EXPORT int LauncherMain( int argc, char **argv )
 		bRestart = false;
 
 		CSourceAppSystemGroup sourceSystems;
-		CSteamApplication steamApplication( &sourceSystems );
-		int nRetval = steamApplication.Run();
-#if ENABLE_HARDWARE_PROFILER
-		// Hack fix, causes memory leak, but prevents crash due to bad coding not doing proper teardown
-		// need to ensure these list anchors don't anchor stale pointers
-		g_pPhysicsMiniProfilers = nullptr;
-		g_pOtherMiniProfilers = nullptr;
-#endif
+		CFSApplication application( &sourceSystems );
+		int nRetval = application.Run();
 
-		if ( steamApplication.GetCurrentStage() == CSourceAppSystemGroup::INITIALIZATION )
+		if ( application.GetCurrentStage() == CSourceAppSystemGroup::INITIALIZATION )
 		{
 			bRestart = (nRetval == INIT_RESTART);
 		}

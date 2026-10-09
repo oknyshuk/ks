@@ -1,13 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef SOUNDSCAPE_H
-#define SOUNDSCAPE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
+#include "playernet_vars.h"
 
 class CEnvSoundscape;
 
@@ -108,6 +105,3 @@ private:
 	void DelegateStartTouch( CBaseEntity *pEnt );
 	void DelegateEndTouch( CBaseEntity *pEnt );
 };
-
-
-#endif // SOUNDSCAPE_H

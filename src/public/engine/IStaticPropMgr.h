@@ -1,18 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ISTATICPROPMGR_H
-#define ISTATICPROPMGR_H
-
-#include "interface.h"
-#include "mathlib/vector.h"
-#include "utlvector.h"
+import ks.tier1;
+import std;
 #include "basehandle.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -31,14 +23,14 @@ struct RenderableInstance_t;
 //-----------------------------------------------------------------------------
 // Interface versions for static props
 //-----------------------------------------------------------------------------
-#define INTERFACEVERSION_STATICPROPMGR_CLIENT		"StaticPropMgrClient005"
-#define INTERFACEVERSION_STATICPROPMGR_SERVER		"StaticPropMgrServer002"
+inline constexpr const char *INTERFACEVERSION_STATICPROPMGR_CLIENT = "StaticPropMgrClient005";
+inline constexpr const char *INTERFACEVERSION_STATICPROPMGR_SERVER = "StaticPropMgrServer002";
 
 
 //-----------------------------------------------------------------------------
 // Interface for static props
 //-----------------------------------------------------------------------------
-abstract_class IStaticPropMgr
+class IStaticPropMgr
 {
 public:
 	// Create physics representations of props
@@ -55,7 +47,7 @@ public:
 	virtual ICollideable *GetStaticPropByIndex( int propIndex ) = 0;
 };
 
-abstract_class IStaticPropMgrClient : public IStaticPropMgr
+class IStaticPropMgrClient : public IStaticPropMgr
 {
 public:
 	// Adds decals to static props, returns point of decal in trace_t
@@ -95,6 +87,3 @@ public:
 	virtual void GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, std::vector< ICollideable * > *pOutput ) = 0; //get all static props that exist wholly or partially in an OBB
 	//===================================================================
 };
-
-
-#endif // IPROPS_H

@@ -1,12 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#if !defined( R_EFXEXTERNH )
-#define R_EFXEXTERNH
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.math;
+struct model_t;
 
 struct dlight_t;
 
@@ -20,5 +18,3 @@ void		R_PlayerDecalShoot			( IMaterial *material, void *userdata, int entity, co
 										  const Vector& position, const Vector *saxis, int flags, const color32 &rgbaColor, int nAdditionalDecalFlags );
 dlight_t	*CL_AllocDlight				( int key );
 dlight_t	*CL_AllocElight				( int key );
-
-#endif

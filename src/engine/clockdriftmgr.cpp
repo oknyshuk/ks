@@ -1,15 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "client.h"
 #include "clockdriftmgr.h"
 #include "demo.h"
 #include "server.h"
 #include "enginethreads.h"
-
 
 ConVar cl_clock_correction( "cl_clock_correction", "1", FCVAR_CHEAT, "Enable/disable clock correction on the client." );
 
@@ -63,7 +59,7 @@ void CClockDriftMgr::Clear()
 	m_nClientTick = 0;
 	m_nServerTick = 0;
 	m_iCurClockOffset = 0;
-	memset( m_ClockOffsets, 0, sizeof( m_ClockOffsets ) );
+	std::memset( m_ClockOffsets, 0, sizeof( m_ClockOffsets ) );
 }
 
 
@@ -101,7 +97,7 @@ void CClockDriftMgr::SetServerTick( int nTick )
 			{
 				GetBaseLocalClient().oldtickcount = GetBaseLocalClient().GetClientTickCount();
 			}
-			memset( m_ClockOffsets, 0, sizeof( m_ClockOffsets ) );
+			std::memset( m_ClockOffsets, 0, sizeof( m_ClockOffsets ) );
 		}
 	}
 	else
@@ -211,7 +207,7 @@ void CClockDriftMgr::AdjustAverageDifferenceBy( float flAmountInSeconds )
 	for ( int i=0; i < NUM_CLOCKDRIFT_SAMPLES; i++ )
 		m_ClockOffsets[i] *= factor;
 	
-	Assert( fabs( GetCurrentClockDifference() - (c + flAmountInTicks) ) < 0.001f );
+	contract_assert( fabs( GetCurrentClockDifference() - (c + flAmountInTicks) ) < 0.001f );
 }
 
 extern float NET_GetFakeLag();

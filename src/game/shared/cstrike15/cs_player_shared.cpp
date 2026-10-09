@@ -1,10 +1,65 @@
- //========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "npcevent.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
@@ -18,12 +73,10 @@
 #include "decals.h"
 #include "cs_gamerules.h"
 #include "weapon_c4.h"
-#include "in_buttons.h"
 #include "datacache/imdlcache.h"
 #include "GameStats.h"
 #include "cs_item_inventory.h"
 
-#include "commonmacros.h"
 
 #ifdef CLIENT_DLL
 	#include "c_cs_player.h"
@@ -42,7 +95,6 @@
 	#include "cs_player.h"
 	#include "soundent.h"
 	#include "bot/cs_bot.h"
-	#include "keyvalues.h"
 	#include "triggers.h"
 	#include "cs_gamestats.h"
 	#include "recipientfilter.h"
@@ -66,7 +118,6 @@
 #include "obstacle_pushaway.h"
 #include "gametypes.h"
 
-#include "playerdecals_signature.h"
 
 ConVar sv_penetration_type( "sv_penetration_type", "1", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY, "What type of penertration to use. 0 = old CS, 1 = new penetration" );
 ConVar sv_showimpacts_penetration( "sv_showimpacts_penetration", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "Shows extra data when bullets penetrate. (use sv_showimpacts_time to increase time shown)" );
@@ -100,9 +151,9 @@ extern ConVar mp_buy_during_immunity;
 extern ConVar mp_free_armor;
 
 #define	CS_MASK_SHOOT (MASK_SOLID|CONTENTS_DEBRIS)
-#define MAX_PENETRATION_DISTANCE 90 // this is 7.5 feet
+constexpr auto MAX_PENETRATION_DISTANCE = 90; // this is 7.5 feet
 
-#define CS_MAX_WALLBANG_TRAIL_LENGTH 800
+constexpr auto CS_MAX_WALLBANG_TRAIL_LENGTH = 800;
 
 void DispatchEffect( const char *pName, const CEffectData &data );
 
@@ -140,7 +191,7 @@ extern void StartParticleEffect( const CEffectData &data, int nSplitScreenPlayer
 		s_LastTime = 0;
 		s_bulletCount = 0;
 		s_firstImpact = Vector(0,0,0);
-		Q_memset( s_bullet_stats, 0, sizeof(s_bullet_stats) );
+		V_memset( s_bullet_stats, 0, sizeof(s_bullet_stats) );
 	}
 
 	void PrintBulletStats()
@@ -195,12 +246,16 @@ extern void StartParticleEffect( const CEffectData &data, int nSplitScreenPlayer
 		s_bullet_stats[i].count++;
 	}
 
-	CON_COMMAND( stats_bullets_reset, "Reset bullet stats")
+	static void stats_bullets_reset( const CCommand &args );
+static ConCommand stats_bullets_reset_command( "stats_bullets_reset", stats_bullets_reset, "Reset bullet stats" );
+static void stats_bullets_reset( const CCommand &args )
 	{
 		ResetBulletStats();
 	}
 
-	CON_COMMAND( stats_bullets_print, "Print bullet stats")
+	static void stats_bullets_print( const CCommand &args );
+static ConCommand stats_bullets_print_command( "stats_bullets_print", stats_bullets_print, "Print bullet stats" );
+static void stats_bullets_print( const CCommand &args )
 	{
 		PrintBulletStats();
 	}
@@ -572,7 +627,7 @@ void CCSPlayer::GetBulletTypeParameters(
 	else
 	{
 		// What kind of ammo is this?
-		Assert( false );
+		contract_assert( false );
 		fPenetrationPower = 0;
 		flPenetrationDistance = 0.0;
 	}
@@ -972,7 +1027,7 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 		if ( display == true )
 		{
 			char strBuyTime[16];
-			Q_snprintf( strBuyTime, sizeof( strBuyTime ), "%d", buyTime );
+			V_snprintf( strBuyTime, sizeof( strBuyTime ), "%d", buyTime );
 			ClientPrint( this, HUD_PRINTCENTER, "#Cant_buy", strBuyTime );
 		}
 
@@ -987,7 +1042,7 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 
 #ifdef GAME_DLL 
 
-	AssertMsg( !m_bIsVIP, " There's no VIP in CSGO. Yet. If implementing, fix this GAME_DLL only code."  );
+	contract_assert( ( !m_bIsVIP ) && " There's no VIP in CSGO. Yet. If implementing, fix this GAME_DLL only code." );
 
 	if ( m_bIsVIP )
 	{
@@ -1058,7 +1113,7 @@ CBaseEntity *CCSPlayer::GetUsableHighPriorityEntity( void )
 		for( int i = 0; i != iEntsNearPlayer; ++i )
 		{
 			CBaseEntity *pEntity = pEntsNearPlayer[i];
-			Assert( pEntity != nullptr );
+			contract_assert( pEntity != nullptr );
 			CConfigurationForHighPriorityUseEntity_t cfgUseSettings;
 			if ( !GetUseConfigurationForHighPriorityUseEntity( pEntity, cfgUseSettings ) )
 				continue; // not a high-priority entity
@@ -1104,7 +1159,7 @@ bool CConfigurationForHighPriorityUseEntity_t::UseByPlayerNow( CCSPlayer *pPlaye
 		return false;
 
 	// entity is close enough, now make sure the player is facing the bomb.
-	float flDistTo = FLT_MAX;
+	float flDistTo = std::numeric_limits<float>::max();
 	switch ( m_eDistanceCheckType )
 	{
 	case k_EDistanceCheckType_2D:
@@ -1114,7 +1169,7 @@ bool CConfigurationForHighPriorityUseEntity_t::UseByPlayerNow( CCSPlayer *pPlaye
 		flDistTo = pPlayer->EyePosition().DistTo( m_pos );
 		break;
 	default:
-		Assert( false );
+		contract_assert( false );
 	}
 	// UTIL_EntitiesInSphere gives strange results where I can find it when my eyes are at an angle, but not when I'm right on top of it
 	// because of that, make sure it's in our radius, but check the 2d los and make sure we are as close or closer than we need to be in 1.6
@@ -1287,7 +1342,7 @@ void CCSPlayer::FireBullet(
 				CStudioHdr *pStudioHdr = playerMissed->GetModelPtr();
 				mstudiohitboxset_t *set = pStudioHdr->pHitboxSet( playerMissed->m_nHitboxSet );
 
-				float flClosestHitboxDistance = FLT_MAX;
+				float flClosestHitboxDistance = std::numeric_limits<float>::max();
 				Vector vecClosestHitboxPos = vecMissPos;
 				int nClosestHitboxIndex = -1;
 
@@ -1679,7 +1734,7 @@ void CCSPlayer::FireBullet(
 
 		//calculate the damage based on the distance the bullet travelled.
 		flCurrentDistance += tr.fraction * (flDistance-flCurrentDistance);
-		fCurrentDamage *= pow (flRangeModifier, (flCurrentDistance / 500));
+		fCurrentDamage *= std::pow (flRangeModifier, (flCurrentDistance / 500));
 
 #ifndef CLIENT_DLL
 		// the value of iPenetration when the round reached its max penetration distance
@@ -1820,17 +1875,17 @@ void CCSPlayer::FireBullet(
 		if ( sv_showimpacts_penetration.GetInt() > 0 )
 		{
 			char text[4];
-			Q_snprintf( text, sizeof( text ), "^" );
+			V_snprintf( text, sizeof( text ), "^" );
 			char text2[32];
-			Q_snprintf( text2, sizeof( text2 ), "%s%d", ( sv_showimpacts_penetration.GetInt() == 2 ) ? "" : "DAMAGE APPLIED:  ", (int)ceil(fCurrentDamage) );
+			V_snprintf( text2, sizeof( text2 ), "%s%d", ( sv_showimpacts_penetration.GetInt() == 2 ) ? "" : "DAMAGE APPLIED:  ", (int)std::ceil(fCurrentDamage) );
 			char text3[32];
 			// convert to meters
 			//(100%% of shots will fall within a 30cm circle.)
 			float flDistMeters = ( flCurrentDistance*0.0254 );
 			if ( flDistMeters >= 1.0 )
-				Q_snprintf( text3, sizeof( text3 ), "%s%0.1fm", ( sv_showimpacts_penetration.GetInt() == 2 ) ? "" : "TOTAL DISTANCE:  ", flDistMeters );
+				V_snprintf( text3, sizeof( text3 ), "%s%0.1fm", ( sv_showimpacts_penetration.GetInt() == 2 ) ? "" : "TOTAL DISTANCE:  ", flDistMeters );
 			else
-				Q_snprintf( text3, sizeof( text3 ), "%s%0.1fcm", ( sv_showimpacts_penetration.GetInt() == 2 ) ? "" : "TOTAL DISTANCE:  ", flDistMeters/0.01 );
+				V_snprintf( text3, sizeof( text3 ), "%s%0.1fcm", ( sv_showimpacts_penetration.GetInt() == 2 ) ? "" : "TOTAL DISTANCE:  ", flDistMeters/0.01 );
 
 			Vector textPos = tr.endpos;
 
@@ -1937,8 +1992,8 @@ void CCSPlayer::FireBullet(
 
 // [dkorus] helper for FireBullet
 //			changes iPenetration to updated value
-//			returns TRUE if we should stop processing more hits after this one
-//			returns FALSE if we can continue processing
+//			returns true if we should stop processing more hits after this one
+//			returns false if we can continue processing
 bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 										 int &iEnterMaterial,
 										 bool &hitGrate,
@@ -2220,7 +2275,7 @@ void CCSPlayer::DisplayPenetrationDebug( Vector vecEnter, Vector vecExit, float 
 				vecStart = vecEnd;
 			}
 
-			flTotalLostDamage = ( int )ceil( flInitialDamage );
+			flTotalLostDamage = ( int )std::ceil( flInitialDamage );
 		}
 
 		Vector textPos = vecEnd;
@@ -2231,25 +2286,25 @@ void CCSPlayer::DisplayPenetrationDebug( Vector vecEnter, Vector vecExit, float 
 			
 			float flDistMeters = ( flDistance*0.0254 );
 			if ( flDistMeters >= 1.0 )
-				Q_snprintf( text, sizeof( text ), "%s%0.1fm", ( sv_showimpacts_penetration.GetInt() == 2 ) ? "" : "THICKNESS:		", flDistMeters );
+				V_snprintf( text, sizeof( text ), "%s%0.1fm", ( sv_showimpacts_penetration.GetInt() == 2 ) ? "" : "THICKNESS:		", flDistMeters );
 			else
-				Q_snprintf( text, sizeof( text ), "%s%0.1fcm", ( sv_showimpacts_penetration.GetInt() == 2 ) ? "" : "THICKNESS:		", flDistMeters / 0.01 );
+				V_snprintf( text, sizeof( text ), "%s%0.1fcm", ( sv_showimpacts_penetration.GetInt() == 2 ) ? "" : "THICKNESS:		", flDistMeters / 0.01 );
 
 		}
 		else
 		{
-			Q_snprintf( text, sizeof( text ), "%s", "STOPPED!" );
+			V_snprintf( text, sizeof( text ), "%s", "STOPPED!" );
 		}
 		
 		NDebugOverlay::EntityTextAtPosition( textPos, -3, text, sv_showimpacts_time.GetFloat(), 220, 128, 128, 255 );
 
 		char text3[64];
-		Q_snprintf( text3, sizeof( text3 ), "%s%0.1f", ( sv_showimpacts_penetration.GetInt() == 2 ) ? "-" : "LOST DAMAGE:		", flTotalLostDamage );
+		V_snprintf( text3, sizeof( text3 ), "%s%0.1f", ( sv_showimpacts_penetration.GetInt() == 2 ) ? "-" : "LOST DAMAGE:		", flTotalLostDamage );
 
 		NDebugOverlay::EntityTextAtPosition( textPos, -2, text3, sv_showimpacts_time.GetFloat(), 90, 22, 0, 160 );
 
 		char textmat1[64];
-		Q_snprintf( textmat1, sizeof( textmat1 ), "%s", physprops->GetPropName( nEnterSurf ) );
+		V_snprintf( textmat1, sizeof( textmat1 ), "%s", physprops->GetPropName( nEnterSurf ) );
 		NDebugOverlay::EntityTextAtPosition( vecStart, -1, textmat1, sv_showimpacts_time.GetFloat(), 0, 255, 0, 128 );
 
 		if ( nExitSurf != -100 )
@@ -2257,7 +2312,7 @@ void CCSPlayer::DisplayPenetrationDebug( Vector vecEnter, Vector vecExit, float 
 			NDebugOverlay::Box( vecStart, Vector( -0.4, -0.4, -0.4 ), Vector( 0.4, 0.4, 0.4 ), 0, 255, 0, 128, sv_showimpacts_time.GetFloat() );		
 
 			char textmat2[64];
-			Q_snprintf( textmat2, sizeof( textmat2 ), "%s", ( nExitSurf == -1 ) ? "" : physprops->GetPropName( nExitSurf ) );
+			V_snprintf( textmat2, sizeof( textmat2 ), "%s", ( nExitSurf == -1 ) ? "" : physprops->GetPropName( nExitSurf ) );
 			NDebugOverlay::Box( vecEnd, Vector( -0.4, -0.4, -0.4 ), Vector( 0.4, 0.4, 0.4 ), 0, 128, 255, 128, sv_showimpacts_time.GetFloat() );
 			NDebugOverlay::EntityTextAtPosition( vecEnd, -1, textmat2, sv_showimpacts_time.GetFloat(), 0, 128, 255, 128 );
 
@@ -2286,8 +2341,8 @@ void CCSPlayer::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCust
 	if ( violence_hblood && !violence_hblood->GetBool() )
 		return;
 
-	VPROF( "CCSPlayer::ImpactTrace" );
-	Assert( pTrace->Ent<CBaseEntity>() );
+	CVProfScope _( "CCSPlayer::ImpactTrace", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	contract_assert( pTrace->Ent<CBaseEntity>() );
 
 	CBaseEntity *pEntity = pTrace->Ent<CBaseEntity>();
 
@@ -2452,8 +2507,8 @@ ConVar weapon_recoil_view_punch_extra( "weapon_recoil_view_punch_extra", "0.055"
 void CCSPlayer::KickBack( float fAngle, float fMagnitude )
 {
 	QAngle angleVelocity(0,0,0);
-	angleVelocity[YAW] = -sinf(DEG2RAD(fAngle)) * fMagnitude;
-	angleVelocity[PITCH] = -cosf(DEG2RAD(fAngle)) * fMagnitude;
+	angleVelocity[YAW] = -std::sinf(DEG2RAD(fAngle)) * fMagnitude;
+	angleVelocity[PITCH] = -std::cosf(DEG2RAD(fAngle)) * fMagnitude;
 	angleVelocity += m_Local.m_aimPunchAngleVel.Get();
 	SetAimPunchAngleVelocity( angleVelocity );
 
@@ -2594,11 +2649,11 @@ void CCSPlayer::OnLand( float fVelocity )
 
 			if (GetTeamNumber() == TEAM_TERRORIST)
 			{
-				Q_snprintf(szStep, sizeof(szStep), "t_%s", pRawSoundName);
+				V_snprintf(szStep, sizeof(szStep), "t_%s", pRawSoundName);
 			}
 			else
 			{
-				Q_snprintf(szStep, sizeof(szStep), "ct_%s", pRawSoundName);
+				V_snprintf(szStep, sizeof(szStep), "ct_%s", pRawSoundName);
 			}
 
 		
@@ -2949,7 +3004,6 @@ CWeaponCSBase* CCSPlayer::CSWeapon_OwnsThisType( CEconItemView *pItem ) const
 //************************************
 int CCSPlayer::GetWeaponPrice( CSWeaponID weaponId, const CEconItemView *pWepView ) const
 {
-	Assert( pWepView || ( weaponId != WEAPON_NONE ) );
 
 	if ( !pWepView && ( weaponId == WEAPON_NONE ) )
 		return -1;
@@ -3053,7 +3107,7 @@ bool CCSPlayer::UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeapo
 #ifdef DEBUG
 			if ( V_stristr( pszSeqName, "default" ) )
 			{
-				AssertMsg( false, "Warning: weapon is attempting to play its default sequence as a dispatched anim.\n" );
+				contract_assert( false && "Warning: weapon is attempting to play its default sequence as a dispatched anim.\n" );
 			}
 #endif
 
@@ -3109,7 +3163,7 @@ float CCSPlayer::GetLayerSequenceCycleRate( CAnimationLayer *pLayer, int iSequen
 
 //--------------------------------------------------------------------------------------------------------------
 
-#define MATERIAL_NAME_LENGTH 16
+constexpr auto MATERIAL_NAME_LENGTH = 16;
 
 #ifdef GAME_DLL
 
@@ -3196,5 +3250,3 @@ surfacedata_t * CCSPlayer::GetFootstepSurface( const Vector &origin, const char 
 }
 
 #endif
-
-

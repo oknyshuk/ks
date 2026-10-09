@@ -1,19 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef TEAMPLAY_GAMERULES_H
-#define TEAMPLAY_GAMERULES_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "gamerules.h"
 #include "multiplay_gamerules.h"
@@ -28,16 +15,14 @@
 
 #endif
 
-
 //
 // teamplay_gamerules.h
 //
 
-
-#define MAX_TEAMNAME_LENGTH	16
+inline constexpr auto MAX_TEAMNAME_LENGTH = 16;
 #define MAX_TEAMS			32
 
-#define TEAMPLAY_TEAMLISTLENGTH		MAX_TEAMS*MAX_TEAMNAME_LENGTH
+inline constexpr auto TEAMPLAY_TEAMLISTLENGTH = MAX_TEAMS*MAX_TEAMNAME_LENGTH;
 
 
 class CTeamplayRules : public CMultiplayRules
@@ -119,5 +104,3 @@ inline CTeamplayRules* TeamplayGameRules()
 {
 	return static_cast<CTeamplayRules*>(g_pGameRules);
 }
-
-#endif // TEAMPLAY_GAMERULES_H

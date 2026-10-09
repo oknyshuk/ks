@@ -1,15 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#if !defined( IINPUT_H )
-#define IINPUT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-class bf_write;
-class bf_read;
+
+import ks.tier1;
+import std;
+#include "inputsystem/ButtonCode.h"
+
 class CUserCmd;
 class C_BaseCombatWeapon;
 struct kbutton_t;
@@ -24,7 +21,7 @@ struct CameraThirdData_t
 	Vector	m_vecHullMax;
 };
 
-abstract_class IInput
+class IInput
 {
 public:
 	// Initialization/shutdown of the subsystem
@@ -111,5 +108,3 @@ public:
 };
 
 extern ::IInput *input;
-
-#endif // IINPUT_H

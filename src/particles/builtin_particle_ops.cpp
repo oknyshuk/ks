@@ -1,34 +1,16 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: particle system code
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include "tier0/platform.h"
+// Purpose: particle system code
+
+import ks.core;
 #include "particles/particles.h"
-#include "filesystem.h"
-#include "tier2/tier2.h"
-#include "tier2/fileutils.h"
 #include "tier2/renderutils.h"
-#include "tier1/strtools.h"
 #include "studio.h"
 #include "bspflags.h"
-#include "tier0/vprof.h"
 
-#if MEASURE_PARTICLE_PERF
-
-#define START_OP float flOpStartTime = Plat_FloatTime(); VPROF_ENTER_SCOPE(pOp->GetDefinition()->GetName())
-
-#define END_OP  if ( 1 ) {																						\
-	float flETime = Plat_FloatTime() - flOpStartTime;									\
-	IParticleOperatorDefinition *pDef = (IParticleOperatorDefinition *) pOp->GetDefinition();	\
-	pDef->RecordExecutionTime( flETime );												\
-} \
-	VPROF_EXIT_SCOPE()
-#else
 #define START_OP
 #define END_OP
-#endif
 
 //-----------------------------------------------------------------------------
 // Standard movement operator
@@ -63,32 +45,10 @@ BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_BasicMovement )
 END_PARTICLE_OPERATOR_UNPACK( C_OP_BasicMovement )
 
 
-#define MAXIMUM_NUMBER_OF_CONSTRAINTS 100
+constexpr auto MAXIMUM_NUMBER_OF_CONSTRAINTS = 100;
 //#define CHECKALL 1
 
-#ifdef NDEBUG
 #define CHECKSYSTEM( p ) 0
-#else
-#ifdef CHECKALL
-static void CHECKSYSTEM( CParticleCollection *pParticles )
-{
-//	Assert( pParticles->m_nActiveParticles <= pParticles->m_pDef->m_nMaxParticles );
-	for ( int i = 0; i < pParticles->m_nActiveParticles; ++i )
-	{
-		const float *xyz = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_XYZ, i );
-		const float *xyz_prev = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_PREV_XYZ, i );
-		Assert( IsFinite( xyz[0] ) );
-		Assert( IsFinite( xyz[4] ) );
-		Assert( IsFinite( xyz[8] ) );
-		Assert( IsFinite( xyz_prev[0] ) );
-		Assert( IsFinite( xyz_prev[4] ) );
-		Assert( IsFinite( xyz_prev[8] ) );
-	}
-}
-#else
-#define CHECKSYSTEM( p ) 0
-#endif
-#endif
 
 void C_OP_BasicMovement::Operate( CParticleCollection *pParticles, float flStrength, void *pContext ) const
 {
@@ -98,7 +58,7 @@ void C_OP_BasicMovement::Operate( CParticleCollection *pParticles, float flStren
 	// fltx4 adj_dt = ReplicateX4( (1.0-m_fDrag) * ( pParticles->m_flDt / pParticles->m_flPreviousDt ) );
 	fltx4 adj_dt = ReplicateX4( ( pParticles->m_flDt / pParticles->m_flPreviousDt ) * ExponentialDecay( ( 1.0f - fpmax(0.0, m_fDrag)), (1.0f / 30.0f), pParticles->m_flDt ) );
 
-	size_t nForceStride=0;
+	std::size_t nForceStride=0;
 	Vector acc = m_Gravity;
 	fltx4 accFactorX = ReplicateX4( acc.x );
 	fltx4 accFactorY = ReplicateX4( acc.y );
@@ -588,8 +548,8 @@ class C_OP_FadeIn : public CParticleOperatorInstance
 		return PARTICLE_ATTRIBUTE_ALPHA_MASK;
 	}
 
-	template<bool bRandom> FORCEINLINE void OperateInternal( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
-	template<bool bRandom, bool bProportional> FORCEINLINE void OperateInternal( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
+	template<bool bRandom> [[gnu::always_inline]] inline void OperateInternal( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
+	template<bool bRandom, bool bProportional> [[gnu::always_inline]] inline void OperateInternal( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
 	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
 
 	float	m_flFadeInTimeMin;
@@ -610,7 +570,7 @@ END_PARTICLE_OPERATOR_UNPACK( C_OP_FadeIn )
 
 
 
-template<bool bRandom, bool bProportional> FORCEINLINE void C_OP_FadeIn::OperateInternal( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
+template<bool bRandom, bool bProportional> [[gnu::always_inline]] inline void C_OP_FadeIn::OperateInternal( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
 {
 	CM128AttributeIterator pCreationTime( PARTICLE_ATTRIBUTE_CREATION_TIME, pParticles );
 	CM128InitialAttributeIterator pInitialAlpha( PARTICLE_ATTRIBUTE_ALPHA, pParticles );
@@ -684,7 +644,7 @@ template<bool bRandom, bool bProportional> FORCEINLINE void C_OP_FadeIn::Operate
 	} while( --nCtr );
 }
 
-template<bool bRandom> FORCEINLINE void C_OP_FadeIn::OperateInternal( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
+template<bool bRandom> [[gnu::always_inline]] inline void C_OP_FadeIn::OperateInternal( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
 {
 	if ( m_bProportional )
 	{
@@ -915,7 +875,7 @@ void C_OP_FadeOut::InitParams( CParticleSystemDefinition *pDef )
 	m_bRandomize = ( m_flFadeOutTimeMin != m_flFadeOutTimeMax );
 	if ( m_bRandomize && ( m_flFadeOutTimeMin == 0.0f ) )
 	{
-		m_flFadeOutTimeMin = m_flFadeOutTimeMax = FLT_EPSILON;
+		m_flFadeOutTimeMin = m_flFadeOutTimeMax = std::numeric_limits<float>::epsilon();
 	}
 	// determine function ptr
 	static OPERATE_FUNCTION s_pDispatchTable[8] = {
@@ -1949,7 +1909,7 @@ void C_OP_LerpScalar::Operate( CParticleCollection *pParticles, float flStrength
 	{
 		const float *pCt = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_CREATION_TIME, i );
 		const float *pLifespan = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_LIFE_DURATION, i );
-		float flAge = ( pParticles->m_flCurTime - *pCt ) / ( *pLifespan + FLT_EPSILON );
+		float flAge = ( pParticles->m_flCurTime - *pCt ) / ( *pLifespan + std::numeric_limits<float>::epsilon() );
 		if ( flAge < m_flStartTime || flAge > m_flEndTime )
 			continue;
 		const float *pInput = pParticles->GetInitialFloatAttributePtr( m_nFieldOutput, i );
@@ -1997,10 +1957,10 @@ class C_OP_LerpEndCapScalar : public CParticleOperatorInstance
 	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		LerpEndcapContext_t *pCtx=reinterpret_cast<LerpEndcapContext_t *>( pContext );
-		pCtx->m_flEndCapStartTime = -FLT_MAX;
+		pCtx->m_flEndCapStartTime = -std::numeric_limits<float>::max();
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( LerpEndcapContext_t );
 	}
@@ -2039,7 +1999,7 @@ void C_OP_LerpEndCapScalar::Operate( CParticleCollection *pParticles, float flSt
 		}
 		for ( int i = 0; i < pParticles->m_nActiveParticles; ++i )
 		{
-			float flAge = ( pParticles->m_flCurTime - pCtx->m_flEndCapStartTime ) / ( m_flLerpTime + FLT_EPSILON );
+			float flAge = ( pParticles->m_flCurTime - pCtx->m_flEndCapStartTime ) / ( m_flLerpTime + std::numeric_limits<float>::epsilon() );
 			if ( flAge > 1.0f )
 				continue;
 			const float *pInput = pParticles->GetInitialFloatAttributePtr( m_nFieldOutput, i );
@@ -2082,10 +2042,10 @@ class C_OP_LerpEndCapVector : public CParticleOperatorInstance
 	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		LerpEndcapContext_t *pCtx=reinterpret_cast<LerpEndcapContext_t *>( pContext );
-		pCtx->m_flEndCapStartTime = -FLT_MAX;
+		pCtx->m_flEndCapStartTime = -std::numeric_limits<float>::max();
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( LerpEndcapContext_t );
 	}
@@ -2124,7 +2084,7 @@ void C_OP_LerpEndCapVector::Operate( CParticleCollection *pParticles, float flSt
 		}
 		for ( int i = 0; i < pParticles->m_nActiveParticles; ++i )
 		{
-			float flAge = ( pParticles->m_flCurTime - pCtx->m_flEndCapStartTime ) / ( m_flLerpTime + FLT_EPSILON );
+			float flAge = ( pParticles->m_flCurTime - pCtx->m_flEndCapStartTime ) / ( m_flLerpTime + std::numeric_limits<float>::epsilon() );
 			if ( flAge > 1.0f )
 				continue;
 			const float *pInput = pParticles->GetInitialFloatAttributePtr( m_nFieldOutput, i );
@@ -2189,7 +2149,7 @@ void C_OP_LerpVector::Operate( CParticleCollection *pParticles, float flStrength
 	{
 		const float *pCt = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_CREATION_TIME, i );
 		const float *pLifespan = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_LIFE_DURATION, i );
-		float flAge = ( pParticles->m_flCurTime - *pCt ) / ( *pLifespan + FLT_EPSILON );
+		float flAge = ( pParticles->m_flCurTime - *pCt ) / ( *pLifespan + std::numeric_limits<float>::epsilon() );
 		if ( flAge < m_flStartTime || flAge > m_flEndTime )
 			continue;
 		const float *pInput = pParticles->GetInitialFloatAttributePtr( m_nFieldOutput, i );
@@ -2447,7 +2407,7 @@ void C_OP_RemapModelVolumetoCP::Operate( CParticleCollection *pParticles, float 
 		g_pParticleSystemMgr->Query()->GetControllingObjectOBBox( pParticles, m_nInControlPointNumber, vecMin, vecMax );
 		Vector vecVolume = vecMax - vecMin;
 		float flVolume = vecVolume.x * vecVolume.y * vecVolume.z;
-		flVolume = pow( flVolume, 0.33333333f );
+		flVolume = std::pow( flVolume, 0.33333333f );
 		float flOutput = RemapValClamped( flVolume, m_flInputMin, m_flInputMax, m_flOutputMin, m_flOutputMax  );
 		pParticles->SetControlPoint( m_nOutControlPointNumber, Vector( flOutput, 0, 0 ));
 	}
@@ -2512,7 +2472,7 @@ void C_OP_RemapBoundingVolumetoCP::Operate( CParticleCollection *pParticles, flo
 		pParticles->GetBounds( &vecMin, &vecMax );
 		Vector vecVolume = vecMax - vecMin;
 		float flVolume = vecVolume.x * vecVolume.y * vecVolume.z;
-		flVolume = pow( flVolume, 0.33333333f );
+		flVolume = std::pow( flVolume, 0.33333333f );
 		float flOutput = RemapValClamped( flVolume, m_flInputMin, m_flInputMax, m_flOutputMin, m_flOutputMax  );
 		pParticles->SetControlPoint( m_nOutControlPointNumber, Vector( flOutput, 0, 0 ));
 	}
@@ -3158,8 +3118,8 @@ void C_OP_Noise::Operate( CParticleCollection *pParticles, float flStrength, voi
 
 	if ( ATTRIBUTES_WHICH_ARE_ANGLES & (1 << m_nFieldOutput ) )
 	{
-		fMin *= ( M_PI / 180.0f );
-		fMax *= ( M_PI / 180.0f );
+		fMin *= ( std::numbers::pi / 180.0f );
+		fMax *= ( std::numbers::pi / 180.0f );
 	}
 	// calculate coefficients. noise retuns -1..1
 	fltx4 ValueScale=ReplicateX4( 0.5*(fMax-fMin ) );
@@ -3487,7 +3447,7 @@ END_PARTICLE_OPERATOR_UNPACK( C_OP_AlphaDecay )
 
 void C_OP_AlphaDecay::Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
 {
-	fltx4 fl4MinAlpha = ReplicateX4( m_flMinAlpha + FLT_EPSILON );
+	fltx4 fl4MinAlpha = ReplicateX4( m_flMinAlpha + std::numeric_limits<float>::epsilon() );
 
 	CM128AttributeIterator pAlpha( PARTICLE_ATTRIBUTE_ALPHA, pParticles );
 	CM128AttributeIterator pAlpha2( PARTICLE_ATTRIBUTE_ALPHA2, pParticles );
@@ -3617,7 +3577,7 @@ class C_OP_DecayMaintainCount : public CParticleOperatorInstance
 		m_nScaleControlPointField = clamp( m_nScaleControlPointField, 0, 2 );
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( C_OP_MaintainCountContext_t );
 	}
@@ -3785,8 +3745,8 @@ protected:
 
 	virtual void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_fSpinRateRadians = (float) m_nSpinRateDegrees * ( M_PI / 180.0f );
-		m_fSpinRateMinRadians = (float) m_nSpinRateMinDegrees * ( M_PI / 180.0f );
+		m_fSpinRateRadians = (float) m_nSpinRateDegrees * ( std::numbers::pi / 180.0f );
+		m_fSpinRateMinRadians = (float) m_nSpinRateMinDegrees * ( std::numbers::pi / 180.0f );
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
@@ -3807,21 +3767,21 @@ void CGeneralSpin::Operate( CParticleCollection *pParticles, float flStrength,  
 
 	bool bIsInterpolating = pParticles->IsUsingInterpolatedRendering();
 	float dt = pParticles->m_flDt;
-	float drot = dt * fabs( fCurSpinRate * 2.0f * M_PI );
+	float drot = dt * fabs( fCurSpinRate * 2.0f * std::numbers::pi );
 	if ( m_fSpinRateStopTime == 0.0f )
 	{
-		drot = fmod( drot, (float)(2.0f * M_PI) );
+		drot = std::fmod( drot, (float)(2.0f * std::numbers::pi) );
 	}
 	if ( fCurSpinRate < 0.0f )
 	{
 		drot = -drot;
 	}
 	fltx4 Rot_Add = ReplicateX4( drot );
-	fltx4 Pi_2 = ReplicateX4( 2.0*M_PI );
-	fltx4 nPi_2 = ReplicateX4( -2.0*M_PI );
+	fltx4 Pi_2 = ReplicateX4( 2.0*std::numbers::pi );
+	fltx4 nPi_2 = ReplicateX4( -2.0*std::numbers::pi );
 
 	// FIXME: This is wrong
-	fltx4 minSpeedRadians = ReplicateX4( dt * fabs( m_fSpinRateMinRadians * 2.0f * M_PI ) );
+	fltx4 minSpeedRadians = ReplicateX4( dt * fabs( m_fSpinRateMinRadians * 2.0f * std::numbers::pi ) );
 
 	fltx4 now = pParticles->m_fl4CurTime;
 	fltx4 SpinRateStopTime = ReplicateX4( m_fSpinRateStopTime ); 
@@ -4303,7 +4263,7 @@ class C_OP_PositionLock : public CParticleOperatorInstance
 		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( C_OP_PositionLockContext_t );
 	}
@@ -4333,81 +4293,6 @@ BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_PositionLock )
 	DMXELEMENT_UNPACK_FIELD( "lock rotation", "0", bool, m_bLockRot )
 END_PARTICLE_OPERATOR_UNPACK( C_OP_PositionLock )
 
-#ifdef OLD_NON_SSE_POSLOCK_FOR_TESTING
-void C_OP_PositionLock::Operate( CParticleCollection *pParticles, float flStrength, void *pContext ) const
-{
-	Vector vecControlPoint = pParticles->GetControlPointAtCurrentTime( m_nControlPointNumber );
-
-	// At initialization, set prevposition to the control point to prevent random placements/velocities
-
-	C_OP_PositionLockContext_t *pCtx=reinterpret_cast<C_OP_PositionLockContext_t *>( pContext );
-
-	if ( pCtx->m_vPrevPosition == Vector (0, 0, 0) )
-
-	{
-		pCtx->m_vPrevPosition = vecControlPoint;
-	}
-
-	// Control point movement delta
-
-	int nRandomOffset = pParticles->OperatorRandomSampleOffset();
-	// FIXME: SSE-ize
-	for ( int i = 0; i < pParticles->m_nActiveParticles; ++i )
-	{
-		Vector vecPrevCPPos = pCtx->m_vPrevPosition;
-
-		const float *pCreationTime;
-		const float *pLifeDuration;	
-		pCreationTime = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_CREATION_TIME, i );
-		pLifeDuration = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_LIFE_DURATION, i );
-		float flLifeTime = *pLifeDuration != 0.0f ? clamp( ( pParticles->m_flCurTime - *pCreationTime ) / ( *pLifeDuration ), 0.0f, 1.0f ) : 0.0f;
-		if ( *pCreationTime >= ( pParticles->m_flCurTime - pParticles->m_flDt ) )
-		{
-			pParticles->GetControlPointAtTime( m_nControlPointNumber, *pCreationTime, &vecPrevCPPos );
-		}
-
-		Vector vDelta = vecControlPoint - vecPrevCPPos;
-		vDelta *= flStrength;
-
-		// clamp activity to start/end time
-		int nParticleId = *pParticles->GetIntAttributePtr( PARTICLE_ATTRIBUTE_PARTICLE_ID, i );
-		float flStartTime = pParticles->RandomFloatExp( nParticleId + nRandomOffset + 9, m_flStartTime_min, m_flStartTime_max, m_flStartTime_exp );
-		float flEndTime = pParticles->RandomFloatExp( nParticleId + nRandomOffset + 10, m_flEndTime_min, m_flEndTime_max, m_flEndTime_exp );
-
-		// bias attachedness by fadeout
-		float flLockScale = SimpleSplineRemapValClamped( flLifeTime, flStartTime, flEndTime, 1.0f, 0.0f );
-
-		float *xyz = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_XYZ, i );
-		float *xyz_prev = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_PREV_XYZ, i );
-
-		Vector vecParticlePosition, vecParticlePosition_prev ;
-		SetVectorFromAttribute( vecParticlePosition, xyz ); 
-		SetVectorFromAttribute( vecParticlePosition_prev, xyz_prev ); 
-		float flDampenAmount = 1;
-		if ( m_flRange != 0 )
-		{
-			Vector ofs;
-			ofs = (vecParticlePosition + ( vDelta * flLockScale ) ) - vecControlPoint;
-			float flDistance = ofs.Length();
-			flDampenAmount = SimpleSplineRemapValClamped( flDistance, 0, m_flRange, 1.0f, 0.0f );
-			flDampenAmount = Bias( flDampenAmount, .2 );
-		}
-		Vector vParticleDelta = vDelta * flLockScale * flDampenAmount;
-
-
-		vecParticlePosition += vParticleDelta;
-		vecParticlePosition_prev += vParticleDelta;
-		SetVectorAttribute( xyz, vecParticlePosition );
-		SetVectorAttribute( xyz_prev, vecParticlePosition_prev );
-	}
-
-	// Store off the control point position for the next delta computation
-	pCtx->m_vPrevPosition = vecControlPoint;
-
-
-};
-
-#else
 void C_OP_PositionLock::Operate( CParticleCollection *pParticles, float flStrength, void *pContext ) const
 {
 	Vector vecControlPoint = pParticles->GetControlPointAtCurrentTime( m_nControlPointNumber );
@@ -4586,7 +4471,6 @@ void C_OP_PositionLock::Operate( CParticleCollection *pParticles, float flStreng
 	pCtx->m_matPrevTransform = matCurrentTransform;
 	ReleaseSIMDRandContext( nContext );
 };
-#endif
 
 
 
@@ -5465,7 +5349,7 @@ void C_OP_DampenToCP::Operate( CParticleCollection *pParticles, float flStrength
 		else
 		{
 			flDampenAmount = flDistance  / m_flRange;
-			flDampenAmount = pow( flDampenAmount, m_flScale);
+			flDampenAmount = std::pow( flDampenAmount, m_flScale);
 		}
 		
 		vParticleDelta = vecParticlePosition - vecParticlePosition_prev;
@@ -6532,7 +6416,7 @@ void C_OP_CPOffsetToPercentageBetweenCPs::Operate( CParticleCollection *pParticl
 	if ( m_bRadialCheck )
 	{
 		Vector vecCPDelta = vecControlPoint1 - vecControlPointInput;
-		float flDistance = vecCPDelta.Length() + FLT_EPSILON;
+		float flDistance = vecCPDelta.Length() + std::numeric_limits<float>::epsilon();
 		flPercentage = 1 / ( flTotalDistance / flDistance );
 	}
 	else
@@ -6904,7 +6788,7 @@ class C_OP_VelocityMatchingForce : public CParticleOperatorInstance
 		pCtx->m_flAvgSpeed = 0;
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( VelocityMatchingForceContext_t );
 	}
@@ -7151,7 +7035,7 @@ class C_OP_MovementPlaceOnGround : public CParticleOperatorInstance
 		pCtx->m_flLerpTime = pParticles->m_flCurTime;
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( PlaceOnGroundContext_t );
 	}
@@ -7342,7 +7226,7 @@ class C_OP_InheritFromParentParticles : public CParticleInitializerOperatorInsta
 		pCtx->m_nCurrentParentParticle = 0;
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( ParentParticlesContext_t );
 	}
@@ -7460,7 +7344,7 @@ END_PARTICLE_OPERATOR_UNPACK( C_OP_OrientTo2dDirection )
 void C_OP_OrientTo2dDirection::Operate( CParticleCollection *pParticles, float flStrength, void *pContext ) const
 {
 
-	float flRotOffset = m_flRotOffset * ( M_PI / 180.0f );
+	float flRotOffset = m_flRotOffset * ( std::numbers::pi / 180.0f );
 	// FIXME: SSE-ize
 	for ( int i = 0; i < pParticles->m_nActiveParticles; ++i )
 	{
@@ -7484,7 +7368,7 @@ void C_OP_OrientTo2dDirection::Operate( CParticleCollection *pParticles, float f
 
 		float flCurRot = *roll;
 
-		float flVelRot = atan2(vecVelocityCur.y, vecVelocityCur.x ) + M_PI;
+		float flVelRot = std::atan2(vecVelocityCur.y, vecVelocityCur.x ) + std::numbers::pi;
 
 		flVelRot += flRotOffset;
 
@@ -7546,7 +7430,7 @@ class C_OP_RestartAfterDuration : public CParticleOperatorInstance
 		pCtx->m_flLastRestart = 0;
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( RestartAfterDurationContext_t );
 	}
@@ -7703,7 +7587,7 @@ END_PARTICLE_OPERATOR_UNPACK( C_OP_Orient2DRelToCP )
 void C_OP_Orient2DRelToCP::Operate( CParticleCollection *pParticles, float flStrength, void *pContext ) const
 {
 
-	float flRotOffset = m_flRotOffset * ( M_PI / 180.0f );
+	float flRotOffset = m_flRotOffset * ( std::numbers::pi / 180.0f );
 	// FIXME: SSE-ize
 	for ( int i = 0; i < pParticles->m_nActiveParticles; ++i )
 	{
@@ -7725,7 +7609,7 @@ void C_OP_Orient2DRelToCP::Operate( CParticleCollection *pParticles, float flStr
 
 		float flCurRot = *roll;
 
-		float flVelRot = atan2(vecVelocityCur.y, vecVelocityCur.x ) + M_PI;
+		float flVelRot = std::atan2(vecVelocityCur.y, vecVelocityCur.x ) + std::numbers::pi;
 
 		flVelRot += flRotOffset;
 		
@@ -8130,7 +8014,7 @@ void C_OP_LagCompensation::Operate( CParticleCollection *pParticles, float flStr
 	{
 		Vector vecDesiredVelocity = pParticles->GetControlPointAtCurrentTime( m_nDesiredVelocityCP );
 		Vector vecLatency = pParticles->GetControlPointAtCurrentTime( m_nLatencyCP );
-		float flLatency = vecLatency[m_nLatencyCPField] + FLT_EPSILON;
+		float flLatency = vecLatency[m_nLatencyCPField] + std::numeric_limits<float>::epsilon();
 		float flDesiredSpeed;
 		if ( m_nDesiredVelocityCPField > -1 )
 			flDesiredSpeed = vecDesiredVelocity[m_nDesiredVelocityCPField];
@@ -8233,7 +8117,7 @@ class C_OP_MaintainSequentialPath : public CParticleOperatorInstance
 		m_PathParams.ClampControlPointIndices();
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( SequentialPositionContext_t );
 	}
@@ -8399,7 +8283,7 @@ class C_OP_LockToSavedSequentialPath : public CParticleOperatorInstance
 		m_nPathCount = std::max( 1, m_bCPPairs ? m_PathParams.m_nEndControlPointNumber - m_PathParams.m_nStartControlPointNumber : 1 );
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( LockPathPositionContext_t );
 	}
@@ -8828,7 +8712,7 @@ class C_OP_NormalLock : public CParticleOperatorInstance
 		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( C_OP_NormalLockContext_t );
 	}
@@ -8933,7 +8817,7 @@ class C_OP_SetControlPointToImpactPoint : public CParticleOperatorInstance
 		m_nCPOut = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nCPOut ) );
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( C_OP_SetCPToImpactPointContext_t );
 	}
@@ -9617,4 +9501,3 @@ void AddBuiltInParticleOperators( void )
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_LagCompensation );	
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_OPERATOR, C_OP_MovementRotateParticleAroundAxis );		
 }
-

@@ -1,24 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Revision: $
-// $NoKeywords: $
-//
-// The BSP tree leaf data system
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
+// Purpose: The BSP tree leaf data system
 
-#if !defined( BSPTREEDATA )
-#define BSPTREEDATA
+import ks.math;
+
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
 
-class Vector;
 struct Ray_t;
 
 
@@ -45,7 +37,7 @@ enum
 //
 //-----------------------------------------------------------------------------
 
-abstract_class ISpatialLeafEnumerator
+class ISpatialLeafEnumerator
 {
 public:
 	// call back with a leaf and a context
@@ -58,7 +50,7 @@ public:
 	virtual bool EnumerateLeaf( int leaf, intp context ) = 0;
 };
 
-abstract_class ISpatialQuery
+class ISpatialQuery
 {
 public:
 	// Returns the number of leaves
@@ -89,14 +81,14 @@ public:
 // a spatial partition of some sort to hold onto.
 //-----------------------------------------------------------------------------
 
-abstract_class IBSPTreeDataEnumerator
+class IBSPTreeDataEnumerator
 {
 public:
 	// call back with a userId and a context
-	virtual bool FASTCALL EnumerateElement( int userId, intp context ) = 0;
+	virtual bool EnumerateElement( int userId, intp context ) = 0;
 };
 
-abstract_class IBSPTreeData
+class IBSPTreeData
 {
 public:
 	// Add a virtual destructor so that the derived class destructors will
@@ -135,8 +127,3 @@ public:
 
 IBSPTreeData* CreateBSPTreeData();
 void DestroyBSPTreeData( IBSPTreeData* pTreeData );
-
-
-#endif	// BSPTREEDATA
-
-

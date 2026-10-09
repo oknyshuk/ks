@@ -1,18 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BASEENTITY_H
-#define BASEENTITY_H
-
+import ks.math;
 #include "reflect_annotations.h"
 
-#define TEAMNUM_NUM_BITS	6
+inline constexpr auto TEAMNUM_NUM_BITS = 6;
 
-#include <ctype.h>
+import std;
 #include "entitylist.h"
 #include "entityoutput.h"
 #include "networkvar.h"
@@ -21,9 +16,23 @@
 #include "shareddefs.h"
 #include "vscript/ivscript.h"
 #include "vscript_server.h"
-#include "branchingsingleton.h"
 #include "bittools.h"
 #include "sendprop_priorities.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "sharedvar.h"
 // CPU_LEVEL_BIT_COUNT / GPU_LEVEL_BIT_COUNT, named by the Net annotations on the four
 // m_n{Min,Max}{CPU,GPU}Level members.
 #include "videocfg/videocfg.h"
@@ -35,13 +44,8 @@
 
 // Named by the Net annotations on m_vecOrigin and m_angRotation, so they have to be constant
 // expressions here rather than const ints in baseentity.cpp beside the table.
-#if PREDICTION_ERROR_CHECK_LEVEL > 1 
-constexpr int SENDPROP_ANGROTATION_DEFAULT_BITS = -1;
-constexpr int SENDPROP_VECORIGIN_FLAGS = SPROP_NOSCALE|SPROP_CHANGES_OFTEN;
-#else
 constexpr int SENDPROP_ANGROTATION_DEFAULT_BITS = 13;
 constexpr int SENDPROP_VECORIGIN_FLAGS = SPROP_CELL_COORD|SPROP_CHANGES_OFTEN;
-#endif
 
 // DT_BaseEntity names DT_AnimTimeMustBeFirst as a sub-table prop; the global is defined by
 // IMPLEMENT_REFLECT_TABLE_IN in baseentity.cpp.
@@ -82,9 +86,7 @@ class CRecipientFilter;
 
 // Matching the high level concept is significantly better than other criteria
 // FIXME:  Could do this in the script file by making it required and bumping up weighting there instead...
-#define CONCEPT_WEIGHT 5.0f
-
-typedef CHandle<CBaseEntity> EHANDLE;
+inline constexpr auto CONCEPT_WEIGHT = 5.0f;
 
 #define MANUALMODE_GETSET_PROP(type, accessorName, varName) \
 	private:\
@@ -110,7 +112,6 @@ class IPhysicsObject;
 class IPhysicsShadowController;
 class CBaseCombatCharacter;
 class CTeam;
-class Vector;
 struct gamevcollisionevent_t;
 class CBaseAnimating;
 class CBaseAnimatingOverlay;
@@ -256,7 +257,7 @@ T *_CreateEntity( T *newClass, const char *className )
 	if ( !newEnt )
 	{
 		Warning( "classname %s used to create wrong class type\n", className );
-		Assert(0);
+		contract_assert( 0 );
 	}
 
 	return newEnt;
@@ -345,8 +346,8 @@ public:
 	DECLARE_ENT_SCRIPTDESC();
 	
 	// memory handling
-    void *operator new( size_t stAllocateBlock );
-    void *operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
+    void *operator new( std::size_t stAllocateBlock );
+    void *operator new( std::size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
 	void operator delete( void *pMem );
 	void operator delete( void *pMem, int nBlockUse, const char *pFileName, int nLine ) { operator delete(pMem); }
 
@@ -389,9 +390,9 @@ public:
 	bool					IsCurrentlyTouching( void ) const;
 	const Vector&			GetAbsOrigin( void ) const;
 	const QAngle&			GetAbsAngles( void ) const;  // see also GetVectors()
-	inline Vector			Forward() const RESTRICT; ///< get my forward (+x) vector
-	inline Vector			Left() const RESTRICT;    ///< get my left    (+y) vector
-	inline Vector			Up() const RESTRICT;      ///< get my up      (+z) vector
+	inline Vector			Forward() const __restrict__; ///< get my forward (+x) vector
+	inline Vector			Left() const __restrict__;    ///< get my left    (+y) vector
+	inline Vector			Up() const __restrict__;      ///< get my up      (+z) vector
 
 	SolidType_t				GetSolid() const;
 	int			 			GetSolidFlags( void ) const;
@@ -406,7 +407,7 @@ public:
 	void					RecalcHasPlayerChildBit();
 	bool					DoesHavePlayerChild();
 
-	void					SetNavIgnore( float duration = FLT_MAX );
+	void					SetNavIgnore( float duration = std::numeric_limits<float>::max() );
 	void					ClearNavIgnore();
 	bool					IsNavIgnored() const;
 
@@ -783,11 +784,6 @@ public:
 	float				GetSimulationTime() const;
 	void				SetSimulationTime( float st );
 
-#if defined(ENABLE_CREATE_TIME)
-	float				GetCreateTime()										{ return m_flCreateTime; }
-	void				SetCreateTime( float flCreateTime )					{ m_flCreateTime = flCreateTime; }
-#endif
-
 	void				SetRenderMode( RenderMode_t nRenderMode );
 	RenderMode_t		GetRenderMode() const;
 	void				SetRenderFX( RenderFx_t nRenderFX );
@@ -814,16 +810,8 @@ public:
 	float		m_flPrevAnimTime;
 	CNetworkVar( float, m_flAnimTime, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, .enc = ks::reflect::WireEnc::Int, .table = "DT_AnimTimeMustBeFirst" } ]] [[= ks::reflect::Proxy<SendProxy_AnimTime, ks::reflect::WireSide::Send>{} ]] );  // this is the point in time that the client will interpolate to position,angle,frame,etc.
 	CNetworkVar( float, m_flSimulationTime, [[= ks::reflect::Net{ .bits = SIMULATION_TIME_WINDOW_BITS, .flags = SPROP_UNSIGNED|SPROP_CHANGES_OFTEN|SPROP_ENCODED_AGAINST_TICKCOUNT, .enc = ks::reflect::WireEnc::Int, .priority = SENDPROP_SIMULATION_TIME_PRIORITY } ]] [[= ks::reflect::Proxy<SendProxy_SimulationTime, ks::reflect::WireSide::Send>{} ]] );
-#if defined(ENABLE_CREATE_TIME)
-	CNetworkVar( float, m_flCreateTime );
-#endif
 
 	int				m_nLastThinkTick;
-
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-	// Certain entities (projectiles) can be created on the client and thus need a matching id number
-	CNetworkVar( CPredictableId, m_PredictableID );
-#endif
 
 	// used so we know when things are no longer touching
 	int			touchStamp;			
@@ -1096,7 +1084,7 @@ public:
 	ENTITYFUNCPTR TouchSet( ENTITYFUNCPTR func, char *name )
 	{ 
         //lwss update: newer compilers will make class member pointers 2x the size of a pointer
-	    COMPILE_TIME_ASSERT( sizeof(func) == 8 || sizeof(func) == 16 );
+	    static_assert( sizeof(func) == 8 || sizeof(func) == 16 );
 		m_pfnTouch = func; 
 		FunctionCheck( reinterpret_cast<inputfunc_t>(m_pfnTouch), name ); 
 		return func;
@@ -1104,7 +1092,7 @@ public:
 	USEPTR	UseSet( USEPTR func, char *name ) 
 	{ 
         //lwss update: newer compilers will make class member pointers 2x the size of a pointer
-	    COMPILE_TIME_ASSERT( sizeof(func) == 8 || sizeof(func) == 16 );
+	    static_assert( sizeof(func) == 8 || sizeof(func) == 16 );
 		m_pfnUse = func; 
 		FunctionCheck( reinterpret_cast<inputfunc_t>(m_pfnUse), name ); 
 		return func;
@@ -1112,7 +1100,7 @@ public:
 	ENTITYFUNCPTR	BlockedSet( ENTITYFUNCPTR func, char *name ) 
 	{ 
         //lwss update: newer compilers will make class member pointers 2x the size of a pointer
-	    COMPILE_TIME_ASSERT( sizeof(func) == 8 || sizeof(func) == 16 );
+	    static_assert( sizeof(func) == 8 || sizeof(func) == 16 );
 		m_pfnBlocked = func; 
 		FunctionCheck( reinterpret_cast<inputfunc_t>(m_pfnBlocked), name ); 
 		return func;
@@ -1447,13 +1435,11 @@ public:
 	// --------------------------------------------------------------------
 
 public:
-#if !defined( NO_ENTITY_PREDICTION )
 	// The player drives simulation of this entity
 	void					SetPlayerSimulated( CBasePlayer *pOwner );
 	void					UnsetPlayerSimulated( void );
 	bool					IsPlayerSimulated( void ) const;
 	CBasePlayer				*GetSimulatingPlayer( void );
-#endif
 	// FIXME: Make these private!
 	void					PhysicsCheckForEntityUntouch( void );
  	bool					PhysicsRunThink( thinkmethods_t thinkMethod = THINK_FIRE_ALL_FUNCTIONS );
@@ -1629,10 +1615,6 @@ protected:
 	CNetworkVar( string_t, m_iName, [[= ks::reflect::Net{} ]] ); // name used to identify this entity
 
 	// Damage modifiers
-#if defined(ENABLE_DAMAGE_MODIFIERS)
-	friend class CDamageModifier;
-	std::vector<CDamageModifier*>	m_DamageModifiers;		// ONLY TF, REMOVE?
-#endif
 
 	EHANDLE m_pParent;  // for movement hierarchy
 	byte	m_nTransmitStateOwnedCounter;
@@ -1686,10 +1668,6 @@ protected:
 	// was pev->friction
 	CNetworkVarForDerived( float, m_flFriction, [[= ks::reflect::Key{ .name = "friction" } ]] );
 	CNetworkVar( float, m_flElasticity, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_COORD } ]] );
-#if defined(ENABLE_FRICTION_OVERRIDE)
-	float m_flOverriddenFriction;
-	void FrictionRevertThink( void );
-#endif
 	// was pev->ltime
 	[[= ks::reflect::Key{ .name = "ltime" } ]] float			m_flLocalTime;
 	// local time at the beginning of this frame
@@ -1740,18 +1718,16 @@ public:
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-	static uint GetOriginPrefetchOffset() { return offsetof(CBaseEntity,m_vecAbsOrigin); }
+	static uint GetOriginPrefetchOffset() { return __builtin_offsetof(CBaseEntity,m_vecAbsOrigin); }
 #pragma GCC diagnostic pop
 	CNetworkVarForDerived( bool, m_bClientSideRagdoll );
 	CNetworkVarForDerived( char, m_lifeState );
 	CNetworkVarForDerived( char , m_takedamage );
 
 private:
-#if !defined( NO_ENTITY_PREDICTION )
 	CNetworkVar( bool, m_bIsPlayerSimulated );
 	// Player who is driving my simulation
 	CNetworkHandle( CBasePlayer, m_hPlayerSimulationOwner );
-#endif
 	// User outputs. Fired when the "FireInputX" input is triggered.
 	[[= ks::reflect::Key{ .name = "OnUser1" } ]] COutputEvent m_OnUser1;
 	[[= ks::reflect::Key{ .name = "OnUser2" } ]] COutputEvent m_OnUser2;
@@ -2092,7 +2068,7 @@ inline const char *CBaseEntity::GetPreTemplateName()
 	if ( !pszDelimiter )
 		return STRING( m_iName.Get() );
 	static char szStrippedName[128];
-	V_strncpy( szStrippedName, STRING( m_iName.Get() ), std::min<std::common_type_t<long unsigned int, long int>>( ARRAYSIZE(szStrippedName), pszDelimiter - STRING( m_iName.Get() ) + 1 ) );
+	V_strncpy( szStrippedName, STRING( m_iName.Get() ), std::min<std::common_type_t<long unsigned int, long int>>( std::size( szStrippedName ), pszDelimiter - STRING( m_iName.Get() ) + 1 ) );
 	return szStrippedName;
 }
 
@@ -2239,7 +2215,7 @@ inline bool CBaseEntity::IsEFlagSet( int nEFlagMask ) const
 
 inline void	CBaseEntity::SetNavIgnore( float duration )
 {
-	float flNavIgnoreUntilTime = ( duration == FLT_MAX ) ? FLT_MAX : gpGlobals->curtime + duration;
+	float flNavIgnoreUntilTime = ( duration == std::numeric_limits<float>::max() ) ? std::numeric_limits<float>::max() : gpGlobals->curtime + duration;
 	if ( flNavIgnoreUntilTime > m_flNavIgnoreUntilTime )
 		m_flNavIgnoreUntilTime = flNavIgnoreUntilTime;
 }
@@ -2286,7 +2262,7 @@ inline const QAngle& CBaseEntity::GetLocalAngles( void ) const
 
 inline const Vector& CBaseEntity::GetAbsOrigin( void ) const
 {
-	Assert( CBaseEntity::IsAbsQueriesValid() );
+	contract_assert( CBaseEntity::IsAbsQueriesValid() );
 
 	if (IsEFlagSet(EFL_DIRTY_ABSTRANSFORM))
 	{
@@ -2297,7 +2273,7 @@ inline const Vector& CBaseEntity::GetAbsOrigin( void ) const
 
 inline const QAngle& CBaseEntity::GetAbsAngles( void ) const
 {
-	Assert( CBaseEntity::IsAbsQueriesValid() );
+	contract_assert( CBaseEntity::IsAbsQueriesValid() );
 
 	if (IsEFlagSet(EFL_DIRTY_ABSTRANSFORM))
 	{
@@ -2313,7 +2289,7 @@ inline const QAngle& CBaseEntity::GetAbsAngles( void ) const
 //-----------------------------------------------------------------------------
 inline matrix3x4_t &CBaseEntity::EntityToWorldTransform() 
 { 
-	Assert( CBaseEntity::IsAbsQueriesValid() );
+	contract_assert( CBaseEntity::IsAbsQueriesValid() );
 
 	if (IsEFlagSet(EFL_DIRTY_ABSTRANSFORM))
 	{
@@ -2324,7 +2300,7 @@ inline matrix3x4_t &CBaseEntity::EntityToWorldTransform()
 
 inline const matrix3x4_t &CBaseEntity::EntityToWorldTransform() const
 { 
-	Assert( CBaseEntity::IsAbsQueriesValid() );
+	contract_assert( CBaseEntity::IsAbsQueriesValid() );
 
 	if (IsEFlagSet(EFL_DIRTY_ABSTRANSFORM))
 	{
@@ -2379,7 +2355,7 @@ inline const Vector &CBaseEntity::GetLocalVelocity( ) const
 
 inline const Vector &CBaseEntity::GetAbsVelocity( ) const
 {
-	Assert( CBaseEntity::IsAbsQueriesValid() );
+	contract_assert( CBaseEntity::IsAbsQueriesValid() );
 
 	if (IsEFlagSet(EFL_DIRTY_ABSVELOCITY))
 	{
@@ -2697,22 +2673,22 @@ inline string_t CBaseEntity::GetAIAddOn( void ) const
 //-----------------------------------------------------------------------------
 inline const Vector& CBaseEntity::WorldAlignMins( ) const
 {
-	Assert( !CollisionProp()->IsBoundsDefinedInEntitySpace() );
-	Assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
+	contract_assert( !CollisionProp()->IsBoundsDefinedInEntitySpace() );
+	contract_assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
 	return CollisionProp()->OBBMins();
 }
 
 inline const Vector& CBaseEntity::WorldAlignMaxs( ) const
 {
-	Assert( !CollisionProp()->IsBoundsDefinedInEntitySpace() );
-	Assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
+	contract_assert( !CollisionProp()->IsBoundsDefinedInEntitySpace() );
+	contract_assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
 	return CollisionProp()->OBBMaxs();
 }
 
 inline const Vector& CBaseEntity::WorldAlignSize( ) const
 {
-	Assert( !CollisionProp()->IsBoundsDefinedInEntitySpace() );
-	Assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
+	contract_assert( !CollisionProp()->IsBoundsDefinedInEntitySpace() );
+	contract_assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
 	return CollisionProp()->OBBSize();
 }
 
@@ -2790,8 +2766,8 @@ inline void	CBaseEntity::NetworkStateChanged()
 inline void	CBaseEntity::NetworkStateChanged( void *pVar )
 {
 	// Make sure it's a semi-reasonable pointer.
-	Assert( (char*)pVar > (char*)this );
-	Assert( (char*)pVar - (char*)this < 32768 );
+	contract_assert( (char*)pVar > (char*)this );
+	contract_assert( (char*)pVar - (char*)this < 32768 );
 	
 	// Good, they passed an offset so we can track this variable's change
 	// and avoid sending the whole entity.
@@ -2809,13 +2785,13 @@ inline const CBaseHandle& CBaseEntity::GetRefEHandle() const
 
 inline void CBaseEntity::IncrementTransmitStateOwnedCounter()
 {
-	Assert( m_nTransmitStateOwnedCounter != 255 );
+	contract_assert( m_nTransmitStateOwnedCounter != 255 );
 	m_nTransmitStateOwnedCounter++;
 }
 
 inline void CBaseEntity::DecrementTransmitStateOwnedCounter()
 {
-	Assert( m_nTransmitStateOwnedCounter != 0 );
+	contract_assert( m_nTransmitStateOwnedCounter != 0 );
 	m_nTransmitStateOwnedCounter--;
 }
 
@@ -2862,7 +2838,7 @@ inline const ResponseContext_t	*CBaseEntity::GetContextData( int index ) const
 	do \
 	{ \
 		m_pfnMoveDone = static_cast <void (CBaseEntity::*)(void)> (a); \
-		FunctionCheck( * (inputfunc_t *)(((char *)this + ( offsetof(CBaseEntity,m_pfnMoveDone)))), "BaseMoveFunc" ); \
+		FunctionCheck( * (inputfunc_t *)(((char *)this + ( __builtin_offsetof(CBaseEntity,m_pfnMoveDone)))), "BaseMoveFunc" ); \
 	} while ( 0 )
 #else
 #define SetMoveDone( a ) \
@@ -2872,7 +2848,7 @@ inline const ResponseContext_t	*CBaseEntity::GetContextData( int index ) const
 
 inline bool FClassnameIs(CBaseEntity *pEntity, const char *szClassname)
 {
-	Assert( pEntity );
+	contract_assert( pEntity );
 	return pEntity && pEntity->ClassMatches(szClassname); 
 }
 
@@ -2941,7 +2917,7 @@ void SendProxy_OriginZ( const SendProp *pProp, const void *pStruct, const void *
 
 extern bool EntityNamesMatchCStrings( const char *pszQuery, const char *pszNameToMatch );
 
-FORCEINLINE bool EntityNamesMatch( const char *pszQuery, string_t nameToMatch )
+[[gnu::always_inline]] inline bool EntityNamesMatch( const char *pszQuery, string_t nameToMatch )
 {
 	if ( nameToMatch == NULL_STRING )
 		return (*pszQuery == 0 || *pszQuery == '*');
@@ -2954,5 +2930,3 @@ FORCEINLINE bool EntityNamesMatch( const char *pszQuery, string_t nameToMatch )
 
 	return EntityNamesMatchCStrings( pszQuery, pszNameToMatch );
 }
-
-#endif // BASEENTITY_H

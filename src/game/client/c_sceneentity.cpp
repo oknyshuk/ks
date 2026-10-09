@@ -1,10 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "networkstringtable_clientdll.h"
@@ -13,13 +25,11 @@
 #include "choreoactor.h"
 #include "choreochannel.h"
 #include "choreoscene.h"
-#include "tier1/byte_reader.h"
 #include "filesystem.h"
 #include "ichoreoeventcallback.h"
 #include "scenefilecache/ISceneFileCache.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "tier2/tier2.h"
-#include "tier1/fmtstr.h"
 #include "../../common/blackbox_helper.h"
 
 #include "c_sceneentity.h"
@@ -73,7 +83,7 @@ char const *C_SceneEntity::GetSceneFileName()
 	if ( bFirst )
 	{
 		bFirst = false;
-		Assert( 0 );
+		contract_assert( 0 );
 		Warning( "GetSceneFilename() failed for scene index %d\n", m_nSceneStringIndex );
 	}
 	return "";
@@ -206,7 +216,7 @@ void C_SceneEntity::SetupClientOnlyScene( const char *pszFilename, C_BaseFlex *p
 	m_bClientOnly = true;
 
 	char szFilename[128];
-	Assert( V_strlen( pszFilename ) < 128 );
+	contract_assert( V_strlen( pszFilename ) < 128 );
 	V_strcpy( szFilename, pszFilename );
 
 	char szSceneHWM[128];
@@ -215,12 +225,12 @@ void C_SceneEntity::SetupClientOnlyScene( const char *pszFilename, C_BaseFlex *p
 		V_strcpy( szFilename, szSceneHWM );
 	}
 
-	Assert( szFilename && szFilename[ 0 ] );
+	contract_assert( szFilename && szFilename[ 0 ] );
 	if (  szFilename && szFilename[ 0 ] )
 	{
 		LoadSceneFromFile( szFilename );
 		
-		Assert( m_pScene );
+		contract_assert( m_pScene );
 
 		// Should handle gestures and sequences client side.
 		if ( m_bMultiplayer )
@@ -255,7 +265,7 @@ void C_SceneEntity::SetupClientOnlyScene( const char *pszFilename, C_BaseFlex *p
 
 	if ( m_hOwner.Get() )
 	{
-		Assert( m_pScene );
+		contract_assert( m_pScene );
 
 		if ( m_pScene )
 		{
@@ -285,7 +295,7 @@ void C_SceneEntity::SetupClientOnlyScene( const char *pszFilename, C_BaseFlex *p
 			if ( !actor )
 				continue;
 
-			Assert( m_pScene );
+			contract_assert( m_pScene );
 
 			if ( m_pScene )
 			{
@@ -312,7 +322,7 @@ void C_SceneEntity::PostDataUpdate( DataUpdateType_t updateType )
 
 	char const *str = GetSceneFileName();
 	char szFilename[MAX_PATH];
-	Assert( V_strlen( str ) < MAX_PATH );
+	contract_assert( V_strlen( str ) < MAX_PATH );
 	V_strcpy( szFilename, str );
 
 	char szSceneHWM[MAX_PATH];
@@ -323,13 +333,13 @@ void C_SceneEntity::PostDataUpdate( DataUpdateType_t updateType )
 
 	if ( updateType == DATA_UPDATE_CREATED )
 	{
-		Assert( szFilename && szFilename[ 0 ] );
+		contract_assert( szFilename && szFilename[ 0 ] );
 		if (  szFilename && szFilename[ 0 ] )
 		{
 			LoadSceneFromFile( szFilename );
 
 			// Kill everything except flex events
-			Assert( m_pScene );
+			contract_assert( m_pScene );
 
 			// Should handle gestures and sequences clientside.
 			if ( m_bMultiplayer )
@@ -372,7 +382,7 @@ void C_SceneEntity::PostDataUpdate( DataUpdateType_t updateType )
 			if ( !actor )
 				continue;
 
-			Assert( m_pScene );
+			contract_assert( m_pScene );
 
 			if ( m_pScene )
 			{
@@ -447,9 +457,9 @@ C_BaseFlex *C_SceneEntity::FindNamedActor( CChoreoActor *pChoreoActor )
 //-----------------------------------------------------------------------------
 void C_SceneEntity::StartEvent( float currenttime, CChoreoScene *scene, CChoreoEvent *event )
 {
-	Assert( event );
+	contract_assert( event );
 
-	if ( !Q_stricmp( event->GetName(), "NULL" ) )
+	if ( !V_stricmp( event->GetName(), "NULL" ) )
  	{
  		Scene_Printf( "%s : %8.2f:  ignored %s\n", GetSceneFileName(), currenttime, event->GetDescription() );
  		return;
@@ -497,9 +507,9 @@ void C_SceneEntity::StartEvent( float currenttime, CChoreoScene *scene, CChoreoE
 	case CChoreoEvent::GESTURE:
 		{
 			// Verify data.
-			Assert( m_bMultiplayer );
-			Assert( scene != nullptr );
-			Assert( event != nullptr );
+			contract_assert( m_bMultiplayer );
+			contract_assert( scene != nullptr );
+			contract_assert( event != nullptr );
 
 			if ( pActor )
 			{
@@ -510,9 +520,9 @@ void C_SceneEntity::StartEvent( float currenttime, CChoreoScene *scene, CChoreoE
 	case CChoreoEvent::SEQUENCE:
 		{
 			// Verify data.
-			Assert( m_bMultiplayer );
-			Assert( scene != nullptr );
-			Assert( event != nullptr );
+			contract_assert( m_bMultiplayer );
+			contract_assert( scene != nullptr );
+			contract_assert( event != nullptr );
 
 			if ( pActor )
 			{
@@ -523,9 +533,9 @@ void C_SceneEntity::StartEvent( float currenttime, CChoreoScene *scene, CChoreoE
 	case CChoreoEvent::LOOP:
 		{
 			// Verify data.
-			Assert( m_bMultiplayer );
-			Assert( scene != nullptr );
-			Assert( event != nullptr );
+			contract_assert( m_bMultiplayer );
+			contract_assert( scene != nullptr );
+			contract_assert( event != nullptr );
 
 			DispatchProcessLoop( scene, event );
 		}
@@ -560,7 +570,7 @@ void C_SceneEntity::StartEvent( float currenttime, CChoreoScene *scene, CChoreoE
 //-----------------------------------------------------------------------------
 void C_SceneEntity::DispatchProcessLoop( CChoreoScene *scene, CChoreoEvent *event )
 {
-	Assert( event->GetType() == CChoreoEvent::LOOP );
+	contract_assert( event->GetType() == CChoreoEvent::LOOP );
 
 	float backtime = (float)atof( event->GetParameters() );
 
@@ -634,9 +644,9 @@ void C_SceneEntity::DispatchEndSpeak( CChoreoScene *scene, C_BaseFlex *actor, CC
 //-----------------------------------------------------------------------------
 void C_SceneEntity::EndEvent( float currenttime, CChoreoScene *scene, CChoreoEvent *event )
 {
-	Assert( event );
+	contract_assert( event );
 
-	if ( !Q_stricmp( event->GetName(), "NULL" ) )
+	if ( !V_stricmp( event->GetName(), "NULL" ) )
  	{
  		return;
  	}
@@ -706,7 +716,7 @@ public:
 	short FindOrAddString( const char *pString )
 	{
 		// huh?, no compilation at run time, only fetches
-		Assert( 0 );
+		contract_assert( 0 );
 		return -1;
 	}
 
@@ -728,9 +738,9 @@ CChoreoStringPool g_ChoreoStringPool;
 CChoreoScene *C_SceneEntity::LoadScene( const char *filename )
 {
 	char loadfile[ 512 ];
-	Q_strncpy( loadfile, filename, sizeof( loadfile ) );
-	Q_SetExtension( loadfile, ".vcd", sizeof( loadfile ) );
-	Q_FixSlashes( loadfile );
+	V_strncpy( loadfile, filename, sizeof( loadfile ) );
+	V_SetExtension( loadfile, ".vcd", sizeof( loadfile ) );
+	V_FixSlashes( loadfile );
 
 	char *pBuffer = nullptr;
 	size_t bufsize = scenefilecache->GetSceneBufferSize( loadfile );
@@ -903,7 +913,7 @@ void C_SceneEntity::DispatchEndExpression( CChoreoScene *scene, C_BaseFlex *acto
 void C_SceneEntity::DispatchStartGesture( CChoreoScene *scene, C_BaseFlex *actor, CChoreoEvent *event )
 {
 	// Ingore null gestures
-	if ( !Q_stricmp( event->GetName(), "NULL" ) )
+	if ( !V_stricmp( event->GetName(), "NULL" ) )
 		return;
 
 	actor->AddSceneEvent( scene, event, nullptr, IsClientOnly() || IsMultiplayer(), this ); 
@@ -935,7 +945,7 @@ void C_SceneEntity::DispatchEndSequence( CChoreoScene *scene, CBaseFlex *actor, 
 void C_SceneEntity::DispatchEndGesture( CChoreoScene *scene, C_BaseFlex *actor, CChoreoEvent *event )
 {
 	// Ingore null gestures
-	if ( !Q_stricmp( event->GetName(), "NULL" ) )
+	if ( !V_stricmp( event->GetName(), "NULL" ) )
 		return;
 
 	actor->RemoveSceneEvent( scene, event, false );
@@ -1032,7 +1042,7 @@ void C_SceneEntity::SetCurrentTime( float t, bool forceClientSync )
 //-----------------------------------------------------------------------------
 void C_SceneEntity::PrefetchAnimBlocks( CChoreoScene *pScene )
 {
-	Assert( pScene && m_bMultiplayer );
+	contract_assert( pScene && m_bMultiplayer );
 	if ( !pScene || !m_bMultiplayer )
 		return;
 

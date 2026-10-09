@@ -1,24 +1,30 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "fx.h"
 #include "fx_sparks.h"
-#include "precache_register.h"
 #include "particle_simple3d.h"
 #include "decals.h"
-#include "engine/IEngineSound.h"
 #include "c_te_particlesystem.h"
 #include "engine/ivmodelinfo.h"
 #include "particles_ez.h"
 #include "c_impact_effects.h"
 #include "engine/IStaticPropMgr.h"
-#include "tier0/vprof.h"
 #include "c_te_effect_dispatch.h"
 
 //Precahce the effects
@@ -133,7 +139,7 @@ void GetColorForSurface( trace_t *trace, Vector *color )
 	}
 
 	//Get final light value
-	color->x = pow( diffuseColor[0], 1.0f/2.2f ) * baseColor[0];
+	color->x = std::pow( diffuseColor[0], 1.0f/2.2f ) * baseColor[0];
 	color->y = pow( diffuseColor[1], 1.0f/2.2f ) * baseColor[1];
 	color->z = pow( diffuseColor[2], 1.0f/2.2f ) * baseColor[2];
 }
@@ -142,11 +148,11 @@ void GetColorForSurface( trace_t *trace, Vector *color )
 //-----------------------------------------------------------------------------
 // This does the actual debris flecks
 //-----------------------------------------------------------------------------
-#define	FLECK_MIN_SPEED		64.0f
-#define	FLECK_MAX_SPEED		128.0f
-#define	FLECK_GRAVITY		800.0f
-#define	FLECK_DAMPEN		0.3f
-#define	FLECK_ANGULAR_SPRAY	0.6f
+constexpr auto FLECK_MIN_SPEED = 64.0f;
+constexpr auto FLECK_MAX_SPEED = 128.0f;
+constexpr auto FLECK_GRAVITY = 800.0f;
+constexpr auto FLECK_DAMPEN = 0.3f;
+constexpr auto FLECK_ANGULAR_SPRAY = 0.6f;
 
 //
 // PC ONLY!
@@ -229,7 +235,7 @@ static void CreateFleckParticles( const Vector& origin, const Vector &color, tra
 //-----------------------------------------------------------------------------
 void FX_DebrisFlecks( const Vector& origin, trace_t *tr, char materialType, int iScale, bool bNoFlecks )
 {
-	VPROF_BUDGET( "FX_DebrisFlecks", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_DebrisFlecks", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	if ( !fx_drawimpactdebris.GetBool() )
 		return;
@@ -351,20 +357,20 @@ void FX_DebrisFlecks( const Vector& origin, trace_t *tr, char materialType, int 
 	AddSimpleParticle( &newParticle, g_Mat_DustPuff[0] );
 }
 
-#define	GLASS_SHARD_MIN_LIFE	2.5f
-#define	GLASS_SHARD_MAX_LIFE	5.0f
-#define	GLASS_SHARD_NOISE		0.8
-#define	GLASS_SHARD_GRAVITY		800
-#define	GLASS_SHARD_DAMPING		0.3
-#define	GLASS_SHARD_MIN_SPEED	1
-#define	GLASS_SHARD_MAX_SPEED	300
+constexpr auto GLASS_SHARD_MIN_LIFE = 2.5f;
+constexpr auto GLASS_SHARD_MAX_LIFE = 5.0f;
+constexpr auto GLASS_SHARD_NOISE = 0.8;
+constexpr auto GLASS_SHARD_GRAVITY = 800;
+constexpr auto GLASS_SHARD_DAMPING = 0.3;
+constexpr auto GLASS_SHARD_MIN_SPEED = 1;
+constexpr auto GLASS_SHARD_MAX_SPEED = 300;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void GlassImpactCallback( const CEffectData &data )
 {
-	VPROF_BUDGET( "GlassImpactCallback", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "GlassImpactCallback", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	Vector pos = data.m_vOrigin;
 	Vector normal = data.m_vNormal;
@@ -507,7 +513,7 @@ DECLARE_CLIENT_EFFECT( GlassImpact, GlassImpactCallback )
 void FX_AntlionImpact( const Vector &pos, trace_t *trace )
 {
 
-	VPROF_BUDGET( "FX_AntlionImpact", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_AntlionImpact", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	ks::intrusive_ptr<CSimple3DEmitter> fleckEmitter = CSimple3DEmitter::Create( "FX_DebrisFlecks" );
 	if ( fleckEmitter == nullptr )
@@ -618,7 +624,7 @@ void FX_AntlionImpact( const Vector &pos, trace_t *trace )
 		pParticle->m_uchStartAlpha	= random->RandomInt( 32, 64);
 		pParticle->m_uchEndAlpha	= 0;
 		
-		pParticle->m_flRoll			= random->RandomFloat( 0, 2.0f*M_PI );
+		pParticle->m_flRoll			= random->RandomFloat( 0, 2.0f*std::numbers::pi );
 		pParticle->m_flRollDelta	= random->RandomFloat( -0.5f, 0.5f );
 
 		colorRamp = random->RandomFloat( 0.5f, 1.0f );
@@ -638,13 +644,13 @@ void FX_AntlionImpact( const Vector &pos, trace_t *trace )
 // Input  : &pos - 
 //			&dir - 
 //-----------------------------------------------------------------------------
-#define NUM_BUG_BLOOD	32
-#define NUM_BUG_BLOOD2	16
-#define NUM_BUG_SPLATS	16
+constexpr auto NUM_BUG_BLOOD = 32;
+constexpr auto NUM_BUG_BLOOD2 = 16;
+constexpr auto NUM_BUG_SPLATS = 16;
 
 void FX_BugBlood( Vector &pos, Vector &dir, Vector &vWorldMins, Vector &vWorldMaxs )
 {
-	VPROF_BUDGET( "FX_BugBlood", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_BugBlood", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "FX_BugBlood" );
 	if ( !pSimple )
@@ -757,7 +763,7 @@ void FX_BugBlood( Vector &pos, Vector &dir, Vector &vWorldMins, Vector &vWorldMa
 //-----------------------------------------------------------------------------
 void FX_Blood( Vector &pos, Vector &dir, float r, float g, float b, float a )
 {
-	VPROF_BUDGET( "FX_Blood", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_Blood", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	// Cloud
 	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "FX_Blood" );
@@ -849,7 +855,7 @@ void FX_DustImpact( const Vector &origin, trace_t *tr, float flScale )
 	// PC version
 	//
 
-	VPROF_BUDGET( "FX_DustImpact", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_DustImpact", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	Vector	offset;
 	float	spread = 0.2f;
 	
@@ -1008,7 +1014,7 @@ void FX_GaussExplosion( const Vector &pos, const Vector &dir, int type )
 
 	if ( !pSparkEmitter )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 
@@ -1109,4 +1115,3 @@ void TE_GaussExplosion( IRecipientFilter& filter, float delay, const Vector &pos
 {
 	FX_GaussExplosion( pos, dir, type );
 }
-

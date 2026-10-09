@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Color conversion routines.
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <math.h>
-#include <float.h>	// needed for flt_epsilon
-#include "basetypes.h"
-#include <memory.h>
-#include "tier0/dbg.h"
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
+// Purpose: Color conversion routines.
+
+import std;
+import ks.math;
 
 //-----------------------------------------------------------------------------
 // Gamma conversion support
@@ -32,7 +26,7 @@ static float	g_Mathlib_LinearToGamma[256];	// linear (0..1) to gamma (0..1)
 // onto SIMD registers easily if needed (used by SSE version of lightmaps)
 // TODO: move this into the one DLL that actually uses it, instead of statically
 // linking it everywhere via mathlib.
-ALIGN128 float	power2_n[256] = 			// 2**(index - 128) / 255
+float	power2_n[256] = 			// 2**(index - 128) / 255
 { 
 	1.152445441982634800E-041, 2.304890883965269600E-041, 4.609781767930539200E-041, 9.219563535861078400E-041, 
 	1.843912707172215700E-040, 3.687825414344431300E-040, 7.375650828688862700E-040, 1.475130165737772500E-039,
@@ -102,20 +96,6 @@ ALIGN128 float	power2_n[256] = 			// 2**(index - 128) / 255
 
 // You can use this to double check the exponent table and assert that 
 // the precomputation is correct.
-#ifdef DBGFLAG_ASSERT
-static void CheckExponentTable()
-{
-	for( int i = 0; i < 256; i++ )
-	{
-		float testAgainst = pow( 2.0f, i - 128 ) / 255.0f;
-		float diff = testAgainst - power2_n[i] ;
-		float relativeDiff = diff / testAgainst;
-		Assert( testAgainst == 0 ? 
-				power2_n[i] < 1.16E-041 :
-				power2_n[i] == testAgainst );
-	}
-}
-#endif
 
 void BuildGammaTable( float gamma, float texGamma, float brightness, int overbright )
 {
@@ -148,7 +128,7 @@ void BuildGammaTable( float gamma, float texGamma, float brightness, int overbri
 
 	for (i=0 ; i<256 ; i++)
 	{
-		inf = ( int )( 255 * pow ( i/255.f, g1 ) ); 
+		inf = ( int )( 255 * std::pow ( i/255.f, g1 ) ); 
 		if (inf < 0)
 			inf = 0;
 		if (inf > 255)
@@ -173,7 +153,7 @@ void BuildGammaTable( float gamma, float texGamma, float brightness, int overbri
 			f = 0.125 + ((f - g3) / (1.0 - g3)) * 0.875;
 
 		// convert linear space to desired gamma space
-		inf = ( int )( 255 * pow ( f, g ) ); 
+		inf = ( int )( 255 * std::pow ( f, g ) ); 
 
 		if (inf < 0)
 			inf = 0;
@@ -195,7 +175,7 @@ void BuildGammaTable( float gamma, float texGamma, float brightness, int overbri
 	for (i=0 ; i<256 ; i++)
 	{
 		// convert from nonlinear texture space (0..255) to linear space (0..1)
-		texturetolinear[i] =  pow( i / 255.f, texGamma );
+		texturetolinear[i] =  std::pow( i / 255.f, texGamma );
 
 		// convert from linear space (0..1) to nonlinear (sRGB) space (0..1)
 		g_Mathlib_LinearToGamma[i] =  LinearToGammaFullRange( i / 255.f );
@@ -207,7 +187,7 @@ void BuildGammaTable( float gamma, float texGamma, float brightness, int overbri
 	for (i=0 ; i<1024 ; i++)
 	{
 		// convert from linear space (0..1) to nonlinear texture space (0..255)
-		lineartotexture[i] = ( int )pow( i / 1023.0, 1.0 / texGamma ) * 255;
+		lineartotexture[i] = ( int )std::pow( i / 1023.0, 1.0 / texGamma ) * 255;
 	}
 
 
@@ -229,7 +209,7 @@ void BuildGammaTable( float gamma, float texGamma, float brightness, int overbri
 		for (i=0 ; i<4096 ; i++)
 		{
 			// convert from linear 0..4 (x1024) to screen corrected vertex space (0..1?)
-			f = pow ( i/1024.0, 1.0 / gamma );
+			f = std::pow ( i/1024.0, 1.0 / gamma );
 
 			lineartovertex[i] = f * overbrightFactor;
 			if (lineartovertex[i] > 1)
@@ -244,17 +224,17 @@ void BuildGammaTable( float gamma, float texGamma, float brightness, int overbri
 
 float GammaToLinearFullRange( float gamma )
 {
-	return pow( gamma, 2.2f );
+	return std::pow( gamma, 2.2f );
 }
 
 float LinearToGammaFullRange( float linear )
 {
-	return pow( linear, 1.0f / 2.2f );
+	return std::pow( linear, 1.0f / 2.2f );
 }
 
 float GammaToLinear( float gamma )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	if ( gamma < 0.0f )
 	{
 		return 0.0f;
@@ -269,13 +249,13 @@ float GammaToLinear( float gamma )
 	}
 
 	int index = RoundFloatToInt( gamma * 255.0f );
-	Assert( index >= 0 && index < 256 );
+	contract_assert( index >= 0 && index < 256 );
 	return g_Mathlib_GammaToLinear[index];
 }
 
 float LinearToGamma( float linear )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	if ( linear < 0.0f )
 	{
 		return 0.0f;
@@ -283,12 +263,12 @@ float LinearToGamma( float linear )
 	if ( linear > 1.0f )
 	{
 		// Use LinearToGammaFullRange maybe if you trip this.
-		Assert( 0 );
+		contract_assert( 0 );
 		return 1.0f;
 	}
 
 	int index = RoundFloatToInt( linear * 255.0f );
-	Assert( index >= 0 && index < 256 );
+	contract_assert( index >= 0 && index < 256 );
 	return g_Mathlib_LinearToGamma[index];
 }
 
@@ -298,13 +278,13 @@ float LinearToGamma( float linear )
 float SrgbGammaToLinear( float flSrgbGammaValue )
 {
 	float x = clamp( flSrgbGammaValue, 0.0f, 1.0f );
-	return ( x <= 0.04045f ) ? ( x / 12.92f ) : ( pow( ( x + 0.055f ) / 1.055f, 2.4f ) );
+	return ( x <= 0.04045f ) ? ( x / 12.92f ) : ( std::pow( ( x + 0.055f ) / 1.055f, 2.4f ) );
 }
 
 float SrgbLinearToGamma( float flLinearValue )
 {
 	float x = clamp( flLinearValue, 0.0f, 1.0f );
-	return ( x <= 0.0031308f ) ? ( x * 12.92f ) : ( 1.055f * pow( x, ( 1.0f / 2.4f ) ) ) - 0.055f;
+	return ( x <= 0.0031308f ) ? ( x * 12.92f ) : ( 1.055f * std::pow( x, ( 1.0f / 2.4f ) ) ) - 0.055f;
 }
 
 float X360GammaToLinear( float fl360GammaValue )
@@ -321,7 +301,7 @@ float X360GammaToLinear( float fl360GammaValue )
 		else
 		{
 			flLinearValue = fl360GammaValue * ( 255.0f * 2.0f ) - 64.0f;
-			flLinearValue += floor( flLinearValue * ( 1.0f / 512.0f ) );
+			flLinearValue += std::floor( flLinearValue * ( 1.0f / 512.0f ) );
 		}
 	}
 	else
@@ -329,12 +309,12 @@ float X360GammaToLinear( float fl360GammaValue )
 		if( fl360GammaValue < ( 192.0f / 255.0f ) )
 		{
 			flLinearValue = fl360GammaValue * ( 255.0f * 4.0f ) - 256.0f;
-			flLinearValue += floor( flLinearValue * ( 1.0f / 256.0f ) );
+			flLinearValue += std::floor( flLinearValue * ( 1.0f / 256.0f ) );
 		}
 		else
 		{
 			flLinearValue = fl360GammaValue * ( 255.0f * 8.0f ) - 1024.0f;
-			flLinearValue += floor( flLinearValue * ( 1.0f / 128.0f ) );
+			flLinearValue += std::floor( flLinearValue * ( 1.0f / 128.0f ) );
 		}
 	}
 
@@ -390,7 +370,7 @@ float SrgbGammaTo360Gamma( float flSrgbGammaValue )
 // convert texture to linear 0..1 value
 float TextureToLinear( int c )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	if (c < 0)
 		return 0;
 	if (c > 255)
@@ -402,7 +382,7 @@ float TextureToLinear( int c )
 // convert texture to linear 0..1 value
 int LinearToTexture( float f )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	int i;
 	i = ( int )( f * 1023 );	// assume 0..1 range
 	if (i < 0)
@@ -417,7 +397,7 @@ int LinearToTexture( float f )
 // converts 0..1 linear value to screen gamma (0..255)
 int LinearToScreenGamma( float f )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	int i;
 	i = ( int )( f * 1023 );	// assume 0..1 range
 	if (i < 0)
@@ -430,7 +410,7 @@ int LinearToScreenGamma( float f )
 
 void ColorRGBExp32ToVector( const ColorRGBExp32& in, Vector& out )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	// FIXME: Why is there a factor of 255 built into this?
 	out.x = 255.0f * TexLightToLinear( in.r, in.exponent );
 	out.y = 255.0f * TexLightToLinear( in.g, in.exponent );
@@ -474,8 +454,8 @@ inline static int VectorToColorRGBExp32_CalcExponent( const float *pin )
 /// porting to an 8080 are out of luck.
 void VectorToColorRGBExp32( const Vector& vin, ColorRGBExp32 &c )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( vin.x >= 0.0f && vin.y >= 0.0f && vin.z >= 0.0f );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( vin.x >= 0.0f && vin.y >= 0.0f && vin.z >= 0.0f );
 
 	// work out which of the channels is the largest ( we will use that to map the exponent )
 	// this is a sluggish branch-based decision tree -- most architectures will offer a [max]
@@ -509,7 +489,7 @@ void VectorToColorRGBExp32( const Vector& vin, ColorRGBExp32 &c )
 
 	// make sure the exponent fits into a signed byte.
 	// (in single precision format this is assured because it was a signed byte to begin with)
-	Assert(exponent > -128 && exponent <= 127);
+	contract_assert( exponent > -128 && exponent <= 127 );
 
 	// promote the exponent back onto a scalar that we'll use to normalize all the numbers
 	float scalar;
@@ -519,9 +499,9 @@ void VectorToColorRGBExp32( const Vector& vin, ColorRGBExp32 &c )
 	}
 
 	// we should never need to clamp:
-	Assert(vin.x * scalar <= 255.0f && 
+	contract_assert( vin.x * scalar <= 255.0f && 
 		   vin.y * scalar <= 255.0f && 
-		   vin.z * scalar <= 255.0f);
+		   vin.z * scalar <= 255.0f );
 
 	// This awful construction is necessary to prevent VC2005 from using the 
 	// fldcw/fnstcw control words around every float-to-unsigned-char operation.
@@ -542,4 +522,3 @@ void VectorToColorRGBExp32( const Vector& vin, ColorRGBExp32 &c )
 
 	c.exponent = ( signed char )exponent;
 }
-

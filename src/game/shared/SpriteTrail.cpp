@@ -1,10 +1,56 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "reflect_predmap.h"
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
@@ -22,11 +68,9 @@
 #include "clientsideeffects.h"
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/imesh.h"
-#include "mathlib/vmatrix.h"
 #include "view.h"
 #include "beamdraw.h"
 #include "enginesprite.h"
-#include "tier0/vprof.h"
 
 extern CEngineSprite *Draw_SetSpriteTexture( const model_t *pSpriteModel, int frame, int rendermode );
 
@@ -35,7 +79,6 @@ extern CEngineSprite *Draw_SetSpriteTexture( const model_t *pSpriteModel, int fr
 //-----------------------------------------------------------------------------
 // constants
 //-----------------------------------------------------------------------------
-#define SCREEN_SPACE_TRAILS 0
 
 
 //-----------------------------------------------------------------------------
@@ -267,8 +310,8 @@ void CSpriteTrail::ConvertSkybox()
 //-----------------------------------------------------------------------------
 TrailPoint_t *CSpriteTrail::GetTrailPoint( int n )
 {
-	Assert( n < MAX_SPRITE_TRAIL_POINTS );
-	COMPILE_TIME_ASSERT( (MAX_SPRITE_TRAIL_POINTS & (MAX_SPRITE_TRAIL_POINTS-1)) == 0 );
+	contract_assert( n < MAX_SPRITE_TRAIL_POINTS );
+	static_assert( (MAX_SPRITE_TRAIL_POINTS & (MAX_SPRITE_TRAIL_POINTS-1)) == 0 );
 	int nIndex = (n + m_nFirstStep) & MAX_SPRITE_TRAIL_MASK; 
 	return &m_vecSteps[nIndex];
 }
@@ -279,13 +322,7 @@ TrailPoint_t *CSpriteTrail::GetTrailPoint( int n )
 //-----------------------------------------------------------------------------
 void CSpriteTrail::ComputeScreenPosition( Vector *pScreenPos )
 {
-#if SCREEN_SPACE_TRAILS
-	VMatrix	viewMatrix;
-	materials->GetMatrix( MATERIAL_VIEW, &viewMatrix );
-	*pScreenPos = viewMatrix * GetRenderOrigin();
-#else
 	*pScreenPos = GetRenderOrigin();
-#endif
 }
 
 
@@ -371,7 +408,7 @@ void CSpriteTrail::UpdateTrail( void )
 //-----------------------------------------------------------------------------
 int CSpriteTrail::DrawModel( int flags, const RenderableInstance_t &instance )
 {
-	VPROF_BUDGET( "CSpriteTrail::DrawModel", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "CSpriteTrail::DrawModel", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	
 	// Must have at least one point
 	if ( m_nStepCount < 1 )
@@ -397,12 +434,6 @@ int CSpriteTrail::DrawModel( int flags, const RenderableInstance_t &instance )
 	ComputeScreenPosition( &currentPoint.m_vecScreenPos );
 	currentPoint.m_flTexCoord = pLast->m_flTexCoord + currentPoint.m_vecScreenPos.DistTo(pLast->m_vecScreenPos) * m_flTextureRes;
 	currentPoint.m_flWidthVariance = 0.0f;
-
-#if SCREEN_SPACE_TRAILS
-	VMatrix	viewMatrix;
-	materials->GetMatrix( MATERIAL_VIEW, &viewMatrix );
-	viewMatrix = viewMatrix.InverseTR();
-#endif
 
 	TrailPoint_t *pPrevPoint = nullptr;
 	float flTailAlphaDist = m_flMinFadeLength;
@@ -438,11 +469,7 @@ int CSpriteTrail::DrawModel( int flags, const RenderableInstance_t &instance )
 		}
 		curSeg.m_color.a  = GetRenderBrightness() * flAlphaFade;
 
-#if SCREEN_SPACE_TRAILS
-		curSeg.m_vPos = viewMatrix * pPoint->m_vecScreenPos;
-#else
 		curSeg.m_vPos = pPoint->m_vecScreenPos;
-#endif
 
 		if ( m_flEndWidth >= 0.0f )
 		{

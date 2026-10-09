@@ -1,21 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef DECAL_H
-#define DECAL_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "gl_model_private.h"
 
-#ifndef DRAW_H
 #include "draw.h"
-#endif
-
 
 void				Decal_Init( void );
 void				Decal_Shutdown( void );
@@ -25,5 +14,3 @@ const char *		Draw_DecalNameFromIndex( int index );
 void				Draw_DecalSetName( int decal, char *name );
 void				R_DecalShoot( int textureIndex, int entity, const model_t *model, const Vector &position, const Vector *saxis, int flags, const color32 &rgbaColor );
 int					Draw_DecalMax( void );
-
-#endif		// DECAL_H

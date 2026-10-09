@@ -1,19 +1,11 @@
-//========= Copyright c 1996-2011, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//====================================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2011 Valve Corporation
 
-#ifndef __VTFCOMBINE_H
-#define __VTFCOMBINE_H
-
-
+import ks.tier1;
 #include "mdlcombine.h"
-#include "mathlib/vector2d.h"
+import std;
 
-
-class KeyValues;
 struct VTFFileHeader_t;
 struct ResourceEntryInfo;
 class CSimpleTexturePacker;
@@ -22,14 +14,14 @@ class CSimpleTexturePacker;
 //#define DEBUG_VTF_COMBINE	1
 
 
-#define MAX_COMBINED_MIP_LEVELS		11
-#define MAX_COMBINED_WIDTH			1024
-#define MAX_COMBINED_HEIGHT			1024
-#define MAX_COMBINED_TEXTURE_MEMORY	( ( 1024 + ( ( MAX_COMBINED_WIDTH >> 2 ) * ( MAX_COMBINED_HEIGHT >> 2 ) * 16 * 2 ) ) )
+inline constexpr auto MAX_COMBINED_MIP_LEVELS = 11;
+inline constexpr auto MAX_COMBINED_WIDTH = 1024;
+inline constexpr auto MAX_COMBINED_HEIGHT = 1024;
+inline constexpr auto MAX_COMBINED_TEXTURE_MEMORY = ( ( 1024 + ( ( MAX_COMBINED_WIDTH >> 2 ) * ( MAX_COMBINED_HEIGHT >> 2 ) * 16 * 2 ) ) );
 
-#define ATLAS_INFO_GROUP_INDEX		0
-#define ATLAS_INFO_MATERIAL_INDEX	1
-#define ATLAS_INFO_COUNT			(ATLAS_INFO_MATERIAL_INDEX + 1)
+inline constexpr auto ATLAS_INFO_GROUP_INDEX = 0;
+inline constexpr auto ATLAS_INFO_MATERIAL_INDEX = 1;
+inline constexpr auto ATLAS_INFO_COUNT = (ATLAS_INFO_MATERIAL_INDEX + 1);
 
 enum
 {
@@ -74,12 +66,12 @@ public:
 
 	int		GetAtlasGroupIndex( int nIndex ) const
 	{ 
-		Assert( nIndex < COMBINER_MAX_MATERIALS );
+		contract_assert( nIndex < COMBINER_MAX_MATERIALS );
 		return m_nMaterialAtlasInfo[ nIndex ][ ATLAS_INFO_GROUP_INDEX ]; 
 	}
 	int		GetAtlasGroupMaterialIndex( int nIndex ) const
 	{ 
-		Assert( nIndex < COMBINER_MAX_MATERIALS );
+		contract_assert( nIndex < COMBINER_MAX_MATERIALS );
 		return m_nMaterialAtlasInfo[ nIndex ][ ATLAS_INFO_MATERIAL_INDEX ];
 	}
 
@@ -110,6 +102,3 @@ private:
 
 
 extern CTextureCombine& GetTextureCombiner();
-
-
-#endif // __VTFCOMBINE_H

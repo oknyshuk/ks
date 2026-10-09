@@ -1,16 +1,39 @@
-//======= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======
-//
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "rope.h"
 #include "entitylist.h"
 #include "rope_shared.h"
-#include "sendproxy.h"
 #include "rope_helpers.h"
 #include "te_effect_dispatch.h"
 #include "videocfg/videocfg.h"
@@ -18,7 +41,7 @@
 //--------------------------------------------
 // Rope Spawn Flags
 //--------------------------------------------
-#define SF_ROPE_RESIZE			1		// Automatically resize the rope
+constexpr auto SF_ROPE_RESIZE = 1; // Automatically resize the rope
 
 // -------------------------------------------------------------------------------- //
 // Fun With Tables.
@@ -621,7 +644,7 @@ void CRopeKeyframe::Spawn( void )
 
 void CRopeKeyframe::DetachPoint( int iPoint )
 {
-	Assert( iPoint == 0 || iPoint == 1 );
+	contract_assert( iPoint == 0 || iPoint == 1 );
 	
 	m_fLockedPoints &= ~(1 << iPoint);
 }
@@ -653,31 +676,31 @@ bool CRopeKeyframe::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if( stricmp( szKeyName, "Breakable" ) == 0 )
 	{
-		if( atoi( szValue ) == 1 )
+		if( std::atoi( szValue ) == 1 )
 		{
 			m_RopeFlags |= ROPE_BREAKABLE;
 		}
 	}
 	else if( stricmp( szKeyName, "Collide" ) == 0 )
 	{
-		if( atoi( szValue ) == 1 )
+		if( std::atoi( szValue ) == 1 )
 			m_RopeFlags |= ROPE_COLLIDE;
 	}
 	else if( stricmp( szKeyName, "Barbed" ) == 0 )
 	{
-		if( atoi( szValue ) == 1 )
+		if( std::atoi( szValue ) == 1 )
 			m_RopeFlags |= ROPE_BARBED;
 	}
 	else if( stricmp( szKeyName, "UseWind" ) == 0 )
 	{
-		if( atoi( szValue ) == 1 )
+		if( std::atoi( szValue ) == 1 )
 		{
 			m_RopeFlags |= ROPE_USE_WIND;
 		}
 	}
 	else if( stricmp( szKeyName, "Dangling" ) == 0 )
 	{
-		if( atoi( szValue ) == 1 )
+		if( std::atoi( szValue ) == 1 )
 		{
 			m_fLockedPoints &= ~ROPE_LOCK_END_POINT; // detach our dest point
 		}
@@ -686,7 +709,7 @@ bool CRopeKeyframe::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else if( stricmp( szKeyName, "Type" ) == 0 )
 	{
-		int iType = atoi( szValue );
+		int iType = std::atoi( szValue );
 		if( iType == 0 )
 			m_nSegments = ROPE_MAX_SEGMENTS;
 		else if( iType == 1 )
@@ -697,7 +720,7 @@ bool CRopeKeyframe::KeyValue( const char *szKeyName, const char *szValue )
 	else if ( stricmp( szKeyName, "RopeShader" ) == 0 )
 	{
 		// Legacy support for the RopeShader parameter.
-		int iShader = atoi( szValue );
+		int iShader = std::atoi( szValue );
 		if ( iShader == 0 )
 		{
 			m_strRopeMaterialModel = MAKE_STRING( "cable/cable.vmt" );
@@ -714,14 +737,14 @@ bool CRopeKeyframe::KeyValue( const char *szKeyName, const char *szValue )
 	else if ( stricmp( szKeyName, "RopeMaterial" ) == 0 )
 	{
 		// Make sure we have a vmt extension.
-		if ( Q_stristr( szValue, ".vmt" ) )
+		if ( V_stristr( szValue, ".vmt" ) )
 		{
 			SetMaterial( szValue );
 		}
 		else
 		{
 			char str[512];
-			Q_snprintf( str, sizeof( str ), "%s.vmt", szValue );
+			V_snprintf( str, sizeof( str ), "%s.vmt", szValue );
 			SetMaterial( str );
 		}
 	}
@@ -752,7 +775,3 @@ int CRopeKeyframe::UpdateTransmitState()
 	// as they come in and out of the PVS.
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
-
-
-
-		

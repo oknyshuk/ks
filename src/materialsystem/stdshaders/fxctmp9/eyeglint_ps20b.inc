@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 #include "shaderlib/cshader.h"
 class eyeglint_ps20b_Static_Index
@@ -16,7 +17,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_eyeglint_ps20b 0
+inline constexpr int shaderStaticTest_eyeglint_ps20b = 0;
 class eyeglint_ps20b_Dynamic_Index
 {
 public:
@@ -33,10 +34,10 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_eyeglint_ps20b 0
+inline constexpr int shaderDynamicTest_eyeglint_ps20b = 0;
 static const ShaderComboSemantics_t eyeglint_ps20b_combos =
 {
-	"eyeglint_ps20b", NULL, 0, NULL, 0 
+	"eyeglint_ps20b", nullptr, 0, nullptr, 0 
 };
 
 class ConstructMe_eyeglint_ps20b

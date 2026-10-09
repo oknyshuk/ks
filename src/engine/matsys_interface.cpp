@@ -1,33 +1,46 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: loads and unloads main matsystem dll and interface
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "render_pch.h"
+// Purpose: loads and unloads main matsystem dll and interface
+
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialvar.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "r_local.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_lightmap.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
+#include "sysexternal.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "materialsystem/materialsystem_config.h"
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/ivballoctracker.h"
 #include "materialsystem/imesh.h"
-#include "tier0/dbg.h"
-#include "sys_dll.h"
+import std;
 #include "host.h"
 #include "cmodel_engine.h"
 #include "modelloader.h"
 #include "staticpropmgr.h"
 #include "gl_model_private.h"
-#include "view.h"
 #include "gl_matsysiface.h"
 #include "gl_cvars.h"
 #include "gl_lightmap.h"
 #include "lightcache.h"
-#include "vstdlib/random.h"
-#include "tier0/icommandline.h"
 #include "draw.h"
 #include "decal_private.h"
 #include "l_studio.h"
-#include "keyvalues.h"
 #include "materialsystem/imaterial.h"
 #include "gl_shader.h"
 #include "ivideomode.h"
@@ -35,7 +48,6 @@
 #include "filesystem.h"
 #include "server.h"
 #include "game/client/iclientrendertargets.h"
-#include "tier2/tier2.h"
 #include "videocfg/videocfg.h"
 #include "LoadScreenUpdate.h"
 #include "cl_main.h"
@@ -46,7 +58,6 @@ extern IFileSystem *g_pFileSystem;
 #include "iregistry.h"
 #endif
 
-#include "igame.h"
 
 #include "toolframework/itoolframework.h"
 
@@ -141,7 +152,7 @@ static void mat_resolveFullFrameDepth_changed( IConVar *var, const char *pOldVal
 {
 	ConVar *cVar = (ConVar*)(var);
 	int newVal = cVar->GetInt();
-	int oldVal = atoi( pOldValue );
+	int oldVal = std::atoi( pOldValue );
 
 	static int oldNonZeroVal = -1;
 
@@ -294,7 +305,7 @@ int GetScreenAspectMode( int width, int height )
 	// just find the closest ratio
 	float closestAspectRatioDist = 99999.0f;
 	int closestAnamorphic = 0;
-	for (int i = 0; i < ARRAYSIZE(g_RatioToAspectModes); i++)
+	for (int i = 0; i < std::size( g_RatioToAspectModes ); i++)
 	{
 		float dist = fabs( g_RatioToAspectModes[i].aspectRatio - aspectRatio );
 		if (dist < closestAspectRatioDist)
@@ -448,7 +459,7 @@ void OverrideMaterialSystemConfig( MaterialSystem_Config_t &config )
 
 
 // auto config version to store in the registry so we can force reconfigs if needed
-#define AUTOCONFIG_VERSION 1 
+constexpr auto AUTOCONFIG_VERSION = 1;
 
 //-----------------------------------------------------------------------------
 // Purpose: Initializes configuration
@@ -497,8 +508,8 @@ void UpdateMaterialSystemConfig( void )
 {
 	// INFESTED_DLL - Alien Swarm doesn't want fullbright turned on when there are no lights (since it uses dynamic lights and skips vrad)
 	static char gamedir[MAX_OSPATH];
-	Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
-	if ( host_state.worldbrush && !host_state.worldbrush->lightdata && Q_stricmp( gamedir, "infested" ) )
+	V_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
+	if ( host_state.worldbrush && !host_state.worldbrush->lightdata && V_stricmp( gamedir, "infested" ) )
 	{
 		mat_fullbright.SetValue( 1 );
 	}
@@ -580,33 +591,39 @@ void PrintMaterialSystemConfig( const MaterialSystem_Config_t &config )
 	Warning( "CSM Quality Level: %u\n", config.m_nCSMQuality );
 }
 
-CON_COMMAND( mat_configcurrent, "show the current video control panel config for the material system" )
+static void mat_configcurrent( const CCommand &args );
+static ConCommand mat_configcurrent_command( "mat_configcurrent", mat_configcurrent, "show the current video control panel config for the material system" );
+static void mat_configcurrent( const CCommand &args )
 {
 	const MaterialSystem_Config_t &config = materials->GetCurrentConfigForVideoCard();
 	PrintMaterialSystemConfig( config );
 }
 
 #if !defined(DEDICATED)
-CON_COMMAND( mat_setvideomode, "sets the width, height, windowed state of the material system" )
+static void mat_setvideomode( const CCommand &args );
+static ConCommand mat_setvideomode_command( "mat_setvideomode", mat_setvideomode, "sets the width, height, windowed state of the material system" );
+static void mat_setvideomode( const CCommand &args )
 {
 	if ( args.ArgC() < 4 )
 		return;
 
-	int nWidth = Q_atoi( args[1] );
-	int nHeight = Q_atoi( args[2] );
-	bool bWindowed = Q_atoi( args[3] ) > 0 ? true : false;
+	int nWidth = V_atoi( args[1] );
+	int nHeight = V_atoi( args[2] );
+	bool bWindowed = V_atoi( args[3] ) > 0 ? true : false;
 	bool bNoBorder = videomode->NoWindowBorder();
 	
 	if ( args.ArgC() >= 5 )
 	{
-		bNoBorder = Q_atoi( args[4] ) > 0 ? true : false;
+		bNoBorder = V_atoi( args[4] ) > 0 ? true : false;
 	}
 
 	videomode->SetMode( nWidth, nHeight, bWindowed, bNoBorder );
 }
 #endif
 
-CON_COMMAND( mat_savechanges, "saves current video configuration to the registry" )
+static void mat_savechanges( const CCommand &args );
+static ConCommand mat_savechanges_command( "mat_savechanges", mat_savechanges, "saves current video configuration to the registry" );
+static void mat_savechanges( const CCommand &args )
 {
 	// if the user has got to the point where they can adjust and apply video changes, then we can clear safe mode
 	CommandLine()->RemoveParm( "-safe" );
@@ -617,7 +634,9 @@ CON_COMMAND( mat_savechanges, "saves current video configuration to the registry
 }
 
 #if !defined( DEDICATED )
-CON_COMMAND( mat_updateconvars, "updates the video config convars" )
+static void mat_updateconvars( const CCommand &args );
+static ConCommand mat_updateconvars_command( "mat_updateconvars", mat_updateconvars, "updates the video config convars" );
+static void mat_updateconvars( const CCommand &args )
 {
 	UpdateVideoConfigConVars();
 }
@@ -629,7 +648,9 @@ bool g_bHasIssuedMatSuppressOrDebug;
 //-----------------------------------------------------------------------------
 // A console command to debug materials
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( mat_debug, "Activates debugging spew for a specific material.", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY )
+static void mat_debug( const CCommand &args );
+static ConCommand mat_debug_command( "mat_debug", mat_debug, "Activates debugging spew for a specific material.", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+static void mat_debug( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -646,7 +667,9 @@ CON_COMMAND_F( mat_debug, "Activates debugging spew for a specific material.", F
 //-----------------------------------------------------------------------------
 // A console command to suppress materials
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( mat_suppress, "Suppress a material from drawing", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY )
+static void mat_suppress( const CCommand &args );
+static ConCommand mat_suppress_command( "mat_suppress", mat_suppress, "Suppress a material from drawing", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+static void mat_suppress( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -722,7 +745,7 @@ static ITexture *CreateBuildCubemaps16BitTexture( void )
 static ITexture *CreateQuarterSizedFBTexture( int n, unsigned int iRenderTargetFlags )
 {
 	char nbuf[20];
-	sprintf(nbuf,"_rt_SmallFB%d",n);
+	std::sprintf(nbuf,"_rt_SmallFB%d",n);
 
 	ImageFormat fmt=materials->GetBackBufferFormat();
 	if ( g_pMaterialSystemHardwareConfig->GetHDRType() == HDR_TYPE_FLOAT )
@@ -738,7 +761,7 @@ static ITexture *CreateQuarterSizedFBTexture( int n, unsigned int iRenderTargetF
 static ITexture *CreateTeenyFBTexture( int n )
 {
 	char nbuf[20];
-	sprintf(nbuf,"_rt_TeenyFB%d",n);
+	std::sprintf(nbuf,"_rt_TeenyFB%d",n);
 
 	ImageFormat fmt = materials->GetBackBufferFormat();
 	if ( g_pMaterialSystemHardwareConfig->GetHDRType() == HDR_TYPE_FLOAT )
@@ -755,11 +778,11 @@ static ITexture *CreateFullFrameFBTexture( int textureIndex, int iExtraFlags = 0
 
 	if ( textureIndex > 0 )
 	{
-		sprintf( textureName, "_rt_FullFrameFB%d", textureIndex );
+		std::sprintf( textureName, "_rt_FullFrameFB%d", textureIndex );
 	}
 	else
 	{
-		Q_strcpy( textureName, "_rt_FullFrameFB" );
+		V_strcpy( textureName, "_rt_FullFrameFB" );
 	}
 
 	int rtFlags = iExtraFlags | CREATERENDERTARGETFLAGS_HDR;
@@ -1145,7 +1168,9 @@ void InitStartupScreen()
 //-----------------------------------------------------------------------------
 // A console command to spew out driver information
 //-----------------------------------------------------------------------------
-CON_COMMAND( mat_info, "Shows material system info" )
+static void mat_info( const CCommand &args );
+static ConCommand mat_info_command( "mat_info", mat_info, "Shows material system info" );
+static void mat_info( const CCommand &args )
 {
 	materials->SpewDriverInfo();
 }
@@ -1298,89 +1323,6 @@ void MaterialSystem_DestroySortinfo( void )
 //			overbright - overbright factor (for colors)
 //			&builder - mesh that holds the vertex buffer
 //-----------------------------------------------------------------------------
-#ifdef NEWMESH
-void BuildMSurfaceVertexArrays( worldbrushdata_t *pBrushData, SurfaceHandle_t surfID, CVertexBufferBuilder &builder )
-{
-	SurfaceCtx_t ctx;
-	SurfSetupSurfaceContext( ctx, surfID );
-
-	byte flatColor[4] = { 255, 255, 255, 255 };
-
-	Vector tVect;
-	bool negate = false;
-	if ( MSurf_Flags( surfID ) & SURFDRAW_TANGENTSPACE )
-	{
-		negate = TangentSpaceSurfaceSetup( surfID, tVect );
-	}
-
-	for ( int i = 0; i < MSurf_VertCount( surfID ); i++ )
-	{
-		int vertIndex = pBrushData->vertindices[MSurf_FirstVertIndex( surfID ) + i];
-
-		// world-space vertex
-		Vector& vec = pBrushData->vertexes[vertIndex].position;
-
-		// output to mesh
-		builder.Position3fv( vec.Base() );
-
-		Vector2D uv;
-		SurfComputeTextureCoordinate( surfID, vec, uv.Base() );
-		builder.TexCoord2fv( 0, uv.Base() );
-
-		// garymct: normalized (within space of surface) lightmap texture coordinates
-		SurfComputeLightmapCoordinate( ctx, surfID, vec, uv );
-		builder.TexCoord2fv( 1, uv.Base() );
-
-		if ( MSurf_Flags( surfID ) & SURFDRAW_BUMPLIGHT )
-		{
-			// bump maps appear left to right in lightmap page memory, calculate 
-			// the offset for the width of a single map. The pixel shader will use 
-			// this to compute the actual texture coordinates
-			builder.TexCoord2f( 2, ctx.m_BumpSTexCoordOffset, 0.0f );
-		}
-		else
-		{
-			// PORTAL 2 FIX - paint shader assumes it can use 3 lightmapped coordinates in all cases, so set the offset to something reasonable
-			builder.TexCoord2f( 2, 0.0f, 0.0f );
-		}
-
-		Vector& normal = pBrushData->vertnormals[ pBrushData->vertnormalindices[MSurf_FirstVertNormal( surfID ) + i] ];
-		builder.Normal3fv( normal.Base() );
-
-		if ( MSurf_Flags( surfID ) & SURFDRAW_TANGENTSPACE )
-		{
-			Vector tangentS, tangentT;
-			TangentSpaceComputeBasis( tangentS, tangentT, normal, tVect, negate );
-			builder.TangentS3fv( tangentS.Base() );
-			builder.TangentT3fv( tangentT.Base() );
-		}
-
-		// The amount to blend between basetexture and basetexture2 used to sit in lightmap
-		// alpha, so we didn't care about the vertex color or vertex alpha. But now if they're
-		// using it, we have to make sure the vertex has the color and alpha specified correctly
-		// or it will look weird.
-		if ( !SurfaceHasDispInfo( surfID ) && 
-			 (MSurf_TexInfo( surfID )->texinfoFlags & TEXINFO_USING_BASETEXTURE2) )
-		{
-			static bool bWarned = false;
-			if ( !bWarned )
-			{
-				const char *pMaterialName = MSurf_TexInfo( surfID )->material->GetName();
-				bWarned = true;
-				Warning( "Warning: WorldTwoTextureBlend found on a non-displacement surface (material: %s). This wastes perf for no benefit.\n", pMaterialName );
-			}
-
-			builder.Color4ub( 255, 255, 255, 0 );
-		}
-		else
-		{
-			builder.Color3ubv( flatColor );
-		}
-		
-		builder.AdvanceVertex();
-	}
-}
-#else
 //-----------------------------------------------------------------------------
 // Purpose: Build a vertex buffer for this face
 // Input  : *pWorld - world model base
@@ -1429,7 +1371,7 @@ void BuildMSurfaceVertexArrays( worldbrushdata_t *pBrushData, SurfaceHandle_t su
 
 			if ( uv.x + ctx.m_BumpSTexCoordOffset*3 > 1.00001f )
 			{
-				Assert(0);
+				contract_assert( 0 );
 
 				SurfComputeLightmapCoordinate( ctx, surfID, vec, uv );
 			}
@@ -1468,7 +1410,6 @@ void BuildMSurfaceVertexArrays( worldbrushdata_t *pBrushData, SurfaceHandle_t su
 		builder.AdvanceVertex();
 	}
 }
-#endif // NEWMESH
 
 static int VertexCountForSurfaceList( const CMSurfaceSortList &list, const surfacesortgroup_t &group )
 {
@@ -1485,11 +1426,7 @@ static int VertexCountForSurfaceList( const CMSurfaceSortList &list, const surfa
 
 struct meshlist_t
 {
-#ifdef NEWMESH
-	IVertexBuffer *pVertexBuffer;
-#else
 	IMesh *pMesh;
-#endif
 	IMaterial *pMaterial;
 	int vertCount;
 	VertexFormat_t vertexFormat;
@@ -1560,7 +1497,7 @@ void SetTexInfoBaseTexture2Flags()
 			if ( !pParms[i]->IsDefined() )
 				continue;
 
-			if ( Q_stricmp( pParms[i]->GetName(), "$basetexture2" ) == 0 )
+			if ( V_stricmp( pParms[i]->GetName(), "$basetexture2" ) == 0 )
 			{
 				pTexInfo->texinfoFlags |= TEXINFO_USING_BASETEXTURE2;
 				break;
@@ -1599,7 +1536,7 @@ void WorldStaticMeshCreate( void )
 	{
 		// this is probably a bug in alt-tab.  It's calling this as a restore function
 		// but the lightmaps haven't been allocated yet
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 
@@ -1609,9 +1546,9 @@ void WorldStaticMeshCreate( void )
 	// Not entirely true since we need the correct lightmap page for WorldVertexTransition materials.
 	g_pShadowMgr->SetNumWorldMaterialBuckets( nSortIDs );
 
-	Assert( !std::ssize( g_WorldStaticMeshes ) );
+	contract_assert( !std::ssize( g_WorldStaticMeshes ) );
 	g_WorldStaticMeshes.assign( nSortIDs, {} );
-	memset( g_WorldStaticMeshes.data(), 0, sizeof(g_WorldStaticMeshes[0]) * std::ssize( g_WorldStaticMeshes ) );
+	std::memset( g_WorldStaticMeshes.data(), 0, sizeof(g_WorldStaticMeshes[0]) * std::ssize( g_WorldStaticMeshes ) );
 
 	CMSurfaceSortList matSortArray;
 	matSortArray.Init( nSortIDs, 512 );
@@ -1664,41 +1601,11 @@ void WorldStaticMeshCreate( void )
 
 	CMatRenderContextPtr pRenderContext( materials );
 
-	PIXEVENT( pRenderContext, "WorldStaticMeshCreate()" );
-#ifdef NEWMESH
-	for ( i = 0; i < g_Meshes.Count(); i++ )
-	{
-		Assert( g_Meshes[i].vertCount > 0 );
-		Assert( g_Meshes[i].pMaterial );
-		g_Meshes[i].pVertexBuffer = pRenderContext->CreateStaticVertexBuffer( GetUncompressedFormat( g_Meshes[i].pMaterial ), g_Meshes[i].vertCount, TEXTURE_GROUP_STATIC_VERTEX_BUFFER_WORLD );
-		int vertBufferIndex = 0;
-		// NOTE: Index count is zero because this will be a static vertex buffer!!!
-		CVertexBufferBuilder vertexBufferBuilder;
-		vertexBufferBuilder.Begin( g_Meshes[i].pVertexBuffer, g_Meshes[i].vertCount );
-		for ( int j = 0; j < g_WorldStaticMeshes.Count(); j++ )
-		{
-			int meshId = sortIndex[j];
-			if ( meshId == i )
-			{
-				g_WorldStaticMeshes[j] = g_Meshes[i].pVertexBuffer;
-				const surfacesortgroup_t &group = matSortArray.GetGroupForSortID(0,j);
-				MSL_FOREACH_SURFACE_IN_GROUP_BEGIN(matSortArray, group, surfID);
-					MSurf_VertBufferIndex( surfID ) = vertBufferIndex;
-					BuildMSurfaceVertexArrays( host_state.worldbrush, surfID, vertexBufferBuilder );
-
-					vertBufferIndex += MSurf_VertCount( surfID );
-
-				MSL_FOREACH_SURFACE_IN_GROUP_END();
-			}
-		}
-		vertexBufferBuilder.End();
-		Assert(vertBufferIndex == g_Meshes[i].vertCount);
-	}
-#else
+	( pRenderContext, "WorldStaticMeshCreate()" );
 	g_DepthFillVBFirstVertexForSurface.assign( host_state.worldbrush->numsurfaces, {} );
 	for ( i = 0; i < std::ssize( g_Meshes ); i++ )
 	{
-		Assert( g_Meshes[i].vertCount > 0 );
+		contract_assert( g_Meshes[i].vertCount > 0 );
 		if ( g_VBAllocTracker )
 			g_VBAllocTracker->TrackMeshAllocations( "WorldStaticMeshCreate" );
 		VertexFormat_t vertexFormat = ComputeWorldStaticMeshVertexFormat( g_Meshes[i].pMaterial );
@@ -1739,11 +1646,10 @@ void WorldStaticMeshCreate( void )
 			}
 		}
 		meshBuilder.End();
-		Assert(vertBufferIndex == g_Meshes[i].vertCount);
+		contract_assert( vertBufferIndex == g_Meshes[i].vertCount );
 		if ( g_VBAllocTracker )
 			g_VBAllocTracker->TrackMeshAllocations( nullptr );
 	}
-#endif
 	//Msg("Total %d meshes, %d before\n", g_Meshes.Count(), g_WorldStaticMeshes.Count() );
 }
 
@@ -1754,11 +1660,7 @@ void WorldStaticMeshDestroy( void )
 	// Blat out the static meshes associated with each material
 	for ( int i = 0; i < std::ssize( g_Meshes ); i++ )
 	{
-#ifdef NEWMESH
-		pRenderContext->DestroyVertexBuffer( g_Meshes[i].pVertexBuffer );
-#else
 		pRenderContext->DestroyStaticMesh( g_Meshes[i].pMesh );
-#endif
 	}
 	g_WorldStaticMeshes.clear(); g_WorldStaticMeshes.shrink_to_fit();
 	g_Meshes.clear();
@@ -1770,7 +1672,7 @@ void WorldStaticMeshDestroy( void )
 // Compute texture and lightmap coordinates
 //-----------------------------------------------------------------------------
 
-void SurfComputeTextureCoordinate( SurfaceHandle_t surfID, Vector const& vec, float * RESTRICT pUV )
+void SurfComputeTextureCoordinate( SurfaceHandle_t surfID, Vector const& vec, float * __restrict__ pUV )
 {
 	mtexinfo_t* pTexInfo = MSurf_TexInfo( surfID );
 
@@ -1790,7 +1692,7 @@ void SurfComputeTextureCoordinate( SurfaceHandle_t surfID, Vector const& vec, fl
 #if _DEBUG
 void CheckTexCoord( float coord )
 {
-	Assert(coord <= 1.0f );
+	contract_assert( coord <= 1.0f );
 }
 #endif
 
@@ -1822,13 +1724,8 @@ void SurfComputeLightmapCoordinate( SurfaceCtx_t const& ctx, SurfaceHandle_t sur
 		uv *= ctx.m_Scale;
 		uv += ctx.m_Offset;
 
-		assert( uv.IsValid() );
+		contract_assert( uv.IsValid() );
 	}
-#if _DEBUG
-	// This was here for check against displacements and they actually get calculated later correctly.
-//	CheckTexCoord( uv.x );
-//	CheckTexCoord( uv.y );
-#endif
 	uv.x = clamp(uv.x, 0.0f, 1.0f);
 	uv.y = clamp(uv.y, 0.0f, 1.0f);
 }

@@ -1,17 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SHEETSIMULATOR_H
-#define SHEETSIMULATOR_H
-
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include "utlvector.h"
-
+import std;
+import ks.tier1;
 
 // Uncomment this for client-side simulation
 //#define CLIENT_SIDE_SIMULATION 1
@@ -205,6 +197,3 @@ private:
 	char	m_CurrentCollisionPt;
 	bool	m_InitialPass;
 };
-
-
-#endif // TF_SHIELD_SHARED_H

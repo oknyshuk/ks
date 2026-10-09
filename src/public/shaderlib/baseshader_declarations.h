@@ -1,11 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: These are declarations (functions, structs, enums) used in both 
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: These are declarations (functions, structs, enums) used in both
 // SPU and PPU on PS/3, as well as potentially on different processor targets
 // on future platforms
-//===========================================================================//
-#ifndef BASESHADER_SHARED_DECLARATIONS_HDR
-#define BASESHADER_SHARED_DECLARATIONS_HDR
 
 //-----------------------------------------------------------------------------
 // Standard material vars
@@ -68,7 +67,3 @@ enum BlendType_t
 	//			alpha: srcAlpha * one + dstAlpha * one
 	BT_BLENDADD
 };
-
-
-
-#endif

@@ -1,27 +1,15 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// $Header: $
-// $NoKeywords: $
-//
-// SOA container
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "utlsoacontainer.h"
-#include "tier0/memalloc.h"
-#include <stdio.h>
-#include <stdarg.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <limits.h>
-#include "mathlib/halton.h"
-#include "vstdlib/jobthread.h"
-#include "tier1/callqueue.h"
+// Purpose: SOA container
 
+import std;
+import ks.vstdlib;
 
 //-----------------------------------------------------------------------------
 // Globals
 //-----------------------------------------------------------------------------
-static size_t s_DataTypeByteSize[]= 
+static std::size_t s_DataTypeByteSize[]= 
 {
 	sizeof( float ),
 	3 * sizeof( float ),
@@ -36,20 +24,20 @@ static fltx4 s_ZeroFields[3];
 //-----------------------------------------------------------------------------
 CSOAContainer::CSOAContainer( int nCols, int nRows, int nSlices, ... )
 {
-	COMPILE_TIME_ASSERT( ATTRDATATYPE_COUNT == ARRAYSIZE( s_DataTypeByteSize ) );
+	static_assert( ATTRDATATYPE_COUNT == std::size( s_DataTypeByteSize ) );
 
 	Init();
-	va_list args;
-	va_start( args, nSlices );
+	std::va_list args;
+	__builtin_va_start( args, nSlices );
 	for(;;)
 	{
-		int nFieldNumber = va_arg( args, int );
+		int nFieldNumber = __builtin_va_arg( args, int );
 		if ( nFieldNumber == -1 )
 			break;
-		EAttributeDataType nDataType = (EAttributeDataType)va_arg( args, int );
+		EAttributeDataType nDataType = (EAttributeDataType)__builtin_va_arg( args, int );
 		SetAttributeType( nFieldNumber, nDataType );
 	}
-	va_end( args );
+	__builtin_va_end( args );
 	AllocateData( nCols, nRows, nSlices );
 }
 
@@ -122,7 +110,7 @@ void CSOAContainer::AllocateData( int nNCols, int nNRows, int nSlices )
 
 void CSOAContainer::SetAttributeType( int nAttrIdx, EAttributeDataType nDataType, bool bAllocateMemory )
 {
-	Assert( nAttrIdx < MAX_SOA_FIELDS );
+	contract_assert( nAttrIdx < MAX_SOA_FIELDS );
 	if ( !m_pDataMemory )
 	{
 		// Attributes will be allocated/setup later, when AllocateData is called
@@ -141,7 +129,7 @@ void CSOAContainer::SetAttributeType( int nAttrIdx, EAttributeDataType nDataType
 		if ( m_nDataType[nAttrIdx] != nDataType )
 		{
 			Warning( "CSOAContainer::SetAttributeType - ERROR, trying to change type of previously-defined attribute %d!\n", nAttrIdx );
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 		return;
 	}
@@ -162,12 +150,12 @@ void CSOAContainer::SetAttributeType( int nAttrIdx, EAttributeDataType nDataType
 		m_nRowStrideInBytes[nAttrIdx]   = 0;
 		m_nSliceStrideInBytes[nAttrIdx] = 0;
 	}
-	m_pSeparateDataMemory[nAttrIdx] = reinterpret_cast<uint8 *>( MemAlloc_AllocAligned( AttributeMemorySize( nAttrIdx ), 16 ) );
+	m_pSeparateDataMemory[nAttrIdx] = reinterpret_cast<uint8 *>( MemAlloc_AllocAlignedUnattributed( AttributeMemorySize( nAttrIdx ), 16 ) );
 	m_pAttributePtrs[nAttrIdx] = m_pSeparateDataMemory[nAttrIdx];
 	if ( !bAllocateMemory )
 	{
 		// Set constant memory to zero as the default value
-		memset( m_pSeparateDataMemory[nAttrIdx], 0, AttributeMemorySize( nAttrIdx ) );
+		std::memset( m_pSeparateDataMemory[nAttrIdx], 0, AttributeMemorySize( nAttrIdx ) );
 	}
 }
 
@@ -186,7 +174,7 @@ void CSOAContainer::PurgeData( void )
 		m_pDataMemory = nullptr;
 	}
 
-	for( int i = 0; i < ARRAYSIZE( m_pSeparateDataMemory ); i++ )
+	for( int i = 0; i < std::size( m_pSeparateDataMemory ); i++ )
 	{
 		if ( m_pSeparateDataMemory[i] )
 		{
@@ -196,7 +184,7 @@ void CSOAContainer::PurgeData( void )
 	}
 }
 
-size_t CSOAContainer::AttributeMemorySize( int nAttrIndex ) const
+std::size_t CSOAContainer::AttributeMemorySize( int nAttrIndex ) const
 {
 	EAttributeDataType nDataType = m_nDataType[ nAttrIndex ];
 	if ( nDataType == ATTRDATATYPE_NONE )
@@ -207,9 +195,9 @@ size_t CSOAContainer::AttributeMemorySize( int nAttrIndex ) const
 		return ( 4 * s_DataTypeByteSize[ nDataType ] );
 }
 
-size_t CSOAContainer::DataMemorySize( void ) const
+std::size_t CSOAContainer::DataMemorySize( void ) const
 {
-	size_t nDataMemorySize = 0;
+	std::size_t nDataMemorySize = 0;
 	for( int i = 0; i < MAX_SOA_FIELDS; i++ )
 	{
 		if ( !( m_nFieldPresentMask & ( 1 << i ) ) )
@@ -221,17 +209,17 @@ size_t CSOAContainer::DataMemorySize( void ) const
 
 void CSOAContainer::AllocateDataMemory( void )
 {
-	Assert( !m_pDataMemory );
-	size_t nMemorySize = DataMemorySize();
+	contract_assert( !m_pDataMemory );
+	std::size_t nMemorySize = DataMemorySize();
 	if ( nMemorySize )
 	{
-		m_pDataMemory = reinterpret_cast<uint8 *> ( MemAlloc_AllocAligned( nMemorySize, 16 ) );
+		m_pDataMemory = reinterpret_cast<uint8 *> ( MemAlloc_AllocAlignedUnattributed( nMemorySize, 16 ) );
 	}
 }
 
-size_t CSOAContainer::ConstantMemorySize( void ) const
+std::size_t CSOAContainer::ConstantMemorySize( void ) const
 {
-	size_t nConstantDataSize = 0;
+	std::size_t nConstantDataSize = 0;
 	for( int i = 0; i < MAX_SOA_FIELDS; i++ )
 	{
 		if ( ( m_nDataType[i] == ATTRDATATYPE_NONE ) || ( m_nFieldPresentMask & ( 1 << i ) ) )
@@ -243,12 +231,12 @@ size_t CSOAContainer::ConstantMemorySize( void ) const
 
 void CSOAContainer::AllocateConstantMemory( void )
 {
-	Assert( !m_pConstantDataMemory );
-	size_t nConstantDataSize = ConstantMemorySize();
+	contract_assert( !m_pConstantDataMemory );
+	std::size_t nConstantDataSize = ConstantMemorySize();
 	if ( nConstantDataSize > 0 )
 	{
-		m_pConstantDataMemory = (uint8*)MemAlloc_AllocAligned( nConstantDataSize, 16 );
-		memset( m_pConstantDataMemory, 0, nConstantDataSize );
+		m_pConstantDataMemory = (uint8*)MemAlloc_AllocAlignedUnattributed( nConstantDataSize, 16 );
+		std::memset( m_pConstantDataMemory, 0, nConstantDataSize );
 	}
 }
 
@@ -266,27 +254,28 @@ void CSOAContainer::SetThreadMode( SOAThreadMode_t eThreadMode )
 	m_eThreadMode = eThreadMode;
 }
 
-#define THREAD_NJOBS 32
+constexpr auto THREAD_NJOBS = 32;
 
-#define PARALLEL_DISPATCH( method, ... )								\
-{																		\
-	if ( m_eThreadMode == SOATHREADMODE_NONE )							\
-	{																	\
-		method( 0, NumRows(), 0, NumSlices(), __VA_ARGS__ );			\
-	}																	\
-	else																\
-	{																	\
-		CCallQueue workList;											\
-		int nStep = std::max( 1, ( NumRows() / THREAD_NJOBS ) );				\
-		int nY = 0;														\
-		while( nY < NumRows() )											\
-		{																\
-			nStep = std::min( nStep, NumRows() - nY );						\
-			workList.QueueCall( this, &CSOAContainer::method, nY, nStep, 0, NumSlices(), __VA_ARGS__ ); \
-			nY += nStep;												\
-		}																\
-		workList.ParallelCallQueued();									\
-	}																	\
+template < typename... Args >
+void CSOAContainer::ParallelDispatch( void ( CSOAContainer::*method )( int, int, int, int, Args... ), std::type_identity_t< Args >... args )
+{
+	if ( m_eThreadMode == SOATHREADMODE_NONE )
+	{
+		( this->*method )( 0, NumRows(), 0, NumSlices(), args... );
+	}
+	else
+	{
+		CCallQueue workList;
+		int nStep = std::max( 1, ( NumRows() / THREAD_NJOBS ) );
+		int nY = 0;
+		while( nY < NumRows() )
+		{
+			nStep = std::min( nStep, NumRows() - nY );
+			workList.QueueCall( this, method, nY, nStep, 0, NumSlices(), args... );
+			nY += nStep;
+		}
+		workList.ParallelCallQueued();
+	}
 }
 
 
@@ -295,8 +284,8 @@ void CSOAContainer::CopyAttrFromPartial( int nStartRow, int nNumRows, int nStart
 	// copy a subregion in parallel
 	for( int z = nStartSlice; z < nEndSlice; z++ )
 	{
-		size_t nCopySize = m_nRowStrideInBytes[nDestAttributeIndex] * nNumRows;
-		memcpy( RowPtr<fltx4>( nDestAttributeIndex, nStartRow, z ), 
+		std::size_t nCopySize = m_nRowStrideInBytes[nDestAttributeIndex] * nNumRows;
+		std::memcpy( RowPtr<fltx4>( nDestAttributeIndex, nStartRow, z ), 
 				pOther->ConstRowPtr( nSrcAttributeIndex, nStartRow, z ),
 				nCopySize );
 	}
@@ -308,25 +297,25 @@ void CSOAContainer::CopyAttrFrom( CSOAContainer const &other, int nDestAttribute
 	{
 		nSrcAttributeIndex = nDestAttributeIndex;
 	}
-	Assert( other.NumRows() == NumRows() );
-	Assert( other.NumCols() == NumCols() );
-	Assert( other.NumSlices() == NumSlices() );
-	Assert( m_nDataType[nDestAttributeIndex] == other.m_nDataType[nSrcAttributeIndex] );
+	contract_assert( other.NumRows() == NumRows() );
+	contract_assert( other.NumCols() == NumCols() );
+	contract_assert( other.NumSlices() == NumSlices() );
+	contract_assert( m_nDataType[nDestAttributeIndex] == other.m_nDataType[nSrcAttributeIndex] );
 	if ( m_eThreadMode == SOATHREADMODE_NONE )
 	{
-		memcpy( m_pAttributePtrs[nDestAttributeIndex], other.m_pAttributePtrs[nSrcAttributeIndex], AttributeMemorySize( nDestAttributeIndex ) );
+		std::memcpy( m_pAttributePtrs[nDestAttributeIndex], other.m_pAttributePtrs[nSrcAttributeIndex], AttributeMemorySize( nDestAttributeIndex ) );
 	}
 	else
 	{
-		PARALLEL_DISPATCH( CopyAttrFromPartial, &other, nDestAttributeIndex, nSrcAttributeIndex );
+		ParallelDispatch( &CSOAContainer::CopyAttrFromPartial, &other, nDestAttributeIndex, nSrcAttributeIndex );
 	}
 }
 
 
 void CSOAContainer::CopyAttrToAttr( int nSrcAttributeIndex, int nDestAttributeIndex)
 {
-	Assert( m_nDataType[nSrcAttributeIndex] == m_nDataType[nDestAttributeIndex] );
-	memcpy( m_pAttributePtrs[nDestAttributeIndex], m_pAttributePtrs[nSrcAttributeIndex], AttributeMemorySize( nSrcAttributeIndex ) );
+	contract_assert( m_nDataType[nSrcAttributeIndex] == m_nDataType[nDestAttributeIndex] );
+	std::memcpy( m_pAttributePtrs[nDestAttributeIndex], m_pAttributePtrs[nSrcAttributeIndex], AttributeMemorySize( nSrcAttributeIndex ) );
 }
 
 void CSOAContainer::PackScalarAttributesToVectorAttribute( CSOAContainer *pInput,
@@ -344,10 +333,10 @@ void CSOAContainer::PackScalarAttributesToVectorAttribute( CSOAContainer *pInput
 	fltx4 *pInX = pInput->RowPtr<fltx4>( nScalarAttributeX, 0 );
 	fltx4 *pInY = pInput->RowPtr<fltx4>( nScalarAttributeY, 0 );
 	fltx4 *pInZ = pInput->RowPtr<fltx4>( nScalarAttributeZ, 0 );
-	size_t nRowToRowStride = RowToRowStep( nVecAttributeOut ) / sizeof( FourVectors );
-	size_t nRowToRowStrideX = pInput->RowToRowStep( nScalarAttributeX ) / sizeof( fltx4 );
-	size_t nRowToRowStrideY = pInput->RowToRowStep( nScalarAttributeY ) / sizeof( fltx4 );
-	size_t nRowToRowStrideZ = pInput->RowToRowStep( nScalarAttributeZ ) / sizeof( fltx4 );
+	std::size_t nRowToRowStride = RowToRowStep( nVecAttributeOut ) / sizeof( FourVectors );
+	std::size_t nRowToRowStrideX = pInput->RowToRowStep( nScalarAttributeX ) / sizeof( fltx4 );
+	std::size_t nRowToRowStrideY = pInput->RowToRowStep( nScalarAttributeY ) / sizeof( fltx4 );
+	std::size_t nRowToRowStrideZ = pInput->RowToRowStep( nScalarAttributeZ ) / sizeof( fltx4 );
 	int nRowCtr = NumRows() * NumSlices();
 	do
 	{
@@ -377,18 +366,18 @@ void CSOAContainer::UnPackVectorAttributeToScalarAttributes( CSOAContainer *pInp
 	AssertDataType( nScalarAttributeX, ATTRDATATYPE_FLOAT );
 	AssertDataType( nScalarAttributeY, ATTRDATATYPE_FLOAT );
 	AssertDataType( nScalarAttributeZ, ATTRDATATYPE_FLOAT );
-	Assert( pInput->NumCols() == NumCols() );
-	Assert( pInput->NumRows() == NumRows() );
-	Assert( pInput->NumSlices() == NumSlices() );
+	contract_assert( pInput->NumCols() == NumCols() );
+	contract_assert( pInput->NumRows() == NumRows() );
+	contract_assert( pInput->NumSlices() == NumSlices() );
 
 	FourVectors *pIn = pInput->RowPtr<FourVectors>( nVecAttributeIn, 0 );
 	fltx4 *pX = RowPtr<fltx4>( nScalarAttributeX, 0 );
 	fltx4 *pY = RowPtr<fltx4>( nScalarAttributeY, 0 );
 	fltx4 *pZ = RowPtr<fltx4>( nScalarAttributeZ, 0 );
-	size_t nRowToRowStride = pInput->RowToRowStep( nVecAttributeIn ) / sizeof( FourVectors );
-	size_t nRowToRowStrideX = RowToRowStep( nScalarAttributeX ) / sizeof( fltx4 );
-	size_t nRowToRowStrideY = RowToRowStep( nScalarAttributeY ) / sizeof( fltx4 );
-	size_t nRowToRowStrideZ = RowToRowStep( nScalarAttributeZ ) / sizeof( fltx4 );
+	std::size_t nRowToRowStride = pInput->RowToRowStep( nVecAttributeIn ) / sizeof( FourVectors );
+	std::size_t nRowToRowStrideX = RowToRowStep( nScalarAttributeX ) / sizeof( fltx4 );
+	std::size_t nRowToRowStrideY = RowToRowStep( nScalarAttributeY ) / sizeof( fltx4 );
+	std::size_t nRowToRowStrideZ = RowToRowStep( nScalarAttributeZ ) / sizeof( fltx4 );
 	int nRowCtr = NumRows() * NumSlices();
 	do
 	{
@@ -413,14 +402,14 @@ void CSOAContainer::MultiplyVectorAttribute( CSOAContainer *pInput, int nAttribu
 											 const Vector &vecScalar, 
 											 int nAttributeOut )
 {
-	Assert( pInput->NumCols() == NumCols() );
-	Assert( pInput->NumRows() == NumRows() );
+	contract_assert( pInput->NumCols() == NumCols() );
+	contract_assert( pInput->NumRows() == NumRows() );
 	FourVectors v4Scale;
 	v4Scale.DuplicateVector( vecScalar );
 	pInput->AssertDataType( nAttributeIn, ATTRDATATYPE_4V );
 	AssertDataType( nAttributeOut, ATTRDATATYPE_4V );
-	size_t nRowToRowStride = pInput->RowToRowStep( nAttributeIn ) / sizeof( FourVectors );
-	size_t nRowToRowStrideOut = RowToRowStep( nAttributeOut ) / sizeof( FourVectors );
+	std::size_t nRowToRowStride = pInput->RowToRowStep( nAttributeIn ) / sizeof( FourVectors );
+	std::size_t nRowToRowStrideOut = RowToRowStep( nAttributeOut ) / sizeof( FourVectors );
 	int nRowCtr = NumRows() * NumSlices();
 	FourVectors const *pIn = pInput->RowPtr<FourVectors>( nAttributeIn, 0 );
 	FourVectors *pOut = RowPtr<FourVectors>( nAttributeOut, 0 );
@@ -442,7 +431,7 @@ void CSOAContainer::RandomizeAttribute( int nAttr, float flMin, float flMax ) co
 {
 	AssertDataType( nAttr, ATTRDATATYPE_FLOAT );
 	fltx4 *pOut = RowPtr<fltx4>( nAttr, 0 );
-	size_t nRowToRowStride = RowToRowStep( nAttr ) / sizeof( fltx4 );
+	std::size_t nRowToRowStride = RowToRowStep( nAttr ) / sizeof( fltx4 );
 	int nContext = GetSIMDRandContext();
 	int nRowCtr = NumRows() * NumSlices();
 	fltx4 fl4Min = ReplicateX4( flMin );
@@ -469,7 +458,7 @@ void CSOAContainer::FillAttrWithInterpolatedValues( int nAttr, float flValue00, 
 	float flYDelta1 = ooHeight * ( flValue11 - flValue10 );
 	int nRowCtr = NumRows();
 	fltx4 *pOut = RowPtr<fltx4>( nAttr, 0 );
-	size_t nRowToRowStride = RowToRowStep( nAttr ) / sizeof( fltx4 );
+	std::size_t nRowToRowStride = RowToRowStep( nAttr ) / sizeof( fltx4 );
 	do
 	{
 		float flXDelta = ooWidth * ( flValue10 - flValue00 );
@@ -500,7 +489,7 @@ void CSOAContainer::FillAttrWithInterpolatedValues( int nAttr, Vector vecValue00
 	Vector vecYDelta1 = ooHeight * ( vecValue11 - vecValue10 );
 	int nRowCtr = NumRows();
 	FourVectors *pOut = RowPtr<FourVectors>( nAttr, 0 );
-	size_t nRowToRowStride = RowToRowStep( nAttr ) / sizeof( FourVectors );
+	std::size_t nRowToRowStride = RowToRowStep( nAttr ) / sizeof( FourVectors );
 	do
 	{
 		Vector vecXDelta = ooWidth * ( vecValue10 - vecValue00 );
@@ -535,7 +524,7 @@ void CSOAContainer::FillAttr( int nAttr, const Vector &vecValue )
 
 	AssertDataType( nAttr, ATTRDATATYPE_4V );
 	FourVectors *pOut = RowPtr<FourVectors>( nAttr, 0 );
-	size_t nRowToRowStride = RowToRowStep( nAttr ) / sizeof( FourVectors );
+	std::size_t nRowToRowStride = RowToRowStep( nAttr ) / sizeof( FourVectors );
 	int nRowCtr = NumRows() * NumSlices();
 	do
 	{
@@ -553,7 +542,7 @@ void CSOAContainer::FillAttrPartial( int nStartRow, int nNumRows, int nStartSlic
 	for( int z = nStartSlice; z < nEndSlice; z++ )
 	{
 		fltx4 *pOut = RowPtr<fltx4>( nAttr, nStartRow, z );
-		size_t nRowToRowStride = RowToRowStep( nAttr ) / sizeof( fltx4 );
+		std::size_t nRowToRowStride = RowToRowStep( nAttr ) / sizeof( fltx4 );
 		int nRowCtr = nNumRows;
 		do
 		{
@@ -579,7 +568,7 @@ void CSOAContainer::FillAttr( int nAttr, float flValue )
 	}
 
 	AssertDataType( nAttr, ATTRDATATYPE_FLOAT );
-	PARALLEL_DISPATCH( FillAttrPartial, nAttr, fl4Fill );
+	ParallelDispatch( &CSOAContainer::FillAttrPartial, nAttr, fl4Fill );
 }
 
 float CSOAContainer::SumAttributeValue( int nAttr ) const
@@ -613,7 +602,7 @@ void CSOAContainer::NormalizeAttr( int nAttr )
 {
 	AssertDataType( nAttr, ATTRDATATYPE_4V );
 	FourVectors *pOut = RowPtr<FourVectors>( nAttr, 0 );
-	size_t nRowToRowStride = RowToRowStep( nAttr ) / sizeof( FourVectors );
+	std::size_t nRowToRowStride = RowToRowStep( nAttr ) / sizeof( FourVectors );
 	int nRowCtr = NumRows() * NumSlices();
 	do
 	{
@@ -634,8 +623,8 @@ void CSOAContainer::MulAttr( CSOAContainer const &src, int nSrcAttr, int nDestAt
 	src.AssertDataType( nSrcAttr, ATTRDATATYPE_4V );
 	FourVectors *pOut = RowPtr<FourVectors>( nDestAttr, 0 );
 	FourVectors *pIn = src.RowPtr<FourVectors>( nSrcAttr, 0 );
-	size_t nSrcRowToRowStride = src.RowToRowStep( nSrcAttr ) / sizeof( FourVectors );
-	size_t nRowToRowStride = RowToRowStep( nDestAttr ) / sizeof( FourVectors );
+	std::size_t nSrcRowToRowStride = src.RowToRowStep( nSrcAttr ) / sizeof( FourVectors );
+	std::size_t nRowToRowStride = RowToRowStep( nDestAttr ) / sizeof( FourVectors );
 	int nRowCtr = NumRows() * NumSlices();
 	do
 	{
@@ -660,9 +649,9 @@ void CSOAContainer::AddGaussianSRBF( float flWeight, Vector vecDir, int nDirecti
 	v4Dir.DuplicateVector( vecDir );
 
 	FourVectors *pDirIn = RowPtr<FourVectors>( nDirectionAttribute, 0 );
-	size_t nRowToRowStride = RowToRowStep( nDirectionAttribute ) / sizeof( FourVectors );
+	std::size_t nRowToRowStride = RowToRowStep( nDirectionAttribute ) / sizeof( FourVectors );
 	fltx4 *pTarget = RowPtr<fltx4>( nScalarTargetAttribute, 0 );
-	size_t nRowToRowStrideTarget = RowToRowStep( nScalarTargetAttribute ) / sizeof( fltx4 );
+	std::size_t nRowToRowStrideTarget = RowToRowStep( nScalarTargetAttribute ) / sizeof( fltx4 );
 	int nRowCtr = NumRows() * NumSlices();
 	do
 	{
@@ -691,7 +680,7 @@ void CSOAContainer::AddGaussianSRBF( Vector vecWeight, Vector vecDir, int nDirec
 	v4Dir.DuplicateVector( vecDir );
 
 	FourVectors *pDirIn = RowPtr<FourVectors>( nDirectionAttribute, 0 );
-	size_t nRowToRowStride = RowToRowStep( nDirectionAttribute ) / sizeof( FourVectors );
+	std::size_t nRowToRowStride = RowToRowStep( nDirectionAttribute ) / sizeof( FourVectors );
 	FourVectors *pTarget = RowPtr<FourVectors>( nVectorTargetAttribute, 0 );
 	int nRowCtr = NumRows() * NumSlices();
 	do
@@ -746,7 +735,7 @@ template<EResampleHorzMode M, class T> void ResampleAttributeInternal( CSOAConta
 			}
 			if ( M == HMODE_DOWNSAMPLE_1X )
 			{
-				memcpy( pDest, pSrc, n * sizeof( T ) );
+				std::memcpy( pDest, pSrc, n * sizeof( T ) );
 			}
 		}
 	}
@@ -912,8 +901,8 @@ void CSOAContainer:: KMeansQuantization( int const *pFieldIndices, int nNumField
 	{
 		for( int i = 0; i < nNumResultsDesired; i++ )
 		{
-			memset( pOutValues[i].m_flValueAccumulators, 0, sizeof( pOutValues[i].m_flValueAccumulators ) );
-			memset( pOutValues[i].m_flWeightAccumulators, 0, sizeof( pOutValues[i].m_flWeightAccumulators ) );
+			std::memset( pOutValues[i].m_flValueAccumulators, 0, sizeof( pOutValues[i].m_flValueAccumulators ) );
+			std::memset( pOutValues[i].m_flWeightAccumulators, 0, sizeof( pOutValues[i].m_flWeightAccumulators ) );
 		}
 		// now, find the closest matches for all data samples, in parallel
 		KMeansQuantizationWorkUnit jobs[QUANTIZER_NJOBS];
@@ -929,7 +918,7 @@ void CSOAContainer:: KMeansQuantization( int const *pFieldIndices, int nNumField
 			jobs[i].m_pOutValues = pOutValues;
 			jobs[i].m_nErrorChannel = nChannelToReceiveErrorSignal;
 		}
-		ParallelProcess( jobs, ARRAYSIZE( jobs ), DoKMeansWork );
+		ParallelProcess( jobs, std::size( jobs ), DoKMeansWork );
 		if ( nNumIterations )						// don't refine the results after the last pass
 		{
 			for( int n = 0; n < nNumResultsDesired; n++ )
@@ -944,7 +933,7 @@ void CSOAContainer:: KMeansQuantization( int const *pFieldIndices, int nNumField
 					}
 				}
 				// re-adjust quantized values
-				float flOOWeight = 1.0 / std::max( FLT_EPSILON, pOutValues[n].m_flWeightAccumulators[0] );
+				float flOOWeight = 1.0 / std::max( std::numeric_limits<float>::epsilon(), pOutValues[n].m_flWeightAccumulators[0] );
 				for( int c = 0; c < nNumFields; c++ )
 				{
 					pOutValues[n].m_fl4Values[c] = ReplicateX4( pOutValues[n].m_flValueAccumulators[0][c] * flOOWeight );
@@ -956,7 +945,7 @@ void CSOAContainer:: KMeansQuantization( int const *pFieldIndices, int nNumField
 	}
 }
 
-#define THRESH 0.9
+constexpr auto THRESH = 0.9;
 
 void CSOAContainer::UpdateDistanceRow( int nSearchRadius, int nMinX, int nMaxX, int nY, int nZ,
 									   int nSrcField, int nDestField )
@@ -1080,17 +1069,17 @@ void CSOAContainer::CopyRegionFrom( CSOAContainer const &src, int nSrcAttr, int 
 									int nSrcMinX, int nSrcMaxX, int nSrcMinY, int nSrcMaxY, int nSrcMinZ, int nSrcMaxZ,
 									int nDestX, int nDestY, int nDestZ )
 {
-	Assert( HasAllocatedMemory( nDestAttr ) );
-	Assert( src.HasAllocatedMemory( nSrcAttr ) );
-	Assert( ItemByteStride( nDestAttr ) == src.ItemByteStride( nSrcAttr ) );
-	size_t nRowSize = ( 1 + nSrcMaxX - nSrcMinX ) * ItemByteStride( nDestAttr );
+	contract_assert( HasAllocatedMemory( nDestAttr ) );
+	contract_assert( src.HasAllocatedMemory( nSrcAttr ) );
+	contract_assert( ItemByteStride( nDestAttr ) == src.ItemByteStride( nSrcAttr ) );
+	std::size_t nRowSize = ( 1 + nSrcMaxX - nSrcMinX ) * ItemByteStride( nDestAttr );
 	for( int z = nSrcMinZ; z <= nSrcMaxZ; z++ )
 	{
 		for( int y = nSrcMinY; y <= nSrcMaxY; y++ )
 		{
 			uint8 const *pSrc = src.RowPtr<uint8>( nSrcAttr, y,z ) + nSrcMinX * ItemByteStride( nDestAttr );
 			uint8 *pDest = RowPtr<uint8>( nDestAttr, y + nDestY - nSrcMinY, z + nDestZ - nSrcMinZ ) + nDestX * ItemByteStride( nDestAttr );
-			memcpy( pDest, pSrc, nRowSize );
+			std::memcpy( pDest, pSrc, nRowSize );
 		}
 	}
 }
@@ -1107,5 +1096,3 @@ void CSOAContainer::CopyRegionFrom( CSOAContainer const &src,
 		}
 	}
 }
-
-

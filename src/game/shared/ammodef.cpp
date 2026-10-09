@@ -1,13 +1,58 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Base combat character with no AI
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Base combat character with no AI
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "ndebugoverlay.h"
+#endif
 #include "ammodef.h"
 
 //-----------------------------------------------------------------------------
@@ -233,9 +278,9 @@ bool CAmmoDef::AddAmmoType(char const* name, int damageType, int tracerType, int
 	if (m_nAmmoIndex == MAX_AMMO_TYPES)
 		return false;
 
-	int len = strlen(name);
+	int len = std::strlen(name);
 	m_AmmoType[m_nAmmoIndex].pName = new char[len+1];
-	Q_strncpy(m_AmmoType[m_nAmmoIndex].pName, name,len+1);
+	V_strncpy(m_AmmoType[m_nAmmoIndex].pName, name,len+1);
 	m_AmmoType[m_nAmmoIndex].nDamageType	= damageType;
 	m_AmmoType[m_nAmmoIndex].eTracerType	= tracerType;
 	m_AmmoType[m_nAmmoIndex].nMinSplashSize	= minSplashSize;
@@ -327,7 +372,7 @@ CAmmoDef::CAmmoDef(void)
 {
 	// Start with an index of 1.  Client assumes 0 is an invalid ammo type
 	m_nAmmoIndex = 1;
-	memset( m_AmmoType, 0, sizeof( m_AmmoType ) );
+	std::memset( m_AmmoType, 0, sizeof( m_AmmoType ) );
 }
 
 CAmmoDef::~CAmmoDef( void )
@@ -337,5 +382,3 @@ CAmmoDef::~CAmmoDef( void )
 		delete[] m_AmmoType[ i ].pName;
 	}
 }
-
-

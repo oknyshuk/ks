@@ -1,12 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "model_combiner.h"
-#include <memory>
 
 struct model_combine_t;
 enum combine_result_t
@@ -282,7 +290,7 @@ void ModelCombineFinished( void *pUserData, MDLHandle_t OldHandle, MDLHandle_t N
 //-----------------------------------------------------------------------------
 bool CModelCombiner::CombineModel( IModelCombinerRequesterInterface *pRequester, const std::vector< SCombinerModelInput_t > &vecModelsToCombine )
 {
-	Assert( std::ssize( vecModelsToCombine ) > 1 );
+	contract_assert( std::ssize( vecModelsToCombine ) > 1 );
 
 	auto pOwnedCombine = std::make_unique< model_combine_t >();
 	model_combine_t	*pCombine = pOwnedCombine.get();
@@ -331,14 +339,14 @@ bool CModelCombiner::CombineModel( IModelCombinerRequesterInterface *pRequester,
 	pCombine->nCombinedModelIndex = modelinfo->BeginCombinedModel( szCombinedModelName, true );
 	if ( pCombine->nCombinedModelIndex == -1 )
 	{
-		AssertMsg1( false, "Failed to combine model %s", STRING( vecModelsToCombine[ 0 ].m_iszModelName ) );
+		contract_assert( false && "Failed to combine model %s" );
 		return false;
 	}
 
 	if ( !modelinfo->SetCombineModels( pCombine->nCombinedModelIndex, vecModelsToCombine ) )
 	{	
 		// we failed - invalid handle?
-		AssertMsg( "Failed to set combined models for %s!", STRING( vecModelsToCombine[ 0 ].m_iszModelName ) );
+		contract_assert( "Failed to set combined models for %s!" );
 		return false;
 	}
 

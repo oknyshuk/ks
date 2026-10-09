@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
 #include "rocketfilesystem.h"
+import std;
+import ks.tier1;
 
 #include "filesystem.h"
-#include "interfaces/interfaces.h"
 
 #include "bitmap/imageformat.h"
-#include "tier1/byte_reader.h"
 #include "vtf/vtf.h"
 
 RocketFileSystem RocketFileSystem::m_Instance;

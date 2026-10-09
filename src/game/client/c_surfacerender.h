@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef C_SURFACERENDER_H
-#define C_SURFACERENDER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
 #ifdef USE_BLOBULATOR
 
@@ -25,6 +18,3 @@ extern ks::aligned_vector< ImpParticleWithFourInterpolants, 16 > g_SurfaceRender
 extern const QAngle g_SurfaceRenderAnglesAngles;
 
 #endif
-
-
-#endif // C_SURFACERENDER_H

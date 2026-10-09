@@ -1,11 +1,12 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "aftershock_helper.h"
 
 DEFINE_FALLBACK_SHADER( Aftershock, Aftershock_dx9 )
 BEGIN_VS_SHADER( Aftershock_dx9, "Aftershock" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( COLORTINT, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Color tint" )
 		SHADER_PARAM( REFRACTAMOUNT, SHADER_PARAM_TYPE_FLOAT, "2", "" )
 

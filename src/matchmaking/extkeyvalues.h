@@ -1,11 +1,6 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef EXT_KEYVALUES_H
-#define EXT_KEYVALUES_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "mm_framework.h"
 
@@ -39,7 +34,7 @@ struct ContextValue_t
 		ContextValue_t const *p = this;
 		for ( ; p->m_szValue; ++ p )
 		{
-			if ( !Q_stricmp( p->m_szValue, szValue ) )
+			if ( !V_stricmp( p->m_szValue, szValue ) )
 				break;
 		}
 		return p->m_dwValue;
@@ -59,7 +54,3 @@ public:
 };
 
 IPropertyRule * GetRuleByName( char const *szRuleName );
-
-
-
-#endif

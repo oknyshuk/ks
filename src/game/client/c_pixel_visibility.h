@@ -1,12 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_PIXEL_VISIBILITY_H
-#define C_PIXEL_VISIBILITY_H
 
+import std;
+import ks.math;
 
 const float PIXELVIS_DEFAULT_PROXY_SIZE = 2.0f;
 const float PIXELVIS_DEFAULT_FADE_TIME = 0.0625f;
@@ -77,5 +75,3 @@ public:
 private:
 	void *m_pManagedData; //no need to worry what's under the hood here
 };
-
-#endif // C_PIXEL_VISIBILITY_H

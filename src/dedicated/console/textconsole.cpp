@@ -1,37 +1,32 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
 // TextConsole.cpp: implementation of the TextConsole class.
 //
 //////////////////////////////////////////////////////////////////////
 
 //#include "port.h"
+import ks.tier1;
 #include "textconsole.h"
-#include "utlvector.h"
-#include "tier1/strtools.h"
-
+import std;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-
 bool CTextConsole::Init( /*IBaseSystem * system*/ )
 {
 	//m_System = system;	// NULL or a valid base system interface
 
-	memset( m_szConsoleText, 0, sizeof( m_szConsoleText ) );
+	std::memset( m_szConsoleText, 0, sizeof( m_szConsoleText ) );
 	m_nConsoleTextLen	= 0;
 	m_nCursorPosition	= 0;
 
-	memset( m_szSavedConsoleText, 0, sizeof( m_szSavedConsoleText ) );
+	std::memset( m_szSavedConsoleText, 0, sizeof( m_szSavedConsoleText ) );
 	m_nSavedConsoleTextLen = 0;
 
-	memset( m_aszLineBuffer, 0, sizeof( m_aszLineBuffer ) );
+	std::memset( m_aszLineBuffer, 0, sizeof( m_aszLineBuffer ) );
 	m_nTotalLines	= 0;
 	m_nInputLine	= 0;
 	m_nBrowseLine	= 0;
@@ -101,9 +96,9 @@ int CTextConsole::ReceiveNewline( void )
 		m_nCursorPosition = 0;
 
 		// cache line in buffer, but only if it's not a duplicate of the previous line
-		if ( ( m_nInputLine == 0 ) || ( strcmp( m_aszLineBuffer[ m_nInputLine - 1 ], m_szConsoleText ) ) )
+		if ( ( m_nInputLine == 0 ) || ( std::strcmp( m_aszLineBuffer[ m_nInputLine - 1 ], m_szConsoleText ) ) )
 		{
-			strncpy( m_aszLineBuffer[ m_nInputLine ], m_szConsoleText, MAX_CONSOLE_TEXTLEN );
+			std::strncpy( m_aszLineBuffer[ m_nInputLine ], m_szConsoleText, MAX_CONSOLE_TEXTLEN );
 			
 			m_nInputLine++;
 
@@ -177,16 +172,16 @@ void CTextConsole::ReceiveTab( void )
 		char * pszRest;
 
 		pszCmdName	= matches[0];
-		pszRest		= pszCmdName + strlen( m_szConsoleText );
+		pszRest		= pszCmdName + std::strlen( m_szConsoleText );
 
 		if ( pszRest )
 		{
 			Echo( pszRest );
-			strcat( m_szConsoleText, pszRest );
-			m_nConsoleTextLen += strlen( pszRest );
+			std::strcat( m_szConsoleText, pszRest );
+			m_nConsoleTextLen += std::strlen( pszRest );
 
 			Echo( " " );
-			strcat( m_szConsoleText, " " );
+			std::strcat( m_szConsoleText, " " );
 			m_nConsoleTextLen++;
 		}
 	}
@@ -203,9 +198,9 @@ void CTextConsole::ReceiveTab( void )
 		pszCurrentCmd = matches[0];
 		while ( pszCurrentCmd )
 		{
-			if ( (int)strlen( pszCurrentCmd) > nLongestCmd )
+			if ( (int)std::strlen( pszCurrentCmd) > nLongestCmd )
 			{
-				nLongestCmd = strlen( pszCurrentCmd);
+				nLongestCmd = std::strlen( pszCurrentCmd);
 			}
 
 			i++;
@@ -232,7 +227,7 @@ void CTextConsole::ReceiveTab( void )
 				nCurrentColumn = 1;
 			}
 
-			Q_snprintf( szFormatCmd, sizeof(szFormatCmd), "%-*s ", nLongestCmd, pszCurrentCmd );
+			V_snprintf( szFormatCmd, sizeof(szFormatCmd), "%-*s ", nLongestCmd, pszCurrentCmd );
 			Echo( szFormatCmd );
 
 			i++;
@@ -307,7 +302,7 @@ void CTextConsole::ReceiveUpArrow( void )
 		if ( m_nConsoleTextLen > 0 )
 		{
 			// Save off current text
-			strncpy( m_szSavedConsoleText, m_szConsoleText, m_nConsoleTextLen );
+			std::strncpy( m_szSavedConsoleText, m_szConsoleText, m_nConsoleTextLen );
 			// No terminator, it's a raw buffer we always know the length of
 		}
 
@@ -328,8 +323,8 @@ void CTextConsole::ReceiveUpArrow( void )
 	// copy buffered line
 	Echo( m_aszLineBuffer[ m_nBrowseLine ] );
 
-	strncpy( m_szConsoleText, m_aszLineBuffer[ m_nBrowseLine ], MAX_CONSOLE_TEXTLEN );
-	m_nConsoleTextLen = strlen( m_aszLineBuffer[ m_nBrowseLine ] );
+	std::strncpy( m_szConsoleText, m_aszLineBuffer[ m_nBrowseLine ], MAX_CONSOLE_TEXTLEN );
+	m_nConsoleTextLen = std::strlen( m_aszLineBuffer[ m_nBrowseLine ] );
 
 	m_nCursorPosition = m_nConsoleTextLen;
 }
@@ -358,7 +353,7 @@ void CTextConsole::ReceiveDownArrow( void )
 		if ( m_nSavedConsoleTextLen > 0 )
 		{
 			// Restore current text
-			strncpy( m_szConsoleText, m_szSavedConsoleText, m_nSavedConsoleTextLen );
+			std::strncpy( m_szConsoleText, m_szSavedConsoleText, m_nSavedConsoleTextLen );
 			// No terminator, it's a raw buffer we always know the length of
 
 			Echo( m_szConsoleText, m_nSavedConsoleTextLen );
@@ -371,9 +366,9 @@ void CTextConsole::ReceiveDownArrow( void )
 		// copy buffered line
 		Echo( m_aszLineBuffer[ m_nBrowseLine ] );
 
-		strncpy( m_szConsoleText, m_aszLineBuffer[ m_nBrowseLine ], MAX_CONSOLE_TEXTLEN );
+		std::strncpy( m_szConsoleText, m_aszLineBuffer[ m_nBrowseLine ], MAX_CONSOLE_TEXTLEN );
 
-		m_nConsoleTextLen = strlen( m_aszLineBuffer[ m_nBrowseLine ] );
+		m_nConsoleTextLen = std::strlen( m_aszLineBuffer[ m_nBrowseLine ] );
 	}
 
 	m_nCursorPosition = m_nConsoleTextLen;

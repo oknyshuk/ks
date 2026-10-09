@@ -1,35 +1,29 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#if !defined( TEMPENT_H )
-#define TEMPENT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "c_baseentity.h"
 #include "c_baseanimating.h"
 #include "c_sprite.h"
 
 // Temporary entity array
-#define TENTPRIORITY_LOW	0
-#define TENTPRIORITY_HIGH	1
+inline constexpr int TENTPRIORITY_LOW = 0;
+inline constexpr int TENTPRIORITY_HIGH = 1;
 
 // TEMPENTITY flags
-#define	FTENT_NONE					0x00000000
-#define	FTENT_SINEWAVE				0x00000001
-#define	FTENT_GRAVITY				0x00000002
-#define FTENT_ROTATE				0x00000004
-#define	FTENT_SLOWGRAVITY			0x00000008
-#define FTENT_SMOKETRAIL			0x00000010
-#define FTENT_COLLIDEWORLD			0x00000020
-#define FTENT_FLICKER				0x00000040
-#define FTENT_FADEOUT				0x00000080
-#define FTENT_SPRANIMATE			0x00000100
-#define FTENT_HITSOUND				0x00000200
-#define FTENT_SPIRAL				0x00000400
-#define FTENT_SPRCYCLE				0x00000800
+inline constexpr int FTENT_NONE = 0x00000000;
+inline constexpr int FTENT_SINEWAVE = 0x00000001;
+inline constexpr int FTENT_GRAVITY = 0x00000002;
+inline constexpr int FTENT_ROTATE = 0x00000004;
+inline constexpr int FTENT_SLOWGRAVITY = 0x00000008;
+inline constexpr int FTENT_SMOKETRAIL = 0x00000010;
+inline constexpr int FTENT_COLLIDEWORLD = 0x00000020;
+inline constexpr int FTENT_FLICKER = 0x00000040;
+inline constexpr int FTENT_FADEOUT = 0x00000080;
+inline constexpr int FTENT_SPRANIMATE = 0x00000100;
+inline constexpr int FTENT_HITSOUND = 0x00000200;
+inline constexpr int FTENT_SPIRAL = 0x00000400;
+inline constexpr int FTENT_SPRCYCLE = 0x00000800;
 #define FTENT_COLLIDEALL			0x00001000 // will collide with world and slideboxes
 #define FTENT_PERSIST				0x00002000 // tent is not removed when unable to draw 
 #define FTENT_COLLIDEKILL			0x00004000 // tent is removed upon collision with anything
@@ -138,5 +132,3 @@ private:
 	int								DrawStudioModel( int flags );
 
 };
-
-#endif // TEMPENTITY_H

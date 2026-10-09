@@ -1,6 +1,7 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 #include "capsule.h"
-#include "trace.h"
 //#include "body.h"
 //#include "mass.h"
 
@@ -8,8 +9,8 @@
 //#include "gjk.h"
 //#include "sat.h"
 
-#define NUM_STACKS 8
-#define NUM_SLICES 16
+constexpr auto NUM_STACKS = 8;
+constexpr auto NUM_SLICES = 16;
 
 
 //--------------------------------------------------------------------------------------------------
@@ -24,7 +25,7 @@ struct CapsuleCast2D_t
 //--------------------------------------------------------------------------------------------------
 static void CastCapsuleRay2DCoaxialInternal( CapsuleCast2D_t &out, float mx, float dx, float h, float e )
 {
-	Assert( e >= 0 );
+	contract_assert( e >= 0 );
 	float mxProj = mx + e; // m.x - (-e)
 	if( mxProj < 0 )
 	{
@@ -60,7 +61,7 @@ static void CastCapsuleRay2DParallelInternal( CapsuleCast2D_t &out, const Vector
 	if( e2 > 0 ) // otherwise, going parallel and outside : FLT_MAX
 	{
 		// going parallel and inside the infinite slab at level m.y, left to right
-		float e = sqrtf( e2 ); // -e..h+e is the extent 
+		float e = std::sqrtf( e2 ); // -e..h+e is the extent 
 		CastCapsuleRay2DCoaxialInternal( out, m.x, dx, h, e );
 	}
 }
@@ -72,9 +73,9 @@ static void CastCapsuleRay2DParallelInternal( CapsuleCast2D_t &out, const Vector
 // return: time of hit
 static void CastCapsuleRay2DInternal( CapsuleCast2D_t &out, const Vector2D &m, const Vector2D &d, float h, float rr )
 {
-	Assert( rr >= 0 );
-	Assert( d.y > -FLT_EPSILON );
-	Assert( d.y != 0.0f ); // otherwise it's going parallel
+	contract_assert( rr >= 0 );
+	contract_assert( d.y > -std::numeric_limits<float>::epsilon() );
+	contract_assert( d.y != 0.0f ); // otherwise it's going parallel
 	float my2 = Sqr( m.y );
 	out.m_flCapsule = Clamp( m.x, 0.0f, h );
 
@@ -87,7 +88,7 @@ static void CastCapsuleRay2DInternal( CapsuleCast2D_t &out, const Vector2D &m, c
 		return;
 	}
 	// well, we don't start inside the capsule. Good to know
-	float r = sqrtf( rr ), dd = Sqr( d.x ) + Sqr( d.y ), ddInv = 1.0f / dd, dymy = d.y * m.y;
+	float r = std::sqrtf( rr ), dd = Sqr( d.x ) + Sqr( d.y ), ddInv = 1.0f / dd, dymy = d.y * m.y;
 
 	// first, intersect the ray with the rectangle
 
@@ -123,8 +124,8 @@ static void CastCapsuleRay2DInternal( CapsuleCast2D_t &out, const Vector2D &m, c
 	float b = ( d.x * mxh + dymy ) * ddInv, c = ( mxh * mxh + my2 - rr ) * ddInv, D = b * b - c;
 	if( D >= 0 )
 	{
-		float tc = -b - sqrtf( D );
-		Assert( tc - t >= -1e-4f );	// the ray should really enter the circle after it entered the stripe of halfspaces 
+		float tc = -b - std::sqrtf( D );
+		contract_assert( tc - t >= -1e-4f );	// the ray should really enter the circle after it entered the stripe of halfspaces 
 		// if tc < 0, we entered capsule before ray began; since we didn't start-in-solid, it means we don't hit the capsule at all
 		if( tc >= 0 )
 		{
@@ -167,7 +168,7 @@ static void CastCapsuleShortRay( CShapeCastResult &out, const Vector &sUnit, flo
 	{
 		out.m_bStartInSolid = true;
 		out.m_flHitTime = 0;
-		out.m_vHitNormal = flDistFromCapsuleSqr > 1e-8f ? vDistance / sqrtf( flDistFromCapsuleSqr ) : VectorPerpendicularToVector( sUnit );
+		out.m_vHitNormal = flDistFromCapsuleSqr > 1e-8f ? vDistance / std::sqrtf( flDistFromCapsuleSqr ) : VectorPerpendicularToVector( sUnit );
 		out.m_vHitPoint = vRayStart;
 	}
 }
@@ -202,21 +203,16 @@ void CastCapsuleRay( CShapeCastResult& out, const Vector& vRayStart, const Vecto
 		float dsUnit = DotProduct( vRayDelta, sUnit );
 
 		CapsuleCast2D_t cast;
-		cast.m_flRay = FLT_MAX;
+		cast.m_flRay = std::numeric_limits<float>::max();
 
-		if( zLenSqr > 256*256 * FLT_EPSILON * FLT_EPSILON ) // the tolerance here is found experimentally, with the target of achieving minimal orthogonality of 1e-3 between z^s and z^d
+		if( zLenSqr > 256*256 * std::numeric_limits<float>::epsilon() * std::numeric_limits<float>::epsilon() ) // the tolerance here is found experimentally, with the target of achieving minimal orthogonality of 1e-3 between z^s and z^d
 		{
-			float zLen = sqrtf( zLenSqr );
+			float zLen = std::sqrtf( zLenSqr );
 			Vector zUnit = z / zLen;
-	#ifdef _DEBUG
-			// z must be orthogonal to capsule and ray (it's a cross product of the two); if it's not, we need to handle this case as parallel
-			float flOrthogonality[2] = { DotProduct( zUnit, s ), DotProduct( zUnit, vRayDelta ) };
-			Assert( fabsf( flOrthogonality[0] ) < 1e-3f * std::max( 1, std::max( zLen, sLen ) ) && fabsf( flOrthogonality[1] ) < 1e-3f * std::max( 1, std::max( zLen, dLen ) ) );
-	#endif
 			float mzUnit = DotProduct( m, zUnit ), rr = Sqr( flRadius ) - Sqr( mzUnit );
 			if( rr <= 0 )
 			{
-				out.m_flHitTime = FLT_MAX;
+				out.m_flHitTime = std::numeric_limits<float>::max();
 				return;
 			}
 			else
@@ -233,7 +229,7 @@ void CastCapsuleRay( CShapeCastResult& out, const Vector& vRayStart, const Vecto
 			float msUnit = DotProduct( m, sUnit );
 			Vector zAlt = m - sUnit * msUnit;
 			float zAltLenSqr = zAlt.LengthSqr();
-			if( zAltLenSqr < FLT_EPSILON * FLT_EPSILON )
+			if( zAltLenSqr < std::numeric_limits<float>::epsilon() * std::numeric_limits<float>::epsilon() )
 			{
 				// ray and capsule are coaxial...
 				CastCapsuleRay2DCoaxialInternal( cast, msUnit, dsUnit, sLen, flRadius ); // note: we're passing radius!
@@ -241,12 +237,12 @@ void CastCapsuleRay( CShapeCastResult& out, const Vector& vRayStart, const Vecto
 			else
 			{
 				// ray and capsule are parallel
-				Vector zUnit = zAlt / sqrtf( zAltLenSqr ), yUnit = CrossProduct( zUnit, sUnit );
+				Vector zUnit = zAlt / std::sqrtf( zAltLenSqr ), yUnit = CrossProduct( zUnit, sUnit );
 				CastCapsuleRay2DParallelInternal( cast, Vector2D( DotProduct( m, sUnit ), DotProduct( m, yUnit ) ), dsUnit, sLen, Sqr( flRadius ) - zAltLenSqr ); // r^2 may be negative here - it'll just return no hit
 			}
 		}
 
-		Assert( cast.m_flRay >= 0 );
+		contract_assert( cast.m_flRay >= 0 );
 		out.m_flHitTime = cast.m_flRay;
 		out.m_vHitPoint = vRayStart + vRayDelta * cast.m_flRay;
 		out.m_vHitNormal = ( out.m_vHitPoint - ( vCenter[0] + sUnit * cast.m_flCapsule ) ).Normalized();
@@ -256,4 +252,3 @@ void CastCapsuleRay( CShapeCastResult& out, const Vector& vRayStart, const Vecto
 		CastCapsuleShortRay( out, sUnit, sLen, m, vRayStart, vCenter, flRadius );
 	}
 }
-

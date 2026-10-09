@@ -1,9 +1,9 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#ifndef ICESURFACE_HELPER_H
-#define ICESURFACE_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -20,7 +20,7 @@ struct PaintBlobVars_t
 {
 	PaintBlobVars_t()
 	{
-		memset( this, 0xFF, sizeof( PaintBlobVars_t ) );
+		std::memset( this, 0xFF, sizeof( PaintBlobVars_t ) );
 	}
 
 	int m_nBackSurface;
@@ -90,5 +90,3 @@ void InitParamsPaintBlob( CBaseVSShader *pShader, IMaterialVar** params, const c
 void InitPaintBlob( CBaseVSShader *pShader, IMaterialVar** params, PaintBlobVars_t &info );
 void DrawPaintBlob( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 					 IShaderShadow* pShaderShadow, PaintBlobVars_t &info, VertexCompressionType_t vertexCompression );
-
-#endif // ICESURFACE_HELPER_H

@@ -1,18 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "DevShotGenerator.h"
 #include "cmd.h"
-#include "fmtstr.h"
-#include "host.h"
-#include "tier0/icommandline.h"
-#include <tier0/dbg.h>
+import std;
 
-#define PAUSE_FRAMES_BETWEEN_MAPS	300
-#define PAUSE_TIME_BETWEEN_MAPS		2.0f
+constexpr auto PAUSE_FRAMES_BETWEEN_MAPS = 300;
+constexpr auto PAUSE_TIME_BETWEEN_MAPS = 2.0f;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -143,4 +138,3 @@ void CDevShotGenerator::StartDevShotGeneration()
 void CDevShotGenerator::Shutdown()
 {
 }
-

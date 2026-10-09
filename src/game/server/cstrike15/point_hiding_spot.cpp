@@ -1,10 +1,40 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "cs_nav_mesh.h"
@@ -18,8 +48,8 @@ public:
 	CPointHidingSpot();
 	DECLARE_DATADESC();
 
-	virtual void Activate() OVERRIDE;
-	virtual void UpdateOnRemove() OVERRIDE;
+	virtual void Activate() override;
+	virtual void UpdateOnRemove() override;
 	void PostActivateSetupThink();
 	void DetachFromHidingSpot();
 protected:
@@ -59,8 +89,8 @@ void CPointHidingSpot::UpdateOnRemove()
 	{
 		m_pNavArea->RemoveHidingSpot( m_pSpot );
 		bool bSuccess = DestroyHidingSpot( m_pSpot );
-		Assert( bSuccess );
-		NOTE_UNUSED( bSuccess );
+		contract_assert( bSuccess );
+		(void)bSuccess;
 	}
 	BaseClass::UpdateOnRemove();
 }

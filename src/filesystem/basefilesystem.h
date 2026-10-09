@@ -1,63 +1,24 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef BASEFILESYSTEM_H
-#define BASEFILESYSTEM_H
-
-#include "tier0/platform.h"
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 
-	#include <unistd.h> // unlink
-	#include "linux_support.h"
+
+import ks.tier1;
+	#include "platform/linux/linux_support.h"
 	#define INVALID_HANDLE_VALUE (void *)-1
 
-	// undo the prepended "_" 's
-	#define _chmod chmod
-	#define _stat stat
-	#define _alloca alloca
-	#define _S_IFDIR S_IFDIR
-
-	#define SUPPORT_VPK
 
 
-#include "tier0/threadtools.h"
-#include <mutex>
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <malloc.h>
-#include <string.h>
-#include "tier1/map_ops.h"
+import std;
 
-#ifdef SUPPORT_VPK
 #include "vpklib/packedstore.h"
-#endif
-#include <time.h>
-#include "refcount.h"
 #include "filesystem.h"
-#include "tier1/utlvector.h"
-#include <stdarg.h>
-#include "tier1/filename_table.h"
-#include "tier1/intern_pool.h"
-#include "tier1/string_ops.h"
-#include "tier1/slot_pool.h"
-#include "tier1/utlstring.h"
-#include <flat_set>
-#include <optional>
-#include <span>
-#include <vector>
 #include "bspfile.h"
-#include "tier1/tier1.h"
 #include "threadsaferefcountedobject.h"
 #include "filetracker.h"
-#include <utility>
 
 
-#include "tier0/memalloc.h"
 #define CORRECT_PATH_SEPARATOR '/'
 #define INCORRECT_PATH_SEPARATOR '\\'
 
@@ -65,7 +26,6 @@
 
 #define MAX_FILEPATH 512
 
-#define SUPPORT_IODELAY_MONITORING
 
 // Case-insensitive pool of paths and path IDs. Views from it compare by data(); a null data() is "none".
 extern ks::intern_pool_mt g_PathIDTable;
@@ -110,7 +70,6 @@ enum FileType_t
 class IThreadPool;
 class CAsyncJobFuliller;
 class CBlockingFileItemList;
-class KeyValues;
 class CCompiledKeyValuesReader;
 class CBaseFileSystem;
 class CPackFileHandle;
@@ -160,20 +119,18 @@ public:
 
 	void SetName( char const *pName )
 	{
-		Assert( pName );
-		Assert( !m_pszTrueFileName );
-		int len = Q_strlen( pName );
+		contract_assert( pName );
+		contract_assert( !m_pszTrueFileName );
+		int len = V_strlen( pName );
 		m_pszTrueFileName = new char[len + 1];
-		memcpy( m_pszTrueFileName, pName, len + 1 );
+		std::memcpy( m_pszTrueFileName, pName, len + 1 );
 	}
 
 	CPackFileHandle		*m_pPackFileHandle;
-#ifdef SUPPORT_VPK
 	CPackedStoreFileHandle m_VPKHandle;
-#endif
 	int64				m_nLength;
 	FileType_t			m_type;
-	FILE				*m_pFile;
+	std::FILE				*m_pFile;
 
 protected:
 	CBaseFileSystem		*m_fs;
@@ -187,7 +144,7 @@ protected:
 	};
 	unsigned int	m_nMagic;
 
-	bool IsValid();
+	bool IsValid() const;
 };
 
 // A pack file handle - essentially represents a file inside the pack file.  
@@ -254,7 +211,7 @@ public:
 
 	// Path management:
 	void SetPath( std::string_view path ) { m_Path = path; }
-	std::string_view GetPath() const	{ Assert( m_Path.data() ); return m_Path; }
+	std::string_view GetPath() const	{ contract_assert( m_Path.data() ); return m_Path; }
 	std::string_view	m_Path;
 
 	// possibly embedded pack
@@ -268,10 +225,8 @@ public:
 	int					m_refCount;
 	int					m_nOpenFiles;
 
-	FILE				*m_hPackFileHandleFS;
-#ifdef SUPPORT_VPK
+	std::FILE				*m_hPackFileHandleFS;
 	CPackedStoreFileHandle m_hPackFileHandleVPK;
-#endif
 	bool				m_bIsExcluded;
 
 	int					m_PackFileID;
@@ -368,8 +323,7 @@ protected:
 class CFileLoadInfo
 {
 public:
-	bool	m_bSteamCacheOnly;			// If Steam and this is true, then the file is only looked for in the Steam caches.
-	bool	m_bLoadedFromSteamCache;	// If Steam, this tells whether the file was loaded off disk or the Steam cache.
+	bool	m_bDiskLoadDisallowed;		// If this is true, then the file may not be loaded off disk.
 };
 
 
@@ -382,7 +336,7 @@ public:
 
 //-----------------------------------------------------------------------------
 
-abstract_class CBaseFileSystem : public CTier2AppSystem< IFileSystem >
+class CBaseFileSystem : public CTier2AppSystem< IFileSystem >
 {
 	friend class CPackFileHandle;
 	friend class CPackFile;
@@ -427,7 +381,7 @@ public:
 	virtual int					ReadEx( void* pOutput, int sizeDest, int size, FileHandle_t file );
 	virtual int					Write( void const* pInput, int size, FileHandle_t file );
 	virtual char				*ReadLine( char *pOutput, int maxChars, FileHandle_t file );
-	virtual int					FPrintf( FileHandle_t file, PRINTF_FORMAT_STRING const char *pFormat, ... ) FMTFUNCTION( 3, 4 );
+	[[gnu::format(printf, 3, 4)]] virtual int					FPrintf( FileHandle_t file, const char *pFormat, ... );
 
 	// Reads/writes whole files
 	virtual std::optional< std::vector< std::byte > >	ReadFile( const char *pFileName, const char *pPath, int nMaxBytes = 0, int nStartingByte = 0 );
@@ -444,7 +398,6 @@ public:
 	// Gets the current working directory
 	virtual bool				GetCurrentDirectory( char* pDirectory, int maxlen );
 
-	// this isn't implementable on STEAM as is.
 	virtual void				CreateDirHierarchy( const char *path, const char *pathID );
 
 	// returns true if the file is a directory
@@ -543,7 +496,7 @@ public:
 	virtual FSAsyncStatus_t		AsyncAppend(const char *pFileName, const void *pSrc, int nSrcBytes, bool bFreeMemory, FSAsyncControl_t *pControl) { return AsyncWrite( pFileName, pSrc, nSrcBytes, bFreeMemory, true, pControl); }
 	virtual FSAsyncStatus_t		AsyncWrite(const char *pFileName, const void *pSrc, int nSrcBytes, bool bFreeMemory, bool bAppend, FSAsyncControl_t *pControl);
 	virtual FSAsyncStatus_t		AsyncAppendFile(const char *pDestFileName, const char *pSrcFileName, FSAsyncControl_t *pControl);
-	virtual void				AsyncFinishAll( int iToPriority = INT_MIN );
+	virtual void				AsyncFinishAll( int iToPriority = std::numeric_limits<int>::min() );
 	virtual void				AsyncFinishAllWrites();
 	virtual bool				AsyncSuspend();
 	virtual bool				AsyncResume();
@@ -566,17 +519,7 @@ public:
 	virtual int					GetSearchPath( const char *pathID, bool bGetPackFiles, char *pPath, int nMaxLen );
 	virtual int					GetSearchPathID( char *pPath, int nMaxLen );
 
-#if defined( TRACK_BLOCKING_IO )
-	virtual void				EnableBlockingFileAccessTracking( bool state );
-	virtual bool				IsBlockingFileAccessEnabled() const;
-	virtual IBlockingFileItemList *RetrieveBlockingFileAccessInfo();
-
-	virtual void				RecordBlockingFileAccess( bool synchronous, const FileBlockingItem& item );
-
-	virtual bool				SetAllowSynchronousLogging( bool state );
-#endif
-
-	virtual bool				GetFileTypeForFullPath( char const *pFullPath, wchar_t *buf, size_t bufSizeInBytes );
+	virtual bool				GetFileTypeForFullPath( char const *pFullPath, wchar_t *buf, std::size_t bufSizeInBytes );
 
 	virtual void				BeginMapAccess();
 	virtual void				EndMapAccess();
@@ -716,7 +659,6 @@ public:
 		{
 			if ( ks::find_index( m_Visits, searchPath.m_storeId ) == -1 )
 			{
-				MEM_ALLOC_CREDIT();
 				m_Visits.push_back( searchPath.m_storeId );
 				return false;
 			}
@@ -746,7 +688,7 @@ public:
 				m_pathID = PathIDSymbol( pszPathID );
 			}
 
-			if ( *ppszFilename && !Q_IsAbsolutePath( *ppszFilename ) )
+			if ( *ppszFilename && !V_IsAbsolutePath( *ppszFilename ) )
 			{
 				// Copy paths to minimize mutex lock time
 				pFileSystem->m_SearchPathsMutex.lock();
@@ -820,10 +762,8 @@ public:
 		
 		std::set< std::string, ks::iless >	m_VisitedFiles;			// We go through the search paths in priority order, and we use this to make sure
 													// that we don't return the same file more than once.
-#ifdef SUPPORT_VPK
 		std::vector< std::string >		m_fileMatchesFromVPK;
 		std::vector< std::string >		m_dirMatchesFromVPK;
-#endif
 	};
 
 	friend class CSearchPath;
@@ -847,7 +787,7 @@ public:
 	// Global list of pack file handles
 	std::vector< CPackFile * > m_ZipFiles;
 
-	FILE *m_pLogFile;
+	std::FILE *m_pLogFile;
 	bool m_bOutputDebugString;
 
 	IThreadPool *	m_pThreadPool;
@@ -855,12 +795,11 @@ public:
 	// Statistics:
 	FileSystemStatistics m_Stats;
 
-#ifdef SUPPORT_IODELAY_MONITORING
 	float m_flDelayLimit;
 	float m_flLastIOTime;
 
 	
-	FORCEINLINE void NoteIO( void )
+	[[gnu::always_inline]] inline void NoteIO( void )
 	{
 		if ( m_pDelayThread )
 		{
@@ -870,21 +809,6 @@ public:
 	
 	CIODelayAlarmThread *m_pDelayThread;
 
-#else
-	FORCEINLINE void NoteIO( void )
-	{
-	}
-#endif
-
-
-#if defined( TRACK_BLOCKING_IO )
-	CBlockingFileItemList	*m_pBlockingItems;
-	bool					m_bBlockingFileAccessReportingEnabled;
-	bool					m_bAllowSynchronousLogging;
-
-	friend class			CBlockingFileItemList;
-	friend class			CAutoBlockReporter;
-#endif
 
 	CFileTracker2	m_FileTracker2;
 
@@ -892,36 +816,28 @@ protected:
 	//----------------------------------------------------------------------------
 	// Purpose: Functions implementing basic file system behavior.
 	//----------------------------------------------------------------------------
-	virtual FILE *FS_fopen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo ) = 0;
-	virtual void FS_setbufsize( FILE *fp, unsigned nBytes ) = 0;
-	virtual void FS_fclose( FILE *fp ) = 0;
-	virtual void FS_fseek( FILE *fp, int64 pos, int seekType ) = 0;
-	virtual long FS_ftell( FILE *fp ) = 0;
-	virtual int FS_feof( FILE *fp ) = 0;
-	size_t FS_fread( void *dest, size_t size, FILE *fp ) { return FS_fread( dest, (size_t)-1, size, fp ); }
-	virtual size_t FS_fread( void *dest, size_t destSize, size_t size, FILE *fp ) = 0;
-    virtual size_t FS_fwrite( const void *src, size_t size, FILE *fp ) = 0;
-	virtual bool FS_setmode( FILE *fp, FileMode_t mode ) { return false; }
-	virtual size_t FS_vfprintf( FILE *fp, const char *fmt, va_list list ) = 0;
-	virtual int FS_ferror( FILE *fp ) = 0;
-	virtual int FS_fflush( FILE *fp ) = 0;
-	virtual char *FS_fgets( char *dest, int destSize, FILE *fp ) = 0;
-	virtual int FS_stat( const char *path, struct _stat *buf ) = 0;
-	virtual int FS_chmod( const char *path, int pmode ) = 0;
+	virtual std::FILE *FS_fopen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo ) = 0;
+	virtual void FS_setbufsize( std::FILE *fp, unsigned nBytes ) = 0;
+	virtual void FS_fclose( std::FILE *fp ) = 0;
+	virtual void FS_fseek( std::FILE *fp, int64 pos, int seekType ) = 0;
+	virtual long FS_ftell( std::FILE *fp ) = 0;
+	virtual int FS_feof( std::FILE *fp ) = 0;
+	std::size_t FS_fread( void *dest, std::size_t size, std::FILE *fp ) { return FS_fread( dest, (std::size_t)-1, size, fp ); }
+	virtual std::size_t FS_fread( void *dest, std::size_t destSize, std::size_t size, std::FILE *fp ) = 0;
+    virtual std::size_t FS_fwrite( const void *src, std::size_t size, std::FILE *fp ) = 0;
+	virtual bool FS_setmode( std::FILE *fp, FileMode_t mode ) { return false; }
+	virtual std::size_t FS_vfprintf( std::FILE *fp, const char *fmt, std::va_list list ) = 0;
+	virtual int FS_ferror( std::FILE *fp ) = 0;
+	virtual int FS_fflush( std::FILE *fp ) = 0;
+	virtual char *FS_fgets( char *dest, int destSize, std::FILE *fp ) = 0;
+	virtual int FS_stat( const char *path, ks::platform::file_info *buf ) = 0;
+	virtual bool FS_setwritable( const char *path, bool writable ) = 0;
 	virtual HANDLE FS_FindFirstFile( const char *findname, WIN32_FIND_DATA *dat) = 0;
 	virtual bool FS_FindNextFile(HANDLE handle, WIN32_FIND_DATA *dat) = 0;
 	virtual bool FS_FindClose(HANDLE handle) = 0;
-	virtual int FS_GetSectorSize( FILE * ) { return 1; }
+	virtual int FS_GetSectorSize( std::FILE * ) { return 1; }
 
-#if defined( TRACK_BLOCKING_IO )
-	void BlockingFileAccess_EnterCriticalSection();
-	void BlockingFileAccess_LeaveCriticalSection();
-
-	std::recursive_mutex m_BlockingFileMutex;
-
-#endif
-
-	void GetFileNameForHandle( FileHandle_t handle, char *buf, size_t buflen );
+	void GetFileNameForHandle( FileHandle_t handle, char *buf, std::size_t buflen );
 
 protected:
 	//-----------------------------------------------------------------------------
@@ -938,24 +854,21 @@ protected:
 		void		SetName( char const *name ) { m_Name = name; }
 		char const	*GetName( void ) const { return m_Name.empty() ? "???" : m_Name.c_str(); }
 
-		FILE		*m_pFile = nullptr;
+		std::FILE		*m_pFile = nullptr;
 		std::string	m_Name;
 	};
 
 	std::recursive_mutex m_OpenedFilesMutex;
 	std::vector< COpenedFile >	m_OpenedFiles;
 	ks::idict< bool >			m_NonexistingFilesExtensions;
-#ifdef NONEXISTING_FILES_CACHE_SUPPORT
-	ks::idict< double >			m_NonexistingFilesCache;
-#endif
 
 	FileWarningLevel_t			m_fwLevel;
 	void						(*m_pfnWarning)( const char *fmt, ... );
 
-	FILE						*Trace_FOpen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo=nullptr );
-	void						Trace_FClose( FILE *fp );
-	void						Trace_FRead( int size, FILE* file );
-	void						Trace_FWrite( int size, FILE* file );
+	std::FILE						*Trace_FOpen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo=nullptr );
+	void						Trace_FClose( std::FILE *fp );
+	void						Trace_FRead( int size, std::FILE* file );
+	void						Trace_FWrite( int size, std::FILE* file );
 
 	void						Trace_DumpUnclosedFiles( void );
 
@@ -1000,7 +913,7 @@ protected:
 	// Helper function for fs_log file logging
 	void LogFileAccess( const char *pFullFileName );
 
-	bool LookupKeyValuesRootKeyName( char const *filename, char const *pPathID, char *rootName, size_t bufsize );
+	bool LookupKeyValuesRootKeyName( char const *filename, char const *pPathID, char *rootName, std::size_t bufsize );
 
 	// If bByRequestOnly is -1, then it will default to false if it doesn't already exist, and it 
 	// won't change it if it does already exist. Otherwise, it will be set to the value of bByRequestOnly.
@@ -1010,7 +923,7 @@ protected:
 	// Global/shared filename/path table
 	ks::filename_table			m_FileNames;
 
-	// This manages most of the info we use for pure servers (whether files came from Steam caches or off-disk, their CRCs, which ones are unverified, etc).
+	// This manages most of the info we use for pure servers (whether files came from off-disk, their CRCs, which ones are unverified, etc).
 	CFileTracker	m_FileTracker;
 	int				m_WhitelistFileTrackingEnabled;	// -1 if unset, 0 if disabled (single player), 1 if enabled (multiplayer).
 	FSDirtyDiskReportFunc_t m_DirtyDiskReportFunc;
@@ -1032,11 +945,9 @@ protected:
 		FileNameHandle_t m_hFixedName;
 	};
 	static std::vector< FileNameHandle_t > m_ExcludeFilePaths;
-#ifdef SUPPORT_VPK
 	std::vector< CPackedStore * > m_VPKFiles;
 	std::set< std::string, ks::iless > m_VPKDirectories;
 	CPackedStoreFileHandle FindFileInVPKs( const char *pFileName );
-#endif
 
 	static std::flat_multiset< DLCContent_t, CDLCLess > m_DLCContents;
 	static std::vector< DLCCorrupt_t > m_CorruptDLC;
@@ -1208,12 +1119,10 @@ inline int CPackFile::GetSectorSize()
 	{
 		return m_fs->FS_GetSectorSize( m_hPackFileHandleFS );
 	}
-#ifdef SUPPORT_VPK
 	else if ( m_hPackFileHandleVPK )
 	{
 		return 2048;
 	}
-#endif
 	else
 	{
 		return -1;
@@ -1221,60 +1130,6 @@ inline int CPackFile::GetSectorSize()
 }
 
 
-#if defined( TRACK_BLOCKING_IO )
-
-class CAutoBlockReporter
-{
-public:
-
-	CAutoBlockReporter( CBaseFileSystem *fs, bool synchronous, char const *filename, int eBlockType, int nTypeOfAccess ) :
-		m_pFS( fs ),
-		m_Item( eBlockType, filename, 0.0f, nTypeOfAccess ),
-		m_bSynchronous( synchronous )
-	{
-		Assert( m_pFS );
-		m_Timer.Start();
-	}
-	
-	CAutoBlockReporter( CBaseFileSystem *fs, bool synchronous, FileHandle_t handle, int eBlockType, int nTypeOfAccess ) :
-		m_pFS( fs ),
-		m_Item( eBlockType, nullptr, 0.0f, nTypeOfAccess ),
-		m_bSynchronous( synchronous )
-	{
-		Assert( m_pFS );
-		char name[ 512 ];
-		m_pFS->GetFileNameForHandle( handle, name, sizeof( name ) );
-		m_Item.SetFileName( name );
-		m_Timer.Start();
-	}
-
-	~CAutoBlockReporter()
-	{
-		m_Timer.End();
-		m_Item.m_flElapsed = m_Timer.GetDuration().GetSeconds();
-		m_pFS->RecordBlockingFileAccess( m_bSynchronous, m_Item );
-	}
-
-private:
-
-	CBaseFileSystem		*m_pFS;
-
-	CFastTimer			m_Timer;
-	FileBlockingItem	m_Item;
-	bool				m_bSynchronous;
-};
-
-#define AUTOBLOCKREPORTER_FN( name, fs, sync, filename, blockType, accessType )		CAutoBlockReporter block##name( fs, sync, filename, blockType, accessType );
-#define AUTOBLOCKREPORTER_FH( name, fs, sync, handle, blockType, accessType )		CAutoBlockReporter block##name( fs, sync, handle, blockType, accessType );
-
-#else
-
-#define AUTOBLOCKREPORTER_FN( name, fs, sync, filename, blockType, accessType )	// Nothing
-#define AUTOBLOCKREPORTER_FH( name, fs, sync, handle , blockType, accessType )	// Nothing
-
-#endif
 
 // singleton accessor
 CBaseFileSystem *BaseFileSystem();
-
-#endif // BASEFILESYSTEM_H

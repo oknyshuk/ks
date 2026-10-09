@@ -1,22 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-// This is what all vs/ps (dx8+) shaders inherit from.
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BASEVSSHADER_H
-#define BASEVSSHADER_H
-
+// Purpose: This is what all vs/ps (dx8+) shaders inherit from.
 
 #include "cpp_shader_constant_register_map.h"
 #include "shaderlib/cshader.h"
 #include "shaderlib/BaseShader.h"
 #include "shaderapifast.h"
-#include "convar.h"
 #include <renderparm.h>
-
+import ks.tier1;
+import std;
 
 // Texture combining modes for combining base and detail/basetexture2
 // Matches what's in common_ps_fxc.h
@@ -47,7 +41,6 @@
 //-----------------------------------------------------------------------------
 #define BEGIN_VS_SHADER_FLAGS(_name, _help, _flags)	__BEGIN_SHADER_INTERNAL( CBaseVSShader, _name, _help, _flags )
 #define BEGIN_VS_SHADER(_name,_help)	__BEGIN_SHADER_INTERNAL( CBaseVSShader, _name, _help, 0 )
-
 
 // useful parameter initialization macro
 #define INIT_FLOAT_PARM( parm, value )					\
@@ -162,7 +155,7 @@ public:
 		DrawFlashlight_dx90_Vars_t() 
 		{ 
 			// set all ints to -1
-			memset( this, 0xFF, sizeof(DrawFlashlight_dx90_Vars_t) ); 
+			std::memset( this, 0xFF, sizeof(DrawFlashlight_dx90_Vars_t) ); 
 			// set all bools to a default value.
 			m_bBump = false;
 			m_bLightmappedGeneric = false;
@@ -217,19 +210,19 @@ private:
 	void ColorVarsToVector( int colorVar, int alphaVar, Vector4D &color );
 };
 
-FORCEINLINE bool IsSRGBDetailTexture( int nMode )
+[[gnu::always_inline]] inline bool IsSRGBDetailTexture( int nMode )
 {
 	return	( nMode == DETAIL_BLEND_MODE_DETAIL_OVER_BASE ) ||
 			( nMode == DETAIL_BLEND_MODE_FADE ) ||
 			( nMode == DETAIL_BLEND_MODE_BASE_OVER_DETAIL );
 }
 
-FORCEINLINE bool IsSRGBDecalTexture( int nMode )
+[[gnu::always_inline]] inline bool IsSRGBDecalTexture( int nMode )
 {
 	return	(nMode == DECAL_BLEND_MODE_DECAL_ALPHA);
 }
 
-FORCEINLINE const char * GetFlashlightTextureFilename()
+[[gnu::always_inline]] inline const char * GetFlashlightTextureFilename()
 {
 	//if ( !IsX360() && ( g_pHardwareConfig->SupportsBorderColor() ) )
 	//{
@@ -243,7 +236,7 @@ FORCEINLINE const char * GetFlashlightTextureFilename()
 
 extern ConVar r_flashlightbrightness;
 
-FORCEINLINE void SetFlashLightColorFromState( FlashlightState_t const &state, IShaderDynamicAPI *pShaderAPI, bool bSinglePassFlashlight, int nPSRegister=28, bool bFlashlightNoLambert=false )
+[[gnu::always_inline]] inline void SetFlashLightColorFromState( FlashlightState_t const &state, IShaderDynamicAPI *pShaderAPI, bool bSinglePassFlashlight, int nPSRegister=28, bool bFlashlightNoLambert=false )
 {
 	// Old code
 	//float flToneMapScale = ( ShaderApiFast( pShaderAPI )->GetToneMappingScaleLinear() ).x;
@@ -282,7 +275,7 @@ FORCEINLINE void SetFlashLightColorFromState( FlashlightState_t const &state, IS
 	ShaderApiFast( pShaderAPI )->SetPixelShaderConstant( nPSRegister, ( float * )vPsConst );
 }
 
-FORCEINLINE float ShadowAttenFromState( FlashlightState_t const &state )
+[[gnu::always_inline]] inline float ShadowAttenFromState( FlashlightState_t const &state )
 {
 	// DX10 requires some hackery due to sRGB/blend ordering change from DX9, which makes the shadows too light
 	if ( g_pHardwareConfig->UsesSRGBCorrectBlending() )
@@ -291,14 +284,14 @@ FORCEINLINE float ShadowAttenFromState( FlashlightState_t const &state )
 	return state.m_flShadowAtten;
 }
 
-FORCEINLINE float ShadowFilterFromState( FlashlightState_t const &state )
+[[gnu::always_inline]] inline float ShadowFilterFromState( FlashlightState_t const &state )
 {
 	// We developed shadow maps at 1024, so we expect the penumbra size to have been tuned relative to that
 	return state.m_flShadowFilterSize / 1024.0f;
 }
 
 
-FORCEINLINE void SetupUberlightFromState( IShaderDynamicAPI *pShaderAPI, FlashlightState_t const &state )
+[[gnu::always_inline]] inline void SetupUberlightFromState( IShaderDynamicAPI *pShaderAPI, FlashlightState_t const &state )
 {
 	// Bail if we can't do ps30 or we don't even want an uberlight
 	if ( !g_pHardwareConfig->HasFastVertexTextures() || !state.m_bUberlight || !pShaderAPI )
@@ -331,27 +324,27 @@ FORCEINLINE void SetupUberlightFromState( IShaderDynamicAPI *pShaderAPI, Flashli
 
 
 // convenient material variable access functions for helpers to use.
-FORCEINLINE bool IsTextureSet( int nVar, IMaterialVar **params )
+[[gnu::always_inline]] inline bool IsTextureSet( int nVar, IMaterialVar **params )
 {
 	return ( nVar != -1 ) && ( params[nVar]->IsTexture() );
 }
 
-FORCEINLINE bool IsBoolSet( int nVar, IMaterialVar **params )
+[[gnu::always_inline]] inline bool IsBoolSet( int nVar, IMaterialVar **params )
 {
 	return ( nVar != -1 ) && ( params[nVar]->GetIntValue() );
 }
 
-FORCEINLINE int GetIntParam( int nVar, IMaterialVar **params, int nDefaultValue = 0 )
+[[gnu::always_inline]] inline int GetIntParam( int nVar, IMaterialVar **params, int nDefaultValue = 0 )
 {
 	return ( nVar != -1 ) ? ( params[nVar]->GetIntValue() ) : nDefaultValue;
 }
 
-FORCEINLINE float GetFloatParam( int nVar, IMaterialVar **params, float flDefaultValue = 0.0 )
+[[gnu::always_inline]] inline float GetFloatParam( int nVar, IMaterialVar **params, float flDefaultValue = 0.0 )
 {
 	return ( nVar != -1 ) ? ( params[nVar]->GetFloatValue() ) : flDefaultValue;
 }
 
-FORCEINLINE void InitFloatParam( int nIndex, IMaterialVar **params, float flValue )
+[[gnu::always_inline]] inline void InitFloatParam( int nIndex, IMaterialVar **params, float flValue )
 {
 	if ( (nIndex != -1) && !params[nIndex]->IsDefined() )
 	{
@@ -359,7 +352,7 @@ FORCEINLINE void InitFloatParam( int nIndex, IMaterialVar **params, float flValu
 	}
 }
 
-FORCEINLINE void InitIntParam( int nIndex, IMaterialVar **params, int nValue )
+[[gnu::always_inline]] inline void InitIntParam( int nIndex, IMaterialVar **params, int nValue )
 {
 	if ( (nIndex != -1) && !params[nIndex]->IsDefined() )
 	{
@@ -367,7 +360,7 @@ FORCEINLINE void InitIntParam( int nIndex, IMaterialVar **params, int nValue )
 	}
 }
 
-FORCEINLINE void InitVecParam( int nIndex, IMaterialVar **params, float x, float y )
+[[gnu::always_inline]] inline void InitVecParam( int nIndex, IMaterialVar **params, float x, float y )
 {
 	if ( (nIndex != -1) && !params[nIndex]->IsDefined() )
 	{
@@ -375,7 +368,7 @@ FORCEINLINE void InitVecParam( int nIndex, IMaterialVar **params, float x, float
 	}
 }
 
-FORCEINLINE void InitVecParam( int nIndex, IMaterialVar **params, float x, float y, float z )
+[[gnu::always_inline]] inline void InitVecParam( int nIndex, IMaterialVar **params, float x, float y, float z )
 {
 	if ( (nIndex != -1) && !params[nIndex]->IsDefined() )
 	{
@@ -383,7 +376,7 @@ FORCEINLINE void InitVecParam( int nIndex, IMaterialVar **params, float x, float
 	}
 }
 
-FORCEINLINE void InitVecParam( int nIndex, IMaterialVar **params, float x, float y, float z, float w )
+[[gnu::always_inline]] inline void InitVecParam( int nIndex, IMaterialVar **params, float x, float y, float z, float w )
 {
 	if ( (nIndex != -1) && !params[nIndex]->IsDefined() )
 	{
@@ -400,6 +393,3 @@ class ConVar;
 extern ConVar mat_envmaptintoverride;
 extern ConVar mat_envmaptintscale;
 #endif
-
-
-#endif // BASEVSSHADER_H

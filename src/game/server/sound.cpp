@@ -1,36 +1,54 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Entities relating to in-level sound effects.
-//
 //			env_speaker: used for public address announcements over loudspeakers.
 //				This tries not to drown out talking NPCs.
-//
 //			env_soundscape: controls what sound script an area uses.
-//
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "player.h"
-#include "mathlib/mathlib.h"
 #include "ai_speech.h"
 #include "stringregistry.h"
 #include "gamerules.h"
 #include "game.h"
-#include <ctype.h>
 #include "entitylist.h"
-#include "vstdlib/random.h"
 #include "engine/IEngineSound.h"
 #include "ndebugoverlay.h"
 #include "soundscape.h"
 #include "igamesystem.h"
-#include "keyvalues.h"
 #include "filesystem.h"
 #include "ambientgeneric.h"
 
 // =================== ROOM SOUND FX ==========================================
-
-
-
 
 // ==================== SENTENCE GROUPS, UTILITY FUNCTIONS  ======================================
 
@@ -204,7 +222,7 @@ void UTIL_RestartAmbientSounds( void )
 	{
 		if (pAmbient->m_fActive )
 		{
-			if ( strstr( STRING( pAmbient->m_iszSound ), "mp3" ) )
+			if ( std::strstr( STRING( pAmbient->m_iszSound ), "mp3" ) )
 			{
 				pAmbient->SendSound( SND_CHANGE_VOL ); // fake a change, so we don't create 2 sounds
 			}

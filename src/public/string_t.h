@@ -1,48 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Defines the more complete set of operations on the string_t defined
-// 			These should be used instead of direct manipulation to allow more
+//			These should be used instead of direct manipulation to allow more
 //			flexibility in future ports or optimization.
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef STRING_T_H
-#define STRING_T_H
-
 
 #ifndef NO_STRING_T
-
-#ifdef WEAK_STRING_T
-
-typedef int	string_t;
-
-//-----------------------------------------------------------------------------
-// Purpose: The correct way to specify the NULL string as a constant.
-//-----------------------------------------------------------------------------
-
-#define NULL_STRING			0
-
-//-----------------------------------------------------------------------------
-// Purpose: Given a string_t, make a C string. By convention the result string 
-// 			pointer should be considered transient and should not be stored.
-//-----------------------------------------------------------------------------
-
-#define STRING( offset )	( ( offset ) ? reinterpret_cast<const char *>( offset ) : "" )
-
-//-----------------------------------------------------------------------------
-// Purpose: Given a C string, obtain a string_t
-//-----------------------------------------------------------------------------
-
-#define MAKE_STRING( str )	( ( *str != 0 ) ? reinterpret_cast<int>( str ) : 0 )
-
-//-----------------------------------------------------------------------------
-
-#define IDENT_STRINGS( s1, s2 )	( *((void **)&(s1)) == *((void **)&(s2)) )
-
-//-----------------------------------------------------------------------------
-
-#else // Strong string_t
 
 //-----------------------------------------------------------------------------
 
@@ -93,8 +57,6 @@ struct castable_string_t : public string_t // string_t is used in unions, hence,
 
 //-----------------------------------------------------------------------------
 
-#endif
-
 #else	// NO_STRING_T
 
 typedef const char *string_t;
@@ -109,5 +71,3 @@ typedef const char *string_t;
 inline void EnsureValidValue( string_t &x ) { x = NULL_STRING; }
 
 //=============================================================================
-
-#endif // STRING_T_H

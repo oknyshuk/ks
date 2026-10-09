@@ -1,9 +1,9 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#ifndef AFTERSHOCK_HELPER_H
-#define AFTERSHOCK_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -18,7 +18,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct AftershockVars_t
 {
-	AftershockVars_t() { memset( this, 0xFF, sizeof(AftershockVars_t) ); }
+	AftershockVars_t() { std::memset( this, 0xFF, sizeof(AftershockVars_t) ); }
 
 	int m_nColorTint;
 	int m_nRefractAmount;
@@ -49,5 +49,3 @@ void InitParamsAftershock( CBaseVSShader *pShader, IMaterialVar** params, const 
 void InitAftershock( CBaseVSShader *pShader, IMaterialVar** params, AftershockVars_t &info );
 void DrawAftershock( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 					IShaderShadow* pShaderShadow, AftershockVars_t &info, VertexCompressionType_t vertexCompression );
-
-#endif // AFTERSHOCK_HELPER_H

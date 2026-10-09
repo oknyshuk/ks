@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: A CBaseFlex, with an Expresser so that it can 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef FLEX_EXPRESSER_H
-#define FLEX_EXPRESSER_H
+// Purpose: A CBaseFlex, with an Expresser so that it can
 
 #include "reflect_annotations.h"
 
@@ -52,8 +48,3 @@ protected:
 	CAI_Expresser *CreateExpresser( void );
 
 };
-
-
-
-
-#endif // FLEX_EXPRESSER_H

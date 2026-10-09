@@ -1,37 +1,30 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
+
 // Purpose: a class for performing cube-mapped spherical sample lookups.
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
 
-#ifndef CUBEMAP_H
-#define CUBEMAP_H
-
-
-#include "tier0/platform.h"
-#include "mathlib/mathlib.h"
+import std;
+import ks.math;
 
 template<class T, int RES> struct CCubeMap
 {
 	T m_Samples[6][RES][RES];
 	
 public:
-	FORCEINLINE void GetCoords( Vector const &vecNormalizedDirection, int &nX, int &nY, int &nFace )
+	[[gnu::always_inline]] inline void GetCoords( Vector const &vecNormalizedDirection, int &nX, int &nY, int &nFace )
 	{
 		// find largest magnitude component
 		int nLargest = 0;
 		int nAxis0 = 1;
 		int nAxis1 = 2;
-		if ( fabs( vecNormalizedDirection[1] ) > fabs( vecNormalizedDirection[0] ) )
+		if ( std::fabs( vecNormalizedDirection[1] ) > std::fabs( vecNormalizedDirection[0] ) )
 		{
 			nLargest = 1;
 			nAxis0 = 0;
 			nAxis1 = 2;
 		}
-		if ( fabs( vecNormalizedDirection[2] ) > fabs( vecNormalizedDirection[nLargest] ) )
+		if ( std::fabs( vecNormalizedDirection[2] ) > std::fabs( vecNormalizedDirection[nLargest] ) )
 		{
 			nLargest = 2;
 			nAxis0 = 0;
@@ -49,16 +42,10 @@ public:
 		nY = RemapValClamped( vecNormalizedDirection[nAxis1] * flZ, -1, 1, 0, RES - 1 );
 	}
 
-	FORCEINLINE T & GetSample( Vector const &vecNormalizedDirection )
+	[[gnu::always_inline]] inline T & GetSample( Vector const &vecNormalizedDirection )
 	{
 		int nX, nY, nFace;
 		GetCoords( vecNormalizedDirection, nX, nY, nFace );
 		return m_Samples[nFace][nX][nY];
 	}
 };
-
-
-
-
-
-#endif // CUBEMAP_H

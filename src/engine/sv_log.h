@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // sv_log.h
 // Server logging functions
 
-#ifndef SV_LOG_H
-#define SV_LOG_H
-#pragma once
-
 #include <igameevents.h>
-#include "netadr.h"
+import std;
+import ks.tier1;
+#include "filesystem.h"
 
 class CLog : public IGameEventListener2
 {
@@ -45,7 +40,7 @@ public:
 	void Reset( void );	// reset all logging streams
 	void Shutdown( void );
 	
-	void Printf( PRINTF_FORMAT_STRING const char *fmt, ... ) FMTFUNCTION( 2, 3 );	// log a line to log file
+	[[gnu::format(printf, 2, 3)]] void Printf( const char *fmt, ... );	// log a line to log file
 	void Print( const char * text );
 	void PrintServerVars( void ); // prints server vars to log file
 
@@ -67,5 +62,3 @@ private:
 };
 
 extern CLog g_Log;
-
-#endif // SV_LOG_H

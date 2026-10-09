@@ -1,6 +1,9 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-#ifndef RUBIKON_INTERSECTION_ATTRIBUTES_HDR
-#define RUBIKON_INTERSECTION_ATTRIBUTES_HDR
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+import ks.core;
+import std;
 
 static const uint32 INTERSECTION_ENTITY_ID_NONE = 0xFFFFFFFF;
 
@@ -86,7 +89,7 @@ enum OverlapTest_t
 
 
 // these are on by default
-#define FCOLLISION_FUNC_DEFAULT		(FCOLLISION_FUNC_ENABLE_SOLID_CONTACT | FCOLLISION_FUNC_ENABLE_TRACE_QUERY | FCOLLISION_FUNC_ENABLE_TOUCH_EVENT)
+inline constexpr auto FCOLLISION_FUNC_DEFAULT = (FCOLLISION_FUNC_ENABLE_SOLID_CONTACT | FCOLLISION_FUNC_ENABLE_TRACE_QUERY | FCOLLISION_FUNC_ENABLE_TOUCH_EVENT);
 
 extern std::string IntersectionPairFlagsToString( uint16 nPairFlags );
 
@@ -184,5 +187,3 @@ inline bool RnCollisionAttr_t::RemoveCollisionFunctionMask( uint8 nRemoveMask )
 	}
 	return false;
 }
-
-#endif

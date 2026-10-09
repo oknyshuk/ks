@@ -1,19 +1,23 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 #include "fx.h"
-#include "tier1/keyvalues.h"
-#include "tier0/vprof.h"
 #include "toolframework_client.h"
 
 extern int		g_sModelIndexBloodDrop;	
@@ -139,7 +143,7 @@ void TE_BloodSprite( IRecipientFilter& filter, float delay,
 //-----------------------------------------------------------------------------
 void C_TEBloodSprite::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEBloodSprite::PostDataUpdate" );
+	CVProfScope _( "C_TEBloodSprite::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	Vector	offset = m_vecOrigin + ( m_vecDirection * 4.0f );
 

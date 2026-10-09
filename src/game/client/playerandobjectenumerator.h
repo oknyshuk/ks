@@ -1,16 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PLAYERANDOBJECTENUMERATOR_H
-#define PLAYERANDOBJECTENUMERATOR_H
-
-#include "utlvector.h"
+import std;
+import ks.tier1;
 #include "ehandle.h"
 #include "ispatialpartition.h"
+#include "networkvar.h"
 
 class C_BaseEntity;
 class C_BasePlayer;
@@ -37,5 +33,3 @@ public:
 	std::vector< CHandle< C_BaseEntity > > m_Objects;
 	C_BasePlayer *m_pLocal;
 };
-
-#endif // PLAYERANDOBJECTENUMERATOR_H

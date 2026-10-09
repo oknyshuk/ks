@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:	Server-side counterpart to C_MemoryLog (see c_memorylog.h)
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef MEMORYLOG_H
-#define MEMORYLOG_H
-
+// Purpose: Server-side counterpart to C_MemoryLog (see c_memorylog.h)
 
 #include "igamesystem.h"
 
@@ -18,6 +14,3 @@ public:
 
 private:
 };
-
-
-#endif // MEMORYLOG_H

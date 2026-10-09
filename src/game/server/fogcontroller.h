@@ -1,22 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef FOGCONTROLLER_H
-#define FOGCONTROLLER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
 #include "playernet_vars.h"
 #include "igamesystem.h"
 #include "GameEventListener.h"
+#include "baseentity.h"
 
 bool GetWorldFogParams( CBaseCombatCharacter *character, fogparams_t &fog );
 
 // Spawn Flags
-#define SF_FOG_MASTER		0x0001
+inline constexpr auto SF_FOG_MASTER = 0x0001;
 
 //=============================================================================
 //
@@ -137,5 +133,3 @@ private:
 };
 
 CFogSystem *FogSystem( void );
-
-#endif // FOGCONTROLLER_H

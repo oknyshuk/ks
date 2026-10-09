@@ -1,8 +1,5 @@
-//====== Copyright  1996-2008, Valve Corporation, All rights reserved. =====//
-#ifndef _SHADERAPIFAST_H_
-#define _SHADERAPIFAST_H_
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#define ShaderApiFast( pShaderAPI ) pShaderAPI
-
-#endif // _SHADERAPIFAST_H_
-
+template <typename T1> [[gnu::always_inline]] inline constexpr auto ShaderApiFast( T1 pShaderAPI ) { return pShaderAPI; }

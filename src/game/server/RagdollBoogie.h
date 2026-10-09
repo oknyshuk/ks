@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef RAGDOLLBOOGIE_H
-#define RAGDOLLBOOGIE_H
-
-
+#include "baseentity.h"
 
 //-----------------------------------------------------------------------------
 // Set this spawnflag before calling Spawn to get electrical effects
 //-----------------------------------------------------------------------------
-#define SF_RAGDOLL_BOOGIE_ELECTRICAL	0x10000
-#define SF_RAGDOLL_BOOGIE_ELECTRICAL_NARROW_BEAM	0x20000
+inline constexpr auto SF_RAGDOLL_BOOGIE_ELECTRICAL = 0x10000;
+inline constexpr auto SF_RAGDOLL_BOOGIE_ELECTRICAL_NARROW_BEAM = 0x20000;
 
 
 //-----------------------------------------------------------------------------
@@ -43,5 +38,3 @@ private:
 	float m_flMagnitude;
 	int	m_nSuppressionCount;
 };
-
-#endif // RAGDOLLBOOGIE_H

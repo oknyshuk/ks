@@ -1,19 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+#if defined(CLIENT_DLL)
+#elif defined(GAME_DLL)
+#endif
+#if defined(CLIENT_DLL)
+import std;
+import ks.core;
+#elif defined(GAME_DLL)
+#endif
+import ks.tier1;
 #include "studio.h"
-#include "tier0/memalloc.h"
 #include "datacache/idatacache.h"
 #include "datacache/imdlcache.h"
-#include "convar.h"
-#include "tier1/map_ops.h"
-#include "tier1/buffer_strider.h"
-#include "tier0/vprof.h"
 #include "mathlib/femodel.h"
 #include "mathlib/femodeldesc.h"
 #include "mathlib/softbody.h"
@@ -34,11 +33,11 @@ ConVar softbody_debug_substr( "softbody_debug_substr", "", FCVAR_CHEAT );
 mstudioanimdesc_t &studiohdr_t::pAnimdesc_Internal( int i ) const
 { 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	virtualgroup_t *pGroup = &pVModel->m_group[ pVModel->m_anim[i].group ];
 	const studiohdr_t *pStudioHdr = pGroup->GetStudioHdr();
-	Assert( pStudioHdr );
+	contract_assert( pStudioHdr );
 
 	return *pStudioHdr->pLocalAnimdesc( pVModel->m_anim[i].index );
 }
@@ -214,7 +213,7 @@ mstudioikrule_t *mstudioanimdesc_t::pIKRule( int i ) const
 		{
 			if (animblock == 0)
 			{
-				AssertOnce(0); // Should never happen
+				contract_assert( 0 ); // Should never happen
 				return  (mstudioikrule_t *)(((byte *)this) + animblockikruleindex) + i;
 			}
 			else
@@ -277,7 +276,7 @@ bool studiohdr_t::SequencesAvailable() const
 int studiohdr_t::GetNumSeq_Internal( void ) const
 {
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 	return std::ssize( pVModel->m_seq );
 }
 
@@ -288,7 +287,7 @@ int studiohdr_t::GetNumSeq_Internal( void ) const
 mstudioseqdesc_t &studiohdr_t::pSeqdesc_Internal( int i ) const
 {
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	if ( !pVModel )
 	{
@@ -297,7 +296,7 @@ mstudioseqdesc_t &studiohdr_t::pSeqdesc_Internal( int i ) const
 
 	virtualgroup_t *pGroup = &pVModel->m_group[ pVModel->m_seq[i].group ];
 	const studiohdr_t *pStudioHdr = pGroup->GetStudioHdr();
-	Assert( pStudioHdr );
+	contract_assert( pStudioHdr );
 
 	return *pStudioHdr->pLocalSeqdesc( pVModel->m_seq[i].index );
 }
@@ -309,7 +308,7 @@ mstudioseqdesc_t &studiohdr_t::pSeqdesc_Internal( int i ) const
 int studiohdr_t::iRelativeAnim_Internal( int baseseq, int relanim ) const
 {
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	virtualgroup_t *pGroup = &pVModel->m_group[ pVModel->m_seq[baseseq].group ];
 
@@ -323,7 +322,7 @@ int studiohdr_t::iRelativeAnim_Internal( int baseseq, int relanim ) const
 int studiohdr_t::iRelativeSeq_Internal( int baseseq, int relseq ) const
 {
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	virtualgroup_t *pGroup = &pVModel->m_group[ pVModel->m_seq[baseseq].group ];
 
@@ -343,7 +342,7 @@ int	studiohdr_t::GetNumPoseParameters( void ) const
 	}
 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	return std::ssize( pVModel->m_pose );
 }
@@ -362,7 +361,7 @@ const mstudioposeparamdesc_t &studiohdr_t::pPoseParameter( int i )
 	}
 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	if ( pVModel->m_pose[i].group == 0)
 		return *pLocalPoseParameter( pVModel->m_pose[i].index );
@@ -370,7 +369,7 @@ const mstudioposeparamdesc_t &studiohdr_t::pPoseParameter( int i )
 	virtualgroup_t *pGroup = &pVModel->m_group[ pVModel->m_pose[i].group ];
 
 	const studiohdr_t *pStudioHdr = pGroup->GetStudioHdr();
-	Assert( pStudioHdr );
+	contract_assert( pStudioHdr );
 
 	return *pStudioHdr->pLocalPoseParameter( pVModel->m_pose[i].index );
 }
@@ -391,7 +390,7 @@ int studiohdr_t::GetSharedPoseParameter( int iSequence, int iLocalPose ) const
 		return iLocalPose;
 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	virtualgroup_t *pGroup = &pVModel->m_group[ pVModel->m_seq[iSequence].group ];
 
@@ -413,7 +412,7 @@ int studiohdr_t::EntryNode( int iSequence )
 	}
 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	virtualgroup_t *pGroup = &pVModel->m_group[ pVModel->m_seq[iSequence].group ];
 
@@ -436,7 +435,7 @@ int studiohdr_t::ExitNode( int iSequence )
 	}
 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	virtualgroup_t *pGroup = &pVModel->m_group[ pVModel->m_seq[iSequence].group ];
 
@@ -456,7 +455,7 @@ int	studiohdr_t::GetNumAttachments( void ) const
 	}
 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	return std::ssize( pVModel->m_attachment );
 }
@@ -475,11 +474,11 @@ const mstudioattachment_t &studiohdr_t::pAttachment( int i ) const
 	}
 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	virtualgroup_t *pGroup = &pVModel->m_group[ pVModel->m_attachment[i].group ];
 	const studiohdr_t *pStudioHdr = pGroup->GetStudioHdr();
-	Assert( pStudioHdr );
+	contract_assert( pStudioHdr );
 
 	return *pStudioHdr->pLocalAttachment( pVModel->m_attachment[i].index );
 }
@@ -536,7 +535,7 @@ const char *studiohdr_t::pszNodeName( int iNode )
 	}
 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	if ( std::ssize( pVModel->m_node ) <= iNode-1 )
 		return "Invalid node";
@@ -575,7 +574,7 @@ int	studiohdr_t::GetActivityListVersion( void )
 	}
 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	int version = activitylistversion;
 
@@ -585,7 +584,7 @@ int	studiohdr_t::GetActivityListVersion( void )
 		virtualgroup_t *pGroup = &pVModel->m_group[ i ];
 		const studiohdr_t *pStudioHdr = pGroup->GetStudioHdr();
 
-		Assert( pStudioHdr );
+		contract_assert( pStudioHdr );
 
 		version = std::min( version, pStudioHdr->activitylistversion );
 	}
@@ -603,7 +602,7 @@ void studiohdr_t::SetActivityListVersion( int version ) const
 	}
 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	int i;
 	for (i = 1; i < std::ssize( pVModel->m_group ); i++)
@@ -611,7 +610,7 @@ void studiohdr_t::SetActivityListVersion( int version ) const
 		virtualgroup_t *pGroup = &pVModel->m_group[ i ];
 		const studiohdr_t *pStudioHdr = pGroup->GetStudioHdr();
 
-		Assert( pStudioHdr );
+		contract_assert( pStudioHdr );
 
 		pStudioHdr->SetActivityListVersion( version );
 	}
@@ -631,7 +630,7 @@ int studiohdr_t::GetNumIKAutoplayLocks( void ) const
 	}
 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	return std::ssize( pVModel->m_iklock );
 }
@@ -644,11 +643,11 @@ const mstudioiklock_t &studiohdr_t::pIKAutoplayLock( int i )
 	}
 
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
-	Assert( pVModel );
+	contract_assert( pVModel );
 
 	virtualgroup_t *pGroup = &pVModel->m_group[ pVModel->m_iklock[i].group ];
 	const studiohdr_t *pStudioHdr = pGroup->GetStudioHdr();
-	Assert( pStudioHdr );
+	contract_assert( pStudioHdr );
 
 	return *pStudioHdr->pLocalIKAutoplayLock( pVModel->m_iklock[i].index );
 }
@@ -781,7 +780,7 @@ void CStudioHdr::Term()
 	{
 		CFeModel *pFeModel = m_pSoftbody->GetFeModel();
 		m_pSoftbody->Shutdown();
-		Assert( pFeModel );
+		contract_assert( pFeModel );
 		MemAlloc_FreeAligned( pFeModel );
 		m_pSoftbody = nullptr;
 	}
@@ -836,7 +835,7 @@ const studiohdr_t *CStudioHdr::GroupStudioHdr( int i )
 {
 	if ( !this )
 	{
-		ExecuteNTimes( 5, Warning( "Call to NULL CStudioHdr::GroupStudioHdr()\n" ) );
+		ExecuteNTimes( 5, [&]{ Warning( "Call to NULL CStudioHdr::GroupStudioHdr()\n" ); } );
 	}
 
 	if ( m_nFrameUnlockCounter != *m_pFrameUnlockCounter )
@@ -844,7 +843,7 @@ const studiohdr_t *CStudioHdr::GroupStudioHdr( int i )
 		m_FrameUnlockCounterMutex.lock();
 		if ( *m_pFrameUnlockCounter != m_nFrameUnlockCounter ) // i.e., this thread got the mutex
 		{
-			memset( m_pStudioHdrCache.data(), 0, std::ssize( m_pStudioHdrCache ) * sizeof(studiohdr_t *) );
+			std::memset( m_pStudioHdrCache.data(), 0, std::ssize( m_pStudioHdrCache ) * sizeof(studiohdr_t *) );
 			m_nFrameUnlockCounter = *m_pFrameUnlockCounter;
 		}
 		m_FrameUnlockCounterMutex.unlock();
@@ -854,7 +853,7 @@ const studiohdr_t *CStudioHdr::GroupStudioHdr( int i )
 	{
 		const char *pszName;
 		pszName = ( m_pStudioHdr ) ? m_pStudioHdr->pszName() : "<<null>>";
-		ExecuteNTimes( 5, Warning( "Invalid index passed to CStudioHdr(%s)::GroupStudioHdr(): %d [%d]\n", pszName, i, (int)std::ssize( m_pStudioHdrCache ) ) );
+		ExecuteNTimes( 5, [&]{ Warning( "Invalid index passed to CStudioHdr(%s)::GroupStudioHdr(): %d [%d]\n", pszName, i, (int)std::ssize( m_pStudioHdrCache ) ); } );
 		DebuggerBreakIfDebugging();
 		return m_pStudioHdr; // return something known to probably exist, certainly things will be messed up, but hopefully not crash before the warning is noticed
 	}
@@ -868,7 +867,7 @@ const studiohdr_t *CStudioHdr::GroupStudioHdr( int i )
 		m_pStudioHdrCache[ i ] = pStudioHdr;
 	}
 
-	Assert( pStudioHdr );
+	contract_assert( pStudioHdr );
 	return pStudioHdr;
 }
 
@@ -922,7 +921,7 @@ int CStudioHdr::GetNumSeq_Internal( void ) const
 
 mstudioseqdesc_t &CStudioHdr::pSeqdesc_Internal( int i )
 {
-	Assert( i >= 0 && i < GetNumSeq() );
+	contract_assert( i >= 0 && i < GetNumSeq() );
 	if ( i < 0 || i >= GetNumSeq() )
 	{
 		// Avoid reading random memory.
@@ -956,7 +955,7 @@ int CStudioHdr::iRelativeSeq( int baseseq, int relseq ) const
 		return relseq;
 	}
 
-	Assert( m_pVModel );
+	contract_assert( m_pVModel );
 
 	virtualgroup_t *pGroup = &m_pVModel->m_group[ m_pVModel->m_seq[baseseq].group ];
 
@@ -978,7 +977,7 @@ int	CStudioHdr::GetNumPoseParameters( void ) const
 			return 0;
 	}
 
-	Assert( m_pVModel );
+	contract_assert( m_pVModel );
 
 	return std::ssize( m_pVModel->m_pose );
 }
@@ -1019,7 +1018,7 @@ int CStudioHdr::GetSharedPoseParameter( int iSequence, int iLocalPose ) const
 	if (iLocalPose == -1)
 		return iLocalPose;
 
-	Assert( m_pVModel );
+	contract_assert( m_pVModel );
 
 	virtualgroup_t *pGroup = &m_pVModel->m_group[ m_pVModel->m_seq[iSequence].group ];
 
@@ -1040,7 +1039,7 @@ int CStudioHdr::EntryNode( int iSequence )
 		return seqdesc.localentrynode;
 	}
 
-	Assert( m_pVModel );
+	contract_assert( m_pVModel );
 
 	virtualgroup_t *pGroup = &m_pVModel->m_group[ m_pVModel->m_seq[iSequence].group ];
 
@@ -1062,7 +1061,7 @@ int CStudioHdr::ExitNode( int iSequence )
 		return seqdesc.localexitnode;
 	}
 
-	Assert( m_pVModel );
+	contract_assert( m_pVModel );
 
 	virtualgroup_t *pGroup = &m_pVModel->m_group[ m_pVModel->m_seq[iSequence].group ];
 
@@ -1081,7 +1080,7 @@ int	CStudioHdr::GetNumAttachments( void ) const
 		return m_pStudioHdr->numlocalattachments;
 	}
 
-	Assert( m_pVModel );
+	contract_assert( m_pVModel );
 
 	return std::ssize( m_pVModel->m_attachment );
 }
@@ -1099,7 +1098,7 @@ const mstudioattachment_t &CStudioHdr::pAttachment( int i )
 		return *m_pStudioHdr->pLocalAttachment( i );
 	}
 
-	Assert( m_pVModel );
+	contract_assert( m_pVModel );
 
 	const studiohdr_t *pStudioHdr = GroupStudioHdr( m_pVModel->m_attachment[i].group );
 
@@ -1201,7 +1200,7 @@ int	CStudioHdr::GetActivityListVersion( void )
 	for (i = 1; i < std::ssize( m_pVModel->m_group ); i++)
 	{
 		const studiohdr_t *pStudioHdr = GroupStudioHdr( i );
-		Assert( pStudioHdr );
+		contract_assert( pStudioHdr );
 		version = std::min( version, pStudioHdr->activitylistversion );
 	}
 
@@ -1221,7 +1220,7 @@ void CStudioHdr::SetActivityListVersion( int version )
 	for (i = 1; i < std::ssize( m_pVModel->m_group ); i++)
 	{
 		const studiohdr_t *pStudioHdr = GroupStudioHdr( i );
-		Assert( pStudioHdr );
+		contract_assert( pStudioHdr );
 		pStudioHdr->SetActivityListVersion( version );
 	}
 }
@@ -1244,7 +1243,7 @@ int	CStudioHdr::GetEventListVersion( void )
 	for (i = 1; i < std::ssize( m_pVModel->m_group ); i++)
 	{
 		const studiohdr_t *pStudioHdr = GroupStudioHdr( i );
-		Assert( pStudioHdr );
+		contract_assert( pStudioHdr );
 		version = std::min( version, pStudioHdr->eventsindexed );
 	}
 
@@ -1264,7 +1263,7 @@ void CStudioHdr::SetEventListVersion( int version )
 	for (i = 1; i < std::ssize( m_pVModel->m_group ); i++)
 	{
 		const studiohdr_t *pStudioHdr = GroupStudioHdr( i );
-		Assert( pStudioHdr );
+		contract_assert( pStudioHdr );
 		pStudioHdr->eventsindexed = version;
 	}
 }
@@ -1292,7 +1291,7 @@ const mstudioiklock_t &CStudioHdr::pIKAutoplayLock( int i )
 	}
 
 	const studiohdr_t *pStudioHdr = GroupStudioHdr( m_pVModel->m_iklock[i].group );
-	Assert( pStudioHdr );
+	contract_assert( pStudioHdr );
 	return *pStudioHdr->pLocalIKAutoplayLock( m_pVModel->m_iklock[i].index );
 }
 
@@ -1532,12 +1531,12 @@ void CStudioHdr::RunFlexRulesOld( const float *src, float *dest )
 void CStudioHdr::RunFlexRulesNew( const float *src, float *dest )
 {
 	// FIXME: this shouldn't be needed, flex without rules should be stripped in studiomdl
-	memset( dest, 0, sizeof( dest[0] ) * numflexdesc() );
+	std::memset( dest, 0, sizeof( dest[0] ) * numflexdesc() );
 
 	for (int i = 0; i < numflexrules(); i++)
 	{
 		float stack[32];
-		float *pSP = stack + ARRAYSIZE( stack );
+		float *pSP = stack + std::size( stack );
 		mstudioflexrule_t *prule = pFlexRule( i );
 
 		mstudioflexop_t *pops = prule->iFlexOp( 0 );
@@ -1766,28 +1765,11 @@ void CStudioHdr::RunFlexRulesNew( const float *src, float *dest )
 	}
 }
 
-#define USE_OLD_FLEX_RULES_INTERPRETER
 
 void CStudioHdr::RunFlexRules( const float *src, float *dest )
 {
-#ifndef USE_OLD_FLEX_RULES_INTERPRETER
-	RunFlexRulesNew( src, dest );
-#else
 	RunFlexRulesOld( src, dest );
-#endif
 
-#if defined(_DEBUG) && !defined(USE_OLD_FLEX_RULES_INTERPRETER)
-	float d1[ MAXSTUDIOFLEXDESC ];
-	RunFlexRulesOld( src, d1 );
-
-	for ( int i =0; i < numflexdesc(); i++)
-	{
-		if ( fabs( d1[i] - dest[i] ) > 0.001 )
-		{
-			Warning("bad %d old =%f new=%f\n", i, dest[i], d1[i] );
-		}
-	}
-#endif // _DEBUG
 }
 
 
@@ -1830,7 +1812,8 @@ ks::intern_pool_mt g_ActivityModifiersTable;
 extern void SetActivityForSequence( CStudioHdr *pstudiohdr, int i );
 void CStudioHdr::CActivityToSequenceMapping::Initialize( const CStudioHdr * __restrict pstudiohdr )
 {
-	VPROF( "CStudioHdr::CActivityToSequenceMapping::Initialize" );
+	ks::ScratchArena<> scratch;
+	CVProfScope _( "CStudioHdr::CActivityToSequenceMapping::Initialize", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// Algorithm: walk through every sequence in the model, determine to which activity
 	// it corresponds, and keep a count of sequences per activity. Once the total count
 	// is available, allocate an array large enough to contain them all, update the 
@@ -1839,7 +1822,7 @@ void CStudioHdr::CActivityToSequenceMapping::Initialize( const CStudioHdr * __re
 
 	m_pStudioHdr = pstudiohdr->m_pStudioHdr;
 
-	AssertMsg1( m_pSequenceTuples == nullptr, "Tried to double-initialize sequence mapping for %s", pstudiohdr->pszName() );
+	contract_assert( ( m_pSequenceTuples == nullptr ) && "Tried to double-initialize sequence mapping for %s" );
 	if ( m_pSequenceTuples != nullptr )
 		return; // don't double initialize.
 
@@ -1877,7 +1860,7 @@ void CStudioHdr::CActivityToSequenceMapping::Initialize( const CStudioHdr * __re
 				HashValueType * __restrict toUpdate = &it->second;
 				toUpdate->count += 1;
 				toUpdate->totalWeight += iabs(seqdesc.actweight);
-				Assert( toUpdate->totalWeight > 0 );
+				contract_assert( toUpdate->totalWeight > 0 );
 			}
 		}
 	}
@@ -1913,10 +1896,9 @@ void CStudioHdr::CActivityToSequenceMapping::Initialize( const CStudioHdr * __re
 	// This stack may potentially grow very large; so if you have problems with it, 
 	// go to a utlmap or similar structure.
 	unsigned int allocsize = (topActivity + 1) * sizeof(int);
-#define ALIGN_VALUE( val, alignment ) ( ( val + alignment - 1 ) & ~( alignment - 1 ) ) //  need macro for constant expression
 	allocsize = ALIGN_VALUE(allocsize,16);
-	int * __restrict seqsPerAct = static_cast<int *>(stackalloc(allocsize));
-	memset(seqsPerAct, 0, allocsize);
+	int * __restrict seqsPerAct = static_cast<int *>(scratch.AllocBytes(allocsize));
+	std::memset(seqsPerAct, 0, allocsize);
 
 	// okay, walk through all the sequences again, and write the relevant data into 
 	// our little table.
@@ -1930,7 +1912,7 @@ void CStudioHdr::CActivityToSequenceMapping::Initialize( const CStudioHdr * __re
 			// If this assert trips, we've written more sequences per activity than we allocated 
 			// (therefore there must have been a miscount in the first for loop above).
 			int tupleOffset = seqsPerAct[seqdesc.activity];
-			Assert( tupleOffset < element.count );
+			contract_assert( tupleOffset < element.count );
 
 			if ( seqdesc.numactivitymodifiers > 0 )
 			{
@@ -1964,16 +1946,6 @@ void CStudioHdr::CActivityToSequenceMapping::Initialize( const CStudioHdr * __re
 			seqsPerAct[seqdesc.activity] += 1;
 		}
 	}
-
-#ifdef DBGFLAG_ASSERT
-	// double check that we wrote exactly the right number of sequences.
-	unsigned int chkSequenceCount = 0;
-	for (int j = 0 ; j <= topActivity ; ++j)
-	{
-		chkSequenceCount += seqsPerAct[j];
-	}
-	Assert(chkSequenceCount == m_iSequenceTuplesCount);
-#endif
 
 }
 
@@ -2033,13 +2005,13 @@ int CStudioHdr::CActivityToSequenceMapping::NumSequencesForActivity( int forActi
 static CStudioHdr::CActivityToSequenceMapping emptyMapping;
 
 // double-check that the data I point to hasn't changed
-bool CStudioHdr::CActivityToSequenceMapping::ValidateAgainst( const CStudioHdr * RESTRICT pstudiohdr ) RESTRICT
+bool CStudioHdr::CActivityToSequenceMapping::ValidateAgainst( const CStudioHdr * __restrict__ pstudiohdr ) __restrict__
 {
 	return ( this == &emptyMapping || 
 			 ( m_pStudioHdr == pstudiohdr->m_pStudioHdr && m_expectedVModel == pstudiohdr->GetVirtualModel() ) );
 }
 
-void CStudioHdr::CActivityToSequenceMapping::SetValidation( const CStudioHdr *RESTRICT pstudiohdr ) RESTRICT
+void CStudioHdr::CActivityToSequenceMapping::SetValidation( const CStudioHdr *__restrict__ pstudiohdr ) __restrict__
 {
 	m_expectedVModel = pstudiohdr->GetVirtualModel();
 }
@@ -2057,14 +2029,14 @@ std::recursive_mutex g_StudioHdrToActivityMapsLock;
 
 CStudioHdr::CActivityToSequenceMapping *CStudioHdr::CActivityToSequenceMapping::FindMapping( const CStudioHdr *pHdr )
 {
-	VPROF( "CStudioHdr::CActivityToSequenceMapping::FindMapping" );
+	CVProfScope _( "CStudioHdr::CActivityToSequenceMapping::FindMapping", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( !pHdr->SequencesAvailable() || pHdr->GetNumSeq() <= 1 )
 	{
 		return &emptyMapping;
 	}
 
-	Assert( !pHdr->m_pActivityToSequence );
+	contract_assert( !pHdr->m_pActivityToSequence );
 
 	std::scoped_lock lock( g_StudioHdrToActivityMapsLock );
 	const studiohdr_t *pRealHdr = pHdr->m_pStudioHdr;
@@ -2072,14 +2044,14 @@ CStudioHdr::CActivityToSequenceMapping *CStudioHdr::CActivityToSequenceMapping::
 	if ( it != g_StudioHdrToActivityMaps.end() )
 	{
 		StudioHdrToActivityMapEntry_t &entry = it->second;
-		if ( ( entry.checksum != pRealHdr->checksum || Q_strcmp( entry.name, pRealHdr->name ) != 0 ) )
+		if ( ( entry.checksum != pRealHdr->checksum || V_strcmp( entry.name, pRealHdr->name ) != 0 ) )
 		{
-			AssertFatal( entry.nRefs == 0 );
+			contract_assert( entry.nRefs == 0 );
 			g_StudioHdrToActivityMaps.erase( it );
 		}
 		else
 		{
-			Assert( entry.checksum == pRealHdr->checksum && Q_strcmp( entry.name, pRealHdr->name ) == 0 );
+			contract_assert( entry.checksum == pRealHdr->checksum && V_strcmp( entry.name, pRealHdr->name ) == 0 );
 			entry.nRefs++;
 			return entry.pMap.get();
 		}
@@ -2088,7 +2060,7 @@ CStudioHdr::CActivityToSequenceMapping *CStudioHdr::CActivityToSequenceMapping::
 	StudioHdrToActivityMapEntry_t &entry = g_StudioHdrToActivityMaps.try_emplace( pRealHdr ).first->second;
 
 	entry.checksum = pRealHdr->checksum;
-	Q_strncpy( entry.name, pRealHdr->name, 64 );
+	V_strncpy( entry.name, pRealHdr->name, 64 );
 	entry.nRefs = 1;
 	entry.pMap = std::make_unique<CStudioHdr::CActivityToSequenceMapping>();
 	entry.pMap->Initialize( pHdr );
@@ -2100,16 +2072,16 @@ void CStudioHdr::CActivityToSequenceMapping::ReleaseMapping( CActivityToSequence
 {
 	if ( pMap && pMap != &emptyMapping)
 	{
-		VPROF( "CStudioHdr::CActivityToSequenceMapping::ReleaseMapping" );
+		CVProfScope _( "CStudioHdr::CActivityToSequenceMapping::ReleaseMapping", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		std::scoped_lock lock( g_StudioHdrToActivityMapsLock );
 		if ( StudioHdrToActivityMapEntry_t *pEntry = ks::find_ptr( g_StudioHdrToActivityMaps, pMap->m_pStudioHdr ) )
 		{
-			Assert( pEntry->nRefs > 0 );
+			contract_assert( pEntry->nRefs > 0 );
 			pEntry->nRefs--;
 		}
 		else
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 	}
 }
@@ -2181,7 +2153,7 @@ CSoftbody * CStudioHdr::InitSoftbody( CSoftbodyEnvironment *pSoftbodyEnvironment
 
 	if ( m_pSoftbody )
 	{
-		ExecuteOnce( Warning( "InitSoftbody is called with Softbody already existing. This pattern is suspicious and will not work if skeleton has changed, please show Sergiy a repro.\n" ) );
+		ExecuteOnce( [&]{ Warning( "InitSoftbody is called with Softbody already existing. This pattern is suspicious and will not work if skeleton has changed, please show Sergiy a repro.\n" ); } );
 		return m_pSoftbody;
 	}
 
@@ -2191,7 +2163,7 @@ CSoftbody * CStudioHdr::InitSoftbody( CSoftbodyEnvironment *pSoftbodyEnvironment
 		if ( const PhysFeModelDesc_t *pFeModelDesc = pHdr2->m_pFeModel.GetPtr() )
 		{
 			uint numCtrlNames = pFeModelDesc->m_CtrlName.Count();
-			CBufferStrider feModelData( MemAlloc_AllocAligned( sizeof( CFeModel ) + sizeof( CSoftbody ) + sizeof( char* ) * numCtrlNames, 16 ) );
+			CBufferStrider feModelData( MemAlloc_AllocAlignedUnattributed( sizeof( CFeModel ) + sizeof( CSoftbody ) + sizeof( char* ) * numCtrlNames, 16 ) );
 			CFeModel *pFeModel = feModelData.Stride<CFeModel>();
 			m_pSoftbody = feModelData.Stride< CSoftbody >();
 			Construct( m_pSoftbody );
@@ -2231,7 +2203,7 @@ void CStudioHdr::FreeSoftbody()
 #endif
 		CFeModel *pFeModel = m_pSoftbody->GetFeModel();
 		m_pSoftbody->Shutdown();
-		Assert( pFeModel );
+		contract_assert( pFeModel );
 		MemAlloc_FreeAligned( pFeModel );
 		m_pSoftbody = nullptr;
 	}

@@ -1,30 +1,22 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef GL_RSURF_H
-#define GL_RSURF_H
-
-
-#include "mathlib/vector.h"
+import std;
+import ks.math;
 #include "bsptreedata.h"
 #include "materialsystem/imesh.h"
+#include "surfacehandle.h"
+#include "ivrenderview.h"
+#include "gl_model_private.h"
 
-class Vector;
 struct WorldListInfo_t;
 class IMaterial;
 class IClientRenderable;
 class IBrushRenderer;
 class IClientEntity;
 struct model_t;
-struct cplane_t;
 struct VisibleFogVolumeInfo_t;
-class CVolumeCuller;
 
 struct LightmapUpdateInfo_t
 {
@@ -135,7 +127,7 @@ inline int BuildIndicesForSurface( CIndexBuilder &meshBuilder, SurfaceHandle_t s
 {
 	int nSurfTriangleCount = MSurf_VertCount( surfID ) - 2;
 	int startVert = MSurf_VertBufferIndex( surfID );
-	Assert(startVert!=0xFFFF);
+	contract_assert( startVert!=0xFFFF );
 
 	// NOTE: This switch appears to help performance
 	// add surface to this batch
@@ -161,9 +153,9 @@ inline void BuildIndicesForWorldSurface( CIndexBuilder &meshBuilder, SurfaceHand
 	if ( SurfaceHasPrims(surfID) )
 	{
 		mprimitive_t *pPrim = &pData->primitives[MSurf_FirstPrimID( surfID, pData )];
-		Assert(pPrim->vertCount==0);
+		contract_assert( pPrim->vertCount==0 );
 		unsigned short startVert = MSurf_VertBufferIndex( surfID );
-		Assert( pPrim->indexCount == ((MSurf_VertCount( surfID ) - 2)*3));
+		contract_assert( pPrim->indexCount == ((MSurf_VertCount( surfID ) - 2)*3) );
 
 		CIndexBuilder &indexBuilder = meshBuilder;
 		indexBuilder.FastIndexList( &pData->primindices[pPrim->firstIndex], startVert, pPrim->indexCount );
@@ -182,7 +174,7 @@ inline int BuildDepthFillIndicesForSurface( CIndexBuilder &meshBuilder, SurfaceH
 {
 	int nSurfTriangleCount = MSurf_VertCount( surfID ) - 2;
 	int startVert = g_DepthFillVBFirstVertexForSurface[ MSurf_Index(surfID )];
-	Assert(startVert!=0xFFFF);
+	contract_assert( startVert!=0xFFFF );
 
 	// NOTE: This switch appears to help performance
 	// add surface to this batch
@@ -208,9 +200,9 @@ inline void BuildDepthFillIndicesForWorldSurface( CIndexBuilder &meshBuilder, Su
 	if ( SurfaceHasPrims(surfID) )
 	{
 		mprimitive_t *pPrim = &pData->primitives[MSurf_FirstPrimID( surfID, pData )];
-		Assert(pPrim->vertCount==0);
+		contract_assert( pPrim->vertCount==0 );
 		unsigned short startVert = g_DepthFillVBFirstVertexForSurface[ MSurf_Index(surfID )];
-		Assert( pPrim->indexCount == ((MSurf_VertCount( surfID ) - 2)*3));
+		contract_assert( pPrim->indexCount == ((MSurf_VertCount( surfID ) - 2)*3) );
 
 		CIndexBuilder &indexBuilder = meshBuilder;
 		indexBuilder.FastIndexList( &pData->primindices[pPrim->firstIndex], startVert, pPrim->indexCount );
@@ -246,9 +238,9 @@ struct CShaderDebug
 
 extern CShaderDebug g_ShaderDebug;
 
-#define BRUSHMODEL_DECAL_SORT_GROUP		MAX_MAT_SORT_GROUPS
+inline constexpr auto BRUSHMODEL_DECAL_SORT_GROUP = MAX_MAT_SORT_GROUPS;
 const int MAX_VERTEX_FORMAT_CHANGES = 128;
-#define BACKFACE_EPSILON	-0.01f
+inline constexpr auto BACKFACE_EPSILON = -0.01f;
 void Shader_GetSurfVertexAndIndexCount( SurfaceHandle_t surfaceHandle, int *pVertexCount, int *pIndexCount );
 
 // Draw debugging information
@@ -267,6 +259,3 @@ public:
 	Vector	m_savedModelorg;
 	bool	m_bIdentity;
 };
-
-
-#endif // GL_RSURF_H

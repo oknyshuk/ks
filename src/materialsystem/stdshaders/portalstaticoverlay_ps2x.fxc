@@ -1,4 +1,5 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "HASALPHAMASK"		"0..1"
 // STATIC: "HASSTATICTEXTURE"	"0..1"
@@ -8,7 +9,6 @@
 
 #include "common_ps_fxc.h"
 #include "shader_constant_register_map.h"
-
 
 const float3 g_StaticAmount	: register( c0 ); //x is static, y is 1.0 - static
 

@@ -1,10 +1,7 @@
-#include "common_fog_vs_fxc.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Purpose: 
-//
-//===========================================================================
+#include "common_fog_vs_fxc.h"
 
 #include "common_vs_fxc.h"
 
@@ -46,4 +43,3 @@ VS_OUTPUT main( const VS_INPUT v )
 	o.vertexColor = cModulationColor;
 	return o;
 }
-

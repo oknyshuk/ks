@@ -1,21 +1,13 @@
-//========= Copyright (c) 1996-2013, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Provide custom texture generation (compositing) 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2013 Valve Corporation
 
-#ifndef BASE_VISUALS_DATA_PROCESSOR_H
-#define BASE_VISUALS_DATA_PROCESSOR_H
+// Purpose: Provide custom texture generation (compositing)
 
+import ks.tier1;
 #include "ivisualsdataprocessor.h"
-#include "serialization.h"
-#include "tier1/byte_writer.h"
 
-#include <algorithm>
-#include <span>
-#include <vector>
-
+import std;
 
 // derive from and extend this class if you have additional items to compare in your Visuals Data Processor
 class CBaseVisualsDataCompare : public IVisualsDataCompare
@@ -106,5 +98,3 @@ enum MaterialParamID_t
 };
 
 extern const char g_szMaterialParamNames[MATERIAL_PARAM_ID_COUNT][32];
-
-#endif // BASE_VISUALS_DATA_PROCESSOR_H

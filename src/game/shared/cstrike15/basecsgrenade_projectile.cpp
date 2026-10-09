@@ -1,10 +1,59 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
@@ -30,7 +79,6 @@ extern ConVar sv_gravity;
 	#include "cs_player.h"
 	#include "soundent.h"
 	#include "te_effect_dispatch.h"
-	#include "keyvalues.h"
 	#include "cs_gamestats.h"
 	#include "cs_simple_hostage.h"
 	#include "Effects/chicken.h"
@@ -154,7 +202,7 @@ IMPLEMENT_REFLECT_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile );
 					float flGrTraThickness = sv_grenade_trajectory_thickness.GetFloat();
 					Vector vec3_GrTrajMin = Vector( 0, -flGrTraThickness, -flGrTraThickness );
 					Vector vec3_GrTrajMax = Vector( vec3tempOrientation.Length(), flGrTraThickness, flGrTraThickness );
-					bool bDotted = ( sv_grenade_trajectory_dash.GetInt() && ( fmod( gpGlobals->curtime, 0.1f ) < 0.05f ) );
+					bool bDotted = ( sv_grenade_trajectory_dash.GetInt() && ( std::fmod( gpGlobals->curtime, 0.1f ) < 0.05f ) );
 
 					Color traceColor;
 					if ( GetTeamNumber() == TEAM_CT )
@@ -340,7 +388,7 @@ IMPLEMENT_REFLECT_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile );
 
 		// Verify that we have an entity.
 		CBaseEntity *pEntity = trace.Ent<CBaseEntity>();
-		Assert( pEntity );
+		contract_assert( pEntity );
 		
 		if ( pEntity )
 		{
@@ -584,7 +632,7 @@ IMPLEMENT_REFLECT_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile );
 			else
 			{
 				//NOTENOTE: We somehow got into a splash without being near water?
-				Assert( 0 );
+				contract_assert( 0 );
 			}
 		}
 		else if ( tr.fractionleftsolid )
@@ -608,35 +656,6 @@ IMPLEMENT_REFLECT_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile );
 		}
 
 		DispatchEffect( "gunshotsplash", data );
-	}
-
-	// Add a row to ogs for the explosion of this grenade. Damage instances are recorded separately.
-	void CBaseCSGrenadeProjectile::RecordDetonation( void )
-	{
-		// I hate having to call this from so many places since half the grenades override the standard detonate and the rest dont...
-		// If this triggers, it's because either somebody changed the way some grenade code chains to base methods or it's taking an uncommon code path
-		// that needs to be investigated.
-		if ( m_bDetonationRecorded )
-		{
-			Warning( "Detonation of grenade '%s' attempted to record twice!\n", GetDebugName() );
-			Assert( 0 );
-			return;
-		}
-
-		CCSPlayer::StartNewBulletGroup();
-
-		auto pHitData = std::make_unique< SWeaponHitData >();
-		if ( pHitData->InitAsGrenadeDetonation( this, CCSPlayer::GetBulletGroup() ) )
-		{
-			CCS_GameStats.RecordWeaponHit( std::move( pHitData ) );
-			m_bDetonationRecorded = true;
-		}
-	}
-
-	void CBaseCSGrenadeProjectile::Explode( trace_t *pTrace, int bitsDamageType )
-	{
-		RecordDetonation();
-		BaseClass::Explode( pTrace, bitsDamageType );
 	}
 
 #endif // !CLIENT_DLL

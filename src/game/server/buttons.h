@@ -1,14 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ====
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef BUTTONS_H
-#define BUTTONS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-
+#include "baseentity.h"
+#include "basetoggle.h"
+#include "locksounds.h"
 
 class [[= ks::reflect::NetTable{ .name = "DT_BaseButton" } ]]
       CBaseButton : public CBaseToggle
@@ -218,6 +215,3 @@ private:
 	COutputEvent m_OnUnpressed;
 	COutputEvent m_OnTimeUp;
 };
-
-
-#endif // BUTTONS_H

@@ -1,83 +1,48 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // baseserver.cpp: implementation of the CBaseServer class.
 //
 //////////////////////////////////////////////////////////////////////
 
 
+#include <sys/sysinfo.h>
+#include <asm/param.h>
 
-#if   defined(OSX) || defined(CYGWIN)
-#include <time.h>
-#include <mutex>                  
-#include <sys/time.h>                  
-#include <sys/resource.h>                  
-#include <netinet/in.h>
-#else
-#include <time.h>                  
-#include <sys/sysinfo.h>          
-#include <asm/param.h> // for HZ
-#include <netinet/in.h>
-#endif
 
-#include "filesystem_engine.h"
 #include "baseserver.h"
 #include "hltvserver.h"
 #include "sysexternal.h"
 #include "quakedef.h"
 #include "host.h"
 #include "netmessages.h"
-#include "master.h"
 #include "sys.h"
 #include "framesnapshot.h"
 #include "sv_packedentities.h"
 #include "dt_send_eng.h"
 #include "dt_recv_eng.h"
 #include "networkstringtable.h"
-#include "sys_dll.h"
 #include "host_cmd.h"
-#include "sv_steamauth.h"
-#include "SteamUserIDValidation.h"
 
 #include <proto_oob.h>
-#include <vstdlib/random.h>
 #include <irecipientfilter.h>
-#include <keyvalues.h>
-#include <tier0/vprof.h>
 #include <cdll_int.h>
 #include <eiface.h>
 #include <client_class.h>
-#include "tier0/icommandline.h"
-#include "sv_steamauth.h"
+import std;
+import ks.vstdlib;
 #include "sv_ipratelimit.h"
-#include "cl_steamauth.h"
-#include "fmtstr.h"
 #include "mathlib/IceKey.H"
 #include "matchmaking/imatchframework.h"
-#include "tier2/tier2.h"
-#include "fmtstr.h"
 #include "sv_plugin.h"
 
 std::recursive_mutex g_svInstanceBaselineMutex;
 
 // BUGBUG: JAY: Leaving this here for some of the matchmaking code.  I don't want to delete the code or enable it
 // in other games yet. (came over in the merge and will be rationalized later)
-#define IsLeft4Dead() false
+[[gnu::always_inline]] inline constexpr auto IsLeft4Dead() { return false; }
 
-// Give new data to Steam's master server updater every N seconds.
-// This is NOT how often packets are sent to master servers, only how often the
-// game server talks to Steam's master server updater (which is on the game server's
-// machine, not the Steam servers).
-#define MASTER_SERVER_UPDATE_INTERVAL		2.0
-
-// Steam has a matching one in matchmakingtypes.h
-#define MAX_TAG_STRING_LENGTH		128
-
-bool g_bSteamMasterHeartbeatsEnabled = false;
+constexpr auto MAX_TAG_STRING_LENGTH = 128;
 
 static std::vector< std::string > SplitServerTags( const char *pTags )
 {
@@ -122,7 +87,7 @@ static void ServerTagsCleanUp( void )
 		{
 			if ( i > 0 )
 			{
-				Q_strncat( tmptags, ",", MAX_TAG_STRING_LENGTH );
+				V_strncat( tmptags, ",", MAX_TAG_STRING_LENGTH );
 			}
 
 			const char *pChar = TagList[i].c_str();
@@ -134,7 +99,7 @@ static void ServerTagsCleanUp( void )
 			// make sure we don't have an empty string (all spaces or ,,)
 			if ( *pChar )
 			{
-				Q_strncat( tmptags, pChar, MAX_TAG_STRING_LENGTH );
+				V_strncat( tmptags, pChar, MAX_TAG_STRING_LENGTH );
 			}
 		}
 
@@ -148,14 +113,14 @@ static void ServerTagsCleanUp( void )
 		{
 			if ( i > 0 )
 			{
-				Q_strncat( tmptags, ",", MAX_TAG_STRING_LENGTH );
+				V_strncat( tmptags, ",", MAX_TAG_STRING_LENGTH );
 			}
 
-			Q_strncat( tmptags, TagList[i].c_str(), MAX_TAG_STRING_LENGTH );
+			V_strncat( tmptags, TagList[i].c_str(), MAX_TAG_STRING_LENGTH );
 		}
 
 		// set our convar
-		if ( Q_strcmp( tmptags, sv_tags.GetString() ) )
+		if ( V_strcmp( tmptags, sv_tags.GetString() ) )
 		{
 			sv_tags.SetValue( tmptags );
 		}
@@ -165,20 +130,7 @@ static void ServerTagsCleanUp( void )
 static void SvTagsChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	sv.UpdateGameData();
-	if ( sv.IsActive() )
-	{
-		Cbuf_AddText( CBUF_SERVER, "heartbeat\n" );
-	}
 	ServerTagsCleanUp();
-}
-
-static void SvGameDataChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
-{
-	// TODO: sv.UpdateGameData();
-	if ( sv.IsActive() )
-	{
-		Cbuf_AddText( CBUF_SERVER, "heartbeat\n" );
-	}
 }
 
 extern ConVar	sv_search_key;
@@ -195,9 +147,9 @@ static ConVar	sv_reservation_tickrate_adjustment( "sv_reservation_tickrate_adjus
 static void SvPasswordChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	ConVarRef cvref( pConVar );
-	bool bOldPassword = ( pOldValue && pOldValue[0] && Q_stricmp( pOldValue, "none" ) );
+	bool bOldPassword = ( pOldValue && pOldValue[0] && V_stricmp( pOldValue, "none" ) );
 	char const *pNewValue = cvref.GetString();
-	bool bNewPassword = ( pNewValue && pNewValue[0] && Q_stricmp( pNewValue, "none" ) );
+	bool bNewPassword = ( pNewValue && pNewValue[0] && V_stricmp( pNewValue, "none" ) );
 
 	if ( ( sv.GetNumHumanPlayers() > 0 ) || sv.IsReserved() )
 	{
@@ -207,8 +159,6 @@ static void SvPasswordChangeCallback( IConVar *pConVar, const char *pOldValue, f
 			cvref.SetValue( "" );
 		}
 	}
-
-	sv.OnPasswordChanged();
 }
 
 static ConVar	sv_password( "sv_password", "", FCVAR_NOTIFY | FCVAR_PROTECTED | FCVAR_DONTRECORD | FCVAR_RELEASE, "Server password for entry into multiplayer games", SvPasswordChangeCallback );
@@ -220,15 +170,8 @@ ConVar			sv_allow_lobby_connect_only( "sv_allow_lobby_connect_only", "0",  FCVAR
 static ConVar   sv_reservation_timeout( "sv_reservation_timeout", "45", FCVAR_RELEASE, "Time in seconds before lobby reservation expires.", true, 5.0f, true, 180.0f );
 static ConVar   sv_reservation_grace( "sv_reservation_grace", "5", 0, "Time in seconds given for a lobby reservation.", true, 3.0f, true, 30.0f );
 
-ConVar			sv_steamgroup( "sv_steamgroup", "", FCVAR_NOTIFY | FCVAR_RELEASE, "The ID of the steam group that this server belongs to. You can find your group's ID on the admin profile page in the steam community.", SvGameDataChangeCallback );
-ConVar			sv_steamgroup_exclusive( "sv_steamgroup_exclusive", "0", FCVAR_RELEASE, "If set, only members of Steam group will be able to join the server when it's empty, public people will be able to join the server only if it has players." );
 
-static void SvMmQueueReservationChanged( IConVar *pConVar, const char *pOldValue, float flOldValue )
-{
-	if ( serverGameDLL )
-		serverGameDLL->UpdateGCInformation();
-}
-ConVar			sv_mmqueue_reservation( "sv_mmqueue_reservation", "", FCVAR_DEVELOPMENTONLY | FCVAR_DONTRECORD, "Server queue reservation", SvMmQueueReservationChanged );
+ConVar			sv_mmqueue_reservation( "sv_mmqueue_reservation", "", FCVAR_DEVELOPMENTONLY | FCVAR_DONTRECORD, "Server queue reservation" );
 ConVar			sv_mmqueue_reservation_timeout( "sv_mmqueue_reservation_timeout", "21", FCVAR_DEVELOPMENTONLY, "Time in seconds before mmqueue reservation expires.", true, 5.0f, true, 180.0f );
 ConVar			sv_mmqueue_reservation_extended_timeout( "sv_mmqueue_reservation_extended_timeout", "21", FCVAR_DEVELOPMENTONLY, "Extended time in seconds before mmqueue reservation expires.", true, 5.0f, true, 180.0f );
 
@@ -236,35 +179,6 @@ extern CNetworkStringTableContainer *networkStringTableContainerServer;
 extern ConVar sv_stressbots;
 
 int g_CurGameServerID = 1;
-
-static void SetMasterServerKeyValue( ISteamGameServer *pGameServer, IConVar *pConVar )
-{
-	ConVarRef var( pConVar );
-
-	// For protected cvars, don't send the string
-	if ( var.IsFlagSet( FCVAR_PROTECTED ) )
-	{
-		// If it has a value string and the string is not "none"
-		if ( ( strlen( var.GetString() ) > 0 ) &&
-				stricmp( var.GetString(), "none" ) )
-		{
-			pGameServer->SetKeyValue( var.GetName(), "1" );
-		}
-		else
-		{
-			pGameServer->SetKeyValue( var.GetName(), "0" );
-		}
-	}
-	else
-	{
-		pGameServer->SetKeyValue( var.GetName(), var.GetString() );
-	}
-
-	if ( Steam3Server().BIsActive() )
-	{
-		sv.RecalculateTags();
-	}
-}
 
 static KeyValues *g_pKVrulesConvars = nullptr;
 
@@ -275,16 +189,8 @@ static void ServerNotifyVarChangeCallback( IConVar *pConVar, const char *pOldVal
 
 	if ( !g_pKVrulesConvars->GetBool( pConVar->GetName() ) )
 		return;
-	
-	ISteamGameServer *pGameServer = Steam3Server().SteamGameServer();
-	if ( !pGameServer )
-	{
-		// This will force it to send all the rules whenever the master server updater is there.
-		sv.SetMasterServerRulesDirty();
-		return;
-	}
 
-	SetMasterServerKeyValue( pGameServer, pConVar );
+	sv.SetMasterServerRulesDirty();
 }
 
 
@@ -292,10 +198,8 @@ static void ServerNotifyVarChangeCallback( IConVar *pConVar, const char *pOldVal
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CBaseServer::CBaseServer() : 
-	m_flFlagForSteamIDReuseAfterShutdownTime( 0 )
+CBaseServer::CBaseServer()
 {
-	// Just get a unique ID to talk to the steam master server updater.
 	m_bRestartOnLevelChange = false;
 	
 	m_StringTables = nullptr;
@@ -330,7 +234,6 @@ CBaseServer::CBaseServer() :
 	m_fLastCPUCheckTime = 0;
 	
 	m_bMasterServerRulesDirty = true;
-	m_flLastMasterServerUpdateTime = 0;
 
 	m_nReservationCookie = 0;
 	m_pnReservationCookieSession = nullptr;
@@ -418,7 +321,7 @@ const char *CBaseServer::GetPassword() const
 	const char *password = sv_password.GetString();
 
 	// if password is empty or "none", return NULL
-	if ( !password[0] || !Q_stricmp(password, "none" ) )
+	if ( !password[0] || !V_stricmp(password, "none" ) )
 	{
 		return nullptr;
 	}
@@ -431,7 +334,7 @@ void CBaseServer::SetPassword(const char *password)
 {
 	if ( password != nullptr )
 	{
-		Q_strncpy( m_Password, password, sizeof(m_Password) );
+		V_strncpy( m_Password, password, sizeof(m_Password) );
 	}
 	else
 	{
@@ -444,7 +347,7 @@ int CBaseServer::GetNextUserID()
 	// Note: we'll usually exit on the first pass of this loop..
 	for ( int i=0; i < std::ssize( m_Clients )+1; i++ )
 	{
-		int nTestID = (m_nUserid + i + 1) % SHRT_MAX;
+		int nTestID = (m_nUserid + i + 1) % std::numeric_limits<short>::max();
 
 		// Make sure no client has this user ID.		
 		int iClient;
@@ -459,7 +362,7 @@ int CBaseServer::GetNextUserID()
 			return nTestID;
 	}
 	
-	Assert( !"GetNextUserID: can't find a unique ID." );
+	contract_assert( !"GetNextUserID: can't find a unique ID." );
 	return m_nUserid + 1;
 }
 
@@ -494,18 +397,6 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 {
 
 	ns_address_render sAdr( adr );
-
-#ifdef IHV_DEMO
-	if ( !adr.IsLoopback() )
-	{
-		Warning( "This demo version only works as a listen server. Ignoring connection request from %s\n", adr.ToString() );
-		return nullptr;
-	}
-	else
-	{
-		DevMsg( "IHV Demo Version - Connected to loopback client.\n");
-	}
-#endif
 
 	COM_TimestampedLog( "CBaseServer::ConnectClient" );
 
@@ -631,19 +522,15 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	}
 
 	int nNextUserID = GetNextUserID();
-	if ( !CheckChallengeType( client, nNextUserID, adr, authProtocol, hashedCDkey, cdKeyLen ) ) // we use the client pointer to track steam requests
+	if ( !CheckChallengeType( client, nNextUserID, adr, authProtocol, hashedCDkey, cdKeyLen ) )
 	{
 		return nullptr;
 	}
 
-#ifndef _HLTVTEST
-#ifndef _REPLAYTEST
 	if ( !FinishCertificateCheck( adr, authProtocol, hashedCDkey	) )
 	{
 		return nullptr;
 	}
-#endif
-#endif
 
 	// Make sure client user info carries correct cookie
 	bool bValidatedUserInfo = false;
@@ -661,7 +548,7 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 					continue;
 
 				uint64 uid;
-				if ( sscanf( value, "$%llx", &uid ) != 1 )
+				if ( std::sscanf( value, "$%llx", &uid ) != 1 )
 				{
 					Warning( "failed to parse session id %s\n", value );
 				}
@@ -688,7 +575,7 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	}
 
 	// Final validation chance by server.dll
-	if ( char const *szGameServerError = serverGameDLL->ClientConnectionValidatePreNetChan( ( this == &sv ), sAdr.String(), authProtocol, client->m_SteamID.ConvertToUint64() ) )
+	if ( char const *szGameServerError = serverGameDLL->ClientConnectionValidatePreNetChan( ( this == &sv ), sAdr.String(), authProtocol, client->m_PlayerUID.ConvertToUint64() ) )
 	{
 		RejectConnection( adr, "%s", szGameServerError );
 		return nullptr;
@@ -713,7 +600,7 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	}
 
 	// Use an override for connection name
-	pchClientConnectionName = serverGameClients->ClientNameHandler( client->m_SteamID.ConvertToUint64(), pchClientConnectionName );
+	pchClientConnectionName = serverGameClients->ClientNameHandler( client->m_PlayerUID.ConvertToUint64(), pchClientConnectionName );
 
 	// create network channel
 	// Encryption keys for the client must have been received previously
@@ -756,12 +643,8 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	if ( authProtocol == PROTOCOL_HASHEDCDKEY )
 	{
 		// use hased CD key as player GUID
-		Q_strncpy ( client->m_GUID, hashedCDkey, SIGNED_GUID_LEN );
+		V_strncpy ( client->m_GUID, hashedCDkey, SIGNED_GUID_LEN );
 		client->m_GUID[SIGNED_GUID_LEN] = '\0';
-	}
-	else if ( authProtocol == PROTOCOL_STEAM )
-	{
-		// StartSteamValidation() above initialized the clients networkid
 	}
 
 	//now process the split screen clients who came in with this client
@@ -828,28 +711,9 @@ bool CBaseServer::ValidChallenge( const ns_address & adr, int challengeNr )
 	return true; 
 }
 
-bool CBaseServer::ValidInfoChallenge( const ns_address & adr, const char *nugget )
-{
-	if ( !IsActive() )            // Must be running a server.
-		return false ;
-
-	if ( !IsMultiplayer() )   // ignore in single player
-		return false ;
-
-	if ( RequireValidChallenge( adr) )
-	{
-		if ( Q_stricmp( nugget, A2S_KEY_STRING ) ) // if the string isn't equal then fail out
-		{
-			return false;
-		}
-	}
-
-	return true; 
-}
-
-
 bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 {
+	ks::ScratchArena<> scratch;
 	// NOTE: msg is copy-constructed from packet->message, so reading
 	// from "msg" will not advance read-pointer in "packet->message"!!!
 	// ... and vice-versa, hence passing "packet" to a nested function
@@ -896,23 +760,7 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 		case A2S_SERVERQUERY_GETCHALLENGE: ReplyServerChallenge( packet->from );
 							break;
 
-#if ENGINE_CONNECT_VIA_MMS
-		case C2S_VALIDATE_SESSION: {
-										int protocol = msg.ReadLong();
-										uint64 uiXuid = msg.ReadLongLong();
-										uint64 uiSessionId = msg.ReadLongLong();
-										Msg( "C2S_VALIDATE_SESSION from %llx, session %llx, protocol %d.\n", uiXuid, uiSessionId, protocol );
-
-										if ( GetHostVersion() == protocol )
-										{
-											extern void HostValidateSessionImpl();
-											HostValidateSessionImpl();
-										}
-								   }
-								   break;
-#endif
-
-		case C2S_CONNECT :	{	char cdkey[STEAM_KEYSIZE];
+		case C2S_CONNECT :	{	char cdkey[AUTH_KEYSIZE];
 								char name[256] = {};
 								char password[256] = {};
 
@@ -998,7 +846,7 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 										break;
 									}
 
-									// Check if we are running with a special flag and not advertise to Steam
+									// Check if we are running with a special flag and not advertise the server
 									if ( LaunchOptionsHasUnavailableFlag() )
 									{
 										DevMsg( "Rejecting connection request from %s (reservation cookie 0x%llx), server is reserved with reservation cookie 0x%llx "
@@ -1040,7 +888,7 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 											break;
 										}
 
-										unAccountIDfor3rdParties = Q_atoi( value );
+										unAccountIDfor3rdParties = V_atoi( value );
 									}
 								}
 
@@ -1057,7 +905,7 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 									int numEncryptedBytes = msg.ReadLong();
 									if ( ( numEncryptedBytes > 0 ) && ( numEncryptedBytes <= 256 ) )
 									{
-										byte *pbEncryptedKey = ( byte * ) stackalloc( numEncryptedBytes );
+										byte *pbEncryptedKey = ( byte * ) scratch.AllocBytes( numEncryptedBytes );
 										msg.ReadBytes( pbEncryptedKey, numEncryptedBytes );
 
 										// Community-servers feature to manage encryption keys in their secure clients
@@ -1068,8 +916,8 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 											if ( g_pServerPluginHandler->BNetworkCryptKeyValidate( packet->from.GetIP(), packet->from.GetPort(), unAccountIDfor3rdParties,
 												nEncryptionKeyIndex, numEncryptedBytes, pbEncryptedKey, chPlainKey ) )
 											{
-												pbClientPlainKey = ( byte * ) stackalloc( NET_CRYPT_KEY_LENGTH );
-												Q_memcpy( pbClientPlainKey, chPlainKey, NET_CRYPT_KEY_LENGTH );
+												pbClientPlainKey = ( byte * ) scratch.AllocBytes( NET_CRYPT_KEY_LENGTH );
+												V_memcpy( pbClientPlainKey, chPlainKey, NET_CRYPT_KEY_LENGTH );
 											}
 										}
 										else
@@ -1081,10 +929,10 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 											if ( bNetEncryptPrivateKey && NET_CryptVerifyClientSessionKey( serverGameDLL->IsValveDS(),
 												pbNetEncryptPrivateKey, cbNetEncryptPrivateKey,
 												pbEncryptedKey, numEncryptedBytes,
-												chPlainKey, Q_ARRAYSIZE( chPlainKey ) ) )
+												chPlainKey, std::size( chPlainKey ) ) )
 											{
-												pbClientPlainKey = ( byte * ) stackalloc( NET_CRYPT_KEY_LENGTH );
-												Q_memcpy( pbClientPlainKey, chPlainKey, NET_CRYPT_KEY_LENGTH );
+												pbClientPlainKey = ( byte * ) scratch.AllocBytes( NET_CRYPT_KEY_LENGTH );
+												V_memcpy( pbClientPlainKey, chPlainKey, NET_CRYPT_KEY_LENGTH );
 											}
 										}
 									}
@@ -1097,38 +945,15 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 									break;
 								}
 
-								if ( authProtocol == PROTOCOL_STEAM )
-								{
-									int keyLen = msg.ReadShort();
-									if ( keyLen < 0 || keyLen > sizeof(cdkey) )
-									{
-										RejectConnection( packet->from, "Invalid Steam key length\n" );
-										break;
-									}
-									msg.ReadBytes( cdkey, keyLen );
-
-									ConnectClient( packet->from, protocol, 
-										challengeNr, authProtocol, name, password, cdkey, keyLen, splitScreenPlayers, isClientLowViolence, clientPlatform,
-										pbClientPlainKey, nEncryptionKeyIndex );	// cd key is actually a raw encrypted key	
-								}
-								else
-								{
-									msg.ReadString( cdkey, sizeof(cdkey) );
-									ConnectClient( packet->from, protocol, 
-										challengeNr, authProtocol, name, password, cdkey, strlen(cdkey), splitScreenPlayers, isClientLowViolence, clientPlatform,
-										pbClientPlainKey, nEncryptionKeyIndex );
-								}
-
+								msg.ReadString( cdkey, sizeof(cdkey) );
+								ConnectClient( packet->from, protocol, 
+									challengeNr, authProtocol, name, password, cdkey, std::strlen(cdkey), splitScreenPlayers, isClientLowViolence, clientPlatform,
+									pbClientPlainKey, nEncryptionKeyIndex );
 							}
 							break;
 		
 		case A2A_CUSTOM	:	// TODO fire game event with string and adr so 3rd party tool can get it
 			break;
-
-#if ENGINE_CONNECT_VIA_MMS
-		case A2S_RESERVE :	ReplyReservationRequest( packet->from, msg );
-							break;
-#endif
 
 		case A2S_RESERVE_CHECK : ReplyReservationCheckRequest( packet->from, msg );
 								 break;
@@ -1162,201 +987,8 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 			}
 			break;
 
-		case A2S_INFO:
-			// Handle A2S_INFO ourselves, we are concealing SteamID of the game server and report players differently
-			if ( g_bSteamMasterHeartbeatsEnabled )
-			{
-				extern ConVar host_info_show;
-				switch ( host_info_show.GetInt() )
-				{
-				case 2:
-					goto steam3server_oob_packet_handler;
-
-				case 1:
-					{
-						  // Validate challenge
-						  char nugget[ 64 ];
-						  if ( !msg.ReadString( nugget, sizeof( nugget ) ) )
-							  break;
-						  if ( !ValidInfoChallenge( packet->from, nugget ) )
-							  break;
-
-						  // Respond
-						  extern AppId_t g_unSteamAppID;
-						  AppId_t appIdResponse = g_unSteamAppID ? g_unSteamAppID : 730;
-						  ks::byte_writer buf;
-						  buf.reserve( MAX_ROUTABLE_PAYLOAD );
-
-						  buf.write<unsigned>( LittleDWord( CONNECTIONLESS_HEADER ) );
-						  buf.write<unsigned char>( S2A_INFO_SRC );
-						  buf.write<unsigned char>( 17 ); // Hardcoded protocol version number
-						  extern ConVar host_name_store;
-						  buf.write_cstring( host_name_store.GetBool() ? GetName() : "Counter-Strike: Global Offensive" );
-						  buf.write_cstring( GetMapName() );
-						  buf.write_cstring( "csgo" );
-						  buf.write_cstring( "Counter-Strike: Global Offensive" );
-
-						  // The next field is a 16-bit version of the AppID.  If our AppID < 65536,
-						  // then let's go ahead and put in in there, to maximize compatibility
-						  // with old clients who might be only using this field but not the new one.
-						  // However, if our AppID won't fit, there's no way we can be compatible,
-						  // anyway, so just put in a zero, which is better than a bogus AppID.
-						  uint16 usAppIdShort = ( uint16 ) appIdResponse;
-						  buf.write<short>( LittleWord( usAppIdShort ) );
-
-						  // player info
-						  buf.write<unsigned char>( GetNumPlayers() );
-						  buf.write<unsigned char>( GetMaxHumanPlayers() );
-						  buf.write<unsigned char>( std::max( 0, GetNumFakeClients() - GetNumProxies() ) );
-
-						  // NOTE: This key's meaning is changed in the new version. Since we send gameport and specport,
-						  // it knows whether we're running SourceTV or not. Then it only needs to know if we're a dedicated or listen server.
-						  if ( IsDedicated() )
-							  buf.write<unsigned char>( 'd' );	// d = dedicated server
-						  else
-							  buf.write<unsigned char>( 'l' );	// l = listen server
-
-						  buf.write<unsigned char>( 'l' );
-
-						  // Password?
-						  buf.write<unsigned char>( GetPassword() ? 1 : 0 );
-						  buf.write<unsigned char>( Steam3Server().BSecure() ? 1 : 0 );
-						  buf.write_cstring( GetHostVersionString() );
-
-						  //
-						  // NEW DATA.
-						  //
-
-						  // Write a byte with some flags that describe what is to follow.
-						  byte nNewFlags = 0;
-						  nNewFlags |= S2A_EXTRA_DATA_HAS_GAME_PORT;
-
-						  // 				if ( GetSteamID().IsValid() )
-						  // 					nNewFlags |= S2A_EXTRA_DATA_HAS_STEAMID;
-
-						  extern bool CanShowHostTvStatus();
-						  CHLTVServer *hltv = nullptr;
-						  for ( CActiveHltvServerIterator it; it; it.Next() )
-						  {
-							  if ( CanShowHostTvStatus() )
-							  {
-								  hltv = it;
-								  // pass spectator data (port and name)
-								  nNewFlags |= S2A_EXTRA_DATA_HAS_SPECTATOR_DATA;
-							  }
-							  break;
-						  }
-
-						  if ( m_GameType.c_str()[ 0 ] != '\0' )
-							  nNewFlags |= S2A_EXTRA_DATA_HAS_GAMETAG_DATA;
-
-						  nNewFlags |= S2A_EXTRA_DATA_GAMEID;
-
-						  buf.write<unsigned char>( nNewFlags );
-
-						  // Write the rest of the data.
-						  if ( nNewFlags & S2A_EXTRA_DATA_HAS_GAME_PORT )
-						  {
-							  buf.write<short>( LittleWord( GetUDPPort() ) );
-						  }
-
-						  if ( nNewFlags & S2A_EXTRA_DATA_HAS_SPECTATOR_DATA )
-						  {
-							  buf.write<short>( LittleWord( hltv->GetUDPPort() ) );
-							  buf.write_cstring( host_name_store.GetBool() ? GetName() : "Counter-Strike: Global Offensive" );
-						  }
-
-						  if ( nNewFlags & S2A_EXTRA_DATA_HAS_GAMETAG_DATA )
-						  {
-							  buf.write_cstring( m_GameType.c_str() );
-						  }
-
-						  if ( nNewFlags & S2A_EXTRA_DATA_GAMEID )
-						  {
-							  // !FIXME! Is there a reason we aren't using the other half
-							  // of this field?  Shouldn't we put the game mod ID in there, too?
-							  // We have the game dir.
-							  buf.write<int64>( LittleQWord( CGameID( appIdResponse ).ToUint64() ) );
-						  }
-
-						  NET_SendPacket( nullptr, m_Socket, packet->from, ( unsigned char * ) buf.data(), buf.size() );
-					}
-					break;
-				}
-			}
-			break;
-
-		case A2S_PLAYER:
-			// Handle A2S_PLAYER ourselves, we are concealing SteamID of the game server and report players differently
-			if ( g_bSteamMasterHeartbeatsEnabled )
-			{
-				extern ConVar host_players_show;
-				switch ( host_players_show.GetInt() )
-				{
-				case 2:
-					goto steam3server_oob_packet_handler;
-				case 1:
-					{
-						ks::byte_writer buf;
-						buf.reserve( MAX_ROUTABLE_PAYLOAD );
-
-						buf.write<unsigned>( LittleDWord( CONNECTIONLESS_HEADER ) );
-						buf.write<unsigned char>( S2A_PLAYER );
-						buf.write<unsigned char>( 1 );
-						buf.write<unsigned char>( 0 );
-						buf.write_cstring( "Max Players" );
-						buf.write<int>( GetMaxHumanPlayers() );
-
-						if ( m_fStartTime == 0 ) // record when we started
-						{
-							m_fStartTime = Sys_FloatTime();
-						}
-						float flTime = Sys_FloatTime() - m_fStartTime;
-						float flLittleTime;
-						LittleFloat( &flLittleTime, &flTime );
-						buf.write<float>( flLittleTime );
-
-						NET_SendPacket( nullptr, m_Socket, packet->from, ( unsigned char * ) buf.data(), buf.size() );
-					}
-					break;
-				}
-			}
-			break;
-
-		case A2S_RULES:
-			if ( g_bSteamMasterHeartbeatsEnabled )
-			{
-				extern ConVar host_rules_show;
-				if ( host_rules_show.GetBool() )
-					goto steam3server_oob_packet_handler;
-			}
-			break;
-
 		default:
-		{
-			static bool s_bEnableLegacyPackets = !!CommandLine()->FindParm( "-enablelegacypackets" );
-			if ( !s_bEnableLegacyPackets )
-				break;
-
-			steam3server_oob_packet_handler:
-
-			// We don't understand it, let the master server updater at it.
-			if ( packet->from.IsType< netadr_t >() && Steam3Server().SteamGameServer() && Steam3Server().IsMasterServerUpdaterSharingGameSocket() )
-			{
-				const netadr_t &adr = packet->from.AsType< netadr_t>();
-				Steam3Server().SteamGameServer()->HandleIncomingPacket( 
-					packet->message.GetBasePointer(), 
-					packet->message.TotalBytesAvailable(),
-					adr.GetIPHostByteOrder(),
-					adr.GetPort()
-					);
-			
-				// This is where it will usually want to respond to something immediately by sending some
-				// packets, so check for that immediately.
-				ForwardPacketsFromMasterServerUpdater();
-			}
-		}
-		break;
+			break;
 	}
 
 	return true;
@@ -1412,9 +1044,6 @@ int CBaseServer::GetNumProxies( void ) const
 	for (int i=0 ; i < std::ssize( m_Clients ) ; i++ )
 	{
 		if ( m_Clients[ i ]->IsConnected() && (m_Clients[ i ]->IsHLTV()
-#if defined( REPLAY_ENABLED )
-			|| m_Clients[ i ]->IsReplay()
-#endif
 			) )
 		{
 			count++;
@@ -1459,7 +1088,7 @@ bool CBaseServer::GetPlayerInfo( int nClientIndex, player_info_t *pinfo )
 
 	if ( nClientIndex < 0 || nClientIndex >= GetUserInfoTable()->GetNumStrings() )
 	{
-		Q_memset( pinfo, 0, sizeof( player_info_t ) );
+		V_memset( pinfo, 0, sizeof( player_info_t ) );
 		return false;
 	}
 
@@ -1467,11 +1096,11 @@ bool CBaseServer::GetPlayerInfo( int nClientIndex, player_info_t *pinfo )
 
 	if ( !pi )
 	{
-		Q_memset( pinfo, 0, sizeof( player_info_t ) );
+		V_memset( pinfo, 0, sizeof( player_info_t ) );
 		return false;	
 	}
 
-	Q_memcpy( pinfo, pi, sizeof( player_info_t ) );
+	V_memcpy( pinfo, pi, sizeof( player_info_t ) );
 
 	return true;
 }
@@ -1502,7 +1131,7 @@ void CBaseServer::UserInfoChanged( int nClientIndex )
 void CBaseServer::FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo)
 {
 	char gamedir[MAX_OSPATH];
-	Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
+	V_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
 
 	serverinfo.protocol = GetHostVersion();
 	serverinfo.server_count = GetSpawnCount();
@@ -1516,7 +1145,7 @@ void CBaseServer::FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo)
 	serverinfo.c_os = 'L';
 
 	// HACK to signal that the server is "new"
-	serverinfo.c_os = tolower( serverinfo.c_os );
+	serverinfo.c_os = std::tolower( serverinfo.c_os );
 
 	serverinfo.tick_interval = GetTickInterval();
 	serverinfo.game_dir = gamedir;
@@ -1527,21 +1156,7 @@ void CBaseServer::FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo)
 	serverinfo.host_name = host_name_store.GetBool() ? GetName() : "Counter-Strike: Global Offensive";
 	serverinfo.is_hltv = IsHLTV();
 	serverinfo.is_redirecting_to_proxy_relay = false;
-	
-	char szMapPath[MAX_PATH];
-	V_ComposeFileName( "maps", GetMapName(), szMapPath, sizeof(szMapPath) );
-	serverinfo.ugc_map_id = serverGameDLL->GetUGCMapFileID( szMapPath );
-
-#if defined( REPLAY_ENABLED )
-	serverinfo.is_replay = IsReplay();
-#endif
-
-// Don't expose server public IP in the server info, the client is already connected, so there's no reason to store it either
-// 	if( Steam3Server().SteamGameServer() == NULL )
-// 		serverinfo.public_ip = NULL;
-// 	else
-// 		serverinfo.public_ip = Steam3Server().SteamGameServer()->GetPublicIP();
-}
+	}
 
 /*
 =================
@@ -1561,14 +1176,14 @@ void CBaseServer::ReplyChallenge( const ns_address &adr, bf_read &inmsg )
 		// Silently swallow the challenge request
 		return;
 
-	// Check if we are running with a special flag and not advertise to Steam
+	// Check if we are running with a special flag and not advertise the server
 	if ( LaunchOptionsHasUnavailableFlag() )
 	{
 		DevMsg( "Server running with server_is_unavailable, ignoring challenge from %s\n", ns_address_render( adr ).String() );
 		return;
 	}
 
-	char	ALIGN4 buffer[512] ALIGN4_POST;
+	char	buffer[512] [[gnu::aligned(4)]];
 	bf_write msg(buffer,sizeof(buffer));
 
 	char context[ 256 ] = { 0 };
@@ -1584,17 +1199,6 @@ void CBaseServer::ReplyChallenge( const ns_address &adr, bf_read &inmsg )
 	msg.WriteLong( challengeNr );
 	msg.WriteLong( authprotocol );
 
-	bool bWroteInfo = false;
-	uint64 ullSteamIDGS = 0ull;
-
-
-	if ( !bWroteInfo )
-	{
-		msg.WriteShort( 1 );
-		msg.WriteLongLong( ullSteamIDGS );
-		msg.WriteByte( 0 );
-	}
-
 	bool bReloadServerMap = false;
 
 	if ( StringHasPrefix( context, "connect" ) )
@@ -1607,12 +1211,12 @@ void CBaseServer::ReplyChallenge( const ns_address &adr, bf_read &inmsg )
 		// Validate the challenge if the challenge was passed as part of connect
 		// packet:
 		unsigned long nChallenge = 0;
-		char const *pszValidate = context + Q_strlen( "connect" );
+		char const *pszValidate = context + V_strlen( "connect" );
 		if ( pszValidate[0] == '0' && pszValidate[1] == 'x' )
 		{
 			char chValidateChallenge[ 9 ] = {0};
-			Q_strncpy( chValidateChallenge, pszValidate + 2, sizeof( chValidateChallenge ) );
-			nChallenge = strtoul( chValidateChallenge, nullptr, 16 );
+			V_strncpy( chValidateChallenge, pszValidate + 2, sizeof( chValidateChallenge ) );
+			nChallenge = std::strtoul( chValidateChallenge, nullptr, 16 );
 		}
 
 		bool bAllowDC = !serverGameDLL->IsValveDS();	// Official DS direct connect disabled
@@ -1646,32 +1250,11 @@ void CBaseServer::ReplyChallenge( const ns_address &adr, bf_read &inmsg )
 					{
 						// Do not allow direct-connect to this community server
 						msg.WriteString( "connect-lan-only" );
-						DevMsg( "Cannot direct-connect to community CS:GO Server, visit http://steamcommunity.com/dev/managegameservers\n" );
-
-						static bool s_bPrintedInfo = false;
-						if ( sv.IsDedicated() && !s_bPrintedInfo )
-						{
-							s_bPrintedInfo = true;
-
-							Warning( "****************************************************\n" );
-							Warning( "*  Client connections are restricted to LAN only.  *\n" );
-							Warning( "*  Double-check your sv_setsteamaccount setting.   *\n" );
-							Warning( "*  To create a game server account go to           *\n" );
-							Warning( "*  http://steamcommunity.com/dev/managegameservers *\n" );
-							Warning( "****************************************************\n" );
-						}
+						DevMsg( "Cannot direct-connect to community CS:GO Server\n" );
 					}
 				}
 				else
 				{
-					#if ENGINE_CONNECT_VIA_MMS
-					msg.WriteString( "connect-granted" );
-				
-					m_flTimeReservationGraceStarted = net_time;
-					m_adrReservationGraceStarted = adr;
-
-					DevMsg( "Server requires lobby reservation and is unreserved: granting reservation grace period to %s\n", ns_address_render( adr ).String() );
-					#else
 					if ( m_pnReservationCookieSession && *m_pnReservationCookieSession )
 					{
 						// Reserve in place
@@ -1687,7 +1270,6 @@ void CBaseServer::ReplyChallenge( const ns_address &adr, bf_read &inmsg )
 						DevMsg( "Server is not connected to matchmaking backend, ignoring challenge from %s\n", ns_address_render( adr ).String() );
 						return;
 					}
-					#endif
 				}
 			}
 		}
@@ -1701,7 +1283,7 @@ void CBaseServer::ReplyChallenge( const ns_address &adr, bf_read &inmsg )
 		if ( IsExclusiveToLobbyConnections() )
 		{
 			pszLobbyType = "public";
-			if ( sv_steamgroup_exclusive.GetBool() || GetPassword() )
+			if ( GetPassword() )
 			{
 				pszLobbyType = "friends";
 			}
@@ -1712,37 +1294,8 @@ void CBaseServer::ReplyChallenge( const ns_address &adr, bf_read &inmsg )
 
 		msg.WriteByte( bWillRequirePassword ? 1 : 0 );
 
-		#if ENGINE_CONNECT_VIA_MMS
-		if ( !bAllowDC )
-		{
-			msg.WriteLongLong( (uint64)-1 );
-			msg.WriteByte( 0 );
-		}
-		else
-		{
-			if ( !IsHLTV() )
-			{
-				msg.WriteLongLong( sv.GetReservationCookie() );
-			}
-			else
-			{
-				msg.WriteLongLong( 0 );
-			}
-			static ConVar *dcFriendsReqd = cvar->FindVar( "sv_dc_friends_reqd" );
-			
-			if ( !IsHLTV() && dcFriendsReqd )
-			{
-				msg.WriteByte( dcFriendsReqd->GetInt() );
-			}
-			else
-			{
-				msg.WriteByte( 0 );
-			}			
-		}
-		#else
 		msg.WriteLongLong( ( uint64 ) -1 );
 		msg.WriteByte( 0 );
-		#endif
 
 		msg.WriteByte( serverGameDLL->IsValveDS() ? 1 : 0 );
 		
@@ -1906,8 +1459,8 @@ void CBaseServer::ReplyReservationRequest( const ns_address &adr, bf_read &msgIn
 			{
 				IceKey cipher(1); /* medium encryption level */
 				unsigned char ucEncryptionKey[8] = { 0 };
-				*( int * )&ucEncryptionKey[ 0 ] = LittleDWord( nChallengeNr ^ 0x5ef8ce12 );
-				*( int * )&ucEncryptionKey[ 4 ] = LittleDWord( nChallengeNr ^ 0xaa98e42c );
+				*( int * )&ucEncryptionKey[ 0 ] = ( nChallengeNr ^ 0x5ef8ce12 );
+				*( int * )&ucEncryptionKey[ 4 ] = ( nChallengeNr ^ 0xaa98e42c );
 
 				cipher.set( ucEncryptionKey );
 
@@ -1967,7 +1520,7 @@ void CBaseServer::ReplyReservationRequest( const ns_address &adr, bf_read &msgIn
 				KeyValues *pKV = new KeyValues("");
 				KeyValues::AutoDelete autodelete_pKV( pKV );
 				byte tmp[MAX_OOB_KEYVALUES];
-				Assert( nSettingsSize <= sizeof( tmp ) );
+				contract_assert( nSettingsSize <= sizeof( tmp ) );
 
 				if ( nSettingsSize <= sizeof( tmp ) )
 				{
@@ -1980,7 +1533,7 @@ void CBaseServer::ReplyReservationRequest( const ns_address &adr, bf_read &msgIn
 					{
 						float fDesiredTickInterval = 1.0f / sv_reservation_tickrate_adjustment.GetInt();
 						// quantize tick intervals to the nearest N / 512 fraction
-						float fNumerator = floorf(fDesiredTickInterval * 512.0f + 0.5f);
+						float fNumerator = std::floorf(fDesiredTickInterval * 512.0f + 0.5f);
 						host_state.interval_per_tick = fNumerator / 512.0f;
 						host_state.interval_per_tick = clamp( host_state.interval_per_tick, MINIMUM_TICK_INTERVAL, MAXIMUM_TICK_INTERVAL );
 						DevMsg( "Reservation tickrate adjustment to %.0f ticks %.6f ms\n", floorf( 1.0f/host_state.interval_per_tick ), host_state.interval_per_tick );
@@ -2025,18 +1578,18 @@ void CBaseServer::ReplyReservationCheckRequest( const ns_address &adr, bf_read &
 	uint64	nReservationCookie= msgIn.ReadLongLong();
 	bool reservationMatch = ( nReservationCookie == GetReservationCookie() );
 	
-	uint64 uiClientSteamID = msgIn.ReadLongLong();
+	uint64 uiClientPlayerID = msgIn.ReadLongLong();
 	uint8 uiAwaitingClients = 0x7F; // large positive int8 number
-	if ( uiReservationStage && reservationMatch && uiClientSteamID && sv_mmqueue_reservation.GetString()[0] == 'Q' )
+	if ( uiReservationStage && reservationMatch && uiClientPlayerID && sv_mmqueue_reservation.GetString()[0] == 'Q' )
 	{
-		DevMsg( "Reservation from client %u: %u\n", uint32( uiClientSteamID ), uiReservationStage );
+		DevMsg( "Reservation from client %u: %u\n", uint32( uiClientPlayerID ), uiReservationStage );
 		// For queue reservation client ID must match
 		bool bThisClientShouldJoin = false, bThisClientJustConfirmed = false;
 		uint8 uiActualAwaitingClients = 0;
 		for ( int k = 0; k < std::ssize( m_arrReservationPlayers ); ++ k )
 		{
 			QueueMatchPlayer_t &qmp = m_arrReservationPlayers[k];
-			if ( qmp.m_uiAccountID == CSteamID( uiClientSteamID ).GetAccountID() )
+			if ( qmp.m_uiAccountID == CPlayerId( uiClientPlayerID ).GetAccountID() )
 			{
 				bThisClientShouldJoin = true;
 				qmp.m_adr = adr;
@@ -2085,9 +1638,9 @@ void CBaseServer::ReplyReservationCheckRequest( const ns_address &adr, bf_read &
 		}
 	}
 
-	if ( uiReservationStage && reservationMatch && uiClientSteamID && sv_mmqueue_reservation.GetString()[ 0 ] == 'G' )
+	if ( uiReservationStage && reservationMatch && uiClientPlayerID && sv_mmqueue_reservation.GetString()[ 0 ] == 'G' )
 	{
-		DevMsg( "Reservation from in-progress client %u: %u\n", uint32( uiClientSteamID ), uiReservationStage );
+		DevMsg( "Reservation from in-progress client %u: %u\n", uint32( uiClientPlayerID ), uiReservationStage );
 
 		// Reservation matches, report to this client how many more clients we are awaiting
 		uiAwaitingClients = 0;
@@ -2141,10 +1694,6 @@ void CBaseServer::ClearReservationStatus()
 	m_ReservationStatus.m_bActive = false;
 }
 
-void CBaseServer::FlagForSteamIDReuseAfterShutdown()
-{
-	m_flFlagForSteamIDReuseAfterShutdownTime = Plat_FloatTime();
-}
 
 void CBaseServer::SendReservationStatus( EReservationStatus_t kEReservationStatus )
 {
@@ -2180,39 +1729,17 @@ const char *CBaseServer::GetName( void ) const
 bool UseCDKeyAuth()
 {
 	return true;
-
-	// if we are physically on a 360 (360 listen server) or we are on a PC dedicated server for 360 clients, don't require Steam auth
-
-	// for single player games that don't use Steam features, don't require Steam auth
-	if ( !serverGameDLL->ShouldPreferSteamAuth() && Host_IsSinglePlayerGame() )
-		return true;
-
-#ifndef DEDICATED
-	// for listen servers, if the Steam interface is not available (Steam not running), OK to not require Steam auth
-	if ( !sv.IsDedicated() && !Steam3Client().SteamUser() )
-		return true;
-#endif
-
-	// require Steam auth
-	return false;
 }
 
 int CBaseServer::GetChallengeType( const ns_address &adr)
 {	
-	if ( UseCDKeyAuth() )
-	{
-		return PROTOCOL_HASHEDCDKEY;
-	}
-	else
-	{
-		return PROTOCOL_STEAM;
-	}
+	return PROTOCOL_HASHEDCDKEY;
 }
 
 int CBaseServer::GetChallengeNr ( const ns_address &adr)
 {
 	int		oldest = 0;
-	float	oldestTime = FLT_MAX;
+	float	oldestTime = std::numeric_limits<float>::max();
 		
 	// see if we already have a challenge for this ip
 	for (int i = 0 ; i < std::ssize( m_ServerQueryChallenges ) ; i++)
@@ -2277,15 +1804,15 @@ void CBaseServer::CalculateCPUUsage( void )
 	if(m_fStartTime==0)
 	// record when we started
 	{
-		m_fStartTime=Sys_FloatTime();
+		m_fStartTime=Plat_FloatTime();
 	}
 
-	if( Sys_FloatTime () > m_fLastCPUCheckTime+1)
+	if( Plat_FloatTime () > m_fLastCPUCheckTime+1)
 	// only do this every 1 second
 	{
 		// FAKE
 		m_fCPUPercent = 0.1;
-		m_fLastCPUCheckTime=Sys_FloatTime(); 
+		m_fLastCPUCheckTime=Plat_FloatTime(); 
 	}
 }
 
@@ -2301,13 +1828,8 @@ void CBaseServer::InactivateClients( void )
 
 		// Fake clients get killed in here (but split screen users don't)
 		if ( cl->IsFakeClient() && !cl->IsSplitScreenUser() && !cl->IsHLTV()
-#if defined( REPLAY_ENABLED )
-			&& !cl->IsReplay()
-#endif
 			)
 		{
-			// If we don't do this, it'll have a bunch of extra steam IDs for unauthenticated users.
-			Steam3Server().NotifyClientDisconnect( cl );
 			cl->Clear();
 			continue;
 		}
@@ -2371,14 +1893,13 @@ void CBaseServer::CheckTimeouts (void)
 			{
 				if ( CGameClient *pGameClient = dynamic_cast< CGameClient * >( cl ) )
 				{
-					serverGameDLL->OnEngineClientNetworkEvent( pGameClient->edict, pGameClient->m_SteamID.ConvertToUint64(), INetChannelInfo::k_ENetworkEventType_TimedOut, nullptr );
+					serverGameDLL->OnEngineClientNetworkEvent( pGameClient->edict, pGameClient->m_PlayerUID.ConvertToUint64(), INetChannelInfo::k_ENetworkEventType_TimedOut, nullptr );
 				}
 			}
 			cl->Disconnect( CFmtStr( "%s timed out", cl->GetClientName() ) );
 		}
 		else
 #endif
-		// Handle steam socket disconnection
 		if ( netchan->IsRemoteDisconnected() )
 		{
 			cl->Disconnect( CFmtStr( "%s disconnected", cl->GetClientName() ) );
@@ -2419,15 +1940,6 @@ void CBaseServer::SendPendingServerInfo()
 		{
 			cl->SendServerInfo();
 		}
-	}
-}
-
-void CBaseServer::OnSteamServerLogonSuccess( uint32 externalIP )
-{
-	for (int i=0 ; i< std::ssize( m_Clients ) ; i++ )
-	{
-		CBaseClient	*cl = m_Clients[ i ];
-		cl->OnSteamServerLogonSuccess( externalIP );
 	}
 }
 
@@ -2477,60 +1989,13 @@ bool CBaseServer::CheckChallengeType( CBaseClient * client, int nNewUserID, cons
 		return false;
 	}
 
-	if ( ( nAuthProtocol == PROTOCOL_HASHEDCDKEY ) && (Q_strlen( pchLogonCookie ) <= 0 ||  Q_strlen(pchLogonCookie) != 32 ) )
+	if ( ( nAuthProtocol == PROTOCOL_HASHEDCDKEY ) && (V_strlen( pchLogonCookie ) <= 0 ||  V_strlen(pchLogonCookie) != 32 ) )
 	{
 		RejectConnection( adr, "Invalid authentication certificate length.\n" );
 		return false;
 	}
 
-
-	if ( nAuthProtocol == PROTOCOL_STEAM )
-	{
-		// Dev hack to allow 360/Steam PC cross platform play
-// 		int ip0 = 207;
-// 		int ip1 = 173;
-// 		int ip2 = 179;
-// 		int ip3Min = 230;
-// 		int ip3Max = 245;
-// 
-// 		if ( adr.ip[0] == ip0 &&
-// 			adr.ip[1] == ip1 &&
-// 			adr.ip[2] == ip2 &&
-// 			adr.ip[3] >= ip3Min &&
-// 			adr.ip[3] <= ip3Max )
-// 		{
-// 			return true;
-// 		}
-
-		client->SetSteamID( CSteamID() ); // set an invalid SteamID
-
-		// Convert raw certificate back into data
-		if ( cbCookie <= 0 || cbCookie >= STEAM_KEYSIZE )
-		{
-			RejectConnection( adr, "STEAM certificate length error! %i/%i\n", cbCookie, STEAM_KEYSIZE );
-			return false;
-		}
-		ns_address checkAdr = adr;
-		if ( adr.IsLoopback() || adr.IsLocalhost() )
-		{
-			checkAdr.AsType<netadr_t>().SetIP( net_local_adr.GetIPHostByteOrder() );
-		}
-
-		if ( !Steam3Server().NotifyClientConnect( client, nNewUserID, checkAdr, pchLogonCookie, cbCookie ) 
-			&& !Steam3Server().BLanOnly() ) // the userID isn't alloc'd yet so we need to fill it in manually
-		{
-			RejectConnection( adr, "STEAM validation rejected\n" );
-			return false;
-		}
-	}
-	else
-	{
-		if ( !Steam3Server().NotifyLocalClientConnect( client ) ) // the userID isn't alloc'd yet so we need to fill it in manually
-		{
-			RejectConnection( adr, "GSCreateLocalUser failed\n" );
-			return false;
-		}
-	}
+	client->SetPlayerID( CPlayerId() );
 
 	return true;
 }
@@ -2544,7 +2009,7 @@ bool CBaseServer::CheckIPRestrictions( const ns_address &adr, int nAuthProtocol 
 	// X360TBD: network
 
 	// allow other users if they're on the same ip range
-	if ( Steam3Server().BLanOnly() )
+	if ( sv_lan.GetBool() )
 	{
 		if ( !adr.IsType<netadr_t>() )
 			return false;
@@ -2585,14 +2050,14 @@ bool CBaseServer::CheckPassword( const ns_address &adr, const char *password, co
 		return true; // local client can always connect
 	}
 
-	int iServerPassLen = Q_strlen(server_password);
+	int iServerPassLen = V_strlen(server_password);
 
-	if ( iServerPassLen != Q_strlen(password) )
+	if ( iServerPassLen != V_strlen(password) )
 	{
 		return false; // different length cannot be equal
 	}
 
-	if ( Q_strncmp( password, server_password, iServerPassLen ) == 0)
+	if ( V_strncmp( password, server_password, iServerPassLen ) == 0)
 	{
 		return true; // passwords are equal
 	}
@@ -2644,16 +2109,15 @@ void CBaseServer::Clear( void )
 	
 	m_nTickCount = 0;
 	
-	Q_memset( m_szMapname, 0, sizeof( m_szMapname ) );
-	Q_memset( m_szBaseMapname, 0, sizeof( m_szBaseMapname ) );
-	Q_memset( m_szMapGroupName, 0, sizeof( m_szMapGroupName ) );
-	Q_memset( m_szSkyname, 0, sizeof( m_szSkyname ) );
+	V_memset( m_szMapname, 0, sizeof( m_szMapname ) );
+	V_memset( m_szBaseMapname, 0, sizeof( m_szBaseMapname ) );
+	V_memset( m_szMapGroupName, 0, sizeof( m_szMapGroupName ) );
+	V_memset( m_szSkyname, 0, sizeof( m_szSkyname ) );
 
 	clientDllCRC = 0;
 	worldmapCRC = 0;
 	stringTableCRC = 0;
 
-	MEM_ALLOC_CREDIT();
 
 	// Use a different limit on the signon buffer, so we can save some memory in SP (for xbox).
 	if ( IsMultiplayer() || IsDedicated() )
@@ -2681,12 +2145,12 @@ Rejects connection request and sends back a message
 */
 void CBaseServer::RejectConnection( const ns_address &adr, const char *fmt, ... )
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char	text[1024];
 
-	va_start (argptr, fmt);
-	Q_vsnprintf ( text, sizeof( text ), fmt, argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr, fmt);
+	V_vsnprintf ( text, sizeof( text ), fmt, argptr);
+	__builtin_va_end (argptr);
 
 	NET_OutOfBandPrintf( m_Socket, adr, "%c%s", S2C_CONNREJECT, text );
 
@@ -2794,190 +2258,20 @@ bool CBaseServer::GetClassBaseline( ServerClass *pClass, SerializedEntityHandle_
 {
 	if ( sv_instancebaselines.GetInt() )
 	{
-		ErrorIfNot( pClass->m_InstanceBaselineIndex != INVALID_STRING_INDEX,
-			("SV_GetInstanceBaseline: missing instance baseline for class '%s'", pClass->m_pNetworkName)
-			);
+		if ( !( pClass->m_InstanceBaselineIndex != INVALID_STRING_INDEX ) ) Error("SV_GetInstanceBaseline: missing instance baseline for class '%s'", pClass->m_pNetworkName);
 
 		std::scoped_lock lock( g_svInstanceBaselineMutex );
 		auto nSlot = m_BaselineHandles.find( pClass->m_InstanceBaselineIndex ); 
-		ErrorIfNot( nSlot != m_BaselineHandles.end(), ( "CBaseServer::GetClassBaseline: for %s failed\n", pClass->GetName() ) );
+		if ( !( nSlot != m_BaselineHandles.end() ) ) Error( "CBaseServer::GetClassBaseline: for %s failed\n", pClass->GetName() );
 
 		*pHandle = nSlot->second;
-		Assert( *pHandle != SERIALIZED_ENTITY_HANDLE_INVALID );
+		contract_assert( *pHandle != SERIALIZED_ENTITY_HANDLE_INVALID );
 		return *pHandle != SERIALIZED_ENTITY_HANDLE_INVALID;
 	}
 
 	*pHandle = SERIALIZED_ENTITY_HANDLE_INVALID;
 	return true;
 }
-
-bool CBaseServer::ShouldUpdateMasterServer()
-{
-	// If the game server itself is ever running, then it's the one who gets to update the master server.
-	// (SourceTV will not update it in this case).
-	return true;
-}
-
-
-void CBaseServer::CheckMasterServerRequestRestart()
-{
-	if ( !( CommandLine()->FindParm( "-fake_stale_server" ) ) )
-	{
-		if ( !Steam3Server().SteamGameServer() || !Steam3Server().SteamGameServer()->WasRestartRequested() )
-		return;
-	}
-
-	// Connection was rejected by the HLMaster (out of date version)
-
-	// hack, vgui console looks for this string; 
-	Msg("%cMasterRequestRestart\n", 3);
-
-	if (CommandLine()->FindParm(AUTO_RESTART))
-	{
-		Msg("Your server is out of date and will be shutdown during hibernation or changelevel, whichever comes first.\n");
-		Log_Msg( LOG_SERVER_LOG, "Your server is out of date and will be shutdown during hibernation or changelevel, whichever comes first.\n");
-
-		SetRestartOnLevelChange( true );
-
-		Cbuf_AddText(CBUF_SERVER, "sv_shutdown\n");
-		Cbuf_Execute();
-	}
-	else if ( 1 ) // under linux assume steam
-	{
-		Msg("Your server needs to be restarted in order to receive the latest update.\n");
-		Log_Msg( LOG_SERVER_LOG, "Your server needs to be restarted in order to receive the latest update.\n");
-	}
-	else
-	{
-		Msg("Your server is out of date.  Please update and restart.\n");
-	}
-
-	if ( serverGameDLL && serverGameDLL->IsValveDS() && !CommandLine()->FindParm( "-noautoupdate" ) )
-	{	// Valve DS always posts sv_shutdown when out of date
-		Cbuf_AddText( CBUF_SERVER, "sv_shutdown\n" );
-		Cbuf_Execute();
-	}
-}
-
-void CBaseServer::UpdateMasterServer()
-{
-	if ( !ShouldUpdateMasterServer() )
-		return;
-
-	if ( !Steam3Server().SteamGameServer() )
-		return;
-	
-	// Call this every frame
-	ForwardPacketsFromMasterServerUpdater();
-		
-	// Only update every so often.
-	double flCurTime = Plat_FloatTime();
-	if ( flCurTime - m_flLastMasterServerUpdateTime < MASTER_SERVER_UPDATE_INTERVAL )
-		return;
-
-	m_flLastMasterServerUpdateTime = flCurTime;
-
-	// If we are not in legacy mode then make sure server tags still get updated every so often. 
-	// In legacy mode this is done by heartbeat code
-	UpdateGameData();
-
-	CheckMasterServerRequestRestart();
-	
-	if ( NET_IsDedicated() && sv_region.GetInt() == -1 )
-    {
-		sv_region.SetValue( 255 ); // HACK!HACK! undo me once we want to enforce regions
-
-        //Log_Printf( "You must set sv_region in your server.cfg or use +sv_region on the command line\n" );
-		//Con_Printf( "You must set sv_region in your server.cfg or use +sv_region on the command line\n" );
-        //Cbuf_AddText( "quit\n" );
-        //return;
-    }
-
-	static bool bUpdateMasterServers = !CommandLine()->FindParm( "-nomaster" );
-	if ( bUpdateMasterServers )
-	{
-		bool bActive = IsActive() && IsMultiplayer() && g_bEnableMasterServerUpdater && !IsSinglePlayerGame();
-		if ( ShouldHideFromMasterServer() )
-			bActive = false;
-
-		g_bSteamMasterHeartbeatsEnabled = bActive;
-		Steam3Server().SteamGameServer()->EnableHeartbeats( bActive );
-
-		if ( bActive )
-		{
-			UpdateMasterServerRules();
-			UpdateMasterServerPlayers();
-			Steam3Server().SendUpdatedServerDetails();
-		}
-	}
-	
-	if ( serverGameDLL && Steam3Server().GetGSSteamID().IsValid() )
-		serverGameDLL->UpdateGCInformation();
-}
-
-void CBaseServer::UpdateMasterServerRules()
-{
-	// Only do this if the rules vars are dirty.
-	if ( !m_bMasterServerRulesDirty )
-		return;
-
-	ISteamGameServer *pGameServer = Steam3Server().SteamGameServer();
-	if ( !pGameServer )
-		return;
-		
-	pGameServer->ClearAllKeyValues();
-	
-	// Need to respond with game directory, game name, and any server variables that have been set that
-	// affect rules.  Also, probably need a hook into the .dll to respond with additional rule information.
-	ICvar::Iterator iter( g_pCVar );
-	for ( iter.SetFirst() ; iter.IsValid() ; iter.Next() )
-	{
-		ConCommandBase *var = iter.Get();
-
-		if ( !(var->IsFlagSet( FCVAR_NOTIFY ) ) )
-			continue;
-
-		ConVar *pConVar = dynamic_cast< ConVar* >( var );
-		if ( !pConVar )
-			continue;
-
-		if ( !g_pKVrulesConvars->GetBool( pConVar->GetName() ) )
-			continue;
-
-		SetMasterServerKeyValue( pGameServer, pConVar );
-	}
-
-	if (  Steam3Server().SteamGameServer() )
-	{
-		RecalculateTags();
-	}
-
-	// Ok.. it's all updated, only send incremental updates now until we decide they're all dirty.
-	m_bMasterServerRulesDirty = false;
-}
-
-
-void CBaseServer::ForwardPacketsFromMasterServerUpdater()
-{
-	ISteamGameServer *p = Steam3Server().SteamGameServer();
-	if ( !p )
-		return;
-	
-	while ( 1 )
-	{
-		uint32 netadrAddress;
-		uint16 netadrPort;
-		unsigned char packetData[16 * 1024];
- 		int len = p->GetNextOutgoingPacket( packetData, sizeof( packetData ), &netadrAddress, &netadrPort );
-		if ( len <= 0 )
-			break;
-		
-		// Send this packet for them..
-		netadr_t adr( netadrAddress, netadrPort );
-		NET_SendPacket( nullptr, m_Socket, adr, packetData, len );
-	}
-}
-
 
 /*
 =================
@@ -2987,17 +2281,17 @@ Read's packets from clients and executes messages as appropriate.
 =================
 */
 
-#define PARENT_PROCESS_UPDATE_INTERVAL ( 10.0 )				// every 10 seconds
+constexpr auto PARENT_PROCESS_UPDATE_INTERVAL = ( 10.0 ); // every 10 seconds
 
 void UpdateParentProcess( void )
 {
 	static double s_flNextParentProcessUpdate = -1;
-	float flNow = Sys_FloatTime();
+	float flNow = Plat_FloatTime();
 	if ( flNow >= s_flNextParentProcessUpdate )
 	{
 		s_flNextParentProcessUpdate = flNow + PARENT_PROCESS_UPDATE_INTERVAL;
 		char sbuf[2048];
-		sprintf( sbuf, "status map=%s;players=%d", sv.GetMapName(), sv.GetNumClients() );
+		std::sprintf( sbuf, "status map=%s;players=%d", sv.GetMapName(), sv.GetNumClients() );
 		SendStringToParentProcess( sbuf );
 	}
 
@@ -3006,7 +2300,7 @@ void UpdateParentProcess( void )
 
 void CBaseServer::RunFrame( void )
 {
-	VPROF_BUDGET( "CBaseServer::RunFrame", VPROF_BUDGETGROUP_OTHER_NETWORKING );
+	CVProfScope _( "CBaseServer::RunFrame", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
 	NET_ProcessSocket( m_Socket, this );	
 
@@ -3017,8 +2311,6 @@ void CBaseServer::RunFrame( void )
 	SendPendingServerInfo(); // send outstanding signon packets after ALL user settings have been updated
 
 	CalculateCPUUsage(); // update CPU usage
-
-	UpdateMasterServer();
 
 	if ( IsChildProcess() )
 	{
@@ -3135,8 +2427,7 @@ CBaseClient * CBaseServer::GetFreeClientInternal( const ns_address &adr )
 
 void CBaseServer::SendClientMessages ( bool bSendSnapshots )
 {
-	VPROF_BUDGET( "SendClientMessages", VPROF_BUDGETGROUP_OTHER_NETWORKING );
-    SNPROF("SendClientMessages");
+	CVProfScope _( "SendClientMessages", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 	
 	for (int i=0; i< std::ssize( m_Clients ); i++ )
 	{
@@ -3285,12 +2576,12 @@ void CBaseServer::Shutdown( void )
 //-----------------------------------------------------------------------------
 void CBaseServer::BroadcastPrintf (const char *fmt, ...)
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		string[1024];
 
-	va_start (argptr,fmt);
-	Q_vsnprintf (string, sizeof( string ), fmt,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,fmt);
+	V_vsnprintf (string, sizeof( string ), fmt,argptr);
+	__builtin_va_end (argptr);
 
 	CSVCMsg_Print_t print;
 	print.text = string;
@@ -3393,8 +2684,8 @@ void CBaseServer::WriteTempEntities( CBaseClient *client, CFrameSnapshot *pCurre
 	msg.Clear();
 
 	// allocate the temp buffer for the temp ents
-	char ALIGN4 tempEntityData[kTempEntityBufferSize] ALIGN4_POST;
-	bf_write buffer( &tempEntityData[0], ARRAYSIZE(tempEntityData) );
+	char tempEntityData[kTempEntityBufferSize] [[gnu::aligned(4)]];
+	bf_write buffer( &tempEntityData[0], std::size( tempEntityData ) );
 
 	bool bDebug = sv_debugtempentities.GetBool();
 
@@ -3534,7 +2825,7 @@ void CBaseServer::RecalculateTags( void )
 			{
 				const char *pszDef = pConVar->GetDefault();
 				const char *pszCur = pConVar->GetString();
-				if ( Q_strcmp( pszDef, pszCur ) )
+				if ( V_strcmp( pszDef, pszCur ) )
 				{
 					AddTag( p->GetString("tag") );
 				}
@@ -3580,19 +2871,6 @@ void CBaseServer::RecalculateTags( void )
 		RemoveTag( "low_violence" );
 	}
 
-	// Group name
-	const char *pszGroupName = sv_steamgroup.GetString();
-	if ( !pszGroupName || !pszGroupName[0] )
-	{
-		RemoveTag( "*grp:", true );
-	}
-	else
-	{
-		char chGroupNameBuf[64] = {0};
-		Q_snprintf( chGroupNameBuf, sizeof( chGroupNameBuf ) - 2, "%si", pszGroupName );
-		AddTag( "*grp:", chGroupNameBuf );
-	}
-
 	bRecalculatingTags = false;
 }
 
@@ -3611,7 +2889,7 @@ void CBaseServer::AddTag( const char *pszTag, const char *pszSubTagValue )
 			if ( StringHasPrefix( TagList[i].c_str(), pszTag ) )
 			{
 				// Ok, see if the tag value matches
-				if ( Q_stricmp(TagList[i].c_str()+strlen(pszTag),pszSubTagValue) == 0 )
+				if ( V_stricmp(TagList[i].c_str()+std::strlen(pszTag),pszSubTagValue) == 0 )
 					return;
 
 				// They have a subtag specified, but it's wrong. Remove it.
@@ -3621,7 +2899,7 @@ void CBaseServer::AddTag( const char *pszTag, const char *pszSubTagValue )
 		else
 		{
 			// Already in the tag list?
-			if ( !Q_stricmp(TagList[i].c_str(),pszTag) )
+			if ( !V_stricmp(TagList[i].c_str(),pszTag) )
 				return;
 		}
 	}
@@ -3629,13 +2907,13 @@ void CBaseServer::AddTag( const char *pszTag, const char *pszSubTagValue )
 	// Append it
 	char tmptags[MAX_TAG_STRING_LENGTH];
 	tmptags[0] = '\0';
-	Q_strncpy( tmptags, pszTag, MAX_TAG_STRING_LENGTH );
+	V_strncpy( tmptags, pszTag, MAX_TAG_STRING_LENGTH );
 	if ( pszSubTagValue )
 	{
-		Q_strncat( tmptags, pszSubTagValue, MAX_TAG_STRING_LENGTH );
+		V_strncat( tmptags, pszSubTagValue, MAX_TAG_STRING_LENGTH );
 	}
-	Q_strncat( tmptags, ",", MAX_TAG_STRING_LENGTH );
-	Q_strncat( tmptags, sv_tags.GetString(), MAX_TAG_STRING_LENGTH );
+	V_strncat( tmptags, ",", MAX_TAG_STRING_LENGTH );
+	V_strncat( tmptags, sv_tags.GetString(), MAX_TAG_STRING_LENGTH );
 	sv_tags.SetValue( tmptags );
 }
 
@@ -3663,14 +2941,14 @@ void CBaseServer::RemoveTag( const char *pszTag, bool bSubTag )
 		}
 		else
 		{
-			bMatched = Q_stricmp(TagList[i].c_str(),pszTag) == 0;
+			bMatched = V_stricmp(TagList[i].c_str(),pszTag) == 0;
 		}
 
 		// Keep any tags other than the specified one
 		if ( !bMatched )
 		{
-			Q_strncat( tmptags, TagList[i].c_str(), MAX_TAG_STRING_LENGTH );
-			Q_strncat( tmptags, ",", MAX_TAG_STRING_LENGTH );
+			V_strncat( tmptags, TagList[i].c_str(), MAX_TAG_STRING_LENGTH );
+			V_strncat( tmptags, ",", MAX_TAG_STRING_LENGTH );
 		}
 		else
 		{
@@ -3706,7 +2984,7 @@ CBaseClient *CBaseServer::CreateSplitClient( const ks::net::CMsg_CVars& vecUserI
 	// Name will be pulled from vecUserInfo!!!
 	pSplitClient->Connect( "split", m_nUserid, netchan, true, pAttachedTo->m_ClientPlatform, &vecUserInfo );
 	
-	Assert( pSplitClient->m_bFakePlayer == true );
+	contract_assert( pSplitClient->m_bFakePlayer == true );
 	pSplitClient->m_bSplitScreenUser = true;
 	pSplitClient->m_pAttachedTo = pAttachedTo;
 	
@@ -3797,7 +3075,7 @@ bool CBaseServer::ReserveServerForQueuedGame( char const *szReservationPayload )
 		break;
 	
 	case 'R':
-		sscanf( szReservationPayload + 1, "%p", &m_pnReservationCookieSession );
+		std::sscanf( szReservationPayload + 1, "%p", &m_pnReservationCookieSession );
 		return true;
 
 	default:
@@ -3814,7 +3092,7 @@ bool CBaseServer::ReserveServerForQueuedGame( char const *szReservationPayload )
 	uint64 uiReservationCookie = 0;
 	uint64 uiMatchID = 0;
 	int32 bReserve = 0;
-	sscanf( szReservationPayload+1, "%llx,%llx,%d:", &uiReservationCookie, &uiMatchID, &bReserve );
+	std::sscanf( szReservationPayload+1, "%llx,%llx,%d:", &uiReservationCookie, &uiMatchID, &bReserve );
 	if ( !uiReservationCookie || !uiMatchID )
 		return false;
 
@@ -3849,10 +3127,10 @@ void CBaseServer::SetReservationCookie( uint64 uiCookie, char const *pchReasonFo
 	if ( uiCookie != m_nReservationCookie )
 	{
 		char reason[ 256 ] = { 0 };
-		va_list argptr;
-		va_start( argptr, pchReasonFormat );
-		Q_vsnprintf( reason, sizeof( reason ), pchReasonFormat, argptr );
-		va_end( argptr );
+		std::va_list argptr;
+		__builtin_va_start( argptr, pchReasonFormat );
+		V_vsnprintf( reason, sizeof( reason ), pchReasonFormat, argptr );
+		__builtin_va_end( argptr );
 		ConColorMsg( Color( 255, 0, 255, 255 ), "-> Reservation cookie %llx:  reason %s\n", uiCookie, reason );
 
 		if ( !uiCookie )
@@ -3865,10 +3143,10 @@ void CBaseServer::SetReservationCookie( uint64 uiCookie, char const *pchReasonFo
 			// Set reservation players
 			m_arrReservationPlayers.clear();
 			for ( char const *pszPrev = sv_mmqueue_reservation.GetString(), *pszNext = pszPrev;
-				( pszNext = strchr( pszPrev, '[' ) ) != nullptr; pszPrev = pszNext + 1 )
+				( pszNext = std::strchr( pszPrev, '[' ) ) != nullptr; pszPrev = pszNext + 1 )
 			{
 				uint32 uiAccountId = 0;
-				sscanf( pszNext, "[%x]", &uiAccountId );
+				std::sscanf( pszNext, "[%x]", &uiAccountId );
 				if ( uiAccountId )
 				{
 					QueueMatchPlayer_t qmp;
@@ -3888,10 +3166,10 @@ void CBaseServer::SetReservationCookie( uint64 uiCookie, char const *pchReasonFo
 			{
 				int numCasters = 0;
 				for ( char const *pszPrev = sv_mmqueue_reservation.GetString(), *pszNext = pszPrev;
-					( pszNext = strchr( pszPrev, '{' ) ) != nullptr; pszPrev = pszNext + 1 )
+					( pszNext = std::strchr( pszPrev, '{' ) ) != nullptr; pszPrev = pszNext + 1 )
 				{
 					uint32 uiAccountId = 0;
-					sscanf( pszNext, "{%x}", &uiAccountId );
+					std::sscanf( pszNext, "{%x}", &uiAccountId );
 					if ( uiAccountId )
 						++ numCasters;
 				}
@@ -3963,11 +3241,12 @@ void CBaseServer::ClearTagStrings()
 
 static void BuildTokenList( char const *pchString, char chDelim, std::vector< std::string > &list )
 {
+	ks::ScratchArena<> scratch;
 	// Have to split up the string
-	int len = Q_strlen( pchString );
-	char *szCritBuf = (char *)stackalloc( len + 1 );
-	Q_strncpy( szCritBuf, pchString, len + 1 );
-	char *pszTok = strchr( szCritBuf, chDelim );
+	int len = V_strlen( pchString );
+	char *szCritBuf = (char *)scratch.AllocBytes( len + 1 );
+	V_strncpy( szCritBuf, pchString, len + 1 );
+	char *pszTok = std::strchr( szCritBuf, chDelim );
 	char *pszPrevTok = szCritBuf;
 
 	while ( pszTok && pszPrevTok )
@@ -3999,7 +3278,7 @@ void CBaseServer::AddTagString( std::string &dest, char const *pchString )
 
 	const char *chDelim = ",";
 
-	if ( Q_strstr( pchString, chDelim ) )
+	if ( V_strstr( pchString, chDelim ) )
 	{
 		std::vector< std::string > list;
 		BuildTokenList( pchString, *chDelim, list );
@@ -4044,21 +3323,6 @@ void CBaseServer::UpdateGameType()
 	{
 		AddTagString( m_GameType, var.GetString() );
 	}
-
-	// Is this server "secure"?
-
-// 	if ( IsDedicated() &&  serverGameDLL->IsValveDS() && !IsX360() && !false &&
-// 		 !bHaveAnyClients &&
-// 		 !IsReserved() && !( GetNumClients() - GetNumFakeClients() ) &&
-// 		 !sv_steamgroup_exclusive.GetBool() )
-// 	{
-// 		AddTagString( va( "*sv_search_key_%s%d", sv_search_key.GetString(), GetHostVersion() ) );
-// 	}
-
-	if ( Steam3Server().SteamGameServer() )
-	{
-		Steam3Server().SteamGameServer()->SetGameTags( m_GameType.c_str() );
-	}
 }
 
 void CBaseServer::UpdateGameData()
@@ -4077,14 +3341,14 @@ void CBaseServer::UpdateGameData()
 	m_GameData.clear();
 	m_GameData.reserve( nPacketSize );
 	m_GameData.resize( m_GameData.size() + nPacketSize );
-	memset( m_GameData.data(), 0, std::ssize( m_GameData ) );
+	std::memset( m_GameData.data(), 0, std::ssize( m_GameData ) );
 
 	// Add search key
 	std::string utlKey;
 	if ( serverGameDLL && IsDedicated() &&
 	 		( GetNumHumanPlayers() <= 0 ) &&
 	 		!IsReserved() && !( GetNumClients() - GetNumFakeClients() ) &&
-	 		!sv_steamgroup_exclusive.GetBool() && !GetPassword() )
+	 		!GetPassword() )
 	{
 		AddTagString( utlKey, CFmtStr( "%skey:%s%d",
 			serverGameDLL->IsValveDS() ? "v" : "c",
@@ -4097,49 +3361,22 @@ void CBaseServer::UpdateGameData()
 		return;
 	}
 
-	// Group name
-	std::string utlGroups;
-	const char *pszGroupName = sv_steamgroup.GetString();
-	{
-		std::vector< std::string > list;
-		const char *chDelim = ",";
-		BuildTokenList( pszGroupName, *chDelim, list );
-
-		for ( int i = 0; i < std::ssize( list ); ++i )
-		{
-			AddTagString( utlGroups, CFmtStr( "grp:%si", list[ i ].c_str() ) );
-		}
-	}
-
-	if ( std::ssize( utlKey ) + std::ssize( utlGroups ) > std::ssize( m_GameData ) - 3 )
-	{
-		Warning( "GameData: Too many Steam groups set for sv_steamgroup, not advertising Steam groups affiliation.\n" );
-		utlGroups.clear();
-	}
-
 	if ( serverGameDLL )
 	{
-		serverGameDLL->GetMatchmakingGameData( m_GameData.data(), std::ssize( m_GameData ) - 1 - std::ssize( utlKey ) - std::ssize( utlGroups ) - 2 );
+		serverGameDLL->GetMatchmakingGameData( m_GameData.data(), std::ssize( m_GameData ) - 1 - std::ssize( utlKey ) - 2 );
 	}
 
-	int nLen = Q_strlen( m_GameData.data() );
+	int nLen = V_strlen( m_GameData.data() );
 	char *pszWrite = m_GameData.data() + nLen;
 	int numBytes = std::ssize( m_GameData ) - nLen;
 
-	Q_snprintf( pszWrite, numBytes - 1, "%s%s%s%s",
+	V_snprintf( pszWrite, numBytes - 1, "%s%s",
 		nLen ? "," : "",
-		utlGroups.data(), std::ssize( utlGroups ) ? "," : "",
 		utlKey.data() );
-
-	// Always update Steam
-	if ( Steam3Server().SteamGameServer() )
-	{
-		Steam3Server().SteamGameServer()->SetGameData( m_GameData.data() );
-	}
 
 	// Increment data version if changed
 	if ( std::ssize( oldGameData ) != std::ssize( m_GameData ) ||
-		memcmp( oldGameData.data(), m_GameData.data(), std::ssize( m_GameData ) ) )
+		std::memcmp( oldGameData.data(), m_GameData.data(), std::ssize( m_GameData ) ) )
 	{
 		++ m_GameDataVersion;
 	}
@@ -4177,28 +3414,6 @@ bool CBaseServer::ShouldHideServer() const
 	}
 
 	return false;
-}
-
-// If a server is hidden from master server it won't show up on public internet (server browser, steam server list)
-//  but it can still respond to LAN info, players, rules queries etc.
-bool CBaseServer::ShouldHideFromMasterServer() const
-{
-	// UNDONE: MATCHMAKING: Left4Dead keeps passworded, listen and cheat servers off the master server.  TF2 does not.
-	extern ConVar sv_cheats;
-	if ( !IsDedicated() && (!IsHLTV()) )
-	{
-		return true;
-	}
-
-	return ShouldHideServer();
-}
-
-void CBaseServer::OnPasswordChanged()
-{
-	if ( IsActive() )
-	{
-		Cbuf_AddText( CBUF_SERVER, "heartbeat\n" );
-	}
 }
 
 int CBaseServer::GetMaxClients() const
@@ -4264,7 +3479,9 @@ void CBaseServer::ShowTags() const
 	Msg( "Private:  %s\n", GetGameData() );
 }
 
-CON_COMMAND( sv_showtags, "Describe current gametags." )
+static void sv_showtags( const CCommand &args );
+static ConCommand sv_showtags_command( "sv_showtags", sv_showtags, "Describe current gametags." );
+static void sv_showtags( const CCommand &args )
 {
 	sv.ShowTags();
 }

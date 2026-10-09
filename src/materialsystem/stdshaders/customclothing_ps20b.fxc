@@ -1,4 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC:  "COMPOSITEMODE"				"0..2"
 // STATIC:  "CASCADED_SHADOW_MAPPING"	"0..1" [ps30]
@@ -10,28 +11,23 @@
 // STATIC:  "USE_LOGO1"					"0..1"
 // STATIC:  "USE_LOGO2"					"0..1"
 // STATIC:  "SWAP_PATTERN_MASKS"		"0..1"
-
 // DYNAMIC: "NUM_LIGHTS"				"0..2" [ps20]
 // DYNAMIC: "NUM_LIGHTS"				"0..4" [ps20b] [ps30]
 // DYNAMIC: "DYN_CSM_ENABLED"			"0..1"
 // DYNAMIC:	"AO_MODE"					"0..1"
-
 // SKIP: ( ( $COMPOSITEMODE == 1 ) && ( $CASCADED_SHADOW_MAPPING != 0 ) )
 // SKIP: ( ( $COMPOSITEMODE == 1 ) && ( $NUM_LIGHTS != 0 ) )
 // SKIP: ( $CASCADED_SHADOW_MAPPING == 0 ) && ( $DYN_CSM_ENABLED == 1 )
 // SKIP: ( $CASCADED_SHADOW_MAPPING == 0 ) && ( $CSM_MODE != 0 )
-
 // SKIP: ( $USE_PATTERN2 == 1 ) && ( $USE_PATTERN1 == 0 )
 // SKIP: ( $USE_PATTERN_OFFSET == 1 ) && ( $USE_PATTERN1 == 0 && $USE_PATTERN2 == 0 )
 // SKIP: ( $SWAP_PATTERN_MASKS == 1 ) && ( $USE_PATTERN1 == 0 && $USE_PATTERN2 == 0 )
 // SKIP: ( $USE_LOGO2 == 1 ) && ( $USE_LOGO1 == 0 )
-
 // SKIP: ( $COMPOSITEMODE == 2 ) && ( $USE_PATTERN1 == 1 )
 // SKIP: ( $COMPOSITEMODE == 2 ) && ( $USE_PATTERN2 == 1 )
 // SKIP: ( $COMPOSITEMODE == 2 ) && ( $USE_PATTERN_OFFSET == 1 )
 // SKIP: ( $COMPOSITEMODE == 2 ) && ( $USE_LOGO1 == 1 )
 // SKIP: ( $COMPOSITEMODE == 2 ) && ( $USE_LOGO2 == 1 )
-
 // SKIP: ( $AO_MODE == 1 ) && ( $COMPOSITEMODE == 1 )
 // SKIP: ( $AO_MODE == 1 ) && ( $NUM_LIGHTS != 0 )
 // SKIP: ( $AO_MODE == 1 ) && ( $DYN_CSM_ENABLED == 1 )

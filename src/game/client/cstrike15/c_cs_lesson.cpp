@@ -1,10 +1,20 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Client handler implementations for instruction players how to play
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Client handler implementations for instruction players how to play
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 
 #include "c_gameinstructor.h"
 #include "c_baselesson.h"
@@ -12,7 +22,6 @@
 #include "cs_gamerules.h"
 
 #include "gametypes.h"
-
 
 extern ConVar gameinstructor_verbose;
 

@@ -1,12 +1,6 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose:
-//
-//=============================================================================
-
-#ifndef ACHIEVEMENTSANDSTATSINTERFACE_H
-#define ACHIEVEMENTSANDSTATSINTERFACE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class AchievementsAndStatsInterface
 {
@@ -17,6 +11,3 @@ public:
     virtual void ReleasePanel() {}
 	virtual int GetAchievementsPanelMinWidth( void ) const { return 0; }
 };
-
-
-#endif // ACHIEVEMENTSANDSTATSINTERFACE_H

@@ -1,11 +1,12 @@
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+// STATIC: "VERTEXCOLOR"			"0..1"
+// STATIC: "LIGHTING_PREVIEW"		"0..1"	[PC]
+// STATIC: "LIGHTING_PREVIEW"		"0..0"	[CONSOLE]
+// DYNAMIC: "COMPRESSED_VERTS"		"0..1"
+
 // based on vertexlit_and_unlit_generic_vs20.fxc
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-
-//  STATIC: "VERTEXCOLOR"			"0..1"
-//  STATIC: "LIGHTING_PREVIEW"		"0..1"	[PC]
-//  STATIC: "LIGHTING_PREVIEW"		"0..0"	[CONSOLE]
-
-//  DYNAMIC: "COMPRESSED_VERTS"		"0..1"
 #include "common_fog_vs_fxc.h"
 //	DYNAMIC: "SKINNING"				"0..0"  [vs20]
 //	DYNAMIC: "SKINNING"				"0..1"  [vs30]
@@ -140,5 +141,3 @@ VS_OUTPUT main( const VS_INPUT v )
 
 	return o;
 }
-
-

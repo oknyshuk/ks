@@ -1,10 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "view.h"
 #include "iviewrender.h"
 #include "c_sun.h"
@@ -13,7 +18,6 @@
 #include "c_pixel_visibility.h"
 #include "glow_overlay.h"
 #include "view_shared.h"
-#include "tier0/vprof.h"
 #include "materialsystem/imaterialvar.h"
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectGlow )
@@ -57,7 +61,7 @@ ConVar cl_sun_decay_rate( "cl_sun_decay_rate", "0.05", FCVAR_CHEAT );
 
 // Dot product space the overlays are drawn in.
 // Here it's setup to allow you to see it if you're looking within 40 degrees of the source.
-float g_flOverlayRange = cos( DEG2RAD( 40 ) );
+float g_flOverlayRange = std::cos( DEG2RAD( 40 ) );
 
 // ----------------------------------------------------------------------------- //
 // ----------------------------------------------------------------------------- //
@@ -136,7 +140,7 @@ float CGlowOverlay::CalcGlowAspect()
 
 void CGlowOverlay::UpdateSkyGlowObstruction( float zFar, bool bCacheFullSceneState )
 {
-	Assert( m_bInSky );
+	contract_assert( m_bInSky );
 
 	// If we already cached the sky obstruction and are still using that, early-out
 	if ( bCacheFullSceneState && m_bCacheSkyObstruction )
@@ -216,7 +220,7 @@ void CGlowOverlay::UpdateGlowObstruction( const Vector &vToGlow, bool bCacheFull
 		{
 			// If it's not in the sky, then we need a valid position or else we don't
 			// know what's in front of it.
-			Assert( !m_bDirectional );
+			contract_assert( !m_bDirectional );
 
 			pixelvis_queryparams_t params;
 			params.Init( m_vPos, m_flProxyRadius, CalcGlowAspect() );
@@ -240,7 +244,7 @@ void CGlowOverlay::UpdateGlowObstruction( const Vector &vToGlow, bool bCacheFull
 	{
 		// If it's not in the sky, then we need a valid position or else we don't
 		// know what's in front of it.
-		Assert( !m_bDirectional );
+		contract_assert( !m_bDirectional );
 
 		pixelvis_queryparams_t params;
 		params.Init( m_vPos, m_flProxyRadius );
@@ -395,7 +399,7 @@ void CGlowOverlay::Draw( bool bCacheFullSceneState )
 			m_Sprites[iSprite].m_pMaterial = materials->FindMaterial( "sprites/light_glow02_add_noz", TEXTURE_GROUP_CLIENT_EFFECTS );
 		}
 
-		Assert( m_Sprites[iSprite].m_pMaterial );
+		contract_assert( m_Sprites[iSprite].m_pMaterial );
 		static unsigned int		nHDRColorScaleCache = 0;
 		IMaterialVar *pHDRColorScaleVar = m_Sprites[iSprite].m_pMaterial->FindVarFast( "$hdrcolorscale", &nHDRColorScaleCache );
 		if( pHDRColorScaleVar )
@@ -413,25 +417,25 @@ void CGlowOverlay::Draw( bool bCacheFullSceneState )
 		
 		vPt = vBasePt - vRight + vUp;
 		builder.Position3fv( vPt.Base() );
-		builder.Color4f( VectorExpand(vColor), 1 );
+		builder.Color4f( vColor.x, vColor.y, vColor.z, 1 );
 		builder.TexCoord2f( 0, 0, 1 );
 		builder.AdvanceVertex();
 		
 		vPt = vBasePt + vRight + vUp;
 		builder.Position3fv( vPt.Base() );
-		builder.Color4f( VectorExpand(vColor), 1 );
+		builder.Color4f( vColor.x, vColor.y, vColor.z, 1 );
 		builder.TexCoord2f( 0, 1, 1 );
 		builder.AdvanceVertex();
 		
 		vPt = vBasePt + vRight - vUp;
 		builder.Position3fv( vPt.Base() );
-		builder.Color4f( VectorExpand(vColor), 1 );
+		builder.Color4f( vColor.x, vColor.y, vColor.z, 1 );
 		builder.TexCoord2f( 0, 1, 0 );
 		builder.AdvanceVertex();
 		
 		vPt = vBasePt - vRight - vUp;
 		builder.Position3fv( vPt.Base() );
-		builder.Color4f( VectorExpand(vColor), 1 );
+		builder.Color4f( vColor.x, vColor.y, vColor.z, 1 );
 		builder.TexCoord2f( 0, 0, 0 );
 		builder.AdvanceVertex();
 		
@@ -494,7 +498,7 @@ void CGlowOverlay::Deactivate()
 
 void CGlowOverlay::DrawOverlays( bool bCacheFullSceneState )
 {
-	VPROF("CGlowOverlay::DrawOverlays()");
+	CVProfScope _( "CGlowOverlay::DrawOverlays()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CMatRenderContextPtr pRenderContext( materials );
 
@@ -532,8 +536,3 @@ void CGlowOverlay::UpdateSkyOverlays( float zFar, bool bCacheFullSceneState )
 		pOverlay->UpdateSkyGlowObstruction( zFar, bCacheFullSceneState );
 	}
 }
-
-
-
-
-

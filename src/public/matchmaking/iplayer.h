@@ -1,14 +1,10 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-
-#ifndef _IPLAYER_H_
-#define _IPLAYER_H_
-
-#include "tier1/keyvalues.h"
+import std;
+import ks.tier1;
+struct TitleDataFieldsDescription_t;
 
 struct UserProfileData
 {
@@ -31,7 +27,7 @@ struct UserProfileData
 };
 
 //Players are a wrapper or a networked player, as such they may not have all the information current, particularly when first created.
-abstract_class IPlayer
+class IPlayer
 {
 public:
 	enum OnlineState_t
@@ -51,24 +47,10 @@ public:
 	virtual OnlineState_t GetOnlineState() = 0;
 };
 
-abstract_class IPlayerFriend : public IPlayer
-{
-public:
-	virtual wchar_t const * GetRichPresence() = 0;
-
-	virtual KeyValues *GetGameDetails() = 0;
-	virtual KeyValues *GetPublishedPresence() = 0;
-
-	virtual bool IsJoinable() = 0;
-	virtual void Join() = 0;
-	virtual uint64 GetTitleID() = 0;
-	virtual uint32 GetGameServerIP() = 0;
-};
-
 struct MatchmakingData;
 class IPlayerRankingDataStore; 
 
-abstract_class IPlayerLocal : public IPlayer
+class IPlayerLocal : public IPlayer
 {
 public:
 	virtual const UserProfileData& GetPlayerProfileData() = 0;
@@ -80,15 +62,7 @@ public:
 	virtual const void * GetPlayerTitleData( int iTitleDataIndex ) = 0;
 	virtual void UpdatePlayerTitleData( TitleDataFieldsDescription_t const *fdKey, const void *pvNewTitleData, int numNewBytes ) = 0;
 
-	virtual void GetLeaderboardData( KeyValues *pLeaderboardInfo ) = 0;
-	virtual void UpdateLeaderboardData( KeyValues *pLeaderboardInfo ) = 0;
-
-	virtual void GetAwardsData( KeyValues *pAwardsData ) = 0;
-	virtual void UpdateAwardsData( KeyValues *pAwardsData ) = 0;
-
 	virtual void SetNeedsSave( void ) = 0;
 
 	virtual bool IsTitleDataStorageConnected( void ) = 0;
 };
-
-#endif

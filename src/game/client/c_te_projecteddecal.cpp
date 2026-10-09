@@ -1,20 +1,18 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "iefx.h"
 #include "engine/IStaticPropMgr.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
-#include "tier0/vprof.h"
 
 // UNDONE:  Get rid of this?
 #define FDECAL_PERMANENT			0x01
@@ -128,7 +126,7 @@ void TE_ProjectDecal( IRecipientFilter& filter, float delay,
 	}
 
 	C_BaseEntity* ent = tr.Ent<CBaseEntity>();
-	Assert( ent );
+	contract_assert( ent );
 
 	int hitbox = tr.hitbox;
 
@@ -149,7 +147,7 @@ void TE_ProjectDecal( IRecipientFilter& filter, float delay,
 //-----------------------------------------------------------------------------
 void C_TEProjectedDecal::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEProjectedDecal::PostDataUpdate" );
+	CVProfScope _( "C_TEProjectedDecal::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CBroadcastRecipientFilter filter;
 	TE_ProjectDecal( filter, 0.0f, &m_vecOrigin, &m_angRotation, m_flDistance, m_nIndex );
@@ -174,4 +172,3 @@ void TE_ProjectDecal( IRecipientFilter& filter, float delay, KeyValues *pKeyValu
 
 	TE_ProjectDecal( filter, 0.0f, &vecOrigin, &angles, flDistance, effects->Draw_DecalIndexFromName( (char*)pDecalName ) );
 }
-

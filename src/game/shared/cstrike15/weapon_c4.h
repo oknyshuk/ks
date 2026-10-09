@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef WEAPON_C4_H
-#define WEAPON_C4_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
 
-
 #include "weapon_csbase.h"
-#include "utlvector.h"
+import std;
 
-#define NUM_BEEPS 7
+inline constexpr auto NUM_BEEPS = 7;
 
 #if defined( CLIENT_DLL )
 
@@ -149,9 +144,9 @@
 
 #endif
 
-#define WEAPON_C4_CLASSNAME "weapon_c4"
-#define PLANTED_C4_CLASSNAME "planted_c4"
-#define PLANTED_C4TRAINING_CLASSNAME "planted_c4_training"
+inline constexpr const char *WEAPON_C4_CLASSNAME = "weapon_c4";
+inline constexpr const char *PLANTED_C4_CLASSNAME = "planted_c4";
+inline constexpr const char *PLANTED_C4TRAINING_CLASSNAME = "planted_c4_training";
 
 class [[= ks::reflect::NetTable{ .name = "DT_WeaponC4" } ]]
       CC4 : public CWeaponCSBase
@@ -240,6 +235,3 @@ private:
 	
 	CC4( const CC4 & );
 };
-
-
-#endif // WEAPON_C4_H

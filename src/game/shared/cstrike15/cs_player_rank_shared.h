@@ -1,3 +1,4 @@
+#pragma once
 #if !defined CS_PLAYER_RANK_SHARED_H
 #define CS_PLAYER_RANK_SHARED_H
 
@@ -15,7 +16,7 @@ enum MedalCategory_t
 	MEDAL_CATEGORY_COUNT,
 };
 
-#define MEDAL_SEASON_ACCESS_OPERATION_NAME "op06"
+inline constexpr const char *MEDAL_SEASON_ACCESS_OPERATION_NAME = "op06";
 
 enum MedalSeasonCoinItemIds_t
 {

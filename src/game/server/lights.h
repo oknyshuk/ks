@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef LIGHTS_H
-#define LIGHTS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -43,5 +39,3 @@ private:
 	char	m_iCurrentFade;
 	char	m_iTargetFade;
 };
-
-#endif // LIGHTS_H

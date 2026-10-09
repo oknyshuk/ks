@@ -1,17 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef R_LOCAL_H
-#define R_LOCAL_H
-
-
+import ks.tier1;
 #include "surfacehandle.h"
 #include "bspfile.h"
+import std;
+struct model_t;
 
 extern	int		r_framecount;
 
@@ -52,7 +47,7 @@ void MarkDLightsOnStaticProps( void );
 
 inline float LightStyleValue( int style )
 {
-	Assert( style >= 0 && style < MAX_LIGHTSTYLES );
+	contract_assert( style >= 0 && style < MAX_LIGHTSTYLES );
 	return ( float )d_lightstylevalue[style] * (1.0f / 264.0f);
 }
 
@@ -61,5 +56,3 @@ inline bool LightStyleIsModified( int nStyle )
 {
 	return d_lightstylevalue[nStyle] != 264 ? true : false;
 }
-
-#endif // R_LOCAL_H

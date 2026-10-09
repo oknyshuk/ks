@@ -1,11 +1,62 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Class to control 'aim-down-sights' aka "IronSight" weapon functionality
-//
-//=====================================================================================//
 
-
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "const.h"
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "cs_shareddefs.h"
 
 #ifdef IRONSIGHT
@@ -343,7 +394,7 @@ void CIronSightController::ApplyIronSightPositioning( Vector &vecPosition, QAngl
 		//magic bob value, replace me
 		Vector vecIronSightBob = Vector(
 			1,
-			IRONSIGHT_VIEWMODEL_BOB_MULT_X * sin( gpGlobals->curtime * IRONSIGHT_VIEWMODEL_BOB_PERIOD_X ),			
+			IRONSIGHT_VIEWMODEL_BOB_MULT_X * std::sin( gpGlobals->curtime * IRONSIGHT_VIEWMODEL_BOB_PERIOD_X ),			
 			IRONSIGHT_VIEWMODEL_BOB_MULT_Y * sin( gpGlobals->curtime * IRONSIGHT_VIEWMODEL_BOB_PERIOD_Y ) - IRONSIGHT_VIEWMODEL_BOB_MULT_Y
 			);
 	

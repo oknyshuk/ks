@@ -1,11 +1,17 @@
-//========= Copyright (c) 1996-2013, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Provide custom material swapping for weapons (when switch from world to view or vice versa)
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2013 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Provide custom material swapping for weapons (when switch from world to view or vice versa)
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 
 #include "cs_custom_material_swap.h"
 #include "materialsystem/icustommaterial.h"

@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -21,7 +22,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_colorcorrection_ps20 0
+inline constexpr int shaderStaticTest_colorcorrection_ps20 = 0;
 class colorcorrection_ps20_Dynamic_Index
 {
 private:
@@ -32,7 +33,7 @@ private:
 public:
 	void SetNUM_LOOKUPS( int i )
 	{
-		Assert( i >= 0 && i <= 4 );
+		contract_assert( i >= 0 && i <= 4 );
 		m_nNUM_LOOKUPS = i;
 #ifdef _DEBUG
 		m_bNUM_LOOKUPS = true;
@@ -40,7 +41,7 @@ public:
 	}
 	void SetNUM_LOOKUPS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LOOKUPS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LOOKUPS = true;
@@ -61,7 +62,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bNUM_LOOKUPS;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nNUM_LOOKUPS ) + 0;
 	}
@@ -74,7 +75,7 @@ static const ShaderComboInformation_t s_DynamicComboArray_colorcorrection_ps20[1
 };
 static const ShaderComboSemantics_t colorcorrection_ps20_combos =
 {
-	"colorcorrection_ps20", s_DynamicComboArray_colorcorrection_ps20, 1, NULL, 0 
+	"colorcorrection_ps20", s_DynamicComboArray_colorcorrection_ps20, 1, nullptr, 0 
 };
 
 class ConstructMe_colorcorrection_ps20

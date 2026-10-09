@@ -1,17 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
-#include <string.h>
-#include <stdio.h>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.core;
+#include "const.h"
 #include "voice_banmgr.h"
 #include "filesystem.h"
 #include "cdll_client_int.h"
 
-#define BANMGR_FILEVERSION	1
+constexpr auto BANMGR_FILEVERSION = 1;
 const char *g_pBanMgrFilename = "voice_ban.dt";
 
 
@@ -158,7 +155,7 @@ CVoiceBanMgr::BannedPlayer* CVoiceBanMgr::InternalFindPlayerSquelch(char const p
 	BannedPlayer *pListHead = &m_PlayerHash[index];
 	for(BannedPlayer *pCur=pListHead->m_pNext; pCur != pListHead; pCur=pCur->m_pNext)
 	{
-		if(memcmp(playerID, pCur->m_PlayerID, SIGNED_GUID_LEN) == 0)
+		if(std::memcmp(playerID, pCur->m_PlayerID, SIGNED_GUID_LEN) == 0)
 			return pCur;
 	}
 
@@ -173,10 +170,9 @@ CVoiceBanMgr::BannedPlayer* CVoiceBanMgr::AddBannedPlayer(char const playerID[SI
 		return nullptr;
 
 	int index = HashPlayerID(playerID);
-	memcpy(pNew->m_PlayerID, playerID, SIGNED_GUID_LEN);
+	std::memcpy(pNew->m_PlayerID, playerID, SIGNED_GUID_LEN);
 	pNew->m_pNext = &m_PlayerHash[index];
 	pNew->m_pPrev = m_PlayerHash[index].m_pPrev;
 	pNew->m_pPrev->m_pNext = pNew->m_pNext->m_pPrev = pNew;
 	return pNew;
 }
-

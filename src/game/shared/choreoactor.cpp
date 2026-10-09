@@ -1,17 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
 #include "choreoactor.h"
 #include "choreochannel.h"
 #include "choreoscene.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -40,8 +34,8 @@ CChoreoActor& CChoreoActor::operator=( const CChoreoActor& src )
 {
 	m_bActive = src.m_bActive;
 
-	Q_strncpy( m_szName, src.m_szName, sizeof( m_szName ) );
-	Q_strncpy( m_szFacePoserModelName, src.m_szFacePoserModelName, sizeof( m_szFacePoserModelName ) );
+	V_strncpy( m_szName, src.m_szName, sizeof( m_szName ) );
+	V_strncpy( m_szFacePoserModelName, src.m_szFacePoserModelName, sizeof( m_szFacePoserModelName ) );
 
 	for ( int i = 0; i < std::ssize( src.m_Channels ); i++ )
 	{
@@ -71,8 +65,8 @@ void CChoreoActor::Init( void )
 //-----------------------------------------------------------------------------
 void CChoreoActor::SetName( const char *name )
 {
-	assert( strlen( name ) < MAX_ACTOR_NAME );
-	Q_strncpy( m_szName, name, sizeof( m_szName ) );
+	contract_assert( std::strlen( name ) < MAX_ACTOR_NAME );
+	V_strncpy( m_szName, name, sizeof( m_szName ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -175,7 +169,7 @@ int CChoreoActor::FindChannelIndex( CChoreoChannel *channel )
 //-----------------------------------------------------------------------------
 void CChoreoActor::SetFacePoserModelName( const char *name )
 {
-	Q_strncpy( m_szFacePoserModelName, name, sizeof( m_szFacePoserModelName ) );
+	V_strncpy( m_szFacePoserModelName, name, sizeof( m_szFacePoserModelName ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -231,7 +225,7 @@ CChoreoChannel *CChoreoActor::FindChannel( const char *name )
 	for ( int i = 0; i < c; i++ )
 	{
 		CChoreoChannel *channel = GetChannel( i );
-		if ( !Q_stricmp( channel->GetName(), name ) )
+		if ( !V_stricmp( channel->GetName(), name ) )
 			return channel;
 	}
 
@@ -243,18 +237,18 @@ void CChoreoActor::SaveToBuffer( ks::byte_writer& buf, CChoreoScene *pScene, ICh
 	buf.write< short >( pStringPool->FindOrAddString( GetName() ) );
 
 	int c = GetNumChannels();
-	Assert( c <= 255 );
+	contract_assert( c <= 255 );
 	buf.write< unsigned char >( c );
 
 	for ( int i = 0; i < c; i++ )
 	{
 		CChoreoChannel *channel = GetChannel( i );
-		Assert( channel );
+		contract_assert( channel );
 		channel->SaveToBuffer( buf, pScene, pStringPool );
 	}
 
 	/*
-	if ( Q_strlen( a->GetFacePoserModelName() ) > 0 )
+	if ( V_strlen( a->GetFacePoserModelName() ) > 0 )
 	{
 		FilePrintf( buf, level + 1, "faceposermodel \"%s\"\n", a->GetFacePoserModelName() );
 	}
@@ -274,7 +268,7 @@ bool CChoreoActor::RestoreFromBuffer( ks::byte_reader& buf, CChoreoScene *pScene
 	for ( i = 0; i < c; i++ )
 	{
 		CChoreoChannel *channel = pScene->AllocChannel();
-		Assert( channel );
+		contract_assert( channel );
 		if ( channel->RestoreFromBuffer( buf, pScene, this, pStringPool ) )
 		{
 			AddChannel( channel );
@@ -289,4 +283,3 @@ bool CChoreoActor::RestoreFromBuffer( ks::byte_reader& buf, CChoreoScene *pScene
 
 	return true;
 }
-

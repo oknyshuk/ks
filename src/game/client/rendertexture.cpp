@@ -1,15 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-// Implements local hooks into named renderable textures.
-// See matrendertexture.cpp in material system for list of available RT's
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Implements local hooks into named renderable textures.
+// See matrendertexture.cpp in material system for list of available RT's
+
+import std;
+import ks.tier1;
 #include "materialsystem/imesh.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/MaterialSystemUtil.h"
-#include "tier1/strtools.h"
 #include "rendertexture.h"
 
 void ReleaseRenderTargets( int nChangeFlags );
@@ -33,7 +32,6 @@ ITexture *GetStereoParamTexture( void )
 	if ( !s_pStereoParamTexture )
 	{
 		s_pStereoParamTexture.Init( materials->FindTexture( "stereoparam", TEXTURE_GROUP_OTHER ) );
-		Assert( !IsErrorTexture( s_pStereoParamTexture ) );
 		AddReleaseFunc();
 	}
 
@@ -50,7 +48,6 @@ ITexture *GetPowerOfTwoFrameBufferTexture( void )
 	if ( !s_pPowerOfTwoFrameBufferTexture )
 	{
 		s_pPowerOfTwoFrameBufferTexture.Init( materials->FindTexture( "_rt_PowerOfTwoFB", TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pPowerOfTwoFrameBufferTexture ) );
 		AddReleaseFunc();
 	}
 	
@@ -66,7 +63,6 @@ ITexture *GetFullscreenTexture( void )
 	if ( !s_pFullscreenTexture )
 	{
 		s_pFullscreenTexture.Init( materials->FindTexture( "_rt_Fullscreen", TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pFullscreenTexture ) );
 		AddReleaseFunc();
 	}
 
@@ -82,7 +78,6 @@ ITexture *GetCameraTexture( void )
 	if ( !s_pCameraTexture )
 	{
 		s_pCameraTexture.Init( materials->FindTexture( "_rt_Camera", TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pCameraTexture ) );
 		AddReleaseFunc();
 	}
 	
@@ -98,7 +93,6 @@ ITexture *GetFullFrameDepthTexture( void )
 	if ( !s_pFullFrameDepthTexture )
 	{
 		s_pFullFrameDepthTexture.Init( materials->FindTexture( "_rt_FullFrameDepth", TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pFullFrameDepthTexture ) );
 		AddReleaseFunc();
 	}
 
@@ -116,14 +110,13 @@ ITexture *GetFullFrameFrameBufferTexture( int textureIndex )
 		char name[256];
 		if( textureIndex != 0 )
 		{
-			Q_snprintf( name, ARRAYSIZE( name ), "_rt_FullFrameFB%d", textureIndex );
+			V_snprintf( name, std::size( name ), "_rt_FullFrameFB%d", textureIndex );
 		}
 		else
 		{
-			Q_strcpy( name, "_rt_FullFrameFB" );
+			V_strcpy( name, "_rt_FullFrameFB" );
 		}
 		s_pFullFrameFrameBufferTexture[textureIndex].Init( materials->FindTexture( name, TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pFullFrameFrameBufferTexture[textureIndex] ) );
 		AddReleaseFunc();
 	}
 	
@@ -140,7 +133,6 @@ ITexture *GetWaterReflectionTexture( void )
 	if ( !s_pWaterReflectionTexture )
 	{
 		s_pWaterReflectionTexture.Init( materials->FindTexture( "_rt_WaterReflection", TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pWaterReflectionTexture ) );
 		AddReleaseFunc();
 	}
 	
@@ -156,7 +148,6 @@ ITexture *GetWaterRefractionTexture( void )
 	if ( !s_pWaterRefractionTexture )
 	{
 		s_pWaterRefractionTexture.Init( materials->FindTexture( "_rt_WaterRefraction", TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pWaterRefractionTexture ) );
 		AddReleaseFunc();
 	}
 	
@@ -172,7 +163,6 @@ ITexture *GetCustomWeaponTexture( void )
 	if ( !s_pCustomWeaponTexture )
 	{
 		s_pCustomWeaponTexture.Init( materials->FindTexture( "_rt_CustomWeapon", TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pCustomWeaponTexture ) );
 		AddReleaseFunc();
 	}
 
@@ -188,7 +178,6 @@ ITexture *GetCustomWeaponTextureExp( void )
 	if ( !s_pCustomWeaponTextureExp )
 	{
 		s_pCustomWeaponTextureExp.Init( materials->FindTexture( "_rt_CustomWeaponExp", TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pCustomWeaponTextureExp ) );
 		AddReleaseFunc();
 	}
 
@@ -204,7 +193,6 @@ ITexture *GetSmallBufferHDR0( void )
 	if ( !s_pSmallBufferHDR0 )
 	{
 		s_pSmallBufferHDR0.Init( materials->FindTexture( "_rt_SmallHDR0", TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pSmallBufferHDR0 ) );
 		AddReleaseFunc();
 	}
 	
@@ -220,7 +208,6 @@ ITexture *GetSmallBufferHDR1( void )
 	if ( !s_pSmallBufferHDR1 )
 	{
 		s_pSmallBufferHDR1.Init( materials->FindTexture( "_rt_SmallHDR1", TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pSmallBufferHDR1 ) );
 		AddReleaseFunc();
 	}
 	
@@ -236,7 +223,6 @@ ITexture *GetSmallBuffer0( void )
 	if ( !s_pQuarterSizedFB0 )
 	{
 		s_pQuarterSizedFB0.Init( materials->FindTexture( "_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pQuarterSizedFB0 ) );
 		AddReleaseFunc();
 	}
 	
@@ -252,7 +238,6 @@ ITexture *GetSmallBuffer1( void )
 	if ( !s_pQuarterSizedFB1 )
 	{
 		s_pQuarterSizedFB1.Init( materials->FindTexture( "_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_pQuarterSizedFB1 ) );
 		AddReleaseFunc();
 	}
 	
@@ -266,14 +251,13 @@ static CTextureReference s_TeenyTextures[MAX_TEENY_TEXTURES];
 ITexture *GetTeenyTexture( int which )
 {
 
-	Assert( which < MAX_TEENY_TEXTURES );
+	contract_assert( which < MAX_TEENY_TEXTURES );
 
 	if ( !s_TeenyTextures[which] )
 	{
 		char nbuf[20];
-		Q_snprintf( nbuf, ARRAYSIZE( nbuf ), "_rt_TeenyFB%d", which );
+		V_snprintf( nbuf, std::size( nbuf ), "_rt_TeenyFB%d", which );
 		s_TeenyTextures[which].Init( materials->FindTexture( nbuf, TEXTURE_GROUP_RENDER_TARGET ) );
-		Assert( !IsErrorTexture( s_TeenyTextures[which] ) );
 		AddReleaseFunc();
 	}
 	return s_TeenyTextures[which];

@@ -1,21 +1,13 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef ISHADERAPI_H
-#define ISHADERAPI_H
-
-
-#include "mathlib/vector4d.h"
+import std;
+import ks.math;
 #include "shaderapi/ishaderdynamic.h"
 #include "shaderapi/IShaderDevice.h"
 #include "materialsystem/deformations.h"
 #include "shaderlib/shadercombosemantics.h"
-
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -89,7 +81,7 @@ enum CreateTextureFlags_t
 //-----------------------------------------------------------------------------
 // Viewport structure
 //-----------------------------------------------------------------------------
-#define SHADER_VIEWPORT_VERSION 1
+inline constexpr auto SHADER_VIEWPORT_VERSION = 1;
 struct ShaderViewport_t
 {
 	int m_nVersion;
@@ -104,7 +96,7 @@ struct ShaderViewport_t
 
 	void Init()
 	{
-		memset( this, 0, sizeof(ShaderViewport_t) );
+		std::memset( this, 0, sizeof(ShaderViewport_t) );
 		m_nVersion = SHADER_VIEWPORT_VERSION;
 	}
 
@@ -203,15 +195,16 @@ struct ShaderStencilState_t
 //-----------------------------------------------------------------------------
 // Used for occlusion queries
 //-----------------------------------------------------------------------------
-DECLARE_POINTER_HANDLE( ShaderAPIOcclusionQuery_t );
-#define INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE ( (ShaderAPIOcclusionQuery_t)0 )
+struct ShaderAPIOcclusionQuery_t__ { int unused; };
+using ShaderAPIOcclusionQuery_t = ShaderAPIOcclusionQuery_t__ *;
+inline constexpr auto INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE = ( (ShaderAPIOcclusionQuery_t)0 );
 
 enum ShaderAPIOcclusionQueryResult_t
 {
 	OCCLUSION_QUERY_RESULT_PENDING	=	-1,
 	OCCLUSION_QUERY_RESULT_ERROR	=	-2
 };
-#define OCCLUSION_QUERY_FINISHED( iQueryResult ) ( ( iQueryResult ) != OCCLUSION_QUERY_RESULT_PENDING )
+template <typename T1> [[gnu::always_inline]] inline auto OCCLUSION_QUERY_FINISHED( T1 iQueryResult ) { return ( ( iQueryResult ) != OCCLUSION_QUERY_RESULT_PENDING ); }
 
 
 //-----------------------------------------------------------------------------
@@ -239,8 +232,8 @@ struct ExternalMeshData_t
 //-----------------------------------------------------------------------------
 // This is what the material system gets to see.
 //-----------------------------------------------------------------------------
-#define SHADERAPI_INTERFACE_VERSION		"ShaderApi029"
-abstract_class IShaderAPI : public IShaderDynamicAPI
+inline constexpr const char *SHADERAPI_INTERFACE_VERSION = "ShaderApi029";
+class IShaderAPI : public IShaderDynamicAPI
 {
 public:
 	//
@@ -736,7 +729,7 @@ public:
 
 	// debug logging
 	// only implemented in some subclasses
-	virtual void PrintfVA( char *fmt, va_list vargs ) = 0;
+	virtual void PrintfVA( char *fmt, std::va_list vargs ) = 0;
 	virtual void Printf( char *fmt, ... ) = 0;
 	virtual float Knob( char *knobname, float *setvalue = nullptr ) = 0;
 
@@ -749,6 +742,3 @@ public:
 
 	virtual ShaderAPITextureHandle_t GetStandardTextureHandle(StandardTextureId_t id) = 0;
 };
-
-
-#endif // ISHADERAPI_H

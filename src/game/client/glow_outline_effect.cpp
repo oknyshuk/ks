@@ -1,10 +1,25 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Functionality to render a glowing outline around client renderable objects.
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
+// Purpose: Functionality to render a glowing outline around client renderable objects.
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "glow_outline_effect.h"
 #include "model_types.h"
 #include "shaderapi/ishaderapi.h"
@@ -12,13 +27,12 @@
 #include "view_shared.h"
 #include "c_cs_player.h"
 #include "tier2/renderutils.h"
-#include <ranges>
 
-#define FULL_FRAME_TEXTURE "_rt_FullFrameFB"
+inline constexpr const char *FULL_FRAME_TEXTURE = "_rt_FullFrameFB";
 
-#define GLOWBOX_PASS_COLOR 0
-#define GLOWBOX_PASS_STENCIL 1
-#define GLOW_PULSE_DURATION 0.2f
+constexpr auto GLOWBOX_PASS_COLOR = 0;
+constexpr auto GLOWBOX_PASS_STENCIL = 1;
+constexpr auto GLOW_PULSE_DURATION = 0.2f;
 
 ConVar glow_outline_effect_enable( "glow_outline_effect_enable", "1", FCVAR_CHEAT, "Enable entity outline glow effects." );
 ConVar glow_outline_effect_width( "glow_outline_width", "6.0f", FCVAR_CHEAT, "Width of glow outline effect in screen space." );
@@ -396,7 +410,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 	if ( !vecGlowObjectsRimGlow3DStyle.empty() )
 	{
 		//todo: expose pulse width and frequency parameters
-		float flPulse = 0.5f + 0.5f * sin( gpGlobals->curtime * 12.0f );
+		float flPulse = 0.5f + 0.5f * std::sin( gpGlobals->curtime * 12.0f );
 
 		IMaterial *pMatRim = materials->FindMaterial( "dev/glow_rim3d", TEXTURE_GROUP_OTHER, true );
 		g_pStudioRender->ForcedMaterialOverride( pMatRim );
@@ -481,7 +495,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 
 			if ( glowObject.m_nRenderStyle == GLOWRENDERSTYLE_EDGE_HIGHLIGHT_PULSE )
 			{
-				float flPulse = 1.5f + 0.5f * sin( gpGlobals->curtime * 16.0f );
+				float flPulse = 1.5f + 0.5f * std::sin( gpGlobals->curtime * 16.0f );
 				vecTempColor *= (flPulse * 0.5f);
 			}
 
@@ -658,7 +672,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 			if ( pPlayer->m_flHealthFadeAlpha > 0 ) //only need to update the effect if we can see it
 			{
 				float flGlowPulseSpeed = Lerp( pPlayer->m_flHealthFadeValue/100.0f, 30.0f, 10.0f );
-				pMatGlowHealthColor->AlphaModulate( pPlayer->m_flHealthFadeAlpha * (0.4*(sin(flGlowPulseSpeed*gpGlobals->curtime)+1.4)) );
+				pMatGlowHealthColor->AlphaModulate( pPlayer->m_flHealthFadeAlpha * (0.4*(std::sin(flGlowPulseSpeed*gpGlobals->curtime)+1.4)) );
 
 				Vector vecPlayerScreenSpaceOrigin;
 				if ( ScreenTransform( pPlayer->GetAbsOrigin(), vecPlayerScreenSpaceOrigin ) == 0 )

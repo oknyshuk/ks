@@ -1,12 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Weapons Resource implementation
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
 #include "c_baseplayer.h"
 #include "hud.h"
 
@@ -97,7 +104,7 @@ void WeaponsResource::LoadWeaponSprites( WEAPON_FILE_INFO_HANDLE hWeaponFileInfo
 	pWeaponInfo->iconSmall = nullptr;
 
 	char sz[128];
-	Q_snprintf(sz, sizeof( sz ), "scripts/%s", pWeaponInfo->szClassName);
+	V_snprintf(sz, sizeof( sz ), "scripts/%s", pWeaponInfo->szClassName);
 
 	CHudTextureList tempList;
 
@@ -251,4 +258,3 @@ const FileWeaponInfo_t *WeaponsResource::GetWeaponFromAmmo( int iAmmoId )
 
 	return nullptr;
 }
-

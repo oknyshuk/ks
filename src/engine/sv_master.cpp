@@ -1,51 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#include "server_pch.h"
-#include "server.h"
-#include "master.h"
-#include "proto_oob.h"
-#include "sv_main.h" // SV_GetFakeClientCount()
-#include "tier0/icommandline.h"
-#include "FindSteamServers.h"
-#include "filesystem_engine.h"
-#include "sv_steamauth.h"
-#include "hltvserver.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-bool g_bEnableMasterServerUpdater = true;
+// main precompiled header for server files
+
+import std;
+import ks.tier1;
+
+#include "server.h"
+#include "server.h"
 
 static void SvSearchKeyChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	sv.UpdateGameData();
-	if ( sv.IsActive() )
-	{
-		Cbuf_AddText( CBUF_SERVER, "heartbeat\n" );
-	}
 }
 
 ConVar sv_search_key( "sv_search_key",
 						"",
 						  FCVAR_RELEASE, "When searching for a dedicated server from lobby, restrict search to only dedicated servers having the same sv_search_key.", SvSearchKeyChangeCallback );
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void Heartbeat_f()
-{
-	if ( g_nForkID != FORK_ID_PARENT_PROCESS )								// if we are the process parent, we won't advertise ourself to steam / xlsp
-	{
-		if( Steam3Server().SteamGameServer() )
-		{
-			Steam3Server().SteamGameServer()->ForceHeartbeat();
-		}
-	}
-}
-
-
-static ConCommand heartbeat( "heartbeat", Heartbeat_f, "Force heartbeat of master servers", 0 );

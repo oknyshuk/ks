@@ -1,20 +1,15 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IENGINETOOL_H
-#define IENGINETOOL_H
-
-#include "interface.h"
+import std;
+import ks.tier1;
 #include "soundflags.h"
 #include "avi/iavi.h"
 #include "ispatialpartition.h"
 
 class CViewSetup;
 class IToolSystem;
-class KeyValues;
 class ITraceFilter;
 class CBaseTrace;
 struct dlight_t;
@@ -55,7 +50,7 @@ public:
 	virtual bool		LoadToolModule( char const *pToolModule, bool bSwitchToFirst ) = 0;
 };
 
-#define VENGINETOOLFRAMEWORK_INTERFACE_VERSION	"VENGINETOOLFRAMEWORK003"
+inline constexpr const char *VENGINETOOLFRAMEWORK_INTERFACE_VERSION = "VENGINETOOLFRAMEWORK003";
 
 struct model_t;
 struct studiohdr_t;
@@ -238,6 +233,4 @@ public:
 	virtual void		PrefetchSound( char const *pchSoundName ) = 0;
 };
 
-#define VENGINETOOL_INTERFACE_VERSION	"VENGINETOOL003"
-
-#endif // IENGINETOOL_H
+inline constexpr const char *VENGINETOOL_INTERFACE_VERSION = "VENGINETOOL003";

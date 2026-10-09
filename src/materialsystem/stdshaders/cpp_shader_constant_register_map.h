@@ -1,13 +1,10 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Purpose: Provide convenient mapping for shader constants
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#define C_CODE_HACK
+// Purpose: Provide convenient mapping for shader constants
+
 #include "shader_constant_register_map.h"
-#undef C_CODE_HACK
 
 // For the C code, map the above file's defines back to integers...
 #define PSREG_CONSTANT_00	0

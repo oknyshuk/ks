@@ -1,10 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "ndebugoverlay.h"
 #include "coerciblevariant_t.h"
 #include "entitylist.h"
 
@@ -99,7 +127,7 @@ void coerciblevariant_t::SetString( const char * str )
 
 	// make a copy of the string for me.
 	szVal = new char[DEFAULT_VARIANT_STRING_SIZE];
-	Q_strncpy( szVal, str, DEFAULT_VARIANT_STRING_SIZE );
+	V_strncpy( szVal, str, DEFAULT_VARIANT_STRING_SIZE );
 	m_bvInitFields = kINIT_STRING;
 	fieldType = FIELD_STRING;
 }
@@ -128,7 +156,7 @@ const char * coerciblevariant_t::String( void )
 	if ( (m_bvInitFields & kINIT_STRING) == 0 )
 	{
 		// need to initialize the string.
-		AssertMsg(szVal == nullptr, "A variant tried to convert itself to a string when it already was one.");
+		contract_assert( ( szVal == nullptr ) && "A variant tried to convert itself to a string when it already was one." );
 
 		// convert from the appropriate native type
 		switch (fieldType)
@@ -140,11 +168,11 @@ const char * coerciblevariant_t::String( void )
 			break;
 		case FIELD_INTEGER:
 			szVal = new char[24];
-			Q_snprintf( szVal, 24, "%d", iVal );
+			V_snprintf( szVal, 24, "%d", iVal );
 			break;
 		case FIELD_FLOAT:
 			szVal = new char[32];
-			Q_snprintf( szVal, 32, "%.3f", flVal );
+			V_snprintf( szVal, 32, "%.3f", flVal );
 			break;
 		case FIELD_EHANDLE: // entity name, or ""
 		{
@@ -153,7 +181,7 @@ const char * coerciblevariant_t::String( void )
 			if (ent)
 			{
 				szVal = new char[DEFAULT_VARIANT_STRING_SIZE];
-				Q_strncpy( szVal, ent->GetEntityName().ToCStr(), DEFAULT_VARIANT_STRING_SIZE );
+				V_strncpy( szVal, ent->GetEntityName().ToCStr(), DEFAULT_VARIANT_STRING_SIZE );
 			}
 			else
 			{
@@ -163,10 +191,10 @@ const char * coerciblevariant_t::String( void )
 			break;
 		}
 		case FIELD_STRING:
-			AssertMsg( false, "Tried to convert a variant from string to string?!" );
+			contract_assert( false && "Tried to convert a variant from string to string?!" );
 			break;
 		default:
-			AssertMsg1( false, "Tried to convert a variant from unknown field type %d", fieldType );
+			contract_assert( false && "Tried to convert a variant from unknown field type %d" );
 			szVal = new char[1];
 			szVal[0] = 0;
 			break;
@@ -185,19 +213,19 @@ float coerciblevariant_t::ConvertFloat() const
 	{
 	case FIELD_STRING:
 		// try to turn the string into a float
-		return atof(szVal);
+		return std::atof(szVal);
 
 	case FIELD_EHANDLE:
-		AssertMsg(false, "Variant tried to convert from EHANDLE to float?!" );
+		contract_assert( false && "Variant tried to convert from EHANDLE to float?!" );
 		return eVal.Get() ? 1 : 0;
 
 	case FIELD_FLOAT:
 	case FIELD_INTEGER:
 	case FIELD_BOOLEAN:
-		AssertMsg( false, "Can't-happen: coercible variant tried to convert from float to a number, which should already have been done" );
+		contract_assert( false && "Can't-happen: coercible variant tried to convert from float to a number, which should already have been done" );
 		return flVal;
 	default:
-		AssertMsg1( false, "Tried to convert a variant from unknown field type %d", fieldType );
+		contract_assert( false && "Tried to convert a variant from unknown field type %d" );
 		return 0;
 	}
 }
@@ -209,19 +237,19 @@ int coerciblevariant_t::ConvertInt() const
 	{
 	case FIELD_STRING:
 		// try to turn the string into an int
-		return atoi(szVal);
+		return std::atoi(szVal);
 
 	case FIELD_EHANDLE:
-		AssertMsg(false, "Variant tried to convert from EHANDLE to int?!" );
+		contract_assert( false && "Variant tried to convert from EHANDLE to int?!" );
 		return eVal.Get() ? 1 : 0;
 
 	case FIELD_FLOAT:
 	case FIELD_INTEGER:
 	case FIELD_BOOLEAN:
-		AssertMsg( false, "Can't-happen: coercible variant tried to convert from int to a number, which should already have been done" );
+		contract_assert( false && "Can't-happen: coercible variant tried to convert from int to a number, which should already have been done" );
 		return iVal;
 	default:
-		AssertMsg1( false, "Tried to convert a variant from unknown field type %d", fieldType );
+		contract_assert( false && "Tried to convert a variant from unknown field type %d" );
 		return 0;
 	}
 }
@@ -233,7 +261,7 @@ bool coerciblevariant_t::ConvertBool() const
 	{
 	case FIELD_STRING:
 		// try to turn the string into an int
-		return atoi(szVal);
+		return std::atoi(szVal);
 
 	case FIELD_EHANDLE:
 		return eVal.Get();
@@ -241,10 +269,10 @@ bool coerciblevariant_t::ConvertBool() const
 	case FIELD_FLOAT:
 	case FIELD_INTEGER:
 	case FIELD_BOOLEAN:
-		AssertMsg( false, "Can't-happen: coercible variant tried to convert from int to a number, which should already have been done" );
+		contract_assert( false && "Can't-happen: coercible variant tried to convert from int to a number, which should already have been done" );
 		return iVal;
 	default:
-		AssertMsg1( false, "Tried to convert a variant from unknown field type %d", fieldType );
+		contract_assert( false && "Tried to convert a variant from unknown field type %d" );
 		return 0;
 	}
 }
@@ -264,10 +292,10 @@ CBaseEntity *coerciblevariant_t::ConvertEntity() const
 	case FIELD_FLOAT:
 	case FIELD_INTEGER:
 	case FIELD_BOOLEAN:
-		AssertMsg( false, "Coercible variant tried to turn a number into an entity, which is just plain wierd." );
+		contract_assert( false && "Coercible variant tried to turn a number into an entity, which is just plain wierd." );
 		return nullptr;
 	default:
-		AssertMsg1( false, "Tried to convert a variant from unknown field type %d", fieldType );
+		contract_assert( false && "Tried to convert a variant from unknown field type %d" );
 		return nullptr;
 	}
 }

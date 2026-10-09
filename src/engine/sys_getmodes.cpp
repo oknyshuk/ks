@@ -1,33 +1,23 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#undef PROTECTED_THINGS_ENABLE
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include <SDL3/SDL.h>
+import ks.tier1;
 
 typedef void *HDC;
 
+import ks.desktop;
+import ks.jpeg;
 #include "appframework/ilaunchermgr.h"
-#include "appframework/sdlwindow.h"
 
-#include "basetypes.h"
+import std;
 #include "sysexternal.h"
 #include "cmd.h"
 #include "modelloader.h"
 #include "gl_matsysiface.h"
-#include "vmodes.h"
 #include "modes.h"
 #include "ivideomode.h"
 #include "igame.h"
-#include "iengine.h"
-#include "engine_launcher_api.h"
-#include "iregistry.h"
 #include "common.h"
-#include "tier0/icommandline.h"
 #include "cl_main.h"
 #include "filesystem_engine.h"
 #include "host.h"
@@ -37,7 +27,6 @@ typedef void *HDC;
 #include "materialsystem/materialsystem_config.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
-#include <jpeglib.h>
 #include "gl_shader.h"
 #include "sys_dll.h"
 #include "materialsystem/imaterial.h"
@@ -46,10 +35,6 @@ typedef void *HDC;
 #include "tier2/renderutils.h"
 #include "LoadScreenUpdate.h"
 
-#include "tier0/memalloc.h"
-ConVar cl_savescreenshotstosteam( "cl_savescreenshotstosteam", "0", FCVAR_HIDDEN, "Saves screenshots to the Steam's screenshot library" );
-ConVar cl_screenshotusertag( "cl_screenshotusertag", "", FCVAR_HIDDEN, "User to tag in the screenshot" );
-ConVar cl_screenshotlocation( "cl_screenshotlocation", "", FCVAR_HIDDEN, "Location to tag the screenshot with" );
 
 //-----------------------------------------------------------------------------
 // HDRFIXME: move this somewhere else.
@@ -111,8 +96,6 @@ protected:
 	int					GetModeBPP( ) const { return 32; }
 	void				DrawStartupVideo();
 	void				ComputeStartupGraphicName( char *pBuf, int nBufLen );
-	void				WriteScreenshotToSteam( uint8 *pImage, int cubImage, int width, int height );
-	void				AddScreenshotToSteam( const char *pchFilenameJpeg, int width, int height );
 
 	// Finds the video mode in the list of video modes
 	int					FindVideoMode( int nDesiredWidth, int nDesiredHeight, bool bWindowed );
@@ -212,15 +195,11 @@ CVideoMode_Common::CVideoMode_Common( void )
     int desktopWidth = 1920;
     int desktopHeight = 1080;
 
-    if ( SDL_WasInit( SDL_INIT_VIDEO ) )
+    ks::desktop::display_mode desktopMode;
+    if ( ks::desktop::video_ready() && ks::desktop::desktop_mode( ks::desktop::primary_display(), &desktopMode ) )
     {
-        SDL_DisplayID primaryDisplay = SDL_GetPrimaryDisplay();
-        const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode( primaryDisplay );
-        if ( mode )
-        {
-            desktopWidth = mode->w;
-            desktopHeight = mode->h;
-        }
+        desktopWidth = desktopMode.width;
+        desktopHeight = desktopMode.height;
     }
 
     DefaultVideoMode().width  = desktopWidth;
@@ -309,8 +288,8 @@ bool CVideoMode_Common::SyncToActualWindowSize()
     if ( !g_pLauncherMgr )
         return false;
 
-    int nWidth = 0, nHeight = 0;
-    SDL_GetWindowSizeInPixels( GetGameSDLWindow(), &nWidth, &nHeight );
+    const ks::desktop::size pixels = ks::desktop::window_pixel_size( ks::desktop::game_window() );
+    int nWidth = pixels.width, nHeight = pixels.height;
 
     if ( nWidth <= 0 || nHeight <= 0 )
         return false;
@@ -603,7 +582,7 @@ void CVideoMode_Common::ComputeStartupGraphicName( char *pBuf, int nBufLen )
 	// get the image to load
 	char startupName[MAX_PATH];
 	CL_GetStartupImage( startupName, sizeof( startupName ) );
-	Q_snprintf( pBuf, nBufLen, "materials/%s.vtf", startupName );
+	V_snprintf( pBuf, nBufLen, "materials/%s.vtf", startupName );
 }
 
 bool CVideoMode_Common::SetupStartupGraphic()
@@ -641,31 +620,6 @@ bool CVideoMode_Common::SetupStartupGraphic()
 
 	return true;
 }
-
-
-//-----------------------------------------------------------------------------
-// Writes a screenshot to Steam screenshot library given an RGB buffer
-// and applies any tags that have been set for it
-//-----------------------------------------------------------------------------
-void CVideoMode_Common::WriteScreenshotToSteam( uint8 *pImage, int cubImage, int width, int height )
-{
-}
-
-
-//-----------------------------------------------------------------------------
-// Adds a screenshot to the Steam screenshot library from disk
-// and applies any tags that have been set for it
-//-----------------------------------------------------------------------------
-void CVideoMode_Common::AddScreenshotToSteam( const char *pchFilename, int width, int height )
-{
-}
-
-
-//-----------------------------------------------------------------------------
-// Applies tags to a screenshot for the Steam screenshot library, which are
-// passed in through convars
-//-----------------------------------------------------------------------------
-
 
 
 //-----------------------------------------------------------------------------
@@ -787,7 +741,7 @@ void CVideoMode_Common::DrawStartupGraphic()
 		float depth = 0.5f;
 
 		// Apply a custom scaling that mirrors the way we draw the Scaleform background texture
-		Assert( tw == th );
+		contract_assert( tw == th );
 
 		// VTFs are forced to be square, even if the source texture is non 1:1.  Rescale the
 		//		texture to assume its actually in 16:9, as it was authored
@@ -828,18 +782,14 @@ void CVideoMode_Common::DrawStartupGraphic()
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::BlitGraphicToHDCWithAlpha(HDC hdc, byte *rgba, int imageWidth, int imageHeight, int x0, int y0, int x1, int y1)
 {
-    Assert( !"Impl me" );
+    contract_assert( !"Impl me" );
 }
 
 void CVideoMode_Common::InvalidateWindow()
 {
     if ( CommandLine()->FindParm( "-noshaderapi" ) )
     {
-        SDL_Event fake;
-        memset(&fake, '\0', sizeof (SDL_Event));
-        fake.type = SDL_EVENT_WINDOW_EXPOSED;
-        fake.window.windowID = SDL_GetWindowID((SDL_Window *) game->GetMainWindow());
-        SDL_PushEvent(&fake);
+        ks::desktop::post_expose( reinterpret_cast< ks::desktop::window * >( game->GetMainWindow() ) );
     }
 }
 
@@ -851,7 +801,7 @@ void CVideoMode_Common::DrawNullBackground( void *hHDC, int w, int h )
 	// Show a message if running without renderer..
 	if ( CommandLine()->FindParm( "-noshaderapi" ) )
 	{
-		printf ( "%s\n",  modelloader->GetName( host_state.worldmodel ) );
+		std::printf ( "%s\n",  modelloader->GetName( host_state.worldmodel ) );
 	}
 }
 
@@ -893,10 +843,10 @@ typedef struct tagRGBQUAD {
 } RGBQUAD;
 
 /* constants for the biCompression field */
-#define BI_RGB        0L
-#define BI_RLE8       1L
-#define BI_RLE4       2L
-#define BI_BITFIELDS  3L
+constexpr auto BI_RGB = 0L;
+constexpr auto BI_RLE8 = 1L;
+constexpr auto BI_RLE4 = 2L;
+constexpr auto BI_BITFIELDS = 3L;
 
 typedef GUID UUID;
 
@@ -906,7 +856,7 @@ typedef GUID UUID;
 void CVideoMode_Common::BlitGraphicToHDC(HDC hdc, byte *rgba, int imageWidth, int imageHeight, int x0, int y0, int x1, int y1)
 {
 
-    Assert( !"Impl me" );
+    contract_assert( !"Impl me" );
 }
 
 //-----------------------------------------------------------------------------
@@ -994,12 +944,10 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 		WindowRect.right - WindowRect.left,
 		WindowRect.bottom - WindowRect.top );
 
-	// SDL_SyncWindow(): apply before returning, so the RESIZED event this generates
+	// resize_window() applies synchronously, so the RESIZED event this generates
 	// is pumped while we still know it was self-inflicted. Otherwise it lands a frame
 	// later, looks like a user resize, and bounces back into SetMode().
-	SDL_Window *pGameWindow = GetGameSDLWindow();
-	SDL_SetWindowSize( pGameWindow, WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top );
-	SDL_SyncWindow( pGameWindow );
+	ks::desktop::resize_window( ks::desktop::game_window(), WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top );
 
 
     game->SetWindowSize( nWidth, nHeight );
@@ -1087,14 +1035,13 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 {
     int     CenterX, CenterY;
 
-	SDL_DisplayID displayID = SDL_GetDisplayForWindow( GetGameSDLWindow() );
-	if ( !displayID )
-		displayID = SDL_GetPrimaryDisplay();
+	const ks::desktop::display_id displayID = ks::desktop::display_of( ks::desktop::game_window() );
 
-	const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode( displayID );
+	ks::desktop::display_mode mode{};
+	ks::desktop::current_mode( displayID, &mode );
 
-	const int wide = mode->w;
-	const int tall = mode->h;
+	const int wide = mode.width;
+	const int tall = mode.height;
 
 	CenterX = (wide - width) / 2;
 	CenterY = (tall - height) / 2;
@@ -1117,14 +1064,14 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 		CenterY = -negy;
 	}
 
-	SDL_Rect rect = { 0, 0, 0, 0 };
-	SDL_GetDisplayBounds( displayID, &rect );
+	ks::desktop::rect bounds{};
+	ks::desktop::display_bounds( displayID, &bounds );
 
-	CenterX += rect.x;
-	CenterY += rect.y;
+	CenterX += bounds.x;
+	CenterY += bounds.y;
 
 	game->SetWindowXY( CenterX, CenterY );
-	SDL_SetWindowPosition( GetGameSDLWindow(), CenterX, CenterY );
+	ks::desktop::move_window( ks::desktop::game_window(), CenterX, CenterY );
 
 }
 
@@ -1147,7 +1094,7 @@ void CVideoMode_Common::ReleaseVideo( void )
 void CVideoMode_Common::ReadScreenPixels( int x, int y, int w, int h, void *pBuffer, ImageFormat format )
 {
     int nBytes = ImageLoader::GetMemRequired( w, h, 1, format, false );
-    memset( pBuffer, 0, nBytes );
+    std::memset( pBuffer, 0, nBytes );
 }
 
 //-----------------------------------------------------------------------------
@@ -1172,16 +1119,6 @@ void CVideoMode_Common::TakeSnapshotTGA( const char *pFilename )
         {
             Warning( "Couldn't write bitmap data snapshot to file %s.\n", pFilename );
 		}
-		else
-		{
-			char szPath[MAX_PATH];
-			szPath[0] = 0;
-			if ( g_pFileSystem->GetLocalPath( pFilename, szPath, sizeof(szPath) ) )
-			{
-				AddScreenshotToSteam( szPath, GetModeWidth(), GetModeHeight() );
-			}
-		}
-
     }
 
     delete[] pImage;
@@ -1267,7 +1204,7 @@ void GetCubemapOffset( CubeMapFaceIndex_t faceIndex, int &x, int &y, int &faceDi
         x = 2;
         y = 2;
         break;
-    NO_DEFAULT
+    default: UNREACHABLE();
     }
     x *= faceDim;
     y *= faceDim;
@@ -1323,7 +1260,7 @@ void CVideoMode_Common::TakeSnapshotPFMRect( const char *pFilename, int x, int y
         ( unsigned char * )pImage1, IMAGE_FORMAT_RGB323232F,
         w, h );
 
-    Assert( w == h ); // garymcthack - this only works for square images
+    contract_assert( w == h ); // garymcthack - this only works for square images
 
     float *pFloatImage = ( float * )MemAlloc_Alloc( resampleWidth * resampleHeight * ImageLoader::SizeInBytes( IMAGE_FORMAT_RGB323232F ) );
 
@@ -1369,7 +1306,7 @@ void CVideoMode_Common::TakeSnapshotTGARect( const char *pFilename, int x, int y
     // Get Bits from the material system
     ReadScreenPixels( x, y, w, h, pImage, IMAGE_FORMAT_RGBA8888 );
 
-    Assert( w == h ); // garymcthack - this only works for square images
+    contract_assert( w == h ); // garymcthack - this only works for square images
 
     ImageLoader::ResampleInfo_t info;
     info.m_pSrc = pImage;
@@ -1487,175 +1424,27 @@ void CVideoMode_Common::WriteMovieFrame( const MovieInfo_t& info )
     delete[] hp;
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: Expanded data destination object for byte_writer output
-//-----------------------------------------------------------------------------
-struct JPEGDestinationManager_t
-{
-    struct jpeg_destination_mgr pub; // public fields
-
-    ks::byte_writer *pBuffer;   // target/final buffer
-    byte        *buffer;        // start of temp buffer
-};
-
-// choose an efficiently bufferaable size
-#define OUTPUT_BUF_SIZE  4096
-
-//-----------------------------------------------------------------------------
-// Purpose:  Initialize destination --- called by jpeg_start_compress
-//  before any data is actually written.
-//-----------------------------------------------------------------------------
-METHODDEF(void) init_destination (j_compress_ptr cinfo)
-{
-    JPEGDestinationManager_t *dest = ( JPEGDestinationManager_t *) cinfo->dest;
-
-    // Allocate the output buffer --- it will be released when done with image
-    dest->buffer = (byte *)
-        (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-        OUTPUT_BUF_SIZE * sizeof(byte));
-
-    dest->pub.next_output_byte = dest->buffer;
-    dest->pub.free_in_buffer = OUTPUT_BUF_SIZE;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Empty the output buffer --- called whenever buffer fills up.
-// Input  : boolean -
-//-----------------------------------------------------------------------------
-METHODDEF(boolean) empty_output_buffer (j_compress_ptr cinfo)
-{
-    JPEGDestinationManager_t *dest = ( JPEGDestinationManager_t * ) cinfo->dest;
-
-    ks::byte_writer *buf = dest->pBuffer;
-
-    // Add some data
-    buf->write_bytes( dest->buffer, OUTPUT_BUF_SIZE );
-
-    dest->pub.next_output_byte = dest->buffer;
-    dest->pub.free_in_buffer = OUTPUT_BUF_SIZE;
-
-    return TRUE;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Terminate destination --- called by jpeg_finish_compress
-// after all data has been written.  Usually needs to flush buffer.
-//
-// NB: *not* called by jpeg_abort or jpeg_destroy; surrounding
-// application must deal with any cleanup that should happen even
-// for error exit.
-//-----------------------------------------------------------------------------
-METHODDEF(void) term_destination (j_compress_ptr cinfo)
-{
-    JPEGDestinationManager_t *dest = (JPEGDestinationManager_t *) cinfo->dest;
-    size_t datacount = OUTPUT_BUF_SIZE - dest->pub.free_in_buffer;
-
-    ks::byte_writer *buf = dest->pBuffer;
-
-    /* Write any data remaining in the buffer */
-    if (datacount > 0)
-    {
-        buf->write_bytes( dest->buffer, datacount );
-    }
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Set up functions for writing data to a byte_writer instead of FILE *
-//-----------------------------------------------------------------------------
-GLOBAL(void) jpeg_ByteWriter_dest (j_compress_ptr cinfo, ks::byte_writer *pBuffer )
-{
-    JPEGDestinationManager_t *dest;
-
-    /* The destination object is made permanent so that multiple JPEG images
-    * can be written to the same file without re-executing jpeg_stdio_dest.
-    * This makes it dangerous to use this manager and a different destination
-    * manager serially with the same JPEG object, because their private object
-    * sizes may be different.  Caveat programmer.
-    */
-    if (cinfo->dest == nullptr) {  /* first time for this JPEG object? */
-        cinfo->dest = (struct jpeg_destination_mgr *)
-            (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-            sizeof(JPEGDestinationManager_t));
-    }
-
-    dest = ( JPEGDestinationManager_t * ) cinfo->dest;
-
-    dest->pub.init_destination      = init_destination;
-    dest->pub.empty_output_buffer   = empty_output_buffer;
-    dest->pub.term_destination      = term_destination;
-    dest->pBuffer                   = pBuffer;
-}
-
 bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( ks::byte_writer& buf, int quality )
 {
     if ( g_LostVideoMemory )
         return false;
 
-    // Validate quality level
-    quality = clamp( quality, 1, 100 );
-
     // Allocate space for bits
-    uint8 *pImage = new uint8[ GetModeWidth() * 3 * GetModeHeight() ];
-    if ( !pImage )
-    {
-        Msg( "Unable to allocate %i bytes for image\n", GetModeWidth() * 3 * GetModeHeight() );
-        return false;
-    }
+    std::vector< uint8 > image( static_cast< std::size_t >( GetModeWidth() ) * 3 * GetModeHeight() );
 
     // Get Bits from the material system
-    ReadScreenPixels( 0, 0, GetModeWidth(), GetModeHeight(), pImage, IMAGE_FORMAT_RGB888 );
+    ReadScreenPixels( 0, 0, GetModeWidth(), GetModeHeight(), image.data(), IMAGE_FORMAT_RGB888 );
 
-    JSAMPROW row_pointer[1];     // pointer to JSAMPLE row[s]
-    int row_stride;              // physical row width in image buffer
+    bool bEncoded = ks::jpeg::encode( image.data(), GetModeWidth(), GetModeHeight(), clamp( quality, 1, 100 ),
+        []( const void *pBytes, unsigned long nSize, void *pContext )
+        {
+            static_cast< ks::byte_writer * >( pContext )->write_bytes( pBytes, nSize );
+        }, &buf );
 
-    // stderr handler
-    struct jpeg_error_mgr jerr;
+    if ( !bEncoded )
+        Warning( "%s\n", ks::jpeg::last_error() );
 
-    // compression data structure
-    struct jpeg_compress_struct cinfo;
-
-    row_stride = GetModeWidth() * 3; // JSAMPLEs per row in image_buffer
-
-    // point at stderr
-    cinfo.err = jpeg_std_error(&jerr);
-
-    // create compressor
-    jpeg_create_compress(&cinfo);
-
-    // Hook byte_writer to compression
-    jpeg_ByteWriter_dest(&cinfo, &buf );
-
-    // image width and height, in pixels
-    cinfo.image_width = GetModeWidth();
-    cinfo.image_height = GetModeHeight();
-    // RGB is 3 componnent
-    cinfo.input_components = 3;
-    // # of color components per pixel
-    cinfo.in_color_space = JCS_RGB;
-
-    // Apply settings
-    jpeg_set_defaults(&cinfo);
-    jpeg_set_quality(&cinfo, quality, TRUE );
-
-    // Start compressor
-    jpeg_start_compress(&cinfo, TRUE);
-
-    // Write scanlines
-    while ( cinfo.next_scanline < cinfo.image_height )
-    {
-        row_pointer[ 0 ] = &pImage[ cinfo.next_scanline * row_stride ];
-        jpeg_write_scanlines( &cinfo, row_pointer, 1 );
-    }
-
-    // Finalize image
-    jpeg_finish_compress(&cinfo);
-
-    // Cleanup
-    jpeg_destroy_compress(&cinfo);
-
-    delete[] pImage;
-
-    return true;
+    return bEncoded;
 }
 
 //-----------------------------------------------------------------------------
@@ -1664,7 +1453,7 @@ bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( ks::byte_writer& buf, int qual
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::TakeSnapshotJPEG( const char *pFilename, int quality )
 {
-    Assert( pFilename );
+    contract_assert( pFilename );
 
     // Output buffer
     ks::byte_writer buf;
@@ -1682,21 +1471,11 @@ void CVideoMode_Common::TakeSnapshotJPEG( const char *pFilename, int quality )
 // Show info to console.
     char orig[ 64 ];
     char final[ 64 ];
-    Q_strncpy( orig, Q_pretifymem( GetModeWidth() * 3 * GetModeHeight(), 2 ), sizeof( orig ) );
-    Q_strncpy( final, Q_pretifymem( finalSize, 2 ), sizeof( final ) );
+    V_strncpy( orig, V_pretifymem( GetModeWidth() * 3 * GetModeHeight(), 2 ), sizeof( orig ) );
+    V_strncpy( final, V_pretifymem( finalSize, 2 ), sizeof( final ) );
 
     Msg( "Wrote '%s':  %s (%dx%d) compresssed (quality %i) to %s\n",
         pFilename, orig, GetModeWidth(), GetModeHeight(), quality, final );
-
-	if ( finalSize > 0 )
-	{
-		char szPath[MAX_PATH];
-		szPath[0] = 0;
-		if ( g_pFileSystem->GetLocalPath( pFilename, szPath, sizeof(szPath) ) )
-		{
-			AddScreenshotToSteam( szPath, GetModeWidth(), GetModeHeight() );
-		}
-	}
 
 }
 
@@ -1762,19 +1541,19 @@ bool CVideoMode_MaterialSystem::Init( )
     // DXVK's D3D9 adapter only queries the default monitor, which misses
     // resolutions available on other displays in multi-monitor setups.
     {
-        int nDisplayCount = 0;
-        SDL_DisplayID *pDisplays = SDL_GetDisplays( &nDisplayCount );
+        ks::desktop::display_id displays[16];
+        const int nDisplayCount = ks::desktop::displays( displays, 16 );
 
         for ( int d = 0; d < nDisplayCount && m_nNumModes < MAX_MODE_LIST; d++ )
         {
-            int nSDLModeCount = 0;
-            SDL_DisplayMode **ppModes = SDL_GetFullscreenDisplayModes( pDisplays[d], &nSDLModeCount );
+            ks::desktop::display_mode modes[256];
+            const int nModeCount = ks::desktop::fullscreen_modes( displays[d], modes, 256 );
 
-            for ( int i = 0; i < nSDLModeCount && m_nNumModes < MAX_MODE_LIST; i++ )
+            for ( int i = 0; i < nModeCount && m_nNumModes < MAX_MODE_LIST; i++ )
             {
-                int w = ppModes[i]->w;
-                int h = ppModes[i]->h;
-                int refresh = (int)ppModes[i]->refresh_rate;
+                int w = modes[i].width;
+                int h = modes[i].height;
+                int refresh = modes[i].refresh_rate;
 
                 if ( w < 640 || h < 480 )
                 {
@@ -1809,16 +1588,13 @@ bool CVideoMode_MaterialSystem::Init( )
                 }
             }
 
-            SDL_free( (void *)ppModes );
         }
-
-        SDL_free( pDisplays );
     }
 
     // Sort modes for easy searching later
     if ( m_nNumModes > 1 )
     {
-        qsort( (void *)&m_rgModeList[0], m_nNumModes, sizeof(vmode_t), VideoModeCompare );
+        std::qsort( (void *)&m_rgModeList[0], m_nNumModes, sizeof(vmode_t), VideoModeCompare );
     }
 
     materials->AddModeChangeCallBack( &VideoMode_AdjustForModeChange );
@@ -2046,7 +1822,7 @@ void CVideoMode_MaterialSystem::ReadScreenPixels( int x, int y, int w, int h, vo
     else
     {
         int nBytes = ImageLoader::GetMemRequired( w, h, 1, format, false );
-        memset( pBuffer, 0, nBytes );
+        std::memset( pBuffer, 0, nBytes );
     }
 }
 
@@ -2060,7 +1836,7 @@ IVideoMode *videomode = ( IVideoMode * )nullptr;
 void VideoMode_Create( )
 {
     videomode = new CVideoMode_MaterialSystem;
-    Assert( videomode );
+    contract_assert( videomode );
 }
 
 void VideoMode_Destroy()

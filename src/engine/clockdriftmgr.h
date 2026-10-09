@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef CLOCKDRIFTMGR_H
-#define CLOCKDRIFTMGR_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class CClockDriftMgr
 {
@@ -60,6 +54,3 @@ private:
 	int	m_nClientTick;		// The client's own tick counter (specifically, for interpolation during rendering).
 							// The server may be on a slightly different tick and the client will drift towards it.
 };
-
-
-#endif // CLOCKDRIFTMGR_H

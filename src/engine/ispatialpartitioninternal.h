@@ -1,21 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Revision: $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ISPATIALPARTITIONINTERNAL_H
-#define ISPATIALPARTITIONINTERNAL_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ispatialpartition.h"
-
 
 //-----------------------------------------------------------------------------
 // These methods of the spatial partition manager are only used in the engine
 //-----------------------------------------------------------------------------
-abstract_class ISpatialPartitionInternal : public ISpatialPartition
+class ISpatialPartitionInternal : public ISpatialPartition
 {
 public:
 	// Call this to clear out the spatial partition and to re-initialize
@@ -48,9 +40,3 @@ ISpatialPartitionInternal* SpatialPartitionOld();
 //-----------------------------------------------------------------------------
 ISpatialPartition *CreateSpatialPartitionOld( const Vector& worldmin, const Vector& worldmax );
 void DestroySpatialPartitionOld( ISpatialPartition * );
-
-
-#endif	// ISPATIALPARTITIONINTERNAL_H
-
-
-

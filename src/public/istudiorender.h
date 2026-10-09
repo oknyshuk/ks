@@ -1,23 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ISTUDIORENDER_H
-#define ISTUDIORENDER_H
-
-#include "tier1/interface.h"
-#include "mathlib/vector.h"
-#include "mathlib/vector4d.h"
-#include "tier1/text_writer.h"
-#include "tier1/utlvector.h"
+import ks.tier1;
+import std;
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystem.h"
-#include "appframework/iappsystem.h"
 #include "datacache/imdlcache.h"
-#include "tier0/fasttimer.h"
 #include "studio.h"
 
 
@@ -26,18 +15,13 @@
 //-----------------------------------------------------------------------------
 struct studiohdr_t;
 struct studiomeshdata_t;
-class Vector;
-struct LightDesc_t;
 class IMaterial;
 struct studiohwdata_t;
 struct Ray_t;
-class Vector4D;
 class IMaterialSystem;
-struct matrix3x4_t;
 class IMesh;
 struct vertexFileHeader_t;
 struct FlashlightState_t;
-class VMatrix;
 namespace OptimizedModel { struct FileHeader_t; }
 class IPooledVBAllocator;
 struct MeshInstanceData_t;
@@ -45,7 +29,7 @@ struct ShaderStencilState_t;
 
 
 // undone: what's the standard for function type naming?
-typedef void (*StudioRender_Printf_t)( PRINTF_FORMAT_STRING const char *fmt, ... );
+typedef void (*StudioRender_Printf_t)( const char *fmt, ... );
 
 struct StudioRenderConfig_t
 {
@@ -84,8 +68,9 @@ struct StudioRenderConfig_t
 //-----------------------------------------------------------------------------
 // Studio render interface
 //-----------------------------------------------------------------------------
-DECLARE_POINTER_HANDLE( StudioDecalHandle_t );
-#define STUDIORENDER_DECAL_INVALID  ( (StudioDecalHandle_t)0 )
+struct StudioDecalHandle_t__ { int unused; };
+using StudioDecalHandle_t = StudioDecalHandle_t__ *;
+inline constexpr auto STUDIORENDER_DECAL_INVALID = ( (StudioDecalHandle_t)0 );
 
 enum
 {
@@ -137,7 +122,7 @@ enum
 // FIXME: remove these (materials/shaders should drive vertex format). Need to
 //        list required forcedmaterialoverrides in models/bsps (rather than
 //        all models supporting all possible overrides, as they do currently).
-#define VERTEX_TEXCOORD0_2D ( ( (uint64) 2 ) << ( TEX_COORD_SIZE_BIT + ( 3*0 ) ) )
+inline constexpr auto VERTEX_TEXCOORD0_2D = ( ( (uint64) 2 ) << ( TEX_COORD_SIZE_BIT + ( 3*0 ) ) );
 enum MaterialVertexFormat_t
 {
 	MATERIAL_VERTEX_FORMAT_MODEL	= (VertexFormat_t) VERTEX_POSITION | VERTEX_COLOR_STREAM_1 | VERTEX_NORMAL | VERTEX_TEXCOORD0_2D | VERTEX_USERDATA_SIZE(4),
@@ -170,7 +155,7 @@ enum
 };
 
 // beyond this number of materials, you won't get info back from DrawModel
-#define MAX_DRAW_MODEL_INFO_MATERIALS 8
+inline constexpr auto MAX_DRAW_MODEL_INFO_MATERIALS = 8;
 
 struct DrawModelResults_t
 {
@@ -209,7 +194,12 @@ struct DrawModelInfo_t
 	bool			m_bStaticLighting;
 	MaterialLightingState_t	m_LightingState;
 
-	IMPLEMENT_OPERATOR_EQUAL( DrawModelInfo_t );
+	public:
+	DrawModelInfo_t &operator=( const DrawModelInfo_t &src )
+	{
+		std::memcpy( this, &src, sizeof( DrawModelInfo_t ) );
+		return *this;
+	};
 };
 
 enum
@@ -280,7 +270,12 @@ struct GetTriangles_Vertex_t
 	int m_BoneIndex[4];
 	int m_NumBones;
 
-	IMPLEMENT_OPERATOR_EQUAL( GetTriangles_Vertex_t );
+	public:
+	GetTriangles_Vertex_t &operator=( const GetTriangles_Vertex_t &src )
+	{
+		std::memcpy( this, &src, sizeof( GetTriangles_Vertex_t ) );
+		return *this;
+	};
 };
 
 struct GetTriangles_MaterialBatch_t
@@ -295,7 +290,8 @@ struct GetTriangles_Output_t
 	std::vector< GetTriangles_MaterialBatch_t > m_MaterialBatches;
 	matrix3x4_t m_PoseToWorld[MAXSTUDIOBONES];
 
-	DISALLOW_OPERATOR_EQUAL( GetTriangles_Output_t );
+	GetTriangles_Output_t &operator=( const GetTriangles_Output_t & ) = delete;
+public:;
 };
 
 //-----------------------------------------------------------------------------
@@ -305,9 +301,9 @@ struct GetTriangles_Output_t
 // code expectes data to be dynamic and invokes cache callback prior to iterative access.
 // virtualModel is member passed in via studiohdr_t and passed back for model identification.
 //-----------------------------------------------------------------------------
-#define STUDIO_DATA_CACHE_INTERFACE_VERSION "VStudioDataCache005"
+inline constexpr const char *STUDIO_DATA_CACHE_INTERFACE_VERSION = "VStudioDataCache005";
  
-abstract_class IStudioDataCache : public IAppSystem
+class IStudioDataCache : public IAppSystem
 {
 public:
 	virtual bool VerifyHeaders( studiohdr_t *pStudioHdr ) = 0;
@@ -318,7 +314,7 @@ public:
 //-----------------------------------------------------------------------------
 // Studio render interface
 //-----------------------------------------------------------------------------
-abstract_class IStudioRender : public IAppSystem
+class IStudioRender : public IAppSystem
 {
 public:
 	virtual void BeginFrame( void ) = 0;
@@ -440,6 +436,4 @@ public:
 	virtual void GatherRenderedFaceInfo( FaceInfoCallbackFunc_t pFunc ) = 0;
 };
 
-DECLARE_TIER3_INTERFACE( IStudioRender, g_pStudioRender );
-
-#endif // ISTUDIORENDER_H
+extern IStudioRender *g_pStudioRender;;

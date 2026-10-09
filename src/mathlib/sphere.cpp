@@ -1,9 +1,10 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 #include "sphere.h"
 //#include "body.h"
 //#include "gjk.h"
 //#include "toi.h"
-
 
 //--------------------------------------------------------------------------------------------------
 // Local utilities 
@@ -19,9 +20,9 @@ static void CastStationaryHit( CShapeCastResult& out, float c, const Vector &p, 
 	{
 		out.m_flHitTime = 0;
 		out.m_vHitPoint = p;
-		if( mm > FLT_EPSILON )
+		if( mm > std::numeric_limits<float>::epsilon() )
 		{
-			out.m_vHitNormal = m / sqrtf( mm );
+			out.m_vHitNormal = m / std::sqrtf( mm );
 		}
 		else
 		{
@@ -31,7 +32,7 @@ static void CastStationaryHit( CShapeCastResult& out, float c, const Vector &p, 
 	else
 	{
 		// we didn't hit - we're outside and we don't move
-		out.m_flHitTime = FLT_MAX;
+		out.m_flHitTime = std::numeric_limits<float>::max();
 	}
 }
 
@@ -40,7 +41,7 @@ static void CastStationaryHit( CShapeCastResult& out, float c, const Vector &p, 
 void CastSphereRay( CShapeCastResult& out, const Vector &m, const Vector& p, const Vector& d, float flRadius )
 {
 	float a = DotProduct( d, d ), mm = DotProduct( m, m ), c = mm - Sqr( flRadius );
-	if( a < FLT_EPSILON * FLT_EPSILON )
+	if( a < std::numeric_limits<float>::epsilon() * std::numeric_limits<float>::epsilon() )
 	{
 		// we barely move; just detect if we're in the sphere or not
 		CastStationaryHit( out, c, p, m, mm );
@@ -52,10 +53,10 @@ void CastSphereRay( CShapeCastResult& out, const Vector &m, const Vector& p, con
 	if( D < 0 )
 	{
 		// no intersection at all
-		out.m_flHitTime = FLT_MAX;
+		out.m_flHitTime = std::numeric_limits<float>::max();
 		return;
 	}
-	float sqrtD = sqrtf( D );
+	float sqrtD = std::sqrtf( D );
 	float t = ( -b - sqrtD ) / a;
 	if( t < 0 )
 	{
@@ -72,4 +73,3 @@ void CastSphereRay( CShapeCastResult& out, const Vector &m, const Vector& p, con
 		out.m_vHitNormal = ( m + dt ) / flRadius; // Should I normalize this here or is this sufficient precision?
 	}
 }
-

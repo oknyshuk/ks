@@ -1,10 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 
@@ -12,10 +7,9 @@
 #include "treeleaf_ps20b.inc"
 #include "treeleaf_vs20.inc"
 
-
 BEGIN_VS_SHADER_FLAGS( TreeLeaf, "Help for TreeLeaf", SHADER_NOT_EDITABLE )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( LEAFCENTER, SHADER_PARAM_TYPE_VEC3, "[0 0 0]", "Center of leaf cluster for lighting" )
 	END_SHADER_PARAMS
 

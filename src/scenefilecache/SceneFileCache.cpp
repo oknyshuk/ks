@@ -1,18 +1,16 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Cache for VCDs. PC async loads and uses the datacache to manage.
 // 360 uses a baked resident image of aggregated compiled VCDs.
-//
-//=============================================================================
 
+import ks.tier1;
 #include "scenefilecache/ISceneFileCache.h"
 #include "filesystem.h"
-#include <vector>
-#include "tier1/lzmaDecoder.h"
+import std;
 #include "scenefilecache/SceneImageFile.h"
 #include "choreoscene.h"
 
-#include "tier0/memalloc.h"
 IFileSystem	*filesystem = nullptr;
 																				
 bool IsBufferBinaryVCD( char *pBuffer, int bufferSize )
@@ -38,8 +36,8 @@ public:
 	// Physically reloads image from disk
 	virtual void			Reload();
 
-	virtual size_t			GetSceneBufferSize( char const *pFilename );
-	virtual bool			GetSceneData( char const *pFilename, byte *buf, size_t bufsize );
+	virtual std::size_t			GetSceneBufferSize( char const *pFilename );
+	virtual bool			GetSceneData( char const *pFilename, byte *buf, std::size_t bufsize );
 
 	// alternate resident image implementation
 	virtual bool			GetSceneCachedData( char const *pFilename, SceneCachedData_t *pData );
@@ -50,7 +48,7 @@ private:
 	// alternate implementation - uses a resident baked image of the file cache, contains all the compiled VCDs
 	// single i/o read at startup to mount the image
 	int						FindSceneInImage( const char *pSceneName );
-	bool					GetSceneDataFromImage( const char *pSceneName, int iIndex, byte *pData, size_t *pLength );
+	bool					GetSceneDataFromImage( const char *pSceneName, int iIndex, byte *pData, std::size_t *pLength );
 
 private:
 	std::vector< std::byte >		m_SceneImageFile;
@@ -72,11 +70,10 @@ void CSceneFileCache::Disconnect()
 
 InitReturnVal_t CSceneFileCache::Init()
 {
-	const char *pSceneImageName = "scenes/scenes" PLATFORM_EXT ".image";
+	const char *pSceneImageName = "scenes/scenes"".image";
 
 	if ( m_SceneImageFile.empty() )
 	{
-		MEM_ALLOC_CREDIT();
 
 		if ( auto file = filesystem->ReadFile( pSceneImageName, "GAME" ) )
 		{
@@ -105,35 +102,35 @@ void CSceneFileCache::Reload()
 	Init();
 }
 
-size_t CSceneFileCache::GetSceneBufferSize( char const *pFilename )
+std::size_t CSceneFileCache::GetSceneBufferSize( char const *pFilename )
 {
-	size_t returnSize = 0;
+	std::size_t returnSize = 0;
 
 	char fn[MAX_PATH];
-	Q_strncpy( fn, pFilename, sizeof( fn ) );
-	Q_FixSlashes( fn );
-	Q_strlower( fn );
+	V_strncpy( fn, pFilename, sizeof( fn ) );
+	V_FixSlashes( fn );
+	V_strlower( fn );
 
 	GetSceneDataFromImage( pFilename, FindSceneInImage( fn ), nullptr, &returnSize );
 	return returnSize;
 }
 
-bool CSceneFileCache::GetSceneData( char const *pFilename, byte *buf, size_t bufsize )
+bool CSceneFileCache::GetSceneData( char const *pFilename, byte *buf, std::size_t bufsize )
 {
-	Assert( pFilename );
-	Assert( buf );
-	Assert( bufsize > 0 );
+	contract_assert( pFilename );
+	contract_assert( buf );
+	contract_assert( bufsize > 0 );
 
 	char fn[MAX_PATH];
-	Q_strncpy( fn, pFilename, sizeof( fn ) );
-	Q_FixSlashes( fn );
-	Q_strlower( fn );
+	V_strncpy( fn, pFilename, sizeof( fn ) );
+	V_FixSlashes( fn );
+	V_strlower( fn );
 
-	size_t nLength = bufsize;
+	std::size_t nLength = bufsize;
 	return GetSceneDataFromImage( pFilename, FindSceneInImage( fn ), buf, &nLength );
 }
 
-bool CSceneFileCache::GetSceneCachedData( char const *pFilename, SceneCachedData_t * RESTRICT pData )
+bool CSceneFileCache::GetSceneCachedData( char const *pFilename, SceneCachedData_t * __restrict__ pData )
 {
 	int iScene = FindSceneInImage( pFilename );
 	SceneImageHeader_t *pHeader = (SceneImageHeader_t *)m_SceneImageFile.data();
@@ -173,7 +170,7 @@ short CSceneFileCache::GetSceneCachedSound( int iScene, int iSound )
 	if ( iSound < 0 || iSound >= pSummary->numSounds )
 	{
 		// bad index
-		Assert( 0 );
+		contract_assert( 0 );
 		return -1;
 	}
 
@@ -212,7 +209,7 @@ int CSceneFileCache::FindSceneInImage( const char *pSceneName )
 	// We're going to assume that all filenames have the correct extension
 //	V_SetExtension( szCleanName, ".vcd", sizeof( szCleanName ) );
 
-	CRC32_t crcFilename = CRC32_ProcessSingleBuffer( szCleanName, strlen( szCleanName ) );
+	CRC32_t crcFilename = CRC32_ProcessSingleBuffer( szCleanName, std::strlen( szCleanName ) );
 
 	// use binary search, entries are sorted by ascending crc
 	int nLowerIdx = 1;
@@ -251,7 +248,7 @@ int CSceneFileCache::FindSceneInImage( const char *pSceneName )
 //-----------------------------------------------------------------------------
 //  Returns true if success, false otherwise. Caller must free ouput scene data
 //-----------------------------------------------------------------------------
-bool CSceneFileCache::GetSceneDataFromImage( const char *pFileName, int iScene, byte *pSceneData, size_t *pSceneLength )
+bool CSceneFileCache::GetSceneDataFromImage( const char *pFileName, int iScene, byte *pSceneData, std::size_t *pSceneLength )
 {
 	SceneImageHeader_t *pHeader = (SceneImageHeader_t *)m_SceneImageFile.data();
 	if ( !pHeader || iScene < 0 || iScene >= pHeader->nNumScenes )
@@ -299,16 +296,16 @@ bool CSceneFileCache::GetSceneDataFromImage( const char *pFileName, int iScene, 
 	{
 		if ( pSceneData )
 		{
-			size_t nCountToCopy = std::min(*pSceneLength, (size_t)pEntries[iScene].nDataLength );
+			std::size_t nCountToCopy = std::min(*pSceneLength, (std::size_t)pEntries[iScene].nDataLength );
 			V_memcpy( pSceneData, pData, nCountToCopy );
 		}
 		if ( pSceneLength )
 		{
-			*pSceneLength = (size_t)pEntries[iScene].nDataLength;
+			*pSceneLength = (std::size_t)pEntries[iScene].nDataLength;
 		}
 	}
 	return true;
 }
 
 static CSceneFileCache g_SceneFileCache;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CSceneFileCache, ISceneFileCache, SCENE_FILE_CACHE_INTERFACE_VERSION, g_SceneFileCache );
+static InterfaceReg s_Reg_CSceneFileCache_ISceneFileCache( []() -> void * { return static_cast<ISceneFileCache *>( &g_SceneFileCache ); }, SCENE_FILE_CACHE_INTERFACE_VERSION );;

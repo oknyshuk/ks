@@ -1,21 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ENVMESSAGE_H
-#define ENVMESSAGE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
 #include "baseentity.h"
 #include "entityoutput.h"
 
-
-#define SF_MESSAGE_ONCE			0x0001		// Fade in, not out
-#define SF_MESSAGE_ALL			0x0002		// Send to all clients
+inline constexpr auto SF_MESSAGE_ONCE = 0x0001; // Fade in, not out
+inline constexpr auto SF_MESSAGE_ALL = 0x0002; // Send to all clients
 
 class CMessage : public CPointEntity
 {
@@ -43,5 +36,3 @@ private:
 	[[= ks::reflect::As{ FIELD_SOUNDNAME } ]] [[= ks::reflect::Key{ .name = "messagesound" } ]] string_t m_sNoise;
 	[[= ks::reflect::Key{ .name = "OnShowMessage" } ]] COutputEvent m_OnShowMessage;
 };
-
-#endif // ENVMESSAGE_H

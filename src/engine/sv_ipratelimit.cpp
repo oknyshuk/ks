@@ -1,21 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Handles all the functions for implementing remote access to the engine
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "netadr.h"
-#include <mutex>
+// Purpose: Handles all the functions for implementing remote access to the engine
+
+import ks.tier1;
+import std;
 #include "sv_ipratelimit.h"
-#include "convar.h"
-#include "utlvector.h"
-#include <map>
-#include "tier1/map_ops.h"
-#include <unordered_map>
 #include "filesystem.h"
 #include "sv_log.h"
-#include "tier1/ns_address.h"
-
 
 static ConVar	sv_max_queries_sec( "sv_max_queries_sec", "10.0", FCVAR_RELEASE, "Maximum queries per second to respond to from a single IP address." );
 static ConVar	sv_max_queries_window( "sv_max_queries_window", "30", FCVAR_RELEASE, "Window over which to average queries per second averages." );
@@ -115,7 +107,7 @@ bool CIPRateLimit::CheckIP( netadr_t adr )
 	
 	// check the per ip rate (do this first, so one person dosing doesn't add to the global max rate
 	ip_t clientIP;
-	memcpy( &clientIP, adr.ip, sizeof(ip_t) );
+	std::memcpy( &clientIP, adr.ip, sizeof(ip_t) );
 	
 	int const MAX_TREE_SIZE = sv_max_queries_tracked_ips_max.GetInt();
 	int const MAX_TREE_PRUNE = sv_max_queries_tracked_ips_prune.GetInt();

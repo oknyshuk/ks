@@ -1,11 +1,18 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 #include "particlemgr.h"
 #include "particles_new.h"
 #include "iclientmode.h"
@@ -13,15 +20,9 @@
 #include "particle_property.h"
 #include "toolframework/itoolframework.h"
 #include "toolframework_client.h"
-#include "tier1/keyvalues.h"
 #include "model_types.h"
-#include "vprof.h"
 #include "datacache/iresourceaccesscontrol.h"
-#include "tier2/tier2.h"
 #include "viewrender.h"
-
-
-
 
 extern ConVar cl_particleeffect_aabb_buffer;
 extern ConVar cl_particles_show_bbox;
@@ -246,7 +247,7 @@ void CNewParticleEffect::AddRef()
 
 void CNewParticleEffect::Release()
 {
-	Assert( m_RefCount > 0 );
+	contract_assert( m_RefCount > 0 );
 	--m_RefCount;
 
 	// If all the particles are already gone, delete ourselves now.
@@ -512,7 +513,7 @@ CNewParticleEffect* CNewParticleEffect::ReplaceWith( const char *pParticleSystem
 	// At this point any references should have been redirected,
 	// but we may still be running with some stray particles, so we
 	// might not be flagged for removal - force the issue!
-	Assert( m_RefCount == 0 );
+	contract_assert( m_RefCount == 0 );
 	SetRemoveFlag();
 
 	return pNewEffect;
@@ -562,8 +563,8 @@ void CNewParticleEffect::DetectChanges()
 
 	if ( !m_bBoundsValid )
 	{
-		m_LastMin.Init( FLT_MAX, FLT_MAX, FLT_MAX );
-		m_LastMin.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
+		m_LastMin.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+		m_LastMin.Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 		return;
 	}
 
@@ -586,7 +587,7 @@ extern ConVar r_DrawParticles;
 //-----------------------------------------------------------------------------
 int CNewParticleEffect::DrawModel( int flags, const RenderableInstance_t &instance )
 {
-	VPROF_BUDGET( "CNewParticleEffect::DrawModel", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "CNewParticleEffect::DrawModel", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	if ( r_DrawParticles.GetBool() == false )
 		return 0;
 
@@ -745,7 +746,9 @@ static void DumpParticleStats_f( void )
 
 static ConCommand cl_dump_particle_stats( "cl_dump_particle_stats", DumpParticleStats_f, "dump particle profiling info to particle_profile.csv") ;
 
-CON_COMMAND( cl_particles_dumplist, "Dump all new particles, optional name substring." )
+static void cl_particles_dumplist( const CCommand &args );
+static ConCommand cl_particles_dumplist_command( "cl_particles_dumplist", cl_particles_dumplist, "Dump all new particles, optional name substring." );
+static void cl_particles_dumplist( const CCommand &args )
 {
 	if ( args.ArgC() == 2 )
 	{

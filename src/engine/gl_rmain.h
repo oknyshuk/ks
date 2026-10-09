@@ -1,17 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef GL_RMAIN_H
-#define GL_RMAIN_H
-
-
-
-#include "mathlib/vector.h"
-#include "mathlib/mathlib.h"
+import std;
+import ks.math;
+class CViewSetup;
 
 extern Frustum_t g_Frustum;
 
@@ -31,5 +24,3 @@ void R_CheckForPaintmapChanges();
 
 // NOTE: Screen coordinates go from 0->w, 0->h
 void ComputeWorldToScreenMatrix( VMatrix *pWorldToScreen, const VMatrix &worldToProjection, const CViewSetup &viewSetup );
-
-#endif // GL_RMAIN_H

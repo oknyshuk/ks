@@ -1,5 +1,8 @@
-#ifndef KISAKSTRIKE_RKHUD_KILLFEED_H
-#define KISAKSTRIKE_RKHUD_KILLFEED_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include <rocketui/rmlui.h>
 
 #include <rocketui/rocketui.h>
 #include "rkhud_document.h"
@@ -33,5 +36,3 @@ private:
     void CheckForOldEntries();
     void OnPlayerDeath( IGameEvent *event );
 };
-
-#endif //KISAKSTRIKE_RKHUD_KILLFEED_H

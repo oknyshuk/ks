@@ -1,15 +1,75 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Controls the pose parameters of a model
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include "reflect_annotations.h"
+// Purpose: Controls the pose parameters of a model
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
 #endif
-#include "reflect_annotations.h"
 #ifdef GAME_DLL
 #include "reflect_sendtable.h"
 #include "reflect_datamap.h"
@@ -20,7 +80,6 @@
 	#include "baseanimating.h"
 	#include "props.h"
 #endif
-
 
 #ifndef CLIENT_DLL
 //-----------------------------------------------------------------------------
@@ -340,7 +399,7 @@ void C_PoseController::OnDataChanged( DataUpdateType_t updateType )
 		{
 			float fInterpBackward = ( fClientPoseValue + ( ( fClientPoseValue < 0.5f ) ? ( 1.0f ) : ( -1.0f ) ) ) - m_fPoseValue;
 
-			m_PoseTransitionValue.Init( ( ( fabsf( fInterpForward ) < fabsf( fInterpBackward ) ) ? ( fInterpForward ) : ( fInterpBackward ) ), 0.0f, m_fInterpolationTime );
+			m_PoseTransitionValue.Init( ( ( std::fabsf( fInterpForward ) < fabsf( fInterpBackward ) ) ? ( fInterpForward ) : ( fInterpBackward ) ), 0.0f, m_fInterpolationTime );
 		}
 		else
 		{
@@ -374,13 +433,13 @@ void C_PoseController::UpdateModulation( void )
 		{
 			float fCycleTime = m_fFModRate * ( gpGlobals->curtime + m_fFModTimeOffset );
 
-			m_fCurrentFMod = m_fFModAmplitude * sinf( fCycleTime * ( 2.0f * M_PI ) );
+			m_fCurrentFMod = m_fFModAmplitude * std::sinf( fCycleTime * ( 2.0f * std::numbers::pi ) );
 			break;
 		}
 
 	case POSECONTROLLER_FMODTYPE_SQUARE:
 		{
-			float fCycleTime = fabsf( m_fFModRate * 2.0f * ( gpGlobals->curtime + m_fFModTimeOffset ) );
+			float fCycleTime = std::fabsf( m_fFModRate * 2.0f * ( gpGlobals->curtime + m_fFModTimeOffset ) );
 
 			// Separate the current time into integer and decimal
 			int iIntegerPortion = static_cast<int>( fCycleTime );
@@ -396,7 +455,7 @@ void C_PoseController::UpdateModulation( void )
 
 	case POSECONTROLLER_FMODTYPE_TRIANGLE:
 		{
-			float fCycleTime = fabsf( m_fFModRate * 4.0f * ( gpGlobals->curtime + m_fFModTimeOffset ) );
+			float fCycleTime = std::fabsf( m_fFModRate * 4.0f * ( gpGlobals->curtime + m_fFModTimeOffset ) );
 
 			// Separate the current time into integer and decimal
 			int iIntegerPortion = static_cast<int>( fCycleTime );
@@ -424,7 +483,7 @@ void C_PoseController::UpdateModulation( void )
 
 	case POSECONTROLLER_FMODTYPE_SAWTOOTH:
 		{
-			float fCycleTime = fabsf( m_fFModRate * 2.0f * ( gpGlobals->curtime + m_fFModTimeOffset ) );
+			float fCycleTime = std::fabsf( m_fFModRate * 2.0f * ( gpGlobals->curtime + m_fFModTimeOffset ) );
 
 			// Separate the current time into integer and decimal
 			int iIntegerPortion = static_cast<int>( fCycleTime );

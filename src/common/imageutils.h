@@ -1,11 +1,9 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-//=======================================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef IMAGECONVERSION_H
-#define IMAGECONVERSION_H
-
-#include "tier0/basetypes.h"
+import std;
+import ks.core;
 
 namespace ks { class byte_reader; class byte_writer; }
 struct Bitmap_t;
@@ -97,5 +95,3 @@ ConversionErrorType ImgUtl_SavePNGBitmapToBuffer( ks::byte_writer &fileData, con
 ConversionErrorType ImgUtl_ResizeBitmap( Bitmap_t &destBitmap, int nWidth, int nHeight, const Bitmap_t *pImgSource = nullptr );
 
 ConversionErrorType ImgUtl_CropRGBA( int x0, int y0, int nSrcWidth, int nSrcHeight, int nDestWidth, int nDestHeight, const unsigned char *pIn, unsigned char *pOut );
-
-#endif // IMAGECONVERSION_H

@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( PREDICTION_H )
-#define PREDICTION_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "mathlib/vector.h"
+import std;
+import ks.math;
 #include "iprediction.h"
 #include "c_baseplayer.h"
 #include "cdll_bounded_cvars.h"
@@ -52,19 +46,13 @@ public:
 	virtual bool	IsFirstTimePredicted( void ) const;
 	virtual int		GetLastAcknowledgedCommandNumber( void ) const;
 
-#if defined( KEEP_COMMAND_REPREDICTION_COUNT )
-	virtual unsigned int GetRepredictionCount( void ) const;
-#endif
-
-#if !defined( NO_ENTITY_PREDICTION )
 	virtual int		GetIncomingPacketNumber( void ) const;
-#endif
 
 	float			GetIdealPitch( int nSlot ) const 
 	{
 		if ( nSlot == -1 )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			return 0.0f;
 		}
 		return m_Split[ nSlot ].m_flIdealPitch;
@@ -137,7 +125,6 @@ private:
 	void			FinishPredictionList( int listRow, int showlist, int totalsize, int totalsize_intermediate );
 	void			CheckPredictConvar();
 
-#if !defined( NO_ENTITY_PREDICTION )
 // Data
 protected:
 	// Last object the player was standing on
@@ -176,14 +163,10 @@ private:
 		std::vector< CHandle< CBaseEntity > > m_EntsWithPredictionErrorsInLastAck;
 		bool			m_bPerformedTickShift;
 
-#if defined( KEEP_COMMAND_REPREDICTION_COUNT )
-		unsigned int	m_Debug_RepredictionCount;
-#endif
 	};
 
 	Split_t				m_Split[ MAX_SPLITSCREEN_PLAYERS ];
 
-#endif
 	CGlobalVarsBase	m_SavedVars;
 
 	bool			m_bPlayerOriginTypedescriptionSearched;
@@ -192,5 +175,3 @@ private:
 };
  
 extern CPrediction *prediction;
-
-#endif // PREDICTION_H

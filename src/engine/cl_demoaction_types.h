@@ -1,13 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 //-----------------------------------------------------------------------------
 // Purpose: Skips ahead in demo to specified frame/time
 //-----------------------------------------------------------------------------
+#include "cl_demoaction.h"
+#include "shake.h"
+#include "client_textmessage.h"
+
 class CDemoActionSkipAhead : public CBaseDemoAction
 {
 	typedef CBaseDemoAction BaseClass;

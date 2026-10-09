@@ -1,20 +1,35 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ====
-//
-// An entity that allows level designer control over the fog parameters.
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "cbase.h"
+// Purpose: An entity that allows level designer control over the fog parameters.
+
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
-#include "reflect_annotations.h"
 #include "postprocesscontroller.h"
-#include "entityinput.h"
-#include "entityoutput.h"
-#include "eventqueue.h"
 #include "player.h"
 #include "world.h"
-#include "ndebugoverlay.h"
 #include "triggers.h"
 
 CPostProcessSystem s_PostProcessSystem( "PostProcessSystem" );

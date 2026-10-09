@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -15,7 +16,7 @@ private:
 public:
 	void SetRELOADZCULL( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nRELOADZCULL = i;
 #ifdef _DEBUG
 		m_bRELOADZCULL = true;
@@ -23,7 +24,7 @@ public:
 	}
 	void SetRELOADZCULL( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nRELOADZCULL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bRELOADZCULL = true;
@@ -44,7 +45,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bRELOADZCULL;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nRELOADZCULL ) + 0;
 	}
@@ -66,7 +67,7 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_bufferclearobeystencil_ps20b 0
+inline constexpr int shaderDynamicTest_bufferclearobeystencil_ps20b = 0;
 
 static const ShaderComboInformation_t s_StaticComboArray_bufferclearobeystencil_ps20b[1] = 
 {
@@ -74,7 +75,7 @@ static const ShaderComboInformation_t s_StaticComboArray_bufferclearobeystencil_
 };
 static const ShaderComboSemantics_t bufferclearobeystencil_ps20b_combos =
 {
-	"bufferclearobeystencil_ps20b", NULL, 0, s_StaticComboArray_bufferclearobeystencil_ps20b, 1 
+	"bufferclearobeystencil_ps20b", nullptr, 0, s_StaticComboArray_bufferclearobeystencil_ps20b, 1 
 };
 
 class ConstructMe_bufferclearobeystencil_ps20b

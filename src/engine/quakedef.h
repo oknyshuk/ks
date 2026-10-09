@@ -1,28 +1,20 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Primary header for engine
-#if !defined( QUAKEDEF_H )
-#define QUAKEDEF_H
 
 // OPTIONAL DEFINES
 //#define	PARANOID		// speed sapping error checking
-#include "basetypes.h"
+import std;
+import ks.tier1;
 #include "qlimits.h"
 
 //===========================================
 // FIXME, remove more of these?
 #include "sysexternal.h"
-#include "tier1/tier1.h"
-#include "mathlib/mathlib.h"
 #include "common.h"
 #include "cmd.h"
 #include "protocol.h"
 #include "render.h"
 #include "gl_model.h"
-
-
-#endif // QUAKEDEF_H

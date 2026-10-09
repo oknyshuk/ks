@@ -1,14 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ENGINESPRITE_H
-#define ENGINESPRITE_H
-
-#include "mathlib/vector.h"
+import std;
+import ks.math;
 #include "avi/iavi.h"
 #include "avi/ibik.h"
 #include "const.h"
@@ -62,5 +57,3 @@ private:
 	float m_hudSpriteColor[3];
 	float up, down, left, right;
 };
-
-#endif // ENGINESPRITE_H

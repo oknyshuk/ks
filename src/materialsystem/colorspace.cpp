@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <math.h>
-#include "mathlib/bumpvects.h"
+import std;
 #include "colorspace.h"
 #include "materialsystem_global.h"
 #include "IHardwareConfigInternal.h"
-#include "materialsystem/materialsystem_config.h"
 
 //static float			texLightToLinear[256];	// texlight (0..255) to linear (0..4)
 static float			textureToLinear[256];	// texture (0..255) to linear (0..1)
@@ -81,7 +76,7 @@ void ColorSpace::SetGamma( float screenGamma, float texGamma,
 			f = 0.125f + ((f - g3) / (1.0f - g3)) * 0.875f;
 
 		// convert linear space to desired gamma space
-		inf = ( int )( 255 * pow ( f, g ) );
+		inf = ( int )( 255 * std::pow ( f, g ) );
 
 		if (inf < 0)
 			inf = 0;
@@ -93,13 +88,13 @@ void ColorSpace::SetGamma( float screenGamma, float texGamma,
 	for (i=0 ; i<256 ; i++)
 	{
 		// convert from nonlinear texture space (0..255) to linear space (0..1)
-		textureToLinear[i] =  ( float )pow( i / 255.0f, texGamma );
+		textureToLinear[i] =  ( float )std::pow( i / 255.0f, texGamma );
 	}
 
 	for (i=0 ; i<1024 ; i++)
 	{
 		// convert from linear space (0..1) to nonlinear texture space (0..255)
-		linearToTexture[i] =  ( int )( pow( i / 1023.0f, 1.0f / texGamma ) * 255 );
+		linearToTexture[i] =  ( int )( std::pow( i / 1023.0f, 1.0f / texGamma ) * 255 );
 	}
 
 	
@@ -128,7 +123,7 @@ void ColorSpace::SetGamma( float screenGamma, float texGamma,
 	for (i=0 ; i<4096 ; i++)
 	{
 		// convert from linear 0..4 (x1024) to screen corrected vertex space (0..1?)
-		f = ( float )pow ( i/1024.0f, 1.0f / screenGamma );
+		f = ( float )std::pow ( i/1024.0f, 1.0f / screenGamma );
 		
 		g_LinearToVertex[i] = f * overbrightFactor;
 		if (g_LinearToVertex[i] > 1)
@@ -168,7 +163,7 @@ float ColorSpace::TexLightToLinear( int c, int exponent )
 {
 //	return texLightToLinear[ c ];
 	// optimize me
-	return ( float )c * ( float )pow( 2.0f, exponent ) * ( 1.0f / 255.0f );
+	return ( float )c * ( float )std::pow( 2.0f, exponent ) * ( 1.0f / 255.0f );
 }
 
 // converts 0..1 linear value to screen gamma (0..255)
@@ -193,5 +188,3 @@ uint16 ColorSpace::LinearFloatToCorrectedShort( float in )
 
 	return out;
 }
-
-

@@ -1,11 +1,12 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "BASETEXTURE2"				"0..1"
 // STATIC: "BUMPMAP"					"0..2"
 // STATIC: "BUMPMAP2"					"0..1"  [ps20b] [ps30]
 // STATIC: "BUMPMAP2"					"0..0"  [ps20]
 // STATIC: "CUBEMAP"					"0..2"
-// STATIC: "ENVMAPMASK"					"0..1"  
+// STATIC: "ENVMAPMASK"					"0..1"
 // STATIC: "BASEALPHAENVMAPMASK"		"0..1"
 // STATIC: "SELFILLUM"					"0..1"
 // STATIC: "NORMALMAPALPHAENVMAPMASK"	"0..1"
@@ -16,10 +17,10 @@
 // STATIC: "ENVMAPANISOTROPY"			"0..0"  [ps20]
 // STATIC: "ADDBUMPMAPS"				"0..1"  [ps20b] [ps30]
 // STATIC: "ADDBUMPMAPS"				"0..0"  [ps20]
-
 // disabling things that are unused for now
 // STATIC: "BUMPMASK"                   "0..0"
 // diffuse bump map is always true when bumpmapping is enabled, so just set it to 1
+
 #define DIFFUSEBUMPMAP 1
 
 // STATIC: "DETAIL_BLEND_MODE"			"0..12"

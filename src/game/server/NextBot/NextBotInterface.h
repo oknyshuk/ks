@@ -1,10 +1,9 @@
+#pragma once
 // NextBotInterface.h
 // Interface for NextBot
 // Author: Michael Booth, May 2006
 // Copyright (c) 2006 Turtle Rock Studios, Inc. - All Rights Reserved
 
-#ifndef _NEXT_BOT_INTERFACE_H_
-#define _NEXT_BOT_INTERFACE_H_
 
 #include "NextBot/NextBotKnownEntity.h"
 #include "NextBotComponentInterface.h"
@@ -296,4 +295,3 @@ inline INextBotEventResponder *INextBot::NextContainedResponder( INextBotEventRe
 }
 
 
-#endif // _NEXT_BOT_INTERFACE_H_

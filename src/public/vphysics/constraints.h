@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CONSTRAINTS_H
-#define CONSTRAINTS_H
-
+import ks.math;
 #include "vphysics_interface.h"
-#include "mathlib/mathlib.h"
+import std;
 
 // constraint groups
 struct constraint_groupparams_t
@@ -345,6 +340,3 @@ public:
 	virtual void SetErrorParams( const constraint_groupparams_t &params ) = 0;
 	virtual void SolvePenetration( IPhysicsObject *pObj0, IPhysicsObject *pObj1 ) = 0;
 };
-
-
-#endif // CONSTRAINTS_H

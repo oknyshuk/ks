@@ -1,23 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
-#include "utlvector.h"
+import ks.tier1;
 #include "materialsystem/imaterialsystem.h"
 #include "IHardwareConfigInternal.h"
 #include "shadersystem.h"
 #include "shaderapi/ishaderutil.h"
 #include "shaderapi/ishaderapi.h"
 #include "materialsystem/imesh.h"
-#include "tier0/dbg.h"
+import std;
 #include "materialsystem/idebugtextureinfo.h"
 #include "materialsystem/deformations.h"
-#include "shaderapi_builtin.h"
-
 
 //-----------------------------------------------------------------------------
 // The empty mesh
@@ -258,7 +252,7 @@ public:
 	virtual void ReacquireResources();
 	virtual IMesh* CreateStaticMesh( VertexFormat_t fmt, const char *pTextureBudgetGroup, IMaterial * pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr );
 	virtual void DestroyStaticMesh( IMesh* mesh );
-	virtual IShaderBuffer* CompileShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion ) { return nullptr; }
+	virtual IShaderBuffer* CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion ) { return nullptr; }
 	virtual VertexShaderHandle_t CreateVertexShader( IShaderBuffer* pShaderBuffer ) { return VERTEX_SHADER_HANDLE_INVALID; }
 	virtual void DestroyVertexShader( VertexShaderHandle_t hShader ) {}
 	virtual GeometryShaderHandle_t CreateGeometryShader( IShaderBuffer* pShaderBuffer ) { return GEOMETRY_SHADER_HANDLE_INVALID; }
@@ -1180,7 +1174,7 @@ public:
 	virtual void UpdateStereoTexture( ShaderAPITextureHandle_t texHandle, bool *pStereoActiveThisFrame ) {}
 	virtual void SetSRGBWrite( bool bState ) {}
 
-	void PrintfVA( char *fmt, va_list vargs ) {}
+	void PrintfVA( char *fmt, std::va_list vargs ) {}
 	void Printf( char *fmt, ... ) {}
 	float Knob( char *knobname, float *setvalue = nullptr ) { return 0.0f; };
 	void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics ) {}
@@ -1247,17 +1241,17 @@ static void* ShaderInterfaceFactory( const char *pInterfaceName, int *pReturnCod
 	{
 		*pReturnCode = IFACE_OK;
 	}
-	if ( !Q_stricmp( pInterfaceName, SHADER_DEVICE_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_INTERFACE_VERSION ) )
 		return static_cast< IShaderDevice* >( &s_ShaderDeviceEmpty );
-	if ( !Q_stricmp( pInterfaceName, SHADERAPI_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, SHADERAPI_INTERFACE_VERSION ) )
 		return static_cast< IShaderAPI* >( &g_ShaderAPIEmpty );
-	if ( !Q_stricmp( pInterfaceName, SHADERSHADOW_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, SHADERSHADOW_INTERFACE_VERSION ) )
 		return static_cast< IShaderShadow* >( &g_ShaderShadow );
-	if ( !Q_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) )
 		return static_cast< IShaderDeviceMgr* >( &s_ShaderDeviceMgrEmpty );
-	if ( !Q_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
 		return static_cast< IMaterialSystemHardwareConfig* >( &g_ShaderAPIEmpty );
-	if ( !Q_stricmp( pInterfaceName, DEBUG_TEXTURE_INFO_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, DEBUG_TEXTURE_INFO_VERSION ) )
 		return static_cast< IDebugTextureInfo* >( &g_ShaderAPIEmpty );
 
 	if ( pReturnCode )
@@ -1293,9 +1287,9 @@ void CShaderDeviceMgrEmpty::Disconnect()
 
 void *CShaderDeviceMgrEmpty::QueryInterface( const char *pInterfaceName )
 {
-	if ( !Q_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) )
 		return static_cast< IShaderDeviceMgr* >( this );
-	if ( !Q_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
+	if ( !V_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
 		return static_cast< IMaterialSystemHardwareConfig* >( &g_ShaderAPIEmpty );
 	return nullptr;
 }
@@ -1341,7 +1335,7 @@ bool CShaderDeviceMgrEmpty::GetRecommendedConfigurationInfo( int nAdapter, int n
 // Returns info about each adapter
 void CShaderDeviceMgrEmpty::GetAdapterInfo( int adapter, MaterialAdapterInfo_t& info ) const
 {
-	memset( &info, 0, sizeof( info ) );
+	std::memset( &info, 0, sizeof( info ) );
 	info.m_nDXSupportLevel = 90;
 }
 
@@ -1436,7 +1430,7 @@ IIndexBuffer *CShaderDeviceEmpty::CreateIndexBuffer( ShaderBufferType_t bufferTy
 	case SHADER_BUFFER_TYPE_STATIC_TEMP:
 		return &m_Mesh;
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 	case SHADER_BUFFER_TYPE_DYNAMIC:
 	case SHADER_BUFFER_TYPE_DYNAMIC_TEMP:
 		return &m_DynamicMesh;
@@ -1630,7 +1624,7 @@ void CEmptyMesh::ValidateData( int numVerts, int numIndices, const MeshDesc_t & 
 IMaterial* CEmptyMesh::GetMaterial()
 {
 	// umm. this don't work none
-	Assert(0);
+	contract_assert( 0 );
 	return 0;
 }
 
@@ -2576,7 +2570,7 @@ void CShaderAPIEmpty::EndFrame()
 // returns the current time in seconds....
 double CShaderAPIEmpty::CurrentTime() const
 {
-	return Sys_FloatTime();
+	return Plat_FloatTime();
 }
 
 // Get the current camera position in world space.
@@ -2628,7 +2622,7 @@ void CShaderAPIEmpty::GetDX9LightState( LightState_t *state ) const
 
 MaterialFogMode_t CShaderAPIEmpty::GetCurrentFogType( void ) const
 {
-	Assert( 0 ); // deprecated
+	contract_assert( 0 ); // deprecated
 	return MATERIAL_FOG_NONE;
 }
 

@@ -1,18 +1,27 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: An entity that networks the state of the game's objectives.
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: An entity that networks the state of the game's objectives.
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "reflect_recvtable.h"
-#include "reflect_annotations.h"
 #include "c_team_objectiveresource.h"
 #include "igameevents.h"
 #include "teamplayroundbased_gamerules.h"
 #include "c_baseplayer.h"
 
-#define RESOURCE_THINK_TIME		0.1
+constexpr auto RESOURCE_THINK_TIME = 0.1;
 
 extern ConVar mp_capstyle;
 extern ConVar mp_capdeteriorate_time;
@@ -169,7 +178,7 @@ void C_BaseTeamObjectiveResource::UpdateControlPoint( const char *pszEvent, int 
 //-----------------------------------------------------------------------------
 float C_BaseTeamObjectiveResource::GetCPCapPercentage( int index )
 {
-	Assert( 0 <= index && index <= m_iNumControlPoints );
+	contract_assert( 0 <= index && index <= m_iNumControlPoints );
 
 	float flCapLength = m_flTeamCapTime[ TEAM_ARRAY(index,m_iCappingTeam[index]) ];
 
@@ -251,7 +260,7 @@ void C_BaseTeamObjectiveResource::SetCappingTeam( int index, int team )
 //-----------------------------------------------------------------------------
 void C_BaseTeamObjectiveResource::SetCapLayout( const char *pszLayout )
 {
-	Q_strncpy( m_pszCapLayoutInHUD, pszLayout, MAX_CAPLAYOUT_LENGTH );
+	V_strncpy( m_pszCapLayoutInHUD, pszLayout, MAX_CAPLAYOUT_LENGTH );
 
 	UpdateControlPoint( "controlpoint_updatelayout" );
 }
@@ -261,7 +270,7 @@ void C_BaseTeamObjectiveResource::SetCapLayout( const char *pszLayout )
 //-----------------------------------------------------------------------------
 bool C_BaseTeamObjectiveResource::CapIsBlocked( int index )
 {
-	Assert( 0 <= index && index <= m_iNumControlPoints );
+	contract_assert( 0 <= index && index <= m_iNumControlPoints );
 
 	if ( m_flCapTimeLeft[index] )
 	{

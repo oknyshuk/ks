@@ -1,8 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "dt_recv_decoder.h"
 
@@ -35,6 +32,3 @@ CClientSendTable::~CClientSendTable()
 
 	delete [] m_SendTable.m_pProps;
 }
-
-
-

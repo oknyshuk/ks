@@ -1,12 +1,11 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: A higher level link library for general use in the game and tools.
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#include <tier0/platform.h>
+// Purpose: A higher level link library for general use in the game and tools.
+
 #include <tier2/tier2.h>
 #include <filesystem_init.h>
+import ks.core;
 
 
 static CSysModule *g_pFullFileSystemModule = nullptr;
@@ -22,22 +21,22 @@ void* DefaultCreateInterfaceFn(const char *pName, int *pReturnCode)
 
 void InitDefaultFileSystem( void )
 {
-	AssertMsg( !g_pFullFileSystem, "Already set up the file system" );
+	contract_assert( ( !g_pFullFileSystem ) && "Already set up the file system" );
 
 	if ( !Sys_LoadInterface( "filesystem_stdio", FILESYSTEM_INTERFACE_VERSION,
 		&g_pFullFileSystemModule, (void**)&g_pFullFileSystem ) )
 	{
-		exit(0);
+		std::exit(0);
 	}
 
 	if ( !g_pFullFileSystem->Connect( DefaultCreateInterfaceFn ) )
 	{
-		exit(0);
+		std::exit(0);
 	}
 
 	if ( g_pFullFileSystem->Init() != INIT_OK )
 	{
-		exit(0);
+		std::exit(0);
 	}
 
 	g_pFullFileSystem->RemoveAllSearchPaths();
@@ -47,7 +46,7 @@ void InitDefaultFileSystem( void )
 
 void ShutdownDefaultFileSystem(void)
 {
-	AssertMsg( g_pFullFileSystem, "File system not set up" );
+	contract_assert( g_pFullFileSystem && "File system not set up" );
 	g_pFullFileSystem->Shutdown();
 	g_pFullFileSystem->Disconnect();
 	Sys_UnloadModule( g_pFullFileSystemModule );

@@ -1,19 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef FUNC_AREAPORTALWINDOW_H
-#define FUNC_AREAPORTALWINDOW_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "baseentity.h"
 #include "func_areaportalbase.h"
-
 
 class [[= ks::reflect::NetTable{ .name = "DT_FuncAreaPortalWindow" } ]]
       [[= ks::reflect::KeyFrom<"m_portalNumber", ks::reflect::Key{ .name = "portalnumber" } >{} ]]
@@ -61,7 +53,3 @@ public:
 	[[= ks::reflect::Input{ .name = "SetFadeStartDistance", .type = FIELD_FLOAT } ]] void InputSetFadeStartDistance( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "SetFadeEndDistance", .type = FIELD_FLOAT } ]] void InputSetFadeEndDistance( inputdata_t &inputdata );
 };
-
-
-
-#endif // FUNC_AREAPORTALWINDOW_H

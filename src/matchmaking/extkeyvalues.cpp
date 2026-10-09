@@ -1,15 +1,9 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "extkeyvalues.h"
 
-#include <ctype.h>
-#include "fmtstr.h"
-
-
+import std;
 
 //
 // Rule evaluation
@@ -43,7 +37,7 @@ g_PropertyRule_None;
 
 IPropertyRule * GetRuleByName( char const *szRuleName )
 {
-	if ( !Q_stricmp( szRuleName, "max" ) )
+	if ( !V_stricmp( szRuleName, "max" ) )
 		return &g_PropertyRule_Max;
 
 	return &g_PropertyRule_None;

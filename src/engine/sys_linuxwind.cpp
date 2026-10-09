@@ -1,16 +1,13 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Linux support for the IGame interface
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+
+import ks.core;
 #include "iengine.h"
-#include <stdlib.h>
+import std;
 
 #include "engine_launcher_api.h"
-#include "basetypes.h"
 #include "ivideomode.h"
 #include "igame.h"
 

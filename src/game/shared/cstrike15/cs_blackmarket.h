@@ -1,14 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Holds defintion for game ammo types
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CS_BLACKMARKET_H
-#define CS_BLACKMARKET_H
+// Purpose: Holds defintion for game ammo types
 
 #include "cs_weapon_parse.h"
 
@@ -17,8 +11,6 @@
 #else
 #include "cs_player.h"
 #endif
-
-
 
 struct blackmarket_items_t
 {
@@ -70,6 +62,3 @@ public:
 
 #define CBlackMarketElement C_BlackMarketElement
 #endif
-
-#endif // CS_BLACKMARKET_H
- 

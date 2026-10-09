@@ -1,16 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_ENTITY_DISSOLVE_H
-#define C_ENTITY_DISSOLVE_H
-
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
 #include "reflect_annotations.h"
-#include "tier1/intrusive_ptr.h"
 
 //-----------------------------------------------------------------------------
 // Entity Dissolve, client-side implementation
@@ -74,6 +72,3 @@ private:
 	bool	m_bLinkedToServerEnt;
 	IPhysicsMotionController	*m_pController;
 };
-
-#endif // C_ENTITY_DISSOLVE_H
-

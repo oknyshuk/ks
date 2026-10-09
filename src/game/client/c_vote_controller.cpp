@@ -1,10 +1,25 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: CS's custom C_VoteController
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 #include "c_vote_controller.h"
 #include "shareddefs.h"
 #include "hud.h"
@@ -40,7 +55,7 @@ void C_VoteController::RecvProxy_VoteOption( const CRecvProxyData *pData, void *
 {
 	int index = pData->m_pRecvProp->GetOffset() / sizeof(int);
 	
-	size_t offset = offsetof( C_VoteController, m_nVoteOptionCount );
+	size_t offset = __builtin_offsetof( C_VoteController, m_nVoteOptionCount );
 	C_VoteController *pMe = (C_VoteController *)((byte *)pStruct - offset );
 	if( pMe->m_nVoteOptionCount[index] == pData->m_Value.m_Int )
 		return;
@@ -124,10 +139,10 @@ void C_VoteController::ClientThink()
 					for ( int index = 0; index < MAX_VOTE_OPTIONS; index++ )
 					{
 						char szOption[ 2 ];
-						Q_snprintf( szOption, sizeof( szOption ), "%i", index + 1 );
+						V_snprintf( szOption, sizeof( szOption ), "%i", index + 1 );
 
 						char szVoteOption[ 13 ] = "vote_option";
-						Q_strncat( szVoteOption, szOption, sizeof( szVoteOption ), COPY_ALL_CHARACTERS );
+						V_strncat( szVoteOption, szOption, sizeof( szVoteOption ), COPY_ALL_CHARACTERS );
 
 						event->SetInt( szVoteOption, m_nVoteOptionCount[ index ] );
 					}

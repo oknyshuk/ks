@@ -1,20 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // TODO:  Should all of this Map_Vis* stuff be an interface?
 //
 
+import ks.core;
 #include "quakedef.h"
 #include "gl_model_private.h"
 #include "view_shared.h"
 #include "cmodel_engine.h"
-#include "tier0/vprof.h"
-#include <list>
+import std;
 #include "ivrenderview.h"
-#include "tier0/cache_hints.h"
 
 static ConVar	r_novis( "r_novis","0", FCVAR_CHEAT	, "Turn off the PVS." );
 static ConVar	r_lockpvs( "r_lockpvs", "0", FCVAR_CHEAT, "Lock the PVS so you can fly around and inspect what is being drawn." );
@@ -104,7 +100,7 @@ static void VisMark_Cached( const VisCacheEntry &cache, const worldbrushdata_t &
 	visframe = r_visframecount;
 
 	count = std::ssize( cache.leaflist );
-	const unsigned short * RESTRICT pSrc = cache.leaflist.data();
+	const unsigned short * __restrict__ pSrc = cache.leaflist.data();
 
 
 	while ( count >= 8 )
@@ -153,7 +149,7 @@ static void VisMark_Cached( const VisCacheEntry &cache, const worldbrushdata_t &
 
 static void VisCache_Build( VisCacheEntry &cache, const worldbrushdata_t &worldbrush )
 {
-	VPROF_INCREMENT_COUNTER( "VisCache misses", 1 );
+	VProfIncrementCounter<"VisCache misses">( 1 );
 	int			i;
 	mleaf_t		*leaf;
 	int			cluster;
@@ -171,7 +167,6 @@ static void VisCache_Build( VisCacheEntry &cache, const worldbrushdata_t &worldb
 
 	for ( i = 0, leaf = worldbrush.leafs ; i < worldbrush.numleafs ; i++, leaf++)
 	{
-		MEM_ALLOC_CREDIT();
 		cluster = leaf->cluster;
 		if ( cluster == -1 )
 			continue;
@@ -215,7 +210,7 @@ bool Map_AreAnyLeavesVisible( const worldbrushdata_t &worldbrush, int *leafList,
 //-----------------------------------------------------------------------------
 void Map_VisMark( bool forcenovis, model_t *worldmodel )
 {
-	VPROF( "Map_VisMark" );
+	CVProfScope _( "Map_VisMark", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	int			i, c;
 
 	// development aid to let you run around and see exactly where
@@ -282,7 +277,7 @@ void Map_VisMark( bool forcenovis, model_t *worldmodel )
 #endif
 
 	// There should always be at least one origin and that's the default render origin in most cases
-	assert( vis.nClusters >= 1 );
+	contract_assert( vis.nClusters >= 1 );
 
 	CM_Vis( vis.rgCurrentVis, sizeof( vis.rgCurrentVis ), vis.rgVisClusters[ 0 ].viewcluster, DVIS_PVS );
 
@@ -351,7 +346,7 @@ next_cache_check:;
 //-----------------------------------------------------------------------------
 void Map_VisSetup( model_t *worldmodel, int visorigincount, const Vector origins[], bool forcenovis /*=false*/, unsigned int &returnFlags )
 {
-	assert( visorigincount <= MAX_VIS_LEAVES );
+	contract_assert( visorigincount <= MAX_VIS_LEAVES );
 
 	// Don't crash if the client .dll tries to do something weird/dumb
 	vis.nClusters = std::min( visorigincount, MAX_VIS_LEAVES );
@@ -417,7 +412,7 @@ int Map_VisCurrentCluster( void )
 	// BUGBUG: The client DLL can hit this assert during a level transition
 	// because the temporary entities do visibility calculations during the 
 	// wrong part of the frame loop (i.e. before a view has been set up!)
-	Assert( vis.rgVisClusters[ 0 ].viewcluster >= 0 );
+	contract_assert( vis.rgVisClusters[ 0 ].viewcluster >= 0 );
 	if ( vis.rgVisClusters[ 0 ].viewcluster < 0 )
 	{
 		static int visclusterwarningcount = 0;

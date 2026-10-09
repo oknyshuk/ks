@@ -1,27 +1,19 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose: CBaseFileSystem Async Operation
-//
-//			The CBaseFileSystem methods implement the IFileSystem 
-//			asynchronous entry points. The model for reads currently is a 
-//			callback model where the callback can take place either in the 
-//			context of the main thread or the worker thread. It would be 
-//			easy to do a polled model later. Async operations return a 
-//			handle which is used to refer to the operation later. The 
-//			handle is actually a pointer to a reference counted "job" 
-//			object that holds all the context, status, and results of an 
-//			operation.
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#include <mutex>
-#include <limits.h>
-#include "tier1/convar.h"
-#include "vstdlib/jobthread.h"
-#include "tier1/map_ops.h"
-#include <memory>
-#include "tier0/icommandline.h"
-#include "vstdlib/random.h"
+// Purpose: CBaseFileSystem Async Operation
+//			The CBaseFileSystem methods implement the IFileSystem
+//			asynchronous entry points. The model for reads currently is a
+//			callback model where the callback can take place either in the
+//			context of the main thread or the worker thread. It would be
+//			easy to do a polled model later. Async operations return a
+//			handle which is used to refer to the operation later. The
+//			handle is actually a pointer to a reference counted "job"
+//			object that holds all the context, status, and results of an
+//			operation.
+
+import std;
+import ks.vstdlib;
 #include "basefilesystem.h"
 
 // VCR mode for now is handled by not running async.  This is primarily for
@@ -30,7 +22,6 @@
 // and to make it a deliberate compile time choice to keep the fast path.
 #undef WaitForSingleObject
 
-#include "tier0/memalloc.h"
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
@@ -44,8 +35,6 @@ enum FSAsyncMode_t
 	FSAM_ASYNC,
 	FSAM_SYNC,
 };
-
-#ifndef DISABLE_ASYNC
 
 // If we are not in CERT, we are adding some latency to the async accesses (between 15 and 25 ms).
 // 70 ms is an usual average seek time on DVD / BluRay (or increasing much more the seek time for HDD).
@@ -64,34 +53,22 @@ static bool AsyncAllowHeldFiles( void )
 }
 
 
-CON_COMMAND( async_suspend, "" )
+static void async_suspend( const CCommand &args );
+static ConCommand async_suspend_command( "async_suspend", async_suspend, "" );
+static void async_suspend( const CCommand &args )
 {
 	BaseFileSystem()->AsyncSuspend();
 }
 
-CON_COMMAND( async_resume, "" )
+static void async_resume( const CCommand &args );
+static ConCommand async_resume_command( "async_resume", async_resume, "" );
+static void async_resume( const CCommand &args )
 {
 	BaseFileSystem()->AsyncResume();
 }
 
-#else
-
-
-FORCEINLINE static FSAsyncMode_t GetAsyncMode( void )
+[[gnu::always_inline]] inline static void SimulateDelay( void )
 {
-	return FSAM_SYNC;
-}
-
-static bool AsyncAllowHeldFiles( void )
-{
-	return false;
-}
-
-#endif
-
-FORCEINLINE static void SimulateDelay( void )
-{
-#ifndef DISABLE_ASYNC
 	if ( async_simulate_delay.GetInt() == 0 || ThreadInMainThread() )
 	{
 	}
@@ -101,7 +78,6 @@ FORCEINLINE static void SimulateDelay( void )
 		int nDelayMidRange = nDelay / 4;
 		ThreadSleep( RandomInt( nDelay - nDelayMidRange, nDelay + nDelayMidRange ) );
 	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -141,8 +117,8 @@ public:
 	FSAsyncFile_t FindOrAdd( const char *pszFilename )
 	{
 		char szFixedName[MAX_FILEPATH];
-		Q_strncpy( szFixedName, pszFilename, sizeof( szFixedName ) );
-		Q_FixSlashes( szFixedName );
+		V_strncpy( szFixedName, pszFilename, sizeof( szFixedName ) );
+		V_FixSlashes( szFixedName );
 
 		std::scoped_lock lock( m_mutex );
 
@@ -162,8 +138,8 @@ public:
 	FSAsyncFile_t Find( const char *pszFilename )
 	{
 		char szFixedName[MAX_FILEPATH];
-		Q_strncpy( szFixedName, pszFilename, sizeof( szFixedName ) );
-		Q_FixSlashes( szFixedName );
+		V_strncpy( szFixedName, pszFilename, sizeof( szFixedName ) );
+		V_FixSlashes( szFixedName );
 
 		std::scoped_lock lock( m_mutex );
 
@@ -219,7 +195,7 @@ public:
 				BaseFileSystem()->Close( pFile->hFile );
 			}
 			auto iEntry = m_map.find( *pFile->m_pName );
-			Assert( iEntry != m_map.end() && iEntry->second.get() == pFile );
+			contract_assert( iEntry != m_map.end() && iEntry->second.get() == pFile );
 			m_map.erase( iEntry );
 		}
 	}
@@ -234,15 +210,14 @@ CAsyncOpenedFiles g_AsyncOpenedFiles;
 
 
 
-#define FSASYNC_WRITE_PRIORITY	JP_LOW
 
 //---------------------------------------------------------
 
-ASSERT_INVARIANT( (int)FSASYNC_OK == (int)JOB_OK );
-ASSERT_INVARIANT( (int)FSASYNC_STATUS_PENDING == (int)JOB_STATUS_PENDING );
-ASSERT_INVARIANT( (int)FSASYNC_STATUS_INPROGRESS == (int)JOB_STATUS_INPROGRESS );
-ASSERT_INVARIANT( (int)FSASYNC_STATUS_ABORTED == (int)JOB_STATUS_ABORTED );
-ASSERT_INVARIANT( (int)FSASYNC_STATUS_UNSERVICED == (int)JOB_STATUS_UNSERVICED );
+static_assert( (int)FSASYNC_OK == (int)JOB_OK );
+static_assert( (int)FSASYNC_STATUS_PENDING == (int)JOB_STATUS_PENDING );
+static_assert( (int)FSASYNC_STATUS_INPROGRESS == (int)JOB_STATUS_INPROGRESS );
+static_assert( (int)FSASYNC_STATUS_ABORTED == (int)JOB_STATUS_ABORTED );
+static_assert( (int)FSASYNC_STATUS_UNSERVICED == (int)JOB_STATUS_UNSERVICED );
 
 //---------------------------------------------------------
 // A standard filesystem job
@@ -275,11 +250,8 @@ public:
 		m_pRealContext( fromRequest.pContext ),
 		m_pfnRealCallback( fromRequest.pfnCallback )
 	{
-#if defined( TRACK_BLOCKING_IO )
-		m_Timer.Start();
-#endif
 		pszFilename = MemAlloc_StrDup( fromRequest.pszFilename );
-		Q_FixSlashes( const_cast<char*>( pszFilename ) );
+		V_FixSlashes( const_cast<char*>( pszFilename ) );
 
 		pContext = this;
 		pfnCallback = InterceptCallback;
@@ -318,9 +290,6 @@ public:
 	virtual JobStatus_t DoExecute()
 	{
 		SimulateDelay();
-#if defined( TRACK_BLOCKING_IO )
-		bool oldState = BaseFileSystem()->SetAllowSynchronousLogging( false );
-#endif
 
 #if defined(_DEBUG)
 		if ( m_pszAllocCreditFile )
@@ -334,12 +303,6 @@ public:
 			MemAlloc_PopAllocDbgInfo();
 #endif
 
-#if defined( TRACK_BLOCKING_IO )
-		m_Timer.End();
-		FileBlockingItem item( FILESYSTEM_BLOCKING_ASYNCHRONOUS, Describe(), m_Timer.GetDuration().GetSeconds(), FileBlockingItem::FB_ACCESS_READ );
-		BaseFileSystem()->RecordBlockingFileAccess( false, item );
-		BaseFileSystem()->SetAllowSynchronousLogging( oldState );
-#endif
 		return retval;
 	}
 
@@ -386,9 +349,6 @@ private:
 	int						m_nResultSize;
 	void *					m_pRealContext;
 	FSAsyncCallbackFunc_t	m_pfnRealCallback;
-#if defined( TRACK_BLOCKING_IO )
-	CFastTimer				m_Timer;
-#endif
 #if defined(_DEBUG)
 	const char *			m_pszAllocCreditFile;
 	int						m_nAllocCreditLine;
@@ -404,15 +364,12 @@ class CFileAsyncWriteJob : public CFileAsyncJob
 {
 public:
 	CFileAsyncWriteJob( const char *pszFilename, const void *pData, unsigned nBytes, bool bFreeMemory, bool bAppend )
-	  : CFileAsyncJob( FSASYNC_WRITE_PRIORITY ),
+	  : CFileAsyncJob( JP_LOW ),
 		m_pData( pData ),
 		m_nBytes( nBytes ),
 		m_bFreeMemory( bFreeMemory ),
 		m_bAppend( bAppend )
 	{
-#if defined( TRACK_BLOCKING_IO )
-		m_Timer.Start();
-#endif
 		m_pszFilename = MemAlloc_StrDup( pszFilename );
 		g_nAsyncWriteJobs++;
 
@@ -432,17 +389,8 @@ public:
 	virtual JobStatus_t DoExecute()
 	{
 		SimulateDelay();
-#if defined( TRACK_BLOCKING_IO )
-		bool oldState = BaseFileSystem()->SetAllowSynchronousLogging( false );
-#endif
 		JobStatus_t retval = BaseFileSystem()->SyncWrite( m_pszFilename, m_pData, m_nBytes, false, m_bAppend );
 
-#if defined( TRACK_BLOCKING_IO )
-		m_Timer.End();
-		FileBlockingItem item( FILESYSTEM_BLOCKING_ASYNCHRONOUS, Describe(), m_Timer.GetDuration().GetSeconds(), FileBlockingItem::FB_ACCESS_WRITE );
-		BaseFileSystem()->RecordBlockingFileAccess( false, item );
-		BaseFileSystem()->SetAllowSynchronousLogging( oldState );
-#endif
 		return retval;
 	}
 
@@ -459,9 +407,6 @@ private:
 	const void *m_pData;
 	int			m_nBytes;
 	bool		m_bAppend;
-#if defined( TRACK_BLOCKING_IO )
-	CFastTimer	m_Timer;
-#endif
 };
 
 //---------------------------------------------------------
@@ -471,15 +416,12 @@ class CFileAsyncAppendFileJob : public CFileAsyncJob
 {
 public:
 	CFileAsyncAppendFileJob( const char *pszAppendTo, const char *pszAppendFrom )
-		: CFileAsyncJob( FSASYNC_WRITE_PRIORITY )
+		: CFileAsyncJob( JP_LOW )
 	{
-#if defined( TRACK_BLOCKING_IO )
-		m_Timer.Start();
-#endif
 		m_pszAppendTo = MemAlloc_StrDup( pszAppendTo );
 		m_pszAppendFrom = MemAlloc_StrDup( pszAppendFrom );
-		Q_FixSlashes( const_cast<char*>( m_pszAppendTo ) );
-		Q_FixSlashes( const_cast<char*>( m_pszAppendFrom ) );
+		V_FixSlashes( const_cast<char*>( m_pszAppendTo ) );
+		V_FixSlashes( const_cast<char*>( m_pszAppendFrom ) );
 		g_nAsyncWriteJobs++;
 
 		SetFlags( GetFlags() | JF_SERIAL );
@@ -497,17 +439,7 @@ public:
 	virtual JobStatus_t DoExecute()
 	{
 		SimulateDelay();
-#if defined( TRACK_BLOCKING_IO )
-		bool oldState = BaseFileSystem()->SetAllowSynchronousLogging( false );
-#endif
 		JobStatus_t retval = BaseFileSystem()->SyncAppendFile( m_pszAppendTo, m_pszAppendFrom );
-
-#if defined( TRACK_BLOCKING_IO )
-		m_Timer.End();
-		FileBlockingItem item( FILESYSTEM_BLOCKING_ASYNCHRONOUS, Describe(), m_Timer.GetDuration().GetSeconds(), FileBlockingItem::FB_ACCESS_APPEND );
-		BaseFileSystem()->RecordBlockingFileAccess( false, item );
-		BaseFileSystem()->SetAllowSynchronousLogging( oldState );
-#endif
 
 		return retval;
 	}
@@ -515,9 +447,6 @@ public:
 private:
 	const char *m_pszAppendTo;
 	const char *m_pszAppendFrom;
-#if defined( TRACK_BLOCKING_IO )
-	CFastTimer	m_Timer;
-#endif
 };
 
 //---------------------------------------------------------
@@ -530,30 +459,14 @@ public:
 	CFileAsyncFileSizeJob( const FileAsyncRequest_t &fromRequest )
 		: CFileAsyncReadJob( fromRequest )
 	{
-#if defined( TRACK_BLOCKING_IO )
-		m_Timer.Start();
-#endif
 	}
 
 	virtual JobStatus_t DoExecute()
 	{
 		SimulateDelay();
-#if defined( TRACK_BLOCKING_IO )
-		bool oldState = BaseFileSystem()->SetAllowSynchronousLogging( false );
-#endif
 		JobStatus_t retval = BaseFileSystem()->SyncGetFileSize( *this );
-#if defined( TRACK_BLOCKING_IO )
-		m_Timer.End();
-		FileBlockingItem item( FILESYSTEM_BLOCKING_ASYNCHRONOUS, Describe(), m_Timer.GetDuration().GetSeconds(), FileBlockingItem::FB_ACCESS_SIZE );
-		BaseFileSystem()->RecordBlockingFileAccess( false, item );
-		BaseFileSystem()->SetAllowSynchronousLogging( oldState );
-#endif
 		return retval;
 	}
-#if defined( TRACK_BLOCKING_IO )
-private:
-	CFastTimer				m_Timer;
-#endif
 };
 
 
@@ -574,7 +487,7 @@ class CFileAsyncDirectoryScanJob : public CFileAsyncJob
 	public:
 		CFileAsyncDirectoryScanJob( const char* pSearchSpec, bool bRecurseDirs, void* pContext, FSAsyncScanAddFunc_t pAddCallback, FSAsyncScanCompleteFunc_t pDoneCallback ) : CFileAsyncJob( JP_NORMAL )
 		{
-			Assert( pSearchSpec != nullptr && V_strlen( pSearchSpec )  < MAX_PATH && pAddCallback != nullptr && pDoneCallback != nullptr );
+			contract_assert( pSearchSpec != nullptr && V_strlen( pSearchSpec )  < MAX_PATH && pAddCallback != nullptr && pDoneCallback != nullptr );
 			m_pAddResultCallback = pAddCallback;
 			m_pCompletionCallback = pDoneCallback;
 			m_bRecurse = bRecurseDirs;
@@ -630,7 +543,7 @@ JobStatus_t CFileAsyncDirectoryScanJob::DoExecute()
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::InitAsync()
 {
-	Assert( !m_pThreadPool );
+	contract_assert( !m_pThreadPool );
 	if ( m_pThreadPool )
 		return;
 
@@ -879,7 +792,7 @@ bool CBaseFileSystem::AsyncResume()
 //-----------------------------------------------------------------------------
 FSAsyncStatus_t CBaseFileSystem::AsyncBeginRead( const char *pszFile, FSAsyncFile_t *phFile )
 {
-#if !defined(FILESYSTEM_STEAM) && !defined(DEDICATED)
+#if !defined(DEDICATED)
 	if ( AsyncAllowHeldFiles() )
 	{
 		*phFile = g_AsyncOpenedFiles.FindOrAdd( pszFile );
@@ -896,7 +809,7 @@ FSAsyncStatus_t CBaseFileSystem::AsyncBeginRead( const char *pszFile, FSAsyncFil
 //-----------------------------------------------------------------------------
 FSAsyncStatus_t CBaseFileSystem::AsyncEndRead( FSAsyncFile_t hFile )
 {
-#if !defined(FILESYSTEM_STEAM) && !defined(DEDICATED)
+#if !defined(DEDICATED)
 	if ( hFile != FS_INVALID_ASYNC_FILE )
 		g_AsyncOpenedFiles.Release( hFile );
 #endif
@@ -918,23 +831,12 @@ FSAsyncStatus_t CBaseFileSystem::AsyncFinish( FSAsyncControl_t hControl, bool wa
 			return FSASYNC_ERR_FAILURE;
 		}
 
-#if defined( TRACK_BLOCKING_IO )
-		CFastTimer timer;
-		timer.Start();
-		BaseFileSystem()->SetAllowSynchronousLogging( false );
-#endif
 		FSAsyncStatus_t retval = (FSAsyncStatus_t)pJob->Execute();
 
-#if defined( TRACK_BLOCKING_IO )
-		timer.End();
-		FileBlockingItem item( FILESYSTEM_BLOCKING_ASYNCHRONOUS_BLOCK, pJob->Describe(), timer.GetDuration().GetSeconds(), FileBlockingItem::FB_ACCESS_READ );
-		BaseFileSystem()->RecordBlockingFileAccess( false, item );
-		BaseFileSystem()->SetAllowSynchronousLogging( true );
-#endif
 		return retval;
 	}
 
-	AsyncSetPriority( hControl, INT_MAX );
+	AsyncSetPriority( hControl, std::numeric_limits<int>::max() );
 	return FSASYNC_OK;
 }
 
@@ -1101,7 +1003,7 @@ FSAsyncStatus_t CBaseFileSystem::AsyncDirectoryScan( const char* pSearchSpec, bo
 //-----------------------------------------------------------------------------
 static void *GetDest( const FileAsyncRequest_t &request, bool bTryUnbuffered, unsigned *pBytesBuffer, unsigned *pBytesRead )
 {
-	Assert( false ); // This function is not implemented
+	contract_assert( false ); // This function is not implemented
 	return nullptr;
 }
 
@@ -1111,7 +1013,7 @@ static void *GetDest( const FileAsyncRequest_t &request, bool bTryUnbuffered, un
 
 FSAsyncStatus_t CBaseFileSystem::SyncRead( const FileAsyncRequest_t &request )
 {
-	Assert( request.nBytes >=0 );
+	contract_assert( request.nBytes >=0 );
 
 	if ( request.nBytes < 0 || request.nOffset < 0 )
 	{
@@ -1154,7 +1056,7 @@ FSAsyncStatus_t CBaseFileSystem::SyncRead( const FileAsyncRequest_t &request )
 		if ( request.pData )
 		{
 			// caller provided buffer
-			Assert( !( request.flags & FSASYNC_FLAGS_NULLTERMINATE ) );
+			contract_assert( !( request.flags & FSASYNC_FLAGS_NULLTERMINATE ) );
 			pDest = request.pData;
 			nBytesBuffer = nBytesToRead;
 		}
@@ -1326,7 +1228,6 @@ void CBaseFileSystem::DoAsyncCallback( const FileAsyncRequest_t &request, void *
 			FileAsyncRequest_t temp = request;
 			temp.pData = pData;
 			{
-				AUTOBLOCKREPORTER_FN( DoAsyncCallback, this, false, temp.pszFilename, FILESYSTEM_BLOCKING_CALLBACKTIMING, FileBlockingItem::FB_ACCESS_READ );
 				(*request.pfnCallback)( temp, nBytesRead, result );
 			}
 			if ( !( request.flags & FSASYNC_FLAGS_ALLOCNOFREE ) )
@@ -1337,7 +1238,6 @@ void CBaseFileSystem::DoAsyncCallback( const FileAsyncRequest_t &request, void *
 		else
 		{
 			{
-				AUTOBLOCKREPORTER_FN( DoAsyncCallback, this, false, request.pszFilename, FILESYSTEM_BLOCKING_CALLBACKTIMING, FileBlockingItem::FB_ACCESS_READ );
 				(*request.pfnCallback)( request, nBytesRead, result );
 			}
 			if ( ( request.flags & FSASYNC_FLAGS_FREEDATAPTR ) )
@@ -1349,9 +1249,8 @@ void CBaseFileSystem::DoAsyncCallback( const FileAsyncRequest_t &request, void *
 
 	if ( pDataToFree  )
 	{
-		Assert( !request.pfnAlloc );
+		contract_assert( !request.pfnAlloc );
 		// The ugly delete[] (void*) method generates a compile warning on osx, as it should.
 		g_pMemAlloc->Free( pDataToFree );
 	}
 }
-

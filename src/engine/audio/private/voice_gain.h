@@ -1,14 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef VOICE_GAIN_H
-#define VOICE_GAIN_H
 #pragma once
-
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // ----------------------------------------------------------------------- //
 // CAutoGain is fed samples and figures out a gain to apply to blocks of samples.
@@ -57,6 +49,3 @@ private:
 	AGFixed	m_FixedCurrentGain;		// Fixed-point m_CurrentGain.	
 	AGFixed	m_GainMultiplier;		// (m_NextGain - m_CurrentGain) / (m_BlockSize - 1).
 };
-
-
-#endif // VOICE_GAIN_H

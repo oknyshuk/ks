@@ -1,20 +1,11 @@
-//========= Copyright (c) 1996-2013, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:  
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2013 Valve Corporation
 
-#ifndef IVISUALSDATAPROCESSOR_H
-#define IVISUALSDATAPROCESSOR_H
+import ks.tier1;
 
-#include "refcount.h"
+import std;
 
-#include <cstddef>
-#include <span>
-#include <vector>
-
-class KeyValues;
 
 //
 // Visuals Data Interface
@@ -49,5 +40,3 @@ public:
 protected:
 	virtual ~IVisualsDataProcessor() {}
 };
-
-#endif // IVISUALSDATAPROCESSOR_H

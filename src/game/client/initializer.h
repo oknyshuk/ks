@@ -1,10 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Initializers are a way to register your object to be initialized at startup time.
 // They're a good way to have global variables without worrying about dependent
@@ -15,10 +11,6 @@
 // class SomeClass {....}
 // SomeClass *g_pSomeClassSingleton = NULL;
 // REGISTER_INITIALIZER(SomeClass, &g_pSomeClassSingleton);
-
-#ifndef INITIALIZER_H
-#define INITIALIZER_H
-
 
 typedef void* (*CreateInitializerObjectFn)();
 typedef void (*DeleteInitializerObjectFn)(void *ptr);
@@ -53,6 +45,3 @@ private:
 #define REGISTER_FUNCTION_INITIALIZER(functionName)	\
 	static void* __Initializer__Create##functionName##Fn()			{ functionName(); return 0; } \
 	static Initializer g_Initializer_##functionName##(0, __Initializer__Create##functionName##Fn, 0);
-
-#endif
-

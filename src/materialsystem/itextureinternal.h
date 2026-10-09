@@ -1,19 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef ITEXTUREINTERNAL_H
-#define ITEXTUREINTERNAL_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
 
 #include "materialsystem/itexture.h"
 #include "shaderapi/ishaderapi.h"
 
-class Vector;
 enum Sampler_t;
 class IFileList;
 
@@ -30,7 +22,7 @@ enum RenderTargetType_t
 	RENDER_TARGET_ONLY_DEPTH = 4,
 };
 
-abstract_class ITextureInternal : public ITexture
+class ITextureInternal : public ITexture
 {
 public:
 
@@ -149,22 +141,20 @@ inline bool IsTextureInternalEnvCubemap( const ITextureInternal *pTexture )
 inline char *NormalizeTextureName( const char *pName, char *pOutName, int nOutNameSize )
 {
 	// hdr textures have an ldr version and need to resolve correctly
-	int nLen = Q_strlen( pName ) + 1;
-	if ( nLen <= 5 || Q_stricmp( pName + nLen - 5, ".hdr" ) )
+	int nLen = V_strlen( pName ) + 1;
+	if ( nLen <= 5 || V_stricmp( pName + nLen - 5, ".hdr" ) )
 	{
 		// strip any non .hdr extension
-		Q_StripExtension( pName, pOutName, nOutNameSize ); 
+		V_StripExtension( pName, pOutName, nOutNameSize ); 
 	}
 	else
 	{
 		// keep .hdr extension
-		Q_strncpy( pOutName, pName, nOutNameSize );
+		V_strncpy( pOutName, pName, nOutNameSize );
 	}
 
-	Q_strlower( pOutName );
-	Q_FixSlashes( pOutName, '/' );
+	V_strlower( pOutName );
+	V_FixSlashes( pOutName, '/' );
 
 	return pOutName;
 }
-
-#endif // ITEXTUREINTERNAL_H

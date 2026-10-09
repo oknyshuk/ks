@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef C_USER_MESSAGE_REGISTER_H
-#define C_USER_MESSAGE_REGISTER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "usermessages.h"
 
@@ -53,5 +47,3 @@ public:
 	CUserMessageBinder m_msgBinder;
 	pfnHandler m_pMsgFunc;
 };
-
-#endif // C_USER_MESSAGE_REGISTER_H

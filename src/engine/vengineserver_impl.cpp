@@ -1,13 +1,31 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
-#include "server_pch.h"
-#include <algorithm>
-#include <bitset>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// main precompiled header for server files
+
+
+import ks.vstdlib;
+#include "common.h"
+#include "quakedef.h"
+#include "decal.h"
+#include "host_cmd.h"
+#include "cmodel_engine.h"
+#include "sv_log.h"
+#include "zone.h"
+#include "sound.h"
+#include "vox.h"
+#include "EngineSoundInternal.h"
+#include "checksum_engine.h"
+#include "host.h"
+#include "keys.h"
+#include "vengineserver_impl.h"
+#include "server.h"
+#include "eiface.h"
+#include "filesystem.h"
+#include "console.h"
+#include "edict.h"
+#include "server_class.h"
+import std;
 #include "vengineserver_impl.h"
 #include "vox.h"
 #include "sound.h"
@@ -15,19 +33,13 @@
 #include "world.h"
 #include "l_studio.h"
 #include "decal.h"
-#include "sys_dll.h"
 #include "sv_log.h"
 #include "sv_main.h"
-#include "tier1/strtools.h"
 #include "collisionutils.h"
-#include "staticpropmgr.h"
-#include "string_t.h"
-#include "vstdlib/random.h"
 #include "EngineSoundInternal.h"
 #include "dt_send_eng.h"
 #include "PlayerState.h"
 #include "irecipientfilter.h"
-#include "sv_user.h"
 #include "server_class.h"
 #include "cdll_engine_int.h"
 #include "enginesingleuserfilter.h"
@@ -36,13 +48,11 @@
 #include "tmessage.h"
 #include "iscratchpad3d.h"
 #include "pr_edict.h"
-#include "networkstringtableserver.h"
 #include "networkstringtable.h"
 #include "LocalNetworkBackdoor.h"
 #include "sv_plugin.h"
 #include "singleplayersharedmemory.h"
 #include "MapReslistGenerator.h"
-#include "sv_steamauth.h"
 #include "LoadScreenUpdate.h"
 #include "paint.h"
 #include "matchmaking/imatchframework.h"
@@ -51,9 +61,8 @@
 #include "sv_packedentities.h"
 #include "hltvserver.h"
 
-#include "tier0/memalloc.h"
-#define MAX_MESSAGE_SIZE	2500
-#define MAX_TOTAL_ENT_LEAFS		128
+constexpr auto MAX_MESSAGE_SIZE = 2500;
+constexpr auto MAX_TOTAL_ENT_LEAFS = 128;
 
 void SV_DetermineMulticastRecipients( bool usepas, const Vector& origin, CPlayerBitVec& playerbits );
 
@@ -134,7 +143,7 @@ void SeedRandomNumberGenerator( bool random_invariant )
 {
 	if (!random_invariant)
 	{
-		int iSeed = -(long)Sys_FloatTime();
+		int iSeed = -(long)Plat_FloatTime();
 		if (1000 < iSeed)
 		{
 			iSeed = -iSeed;
@@ -256,7 +265,7 @@ static bool ValidCmd( const char *pCmd )
 {
 	int len;
 
-	len = strlen(pCmd);
+	len = std::strlen(pCmd);
 
 	// Valid commands all have a ';' or newline '\n' as their last character
 	if ( len && (pCmd[len-1] == '\n' || pCmd[len-1] == ';') )
@@ -275,7 +284,7 @@ struct HltvRelayProxyWhitelistMask_t
 
 	bool operator==( HltvRelayProxyWhitelistMask_t const &other ) const
 	{
-		return 0 == Q_memcmp( this, &other, sizeof( *this ) );
+		return 0 == V_memcmp( this, &other, sizeof( *this ) );
 	}
 };
 static std::vector< HltvRelayProxyWhitelistMask_t > s_arrHltvRelayProxyWhitelist;
@@ -323,11 +332,11 @@ public:
 
 		if ( !s2 ) // no indication of where they are coming from;  so just do a standard old changelevel
 		{
-			Q_snprintf( cmd, sizeof( cmd ), "changelevel %s\n", s1 );
+			V_snprintf( cmd, sizeof( cmd ), "changelevel %s\n", s1 );
 		}
 		else
 		{
-			Q_snprintf( cmd, sizeof( cmd ), "changelevel2 %s %s\n", s1, s2 );
+			V_snprintf( cmd, sizeof( cmd ), "changelevel2 %s %s\n", s1, s2 );
 		}
 
 		Cbuf_AddText( CBUF_SERVER, cmd );
@@ -749,7 +758,7 @@ public:
 		if ( TestSoundChar(samp, CHAR_SENTENCE) )
 		{
 			sound.bIsSentence = true;
-			sound.nSoundNum = Q_atoi( PSkipSoundChars(samp) );
+			sound.nSoundNum = V_atoi( PSkipSoundChars(samp) );
 			if ( sound.nSoundNum >= (unsigned int)VOX_SentenceCount() )
 			{
 				ConMsg("EmitAmbientSound: invalid sentence number: %s", PSkipSoundChars(samp));
@@ -830,7 +839,7 @@ public:
 			Sys_Error( "SentenceGroupPick with NULL name\n" );
 		}
 
-		Assert( nameLen > 0 );
+		contract_assert( nameLen > 0 );
 
 		return VOX_GroupPick( groupIndex, name, nameLen );
 	}
@@ -843,7 +852,7 @@ public:
 			Sys_Error( "SentenceGroupPickSequential with NULL name\n" );
 		}
 
-		Assert( nameLen > 0 );
+		contract_assert( nameLen > 0 );
 
 		return VOX_GroupPickSequential( groupIndex, name, nameLen, sentenceIndex, reset );
 	}
@@ -947,12 +956,12 @@ public:
 	*/
 	virtual void ClientCommand(edict_t* pEdict, const char* szFmt, ...)
 	{
-		va_list		argptr;
+		std::va_list		argptr;
 		static char	szOut[1024];
 
-		va_start(argptr, szFmt);
-		Q_vsnprintf(szOut, sizeof( szOut ), szFmt, argptr);
-		va_end(argptr);
+		__builtin_va_start(argptr, szFmt);
+		V_vsnprintf(szOut, sizeof( szOut ), szFmt, argptr);
+		__builtin_va_end(argptr);
 
 		if ( szOut[0] == 0 )
 		{
@@ -1016,7 +1025,7 @@ public:
 
 		INetworkStringTable *stringTable = sv.GetLightStyleTable();
 
-		stringTable->SetStringUserData( style, Q_strlen(val)+1, val );
+		stringTable->SetStringUserData( style, V_strlen(val)+1, val );
 	}
 
 
@@ -1065,7 +1074,7 @@ public:
 
 		s_MsgData.Reset();
 
-		Assert( ent_class );
+		contract_assert( ent_class );
 
 		s_MsgData.filter = nullptr;
 		s_MsgData.reliable = reliable;
@@ -1169,11 +1178,11 @@ public:
 		if ( IsDedicatedServer() )
 			return;
 
-		va_list		argptr;
+		std::va_list		argptr;
 		char		text[4096];
-		va_start (argptr, fmt);
-		Q_vsnprintf(text, sizeof( text ), fmt, argptr);
-		va_end (argptr);
+		__builtin_va_start (argptr, fmt);
+		V_vsnprintf(text, sizeof( text ), fmt, argptr);
+		__builtin_va_end (argptr);
 
 		::Con_NPrintf( pos, "%s", text );
 	}
@@ -1183,11 +1192,11 @@ public:
 		if ( IsDedicatedServer() )
 			return;
 
-		va_list		argptr;
+		std::va_list		argptr;
 		char		text[4096];
-		va_start (argptr, fmt);
-		Q_vsnprintf(text, sizeof( text ), fmt, argptr);
-		va_end (argptr);
+		__builtin_va_start (argptr, fmt);
+		V_vsnprintf(text, sizeof( text ), fmt, argptr);
+		__builtin_va_end (argptr);
 
 		::Con_NXPrintf( info, "%s", text );
 	}
@@ -1340,7 +1349,7 @@ public:
 	{
 		if ( iClientIndex < 0 || iClientIndex >= sv.GetClientCount() )
 		{
-			Assert( false );
+			contract_assert( false );
 			return nullptr;
 		}
 
@@ -1438,7 +1447,7 @@ public:
 
 	virtual int GetAppID()
 	{
-		return GetSteamAppID();
+		return GetGameAppID();
 	}
 
 	virtual bool IsLowViolence();
@@ -1495,7 +1504,7 @@ public:
 		return g_pSinglePlayerSharedMemoryManager->GetSharedMemory( szName, ent_num );
 	}
 
-	virtual void *AllocLevelStaticData( size_t bytes )
+	virtual void *AllocLevelStaticData( std::size_t bytes )
 	{
 		return Hunk_AllocName( bytes, "AllocLevelStaticData", false );
 	}
@@ -1517,7 +1526,7 @@ public:
 		if ( !client->IsSplitScreenUser() )
 			return nullptr;
 
-		Assert( client->m_pAttachedTo );
+		contract_assert( client->m_pAttachedTo );
 		if ( !client->m_pAttachedTo )
 			return nullptr;
 
@@ -1536,11 +1545,11 @@ public:
 	void EnsureInstanceBaseline( int ent_num )
 	{
 		edict_t *pEnt = EDICT_NUM( ent_num );
-		Assert ( pEnt && pEnt->GetNetworkable() );
+		contract_assert( pEnt && pEnt->GetNetworkable() );
 		if ( pEnt && pEnt->GetNetworkable() )
 		{
 			SerializedEntityHandle_t handle = g_pSerializedEntities->AllocateSerializedEntity(__FILE__, __LINE__);
-			Assert( handle != SERIALIZED_ENTITY_HANDLE_INVALID);
+			contract_assert( handle != SERIALIZED_ENTITY_HANDLE_INVALID );
 			if ( handle != SERIALIZED_ENTITY_HANDLE_INVALID )
 			{
 				ServerClass *pServerClass = pEnt->GetNetworkable()->GetServerClass();
@@ -1563,7 +1572,7 @@ public:
 
 	bool GetEngineHltvInfo( CEngineHltvInfo_t &info )
 	{
-		Q_memset( &info, 0, sizeof( info ) );
+		V_memset( &info, 0, sizeof( info ) );
 		CActiveHltvServerIterator hltv;
 		if ( !hltv )
 			return false; // broadcast is not active, no active GOTV[] instances
@@ -1602,11 +1611,11 @@ public:
 		return true;
 	}
 
-	// Add HLTV proxy whitelist to bypass password and Steam Auth checks upon connection, as CIDR a.b.c.d/numbits
+	// Add HLTV proxy whitelist to bypass password checks upon connection, as CIDR a.b.c.d/numbits
 	void AddHltvRelayProxyWhitelist( uint32 a, uint32 b, uint32 c, uint32 d, uint32 numbits )
 	{
 		HltvRelayProxyWhitelistMask_t mask;
-		Q_memset( &mask, 0, sizeof( mask ) );
+		V_memset( &mask, 0, sizeof( mask ) );
 		mask.a = a;
 		mask.b = b;
 		mask.c = c;
@@ -1617,7 +1626,7 @@ public:
 			s_arrHltvRelayProxyWhitelist.push_back( mask );
 	}
 
-	// On master HLTV this call updates number of external viewers and which portion of those are linked with Steam
+	// On master HLTV this call updates number of external viewers and which portion of those are linked
 	void UpdateHltvExternalViewers( uint32 numTotalViewers, uint32 numLinkedViewers )
 	{
 		for ( CHltvServerIterator hltv; hltv; hltv.Next() )
@@ -1635,16 +1644,6 @@ public:
 			sv_stressbots.SetValue( (int)1 );
 		}
 	}
-
-	// Returns the SteamID of the game server
-	const CSteamID	*GetGameServerSteamID()
-	{
-		if ( !Steam3Server().GetGSSteamID().IsValid() )
-			return nullptr;
-
-		return &Steam3Server().GetGSSteamID();
-	}
-
 
 	int	GetNumSplitScreenUsersAttachedToEdict( int ent_num )
 	{
@@ -1807,7 +1806,7 @@ public:
 		std::vector< uint32 > data;
 		g_PaintManager.GetPaintmapDataRLE( data );
 
-		AssertMsg2( std::ssize( data ) < NET_MAX_PAYLOAD, "Sending paint data with size [%d bytes] to client, max payload is [%d bytes]\n", std::ssize( data ), NET_MAX_PAYLOAD );
+		contract_assert( ( std::ssize( data ) < NET_MAX_PAYLOAD ) && "Sending paint data with size [%d bytes] to client, max payload is [%d bytes]\n" );
 
 		if ( !data.empty() )
 		{
@@ -1821,7 +1820,7 @@ public:
 
 
 	// Returns the SteamID of the specified player. It'll be NULL if the player hasn't authenticated yet.
-	const CSteamID	*GetClientSteamID( const edict_t *pPlayerEdict, bool bRequireFullyAuthenticated )
+	const CPlayerId	*GetClientPlayerID( const edict_t *pPlayerEdict, bool bRequireFullyAuthenticated )
 	{
 		int entnum = NUM_FOR_EDICT( pPlayerEdict );
 		if (entnum < 1 || entnum > sv.GetClientCount() )
@@ -1832,13 +1831,13 @@ public:
 		if ( !client )
 			return nullptr;
 
-		if ( !client->m_SteamID.IsValid() )
+		if ( !client->m_PlayerUID.IsValid() )
 			return nullptr;
 
 		if ( bRequireFullyAuthenticated && !client->IsFullyAuthenticated() )
 			return nullptr;
 
-		return &client->m_SteamID;
+		return &client->m_PlayerUID;
 	}
 
 	// Returns the XUID of the specified player. It'll be NULL if the player hasn't connected yet.
@@ -1930,7 +1929,7 @@ private:
 		g_bNoClipEnabled = bEnabled;
 	}
 
-	virtual bool StartClientHltvReplay( int nClientIndex, const HltvReplayParams_t &params ) OVERRIDE
+	virtual bool StartClientHltvReplay( int nClientIndex, const HltvReplayParams_t &params ) override
 	{
 		if ( IClient *pClient = sv.GetClient( nClientIndex ) )
 		{
@@ -1939,7 +1938,7 @@ private:
 		return false;
 	}
 
-	virtual void StopClientHltvReplay( int nClientIndex ) OVERRIDE
+	virtual void StopClientHltvReplay( int nClientIndex ) override
 	{
 		if ( IClient *pClient = sv.GetClient( nClientIndex ) )
 		{
@@ -1947,7 +1946,7 @@ private:
 		}
 	}
 
-	virtual int GetClientHltvReplayDelay( int nClientIndex ) OVERRIDE
+	virtual int GetClientHltvReplayDelay( int nClientIndex ) override
 	{
 		if ( IClient *pClient = sv.GetClient( nClientIndex ) )
 		{
@@ -1956,7 +1955,7 @@ private:
 		return 0;
 	}
 
-	virtual bool ClientCanStartHltvReplay( int nClientIndex ) OVERRIDE
+	virtual bool ClientCanStartHltvReplay( int nClientIndex ) override
 	{
 		if ( IClient* pClient = sv.GetClient( nClientIndex ) )
 		{
@@ -1965,14 +1964,14 @@ private:
 		return false;
 	}
 
-	virtual bool HasHltvReplay( ) OVERRIDE
+	virtual bool HasHltvReplay( ) override
 	{
 		CActiveHltvServerIterator hltv;
 
 		return hltv && hltv->GetOldestTick() > 0;
 	}
 
-	virtual void ClientResetReplayRequestTime( int nClientIndex ) OVERRIDE
+	virtual void ClientResetReplayRequestTime( int nClientIndex ) override
 	{
 		if ( IClient* pClient = sv.GetClient( nClientIndex ) )
 		{
@@ -1980,7 +1979,7 @@ private:
 		}
 	}
 
-	virtual bool AnyClientsInHltvReplayMode() OVERRIDE
+	virtual bool AnyClientsInHltvReplayMode() override
 	{
 		return sv.AnyClientsInHltvReplayMode();
 	}
@@ -1990,7 +1989,7 @@ private:
 // Expose CVEngineServer to the game DLL.
 //-----------------------------------------------------------------------------
 static CVEngineServer	g_VEngineServer;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CVEngineServer, IVEngineServer, INTERFACEVERSION_VENGINESERVER, g_VEngineServer);
+static InterfaceReg s_Reg_CVEngineServer_IVEngineServer( []() -> void * { return static_cast<IVEngineServer *>( &g_VEngineServer ); }, INTERFACEVERSION_VENGINESERVER );;
 
 //-----------------------------------------------------------------------------
 // Expose CVEngineServer to the engine.
@@ -2063,7 +2062,7 @@ static void WriteReliableEvent( const SendTable *pST, float delay, int classID, 
 //-----------------------------------------------------------------------------
 void CVEngineServer::PlaybackTempEntity( IRecipientFilter& filter, float delay, const void *pSender, const SendTable *pST, int classID  )
 {
-	VPROF( "PlaybackTempEntity" );
+	CVProfScope _( "PlaybackTempEntity", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// don't add more events to a snapshot than a client can receive
 	if ( std::ssize( sv.m_TempEntities ) >= ((1<<CEventInfo::EVENT_INDEX_BITS)-1) )
@@ -2194,20 +2193,14 @@ void CVEngineServer::ForceFlushEntity( int iEntity )
 
 void CVEngineServer::LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 {
-#ifndef DEDICATED
-#endif
 }
 
 void CVEngineServer::ClearSaveDir()
 {
-#ifndef DEDICATED
-#endif
 }
 
 void CVEngineServer::ClearSaveDirAfterClientLoad()
 {
-#ifndef DEDICATED
-#endif
 }
 
 
@@ -2241,7 +2234,7 @@ void CVEngineServer::BuildEntityClusterList( edict_t *pEdict, PVSInfo_t *pPVSInf
 		return;
 
 	ICollideable *pCollideable = pEdict->GetCollideable();
-	Assert( pCollideable );
+	contract_assert( pCollideable );
 	if ( !pCollideable )
 		return;
 
@@ -2325,7 +2318,7 @@ void CVEngineServer::BuildEntityClusterList( edict_t *pEdict, PVSInfo_t *pPVSInf
 			if ( pPVSInfo->m_nClusterCount == MAX_FAST_ENT_CLUSTERS )
 			{
 				unsigned short *pClusters = (unsigned short *)s_PVSInfoAllocator.alloc();
-				memcpy( pClusters, pPVSInfo->m_pClusters, MAX_FAST_ENT_CLUSTERS * sizeof(unsigned short) );
+				std::memcpy( pClusters, pPVSInfo->m_pClusters, MAX_FAST_ENT_CLUSTERS * sizeof(unsigned short) );
 				pPVSInfo->m_pClusters = pClusters;
 			}
 			else if ( pPVSInfo->m_nClusterCount == MAX_ENT_CLUSTERS )
@@ -2359,7 +2352,7 @@ void CVEngineServer::BuildEntityClusterList( edict_t *pEdict, PVSInfo_t *pPVSInf
 		if ( pPVSInfo->m_nClusterCount == MAX_FAST_ENT_CLUSTERS )
 		{
 			unsigned short *pClusters = (unsigned short*)s_PVSInfoAllocator.alloc();
-			memcpy( pClusters, pPVSInfo->m_pClusters, MAX_FAST_ENT_CLUSTERS * sizeof(unsigned short) );
+			std::memcpy( pClusters, pPVSInfo->m_pClusters, MAX_FAST_ENT_CLUSTERS * sizeof(unsigned short) );
 			pPVSInfo->m_pClusters = pClusters;
 		}
 		else if ( pPVSInfo->m_nClusterCount == MAX_ENT_CLUSTERS )

@@ -7,11 +7,9 @@
 //
 //=====================================================================================//
 
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
-#include "tier1/lzmaDecoder.h"
+import std;
+import ks.tier1;
 
-#include "tier0/memalloc.h"
 #ifndef _7ZIP_BYTE_DEFINED
 #define _7ZIP_BYTE_DEFINED
 typedef unsigned char Byte;
@@ -37,7 +35,6 @@ typedef unsigned int UInt32;
 #ifndef _7ZIP_SIZET_DEFINED
 #define _7ZIP_SIZET_DEFINED
 #ifdef _LZMA_SYSTEM_SIZE_T
-#include <stddef.h>
 typedef size_t SizeT;
 #else
 typedef UInt32 SizeT;
@@ -1172,7 +1169,7 @@ unsigned int CLZMA::GetActualSize( unsigned char *pInput )
 	lzma_header_t *pHeader = (lzma_header_t *)pInput;
 	if ( pHeader && pHeader->id == LZMA_ID )
 	{
-		return LittleLong( pHeader->actualSize );
+		return ( pHeader->actualSize );
 	}
 
 	// unrecognized
@@ -1195,11 +1192,11 @@ unsigned int CLZMA::Uncompress( unsigned char *pInput, unsigned char *pOutput, L
 	CLzmaDecoderState state;
 	if ( LzmaDecodeProperties( &state.Properties, ((lzma_header_t *)pInput)->properties, LZMA_PROPERTIES_SIZE ) != LZMA_RESULT_OK )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 	state.Probs = (CProb *)MemAlloc_Alloc( LzmaGetNumProbs( &state.Properties ) * sizeof( CProb ) );
 
-	unsigned int lzmaSize = LittleLong( ((lzma_header_t *)pInput)->lzmaSize );
+	unsigned int lzmaSize = ( ((lzma_header_t *)pInput)->lzmaSize );
 
 	SizeT inProcessed;
 	SizeT outProcessed;
@@ -1209,7 +1206,7 @@ unsigned int CLZMA::Uncompress( unsigned char *pInput, unsigned char *pOutput, L
 
 	if ( result != LZMA_RESULT_OK || outProcessed != (SizeT)actualSize )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return 0;
 	}
 

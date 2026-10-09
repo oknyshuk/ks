@@ -1,12 +1,10 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef _TREE_SWAY_H
-#define _TREE_SWAY_H
-
-// Tree sway vertex animation function. Requires a number of global variables to be defined. See vertexlit_and_unlit_generic_vs20.fxc or depthwrite_vs20.fxc for details.
-
+// Purpose: Tree sway vertex animation function. Requires a number of global variables to be defined. See vertexlit_and_unlit_generic_vs20.fxc or depthwrite_vs20.fxc for details.
 // Tree sway mode 2:
-// Hacks to use tree sway code on rectangular sheets of plastic/tarp attached at the four corners. 
+// Hacks to use tree sway code on rectangular sheets of plastic/tarp attached at the four corners.
 // Inverts the sway scale radius to be 1 at (0,0,0) in model space and fall off radially towards the edges of the model.
 // The model is expected to be build lying in the xy plane in model space, with its center at the origin.
 // Treeswaystrength should be 0 in the vmt.
@@ -85,5 +83,3 @@
 		return vPositionOS.xyz + vPositionOffset.xyz;
 	}
 #endif
-
-#endif // _TREE_SWAY_H

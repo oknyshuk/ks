@@ -1,10 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Team management class. Contains all the details for a specific team
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "team.h"
@@ -27,7 +52,7 @@ void SendProxy_PlayerList( const SendProp *pProp, const void *pStruct, const voi
 	CTeam *pTeam = (CTeam*)pData;
 
 	// If this assertion fails, then SendProxyArrayLength_PlayerArray must have failed.
-	Assert( iElement < std::ssize( pTeam->m_aPlayers ) );
+	contract_assert( iElement < std::ssize( pTeam->m_aPlayers ) );
 
 	CBasePlayer *pPlayer = pTeam->m_aPlayers[iElement];
 	pOut->m_Int = pPlayer->entindex();
@@ -86,7 +111,7 @@ int CTeam::m_nStaticGGLeader_T = -1;
 //-----------------------------------------------------------------------------
 CTeam::CTeam( void )
 {
-	memset( m_szTeamname.GetForModify(), 0, sizeof(m_szTeamname) );
+	std::memset( m_szTeamname.GetForModify(), 0, sizeof(m_szTeamname) );
 	memset( m_szClanTeamname.GetForModify(), 0, sizeof(m_szClanTeamname) );
 	memset( m_szTeamFlagImage.GetForModify(), 0, sizeof(m_szTeamFlagImage) );
 	memset( m_szTeamLogoImage.GetForModify(), 0, sizeof(m_szTeamLogoImage) );
@@ -294,7 +319,7 @@ void CTeam::Init( const char *pName, int iNumber )
 	m_scoreSecondHalf = 0; 	
 	m_scoreOvertime = 0;
 
-	Q_strncpy( m_szTeamname.GetForModify(), pName, MAX_TEAM_NAME_LENGTH );
+	V_strncpy( m_szTeamname.GetForModify(), pName, MAX_TEAM_NAME_LENGTH );
 	m_iTeamNum = iNumber;
 }
 
@@ -311,7 +336,7 @@ int CTeam::GetTeamNumber( void ) const
 //-----------------------------------------------------------------------------
 void CTeam::SetName( const char *pName )
 {
-	Q_strncpy( m_szTeamname.GetForModify(), pName, MAX_TEAM_NAME_LENGTH );
+	V_strncpy( m_szTeamname.GetForModify(), pName, MAX_TEAM_NAME_LENGTH );
 }
 
 //-----------------------------------------------------------------------------
@@ -327,7 +352,7 @@ const char *CTeam::GetName( void )
 //-----------------------------------------------------------------------------
 void CTeam::SetClanName( const char *pName )
 {
-	Q_strncpy( m_szClanTeamname.GetForModify(), pName, MAX_TEAM_NAME_LENGTH );
+	V_strncpy( m_szClanTeamname.GetForModify(), pName, MAX_TEAM_NAME_LENGTH );
 }
 
 //-----------------------------------------------------------------------------
@@ -353,7 +378,7 @@ uint32 CTeam::GetClanID( void )
 //-----------------------------------------------------------------------------
 void CTeam::SetFlagImageString( const char *pName )
 {
-	Q_strncpy( m_szTeamFlagImage.GetForModify(), pName, MAX_TEAM_FLAG_ICON_LENGTH );
+	V_strncpy( m_szTeamFlagImage.GetForModify(), pName, MAX_TEAM_FLAG_ICON_LENGTH );
 }
 
 //-----------------------------------------------------------------------------
@@ -369,7 +394,7 @@ const char *CTeam::GetFlagImageString( void )
 //-----------------------------------------------------------------------------
 void CTeam::SetLogoImageString( const char *pName )
 {
-	Q_strncpy( m_szTeamLogoImage.GetForModify(), pName, MAX_TEAM_FLAG_ICON_LENGTH );
+	V_strncpy( m_szTeamLogoImage.GetForModify(), pName, MAX_TEAM_FLAG_ICON_LENGTH );
 }
 
 void CTeam::SetNumMapVictories( int numMapVictories )
@@ -508,7 +533,7 @@ int CTeam::GetNumPlayers( void )
 //-----------------------------------------------------------------------------
 CBasePlayer *CTeam::GetPlayer( int iIndex )
 {
-	Assert( iIndex >= 0 && iIndex < std::ssize( m_aPlayers ) );
+	contract_assert( iIndex >= 0 && iIndex < std::ssize( m_aPlayers ) );
 	return m_aPlayers[ iIndex ];
 }
 
@@ -533,7 +558,7 @@ void CTeam::ResetScores( void )
 //-----------------------------------------------------------------------------
 void CTeam::AwardAchievement( int iAchievement )
 {
-	Assert( iAchievement >= 0 && iAchievement < 255 );	// must fit in short 
+	contract_assert( iAchievement >= 0 && iAchievement < 255 );	// must fit in short 
 
 	CRecipientFilter filter;
 
@@ -611,4 +636,3 @@ int CTeam::GetHumanMembers( std::vector< class CCSPlayer* > *pOutVecPlayers /*= 
 	}
 	return iPlayers;
 }
-

@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_NAVTYPE_H
-#define AI_NAVTYPE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // ---------------------------
 //  Navigation Type Bits
@@ -21,6 +14,3 @@ enum Navigation_t
 	NAV_CLIMB,		// climb ladders
 	NAV_CRAWL,		// crawl
 };
-
-
-#endif // AI_NAVTYPE_H

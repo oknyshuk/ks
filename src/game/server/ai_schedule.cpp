@@ -1,24 +1,45 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Base combat character with no AI
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include "convar.h"
+// Purpose: Base combat character with no AI
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "ai_basenpc.h"
 #include "ai_agent.h"
-#include "tier1/strtools.h"
 #include "ai_activity.h"
 #include "ai_schedule.h"
 #include "ai_default.h"
 #include "ai_hint.h"
 #include "bitstring.h"
 #include "stringregistry.h"
-
 
 //-----------------------------------------------------------------------------
 // Init static variables
@@ -215,7 +236,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 		{
 			DevMsg("ERROR: file contains a schedule (%s) that has already been defined!\n",token);
 			DevMsg("       Aborting schedule load.\n");
-			Assert(0);
+			contract_assert( 0 );
 			return false;
 		}
 
@@ -235,7 +256,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 		if (stricmp(token,"Tasks"))
 		{
 			DevMsg( "ERROR: LoadSchd (%s): (%s) Malformed AI Schedule.  Expecting 'Tasks' keyword.\n",prefix,new_schedule->GetName());
-			Assert(0);
+			contract_assert( 0 );
 			return false;
 		}
 
@@ -257,11 +278,11 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 			if (tempTask[taskNum].iTask == -1)
 			{
 				DevMsg( "ERROR: LoadSchd (%s): (%s) Unknown task %s!\n", prefix,new_schedule->GetName(), token);
-				Assert(0);
+				contract_assert( 0 );
 				return false;
 			}
 
-			Assert( AI_IdIsLocal( tempTask[taskNum].iTask ) );
+			contract_assert( AI_IdIsLocal( tempTask[taskNum].iTask ) );
 
 			// Read in the task argument
 			pfile = engine->ParseFile(pfile, token, sizeof( token ) );
@@ -273,7 +294,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (stricmp(token,":"))
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Malformed AI Schedule.  Expecting ':' after type 'ACTIVITY.\n",prefix,new_schedule->GetName());
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 
@@ -283,7 +304,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (tempTask[taskNum].flTaskData == -1)
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Unknown activity %s!\n", prefix,new_schedule->GetName(), token);
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 			}
@@ -294,7 +315,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (stricmp(token,":"))
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Malformed AI Schedule.  Expecting ':' after type 'ACTIVITY.\n",prefix,new_schedule->GetName());
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 
@@ -308,7 +329,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (tempTask[taskNum].flTaskData == -1)
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Unknown task %s!\n", prefix,new_schedule->GetName(), token);
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 			}
@@ -319,7 +340,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (stricmp(token,":"))
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Malformed AI Schedule.  Expecting ':' after type 'ACTIVITY.\n",prefix,new_schedule->GetName());
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 
@@ -333,7 +354,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (tempTask[taskNum].flTaskData == -1)
 				{
 					DevMsg( "ERROR: LoadSchd %d (%s): (%s) Unknown shedule %s!\n", __LINE__, prefix,new_schedule->GetName(), token);
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 			}
@@ -344,7 +365,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (stricmp(token,":"))
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Malformed AI Schedule.  Expecting ':' after type 'STATE.\n",prefix,new_schedule->GetName());
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 
@@ -354,7 +375,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (tempTask[taskNum].flTaskData == -1)
 				{
 					DevMsg( "ERROR: LoadSchd %d (%s): (%s) Unknown shedule %s!\n", __LINE__, prefix,new_schedule->GetName(), token);
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 			}
@@ -366,7 +387,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (stricmp(token,":"))
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Malformed AI Schedule.  Expecting ':' after type 'STATE.\n",prefix,new_schedule->GetName());
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 
@@ -376,7 +397,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (tempTask[taskNum].flTaskData == -1)
 				{
 					DevMsg( "ERROR: LoadSchd %d (%s): (%s) Unknown shedule %s!\n", __LINE__, prefix,new_schedule->GetName(), token);
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 			}
@@ -387,7 +408,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (stricmp(token,":"))
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Malformed AI Schedule.  Expecting ':' after type 'PATH.\n",prefix,new_schedule->GetName());
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 
@@ -397,7 +418,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (tempTask[taskNum].flTaskData == -1)
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Unknown path type %s!\n", prefix,new_schedule->GetName(), token);
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 			}
@@ -408,7 +429,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (stricmp(token,":"))
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Malformed AI Schedule.  Expecting ':' after type 'GOAL.\n",prefix,new_schedule->GetName());
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 
@@ -418,7 +439,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (tempTask[taskNum].flTaskData == -1)
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Unknown goal type  %s!\n", prefix,new_schedule->GetName(), token);
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 			}
@@ -429,7 +450,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (stricmp(token,":"))
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Malformed AI Schedule.  Expecting ':' after type 'HINTFLAG'\n",prefix,new_schedule->GetName());
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 
@@ -439,7 +460,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 				if (tempTask[taskNum].flTaskData == -1)
 				{
 					DevMsg( "ERROR: LoadSchd (%s): (%s) Unknown hint flag type  %s!\n", prefix,new_schedule->GetName(), token);
-					Assert(0);
+					contract_assert( 0 );
 					return false;
 				}
 			}
@@ -447,17 +468,17 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 			{
 				// a parse error.  Interrupts is the next section, TASK_ is probably the next task, missing task argument?
 				Warning( "ERROR: LoadSchd (%s): (%s) Bad syntax at task #%d (wasn't expecting %s)\n", prefix, new_schedule->GetName(), taskNum, token);
-				Assert(0);
+				contract_assert( 0 );
 				return false;
 			}
 			else
 			{
-				tempTask[taskNum].flTaskData = atof(token);
+				tempTask[taskNum].flTaskData = std::atof(token);
 			}
 			taskNum++;
 
 			// Read the next token
-			Q_strncpy(save_token,token,sizeof(save_token));
+			V_strncpy(save_token,token,sizeof(save_token));
 			pfile = engine->ParseFile(pfile, token, sizeof( token ) );
 
 			// Check for malformed task argument type
@@ -465,7 +486,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 			{
 				DevMsg( "ERROR: LoadSchd (%s): Schedule (%s),\n        Task (%d), has a malformed AI Task Argument = (%s)\n",
 						prefix,new_schedule->GetName(),taskID,save_token);
-				Assert(0);
+				contract_assert( 0 );
 				return false;
 			}
 		}
@@ -478,7 +499,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 			new_schedule->m_pTaskList[i].iTask		= tempTask[i].iTask;
 			new_schedule->m_pTaskList[i].flTaskData = tempTask[i].flTaskData;
 
-			Assert( AI_IdIsLocal( new_schedule->m_pTaskList[i].iTask ) );
+			contract_assert( AI_IdIsLocal( new_schedule->m_pTaskList[i].iTask ) );
 		}
 
 		// ==========================
@@ -494,14 +515,14 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 			if (condID == -1)
 			{
 				DevMsg( "ERROR: LoadSchd (%s): Schedule (%s), Unknown condition %s!\n", prefix,new_schedule->GetName(),token);
-				Assert(0);
+				contract_assert( 0 );
 			}
 
 			// Otherwise, add to this schedules list of conditions
 			else
 			{
 				int interrupt = AI_RemapFromGlobal(condID);
-				Assert( AI_IdIsGlobal( condID ) && interrupt >= 0 && interrupt < MAX_CONDITIONS );
+				contract_assert( AI_IdIsGlobal( condID ) && interrupt >= 0 && interrupt < MAX_CONDITIONS );
 				new_schedule->m_InterruptMask.set(interrupt);
 			}
 
@@ -577,9 +598,9 @@ CAI_Schedule::CAI_Schedule(char *name, int schedule_id, CAI_Schedule *pNext)
 {
 	m_iScheduleID = schedule_id;
 
-	int len = strlen(name);
+	int len = std::strlen(name);
 	m_pName = new char[len+1];
-	Q_strncpy(m_pName,name,len+1);
+	V_strncpy(m_pName,name,len+1);
 
 	m_pTaskList = nullptr;
 	m_iNumTasks = 0;

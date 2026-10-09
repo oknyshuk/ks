@@ -1,20 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Provides access to cvar values that are bounded by the server.
-//
-//=============================================================================//
 
-#ifndef CL_BOUNDED_CVARS_H
-#define CL_BOUNDED_CVARS_H
-
-
-#include "convar_serverbounded.h"
-
+import std;
+import ks.tier1;
 
 extern ConVar_ServerBounded *cl_rate;
 extern ConVar_ServerBounded *cl_cmdrate;
 extern ConVar_ServerBounded *cl_updaterate;
-
-
-#endif // CL_BOUNDED_CVARS_H
-

@@ -1,32 +1,29 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-// NOTE: To make use of this file, g_pFullFileSystem must be defined, or you can modify
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
+
+// Purpose: NOTE: To make use of this file, g_pFullFileSystem must be defined, or you can modify
 // this source to take an IFileSystem * as input.
-//
-//=======================================================================================//
 
 // @note Tom Bui: we need to use fopen below in the jpeg code, so we can't have this on...
-#ifdef PROTECTED_THINGS_ENABLE
-#undef fopen
-#endif
 
-#include <stdio.h>
-#include <sys/stat.h>
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import ks.jpeg;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
 
 #include "imageutils.h"
 #include "filesystem.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include <vector>
 #include "bitmap/bitmap.h"
 #include "vtf/vtf.h"
 
 // clang3 on OSX folks the attribute into the prototype, causing a compile failure
 // filed radar bug 10397783
-#if ( __clang_major__ == 3 )
-#include <setjmp.h>
-extern void longjmp( jmp_buf, int ) __attribute__((noreturn));
-#endif
 
 
 #ifdef ENGINE_DLL
@@ -40,10 +37,6 @@ extern void longjmp( jmp_buf, int ) __attribute__((noreturn));
 	extern class IEngineSound *enginesound;
 	extern class IMatchmaking *matchmaking;
 	extern class IAchievementMgr *achievementmgr; 
-	extern class CSteamAPIContext *steamapicontext;
-#elif REPLAY_DLL
-	#include "replay/ienginereplay.h"
-	extern IEngineReplay *g_pEngine;
 #elif ENGINE_DLL
 	#include "engineinterface.h"
 #elif defined(CLIENT_DLL) || defined(GAME_DLL)
@@ -51,246 +44,100 @@ extern void longjmp( jmp_buf, int ) __attribute__((noreturn));
 	extern IVEngineClient *engine;
 #endif
 
-#include <jpeglib.h>
-#include <png.h>
-
-#include <setjmp.h>
 
 // clang3 on OSX folds the attribute into the prototype, causing a compile failure
 // filed radar bug 10397783
-#if ( __clang_major__ == 3 )
-extern void longjmp( jmp_buf, int ) __attribute__((noreturn));
-#endif
 
 #include "bitmap/tgawriter.h"
 #include "ivtex.h"
 
-#define DeleteFile(s)	remove(s)
 
 
-#if ( defined(GAME_DLL) || defined(CLIENT_DLL) )
-#endif //!defined( _GAMECONSOLE )
 
-#include "tier0/memalloc.h"
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-struct ValveJpegErrorHandler_t 
+namespace
 {
-	// The default manager
-	struct jpeg_error_mgr	m_Base;
-	// For handling any errors
-	jmp_buf					m_ErrorContext;
-};
 
-#define JPEG_OUTPUT_BUF_SIZE  4096   
-
-struct JPEGDestinationManager_t
+void AppendToWriter( const void *pBytes, unsigned long nSize, void *pContext )
 {
-	struct jpeg_destination_mgr pub; // public fields
-
-	ks::byte_writer *pBuffer;    // target/final buffer
-	byte        *buffer;        // start of temp buffer
-};
-
-
-//-----------------------------------------------------------------------------
-// Purpose: We'll override the default error handler so we can deal with errors without having to exit the engine
-//-----------------------------------------------------------------------------
-static void ValveJpegErrorHandler( j_common_ptr cinfo )
-{
-	ValveJpegErrorHandler_t *pError = reinterpret_cast< ValveJpegErrorHandler_t * >( cinfo->err );
-
-	char buffer[ JMSG_LENGTH_MAX ];
-
-	/* Create the message */
-	( *cinfo->err->format_message )( cinfo, buffer );
-
-	Warning( "%s\n", buffer );
-
-	// Bail
-	longjmp( pError->m_ErrorContext, 1 );
+	static_cast< ks::byte_writer * >( pContext )->write_bytes( pBytes, nSize );
 }
 
-class CJpegSourceMgr : public jpeg_source_mgr
+bool LoadDiskFile( const char *pPath, std::vector< std::byte > &contents )
 {
-public:
-	CJpegSourceMgr()
-	{
-		this->init_source = &CJpegSourceMgr::imp_init_source;
-		this->fill_input_buffer = &CJpegSourceMgr::imp_fill_input_buffer;
-		this->skip_input_data = &CJpegSourceMgr::imp_skip_input_data;
-		this->resync_to_restart = &CJpegSourceMgr::imp_resync_to_restart;
-		this->term_source = &CJpegSourceMgr::imp_term_source;
-
-		this->next_input_byte = 0;
-		this->bytes_in_buffer = 0;
-	}
-
-	static void error_exit ( j_common_ptr cinfo )
-	{
-		/* Always display the message */
-		(*cinfo->err->output_message) (cinfo);
-
-		/* Let the memory manager delete any temp files before we die */
-		jpeg_destroy(cinfo);
-
-		//exit( EXIT_FAILURE );
-		// FIXME: Can't we get a better error than this?
-	}
-
-	static void imp_init_source(j_decompress_ptr cinfo)
-	{
-	}
-
-	static boolean imp_fill_input_buffer(j_decompress_ptr cinfo)
-	{
-		Assert( false ); // They should never need to call these functions since we give them all the data up front.
-		return 0;
-	}
-
-	static void imp_skip_input_data(j_decompress_ptr cinfo, long num_bytes)
-	{
-		Assert( false ); // They should never need to call these functions since we give them all the data up front.
-	}
-
-	static boolean imp_resync_to_restart(j_decompress_ptr cinfo, int desired)
-	{
-		Assert( false ); // They should never need to call these functions since we give them all the data up front.
+	ks::platform::file *pFile = ks::platform::open_file( pPath, ks::platform::file_mode::read, nullptr );
+	if ( pFile == nullptr )
 		return false;
-	}
 
-	static void imp_term_source(j_decompress_ptr cinfo)
+	contents.resize( ks::platform::file_size( pFile ) );
+	const long nRead = ks::platform::read_file( pFile, contents.data(), contents.size(), nullptr );
+	ks::platform::close_file( pFile );
+	return nRead == static_cast< long >( contents.size() );
+}
+
+ConversionErrorType DecodeJPEG( const void *pData, size_t nSize, int nChannels, ks::byte_writer &dst, int &width, int &height )
+{
+	if ( !ks::jpeg::read_header( pData, nSize, &width, &height ) )
 	{
+		Warning( "%s\n", ks::jpeg::last_error() );
+		return CE_ERROR_PARSING_SOURCE;
 	}
 
-public:
-	//	std::vector< char > m_Data;
-};
+	const size_t nBytes = static_cast< size_t >( width ) * height * nChannels;
+	std::span< std::byte > pixels = dst.claim_span( nBytes );
+	if ( pixels.size() != nBytes )
+		return CE_MEMORY_ERROR;
+
+	if ( !ks::jpeg::decode( pData, nSize, nChannels, reinterpret_cast< unsigned char * >( pixels.data() ), nBytes ) )
+	{
+		Warning( "%s\n", ks::jpeg::last_error() );
+		dst.clear();
+		return CE_ERROR_PARSING_SOURCE;
+	}
+	return CE_SUCCESS;
+}
+
+bool WriteBufferToFile( const char *pFilename, const ks::byte_writer &buffer )
+{
+	FileHandle_t fh = g_pFullFileSystem->Open( pFilename, "wb", "LOCAL" );
+	if ( FILESYSTEM_INVALID_HANDLE == fh )
+		return false;
+
+	g_pFullFileSystem->Write( buffer.data(), buffer.tell(), fh );
+	g_pFullFileSystem->Close( fh );
+	return true;
+}
+
+} // namespace
 
 // convert the JPEG file given to a TGA file at the given output path.
 ConversionErrorType ImgUtl_ConvertJPEGToTGA( const char *jpegpath, const char *tgaPath, bool bRequirePowerOfTwo )
 {
-
-	//
-	// !FIXME! This really probably should use ImgUtl_ReadJPEGAsRGBA, to avoid duplicated code.
-	//
-
-	struct jpeg_decompress_struct jpegInfo;
-	struct ValveJpegErrorHandler_t jerr;
-	JSAMPROW row_pointer[1];
-	int row_stride;
-	int cur_row = 0;
-
-	// image attributes
-	int image_height;
-	int image_width;
-
-	// open the jpeg image file.
-	FILE *infile = fopen(jpegpath, "rb");
-	if (infile == nullptr)
-	{
+	std::vector< std::byte > file;
+	if ( !LoadDiskFile( jpegpath, file ) )
 		return CE_CANT_OPEN_SOURCE_FILE;
-	}
 
-	// setup error to print to stderr.
-	jpegInfo.err = jpeg_std_error(&jerr.m_Base);
-
-	jpegInfo.err->error_exit = &ValveJpegErrorHandler;
-
-	// create the decompress struct.
-	jpeg_create_decompress(&jpegInfo);
-
-	if ( setjmp( jerr.m_ErrorContext ) )
-	{
-		// Get here if there is any error
-		jpeg_destroy_decompress( &jpegInfo );
-
-		fclose(infile);
-
+	int image_width = 0, image_height = 0;
+	if ( !ks::jpeg::read_header( file.data(), file.size(), &image_width, &image_height ) )
 		return CE_ERROR_PARSING_SOURCE;
-	}
-
-	jpeg_stdio_src(&jpegInfo, infile);
-
-	// read in the jpeg header and make sure that's all good.
-	if (jpeg_read_header(&jpegInfo, TRUE) != JPEG_HEADER_OK)
-	{
-		fclose(infile);
-		return CE_ERROR_PARSING_SOURCE;
-	}
-
-	// start the decompress with the jpeg engine.
-	if ( !jpeg_start_decompress(&jpegInfo) )
-	{
-		jpeg_destroy_decompress(&jpegInfo);
-		fclose(infile);
-		return CE_ERROR_PARSING_SOURCE;
-	}
 
 	// Check for valid width and height (ie. power of 2 and print out an error and exit if not).
-	if ( bRequirePowerOfTwo && ( !IsPowerOfTwo(jpegInfo.image_height) || !IsPowerOfTwo(jpegInfo.image_width) ) 
-		|| jpegInfo.output_components != 3 )
-	{
-		jpeg_destroy_decompress(&jpegInfo);
-		fclose( infile );
+	if ( bRequirePowerOfTwo && ( !IsPowerOfTwo( image_height ) || !IsPowerOfTwo( image_width ) ) )
 		return CE_SOURCE_FILE_SIZE_NOT_SUPPORTED;
-	}
 
-	// now that we've started the decompress with the jpeg lib, we have the attributes of the
-	// image ready to be read out of the decompress struct.
-	row_stride = jpegInfo.output_width * jpegInfo.output_components;
-	image_height = jpegInfo.image_height;
-	image_width = jpegInfo.image_width;
-	int mem_required = jpegInfo.image_height * jpegInfo.image_width * jpegInfo.output_components;
-
-	// allocate the memory to read the image data into.
-	unsigned char *buf = (unsigned char *)MemAlloc_Alloc(mem_required);
-	if (buf == nullptr)
+	std::vector< unsigned char > pixels( static_cast< size_t >( image_width ) * image_height * 3 );
+	if ( !ks::jpeg::decode( file.data(), file.size(), 3, pixels.data(), pixels.size() ) )
 	{
-		jpeg_destroy_decompress(&jpegInfo);
-		fclose(infile);
-		return CE_MEMORY_ERROR;
-	}
-
-	// read in all the scan lines of the image into our image data buffer.
-	bool working = true;
-	while (working && (jpegInfo.output_scanline < jpegInfo.output_height))
-	{
-		row_pointer[0] = &(buf[cur_row * row_stride]);
-		if ( !jpeg_read_scanlines(&jpegInfo, row_pointer, 1) )
-		{
-			working = false;
-		}
-		++cur_row;
-	}
-
-	if (!working)
-	{
-		g_pMemAlloc->Free(buf);
-		jpeg_destroy_decompress(&jpegInfo);
-		fclose(infile);
+		Warning( "%s\n", ks::jpeg::last_error() );
 		return CE_ERROR_PARSING_SOURCE;
 	}
 
-	jpeg_finish_decompress(&jpegInfo);
-
-	fclose(infile);
-	
 	// ok, at this point we have read in the JPEG image to our buffer, now we need to write it out as a TGA file.
 	ks::byte_writer outBuf;
-	bool bRetVal = TGAWriter::WriteToBuffer( buf, outBuf, image_width, image_height, IMAGE_FORMAT_RGB888, IMAGE_FORMAT_RGB888 );
-	if ( bRetVal )
-	{
-		if ( !g_pFullFileSystem->WriteFile( tgaPath, nullptr, outBuf.bytes() ) )
-		{
-			bRetVal = false;
-		}
-	}
+	bool bRetVal = TGAWriter::WriteToBuffer( pixels.data(), outBuf, image_width, image_height, IMAGE_FORMAT_RGB888, IMAGE_FORMAT_RGB888 );
+	if ( bRetVal && !g_pFullFileSystem->WriteFile( tgaPath, nullptr, outBuf.bytes() ) )
+		bRetVal = false;
 
-	g_pMemAlloc->Free(buf);
 	return bRetVal ? CE_SUCCESS : CE_ERROR_WRITING_OUTPUT_FILE;
-
 }
 
 // convert the bmp file given to a TGA file at the given destination path.
@@ -331,7 +178,7 @@ unsigned char *ImgUtl_ReadVTFAsRGBA( const char *vtfPath, int &width, int &heigh
 		errcode = CE_MEMORY_ERROR;
 		return nullptr;
 	}
-	Q_memcpy( pMemImage, pVTFTexture->ImageData(), nMemSize );
+	V_memcpy( pMemImage, pVTFTexture->ImageData(), nMemSize );
 
 	DestroyVTFTexture( pVTFTexture );
 
@@ -340,7 +187,7 @@ unsigned char *ImgUtl_ReadVTFAsRGBA( const char *vtfPath, int &width, int &heigh
 }
 
 // read a TGA header from the current point in the file stream.
-static void ImgUtl_ReadTGAHeader(FILE *infile, TGAHeader &header)
+static void ImgUtl_ReadTGAHeader(std::FILE *infile, TGAHeader &header)
 {
 	if (infile == nullptr)
 	{
@@ -362,7 +209,7 @@ static void ImgUtl_ReadTGAHeader(FILE *infile, TGAHeader &header)
 }
 
 // write a TGA header to the current point in the file stream.
-static void WriteTGAHeader(FILE *outfile, TGAHeader &header)
+static void WriteTGAHeader(std::FILE *outfile, TGAHeader &header)
 {
 	if (outfile == nullptr)
 	{
@@ -386,7 +233,7 @@ static void WriteTGAHeader(FILE *outfile, TGAHeader &header)
 // reads in a TGA file and converts it to 32 bit RGBA color values in a memory buffer.
 unsigned char * ImgUtl_ReadTGAAsRGBA(const char *tgaPath, int &width, int &height, ConversionErrorType &errcode, TGAHeader &tgaHeader )
 {
-	FILE *tgaFile = fopen(tgaPath, "rb");
+	std::FILE *tgaFile = fopen(tgaPath, "rb");
 	if (tgaFile == nullptr)
 	{
 		errcode = CE_CANT_OPEN_SOURCE_FILE;
@@ -487,287 +334,44 @@ unsigned char * ImgUtl_ReadTGAAsRGBA(const char *tgaPath, int &width, int &heigh
 
 unsigned char *ImgUtl_ReadJPEGAsRGBA( const char *jpegPath, int &width, int &height, ConversionErrorType &errcode )
 {
-	struct jpeg_decompress_struct jpegInfo;
-	struct ValveJpegErrorHandler_t jerr;
-	JSAMPROW row_pointer[1];
-	int row_stride;
-	int cur_row = 0;
-
-	// image attributes
-	int image_height;
-	int image_width;
-
-	// open the jpeg image file.
-	FILE *infile = fopen(jpegPath, "rb");
-	if (infile == nullptr)
+	std::vector< std::byte > file;
+	if ( !LoadDiskFile( jpegPath, file ) )
 	{
 		errcode = CE_CANT_OPEN_SOURCE_FILE;
 		return nullptr;
 	}
 
-	//CJpegSourceMgr src;
-	//FileHandle_t fileHandle = g_pFullFileSystem->Open( jpegPath, "rb" );
-	//if ( fileHandle == FILESYSTEM_INVALID_HANDLE )
-	//{
-	//	errcode = CE_CANT_OPEN_SOURCE_FILE;
-	//	return NULL;
-	//}
-	//if ( !src.Init( g_pFullFileSystem, fileHandle ) ) {
-	//	errcode = CE_CANT_OPEN_SOURCE_FILE;
-	//	g_pFullFileSystem->Close( fileHandle );
-	//	return NULL;
-	//}
-
-	// setup error to print to stderr.
-	memset( &jpegInfo, 0, sizeof( jpegInfo ) );
-	jpegInfo.err = jpeg_std_error(&jerr.m_Base);
-
-	jpegInfo.err->error_exit = &ValveJpegErrorHandler;
-
-	// create the decompress struct.
-	jpeg_create_decompress(&jpegInfo);
-
-	if ( setjmp( jerr.m_ErrorContext ) )
+	if ( !ks::jpeg::read_header( file.data(), file.size(), &width, &height ) )
 	{
-		// Get here if there is any error
-		jpeg_destroy_decompress( &jpegInfo );
-
-		fclose( infile );
-		//g_pFullFileSystem->Close( fileHandle );
-
+		Warning( "%s\n", ks::jpeg::last_error() );
 		errcode = CE_ERROR_PARSING_SOURCE;
 		return nullptr;
 	}
 
-	jpeg_stdio_src(&jpegInfo, infile);
-	//jpegInfo.src = &src;
-
-	// read in the jpeg header and make sure that's all good.
-	if (jpeg_read_header(&jpegInfo, TRUE) != JPEG_HEADER_OK)
+	const size_t nBytes = static_cast< size_t >( width ) * height * 4;
+	unsigned char *buf = (unsigned char *)MemAlloc_Alloc( nBytes );
+	if ( buf == nullptr )
 	{
-		fclose( infile );
-		//g_pFullFileSystem->Close( fileHandle );
-		errcode = CE_ERROR_PARSING_SOURCE;
-		return nullptr;
-	}
-
-	// start the decompress with the jpeg engine.
-	if ( !jpeg_start_decompress(&jpegInfo) )
-	{
-		jpeg_destroy_decompress(&jpegInfo);
-		fclose( infile );
-		//g_pFullFileSystem->Close( fileHandle );
-		errcode = CE_ERROR_PARSING_SOURCE;
-		return nullptr;
-	}
-
-	// We only support 24-bit JPEG's
-	if ( jpegInfo.out_color_space != JCS_RGB || jpegInfo.output_components != 3 )
-	{
-		jpeg_destroy_decompress(&jpegInfo);
-		fclose( infile );
-		//g_pFullFileSystem->Close( fileHandle );
-		errcode = CE_SOURCE_FILE_SIZE_NOT_SUPPORTED;
-		return nullptr;
-	}
-
-	// now that we've started the decompress with the jpeg lib, we have the attributes of the
-	// image ready to be read out of the decompress struct.
-	row_stride = jpegInfo.output_width * 4;
-	image_height = jpegInfo.image_height;
-	image_width = jpegInfo.image_width;
-	int mem_required = jpegInfo.image_height * row_stride;
-
-	// allocate the memory to read the image data into.
-	unsigned char *buf = (unsigned char *)MemAlloc_Alloc(mem_required);
-	if (buf == nullptr)
-	{
-		jpeg_destroy_decompress(&jpegInfo);
-		fclose( infile );
-		//g_pFullFileSystem->Close( fileHandle );
 		errcode = CE_MEMORY_ERROR;
 		return nullptr;
 	}
 
-	// read in all the scan lines of the image into our image data buffer.
-	bool working = true;
-	while (working && (jpegInfo.output_scanline < jpegInfo.output_height))
+	if ( !ks::jpeg::decode( file.data(), file.size(), 4, buf, nBytes ) )
 	{
-		unsigned char *pRow = &(buf[cur_row * row_stride]);
-		row_pointer[0] = pRow;
-		if ( !jpeg_read_scanlines(&jpegInfo, row_pointer, 1) )
-		{
-			working = false;
-		}
-
-		// Expand the row RGB -> RGBA
-		for ( int x = image_width-1 ; x >= 0 ; --x )
-		{
-			pRow[x*4+3] = 0xff;
-			pRow[x*4+2] = pRow[x*3+2];
-			pRow[x*4+1] = pRow[x*3+1];
-			pRow[x*4] = pRow[x*3];
-		}
-
-		++cur_row;
-	}
-
-	// Clean up
-	fclose( infile );
-	//g_pFullFileSystem->Close( fileHandle );
-	jpeg_destroy_decompress(&jpegInfo);
-
-	// Check success status
-	if (!working)
-	{
-		g_pMemAlloc->Free(buf);
+		Warning( "%s\n", ks::jpeg::last_error() );
+		g_pMemAlloc->Free( buf );
 		errcode = CE_ERROR_PARSING_SOURCE;
 		return nullptr;
 	}
 
-	// OK!
-	width = image_width;
-	height = image_height;
 	errcode = CE_SUCCESS;
 	return buf;
-
 }
 
 ConversionErrorType ImgUtl_ReadJPEGAsRGBA( ks::byte_reader &srcBuf, ks::byte_writer &dstBuf, int &width, int &height )
 {
-	// Point directly to our byte_reader data
-	CJpegSourceMgr jpgMgr;
-	jpgMgr.bytes_in_buffer = srcBuf.size();
-	jpgMgr.next_input_byte = reinterpret_cast< const unsigned char * >( srcBuf.bytes().data() );
-
-	// Load the jpeg
-	struct jpeg_decompress_struct jpegInfo;
-	struct ValveJpegErrorHandler_t jerr;
-
-	memset( &jpegInfo, 0, sizeof( jpegInfo ) );
-	jpegInfo.err = jpeg_std_error(&jerr.m_Base);
-	jpegInfo.err->error_exit = &ValveJpegErrorHandler;
-
-	// create the decompress struct.
-	jpeg_create_decompress(&jpegInfo);
-
-	if ( setjmp( jerr.m_ErrorContext ) )
-	{
-		// Get here if there is any error
-		jpeg_destroy_decompress( &jpegInfo );
-		return CE_ERROR_PARSING_SOURCE;
-	}
-
-	// Set our source
-	jpegInfo.src = &jpgMgr;
-	
-	// read in the jpeg header and make sure that's all good.
-	if (jpeg_read_header(&jpegInfo, TRUE) != JPEG_HEADER_OK)
-	{
-		//fclose( infile );
-		//g_pFullFileSystem->Close( fileHandle );
-		return CE_ERROR_PARSING_SOURCE;
-	}
-
-	// start the decompress with the jpeg engine.
-	if ( !jpeg_start_decompress(&jpegInfo) )
-	{
-		jpeg_destroy_decompress(&jpegInfo);
-		return CE_ERROR_PARSING_SOURCE;
-	}
-
-	// We only support 24-bit JPEG's
-	if ( jpegInfo.out_color_space != JCS_RGB || jpegInfo.output_components != 3 )
-	{
-		jpeg_destroy_decompress(&jpegInfo);
-		return CE_SOURCE_FILE_SIZE_NOT_SUPPORTED;
-	}
-
-	// now that we've started the decompress with the jpeg lib, we have the attributes of the
-	// image ready to be read out of the decompress struct.
-	JSAMPROW row_pointer[1];
-	int row_stride;
-	int cur_row = 0;
-
-	// image attributes
-	int image_height;
-	int image_width;
-
-	row_stride = jpegInfo.output_width * 4;
-	image_height = jpegInfo.image_height;
-	image_width = jpegInfo.image_width;
-	int mem_required = jpegInfo.image_height * row_stride;
-
-	// Alloc a temporary buffer to serialize to
-	std::span< std::byte > dstSpan = dstBuf.claim_span( mem_required );
-	if ( dstSpan.size() != static_cast< size_t >( mem_required ) )
-	{
-		jpeg_destroy_decompress(&jpegInfo);
-		return CE_MEMORY_ERROR;
-	}
-	unsigned char *pDstBuf = reinterpret_cast< unsigned char * >( dstSpan.data() );
-
-	// read in all the scan lines of the image into our image data buffer.
-	bool working = true;
-	while (working && (jpegInfo.output_scanline < jpegInfo.output_height))
-	{
-		unsigned char *pRow = &(pDstBuf[cur_row * row_stride]);
-		row_pointer[0] = pRow;
-		if ( !jpeg_read_scanlines(&jpegInfo, row_pointer, 1) )
-		{
-			working = false;
-		}
-
-		// Expand the row RGB -> RGBA
-		for ( int x = image_width-1 ; x >= 0 ; --x )
-		{
-			pRow[x*4+3] = 0xff;
-			pRow[x*4+2] = pRow[x*3+2];
-			pRow[x*4+1] = pRow[x*3+1];
-			pRow[x*4] = pRow[x*3];
-		}
-
-		++cur_row;
-	}
-
-	// Clean up
-	//fclose( infile );
-	//g_pFullFileSystem->Close( fileHandle );
-	jpeg_destroy_decompress(&jpegInfo);
-
-	// Check success status
-	if ( !working )
-	{
-		dstBuf.clear();
-		return CE_ERROR_PARSING_SOURCE;
-	}
-
-	// OK!
-	width = image_width;
-	height = image_height;
-	return CE_SUCCESS;
-
+	return DecodeJPEG( srcBuf.bytes().data(), srcBuf.size(), 4, dstBuf, width, height );
 }
-
-static void ReadPNGData( png_structp png_ptr, png_bytep outBytes, png_size_t byteCountToRead )
-{
-
-	// Cast pointer
-	ks::byte_reader *pBuf = (ks::byte_reader *)png_get_io_ptr( png_ptr );
-	Assert( pBuf );
-
-	// Check for IO error
-	if ( pBuf->remaining() < byteCountToRead )
-	{
-		// Attempt to read past the end of the buffer.
-		// Use longjmp to report the error
-		png_longjmp( png_ptr, 1 );
-	}
-
-	// Read the bytes
-	pBuf->read_bytes( outBytes, byteCountToRead );
-}
-
 
 unsigned char *ImgUtl_ReadPNGAsRGBA( const char *pngPath, int &width, int &height, ConversionErrorType &errcode )
 {
@@ -805,23 +409,23 @@ unsigned char *ImgUtl_ReadImageAsRGBA( const char *path, int &width, int &height
 	const char *pExt = V_GetFileExtension( path );
 	if ( pExt )
 	{
-		if ( !Q_stricmp(pExt, "vtf") )
+		if ( !V_stricmp(pExt, "vtf") )
 		{
 			return ImgUtl_ReadVTFAsRGBA( path, width, height, errcode );
 		}
-		if ( !Q_stricmp(pExt, "bmp") )
+		if ( !V_stricmp(pExt, "bmp") )
 		{
 			return ImgUtl_ReadBMPAsRGBA( path, width, height, errcode );
 		}
-		if ( !Q_stricmp(pExt, "jpg") || !Q_stricmp(pExt, "jpeg") )
+		if ( !V_stricmp(pExt, "jpg") || !V_stricmp(pExt, "jpeg") )
 		{
 			return ImgUtl_ReadJPEGAsRGBA( path, width, height, errcode );
 		}
-		if ( !Q_stricmp(pExt, "png") )
+		if ( !V_stricmp(pExt, "png") )
 		{
 			return ImgUtl_ReadPNGAsRGBA( path, width, height, errcode );
 		}
-		if ( !Q_stricmp(pExt, "tga") )
+		if ( !V_stricmp(pExt, "tga") )
 		{
 			TGAHeader header;
 			return ImgUtl_ReadTGAAsRGBA( path, width, height, errcode, header );
@@ -935,7 +539,7 @@ ConversionErrorType ImgUtl_ConvertTGA(const char *tgaPath, int nMaxWidth/*=-1*/,
 	unsigned char *finalBuffer = (unsigned char *)MemAlloc_Alloc(paddedImageWidth * paddedImageHeight * 4);
 	ImgUtl_PadRGBAImage(resizeBuffer, finalWidth, finalHeight, finalBuffer, paddedImageWidth, paddedImageHeight);
 
-	FILE *outfile = fopen(tgaPath, "wb");
+	std::FILE *outfile = fopen(tgaPath, "wb");
 	if (outfile == nullptr)
 	{
 		g_pMemAlloc->Free(resizeBuffer);
@@ -1132,7 +736,7 @@ ConversionErrorType ImgUtl_PadRGBAImage(const unsigned char *srcBuf, const int s
 // convert TGA file at the given location to a VTF file of the same root name at the same location.
 ConversionErrorType ImgUtl_ConvertTGAToVTF(const char *tgaPath, int nMaxWidth/*=-1*/, int nMaxHeight/*=-1*/ )
 {
-	FILE *infile = fopen(tgaPath, "rb");
+	std::FILE *infile = fopen(tgaPath, "rb");
 	if (infile == nullptr)
 	{
 		return CE_CANT_OPEN_SOURCE_FILE;
@@ -1206,8 +810,6 @@ static void DoCopyFile( const char *source, const char *destination )
 {
 #if   defined( ENGINE_DLL )
 	::COM_CopyFile( source, destination );
-#elif REPLAY_DLL
-	g_pEngine->CopyFile( source, destination );
 #else
 	engine->CopyLocalFile( source, destination );
 #endif
@@ -1215,7 +817,7 @@ static void DoCopyFile( const char *source, const char *destination )
 
 static void DoDeleteFile( const char *filename )
 {
-	unlink( filename );
+	ks::platform::remove_file( filename, nullptr );
 }
 
 ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const char *pMaterialsSubDir, int nMaxWidth/*=-1*/, int nMaxHeight/*=-1*/ )
@@ -1234,7 +836,7 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 	{
 		--constchar;
 	}
-	Q_strncpy(extension, constchar, MAX_PATH);
+	V_strncpy(extension, constchar, MAX_PATH);
 
 	bool deleteIntermediateTGA = false;
 	bool deleteIntermediateVTF = false;
@@ -1243,7 +845,7 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 	char *c;
 	bool failed = false;
 
-	Q_strncpy(tgaPath, pInPath, sizeof(tgaPath));
+	V_strncpy(tgaPath, pInPath, sizeof(tgaPath));
 
 	// Construct a TGA version if necessary
 	if (stricmp(extension, "tga"))
@@ -1256,13 +858,13 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 		*c = 0;
 
 		char origpath[MAX_PATH*2];
-		Q_strncpy(origpath, tgaPath, sizeof(origpath));
+		V_strncpy(origpath, tgaPath, sizeof(origpath));
 
 		int index = 0;
 		do {
-			Q_snprintf(tgaPath, sizeof(tgaPath), "%stemp%d.tga", origpath, index);
+			V_snprintf(tgaPath, sizeof(tgaPath), "%stemp%d.tga", origpath, index);
 			++index;
-		} while (_access(tgaPath, 0) != -1);
+		} while (ks::platform::path_exists( tgaPath ));
 
 		if (!stricmp(extension, "jpg") || !stricmp(extension, "jpeg"))
 		{
@@ -1310,7 +912,7 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 		if (!failed)
 		{
 			char tempPath[MAX_PATH*2];
-			Q_strncpy(tempPath, tgaPath, sizeof(tempPath));
+			V_strncpy(tempPath, tgaPath, sizeof(tempPath));
 
 			nErrorCode = ImgUtl_ConvertTGAToVTF( tempPath, nMaxWidth, nMaxHeight );
 			if (nErrorCode == CE_SUCCESS)
@@ -1331,7 +933,7 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 
 	if (!failed)
 	{
-		Q_strncpy(vtfPath, tgaPath, sizeof(vtfPath));
+		V_strncpy(vtfPath, tgaPath, sizeof(vtfPath));
 
 		// rename the tga file to be a vtf file.
 		c = vtfPath + strlen(vtfPath);
@@ -1340,7 +942,7 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 			--c;
 		}
 		*c = 0;
-		Q_strncat(vtfPath, "vtf", sizeof(vtfPath), COPY_ALL_CHARACTERS);
+		V_strncat(vtfPath, "vtf", sizeof(vtfPath), COPY_ALL_CHARACTERS);
 
 		// get the vtfFilename from the path.
 		const char *vtfFilename = pInPath + strlen(pInPath);
@@ -1354,20 +956,18 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 		V_strcpy_safe( szOutDir, "/materials/" );
 		if ( pMaterialsSubDir[0] == '\\' || pMaterialsSubDir[0] == '/' )
 			pMaterialsSubDir = pMaterialsSubDir + 1;
-		Q_strcat(szOutDir, pMaterialsSubDir, sizeof(szOutDir) );
-		Q_StripTrailingSlash( szOutDir );
-		Q_AppendSlash( szOutDir, sizeof(szOutDir) );
-		Q_FixSlashes( szOutDir, CORRECT_PATH_SEPARATOR );
+		V_strcat(szOutDir, pMaterialsSubDir, sizeof(szOutDir) );
+		V_StripTrailingSlash( szOutDir );
+		V_AppendSlash( szOutDir, sizeof(szOutDir) );
+		V_FixSlashes( szOutDir, CORRECT_PATH_SEPARATOR );
 
 #ifdef ENGINE_DLL
-		Q_strncpy(finalPath, com_gamedir, sizeof(finalPath));
-#elif REPLAY_DLL
-		Q_strncpy(finalPath, g_pEngine->GetGameDir(), sizeof(finalPath));
+		V_strncpy(finalPath, com_gamedir, sizeof(finalPath));
 #elif defined(CLIENT_DLL) || defined(GAME_DLL)
-		Q_strncpy(finalPath, engine->GetGameDirectory(), sizeof(finalPath));
+		V_strncpy(finalPath, engine->GetGameDirectory(), sizeof(finalPath));
 #endif
-		Q_strncat(finalPath, szOutDir, sizeof(finalPath), COPY_ALL_CHARACTERS);
-		Q_strncat(finalPath, vtfFilename, sizeof(finalPath), COPY_ALL_CHARACTERS);
+		V_strncat(finalPath, szOutDir, sizeof(finalPath), COPY_ALL_CHARACTERS);
+		V_strncat(finalPath, vtfFilename, sizeof(finalPath), COPY_ALL_CHARACTERS);
 
 		c = finalPath + strlen(finalPath);
 		while ((c > finalPath) && (*(c-1) != '.'))
@@ -1375,7 +975,7 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 			--c;
 		}
 		*c = 0;
-		Q_strncat(finalPath,"vtf", sizeof(finalPath), COPY_ALL_CHARACTERS);
+		V_strncat(finalPath,"vtf", sizeof(finalPath), COPY_ALL_CHARACTERS);
 
 		// make sure the directory exists before we try to copy the file.
 		g_pFullFileSystem->CreateDirHierarchy(szOutDir + 1, "GAME");
@@ -1407,7 +1007,7 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 		{
 			--c;
 		}
-		Q_strncpy(c, "txt", sizeof(vtfPath)-(c-vtfPath));
+		V_strncpy(c, "txt", sizeof(vtfPath)-(c-vtfPath));
 
 		DoDeleteFile( vtfPath );
 	}
@@ -1430,13 +1030,13 @@ ConversionErrorType ImgUtl_WriteGenericVMT( const char *vtfPath, const char *pMa
 
 	// make the vmt filename
 	char vmtPath[MAX_PATH*4];
-	Q_strncpy(vmtPath, vtfPath, sizeof(vmtPath));
+	V_strncpy(vmtPath, vtfPath, sizeof(vmtPath));
 	char *c = vmtPath + strlen(vmtPath);
 	while ((c > vmtPath) && (*(c-1) != '.'))
 	{
 		--c;
 	}
-	Q_strncpy(c, "vmt", sizeof(vmtPath) - (c - vmtPath));
+	V_strncpy(c, "vmt", sizeof(vmtPath) - (c - vmtPath));
 
 	// get the root filename for the vtf file
 	char filename[MAX_PATH];
@@ -1453,7 +1053,7 @@ ConversionErrorType ImgUtl_WriteGenericVMT( const char *vtfPath, const char *pMa
 	filename[i] = 0;
 
 	// create the vmt file.
-	FILE *vmtFile = fopen(vmtPath, "w");
+	std::FILE *vmtFile = fopen(vmtPath, "w");
 	if (vmtFile == nullptr)
 	{
 		return CE_ERROR_WRITING_OUTPUT_FILE;
@@ -1475,233 +1075,32 @@ ConversionErrorType ImgUtl_WriteGenericVMT( const char *vtfPath, const char *pMa
 	return CE_SUCCESS;
 }
 
-static void WritePNGData( png_structp png_ptr, png_bytep inBytes, png_size_t byteCountToWrite )
-{
-
-	// Cast pointer
-	ks::byte_writer *pBuf = (ks::byte_writer *)png_get_io_ptr( png_ptr );
-	Assert( pBuf );
-
-	// Write the bytes
-	pBuf->write_bytes( inBytes, byteCountToWrite );
-
-}
-
-static void FlushPNGData( png_structp png_ptr )
-{
-	// We're writing to a memory buffer, it's a NOP
-}
-
 ConversionErrorType ImgUtl_WriteRGBAAsPNGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, ks::byte_writer &bufOutData, int nStride )
 {
 	return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
 }
 
-//-----------------------------------------------------------------------------
-// Purpose:  Initialize destination --- called by jpeg_start_compress
-//  before any data is actually written.
-//-----------------------------------------------------------------------------
-METHODDEF(void) init_destination (j_compress_ptr cinfo)
-{
-	JPEGDestinationManager_t *dest = ( JPEGDestinationManager_t *) cinfo->dest;
-
-	// Allocate the output buffer --- it will be released when done with image
-	dest->buffer = (byte *)
-		(*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-		JPEG_OUTPUT_BUF_SIZE * sizeof(byte));
-
-	dest->pub.next_output_byte = dest->buffer;
-	dest->pub.free_in_buffer = JPEG_OUTPUT_BUF_SIZE;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Empty the output buffer --- called whenever buffer fills up.
-// Input  : boolean - 
-//-----------------------------------------------------------------------------
-METHODDEF(boolean) empty_output_buffer (j_compress_ptr cinfo)
-{
-	JPEGDestinationManager_t *dest = ( JPEGDestinationManager_t * ) cinfo->dest;
-
-	ks::byte_writer *buf = dest->pBuffer;
-
-	// Add some data
-	buf->write_bytes( dest->buffer, JPEG_OUTPUT_BUF_SIZE );
-
-	dest->pub.next_output_byte = dest->buffer;
-	dest->pub.free_in_buffer = JPEG_OUTPUT_BUF_SIZE;
-
-	return TRUE;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Terminate destination --- called by jpeg_finish_compress
-// after all data has been written.  Usually needs to flush buffer.
-//
-// NB: *not* called by jpeg_abort or jpeg_destroy; surrounding
-// application must deal with any cleanup that should happen even
-// for error exit.
-//-----------------------------------------------------------------------------
-METHODDEF(void) term_destination (j_compress_ptr cinfo)
-{
-	JPEGDestinationManager_t *dest = (JPEGDestinationManager_t *) cinfo->dest;
-	size_t datacount = JPEG_OUTPUT_BUF_SIZE - dest->pub.free_in_buffer;
-
-	ks::byte_writer *buf = dest->pBuffer;
-
-	/* Write any data remaining in the buffer */
-	if (datacount > 0) 
-	{
-		buf->write_bytes( dest->buffer, datacount );
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Set up functions for writing data to a byte_writer instead of FILE *
-//-----------------------------------------------------------------------------
-GLOBAL(void) jpeg_ByteWriter_dest (j_compress_ptr cinfo, ks::byte_writer *pBuffer )
-{
-    JPEGDestinationManager_t *dest;
-    
-    /* The destination object is made permanent so that multiple JPEG images
-    * can be written to the same file without re-executing jpeg_stdio_dest.
-    * This makes it dangerous to use this manager and a different destination
-    * manager serially with the same JPEG object, because their private object
-    * sizes may be different.  Caveat programmer.
-    */
-    if (cinfo->dest == nullptr) {  /* first time for this JPEG object? */
-        cinfo->dest = (struct jpeg_destination_mgr *)
-            (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-            sizeof(JPEGDestinationManager_t));
-    }
-    
-    dest = ( JPEGDestinationManager_t * ) cinfo->dest;
-
-    dest->pub.init_destination      = init_destination;
-    dest->pub.empty_output_buffer   = empty_output_buffer;
-    dest->pub.term_destination      = term_destination;
-    dest->pBuffer                   = pBuffer;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Write three channel RGB data to a JPEG file
-//-----------------------------------------------------------------------------
-bool ImgUtl_WriteRGBToJPEG( unsigned char *pSrcBuf, unsigned int nSrcWidth, unsigned int nSrcHeight, const char *lpszFilename )
-{
-	ks::byte_writer dstBuf;
-
-	JSAMPROW row_pointer[1];     // pointer to JSAMPLE row[s]
-	int row_stride;              // physical row width in image buffer
-
-	// stderr handler
-	struct jpeg_error_mgr jerr;
-
-	// compression data structure
-	struct jpeg_compress_struct cinfo;
-
-	row_stride = nSrcWidth * 3; // JSAMPLEs per row in image_buffer
-
-	// point at stderr
-	cinfo.err = jpeg_std_error(&jerr);
-
-	// create compressor
-	jpeg_create_compress(&cinfo);
-
-	// Hook byte_writer to compression
-	jpeg_ByteWriter_dest(&cinfo, &dstBuf );
-
-	// image width and height, in pixels
-	cinfo.image_width = nSrcWidth;
-	cinfo.image_height = nSrcHeight;
-	// RGB is 3 component
-	cinfo.input_components = 3;
-	// # of color components per pixel
-	cinfo.in_color_space = JCS_RGB;
-
-	// Apply settings
-	jpeg_set_defaults(&cinfo);
-	jpeg_set_quality(&cinfo, 100, TRUE );
-
-	// Start compressor
-	jpeg_start_compress(&cinfo, TRUE);
-
-	// Write scanlines
-	while ( cinfo.next_scanline < cinfo.image_height ) 
-	{
-		row_pointer[ 0 ] = &pSrcBuf[ cinfo.next_scanline * row_stride ];
-		jpeg_write_scanlines( &cinfo, row_pointer, 1 );
-	}
-
-	// Finalize image
-	jpeg_finish_compress(&cinfo);
-
-	// Cleanup
-	jpeg_destroy_compress(&cinfo);
-	
-	return CE_SUCCESS;
-}
-
 ConversionErrorType ImgUtl_WriteRGBAAsJPEGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, ks::byte_writer &bufOutData, int nStride )
 {
-
-	JSAMPROW row_pointer[1];     // pointer to JSAMPLE row[s]
-	int row_stride;              // physical row width in image buffer
-
-	// stderr handler
-	struct jpeg_error_mgr jerr;
-
-	// compression data structure
-	struct jpeg_compress_struct cinfo;
-
-	row_stride = nWidth * 4;
-
-	// point at stderr
-	cinfo.err = jpeg_std_error(&jerr);
-
-	// create compressor
-	jpeg_create_compress(&cinfo);
-
-	// Hook byte_writer to compression
-	jpeg_ByteWriter_dest(&cinfo, &bufOutData );
-
-	// image width and height, in pixels
-	cinfo.image_width = nWidth;
-	cinfo.image_height = nHeight;
-	// RGB is 3 component
-	cinfo.input_components = 3;
-	// # of color components per pixel
-	cinfo.in_color_space = JCS_RGB;
-
-	// Apply settings
-	jpeg_set_defaults(&cinfo);
-	jpeg_set_quality(&cinfo, 100, TRUE );
-
-	// Start compressor
-	jpeg_start_compress(&cinfo, TRUE);
-
-	// Write scanlines
-	unsigned char *pDstRow = (unsigned char *)MemAlloc_Alloc( sizeof(unsigned char) * nWidth * 4 );
-	while ( cinfo.next_scanline < cinfo.image_height ) 
+	const int nRowBytes = nStride > 0 ? nStride : nWidth * 4;
+	std::vector< unsigned char > rgb( static_cast< size_t >( nWidth ) * nHeight * 3 );
+	for ( int y = 0; y < nHeight; ++y )
 	{
-		const unsigned char *pSrcRow = &(pRGBAData[cinfo.next_scanline * row_stride]);
-		// convert row from RGBA to RGB
-		for ( int x = nWidth-1 ; x >= 0 ; --x )
+		const unsigned char *pSrcRow = pRGBAData + static_cast< size_t >( y ) * nRowBytes;
+		unsigned char *pDstRow = rgb.data() + static_cast< size_t >( y ) * nWidth * 3;
+		for ( int x = 0; x < nWidth; ++x )
 		{
 			pDstRow[x*3+2] = pSrcRow[x*4+2];
 			pDstRow[x*3+1] = pSrcRow[x*4+1];
 			pDstRow[x*3] = pSrcRow[x*4];
 		}
-		row_pointer[ 0 ] = pDstRow;
-		jpeg_write_scanlines( &cinfo, row_pointer, 1 );
 	}
 
-	// Finalize image
-	jpeg_finish_compress(&cinfo);
-
-	// Cleanup
-	jpeg_destroy_compress(&cinfo);
-
-	g_pMemAlloc->Free( pDstRow );
-
+	if ( !ks::jpeg::encode( rgb.data(), nWidth, nHeight, 100, AppendToWriter, &bufOutData ) )
+	{
+		Warning( "%s\n", ks::jpeg::last_error() );
+		return CE_ERROR_PARSING_SOURCE;
+	}
 	return CE_SUCCESS;
 }
 
@@ -1731,14 +1130,14 @@ static ConversionErrorType ImgUtl_SaveJPEGBitmapToBuffer( ks::byte_writer &fileD
 {
 	if ( !bitmap.IsValid() )
 	{
-		Assert( bitmap.IsValid() );
+		contract_assert( bitmap.IsValid() );
 		return CE_CANT_OPEN_SOURCE_FILE;
 	}
 
 	// Sorry, only RGBA8888 supported right now
 	if ( bitmap.Format() != IMAGE_FORMAT_RGBA8888 )
 	{
-		Assert( bitmap.Format() == IMAGE_FORMAT_RGBA8888 );
+		contract_assert( bitmap.Format() == IMAGE_FORMAT_RGBA8888 );
 		return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
 	}
 
@@ -1797,14 +1196,14 @@ ConversionErrorType ImgUtl_SavePNGBitmapToBuffer( ks::byte_writer &fileData, con
 {
 	if ( !bitmap.IsValid() )
 	{
-		Assert( bitmap.IsValid() );
+		contract_assert( bitmap.IsValid() );
 		return CE_CANT_OPEN_SOURCE_FILE;
 	}
 
 	// Sorry, only RGBA8888 supported right now
 	if ( bitmap.Format() != IMAGE_FORMAT_RGBA8888 )
 	{
-		Assert( bitmap.Format() == IMAGE_FORMAT_RGBA8888 );
+		contract_assert( bitmap.Format() == IMAGE_FORMAT_RGBA8888 );
 		return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
 	}
 
@@ -1833,7 +1232,7 @@ ConversionErrorType ImgUtl_ResizeBitmap( Bitmap_t &destBitmap, int nWidth, int n
 	// No source image?
 	if ( !pImgSource->IsValid() )
 	{
-		Assert( pImgSource->IsValid() );
+		contract_assert( pImgSource->IsValid() );
 		return CE_CANT_OPEN_SOURCE_FILE;
 	}
 
@@ -1843,8 +1242,8 @@ ConversionErrorType ImgUtl_ResizeBitmap( Bitmap_t &destBitmap, int nWidth, int n
 		pImgSource->Format() != IMAGE_FORMAT_RGBA8888
 		|| pImgSource->Stride() != pImgSource->Width()*4
 	) {
-		Assert( pImgSource->Format() == IMAGE_FORMAT_RGBA8888 );
-		Assert( pImgSource->Stride() == pImgSource->Width()*4 );
+		contract_assert( pImgSource->Format() == IMAGE_FORMAT_RGBA8888 );
+		contract_assert( pImgSource->Stride() == pImgSource->Width()*4 );
 		return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
 	}
 
@@ -1854,7 +1253,7 @@ ConversionErrorType ImgUtl_ResizeBitmap( Bitmap_t &destBitmap, int nWidth, int n
 	// Something wrong?
 	if ( !destBitmap.IsValid() )
 	{
-		Assert( destBitmap.IsValid() );
+		contract_assert( destBitmap.IsValid() );
 		return CE_MEMORY_ERROR;
 	}
 
@@ -1869,72 +1268,7 @@ ConversionErrorType ImgUtl_ResizeBitmap( Bitmap_t &destBitmap, int nWidth, int n
 //-----------------------------------------------------------------------------
 ConversionErrorType ImgUtl_ReadJPEGToRGB( ks::byte_reader &srcBuf, ks::byte_writer &dstBuf, int &width, int &height )
 {
-	// Point directly to our byte_reader data
-	CJpegSourceMgr jpgMgr;
-	jpgMgr.bytes_in_buffer = srcBuf.size();
-	jpgMgr.next_input_byte = reinterpret_cast< const unsigned char * >( srcBuf.bytes().data() );
-
-	// Load the jpeg.
-	struct jpeg_decompress_struct jpegInfo;
-	struct jpeg_error_mgr jerr;
-
-	memset( &jpegInfo, 0, sizeof( jpegInfo ) );
-	jpegInfo.err = jpeg_std_error(&jerr);
-	jpeg_create_decompress(&jpegInfo);
-	jpegInfo.src = &jpgMgr;
-
-	jpegInfo.err->error_exit = &ValveJpegErrorHandler;
-
-	if ( jpeg_read_header( &jpegInfo, TRUE ) != JPEG_HEADER_OK)
-		return CE_ERROR_PARSING_SOURCE;
-
-	// start the decompress with the jpeg engine.
-	if ( !jpeg_start_decompress( &jpegInfo ) || jpegInfo.output_components != 3)
-	{
-		jpeg_destroy_decompress(&jpegInfo);
-		return CE_ERROR_PARSING_SOURCE;
-	}
-
-	// now that we've started the decompress with the jpeg lib, we have the attributes of the
-	// image ready to be read out of the decompress struct.
-	int row_stride = jpegInfo.output_width * jpegInfo.output_components;
-	int mem_required = jpegInfo.image_height * jpegInfo.image_width * jpegInfo.output_components;
-	JSAMPROW row_pointer[1];
-	int cur_row = 0;
-
-	width = jpegInfo.output_width;
-	height = jpegInfo.output_height;
-
-	// Alloc a temporary buffer to serialize to
-	std::span< std::byte > dstSpan = dstBuf.claim_span( mem_required );
-	if ( dstSpan.size() != static_cast< size_t >( mem_required ) )
-	{
-		jpeg_destroy_decompress(&jpegInfo);
-		return CE_MEMORY_ERROR;
-	}
-	unsigned char *pDstBuf = reinterpret_cast< unsigned char * >( dstSpan.data() );
- 
-	// read in all the scan lines of the image into our image data buffer.
-	bool working = true;
-	while (working && (jpegInfo.output_scanline < jpegInfo.output_height))
-	{
-		row_pointer[0] = &(pDstBuf[cur_row * row_stride]);
-		if (!jpeg_read_scanlines(&jpegInfo, row_pointer, 1) )
-		{
-			working = false;
-		}
-		++cur_row;
-	}
-
-	if (!working)
-	{
-		jpeg_destroy_decompress(&jpegInfo);
-		return CE_ERROR_PARSING_SOURCE;
-	}
-
-	jpeg_finish_decompress(&jpegInfo);
-
-	return CE_SUCCESS;
+	return DecodeJPEG( srcBuf.bytes().data(), srcBuf.size(), 3, dstBuf, width, height );
 }
 
 //-----------------------------------------------------------------------------
@@ -1960,77 +1294,9 @@ ConversionErrorType ImgUtl_CropRGBA( int x0, int y0, int nSrcWidth, int nSrcHeig
 bool ImgUtl_WriteRGBAToJPEG( unsigned char *pSrcBuf, unsigned int nSrcWidth, unsigned int nSrcHeight, const char *lpszFilename )
 {
 	ks::byte_writer dstBuf;
+	if ( ImgUtl_WriteRGBAAsJPEGToBuffer( pSrcBuf, nSrcWidth, nSrcHeight, dstBuf, 0 ) != CE_SUCCESS )
+		return false;
 
-	JSAMPROW row_pointer[1];     // pointer to JSAMPLE row[s]
-	int row_stride;              // physical row width in image buffer
-
-	// compression data structure
-	struct jpeg_compress_struct cinfo;
-
-	unsigned char *pConvBuf;
-	pConvBuf = (unsigned char *) MemAlloc_Alloc( nSrcHeight * nSrcWidth * ImageLoader::SizeInBytes( IMAGE_FORMAT_RGB888 ) );
-	if ( pConvBuf == nullptr )
-		return CE_MEMORY_ERROR;
-	
-	ImageLoader::ConvertImageFormat( pSrcBuf, IMAGE_FORMAT_RGBA8888, pConvBuf, IMAGE_FORMAT_RGB888, nSrcWidth, nSrcHeight );
-
-	row_stride = nSrcWidth * 3; // JSAMPLEs per row in image_buffer
-
-	struct ValveJpegErrorHandler_t jerr;
-	cinfo.err = jpeg_std_error(&jerr.m_Base);
-	cinfo.err->error_exit = &ValveJpegErrorHandler;
-
-	// create compressor
-	jpeg_create_compress(&cinfo);
-
-	// Hook byte_writer to compression
-	jpeg_ByteWriter_dest(&cinfo, &dstBuf );
-
-	// Handle our error case
-	if ( setjmp( jerr.m_ErrorContext ) )
-	{
-		g_pMemAlloc->Free( pConvBuf );
-		return CE_ERROR_PARSING_SOURCE;
-	}
-
-	// image width and height, in pixels
-	cinfo.image_width = nSrcWidth;
-	cinfo.image_height = nSrcHeight;
-	// RGBA is 3 components
-	cinfo.input_components = 3;
-	// # of color components per pixel
-	cinfo.in_color_space = JCS_RGB;
-
-	// Apply settings
-	jpeg_set_defaults(&cinfo);
-	jpeg_set_quality(&cinfo, 100, TRUE );
-
-	// Start compressor
-	jpeg_start_compress(&cinfo, TRUE);
-
-	// Write scanlines
-	while ( cinfo.next_scanline < cinfo.image_height ) 
-	{
-		row_pointer[ 0 ] = &pConvBuf[ cinfo.next_scanline * row_stride ];
-		jpeg_write_scanlines( &cinfo, row_pointer, 1 );
-	}
-
-	// Finalize image
-	jpeg_finish_compress(&cinfo);
-
-	// Cleanup
-	jpeg_destroy_compress(&cinfo);
-
-	g_pMemAlloc->Free( pConvBuf );
-
-	int finalSize = 0;
-	FileHandle_t fh = g_pFullFileSystem->Open( lpszFilename, "wb", "LOCAL" );
-	if ( FILESYSTEM_INVALID_HANDLE != fh )
-	{
-		g_pFullFileSystem->Write( dstBuf.data(), dstBuf.tell(), fh );
-		finalSize = g_pFullFileSystem->Tell( fh );
-		g_pFullFileSystem->Close( fh );
-	}
-	
-	return CE_SUCCESS;
+	WriteBufferToFile( lpszFilename, dstBuf );
+	return true;
 }

@@ -1,19 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "iefx.h"
 #include "engine/IStaticPropMgr.h"
-#include "tier1/keyvalues.h"
-#include "tier0/vprof.h"
 #include "toolframework_client.h"
 
 //-----------------------------------------------------------------------------
@@ -147,7 +145,7 @@ void TE_Decal( IRecipientFilter& filter, float delay,
 //-----------------------------------------------------------------------------
 void C_TEDecal::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEDecal::PostDataUpdate" );
+	CVProfScope _( "C_TEDecal::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CBroadcastRecipientFilter filter;
 	TE_Decal( filter, 0.0f, &m_vecOrigin, &m_vecStart, m_nEntity, m_nHitbox, m_nIndex );

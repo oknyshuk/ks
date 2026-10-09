@@ -1,17 +1,19 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "clientalphaproperty.h"
 #include "const.h"
 #include "iclientshadowmgr.h"
 #include "iclientunknown.h"
 #include "iclientrenderable.h"
-
 
 //-----------------------------------------------------------------------------
 // Client alpha property starts here
@@ -64,14 +66,14 @@ void CClientAlphaProperty::EnableShadowAlphaModulationOverride( bool bEnable )
 // Sets an FX function
 void CClientAlphaProperty::SetRenderFX( RenderFx_t nRenderFx, RenderMode_t nRenderMode, float flStartTime, float flDuration )
 {
-	bool bStartTimeUnspecified = ( flStartTime == FLT_MAX );
+	bool bStartTimeUnspecified = ( flStartTime == std::numeric_limits<float>::max() );
 	bool bRenderFxChanged = ( m_nRenderFX != nRenderFx );
 
 	switch( nRenderFx )
 	{
 	case kRenderFxFadeIn:
 	case kRenderFxFadeOut:
-		Assert( !bStartTimeUnspecified || !bRenderFxChanged );
+		contract_assert( !bStartTimeUnspecified || !bRenderFxChanged );
 		if ( bStartTimeUnspecified )
 		{
 			flStartTime = gpGlobals->curtime;
@@ -80,7 +82,7 @@ void CClientAlphaProperty::SetRenderFX( RenderFx_t nRenderFx, RenderMode_t nRend
 
 	case kRenderFxFadeSlow:
 	case kRenderFxSolidSlow:
-		Assert( !bStartTimeUnspecified || !bRenderFxChanged );
+		contract_assert( !bStartTimeUnspecified || !bRenderFxChanged );
 		if ( bStartTimeUnspecified )
 		{
 			flStartTime = gpGlobals->curtime;
@@ -90,7 +92,7 @@ void CClientAlphaProperty::SetRenderFX( RenderFx_t nRenderFx, RenderMode_t nRend
 
 	case kRenderFxFadeFast:
 	case kRenderFxSolidFast:
-		Assert( !bStartTimeUnspecified || !bRenderFxChanged );
+		contract_assert( !bStartTimeUnspecified || !bRenderFxChanged );
 		if ( bStartTimeUnspecified )
 		{
 			flStartTime = gpGlobals->curtime;
@@ -116,7 +118,7 @@ void CClientAlphaProperty::SetDesyncOffset( int nOffset )
 void CClientAlphaProperty::SetDistanceFadeMode( ClientAlphaDistanceFadeMode_t nFadeMode )
 {
 	// Necessary since m_nDistanceFadeMode is stored in 1 bit
-	COMPILE_TIME_ASSERT( CLIENT_ALPHA_DISTANCE_FADE_MODE_COUNT <= ( 1 << CLIENT_ALPHA_DISTANCE_FADE_MODE_BIT_COUNT ) );
+	static_assert( CLIENT_ALPHA_DISTANCE_FADE_MODE_COUNT <= ( 1 << CLIENT_ALPHA_DISTANCE_FADE_MODE_BIT_COUNT ) );
 	m_nDistanceFadeMode = nFadeMode;
 }
 
@@ -139,8 +141,8 @@ void CClientAlphaProperty::SetFade( float flGlobalFadeScale, float flDistFadeSta
 		}
 	}
 
-	Assert( flDistFadeStart >= 0 && flDistFadeStart <= 65535 );
-	Assert( flDistFadeEnd >= 0 && flDistFadeEnd <= 65535 );
+	contract_assert( flDistFadeStart >= 0 && flDistFadeStart <= 65535 );
+	contract_assert( flDistFadeEnd >= 0 && flDistFadeEnd <= 65535 );
 
 	m_nDistFadeStart = (uint16)flDistFadeStart;
 	m_nDistFadeEnd = (uint16)flDistFadeEnd;
@@ -156,7 +158,7 @@ int CClientAlphaProperty::ComputeRenderEffectBlend( int nRenderEffect ) const
 	switch( nRenderEffect ) 
 	{
 	case kRenderFxPulseSlowWide:
-		nBlend = m_nAlpha + 0x40 * sin( gpGlobals->curtime * 2 + flOffset );	
+		nBlend = m_nAlpha + 0x40 * std::sin( gpGlobals->curtime * 2 + flOffset );	
 		break;
 
 	case kRenderFxPulseFastWide:

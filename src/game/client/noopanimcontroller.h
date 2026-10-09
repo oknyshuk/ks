@@ -1,5 +1,6 @@
-#ifndef NOOPANIMCONTROLLER_H
-#define NOOPANIMCONTROLLER_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
 
 class CNoopAnimController
 {
@@ -13,5 +14,3 @@ public:
 	void RunAnimationCommand( ... ) {}
 	float GetAnimationSequenceLength( const char * ) { return 0.0f; }
 };
-
-#endif // NOOPANIMCONTROLLER_H

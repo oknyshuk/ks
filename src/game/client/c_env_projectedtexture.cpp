@@ -1,26 +1,27 @@
-//====== Copyright (c) 1996-2003, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2003 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 
 #include "c_env_projectedtexture.h"
-#include "shareddefs.h"
-#include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
-#include "view.h"
-#include "iviewrender.h"
-#include "view_shared.h"
 #include "texture_group_names.h"
-#include "tier0/icommandline.h"
-#include "tier0/platform.h"
 
-
-float C_EnvProjectedTexture::m_flVisibleBBoxMinHeight = -FLT_MAX;
+float C_EnvProjectedTexture::m_flVisibleBBoxMinHeight = -std::numeric_limits<float>::max();
 
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_EnvProjectedTexture, DT_EnvProjectedTexture, CEnvProjectedTexture )
@@ -119,14 +120,13 @@ void C_EnvProjectedTexture::SetRotation( float flRotation )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : updateType - 
+// Purpose:
+// Input  : updateType -
 //-----------------------------------------------------------------------------
 void C_EnvProjectedTexture::OnDataChanged( DataUpdateType_t updateType )
 {
 	if ( updateType == DATA_UPDATE_CREATED )
 	{
-		Assert( m_SpotlightTexture.IsValid() == false );
 		m_SpotlightTexture.Init( m_SpotlightTextureName, TEXTURE_GROUP_OTHER, true );
 		m_ProjectedMaterial.Init( m_SpotlightTextureName, TEXTURE_GROUP_OTHER );
 	}
@@ -168,7 +168,7 @@ void C_EnvProjectedTexture::UpdateLight( void )
 		return;
 	}
 
-	VPROF("C_EnvProjectedTexture::UpdateLight");
+	CVProfScope _( "C_EnvProjectedTexture::UpdateLight", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	bool bVisible = true;
 
 	Vector vLinearFloatLightColor( m_LightColor.r, m_LightColor.g, m_LightColor.b );
@@ -190,10 +190,10 @@ void C_EnvProjectedTexture::UpdateLight( void )
 
 		m_bForceUpdate = true;
 	}
-	
+
 	if ( !m_bForceUpdate && r_flashlightenableculling.GetBool() )
 	{
-		bVisible = IsBBoxVisible();		
+		bVisible = IsBBoxVisible();
 	}
 
 	if ( m_bState == false || !bVisible )
@@ -244,7 +244,7 @@ void C_EnvProjectedTexture::UpdateLight( void )
 				VectorNormalize( vForward );
 
 				// JasonM - unimplemented
-				Assert (0);
+				contract_assert( 0 );
 
 				//Quaternion q = DirectionToOrientation( dir );
 
@@ -275,24 +275,24 @@ void C_EnvProjectedTexture::UpdateLight( void )
 			// quickly check the proposed light's bbox against the view frustum to determine whether we
 			// should bother to create it, if it doesn't exist, or cull it, if it does.
 
-			// get the half-widths of the near and far planes, 
+			// get the half-widths of the near and far planes,
 			// based on the FOV which is in degrees. Remember that
-			// on planet Valve, x is forward, y left, and z up. 
-			const float tanHalfAngle = tan( m_flLightFOV * ( M_PI/180.0f ) * 0.5f );
+			// on planet Valve, x is forward, y left, and z up.
+			const float tanHalfAngle = std::tan( m_flLightFOV * ( std::numbers::pi/180.0f ) * 0.5f );
 			const float halfWidthNear = tanHalfAngle * m_flNearZ;
 			const float halfWidthFar = tanHalfAngle * m_flFarZ;
-			// now we can build coordinates in local space: the near rectangle is eg 
-			// (0, -halfWidthNear, -halfWidthNear), (0,  halfWidthNear, -halfWidthNear), 
+			// now we can build coordinates in local space: the near rectangle is eg
+			// (0, -halfWidthNear, -halfWidthNear), (0,  halfWidthNear, -halfWidthNear),
 			// (0,  halfWidthNear,  halfWidthNear), (0, -halfWidthNear,  halfWidthNear)
 
-			VectorAligned vNearRect[4] = { 
+			VectorAligned vNearRect[4] = {
 				VectorAligned( m_flNearZ, -halfWidthNear, -halfWidthNear), VectorAligned( m_flNearZ,  halfWidthNear, -halfWidthNear),
-				VectorAligned( m_flNearZ,  halfWidthNear,  halfWidthNear), VectorAligned( m_flNearZ, -halfWidthNear,  halfWidthNear) 
+				VectorAligned( m_flNearZ,  halfWidthNear,  halfWidthNear), VectorAligned( m_flNearZ, -halfWidthNear,  halfWidthNear)
 			};
 
-			VectorAligned vFarRect[4] = { 
+			VectorAligned vFarRect[4] = {
 				VectorAligned( m_flFarZ, -halfWidthFar, -halfWidthFar), VectorAligned( m_flFarZ,  halfWidthFar, -halfWidthFar),
-				VectorAligned( m_flFarZ,  halfWidthFar,  halfWidthFar), VectorAligned( m_flFarZ, -halfWidthFar,  halfWidthFar) 
+				VectorAligned( m_flFarZ,  halfWidthFar,  halfWidthFar), VectorAligned( m_flFarZ, -halfWidthFar,  halfWidthFar)
 			};
 
 			matrix3x4_t matOrientation( vForward, -vRight, vUp, vPos );
@@ -303,7 +303,7 @@ void C_EnvProjectedTexture::UpdateLight( void )
 				kFAR = 1,
 			};
 			VectorAligned vOutRects[2][4];
-			
+
 			for ( int i = 0 ; i < 4 ; ++i )
 			{
 				VectorTransform( vNearRect[i].Base(), matOrientation, vOutRects[0][i].Base() );
@@ -314,15 +314,15 @@ void C_EnvProjectedTexture::UpdateLight( void )
 			}
 
 			// now take the min and max extents for the bbox, and see if it is visible.
-			Vector mins = **vOutRects; 
-			Vector maxs = **vOutRects; 
+			Vector mins = **vOutRects;
+			Vector maxs = **vOutRects;
 			for ( int i = 1; i < 8 ; ++i )
 			{
 				VectorMin( mins, *(*vOutRects+i), mins );
 				VectorMax( maxs, *(*vOutRects+i), maxs );
 			}
 
-			
+
 			bool bVisible = IsBBoxVisible( mins, maxs );
 
 
@@ -450,4 +450,3 @@ bool C_EnvProjectedTexture::IsBBoxVisible( Vector vecExtentsMin, Vector vecExten
 	// Check if the bbox is in the view
 	return !engine->CullBox( vecExtentsMin, vecExtentsMax );
 }
-

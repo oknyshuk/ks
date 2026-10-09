@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BASEFLEX_H
-#define BASEFLEX_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
 
-
 #include "BaseAnimatingOverlay.h"
-#include "utlvector.h"
-#include <map>
+import std;
 #include "sceneentity_shared.h"
 
 struct flexsettinghdr_t;
@@ -247,6 +240,3 @@ inline float CBaseFlex::GetFlexWeight( char *szName )
 
 
 EXTERN_SEND_TABLE(DT_BaseFlex);
-
-
-#endif // BASEFLEX_H

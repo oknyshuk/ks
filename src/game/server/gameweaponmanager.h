@@ -1,14 +1,8 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
-
-#ifndef GAMEWEAPONMANAGER_H
-#define GAMEWEAPONMANAGER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
 #include "reflect_annotations.h"
-
 
 void CreateWeaponManager( const char *pWeaponName, int iMaxPieces );
 
@@ -18,5 +12,3 @@ void WeaponManager_AmmoMod( CBaseCombatWeapon *pWeapon );
 
 void WeaponManager_AddManaged( CBaseEntity *pWeapon );
 void WeaponManager_RemoveManaged( CBaseEntity *pWeapon );
-
-#endif // GAMEWEAPONMANAGER_H

@@ -1,15 +1,10 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: particle system code
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include "tier0/platform.h"
+// Purpose: particle system code
+
+import ks.core;
 #include "particles/particles.h"
-#include "filesystem.h"
-#include "tier2/tier2.h"
-#include "tier2/fileutils.h"
-#include "tier1/strtools.h"
 
 extern int g_nParticle_Multiplier;
 
@@ -151,7 +146,7 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 			pCtx->m_flRandomStartTime = m_flStartTime;
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( InstantaneousEmitterContext_t );
 	}
@@ -397,7 +392,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 			Vector vecScale;
 			pParticles->GetControlPointAtTime( m_nScaleControlPoint, pParticles->m_flCurTime, &vecScale );
 			float flScale = vecScale[m_nScaleControlPointField];
-			Assert( flScale >= 0.0f );
+			contract_assert( flScale >= 0.0f );
 			flEmissionRate *= std::max( 0.0f, flScale );
 		}
 
@@ -431,7 +426,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		//	pCtx->m_flTotalActualParticlesSoFar = min( pCtx->m_ActualParticlesToEmit, pCtx->m_flTotalActualParticlesSoFar );
 		pCtx->m_nTotalEmittedSoFar = 0;
 		//simulate a bunch
-		int nActualParticlesToEmit = floor (pCtx->m_flTotalActualParticlesSoFar);
+		int nActualParticlesToEmit = std::floor (pCtx->m_flTotalActualParticlesSoFar);
 		int nStartParticle = pParticles->m_nActiveParticles;
 
 		if ( pParticles->m_nMaxAllowedParticles < nStartParticle + nActualParticlesToEmit )
@@ -467,7 +462,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		}
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( ContinuousEmitterContext_t );
 	}
@@ -541,7 +536,7 @@ uint32 C_OP_ContinuousEmitter::Emit( CParticleCollection *pParticles, float flCu
 		int nNumParticlesToKill;
 		GetParentKillList( pParticles, nNumParticlesToKill );
 		flActualParticlesToEmit = nNumParticlesToKill;
-		Assert( flActualParticlesToEmit > 0 );
+		contract_assert( flActualParticlesToEmit > 0 );
 
 		// Just emit all particles at once since this time isn't advancing here (TODO: is there a better way?)
 		flCurrDrawTime = pParticles->m_flCurTime;
@@ -564,7 +559,7 @@ uint32 C_OP_ContinuousEmitter::Emit( CParticleCollection *pParticles, float flCu
 		{
 			Vector vecScale;
 			pParticles->GetControlPointAtTime( m_nScaleControlPoint, pParticles->m_flCurTime, &vecScale );
-			Assert( vecScale[m_nScaleControlPointField] >= 0.0f );
+			contract_assert( vecScale[m_nScaleControlPointField] >= 0.0f );
 			flEmissionRate *= std::max( 0.0f, vecScale[m_nScaleControlPointField] );
 		}
 
@@ -612,7 +607,7 @@ uint32 C_OP_ContinuousEmitter::Emit( CParticleCollection *pParticles, float flCu
 	pCtx->m_flTotalActualParticlesSoFar += flActualParticlesToEmit;
 
 	//Floor float accumulated value and subtract whole int emitted so far from the result to determine total whole particles to emit this frame
-	int nParticlesToEmit = 	floor ( pCtx->m_flTotalActualParticlesSoFar ) - pCtx->m_nTotalEmittedSoFar;
+	int nParticlesToEmit = 	std::floor ( pCtx->m_flTotalActualParticlesSoFar ) - pCtx->m_nTotalEmittedSoFar;
 
 	//Add emitted particles to running int total.
 	pCtx->m_nTotalEmittedSoFar += nParticlesToEmit;
@@ -766,7 +761,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( NoiseEmitterContext_t );
 	}
@@ -880,7 +875,7 @@ uint32 C_OP_NoiseEmitter::Emit( CParticleCollection *pParticles, float flCurStre
 	}
 
 	float flInitialNoise = ( ValueBase + ( ValueScale * flNoise ) );
-	flInitialNoise = clamp(flInitialNoise, 0.0f, INT_MAX );
+	flInitialNoise = clamp(flInitialNoise, 0.0f, std::numeric_limits<int>::max() );
 
 	//Global strength scale brought in by operator fade in/fade out/oscillate 
 	float flEmissionRate = flInitialNoise * flCurStrength;
@@ -899,7 +894,7 @@ uint32 C_OP_NoiseEmitter::Emit( CParticleCollection *pParticles, float flCurStre
 	if ( pParticles->m_flCurTime < flStartTime )
 		return 0;
 
-	Assert( flEmissionRate != 0.0f );
+	contract_assert( flEmissionRate != 0.0f );
 
 	// determine our previous and current draw times and clamp them to start time and emission duration
 	float flPrevDrawTime = pParticles->m_flCurTime - pParticles->m_flDt;
@@ -926,7 +921,7 @@ uint32 C_OP_NoiseEmitter::Emit( CParticleCollection *pParticles, float flCurStre
 	pCtx->m_flTotalActualParticlesSoFar += flActualParticlesToEmit;
 
 	//Floor float accumulated value and subtract whole int emitted so far from the result to determine total whole particles to emit this frame
-	int nParticlesToEmit = 	floor ( pCtx->m_flTotalActualParticlesSoFar ) - pCtx->m_nTotalEmittedSoFar;
+	int nParticlesToEmit = 	std::floor ( pCtx->m_flTotalActualParticlesSoFar ) - pCtx->m_nTotalEmittedSoFar;
 
 	//Add emitted particles to running int total.
 	pCtx->m_nTotalEmittedSoFar += nParticlesToEmit;
@@ -1056,7 +1051,7 @@ class C_OP_MaintainEmitter : public CParticleOperatorInstance
 		return pCtx->m_bOn;
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( MaintainEmitterContext_t );
 	}
@@ -1175,4 +1170,3 @@ void AddBuiltInParticleEmitters( void )
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_EMITTER, C_OP_NoiseEmitter );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_EMITTER, C_OP_MaintainEmitter );
 }
-

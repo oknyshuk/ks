@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <limits.h>
+import ks.tier1;
 #include "studio.h"
-#include "tier1/map_ops.h"
+import std;
 #include "filesystem.h"
-#include "tier0/icommandline.h"
 
 extern IFileSystem *		g_pFileSystem;
 
@@ -67,7 +61,7 @@ CModelLookupContext::~CModelLookupContext()
 {
 	if ( m_lookupIndex >= 0 )
 	{
-		Assert(m_lookupIndex == (std::ssize( g_ModelLookup )-1));
+		contract_assert( m_lookupIndex == (std::ssize( g_ModelLookup )-1) );
 		ks::swap_remove( g_ModelLookup, m_lookupIndex );
 		g_ModelLookupIndex = std::ssize( g_ModelLookup )-1;
 	}
@@ -106,10 +100,10 @@ void virtualmodel_t::AppendModels( int group, const studiohdr_t *pStudioHdr )
 		const studiohdr_t *pTmpHdr = pStudioHdr->FindModel( &tmp, pStudioHdr->pModelGroup( j )->pszName() );
 		if ( pTmpHdr )
 		{
-			if ( nValidIncludes >= ARRAYSIZE( list ) )
+			if ( nValidIncludes >= std::size( list ) )
 			{
 				// would cause stack overflow
-				Assert( 0 );
+				contract_assert( 0 );
 				break;
 			}
 
@@ -124,7 +118,6 @@ void virtualmodel_t::AppendModels( int group, const studiohdr_t *pStudioHdr )
 		m_group.reserve( std::ssize( m_group ) + nValidIncludes );
 		for (j = 0; j < nValidIncludes; j++)
 		{
-			MEM_ALLOC_CREDIT();
 			int group = std::ssize( m_group ); m_group.emplace_back();
 			m_group[group].cache = list[j].handle;
 			AppendModels( group, list[j].pHdr );
@@ -141,7 +134,6 @@ void virtualmodel_t::AppendSequences( int group, const studiohdr_t *pStudioHdr )
 
 	int j, k;
 
-	MEM_ALLOC_CREDIT();
 
 	std::vector< virtualsequence_t > seq;
 
@@ -232,7 +224,6 @@ void virtualmodel_t::AppendAnimations( int group, const studiohdr_t *pStudioHdr 
 	std::vector< virtualgeneric_t > anim;
 	anim = m_anim;
 
-	MEM_ALLOC_CREDIT();
 
 	int j, k;
 
@@ -292,7 +283,6 @@ void virtualmodel_t::AppendAnimations( int group, const studiohdr_t *pStudioHdr 
 void virtualmodel_t::AppendBonemap( int group, const studiohdr_t *pStudioHdr )
 {
 	std::scoped_lock lock( m_Lock );
-	MEM_ALLOC_CREDIT();
 
 	const studiohdr_t *pBaseStudioHdr = m_group[ 0 ].GetStudioHdr( );
 
@@ -373,7 +363,6 @@ void virtualmodel_t::AppendAttachments( int group, const studiohdr_t *pStudioHdr
 	std::vector< virtualgeneric_t > attachment;
 	attachment = m_attachment;
 
-	MEM_ALLOC_CREDIT();
 
 	int j, k, n;
 
@@ -429,7 +418,6 @@ void virtualmodel_t::AppendPoseParameters( int group, const studiohdr_t *pStudio
 	std::vector< virtualgeneric_t > pose;
 	pose = m_pose;
 
-	MEM_ALLOC_CREDIT();
 
 	int j, k;
 
@@ -485,7 +473,6 @@ void virtualmodel_t::AppendNodes( int group, const studiohdr_t *pStudioHdr )
 	std::vector< virtualgeneric_t > node;
 	node = m_node;
 
-	MEM_ALLOC_CREDIT();
 
 	int j, k;
 
@@ -548,7 +535,6 @@ void virtualmodel_t::AppendIKLocks( int group, const studiohdr_t *pStudioHdr )
 		// no duplication
 		if (k == numCheck)
 		{
-			MEM_ALLOC_CREDIT();
 
 			virtualgeneric_t tmp;
 			tmp.group = group;

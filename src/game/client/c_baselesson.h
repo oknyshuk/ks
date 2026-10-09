@@ -1,17 +1,20 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Client handler for instruction players how to play
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef _C_BASELESSON_H_
-#define _C_BASELESSON_H_
+// Purpose: Client handler for instruction players how to play
 
-
+import ks.tier1;
 #include "GameEventListener.h"
 #include "hud_locator_target.h"
-#include "tier1/map_ops.h"
+import std;
+#include "ehandle.h"
+#include "cdll_client_int.h"
+#include "datamap.h"
 
+typedef CHandle<C_BaseEntity> EHANDLE;
+
+class C_BaseEntity;
 
 #define DECLARE_LESSON( _lessonClassName, _baseLessonClassName ) \
 	typedef _baseLessonClassName BaseClass;\
@@ -35,7 +38,7 @@ enum LessonInstanceType
 
 
 // This is used to solve a problem where bots can take the place of a player, where on or the other don't have valid entities on the client at the same time
-#define MAX_DELAYED_PLAYER_SWAPS 8
+inline constexpr auto MAX_DELAYED_PLAYER_SWAPS = 8;
 
 struct delayed_player_swap_t
 {
@@ -50,7 +53,7 @@ struct delayed_player_swap_t
 };
 
 
-abstract_class CBaseLesson : public CGameEventListener
+class CBaseLesson : public CGameEventListener
 {
 public:
 
@@ -458,6 +461,3 @@ private:
 	friend class LessonVariableInfo;
 	friend int LessonActionFromString( const char *pchName );
 };
-
-
-#endif // _C_BASELESSON_H_

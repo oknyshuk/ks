@@ -1,9 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 
@@ -11,25 +7,25 @@
 
 static void GetAdjustedShaderName( char *pOutputBuffer, char const *pShader20Name )
 {
-	Q_strcpy( pOutputBuffer, pShader20Name );
+	V_strcpy( pOutputBuffer, pShader20Name );
 	if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 	{
-		size_t iLength = Q_strlen( pOutputBuffer );
+		std::size_t iLength = V_strlen( pOutputBuffer );
 		if( ( iLength > 4 ) && 
 			(
-				( Q_stricmp( pOutputBuffer + iLength - 5, "_ps20" ) == 0 ) || 
-				( Q_stricmp( pOutputBuffer + iLength - 5, "_vs20" ) == 0 )
+				( V_stricmp( pOutputBuffer + iLength - 5, "_ps20" ) == 0 ) || 
+				( V_stricmp( pOutputBuffer + iLength - 5, "_vs20" ) == 0 )
 				)
 			)
 		{
-			strcpy( pOutputBuffer + iLength - 2, "20b" );
+			std::strcpy( pOutputBuffer + iLength - 2, "20b" );
 		}
 	}
 }
 
 DEFINE_FALLBACK_SHADER( screenspace_general, screenspace_general_dx9 )
 BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( C0_X,SHADER_PARAM_TYPE_FLOAT,"0","")
 		SHADER_PARAM( C0_Y,SHADER_PARAM_TYPE_FLOAT,"0","")
 		SHADER_PARAM( C0_Z,SHADER_PARAM_TYPE_FLOAT,"0","")
@@ -322,7 +318,7 @@ BEGIN_VS_SHADER_FLAGS( screenspace_general_dx9, "Help for screenspace_general", 
 				params[C4_W]->GetFloatValue()
 			};
 
-			pShaderAPI->SetPixelShaderConstant( 0, c0, ARRAYSIZE(c0)/4 );
+			pShaderAPI->SetPixelShaderConstant( 0, c0, std::size( c0 )/4 );
 
 			float eyePos[4];
 			pShaderAPI->GetWorldSpaceCameraPosition( eyePos );

@@ -1,11 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "igameevents.h"
+#include "ndebugoverlay.h"
 
 #include "ai_movesolver.h"
 #include "ndebugoverlay.h"
@@ -94,7 +96,7 @@ bool CAI_MoveSolver::Solve( const AI_MoveSuggestion_t *pSuggestions, int nSugges
 	const int NUM_SOLUTIONS	= 120;
 	const int SOLUTION_ANG	= 360 / NUM_SOLUTIONS;
 
-	COMPILE_TIME_ASSERT( ( 360 % NUM_SOLUTIONS ) == 0 );
+	static_assert( ( 360 % NUM_SOLUTIONS ) == 0 );
 
 	struct Solution_t
 	{
@@ -111,7 +113,7 @@ bool CAI_MoveSolver::Solve( const AI_MoveSuggestion_t *pSuggestions, int nSugges
 	// The first thing we do is reweight and normalize the weights into a range of [-1..1], where
 	// a negative weight is a repulsion. This becomes a bias for the solver.
 	// @TODO (toml 06-18-02): this can be made sligtly more optimal by precalculating regulation adjusted weights
-	Assert( std::ssize( suggestions ) >= 1 );
+	contract_assert( std::ssize( suggestions ) >= 1 );
 	NormalizeSuggestions( &suggestions[0], (&suggestions[0]) + std::ssize( suggestions ) );
 
 	//
@@ -123,7 +125,7 @@ bool CAI_MoveSolver::Solve( const AI_MoveSuggestion_t *pSuggestions, int nSugges
 
 		// Convert arc values to solution indices relative to right post. Right is angle down, left is angle up.
 		float halfSpan	= current.arc.span * 0.5;
-		int   center 	= round( ( halfSpan * NUM_SOLUTIONS ) / 360 );
+		int   center 	= std::round( ( halfSpan * NUM_SOLUTIONS ) / 360 );
 		int   left		= ( current.arc.span * NUM_SOLUTIONS ) / 360;
 
 		float angRight   = current.arc.center - halfSpan;
@@ -234,7 +236,7 @@ void CAI_MoveSolver::NormalizeSuggestions( AI_MoveSuggestion_t *pBegin, AI_MoveS
 		const float min = g_AI_MoveSuggWeights[pBegin->type].min;
 		const float max = g_AI_MoveSuggWeights[pBegin->type].max;
 
-		Assert( pBegin->weight >= -AIMS_EPS && pBegin->weight <= 1.0 + AIMS_EPS );
+		contract_assert( pBegin->weight >= -AIMS_EPS && pBegin->weight <= 1.0 + AIMS_EPS );
 
 		if ( pBegin->weight < AIMS_EPS ) // zero normalizes to zero
 			pBegin->weight = 0.0;
@@ -272,7 +274,9 @@ bool CAI_MoveSolver::HaveRegulationForObstacle( CBaseEntity *pEntity)
 //
 
 #ifdef DEBUG
-CON_COMMAND(ai_test_move_solver, "Tests the AI move solver system")
+static void ai_test_move_solver( const CCommand &args );
+static ConCommand ai_test_move_solver_command( "ai_test_move_solver", ai_test_move_solver, "Tests the AI move solver system" );
+static void ai_test_move_solver( const CCommand &args )
 {
 #ifdef DEBUG
 	const float EPS = 0.001;
@@ -291,8 +295,8 @@ CON_COMMAND(ai_test_move_solver, "Tests the AI move solver system")
 
 	for (i = 0; i < 360; ++i)
 	{
-		Assert( solver.Solve( AI_MoveSuggestion_t( AIMST_MOVE, 1, i, 180 ), &solution ) );
-		Assert( solution.dir == (float)i );
+		contract_assert( solver.Solve( AI_MoveSuggestion_t( AIMST_MOVE, 1, i, 180 ), &solution ) );
+		contract_assert( solution.dir == (float)i );
 
 	}
 
@@ -311,8 +315,8 @@ CON_COMMAND(ai_test_move_solver, "Tests the AI move solver system")
 	suggestions[0].Set( AIMST_MOVE, 1.0, 180, 100 );
 	suggestions[1].Set( AIMST_MOVE, 0.5, 0, 100 );
 
-	Assert( solver.Solve( suggestions, 2, &solution ) );
-	Assert( solution.dir == (float)suggestions[0].arc.center );
+	contract_assert( solver.Solve( suggestions, 2, &solution ) );
+	contract_assert( solution.dir == (float)suggestions[0].arc.center );
 
 
 	DevMsg( "pass.\n" );
@@ -332,8 +336,8 @@ CON_COMMAND(ai_test_move_solver, "Tests the AI move solver system")
 	suggestions[0].Set( AIMST_MOVE, 1.0, 270, 45 );
 	suggestions[1].Set( AIMST_MOVE, 1.0, 0, 45 );
 
-	Assert( solver.Solve( suggestions, 2, &solution ) );
-	Assert( solution.dir == (float)suggestions[1].arc.center );
+	contract_assert( solver.Solve( suggestions, 2, &solution ) );
+	contract_assert( solution.dir == (float)suggestions[1].arc.center );
 
 
 	DevMsg( "pass.\n" );
@@ -351,7 +355,7 @@ CON_COMMAND(ai_test_move_solver, "Tests the AI move solver system")
 	suggestions[0].Set( AIMST_MOVE, 1.0, 270, 90 );
 	suggestions[1].Set( AIMST_AVOID_OBJECT, 1.0, 260, 180 );
 
-	Assert( !solver.Solve( suggestions, 2, &solution ) );
+	contract_assert( !solver.Solve( suggestions, 2, &solution ) );
 
 	DevMsg( "pass.\n" );
 	solver.ClearRegulations();
@@ -368,8 +372,8 @@ CON_COMMAND(ai_test_move_solver, "Tests the AI move solver system")
 	suggestions[0].Set( AIMST_MOVE, 1.0, 278, 90 );
 	suggestions[1].Set( AIMST_AVOID_OBJECT, 1.0, 260, 24 );
 
-	Assert( solver.Solve( suggestions, 2, &solution ) );
-	Assert( solution.dir == (float)suggestions[0].arc.center );
+	contract_assert( solver.Solve( suggestions, 2, &solution ) );
+	contract_assert( solution.dir == (float)suggestions[0].arc.center );
 
 	DevMsg( "pass.\n" );
 	solver.ClearRegulations();
@@ -386,8 +390,8 @@ CON_COMMAND(ai_test_move_solver, "Tests the AI move solver system")
 	suggestions[0].Set( AIMST_MOVE, 1.0, 270, 90 );
 	suggestions[1].Set( AIMST_AVOID_OBJECT, 1.0, 260, 40 );
 
-	Assert( solver.Solve( suggestions, 2, &solution ) );
-	Assert( solution.dir - 282 < EPS ); // given 60 solutions
+	contract_assert( solver.Solve( suggestions, 2, &solution ) );
+	contract_assert( solution.dir - 282 < EPS ); // given 60 solutions
 
 	DevMsg( "pass.\n" );
 	solver.ClearRegulations();

@@ -1,15 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "cdll_client_int.h"
 #include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
-#include <keyvalues.h>
-#include "mathlib/vmatrix.h"
 #include "functionproxy.h"
 
 #include "imaterialproxydict.h"
@@ -78,8 +75,8 @@ void CTextureScrollMaterialProxy::OnBind( void *pC_BaseEntity )
 
 	float sOffset, tOffset;
 	
-	sOffset = gpGlobals->curtime * cos( angle * ( M_PI / 180.0f ) ) * rate;
-	tOffset = gpGlobals->curtime * sin( angle * ( M_PI / 180.0f ) ) * rate;
+	sOffset = gpGlobals->curtime * std::cos( angle * ( std::numbers::pi / 180.0f ) ) * rate;
+	tOffset = gpGlobals->curtime * std::sin( angle * ( std::numbers::pi / 180.0f ) ) * rate;
 
 	// make sure that we are positive
 	if( sOffset < 0.0f )

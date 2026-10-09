@@ -1,10 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "functionproxy.h"
 
 #include "imaterialproxydict.h"
@@ -40,10 +46,8 @@ void CProxyHealth::OnBind( void *pC_BaseEntity )
 
 	C_BaseEntity *pEntity = BindArgToEntity( pC_BaseEntity );
 
-	Assert( m_pResult );
+	contract_assert( m_pResult );
 	SetFloatResult( pEntity->HealthFraction() * m_Factor.GetFloat() );
 }
 
 EXPOSE_MATERIAL_PROXY( CProxyHealth, Health );
-
-

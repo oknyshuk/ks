@@ -1,11 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#elif defined(GAME_DLL)
+#endif
 #include "eventlist.h"
 #include "stringregistry.h"
 
@@ -49,7 +50,6 @@ void EventList_Free( void )
 // add a new event to the database
 eventlist_t *EventList_AddEventEntry( const char *pName, int iEventIndex, bool isPrivate, int iType )
 {
-	MEM_ALLOC_CREDIT();
 	int index = std::ssize( g_EventList ); g_EventList.emplace_back();
 	eventlist_t *pList = &g_EventList[index];
 	pList->eventIndex = iEventIndex;
@@ -146,7 +146,7 @@ Animevent EventList_RegisterPrivateEvent( const char *pszEventName )
 		{
 			// this private activity collides with a shared activity. That is not allowed.
 			Warning( "***\nShared<->Private Event collision!\n***\n" );
-			Assert(0);
+			contract_assert( 0 );
 			return AE_INVALID;
 		}
 	}

@@ -1,11 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
+import ks.core;
 #include "sysexternal.h"
 #include "cmodel_engine.h"
 #include "dispcoll_common.h"
@@ -22,7 +18,6 @@
 
 #include "vphysics_interface.h"
 #include "sys_dll.h"
-#include "tier3/tier3.h"
 
 IPhysicsSurfaceProps *physprops = nullptr;
 IPhysicsCollision	 *physcollision = nullptr;
@@ -241,7 +236,7 @@ bool CollisionBSPData_Load( const char *pPathName, CCollisionBSPData *pBSPData, 
 	// This is a table that maps texinfo references to csurface_t
 	// It is freed after the map has been loaded
 	// copy map name
-	Q_strncpy( pBSPData->mapPathName, pPathName, sizeof( pBSPData->mapPathName ) );
+	V_strncpy( pBSPData->mapPathName, pPathName, sizeof( pBSPData->mapPathName ) );
 
 	//
 	// load bsp file data
@@ -335,12 +330,12 @@ void CollisionBSPData_LoadTextures( CCollisionBSPData *pBSPData )
 	pBSPData->numtextures = count;
 
 	pBSPData->map_texturenames = (char *)Hunk_AllocName( lhStringData.LumpSize() * sizeof(char), va( "%s [%s]", lh.GetLoadName(), "Textures" ), false );
-	memcpy( pBSPData->map_texturenames, pStringData, lhStringData.LumpSize() );
+	std::memcpy( pBSPData->map_texturenames, pStringData, lhStringData.LumpSize() );
  
 	for ( i=0 ; i<count ; i++, in++ )
 	{
-		Assert( in->nameStringTableID >= 0 );
-		Assert( pStringTable[in->nameStringTableID] >= 0 );
+		contract_assert( in->nameStringTableID >= 0 );
+		contract_assert( pStringTable[in->nameStringTableID] >= 0 );
 
 		const char *pInName = &pStringData[pStringTable[in->nameStringTableID]];
 		int index = pInName - pStringData;
@@ -444,7 +439,7 @@ void CollisionBSPData_LoadLeafs_Version_0( CCollisionBSPData *pBSPData, CMapLoad
 
 	pBSPData->solidleaf = 0;
 	pBSPData->emptyleaf = pBSPData->numleafs;
-	memset( &pBSPData->map_leafs[pBSPData->emptyleaf], 0, sizeof(pBSPData->map_leafs[pBSPData->emptyleaf]) );
+	std::memset( &pBSPData->map_leafs[pBSPData->emptyleaf], 0, sizeof(pBSPData->map_leafs[pBSPData->emptyleaf]) );
 	pBSPData->numleafs++;
 }
 
@@ -509,7 +504,7 @@ void CollisionBSPData_LoadLeafs_Version_1( CCollisionBSPData *pBSPData, CMapLoad
 
 	pBSPData->solidleaf = 0;
 	pBSPData->emptyleaf = pBSPData->numleafs;
-	memset( &pBSPData->map_leafs[pBSPData->emptyleaf], 0, sizeof(pBSPData->map_leafs[pBSPData->emptyleaf]) );
+	std::memset( &pBSPData->map_leafs[pBSPData->emptyleaf], 0, sizeof(pBSPData->map_leafs[pBSPData->emptyleaf]) );
 	pBSPData->numleafs++;
 }
 
@@ -526,7 +521,7 @@ void CollisionBSPData_LoadLeafs( CCollisionBSPData *pBSPData )
 		CollisionBSPData_LoadLeafs_Version_1( pBSPData, lh );
 		break;
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		Error( "Unknown LUMP_LEAFS version\n" );
 		break;
 	}
@@ -686,10 +681,10 @@ inline void ExtractBoxBrush( cboxbrush_t *pBox, const cbrush_t &brush, dbrushsid
 		dbrushside_t *side = pSides + i + brush.firstbrushside;
 		cplane_t *plane = pPlanes + side->planenum;
 		int t = side->texinfo;
-		Assert(t<texinfoCount);
+		contract_assert( t<texinfoCount );
 		int surfaceIndex = (t<0) ? SURFACE_INDEX_INVALID : pTexinfo[t].texdata;
 		int axis = plane->type;
-		Assert(fabs(plane->normal[axis])==1.0f);
+		contract_assert( fabs(plane->normal[axis])==1.0f );
 		int maskIndex = axis;
 		if ( plane->normal[axis] == 1.0f )
 		{
@@ -704,7 +699,7 @@ inline void ExtractBoxBrush( cboxbrush_t *pBox, const cbrush_t &brush, dbrushsid
 		}
 		else
 		{
-			Assert(0);
+			contract_assert( 0 );
 		}
 		pBox->thinMask |= side->thin << maskIndex;
 	}
@@ -790,8 +785,8 @@ void CollisionBSPData_LoadBrushSides( CCollisionBSPData *pBSPData, texinfo_t *pT
 			pBrush->firstbrushside = outBrushSide;
 			for ( j = 0; j < pBrush->numsides; j++ )
 			{
-				cbrushside_t * RESTRICT pSide = &pBSPData->map_brushsides[outBrushSide];
-				dbrushside_t * RESTRICT pInputSide = in + firstInputSide + j;
+				cbrushside_t * __restrict__ pSide = &pBSPData->map_brushsides[outBrushSide];
+				dbrushside_t * __restrict__ pInputSide = in + firstInputSide + j;
 				pSide->plane = &pBSPData->map_planes[pInputSide->planenum];
 				int t = pInputSide->texinfo;
 				if (t >= texinfoCount)
@@ -807,7 +802,7 @@ void CollisionBSPData_LoadBrushSides( CCollisionBSPData *pBSPData, texinfo_t *pT
 			}
 		}
 	}
-	Assert( outBrushSide == pBSPData->numbrushsides && outBoxBrush == pBSPData->numboxbrushes );
+	contract_assert( outBrushSide == pBSPData->numbrushsides && outBoxBrush == pBSPData->numboxbrushes );
 }
 
 
@@ -960,8 +955,7 @@ void CollisionBSPData_LoadAreaPortals( CCollisionBSPData *pBSPData )
 	int nSize = count * sizeof(dareaportal_t);
 	pBSPData->map_areaportals.Attach( count, (dareaportal_t*)Hunk_AllocName( nSize, va( "%s [%s]", lh.GetLoadName(), "AreaPortals" ) ) );
 
-	Assert( nSize >= lh.LumpSize() ); 
-	memcpy( pBSPData->map_areaportals.Base(), in, lh.LumpSize() );
+	std::memcpy( pBSPData->map_areaportals.Base(), in, lh.LumpSize() );
 }
 
 
@@ -983,7 +977,7 @@ void CollisionBSPData_LoadVisibility( CCollisionBSPData *pBSPData )
 	else
 	{
 		pBSPData->map_vis = (dvis_t *) Hunk_AllocName( visDataSize, va( "%s [%s]", lh.GetLoadName(), "Visibility" ), false );
-		memcpy( pBSPData->map_vis, lh.LumpBase(), visDataSize );
+		std::memcpy( pBSPData->map_vis, lh.LumpBase(), visDataSize );
 	}
 }
 
@@ -995,7 +989,6 @@ void CollisionBSPData_LoadEntityString( CCollisionBSPData *pBSPData )
 	CMapLoadHelper lh( LUMP_ENTITIES );
 
 	pBSPData->numentitychars = lh.LumpSize();
-	MEM_ALLOC_CREDIT();
 	pBSPData->map_entitystring.Init( lh.GetDiskName(), lh.LumpOffset(), lh.LumpSize(), lh.LumpBase() );
 }
 
@@ -1019,7 +1012,7 @@ void CollisionBSPData_LoadPhysics( CCollisionBSPData *pBSPData )
 	// with modelIndex -1, dataSize -1
 	do
 	{
-		memcpy( &physModel, ptr, sizeof(physModel) );
+		std::memcpy( &physModel, ptr, sizeof(physModel) );
 		ptr += sizeof(physModel);
 
 		if ( physModel.dataSize > 0 )
@@ -1042,6 +1035,7 @@ void CollisionBSPData_LoadPhysics( CCollisionBSPData *pBSPData )
 //-----------------------------------------------------------------------------
 void CollisionBSPData_LoadDispInfo( CCollisionBSPData *pBSPData, texinfo_t *pTexinfo, int texinfoCount )
 {
+	ks::ScratchArena<> scratch;
 	// How many displacements in the map?
 	CMapLoadHelper lhDispInfo( LUMP_DISPINFO );
 	int coreDispCount = lhDispInfo.LumpSize() / sizeof( ddispinfo_t );
@@ -1098,8 +1092,8 @@ void CollisionBSPData_LoadDispInfo( CCollisionBSPData *pBSPData, texinfo_t *pTex
 
 	// Build the inverse mapping from disp index to face
 	int nMemSize = coreDispCount * sizeof(unsigned short);
-	unsigned short *pDispIndexToFaceIndex = (unsigned short*)stackalloc( nMemSize );
-	memset( pDispIndexToFaceIndex, 0xFF, nMemSize );
+	unsigned short *pDispIndexToFaceIndex = (unsigned short*)scratch.AllocBytes( nMemSize );
+	std::memset( pDispIndexToFaceIndex, 0xFF, nMemSize );
 	
 	int i;
     for ( i = 0; i < faceCount; ++i, ++pFaces )
@@ -1279,16 +1273,3 @@ void CollisionBSPData_LoadDispInfo( CCollisionBSPData *pBSPData, texinfo_t *pTex
 //
 // Collision Count Functions
 //
-
-#ifdef COUNT_COLLISIONS
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-void CollisionCounts_Init( CCollisionCounts *pCounts )
-{
-	pCounts->m_PointContents = 0;
-	pCounts->m_Traces = 0;
-	pCounts->m_BrushTraces = 0;
-	pCounts->m_DispTraces = 0;
-	pCounts->m_Stabs = 0;
-}
-#endif

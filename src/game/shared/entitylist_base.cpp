@@ -1,10 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+#elif defined(GAME_DLL)
+#include "string_t.h"
+#endif
 #include "entitylist_base.h"
 #include "ihandleentity.h"
 
@@ -27,7 +29,7 @@ CBaseEntityList::CEntInfoList::CEntInfoList()
 // NOTE: Cut from UtlFixedLinkedList<>, UNDONE: Find a way to share this code
 void CBaseEntityList::CEntInfoList::LinkBefore( CEntInfo *pBefore, CEntInfo *pElement )
 {
-	Assert( pElement );
+	contract_assert( pElement );
 	
 	// Unlink it if it's in the list at the moment
 	Unlink(pElement);
@@ -45,7 +47,6 @@ void CBaseEntityList::CEntInfoList::LinkBefore( CEntInfo *pBefore, CEntInfo *pEl
 	{
 		// Here, we're not linking to the end. Set the prev pointer to point to
 		// the element we're linking.
-		Assert( IsInList(pBefore) );
 		pElement->m_pPrev = pBefore->m_pPrev;
 		pBefore->m_pPrev = pElement;
 	}
@@ -63,7 +64,7 @@ void CBaseEntityList::CEntInfoList::LinkBefore( CEntInfo *pBefore, CEntInfo *pEl
 
 void CBaseEntityList::CEntInfoList::LinkAfter( CEntInfo *pAfter, CEntInfo *pElement )
 {
-	Assert( pElement );
+	contract_assert( pElement );
 	
 	// Unlink it if it's in the list at the moment
 	if ( IsInList(pElement) )
@@ -81,7 +82,6 @@ void CBaseEntityList::CEntInfoList::LinkAfter( CEntInfo *pAfter, CEntInfo *pElem
 	{
 		// Here, we're not linking to the end. Set the next pointer to point to
 		// the element we're linking.
-		Assert( IsInList(pAfter) );
 		pElement->m_pNext = pAfter->m_pNext;
 		pAfter->m_pNext = pElement;
 	}
@@ -141,7 +141,7 @@ CBaseEntityList::CBaseEntityList()
 	for ( i = 0; i < NUM_ENT_ENTRIES; i++ )
 	{
 		m_EntPtrArray[i].ClearLinks();
-		m_EntPtrArray[i].m_SerialNumber = (rand()& SERIAL_MASK); // generate random starting serial number
+		m_EntPtrArray[i].m_SerialNumber = (std::rand()& SERIAL_MASK); // generate random starting serial number
 		m_EntPtrArray[i].m_pEntity = nullptr;
 	}
 
@@ -170,7 +170,7 @@ CBaseEntityList::~CBaseEntityList()
 
 CBaseHandle CBaseEntityList::AddNetworkableEntity( IHandleEntity *pEnt, int index, int iForcedSerialNum )
 {
-	Assert( index >= 0 && index < MAX_EDICTS );
+	contract_assert( index >= 0 && index < MAX_EDICTS );
 	return AddEntityAtSlot( pEnt, index, iForcedSerialNum );
 }
 
@@ -182,7 +182,7 @@ CBaseHandle CBaseEntityList::AddNonNetworkableEntity( IHandleEntity *pEnt )
 	if ( !pSlot )
 	{
 		Warning( "CBaseEntityList::AddNonNetworkableEntity: no free slots!\n" );
-		AssertMsg( 0, ( "CBaseEntityList::AddNonNetworkableEntity: no free slots!\n" ) );
+		contract_assert( 0 );
 		return CBaseHandle();
 	}
 
@@ -204,7 +204,7 @@ CBaseHandle CBaseEntityList::AddEntityAtSlot( IHandleEntity *pEnt, int iSlot, in
 {
 	// Init the CSerialEntity.
 	CEntInfo *pSlot = &m_EntPtrArray[iSlot];
-	Assert( pSlot->m_pEntity == nullptr );
+	contract_assert( pSlot->m_pEntity == nullptr );
 	pSlot->m_pEntity = pEnt;
 
 	// Force the serial number (client-only)?
@@ -214,7 +214,7 @@ CBaseHandle CBaseEntityList::AddEntityAtSlot( IHandleEntity *pEnt, int iSlot, in
 		
 		#if !defined( CLIENT_DLL )
 			// Only the client should force the serial numbers.
-			Assert( false );
+			contract_assert( false );
 		#endif
 	}
 	
@@ -233,7 +233,7 @@ CBaseHandle CBaseEntityList::AddEntityAtSlot( IHandleEntity *pEnt, int iSlot, in
 
 void CBaseEntityList::RemoveEntityAtSlot( int iSlot )
 {
-	Assert( iSlot >= 0 && iSlot < NUM_ENT_ENTRIES );
+	contract_assert( iSlot >= 0 && iSlot < NUM_ENT_ENTRIES );
 
 	CEntInfo *pInfo = &m_EntPtrArray[iSlot];
 

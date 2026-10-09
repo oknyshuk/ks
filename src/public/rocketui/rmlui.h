@@ -1,3 +1,4 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
@@ -14,8 +15,6 @@
 // window (and to nothing at all unless RMLUI_DEBUG is set), so it needs no
 // further care.
 
-#ifndef ROCKETUI_RMLUI_H
-#define ROCKETUI_RMLUI_H
 
 #pragma push_macro("Assert")
 #undef Assert
@@ -28,4 +27,3 @@
 
 #pragma pop_macro("Assert")
 
-#endif // ROCKETUI_RMLUI_H

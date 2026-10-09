@@ -1,16 +1,15 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-#ifndef KISAKSTRIKE_RKCONSOLE_H
-#define KISAKSTRIKE_RKCONSOLE_H
+#include <rocketui/rmlui.h>
 
-#include "icvar.h"
-#include "color.h"
-#include "tier1/utlvector.h"
-#include "tier1/utlstring.h"
+
 #include "GameEventListener.h"
 #include <rocketui/rocketui.h>
 #include <rocketui/rmlui.h>
+import ks.tier1;
+import std;
 
 namespace Rml {
     class ElementDocument;
@@ -124,4 +123,3 @@ private:
 
 RocketConsole& RkConsole();
 
-#endif // KISAKSTRIKE_RKCONSOLE_H

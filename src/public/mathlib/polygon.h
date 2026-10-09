@@ -1,22 +1,16 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Utility functions for polygon simplification / convex decomposition.
-//
-//===============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef POLYGON_H
-#define POLYGON_H
+// Purpose: Utility functions for polygon simplification / convex decomposition.
 
-
-#include "utlvector.h"
-#include "mathlib/vector.h"
+import ks.tier1;
+import std;
 
 //-----------------------------------------------------------------------------
 // NOTE: Polygons are assumed to be wound clockwise unless otherwise noted.
 // Holes in polygons wind counter-clockwise.
 //-----------------------------------------------------------------------------
-
-
 
 static const float POINT_IN_POLYGON_EPSILON = 0.01f;
 
@@ -99,5 +93,3 @@ void DecomposePolygon( const std::vector< Vector > &polygonPoints, const Vector 
 // If so, what is its height above/below the plane of the polygon?
 //-----------------------------------------------------------------------------
 bool IsPointInPolygonPrism( const Vector *pPolygonPoints, int nPointCount, const Vector &vPoint, float flThreshold = 0.0f, float *pHeight = nullptr );
-
-#endif // POLYGON_H

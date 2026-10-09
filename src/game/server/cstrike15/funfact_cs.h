@@ -3,6 +3,7 @@
 #pragma once
 
 #include "cs_shareddefs.h"
+#include "networkvar.h"
 
 
 struct FunFact

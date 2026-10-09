@@ -1,6 +1,9 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-// derivative of catmull rom spline courtesy of calc
+// Purpose: derivative of catmull rom spline courtesy of calc
+
 float4 DCatmullRomSpline ( float4 a, float4 b, float4 c, float4 d, float t )
 {
 	return 0.5 *( c - a + t * ( 2 * a - 5 * b + 4 * c - d + t * (3 * b - a - 3 * c + d ) ) 

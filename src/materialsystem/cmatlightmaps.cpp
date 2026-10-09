@@ -1,12 +1,18 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "pch_materialsystem.h"
+import std;
 
-#define MATSYS_INTERNAL
+
+import ks.tier1;
+
+#include "pixelwriter.h"
+
+#include "materialsystem_global.h"
+
+#include "imaterialinternal.h"
+#include "imaterialsysteminternal.h"
+
 
 #include "cmatlightmaps.h"
 
@@ -142,14 +148,14 @@ void CMatLightmaps::GetLightmapPageSize( int lightmapPageID, int *pWidth, int *p
 	switch( lightmapPageID )
 	{
 	default:
- 		Assert( lightmapPageID >= 0 && lightmapPageID < GetNumLightmapPages() );
+ 		contract_assert( lightmapPageID >= 0 && lightmapPageID < GetNumLightmapPages() );
 		*pWidth = m_pLightmapPages[lightmapPageID].m_Width;
 		*pHeight = m_pLightmapPages[lightmapPageID].m_Height;
 		break;
 
 	case MATERIAL_SYSTEM_LIGHTMAP_PAGE_USER_DEFINED:
 		*pWidth = *pHeight = 1;
-		AssertOnce( !"Can't use CMatLightmaps to get properties of MATERIAL_SYSTEM_LIGHTMAP_PAGE_USER_DEFINED" );
+		contract_assert( !"Can't use CMatLightmaps to get properties of MATERIAL_SYSTEM_LIGHTMAP_PAGE_USER_DEFINED" );
 		break;
 	
 	case MATERIAL_SYSTEM_LIGHTMAP_PAGE_WHITE:
@@ -167,11 +173,11 @@ int CMatLightmaps::GetLightmapWidth( int lightmapPageID ) const
 	switch( lightmapPageID )
 	{
 	default:
- 		Assert( lightmapPageID >= 0 && lightmapPageID < GetNumLightmapPages() );
+ 		contract_assert( lightmapPageID >= 0 && lightmapPageID < GetNumLightmapPages() );
 		return m_pLightmapPages[lightmapPageID].m_Width;
 
 	case MATERIAL_SYSTEM_LIGHTMAP_PAGE_USER_DEFINED:
-		AssertOnce( !"Can't use CMatLightmaps to get properties of MATERIAL_SYSTEM_LIGHTMAP_PAGE_USER_DEFINED" );
+		contract_assert( !"Can't use CMatLightmaps to get properties of MATERIAL_SYSTEM_LIGHTMAP_PAGE_USER_DEFINED" );
 		return 1;
 	
 	case MATERIAL_SYSTEM_LIGHTMAP_PAGE_WHITE:
@@ -188,11 +194,11 @@ int CMatLightmaps::GetLightmapHeight( int lightmapPageID ) const
 	switch( lightmapPageID )
 	{
 	default:
- 		Assert( lightmapPageID >= 0 && lightmapPageID < GetNumLightmapPages() );
+ 		contract_assert( lightmapPageID >= 0 && lightmapPageID < GetNumLightmapPages() );
 		return m_pLightmapPages[lightmapPageID].m_Height;
 
 	case MATERIAL_SYSTEM_LIGHTMAP_PAGE_USER_DEFINED:
-		AssertOnce( !"Can't use CMatLightmaps to get properties of MATERIAL_SYSTEM_LIGHTMAP_PAGE_USER_DEFINED" );
+		contract_assert( !"Can't use CMatLightmaps to get properties of MATERIAL_SYSTEM_LIGHTMAP_PAGE_USER_DEFINED" );
 		return 1;
 	
 	case MATERIAL_SYSTEM_LIGHTMAP_PAGE_WHITE:
@@ -217,7 +223,7 @@ void CMatLightmaps::CleanupLightmaps()
 		 {
 			char szPFMFileName[MAX_PATH];
 
-			sprintf(szPFMFileName, "Lightmap-Page-%d.pfm", lightmap);
+			std::sprintf(szPFMFileName, "Lightmap-Page-%d.pfm", lightmap);
 			m_pLightmapDataPtrArray[lightmap]->WritePFM(szPFMFileName);
 		 }
 	  }
@@ -329,7 +335,7 @@ int CMatLightmaps::AllocateLightmap( int width, int height,
 		SetCurrentMaterialInternal(pMaterial);
 
 		// This assertion guarantees we don't see the same material twice in this loop.
-		Assert( pMaterial->GetMinLightmapPageID( ) > pMaterial->GetMaxLightmapPageID() );
+		contract_assert( pMaterial->GetMinLightmapPageID( ) > pMaterial->GetMaxLightmapPageID() );
 
 		// NOTE: We may not use this lightmap page, but we might
 		// we won't know for sure until the next material is passed in.
@@ -370,7 +376,7 @@ int CMatLightmaps::AllocateLightmap( int width, int height,
 // UNDONE: This needs testing, but it appears as though creating these textures managed
 // results in huge stalls whenever they are locked for modify.
 // That makes sense given the d3d docs, but these have been flagged as managed for quite some time.
-#define DYNAMIC_TEXTURES_NO_BACKING 1
+constexpr auto DYNAMIC_TEXTURES_NO_BACKING = 1;
 
 void CMatLightmaps::EndLightmapAllocation()
 {
@@ -393,7 +399,7 @@ void CMatLightmaps::EndLightmapAllocation()
 	m_ImagePackers.clear(); m_ImagePackers.shrink_to_fit();
 
 	m_pLightmapPages = new LightmapPageInfo_t[GetNumLightmapPages()];
-	Assert( m_pLightmapPages );
+	contract_assert( m_pLightmapPages );
 
    if ( mat_lightmap_pfms.GetBool())
    {
@@ -464,13 +470,13 @@ void CMatLightmaps::AllocateLightmapTexture( int lightmap )
 	}
 
 	char debugName[256];
-	Q_snprintf( debugName, sizeof( debugName ), "[lightmap %d]", lightmap );
+	V_snprintf( debugName, sizeof( debugName ), "[lightmap %d]", lightmap );
 	
 	ImageFormat imageFormat;
 	switch ( HardwareConfig()->GetHDRType() )
 	{
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		// fall through.
 
 	case HDR_TYPE_NONE:
@@ -525,7 +531,7 @@ void CMatLightmaps::AllocateLightmapTexture( int lightmap )
 	default:
 		// Not assigned m_LightmapPageTextureHandles[lightmap];
 		Warning( "AllocateLightmapTexture(%d) in unknown lightmap state (%d), skipped.\n", lightmap, m_eLightmapsState );
-		Assert( !"AllocateLightmapTexture(?) in unknown lightmap state (?)" );
+		contract_assert( !"AllocateLightmapTexture(?) in unknown lightmap state (?)" );
 		return;
 	}
 }
@@ -575,7 +581,7 @@ void CMatLightmaps::ReleaseLightmapPages()
 	
 	default:
 		Warning( "ReleaseLightmapPages is expected in STATE_DEFAULT, current state = %d, discarded.\n", m_eLightmapsState );
-		Assert( !"ReleaseLightmapPages is expected in STATE_DEFAULT" );
+		contract_assert( !"ReleaseLightmapPages is expected in STATE_DEFAULT" );
 		return;
 	}
 
@@ -600,7 +606,7 @@ void CMatLightmaps::RestoreLightmapPages()
 
 	default:
 		Warning( "RestoreLightmapPages is expected in STATE_RELEASED, current state = %d, discarded.\n", m_eLightmapsState );
-		Assert( !"RestoreLightmapPages is expected in STATE_RELEASED" );
+		contract_assert( !"RestoreLightmapPages is expected in STATE_RELEASED" );
 		return;
 	}
 
@@ -624,7 +630,7 @@ void CMatLightmaps::RestoreLightmapPages()
 //-----------------------------------------------------------------------------
 void CMatLightmaps::InitLightmapBits( int lightmap )
 {
-	VPROF_( "CMatLightmaps::InitLightmapBits", 1, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0 );
+	CVProfScope _( "CMatLightmaps::InitLightmapBits", 1, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0 );
 	int width = GetLightmapWidth(lightmap);
 	int height = GetLightmapHeight(lightmap);
 
@@ -688,7 +694,7 @@ void CMatLightmaps::InitLightmapBits( int lightmap )
 bool CMatLightmaps::LockLightmap( int lightmap )
 {
 //	Warning( "locking lightmap page: %d\n", lightmap );
-	VPROF( "lightmap fullpage texlock");
+	CVProfScope _( "lightmap fullpage texlock", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if( m_nLockedLightmap != -1 )
 	{
 		g_pShaderAPI->TexUnlock();
@@ -698,7 +704,7 @@ bool CMatLightmaps::LockLightmap( int lightmap )
 	int pageHeight = m_pLightmapPages[lightmap].m_Height;
 	if (!g_pShaderAPI->TexLock( 0, 0, 0, 0,	pageWidth, pageHeight, m_LightmapPixelWriter ))
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 	m_nLockedLightmap = lightmap;
@@ -717,7 +723,7 @@ Vector4D ConvertLightmapColorToRGBScale( const float *lightmapColor )
 			fScale = lightmapColor[i];
 	}
 
-	fScale = ceil( fScale * (255.0f/16.0f) ) * (16.0f/255.0f);
+	fScale = std::ceil( fScale * (255.0f/16.0f) ) * (16.0f/255.0f);
 	fScale = std::min( fScale, 16.0f );
 
 	float fInvScale = 1.0f / fScale;
@@ -821,7 +827,7 @@ void CMatLightmaps::BumpedLightmapBitsToPixelWriter_HDRF( float* pFloatImage, fl
 												 float *pFloatImageBump3, int pLightmapSize[2], int pOffsetIntoLightmapPage[2], FloatBitMap_t *pfmOut )
 {
 
-	Assert( !pfmOut );		// unsupported in this mode
+	contract_assert( !pfmOut );		// unsupported in this mode
 
 	const int nLightmapSize0 = pLightmapSize[0];
 	const int nLightmap0WriterSizeBytes = nLightmapSize0 * m_LightmapPixelWriter.GetPixelSize();
@@ -924,8 +930,8 @@ void CMatLightmaps::BumpedLightmapBitsToPixelWriter_HDRF( float* pFloatImage, fl
 
 
 // write bumped lightmap update to HDR integer lightmap
-void CMatLightmaps::BumpedLightmapBitsToPixelWriter_HDRI( float* RESTRICT pFloatImage, float * RESTRICT pFloatImageBump1, float * RESTRICT pFloatImageBump2, 
-												 float * RESTRICT pFloatImageBump3, int pLightmapSize[2], int pOffsetIntoLightmapPage[2], FloatBitMap_t *pfmOut ) RESTRICT
+void CMatLightmaps::BumpedLightmapBitsToPixelWriter_HDRI( float* __restrict__ pFloatImage, float * __restrict__ pFloatImageBump1, float * __restrict__ pFloatImageBump2, 
+												 float * __restrict__ pFloatImageBump3, int pLightmapSize[2], int pOffsetIntoLightmapPage[2], FloatBitMap_t *pfmOut ) __restrict__
 {
 	const int nLightmapSize0 = pLightmapSize[0];
 	const int nLightmap0WriterSizeBytes = nLightmapSize0 * m_LightmapPixelWriter.GetPixelSize();
@@ -949,7 +955,7 @@ void CMatLightmaps::BumpedLightmapBitsToPixelWriter_HDRI( float* RESTRICT pFloat
 					&pFloatImageBump3[srcTexelOffset],
 					color[0], color[1], color[2], color[3] );
 				float alpha = pFloatImage[srcTexelOffset+3];
-				Assert( alpha >= 0.0f && alpha <= 1.0f );
+				contract_assert( alpha >= 0.0f && alpha <= 1.0f );
 
 				if ( HardwareConfig()->GetCSMAccurateBlending() )
 				{
@@ -978,8 +984,6 @@ void CMatLightmaps::BumpedLightmapBitsToPixelWriter_HDRI( float* RESTRICT pFloat
 				float toFloat = ( 1.0f / ( float )( 1 << 16 ) );
 
 				/* // This code is now a can't-happen, because we do not allow float formats on 360.
-#if ( defined( USE_32BIT_LIGHTMAPS_ON_360 ) )
-#endif
 				*/
 
 				m_LightmapPixelWriter.WritePixelNoAdvanceF( toFloat * color[0][0], toFloat * color[0][1], toFloat * color[0][2], toFloat * color[0][3] );
@@ -1037,8 +1041,6 @@ void CMatLightmaps::BumpedLightmapBitsToPixelWriter_HDRI( float* RESTRICT pFloat
 					color[0][3] = color[1][3] = color[2][3] = color[3][3] = alpha;
 				}
 
-#if ( defined( USE_32BIT_LIGHTMAPS_ON_360 ) )
-#endif
 				m_LightmapPixelWriter.WritePixelNoAdvance( color[0][0], color[0][1], color[0][2], color[0][3] );
 
 				m_LightmapPixelWriter.SkipBytes( nLightmap0WriterSizeBytes );
@@ -1126,7 +1128,7 @@ void CMatLightmaps::LightmapBitsToPixelWriter_HDRF( float* pFloatImage, int pLig
 }
 
 // numbers come in on the domain [0..16]
-void CMatLightmaps::LightmapBitsToPixelWriter_HDRI( float* RESTRICT pFloatImage, int pLightmapSize[2], int pOffsetIntoLightmapPage[2], FloatBitMap_t * RESTRICT pfmOut )
+void CMatLightmaps::LightmapBitsToPixelWriter_HDRI( float* __restrict__ pFloatImage, int pLightmapSize[2], int pOffsetIntoLightmapPage[2], FloatBitMap_t * __restrict__ pfmOut )
 {
 	// PC code (and old, pre-SIMD xbox version -- unshippably slow)
 	if ( m_LightmapPixelWriter.IsUsingFloatFormat() )
@@ -1155,10 +1157,7 @@ void CMatLightmaps::LightmapBitsToPixelWriter_HDRI( float* RESTRICT pFloatImage,
 
 				float toFloat = ( 1.0f / ( float )( 1 << 16 ) );
 
-#if ( defined( USE_32BIT_LIGHTMAPS_ON_360 ) )
-
-#endif
-				Assert( pSrc[3] >= 0.0f && pSrc[3] <= 1.0f );
+				contract_assert( pSrc[3] >= 0.0f && pSrc[3] <= 1.0f );
 				m_LightmapPixelWriter.WritePixelF( r * toFloat, g * toFloat, b * toFloat, pSrc[3] );
 			}
 		}
@@ -1187,8 +1186,6 @@ void CMatLightmaps::LightmapBitsToPixelWriter_HDRI( float* RESTRICT pFloatImage,
 					a = ColorSpace::LinearToUnsignedShort( pSrc[3], 16 );
 				}
 
-#if ( defined( USE_32BIT_LIGHTMAPS_ON_360 ) )
-#endif
 				m_LightmapPixelWriter.WritePixel( r, g, b, a );
 
 				if ( pfmOut )
@@ -1228,7 +1225,7 @@ void CMatLightmaps::EndUpdateLightmaps( void )
 	}
 
 	m_nUpdatingLightmapsStackDepth--;
-	Assert( m_nUpdatingLightmapsStackDepth >= 0 );
+	contract_assert( m_nUpdatingLightmapsStackDepth >= 0 );
 	if( m_nUpdatingLightmapsStackDepth <= 0 && m_nLockedLightmap != -1 )
 	{
 		g_pShaderAPI->TexUnlock();
@@ -1266,7 +1263,7 @@ void CMatLightmaps::UpdateLightmap( int lightmapPageID, int lightmapSize[2],
 									  float *pFloatImage, float *pFloatImageBump1,
 									  float *pFloatImageBump2, float *pFloatImageBump3 )
 {
-	VPROF( "CMatRenderContext::UpdateLightmap" );
+	CVProfScope _( "CMatRenderContext::UpdateLightmap", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	bool hasBump = false;
 	int uSize = 1;
@@ -1287,7 +1284,7 @@ void CMatLightmaps::UpdateLightmap( int lightmapPageID, int lightmapSize[2],
 	if ( bDynamic )
 	{
 		int dynamicIndex = lightmapPageID-m_firstDynamicLightmap;
-		Assert(dynamicIndex < COUNT_DYNAMIC_LIGHTMAP_PAGES);
+		contract_assert( dynamicIndex < COUNT_DYNAMIC_LIGHTMAP_PAGES );
 		m_dynamic.currentDynamicIndex = (dynamicIndex + 1) % COUNT_DYNAMIC_LIGHTMAP_PAGES;
 	}
 
@@ -1307,12 +1304,12 @@ void CMatLightmaps::UpdateLightmap( int lightmapPageID, int lightmapSize[2],
 	// added to the right of the original lightmap.
 	bool bLockSubRect;
 	{
-		VPROF_( "Locking lightmaps", 2, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0 ); // vprof scope
+		CVProfScope _( "Locking lightmaps", 2, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0 ); // vprof scope
 
 		bLockSubRect = m_nUpdatingLightmapsStackDepth <= 0 && !bDynamic;
 		if( bLockSubRect )
 		{
-			VPROF( "lightmap subrect texlock" );
+			CVProfScope _( "lightmap subrect texlock", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			g_pShaderAPI->ModifyTexture( m_LightmapPageTextureHandles[lightmapPageID] );
 			if (!g_pShaderAPI->TexLock( 0, 0, offsetIntoLightmapPage[0], offsetIntoLightmapPage[1],
 				lightmapSize[0] * uSize, lightmapSize[1], m_LightmapPixelWriter ))
@@ -1324,7 +1321,7 @@ void CMatLightmaps::UpdateLightmap( int lightmapPageID, int lightmapSize[2],
 		{
 			if ( !LockLightmap( lightmapPageID ) )
 			{
-				ExecuteNTimes( 10, Warning( "Failed to lock lightmap\n" ) );
+				ExecuteNTimes( 10, [&]{ Warning( "Failed to lock lightmap\n" ); } );
 				return;
 			}
 		}
@@ -1334,7 +1331,7 @@ void CMatLightmaps::UpdateLightmap( int lightmapPageID, int lightmapSize[2],
 
 	{
 		// account for the part spent in math:
-		VPROF_( "LightmapBitsToPixelWriter", 2, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0 );
+		CVProfScope _( "LightmapBitsToPixelWriter", 2, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0 );
 		if ( hasBump )
 		{
 			switch( HardwareConfig()->GetHDRType() )
@@ -1370,7 +1367,7 @@ void CMatLightmaps::UpdateLightmap( int lightmapPageID, int lightmapSize[2],
 				break;
 
 			default:
-				Assert( 0 );
+				contract_assert( 0 );
 				break;
 			}
 		}
@@ -1378,7 +1375,7 @@ void CMatLightmaps::UpdateLightmap( int lightmapPageID, int lightmapSize[2],
 
 	if( bLockSubRect )
 	{
-		VPROF_( "Unlocking Lightmaps", 2, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0 );
+		CVProfScope _( "Unlocking Lightmaps", 2, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0 );
 		g_pShaderAPI->TexUnlock();
 	}
 }
@@ -1472,7 +1469,7 @@ void CMatLightmaps::GetSortInfo( MaterialSystem_SortInfo_t *pSortInfoArray )
 	int sortId = 0;
 	ComputeSortInfo( pSortInfoArray, sortId, false );
 	ComputeWhiteLightmappedSortInfo( pSortInfoArray, sortId, false );
-	Assert( m_numSortIDs == sortId );
+	contract_assert( m_numSortIDs == sortId );
 }
 
 //-----------------------------------------------------------------------------
@@ -1496,5 +1493,3 @@ void CMatLightmaps::EnableLightmapFiltering( bool enabled )
 		}
 	}
 }
-
-

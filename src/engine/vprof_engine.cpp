@@ -1,36 +1,25 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: VProf engine integration
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
-#include "tier1/byte_writer.h"
+// Purpose: VProf engine integration
+
+import std;
+import ks.tier1;
 #include "sys.h"
 #include "vprof_engine.h"
 #include "sv_main.h"
 #include "iengine.h"
-#include "basetypes.h"
-#include "convar.h"
 #include "cmd.h"
-#include "tier1/strtools.h"
 #include "con_nprint.h"
-#include "tier0/vprof.h"
 #include "materialsystem/imaterialsystem.h"
 #ifndef DEDICATED
 #include "engineui.h"
 #endif
-#include "utlvector.h"
 #include "sv_remoteaccess.h"
 #include "ivprofexport.h"
 #include "vprof_record.h"
 #include "filesystem_engine.h"
-#include "tier1/utlstring.h"
-#include "tier1/utlvector.h"
-#include "debugoverlay.h"
-#include "fmtstr.h"
 
-#ifdef VPROF_ENABLED
 void VProfExport_StartOrStop();
 
 static ConVar vprof_dump_spikes( "vprof_dump_spikes","0", 0, "Framerate at which vprof will begin to dump spikes to the console. 0 = disabled, negative to reset after dump" );
@@ -115,14 +104,16 @@ int ConsoleLogger::m_index = 0;
 static float s_flIntervalStartTime = 0.0f;
 static bool g_bDumpCounters = false;
 
-CON_COMMAND(vprof_dump_counters, "Dump vprof counters to the console" )
+static void vprof_dump_counters( const CCommand &args );
+static ConCommand vprof_dump_counters_command( "vprof_dump_counters", vprof_dump_counters, "Dump vprof counters to the console" );
+static void vprof_dump_counters( const CCommand &args )
 {
 	g_bDumpCounters = true;
 }
 
 void PreUpdateProfile( float filteredtime )
 {
-	Assert( g_VProfCurrentProfile.AtRoot() );
+	contract_assert( g_VProfCurrentProfile.AtRoot() );
 
 	ExecuteDeferredOp();
 	VProfExport_StartOrStop();
@@ -158,12 +149,12 @@ void PreUpdateProfile( float filteredtime )
 
 	if( g_VProfCurrentProfile.IsEnabled() && vprof_dump_spikes.GetFloat() )
 	{
-		float spikeThreash = fabsf( vprof_dump_spikes.GetFloat() );
+		float spikeThreash = std::fabsf( vprof_dump_spikes.GetFloat() );
 		g_VProfCurrentProfile.MarkFrame();
 		bool bSuppressRestart = false;
 		if ( g_VProfSignalSpike || eng->GetFrameTime() > ( 1.f / spikeThreash ) )
 		{
-			if( g_VProfSignalSpike || ( Sys_FloatTime() - LastSpikeTime > MAX_SPIKE_REPORT && g_ServerGlobalVariables.framecount > LastSpikeFrame + MAX_SPIKE_REPORT_FRAMES ) )
+			if( g_VProfSignalSpike || ( Plat_FloatTime() - LastSpikeTime > MAX_SPIKE_REPORT && g_ServerGlobalVariables.framecount > LastSpikeFrame + MAX_SPIKE_REPORT_FRAMES ) )
 			{
 				ConsoleLogger consoleLog;
 				Msg( "******** Spike on frame %d at time %.3f ", g_ServerGlobalVariables.framecount, Plat_FloatTime() );
@@ -189,7 +180,7 @@ void PreUpdateProfile( float filteredtime )
 						( vprof_dump_spikes_budget_group.GetString()[0] ) ? g_VProfCurrentProfile.BudgetGroupNameToBudgetGroupID( vprof_dump_spikes_budget_group.GetString() ) : -1 );
 				}
 
-				LastSpikeTime = Sys_FloatTime();
+				LastSpikeTime = Plat_FloatTime();
 				LastSpikeFrame = g_ServerGlobalVariables.framecount;
 
 				if ( vprof_dump_spikes.GetFloat() < 0.0 )
@@ -221,8 +212,8 @@ void PreUpdateProfile( float filteredtime )
 			}
 		}
 
-		Assert( g_VProfCurrentProfile.AtRoot() );
-		Assert( g_VProfCurrentProfile.IsEnabled() );
+		contract_assert( g_VProfCurrentProfile.AtRoot() );
+		contract_assert( g_VProfCurrentProfile.IsEnabled() );
 	}
 
 	int nCounterType = vprof_counters.GetInt();
@@ -275,9 +266,7 @@ void PreUpdateProfile( float filteredtime )
 
 	// This MUST come before GetVProfPanel()->UpdateProfile(), because UpdateProfile uses the data we snapshot here.
 	VProfExport_SnapshotVProfHistory();
-#ifdef VPROF_ENABLED
 	VProfRecord_Snapshot();
-#endif
 
 	g_bDumpCounters = false;
 }
@@ -290,33 +279,27 @@ void PostUpdateProfile()
 	}
 }
 
-#if defined( VPROF_VXCONSOLE_EXISTS )
-void UpdateVXConsoleProfile()
-{
-	g_VProfCurrentProfile.VXProfileUpdate();
-}
-#endif
-
 static bool g_fVprofCacheMissOnByUI = false;
 static char g_szDefferedArg1[128];
 static char g_szDefferedArg2[128];
 
-#define DEFERRED_CON_COMMAND( cmd, help )									\
-	static void cmd##_Impl();												\
-	CON_COMMAND(cmd, help)													\
-	{																		\
-		g_pfnDeferredOp = cmd##_Impl;										\
-		Q_strncpy( g_szDefferedArg1, args[1], sizeof(g_szDefferedArg1) );	\
-		Q_strncpy( g_szDefferedArg2, args[2], sizeof(g_szDefferedArg2) );	\
-	}																		\
-	static void cmd##_Impl()
+static void DeferCommand( void (*pfnImpl)(), const CCommand &args )
+{
+	g_pfnDeferredOp = pfnImpl;
+	V_strncpy( g_szDefferedArg1, args[1], sizeof(g_szDefferedArg1) );
+	V_strncpy( g_szDefferedArg2, args[2], sizeof(g_szDefferedArg2) );
+}
 
-CON_COMMAND_F( spike,"generates a fake spike", FCVAR_CHEAT )
+static void spike( const CCommand &args );
+static ConCommand spike_command( "spike", spike, "generates a fake spike", FCVAR_CHEAT );
+static void spike( const CCommand &args )
 {
 	Sys_Sleep(1000);
 }
 
-CON_COMMAND( vprof_vtune_group, "enable vtune for a particular vprof group (\"disable\" to disable)" )
+static void vprof_vtune_group( const CCommand &args );
+static ConCommand vprof_vtune_group_command( "vprof_vtune_group", vprof_vtune_group, "enable vtune for a particular vprof group (\"disable\" to disable)" );
+static void vprof_vtune_group( const CCommand &args )
 {
 	if( args.ArgC() != 2 )
 	{
@@ -324,7 +307,7 @@ CON_COMMAND( vprof_vtune_group, "enable vtune for a particular vprof group (\"di
 		return;
 	}
 	const char *pArg = args[ 1 ];
-	if( Q_stricmp( pArg, "disable" ) == 0 )
+	if( V_stricmp( pArg, "disable" ) == 0 )
 	{
 		g_VProfCurrentProfile.DisableVTuneGroup();
 	}
@@ -334,7 +317,9 @@ CON_COMMAND( vprof_vtune_group, "enable vtune for a particular vprof group (\"di
 	}
 }
 
-CON_COMMAND( vprof_dump_groupnames, "Write the names of all of the vprof groups to the console." )
+static void vprof_dump_groupnames( const CCommand &args );
+static ConCommand vprof_dump_groupnames_command( "vprof_dump_groupnames", vprof_dump_groupnames, "Write the names of all of the vprof groups to the console." );
+static void vprof_dump_groupnames( const CCommand &args )
 {
 	int n = g_VProfCurrentProfile.GetNumBudgetGroups();
 	int i;
@@ -344,7 +329,10 @@ CON_COMMAND( vprof_dump_groupnames, "Write the names of all of the vprof groups 
 	}
 }
 
-DEFERRED_CON_COMMAND( vprof_cachemiss, "Toggle VProf cache miss checking" )
+static void vprof_cachemiss_Impl();
+static void vprof_cachemiss( const CCommand &args ) { DeferCommand( vprof_cachemiss_Impl, args ); }
+static ConCommand vprof_cachemiss_command( "vprof_cachemiss", vprof_cachemiss, "Toggle VProf cache miss checking" );
+static void vprof_cachemiss_Impl()
 {
 	if ( !g_fVprofCacheMissOnByUI )
 	{
@@ -360,7 +348,10 @@ DEFERRED_CON_COMMAND( vprof_cachemiss, "Toggle VProf cache miss checking" )
 	}
 }
 
-DEFERRED_CON_COMMAND( vprof_cachemiss_on, "Turn on VProf cache miss checking" )
+static void vprof_cachemiss_on_Impl();
+static void vprof_cachemiss_on( const CCommand &args ) { DeferCommand( vprof_cachemiss_on_Impl, args ); }
+static ConCommand vprof_cachemiss_on_command( "vprof_cachemiss_on", vprof_cachemiss_on, "Turn on VProf cache miss checking" );
+static void vprof_cachemiss_on_Impl()
 {
 	if ( !g_fVprofCacheMissOnByUI )
 	{
@@ -370,7 +361,10 @@ DEFERRED_CON_COMMAND( vprof_cachemiss_on, "Turn on VProf cache miss checking" )
 	}
 }
 
-DEFERRED_CON_COMMAND( vprof_cachemiss_off, "Turn off VProf cache miss checking" )
+static void vprof_cachemiss_off_Impl();
+static void vprof_cachemiss_off( const CCommand &args ) { DeferCommand( vprof_cachemiss_off_Impl, args ); }
+static ConCommand vprof_cachemiss_off_command( "vprof_cachemiss_off", vprof_cachemiss_off, "Turn off VProf cache miss checking" );
+static void vprof_cachemiss_off_Impl()
 {
 	if ( g_fVprofCacheMissOnByUI )
 	{
@@ -380,7 +374,10 @@ DEFERRED_CON_COMMAND( vprof_cachemiss_off, "Turn off VProf cache miss checking" 
 	}
 }
 
-DEFERRED_CON_COMMAND( vprof, "Toggle VProf profiler" )
+static void vprof_Impl();
+static void vprof( const CCommand &args ) { DeferCommand( vprof_Impl, args ); }
+static ConCommand vprof_command( "vprof", vprof, "Toggle VProf profiler" );
+static void vprof_Impl()
 {
 	if ( !g_fVprofOnByUI )
 	{
@@ -396,7 +393,10 @@ DEFERRED_CON_COMMAND( vprof, "Toggle VProf profiler" )
 	}
 }
 
-DEFERRED_CON_COMMAND( vprof_on, "Turn on VProf profiler" )
+static void vprof_on_Impl();
+static void vprof_on( const CCommand &args ) { DeferCommand( vprof_on_Impl, args ); }
+static ConCommand vprof_on_command( "vprof_on", vprof_on, "Turn on VProf profiler" );
+static void vprof_on_Impl()
 {
 	if ( !g_fVprofOnByUI )
 	{
@@ -407,7 +407,9 @@ DEFERRED_CON_COMMAND( vprof_on, "Turn on VProf profiler" )
 	}
 }
 
-CON_COMMAND( budget_toggle_group, "Turn a budget group on/off" )
+static void budget_toggle_group( const CCommand &args );
+static ConCommand budget_toggle_group_command( "budget_toggle_group", budget_toggle_group, "Turn a budget group on/off" );
+static void budget_toggle_group( const CCommand &args )
 {
 	if( args.ArgC() != 2 )
 	{
@@ -424,7 +426,10 @@ CON_COMMAND( budget_toggle_group, "Turn a budget group on/off" )
 	g_VProfCurrentProfile.HideBudgetGroup( budgetGroup, !(g_VProfCurrentProfile.GetBudgetGroupFlags( budgetGroup ) & BUDGETFLAG_HIDDEN) );
 }
 
-DEFERRED_CON_COMMAND( vprof_off, "Turn off VProf profiler" )
+static void vprof_off_Impl();
+static void vprof_off( const CCommand &args ) { DeferCommand( vprof_off_Impl, args ); }
+static ConCommand vprof_off_command( "vprof_off", vprof_off, "Turn off VProf profiler" );
+static void vprof_off_Impl()
 {
 	if ( g_fVprofOnByUI )
 	{
@@ -442,19 +447,28 @@ DEFERRED_CON_COMMAND( vprof_off, "Turn off VProf profiler" )
 	}
 }
 
-DEFERRED_CON_COMMAND( vprof_reset, "Reset the stats in VProf profiler" )
+static void vprof_reset_Impl();
+static void vprof_reset( const CCommand &args ) { DeferCommand( vprof_reset_Impl, args ); }
+static ConCommand vprof_reset_command( "vprof_reset", vprof_reset, "Reset the stats in VProf profiler" );
+static void vprof_reset_Impl()
 {
 	Msg("VProf reset.\n");
 	g_VProfCurrentProfile.Reset();
 }
 
-DEFERRED_CON_COMMAND(vprof_reset_peaks, "Reset just the peak time in VProf profiler")
+static void vprof_reset_peaks_Impl();
+static void vprof_reset_peaks( const CCommand &args ) { DeferCommand( vprof_reset_peaks_Impl, args ); }
+static ConCommand vprof_reset_peaks_command( "vprof_reset_peaks", vprof_reset_peaks, "Reset just the peak time in VProf profiler" );
+static void vprof_reset_peaks_Impl()
 {
 	Msg("VProf peaks reset.\n");
 	g_VProfCurrentProfile.ResetPeaks();
 }
 
-DEFERRED_CON_COMMAND(vprof_generate_report, "Generate a report to the console.")
+static void vprof_generate_report_Impl();
+static void vprof_generate_report( const CCommand &args ) { DeferCommand( vprof_generate_report_Impl, args ); }
+static ConCommand vprof_generate_report_command( "vprof_generate_report", vprof_generate_report, "Generate a report to the console." );
+static void vprof_generate_report_Impl()
 {
 	g_VProfCurrentProfile.Pause();
 	ConsoleLogger consoleLog;
@@ -462,7 +476,10 @@ DEFERRED_CON_COMMAND(vprof_generate_report, "Generate a report to the console.")
 	g_VProfCurrentProfile.Resume();
 }
 
-DEFERRED_CON_COMMAND(vprof_generate_report_budget, "Generate a report to the console based on budget group.")
+static void vprof_generate_report_budget_Impl();
+static void vprof_generate_report_budget( const CCommand &args ) { DeferCommand( vprof_generate_report_budget_Impl, args ); }
+static ConCommand vprof_generate_report_budget_command( "vprof_generate_report_budget", vprof_generate_report_budget, "Generate a report to the console based on budget group." );
+static void vprof_generate_report_budget_Impl()
 {
 	if ( !g_szDefferedArg1[0] )
 	{
@@ -474,7 +491,10 @@ DEFERRED_CON_COMMAND(vprof_generate_report_budget, "Generate a report to the con
 	g_VProfCurrentProfile.Resume();
 }
 
-DEFERRED_CON_COMMAND(vprof_generate_report_hierarchy, "Generate a report to the console.")
+static void vprof_generate_report_hierarchy_Impl();
+static void vprof_generate_report_hierarchy( const CCommand &args ) { DeferCommand( vprof_generate_report_hierarchy_Impl, args ); }
+static ConCommand vprof_generate_report_hierarchy_command( "vprof_generate_report_hierarchy", vprof_generate_report_hierarchy, "Generate a report to the console." );
+static void vprof_generate_report_hierarchy_Impl()
 {
 	g_VProfCurrentProfile.Pause();
 	ConsoleLogger consoleLog;
@@ -482,7 +502,10 @@ DEFERRED_CON_COMMAND(vprof_generate_report_hierarchy, "Generate a report to the 
 	g_VProfCurrentProfile.Resume();
 }
 
-DEFERRED_CON_COMMAND(vprof_generate_report_hierarchy_per_frame_and_count_only, "Generate a minimal hiearchical report to the console.")
+static void vprof_generate_report_hierarchy_per_frame_and_count_only_Impl();
+static void vprof_generate_report_hierarchy_per_frame_and_count_only( const CCommand &args ) { DeferCommand( vprof_generate_report_hierarchy_per_frame_and_count_only_Impl, args ); }
+static ConCommand vprof_generate_report_hierarchy_per_frame_and_count_only_command( "vprof_generate_report_hierarchy_per_frame_and_count_only", vprof_generate_report_hierarchy_per_frame_and_count_only, "Generate a minimal hiearchical report to the console." );
+static void vprof_generate_report_hierarchy_per_frame_and_count_only_Impl()
 {
 	g_VProfCurrentProfile.Pause();
 	ConsoleLogger consoleLog;
@@ -490,7 +513,10 @@ DEFERRED_CON_COMMAND(vprof_generate_report_hierarchy_per_frame_and_count_only, "
 	g_VProfCurrentProfile.Resume();
 }
 
-DEFERRED_CON_COMMAND(vprof_generate_report_AI, "Generate a report to the console.")
+static void vprof_generate_report_AI_Impl();
+static void vprof_generate_report_AI( const CCommand &args ) { DeferCommand( vprof_generate_report_AI_Impl, args ); }
+static ConCommand vprof_generate_report_AI_command( "vprof_generate_report_AI", vprof_generate_report_AI, "Generate a report to the console." );
+static void vprof_generate_report_AI_Impl()
 {
 	// This is an unfortunate artifact of deferred commands not supporting arguments
 	g_VProfCurrentProfile.Pause();
@@ -499,7 +525,10 @@ DEFERRED_CON_COMMAND(vprof_generate_report_AI, "Generate a report to the console
 	g_VProfCurrentProfile.Resume();
 }
 
-DEFERRED_CON_COMMAND(vprof_generate_report_AI_only, "Generate a report to the console.")
+static void vprof_generate_report_AI_only_Impl();
+static void vprof_generate_report_AI_only( const CCommand &args ) { DeferCommand( vprof_generate_report_AI_only_Impl, args ); }
+static ConCommand vprof_generate_report_AI_only_command( "vprof_generate_report_AI_only", vprof_generate_report_AI_only, "Generate a report to the console." );
+static void vprof_generate_report_AI_only_Impl()
 {
 	// This is an unfortunate artifact of deferred commands not supporting arguments
 	g_VProfCurrentProfile.Pause();
@@ -508,7 +537,10 @@ DEFERRED_CON_COMMAND(vprof_generate_report_AI_only, "Generate a report to the co
 	g_VProfCurrentProfile.Resume();
 }
 
-DEFERRED_CON_COMMAND(vprof_generate_report_map_load, "Generate a report to the console.")
+static void vprof_generate_report_map_load_Impl();
+static void vprof_generate_report_map_load( const CCommand &args ) { DeferCommand( vprof_generate_report_map_load_Impl, args ); }
+static ConCommand vprof_generate_report_map_load_command( "vprof_generate_report_map_load", vprof_generate_report_map_load, "Generate a report to the console." );
+static void vprof_generate_report_map_load_Impl()
 {
 	// This is an unfortunate artifact of deferred commands not supporting arguments
 	g_VProfCurrentProfile.Pause();
@@ -516,36 +548,6 @@ DEFERRED_CON_COMMAND(vprof_generate_report_map_load, "Generate a report to the c
 	g_VProfCurrentProfile.OutputReport( VPRT_FULL, "Host_NewGame" );
 	g_VProfCurrentProfile.Resume();
 }
-
-#ifdef VPROF_VXCONSOLE_EXISTS
-
-CON_COMMAND( vx_vprof_update, "" )
-{
-	if ( args.ArgC() < 2 )
-		return;
-
-	const char *pArg = args[1];
-	if ( !Q_stricmp( pArg, "cpu" ) )
-	{
-		g_VProfCurrentProfile.VXEnableUpdateMode( VPROF_UPDATE_BUDGET, true );
-	}
-	else if ( !Q_stricmp( pArg, "texture" ) )
-	{
-		g_VProfCurrentProfile.VXEnableUpdateMode( VPROF_UPDATE_TEXTURE_GLOBAL, true );
-		g_VProfCurrentProfile.VXEnableUpdateMode( VPROF_UPDATE_TEXTURE_PERFRAME, false );
-	}
-	else if ( !Q_stricmp( pArg, "texture_frame" ) )
-	{
-		g_VProfCurrentProfile.VXEnableUpdateMode( VPROF_UPDATE_TEXTURE_PERFRAME, true );
-		g_VProfCurrentProfile.VXEnableUpdateMode( VPROF_UPDATE_TEXTURE_GLOBAL, false );
-	}
-}
-
-CON_COMMAND( vx_vprof_nodeslist, "" )
-{
-	g_VProfCurrentProfile.VXSendNodes();
-}
-#endif
 
 
 
@@ -628,7 +630,7 @@ public:
 	{
 		int nTotalGroups = std::min<int>( std::ssize( m_Times ), GetActiveVProfile()->GetNumBudgetGroups() );
 		int nGroups = std::min<int>( nTotalGroups, IVProfExport::MAX_BUDGETGROUP_TIMES );
-		memset( times, 0, sizeof( times[0] ) * nGroups );
+		std::memset( times, 0, sizeof( times[0] ) * nGroups );
 
 		int iOut = 0;
 		for ( int i=0; i < nTotalGroups; i++ )
@@ -703,7 +705,7 @@ public:
 		}
 		else
 		{
-			Assert( false );
+			contract_assert( false );
 		}
 
 		if( pNode->GetSibling() )
@@ -732,7 +734,7 @@ public:
 			m_Times.assign( GetActiveVProfile()->GetNumBudgetGroups(), {} );
 		}
 
-		memset( m_Times.data(), 0, sizeof( m_Times[0] ) * GetActiveVProfile()->GetNumBudgetGroups() );
+		std::memset( m_Times.data(), 0, sizeof( m_Times[0] ) * GetActiveVProfile()->GetNumBudgetGroups() );
 		CVProfNode *pNode = GetActiveVProfile()->GetRoot();
 		if( pNode && pNode->GetChild() )
 		{
@@ -825,7 +827,7 @@ static int FindSentGroupIndex( VProfListenInfo_t &info, const char *pGroupName )
 	int nCount = std::ssize( info.m_SentGroups );
 	for ( int i = 0; i < nCount; ++i )
 	{
-		if ( !Q_strcmp( pGroupName, info.m_SentGroups[i].data() ) )
+		if ( !V_strcmp( pGroupName, info.m_SentGroups[i].data() ) )
 			return i;
 	}
 	return -1;
@@ -837,13 +839,14 @@ static int FindSentGroupIndex( VProfListenInfo_t &info, const char *pGroupName )
 //-----------------------------------------------------------------------------
 void WriteRemoteVProfGroupData( VProfListenInfo_t &info )
 {
+	ks::ScratchArena<> scratch;
 
 	int nGroupCount = g_pVProfileForDisplay->GetNumBudgetGroups();
 	int nInitialCount = std::ssize( info.m_SentGroups );
 
 	// Build list of unsent groups to send
 	int nSendCount = 0;
-	int *pIndex = (int*)stackalloc( nGroupCount * sizeof(int) ); 
+	int *pIndex = scratch.Alloc<int>( nGroupCount ); 
 	for ( int i = 0; i < nGroupCount; ++i )
 	{
 		const char *pName = g_pVProfileForDisplay->GetBudgetGroupName( i );
@@ -881,6 +884,7 @@ void WriteRemoteVProfGroupData( VProfListenInfo_t &info )
 static ConVar rpt_vprof_time( "rpt_vprof_time","0.25", FCVAR_HIDDEN | FCVAR_DONTRECORD, "" );
 void WriteRemoteVProfData()
 {
+	ks::ScratchArena<> scratch;
 
 	// Throttle sending too much data
 	float flMaxDelta = rpt_vprof_time.GetFloat();
@@ -901,7 +905,7 @@ void WriteRemoteVProfData()
 
 	int nGroupCount = g_pVProfileForDisplay->GetNumBudgetGroups();
 	int nBufSize = nGroupCount * sizeof(float);
-	float *pTimes = (float*)stackalloc( nBufSize );
+	float *pTimes = (float*)scratch.AllocBytes( nBufSize );
 	g_VProfExport.GetAllBudgetGroupTimes( pTimes );
 
 	for( int i = 0; i < nListenerCount; i++ )
@@ -914,12 +918,12 @@ void WriteRemoteVProfData()
 
 		// Re-order send times to match send group order
 		int nSentSize = std::ssize( s_VProfListeners[i].m_SentGroups ) * sizeof(float);
-		float *pSentTimes = (float*)stackalloc( nSentSize );
-		memset( pSentTimes, 0, nSentSize );
+		float *pSentTimes = (float*)scratch.AllocBytes( nSentSize );
+		std::memset( pSentTimes, 0, nSentSize );
 		for ( int j = 0; j < nGroupCount; ++j )
 		{
 			int nIndex = FindSentGroupIndex( s_VProfListeners[i], g_pVProfileForDisplay->GetBudgetGroupName( j ) );
-			Assert( nIndex >= 0 );
+			contract_assert( nIndex >= 0 );
 			pSentTimes[ nIndex ] = pTimes[j];
 		}
 		g_ServerRemoteAccess.SendVProfData( s_VProfListeners[i].m_nListenerId, false, pSentTimes, nSentSize );
@@ -951,6 +955,3 @@ void RemoveVProfDataListener( ra_listener_id listenerID )
 		g_VProfExport.RemoveListener();
 	}
 }
-
-#endif
-

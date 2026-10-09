@@ -1,17 +1,11 @@
-//===== Copyright c 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef IMATCHASYNC_H
-#define IMATCHASYNC_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 //
 // Describes possible states of an async operation
 //
+import ks.core;
 enum AsyncOperationState_t
 {
 	AOS_RUNNING,
@@ -24,7 +18,7 @@ enum AsyncOperationState_t
 //
 // Interface of an async operation
 //
-abstract_class IMatchAsyncOperation
+class IMatchAsyncOperation
 {
 public:
 	// Poll if operation has completed
@@ -50,11 +44,9 @@ public:
 	virtual void Release() = 0;
 };
 
-abstract_class IMatchAsyncOperationCallback
+class IMatchAsyncOperationCallback
 {
 public:
 	// Signals when operation has finished
 	virtual void OnOperationFinished( IMatchAsyncOperation *pOperation ) = 0;
 };
-
-#endif // IMATCHASYNC_H

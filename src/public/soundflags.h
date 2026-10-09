@@ -1,14 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SOUNDFLAGS_H
-#define SOUNDFLAGS_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // channels
@@ -34,21 +26,21 @@ enum
 //-----------------------------------------------------------------------------
 // common volume values
 //-----------------------------------------------------------------------------
-#define VOL_NORM		1.0f
+inline constexpr auto VOL_NORM = 1.0f;
 
 
 //-----------------------------------------------------------------------------
 // common attenuation values
 //-----------------------------------------------------------------------------
-#define ATTN_NONE		0.0f
-#define ATTN_NORM		0.8f
-#define ATTN_IDLE		2.0f
-#define ATTN_STATIC		1.25f 
-#define ATTN_RICOCHET	1.5f
+inline constexpr auto ATTN_NONE = 0.0f;
+inline constexpr auto ATTN_NORM = 0.8f;
+inline constexpr auto ATTN_IDLE = 2.0f;
+inline constexpr auto ATTN_STATIC = 1.25f;
+inline constexpr auto ATTN_RICOCHET = 1.5f;
 
 // HL2 world is 8x bigger now! We want to hear gunfire from farther.
 // Don't change this without consulting Kelly or Wedge (sjb).
-#define ATTN_GUNFIRE	0.27f
+inline constexpr auto ATTN_GUNFIRE = 0.27f;
 
 enum soundlevel_t
 {
@@ -97,17 +89,17 @@ enum soundlevel_t
 	//       256-511 are reserved for sounds using goldsrc compatibility attenuation.
 };
 
-#define MAX_SNDLVL_BITS		9	// Used to encode 0-255 for regular soundlevel_t's and 256-511 for goldsrc-compatible ones.
-#define MIN_SNDLVL_VALUE	0
-#define MAX_SNDLVL_VALUE	((1<<MAX_SNDLVL_BITS)-1)
+inline constexpr auto MAX_SNDLVL_BITS = 9; // Used to encode 0-255 for regular soundlevel_t's and 256-511 for goldsrc-compatible ones.
+inline constexpr auto MIN_SNDLVL_VALUE = 0;
+inline constexpr auto MAX_SNDLVL_VALUE = ((1<<MAX_SNDLVL_BITS)-1);
 
 
-#define ATTN_TO_SNDLVL( a ) (soundlevel_t)(int)((a) ? (50 + 20 / ((float)a)) : 0 )
-#define SNDLVL_TO_ATTN( a ) ( (a > 50) ? (20.0f / (float)(a - 50)) : ( (a == 0) ? (0.0f) : (4.0f) ) )
+template <typename T1> [[gnu::always_inline]] inline auto ATTN_TO_SNDLVL( T1 a ) { return (soundlevel_t)(int)((a) ? (50 + 20 / ((float)a)) : 0 ); }
+template <typename T1> [[gnu::always_inline]] inline auto SNDLVL_TO_ATTN( T1 a ) { return ( (a > 50) ? (20.0f / (float)(a - 50)) : ( (a == 0) ? (0.0f) : (4.0f) ) ); }
 
 // This is a limit due to network encoding.
 // It encodes attenuation * 64 in 8 bits, so the maximum is (255 / 64)
-#define MAX_ATTENUATION		3.98f
+inline constexpr auto MAX_ATTENUATION = 3.98f;
 
 //-----------------------------------------------------------------------------
 // Flags to be or-ed together for the iFlags field
@@ -135,40 +127,33 @@ enum SoundFlags_t
 	SND_OVERRIDE_PITCH			= (1<<13),		// The pitch given in code overrides what is present in the sound entry.
 };
 
-#define SND_FLAG_BITS_ENCODE 13
+inline constexpr auto SND_FLAG_BITS_ENCODE = 13;
 
-#define MAX_SOUND_INDEX_BITS	13
-#define	MAX_SOUNDS				(1<<MAX_SOUND_INDEX_BITS)
+inline constexpr auto MAX_SOUND_INDEX_BITS = 13;
+inline constexpr auto MAX_SOUNDS = (1<<MAX_SOUND_INDEX_BITS);
 
 // Todo: Morasky, we need to test against this #!
 // MAX_MEASURED_SOUNDENTRIES
 
-#if !defined( IN_XBOX_CODELINE )
 // +/-4096 msec
-#define MAX_SOUND_DELAY_MSEC_ENCODE_BITS	(13)
-#else
-// +/-65536 msec, 64 seconds
-#define MAX_SOUND_DELAY_MSEC_ENCODE_BITS	(17)
-#endif
+inline constexpr auto MAX_SOUND_DELAY_MSEC_ENCODE_BITS = (13);
 
 // Subtract one to leave room for the sign bit
-#define MAX_SOUND_DELAY_MSEC				(1<<(MAX_SOUND_DELAY_MSEC_ENCODE_BITS-1))    // 4096 msec or about 4 seconds
+inline constexpr auto MAX_SOUND_DELAY_MSEC = (1<<(MAX_SOUND_DELAY_MSEC_ENCODE_BITS-1)); // 4096 msec or about 4 seconds
 
-#define MAX_SOUND_SEED_BITS		6	// Used to encode 0-63 for seeding client side sound operators
+inline constexpr auto MAX_SOUND_SEED_BITS = 6; // Used to encode 0-63 for seeding client side sound operators
 									// NOTE: The LSB also carries the server side wave file selection
-#define MIN_SOUND_SEED_VALUE	0
-#define MAX_SOUND_SEED_VALUE	((1<<MAX_SOUND_SEED_BITS)-1)
-#define MAX_SOUND_RNDWAVE_NUM	MAX_SOUND_SEED_VALUE
+inline constexpr auto MIN_SOUND_SEED_VALUE = 0;
+inline constexpr auto MAX_SOUND_SEED_VALUE = ((1<<MAX_SOUND_SEED_BITS)-1);
+inline constexpr auto MAX_SOUND_RNDWAVE_NUM = MAX_SOUND_SEED_VALUE;
 
 //-----------------------------------------------------------------------------
 // common pitch values
 //-----------------------------------------------------------------------------
-#define	PITCH_NORM		100			// non-pitch shifted
-#define PITCH_LOW		95			// other values are possible - 0-255, where 255 is very high
-#define PITCH_HIGH		120
+inline constexpr auto PITCH_NORM = 100; // non-pitch shifted
+inline constexpr auto PITCH_LOW = 95; // other values are possible - 0-255, where 255 is very high
+inline constexpr auto PITCH_HIGH = 120;
 
-#define DEFAULT_SOUND_PACKET_VOLUME 1.0f
-#define DEFAULT_SOUND_PACKET_PITCH	100
-#define DEFAULT_SOUND_PACKET_DELAY	0.0f
-
-#endif // SOUNDFLAGS_H
+inline constexpr auto DEFAULT_SOUND_PACKET_VOLUME = 1.0f;
+inline constexpr auto DEFAULT_SOUND_PACKET_PITCH = 100;
+inline constexpr auto DEFAULT_SOUND_PACKET_DELAY = 0.0f;

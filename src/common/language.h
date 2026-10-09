@@ -1,11 +1,8 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: represent a canonical list of the languages we support, 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
-#ifndef LANG_H
-#define LANG_H
+// Purpose: represent a canonical list of the languages we support,
 
 // if you change this enum also change language.cpp:s_LanguageNames
 enum ELanguage
@@ -45,6 +42,3 @@ const char *GetLanguageICUName( ELanguage eLang );
 const char *GetLanguageVGUILocalization( ELanguage eLang );
 const char *GetLangugeCLocaleName( ELanguage eLang );
 int GetLanguageCodeID(ELanguage eLang);
-
-#endif /* LANG_H */
-

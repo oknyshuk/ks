@@ -1,8 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // vertexshaders that pair with this pixel shader:
 // lightmappedgeneric_flashlight_vs20

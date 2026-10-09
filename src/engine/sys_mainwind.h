@@ -1,13 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SYS_MAINWIND_H
-#define SYS_MAINWIND_H
-
-FORWARD_DECLARE_HANDLE( InputContextHandle_t );
+struct InputContextHandle_t__;
+using InputContextHandle_t = InputContextHandle_t__ *;
 
 int MapEngineKeyToVirtualKey( int keyCode );
 
@@ -25,5 +21,3 @@ extern bool g_bVCRSingleStep;
 extern bool g_bShowVCRPlaybackDisplay;
 
 InputContextHandle_t GetGameInputContext();
-
-#endif // SYS_MAINWIND_H

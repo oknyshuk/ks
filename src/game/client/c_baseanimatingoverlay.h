@@ -1,24 +1,15 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef C_BASEANIMATINGOVERLAY_H
-#define C_BASEANIMATINGOVERLAY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-#pragma once
 
 #include "c_baseanimating.h"
 #include "toolframework/itoolframework.h"
-#include <vector>
+import std;
 
 // For shared code.
 #define CBaseAnimatingOverlay C_BaseAnimatingOverlay
-
 
 namespace DT_OverlayVars { extern RecvTable g_RecvTable; }
 
@@ -37,7 +28,6 @@ class [[= ks::reflect::NetTable{ .name = "DT_BaseAnimatingOverlay" } ]]
 	DECLARE_CLASS( C_BaseAnimatingOverlay, C_BaseAnimating );
 	DECLARE_CLIENTCLASS();
 	DECLARE_PREDICTABLE();
-	DECLARE_INTERPOLATION();
 
 	// Inherited from C_BaseAnimating
 public:
@@ -97,10 +87,3 @@ inline void C_BaseAnimatingOverlay::SetOverlayPrevEventCycle( int nSlot, float f
 }
 
 EXTERN_RECV_TABLE(DT_BaseAnimatingOverlay);
-
-
-#endif // C_BASEANIMATINGOVERLAY_H
-
-
-
-

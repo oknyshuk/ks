@@ -1,15 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IHARDWARECONFIGINTERNAL_H
-#define IHARDWARECONFIGINTERNAL_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 
@@ -22,6 +13,3 @@ public:
 	// Gets at the HW specific shader DLL name
 	virtual const char *GetHWSpecificShaderDLLName() const = 0;
 };
-
-
-#endif // IHARDWARECONFIGINTERNAL_H

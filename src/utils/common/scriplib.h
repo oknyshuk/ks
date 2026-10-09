@@ -1,15 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SCRIPLIB_H
-#define SCRIPLIB_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 
 enum ScriptPathMode_t
@@ -21,7 +12,7 @@ enum ScriptPathMode_t
 
 // scriplib.h
 
-#define	MAXTOKEN	1024
+inline constexpr auto MAXTOKEN = 1024;
 
 extern	char	token[MAXTOKEN];
 //extern	char	*scriptbuffer,*script_p,*scriptend_p;
@@ -54,12 +45,8 @@ typedef void ( * SCRIPT_LOADED_CALLBACK )( char const *pFilenameLoaded, char con
 //	Returns the previous callback function.
 SCRIPT_LOADED_CALLBACK SetScriptLoadedCallback( SCRIPT_LOADED_CALLBACK pfnNewScriptLoadedCallback );
 
-#include "tier1/utlstring.h"
-#include "tier1/utlvector.h"
-#include <cstddef>
-#include <optional>
-#include <span>
-#include <vector>
+import ks.tier1;
+import std;
 
 enum DiskWriteMode_t
 {
@@ -71,7 +58,7 @@ enum DiskWriteMode_t
 struct fileList_t
 {
 	std::string	fileName;
-	time_t		timeWrite;
+	std::time_t		timeWrite;
 };
 
 class IScriptLib
@@ -88,6 +75,3 @@ public:
 
 extern IScriptLib *scriptlib;
 extern IScriptLib *g_pScriptLib;
-
-
-#endif // SCRIPLIB_H

@@ -1,18 +1,21 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =====//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "debugoverlay_shared.h"
 #include "toolframework_client.h"
 #include "igamesystem.h"
-#include "tier1/keyvalues.h"
 #include "toolframework/iclientenginetools.h"
 #include "client_factorylist.h"
 #include "iviewrender.h"
 #include "materialsystem/imaterialvar.h"
-
 
 extern IViewRender *view;
 
@@ -45,14 +48,10 @@ public:
 //-----------------------------------------------------------------------------
 static CToolFrameworkClient g_ToolFrameworkClient;
 
-#ifndef NO_TOOLFRAMEWORK
-
 bool ToolsEnabled()
 {
 	return g_ToolFrameworkClient.m_pTools && g_ToolFrameworkClient.m_pTools->InToolMode();
 }
-
-#endif
 
 IGameSystem *ToolFrameworkClientSystem()
 {

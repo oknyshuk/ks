@@ -1,12 +1,8 @@
-//========= Copyright c 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Physics2 interfaces to vphysics DLL
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef VPHYSICS2_INTERFACE_VERSION_FLAGS_H
-#define VPHYSICS2_INTERFACE_VERSION_FLAGS_H
+// Purpose: Physics2 interfaces to vphysics DLL
 
 enum Physics2FlagEnum
 {
@@ -37,8 +33,3 @@ enum Physics2CreateWorldFlags
 	PHYSICS2_CREATE_CLIENT_WORLD = 1<<0,
 	PHYSICS2_CREATE_SERVER_WORLD = 1<<1
 };
-
-
-
-
-#endif

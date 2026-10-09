@@ -1,43 +1,27 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#ifndef CONST_H
-#define CONST_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <bitset>
-#include <mutex>
-#include "tier1/null_mutex.h"
+import std;
+import ks.tier1;
 
-
-// the command line param that tells the engine to use steam
-#define STEAM_PARM					"-steam"
 // the command line param to tell dedicated server to restart 
 // if they are out of date
-#define AUTO_RESTART "-autoupdate"
+inline constexpr const char *AUTO_RESTART = "-autoupdate";
 
-// the message a server sends when a clients steam login is expired
-#define INVALID_STEAM_TICKET "Invalid STEAM UserID Ticket\n"
-#define INVALID_STEAM_LOGON "No Steam logon\n"
-#define INVALID_STEAM_VACBANSTATE "VAC banned from secure server\n"
-#define INVALID_STEAM_LOGGED_IN_ELSEWHERE "This Steam account is being used in another location\n"
-
-#define DEFAULT_TICK_INTERVAL_X360	(1.0 / 29.970030) // This matches x360 refresh, but is not critical
-#define DEFAULT_TICK_INTERVAL_PS3	(1.0 / 30.0)
-#define DEFAULT_TICK_INTERVAL_PC	(1.0 / 64.0)
+inline constexpr auto DEFAULT_TICK_INTERVAL_X360 = (1.0 / 29.970030); // This matches x360 refresh, but is not critical
+inline constexpr auto DEFAULT_TICK_INTERVAL_PS3 = (1.0 / 30.0);
+inline constexpr auto DEFAULT_TICK_INTERVAL_PC = (1.0 / 64.0);
 
 // This is the default, see shareddefs.h for mod-specific value, which can override this
-#define DEFAULT_TICK_INTERVAL	DEFAULT_TICK_INTERVAL_PC
-#define MINIMUM_TICK_INTERVAL   (4.0f / 512.0f)		// 128 fps
-#define MAXIMUM_TICK_INTERVAL	(25.0f / 512.0f)	// 20.48 fps
+inline constexpr auto DEFAULT_TICK_INTERVAL = DEFAULT_TICK_INTERVAL_PC;
+inline constexpr auto MINIMUM_TICK_INTERVAL = (4.0f / 512.0f); // 128 fps
+inline constexpr auto MAXIMUM_TICK_INTERVAL = (25.0f / 512.0f); // 20.48 fps
 
 // This is the max # of players the engine can handle
 // Note, must be power of 2
 #define ABSOLUTE_PLAYER_LIMIT 255
-#define ABSOLUTE_PLAYER_LIMIT_DW	( (ABSOLUTE_PLAYER_LIMIT/32) + 1 )
+inline constexpr auto ABSOLUTE_PLAYER_LIMIT_DW = ( (ABSOLUTE_PLAYER_LIMIT/32) + 1 );
 
 #if ABSOLUTE_PLAYER_LIMIT > 32
 using CPlayerBitVec = std::bitset< ABSOLUTE_PLAYER_LIMIT >;
@@ -47,55 +31,55 @@ using CPlayerBitVec = std::bitset< 32 >;
 
 // a player name may have 31 chars + 0 on the PC.
 // the 360 only allows 15 char + 0, but stick with the larger PC size for cross-platform communication
-#define MAX_PLAYER_NAME_LENGTH		128
+inline constexpr auto MAX_PLAYER_NAME_LENGTH = 128;
 
-#define MAX_PLAYERS_PER_CLIENT		1	// One player per PC
+inline constexpr auto MAX_PLAYERS_PER_CLIENT = 1; // One player per PC
 
-#define MAX_MAP_NAME				64	
-#define	MAX_NETWORKID_LENGTH		64  // num chars for a network (i.e steam) ID
+inline constexpr auto MAX_MAP_NAME = 64;
+inline constexpr auto MAX_NETWORKID_LENGTH = 64; // num chars for a network ID
 
 // BUGBUG: Reconcile with or derive this from the engine's internal definition!
 // FIXME: Somebody added an extra bit because they needed to make it signed, not sure why?
 // Anyways must have this value in sync(+1) with qlimits.h and effect_dispatch_data.cpp
-#define SP_MODEL_INDEX_BITS			13
+inline constexpr auto SP_MODEL_INDEX_BITS = 13;
 
 // How many bits to use to encode an edict.
-#define	MAX_EDICT_BITS				12			// # of bits needed to represent max edicts
+inline constexpr auto MAX_EDICT_BITS = 12; // # of bits needed to represent max edicts
 // Max # of edicts in a level
-#define	MAX_EDICTS					(1<<MAX_EDICT_BITS)
+inline constexpr auto MAX_EDICTS = (1<<MAX_EDICT_BITS);
 
 // How many bits to use to encode an server class index
-#define MAX_SERVER_CLASS_BITS		9
+inline constexpr auto MAX_SERVER_CLASS_BITS = 9;
 // Max # of networkable server classes
-#define MAX_SERVER_CLASSES			(1<<MAX_SERVER_CLASS_BITS)
+inline constexpr auto MAX_SERVER_CLASSES = (1<<MAX_SERVER_CLASS_BITS);
 
-#define SIGNED_GUID_LEN 32 // Hashed CD Key (32 hex alphabetic chars + 0 terminator )
+inline constexpr auto SIGNED_GUID_LEN = 32; // Hashed CD Key (32 hex alphabetic chars + 0 terminator )
 
 // Used for networking ehandles.
-#define NUM_ENT_ENTRY_BITS		(MAX_EDICT_BITS + 2)
-#define NUM_ENT_ENTRIES			(1 << NUM_ENT_ENTRY_BITS)
-#define INVALID_EHANDLE_INDEX	0xFFFFFFFF
+inline constexpr auto NUM_ENT_ENTRY_BITS = (MAX_EDICT_BITS + 2);
+inline constexpr auto NUM_ENT_ENTRIES = (1 << NUM_ENT_ENTRY_BITS);
+inline constexpr auto INVALID_EHANDLE_INDEX = 0xFFFFFFFF;
 
-#define NUM_SERIAL_NUM_BITS		16 // (32 - NUM_ENT_ENTRY_BITS)
-#define NUM_SERIAL_NUM_SHIFT_BITS (32 - NUM_SERIAL_NUM_BITS)
-#define ENT_ENTRY_MASK			(( 1 << NUM_SERIAL_NUM_BITS) - 1)
+inline constexpr auto NUM_SERIAL_NUM_BITS = 16; // (32 - NUM_ENT_ENTRY_BITS)
+inline constexpr auto NUM_SERIAL_NUM_SHIFT_BITS = (32 - NUM_SERIAL_NUM_BITS);
+inline constexpr auto ENT_ENTRY_MASK = (( 1 << NUM_SERIAL_NUM_BITS) - 1);
 
 
 // Networked ehandles use less bits to encode the serial number.
-#define NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS	10
+inline constexpr auto NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS = 10;
 #define NUM_NETWORKED_EHANDLE_BITS					(MAX_EDICT_BITS + NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS)
-#define INVALID_NETWORKED_EHANDLE_VALUE				((1 << NUM_NETWORKED_EHANDLE_BITS) - 1)
+inline constexpr auto INVALID_NETWORKED_EHANDLE_VALUE = ((1 << NUM_NETWORKED_EHANDLE_BITS) - 1);
 
 // This is the maximum amount of data a PackedEntity can have. Having a limit allows us
 // to use static arrays sometimes instead of allocating memory all over the place.
-#define MAX_PACKEDENTITY_DATA	(16384)
+inline constexpr auto MAX_PACKEDENTITY_DATA = (16384);
 
 // This is the maximum number of properties that can be delta'd. Must be evenly divisible by 8.
-#define MAX_PACKEDENTITY_PROPS	(4096)
+inline constexpr auto MAX_PACKEDENTITY_PROPS = (4096);
 
 // a client can have up to 4 customization files (logo, sounds, models, txt).
-#define MAX_CUSTOM_FILES		4		// max 4 files
-#define MAX_CUSTOM_FILE_SIZE	524288	// Half a megabyte
+inline constexpr auto MAX_CUSTOM_FILES = 4; // max 4 files
+inline constexpr auto MAX_CUSTOM_FILE_SIZE = 524288; // Half a megabyte
 
 //
 // Constants shared by the engine and dlls
@@ -104,50 +88,49 @@ using CPlayerBitVec = std::bitset< 32 >;
 
 // CBaseEntity::m_fFlags
 // PLAYER SPECIFIC FLAGS FIRST BECAUSE WE USE ONLY A FEW BITS OF NETWORK PRECISION
-#define	FL_ONGROUND				(1<<0)	// At rest / on the ground
-#define FL_DUCKING				(1<<1)	// Player flag -- Player is fully crouched
-#define FL_ANIMDUCKING			(1<<2)	// Player flag -- Player is in the process of crouching or uncrouching but could be in transition
+inline constexpr auto FL_ONGROUND = (1<<0); // At rest / on the ground
+inline constexpr auto FL_DUCKING = (1<<1); // Player flag -- Player is fully crouched
+inline constexpr auto FL_ANIMDUCKING = (1<<2); // Player flag -- Player is in the process of crouching or uncrouching but could be in transition
                                         // examples:                                   Fully ducked:  FL_DUCKING &  FL_ANIMDUCKING
                                         //           Previously fully ducked, unducking in progress:  FL_DUCKING & !FL_ANIMDUCKING
                                         //                                           Fully unducked: !FL_DUCKING & !FL_ANIMDUCKING
                                         //           Previously fully unducked, ducking in progress: !FL_DUCKING &  FL_ANIMDUCKING
-#define	FL_WATERJUMP			(1<<3)	// player jumping out of water
-#define FL_ONTRAIN				(1<<4) // Player is _controlling_ a train, so movement commands should be ignored on client during prediction.
-#define FL_INRAIN				(1<<5)	// Indicates the entity is standing in rain
-#define FL_FROZEN				(1<<6) // Player is frozen for 3rd person camera
-#define FL_ATCONTROLS			(1<<7) // Player can't move, but keeps key inputs for controlling another entity
-#define	FL_CLIENT				(1<<8)	// Is a player
-#define FL_FAKECLIENT			(1<<9)	// Fake client, simulated server side; don't send network messages to them
+inline constexpr auto FL_WATERJUMP = (1<<3); // player jumping out of water
+inline constexpr auto FL_ONTRAIN = (1<<4); // Player is _controlling_ a train, so movement commands should be ignored on client during prediction.
+inline constexpr auto FL_INRAIN = (1<<5); // Indicates the entity is standing in rain
+inline constexpr auto FL_FROZEN = (1<<6); // Player is frozen for 3rd person camera
+inline constexpr auto FL_ATCONTROLS = (1<<7); // Player can't move, but keeps key inputs for controlling another entity
+inline constexpr auto FL_CLIENT = (1<<8); // Is a player
+inline constexpr auto FL_FAKECLIENT = (1<<9); // Fake client, simulated server side; don't send network messages to them
 // NON-PLAYER SPECIFIC (i.e., not used by GameMovement or the client .dll ) -- Can still be applied to players, though
-#define	FL_INWATER				(1<<10)	// In water
+inline constexpr auto FL_INWATER = (1<<10); // In water
 
 // NOTE if you move things up, make sure to change this value
-#define PLAYER_FLAG_BITS		11
+inline constexpr auto PLAYER_FLAG_BITS = 11;
 
-#define	FL_FLY					(1<<11)	// Changes the SV_Movestep() behavior to not need to be on ground
-#define	FL_SWIM					(1<<12)	// Changes the SV_Movestep() behavior to not need to be on ground (but stay in water)
-#define	FL_CONVEYOR				(1<<13)
-#define	FL_NPC					(1<<14)
-#define	FL_GODMODE				(1<<15)
-#define	FL_NOTARGET				(1<<16)
-#define	FL_AIMTARGET			(1<<17)	// set if the crosshair needs to aim onto the entity
-#define	FL_PARTIALGROUND		(1<<18)	// not all corners are valid
-#define FL_STATICPROP			(1<<19)	// Eetsa static prop!		
-#define FL_GRAPHED				(1<<20) // worldgraph has this ent listed as something that blocks a connection
-#define FL_GRENADE				(1<<21)
-#define FL_STEPMOVEMENT			(1<<22)	// Changes the SV_Movestep() behavior to not do any processing
-#define FL_DONTTOUCH			(1<<23)	// Doesn't generate touch functions, generates Untouch() for anything it was touching when this flag was set
-#define FL_BASEVELOCITY			(1<<24)	// Base velocity has been applied this frame (used to convert base velocity into momentum)
-#define FL_WORLDBRUSH			(1<<25)	// Not moveable/removeable brush entity (really part of the world, but represented as an entity for transparency or something)
-#define FL_OBJECT				(1<<26) // Terrible name. This is an object that NPCs should see. Missiles, for example.
-#define FL_KILLME				(1<<27)	// This entity is marked for death -- will be freed by game DLL
-#define FL_ONFIRE				(1<<28)	// You know...
-#define FL_DISSOLVING			(1<<29) // We're dissolving!
-#define FL_TRANSRAGDOLL			(1<<30) // In the process of turning into a client side ragdoll.
-#define FL_UNBLOCKABLE_BY_PLAYER (1<<31) // pusher that can't be blocked by the player
+inline constexpr auto FL_FLY = (1<<11); // Changes the SV_Movestep() behavior to not need to be on ground
+inline constexpr auto FL_SWIM = (1<<12); // Changes the SV_Movestep() behavior to not need to be on ground (but stay in water)
+inline constexpr auto FL_CONVEYOR = (1<<13);
+inline constexpr auto FL_NPC = (1<<14);
+inline constexpr auto FL_GODMODE = (1<<15);
+inline constexpr auto FL_NOTARGET = (1<<16);
+inline constexpr auto FL_AIMTARGET = (1<<17); // set if the crosshair needs to aim onto the entity
+inline constexpr auto FL_PARTIALGROUND = (1<<18); // not all corners are valid
+inline constexpr auto FL_STATICPROP = (1<<19); // Eetsa static prop!
+inline constexpr auto FL_GRAPHED = (1<<20); // worldgraph has this ent listed as something that blocks a connection
+inline constexpr auto FL_GRENADE = (1<<21);
+inline constexpr auto FL_STEPMOVEMENT = (1<<22); // Changes the SV_Movestep() behavior to not do any processing
+inline constexpr auto FL_DONTTOUCH = (1<<23); // Doesn't generate touch functions, generates Untouch() for anything it was touching when this flag was set
+inline constexpr auto FL_BASEVELOCITY = (1<<24); // Base velocity has been applied this frame (used to convert base velocity into momentum)
+inline constexpr auto FL_WORLDBRUSH = (1<<25); // Not moveable/removeable brush entity (really part of the world, but represented as an entity for transparency or something)
+inline constexpr auto FL_OBJECT = (1<<26); // Terrible name. This is an object that NPCs should see. Missiles, for example.
+inline constexpr auto FL_KILLME = (1<<27); // This entity is marked for death -- will be freed by game DLL
+inline constexpr auto FL_ONFIRE = (1<<28); // You know...
+inline constexpr auto FL_DISSOLVING = (1<<29); // We're dissolving!
+inline constexpr auto FL_TRANSRAGDOLL = (1<<30); // In the process of turning into a client side ragdoll.
+inline constexpr auto FL_UNBLOCKABLE_BY_PLAYER = (1<<31); // pusher that can't be blocked by the player
 
 // FIXME[HPE]: this won't actually work - we're out of bits. :(
-#define FL_FREEZING				(1<<32) // We're becoming frozen!
 
 // edict->movetype values
 enum MoveType_t
@@ -235,11 +218,11 @@ inline bool IsSolid( SolidType_t solidType, int nSolidFlags )
 
 
 // m_lifeState values
-#define	LIFE_ALIVE				0 // alive
-#define	LIFE_DYING				1 // playing death animation or still falling off of a ledge waiting to hit ground
-#define	LIFE_DEAD				2 // dead. lying still.
-#define LIFE_RESPAWNABLE		3
-#define LIFE_DISCARDBODY		4
+inline constexpr auto LIFE_ALIVE = 0; // alive
+inline constexpr auto LIFE_DYING = 1; // playing death animation or still falling off of a ledge waiting to hit ground
+inline constexpr auto LIFE_DEAD = 2; // dead. lying still.
+inline constexpr auto LIFE_RESPAWNABLE = 3;
+inline constexpr auto LIFE_DISCARDBODY = 4;
 
 // entity effects
 enum
@@ -266,53 +249,53 @@ enum
 	EF_MAX_BITS = 15
 };
 
-#define EF_PARITY_BITS	3
-#define EF_PARITY_MASK  ((1<<EF_PARITY_BITS)-1)
+inline constexpr auto EF_PARITY_BITS = 3;
+inline constexpr auto EF_PARITY_MASK = ((1<<EF_PARITY_BITS)-1);
 
 // How many bits does the muzzle flash parity thing get?
-#define EF_MUZZLEFLASH_BITS 2
+inline constexpr auto EF_MUZZLEFLASH_BITS = 2;
 
 // plats
-#define	PLAT_LOW_TRIGGER	1
+inline constexpr auto PLAT_LOW_TRIGGER = 1;
 
 // Trains
-#define	SF_TRAIN_WAIT_RETRIGGER	1
-#define SF_TRAIN_PASSABLE		8		// Train is not solid -- used to make water trains
+inline constexpr auto SF_TRAIN_WAIT_RETRIGGER = 1;
+inline constexpr auto SF_TRAIN_PASSABLE = 8; // Train is not solid -- used to make water trains
 
 // view angle update types for CPlayerState::fixangle
-#define FIXANGLE_NONE			0
-#define FIXANGLE_ABSOLUTE		1
-#define FIXANGLE_RELATIVE		2
+inline constexpr auto FIXANGLE_NONE = 0;
+inline constexpr auto FIXANGLE_ABSOLUTE = 1;
+inline constexpr auto FIXANGLE_RELATIVE = 2;
 
 // Break Model Defines
 
-#define BREAK_GLASS		0x01
-#define BREAK_METAL		0x02
-#define BREAK_FLESH		0x04
-#define BREAK_WOOD		0x08
+inline constexpr auto BREAK_GLASS = 0x01;
+inline constexpr auto BREAK_METAL = 0x02;
+inline constexpr auto BREAK_FLESH = 0x04;
+inline constexpr auto BREAK_WOOD = 0x08;
 
-#define BREAK_SMOKE		0x10
-#define BREAK_TRANS		0x20
-#define BREAK_CONCRETE	0x40
+inline constexpr auto BREAK_SMOKE = 0x10;
+inline constexpr auto BREAK_TRANS = 0x20;
+inline constexpr auto BREAK_CONCRETE = 0x40;
 
 // If this is set, then we share a lighting origin with the last non-slave breakable sent down to the client
-#define BREAK_SLAVE		0x80
+inline constexpr auto BREAK_SLAVE = 0x80;
 
 // Colliding temp entity sounds
 
-#define BOUNCE_GLASS	BREAK_GLASS
-#define	BOUNCE_METAL	BREAK_METAL
-#define BOUNCE_FLESH	BREAK_FLESH
-#define BOUNCE_WOOD		BREAK_WOOD
-#define BOUNCE_SHRAP	0x10
-#define BOUNCE_SHELL	0x20
-#define	BOUNCE_CONCRETE BREAK_CONCRETE
-#define BOUNCE_SHOTSHELL 0x80
+inline constexpr auto BOUNCE_GLASS = BREAK_GLASS;
+inline constexpr auto BOUNCE_METAL = BREAK_METAL;
+inline constexpr auto BOUNCE_FLESH = BREAK_FLESH;
+inline constexpr auto BOUNCE_WOOD = BREAK_WOOD;
+inline constexpr auto BOUNCE_SHRAP = 0x10;
+inline constexpr auto BOUNCE_SHELL = 0x20;
+inline constexpr auto BOUNCE_CONCRETE = BREAK_CONCRETE;
+inline constexpr auto BOUNCE_SHOTSHELL = 0x80;
 
 // Temp entity bounce sound types
-#define TE_BOUNCE_NULL		0
-#define TE_BOUNCE_SHELL		1
-#define TE_BOUNCE_SHOTSHELL	2
+inline constexpr auto TE_BOUNCE_NULL = 0;
+inline constexpr auto TE_BOUNCE_SHELL = 1;
+inline constexpr auto TE_BOUNCE_SHOTSHELL = 2;
 
 // Rendering constants
 // if this is changed, update common/MaterialSystem/Sprite.cpp
@@ -393,12 +376,11 @@ enum Collision_Group_t
 	LAST_SHARED_COLLISION_GROUP
 };
 
-#include "basetypes.h"
 
-#define SOUND_NORMAL_CLIP_DIST	1000.0f
+inline constexpr auto SOUND_NORMAL_CLIP_DIST = 1000.0f;
 
 // max number of cached build/draw views to support parallel building of World/Renderlists on SPU
-#define MAX_CONCURRENT_BUILDVIEWS 10
+inline constexpr auto MAX_CONCURRENT_BUILDVIEWS = 10;
 
 //-----------------------------------------------------------------------------
 // Base light indices to avoid index collision
@@ -413,20 +395,15 @@ enum
 };
 
 // How many networked area portals do we allow?
-#define MAX_AREA_STATE_BYTES		32
-#define MAX_AREA_PORTAL_STATE_BYTES 24
+inline constexpr auto MAX_AREA_STATE_BYTES = 32;
+inline constexpr auto MAX_AREA_PORTAL_STATE_BYTES = 24;
 
 // user message max payload size (note, this value is used by the engine, so MODs cannot change it)
 #define MAX_USER_MSG_BITS 12
 #define MAX_USER_MSG_DATA ( ( 1 << ( MAX_USER_MSG_BITS - 3 ) ) - 1 )
-#define MAX_ENTITY_MSG_DATA 255
+inline constexpr auto MAX_ENTITY_MSG_DATA = 255;
 
-#define SOURCE_MT
-#ifdef SOURCE_MT
 typedef std::recursive_mutex CSourceMutex;
-#else
-typedef ks::null_mutex CSourceMutex;
-#endif
 
 #if defined( CLIENT_DLL )
 #define IsServerDll() false
@@ -439,6 +416,5 @@ typedef ks::null_mutex CSourceMutex;
 #define IsClientDll() false
 #endif
 
-#endif
 
 #define IsValveDedicated() false

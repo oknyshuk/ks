@@ -1,22 +1,17 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef DMXHEADER_H
-#define DMXHEADER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // data file format info
 //-----------------------------------------------------------------------------
-#define DMX_LEGACY_VERSION_STARTING_TOKEN "<!-- DMXVersion"
-#define DMX_LEGACY_VERSION_ENDING_TOKEN "-->"
+inline constexpr const char *DMX_LEGACY_VERSION_STARTING_TOKEN = "<!-- DMXVersion";
+inline constexpr const char *DMX_LEGACY_VERSION_ENDING_TOKEN = "-->";
 
-#define DMX_VERSION_STARTING_TOKEN "<!-- dmx"
-#define DMX_VERSION_ENDING_TOKEN "-->"
+inline constexpr const char *DMX_VERSION_STARTING_TOKEN = "<!-- dmx";
+inline constexpr const char *DMX_VERSION_ENDING_TOKEN = "-->";
 
-#define GENERIC_DMX_FORMAT "dmx"
+inline constexpr const char *GENERIC_DMX_FORMAT = "dmx";
 
 
 enum
@@ -45,5 +40,3 @@ enum DmFileId_t
 {
 	DMFILEID_INVALID = 0xffffffff
 };
-
-#endif // DMXHEADER_H

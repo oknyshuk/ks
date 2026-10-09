@@ -1,21 +1,14 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#include "platform.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 
 
+
+import ks.tier1;
 #include "key_translation.h"
-#include "tier1/convar.h"
-#include "tier1/strtools.h"
-#include "tier0/dbg.h"
+import std;
 
 static ButtonCode_t s_pVirtualKeyToButtonCode[256];
-
-static ButtonCode_t s_pSKeytoButtonCode[SK_MAX_KEYS];
 
 
 static int s_pButtonCodeToVirtual[BUTTON_CODE_LAST];
@@ -73,56 +66,6 @@ static int s_pButtonCodeToVirtual[BUTTON_CODE_LAST];
 	"U AXIS NEG",\
 	"V AXIS POS",\
 	"V AXIS NEG"
-
-#define SCONTROLLERBUTTONS_BUTTONS( x ) \
-	"SC_A",\
-	"SC_B",\
-	"SC_X",\
-	"SC_Y",\
-	"SC_DPAD_UP",\
-	"SC_DPAD_RIGHT",\
-	"SC_DPAD_DOWN",\
-	"SC_DPAD_LEFT",\
-	"SC_LEFT_BUMPER",\
-	"SC_RIGHT_BUMPER",\
-	"SC_LEFT_TRIGGER",\
-	"SC_RIGHT_TRIGGER",\
-	"SC_LEFT_GRIP",\
-	"SC_RIGHT_GRIP",\
-	"SC_LEFT_PAD_TOUCH",\
-	"SC_RIGHT_PAD_TOUCH",\
-	"SC_LEFT_PAD_CLICK",\
-	"SC_RIGHT_PAD_CLICK",\
-	"SC_LPAD_UP",\
-	"SC_LPAD_RIGHT",\
-	"SC_LPAD_DOWN",\
-	"SC_LPAD_LEFT",\
-	"SC_RPAD_UP",\
-	"SC_RPAD_RIGHT",\
-	"SC_RPAD_DOWN",\
-	"SC_RPAD_LEFT",\
-	"SC_SELECT",\
-	"SC_START",\
-	"SC_STEAM",\
-	"SC_NULL"
-
-#define SCONTROLLERBUTTONS_AXIS( x ) \
-	"SC_LPAD_AXIS_RIGHT",\
-	"SC_LPAD_AXIS_LEFT",\
-	"SC_LPAD_AXIS_DOWN",\
-	"SC_LPAD_AXIS_UP",\
-	"SC_AXIS_L_TRIGGER",\
-	"SC_AXIS_R_TRIGGER",\
-	"SC_RPAD_AXIS_RIGHT",\
-	"SC_RPAD_AXIS_LEFT",\
-	"SC_RPAD_AXIS_DOWN",\
-	"SC_RPAD_AXIS_UP",\
-	"SC_GYRO_AXIS_PITCH_POSITIVE",\
-	"SC_GYRO_AXIS_PITCH_NEGATIVE",\
-	"SC_GYRO_AXIS_ROLL_POSITIVE",\
-	"SC_GYRO_AXIS_ROLL_NEGATIVE",\
-	"SC_GYRO_AXIS_YAW_POSITIVE",\
-	"SC_GYRO_AXIS_YAW_NEGATIVE"
 
 static const char *s_pButtonCodeName[ ] =
 {
@@ -261,43 +204,6 @@ static const char *s_pButtonCodeName[ ] =
 	JOYSTICK_NAMES_AXIS( 1 ),
 	JOYSTICK_NAMES_AXIS( 2 ),
 	JOYSTICK_NAMES_AXIS( 3 ),
-
-	SCONTROLLERBUTTONS_BUTTONS( 0 ),	
-	SCONTROLLERBUTTONS_BUTTONS( 1 ),	
-	SCONTROLLERBUTTONS_BUTTONS( 2 ),	
-	SCONTROLLERBUTTONS_BUTTONS( 3 ),
-	SCONTROLLERBUTTONS_BUTTONS( 4 ),
-	SCONTROLLERBUTTONS_BUTTONS( 5 ),
-	SCONTROLLERBUTTONS_BUTTONS( 6 ),
-	SCONTROLLERBUTTONS_BUTTONS( 7 ),
-
-	SCONTROLLERBUTTONS_BUTTONS( 8 ),	
-	SCONTROLLERBUTTONS_BUTTONS( 9 ),	
-	SCONTROLLERBUTTONS_BUTTONS( 10 ),	
-	SCONTROLLERBUTTONS_BUTTONS( 11 ),
-	SCONTROLLERBUTTONS_BUTTONS( 12 ),
-	SCONTROLLERBUTTONS_BUTTONS( 13 ),
-	SCONTROLLERBUTTONS_BUTTONS( 14 ),
-	SCONTROLLERBUTTONS_BUTTONS( 15 ),
-
-	SCONTROLLERBUTTONS_AXIS( 0 ),	
-	SCONTROLLERBUTTONS_AXIS( 1 ),	
-	SCONTROLLERBUTTONS_AXIS( 2 ),	
-	SCONTROLLERBUTTONS_AXIS( 3 ),	
-	SCONTROLLERBUTTONS_AXIS( 4 ),
-	SCONTROLLERBUTTONS_AXIS( 5 ),
-	SCONTROLLERBUTTONS_AXIS( 6 ),
-	SCONTROLLERBUTTONS_AXIS( 7 ),
-
-	SCONTROLLERBUTTONS_AXIS( 8 ),	
-	SCONTROLLERBUTTONS_AXIS( 9 ),	
-	SCONTROLLERBUTTONS_AXIS( 10 ),	
-	SCONTROLLERBUTTONS_AXIS( 11 ),	
-	SCONTROLLERBUTTONS_AXIS( 12 ),
-	SCONTROLLERBUTTONS_AXIS( 13 ),
-	SCONTROLLERBUTTONS_AXIS( 14 ),
-	SCONTROLLERBUTTONS_AXIS( 15 ),
-
 };
 
 #define JOYSTICK_ANALOG( x )	\
@@ -393,28 +299,6 @@ static const char *s_pXControllerButtonCodeNames[ ] =
 	XCONTROLLERBUTTONS_AXIS( 3 ),
 };
 
-static const char *s_pSControllerButtonCodeNames[ ] =
-{
-	SCONTROLLERBUTTONS_BUTTONS( 0 ),	
-	SCONTROLLERBUTTONS_BUTTONS( 1 ),	
-	SCONTROLLERBUTTONS_BUTTONS( 2 ),	
-	SCONTROLLERBUTTONS_BUTTONS( 3 ),
-	SCONTROLLERBUTTONS_BUTTONS( 4 ),
-	SCONTROLLERBUTTONS_BUTTONS( 5 ),
-	SCONTROLLERBUTTONS_BUTTONS( 6 ),
-	SCONTROLLERBUTTONS_BUTTONS( 7 ),
-
-	SCONTROLLERBUTTONS_AXIS( 0 ),	
-	SCONTROLLERBUTTONS_AXIS( 1 ),	
-	SCONTROLLERBUTTONS_AXIS( 2 ),	
-	SCONTROLLERBUTTONS_AXIS( 3 ),	
-	SCONTROLLERBUTTONS_AXIS( 4 ),
-	SCONTROLLERBUTTONS_AXIS( 5 ),
-	SCONTROLLERBUTTONS_AXIS( 6 ),
-	SCONTROLLERBUTTONS_AXIS( 7 ),
-
-};
-
 // this maps non-translated keyboard scan codes to engine key codes
 // Google for 'Keyboard Scan Code Specification'
 static ButtonCode_t s_pScanToButtonCode_QWERTY[128] = 
@@ -451,13 +335,13 @@ static ButtonCode_t s_pScanToButtonCode[128];
 
 void ButtonCode_InitKeyTranslationTable()
 {
-	COMPILE_TIME_ASSERT( sizeof(s_pButtonCodeName) / sizeof( const char * ) == BUTTON_CODE_LAST );
-	COMPILE_TIME_ASSERT( sizeof(s_pAnalogCodeName) / sizeof( const char * ) == ANALOG_CODE_LAST );
+	static_assert( sizeof(s_pButtonCodeName) / sizeof( const char * ) == BUTTON_CODE_LAST );
+	static_assert( sizeof(s_pAnalogCodeName) / sizeof( const char * ) == ANALOG_CODE_LAST );
 
 // For debugging, spews entire mapping
 
 	// set virtual key translation table
-	memset( s_pVirtualKeyToButtonCode, KEY_NONE, sizeof(s_pVirtualKeyToButtonCode) );
+	std::memset( s_pVirtualKeyToButtonCode, KEY_NONE, sizeof(s_pVirtualKeyToButtonCode) );
 
 	s_pVirtualKeyToButtonCode['0']			=KEY_0;
 	s_pVirtualKeyToButtonCode['1']			=KEY_1;
@@ -497,90 +381,21 @@ void ButtonCode_InitKeyTranslationTable()
 	s_pVirtualKeyToButtonCode['Z']			=KEY_Z;
 
 	// init the xkey translation table
-#if !defined( PLATFORM_POSIX ) || defined( _OSX )
-	s_pXKeyTrans[XK_NULL]					= KEY_NONE;
-	s_pXKeyTrans[XK_BUTTON_UP]				= KEY_XBUTTON_UP;
-	s_pXKeyTrans[XK_BUTTON_DOWN]			= KEY_XBUTTON_DOWN;
-	s_pXKeyTrans[XK_BUTTON_LEFT]			= KEY_XBUTTON_LEFT;
-	s_pXKeyTrans[XK_BUTTON_RIGHT]			= KEY_XBUTTON_RIGHT;
-	s_pXKeyTrans[XK_BUTTON_START]			= KEY_XBUTTON_START;
-	s_pXKeyTrans[XK_BUTTON_BACK]			= KEY_XBUTTON_BACK;
-	s_pXKeyTrans[XK_BUTTON_STICK1]			= KEY_XBUTTON_STICK1;
-	s_pXKeyTrans[XK_BUTTON_STICK2]			= KEY_XBUTTON_STICK2;
-	s_pXKeyTrans[XK_BUTTON_A]				= KEY_XBUTTON_A;
-	s_pXKeyTrans[XK_BUTTON_B]				= KEY_XBUTTON_B;
-	s_pXKeyTrans[XK_BUTTON_X]				= KEY_XBUTTON_X;
-	s_pXKeyTrans[XK_BUTTON_Y]				= KEY_XBUTTON_Y;
-	s_pXKeyTrans[XK_BUTTON_LEFT_SHOULDER]   = KEY_XBUTTON_LEFT_SHOULDER;
-	s_pXKeyTrans[XK_BUTTON_RIGHT_SHOULDER]	= KEY_XBUTTON_RIGHT_SHOULDER;
-	s_pXKeyTrans[XK_BUTTON_LTRIGGER]		= KEY_XBUTTON_LTRIGGER;
-	s_pXKeyTrans[XK_BUTTON_RTRIGGER]		= KEY_XBUTTON_RTRIGGER;
-	s_pXKeyTrans[XK_STICK1_UP]				= KEY_XSTICK1_UP;
-	s_pXKeyTrans[XK_STICK1_DOWN]			= KEY_XSTICK1_DOWN;
-	s_pXKeyTrans[XK_STICK1_LEFT]			= KEY_XSTICK1_LEFT;
-	s_pXKeyTrans[XK_STICK1_RIGHT]			= KEY_XSTICK1_RIGHT;
-	s_pXKeyTrans[XK_STICK2_UP]				= KEY_XSTICK2_UP;
-	s_pXKeyTrans[XK_STICK2_DOWN]			= KEY_XSTICK2_DOWN;
-	s_pXKeyTrans[XK_STICK2_LEFT]			= KEY_XSTICK2_LEFT;
-	s_pXKeyTrans[XK_STICK2_RIGHT]			= KEY_XSTICK2_RIGHT;
-	s_pXKeyTrans[XK_BUTTON_INACTIVE_START]	= KEY_XBUTTON_INACTIVE_START;
-
-	s_pXKeyTrans[XK_BUTTON_FIREMODE_SELECTOR_1]	= KEY_XBUTTON_FIREMODE_SELECTOR_1;
-	s_pXKeyTrans[XK_BUTTON_FIREMODE_SELECTOR_2]	= KEY_XBUTTON_FIREMODE_SELECTOR_2;
-	s_pXKeyTrans[XK_BUTTON_FIREMODE_SELECTOR_3]	= KEY_XBUTTON_FIREMODE_SELECTOR_3;
-	s_pXKeyTrans[XK_BUTTON_RELOAD]				= KEY_XBUTTON_RELOAD;
-	s_pXKeyTrans[XK_BUTTON_TRIGGER]				= KEY_XBUTTON_TRIGGER;
-	s_pXKeyTrans[XK_BUTTON_PUMP_ACTION]			= KEY_XBUTTON_PUMP_ACTION;
-	s_pXKeyTrans[XK_XBUTTON_ROLL_RIGHT]			= KEY_XBUTTON_ROLL_RIGHT;
-	s_pXKeyTrans[XK_XBUTTON_ROLL_LEFT]			= KEY_XBUTTON_ROLL_LEFT;
-#endif // PLATFORM_POSIX
 
 	// create reverse table engine to virtual
-	for ( int i = 0; i < ARRAYSIZE( s_pVirtualKeyToButtonCode ); i++ )
+	for ( int i = 0; i < std::size( s_pVirtualKeyToButtonCode ); i++ )
 	{
 		s_pButtonCodeToVirtual[ s_pVirtualKeyToButtonCode[i] ] = i;
 	}
 
 	s_pButtonCodeToVirtual[0] = 0;
-
-	s_pSKeytoButtonCode[SK_NULL]					= KEY_NONE;
-	s_pSKeytoButtonCode[SK_BUTTON_A]				= STEAMCONTROLLER_A;
-	s_pSKeytoButtonCode[SK_BUTTON_B]				= STEAMCONTROLLER_B;
-	s_pSKeytoButtonCode[SK_BUTTON_X]				= STEAMCONTROLLER_X;
-	s_pSKeytoButtonCode[SK_BUTTON_Y]				= STEAMCONTROLLER_Y;
-	s_pSKeytoButtonCode[SK_BUTTON_UP]				= STEAMCONTROLLER_DPAD_UP;
-	s_pSKeytoButtonCode[SK_BUTTON_RIGHT]			= STEAMCONTROLLER_DPAD_RIGHT;
-	s_pSKeytoButtonCode[SK_BUTTON_DOWN]				= STEAMCONTROLLER_DPAD_DOWN;
-	s_pSKeytoButtonCode[SK_BUTTON_LEFT]				= STEAMCONTROLLER_DPAD_LEFT;
-	s_pSKeytoButtonCode[SK_BUTTON_LEFT_BUMPER]		= STEAMCONTROLLER_LEFT_BUMPER;
-	s_pSKeytoButtonCode[SK_BUTTON_RIGHT_BUMPER]		= STEAMCONTROLLER_RIGHT_BUMPER;
-	s_pSKeytoButtonCode[SK_BUTTON_LEFT_TRIGGER]		= STEAMCONTROLLER_LEFT_TRIGGER;
-	s_pSKeytoButtonCode[SK_BUTTON_RIGHT_TRIGGER]	= STEAMCONTROLLER_RIGHT_TRIGGER;
-	s_pSKeytoButtonCode[SK_BUTTON_LEFT_GRIP]		= STEAMCONTROLLER_LEFT_GRIP;
-	s_pSKeytoButtonCode[SK_BUTTON_RIGHT_GRIP]		= STEAMCONTROLLER_RIGHT_GRIP;
-	s_pSKeytoButtonCode[SK_BUTTON_LPAD_TOUCH]		= STEAMCONTROLLER_LEFT_PAD_FINGERDOWN;
-	s_pSKeytoButtonCode[SK_BUTTON_RPAD_TOUCH]		= STEAMCONTROLLER_RIGHT_PAD_FINGERDOWN;
-	s_pSKeytoButtonCode[SK_BUTTON_LPAD_CLICK]		= STEAMCONTROLLER_LEFT_PAD_CLICK;
-	s_pSKeytoButtonCode[SK_BUTTON_RPAD_CLICK]		= STEAMCONTROLLER_RIGHT_PAD_CLICK;
-	s_pSKeytoButtonCode[SK_BUTTON_LPAD_UP]			= STEAMCONTROLLER_LEFT_PAD_UP;
-	s_pSKeytoButtonCode[SK_BUTTON_LPAD_RIGHT]		= STEAMCONTROLLER_LEFT_PAD_RIGHT;
-	s_pSKeytoButtonCode[SK_BUTTON_LPAD_DOWN]		= STEAMCONTROLLER_LEFT_PAD_DOWN;
-	s_pSKeytoButtonCode[SK_BUTTON_LPAD_LEFT]		= STEAMCONTROLLER_LEFT_PAD_LEFT;
-	s_pSKeytoButtonCode[SK_BUTTON_RPAD_UP]			= STEAMCONTROLLER_RIGHT_PAD_UP;
-	s_pSKeytoButtonCode[SK_BUTTON_RPAD_RIGHT]		= STEAMCONTROLLER_RIGHT_PAD_RIGHT;
-	s_pSKeytoButtonCode[SK_BUTTON_RPAD_DOWN]		= STEAMCONTROLLER_RIGHT_PAD_DOWN;
-	s_pSKeytoButtonCode[SK_BUTTON_RPAD_LEFT]		= STEAMCONTROLLER_RIGHT_PAD_LEFT;
-	s_pSKeytoButtonCode[SK_BUTTON_SELECT]			= STEAMCONTROLLER_SELECT;
-	s_pSKeytoButtonCode[SK_BUTTON_START]			= STEAMCONTROLLER_START;
-	s_pSKeytoButtonCode[SK_BUTTON_STEAM]			= STEAMCONTROLLER_STEAM;
-	s_pSKeytoButtonCode[SK_BUTTON_INACTIVE_START]	= STEAMCONTROLLER_INACTIVE_START;
 }
 
 ButtonCode_t ButtonCode_VirtualKeyToButtonCode( int keyCode )
 {
 	if ( keyCode < 0 || keyCode >= sizeof( s_pVirtualKeyToButtonCode ) / sizeof( s_pVirtualKeyToButtonCode[0] ) )
 	{
-		Assert( false );
+		contract_assert( false );
 		return KEY_NONE;
 	}
 	return s_pVirtualKeyToButtonCode[keyCode];
@@ -593,61 +408,7 @@ int ButtonCode_ButtonCodeToVirtualKey( ButtonCode_t code )
 
 ButtonCode_t ButtonCode_XKeyToButtonCode( int nPort, int keyCode )
 {
-#if !defined( PLATFORM_POSIX ) || defined( _OSX )
-	if ( keyCode < 0 || keyCode >= sizeof( s_pXKeyTrans ) / sizeof( s_pXKeyTrans[0] ) )
-	{
-		Assert( false );
-		return KEY_NONE;
-	}
-
-	ButtonCode_t code = s_pXKeyTrans[keyCode];
-	if ( IsJoystickButtonCode( code ) )
-	{
-		int nOffset = code - JOYSTICK_FIRST_BUTTON;
-		return JOYSTICK_BUTTON( nPort, nOffset );
-	}
-	
-	if ( IsJoystickPOVCode( code ) )
-	{
-		int nOffset = code - JOYSTICK_FIRST_POV_BUTTON;
-		return JOYSTICK_POV_BUTTON( nPort, nOffset );
-	}
-	
-	if ( IsJoystickAxisCode( code ) )
-	{
-		int nOffset = code - JOYSTICK_FIRST_AXIS_BUTTON;
-		return JOYSTICK_AXIS_BUTTON( nPort, nOffset );
-	}
-
-	return code;
-#else // PLATFORM_POSIX
 	return KEY_NONE;
-#endif // PLATFORM_POSIX
-}
-
-ButtonCode_t ButtonCode_SKeyToButtonCode( int nPort, int keyCode )
-{
-	if ( keyCode < 0 || keyCode >= sizeof( s_pSKeytoButtonCode ) / sizeof( s_pSKeytoButtonCode[0] ) )
-	{
-		Assert( false );
-		return KEY_NONE;
-	}
-
-	ButtonCode_t code = s_pSKeytoButtonCode[keyCode];
-
-	if ( IsSteamControllerButtonCode( code ) )
-	{
-		int nOffset = code - STEAMCONTROLLER_FIRST_BUTTON;
-		return STEAMCONTROLLER_BUTTON( nPort, nOffset );
-	}
-
-	if ( IsSteamControllerAxisCode( code ) )
-	{
-		int nOffset = code - STEAMCONTROLLER_FIRST_AXIS_BUTTON;
-		return STEAMCONTROLLER_AXIS_BUTTON( nPort, nOffset );
-	}
-
-	return code;
 }
 
 // Convert back + forth between ButtonCode/AnalogCode + strings
@@ -691,9 +452,9 @@ ButtonCode_t ButtonCode_StringToButtonCode( const char *pString, bool bXControll
 		return BUTTON_CODE_INVALID;
 
 	// Backward compat for screwed up previous joystick button names
-	if ( !Q_strnicmp( pString, "aux", 3 ) )
+	if ( !V_strnicmp( pString, "aux", 3 ) )
 	{
-		int nIndex = atoi( &pString[3] );
+		int nIndex = std::atoi( &pString[3] );
 		if ( nIndex < 29 )
 			return JOYSTICK_BUTTON( 0, nIndex );
 		if ( ( nIndex >= 29 ) && ( nIndex <= 32 ) )
@@ -702,22 +463,22 @@ ButtonCode_t ButtonCode_StringToButtonCode( const char *pString, bool bXControll
 	}
 
   // map "COMMAND" to the LWIN key on non-OSX
-  if ( !Q_stricmp( pString, "command" ) )
+  if ( !V_stricmp( pString, "command" ) )
   {
     return KEY_LWIN;
   }
 
 	for ( int i = 0; i < BUTTON_CODE_LAST; ++i )
 	{
-		if ( !Q_stricmp( s_pButtonCodeName[i], pString ) )
+		if ( !V_stricmp( s_pButtonCodeName[i], pString ) )
 			return (ButtonCode_t)i;
 	}
 
 	if ( bXController )
 	{
-		for ( int i = 0; i < ARRAYSIZE(s_pXControllerButtonCodeNames); ++i )
+		for ( int i = 0; i < std::size( s_pXControllerButtonCodeNames ); ++i )
 		{
-			if ( !Q_stricmp( s_pXControllerButtonCodeNames[i], pString ) )
+			if ( !V_stricmp( s_pXControllerButtonCodeNames[i], pString ) )
 				return (ButtonCode_t)(JOYSTICK_FIRST_BUTTON + i);
 		}
 	}
@@ -732,7 +493,7 @@ AnalogCode_t AnalogCode_StringToAnalogCode( const char *pString )
 
 	for ( int i = 0; i < ANALOG_CODE_LAST; ++i )
 	{
-		if ( !Q_stricmp( s_pAnalogCodeName[i], pString ) )
+		if ( !V_stricmp( s_pAnalogCodeName[i], pString ) )
 			return (AnalogCode_t)i;
 	}
 
@@ -803,7 +564,7 @@ ButtonCode_t ButtonCode_ScanCodeToButtonCode( int lParam )
 void ButtonCode_UpdateScanCodeLayout( )
 {
 	// reset the keyboard
-	memcpy( s_pScanToButtonCode, s_pScanToButtonCode_QWERTY, sizeof(s_pScanToButtonCode) );
+	std::memcpy( s_pScanToButtonCode, s_pScanToButtonCode_QWERTY, sizeof(s_pScanToButtonCode) );
 
 }
 
@@ -811,7 +572,9 @@ void ButtonCode_UpdateScanCodeLayout( )
 //-----------------------------------------------------------------------------
 // Purpose: Updates the current keyboard layout
 //-----------------------------------------------------------------------------
-CON_COMMAND( key_updatelayout, "Updates game keyboard layout to current windows keyboard setting." )
+static void key_updatelayout( const CCommand &args );
+static ConCommand key_updatelayout_command( "key_updatelayout", key_updatelayout, "Updates game keyboard layout to current windows keyboard setting." );
+static void key_updatelayout( const CCommand &args )
 {
 	ButtonCode_UpdateScanCodeLayout();
 }

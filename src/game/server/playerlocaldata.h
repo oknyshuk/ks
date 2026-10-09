@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef PLAYERLOCALDATA_H
-#define PLAYERLOCALDATA_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "playernet_vars.h"
 #include "networkvar.h"
-#include "fogcontroller.h"
-#include "postprocesscontroller.h"
-#include "colorcorrection.h"
+#include "reflect_annotations.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+class CBasePlayer;
 
 //-----------------------------------------------------------------------------
 // Purpose: Player specific data ( sent only to local player, too )
@@ -87,15 +81,9 @@ public:
 	// Base velocity that was passed in to server physics so 
 	//  client can predict conveyors correctly.  Server zeroes it, so we need to store here, too.
 	// auto-decaying view angle adjustment
-#if PREDICTION_ERROR_CHECK_LEVEL > 1
-	CNetworkQAngleXYZ( m_viewPunchAngle );
-	CNetworkQAngleXYZ( m_aimPunchAngle );
-	CNetworkQAngleXYZ( m_aimPunchAngleVel );
-#else
 	CNetworkQAngle( m_viewPunchAngle, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkQAngle( m_aimPunchAngle, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkQAngle( m_aimPunchAngleVel, [[= ks::reflect::Net{ .bits = -1, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::Vector } ]] );
-#endif
 	// Draw view model for the player
 	CNetworkVar( bool, m_bDrawViewmodel , [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED, .enc = ks::reflect::WireEnc::Int } ]] );
 
@@ -122,5 +110,7 @@ public:
 
 EXTERN_SEND_TABLE(DT_Local);
 
-
-#endif // PLAYERLOCALDATA_H
+// Included last: these pull in baseentity.h and then player.h, which needs CPlayerLocalData above.
+#include "fogcontroller.h"
+#include "postprocesscontroller.h"
+#include "colorcorrection.h"

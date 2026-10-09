@@ -1,26 +1,33 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#elif defined(GAME_DLL)
+#endif
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
 #else
 #include "reflect_sendtable.h"
 #endif
-#include "reflect_annotations.h"
 #include "effect_dispatch_data.h"
-#include "coordsize.h"
 
 #ifdef CLIENT_DLL
 #include "cliententitylist.h"
 #endif
 
-
-#define SUBINCH_PRECISION	3
+constexpr auto SUBINCH_PRECISION = 3;
 
 // MAX_MODEL_INDEX_BITS moved to effect_dispatch_data.h: an annotation on CEffectData has to be a
 // constant expression where the class is declared.

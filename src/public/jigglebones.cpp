@@ -1,11 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier1/convar.h"
+import std;
+import ks.tier1;
 #include "jigglebones.h"
 #ifdef CLIENT_DLL
 #include "engine/ivdebugoverlay.h"
@@ -31,7 +28,7 @@ public:
 	void AddTextOverlay(const Vector &origin, float duration, const char *format, ...) {}
 };
 
-SELECTANY CDummyOverlay *debugoverlay = new CDummyOverlay;
+[[gnu::weak]] CDummyOverlay *debugoverlay = new CDummyOverlay;
 
 char *VarArgs( const char *format, ... )
 {
@@ -250,7 +247,7 @@ void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime,
 			if (jiggleInfo->flags & JIGGLE_HAS_YAW_CONSTRAINT)
 			{
 				// enforce yaw constraints in local XZ plane
-				float yawError = atan2( localAlong.x, localAlong.z );
+				float yawError = std::atan2( localAlong.x, localAlong.z );
 
 				bool isAtLimit = false;
 				float yaw = 0.0f;
@@ -351,7 +348,7 @@ void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime,
 			if (jiggleInfo->flags & JIGGLE_HAS_PITCH_CONSTRAINT)
 			{
 				// enforce pitch constraints in local YZ plane
-				float pitchError = atan2( localAlong.y, localAlong.z );
+				float pitchError = std::atan2( localAlong.y, localAlong.z );
 
 				bool isAtLimit = false;
 				float pitch = 0.0f;
@@ -448,16 +445,16 @@ void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime,
 			// enforce max angular error
 			Vector error = goalTip - data->tipPos;
 			float dot = DotProduct( forward, goalForward );
-			float angleBetween = acos( dot );
+			float angleBetween = std::acos( dot );
 			if (dot < 0.0f)
 			{
-				angleBetween = 2.0f * M_PI - angleBetween;
+				angleBetween = 2.0f * std::numbers::pi - angleBetween;
 			}
 
 			if (angleBetween > jiggleInfo->angleLimit)
 			{
 				// at angular limit
-				float maxBetween = jiggleInfo->length * sin( jiggleInfo->angleLimit );
+				float maxBetween = jiggleInfo->length * std::sin( jiggleInfo->angleLimit );
 
 				Vector delta = goalTip - data->tipPos;
 				delta.NormalizeInPlace();
@@ -650,4 +647,3 @@ void CJiggleBones::BuildJiggleTransformations( int boneIndex, float currenttime,
 		}
 	}
 }
-

@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef FLEXCYCLER_H
-#define FLEXCYCLER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -33,7 +27,7 @@ public:
 	virtual void ProcessSceneEvents( void );
 
 	// Don't treat as a live target
-	virtual bool IsAlive( void ) { return FALSE; }
+	virtual bool IsAlive( void ) { return false; }
 
 	float m_flextime;
 	LocalFlexController_t m_flexnum;
@@ -62,6 +56,3 @@ public:
 
 	void Spawn( void ) { GenericCyclerSpawn( (char *)STRING( GetModelName() ), Vector(-16, -16, 0), Vector(16, 16, 72) ); }
 };
-
-
-#endif // FLEXCYCLER_H

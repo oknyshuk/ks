@@ -1,8 +1,5 @@
-#include <basetypes.h>
-#include <float.h>
-#include "tier1/utlvector.h"
-#include "eigen.h"
-#include "mathlib/aabb.h"
+import std;
+import ks.math;
 
 static matrix3x4_t Transpose(const matrix3x4_t &a)
 {
@@ -35,7 +32,7 @@ Quaternion Diagonalizer( const matrix3x4_t &A, Vector &d )
 		matrix3x4_t D  = Transpose( Q ) * A * Q;  // A = Q*D*Q^T
 		Vector offdiag( D[1][2], D[0][2], D[0][1] ); // elements not on the diagonal
 		d = Vector( D[0][0], D[1][1], D[2][2] );
-		Vector om( fabsf( offdiag.x ), fabsf( offdiag.y ), fabsf( offdiag.z ) ); // mag of each offdiag elem
+		Vector om( std::fabsf( offdiag.x ), std::fabsf( offdiag.y ), std::fabsf( offdiag.z ) ); // mag of each offdiag elem
 		int k = ( om.x > om.y && om.x > om.z ) ? 0 : ( om.y > om.z ) ? 1 : 2; // index of largest element of offdiag
 		int k1 = ( k + 1 ) % 3;
 		int k2 = ( k + 2 ) % 3;
@@ -43,13 +40,13 @@ Quaternion Diagonalizer( const matrix3x4_t &A, Vector &d )
 		float thet = ( D[k2][k2] - D[k1][k1] ) / ( 2.0f * offdiag[k] );
 		float sgn = ( thet > 0.0f ) ? 1.0f : -1.0f;
 		thet    *= sgn; // make it positive
-		float t = sgn / ( thet + ( ( thet < 1.E6f ) ? sqrtf( thet * thet + 1.0f ) : thet ) ) ; // sign(T)/(|T|+sqrt(T^2+1))
-		float c = 1.0f / sqrtf( t * t + 1.0f ); //  c= 1/(t^2+1) , t=s/c
+		float t = sgn / ( thet + ( ( thet < 1.E6f ) ? std::sqrtf( thet * thet + 1.0f ) : thet ) ) ; // sign(T)/(|T|+sqrt(T^2+1))
+		float c = 1.0f / std::sqrtf( t * t + 1.0f ); //  c= 1/(t^2+1) , t=s/c
 		if ( c == 1.0f ) break;  // no room for improvement - reached machine precision.
 		Quaternion jr( 0, 0, 0, 0 ); // jacobi rotation for this iteration.
-		jr[k] = sgn * sqrtf( ( 1.0f - c ) / 2.0f );  // using 1/2 angle identity sin(a/2) = sqrt((1-cos(a))/2)
+		jr[k] = sgn * std::sqrtf( ( 1.0f - c ) / 2.0f );  // using 1/2 angle identity sin(a/2) = sqrt((1-cos(a))/2)
 		jr[k] *= -1.0f; // ??since our quat-to-matrix convention was for v*M instead of M*v
-		jr.w  = sqrtf( 1.0f - jr[k] * jr[k] );
+		jr.w  = std::sqrtf( 1.0f - jr[k] * jr[k] );
 		if ( jr.w == 1.0f ) break; // reached limits of floating point precision
 		QuaternionMult( q, jr, q ); //q =  q*jr;
 		QuaternionNormalize( q );

@@ -1,10 +1,16 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Functionality to render object motion blur
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
+// Purpose: Functionality to render object motion blur
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "object_motion_blur_effect.h"
 #include "model_types.h"
 
@@ -34,7 +40,7 @@ int CObjectMotionBlurManager::RegisterObject( C_BaseAnimating *pEntity, float fl
 
 void CObjectMotionBlurManager::UnregisterObject( int nObjectHandle )
 {
-	Assert( !m_ObjectMotionBlurDefinitions[nObjectHandle].IsUnused() );
+	contract_assert( !m_ObjectMotionBlurDefinitions[nObjectHandle].IsUnused() );
 
 	m_ObjectMotionBlurDefinitions[nObjectHandle].m_nNextFreeSlot = m_nFirstFreeSlot;
 	m_ObjectMotionBlurDefinitions[nObjectHandle].m_pEntity = nullptr;

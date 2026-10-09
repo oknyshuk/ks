@@ -1,13 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Depth of field material
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Depth of field material
+
+import ks.tier1;
 #include "BaseVSShader.h"
 #include "depth_of_field_vs20.inc"
 #include "depth_of_field_ps20b.inc"
-#include "convar.h"
+import std;
 
 ConVar mat_dof_max_blur_radius( "mat_dof_max_blur_radius", "10", FCVAR_MATERIAL_SYSTEM_THREAD );
 ConVar mat_dof_quality( "mat_dof_quality", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
@@ -82,7 +82,7 @@ static const float s_flPoissonConstsQuality2[64] = {
 
 DEFINE_FALLBACK_SHADER( DepthOfField, DepthOfField_dx9 )
 BEGIN_VS_SHADER_FLAGS( DepthOfField_dx9, "Depth of Field", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( SMALLFB, SHADER_PARAM_TYPE_TEXTURE, "_rt_SmallFB1", "Downsampled backbuffer" )
 		SHADER_PARAM( NEARPLANE, SHADER_PARAM_TYPE_FLOAT, "0", "Near plane depth" )
 		SHADER_PARAM( FARPLANE,  SHADER_PARAM_TYPE_FLOAT, "0", "Far plane depth" )
@@ -153,7 +153,7 @@ BEGIN_VS_SHADER_FLAGS( DepthOfField_dx9, "Depth of Field", SHADER_NOT_EDITABLE )
 			}
 			else
 			{
-				Assert( !"No ps_2_b. This shouldn't be happening" );
+				contract_assert( !"No ps_2_b. This shouldn't be happening" );
 			}
 
 			pShaderShadow->EnableDepthWrites( false );
@@ -240,7 +240,7 @@ BEGIN_VS_SHADER_FLAGS( DepthOfField_dx9, "Depth of Field", SHADER_NOT_EDITABLE )
 
 			// Get texture dimensions
 			ITexture *pTex = params[BASETEXTURE]->GetTextureValue();
-			Assert( pTex );
+			contract_assert( pTex );
 			float flInvTexWidth = 1.0f / static_cast<float>( pTex->GetActualWidth() );
 			float flInvTexHeight = 1.0f / static_cast<float>( pTex->GetActualHeight() );
 
@@ -268,7 +268,7 @@ BEGIN_VS_SHADER_FLAGS( DepthOfField_dx9, "Depth of Field", SHADER_NOT_EDITABLE )
 			}
 			else
 			{
-				Assert( !"No ps_2_b. This shouldn't be happening" );
+				contract_assert( !"No ps_2_b. This shouldn't be happening" );
 			}
 		}
 

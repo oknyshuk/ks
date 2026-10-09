@@ -1,35 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef COMMON_H
-#define COMMON_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef WORLDSIZE_H
+import ks.tier1;
 #include "worldsize.h"
-#endif
 
-#include "basetypes.h"
 #include "filesystem.h"
-#include "mathlib/vector.h" // @Note (toml 05-01-02): solely for definition of QAngle
+import std;
 #include "qlimits.h"
-#include "SteamCommon.h"
-#include "steam/steamclientpublic.h"
 
-
-class Vector;
 struct cache_user_t;
 
 //============================================================================
 
-#define COM_COPY_CHUNK_SIZE 1024   // For copying operations
+inline constexpr auto COM_COPY_CHUNK_SIZE = 1024; // For copying operations
 
-#include "tier1/strtools.h"
 
 //============================================================================
 char *COM_StringCopy(const char *text);	// allocates memory and copys text
@@ -58,11 +43,11 @@ void COM_Shutdown( void );
 bool COM_CheckGameDirectory( const char *gamedir );
 void COM_ParseDirectoryFromCmd( const char *pCmdName, char *pDirName, int maxlen, const char *pDefault );
 
-#define Bits2Bytes(b) ((b+7)>>3)
+template <typename T1> [[gnu::always_inline]] inline constexpr auto Bits2Bytes( T1 b ) { return ((b+7)>>3); }
 
 // does a varargs printf into a temp buffer
 // Returns char* because of bad historical reasons.
-char	*va(PRINTF_FORMAT_STRING const char *format, ...) FMTFUNCTION( 1, 2 );
+char	*va(const char *format, ...) [[gnu::format(printf, 1, 2)]];
 // prints a vector into a temp buffer.
 const char    *vstr(Vector& v);
 
@@ -86,16 +71,13 @@ const char *COM_ParseFile(const char *data, char *token, int maxtoken);
 extern char gszDisconnectReason[256];
 extern char gszExtendedDisconnectReason[256];
 extern bool gfExtendedError;
-extern uint8 g_eSteamLoginFailure;
-void COM_ExplainDisconnection( bool bPrint, PRINTF_FORMAT_STRING const char *fmt, ... ) FMTFUNCTION( 2, 3 );
+void COM_ExplainDisconnection( bool bPrint, const char *fmt, ... ) [[gnu::format(printf, 2, 3)]];
 
 const char *COM_DXLevelToString( int dxlevel );  // convert DX level to string
 
-void COM_Log( const char *pszFile, PRINTF_FORMAT_STRING const char *fmt, ...) FMTFUNCTION( 2, 3 ); // Log a debug message to specified file ( if pszFile == NULL uses c:\\hllog.txt )
+void COM_Log( const char *pszFile, const char *fmt, ...) [[gnu::format(printf, 2, 3)]]; // Log a debug message to specified file ( if pszFile == NULL uses c:\\hllog.txt )
 void COM_LogString( char const *pchFile, char const *pchString );
 
 const char *COM_FormatSeconds( int seconds ); // returns seconds as hh:mm:ss string
 
 const char *COM_GetModDirectory(); // return the mod dir (rather than the complete -game param, which can be a path)
-
-#endif // COMMON_H

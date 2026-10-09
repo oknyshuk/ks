@@ -1,12 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "worldsize.h"
+#include "engine/ivmodelinfo.h"
 // identifier was truncated to '255' characters in the debug information
 
 #include "proxyentity.h"
@@ -14,7 +21,6 @@
 #include "materialsystem/itexture.h"
 #include "bitmap/tgaloader.h"
 #include "view.h"
-#include "datacache/idatacache.h"
 #include "materialsystem/imaterial.h"
 #include "vtf/vtf.h"
 
@@ -150,7 +156,7 @@ void CCamoMaterialProxy::GetColors( Vector &diffuseColor, Vector &baseColor, int
 	engine->TraceLineMaterialAndLighting( transformedPosition, endPoint, diffuseColor, baseColor );
 
 	// hack - optimize! - convert from linear to gamma space - this should be hidden
-	diffuseColor[0] = pow( diffuseColor[0], 1.0f / 2.2f );
+	diffuseColor[0] = std::pow( diffuseColor[0], 1.0f / 2.2f );
 	diffuseColor[1] = pow( diffuseColor[1], 1.0f / 2.2f );
 	diffuseColor[2] = pow( diffuseColor[2], 1.0f / 2.2f );
 
@@ -239,9 +245,9 @@ void CCamoMaterialProxy::GenerateCamoTexture( ITexture* pTexture, IVTFTexture *p
 		for( x = 0; x < width; x++ )
 		{
 			int offset = 3 * ( x + y * width );
-			assert( offset < width * height * 3 );
+			contract_assert( offset < width * height * 3 );
 			int paletteID = m_pCamoPatternImage[x + y * width];
-			assert( paletteID < 256 );
+			contract_assert( paletteID < 256 );
 			imageData[offset + 0] = camoPalette[paletteID][0];
 			imageData[offset + 1] = camoPalette[paletteID][1];
 			imageData[offset + 2] = camoPalette[paletteID][2];

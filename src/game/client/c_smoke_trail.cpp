@@ -1,24 +1,31 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_smoke_trail.h"
 #include "fx.h"
-#include "engine/ivdebugoverlay.h"
 #include "engine/IEngineSound.h"
 #include "c_te_effect_dispatch.h"
 #include "glow_overlay.h"
 #include "fx_explosion.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
 #include "view.h"
-#include "precache_register.h"
 
 //
 // CRocketTrailParticle
@@ -55,7 +62,7 @@ public:
 	//Alpha
 	virtual float UpdateAlpha( const SimpleParticle *pParticle )
 	{
-		return ( ((float)pParticle->m_uchStartAlpha/255.0f) * sin( M_PI * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
+		return ( ((float)pParticle->m_uchStartAlpha/255.0f) * std::sin( std::numbers::pi * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
 	}
 
 private:
@@ -81,7 +88,7 @@ public:
 	//Alpha
 	virtual float UpdateAlpha( const SimpleParticle *pParticle )
 	{
-		return ( ((float)pParticle->m_uchStartAlpha/255.0f) * sin( M_PI * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
+		return ( ((float)pParticle->m_uchStartAlpha/255.0f) * std::sin( std::numbers::pi * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
 	}
 
 	//Color
@@ -238,7 +245,7 @@ void C_SmokeTrail::Start( CParticleMgr *pParticleMgr, IPrototypeArgAccess *pArgs
 	
 	if ( !m_pSmokeEmitter )
 	{
-		Assert( false );
+		contract_assert( false );
 		return;
 	}
 
@@ -490,7 +497,6 @@ void C_SmokeTrail::CleanupToolRecordingState( KeyValues *msg )
 //==================================================
 
 // Expose to the particle app.
-EXPOSE_PROTOTYPE_EFFECT(RocketTrail, C_RocketTrail);
 
 // Datatable.. this can have all the smoketrail parameters when we need it to.
 IMPLEMENT_REFLECT_CLIENTCLASS( C_RocketTrail, DT_RocketTrail, RocketTrail )
@@ -599,7 +605,7 @@ void C_RocketTrail::Start( CParticleMgr *pParticleMgr, IPrototypeArgAccess *pArg
 	m_pRocketEmitter = CRocketTrailParticle::Create("smokeTrail");
 	if ( !m_pRocketEmitter )
 	{
-		Assert( false );
+		contract_assert( false );
 		return;
 	}
 
@@ -834,7 +840,7 @@ void SporeEffect::UpdateVelocity( SimpleParticle *pParticle, float timeDelta )
 Vector SporeEffect::UpdateColor( const SimpleParticle *pParticle )
 {
 	Vector	color;
-	float	ramp = ((float)pParticle->m_uchStartAlpha/255.0f) * sin( M_PI * (pParticle->m_flLifetime / pParticle->m_flDieTime) );//1.0f - ( pParticle->m_flLifetime / pParticle->m_flDieTime );
+	float	ramp = ((float)pParticle->m_uchStartAlpha/255.0f) * std::sin( std::numbers::pi * (pParticle->m_flLifetime / pParticle->m_flDieTime) );//1.0f - ( pParticle->m_flLifetime / pParticle->m_flDieTime );
 
 	color[0] = ( (float) pParticle->m_uchColor[0] * ramp ) / 255.0f;
 	color[1] = ( (float) pParticle->m_uchColor[1] * ramp ) / 255.0f;
@@ -851,14 +857,13 @@ Vector SporeEffect::UpdateColor( const SimpleParticle *pParticle )
 //-----------------------------------------------------------------------------
 float SporeEffect::UpdateAlpha( const SimpleParticle *pParticle )
 {
-	return ( ((float)pParticle->m_uchStartAlpha/255.0f) * sin( M_PI * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
+	return ( ((float)pParticle->m_uchStartAlpha/255.0f) * std::sin( std::numbers::pi * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
 }
 
 //==================================================
 // C_SporeExplosion
 //==================================================
 
-EXPOSE_PROTOTYPE_EFFECT( SporeExplosion, C_SporeExplosion );
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_SporeExplosion, DT_SporeExplosion, SporeExplosion )
 
@@ -1392,7 +1397,7 @@ void C_FireTrail::Start( CParticleMgr *pParticleMgr, IPrototypeArgAccess *pArgs 
 	
 	if ( !m_pTrailEmitter )
 	{
-		Assert( false );
+		contract_assert( false );
 		return;
 	}
 
@@ -1416,7 +1421,7 @@ void C_FireTrail::Start( CParticleMgr *pParticleMgr, IPrototypeArgAccess *pArgs 
 
 	if ( !m_pSmokeEmitter )
 	{
-		Assert( false );
+		contract_assert( false );
 		return;
 	}
 
@@ -1442,11 +1447,11 @@ void C_FireTrail::Update( float fTimeDelta )
 	
 	Vector			offset;
 
-#define	STARTSIZE			8
-#define	ENDSIZE				16
-#define	PARTICLE_LIFETIME	0.075f
-#define	MIN_SPEED			32
-#define	MAX_SPEED			64
+constexpr auto STARTSIZE = 8;
+constexpr auto ENDSIZE = 16;
+constexpr auto PARTICLE_LIFETIME = 0.075f;
+constexpr auto MIN_SPEED = 32;
+constexpr auto MAX_SPEED = 64;
 
 	// Add new particles
 	//if ( ShouldEmit() )
@@ -1662,7 +1667,7 @@ void C_DustTrail::Start( CParticleMgr *pParticleMgr, IPrototypeArgAccess *pArgs 
 	
 	if ( !m_pDustEmitter )
 	{
-		Assert( false );
+		contract_assert( false );
 		return;
 	}
 
@@ -1672,7 +1677,7 @@ void C_DustTrail::Start( CParticleMgr *pParticleMgr, IPrototypeArgAccess *pArgs 
 	for (int i = 0; i < DUSTTRAIL_MATERIALS; i++)
 	{
 		//char name[256];
-		//Q_snprintf( name, sizeof( name ), "particle/smokesprites_%04d", i + 1 );
+		//V_snprintf( name, sizeof( name ), "particle/smokesprites_%04d", i + 1 );
 		m_MaterialHandle[i] = m_pDustEmitter->GetPMaterial( "particle/smokesprites_0001" );
 	}
 	
@@ -1763,7 +1768,7 @@ void C_DustTrail::Update( float fTimeDelta )
 
 		if ( m_StopEmitTime != 0 && m_StopEmitTime > m_StartEmitTime )
 		{
-			alpha *= sqrt( (m_StopEmitTime - gpGlobals->curtime) /(m_StopEmitTime - m_StartEmitTime) );
+			alpha *= std::sqrt( (m_StopEmitTime - gpGlobals->curtime) /(m_StopEmitTime - m_StartEmitTime) );
 		}
 
 		pParticle->m_uchStartAlpha	= alpha * 255; 

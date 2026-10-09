@@ -1,16 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef TEXTSTATSMGR_H
-#define TEXTSTATSMGR_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "filesystem.h"
-
 
 // Text stats get to print their stuff by implementing this type of function.
 typedef void (*TextStatPrintFn)( IFileSystem *pFileSys, FileHandle_t hFile, void *pUserData );
@@ -124,6 +116,3 @@ private:
 	CTextStatFile *m_pNext;
 	TextStatFileFn m_pFn;
 };
-
-
-#endif // TEXTSTATSMGR_H

@@ -1,15 +1,24 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_vehicle_jeep.h"
 #include "movevars_shared.h"
-#include "view.h"
 #include "flashlighteffect.h"
 #include "c_baseplayer.h"
 #include "c_te_effect_dispatch.h"
@@ -21,9 +30,9 @@ ConVar r_JeepViewBlendTo( "r_JeepViewBlendTo", "1", FCVAR_CHEAT );
 ConVar r_JeepViewBlendToScale( "r_JeepViewBlendToScale", "0.03", FCVAR_CHEAT );
 ConVar r_JeepViewBlendToTime( "r_JeepViewBlendToTime", "1.5", FCVAR_CHEAT );
 
-#define JEEP_DELTA_LENGTH_MAX	12.0f			// 1 foot
-#define JEEP_FRAMETIME_MIN		1e-6
-#define JEEP_HEADLIGHT_DISTANCE 1000
+constexpr auto JEEP_DELTA_LENGTH_MAX = 12.0f; // 1 foot
+constexpr auto JEEP_FRAMETIME_MIN = 1e-6;
+constexpr auto JEEP_HEADLIGHT_DISTANCE = 1000;
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_PropJeep, DT_PropJeep, CPropJeep )
 
@@ -100,7 +109,7 @@ void C_PropJeep::UpdateViewAngles( C_BasePlayer *pLocalPlayer, CUserCmd *pCmd )
 	if ( r_JeepViewBlendTo.GetInt() )
 	{
 		// Check to see if the mouse has been touched in a bit or that we are not throttling.
-		if ( ( pCmd->mousedx != 0 || pCmd->mousedy != 0 ) || ( fabsf( m_flThrottle ) < 0.01f ) )
+		if ( ( pCmd->mousedx != 0 || pCmd->mousedy != 0 ) || ( std::fabsf( m_flThrottle ) < 0.01f ) )
 		{
 			m_flViewAngleDeltaTime = 0.0f;
 		}

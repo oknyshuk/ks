@@ -1,27 +1,14 @@
-//===== Copyright (c) 2009, Valve Corporation, All rights reserved. ======//
-// filesyste_newasync.h
-//
-// Purpose: 
-//
-// $NoKeywords: $async file system
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2009 Valve Corporation
 
-#include <limits.h>
-#include <atomic>
-#include <mutex>
-#include <string>
+// Purpose: async file system
 
-#include "tier0/threadtools.h"
-#include "tier0/memalloc.h"
-#include "tier1/interface.h"
-#include "appframework/iappsystem.h"
-#include "tier1/checksum_crc.h"
+import std;
+
+import ks.tier1;
 #include "filesystem/iasyncfilesystem.h"
-
-#ifndef FILESYSTEMASYNC_H
-#define FILESYSTEMASYNC_H
-
-
+#include "filesystem.h"
 
 class CAsyncGroupRequest;
 
@@ -252,7 +239,7 @@ class CAsyncFileRequest : public IAsyncFileRequest
 		std::string						m_pFileName;					// file system name (copy of string that we own)
 		
 		void*							m_pUserProvidedDataBuffer;		// optional (if read op), system will alloc one if NULL/free if NULL
-		size_t							m_nUserProvidedBufferSize;		// size of the memory buffer			
+		std::size_t							m_nUserProvidedBufferSize;		// size of the memory buffer			
 		
 		int64							m_nFileSeekOffset;				// (optional) position in the file to seek to/begin xfer at, 0=beginning
 		int64							m_nMaxIOSizeInBytes;			// optional read clamp, 0=full read
@@ -261,8 +248,8 @@ class CAsyncFileRequest : public IAsyncFileRequest
 		// Members which get set by the file system after submission	
 
 		void*							m_pResultsBuffer;				// Buffer results were placed in, could be from user (or not)
-		size_t							m_nResultsBufferSize;			// size of results buffer
-		size_t							m_nIOActualSize;				// actual size of IO performed
+		std::size_t							m_nResultsBufferSize;			// size of results buffer
+		std::size_t							m_nIOActualSize;				// actual size of IO performed
 		
 		bool							m_bDeleteBufferMemory;			// Flag indicating the memory holding the file data is deleted when the request is released
 		
@@ -316,24 +303,24 @@ class CAsyncFileRequest : public IAsyncFileRequest
 		virtual const char*				GetFileName()				{ return m_pFileName.c_str(); }			// get the filename we've assigned
 		
 		// Buffer control functions		
-		virtual void					SetUserBuffer( void* pDataBuffer, size_t nBufferSize );				// User supplies a memory buffer to use, which they own the memory for
+		virtual void					SetUserBuffer( void* pDataBuffer, std::size_t nBufferSize );				// User supplies a memory buffer to use, which they own the memory for
 		virtual void*					GetUserBuffer()				{ return m_pUserProvidedDataBuffer; }	// returns the address of the user supplied buffer
-		virtual size_t					GetUserBufferSize()			{ return m_nUserProvidedBufferSize; }	// returns the size of the user supplied buffer
+		virtual std::size_t					GetUserBufferSize()			{ return m_nUserProvidedBufferSize; }	// returns the size of the user supplied buffer
 
 		virtual void					ProvideDataBuffer();												// file system provide a buffer with the results
 		
 		// returned buffer (read) functions		
 		virtual void*					GetResultBuffer()			{ return m_pResultsBuffer; }			// Returns the address of the data transferred
-		virtual size_t					GetResultBufferSize()		{ return m_nResultsBufferSize; }		// Returns the size of the buffer holding the data transferred
-		virtual size_t					GetIOTransferredSize()		{ return m_nIOActualSize; }				// Returns the number of bytes of data actually transferred
+		virtual std::size_t					GetResultBufferSize()		{ return m_nResultsBufferSize; }		// Returns the size of the buffer holding the data transferred
+		virtual std::size_t					GetIOTransferredSize()		{ return m_nIOActualSize; }				// Returns the number of bytes of data actually transferred
 
 		// Memory control functions for buffers allocated by the async file system
 		virtual void					KeepResultBuffer()			{ m_bDeleteBufferMemory = false; }		// User wants to keeps buffer allocated by the file system
 		virtual void					ReleaseResultBuffer()		{ m_bDeleteBufferMemory = true; }		// User decides they want the request to take care of releasing the buffer
 
 		// file position functions										
-		virtual void					ReadFileDataAt( int64 nOffset, size_t nReadSize = 0 );				// Read file data starting at supplied offset, optional max size to read
-		virtual void					WriteFileDataAt( int64 nOffset, size_t nWriteSize = 0 );			// Write data to file at supplied offset, optional size to write (max size of buffer)
+		virtual void					ReadFileDataAt( int64 nOffset, std::size_t nReadSize = 0 );				// Read file data starting at supplied offset, optional max size to read
+		virtual void					WriteFileDataAt( int64 nOffset, std::size_t nWriteSize = 0 );			// Write data to file at supplied offset, optional size to write (max size of buffer)
 	
 
 		// --------------------------------------------------------------
@@ -526,7 +513,7 @@ class CAsyncFileSystem : public CTier2AppSystem< IAsyncFileSystem >
 		virtual void							ReleaseAsyncRequest( const IAsyncRequestBase* pRequest );
 		virtual bool							BlockUntilAsyncIOComplete( const IAsyncRequestBase* pRequest );
 
-		virtual void*							AllocateBuffer( size_t nBufferSize, int nAlignment = 4 );
+		virtual void*							AllocateBuffer( std::size_t nBufferSize, int nAlignment = 4 );
 		virtual void							ReleaseBuffer( void* pBuffer );
 
 		//--------------------------------------------------
@@ -586,7 +573,3 @@ class CAsyncFileSystem : public CTier2AppSystem< IAsyncFileSystem >
 //	
 //-----------------------------------------------------------------------------
 AsyncRequestStatus_t ValidateFileName( const char* pFileName );
-
-
-
-#endif

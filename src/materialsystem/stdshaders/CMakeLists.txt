@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 oknyshuk
+
 add_library(stdshader_dx9 OBJECT
     aftershock.cpp
     aftershock_helper.cpp

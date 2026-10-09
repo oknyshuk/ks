@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
 #pragma once
-#ifndef AI_LOOKTARGET_H
-#define AI_LOOKTARGET_H
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 #define SF_LOOKTARGET_ONLYONCE	0x00000001
 
@@ -45,5 +41,3 @@ private:
 	float	m_flTimeNextAvailable;
 	[[= ks::reflect::Key{ .name = "maxdist" } ]] float	m_flMaxDist;
 };
-
-#endif//AI_LOOKTARGET_H

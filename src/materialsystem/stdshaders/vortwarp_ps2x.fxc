@@ -1,4 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "BASETEXTURE"				"0..1"
 // STATIC: "CUBEMAP"					"0..1"
@@ -7,8 +8,8 @@
 // STATIC: "HALFLAMBERT"				"0..1"
 // STATIC: "FLASHLIGHT"					"0..1"
 // STATIC: "TRANSLUCENT"				"0..1"
-
 // DYNAMIC: "WRITEWATERFOGTODESTALPHA"  "0..1"
+
 #include "common_fog_ps_fxc.h"
 // DYNAMIC: "WARPINGIN"					"0..1"
 // DYNAMIC: "AMBIENT_LIGHT"				"0..1"
@@ -192,4 +193,3 @@ float4 main( PS_INPUT i ) : COLOR
 	//FIXME: need to take dowaterfog into consideration
 	return FinalOutput( float4( result, alpha ), fogFactor, PIXELFOGTYPE, TONEMAP_SCALE_LINEAR );
 }
-

@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "clientsideeffects.h"
 
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystem.h"
-
-#ifndef FX_QUAD_H
-#define FX_QUAD_H
 
 // Flags
 #define	FXQUAD_BIAS_SCALE	0x0001	//Bias the scale's interpolation function
@@ -83,5 +78,3 @@ protected:
 
 	FXQuadData_t	m_FXData;
 };
-
-#endif // FX_QUAD_H

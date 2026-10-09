@@ -52,14 +52,14 @@ option cc_generic_services = false;
 //
 // Use CamelCase CMsgMyMessageName style names for messages.
 // 
-// Use lowercase _ delimited names like my_steam_id for field names, this is non-standard for Steam,
-// but plays nice with the Google formatted code generation.  
+// Use lowercase _ delimited names like my_player_id for field names, which
+// plays nice with the Google formatted code generation.  
 // 
 // Try not to use required fields ever. Only do so if you are really really sure you'll never want them removed. 
 // Optional should be preffered as it will make versioning easier and cleaner in the future if someone refactors
 // your message and wants to remove or rename fields.
 //
-// Use fixed64 for JobId_t, GID_t, or SteamID.  This is appropriate for any field that is normally
+// Use fixed64 for JobId_t, GID_t, or player ids.  This is appropriate for any field that is normally
 // going to be larger than 2^56.  Otherwise use int64 for 64 bit values that are frequently smaller
 // than 2^56 as it will safe space on the wire in those cases.
 //
@@ -239,7 +239,6 @@ message CCLCMsg_Move
 
 enum VoiceDataFormat_t
 {
-	VOICEDATA_FORMAT_STEAM = 0; // steam uses SILK
 	VOICEDATA_FORMAT_ENGINE = 1; // was speex, switching to celt
 };
 
@@ -385,7 +384,6 @@ message CSVCMsg_ServerInfo
 	optional string sky_name = 18;			// name of current skybox 
 	optional string host_name = 19;			// server name
 	optional uint32 public_ip = 20;	
-	optional uint64 ugc_map_id = 22;	
 }
 
 message CSVCMsg_ClassInfo

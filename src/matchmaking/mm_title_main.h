@@ -1,11 +1,11 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef MM_TITLE_MAIN_H
-#define MM_TITLE_MAIN_H
+import std;
+import ks.tier1;
+#include "matchmaking/imatchtitle.h"
+#include "matchmaking/imatchevents.h"
 
 extern InitReturnVal_t MM_Title_Init();
 extern void MM_Title_Shutdown();
@@ -30,6 +30,3 @@ namespace { \
 		} \
 	} s_LinkHelper; \
 };
-
-
-#endif // MM_EVENTS_H

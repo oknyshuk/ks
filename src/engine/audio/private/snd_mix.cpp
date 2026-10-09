@@ -1,11 +1,34 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Portable code to mix sounds for snd_dma.cpp.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "audio_pch.h"
-#include <mutex>
+// Purpose: Portable code to mix sounds for snd_dma.cpp.
+
+
+
+import ks.tier1;
+
+#include "tier2/riff.h"
+#include "sound.h"
+#include "soundservice.h"
+#include "soundflags.h"
+#include "filesystem.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_mix_buf.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_convars.h"
+#include "snd_dev_common.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+#include "snd_wave_source.h"
+#include "snd_wave_temp.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+
+#include "audio/private/posix_stubs.h"
+import std;
 
 #include "mouthinfo.h"
 #include "../../cl_main.h"
@@ -14,21 +37,19 @@
 #include "../../sys_dll.h"
 #include "avi/iavi.h"
 #include "snd_op_sys/sos_system.h"
-#include "tier0/cache_hints.h"
 
 // we don't suport the ASM in this file right now under GCC, fallback to C libs
 #undef id386
 
-#include "tier0/memalloc.h"
 
 // NOTE: !!!!!! YOU MUST UPDATE SND_MIXA.S IF THIS VALUE IS CHANGED !!!!!
-#define SND_SCALE_BITS		7
-#define SND_SCALE_SHIFT		(8-SND_SCALE_BITS)
-#define SND_SCALE_LEVELS	(1<<SND_SCALE_BITS)
+constexpr auto SND_SCALE_BITS = 7;
+constexpr auto SND_SCALE_SHIFT = (8-SND_SCALE_BITS);
+constexpr auto SND_SCALE_LEVELS = (1<<SND_SCALE_BITS);
 
-#define SND_SCALE_BITS16	8
-#define SND_SCALE_SHIFT16	(8-SND_SCALE_BITS16)
-#define SND_SCALE_LEVELS16	(1<<SND_SCALE_BITS16)
+constexpr auto SND_SCALE_BITS16 = 8;
+constexpr auto SND_SCALE_SHIFT16 = (8-SND_SCALE_BITS16);
+constexpr auto SND_SCALE_LEVELS16 = (1<<SND_SCALE_BITS16);
 
 // In debug, we are going to compare the old code and the new code and make sure we get the exact same output
 #if _DEBUG
@@ -48,7 +69,7 @@ void FreeDuplicatedSamplePairs( portable_samplepair_t * pInputBuffer, int nSampl
 ConVar snd_mix_optimization( "snd_mix_optimization", "0", FCVAR_NONE, "Turns optimization on for mixing if set to 1 (default). 0 to turn the optimization off." );
 ConVar snd_mix_soundchar_enabled( "snd_mix_soundchar_enabled", "1", FCVAR_NONE, "Turns sound char on for mixing if set to 1 (default). 0 to turn the sound char off and use default behavior (spatial instead of doppler, directional, etc...)." );
 
-#define SKIP_MIXING_IF_TOTAL_VOLUME_LESS_OR_EQUAL_THAN	0
+constexpr auto SKIP_MIXING_IF_TOTAL_VOLUME_LESS_OR_EQUAL_THAN = 0;
 
 void Snd_WriteLinearBlastStereo16(void);
 void SND_PaintChannelFrom8( portable_samplepair_t *pOutput, int *volume, byte *pData8, int count );
@@ -57,7 +78,7 @@ void SND_RecordBuffer( void );
 bool DSP_RoomDSPIsOff( void );
 bool BChannelLowVolume( channel_t *pch, float vol_min );
 void ChannelCopyVolumes( channel_t *pch, float *pvolume_dest, int ivol_start, int cvol );
-float ChannelLoudestCurVolume( const channel_t * RESTRICT pch );
+float ChannelLoudestCurVolume( const channel_t * __restrict__ pch );
 
 extern int64 g_soundtime;
 extern float host_frametime;
@@ -65,9 +86,7 @@ extern float host_frametime_unbounded;
 
 extern CScratchPad g_scratchpad;
 
-#if !defined( NO_VOICE )
 extern int g_SND_VoiceOverdriveInt;
-#endif
 
 extern ConVar dsp_room;
 extern ConVar dsp_water;
@@ -90,12 +109,12 @@ portable_samplepair_t *g_temppaintbuffer = nullptr;
 
 paintbuffer_t *g_paintBuffers = nullptr;
 
-#define IPAINTBUFFER			0
-#define IROOMBUFFER				1
-#define IFACINGBUFFER			2
-#define IFACINGAWAYBUFFER		3
-#define IDRYBUFFER				4
-#define ISPEAKERBUFFER			5
+constexpr auto IPAINTBUFFER = 0;
+constexpr auto IROOMBUFFER = 1;
+constexpr auto IFACINGBUFFER = 2;
+constexpr auto IFACINGAWAYBUFFER = 3;
+constexpr auto IDRYBUFFER = 4;
+constexpr auto ISPEAKERBUFFER = 5;
 
 // pointer to current paintbuffer (front and rear), used by all mixing, upsampling and dsp routines
 portable_samplepair_t *g_curpaintbuffer = nullptr;
@@ -115,9 +134,9 @@ unsigned g_snd_frametime = 0;
 unsigned g_snd_frametime_total = 0;
 int	g_snd_profile_type = 0;		// type 1 dsp, type 2 mixer, type 3 load sound, type 4 all sound
 
-#define FILTERTYPE_NONE		0
-#define FILTERTYPE_LINEAR	1
-#define FILTERTYPE_CUBIC	2
+constexpr auto FILTERTYPE_NONE = 0;
+constexpr auto FILTERTYPE_LINEAR = 1;
+constexpr auto FILTERTYPE_CUBIC = 2;
 
 // filter memory for upsampling
 portable_samplepair_t cubicfilter1[3] = {{0,0},{0,0},{0,0}};
@@ -159,8 +178,8 @@ char* Status_UpdateAudioBuffer()
 
 	g_ActiveChannels.DumpChannelInfo( buf );
 
-	const size_t len = std::min( buf.size(), sizeof( buffer ) - 1 );
-	Q_memcpy( buffer, buf.c_str(), len );
+	const std::size_t len = std::min( buf.size(), sizeof( buffer ) - 1 );
+	V_memcpy( buffer, buf.c_str(), len );
 	buffer[len] = 0;
 
 	return buffer;
@@ -218,22 +237,22 @@ bool MIX_InitAllPaintbuffers(void)
 	g_paintBuffers = (paintbuffer_t *)MemAlloc_Alloc( CPAINTBUFFERS*sizeof( paintbuffer_t ) );
 	V_memset( g_paintBuffers, 0, CPAINTBUFFERS*sizeof( paintbuffer_t ) );
 
-	g_temppaintbuffer = (portable_samplepair_t*)MemAlloc_AllocAligned( TEMP_COPY_BUFFER_SIZE*sizeof(portable_samplepair_t), 16 );
+	g_temppaintbuffer = (portable_samplepair_t*)MemAlloc_AllocAlignedUnattributed( TEMP_COPY_BUFFER_SIZE*sizeof(portable_samplepair_t), 16 );
 	V_memset( g_temppaintbuffer, 0, TEMP_COPY_BUFFER_SIZE*sizeof(portable_samplepair_t) );
 
 	for ( i=0; i<CPAINTBUFFERS; i++ )
 	{
-		g_paintBuffers[i].pbuf = (portable_samplepair_t *)MemAlloc_AllocAligned( PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t), 16 );
+		g_paintBuffers[i].pbuf = (portable_samplepair_t *)MemAlloc_AllocAlignedUnattributed( PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t), 16 );
 		V_memset( g_paintBuffers[i].pbuf, 0, PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t) );
 
 		if ( bSurround )
 		{
-			g_paintBuffers[i].pbufrear = (portable_samplepair_t *)MemAlloc_AllocAligned( PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t), 16 );
+			g_paintBuffers[i].pbufrear = (portable_samplepair_t *)MemAlloc_AllocAlignedUnattributed( PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t), 16 );
 			V_memset( g_paintBuffers[i].pbufrear, 0, PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t) );
 		}
 		if ( bSurroundCenter )
 		{
-			g_paintBuffers[i].pbufcenter = (portable_samplepair_t *)MemAlloc_AllocAligned( PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t), 16 );
+			g_paintBuffers[i].pbufcenter = (portable_samplepair_t *)MemAlloc_AllocAlignedUnattributed( PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t), 16 );
 			V_memset( g_paintBuffers[i].pbufcenter, 0, PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t) );
 		}
 	}
@@ -293,7 +312,7 @@ double MIX_GetMaxRate( double rate, int sampleCount )
 	// make sure sampleCount is never greater than paintbuffer samples
 	// (this should have been set up in MIX_PaintChannels)
 
-	Assert (sampleCount <= PAINTBUFFER_SIZE);
+	contract_assert( sampleCount <= PAINTBUFFER_SIZE );
 
 	return fpmin( rate, rate_max );
 }
@@ -303,65 +322,6 @@ double MIX_GetMaxRate( double rate, int sampleCount )
 // pfront - pointer to stereo paintbuffer - 32 bit samples, interleaved stereo
 // lpaintedtime - total number of 32 bit stereo samples previously output to hardware
 // endtime - total number of 32 bit stereo samples currently mixed in paintbuffer
-#if USE_AUDIO_DEVICE_V1
-void S_TransferStereo16( void *pOutput, const portable_samplepair_t *pfront, int64 lpaintedtime, int64 endtime )
-{
-	int		lpos;
-	
-
-	Assert( pOutput );
-
-	snd_vol = S_GetMasterVolume()*256;
-	snd_p = (int *)pfront;
-	
-	// get size of output buffer in full samples (LR pairs)
-	int samplePairCount = g_AudioDevice->DeviceSampleCount() >> 1;
-	int sampleMask = samplePairCount  - 1;
-
-	bool bShouldPlaySound = !cl_movieinfo.IsRecording();
-
-	while ( lpaintedtime < endtime )
-	{														
-		// pbuf can hold 16384, 16 bit L/R samplepairs.
-		// lpaintedtime - where to start painting into dma buffer. 
-		// (modulo size of dma buffer for current position).
-		// handle recirculating buffer issues
-		// lpos - samplepair index into dma buffer. First samplepair from paintbuffer to be xfered here.															
-		lpos = lpaintedtime & sampleMask;
-
-		// snd_out is L/R sample index into dma buffer.  First L sample from paintbuffer goes here.
-		snd_out = (short *)pOutput + (lpos<<1);
-
-		// snd_linear_count is number of samplepairs between end of dma buffer and xfer start index.
-		snd_linear_count = samplePairCount - lpos;
-
-		// clamp snd_linear_count to be only as many samplepairs premixed
-		if ( snd_linear_count > endtime - lpaintedtime )
-		{
-			// endtime - lpaintedtime = number of premixed sample pairs ready for xfer.
-			snd_linear_count = endtime - lpaintedtime;
-		}
-
-		// snd_linear_count is now number of mono 16 bit samples (L and R) to xfer.
-		snd_linear_count <<= 1;
-
-		// write a linear blast of samples
-		SND_RecordBuffer();
-		if ( bShouldPlaySound )
-		{
-			// transfer 16bit samples from snd_p into snd_out, multiplying each sample by volume.
-			Snd_WriteLinearBlastStereo16();
-		}
-
-		// advance paintbuffer pointer
-		snd_p += snd_linear_count;
-
-		// advance lpaintedtime by number of samplepairs just xfered.
-		lpaintedtime += (snd_linear_count>>1);				
-	}
-}
-
-#endif
 
 /*
 ===============================================================================
@@ -393,7 +353,7 @@ void S_FreeChannel(channel_t *ch)
 		{
 			char sndname[MAX_PATH];
 			ch->sfx->GetFileName( sndname, sizeof( sndname ) );
-			if ( Q_stristr( sndname, snd_find_channel.GetString() ) != 0 )
+			if ( V_stristr( sndname, snd_find_channel.GetString() ) != 0 )
 			{
 				PrintChannel( "FreeChannel", sndname, ch, "from ConVar snd_find_channel." );
 			}
@@ -423,7 +383,7 @@ void S_FreeChannel(channel_t *ch)
 
 	// zero all data in channel
 	g_ActiveChannels.Remove( ch );
-	Q_memset(ch, 0, sizeof(channel_t));
+	V_memset(ch, 0, sizeof(channel_t));
 }
 
 extern ConVar host_timescale;
@@ -441,14 +401,14 @@ ConVar snd_pause_all( "snd_pause_all", "1", FCVAR_CHEAT, "Specifies to pause all
 //		 we'll miss data if outputRate < SOUND_DMA_SPEED!
 void MIX_MixChannelsToPaintbuffer( CChannelList &list, int64 endtime, int flags, int rate, int outputRate )
 {
-	VPROF( "MixChannelsToPaintbuffer" );
+	CVProfScope _( "MixChannelsToPaintbuffer", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	int		i;
 	int		sampleCount;
 
 	// mix each channel into paintbuffer
 	// validate parameters
-	Assert( outputRate <= SOUND_DMA_SPEED );
-	Assert( !((endtime - g_paintedtime) & 0x3) || (outputRate == SOUND_DMA_SPEED) ); // make sure we're not discarding data
+	contract_assert( outputRate <= SOUND_DMA_SPEED );
+	contract_assert( !((endtime - g_paintedtime) & 0x3) || (outputRate == SOUND_DMA_SPEED) ); // make sure we're not discarding data
 											  
 	// 44k: try to mix this many samples at outputRate
 	sampleCount = ( endtime - g_paintedtime ) / ( SOUND_DMA_SPEED / outputRate );
@@ -467,9 +427,9 @@ void MIX_MixChannelsToPaintbuffer( CChannelList &list, int64 endtime, int flags,
 	for ( i = list.Count(); --i >= 0; )
 	{
 		channel_t *ch = list.GetChannel( i );
-		Assert( ch->sfx );
+		contract_assert( ch->sfx );
 		// must never have a 'dry' and 'speaker' set - causes double mixing & double data reading
-		Assert ( !( ch->flags.bdry && ch->flags.bSpeaker ) );	
+		contract_assert( !( ch->flags.bdry && ch->flags.bSpeaker ) );	
 
 		// if mixing with SOUND_MIX_DRY flag, ignore (don't even load) all channels not flagged as 'dry'
 		if ( flags == SOUND_MIX_DRY )
@@ -617,7 +577,7 @@ void S_Interpolate2xCubic( portable_samplepair_t *pbuffer, portable_samplepair_t
 	portable_samplepair_t *psamp3;
 	int outpos = 0;
 
-	Assert (upCount <= PAINTBUFFER_SIZE);
+	contract_assert( upCount <= PAINTBUFFER_SIZE );
 
 	// pfiltermem holds 6 samples from previous buffer pass
 
@@ -670,10 +630,10 @@ void S_Interpolate2xCubic( portable_samplepair_t *pbuffer, portable_samplepair_t
 		// write out interpolated sample, increment output counter
 		g_temppaintbuffer[outpos++].right = a/8 + b/4 + c/2 + x0;
 
-		Assert( outpos <= TEMP_COPY_BUFFER_SIZE );
+		contract_assert( outpos <= TEMP_COPY_BUFFER_SIZE );
 	}
 	
-	Assert(cfltmem >= 3);
+	contract_assert( cfltmem >= 3 );
 
 	// save last 3 samples from paintbuffer
 	
@@ -697,8 +657,8 @@ void S_Interpolate2xLinear( portable_samplepair_t *pbuffer, portable_samplepair_
 {
 	int i, upCount = count<<1;
 
-	Assert (upCount <= PAINTBUFFER_SIZE);
-	Assert (cfltmem >= 1);
+	contract_assert( upCount <= PAINTBUFFER_SIZE );
+	contract_assert( cfltmem >= 1 );
 
 	// use interpolation value from previous mix
 
@@ -722,7 +682,7 @@ void S_Interpolate2xLinear( portable_samplepair_t *pbuffer, portable_samplepair_
 // Optimized routine.  2.27X faster than the above routine
 void S_Interpolate2xLinear_2( int count, portable_samplepair_t *pbuffer, portable_samplepair_t *pfiltermem, int cfltmem )
 {
-	Assert (cfltmem >= 1);
+	contract_assert( cfltmem >= 1 );
 
 	int sample = count-1;
 	int end = (count*2)-1;
@@ -793,7 +753,7 @@ void S_Interpolate2xLinear_2( int count, portable_samplepair_t *pbuffer, portabl
 	*pfiltermem = pbuffer[end];
 }
 
-FORCEINLINE
+[[gnu::always_inline]] inline
 void WriteLeftRight( portable_samplepair_t *pWriteBuffer, int nLeft, int nRight )
 {
 	// This should be replaced by one instruction by the compiler on X360 and PS3.
@@ -809,7 +769,6 @@ void WriteLeftRight( portable_samplepair_t *pWriteBuffer, int nLeft, int nRight 
 // TODO: Add code to compare before and after.
 void S_Interpolate2xLinear_3( int count, portable_samplepair_t *pbuffer, portable_samplepair_t *pfiltermem, int cfltmem )
 {
-	Assert (cfltmem >= 1);
 
 	int sample = count-1;
 	int end = (count*2)-1;
@@ -902,7 +861,7 @@ void S_MixBufferUpsample2x( int count, portable_samplepair_t *pbuffer, portable_
 	if ( filtertype == FILTERTYPE_LINEAR )
 	{
 #if CHECK_VALUES_AFTER_REFACTORING
-		portable_samplepair_t *pTempBuffer = (portable_samplepair_t *)alloca( 2 * count * sizeof(portable_samplepair_t) );
+		portable_samplepair_t *pTempBuffer = (portable_samplepair_t *)__builtin_alloca( 2 * count * sizeof(portable_samplepair_t) );
 		memcpy( pTempBuffer, pbuffer, count * sizeof(portable_samplepair_t) );		// Copy the source data
 		portable_samplepair_t oldFiltermem = *pfiltermem;
 		// Run the older implementation on the temp buffer
@@ -920,9 +879,9 @@ void S_MixBufferUpsample2x( int count, portable_samplepair_t *pbuffer, portable_
 
 #if CHECK_VALUES_AFTER_REFACTORING
 		bool bIsSame = ( memcmp( pbuffer, pTempBuffer, 2 * count * sizeof(portable_samplepair_t) ) == 0 );
-		Assert( bIsSame );
-		Assert( oldFiltermem.left == pfiltermem->left );
-		Assert( oldFiltermem.right == pfiltermem->right );
+		contract_assert( bIsSame );
+		contract_assert( oldFiltermem.left == pfiltermem->left );
+		contract_assert( oldFiltermem.right == pfiltermem->right );
 #endif
 		return;
 	}
@@ -965,7 +924,7 @@ void MIX_SetCurrentPaintbuffer(int ipaintbuffer)
 {
 	// set front and rear paintbuffer
 
-	Assert(ipaintbuffer < CPAINTBUFFERS);
+	contract_assert( ipaintbuffer < CPAINTBUFFERS );
 	
 	g_curpaintbuffer = g_paintBuffers[ipaintbuffer].pbuf;
 
@@ -984,7 +943,7 @@ void MIX_SetCurrentPaintbuffer(int ipaintbuffer)
 		g_curcenterpaintbuffer = nullptr;
 	}
 
-	Assert(g_curpaintbuffer != nullptr);
+	contract_assert( g_curpaintbuffer != nullptr );
 }
 
 // return index to current paintbuffer
@@ -1009,7 +968,6 @@ paintbuffer_t *MIX_GetCurrentPaintbufferPtr( void )
 {
 	int ipaint = MIX_GetCurrentPaintbufferIndex();
 	
-	Assert(ipaint < CPAINTBUFFERS);
 
 	return &g_paintBuffers[ipaint];
 }
@@ -1024,7 +982,6 @@ inline portable_samplepair_t *MIX_GetPFrontFromIPaint(int ipaintbuffer)
 
 inline paintbuffer_t *MIX_GetPPaintFromIPaint( int ipaint )
 {	
-	Assert(ipaint < CPAINTBUFFERS);
 
 	return &g_paintBuffers[ipaint];
 }
@@ -1098,11 +1055,11 @@ inline void MIX_ConvertBufferToSurround( int ipaintbuffer )
 		portable_samplepair_t *pcenter = MIX_GetPCenterFromIPaint( ipaintbuffer );
 		
 		// copy front to rear
-		Q_memcpy(prear, pfront, sizeof(portable_samplepair_t) * PAINTBUFFER_SIZE);
+		V_memcpy(prear, pfront, sizeof(portable_samplepair_t) * PAINTBUFFER_SIZE);
 
 		// copy front to center
 		if ( g_AudioDevice->IsSurroundCenter() )
-			Q_memcpy(pcenter, pfront, sizeof(portable_samplepair_t) * PAINTBUFFER_SIZE);
+			V_memcpy(pcenter, pfront, sizeof(portable_samplepair_t) * PAINTBUFFER_SIZE);
 	}
 }
 
@@ -1111,7 +1068,6 @@ inline void MIX_ConvertBufferToSurround( int ipaintbuffer )
 
 inline void MIX_ActivatePaintbuffer(int ipaintbuffer)
 {
-	Assert(ipaintbuffer < CPAINTBUFFERS);
 	g_paintBuffers[ipaintbuffer].factive = true;
 }
 
@@ -1119,7 +1075,6 @@ inline void MIX_ActivatePaintbuffer(int ipaintbuffer)
 
 inline void MIX_DeactivatePaintbuffer(int ipaintbuffer)
 {
-	Assert(ipaintbuffer < CPAINTBUFFERS);
 	g_paintBuffers[ipaintbuffer].factive = false;
 }
 
@@ -1144,7 +1099,6 @@ inline void MIX_ResetPaintbufferFilterCounters( void )
 
 inline void MIX_ResetPaintbufferFilterCounter( int ipaintbuffer )
 {
-	Assert (ipaintbuffer < CPAINTBUFFERS);
 	g_paintBuffers[ipaintbuffer].ifilter = 0;
 }
 
@@ -1152,7 +1106,6 @@ inline void MIX_ResetPaintbufferFilterCounter( int ipaintbuffer )
 
 inline void MIX_SetPaintbufferFlags(int ipaintbuffer, int flags)
 {
-	Assert(ipaintbuffer < CPAINTBUFFERS);
 	g_paintBuffers[ipaintbuffer].flags = flags;
 }
 
@@ -1161,67 +1114,7 @@ inline void MIX_SetPaintbufferFlags(int ipaintbuffer, int flags)
 
 void ZeroBuffer( void * pBuffer, int nSize )
 {
-#if 0 || IsDebug()
-	// On console we are going to use prefetch and pre-zero as much as we can...
-	// We do it on PC debug as well, for debugging purpose.
-	if ( nSize < 2 * CACHE_LINE_SIZE )
-	{
-		// If less than a few cache lines, don't use the complex version. Just use the simple one.
-		PREFETCH_128( pBuffer, 0 * CACHE_LINE_SIZE );
-		PREFETCH_128( pBuffer, 1 * CACHE_LINE_SIZE );
-		PREFETCH_128( pBuffer, 2 * CACHE_LINE_SIZE );		// In some cases, this prefetch could actually prefetch after the buffer we are trying to fill
-											// TODO: Improve this
-		Q_memset(pBuffer, 0, nSize );
-		return;
-	}
-
-	// We have 3 zones. Prefetch the first cache line (then memset it).
-	// Pre-zero the cache lines in the middle. Then prefetch the last cache line (and memset it).
-
-	char * pBufferStartFirstCacheLine = (char *)pBuffer;
-	char * pBufferEndFirstCacheLine = (char *)ALIGN_VALUE( (intp)pBuffer, CACHE_LINE_SIZE );
-	int nSizeFirstCacheLine = pBufferEndFirstCacheLine - pBufferStartFirstCacheLine;
-	if ( nSizeFirstCacheLine != 0 )
-	{
-		// It means that the beginning is not aligned, so we have to prefetch / then memset the cache line before
-		PREFETCH_128( pBufferStartFirstCacheLine, 0 );
-	}
-
-	char * pBufferEndLastCacheLine = (char *)pBuffer + nSize;
-	char * pBufferStartLastCacheLine = (char *)( (intp)pBufferEndLastCacheLine & ~( CACHE_LINE_SIZE - 1 ) );
-	int nSizeLastCacheLine = pBufferEndLastCacheLine - pBufferStartLastCacheLine;
-	if ( nSizeLastCacheLine != 0 )
-	{
-		// It means that the end is not aligned, so we have to prefetch / then memset the cache line before
-		PREFETCH_128( pBufferStartLastCacheLine, 0 );
-	}
-
-	// And then we have to fill everything 
-	int nSizeToZero = pBufferStartLastCacheLine - pBufferEndFirstCacheLine;
-	Assert( (nSizeToZero % CACHE_LINE_SIZE) == 0 );		// This should be multiple of cache line size
-	int nNumberOfCacheLinesToZero = nSizeToZero / CACHE_LINE_SIZE;
-	char * pCurrentCacheLineToZero = pBufferEndFirstCacheLine;
-	while ( nNumberOfCacheLinesToZero > 0 )
-	{
-		PREZERO_128( pCurrentCacheLineToZero, 0 );
-		pCurrentCacheLineToZero += CACHE_LINE_SIZE;
-		--nNumberOfCacheLinesToZero;
-	}
-
-	// At that point the initial pre-fetches should be over, we can clear them normally now
-	// The if tests should be unnecessary - Q_memset() should be a mo-op, still keep them to have more correct profile usage.
-	if ( nSizeFirstCacheLine != 0)
-	{
-		Q_memset( pBufferStartFirstCacheLine, 0, nSizeFirstCacheLine );
-	}
-	if ( nSizeLastCacheLine != 0)
-	{
-		Q_memset( pBufferStartLastCacheLine, 0, nSizeLastCacheLine );
-	}
-#else
-	// Slow version here
-	Q_memset(pBuffer, 0, nSize );
-#endif
+	V_memset(pBuffer, 0, nSize );
 }
 
 void MIX_ClearAllPaintBuffers( int SampleCount, bool clearFilters )
@@ -1249,9 +1142,9 @@ void MIX_ClearAllPaintBuffers( int SampleCount, bool clearFilters )
 
 		if ( clearFilters )
 		{
-			Q_memset( g_paintBuffers[i].fltmem, 0, sizeof(g_paintBuffers[i].fltmem) );
-			Q_memset( g_paintBuffers[i].fltmemrear, 0, sizeof(g_paintBuffers[i].fltmemrear) );
-			Q_memset( g_paintBuffers[i].fltmemcenter, 0, sizeof(g_paintBuffers[i].fltmemcenter) );
+			V_memset( g_paintBuffers[i].fltmem, 0, sizeof(g_paintBuffers[i].fltmem) );
+			V_memset( g_paintBuffers[i].fltmemrear, 0, sizeof(g_paintBuffers[i].fltmemrear) );
+			V_memset( g_paintBuffers[i].fltmemcenter, 0, sizeof(g_paintBuffers[i].fltmemcenter) );
 		}
 	}
 
@@ -1262,8 +1155,8 @@ void MIX_ClearAllPaintBuffers( int SampleCount, bool clearFilters )
 }
 
 #define SWAP(a,b,t)		{(t) = (a); (a) = (b); (b) = (t);}
-#define AVG(a,b)		(((a) + (b)) >> 1 )
-#define AVG4(a,b,c,d)	(((a) + (b) + (c) + (d)) >> 2 )
+template <typename T1, typename T2> [[gnu::always_inline]] inline constexpr auto AVG( T1 a, T2 b ) { return (((a) + (b)) >> 1 ); }
+template <typename T1, typename T2, typename T3, typename T4> [[gnu::always_inline]] inline constexpr auto AVG4( T1 a, T2 b, T3 c, T4 d ) { return (((a) + (b) + (c) + (d)) >> 2 ); }
 
 // Synthesize center channel from left/right values (average).
 // Currently just averages, but could actually remove
@@ -1311,7 +1204,7 @@ class CMixData
 public:
 	CMixData()
 	{
-		memset( this, 0, sizeof(*this) );
+		std::memset( this, 0, sizeof(*this) );
 	}
 
 	int count;
@@ -1326,14 +1219,14 @@ public:
 // Assume that's intel / SSE
 typedef __m128i samplex4;
 
-FORCEINLINE
+[[gnu::always_inline]] inline
 samplex4 AddSignedSIMD( const samplex4 & first, const samplex4 & second )
 {
 	// Assume that's intel / SSE
 	return _mm_add_epi32( first, second );
 }
 
-FORCEINLINE
+[[gnu::always_inline]] inline
 samplex4 AverageSIMD( const samplex4 & first, const samplex4 & second )
 {
 	// There is no SSE2 average for 32 bits, do it with 2 operations (the code was not rounding).
@@ -1341,12 +1234,12 @@ samplex4 AverageSIMD( const samplex4 & first, const samplex4 & second )
 	return _mm_srai_epi32( sum, 1 );
 }
 
-FORCEINLINE
+[[gnu::always_inline]] inline
 samplex4 AverageLeftAndRightSIMD( const samplex4 & first )
 {
 	// SSE is not as good as VMX in term of converting similar types to one another
 	const __m128 & first128 = (const __m128 &)first;
-	__m128 result = _mm_shuffle_ps( first128, first128, MM_SHUFFLE_REV( 1, 0, 3, 2 ) );
+	__m128 result = ks::simd::shuffle<1,0,3,2>( first128 );
 	samplex4 second = (samplex4&)result;
 	// Then average them (both pairs should be the same).
 	return AverageSIMD( first, second );
@@ -1469,13 +1362,13 @@ void Mix255_SIMD( CMixData & data )
 
 		int c = MIX_CenterFromLeftRightRounded( l, r );
 
-		Assert( data.pbuf3[i].left == l + backupData.pbuf2[i].left );
-		Assert( data.pbuf3[i].right == r + backupData.pbuf2[i].right );
+		contract_assert( data.pbuf3[i].left == l + backupData.pbuf2[i].left );
+		contract_assert( data.pbuf3[i].right == r + backupData.pbuf2[i].right );
 
-		Assert( data.pbufrear3[i].left == l + backupData.pbufrear2[i].left );
-		Assert( data.pbufrear3[i].right == r + backupData.pbufrear2[i].right );
+		contract_assert( data.pbufrear3[i].left == l + backupData.pbufrear2[i].left );
+		contract_assert( data.pbufrear3[i].right == r + backupData.pbufrear2[i].right );
 
-		Assert( data.pbufcenter3[i].left == c + backupData.pbufcenter2[i].left );
+		contract_assert( data.pbufcenter3[i].left == c + backupData.pbufcenter2[i].left );
 	}
 	FreeDuplicatedSamplePairs( backupData.pbuf1, data.count );
 	FreeDuplicatedSamplePairs( backupData.pbufrear1, data.count );
@@ -1607,11 +1500,11 @@ void Mix555_SIMD( CMixData & data )
 	// Verify that we would get the same result with the old code
 	for ( int i = 0; i < data.count; ++i )
 	{
-		Assert( data.pbuf3[i].left == backupData.pbuf1[i].left  + backupData.pbuf2[i].left );
-		Assert( data.pbuf3[i].right == backupData.pbuf1[i].right + backupData.pbuf2[i].right );
-		Assert( data.pbufrear3[i].left == backupData.pbufrear1[i].left  + backupData.pbufrear2[i].left );
-		Assert( data.pbufrear3[i].right == backupData.pbufrear1[i].right + backupData.pbufrear2[i].right );
-		Assert( data.pbufcenter3[i].left == backupData.pbufcenter1[i].left + backupData.pbufcenter2[i].left );
+		contract_assert( data.pbuf3[i].left == backupData.pbuf1[i].left  + backupData.pbuf2[i].left );
+		contract_assert( data.pbuf3[i].right == backupData.pbuf1[i].right + backupData.pbuf2[i].right );
+		contract_assert( data.pbufrear3[i].left == backupData.pbufrear1[i].left  + backupData.pbufrear2[i].left );
+		contract_assert( data.pbufrear3[i].right == backupData.pbufrear1[i].right + backupData.pbufrear2[i].right );
+		contract_assert( data.pbufcenter3[i].left == backupData.pbufcenter1[i].left + backupData.pbufcenter2[i].left );
 	}
 	FreeDuplicatedSamplePairs( backupData.pbuf1, data.count );
 	FreeDuplicatedSamplePairs( backupData.pbufrear1, data.count );
@@ -1633,7 +1526,7 @@ void Mix555( CMixData & data )
 
 void MIX_MixPaintbuffers(int ibuf1, int ibuf2, int ibuf3, int count, float fgain_out)
 {
-	VPROF("Mixpaintbuffers");
+	CVProfScope _( "Mixpaintbuffers", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	int i;
 	portable_samplepair_t *pbuf1, *pbuf2, *pbuf3, *pbuft;
 	portable_samplepair_t *pbufrear1, *pbufrear2, *pbufrear3, *pbufreart;
@@ -1645,10 +1538,9 @@ void MIX_MixPaintbuffers(int ibuf1, int ibuf2, int ibuf3, int count, float fgain
 
 	gain_out = 256 * fgain_out;
 	
-	Assert (count <= PAINTBUFFER_SIZE);
-	Assert (ibuf1 < CPAINTBUFFERS);
-	Assert (ibuf2 < CPAINTBUFFERS);
-	Assert (ibuf3 < CPAINTBUFFERS);
+	contract_assert( ibuf1 < CPAINTBUFFERS );
+	contract_assert( ibuf2 < CPAINTBUFFERS );
+	contract_assert( ibuf3 < CPAINTBUFFERS );
 
 	pbuf1 = g_paintBuffers[ibuf1].pbuf;
 	pbuf2 = g_paintBuffers[ibuf2].pbuf;
@@ -2122,7 +2014,7 @@ float sdebug_avg_in = 0.0;
 float sdebug_in_count = 0.0;
 float sdebug_avg_out = 0.0;
 float sdebug_out_count = 0.0;
-#define SDEBUG_TOTAL_COUNT	(3*44100)
+inline constexpr auto SDEBUG_TOTAL_COUNT = (3*44100);
 #endif // DEBUG
 
 // DEBUG code - get and show peak value of specified paintbuffer
@@ -2234,7 +2126,7 @@ void ClipLeft( portable_samplepair_t * pBuffer, int nCount )
 
 void MIX_CompressPaintbuffer(int ipaint, int count)
 {
-	VPROF("CompressPaintbuffer");
+	CVProfScope _( "CompressPaintbuffer", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	paintbuffer_t *ppaint = MIX_GetPPaintFromIPaint(ipaint);
 	portable_samplepair_t *pbf;
 	portable_samplepair_t *pbr;
@@ -2248,13 +2140,11 @@ void MIX_CompressPaintbuffer(int ipaint, int count)
 	
 	if ( ppaint->fsurround )
 	{
-		Assert (pbr);
 		ClipStereo( pbr, count );
 	}
 
 	if ( ppaint->fsurround_center )
 	{
-		Assert (pbc);
 		// mono - left channel
 		ClipLeft( pbc, count );
 	}
@@ -2272,7 +2162,7 @@ void MIX_CompressPaintbuffer(int ipaint, int count)
 
 void MIX_MixUpsampleBuffer( CChannelList &list, int ipaintbuffer, int64 end, int count, int flags )
 {
-	VPROF("MixUpsampleBuffer");
+	CVProfScope _( "MixUpsampleBuffer", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	int ipaintcur = MIX_GetCurrentPaintbufferIndex(); // save current paintbuffer
 
 	// reset paintbuffer upsampling filter index
@@ -2320,7 +2210,7 @@ void MIX_MixUpsampleBuffer( CChannelList &list, int ipaintbuffer, int64 end, int
 
 void MIX_UpsampleAllPaintbuffers( CChannelList &list, int64 end, int count )
 {
-	VPROF( "MixUpsampleAll" );
+	CVProfScope _( "MixUpsampleAll", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// 'dry' and 'speaker' channel sounds mix 100% into their corresponding buffers
 
@@ -2465,7 +2355,7 @@ static int ChannelVolComparator ( const void * a, const void * b )
 
 void CChannelCullList::Initialize( CChannelList &list )
 {
-	VPROF("CChannelCullList::Initialize");
+	CVProfScope _( "CChannelCullList::Initialize", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// First, build a sorted list of channels by decreasing volume, and by a hash of their wavname.
 	m_numChans = list.Count();
 
@@ -2476,7 +2366,6 @@ void CChannelCullList::Initialize( CChannelList &list )
 		if ( ch && ch->pMixer->IsReadyToMix() )
 		{
 			m_channelInfo[i].m_vol = ChannelLoudestCurVolume(ch);
-			AssertMsg(m_channelInfo[i].m_vol >= 0, "Sound channel has a negative volume?");
 			m_channelInfo[i].m_nameHash = (uintp) ch->sfx;
 		}
 		else
@@ -2494,7 +2383,7 @@ void CChannelCullList::Initialize( CChannelList &list )
 	}
 
 	// Sort the list.
-	qsort( m_channelInfo, MAX_CHANNELS, sizeof(sChannelVolData), ChannelVolComparator );
+	std::qsort( m_channelInfo, MAX_CHANNELS, sizeof(sChannelVolData), ChannelVolComparator );
 
 	// Then, determine if the given sound is less than the nth loudest of its hash. If so, mark its flag
 	// for removal.
@@ -2537,7 +2426,7 @@ void CChannelCullList::Initialize( CChannelList &list )
 // remove all active channels that won't mix for some reason
 void MIX_BuildChannelList( CChannelList &list )
 {
-	VPROF("MIX_BuildChannelList");
+	CVProfScope _( "MIX_BuildChannelList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	g_ActiveChannels.GetActiveChannels( list );
 	list.m_hasDryChannels = false;
 	list.m_hasSpeakerChannels = false;
@@ -2728,16 +2617,14 @@ ConVar snd_mix_test2( "snd_mix_test2", "1.0", FCVAR_NONE );
 
 void MIX_PaintChannels( int64 endtime, bool bIsUnderwater )
 {
-	VPROF("MIX_PaintChannels");
+	CVProfScope _( "MIX_PaintChannels", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-#if !defined( USE_AUDIO_DEVICE_V1 ) && defined( USE_SDL )
 	//Our path for make snd_mute_losefocus work on Linux/Mac.
 	extern IVEngineClient *engineClient;
 	if ( engineClient && g_AudioDevice )
 	{
 		g_AudioDevice->UpdateFocus( engineClient->IsActiveApp() );
 	}
-#endif
 
 	int64 	end;
 	int		count;
@@ -2790,7 +2677,7 @@ void MIX_PaintChannels( int64 endtime, bool bIsUnderwater )
 
 	while ( g_paintedtime < endtime )
 	{
-		VPROF("MIX_PaintChannels inner loop");
+		CVProfScope _( "MIX_PaintChannels inner loop", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		// mix a full 'paintbuffer' of sound
 		
 		// clamp at paintbuffer size
@@ -2950,11 +2837,7 @@ bool MIX_ScaleChannelVolume( paintbuffer_t *ppaint, channel_t *pChannel, float v
 		dspmix = 0.0;
 	
 	// duck all sound volumes except speaker's voice
-#if !defined( NO_VOICE )
 	int duckScale = std::min(g_DuckScaleInt256, g_SND_VoiceOverdriveInt);		// g_SND_VoiceOverdriveInt is already multipled by 256
-#else
-	int duckScale = g_DuckScaleInt256;
-#endif
 	if( duckScale < 256 )
 	{
 		if( pChannel->pMixer )
@@ -3098,7 +2981,7 @@ bool MIX_ScaleChannelVolume( paintbuffer_t *ppaint, channel_t *pChannel, float v
 
 	for (i = 0; i < CCHANVOLUMES; i++)
 	{
-		volume[i] = iclamp(volume[i], 0, 255);
+		volume[i] = clamp(volume[i], 0, 255);
 
 		if (volume[i])
 			fzerovolume = false;
@@ -3120,7 +3003,6 @@ bool MIX_ScaleChannelVolume( paintbuffer_t *ppaint, channel_t *pChannel, float v
 //===============================================================================
 void Snd_WriteLinearBlastStereo16( void )
 {
-#if	!id386
 	int		i;
 	int		val;
 
@@ -3144,59 +3026,6 @@ void Snd_WriteLinearBlastStereo16( void )
 		else
 			snd_out[i+1] = val;
 	}
-#else
-	__asm 
-	{
-		// input data
-		mov	ebx,snd_p
-
-		// output data
-		mov	edi,snd_out
-
-		// iterate from end to beginning
-		mov	ecx,snd_linear_count
-
-		// scale table
-		mov	esi,snd_vol
-
-		// scale and clamp 16bit signed lsw: [0x8000, 0x7FFF]
-WLBS16_LoopTop:
-		mov		eax,[ebx+ecx*4-8]
-		imul	eax,esi
-		sar		eax,0x08
-		cmp		eax,0x7FFF
-		jg		WLBS16_ClampHigh
-		cmp		eax,0xFFFF8000
-		jnl		WLBS16_ClampDone
-		mov		eax,0xFFFF8000
-		jmp		WLBS16_ClampDone
-WLBS16_ClampHigh:
-		mov		eax,0x7FFF
-WLBS16_ClampDone:
-
-		// scale and clamp 16bit signed msw: [0x8000, 0x7FFF]
-		mov		edx,[ebx+ecx*4-4]
-		imul	edx,esi
-		sar		edx,0x08
-		cmp		edx,0x7FFF
-		jg		WLBS16_ClampHigh2
-		cmp		edx,0xFFFF8000
-		jnl		WLBS16_ClampDone2
-		mov		edx,0xFFFF8000
-		jmp		WLBS16_ClampDone2
-WLBS16_ClampHigh2:
-		mov		edx,0x7FFF
-WLBS16_ClampDone2:
-		shl		edx,0x10
-		and		eax,0xFFFF
-		or		edx,eax
-		mov		[edi+ecx*2-4],edx
-
-		// two shorts per iteration
-		sub		ecx,0x02
-		jnz		WLBS16_LoopTop
-	}
-#endif
 }
 
 void SND_InitScaletable (void)
@@ -4000,11 +3829,11 @@ enum SW_FillMode
 // Try to keep the number of parameters to 4 to make sure the optimizer is not doing something too stupid.
 // Pass the volume by pointer instead of left and right values. It seems that the compiler has harder time optimizing with one more variable.
 template <SW_FillMode MODE>
-void FillMonoOutput( int nValue, portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume );
+void FillMonoOutput( int nValue, portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume );
 
 template <>
-FORCEINLINE
-void FillMonoOutput<FM_SAME_VOL>( int nValue, portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume )
+[[gnu::always_inline]] inline
+void FillMonoOutput<FM_SAME_VOL>( int nValue, portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume )
 {
 	nValue = int(( pVolume[0] * nValue ) /256.0f);
 	pOutput->left  += nValue;
@@ -4012,29 +3841,29 @@ void FillMonoOutput<FM_SAME_VOL>( int nValue, portable_samplepair_t * RESTRICT p
 }
 
 template <>
-FORCEINLINE
-void FillMonoOutput<FM_LEFT_ZERO>( int nValue, portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume )
+[[gnu::always_inline]] inline
+void FillMonoOutput<FM_LEFT_ZERO>( int nValue, portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume )
 {
 	pOutput->right += int(( pVolume[1] * nValue ) / 256.0f);
 }
 
 template <>
-FORCEINLINE
-void FillMonoOutput<FM_RIGHT_ZERO>( int nValue, portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume )
+[[gnu::always_inline]] inline
+void FillMonoOutput<FM_RIGHT_ZERO>( int nValue, portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume )
 {
 	pOutput->left += int(( pVolume[0] * nValue ) / 256.0f);
 }
 
 template <>
-FORCEINLINE
-void FillMonoOutput<FM_NORMAL>( int nValue, portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume )
+[[gnu::always_inline]] inline
+void FillMonoOutput<FM_NORMAL>( int nValue, portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume )
 {
 	pOutput->left  += int(( pVolume[0] * nValue ) /256.0f);
 	pOutput->right += int(( pVolume[1] * nValue ) /256.0f);
 }
 
 template <SW_FillMode MODE>
-void SW_Mix16Mono_Shift_OptMeta( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume, short * RESTRICT pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount  )
+void SW_Mix16Mono_Shift_OptMeta( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume, short * __restrict__ pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount  )
 {
 	fixedint nSampleFrac = nInputOffset;
 
@@ -4081,7 +3910,7 @@ void SW_Mix16Mono_Shift_OptMeta( portable_samplepair_t * RESTRICT pOutput, float
 	}
 }
 
-void SW_Mix16Mono_Shift_Opt( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume, short * RESTRICT pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount )
+void SW_Mix16Mono_Shift_Opt( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume, short * __restrict__ pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount )
 {
 	int nVolumeLeft = pVolume[0];
 	int nVolumeRight = pVolume[1];
@@ -4108,7 +3937,7 @@ void SW_Mix16Mono_Shift_Opt( portable_samplepair_t * RESTRICT pOutput, float * R
 }
 
 template <SW_FillMode MODE>
-void SW_Mix16Mono_NoShift_OptMeta( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume, short * RESTRICT pData, int nOutCount  )
+void SW_Mix16Mono_NoShift_OptMeta( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume, short * __restrict__ pData, int nOutCount  )
 {
 	// This code is relatively lightweight, and usually 255 to 1020 samples are passed. So 8 at a time.
 	while ( nOutCount >= 4 )
@@ -4133,7 +3962,7 @@ void SW_Mix16Mono_NoShift_OptMeta( portable_samplepair_t * RESTRICT pOutput, flo
 	}
 }
 
-void SW_Mix16Mono_NoShift_Opt( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume, short * RESTRICT pData, int nOutCount )
+void SW_Mix16Mono_NoShift_Opt( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume, short * __restrict__ pData, int nOutCount )
 {
 	int nVolumeLeft = pVolume[0];
 	int nVolumeRight = pVolume[1];
@@ -4159,7 +3988,7 @@ void SW_Mix16Mono_NoShift_Opt( portable_samplepair_t * RESTRICT pOutput, float *
 	}
 }
 
-void SW_Mix16Mono( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT volume, short * RESTRICT pData, int inputOffset, fixedint rateScaleFix, int outCount )
+void SW_Mix16Mono( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ volume, short * __restrict__ pData, int inputOffset, fixedint rateScaleFix, int outCount )
 {
 	if ( rateScaleFix == FIX(1) )
 	{
@@ -4171,7 +4000,7 @@ void SW_Mix16Mono( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT vo
 	}
 }
 
-void SW_Mix16Mono_Opt(portable_samplepair_t * RESTRICT pOutput, float * RESTRICT volume, short * RESTRICT pData, int inputOffset, fixedint rateScaleFix, int outCount)
+void SW_Mix16Mono_Opt(portable_samplepair_t * __restrict__ pOutput, float * __restrict__ volume, short * __restrict__ pData, int inputOffset, fixedint rateScaleFix, int outCount)
 {
 	if ( rateScaleFix == FIX(1) )
 	{
@@ -4186,7 +4015,7 @@ void SW_Mix16Mono_Opt(portable_samplepair_t * RESTRICT pOutput, float * RESTRICT
 // interpolating pitch shifter - sample(s) from preceding buffer are preloaded in
 // pData buffer, ensuring we can always provide 'outCount' samples.
 
-void SW_Mix16Mono_Interp(portable_samplepair_t * RESTRICT pOutput, float * RESTRICT volume, short * RESTRICT pData, int inputOffset, fixedint rateScaleFix, int outCount)
+void SW_Mix16Mono_Interp(portable_samplepair_t * __restrict__ pOutput, float * __restrict__ volume, short * __restrict__ pData, int inputOffset, fixedint rateScaleFix, int outCount)
 {
 	fixedint sampleIndex = 0;
 	fixedint rateScaleFix14 = FIX_28TO14(rateScaleFix);		// convert 28 bit fixed point to 14 bit fixed point
@@ -4211,7 +4040,7 @@ void SW_Mix16Mono_Interp(portable_samplepair_t * RESTRICT pOutput, float * RESTR
 }
 
 template <SW_FillMode MODE>
-void SW_Mix16Mono_Interp_OptMeta( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume, short * RESTRICT pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount  )
+void SW_Mix16Mono_Interp_OptMeta( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume, short * __restrict__ pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount  )
 {
 	fixedint rateScaleFix14 = FIX_28TO14(nRateScaleFix);		// convert 28 bit fixed point to 14 bit fixed point
 	fixedint sampleFrac14   = FIX_28TO14(nInputOffset);
@@ -4276,7 +4105,7 @@ void SW_Mix16Mono_Interp_OptMeta( portable_samplepair_t * RESTRICT pOutput, floa
 	}
 }
 
-void SW_Mix16Mono_Interp_Opt( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume, short * RESTRICT pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount  )
+void SW_Mix16Mono_Interp_Opt( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume, short * __restrict__ pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount  )
 {
 	// Besides unrolling, there are 2 other possible optimizations:
 	//	In some cases both volumes are the same.
@@ -4317,11 +4146,11 @@ void SW_Mix16Mono_Interp_Opt( portable_samplepair_t * RESTRICT pOutput, float * 
 // Try to keep the number of parameters to 4 to make sure the optimizer is not doing something too stupid.
 // Pass the volume by pointer instead of left and right values. It seems that the compiler has harder time optimizing with one more variable.
 template <SW_FillMode MODE>
-void FillStereoOutput(short * RESTRICT pInput, portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume);
+void FillStereoOutput(short * __restrict__ pInput, portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume);
 
 template <>
-FORCEINLINE
-void FillStereoOutput<FM_SAME_VOL>(short * RESTRICT pInput, portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume)
+[[gnu::always_inline]] inline
+void FillStereoOutput<FM_SAME_VOL>(short * __restrict__ pInput, portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume)
 {
 	int nVolume = pVolume[0];
 	pOutput->left += int((nVolume * (int)(pInput[0])) / 256.0f);
@@ -4329,29 +4158,29 @@ void FillStereoOutput<FM_SAME_VOL>(short * RESTRICT pInput, portable_samplepair_
 }
 
 template <>
-FORCEINLINE
-void FillStereoOutput<FM_LEFT_ZERO>(short * RESTRICT pInput, portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume)
+[[gnu::always_inline]] inline
+void FillStereoOutput<FM_LEFT_ZERO>(short * __restrict__ pInput, portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume)
 {
 	pOutput->right += int((pVolume[1] * (int)(pInput[1])) / 256.0f);
 }
 
 template <>
-FORCEINLINE
-void FillStereoOutput<FM_RIGHT_ZERO>(short * RESTRICT pInput, portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume)
+[[gnu::always_inline]] inline
+void FillStereoOutput<FM_RIGHT_ZERO>(short * __restrict__ pInput, portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume)
 {
 	pOutput->left += int((pVolume[0] * (int)(pInput[0])) / 256.0f);
 }
 
 template <>
-FORCEINLINE
-void FillStereoOutput<FM_NORMAL>( short * RESTRICT pInput, portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume )
+[[gnu::always_inline]] inline
+void FillStereoOutput<FM_NORMAL>( short * __restrict__ pInput, portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume )
 {
 	pOutput->left  += int((pVolume[0] * (int)(pInput[0])) / 256.0f);
 	pOutput->right += int((pVolume[1] * (int)(pInput[1])) / 256.0f);
 }
 
 template <SW_FillMode MODE>
-void SW_Mix16Stereo_NoShift_OptMeta( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume, short * RESTRICT pData, int nOutCount )
+void SW_Mix16Stereo_NoShift_OptMeta( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume, short * __restrict__ pData, int nOutCount )
 {
 	while ( nOutCount >= 4 )
 	{
@@ -4376,7 +4205,7 @@ void SW_Mix16Stereo_NoShift_OptMeta( portable_samplepair_t * RESTRICT pOutput, f
 }
 
 template <SW_FillMode MODE>
-void SW_Mix16Stereo_Shift_OptMeta( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume, short * RESTRICT pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount )
+void SW_Mix16Stereo_Shift_OptMeta( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume, short * __restrict__ pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount )
 {
 	fixedint nSampleFrac = nInputOffset;
 
@@ -4418,7 +4247,7 @@ void SW_Mix16Stereo_Shift_OptMeta( portable_samplepair_t * RESTRICT pOutput, flo
 	}
 }
 
-void SW_Mix16Stereo_Opt( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume, short * RESTRICT pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount )
+void SW_Mix16Stereo_Opt( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume, short * __restrict__ pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount )
 {
 	int nVolumeLeft = pVolume[0];
 	int nVolumeRight = pVolume[1];
@@ -4469,7 +4298,7 @@ void SW_Mix16Stereo_Opt( portable_samplepair_t * RESTRICT pOutput, float * RESTR
 	}
 }
 
-void SW_Mix16Stereo_NoOpt( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume, short * RESTRICT pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount )
+void SW_Mix16Stereo_NoOpt( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume, short * __restrict__ pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount )
 {
 	int nSampleIndex = 0;
 	fixedint nSampleFrac = nInputOffset;
@@ -4485,7 +4314,7 @@ void SW_Mix16Stereo_NoOpt( portable_samplepair_t * RESTRICT pOutput, float * RES
 	}
 }
 
-void SW_Mix16Stereo( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume, short * RESTRICT pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount )
+void SW_Mix16Stereo( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume, short * __restrict__ pData, int nInputOffset, fixedint nRateScaleFix, int nOutCount )
 {
 #if CHECK_VALUES_AFTER_REFACTORING
 	// Backup the output and apply the same changes
@@ -4507,7 +4336,7 @@ void SW_Mix16Stereo( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT 
 #if CHECK_VALUES_AFTER_REFACTORING
 	// Compare side by side
 	bool bFailed = ( memcmp( pOutput, pOldOutput, nOutCount * sizeof( portable_samplepair_t ) ) != 0 );
-	Assert( bFailed == false );
+	contract_assert( bFailed == false );
 
 	FreeDuplicatedSamplePairs( pOldOutput, nOutCount );
 #endif
@@ -4516,7 +4345,7 @@ void SW_Mix16Stereo( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT 
 // interpolating pitch shifter - sample(s) from preceding buffer are preloaded in
 // pData buffer, ensuring we can always provide 'outCount' samples.
 // The loop is already long, unrolling more is not going to help much.
-void SW_Mix16Stereo_Interp( portable_samplepair_t * RESTRICT pOutput, float * RESTRICT pVolume, short * RESTRICT pData, int inputOffset, fixedint rateScaleFix, int outCount  )
+void SW_Mix16Stereo_Interp( portable_samplepair_t * __restrict__ pOutput, float * __restrict__ pVolume, short * __restrict__ pData, int inputOffset, fixedint rateScaleFix, int outCount  )
 {
 	fixedint sampleIndex = 0;
 	fixedint rateScaleFix14 = FIX_28TO14(rateScaleFix);		// convert 28 bit fixed point to 14 bit fixed point
@@ -4555,7 +4384,7 @@ bool FUseHighQualityPitch( channel_t *pChannel )
 	if ( !snd_pitchquality.GetInt() || pChannel->flags.bfast_pitch )
 		return false;
 
-	return ( (pChannel->pitch != floor(pChannel->pitch)) );
+	return ( (pChannel->pitch != std::floor(pChannel->pitch)) );
 }
 
 //===============================================================================
@@ -4611,7 +4440,7 @@ void Mix16MonoWavtype( channel_t *pChannel, portable_samplepair_t *pOutput, floa
 #if CHECK_VALUES_AFTER_REFACTORING
 	// Compare side by side
 	bool bFailed = ( memcmp( pOutput, pOldOutput, outCount * sizeof( portable_samplepair_t ) ) != 0 );
-	Assert( bFailed == false );
+	contract_assert( bFailed == false );
 
 	FreeDuplicatedSamplePairs( pOldOutput, outCount );
 #endif
@@ -4822,7 +4651,7 @@ struct mouthenvelope_t
 // a couple of simple arrays for queuing the mouth data
 static std::vector< mouthoutput_t > g_MouthOutput;
 static std::vector< mouthenvelope_t > g_MouthEnvelope;
-#define CAVGSAMPLES 10
+constexpr auto CAVGSAMPLES = 10;
 
 // queue up a command to remove the channel's mouth source if playing
 void SND_CloseMouth(channel_t *pChannel) 
@@ -4860,7 +4689,7 @@ void SND_MouthUpdateAll()
 		CMouthInfo *pMouth = pClientEntity->GetMouth();
 		if ( !pMouth )
 			continue;
-		Assert(rec.pSource);
+		contract_assert( rec.pSource );
 
 		if ( rec.elapsedTime < 0 )
 		{
@@ -4947,7 +4776,7 @@ void SND_MoveMouth8( channel_t *ch, CAudioSource *pSource, int count )
 			int index = std::ssize( g_MouthOutput ); g_MouthOutput.emplace_back();
 			g_MouthOutput[index].entityId = mouthentity;
 			g_MouthOutput[index].pSource = pSource;
-			Assert( pSource->SampleRate() > 0 );
+			contract_assert( pSource->SampleRate() > 0 );
 			float elapsed = ( float )ch->pMixer->GetSamplePosition() / ( float )pSource->SampleRate();
 			g_MouthOutput[index].elapsedTime = elapsed;
 		}
@@ -5047,10 +4876,6 @@ void SND_MovieStart( void )
 		return;
 
 	g_paintedtime = 0;
-#if USE_AUDIO_DEVICE_V1
-	g_soundtime = 0;
-	g_soundtimeerror = 0.0;
-#endif
 	g_moviestart = host_time;
 	g_nMovieStartTick = host_tickcount;
 
@@ -5098,6 +4923,7 @@ bool SND_IsRecording()
 
 void SND_RecordBuffer( void )
 {
+	ks::ScratchArena<> scratch;
 
 	if ( !SND_IsRecording() )
 		return;
@@ -5105,7 +4931,7 @@ void SND_RecordBuffer( void )
 	int		i;
 	int		val;
 	int		bufferSize = snd_linear_count * sizeof(short);
-	short	*tmp = (short *)stackalloc( bufferSize );
+	short	*tmp = (short *)scratch.AllocBytes( bufferSize );
 	
 	for (i=0 ; i<snd_linear_count ; i+=2)
 	{

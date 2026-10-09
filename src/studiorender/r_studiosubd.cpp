@@ -1,10 +1,10 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Support for mapping from a quad mesh to Bicubic Patches, as a means
-//          of rendering approximate Catmull-Clark subdivision surfaces
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
+// Purpose: Support for mapping from a quad mesh to Bicubic Patches, as a means
+//         of rendering approximate Catmull-Clark subdivision surfaces
+
+import ks.tier1;
 #include "studio.h"
 #include "studiorendercontext.h"
 #include "materialsystem/imaterialsystem.h"
@@ -12,14 +12,10 @@
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imesh.h"
-#include "mathlib/mathlib.h"
+import std;
 #include "studiorender.h"
 #include "optimize.h"
-#include "tier1/convar.h"
-#include "tier1/keyvalues.h"
-#include "tier0/vprof.h"
 
-#define  R_STUDIOSUBD 
 #include "r_studiosubd_patches.h"
 
 #ifdef _DEBUG
@@ -36,7 +32,7 @@ extern std::vector< Vector4D > g_DebugInteriorPositions;
 
 static void R_TransformVert( const Vector *pSrcPos,	matrix3x4_t *pSkinMat, Vector4DAligned &pos )
 {
-	VPROF_BUDGET( "R_TransformVert", _T("SubD Rendering") );
+	CVProfScope _( "R_TransformVert", 0, "SubD Rendering", false, BUDGETFLAG_OTHER );
 
 	// NOTE: Could add SSE stuff here, if we knew what SSE stuff could make it faster
 	pos.x  = pSrcPos->x  * (*pSkinMat)[0][0] + pSrcPos->y  * (*pSkinMat)[0][1] + pSrcPos->z  * (*pSkinMat)[0][2] + (*pSkinMat)[0][3];
@@ -49,13 +45,13 @@ static void R_TransformVert( const Vector *pSrcPos,	matrix3x4_t *pSkinMat, Vecto
 // This function is duplicate code ****
 static matrix3x4_t *ComputeSkinMatrixSSE( mstudioboneweight_t &boneweights, matrix3x4_t *pPoseToWorld, matrix3x4_t &scratchMatrix )
 {
-	VPROF_BUDGET( "ComputeSkinMatrixSSE", _T("SubD Rendering") );
+	CVProfScope _( "ComputeSkinMatrixSSE", 0, "SubD Rendering", false, BUDGETFLAG_OTHER );
 
 	// NOTE: pPoseToWorld, being cache aligned, doesn't need explicit initialization
 	extern matrix3x4_t *ComputeSkinMatrix( mstudioboneweight_t &boneweights, matrix3x4_t *pPoseToWorld, matrix3x4_t &scratchMatrix );
 	return ComputeSkinMatrix( boneweights, pPoseToWorld, scratchMatrix );
 
-	Assert( 0 );
+	contract_assert( 0 );
 	return nullptr;
 }
 
@@ -67,12 +63,12 @@ void CStudioRender::SkinSubDCage( mstudiovertex_t *pVertices, int nNumVertices,
 								  matrix3x4_t *pPoseToWorld, CCachedRenderData &vertexCache,
 								  unsigned short* pGroupToMesh, fltx4 *vOutput, bool bDoFlex )
 {
-	VPROF_BUDGET( "CStudioRender::SkinSubDCage", _T("SubD Rendering") );
+	CVProfScope _( "CStudioRender::SkinSubDCage", 0, "SubD Rendering", false, BUDGETFLAG_OTHER );
 
 	Vector *pSrcPos;
-	ALIGN16 matrix3x4_t *pSkinMat, temp ALIGN16_POST;
+	matrix3x4_t *pSkinMat, temp [[gnu::aligned(16)]];
 
-	Assert( nNumVertices > 0 );
+	contract_assert( nNumVertices > 0 );
 
 	for ( int j=0; j < nNumVertices; ++j )
 	{
@@ -149,7 +145,7 @@ void DumpDebugPositions()
 			if ( NotQuiteEqual( g_DebugCornerPositions[i], g_DebugCornerPositions[j] ) )
 			{
 				bCrack = true;
-				Assert(0);
+				contract_assert( 0 );
 			}
 		}
 
@@ -189,7 +185,7 @@ void DumpDebugPositions()
 
 void GenerateWorldSpacePatches( float *pSubDBuff, int nNumPatches, unsigned short *pTopologyIndices, fltx4 *pWSVertices, bool bRegularPatch )
 {
-	VPROF_BUDGET( "CStudioRender::GenerateWorldSpacePatches", _T("SubD Rendering") );
+	CVProfScope _( "CStudioRender::GenerateWorldSpacePatches", 0, "SubD Rendering", false, BUDGETFLAG_OTHER );
 
 	TopologyIndexStruct quad;
 	unsigned short *nextPatchIndices = InitializeTopologyIndexStruct( quad, pTopologyIndices );
@@ -197,9 +193,9 @@ void GenerateWorldSpacePatches( float *pSubDBuff, int nNumPatches, unsigned shor
 	set_ShowACCGeometryTangents(mat_tessellation_accgeometrytangents.GetBool());
 	set_UseCornerTangents(mat_tessellation_cornertangents.GetBool());
 
-	ALIGN16 Vector4D Geo[16] ALIGN16_POST;
-	ALIGN16 Vector4D TanU[12] ALIGN16_POST;
-	ALIGN16 Vector4D TanV[12] ALIGN16_POST;
+	Vector4D Geo[16] [[gnu::aligned(16)]];
+	Vector4D TanU[12] [[gnu::aligned(16)]];
+	Vector4D TanV[12] [[gnu::aligned(16)]];
 
 #ifdef _DEBUG
 	if ( mat_tess_dump.GetBool() )
@@ -218,12 +214,7 @@ void GenerateWorldSpacePatches( float *pSubDBuff, int nNumPatches, unsigned shor
 
 	for( int p = 0; p < nNumPatches; p++ )
 	{
-#if defined( USE_OPT )
 		ComputeACCAllPatches( pWSVertices, &quad, Geo, TanU, TanV, bRegularPatch );
-#else
-		ComputeACCGeometryPatch( pWSVertices, &quad, Geo );
-		ComputeACCTangentPatches( pWSVertices, &quad, Geo, TanU, TanV );
-#endif
 
 		for ( int i=0; i < 16; i++ )
 		{
@@ -256,9 +247,9 @@ void GenerateWorldSpacePatches( float *pSubDBuff, int nNumPatches, unsigned shor
 	if ( mat_tess_dump.GetBool() )
 	{
 		// These should be a particular size
-		Assert( std::ssize( g_DebugCornerPositions ) == ( nNumPatches * 4 ) );
-		Assert( std::ssize( g_DebugEdgePositions ) == ( nNumPatches * 8 ) );
-		Assert( std::ssize( g_DebugInteriorPositions ) == ( nNumPatches * 4 ) );
+		contract_assert( std::ssize( g_DebugCornerPositions ) == ( nNumPatches * 4 ) );
+		contract_assert( std::ssize( g_DebugEdgePositions ) == ( nNumPatches * 8 ) );
+		contract_assert( std::ssize( g_DebugInteriorPositions ) == ( nNumPatches * 4 ) );
 
 		DumpDebugPositions();
 		mat_tess_dump.SetValue( 0 );		// Turn back off
@@ -272,14 +263,14 @@ void GenerateWorldSpacePatches( float *pSubDBuff, int nNumPatches, unsigned shor
 //-----------------------------------------------------------------------------------
 void CStudioRender::GenerateBicubicPatches( mstudiomesh_t* pmesh, studiomeshgroup_t* pGroup, bool bDoFlex )
 {
-  	Assert(0);
+  	contract_assert( 0 );
 }
 
 
 // Transform Tangent vector
 static void R_TransformTangent( const Vector4D *pSrcTangentS, matrix3x4_t *pSkinMat, Vector4DAligned &tangentS )
 {
-	VPROF_BUDGET( "R_TransformTangent", _T("SubD Rendering") );
+	CVProfScope _( "R_TransformTangent", 0, "SubD Rendering", false, BUDGETFLAG_OTHER );
 
 	tangentS.x = pSrcTangentS->x * (*pSkinMat)[0][0] + pSrcTangentS->y * (*pSkinMat)[0][1]	+ pSrcTangentS->z * (*pSkinMat)[0][2];
 	tangentS.y = pSrcTangentS->x * (*pSkinMat)[1][0] + pSrcTangentS->y * (*pSkinMat)[1][1]	+ pSrcTangentS->z * (*pSkinMat)[1][2];
@@ -292,11 +283,11 @@ void CStudioRender::SoftwareProcessQuadMesh( mstudiomesh_t* pmesh, CMeshBuilder&
 											 int numFaces, unsigned short* pGroupToMesh,
 											 unsigned short *pTopologyIndices, bool bTangentSpace, bool bDoFlex )
 {
-	VPROF_BUDGET( "CStudioRender::SoftwareProcessQuadMesh", _T("SubD Rendering") );
+	CVProfScope _( "CStudioRender::SoftwareProcessQuadMesh", 0, "SubD Rendering", false, BUDGETFLAG_OTHER );
 
 	Vector4D *pStudioTangentS = nullptr;
 
-	ALIGN16 QuadTessVertex_t quadVertex ALIGN16_POST;
+	QuadTessVertex_t quadVertex [[gnu::aligned(16)]];
 
 	// QuadTessVertex_t currently has the following map:
 	// +-----------------------------------+
@@ -309,12 +300,12 @@ void CStudioRender::SoftwareProcessQuadMesh( mstudiomesh_t* pmesh, CMeshBuilder&
 
 	quadVertex.m_vTangent.Init( 1.0f, 0.0f, 0.0f, 1.0f );
 
-	ALIGN16 matrix3x4_t *pSkinMat, matTemp ALIGN16_POST;
+	matrix3x4_t *pSkinMat, matTemp [[gnu::aligned(16)]];
 
-	Assert( numFaces > 0 );
+	contract_assert( numFaces > 0 );
 
 	const mstudio_meshvertexdata_t *pVertData = pmesh->GetVertexData( m_pStudioHdr );
-	Assert( pVertData );
+	contract_assert( pVertData );
 	if ( !pVertData )
 		return;
 

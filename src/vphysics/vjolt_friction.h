@@ -4,6 +4,11 @@
 
 #pragma once
 
+import ks.math;
+#include "vphysics_interface.h"
+#include "vphysics/friction.h"
+import std;
+
 class JoltPhysicsFrictionSnapshot final : public IPhysicsFrictionSnapshot
 {
 public:

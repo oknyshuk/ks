@@ -1,26 +1,27 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+import ks.core;
+// Purpose: Dynamic tree
 
-//--------------------------------------------------------------------------------------------------
-// Dynamic tree
-//--------------------------------------------------------------------------------------------------
-FORCEINLINE void* CDynamicTree::GetUserData( int32 nProxyId ) const
+[[gnu::always_inline]] inline void* CDynamicTree::GetUserData( int32 nProxyId ) const
 {
-	AssertDbg( m_NodePool[ nProxyId ].IsLeaf() );
+	contract_assert( m_NodePool[ nProxyId ].IsLeaf() );
 	return m_NodePool[ nProxyId ].m_pUserData;
 }
 
 
 //--------------------------------------------------------------------------------------------------
-FORCEINLINE AABB_t CDynamicTree::GetBounds( int32 nProxyId ) const
+[[gnu::always_inline]] inline AABB_t CDynamicTree::GetBounds( int32 nProxyId ) const
 {
-	AssertDbg( m_NodePool[ nProxyId ].IsLeaf() );
+	contract_assert( m_NodePool[ nProxyId ].IsLeaf() );
 	return m_NodePool[ nProxyId ].m_Bounds;
 }
 
 
 //-------------------------------------------------------------------------------------------------
-FORCEINLINE AABB_t CDynamicTree::Inflate( const AABB_t& aabb, float flExtent ) const
+[[gnu::always_inline]] inline AABB_t CDynamicTree::Inflate( const AABB_t& aabb, float flExtent ) const
 {
 	AABB_t out;
 	Vector vExtent( flExtent, flExtent, flExtent );
@@ -32,7 +33,7 @@ FORCEINLINE AABB_t CDynamicTree::Inflate( const AABB_t& aabb, float flExtent ) c
 
 
 //-------------------------------------------------------------------------------------------------
-FORCEINLINE AABB_t CDynamicTree::Inflate( const AABB_t& aabb, const Vector& vExtent ) const
+[[gnu::always_inline]] inline AABB_t CDynamicTree::Inflate( const AABB_t& aabb, const Vector& vExtent ) const
 {
 	AABB_t out;
 	out.m_vMinBounds = aabb.m_vMinBounds - vExtent;
@@ -43,7 +44,7 @@ FORCEINLINE AABB_t CDynamicTree::Inflate( const AABB_t& aabb, const Vector& vExt
 
 
 //--------------------------------------------------------------------------------------------------
-FORCEINLINE void CDynamicTree::ClipRay( const Ray_t& ray, const AABB_t& aabb, float& flMinT, float& flMaxT ) const
+[[gnu::always_inline]] inline void CDynamicTree::ClipRay( const Ray_t& ray, const AABB_t& aabb, float& flMinT, float& flMaxT ) const
 {
 	for ( int nAxis = 0; nAxis < 3; ++nAxis )
 	{
@@ -61,7 +62,7 @@ template < typename Functor > void CDynamicTree::CastRay( const Vector& vRayStar
 {
 	if ( m_nRoot < 0 )
 	{
-		AssertDbg( m_nRoot == NULL_NODE );
+		contract_assert( m_nRoot == NULL_NODE );
 		return;
 	}
 
@@ -87,7 +88,7 @@ template < typename Functor > void CDynamicTree::CastRay( const Vector& vRayStar
 
 		if ( !node.IsLeaf() )
 		{
-			AssertDbg( nCount + 2 <= STACK_DEPTH );
+			contract_assert( nCount + 2 <= STACK_DEPTH );
 			stack[ nCount++ ] = node.m_nChild2;
 			stack[ nCount++ ] = node.m_nChild1;
 		}
@@ -111,7 +112,7 @@ template< typename Functor > void CDynamicTree::CastSphere( const Vector& vRaySt
 {
 	if ( m_nRoot < 0 )
 	{
-		AssertDbg( m_nRoot == NULL_NODE );
+		contract_assert( m_nRoot == NULL_NODE );
 		return;
 	}
 
@@ -137,7 +138,7 @@ template< typename Functor > void CDynamicTree::CastSphere( const Vector& vRaySt
 
 		if ( !node.IsLeaf() )
 		{
-			AssertDbg( nCount + 2 <= STACK_DEPTH );
+			contract_assert( nCount + 2 <= STACK_DEPTH );
 			stack[ nCount++ ] = node.m_nChild2;
 			stack[ nCount++ ] = node.m_nChild1;
 		}
@@ -161,7 +162,7 @@ template< typename Functor > void CDynamicTree::CastBox( const Vector& vRayStart
 {
 	if ( m_nRoot < 0 )
 	{
-		AssertDbg( m_nRoot == NULL_NODE );
+		contract_assert( m_nRoot == NULL_NODE );
 		return;
 	}
 
@@ -187,7 +188,7 @@ template< typename Functor > void CDynamicTree::CastBox( const Vector& vRayStart
 
 		if ( !node.IsLeaf() )
 		{
-			AssertDbg( nCount + 2 <= STACK_DEPTH );
+			contract_assert( nCount + 2 <= STACK_DEPTH );
 			stack[ nCount++ ] = node.m_nChild2;
 			stack[ nCount++ ] = node.m_nChild1;
 		}

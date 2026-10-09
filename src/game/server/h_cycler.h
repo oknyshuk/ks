@@ -1,13 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef H_CYCLER_H
-#define H_CYCLER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
+#include "ai_basenpc.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -36,5 +32,3 @@ public:
 
 	int			m_animate;
 };
-
-#endif // H_CYCLER_H

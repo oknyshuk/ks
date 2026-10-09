@@ -1,12 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef APPARENT_VELOCITY_HELPER_H
-#define APPARENT_VELOCITY_HELPER_H
-
+import std;
+import ks.math;
 
 inline float CalcDistance( float x, float y )
 {
@@ -66,6 +63,3 @@ private:
 	T m_LastValue;
 	float m_LastTime;
 };
-
-
-#endif // APPARENT_VELOCITY_HELPER_H

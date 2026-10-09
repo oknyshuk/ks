@@ -1,3 +1,4 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
@@ -13,8 +14,6 @@
 // prop, but it is in the descriptor, so byte-identity requires emitting it too. An ehandle
 // member may therefore not carry Net::flags.
 
-#ifndef KS_REFLECT_SENDTABLE_H
-#define KS_REFLECT_SENDTABLE_H
 
 #include "reflect.h"
 #include "dt_send.h"
@@ -22,8 +21,7 @@
 #include "sendproxy.h"
 #include "networkvar.h"
 
-#include <span>
-#include <vector>
+import std;
 
 namespace ks::reflect::net
 {
@@ -684,4 +682,3 @@ SendTable &table()
 		return 1;                                                                                \
 	}();
 
-#endif // KS_REFLECT_SENDTABLE_H

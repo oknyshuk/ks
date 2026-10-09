@@ -1,19 +1,26 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include "precache_register.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "fx_sparks.h"
-#include "iefx.h"
 #include "c_te_effect_dispatch.h"
 #include "particles_ez.h"
-#include "decals.h"
 #include "engine/IEngineSound.h"
 #include "fx_quad.h"
-#include "tier0/vprof.h"
 #include "fx.h"
 #include "fx_water.h"
 
@@ -25,17 +32,17 @@ PRECACHE( MATERIAL, "effects/slime1" )
 PRECACHE_REGISTER_END()
 
 
-#define	SPLASH_MIN_SPEED	50.0f
-#define	SPLASH_MAX_SPEED	100.0f
+constexpr auto SPLASH_MIN_SPEED = 50.0f;
+constexpr auto SPLASH_MAX_SPEED = 100.0f;
 
 ConVar	cl_show_splashes( "cl_show_splashes", "1" );
 
 static Vector s_vecSlimeColor( 46.0f/255.0f, 90.0f/255.0f, 36.0f/255.0f );
 
 // Each channel does not contribute to the luminosity equally, as represented here
-#define	RED_CHANNEL_CONTRIBUTION	0.30f
-#define GREEN_CHANNEL_CONTRIBUTION	0.59f
-#define	BLUE_CHANNEL_CONTRIBUTION	0.11f
+constexpr auto RED_CHANNEL_CONTRIBUTION = 0.30f;
+constexpr auto GREEN_CHANNEL_CONTRIBUTION = 0.59f;
+constexpr auto BLUE_CHANNEL_CONTRIBUTION = 0.11f;
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns a normalized tint and luminosity for a specified color
@@ -82,7 +89,7 @@ void FX_WaterRipple( const Vector &origin, float scale, Vector *pColor, float fl
 
 
 
-	VPROF_BUDGET( "FX_WaterRipple", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_WaterRipple", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	trace_t	tr;
 
 	Vector	color = pColor ? *pColor : Vector( 0.8f, 0.8f, 0.75f );
@@ -114,7 +121,7 @@ PRECACHE_REGISTER_END()
 //-----------------------------------------------------------------------------
 void FX_GunshotSplashVisuals( const Vector &origin, const Vector &normal, float scale )
 {
-	VPROF_BUDGET( "FX_GunshotSplash", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_GunshotSplash", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	
   	if ( cl_show_splashes.GetBool() == false )
 		return;
@@ -169,7 +176,7 @@ PRECACHE_REGISTER_END()
 //-----------------------------------------------------------------------------
 void FX_GunshotSplash( const Vector &origin, const Vector &normal, float scale )
 {
-	VPROF_BUDGET( "FX_GunshotSplash", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_GunshotSplash", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	if ( cl_show_splashes.GetBool() == false )
 		return;
@@ -190,7 +197,7 @@ void FX_GunshotSlimeSplash( const Vector &origin, const Vector &normal, float sc
 	if ( cl_show_splashes.GetBool() == false )
 		return;
 
-	VPROF_BUDGET( "FX_GunshotSlimeSplash", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_GunshotSlimeSplash", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	
 	QAngle vecAngles;
 	// we flip the z and the x to match the orientation of how the impact particles are authored
@@ -339,7 +346,7 @@ WaterDebrisEffect* WaterDebrisEffect::Create( const char *pDebugName )
 //-----------------------------------------------------------------------------
 float WaterDebrisEffect::UpdateAlpha( const SimpleParticle *pParticle )
 {
-	return ( ((float)pParticle->m_uchStartAlpha/255.0f) * sin( M_PI * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
+	return ( ((float)pParticle->m_uchStartAlpha/255.0f) * std::sin( std::numbers::pi * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -378,7 +385,7 @@ void CSplashParticle::UpdateVelocity( SimpleParticle *pParticle, float timeDelta
 	{
 		dtime = timeDelta;
 		float expected = 3.0f;
-		decay = exp( log( 0.0001f ) * dtime / expected );
+		decay = std::exp( std::log( 0.0001f ) * dtime / expected );
 	}
 
 	pParticle->m_vecVelocity *= decay;

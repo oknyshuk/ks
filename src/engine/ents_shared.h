@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef ENTS_SHARED_H
-#define ENTS_SHARED_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <protocol.h>
-#include "tier1/bit_ops.h"
 #include <iserver.h>
+import std;
+import ks.tier1;
 #include "clientframe.h"
 #include "packed_entity.h"
 #include "iclientnetworkable.h"
-
 
 typedef intp SerializedEntityHandle_t;
 
@@ -22,7 +17,7 @@ enum
 	SERIALIZED_ENTITY_HANDLE_INVALID = (SerializedEntityHandle_t)0,
 };
 
-abstract_class ISerializedEntities
+class ISerializedEntities
 {
 public:
 	virtual SerializedEntityHandle_t AllocateSerializedEntity( char const *pFile, int nLine ) = 0;
@@ -176,5 +171,3 @@ public:
 	CPostDataUpdateCall	m_PostDataUpdateCalls[MAX_EDICTS];
 	int					m_nPostDataUpdateCalls;
 };
-
-#endif // ENTS_SHARED_H

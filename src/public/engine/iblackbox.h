@@ -1,7 +1,6 @@
-#ifndef IBLACKBOX_H
-#define IBLACKBOX_H
+#pragma once
 
-#define BLACKBOX_INTERFACE_VERSION "BlackBoxVersion001"
+inline constexpr const char *BLACKBOX_INTERFACE_VERSION = "BlackBoxVersion001";
 
 class IBlackBox 
 {
@@ -16,4 +15,3 @@ public:
 	virtual int GetTypeCount() = 0;
 };
 
-#endif

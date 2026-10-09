@@ -1,18 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Model loading / unloading interface
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef OVERLAY_H
-#define OVERLAY_H
-
-
 
 // This is a workaround for the fact that we get massive decal flicker
 // when looking at a decal at a glancing angle while standing right next to it.
-#define OVERLAY_AVOID_FLICKER_NORMAL_OFFSET	0.1f
+class IMatRenderContext;
+
+inline constexpr auto OVERLAY_AVOID_FLICKER_NORMAL_OFFSET = 0.1f;
 
 
 //-----------------------------------------------------------------------------
@@ -61,5 +57,3 @@ public:
 // Overlay manager singleton
 //-----------------------------------------------------------------------------
 IOverlayMgr *OverlayMgr();
-
-#endif // OVERLAY_H

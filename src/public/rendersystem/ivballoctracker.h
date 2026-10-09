@@ -1,11 +1,8 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: tracks VB allocations (and compressed/uncompressed vertex memory usage)
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#ifndef IVBALLOCTRACKER_H
-#define IVBALLOCTRACKER_H
+// Purpose: tracks VB allocations (and compressed/uncompressed vertex memory usage)
 
 //#include "materialsystem/imaterialsystem.h"
 
@@ -18,10 +15,9 @@
 #endif
 
 // This interface is actually exported by the shader API DLL.
-#define VB_ALLOC_TRACKER_INTERFACE_VERSION "VBAllocTracker001"
 
 // Interface to the VB mem alloc tracker
-abstract_class IVBAllocTracker
+class IVBAllocTracker
 {
 public:
 	// This should be called wherever VertexBuffers are allocated
@@ -31,5 +27,3 @@ public:
 	// Track mesh allocations (set this before an allocation, clear it after)
 	virtual void TrackMeshAllocations( const char * allocatorName ) = 0;
 };
-
-#endif // IVBALLOCTRACKER_H

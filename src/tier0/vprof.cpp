@@ -1,30 +1,12 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Real-Time Hierarchical Profiling
-//
-// $NoKeywords: $
-//===========================================================================//
 
-#include "pch_tier0.h"
+import ks.core;
 
-#include "tier0/memalloc.h"
-#include "tier0/valve_off.h"
-
-
-#include <assert.h>
-
-
-#include <map>
-#include <vector>
-#include <algorithm>
-
-#include "tier0/valve_on.h"
-#include "tier0/vprof.h"
-#include "tier0/l2cache.h"
-#include "tier0/tslist.h"
-#include "tier0/icommandline.h"
-#include "tier0/dynfunction.h"
-#include "strtools.h"
+// First include standard libraries
+import std;
 
 
 // NOTE: Explicitly and intentionally using STL in here to not generate any
@@ -32,18 +14,15 @@
 // level data structures (toml 01-27-03)
 using namespace std;
 
-#ifdef VPROF_ENABLED
-
 
 //-----------------------------------------------------------------------------
 bool g_VProfSignalSpike;
 
 //-----------------------------------------------------------------------------
 
-CVProfile g_VProfCurrentProfile CONSTRUCT_EARLY;
+CVProfile g_VProfCurrentProfile [[gnu::init_priority(101)]];
 
 int CVProfNode::s_iCurrentUniqueNodeID = 0;
-
 
 
 CVProfNode::~CVProfNode()
@@ -89,9 +68,7 @@ void CVProfNode::EnterScope()
 			m_L2Cache.Start();
 		}
 
-#ifdef VPROF_VTUNE_GROUP
 		g_VProfCurrentProfile.PushGroup( m_BudgetGroupID );
-#endif
 	}
 }
 
@@ -109,9 +86,7 @@ bool CVProfNode::ExitScope()
 			m_iCurL2CacheMiss += m_L2Cache.GetL2CacheMisses();
 		}
 
-#ifdef VPROF_VTUNE_GROUP
 		g_VProfCurrentProfile.PopGroup();
-#endif
 	}
 	return ( m_nRecursions == 0 );
 }
@@ -245,28 +220,6 @@ void CVProfNode::SetCurFrameTime( unsigned long milliseconds )
 {
 	m_CurFrameTime.Init( (float)milliseconds );
 }
-#ifdef DBGFLAG_VALIDATE
-//-----------------------------------------------------------------------------
-// Purpose: Ensure that all of our internal structures are consistent, and
-//			account for all memory that we've allocated.
-// Input:	validator -		Our global validator object
-//			pchName -		Our name (typically a member var in our container)
-//-----------------------------------------------------------------------------
-void CVProfNode::Validate( CValidator &validator, tchar *pchName )
-{
-	validator.Push( _T("CVProfNode"), this, pchName );
-
-	m_L2Cache.Validate( validator, _T("m_L2Cache") );
-
-	if ( m_pSibling )
-		m_pSibling->Validate( validator, _T("m_pSibling") );
-	if ( m_pChild )
-		m_pChild->Validate( validator, _T("m_pChild") );
-
-	validator.Pop( );
-}
-#endif // DBGFLAG_VALIDATE
-
 
 
 //-----------------------------------------------------------------------------
@@ -335,7 +288,7 @@ void CVProfile::SumTimes( CVProfNode *pNode, int budgetGroupID )
 		return; // this generally only happens on a failed FindNode()
 
 	bool bSetStartNode;
-	if ( !g_pStartNode && _tcscmp( pNode->GetName(), g_pszSumNode ) == 0 )
+	if ( !g_pStartNode && strcmp( pNode->GetName(), g_pszSumNode ) == 0 )
 	{
 		g_pStartNode = pNode;
 		bSetStartNode = true;
@@ -389,7 +342,7 @@ void CVProfile::SumTimes( CVProfNode *pNode, int budgetGroupID )
 
 CVProfNode *CVProfile::FindNode( CVProfNode *pStartNode, const tchar *pszNode )
 {
-	if ( _tcscmp( pStartNode->GetName(), pszNode ) != 0 )
+	if ( strcmp( pStartNode->GetName(), pszNode ) != 0 )
 	{
 		CVProfNode *pFoundNode = nullptr;
 		if ( pStartNode->GetSibling() )
@@ -438,15 +391,15 @@ void CVProfile::DumpNodes( CVProfNode *pNode, int indent, bool bAverageAndCountO
 	{
 		if( bAverageAndCountOnly )
 		{
-			Msg( _T(" Avg Time/Frame (ms)\n") );
-			Msg( _T("[ func+child      func ]       Count\n") );
-			Msg( _T("  ---------- ---------      --------\n") );
+			Msg( " Avg Time/Frame (ms)\n" );
+			Msg( "[ func+child      func ]       Count\n" );
+			Msg( "  ---------- ---------      --------\n" );
 		}
 		else
 		{
-			Msg( _T("       Sum (ms)            Avg Time/Frame (ms)     Avg Time/Call (ms)\n") );
-			Msg( _T("[ func+child      func ]  [ func+child   func ]  [ func+child   func ]    Count   Peak\n") );
-			Msg( _T("  ---------- ---------      ---------- ------      ---------- ------   -------- ------\n") );
+			Msg( "       Sum (ms)            Avg Time/Frame (ms)     Avg Time/Call (ms)\n" );
+			Msg( "[ func+child      func ]  [ func+child   func ]  [ func+child   func ]    Count   Peak\n" );
+			Msg( "  ---------- ---------      ---------- ------      ---------- ------   -------- ------\n" );
 		}
 	}
 
@@ -460,14 +413,14 @@ void CVProfile::DumpNodes( CVProfNode *pNode, int indent, bool bAverageAndCountO
 
 		if( bAverageAndCountOnly )
 		{
-			Msg( _T("  %10.3f %9.2f      %8d"), 
+			Msg( "  %10.3f %9.2f      %8d", 
 						 ( pNode->GetTotalCalls() > 0 ) ? pNode->GetTotalTime() / (double)NumFramesSampled() : 0, 
 						 ( pNode->GetTotalCalls() > 0 ) ? dNodeTime / (double)NumFramesSampled() : 0, 
 						 pNode->GetTotalCalls()  );
 		}
 		else
 		{
-			Msg( _T("  %10.3f %9.2f      %10.3f %6.2f      %10.3f %6.2f   %8d %6.2f"), 
+			Msg( "  %10.3f %9.2f      %10.3f %6.2f      %10.3f %6.2f   %8d %6.2f", 
 						 pNode->GetTotalTime(), dNodeTime,
 						 ( pNode->GetTotalCalls() > 0 ) ? pNode->GetTotalTime() / (double)NumFramesSampled() : 0, 
 						 ( pNode->GetTotalCalls() > 0 ) ? dNodeTime / (double)NumFramesSampled() : 0, 
@@ -476,13 +429,13 @@ void CVProfile::DumpNodes( CVProfNode *pNode, int indent, bool bAverageAndCountO
 						 pNode->GetTotalCalls(), pNode->GetPeakTime()  );
 		}
 		
-		Msg( _T("  ") );
+		Msg( "  " );
 		for ( int i = 1; i < indent; i++ )
 		{
-			Msg( _T("|  ") );
+			Msg( "|  " );
 		}
 
-		Msg( _T("%s\n"), pNode->GetName() );
+		Msg( "%s\n", pNode->GetName() );
 	}
 
 	if( pNode->GetChild() )
@@ -498,312 +451,6 @@ void CVProfile::DumpNodes( CVProfNode *pNode, int indent, bool bAverageAndCountO
 
 //-------------------------------------
 
-#if defined( VPROF_VXCONSOLE_EXISTS )
-static void CalcBudgetGroupTimes_Recursive( CVProfNode *pNode, unsigned int *groupTimes, int numGroups, float flScale )
-{
-	int			groupID;
-	CVProfNode	*nodePtr;
-
-	groupID = pNode->GetBudgetGroupID();
-	if ( groupID >= numGroups )
-	{
-		return;
-	}
-
-	groupTimes[groupID] += flScale*pNode->GetPrevTimeLessChildren();	
-
-	nodePtr = pNode->GetSibling();
-	if ( nodePtr )
-	{
-		CalcBudgetGroupTimes_Recursive( nodePtr, groupTimes, numGroups, flScale );
-	}
-
-	nodePtr = pNode->GetChild();
-	if ( nodePtr )
-	{
-		CalcBudgetGroupTimes_Recursive( nodePtr, groupTimes, numGroups, flScale );
-	}
-}
-
-static void CalcBudgetGroupL2CacheMisses_Recursive( CVProfNode *pNode, unsigned int *groupTimes, int numGroups, float flScale )
-{
-	int			groupID;
-	CVProfNode	*nodePtr;
-
-	groupID = pNode->GetBudgetGroupID();
-	if ( groupID >= numGroups )
-	{
-		return;
-	}
-
-	groupTimes[groupID] += flScale*pNode->GetPrevL2CacheMissLessChildren();	
-
-	nodePtr = pNode->GetSibling();
-	if ( nodePtr )
-	{
-		CalcBudgetGroupL2CacheMisses_Recursive( nodePtr, groupTimes, numGroups, flScale );
-	}
-
-	nodePtr = pNode->GetChild();
-	if ( nodePtr )
-	{
-		CalcBudgetGroupL2CacheMisses_Recursive( nodePtr, groupTimes, numGroups, flScale );
-	}
-}
-
-static void CalcBudgetGroupLHS_Recursive( CVProfNode *pNode, unsigned int *groupTimes, int numGroups, float flScale )
-{
-	int			groupID;
-	CVProfNode	*nodePtr;
-
-	groupID = pNode->GetBudgetGroupID();
-	if ( groupID >= numGroups )
-	{
-		return;
-	}
-
-	groupTimes[groupID] += flScale*pNode->GetPrevLoadHitStoreLessChildren();	
-
-	nodePtr = pNode->GetSibling();
-	if ( nodePtr )
-	{
-		CalcBudgetGroupLHS_Recursive( nodePtr, groupTimes, numGroups, flScale );
-	}
-
-	nodePtr = pNode->GetChild();
-	if ( nodePtr )
-	{
-		CalcBudgetGroupLHS_Recursive( nodePtr, groupTimes, numGroups, flScale );
-	}
-}
-
-
-void CVProfile::VXConsoleReportMode( VXConsoleReportMode_t mode )
-{
-	m_ReportMode = mode;
-}
-
-void CVProfile::VXConsoleReportScale( VXConsoleReportMode_t mode, float flScale )
-{
-	m_pReportScale[mode] = flScale;
-}
-
-
-//-----------------------------------------------------------------------------
-// Send the all the counter attributes once to VXConsole at profiling start
-//-----------------------------------------------------------------------------
-void CVProfile::VXProfileStart()
-{
-	const char		*names[XBX_MAX_PROFILE_COUNTERS];
-	COLORREF		colors[XBX_MAX_PROFILE_COUNTERS];
-	int				numGroups;
-	int				counterGroup;
-	const char		*pGroupName;
-	int				i;
-	int				r,g,b,a;
-
-	// vprof system must be running
-	if ( m_enabled <= 0 || !m_UpdateMode )
-	{
-		return;
-	}
-
-	if ( m_UpdateMode & VPROF_UPDATE_BUDGET )
-	{
-		// update budget profiling
-		numGroups = g_VProfCurrentProfile.GetNumBudgetGroups();
-		if ( numGroups > XBX_MAX_PROFILE_COUNTERS )
-		{
-			numGroups = XBX_MAX_PROFILE_COUNTERS;
-		}
-		for ( i=0; i<numGroups; i++ )
-		{
-			names[i] = g_VProfCurrentProfile.GetBudgetGroupName( i );
-			g_VProfCurrentProfile.GetBudgetGroupColor( i, r, g, b, a );
-			colors[i] = XMAKECOLOR( r, g, b );
-		}
-
-		// send all the profile attributes
-		XBX_rSetProfileAttributes( "cpu", numGroups, names, colors );
-	}
-
-	if ( m_UpdateMode & (VPROF_UPDATE_TEXTURE_GLOBAL|VPROF_UPDATE_TEXTURE_PERFRAME) )
-	{		
-		// update texture profiling
-		numGroups = 0;
-		counterGroup = (m_UpdateMode & VPROF_UPDATE_TEXTURE_GLOBAL) ? COUNTER_GROUP_TEXTURE_GLOBAL : COUNTER_GROUP_TEXTURE_PER_FRAME;
-		for ( i=0; i<g_VProfCurrentProfile.GetNumCounters(); i++ )
-		{
-			if ( g_VProfCurrentProfile.GetCounterGroup( i ) == counterGroup )
-			{	
-				// strip undesired prefix
-				pGroupName = g_VProfCurrentProfile.GetCounterName( i );
-				if ( !stricmp( pGroupName, "texgroup_frame_" ) )
-				{
-					pGroupName += 15;
-				}
-				else if ( !stricmp( pGroupName, "texgroup_global_" ) )
-				{
-					pGroupName += 16;
-				}
-				names[numGroups] = pGroupName;
-
-				g_VProfCurrentProfile.GetBudgetGroupColor( numGroups, r, g, b, a );
-				colors[numGroups] = XMAKECOLOR( r, g, b );
-
-				numGroups++;
-				if ( numGroups == XBX_MAX_PROFILE_COUNTERS )
-				{
-					break;
-				}
-			}
-		}
-
-		// send all the profile attributes
-		XBX_rSetProfileAttributes( "texture", numGroups, names, colors );
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Send the counters to VXConsole
-//-----------------------------------------------------------------------------
-void CVProfile::VXProfileUpdate()
-{
-	int				i;
-	int				counterGroup;
-	int				numGroups;
-	unsigned int	groupData[XBX_MAX_PROFILE_COUNTERS];
-
-	// vprof system must be running
-	if ( m_enabled <= 0 || !m_UpdateMode )
-	{
-		return;
-	}
-
-	if ( m_UpdateMode & VPROF_UPDATE_BUDGET )
-	{
-		// send the cpu counters
-		numGroups = g_VProfCurrentProfile.GetNumBudgetGroups();
-		if ( numGroups > XBX_MAX_PROFILE_COUNTERS )
-		{
-			numGroups = XBX_MAX_PROFILE_COUNTERS;
-		}
-		memset( groupData, 0, numGroups * sizeof( unsigned int ) );
-
-		CVProfNode *pNode = g_VProfCurrentProfile.GetRoot();
-		if ( pNode && pNode->GetChild() )
-		{
-			switch ( m_ReportMode )
-			{
-			default:
-			case VXCONSOLE_REPORT_TIME:
-				CalcBudgetGroupTimes_Recursive( pNode->GetChild(), groupData, numGroups, m_pReportScale[VXCONSOLE_REPORT_TIME] );
-				break;
-
-			case VXCONSOLE_REPORT_L2CACHE_MISSES:
-				CalcBudgetGroupL2CacheMisses_Recursive( pNode->GetChild(), groupData, numGroups, m_pReportScale[VXCONSOLE_REPORT_L2CACHE_MISSES] );
-				break;
-
-			case VXCONSOLE_REPORT_LOAD_HIT_STORE:
-				CalcBudgetGroupLHS_Recursive( pNode->GetChild(), groupData, numGroups, m_pReportScale[VXCONSOLE_REPORT_LOAD_HIT_STORE] );
-				break;
-			}
-		}
-
-		XBX_rSetProfileData( "cpu", numGroups, groupData );
-	}
-
-	if ( m_UpdateMode & ( VPROF_UPDATE_TEXTURE_GLOBAL|VPROF_UPDATE_TEXTURE_PERFRAME ) )
-	{
-		// send the texture counters
-		numGroups = 0;
-		counterGroup = ( m_UpdateMode & VPROF_UPDATE_TEXTURE_GLOBAL ) ? COUNTER_GROUP_TEXTURE_GLOBAL : COUNTER_GROUP_TEXTURE_PER_FRAME;
-		for ( i = 0; i < g_VProfCurrentProfile.GetNumCounters(); i++ )
-		{
-			if ( g_VProfCurrentProfile.GetCounterGroup( i ) == counterGroup )
-			{
-				// get the size in bytes
-				groupData[numGroups++] = g_VProfCurrentProfile.GetCounterValue( i );
-				if ( numGroups == XBX_MAX_PROFILE_COUNTERS )
-				{
-					break;
-				}
-			}
-		}
-
-		XBX_rSetProfileData( "texture", numGroups, groupData );
-	}
-}
-
-void CVProfile::VXEnableUpdateMode( int event, bool bEnable )
-{
-	// enable or disable the updating of specified events
-	if ( bEnable )
-	{
-		m_UpdateMode |= event;
-	}
-	else
-	{
-		m_UpdateMode &= ~event;
-	}
-
-	// force a resend of possibly affected attributes
-	VXProfileStart();
-}
-
-#define MAX_VPROF_NODES_IN_LIST 4096
-static void VXBuildNodeList_r( CVProfNode *pNode, xVProfNodeItem_t *pNodeList, int *pNumNodes )
-{
-	if ( !pNode )
-	{
-		return; 
-	}
-	if ( *pNumNodes >= MAX_VPROF_NODES_IN_LIST )
-	{
-		// list full
-		return;
-	}
-
-	// add to list
-	pNodeList[*pNumNodes].pName = (const char *)pNode->GetName();
-
-	pNodeList[*pNumNodes].pBudgetGroupName = g_VProfCurrentProfile.GetBudgetGroupName( pNode->GetBudgetGroupID() );
-	int r, g, b, a;
-	g_VProfCurrentProfile.GetBudgetGroupColor( pNode->GetBudgetGroupID(), r, g, b, a );
-	pNodeList[*pNumNodes].budgetGroupColor = XMAKECOLOR( r, g, b );
-
-	pNodeList[*pNumNodes].totalCalls = pNode->GetTotalCalls();
-	pNodeList[*pNumNodes].inclusiveTime = pNode->GetTotalTime();
-	pNodeList[*pNumNodes].exclusiveTime = pNode->GetTotalTimeLessChildren();
-	(*pNumNodes)++;
-
-	CVProfNode	*nodePtr = pNode->GetSibling();
-	if ( nodePtr )
-	{
-		VXBuildNodeList_r( nodePtr, pNodeList, pNumNodes );
-	}
-
-	nodePtr = pNode->GetChild();
-	if ( nodePtr )
-	{
-		VXBuildNodeList_r( nodePtr, pNodeList, pNumNodes );
-	}
-}
-void CVProfile::VXSendNodes( void )
-{
-	Pause();
-
-	xVProfNodeItem_t *pNodeList = (xVProfNodeItem_t *)stackalloc( MAX_VPROF_NODES_IN_LIST * sizeof(xVProfNodeItem_t) );
-	int numNodes = 0;
-	VXBuildNodeList_r( GetRoot(), pNodeList, &numNodes );
-
-	// send to vxconsole
-	XBX_rVProfNodeList( numNodes, pNodeList );
-
-	Resume();
-}
-#endif
-
 //-------------------------------------
 static void DumpSorted( const tchar *pszHeading, double totalTime, bool (*pfnSort)( const TimeSums_t &, const TimeSums_t & ), int maxLen = 999999 )
 {
@@ -812,15 +459,15 @@ static void DumpSorted( const tchar *pszHeading, double totalTime, bool (*pfnSor
 	sortedSums = g_TimeSums;
 	sort( sortedSums.begin(), sortedSums.end(), pfnSort );
 	
-	Msg( _T("%s\n"), pszHeading);
-    Msg( _T("  Scope                                                      Calls Calls/Frame  Time+Child    Pct        Time    Pct   Avg/Frame    Avg/Call Avg-NoChild        Peak\n"));
-    Msg( _T("  ---------------------------------------------------- ----------- ----------- ----------- ------ ----------- ------ ----------- ----------- ----------- -----------\n"));
+	Msg( "%s\n", pszHeading);
+    Msg( "  Scope                                                      Calls Calls/Frame  Time+Child    Pct        Time    Pct   Avg/Frame    Avg/Call Avg-NoChild        Peak\n");
+    Msg( "  ---------------------------------------------------- ----------- ----------- ----------- ------ ----------- ------ ----------- ----------- ----------- -----------\n");
     for ( i = 0; i < sortedSums.size() && i < (unsigned)maxLen; i++ )
     {
 		double avg = ( sortedSums[i].calls ) ? sortedSums[i].time / (double)sortedSums[i].calls : 0.0;
 		double avgLessChildren = ( sortedSums[i].calls ) ? sortedSums[i].timeLessChildren / (double)sortedSums[i].calls : 0.0;
 		
-        Msg( _T("  %52.52s%12d%12.3f%12.3f%7.2f%12.3f%7.2f%12.3f%12.3f%12.3f%12.3f\n"), 
+        Msg( "  %52.52s%12d%12.3f%12.3f%7.2f%12.3f%7.2f%12.3f%12.3f%12.3f%12.3f\n", 
              sortedSums[i].pszProfileScope,
              sortedSums[i].calls,
 			 (float)sortedSums[i].calls / (float)g_TotalFrames,
@@ -839,24 +486,24 @@ static void DumpSorted( const tchar *pszHeading, double totalTime, bool (*pfnSor
 
 void CVProfile::OutputReport( int type, const tchar *pszStartNode, int budgetGroupID )
 {
-	Msg( _T("******** BEGIN VPROF REPORT ********\n"));
+	Msg( "******** BEGIN VPROF REPORT ********\n");
 
 	g_TotalFrames = max( NumFramesSampled() - 1, 1 );
 	
 	if ( NumFramesSampled() == 0 || GetTotalTimeSampled() == 0)
-		Msg( _T("No samples\n") );
+		Msg( "No samples\n" );
 	else
 	{
 		if ( type & VPRT_SUMMARY )
 		{
-			Msg( _T("-- Summary --\n") );
-			Msg( _T("%d frames sampled for %.2f seconds\n"), g_TotalFrames, GetTotalTimeSampled() / 1000.0 );
-			Msg( _T("Average %.2f fps, %.2f ms per frame\n"), 1000.0 / ( GetTotalTimeSampled() / g_TotalFrames ), GetTotalTimeSampled() / g_TotalFrames );
-			Msg( _T("Peak %.2f ms frame\n"), GetPeakFrameTime() );
+			Msg( "-- Summary --\n" );
+			Msg( "%d frames sampled for %.2f seconds\n", g_TotalFrames, GetTotalTimeSampled() / 1000.0 );
+			Msg( "Average %.2f fps, %.2f ms per frame\n", 1000.0 / ( GetTotalTimeSampled() / g_TotalFrames ), GetTotalTimeSampled() / g_TotalFrames );
+			Msg( "Peak %.2f ms frame\n", GetPeakFrameTime() );
 			
 			double timeAccountedFor = 100.0 - ( m_Root.GetTotalTimeLessChildren() / m_Root.GetTotalTime() );
-			Msg( _T("%.0f pct of time accounted for\n"), min( 100.0, timeAccountedFor ) );
-			Msg( _T("\n") );
+			Msg( "%.0f pct of time accounted for\n", min( 100.0, timeAccountedFor ) );
+			Msg( "\n" );
 		}
 
 		if ( pszStartNode == nullptr )
@@ -869,59 +516,59 @@ void CVProfile::OutputReport( int type, const tchar *pszStartNode, int budgetGro
 		// Dump the hierarchy
 		if ( type & VPRT_HIERARCHY )
 		{
-			Msg( _T("-- Hierarchical Call Graph --\n"));
+			Msg( "-- Hierarchical Call Graph --\n");
 			if ( pszStartNode == nullptr )
 				g_pStartNode = nullptr;
 			else
 				g_pStartNode = FindNode( GetRoot(), pszStartNode );
 
 			DumpNodes( (!g_pStartNode) ? GetRoot() : g_pStartNode, 0, false );
-			Msg( _T("\n") );
+			Msg( "\n" );
 		}
 		
 		if ( type & VPRT_HIERARCHY_TIME_PER_FRAME_AND_COUNT_ONLY )
 		{
-			Msg( _T("-- Hierarchical Call Graph --\n"));
+			Msg( "-- Hierarchical Call Graph --\n");
 			if ( pszStartNode == nullptr )
 				g_pStartNode = nullptr;
 			else
 				g_pStartNode = FindNode( GetRoot(), pszStartNode );
 
 			DumpNodes( (!g_pStartNode) ? GetRoot() : g_pStartNode, 0, true );
-			Msg( _T("\n") );
+			Msg( "\n" );
 		}
 
 		int maxLen = ( type & VPRT_LIST_TOP_ITEMS_ONLY ) ? 25 : 999999;
 
 		if ( type & VPRT_LIST_BY_TIME )
 		{
-			DumpSorted( _T("-- Profile scopes sorted by time (including children) --"), GetTotalTimeSampled(), TimeCompare, maxLen );
-			Msg( _T("\n") );
+			DumpSorted( "-- Profile scopes sorted by time (including children) --", GetTotalTimeSampled(), TimeCompare, maxLen );
+			Msg( "\n" );
 		}
 		if ( type & VPRT_LIST_BY_TIME_LESS_CHILDREN )
 		{
-			DumpSorted( _T("-- Profile scopes sorted by time (without children) --"), GetTotalTimeSampled(), TimeLessChildrenCompare, maxLen );
-			Msg( _T("\n") );
+			DumpSorted( "-- Profile scopes sorted by time (without children) --", GetTotalTimeSampled(), TimeLessChildrenCompare, maxLen );
+			Msg( "\n" );
 		}
 		if ( type & VPRT_LIST_BY_AVG_TIME )
 		{
-			DumpSorted( _T("-- Profile scopes sorted by average time (including children) --"), GetTotalTimeSampled(), AverageTimeCompare, maxLen );
-			Msg( _T("\n") );
+			DumpSorted( "-- Profile scopes sorted by average time (including children) --", GetTotalTimeSampled(), AverageTimeCompare, maxLen );
+			Msg( "\n" );
 		}
 		if ( type & VPRT_LIST_BY_AVG_TIME_LESS_CHILDREN )
 		{
-			DumpSorted( _T("-- Profile scopes sorted by average time (without children) --"), GetTotalTimeSampled(), AverageTimeLessChildrenCompare, maxLen );
-			Msg( _T("\n") );
+			DumpSorted( "-- Profile scopes sorted by average time (without children) --", GetTotalTimeSampled(), AverageTimeLessChildrenCompare, maxLen );
+			Msg( "\n" );
 		}
 		if ( type & VPRT_LIST_BY_PEAK_TIME )
 		{
-			DumpSorted( _T("-- Profile scopes sorted by peak --"), GetTotalTimeSampled(), PeakCompare, maxLen);
-			Msg( _T("\n") );
+			DumpSorted( "-- Profile scopes sorted by peak --", GetTotalTimeSampled(), PeakCompare, maxLen);
+			Msg( "\n" );
 		}
 		if ( type & VPRT_LIST_BY_PEAK_OVER_AVERAGE )
 		{
-			DumpSorted( _T("-- Profile scopes sorted by peak over average (including children) --"), GetTotalTimeSampled(), PeakOverAverageCompare, maxLen );
-			Msg( _T("\n") );
+			DumpSorted( "-- Profile scopes sorted by peak over average (including children) --", GetTotalTimeSampled(), PeakOverAverageCompare, maxLen );
+			Msg( "\n" );
 		}
 		
 		// TODO: Functions by time less children
@@ -932,14 +579,14 @@ void CVProfile::OutputReport( int type, const tchar *pszStartNode, int budgetGro
 		g_TimeSumsMap.clear();
 		g_TimeSums.clear();
 	}
-	Msg( _T("******** END VPROF REPORT ********\n"));
+	Msg( "******** END VPROF REPORT ********\n");
 
 }
 
 //=============================================================================
 
 CVProfile::CVProfile() 
- :	m_Root( _T("Root"), 0, nullptr, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, 0 ),
+ :	m_Root( "Root", 0, nullptr, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, 0 ),
 	m_pCurNode( &m_Root ), 
  	m_nFrames( 0 ),
  	m_enabled( 0 ),  // don't change this. if m_enabled is anything but zero coming out of this constructor, vprof will break.
@@ -947,15 +594,12 @@ CVProfile::CVProfile()
 	m_fAtRoot( true )
 {
 
-#ifdef VPROF_VTUNE_GROUP
 	m_GroupIDStackDepth = 1;
 	m_GroupIDStack[0] = 0; // VPROF_BUDGETGROUP_OTHER_UNACCOUNTED
-#endif
 
 	m_TargetThreadId = ThreadGetCurrentId();
 	
 	// Go ahead and allocate 32 slots for budget group names
-	MEM_ALLOC_CREDIT();
 	m_pBudgetGroups = new CVProfile::CBudgetGroup[32];
 	m_nBudgetGroupNames = 0;
 	m_nBudgetGroupNamesAllocated = 32;
@@ -998,19 +642,6 @@ CVProfile::CVProfile()
 	m_bPMEInit = false;
 	m_bPMEEnabled = false;
 
-#ifdef VPROF_VXCONSOLE_EXISTS
-	m_bTraceCompleteEvent = false;
-	m_iSuccessiveTraceIndex = 0;
-	m_ReportMode = VXCONSOLE_REPORT_TIME;
-	m_pReportScale[VXCONSOLE_REPORT_TIME] = 1000.0f;
-	m_pReportScale[VXCONSOLE_REPORT_L2CACHE_MISSES] = 1.0f;
-	m_pReportScale[VXCONSOLE_REPORT_LOAD_HIT_STORE] = 0.1f;
-	m_nFrameCount = 0;
-	m_nFramesRemaining = 1;
-	m_WorstCycles = 0;
-	m_WorstTraceFilename[ 0 ] = 0;
-	m_UpdateMode = 0;
-#endif
 }
 
 
@@ -1067,8 +698,8 @@ void CVProfile::Term()
 }
 
 
-#define COLORMIN 160
-#define COLORMAX 255
+inline constexpr int COLORMIN = 160;
+inline constexpr int COLORMAX = 255;
 
 static int g_ColorLookup[4] = 
 {
@@ -1078,7 +709,7 @@ static int g_ColorLookup[4] =
 	COLORMIN+((COLORMAX-COLORMIN)*2)/3, 
 };
 
-#define GET_BIT( val, bitnum ) ( ( val >> bitnum ) & 0x1 )
+template <typename T1, typename T2> [[gnu::always_inline]] inline auto GET_BIT( T1 val, T2 bitnum ) { return ( ( val >> bitnum ) & 0x1 ); }
 
 void CVProfile::GetBudgetGroupColor( int budgetGroupID, int &r, int &g, int &b, int &a )
 {
@@ -1100,7 +731,7 @@ int CVProfile::FindBudgetGroupName( const tchar *pBudgetGroupName )
 	int i;
 	for( i = 0; i < m_nBudgetGroupNames; i++ )
 	{
-		if( _tcsicmp( pBudgetGroupName, m_pBudgetGroups[i].m_pName ) == 0 )
+		if( V_tier0_stricmp( pBudgetGroupName, m_pBudgetGroups[i].m_pName ) == 0 )
 		{
 			return i;
 		}
@@ -1110,7 +741,6 @@ int CVProfile::FindBudgetGroupName( const tchar *pBudgetGroupName )
 
 int CVProfile::AddBudgetGroupName( const tchar *pBudgetGroupName, int budgetFlags )
 {
-	MEM_ALLOC_CREDIT();
 	tchar *pNewString = new tchar[ _tcslen( pBudgetGroupName ) + 1 ];
 	_tcscpy( pNewString, pBudgetGroupName );
 	if( m_nBudgetGroupNames + 1 > m_nBudgetGroupNamesAllocated )
@@ -1134,10 +764,6 @@ int CVProfile::AddBudgetGroupName( const tchar *pBudgetGroupName, int budgetFlag
 		(*m_pNumBudgetGroupsChangedCallBack)();
 	}
 
-#if defined( VPROF_VXCONSOLE_EXISTS )
-	// re-start with all the known budgets
-	VXProfileStart();
-#endif
 	return m_nBudgetGroupNames - 1;
 }
 
@@ -1184,7 +810,7 @@ void CVProfile::HideBudgetGroup( int budgetGroupID, bool bHide )
 
 int *CVProfile::FindOrCreateCounter( const tchar *pName, CounterGroup_t eCounterGroup )
 {	
-	Assert( m_NumCounters+1 < MAXCOUNTERS );
+	contract_assert( m_NumCounters+1 < MAXCOUNTERS );
 	if ( m_NumCounters + 1 >= MAXCOUNTERS || !InTargetThread() )
 	{
 		static int dummy;
@@ -1193,7 +819,7 @@ int *CVProfile::FindOrCreateCounter( const tchar *pName, CounterGroup_t eCounter
 	int i;
 	for( i = 0; i < m_NumCounters; i++ )
 	{
-		if( _tcsicmp( m_CounterNames[i], pName ) == 0 )
+		if( V_tier0_stricmp( m_CounterNames[i], pName ) == 0 )
 		{
 			// found it!
 			return &m_Counters[i];
@@ -1201,7 +827,6 @@ int *CVProfile::FindOrCreateCounter( const tchar *pName, CounterGroup_t eCounter
 	}
 
 	// NOTE: These get freed in ~CVProfile.
-	MEM_ALLOC_CREDIT();
 	tchar *pNewName = new tchar[_tcslen( pName ) + 1];
 	_tcscpy( pNewName, pName );
 	m_Counters[m_NumCounters] = 0;
@@ -1227,441 +852,25 @@ int CVProfile::GetNumCounters() const
 
 const tchar *CVProfile::GetCounterName( int index ) const
 {
-	Assert( index >= 0 && index < m_NumCounters );
+	contract_assert( index >= 0 && index < m_NumCounters );
 	return m_CounterNames[index];
 }
 
 int CVProfile::GetCounterValue( int index ) const
 {
-	Assert( index >= 0 && index < m_NumCounters );
+	contract_assert( index >= 0 && index < m_NumCounters );
 	return m_Counters[index];
 }
 
 const tchar *CVProfile::GetCounterNameAndValue( int index, int &val ) const
 {
-	Assert( index >= 0 && index < m_NumCounters );
+	contract_assert( index >= 0 && index < m_NumCounters );
 	val = m_Counters[index];
 	return m_CounterNames[index];
 }
 
 CounterGroup_t CVProfile::GetCounterGroup( int index ) const
 {
-	Assert( index >= 0 && index < m_NumCounters );
+	contract_assert( index >= 0 && index < m_NumCounters );
 	return (CounterGroup_t)m_CounterGroups[index];
 }
-
-#ifdef DBGFLAG_VALIDATE
-
-
-const int k_cSTLMapAllocOffset = 4;
-#define GET_INTERNAL_MAP_ALLOC_PTR( pMap ) \
-	( * ( (void **) ( ( ( byte * ) ( pMap ) ) + k_cSTLMapAllocOffset ) ) )
-//-----------------------------------------------------------------------------
-// Purpose: Ensure that all of our internal structures are consistent, and
-//			account for all memory that we've allocated.
-// Input:	validator -		Our global validator object
-//			pchName -		Our name (typically a member var in our container)
-//-----------------------------------------------------------------------------
-void CVProfile::Validate( CValidator &validator, tchar *pchName )
-{
-	validator.Push( _T("CVProfile"), this, pchName );
-
-	m_Root.Validate( validator, _T("m_Root") );
-
-	for ( int iBudgetGroup=0; iBudgetGroup < m_nBudgetGroupNames; iBudgetGroup++ )
-		validator.ClaimMemory( m_pBudgetGroups[iBudgetGroup].m_pName );
-
-	validator.ClaimMemory( m_pBudgetGroups );
-
-	// The std template map class allocates memory internally, but offer no way to get
-	// access to their pointer.  Since this is for debug purposes only and the
-	// std template classes don't change, just look at the well-known offset.  This
-	// is arguably sick and wrong, kind of like marrying a squirrel.
-	validator.ClaimMemory( GET_INTERNAL_MAP_ALLOC_PTR( &g_TimesLessChildren ) );
-	validator.ClaimMemory( GET_INTERNAL_MAP_ALLOC_PTR( &g_TimeSumsMap ) );
-
-	validator.Pop( );
-}
-#endif // DBGFLAG_VALIDATE
-
-#endif // VPROF_ENABLED
-
-
-#ifdef RAD_TELEMETRY_ENABLED
-
-extern "C" char *
-__realpath_chk (const char *buf, char *resolved, size_t resolvedlen)
-{
-    return realpath (buf, resolved);
-}
-
-TelemetryData g_Telemetry;
-static HTELEMETRY g_tmContext;
-static TmU8 *g_pTmMemoryArena = nullptr;
-static bool g_TelemetryLoaded = false;
-
-static unsigned int g_TelemetryFrameCount = 0;
-static bool g_fTelemetryLevelChanged = false;
-
-struct ThreadNameInfo_t
-{
-	TSLNodeBase_t base;
-	ThreadId_t ThreadID;
-	char szName[ 64 ];
-};
-static CTSSimpleList< ThreadNameInfo_t > g_ThreadNamesList;
-
-static bool g_bThreadNameArrayChanged = false;
-static int g_ThreadNameArrayCount = 0;
-static ThreadNameInfo_t g_ThreadNameArray[32];
-
-void TelemetryThreadSetDebugName( ThreadId_t id, const char *pszName )
-{
-	ThreadNameInfo_t *pThreadNameInfo = new ThreadNameInfo_t;
-
-	if( id == ( uint32 )-1 )
-	{
-		id = ThreadGetCurrentId();
-	}
-
-	pThreadNameInfo->ThreadID = id;
-	strncpy( pThreadNameInfo->szName, pszName, ARRAYSIZE( pThreadNameInfo->szName ) );
-	pThreadNameInfo->szName[ ARRAYSIZE( pThreadNameInfo->szName ) - 1 ] = 0;
-	g_ThreadNamesList.Push( pThreadNameInfo );
-
-	g_bThreadNameArrayChanged = true;
-}
-
-const int TELEMETRY_ARENA_SIZE = 32 * 1024 * 1024; // How much memory we want Telemetry to use.
-
-static bool TelemetryInitialize()
-{
-	if( g_tmContext )
-	{
-		TmConnectionStatus status = TM_GET_CONNECTION_STATUS( g_tmContext );
-
-		if( status == TMCS_CONNECTED || status == TMCS_CONNECTING )
-			return true;
-	}
-
-	TmErrorCode retVal;
-
-	if( !g_TelemetryLoaded )
-	{
-		// Pass in 0 if you want to use the release mode DLL or 1 if you want to
-		// use the checked DLL.  The checked DLL is compiled with optimizations but
-		// does extra run time checks and reporting.
-		int nLoadTelemetry = TM_LOAD_TELEMETRY( 0 );
-
-		retVal = TM_STARTUP();
-		if ( retVal != TM_OK )
-		{
-			Warning( "TelemetryInit() failed: tmStartup() returned %d, tmLoadTelemetry() returned %d.\n", retVal, nLoadTelemetry );
-			return false;
-		}
-
-		if( !g_pTmMemoryArena )
-		{
-			g_pTmMemoryArena = new TmU8[ TELEMETRY_ARENA_SIZE ];
-		}
-
-		retVal = TM_INITIALIZE_CONTEXT( &g_tmContext, g_pTmMemoryArena, TELEMETRY_ARENA_SIZE );
-		if ( retVal != TM_OK )
-		{
-			delete [] g_pTmMemoryArena;
-			g_pTmMemoryArena = nullptr;
-
-			Warning( "TelemetryInit() failed: tmInitializeContext() returned %d.\n", retVal );
-			return false;
-		}
-
-		g_TelemetryLoaded = true;
-	}
-
-	char *pGameName = "csgo";
-
-
-	const char *pServerAddress = g_Telemetry.ServerAddress[0] ? g_Telemetry.ServerAddress : "localhost";
-	TmConnectionType tmType = TMCT_TCP; // !V_tier0_stricmp( pServerAddress, "FILE" ) ? TMCT_FILE : TMCT_TCP;
-
-	Msg( "TELEMETRY: Calling tmOpen( %s )...\n", pServerAddress );
-
-	char szBuildInfo[ 2048 ];
-	_snprintf( szBuildInfo, ARRAYSIZE( szBuildInfo ), "%s: %s", __DATE__ __TIME__, Plat_GetCommandLine() );
-	szBuildInfo[ ARRAYSIZE( szBuildInfo ) - 1 ] = 0;
-
-
-	TmU32 TmOpenFlags = TMOF_DEFAULT | TMOF_MINIMAL_CONTEXT_SWITCHES;
-	/* TmOpenFlags |= TMOF_DISABLE_CONTEXT_SWITCHES | TMOF_INIT_NETWORKING*/
-
-	retVal = TM_OPEN( g_tmContext, pGameName, szBuildInfo, pServerAddress, tmType,
-		TELEMETRY_DEFAULT_PORT, TmOpenFlags, 1000 );
-	if ( retVal != TM_OK )
-	{
-		Warning( "TelemetryInitialize() failed: tmOpen returned %d.\n", retVal );
-		return false;
-	}
-
-	Msg( "Telemetry initialized at level %u.\n", g_Telemetry.Level );
-	printf( "Telemetry initialized at level %u.\n", g_Telemetry.Level );
-
-	if( g_bThreadNameArrayChanged )
-	{
-		// Go through and add any new thread names we got in our thread safe list to our thread names array.
-		for( ThreadNameInfo_t *pThreadNameInfo = g_ThreadNamesList.Pop();
-			pThreadNameInfo;
-			pThreadNameInfo = g_ThreadNamesList.Pop() )
-		{
-			if( g_ThreadNameArrayCount < ARRAYSIZE( g_ThreadNameArray ) )
-			{
-				g_ThreadNameArray[ g_ThreadNameArrayCount ] = *pThreadNameInfo;
-				g_ThreadNameArrayCount++;
-			}
-
-			delete pThreadNameInfo;
-		}
-
-		for( int i = 0; i < g_ThreadNameArrayCount; i++ )
-		{
-			tmThreadName( g_tmContext, g_ThreadNameArray[i].ThreadID, g_ThreadNameArray[i].szName );
-		}
-
-		g_bThreadNameArrayChanged = false;
-	}
-
-	// Default Zone Filter value to .5ms if they haven't set it already.
-	if( !g_Telemetry.ZoneFilterVal )
-		g_Telemetry.ZoneFilterVal = 500;
-
-	// Init plot data
-	for( int i = 0; i < TELEMETRY_ZONE_PLOT_SLOT_MAX; ++i )
-	{
-		g_Telemetry.m_ZonePlot[i].m_Name			= nullptr;
-		g_Telemetry.m_ZonePlot[i].m_CurrFrameTime	= 0;
-	}
-
-	return true;
-}
-
-
-static void TelemetryShutdown( bool InDtor = false )
-{
-	if( g_tmContext )
-	{
-		// Msg can't be called here as tier0 may have already been shut down...
-		if( !InDtor )
-		{
-			Msg( "Shutting down telemetry.\n" );
-		}
-
-		TmConnectionStatus status = TM_GET_CONNECTION_STATUS( g_tmContext );
-		if( status == TMCS_CONNECTED || status == TMCS_CONNECTING )
-			TM_CLOSE( g_tmContext );
-
-
-		//discontinue new usage of the context before shutting it down (multithreading)
-		memset( g_Telemetry.tmContext, 0, sizeof( g_Telemetry.tmContext ) );
-		HTELEMETRY hShutdown = g_tmContext;
-		g_tmContext = nullptr;
-
-		TM_SHUTDOWN_CONTEXT( hShutdown ); 
-		delete [] g_pTmMemoryArena;
-		g_pTmMemoryArena = nullptr;
-		TM_SHUTDOWN();
-		g_TelemetryLoaded = false;
-	}
-}
-
-// Helper class to initialize Telemetry.
-class CTelemetryRegister
-{
-public:
-	CTelemetryRegister() 	{}
-	~CTelemetryRegister() 	{ TelemetryShutdown( true ); }
-} g_TelemetryRegister;
-
-PLATFORM_INTERFACE void TelemetrySetLevel( unsigned int Level )
-{
-	DevMsg( "TelemetrySetLevel changed from 0x%x to 0x%x (ZoneFilterVal:%d)\n", g_Telemetry.Level, Level, g_Telemetry.ZoneFilterVal );
-
-	if( Level != g_Telemetry.Level )
-	{
-		g_Telemetry.Level = Level;
-		g_TelemetryFrameCount = g_Telemetry.FrameCount;
-		g_fTelemetryLevelChanged = true;
-	}
-}
-
-
-static void TelemetryPlots()
-{
-	if( g_Telemetry.playbacktick )
-	{
-		TM_PLOT_U32( TELEMETRY_LEVEL1, TMPT_INTEGER, 0, g_Telemetry.playbacktick, "game/PlaybackTick" );
-		g_Telemetry.playbacktick = 0;
-	}
-
-	if( g_Telemetry.dotatime )
-	{
-		TM_PLOT_F32( TELEMETRY_LEVEL1, TMPT_NONE, 0, g_Telemetry.dotatime, "game/DotaTime" );
-		g_Telemetry.dotatime = 0.0f;
-	}
-
-	for( int i = 0; i < g_VProfCurrentProfile.GetNumCounters(); i++ )
-	{
-		if( g_VProfCurrentProfile.GetCounterGroup( i ) == COUNTER_GROUP_TELEMETRY )
-		{
-			int val;
-			const char *name = g_VProfCurrentProfile.GetCounterNameAndValue( i, val );
-
-			TM_PLOT_I32( TELEMETRY_LEVEL1, TMPT_INTEGER, 0, val, name );
-		}
-	}
-
-	g_VProfCurrentProfile.ResetCounters( COUNTER_GROUP_TELEMETRY );
-
-	// Send plot value collected using TM_ZONE_PLOT macro
-	// Data sent as a percentage of a 16ms frame (so that Telemetry display the data nicely in the Timeline view)
-	for( int i = 0; i < TELEMETRY_ZONE_PLOT_SLOT_MAX; ++i )
-	{
-		TelemetryZonePlotData* pData = &g_Telemetry.m_ZonePlot[i];
-		if (pData->m_Name)
-		{
-			TM_PLOT_F32(
-				TELEMETRY_LEVEL1,
-				TMPT_TIME_MS, 
-				TMPF_NONE, 
-				(pData->m_CurrFrameTime * g_Telemetry.flRDTSCToMilliSeconds),
-				"(frametimes)%s(ms)", pData->m_Name );
-		}
-
-		pData->m_Name			= nullptr;
-		pData->m_CurrFrameTime	= 0;
-	}
-
-	TM_PLOT_F32(
-		TELEMETRY_LEVEL1,
-		TMPT_TIME_MS, 
-		TMPF_NONE,
-		16.666f,
-		"(frametimes)%s(ms)", "Ref 16ms" );
-}
-
-PLATFORM_INTERFACE void TelemetryTick()
-{
-	if( !g_Telemetry.Level && g_Telemetry.DemoTickStart && ( (uint32)g_Telemetry.playbacktick > g_Telemetry.DemoTickStart ) )
-	{
-		TelemetrySetLevel( 2 );
-		g_Telemetry.DemoTickStart = 0;
-	}
-	if( g_Telemetry.Level && g_Telemetry.DemoTickEnd && ( (uint32)g_Telemetry.playbacktick > g_Telemetry.DemoTickEnd ) )
-	{
-		TelemetrySetLevel( 0 );
-		g_Telemetry.DemoTickEnd = ( uint32 )-1;
-	}
-
-	if ( ( g_tmContext ) && ( g_Telemetry.Level > 0 ) )
-	{
-		TelemetryPlots();
-	}
-
-	static double s_d0 = Plat_FloatTime();
-	static TmU64 s_t0 = TM_FAST_TIME();
-
-	// People can NIL out contexts in the TelemetryData structure to control
-	//	the level and what sections to log. We always need to do ticks though,
-	//	so use the master context for this.
-	if( g_tmContext )
-	{
-		TM_TICK( g_tmContext );
-	}
-
-	if( g_tmContext )
-	{
-		static uint32 s_ZoneFilterValLast = 0;
-
-		if( s_ZoneFilterValLast != g_Telemetry.ZoneFilterVal )
-		{
-			g_fTelemetryLevelChanged = true;
-			s_ZoneFilterValLast = g_Telemetry.ZoneFilterVal;
-		}
-
-		TmU64 s_t1 = TM_FAST_TIME();
-		double s_d1 = Plat_FloatTime();
-
-		g_Telemetry.flRDTSCToMilliSeconds = 1000.0f / ( ( s_t1 - s_t0 ) / ( s_d1 - s_d0 ) );
-		// Msg( "g_Telemetry.flRDTSCToMilliSeconds: %f time:%f\n", g_Telemetry.flRDTSCToMilliSeconds, ( s_t1 - s_t0 ) * g_Telemetry.flRDTSCToMilliSeconds );
-
-		s_d0 = s_d1;
-		s_t0 = s_t1;
-
-		if( g_TelemetryFrameCount && !TM_IS_PAUSED( g_tmContext ) )
-		{
-			g_TelemetryFrameCount--;
-			if( !g_TelemetryFrameCount )
-			{
-				TelemetrySetLevel( 0 );
-			}
-		}
-	}
-
-	if( g_fTelemetryLevelChanged )
-	{
-		g_fTelemetryLevelChanged = false;
-		memset( g_Telemetry.tmContext, 0, sizeof( g_Telemetry.tmContext ) );
-
-		// Mask of all zeros just enables level 0.
-		if( g_Telemetry.Level == 0x80000000 )
-			g_Telemetry.Level = 1;
-
-		unsigned int Level = g_Telemetry.Level;
-		bool IsMask = ( Level & 0x80000000 ) ? true : false;
-
-		Level &= ~0x80000000;
-
-		if( Level == 0 )
-		{
-			// Calling shutdown here invalidates all the telemetry context handles, and background
-			//  threads in the middle of Tm__Zone'd calls will crash. So pause things for now.
-			TelemetryShutdown();
-		}
-		else
-		{
-			if( !TelemetryInitialize() )
-			{
-				g_Telemetry.Level = 0;
-			}
-			else
-			{
-				TM_PAUSE( g_tmContext, 0 );
-
-				if( IsMask )
-				{
-					for( unsigned int i = 0; i < ARRAYSIZE( g_Telemetry.tmContext ); i++)
-					{
-						if( (1 << i) & Level)
-						{
-							g_Telemetry.tmContext[ i ] = g_tmContext;
-						}
-					}
-				}
-				else
-				{
-					Level = std::min( Level, ARRAYSIZE( g_Telemetry.tmContext ) );
-					for( unsigned int i = 0; i < Level; i++ )
-					{
-						g_Telemetry.tmContext[i] = g_tmContext;
-					}
-				}
-			}
-		}
-
-		//  	TM_SET_TIMELINE_SECTION_NAME( g_tmContext, "Level:0x%x", g_Telemetry.Level );
-
-		// To disable various telemetry features, use the tmEnable() function as so:
-		//	TM_ENABLE( g_tmContext, TMO_SUPPORT_PLOT, 0 );
-	}
-}
-
-
-#endif // RAD_TELEMETRY_ENABLED

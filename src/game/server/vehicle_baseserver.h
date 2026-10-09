@@ -1,14 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef VEHICLE_BASESERVER_H
-#define VEHICLE_BASESERVER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "vehicle_sounds.h"
 #include "entityblocker.h"
+#include "iservervehicle.h"
+#include "igamemovement.h"
 
 class CSoundPatch;
 
@@ -149,8 +146,8 @@ public:
 	virtual bool			PassengerShouldReceiveDamage( CTakeDamageInfo &info );
 
 	virtual bool			IsVehicleUpright( void ) { return true; }
-	virtual bool			IsPassengerEntering( void ) { Assert( 0 ); return false; }
-	virtual bool			IsPassengerExiting( void ) { Assert( 0 ); return false; }
+	virtual bool			IsPassengerEntering( void ) { contract_assert( 0 ); return false; }
+	virtual bool			IsPassengerExiting( void ) { contract_assert( 0 ); return false; }
 	
 	virtual void			HandlePassengerEntry( CBaseCombatCharacter *pPassenger, bool bAllowEntryOutsideZone = false );
 	virtual bool			HandlePassengerExit( CBaseCombatCharacter *pPassenger );
@@ -323,5 +320,3 @@ private:
 	bool	GetLocalAttachmentAtTime( int nQuerySequence, int nAttachmentIndex, float flCyclePoint, Vector *vecOriginOut, QAngle *vecAnglesOut );
 	bool	GetLocalAttachmentAtTime( const char *lpszAnimName, int nAttachmentIndex, float flCyclePoint, Vector *vecOriginOut, QAngle *vecAnglesOut );
 };
-
-#endif // VEHICLE_BASESERVER_H

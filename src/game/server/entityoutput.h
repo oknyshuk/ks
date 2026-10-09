@@ -1,21 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Declares basic entity communications classes, for input/output of data
 //			between entities
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef ENTITYOUTPUT_H
-#define ENTITYOUTPUT_H
-
-
-
+import std;
+import ks.math;
+#include "string_t.h"
+#include "datamap.h"
+#include "variant_t.h"
+#include "entitylist.h"
 
 class CBaseEntity;
 
 
-#define EVENT_FIRE_ALWAYS	-1
+inline constexpr auto EVENT_FIRE_ALWAYS = -1;
 
 
 //-----------------------------------------------------------------------------
@@ -42,8 +42,8 @@ public:
 	CEventAction *m_pNext; 
 
 	// allocates memory from engine.MPool/g_EntityListPool
-	static void *operator new( size_t stAllocateBlock );
-	static void *operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
+	static void *operator new( std::size_t stAllocateBlock );
+	static void *operator new( std::size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
 	static void operator delete( void *pMem );
 	static void operator delete( void *pMem , int nBlockUse, const char *pFileName, int nLine ) { operator delete(pMem); }
 
@@ -192,5 +192,3 @@ typedef CEntityOutputTemplate<EHANDLE,FIELD_EHANDLE>		COutputEHANDLE;
 typedef CEntityOutputTemplate<Vector,FIELD_VECTOR>			COutputVector;
 typedef CEntityOutputTemplate<Vector,FIELD_POSITION_VECTOR>	COutputPositionVector;
 typedef CEntityOutputTemplate<color32,FIELD_COLOR32>		COutputColor32;
-
-#endif // ENTITYOUTPUT_H

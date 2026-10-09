@@ -1,13 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Network data for screen shake and screen fade.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef SHAKE_H
-#define SHAKE_H
-
+import std;
+import ks.math;
 
 //
 // Commands for the screen shake effect.
@@ -60,13 +58,13 @@ struct ScreenTilt_t
 // Fade in/out
 extern int gmsgFade;
 
-#define FFADE_IN			0x0001		// Just here so we don't pass 0 into the function
-#define FFADE_OUT			0x0002		// Fade out (not in)
-#define FFADE_MODULATE		0x0004		// Modulate (don't blend)
-#define FFADE_STAYOUT		0x0008		// ignores the duration, stays faded out until new ScreenFade message received
-#define FFADE_PURGE			0x0010		// Purges all other fades, replacing them with this one
+inline constexpr auto FFADE_IN = 0x0001; // Just here so we don't pass 0 into the function
+inline constexpr auto FFADE_OUT = 0x0002; // Fade out (not in)
+inline constexpr auto FFADE_MODULATE = 0x0004; // Modulate (don't blend)
+inline constexpr auto FFADE_STAYOUT = 0x0008; // ignores the duration, stays faded out until new ScreenFade message received
+inline constexpr auto FFADE_PURGE = 0x0010; // Purges all other fades, replacing them with this one
 
-#define SCREENFADE_FRACBITS		9		// which leaves 16-this for the integer part
+inline constexpr auto SCREENFADE_FRACBITS = 9; // which leaves 16-this for the integer part
 // This structure is sent over the net to describe a screen fade event
 struct ScreenFade_t
 {
@@ -84,5 +82,3 @@ inline ScreenShake_t::ScreenShake_t( ShakeCommand_t _command, float _amplitude, 
 	command(_command), amplitude(_amplitude), frequency(_frequency),
 		duration(_duration), direction(_direction)
 {}
-
-#endif // SHAKE_H

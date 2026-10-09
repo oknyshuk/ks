@@ -1,23 +1,11 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#ifndef CMATERIALDICT_H
-#define CMATERIALDICT_H
+import ks.tier1;
+import std;
 
-#include "tier1/intern_pool.h"
-#include <map>
-#include <set>
-#include <string>
-#include <string_view>
-#include <vector>
-
-#ifndef MATSYS_INTERNAL
-#error "This file is private to the implementation of IMaterialSystem/IMaterialSystemInternal"
-#endif
-
+#include "imaterialinternal.h"
 
 //-----------------------------------------------------------------------------
 
@@ -148,7 +136,7 @@ inline IMaterial* CMaterialDict::GetMaterial( MaterialHandle_t idx ) const
 
 inline IMaterialInternal* CMaterialDict::GetMaterialInternal( MaterialHandle_t idx ) const
 {
-	Assert( (m_MaterialSlots[idx].m_pMaterial == nullptr) || m_MaterialSlots[idx].m_pMaterial->IsRealTimeVersion() );	
+	contract_assert( (m_MaterialSlots[idx].m_pMaterial == nullptr) || m_MaterialSlots[idx].m_pMaterial->IsRealTimeVersion() );	
 	return m_MaterialSlots[idx].m_pMaterial;
 }
 
@@ -180,5 +168,3 @@ inline bool CMaterialDict::NoteMissing( const char *pszName )
 }
 
 //-----------------------------------------------------------------------------
-
-#endif // CMATERIALDICT_H

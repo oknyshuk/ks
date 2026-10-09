@@ -1,16 +1,34 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Deals with singleton  
-//
-// $Revision: $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Deals with singleton
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+#endif
 #include "igamesystem.h"
 #include "datacache/imdlcache.h"
-#include "utlvector.h"
-#include "vprof.h"
 
 // enable this #define (here or in your vpc) to have 
 // each GameSystem accounted for individually in the vprof.
@@ -245,9 +263,9 @@ void IGameSystem::LevelInitPreEntityAllSystems( char const* pMapName )
 		delete[] s_pMapName;
 	}
 
-	int len = Q_strlen(pMapName) + 1;
+	int len = V_strlen(pMapName) + 1;
 	s_pMapName = new char [ len ];
-	Q_strncpy( s_pMapName, pMapName, len );
+	V_strncpy( s_pMapName, pMapName, len );
 	
 	InvokeMethodTickProgress( &IGameSystem::LevelInitPreEntity, "LevelInitPreEntity" );
 }
@@ -285,7 +303,6 @@ void IGameSystem::OnRestoreAllSystems()
 
 void IGameSystem::SafeRemoveIfDesiredAllSystems()
 {
-    SNPROF("SafeRemoveIfDesiredAllSystems");
 	InvokeMethodReverseOrder( &IGameSystem::SafeRemoveIfDesired );
 }
 
@@ -293,7 +310,7 @@ void IGameSystem::SafeRemoveIfDesiredAllSystems()
 
 void IGameSystem::PreRenderAllSystems()
 {
-	VPROF("IGameSystem::PreRenderAllSystems");
+	CVProfScope _( "IGameSystem::PreRenderAllSystems", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	InvokePerFrameMethod( &IGameSystemPerFrame::PreRender );
 }
 
@@ -320,13 +337,11 @@ void IGameSystem::PostRenderAllSystems()
 
 void IGameSystem::FrameUpdatePreEntityThinkAllSystems()
 {
-	SNPROF("FrameUpdatePreEntityThinkAllSystems");
 	InvokePerFrameMethod( &IGameSystemPerFrame::FrameUpdatePreEntityThink );
 }
 
 void IGameSystem::FrameUpdatePostEntityThinkAllSystems()
 {
-	SNPROF("FrameUpdatePostEntityThinkAllSystems");
 	SafeRemoveIfDesiredAllSystems();
 
 	InvokePerFrameMethod( &IGameSystemPerFrame::FrameUpdatePostEntityThink );
@@ -334,7 +349,6 @@ void IGameSystem::FrameUpdatePostEntityThinkAllSystems()
 
 void IGameSystem::PreClientUpdateAllSystems() 
 {
-	SNPROF("PreClientUpdateAllSystems");
 	InvokePerFrameMethod( &IGameSystemPerFrame::PreClientUpdate );
 }
 
@@ -346,7 +360,7 @@ void IGameSystem::PreClientUpdateAllSystems()
 //-----------------------------------------------------------------------------
 void InvokeMethod( GameSystemFunc_t f, char const *timed /*=0*/ )
 {
-	NOTE_UNUSED( timed );
+	(void)timed;
 
 	MDLCACHE_COARSE_LOCK();
 	MDLCACHE_CRITICAL_SECTION();
@@ -365,7 +379,7 @@ void InvokeMethod( GameSystemFunc_t f, char const *timed /*=0*/ )
 //-----------------------------------------------------------------------------
 void InvokeMethodTickProgress( GameSystemFunc_t f, char const *timed /*=0*/ )
 {
-	NOTE_UNUSED( timed );
+	(void)timed;
 
 	int i;
 	int c = std::ssize( s_GameSystems );
@@ -386,21 +400,13 @@ void InvokeMethodTickProgress( GameSystemFunc_t f, char const *timed /*=0*/ )
 //-----------------------------------------------------------------------------
 void InvokePerFrameMethod( PerFrameGameSystemFunc_t f, char const *timed /*=0*/ )
 {
-	NOTE_UNUSED( timed );
+	(void)timed;
 
 	int i;
 	int c = std::ssize( s_GameSystemsPerFrame );
 	for ( i = 0; i < c ; ++i )
 	{
 		IGameSystemPerFrame *sys  = s_GameSystemsPerFrame[i];
-#if (VPROF_LEVEL > 0) && defined(VPROF_ACCOUNT_GAMESYSTEMS)   // make sure each game system is individually attributed
-		// because vprof nodes must really be constructed with a pointer to a static
-		// string, we can't create a temporary char[] here and sprintf a distinctive
-		// V_snprintf( buf, 63, "gamesys_preframe_%s", sys->Name() ). We'll have to
-		// settle for just the system name, and distinguish between pre and post frame
-		// in hierarchy.
-		VPROF( sys->Name() );
-#endif
 		(sys->*f)();
 	}
 }
@@ -416,16 +422,6 @@ void InvokeMethodReverseOrder( GameSystemFunc_t f )
 	for ( i = c; --i >= 0; )
 	{
 		IGameSystem *sys = s_GameSystems[i];
-#if (VPROF_LEVEL > 0) && defined(VPROF_ACCOUNT_GAMESYSTEMS)   // make sure each game system is individually attributed
-		// because vprof nodes must really be constructed with a pointer to a static
-		// string, we can't create a temporary char[] here and sprintf a distinctive
-		// V_snprintf( buf, 63, "gamesys_preframe_%s", sys->Name() ). We'll have to
-		// settle for just the system name, and distinguish between pre and post frame
-		// in hierarchy.
-		VPROF( sys->Name() );
-#endif
 		(sys->*f)();
 	}
 }
-
-

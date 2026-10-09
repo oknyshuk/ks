@@ -9,7 +9,43 @@
 //
 //=================================================================================================
 
-#include "cbase.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/JobSystemWithBarrier.h>
+#include <Jolt/Core/FixedSizeFreeList.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/PhysicsScene.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollidePointResult.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Ragdoll/Ragdoll.h>
+#include <Jolt/Physics/Collision/CollisionDispatch.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
+#include <Jolt/Physics/Constraints/ConeConstraint.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
+#include <Jolt/Physics/Constraints/FixedConstraint.h>
+#include <Jolt/Physics/Constraints/SixDOFConstraint.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
+import std;
+import ks.tier1;
+#include "bspfile.h"
+#include "cmodel.h"
+#include "vcollide_parse.h"
+#include "vphysics/collision_set.h"
+#include "vjolt_interface.h"
+#include "vjolt_util.h"
 
 #include "coordsize.h" // DIST_EPSILON
 
@@ -218,7 +254,7 @@ public:
 		const uint32 contents = Contents( inResult.mSubShapeID2 );
 
 		// Ensure that the contents filter was used
-		VJoltAssert( PassesMask( contents ) );
+		contract_assert( PassesMask( contents ) );
 
 		// Test if this collision is closer than the previous one
 		const float theirEarlyOut = inResult.GetEarlyOutFraction();
@@ -260,7 +296,7 @@ public:
 	{
 		const uint32 contents = Contents( inResult.mSubShapeID2 );
 
-		VJoltAssert( PassesMask( contents ) );
+		contract_assert( PassesMask( contents ) );
 
 		if ( inResult.GetEarlyOutFraction() < GetEarlyOutFraction() )
 		{
@@ -338,7 +374,7 @@ static void CastRay( const Ray_t &ray, uint32 contentsMask, IConvexInfo *pConvex
 
 	if ( !collector.m_DidHit )
 	{
-		VJoltAssert( collector.m_Fraction == 1.0f );
+		contract_assert( collector.m_Fraction == 1.0f );
 	}
 
 	// Populate pTrace's members
@@ -697,7 +733,7 @@ static void CollideShapeVsShape( const Vector &start, const Vector &end, const C
 
 static void TraceBase( const Ray_t &ray, uint32 contentsMask, IConvexInfo *pConvexInfo, const CPhysCollide *pCollide, const Vector &collideOrigin, const QAngle &collideAngles, trace_t *pTrace )
 {
-	VJoltAssert( pCollide && pTrace );
+	contract_assert( pCollide && pTrace );
 
 	// Default out our trace
 	ClearTrace( pTrace );

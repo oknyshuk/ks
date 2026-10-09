@@ -1,13 +1,10 @@
-//========== Copyright (c) 2007, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2007 Valve Corporation
 
-#include "pch_tier0.h"
-#include "tier0/platwindow.h"
+import ks.core;
 
-
+// First include standard libraries
+import std;
 
 
 //-----------------------------------------------------------------------------
@@ -80,5 +77,3 @@ void Plat_WindowToScreenCoords( PlatWindow_t hWnd, int &x, int &y )
 void Plat_ScreenToWindowCoords( PlatWindow_t hWnd, int &x, int &y )
 {
 }
-
-

@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // cs_simple_hostage.h
 // Simple CS1.6 level hostage
 // Author: Michael S. Booth, July 2004
-
-#ifndef _CS_SIMPLE_HOSTAGE_H_
-#define _CS_SIMPLE_HOSTAGE_H_
 
 #include "reflect_annotations.h"
 #include "const.h"
@@ -329,6 +323,3 @@ bool ForEachHostage( Functor &func )
 
 	return true;
 }
-
-
-#endif // _CS_SIMPLE_HOSTAGE_H_

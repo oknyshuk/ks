@@ -1,20 +1,20 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
 #include "tempent.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
-#include "tier0/vprof.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Glow Sprite TE
@@ -103,7 +103,7 @@ static inline void RecordGlowSprite( const Vector &start, int nModelIndex,
 //-----------------------------------------------------------------------------
 void C_TEGlowSprite::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEGlowSprite::PostDataUpdate" );
+	CVProfScope _( "C_TEGlowSprite::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	float a = ( 1.0 / 255.0 ) * m_nBrightness;
 	C_LocalTempEntity *ent = tempents->TempSprite( m_vecOrigin, vec3_origin, m_fScale, m_nModelIndex, kRenderTransAdd, 0, a, m_fLife, FTENT_SPRANIMATE | FTENT_SPRANIMATELOOP );
@@ -140,4 +140,3 @@ void TE_GlowSprite( IRecipientFilter& filter, float delay, KeyValues *pKeyValues
 
 	TE_GlowSprite( filter, delay, &vecOrigin, nModelIndex, flDuration, flSize, nBrightness );
 }
-

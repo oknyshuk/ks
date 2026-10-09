@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: CS's custom CPlayerResource
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CS_PLAYER_RESOURCE_H
-#define CS_PLAYER_RESOURCE_H
+// Purpose: CS's custom CPlayerResource
 
 #include "player_resource.h"
 #include "coordsize.h"   // COORD_INTEGER_BITS, which several props encode with
+#include "cs_shareddefs.h"
+#include "weapon_parse.h"
 
 extern Vector g_vecDefuserPosition;
 extern CBaseEntity* g_pDefuserEntity;
@@ -64,11 +62,9 @@ protected:
 	CNetworkArray( int, m_iCompetitiveWins, MAX_PLAYERS + 1, [[= ks::reflect::Net{ .bits = 32 } ]] );
 	CNetworkArray( int, m_iCompTeammateColor, MAX_PLAYERS + 1, [[= ks::reflect::Net{ .bits = 32 } ]] );
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	CNetworkArray( int, m_bControllingBot, MAX_PLAYERS+1, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkArray( int, m_iControlledPlayer, MAX_PLAYERS+1, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 	CNetworkArray( int, m_iControlledByPlayer, MAX_PLAYERS+1, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
-#endif
 	CNetworkArray( int, m_iBotDifficulty, MAX_PLAYERS+1, [[= ks::reflect::Net{ .bits = 32 } ]] );	// Difficulty level of a bot ( -1 if not applicable )
 	CNetworkArray( string_t, m_szClan, MAX_PLAYERS+1, [[= ks::reflect::Net{} ]] );
 	CNetworkArray( int, m_iTotalCashSpent, MAX_PLAYERS + 1, [[= ks::reflect::Net{ .bits = 32 } ]] );
@@ -98,5 +94,3 @@ inline CCSPlayerResource* CSPlayerResource()
 {
 	return static_cast<CCSPlayerResource*>(g_pPlayerResource);
 }
-
-#endif // CS_PLAYER_RESOURCE_H

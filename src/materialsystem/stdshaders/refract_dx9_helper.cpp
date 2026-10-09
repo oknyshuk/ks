@@ -1,23 +1,18 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
 #include "refract_dx9_helper.h"
-#include "convar.h"
+import std;
 #include "refract_vs20.inc"
 #include "refract_ps20.inc"
 #include "refract_ps20b.inc"
-#include "cpp_shader_constant_register_map.h"
 
-
-#define MAXBLUR 1
+constexpr auto MAXBLUR = 1;
 
 // number of pixels to shrink the viewport by when handling mirroring of texcoords about the viewport edges.  This deals with not stepping out of viewport due to blurring, etc.
-#define REFRACT_VIEWPORT_SHRINK_PIXELS ( 2 )
+constexpr auto REFRACT_VIEWPORT_SHRINK_PIXELS = ( 2 );
 
 // FIXME: doesn't support fresnel!
 void InitParamsRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, Refract_DX9_Vars_t &info )
@@ -398,4 +393,3 @@ void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDyna
 	}
 	pShader->Draw();
 }
-

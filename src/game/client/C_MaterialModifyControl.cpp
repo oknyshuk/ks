@@ -1,12 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Material Modify control entity.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Material Modify control entity.
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
 #include "reflect_recvtable.h"
-#include "proxyentity.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/itexture.h"
@@ -17,7 +27,7 @@
 #include "imaterialproxydict.h"
 
 #define MATERIAL_MODIFY_STRING_SIZE			255
-#define MATERIAL_MODIFY_ANIMATION_UNSET		-1
+constexpr auto MATERIAL_MODIFY_ANIMATION_UNSET = -1;
 
 // Must match MaterialModifyControl.cpp
 enum MaterialModifyMode_t
@@ -300,7 +310,7 @@ void CMaterialModifyProxy::OnBind( void *pEntity )
 					OnBindFloatLerp( pControl );
 					break;
 				default:
-					Assert( 0 );
+					contract_assert( 0 );
 					break;
 				}
 			}
@@ -325,7 +335,7 @@ void CMaterialModifyProxy::OnBindSetVar( C_MaterialModifyControl *pControl )
 	IMaterial *pMaterial = pControl->GetMaterial();
 	if( !pMaterial )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
@@ -340,14 +350,14 @@ void CMaterialModifyProxy::OnBindSetVar( C_MaterialModifyControl *pControl )
 	if ( !bFound )
 		return;
 
-	if( Q_strcmp( pControl->GetMaterialVariableValue(), "" ) )
+	if( V_strcmp( pControl->GetMaterialVariableValue(), "" ) )
 	{
 //		const char *pMaterialName = m_pMaterial->GetName();
 //		const char *pMaterialVarName = pMaterialVar->GetName();
 //		const char *pMaterialVarValue = pControl->GetMaterialVariableValue();
 //		if( debug_materialmodifycontrol_client.GetBool() 
-//			&& Q_stristr( m_pMaterial->GetName(), "faceandhair" )
-//			&& Q_stristr( pMaterialVar->GetName(), "self" )
+//			&& V_stristr( m_pMaterial->GetName(), "faceandhair" )
+//			&& V_stristr( pMaterialVar->GetName(), "self" )
 //			)
 //		{
 //			static int count = 0;
@@ -364,7 +374,7 @@ void CMaterialModifyProxy::OnBindSetVar( C_MaterialModifyControl *pControl )
 //-----------------------------------------------------------------------------
 void CMaterialModifyProxy::OnBindAnimatedTexture( C_MaterialModifyControl *pControl )
 {
-	assert ( m_AnimatedTextureVar );
+	contract_assert( m_AnimatedTextureVar );
 	if( m_AnimatedTextureVar->GetType() != MATERIAL_VAR_TYPE_TEXTURE )
 		return;
 
@@ -551,7 +561,7 @@ void CMaterialModifyProxy::OnBindFloatLerp( C_MaterialModifyControl *pControl )
 			currentValue = m_flEndValue;
 		}
 
-		if( debug_materialmodifycontrol_client.GetBool() && Q_stristr( m_pMaterial->GetName(), "faceandhair" ) && Q_stristr( m_pMaterialVar->GetName(), "warp" ) )
+		if( debug_materialmodifycontrol_client.GetBool() && V_stristr( m_pMaterial->GetName(), "faceandhair" ) && V_stristr( m_pMaterialVar->GetName(), "warp" ) )
 		{
 			static int count = 0;
 			DevMsg( 1, "CMaterialFloatLerpProxy::OnBind \"%s\" %s=%f %d\n", m_pMaterial->GetName(), m_pMaterialVar->GetName(), currentValue, count++ );
@@ -602,7 +612,7 @@ bool CMaterialModifyAnimatedProxy::Init( IMaterial *pMaterial, KeyValues *pKeyVa
 //-----------------------------------------------------------------------------
 void CMaterialModifyAnimatedProxy::OnBind( void *pEntity )
 {
-	assert ( m_AnimatedTextureVar );
+	contract_assert( m_AnimatedTextureVar );
 	if( m_AnimatedTextureVar->GetType() != MATERIAL_VAR_TYPE_TEXTURE )
 		return;
 

@@ -1,13 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "filesystem.h"
 #include "viewangleanim.h"
-#include "keyvalues.h"
 
 extern ConVar cl_pitchdown;
 extern ConVar cl_pitchup;
@@ -17,7 +19,9 @@ extern ConVar cl_pitchup;
 CViewAngleAnimation *g_pTestAnimation = nullptr;
 
 // create a view animation object to be used for creating an animation. parameter is flags
-CON_COMMAND( viewanim_create, "viewanim_create" )
+static void viewanim_create( const CCommand &args );
+static ConCommand viewanim_create_command( "viewanim_create", viewanim_create, "viewanim_create" );
+static void viewanim_create( const CCommand &args )
 {
 	if ( g_pTestAnimation )
 	{
@@ -64,7 +68,9 @@ void ResetViewAngles( void )
 ConCommand viewanim_reset( "viewanim_reset", ResetViewAngles, "reset view angles!", FCVAR_CHEAT );
 
 // add a key frame to the test animation. first parameter is the time taken to get to this keyframe
-CON_COMMAND_F( viewanim_addkeyframe, "", FCVAR_CHEAT )
+static void viewanim_addkeyframe( const CCommand &args );
+static ConCommand viewanim_addkeyframe_command( "viewanim_addkeyframe", viewanim_addkeyframe, "", FCVAR_CHEAT );
+static void viewanim_addkeyframe( const CCommand &args )
 {
 	if ( g_pTestAnimation )
 	{
@@ -91,7 +97,9 @@ CON_COMMAND_F( viewanim_addkeyframe, "", FCVAR_CHEAT )
 
 
 // save the current test anim, pass filename
-CON_COMMAND( viewanim_save, "Save current animation to file" )
+static void viewanim_save( const CCommand &args );
+static ConCommand viewanim_save_command( "viewanim_save", viewanim_save, "Save current animation to file" );
+static void viewanim_save( const CCommand &args )
 {
 	if (args.ArgC() < 2)
 		return;
@@ -107,7 +115,9 @@ CON_COMMAND( viewanim_save, "Save current animation to file" )
 }
 
 // load a view animation file into the test anim
-CON_COMMAND( viewanim_load, "load animation from file" )
+static void viewanim_load( const CCommand &args );
+static ConCommand viewanim_load_command( "viewanim_load", viewanim_load, "load animation from file" );
+static void viewanim_load( const CCommand &args )
 {
 	if (args.ArgC() < 2)
 		return;
@@ -224,7 +234,7 @@ void CViewAngleAnimation::SaveAsAnimFile( const char *pKeyFrameFileName )
 	{
 		pKey = pData->CreateNewKey();
 
-		Q_snprintf( buf, sizeof(buf), "%f %f %f",
+		V_snprintf( buf, sizeof(buf), "%f %f %f",
 			m_KeyFrames[i]->m_vecAngles[0],
 			m_KeyFrames[i]->m_vecAngles[1],
 			m_KeyFrames[i]->m_vecAngles[2] );
@@ -293,7 +303,7 @@ void CViewAngleAnimation::ClientThink()
 		flTime += m_KeyFrames[i]->m_flTime;
 	}
 
-	Assert( i > 0 );
+	contract_assert( i > 0 );
 
 	if ( i >= c )
 	{
@@ -381,4 +391,3 @@ void CViewAngleAnimation::SetAngles( QAngle vecCalculatedAngles )
 
 	engine->SetViewAngles( vecViewAngle );
 }
-

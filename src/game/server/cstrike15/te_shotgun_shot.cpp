@@ -1,23 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "eiface.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "basetempentity.h"
 #include "fx_cs_shared.h"
 
-
-#define NUM_BULLET_SEED_BITS 8
+constexpr auto NUM_BULLET_SEED_BITS = 8;
 
 
 //-----------------------------------------------------------------------------
@@ -44,9 +57,6 @@ public:
 	CNetworkVar( float, m_fInaccuracy, [[= ks::reflect::Net{ .bits = 10, .low = 0, .high = 1 } ]] );
 	CNetworkVar( float, m_flRecoilIndex, [[= ks::reflect::Net{ .bits = 10, .low = 0, .high = 1000 } ]] );
 	CNetworkVar( float, m_fSpread, [[= ks::reflect::Net{ .bits = 8, .low = 0, .high = 0.1f } ]] );
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-	CNetworkVar( float, m_fAccuracyFishtail );
-#endif
 	CNetworkVar( int, m_iSoundType, [[= ks::reflect::Net{ .bits = 6, .flags = SPROP_UNSIGNED } ]] );
 };
 
@@ -100,14 +110,11 @@ void TE_FireBullets(
 	g_TEFireBullets.m_fInaccuracy = fInaccuracy;
 	g_TEFireBullets.m_flRecoilIndex = flRecoilIndex;
 	g_TEFireBullets.m_fSpread = fSpread;
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-	g_TEFireBullets.m_fAccuracyFishtail = fAccuracyFishtail;
-#endif
 	g_TEFireBullets.m_iMode = iMode;
 	g_TEFireBullets.m_iWeaponID = iWeaponID;
 	g_TEFireBullets.m_iSoundType = iSoundType;
 
-	Assert( iSeed < (1 << NUM_BULLET_SEED_BITS) );
+	contract_assert( iSeed < (1 << NUM_BULLET_SEED_BITS) );
 	
 	g_TEFireBullets.Create( filter, 0 );
 }

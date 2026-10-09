@@ -1,11 +1,11 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: A set of utilities to render standard shapes
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
+// Purpose: A set of utilities to render standard shapes
+
+import std;
+import ks.core;
 #include "tier2/meshutils.h"
-#include "tier0/platform.h"
 
 
 //-----------------------------------------------------------------------------
@@ -33,7 +33,7 @@ void GenerateQuadIndexBuffer( unsigned short *pIndices, int nIndexCount, int nFi
 	int numQuads = nIndexCount / 6;
 	unsigned short baseVertex = (unsigned short)nFirstVertex;
 
-	if ( ( (size_t)pIndices & 0x3 ) == 0 )
+	if ( ( (std::size_t)pIndices & 0x3 ) == 0 )
 	{
 		// Fast version, requires aligned indices
 		int *pWrite = (int*)pIndices;

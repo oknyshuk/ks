@@ -1,18 +1,24 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Implements all the functions exported by the GameUI dll
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdio.h>
+// Purpose: Implements all the functions exported by the GameUI dll
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
 // dgoodenough - io.h and direct.h don't exist on PS3
 // PS3_BUILDFIX
 // @wge Fix for OSX too.
-#include <tier0/dbg.h>
 // @wge Fix for OSX too.
 
 #ifdef SendMessage
@@ -21,8 +27,6 @@
 																
 #include "filesystem.h"
 #include "gameui_interface.h"
-#include "string.h"
-#include "tier0/icommandline.h"
 
 // interface to engine
 #include "engineinterface.h"
@@ -39,51 +43,9 @@
 
 // vgui2 interface
 // note that GameUI project uses ..\vgui2\include, not ..\utils\vgui\include
-#include "tier1/keyvalues.h"
 #include "localize/ilocalize.h"
 #include "tier3/tier3.h"
-#include "steam/steam_api.h"
-#include "protocol.h"
 #include "GameUI/IGameUI.h"
-#include "inputsystem/iinputsystem.h"
-
-#ifdef PANORAMA_ENABLE
-#include "panorama/controls/panel2d.h"
-#include "panorama/iuiengine.h"
-#include "panorama/localization/ilocalize.h"
-#include "panorama/panorama.h"
-#include "panorama/source2/ipanoramaui.h"
-
-
-enum PanoramaEngineViewPriority_t
-{
-	PANORAMA_ENGINE_VIEW_PRIORITY_DEFAULT = 1000,
-	// Room for game-specific views here
-	PANORAMA_ENGINE_VIEW_PRIORITY_CONSOLE = 2000
-};
-
-DEFINE_PANORAMA_EVENT( CSGOLoadProgressChanged );
-
-enum PanoramaGameViewPriority_t
-{
-	PANORAMA_GAME_VIEW_PRIORITY_HUD = PANORAMA_ENGINE_VIEW_PRIORITY_DEFAULT,
-	PANORAMA_GAME_VIEW_PRIORITY_MAINMENU,
-	PANORAMA_GAME_VIEW_PRIORITY_LOADINGSCREEN,
-	PANORAMA_GAME_VIEW_PRIORITY_PAUSEMENU
-};
-#endif
-
-#if   defined( PORTAL2_UITEST_DLL )
-
-#include "portal2uitest/basemodpanel.h"
-#include "portal2uitest/basemodui.h"
-typedef BaseModUI::CBaseModPanel UI_BASEMOD_PANEL_CLASS;
-inline UI_BASEMOD_PANEL_CLASS & GetUiBaseModPanelClass() { return UI_BASEMOD_PANEL_CLASS::GetSingleton(); }
-inline UI_BASEMOD_PANEL_CLASS & ConstructUiBaseModPanelClass() { return * new UI_BASEMOD_PANEL_CLASS(); }
-IMatchExtPortal2 g_MatchExtPortal2;
-class IMatchExtPortal2 *g_pMatchExtPortal2 = &g_MatchExtPortal2;
-
-#else
 
 // VGUI menu shell (CBaseModPanel/CCStrike15BasePanel) removed in VGUI teardown.
 // Menu open/close is routed directly to the RmlUi documents below.
@@ -91,12 +53,9 @@ class IMatchExtPortal2 *g_pMatchExtPortal2 = &g_MatchExtPortal2;
 #include "../RocketUI/rkhud_pausemenu.h"
 #include "../RocketUI/rkhud_loadingscreen.h"
 
-#endif
-
 // dgoodenough - select correct stub header based on current console
 // PS3_BUILDFIX
 
-#include "tier0/dbg.h"
 #include "engine/IEngineSound.h"
 #include "gameui_util.h"
 
@@ -132,7 +91,7 @@ CGameUI &GameUI()
 	return g_GameUI;
 }
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CGameUI, IGameUI, GAMEUI_INTERFACE_VERSION, g_GameUI);
+static InterfaceReg s_Reg_CGameUI_IGameUI( []() -> void * { return static_cast<IGameUI *>( &g_GameUI ); }, GAMEUI_INTERFACE_VERSION );;
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -144,7 +103,6 @@ CGameUI::CGameUI()
 	m_iFriendsLoadPauseFrames = 0;
 	m_iGameIP = 0;
 	m_iGameConnectionPort = 0;
-	m_iGameQueryPort = 0;
 	m_bActivatedUI = false;
 	m_szPreviousStatusText[0] = 0;
 	m_bIsConsoleUI = false;
@@ -180,7 +138,6 @@ CGameUI::~CGameUI()
 //-----------------------------------------------------------------------------
 void CGameUI::Initialize( CreateInterfaceFn factory )
 {
-	MEM_ALLOC_CREDIT();
 	ConnectTier1Libraries( &factory, 1 );
 	ConnectTier2Libraries( &factory, 1 );
 	ConVar_Register( FCVAR_CLIENTDLL );
@@ -188,12 +145,6 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 
 	enginesound = (IEngineSound *)factory(IENGINESOUND_CLIENT_INTERFACE_VERSION, nullptr);
 	engine = (IVEngineClient *)factory( VENGINE_CLIENT_INTERFACE_VERSION, nullptr );
-#if defined( BINK_VIDEO )
-	bik = (IBik*)factory( BIK_INTERFACE_VERSION, nullptr );
-#endif
-
-	SteamAPI_InitSafe();
-	steamapicontext->Init();
 
 	CGameUIConVarRef var( "gameui_xbox" );
 	m_bIsConsoleUI = var.IsValid() && var.GetBool();
@@ -217,20 +168,6 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 // PS3_BUILDFIX
 		!g_pMatchFramework;
 
-#ifdef PANORAMA_ENABLE
-	panorama::IUIEngine *pPanoramaUIEngine = g_pPanoramaUIEngine->AccessUIEngine();
-	Assert( pPanoramaUIEngine );
-	if ( !pPanoramaUIEngine )
-	{
-		bFailed = true;
-	}
-	else
-	{
-		ConnectPanoramaUIEngine( pPanoramaUIEngine );
-	}
-
-#endif
-	
 	if ( bFailed )
 	{
 		Error( "CGameUI::Initialize() failed to get necessary interfaces\n" );
@@ -278,8 +215,8 @@ void CGameUI::PlayGameStartupSound()
 	std::vector< std::string > fileNames;
 
 	char path[ 512 ];
-	Q_snprintf( path, sizeof( path ), "sound/ui/gamestartup*.mp3" );
-	Q_FixSlashes( path );
+	V_snprintf( path, sizeof( path ), "sound/ui/gamestartup*.mp3" );
+	V_FixSlashes( path );
 
 	char const *fn = g_pFullFileSystem->FindFirstEx( path, "MOD", &fh );
 	if ( fn )
@@ -287,14 +224,14 @@ void CGameUI::PlayGameStartupSound()
 		do
 		{
 			char ext[ 10 ];
-			Q_ExtractFileExtension( fn, ext, sizeof( ext ) );
+			V_ExtractFileExtension( fn, ext, sizeof( ext ) );
 
-			if ( !Q_stricmp( ext, "mp3" ) )
+			if ( !V_stricmp( ext, "mp3" ) )
 			{
 				char temp[ 512 ];
-				Q_snprintf( temp, sizeof( temp ), "ui/%s", fn );
+				V_snprintf( temp, sizeof( temp ), "ui/%s", fn );
 
-				Q_FixSlashes( temp );
+				V_FixSlashes( temp );
 				fileNames.push_back( temp );
 			}
 	
@@ -318,7 +255,7 @@ void CGameUI::PlayGameStartupSound()
 			char found[ 512 ];
 
 			// escape chars "*#" make it stream, and be affected by snd_musicvolume
-			Q_snprintf( found, sizeof( found ), "play *#%s", fileNames[index].c_str() );
+			V_snprintf( found, sizeof( found ), "play *#%s", fileNames[index].c_str() );
 
 			engine->ClientCmd_Unrestricted( found );
 		}
@@ -330,16 +267,16 @@ void CGameUI::PlayGameStartupSound()
 //-----------------------------------------------------------------------------
 void CGameUI::Start()
 {
-	// determine Steam location for configuration
+	// determine platform location for configuration
 	if ( !FindPlatformDirectory( m_szPlatformDir, sizeof( m_szPlatformDir ) ) )
 		return;
 
 	// setup config file directory
 	char szConfigDir[512];
-	Q_strncpy( szConfigDir, m_szPlatformDir, sizeof( szConfigDir ) );
-	Q_strncat( szConfigDir, "config", sizeof( szConfigDir ), COPY_ALL_CHARACTERS );
+	V_strncpy( szConfigDir, m_szPlatformDir, sizeof( szConfigDir ) );
+	V_strncat( szConfigDir, "config", sizeof( szConfigDir ), COPY_ALL_CHARACTERS );
 
-	Msg( "Steam config directory: %s\n", szConfigDir );
+	Msg( "Config directory: %s\n", szConfigDir );
 
 	g_pFullFileSystem->AddSearchPath(szConfigDir, "CONFIG");
 	g_pFullFileSystem->CreateDirHierarchy("", "CONFIG");
@@ -382,11 +319,11 @@ bool CGameUI::FindPlatformDirectory(char *platformDir, int bufferSize)
 
 	if ( platformDir[0] == '\0' )
 	{
-		// we're not under steam, so setup using path relative to game
-		if ( getcwd( platformDir, bufferSize ) )
+		// setup using path relative to game
+		if ( ks::platform::current_directory( platformDir, (unsigned long)bufferSize ) )
 		{
 			V_AppendSlash( platformDir, bufferSize );
-			Q_strncat(platformDir, "platform", bufferSize, COPY_ALL_CHARACTERS );
+			V_strncat(platformDir, "platform", bufferSize, COPY_ALL_CHARACTERS );
 			V_AppendSlash( platformDir, bufferSize );
 			return true;
 		}
@@ -407,9 +344,6 @@ void CGameUI::Shutdown()
 	// notify all the modules of Shutdown
 
 	ModInfo().FreeModInfo();
-	
-	steamapicontext->Clear();
-	// SteamAPI_Shutdown(); << Steam shutdown is controlled by engine
 	
 	ConVar_Unregister();
 	DisconnectTier3Libraries();
@@ -539,20 +473,19 @@ void CGameUI::RunFrame()
 //-----------------------------------------------------------------------------
 void CGameUI::OLD_OnConnectToServer(const char *game, int IP, int port)
 {
-	// Nobody should use this anymore because the query port and the connection port can be different.
+	// Nobody should use this anymore.
 	// Use OnConnectToServer2 instead.
-	Assert( false );
-	OnConnectToServer2( game, IP, port, port );
+	contract_assert( false );
+	OnConnectToServer2( game, IP, port );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Called when the game connects to a server
 //-----------------------------------------------------------------------------
-void CGameUI::OnConnectToServer2(const char *game, int IP, int connectionPort, int queryPort)
+void CGameUI::OnConnectToServer2(const char *game, int IP, int connectionPort)
 {
 	m_iGameIP = IP;
 	m_iGameConnectionPort = connectionPort;
-	m_iGameQueryPort = queryPort;
 }
 
 
@@ -560,11 +493,10 @@ void CGameUI::OnConnectToServer2(const char *game, int IP, int connectionPort, i
 //-----------------------------------------------------------------------------
 // Purpose: Called when the game disconnects from a server
 //-----------------------------------------------------------------------------
-void CGameUI::OnDisconnectFromServer( uint8 eSteamLoginFailure )
+void CGameUI::OnDisconnectFromServer()
 {
 	m_iGameIP = 0;
 	m_iGameConnectionPort = 0;
-	m_iGameQueryPort = 0;
 
 	IGameEvent *event = gameeventmanager->CreateEvent( "client_disconnect" );
 	if ( event )
@@ -572,16 +504,6 @@ void CGameUI::OnDisconnectFromServer( uint8 eSteamLoginFailure )
 		gameeventmanager->FireEventClientSide( event );
 	}
 
-
-	if ( eSteamLoginFailure == STEAMLOGINFAILURE_NOSTEAMLOGIN )
-	{
-	}
-	else if ( eSteamLoginFailure == STEAMLOGINFAILURE_VACBANNED )
-	{
-	}
-	else if ( eSteamLoginFailure == STEAMLOGINFAILURE_LOGGED_IN_ELSEWHERE )
-	{
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -668,7 +590,6 @@ bool CGameUI::UpdateSecondaryProgressBar(float progress, const wchar_t *desc )
 //-----------------------------------------------------------------------------
 void CGameUI::SetProgressLevelName( const char *levelName )
 {
-	MEM_ALLOC_CREDIT();
 }
 
 
@@ -708,7 +629,7 @@ bool CGameUI::SetProgressBarStatusText(const char *statusText, bool showDialog )
 	if (!stricmp(statusText, m_szPreviousStatusText))
 		return false;
 
-	Q_strncpy(m_szPreviousStatusText, statusText, sizeof(m_szPreviousStatusText));
+	V_strncpy(m_szPreviousStatusText, statusText, sizeof(m_szPreviousStatusText));
 	return true;
 }
 
@@ -889,7 +810,7 @@ void CGameUI::ReleaseBackgroundMusic( void )
 }
 
 //The way to loop an MP3 is just to constantly check if it is playing and restart it otherwise
-#define MENUMUSIC_FADETIME 1.34
+constexpr auto MENUMUSIC_FADETIME = 1.34;
 
 void CGameUI::UpdateBackgroundMusic( void )
 {
@@ -1031,8 +952,8 @@ void CGameUI::SetPreviewBackgroundMusic( const char * pchPreviewMusicPrefix )
 
 void CGameUI::PlayQuestAudio( const char * pchAudioFile )
 {
-#define MAINMENU_QUEST_AUDIO_MASTER_VOLUME 1.0
-#define MAINMENU_QUEST_AUDIO_MENUMUSIC_VOLUME 0.01
+constexpr auto MAINMENU_QUEST_AUDIO_MASTER_VOLUME = 1.0;
+constexpr auto MAINMENU_QUEST_AUDIO_MENUMUSIC_VOLUME = 0.01;
 
 	if ( !pchAudioFile || !pchAudioFile[0] )
 		return;

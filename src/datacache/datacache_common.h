@@ -1,26 +1,18 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-//===========================================================================//
-
-#ifndef DATACACHE_COMMON_H
-#define DATACACHE_COMMON_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "tier3/tier3.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
 class IDataCacheSection;
-FORWARD_DECLARE_HANDLE( memhandle_t );
+struct memhandle_t__;
+using memhandle_t = memhandle_t__ *;
 typedef memhandle_t DataCacheHandle_t;
 
 
 //-----------------------------------------------------------------------------
 // Console commands
 //-----------------------------------------------------------------------------
-
-#endif // DATACACHE_COMMON_H

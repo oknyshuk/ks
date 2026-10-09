@@ -124,7 +124,6 @@
 "GameUI_SaveGameHelp"		"Select 'New Save Game' in the list to create a new file, or select
 "GameUI_Delete"			"Delete"
 "GameUI_Quit"			"Quit game"
-"GameUI_SteamPassword"		"Steam Password"
 "GameUI_CreateServer"		"CREATE SERVER"
 "GameUI_Start"			"Start"
 "GameUI_Console"		"Console"
@@ -194,7 +193,6 @@
 "GameUI_GameMenu_ChangeGame"	"CHANGE GAME"
 "GameUI_GameMenu_PlayerList"	"MUTE PLAYERS"
 "GameUI_OutOfDate_Title"	"GAME IS OUT OF DATE"
-"GameUI_OutOfDate_URL"		"http://www.steampowered.com/autoupdate"
 "GameUI_OutOfDate_Msg"		"Your game is out of date.
 "GameUI_QuitConfirmationTitle"  "QUIT GAME"
 "GameUI_QuitConfirmationText"   "Do you wish to stop playing now?"
@@ -228,7 +226,6 @@
 "GameUI_LIGHT"			"LIGHT"
 "GameUI_VerifyingResources"	 "Verifying resources..."
 "GameUI_VerifyingAndDownloading" "Verifying and downloading resources..."
-"GameUI_UpdatingSteamResources" "Updating steam resources"
 "GameUI_DownloadFailed"		"Could not download %s1"
 "GameUI_DownloadFailedZeroLen"		"Could not download %s1:
 "GameUI_DownloadFailedConClosed"	"Could not download %s1:
@@ -292,7 +289,6 @@
 "GameUI_RetryingConnectionToServer2"	"Retrying connection to server (2)..."
 "GameUI_RetryingConnectionToServer3"	"Retrying connection to server (3)..."
 "GameUI_CouldNotContactGameServer"	"Failed to contact game server"
-"GameUI_RefreshLogin_InfoTicketExpired"	"Your steam ticket has expired.
 "GameUI_RefreshLogin_UserName" 	"Account name"
 "GameUI_RefreshLogin_Password"	"Password"
 "GameUI_RefreshLogin_Login"		"Login"
@@ -458,7 +454,7 @@
 "GameUI_Spray_Import_Error_BMP_Format_Not_Supported"	"This file's BMP format is not supported.  Supported BMP formats are 24-bit RGB, 8-bit 256 color, 4-bit 16 color, and monochrome black and white."
 "GameUI_Spray_Import_Error_TGA_Format_Not_Supported"	"This file's TGA format is not supported.  Supported TGA formats are 24-bit RGB and 32-bit RGBA."
 "GameUI_Spray_Import_Error_Writing_Temp_Output"	"Error creating temporary file."
-"GameUI_Spray_Import_Error_Cant_Load_VTEX_DLL"	"Unable to load vtex.dll.  Try restarting steam to get the latest updates."
+"GameUI_Spray_Import_Error_Cant_Load_VTEX_DLL"	"Unable to load vtex.dll.  Try restarting the game to get the latest updates."
 "GameUI_Spray_Import_Error_Writing_Output"	"Unable to write output spray file.  It's possible the current user doesn't have permission."
 "GameUI_ImportSprayEllipsis"	"Import Spray..."
 "GameUI_ImportSprayImage"	"Import Spray Image"
@@ -476,8 +472,6 @@
 "GameUI_SettingChangeFromX360Dashboard_Info"	"This setting can only be changed from the Xbox 360 Dashboard."
 "GameUI_Dlg_CheckingStorageDevice"			"Checking storage device..."
 "GameUI_Chapter"		"CHAPTER"
-"VAC_LoggedInElsewhere_Title"		"Account Used Elsewhere"
-"VAC_LoggedInElsewhereReason"		"This Steam account has been used to log in from another computer. To continue using Steam, you need to log in again."
 "GAMEUI_Commentary"			"Commentary"
 "GAMEUI_Commentary_On"			"On (where available)"
 "GAMEUI_Commentary_Off"			"Off"
@@ -602,8 +596,6 @@
 "GameUI_Achievement_Locked"			"Locked"
 "GameUI_Achievement_Unlocked"		"Unlocked"
 "GameUI_Achievements_Title" "My Achievements"
-"GameUI_Achievements_SteamRequired_Title"	"Steam Login Required"
-"GameUI_Achievements_SteamRequired_Message"	"You must be logged in to Steam to unlock or view Achievements."
 "GameUI_Achievements_EnterGameToSeeProgress"	"Enter game to see progress"
 "GameUI_Achievement_Points"		"%s1G"
 "GameUI_Achievement_Menu_Range"	"%s1 of %s2"

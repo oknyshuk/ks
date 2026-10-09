@@ -1,20 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#elif defined(GAME_DLL)
+#endif
+#if defined(CLIENT_DLL)
+import std;
+import ks.core;
+#elif defined(GAME_DLL)
+#endif
 
-
+import ks.tier1;
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "tier2/interval.h"
-#include "soundchars.h"
-#include "keyvalues.h"
 
-#include "tier0/memalloc.h"
 struct SoundChannels
 {
 	int			channel;
@@ -103,7 +102,7 @@ static SoundLevelLookup g_pSoundLevels[] =
 
 static const char *_SoundLevelToString( soundlevel_t level )
 {
-	int c = ARRAYSIZE( g_pSoundLevels );
+	int c = std::size( g_pSoundLevels );
 
 	int i;
 
@@ -115,13 +114,13 @@ static const char *_SoundLevelToString( soundlevel_t level )
 	}
 
 	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%i", (int)level );
+	V_snprintf( sz, sizeof( sz ), "%i", (int)level );
 	return sz;
 }
 
 static const char *_ChannelToString( int channel )
 {
-	int c = ARRAYSIZE( g_pChannelNames );
+	int c = std::size( g_pChannelNames );
 
 	int i;
 
@@ -133,13 +132,13 @@ static const char *_ChannelToString( int channel )
 	}
 
 	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%i", (int)channel );
+	V_snprintf( sz, sizeof( sz ), "%i", (int)channel );
 	return sz;
 }
 
 static const char *_VolumeToString( float volume )
 {
-	int c = ARRAYSIZE( g_pVolumeLevels );
+	int c = std::size( g_pVolumeLevels );
 
 	int i;
 
@@ -151,13 +150,13 @@ static const char *_VolumeToString( float volume )
 	}
 
 	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%.3f", volume );
+	V_snprintf( sz, sizeof( sz ), "%.3f", volume );
 	return sz;
 }
 
 static const char *_PitchToString( float pitch )
 {
-	int c = ARRAYSIZE( g_pPitchLookup );
+	int c = std::size( g_pPitchLookup );
 
 	int i;
 
@@ -169,7 +168,7 @@ static const char *_PitchToString( float pitch )
 	}
 
 	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%.3f", pitch );
+	V_snprintf( sz, sizeof( sz ), "%.3f", pitch );
 	return sz;
 }
 
@@ -179,25 +178,25 @@ soundlevel_t TextToSoundLevel( const char *key )
 {
 	if ( !key )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return SNDLVL_NORM;
 	}
 
-	int c = ARRAYSIZE( g_pSoundLevels );
+	int c = std::size( g_pSoundLevels );
 
 	int i;
 
 	for ( i = 0 ; i < c; i++ )
 	{
 		SoundLevelLookup *entry = &g_pSoundLevels[ i ];
-		if ( !Q_strcasecmp( key, entry->name ) )
+		if ( !V_strcasecmp( key, entry->name ) )
 			return entry->level;
 	}
 
 	if ( StringHasPrefix( key, SNDLVL_PREFIX ) )
 	{
 		char const *val = key + V_strlen( SNDLVL_PREFIX );
-		int sndlvl = atoi( val );
+		int sndlvl = std::atoi( val );
 		if ( sndlvl > 0 && sndlvl <= 180 )
 		{
 			return ( soundlevel_t )sndlvl;
@@ -218,22 +217,22 @@ int TextToChannel( const char *name )
 {
 	if ( !name )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		// CHAN_AUTO
 		return CHAN_AUTO;
 	}
 
-	if ( Q_strncasecmp( name, "chan_", strlen( "chan_" ) ) )
+	if ( V_strncasecmp( name, "chan_", std::strlen( "chan_" ) ) )
 	{
-		return atoi( name );
+		return std::atoi( name );
 	}
 
-	int c = ARRAYSIZE( g_pChannelNames );
+	int c = std::size( g_pChannelNames );
 	int i;
 
 	for ( i = 0; i < c; i++ )
 	{
-		if ( !Q_strcasecmp( name, g_pChannelNames[ i ].name ) )
+		if ( !V_strcasecmp( name, g_pChannelNames[ i ].name ) )
 		{
 			return g_pChannelNames[ i ].channel;
 		}
@@ -248,7 +247,7 @@ int TextToChannel( const char *name )
 
 const char *SoundLevelToString( soundlevel_t level )
 {
-	int c = ARRAYSIZE( g_pSoundLevels );
+	int c = std::size( g_pSoundLevels );
 
 	int i;
 
@@ -260,13 +259,13 @@ const char *SoundLevelToString( soundlevel_t level )
 	}
 
 	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%i", (int)level );
+	V_snprintf( sz, sizeof( sz ), "%i", (int)level );
 	return sz;
 }
 
 const char *ChannelToString( int channel )
 {
-	int c = ARRAYSIZE( g_pChannelNames );
+	int c = std::size( g_pChannelNames );
 
 	int i;
 
@@ -278,13 +277,13 @@ const char *ChannelToString( int channel )
 	}
 
 	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%i", (int)channel );
+	V_snprintf( sz, sizeof( sz ), "%i", (int)channel );
 	return sz;
 }
 
 const char *VolumeToString( float volume )
 {
-	int c = ARRAYSIZE( g_pVolumeLevels );
+	int c = std::size( g_pVolumeLevels );
 
 	int i;
 
@@ -296,13 +295,13 @@ const char *VolumeToString( float volume )
 	}
 
 	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%.3f", volume );
+	V_snprintf( sz, sizeof( sz ), "%.3f", volume );
 	return sz;
 }
 
 const char *PitchToString( float pitch )
 {
-	int c = ARRAYSIZE( g_pPitchLookup );
+	int c = std::size( g_pPitchLookup );
 
 	int i;
 
@@ -314,7 +313,7 @@ const char *PitchToString( float pitch )
 	}
 
 	static char sz[ 32 ];
-	Q_snprintf( sz, sizeof( sz ), "%.3f", pitch );
+	V_snprintf( sz, sizeof( sz ), "%.3f", pitch );
 	return sz;
 }
 
@@ -413,7 +412,7 @@ void CSoundParametersInternal::CopyFrom( const CSoundParametersInternal& src )
 		if ( m_nSoundNames > 1 )
 		{
 			m_pSoundNames = (SoundFile*)MemAlloc_Alloc( sizeof(SoundFile)*m_nSoundNames);
-			memcpy( m_pSoundNames, src.m_pSoundNames, m_nSoundNames * sizeof(SoundFile) );
+			std::memcpy( m_pSoundNames, src.m_pSoundNames, m_nSoundNames * sizeof(SoundFile) );
 		}
 		else
 		{
@@ -431,7 +430,7 @@ void CSoundParametersInternal::CopyFrom( const CSoundParametersInternal& src )
 		if ( m_nConvertedNames > 1 )
 		{
 			m_pConvertedNames = (SoundFile*)MemAlloc_Alloc( sizeof(SoundFile)*m_nConvertedNames);
-			memcpy( m_pConvertedNames, src.m_pConvertedNames, m_nConvertedNames * sizeof(SoundFile) );
+			std::memcpy( m_pConvertedNames, src.m_pConvertedNames, m_nConvertedNames * sizeof(SoundFile) );
 		}
 		else
 		{
@@ -452,7 +451,7 @@ void CSoundParametersInternal::CopyFrom( const CSoundParametersInternal& src )
 	uses_gender_token = src.uses_gender_token;
 }
 
-#define CompareInterval( i1, i2 ) ( memcmp( &(i1), &(i2), sizeof(i1) ) == 0 )
+#define CompareInterval( i1, i2 ) ( std::memcmp( &(i1), &(i2), sizeof(i1) ) == 0 )
 
 bool CSoundParametersInternal::operator == ( const CSoundParametersInternal& other ) const
 {
@@ -500,7 +499,7 @@ const char *CSoundParametersInternal::VolumeToString( void ) const
 	}
 
 	static char sz[ 64 ];
-	Q_snprintf( sz, sizeof( sz ),  "%.3f, %.3f", (float)volume.start, (float)volume.start + (float)volume.range );
+	V_snprintf( sz, sizeof( sz ),  "%.3f, %.3f", (float)volume.start, (float)volume.start + (float)volume.range );
 	return sz;
 }
 
@@ -517,7 +516,7 @@ const char *CSoundParametersInternal::SoundLevelToString( void ) const
 	}
 
 	static char sz[ 64 ];
-	Q_snprintf( sz, sizeof( sz ),  "%i, %i", (soundlevel_t)(int)soundlevel.start, (soundlevel_t)(int)(soundlevel.start + soundlevel.range ) );
+	V_snprintf( sz, sizeof( sz ),  "%i, %i", (soundlevel_t)(int)soundlevel.start, (soundlevel_t)(int)(soundlevel.start + soundlevel.range ) );
 	return sz;
 }
 
@@ -529,13 +528,13 @@ const char *CSoundParametersInternal::PitchToString( void ) const
 	}
 
 	static char sz[ 64 ];
-	Q_snprintf( sz, sizeof( sz ),  "%i, %i", (int)pitch.start, (int)(pitch.start + pitch.range ) );
+	V_snprintf( sz, sizeof( sz ),  "%i, %i", (int)pitch.start, (int)(pitch.start + pitch.range ) );
 	return sz;
 }
 
 void CSoundParametersInternal::VolumeFromString( const char *sz )
 {
-	if ( !Q_strcasecmp( sz, "VOL_NORM" ) )
+	if ( !V_strcasecmp( sz, "VOL_NORM" ) )
 	{
 		volume.start = VOL_NORM;
 		volume.range = 0.0f;
@@ -553,17 +552,17 @@ void CSoundParametersInternal::ChannelFromString( const char *sz )
 
 void CSoundParametersInternal::PitchFromString( const char *sz )
 {
-	if ( !Q_strcasecmp( sz, "PITCH_NORM" ) )
+	if ( !V_strcasecmp( sz, "PITCH_NORM" ) )
 	{
 		pitch.start	= PITCH_NORM;
 		pitch.range = 0;
 	}
-	else if ( !Q_strcasecmp( sz, "PITCH_LOW" ) )
+	else if ( !V_strcasecmp( sz, "PITCH_LOW" ) )
 	{
 		pitch.start	= PITCH_LOW;
 		pitch.range = 0;
 	}
-	else if ( !Q_strcasecmp( sz, "PITCH_HIGH" ) )
+	else if ( !V_strcasecmp( sz, "PITCH_HIGH" ) )
 	{
 		pitch.start	= PITCH_HIGH;
 		pitch.range = 0;
@@ -576,7 +575,7 @@ void CSoundParametersInternal::PitchFromString( const char *sz )
 
 void CSoundParametersInternal::SoundLevelFromString( const char *sz )
 {
-	if ( !Q_strncasecmp( sz, "SNDLVL_", strlen( "SNDLVL_" ) ) )
+	if ( !V_strncasecmp( sz, "SNDLVL_", std::strlen( "SNDLVL_" ) ) )
 	{
 		soundlevel.start = TextToSoundLevel( sz );
 		soundlevel.range = 0;
@@ -594,7 +593,7 @@ void CSoundParametersInternal::AddToTail( SoundFile **pDest, uint16 *pDestCount,
 	{
 		// NOTE: when there's only one soundfile in the list, we store it
 		// packed into the pointer itself, the four bytes for the pointer is just used to store the sound file!
-		COMPILE_TIME_ASSERT( sizeof(SoundFile) <= sizeof(SoundFile *) );
+		static_assert( sizeof(SoundFile) <= sizeof(SoundFile *) );
 		*((SoundFile *)(pDest)) = source;
 	}
 	else
@@ -617,4 +616,3 @@ void CSoundParametersInternal::AddToTail( SoundFile **pDest, uint16 *pDestCount,
 		}
 	}
 }
-

@@ -1,16 +1,15 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Color correction entity with simple radial falloff
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_COLORCORRECTION_H
-#define C_COLORCORRECTION_H
+// Purpose: Color correction entity with simple radial falloff
 
 #include "reflect_annotations.h"
 
 #include "colorcorrectionmgr.h"
+#include "dt_recv.h"
+#include "client_class.h"
+#include "c_baseentity.h"
 
 //------------------------------------------------------------------------------
 // Purpose : Color correction entity with radial falloff
@@ -72,5 +71,3 @@ protected:
 
 	ClientCCHandle_t m_CCHandle;
 };
-
-#endif

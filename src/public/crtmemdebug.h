@@ -1,33 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CRTMEMDEBUG_H
-#define CRTMEMDEBUG_H
 #pragma once
-
-#ifdef USECRTMEMDEBUG
-
-#include <crtdbg.h>
-#define MEMCHECK CheckHeap()
-void CheckHeap( void );
-
-#else
-
-#define MEMCHECK
-
-#endif
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 void InitCRTMemDebug( void );
-
-
-#endif // CRTMEMDEBUG_H

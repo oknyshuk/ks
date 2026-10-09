@@ -1,20 +1,39 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Namespace for functions having to do with WC Edit mode
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Namespace for functions having to do with WC Edit mode
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
-#include "mathlib/mathlib.h"
 #include "player.h"
 #include "wcedit.h"
 #include "ai_network.h"
@@ -31,7 +50,6 @@
 // UNDONE: Reduce some dependency here!
 #include "physics_prop_ragdoll.h"
 #include "items.h"
-#include "tier1/intern_pool.h"
 #include "physobj.h"
 
 extern float			GetFloorZ(const Vector &origin);
@@ -73,7 +91,7 @@ bool NWCEdit::IsWCVersionValid(void)
 //------------------------------------------------------------------------------
 Vector NWCEdit::AirNodePlacementPosition( void )
 {
-	AssertMsg( false, "Air node placement in wcedit broken in Left4Dead." );
+	contract_assert( false && "Air node placement in wcedit broken in Left4Dead." );
 	CBasePlayer* pPlayer = UTIL_PlayerByIndex(CBaseEntity::m_nDebugPlayer);
 
 	if (!pPlayer) 
@@ -195,7 +213,7 @@ void NWCEdit::CreateAINode( CBasePlayer *pPlayer )
 		}
 
 		// <<TEMP>> Round position till DS fixed WC bug
-		testHull->SetLocalOrigin( Vector( floor(testHull->GetAbsOrigin().x),
+		testHull->SetLocalOrigin( Vector( std::floor(testHull->GetAbsOrigin().x),
 			floor(testHull->GetAbsOrigin().y ), floor(testHull->GetAbsOrigin().z) ) );
 
 		// ---------------------------------------
@@ -715,7 +733,9 @@ IMPLEMENT_REFLECT_DATAMAP( CWC_UpdateIgnoreList )
 
 
 
-CON_COMMAND( hammer_update_entity, "Updates the entity's position/angles when in edit mode" )
+static void hammer_update_entity( const CCommand &args );
+static ConCommand hammer_update_entity_command( "hammer_update_entity", hammer_update_entity, "Updates the entity's position/angles when in edit mode" );
+static void hammer_update_entity( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -744,7 +764,9 @@ CON_COMMAND( hammer_update_entity, "Updates the entity's position/angles when in
 	}
 }
 
-CON_COMMAND( hammer_update_safe_entities, "Updates entities in the map that can safely be updated (don't have parents or are affected by constraints). Also excludes entities mentioned in any hammer_updateignorelist objects in this map." )
+static void hammer_update_safe_entities( const CCommand &args );
+static ConCommand hammer_update_safe_entities_command( "hammer_update_safe_entities", hammer_update_safe_entities, "Updates entities in the map that can safely be updated (don't have parents or are affected by constraints). Also excludes entities mentioned in any hammer_updateignorelist objects in this map." );
+static void hammer_update_safe_entities( const CCommand &args )
 {
 	int iCount = 0;
 	CBaseEntity *pEnt = nullptr;

@@ -1,19 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Deal intelligently with an enemy that we're afraid of
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#ifndef AI_BEHAVIOR_FEAR_H
-#define AI_BEHAVIOR_FEAR_H
+// Purpose: Deal intelligently with an enemy that we're afraid of
 
 #include "ai_behavior.h"
 
@@ -88,7 +77,3 @@ private:
 	CHandle<CAI_Hint>	m_hMovingToHint;
 
 };
-
-#endif // AI_BEHAVIOR_FEAR_H
-
-

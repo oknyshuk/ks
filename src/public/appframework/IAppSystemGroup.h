@@ -1,37 +1,18 @@
-//======== (C) Copyright 1999, 2000 Valve, L.L.C. All rights reserved. ========
-//
-// The copyright to the contents herein is the property of Valve, L.L.C.
-// The contents may be used and/or copied only with the written permission of
-// Valve, L.L.C., or in accordance with the terms and conditions stipulated in
-// the agreement/contract under which the contents have been supplied.
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1999-2000 Valve Corporation
+
 // Purpose: Defines a group of app systems that all have the same lifetime
 // that need to be connected/initialized, etc. in a well-defined order
-//
-// $Revision: $
-// $NoKeywords: $
-//=============================================================================
 
-#ifndef IAPPSYSTEMGROUP_H
-#define IAPPSYSTEMGROUP_H
-
-
-
-#include "tier1/interface.h"
-#include "tier1/utlvector.h"
-#include "tier1/map_ops.h"
-#include <algorithm>
-#include <string>
-#include <string_view>
-#include <vector>
-#include "iappsystem.h"
+import ks.tier1;
+import std;
 
 //-----------------------------------------------------------------------------
 // forward declarations
 //-----------------------------------------------------------------------------
 class IAppSystem;
 class CSysModule;
-class IBaseInterface;
 class IFileSystem;
 
 //-----------------------------------------------------------------------------
@@ -49,7 +30,7 @@ enum
 // NOTE: The following methods must be implemented in your application
 // although they can be empty implementations if you like...
 //-----------------------------------------------------------------------------
-abstract_class IAppSystemGroup
+class IAppSystemGroup
 {
 public:
 	// An installed application creation function, you should tell the group
@@ -250,19 +231,19 @@ private:
 
 	static LibraryDependencies_t *sm_pSortDependencies;
 	friend void *AppSystemCreateInterfaceFn(const char *pName, int *pReturnCode);
-	friend class CSteamAppSystemGroup;
+	friend class CFSAppSystemGroup;
 };
 
 
 //-----------------------------------------------------------------------------
-// This class represents a group of app systems that are loaded through steam
+// This class represents a group of app systems that are loaded through the file system
 //-----------------------------------------------------------------------------
-class CSteamAppSystemGroup : public CAppSystemGroup
+class CFSAppSystemGroup : public CAppSystemGroup
 {
 public:
-	CSteamAppSystemGroup( IFileSystem *pFileSystem = nullptr, CAppSystemGroup *pParentAppSystem = nullptr );
+	CFSAppSystemGroup( IFileSystem *pFileSystem = nullptr, CAppSystemGroup *pParentAppSystem = nullptr );
 
-	// Used by CSteamApplication to set up necessary pointers if we can't do it in the constructor
+	// Used by CFSApplication to set up necessary pointers if we can't do it in the constructor
 	void Setup( IFileSystem *pFileSystem, CAppSystemGroup *pParentAppSystem );
 
 protected:
@@ -300,7 +281,7 @@ public:
 // Special helper for game info directory suggestion
 //-----------------------------------------------------------------------------
 
-class CFSSteamSetupInfo;	// Forward declaration
+class CFSSetupInfo;	// Forward declaration
 
 //
 // SuggestGameInfoDirFn_t
@@ -308,7 +289,7 @@ class CFSSteamSetupInfo;	// Forward declaration
 //		Provided by the application to possibly detect the suggested game info
 //		directory and initialize all the game-info-related systems appropriately.
 // Parameters:
-//		pFsSteamSetupInfo		steam file system setup information if available.
+//		pFsSetupInfo			file system setup information if available.
 //		pchPathBuffer			buffer to hold game info directory path on return.
 //		nBufferLength			length of the provided buffer to hold game info directory path.
 //		pbBubbleDirectories		should contain "true" on return to bubble the directories up searching for game info file.
@@ -317,7 +298,7 @@ class CFSSteamSetupInfo;	// Forward declaration
 //		was successfully copied into the provided buffer.
 //		Returns "false" otherwise, interpreted that no suggestion will be used.
 //
-typedef bool ( * SuggestGameInfoDirFn_t ) ( CFSSteamSetupInfo const *pFsSteamSetupInfo, char *pchPathBuffer, int nBufferLength, bool *pbBubbleDirectories );
+typedef bool ( * SuggestGameInfoDirFn_t ) ( CFSSetupInfo const *pFsSetupInfo, char *pchPathBuffer, int nBufferLength, bool *pbBubbleDirectories );
 
 //
 // SetSuggestGameInfoDirFn
@@ -329,8 +310,3 @@ typedef bool ( * SuggestGameInfoDirFn_t ) ( CFSSteamSetupInfo const *pFsSteamSet
 //		This function never fails.
 //
 SuggestGameInfoDirFn_t SetSuggestGameInfoDirFn( SuggestGameInfoDirFn_t pfnNewFn );
-
-
-#endif // APPSYSTEMGROUP_H
-
-

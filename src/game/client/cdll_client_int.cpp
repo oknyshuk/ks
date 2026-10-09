@@ -1,12 +1,23 @@
-//======= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======
-//
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "cdll_int.h"
-#include "tier1/fmtstr.h"
 #include <crtmemdebug.h>
+import ks.vstdlib;
+import std;
 #include "clientui.h"
 #include "clientmode.h"
 #include "iinput.h"
@@ -16,13 +27,10 @@
 #include "prediction.h"
 #include "clientsideeffects.h"
 #include "particlemgr.h"
-#include "steam/steam_api.h"
 #include "smoke_fog_overlay.h"
-#include "view.h"
 #include "iengineui.h"
 #include "iefx.h"
 #include "enginesprite.h"
-#include "networkstringtable_clientdll.h"
 #include "voice_status.h"
 #include "filesystem.h"
 #include "c_te_legacytempents.h"
@@ -41,7 +49,6 @@
 #include "engine/ivdebugoverlay.h"
 #include "uicenterprint.h"
 #include "iviewrender_beams.h"
-#include "tier0/vprof.h"
 #include "engine/IEngineTrace.h"
 #include "engine/ivmodelinfo.h"
 #include "physics.h"
@@ -53,9 +60,6 @@
 #include "datacache/idatacache.h"
 #include "datacache/imdlcache.h"
 #include "kbutton.h"
-#include "tier0/icommandline.h"
-#include "tier1/intern_pool.h"
-#include "vstdlib/jobthread.h"
 #include "gamerules_register.h"
 #include "game/client/iviewport.h"
 #include "bitmap/tgawriter.h"
@@ -67,12 +71,10 @@
 #include "game/client/IGameClientExports.h"
 #include "client_factorylist.h"
 #include "ragdoll_shared.h"
-#include "rendertexture.h"
 #include "view_scene.h"
 #include "iclientmode.h"
 #include "con_nprint.h"
 #include "inputsystem/iinputsystem.h"
-#include "appframework/IAppSystemGroup.h"
 #include "scenefilecache/ISceneFileCache.h"
 #include "tier3/tier3.h"
 #include "avi/iavi.h"
@@ -80,13 +82,6 @@
 #include "toolframework_client.h"
 #include "hltvcamera.h"
 #include "hltvreplaysystem.h"
-#if defined( REPLAY_ENABLED )
-#include "replaycamera.h"
-#include "replay_ragdoll.h"
-#include "replay_ragdoll.h"
-#include "qlimits.h"
-#include "engine/ireplayhistorymanager.h"
-#endif
 #include "matchmaking/imatchframework.h"
 #include "cdll_bounded_cvars.h"
 #include "GameStats.h"
@@ -98,7 +93,6 @@
 #include "c_team.h"
 #include "cs_gamerules.h"
 #include "c_cs_player.h"
-#include "cstrike15/fatdemo.h"
 #include "cstrike15/RocketUI/rkconsole.h"
 #include "cs_item_inventory.h"
 
@@ -107,34 +101,19 @@
 #include "vscript/ivscript.h"
 #include "activitylist.h"
 #include "eventlist.h"
-#ifdef GAMEUI_UISYSTEM2_ENABLED
-#include "gameui.h"
-#endif
-#ifdef GAMEUI_EMBEDDED
-#endif
 
 #include "game_controls/igameuisystemmgr.h"
 
 #include "imaterialproxydict.h"
-#include "tier0/miniprofiler.h" 
 #include "engine/iblackbox.h"
 #include "c_rumble.h"
-#include "viewpostprocess.h"
 
 #include "achievements_and_stats_interface.h"
 
-#include "iachievementmgr.h"
 #include "hud.h"
-#include "hud_element_helper.h"
-
-#ifdef INFESTED_PARTICLES
-#include "c_asw_generic_emitter.h"
-#endif
 
 
-#include "clientsteamcontext.h"
 
-#include "tier1/map_ops.h"
 #include "keybindinglistener.h"
 
 
@@ -144,7 +123,7 @@
 
 extern IClientMode *GetClientModeNormal();
 
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_CONSOLE, "Console" );
+LoggingChannelID_t LOG_CONSOLE = LoggingSystem_RegisterLoggingChannel( "Console", nullptr );;
 
 // IF YOU ADD AN INTERFACE, EXTERN IT IN THE HEADER FILE.
 IVEngineClient	*engine = nullptr;
@@ -180,9 +159,6 @@ IRenderToRTHelper *g_pRenderToRTHelper = nullptr;
 
 IUploadGameStats *gamestatsuploader = nullptr;
 IBlackBox *blackboxrecorder = nullptr;
-#if defined( REPLAY_ENABLED )
-IReplayHistoryManager *g_pReplayHistoryManager = nullptr;
-#endif
 
 AchievementsAndStatsInterface* g_pAchievementsAndStatsInterface = nullptr;
 
@@ -295,7 +271,6 @@ class IMoveHelper;
 static ConVar s_CV_ShowParticleCounts("showparticlecounts", "0", 0, "Display number of particles drawn per frame");
 // static ConVar s_cl_team("cl_team", "default", FCVAR_ARCHIVE, "Default team when joining a game");
 // static ConVar s_cl_class("cl_class", "default", FCVAR_ARCHIVE, "Default class when joining a game");
-static ConVar cl_join_advertise( "cl_join_advertise", "1", FCVAR_ARCHIVE, "Advertise joinable game in progress to Steam friends, otherwise need a Steam invite (2: all servers, 1: official servers, 0: none)" );
 
 // Physics system
 bool g_bLevelInitialized;
@@ -366,7 +341,9 @@ CSetActiveSplitScreenPlayerGuard::~CSetActiveSplitScreenPlayerGuard()
 
 static std::set< const char *, ks::cstr_less > g_Hacks;
 
-CON_COMMAND( cl_dumpsplithacks, "Dump split screen workarounds." )
+static void cl_dumpsplithacks( const CCommand &args );
+static ConCommand cl_dumpsplithacks_command( "cl_dumpsplithacks", cl_dumpsplithacks, "Dump split screen workarounds." );
+static void cl_dumpsplithacks( const CCommand &args )
 {
 	for ( const char *pszHack : g_Hacks )
 	{
@@ -502,7 +479,8 @@ public:
 	}
 };
 
-EXPOSE_SINGLE_INTERFACE( CGameClientExports, IGameClientExports, GAMECLIENTEXPORTS_INTERFACE_VERSION );
+static CGameClientExports s_Singleton_CGameClientExports;
+static InterfaceReg s_Reg_CGameClientExports_IGameClientExports( []() -> void * { return static_cast<IGameClientExports *>( &s_Singleton_CGameClientExports ); }, GAMECLIENTEXPORTS_INTERFACE_VERSION );;
 
 class CClientDLLSharedAppSystems : public IClientDLLSharedAppSystems
 {
@@ -512,9 +490,6 @@ public:
 		AddAppSystem( "engine" , SOUNDEMITTERSYSTEM_INTERFACE_VERSION );
 		AddAppSystem( "engine", SCENE_FILE_CACHE_INTERFACE_VERSION );
 		
-#ifdef GAMEUI_UISYSTEM2_ENABLED
-		AddAppSystem( "client", GAMEUISYSTEMMGR_INTERFACE_VERSION );
-#endif
 	}
 
 	virtual int	Count()
@@ -541,7 +516,8 @@ private:
 	std::vector< AppSystemInfo_t >	m_Systems;
 };
 
-EXPOSE_SINGLE_INTERFACE( CClientDLLSharedAppSystems, IClientDLLSharedAppSystems, CLIENT_DLL_SHARED_APPSYSTEMS );
+static CClientDLLSharedAppSystems s_Singleton_CClientDLLSharedAppSystems;
+static InterfaceReg s_Reg_CClientDLLSharedAppSystems_IClientDLLSharedAppSystems( []() -> void * { return static_cast<IClientDLLSharedAppSystems *>( &s_Singleton_CClientDLLSharedAppSystems ); }, CLIENT_DLL_SHARED_APPSYSTEMS );;
 
 
 //-----------------------------------------------------------------------------
@@ -594,7 +570,7 @@ void TrackBoneSetupEnt( C_BaseAnimating *pEnt )
 	auto i = g_BoneSetupEnts.find( ent.m_Index );
 	if ( i == g_BoneSetupEnts.end() )
 	{
-		Q_strncpy( ent.m_ModelName, modelinfo->GetModelName( pEnt->GetModel() ), sizeof( ent.m_ModelName ) );
+		V_strncpy( ent.m_ModelName, modelinfo->GetModelName( pEnt->GetModel() ), sizeof( ent.m_ModelName ) );
 		ent.m_Count = 1;
 		g_BoneSetupEnts.emplace( ent.m_Index, ent );
 	}
@@ -814,21 +790,14 @@ public:
 	virtual const Frustum_t* GetBuildViewFrustum( void ) const;
 	virtual const std::vector< Frustum_t >* GetBuildViewAeraFrustums( void ) const;
 
-	virtual bool IsSubscribedMap( const char *pchMapName, bool bOnlyOnDisk );
-	virtual bool IsFeaturedMap( const char *pchMapName, bool bOnlyOnDisk );
-
-	virtual void DownloadCommunityMapFile( PublishedFileId_t id );
-	virtual float GetUGCFileDownloadProgress( PublishedFileId_t id );
-
 	virtual void RecordUIEvent( const char* szEvent );
-	virtual void OnHltvReplay( const ks::net::CSVCMsg_HltvReplay  &msg ) OVERRIDE { g_HltvReplaySystem.OnHltvReplay( msg ); }
-	virtual void OnHltvReplayTick() OVERRIDE { g_HltvReplaySystem.OnHltvReplayTick(); }
-	virtual int GetHltvReplayDelay() OVERRIDE { return g_HltvReplaySystem.GetHltvReplayDelay(); }
+	virtual void OnHltvReplay( const ks::net::CSVCMsg_HltvReplay  &msg ) override { g_HltvReplaySystem.OnHltvReplay( msg ); }
+	virtual void OnHltvReplayTick() override { g_HltvReplaySystem.OnHltvReplayTick(); }
+	virtual int GetHltvReplayDelay() override { return g_HltvReplaySystem.GetHltvReplayDelay(); }
 	virtual void OnDemoPlaybackTimeJump();
 
 	// Inventory access
 	virtual float FindInventoryItemWithMaxAttributeValue( char const *szItemType, char const *szAttrClass );
-	virtual void DetermineSubscriptionKvToAdvertise( KeyValues *kvLocalPlayer );
 
 	// Overwatchsupport for engine
 	virtual bool ValidateSignedEvidenceHeader( char const *szKey, void const *pvHeader, CDemoPlaybackParameters_t *pPlaybackParameters );
@@ -840,11 +809,9 @@ public:
 
 	virtual void RetireAllPlayerDecals( bool bRenderContextValid );
 
-	virtual void EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt ) OVERRIDE;
+	virtual void EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt ) override;
 
-	virtual void OnTickPre( int tickcount ) OVERRIDE;
-
-	virtual char const * GetRichPresenceStatusString();
+	virtual void OnTickPre( int tickcount ) override;
 
 	virtual int GetInEyeEntity() const;
 
@@ -861,7 +828,7 @@ private:
 CHLClient gHLClient;
 IBaseClientDLL *clientdll = &gHLClient;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CHLClient, IBaseClientDLL, CLIENT_DLL_INTERFACE_VERSION, gHLClient );
+static InterfaceReg s_Reg_CHLClient_IBaseClientDLL( []() -> void * { return static_cast<IBaseClientDLL *>( &gHLClient ); }, CLIENT_DLL_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -880,7 +847,7 @@ int GetMaterialIndex( const char *pMaterialName )
 	if (pMaterialName)
 	{
 		int nIndex = g_pStringTableMaterials->FindStringIndex( pMaterialName );
-		Assert( nIndex >= 0 );
+		contract_assert( nIndex >= 0 );
 		if (nIndex >= 0)
 			return nIndex;
 	}
@@ -920,7 +887,7 @@ int GetMovieIndex( const char *pMovieName )
 	if ( pMovieName )
 	{
 		int nIndex = g_pStringTableMovies->FindStringIndex( pMovieName );
-		Assert( nIndex >= 0 );
+		contract_assert( nIndex >= 0 );
 		if ( nIndex >= 0 )
 		{
 			return nIndex;
@@ -1054,17 +1021,10 @@ bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 	IGameSystem::Add( ViewportClientSystem() );
 	IGameSystem::Add( g_pClientShadowMgr );
 	IGameSystem::Add( g_pColorCorrectionMgr );
-#ifdef GAMEUI_UISYSTEM2_ENABLED
-	IGameSystem::Add( g_pGameUIGameSystem );
-#endif
 	IGameSystem::Add( ClientThinkList() );
 	IGameSystem::Add( ClientSoundscapeSystem() );
 	IGameSystem::Add( PerfVisualBenchmark() );
 	IGameSystem::Add( MumbleSystem() );
-
-#if defined( CLIENT_DLL ) && defined( COPY_CHECK_STRESSTEST )
-	IGameSystem::Add( GetPredictionCopyTester() );
-#endif
 
 	ActivityList_Init();
 	ActivityList_RegisterSharedActivities();
@@ -1163,7 +1123,9 @@ bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 	return true;
 }
 
-CON_COMMAND( cl_modemanager_reload, "Reloads the panel metaclasses for vgui screens." )
+static void cl_modemanager_reload( const CCommand &args );
+static ConCommand cl_modemanager_reload_command( "cl_modemanager_reload", cl_modemanager_reload, "Reloads the panel metaclasses for vgui screens." );
+static void cl_modemanager_reload( const CCommand &args )
 {
 	modemanager->Init();
 }
@@ -1249,16 +1211,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 		return false;
 	if ( (inputsystem = (IInputSystem *)appSystemFactory(INPUTSYSTEM_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
-#if defined ( AVI_VIDEO )		
-#endif
-#if ( !defined( BINK_ENABLED_FOR_CONSOLE ) ) && defined( BINK_VIDEO )
-	if ( (bik = (IBik *)appSystemFactory(BIK_INTERFACE_VERSION, nullptr)) == nullptr )
-		return false;
-#endif
-#if defined( QUICKTIME_VIDEO )
-	if ( (pQuicktime = (IQuickTime*)appSystemFactory( QUICKTIME_INTERFACE_VERSION, nullptr)) == nullptr )
-		return false;
-#endif
 	if ( (scenefilecache = (ISceneFileCache *)appSystemFactory( SCENE_FILE_CACHE_INTERFACE_VERSION, nullptr )) == nullptr )
 		return false;
 	if ( (blackboxrecorder = (IBlackBox *)appSystemFactory(BLACKBOX_INTERFACE_VERSION, nullptr)) == nullptr )
@@ -1272,10 +1224,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	if ( ( g_pGameTypes = (IGameTypes *)appSystemFactory( VENGINE_GAMETYPES_VERSION, nullptr )) == nullptr )
 		return false;
 
-#if defined( REPLAY_ENABLED )
-	if ( (g_pReplayHistoryManager = (IReplayHistoryManager *)appSystemFactory( REPLAYHISTORYMANAGER_INTERFACE_VERSION, nullptr )) == nullptr )
-		return false;
-#endif
 	if ( ( gamestatsuploader = (IUploadGameStats *)appSystemFactory( INTERFACEVERSION_UPLOADGAMESTATS, nullptr )) == nullptr )
 		return false;
 
@@ -1307,11 +1255,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	{
 		return false;
 	}
-
-#if defined( ALLOW_TEXT_MODE )
- 	if ( CommandLine()->FindParm( "-textmode" ) )
- 		g_bTextMode = true;
-#endif
 
 	if ( CommandLine()->FindParm( "-makedevshots" ) )
 		g_MakingDevShots = true;
@@ -1362,18 +1305,9 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	}
 
 
-#ifdef INFESTED_PARTICLES	// let the emitter cache load in our standard
-	g_ASWGenericEmitterCache.PrecacheTemplates();
-#endif
-
 	COM_TimestampedLog( "C_BaseAnimating::InitBoneSetupThreadPool" );
 
 	C_BaseAnimating::InitBoneSetupThreadPool();
-
-#if defined( PORTAL2_PUZZLEMAKER )
-	// This must be called after all other VGui initialization (i.e after InitGameSystems)
-	g_PuzzleMaker.Init();
-#endif // PORTAL2_PUZZLEMAKER
 
 	// Load the game types.
 	g_pGameTypes->Initialize();
@@ -1480,9 +1414,6 @@ void CHLClient::Shutdown( void )
 	Blobulator::ShutdownBlob();
 #endif // USE_BLOBULATOR
 
-	ClientSteamContext().Shutdown();
-	// SteamAPI_Shutdown(); << Steam shutdown is controlled by engine
-	
 	DisconnectTier3Libraries( );
 	DisconnectTier2Libraries( );
 	ConVar_Unregister();
@@ -1580,18 +1511,7 @@ void CHLClient::HudText( const char * message )
 //-----------------------------------------------------------------------------
 bool CHLClient::HandleGameUIEvent( const InputEvent_t &inputEvent )
 {
-#ifdef GAMEUI_UISYSTEM2_ENABLED
-	// TODO: when embedded UI will be used for HUD, we will need it to maintain
-	// a separate screen for HUD and a separate screen stack for pause menu & main menu.
-	// for now only render embedded UI in pause menu & main menu
-	BaseModUI::CBaseModPanel *pBaseModPanel = BaseModUI::CBaseModPanel::GetSingletonPtr();
-	if ( !pBaseModPanel || !pBaseModPanel->IsVisible() )
-		return false;
-
-	return g_pGameUIGameSystem->RegisterInputEvent( inputEvent );
-#else
 	return false;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1722,8 +1642,8 @@ void CHLClient::IN_SetSampleTime( float frametime )
 void CHLClient::CreateMove ( int sequence_number, float input_sample_frametime, bool active )
 {
 
-	Assert( C_BaseEntity::IsAbsRecomputationsEnabled() );
-	Assert( C_BaseEntity::IsAbsQueriesValid() );
+	contract_assert( C_BaseEntity::IsAbsRecomputationsEnabled() );
+	contract_assert( C_BaseEntity::IsAbsQueriesValid() );
 
 	C_BaseAnimating::AutoAllowBoneAccess boneaccess( true, false ); 
 
@@ -1774,7 +1694,7 @@ void CHLClient::DecodeUserCmdFromBuffer( int nSlot, bf_read& buf, int slot )
 //-----------------------------------------------------------------------------
 void CHLClient::View_Render( vrect_t *rect )
 {
-	VPROF( "View_Render" );
+	CVProfScope _( "View_Render", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// UNDONE: This gets hit at startup sometimes, investigate - will cause NaNs in calcs inside Render()
 	if ( rect->width == 0 || rect->height == 0 )
@@ -1954,15 +1874,7 @@ void ConfigureCurrentSystemLevel()
 		nGPUMemLevel = CONSOLE_SYSTEM_LEVEL_PS3;
 	}
 
-#if   defined ( PAINT )
-	char szModName[32] = "paint";
-#elif defined ( SDK_CLIENT_DLL )
-	char szModName[32] = "sdk";
-#elif defined ( SOB_CLIENT_DLL )
-	char szModName[32] = "ep2";
-#else
 	char szModName[32] = "csgo";
-#endif
 
 	bool bUIIsSplitscreen = UI_IsSplitScreen();
 	if ( cl_disable_splitscreen_cpu_level_cfgs_in_pip.GetBool() && bUIIsSplitscreen && UI_IsSplitScreenPIP() )
@@ -2031,8 +1943,6 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 
 	ResetWindspeed();
 
-#if !defined( NO_ENTITY_PREDICTION )
-
 	//[msmith] Portal 2 wanted to turn off prediction for local clients.
 	//         We want to keep it for CStrike15 (and probably other games) because of the noticable lag without it, particularly when firing a weapon.
 
@@ -2053,7 +1963,6 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 			engine->ClientCmd( "cl_predict 0" );
 		}
 	}
-#endif
 
 	// Check low violence settings for this map
 	g_RagdollLVManager.SetLowViolence( pMapName );
@@ -2072,13 +1981,6 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 		}
 	}
 
-#if defined( REPLAY_ENABLED )
-	// Initialize replay ragdoll recorder
-	if ( !engine->IsPlayingDemo() )
-	{
-		CReplayRagdollRecorder::Instance().Init();
-	}
-#endif
 }
 
 
@@ -2197,11 +2099,6 @@ void CHLClient::LevelShutdown( void )
 
 	CStudioHdr::CActivityToSequenceMapping::ResetMappings();
 
-#if defined( REPLAY_ENABLED )
-	// Shutdown the ragdoll recorder
-	CReplayRagdollRecorder::Instance().Shutdown();
-	CReplayRagdollCache::Instance().Shutdown();
-#endif
 }
 
 
@@ -2337,7 +2234,7 @@ void OnSceneStringTableChanged( void *object, INetworkStringTable *stringTable, 
 void CHLClient::InstallStringTableCallback( const char *tableName )
 {
 	// Here, cache off string table IDs
-	if (!Q_strcasecmp(tableName, "Materials"))
+	if (!V_strcasecmp(tableName, "Materials"))
 	{
 		// Look up the id 
 		g_pStringTableMaterials = networkstringtable->FindTable( tableName );
@@ -2345,38 +2242,38 @@ void CHLClient::InstallStringTableCallback( const char *tableName )
 		// When the material list changes, we need to know immediately
 		g_pStringTableMaterials->SetStringChangedCallback( nullptr, OnMaterialStringTableChanged );
 	}
-	else if ( !Q_strcasecmp( tableName, "EffectDispatch" ) )
+	else if ( !V_strcasecmp( tableName, "EffectDispatch" ) )
 	{
 		g_StringTableEffectDispatch = networkstringtable->FindTable( tableName );
 
 		// When the material list changes, we need to know immediately
 		g_StringTableEffectDispatch->SetStringChangedCallback( nullptr, OnEffectStringTableChanged );
 	}
-	else if ( !Q_strcasecmp( tableName, "InfoPanel" ) )
+	else if ( !V_strcasecmp( tableName, "InfoPanel" ) )
 	{
 		g_pStringTableInfoPanel = networkstringtable->FindTable( tableName );
 	}
-	else if ( !Q_strcasecmp( tableName, "Scenes" ) )
+	else if ( !V_strcasecmp( tableName, "Scenes" ) )
 	{
 		g_pStringTableClientSideChoreoScenes = networkstringtable->FindTable( tableName );
 		networkstringtable->SetAllowClientSideAddString( g_pStringTableClientSideChoreoScenes, true );
 		g_pStringTableClientSideChoreoScenes->SetStringChangedCallback( nullptr, OnSceneStringTableChanged );
 	}
-	else if ( !Q_strcasecmp( tableName, "ParticleEffectNames" ) )
+	else if ( !V_strcasecmp( tableName, "ParticleEffectNames" ) )
 	{
 		g_pStringTableParticleEffectNames = networkstringtable->FindTable( tableName );
 		networkstringtable->SetAllowClientSideAddString( g_pStringTableParticleEffectNames, true );
 		// When the particle system list changes, we need to know immediately
 		g_pStringTableParticleEffectNames->SetStringChangedCallback( nullptr, OnParticleSystemStringTableChanged );
 	}
-	else if ( !Q_strcasecmp( tableName, "ExtraParticleFilesTable" ) )
+	else if ( !V_strcasecmp( tableName, "ExtraParticleFilesTable" ) )
 	{
 		g_pStringTableExtraParticleFiles = networkstringtable->FindTable( tableName );
 		networkstringtable->SetAllowClientSideAddString( g_pStringTableExtraParticleFiles, true );
 		// When the particle system list changes, we need to know immediately
 		g_pStringTableExtraParticleFiles->SetStringChangedCallback( nullptr, OnPrecacheParticleFile );
 	}
-	else if ( !Q_strcasecmp( tableName, "Movies" ) )
+	else if ( !V_strcasecmp( tableName, "Movies" ) )
 	{
 		// Look up the id 
 		g_pStringTableMovies = networkstringtable->FindTable( tableName );
@@ -2397,12 +2294,13 @@ void CHLClient::InstallStringTableCallback( const char *tableName )
 //-----------------------------------------------------------------------------
 void CHLClient::PrecacheMaterial( const char *pMaterialName )
 {
-	Assert( pMaterialName );
+	ks::ScratchArena<> scratch;
+	contract_assert( pMaterialName );
 
-	int nLen = Q_strlen( pMaterialName );
-	char *pTempBuf = (char*)stackalloc( nLen + 1 );
+	int nLen = V_strlen( pMaterialName );
+	char *pTempBuf = (char*)scratch.AllocBytes( nLen + 1 );
 	memcpy( pTempBuf, pMaterialName, nLen + 1 );
-	char *pFound = Q_strstr( pTempBuf, ".vmt\0" );
+	char *pFound = V_strstr( pTempBuf, ".vmt\0" );
 	if ( pFound )
 	{
 		*pFound = 0;
@@ -2443,19 +2341,10 @@ void CHLClient::PrecacheMovie( const char *pMovieName )
 	
 	// hint the movie system to precache our movie resource
 	m_CachedMovies.intern( pMovieName );
-#if defined( BINK_VIDEO )
-	g_pBIK->PrecacheMovie( pMovieName );
-#endif
 }
 
 void CHLClient::UncacheAllMovies()
 {
-#if defined( BINK_VIDEO )
-	for ( const std::string &movie : m_CachedMovies )
-	{
-		g_pBIK->EvictPrecachedMovie( movie.c_str() );
-	}
-#endif
 	m_CachedMovies.clear();
 }
 
@@ -2475,7 +2364,7 @@ bool CHLClient::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, int 
 
 void SimulateEntities()
 {
-	VPROF_BUDGET("Client SimulateEntities", VPROF_BUDGETGROUP_CLIENT_SIM);
+	CVProfScope _( "Client SimulateEntities", 0, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_OTHER );
 
 	// Service timer events (think functions).
   	ClientThinkList()->PerformThinkFunctions();
@@ -2486,13 +2375,13 @@ void SimulateEntities()
 
 bool AddDataChangeEvent( IClientNetworkable *ent, DataUpdateType_t updateType, int *pStoredEvent )
 {
-	VPROF( "AddDataChangeEvent" );
+	CVProfScope _( "AddDataChangeEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-	Assert( ent );
+	contract_assert( ent );
 
 	if ( updateType == DATA_UPDATE_POST_UPDATE )
 	{
-		Assert( g_bDataChangedPostEventsAllowed );
+		contract_assert( g_bDataChangedPostEventsAllowed );
 		*pStoredEvent = (int)g_DataChangedPostEvents.size();
 		g_DataChangedPostEvents.emplace_back( ent, updateType, pStoredEvent );
 		return true;
@@ -2503,7 +2392,6 @@ bool AddDataChangeEvent( IClientNetworkable *ent, DataUpdateType_t updateType, i
 	{
 		if ( uint( *pStoredEvent ) < uint( g_DataChangedEvents.size() ) )
 		{
-			Assert( g_DataChangedEvents[ *pStoredEvent ].GetEntity() == ent );
 
 			// DATA_UPDATE_CREATED always overrides DATA_UPDATE_CHANGED.
 			if ( updateType == DATA_UPDATE_CREATED )
@@ -2534,7 +2422,7 @@ void ClearDataChangedEvent( int iStoredEvent )
 
 void ProcessOnDataChangedEvents()
 {
-	VPROF_("ProcessOnDataChangedEvents", 1, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_CLIENT);
+	CVProfScope _( "ProcessOnDataChangedEvents", 1, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_CLIENT );
 	int nSave = GET_ACTIVE_SPLITSCREEN_SLOT();
 	bool bSaveAccess = engine->SetLocalPlayerIsResolvable( __FILE__, __LINE__, false );
 
@@ -2678,8 +2566,8 @@ void OnRenderStart()
 {
 	CMatRenderContextPtr pRenderContext( materials );
 
-	PIXEVENT( pRenderContext, "OnRenderStart" );
-	VPROF( "OnRenderStart" );
+	( pRenderContext, "OnRenderStart" );
+	CVProfScope _( "OnRenderStart", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	MDLCACHE_CRITICAL_SECTION();
 	MDLCACHE_COARSE_LOCK();
@@ -2701,7 +2589,7 @@ void OnRenderStart()
 
 	{
 		// vprof node for this bloc of math
-		VPROF( "OnRenderStart: dirty bone caches");
+		CVProfScope _( "OnRenderStart: dirty bone caches", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		// Invalidate any bone information.
 		C_BaseAnimating::InvalidateBoneCaches();
 		C_BaseFlex::InvalidateFlexCaches();
@@ -2733,11 +2621,6 @@ void OnRenderStart()
 
 
 
-#ifdef DEMOPOLISH_ENABLED
-	// Update demo polish subsystem if necessary
-	DemoPolish_Think();
-#endif
-	
 	// This will place all entities in the correct position in world space and in the KD-tree
 	// NOTE: Doing this before view->OnRenderStart() because the player can be in hierarchy with
 	// a client-side animated entity.  So the viewport position is dependent on this animation sometimes.
@@ -2759,19 +2642,19 @@ void OnRenderStart()
 
 	{
 		// Simulate all the entities.
-		PIXEVENT( pRenderContext, "SimulateEntities" );
+		( pRenderContext, "SimulateEntities" );
 		SimulateEntities();
 	}
 
 	{
-		PIXEVENT( pRenderContext, "PhysicsSimulate" );
+		( pRenderContext, "PhysicsSimulate" );
 		PhysicsSimulate();
 	}
 
 	C_BaseAnimating::ThreadedBoneSetup();
 
 	{
-		VPROF_("Client TempEnts", 0, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_CLIENT);
+		CVProfScope _( "Client TempEnts", 0, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_CLIENT );
 		// This creates things like temp entities.
 		engine->FireEvents();
 
@@ -2788,7 +2671,7 @@ void OnRenderStart()
 	// Update particle effects (eventually, the effects should use Simulate() instead of having
 	// their own update system).
 	{
-		VPROF_BUDGET( "ParticleMgr()->Simulate", VPROF_BUDGETGROUP_PARTICLE_SIMULATION );
+		CVProfScope _( "ParticleMgr()->Simulate", 0, VPROF_BUDGETGROUP_PARTICLE_SIMULATION, false, BUDGETFLAG_OTHER );
 		ParticleMgr()->Simulate( gpGlobals->frametime );
 	}
 
@@ -2801,12 +2684,6 @@ void OnRenderStart()
 	{
 		C_BaseEntity::ToolRecordEntities();
 	}
-
-#if defined( REPLAY_ENABLED )
-	// This will record any ragdolls if Replay mode is enabled on the server
-	CReplayRagdollRecorder::Instance().Think();
-	CReplayRagdollCache::Instance().Think();
-#endif
 
 	// update dynamic light state. Necessary for light cache to work properly for d- and elights
 	engine->UpdateDAndELights();
@@ -2849,7 +2726,7 @@ void CHLClient::FrameStageNotify( ClientFrameStage_t curStage )
 
 	case FRAME_RENDER_START:
 		{
-			VPROF( "CHLClient::FrameStageNotify FRAME_RENDER_START" );
+			CVProfScope _( "CHLClient::FrameStageNotify FRAME_RENDER_START", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 			engine->SetLocalPlayerIsResolvable( __FILE__, __LINE__, false );
 
@@ -2860,7 +2737,7 @@ void CHLClient::FrameStageNotify( ClientFrameStage_t curStage )
 		
 	case FRAME_RENDER_END:
 		{
-			VPROF( "CHLClient::FrameStageNotify FRAME_RENDER_END" );
+			CVProfScope _( "CHLClient::FrameStageNotify FRAME_RENDER_END", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			OnRenderEnd();
 
 			engine->SetLocalPlayerIsResolvable( __FILE__, __LINE__, false );
@@ -2872,7 +2749,7 @@ void CHLClient::FrameStageNotify( ClientFrameStage_t curStage )
 	case FRAME_NET_FULL_FRAME_UPDATE_ON_REMOVE:
 		{
 			ParticleMgr()->RemoveAllNewEffects(); // new effects linger past entity recreation, creating a flurry of asserts, that's not good
-			Assert( CountPendingDataChangedEvents() == 0 );	// this may only happen when we didn't render anything between getting an update and then a full frame update 
+			contract_assert( CountPendingDataChangedEvents() == 0 );	// this may only happen when we didn't render anything between getting an update and then a full frame update 
 			// NOTE: There are no entities at this point if it's a full frame update! 
 			PurgeOnDataChangedEvents();
 		}
@@ -2880,7 +2757,7 @@ void CHLClient::FrameStageNotify( ClientFrameStage_t curStage )
 
 	case FRAME_NET_UPDATE_START:
 		{
-			VPROF( "CHLClient::FrameStageNotify FRAME_NET_UPDATE_START" );
+			CVProfScope _( "CHLClient::FrameStageNotify FRAME_NET_UPDATE_START", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			// disabled all recomputations while we update entities
 			C_BaseEntity::EnableAbsRecomputations( false );
 			C_BaseEntity::SetAbsQueriesValid( false );
@@ -2904,7 +2781,7 @@ void CHLClient::FrameStageNotify( ClientFrameStage_t curStage )
 		break;
 	case FRAME_NET_UPDATE_POSTDATAUPDATE_START:
 		{
-			VPROF( "CHLClient::FrameStageNotify FRAME_NET_UPDATE_POSTDATAUPDATE_START" );
+			CVProfScope _( "CHLClient::FrameStageNotify FRAME_NET_UPDATE_POSTDATAUPDATE_START", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			PREDICTION_STARTTRACKVALUE( "postdataupdate" );
 		}
 		break;
@@ -2929,14 +2806,11 @@ void CHLClient::FrameStageNotify( ClientFrameStage_t curStage )
 						}
 				}
 			}
-			VPROF( "CHLClient::FrameStageNotify FRAME_NET_UPDATE_POSTDATAUPDATE_END" );
+			CVProfScope _( "CHLClient::FrameStageNotify FRAME_NET_UPDATE_POSTDATAUPDATE_END", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			PREDICTION_ENDTRACKVALUE();
 			// Let prediction copy off pristine data
 			prediction->PostEntityPacketReceived();
 			HLTVCamera()->PostEntityPacketReceived();
-#if defined( REPLAY_ENABLED )
-			ReplayCamera()->PostEntityPacketReceived();
-#endif
 		}
 		break;
 	case FRAME_START:
@@ -3032,7 +2906,7 @@ bool CHLClient::CanStopRecordDemo( char *errorMsg, int length ) const
 		if ( engine->IsClientLocalToActiveServer() )
 			return true;	// listen server clients can always stop whenever
 
-		Q_strncpy( errorMsg, "Demo recording will stop as soon as the round is over.", length );
+		V_strncpy( errorMsg, "Demo recording will stop as soon as the round is over.", length );
 		CSGameRules()->MarkClientStopRecordAtRoundEnd( true );
 		return false;
 	}
@@ -3042,15 +2916,6 @@ bool CHLClient::CanStopRecordDemo( char *errorMsg, int length ) const
 
 void CHLClient::OnDemoRecordStart( char const* pDemoBaseName )
 {
-#ifdef DEMOPOLISH_ENABLED
-	if ( IsDemoPolishEnabled() )
-	{
-		if ( !CDemoPolishRecorder::Instance().Init( pDemoBaseName ) )
-		{
-			CDemoPolishRecorder::Instance().Shutdown();
-		}
-	}
-#endif
 
 	if ( CSGameRules() )
 	{
@@ -3061,33 +2926,10 @@ void CHLClient::OnDemoRecordStart( char const* pDemoBaseName )
 
 void CHLClient::OnDemoRecordStop()
 {
-#ifdef DEMOPOLISH_ENABLED
-	if ( DemoPolish_GetRecorder().m_bInit )
-	{
-		DemoPolish_GetRecorder().Shutdown();
-	}
-#endif
 }
 
 void CHLClient::OnDemoPlaybackStart( char const* pDemoBaseName )
 {
-#ifdef DEMOPOLISH_ENABLED
-	if ( IsDemoPolishEnabled() )
-	{
-		Assert( pDemoBaseName );
-		if ( !DemoPolish_GetController().Init( pDemoBaseName ) )
-		{
-			DemoPolish_GetController().Shutdown();
-		}
-	}
-#endif
-
-#if defined( REPLAY_ENABLED )
-	// Load any ragdoll override frames from disk
-	char szRagdollFile[MAX_OSPATH];
-	V_snprintf( szRagdollFile, sizeof(szRagdollFile), "%s.dmx", pDemoBaseName );
-	CReplayRagdollCache::Instance().Init( szRagdollFile );
-#endif
 
 	KeyValues *pImportantEvents = new KeyValues( "DemoImportantEvents" );
 	if ( pImportantEvents )
@@ -3106,16 +2948,7 @@ void CHLClient::OnDemoPlaybackRestart()
 
 void CHLClient::OnDemoPlaybackStop()
 {
-#ifdef DEMOPOLISH_ENABLED
-	if ( DemoPolish_GetController().m_bInit )
-	{
-		DemoPolish_GetController().Shutdown();
-	}
-#endif
 
-#if defined( REPLAY_ENABLED )
-	CReplayRagdollCache::Instance().Shutdown();
-#endif
 	g_HltvReplaySystem.OnDemoPlayback( false );
 }
 
@@ -3133,29 +2966,11 @@ void CHLClient::ShowHighlightSkippingMessage( bool bState, int nCurrentTick, int
 
 void CHLClient::RecordDemoPolishUserInput( int nCmdIndex )
 {
-#ifdef DEMOPOLISH_ENABLED
-	ASSERT_LOCAL_PLAYER_RESOLVABLE();
-	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
-
-	Assert( engine->IsRecordingDemo() );
-	Assert( IsDemoPolishEnabled() );	// NOTE: cl_demo_polish_enabled checked in engine.
-	
-	CUserCmd const* pUserCmd = input->GetUserCmd( nSlot, nCmdIndex );
-	Assert( pUserCmd );
-	if ( pUserCmd )
-	{
-		DemoPolish_GetRecorder().RecordUserInput( pUserCmd );
-	}
-#endif
 }
 
 bool CHLClient::CacheReplayRagdolls( const char* pFilename, int nStartTick )
 {
-#if defined( REPLAY_ENABLED )
-	return Replay_CacheRagdolls( pFilename, nStartTick );
-#else
 	return false;
-#endif
 }
 
 void CHLClient::ReplayUI_SendMessage( KeyValues *pMsg )
@@ -3171,12 +2986,6 @@ IReplayFactory *CHLClient::GetReplayFactory()
 // Clear out the local player's replay pointer so it doesn't get deleted
 void CHLClient::ClearLocalPlayerReplayPtr()
 {
-#if defined( REPLAY_ENABLED )
-	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-	Assert( pLocalPlayer );
-
-	pLocalPlayer->ClearCachedReplayPtr();
-#endif
 }
 
 
@@ -3207,7 +3016,7 @@ void CHLClient::UpdateReplayScreenshotCache()
 // See RenderViewInfo_t
 void CHLClient::RenderView( const CViewSetup &setup, int nClearFlags, int whatToDraw )
 {
-	VPROF("RenderView");
+	CVProfScope _( "RenderView", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	view->RenderView( setup, setup, nClearFlags, whatToDraw );
 }
 
@@ -3280,11 +3089,6 @@ void CHLClient::OnScreenSizeChanged( int nOldWidth, int nOldHeight )
 
 IMaterialProxy *CHLClient::InstantiateMaterialProxy( const char *proxyName )
 {
-#ifdef GAMEUI_UISYSTEM2_ENABLED
-	IMaterialProxy *pProxy = g_pGameUIGameSystem->CreateProxy( proxyName );
-	if ( pProxy )
-		return pProxy;
-#endif
 	return GetMaterialProxyDict().CreateProxy( proxyName );
 }
 
@@ -3345,7 +3149,7 @@ public:
 
 	virtual void RemoveListener( IKeyBindingListener *pListener )
 	{
-		for ( int i = 0; i < ARRAYSIZE( m_CodeListeners ); ++i )
+		for ( int i = 0; i < std::size( m_CodeListeners ); ++i )
 		{
 			std::vector< IKeyBindingListener * > &list = m_CodeListeners[ i ];
 			ks::erase_first( list, pListener );
@@ -3483,26 +3287,6 @@ const std::vector< Frustum_t >* CHLClient::GetBuildViewAeraFrustums( void ) cons
 }
 
 
-bool CHLClient::IsSubscribedMap( const char *pchMapName, bool bOnlyOnDisk )
-{
-	return false;
-}
-
-bool CHLClient::IsFeaturedMap( const char *pchMapName, bool bOnlyOnDisk )
-{
-	return false;
-}
-
-void CHLClient::DownloadCommunityMapFile( PublishedFileId_t id )
-{
-
-}
-
-float CHLClient::GetUGCFileDownloadProgress( PublishedFileId_t id )
-{
-	return 0.0f;
-}
-
 void CHLClient::RecordUIEvent( const char* szEvent )
 {
 	/* Removed for partner depot */
@@ -3524,405 +3308,6 @@ float CHLClient::FindInventoryItemWithMaxAttributeValue( char const *szItemType,
 {
 	CCSPlayerInventory *pLocalInv = CSInventoryManager()->GetLocalCSInventory();
 	return pLocalInv ? pLocalInv->FindInventoryItemWithMaxAttributeValue( szItemType, szAttrClass ) : -1.0f;
-}
-
-void CHLClient::DetermineSubscriptionKvToAdvertise( KeyValues *kvLocalPlayer )
-{
-	/* Removed for partner depot */
-}
-
-class CHLClientAutoRichPresenceUpdateOnConnect
-{
-public:
-	CHLClientAutoRichPresenceUpdateOnConnect() : m_SteamCallback_OnServersConnected( this, &CHLClientAutoRichPresenceUpdateOnConnect::Steam_OnServersConnected ) {}
-
-	STEAM_CALLBACK( CHLClientAutoRichPresenceUpdateOnConnect, Steam_OnServersConnected, SteamServersConnected_t, m_SteamCallback_OnServersConnected )
-	{
-		( void ) clientdll->GetRichPresenceStatusString();
-	}
-};
-
-char const * CHLClient::GetRichPresenceStatusString()
-{
-	ISteamFriends *pf = steamapicontext->SteamFriends();
-	if ( !pf )
-		return "";
-
-	bool bConnectedToServer = engine->IsInGame();
-
-	static CHLClientAutoRichPresenceUpdateOnConnect s_RPUpdater; // construct auto RP updater upon first rich presence update
-	
-	// Status string
-	static CFmtStr sRichPresence;
-	sRichPresence.Clear();
-
-	// Map (Dust II, Office, etc.)
-	char const *szMap = nullptr;
-	char const *szGameMap = nullptr;
-	
-	if ( bConnectedToServer )
-	{
-		szMap = engine->GetLevelNameShort();
-		szGameMap = szMap;
-		{	// Resolve known map names
-				 if ( !V_stricmp( szGameMap, "cs_assault"		)	) szGameMap = "Assault"					;
-			else if ( !V_stricmp( szGameMap, "cs_italy"			)	) szGameMap = "Italy"					;
-			else if ( !V_stricmp( szGameMap, "cs_militia"		)	) szGameMap = "Militia"					;
-			else if ( !V_stricmp( szGameMap, "cs_office"		)	) szGameMap = "Office"					;
-			else if ( !V_stricmp( szGameMap, "de_aztec"			)	) szGameMap = "Aztec"					;
-			else if ( !V_stricmp( szGameMap, "de_dust"			)	) szGameMap = "Dust"					;
-			else if ( !V_stricmp( szGameMap, "de_dust2"			)	) szGameMap = "Dust II"					;
-			else if ( !V_stricmp( szGameMap, "de_mirage"		)	) szGameMap = "Mirage"					;
-			else if ( !V_stricmp( szGameMap, "de_overpass"		)	) szGameMap = "Overpass"				;
-			else if ( !V_stricmp( szGameMap, "de_cbble"			)	) szGameMap = "Cobblestone"				;
-			else if ( !V_stricmp( szGameMap, "de_train"			)	) szGameMap = "Train"					;
-			else if ( !V_stricmp( szGameMap, "de_inferno"		)	) szGameMap = "Inferno"					;
-			else if ( !V_stricmp( szGameMap, "de_nuke"			)	) szGameMap = "Nuke"					;
-			else if ( !V_stricmp( szGameMap, "de_shorttrain"	)	) szGameMap = "Shorttrain"				;
-			else if ( !V_stricmp( szGameMap, "de_shortdust"		)	) szGameMap = "Shortdust"				;
-			else if ( !V_stricmp( szGameMap, "de_vertigo"		)	) szGameMap = "Vertigo"					;
-			else if ( !V_stricmp( szGameMap, "de_balkan"		)	) szGameMap = "Balkan"					;
-			else if ( !V_stricmp( szGameMap, "random"			)	) szGameMap = "Random"					;
-			else if ( !V_stricmp( szGameMap, "ar_baggage"		)	) szGameMap = "Baggage"					;
-			else if ( !V_stricmp( szGameMap, "ar_monastery"		)	) szGameMap = "Monastery"				;
-			else if ( !V_stricmp( szGameMap, "ar_shoots"		)	) szGameMap = "Shoots"					;
-			else if ( !V_stricmp( szGameMap, "de_embassy"		)	) szGameMap = "Embassy"					;
-			else if ( !V_stricmp( szGameMap, "de_bank"			)	) szGameMap = "Bank"					;
-			else if ( !V_stricmp( szGameMap, "de_lake"			)	) szGameMap = "Lake"					;
-			else if ( !V_stricmp( szGameMap, "de_depot"			)	) szGameMap = "Depot"					;
-			else if ( !V_stricmp( szGameMap, "de_safehouse"		)	) szGameMap = "Safehouse"				;
-			else if ( !V_stricmp( szGameMap, "de_sugarcane"		)	) szGameMap = "Sugarcane"				;
-			else if ( !V_stricmp( szGameMap, "de_stmarc"		)	) szGameMap = "St. Marc"				;
-			else if ( !V_stricmp( szGameMap, "training1"		)	) szGameMap = "Weapons Course"			;
-			else if ( !V_stricmp( szGameMap, "cs_museum"		)	) szGameMap = "Museum"					;
-			else if ( !V_stricmp( szGameMap, "cs_thunder"		)	) szGameMap = "Thunder"					;
-			else if ( !V_stricmp( szGameMap, "de_favela"		)	) szGameMap = "Favela"					;
-			else if ( !V_stricmp( szGameMap, "cs_downtown"		)	) szGameMap = "Downtown"				;
-			else if ( !V_stricmp( szGameMap, "de_seaside"		)	) szGameMap = "Seaside"					;
-			else if ( !V_stricmp( szGameMap, "de_library"		)	) szGameMap = "Library"					;
-			else if ( !V_stricmp( szGameMap, "cs_motel"			)	) szGameMap = "Motel"					;
-			else if ( !V_stricmp( szGameMap, "de_cache"			)	) szGameMap = "Cache"					;
-			else if ( !V_stricmp( szGameMap, "de_ali"			)	) szGameMap = "Ali"						;
-			else if ( !V_stricmp( szGameMap, "de_ruins"			)	) szGameMap = "Ruins"					;
-			else if ( !V_stricmp( szGameMap, "de_chinatown"		)	) szGameMap = "Chinatown"				;
-			else if ( !V_stricmp( szGameMap, "de_gwalior"		)	) szGameMap = "Gwalior"					;
-			else if ( !V_stricmp( szGameMap, "cs_agency"		)	) szGameMap = "Agency"					;
-			else if ( !V_stricmp( szGameMap, "cs_siege"			)	) szGameMap = "Siege"					;
-			else if ( !V_stricmp( szGameMap, "de_blackgold"		)	) szGameMap = "Black Gold"				;
-			else if ( !V_stricmp( szGameMap, "de_castle"		)	) szGameMap = "Castle"					;
-			else if ( !V_stricmp( szGameMap, "de_overgrown"		)	) szGameMap = "Overgrown"				;
-			else if ( !V_stricmp( szGameMap, "de_mist"			)	) szGameMap = "Mist"					;
-			else if ( !V_stricmp( szGameMap, "cs_rush"			)	) szGameMap = "Rush"					;
-			else if ( !V_stricmp( szGameMap, "cs_insertion"		)	) szGameMap = "Insertion"				;
-			else if ( !V_stricmp( szGameMap, "cs_workout"		)	) szGameMap = "Workout"					;
-			else if ( !V_stricmp( szGameMap, "cs_backalley"		)	) szGameMap = "Back Alley"				;
-			else if ( !V_stricmp( szGameMap, "de_bazaar"		)	) szGameMap = "Bazaar"					;
-			else if ( !V_stricmp( szGameMap, "de_marquis"		)	) szGameMap = "Marquis"					;
-			else if ( !V_stricmp( szGameMap, "de_season"		)	) szGameMap = "Season"					;
-			else if ( !V_stricmp( szGameMap, "de_facade"		)	) szGameMap = "Facade"					;
-			else if ( !V_stricmp( szGameMap, "de_log"			)	) szGameMap = "Log"						;
-			else if ( !V_stricmp( szGameMap, "de_rails"			)	) szGameMap = "Rails"					;
-			else if ( !V_stricmp( szGameMap, "de_resort"		)	) szGameMap = "Resort"					;
-			else if ( !V_stricmp( szGameMap, "de_zoo"			)	) szGameMap = "Zoo"						;
-			else if ( !V_stricmp( szGameMap, "cs_cruise"		)	) szGameMap = "Cruise"					;
-			else if ( !V_stricmp( szGameMap, "de_coast"			)	) szGameMap = "Coast"					;
-			else if ( !V_stricmp( szGameMap, "de_empire"		)	) szGameMap = "Empire"					;
-			else if ( !V_stricmp( szGameMap, "de_mikla"			)	) szGameMap = "Mikla"					;
-			else if ( !V_stricmp( szGameMap, "de_royal"			)	) szGameMap = "Royal"					;
-			else if ( !V_stricmp( szGameMap, "de_santorini"		)	) szGameMap = "Santorini"				;
-			else if ( !V_stricmp( szGameMap, "de_tulip"			)	) szGameMap = "Tulip"					;
-			else if ( !V_stricmp( szGameMap, "gd_crashsite"		)	) szGameMap = "Crashsite"				;
-			else if ( !V_stricmp( szGameMap, "gd_lake"			)	) szGameMap = "Lake"					;
-			else if ( !V_stricmp( szGameMap, "gd_bank"			)	) szGameMap = "Bank"					;
-			else if ( !V_stricmp( szGameMap, "gd_cbble"			)	) szGameMap = "Cobblestone"				;
-			else if ( !V_stricmp( szGameMap, "gd_sugarcane"		)	) szGameMap = "Sugarcane"				;
-			else if ( !V_stricmp( szGameMap, "coop_cementplant"	)	) szGameMap = "Phoenix Compound"		;
-		}
-	}
-
-	// Map group
-	char const *szMapGroup = nullptr;
-	char const *szGameMapGroup = nullptr;
-	
-	if ( bConnectedToServer )
-	{
-		szMapGroup = engine->GetMapGroupName();
-		szGameMapGroup = szMapGroup;
-		{
-				 if ( !V_stricmp( szGameMapGroup, "mg_active"		)	) szGameMapGroup = "Active Duty"			;
-			else if ( !V_stricmp( szGameMapGroup, "mg_reserves"		)	) szGameMapGroup = "Reserves"				;
-			else if ( !V_stricmp( szGameMapGroup, "mg_op_06"		)	) szGameMapGroup = "Operation Bloodhound"	;
-		}
-	}
-	
-	// Game mode (Arms Race, Demolition, etc.)
-	char const *szMode = nullptr;
-	char const *szGameMode = nullptr;
-	
-	if ( bConnectedToServer )
-	{
-		extern ConVar game_type;
-		extern ConVar game_mode;
-		switch ( game_type.GetInt() )
-		{
-		case 0:
-			switch ( game_mode.GetInt() )
-			{
-			case 1:
-				szMode = "competitive";
-				szGameMode = "Competitive";
-				break;
-			default:
-				szMode = "casual";
-				szGameMode = "Casual";
-				break;
-			}
-			break;
-		case 1:
-			switch ( game_mode.GetInt() )
-			{
-			case 0:
-				szMode = "gungameprogressive";
-				szGameMode = "Arms Race";
-				break;
-			case 1:
-				szMode = "gungametrbomb";
-				szGameMode = "Demolition";
-				break;
-			default:
-				szMode = "deathmatch";
-				szGameMode = "Deathmatch";
-				break;
-			}
-			break;
-		case 2:
-			szMode = "training";
-			szGameMode = "Weapons Course";
-			break;
-		case 4:
-			szMode = "cooperative";
-			szGameMode = "Mission";
-			break;
-		default:
-			szMode = "custom";
-			szGameMode = "Custom";
-			break;
-		}
-	}
-	
-	// Score of the match
-	char chScore[64] = {};
-	char const *szScore = nullptr;
-	if ( bConnectedToServer && !g_bEngineIsHLTV && CSGameRules() )
-	{
-		// Append the score using local player's team first, or CT first
-		bool bLocalPlayerT = false;
-		if ( C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer() )
-		{
-			bLocalPlayerT = ( pLocalPlayer->GetTeamNumber() == TEAM_TERRORIST );
-		}
-
-		C_Team *tTeam = GetGlobalTeam( TEAM_TERRORIST );
-		int nTscore = tTeam ? tTeam->Get_Score() : 0;
-		C_Team *ctTeam = GetGlobalTeam( TEAM_CT );
-		int nCTscore = ctTeam ? ctTeam->Get_Score() : 0;
-
-		if ( nTscore + nCTscore > 0 )
-		{
-			V_sprintf_safe( chScore, "[ %d : %d ]", bLocalPlayerT ? nTscore : nCTscore, bLocalPlayerT ? nCTscore : nTscore );
-			szScore = chScore;
-		}
-	}
-
-	// Server type
-	char const *szServerType = nullptr; // V for Valve, P for Pinion
-	char const *szConnectAddress = nullptr;
-	bool bCanInvite = false;
-	bool bCanWatch = false;
-	bool bPlayingDemo = engine->IsPlayingDemo();
-	CDemoPlaybackParameters_t const *pDemoPlaybackParameters = bPlayingDemo ? engine->GetDemoPlaybackParameters() : nullptr;
-	bool bWatchingLiveBroadcast = bPlayingDemo && pDemoPlaybackParameters && pDemoPlaybackParameters->m_bPlayingLiveRemoteBroadcast;
-	if ( bConnectedToServer )
-	{
-		if ( bWatchingLiveBroadcast )
-		{
-			if ( CSGameRules() && CSGameRules()->IsValveDS() )
-			{
-				szServerType = "kv";
-
-				// Some official game modes aren't watchable
-				if ( !CSGameRules()->IsPlayingCooperativeGametype() )
-					bCanWatch = true;
-			}
-		}
-		else if ( !bPlayingDemo )
-		{
-			// Check if the connection is to a Valve official server
-			INetChannelInfo *pNetChanInfo = engine->GetNetChannelInfo();
-			netadr_t adrRemote( pNetChanInfo ? pNetChanInfo->GetAddress() : "127.0.0.1" );
-			if ( pNetChanInfo && ( pNetChanInfo->IsLoopback() || adrRemote.IsLocalhost() ) )
-			{
-				szServerType = "offline";
-			}
-			else if ( pNetChanInfo )
-			{
-				szConnectAddress = pNetChanInfo->GetAddress();
-
-				if ( CSGameRules() && CSGameRules()->IsValveDS() )
-				{
-					szServerType = "kv";
-
-					// Some official game modes aren't watchable
-					if ( !CSGameRules()->IsPlayingCooperativeGametype() )
-						bCanWatch = true;
-				}
-
-				if ( !szServerType )
-				{
-					szServerType = "community";
-
-					if ( ( steamapicontext->SteamUtils()->GetConnectedUniverse() != k_EUniversePublic ) && ( cl_join_advertise.GetInt() >= 3 ) )
-					{	// cl_join_advertise 3 can override SteamBeta testing to show up as Valve servers
-						szServerType = "kv";
-						bCanWatch = true;
-					}
-				}
-
-				bCanInvite = ( CSGameRules() && !CSGameRules()->IsQueuedMatchmaking() &&	// queued official competitive
-					!engine->IsHLTV() &&			// demo preview or GOTV
-					( adrRemote.GetPort() != 1 )	// SteamID steamcnx for a private match, address is not valid
-					);
-				if ( bCanInvite && Q_strcmp( szServerType, "community" ) )
-				{
-					// Make sure we don't have a max number of players
-					int numPlayers = 0;
-					for ( int j = 1; j <= gpGlobals->maxClients; j++ )
-					{
-						CBasePlayer *pPlayer = UTIL_PlayerByIndex( j );
-						if ( pPlayer && !pPlayer->IsBot() )
-							++numPlayers;
-					}
-					int numPlayersLimit = 10;
-					if ( !Q_strcmp( szMode, "casual" ) )
-						numPlayersLimit = 20;
-					else if ( !Q_strcmp( szMode, "deathmatch" ) )
-						numPlayersLimit = 16;
-
-					if ( numPlayersLimit && ( numPlayers >= numPlayersLimit ) )
-						bCanInvite = false;
-				}
-			}
-		}
-	}
-
-	// Activity
-	char const *szActivity = nullptr;
-	char const *szGameActivity = nullptr;
-	if ( bConnectedToServer && bPlayingDemo && !bWatchingLiveBroadcast )
-	{
-		CDemoPlaybackParameters_t const *pParams = engine->GetDemoPlaybackParameters();
-		if ( pParams && pParams->m_bAnonymousPlayerIdentity )
-		{
-			szActivity = "overwatch";
-			szGameActivity = "Overwatch";
-		}
-		else
-		{
-			szActivity = "review";
-			szGameActivity = "Replaying";
-		}
-	}
-	else if ( bConnectedToServer && engine->IsHLTV() )
-	{
-		szActivity = "watch";
-		szGameActivity = "Watching";
-	}
-	else if ( szServerType && !Q_strcmp( "offline", szServerType ) )
-	{
-		szActivity = "offline";
-		szGameActivity = "Offline";
-	}
-	else if ( szServerType && !Q_strcmp( "community", szServerType ) )
-	{
-		szActivity = "community";
-		szGameActivity = "Community";
-	}
-
-	//
-	// Build the special status string
-	// [Activity] [Mode] [Map / MapGroup] [Score]
-	//
-	if ( szGameActivity && *szGameActivity )
-	{
-		if ( sRichPresence.Length() > 0 )
-			sRichPresence.Append( ' ' );
-		sRichPresence.AppendFormat( "%s", szGameActivity );
-	}
-	if ( szGameMode && *szGameMode )
-	{
-		if ( sRichPresence.Length() > 0 )
-			sRichPresence.Append( ' ' );
-		sRichPresence.AppendFormat( "%s", szGameMode );
-	}
-	if ( szGameMap && *szGameMap )
-	{
-		if ( sRichPresence.Length() > 0 )
-			sRichPresence.Append( ' ' );
-		sRichPresence.AppendFormat( "%s", szGameMap );
-	}
-	if ( szScore && *szScore )
-	{
-		if ( sRichPresence.Length() > 0 )
-			sRichPresence.Append( ' ' );
-		sRichPresence.AppendFormat( "%s", szScore );
-	}
-
-	if ( !sRichPresence.Length() )
-	{	// Default RP
-		sRichPresence.AppendFormat( "Playing CS:GO" );
-	}
-
-	pf->SetRichPresence( "status", sRichPresence.Get() );
-	pf->SetRichPresence( "version", CFmtStr( "%d", engine->GetEngineBuildNumber() ) );
-	pf->SetRichPresence( "time", CFmtStr( "%f", Plat_FloatTime() ) );	// cause RP upload in case we drop from Steam and reconnect
-	pf->SetRichPresence( "game:act", szActivity );
-	pf->SetRichPresence( "game:mode", szMode );
-	pf->SetRichPresence( "game:mapgroupname", szMapGroup );
-	pf->SetRichPresence( "game:map", szMap );
-	pf->SetRichPresence( "game:score", szScore );
-	pf->SetRichPresence( "game:server", szServerType );
-	pf->SetRichPresence( "watch", bCanWatch ? "1" : nullptr );
-
-	if ( bCanInvite && szConnectAddress )
-	{
-		uint32 uiRandomThing = RandomInt( 1, INT_MAX );
-		std::string strConnectHash;
-		ns_address adr;
-		if ( adr.SetFromString( szConnectAddress ) && adr.GetAddressType() == NSAT_PROXIED_GAMESERVER )
-			strConnectHash = ks::format_printf( "%u:%u:%llu", uiRandomThing, steamapicontext->SteamUser()->GetSteamID().GetAccountID(), adr.m_steamID.GetSteamID().ConvertToUint64() );
-		else
-			strConnectHash = ks::format_printf( "%u:%u:%s", uiRandomThing, steamapicontext->SteamUser()->GetSteamID().GetAccountID(), szConnectAddress );
-		CRC32_t crcConnectHash = CRC32_ProcessSingleBuffer( strConnectHash.data(), std::ssize( strConnectHash ) );
-
-		bool bPublicConnect = false;
-		if ( !Q_strcmp( szServerType, "community" ) )
-			bPublicConnect = ( cl_join_advertise.GetInt() >= 2 );
-		else
-			bPublicConnect = ( cl_join_advertise.GetInt() >= 1 );
-
-		CFmtStr fmtConnectValue( "+gcconnect%08X%08X%08X",
-			uiRandomThing, steamapicontext->SteamUser()->GetSteamID().GetAccountID(), crcConnectHash );
-
-		pf->SetRichPresence( "connect", bPublicConnect ? fmtConnectValue.Access() : nullptr );
-		pf->SetRichPresence( "connect_private", fmtConnectValue.Access() );
-	}
-	else
-	{
-		pf->SetRichPresence( "connect", nullptr );
-		pf->SetRichPresence( "connect_private", nullptr );
-	}
-
-	return sRichPresence.Get();
 }
 
 int CHLClient::GetInEyeEntity() const
@@ -4046,5 +3431,4 @@ class CClientMaterialSystem : public IClientMaterialSystem
 //-----------------------------------------------------------------------------
 static CClientMaterialSystem s_ClientMaterialSystem;
 IClientMaterialSystem *g_pClientMaterialSystem = &s_ClientMaterialSystem;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CClientMaterialSystem, IClientMaterialSystem, VCLIENTMATERIALSYSTEM_INTERFACE_VERSION, s_ClientMaterialSystem );
-
+static InterfaceReg s_Reg_CClientMaterialSystem_IClientMaterialSystem( []() -> void * { return static_cast<IClientMaterialSystem *>( &s_ClientMaterialSystem ); }, VCLIENTMATERIALSYSTEM_INTERFACE_VERSION );;

@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2011, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2011 Valve Corporation
+
 // Purpose: Game types and modes
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef IGAME_TYPES_H
-#define IGAME_TYPES_H
+import std;
+import ks.tier1;
 
-
-#include "utlvector.h"
-#include "utlstring.h"
-#include "tier1/keyvalues.h"
-
-abstract_class IGameTypes
+class IGameTypes
 {
 public:
 	struct WeaponProgression
@@ -75,8 +69,6 @@ public:
 	virtual bool GetGameModeAndTypeNameIdsFromStrings( const char* szGameType, const char* szGameMode, const char*& szOutGameTypeNameId, const char*& szOutGameModeNameId ) = 0;
 
 
-	virtual bool CreateOrUpdateWorkshopMapGroup( const char* szName, const std::vector< std::string >& vecMapNames ) = 0;
-	virtual bool IsWorkshopMapGroup( const char* szMapGroupName ) = 0;
 
 	//
 	// Maps
@@ -144,6 +136,4 @@ public:
 	virtual bool LoadMapEntry( KeyValues *pKV ) = 0;
 };
 
-#define VENGINE_GAMETYPES_VERSION "VENGINE_GAMETYPES_VERSION002"
-
-#endif // IGAME_TYPES_H
+inline constexpr const char *VENGINE_GAMETYPES_VERSION = "VENGINE_GAMETYPES_VERSION002";

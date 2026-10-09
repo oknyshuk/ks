@@ -1,20 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SOUNDINFO_H
-#define SOUNDINFO_H
-
-
-#include "bitbuf.h"
+import ks.tier1;
 #include "const.h"
 #include "soundflags.h"
 #include "coordsize.h"
-#include "mathlib/vector.h"
+import std;
 #include "netmessages.h"
-
 
 #define WRITE_DELTA_UINT( name, length )	\
 	if ( name == delta->name )		\
@@ -58,16 +51,15 @@
 	{ name = scale * buffer.ReadSBitLong( length ); }	\
 	else { name = delta->name; }
 
-#define SOUND_SEQNUMBER_BITS	10
-#define SOUND_SEQNUMBER_MASK	( (1<<SOUND_SEQNUMBER_BITS) - 1 )
+inline constexpr auto SOUND_SEQNUMBER_BITS = 10;
+inline constexpr auto SOUND_SEQNUMBER_MASK = ( (1<<SOUND_SEQNUMBER_BITS) - 1 );
 
 // offset sound delay encoding by 60ms since we encode negative sound delays with less precision
 // This means any negative sound delay greater than -100ms will get encoded at full precision
-#define SOUND_DELAY_OFFSET					(0.100f)
+inline constexpr auto SOUND_DELAY_OFFSET = (0.100f);
 
 #pragma pack(4)
 // the full float time for now.
-#define SEND_SOUND_TIME 1
 
 //-----------------------------------------------------------------------------
 struct SoundInfo_t
@@ -318,5 +310,3 @@ struct SpatializationInfo_t
 
 };
 #pragma pack()
-
-#endif // SOUNDINFO_H

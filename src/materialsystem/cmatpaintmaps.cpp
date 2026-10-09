@@ -1,20 +1,24 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#include "pch_materialsystem.h"
+import std;
 
-#define MATSYS_INTERNAL
+
+import ks.tier1;
+
+#include "tier2/tier2.h"
+#include "pixelwriter.h"
+
+#include "materialsystem_global.h"
+
+#include "imaterialsysteminternal.h"
+
 
 #include "cmaterialsystem.h"
 #include "IHardwareConfigInternal.h"
 #include "cmatpaintmaps.h"
 #include "cmatlightmaps.h"
 #include "materialsystem_global.h"
-#include "materialsystem/materialsystem_config.h"
-#include "itextureinternal.h"
 
 // src/public/
 #include "game/shared/portal2/paint_enum.h"
@@ -94,7 +98,7 @@ void CMatPaintmaps::ReleasePaintmaps( void )
 
 void CMatPaintmaps::RestorePaintmaps( int nNumLightmaps )
 {
-	Assert( std::ssize( m_PaintmapTextureHandles ) == 0 );
+	contract_assert( std::ssize( m_PaintmapTextureHandles ) == 0 );
 
 	// reallocate + update paint textures
 	for ( int i=0; i<nNumLightmaps; ++i )
@@ -145,9 +149,9 @@ void CMatPaintmaps::BeginUpdatePaintmaps()
 }
 
 
-void CMatPaintmaps::FillRect( int paintmap, Rect_t* RESTRICT pRect, BYTE* RESTRICT pPaintData, Rect_t* RESTRICT pSubRect /*= NULL*/ ) RESTRICT 
+void CMatPaintmaps::FillRect( int paintmap, Rect_t* __restrict__ pRect, BYTE* __restrict__ pPaintData, Rect_t* __restrict__ pSubRect /*= NULL*/ ) __restrict__ 
 {
-	VPROF("CMatPaintmaps::FillRect");
+	CVProfScope _( "CMatPaintmaps::FillRect", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	int width, height;
 	m_pDataManager->GetPaintmapSize( paintmap, width, height );
@@ -189,7 +193,7 @@ void CMatPaintmaps::FillRect( int paintmap, Rect_t* RESTRICT pRect, BYTE* RESTRI
 
 void CMatPaintmaps::UpdatePaintmap( int paintmap, BYTE* pPaintData, int numRects, Rect_t* pRects )
 {
-	VPROF("CMatPaintmaps::UpdatePaintmap");
+	CVProfScope _( "CMatPaintmaps::UpdatePaintmap", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( paintmap >= GetMaterialSystem()->GetNumLightmapPages() || paintmap < 0 )
 	{
 		Error( "CMatPaintmaps::UpdatePaintmap paintmap=%d out of range\n", paintmap );
@@ -232,7 +236,7 @@ void CMatPaintmaps::UpdatePaintmap( int paintmap, BYTE* pPaintData, int numRects
 		g_pShaderAPI->ModifyTexture( m_PaintmapTextureHandles[paintmap] );
 		if ( !g_pShaderAPI->TexLock( 0, 0, rect.x, rect.y, rect.width, rect.height, m_PaintmapPixelWriter ) )
 		{
-			Assert("Failed to lock paint texture!");
+			contract_assert( "Failed to lock paint texture!" );
 			return;
 		}
 	}
@@ -240,7 +244,7 @@ void CMatPaintmaps::UpdatePaintmap( int paintmap, BYTE* pPaintData, int numRects
 	{
 		if ( !LockPaintmap( paintmap ) )
 		{
-			Assert("Failed to lock paint texture!");
+			contract_assert( "Failed to lock paint texture!" );
 			return;
 		}
 	}
@@ -276,7 +280,7 @@ void CMatPaintmaps::EndUpdatePaintmaps()
 	}
 
 	m_nUpdatingPaintmapsStackDepth--;
-	Assert( m_nUpdatingPaintmapsStackDepth >= 0 );
+	contract_assert( m_nUpdatingPaintmapsStackDepth >= 0 );
 	if( m_nUpdatingPaintmapsStackDepth <= 0 && m_nLockedPaintmap != -1 )
 	{
 		g_pShaderAPI->TexUnlock();
@@ -303,7 +307,7 @@ void CMatPaintmaps::AllocatePaintmapTexture( int paintmap, int iWidth, int iHeig
 	ks::ensure_size( m_PaintmapTextureHandles, paintmap + 1 );
 
 	char debugName[256];
-	Q_snprintf( debugName, sizeof( debugName ), "[paintmap %d]", paintmap );
+	V_snprintf( debugName, sizeof( debugName ), "[paintmap %d]", paintmap );
 
 	ImageFormat imageFormat;
 	imageFormat = IMAGE_FORMAT_RGBA8888;
@@ -314,7 +318,7 @@ void CMatPaintmaps::AllocatePaintmapTexture( int paintmap, int iWidth, int iHeig
 		imageFormat, 
 		1, 1, flags, debugName, TEXTURE_GROUP_LIGHTMAP );	// don't mipmap Paintmaps
 
-	Assert( m_PaintmapTextureHandles[paintmap] != INVALID_SHADERAPI_TEXTURE_HANDLE );
+	contract_assert( m_PaintmapTextureHandles[paintmap] != INVALID_SHADERAPI_TEXTURE_HANDLE );
 
 	// Load up the texture data
 	g_pShaderAPI->ModifyTexture( m_PaintmapTextureHandles[paintmap] );
@@ -352,7 +356,7 @@ void CMatPaintmaps::InitPaintmapBits( int paintmap )
 
 	// This always needs to be initialized fully to black
 	void *pBits = writer.GetPixelMemory();
-	memset( pBits, 0, width * height * writer.GetPixelSize() );
+	std::memset( pBits, 0, width * height * writer.GetPixelSize() );
 	g_pShaderAPI->TexUnlock();
 }
 
@@ -370,7 +374,7 @@ bool CMatPaintmaps::LockPaintmap( int paintmap )
 
 	if ( !g_pShaderAPI->TexLock( 0, 0, 0, 0, width, height, m_PaintmapPixelWriter ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 

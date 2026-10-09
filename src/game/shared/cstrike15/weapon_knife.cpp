@@ -1,10 +1,54 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_predmap.h"
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
@@ -29,11 +73,11 @@
 	#include "te_effect_dispatch.h"
 #endif
 
-#define	KNIFE_BODYHIT_VOLUME 128
-#define	KNIFE_WALLHIT_VOLUME 512
+constexpr auto KNIFE_BODYHIT_VOLUME = 128;
+constexpr auto KNIFE_WALLHIT_VOLUME = 512;
 
-#define KNIFE_RANGE_SHORT 32
-#define KNIFE_RANGE_LONG 48
+constexpr auto KNIFE_RANGE_SHORT = 32;
+constexpr auto KNIFE_RANGE_LONG = 48;
 
 Vector head_hull_mins( -16, -16, -18 );
 Vector head_hull_maxs( 16, 16, 18 );
@@ -160,7 +204,7 @@ void CKnife::Spawn()
 // Different knives seem to have a slightly different deploy timing on the animation
 // we hardcode the next attack to be consistent with any knife
 //
-#define hardcoded_knife_deploy_time 1.0f
+constexpr auto hardcoded_knife_deploy_time = 1.0f;
 bool CKnife::Deploy()
 {
 	// NOTE (wills): Knives no longer use model bodygroups to change their appearance 

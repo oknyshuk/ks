@@ -1,15 +1,37 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "recipientfilter.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "foundryhelpers_server.h"
 #include "basetempentity.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: This just marshalls certain FoundryHelpers_ calls to the client.
@@ -92,7 +114,9 @@ void GetCrosshairOrNamedEntities( const CCommand &args, std::vector< CBaseEntity
 }
 
 
-CON_COMMAND_F( foundry_update_entity, "Updates the entity's position/angles when in edit mode", FCVAR_CHEAT )
+static void foundry_update_entity( const CCommand &args );
+static ConCommand foundry_update_entity_command( "foundry_update_entity", foundry_update_entity, "Updates the entity's position/angles when in edit mode", FCVAR_CHEAT );
+static void foundry_update_entity( const CCommand &args )
 {
 	if ( !CheckInFoundryMode() )
 		return;
@@ -107,7 +131,9 @@ CON_COMMAND_F( foundry_update_entity, "Updates the entity's position/angles when
 	}
 }
 
-CON_COMMAND_F( foundry_sync_hammer_view, "Move Hammer's 3D view to the same position as the engine's 3D view.", FCVAR_CHEAT )
+static void foundry_sync_hammer_view( const CCommand &args );
+static ConCommand foundry_sync_hammer_view_command( "foundry_sync_hammer_view", foundry_sync_hammer_view, "Move Hammer's 3D view to the same position as the engine's 3D view.", FCVAR_CHEAT );
+static void foundry_sync_hammer_view( const CCommand &args )
 {
 	CBasePlayer *pPlayer = CheckInFoundryMode();
 	if ( !pPlayer )
@@ -118,7 +144,9 @@ CON_COMMAND_F( foundry_sync_hammer_view, "Move Hammer's 3D view to the same posi
 	serverfoundry->MoveHammerViewTo( vPos, vAngles );
 }
 
-CON_COMMAND_F( foundry_engine_get_mouse_control, "Give the engine control of the mouse.", FCVAR_CHEAT )
+static void foundry_engine_get_mouse_control( const CCommand &args );
+static ConCommand foundry_engine_get_mouse_control_command( "foundry_engine_get_mouse_control", foundry_engine_get_mouse_control, "Give the engine control of the mouse.", FCVAR_CHEAT );
+static void foundry_engine_get_mouse_control( const CCommand &args )
 {
 	if ( !CheckInFoundryMode() )
 		return;
@@ -127,7 +155,9 @@ CON_COMMAND_F( foundry_engine_get_mouse_control, "Give the engine control of the
 }
 
 
-CON_COMMAND_F( foundry_engine_release_mouse_control, "Give the control of the mouse back to Hammer.", FCVAR_CHEAT )
+static void foundry_engine_release_mouse_control( const CCommand &args );
+static ConCommand foundry_engine_release_mouse_control_command( "foundry_engine_release_mouse_control", foundry_engine_release_mouse_control, "Give the control of the mouse back to Hammer.", FCVAR_CHEAT );
+static void foundry_engine_release_mouse_control( const CCommand &args )
 {
 	if ( !CheckInFoundryMode() )
 		return;
@@ -135,7 +165,9 @@ CON_COMMAND_F( foundry_engine_release_mouse_control, "Give the control of the mo
 	serverfoundry->EngineReleaseMouseControl();
 }
 
-CON_COMMAND_F( foundry_select_entity, "Select the entity under the crosshair or select entities with the specified name.", FCVAR_CHEAT )
+static void foundry_select_entity( const CCommand &args );
+static ConCommand foundry_select_entity_command( "foundry_select_entity", foundry_select_entity, "Select the entity under the crosshair or select entities with the specified name.", FCVAR_CHEAT );
+static void foundry_select_entity( const CCommand &args )
 {
 	CBasePlayer *pPlayer = CheckInFoundryMode();
 	if ( !pPlayer )
@@ -162,4 +194,3 @@ CON_COMMAND_F( foundry_select_entity, "Select the entity under the crosshair or 
 		serverfoundry->SelectEntities( hammerIDs.data(), std::ssize( hammerIDs ) );
 	}
 }
-

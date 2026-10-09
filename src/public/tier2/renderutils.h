@@ -1,24 +1,17 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
+
 // Purpose: A set of utilities to render standard shapes
-//
-//===========================================================================//
 
-#ifndef RENDERUTILS_H
-#define RENDERUTILS_H
-
-
+import ks.math;
 #include "tier2/tier2.h"
-#include "color.h"
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class Vector;
-class Vector2D;
-class QAngle;
 class IMaterial;
-struct matrix3x4_t;
 
 
 // Renders a wireframe sphere
@@ -68,6 +61,3 @@ void DrawNDCSpaceUntexturedPolygon( IMaterial *pMaterial, int nVertexCount, Vect
 
 // Render a capsule ( a pill-shaped hemisphere-capped cylinder )
 void RenderCapsule( const Vector &vStart, const Vector &vEnd, const float &flRadius, Color c, IMaterial *pMaterial );
-
-#endif // RENDERUTILS_H
-

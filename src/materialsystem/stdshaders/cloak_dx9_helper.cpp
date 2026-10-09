@@ -1,22 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
 #include "cloak_dx9_helper.h"
-#include "../shaderapidx9/locald3dtypes.h"												   
-#include "convar.h"
-#include "cpp_shader_constant_register_map.h"
+import std;
 #include "cloak_vs20.inc"
 #include "cloak_ps20.inc"
 #include "cloak_ps20b.inc"
 
 #include "cloak_vs30.inc"
 #include "cloak_ps30.inc"
-
 
 static ConVar r_lightwarpidentity( "r_lightwarpidentity", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 

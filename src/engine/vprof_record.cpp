@@ -1,28 +1,24 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+
 
 #undef PROTECT_FILEIO_FUNCTIONS
-#include "tier0/vprof.h"
-#include "tier1/map_ops.h"
+import ks.tier1;
 #include "client.h"
 #include "cmd.h"
 #include "filesystem_engine.h"
 #include "vprof_record.h"
-#include <memory>
-
-#ifdef VPROF_ENABLED
+import std;
 
 CVProfile *g_pVProfileForDisplay = &g_VProfCurrentProfile;
 
-long GetFileSize( FILE *fp )
+long GetFileSize( std::FILE *fp )
 {
 	int curPos = ftell( fp );
-	fseek( fp, 0, SEEK_END );
+	fseek( fp, 0, k_nSeekEnd );
 	long ret = ftell( fp );
-	fseek( fp, curPos, SEEK_SET );
+	fseek( fp, curPos, k_nSeekSet );
 	return ret;
 }
 
@@ -46,7 +42,7 @@ public:
 
 	~CVProfRecorder()
 	{
-		Assert( m_Mode == Mode_None );
+		contract_assert( m_Mode == Mode_None );
 	}
 
 	template <typename T> void Write( T *pData )
@@ -97,9 +93,9 @@ public:
 		Stop();
 
 		char tempFilename[512];
-		if ( !strchr( pFilename, '.' ) )
+		if ( !std::strchr( pFilename, '.' ) )
 		{
-			Q_snprintf( tempFilename, sizeof( tempFilename ), "%s.vprof", pFilename );
+			V_snprintf( tempFilename, sizeof( tempFilename ), "%s.vprof", pFilename );
 			pFilename = tempFilename;
 		}
 
@@ -153,7 +149,7 @@ public:
 					pCur = pCur->m_pSibling;
 				}
 
-				Assert( pToAdd );
+				contract_assert( pToAdd );
 
 				// Write this to the file.
 				int budgetGroupID = pToAdd->m_BudgetGroupID;
@@ -180,8 +176,8 @@ public:
 		const CVProfNode *pInChild = pIn->m_pChild;
 		while ( pOutChild && pInChild )
 		{
-			Assert( Q_stricmp( pInChild->m_pszName, pOutChild->m_pszName ) == 0 );
-			Assert( pInChild->GetUniqueNodeID() == pOutChild->GetUniqueNodeID() );
+			contract_assert( V_stricmp( pInChild->m_pszName, pOutChild->m_pszName ) == 0 );
+			contract_assert( pInChild->GetUniqueNodeID() == pOutChild->GetUniqueNodeID() );
 			Record_MatchTree_R( pOutChild, pInChild, pInProfile );
 			
 			pOutChild = pOutChild->m_pSibling;
@@ -191,7 +187,6 @@ public:
 
 	void Record_MatchBudgetGroups( CVProfile *pInProfile )
 	{
-		Assert( GetNumBudgetGroups() <= pInProfile->GetNumBudgetGroups() );
 
 		int nOriginalGroups = GetNumBudgetGroups();
 		for ( int i=nOriginalGroups; i < pInProfile->GetNumBudgetGroups(); i++ )
@@ -285,7 +280,7 @@ public:
 		{
 			Stop();
 			Warning( "VPROF PLAYBACK ASSERT (%s, line %d) - stopping playback.\n", __FILE__, iLine );
-			Assert( 0 );
+			contract_assert( 0 );
 			return false;
 		}
 	}
@@ -296,9 +291,9 @@ public:
 		Stop();
 
 		char tempFilename[512];
-		if ( !strchr( pFilename, '.' ) )
+		if ( !std::strchr( pFilename, '.' ) )
 		{
-			Q_snprintf( tempFilename, sizeof( tempFilename ), "%s.vprof", pFilename );
+			V_snprintf( tempFilename, sizeof( tempFilename ), "%s.vprof", pFilename );
 			pFilename = tempFilename;
 		}
 
@@ -338,7 +333,7 @@ public:
 	{
 		if ( m_Mode != Mode_Playback )
 		{
-			Assert( false );
+			contract_assert( false );
 			return;
 		}
 		
@@ -353,7 +348,7 @@ public:
 
 	char Playback_ReadToken()
 	{
-		Assert( m_Mode == Mode_Playback );
+		contract_assert( m_Mode == Mode_Playback );
 		char token;
 		if ( Read( &token ) != 1 )
 			token = TOKEN_FILE_FINISHED;
@@ -363,7 +358,7 @@ public:
 
 	void WriteString( const char *pStr )
 	{
-		g_pFileSystem->Write( pStr, strlen( pStr ) + 1, m_hFile );
+		g_pFileSystem->Write( pStr, std::strlen( pStr ) + 1, m_hFile );
 	}
 	
 	bool Playback_ReadString( char *pOut, int maxLen )
@@ -615,7 +610,7 @@ public:
 		if ( !pAverage )
 		{
 			pAverage = &averages.emplace_back();
-			memset( pAverage, 0, sizeof( *pAverage ) );
+			std::memset( pAverage, 0, sizeof( *pAverage ) );
 			pAverage->m_pNode = pNode;
 		}
 		pAverage->m_CurFrameTime_Total += pNode->m_CurFrameTime;
@@ -858,7 +853,9 @@ void VProf_StopRecording( void )
 	g_VProfRecorder.Stop();
 }
 
-CON_COMMAND( vprof_record_start, "Start recording vprof data for playback later." )
+static void vprof_record_start( const CCommand &args );
+static ConCommand vprof_record_start_command( "vprof_record_start", vprof_record_start, "Start recording vprof data for playback later." );
+static void vprof_record_start( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -869,7 +866,9 @@ CON_COMMAND( vprof_record_start, "Start recording vprof data for playback later.
 	g_VProfRecorder.Record_Start( args[1] );
 }
 
-CON_COMMAND( vprof_record_stop, "Stop recording vprof data" )
+static void vprof_record_stop( const CCommand &args );
+static ConCommand vprof_record_stop_command( "vprof_record_stop", vprof_record_stop, "Stop recording vprof data" );
+static void vprof_record_stop( const CCommand &args )
 {
 	Warning( "Stopping vprof recording...\n" );
 	g_VProfRecorder.Stop();
@@ -1018,7 +1017,9 @@ protected:
 
 
 
-CON_COMMAND( vprof_to_csv, "Convert a recorded .vprof file to .csv." )
+static void vprof_to_csv( const CCommand &args );
+static ConCommand vprof_to_csv_command( "vprof_to_csv", vprof_to_csv, "Convert a recorded .vprof file to .csv." );
+static void vprof_to_csv( const CCommand &args )
 {
 
 	//
@@ -1043,7 +1044,7 @@ CON_COMMAND( vprof_to_csv, "Convert a recorded .vprof file to .csv." )
 
 	for ( int i=1; i < args.ArgC(); i++ )
 	{
-		Q_strncat( szArgs, args[i], sizeof( szArgs ), COPY_ALL_CHARACTERS );
+		V_strncat( szArgs, args[i], sizeof( szArgs ), COPY_ALL_CHARACTERS );
 	}
 
 	//Separate the filter tokens from the arguments
@@ -1054,7 +1055,7 @@ CON_COMMAND( vprof_to_csv, "Convert a recorded .vprof file to .csv." )
 	V_strncpy( szVPROFFilename, argsVector[0].c_str(), MAX_PATH);
 	
 	// Add the remaining arguments to the map of token filters
-	for ( size_t i = 1; i < argsVector.size(); i++ )
+	for ( std::size_t i = 1; i < argsVector.size(); i++ )
 	{
 		tokenMap.insert( argsVector[i].c_str() );
 	}
@@ -1077,7 +1078,9 @@ CON_COMMAND( vprof_to_csv, "Convert a recorded .vprof file to .csv." )
 }
 
 
-CON_COMMAND( vprof_playback_start, "Start playing back a recorded .vprof file." )
+static void vprof_playback_start( const CCommand &args );
+static ConCommand vprof_playback_start_command( "vprof_playback_start", vprof_playback_start, "Start playing back a recorded .vprof file." );
+static void vprof_playback_start( const CCommand &args )
 {
 	if ( args.ArgC() < 2 )
 	{
@@ -1090,33 +1093,41 @@ CON_COMMAND( vprof_playback_start, "Start playing back a recorded .vprof file." 
 	fullFilename[0] = 0;
 	for ( int i=1; i < args.ArgC(); i++ )
 	{
-		Q_strncat( fullFilename, args[i], sizeof( fullFilename ), COPY_ALL_CHARACTERS );
+		V_strncat( fullFilename, args[i], sizeof( fullFilename ), COPY_ALL_CHARACTERS );
 	}
 
 	g_VProfRecorder.Playback_Start( fullFilename );
 }
 
-CON_COMMAND( vprof_playback_stop, "Stop playing back a recorded .vprof file." )
+static void vprof_playback_stop( const CCommand &args );
+static ConCommand vprof_playback_stop_command( "vprof_playback_stop", vprof_playback_stop, "Stop playing back a recorded .vprof file." );
+static void vprof_playback_stop( const CCommand &args )
 {
 	Warning( "Stopping vprof playback...\n" );
 	g_VProfRecorder.Stop();
 }
 
-CON_COMMAND( vprof_playback_step, "While playing back a .vprof file, step to the next tick." )
+static void vprof_playback_step( const CCommand &args );
+static ConCommand vprof_playback_step_command( "vprof_playback_step", vprof_playback_step, "While playing back a .vprof file, step to the next tick." );
+static void vprof_playback_step( const CCommand &args )
 {
 	VProfPlayback_Step();
 }
 
-CON_COMMAND( vprof_playback_stepback, "While playing back a .vprof file, step to the previous tick." )
+static void vprof_playback_stepback( const CCommand &args );
+static ConCommand vprof_playback_stepback_command( "vprof_playback_stepback", vprof_playback_stepback, "While playing back a .vprof file, step to the previous tick." );
+static void vprof_playback_stepback( const CCommand &args )
 {
 	VProfPlayback_StepBack();
 }
 
-CON_COMMAND( vprof_playback_average, "Average the next N frames." )
+static void vprof_playback_average( const CCommand &args );
+static ConCommand vprof_playback_average_command( "vprof_playback_average", vprof_playback_average, "Average the next N frames." );
+static void vprof_playback_average( const CCommand &args )
 {
 	if ( args.ArgC() >= 2 )
 	{
-		int nFrames = atoi( args[ 1 ] );
+		int nFrames = std::atoi( args[ 1 ] );
 		if ( nFrames == -1 )
 			nFrames = 9999999;
 			
@@ -1187,11 +1198,3 @@ int VProfPlayback_StepBack()
 {
 	return g_VProfRecorder.Playback_SetPlaybackTick( g_VProfRecorder.Playback_GetCurrentTick() - 1 );
 }
-
-
-#else // VPROF_ENABLED
-
-#define VProf_StartRecording( pFilename )	((void)(0))
-#define VProf_StopRecording()				((void)(0))
-
-#endif

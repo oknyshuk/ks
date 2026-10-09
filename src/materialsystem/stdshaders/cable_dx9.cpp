@@ -1,23 +1,19 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A wet version of base * lightmap
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
 
 #include "BaseVSShader.h"
 
 #include "cable_vs20.inc"
 #include "cable_ps20.inc"
 #include "cable_ps20b.inc"
-#include "cpp_shader_constant_register_map.h"
 
 DEFINE_FALLBACK_SHADER( Cable, Cable_DX9 )
 
 BEGIN_VS_SHADER( Cable_DX9, 
 			  "Help for Cable shader" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( BUMPMAP, SHADER_PARAM_TYPE_TEXTURE, "cable/cablenormalmap", "bumpmap texture" )
 		SHADER_PARAM( MINLIGHT, SHADER_PARAM_TYPE_FLOAT, "0.1", "Minimum amount of light (0-1 value)" )
 		SHADER_PARAM( MAXLIGHT, SHADER_PARAM_TYPE_FLOAT, "0.3", "Maximum amount of light" )

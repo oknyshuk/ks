@@ -1,18 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_entities.h
 // Navigation entities
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-#ifndef NAV_ENTITIES_H
-#define NAV_ENTITIES_H
-
 #include "reflect_annotations.h"
+#include "baseentity.h"
+#include "nav_area.h"
 
 //-----------------------------------------------------------------------------------------------------
 /**
@@ -69,5 +65,3 @@ private:
 	Vector m_CachedMins, m_CachedMaxs;
 
 };
-
-#endif // NAV_ENTITIES_H

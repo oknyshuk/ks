@@ -1,24 +1,15 @@
-//===== Copyright c 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef INETSUPPORT_H
-#define INETSUPPORT_H
-
-
-#include "tier1/interface.h"
-#include "keyvalues.h"
-#include "bitbuf.h"
+import std;
+import ks.tier1;
 #include "inetchannel.h"
 #include "inetmsghandler.h"
 #include "matchmaking/imatchasync.h"
 
-class ISteamNetworkingUtils;
 
-abstract_class INetSupport : public IAppSystem
+class INetSupport : public IAppSystem
 {
 public:
 	enum NetworkConsts_t
@@ -32,14 +23,6 @@ public:
 		NS_SOCK_SERVER,		// server socket
 	};
 
-	enum SteamP2PChannelId_t
-	{
-		// see top of net_steamsocketmgr.cpp for why we need seperate channels for client & server
-		SP2PC_RECV_CLIENT = 0,
-		SP2PC_RECV_SERVER,
-		SP2PC_LOBBY
-	};
-
 	struct ServerInfo_t
 	{
 		netadr_t m_netAdr;
@@ -49,7 +32,7 @@ public:
 		bool m_bActive;		// sv.IsActive
 		bool m_bDedicated;	// sv.IsDedicated
 		bool m_bLobbyExclusive;	// Exclusive to lobby connections
-		bool m_bGroupExclusive;	// Exclusive to Steam Group
+		bool m_bGroupExclusive;	// Exclusive to group
 		bool m_bInMainMenuBkgnd; // Server is in a background map
 
 		char const *m_szServerName;
@@ -111,11 +94,6 @@ public:
 		const void *data, int length,
 		bf_write *pVoicePayload = nullptr,
 		bool bUseCompression = false ) = 0;
-
-	virtual ISteamNetworkingUtils *GetSteamNetworkingUtils() = 0;
 };
 
-#define INETSUPPORT_VERSION_STRING "INETSUPPORT_003"
-
-
-#endif // INETSUPPORT_H
+inline constexpr const char *INETSUPPORT_VERSION_STRING = "INETSUPPORT_003";

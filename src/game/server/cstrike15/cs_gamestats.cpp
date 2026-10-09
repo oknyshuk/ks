@@ -1,17 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: CS game stats
-//
-// $NoKeywords: $
-//=============================================================================//
 
 // Some tricky business here - we don't want to include the precompiled header for the statreader
 // and trying to #ifdef it out does funky things like ignoring the #endif. Define our header file
 // separately and include it based on the switch
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "recipientfilter.h"
 
-#include <tier0/platform.h>
 #include "cs_gamerules.h"
 #include "cs_gamestats.h"
 #include "weapon_csbase.h"
@@ -20,15 +41,8 @@
 #include "weapon_c4.h"
 #include "cs_bot.h"
 
-#include <time.h>
 #include "filesystem.h"
 #include "bot_util.h"
-
-// needed for recording grenade detonation rows
-#include "basecsgrenade_projectile.h"
-#include "flashbang_projectile.h"
-#include "hegrenade_projectile.h"
-#include "Effects/inferno.h"
 
 #include "cdll_int.h"
 
@@ -99,75 +113,6 @@ struct
 	{ CSDominationOverkillsMatch,	CSSTAT_DOMINATION_OVERKILLS,	0,				                                        10,	nullptr, false },
 };
 
-// The struct below should be updated (along with the CSBombEventName enum table) whenever we write data for a new bomb-related event.
-struct BombEventNameInfo
-{
-	CSBombEventName eventID;
-	const char *	name;
-};
-BombEventNameInfo s_BombEventNameInfo[]=
-{
-	{	BOMB_EVENT_NAME_PLANTED, "bomb_planted" },
-	{   BOMB_EVENT_NAME_DEFUSED, "bomb_defused"	},
-};
-
-CSBombEventName BombEventNameFromString( const char* pEventName )
-{
-	for ( int i = 0; i < ARRAYSIZE( s_BombEventNameInfo ); ++i )
-	{
-		if ( !V_stricmp( s_BombEventNameInfo[i].name, pEventName ) )
-		{
-			return s_BombEventNameInfo[i].eventID;
-		}
-	}
-	return BOMB_EVENT_NAME_NONE;
-}
-
-
-uint32 GetPlayerID( CCSPlayer *pPlayer )
-{
-	// Steam account id's for bots based on difficulty
-	static int32 s_botIDs[ NUM_DIFFICULTY_LEVELS ] =
-	{
-		551,
-		552,
-		553,
-		554,
-	};
-
-	// if we're controlling a bot, return the bot ID
-	if( pPlayer->IsControllingBot() )
-	{
-		CCSPlayer* controlledPlayer = pPlayer->GetControlledBot();
-		AssertMsg( controlledPlayer != pPlayer, "Player should never match controlled player: this will cause an infinite loop" );
-		if( controlledPlayer )
-		{
-			return GetPlayerID( controlledPlayer );
-		}
-	}
-
-	if ( pPlayer->IsBot() )
-	{
-		CCSBot* pBot = dynamic_cast< CCSBot* >( pPlayer );
-		if ( pBot )
-		{
-			const BotProfile* pProfile = pBot->GetProfile();
-			if ( pProfile )
-			{
-				for ( int i = NUM_DIFFICULTY_LEVELS - 1; i >= BOT_EASY; --i )
-				{
-					if ( pProfile->IsDifficulty( ( BotDifficultyType ) i ) )
-					{
-						return s_botIDs[ i ];
-					}
-				}
-			}
-		}
-	}
-
-	return pPlayer->GetSteamIDAsUInt64();
-}
-
 // [Forrest] Allow nemesis/revenge to be turned off for a server
 static void SvNoNemesisChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
 {
@@ -188,13 +133,12 @@ static void SvNoNemesisChangeCallback( IConVar *pConVar, const char *pOldValue, 
 
 ConVar sv_nonemesis( "sv_nonemesis", "0", 0, "Disable nemesis and revenge.", SvNoNemesisChangeCallback );
 ConVar sv_dumpmatchweaponmetrics( "sv_dumpmatchweaponmetrics", "0", FCVAR_DEVELOPMENTONLY, "Turn on the exporting of weapon metrics at the end of a level.");
-ConVar sv_debugroundstats( "sv_debugroundstats", "0", FCVAR_DEVELOPMENTONLY );
 
 int GetCSLevelIndex( const char *pLevelName )
 {
 	for ( int i = 0; MapName_StatId_Table[i].statWinsId != CSSTAT_UNDEFINED; i ++ )
 	{
-		if ( Q_strcmp( pLevelName, MapName_StatId_Table[i].szMapName ) == 0 )
+		if ( V_strcmp( pLevelName, MapName_StatId_Table[i].szMapName ) == 0 )
 			return i;
 	}
 
@@ -203,7 +147,6 @@ int GetCSLevelIndex( const char *pLevelName )
 
 
 CCSGameStats CCS_GameStats;
-CCSGameStats::StatContainerList_t* CCSGameStats::s_StatLists = new CCSGameStats::StatContainerList_t();
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -216,7 +159,7 @@ CCSGameStats::CCSGameStats()
 	m_fDisseminationTimerLow = m_fDisseminationTimerHigh = 0.0f;
 
 	// create table for mapping prop models to stats
-	for ( int i = 0; i < ARRAYSIZE(PropModelStatsTableInit); ++i)
+	for ( int i = 0; i < std::size( PropModelStatsTableInit ); ++i)
 	{
 		m_PropStatTable.emplace(PropModelStatsTableInit[i].szPropModelName, PropModelStatsTableInit[i].statType);
 	}
@@ -253,9 +196,6 @@ bool CCSGameStats::Init( void )
 	ListenForGameEvent( "round_officially_ended" );
 	ListenForGameEvent( "break_prop" );
 	ListenForGameEvent( "player_decal" );	
-	ListenForGameEvent( "begin_new_match" );	
-	ListenForGameEvent( "bomb_planted" );
-	ListenForGameEvent( "bomb_defused" );
 	return true;
 }
 
@@ -267,7 +207,7 @@ void CCSGameStats::Event_ShotFired( CBasePlayer *pPlayer, CBaseCombatWeapon* pWe
 	if ( CSGameRules()->IsRoundOver() )
 		return;
 
-	Assert( pPlayer );
+	contract_assert( pPlayer );
 	CCSPlayer *pCSPlayer = ToCSPlayer( pPlayer );
 
 	// [dwenger] adding tracking for weapon used fun fact
@@ -290,18 +230,6 @@ void CCSGameStats::Event_ShotFired( CBasePlayer *pPlayer, CBaseCombatWeapon* pWe
 			//if ( weaponId == WEAPON_HEGRENADE )
 			//	int here = 0;
 
-			// OGS tracking
-			// Check to see if this bullet is from a weapon that fires multiple bullets with a single shot.
-			uint8 iSubBullet = 0;			
-			SWeaponShotData *lastShotData = !m_WeaponShotData.empty() ? m_WeaponShotData.back().get() : nullptr;
-
-			// If the previous weapon shot data has the save bulletid, then we check the sub bullet id and increment one from that
-			if ( lastShotData && lastShotData->m_uiBulletID == CCSPlayer::GetBulletGroup() )
-			{
-				iSubBullet = lastShotData->m_uiSubBulletID + 1;
-			}
-
-			m_WeaponShotData.push_back( std::make_unique< SWeaponShotData >( pCSPlayer, pCSWeapon, iSubBullet, CSGameRules()->m_iTotalRoundsPlayed, (int)pCSWeapon->m_flRecoilIndex ) );
 			for (int i = 0; WeaponName_StatId_Table[i].weaponId != WEAPON_NONE; ++i)
 			{
 			    if ( WeaponName_StatId_Table[i].weaponId == weaponId && WeaponName_StatId_Table[i].shotStatId != CSSTAT_UNDEFINED )
@@ -319,7 +247,7 @@ void CCSGameStats::Event_ShotFired( CBasePlayer *pPlayer, CBaseCombatWeapon* pWe
 
 void CCSGameStats::Event_ShotHit( CBasePlayer *pPlayer, const CTakeDamageInfo &info )
 {
-	Assert( pPlayer );
+	contract_assert( pPlayer );
 	CCSPlayer *pCSPlayer = ToCSPlayer( pPlayer );
 
 	if ( info.GetDamagedOtherPlayers() <=  0 )
@@ -360,7 +288,7 @@ void CCSGameStats::Event_ShotHit( CBasePlayer *pPlayer, const CTakeDamageInfo &i
 }
 void CCSGameStats::Event_PlayerKilled( CBasePlayer *pPlayer, const CTakeDamageInfo &info )
 {
-	Assert( pPlayer );
+	contract_assert( pPlayer );
 	CCSPlayer *pCSPlayer = ToCSPlayer( pPlayer );
 	
 	IncrementStat( pCSPlayer, CSSTAT_DEATHS, 1 );
@@ -373,7 +301,7 @@ void CCSGameStats::Event_PlayerSprayedDecal( CCSPlayer* pPlayer )
 
 void CCSGameStats::Event_PlayerKilled_PreWeaponDrop( CBasePlayer *pPlayer, const CTakeDamageInfo &info )
 {
-	Assert( pPlayer );
+	contract_assert( pPlayer );
 	CCSPlayer *pCSPlayer = ToCSPlayer( pPlayer );
 	CCSPlayer *pAttacker = ToCSPlayer( info.GetAttacker() );
 	bool victimZoomed = ( pCSPlayer->GetFOV() != pCSPlayer->GetDefaultFOV() );
@@ -490,7 +418,7 @@ void CCSGameStats::Event_AllHostagesRescued()
 //-----------------------------------------------------------------------------
 void CCSGameStats::Event_WindowShattered( CBasePlayer *pPlayer)
 {
-	Assert( pPlayer );
+	contract_assert( pPlayer );
 	CCSPlayer *pCSPlayer = ToCSPlayer( pPlayer );
 
 	IncrementStat( pCSPlayer, CSSTAT_NUM_BROKEN_WINDOWS, 1 );
@@ -637,8 +565,8 @@ void CCSGameStats::UpdatePlayerRoundStats(int winner)
 void CCSGameStats::DumpMatchWeaponMetrics()
 {
 	// generate a filename
-	time_t t = time( nullptr );
-	struct tm *now = localtime( &t );
+	std::time_t t = time( nullptr );
+	struct tm *now = std::localtime( &t );
 	if ( !now )
 		return;
 
@@ -650,7 +578,7 @@ void CCSGameStats::DumpMatchWeaponMetrics()
 	int second = now->tm_sec;
 
 	char filename[ 128 ];
-	Q_snprintf( filename, sizeof(filename), "wm_%4d%02d%02d_%02d%02d%02d_%s.csv", 
+	V_snprintf( filename, sizeof(filename), "wm_%4d%02d%02d_%02d%02d%02d_%s.csv", 
 		year, month, day, hour, minute, second, gpGlobals->mapname.ToCStr());
 
 	FileHandle_t hLogFile = filesystem->Open( filename, "wt" );
@@ -835,8 +763,8 @@ void CCSGameStats::Event_PlayerKilledOther( CBasePlayer *pAttacker, CBaseEntity 
 	if ( CBaseCombatWeapon *pWeapon = dynamic_cast<CBaseCombatWeapon *>( info.GetWeapon() ) )
 	{
 		// Does the player own this item?
-		CSteamID HolderSteamID;
-		pAttacker->GetSteamID( &HolderSteamID );
+		CPlayerId HolderPlayerID;
+		pAttacker->GetPlayerID( &HolderPlayerID );
 		if ( CEconItemView *pItemView = pWeapon->GetEconItemView() )
 		{
 			// Get the supported killeater types on this weapon
@@ -845,7 +773,7 @@ void CCSGameStats::Event_PlayerKilledOther( CBasePlayer *pAttacker, CBaseEntity 
 
 			if ( !killEaterTypes.empty() )
 			{
-				if ( pItemView->GetAccountID() == HolderSteamID.GetAccountID() )
+				if ( pItemView->GetAccountID() == HolderPlayerID.GetAccountID() )
 				{
 					// Here we could differentiate on StatTrak types (normal, headshot, etc.):
 					IncrementStat( pPlayerAttacker, CSSTAT_KILLS_WITH_STATTRAK_WEAPON, 1 );
@@ -879,24 +807,6 @@ void CCSGameStats::Event_PlayerDamage( CBasePlayer *pBasePlayer, const CTakeDama
 	{
 		IncrementStat( pAttacker, CSSTAT_DAMAGE, info.GetDamage() );
 	}
-
-	// OGS stats
-
-	// See if this is a bullet from a weapon that fires multiple (shotgun)
-
-	if ( info.GetBulletID() != 0 )
-	{
-		uint8 iSubBullet = 0;			
-		SWeaponHitData *lastHitData = !m_WeaponHitData.empty() ? m_WeaponHitData.back().get() : nullptr;
-
-		// If the previous weapon shot data has the save bulletid, then we check the sub bullet id and increment one from that
-		if ( lastHitData && lastHitData->m_uiBulletID == CCSPlayer::GetBulletGroup() )
-		{
-			iSubBullet = lastHitData->m_uiSubBulletID + 1;
-		}
-
-		m_WeaponHitData.push_back( std::make_unique< SWeaponHitData >( ToCSPlayer( pBasePlayer ), info, iSubBullet, CSGameRules()->m_iTotalRoundsPlayed, info.GetRecoilIndex() ) );
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -915,12 +825,6 @@ void CCSGameStats::Event_MoneySpent( CCSPlayer* pPlayer, int moneySpent, const c
 	if ( pPlayer && moneySpent > 0)
 	{
 		IncrementStat(pPlayer, CSSTAT_MONEY_SPENT, moneySpent);
-		if ( pItemName && !pPlayer->IsBot() )
-		{
-			CSteamID steamIDForBuyer;
-			pPlayer->GetSteamID( &steamIDForBuyer );
-			m_MarketPurchases.push_back( std::make_unique< SMarketPurchases >( steamIDForBuyer.ConvertToUint64(), moneySpent, pItemName, CSGameRules()->m_iTotalRoundsPlayed ) );
-		}
 	}
 }
 
@@ -962,8 +866,7 @@ void CCSGameStats::FireGameEvent( IGameEvent *event )
 	}
 	else if ( V_strcmp( pEventName, "round_officially_ended" ) == 0 )
 	{
-		// Upload round stats here to avoid end-of-round visual hitch
-		UploadRoundStats();
+		CCSPlayer::ResetBulletGroup();
 	}
 	else if ( V_strcmp(pEventName, "break_prop") == 0 )
 	{
@@ -977,32 +880,6 @@ void CCSGameStats::FireGameEvent( IGameEvent *event )
 		int userid = event->GetInt("userid", 0);
 		Event_PlayerSprayedDecal(ToCSPlayer(UTIL_PlayerByUserId(userid)));
 	}	
-	else if ( V_strcmp(pEventName, "begin_new_match") == 0 )
-	{
-		CreateNewGameStatsSession();
-	}
-	else if ( V_strcmp(pEventName, "bomb_planted") == 0 || V_strcmp(pEventName, "bomb_defused") == 0 )
-	{
-		//Generate a special weapon hit entry for each alive human player
-		
-		CPlantedC4* pPlantedC4 = g_PlantedC4s[0];	
-		uint8 unBombsite = event->GetInt("site",0); //Get Bombsite
-		CSBombEventName nBombEventName = BombEventNameFromString(pEventName);
-		
-		for( int iPlayerIndex = 1 ; iPlayerIndex <= MAX_PLAYERS; iPlayerIndex++ )
-		{
-			if (CCSPlayer *pCSPlayer = ToCSPlayer( UTIL_PlayerByIndex( iPlayerIndex ) ) )
-			{
-				if ( pCSPlayer->IsConnected() && pCSPlayer->IsAlive() && !pCSPlayer->IsBot() )
-				{
-					CCSPlayer::StartNewBulletGroup();
-					auto pHitData = std::make_unique< SWeaponHitData >();
-					if ( pHitData->InitAsBombEvent( pCSPlayer, pPlantedC4, CCSPlayer::GetBulletGroup(), unBombsite, nBombEventName ) )
-						CCS_GameStats.RecordWeaponHit( std::move( pHitData ) );
-				}				
-			}
-		}					 	
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1019,7 +896,7 @@ const PlayerStats_t& CCSGameStats::FindPlayerStats( CBasePlayer *pPlayer ) const
 const StatsCollection_t& CCSGameStats::GetTeamStats( int iTeamIndex ) const
 {
 	int arrayIndex = iTeamIndex - FIRST_GAME_TEAM;
-	Assert( arrayIndex >= 0 && arrayIndex < TEAM_MAXCOUNT - FIRST_GAME_TEAM );
+	contract_assert( arrayIndex >= 0 && arrayIndex < TEAM_MAXCOUNT - FIRST_GAME_TEAM );
 	return m_aTeamStats[arrayIndex];
 }
 
@@ -1028,7 +905,7 @@ const StatsCollection_t& CCSGameStats::GetTeamStats( int iTeamIndex ) const
 //-----------------------------------------------------------------------------
 void CCSGameStats::ResetAllTeamStats()
 {
-	for ( int i = 0; i < ARRAYSIZE(m_aTeamStats); ++i )
+	for ( int i = 0; i < std::size( m_aTeamStats ); ++i )
 	{
 		m_aTeamStats[i].Reset();
 	}
@@ -1039,7 +916,7 @@ void CCSGameStats::ResetAllTeamStats()
 //-----------------------------------------------------------------------------
 void CCSGameStats::ResetAllStats()
 {
-	for ( int i = 0; i < ARRAYSIZE( m_aPlayerStats ); i++ )
+	for ( int i = 0; i < std::size( m_aPlayerStats ); i++ )
 	{		
 		m_aPlayerStats[i].statsDelta.Reset();
 		m_aPlayerStats[i].statsCurrentRound.Reset();
@@ -1049,8 +926,6 @@ void CCSGameStats::ResetAllStats()
 		m_numberOfTerroristEntriesForDirectAverages = 0;
 		m_numberOfCounterTerroristEntriesForDirectAverages = 0;
 	}
-
-	ClearOGSRoundStats();
 }
 
 
@@ -1062,7 +937,7 @@ void CCSGameStats::ResetWeaponStats()
 void CCSGameStats::IncrementTeamStat( int iTeamIndex, int iStatIndex, int iAmount )
 {
 	int arrayIndex = iTeamIndex - TEAM_TERRORIST;
-	Assert( iStatIndex >= 0 && iStatIndex < CSSTAT_MAX );
+	contract_assert( iStatIndex >= 0 && iStatIndex < CSSTAT_MAX );
 	if( arrayIndex >= 0 && arrayIndex < TEAM_MAXCOUNT - TEAM_TERRORIST )
 	{
 		m_aTeamStats[arrayIndex][iStatIndex] += iAmount;
@@ -1091,7 +966,7 @@ void CCSGameStats::ResetKillHistory( CBasePlayer* pPlayer )
 	PlayerStats_t& statsPlayer = m_aPlayerStats[iPlayerIndex];
 
 	// for every other player, set all all the kills with respect to this player to 0
-	for ( int i = 0; i < ARRAYSIZE( m_aPlayerStats ); i++ )
+	for ( int i = 0; i < std::size( m_aPlayerStats ); i++ )
 	{
 		//reset their record of us.
 		PlayerStats_t &statsOther = m_aPlayerStats[i];
@@ -1111,23 +986,10 @@ void CCSGameStats::ResetKillHistory( CBasePlayer* pPlayer )
 //-----------------------------------------------------------------------------
 void CCSGameStats::ResetRoundStats()
 {
-	for ( int i = 0; i < ARRAYSIZE( m_aPlayerStats ); i++ )
+	for ( int i = 0; i < std::size( m_aPlayerStats ); i++ )
 	{		
 		m_aPlayerStats[i].statsCurrentRound.Reset();
 	}
-
-	ClearOGSRoundStats();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Reset round stats
-//-----------------------------------------------------------------------------
-void CCSGameStats::ClearOGSRoundStats()
-{
-	m_WeaponHitData.clear();
-	m_WeaponMissData.clear();
-	m_WeaponShotData.clear();
-	m_MarketPurchases.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -1143,7 +1005,7 @@ void CCSGameStats::IncrementStat( CCSPlayer* pPlayer, CSStatType_t statId, int i
 		{
 			CCSPlayer* controlledPlayer = pPlayer->GetControlledBot();
 
-			AssertMsg( controlledPlayer != pPlayer, "Player should never match controlled player: this will cause an infinite loop" );
+			contract_assert( ( controlledPlayer != pPlayer ) && "Player should never match controlled player: this will cause an infinite loop" );
 			if( controlledPlayer )
 			{
 				IncrementStat( controlledPlayer, statId,iDelta,bPlayerOnly );
@@ -1160,12 +1022,12 @@ void CCSGameStats::IncrementStat( CCSPlayer* pPlayer, CSStatType_t statId, int i
 
 		// increment team stat
 		int teamIndex = pPlayer->GetTeamNumber() - FIRST_GAME_TEAM;
-		if ( !bPlayerOnly && teamIndex >= 0 && teamIndex < ARRAYSIZE(m_aTeamStats) )
+		if ( !bPlayerOnly && teamIndex >= 0 && teamIndex < std::size( m_aTeamStats ) )
 		{
 			m_aTeamStats[teamIndex][statId] += iDelta;
 		}
 
-		for (int i = 0; i < ARRAYSIZE(ServerStatBasedAchievements); ++i)
+		for (int i = 0; i < std::size( ServerStatBasedAchievements ); ++i)
 		{
 			if (ServerStatBasedAchievements[i].statId == statId)
 			{
@@ -1204,7 +1066,7 @@ void CCSGameStats::SetStat( CCSPlayer *pPlayer, CSStatType_t statId, int iValue 
 		stats.statsCurrentRound[statId] = iValue;
 		stats.statsCurrentMatch[statId] = iValue;
 
-		for (int i = 0; i < ARRAYSIZE(ServerStatBasedAchievements); ++i)
+		for (int i = 0; i < std::size( ServerStatBasedAchievements ); ++i)
 		{
 			if (ServerStatBasedAchievements[i].statId == statId)
 			{
@@ -1226,21 +1088,21 @@ void CCSGameStats::SetStat( CCSPlayer *pPlayer, CSStatType_t statId, int iValue 
 
 void CRC32Helper_ProcessInt16( CRC32_t &crc, int16 n )
 {
-	int16 plat_n = LittleShort( n );
+	int16 plat_n = ( n );
 	CRC32_ProcessBuffer( &crc, &plat_n, sizeof(plat_n) );
 }
 
 
 void CRC32Helper_ProcessInt32( CRC32_t &crc, int32 n )
 {
-	int32 plat_n = LittleDWord( n );
+	int32 plat_n = ( n );
 	CRC32_ProcessBuffer( &crc, &plat_n, sizeof(plat_n) );
 }
 
 
 void CRC32Helper_ProcessUInt32( CRC32_t &crc, uint32 n )
 {
-	uint32 plat_n = LittleDWord( n );
+	uint32 plat_n = ( n );
 	CRC32_ProcessBuffer( &crc, &plat_n, sizeof(plat_n) );
 }
 
@@ -1259,9 +1121,6 @@ void CCSGameStats::SendStatsToPlayer( CCSPlayer * pPlayer, int iMinStatPriority 
 			int iPriority = CSStatProperty_Table[iStat].flags & CSSTAT_PRIORITY_MASK;
 			if (deltaStats[iStat] != 0 && iPriority >= iMinStatPriority)
 			{
-#if defined ( DEBUG_STAT_TRANSMISSION )
-				Msg( "Sending Stat '%s' to client. Value: %d\n", CSStatProperty_Table[iStat].szSteamName, deltaStats[iStat] );
-#endif
 				++iStatsToSend;
 			}
 		}
@@ -1299,7 +1158,7 @@ void CCSGameStats::SendStatsToPlayer( CCSPlayer * pPlayer, int iMinStatPriority 
 				CRC32Helper_ProcessInt16( crc, iStat );
 				pStat->idx = iStat;
 
-				Assert(deltaStats[iStat] <= 0x7FFF && deltaStats[iStat] > 0);	// make sure we aren't truncating bits
+				contract_assert( deltaStats[iStat] <= 0x7FFF && deltaStats[iStat] > 0 );	// make sure we aren't truncating bits
 
 				short delta = deltaStats[iStat];
 				CRC32Helper_ProcessInt16( crc, delta );
@@ -1310,7 +1169,7 @@ void CCSGameStats::SendStatsToPlayer( CCSPlayer * pPlayer, int iMinStatPriority 
 			}
 		}
 
-		Assert(iStatsToSend == 0);
+		contract_assert( iStatsToSend == 0 );
 
 		int userID = pPlayer->GetUserID();
 		msg.user_id = userID;
@@ -1505,7 +1364,6 @@ void CCSGameStats::Event_LevelShutdown( float fElapsed )
 	}
 	CBaseGameStats::Event_LevelShutdown(fElapsed);
 
-	GetSteamWorksGameStatsServer().EndSession();
 }
 
 // Reset any per match info that resides in the player class
@@ -1523,165 +1381,6 @@ void CCSGameStats::ResetPlayerClassMatchStats()
 }
 
 
-
-extern double g_rowCommitTime;
-extern double g_rowWriteTime;
-//-----------------------------------------------------------------------------
-// Purpose: Submits all round specific data to the OGS system
-//-----------------------------------------------------------------------------
-void CCSGameStats::UploadRoundStats( void )
-{
-	// If we don't have any data to send, we can early out now;
-
-	// Purpose: Linux servers hang if they submit too many bullets at once and they restart. That's bad!
-	// Only report rounds that are likely to yield valuable data and not cause issues:
-	//		Competitive Rounds (including tournaments on other servers)
-	//		Valve's Casual Rounds (to capture Operation Payback and other special events).
-
-	
-	bool bIsCompetitiveRound = ( game_mode.GetInt() == 1 && game_type.GetInt() == 0 && CSGameRules() && CSGameRules()->GetRoundLength() < 300 );
-	bool bIsValveCasualRound = ( game_mode.GetInt() == 0 && game_type.GetInt() == 0 && IsValveDedicated() );	//Adding IsValveDedicated
-	
-	static char const * s_pchTournamentServer = CommandLine()->ParmValue( "-tournament", ( char const * ) nullptr );
-	static bool s_bSubmittingStats = ( RandomFloat() < 0.1 ) || ( IsValveDedicated() && s_pchTournamentServer ); // Valve tournament major servers do not throttle
-
-	bool bIsValidMatch = bIsCompetitiveRound || bIsValveCasualRound;
-
-	if ( !bIsValidMatch || !s_bSubmittingStats )
-	{
-		CCSPlayer::ResetBulletGroup();
-		ClearOGSRoundStats();
-		return;
-	}
-
-	KeyValues *pKV = new KeyValues( "basedata" );
-	if ( !pKV )
-		return;
-
-	CFastTimer totalTimer, weaponHitTimer, weaponMissTimer, marketPurchaseTimer, submitTimer, cleanupTimer;
-	g_rowCommitTime = 0.0f;
-	g_rowWriteTime = 0.0f;
-
-	totalTimer.Start();
-	const char *pzMapName = gpGlobals->mapname.ToCStr();
-	pKV->SetString( "MapID", pzMapName );
-
-	// Calculate the shot misses by searching for any entries that are in the shot fired list but not in the damage given list
-	for ( int i = 0 ; i < std::ssize( m_WeaponShotData ) ; ++i )
-	{
-		bool found = false;
-		for ( int k=0 ; k < std::ssize( m_WeaponHitData ) ; ++k )
-		{
-			// This shot was a hit so we can move on and search for the next miss
-			if ( m_WeaponShotData[i]->m_uiBulletID == m_WeaponHitData[k]->m_uiBulletID && m_WeaponShotData[i]->m_uiSubBulletID == m_WeaponHitData[k]->m_uiSubBulletID )
-			{
-				found = true;
-				break;
-			}
-		}
-
-		// This shot was a miss so add it to Missed container
-		if ( !found )
-		{
-			m_WeaponMissData.push_back( std::make_unique< SWeaponMissData >( m_WeaponShotData[i].get() ) );
-		}
-	}
-
-	weaponHitTimer.Start();
-	uint32 iNumHits = std::ssize( m_WeaponHitData );
-	for ( int j=0 ; j < std::ssize( m_WeaponHitData ) ; ++j )
-	{
-		m_WeaponHitData[ j ]->CompactBulletID();
-		SubmitStat( m_WeaponHitData[ j ].get() );	// the stat tables only observe
-	}
-	weaponHitTimer.End();
-
-	weaponMissTimer.Start();
-	uint32 iNumMisses = std::ssize( m_WeaponMissData );
-	for ( int k=0 ; k < std::ssize( m_WeaponMissData ) ; ++k )
-	{
-		m_WeaponMissData[ k ]->CompactBulletID();
-		SubmitStat( m_WeaponMissData[ k ].get() );
-	}
-	weaponMissTimer.End();
-
-	marketPurchaseTimer.Start();
-	uint32 iNumPurchases = std::ssize( m_MarketPurchases );
-	for ( int k=0 ; k < std::ssize( m_MarketPurchases ) ; ++k )
-		SubmitStat( m_MarketPurchases[ k ].get() );
-	marketPurchaseTimer.End();
-
-	submitTimer.Start();
-	// Perform the actual submission
-	SubmitGameStats( pKV );
-	submitTimer.End();
-
-	cleanupTimer.Start();
-	// Clear out the per round stats
-	ClearOGSRoundStats();
-	pKV->deleteThis();
-	cleanupTimer.End();
-
-	totalTimer.End();
-
-	if ( sv_debugroundstats.GetBool() )
-	{
-		Msg( "**** ROUND STAT DEBUG ****\n" );
-		Msg( "UploadRoundStats completed. %.3f msec. Breakdown:\n hit: %.3f msec\n miss: %.3f msec\n market: %.3f msec\n submit: %.3f msec\n cleanup: %.3f msec\n counts: %d %d %d \n commit: %.3fms\n write: %.3fms.\n\n",
-			totalTimer.GetDuration().GetMillisecondsF(),
-			weaponHitTimer.GetDuration().GetMillisecondsF(),
-			weaponMissTimer.GetDuration().GetMillisecondsF(),
-			marketPurchaseTimer.GetDuration().GetMillisecondsF(),
-			submitTimer.GetDuration().GetMillisecondsF(),
-			cleanupTimer.GetDuration().GetMillisecondsF(),
-			iNumHits, iNumMisses, iNumPurchases, g_rowCommitTime, g_rowWriteTime );
-	}
-
-	// Reset the bullet ID.
-	CCSPlayer::ResetBulletGroup();
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CCSGameStats::SubmitGameStats( KeyValues *pKV )
-{
-	int listCount = std::ssize( *s_StatLists );
-	for( int i=0; i < listCount; ++i )
-	{
-		// Create a master key value that has stats everybody should share (map name, session ID, etc)
-		(*s_StatLists)[i]->SendData(pKV);
-		(*s_StatLists)[i]->Clear();
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-CCSGameStats::StatContainerList_t* CCSGameStats::GetStatContainerList( void )
-{
-	return s_StatLists;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CCSGameStats::AnyOGSDataToSubmit( void )
-{
-	return !m_WeaponShotData.empty() || std::ssize( m_MarketPurchases ) > 0;
-}
-
-void CCSGameStats::CreateNewGameStatsSession( void )
-{
-	GetSteamWorksGameStatsServer().EndSession();
-	GetSteamWorksGameStatsServer().StartSession();
-}
-
-void CCSGameStats::RecordWeaponHit( std::unique_ptr< SWeaponHitData > pHitData )
-{
-	m_WeaponHitData.push_back( std::move( pHitData ) );
-}
 
 float UTIL_GetEffectiveRange( CCSPlayer* pPlayer )
 {
@@ -1701,241 +1400,8 @@ float UTIL_GetEffectiveRange( CCSPlayer* pPlayer )
 	Vector vecInaccFinal = vecDirShooting + fFinalInaccuracy * vecRight + fFinalInaccuracy * vecUp;
 	VectorNormalize( vecInaccFinal );
 	float flDotInaccFinal = DotProduct( vecDirShooting.Normalized(), vecInaccFinal.Normalized() );
-	float flAngleInaccFinal = flDotInaccFinal < 0.0f ? -acos( flDotInaccFinal ) : acos( flDotInaccFinal );
+	float flAngleInaccFinal = flDotInaccFinal < 0.0f ? -std::acos( flDotInaccFinal ) : acos( flDotInaccFinal );
 	//Msg( "Inaccuracy			: %.2f deg.\n", RAD2DEG( flAngleInaccFinal ) );
 
-	return ( 0.5 * 12 ) / tanf( 0.5 * flAngleInaccFinal ); // 12 inch dinner plate 
+	return ( 0.5 * 12 ) / std::tanf( 0.5 * flAngleInaccFinal ); // 12 inch dinner plate 
 }
-
-
-SWeaponHitData::SWeaponHitData( CCSPlayer *pCSTarget, const CTakeDamageInfo &info, uint8 subBullet, uint8 round, uint8 iRecoilIndex ) 
-{
-	Clear();
-
-	CWeaponCSBase* pCSWeapon = dynamic_cast< CWeaponCSBase * >(info.GetWeapon());
-
-	// If we don't have a valid pCSWeapon then the weapon is most likely a radius type weapon 
-	
-	uint8 shotInaccuracy = 0;
-
-	{
-		CBaseEntity* pInflictor = info.GetInflictor();														   
-
-		if ( CBaseCSGrenadeProjectile* pGrenade = dynamic_cast< CBaseCSGrenadeProjectile* >( pInflictor ) ) 
-		{
-			//Some form of grenade, not Molotov.
-			if ( CCSPlayer *pPlayer = ToCSPlayer( pGrenade->GetThrower() ) )
-			{
-				for ( int i = LOADOUT_POSITION_GRENADE0; i <= LOADOUT_POSITION_GRENADE5; ++i )
-				{
-					if ( !pGrenade->m_pWeaponInfo )
-						continue;
-
-					if ( !pPlayer->Inventory() )
-						continue;
-
-					CEconItemView *pGrenadeItemView = pPlayer->Inventory()->GetItemInLoadout( pPlayer->GetTeamNumber(), i ); //LOADOUT_POSITION_GRENADE0 );
-					if ( !pGrenadeItemView || !pGrenadeItemView->GetItemDefinition() )
-						continue;
-
-					//if ( V_strcmp( pGrenadeItemView->GetItemDefinition()->GetItemClass(), pGrenadeItemView->m_pWeaponInfo->szClassname ) == 0 )
-					if ( V_strcmp( pGrenadeItemView->GetItemDefinition()->GetItemClass(), pGrenade->m_pWeaponInfo->szClassName ) == 0 )
-					{
-						m_ui8WeaponID = (uint8)pGrenadeItemView->GetItemIndex();
-					}
-				}
-			}
-		}
-		else if ( CInferno* pInferno = dynamic_cast< CInferno* >( pInflictor ) )
-		{
-			//Molotov's FIRE damage, not the projectile itself.
-			CCSPlayer *pPlayer = ToCSPlayer( info.GetAttacker() );
-			if ( pPlayer && pPlayer->Inventory() )
-			{
-				for ( int i = LOADOUT_POSITION_GRENADE0; i <= LOADOUT_POSITION_GRENADE5; ++i )
-				{
-					CEconItemView *pInfernoItemView = pPlayer->Inventory()->GetItemInLoadout( pPlayer->GetTeamNumber(), i );
-					if ( !pInfernoItemView || !pInfernoItemView->GetItemDefinition() || !pInferno->GetSourceWeaponInfo() )
-						continue;
-
-					if ( V_strcmp( pInfernoItemView->GetItemDefinition()->GetItemClass(), pInferno->GetSourceWeaponInfo()->szClassName) == 0 )
-					{
-						m_ui8WeaponID = (uint8)pInfernoItemView->GetItemIndex();
-					}
-				}				
-			}		
-		}
-		else if ( CPlantedC4* pPlantedC4 = dynamic_cast< CPlantedC4* > ( pInflictor ) )
-		{
-			//C4 explosion damage
-			if ( CCSPlayer *pPlayer = pPlantedC4->GetPlanter() )
-			{
-				if ( CEconItemView *pPlantedC4ItemView = pPlayer->Inventory()->GetItemInLoadout( pPlayer->GetTeamNumber(), LOADOUT_POSITION_C4 ) )
-				{
-					m_ui8WeaponID = (uint8)pPlantedC4ItemView->GetItemIndex();
-				}
-			}
-		}
-	}
-
-	CCSPlayer *pCSAttacker = ToCSPlayer( info.GetAttacker() );
-
-	// If there isn't a valid attacker, then try using the weapon's owner entity
-	if ( !pCSAttacker && pCSWeapon )
-	{
-		pCSAttacker = ToCSPlayer( pCSWeapon->GetOwnerEntity() );		
-	}
-
-	if ( pCSAttacker )
-	{
-		// If we haven't been able to classify the weapon yet, then assume it's the player's current active weapon.
-		if ( m_ui8WeaponID == WEAPON_NONE && pCSAttacker->GetActiveWeapon() )
-		{
-			CWeaponCSBase* pCSWeapon = dynamic_cast< CWeaponCSBase * >(pCSAttacker->GetActiveWeapon());
-
-			m_ui8WeaponID = /*pCSWeapon ? (uint8)pCSWeapon->GetEconItemView()->GetItemIndex() :*/ WEAPON_NONE;
-		}
-
-		m_vAttackerPos = pCSAttacker->GetAbsOrigin();
-		m_ui64AttackerID = GetPlayerID( pCSAttacker );
-
-		m_uAttackerMovement = (uint8)pCSAttacker->GetAbsVelocity().Length2D() << 8
-								| (FBitSet( pCSAttacker->GetFlags(), FL_ONGROUND ) ? 0 : 1) << 16	//Not on ground?
-								| (FBitSet( pCSAttacker->GetFlags(), FL_DUCKING ) ? 1 : 0) << 17
-								| shotInaccuracy;
-
-	}
-
-	if ( pCSTarget )
-	{
-		m_vTargetPos = pCSTarget->GetAbsOrigin();
-		m_uiDamage = info.GetDamage();
-		m_ui8Health = pCSTarget->GetHealth();
-
-		// Where on the target's body was hit?
-		// HITGROUP_GENERIC, HITGROUP_HEAD, HITGROUP_CHEST, HITGROUP_STOMACH, HITGROUP_LEFTARM, HITGROUP_RIGHTARM, HITGROUP_LEFTLEG, HITGROUP_RIGHTLEG, HITGROUP_GEAR
-		m_HitRegion = pCSTarget->m_LastHitGroup;
-		m_ui64TargertID = GetPlayerID( pCSTarget );		
-
-		m_uAttackerMovement = m_uAttackerMovement | (uint8)pCSTarget->GetAbsVelocity().Length2D() << 24;
-	}
-
-	m_uiBulletID = info.GetBulletID();
-	m_uiSubBulletID = subBullet;
-	m_uiRecoilIndex = iRecoilIndex;
-	m_RoundID = round;
-}
-
-bool SWeaponHitData::InitAsGrenadeDetonation( CBaseCSGrenadeProjectile *pGrenade, uint32 unBulletGroup )
-{
-	// Weaponinfo gets set in different places for different grenades... 
-	// all grenades getting detonated should have a weaponinfo set by then, but it's hard to know that just reading
-	// the code. Putting a warning/safety guard here just in case.
-	if ( !pGrenade || !pGrenade->m_pWeaponInfo )
-	{
-		Warning( "Failing to submit row for a grenade detonation: Grenade has no weapon info!\n" );
-		return false;
-	}
-
-	m_ui8WeaponID = pGrenade->m_pWeaponInfo->m_weaponId;
-	CCSPlayer *pCSAttacker = ToCSPlayer( pGrenade->GetThrower() );
-	Assert( pGrenade->GetThrower() == pGrenade->GetOriginalThrower() ); // Appears these are always the same-- If this fires, investigate which should be recorded.
-	if ( pCSAttacker )
-	{
-		m_vAttackerPos = pCSAttacker->GetAbsOrigin();
-		m_ui64AttackerID = GetPlayerID( pCSAttacker );
-	}
-
-	// target is always null for grenade detonation rows, origin is the place we landed
-	m_ui64TargertID = 0;
-	m_vTargetPos = pGrenade->GetAbsOrigin();
-	m_uiBulletID = unBulletGroup;
-
-	// overriding to store info about what the grenaded did upon detonation
-	m_HitRegion = pGrenade->m_unOGSExtraFlags;
-
-	m_RoundID = CSGameRules()->m_iTotalRoundsPlayed;
-
-	// for flashes, using these fields to smuggle counts of players effected
-	if ( CFlashbangProjectile *pFlash = dynamic_cast<CFlashbangProjectile*>(pGrenade) )
-	{
-		m_uiDamage = pFlash->m_numOpponentsHit;
-		m_ui8Health = pFlash->m_numTeammatesHit;
-	}
-	else
-	{
-		m_uiDamage = 0;
-		m_ui8Health = 0;
-	}
-
-	// todo: possible places to smuggle info
-	m_uiSubBulletID = 0;
-	m_uiRecoilIndex = 0;
-	return true;
-}
-
-bool SWeaponHitData::InitAsBombEvent( CCSPlayer *pCSPlayer, CPlantedC4 *pPlantedC4, uint32 unBulletGroup, uint8 unBombsite, CSBombEventName nBombEventID )
-{
-	// If for any reason we cannot get a pointer to the currently-planted C4 or current player, skip data collection
-	if ( !pCSPlayer || !pPlantedC4 )
-	{
-		Warning( "Failing to submit row for bomb plant: Player or C4 missing!\n" );
-		return false;
-	}		 	
-
-	//If bomb has been planted and is not defused, set TargetID to Planter 
-	//If bomb has been planted and has been defused, set TargetID to Defuser 
-	//Store plant state in m_uiDamage
-	m_uiDamage = nBombEventID;
-
-	if ( CCSPlayer *pPlanter = pPlantedC4->GetPlanter() )
-	{
-		//Get data from planted C4: WeaponID
-		if ( CEconItemView *pPlantedC4ItemView = pPlanter->Inventory()->GetItemInLoadout( pPlanter->GetTeamNumber(), LOADOUT_POSITION_C4 ) )
-		{
-			m_ui8WeaponID = (uint8)pPlantedC4ItemView->GetItemIndex();
-		}
-		
-		if ( nBombEventID == BOMB_EVENT_NAME_PLANTED )
-		{
-			m_ui64TargertID = GetPlayerID( pPlanter );
-			m_uiDamage = 1;	
-		}
-		
-		if ( nBombEventID == BOMB_EVENT_NAME_DEFUSED )	
-		{
-			if ( CCSPlayer *pDefuser = pPlantedC4->GetDefuser() )
-			{
-				m_ui64TargertID = GetPlayerID( pDefuser );
-			}							
-		}
-	}
-
-	m_vTargetPos = pPlantedC4->GetAbsOrigin(); //Record Bomb Location
-
-	// Attacker position, in this case, is just the location of the current alive player
-	if ( pCSPlayer )
-	{
-		m_vAttackerPos = pCSPlayer->GetAbsOrigin();
-		m_ui64AttackerID = GetPlayerID( pCSPlayer );
-	}								  
-	
-	m_uiBulletID = unBulletGroup;
-
-	// overriding to store info about the bombsite involved.
-	
-	// Shifting storage of unBombsite from m_HitRegion, because we have no guarantee that the value will fall within a tinyint field.
-	m_uAttackerMovement = unBombsite;
-
-	m_RoundID = CSGameRules()->m_iTotalRoundsPlayed;
-
-	// fields remaining to store info about the plant/defuse event
-	// m_HitRegion = 0;
-	// m_ui8Health = 0;
-	// m_uiSubBulletID = 0;
-	// m_uiRecoilIndex = 0;
-	return true;  
-}
-
-
-

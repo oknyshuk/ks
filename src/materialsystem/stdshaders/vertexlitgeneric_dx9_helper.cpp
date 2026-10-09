@@ -1,10 +1,7 @@
-//====== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. =====//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
+import ks.tier1;
 #include "BaseVSShader.h"
 #include "vertexlitgeneric_dx9_helper.h"
 #include "phong_dx9_helper.h"
@@ -24,9 +21,8 @@
 
 #include "shaderapifast.h"
 #include "shaderlib/commandbuilder.h"
-#include "convar.h"
+import std;
 
-#include "tier0/vprof.h"
 
 static ConVar r_lightwarpidentity( "r_lightwarpidentity","0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 static ConVar mat_phong( "mat_phong", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
@@ -1659,7 +1655,7 @@ bool bDistanceAlphaFromDetail = false;
 		{
 			bWriteDepthToAlpha = ShaderApiFast( pShaderAPI )->ShouldWriteDepthToDestAlpha();
 			bWriteWaterFogToAlpha = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z);
-			AssertMsg( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha), "Can't write two values to alpha at the same time." );
+			contract_assert( ( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha) ) && "Can't write two values to alpha at the same time." );
 		}
 		else
 		{
@@ -1688,9 +1684,9 @@ bool bDistanceAlphaFromDetail = false;
 			}
 
 			// Currently, tessellation is mutually exclusive with any kind of GPU-side skinning, morphing or vertex compression
-			Assert( !ShaderApiFast( pShaderAPI )->IsHWMorphingEnabled() );
-			Assert( numBones == 0 );
-			Assert( vertexCompression == 0);
+			contract_assert( !ShaderApiFast( pShaderAPI )->IsHWMorphingEnabled() );
+			contract_assert( numBones == 0 );
+			contract_assert( vertexCompression == 0 );
 			
 			// Also mutually exclusive with these in the non-bump case:
 			//$STATICLIGHT3 || $VERTEXCOLOR || $SEAMLESS_BASE || $SEAMLESS_DETAIL || $SEPARATE_DETAIL_UVS
@@ -2275,7 +2271,7 @@ void DrawVertexLitGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, IS
 		}
 		else
 		{
-			Assert( pShaderAPI );
+			contract_assert( pShaderAPI );
 			if( ShaderApiFast( pShaderAPI )->SinglePassFlashlightModeEnabled() )
 			{
 				//use only the second (singlepass flashlights) snapshot

@@ -1,18 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// NetAdr.cpp: implementation of the CNetAdr class.
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/dbg.h"
-#include "netadr.h"
-#include "tier1/strtools.h"
+// Purpose: NetAdr.cpp: implementation of the CNetAdr class.
 
-#include <netinet/in.h> // ntohs()
-#include <netdb.h>		// gethostbyname()
-#include <sys/socket.h>	// getsockname()
+import std;
+import ks.tier1;
+
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -124,7 +117,7 @@ void netadr_t::ToString( char *pchBuffer, uint32 unBufferSize, bool onlyBase ) c
 		}
 		else
 		{
-			V_snprintf( pchBuffer, unBufferSize, "%i.%i.%i.%i:%i", ip[0], ip[1], ip[2], ip[3], ntohs(port));
+			V_snprintf( pchBuffer, unBufferSize, "%i.%i.%i.%i:%i", ip[0], ip[1], ip[2], ip[3], WordSwapC(port));
 		}
 	}
 	else
@@ -162,7 +155,7 @@ void netadr_t::SetIP(uint8 b1, uint8 b2, uint8 b3, uint8 b4)
 
 void netadr_t::SetIP(uint unIP)
 {
-	*((uint*)ip) = BigLong( unIP );
+	*((uint*)ip) = DWordSwapC( unIP );
 }
 
 void netadr_t::SetType(netadrtype_t newtype)
@@ -177,7 +170,7 @@ netadrtype_t netadr_t::GetType() const
 
 unsigned short netadr_t::GetPort() const
 {
-	return BigShort( port );
+	return WordSwapC( port );
 }
 
 unsigned int netadr_t::GetIPNetworkByteOrder() const
@@ -187,47 +180,27 @@ unsigned int netadr_t::GetIPNetworkByteOrder() const
 
 unsigned int netadr_t::GetIPHostByteOrder() const
 {
-	return BigDWord( GetIPNetworkByteOrder() );
+	return DWordSwapC( GetIPNetworkByteOrder() );
 }
 
-void netadr_t::ToSockadr (struct sockaddr * s) const
+ks::platform::address netadr_t::ToAddress() const
 {
-	Q_memset ( s, 0, sizeof(struct sockaddr));
-
-	if (type == NA_BROADCAST)
-	{
-		((struct sockaddr_in*)s)->sin_family = AF_INET;
-		((struct sockaddr_in*)s)->sin_port = port;
-		((struct sockaddr_in*)s)->sin_addr.s_addr = INADDR_BROADCAST;
-	}
-	else if (type == NA_IP)
-	{
-		((struct sockaddr_in*)s)->sin_family = AF_INET;
-		((struct sockaddr_in*)s)->sin_addr.s_addr = *(int *)&ip;
-		((struct sockaddr_in*)s)->sin_port = port;
-	}
-	else if (type == NA_LOOPBACK )
-	{
-		((struct sockaddr_in*)s)->sin_family = AF_INET;
-		((struct sockaddr_in*)s)->sin_port = port;
-		((struct sockaddr_in*)s)->sin_addr.s_addr = INADDR_LOOPBACK ;
-	}
+	ks::platform::address a{};
+	a.port = GetPort();
+	if ( type == NA_BROADCAST )
+		a.ip = 0xFFFFFFFFu;
+	else if ( type == NA_LOOPBACK )
+		a.ip = 0x7F000001u;
+	else if ( type == NA_IP )
+		a.ip = GetIPHostByteOrder();
+	return a;
 }
 
-bool netadr_t::SetFromSockadr(const struct sockaddr * s)
+void netadr_t::SetFromAddress( const ks::platform::address &a )
 {
-	if (s->sa_family == AF_INET)
-	{
-		type = NA_IP;
-		*(int *)&ip = ((struct sockaddr_in *)s)->sin_addr.s_addr;
-		port = ((struct sockaddr_in *)s)->sin_port;
-		return true;
-	}
-	else
-	{
-		Clear();
-		return false;
-	}
+	type = NA_IP;
+	SetIP( a.ip );
+	SetPort( a.port );
 }
 
 bool netadr_t::IsValid() const
@@ -245,7 +218,7 @@ bool netadr_t::IsBaseAdrValid() const
 
 void netadr_t::SetPort(unsigned short newport)
 {
-	port = BigShort( newport );
+	port = WordSwapC( newport );
 }
 
 bool netadr_t::SetFromString( const char *pch, bool bUseDNS )
@@ -253,7 +226,7 @@ bool netadr_t::SetFromString( const char *pch, bool bUseDNS )
 	Clear();
 	type = NA_IP;
 
-	Assert( pch );		// invalid to call this with NULL pointer; fix your code bug!
+	contract_assert( pch );		// invalid to call this with NULL pointer; fix your code bug!
 	if ( !pch )			// but let's not crash
 		return false;
 
@@ -278,10 +251,10 @@ bool netadr_t::SetFromString( const char *pch, bool bUseDNS )
 	// Starts with a number and has a dot
 	if ( address[0] >= '0' && 
 		 address[0] <= '9' && 
-		 strchr( address, '.' ) )
+		 std::strchr( address, '.' ) )
 	{
 		int n1 = -1, n2 = -1, n3 = -1, n4 = -1, n5 = 0; // set port to 0 if we don't parse one
-		int nRes = sscanf( address, "%d.%d.%d.%d:%d", &n1, &n2, &n3, &n4, &n5 );
+		int nRes = std::sscanf( address, "%d.%d.%d.%d:%d", &n1, &n2, &n3, &n4, &n5 );
 		if (
 			nRes < 4
 			|| n1 < 0 || n1 > 255
@@ -303,18 +276,18 @@ bool netadr_t::SetFromString( const char *pch, bool bUseDNS )
 	// PS3_BUILDFIX
 	// FIXME - Leap of faith, this works without asserting on X360, so I assume it will on PS3
 		// Null out the colon if there is one
-		char *pchColon = strchr( address, ':' );
+		char *pchColon = std::strchr( address, ':' );
 		if ( pchColon )
 		{
 			*pchColon = 0;
 		}
 		
 		// DNS it base name
-		struct hostent *h = gethostbyname( address );
-		if ( !h )
+		unsigned int resolved = 0;
+		if ( !ks::platform::resolve_host( address, &resolved ) )
 			return false;
 
-		SetIP( ntohl( *(int *)h->h_addr_list[0] ) );
+		SetIP( resolved );
 
 		// Set Port to whatever was specified after the colon
 		if ( pchColon )
@@ -334,21 +307,4 @@ bool netadr_t::operator<(const netadr_t &netadr) const
 	else if ( *((uint *)netadr.ip) > *((uint *)ip) )
 		return false;
 	return ( netadr.port < port );
-}
-
-
-void netadr_t::SetFromSocket( int hSocket )
-{	
-	// dgoodenough - since this is skipped on X360, seems reasonable to skip as well on PS3
-	// PS3_BUILDFIX
-	// FIXME - Leap of faith, this works without asserting on X360, so I assume it will on PS3
-	Clear();
-	type = NA_IP;
-
-	struct sockaddr address;
-	socklen_t namelen = sizeof(address);
-	if ( getsockname( hSocket, (struct sockaddr *)&address, &namelen) == 0 )
-	{
-		SetFromSockadr( &address );
-	}
 }

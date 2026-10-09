@@ -1,21 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: The TF Game rules object
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef CS_GAMERULES_H
-#define CS_GAMERULES_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
 
-
+class CNavArea;
 
 #include "teamplay_gamerules.h"
-#include "convar.h"
 #include "cs_shareddefs.h"
 #include "cs_weapon_parse.h"
 #include "gamevars_shared.h"
@@ -26,12 +20,10 @@
 #include "usermessages.h"
 #if defined( GAME_DLL )
 #include "maprules.h"
-#include <map>
-#include <memory>
+import std;
 #endif
 
 //#define DEBUG_QUESTS_IN_CLIENT
-
 
 #ifdef CLIENT_DLL
 	#include "networkstringtable_clientdll.h"
@@ -43,25 +35,25 @@
 	class CCSPlayer;
 #endif
 
-#define	WINNER_NONE		0
-#define WINNER_DRAW		1
-#define WINNER_TER		TEAM_TERRORIST
-#define WINNER_CT		TEAM_CT	
+inline constexpr auto WINNER_NONE = 0;
+inline constexpr auto WINNER_DRAW = 1;
+inline constexpr auto WINNER_TER = TEAM_TERRORIST;
+inline constexpr auto WINNER_CT = TEAM_CT;
 
-#define CUSTOM_BOT_DIFFICULTY_NOBOTS	0
-#define CUSTOM_BOT_DIFFICULTY_DUMB		1
-#define CUSTOM_BOT_DIFFICULTY_EASY		2
-#define CUSTOM_BOT_DIFFICULTY_MEDIUM	3
-#define CUSTOM_BOT_DIFFICULTY_HARD		4
-#define CUSTOM_BOT_DIFFICULTY_EXPERT	5
+inline constexpr auto CUSTOM_BOT_DIFFICULTY_NOBOTS = 0;
+inline constexpr auto CUSTOM_BOT_DIFFICULTY_DUMB = 1;
+inline constexpr auto CUSTOM_BOT_DIFFICULTY_EASY = 2;
+inline constexpr auto CUSTOM_BOT_DIFFICULTY_MEDIUM = 3;
+inline constexpr auto CUSTOM_BOT_DIFFICULTY_HARD = 4;
+inline constexpr auto CUSTOM_BOT_DIFFICULTY_EXPERT = 5;
 
-#define CUSTOM_BOT_MIN_DIFFICULTY_FOR_AWARDS_PROGRESS	CUSTOM_BOT_DIFFICULTY_EASY
+inline constexpr auto CUSTOM_BOT_MIN_DIFFICULTY_FOR_AWARDS_PROGRESS = CUSTOM_BOT_DIFFICULTY_EASY;
 
-#define MAX_WEAPON_NAME_POPUP_RANGE 128.0
+inline constexpr auto MAX_WEAPON_NAME_POPUP_RANGE = 128.0;
 
-#define MAX_GIFT_GIVERS_FEATURED_COUNT 4
+inline constexpr auto MAX_GIFT_GIVERS_FEATURED_COUNT = 4;
 
-#define MAX_TOURNAMENT_ACTIVE_CASTER_COUNT 4
+inline constexpr auto MAX_TOURNAMENT_ACTIVE_CASTER_COUNT = 4;
 
 class CCSBot;
 class CHostage;
@@ -181,25 +173,25 @@ struct GGWeaponAliasName
 	const char *aliasName;
 };
 
-#define GGLIST_PISTOLS_TOTAL		9
-#define GGLIST_RIFLES_TOTAL			7
-#define GGLIST_MGS_TOTAL			2
-#define GGLIST_SGS_TOTAL			4
-#define GGLIST_SMGS_TOTAL			6
-#define GGLIST_SNIPERS_TOTAL		3
+inline constexpr auto GGLIST_PISTOLS_TOTAL = 9;
+inline constexpr auto GGLIST_RIFLES_TOTAL = 7;
+inline constexpr auto GGLIST_MGS_TOTAL = 2;
+inline constexpr auto GGLIST_SGS_TOTAL = 4;
+inline constexpr auto GGLIST_SMGS_TOTAL = 6;
+inline constexpr auto GGLIST_SNIPERS_TOTAL = 3;
 
-#define GGLIST_PISTOLS_START	0
-#define GGLIST_PISTOLS_LAST		(GGLIST_PISTOLS_START+GGLIST_PISTOLS_TOTAL-1)
-#define GGLIST_RIFLES_START		GGLIST_PISTOLS_LAST+1
-#define GGLIST_RIFLES_LAST		(GGLIST_RIFLES_START+GGLIST_RIFLES_TOTAL-1)
-#define GGLIST_MGS_START		GGLIST_RIFLES_LAST+1
-#define GGLIST_MGS_LAST			(GGLIST_MGS_START+GGLIST_MGS_TOTAL-1)
-#define GGLIST_SGS_START		GGLIST_MGS_LAST+1
-#define GGLIST_SGS_LAST			(GGLIST_SGS_START+GGLIST_SGS_TOTAL-1)
-#define GGLIST_SMGS_START		GGLIST_SGS_LAST+1
-#define GGLIST_SMGS_LAST			(GGLIST_SMGS_START+GGLIST_SMGS_TOTAL-1)
-#define GGLIST_SNIPERS_START		GGLIST_SMGS_LAST+1
-#define GGLIST_SNIPERS_LAST			(GGLIST_SNIPERS_START+GGLIST_SNIPERS_TOTAL-1)
+inline constexpr auto GGLIST_PISTOLS_START = 0;
+inline constexpr auto GGLIST_PISTOLS_LAST = (GGLIST_PISTOLS_START+GGLIST_PISTOLS_TOTAL-1);
+inline constexpr auto GGLIST_RIFLES_START = GGLIST_PISTOLS_LAST+1;
+inline constexpr auto GGLIST_RIFLES_LAST = (GGLIST_RIFLES_START+GGLIST_RIFLES_TOTAL-1);
+inline constexpr auto GGLIST_MGS_START = GGLIST_RIFLES_LAST+1;
+inline constexpr auto GGLIST_MGS_LAST = (GGLIST_MGS_START+GGLIST_MGS_TOTAL-1);
+inline constexpr auto GGLIST_SGS_START = GGLIST_MGS_LAST+1;
+inline constexpr auto GGLIST_SGS_LAST = (GGLIST_SGS_START+GGLIST_SGS_TOTAL-1);
+inline constexpr auto GGLIST_SMGS_START = GGLIST_SGS_LAST+1;
+inline constexpr auto GGLIST_SMGS_LAST = (GGLIST_SMGS_START+GGLIST_SMGS_TOTAL-1);
+inline constexpr auto GGLIST_SNIPERS_START = GGLIST_SMGS_LAST+1;
+inline constexpr auto GGLIST_SNIPERS_LAST = (GGLIST_SNIPERS_START+GGLIST_SNIPERS_TOTAL-1);
 
 //--------------------------------------------------------------------------------------------------------------
 // NOTE: Array must be NULL-terminated
@@ -295,7 +287,7 @@ public:
 	int GetTerroristScore( void ) const 	{ return m_terroristScoreTotal; }
 	int GetCTScore( void ) const  			{ return m_ctScoreTotal; }	
 
-	int GetTeamScore( int nTeam ) const		{ switch( nTeam ) { case TEAM_TERRORIST: return GetTerroristScore(); case TEAM_CT: return GetCTScore(); default: Assert( !"unexpected value for nTeam" ); return 0; } }
+	int GetTeamScore( int nTeam ) const		{ switch( nTeam ) { case TEAM_TERRORIST: return GetTerroristScore(); case TEAM_CT: return GetCTScore(); default: contract_assert( !"unexpected value for nTeam" ); return 0; } }
 	int GetRoundsPlayed( void ) const		{ return m_actualRoundsPlayed; }	
 	
 	//Since the teams change in halftime modes and we want to retain their scores, we swap the scores
@@ -470,7 +462,6 @@ public:
 
 	virtual bool IsTeamChangeSilent( CBasePlayer *pPlayer, int iTeamNum, bool bAutoTeam, bool bSilent ) { return bSilent || m_bForceTeamChangeSilent; }
 
-	void CheckForGiftsLeaderboardUpdate();
 #endif
 
 	bool IsConnectedUserInfoChangeAllowed( CBasePlayer *pPlayer );
@@ -617,7 +608,7 @@ public:
 	void CoopMissionRespawnDeadPlayers( void );
 	void CoopCollectBonusCoin( void );
 
-	virtual bool OnReplayPrompt( CBasePlayer *pVictim, CBasePlayer *pScorer ) OVERRIDE;
+	virtual bool OnReplayPrompt( CBasePlayer *pVictim, CBasePlayer *pScorer ) override;
 #endif
 	int GetGuardianRequiredKills( void ) const;
 	int GetGuardianKillsRemaining( void ) const;
@@ -627,7 +618,7 @@ private:
 	float GetExplosionDamageAdjustment(Vector & vecSrc, Vector & vecEnd, CBaseEntity *pEntityToIgnore); // returns multiplier between 0.0 and 1.0 that is the percentage of any damage done from vecSrc to vecEnd that actually makes it.
 	float GetAmountOfEntityVisible(Vector & src, CBaseEntity *player); // returns a value from 0 to 1 that is the percentage of player visible from src.
 
-	CNetworkVar( bool, m_bFreezePeriod, [[= ks::reflect::Net{} ]] );	 // TRUE at beginning of round, set to FALSE when the period expires
+	CNetworkVar( bool, m_bFreezePeriod, [[= ks::reflect::Net{} ]] );	 // true at beginning of round, set to false when the period expires
 	CNetworkVar( bool, m_bWarmupPeriod, [[= ks::reflect::Net{} ]] );	 // 
 	CNetworkVar( float, m_fWarmupPeriodEnd, [[= ks::reflect::Net{ .bits = 32 } ]] ); // OBSOLETE. LEFT IN FOR DEMO COMPATIBILITY.
 	CNetworkVar( float, m_fWarmupPeriodStart, [[= ks::reflect::Net{ .bits = 32 } ]] );
@@ -896,7 +887,7 @@ public:
 
 	virtual bool PlayTextureSounds( void ) { return true; }
 	// Let the game rules specify if fall death should fade screen to black
-	virtual bool  FlPlayerFallDeathDoesScreenFade( CBasePlayer *pl ) { return FALSE; }
+	virtual bool  FlPlayerFallDeathDoesScreenFade( CBasePlayer *pl ) { return false; }
 
 	virtual void  RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrcIn, float flRadius, int iClassIgnore, CBaseEntity *pEntityIgnore );
 	void RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrcIn, float flRadius, int iClassIgnore, bool bIgnoreWorld );
@@ -1095,7 +1086,7 @@ public:
 	virtual const char *GetChatFormat( bool bTeamOnly, CBasePlayer *pPlayer );
 	void ClientSettingsChanged( CBasePlayer *pPlayer );
 
-	virtual bool CanClientCustomizeOwnIdentity() OVERRIDE;
+	virtual bool CanClientCustomizeOwnIdentity() override;
 	
 	bool IsCareer( void ) const		{ return false; }		// returns true if this is a CZ "career" game
 
@@ -1177,7 +1168,7 @@ public:
 	std::vector< int > m_arrSelectedHostageSpawnIndices; // The indices of hostage spawn locations selected for the match
 
 	bool m_bFirstConnected;
-	bool m_bCompleteReset;		// Set to TRUE to have the scores reset next time round restarts
+	bool m_bCompleteReset;		// Set to true to have the scores reset next time round restarts
 	bool m_bPickNewTeamsOnReset;
 	bool m_bScrambleTeamsOnRestart;
 	bool m_bSwapTeamsOnRestart;
@@ -1228,12 +1219,12 @@ public:
 	{
 		CQMMPlayerData_t()
 		{
-			Q_memset( this, 0, offsetof( CQMMPlayerData_t, m_uiCustomNonPodFields ) );
+			V_memset( this, 0, __builtin_offsetof( CQMMPlayerData_t, m_uiCustomNonPodFields ) );
 		}
 		void Reset()
 		{	// Reset everything starting from m_numKills to the end
-			Q_memset( ( ( char * ) this ) + offsetof( CQMMPlayerData_t, m_numKills ), 0,
-				offsetof( CQMMPlayerData_t, m_uiCustomNonPodFields ) - offsetof( CQMMPlayerData_t, m_numKills ) );
+			V_memset( ( ( char * ) this ) + __builtin_offsetof( CQMMPlayerData_t, m_numKills ), 0,
+				__builtin_offsetof( CQMMPlayerData_t, m_uiCustomNonPodFields ) - __builtin_offsetof( CQMMPlayerData_t, m_numKills ) );
 		}
 
 		uint32 m_uiPlayerAccountId;		// QMM player account ID
@@ -1314,14 +1305,6 @@ public:
 	}
 	CQMMPlayerData_t * QueuedMatchmakingPlayersDataFindOrCreate( CCSPlayer *pPlayer );
 
-	struct CGcBanInformation_t
-	{
-		uint32 m_uiReason;
-		double m_dblExpiration;
-	};
-	typedef std::map< uint32, CGcBanInformation_t > GcBanInformationMap_t;
-	static GcBanInformationMap_t sm_mapGcBanInformation;
-
 	bool m_bForceTeamChangeSilent;
 	bool m_bLoadingRoundBackupData;
 
@@ -1346,7 +1329,7 @@ public:
 	struct ServerPlayerDecalData_t
 	{
 		ServerPlayerDecalData_t() { V_memset( this, 0, sizeof(*this) ); }
-		bool operator == ( ServerPlayerDecalData_t const &x ) const { return !V_memcmp( this, &x, offsetof( ServerPlayerDecalData_t, m_rtGcTime ) ); }
+		bool operator == ( ServerPlayerDecalData_t const &x ) const { return !V_memcmp( this, &x, __builtin_offsetof( ServerPlayerDecalData_t, m_rtGcTime ) ); }
 
 		AccountID_t m_unAccountID;
 		int m_nTraceID;
@@ -1569,8 +1552,8 @@ inline CCSGameRules* CSGameRules()
 	return static_cast<CCSGameRules*>(g_pGameRules);
 }
 
-#define IGNORE_SPECTATORS false
-#define IGNORE_UNASSIGNED true
+inline constexpr auto IGNORE_SPECTATORS = false;
+inline constexpr auto IGNORE_UNASSIGNED = true;
 int UTIL_HumansInGame( bool ignoreSpectators = false, bool ignoreUnassigned = false );
 int UTIL_SpectatorsInGame( void );
 
@@ -1596,7 +1579,7 @@ enum CsMusicType_t
 	CSMUSIC_HALFTIME
 
 };
-#define CSMUSIC_NOPACK 0
+inline constexpr auto CSMUSIC_NOPACK = 0;
 
 #ifdef CLIENT_DLL
 void PlayMusicSelection( IRecipientFilter& filter, CsMusicType_t nMusicType , int nPlayerEntIndex  = 0 , float flPreElapsedTime  = 0.0 );
@@ -1621,6 +1604,3 @@ bool IsAssassinationQuest( uint32 questID );
 bool IsAssassinationQuestActive( const CEconQuestDefinition *pQuest );
 
 extern const float g_flWarmupToFreezetimeDelay;
-
-#endif // TF_GAMERULES_H
-

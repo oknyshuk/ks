@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef DATATABLE_INSTRUMENTATION_H
-#define DATATABLE_INSTRUMENTATION_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "dt_recv_eng.h"
 #include "dt_encode.h"
-
 
 // Is instrumentation enabled?
 extern bool g_bDTIEnabled;
@@ -49,5 +42,3 @@ inline void DTI_HookDeltaBits( CRecvDecoder *pDecoder, int iProp, int nDataBits,
 		_DTI_HookDeltaBits( pDecoder, iProp, nDataBits, nIndexBits );
 	}
 }
-
-#endif // DATATABLE_INSTRUMENTATION_H

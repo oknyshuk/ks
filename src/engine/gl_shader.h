@@ -1,15 +1,6 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef GL_SHADER_H
-#define GL_SHADER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
 
 void Shader_BeginRendering ();
@@ -17,8 +8,8 @@ bool Shader_Connect( bool bSetProxyFactory );
 void Shader_Disconnect();
 void Shader_SwapBuffers();
 
-#include "mathlib/vector.h"
-#include "convar.h"
+import std;
+import ks.tier1;
 
 extern	Vector		modelorg;
 extern VMatrix g_BrushToWorldMatrix;
@@ -72,5 +63,3 @@ extern	ConVar	mat_fullbright;
 extern	ConVar	mat_drawflat;
 extern	ConVar	mat_reversedepth;
 extern  ConVar	mat_norendering;
-
-#endif // GL_SHADER_H

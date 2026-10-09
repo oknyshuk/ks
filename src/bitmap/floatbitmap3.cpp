@@ -1,18 +1,9 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include <tier0/platform.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <stdlib.h>
+import std;
+import ks.vstdlib;
 #include "bitmap/floatbitmap.h"
-#include "vstdlib/vstdlib.h"
-#include "vstdlib/random.h"
-#include "tier1/strtools.h"
 
 
 void FloatBitMap_t::InitializeWithRandomPixelsFromAnotherFloatBM( FloatBitMap_t const & other )
@@ -68,7 +59,7 @@ void FloatBitMap_t::QuarterSizeWithGaussian( FloatBitMap_t *pBitmap )
 
 FloatImagePyramid_t::FloatImagePyramid_t( FloatBitMap_t const & src, ImagePyramidMode_t mode )
 {
-	memset( m_pLevels, 0, sizeof( m_pLevels ));
+	std::memset( m_pLevels, 0, sizeof( m_pLevels ));
 	m_nLevels = 1;
 	m_pLevels[0]= new FloatBitMap_t( & src );
 	ReconstructLowerResolutionLevels( 0 );
@@ -89,7 +80,7 @@ void FloatImagePyramid_t::ReconstructLowerResolutionLevels( int start_level )
 
 float & FloatImagePyramid_t::Pixel( int x, int y, int component, int level ) const
 {
-	Assert( level < m_nLevels );
+	contract_assert( level < m_nLevels );
 	x <<= level;
 	y <<= level;
 	return m_pLevels[level]-> Pixel( x, y, 0, component );
@@ -100,7 +91,7 @@ void FloatImagePyramid_t::WriteTGAs( char const * basename ) const
 	for( int l = 0;l < m_nLevels;l++ )
 	{
 		char bname_out[1024];
-		Q_snprintf(bname_out,sizeof(bname_out),"%s_%02d.tga",basename,l);
+		V_snprintf(bname_out,sizeof(bname_out),"%s_%02d.tga",basename,l);
 		m_pLevels[l]-> WriteTGAFile( bname_out );
 	}
 

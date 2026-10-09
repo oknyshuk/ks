@@ -1,29 +1,37 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "render_pch.h"
+// main precompiled header for client rendering code
+
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialvar.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "r_local.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
+#include "sysexternal.h"
 #include "r_decal.h"
 #include "client.h"
 #include <materialsystem/imaterialsystemhardwareconfig.h>
+import ks.vstdlib;
 #include "decal.h"
-#include "tier0/vprof.h"
 #include "materialsystem/materialsystem_config.h"
 #include "icliententity.h"
-#include "icliententitylist.h"
 #include "tier2/tier2.h"
-#include "tier1/callqueue.h"
-#include "tier1/memstack.h"
-#include "tier1/fixed_pool.h"
-#include "vstdlib/random.h"
-#include "getintersectingsurfaces_struct.h"
-#include "surfinfo.h"
+import std;
 #include "collisionutils.h"
 #include "engine/decal_flags.h"
 
-#define DECAL_DISTANCE			4
+constexpr auto DECAL_DISTANCE = 4;
 
 // Empirically determined constants for minimizing overalpping decals
 ConVar r_decal_overlap_count("r_decal_overlap_count", "3");
@@ -46,7 +54,7 @@ inline int R_ConvertToPrivateDecalFlags( int nPublicDecalFlags )
 	if ( ( nPublicDecalFlags & EDF_IMMEDIATECLEANUP ) != 0 )	{ nPublicDecalFlags &= ~EDF_IMMEDIATECLEANUP;	nPrivateFlags |= FDECAL_IMMEDIATECLEANUP; }
 
 	// If this hits, we are missing conversion here. 
-	Assert( nPublicDecalFlags == 0 );
+	contract_assert( nPublicDecalFlags == 0 );
 
 	return nPrivateFlags;
 }
@@ -92,7 +100,7 @@ std::vector< decal_t* >		s_aDecalPool;
 const int DECALCACHE_ENTRY_COUNT = 1024;
 const int INVALID_CACHE_ENTRY = 0xFFFF;
 
-class ALIGN16 CDecalVertCache
+class CDecalVertCache
 {
 	enum decalindex_ordinal
 	{
@@ -138,7 +146,7 @@ private:
 	int AllocBlock();
 	int AllocBlocks( int blockCount );
 
-	ALIGN16 decalcache_t	m_cache[DECALCACHE_ENTRY_COUNT];
+	decalcache_t	m_cache[DECALCACHE_ENTRY_COUNT];
 	int m_freeBlockCount;
 	int m_firstFree;
 	int m_frameBlocks;
@@ -146,7 +154,7 @@ private:
 	int m_freeTestIndex;
 };
 
-static CDecalVertCache ALIGN16 g_DecalVertCache;
+static CDecalVertCache g_DecalVertCache;
 
 //
 // <vitaliy> (Hi John)
@@ -187,7 +195,7 @@ static class CDecalChecker
 public:
 	~CDecalChecker()
 	{
-		Assert( g_nDynamicDecals == 0 );
+		contract_assert( g_nDynamicDecals == 0 );
 	}
 } g_DecalChecker;
 
@@ -245,7 +253,7 @@ static void r_printdecalinfo_f()
 		}
 	}
 
-	Assert( nDynamic == g_nDynamicDecals );
+	contract_assert( nDynamic == g_nDynamicDecals );
 	Msg( "%d decals: %d permanent, %d dynamic\nr_decals: %d\n", nPermanent+nDynamic, nPermanent, nDynamic, r_decals.GetInt() );
 }
 
@@ -264,7 +272,6 @@ void CDecalVertCache::StoreVertsInCache( decal_t *pDecal, CDecalVert *pList )
 	decalcache_t *pCache = &m_cache[cacheHandle];
 	while ( blockCount )
 	{
-		Assert(GetIndex(pCache, DECAL_INDEX) == -1 );
 		// don't memcpy here it overwrites the indices we're storing in the m_decalIndex data
 		for ( int i = 0; i < 4; i++ )
 		{
@@ -289,7 +296,6 @@ void CDecalVertCache::FreeCachedVerts( decal_t *pDecal )
 	{
 		decalcache_t *pCache = m_cache + cacheHandle;
 		nextIndex = GetIndex(pCache, NEXT_VERT_BLOCK_INDEX);
-		Assert(GetIndex(pCache,DECAL_INDEX)==pDecal->m_iDecalPool);
 		FreeBlock(cacheHandle);
 	}
 	pDecal->cacheHandle = INVALID_CACHE_ENTRY;
@@ -312,7 +318,6 @@ CDecalVert *CDecalVertCache::GetCachedVerts( decal_t *pDecal )
 	for ( int i = cacheHandle; i != INVALID_CACHE_ENTRY; i = GetIndex(&m_cache[i], NEXT_VERT_BLOCK_INDEX) )
 	{
 		SetIndex( pCache, FRAME_COUNT_INDEX, r_framecount );
-		Assert( GetIndex(pCache, DECAL_INDEX) == pDecal->m_iDecalPool);
 	}
 
 	int vertCount = pDecal->clippedVertCount;
@@ -325,7 +330,7 @@ CDecalVert *CDecalVertCache::GetCachedVerts( decal_t *pDecal )
 		int indexOut = 0;
 		while ( blockCount )
 		{
-			Plat_FastMemcpy( &g_DecalClipVerts[indexOut], pCache, sizeof(*pCache) );
+			std::memcpy( &g_DecalClipVerts[indexOut], pCache, sizeof(*pCache) );
 			indexOut += 4;
 			blockCount --;
 			pCache = NextBlock(pCache);
@@ -400,7 +405,6 @@ int CDecalVertCache::AllocBlock()
 {
 	if ( !m_freeBlockCount )
 		return INVALID_CACHE_ENTRY;
-	Assert(IsFree(m_firstFree));
 	int nextFree = GetIndex(m_cache+m_firstFree, NEXT_VERT_BLOCK_INDEX );
 	int cacheIndex = m_firstFree;
 	SetFree( cacheIndex, false );
@@ -413,12 +417,12 @@ int CDecalVertCache::AllocBlocks( int blockCount )
 	if ( blockCount > m_freeBlockCount )
 		return INVALID_CACHE_ENTRY;
 	int firstBlock = AllocBlock();
-	Assert(firstBlock!=INVALID_CACHE_ENTRY);
+	contract_assert( firstBlock!=INVALID_CACHE_ENTRY );
 	int blockHandle = firstBlock;
 	for ( int i = 1; i < blockCount; i++ )
 	{
 		int nextBlock = AllocBlock();
-		Assert(nextBlock!=INVALID_CACHE_ENTRY);
+		contract_assert( nextBlock!=INVALID_CACHE_ENTRY );
 		SetIndex( m_cache + blockHandle, NEXT_VERT_BLOCK_INDEX, nextBlock );
 		blockHandle = nextBlock;
 	}
@@ -472,7 +476,7 @@ void Shader_DecalDrawPoly( CDecalVert *v, IMaterial *pMaterial, SurfaceHandle_t 
 	else
 #endif
 	{
-		Assert( MSurf_MaterialSortID( surfID ) >= 0 && 
+		contract_assert( MSurf_MaterialSortID( surfID ) >= 0 && 
 			    MSurf_MaterialSortID( surfID )  < std::ssize( g_WorldStaticMeshes ) );
 		pRenderContext->BindLightmapPage( materialSortInfoArray[MSurf_MaterialSortID( surfID )].lightmapPageID );
 		pRenderContext->Bind( pMaterial, pdecal->userdata );
@@ -529,7 +533,7 @@ void Shader_DecalDrawPoly( CDecalVert *v, IMaterial *pMaterial, SurfaceHandle_t 
 
 	for( int i = 0; i < vertCount; i++, v++ )
 	{
-		meshBuilder.Position3f( VectorExpand( v->m_vPos ) );
+		meshBuilder.Position3f( v->m_vPos.x, v->m_vPos.y, v->m_vPos.z );
 		if ( vertexFormat & VERTEX_NORMAL )
 		{
 			meshBuilder.Normal3fv( normal.Base() );
@@ -537,8 +541,8 @@ void Shader_DecalDrawPoly( CDecalVert *v, IMaterial *pMaterial, SurfaceHandle_t 
 		meshBuilder.Color4ubv( color );
 
 		// Check to see if we are in a material page.
-		meshBuilder.TexCoord2f( 0, Vector2DExpand( v->m_ctCoords ) );
-		meshBuilder.TexCoord2f( 1, Vector2DExpand( v->m_cLMCoords ) );
+		meshBuilder.TexCoord2f( 0, v->m_ctCoords.x, v->m_ctCoords.y );
+		meshBuilder.TexCoord2f( 1, v->m_cLMCoords.x, v->m_cLMCoords.y );
 		meshBuilder.TexCoord1f( 2, flOffset );
 		if ( vertexFormat & VERTEX_TANGENT_SPACE )
 		{
@@ -606,7 +610,7 @@ static WorldDecalHandle_t DecalToHandle( decal_t *pDecal )
 		return WORLD_DECAL_HANDLE_INVALID;
 
 	int decalIndex = pDecal->m_iDecalPool;
-	Assert( decalIndex >= 0 && decalIndex < g_nMaxDecals );
+	contract_assert( decalIndex >= 0 && decalIndex < g_nMaxDecals );
 	return static_cast<WorldDecalHandle_t> (decalIndex);
 }
 
@@ -615,7 +619,7 @@ void R_DecalInit( void )
 {
 	g_nMaxDecals = r_decals.GetInt();
 	g_nMaxDecals = std::max(64, g_nMaxDecals);
-	Assert( g_DecalAllocator.count() == 0 );
+	contract_assert( g_DecalAllocator.count() == 0 );
 	g_nDynamicDecals = 0;
 	g_nStaticDecals = 0;
 	g_iLastReplacedDynamic = -1;
@@ -674,7 +678,7 @@ void R_DecalTerm( worldbrushdata_t *pBrushData, bool term_permanent_decals, bool
 
 		if ( term_permanent_decals && term_player_decals )
 		{
-			Assert( MSurf_DecalPointer( surfID ) == nullptr );
+			contract_assert( MSurf_DecalPointer( surfID ) == nullptr );
 		}
 	}
 }
@@ -802,16 +806,16 @@ void R_DecalUnlink( decal_t *pdecal, worldbrushdata_t *pData )
 	if ( !(pdecal->flags & FDECAL_PERMANENT) )
 	{
 		--g_nDynamicDecals;
-		Assert( g_nDynamicDecals >= 0 );
+		contract_assert( g_nDynamicDecals >= 0 );
 	}
 	else
 	{
 		--g_nStaticDecals;
-		Assert( g_nStaticDecals >= 0 );
+		contract_assert( g_nStaticDecals >= 0 );
 	}
 	
 	// Free the decal.
-	Assert( s_aDecalPool[pdecal->m_iDecalPool] == pdecal );
+	contract_assert( s_aDecalPool[pdecal->m_iDecalPool] == pdecal );
 	s_aDecalPool[pdecal->m_iDecalPool] = nullptr;
 	g_DecalAllocator.free( pdecal );
 }
@@ -829,39 +833,6 @@ int R_FindFreeDecalSlot()
 
 // Uncomment this to spew decals if we run out of space!!!
 // #define SPEW_DECALS 
-#if defined( SPEW_DECALS )
-void SpewDecals()
-{
-	static bool spewdecals = true;
-
-	if ( spewdecals )
-	{
-		sspewdecals = false;
-
-		int i = 0;
-		for ( i = 0 ; i  < g_nMaxDecals; ++i )
-		{
-			decal_t *decal = s_aDecalPool[ i ];
-			Assert( decal );
-			if ( decal )
-			{
-				bool permanent = ( decal->flags & FDECAL_PERMANENT ) ? true : false;
-				Msg( "%i == %s on %i perm %i at %.2f %.2f %.2f on surf %i (%.2f %.2f %2.f)\n", 
-					i, 
-					decal->material->GetName(), 
-					(int)decal->entityIndex, 
-					permanent ? 1 : 0,
-					decal->position.x, decal->position.y, decal->position.z,
-					(int)decal->surfID,
-					decal->dx,
-					decal->dy,
-					decal->scale );
-			}
-		}
-	}
-}
-
-#endif
 
 int R_FindDynamicDecalSlot( int iStartAt )
 {
@@ -888,10 +859,6 @@ int R_FindDynamicDecalSlot( int iStartAt )
 	while ( i != iStartAt );
 
 	DevMsg("R_FindDynamicDecalSlot: no slot available.\n");
-
-#if defined( SPEW_DECALS )
-	SpewDecals();
-#endif
 
 	return -1;
 }	
@@ -967,7 +934,7 @@ static decal_t *R_DecalAlloc( int flags )
 void R_DecalSurface( SurfaceHandle_t surfID, decalinfo_t *decalinfo, bool bForceForDisplacement )
 {
 	// If we are a player spray, we should have a normal.
-	Assert( ( ( decalinfo->m_Flags & FDECAL_PLAYERSPRAY ) == 0 ) || decalinfo->m_pNormal != nullptr );
+	contract_assert( ( ( decalinfo->m_Flags & FDECAL_PLAYERSPRAY ) == 0 ) || decalinfo->m_pNormal != nullptr );
 
 	if ( decalinfo->m_pNormal )
 	{
@@ -1073,7 +1040,7 @@ void R_DecalLeaf( mleaf_t *pLeaf, decalinfo_t *decalinfo )
 		if ( ks::find_index( decalinfo->m_aApplySurfs, surfID ) != -1 )
 			continue;
 
-		Assert( !MSurf_DispInfo( surfID ) );
+		contract_assert( !MSurf_DispInfo( surfID ) );
 
 		float dist = fabs( DotProduct(decalinfo->m_Position, MSurf_Plane( surfID ).normal) - MSurf_Plane( surfID ).dist);
 		if ( dist < DECAL_DISTANCE )
@@ -1174,7 +1141,7 @@ static int DecalListAdd( decallist_t *pList, int count )
 	pdecal = pList + count;
 	for ( i = 0; i < count; i++ )
 	{
-		if ( !Q_strcmp( pdecal->name, pList[i].name ) && 
+		if ( !V_strcmp( pdecal->name, pList[i].name ) && 
 			pdecal->entityIndex == pList[i].entityIndex )
 		{
 			VectorSubtract( pdecal->position, pList[i].position, tmp );	// Merge
@@ -1239,7 +1206,7 @@ int DecalListCreate( decallist_t *pList )
 			R_DecalUnProject( decal, &pList[total] );
 
 			pMaterial = decal->material;
-			Q_strncpy( pList[total].name, pMaterial->GetName(), sizeof( pList[total].name ) );
+			V_strncpy( pList[total].name, pMaterial->GetName(), sizeof( pList[total].name ) );
 
 			// Check to see if the decal should be added
 			total = DecalListAdd( pList, total );
@@ -1247,7 +1214,7 @@ int DecalListCreate( decallist_t *pList )
 	}
 
 	// Sort the decals lowest depth first, so they can be re-applied in order
-	qsort( pList, total, sizeof(decallist_t), ( qsortFunc_t )DecalDepthCompare );
+	std::qsort( pList, total, sizeof(decallist_t), ( qsortFunc_t )DecalDepthCompare );
 
 	return total;
 }
@@ -1392,7 +1359,7 @@ void R_PlayerDecalShoot( IMaterial *material, void *userdata, int entity, const 
 {
 	// The userdata that is passed in is actually the sticker kit ID
 	// it cannot be zero
-	Assert( userdata != 0 );
+	contract_assert( userdata != 0 );
 
 
 	// set this to be a player spray so it is timed out appropriately.
@@ -1823,7 +1790,7 @@ static void R_DecalCreate(
 	pdecal->dx = x;
 	pdecal->dy = y;
 	pdecal->material = decalinfo->m_pMaterial;
-	Assert( pdecal->material );
+	contract_assert( pdecal->material );
 	pdecal->userdata = decalinfo->m_pUserData;
 
 	// Set scaling
@@ -1891,7 +1858,7 @@ bool DecalUpdate( decal_t* pDecal )
 	return false;
 }
 
-#define NEXT_MULTIPLE_OF_4(P)  ( ((P) + ((4)-1)) & (~((4)-1)) )
+template <typename T1> [[gnu::always_inline]] inline constexpr auto NEXT_MULTIPLE_OF_4( T1 P ) { return ( ((P) + ((4)-1)) & (~((4)-1)) ); }
 
 // Build the vertex list for a decal on a surface and clip it to the surface.
 // This is a template so it can work on world surfaces and dynamic displacement 
@@ -2289,7 +2256,7 @@ void R_DrawDecalsAll( IMatRenderContext *pRenderContext, int iGroup, int iTreeTy
 				continue;
 
 			decal_t *pDecalHead = g_aDecalSortPool[iHead].m_pDecal;
-			Assert( pDecalHead->material );
+			contract_assert( pDecalHead->material );
 			if ( !pDecalHead->material )
 				continue;
 
@@ -2428,7 +2395,7 @@ void R_DrawDecalsAll( IMatRenderContext *pRenderContext, int iGroup, int iTreeTy
 											
 					bBatchInit = false;
 				}
-				Assert ( pBatch );
+				contract_assert( pBatch );
 				
 				// Set base color.
 				byte color[4] = { pDecal->color.r, pDecal->color.g, pDecal->color.b, pDecal->color.a };
@@ -2513,7 +2480,7 @@ void R_DrawDecalsAll( IMatRenderContext *pRenderContext, int iGroup, int iTreeTy
 void DecalSurfaceDraw( IMatRenderContext *pRenderContext, int renderGroup, float flFade )
 {
 	//	VPROF_BUDGET( "Decals", "Decals" );
-	VPROF( "DecalsDraw" );
+	CVProfScope _( "DecalsDraw", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if( !r_drawdecals.GetBool() )
 	{
@@ -2558,7 +2525,7 @@ void DecalSurfaceAdd( SurfaceHandle_t surfID, int iGroup )
 {
 	// Performance analysis.
 //	VPROF_BUDGET( "Decals", "Decals" );
-	VPROF( "DecalsBatch" );
+	CVProfScope _( "DecalsBatch", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	
 	// Go through surfaces decal list and add them to the correct lists.
 	decal_t *pDecalList = MSurf_DecalPointer( surfID );

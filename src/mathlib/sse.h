@@ -1,11 +1,8 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
+import ks.math;
 
-#ifndef _SSE_H
-#define _SSE_H
 
 float _SSE_Sqrt(float x);
 float _SSE_RSqrtAccurate(float a);
@@ -17,5 +14,3 @@ void _SSE2_SinCos(float x, float* s, float* c);
 float _SSE2_cos(float x); 
 void VectorTransformSSE(const float *in1, const matrix3x4_t& in2, float *out1);
 void VectorRotateSSE( const float *in1, const matrix3x4_t& in2, float *out1 );
-
-#endif // _SSE_H

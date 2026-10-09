@@ -1,11 +1,6 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef MM_NETMSGCONTROLLER_H
-#define MM_NETMSGCONTROLLER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "mm_framework.h"
 
@@ -19,7 +14,6 @@ public:
 	virtual KeyValues * GetActiveServerGameDetails( KeyValues *pRequest );
 
 	virtual KeyValues * UnpackGameDetailsFromQOS( MM_GameDetails_QOS_t const *pvQosReply );
-	virtual KeyValues * UnpackGameDetailsFromSteamLobby( uint64 uiLobbyID );
 
 	virtual void PackageGameDetailsForQOS( KeyValues *pSettings, ks::byte_writer &buf );
 
@@ -32,5 +26,3 @@ public:
 
 // Match title singleton
 extern CMatchNetworkMsgControllerBase *g_pMatchNetMsgControllerBase;
-
-#endif // MM_NETMSGCONTROLLER_H

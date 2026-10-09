@@ -1,13 +1,15 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
+
 // Purpose: languages definition
-//
-//=============================================================================
 
+#if defined(CLIENT_DLL)
+#endif
+import std;
+#if defined(CLIENT_DLL)
+#endif
+import ks.tier1;
 #include "language.h"
-#include "tier0/dbg.h"
-#include "tier1/strtools.h"
-
 
 struct Language_t
 {	
@@ -59,7 +61,7 @@ static const Language_t s_LanguageNames[] =
 //-----------------------------------------------------------------------------
 int GetLanguageCodeID(ELanguage eLang)
 {
-	for ( uint iLang = 0; iLang < Q_ARRAYSIZE(s_LanguageNames); ++iLang )
+	for ( uint iLang = 0; iLang < std::size( s_LanguageNames ); ++iLang )
 	{
 		if ( s_LanguageNames[iLang].m_ELanguage == eLang )
 			return s_LanguageNames[iLang].m_LanguageCodeID;
@@ -74,13 +76,13 @@ int GetLanguageCodeID(ELanguage eLang)
 //-----------------------------------------------------------------------------
 ELanguage PchLanguageToELanguage( const char *pchShortName, ELanguage eDefault )
 {
-	COMPILE_TIME_ASSERT( Q_ARRAYSIZE(s_LanguageNames) == k_Lang_MAX + 1 );
+	static_assert( std::size( s_LanguageNames ) == k_Lang_MAX + 1 );
 	if ( !pchShortName )
 		return eDefault;
 
-	for ( uint iLang = 0; iLang < Q_ARRAYSIZE(s_LanguageNames); ++iLang )
+	for ( uint iLang = 0; iLang < std::size( s_LanguageNames ); ++iLang )
 	{
-		if ( !Q_stricmp( pchShortName, s_LanguageNames[iLang].m_pchShortName ) )
+		if ( !V_stricmp( pchShortName, s_LanguageNames[iLang].m_pchShortName ) )
 		{
 			return s_LanguageNames[iLang].m_ELanguage;
 		}
@@ -96,25 +98,25 @@ ELanguage PchLanguageToELanguage( const char *pchShortName, ELanguage eDefault )
 //-----------------------------------------------------------------------------
 ELanguage PchLanguageICUCodeToELanguage( const char *pchICUCode, ELanguage eDefault )
 {
-	COMPILE_TIME_ASSERT( Q_ARRAYSIZE(s_LanguageNames) == k_Lang_MAX + 1 );
+	static_assert( std::size( s_LanguageNames ) == k_Lang_MAX + 1 );
 	if ( !pchICUCode )
 		return eDefault;
 
 	// Match to no more than the param length so either a short 'en' or
 	// full 'zh-Hant' can match
-	int nLen = Q_strlen( pchICUCode );
+	int nLen = V_strlen( pchICUCode );
 
 	// we only have 5 character ICU codes so this should be enough room
 	char rchCleanedCode[ 6 ];
-	Q_strncpy( rchCleanedCode, pchICUCode, Q_ARRAYSIZE( rchCleanedCode ) );
+	V_strncpy( rchCleanedCode, pchICUCode, std::size( rchCleanedCode ) );
 	if( nLen >= 3 && rchCleanedCode[ 2 ] == '-' )
 	{
 		rchCleanedCode[ 2 ] = '_';
 	}
 
-	for ( uint iLang = 0; iLang < Q_ARRAYSIZE(s_LanguageNames); ++iLang )
+	for ( uint iLang = 0; iLang < std::size( s_LanguageNames ); ++iLang )
 	{
-		if ( !Q_strnicmp( rchCleanedCode, s_LanguageNames[iLang].m_pchICUName, nLen ) )
+		if ( !V_strnicmp( rchCleanedCode, s_LanguageNames[iLang].m_pchICUName, nLen ) )
 		{
 			return s_LanguageNames[iLang].m_ELanguage;
 		}
@@ -126,33 +128,33 @@ ELanguage PchLanguageICUCodeToELanguage( const char *pchICUCode, ELanguage eDefa
 
 
 //-----------------------------------------------------------------------------
-// Purpose: return the short string name used for this language by SteamUI
+// Purpose: return the short string name used for this language
 //-----------------------------------------------------------------------------
 const char *GetLanguageShortName( ELanguage eLang )
 {
-	COMPILE_TIME_ASSERT( Q_ARRAYSIZE(s_LanguageNames) == k_Lang_MAX + 1 );
+	static_assert( std::size( s_LanguageNames ) == k_Lang_MAX + 1 );
 	if ( s_LanguageNames[ eLang + 1 ].m_ELanguage == eLang )
 	{
 		return s_LanguageNames[ eLang + 1 ].m_pchShortName;
 	}
 
-	Assert( !"enum ELanguage order mismatched from Language_t s_LanguageNames, fix it!" );
+	contract_assert( !"enum ELanguage order mismatched from Language_t s_LanguageNames, fix it!" );
 	return s_LanguageNames[0].m_pchShortName;
 }
 
 
 //-----------------------------------------------------------------------------
-// Purpose: return the ICU code used for this language by SteamUI
+// Purpose: return the ICU code used for this language
 //-----------------------------------------------------------------------------
 const char *GetLanguageICUName( ELanguage eLang )
 {
-	COMPILE_TIME_ASSERT( Q_ARRAYSIZE(s_LanguageNames) == k_Lang_MAX + 1 );
+	static_assert( std::size( s_LanguageNames ) == k_Lang_MAX + 1 );
 	if ( s_LanguageNames[ eLang + 1 ].m_ELanguage == eLang )
 	{
 		return s_LanguageNames[ eLang + 1 ].m_pchICUName;
 	}
 
-	Assert( !"enum ELanguage order mismatched from Language_t s_LanguageNames, fix it!" );
+	contract_assert( !"enum ELanguage order mismatched from Language_t s_LanguageNames, fix it!" );
 	return s_LanguageNames[0].m_pchICUName;
 }
 
@@ -178,17 +180,16 @@ const char *GetLangugeCLocaleName( ELanguage eLang )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: return the short string name used for this language by SteamUI
+// Purpose: return the short string name used for this language
 //-----------------------------------------------------------------------------
 const char *GetLanguageVGUILocalization( ELanguage eLang )
 {
-	COMPILE_TIME_ASSERT( Q_ARRAYSIZE(s_LanguageNames) == k_Lang_MAX + 1 );
+	static_assert( std::size( s_LanguageNames ) == k_Lang_MAX + 1 );
 	if ( s_LanguageNames[ eLang + 1 ].m_ELanguage == eLang )
 	{
 		return s_LanguageNames[ eLang + 1 ].m_pchVGUILocalizationName;
 	}
 
-	Assert( !"enum ELanguage order mismatched from Language_t s_LanguageNames, fix it!" );
+	contract_assert( !"enum ELanguage order mismatched from Language_t s_LanguageNames, fix it!" );
 	return s_LanguageNames[0].m_pchVGUILocalizationName;
 }
-

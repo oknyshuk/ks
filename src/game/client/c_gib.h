@@ -1,13 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_GIB_H
-#define C_GIB_H
 
-#define	DEFAULT_GIB_LIFETIME	4.0f
+#include "reflect_annotations.h"
+#include "dt_recv.h"
+#include "client_class.h"
+#include "c_baseanimating.h"
+
+inline constexpr auto DEFAULT_GIB_LIFETIME = 4.0f;
 
 // Base client gibs
 
@@ -30,7 +31,3 @@ protected:
 
 	float	m_flTouchDelta;		// Amount of time that must pass before another touch function can be called
 };
-
-
-
-#endif // C_GIB_H

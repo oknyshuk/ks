@@ -1,8 +1,11 @@
 /* see copyright notice in squirrel.h */
-#include <squirrel.h>
+
 #include <string.h>
 #include <ctype.h>
 #include <setjmp.h>
+#include <stdio.h>
+
+#include <squirrel.h>
 #include "sqstdstring.h"
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
 #endif
@@ -14,7 +17,6 @@
 #endif
 
 #ifdef DEBUG_SQSTDREX
-#include <stdio.h>
 
 static const SQChar *g_nnames[] =
 {

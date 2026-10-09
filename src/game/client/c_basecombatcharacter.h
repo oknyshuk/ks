@@ -1,15 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Defines the client-side representation of CBaseCombatCharacter.
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_BASECOMBATCHARACTER_H
-#define C_BASECOMBATCHARACTER_H
+// Purpose: Defines the client-side representation of CBaseCombatCharacter.
 
 #include "reflect_annotations.h"
-
 
 #include "shareddefs.h"
 #include "c_baseflex.h"
@@ -161,5 +156,3 @@ inline int	C_BaseCombatCharacter::WeaponCount() const
 }
 
 EXTERN_RECV_TABLE(DT_BaseCombatCharacter);
-
-#endif // C_BASECOMBATCHARACTER_H

@@ -1,8 +1,7 @@
+#pragma once
 // chicken.h
 // An interactive, shootable chicken
 
-#ifndef CHICKEN_H
-#define CHICKEN_H
 
 #include "reflect_annotations.h"
 
@@ -149,4 +148,3 @@ private:
 };
 
 
-#endif // CHICKEN_H

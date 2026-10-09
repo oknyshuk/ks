@@ -1,14 +1,66 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Weapon data file parsing, shared by game & client dlls.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
-#include <keyvalues.h>
-#include <tier0/mem.h>
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#endif
 #include "filesystem.h"
-#include "tier1/map_ops.h"
 #include "ammodef.h"
 #include "util_shared.h"
 #include "weapon_parse.h"
@@ -58,7 +110,7 @@ int GetWeaponSoundFromString( const char *pszString )
 {
 	for ( int i = EMPTY; i < NUM_SHOOT_SOUND_TYPES; i++ )
 	{
-		if ( !Q_stricmp(pszString,pWeaponSoundCategories[i]) )
+		if ( !V_stricmp(pszString,pWeaponSoundCategories[i]) )
 			return (WeaponSound_t)i;
 	}
 	return -1;
@@ -120,7 +172,7 @@ WEAPON_FILE_INFO_HANDLE GetInvalidWeaponInfoHandle( void )
 
 KeyValues* ReadEncryptedKVFile( IFileSystem *filesystem, const char *szFilenameWithoutExtension, const unsigned char *pICEKey, bool bForceReadEncryptedFile )
 {
-	Assert( strchr( szFilenameWithoutExtension, '.' ) == nullptr );
+	contract_assert( std::strchr( szFilenameWithoutExtension, '.' ) == nullptr );
 	char szFullName[512];
 
 	const char *pSearchPath = "GAME";
@@ -129,13 +181,13 @@ KeyValues* ReadEncryptedKVFile( IFileSystem *filesystem, const char *szFilenameW
 	KeyValues *pKV = new KeyValues( "WeaponDatafile" );
 	pKV->UsesEscapeSequences( true );
 
-	Q_snprintf(szFullName,sizeof(szFullName), "%s.txt", szFilenameWithoutExtension);
+	V_snprintf(szFullName,sizeof(szFullName), "%s.txt", szFilenameWithoutExtension);
 
 	if ( bForceReadEncryptedFile || !pKV->LoadFromFile( filesystem, szFullName, pSearchPath ) ) // try to load the normal .txt file first
 	{
 		if ( pICEKey )
 		{
-			Q_snprintf(szFullName,sizeof(szFullName), "%s.ctx", szFilenameWithoutExtension); // fall back to the .ctx file
+			V_snprintf(szFullName,sizeof(szFullName), "%s.ctx", szFilenameWithoutExtension); // fall back to the .ctx file
 
 			FileHandle_t f = filesystem->Open( szFullName, "rb", pSearchPath );
 
@@ -148,7 +200,7 @@ KeyValues* ReadEncryptedKVFile( IFileSystem *filesystem, const char *szFilenameW
 			int fileSize = filesystem->Size(f);
 			char *buffer = (char*)MemAllocScratch(fileSize + 1);
 		
-			Assert(buffer);
+			contract_assert( buffer );
 		
 			filesystem->Read(buffer, fileSize, f); // read into local buffer
 			buffer[fileSize] = 0; // null terminate file as EOF
@@ -224,7 +276,7 @@ FileWeaponInfo_t::FileWeaponInfo_t()
 	szAmmo1[0] = 0;
 	szAmmo2[0] = 0;
 	szAIAddOn[0] = 0;
-	memset( aShootSounds, 0, sizeof( aShootSounds ) );
+	std::memset( aShootSounds, 0, sizeof( aShootSounds ) );
 	iAmmoType = 0;
 	iAmmo2Type = 0;
 	m_bMeleeWeapon = false;
@@ -243,11 +295,11 @@ FileWeaponInfo_t::FileWeaponInfo_t()
 
 	if ( !ms_bWeaponInfoLookupInitialized )
 	{
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iMaxClip1 ), FIELD_INTEGER, "primary clip size" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iMaxClip2 ), FIELD_INTEGER, "secondary clip size" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iDefaultClip1 ), FIELD_INTEGER, "primary default clip size" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iDefaultClip2 ), FIELD_INTEGER, "secondary default clip size" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iSlot ), FIELD_INTEGER, "bucket slot" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( FileWeaponInfo_t, iMaxClip1 ), FIELD_INTEGER, "primary clip size" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( FileWeaponInfo_t, iMaxClip2 ), FIELD_INTEGER, "secondary clip size" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( FileWeaponInfo_t, iDefaultClip1 ), FIELD_INTEGER, "primary default clip size" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( FileWeaponInfo_t, iDefaultClip2 ), FIELD_INTEGER, "secondary default clip size" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( FileWeaponInfo_t, iSlot ), FIELD_INTEGER, "bucket slot" ) );
 
 		std::ranges::stable_sort( ms_vecWeaponInfoLookup, CWeaponInfoLookupListLess() );
 		ms_bWeaponInfoLookupInitialized = true;
@@ -264,17 +316,17 @@ void FileWeaponInfo_t::Parse( KeyValues *pKeyValuesData, const char *szWeaponNam
 	bParsedScript = true;
 
 	// Classname
-	Q_strncpy( szClassName, szWeaponName, MAX_WEAPON_STRING );
+	V_strncpy( szClassName, szWeaponName, MAX_WEAPON_STRING );
 	// Printable name
-	Q_strncpy( szPrintName, pKeyValuesData->GetString( "printname", WEAPON_PRINTNAME_MISSING ), MAX_WEAPON_STRING );
+	V_strncpy( szPrintName, pKeyValuesData->GetString( "printname", WEAPON_PRINTNAME_MISSING ), MAX_WEAPON_STRING );
 	// View model & world model
-	Q_strncpy( szViewModel, pKeyValuesData->GetString( "viewmodel" ), MAX_WEAPON_STRING );
-	Q_strncpy( szWorldModel, pKeyValuesData->GetString( "playermodel" ), MAX_WEAPON_STRING );
+	V_strncpy( szViewModel, pKeyValuesData->GetString( "viewmodel" ), MAX_WEAPON_STRING );
+	V_strncpy( szWorldModel, pKeyValuesData->GetString( "playermodel" ), MAX_WEAPON_STRING );
 
 	V_StripExtension( szWorldModel, szWorldDroppedModel, sizeof( szWorldDroppedModel ) );
 	V_strcat_safe( szWorldDroppedModel, "_dropped.mdl" );
 	
-	Q_strncpy( szAnimationPrefix, pKeyValuesData->GetString( "anim_prefix" ), MAX_WEAPON_PREFIX );
+	V_strncpy( szAnimationPrefix, pKeyValuesData->GetString( "anim_prefix" ), MAX_WEAPON_PREFIX );
 	iSlot = pKeyValuesData->GetInt( "bucket", 0 );
 	iPosition = pKeyValuesData->GetInt( "bucket_position", 0 );
 	
@@ -298,7 +350,7 @@ void FileWeaponInfo_t::Parse( KeyValues *pKeyValuesData, const char *szWeaponNam
 	// Weapon scripts should use the flag names.
 	iFlags = pKeyValuesData->GetInt( "item_flags", ITEM_FLAG_LIMITINWORLD );
 
-	for ( int i=0; i < ARRAYSIZE( g_ItemFlags ); i++ )
+	for ( int i=0; i < std::size( g_ItemFlags ); i++ )
 	{
 		int iVal = pKeyValuesData->GetInt( g_ItemFlags[i].m_pFlagName, -1 );
 		if ( iVal == 0 )
@@ -321,29 +373,29 @@ void FileWeaponInfo_t::Parse( KeyValues *pKeyValuesData, const char *szWeaponNam
 
 	// Primary ammo used
 	const char *pAmmo = pKeyValuesData->GetString( "primary_ammo", "None" );
-	if ( strcmp("None", pAmmo) == 0 )
-		Q_strncpy( szAmmo1, "", sizeof( szAmmo1 ) );
+	if ( std::strcmp("None", pAmmo) == 0 )
+		V_strncpy( szAmmo1, "", sizeof( szAmmo1 ) );
 	else
-		Q_strncpy( szAmmo1, pAmmo, sizeof( szAmmo1 )  );
+		V_strncpy( szAmmo1, pAmmo, sizeof( szAmmo1 )  );
 	iAmmoType = GetAmmoDef()->Index( szAmmo1 );
 	
 	// Secondary ammo used
 	pAmmo = pKeyValuesData->GetString( "secondary_ammo", "None" );
-	if ( strcmp("None", pAmmo) == 0)
-		Q_strncpy( szAmmo2, "", sizeof( szAmmo2 ) );
+	if ( std::strcmp("None", pAmmo) == 0)
+		V_strncpy( szAmmo2, "", sizeof( szAmmo2 ) );
 	else
-		Q_strncpy( szAmmo2, pAmmo, sizeof( szAmmo2 )  );
+		V_strncpy( szAmmo2, pAmmo, sizeof( szAmmo2 )  );
 	iAmmo2Type = GetAmmoDef()->Index( szAmmo2 );
 
 	// AI AddOn
 	const char *pAIAddOn = pKeyValuesData->GetString( "ai_addon", "ai_addon_basecombatweapon" );
-	if ( strcmp("None", pAIAddOn) == 0)
-		Q_strncpy( szAIAddOn, "", sizeof( szAIAddOn ) );
+	if ( std::strcmp("None", pAIAddOn) == 0)
+		V_strncpy( szAIAddOn, "", sizeof( szAIAddOn ) );
 	else
-		Q_strncpy( szAIAddOn, pAIAddOn, sizeof( szAIAddOn )  );
+		V_strncpy( szAIAddOn, pAIAddOn, sizeof( szAIAddOn )  );
 
 	// Now read the weapon sounds
-	memset( aShootSounds, 0, sizeof( aShootSounds ) );
+	std::memset( aShootSounds, 0, sizeof( aShootSounds ) );
 	KeyValues *pSoundData = pKeyValuesData->FindKey( "SoundData" );
 	if ( pSoundData )
 	{
@@ -352,7 +404,7 @@ void FileWeaponInfo_t::Parse( KeyValues *pKeyValuesData, const char *szWeaponNam
 			const char *soundname = pSoundData->GetString( pWeaponSoundCategories[i] );
 			if ( soundname && soundname[0] )
 			{
-				Q_strncpy( aShootSounds[i], soundname, MAX_WEAPON_STRING );
+				V_strncpy( aShootSounds[i], soundname, MAX_WEAPON_STRING );
 			}
 			else
 			{
@@ -491,7 +543,9 @@ int FileWeaponInfo_t::GetIndexofAttribute( string_t iszAttribClassName ) const
 
 
 #if defined( GAME_DLL )
-CON_COMMAND_F ( weapon_reload_database, "Reload the weapon database", FCVAR_CHEAT | FCVAR_GAMEDLL| FCVAR_SERVER_CAN_EXECUTE )
+static void weapon_reload_database( const CCommand &args );
+static ConCommand weapon_reload_database_command( "weapon_reload_database", weapon_reload_database, "Reload the weapon database", FCVAR_CHEAT | FCVAR_GAMEDLL| FCVAR_SERVER_CAN_EXECUTE );
+static void weapon_reload_database( const CCommand &args )
 {
 	g_WeaponDatabase.LoadManifest();
 	IGameEvent *event = gameeventmanager->CreateEvent( "weapon_reload_database" );
@@ -525,10 +579,10 @@ bool CWeaponDatabase::LoadManifest()
 	{
 		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != nullptr ; sub = sub->GetNextKey() )
 		{
-			if ( !Q_stricmp( sub->GetName(), "file" ) )
+			if ( !V_stricmp( sub->GetName(), "file" ) )
 			{
 				char fileBase[512];
-				Q_FileBase( sub->GetString(), fileBase, sizeof(fileBase) );
+				V_FileBase( sub->GetString(), fileBase, sizeof(fileBase) );
 
 				LoadWeaponDataFromFile( filesystem, fileBase, szEncryptionKey );
 			}
@@ -596,7 +650,7 @@ WEAPON_FILE_INFO_HANDLE CWeaponDatabase::FindOrCreateWeaponInfo( const char *nam
 	}
 
 	WEAPON_FILE_INFO_HANDLE lookup = (WEAPON_FILE_INFO_HANDLE)m_WeaponInfos.size();
-	Assert( lookup != GetInvalidWeaponInfoHandle() );
+	contract_assert( lookup != GetInvalidWeaponInfoHandle() );
 	m_WeaponInfos.emplace_back( CreateWeaponInfo() );
 	m_WeaponInfoDatabase.emplace( name, lookup );
 	return lookup;
@@ -628,14 +682,14 @@ FileWeaponInfo_t * CWeaponDatabase::GetFileWeaponInfoFromHandle( WEAPON_FILE_INF
 bool CWeaponDatabase::LoadWeaponDataFromFile( IFileSystem* filesystem, const char *szWeaponName, const unsigned char *pICEKey )
 {
 	char sz[128];
-	Q_snprintf( sz, sizeof( sz ), "scripts/%s", szWeaponName );
+	V_snprintf( sz, sizeof( sz ), "scripts/%s", szWeaponName );
 	KeyValues *pKV = ReadEncryptedKVFile( filesystem, sz, pICEKey );
 	if ( !pKV )
 		return false;
 
 	WEAPON_FILE_INFO_HANDLE handle = FindOrCreateWeaponInfo( szWeaponName );
 	FileWeaponInfo_t *pFileInfo = GetFileWeaponInfoFromHandle( handle );
-	Assert( pFileInfo );
+	contract_assert( pFileInfo );
 
 	pFileInfo->Parse( pKV, szWeaponName );
 
@@ -659,7 +713,7 @@ void CWeaponDatabase::FireGameEvent( IGameEvent *pEvent )
 {
 #if defined( CLIENT_DLL )
 	const char *pEventName = pEvent->GetName();
-	if ( 0 == Q_strcmp( pEventName, "weapon_reload_database" ) )
+	if ( 0 == V_strcmp( pEventName, "weapon_reload_database" ) )
 	{
 		LoadManifest();
 	}

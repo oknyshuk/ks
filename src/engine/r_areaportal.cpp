@@ -1,15 +1,25 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "render_pch.h"
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+import std;
+#include "gl_model.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_matsysiface.h"
+#include "gl_rmain.h"
+#include "gl_rsurf.h"
+#include "render.h"
+#include "view.h"
 #include "client.h"
-#include "debug_leafvis.h"
 #include "con_nprint.h"
-#include "tier0/fasttimer.h"
 #include "r_areaportal.h"
 #include "cmodel_engine.h"
 #include "con_nprint.h"
@@ -26,7 +36,7 @@ bool g_bViewerInSolidSpace = false;
 // ------------------------------------------------------------------------------------ //
 
 
-#define MAX_PORTAL_VERTS	32
+constexpr auto MAX_PORTAL_VERTS = 32;
 
 // ------------------------------------------------------------------------------------ //
 // Globals.
@@ -96,7 +106,7 @@ struct portalclip_t
 // Transforms and clips the portal's verts to the view frustum. Returns false
 // if the verts lie outside the frustum.
 static inline bool GetPortalScreenExtents( dareaportal_t *pPortal, 
-	portalclip_t * RESTRICT clip, CPortalRect &portalRect , float *pReflectionWaterHeight, VPlane *pFrustumPlanes )
+	portalclip_t * __restrict__ clip, CPortalRect &portalRect , float *pReflectionWaterHeight, VPlane *pFrustumPlanes )
 {
 	portalRect.left = portalRect.bottom = 1e24;
 	portalRect.right = portalRect.top   = -1e24;
@@ -179,7 +189,7 @@ static inline bool GetPortalScreenExtents( dareaportal_t *pPortal,
 
 		// Project all the verts and figure out the screen extents.
 		Vector screenPos;
-		Assert( iCurList == 0 );
+		contract_assert( iCurList == 0 );
 		for( i=0; i < nStartVerts; i++ )
 		{
 			Vector &point = clip->v0[i];
@@ -251,7 +261,7 @@ static void R_FlowThroughArea( int area, const Vector &vecVisOrigin, const CPort
 
 	worldbrushdata_t *pBrushData = host_state.worldbrush;
 
-	Assert( area < host_state.worldbrush->m_nAreas );
+	contract_assert( area < host_state.worldbrush->m_nAreas );
 	darea_t *pArea = &host_state.worldbrush->m_pAreas[area];
 	// temp buffer for clipping
 	portalclip_t clipTmp;
@@ -260,7 +270,7 @@ static void R_FlowThroughArea( int area, const Vector &vecVisOrigin, const CPort
 	// Check all areas that connect to this area.
 	for( int iAreaPortal=0; iAreaPortal < pArea->numareaportals; iAreaPortal++ )
 	{
-		Assert( pArea->firstareaportal + iAreaPortal < pBrushData->m_nAreaPortals );
+		contract_assert( pArea->firstareaportal + iAreaPortal < pBrushData->m_nAreaPortals );
 		dareaportal_t *pAreaPortal = &pBrushData->m_pAreaPortals[ pArea->firstareaportal + iAreaPortal ];
 
 		// Don't flow back into a portal on the stack.
@@ -359,7 +369,7 @@ static void R_SetupVisibleAreaFrustums()
 		float xFOV = g_EngineRenderer->GetFov() * 0.5f;
 		float yFOV = g_EngineRenderer->GetFovY() * 0.5f;
 
-		viewWindow.right	= tan( DEG2RAD( xFOV ) );
+		viewWindow.right	= std::tan( DEG2RAD( xFOV ) );
 		viewWindow.left		= -viewWindow.right;
 		viewWindow.top		= tan( DEG2RAD( yFOV ) );
 		viewWindow.bottom	= -viewWindow.top;
@@ -478,7 +488,7 @@ void R_SetupAreaBits( int iForceViewLeaf /* = -1 */, const VisOverrideData_t* pV
 	Vector vVisOrigin =  pVisData ? pVisData->m_vecVisOrigin : g_EngineRenderer->ViewOrigin();
 
 	// Clear the visible area bits.
-	memset( g_RenderAreaBits, 0, sizeof( g_RenderAreaBits ) );
+	std::memset( g_RenderAreaBits, 0, sizeof( g_RenderAreaBits ) );
 	memset( g_AreaStack, 0, sizeof( g_AreaStack ) );
 
 	// Our initial clip rect is the whole screen.
@@ -521,9 +531,6 @@ void R_SetupAreaBits( int iForceViewLeaf /* = -1 */, const VisOverrideData_t* pV
 
 		if ( host_state.worldbrush->leafs[leaf].contents & CONTENTS_SOLID ||
 			 GetBaseLocalClient().ishltv || 
-#if defined( REPLAY_ENABLED )
-			 GetBaseLocalClient().isreplay ||
-#endif
 			 !GetBaseLocalClient().m_bAreaBitsValid || 
 			 r_portalsopenall.GetBool()  )
 		{
@@ -548,7 +555,7 @@ void R_SetupAreaBits( int iForceViewLeaf /* = -1 */, const VisOverrideData_t* pV
 				// If the current view origin is within some perpendicular distance of the exit portal AND within the radius of the portal,
 				// don't attempt to optimize the area rect/frustum
 				Vector vViewOriginToPortalOrigin = CurrentViewOrigin() - pVisData->m_vPortalOrigin;
-				if ( fabsf( vViewOriginToPortalOrigin.Dot( pVisData->m_vPortalForward ) ) > flDistToPortalTolerance ||
+				if ( std::fabsf( vViewOriginToPortalOrigin.Dot( pVisData->m_vPortalForward ) ) > flDistToPortalTolerance ||
 					 vViewOriginToPortalOrigin.Length() > pVisData->m_flPortalRadius )
 				{
 					// invert the rectangle and then grow it to fit the portal

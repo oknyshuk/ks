@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include <string.h>
-#include <assert.h>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
 #include "packed_entity.h"
-#include "basetypes.h"
 #include "changeframelist.h"
 #include "dt_send.h"
 #include "dt_send_eng.h"
 #include "server_class.h"
-
 
 // -------------------------------------------------------------------------------------------------- //
 // PackedEntity.
@@ -89,7 +82,7 @@ bool PackedEntity::CompareRecipients( std::span<const CSendProxyRecipients> reci
 	if ( std::ssize( recipients ) != std::ssize( m_Recipients ) )
 		return false;
 	
-	return memcmp( recipients.data(), m_Recipients.data(), sizeof( CSendProxyRecipients ) * std::ssize( m_Recipients ) ) == 0;
+	return std::memcmp( recipients.data(), m_Recipients.data(), sizeof( CSendProxyRecipients ) * std::ssize( m_Recipients ) ) == 0;
 }	
 
 void PackedEntity::SetServerAndClientClass( ServerClass *pServerClass, ClientClass *pClientClass )
@@ -98,7 +91,7 @@ void PackedEntity::SetServerAndClientClass( ServerClass *pServerClass, ClientCla
 	m_pClientClass = pClientClass;
 	if ( pServerClass )
 	{
-		Assert( pServerClass->m_pTable );
+		contract_assert( pServerClass->m_pTable );
 		SetShouldCheckCreationTick( pServerClass->m_pTable->HasPropsEncodedAgainstTickCount() );
 	}
 }

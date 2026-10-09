@@ -1,11 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef RAGDOLL_SHARED_H
-#define RAGDOLL_SHARED_H
+import ks.math;
+#include "shared_classnames.h"
 
 class IPhysicsObject;
 class IPhysicsConstraint;
@@ -13,26 +11,28 @@ class IPhysicsConstraintGroup;
 class IPhysicsCollision;
 class IPhysicsEnvironment;
 class IPhysicsSurfaceProps;
-struct matrix3x4_t;
 
 struct vcollide_t;
 struct studiohdr_t;
 class CStudioHdr;
 class CBoneAccessor;
+class CBaseAnimating;
+class CBaseEntity;
 
-#include "mathlib/vector.h"
 #include "bone_accessor.h"
 #include "vcollide_parse.h"
-#include <vector>
+#include "ehandle.h"
+#include "igamesystem.h"
+import std;
 
 // UNDONE: Remove and make dynamic?
-#define RAGDOLL_MAX_ELEMENTS	24
-#define RAGDOLL_INDEX_BITS		5			// NOTE 1<<RAGDOLL_INDEX_BITS >= RAGDOLL_MAX_ELEMENTS
+inline constexpr auto RAGDOLL_MAX_ELEMENTS = 24;
+inline constexpr auto RAGDOLL_INDEX_BITS = 5; // NOTE 1<<RAGDOLL_INDEX_BITS >= RAGDOLL_MAX_ELEMENTS
 
-#define CORE_DISSOLVE_FADE_START 0.2f
-#define CORE_DISSOLVE_MODEL_FADE_START 0.1f
-#define CORE_DISSOLVE_MODEL_FADE_LENGTH 0.05f
-#define CORE_DISSOLVE_FADEIN_LENGTH 0.1f
+inline constexpr auto CORE_DISSOLVE_FADE_START = 0.2f;
+inline constexpr auto CORE_DISSOLVE_MODEL_FADE_START = 0.1f;
+inline constexpr auto CORE_DISSOLVE_MODEL_FADE_LENGTH = 0.05f;
+inline constexpr auto CORE_DISSOLVE_FADEIN_LENGTH = 0.1f;
 
 struct ragdollelement_t
 {
@@ -158,5 +158,3 @@ void RagdollApplyAnimationAsVelocity( ragdoll_t &ragdoll, const matrix3x4_t *pBo
 void RagdollApplyAnimationAsVelocity( ragdoll_t &ragdoll, const matrix3x4_t *pPrevBones, const matrix3x4_t *pCurrentBones, float dt );
 
 void RagdollSolveSeparation( ragdoll_t &ragdoll, CBaseEntity *pEntity );
-
-#endif // RAGDOLL_SHARED_H

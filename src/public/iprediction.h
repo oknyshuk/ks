@@ -1,29 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( IPREDICTION_H )
-#define IPREDICTION_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "interface.h"
-#include "mathlib/vector.h" // Solely to get at define for QAngle
-
+import ks.tier1;
+import std;
 
 class IMoveHelper;
 
 //-----------------------------------------------------------------------------
 // Purpose: Engine interface into client side prediction system
 //-----------------------------------------------------------------------------
-abstract_class IPrediction
+class IPrediction
 {
 public:
 	virtual			~IPrediction( void ) {};
@@ -59,7 +46,4 @@ public:
 
 extern IPrediction *g_pClientSidePrediction;
 
-#define VCLIENT_PREDICTION_INTERFACE_VERSION	"VClientPrediction001"
-
-#endif // IPREDICTION_H
-
+inline constexpr const char *VCLIENT_PREDICTION_INTERFACE_VERSION = "VClientPrediction001";

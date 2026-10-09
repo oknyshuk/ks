@@ -1,4 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #define HDRTYPE HDR_TYPE_NONE
 #include "common_ps_fxc.h"
@@ -16,4 +17,3 @@ HALF4 main( PS_INPUT i ) : COLOR
 	float4 baseTex = tex2D( BaseTextureSampler, i.texCoord0 );	
 	return FinalOutput( baseTex * float4( i.color, 1 ), 0, PIXEL_FOG_TYPE_NONE, TONEMAP_SCALE_NONE );
 }
-

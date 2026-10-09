@@ -1,15 +1,12 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:  implementation of the rcon client
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
+// Purpose: implementation of the rcon client
+
+import std;
+import ks.tier1;
 #include "net_ws_headers.h"
 
-#include <tier0/dbg.h>
-#include "tier1/byte_writer.h"
-#include "tier1/string_ops.h"
 #include "cl_rcon.h"
 #include "vprof_engine.h"
 #include "proto_oob.h" // PORT_RCON define
@@ -24,37 +21,6 @@ CRConClient & RCONClient()
 {
 	return g_RCONClient;
 }
-
-#ifdef ENABLE_RPT
-class CRPTClient : public CRConClient
-{
-	typedef CRConClient BaseClass;
-
-public:
-	virtual void OnSocketAccepted( SocketHandle_t hSocket, const netadr_t & netAdr, void** ppData )
-	{
-		BaseClass::OnSocketAccepted( hSocket, netAdr, ppData );
-
-		// Immediately try to start vprofiling
-		// Also, enable cheats on this client only
-		Cmd_SetRptActive( true );
-		StartVProfData();
-	}
-
-	virtual void OnSocketClosed( SocketHandle_t hSocket, const netadr_t & netAdr, void* pData )
-	{
-		StopVProfData();
-		Cmd_SetRptActive( false );
-		BaseClass::OnSocketClosed( hSocket, netAdr, pData );
-	}
-};
-
-static CRPTClient g_RPTClient;
-CRConClient & RPTClient()
-{
-	return g_RPTClient;
-}
-#endif // ENABLE_RPT
 
 static void RconAddressChanged_f( IConVar *pConVar, const char *pOldString, float flOldValue )
 {
@@ -101,34 +67,30 @@ int CRConVProfExport::GetNumBudgetGroups()
 
 void CRConVProfExport::GetBudgetGroupInfos( CExportedBudgetGroupInfo *pInfos )
 {
-	memcpy( pInfos, m_Info.data(), GetNumBudgetGroups() * sizeof(CExportedBudgetGroupInfo) );
+	std::memcpy( pInfos, m_Info.data(), GetNumBudgetGroups() * sizeof(CExportedBudgetGroupInfo) );
 }
 
 void CRConVProfExport::GetBudgetGroupTimes( float times[IVProfExport::MAX_BUDGETGROUP_TIMES] )
 {
 	int nGroups = std::min<int>( std::ssize( m_Times ), IVProfExport::MAX_BUDGETGROUP_TIMES );
-	memset( times, 0, nGroups * sizeof(float) );
+	std::memset( times, 0, nGroups * sizeof(float) );
 	nGroups = std::min( GetNumBudgetGroups(), nGroups );
-	memcpy( times, m_Times.data(), nGroups * sizeof(float) );
+	std::memcpy( times, m_Times.data(), nGroups * sizeof(float) );
 }
 
 void CRConVProfExport::PauseProfile()
 {
-#ifdef VPROF_ENABLED
 	// NOTE: This only has effect when testing on a listen server
 	// it shouldn't do anything in the wild. When drawing the budget panel
 	// this will cause the time spent doing so to not be counted
 	VProfExport_Pause();
-#endif
 }
 
 void CRConVProfExport::ResumeProfile()
 {
-#ifdef VPROF_ENABLED
 	// NOTE: This only has effect when testing on a listen server
 	// it shouldn't do anything in the wild
 	VProfExport_Resume();
-#endif
 }		
 
 void CRConVProfExport::CleanupGroupData()
@@ -153,7 +115,7 @@ void CRConVProfExport::OnRemoteGroupData( const void *data, int len )
 	}
 	else
 	{
-		Assert( nFirstGroup == std::ssize( m_Info ) );
+		contract_assert( nFirstGroup == std::ssize( m_Info ) );
 	}
 
 	// NOTE: See WriteRemoteVProfGroupData in vprof_engine.cpp
@@ -171,12 +133,12 @@ void CRConVProfExport::OnRemoteGroupData( const void *data, int len )
 		blue = buf.read<unsigned char>();
 		alpha = buf.read<unsigned char>();
 		buf.read_cstring( temp, sizeof(temp) );
-		int nLen = Q_strlen( temp );
+		int nLen = V_strlen( temp );
 
 		pInfo->m_Color.SetColor( red, green, blue, alpha );
 		char *pBuf = new char[ nLen + 1 ];
 		pInfo->m_pName = pBuf;
-		memcpy( pBuf, temp, nLen+1 );
+		std::memcpy( pBuf, temp, nLen+1 );
 		pInfo->m_BudgetFlags = 0;
 	}
 }
@@ -186,36 +148,28 @@ void CRConVProfExport::OnRemoteData( const void *data, int len )
 	// NOTE: See WriteRemoteVProfData in vprof_engine.cpp
 	// to see the encoding of this data
 	int nCount = len / sizeof(float);
-	Assert( nCount == std::ssize( m_Info ) );
+	contract_assert( nCount == std::ssize( m_Info ) );
 
 	m_Times.assign( nCount, {} );
-	memcpy( m_Times.data(), data, nCount * sizeof(float) );
+	std::memcpy( m_Times.data(), data, nCount * sizeof(float) );
 }
 
 
-CON_COMMAND( vprof_remote_start, "Request a VProf data stream from the remote server (requires authentication)" )
+static void vprof_remote_start( const CCommand &args );
+static ConCommand vprof_remote_start_command( "vprof_remote_start", vprof_remote_start, "Request a VProf data stream from the remote server (requires authentication)" );
+static void vprof_remote_start( const CCommand &args )
 {
 	// TODO: Make this work (it might already!)
 //	RCONClient().StartVProfData();
 }
 
-CON_COMMAND( vprof_remote_stop, "Stop an existing remote VProf data request" )
+static void vprof_remote_stop( const CCommand &args );
+static ConCommand vprof_remote_stop_command( "vprof_remote_stop", vprof_remote_stop, "Stop an existing remote VProf data request" );
+static void vprof_remote_stop( const CCommand &args )
 {
 	// TODO: Make this work (it might already!)
 //	RCONClient().StopVProfData();
 }
-
-#ifdef ENABLE_RPT
-CON_COMMAND_F( rpt_screenshot, "", FCVAR_HIDDEN | FCVAR_DONTRECORD )
-{
-	RPTClient().TakeScreenshot();
-}
-
-CON_COMMAND_F( rpt_download_log, "", FCVAR_HIDDEN | FCVAR_DONTRECORD )
-{
-	RPTClient().GrabConsoleLog();
-}
-#endif // ENABLE_RPT
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -347,16 +301,17 @@ void CRConClient::SendQueuedData()
 	ks::byte_reader reader( m_SendBuffer );
 	while ( reader.remaining() > sizeof(int) )
 	{
-		size_t nSize = reader.peek<int>();
-		Assert( nSize >= reader.remaining() - sizeof( int ) );
-		int ret = send( hSocket, (const char *)reader.rest().data(), nSize + sizeof( int ), 0 );
+		std::size_t nSize = reader.peek<int>();
+		contract_assert( nSize >= reader.remaining() - sizeof( int ) );
+		ks::platform::socket_error error = ks::platform::socket_error::none;
+		long ret = ks::platform::send_bytes( hSocket, reader.rest().data(), nSize + sizeof( int ), &error );
 		if ( ret != -1 )
 		{
 			reader.skip( nSize + sizeof( int ) );
 			continue;
 		}
 
-		if ( !SocketWouldBlock() )
+		if ( error != ks::platform::socket_error::again )
 		{
 			Warning( "Lost RCON connection, please retry command.\n"); 
 			CloseSocket();
@@ -365,7 +320,7 @@ void CRConClient::SendQueuedData()
 	}
 
 	// CloseSocket() above empties the buffer
-	const size_t nSizeRemaining = m_SendBuffer.empty() ? 0 : reader.remaining();
+	const std::size_t nSizeRemaining = m_SendBuffer.empty() ? 0 : reader.remaining();
 	if ( nSizeRemaining <= sizeof(int) )
 	{
 		m_SendBuffer.clear();
@@ -404,7 +359,7 @@ void CRConClient::ParseReceivedData()
 				}
 				else
 				{
-					Assert( reqID == m_iAuthRequestID );
+					contract_assert( reqID == m_iAuthRequestID );
 					m_bAuthenticated = true;
 				}
 				char dummy[2];
@@ -516,6 +471,7 @@ void CRConClient::ParseReceivedData()
 //-----------------------------------------------------------------------------
 void CRConClient::RunFrame()
 {
+	ks::ScratchArena<> scratch;
 	m_Socket.RunFrame();
 
 	if ( !IsConnected() )
@@ -525,8 +481,9 @@ void CRConClient::RunFrame()
 
 	SocketHandle_t hSocket = GetSocketHandle();
 	char ch;
-	int pendingLen = recv( hSocket, &ch, sizeof(ch), MSG_PEEK );
-	if ( pendingLen == -1 && SocketWouldBlock() )
+	ks::platform::socket_error error = ks::platform::socket_error::none;
+	long pendingLen = ks::platform::peek_bytes( hSocket, &ch, sizeof(ch), &error );
+	if ( pendingLen == -1 && error == ks::platform::socket_error::again )
 		return;
 
 	if ( pendingLen == 0 ) // socket got closed
@@ -538,33 +495,32 @@ void CRConClient::RunFrame()
 	if ( pendingLen < 0 )
 	{
 		CloseSocket();
-		Warning( "Lost RCON connection, please retry command (%s)\n", NET_ErrorString( WSAGetLastError() ) );
+		Warning( "Lost RCON connection, please retry command (%s)\n", NET_ErrorString( error ) );
 		return;
 	}
 
 	// find out how much we have to read
-	unsigned long readLen = 0;
-	ioctlsocket( hSocket, FIONREAD, &readLen );
+	unsigned long readLen = ks::platform::bytes_available( hSocket );
 	if ( readLen <= sizeof(int) ) 
 		return;
 
 	// we have a command to process
 	// Read data into the receive buffer
 	m_RecvBuffer.reserve( m_RecvBuffer.size() + readLen + 1 );
-	char *recvbuffer = (char *)stackalloc( ( std::min<std::common_type_t<int, long unsigned int>>( 1024, readLen + 1 ) ) );
+	char *recvbuffer = (char *)scratch.AllocBytes( ( std::min<std::common_type_t<int, long unsigned int>>( 1024, readLen + 1 ) ) );
 	unsigned int len = 0;
 	while ( len < readLen )
 	{
-		int recvLen = recv( hSocket, recvbuffer , std::min<std::common_type_t<int, long unsigned int>>( 1024, readLen - len ) , 0 );
+		long recvLen = ks::platform::receive_bytes( hSocket, recvbuffer , std::min<std::common_type_t<int, long unsigned int>>( 1024, readLen - len ) , &error );
 		if ( recvLen == 0 ) // socket was closed
 		{
 			CloseSocket();
 			break;
 		}
 		
-		if ( recvLen < 0 && !SocketWouldBlock() )
+		if ( recvLen < 0 && error != ks::platform::socket_error::again )
 		{
-			Warning( "RCON Cmd: recv error (%s)\n", NET_ErrorString( WSAGetLastError() ) );
+			Warning( "RCON Cmd: recv error (%s)\n", NET_ErrorString( error ) );
 			break;
 		}
 
@@ -595,10 +551,11 @@ void CRConClient::SendResponse( ks::byte_writer &response, bool bAutoAuthenticat
 		return;
 	}
 
-	int ret = send( GetSocketHandle(), (const char *)response.data(), response.size(), 0 );
+	ks::platform::socket_error error = ks::platform::socket_error::none;
+	long ret = ks::platform::send_bytes( GetSocketHandle(), response.data(), response.size(), &error );
 	if ( ret == -1 )
 	{
-		if ( SocketWouldBlock() )
+		if ( error == ks::platform::socket_error::again )
 		{
 			m_SendBuffer.insert( m_SendBuffer.end(), response.bytes().begin(), response.bytes().end() );
 		}
@@ -648,7 +605,7 @@ void CRConClient::Authenticate()
 	{
 		if ( GetBaseLocalClient().m_nPlayerSlot < GetBaseLocalClient().m_nMaxClients && GetBaseLocalClient().m_nPlayerSlot >= 0 )
 		{
-			Assert( GetBaseLocalClient().m_pUserInfoTable );
+			contract_assert( GetBaseLocalClient().m_pUserInfoTable );
 			if ( GetBaseLocalClient().m_pUserInfoTable )
 			{
 				player_info_t *pi = (player_info_t*) GetBaseLocalClient().m_pUserInfoTable->GetStringUserData( GetBaseLocalClient().m_nPlayerSlot, nullptr );
@@ -656,7 +613,7 @@ void CRConClient::Authenticate()
 				{
 					addedUserID = true;
 					// Fixup from network order (little endian)
-					response.write_cstring( va( "%d", LittleLong( pi->userID ) ) );
+					response.write_cstring( va( "%d", ( pi->userID ) ) );
 				}
 			}
 		}
@@ -702,10 +659,8 @@ void CRConClient::StartVProfData()
 			return;
 	}
 
-#ifdef VPROF_ENABLED
 	// Override the vprof export to point to our local profiling data
 	OverrideVProfExport( &m_VProfExport );
-#endif
 
 	ks::byte_writer response;
 	BuildResponse( response, SERVERDATA_VPROF, "", "" );
@@ -718,10 +673,8 @@ void CRConClient::StartVProfData()
 //-----------------------------------------------------------------------------
 void CRConClient::StopVProfData()
 {
-#ifdef VPROF_ENABLED
 	// Reset the vprof export to point to the normal profiling data
 	ResetVProfExport( &m_VProfExport );
-#endif
 
 	// Don't bother restarting a connection to turn this off
 	if ( !IsConnected() )
@@ -787,7 +740,7 @@ void CRConClient::SaveRemoteScreenshot( const void* pBuffer, int nBufLen )
 	char pScreenshotPath[MAX_PATH];
 	do 
 	{
-		Q_snprintf( pScreenshotPath, sizeof( pScreenshotPath ), "%s/screenshot%04d.jpg", m_RemoteFileDir.data(), m_nScreenShotIndex++ );	
+		V_snprintf( pScreenshotPath, sizeof( pScreenshotPath ), "%s/screenshot%04d.jpg", m_RemoteFileDir.data(), m_nScreenShotIndex++ );	
 	} while ( g_pFullFileSystem->FileExists( pScreenshotPath, "MOD" ) );
 
 	char pFullPath[MAX_PATH];
@@ -796,12 +749,12 @@ void CRConClient::SaveRemoteScreenshot( const void* pBuffer, int nBufLen )
 
 	int nIndex;
 	ZIPENTRY zipInfo;
-	FindZipItem( hZip, "screenshot.jpg", true, &nIndex, &zipInfo );
+	FindZipItemA( hZip, "screenshot.jpg", true, &nIndex, &zipInfo );
 	if ( nIndex >= 0 )
 	{
 		UnzipItem( hZip, nIndex, pFullPath, 0, ZIP_FILENAME );
 	}
-	CloseZip( hZip );
+	CloseZipU( hZip );
 }
 
 void CRConClient::SaveRemoteConsoleLog( const void* pBuffer, int nBufLen )
@@ -812,7 +765,7 @@ void CRConClient::SaveRemoteConsoleLog( const void* pBuffer, int nBufLen )
 	char pLogPath[MAX_PATH];
 	do 
 	{
-		Q_snprintf( pLogPath, sizeof( pLogPath ), "%s/console%04d.log", m_RemoteFileDir.data(), m_nConsoleLogIndex++ );	
+		V_snprintf( pLogPath, sizeof( pLogPath ), "%s/console%04d.log", m_RemoteFileDir.data(), m_nConsoleLogIndex++ );	
 	} while ( g_pFullFileSystem->FileExists( pLogPath, "MOD" ) );
 
 	char pFullPath[MAX_PATH];
@@ -821,10 +774,10 @@ void CRConClient::SaveRemoteConsoleLog( const void* pBuffer, int nBufLen )
 
 	int nIndex;
 	ZIPENTRY zipInfo;
-	FindZipItem( hZip, "console.log", true, &nIndex, &zipInfo );
+	FindZipItemA( hZip, "console.log", true, &nIndex, &zipInfo );
 	if ( nIndex >= 0 )
 	{
 		UnzipItem( hZip, nIndex, pFullPath, 0, ZIP_FILENAME );
 	}
-	CloseZip( hZip );
+	CloseZipU( hZip );
 }

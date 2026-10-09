@@ -1,15 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef TGAWRITER_H
-#define TGAWRITER_H
-
-
-#include "tier1/interface.h"
+import std;
+import ks.tier1;
 #include "bitmap/imageformat.h" //ImageFormat enum definition
 
 namespace ks { class byte_writer; }
@@ -28,5 +22,3 @@ namespace TGAWriter
 	bool WriteRectNoAllocFeather( unsigned char *pImageData, const char *fileName, int nXOrigin, int nYOrigin, int width, int height, int nGuardBandWidth, int nGuardBandHeight, int nStride, enum ImageFormat srcFormat );
 
 } // end namespace TGAWriter
-
-#endif // TGAWRITER_H

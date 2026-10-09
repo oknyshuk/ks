@@ -1,12 +1,14 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include <rocketui/rmlui.h>
+
 #include "rocketuiimpl.h"
 #include "rocketfilesystem.h"
 #include "rocketrender.h"
 #include "rocketsystem.h"
 
-#include <rocketui/rmlui.h>
-
-#include <cstdio>
-#include <cstring>
+import std;
 
 #include "inputsystem/iinputsystem.h"
 #include "rocketkeys.h"
@@ -27,13 +29,13 @@ static int GetRmlKeyModifierState() {
 }
 
 RocketUIImpl RocketUIImpl::m_Instance;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(RocketUIImpl, IRocketUI,
-                                  ROCKETUI_INTERFACE_VERSION,
-                                  RocketUIImpl::m_Instance)
+static InterfaceReg s_Reg_RocketUIImpl_IRocketUI( []() -> void * { return static_cast<IRocketUI *>( &RocketUIImpl::m_Instance ); }, ROCKETUI_INTERFACE_VERSION );;
 
 ConVar rocket_enable("rocket_enable", "1", 0, "Enables RocketUI");
 
-CON_COMMAND_F(rocket_reload, "Reloads all RocketUI Documents", FCVAR_NONE) {
+static void rocket_reload( const CCommand &args );
+static ConCommand rocket_reload_command( "rocket_reload", rocket_reload, "Reloads all RocketUI Documents", FCVAR_NONE );
+static void rocket_reload( const CCommand &args ) {
   if (RocketUIImpl::m_Instance.ReloadDocuments()) {
     ConMsg("[RocketUI] Documents Reloaded.\n");
   } else {
@@ -41,14 +43,17 @@ CON_COMMAND_F(rocket_reload, "Reloads all RocketUI Documents", FCVAR_NONE) {
   }
 }
 
-CON_COMMAND_F(rocket_debug, "Open/Close the RocketUI Debugger", FCVAR_NONE) {
+static void rocket_debug( const CCommand &args );
+static ConCommand rocket_debug_command( "rocket_debug", rocket_debug, "Open/Close the RocketUI Debugger", FCVAR_NONE );
+static void rocket_debug( const CCommand &args ) {
   RocketUIImpl::m_Instance.ToggleDebugger();
 }
 
 // Names the document that currently takes the mouse, i.e. what IsConsumingInput()
 // is answering. Run it from a key bind: an open console is itself a claimant.
-CON_COMMAND_F(rocket_input_owner, "Name the document that owns mouse input",
-              FCVAR_NONE) {
+static void rocket_input_owner( const CCommand &args );
+static ConCommand rocket_input_owner_command( "rocket_input_owner", rocket_input_owner, "Name the document that owns mouse input", FCVAR_NONE );
+static void rocket_input_owner( const CCommand &args ) {
   Rml::ElementDocument *doc = RocketUIImpl::m_Instance.FindInputClaimant();
   ConMsg("[RocketUI] mouse owner: %s\n",
          doc ? doc->GetSourceURL().c_str() : "(none - the game has it)");
@@ -114,8 +119,8 @@ void RocketUIImpl::Disconnect() {
 }
 
 void *RocketUIImpl::QueryInterface(const char *pInterfaceName) {
-  if (!Q_strncmp(pInterfaceName, ROCKETUI_INTERFACE_VERSION,
-                 Q_strlen(ROCKETUI_INTERFACE_VERSION) + 1)) {
+  if (!V_strncmp(pInterfaceName, ROCKETUI_INTERFACE_VERSION,
+                 V_strlen(ROCKETUI_INTERFACE_VERSION) + 1)) {
     return (IRocketUI *)&RocketUIImpl::m_Instance;
   }
 
@@ -333,7 +338,7 @@ void RocketUIImpl::SyncCursorToInputOwner() {
 
   if (bWantCursor) {
     m_pLauncherMgr->SetMouseCursor(
-        RocketSystem::m_Instance.m_pCursors[SDL_SYSTEM_CURSOR_DEFAULT]);
+        RocketSystem::m_Instance.m_pCursors[(int)ks::desktop::cursor_kind::arrow]);
   }
   m_pLauncherMgr->SetMouseVisible(bWantCursor);
 }

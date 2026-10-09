@@ -1,11 +1,22 @@
-//========= Copyright (c) 2011-2011, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: No defuse area ent
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2011 Valve Corporation
 
-#include "cbase.h"
+// Purpose: No defuse area ent
+
+import std;
+import ks.math;
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
 #include "triggers.h"
 
 class CNoDefuseArea : public CBaseTrigger
@@ -14,5 +25,5 @@ public:
 	DECLARE_CLASS( CNoDefuseArea, CBaseTrigger );
 
 	void Spawn();
-	void EXPORT NoDefuseAreaTouch( CBaseEntity* pOther );
+	void NoDefuseAreaTouch( CBaseEntity* pOther );
 };

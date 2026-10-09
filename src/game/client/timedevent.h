@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef TIMEDEVENT_H
-#define TIMEDEVENT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // This class triggers events at a specified rate. Just call NextEvent() and do an event until it 
 // returns false. For example, if you want to spawn particles 10 times per second, do this:
@@ -38,7 +33,7 @@ public:
 	inline bool NextEvent(float &curDelta)
 	{
 		// If this goes off, you didn't call Init().
-		Assert( m_TimeBetweenEvents != -1 );
+		contract_assert( m_TimeBetweenEvents != -1 );
 
 		if(curDelta >= m_fNextEvent)
 		{
@@ -58,5 +53,3 @@ private:
 	float		m_TimeBetweenEvents;
 	float		m_fNextEvent;	// When the next event should be triggered.
 };
-
-#endif // TIMEDEVENT_H

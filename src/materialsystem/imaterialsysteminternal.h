@@ -1,22 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IMATERIALSYSTEMINTERNAL_H
-#define IMATERIALSYSTEMINTERNAL_H
-
-
+import ks.vstdlib;
 #include "materialsystem/imaterialsystem.h"
-#include "tier1/callqueue.h"
-#include "tier1/memstack.h"
-#include "tier1/fmtstr.h"
+import std;
 
-#include "tier0/vprof_telemetry.h"
-#include "tier0/perfstats.h"
 
 class IMaterialInternal;
 
@@ -41,12 +30,12 @@ public:
 		m_pHead = m_pTail = nullptr;
 	}
 
-	size_t GetMemoryUsed()
+	std::size_t GetMemoryUsed()
 	{
 		return m_Allocator.GetUsed();
 	}
 
-	int Count()
+	int Count() const
 	{
 		int i = 0;
 		Elem_t *pCurrent = m_pHead;
@@ -62,7 +51,7 @@ public:
 	T &Copy( T &item )
 	{
 		T *pCopy = (T *)m_Allocator.Alloc( sizeof(T) );
-		memcpy( pCopy, &item, sizeof(T) );
+		std::memcpy( pCopy, &item, sizeof(T) );
 		return *pCopy;
 	}
 
@@ -70,7 +59,7 @@ public:
 	T *CopyArray( T *p, int n )
 	{
 		T *pCopy = (T *)m_Allocator.Alloc( sizeof(T) * n );
-		memcpy( (void *)pCopy, p, sizeof(T) * n );
+		std::memcpy( (void *)pCopy, p, sizeof(T) * n );
 		return pCopy;
 	}
 
@@ -86,8 +75,7 @@ public:
 
 	void CallQueued()
 	{
-		TM_ZONE_PLOT( TELEMETRY_LEVEL1, "RenderThread",  TELEMETRY_ZONE_PLOT_SLOT_2 );
-		PERF_STATS_BLOCK( "RenderThread", PERF_STATS_SLOT_RENDERTHREAD );
+		CPerfStatsScope _perfStatsScope3171( "RenderThread", PERF_STATS_SLOT_RENDERTHREAD );
 		if ( !m_pHead )
 		{
 			return;
@@ -107,28 +95,18 @@ public:
 #endif
 			if ( pCurrent->pNext )
 			{
-				PREFETCH360( pCurrent->pNext, 0 );
-				PREFETCH360( pCurrent->pNext, 128 );
 			}
 			(*pFunctor)();
 			pFunctor->~CFunctor(); // no need to ref count, we're alone here...
 			pCurrent = pCurrent->pNext;
 		}
-#ifdef DEBUG_MATCALLQUEUE
-		static int prevHigh = 0;
-		if ( m_Allocator.GetUsed() > prevHigh )
-		{
-			Msg( "***%d\n", m_Allocator.GetUsed() );
-			prevHigh = m_Allocator.GetUsed();
-		}
-#endif
 		m_Allocator.FreeAll( false );
 		m_pHead = m_pTail = nullptr;
 	}
 
 	void QueueFunctor( CFunctor *pFunctor )
 	{
-		Assert( pFunctor );
+		contract_assert( pFunctor );
 		m_Allocator.Alloc( sizeof(Elem_t) );
 		QueueFunctorInternal( m_FunctorFactory.CreateRefCountingFunctor( pFunctor, &CFunctor::operator() ) );
 	}
@@ -154,39 +132,30 @@ public:
 		m_pHead = m_pTail = nullptr;
 	}
 
-	#define DEFINE_MATCALLQUEUE_NONMEMBER_QUEUE_CALL(N) \
-		template <typename FUNCTION_RETTYPE FUNC_TEMPLATE_FUNC_PARAMS_##N FUNC_TEMPLATE_ARG_PARAMS_##N> \
-		void QueueCall(FUNCTION_RETTYPE (*pfnProxied)( FUNC_BASE_TEMPLATE_FUNC_PARAMS_##N ) FUNC_ARG_FORMAL_PARAMS_##N ) \
-		{ \
-			m_Allocator.Alloc( sizeof(Elem_t) ); \
-			QueueFunctorInternal( m_FunctorFactory.CreateFunctor( pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ) ); \
-		}
+	template <typename RET_TYPE, typename... PARAMS, typename... ARGS>
+	void QueueCall( RET_TYPE (*pfnProxied)( PARAMS... ), ARGS &&... args )
+	{
+		m_Allocator.Alloc( sizeof(Elem_t) );
+		QueueFunctorInternal( m_FunctorFactory.CreateFunctor( pfnProxied, std::forward<ARGS>(args)... ) );
+	}
 
 		//-------------------------------------
 
-	#define DEFINE_MATCALLQUEUE_MEMBER_QUEUE_CALL(N) \
-		template <typename OBJECT_TYPE_PTR, typename FUNCTION_CLASS, typename FUNCTION_RETTYPE FUNC_TEMPLATE_FUNC_PARAMS_##N FUNC_TEMPLATE_ARG_PARAMS_##N> \
-		void QueueCall(OBJECT_TYPE_PTR pObject, FUNCTION_RETTYPE ( FUNCTION_CLASS::*pfnProxied )( FUNC_BASE_TEMPLATE_FUNC_PARAMS_##N ) FUNC_ARG_FORMAL_PARAMS_##N ) \
-		{ \
-			m_Allocator.Alloc( sizeof(Elem_t) ); \
-			QueueFunctorInternal( m_FunctorFactory.CreateFunctor( pObject, pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ) ); \
-		}
+	template <typename OBJECT_TYPE_PTR, typename RET_TYPE, typename FUNCTION_CLASS, typename... PARAMS, typename... ARGS>
+	void QueueCall( OBJECT_TYPE_PTR pObject, RET_TYPE ( FUNCTION_CLASS::*pfnProxied )( PARAMS... ), ARGS &&... args )
+	{
+		m_Allocator.Alloc( sizeof(Elem_t) );
+		QueueFunctorInternal( m_FunctorFactory.CreateFunctor( pObject, pfnProxied, std::forward<ARGS>(args)... ) );
+	}
 
 		//-------------------------------------
 
-	#define DEFINE_MATCALLQUEUE_CONST_MEMBER_QUEUE_CALL(N) \
-		template <typename OBJECT_TYPE_PTR, typename FUNCTION_CLASS, typename FUNCTION_RETTYPE FUNC_TEMPLATE_FUNC_PARAMS_##N FUNC_TEMPLATE_ARG_PARAMS_##N> \
-		void QueueCall(OBJECT_TYPE_PTR pObject, FUNCTION_RETTYPE ( FUNCTION_CLASS::*pfnProxied )( FUNC_BASE_TEMPLATE_FUNC_PARAMS_##N ) const FUNC_ARG_FORMAL_PARAMS_##N ) \
-		{ \
-			m_Allocator.Alloc( sizeof(Elem_t) ); \
-			QueueFunctorInternal( m_FunctorFactory.CreateFunctor( pObject, pfnProxied FUNC_FUNCTOR_CALL_ARGS_##N ) ); \
-		}
-
-		//-------------------------------------
-
-	FUNC_GENERATE_ALL( DEFINE_MATCALLQUEUE_NONMEMBER_QUEUE_CALL );
-	FUNC_GENERATE_ALL( DEFINE_MATCALLQUEUE_MEMBER_QUEUE_CALL );
-	FUNC_GENERATE_ALL( DEFINE_MATCALLQUEUE_CONST_MEMBER_QUEUE_CALL );
+	template <typename OBJECT_TYPE_PTR, typename RET_TYPE, typename FUNCTION_CLASS, typename... PARAMS, typename... ARGS>
+	void QueueCall( OBJECT_TYPE_PTR pObject, RET_TYPE ( FUNCTION_CLASS::*pfnProxied )( PARAMS... ) const, ARGS &&... args )
+	{
+		m_Allocator.Alloc( sizeof(Elem_t) );
+		QueueFunctorInternal( m_FunctorFactory.CreateFunctor( pObject, pfnProxied, std::forward<ARGS>(args)... ) );
+	}
 
 private:
 	void QueueFunctorInternal( CFunctor *pFunctor )
@@ -194,7 +163,6 @@ private:
 #ifdef _DEBUG
 		pFunctor->m_nUserID = m_nCurSerialNumber++;
 #endif
-		MEM_ALLOC_CREDIT_( "CMatCallQueue.m_Allocator" );
 		// Caller is expected to have preallocated Elem_t entry immediately prior to functor
 		Elem_t *pNew = ((Elem_t *)pFunctor) - 1;
 		if ( m_pTail )
@@ -224,12 +192,12 @@ private:
 	unsigned m_nBreakSerialNumber;
 };
 
-#define MATCONFIG_FLAGS_SUPPORT_EDITOR ( 1 << 0 )
-#define MATCONFIG_FLAGS_SUPPORT_GBUFFER ( 1 << 1 )
+inline constexpr auto MATCONFIG_FLAGS_SUPPORT_EDITOR = ( 1 << 0 );
+inline constexpr auto MATCONFIG_FLAGS_SUPPORT_GBUFFER = ( 1 << 1 );
 //-----------------------------------------------------------------------------
 // Additional interfaces used internally to the library
 //-----------------------------------------------------------------------------
-abstract_class IMaterialSystemInternal : public IMaterialSystem
+class IMaterialSystemInternal : public IMaterialSystem
 {
 public:
 	// Returns the current material
@@ -264,6 +232,3 @@ public:
 	virtual void UnbindMaterial( IMaterial *pMaterial ) = 0;
 	virtual uint GetRenderThreadId() const = 0 ;
 };
-
-
-#endif // IMATERIALSYSTEMINTERNAL_H

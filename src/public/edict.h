@@ -1,21 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef EDICT_H
-#define EDICT_H
-
-
-#include "mathlib/vector.h"
+import std;
+import ks.tier1;
 #include "cmodel.h"
 #include "const.h"
 #include "iserverentity.h"
 #include "globalvars_base.h"
 #include "engine/ICollideable.h"
 #include "iservernetworkable.h"
-#include "tier1/convar.h"
 
 struct edict_t;
 
@@ -74,33 +68,33 @@ class IServerNetworkable;
 class IServerEntity;
 
 
-#define FL_EDICT_CHANGED	(1<<0)	// Game DLL sets this when the entity state changes
+inline constexpr auto FL_EDICT_CHANGED = (1<<0); // Game DLL sets this when the entity state changes
 									// Mutually exclusive with FL_EDICT_PARTIAL_CHANGE.
 									
-#define FL_EDICT_FREE		(1<<1)	// this edict if free for reuse
-#define FL_EDICT_FULL		(1<<2)	// this is a full server entity
+inline constexpr auto FL_EDICT_FREE = (1<<1); // this edict if free for reuse
+inline constexpr auto FL_EDICT_FULL = (1<<2); // this is a full server entity
 
-#define FL_EDICT_FULLCHECK	(0<<0)  // call ShouldTransmit() each time, this is a fake flag
-#define FL_EDICT_ALWAYS		(1<<3)	// always transmit this entity
-#define FL_EDICT_DONTSEND	(1<<4)	// don't transmit this entity
-#define FL_EDICT_PVSCHECK	(1<<5)	// always transmit entity, but cull against PVS
+inline constexpr auto FL_EDICT_FULLCHECK = (0<<0); // call ShouldTransmit() each time, this is a fake flag
+inline constexpr auto FL_EDICT_ALWAYS = (1<<3); // always transmit this entity
+inline constexpr auto FL_EDICT_DONTSEND = (1<<4); // don't transmit this entity
+inline constexpr auto FL_EDICT_PVSCHECK = (1<<5); // always transmit entity, but cull against PVS
 
 // Used by local network backdoor.
-#define FL_EDICT_PENDING_DORMANT_CHECK	(1<<6)
+inline constexpr auto FL_EDICT_PENDING_DORMANT_CHECK = (1<<6);
 
 // This is always set at the same time EFL_DIRTY_PVS_INFORMATION is set, but it 
 // gets cleared in a different place.
-#define FL_EDICT_DIRTY_PVS_INFORMATION	(1<<7)
+inline constexpr auto FL_EDICT_DIRTY_PVS_INFORMATION = (1<<7);
 
 // This is used internally to edict_t to remember that it's carrying a 
 // "full change list" - all its properties might have changed their value.
-#define FL_FULL_EDICT_CHANGED			(1<<8)
+inline constexpr auto FL_FULL_EDICT_CHANGED = (1<<8);
 
 
 // Max # of variable changes we'll track in an entity before we treat it
 // like they all changed.
-#define MAX_CHANGE_OFFSETS	19
-#define MAX_EDICT_CHANGE_INFOS	100
+inline constexpr auto MAX_CHANGE_OFFSETS = 19;
+inline constexpr auto MAX_EDICT_CHANGE_INFOS = 100;
 
 
 class CEdictChangeInfo
@@ -433,6 +427,3 @@ inline ICollideable *edict_t::GetCollideable()
 	else
 		return nullptr;
 }
-
-
-#endif // EDICT_H

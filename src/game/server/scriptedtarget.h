@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SCRIPTEDTARGET_H
-#define SCRIPTEDTARGET_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-#ifndef SCRIPTEVENT_H
 #include "scriptevent.h"
-#endif
 
 #include "ai_basenpc.h"
 
@@ -59,5 +51,3 @@ private:
 	[[= ks::reflect::Key{ .name = "AtTarget" } ]] COutputEvent		m_AtTarget;			// Fired when scripted target has been reached
 	[[= ks::reflect::Key{ .name = "LeaveTarget" } ]] COutputEvent		m_LeaveTarget;		// Fired when scripted target is left
 };
-
-#endif // SCRIPTEDTARGET_H

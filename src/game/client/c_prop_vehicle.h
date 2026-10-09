@@ -1,14 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef C_PROP_VEHICLE_H
-#define C_PROP_VEHICLE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-#pragma once
 
 #include "iclientvehicle.h"
 #include "vehicle_viewblend_shared.h"
@@ -21,7 +15,6 @@ class [[= ks::reflect::NetTable{ .name = "DT_PropVehicleDriveable" } ]]
 public:
 
 	DECLARE_CLIENTCLASS();
-	DECLARE_INTERPOLATION();
 	DECLARE_DATADESC();
 
 	C_PropVehicleDriveable();
@@ -125,6 +118,3 @@ protected:
 
 	ViewSmoothingData_t			m_ViewSmoothingData;
 };
-
-
-#endif // C_PROP_VEHICLE_H

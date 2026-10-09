@@ -1,33 +1,76 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "gamemovement.h"
 #include "cs_gamerules.h"
 #include "in_buttons.h"
 #include "movevars_shared.h"
 #include "weapon_csbase.h"
 
-
 #ifdef CLIENT_DLL
 	#include "c_cs_player.h"
 	#include "uicenterprint.h"
 #else
 	#include "cs_player.h"
-	#include "keyvalues.h"
 #endif
 
-#define STAMINA_RANGE				100.0
+constexpr auto STAMINA_RANGE = 100.0;
 ConVar sv_staminajumpcost( "sv_staminajumpcost", ".080", FCVAR_RELEASE | FCVAR_REPLICATED, "Stamina penalty for jumping", true, 0.0, false, 0.0 );
 ConVar sv_staminalandcost( "sv_staminalandcost", ".050", FCVAR_RELEASE | FCVAR_REPLICATED, "Stamina penalty for landing", true, 0.0, false, 0.0 );
 ConVar sv_staminarecoveryrate( "sv_staminarecoveryrate", "60", FCVAR_RELEASE | FCVAR_REPLICATED, "Rate at which stamina recovers (units/sec)", true, 0.0, false, 0.0 );
 ConVar sv_staminamax( "sv_staminamax", "80", FCVAR_RELEASE | FCVAR_REPLICATED, "Maximum stamina penalty", true, 0.0, true, 100.0 );
 
-#define get_sv_crouch_spam_penalty 2.0f
+constexpr auto get_sv_crouch_spam_penalty = 2.0f;
 
 // Prevent super-fast duck-spam while in air
 ConVar sv_timebetweenducks( "sv_timebetweenducks", "0.4", FCVAR_REPLICATED | FCVAR_RELEASE, "Minimum time before recognizing consecutive duck key", true, 0.0, true, 2.0 );
@@ -36,8 +79,8 @@ extern bool g_bMovementOptimizations;
 extern ConVar sv_accelerate_use_weapon_speed;
 extern ConVar sv_accelerate_debug_speed;
 
-#define SV_ACCELERATE_EXPONENT_TIME 0
-#define SV_ACCELERATE_EXPONENT 1
+constexpr auto SV_ACCELERATE_EXPONENT_TIME = 0;
+constexpr auto SV_ACCELERATE_EXPONENT = 1;
 
 // Not ready to ship yet... previous value was 2.0
 ConVar sv_extreme_strafe_accuracy_fishtail( "sv_extreme_strafe_accuracy_fishtail", "0", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY, "Number of degrees of aim 'fishtail' when making an extreme strafe direction change", true, -5.0, true, 5.0 );
@@ -110,7 +153,7 @@ private:
 static CCSGameMovement g_GameMovement;
 IGameMovement *g_pGameMovement = ( IGameMovement * )&g_GameMovement;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CGameMovement, IGameMovement,INTERFACENAME_GAMEMOVEMENT, g_GameMovement );
+static InterfaceReg s_Reg_CGameMovement_IGameMovement( []() -> void * { return static_cast<IGameMovement *>( &g_GameMovement ); }, INTERFACENAME_GAMEMOVEMENT );;
 
 
 // ---------------------------------------------------------------------------------------- //
@@ -169,17 +212,16 @@ void CCSGameMovement::CheckParameters( void )
 	//       IN_DUCK was held, before it is modified by code.  This way when m_nButtons is
 	//       copied to m_nOldButtons we can tell if duck was pressed or released on the next
 	//       frame.
-	#define IN_RAWDUCK IN_BULLRUSH
 
 	QAngle	v_angle;
 
 	// Save off state of IN_DUCK before we set/unset it from gameplay effects
 	if ( ( mv->m_nButtons & IN_DUCK ) != 0 )
-		mv->m_nButtons |= IN_RAWDUCK;
+		mv->m_nButtons |= IN_BULLRUSH;
 
 	// Add duck-spam speed penalty when we press or release the duck key.
 	// (this is the only place that IN_RAWDUCK is checked)
-	if ( ( mv->m_nButtons & IN_RAWDUCK ) != ( mv->m_nOldButtons & IN_RAWDUCK ) )
+	if ( ( mv->m_nButtons & IN_BULLRUSH ) != ( mv->m_nOldButtons & IN_BULLRUSH ) )
 	{
 		player->m_flDuckSpeed = std::max<std::common_type_t<int, float>>( 0, player->m_flDuckSpeed - get_sv_crouch_spam_penalty );
 	}
@@ -289,7 +331,7 @@ void CCSGameMovement::CheckParameters( void )
 			// Same thing but only do the sqrt if we have to.
 			if ( ( speed_squared != 0.0 ) && ( speed_squared > mv->m_flMaxSpeed*mv->m_flMaxSpeed ) )
 			{
-				float fRatio = mv->m_flMaxSpeed / sqrt( speed_squared );
+				float fRatio = mv->m_flMaxSpeed / std::sqrt( speed_squared );
 				mv->m_flForwardMove *= fRatio;
 				mv->m_flSideMove    *= fRatio;
 				mv->m_flUpMove      *= fRatio;
@@ -297,7 +339,7 @@ void CCSGameMovement::CheckParameters( void )
 		}
 		else
 		{
-			float spd = sqrt( speed_squared );
+			float spd = std::sqrt( speed_squared );
 			if ( ( spd != 0.0 ) && ( spd > mv->m_flMaxSpeed ) )
 			{
 				float fRatio = mv->m_flMaxSpeed / spd;
@@ -594,7 +636,7 @@ ConVar sv_enablebunnyhopping( "sv_enablebunnyhopping", "0", FCVAR_RELEASE | FCVA
 ConVar sv_autobunnyhopping( "sv_autobunnyhopping", "0", FCVAR_RELEASE | FCVAR_REPLICATED, "Players automatically re-jump while holding jump button" );
 
 // Only allow bunny jumping up to 1.1x server / player maxspeed setting
-#define BUNNYJUMP_MAX_SPEED_FACTOR 1.1f
+constexpr auto BUNNYJUMP_MAX_SPEED_FACTOR = 1.1f;
 
 // taken from TF2 but changed BUNNYJUMP_MAX_SPEED_FACTOR from 1.1 to 1.0
 void CCSGameMovement::PreventBunnyJumping()
@@ -789,7 +831,7 @@ void HybridDecay( QAngle& v, float fExp, float fLin, float dT )
 	fExp *= dT;
 	fLin *= dT;
 
-	v *= expf(-fExp);
+	v *= std::expf(-fExp);
 
 	float fMag = v.Length();
 	if ( fMag > fLin )
@@ -814,7 +856,7 @@ void CCSGameMovement::DecayAimPunchAngle( void )
 	punchAngle += punchAngleVel * TICK_INTERVAL * 0.5f;
 
 	// decay the punch angle velocity
-	punchAngleVel *= expf(TICK_INTERVAL * -weapon_recoil_vel_decay.GetFloat());
+	punchAngleVel *= std::expf(TICK_INTERVAL * -weapon_recoil_vel_decay.GetFloat());
 
 	punchAngle += punchAngleVel * TICK_INTERVAL * 0.5f;
 
@@ -922,7 +964,7 @@ void CCSGameMovement::FinishUnDuck( void )
 //-----------------------------------------------------------------------------
 void CCSGameMovement::FinishDuck( void )
 {
-	Assert( !player->m_Local.m_bDucked );
+	contract_assert( !player->m_Local.m_bDucked );
 
 	Vector newOrigin = mv->GetAbsOrigin();
 
@@ -1106,7 +1148,7 @@ void CCSGameMovement::Duck( void )
 	// Handle animating into the ducking pose.
 	if ( duckButtonHeld && player->m_Local.m_bDucking )
 	{
-		Assert( !player->m_Local.m_bDucked );
+		contract_assert( !player->m_Local.m_bDucked );
 
 		// ducking is always a little slower than unducking
 		float duckSpeed = player->m_flDuckSpeed * 0.8f;
@@ -1184,24 +1226,10 @@ void CCSGameMovement::Duck( void )
 		}
 	}
 
-#ifdef AUTHOR_RYANI
-	// REI: Consistency checks for fully ducked/unducked states
-	if ( player->m_flDuckAmount >= 1.0f )
-	{
-		AssertMsg1( ( player->GetFlags() & ( FL_DUCKING | FL_ANIMDUCKING ) ) == ( FL_DUCKING | FL_ANIMDUCKING ),
-			"ryan: inconsistent state in new duck code for %s.", player->GetPlayerName() );
-	}
-	else if ( player->m_flDuckAmount <= 0.0f )
-	{
-		AssertMsg1( ( player->GetFlags() & ( FL_DUCKING | FL_ANIMDUCKING ) ) == 0,
-			"ryan: inconsistent state in new duck code for %s.", player->GetPlayerName() );
-	}
-#endif
-
 	// REI: I think I've fixed all cases of this happening.  Leaving it in for now.  $$$REI remove this after testing shows it never happening again.
 	if ( player->m_flDuckAmount <= 0 && (player->GetFlags() & FL_ANIMDUCKING) )
 	{
-		AssertMsg1( false, "Clearing FL_ANIMDUCKING flag on player %s to prevent crab-walk.  Please let Ryan know if you hit this.", player->GetPlayerName() );
+		contract_assert( false && "Clearing FL_ANIMDUCKING flag on player %s to prevent crab-walk.  Please let Ryan know if you hit this." );
 		player->RemoveFlag( FL_ANIMDUCKING );
 	}
 
@@ -1342,7 +1370,7 @@ void CCSGameMovement::Accelerate( Vector& wishdir, float wishspeed, float accel 
 
 		float flAccelExponent = flAccelExponentTop + 1;
 
-		float flMoveFracActual = pow( currentspeed/flGoalSpeed, 1/flAccelExponent );
+		float flMoveFracActual = std::pow( currentspeed/flGoalSpeed, 1/flAccelExponent );
 
 		float flLastTimeDelta = gpGlobals->curtime - m_pCSPlayer->m_flGroundAccelLinearFracLastTime;
 		if ( currentspeed <= 1 || flLastTimeDelta > 0.1 )
@@ -1441,18 +1469,6 @@ void CCSGameMovement::Accelerate( Vector& wishdir, float wishspeed, float accel 
 					CWeaponCSBase *pWeapon = m_pCSPlayer->GetActiveCSWeapon();
 					if ( pWeapon )
 					{
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-						//DevMsg( "FISHTAIL %s!\n", flEyeDot > 0.0f ? "left" : "right" );
-
-						/*if ( sv_extreme_strafe_aim_punch.GetBool() )
-						{
-							m_pCSPlayer->KickBack( flEyeDot > 0.0f ? 90.0f : 270.0f, sv_extreme_strafe_accuracy_fishtail.GetFloat() * 15.0f );
-						}
-						else*/
-						{
-							pWeapon->SetAccuracyFishtail( flEyeDot > 0.0f ? -sv_extreme_strafe_accuracy_fishtail.GetFloat() : sv_extreme_strafe_accuracy_fishtail.GetFloat() );
-						}
-#endif
 						mv->m_vecTrailingVelocity = mv->m_vecVelocity;
 						mv->m_flTrailingVelocityTime = gpGlobals->curtime;
 					}
@@ -1461,4 +1477,3 @@ void CCSGameMovement::Accelerate( Vector& wishdir, float wishspeed, float accel 
 		}
 	}
 }
-

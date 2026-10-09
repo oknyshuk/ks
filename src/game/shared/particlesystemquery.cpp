@@ -1,10 +1,59 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: particle system definitions
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include "cbase.h"
+// Purpose: particle system definitions
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "npcevent.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "particles/particles.h"
 #include "baseparticleentity.h"
 #include "entityparticletrail_shared.h"
@@ -12,7 +61,6 @@
 #include "engine/ivdebugoverlay.h"
 #include "raytrace.h"
 #include "animation.h"
-#include "activitylist.h"
 
 #if defined( CLIENT_DLL )
 #include "c_pixel_visibility.h"
@@ -23,15 +71,9 @@
 #include "c_env_projectedtexture.h"
 #endif
 
-
-
-
 #ifdef GAME_DLL
 #include "ai_utils.h"
 #endif
-
-#include <memory>
-#include <mutex>
 
 
 #if defined( CLIENT_DLL )
@@ -52,7 +94,7 @@ typedef struct SProjectedTextureInfo
 
 
 
-#define POINT_AT_ORIGIN_EPSILON 0.1f
+constexpr auto POINT_AT_ORIGIN_EPSILON = 0.1f;
 //-----------------------------------------------------------------------------
 // Interface to allow the particle system to call back into the game code
 //-----------------------------------------------------------------------------
@@ -174,7 +216,7 @@ IParticleSystemQuery *g_pParticleSystemQuery = &s_ParticleSystemQuery;
 // Exposes the interface (so tools can get at it)
 //-----------------------------------------------------------------------------
 #ifdef CLIENT_DLL
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CParticleSystemQuery, IParticleSystemQuery, PARTICLE_SYSTEM_QUERY_INTERFACE_VERSION, s_ParticleSystemQuery );
+static InterfaceReg s_Reg_CParticleSystemQuery_IParticleSystemQuery( []() -> void * { return static_cast<IParticleSystemQuery *>( &s_ParticleSystemQuery ); }, PARTICLE_SYSTEM_QUERY_INTERFACE_VERSION );;
 #endif
 
 static std::recursive_mutex s_LightMutex;
@@ -185,7 +227,7 @@ static std::recursive_mutex s_BoneMutex;
 //-----------------------------------------------------------------------------
 void CParticleSystemQuery::GetLightingAtPoint( const Vector& vecOrigin, Color &cTint )
 {
-	VPROF("CParticleSystemQuery::GetLightingAtPoint");
+	CVProfScope _( "CParticleSystemQuery::GetLightingAtPoint", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 #ifdef GAME_DLL
 
 	// FIXME: Go through to the engine from the server to get these values
@@ -237,7 +279,7 @@ void CParticleSystemQuery::TraceLine( const Vector& vecAbsStart,
 	{
 		trace_t tempTrace;
 		UTIL_TraceLine( vecAbsStart, vecAbsEnd, mask, ignore, collisionGroup, &tempTrace );
-		memcpy( ptr, &tempTrace, sizeof ( CBaseTrace ) );
+		std::memcpy( ptr, &tempTrace, sizeof ( CBaseTrace ) );
 	}
 	else
 	{
@@ -574,7 +616,7 @@ void CParticleSystemQuery::GetClosestControllingObjectHitBox(
 
 						for( int i=0 ; i < nNumPtsIn; i++)
 						{
-							float flBestPointGoodness = FLT_MAX;
+							float flBestPointGoodness = std::numeric_limits<float>::max();
 							Vector vecCurrentPoint = *( pPntsIn++ );
 							for ( int j = nHitboxMin; j < nHitboxMax; j++ )
 							{
@@ -863,7 +905,7 @@ static RayTraceEnvironmentNameRecord_t s_RtEnvNameMap[]={
 
 int CParticleSystemQuery::GetRayTraceEnvironmentFromName( const char *pszRtEnvName )
 {
-	for(int i = 0; i < ARRAYSIZE( s_RtEnvNameMap ); i++ )
+	for(int i = 0; i < std::size( s_RtEnvNameMap ); i++ )
 	{
 		if ( ! stricmp( s_RtEnvNameMap[i].m_pszGroupName, pszRtEnvName ) )
 			return s_RtEnvNameMap[i].m_nGroupID;
@@ -892,7 +934,7 @@ static CollisionGroupNameRecord_t s_NameMap[]={
 
 int CParticleSystemQuery::GetCollisionGroupFromName( const char *pszCollisionGroupName )
 {
-	for(int i = 0; i < ARRAYSIZE( s_NameMap ); i++ )
+	for(int i = 0; i < std::size( s_NameMap ); i++ )
 	{
 		if ( ! stricmp( s_NameMap[i].m_pszGroupName, pszCollisionGroupName ) )
 			return s_NameMap[i].m_nGroupID;
@@ -1171,4 +1213,3 @@ int CParticleSystemQuery::GetActivityNumber( void *pModel, const char *m_pszActi
 
 	return -1;
 }
-

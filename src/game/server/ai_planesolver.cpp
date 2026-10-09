@@ -1,13 +1,36 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 
-#include <float.h> // for FLT_MAX
 
 #include "ai_planesolver.h"
 #include "ai_moveprobe.h"
@@ -16,6 +39,9 @@
 #include "ai_route.h"
 #include "ndebugoverlay.h"
 
+// Probing for NPCs (rather than just world geometry) is disabled.
+constexpr bool ProbeForNpcs() { return false; }
+
 //-----------------------------------------------------------------------------
 
 const float PLANE_SOLVER_THINK_FREQUENCY[2] = { 0.0f, 0.2f };
@@ -23,13 +49,7 @@ const float MAX_PROBE_DIST[2] = { (10.0f*12.0f), (8.0f*12.0f) };
 
 //#define PROFILE_PLANESOLVER 1
 
-#ifdef PROFILE_PLANESOLVER
-#define PLANESOLVER_PROFILE_SCOPE( tag ) AI_PROFILE_SCOPE( tag )
-#else
-#define PLANESOLVER_PROFILE_SCOPE( tag ) ((void)0)
-#endif
 
-#define ProbeForNpcs() 0
 
 //#define TESTING_SUGGESTIONS
 
@@ -54,10 +74,10 @@ std::list<CAI_PlaneSolver::CircleObstacles_t> CAI_PlaneSolver::s_GlobalObstacles
 CAI_PlaneSolver::CAI_PlaneSolver( CAI_BaseNPC *pNpc ) 
  :	m_pNpc( pNpc ),
 	m_fSolvedPrev( false ),
-	m_PrevTarget( FLT_MAX, FLT_MAX, FLT_MAX ),
+	m_PrevTarget( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() ),
 	m_PrevSolution( 0 ),
-	m_ClosestHaveBeenToCurrent( FLT_MAX ),
-	m_TimeLastProgress( FLT_MAX ),
+	m_ClosestHaveBeenToCurrent( std::numeric_limits<float>::max() ),
+	m_TimeLastProgress( std::numeric_limits<float>::max() ),
 	m_fCannotSolveCurrent( false ),
 	m_RefreshSamplesTimer( PLANE_SOLVER_THINK_FREQUENCY[AIStrongOpt()] - 0.05 )
 {
@@ -88,13 +108,12 @@ inline const Vector &CAI_PlaneSolver::GetLocalOrigin()
 
 bool CAI_PlaneSolver::MoveLimit( Navigation_t navType, const Vector &target, bool ignoreTransients, bool fCheckStep, int contents, AIMoveTrace_t *pMoveTrace )
 {
-	AI_PROFILE_SCOPE( CAI_PlaneSolver_MoveLimit );
 
 	int flags = ( navType == NAV_GROUND ) ? AIMLF_2D : AIMLF_DEFAULT;
 
 	if ( ignoreTransients )
 	{
-		Assert( !ProbeForNpcs() );
+		contract_assert( !ProbeForNpcs() );
 		flags |= AIMLF_IGNORE_TRANSIENTS;
 	}
 
@@ -114,7 +133,6 @@ bool CAI_PlaneSolver::MoveLimit( Navigation_t navType, const Vector &target, boo
 
 bool CAI_PlaneSolver::DetectUnsolvable( const AILocalMoveGoal_t &goal )
 {
-#ifndef TESTING_SUGGESTIONS
 	float curDistance = ( goal.target.AsVector2D() - GetLocalOrigin().AsVector2D() ).Length();
 	if ( m_PrevTarget != goal.target )
 	{
@@ -143,7 +161,6 @@ bool CAI_PlaneSolver::DetectUnsolvable( const AILocalMoveGoal_t &goal )
 			}
 		}
 	}
-#endif
 	return false;
 }
 
@@ -223,7 +240,7 @@ void CAI_PlaneSolver::GenerateSuggestionFromTrace( const AILocalMoveGoal_t &goal
 		case AIMR_BLOCKED_WORLD:	type = AIMST_AVOID_WORLD;	break;
 		case AIMR_BLOCKED_NPC:		type = AIMST_AVOID_NPC;		break;
 		case AIMR_ILLEGAL:			type = AIMST_AVOID_DANGER;	break;
-		default:					type = AIMST_NO_KNOWLEDGE;	AssertMsg( 0, "Unexpected mode status" ); break; 
+		default:					type = AIMST_NO_KNOWLEDGE;	contract_assert( false && "Unexpected mode status" ); break; 
 	}
 
 	if ( goal.pMoveTarget != nullptr && goal.pMoveTarget == moveTrace.pObstruction )
@@ -415,9 +432,8 @@ AI_SuggestorResult_t CAI_PlaneSolver::GenerateObstacleSuggestion( const AILocalM
 AI_SuggestorResult_t CAI_PlaneSolver::GenerateObstacleSuggestions( const AILocalMoveGoal_t &goal, const AIMoveTrace_t &directTrace, 
 																   float distClear, float probeDist, float degreesToProbe, int nProbes )
 {
-	Assert( nProbes % 2 == 1 );
+	contract_assert( nProbes % 2 == 1 );
 	
-	PLANESOLVER_PROFILE_SCOPE( CAI_PlaneSolver_GenerateObstacleSuggestions );
 	
 	AI_SuggestorResult_t seekResult = SR_NONE;
 	bool				 fNewTarget = ( !m_fSolvedPrev || m_PrevTarget != goal.target );
@@ -561,24 +577,24 @@ void CAI_PlaneSolver::VisualizeSolution( const Vector &vecGoal, const Vector& ve
 //-----------------------------------------------------------------------------
 // Adjust the solution for fliers
 //-----------------------------------------------------------------------------
-#define MIN_ZDIR_TO_RADIUS	0.1f
+constexpr auto MIN_ZDIR_TO_RADIUS = 0.1f;
 
 void CAI_PlaneSolver::AdjustSolutionForFliers( const AILocalMoveGoal_t &goal, float flSolutionYaw, Vector *pSolution )
 {
 	// Fliers should move up if there are local obstructions...
 	// A hacky solution, but the bigger the angle of deflection, the more likely
 	// we're close to a problem and the higher we should go up.
-	Assert( pSolution->z == 0.0f );
+	contract_assert( pSolution->z == 0.0f );
 
 	// If we're largely needing to move down, then blow off the upward motion...
 	Vector vecDelta, vecDir;
 	VectorSubtract( goal.target, GetLocalOrigin(), vecDelta );
 	vecDir = vecDelta;
 	VectorNormalize( vecDir );
-	float flRadius = sqrt( vecDir.x * vecDir.x + vecDir.y * vecDir.y );
+	float flRadius = std::sqrt( vecDir.x * vecDir.x + vecDir.y * vecDir.y );
 	*pSolution *= flRadius;
 	pSolution->z = vecDir.z;
-	AssertFloatEquals( pSolution->LengthSqr(), 1.0f, 1e-3 );
+	contract_assert( fabs( pSolution->LengthSqr() - 1.0f ) <= 1e-3 );
 
 	// Move up 0 when we have to move forward as much as we have to move down z (45 degree angle)
 	// Move up max when we have to move forward 5x as much as we have to move down z,
@@ -596,7 +612,7 @@ void CAI_PlaneSolver::AdjustSolutionForFliers( const AILocalMoveGoal_t &goal, fl
 	{
 		flUpAmount = (-flRadius / vecDir.z) - 1.0f;
 		flUpAmount *= MIN_ZDIR_TO_RADIUS;
-		Assert( (flUpAmount >= 0.0f) && (flUpAmount <= 1.0f) );
+		contract_assert( (flUpAmount >= 0.0f) && (flUpAmount <= 1.0f) );
 	}
 
 	// Check the deflection amount...
@@ -632,7 +648,6 @@ unsigned CAI_PlaneSolver::ComputeTurnBiasFlags( const AILocalMoveGoal_t &goal, c
 bool CAI_PlaneSolver::RunMoveSolver( const AILocalMoveGoal_t &goal, const AIMoveTrace_t &directTrace, float degreesPositiveArc, 
 									 bool fDeterOscillation, Vector *pResult )
 {
-	PLANESOLVER_PROFILE_SCOPE( CAI_PlaneSolver_RunMoveSolver );
 		
 	AI_MoveSolution_t solution;
 	
@@ -653,9 +668,7 @@ bool CAI_PlaneSolver::RunMoveSolver( const AILocalMoveGoal_t &goal, const AIMove
 
 		if ( fDeterOscillation && !fNewTarget )
 		{
-#ifndef TESTING_SUGGESTIONS
 			moveSuggestions[nSuggestions++].Set( AIMST_OSCILLATION_DETERRANCE, 1, m_PrevSolution - 180, 180 );
-#endif
 		}
 
 		if ( m_Solver.Solve( moveSuggestions, nSuggestions, &solution ) )
@@ -671,7 +684,6 @@ bool CAI_PlaneSolver::RunMoveSolver( const AILocalMoveGoal_t &goal, const AIMove
 			}
 			// A crude attempt at oscillation detection: if we solved last time, and this time, and the same target is
 			// involved, and we resulted in nearly a 180, we are probably oscillating
-#ifndef TESTING_SUGGESTIONS
 			if ( !fNewTarget )
 			{
 				float delta = solution.dir - m_PrevSolution;
@@ -680,7 +692,6 @@ bool CAI_PlaneSolver::RunMoveSolver( const AILocalMoveGoal_t &goal, const AIMove
 				if ( delta > 165 && delta < 195 )
 					return false;
 			}
-#endif
 			m_PrevSolution = solution.dir;
 			m_PrevSolutionVector = *pResult;
 
@@ -831,29 +842,15 @@ bool CAI_PlaneSolver::GenerateCircleObstacleSuggestion( const CircleObstacles_t 
 		vecTangent.z = 0;
 
 		float cosHalfArc = vecToObstacle.Dot( vecTangent );
-		arc = RAD2DEG(acosf( cosHalfArc )) * 2.0;
+		arc = RAD2DEG(std::acosf( cosHalfArc )) * 2.0;
 		weight = 1.0 - (distToObstacle - radius) / probeDist;
 		if ( weight > 0.75 )
 		{
 			arc += (arc * 0.5) * (weight - 0.75) / 0.25;
 		}
 
-		Assert( weight >= 0.0 && weight <= 1.0 );
+		contract_assert( weight >= 0.0 && weight <= 1.0 );
 
-#if DEBUG_OBSTACLES
-		// -------------------------
-		Msg( "Adding arc %f, w %f\n", arc, weight );
-
-		Vector pointTangent = npcLoc + ( vecTangent * distToTangent );
-
-		NDebugOverlay::Line( npcLoc - Vector( 0, 0, 64 ), npcLoc + Vector(0,0,64), 0,255,0, false, 0.1 );
-		NDebugOverlay::Line( center - Vector( 0, 0, 64 ), center + Vector(0,0,64), 0,255,0, false, 0.1 );
-		NDebugOverlay::Line( pointTangent - Vector( 0, 0, 64 ), pointTangent + Vector(0,0,64), 0,255,0, false, 0.1 );
-
-		NDebugOverlay::Line( npcLoc + Vector(0,0,64), center + Vector(0,0,64), 0,0,255, false, 0.1 );
-		NDebugOverlay::Line( center + Vector(0,0,64), pointTangent + Vector(0,0,64), 0,0,255, false, 0.1 );
-		NDebugOverlay::Line( pointTangent + Vector(0,0,64), npcLoc + Vector(0,0,64), 0,0,255, false, 0.1 );
-#endif
 	}
 	else
 	{

@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef PARTICLE_UTIL_H
-#define PARTICLE_UTIL_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "materialsystem/imesh.h"
 #include "particledraw.h"
@@ -224,8 +217,8 @@ inline void RenderParticle_Color255SizeNormalAngle(
 	ubColor[2] = (unsigned char)RoundFloatToInt( color.z );
 	ubColor[3] = (unsigned char)RoundFloatToInt( alpha );
 
-	float ca = (float)cos(angle);
-	float sa = (float)sin(angle);
+	float ca = (float)std::cos(angle);
+	float sa = (float)std::sin(angle);
 
 	// Add the 4 corner vertices.
 	pBuilder->Position3f( pos.x + (-ca + sa) * size, pos.y + (-sa - ca) * size, pos.z );
@@ -374,28 +367,28 @@ inline void RenderParticle_ColorSizeAngles(
 	Vector vVertex = pos;
 	pBuilder->Position3f( vVertex.x , vVertex.y , vVertex.z );
 	pBuilder->Color4ubv( ubColor );
-	pBuilder->Normal3f( VectorExpand(vNorm) );
+	pBuilder->Normal3f( vNorm.x, vNorm.y, vNorm.z );
 	pBuilder->TexCoord2f( 0, pDraw->m_pSubTexture->m_tCoordMins[0], pDraw->m_pSubTexture->m_tCoordMaxs[1] );
  	pBuilder->AdvanceVertex();
 
 	vVertex = vVertex + vWidth*size;
 	pBuilder->Position3f( vVertex.x, vVertex.y, vVertex.z );
 	pBuilder->Color4ubv( ubColor );
-	pBuilder->Normal3f( VectorExpand(vNorm) );
+	pBuilder->Normal3f( vNorm.x, vNorm.y, vNorm.z );
 	pBuilder->TexCoord2f( 0, pDraw->m_pSubTexture->m_tCoordMins[0], pDraw->m_pSubTexture->m_tCoordMins[1] );
  	pBuilder->AdvanceVertex();
 
 	vVertex = vVertex + vHeight*size;
 	pBuilder->Position3f( vVertex.x, vVertex.y , vVertex.z );
 	pBuilder->Color4ubv( ubColor );
-	pBuilder->Normal3f( VectorExpand(vNorm) );
+	pBuilder->Normal3f( vNorm.x, vNorm.y, vNorm.z );
 	pBuilder->TexCoord2f( 0, pDraw->m_pSubTexture->m_tCoordMaxs[0], pDraw->m_pSubTexture->m_tCoordMins[1] );
  	pBuilder->AdvanceVertex();
 
 	vVertex = vVertex - vWidth*size;
 	pBuilder->Position3f( vVertex.x, vVertex.y, vVertex.z );
 	pBuilder->Color4ubv( ubColor );
-	pBuilder->Normal3f( VectorExpand(vNorm) );
+	pBuilder->Normal3f( vNorm.x, vNorm.y, vNorm.z );
 	pBuilder->TexCoord2f( 0, pDraw->m_pSubTexture->m_tCoordMaxs[0], pDraw->m_pSubTexture->m_tCoordMaxs[1] );
  	pBuilder->AdvanceVertex();
 }
@@ -422,14 +415,5 @@ inline float GetAlphaDistanceFade(
 
 inline Vector WorldGetLightForPoint(const Vector &vPos, bool bClamp)
 {
-	#if defined(PARTICLEPROTOTYPE_APP)
-		return Vector(1,1,1);
-	#else
 		return engine->GetLightForPoint(vPos, bClamp);
-	#endif
 }
-
-#endif
-
-
-

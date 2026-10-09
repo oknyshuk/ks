@@ -1,22 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Expose functions from sv_main.cpp.
-//
-// $NoKeywords: $
-//===========================================================================//
 
-#ifndef SV_MAIN_H
-#define SV_MAIN_H
-
-
+import ks.tier1;
 #include "edict.h"
 #include "packed_entity.h"
-#include "utlvector.h"
-#include "convar.h"
-#include "netadr.h"
-#include "checksum_crc.h"
+import std;
 #include "soundflags.h"
-#include "tier1/bitbuf.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "netmessages_schema.h"
 
@@ -70,10 +62,6 @@ void SV_ExecuteClientMessage (CGameClient *cl);
 
 bool SV_ActivateServer();
 
-#ifdef ENABLE_RPT
-void SV_NotifyRPTOfDisconnect( int nClientSlot );
-#endif // ENABLE_RPT
-
 // sv_redirect.cpp
 
 enum redirect_t
@@ -122,9 +110,4 @@ extern CGlobalVars g_ServerGlobalVariables;
 void SV_CheckForFlushMemory( const char *pCurrentMapName, const char *pDestMapName );
 bool SV_FlushMemoryIfMarked();
 void SV_FlushMemoryOnNextServer();
-
-void SV_SetSteamCrashComment();
-
-#endif
-
 

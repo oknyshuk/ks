@@ -1,40 +1,63 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Utility code.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Utility code.
+
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "player.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "globalstate.h"
-#include <stdarg.h>
 #include "shake.h"
 #include "decals.h"
 #include "player.h"
 #include "gamerules.h"
 #include "entitylist.h"
 #include "bspfile.h"
-#include "mathlib/mathlib.h"
 #include "IEffects.h"
-#include "vstdlib/random.h"
 #include "soundflags.h"
 #include "ispatialpartition.h"
 #include "igamesystem.h"
-#include "checksum_crc.h"
 #include "hierarchy.h"
 #include "iservervehicle.h"
 #include "te_effect_dispatch.h"
-#include "tier1/map_ops.h"
 #include "collisionutils.h"
 #include "movevars_shared.h"
 #include "inetchannelinfo.h"
-#include "tier0/vprof.h"
 #include "ndebugoverlay.h"
 #include "engine/ivdebugoverlay.h"
 #include "datacache/imdlcache.h"
 #include "util.h"
 #include "usermessages.h"
-
 
 extern int		g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for the smoke cloud
 extern int		g_sModelIndexBloodDrop;		// (in combatweapon.cpp) holds the sprite index for the initial blood
@@ -50,9 +73,9 @@ void DBG_AssertFunction( bool fExpr, const char *szExpr, const char *szFile, int
 		return;
 	char szOut[512];
 	if (szMessage != nullptr)
-		Q_snprintf(szOut,sizeof(szOut), "ASSERT FAILED:\n %s \n(%s@%d)\n%s", szExpr, szFile, szLine, szMessage);
+		V_snprintf(szOut,sizeof(szOut), "ASSERT FAILED:\n %s \n(%s@%d)\n%s", szExpr, szFile, szLine, szMessage);
 	else
-		Q_snprintf(szOut,sizeof(szOut), "ASSERT FAILED:\n %s \n(%s@%d)\n", szExpr, szFile, szLine);
+		V_snprintf(szOut,sizeof(szOut), "ASSERT FAILED:\n %s \n(%s@%d)\n", szExpr, szFile, szLine);
 	Warning( "%s", szOut);
 }
 #endif	// DEBUG
@@ -108,7 +131,9 @@ static ConCommand dumpentityfactories( "dumpentityfactories", DumpEntityFactorie
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-CON_COMMAND( dump_entity_sizes, "Print sizeof(entclass)" )
+static void dump_entity_sizes( const CCommand &args );
+static ConCommand dump_entity_sizes_command( "dump_entity_sizes", dump_entity_sizes, "Print sizeof(entclass)" );
+static void dump_entity_sizes( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -140,7 +165,6 @@ IEntityFactory *CEntityFactoryDictionary::FindFactory( const char *pClassName )
 //-----------------------------------------------------------------------------
 void CEntityFactoryDictionary::InstallFactory( IEntityFactory *pFactory, const char *pClassName )
 {
-	AssertMsg1( FindFactory( pClassName ) == nullptr, "Double installation of factory for %s", pClassName );
 	m_Factories.emplace( pClassName, pFactory );
 }
 
@@ -205,7 +229,7 @@ int UTIL_PrecacheDecal( const char *name, bool preload )
 	{
 		if ( !engine->IsDecalPrecached( name ) )
 		{
-			Assert( !"UTIL_PrecacheDecal:  too late" );
+			contract_assert( !"UTIL_PrecacheDecal:  too late" );
 
 			Warning( "Late precache of %s\n", name );
 		}
@@ -242,7 +266,7 @@ int UTIL_EntitiesInSphere( const Vector &center, float radius, CFlaggedEntitiesE
 CEntitySphereQuery::CEntitySphereQuery( const Vector &center, float radius, int flagMask )
 {
 	m_listIndex = 0;
-	m_listCount = UTIL_EntitiesInSphere( m_pList, ARRAYSIZE(m_pList), center, radius, flagMask );
+	m_listCount = UTIL_EntitiesInSphere( m_pList, std::size( m_pList ), center, radius, flagMask );
 }
 
 CBaseEntity *CEntitySphereQuery::GetCurrentEntity()
@@ -285,7 +309,7 @@ int UTIL_DropToFloor( CBaseEntity *pEntity, unsigned int mask, CBaseEntity *pIgn
 	// Assume no ground
 	pEntity->SetGroundEntity( nullptr );
 
-	Assert( pEntity );
+	contract_assert( pEntity );
 
 	trace_t	trace;
 	// HACK: is this really the only sure way to detect crossing a terrain boundry?
@@ -318,7 +342,7 @@ bool UTIL_CheckBottom( CBaseEntity *pEntity, ITraceFilter *pTraceFilter, float f
 	int		x, y;
 	float	mid, bottom;
 
-	Assert( pEntity );
+	contract_assert( pEntity );
 
 	CTracePassFilter traceFilter(pEntity);
 	if ( !pTraceFilter )
@@ -404,7 +428,7 @@ void UTIL_Remove( IServerNetworkable *oldObj )
 		// in case the deferred delete will have unwanted results (like continuing to receive callbacks).  That will make it 
 		// obvious why the unwanted results are happening so the caller can handle them appropriately. (some callbacks can be masked 
 		// or the calling entity can be flagged to filter them in most cases)
-		Assert(0);
+		contract_assert( 0 );
 		PhysCallbackRemove(oldObj);
 		return;
 	}
@@ -418,7 +442,7 @@ void UTIL_Remove( IServerNetworkable *oldObj )
 		g_bReceivedChainedUpdateOnRemove = false;
 		pBaseEnt->UpdateOnRemove();
 
-		Assert( g_bReceivedChainedUpdateOnRemove );
+		contract_assert( g_bReceivedChainedUpdateOnRemove );
 
 		// clear oldObj targetname / other flags now
 		pBaseEnt->SetName( NULL_STRING );
@@ -443,7 +467,7 @@ void UTIL_DisableRemoveImmediate()
 void UTIL_EnableRemoveImmediate()
 {
 	s_RemoveImmediateSemaphore--;
-	Assert(s_RemoveImmediateSemaphore>=0);
+	contract_assert( s_RemoveImmediateSemaphore>=0 );
 }
 //-----------------------------------------------------------------------------
 // Purpose: deletes an entity, without any delay.  WARNING! Only use this when sure
@@ -467,7 +491,7 @@ void UTIL_RemoveImmediate( CBaseEntity *oldObj )
 
 	g_bReceivedChainedUpdateOnRemove = false;
 	oldObj->UpdateOnRemove();
-	Assert( g_bReceivedChainedUpdateOnRemove );
+	contract_assert( g_bReceivedChainedUpdateOnRemove );
 
 	// Entities shouldn't reference other entities in their destructors
 	//  that type of code should only occur in an UpdateOnRemove call
@@ -512,7 +536,7 @@ CBasePlayer* UTIL_PlayerByName( const char *name )
 		if ( !pPlayer->IsConnected() )
 			continue;
 
-		if ( Q_stricmp( pPlayer->GetPlayerName(), name ) == 0 )
+		if ( V_stricmp( pPlayer->GetPlayerName(), name ) == 0 )
 		{
 			return pPlayer;
 		}
@@ -554,8 +578,8 @@ CBasePlayer* UTIL_PlayerByAccountID( AccountID_t accountID )
 		if ( !pPlayer->IsConnected( ) )
 			continue;
 
-		if ( engine->GetClientSteamID( pPlayer->edict( ) ) && 
-			( engine->GetClientSteamID( pPlayer->edict( ) )->GetAccountID( ) == accountID ) )
+		if ( engine->GetClientPlayerID( pPlayer->edict( ) ) && 
+			( engine->GetClientPlayerID( pPlayer->edict( ) )->GetAccountID( ) == accountID ) )
 		{
 			return pPlayer;
 		}
@@ -576,7 +600,7 @@ CBasePlayer *UTIL_GetLocalPlayer( void )
 	{
 		if ( developer.GetBool() )
 		{
-			Assert( !"UTIL_GetLocalPlayer" );
+			contract_assert( !"UTIL_GetLocalPlayer" );
 			
 #ifdef	DEBUG
 			Warning( "UTIL_GetLocalPlayer() called in multiplayer game.\n" );
@@ -597,7 +621,7 @@ CBasePlayer *UTIL_GetListenServerHost( void )
 	// no "local player" if this is a dedicated server or a single player game
 	if (engine->IsDedicatedServer())
 	{
-		Assert( !"UTIL_GetListenServerHost" );
+		contract_assert( !"UTIL_GetListenServerHost" );
 		Warning( "UTIL_GetListenServerHost() called from a dedicated server or single-player game.\n" );
 		return nullptr;
 	}
@@ -691,14 +715,14 @@ void UTIL_GetPlayerConnectionInfo( int playerIndex, int& ping, int &packetloss )
 		static const ConVar *pMinUpdateRate = g_pCVar->FindVar( "sv_minupdaterate" );
 		static const ConVar *pMaxUpdateRate = g_pCVar->FindVar( "sv_maxupdaterate" );
 
-		float flUpdateRateValue = Q_atof( szUpdateRate );
+		float flUpdateRateValue = V_atof( szUpdateRate );
 		if ( !player->IsHLTV() )
 		{
 			if ( pMinUpdateRate && pMaxUpdateRate )
 				flUpdateRateValue = clamp( flUpdateRateValue, pMinUpdateRate->GetFloat(), pMaxUpdateRate->GetFloat() );
 		}
 		
-		float flCmdRateValue = Q_atof( szCmdRate );
+		float flCmdRateValue = V_atof( szCmdRate );
 		if ( player->IsHLTV() )
 		{
 			flCmdRateValue = flUpdateRateValue;
@@ -1360,7 +1384,7 @@ void UTIL_SetTrace(trace_t& trace, const Ray_t &ray, edict_t *ent, float fractio
 
 void UTIL_ClearTrace( trace_t &trace )
 {
-	memset( &trace, 0, sizeof(trace));
+	std::memset( &trace, 0, sizeof(trace));
 	trace.fraction = 1.f;
 	trace.fractionleftsolid = 0;
 	trace.surface = g_NullSurface;
@@ -1381,7 +1405,7 @@ static void SetMinMaxSize (CBaseEntity *pEnt, const Vector& mins, const Vector& 
 		}
 	}
 
-	Assert( pEnt );
+	contract_assert( pEnt );
 
 	pEnt->SetCollisionBounds( mins, maxs );
 }
@@ -1476,12 +1500,12 @@ void UTIL_SnapDirectionToAxis( Vector &direction, float epsilon )
 
 const char *UTIL_VarArgs( const char *format, ... )
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	static char		string[1024];
 	
-	va_start (argptr, format);
-	Q_vsnprintf(string, sizeof(string), format,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr, format);
+	V_vsnprintf(string, sizeof(string), format,argptr);
+	__builtin_va_end (argptr);
 
 	return string;	
 }
@@ -1591,8 +1615,8 @@ void UTIL_AxisStringToPointPoint( Vector &start, Vector &end, const char *pStrin
 {
 	char tmpstr[256];
 
-	Q_strncpy( tmpstr, pString, sizeof(tmpstr) );
-	char *pVec = strtok( tmpstr, "," );
+	V_strncpy( tmpstr, pString, sizeof(tmpstr) );
+	char *pVec = std::strtok( tmpstr, "," );
 	int i = 0;
 	while ( pVec != nullptr && *pVec )
 	{
@@ -1692,7 +1716,7 @@ void UTIL_BubbleTrail( const Vector& from, const Vector& to, int count )
 		}
 
 		float t = IntersectRayWithAAPlane( from, to, 2, 1.0f, flWaterZ );
-		Assert( (t >= -1e-3f) && ( t <= 1.0f ) );
+		contract_assert( (t >= -1e-3f) && ( t <= 1.0f ) );
 		VectorLerp( from, to, t, vecWaterPoint );
 		if ( flStartHeight == 0 )
 		{
@@ -1763,11 +1787,8 @@ bool UTIL_IsValidEntity( CBaseEntity *pEnt )
 }
 
 
-#define PRECACHE_OTHER_ONCE
 // UNDONE: Do we need this to avoid doing too much of this?  Measure startup times and see
-#if defined( PRECACHE_OTHER_ONCE )
 
-#include "tier1/intern_pool.h"
 class CPrecacheOtherList : public CAutoGameSystem
 {
 public:
@@ -1808,7 +1829,6 @@ bool CPrecacheOtherList::AddOrMarkPrecached( const char *pClassname )
 }
 
 CPrecacheOtherList g_PrecacheOtherList( "CPrecacheOtherList" );
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1817,11 +1837,9 @@ CPrecacheOtherList g_PrecacheOtherList( "CPrecacheOtherList" );
 //-----------------------------------------------------------------------------
 void UTIL_PrecacheOther( const char *szClassname, const char *modelName )
 {
-#if defined( PRECACHE_OTHER_ONCE )
 	// already done this one?, if not, mark as done
 	if ( !g_PrecacheOtherList.AddOrMarkPrecached( szClassname ) )
 		return;
-#endif
 
 	CBaseEntity	*pEntity = CreateEntityByName( szClassname );
 	if ( !pEntity )
@@ -1851,12 +1869,12 @@ void UTIL_LogPrintf( const char *fmt, ... )
 	if ( !g_bIsLogging )
 		return;
 
-	va_list		argptr;
+	std::va_list		argptr;
 	char		tempString[1024];
 	
-	va_start ( argptr, fmt );
-	Q_vsnprintf( tempString, sizeof(tempString), fmt, argptr );
-	va_end   ( argptr );
+	__builtin_va_start ( argptr, fmt );
+	V_vsnprintf( tempString, sizeof(tempString), fmt, argptr );
+	__builtin_va_end   ( argptr );
 
 	// Print to server console
 	engine->LogPrint( tempString );
@@ -1907,15 +1925,15 @@ float UTIL_ScaleForGravity( float desiredGravity )
 //-----------------------------------------------------------------------------
 extern "C" void Sys_Error( char *error, ... )
 {
-	va_list	argptr;
+	std::va_list	argptr;
 	char	string[1024];
 	
-	va_start( argptr, error );
-	Q_vsnprintf( string, sizeof(string), error, argptr );
-	va_end( argptr );
+	__builtin_va_start( argptr, error );
+	V_vsnprintf( string, sizeof(string), error, argptr );
+	__builtin_va_end( argptr );
 
 	Warning( "%s", string );
-	Assert(0);
+	contract_assert( 0 );
 }
 
 
@@ -2079,8 +2097,8 @@ void EntityMatrix::InitFromEntityLocal( CBaseEntity *entity )
 void UTIL_ValidateSoundName( string_t &name, const char *defaultStr )
 {
 	if ( ( !name || 
-		   strlen( (char*) STRING( name ) ) < 1 ) || 
-		   !Q_stricmp( (char *)STRING(name), "0" ) )
+		   std::strlen( (char*) STRING( name ) ) < 1 ) || 
+		   !V_stricmp( (char *)STRING(name), "0" ) )
 	{
 		name = AllocPooledString( defaultStr );
 	}
@@ -2167,7 +2185,7 @@ static int UTIL_GetNewCheckClient( int check )
 
 	if ( i != check )
 	{
-		memset( g_CheckClient.m_checkVisibilityPVS, 0, sizeof(g_CheckClient.m_checkVisibilityPVS) );
+		std::memset( g_CheckClient.m_checkVisibilityPVS, 0, sizeof(g_CheckClient.m_checkVisibilityPVS) );
 		g_CheckClient.m_bClientPVSIsExpanded = false;
 	}
 
@@ -2228,7 +2246,7 @@ void UTIL_SetClientVisibilityPVS( edict_t *pClient, const unsigned char *pvs, in
 {
 	if ( pClient == UTIL_GetCurrentCheckClient() )
 	{
-		Assert( pvssize <= sizeof(g_CheckClient.m_checkVisibilityPVS) );
+		contract_assert( pvssize <= sizeof(g_CheckClient.m_checkVisibilityPVS) );
 
 		g_CheckClient.m_bClientPVSIsExpanded = false;
 
@@ -2381,7 +2399,7 @@ CBaseEntity *UTIL_EntitiesInPVS( CBaseEntity *pPVSEntity, CBaseEntity *pStarting
 	{
 		org = pPVSEntity->EyePosition();
 		int clusterIndex = engine->GetClusterForOrigin( org );
-		Assert( clusterIndex >= 0 );
+		contract_assert( clusterIndex >= 0 );
 		engine->GetPVSForCluster( clusterIndex, sizeof(pvs), pvs );
 	}
 
@@ -2709,7 +2727,7 @@ void LoadAndSpawnEntities_ParseEntKVBlockHelper( CBaseEntity *pNode, KeyValues *
 	while ( pkvNodeData )
 	{
 		// Handle the connections block
-		if ( !Q_strcmp(pkvNodeData->GetName(), "connections") )
+		if ( !V_strcmp(pkvNodeData->GetName(), "connections") )
 		{
 			LoadAndSpawnEntities_ParseEntKVBlockHelper( pNode, pkvNodeData );
 		}
@@ -2894,7 +2912,7 @@ void UTIL_WorldToParentSpace( CBaseEntity *pEntity, Vector &vecPosition, Quatern
 //-----------------------------------------------------------------------------
 void UTIL_BoundToWorldSize( Vector *pVecPos )
 {
-	Assert( pVecPos );
+	contract_assert( pVecPos );
 	for ( int i = 0; i < 3; ++i )
 	{
 		(*pVecPos)[ i ] = clamp( (*pVecPos)[ i ], MIN_COORD_FLOAT, MAX_COORD_FLOAT );
@@ -3004,7 +3022,7 @@ void UTIL_SendClientCommandKVToPlayer( KeyValues *pKV, CBasePlayer *pPlayer )
 
 void UTIL_RecordAchievementEvent( const char *pszAchievementname, CBasePlayer *pPlayer /*= NULL*/ )
 {
-	bool bIsWriteStat = ( strchr( pszAchievementname, '@' ) || strchr( pszAchievementname, '[' ) || strchr( pszAchievementname, '(' ) ); // Achievements cannot have @[( symbols in names - it's a stat
+	bool bIsWriteStat = ( std::strchr( pszAchievementname, '@' ) || strchr( pszAchievementname, '[' ) || strchr( pszAchievementname, '(' ) ); // Achievements cannot have @[( symbols in names - it's a stat
 	KeyValues *pKV; 
 	if ( bIsWriteStat )
 		pKV = new KeyValues( "write_stats", pszAchievementname, 1 );
@@ -3019,8 +3037,8 @@ void UTIL_RecordAchievementEvent( const char *pszAchievementname, CBasePlayer *p
 // Tests!
 //
 
-#define NUM_KDTREE_TESTS		2500
-#define NUM_KDTREE_ENTITY_SIZE	256
+constexpr auto NUM_KDTREE_TESTS = 2500;
+constexpr auto NUM_KDTREE_ENTITY_SIZE = 256;
 
 void CC_KDTreeTest( const CCommand &args )
 {
@@ -3046,7 +3064,7 @@ void CC_KDTreeTest( const CCommand &args )
 		for ( int i = 0; i < NUM_KDTREE_TESTS; ++i )
 		{
 			flRadius += NUM_KDTREE_TESTS * 123.123;
-			flRadius =  fmod( flRadius, 128.0 );
+			flRadius =  std::fmod( flRadius, 128.0 );
 			flRadius =  fabs( flRadius );
 
 			flTheta  += NUM_KDTREE_TESTS * 76.76;
@@ -3077,23 +3095,21 @@ void CC_KDTreeTest( const CCommand &args )
 	int nTestType = 0;
 	if ( args.ArgC() >= 2 )
 	{
-		nTestType = atoi( args[ 1 ] );
+		nTestType = std::atoi( args[ 1 ] );
 	}
 
 	vtune( true );
 
-#ifdef VPROF_ENABLED
 	g_VProfCurrentProfile.Resume();
 	g_VProfCurrentProfile.Start();
 	g_VProfCurrentProfile.Reset();
 	g_VProfCurrentProfile.MarkFrame();
-#endif
 
 	switch ( nTestType )
 	{
 	case 0:
 		{
-			VPROF( "TraceTotal" );			
+			CVProfScope _( "TraceTotal", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );			
 
 			trace_t trace;
 			for ( int iTest = 0; iTest < NUM_KDTREE_TESTS; ++iTest )
@@ -3104,7 +3120,7 @@ void CC_KDTreeTest( const CCommand &args )
 		}
 	case 1:
 		{
-			VPROF( "TraceTotal" );
+			CVProfScope _( "TraceTotal", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 			trace_t trace;
 			for ( int iTest = 0; iTest < NUM_KDTREE_TESTS; ++iTest )
@@ -3135,7 +3151,7 @@ void CC_KDTreeTest( const CCommand &args )
 			}
 
 
-			VPROF( "TraceTotal" );
+			CVProfScope _( "TraceTotal", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 			int nCount = 0;
 
@@ -3161,7 +3177,7 @@ void CC_KDTreeTest( const CCommand &args )
 				flRadius[iTest] = vecDelta.Length() * 0.5f;
 			}
 
-			VPROF( "TraceTotal" );
+			CVProfScope _( "TraceTotal", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 			int nCount = 0;
 
@@ -3181,11 +3197,9 @@ void CC_KDTreeTest( const CCommand &args )
 		}
 	}
 
-#ifdef VPROF_ENABLED
 	g_VProfCurrentProfile.MarkFrame();
 	g_VProfCurrentProfile.Pause();
 	g_VProfCurrentProfile.OutputReport( VPRT_FULL );
-#endif
 	
 	vtune( false );
 }
@@ -3216,7 +3230,7 @@ void CC_VoxelTreeBox( const CCommand &args )
 	Vector vecMin, vecMax;
 	if ( args.ArgC() >= 6 )
 	{
-		vecMin.x = atof( args[ 1 ] );
+		vecMin.x = std::atof( args[ 1 ] );
 		vecMin.y = atof( args[ 2 ] );
 		vecMin.z = atof( args[ 3 ] );
 
@@ -3268,7 +3282,7 @@ void CC_VoxelTreeSphere( const CCommand &args )
 	float flRadius;
 	if ( args.ArgC() >= 4 )
 	{
-		vecCenter.x = atof( args[ 1 ] );
+		vecCenter.x = std::atof( args[ 1 ] );
 		vecCenter.y = atof( args[ 2 ] );
 		vecCenter.z = atof( args[ 3 ] );
 
@@ -3318,7 +3332,7 @@ static ConCommand voxeltree_sphere( "voxeltree_sphere", CC_VoxelTreeSphere, "Vie
 
 
 
-#define NUM_COLLISION_TESTS 2500
+constexpr auto NUM_COLLISION_TESTS = 2500;
 void CC_CollisionTest( const CCommand &args )
 {
 	if ( !physenv )
@@ -3341,7 +3355,7 @@ void CC_CollisionTest( const CCommand &args )
 		for ( i = 0; i < NUM_COLLISION_TESTS; i++ )
 		{
 			radius += NUM_COLLISION_TESTS * 123.123;
-			radius = fabs(fmod(radius, 128));
+			radius = fabs(std::fmod(radius, 128));
 			theta += NUM_COLLISION_TESTS * 76.76;
 			theta = fabs(fmod(theta, DEG2RAD(360)));
 			phi += NUM_COLLISION_TESTS * 1997.99;
@@ -3368,7 +3382,7 @@ void CC_CollisionTest( const CCommand &args )
 	int testType = 0;
 	if ( args.ArgC() >= 2 )
 	{
-		testType = atoi(args[1]);
+		testType = std::atoi(args[1]);
 	}
 	float duration = 0;
 	Vector size[2];
@@ -3431,7 +3445,3 @@ void UTIL_EnsureInstanceBaseline( const char *szClassname )
 }
 
 static ConCommand collision_test("collision_test", CC_CollisionTest, "Tests collision system", FCVAR_CHEAT );
-
-
-
-

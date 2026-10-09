@@ -1,10 +1,35 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ====
-//
-// An entity that allows level designer control over the fog parameters.
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "cbase.h"
+// Purpose: An entity that allows level designer control over the fog parameters.
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -16,7 +41,6 @@
 #include "world.h"
 #include "ndebugoverlay.h"
 #include "triggers.h"
-
 
 CFogSystem s_FogSystem( "FogSystem" );
 
@@ -182,56 +206,56 @@ int CFogController::DrawDebugTextOverlays(void)
 	{
 		char tempstr[512];
 
-		Q_snprintf(tempstr,sizeof(tempstr),"State: %s",(m_fog.enable)?"On":"Off");
+		V_snprintf(tempstr,sizeof(tempstr),"State: %s",(m_fog.enable)?"On":"Off");
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"Start: %3.0f",m_fog.start.Get() );
+		V_snprintf(tempstr,sizeof(tempstr),"Start: %3.0f",m_fog.start.Get() );
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"End  : %3.0f",m_fog.end.Get() );
+		V_snprintf(tempstr,sizeof(tempstr),"End  : %3.0f",m_fog.end.Get() );
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		color32 color = m_fog.colorPrimary;
-		Q_snprintf(tempstr,sizeof(tempstr),"1) Red  : %i",color.r);
+		V_snprintf(tempstr,sizeof(tempstr),"1) Red  : %i",color.r);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"1) Green: %i",color.g);
+		V_snprintf(tempstr,sizeof(tempstr),"1) Green: %i",color.g);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"1) Blue : %i",color.b);
+		V_snprintf(tempstr,sizeof(tempstr),"1) Blue : %i",color.b);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		color = m_fog.colorSecondary;
-		Q_snprintf(tempstr,sizeof(tempstr),"2) Red  : %i",color.r);
+		V_snprintf(tempstr,sizeof(tempstr),"2) Red  : %i",color.r);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"2) Green: %i",color.g);
+		V_snprintf(tempstr,sizeof(tempstr),"2) Green: %i",color.g);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"2) Blue : %i",color.b);
+		V_snprintf(tempstr,sizeof(tempstr),"2) Blue : %i",color.b);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"HDR Color Scale: %0.3f",m_fog.HDRColorScale.Get() );
+		V_snprintf(tempstr,sizeof(tempstr),"HDR Color Scale: %0.3f",m_fog.HDRColorScale.Get() );
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}
 	return text_offset;
 }
 
-#define FOG_CONTROLLER_COLORPRIMARY_LERP		(1 << 0)
-#define FOG_CONTROLLER_COLORSECONDARY_LERP		(1 << 1)
-#define FOG_CONTROLLER_START_LERP				(1 << 2)
-#define FOG_CONTROLLER_END_LERP					(1 << 3)
-#define FOG_CONTROLLER_MAXDENSITY_LERP			(1 << 4)
+constexpr auto FOG_CONTROLLER_COLORPRIMARY_LERP = (1 << 0);
+constexpr auto FOG_CONTROLLER_COLORSECONDARY_LERP = (1 << 1);
+constexpr auto FOG_CONTROLLER_START_LERP = (1 << 2);
+constexpr auto FOG_CONTROLLER_END_LERP = (1 << 3);
+constexpr auto FOG_CONTROLLER_MAXDENSITY_LERP = (1 << 4);
 
 void CFogController::InputSetColorLerpTo(inputdata_t &data)
 {

@@ -1,14 +1,39 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "client_pch.h"
+// main precompiled header for client files
+
+
+#include "common.h"
+#include "qlimits.h"
+
+#include "protocol.h"
+#include "render.h"
+
+
+#include "screen.h"
+
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+
+#include "con_nprint.h"
+#include "demo.h"
+#include "host_state.h"
+#include "host.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "networkstringtabledefs.h"
-#include <checksum_md5.h>
 #include <iregistry.h>
+import std;
+import ks.tier1;
 #include "userid.h"
 #include "pure_server.h"
 #include "netmessages.h"
@@ -17,14 +42,11 @@
 #include "host.h"
 #include "gl_matsysiface.h"
 #include "engineui.h"
-#include "tier0/icommandline.h"
-#include <proto_oob.h>
 #include "checksum_engine.h"
 #include "filesystem_engine.h"
 #include "logofile_shared.h"
 #include "sound.h"
 #include "decal.h"
-#include "networkstringtableclient.h"
 #include "dt_send_eng.h"
 #include "ents_shared.h"
 #include "cl_ents_parse.h"
@@ -41,14 +63,9 @@
 #include "ModelInfo.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/materialsystem_config.h"
-#include "tier1/fmtstr.h"
-#include "cl_steamauth.h"
 #include "matchmaking/imatchframework.h"
 #include "audio/private/snd_sfx.h"
-#include "tier0/platform.h"
-#include "tier0/systeminformation.h"
 
-#include "tier0/memalloc.h"
 ConVar cl_timeout( "cl_timeout", "30", FCVAR_ARCHIVE, "After this many seconds without receiving a packet from the server, the client will disconnect itself"
 #ifndef _DEBUG
 	, true, 4, true, 30
@@ -56,9 +73,8 @@ ConVar cl_timeout( "cl_timeout", "30", FCVAR_ARCHIVE, "After this many seconds w
 	);
 static ConVar cl_forcepreload( "cl_forcepreload", "0", FCVAR_ARCHIVE, "Whether we should force preloading.");
 static ConVar cl_downloadfilter( "cl_downloadfilter", "all", FCVAR_ARCHIVE, "Determines which files can be downloaded from the server (all, none, nosounds)" );
-static ConVar cl_download_demoplayer( "cl_download_demoplayer", "1", FCVAR_RELEASE, "Determines whether downloads of external resources are allowed during demo playback (0:no,1:workshop,2:all)" );
+static ConVar cl_download_demoplayer( "cl_download_demoplayer", "1", FCVAR_RELEASE, "Determines whether downloads of external resources are allowed during demo playback (0:no,2:all)" );
 
-ConVar cl_debug_ugc_downloads( "cl_debug_ugc_downloads", "0", FCVAR_RELEASE );
 
 extern ConVar sv_downloadurl;
 extern ConVar sv_consistency;
@@ -78,8 +94,8 @@ CClientState::CClientState()
 	m_frameTime = 0;
 	m_pAreaBits = nullptr;
 	m_hWaitForResourcesHandle = 0;
-	m_bUpdateSteamResources = false;
-	m_bShownSteamResourceUpdateProgress = false;
+	m_bUpdateResources = false;
+	m_bShownResourceUpdateProgress = false;
 	m_pPureServerWhitelist = nullptr;
 	m_bCheckCRCsWithServer = false;
 	m_flLastCRCBatchTime = 0;
@@ -95,13 +111,13 @@ CClientState::CClientState()
 	serverCRC = 0;
 	serverClientSideDllCRC = 0;
 	viewangles.Init();
-	Q_memset( m_chAreaBits, 0, sizeof( m_chAreaBits ) );
-	Q_memset( m_chAreaPortalBits, 0, sizeof( m_chAreaPortalBits ) );
+	V_memset( m_chAreaBits, 0, sizeof( m_chAreaBits ) );
+	V_memset( m_chAreaPortalBits, 0, sizeof( m_chAreaPortalBits ) );
 	m_bAreaBitsValid = false;
 	addangletotal = 0.0f;
 	prevaddangletotal = 0.0f;
 	cdtrack = 0;
-	Q_memset( m_FriendsName, 0, sizeof( m_FriendsName ) );
+	V_memset( m_FriendsName, 0, sizeof( m_FriendsName ) );
 	m_pModelPrecacheTable = nullptr;
 	m_pDynamicModelTable = nullptr;
 	m_pGenericPrecacheTable = nullptr;
@@ -113,13 +129,9 @@ CClientState::CClientState()
 	m_pServerStartupTable = nullptr;
 	m_pDownloadableFileTable = nullptr;
 	m_bDownloadResources = false;
-	m_bDownloadingUGCMap = false;
 	insimulation = false;
 	oldtickcount = 0;
 	ishltv = false;
-#if defined( REPLAY_ENABLED )
-	isreplay = false;
-#endif
 	ResetHltvReplayState();
 }
 
@@ -140,7 +152,7 @@ CClientState::~CClientState()
 }
 
 // HL1 CD Key
-#define GUID_LEN 13
+constexpr auto GUID_LEN = 13;
 
 /*
 =======================
@@ -160,7 +172,7 @@ const char *CClientState::GetCDKeyHash( void )
 	MD5Context_t ctx;
 	unsigned char digest[16]; // The MD5 Hash
 
-	nKeyLength = Q_snprintf( szKeyBuffer, sizeof( szKeyBuffer ), "%s", registry->ReadString( "key", "" ) );
+	nKeyLength = V_snprintf( szKeyBuffer, sizeof( szKeyBuffer ), "%s", registry->ReadString( "key", "" ) );
 
 	if (bDedicated)
 	{
@@ -171,8 +183,8 @@ const char *CClientState::GetCDKeyHash( void )
 	if ( nKeyLength == 0 )
 	{
 		nKeyLength = 13;
-		Q_strncpy( szKeyBuffer, "1234567890123", sizeof( szKeyBuffer ) );
-		Assert( Q_strlen( szKeyBuffer ) == nKeyLength );
+		V_strncpy( szKeyBuffer, "1234567890123", sizeof( szKeyBuffer ) );
+		contract_assert( V_strlen( szKeyBuffer ) == nKeyLength );
 
 		DevMsg( "Missing CD Key from registry, inserting blank key\n" );
 
@@ -187,13 +199,13 @@ const char *CClientState::GetCDKeyHash( void )
 	}
 
 	// Now get the md5 hash of the key
-	memset( &ctx, 0, sizeof( ctx ) );
+	std::memset( &ctx, 0, sizeof( ctx ) );
 	memset( digest, 0, sizeof( digest ) );
 	
 	MD5Init(&ctx);
 	MD5Update(&ctx, (unsigned char*)szKeyBuffer, nKeyLength);
 	MD5Final(digest, &ctx);
-	Q_strncpy ( szHashedKeyBuffer, MD5_Print ( digest, sizeof( digest ) ), sizeof( szHashedKeyBuffer ) );
+	V_strncpy ( szHashedKeyBuffer, MD5_Print ( digest, sizeof( digest ) ), sizeof( szHashedKeyBuffer ) );
 	return szHashedKeyBuffer;
 
 	return "12345678901234567890123456789012";
@@ -206,9 +218,6 @@ void CClientState::SendClientInfo( void )
 	info.send_table_crc = SendTable_GetCRC();
 	info.server_count = m_nServerCount;
 	info.is_hltv = false;
-#if defined( REPLAY_ENABLED )
-	info.is_replay = false;
-#endif
 
 	info.friends_id = 0;
 	info.friends_name = m_FriendsName;
@@ -328,7 +337,7 @@ bool CClientState::SetSignonState ( int state, int count, const ks::net::CNETMsg
 					}
 
 					// start making sure we have all the specified resources
-					StartUpdatingSteamResources();
+					StartUpdatingResources();
 				}
 				else
 				{
@@ -350,7 +359,7 @@ bool CClientState::SetSignonState ( int state, int count, const ks::net::CNETMsg
 		case SIGNONSTATE_SPAWN :
 			{
 				extern float NET_GetFakeLag();
-				Assert( g_ClientDLL );
+				contract_assert( g_ClientDLL );
 
 				EngineUI()->UpdateProgressBar(PROGRESS_SIGNONSPAWN);
 
@@ -444,67 +453,67 @@ bool CClientState::HookClientStringTable( char const *tableName )
 	}
 
 	// Hook Model Precache table
-	if ( !Q_strcasecmp( tableName, MODEL_PRECACHE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, MODEL_PRECACHE_TABLENAME ) )
 	{
 		m_pModelPrecacheTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, GENERIC_PRECACHE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, GENERIC_PRECACHE_TABLENAME ) )
 	{
 		m_pGenericPrecacheTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, SOUND_PRECACHE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, SOUND_PRECACHE_TABLENAME ) )
 	{
 		m_pSoundPrecacheTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, DECAL_PRECACHE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, DECAL_PRECACHE_TABLENAME ) )
 	{
 		// Cache the id
 		m_pDecalPrecacheTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, INSTANCE_BASELINE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, INSTANCE_BASELINE_TABLENAME ) )
 	{
 		// Cache the id
 		m_pInstanceBaselineTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, LIGHT_STYLES_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, LIGHT_STYLES_TABLENAME ) )
 	{
 		// Cache the id
 		m_pLightStyleTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, USER_INFO_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, USER_INFO_TABLENAME ) )
 	{
 		// Cache the id
 		m_pUserInfoTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, SERVER_STARTUP_DATA_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, SERVER_STARTUP_DATA_TABLENAME ) )
 	{
 		// Cache the id
 		m_pServerStartupTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, DOWNLOADABLE_FILE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, DOWNLOADABLE_FILE_TABLENAME ) )
 	{
 		// Cache the id
 		m_pDownloadableFileTable = table;
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, DYNAMIC_MODEL_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, DYNAMIC_MODEL_TABLENAME ) )
 	{
 		m_pDynamicModelTable = table;
 		return true;
@@ -524,63 +533,63 @@ bool CClientState::InstallEngineStringTableCallback( char const *tableName )
 		return false;
 
 	// Hook Model Precache table
-	if ( !Q_strcasecmp( tableName, MODEL_PRECACHE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, MODEL_PRECACHE_TABLENAME ) )
 	{
 		table->SetStringChangedCallback( nullptr, Callback_ModelChanged );
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, GENERIC_PRECACHE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, GENERIC_PRECACHE_TABLENAME ) )
 	{
 		// Install the callback
 		table->SetStringChangedCallback( nullptr, Callback_GenericChanged );
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, SOUND_PRECACHE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, SOUND_PRECACHE_TABLENAME ) )
 	{
 		// Install the callback
 		table->SetStringChangedCallback( nullptr, Callback_SoundChanged );
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, DECAL_PRECACHE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, DECAL_PRECACHE_TABLENAME ) )
 	{
 		// Install the callback
 		table->SetStringChangedCallback( nullptr, Callback_DecalChanged );
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, INSTANCE_BASELINE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, INSTANCE_BASELINE_TABLENAME ) )
 	{
 		// Install the callback (already done above)
 		table->SetStringChangedCallback( nullptr, Callback_InstanceBaselineChanged );
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, LIGHT_STYLES_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, LIGHT_STYLES_TABLENAME ) )
 	{
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, USER_INFO_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, USER_INFO_TABLENAME ) )
 	{
 		// Install the callback
 		table->SetStringChangedCallback( nullptr, Callback_UserInfoChanged );
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, SERVER_STARTUP_DATA_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, SERVER_STARTUP_DATA_TABLENAME ) )
 	{
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, DOWNLOADABLE_FILE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, DOWNLOADABLE_FILE_TABLENAME ) )
 	{
 		return true;
 	}
 
-	if ( !Q_strcasecmp( tableName, DYNAMIC_MODEL_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, DYNAMIC_MODEL_TABLENAME ) )
 	{
 		table->SetStringChangedCallback( nullptr, Callback_DynamicModelChanged );
 		m_pDynamicModelTable = table;
@@ -709,10 +718,9 @@ void CClientState::Clear( void )
 	// Clear all download vars.
 	m_pDownloadableFileTable = nullptr;
 	m_hWaitForResourcesHandle = 0;
-	m_bUpdateSteamResources = false;
-	m_bShownSteamResourceUpdateProgress = false;
+	m_bUpdateResources = false;
+	m_bShownResourceUpdateProgress = false;
 	m_bDownloadResources = false;
-	m_bDownloadingUGCMap = false;
 	m_modelIndexLoaded = -1;
 	m_lastModelPercent = -1;
 
@@ -727,12 +735,9 @@ void CClientState::Clear( void )
 	addangletotal = 0.0f;
 	prevaddangletotal = 0.0f;
 
-	memset(model_precache, 0, sizeof(model_precache));
+	std::memset(model_precache, 0, sizeof(model_precache));
 	memset(sound_precache, 0, sizeof(sound_precache));
 	ishltv = false;
-#if defined( REPLAY_ENABLED )
-	isreplay = false;
-#endif
 	cdtrack = 0;
 	serverCRC = 0;
 	serverClientSideDllCRC = 0;
@@ -751,7 +756,7 @@ void CClientState::Clear( void )
 
 void CClientState::ClearSounds()
 {
-	int c = ARRAYSIZE( sound_precache );
+	int c = std::size( sound_precache );
 	for ( int i = 0; i < c; ++i )
 	{
 		sound_precache[ i ].SetSound( nullptr );
@@ -760,7 +765,7 @@ void CClientState::ClearSounds()
 
 bool CClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 {
-	Assert( packet );
+	contract_assert( packet );
 
 	return CBaseClientState::ProcessConnectionlessPacket( packet );
 }
@@ -855,7 +860,7 @@ model_t *CClientState::GetModel( int index )
 
 	if ( index >= m_pModelPrecacheTable->GetNumStrings() )
 	{
-		Assert( 0 ); // model index for unkown model requested
+		contract_assert( 0 ); // model index for unkown model requested
 		return nullptr;
 	}
 
@@ -1197,7 +1202,7 @@ void CClientState::SetDecal( int tableIndex )
 void CClientState::SetFriendsID( uint friendsID, const char *friendsName )
 {
 	m_nFriendsID = friendsID;
-	Q_strncpy( m_FriendsName, friendsName, sizeof(m_FriendsName) );
+	V_strncpy( m_FriendsName, friendsName, sizeof(m_FriendsName) );
 }
 
 
@@ -1221,7 +1226,7 @@ void CClientState::CheckOthersCustomFile( CRC32_t crcValue )
 
 void CClientState::AddCustomFile( int slot, const char *resourceFile)
 {
-	if ( Q_strlen(resourceFile) <= 0 )
+	if ( V_strlen(resourceFile) <= 0 )
 		return; // no resource file given
 
 	if ( !COM_IsValidPath( resourceFile ) )
@@ -1295,7 +1300,7 @@ void CClientState::AddCustomFile( int slot, const char *resourceFile)
 void CClientState::CheckOwnCustomFiles()
 {
 	// clear file CRCs
-	Q_memset( m_nCustomFiles, 0, sizeof(m_nCustomFiles) );
+	V_memset( m_nCustomFiles, 0, sizeof(m_nCustomFiles) );
 }
 
 //-----------------------------------------------------------------------------
@@ -1311,19 +1316,19 @@ void CClientState::DumpPrecacheStats( const char * name )
 
 	CPrecacheItem *items = nullptr;
 	
-	if ( !Q_strcmp(MODEL_PRECACHE_TABLENAME, name ) )
+	if ( !V_strcmp(MODEL_PRECACHE_TABLENAME, name ) )
 	{
 		items = model_precache;
 	}
-	else if ( !Q_strcmp(GENERIC_PRECACHE_TABLENAME, name ) )
+	else if ( !V_strcmp(GENERIC_PRECACHE_TABLENAME, name ) )
 	{
 		items = generic_precache;
 	}
-	else if ( !Q_strcmp(SOUND_PRECACHE_TABLENAME, name ) )
+	else if ( !V_strcmp(SOUND_PRECACHE_TABLENAME, name ) )
 	{
 		items = sound_precache;
 	}
-	else if ( !Q_strcmp(DECAL_PRECACHE_TABLENAME, name ) )
+	else if ( !V_strcmp(DECAL_PRECACHE_TABLENAME, name ) )
 	{
 		items = decal_precache;
 	}
@@ -1376,7 +1381,7 @@ void CClientState::DumpPrecacheStats( const char * name )
 
 void CClientState::ReadDeletions( CEntityReadInfo &u )
 {
-	VPROF( "ReadDeletions" );
+	CVProfScope _( "ReadDeletions", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	int nBase = -1;
 	int nCount = u.m_pBuf->ReadUBitVar();
 	for ( int i = 0; i < nCount; ++i )
@@ -1384,7 +1389,7 @@ void CClientState::ReadDeletions( CEntityReadInfo &u )
 		int nDelta = u.m_pBuf->ReadUBitVar();
 		int nSlot = nBase + nDelta;
 
-		Assert( !u.m_pTo->transmit_entity[nSlot] );
+		contract_assert( !u.m_pTo->transmit_entity[nSlot] );
 
 		CL_DeleteDLLEntity( nSlot, "ReadDeletions" );
 
@@ -1426,9 +1431,6 @@ static inline void CL_ParseDeltaHeader( CEntityReadInfo &u )
 {
 	u.m_UpdateFlags = FHDR_ZERO;
 
-#ifdef DEBUG_NETWORKING
-	int startbit = u.m_pBuf->GetNumBitsRead();
-#endif
 	u.m_nNewEntity = u.m_nHeaderBase + 1 + u.m_pBuf->ReadUBitVar();
 
 
@@ -1454,13 +1456,6 @@ static inline void CL_ParseDeltaHeader( CEntityReadInfo &u )
 		}
 	}
 	// Output the bitstream...
-#ifdef DEBUG_NETWORKING
-	int lastbit = u.m_pBuf->GetNumBitsRead();
-	{
-		void	SpewBitStream( unsigned char* pMem, int bit, int lastbit );
-		SpewBitStream( (byte *)u.m_pBuf->m_pData, startbit, lastbit );
-	}
-#endif
 }
 
 void CClientState::ReadPacketEntities( CEntityReadInfo &u )
@@ -1509,13 +1504,13 @@ void CClientState::ReadPacketEntities( CEntityReadInfo &u )
 				{
 					if ( !u.m_bAsDelta )
 					{
-						Assert(0); // GetBaseLocalClient().validsequence = 0;
+						contract_assert( 0 ); // GetBaseLocalClient().validsequence = 0;
 						ConMsg( "WARNING: LeavePVS on full update" );
 						updateType = Failed;	// break out
 					}
 					else
 					{
-						Assert( !u.m_pTo->transmit_entity[oldEntity] );
+						contract_assert( !u.m_pTo->transmit_entity[oldEntity] );
 
 						if ( u.m_UpdateFlags & FHDR_DELETE )
 						{
@@ -1543,7 +1538,7 @@ void CClientState::ReadPacketEntities( CEntityReadInfo &u )
 					}
 					else
 					{
-						Assert( u.m_pFrom->transmit_entity[oldEntity] );
+						contract_assert( u.m_pFrom->transmit_entity[oldEntity] );
 
 						// copy one of the old entities over to the new packet unchanged
 						if ( u.m_nNewEntity < 0 || u.m_nNewEntity >= MAX_EDICTS )
@@ -1597,25 +1592,26 @@ void CClientState::ReadPacketEntities( CEntityReadInfo &u )
 //-----------------------------------------------------------------------------
 // Purpose: Starts checking that all the necessary files are local
 //-----------------------------------------------------------------------------
-void CClientState::StartUpdatingSteamResources()
+void CClientState::StartUpdatingResources()
 {
 
 	// we can only do this when in SIGNONSTATE_NEW, 
 	// since the completion of this triggers the continuation of SIGNONSTATE_NEW
-	Assert(m_nSignonState == SIGNONSTATE_NEW);
+	contract_assert( m_nSignonState == SIGNONSTATE_NEW );
 
 	// make sure we have all the necessary resources locally before continuing
 	m_hWaitForResourcesHandle = g_pFileSystem->WaitForResources(m_szLevelNameShort);
-	m_bUpdateSteamResources = true;
-	m_bShownSteamResourceUpdateProgress = false;
+	m_bUpdateResources = true;
+	m_bShownResourceUpdateProgress = false;
 	m_bDownloadResources = false;
-	m_bDownloadingUGCMap = false; 
 }
 
 // INFESTED_DLL
 bool g_bASW_Waiting_For_Map_Build = false;
 
-CON_COMMAND( asw_engine_finished_building_map, "Notify engine that we've finished building a map" )
+static void asw_engine_finished_building_map( const CCommand &args );
+static ConCommand asw_engine_finished_building_map_command( "asw_engine_finished_building_map", asw_engine_finished_building_map, "Notify engine that we've finished building a map" );
+static void asw_engine_finished_building_map( const CCommand &args )
 {
 	g_bASW_Waiting_For_Map_Build = false;
 }
@@ -1623,12 +1619,12 @@ CON_COMMAND( asw_engine_finished_building_map, "Notify engine that we've finishe
 //-----------------------------------------------------------------------------
 // Purpose: checks to see if we're done updating files
 //-----------------------------------------------------------------------------
-void CClientState::CheckUpdatingSteamResources()
+void CClientState::CheckUpdatingResources()
 {
 
-	VPROF_BUDGET( "CheckUpdatingSteamResources", VPROF_BUDGETGROUP_STEAM );
+	CVProfScope _( "CheckUpdatingResources", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
-	if (m_bUpdateSteamResources)
+	if (m_bUpdateResources)
 	{
 		bool bComplete = false;
 		float flProgress = 0.0f;
@@ -1637,20 +1633,19 @@ void CClientState::CheckUpdatingSteamResources()
 		if (bComplete)
 		{
 			m_hWaitForResourcesHandle = 0;
-			m_bUpdateSteamResources = false;
+			m_bUpdateResources = false;
 			m_bDownloadResources = false;
-			m_bDownloadingUGCMap = false;
-
+		
 			if ( m_pDownloadableFileTable )
 			{
 				bool allowDownloads = true;
 				bool allowSoundDownloads = true;
 
-				if ( !Q_strcasecmp( cl_downloadfilter.GetString(), "none" ) )
+				if ( !V_strcasecmp( cl_downloadfilter.GetString(), "none" ) )
 				{
 					allowDownloads = allowSoundDownloads = false;
 				}
-				else if ( !Q_strcasecmp( cl_downloadfilter.GetString(), "nosounds" ) )
+				else if ( !V_strcasecmp( cl_downloadfilter.GetString(), "nosounds" ) )
 				{
 					allowSoundDownloads = false;
 				}
@@ -1664,56 +1659,34 @@ void CClientState::CheckUpdatingSteamResources()
 
 						if ( !allowSoundDownloads )
 						{
-							Q_ExtractFileExtension( fname, extension, sizeof( extension ) );
-							if ( !Q_strcasecmp( extension, "wav" ) || !Q_strcasecmp( extension, "mp3" ) )
+							V_ExtractFileExtension( fname, extension, sizeof( extension ) );
+							if ( !V_strcasecmp( extension, "wav" ) || !V_strcasecmp( extension, "mp3" ) )
 							{
 								continue;
 							}
 						}
 
-						// If this is a community map we're loading download from the workshop cdn instead of server.
 						char bufFileName[MAX_PATH];
 						V_FixupPathName( bufFileName, sizeof( bufFileName ), fname );
 
 						EngineUI()->UpdateProgressBar(PROGRESS_PROCESSSERVERINFO);
 
-						if ( m_unUGCMapFileID != 0 )
-						{
-							int lenBufFileName = V_strlen( bufFileName );
-							if ( !V_stricmp( bufFileName, m_szLevelName ) || // if UGC map file ID is set and the resource is the bsp then download the client level
-								( ( lenBufFileName > 4 ) && !V_stricmp( bufFileName + lenBufFileName - 4, ".bsp" ) ) )
-							{
-								g_ClientDLL->DownloadCommunityMapFile( m_unUGCMapFileID );
-								m_bDownloadingUGCMap = true;
-								if ( cl_debug_ugc_downloads.GetBool() )
-									Msg( "CheckUpdatingSteamResources: downloading UGC map file '%s' id %llu\n", m_szLevelName, m_unUGCMapFileID );
-
-								continue;
-							}
-							
-							if ( ( lenBufFileName > 4 ) && !V_stricmp( bufFileName + lenBufFileName - 4, ".nav" ) )
-								continue; // UGC maps always have nav embedded in the bsp
-						}
-
 						if ( demoplayer->IsPlayingBack() && ( cl_download_demoplayer.GetInt() < 2 ) )
 							continue; // demo playback doesn't need to download all the resources
-								
-						if ( cl_debug_ugc_downloads.GetBool() )
-							Msg( "CheckUpdatingSteamResources: downloading file '%s'\n", bufFileName );
 
 						// INFESTED_DLL
 						static char gamedir[MAX_OSPATH];
-						Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
-						if ( !Q_stricmp( gamedir, "infested" ) )
+						V_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
+						if ( !V_stricmp( gamedir, "infested" ) )
 						{							
 							// if we're trying to download a randomly generated map, instead request the map layout file
 							const char *pExt = V_GetFileExtension( fname );
-							if ( !Q_stricmp( pExt, "bsp" ) )
+							if ( !V_stricmp( pExt, "bsp" ) )
 							{
 								char mapLayoutFName[256];
-								Q_snprintf( mapLayoutFName, sizeof( mapLayoutFName ), "%s", fname );
+								V_snprintf( mapLayoutFName, sizeof( mapLayoutFName ), "%s", fname );
 								int extPos = pExt - fname;
-								Q_snprintf( mapLayoutFName + extPos, sizeof( mapLayoutFName ) - extPos, "layout" );
+								V_snprintf( mapLayoutFName + extPos, sizeof( mapLayoutFName ) - extPos, "layout" );
 
 								if ( StringHasPrefix( fname + 5, "gridrandom" ) || StringHasPrefix( fname + 5, "output" ) ) 
 								{
@@ -1738,7 +1711,7 @@ void CClientState::CheckUpdatingSteamResources()
 					}
 				}
 
-				if ( CL_GetDownloadQueueSize() || g_bASW_Waiting_For_Map_Build || m_bDownloadingUGCMap )
+				if ( CL_GetDownloadQueueSize() || g_bASW_Waiting_For_Map_Build )
 				{
 					// make sure the loading dialog is up
 					EngineUI()->StartCustomProgress();
@@ -1758,42 +1731,23 @@ void CClientState::CheckUpdatingSteamResources()
 		}
 		else if (flProgress > 0.0f)
 		{
-			if (!m_bShownSteamResourceUpdateProgress)
+			if (!m_bShownResourceUpdateProgress)
 			{
 				// make sure the loading dialog is up
 				EngineUI()->StartCustomProgress();
 				EngineUI()->ActivateGameUI();
-				m_bShownSteamResourceUpdateProgress = true;
+				m_bShownResourceUpdateProgress = true;
 			}
 
-			// change it to be updating steam resources
 			EngineUI()->UpdateSecondaryProgressBar( flProgress, (flProgress < 1.0f) ? g_pLocalize->FindSafe("#Valve_UpdatingSteamResources") : L"" );
 		}
 	}
 
-	if ( m_bDownloadResources || m_bDownloadingUGCMap )
+	if ( m_bDownloadResources )
 	{
 		// Check on any HTTP downloads in progress
 		bool stillDownloading = CL_DownloadUpdate();
-		if ( m_bDownloadingUGCMap )
-		{
-			float progress = g_ClientDLL->GetUGCFileDownloadProgress( m_unUGCMapFileID );
-			if ( progress == 1.0f || progress < 0.0f )
-				m_bDownloadingUGCMap = false; // stop waiting if we're done, or on error.
-
-			if ( cl_debug_ugc_downloads.GetBool() )
-				Msg( "CheckUpdatingSteamResources: Downloading UGC Map.... %f%%\n", 100.0f*progress );
-
-			wchar_t wszPercent[ 10 ];
-			V_snwprintf( wszPercent, ARRAYSIZE( wszPercent ), L"%d%%",  (int)(100*progress) );
-			wchar_t wszWideBuff[ 128 ];
-			g_pLocalize->ConstructString( wszWideBuff, sizeof( wszWideBuff ), g_pLocalize->Find( "#SFUI_Loading_UGCMap_Progress" ), 1, wszPercent );
-
-			// change it to be updating steam resources
-			EngineUI()->UpdateSecondaryProgressBar( progress, ( (progress > 0.0f) && (progress < 1.0f) ) ? wszWideBuff : L"" );
-		}
-
-		if ( !stillDownloading && !g_bASW_Waiting_For_Map_Build && !m_bDownloadingUGCMap )
+		if ( !stillDownloading && !g_bASW_Waiting_For_Map_Build )
 		{
 			m_bDownloadResources = false;
 			FinishSignonState_New();
@@ -1811,7 +1765,7 @@ void CClientState::CheckUpdatingSteamResources()
 //-----------------------------------------------------------------------------
 void CClientState::CheckFileCRCsWithServer()
 {
-	VPROF_( "CheckFileCRCsWithServer", 1, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_CLIENT );
+	CVProfScope _( "CheckFileCRCsWithServer", 1, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_CLIENT );
 	const float flBatchInterval = 1.0f / 5.0f;
 	const int nBatchSize = 5;
 
@@ -1830,7 +1784,7 @@ void CClientState::CheckFileCRCsWithServer()
 	m_flLastCRCBatchTime = flCurTime;
 
 	CUnverifiedFileHash rgUnverifiedFiles[nBatchSize];
-	int count = g_pFileSystem->GetUnverifiedFileHashes( rgUnverifiedFiles, ARRAYSIZE( rgUnverifiedFiles ) );
+	int count = g_pFileSystem->GetUnverifiedFileHashes( rgUnverifiedFiles, std::size( rgUnverifiedFiles ) );
 	if ( count == 0 )
 		return;
 
@@ -1864,9 +1818,9 @@ bool CheckSimpleMaterial( IMaterial *pMaterial )
 		return false;
 
 	const char *name = pMaterial->GetShaderName();
-	if ( Q_strncasecmp( name, "VertexLitGeneric", 16 ) &&
-		 Q_strncasecmp( name, "UnlitGeneric", 12 ) &&
-		 Q_strncasecmp( name, "Infected", 8 ) )
+	if ( V_strncasecmp( name, "VertexLitGeneric", 16 ) &&
+		 V_strncasecmp( name, "UnlitGeneric", 12 ) &&
+		 V_strncasecmp( name, "Infected", 8 ) )
 	{
 		return false;
 	}
@@ -1898,16 +1852,16 @@ int FindFilenameInStringTable( INetworkStringTable *table, const char *searchFna
 	char searchFilename[MAX_PATH];
 	char tableFilename[MAX_PATH];
 
-	Q_strncpy( searchFilename, searchFname, MAX_PATH );
-	Q_FixSlashes( searchFilename );
+	V_strncpy( searchFilename, searchFname, MAX_PATH );
+	V_FixSlashes( searchFilename );
 
 	for ( int i=0; i<table->GetNumStrings(); ++i )
 	{
 		const char *tableFname = table->GetString( i );
-		Q_strncpy( tableFilename, tableFname, MAX_PATH );
-		Q_FixSlashes( tableFilename );
+		V_strncpy( tableFilename, tableFname, MAX_PATH );
+		V_FixSlashes( tableFilename );
 
-		if ( !Q_strcasecmp( searchFilename, tableFilename ) )
+		if ( !V_strcasecmp( searchFilename, tableFilename ) )
 		{
 			return i;
 		}
@@ -1988,7 +1942,7 @@ void CClientState::FinishSignonState_New()
 		demoplayer->SetPacketReadSuspended( false );
 	}
 
-	VPROF_BUDGET( "FinishSignonState_New", VPROF_BUDGETGROUP_STEAM );
+	CVProfScope _( "FinishSignonState_New", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
 
 	if ( !m_bMarkedCRCsUnverified )
@@ -2010,13 +1964,6 @@ void CClientState::FinishSignonState_New()
 		Host_Error( "Unabled to verify map %s\n", ( m_szLevelName && m_szLevelName[0] ) ? m_szLevelName : "unknown" );
 		return;
 	}
-
-	// Don't load the client if we don't own the game
-	if ( NET_IsMultiplayer() && Steam3Client().SteamApps() && !Steam3Client().SteamApps()->BIsSubscribed() )
-	{
-		Host_Error( "Steam ownership check failed.\n" );
-		return;
-	} 
 
 	COM_TimestampedLog( "CL_InstallAndInvokeClientStringTableCallbacks" );
 	CL_InstallAndInvokeClientStringTableCallbacks();
@@ -2045,7 +1992,7 @@ void CClientState::FinishSignonState_New()
 	
 	SendClientInfo();
 
-	CL_SetSteamCrashComment();
+	CL_SetCrashComment();
 
 	// tell server that we entered now that state
 	CNETMsg_SignonState_t msgSignonState( m_nSignonState, m_nServerCount );
@@ -2058,7 +2005,7 @@ void CClientState::FinishSignonState_New()
 //-----------------------------------------------------------------------------
 void CClientState::ConsistencyCheck(bool bChanged )
 {
-	VPROF_BUDGET( "CClientState::ConsistencyCheck", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
+	CVProfScope _( "CClientState::ConsistencyCheck", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 
 	// get the default config for the current card as a starting point.
 	// server must have sent us this table
@@ -2081,7 +2028,7 @@ void CClientState::ConsistencyCheck(bool bChanged )
 	static MaterialSystem_Config_t s_LastConfig;
 	MaterialSystem_Config_t newConfig = materials->GetCurrentConfigForVideoCard();
 
-	if ( Q_memcmp( &s_LastConfig, &newConfig, sizeof(MaterialSystem_Config_t) ) )
+	if ( V_memcmp( &s_LastConfig, &newConfig, sizeof(MaterialSystem_Config_t) ) )
 	{
 		// remember last config we tested
 		s_LastConfig = newConfig;
@@ -2156,7 +2103,7 @@ void CClientState::ConsistencyCheck(bool bChanged )
 
 				// Check each texture
 				IMaterial *materials[ 128 ];
-				int materialCount = Mod_GetModelMaterials( pModel, ARRAYSIZE( materials ), materials );
+				int materialCount = Mod_GetModelMaterials( pModel, std::size( materials ), materials );
 
 				for ( int j = 0; j<materialCount; ++j )
 				{
@@ -2189,12 +2136,12 @@ void CClientState::UpdateAreaBits_BackwardsCompatible()
 {
 	if ( m_pAreaBits )
 	{
-		memcpy( m_chAreaBits, m_pAreaBits, sizeof( m_chAreaBits ) );
+		std::memcpy( m_chAreaBits, m_pAreaBits, sizeof( m_chAreaBits ) );
 		
 		// The whole point of adding this array was that the client could react to closed portals.
 		// If they're using the old interface to set area portal bits, then we use the old 
 		// behavior of assuming all portals are open on the clent.
-		memset( m_chAreaPortalBits, 0xFF, sizeof( m_chAreaPortalBits ) );
+		std::memset( m_chAreaPortalBits, 0xFF, sizeof( m_chAreaPortalBits ) );
 
 		m_bAreaBitsValid = true;
 	}
@@ -2243,7 +2190,6 @@ void CClientState::RunFrame()
 			Warning( "  Currently using %d pages (%d Kb) of total %d pages (%d Kb total)\n",
 				ppi.numPagesUsed, ppi.numPagesUsed * Plat_GetMemPageSize(),
 				( ppi.numPagesFree + ppi.numPagesUsed ), ( ppi.numPagesFree + ppi.numPagesUsed ) * Plat_GetMemPageSize() );
-			Warning( "  Please see http://support.steampowered.com for more information.\n" );
 		}
 	}
 	else if ( s_bLowPagedPoolMemoryWarning )

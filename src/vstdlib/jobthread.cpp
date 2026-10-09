@@ -1,23 +1,8 @@
-//========== Copyright 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-
-#include "tier0/dbg.h"
-#include <mutex>
-#include <atomic>
-#include "tier0/tslist.h"
-#include "tier0/icommandline.h"
-#include "tier0/threadtools.h"
-#include "vstdlib/jobthread.h"
-#include "vstdlib/random.h"
-#include "tier1/functors.h"
-#include "tier1/fmtstr.h"
-#include "tier1/utlvector.h"
-#include "tier1/generichash.h"
-#include "tier0/fasttimer.h"
+import std;
+import ks.vstdlib;
 
 
 
@@ -44,12 +29,12 @@ inline void ServiceJobAndRelease( CJob *pJob, int iThread = -1 )
 
 #pragma pack(push)
 #pragma pack(8)
-class ALIGN16 CJobQueue
+class alignas(16) CJobQueue
 {
 public:
 	CJobQueue() :
 		m_nItems( 0 ),
-		m_nMaxItems( INT_MAX )
+		m_nMaxItems( std::numeric_limits<int>::max() )
 	{
 	}
 
@@ -134,7 +119,7 @@ public:
 		}
 
 		m_mutex.lock();
-		AssertMsg( m_MinPriority != JP_LOW, "Expected at least one queue item" );
+		contract_assert( ( m_MinPriority != JP_LOW ) && "Expected at least one queue item" );
 
 		if ( ++m_nItems == 1 )
 		{
@@ -178,7 +163,7 @@ private:
 	std::recursive_mutex	m_mutex;
 	CThreadManualEvent	m_JobAvailableEvent;
 	static int			m_MinPriority;
-} ALIGN16_POST;
+};
 
 int	CJobQueue::m_MinPriority = JP_LOW;
 
@@ -290,12 +275,12 @@ private:
 
 //-----------------------------------------------------------------------------
 
-JOB_INTERFACE IThreadPool *CreateNewThreadPool()
+IThreadPool *CreateNewThreadPool()
 {
 	return new CThreadPool;
 }
 
-JOB_INTERFACE void DestroyThreadPool( IThreadPool *pPool )
+void DestroyThreadPool( IThreadPool *pPool )
 {
 	delete static_cast<CThreadPool*>( pPool );
 }
@@ -366,7 +351,7 @@ public:
 	}
 	virtual bool OnFinalRelease()
 	{
-		AssertMsg( 0, "Releasing global thread pool object!" );
+		contract_assert( false && "Releasing global thread pool object!" );
 		return false;
 	}
 };
@@ -433,7 +418,7 @@ private:
 				{
 				case TPM_EXIT:
 					Reply( true );
-					bExit = TRUE;
+					bExit = true;
 					break;
 
 				case TPM_SUSPEND:
@@ -442,7 +427,7 @@ private:
 					break;
 
 				default:
-					AssertMsg( 0, "Unknown call to thread" );
+					contract_assert( false && "Unknown call to thread" );
 					Reply( false );
 					break;
 				}
@@ -572,7 +557,7 @@ int CThreadPool::SuspendExecution()
 int CThreadPool::ResumeExecution()
 {
 	std::scoped_lock lock( m_SuspendMutex );
-	AssertMsg( m_nSuspend >= 1, "Attempted resume when not suspended");
+	contract_assert( ( m_nSuspend >= 1 ) && "Attempted resume when not suspended" );
 	int result = m_nSuspend--;
 	if (m_nSuspend == 0 )
 	{
@@ -588,7 +573,7 @@ int CThreadPool::ResumeExecution()
 
 int CThreadPool::YieldWait( CThreadEvent **pEvents, int nEvents, bool bWaitAll, unsigned timeout )
 {
-	Assert( timeout == TT_INFINITE ); // unimplemented
+	contract_assert( timeout == TT_INFINITE ); // unimplemented
 	int result;
 	CJob *pJob;
 	// Always wait for zero milliseconds initially, to let us process jobs on this thread.
@@ -642,7 +627,7 @@ int CThreadPool::YieldWait( CJob **ppJobs, int nJobs, bool bWaitAll, unsigned ti
 void CThreadPool::Yield( unsigned timeout )
 {
 	// @MULTICORE (toml 10/24/2006): not implemented
-	Assert( ThreadInMainThread() );
+	contract_assert( ThreadInMainThread() );
 	if ( !ThreadInMainThread() )
 	{
 		ThreadSleep( timeout );
@@ -657,6 +642,7 @@ void CThreadPool::Yield( unsigned timeout )
 //---------------------------------------------------------
 int CThreadPool::YieldWaitPerFrameJobs( )
 {
+	ks::ScratchArena<> scratch;
 	// NOTE: Per-Frame jobs may spawn other per-frame jobs.
 	// Therefore we must copy the list off and block on that list
 	// because more jobs may be added while we're yielding
@@ -671,9 +657,9 @@ int CThreadPool::YieldWaitPerFrameJobs( )
 			break;
 		}
 
-		size_t nSize = nCount * sizeof( CJob* );
-		CJob **ppJobs = ( CJob** )stackalloc( nSize );
-		memcpy( ppJobs, m_PerFrameJobs.data(), nSize );
+		std::size_t nSize = nCount * sizeof( CJob* );
+		CJob **ppJobs = ( CJob** )scratch.AllocBytes( nSize );
+		std::memcpy( ppJobs, m_PerFrameJobs.data(), nSize );
 		m_PerFrameJobs.clear();
 		m_PerFrameJobListMutex.unlock();
 
@@ -707,7 +693,7 @@ void CThreadPool::AddJob( CJob *pJob )
 	if ( m_Threads.empty() )
 	{
 		// So only threadpool jobs are supposed to execute the jobs, but there are no threadpool threads?
-		Assert( !m_bExecOnThreadPoolThreadsOnly );
+		contract_assert( !m_bExecOnThreadPoolThreadsOnly );
 
 		pJob->Execute();
 		return;
@@ -728,21 +714,12 @@ void CThreadPool::AddJob( CJob *pJob )
 	if ( !pJob->CanExecute() )
 	{
 		// Already handled
-		ExecuteOnce( Warning( "Attempted to add job to job queue that has already been completed\n" ) );
+		ExecuteOnce( [&]{ Warning( "Attempted to add job to job queue that has already been completed\n" ); } );
 		return;
 	}
 
 	pJob->m_pThreadPool = this;
 	pJob->m_status = JOB_STATUS_PENDING;
-#if defined( THREAD_PARENT_STACK_TRACE_ENABLED )
-	{
-		int iValidEntries = GetCallStack_Fast( pJob->m_ParentStackTrace, ARRAYSIZE( pJob->m_ParentStackTrace ), 0 );
-		for( int i = iValidEntries; i < ARRAYSIZE( pJob->m_ParentStackTrace ); ++i )
-		{
-			pJob->m_ParentStackTrace[i] = nullptr;
-		}
-	}
-#endif
 	InsertJobInQueue( pJob );
 	++m_nJobs;
 }
@@ -829,7 +806,7 @@ void CThreadPool::ChangePriority( CJob *pJob, JobPriority_t priority )
 	}
 	else
 	{
-		ExecuteOnce( if ( pJob->GetPriority() != priority ) DevMsg( "CThreadPool::RemoveJob not implemented right now" ) );
+		ExecuteOnce( [&]{ if ( pJob->GetPriority() != priority ) DevMsg( "CThreadPool::RemoveJob not implemented right now" ); } );
 	}
 
 }
@@ -838,7 +815,7 @@ void CThreadPool::ChangePriority( CJob *pJob, JobPriority_t priority )
 // Execute to a specified priority
 //---------------------------------------------------------
 
-#define THREADED_EXECUTETOPRIORITY 0 //  Not ready for general consumption [8/4/2010 tom]
+constexpr auto THREADED_EXECUTETOPRIORITY = 0; //  Not ready for general consumption [8/4/2010 tom]
 
 int CThreadPool::ExecuteToPriority( JobPriority_t iToPriority, JobFilter_t pfnFilter )
 {
@@ -987,10 +964,6 @@ int CThreadPool::AbortAll()
 
 bool CThreadPool::Start( const ThreadPoolStartParams_t &startParams, const char *pszName )
 {
-#if defined( DEDICATED ) && 1
-	if ( !startParams.bEnableOnLinuxDedicatedServer )
-		return false;
-#endif
 
 	int nThreads = startParams.nThreads;
 
@@ -1036,7 +1009,7 @@ bool CThreadPool::Start( const ThreadPoolStartParams_t &startParams, const char 
 
 	int priority = startParams.iThreadPriority;
 
-	if ( priority == SHRT_MIN )
+	if ( priority == std::numeric_limits<short>::min() )
 	{
 		if ( startParams.bIOThreads )
 		{
@@ -1131,23 +1104,14 @@ void CThreadPool::Distribute( bool bDistribute, int *pAffinityTable )
 bool CThreadPool::Stop( int timeout )
 {
 
-	std::vector< ThreadHandle_t > arrHandles;
-	arrHandles.assign( std::ssize( m_Threads ), {} );
 	for ( int i = 0; i < std::ssize( m_Threads ); i++ )
 	{
-		arrHandles[i] = m_Threads[i]->GetThreadHandle();
-		
 		m_Threads[i]->CallWorker( TPM_EXIT );
 	}
 
 	for ( int i = 0; i < std::ssize( m_Threads ); ++i )
 	{
-		if ( arrHandles[i] )
-		{
-			ThreadJoin( arrHandles[i] );
-
-			Assert( !m_Threads[i]->IsAlive() );
-		}
+		m_Threads[i]->Join();
 
 		while( m_Threads[i]->IsAlive() )
 		{
@@ -1209,11 +1173,11 @@ public:
 			int i;
 			for ( i = 0; i < 1024; i++ )
 			{
-				pMemory[i] = rand();
+				pMemory[i] = std::rand();
 			}
 			for ( i = 0; i < 50; i++ )
 			{
-				sqrt( (float)HashBlock( pMemory, 1024 ) + HashBlock( pMemory, 1024 ) + 10.0 );
+				std::sqrt( (float)HashBlock( pMemory, 1024 ) + HashBlock( pMemory, 1024 ) + 10.0 );
 			}
 			bDoWork = false;
 		}
@@ -1338,11 +1302,11 @@ public:
 		int i;
 		for ( i = 0; i < 1024; i++ )
 		{
-			pMemory[i] = rand();
+			pMemory[i] = std::rand();
 		}
 		for ( i = 0; i < 50; i++ )
 		{
-			sqrt( (float)HashBlock( pMemory, 1024 ) + HashBlock( pMemory, 1024 ) + 10.0 );
+			std::sqrt( (float)HashBlock( pMemory, 1024 ) + HashBlock( pMemory, 1024 ) + 10.0 );
 		}
 		if ( AccessEvent()->Check() || IsFinished() )
 		{

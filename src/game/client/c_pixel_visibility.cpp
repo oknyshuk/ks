@@ -1,23 +1,27 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "c_pixel_visibility.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
 #include "precache_register.h"
 #include "view.h"
 #include "viewrender.h"
-#include "tier1/vector_ops.h"
-#include <deque>
-#include <vector>
-#include "vprof.h"
-
 
 static void PixelvisDrawChanged( IConVar *pPixelvisVar, const char *pOld, float flOldValue );
 
@@ -194,7 +198,7 @@ private:
 
 void CPixelVisSet::Init( const pixelvis_queryparams_t &params )
 {
-	Assert( params.bSetup );
+	contract_assert( params.bSetup );
 	proxySize = params.proxySize;
 	proxyAspect = params.proxyAspect;
 	if ( params.fadeTime > 0.0f )
@@ -235,9 +239,9 @@ public:
 	void SetView( int nPlayerSlot, int viewID ) 
 	{
 		// This is necessary since player slot is stored in 2 bits
-		COMPILE_TIME_ASSERT( MAX_SPLITSCREEN_PLAYERS <= 4 );
+		static_assert( MAX_SPLITSCREEN_PLAYERS <= 4 );
 
-		Assert( nPlayerSlot >= 0 && nPlayerSlot < MAX_SPLITSCREEN_PLAYERS );
+		contract_assert( nPlayerSlot >= 0 && nPlayerSlot < MAX_SPLITSCREEN_PLAYERS );
 		m_viewID = viewID;	
 		m_brightnessTarget = 0.0f;
 		m_clipFraction = 1.0f;
@@ -414,7 +418,6 @@ void CPixelVisibilityQuery::IssueQuery( IMatRenderContext *pRenderContext, float
 {
 	if ( !m_failed )
 	{
-		Assert( IsValid() );
 
 		if ( r_pixelvisibility_spew.GetBool() && CurrentViewID() == 0 ) 
 		{
@@ -433,7 +436,7 @@ void CPixelVisibilityQuery::IssueQuery( IMatRenderContext *pRenderContext, float
 		}
 	}
 	// In split screen we can issue these multiple times
-	Assert( m_frameIssued != gpGlobals->framecount);
+	contract_assert( m_frameIssued != gpGlobals->framecount );
 
 	m_frameIssued = gpGlobals->framecount;
 	m_wasQueriedThisFrame = false;
@@ -444,7 +447,6 @@ void CPixelVisibilityQuery::IssueCountingQuery( IMatRenderContext *pRenderContex
 {
 	if ( !m_failed )
 	{
-		Assert( IsValid() );
 		PixelVisibility_DrawProxy( pRenderContext, m_queryHandleCount, m_origin, proxySize, proxyAspect, pMaterial, sizeIsScreenSpace );
 	}
 }
@@ -565,7 +567,7 @@ float CPixelVisibilitySystem::GetFractionVisible( const pixelvis_queryparams_t &
 	int nPlayerSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 
 	CPixelVisSet *pSet = FindOrCreatePixelVisSet( params, queryHandle );
-	Assert( pSet );
+	contract_assert( pSet );
 	unsigned short node = FindOrCreateQueryForView( pSet, nPlayerSlot, CurrentViewID() );
 	m_queryList[node].m_origin = params.position;
 	float fraction = m_queryList[node].GetFractionVisible( pSet->fadeTimeInv );
@@ -1096,7 +1098,9 @@ int COcclusionQuerySet::GetLastFrameDrawn( void )
 
 
 
-CON_COMMAND( pixelvis_debug, "Dump debug info" )
+static void pixelvis_debug( const CCommand &args );
+static ConCommand pixelvis_debug_command( "pixelvis_debug", pixelvis_debug, "Dump debug info" );
+static void pixelvis_debug( const CCommand &args )
 {
 	g_PixelVisibilitySystem.DebugInfo();
 }

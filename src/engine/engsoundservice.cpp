@@ -1,10 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Engine implementation of services required by the audio subsystem
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Engine implementation of services required by the audio subsystem
+
+import ks.tier1;
 #include "quakedef.h"
 #include "cdll_int.h"
 #include "soundservice.h"
@@ -15,8 +14,6 @@
 #include "icliententitylist.h"
 #include "mouthinfo.h"
 #include "host.h"
-#include "vstdlib/random.h"
-#include "tier0/icommandline.h"
 #include "igame.h"
 #include "client.h"
 #include "server.h"
@@ -25,18 +22,14 @@
 #include "sound.h"
 #include "localize/ilocalize.h"
 #include "engineui.h"
-#include "datacache/idatacache.h"
-#include "sys_dll.h"
 #include "toolframework/itoolframework.h"
-#include "tier0/vprof.h"
-#include "cl_steamauth.h"
-#include "tier1/fmtstr.h"
+import std;
 #include "MapReslistGenerator.h"
 #include "cl_main.h"
 
 void Snd_Restart_f();
 
-#define MAPLIST_FILE "maplist.txt"
+inline constexpr const char *MAPLIST_FILE = "maplist.txt";
 
 class CEngineSoundServices : public ISoundServices
 {
@@ -157,15 +150,6 @@ public:
 
 	virtual void OnChangeVoiceStatus( int entity, int iSsSlot, bool status )
 	{
-		// Local player changing state
-		if ( iSsSlot >= 0 )
-		{
-			if ( Steam3Client().SteamFriends() && Steam3Client().SteamUser() )
-			{
-				// Tell Friends' Voice chat that the local user is speaking!!!
-				Steam3Client().SteamFriends()->SetInGameVoiceSpeaking( Steam3Client().SteamUser()->GetSteamID(), status );
-			}
-		}
 		ClientDLL_VoiceStatus( entity, iSsSlot, status );
 	}
 
@@ -207,7 +191,7 @@ public:
 		extern IVEngineClient *engineClient;
 		if ( !engineClient )
 		{
-			Assert( !"No engineClient, bug???" );
+			contract_assert( !"No engineClient, bug???" );
 			return false;
 		}
 
@@ -241,11 +225,11 @@ public:
 					while ( 1 )
 					{
 						pFileList = COM_Parse( pFileList );
-						if ( strlen( com_token ) <= 0 )
+						if ( std::strlen( com_token ) <= 0 )
 							break;
 
 						char manifest_file[ 512 ];
-						Q_snprintf( manifest_file, sizeof( manifest_file ), "%s/%s.manifest", AUDIOSOURCE_CACHE_ROOTDIR, com_token );
+						V_snprintf( manifest_file, sizeof( manifest_file ), "%s/%s.manifest", AUDIOSOURCE_CACHE_ROOTDIR, com_token );
 
 						if ( g_pFileSystem->FileExists( manifest_file, "MOD" ) )
 						{
@@ -280,7 +264,7 @@ public:
 	virtual void GetAllSoundFilesReferencedInReslists( std::set< FileNameHandle_t >& list )
 	{
 		char reslistdir[ MAX_PATH ];
-		Q_strncpy( reslistdir, MapReslistGenerator().GetResListDirectory(), sizeof( reslistdir ) );
+		V_strncpy( reslistdir, MapReslistGenerator().GetResListDirectory(), sizeof( reslistdir ) );
 		list.clear();
 
 		// Load them in
@@ -303,10 +287,10 @@ public:
 						char resfile[ 512 ];
 
 						pFileList = COM_Parse( pFileList );
-						if ( strlen( com_token ) <= 0 )
+						if ( std::strlen( com_token ) <= 0 )
 							break;
 
-						Q_snprintf( resfile, sizeof( resfile ), "%s\\%s.lst", reslistdir, com_token );
+						V_snprintf( resfile, sizeof( resfile ), "%s\\%s.lst", reslistdir, com_token );
 
 						CacheSoundsFromResFile( false, list, resfile );
 
@@ -385,7 +369,7 @@ public:
 
 	virtual char const *GetPrecachedSound( int index )
 	{
-		Assert( sv.IsActive() );
+		contract_assert( sv.IsActive() );
 
 		INetworkStringTable *table = sv.GetSoundPrecacheTable();
 		if ( !table )
@@ -436,16 +420,16 @@ private:
 					while ( 1 )
 					{
 						pFileList = COM_Parse( pFileList );
-						if ( strlen( com_token ) <= 0 )
+						if ( std::strlen( com_token ) <= 0 )
 							break;
 
 						if ( checkandcleanname )
 						{
-							if ( Q_stristr( com_token, ".wav" ) ||
-								 Q_stristr( com_token, ".mp3" ) )
+							if ( V_stristr( com_token, ".wav" ) ||
+								 V_stristr( com_token, ".mp3" ) )
 							{
 								// skip past the game/mod directory		   "hl2/sound/player/footstep.wav"
-								Q_FixSlashes(com_token);				// "hl2\sound\player\footstep.wav"
+								V_FixSlashes(com_token);				// "hl2\sound\player\footstep.wav"
 								const char *pName = com_token;
 								while (pName[0] && pName[0] != CORRECT_PATH_SEPARATOR)
 								{
@@ -478,7 +462,7 @@ private:
 
 	virtual void OnSoundStarted( int guid, StartSoundParams_t& params, char const *soundname )
 	{
-		VPROF("OnSoundStarted");
+		CVProfScope _( "OnSoundStarted", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		// Don't send the sound message to the tool framework if active tool 
 		// is not recording or the sound originated from the tool.
@@ -520,7 +504,7 @@ private:
 		// be sent for that guid either. This requires more plumbing, though, and
 		// for the moment, it's not necessary to do that plumbing.
 
-		VPROF("OnSoundStopped");
+		CVProfScope _( "OnSoundStopped", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		if ( !toolframework->IsToolRecording() )
 			return;

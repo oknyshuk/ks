@@ -1,11 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "particle_prototype.h"
@@ -15,9 +18,9 @@
 // ------------------------------------------------------------------------- //
 // Definitions
 // ------------------------------------------------------------------------- //
-#define NUM_MOVIEEXPLOSION_EMITTERS	50
-#define EXPLOSION_EMITTER_LIFETIME	3
-#define EMITTED_PARTICLE_LIFETIME	1
+constexpr auto NUM_MOVIEEXPLOSION_EMITTERS = 50;
+constexpr auto EXPLOSION_EMITTER_LIFETIME = 3;
+constexpr auto EMITTED_PARTICLE_LIFETIME = 1;
 
 
 // ------------------------------------------------------------------------- //
@@ -74,7 +77,6 @@ private:
 };
 
 // Expose to the particle app.
-EXPOSE_PROTOTYPE_EFFECT(MovieExplosion, C_MovieExplosion);
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_MovieExplosion, DT_MovieExplosion, MovieExplosion )
 
@@ -141,7 +143,7 @@ void C_MovieExplosion::Update(float fTimeDelta)
 	if(m_EmitterLifetime > EXPLOSION_EMITTER_LIFETIME)
 		return;
 
-	m_EmitterAlpha = (float)sin(m_EmitterLifetime * 3.14159f / EXPLOSION_EMITTER_LIFETIME);
+	m_EmitterAlpha = (float)std::sin(m_EmitterLifetime * 3.14159f / EXPLOSION_EMITTER_LIFETIME);
 
 	// Simulate the emitters and have them spit out particles.
 	for(int iEmitter=0; iEmitter < NUM_MOVIEEXPLOSION_EMITTERS; iEmitter++)
@@ -179,7 +181,7 @@ void C_MovieExplosion::RenderParticles( CParticleRenderIterator *pIterator )
 
 		float lifetimePercent = pParticle->m_Lifetime / EMITTED_PARTICLE_LIFETIME;
 		Vector color;
-		color.x = sin(lifetimePercent * 3.14159);
+		color.x = std::sin(lifetimePercent * 3.14159);
 		color.y = color.x * 0.5f;
 		color.z = 0;
 		RenderParticle_ColorSize(
@@ -214,4 +216,3 @@ void C_MovieExplosion::SimulateParticles( CParticleSimulateIterator *pIterator )
 		pParticle = (StandardParticle_t*)pIterator->GetNext();
 	}
 }
-

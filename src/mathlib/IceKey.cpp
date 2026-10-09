@@ -3,8 +3,9 @@
 //			http://www.darkside.com.au/ice/
 
 
+import ks.tier1;
 #include "mathlib/IceKey.H"
-#include "tier1/strtools.h"
+import std;
 
 
 
@@ -394,6 +395,7 @@ IceKey::blockSize () const
 // Valve-written routine  to decode a buffer
 void DecodeICE( unsigned char *pBuffer, int nSize, const unsigned char *pKey)
 {
+	ks::ScratchArena<> scratch;
 	if ( !pKey )
 		return;
 
@@ -402,7 +404,7 @@ void DecodeICE( unsigned char *pBuffer, int nSize, const unsigned char *pKey)
 
 	int nBlockSize = ice.blockSize();
 
-	unsigned char *pTemp = (unsigned char *) stackalloc( PAD_NUMBER( nSize, nBlockSize ) );
+	unsigned char *pTemp = (unsigned char *) scratch.AllocBytes( PAD_NUMBER( nSize, nBlockSize ) );
 	unsigned char *p1 = pBuffer;
 	unsigned char *p2 = pTemp;
 
@@ -417,7 +419,7 @@ void DecodeICE( unsigned char *pBuffer, int nSize, const unsigned char *pKey)
 	}
 
 	// copy encrypted data back to original buffer
-	Q_memcpy( pBuffer, pTemp, nSize - nBytesLeft );
+	V_memcpy( pBuffer, pTemp, nSize - nBytesLeft );
 }
 
 

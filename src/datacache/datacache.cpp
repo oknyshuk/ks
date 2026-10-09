@@ -1,32 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <mutex>
+import std;
+import ks.tier1;
 #include "datacache/idatacache.h"
 
-#include <malloc.h>
-
-#include "tier0/vprof.h"
-#include "basetypes.h"
-#include "convar.h"
-#include "interface.h"
-#include "datamanager.h"
-#include <algorithm>
-#include "generichash.h"
 #include "filesystem.h"
 #include "datacache.h"
-#include "utlvector.h"
-#include "fmtstr.h"
 
 //-----------------------------------------------------------------------------
 // Singleton
 //-----------------------------------------------------------------------------
 CDataCache g_DataCache;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CDataCache, IDataCache, DATACACHE_INTERFACE_VERSION, g_DataCache );
+static InterfaceReg s_Reg_CDataCache_IDataCache( []() -> void * { return static_cast<IDataCache *>( &g_DataCache ); }, DATACACHE_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -47,7 +34,7 @@ static int g_iDontForceFlush;
 // DataCacheItem_t
 //-----------------------------------------------------------------------------
 
-DEFINE_FIXEDSIZE_ALLOCATOR_MT( DataCacheItem_t, 4096/sizeof(DataCacheItem_t), ks::fixed_pool::grow::slow );
+ks::fixed_pool_mt DataCacheItem_t::s_Allocator( sizeof(DataCacheItem_t), 4096/sizeof(DataCacheItem_t), ks::fixed_pool::grow::slow, "DataCacheItem_t pool", alignof(DataCacheItem_t) );
 
 void DataCacheItem_t::DestroyResource()
 { 
@@ -71,10 +58,10 @@ CDataCacheSection::CDataCacheSection( CDataCache *pSharedCache, IDataCacheClient
 	m_nFrameUnlockCounter( 0 ),
 	m_options( 0 )
 {
-	memset( m_FrameLocks, 0, sizeof( m_FrameLocks ) );
-	memset( &m_status, 0, sizeof(m_status) );
-	AssertMsg1( strlen(pszName) <= DC_MAX_CLIENT_NAME, "Cache client name too long \"%s\"", pszName );
-	Q_strncpy( szName, pszName, sizeof(szName) );
+	std::memset( m_FrameLocks, 0, sizeof( m_FrameLocks ) );
+	std::memset( &m_status, 0, sizeof(m_status) );
+	contract_assert( ( std::strlen(pszName) <= DC_MAX_CLIENT_NAME ) && "Cache client name too long \"%s\"" );
+	V_strncpy( szName, pszName, sizeof(szName) );
 
 	for ( int i = 0; i < DC_MAX_THREADS_FRAMELOCKED; i++ )
 	{
@@ -100,7 +87,7 @@ CDataCacheSection::~CDataCacheSection()
 void CDataCacheSection::SetLimits( const DataCacheLimits_t &limits )
 {
 	m_limits = limits;
-	AssertMsg( m_limits.nMinBytes == 0 && m_limits.nMinItems == 0, "Cache minimums not yet implemented" );
+	contract_assert( ( m_limits.nMinBytes == 0 && m_limits.nMinItems == 0 ) && "Cache minimums not yet implemented" );
 }
 
 //-----------------------------------------------------------------------------
@@ -147,7 +134,7 @@ void CDataCacheSection::GetStatus( DataCacheStatus_t *pStatus, DataCacheLimits_t
 //-----------------------------------------------------------------------------
 void CDataCacheSection::EnsureCapacity( unsigned nBytes, unsigned nItems )
 {
-	VPROF( "CDataCacheSection::EnsureCapacity" );
+	CVProfScope _( "CDataCacheSection::EnsureCapacity", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( m_limits.nMaxItems != (unsigned)-1 || m_limits.nMaxBytes != (unsigned)-1 )
 	{
@@ -180,7 +167,7 @@ bool CDataCacheSection::Add( DataCacheClientID_t clientId, const void *pItemData
 //-----------------------------------------------------------------------------
 bool CDataCacheSection::AddEx( DataCacheClientID_t clientId, const void *pItemData, unsigned size, unsigned flags, DataCacheHandle_t *pHandle )
 {
-	VPROF( "CDataCacheSection::Add" );
+	CVProfScope _( "CDataCacheSection::Add", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	ForceFlushDebug( true );
 
@@ -202,7 +189,7 @@ bool CDataCacheSection::AddEx( DataCacheClientID_t clientId, const void *pItemDa
 
 	memhandle_t hMem = m_LRU.CreateResource( itemData, true );
 
-	Assert( hMem != (memhandle_t)0 && hMem != (memhandle_t)DC_INVALID_HANDLE );
+	contract_assert( hMem != (memhandle_t)0 && hMem != (memhandle_t)DC_INVALID_HANDLE );
 
 	AccessItem( hMem )->hLRU = hMem;
 
@@ -237,7 +224,7 @@ bool CDataCacheSection::AddEx( DataCacheClientID_t clientId, const void *pItemDa
 //-----------------------------------------------------------------------------
 DataCacheHandle_t CDataCacheSection::Find( DataCacheClientID_t clientId )
 {
-	VPROF( "CDataCacheSection::Find" );
+	CVProfScope _( "CDataCacheSection::Find", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	m_status.nFindRequests++;
 
@@ -290,7 +277,7 @@ DataCacheHandle_t CDataCacheSection::DoFind( DataCacheClientID_t clientId )
 //-----------------------------------------------------------------------------
 DataCacheRemoveResult_t CDataCacheSection::Remove( DataCacheHandle_t handle, const void **ppItemData, unsigned *pItemSize, bool bNotify )
 {
-	VPROF( "CDataCacheSection::Remove" );
+	CVProfScope _( "CDataCacheSection::Remove", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( handle != DC_INVALID_HANDLE )
 	{
@@ -339,7 +326,7 @@ bool CDataCacheSection::IsPresent( DataCacheHandle_t handle )
 //-----------------------------------------------------------------------------
 void CDataCacheSection::GetAndLockMultiple( void **ppData, int nCount, DataCacheHandle_t *pHandles )
 {
-	VPROF( "CDataCacheSection::GetAndLockMultiple" );
+	CVProfScope _( "CDataCacheSection::GetAndLockMultiple", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	ForceFlushDebug( !g_iDontForceFlush );
 
@@ -374,7 +361,7 @@ void CDataCacheSection::GetAndLockMultiple( void **ppData, int nCount, DataCache
 //-----------------------------------------------------------------------------
 void *CDataCacheSection::Lock( DataCacheHandle_t handle )
 {
-	VPROF( "CDataCacheSection::Lock" );
+	CVProfScope _( "CDataCacheSection::Lock", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	ForceFlushDebug( !g_iDontForceFlush );
 
@@ -401,12 +388,11 @@ void *CDataCacheSection::Lock( DataCacheHandle_t handle )
 //-----------------------------------------------------------------------------
 int CDataCacheSection::Unlock( DataCacheHandle_t handle )
 {
-	VPROF( "CDataCacheSection::Unlock" );
+	CVProfScope _( "CDataCacheSection::Unlock", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	int iNewLockCount = 0;
 	if ( handle != DC_INVALID_HANDLE )
 	{
-		AssertMsg( AccessItem( (memhandle_t)handle ) != nullptr, "Attempted to unlock nonexistent cache entry" );
 		unsigned nBytesUnlocked = 0;
 		m_mutex.lock();
 		iNewLockCount = m_LRU.UnlockResource( (memhandle_t)handle );
@@ -449,7 +435,7 @@ void CDataCacheSection::UnlockMutex()
 //-----------------------------------------------------------------------------
 void *CDataCacheSection::Get( DataCacheHandle_t handle, bool bFrameLock )
 {
-	VPROF( "CDataCacheSection::Get" );
+	CVProfScope _( "CDataCacheSection::Get", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	ForceFlushDebug( !g_iDontForceFlush );
 
@@ -475,7 +461,7 @@ void *CDataCacheSection::Get( DataCacheHandle_t handle, bool bFrameLock )
 //-----------------------------------------------------------------------------
 void *CDataCacheSection::GetNoTouch( DataCacheHandle_t handle, bool bFrameLock )
 {
-	VPROF( "CDataCacheSection::GetNoTouch" );
+	CVProfScope _( "CDataCacheSection::GetNoTouch", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( handle != DC_INVALID_HANDLE )
 	{
@@ -537,7 +523,7 @@ bool CDataCacheSection::IsFrameLocking()
 //-----------------------------------------------------------------------------
 void *CDataCacheSection::FrameLock( DataCacheHandle_t handle )
 {
-	VPROF( "CDataCacheSection::FrameLock" );
+	CVProfScope _( "CDataCacheSection::FrameLock", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	ForceFlushDebug( !g_iDontForceFlush );
 
@@ -573,11 +559,11 @@ int CDataCacheSection::EndFrameLocking()
 {
 	int nThread = g_nThreadID;
 	FrameLock_t *pFrameLock = m_FrameLocks[nThread];
-	Assert( pFrameLock->m_iLock > 0 );
+	contract_assert( pFrameLock->m_iLock > 0 );
 
 	if ( pFrameLock->m_iLock == 1 )
 	{
-		VPROF( "CDataCacheSection::EndFrameLocking" );
+		CVProfScope _( "CDataCacheSection::EndFrameLocking", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		if ( pFrameLock->m_pFirst )
 		{
@@ -658,7 +644,7 @@ bool CDataCacheSection::Age( DataCacheHandle_t handle )
 //-----------------------------------------------------------------------------
 unsigned CDataCacheSection::Flush( bool bUnlockedOnly, bool bNotify )
 {
-	VPROF( "CDataCacheSection::Flush" );
+	CVProfScope _( "CDataCacheSection::Flush", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	std::scoped_lock lock( m_mutex );
 
@@ -710,7 +696,7 @@ unsigned CDataCacheSection::Flush( bool bUnlockedOnly, bool bNotify )
 //-----------------------------------------------------------------------------
 unsigned CDataCacheSection::Purge( unsigned nBytes )
 {
-	VPROF( "CDataCacheSection::Purge" );
+	CVProfScope _( "CDataCacheSection::Purge", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	std::scoped_lock lock( m_mutex );
 
@@ -927,7 +913,7 @@ bool CDataCacheSection::DiscardItemData( DataCacheItem_t *pItem, DataCacheNotifi
 	{
 		if ( type != DC_NONE )
 		{
-			Assert( type == DC_AGE_DISCARD || type == DC_FLUSH_DISCARD || DC_REMOVED );
+			contract_assert( type == DC_AGE_DISCARD || type == DC_FLUSH_DISCARD || DC_REMOVED );
 
 			if ( type == DC_AGE_DISCARD && m_pSharedCache->IsInFlush() )
 				type = DC_FLUSH_DISCARD;
@@ -942,7 +928,7 @@ bool CDataCacheSection::DiscardItemData( DataCacheItem_t *pItem, DataCacheNotifi
 			};
 
 			bool bResult = m_pClient->HandleCacheNotification( notification );
-			AssertMsg( bResult, "Refusal of cache drop not yet implemented!" );
+			contract_assert( bResult && "Refusal of cache drop not yet implemented!" );
 
 			if ( bResult )
 			{
@@ -999,7 +985,7 @@ DataCacheHandle_t CDataCacheSectionFastFind::DoFind( DataCacheClientID_t clientI
 void CDataCacheSectionFastFind::OnAdd( DataCacheClientID_t clientId, DataCacheHandle_t hCacheItem ) 
 {
 	std::scoped_lock lock( m_mutex );
-	Assert( !m_Handles.contains( clientId ) );
+	contract_assert( !m_Handles.contains( clientId ) );
 	m_Handles.insert_or_assign( clientId, hCacheItem );
 }
 
@@ -1007,8 +993,8 @@ void CDataCacheSectionFastFind::OnAdd( DataCacheClientID_t clientId, DataCacheHa
 void CDataCacheSectionFastFind::OnRemove( DataCacheClientID_t clientId ) 
 {
 	std::scoped_lock lock( m_mutex );
-	[[maybe_unused]] size_t nRemoved = m_Handles.erase( clientId );
-	Assert( nRemoved );
+	[[maybe_unused]] std::size_t nRemoved = m_Handles.erase( clientId );
+	contract_assert( nRemoved );
 }
 
 
@@ -1084,7 +1070,7 @@ void *CDataCache::QueryInterface( const char *pInterfaceName )
 CDataCache::CDataCache()
 	: m_mutex( m_LRU.AccessMutex() )
 {
-	memset( &m_status, 0, sizeof(m_status) );
+	std::memset( &m_status, 0, sizeof(m_status) );
 	m_bInFlush = false;
 	m_LRU.SetFreeOnDestruct( false ); // Causes problems in error shut down scenarios as CDataCache::Shutdown() isn't called, so the LRU is pointing to things owned by unloaded DLLs
 }
@@ -1156,7 +1142,7 @@ IDataCacheSection *CDataCache::AddSection( IDataCacheClient *pClient, const char
 	pSection = (CDataCacheSection *)FindSection( pszSectionName );
 	if ( pSection )
 	{
-		AssertMsg1( pSection->GetClient() == pClient, "Duplicate cache section name \"%s\"", pszSectionName );
+		contract_assert( ( pSection->GetClient() == pClient ) && "Duplicate cache section name \"%s\"" );
 		return pSection;
 	}
 
@@ -1214,7 +1200,7 @@ IDataCacheSection *CDataCache::FindSection( const char *pszClientName )
 //-----------------------------------------------------------------------------
 void CDataCache::EnsureCapacity( unsigned nBytes )
 {
-	VPROF( "CDataCache::EnsureCapacity" );
+	CVProfScope _( "CDataCache::EnsureCapacity", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	m_LRU.EnsureCapacity( nBytes );
 }
@@ -1225,7 +1211,7 @@ void CDataCache::EnsureCapacity( unsigned nBytes )
 //-----------------------------------------------------------------------------
 unsigned CDataCache::Purge( unsigned nBytes )
 {
-	VPROF( "CDataCache::Purge" );
+	CVProfScope _( "CDataCache::Purge", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	return m_LRU.Purge( nBytes );
 }
@@ -1236,7 +1222,7 @@ unsigned CDataCache::Purge( unsigned nBytes )
 //-----------------------------------------------------------------------------
 unsigned CDataCache::Flush( bool bUnlockedOnly, bool bNotify )
 {
-	VPROF( "CDataCache::Flush" );
+	CVProfScope _( "CDataCache::Flush", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	unsigned result;
 
@@ -1340,7 +1326,7 @@ void CDataCache::OutputReport( DataCacheReportType_t reportType, const char *psz
 					OutputReport( DC_SUMMARY_REPORT, m_Sections[i]->GetName() );
 				}
 			}
-			Msg( "Summary: %i resources total %s, %.2f %% of capacity\n", (int)std::ssize( lockedlist ) + (int)std::ssize( lruList ), Q_pretifymem( bytesUsed, 2, true ), percent );
+			Msg( "Summary: %i resources total %s, %.2f %% of capacity\n", (int)std::ssize( lockedlist ) + (int)std::ssize( lruList ), V_pretifymem( bytesUsed, 2, true ), percent );
 		}
 		else
 		{
@@ -1378,7 +1364,7 @@ void CDataCache::OutputReport( DataCacheReportType_t reportType, const char *psz
 				sectionSize = pSection->GetLimits().nMaxBytes;
 			}
 			sectionPercent = 100.0f * (float)sectionBytes/(float)sectionSize;
-			Msg( "Section [%s]: %i resources total %s, %.2f %% of limit (%s)\n", pszSection, sectionCount, Q_pretifymem( sectionBytes, 2, true ), sectionPercent, Q_pretifymem( sectionSize, 2, true ) );
+			Msg( "Section [%s]: %i resources total %s, %.2f %% of limit (%s)\n", pszSection, sectionCount, V_pretifymem( sectionBytes, 2, true ), sectionPercent, V_pretifymem( sectionSize, 2, true ) );
 		}
 	}
 }
@@ -1401,7 +1387,7 @@ void CDataCache::OutputItemReport( memhandle_t hItem, void *pXboxData )
 
 
 	Msg( "\t%16.16s : %12s : 0x%08x, %p, 0x%p : %s : %s\n", 
-		Q_pretifymem( pItem->size, 2, true ), 
+		V_pretifymem( pItem->size, 2, true ), 
 		pSection->GetName(), 
 		pItem->clientId, pItem->pItemData, hItem,
 		( name[0] ) ? name : "unknown",
@@ -1431,8 +1417,8 @@ bool CDataCache::SortMemhandlesBySizeLessFunc( const memhandle_t& lhs, const mem
 	DataCacheItem_t *pItem1 = g_DataCache.m_LRU.GetResource_NoLockNoLRUTouch( lhs );
 	DataCacheItem_t *pItem2 = g_DataCache.m_LRU.GetResource_NoLockNoLRUTouch( rhs );
 
-	Assert( pItem1 );
-	Assert( pItem2 );
+	contract_assert( pItem1 );
+	contract_assert( pItem2 );
 
 	return pItem1->size < pItem2->size;
 }

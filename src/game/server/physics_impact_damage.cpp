@@ -1,17 +1,33 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
 #include "physics_impact_damage.h"
 #include "shareddefs.h"
 #include "vphysics/friction.h"
 #include "vphysics/player_controller.h"
 #include "world.h"
-
 
 //==============================================================================================
 // PLAYER PHYSICS DAMAGE TABLE
@@ -39,8 +55,8 @@ impactdamagetable_t gDefaultPlayerImpactDamageTable =
 	playerLinearTable,
 	playerAngularTable,
 
-	ARRAYSIZE(playerLinearTable),
-	ARRAYSIZE(playerAngularTable),
+	std::size( playerLinearTable ),
+	std::size( playerAngularTable ),
 
 	24*24.0f,	// minimum linear speed
 	360*360.0f,	// minimum angular speed
@@ -83,8 +99,8 @@ impactdamagetable_t gDefaultPlayerVehicleImpactDamageTable =
 	playerVehicleLinearTable,
 	playerVehicleAngularTable,
 
-	ARRAYSIZE(playerVehicleLinearTable),
-	ARRAYSIZE(playerVehicleAngularTable),
+	std::size( playerVehicleLinearTable ),
+	std::size( playerVehicleAngularTable ),
 
 	24*24,		// minimum linear speed
 	360*360,	// minimum angular speed
@@ -126,8 +142,8 @@ impactdamagetable_t gDefaultNPCImpactDamageTable =
 	npcLinearTable,
 	npcAngularTable,
 	
-	ARRAYSIZE(npcLinearTable),
-	ARRAYSIZE(npcAngularTable),
+	std::size( npcLinearTable ),
+	std::size( npcAngularTable ),
 
 	24*24,		// minimum linear speed squared
 	360*360,	// minimum angular speed squared (360 deg/s to cause spin/slice damage)
@@ -169,8 +185,8 @@ impactdamagetable_t gGlassImpactDamageTable =
 	glassLinearTable,
 	glassAngularTable,
 	
-	ARRAYSIZE(glassLinearTable),
-	ARRAYSIZE(glassAngularTable),
+	std::size( glassLinearTable ),
+	std::size( glassAngularTable ),
 
 	8*8,		// minimum linear speed squared
 	360*360,	// minimum angular speed squared (360 deg/s to cause spin/slice damage)
@@ -297,7 +313,7 @@ float CalculatePhysicsImpactDamage( int index, gamevcollisionevent_t *pEvent, co
 	{
 		// UNDONE: Add up mass here for car wheels and prop_ragdoll pieces?
 		IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-		int count = pEvent->pEntities[otherIndex]->VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+		int count = pEvent->pEntities[otherIndex]->VPhysicsGetObjectList( pList, std::size( pList ) );
 		for ( int i = 0; i < count; i++ )
 		{
 			if ( pList[i]->GetGameFlags() & gameFlagsNoDamage )
@@ -466,9 +482,9 @@ float CalculateDefaultPhysicsDamage( int index, gamevcollisionevent_t *pEvent, f
 	// If we have a specified damage table, find it and use it instead
 	if ( iszDamageTableName != NULL_STRING )
 	{
-		for ( int i = 0; i < ARRAYSIZE(gDamageTableRegistry); i++ )
+		for ( int i = 0; i < std::size( gDamageTableRegistry ); i++ )
 		{
-			if ( !Q_strcmp( gDamageTableRegistry[i].pszTableName, STRING(iszDamageTableName) ) )
+			if ( !V_strcmp( gDamageTableRegistry[i].pszTableName, STRING(iszDamageTableName) ) )
 				return CalculatePhysicsImpactDamage( index, pEvent, *(gDamageTableRegistry[i].pTable), energyScale, allowStaticDamage, damageType, bDamageFromHeldObjects );
 		}
 
@@ -596,7 +612,7 @@ float CalculateObjectStress( IPhysicsObject *pObject, CBaseEntity *pInputOwnerEn
 	Vector negativeForce = vec3_origin;
 	Vector positiveForce = vec3_origin;
 
-	Assert( std::ssize( pObjectList ) == std::ssize( objectForce ) );
+	contract_assert( std::ssize( pObjectList ) == std::ssize( objectForce ) );
 	for ( int objectIndex = std::ssize( pObjectList )-1; objectIndex >= 0; --objectIndex )
 	{
 		sum += objectForce[objectIndex].Length();

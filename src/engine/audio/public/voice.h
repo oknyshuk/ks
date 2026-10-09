@@ -1,33 +1,23 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef VOICE_H
-#define VOICE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+import ks.core;
 #include "ivoicetweak.h"
-
 
 /*! @defgroup Voice Voice
 Defines the engine's interface to the voice code.
 @{
 */
-
-
-#define VOICE_OUTPUT_SAMPLE_RATE			22050	// Sample rate that we feed to the mixer for celt codec.
-#define VOICE_OUTPUT_SAMPLE_RATE_SPEEX		11025	// Sample rate that we feed to the mixer for speex codec.
+inline constexpr auto VOICE_OUTPUT_SAMPLE_RATE = 22050; // Sample rate that we feed to the mixer for celt codec.
+inline constexpr auto VOICE_OUTPUT_SAMPLE_RATE_SPEEX = 11025; // Sample rate that we feed to the mixer for speex codec.
 
 
 //! Returned on error from certain voice functions.
-#define VOICE_CHANNEL_ERROR			-1
-#define VOICE_CHANNEL_IN_TWEAK_MODE	-2	// Returned by AssignChannel if currently in tweak mode (not an error).
+inline constexpr auto VOICE_CHANNEL_ERROR = -1;
+inline constexpr auto VOICE_CHANNEL_IN_TWEAK_MODE = -2; // Returned by AssignChannel if currently in tweak mode (not an error).
 
-#define VOICE_CURRENT_VERSION 3
+inline constexpr auto VOICE_CURRENT_VERSION = 3;
 
 
 //! Initialize the voice code.
@@ -85,7 +75,6 @@ bool Voice_RecordStop();
 
 enum VoiceFormat_t
 {
-	VoiceFormat_Steam,
 	VoiceFormat_Engine
 };
 
@@ -120,11 +109,11 @@ void Voice_AddIncomingData(
 	uint32 nSectionSequenceNumber,
 	//! Uncompressed timestamp.  Used to handle silence and dropped packets properly
 	uint32 nUncompressedSampleOffset,
-	//! Use Steam or engine voice data format
+	//! Voice data format
 	VoiceFormat_t format
 	);
 
-#define VOICE_TIME_PADDING	0.2f	// Time between receiving the first voice packet and actually starting
+inline constexpr auto VOICE_TIME_PADDING = 0.2f; // Time between receiving the first voice packet and actually starting
 									// to play the sound. This accounts for frametime differences on the clients
 									// and the server.
 
@@ -137,11 +126,6 @@ int Voice_AssignChannel(int nEntity, bool bProximity, bool bCaster = false, floa
 //! \return A channel index for use with Voice_AddIncomingData or VOICE_CHANNEL_ERROR if the entity isn't talking.
 int Voice_GetChannel(int nEntity);
 
-#if !defined( NO_VOICE )
 extern IVoiceTweak g_VoiceTweakAPI;
-#endif
 
 /*! @} */
-
-
-#endif // VOICE_H

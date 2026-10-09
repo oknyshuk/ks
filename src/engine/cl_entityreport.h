@@ -1,13 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( CL_ENTITYREPORT_H )
-#define CL_ENTITYREPORT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Bits needed for action
+import std;
+import ks.tier1;
+class ClientClass;
+
 void CL_RecordEntityBits( int entnum, int bitcount );
 
 // Special events to record
@@ -16,5 +15,3 @@ void CL_RecordLeavePVS( int entnum );
 void CL_RecordDeleteEntity( int entnum, ClientClass *pclass );
 
 extern ConVar cl_entityreport;
-
-#endif // CL_ENTITYREPORT_H

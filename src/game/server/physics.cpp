@@ -1,20 +1,49 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Interface layer for ipion IVP physics.
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
 
-
-#include "cbase.h"
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "coordsize.h"
 #include "entitylist.h"
 #include "vcollide_parse.h"
 #include "soundenvelope.h"
 #include "game.h"
-#include "utlvector.h"
 #include "init_factory.h"
 #include "igamesystem.h"
 #include "hierarchy.h"
@@ -28,25 +57,19 @@
 #include "vehicle_sounds.h"
 #include "movevars_shared.h"
 #include "solidsetdefaults.h"
-#include "tier0/vprof.h"
 #include "engine/IStaticPropMgr.h"
 #include "physics_prop_ragdoll.h"
 #include "particle_parse.h"
 #include "vphysics/object_hash.h"
 #include "vphysics/collision_set.h"
 #include "vphysics/friction.h"
-#include "fmtstr.h"
 #include "physics_npc_solver.h"
 #include "physics_collisionevent.h"
 #include "vphysics/performance.h"
 #include "positionwatcher.h"
-#include "tier1/callqueue.h"
 #include "vphysics/constraints.h"
-#include "tier0/miniprofiler.h"
-#include "tier1.h"
 #include "vphysics2_interface.h"
 #include "vphysics2_interface_flags.h"
-
 
 void PrecachePhysicsSounds( void );
 
@@ -56,8 +79,6 @@ ConVar phys_show_active( "phys_show_active", "0", FCVAR_CHEAT );
 ConVar phys_debug_check_contacts("phys_debug_check_contacts", "0", FCVAR_CHEAT|FCVAR_REPLICATED);
 // defined in phys_constraint
 extern IPhysicsConstraintEvent *g_pConstraintEvents;
-//DLL_IMPORT CLinkedMiniProfiler *g_pPhysicsMiniProfilers;
-//CLinkedMiniProfiler g_mp_ServerPhysicsSimulate("ServerPhysicsSimulate",&g_pPhysicsMiniProfilers);
 
 
 CEntityList *g_pShadowEntities = nullptr;
@@ -271,7 +292,7 @@ bool CPhysicsHook::FindOrAddVehicleScript( const char *pScriptName, vehicleparam
 	int index = -1;
 	for ( int i = 0; i < std::ssize( m_vehicleScripts ); i++ )
 	{
-		if ( !Q_stricmp(m_vehicleScripts[i].scriptName.ToCStr(), pScriptName) )
+		if ( !V_stricmp(m_vehicleScripts[i].scriptName.ToCStr(), pScriptName) )
 		{
 			index = i;
 			bLoadedSounds = true;
@@ -297,7 +318,7 @@ bool CPhysicsHook::FindOrAddVehicleScript( const char *pScriptName, vehicleparam
 				{
 					pParse->ParseVehicle( &m_vehicleScripts[index].params, nullptr );
 				}
-				else if ( !Q_stricmp( pBlock, "vehicle_sounds" ) )
+				else if ( !V_stricmp( pBlock, "vehicle_sounds" ) )
 				{
 					bLoadedSounds = true;
 					CVehicleSoundsParser soundParser;
@@ -336,7 +357,7 @@ bool CPhysicsHook::FindOrAddVehicleScript( const char *pScriptName, vehicleparam
 // called after entities think
 void CPhysicsHook::FrameUpdatePostEntityThink( ) 
 {
-	VPROF_BUDGET( "CPhysicsHook::FrameUpdatePostEntityThink", VPROF_BUDGETGROUP_PHYSICS );
+	CVProfScope _( "CPhysicsHook::FrameUpdatePostEntityThink", 0, VPROF_BUDGETGROUP_PHYSICS, false, BUDGETFLAG_OTHER );
 
 	// Tracker 24846:  If game is paused, don't simulate vphysics
 	float interval = ( gpGlobals->frametime > 0.0f ) ? TICK_INTERVAL : 0.0f;
@@ -405,7 +426,7 @@ int CCollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject *pObj1
 {
 	int x0 = ShouldCollide_2(pObj0, pObj1, pGameData0, pGameData1);
 	int x1 = ShouldCollide_2(pObj1, pObj0, pGameData1, pGameData0);
-	Assert(x0==x1);
+	contract_assert( x0==x1 );
 	return x0;
 }
 int CCollisionEvent::ShouldCollide_2( IPhysicsObject *pObj0, IPhysicsObject *pObj1, void *pGameData0, void *pGameData1 )
@@ -761,7 +782,7 @@ static void UpdateEntityPenetrationFlag( CBaseEntity *pEntity, bool isPenetratin
 	if ( !pEntity )
 		return;
 	IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-	int count = pEntity->VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+	int count = pEntity->VPhysicsGetObjectList( pList, std::size( pList ) );
 	for ( int i = 0; i < count; i++ )
 	{
 		if ( !pList[i]->IsStatic() )
@@ -828,7 +849,7 @@ void CCollisionEvent::UpdatePenetrateEvents( void )
 				if ( !pNPC )
 				{
 					pNPC = pEntity1->MyNPCPointer();
-					Assert(pNPC);
+					contract_assert( pNPC );
 					pBlocker = pEntity0;
 				}
 				NPCPhysics_CreateSolver( pNPC, pBlocker, true, 1.0f );
@@ -1134,20 +1155,20 @@ void PhysSolidOverride( solid_t &solid, string_t overrideScript )
 		char pTmpString[4096];
 
 		// write a header for a solid_t
-		Q_strncpy( pTmpString, "solid { ", sizeof(pTmpString) );
+		V_strncpy( pTmpString, "solid { ", sizeof(pTmpString) );
 
 		// suck out the comma delimited tokens and turn them into quoted key/values
 		char szToken[256];
 		const char *pStr = nexttoken(szToken, STRING(overrideScript), ',');
 		while ( szToken[0] != 0 )
 		{
-			Q_strncat( pTmpString, "\"", sizeof(pTmpString), COPY_ALL_CHARACTERS );
-			Q_strncat( pTmpString, szToken, sizeof(pTmpString), COPY_ALL_CHARACTERS );
-			Q_strncat( pTmpString, "\" ", sizeof(pTmpString), COPY_ALL_CHARACTERS );
+			V_strncat( pTmpString, "\"", sizeof(pTmpString), COPY_ALL_CHARACTERS );
+			V_strncat( pTmpString, szToken, sizeof(pTmpString), COPY_ALL_CHARACTERS );
+			V_strncat( pTmpString, "\" ", sizeof(pTmpString), COPY_ALL_CHARACTERS );
 			pStr = nexttoken(szToken, pStr, ',');
 		}
 		// terminate the script
-		Q_strncat( pTmpString, "}", sizeof(pTmpString), COPY_ALL_CHARACTERS );
+		V_strncat( pTmpString, "}", sizeof(pTmpString), COPY_ALL_CHARACTERS );
 
 		// parse that sucker
 		IVPhysicsKeyParser *pParse = physcollision->VPhysicsKeyParserCreate( pTmpString );
@@ -1223,11 +1244,12 @@ typedef void (*EntityCallbackFunction) ( CBaseEntity *pEntity );
 
 void IterateActivePhysicsEntities( EntityCallbackFunction func )
 {
+	ks::ScratchArena<> scratch;
 	int activeCount = physenv->GetActiveObjectCount();
 	IPhysicsObject **pActiveList = nullptr;
 	if ( activeCount )
 	{
-		pActiveList = (IPhysicsObject **)stackalloc( sizeof(IPhysicsObject *)*activeCount );
+		pActiveList = scratch.Alloc<IPhysicsObject *>( activeCount );
 		physenv->GetActiveObjects( pActiveList );
 		for ( int i = 0; i < activeCount; i++ )
 		{
@@ -1249,14 +1271,16 @@ static void CallbackHighlight( CBaseEntity *pEntity )
 static void CallbackReport( CBaseEntity *pEntity )
 {
 	const char *pName = STRING(pEntity->GetEntityName());
-	if ( !Q_strlen(pName) )
+	if ( !V_strlen(pName) )
 	{
 		pName = STRING(pEntity->GetModelName());
 	}
 	Msg( "%s - %s\n", pEntity->GetClassname(), pName );
 }
 
-CON_COMMAND(physics_highlight_active, "Turns on the absbox for all active physics objects")
+static void physics_highlight_active( const CCommand &args );
+static ConCommand physics_highlight_active_command( "physics_highlight_active", physics_highlight_active, "Turns on the absbox for all active physics objects" );
+static void physics_highlight_active( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1264,7 +1288,9 @@ CON_COMMAND(physics_highlight_active, "Turns on the absbox for all active physic
 	IterateActivePhysicsEntities( CallbackHighlight );
 }
 
-CON_COMMAND(physics_report_active, "Lists all active physics objects")
+static void physics_report_active( const CCommand &args );
+static ConCommand physics_report_active_command( "physics_report_active", physics_report_active, "Lists all active physics objects" );
+static void physics_report_active( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1272,7 +1298,9 @@ CON_COMMAND(physics_report_active, "Lists all active physics objects")
 	IterateActivePhysicsEntities( CallbackReport );
 }
 
-CON_COMMAND_F(surfaceprop, "Reports the surface properties at the cursor", FCVAR_CHEAT )
+static void surfaceprop( const CCommand &args );
+static ConCommand surfaceprop_command( "surfaceprop", surfaceprop, "Reports the surface properties at the cursor", FCVAR_CHEAT );
+static void surfaceprop( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1324,7 +1352,7 @@ static void OutputVPhysicsDebugInfo( CBaseEntity *pEntity )
 		}
 
 		IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-		int physCount = pEntity->VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+		int physCount = pEntity->VPhysicsGetObjectList( pList, std::size( pList ) );
 		if ( physCount )
 		{
 			if ( physCount > 1 )
@@ -1381,7 +1409,7 @@ public:
 		}
 		int entryIndex = it->second;
 		CConstraintFloodEntry &entry = m_entryList[ entryIndex ];
-		Assert( entry.isConstraint == bIsConstraint );
+		contract_assert( entry.isConstraint == bIsConstraint );
 		if ( ks::find_index( entry.linkList, pLink ) < 0 )
 		{
 			entry.linkList.push_back( pLink );
@@ -1399,7 +1427,7 @@ public:
 			{
 				if ( entry.isConstraint )
 				{
-					Assert( ks::find_index( constraintList, pEntity ) < 0);
+					contract_assert( ks::find_index( constraintList, pEntity ) < 0 );
 					constraintList.push_back( pEntity );
 				}
 				entry.isMarked = true;
@@ -1514,7 +1542,9 @@ void PhysicsCommand( const CCommand &args, void (*func)( CBaseEntity *pEntity ) 
 	}
 }
 
-CON_COMMAND(physics_constraints, "Highlights constraint system graph for an entity")
+static void physics_constraints( const CCommand &args );
+static ConCommand physics_constraints_command( "physics_constraints", physics_constraints, "Highlights constraint system graph for an entity" );
+static void physics_constraints( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1522,7 +1552,9 @@ CON_COMMAND(physics_constraints, "Highlights constraint system graph for an enti
 	PhysicsCommand( args, DebugConstraints );
 }
 
-CON_COMMAND(physics_debug_entity, "Dumps debug info for an entity")
+static void physics_debug_entity( const CCommand &args );
+static ConCommand physics_debug_entity_command( "physics_debug_entity", physics_debug_entity, "Dumps debug info for an entity" );
+static void physics_debug_entity( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1530,7 +1562,9 @@ CON_COMMAND(physics_debug_entity, "Dumps debug info for an entity")
 	PhysicsCommand( args, OutputVPhysicsDebugInfo );
 }
 
-CON_COMMAND(physics_select, "Dumps debug info for an entity")
+static void physics_select( const CCommand &args );
+static ConCommand physics_select_command( "physics_select", physics_select, "Dumps debug info for an entity" );
+static void physics_select( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1538,8 +1572,11 @@ CON_COMMAND(physics_select, "Dumps debug info for an entity")
 	PhysicsCommand( args, MarkVPhysicsDebug );
 }
 
-CON_COMMAND( physics_budget, "Times the cost of each active object" )
+static void physics_budget( const CCommand &args );
+static ConCommand physics_budget_command( "physics_budget", physics_budget, "Times the cost of each active object" );
+static void physics_budget( const CCommand &args )
 {
+	ks::ScratchArena<> scratch;
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
 
@@ -1551,7 +1588,7 @@ CON_COMMAND( physics_budget, "Times the cost of each active object" )
 	{
 		int i;
 
-		pActiveList = (IPhysicsObject **)stackalloc( sizeof(IPhysicsObject *)*activeCount );
+		pActiveList = scratch.Alloc<IPhysicsObject *>( activeCount );
 		physenv->GetActiveObjects( pActiveList );
 		for ( i = 0; i < activeCount; i++ )
 		{
@@ -1573,7 +1610,6 @@ CON_COMMAND( physics_budget, "Times the cost of each active object" )
 				ents.push_back( pEntity );
 			}
 		}
-		stackfree( pActiveList );
 
 		if ( ents.empty() )
 			return;
@@ -1583,7 +1619,6 @@ CON_COMMAND( physics_budget, "Times the cost of each active object" )
 		g_Collisions.BufferTouchEvents( true );
 		double full = Plat_FloatTime();
 		{
-			//CMiniProfilerGuard mpg3(&g_mp_ServerPhysicsSimulate);
 			physenv->Simulate( DEFAULT_TICK_INTERVAL );
 		}
 		full = Plat_FloatTime() - full;
@@ -1603,7 +1638,6 @@ CON_COMMAND( physics_budget, "Times the cost of each active object" )
 			}
 			float start = Plat_FloatTime();
 			{
-				//CMiniProfilerGuard mpg3(&g_mp_ServerPhysicsSimulate);
 				physenv->Simulate( DEFAULT_TICK_INTERVAL );
 			}
 			double end = Plat_FloatTime();
@@ -1619,7 +1653,7 @@ CON_COMMAND( physics_budget, "Times the cost of each active object" )
 		for ( i = 0; i < std::ssize( ents ); i++ )
 		{
 			float fraction = times[i] / totalTime;
-			Msg( "%s (%s): %.3fms (%.3f%%) @ %s\n", ents[i]->GetClassname(), ents[i]->GetDebugName(), fraction * totalTime * 1000.0f, fraction * 100.0f, VecToString(ents[i]->GetAbsOrigin()) );
+			Msg( "%s (%s): %.3fms (%.3f%%) @ %s\n", ents[i]->GetClassname(), ents[i]->GetDebugName(), fraction * totalTime * 1000.0f, fraction * 100.0f, VecToString(ents[i]->GetAbsOrigin()).c_str() );
 		}
 		g_Collisions.BufferTouchEvents( false );
 	}
@@ -1631,6 +1665,7 @@ CON_COMMAND( physics_budget, "Times the cost of each active object" )
 // Advance physics by time (in seconds)
 void PhysFrame( float deltaTime )
 {
+	ks::ScratchArena<> scratch;
 	static int lastObjectCount = 0;
 	entitem_t *pItem;
 
@@ -1670,8 +1705,7 @@ void PhysFrame( float deltaTime )
 	g_Collisions.BufferTouchEvents( true );
 
 	{
-		//CMiniProfilerGuard mpg3(&g_mp_ServerPhysicsSimulate);
-		VPROF( "physenv->Simulate()" );
+		CVProfScope _( "physenv->Simulate()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		physenv->Simulate( deltaTime );
 	}
 
@@ -1679,9 +1713,9 @@ void PhysFrame( float deltaTime )
 	IPhysicsObject **pActiveList = nullptr;
 	if ( activeCount )
 	{
-		VPROF( "physenv->GetActiveObjects->VPhysicsUpdate" );
+		CVProfScope _( "physenv->GetActiveObjects->VPhysicsUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-		pActiveList = (IPhysicsObject **)stackalloc( sizeof(IPhysicsObject *)*activeCount );
+		pActiveList = scratch.Alloc<IPhysicsObject *>( activeCount );
 		physenv->GetActiveObjects( pActiveList );
 
 		for ( int i = 0; i < activeCount; i++ )
@@ -1708,11 +1742,10 @@ void PhysFrame( float deltaTime )
 				}
 			}
 		}
-		stackfree( pActiveList );
 	}
 
 	{
-	VPROF( "PhysFrame VPhysicsShadowUpdate" );
+	CVProfScope _( "PhysFrame VPhysicsShadowUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	for ( pItem = g_pShadowEntities->m_pItemList; pItem; pItem = pItem->pNext )
 	{
 		CBaseEntity *pEntity = pItem->hEnt.Get();
@@ -1860,7 +1893,7 @@ void CCollisionEvent::PostCollision( vcollisionevent_t *pEvent )
 			}
 
 			// Shouldn't get impacts with triggers
-			Assert( !pObject->IsTrigger() );
+			contract_assert( !pObject->IsTrigger() );
 		}
 	}
 
@@ -1904,9 +1937,8 @@ void PhysForceEntityToSleep( CBaseEntity *pEntity, IPhysicsObject *pObject )
 		return;
 
 	DevMsg(2, "Putting entity to sleep: %s\n", pEntity->GetClassname() );
-	MEM_ALLOC_CREDIT();
 	IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-	int physCount = pEntity->VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+	int physCount = pEntity->VPhysicsGetObjectList( pList, std::size( pList ) );
 	for ( int i = 0; i < physCount; i++ )
 	{
 		PhysForceClearVelocity( pList[i] );
@@ -1950,7 +1982,7 @@ friction_t *CCollisionEvent::FindFriction( CBaseEntity *pObject )
 {
 	friction_t *pFree = nullptr;
 
-	for ( int i = 0; i < ARRAYSIZE(m_current); i++ )
+	for ( int i = 0; i < std::size( m_current ); i++ )
 	{
 		if ( !m_current[i].pObject && !pFree )
 			pFree = &m_current[i];
@@ -1972,7 +2004,7 @@ void CCollisionEvent::ShutdownFriction( friction_t &friction )
 
 void CCollisionEvent::UpdateRemoveObjects()
 {
-	Assert(!PhysIsInCallback());
+	contract_assert( !PhysIsInCallback() );
 	for ( int i = 0 ; i < std::ssize( m_removeObjects ); i++ )
 	{
 		UTIL_Remove(m_removeObjects[i]);
@@ -1997,7 +2029,7 @@ void CCollisionEvent::FlushQueuedOperations()
 			break;
 		// testing, if this assert fires it proves we've fixed the crash
 		// after that the assert + warning can safely be removed
-		Assert(0);
+		contract_assert( 0 );
 		Warning("Physics queue not empty, error!\n");
 		loopCount++;
 		UpdateTouchEvents();
@@ -2061,7 +2093,7 @@ float CCollisionEvent::DeltaTimeSinceLastFluid( CBaseEntity *pEntity )
 
 void CCollisionEvent::UpdateFrictionSounds( void )
 {
-	for ( int i = 0; i < ARRAYSIZE(m_current); i++ )
+	for ( int i = 0; i < std::size( m_current ); i++ )
 	{
 		if ( m_current[i].patch )
 		{
@@ -2078,7 +2110,7 @@ void CCollisionEvent::UpdateFrictionSounds( void )
 void CCollisionEvent::DispatchStartTouch( CBaseEntity *pEntity0, CBaseEntity *pEntity1, const Vector &point, const Vector &normal )
 {
 	trace_t trace;
-	memset( &trace, 0, sizeof(trace) );
+	std::memset( &trace, 0, sizeof(trace) );
 	trace.endpos = point;
 	trace.plane.dist = DotProduct( point, normal );
 	trace.plane.normal = normal;
@@ -2260,7 +2292,7 @@ void CCollisionEvent::AddDamageEvent( CBaseEntity *pEntity, const CTakeDamageInf
 	int iTimeBasedDamage = g_pGameRules->Damage_GetTimeBased();
 	if ( !( info.GetDamageType() & (DMG_BURN | DMG_DROWN | iTimeBasedDamage | DMG_PREVENT_PHYSICS_FORCE) ) )
 	{
-		Assert( info.GetDamageForce() != vec3_origin && info.GetDamagePosition() != vec3_origin );
+		contract_assert( info.GetDamageForce() != vec3_origin && info.GetDamagePosition() != vec3_origin );
 	}
 
 	int index = std::ssize( m_damageEvents ); m_damageEvents.emplace_back();
@@ -2355,7 +2387,7 @@ int CCollisionEvent::AddDamageInflictor( IPhysicsObject *pInflictorPhysics, floa
 		if ( pEntity )
 		{
 			IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-			int physCount = pEntity->VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+			int physCount = pEntity->VPhysicsGetObjectList( pList, std::size( pList ) );
 			if ( physCount > 1 )
 			{
 				int currentIndex = addIndex;
@@ -2380,7 +2412,7 @@ int CCollisionEvent::AddDamageInflictor( IPhysicsObject *pInflictorPhysics, floa
 
 void CCollisionEvent::LevelShutdown( void )
 {
-	for ( int i = 0; i < ARRAYSIZE(m_current); i++ )
+	for ( int i = 0; i < std::size( m_current ); i++ )
 	{
 		if ( m_current[i].patch )
 		{
@@ -2439,7 +2471,7 @@ void CCollisionEvent::EndTouch( IPhysicsObject *pObject1, IPhysicsObject *pObjec
 
 	// contact point deleted, but entities are still touching?
 	IPhysicsObject *list[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-	int count = pEntity1->VPhysicsGetObjectList( list, ARRAYSIZE(list) );
+	int count = pEntity1->VPhysicsGetObjectList( list, std::size( list ) );
 
 	int contactCount = 0;
 	for ( int i = 0; i < count; i++ )
@@ -2686,19 +2718,19 @@ void PhysCleanupFrictionSounds( CBaseEntity *pEntity )
 //-----------------------------------------------------------------------------
 void PhysCallbackImpulse( IPhysicsObject *pPhysicsObject, const Vector &vecCenterForce, const AngularImpulse &vecCenterTorque )
 {
-	Assert( physenv->IsInSimulation() );
+	contract_assert( physenv->IsInSimulation() );
 	g_PostSimulationQueue.QueueCall( PostSimulation_ImpulseEvent, pPhysicsObject, RefToVal(vecCenterForce), RefToVal(vecCenterTorque) );
 }
 
 void PhysCallbackSetVelocity( IPhysicsObject *pPhysicsObject, const Vector &vecVelocity )
 {
-	Assert( physenv->IsInSimulation() );
+	contract_assert( physenv->IsInSimulation() );
 	g_PostSimulationQueue.QueueCall( PostSimulation_SetVelocityEvent, pPhysicsObject, RefToVal(vecVelocity) );
 }
 
 void PhysCallbackDamage( CBaseEntity *pEntity, const CTakeDamageInfo &info, gamevcollisionevent_t &event, int hurtIndex )
 {
-	Assert( physenv->IsInSimulation() );
+	contract_assert( physenv->IsInSimulation() );
 	int otherIndex = !hurtIndex;
 	g_Collisions.AddDamageEvent( pEntity, info, event.pObjects[otherIndex], true, event.preVelocity[otherIndex], event.preAngularVelocity[otherIndex] );
 }
@@ -2736,7 +2768,7 @@ void PhysCallbackRemove(IServerNetworkable *pRemove)
 void PhysSetEntityGameFlags( CBaseEntity *pEntity, unsigned short flags )
 {
 	IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-	int count = pEntity->VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+	int count = pEntity->VPhysicsGetObjectList( pList, std::size( pList ) );
 	for ( int i = 0; i < count; i++ )
 	{
 		PhysSetGameFlags( pList[i], flags );
@@ -2755,7 +2787,7 @@ void PhysFlushVehicleScripts()
 
 IPhysicsObject *FindPhysicsObjectByName( const char *pName, CBaseEntity *pErrorEntity )
 {
-	if ( !pName || !strlen(pName) )
+	if ( !pName || !std::strlen(pName) )
 		return nullptr;
 
 	CBaseEntity *pEntity = nullptr;
@@ -2771,7 +2803,7 @@ IPhysicsObject *FindPhysicsObjectByName( const char *pName, CBaseEntity *pErrorE
 			{
 				const char *pErrorName = pErrorEntity ? pErrorEntity->GetClassname() : "Unknown";
 				Vector origin = pErrorEntity ? pErrorEntity->GetAbsOrigin() : vec3_origin;
-				DevWarning("entity %s at %s has physics attachment to more than one entity with the name %s!!!\n", pErrorName, VecToString(origin), pName );
+				DevWarning("entity %s at %s has physics attachment to more than one entity with the name %s!!!\n", pErrorName, VecToString(origin).c_str(), pName );
 				while ( ( pEntity = gEntList.FindEntityByName( pEntity, pName ) ) != nullptr )
 				{
 					DevWarning("Found %s\n", pEntity->GetClassname() );
@@ -2796,7 +2828,7 @@ void CC_AirDensity( const CCommand &args )
 	}
 	else
 	{
-		float density = atof( args[1] );
+		float density = std::atof( args[1] );
 		physenv->SetAirDensity( density );
 	}
 }
@@ -2822,7 +2854,3 @@ void DebugDrawContactPoints(IPhysicsObject *pPhysics)
 	pSnapshot->DeleteAllMarkedContacts( true );
 	pPhysics->DestroyFrictionSnapshot( pSnapshot );
 }
-
-
-
-

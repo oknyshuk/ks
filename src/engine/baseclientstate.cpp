@@ -1,10 +1,37 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:  baseclientstate.cpp: implementation of the CBaseClientState class.
-// 
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "client_pch.h"
+// Purpose: baseclientstate.cpp: implementation of the CBaseClientState class.
+
+// main precompiled header for client files
+
+import ks.tier1;
+
+#include "common.h"
+
+#include "cmd.h"
+#include "protocol.h"
+#include "render.h"
+
+
+#include "screen.h"
+
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+
+#include "demo.h"
+#include "host_state.h"
+#include "host.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "baseclientstate.h"
 #include "inetchannel.h"
 #include "netmessages.h"
@@ -17,28 +44,17 @@
 #include "cl_pluginhelpers.h"
 #include "cdll_engine_int.h"
 #endif
-#include "sv_steamauth.h"
 #include "snd_audio_source.h"
 #include "server.h"
-#include "cl_steamauth.h"
-#if defined( REPLAY_ENABLED )
-#include "replayserver.h"
-#include "replayhistorymanager.h"
-#endif
 #include "serializedentity.h"
 #include "checksum_engine.h"
 
 #include "matchmaking/imatchframework.h"
 #include "mathlib/IceKey.H"
 #include "hltvserver.h"
-#include "tier1/map_ops.h"
-#include <memory>
+import std;
 
-#include "localize/ilocalize.h"
 #include "eiface.h"
-
-#include "csgo_limits.h"
-#include "csgo_limits.inl"
 
 
 ConVar cl_teammate_color_1( "cl_teammate_color_1", "240 243 32" );
@@ -46,34 +62,6 @@ ConVar cl_teammate_color_2( "cl_teammate_color_2", "150 34 223" );
 ConVar cl_teammate_color_3( "cl_teammate_color_3", "0 165 90" );
 ConVar cl_teammate_color_4( "cl_teammate_color_4", "92 168 255" );
 ConVar cl_teammate_color_5( "cl_teammate_color_5", "255 155 37" );
-
-#ifdef ENABLE_RPT
-void CL_NotifyRPTOfDisconnect( );
-#endif // ENABLE_RPT
-
-
-void CL_NameCvarChanged( IConVar *pConVar, const char *pOldString, float flOldValue )
-{
-	CSplitScreenAddedConVar *pCheck = dynamic_cast< CSplitScreenAddedConVar * >( pConVar );
-	if ( pCheck )
-		return;
-
-#ifndef DEDICATED
-#endif
-
-	ConVarRef var( pConVar );
-
-	// store off the last known name, that isn't default, in the registry
-	// this is a transition step so it can be used to display in friends
-	if ( 0 != Q_stricmp( var.GetString(), var.GetDefault()  ) 
-		&& 0 != Q_stricmp( var.GetString(), "player" ) )
-	{
-	    Sys_SetRegKeyValue( "Software\\Valve\\Steam", "LastGameNameUsed", (char *)var.GetString() );
-	}
-}
-
-
-
 
 
 extern IVEngineClient *engineClient;
@@ -106,7 +94,7 @@ void CL_ClanIdChanged( IConVar *pConVar, const char *pOldString, float flOldValu
 
 ConVar	cl_resend	( "cl_resend", "2", FCVAR_RELEASE, "Delay in seconds before the client will resend the 'connect' attempt", true, CL_MIN_RESEND_TIME, true, CL_MAX_RESEND_TIME );
 ConVar	cl_resend_timeout	( "cl_resend_timeout", "60", FCVAR_RELEASE, "Total time allowed for the client to resend the 'connect' attempt", true, CL_MIN_RESEND_TIME, true, 1000 * CL_MAX_RESEND_TIME );
-ConVar	cl_name		( "name","unnamed", FCVAR_ARCHIVE | FCVAR_USERINFO | FCVAR_SS | FCVAR_PRINTABLEONLY | FCVAR_SERVER_CAN_EXECUTE, "Current user name", CL_NameCvarChanged );
+ConVar	cl_name		( "name","unnamed", FCVAR_ARCHIVE | FCVAR_USERINFO | FCVAR_SS | FCVAR_PRINTABLEONLY | FCVAR_SERVER_CAN_EXECUTE, "Current user name" );
 ConVar	password	( "password", "", FCVAR_ARCHIVE | FCVAR_SERVER_CANNOT_QUERY | FCVAR_DONTRECORD, "Current server access password" );
 static ConVar cl_interpolate( "cl_interpolate", "1", FCVAR_RELEASE, "Enables or disables interpolation on listen servers or during demo playback" );
 ConVar  cl_clanid( "cl_clanid", "0", FCVAR_ARCHIVE | FCVAR_USERINFO | FCVAR_HIDDEN, "Current clan ID for name decoration", CL_ClanIdChanged );
@@ -184,7 +172,7 @@ void CServerMsg::Update()
 	}
 	else
 	{
-		m_lastToken = RandomInt( INT_MIN, INT_MAX );
+		m_lastToken = RandomInt( std::numeric_limits<int>::min(), std::numeric_limits<int>::max() );
 		SendMsg( m_serverAdr, m_socket, m_lastToken );
 		m_lastMsgSendTime = net_time;
 		m_numAttempts++;
@@ -255,7 +243,7 @@ void CServerMsg_CheckReservation::SendMsg( const ns_address &serverAdr, int sock
 	msg.WriteLong( token );
 	msg.WriteLong( m_uiReservationStage );
 	msg.WriteLongLong( m_reservationCookie );
-	msg.WriteLongLong( Steam3Client().SteamUser()->GetSteamID().ConvertToUint64() );
+	msg.WriteLongLong( 0ull );
 
 	NET_SendPacket( nullptr, socket, serverAdr, msg.GetData(), msg.GetNumBytesWritten() );
 }
@@ -360,16 +348,15 @@ CBaseClientState::CBaseClientState()
 	m_nSplitScreenSlot = 0;
 	m_nMaxClients = 0;
 	m_nNumPlayersToConnect = 1;
-	Q_memset( m_pEntityBaselines, 0, sizeof( m_pEntityBaselines ) );
+	V_memset( m_pEntityBaselines, 0, sizeof( m_pEntityBaselines ) );
 	m_nServerClasses = 0;
 	m_nServerClassBits = 0;
-	m_ListenServerSteamID = 0ull;
 	m_flNextCmdTime = -1.0f;
-	Q_memset( m_szLevelName, 0, sizeof( m_szLevelName ) );
-	Q_memset( m_szLevelNameShort, 0, sizeof( m_szLevelNameShort ) );
-	Q_memset( m_szLastLevelNameShort, 0, sizeof( m_szLevelNameShort ) );
+	V_memset( m_szLevelName, 0, sizeof( m_szLevelName ) );
+	V_memset( m_szLevelNameShort, 0, sizeof( m_szLevelNameShort ) );
+	V_memset( m_szLastLevelNameShort, 0, sizeof( m_szLevelNameShort ) );
 	m_iEncryptionKeySize = 0;
-	Q_memset( m_szEncryptionKey, 0, sizeof( m_szEncryptionKey ) );
+	V_memset( m_szEncryptionKey, 0, sizeof( m_szEncryptionKey ) );
 
 	m_bRestrictServerCommands = true;
 	m_bRestrictClientCommands = true;
@@ -384,13 +371,8 @@ CBaseClientState::CBaseClientState()
 	m_nReservationMsgRetryNumber = 0;
 	m_bEnteredPassword = false;
 	m_bWaitingForPassword = false;
-#if ENGINE_CONNECT_VIA_MMS
-	m_bWaitingForServerGameDetails = false;
-#endif
 	m_nServerReservationCookie = 0;
 	m_pKVGameSettings = nullptr;
-	m_unUGCMapFileID = 0;
-	m_ulGameServerSteamID = 0;
 }
 
 CBaseClientState::~CBaseClientState()
@@ -422,7 +404,6 @@ void CBaseClientState::Clear( void )
 	m_nSplitScreenSlot = 0;
 	m_szLevelName[0] = 0;
 	m_nMaxClients = 0;
-	m_unUGCMapFileID = 0;
 	// m_nNumPlayersToConnect = 1; <-- when clearing state we need to preserve num players to properly "reconnect" to the server
 
 	// Need to cache off the name of the current map before clearing it so we can use when doing a memory flush.
@@ -440,9 +421,7 @@ void CBaseClientState::Clear( void )
 
 	if ( m_StringTableContainer  )
 	{
-#ifndef SHARED_NET_STRING_TABLES
 		m_StringTableContainer->RemoveAllTables();
-#endif
 	
 		m_StringTableContainer = nullptr;
 	}
@@ -473,17 +452,6 @@ void CBaseClientState::Clear( void )
 void CBaseClientState::FileReceived( const char * fileName, unsigned int transferID, bool bIsReplayDemoFile )
 {
 	ConMsg( "CBaseClientState::FileReceived: %s.\n", fileName );
-#if defined( REPLAY_ENABLED )
-	if ( isReplayDemoFile )
-	{
-		CClientReplayHistoryEntryData *pEntry = static_cast< CClientReplayHistoryEntryData *>( g_pClientReplayHistoryManager->FindEntry( fileName ) );		Assert( pEntry );
-		if ( pEntry )
-		{
-			pEntry->m_bTransferComplete = true;
-			g_pClientReplayHistoryManager->FlushEntriesToDisk();
-		}
-	}
-#endif
 }
 
 void CBaseClientState::FileDenied(const char *fileName, unsigned int transferID, bool bIsReplayDemoFile )
@@ -594,21 +562,21 @@ bool CBaseClientState::SetSignonState ( int state, int count, const ks::net::CNE
 	if ( state < SIGNONSTATE_NONE || state > SIGNONSTATE_CHANGELEVEL )
 	{
 		ConMsg ("Received signon %i when at %i\n", state, m_nSignonState );
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
 	if ( (state > SIGNONSTATE_CONNECTED) &&	(state <= m_nSignonState) && !m_NetChannel->IsPlayback() )
 	{
 		ConMsg ("Received signon %i when at %i\n", state, m_nSignonState);
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
 	if ( (count != m_nServerCount) && (count != -1) && (m_nServerCount != -1) && !m_NetChannel->IsPlayback() )
 	{
 		ConMsg ("Received wrong spawn count %i when at %i\n", count, m_nServerCount );
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
@@ -650,7 +618,7 @@ void RegisterServerCertificate( char const *szServerAddress, int numBytesPayload
 //   response before the timeout, send another "connect" request.
 // Output : void CL_SendConnectPacket
 //-----------------------------------------------------------------------------
-void CBaseClientState::SendConnectPacket ( const ns_address &netAdrRemote, int challengeNr, int authProtocol, uint64 unGSSteamID, bool bGSSecure )
+void CBaseClientState::SendConnectPacket ( const ns_address &netAdrRemote, int challengeNr, int authProtocol )
 {
 	COM_TimestampedLog( "SendConnectPacket" );
 
@@ -762,7 +730,7 @@ void CBaseClientState::SendConnectPacket ( const ns_address &netAdrRemote, int c
 	}
 
 	numBytesCookie = msg.GetNumBytesWritten() - numBytesCookie;
-	int numBytesSteamAuth = msg.GetNumBytesWritten();
+	int numBytesAuth = msg.GetNumBytesWritten();
 	switch ( authProtocol )
 	{
 		// Fall through, bogus protocol type, use CD key hash.
@@ -770,16 +738,10 @@ void CBaseClientState::SendConnectPacket ( const ns_address &netAdrRemote, int c
 									msg.WriteString( CDKey );		// cdkey
 									break;
 
-		case PROTOCOL_STEAM:		if ( !PrepareSteamConnectResponse( unGSSteamID, bGSSecure, netAdrRemote, msg ) )
-									{
-										return;
-									}
-									break;
-
 		default: 					Host_Error( "Unexepected authentication protocol %i!\n", authProtocol );
 									return;
 	}
-	numBytesSteamAuth = msg.GetNumBytesWritten() - numBytesSteamAuth;
+	numBytesAuth = msg.GetNumBytesWritten() - numBytesAuth;
 
 	// Mark time of this attempt for retransmit requests
 	m_flConnectTime = net_time;
@@ -791,43 +753,19 @@ void CBaseClientState::SendConnectPacket ( const ns_address &netAdrRemote, int c
 	if ( msg.GetNumBytesWritten() > 896 )
 	{
 		Warning( "[NET] Client connect packet too large for %s, total size %u bytes ( %u header, %u info, %u cookie, %u auth )\n", ns_address_render( netAdrRemote ).String(), msg.GetNumBytesWritten(),
-			numBytesPacketHeader, numBytesFcvarUserInfo, numBytesCookie, numBytesSteamAuth );
-		Assert( 0 );
+			numBytesPacketHeader, numBytesFcvarUserInfo, numBytesCookie, numBytesAuth );
+		contract_assert( 0 );
 	}
 	else
 	{
 		DevMsg( "[NET] Sending client connect packet to %s, total size %u bytes ( %u header, %u info, %u cookie, %u auth )\n", ns_address_render( netAdrRemote ).String(), msg.GetNumBytesWritten(),
-			numBytesPacketHeader, numBytesFcvarUserInfo, numBytesCookie, numBytesSteamAuth );
+			numBytesPacketHeader, numBytesFcvarUserInfo, numBytesCookie, numBytesAuth );
 	}
 	NET_SendPacket( nullptr, m_Socket, netAdrRemote, msg.GetData(), msg.GetNumBytesWritten() );
-
-
-	// Remember Steam ID, if any
-	m_ulGameServerSteamID = unGSSteamID;
 }
 
 
-//-----------------------------------------------------------------------------
-// Purpose: append steam specific data to a connection response
-//-----------------------------------------------------------------------------
-bool CBaseClientState::PrepareSteamConnectResponse( uint64 unGSSteamID, bool bGSSecure, const ns_address &adr, bf_write &msg )
-{
-	// X360TBD: Network - Steam Dedicated Server hack
 
-	
-#ifndef DEDICATED
-	// now append the steam3 cookie
-	char steam3Cookie[ STEAM_KEYSIZE ];	
-	uint32 steam3CookieLen;
-	Steam3Client().GetAuthSessionTicket( steam3Cookie, sizeof(steam3Cookie), &steam3CookieLen, unGSSteamID, bGSSecure );
-
-	msg.WriteShort( steam3CookieLen );
-	if ( steam3CookieLen > 0 )
-		msg.WriteBytes( steam3Cookie, steam3CookieLen );
-#endif
-
-	return true;
-}
 
 
 bool Remote_t::Resolve()
@@ -860,7 +798,7 @@ bool CAddressList::IsRemoteInList( char const *pchAdrCheck ) const
 {
 	for ( int i = 0; i < std::ssize( m_List ); ++i )
 	{
-		if ( !Q_stricmp( pchAdrCheck, Get( i ).m_szRetryAddress.c_str() ) )
+		if ( !V_stricmp( pchAdrCheck, Get( i ).m_szRetryAddress.c_str() ) )
 			return true;
 	}
 	return false;
@@ -896,13 +834,13 @@ int	CAddressList::Count() const
 
 Remote_t &CAddressList::Get( int index )
 {
-	Assert( index >= 0 && index < std::ssize( m_List ) );
+	contract_assert( index >= 0 && index < std::ssize( m_List ) );
 	return m_List[ index ];
 }
 
 const Remote_t &CAddressList::Get( int index ) const
 {
-	Assert( index >= 0 && index < std::ssize( m_List ) );
+	contract_assert( index >= 0 && index < std::ssize( m_List ) );
 	return m_List[ index ];
 }
 
@@ -922,8 +860,6 @@ void CAddressList::AddRemote( char const *pchAddress, char const *pchAlias )
 
 void CBaseClientState::ConnectInternal( const char *pchPublicAddress, char const *pchPrivateAddress, int numPlayers, const char* szJoinType )
 {
-#ifndef DEDICATED
-#endif
 
 	m_Remote.RemoveAll();
 	m_Remote.AddRemote( pchPublicAddress, "public" );
@@ -942,14 +878,12 @@ void CBaseClientState::ConnectInternal( const char *pchPublicAddress, char const
 	SetSignonState( SIGNONSTATE_CHALLENGE, -1, nullptr );
 
 	// Force connection request to fire.
-	m_flConnectTime = -FLT_MAX;  
+	m_flConnectTime = -std::numeric_limits<float>::max();  
 
 	m_nRetryNumber = 0;
 
 	// Retry for up to timeout seconds
 	m_nRetryMax =  cl_resend_timeout.GetFloat() / cl_resend.GetFloat();	
-
-	m_ulGameServerSteamID = 0;
 
 #if !defined ( DEDICATED )
 	if ( szJoinType && g_ClientDLL )
@@ -971,7 +905,7 @@ INetworkStringTable *CBaseClientState::GetStringTable( const char * name ) const
 {
 	if ( !m_StringTableContainer )
 	{
-		Assert( m_StringTableContainer );
+		contract_assert( m_StringTableContainer );
 		return nullptr;
 	}
 
@@ -1020,7 +954,7 @@ void CBaseClientState::FullConnect( const ns_address &adr, int nEncryptionKey )
 
 	m_NetChannel = NET_CreateNetChannel( m_Socket, &adr, "CLIENT", this, pbEncryptionKey, false );
 
-	Assert( m_NetChannel );
+	contract_assert( m_NetChannel );
 	
 	m_NetChannel->StartStreaming( m_nChallengeNr );	// open TCP stream
 
@@ -1058,54 +992,16 @@ void CBaseClientState::Disconnect( bool bShowMainMenu )
 {
 	m_DeferredConnection.m_bActive = false;
 	m_bWaitingForPassword = false;
-#if ENGINE_CONNECT_VIA_MMS
-	m_bWaitingForServerGameDetails = false;
-#endif
 	m_bEnteredPassword = false;
-	m_flConnectTime = -FLT_MAX;
+	m_flConnectTime = -std::numeric_limits<float>::max();
 	m_nRetryNumber = 0;
-	m_ulGameServerSteamID = 0;
 
 	if ( m_nSignonState == SIGNONSTATE_NONE )
 		return;
 
-#if !defined( DEDICATED ) && defined( ENABLE_RPT )
-	CL_NotifyRPTOfDisconnect( );
-#endif
-
 	SetSignonState( SIGNONSTATE_NONE, -1, nullptr );
 	// Don't clear cookie here as this can get called as part of connection process if changing to new server, etc.
 	// m_nServerReservationCookie = 0;		
-
-	ns_address adr;
-	if ( m_NetChannel )
-	{
-		adr = m_NetChannel->GetRemoteAddress();
-	}
-	else if ( m_Remote.Count() > 0 )
-	{
-		const char *pszAddr = m_Remote.Get( 0 ).m_szRetryAddress.c_str();
-		if ( !adr.SetFromString( m_Remote.Get( 0 ).m_szRetryAddress.c_str() ) )
-		{
-			Warning( "Unable to parse retry address '%s'\n", pszAddr );
-		}
-	}
-
-#ifndef DEDICATED
-	ns_address checkAdr = adr;
-	if ( adr.IsLoopback() || adr.IsLocalhost() )
-	{
-		checkAdr.AsType<netadr_t>().SetIP( net_local_adr.GetIPHostByteOrder() );
-	}
-
-	if ( m_ListenServerSteamID != 0ull && m_Remote.Count() > 0 )
-	{
-		Assert( g_pSteamSocketMgr->GetSteamIDForRemote( m_Remote.Get( 0 ).m_adrRemote ) == m_ListenServerSteamID );
-		NET_TerminateSteamConnection( m_Socket, m_ListenServerSteamID );
-		m_ListenServerSteamID = 0ull;
-	}
- 	Steam3Client().CancelAuthTicket();
-#endif
 
 	if ( m_NetChannel )
 	{
@@ -1113,13 +1009,6 @@ void CBaseClientState::Disconnect( bool bShowMainMenu )
 		m_NetChannel = nullptr;
 	}
 
-#ifndef DEDICATED
-	// Get rid of any whitelist in our filesystem and reload any files that the previous whitelist forced 
-	// to come from Steam.
-	// MD: This causes an annoying pause when you disconnect from a server, so just leave the last whitelist active
-	// until you connect to a new server.
-	//CL_HandlePureServerWhitelist( NULL );
-#endif
 
 #ifndef DEDICATED
 	if ( m_bSplitScreenUser &&
@@ -1132,7 +1021,7 @@ void CBaseClientState::Disconnect( bool bShowMainMenu )
 
 void CBaseClientState::RunFrame (void)
 {
-	VPROF("CBaseClientState::RunFrame");
+	CVProfScope _( "CBaseClientState::RunFrame", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( (m_nSignonState > SIGNONSTATE_NEW) && m_NetChannel && g_GameEventManager.HasClientListenersChanged() )
 	{
 		// assemble a list of all events we listening to and tell the server
@@ -1151,7 +1040,7 @@ void CBaseClientState::RunFrame (void)
 	for ( int i = 0; i < std::ssize( m_arrSvReservationCheck ); ++ i )
 	{
 		CServerMsg_CheckReservation *pSv = m_arrSvReservationCheck[ i ];
-		Assert( pSv );
+		contract_assert( pSv );
 		if ( pSv )
 		{
 			pSv->Update();
@@ -1166,7 +1055,7 @@ void CBaseClientState::RunFrame (void)
 	for ( int i = 0; i < std::ssize( m_arrSvReservationCheck ); ++ i )
 	{
 		CServerMsg_CheckReservation *pSv = m_arrSvReservationCheck[ i ];
-		Assert( pSv );
+		contract_assert( pSv );
 		if ( pSv && pSv->IsFinished() )
 		{
 			// delete pSvPing; -- client will release
@@ -1177,7 +1066,7 @@ void CBaseClientState::RunFrame (void)
 	for ( int iSvPing = 0; iSvPing < std::ssize( m_arrSvPing ); ++ iSvPing )
 	{
 		CServerMsg_Ping *pSvPing = m_arrSvPing[ iSvPing ];
-		Assert( pSvPing );
+		contract_assert( pSvPing );
 		if ( pSvPing )
 		{
 			pSvPing->Update();
@@ -1192,7 +1081,7 @@ void CBaseClientState::RunFrame (void)
 	for ( int iSvPing = 0; iSvPing < std::ssize( m_arrSvPing ); ++ iSvPing )
 	{
 		CServerMsg_Ping *pSvPing = m_arrSvPing[ iSvPing ];
-		Assert( pSvPing );
+		contract_assert( pSvPing );
 		if ( pSvPing && pSvPing->IsFinished() )
 		{
 			// delete pSvPing; -- client will release
@@ -1206,12 +1095,12 @@ void CBaseClientState::RunFrame (void)
 ResetConnectionRetries
 
 Reset the resend state so that the next call to CheckForResend()
-will try. Call this after a listen server connects to Steam.
+will try.
 =================
 */
 void CBaseClientState::ResetConnectionRetries()
 {
-	m_flConnectTime = -FLT_MAX;
+	m_flConnectTime = -std::numeric_limits<float>::max();
 	m_nRetryNumber = 0;
 }
 
@@ -1239,7 +1128,7 @@ void CBaseClientState::CheckForResend ( bool bForceResendNow /* = false */ )
 	// No addresses in list!
 	if ( m_Remote.Count() <= 0 )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
@@ -1273,87 +1162,34 @@ void CBaseClientState::CheckForResend ( bool bForceResendNow /* = false */ )
 		ConMsg ("%s %s...\n", m_nRetryNumber == 0 ? "Connecting to" : "Retrying", desc.c_str() );
 	}
 
-#ifndef DEDICATED
-#if ENGINE_CONNECT_VIA_MMS
-	if ( m_bWaitingForServerGameDetails )
-		// This is a special handler for when we need to fetch server game details
-		// before we can connect to the server
-	{
-		for ( int i = 0; i < m_Remote.Count(); ++i )
-		{
-			Remote_t &remote = m_Remote.Get( i );
-			ResendGameDetailsRequest( remote.m_adrRemote );
-		}
-
-		++m_nRetryNumber;
-		return;
-	}
-#endif
-#endif
 
 	char payload[ 128 ];
-	Q_snprintf( payload, sizeof( payload ), "%cconnect0x%08X", A2S_GETCHALLENGE, m_DeferredConnection.m_nChallenge );
+	V_snprintf( payload, sizeof( payload ), "%cconnect0x%08X", A2S_GETCHALLENGE, m_DeferredConnection.m_nChallenge );
 
 	// Request another challenge value.
-	ISteamSocketMgr::ESteamCnxType cnxType = g_pSteamSocketMgr->GetCnxType();
-
-	bool bShouldSendSteamRetry = 
-		( m_ListenServerSteamID != 0ull ) && 
-		( m_nRetryNumber > 0 ) &&
-		!( m_nRetryNumber & 0x1 );
-
-	if ( m_ListenServerSteamID != 0ull &&
-		cnxType == ISteamSocketMgr::ESCT_ALWAYS ) 
+	for ( int i = 0; i < m_Remote.Count(); ++i )
 	{
-		bShouldSendSteamRetry = true;
-	}
-
-if ( m_ListenServerSteamID ) // PORTAL2-specific: force Steam cnx for P2P (todo: need latest Steam P2P APIs)
- 		bShouldSendSteamRetry = true;
-
-	if ( !bShouldSendSteamRetry )
-	{
-		for ( int i = 0; i < m_Remote.Count(); ++i )
+		const Remote_t &remote = m_Remote.Get( i );
+		const char *pszProtocol = "[unknown protocol]";
+		char szAddress[128];
+		V_strcpy_safe( szAddress, ns_address_render( remote.m_adrRemote ).String() );
+		switch ( remote.m_adrRemote.GetAddressType() )
 		{
-			const Remote_t &remote = m_Remote.Get( i );
-			const char *pszProtocol = "[unknown protocol]";
-			char szAddress[128];
-			V_strcpy_safe( szAddress, ns_address_render( remote.m_adrRemote ).String() );
-			switch ( remote.m_adrRemote.GetAddressType() )
-			{
-				case NSAT_PROXIED_CLIENT: // we're connecting to a server, not a client
-				default:
-					Assert( false );
-					break;
-				case NSAT_NETADR:
-					pszProtocol = "UDP";
-					if ( cl_hideserverip.GetInt()>0 )
-						V_sprintf_safe( szAddress, "<hidden>" );
-					break;
-				case NSAT_P2P:
-					pszProtocol = "SteamP2P";
-					break;
-
-				case NSAT_PROXIED_GAMESERVER:
-					Assert( false );
-					break;
-			}
-			if ( developer.GetInt() != 0 )
-			{
-				ConColorMsg( Color( 0, 255, 0, 255 ), "%.3f:  Sending connect to %s address %s via %s\n", net_time, remote.m_szAlias.c_str(), szAddress, pszProtocol );
-			}
-			
-			NET_OutOfBandDelayedPrintf( m_Socket, remote.m_adrRemote, GetPrivateIPDelayMsecs() * i, payload, Q_strlen( payload ) + 1 );
+			default:
+				contract_assert( false );
+				break;
+			case NSAT_NETADR:
+				pszProtocol = "UDP";
+				if ( cl_hideserverip.GetInt()>0 )
+					V_sprintf_safe( szAddress, "<hidden>" );
+				break;
 		}
-	}
-	else if ( m_ListenServerSteamID )
-	{
-		Msg( "%.3f:  Sending Steam connect to %s %llx\n", net_time, m_Remote.Get( 0 ).m_szRetryAddress.c_str(), m_ListenServerSteamID );
-		m_Remote.Get( 0 ).m_adrRemote = NET_InitiateSteamConnection( m_Socket, m_ListenServerSteamID, payload, Q_strlen( payload ) + 1 );
-	}
-	else
-	{
-		Warning( "%.3f:  Steam connection to unknown SteamId (%s) failed!\n", net_time, m_Remote.Get( 0 ).m_szRetryAddress.c_str() );
+		if ( developer.GetInt() != 0 )
+		{
+			ConColorMsg( Color( 0, 255, 0, 255 ), "%.3f:  Sending connect to %s address %s via %s\n", net_time, remote.m_szAlias.c_str(), szAddress, pszProtocol );
+		}
+		
+		NET_OutOfBandDelayedPrintf( m_Socket, remote.m_adrRemote, GetPrivateIPDelayMsecs() * i, payload, V_strlen( payload ) + 1 );
 	}
 
 	++m_nRetryNumber;
@@ -1457,9 +1293,9 @@ static void Read_S2A_INFO_SRC( const ns_address &from, bf_read *msg )
 
 bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 {
-	VPROF( "ProcessConnectionlessPacket" );
+	CVProfScope _( "ProcessConnectionlessPacket", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-	Assert( packet );
+	contract_assert( packet );
 
 	// NOTE: msg is a reference to packet->message, so reading
 	// from "msg" will also advance read-pointer in "packet->message"!!!
@@ -1494,7 +1330,7 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 				g_mapServersToCertificates.contains( ns_address_render( packet->from ).String() );
 
 			int nEncryptionKeyIndex = 0;
-			if ( ( 1 == sscanf( chEncryptionKeyIndex, "%08X", &nEncryptionKeyIndex ) ) &&
+			if ( ( 1 == std::sscanf( chEncryptionKeyIndex, "%08X", &nEncryptionKeyIndex ) ) &&
 				( ( nEncryptionKeyIndex != 0 ) == bConnectionExpectingEncryptionKey ) )
 			{
 				// server accepted our connection request
@@ -1514,25 +1350,6 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 			dc.m_adrServerAddress = packet->from;
 			dc.m_nChallenge = msg.ReadLong();
 			dc.m_nAuthprotocol = msg.ReadLong();
-			dc.m_unGSSteamID = 0;
-			dc.m_bGSSecure = false;
-			if ( dc.m_nAuthprotocol == PROTOCOL_STEAM )
-			{
-				if ( msg.ReadShort() != 0 )
-				{
-					Msg("Invalid Steam key size.\n");
-					Disconnect();
-					return false;
-				}
-				dc.m_unGSSteamID = msg.ReadLongLong();
-				dc.m_bGSSecure = msg.ReadByte() ? true : false;
-			}
-			else
-			{
-				msg.ReadShort();
-				dc.m_unGSSteamID = msg.ReadLongLong();	// still read out game server SteamID for token validation
-				msg.ReadByte();
-			}
 
 			if ( msg.IsOverflowed() )
 			{
@@ -1573,7 +1390,7 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 					return false;
 				}
 
-				msg.ReadString( dc.m_chLobbyType, ARRAYSIZE( dc.m_chLobbyType ) - 1 );
+				msg.ReadString( dc.m_chLobbyType, std::size( dc.m_chLobbyType ) - 1 );
 				dc.m_bRequiresPassword = ( msg.ReadByte() != 0 );
 				dc.m_unLobbyID = msg.ReadLongLong();
 				dc.m_bDCFriendsReqd =  (msg.ReadByte() != 0);
@@ -1628,29 +1445,6 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 					dc.m_chLobbyType[0] ? dc.m_chLobbyType : "<none>",
 					dc.m_bRequiresPassword ? "yes" : "no",
 					dc.m_unLobbyID );
-
-				#if ENGINE_CONNECT_VIA_MMS
-				// Check if server is denying dc. If it sent us a -1 then we have to use our own reservation id.
-				// This will work if we joined the right lobby, otherwise it will fail
-				if ( dc.m_unLobbyID == (uint64)(-1) )
-				{
-					// GSidhu - Detect the case when we are trying to direct connect - ensure the reservation
-					// cookie we are holding is reset to 0 between session
-
-					//if ( m_nServerReservationCookie == 0 )
-					//{
-					//	COM_ExplainDisconnection( true, "Connecting to a Competitive mode game on a Valve CS:GO server is not allowed, use matchmaking instead.\n" );
-					//	Disconnect();
-					//	break;
-					//}
-					// else
-					{
-						dc.m_unLobbyID = m_nServerReservationCookie;
-					}
-				}
-
-				RememberIPAddressForLobby( dc.m_unLobbyID, dc.m_adrServerAddress );
-				#endif
 
 				if ( !dc.m_chLobbyType[0] && !dc.m_unLobbyID && dc.m_bRequiresPassword &&
 					( !password.GetString()[ 0 ] ) )
@@ -1741,7 +1535,7 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 				SetSignonState( SIGNONSTATE_CHALLENGE, -1, nullptr );
 
 				// Force connection request to fire.
-				m_flConnectTime = -FLT_MAX;
+				m_flConnectTime = -std::numeric_limits<float>::max();
 
 				m_nRetryNumber = 0;
 
@@ -1845,63 +1639,6 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 
 void CBaseClientState::OnEvent( KeyValues *pEvent )
 {
-#if ENGINE_CONNECT_VIA_MMS
-	char const *szEvent = pEvent->GetName();
-	
-	if ( !Q_stricmp( "OnNetLanConnectionlessPacket", szEvent ) )
-	{
-		if ( KeyValues *pGameDetailsServer = pEvent->FindKey( "GameDetailsServer" ) )
-		{
-			char const *szDetailsAdr = pGameDetailsServer->GetString( "ConnectServerDetailsRequest/server" );
-			if ( !m_bWaitingForServerGameDetails ||
-				 !szDetailsAdr || !*szDetailsAdr )
-				return;
-
-			int idxRemoteReconnect = -1;
-			for ( int i = 0; i < m_Remote.Count(); ++i )
-			{
-				const netadr_t &adr = m_Remote.Get( i ).m_adrRemote;
-				if ( !Q_stricmp( adr.ToString(), szDetailsAdr ) )
-				{
-					idxRemoteReconnect = i;
-					break;
-				}
-			}
-
-			if ( idxRemoteReconnect >= 0 )
-			{
-				// This is our direct connect probe response
-				m_bWaitingForServerGameDetails = false;
-				Msg( "Received game details information from %s...\n",
-					m_Remote.Get( idxRemoteReconnect ).m_szRetryAddress.String() );
-				Disconnect( false );	// disconnect the current attempt, will retry with reservation
-
-				//
-				// Prepare the settings
-				//
-				pGameDetailsServer->SetName( "settings" );
-
-				if ( KeyValues *kvLanSearch = pGameDetailsServer->FindKey( "ConnectServerDetailsRequest" ) )
-				{
-					// LanSearch is not needed for the sessions
-					pGameDetailsServer->RemoveSubKey( kvLanSearch );
-					kvLanSearch->deleteThis();
-				}
-
-				// Add the bypass lobby flag
-				KeyValues *optionsKey = pGameDetailsServer->FindKey( "options", true);
-				optionsKey->SetInt( "bypasslobby", 1 );
-
-				Disconnect( false );
-				g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( new KeyValues(
-					"OnEngineLevelLoadingSession", "reason", "CreateSession" ) );
-
-				g_pMatchFramework->CreateSession( pGameDetailsServer );
-			}
-
-		}
-	}
-#endif
 }
 
 void CBaseClientState::SetConnectionPassword( char const *pchCurrentPW )
@@ -1947,65 +1684,20 @@ void CBaseClientState::HandleDeferredConnection()
 	// If we started a listen server then we should connect no matter what
 	if ( ( dc.m_chLobbyType[0] || dc.m_unLobbyID ) && !sv.IsActive() )
 	{
-#if ENGINE_CONNECT_VIA_MMS
-		if ( dc.m_unLobbyID )
-		{
-			IMatchSession *pMatchSession = g_pMatchFramework->GetMatchSession();
-			KeyValues *pSessionSysData = pMatchSession ? pMatchSession->GetSessionSystemData() : nullptr;
-			uint64 xuidSessionReservation = pSessionSysData ? pSessionSysData->GetUint64( "xuidReserve" ) : 0ull;
-			if ( dc.m_bOfficialValveServer || ( xuidSessionReservation == dc.m_unLobbyID ) )	// Force the connection to official server, they aren't direct-connectable otherwise
-			{
-				SendConnectPacket ( dc.m_adrServerAddress, dc.m_nChallenge, dc.m_nAuthprotocol, dc.m_unGSSteamID, dc.m_bGSSecure );
-			}
-			else
-			{
-				KeyValues *pSettings = new KeyValues( "settings" );
-				KeyValues::AutoDelete autodelete( pSettings );
-				pSettings->SetString( "system/network", "LIVE" );
-				pSettings->SetString( "options/action", "joinsession" );
-				pSettings->SetUint64( "options/sessionid", dc.m_unLobbyID );
-				pSettings->SetBool( "options/dcFriendsRed", dc.m_bDCFriendsReqd );
-				if ( !dc.m_bOfficialValveServer )
-					pSettings->SetInt( "game/hosted", 1 );
-				pSettings->SetString( "options/server", dc.m_bOfficialValveServer ? "official" : "dedicated" );
-
-				Disconnect( true );
-				g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( new KeyValues(
-					"OnEngineLevelLoadingSession", "reason", "MatchSession" ) );
-				g_pMatchFramework->MatchSession( pSettings );
-			}
-		}
-		else
-		{
-			// Server has no lobby but needs one, we need to enter through the UI.
-			Msg( "Retrying connection to %s, server requires lobby reservation but is unreserved.\n", dc.m_adrServerAddress.ToString() );
-
-			// Prevent resending the challenges to the server
-			m_bWaitingForServerGameDetails = true;
-			ResendGameDetailsRequest( dc.m_adrServerAddress );
-		}
-#else
 		bool bCanSendConnectPacketRightNow = false;
 		
 		// Always allow to connect if we have a reservation in m_nServerReservationCookie
 		if ( m_nServerReservationCookie )
 			bCanSendConnectPacketRightNow = true;
 
-		// Always allow to connect to listen server peer SteamID
-		if ( m_ListenServerSteamID )
-			bCanSendConnectPacketRightNow = true;
-
 		// Always allow to connect from dedicated or ValveDS or GOTV relay
 		if ( IsClientStateTv() || NET_IsDedicated() || sv.IsDedicated() || ( serverGameDLL && serverGameDLL->IsValveDS() ) )
 			bCanSendConnectPacketRightNow = true;
 
-		if ( !bCanSendConnectPacketRightNow && (
-			!dc.m_unGSSteamID ||														// Connecting to GOTV relay
-			( CSteamID( dc.m_unGSSteamID ).GetEAccountType() == k_EAccountTypeInvalid )	// Connecting to sv_lan 1 server
-			) )
+		if ( !bCanSendConnectPacketRightNow )
 		{
 			static const bool s_bAllowLanWhitelist = !CommandLine()->FindParm( "-ignorelanwhitelist" );
-			bCanSendConnectPacketRightNow = // only allow for LAN server setup to bypass GC auth
+			bCanSendConnectPacketRightNow = // only allow LAN servers
 				dc.m_adrServerAddress.IsLocalhost() || dc.m_adrServerAddress.IsLoopback()		// localhost/loopback
 				|| ( s_bAllowLanWhitelist && dc.m_adrServerAddress.IsReservedAdr() )			// LAN RFC 1918
 				;
@@ -2014,41 +1706,22 @@ void CBaseClientState::HandleDeferredConnection()
 		// If we determined that client is good to go then just follow up with a real connect packet
 		if ( bCanSendConnectPacketRightNow )
 		{
-			SendConnectPacket( dc.m_adrServerAddress, dc.m_nChallenge, dc.m_nAuthprotocol, dc.m_unGSSteamID, dc.m_bGSSecure );
+			SendConnectPacket( dc.m_adrServerAddress, dc.m_nChallenge, dc.m_nAuthprotocol );
 			return;
 		}
 
-		// Check that if we are falling through we have a good game server Steam ID to ask GC about
-		if ( !dc.m_unGSSteamID || !CSteamID( dc.m_unGSSteamID ).BGameServerAccount() )
-		{
-			Disconnect( true ); // cannot retry this attempt - the GS SteamID is not good
-			COM_ExplainDisconnection( true, "You cannot connect to this CS:GO server because it is restricted to LAN connections only.\n" );
-			return;
-		}
-		
-		//
-		// Otherwise we require that client obtained a GS cookie from GC
-		// which allows GC to deny connections to blacklisted game servers
-		//
-		uint64 uiReservationCookie = 0ull;
-		{
-			KeyValues *kvCreateSession = new KeyValues( "OnEngineLevelLoadingSession" );
-			kvCreateSession->SetString( "reason", "CreateSession" );
-			kvCreateSession->SetString( "adr", ns_address_render( dc.m_adrServerAddress ).String() );
-			kvCreateSession->SetUint64( "gsid", dc.m_unGSSteamID );
-			kvCreateSession->SetPtr( "ptr", &uiReservationCookie );
-			g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( kvCreateSession );
-		}
-#endif
+		Disconnect( true ); // cannot retry this attempt
+		COM_ExplainDisconnection( true, "You cannot connect to this CS:GO server because it is restricted to LAN connections only.\n" );
+		return;
 	}
 #endif
-	SendConnectPacket ( dc.m_adrServerAddress, dc.m_nChallenge, dc.m_nAuthprotocol, dc.m_unGSSteamID, dc.m_bGSSecure );
+	SendConnectPacket ( dc.m_adrServerAddress, dc.m_nChallenge, dc.m_nAuthprotocol );
 }
 
 
 bool CBaseClientState::NETMsg_Tick( const ks::net::CNETMsg_Tick& msg )
 {
-	VPROF( "ProcessTick" );
+	CVProfScope _( "ProcessTick", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	m_NetChannel->SetRemoteFramerate(
 		CNETMsg_Tick_t::FrametimeToFloat( msg.host_computationtime ),
@@ -2074,7 +1747,7 @@ void CBaseClientState::SendStringCmd(const char * command)
 		CNETMsg_StringCmd_t stringCmd( command );
 		m_NetChannel->SendNetMsg( stringCmd );
 
-		if ( strstr( command, "disconnect" ) )
+		if ( std::strstr( command, "disconnect" ) )
 		{
 			// When client requests a disconnect this is last moment to
 			// push any data into secure network, forcefully transmit netchannel
@@ -2085,7 +1758,7 @@ void CBaseClientState::SendStringCmd(const char * command)
 
 bool CBaseClientState::NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg )
 {
-	VPROF( "ProcessStringCmd" );
+	CVProfScope _( "ProcessStringCmd", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	return InternalProcessStringCmd( msg );
 }
@@ -2125,57 +1798,9 @@ bool CBaseClientState::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAva
 	return true;
 }
 
-CNETMsg_PlayerAvatarData_t * CBaseClientState::AllocOwnPlayerAvatarData() const
-{
-#ifndef DEDICATED
-	// If the game server is not GOTV then upload our own avatar data
-	extern ConVar sv_reliableavatardata;
-	if ( ( this == &GetBaseLocalClient() )
-		&& !GetBaseLocalClient().ishltv
-		&& m_NetChannel && IsConnected()
-		&& sv_reliableavatardata.GetBool() )
-	{
-		CSteamID steamID = Steam3Client().SteamUser()->GetSteamID();
-		int iAvatar = Steam3Client().SteamFriends()->GetMediumFriendAvatar( steamID );
-		if ( ( iAvatar != -1 ) && ( iAvatar != 0 ) )
-		{
-			uint32 wide = 0, tall = 0;
-			if ( Steam3Client().SteamUtils()->GetImageSize( iAvatar, &wide, &tall ) && ( wide == 64 ) && ( tall == 64 ) )
-			{
-				std::vector< byte > memAvatarData;
-				memAvatarData.assign( 64 * 64 * 4, {} );
-				memset( memAvatarData.data(), 0xFF, std::ssize( memAvatarData ) );
-
-				Steam3Client().SteamUtils()->GetImageRGBA( iAvatar, memAvatarData.data(), std::ssize( memAvatarData ) );
-				// trim alpha for size
-				for ( int y = 0; y < 64; ++y ) for ( int x = 0; x < 64; ++x )
-				{
-					V_memmove( memAvatarData.data() + y * 64 * 3 + x * 3, memAvatarData.data() + y * 64 * 4 + x * 4, 3 );
-				}
-
-				return new CNETMsg_PlayerAvatarData_t( steamID.GetAccountID(), memAvatarData.data(), 64 * 64 * 3 );
-			}
-		}
-
-		// If we got here then we failed to obtain our own medium avatar, ping Steam rack and hope for an avatar changed callback
-		if ( !Steam3Client().SteamFriends()->RequestUserInformation( steamID, false ) )
-		{
-			static bool s_bReentrantGuard = false;
-			if ( !s_bReentrantGuard )
-			{	// Allow one retry here
-				s_bReentrantGuard = true;
-				return AllocOwnPlayerAvatarData();
-				s_bReentrantGuard = false;
-			}
-		}
-	}
-#endif
-	return nullptr;
-}
-
 bool CBaseClientState::NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg )
 {
-	VPROF( "ProcessSetConVar" );
+	CVProfScope _( "ProcessSetConVar", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Never process on local client, since the ConVar is directly linked here
 	if ( m_NetChannel->IsLoopback() )
@@ -2217,14 +1842,14 @@ bool CBaseClientState::NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg )
 
 bool CBaseClientState::NETMsg_SignonState( const ks::net::CNETMsg_SignonState& msg )
 {
-	VPROF( "ProcessSignonState" );
+	CVProfScope _( "ProcessSignonState", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	return SetSignonState( msg.signon_state, msg.spawn_count, &msg ) ;	
 }
 
 bool CBaseClientState::SVCMsg_Print( const ks::net::CSVCMsg_Print& msg )
 {
-	VPROF( "SVCMsg_Print" );
+	CVProfScope _( "SVCMsg_Print", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	ConMsg( "%s", msg.text->c_str() );
 	return true;
@@ -2232,7 +1857,7 @@ bool CBaseClientState::SVCMsg_Print( const ks::net::CSVCMsg_Print& msg )
 
 bool CBaseClientState::SVCMsg_Menu( const ks::net::CSVCMsg_Menu& msg )
 {
-	VPROF( "SVCMsg_Menu" );
+	CVProfScope _( "SVCMsg_Menu", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 #if !defined(DEDICATED)
 	PluginHelpers_Menu( msg );	
@@ -2242,7 +1867,7 @@ bool CBaseClientState::SVCMsg_Menu( const ks::net::CSVCMsg_Menu& msg )
 
 bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg )
 {
-	VPROF( "SVCMsg_ServerInfo" );
+	CVProfScope _( "SVCMsg_ServerInfo", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 #ifndef DEDICATED
 	EngineUI()->UpdateProgressBar(PROGRESS_PROCESSSERVERINFO);
@@ -2323,11 +1948,10 @@ bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 		return false;
 	}
 
-	Q_snprintf( m_szLevelName, sizeof( m_szLevelName ), "maps/%s%s.bsp", msg.map_name->c_str(), GetPlatformExt() );
-	Q_FixSlashes( m_szLevelName );
-	Q_strncpy( m_szLevelNameShort, msg.map_name->c_str(), sizeof( m_szLevelNameShort ) );
-	Q_strncpy( m_szMapGroupName, msg.map_group_name->c_str(), sizeof( m_szMapGroupName ) );
-	m_unUGCMapFileID = msg.ugc_map_id;
+	V_snprintf( m_szLevelName, sizeof( m_szLevelName ), "maps/%s%s.bsp", msg.map_name->c_str(), GetPlatformExt() );
+	V_FixSlashes( m_szLevelName );
+	V_strncpy( m_szLevelNameShort, msg.map_name->c_str(), sizeof( m_szLevelNameShort ) );
+	V_strncpy( m_szMapGroupName, msg.map_group_name->c_str(), sizeof( m_szMapGroupName ) );
 
 #if !defined(DEDICATED)
 	EngineUI()->SetProgressLevelName( m_szLevelNameShort );
@@ -2363,14 +1987,9 @@ bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 		pEvent->SetString( "mapname", msg.map_name->c_str() );
 		pEvent->SetInt(    "maxplayers", msg.max_clients );
 		pEvent->SetInt(	   "password", 0 );				// TODO
-		pEvent->SetString( "os", Q_strupr( va("%c", (int)msg.c_os ) ) );
+		pEvent->SetString( "os", V_strupr( va("%c", (int)msg.c_os ) ) );
 		pEvent->SetBool(    "dedicated", msg.is_dedicated );
 		pEvent->SetBool(    "official", msg.is_official_valve_server );
-		if ( m_ulGameServerSteamID != 0 )
-		{
-			pEvent->SetString( "steamid", CSteamID( m_ulGameServerSteamID ).Render() );
-		}
-
 
 		g_GameEventManager.FireEventClientSide( pEvent );
 	}
@@ -2421,7 +2040,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 		if ( !bIsRelay ) // not a single one of the hltv servers is relay
 		{
 			char bspModelName[ MAX_PATH ];
-			Q_snprintf( bspModelName, sizeof( bspModelName ), "maps/%s.bsp", msg.map_name->c_str() );
+			V_snprintf( bspModelName, sizeof( bspModelName ), "maps/%s.bsp", msg.map_name->c_str() );
 
 #if !defined( DEDICATED )
 			bool bCrcClientMapValid = false;
@@ -2437,78 +2056,6 @@ bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 
 					bCrcClientMapValid = CRC_MapFile( &crcClientMap, bspModelName );
 				}
-			}
-
-			if ( demoplayer && demoplayer->IsPlayingBack() )
-			{
-				// We are playing a demo
-				// Can we use the map on disk directly?
-				if ( bCrcClientMapValid && msg.map_crc && ( crcClientMap == msg.map_crc ) )
-				{
-					// Seems like everything looks good on disk and we can proceed with map on disk
-				}
-				else
-				{
-					// We are trying to playback a demo, but CRC of the client map doesn't match
-					// the CRC of the server map.
-					// There are some known official maps that we can redirect into proper version
-					// on Steam Workshop.
-					char chMapName[ MAX_PATH ] = { 0 };
-					V_sprintf_safe( chMapName, "%s", msg.map_name->c_str() );
-					// Check if it's Valve official Workshop symbolic link
-					if ( char const *szPastWorkshop = StringAfterPrefix( chMapName, "workshop/" ) )
-					{
-						//uint64 uiWkshpId = Q_atoui64( szPastWorkshop );
-						bool bValveOfficialMap = false;
-								/** Removed for partner depot **/
-						if ( bValveOfficialMap )
-						{
-							if ( char const *szMapNameTrail = strchr( szPastWorkshop, '/' ) )
-								Q_memmove( chMapName, szMapNameTrail + 1, chMapName + Q_ARRAYSIZE( chMapName ) - szMapNameTrail - 1 );
-						}
-					}
-					// Now that workshop symlink has been resolved, verify whether
-					// it is one of Valve official maps and redirect to Workshop based on known CRC
-					uint64 uiKnownVersionWkshpId = 0;
-					uint32 uiRepackedWkshpCrc = 0;
-							/** Removed for partner depot **/
-					extern ConVar debug_map_crc;
-					if ( debug_map_crc.GetBool() && !uiKnownVersionWkshpId )
-					{	// Force a debug error when debugging map CRC's
-						Warning( "debug_map_crc: Map version mismatch for %s CRC=%u, no fallback version specified in csgo_official_map_versions!\n",
-							chMapName, (uint32)msg.map_crc );
-					}
-
-					if ( uiKnownVersionWkshpId )
-					{	// We have a fallback version specified for the CRC mismatch
-						Msg( "Map version fallback for %s CRC=%u: %llu (CRC=%u)\n", chMapName, (uint32)msg.map_crc, uiKnownVersionWkshpId, uiRepackedWkshpCrc );
-						Q_snprintf( m_szLevelName, sizeof( m_szLevelName ), "maps/workshop/%llu/%s.bsp", uiKnownVersionWkshpId, chMapName );
-						Q_FixSlashes( m_szLevelName );
-						Q_snprintf( m_szLevelNameShort, sizeof( m_szLevelNameShort ), "workshop/%llu/%s", uiKnownVersionWkshpId, chMapName );
-
-						Q_snprintf( bspModelName, sizeof( bspModelName ), "maps/workshop/%llu/%s.bsp", uiKnownVersionWkshpId, chMapName );
-						m_unUGCMapFileID = uiKnownVersionWkshpId;
-
-						// Dirty method: patch in a different map crc for derived class processing to pick up repacked crc value
-						const_cast< ks::net::CSVCMsg_ServerInfo & >( msg ).map_crc = uiRepackedWkshpCrc;
-
-						// Check if we already have the workshop file for the fallback version downloaded
-						FileHandle_t mapfile = g_pFileSystem->OpenEx( bspModelName, "rb", 0, "GAME" );
-						if ( mapfile != FILESYSTEM_INVALID_HANDLE )
-						{
-							g_pFileSystem->Close( mapfile );
-							bCrcClientMapValid = true; // prevent CRC from resetting bClientHasMap further down in the code, compat versions never change so chances are the map is good right off the bat
-						}
-						else
-							bClientHasMap = false;
-					}
-				}
-			}
-			else
-			{
-				// We are not playing a demo
-				if ( bCrcClientMapValid && msg.map_crc && ( crcClientMap != msg.map_crc ) && ( m_unUGCMapFileID != 0 ) )
-					bClientHasMap = false; // If the crc doesn't match servers delay map load until after downloading new version from the workshop
 			}
 
 			if ( !bCrcClientMapValid )
@@ -2541,7 +2088,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 
 bool CBaseClientState::SVCMsg_SendTable( const ks::net::CSVCMsg_SendTable& msg )
 {
-	VPROF( "SVCMsg_SendTable" );
+	CVProfScope _( "SVCMsg_SendTable", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( !RecvTable_RecvClassInfos( msg ) )
 	{
@@ -2554,14 +2101,14 @@ bool CBaseClientState::SVCMsg_SendTable( const ks::net::CSVCMsg_SendTable& msg )
 
 bool CBaseClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg )
 {
-	VPROF( "SVCMsg_ClassInfo" );
+	CVProfScope _( "SVCMsg_ClassInfo", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	COM_TimestampedLog( " CBaseClient::SVCMsg_ClassInfo" );
 
 	if ( msg.create_on_client )
 	{
 		ConMsg ( "Can't create class tables.\n");
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
@@ -2592,12 +2139,12 @@ bool CBaseClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg )
 
 		C_ServerClassInfo * svclassinfo = &m_pServerClasses[svclass.class_id];
 
-		int len = Q_strlen(svclass.class_name->c_str()) + 1;
+		int len = V_strlen(svclass.class_name->c_str()) + 1;
 		svclassinfo->m_ClassName = new char[ len ];
-		Q_strncpy( svclassinfo->m_ClassName, svclass.class_name->c_str(), len );
-		len = Q_strlen(svclass.data_table_name->c_str()) + 1;
+		V_strncpy( svclassinfo->m_ClassName, svclass.class_name->c_str(), len );
+		len = V_strlen(svclass.data_table_name->c_str()) + 1;
 		svclassinfo->m_DatatableName = new char[ len ];
-		Q_strncpy( svclassinfo->m_DatatableName,svclass.data_table_name->c_str(), len );
+		V_strncpy( svclassinfo->m_DatatableName,svclass.data_table_name->c_str(), len );
 	}
 
 	COM_TimestampedLog( " CBaseClient::SVCMsg_ClassInfo(done)" );
@@ -2607,7 +2154,7 @@ bool CBaseClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg )
 
 bool CBaseClientState::SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg )
 {
-	VPROF( "SVCMsg_SetPause" );
+	CVProfScope _( "SVCMsg_SetPause", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	m_bPaused = msg.paused;
 	return true;
@@ -2616,7 +2163,7 @@ bool CBaseClientState::SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg )
 
 bool CBaseClientState::SVCMsg_CreateStringTable( const ks::net::CSVCMsg_CreateStringTable &msg )
 {
-	VPROF( "SVCMsg_CreateStringTable" );
+	CVProfScope _( "SVCMsg_CreateStringTable", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 #ifndef DEDICATED
 	EngineUI()->UpdateProgressBar(PROGRESS_PROCESSSTRINGTABLE);
@@ -2625,11 +2172,10 @@ bool CBaseClientState::SVCMsg_CreateStringTable( const ks::net::CSVCMsg_CreateSt
 	COM_TimestampedLog( " CBaseClient::ProcessCreateStringTable(%s)", msg.name->c_str() );
 	m_StringTableContainer->AllowCreation( true );
 
-#ifndef SHARED_NET_STRING_TABLES
 	CNetworkStringTable *table = (CNetworkStringTable*)
 		m_StringTableContainer->CreateStringTable( msg.name->c_str(), msg.max_entries, msg.user_data_size, msg.user_data_size_bits, msg.flags );
 
-	Assert ( table );
+	contract_assert( table );
 
 	table->SetTick( GetServerTickCount() ); // set creation tick
 
@@ -2637,8 +2183,6 @@ bool CBaseClientState::SVCMsg_CreateStringTable( const ks::net::CSVCMsg_CreateSt
 	
 	bf_read data( msg.string_data->data(), msg.string_data->size() );
 	table->ParseUpdate( data, msg.num_entries );
-
-#endif
 
 	m_StringTableContainer->AllowCreation( false );
 
@@ -2648,9 +2192,7 @@ bool CBaseClientState::SVCMsg_CreateStringTable( const ks::net::CSVCMsg_CreateSt
 
 bool CBaseClientState::SVCMsg_UpdateStringTable( const ks::net::CSVCMsg_UpdateStringTable &msg )
 {
-	VPROF( "ProcessUpdateStringTable" );
-
-#ifndef SHARED_NET_STRING_TABLES
+	CVProfScope _( "ProcessUpdateStringTable", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	//m_StringTableContainer is NULL on level transitions, Seems to be caused by a UpdateStringTable packet comming in before the ServerInfo packet
 	//  I'm not sure this is safe, but at least we won't crash. The realy odd thing is this can happen on the server as well.//tmauer
@@ -2667,7 +2209,6 @@ bool CBaseClientState::SVCMsg_UpdateStringTable( const ks::net::CSVCMsg_UpdateSt
 		Warning("m_StringTableContainer is NULL in CBaseClientState::ProcessUpdateStringTable\n");
 	}
 
-#endif
 	return true;
 }
 
@@ -2680,7 +2221,7 @@ bool CBaseClientState::SVCMsg_SetView( const ks::net::CSVCMsg_SetView& msg )
 
 bool CBaseClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities &msg )
 {
-	VPROF( "ProcessPacketEntities" );
+	CVProfScope _( "ProcessPacketEntities", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// First update is the final signon stage where we actually receive an entity (i.e., the world at least)
 
@@ -2726,7 +2267,7 @@ ClientClass* CBaseClientState::FindClientClass(const char *pClassName)
 {
 	for(ClientClass *pCur=ClientDLL_GetAllClasses(); pCur; pCur=pCur->m_pNext)
 	{
-		if( Q_stricmp(pCur->m_pNetworkName, pClassName) == 0)
+		if( V_stricmp(pCur->m_pNetworkName, pClassName) == 0)
 			return pCur;
 	}
 
@@ -2762,7 +2303,7 @@ bool CBaseClientState::LinkClasses()
 			const char *pServerName = pServerClass->m_DatatableName;
 			const char *pClientName = pServerClass->m_pClientClass->m_pRecvTable->GetName();
 
-			if ( Q_stricmp( pServerName, pClientName ) != 0 )
+			if ( V_stricmp( pServerName, pClientName ) != 0 )
 			{
 				Host_EndGame( true, "CL_ParseClassInfo_EndClasses: server and client classes for '%s' use different datatables (server: %s, client: %s)",
 					pServerClass->m_ClassName, pServerName, pClientName );
@@ -2784,7 +2325,7 @@ bool CBaseClientState::LinkClasses()
 
 PackedEntity *CBaseClientState::GetEntityBaseline(int iBaseline, int nEntityIndex)
 {
-	Assert( (iBaseline == 0) || (iBaseline == 1) );
+	contract_assert( (iBaseline == 0) || (iBaseline == 1) );
 	return m_pEntityBaselines[iBaseline][nEntityIndex];
 }
 
@@ -2803,9 +2344,9 @@ void CBaseClientState::FreeEntityBaselines()
 
 void CBaseClientState::SetEntityBaseline(int iBaseline, ClientClass *pClientClass, int index, SerializedEntityHandle_t handle)
 {
-	Assert( index >= 0 && index < MAX_EDICTS );
-	Assert( pClientClass );
-	Assert( (iBaseline == 0) || (iBaseline == 1) );
+	contract_assert( index >= 0 && index < MAX_EDICTS );
+	contract_assert( pClientClass );
+	contract_assert( (iBaseline == 0) || (iBaseline == 1) );
 
 	PackedEntity *entitybl = m_pEntityBaselines[iBaseline][index];
 
@@ -2824,7 +2365,7 @@ void CBaseClientState::SetEntityBaseline(int iBaseline, ClientClass *pClientClas
 
 void CBaseClientState::CopyEntityBaseline( int iFrom, int iTo )
 {
-	Assert ( iFrom != iTo );
+	contract_assert( iFrom != iTo );
 	
 
 	for ( int i=0; i<MAX_EDICTS; i++ )
@@ -2854,7 +2395,7 @@ void CBaseClientState::CopyEntityBaseline( int iFrom, int iTo )
 			blto->m_ReferenceCount = 0;
 		}
 
-		Assert( blfrom->m_nEntityIndex == i );
+		contract_assert( blfrom->m_nEntityIndex == i );
 
 		blto->m_nEntityIndex	= blfrom->m_nEntityIndex; 
 		blto->m_pClientClass	= blfrom->m_pClientClass;
@@ -2865,7 +2406,7 @@ void CBaseClientState::CopyEntityBaseline( int iFrom, int iTo )
 
 ClientClass *CBaseClientState::GetClientClass( int index )
 {
-	Assert( index < m_nServerClasses );
+	contract_assert( index < m_nServerClasses );
 	return m_pServerClasses[index].m_pClientClass;
 }
 
@@ -2887,9 +2428,7 @@ void CBaseClientState::UpdateInstanceBaseline( int nStringNumber )
 
 bool CBaseClientState::GetClassBaseline( int iClass, SerializedEntityHandle_t *pHandle )
 {
-	ErrorIfNot( 
-		iClass >= 0 && iClass < m_nServerClasses, 
-		("GetDynamicBaseline: invalid class index '%d'", iClass) );
+	if ( !( iClass >= 0 && iClass < m_nServerClasses ) ) Error("GetDynamicBaseline: invalid class index '%d'", iClass);
 
 	// We lazily update these because if you connect to a server that's already got some dynamic baselines,
 	// you'll get the baselines BEFORE you get the class descriptions.
@@ -2897,24 +2436,21 @@ bool CBaseClientState::GetClassBaseline( int iClass, SerializedEntityHandle_t *p
 
 	INetworkStringTable *pBaselineTable = GetStringTable( INSTANCE_BASELINE_TABLENAME );
 
-	ErrorIfNot( pBaselineTable != nullptr,	("GetDynamicBaseline: NULL baseline table" ) );
+	if ( !( pBaselineTable != nullptr ) ) Error("GetDynamicBaseline: NULL baseline table" );
 
 	if ( pInfo->m_InstanceBaselineIndex == INVALID_STRING_INDEX )
 	{
 		// The key is the class index string.
 		char str[64];
-		Q_snprintf( str, sizeof( str ), "%d", iClass );
+		V_snprintf( str, sizeof( str ), "%d", iClass );
 
 		pInfo->m_InstanceBaselineIndex = pBaselineTable->FindStringIndex( str );
 
-		ErrorIfNot( 
-			pInfo->m_InstanceBaselineIndex != INVALID_STRING_INDEX,
-			("GetDynamicBaseline: FindStringIndex(%s-%s) failed.", str, pInfo->m_ClassName );
-			);
+		if ( !( pInfo->m_InstanceBaselineIndex != INVALID_STRING_INDEX ) ) Error("GetDynamicBaseline: FindStringIndex(%s-%s) failed.", str, pInfo->m_ClassName );;
 	}
 
 	auto slot = m_BaselineHandles.find( pInfo->m_InstanceBaselineIndex );
-	Assert( slot != m_BaselineHandles.end() );
+	contract_assert( slot != m_BaselineHandles.end() );
 
 	*pHandle = slot->second;
 	if ( *pHandle == SERIALIZED_ENTITY_HANDLE_INVALID )
@@ -2936,14 +2472,14 @@ bool CBaseClientState::GetClassBaseline( int iClass, SerializedEntityHandle_t *p
 
 bool CBaseClientState::SVCMsg_GameEventList( const ks::net::CSVCMsg_GameEventList& msg )
 {
-	VPROF( "SVCMsg_GameEventList" );
+	CVProfScope _( "SVCMsg_GameEventList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	return g_GameEventManager.ParseEventList( msg );
 }
 
 bool CBaseClientState::SVCMsg_GetCvarValue( const ks::net::CSVCMsg_GetCvarValue& msg )
 {
-	VPROF( "SVCMsg_GetCvarValue" );
+	CVProfScope _( "SVCMsg_GetCvarValue", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Prepare the response.
 	CCLCMsg_RespondCvarValue_t returnMsg;
@@ -2973,11 +2509,11 @@ bool CBaseClientState::SVCMsg_GetCvarValue( const ks::net::CSVCMsg_GetCvarValue&
 				// The cvar won't store a string, so we have to come up with a string for it ourselves.
 				if ( fabs( pVar->GetFloat() - pVar->GetInt() ) < 0.001f )
 				{
-					Q_snprintf( tempValue, sizeof( tempValue ), "%d", pVar->GetInt() );
+					V_snprintf( tempValue, sizeof( tempValue ), "%d", pVar->GetInt() );
 				}
 				else
 				{
-					Q_snprintf( tempValue, sizeof( tempValue ), "%f", pVar->GetFloat() );
+					V_snprintf( tempValue, sizeof( tempValue ), "%f", pVar->GetFloat() );
 				}
 				returnMsg.value = tempValue;
 			}
@@ -3007,7 +2543,7 @@ bool CBaseClientState::SVCMsg_SplitScreen( const ks::net::CSVCMsg_SplitScreen& m
 	switch ( msg.type )
 	{
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		break;
 	case ks::net::MSG_SPLITSCREEN_ADDUSER:
 		{
@@ -3028,7 +2564,7 @@ bool CBaseClientState::SVCMsg_SplitScreen( const ks::net::CSVCMsg_SplitScreen& m
 bool CBaseClientState::ChangeSplitscreenUser( int nSplitScreenUserSlot )
 {
 #ifndef DEDICATED
-	Assert( splitscreen->IsValidSplitScreenSlot( nSplitScreenUserSlot ) );
+	contract_assert( splitscreen->IsValidSplitScreenSlot( nSplitScreenUserSlot ) );
 	if ( !splitscreen->IsValidSplitScreenSlot( nSplitScreenUserSlot ) )
 		return true;
 
@@ -3123,7 +2659,7 @@ void CBaseClientState::ReserveServer( const ns_address &netAdrPublic, const ns_a
 	NET_SetMultiplayer( true );
 
 	// Should not already have a reservation in progress -- should only attempt one reservation at a time
-	Assert( !m_pServerReservationCallback );
+	contract_assert( !m_pServerReservationCallback );
 	if ( m_pServerReservationCallback )
 	{
 		ReservationResponseReply_t reply;
@@ -3141,7 +2677,7 @@ void CBaseClientState::ReserveServer( const ns_address &netAdrPublic, const ns_a
 	m_nServerReservationCookie = nServerReservationCookie;
 	m_pKVGameSettings = pKVGameSettings->MakeCopy();
 	
-	m_flReservationMsgSendTime = FLT_MIN;
+	m_flReservationMsgSendTime = std::numeric_limits<float>::min();
 	m_nReservationMsgRetryNumber = 0;
 	m_bEnteredPassword = false;
 	m_netadrReserveServer.RemoveAll();
@@ -3163,7 +2699,7 @@ void CBaseClientState::ReserveServer( const ns_address &netAdrPublic, const ns_a
 bool CBaseClientState::CheckServerReservation( const ns_address &netAdrPublic, uint64 nServerReservationCookie, uint32 uiReservationStage,
 	IMatchAsyncOperationCallback *pCallback, IMatchAsyncOperation **ppAsyncOperation )
 {
-	Assert( ppAsyncOperation );
+	contract_assert( ppAsyncOperation );
 	if ( !ppAsyncOperation )
 		return false;
 
@@ -3180,7 +2716,7 @@ bool CBaseClientState::CheckServerReservation( const ns_address &netAdrPublic, u
 bool CBaseClientState::ServerPing( const ns_address &netAdrPublic,
 	IMatchAsyncOperationCallback *pCallback, IMatchAsyncOperation **ppAsyncOperation )
 {
-	Assert( ppAsyncOperation );
+	contract_assert( ppAsyncOperation );
 	if ( !ppAsyncOperation )
 		return false;
 
@@ -3357,7 +2893,7 @@ void CBaseClientState::BuildReserveServerPayload( bf_write &msg, int nChallengeN
 		m_pKVGameSettings->WriteAsBinary( buf );
 		nSettingsLength = buf.size();
 		// make sure it's not going to overflow one UDP packet
-		Assert( nSettingsLength <= MAX_OOB_KEYVALUES );
+		contract_assert( nSettingsLength <= MAX_OOB_KEYVALUES );
 		if ( nSettingsLength > MAX_OOB_KEYVALUES )
 		{
 			ReservationResponseReply_t reply;
@@ -3383,8 +2919,8 @@ void CBaseClientState::BuildReserveServerPayload( bf_write &msg, int nChallengeN
 
 	IceKey cipher(1); /* medium encryption level */
 	unsigned char ucEncryptionKey[8] = { 0 };
-	*( int * )&ucEncryptionKey[ 0 ] = LittleDWord( nChallengeNr ^ 0x5ef8ce12 );
-	*( int * )&ucEncryptionKey[ 4 ] = LittleDWord( nChallengeNr ^ 0xaa98e42c );
+	*( int * )&ucEncryptionKey[ 0 ] = ( nChallengeNr ^ 0x5ef8ce12 );
+	*( int * )&ucEncryptionKey[ 4 ] = ( nChallengeNr ^ 0xaa98e42c );
 
 	cipher.set( ucEncryptionKey );
 

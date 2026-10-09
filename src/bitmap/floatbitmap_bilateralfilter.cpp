@@ -1,18 +1,10 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include <tier0/platform.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <stdlib.h>
+import ks.core;
+import std;
 #include "bitmap/floatbitmap.h"
-#include <tier2/tier2.h>
-#include "tier0/threadtools.h"
-#include "tier0/progressbar.h"
+
 
 
 struct TBFCalculationContext
@@ -50,7 +42,7 @@ static uintp TBFCalculationThreadFN( void *ctx1 )
 
 						// caluclate the g() term. We use a gaussian
 						float exp1 = ( ix * ix + iy * iy ) * ( 1.0 / ( 2.0 * ctx->radius_in_pixels *.033 ));
-						float g = exp( - exp1 );
+						float g = std::exp( - exp1 );
 						// calculate the "similarity" term. We use a triangle filter
 						float s = 1.0;
 						float cdiff = fabs( centerp - this_p );
@@ -99,4 +91,3 @@ void FloatBitMap_t::TileableBilateralFilter( int radius_in_pixels,
 		ThreadJoin( waithandles[t] );
 	}
 }
-

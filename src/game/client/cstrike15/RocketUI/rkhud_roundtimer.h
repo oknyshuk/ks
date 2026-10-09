@@ -1,5 +1,8 @@
-#ifndef KISAKSTRIKE_RKHUD_ROUNDTIMER_H
-#define KISAKSTRIKE_RKHUD_ROUNDTIMER_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include <rocketui/rmlui.h>
 
 #include <rocketui/rocketui.h>
 #include "rkhud_document.h"
@@ -21,4 +24,3 @@ public:
     void ShowPanel(bool bShow, bool force);
 
 };
-#endif //KISAKSTRIKE_RKHUD_ROUNDTIMER_H

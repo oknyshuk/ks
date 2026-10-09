@@ -1,11 +1,61 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "te.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "takedamageinfo.h"
@@ -145,7 +195,7 @@ const char *CTakeDamageInfo::GetAmmoName() const
 		pszAmmoType = m_hInflictor->GetClassname();
 
 		// check for physgun ammo.  unfortunate that this is in game_shared.
-		if ( Q_strcmp( pszAmmoType, "prop_physics" ) == 0 )
+		if ( V_strcmp( pszAmmoType, "prop_physics" ) == 0 )
 		{
 			pszAmmoType = STRING( m_hInflictor->GetModelName() );
 		}
@@ -324,7 +374,7 @@ void CalculateBulletDamageForce( CTakeDamageInfo *info, int iBulletType, const V
 	vecForce *= phys_pushscale.GetFloat();
 	vecForce *= flScale;
 	info->SetDamageForce( vecForce );
-	Assert(vecForce!=vec3_origin);
+	contract_assert( vecForce!=vec3_origin );
 }
 
 //-----------------------------------------------------------------------------
@@ -405,17 +455,17 @@ static const char * const s_DamageTypeToStrTable[] =
 	"DIRECT",
 	"BUCKSHOT"
 };
-#define DAMAGE_TYPE_STR_TABLE_ENTRIES 31 // number of entries in table above
+constexpr auto DAMAGE_TYPE_STR_TABLE_ENTRIES = 31; // number of entries in table above
 
 void CTakeDamageInfo::DebugGetDamageTypeString(unsigned int damageType, char *outbuf, int outbuflength )
 {
-	Assert(outbuflength > 0);
+	contract_assert( outbuflength > 0 );
 
 	// we need to use snprintf to actually copy out the strings here because that's the only function that returns
 	// how much text was output
 	if ( damageType == 0 )
 	{
-		int charsWrit = Q_snprintf(outbuf, outbuflength, "%s", s_DamageTypeToStrTable[0]);
+		int charsWrit = V_snprintf(outbuf, outbuflength, "%s", s_DamageTypeToStrTable[0]);
 		
 		outbuflength -= charsWrit;
 		outbuf += charsWrit; // advance the output pointer (now it sits on the null terminator)
@@ -430,7 +480,7 @@ void CTakeDamageInfo::DebugGetDamageTypeString(unsigned int damageType, char *ou
 		{
 			// this bit was set. Print the corresponding entry from the table
 			// (the index is +1 because entry 1 in the table corresponds to 1 << 0)
-			int charsWrit = Q_snprintf(outbuf, outbuflength, "%s ", s_DamageTypeToStrTable[i + 1]); 
+			int charsWrit = V_snprintf(outbuf, outbuflength, "%s ", s_DamageTypeToStrTable[i + 1]); 
 
 			outbuflength -= charsWrit; // reduce the chars left
 			outbuf += charsWrit; // advance the output pointer (now it sits on the null terminator)

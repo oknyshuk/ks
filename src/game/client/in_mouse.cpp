@@ -1,24 +1,20 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Mouse input routines
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+
+import std;
+import ks.tier1;
 #include "hud.h"
 #include "rocketui/rocketui.h"
 #include "cdll_int.h"
 #include "kbutton.h"
-#include "basehandle.h"
 #include "usercmd.h"
 #include "input.h"
 #include "iviewrender.h"
 #include "iclientmode.h"
-#include "tier0/icommandline.h"
 #include "cdll_client_int.h"
 #include "cdll_util.h"
-#include "tier1/convar_serverbounded.h"
 #include "inputsystem/iinputsystem.h"
 #include "inputsystem/iinputstacksystem.h"
 
@@ -219,7 +215,7 @@ void CInput::CheckMouseAcclerationVars()
 			}
 
 			char sz[ 256 ];
-			Q_snprintf( sz, sizeof( sz ), "Mouse parameter '%s' set to %i\n", name, values[ i ] );
+			V_snprintf( sz, sizeof( sz ), "Mouse parameter '%s' set to %i\n", name, values[ i ] );
 			DevMsg( "%s", sz );
 		}
 	}
@@ -324,8 +320,8 @@ void CInput::ResetMouse( void )
 //-----------------------------------------------------------------------------
 void CInput::GetAccumulatedMouseDeltasAndResetAccumulators( int nSlot, float *mx, float *my )
 {
-	Assert( mx );
-	Assert( my );
+	contract_assert( mx );
+	contract_assert( my );
 
 	PerUserInput_t &user = GetPerUser( nSlot );
 
@@ -373,11 +369,11 @@ void CInput::ScaleMouse( int nSlot, float *x, float *y )
 
 	if ( m_customaccel.GetInt() == 1 ||  m_customaccel.GetInt() == 2 ) 
 	{ 
-		float raw_mouse_movement_distance = sqrt( mx * mx + my * my );
+		float raw_mouse_movement_distance = std::sqrt( mx * mx + my * my );
 		float acceleration_scale = m_customaccel_scale.GetFloat();
 		float accelerated_sensitivity_max = m_customaccel_max.GetFloat();
 		float accelerated_sensitivity_exponent = m_customaccel_exponent.GetFloat();
-		float accelerated_sensitivity = ( (float)pow( raw_mouse_movement_distance, accelerated_sensitivity_exponent ) * acceleration_scale + mouse_sensitivity );
+		float accelerated_sensitivity = ( (float)std::pow( raw_mouse_movement_distance, accelerated_sensitivity_exponent ) * acceleration_scale + mouse_sensitivity );
 
 		if ( accelerated_sensitivity_max > 0.0001f && 
 			accelerated_sensitivity > accelerated_sensitivity_max )
@@ -401,7 +397,7 @@ void CInput::ScaleMouse( int nSlot, float *x, float *y )
 	{
 		float raw_mouse_movement_distance_squared = mx * mx + my * my;
 		float fExp = std::max( 0.0f, ((m_customaccel_exponent.GetFloat() - 1.0f) / 2.0f) );
-		float accelerated_sensitivity = powf( raw_mouse_movement_distance_squared, fExp ) * mouse_sensitivity;
+		float accelerated_sensitivity = std::powf( raw_mouse_movement_distance_squared, fExp ) * mouse_sensitivity;
 
 		*x *= accelerated_sensitivity; 
 		*y *= accelerated_sensitivity; 
@@ -600,7 +596,7 @@ void CInput::MouseMove( int nSlot, CUserCmd *cmd )
 		if ( ControllerModeActive() )
 		{
 			// accumulate mouse movements and if we go over a certain threshold, switch out of controller mode
-			m_fAccumulatedMouseMove += fabsf( mouse_x ) + fabsf( mouse_y );
+			m_fAccumulatedMouseMove += std::fabsf( mouse_x ) + fabsf( mouse_y );
 
 			//Msg( "total_mouse_move = %f\n", m_fAccumulatedMouseMove );
 			if ( m_fAccumulatedMouseMove > 30.0f )
@@ -636,8 +632,8 @@ void CInput::MouseMove( int nSlot, CUserCmd *cmd )
 //-----------------------------------------------------------------------------
 void CInput::GetFullscreenMousePos( int *mx, int *my, int *unclampedx /*=NULL*/, int *unclampedy /*=NULL*/ )
 {
-	Assert( mx );
-	Assert( my );
+	contract_assert( mx );
+	contract_assert( my );
 
 	if ( g_pInputStackSystem->IsTopmostEnabledContext( m_hInputContext ) )
 		return;

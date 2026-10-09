@@ -1,25 +1,23 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Client DLL VGUI2 Viewport
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
 
-
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
 #include <cdll_client_int.h>
 #include <cdll_util.h>
-#include <globalvars_base.h>
 
-#include <keyvalues.h>
 
-#include <igameresources.h>
 
 #include "IGameUIFuncs.h"
 #include "hud.h"
@@ -27,8 +25,8 @@
 // our definition
 #include "baseviewport.h"
 #include <filesystem.h>
-#include <convar.h>
-#include "iclientmode.h"
+import ks.tier1;
+import std;
 
 static IViewPort *s_pFullscreenViewportInterface;
 static IViewPort *s_pViewportInterfaces[ MAX_SPLITSCREEN_PLAYERS ];
@@ -48,7 +46,9 @@ ConVar hud_autoreloadscript("hud_autoreloadscript", "0", FCVAR_NONE, "Automatica
 
 static ConVar cl_leveloverviewmarker( "cl_leveloverviewmarker", "0", FCVAR_CHEAT );
 
-CON_COMMAND( showpanel, "Shows a viewport panel <name>" )
+static void showpanel( const CCommand &args );
+static ConCommand showpanel_command( "showpanel", showpanel, "Shows a viewport panel <name>" );
+static void showpanel( const CCommand &args )
 {
 	if ( !GetViewPortInterface() )
 		return;
@@ -59,7 +59,9 @@ CON_COMMAND( showpanel, "Shows a viewport panel <name>" )
 	GetViewPortInterface()->ShowPanel( args[ 1 ], true );
 }
 
-CON_COMMAND( hidepanel, "Hides a viewport panel <name>" )
+static void hidepanel( const CCommand &args );
+static ConCommand hidepanel_command( "hidepanel", hidepanel, "Hides a viewport panel <name>" );
+static void hidepanel( const CCommand &args )
 {
 	if ( !GetViewPortInterface() )
 		return;
@@ -180,7 +182,7 @@ void CBaseViewport::ShowPanel( const char *pName, bool state )
 
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 
-	if ( Q_strcmp( pName, PANEL_ALL ) == 0 )
+	if ( V_strcmp( pName, PANEL_ALL ) == 0 )
 	{
 		for ( int i = 0; i < std::ssize( m_UnorderedPanels ); ++i )
 		{
@@ -193,7 +195,7 @@ void CBaseViewport::ShowPanel( const char *pName, bool state )
 
 	IViewPortPanel * panel = nullptr;
 
-	if ( Q_strcmp( pName, PANEL_ACTIVE ) == 0 )
+	if ( V_strcmp( pName, PANEL_ACTIVE ) == 0 )
 	{
 		panel = m_pActivePanel;
 	}
@@ -219,9 +221,6 @@ void CBaseViewport::ShowPanel( IViewPortPanel* pPanel, bool state )
 		{
 			// don't show input panels during normal demo playback
 			if ( engine->IsPlayingDemo() && !g_bEngineIsHLTV
-#if defined( REPLAY_ENABLED )
-				&& !engine->IsReplay()
-#endif
 				)
 				return;
 
@@ -346,7 +345,7 @@ void CBaseViewport::Start( IGameUIFuncs *pGameUIFuncs, IGameEventManager2 * pGam
 	m_bInitialized = true;
 }
 
-// Return TRUE if the HUD's allowed to print text messages
+// Return true if the HUD's allowed to print text messages
 bool CBaseViewport::AllowedToPrintText( void )
 {
 	return ( m_pActivePanel == nullptr);
@@ -373,15 +372,12 @@ void CBaseViewport::FireGameEvent( IGameEvent * event)
 {
 	const char * type = event->GetName();
 
-	if ( Q_strcmp(type, "game_newmap") == 0 )
+	if ( V_strcmp(type, "game_newmap") == 0 )
 	{
 		// hide all panels when reconnecting 
 		ShowPanel( PANEL_ALL, false );
 
 		if ( g_bEngineIsHLTV
-#if defined( REPLAY_ENABLED )
-			|| engine->IsReplay()
-#endif
 			)
 		{
 			ShowPanel( PANEL_SPECGUI, true );

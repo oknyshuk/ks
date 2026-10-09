@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef DISPCOLL_COMMON_H
-#define DISPCOLL_COMMON_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.math;
 #include "trace.h"
+#include "cmodel.h"
 #include "builddisp.h"
 #ifdef ENGINE_DLL
 #include "../engine/zone.h"
@@ -18,14 +13,15 @@
 template < typename T >
 using CDispVector = ks::aligned_vector< T, 16 >;
 
-FORWARD_DECLARE_HANDLE( memhandle_t );
+struct memhandle_t__;
+using memhandle_t = memhandle_t__ *;
 
-#define DISPCOLL_TREETRI_SIZE		MAX_DISPTRIS
-#define DISPCOLL_DIST_EPSILON		0.03125f
-#define DISPCOLL_ROOTNODE_INDEX		0
-#define DISPCOLL_INVALID_TRI		-1
-#define DISPCOLL_INVALID_FRAC		-99999.9f
-#define DISPCOLL_NORMAL_UNDEF		0xffff
+inline constexpr auto DISPCOLL_TREETRI_SIZE = MAX_DISPTRIS;
+inline constexpr auto DISPCOLL_DIST_EPSILON = 0.03125f;
+inline constexpr auto DISPCOLL_ROOTNODE_INDEX = 0;
+inline constexpr auto DISPCOLL_INVALID_TRI = -1;
+inline constexpr auto DISPCOLL_INVALID_FRAC = -99999.9f;
+inline constexpr auto DISPCOLL_NORMAL_UNDEF = 0xffff;
 
 extern double g_flDispCollSweepTimer;
 extern double g_flDispCollIntersectTimer;
@@ -79,12 +75,12 @@ public:
 	void FindMinMax( CDispVector<Vector> &m_aVerts );
 
 	// Triangle data.
-	inline void SetVert( int iPos, int iVert )			{ Assert( ( iPos >= 0 ) && ( iPos < 3 ) ); Assert( ( iVert >= 0 ) && ( iVert < ( 1 << 9 ) ) ); m_TriData[iPos].m_Index.uiVert = iVert; }
-	inline int  GetVert( int iPos ) const				{ Assert( ( iPos >= 0 ) && ( iPos < 3 ) ); return m_TriData[iPos].m_Index.uiVert; }
-	inline void SetMin( int iAxis, int iMin )			{ Assert( ( iAxis >= 0 ) && ( iAxis < 3 ) ); Assert( ( iMin >= 0 ) && ( iMin < 3 ) ); m_TriData[iAxis].m_Index.uiMin = iMin; }
-	inline int  GetMin( int iAxis )	const				{ Assert( ( iAxis >= 0 ) && ( iAxis < 3 ) ); return m_TriData[iAxis].m_Index.uiMin; }
-	inline void SetMax( int iAxis, int iMax )			{ Assert( ( iAxis >= 0 ) && ( iAxis < 3 ) ); Assert( ( iMax >= 0 ) && ( iMax < 3 ) ); m_TriData[iAxis].m_Index.uiMax = iMax; }
-	inline int  GetMax( int iAxis ) const				{ Assert( ( iAxis >= 0 ) && ( iAxis < 3 ) ); return m_TriData[iAxis].m_Index.uiMax; }
+	inline void SetVert( int iPos, int iVert )			{ contract_assert( ( iPos >= 0 ) && ( iPos < 3 ) ); contract_assert( ( iVert >= 0 ) && ( iVert < ( 1 << 9 ) ) ); m_TriData[iPos].m_Index.uiVert = iVert; }
+	inline int  GetVert( int iPos ) const				{ contract_assert( ( iPos >= 0 ) && ( iPos < 3 ) ); return m_TriData[iPos].m_Index.uiVert; }
+	inline void SetMin( int iAxis, int iMin )			{ contract_assert( ( iAxis >= 0 ) && ( iAxis < 3 ) ); contract_assert( ( iMin >= 0 ) && ( iMin < 3 ) ); m_TriData[iAxis].m_Index.uiMin = iMin; }
+	inline int  GetMin( int iAxis )	const				{ contract_assert( ( iAxis >= 0 ) && ( iAxis < 3 ) ); return m_TriData[iAxis].m_Index.uiMin; }
+	inline void SetMax( int iAxis, int iMax )			{ contract_assert( ( iAxis >= 0 ) && ( iAxis < 3 ) ); contract_assert( ( iMax >= 0 ) && ( iMax < 3 ) ); m_TriData[iAxis].m_Index.uiMax = iMax; }
+	inline int  GetMax( int iAxis ) const				{ contract_assert( ( iAxis >= 0 ) && ( iAxis < 3 ) ); return m_TriData[iAxis].m_Index.uiMax; }
 };
 
 //=============================================================================
@@ -110,7 +106,7 @@ public:
 	unsigned short m_iCrossZ[3];
 };
 #pragma pack()
-#include "mathlib/ssemath.h"
+import std;
 
 class CDispCollNode
 {
@@ -190,7 +186,7 @@ public:
 
 	inline void GetBounds( Vector &vecBoxMin, Vector &vecBoxMax )	{ vecBoxMin = m_mins; vecBoxMax = m_maxs; }
 	inline int GetContents( void )									{ return m_nContents; }
-	inline void SetSurfaceProps( int iProp, short nSurfProp )		{ Assert( ( iProp >= 0 ) && ( iProp < 4 ) ); m_nSurfaceProps[iProp] = nSurfProp; }
+	inline void SetSurfaceProps( int iProp, short nSurfProp )		{ contract_assert( ( iProp >= 0 ) && ( iProp < 4 ) ); m_nSurfaceProps[iProp] = nSurfProp; }
 	inline short GetSurfaceProps( int iProp )						{ return m_nSurfaceProps[iProp]; }
 
 	inline unsigned int GetMemorySize( void )						{ return m_nSize; }
@@ -216,7 +212,7 @@ public:
 
 #ifdef ENGINE_DLL
 	// Data manager methods
-	static size_t EstimatedSize( CDispCollTree *pTree )
+	static std::size_t EstimatedSize( CDispCollTree *pTree )
 	{
 		return pTree->GetCacheMemorySize();
 	}
@@ -232,7 +228,7 @@ public:
 		return IsCached();
 	}
 
-	size_t Size()
+	std::size_t Size()
 	{
 		return GetCacheMemorySize();
 	}
@@ -257,7 +253,7 @@ protected:
 	void AABBTree_TreeTrisRayTest( const Ray_t &ray, const Vector &vecInvDelta, int iNode, CBaseTrace *pTrace, bool bSide, CDispCollTri **pImpactTri );
 	void AABBTree_TreeTrisRayBarycentricTest( const Ray_t &ray, const Vector &vecInvDelta, int iNode, RayDispOutput_t &output, CDispCollTri **pImpactTri );
 
-	int FORCEINLINE BuildRayLeafList( int iNode, rayleaflist_t &list );
+	[[gnu::always_inline]] inline int BuildRayLeafList( int iNode, rayleaflist_t &list );
 
 	struct AABBTree_TreeTrisSweepTest_Args_t
 	{
@@ -279,21 +275,21 @@ protected:
 	bool Cache_EdgeCrossAxisZ( const Vector &vecEdge, const Vector &vecOnEdge, const Vector &vecOffEdge, CDispCollTri *pTri, unsigned short &iPlane );
 
 	inline bool FacePlane( const Ray_t &ray, const Vector &rayDir, CDispCollTri *pTri, CDispCollHelper *pHelper );
-	bool FORCEINLINE AxisPlanesXYZ( const Ray_t &ray, CDispCollTri *pTri, CDispCollHelper *pHelper );
+	[[gnu::always_inline]] inline bool AxisPlanesXYZ( const Ray_t &ray, CDispCollTri *pTri, CDispCollHelper *pHelper );
 	inline bool EdgeCrossAxisX( const Ray_t &ray, unsigned short iPlane, CDispCollHelper *pHelper );
 	inline bool EdgeCrossAxisY( const Ray_t &ray, unsigned short iPlane, CDispCollHelper *pHelper );
 	inline bool EdgeCrossAxisZ( const Ray_t &ray, unsigned short iPlane, CDispCollHelper *pHelper );
 
 	bool ResolveRayPlaneIntersect( float flStart, float flEnd, const Vector &vecNormal, float flDist, CDispCollHelper *pHelper );
-	template <int AXIS> bool FORCEINLINE TestOneAxisPlaneMin( const Ray_t &ray, CDispCollTri *pTri );
-	template <int AXIS> bool FORCEINLINE TestOneAxisPlaneMax( const Ray_t &ray, CDispCollTri *pTri );
+	template <int AXIS> [[gnu::always_inline]] inline bool TestOneAxisPlaneMin( const Ray_t &ray, CDispCollTri *pTri );
+	template <int AXIS> [[gnu::always_inline]] inline bool TestOneAxisPlaneMax( const Ray_t &ray, CDispCollTri *pTri );
 	template <int AXIS>	bool EdgeCrossAxis( const Ray_t &ray, unsigned short iPlane, CDispCollHelper *pHelper );
 
 	// Utility
 	inline void CalcClosestBoxPoint( const Vector &vecPlaneNormal, const Vector &vecBoxStart, const Vector &vecBoxExtents, Vector &vecBoxPoint );
 	inline void CalcClosestExtents( const Vector &vecPlaneNormal, const Vector &vecBoxExtents, Vector &vecBoxPoint );
 	int AddPlane( const Vector &vecNormal );
-	bool FORCEINLINE IsLeafNode(int iNode);
+	[[gnu::always_inline]] inline bool IsLeafNode(int iNode);
 public:
 	Vector							m_mins;									// Bounding box of the displacement surface and base face
 	int								m_iCounter;
@@ -329,7 +325,7 @@ protected:
 
 };
 
-FORCEINLINE bool CDispCollTree::IsLeafNode(int iNode) 
+[[gnu::always_inline]] inline bool CDispCollTree::IsLeafNode(int iNode) 
 { 
 	return iNode >= std::ssize( m_nodes ) ? true : false; 
 }
@@ -344,8 +340,8 @@ FORCEINLINE bool CDispCollTree::IsLeafNode(int iNode)
 inline int CDispCollTree::Nodes_GetChild( int iNode, int nDirection )
 {
 	// node range [0...m_NodeCount)
-	Assert( iNode >= 0 );
-	Assert( iNode < std::ssize( m_nodes ) );
+	contract_assert( iNode >= 0 );
+	contract_assert( iNode < std::ssize( m_nodes ) );
 
     // ( node index * 4 ) + ( direction + 1 )
     return ( ( iNode << 2 ) + ( nDirection + 1 ) );	
@@ -356,8 +352,8 @@ inline int CDispCollTree::Nodes_GetChild( int iNode, int nDirection )
 //-----------------------------------------------------------------------------
 inline int CDispCollTree::Nodes_CalcCount( int nPower )
 { 
-	Assert( nPower >= 1 );
-	Assert( nPower <= 4 );
+	contract_assert( nPower >= 1 );
+	contract_assert( nPower <= 4 );
 
 	return ( ( 1 << ( ( nPower + 1 ) << 1 ) ) / 3 ); 
 }
@@ -370,8 +366,8 @@ inline int CDispCollTree::Nodes_CalcCount( int nPower )
 inline int CDispCollTree::Nodes_GetParent( int iNode )
 {
 	// node range [0...m_NodeCount)
-	Assert( iNode >= 0 );
-	Assert( iNode < std::ssize( m_nodes ) );
+	contract_assert( iNode >= 0 );
+	contract_assert( iNode < std::ssize( m_nodes ) );
 
 	// ( node index - 1 ) / 4
 	return ( ( iNode - 1 ) >> 2 );
@@ -384,8 +380,8 @@ inline int CDispCollTree::Nodes_GetParent( int iNode )
 inline int CDispCollTree::Nodes_GetLevel( int iNode )
 {
 	// node range [0...m_NodeCount)
-	Assert( iNode >= 0 );
-	Assert( iNode < std::ssize( m_nodes ) );
+	contract_assert( iNode >= 0 );
+	contract_assert( iNode < std::ssize( m_nodes ) );
 
 	// level = 2^n + 1
 	if ( iNode == 0 )  { return 1; }
@@ -446,5 +442,3 @@ inline void CDispCollTree::CalcClosestExtents( const Vector &vecPlaneNormal, con
 // Global Helper Functions
 CDispCollTree *DispCollTrees_Alloc( int count );
 void DispCollTrees_Free( CDispCollTree *pTrees );
-
-#endif // DISPCOLL_COMMON_H

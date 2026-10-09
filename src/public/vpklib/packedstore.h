@@ -1,28 +1,12 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef PACKEDSTORE_H
-#define PACKEDSTORE_H
-
-
-#include <tier0/platform.h>
-#include <tier0/threadtools.h>
 #include <tier2/tier2.h>
 
+import ks.tier1;
 #include "filesystem.h"
-#include "tier1/utlvector.h"
-#include <atomic>
-#include <deque>
-#include <map>
-#include <mutex>
-#include <shared_mutex>
-#include <string_view>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
+import std;
 
 //#define VPK_ENABLE_SIGNING
 
@@ -69,12 +53,12 @@ public:
 	struct CFileHeaderFixedData *m_pHeaderData;
 	uint8 *m_pDirFileNamePtr;								// pointer to basename in dir block
 
-	FORCEINLINE operator bool( void ) const
+	[[gnu::always_inline]] inline operator bool( void ) const
 	{
 		return ( m_nFileNumber != -1 );
 	}
 
-	FORCEINLINE int Read( void *pOutData, int nNumBytes );
+	[[gnu::always_inline]] inline int Read( void *pOutData, int nNumBytes );
 
 	CPackedStoreFileHandle( void )
 	{
@@ -85,11 +69,11 @@ public:
 	{
 		switch( nWhence )
 		{
-			case SEEK_CUR:
+			case FILESYSTEM_SEEK_CURRENT:
 				nOffset = m_nFileOffset + nOffset ;
 				break;
 
-			case SEEK_END:
+			case FILESYSTEM_SEEK_TAIL:
 				nOffset = m_nFileSize + nOffset;
 				break;
 		}
@@ -108,13 +92,13 @@ public:
 		return *pCRC;
 	}
 
-	FORCEINLINE void GetPackFileName( char *pchFileNameOut, int cchFileNameOut );
+	[[gnu::always_inline]] inline void GetPackFileName( char *pchFileNameOut, int cchFileNameOut );
 
 };
 
-#define MAX_ARCHIVE_FILES_TO_KEEP_OPEN_AT_ONCE 512
+inline constexpr auto MAX_ARCHIVE_FILES_TO_KEEP_OPEN_AT_ONCE = 512;
 
-#define PACKEDFILE_EXT_HASH_SIZE 15
+inline constexpr auto PACKEDFILE_EXT_HASH_SIZE = 15;
 
 
 typedef FileHandle_t PackDataFileHandle_t;
@@ -156,7 +140,7 @@ struct VPKContentFileInfo_t
 	/// Size of the data in the chunk file.  (Excludes the preload data size)
 	uint32 GetSizeInChunkFile() const
 	{
-		Assert( m_iTotalSize >= m_iPreloadSize );
+		contract_assert( m_iTotalSize >= m_iPreloadSize );
 		return m_iTotalSize - m_iPreloadSize;
 	}
 
@@ -281,7 +265,7 @@ public:
 
 	~CPackedStore( void );
 
-	FORCEINLINE void *DirectoryData( void )
+	[[gnu::always_inline]] inline void *DirectoryData( void )
 	{
 		return m_DirectoryData.data();
 	}
@@ -352,20 +336,6 @@ public:
 	const std::vector< uint8 > &GetSignaturePublicKey() const { return m_SignaturePublicKey; }
 	const std::vector< uint8 > &GetSignature() const { return m_Signature; }
 
-#ifdef VPK_ENABLE_SIGNING
-	enum ESignatureCheckResult
-	{
-		eSignatureCheckResult_NotSigned,
-		eSignatureCheckResult_WrongKey,
-		eSignatureCheckResult_Failed, // IO error, etc
-		eSignatureCheckResult_InvalidSignature,
-		eSignatureCheckResult_ValidSignature,
-	};
-	ESignatureCheckResult CheckSignature( int nSignatureSize, const void *pSignature ) const;
-
-	void SetKeysForSigning( int nPrivateKeySize, const void *pPrivateKeyData, int nPublicKeySize, const void *pPublicKeyData );
-#endif
-
 	void SetUseDirFile() { m_bUseDirFile = true; }
 
 	int m_PackFileID;
@@ -435,15 +405,12 @@ private:
 	friend class CPackedStoreReadCache;
 };
 
-FORCEINLINE int CPackedStoreFileHandle::Read( void *pOutData, int nNumBytes )
+[[gnu::always_inline]] inline int CPackedStoreFileHandle::Read( void *pOutData, int nNumBytes )
 {
 	return m_pOwner->ReadData( *this, pOutData, nNumBytes );
 }
 
-FORCEINLINE void CPackedStoreFileHandle::GetPackFileName( char *pchFileNameOut, int cchFileNameOut )
+[[gnu::always_inline]] inline void CPackedStoreFileHandle::GetPackFileName( char *pchFileNameOut, int cchFileNameOut )
 {
 	m_pOwner->GetPackFileName( *this, pchFileNameOut, cchFileNameOut );
 }
-
-
-#endif // packedtsore_h

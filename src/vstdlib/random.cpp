@@ -1,28 +1,23 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Random number generator
-//
-// $Workfile: $
-// $NoKeywords: $
-//===========================================================================//
 
+import ks.vstdlib;
+import std;
 
-#include "vstdlib/random.h"
-#include <math.h>
-#include "dbg.h"
-
-#define IA 16807
-#define IM 2147483647
-#define IQ 127773
-#define IR 2836
-#define NDIV (1+(IM-1)/NTAB)
-#define MAX_RANDOM_RANGE 0x7FFFFFFFUL
+constexpr auto IA = 16807;
+constexpr auto IM = 2147483647;
+constexpr auto IQ = 127773;
+constexpr auto IR = 2836;
+constexpr auto NDIV = (1+(IM-1)/NTAB);
+constexpr auto MAX_RANDOM_RANGE = 0x7FFFFFFFUL;
 
 // fran1 -- return a random floating-point number on the interval [0,1)
 //
-#define AM (1.0/IM)
-#define EPS 1.2e-7
-#define RNMX (1.0-EPS)
+constexpr auto AM = (1.0/IM);
+constexpr auto EPS = 1.2e-7;
+constexpr auto RNMX = (1.0-EPS);
 
 //-----------------------------------------------------------------------------
 // globals
@@ -125,7 +120,7 @@ int CUniformRandomStream::GenerateRandomNumber()
 		DebuggerBreakIfDebugging();
 		Warning("CUniformRandomStream had an array overrun: tried to write to element %d of 0..31. Contact Tom or Elan.\n", j);
 		// Ensure that NTAB is a power of two.
-		COMPILE_TIME_ASSERT( ( NTAB & ( NTAB - 1 ) ) == 0 );
+		static_assert( ( NTAB & ( NTAB - 1 ) ) == 0 );
 		// Clamp j.
 		j &= NTAB - 1;
 	}
@@ -157,7 +152,7 @@ float CUniformRandomStream::RandomFloatExp( float flMinVal, float flMaxVal, floa
 	}
 	if ( flExponent != 1.0f )
 	{
-		fl = powf( fl, flExponent );
+		fl = std::powf( fl, flExponent );
 	}
 	return (fl * ( flMaxVal - flMinVal ) ) + flMinVal; // float in [low,high)
 }
@@ -236,7 +231,7 @@ float CGaussianRandomStream::RandomFloat( float flMean, float flStdDev )
 		} while ((rsq > 1.0f) || (rsq == 0.0f));
 
 		// The box-muller transformation to get the two gaussian numbers
-		fac = sqrtf( -2.0f * log(rsq) / rsq );
+		fac = std::sqrtf( -2.0f * std::log(rsq) / rsq );
 
 		// Store off one value for later use
 		m_flRandomValue = v1 * fac;

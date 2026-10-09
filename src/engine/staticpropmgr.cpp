@@ -1,17 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Revision: $
-// $NoKeywords: $
-//
-// This file contains code to allow us to associate client data with bsp leaves.
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: This file contains code to allow us to associate client data with bsp leaves.
 
+import ks.tier1;
 #include "staticpropmgr.h"
-#include "convar.h"
 #include "vcollide_parse.h"
 #include "engine/ICollideable.h"
 #include "iclientunknown.h"
@@ -20,8 +13,6 @@
 #include "engine/ivmodelrender.h"
 #include "engine/IClientLeafSystem.h"
 #include "ispatialpartitioninternal.h"
-#include "tier1/byte_reader.h"
-#include "utlvector.h"
 #include "filesystem.h"
 #include "gl_model_private.h"
 #include "gl_matsysiface.h"
@@ -29,30 +20,23 @@
 #include "materialsystem/ivballoctracker.h"
 #include "materialsystem/imesh.h"
 #include "lightcache.h"
-#include "tier0/vprof.h"
 #include "render.h"
 #include "cmodel_engine.h"
 #include "datacache/imdlcache.h"
 #include "ModelInfo.h"
 #include "cdll_engine_int.h"
-#include "tier0/dbg.h"
 #include "debugoverlay.h"
-#include "draw.h"
 #include "client.h"
 #include "server.h"
 #include "l_studio.h"
-#include "tier0/icommandline.h"
-#include "sys_dll.h"
-#include "generichash.h"
 #include "tier2/renderutils.h"
-#include "ipooledvballocator.h"
 #include "tier3/tier3.h"
 #include "gl_cvars.h"
 #include "shaderapi/ishaderapi.h"
 #include "iclientalphaproperty.h"
 #include "engineui.h"
 
-#include <vector>
+import std;
 
 //-----------------------------------------------------------------------------
 // Convars!
@@ -68,7 +52,7 @@ extern ConVar mat_fullbright;
 static bool g_MakingDevShots = false;
 ConVar r_shadow_deferred( "r_shadow_deferred", "0", FCVAR_CHEAT, "Toggle deferred shadow rendering");
 
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_StaticPropManager, "StaticPropManager", 0, LS_ERROR );
+LoggingChannelID_t LOG_StaticPropManager = LoggingSystem_RegisterLoggingChannel( "StaticPropManager", nullptr, 0, LS_ERROR );;
 
 //-----------------------------------------------------------------------------
 // Index into the fade list
@@ -239,7 +223,7 @@ public:
 	virtual ShadowType_t ShadowCastType() { return SHADOWS_NONE; }
 
 	// Create/get/destroy model instance
-	virtual void CreateModelInstance() { Assert(0); }
+	virtual void CreateModelInstance() { contract_assert( 0 ); }
 	virtual ModelInstanceHandle_t GetModelInstance();
 
 	// Attachments
@@ -391,7 +375,7 @@ public:
 	// methods of IStaticPropMgrClient
 	virtual void TraceRayAgainstStaticProp( const Ray_t& ray, int staticPropIndex, trace_t& tr );
 	virtual void AddDecalToStaticProp( Vector const& rayStart, Vector const& rayEnd,
-		int staticPropIndex, int decalIndex, bool doTrace, trace_t& tr, void *pvProxyUserData = nullptr, const Vector* saxis = nullptr, int32 nAdditionalDecalFlags = 0 ) OVERRIDE;
+		int staticPropIndex, int decalIndex, bool doTrace, trace_t& tr, void *pvProxyUserData = nullptr, const Vector* saxis = nullptr, int32 nAdditionalDecalFlags = 0 ) override;
 	virtual void AddShadowToStaticProp( unsigned short shadowHandle, IClientRenderable* pRenderable );
 	virtual void RemoveAllShadowsFromStaticProp( IClientRenderable* pRenderable );
 	virtual void GetStaticPropMaterialColorAndLighting( trace_t* pTrace,
@@ -455,8 +439,8 @@ private:
 // Expose Interface to the game + client DLLs.
 //-----------------------------------------------------------------------------
 static CStaticPropMgr	s_StaticPropMgr;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CStaticPropMgr, IStaticPropMgrClient, INTERFACEVERSION_STATICPROPMGR_CLIENT, s_StaticPropMgr);
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CStaticPropMgr, IStaticPropMgrServer, INTERFACEVERSION_STATICPROPMGR_SERVER, s_StaticPropMgr);
+static InterfaceReg s_Reg_CStaticPropMgr_IStaticPropMgrClient( []() -> void * { return static_cast<IStaticPropMgrClient *>( &s_StaticPropMgr ); }, INTERFACEVERSION_STATICPROPMGR_CLIENT );;
+static InterfaceReg s_Reg_CStaticPropMgr_IStaticPropMgrServer( []() -> void * { return static_cast<IStaticPropMgrServer *>( &s_StaticPropMgr ); }, INTERFACEVERSION_STATICPROPMGR_SERVER );;
 
 
 //-----------------------------------------------------------------------------
@@ -554,7 +538,7 @@ bool CStaticProp::Init( int index, StaticPropLump_t &lump, model_t *pModel )
 	default:
 		{
 			char szModel[MAX_PATH];
-			Q_strncpy( szModel, m_pModel ? modelloader->GetName( m_pModel ) : "unknown model", sizeof( szModel ) );
+			V_strncpy( szModel, m_pModel ? modelloader->GetName( m_pModel ) : "unknown model", sizeof( szModel ) );
 			Log_Warning( LOG_StaticPropManager, "CStaticProp::Init:  Map error, static_prop with bogus SOLID_ flag (%d)! (%s)\n", m_nSolidType, szModel );
 			m_nSolidType = SOLID_NONE;
 		}
@@ -601,7 +585,7 @@ bool CStaticProp::Init( int index, StaticPropLump_t &lump, model_t *pModel )
 void CStaticProp::SetRefEHandle( const CBaseHandle &handle )
 {
 	// Only the static prop mgr should be setting this...
-	Assert( 0 );
+	contract_assert( 0 );
 }
 
 
@@ -641,7 +625,7 @@ const Vector& CStaticProp::OBBMaxs( ) const
 void CStaticProp::WorldSpaceTriggerBounds( Vector* pVecWorldMins, Vector *pVecWorldMaxs ) const
 {
 	// This should never be called..
-	Assert(0);
+	contract_assert( 0 );
 }
 
 
@@ -827,7 +811,7 @@ void CStaticProp::CleanUpAlphaProperty()
 //-----------------------------------------------------------------------------
 void CStaticProp::GetColorModulation( float* color )
 {
-	memcpy( color, m_DiffuseModulation.Base(), sizeof( float ) * 3 );
+	std::memcpy( color, m_DiffuseModulation.Base(), sizeof( float ) * 3 );
 }
 
 
@@ -836,7 +820,7 @@ void CStaticProp::GetColorModulation( float* color )
 //-----------------------------------------------------------------------------
 bool CStaticProp::TestCollision( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr )
 {
-	Assert(0);
+	contract_assert( 0 );
 	return false;
 }
 
@@ -993,17 +977,17 @@ void CStaticProp::DisplayStaticPropInfo( int nInfoType )
 	switch( nInfoType )
 	{
 	case 1:
-		Q_snprintf( buf, sizeof( buf ), "%s", modelloader->GetName( m_pModel ) );
+		V_snprintf( buf, sizeof( buf ), "%s", modelloader->GetName( m_pModel ) );
 		break;
 
 	case 2:
-		Q_snprintf(buf, sizeof( buf ), "%d", (m_EntHandle.ToInt() & (~STATICPROP_EHANDLE_MASK)) );
+		V_snprintf(buf, sizeof( buf ), "%d", (m_EntHandle.ToInt() & (~STATICPROP_EHANDLE_MASK)) );
 		break;
 
 	case 3:
 		{
 			float flDist = GetRenderOrigin().DistTo( s_StaticPropMgr.ViewOrigin() );
-			Q_snprintf(buf, sizeof( buf ), "%.1f", flDist );
+			V_snprintf(buf, sizeof( buf ), "%.1f", flDist );
 		}
 		break;
 
@@ -1011,7 +995,7 @@ void CStaticProp::DisplayStaticPropInfo( int nInfoType )
 		{
 			CMatRenderContextPtr pRenderContext( materials );
 			float flPixelWidth = pRenderContext->ComputePixelWidthOfSphere( GetRenderOrigin(), Radius() );
-			Q_snprintf(buf, sizeof( buf ), "%.1f", flPixelWidth );
+			V_snprintf(buf, sizeof( buf ), "%.1f", flPixelWidth );
 		}
 		break;
 	}
@@ -1029,7 +1013,7 @@ void CStaticProp::DisplayStaticPropInfo( int nInfoType )
 int	CStaticProp::DrawModelSlow( int flags, const RenderableInstance_t &instance )
 {
 #ifndef DEDICATED
-	VPROF_BUDGET( "CStaticProp::DrawModel", VPROF_BUDGETGROUP_STATICPROP_RENDERING );
+	CVProfScope _( "CStaticProp::DrawModel", 0, VPROF_BUDGETGROUP_STATICPROP_RENDERING, false, BUDGETFLAG_OTHER );
 
 	if ( !r_drawstaticprops.GetBool() )
 		return 0;
@@ -1052,7 +1036,7 @@ int	CStaticProp::DrawModelSlow( int flags, const RenderableInstance_t &instance 
 
 #ifdef _DEBUG
 	studiohdr_t *pStudioHdr = modelinfo->GetStudiomodel( m_pModel );
-	Assert( pStudioHdr );
+	contract_assert( pStudioHdr );
 	if ( !( pStudioHdr->flags & STUDIOHDR_FLAGS_STATIC_PROP ) )
 	{
 		return 0;
@@ -1125,7 +1109,7 @@ int	CStaticProp::DrawModelSlow( int flags, const RenderableInstance_t &instance 
 int CStaticProp::DrawModel( int flags, const RenderableInstance_t &instance )
 {
 #ifndef DEDICATED
-	VPROF_BUDGET( "CStaticProp::DrawModel", VPROF_BUDGETGROUP_STATICPROP_RENDERING );
+	CVProfScope _( "CStaticProp::DrawModel", 0, VPROF_BUDGETGROUP_STATICPROP_RENDERING, false, BUDGETFLAG_OTHER );
 
 	if ( ( instance.m_nAlpha == 0 ) || !m_pModel )
 		return 0;
@@ -1160,7 +1144,7 @@ int CStaticProp::DrawModel( int flags, const RenderableInstance_t &instance )
 //-----------------------------------------------------------------------------
 void CStaticProp::InsertPropIntoKDTree()
 {
-	Assert( m_Partition == PARTITION_INVALID_HANDLE );
+	contract_assert( m_Partition == PARTITION_INVALID_HANDLE );
 	if ( m_nSolidType == SOLID_NONE )
 		return;
 
@@ -1191,7 +1175,7 @@ void CStaticProp::InsertPropIntoKDTree()
 		PARTITION_ENGINE_SOLID_EDICTS | PARTITION_ENGINE_STATIC_PROPS, 
 		mins, maxs );
 
-	Assert( m_Partition != PARTITION_INVALID_HANDLE );
+	contract_assert( m_Partition != PARTITION_INVALID_HANDLE );
 }
 
 void CStaticProp::RemovePropFromKDTree()
@@ -1268,7 +1252,7 @@ void CStaticProp::CreateVPhysics( IPhysicsEnvironment *pPhysEnv, IVPhysicsKeyHan
 		if ( m_nSolidType != SOLID_BBOX  )
 		{
 			char szModel[MAX_PATH];
-			Q_strncpy( szModel, m_pModel ? modelloader->GetName( m_pModel ) : "unknown model", sizeof( szModel ) );
+			V_strncpy( szModel, m_pModel ? modelloader->GetName( m_pModel ) : "unknown model", sizeof( szModel ) );
 			Log_Warning( LOG_StaticPropManager, "Map Error:  Static prop with bogus solid type %d! (%s)\n", m_nSolidType, szModel );
 			m_nSolidType = SOLID_NONE;
 			return;
@@ -1277,10 +1261,10 @@ void CStaticProp::CreateVPhysics( IPhysicsEnvironment *pPhysEnv, IVPhysicsKeyHan
 		// If there's no collide, we need a bbox...
 		pPhysCollide = physcollision->BBoxToCollide( m_pModel->mins, m_pModel->maxs );
 		solid.params = g_PhysDefaultObjectParams;
-        Q_strncpy( solid.surfaceprop, "default", sizeof( solid.surfaceprop ) );
+        V_strncpy( solid.surfaceprop, "default", sizeof( solid.surfaceprop ) );
 	}
 
-	Assert(pPhysCollide);
+	contract_assert( pPhysCollide );
 	solid.params.enableCollisions = true;
 	solid.params.pGameData = pGameData;
 	solid.params.pName = "prop_static";
@@ -1471,7 +1455,7 @@ void CStaticPropMgr::UnserializeModels( ks::byte_reader& buf )
 	int count = buf.read< int >();
 
 	// Constructed in place, all at once: props can't move (see CStaticProp).
-	Assert( m_StaticProps.empty() );
+	contract_assert( m_StaticProps.empty() );
 	m_StaticProps = std::vector< CStaticProp >( count );
 	for ( int i = 0; i < count; ++i )
 	{
@@ -1554,7 +1538,7 @@ void CStaticPropMgr::OutputLevelStats( void )
 		{
 			continue;
 		}
-		Assert( pModel->type == mod_studio );
+		contract_assert( pModel->type == mod_studio );
 		studiohdr_t *pStudioHdr = ( studiohdr_t * )modelloader->GetExtraData( pModel );
 		int bodyPart;
 		for( bodyPart = 0; bodyPart < pStudioHdr->numbodyparts; bodyPart++ )
@@ -1586,7 +1570,6 @@ void CStaticPropMgr::UnserializeStaticProps()
 
 	COM_TimestampedLog( "UnserializeStaticProps - start");
 
-	MEM_ALLOC_CREDIT();
 	std::vector< std::byte > lumpData( size );
 	if ( Mod_LoadGameLump( GAMELUMP_STATIC_PROPS, lumpData.data(), size ))
 	{
@@ -1611,7 +1594,7 @@ void CStaticPropMgr::LevelInit()
 	if ( m_bLevelInitialized )
 		return;
 
-	Assert( !m_bClientInitialized );
+	contract_assert( !m_bClientInitialized );
 	m_bLevelInitialized = true;
 
 	// See if we should skip loading static props
@@ -1660,8 +1643,8 @@ void CStaticPropMgr::LevelInitClient()
 		g_pFileSystem->BeginMapAccess();
 	}
 
-	Assert( m_bLevelInitialized );
-	Assert( !m_bClientInitialized );
+	contract_assert( m_bLevelInitialized );
+	contract_assert( !m_bClientInitialized );
 
 	// Since the client will be ready at a later time than the server
 	// to set up its data, we need a separate call to handle that
@@ -1699,7 +1682,7 @@ void CStaticPropMgr::LevelShutdownClient()
 	if ( !m_bClientInitialized )
 		return;
 
-	Assert( m_bLevelInitialized );
+	contract_assert( m_bLevelInitialized );
 
 	for (int i = std::ssize( m_StaticProps ); --i >= 0; )
 	{
@@ -1735,7 +1718,7 @@ void CStaticPropMgr::CreateVPhysicsRepresentations( IPhysicsEnvironment	*pPhysEn
 //-----------------------------------------------------------------------------
 inline int CStaticPropMgr::HandleEntityToIndex( IHandleEntity *pHandleEntity ) const
 {
-	Assert( IsStaticProp_Inline( pHandleEntity ) );
+	contract_assert( IsStaticProp_Inline( pHandleEntity ) );
 	return pHandleEntity->GetRefEHandle().GetEntryIndex();
 }
 
@@ -1761,7 +1744,7 @@ ICollideable *CStaticPropMgr::GetStaticPropByIndex( int propIndex )
 	{
 		return &m_StaticProps[propIndex];
 	}
-	Assert(0);
+	contract_assert( 0 );
 	return nullptr;
 }
 
@@ -1955,7 +1938,7 @@ void CStaticPropMgr::GetLightingOrigins( Vector *pLightingOrigins, int nOriginSt
 		ppRenderable = (IClientRenderable**)( (unsigned char*)ppRenderable + nRenderableStride ),
 		pLightingOrigins = (Vector*)( (unsigned char*)pLightingOrigins + nOriginStride ))
 	{
-		CStaticProp *pProp = assert_cast< CStaticProp* >( (*ppRenderable)->GetIClientUnknown() );
+		CStaticProp *pProp = static_cast< CStaticProp* >( (*ppRenderable)->GetIClientUnknown() );
 		*pLightingOrigins = pProp->m_LightingOrigin;
 	}
 }
@@ -2010,7 +1993,7 @@ bool CStaticPropMgr::IsPropInPVS( IHandleEntity *pHandleEntity, const byte *pVis
 	int end = prop.FirstLeaf() + prop.LeafCount();
 	for( i = prop.FirstLeaf(); i < end; i++ )
 	{
-		Assert( i >= 0 && i < std::ssize( m_StaticPropLeaves ) );
+		contract_assert( i >= 0 && i < std::ssize( m_StaticPropLeaves ) );
 		int clusterID = CM_LeafCluster( m_StaticPropLeaves[i].m_Leaf );
 		if( pVis[ clusterID >> 3 ] & ( 1 << ( clusterID & 7 ) ) )
 		{
@@ -2023,7 +2006,7 @@ bool CStaticPropMgr::IsPropInPVS( IHandleEntity *pHandleEntity, const byte *pVis
 
 void CStaticPropMgr::DrawStaticProps_Slow( IClientRenderable **pProps, const RenderableInstance_t *pInstances, int count, bool bShadowDepth, bool drawVCollideWireframe )
 {
-	VPROF("CStaticPropMgr::DrawStaticProps_Slow");
+	CVProfScope _( "CStaticPropMgr::DrawStaticProps_Slow", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// slow mode
 	MDLCACHE_CRITICAL_SECTION_( g_pMDLCache );
 	int flags = STUDIO_RENDER;
@@ -2041,7 +2024,7 @@ void CStaticPropMgr::DrawStaticProps_Slow( IClientRenderable **pProps, const Ren
 
 void CStaticPropMgr::DrawStaticProps_Fast( IClientRenderable **pProps, const RenderableInstance_t *pInstances, int count, bool bShadowDepth )
 {
-	VPROF("CStaticPropMgr::DrawStaticProps_Fast");
+	CVProfScope _( "CStaticPropMgr::DrawStaticProps_Fast", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	float color[3];
 	color[0] = color[1] = color[2] = 1.0f;
 	g_pStudioRender->SetColorModulation(color);
@@ -2084,7 +2067,7 @@ void CStaticPropMgr::DrawStaticProps_Fast( IClientRenderable **pProps, const Ren
 // NOTE: This is a work in progress for a new static prop (eventually new model) rendering pipeline
 void CStaticPropMgr::DrawStaticProps_FastPipeline( IClientRenderable **pProps, const RenderableInstance_t *pInstances, int count, bool bShadowDepth )
 {
-	VPROF("CStaticPropMgr::DrawStaticProps_FastPipeline");
+	CVProfScope _( "CStaticPropMgr::DrawStaticProps_FastPipeline", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	const int MAX_OBJECTS = 2048;
 	StaticPropRenderInfo_t propList[MAX_OBJECTS];
 	int listCount = 0;
@@ -2116,7 +2099,7 @@ ConVar pipeline_static_props("pipeline_static_props", "1");
 extern ConVar cl_skipslowpath;
 void CStaticPropMgr::DrawStaticProps( IClientRenderable **pProps, const RenderableInstance_t *pInstances, int count, bool bShadowDepth, bool drawVCollideWireframe )
 {
-	VPROF_BUDGET( "CStaticPropMgr::DrawStaticProps", VPROF_BUDGETGROUP_STATICPROP_RENDERING );
+	CVProfScope _( "CStaticPropMgr::DrawStaticProps", 0, VPROF_BUDGETGROUP_STATICPROP_RENDERING, false, BUDGETFLAG_OTHER );
 
 	if ( !r_drawstaticprops.GetBool() || cl_skipslowpath.GetBool() )
 		return;
@@ -2186,7 +2169,7 @@ void CStaticPropMgr::AddDecalToStaticProp( Vector const& rayStart, Vector const&
 	// Invalid static prop? Blow it off! 
 	if (staticPropIndex >= std::ssize( m_StaticProps ))
 	{
-		memset( &tr, 0, sizeof(trace_t) );
+		std::memset( &tr, 0, sizeof(trace_t) );
 		tr.fraction = 1.0f;
 		return;
 	}
@@ -2208,7 +2191,6 @@ void CStaticPropMgr::AddDecalToStaticProp( Vector const& rayStart, Vector const&
 	CStaticProp& prop = m_StaticProps[staticPropIndex];
 
 	// Found the point, now lets apply the decals
-	Assert( prop.GetModelInstance() != MODEL_INSTANCE_INVALID );
 
 	// Choose a new ray along which to project the decal based on
 	// surface normal. This prevents decal skewing
@@ -2254,7 +2236,7 @@ void CStaticPropMgr::AddDecalToStaticProp( Vector const& rayStart, Vector const&
 void CStaticPropMgr::AddShadowToStaticProp( unsigned short shadowHandle, IClientRenderable* pRenderable )
 {
 #ifndef DEDICATED
-	Assert( dynamic_cast<CStaticProp*>(pRenderable) != 0 );
+	contract_assert( dynamic_cast<CStaticProp*>(pRenderable) != 0 );
 
 	CStaticProp* pProp = static_cast<CStaticProp*>(pRenderable);
 
@@ -2265,7 +2247,7 @@ void CStaticPropMgr::AddShadowToStaticProp( unsigned short shadowHandle, IClient
 void CStaticPropMgr::RemoveAllShadowsFromStaticProp( IClientRenderable* pRenderable )
 {
 #ifndef DEDICATED
-	Assert( dynamic_cast<CStaticProp*>(pRenderable) != 0 );
+	contract_assert( dynamic_cast<CStaticProp*>(pRenderable) != 0 );
 	CStaticProp* pProp = static_cast<CStaticProp*>(pRenderable);
 	if (pProp->GetModelInstance() != MODEL_INSTANCE_INVALID)
 	{
@@ -2342,4 +2324,3 @@ void Cmd_PropCrosshair_f (void)
 }
 
 static ConCommand prop_crosshair( "prop_crosshair", Cmd_PropCrosshair_f, "Shows name for prop looking at", FCVAR_CHEAT );
-

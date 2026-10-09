@@ -1,15 +1,14 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "BaseVSShader.h"
 #include "customweapon_dx9_helper.h"
-#include "cpp_shader_constant_register_map.h"
 
 // Auto generated inc files
 #include "customweapon_vs20.inc"
 #include "customweapon_vs30.inc"
 #include "customweapon_ps20b.inc"
 #include "customweapon_ps30.inc"
-#include "common_hlsl_cpp_consts.h"
 
 #include "shaderlib/commandbuilder.h"
 

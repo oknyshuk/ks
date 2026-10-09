@@ -1,18 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ROPE_H
-#define ROPE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 #include "rope_shared.h"
 #include "baseentity_shared.h"
 #include "videocfg/videocfg.h"
-
 
 #include "baseentity.h"
 
@@ -194,6 +187,3 @@ private:
 	CNetworkVar( short, m_iStartAttachment, [[= ks::reflect::Net{ .bits = 5 } ]] );	// StartAttachment/EndAttachment are attachment points.
 	CNetworkVar( short, m_iEndAttachment, [[= ks::reflect::Net{ .bits = 5 } ]] );
 };
-
-
-#endif // ROPE_H

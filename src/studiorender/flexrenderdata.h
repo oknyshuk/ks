@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef FLEXRENDERDATA_H
-#define FLEXRENDERDATA_H
-
-#include "mathlib/vector.h"
-#include "mathlib/ssemath.h"
-#include "utlvector.h"
+import std;
+import ks.tier1;
 #include "studio.h"
 
 //-----------------------------------------------------------------------------
@@ -36,7 +29,7 @@ struct CachedPosNormTan_t
 		Vector4DCopy( src.m_Position, m_Position );
 		Vector4DCopy( src.m_Normal, m_Normal );
 		Vector4DCopy( src.m_TangentS, m_TangentS );
-		Assert( m_TangentS.w == 1.0f || m_TangentS.w == -1.0f );
+		contract_assert( m_TangentS.w == 1.0f || m_TangentS.w == -1.0f );
 	}
 };
 
@@ -203,15 +196,15 @@ inline bool CCachedRenderData::IsThinVertexFlexed( int vertex ) const
 
 inline CachedPosNormTan_t* CCachedRenderData::GetFlexVertex( int vertex )
 {
-	Assert( m_pFirstFlexIndex );
-	Assert( m_pFirstFlexIndex[vertex].m_Tag == m_CurrentTag );
+	contract_assert( m_pFirstFlexIndex );
+	contract_assert( m_pFirstFlexIndex[vertex].m_Tag == m_CurrentTag );
 	return &m_pFlexVerts[ m_pFirstFlexIndex[vertex].m_VertexIndex ];
 }
 
 inline CachedPosNorm_t* CCachedRenderData::GetThinFlexVertex( int vertex )
 {
-	Assert( m_pFirstThinFlexIndex );
-	Assert( m_pFirstThinFlexIndex[vertex].m_Tag == m_CurrentTag );
+	contract_assert( m_pFirstThinFlexIndex );
+	contract_assert( m_pFirstThinFlexIndex[vertex].m_Tag == m_CurrentTag );
 	return &m_pThinFlexVerts[ m_pFirstThinFlexIndex[vertex].m_VertexIndex ];
 }
 
@@ -233,8 +226,8 @@ inline bool CCachedRenderData::IsVertexPositionCached( int vertex ) const
 
 inline CachedPosNorm_t* CCachedRenderData::GetWorldVertex( int vertex )
 {
-	Assert( m_pFirstWorldIndex );
-	Assert( m_pFirstWorldIndex[vertex].m_Tag == m_CurrentTag );
+	contract_assert( m_pFirstWorldIndex );
+	contract_assert( m_pFirstWorldIndex[vertex].m_Tag == m_CurrentTag );
 	return &m_pWorldVerts[ m_pFirstWorldIndex[vertex].m_VertexIndex ];
 }
 
@@ -304,7 +297,7 @@ void CCachedRenderData::ComputeFlexedVertex_StreamOffset( studiohdr_t *pStudioHd
 			// Add a new flexed vert to the flexed vertex list
 			pFlexedVertex = CreateThinFlexVertex(n);
 
-			Assert( pFlexedVertex != nullptr);
+			contract_assert( pFlexedVertex != nullptr );
 
 			pFlexedVertex->m_Position.InitZero();
 			pFlexedVertex->m_Normal.InitZero();
@@ -323,5 +316,3 @@ void CCachedRenderData::ComputeFlexedVertex_StreamOffset( studiohdr_t *pStudioHd
 		Vector4DWeightMAD( w, vPosition, pFlexedVertex->m_Position, vNormal, pFlexedVertex->m_Normal );
 	}
 }							 
-
-#endif // FLEXRENDERDATA_H

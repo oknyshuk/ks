@@ -1,15 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Point entity used to create templates out of other entities or groups of entities
-//
-//=============================================================================//
 
-#ifndef POINT_TEMPLATE_H
-#define POINT_TEMPLATE_H
-
+import ks.math;
 #include "reflect_annotations.h"
+import std;
+#include "vscript/ivscript.h"
+#include "string_t.h"
+#include "baseentity.h"
 
-#define MAX_NUM_TEMPLATES		16
+inline constexpr auto MAX_NUM_TEMPLATES = 16;
 
 struct template_t
 {
@@ -76,5 +78,3 @@ private:
 
 	[[= ks::reflect::Key{ .name = "OnEntitySpawned" } ]] COutputEvent					m_pOutputOnSpawned;
 };
-
-#endif // POINT_TEMPLATE_H

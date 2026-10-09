@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CDLL_ENGINE_INT_H
-#define CDLL_ENGINE_INT_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "cdll_int.h"
 
@@ -50,5 +43,3 @@ extern IVModelRender* modelrender;
 extern ClientClass *g_pClientClasses;
 extern IClientLeafSystemEngine* clientleafsystem;
 extern bool scr_drawloading;
-
-#endif // CDLL_ENGINE_INT_H

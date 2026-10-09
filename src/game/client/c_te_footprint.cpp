@@ -1,19 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "iefx.h"
 #include "fx.h"
-#include "tier0/vprof.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Footprint Decal TE
@@ -76,7 +77,7 @@ void C_TEFootprintDecal::Precache( void )
 
 void C_TEFootprintDecal::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEFootprintDecal::PostDataUpdate" );
+	CVProfScope _( "C_TEFootprintDecal::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// FIXME: Make this choose the decal based on material type
 	if ( r_decals.GetInt() )

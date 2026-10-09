@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: generates 4 randum numbers in the range 0..1 quickly, using SIMD
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include <math.h>
-#include <atomic>
-#include <float.h>	// needed for flt_epsilon
-#include "basetypes.h"
-#include <memory.h>
-#include "tier0/dbg.h"
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include "mathlib/ssemath.h"
+// Purpose: generates 4 randum numbers in the range 0..1 quickly, using SIMD
+
+import std;
+import ks.math;
 
 // see knuth volume 3 for insight.
 
@@ -58,7 +50,7 @@ public:
 	}
 };
 
-#define MAX_SIMULTANEOUS_RANDOM_STREAMS 32
+constexpr auto MAX_SIMULTANEOUS_RANDOM_STREAMS = 32;
 
 static SIMDRandStreamContext s_SIMDRandContexts[MAX_SIMULTANEOUS_RANDOM_STREAMS];
 
@@ -92,7 +84,7 @@ int GetSIMDRandContext( void )
 				}
 			}
 		}
-		Assert(0);											// why don't we have enough buffers?
+		contract_assert( 0 );											// why don't we have enough buffers?
 		ThreadSleep();
 	}
 }

@@ -1,24 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Core types for the response rules -- criteria, responses, rules, and matchers.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef RESPONSE_TYPES_INTERNAL_H
-#define RESPONSE_TYPES_INTERNAL_H
-
+import ks.tier1;
 #include "responserules/response_types.h"
-#include "tier1/map_ops.h"
-#include <vector>
-
+import std;
 
 namespace ResponseRules
 {
 
 	const char *ResponseCopyString( const char *in );
 
-	inline unsigned FASTCALL HashStringConventional( const char *pszKey )
+	inline unsigned HashStringConventional( const char *pszKey )
 	{
 		unsigned hash = 0xAAAAAAAA; // Alternating 1's and 0's to maximize the effect of the later multiply and add
 
@@ -125,7 +120,7 @@ namespace ResponseRules
 		byte						first : 1;							// 
 		byte						last : 1;							// 
 
-		ALIGN32 AI_ResponseFollowup	m_followup; // info on whether I should force the other guy to say something
+		AI_ResponseFollowup	m_followup; // info on whether I should force the other guy to say something
 	};
 #pragma pack(pop)
 
@@ -208,7 +203,7 @@ namespace ResponseRules
 
 			if ( idx < 0 || idx >= std::ssize( group ) )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				return;
 			}
 
@@ -475,8 +470,8 @@ namespace ResponseRules
 	{
 		int bucket = BucketFromIdx( idx );
 		unsigned int elem = PartFromIdx( idx );
-		Assert( IsValid(idx) );
-		AssertMsg( elem < kIDX_ELEM_MASK, "Too many response rules! Overflow! Doom!" );
+		contract_assert( IsValid(idx) );
+		contract_assert( ( elem < kIDX_ELEM_MASK ) && "Too many response rules! Overflow! Doom!" );
 		if ( elem + 1 < m_RuleParts[bucket].Count() )
 		{
 			return idx+1;
@@ -501,7 +496,7 @@ namespace ResponseRules
 
 	inline Rule &ResponseRulePartition::operator[]( tIndex idx )
 	{
-		Assert( IsValid(idx) );
+		contract_assert( IsValid(idx) );
 		return *m_RuleParts[ BucketFromIdx(idx) ][ PartFromIdx(idx) ] ;
 	}
 
@@ -518,7 +513,7 @@ namespace ResponseRules
 	inline bool ResponseRulePartition::IsValid( const tIndex & idx ) const
 	{
 		// make sure that the idx type for the dicts is still short
-		COMPILE_TIME_ASSERT( sizeof( tRuleDict::IndexType_t ) == 2 );
+		static_assert( sizeof( tRuleDict::IndexType_t ) == 2 );
 
 		if ( idx == -1 ) 
 			return false;
@@ -539,5 +534,3 @@ namespace ResponseRules
 }
 
 #include "response_system.h"
-
-#endif

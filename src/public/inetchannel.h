@@ -1,17 +1,10 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef INETCHANNEL_H
-#define INETCHANNEL_H
-
-#include "tier0/platform.h"
+import ks.tier1;
 #include "inetchannelinfo.h"
-#include "tier1/bitbuf.h"
-#include "tier1/netadr.h"
-#include "tier1/ns_address.h"
+import std;
 
 class	IDemoRecorder;
 class	INetMessage;
@@ -37,7 +30,7 @@ typedef struct netpacket_s
 #endif // NET_PACKET_ST_DEFINED
 
 
-abstract_class INetChannel : public INetChannelInfo
+class INetChannel : public INetChannelInfo
 {
 public:
 	virtual	~INetChannel( void ) {};
@@ -62,7 +55,7 @@ public:
 	virtual void	ProcessPacket( struct netpacket_s* packet, bool bHasHeader ) = 0;
 			
 	virtual bool	SendNetMsg(INetMessage &msg, bool bForceReliable = false, bool bVoice = false ) = 0;
-	FORCEINLINE bool SendNetMsg(INetMessage const &msg, bool bForceReliable = false, bool bVoice = false ) { return SendNetMsg( *( (INetMessage *) &msg ), bForceReliable, bVoice ); }
+	[[gnu::always_inline]] inline bool SendNetMsg(INetMessage const &msg, bool bForceReliable = false, bool bVoice = false ) { return SendNetMsg( *( (INetMessage *) &msg ), bForceReliable, bVoice ); }
 	virtual bool	SendData(bf_write &msg, bool bReliable = true) = 0;
 	virtual bool	SendFile(const char *filename, unsigned int transferID, bool bIsReplayDemoFile ) = 0;
 	virtual void	DenyFile(const char *filename, unsigned int transferID, bool bIsReplayDemoFile ) = 0;
@@ -114,6 +107,3 @@ public:
 
 	virtual bool	EnqueueVeryLargeAsyncTransfer( INetMessage &msg ) = 0;	// Enqueues a message for a large async transfer
 };
-
-
-#endif // INETCHANNEL_H

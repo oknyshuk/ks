@@ -1,19 +1,27 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "audio_pch.h"
-#include "tier2/interval.h"
+
+
+import std;
+import ks.tier1;
+
+#include "sound.h"
+#include "soundservice.h"
+#include "soundflags.h"
+#include "filesystem.h"
+
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+
+#include "audio/private/posix_stubs.h"
 
 #include "snd_dma.h"
 
 #include "sos_op.h"
 #include "sos_op_tracks.h"
-
-
-
-
 
 extern Color OpColor;
 extern Color ConnectColor;
@@ -140,7 +148,7 @@ void CSosOperatorGetTrackSyncPoint::Execute( void *pVoidMem, channel_t *pChannel
 // 			}
 			fDuration = chanTrackData.m_flEndPoint - chanTrackData.m_flStartPoint;
 //			fDuration = S_SoundDuration( &channels[ ch_idx ] );
-			fElapsedTime = fmod( fElapsedTime, fDuration );
+			fElapsedTime = std::fmod( fElapsedTime, fDuration );
 
 	
 			pSyncPointList = pStack->GetSyncPointsKV( pOperatorKV, pStructMem->m_nSyncPointListName );
@@ -398,7 +406,7 @@ void CSosOperatorQueueToTrack::Execute( void *pVoidMem, channel_t *pChannel, CSc
 				fElapsedTime = S_GetElapsedTimeByGuid( pCurrentChannelOnSyncTrack->guid ) * 0.01;
 //				fDuration = S_SoundDuration( pCurrentChannelOnSyncTrack );
 				fDuration = syncTrackData.m_flEndPoint - syncTrackData.m_flStartPoint;
-				fElapsedTime = fmod( fElapsedTime, fDuration );
+				fElapsedTime = std::fmod( fElapsedTime, fDuration );
 
 
 				pSyncPointList = pStack->GetSyncPointsKV( pOperatorKV, pStructMem->m_nSyncPointListName );

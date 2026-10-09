@@ -1,10 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Default schedules.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Default schedules.
+
+import std;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "ai_default.h"
 #include "soundent.h"
 #include "scripted.h"
@@ -258,7 +285,7 @@ int CAI_BaseNPC::TranslateSchedule( int scheduleType )
 	// Hande some special cases
 	case SCHED_AISCRIPT:
 		{
-			Assert( m_hCine != nullptr );
+			contract_assert( m_hCine != nullptr );
 			if ( !m_hCine )
 			{
 				DevWarning( 2, "Script failed for %s\n", GetClassname() );
@@ -339,7 +366,7 @@ int CAI_BaseNPC::TranslateSchedule( int scheduleType )
 		break;
 	case SCHED_ALERT_WALK:
 		{
-			Assert( m_NPCState == NPC_STATE_ALERT );
+			contract_assert( m_NPCState == NPC_STATE_ALERT );
 		}
 		break;
 	case SCHED_COMBAT_FACE:
@@ -355,7 +382,7 @@ int CAI_BaseNPC::TranslateSchedule( int scheduleType )
 		break;
 	case SCHED_COMBAT_WALK:
 		{
-			Assert( m_NPCState == NPC_STATE_COMBAT );
+			contract_assert( m_NPCState == NPC_STATE_COMBAT );
 		}
 		break;
 	}
@@ -2381,5 +2408,3 @@ AI_DEFINE_SCHEDULE
  "	Interrupts"
  ""
  );
-
-

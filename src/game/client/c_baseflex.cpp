@@ -1,29 +1,30 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_predmap.h"
 #include "reflect_annotations.h"
 #include "filesystem.h"
 #include "sentence.h"
 #include "engine/ivmodelinfo.h"
-#include "engine/ivdebugoverlay.h"
 #include "bone_setup.h"
 #include "soundinfo.h"
 #include "tools/bonelist.h"
-#include "keyvalues.h"
-#include "tier0/vprof.h"
 #include "toolframework/itoolframework.h"
 #include "choreoevent.h"
 #include "choreoscene.h"
 #include "choreoactor.h"
 #include "toolframework_client.h"
 
-#include "tier0/memalloc.h"
 bool UseHWMorphVCDs();
 
 ConVar g_CV_PhonemeDelay("phonemedelay", "0", 0, "Phoneme delay to account for sound system latency." );
@@ -108,7 +109,7 @@ C_BaseFlex::C_BaseFlex() :
 	m_iMostRecentFlexCounter = 0xFFFFFFFF;
 
 	/// Make sure size is correct
-	Assert( PHONEME_CLASS_STRONG + 1 == NUM_PHONEME_CLASSES );
+	contract_assert( PHONEME_CLASS_STRONG + 1 == NUM_PHONEME_CLASSES );
 
 }
 
@@ -143,13 +144,13 @@ void C_BaseFlex::SetupMappings( char const *pchFileRoot )
 	memset( m_PhonemeClasses, 0, sizeof( m_PhonemeClasses ) );
 
 	Emphasized_Phoneme *normal = &m_PhonemeClasses[ PHONEME_CLASS_NORMAL ];
-	Q_snprintf( normal->classname, sizeof( normal->classname ), "%s", pchFileRoot );
+	V_snprintf( normal->classname, sizeof( normal->classname ), "%s", pchFileRoot );
 	normal->required = true;
 
 	Emphasized_Phoneme *weak = &m_PhonemeClasses[ PHONEME_CLASS_WEAK ];
-	Q_snprintf( weak->classname, sizeof( weak->classname ), "%s_weak", pchFileRoot );
+	V_snprintf( weak->classname, sizeof( weak->classname ), "%s_weak", pchFileRoot );
 	Emphasized_Phoneme *strong = &m_PhonemeClasses[ PHONEME_CLASS_STRONG ];
-	Q_snprintf( strong->classname, sizeof( strong->classname ), "%s_strong", pchFileRoot );
+	V_snprintf( strong->classname, sizeof( strong->classname ), "%s_strong", pchFileRoot );
 }
 
 
@@ -304,7 +305,7 @@ public:
 		}
 
 		char directory[ MAX_PATH ];
-		Q_snprintf( directory, sizeof( directory ), "%s/*.*", pFolder );
+		V_snprintf( directory, sizeof( directory ), "%s/*.*", pFolder );
 
 		FileFindHandle_t fh;
 		const char *fn;
@@ -319,20 +320,20 @@ public:
 			if ( g_pFullFileSystem->FindIsDirectory( fh ) )
 			{
 				char folderpath[MAX_PATH];
-				Q_snprintf( folderpath, sizeof( folderpath ), "%s/%s", pFolder, fn );
+				V_snprintf( folderpath, sizeof( folderpath ), "%s/%s", pFolder, fn );
 
 				InitRecursive( folderpath );
 				continue;
 			}
 
-			const char *pExt = Q_GetFileExtension( fn );
-			if ( pExt && Q_stricmp( pExt, "vfe" ) )
+			const char *pExt = V_GetFileExtension( fn );
+			if ( pExt && V_stricmp( pExt, "vfe" ) )
 			{
 				continue;
 			}
 
 			char fullFileName[MAX_PATH];
-			Q_snprintf( fullFileName, sizeof(fullFileName), "%s/%s", pFolder, fn );
+			V_snprintf( fullFileName, sizeof(fullFileName), "%s/%s", pFolder, fn );
 
 			// strip default folder and extension
 			int index = V_strlen( "expressions/" );
@@ -384,11 +385,10 @@ public:
 	const void *FindSceneFile( C_BaseFlex *instance, const char *filename, bool allowBlockingIO )
 	{
 		char szFilename[MAX_PATH];
-		Assert( V_strlen( filename ) < MAX_PATH );
 		V_strcpy( szFilename, filename );
 		
 
-		Q_FixSlashes( szFilename );
+		V_FixSlashes( szFilename );
 
 		// See if it's already loaded
 		int i;
@@ -418,7 +418,7 @@ public:
 		// Create scene entry
 		CFlexSceneFile *pfile = new CFlexSceneFile;
 		// Remember filename
-		Q_strncpy( pfile->filename, szFilename, sizeof( pfile->filename ) );
+		V_strncpy( pfile->filename, szFilename, sizeof( pfile->filename ) );
 		// Remember data pointer
 		pfile->buffer = buffer;
 		// Add to list
@@ -577,7 +577,7 @@ Vector C_BaseFlex::SetViewTarget( CStudioHdr *pStudioHdr, const float *pGlobalFl
 			float d = local.LengthSqr();
 			if ( d > 0.0f )
 			{
-				d = sqrtf( ( 1.0f - flMaxEyeDeflection * flMaxEyeDeflection ) / ( local.y*local.y + local.z*local.z ) );
+				d = std::sqrtf( ( 1.0f - flMaxEyeDeflection * flMaxEyeDeflection ) / ( local.y*local.y + local.z*local.z ) );
 				local.x = flMaxEyeDeflection;
 				local.y = local.y * d;
 				local.z = local.z * d;
@@ -602,8 +602,8 @@ Vector C_BaseFlex::SetViewTarget( CStudioHdr *pStudioHdr, const float *pGlobalFl
 	return tmp;
 }
 
-#define STRONG_CROSSFADE_START		0.60f
-#define WEAK_CROSSFADE_START		0.40f
+constexpr auto STRONG_CROSSFADE_START = 0.60f;
+constexpr auto WEAK_CROSSFADE_START = 0.40f;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -622,7 +622,7 @@ void C_BaseFlex::ComputeBlendedSetting( Emphasized_Phoneme *classes, float empha
 	bool has_strong = classes[ PHONEME_CLASS_STRONG ].valid;
 
 	// Better have phonemes in general
-	Assert( classes[ PHONEME_CLASS_NORMAL ].valid );
+	contract_assert( classes[ PHONEME_CLASS_NORMAL ].valid );
 
 	if ( emphasis_intensity > STRONG_CROSSFADE_START )
 	{
@@ -748,7 +748,7 @@ bool C_BaseFlex::SetupEmphasisBlend( Emphasized_Phoneme *classes, int phoneme )
 		info->exp = nullptr;
 		if ( info->base )
 		{
-			Assert( info->base->id == ('V' << 16) + ('F' << 8) + ('E') );
+			contract_assert( info->base->id == ('V' << 16) + ('F' << 8) + ('E') );
 			info->exp = info->base->pIndexedSetting( phoneme );
 		}
 
@@ -932,7 +932,7 @@ void C_BaseFlex::GetToolRecordingState( KeyValues *msg )
 	if ( !ToolsEnabled() )
 		return;
 
-	VPROF_BUDGET( "C_BaseFlex::GetToolRecordingState", VPROF_BUDGETGROUP_TOOLS );
+	CVProfScope _( "C_BaseFlex::GetToolRecordingState", 0, VPROF_BUDGETGROUP_TOOLS, false, BUDGETFLAG_OTHER );
 
 	BaseClass::GetToolRecordingState( msg );
 
@@ -986,14 +986,14 @@ void C_BaseFlex::GetToolRecordingState( KeyValues *msg )
 
 	// FIXME: this needs a better algorithm
 	// blink the eyes
-	float t = (m_blinktime - gpGlobals->curtime) * M_PI * 0.5 * (1.0/g_CV_BlinkDuration.GetFloat());
+	float t = (m_blinktime - gpGlobals->curtime) * std::numbers::pi * 0.5 * (1.0/g_CV_BlinkDuration.GetFloat());
 	if (t > 0)
 	{
 		// do eyeblink falloff curve
-		t = cos(t);
+		t = std::cos(t);
 		if (t > 0)
 		{
-			s_pGlobalFlexWeight[m_iBlink] = sqrtf( t ) * 2;
+			s_pGlobalFlexWeight[m_iBlink] = std::sqrtf( t ) * 2;
 			if (s_pGlobalFlexWeight[m_iBlink] > 1)
 			{
 				s_pGlobalFlexWeight[m_iBlink] = 2.0 - s_pGlobalFlexWeight[m_iBlink];
@@ -1109,8 +1109,8 @@ void C_BaseFlex::BuildTransformations( CStudioHdr *pStudioHdr, BoneVector *pos, 
 		for ( int j = 0; j < nControllerCount; ++j )
 		{
 			const mstudioboneflexdrivercontrol_t *pController = pBoneFlexDriver->pBoneFlexDriverControl( j );
-			Assert( pController->m_nFlexControllerIndex >= 0 && pController->m_nFlexControllerIndex < pStudioHdr->numflexcontrollers() );
-			Assert( pController->m_nBoneComponent >= 0 && pController->m_nBoneComponent <= 2 );
+			contract_assert( pController->m_nFlexControllerIndex >= 0 && pController->m_nFlexControllerIndex < pStudioHdr->numflexcontrollers() );
+			contract_assert( pController->m_nBoneComponent >= 0 && pController->m_nBoneComponent <= 2 );
 			SetFlexWeight( static_cast< LocalFlexController_t >( pController->m_nFlexControllerIndex ), RemapValClamped( position[pController->m_nBoneComponent], pController->m_flMin, pController->m_flMax, 0.0f, 1.0f ) );
 		}
 	}
@@ -1141,7 +1141,7 @@ void C_BaseFlex::SetupWeights( const matrix3x4_t *pBoneToWorld, int nFlexWeightC
 	}
 
 	int nFlexDescCount = hdr->numflexdesc();
-	Assert( nFlexDescCount == std::ssize( m_CachedFlexWeights ) );
+	contract_assert( nFlexDescCount == std::ssize( m_CachedFlexWeights ) );
 	if ( IsFlexCacheValid() )
 	{
 		int nCount = std::min( nFlexWeightCount, nFlexDescCount );
@@ -1155,7 +1155,7 @@ void C_BaseFlex::SetupWeights( const matrix3x4_t *pBoneToWorld, int nFlexWeightC
 		return;
 	}
 
-	Assert( nFlexWeightCount >= nFlexDescCount );
+	contract_assert( nFlexWeightCount >= nFlexDescCount );
 
 	LocalFlexController_t i;
 
@@ -1196,14 +1196,14 @@ void C_BaseFlex::SetupWeights( const matrix3x4_t *pBoneToWorld, int nFlexWeightC
 	// blink the eyes
 	float flBlinkDuration = g_CV_BlinkDuration.GetFloat();
 	float flOOBlinkDuration = ( flBlinkDuration > 0 ) ? 1.0f / flBlinkDuration : 0.0f;
-	float t = ( m_blinktime - gpGlobals->curtime ) * M_PI * 0.5 * flOOBlinkDuration;
+	float t = ( m_blinktime - gpGlobals->curtime ) * std::numbers::pi * 0.5 * flOOBlinkDuration;
 	if (t > 0)
 	{
 		// do eyeblink falloff curve
-		t = cos(t);
+		t = std::cos(t);
 		if (t > 0.0f && t < 1.0f)
 		{
-			t = sqrtf( t ) * 2.0f;
+			t = std::sqrtf( t ) * 2.0f;
 			if (t > 1.0f)
 				t = 2.0f - t;
 			t = clamp( t, 0.0f, 1.0f );
@@ -1270,7 +1270,7 @@ int C_BaseFlex::AddGlobalFlexController( const char *szName )
 	int i;
 	for (i = 0; i < g_numflexcontrollers; i++)
 	{
-		if (Q_stricmp( g_flexcontroller[i], szName ) == 0)
+		if (V_stricmp( g_flexcontroller[i], szName ) == 0)
 		{
 			return i;
 		}
@@ -1361,9 +1361,9 @@ void C_BaseFlex::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
-		Assert( info );
-		Assert( info->m_pScene );
-		Assert( info->m_pEvent );
+		contract_assert( info );
+		contract_assert( info->m_pScene );
+		contract_assert( info->m_pEvent );
 
 		if ( info->m_pScene != scene )
 			continue;
@@ -1371,7 +1371,7 @@ void C_BaseFlex::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 		if ( !ClearSceneEvent( info, false, canceled ))
 		{
 			// unknown expression to clear!!
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 
 		// Free this slot
@@ -1390,9 +1390,9 @@ void C_BaseFlex::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 
 bool C_BaseFlex::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canceled )
 {
-	Assert( info );
-	Assert( info->m_pScene );
-	Assert( info->m_pEvent );
+	contract_assert( info );
+	contract_assert( info->m_pScene );
+	contract_assert( info->m_pEvent );
 	return true;
 }
 
@@ -1498,14 +1498,14 @@ bool C_BaseFlex::RequestStartSequenceSceneEvent( CSceneEventInfo *info, CChoreoS
 //-----------------------------------------------------------------------------
 void C_BaseFlex::RemoveSceneEvent( CChoreoScene *scene, CChoreoEvent *event, bool fastKill )
 {
-	Assert( event );
+	contract_assert( event );
 
 	for ( int i = 0 ; i < std::ssize( m_SceneEvents ); i++ )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
-		Assert( info );
-		Assert( info->m_pEvent );
+		contract_assert( info );
+		contract_assert( info->m_pEvent );
 
 		if ( info->m_pScene != scene )
 			continue;
@@ -1537,8 +1537,8 @@ bool C_BaseFlex::CheckSceneEvent( float currenttime, CChoreoScene *scene, CChore
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
-		Assert( info );
-		Assert( info->m_pEvent );
+		contract_assert( info );
+		contract_assert( info->m_pEvent );
 
 		if ( info->m_pScene != scene )
 			continue;
@@ -1574,7 +1574,7 @@ void C_BaseFlex::SetFlexWeight( LocalFlexController_t index, float value )
 			value = clamp( value, 0.0, 1.0 );
 		}
 
-		Assert( IsFinite( value ) );
+		contract_assert( IsFinite( value ) );
 		m_flexWeight[ index ] = value;
 	}
 }
@@ -1603,7 +1603,7 @@ LocalFlexController_t C_BaseFlex::FindFlexController( const char *szName )
 {
 	for (LocalFlexController_t i = LocalFlexController_t(0); i < GetNumFlexControllers(); i++)
 	{
-		if ( !Q_stricmp( GetFlexControllerName( i ), szName ) )
+		if ( !V_stricmp( GetFlexControllerName( i ), szName ) )
 			return i;
 	}
 
@@ -1636,14 +1636,14 @@ void C_BaseFlex::ProcessSceneEvents( bool bFlexEvents, float *pGlobalFlexWeight 
 	for ( int i = 0; i < std::ssize( m_SceneEvents ); i++ )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
-		Assert( info );
+		contract_assert( info );
 
 		// FIXME:  Need a safe handle to m_pEvent in case of memory deletion?
 		CChoreoEvent *event = info->m_pEvent;
-		Assert( event );
+		contract_assert( event );
 
 		CChoreoScene *scene = info->m_pScene;
-		Assert( scene );
+		contract_assert( scene );
 
 		if ( ProcessSceneEvent( pGlobalFlexWeight, bFlexEvents, info, scene, event ) )
 		{
@@ -1657,7 +1657,7 @@ void C_BaseFlex::ProcessSceneEvents( bool bFlexEvents, float *pGlobalFlexWeight 
 //-----------------------------------------------------------------------------
 bool C_BaseFlex::ProcessFlexAnimationSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event )
 {
-	Assert( event->HasEndTime() );
+	contract_assert( event->HasEndTime() );
 	if ( event->HasEndTime() )
 	{
 		AddFlexAnimation( info );
@@ -1671,7 +1671,7 @@ bool C_BaseFlex::ProcessFlexSettingSceneEvent( float *pGlobalFlexWeight, CSceneE
 	if ( !event->HasEndTime() )
 		return true;
 
-	VPROF( "C_BaseFlex::ProcessFlexSettingSceneEvent" );
+	CVProfScope _( "C_BaseFlex::ProcessFlexSettingSceneEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Look up the actual strings
 	const char *scenefile	= event->GetParameters();
@@ -1706,12 +1706,12 @@ bool C_BaseFlex::ProcessFlexSettingSceneEvent( float *pGlobalFlexWeight, CSceneE
 //-----------------------------------------------------------------------------
 void C_BaseFlex::EnsureTranslations( const flexsettinghdr_t *pSettinghdr )
 {
-	Assert( pSettinghdr );
+	contract_assert( pSettinghdr );
 
 	if ( m_LocalToGlobal.contains( pSettinghdr ) )
 		return;
 
-	Assert( pSettinghdr->numkeys > 0 );
+	contract_assert( pSettinghdr->numkeys > 0 );
 	std::vector< int > mapping( pSettinghdr->numkeys );
 
 	for ( int i = 0; i < pSettinghdr->numkeys; ++i )
@@ -1734,7 +1734,7 @@ int C_BaseFlex::FlexControllerLocalToGlobal( const flexsettinghdr_t *pSettinghdr
 	if ( idx == m_LocalToGlobal.end() )
 	{
 		// This should never happen!!!
-		Assert( 0 );
+		contract_assert( 0 );
 		Warning( "Unable to find mapping for flexcontroller %i, settings %p on %i/%s\n", key, pSettinghdr, entindex(), GetClassname() );
 		EnsureTranslations( pSettinghdr );
 		idx = m_LocalToGlobal.find( pSettinghdr );
@@ -1746,7 +1746,7 @@ int C_BaseFlex::FlexControllerLocalToGlobal( const flexsettinghdr_t *pSettinghdr
 
 	const std::vector< int >& result = idx->second;
 	// Validate lookup
-	Assert( !result.empty() && key < std::ssize( result ) );
+	contract_assert( !result.empty() && key < std::ssize( result ) );
 	int index = result[ key ];
 	return index;
 }
@@ -1885,13 +1885,13 @@ void C_BaseFlex::AddFlexAnimation( CSceneEventInfo *info )
 			if ( track->IsComboType() )
 			{
 				char name[ 512 ];
-				Q_strncpy( name, "right_" ,sizeof(name));
-				Q_strncat( name, track->GetFlexControllerName(),sizeof(name), COPY_ALL_CHARACTERS );
+				V_strncpy( name, "right_" ,sizeof(name));
+				V_strncat( name, track->GetFlexControllerName(),sizeof(name), COPY_ALL_CHARACTERS );
 
 				track->SetFlexControllerIndex( std::max( FindFlexController( name ), LocalFlexController_t(0) ), 0, 0 );
 
-				Q_strncpy( name, "left_" ,sizeof(name));
-				Q_strncat( name, track->GetFlexControllerName(),sizeof(name), COPY_ALL_CHARACTERS );
+				V_strncpy( name, "left_" ,sizeof(name));
+				V_strncat( name, track->GetFlexControllerName(),sizeof(name), COPY_ALL_CHARACTERS );
 
 				track->SetFlexControllerIndex( std::max( FindFlexController( name ), LocalFlexController_t(0) ), 0, 1 );
 			}
@@ -1975,4 +1975,3 @@ float CSceneEventInfo::UpdateWeight( C_BaseFlex *pActor )
 	m_flWeight = std::min( m_flWeight + 0.1, 1.0 );
 	return m_flWeight;
 }
-

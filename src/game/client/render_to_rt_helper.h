@@ -1,15 +1,11 @@
-//===== Copyright (c) 2013-2013, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2013 Valve Corporation
+
 // Purpose: Class to help with rendering CMDLs & CMergedMDLs to textures.
-//
-//===========================================================================//
 
-
-#ifndef RENDER_TO_RT_HELPER_H
-#define RENDER_TO_RT_HELPER_H
-
-
-#include <vector>
+import ks.core;
+import std;
 #include "irendertorthelperobject.h"
 
 //-----------------------------------------------------------------------------
@@ -17,7 +13,6 @@
 //-----------------------------------------------------------------------------
 class IVTFTexture;
 class ITexture;
-class CThreadEvent;
 
 class CRenderToRTHelper	: public IRenderToRTHelper
 {
@@ -43,5 +38,3 @@ private:
 	CThreadEvent *m_pPixelsReadEvent;
 	ITexture *m_pRenderTarget;
 };
-
-#endif // RENDER_TO_RT_HELPER_H

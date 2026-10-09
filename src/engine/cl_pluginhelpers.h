@@ -1,8 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:  baseclientstate.cpp: implementation of the CBaseClientState class.
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: baseclientstate.cpp: implementation of the CBaseClientState class.
 
 //-----------------------------------------------------------------------------
 // Purpose: the plugin message handler

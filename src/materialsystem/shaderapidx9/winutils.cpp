@@ -1,13 +1,9 @@
-//======Copyright 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// winutils.cpp
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
+import ks.desktop;
 #include "winutils.h"
 
-
-#include <SDL3/SDL.h>
 
 void GlobalMemoryStatus( MEMORYSTATUS *pOut )
 {
@@ -52,13 +48,12 @@ void GetClientRect( void *hWnd, RECT *destRect )
 	// so, see if a D3D device is up and running, and if so,
 	// dig in and find out its backbuffer size and use that.
 
-	int width, height;
-    SDL_GetWindowSize( (SDL_Window*)hWnd, &width, &height );
-	Assert( width!=0 && height!=0 );
+	const ks::desktop::size extent = ks::desktop::window_size( reinterpret_cast< ks::desktop::window * >( hWnd ) );
+	const int width = extent.width, height = extent.height;
+	contract_assert( width!=0 && height!=0 );
 
 	destRect->left = 0;
 	destRect->top = 0;
 	destRect->right = width;
 	destRect->bottom = height;		
 }
-

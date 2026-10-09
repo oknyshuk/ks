@@ -1,13 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#ifndef CONSOLE_H
-#define CONSOLE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 typedef unsigned char byte;
 
@@ -29,6 +22,3 @@ Returns true if the log file is successfully read.
 */
 namespace ks { class text_writer; }
 bool GetConsoleLogFileData( ks::text_writer& buf );
-
-
-#endif			// CONSOLE_H

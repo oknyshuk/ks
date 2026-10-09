@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IVOICERECORD_H
-#define IVOICERECORD_H
 #pragma once
-
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // This is the voice recording interface. It provides 16-bit signed mono data from 
 // a mic at some sample rate.
-abstract_class IVoiceRecord
+class IVoiceRecord
 {
 protected:
 
@@ -35,6 +27,3 @@ public:
 	// available samples, it discards the first samples and gives you the last ones.
 	virtual int			GetRecordedData(short *pOut, int nSamplesWanted)=0;
 };
-
-
-#endif // IVOICERECORD_H

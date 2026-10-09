@@ -1,16 +1,25 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "audio_pch.h"
-#include "tier2/interval.h"
+import std;
+
+
+
+import ks.tier1;
+#include "sound.h"
+#include "soundservice.h"
+#include "filesystem.h"
+
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+
+#include "audio/private/posix_stubs.h"
 
 #include "sos_op.h"
 #include "sos_op_falloff.h"
 
 #include "snd_dma.h"
-
 
 extern Color OpColor;
 extern Color ConnectColor;
@@ -113,7 +122,7 @@ void CSosOperatorFalloffTail::SetDefaults( void *pVoidMem ) const
 // 	SOS_INIT_INPUT_VAR( m_flInputTailMin, SO_SINGLE, 240.0 )
 // 	SOS_INIT_INPUT_VAR( m_flInputTailMax, SO_SINGLE, 540.0 )
 }
-#define SOP_FALLOFF_MIN_EXP 0.1f
+constexpr auto SOP_FALLOFF_MIN_EXP = 0.1f;
 void CSosOperatorFalloffTail::Execute( void *pVoidMem, channel_t *pChannel, CScratchPad *pScratchPad, CSosOperatorStack *pStack, int nOpIndex ) const
 {
 
@@ -189,4 +198,3 @@ void CSosOperatorFalloffTail::ParseKV( CSosOperatorStack *pStack, void *pVoidMem
 		pParams = pParams->GetNextKey();
 	}
 }
-

@@ -1,14 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Hooks and classes for the support of humanoid NPCs with 
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "baseentity.h"
+
+// Purpose: Hooks and classes for the support of humanoid NPCs with
 //			groovy facial animation capabilities, aka, "Actors"
-//
-//=============================================================================//
-
-#ifndef AI_INTEREST_TARGET_H
-#define AI_INTEREST_TARGET_H
-
-
 
 //-----------------------------------------------------------------------------
 // CAI_BaseActor
@@ -82,4 +79,3 @@ private:
 
 
 //-----------------------------------------------------------------------------
-#endif // AI_INTEREST_TARGET_H

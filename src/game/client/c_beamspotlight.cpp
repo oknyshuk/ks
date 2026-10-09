@@ -1,10 +1,19 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "dlight.h"
@@ -173,7 +182,7 @@ void C_BeamSpotLight::ClientThink( void )
 	}
 	m_vSpotlightCurrentPos = SpotlightCurrentPos();
 
-	Assert( m_hSpotlight );
+	contract_assert( m_hSpotlight );
 
 	m_hSpotlight->SetStartPos( GetAbsOrigin() );
 	m_hSpotlight->SetEndPos( m_vSpotlightCurrentPos );
@@ -332,7 +341,7 @@ void C_BeamSpotLight::ComputeRenderInfo()
 			if ( !m_pDynamicLight || (m_pDynamicLight->key != index) )
 			{
 				m_pDynamicLight = effects->CL_AllocDlight( index );
-				assert (m_pDynamicLight);
+				contract_assert( m_pDynamicLight );
 			}
 		
 			//m_pDynamicLight->flags = DLIGHT_NO_MODEL_ILLUMINATION;
@@ -343,4 +352,3 @@ void C_BeamSpotLight::ComputeRenderInfo()
 		}
 	}
 }
-

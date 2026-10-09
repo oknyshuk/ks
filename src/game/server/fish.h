@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // fish.h
 // Simple fish behavior
 // Author: Michael S. Booth, April 2005
-
-#ifndef _FISH_H_
-#define _FISH_H_
 
 #include "reflect_annotations.h"
 #include "dt_common.h"
@@ -141,7 +135,3 @@ inline float CFishPool::GetWaterLevel( void ) const
 {
 	return m_waterLevel;
 }
-
-
-#endif // _FISH_H_
-

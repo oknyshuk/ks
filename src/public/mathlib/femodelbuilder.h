@@ -1,17 +1,10 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
-#ifndef FINITE_ELEMENT_MODEL_BUILDER_HDR
-#define FINITE_ELEMENT_MODEL_BUILDER_HDR
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include <memory>
-#include "tier1/utlvector.h"
-#include <unordered_map>
-#include <flat_set>
+import std;
+import ks.tier1;
 #include "mathlib/femodel.h"
-#include "tier1/buffer_strider.h"
-
-
-
-
 
 class CFeModelBuilder: public CFeModel, public CMultiBufferHelper< CFeModelBuilder >
 {
@@ -50,7 +43,7 @@ public:
 		for ( int i = 0; i < std::ssize( m_KelagerBends ); ++i )
 		{
 			FeKelagerBend_t &kbend = m_KelagerBends[ i ];
-			float flMinSide = FLT_MAX;
+			float flMinSide = std::numeric_limits<float>::max();
 			for ( int j = 0; j < 4; ++j )
 			{
 				uint n0 = kbend.m_nNode[ j ], n1 = kbend.m_nNode[ ( j + 1 ) % 4 ];
@@ -162,18 +155,18 @@ protected:
 	{
 		if ( refCtrl >= 0 )
 		{
-			Assert( refCtrl < std::ssize( m_CtrlToNode ) );
+			contract_assert( refCtrl < std::ssize( m_CtrlToNode ) );
 			refCtrl = m_CtrlToNode[ refCtrl ];
 		}
 	}
 	void ConvertCtrlToNode( uint16 &refCtrl )
 	{
-		Assert( int( refCtrl ) < std::ssize( m_CtrlToNode ) );
+		contract_assert( int( refCtrl ) < std::ssize( m_CtrlToNode ) );
 		refCtrl = m_CtrlToNode[ refCtrl ];
 	}
 	void ConvertCtrlToNode( uint32 &refCtrl )
 	{
-		Assert( int( refCtrl ) < std::ssize( m_CtrlToNode ) );
+		contract_assert( int( refCtrl ) < std::ssize( m_CtrlToNode ) );
 		refCtrl = m_CtrlToNode[ refCtrl ];
 	}
 	float GetRank( const FeAxialEdgeBend_t &bend )const
@@ -419,6 +412,3 @@ public:
 	int m_nFitMatrixMinInfluences;
 	bool m_bNeedBacksolvedBasesOnly;
 };
-
-
-#endif

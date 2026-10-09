@@ -1,11 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 
 #include "basemultiplayerplayer.h"
 #include "ai_baseactor.h"
@@ -27,22 +53,22 @@ CResponseQueue::CResponseQueue( int queueSize )
 
 /// Add a deferred response.
 void CResponseQueue::Add( const AIConcept_t &conc,  ///< concept to dispatch
-		 const AI_CriteriaSet * RESTRICT contexts,
+		 const AI_CriteriaSet * __restrict__ contexts,
 		 float time,					 ///< when to dispatch it. You can specify a time of zero to mean "immediately."
 		 const CFollowupTargetSpec_t &targetspec,
 		 CBaseEntity *pIssuer
 		 )
 {
 	// Add a response.
-	AssertMsg( (int)m_Queue.size() < AI_RESPONSE_QUEUE_SIZE, "AI Response queue overfilled." );
+	contract_assert( ( (int)m_Queue.size() < AI_RESPONSE_QUEUE_SIZE ) && "AI Response queue overfilled." );
 	m_Queue.emplace_back().Init( conc, contexts, time, targetspec, pIssuer );
 }
 
 
 /// Remove a deferred response matching the concept and issuer.
 void CResponseQueue::Remove( const AIConcept_t &conc,  ///< concept to dispatch
-			CBaseEntity * const RESTRICT pIssuer		  ///< the entity issuing the response, if one exists.
-			) RESTRICT
+			CBaseEntity * const __restrict__ pIssuer		  ///< the entity issuing the response, if one exists.
+			) __restrict__
 {
 	// walk through the queue until we find a response matching the concept and issuer, then strike it.
 	QueueType_t::iterator idx = m_Queue.begin();
@@ -81,7 +107,7 @@ void CResponseQueue::RemoveSpeechQueuedFor( const CBaseEntity *pSpeaker )
 }
 
 // TODO: use a more compact representation.
-void CResponseQueue::DeferContextsFromCriteriaSet( DeferredContexts_t &contextsOut, const AI_CriteriaSet * RESTRICT criteriaIn )
+void CResponseQueue::DeferContextsFromCriteriaSet( DeferredContexts_t &contextsOut, const AI_CriteriaSet * __restrict__ criteriaIn )
 {
 	contextsOut.Reset();
 	if (criteriaIn)
@@ -112,11 +138,11 @@ failsafe:
 		{
 			// dispatch. we've had bugs where dispatches removed things from inside the queue; 
 			// so, as a failsafe, if the queue length changes as a result, start over.
-			size_t oldLength = m_Queue.size();
+			std::size_t oldLength = m_Queue.size();
 			DispatchOneResponse(response);
 			if ( m_Queue.size() < oldLength )
 			{
-				AssertMsg( false, "Response queue length changed in non-reentrant way! FAILSAFE TRIGGERED" );
+				contract_assert( false && "Response queue length changed in non-reentrant way! FAILSAFE TRIGGERED" );
 				goto failsafe; // ick
 			}
 
@@ -139,7 +165,7 @@ void CResponseQueue::AddExpresserHost(CBaseEntity *host)
 	// see if it's in there already
 	if (ks::contains( m_ExpresserTargets, ehost ))
 	{
-		AssertMsg1(false, "Tried to add %s to response queue when it was already in there.", host->GetDebugName());
+		contract_assert( false && "Tried to add %s to response queue when it was already in there." );
 	}
 	else
 	{
@@ -175,7 +201,7 @@ void CResponseQueue::RemoveExpresserHost(CBaseEntity *host)
 
 /// Get the expresser for a base entity.
 /// TODO: Kind of an ugly hack until I get the class hierarchy straightened out.
-static CAI_Expresser *InferExpresserFromBaseEntity(CBaseEntity * RESTRICT pEnt)
+static CAI_Expresser *InferExpresserFromBaseEntity(CBaseEntity * __restrict__ pEnt)
 {
 	if ( CBaseMultiplayerPlayer *pPlayer = dynamic_cast<CBaseMultiplayerPlayer *>(pEnt) )
 	{
@@ -205,13 +231,13 @@ void CResponseQueue::CDeferredResponse::Quash()
 bool CResponseQueue::DispatchOneResponse(CDeferredResponse &response)
 {
 	// find the target.
-	CBaseEntity * RESTRICT pTarget = nullptr;
+	CBaseEntity * __restrict__ pTarget = nullptr;
 	AI_CriteriaSet &deferredCriteria = response.m_contexts;
-	CAI_Expresser * RESTRICT pEx = nullptr;
-	CBaseEntity * RESTRICT pIssuer = response.m_hIssuer.Get(); // MAY BE NULL
+	CAI_Expresser * __restrict__ pEx = nullptr;
+	CBaseEntity * __restrict__ pIssuer = response.m_hIssuer.Get(); // MAY BE NULL
 	float followupMaxDistSq;
 	{
-		CFlexExpresser * RESTRICT pOrator = CFlexExpresser::AsFlexExpresser( pIssuer );
+		CFlexExpresser * __restrict__ pOrator = CFlexExpresser::AsFlexExpresser( pIssuer );
 		if ( pOrator )
 		{
 			// max dist is overridden. "0" means infinite distance (for orators only), 
@@ -222,7 +248,7 @@ bool CResponseQueue::DispatchOneResponse(CDeferredResponse &response)
 			}
 			else
 			{
-				followupMaxDistSq = FLT_MAX;
+				followupMaxDistSq = std::numeric_limits<float>::max();
 			}
 			
 		}
@@ -275,7 +301,7 @@ bool CResponseQueue::DispatchOneResponse(CDeferredResponse &response)
 				characterCriteria.Merge(&deferredCriteria);
 				if ( pIssuer ) 
 				{
-					characterCriteria.AppendCriteria( "dist_from_issuer",  UTIL_VarArgs( "%f", sqrt(distIssuerToTargetSq) ) );
+					characterCriteria.AppendCriteria( "dist_from_issuer",  UTIL_VarArgs( "%f", std::sqrt(distIssuerToTargetSq) ) );
 				}
 				AI_Response prospectiveResponse;
 				if ( pEx->FindResponse( prospectiveResponse, response.m_concept, &characterCriteria ) )
@@ -291,7 +317,7 @@ bool CResponseQueue::DispatchOneResponse(CDeferredResponse &response)
 		break;
 	default:
 		// WTF?
-		AssertMsg1( false, "Unknown deferred response type %d\n", response.m_Target.m_iTargetType );
+		contract_assert( false && "Unknown deferred response type %d\n" );
 		return false;
 	}
 
@@ -315,10 +341,10 @@ bool CResponseQueue::DispatchOneResponse(CDeferredResponse &response)
 // 
 ConVar rr_thenany_score_slop( "rr_thenany_score_slop", "0.0", FCVAR_CHEAT, "When computing respondents for a 'THEN ANY' rule, all rule-matching scores within this much of the best score will be considered." );
 #define EXARRAYMAX 32 // maximum number of prospective expressers in the array (hardcoded for simplicity)
-bool CResponseQueue::DispatchOneResponse_ThenANY( CDeferredResponse &response, AI_CriteriaSet * RESTRICT pDeferredCriteria, CBaseEntity *  const RESTRICT pIssuer, float followupMaxDistSq )
+bool CResponseQueue::DispatchOneResponse_ThenANY( CDeferredResponse &response, AI_CriteriaSet * __restrict__ pDeferredCriteria, CBaseEntity *  const __restrict__ pIssuer, float followupMaxDistSq )
 {
-	CBaseEntity * RESTRICT pTarget = nullptr;
-	CAI_Expresser * RESTRICT pEx = nullptr;
+	CBaseEntity * __restrict__ pTarget = nullptr;
+	CAI_Expresser * __restrict__ pEx = nullptr;
 	float bestScore = 0;
 	float slop = rr_thenany_score_slop.GetFloat();
 	Vector issuerLocation;
@@ -328,7 +354,7 @@ bool CResponseQueue::DispatchOneResponse_ThenANY( CDeferredResponse &response, A
 	}
 
 	// this is an array of prospective respondents.
-	CAI_Expresser * RESTRICT pBestEx[EXARRAYMAX];
+	CAI_Expresser * __restrict__ pBestEx[EXARRAYMAX];
 	AI_Response responseToSay[EXARRAYMAX];
 	int numExFound = 0; // and this is the high water mark for the array.
 
@@ -341,7 +367,7 @@ bool CResponseQueue::DispatchOneResponse_ThenANY( CDeferredResponse &response, A
 
 	// find all characters (except the issuer)
 	int numExprs = GetNumExpresserTargets();
-	AssertMsg1( numExprs <= EXARRAYMAX, "Response queue has %d possible expresser targets, please increase EXARRAYMAX ", numExprs );
+	contract_assert( ( numExprs <= EXARRAYMAX ) && "Response queue has %d possible expresser targets, please increase EXARRAYMAX " );
 	for ( int i = 0 ; i < numExprs; ++i ) 
 	{
 		pTarget = GetExpresserHost(i);
@@ -369,7 +395,7 @@ bool CResponseQueue::DispatchOneResponse_ThenANY( CDeferredResponse &response, A
 		pTarget->ModifyOrAppendDerivedCriteria( characterCriteria );
 		if ( pIssuer )
 		{
-			characterCriteria.AppendCriteria( "dist_from_issuer",  UTIL_VarArgs( "%f", sqrt(distIssuerToTargetSq) ) );
+			characterCriteria.AppendCriteria( "dist_from_issuer",  UTIL_VarArgs( "%f", std::sqrt(distIssuerToTargetSq) ) );
 		}
 		AI_Response prospectiveResponse;
 
@@ -413,7 +439,7 @@ bool CResponseQueue::DispatchOneResponse_ThenANY( CDeferredResponse &response, A
 		}
 		else
 		{
-			AssertMsg( false, "Response queue somehow found a response, but no expresser for it.\n" );
+			contract_assert( false && "Response queue somehow found a response, but no expresser for it.\n" );
 			return false;
 		}
 	}	
@@ -466,9 +492,8 @@ void CResponseQueueManager::Shutdown()
 
 void CResponseQueueManager::FrameUpdatePostEntityThink()
 {
-	Assert(m_pQueue);
+	contract_assert( m_pQueue );
 	m_pQueue->PerFrameDispatch();
 }
 
 CResponseQueueManager g_ResponseQueueManager( "CResponseQueueManager" );
-

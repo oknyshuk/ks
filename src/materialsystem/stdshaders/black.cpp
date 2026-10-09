@@ -1,6 +1,5 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "black_vs20.inc"
@@ -8,7 +7,7 @@
 #include "black_ps20b.inc"
 
 BEGIN_VS_SHADER( Black, "Help for Black" )
-	BEGIN_SHADER_PARAMS
+	
 	END_SHADER_PARAMS
 
 	SHADER_INIT_PARAMS()
@@ -87,5 +86,3 @@ BEGIN_VS_SHADER( Black, "Help for Black" )
 	}
 
 END_SHADER
-
-

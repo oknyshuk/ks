@@ -1,16 +1,13 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef VIEW_SHAREDV1_H
-#define VIEW_SHAREDV1_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // Purpose: Renderer setup data.  
 //-----------------------------------------------------------------------------
+import std;
+import ks.math;
+
 class CViewSetupV1
 {
 public:
@@ -87,5 +84,3 @@ public:
 	// back buffer into a square (or otherwise) render target.
 	bool		m_bUseRenderTargetAspectRatio;
 };
-
-#endif // VIEW_SHAREDV1_H

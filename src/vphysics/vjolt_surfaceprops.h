@@ -4,11 +4,11 @@
 
 #pragma once
 
+import ks.tier1;
 #include "isaverestore.h"
 
-#include <map>
-#include <string>
-#include <vector>
+import std;
+#include "vphysics_interface.h"
 
 struct JoltSurfaceProp
 {
@@ -47,11 +47,11 @@ public:
 	//ISaveRestoreOps		*GetMaterialIndexDataOps() const override_portal2;
 
 	// GMod-specific internal gubbins that was exposed in the public interface.
-	void				*GetIVPMaterial( int nIndex ) override_gmod;
-	int					GetIVPMaterialIndex( const void *pMaterial ) const override_gmod;
-	void				*GetIVPManager( void ) override_gmod;
-	int					RemapIVPMaterialIndex( int nIndex ) const override_gmod;
-	const char 			*GetReservedMaterialName( int nMaterialIndex ) const override_gmod;
+	void				*GetIVPMaterial( int nIndex ) ;
+	int					GetIVPMaterialIndex( const void *pMaterial ) const ;
+	void				*GetIVPManager( void ) ;
+	int					RemapIVPMaterialIndex( int nIndex ) const ;
+	const char 			*GetReservedMaterialName( int nMaterialIndex ) const ;
 
 public:
 	static JoltPhysicsSurfaceProps& GetInstance() { return s_PhysicsSurfaceProps; }

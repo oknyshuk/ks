@@ -1,36 +1,48 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
 #include "cdll_int.h"
 #include "gameinterface.h"
-#include "mapentities.h"
 #include "cs_gameinterface.h"
 #include "ai_responsesystem.h"
-#include "iachievementmgr.h"
-#include "fmtstr.h"
 #include "gametypes.h"
 #include "matchmaking/imatchframework.h"
-#include "cs_shareddefs.h"
 #include "cs_gamerules.h"
 #include "gametypes.h"
 #include "engine/inetsupport.h"
 #include "cs_player.h"
-#include "server_log_http_dispatcher.h"
 
 #include "netmessages.h"
 #include "usermessages.h"
-
-
 
 //////////////////////////////////////////////////////////////////////////
 //
 // Convars
 //
-static ConVar tv_allow_camera_man_steamid( "tv_allow_camera_man_steamid", "", FCVAR_RELEASE, "Allows tournament production cameraman to run csgo.exe -interactivecaster on SteamID 7650123456XXX and be the camera man." );
+static ConVar tv_allow_camera_man_playerid( "tv_allow_camera_man_steamid", "", FCVAR_RELEASE, "Allows tournament production cameraman to run csgo.exe -interactivecaster on SteamID 7650123456XXX and be the camera man." );
 
 // #define SVGC_RESERVATION_DEBUG 1
 
@@ -53,7 +65,7 @@ void CServerGameClients::GetPlayerLimits( int& minplayers, int& maxplayers, int 
 
 void CServerGameDLL::LevelInit_ParseAllEntities( const char *pMapEntities )
 {
-	if ( Q_strcmp( STRING(gpGlobals->mapname), "cs_" ) )
+	if ( V_strcmp( STRING(gpGlobals->mapname), "cs_" ) )
 	{
 		// don't precache AI responses (hostages) if it's not a hostage rescure map
 		extern IResponseSystem *g_pResponseSystem;
@@ -62,11 +74,6 @@ void CServerGameDLL::LevelInit_ParseAllEntities( const char *pMapEntities )
 }
 
 
-
-void CServerGameDLL::UpdateGCInformation()
-{
-	/** Removed for partner depot **/
-}
 
 // Marks the queue matchmaking game as starting
 void CServerGameDLL::ReportGCQueuedMatchStart( int32 iReservationStage, uint32 *puiConfirmedAccounts, int numConfirmedAccounts )
@@ -77,15 +84,15 @@ void CServerGameDLL::ReportGCQueuedMatchStart( int32 iReservationStage, uint32 *
 //-----------------------------------------------------------------------------
 // Purpose: A user has had their network id setup and validated 
 //-----------------------------------------------------------------------------
-void CServerGameClients::NetworkIDValidated( const char *pszUserName, const char *pszNetworkID, CSteamID steamID )
+void CServerGameClients::NetworkIDValidated( const char *pszUserName, const char *pszNetworkID, CPlayerId playerUID )
 {
 	/** Removed for partner depot **/
 }
 
 //
-// Matchmaking game data buffer to set into SteamGameServer()->SetGameData
+// Matchmaking game data buffer
 //
-void CServerGameDLL::GetMatchmakingGameData( char *buf, size_t bufSize )
+void CServerGameDLL::GetMatchmakingGameData( char *buf, std::size_t bufSize )
 {
 	char * const bufBase = buf;
 	int len = 0;
@@ -94,8 +101,8 @@ void CServerGameDLL::GetMatchmakingGameData( char *buf, size_t bufSize )
 	extern ConVar game_mode;
 
 	// Put the game key
-	Q_snprintf( buf, bufSize, "g:csgo,gt:%u,gm:%u,", game_type.GetInt(), game_mode.GetInt() );
-	len = strlen( buf );
+	V_snprintf( buf, bufSize, "g:csgo,gt:%u,gm:%u,", game_type.GetInt(), game_mode.GetInt() );
+	len = std::strlen( buf );
 	buf += len;
 	bufSize -= len;
 
@@ -106,13 +113,13 @@ void CServerGameDLL::GetMatchmakingGameData( char *buf, size_t bufSize )
 
 // this returns true if they were already in the list or were successfully added
 // returns false if they were not added (not allowed to be a caster)
-bool AddAccountToActiveCasters( const CSteamID &steamID )
+bool AddAccountToActiveCasters( const CPlayerId &playerUID )
 {
 	// first check if they are already in the list
 	bool bAlreadyAdded = false;
 	for ( int j = 0; j < CSGameRules()->m_arrTournamentActiveCasterAccounts.Count(); j++ )
 	{
-		if ( steamID.GetAccountID() == CSGameRules()->m_arrTournamentActiveCasterAccounts[ j ] )
+		if ( playerUID.GetAccountID() == CSGameRules()->m_arrTournamentActiveCasterAccounts[ j ] )
 		{
 			// this caster is already in the list so skip adding them, but allow them
 			bAlreadyAdded = true;
@@ -132,16 +139,8 @@ bool AddAccountToActiveCasters( const CSteamID &steamID )
 		{
 			if ( CSGameRules()->m_arrTournamentActiveCasterAccounts[ j ] == 0 )
 			{
-				CSGameRules()->m_arrTournamentActiveCasterAccounts.Set( j, steamID.GetAccountID() );
-				if ( steamapicontext->SteamUser() && steamapicontext->SteamFriends() )
-				{
-					const char *pszName = steamapicontext->SteamFriends()->GetFriendPersonaName( steamID );
-					ConMsg( "Adding %s (ID:%d) to active caster list!\n", pszName, steamID.GetAccountID() );
-				}
-				else
-				{
-					ConMsg( "Adding ID:%d to active caster list!\n", steamID.GetAccountID() );
-				}
+				CSGameRules()->m_arrTournamentActiveCasterAccounts.Set( j, playerUID.GetAccountID() );
+				ConMsg( "Adding ID:%d to active caster list!\n", playerUID.GetAccountID() );
 				break;
 			}
 		}
@@ -152,12 +151,12 @@ bool AddAccountToActiveCasters( const CSteamID &steamID )
 
 // validate if player is a caster and is not playing in the current game, then add them to the active caster list
 // returns false if they are not allow to be a caster
-bool CServerGameDLL::ValidateAndAddActiveCaster( const CSteamID &steamID )
+bool CServerGameDLL::ValidateAndAddActiveCaster( const CPlayerId &playerUID )
 {
 	// check if they are a player in the current game. Note: players can be casters sometimes (and might be in the casters list below), but we don't want their voice data "public" when they are playing
 	for ( int i = 0; i < CCSGameRules::sm_QueuedServerReservation.account_ids.size(); i++ )
 	{
-		if ( steamID.GetAccountID() == CCSGameRules::sm_QueuedServerReservation.account_ids[ i ] )
+		if ( playerUID.GetAccountID() == CCSGameRules::sm_QueuedServerReservation.account_ids[ i ] )
 		{
 			// this is a player
 			return false;
@@ -166,19 +165,19 @@ bool CServerGameDLL::ValidateAndAddActiveCaster( const CSteamID &steamID )
 	// they weren't in the player list, so now check the caster list
 	for ( int i = 0; i < CCSGameRules::sm_QueuedServerReservation.tournament_casters_account_ids.size(); i++ )
 	{
-		if ( steamID.GetAccountID() == CCSGameRules::sm_QueuedServerReservation.tournament_casters_account_ids[ i ] )
+		if ( playerUID.GetAccountID() == CCSGameRules::sm_QueuedServerReservation.tournament_casters_account_ids[ i ] )
 		{
 			// this is a caster
-			return AddAccountToActiveCasters( steamID );
+			return AddAccountToActiveCasters( playerUID );
 		}
 	}
-	if ( tv_allow_camera_man_steamid.GetString()[0] && engine->IsDedicatedServer() )
+	if ( tv_allow_camera_man_playerid.GetString()[0] && engine->IsDedicatedServer() )
 	{
-		CSteamID steamidCameraMan( V_atoui64( tv_allow_camera_man_steamid.GetString() ) );
-		if ( steamidCameraMan.IsValid() && steamidCameraMan.BIndividualAccount() && steamidCameraMan.GetAccountID() &&
-			( steamidCameraMan.GetAccountID() == steamID.GetAccountID() ) )
+		CPlayerId playeridCameraMan( V_atoui64( tv_allow_camera_man_playerid.GetString() ) );
+		if ( playeridCameraMan.IsValid() && playeridCameraMan.BIndividualAccount() && playeridCameraMan.GetAccountID() &&
+			( playeridCameraMan.GetAccountID() == playerUID.GetAccountID() ) )
 		{
-			return AddAccountToActiveCasters( steamID );
+			return AddAccountToActiveCasters( playerUID );
 		}
 	}
 	return false;
@@ -193,12 +192,12 @@ EncryptedMessageKeyType_t CServerGameDLL::GetMessageEncryptionKey( INetMessage *
 		{
 			// check the voice data packets for being from an active caster and add the caster flag and use the public key
 			CSVCMsg_VoiceData_t *pVoiceData = ( CSVCMsg_VoiceData_t * ) pMessage;
-			CSteamID steamID( static_cast<uint64>( pVoiceData->xuid ) );
-			if ( steamID.GetAccountID() )
+			CPlayerId playerUID( static_cast<uint64>( pVoiceData->xuid ) );
+			if ( playerUID.GetAccountID() )
 			{
 				for ( int j = 0; j < CSGameRules()->m_arrTournamentActiveCasterAccounts.Count(); j++ )
 				{
-					if ( steamID.GetAccountID() == CSGameRules()->m_arrTournamentActiveCasterAccounts[ j ] )
+					if ( playerUID.GetAccountID() == CSGameRules()->m_arrTournamentActiveCasterAccounts[ j ] )
 					{
 						pVoiceData->caster = true;
 						return kEncryptedMessageKeyType_Public;
@@ -272,14 +271,14 @@ void CServerGameDLL::OnPureServerFileValidationFailure( edict_t *edictClient, co
 
 // Last chance validation on connect packet for the client, non-NULL return value
 // causes the client connect to be aborted with the provided error
-char const * CServerGameDLL::ClientConnectionValidatePreNetChan( bool bGameServer, char const *adr, int nAuthProtocol, uint64 ullSteamID )
+char const * CServerGameDLL::ClientConnectionValidatePreNetChan( bool bGameServer, char const *adr, int nAuthProtocol, uint64 ullPlayerID )
 {
 	/** Removed for partner depot **/
 	return nullptr;	// allow connections by default
 }
 
 // Network channel notification from engine to game server code
-void CServerGameDLL::OnEngineClientNetworkEvent( edict_t *edictClient, uint64 ullSteamID, int nEventType, void *pvParam )
+void CServerGameDLL::OnEngineClientNetworkEvent( edict_t *edictClient, uint64 ullPlayerID, int nEventType, void *pvParam )
 {
 	/** Removed for partner depot **/
 }
@@ -295,11 +294,6 @@ bool CServerGameDLL::OnEngineClientProxiedRedirect( uint64 ullClient, const char
 {
 	/** Removed for partner depot **/
 	return false;
-}
-
-bool CServerGameDLL::LogForHTTPListeners( const char* szLogLine )
-{
-	return GetServerLogHTTPDispatcher()->LogForHTTPListeners( szLogLine );
 }
 	
 //-----------------------------------------------------------------------------
@@ -323,16 +317,6 @@ void CServerGameDLL::ApplyGameSettings( KeyValues *pKV )
 		const char* pGameMode = pKV->GetString( "game/mode" );
 		const char* pMapGroupName = pKV->GetString( "game/mapgroupname", nullptr );
 		const char* pMapGroupNameToValidate = nullptr;		// pMapGroupName is ok to be NULL; this variable lets us easily use a non null pMapGroupName or gpGlobals->mapGroupName
-
-		if ( !IsValveDS() &&
-			pMapNameFromKV && StringHasPrefix( pMapNameFromKV, "workshop" ) &&
-			pMapGroupName && Q_stristr( pMapGroupName, "@workshop" ) )
-		{
-			// A community server is getting reserved by a client for a workshop map,
-			// retain our current workshop collection if we are hosting one to preserve
-			// map rotation process
-			pMapGroupName = engine->IsDedicatedServer() ? STRING( gpGlobals->mapGroupName ) : pMapGroupName;
-		}
 
 		if ( pMapGroupName && (pMapGroupName[0] != '\0') && !pMapNameFromKV )
 		{
@@ -361,10 +345,10 @@ void CServerGameDLL::ApplyGameSettings( KeyValues *pKV )
 		// For team games we add the prefix "team" to the game type. This is to
 		// eliminate team game lobbies from searches for QuickMatch and Custom Match
 		const char *teamStr = "team";
-		const char *pTeamPrefix = Q_strstr( pGameType, teamStr);
+		const char *pTeamPrefix = V_strstr( pGameType, teamStr);
 		if ( pTeamPrefix == pGameType )
 		{
-			pGameType += Q_strlen( teamStr );
+			pGameType += V_strlen( teamStr );
 		}
 
 		if ( pMapName && pMapName[0] != '\0' )
@@ -464,10 +448,10 @@ void CServerGameDLL::ApplyGameSettings( KeyValues *pKV )
 
 const char * CServerGameClients::ClientNameHandler( uint64 xuid, const char *pchName )
 {
-	CSteamID steamID( xuid );
+	CPlayerId playerUID( xuid );
 
 	// In tournament mode force names for the players according to the reservation
-	if ( steamID.IsValid() && steamID.BIndividualAccount() &&
+	if ( playerUID.IsValid() && playerUID.BIndividualAccount() &&
 		CCSGameRules::sm_QueuedServerReservation.tournament_event.has_value() )
 	{
 		for ( int32 iTeam = 0; iTeam < CCSGameRules::sm_QueuedServerReservation.tournament_teams.size(); ++iTeam )
@@ -476,7 +460,7 @@ const char * CServerGameClients::ClientNameHandler( uint64 xuid, const char *pch
 			for ( int32 iTeamPlayer = 0; iTeamPlayer < ttTeam.players.size(); ++iTeamPlayer )
 			{
 				ks::net::TournamentPlayer const &ttPlayer = ttTeam.players[ iTeamPlayer ];
-				if ( ttPlayer.account_id && ( ttPlayer.account_id == steamID.GetAccountID() ) )
+				if ( ttPlayer.account_id && ( ttPlayer.account_id == playerUID.GetAccountID() ) )
 				{
 					return ( ttPlayer.player_nick->c_str() );
 				}
@@ -486,7 +470,7 @@ const char * CServerGameClients::ClientNameHandler( uint64 xuid, const char *pch
 
 	// Throttle name changes from clients (hacked clients can set the name convar at any rate)
 	extern CCSPlayer *ToCSPlayer( CBaseEntity *pEntity );
-	if ( CCSPlayer* pPlayer = ToCSPlayer( CBasePlayer::GetPlayerBySteamID( steamID ) ) )
+	if ( CCSPlayer* pPlayer = ToCSPlayer( CBasePlayer::GetPlayerByPlayerID( playerUID ) ) )
 	{
 		if ( !pPlayer->CanChangeName() )
 			return pPlayer->GetPlayerName();

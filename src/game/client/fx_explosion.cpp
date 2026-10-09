@@ -1,10 +1,24 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Base explosion effect
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "fx_explosion.h"
 #include "precache_register.h"
 #include "fx_sparks.h"
@@ -12,7 +26,6 @@
 #include "tempentity.h"
 #include "iefx.h"
 #include "engine/IEngineSound.h"
-#include "engine/ivdebugoverlay.h"
 #include "c_te_effect_dispatch.h"
 #include "fx.h"
 #include "fx_quad.h"
@@ -79,7 +92,7 @@ public:
 		{
 			dtime = timeDelta;
 			float expected = 0.5;
-			decay = exp( log( 0.0001f ) * dtime / expected );
+			decay = std::exp( std::log( 0.0001f ) * dtime / expected );
 		}
 
 		pParticle->m_vecVelocity = pParticle->m_vecVelocity * decay;
@@ -385,7 +398,7 @@ void C_BaseExplosionEffect::CreateCore( void )
 
 		int	numRingSprites = 32;
 
-		float flIncr = (2*M_PI) / (float) numRingSprites; // Radians
+		float flIncr = (2*std::numbers::pi) / (float) numRingSprites; // Radians
 		float flYaw = 0.0f;
 
 		for ( i = 0; i < numRingSprites; i++ )
@@ -569,7 +582,7 @@ void C_BaseExplosionEffect::CreateDebris( void )
 	ks::intrusive_ptr<CTrailParticles> pSparkEmitter	= CTrailParticles::Create( "CreateDebris 1" );
 	if ( pSparkEmitter == nullptr )
 	{
-		assert(0);
+		contract_assert( 0 );
 		return;
 	}
 
@@ -745,7 +758,7 @@ float C_BaseExplosionEffect::Probe( const Vector &origin, Vector *vecDirection, 
 	debugoverlay->AddLineOverlay( m_vecOrigin, endpos, (255*(1.0f-tr.fraction)), (255*tr.fraction), 0, false, 3 );
 #endif
 
-	assert(( 1.0f - tr.fraction ) >= 0.0f );
+	contract_assert( ( 1.0f - tr.fraction ) >= 0.0f );
 
 	//Return the impacted proportion of the probe
 	return (1.0f-tr.fraction);
@@ -851,7 +864,7 @@ public:
 		{
 			dtime = timeDelta;
 			float expected = 0.5;
-			decay = exp( log( 0.0001f ) * dtime / expected );
+			decay = std::exp( std::log( 0.0001f ) * dtime / expected );
 		}
 
 		pParticle->m_vecVelocity = pParticle->m_vecVelocity * decay;
@@ -891,7 +904,7 @@ C_WaterExplosionEffect &WaterExplosionEffect( void )
 	return C_WaterExplosionEffect::Instance(); 
 }
 
-#define	MAX_WATER_SURFACE_DISTANCE	512
+constexpr auto MAX_WATER_SURFACE_DISTANCE = 512;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -921,7 +934,7 @@ void C_WaterExplosionEffect::Create( const Vector &position, float force, float 
 		else
 		{
 			//NOTENOTE: We somehow got into a water explosion without being near water?
-			Assert( 0 );
+			contract_assert( 0 );
 			m_vecWaterSurface = m_vecOrigin;
 			m_flDepth = 0.0f;
 		}

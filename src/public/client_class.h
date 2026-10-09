@@ -1,26 +1,15 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( CLIENT_CLASS_H )
-#define CLIENT_CLASS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "interface.h"
+import std;
+import ks.tier1;
 #include "dt_recv.h"
 
 //-----------------------------------------------------------------------------
 // forward declarations
 //-----------------------------------------------------------------------------
 
-class Vector;
 class CMouthInfo;
 
 
@@ -165,5 +154,3 @@ public:
 	RecvTable*		clientClassName::m_pClassRecvTable = &dataTable::g_RecvTable;\
 	int				clientClassName::YouForgotToImplementOrDeclareClientClass() {return 0;}\
 	ClientClass*	clientClassName::GetClientClass() {return &__g_##clientClassName##ClientClass;}
-
-#endif // CLIENT_CLASS_H

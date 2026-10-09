@@ -1,14 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Local header for CVTFTexture class declaration - allows platform-specific
 //			implementation to be placed in separate cpp files.
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef CVTF_H
-#define CVTF_H
-
 
 #include "s3tc_decode.h"
 #include "vtf/vtf.h"
@@ -106,8 +101,8 @@ public:
 };
 
 
-#define NUM_EDGE_MATCHES	12
-#define NUM_CORNER_MATCHES	8
+inline constexpr auto NUM_EDGE_MATCHES = 12;
+inline constexpr auto NUM_CORNER_MATCHES = 8;
 
 
 //-----------------------------------------------------------------------------
@@ -124,8 +119,8 @@ public:
 	// Methods to initialize the low-res image
 	virtual void InitLowResImage( int nWidth, int nHeight, ImageFormat fmt );
 
-	virtual void *SetResourceData( uint32 eType, void const *pData, size_t nDataSize );
-	virtual void *GetResourceData( uint32 eType, size_t *pDataSize ) const;
+	virtual void *SetResourceData( uint32 eType, void const *pData, std::size_t nDataSize );
+	virtual void *GetResourceData( uint32 eType, std::size_t *pDataSize ) const;
 
 	// Locates the resource entry info if it's present, easier than crawling array types
 	virtual bool HasResourceEntry( uint32 eType ) const;
@@ -388,7 +383,7 @@ private:
 
 	struct ResourceMemorySection
 	{
-		ResourceMemorySection() { memset( this, 0, sizeof( *this ) ); }
+		ResourceMemorySection() { std::memset( this, 0, sizeof( *this ) ); }
 
 		int				m_nDataAllocSize;
 		int				m_nDataLength;
@@ -403,5 +398,3 @@ private:
 
 	VtfProcessingOptions m_Options;
 };
-
-#endif	// CVTF_H

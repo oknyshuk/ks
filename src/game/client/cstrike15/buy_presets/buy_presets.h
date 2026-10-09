@@ -1,13 +1,6 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef BUY_PRESETS_H
-#define BUY_PRESETS_H
-
-#define USE_BUY_PRESETS 1
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 /**
  * CLASS STRUCTURE:
@@ -30,10 +23,9 @@
  *  fallback menu, a wizard can edit the contents of a fallback, specifying primary weapon,
  *  pistol, and equipment.
  */
-
+import ks.tier1;
 #include "weapon_csbase.h"
-#include <keyvalues.h>
-#include <utlvector.h>
+import std;
 
 class BuyPreset;
 class CCSWeaponInfo;
@@ -258,9 +250,5 @@ const wchar_t* WeaponIDToDisplayName( CSWeaponID weaponID );
 // If our weapon is NONE, we want to be able to buy up to this many clips for the current gun we're holding
 enum { NUM_CLIPS_FOR_CURRENT = 4 };
 
-#if USE_BUY_PRESETS
 extern ConVar cl_buy_favorite_quiet;
 extern ConVar cl_buy_favorite_nowarn;
-#endif // USE_BUY_PRESETS
-
-#endif // BUY_PRESETS_H

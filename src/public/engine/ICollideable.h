@@ -1,26 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ENGINE_ICOLLIDEABLE_H
-#define ENGINE_ICOLLIDEABLE_H
-
-
-enum SolidType_t;
+import ks.math;
+#include "const.h"
+import std;
 class IHandleEntity;
 struct Ray_t;
 struct model_t;
-class Vector;
-class QAngle;
 class CGameTrace;
 typedef CGameTrace trace_t;
 class IClientUnknown;
 class IPhysicsObject;
 
-abstract_class ICollideable
+class ICollideable
 {
 public:
 	// Gets at the entity handle associated with the collideable
@@ -75,6 +68,3 @@ public:
 	virtual const matrix3x4_t	*GetRootParentToWorldTransform() const = 0;
 	virtual IPhysicsObject	*GetVPhysicsObject() const = 0;
 };
-
-
-#endif // ENGINE_ICOLLIDEABLE_H

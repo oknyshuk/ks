@@ -1,12 +1,27 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "render_pch.h"
-#include <mutex>
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "const.h"
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialvar.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "r_local.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_lightmap.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
+import std;
 #include "decal_private.h"
 #include "disp_defs.h"
 #include "disp.h"
@@ -15,16 +30,13 @@
 #include "gl_cvars.h"
 #include "gl_rsurf.h"
 #include "gl_lightmap.h"
-#include "con_nprint.h"
 #include "surfinfo.h"
 #include "Overlay.h"
 #include "cl_main.h"
 #include "r_decal.h"
 #include "materialsystem/materialsystem_config.h"
-#include "debugoverlay.h"
 #include "paint.h"
 
-#include "tier0/vprof.h"
 #include "chain_pool.h"
 
 // ----------------------------------------------------------------------------- //
@@ -105,7 +117,7 @@ void CDispInfo::RenderWireframeInLightmapPage( int pageId )
     // render displacement as wireframe into lightmap pages
 	SurfaceHandle_t surfID = GetParent();
 
-	Assert( ( MSurf_MaterialSortID( surfID ) >= 0 ) && ( MSurf_MaterialSortID( surfID ) < std::ssize( g_WorldStaticMeshes ) ) );
+	contract_assert( ( MSurf_MaterialSortID( surfID ) >= 0 ) && ( MSurf_MaterialSortID( surfID ) < std::ssize( g_WorldStaticMeshes ) ) );
 
 	if( materialSortInfoArray[MSurf_MaterialSortID( surfID ) ].lightmapPageID != pageId )
 		return;
@@ -142,7 +154,7 @@ unsigned int CDispInfo::ComputeDynamicLightMask( dlight_t *pLights )
 #ifndef DEDICATED
 	if( !IS_SURF_VALID( m_ParentSurfID ) )
 	{
-		Assert( !"CDispInfo::ComputeDynamicLightMask: no parent surface" );
+		contract_assert( !"CDispInfo::ComputeDynamicLightMask: no parent surface" );
 		return 0;
 	}
 
@@ -174,7 +186,7 @@ void CDispInfo::AddDynamicLights( dlight_t *pLights, unsigned int mask )
 #ifndef DEDICATED
 	if( !IS_SURF_VALID( m_ParentSurfID ) )
 	{
-		Assert( !"CDispInfo::AddDynamicLights: no parent surface" );
+		contract_assert( !"CDispInfo::AddDynamicLights: no parent surface" );
 		return;
 	}
 
@@ -389,7 +401,7 @@ void CDispInfo::GenerateDecalFragments_R( CVertIndex const &nodeIndex,
 	int iNodeBitIndex, unsigned short decalHandle, CDispDecalBase *pDispDecal, int iLevel )
 {
 	// Get the node info for this node...
-	Assert( iNodeBitIndex < m_pPowerInfo->m_NodeCount );
+	contract_assert( iNodeBitIndex < m_pPowerInfo->m_NodeCount );
 	DispNodeInfo_t const& nodeInfo = m_pNodeInfo[iNodeBitIndex];
 
 	int iNodeIndex = VertIndex( nodeIndex );
@@ -451,8 +463,8 @@ bool CDispInfo::ComputeShadowFragments( DispShadowHandle_t h, int& vertexCount, 
 		return true;
 	}
 
-	Assert( pShadowDecal->m_nTris == 0);
-	Assert( pShadowDecal->m_FirstFragment == DISP_SHADOW_FRAGMENT_HANDLE_INVALID);
+	contract_assert( pShadowDecal->m_nTris == 0 );
+	contract_assert( pShadowDecal->m_FirstFragment == DISP_SHADOW_FRAGMENT_HANDLE_INVALID );
 
 	ShadowInfo_t const& info = g_pShadowMgr->GetInfo( pShadowDecal->m_Shadow );
 
@@ -513,7 +525,7 @@ void CDispInfo::FindNodesInShadowFrustum( const Frustum_t& frustum, unsigned sho
 
 		DispNodeInfo_t& nodeInfo = m_pNodeInfo[iNodeBit];
 
-		if ( nodeInfo.m_mins.x == FLT_MAX )
+		if ( nodeInfo.m_mins.x == std::numeric_limits<float>::max() )
 		{
 			// empty node
 			continue;
@@ -586,7 +598,7 @@ void CDispInfo::SetTag()
 void DispInfo_BuildPrimLists( int nSortGroup, SurfaceHandle_t *pList, int listCount, bool bDepthOnly,
 	CDispInfo *visibleDisps[MAX_MAP_DISPINFO], int &nVisibleDisps )
 {
-	VPROF("DispInfo_BuildPrimLists");
+	CVProfScope _( "DispInfo_BuildPrimLists", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	nVisibleDisps = 0;
 	for( int i = 0; i < listCount; i++ )
@@ -606,7 +618,7 @@ void DispInfo_BuildPrimLists( int nSortGroup, SurfaceHandle_t *pList, int listCo
 void DispInfo_GetVisibleDispsAndAddOverlayFragmentsToRenderList( int nSortGroup, SurfaceHandle_t *pList, int listCount,
 	CDispInfo *visibleDisps[MAX_MAP_DISPINFO], int &nVisibleDisps )
 {
-	VPROF( "DispInfo_GetVisibleDispsAndAddOverlayFragmentsToRenderList" );
+	CVProfScope _( "DispInfo_GetVisibleDispsAndAddOverlayFragmentsToRenderList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	nVisibleDisps = 0;
 #ifndef DEDICATED
@@ -630,7 +642,7 @@ ConVar disp_dynamic( "disp_dynamic", "0" );
 void DispInfo_DrawPrimLists( IMatRenderContext *pRenderContext, ERenderDepthMode_t DepthMode )
 {
 #ifndef DEDICATED
-	VPROF("DispInfo_DrawPrimLists");
+	CVProfScope _( "DispInfo_DrawPrimLists", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	int nDispGroupsSize = std::ssize( g_DispGroups );
 
@@ -761,7 +773,7 @@ void DispInfo_BatchDecals( CDispInfo **pVisibleDisps, int nVisibleDisps )
 #ifndef DEDICATED
 
 	// Performance analysis.
-	VPROF( "DispInfo_BatchDecals" );
+	CVProfScope _( "DispInfo_BatchDecals", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Increment the decal sort check count and clear the pool.
 	DecalDispSurfacesInit();
@@ -927,7 +939,7 @@ void DispInfo_DrawDecalsGroup( IMatRenderContext *pRenderContext, int iGroup, in
 				continue;
 
 			decal_t *pDecalHead = g_aDispDecalSortPool[iHead].m_pDecal;
-			Assert( pDecalHead->material );
+			contract_assert( pDecalHead->material );
 			if ( !pDecalHead->material )
 				continue;
 
@@ -1037,7 +1049,7 @@ void DispInfo_DrawDecalsGroup( IMatRenderContext *pRenderContext, int iGroup, in
 						
 						bBatchInit = false;
 					}
-					Assert ( pBatch );
+					contract_assert( pBatch );
 	
 					// Setup verts.
 					float flOffset = fragment.m_pDecal->lightmapOffset;
@@ -1088,7 +1100,7 @@ void DispInfo_DrawDecalsGroup( IMatRenderContext *pRenderContext, int iGroup, in
 void DispInfo_DrawDecals( IMatRenderContext *pRenderContext, CDispInfo **visibleDisps, int nVisibleDisps )
 {
 #ifndef DEDICATED
-	VPROF( "DispInfo_DrawDecals" );
+	CVProfScope _( "DispInfo_DrawDecals", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	int iGroup = 0;
 
@@ -1117,7 +1129,7 @@ int DispInfo_AddShadowsToMeshBuilder( CMeshBuilder& meshBuilder, DispShadowHandl
 	g_pShadowMgr->ComputeRenderInfo( &info, pShadowDecal->m_Shadow );
 
 	// It had better be computed by now...
-	Assert( pShadowDecal->m_Flags & CDispDecalBase::FRAGMENTS_COMPUTED );
+	contract_assert( pShadowDecal->m_Flags & CDispDecalBase::FRAGMENTS_COMPUTED );
 
 #ifdef _DEBUG
 	int triCount = 0;
@@ -1180,8 +1192,8 @@ int DispInfo_AddShadowsToMeshBuilder( CMeshBuilder& meshBuilder, DispShadowHandl
 	meshBuilder.AdvanceIndices( nIndices );
 
 #ifdef _DEBUG
-	Assert( triCount == pShadowDecal->m_nTris );
-	Assert( vertCount == pShadowDecal->m_nVerts );
+	contract_assert( triCount == pShadowDecal->m_nTris );
+	contract_assert( vertCount == pShadowDecal->m_nVerts );
 #endif
 
 	return baseIndex;
@@ -1228,7 +1240,7 @@ IDispInfo* DispInfo_IndexArray( HDISPINFOARRAY hArray, int iElement )
 	if( !pArray )
 		return nullptr;
 
-	Assert( iElement >= 0 && iElement < pArray->m_nDispInfos );
+	contract_assert( iElement >= 0 && iElement < pArray->m_nDispInfos );
 	return &pArray->m_pDispInfos[iElement];
 }
 
@@ -1240,7 +1252,7 @@ int DispInfo_ComputeIndex( HDISPINFOARRAY hArray, IDispInfo* pInfo )
 
 	int iElement = size_cast< int >( ((intp)pInfo - (intp)(pArray->m_pDispInfos)) / sizeof(CDispInfo) );
 
-	Assert( iElement >= 0 && iElement < pArray->m_nDispInfos );
+	contract_assert( iElement >= 0 && iElement < pArray->m_nDispInfos );
 	return iElement;
 }
 
@@ -1328,7 +1340,7 @@ static void DispInfo_DrawChainNormals( IMatRenderContext *pRenderContext, Surfac
 void DispInfo_RenderListDebug( IMatRenderContext *pRenderContext, SurfaceHandle_t *pList, int listCount )
 {
 #ifndef DEDICATED
-	VPROF("DispInfo_DrawDebugInformation");
+	CVProfScope _( "DispInfo_DrawDebugInformation", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( DispInfoRenderDebugModes() )
 	{
 		for( int i = 0; i < listCount; i++ )
@@ -1421,4 +1433,3 @@ void DispInfo_RenderListDecalsAndOverlays( IMatRenderContext *pRenderContext, in
 	g_pShadowMgr->ClearShadowRenderList();
 #endif
 }
-

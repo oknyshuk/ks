@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Expose functions from sys_dll.cpp.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef SYS_DLL_H
-#define SYS_DLL_H
-
-
-
-#include "interface.h"
+import ks.tier1;
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -93,8 +88,4 @@ const char *Sys_GetProductString();
 // SysDlls 3 loading and unloading entry points
 bool SysDll3_Load();
 void SysDll3_Unload();
-DECLARE_LOGGING_CHANNEL( LOG_SERVER_LOG );
-
-#endif
-
-
+extern LoggingChannelID_t LOG_SERVER_LOG;;

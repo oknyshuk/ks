@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CS_HUD_CHAT_H
-#define CS_HUD_CHAT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <hud_basechat.h>
 
@@ -35,7 +29,7 @@ public:
 	virtual void	Init( void );
 	virtual void	Reset( void );
 
-	virtual void	ChatPrintf(int iPlayerIndex, int iFilter, PRINTF_FORMAT_STRING const char* fmt, ...) FMTFUNCTION(4, 5);
+	[[gnu::format(printf, 4, 5)]] virtual void	ChatPrintf(int iPlayerIndex, int iFilter, const char* fmt, ...);
 
 	bool			MsgFunc_SayText2( const ks::net::CCSUsrMsg_SayText2 &msg );
 	bool			MsgFunc_RadioText( const ks::net::CCSUsrMsg_RadioText &msg );
@@ -48,5 +42,3 @@ public:
 
 	virtual int GetFilterForString( const char *pString );
 };
-
-#endif	//CS_HUD_CHAT_H

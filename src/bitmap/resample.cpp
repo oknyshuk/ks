@@ -1,22 +1,10 @@
-//======= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "nvtc.h"
+import ks.math;
 #include "bitmap/imageformat.h"
-#include "basetypes.h"
-#include "tier0/dbg.h"
-#include <malloc.h>
-#include <memory.h>
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include <vector>
-#include "tier1/strtools.h"
-#include "mathlib/compressed_vector.h"
+import std;
 
-#include "tier0/memalloc.h"
 
 namespace ImageLoader
 {
@@ -28,7 +16,7 @@ static void ConstructFloatGammaTable( float* pTable, float srcGamma, float dstGa
 {
 	for( int i = 0; i < 256; i++ )
 	{
-		pTable[i] = 255.0 * pow( (float)i / 255.0f, srcGamma / dstGamma );
+		pTable[i] = 255.0 * std::pow( (float)i / 255.0f, srcGamma / dstGamma );
 	}
 }
 
@@ -38,7 +26,7 @@ void ConstructGammaTable( unsigned char* pTable, float srcGamma, float dstGamma 
 	for( int i = 0; i < 256; i++ )
 	{
 		double f;
-		f = 255.0 * pow( (float)i / 255.0f, srcGamma / dstGamma );
+		f = 255.0 * std::pow( (float)i / 255.0f, srcGamma / dstGamma );
 		v = ( int )(f + 0.5f);
 		if( v < 0 )
 		{
@@ -79,7 +67,7 @@ void GammaCorrectRGBA8888( unsigned char *src, unsigned char* dst, int width, in
 	{
 		if (src != dst)
 		{
-			memcpy( dst, src, GetMemRequired( width, height, depth, IMAGE_FORMAT_RGBA8888, false ) );
+			std::memcpy( dst, src, GetMemRequired( width, height, depth, IMAGE_FORMAT_RGBA8888, false ) );
 		}
 		return;
 	}
@@ -152,17 +140,17 @@ static void GenerateNiceFilter( float wratio, float hratio, float dratio, int ke
 			{
 				int nKernelIndex = kernelWidth * ( i + h * kernelHeight ) + j;
 
-				float d = sqrt( x * x + y * y + z * z );
+				float d = std::sqrt( x * x + y * y + z * z );
 				if (d > kernelDiameter * 0.5f)
 				{
 					pKernel[nKernelIndex] = 0.0f;
 				}
 				else
 				{
-					float t = M_PI * d;
+					float t = std::numbers::pi * d;
 					if ( t != 0 )
 					{
-						float sinc = sin( t ) / t;
+						float sinc = std::sin( t ) / t;
 						float sinc3 = 3.0f * sin( t / 3.0f ) / t;
 						pKernel[nKernelIndex] = sinc * sinc3;
 					}
@@ -486,7 +474,7 @@ public:
 						float flAlpha = ( total[3] >= flAlphaThreshhold ) ? 255 : 0; 
 
 						for ( int ch = 0; ch < 3; ++ ch )
-							info.m_pDest[ dstPixel + ch ] = Clamp( 255.0f * pow( ( info.m_flColorGoal[ch] + ( info.m_flColorScale[ch] * ( ( total[ch] > 0 ? total[ch] : 0 ) - info.m_flColorGoal[ch] ) ) ) / 255.0f, invDstGamma ) );
+							info.m_pDest[ dstPixel + ch ] = Clamp( 255.0f * std::pow( ( info.m_flColorGoal[ch] + ( info.m_flColorScale[ch] * ( ( total[ch] > 0 ? total[ch] : 0 ) - info.m_flColorGoal[ch] ) ) ) / 255.0f, invDstGamma ) );
 						info.m_pDest[ dstPixel + 3 ] = Clamp( flAlpha );
 
 						AddAlphaToAlphaResult( kernel, info, startX, startY, startZ, flAlpha, pAlphaResult );
@@ -494,7 +482,7 @@ public:
 					else
 					{
 						for ( int ch = 0; ch < 3; ++ ch )
-							info.m_pDest[ dstPixel + ch ] = Clamp( 255.0f * pow( ( info.m_flColorGoal[ch] + ( info.m_flColorScale[ch] * ( ( total[ch] > 0 ? total[ch] : 0 ) - info.m_flColorGoal[ch] ) ) ) / 255.0f, invDstGamma ) );
+							info.m_pDest[ dstPixel + ch ] = Clamp( 255.0f * std::pow( ( info.m_flColorGoal[ch] + ( info.m_flColorScale[ch] * ( ( total[ch] > 0 ? total[ch] : 0 ) - info.m_flColorGoal[ch] ) ) ) / 255.0f, invDstGamma ) );
 						info.m_pDest[ dstPixel + 3 ] = Clamp( info.m_flColorGoal[3] + ( info.m_flColorScale[3] * ( total[3] - info.m_flColorGoal[3] ) ) );
 					}
 				}
@@ -633,7 +621,7 @@ bool ResampleRGBA8888( const ResampleInfo_t& info )
 	int dratio = (info.m_nSrcDepth != info.m_nDestDepth) ? info.m_nSrcDepth / info.m_nDestDepth : 0;
 	
 	KernelInfo_t kernel;
-	memset( &kernel, 0, sizeof( KernelInfo_t ) );
+	std::memset( &kernel, 0, sizeof( KernelInfo_t ) );
 
 	float pKernelMem[1];
 	float pInvKernelMem[1];
@@ -698,14 +686,14 @@ bool ResampleRGBA16161616( const ResampleInfo_t& info )
 	// HDRFIXME: This is some lame shit right here. (We need to get NICE working, etc, etc.)
 
 	// Make sure everything is power of two.
-	Assert( ( info.m_nSrcWidth & ( info.m_nSrcWidth - 1 ) ) == 0 );
-	Assert( ( info.m_nSrcHeight & ( info.m_nSrcHeight - 1 ) ) == 0 );
-	Assert( ( info.m_nDestWidth & ( info.m_nDestWidth - 1 ) ) == 0 );
-	Assert( ( info.m_nDestHeight & ( info.m_nDestHeight - 1 ) ) == 0 );
+	contract_assert( ( info.m_nSrcWidth & ( info.m_nSrcWidth - 1 ) ) == 0 );
+	contract_assert( ( info.m_nSrcHeight & ( info.m_nSrcHeight - 1 ) ) == 0 );
+	contract_assert( ( info.m_nDestWidth & ( info.m_nDestWidth - 1 ) ) == 0 );
+	contract_assert( ( info.m_nDestHeight & ( info.m_nDestHeight - 1 ) ) == 0 );
 
 	// Make sure that we aren't upscsaling the image. . .we do`n't support that very well.
-	Assert( info.m_nSrcWidth >= info.m_nDestWidth );
-	Assert( info.m_nSrcHeight >= info.m_nDestHeight );
+	contract_assert( info.m_nSrcWidth >= info.m_nDestWidth );
+	contract_assert( info.m_nSrcHeight >= info.m_nDestHeight );
 
 	int nSampleWidth = info.m_nSrcWidth / info.m_nDestWidth;
 	int nSampleHeight = info.m_nSrcHeight / info.m_nDestHeight;
@@ -749,14 +737,14 @@ bool ResampleRGB323232F( const ResampleInfo_t& info )
 	// HDRFIXME: This is some lame shit right here. (We need to get NICE working, etc, etc.)
 
 	// Make sure everything is power of two.
-	Assert( ( info.m_nSrcWidth & ( info.m_nSrcWidth - 1 ) ) == 0 );
-	Assert( ( info.m_nSrcHeight & ( info.m_nSrcHeight - 1 ) ) == 0 );
-	Assert( ( info.m_nDestWidth & ( info.m_nDestWidth - 1 ) ) == 0 );
-	Assert( ( info.m_nDestHeight & ( info.m_nDestHeight - 1 ) ) == 0 );
+	contract_assert( ( info.m_nSrcWidth & ( info.m_nSrcWidth - 1 ) ) == 0 );
+	contract_assert( ( info.m_nSrcHeight & ( info.m_nSrcHeight - 1 ) ) == 0 );
+	contract_assert( ( info.m_nDestWidth & ( info.m_nDestWidth - 1 ) ) == 0 );
+	contract_assert( ( info.m_nDestHeight & ( info.m_nDestHeight - 1 ) ) == 0 );
 
 	// Make sure that we aren't upscaling the image. . .we do`n't support that very well.
-	Assert( info.m_nSrcWidth >= info.m_nDestWidth );
-	Assert( info.m_nSrcHeight >= info.m_nDestHeight );
+	contract_assert( info.m_nSrcWidth >= info.m_nDestWidth );
+	contract_assert( info.m_nSrcHeight >= info.m_nDestHeight );
 
 	int nSampleWidth = info.m_nSrcWidth / info.m_nDestWidth;
 	int nSampleHeight = info.m_nSrcHeight / info.m_nDestHeight;
@@ -794,14 +782,14 @@ bool ResampleRGBA32323232F( const ResampleInfo_t& info )
 	// HDRFIXME: This is some lame shit right here. (We need to get NICE working, etc, etc.)
 
 	// Make sure everything is power of two.
-	Assert( ( info.m_nSrcWidth & ( info.m_nSrcWidth - 1 ) ) == 0 );
-	Assert( ( info.m_nSrcHeight & ( info.m_nSrcHeight - 1 ) ) == 0 );
-	Assert( ( info.m_nDestWidth & ( info.m_nDestWidth - 1 ) ) == 0 );
-	Assert( ( info.m_nDestHeight & ( info.m_nDestHeight - 1 ) ) == 0 );
+	contract_assert( ( info.m_nSrcWidth & ( info.m_nSrcWidth - 1 ) ) == 0 );
+	contract_assert( ( info.m_nSrcHeight & ( info.m_nSrcHeight - 1 ) ) == 0 );
+	contract_assert( ( info.m_nDestWidth & ( info.m_nDestWidth - 1 ) ) == 0 );
+	contract_assert( ( info.m_nDestHeight & ( info.m_nDestHeight - 1 ) ) == 0 );
 
 	// Make sure that we aren't upscaling the image. . .we don't support that very well.
-	Assert( info.m_nSrcWidth >= info.m_nDestWidth );
-	Assert( info.m_nSrcHeight >= info.m_nDestHeight );
+	contract_assert( info.m_nSrcWidth >= info.m_nDestWidth );
+	contract_assert( info.m_nSrcHeight >= info.m_nDestHeight );
 
 	int nSampleWidth = info.m_nSrcWidth / info.m_nDestWidth;
 	int nSampleHeight = info.m_nSrcHeight / info.m_nDestHeight;
@@ -892,4 +880,3 @@ void GenerateMipmapLevels( unsigned char* pSrc, unsigned char* pDst, int width,
 }
 
 } // ImageLoader namespace ends
-

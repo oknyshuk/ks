@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "memalloc.h"
+import ks.core;
 
-#include <algorithm>
+import std;
 
 #define DevAssert( ... )
 #define DevAssertMsg( ... )

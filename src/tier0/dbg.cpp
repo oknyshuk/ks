@@ -1,79 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
+import ks.core;
+
+import std;
 
 
-#include "tier0/minidump.h"
-#include "tier0/stacktools.h"
-#include "tier0/etwprof.h"
-
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include "color.h"
-#include "tier0/dbg.h"
-#include "tier0/threadtools.h"
-#include "tier0/icommandline.h"
-#include "tier0/vprof.h"
-#include <math.h>
-
-
-#ifndef STEAM
-#define PvRealloc realloc
-#define PvAlloc malloc
-#endif
-
-#if defined( ENABLE_RUNTIME_STACK_TRANSLATION )
-// Disable this warning: dbg.cpp(479): warning C4748: /GS can not protect parameters and local variables from local buffer overrun because optimizations are disabled in function
-#endif
-
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_LOADING, "LOADING" );
+LoggingChannelID_t LOG_LOADING = LoggingSystem_RegisterLoggingChannel( "LOADING", nullptr );;
 
 //-----------------------------------------------------------------------------
 // Stack attachment management
 //-----------------------------------------------------------------------------
-#if defined( ENABLE_RUNTIME_STACK_TRANSLATION )
 
-static bool s_bCallStacksWithAllWarnings = false; //if true, attach a call stack to every SPEW_WARNING message. Warning()/DevWarning()/...
-static int s_iWarningMaxCallStackLength = 5;
-#define AutomaticWarningCallStackLength() (s_bCallStacksWithAllWarnings ? s_iWarningMaxCallStackLength : 0)
-
-void _Warning_AlwaysSpewCallStack_Enable( bool bEnable )
-{
-	s_bCallStacksWithAllWarnings = bEnable;
-}
-
-void _Warning_AlwaysSpewCallStack_Length( int iMaxCallStackLength )
-{
-	s_iWarningMaxCallStackLength = iMaxCallStackLength;
-}
-
-static bool s_bCallStacksWithAllErrors = false; //if true, attach a call stack to every SPEW_ERROR message. Mostly just Error()
-static int s_iErrorMaxCallStackLength = 20; //default to higher output with an error since we're quitting anyways
-#define AutomaticErrorCallStackLength() (s_bCallStacksWithAllErrors ? s_iErrorMaxCallStackLength : 0)
-
-void _Error_AlwaysSpewCallStack_Enable( bool bEnable )
-{
-	s_bCallStacksWithAllErrors = bEnable;
-}
-
-void _Error_AlwaysSpewCallStack_Length( int iMaxCallStackLength )
-{
-	s_iErrorMaxCallStackLength = iMaxCallStackLength;
-}
-
-#else //#if defined( ENABLE_RUNTIME_STACK_TRANSLATION )
-
-#define AutomaticWarningCallStackLength() 0
-#define AutomaticErrorCallStackLength() 0
 
 void _Warning_AlwaysSpewCallStack_Enable( bool bEnable )
 {
@@ -90,23 +28,21 @@ void _Error_AlwaysSpewCallStack_Enable( bool bEnable )
 void _Error_AlwaysSpewCallStack_Length( int iMaxCallStackLength )
 {
 }
-
-#endif //#if defined( ENABLE_RUNTIME_STACK_TRANSLATION )
 
 // Skip forward past the directory
 static const char *SkipToFname( const tchar* pFile )
 {
 	if ( pFile == nullptr )
 		return "unknown";
-	const tchar* pSlash = _tcsrchr( pFile, '\\' );
-	const tchar* pSlash2 = _tcsrchr( pFile, '/' );
+	const tchar* pSlash = std::strrchr( pFile, '\\' );
+	const tchar* pSlash2 = std::strrchr( pFile, '/' );
 	if (pSlash < pSlash2) pSlash = pSlash2;
 	return pSlash ? pSlash + 1: pFile;
 }
 
 void _ExitOnFatalAssert( const tchar* pFile, int line )
 {
-	Log_Msg( LOG_ASSERT, _T("Fatal assert failed: %s, line %d.  Application exiting.\n"), pFile, line );
+	Log_Msg( LOG_ASSERT, "Fatal assert failed: %s, line %d.  Application exiting.\n", pFile, line );
 
 	// only write out minidumps if we're not in the debugger
 	if ( !Plat_IsInDebugSession() )
@@ -114,152 +50,103 @@ void _ExitOnFatalAssert( const tchar* pFile, int line )
 		WriteMiniDump();
 	}
 
-	Log_Msg( LOG_DEVELOPER, _T("_ExitOnFatalAssert\n") );
-	Plat_ExitProcess( EXIT_FAILURE );
+	Log_Msg( LOG_DEVELOPER, "_ExitOnFatalAssert\n" );
+	Plat_ExitProcess( 1 );
 }
 
 
 //-----------------------------------------------------------------------------
 // Templates to assist in validating pointers:
 //-----------------------------------------------------------------------------
-PLATFORM_INTERFACE void _AssertValidReadPtr( void* ptr, int count/* = 1*/ )
+void _AssertValidReadPtr( void* ptr, int count/* = 1*/ )
 {
-	Assert( !count || ptr );
+	contract_assert( !count || ptr );
 }
 
-PLATFORM_INTERFACE void _AssertValidWritePtr( void* ptr, int count/* = 1*/ )
+void _AssertValidWritePtr( void* ptr, int count/* = 1*/ )
 {
-	Assert( !count || ptr );
+	contract_assert( !count || ptr );
 }
 
-PLATFORM_INTERFACE void _AssertValidReadWritePtr( void* ptr, int count/* = 1*/ )
+void _AssertValidReadWritePtr( void* ptr, int count/* = 1*/ )
 {
-	Assert( !count || ptr );
+	contract_assert( !count || ptr );
 }
 
-PLATFORM_INTERFACE void _AssertValidStringPtr( const tchar* ptr, int maxchar/* = 0xFFFFFF */ )
+void _AssertValidStringPtr( const tchar* ptr, int maxchar/* = 0xFFFFFF */ )
 {
-	Assert( ptr );
+	contract_assert( ptr );
 }
 
-PLATFORM_INTERFACE void AssertValidWStringPtr( const wchar_t* ptr, int maxchar/* = 0xFFFFFF */ )
+void AssertValidWStringPtr( const wchar_t* ptr, int maxchar/* = 0xFFFFFF */ )
 {
-	Assert( ptr );
+	contract_assert( ptr );
 }
 
 void AppendCallStackToLogMessage( tchar *formattedMessage, int iMessageLength, int iAppendCallStackLength )
 {
-#if defined( ENABLE_RUNTIME_STACK_TRANSLATION )
-#	if defined( TCHAR_IS_CHAR ) //I'm horrible with unicode and I don't plan on testing this with wide characters just yet
-		if( iAppendCallStackLength > 0 )
-		{
-			int iExistingMessageLength = (int)strlen( formattedMessage ); //no V_strlen in tier 0, plus we're only compiling this for windows and 360. Seems safe
-			formattedMessage += iExistingMessageLength;
-			iMessageLength -= iExistingMessageLength;
-
-			if( iMessageLength <= 32 )
-				return; //no room for anything useful
-
-			//append directly to the spew message
-			if( (iExistingMessageLength > 0) && (formattedMessage[-1] == '\n') )
-			{
-				--formattedMessage;
-				++iMessageLength;
-			}
-
-			//append preface
-			int iAppendedLength = _snprintf( formattedMessage, iMessageLength, _T("\nCall Stack:\n\t") );
-							
-			void **CallStackBuffer = (void **)stackalloc( iAppendCallStackLength * sizeof( void * ) );
-			int iCount = GetCallStack( CallStackBuffer, iAppendCallStackLength, 2 );
-			if( TranslateStackInfo( CallStackBuffer, iCount, formattedMessage + iAppendedLength, iMessageLength - iAppendedLength, _T("\n\t") ) == 0 )
-			{
-				//failure
-				formattedMessage[0] = '\0'; //this is pointing at where we wrote "\nCall Stack:\n\t"
-			}
-			else
-			{
-				iAppendedLength += (int)strlen( formattedMessage + iAppendedLength ); //no V_strlen in tier 0, plus we're only compiling this for windows and 360. Seems safe
-
-				if( iAppendedLength < iMessageLength )
-				{
-					formattedMessage[iAppendedLength] = '\n'; //Add another newline.
-					++iAppendedLength;
-
-					formattedMessage[iAppendedLength] = '\0';
-				}
-			}
-		}
-#	else
-		AssertMsg( false, "Fixme" );
-#	endif
-#endif
 }
 
 // Forward declare for internal use only.
 CLoggingSystem *GetGlobalLoggingSystem();
 
-#define Log_LegacyHelperColor_Stack( Channel, Severity, Color, MessageFormat, AppendCallStackLength ) \
-	do \
-{ \
-	CLoggingSystem *pLoggingSystem = GetGlobalLoggingSystem(); \
-	if ( pLoggingSystem->IsChannelEnabled( Channel, Severity ) ) \
-{ \
-	tchar formattedMessage[MAX_LOGGING_MESSAGE_LENGTH]; \
-	va_list args; \
-	va_start( args, MessageFormat ); \
-	Tier0Internal_vsntprintf( formattedMessage, MAX_LOGGING_MESSAGE_LENGTH, MessageFormat, args ); \
-	va_end( args ); \
-	AppendCallStackToLogMessage( formattedMessage, MAX_LOGGING_MESSAGE_LENGTH, AppendCallStackLength ); \
-	pLoggingSystem->LogDirect( Channel, Severity, Color, formattedMessage ); \
-} \
-} while( 0 )
+static void LogLegacy( LoggingChannelID_t channel, LoggingSeverity_t severity, const Color *pColor, int nCallStackLength, const tchar *pMsgFormat, std::va_list args )
+{
+	CLoggingSystem *pLoggingSystem = GetGlobalLoggingSystem();
+	if ( !pLoggingSystem->IsChannelEnabled( channel, severity ) )
+		return;
 
-#define Log_LegacyHelperColor( Channel, Severity, Color, MessageFormat ) Log_LegacyHelperColor_Stack( Channel, Severity, Color, MessageFormat, 0 )
-
-#define Log_LegacyHelper_Stack( Channel, Severity, MessageFormat, AppendCallStackLength ) Log_LegacyHelperColor_Stack( Channel, Severity, pLoggingSystem->GetChannelColor( Channel ), MessageFormat, AppendCallStackLength )
-#define Log_LegacyHelper( Channel, Severity, MessageFormat ) Log_LegacyHelperColor( Channel, Severity, pLoggingSystem->GetChannelColor( Channel ), MessageFormat )
-
-#if !defined( DBGFLAG_STRINGS_STRIP )
+	tchar formattedMessage[MAX_LOGGING_MESSAGE_LENGTH];
+	std::vsnprintf( formattedMessage, MAX_LOGGING_MESSAGE_LENGTH, pMsgFormat, args );
+	AppendCallStackToLogMessage( formattedMessage, MAX_LOGGING_MESSAGE_LENGTH, nCallStackLength );
+	pLoggingSystem->LogDirect( channel, severity, pColor ? *pColor : pLoggingSystem->GetChannelColor( channel ), formattedMessage );
+}
 
 void Msg( const tchar* pMsgFormat, ... )
 {
-	Log_LegacyHelper( LOG_GENERAL, LS_MESSAGE, pMsgFormat );
+	std::va_list args;
+	__builtin_va_start( args, pMsgFormat );
+	LogLegacy( LOG_GENERAL, LS_MESSAGE, nullptr, 0, pMsgFormat, args );
+	__builtin_va_end( args );
 }
 
 void Warning( const tchar *pMsgFormat, ... )
 {
-	Log_LegacyHelper_Stack( LOG_GENERAL, LS_WARNING, pMsgFormat, AutomaticWarningCallStackLength() );
+	std::va_list args;
+	__builtin_va_start( args, pMsgFormat );
+	LogLegacy( LOG_GENERAL, LS_WARNING, nullptr, 0, pMsgFormat, args );
+	__builtin_va_end( args );
 }
 
 void Warning_SpewCallStack( int iMaxCallStackLength, const tchar *pMsgFormat, ... )
 {
-	Log_LegacyHelper_Stack( LOG_GENERAL, LS_WARNING, pMsgFormat, iMaxCallStackLength );
+	std::va_list args;
+	__builtin_va_start( args, pMsgFormat );
+	LogLegacy( LOG_GENERAL, LS_WARNING, nullptr, iMaxCallStackLength, pMsgFormat, args );
+	__builtin_va_end( args );
 }
-
-#endif // !DBGFLAG_STRINGS_STRIP
 
 void Error( const tchar *pMsgFormat, ... )
 {
-#if !defined( DBGFLAG_STRINGS_STRIP )
-	Log_LegacyHelper_Stack( LOG_GENERAL, LS_ERROR, pMsgFormat, AutomaticErrorCallStackLength() );
+	std::va_list args;
+	__builtin_va_start( args, pMsgFormat );
+	LogLegacy( LOG_GENERAL, LS_ERROR, nullptr, 0, pMsgFormat, args );
+	__builtin_va_end( args );
 	// Many places that call Error assume that execution will not continue afterwards so it
 	// is important to exit here. The function prototype promises that this will happen.
 	Plat_ExitProcess( 100 );
-#endif
 }
 
 void Error_SpewCallStack( int iMaxCallStackLength, const tchar *pMsgFormat, ... )
 {
-#if !defined( DBGFLAG_STRINGS_STRIP )
-	Log_LegacyHelper_Stack( LOG_GENERAL, LS_ERROR, pMsgFormat, iMaxCallStackLength );
+	std::va_list args;
+	__builtin_va_start( args, pMsgFormat );
+	LogLegacy( LOG_GENERAL, LS_ERROR, nullptr, iMaxCallStackLength, pMsgFormat, args );
+	__builtin_va_end( args );
 	// Many places that call Error_SpewCallStack assume that execution will not continue afterwards so it
 	// is important to exit here. The function prototype promises that this will happen.
 	Plat_ExitProcess( 100 );
-#endif
 }
-
-#if !defined( DBGFLAG_STRINGS_STRIP )
 
 //-----------------------------------------------------------------------------
 // A couple of super-common dynamic spew messages, here for convenience 
@@ -268,60 +155,68 @@ void Error_SpewCallStack( int iMaxCallStackLength, const tchar *pMsgFormat, ... 
 void DevMsg( int level, const tchar* pMsgFormat, ... )
 {
 	LoggingChannelID_t channel = level >= 2 ? LOG_DEVELOPER_VERBOSE : LOG_DEVELOPER;
-	Log_LegacyHelper( channel, LS_MESSAGE, pMsgFormat );
+	std::va_list args;
+	__builtin_va_start( args, pMsgFormat );
+	LogLegacy( channel, LS_MESSAGE, nullptr, 0, pMsgFormat, args );
+	__builtin_va_end( args );
 }
 
 
 void DevWarning( int level, const tchar *pMsgFormat, ... )
 {
 	LoggingChannelID_t channel = level >= 2 ? LOG_DEVELOPER_VERBOSE : LOG_DEVELOPER;
-	Log_LegacyHelper( channel, LS_WARNING, pMsgFormat );
+	std::va_list args;
+	__builtin_va_start( args, pMsgFormat );
+	LogLegacy( channel, LS_WARNING, nullptr, 0, pMsgFormat, args );
+	__builtin_va_end( args );
 }
 
 void DevMsg( const tchar *pMsgFormat, ... )
 {
-	Log_LegacyHelper( LOG_DEVELOPER, LS_MESSAGE, pMsgFormat );
+	std::va_list args;
+	__builtin_va_start( args, pMsgFormat );
+	LogLegacy( LOG_DEVELOPER, LS_MESSAGE, nullptr, 0, pMsgFormat, args );
+	__builtin_va_end( args );
 }
 
 void DevWarning( const tchar *pMsgFormat, ... )
 {
-	Log_LegacyHelper( LOG_DEVELOPER, LS_WARNING, pMsgFormat );
+	std::va_list args;
+	__builtin_va_start( args, pMsgFormat );
+	LogLegacy( LOG_DEVELOPER, LS_WARNING, nullptr, 0, pMsgFormat, args );
+	__builtin_va_end( args );
 }
 
 void ConColorMsg( const Color& clr, const tchar* pMsgFormat, ... )
 {
-	Log_LegacyHelperColor( LOG_CONSOLE, LS_MESSAGE, clr, pMsgFormat );
+	std::va_list args;
+	__builtin_va_start( args, pMsgFormat );
+	LogLegacy( LOG_CONSOLE, LS_MESSAGE, &clr, 0, pMsgFormat, args );
+	__builtin_va_end( args );
 }
 
 void ConMsg( const tchar *pMsgFormat, ... )
 {
-	Log_LegacyHelper( LOG_CONSOLE, LS_MESSAGE, pMsgFormat );
+	std::va_list args;
+	__builtin_va_start( args, pMsgFormat );
+	LogLegacy( LOG_CONSOLE, LS_MESSAGE, nullptr, 0, pMsgFormat, args );
+	__builtin_va_end( args );
 }
 
 void ConDMsg( const tchar *pMsgFormat, ... )
 {
-	Log_LegacyHelper( LOG_DEVELOPER_CONSOLE, LS_MESSAGE, pMsgFormat );
+	std::va_list args;
+	__builtin_va_start( args, pMsgFormat );
+	LogLegacy( LOG_DEVELOPER_CONSOLE, LS_MESSAGE, nullptr, 0, pMsgFormat, args );
+	__builtin_va_end( args );
 }
-
-#endif // !DBGFLAG_STRINGS_STRIP
 
 // If we don't have a function from math.h, then it doesn't link certain floating-point
 // functions in and printfs with %f cause runtime errors in the C libraries.
-PLATFORM_INTERFACE float CrackSmokingCompiler( float a )
+float CrackSmokingCompiler( float a )
 {
-	return (float)fabs( a );
+	return (float)std::fabs( a );
 }
-
-void* Plat_SimpleLog( const tchar* file, int line )
-{
-	FILE* f = _tfopen( _T("simple.log"), _T("at+") );
-	_ftprintf( f, _T("%s:%i\n"), file, line );
-	fclose( f );
-
-	return nullptr;
-}
-
-#if !defined( DBGFLAG_STRINGS_STRIP )
 
 //-----------------------------------------------------------------------------
 // Purpose: For debugging startup times, etc.
@@ -354,10 +249,10 @@ void COM_TimestampedLog( char const *fmt, ... )
 	}
 
 	char string[1024];
-	va_list argptr;
-	va_start( argptr, fmt );
-	Tier0Internal_vsnprintf( string, sizeof( string ), fmt, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, fmt );
+	std::vsnprintf( string, sizeof( string ), fmt, argptr );
+	__builtin_va_end( argptr );
 
 	float curStamp = Plat_FloatTime();
 
@@ -369,13 +264,13 @@ void COM_TimestampedLog( char const *fmt, ... )
 	}*/
 	if ( !s_bFirstWrite )
 	{
-		unlink( "timestamped.log" );
+		ks::platform::remove_file( "timestamped.log", nullptr );
 		s_bFirstWrite = true;
 	}
 
-	FILE* fp = fopen( "timestamped.log", "at+" );
-	fprintf( fp, "%8.4f / %8.4f:  %s\n", curStamp, curStamp - s_LastStamp, string );
-	fclose( fp );
+	std::FILE* fp = std::fopen( "timestamped.log", "at+" );
+	std::fprintf( fp, "%8.4f / %8.4f:  %s\n", curStamp, curStamp - s_LastStamp, string );
+	std::fclose( fp );
 
 	if ( s_bShouldLogToConsole )
 	{
@@ -384,8 +279,6 @@ void COM_TimestampedLog( char const *fmt, ... )
 
 	s_LastStamp = curStamp;
 }
-
-#endif // !DBGFLAG_STRINGS_STRIP
 
 static AssertFailedNotifyFunc_t	s_AssertFailedNotifyFunc = nullptr;
 
@@ -408,11 +301,9 @@ void CallAssertFailedNotifyFunc( const char *pchFile, int nLine, const char *pch
 }
 
 
-
-
 //-----------------------------------------------------------------------------
-// The body the assert macros forward to. See the note in dbg.h for why this is a function rather
-// than the macro it used to be.
+// Reports one failed assertion: the LOG_ASSERT channel, the notify callback, and the assert
+// dialog when a debugger is attached.
 //-----------------------------------------------------------------------------
 void AssertImpl( const tchar *pMsg, bool bFatal, const std::source_location &loc )
 {
@@ -424,10 +315,46 @@ void AssertImpl( const tchar *pMsg, bool bFatal, const std::source_location &loc
 	{
 		if ( ShouldUseNewAssertDialog() )
 		{
-			if ( DbgFlagMacro_DoNewAssertDialog( loc.file_name(), (int)loc.line(), pMsg ) )
+			if ( DoNewAssertDialog( loc.file_name(), (int)loc.line(), pMsg ) )
 				DebuggerBreak();
 		}
 		if ( bFatal )
-			DbgFlagMacro_ExitOnFatalAssert( loc.file_name(), (int)loc.line() );
+			_ExitOnFatalAssert( loc.file_name(), (int)loc.line() );
 	}
+}
+
+//-----------------------------------------------------------------------------
+// The replaceable C++26 contract-violation handler, so every contract_assert, pre and post in the
+// tree reports through AssertImpl. It is exported from the engine because client.so and server.so
+// call it too, and they must share this one rather than fall back to libstdc++'s default, which
+// would print to stderr and bypass the logging system.
+//
+// A violation is reported once per source location. The old Assert() reported on every failure,
+// but it was compiled out in every build; turning checks on under `observe` is the first time
+// many of these predicates have run, and one hot assert repeating every frame would bury the
+// rest of the log.
+//
+// Under `enforce` the runtime terminates after this returns. AssertImpl's bFatal path is not used:
+// whether a failure stops the program is the evaluation semantic's decision, made per build.
+//-----------------------------------------------------------------------------
+void handle_contract_violation( const std::contracts::contract_violation &violation )
+{
+	static constinit std::atomic_flag s_bReporting;
+	static std::set<std::pair<const char *, uint32>> s_Reported;
+
+	const std::source_location loc = violation.location();
+
+	// The set is guarded by a spin flag rather than a mutex: this can run from any thread,
+	// including during static initialization and teardown, where a mutex is not guaranteed to be
+	// usable. A violation raised while another thread holds the flag is dropped, not deferred.
+	if ( s_bReporting.test_and_set( std::memory_order_acquire ) )
+		return;
+	const bool bFirst = s_Reported.emplace( loc.file_name(), loc.line() ).second;
+	s_bReporting.clear( std::memory_order_release );
+	if ( !bFirst )
+		return;
+
+	char szMessage[512];
+	std::snprintf( szMessage, sizeof( szMessage ), "Assertion Failed: %s", violation.comment() );
+	AssertImpl( szMessage, false, loc );
 }

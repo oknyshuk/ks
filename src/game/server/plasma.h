@@ -1,15 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #ifndef	__PLASMA__
 #define __PLASMA__
 
 #include "reflect_annotations.h"
-#pragma once
 
 #include "fire_smoke.h"
 
@@ -18,7 +14,7 @@
 //==================================================
 
 //NOTENOTE: Mirrored in cl_dll/c_plasma.cpp
-#define	bitsPLASMA_FREE		0x00000002
+inline constexpr auto bitsPLASMA_FREE = 0x00000002;
 
 class [[= ks::reflect::NetTable{ .name = "DT_Plasma" } ]]
       [[= ks::reflect::From<"m_flScale", ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE }>{} ]]

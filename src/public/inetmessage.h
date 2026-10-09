@@ -1,14 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: INetMessage interface
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef INETMESSAGE_H
-#define INETMESSAGE_H
-
-#include "tier1/bitbuf.h"
+import std;
+import ks.tier1;
 
 class INetMsgHandler;
 class INetMessage;
@@ -39,7 +36,7 @@ public:
 	virtual INetChannel		*GetNetChannel( void ) const { DebuggerBreak(); return nullptr; }
 
 	virtual const char		*ToString( void ) const = 0; // returns a human readable string about message content
-	virtual size_t			GetSize() const = 0;
+	virtual std::size_t			GetSize() const = 0;
 };
 
 class INetMessageBinder
@@ -79,6 +76,3 @@ public:
 
 	virtual bool ChangeSplitscreenUser( int nSplitScreenUserSlot ) = 0; // interleaved networking used by SS system is changing the SS player slot that the subsequent messages pertain to
 };
-
-#endif
-

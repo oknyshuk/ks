@@ -1,21 +1,18 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-// FIXMEL4DTOMAINMERGE
+// Purpose: FIXMEL4DTOMAINMERGE
 // Need to re-enable bloom and disable other L4D-only features in here and the cpp file.
-
 // STATIC: "TOOL_MODE"						"0..1"
 // STATIC: "DEPTH_BLUR_ENABLE"				"0..1"
 // STATIC: "LINEAR_INPUT"					"0..1"  [ps20b] [ps30] [PC]
 // STATIC: "LINEAR_INPUT"					"0..0"  [ps20b] [CONSOLE]
 // STATIC: "LINEAR_OUTPUT"					"0..1"  [ps20b] [ps30] [PC]
 // STATIC: "LINEAR_OUTPUT"					"0..0"  [ps20b] [CONSOLE]
-
 // DYNAMIC: "AA_ENABLE"						"0..0"  [ps20] [ps20b] [PC]
 // DYNAMIC: "AA_ENABLE"						"0..1"  [ps30] [PC]
 // DYNAMIC: "AA_ENABLE"						"0..1"  [CONSOLE]
-
 // DYNAMIC: "COL_CORRECT_NUM_LOOKUPS"		"0..3"
-
 // DYNAMIC: "CONVERT_FROM_LINEAR"			"0..1"	[ps20b] [ps30] [PC]
 // DYNAMIC: "CONVERT_TO_LINEAR"				"0..1"	[ps20b] [ps30] [PC]
 // DYNAMIC: "CONVERT_FROM_LINEAR"			"0..0"	[ps20b] [CONSOLE]
@@ -23,27 +20,21 @@
 // SKIP: ( $CONVERT_FROM_LINEAR == 0 ) && ( $CONVERT_TO_LINEAR == 1 )
 // SKIP: ( $TOOL_MODE == 0 ) && ( $CONVERT_FROM_LINEAR == 1 )
 // SKIP: ( $TOOL_MODE == 0 ) && ( $CONVERT_TO_LINEAR == 1 )
-
 // These are similar but mutually exclusive, the former for SFM PC and the latter for Mac
 // SKIP: ( $CONVERT_FROM_LINEAR == 1 ) && ( $LINEAR_INPUT  == 1 )
 // SKIP: ( $CONVERT_TO_LINEAR   == 1 ) && ( $LINEAR_OUTPUT == 1 )
-
 // DYNAMIC: "FADE_TO_BLACK"					"0..1"
 // DYNAMIC: "FADE_TYPE"						"0..2"
-
 // These two are enabled for PC, but only used in special cases
 // DYNAMIC: "NOISE_ENABLE"					"0..0"	[ps20b] [ps30] [PC]
 // DYNAMIC: "VIGNETTE_ENABLE"				"0..1"	[ps20b] [ps30] [PC]
 // DYNAMIC: "NOISE_ENABLE"					"0..0"	[ps20b] [CONSOLE]
 // DYNAMIC: "VIGNETTE_ENABLE"				"0..1"	[ps20b] [CONSOLE]
-
 // None of these effects are utilized by Portal 2, so they're always zero:
 // DYNAMIC: "LOCAL_CONTRAST_ENABLE"			"0..1"	[ps20b] [ps30]
 // DYNAMIC: "BLURRED_VIGNETTE_ENABLE"		"0..1"	[ps20b] [ps30]
-
 // DYNAMIC: "VOMIT_ENABLE"					"0..0"
 // SKIP: ( $LOCAL_CONTRAST_ENABLE == 0 ) && ( $BLURRED_VIGNETTE_ENABLE == 1 )
-
 // DYNAMIC: "TV_GAMMA"						"0..1"	[ps20b] [ps30] [PC]
 // DYNAMIC: "DESATURATEENABLE"				"0..1"	[ps20b] [ps30] [PC]
 // SKIP: ( $TOOL_MODE == 0 ) && $TV_GAMMA
@@ -54,7 +45,6 @@
 #define FXAA_ENABLE	1 
 
 #include "fxaa3_11_fxc.h"
-
 
 sampler	BaseTextureSampler				: register( s0 );
 sampler	FBTextureSampler				: register( s1 );
@@ -513,4 +503,3 @@ float4_color_return_type main( PS_INPUT i ) : COLOR
 
 	return outColor;
 }
-

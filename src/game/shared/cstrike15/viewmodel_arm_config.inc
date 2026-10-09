@@ -1,3 +1,4 @@
+#pragma once
 //  Builds static array of structs for adding special cases for viewmodel addons depending on 
 //	the character model needs (eg skintone, different sleeves when wearing econ gloves, etc)
 //

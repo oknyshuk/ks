@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -15,7 +16,7 @@ private:
 public:
 	void SetLINEAR_TO_SRGB( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nLINEAR_TO_SRGB = i;
 #ifdef _DEBUG
 		m_bLINEAR_TO_SRGB = true;
@@ -23,7 +24,7 @@ public:
 	}
 	void SetLINEAR_TO_SRGB( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nLINEAR_TO_SRGB = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bLINEAR_TO_SRGB = true;
@@ -44,7 +45,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bLINEAR_TO_SRGB;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 10 * m_nLINEAR_TO_SRGB ) + 0;
 	}
@@ -60,7 +61,7 @@ private:
 public:
 	void SetMODE( int i )
 	{
-		Assert( i >= 0 && i <= 9 );
+		contract_assert( i >= 0 && i <= 9 );
 		m_nMODE = i;
 #ifdef _DEBUG
 		m_bMODE = true;
@@ -68,7 +69,7 @@ public:
 	}
 	void SetMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 9 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 9 );
 		m_nMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMODE = true;
@@ -89,7 +90,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bMODE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nMODE ) + 0;
 	}

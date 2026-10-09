@@ -1,13 +1,33 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 
 #include "GameStats.h"
-
 
 void BasicGameStatsRecord_t::Clear()
 {
@@ -18,7 +38,7 @@ void BasicGameStatsRecord_t::Clear()
 	m_nCaptions = 0;
 	m_bSteam = true;
 	m_bCyberCafe = false;
-	Q_memset( m_nSkill, 0, sizeof( m_nSkill ) );
+	V_memset( m_nSkill, 0, sizeof( m_nSkill ) );
 	m_nDeaths = 0;
 }
 

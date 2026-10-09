@@ -1,26 +1,15 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-#include "mathlib/camera.h"
-#include "tier0/dbg.h"
-#include "mathlib/vector.h"
-#include "mathlib/vmatrix.h"
-#include "tier2/tier2.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
-#define FORWARD_AXIS 0
-#define LEFT_AXIS 1
-#define UP_AXIS 2
+import ks.math;
+#include "mathlib/camera.h"
+import std;
 
 /// matrix to align our Valve coordinate system camera space with a standard viewing coordinate system
 /// x-axis goes from left to right in view space (right in camera space)
 /// y-axis goes from bottom to top in view space (up in camera space)
 /// z-axis goes from far to near in view space (-forward in camera space)
 /// The constructor takes sequential matrix rows, which are basis vectors in view space (so transposed from the init)
-#ifdef YUP_ACTIVE
-#error YUP_ACTIVE is not supported on this branch.
-#endif
 
 /// g_ViewAlignMatrix.Init( Vector(0,-1,0), Vector(0,0,1), Vector(-1,0,0), vec3_origin );
 static matrix3x4_t g_ViewAlignMatrix( 0, 0, -1, 0,		-1, 0, 0, 0,	0, 1, 0, 0 );
@@ -57,7 +46,7 @@ void CalcFarPlaneCameraRelativePoints( Vector *p4PointsOut, Vector &vForward, Ve
 	}
 	else
 	{
-		float flTanX = tanf( DEG2RAD( flFovX * 0.5f ) );
+		float flTanX = std::tanf( DEG2RAD( flFovX * 0.5f ) );
 		float flTanY = flTanX / flAspect;
 
 		vUpShift = flFarPlane * flTanY * vUp;
@@ -108,7 +97,6 @@ void ComputeViewMatrix( VMatrix *pWorldToView, const Camera_t &camera )
 
 	VMatrix matRotate( transform );
 
-#ifndef YUP_ACTIVE
 	VMatrix matRotateZ;
 	MatrixBuildRotationAboutAxis( matRotateZ, Vector(0,0,1), -90 );
 	MatrixMultiply( matRotate, matRotateZ, matRotate );
@@ -117,11 +105,6 @@ void ComputeViewMatrix( VMatrix *pWorldToView, const Camera_t &camera )
 	MatrixBuildRotationAboutAxis( matRotateX, Vector(1,0,0), 90 );
 	MatrixMultiply( matRotate, matRotateX, matRotate );
 	transform = matRotate.As3x4();
-#else
-	VMatrix matRotateUp;
-	MatrixBuildRotationAboutAxis( matRotateUp, Vector(0,1,0), -180 );
-	transform = matRotate.As3x4();
-#endif
 
 	MatrixInvert( transform, invTransform );
 		
@@ -179,9 +162,9 @@ void ComputeProjectionMatrix( VMatrix *pCameraToProjection, const Camera_t &came
 
 void ComputeProjectionMatrix( VMatrix *pCameraToProjection, float flZNear, float flZFar, float flFOVX, float flAspectRatio )
 {
-	float halfWidth = tan( flFOVX * M_PI / 360.0 );
+	float halfWidth = std::tan( flFOVX * std::numbers::pi / 360.0 );
 	float halfHeight = halfWidth / flAspectRatio;
-	memset( pCameraToProjection, 0, sizeof( VMatrix ) );
+	std::memset( pCameraToProjection, 0, sizeof( VMatrix ) );
 	pCameraToProjection->m[0][0]  = 1.0f / halfWidth;
 	pCameraToProjection->m[1][1]  = 1.0f / halfHeight;
 	pCameraToProjection->m[2][2] = flZFar / ( flZNear - flZFar );
@@ -213,7 +196,7 @@ void ComputeProjectionMatrix( VMatrix *pCameraToProjection, float flZNear, float
 	float flHeight = t - b;
 	float flReverseDepth = zn - zf;
 
-	memset( pCameraToProjection, 0, sizeof( VMatrix ) );
+	std::memset( pCameraToProjection, 0, sizeof( VMatrix ) );
 
 	pCameraToProjection->m[0][0] = ( 2.0f * zn ) / flWidth;
 	pCameraToProjection->m[1][1] = ( 2.0f * zn ) / flHeight;
@@ -372,8 +355,8 @@ void CFrustum::GetNearAndFarPlanesAroundBox( float *pNear, float *pFar, AABB_t c
 	vCorners[6] = Vector( box.m_vMaxBounds.x, box.m_vMaxBounds.y, box.m_vMinBounds.z );
 	vCorners[7] = box.m_vMaxBounds;
 
-	float flNear = FLT_MAX;//m_camera.m_flZNear;
-	float flFar = -FLT_MAX;//m_camera.m_flZFar;
+	float flNear = std::numeric_limits<float>::max();//m_camera.m_flZNear;
+	float flFar = -std::numeric_limits<float>::max();//m_camera.m_flZFar;
 	for ( int i=0; i<8; ++i )
 	{
 		Vector vDelta = vCorners[i] - m_camera.m_origin;
@@ -457,7 +440,7 @@ void CFrustum::BuildShadowFrustum( VMatrix &newWorldToView, VMatrix &newProj )
 	CalcViewProj();
 
 	VMatrix &viewToProj = m_projection;
-	Assert( ( viewToProj.m[3][0] == 0.0f ) && ( viewToProj.m[3][1] == 0.0f )  && ( viewToProj.m[3][2] == 0.0f ) && ( viewToProj[3][3] == 1.0f ) );
+	contract_assert( ( viewToProj.m[3][0] == 0.0f ) && ( viewToProj.m[3][1] == 0.0f )  && ( viewToProj.m[3][2] == 0.0f ) && ( viewToProj[3][3] == 1.0f ) );
 
 	VMatrix worldToView( m_worldToView );
 
@@ -489,8 +472,8 @@ void CFrustum::BuildShadowFrustum( VMatrix &newWorldToView, VMatrix &newProj )
 	Vector vNearPoint, vFarPoint; 
 	projToView.V3Mul( Vector( 0.0f, 0.0f, 0.0f ), vNearPoint );
 	projToView.V3Mul( Vector( 0.0f, 0.0f, 1.0f ), vFarPoint );
-	m_camera.m_flZNear = fabs( vNearPoint.z );
-	m_camera.m_flZFar = fabs( vFarPoint.z );
+	m_camera.m_flZNear = std::fabs( vNearPoint.z );
+	m_camera.m_flZFar = std::fabs( vFarPoint.z );
 	m_camera.m_flAspect = 1.0f;
 	m_camera.m_flFOVX = -1.0f;
 
@@ -567,7 +550,7 @@ void Camera_t::ComputeGeometry( Vector *pVertsOut8, const Vector &vForward, cons
 	}
 	else
 	{
-		float flTanX = tan( DEG2RAD(m_flFOVX) * 0.5f );
+		float flTanX = std::tan( DEG2RAD(m_flFOVX) * 0.5f );
 		float flooAspect = 1.0f / m_flAspect;
 		float flWidth = m_flZNear * flTanX;
 		float flHeight = flWidth * flooAspect;
@@ -632,7 +615,7 @@ float CFrustum::ComputeScreenSize( Vector vecOrigin, float flRadius ) const
 	{
 		return 1.0;											// eye inside sphere
 	}
-	float flSin = sin( DEG2RAD( std::min<float>( GetCameraFOV(), 90.0f ) ) );
+	float flSin = std::sin( DEG2RAD( std::min<float>( GetCameraFOV(), 90.0f ) ) );
 	return std::min<float>( 1.0f, flSin * ( flRadius / flDist ) );
 	
 }

@@ -1,24 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
 #include "portal_vs20.inc"
 #include "portal_ps20.inc"
 #include "portal_ps20b.inc"
-#include "convar.h"
-#include "cpp_shader_constant_register_map.h"
-
+import std;
 
 DEFINE_FALLBACK_SHADER( Portal, Portal_DX90 )
 
 BEGIN_VS_SHADER( Portal_DX90, 
 				"Help for Portal shader" )
 
-				BEGIN_SHADER_PARAMS
+				
 				SHADER_PARAM_OVERRIDE( COLOR, SHADER_PARAM_TYPE_COLOR, "{255 255 255}", "unused", SHADER_PARAM_NOT_EDITABLE )
 				SHADER_PARAM_OVERRIDE( ALPHA, SHADER_PARAM_TYPE_FLOAT, "1.0", "unused", SHADER_PARAM_NOT_EDITABLE )
 				SHADER_PARAM( STATICAMOUNT, SHADER_PARAM_TYPE_FLOAT, "0.0", "Amount of the static blend texture to blend into the base texture" )
@@ -281,5 +276,3 @@ BEGIN_VS_SHADER( Portal_DX90,
 	}
 
 END_SHADER
-
-

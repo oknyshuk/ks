@@ -1,9 +1,15 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// scenesunlight.cpp
-//
-//===============================================================================
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "cdll_client_int.h"
 #include "csm_parallel_split.h"
 
 // We don't currently support smooth cascade transitioning on Gameconsoles. This convar must be adjusted if we ever do.
@@ -149,15 +155,15 @@ float CCSMParallelSplit::CalculateSplitPlaneDistance( int nSplit, int nShadowSpl
 	else if ( ( nSplit == 3 ) && ( cl_csm_parallel_split_dist3.GetFloat() >= 0.0f ) )
 		return Lerp( cl_csm_parallel_split_dist3.GetFloat(), flZNear, flZFar );
 
-	Assert( flZNear > 0.f );
-	Assert( flZFar > flZNear );
+	contract_assert( flZNear > 0.f );
+	contract_assert( flZFar > flZNear );
 	// http://appsrv.cse.cuhk.edu.hk/~fzhang/pssm_vrcia/shadow_vrcia.pdf
 	const float fIM = (float)nSplit / (float)nShadowSplits;
 	const float f = std::min( flMaxShadowDistance, flZFar );
 	const float n = flZNear;
 	const float fBias = 0.1f;
 
-	const float flLog = n * powf( f / n, fIM );	
+	const float flLog = n * std::powf( f / n, fIM );	
 	const float flLinear = n + ( f - n ) * fIM;
 	
 	const float flLogScaler = clamp( cl_csm_parallel_split_log_lin_lerp.GetFloat(), 0.0f, 1.0f );
@@ -166,7 +172,7 @@ float CCSMParallelSplit::CalculateSplitPlaneDistance( int nSplit, int nShadowSpl
 	return ( flLog * flLogScaler + flLinear * flLinScaler ) + fBias;
 }
 
-#define MAX_INCLUSION_VOLUME_PLANES 11
+constexpr auto MAX_INCLUSION_VOLUME_PLANES = 11;
 
 template<typename T> inline void swapPlane( T &lhs, T &rhs ) { T temp( lhs ); lhs = rhs; rhs = temp; }
 
@@ -223,7 +229,7 @@ uint CCSMParallelSplit::ComputeCullingVolumePlanes( VPlane *pOutPlanes, Vector v
 	{
 		const VPlane& lowerPlane = vWorldFrustumPlanes[nQuadIndex];
 
-		Assert( lowerPlane.DistTo( vFrustumCenter ) >= 0.0f );
+		contract_assert( lowerPlane.DistTo( vFrustumCenter ) >= 0.0f );
 
 		const bool bFacingFlag = ( lowerPlane.m_Normal.Dot( vLightDir ) ) < 0.0f;
 
@@ -262,7 +268,7 @@ uint CCSMParallelSplit::ComputeCullingVolumePlanes( VPlane *pOutPlanes, Vector v
 		
 //#ifdef _DEBUG
 
-	Assert( upperPlane.DistTo( vFrustumCenter ) >= 0.0f );
+	contract_assert( upperPlane.DistTo( vFrustumCenter ) >= 0.0f );
 	pOutPlanes[nNumCullingPlanes++] = upperPlane;
 
 	// Now compute "side" planes by finding the silhouette edges relative to the light dir.
@@ -299,7 +305,7 @@ uint CCSMParallelSplit::ComputeCullingVolumePlanes( VPlane *pOutPlanes, Vector v
 		return 0;
 	}
 
-	Assert( nNumCullingPlanes <= CVolumeCuller::cMaxInclusionVolumePlanes );
+	contract_assert( nNumCullingPlanes <= CVolumeCuller::cMaxInclusionVolumePlanes );
 	
 	// nNumFacingPlanes can range from [1,5]
 	// nNumEdgePlanes can either be 4 or 6.
@@ -443,7 +449,7 @@ void CCSMParallelSplit::CalculateShadowFrustaParallelSplits(
 	float flCascade0ShadowViewMinZ = 1e-10f; flCascade0ShadowViewMinZ;
 	VPlane exclusionFrustumPlanes[MAX_SUN_LIGHT_SHADOW_CASCADE_SIZE][6];
 
-	COMPILE_TIME_ASSERT( CVolumeCuller::cMaxInclusionVolumePlanes >= MAX_INCLUSION_VOLUME_PLANES );
+	static_assert( CVolumeCuller::cMaxInclusionVolumePlanes >= MAX_INCLUSION_VOLUME_PLANES );
 	
 	struct CascadeParams_t
 	{
@@ -534,7 +540,7 @@ void CCSMParallelSplit::CalculateShadowFrustaParallelSplits(
 		Vector vSubfrustumWorldPoints[ NUM_WORLD_FOCUS_POINTS ];
 		float flSubfrustumDiagonalLength = ComputeFarPlaneCameraRelativePoints( vSubfrustumWorldPoints, flSceneSplitZNear, flSceneSplitZFar, sceneFrustum );
 		
-		flSubfrustumDiagonalLength = ceil( flSubfrustumDiagonalLength * 100.0f ) / 100.0f;
+		flSubfrustumDiagonalLength = std::ceil( flSubfrustumDiagonalLength * 100.0f ) / 100.0f;
 				
 		Vector vSubfrustumWorldCenter( ( vSubfrustumWorldPoints[0] + vSubfrustumWorldPoints[4 + 3] ) * .5f );
 							
@@ -605,7 +611,7 @@ void CCSMParallelSplit::CalculateShadowFrustaParallelSplits(
 		extern ConVar cl_csm_xlat_continuity;
 		if ( cl_csm_xlat_continuity.GetBool() )
 		{
-			vShadowFocusRegionMin.x = ((int)floor( vShadowFocusRegionMin.x / flWorldUnitsPerTexel ) & ~1 ) * flWorldUnitsPerTexel;
+			vShadowFocusRegionMin.x = ((int)std::floor( vShadowFocusRegionMin.x / flWorldUnitsPerTexel ) & ~1 ) * flWorldUnitsPerTexel;
 			vShadowFocusRegionMax.x = ((int)floor( vShadowFocusRegionMax.x / flWorldUnitsPerTexel ) & ~1 ) * flWorldUnitsPerTexel;
 			vShadowFocusRegionMin.y = ((int)floor( vShadowFocusRegionMin.y / flWorldUnitsPerTexel ) & ~1 ) * flWorldUnitsPerTexel;
 			vShadowFocusRegionMax.y = ((int)floor( vShadowFocusRegionMax.y / flWorldUnitsPerTexel ) & ~1 ) * flWorldUnitsPerTexel;
@@ -708,7 +714,7 @@ void CCSMParallelSplit::ComputeCascadeProjToTexMatrices( SunLightState_t &lightS
 	float fOffsetY = 0.5f + ( 0.5f / static_cast< float >( m_nShadowBufferSize ) );
 	float frange   = 1.0f;
 				
-	COMPILE_TIME_ASSERT( 4 == MAX_SUN_LIGHT_SHADOW_CASCADE_SIZE );
+	static_assert( 4 == MAX_SUN_LIGHT_SHADOW_CASCADE_SIZE );
 
 	float flBiases[MAX_SUN_LIGHT_SHADOW_CASCADE_SIZE];
 	static float s_flDefBliases[MAX_SUN_LIGHT_SHADOW_CASCADE_SIZE] = { -0.000005f, -0.000005f, -0.000008f, -0.00009f };

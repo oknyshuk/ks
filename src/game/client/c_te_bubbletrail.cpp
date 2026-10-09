@@ -1,17 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.core;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
-#include "tier0/vprof.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Bubble Trail TE
@@ -69,7 +68,7 @@ void TE_BubbleTrail( IRecipientFilter& filter, float delay,
 //-----------------------------------------------------------------------------
 void C_TEBubbleTrail::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEBubbleTrail::PostDataUpdate" );
+	CVProfScope _( "C_TEBubbleTrail::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	tempents->BubbleTrail( m_vecMins, m_vecMaxs, m_flWaterZ, m_nModelIndex, m_nCount, m_fSpeed );
 }

@@ -1,7 +1,9 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "convar.h"
+import std;
 
 #include "splinerope_ps20.inc"
 #include "splinerope_ps20b.inc"
@@ -12,7 +14,7 @@ static ConVar rope_min_pixel_diameter( "rope_min_pixel_diameter", "2.0", FCVAR_M
 static ConVar r_shader_srgbread( "r_shader_srgbread", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "1 = use shader srgb texture reads, 0 = use HW" );
 
 BEGIN_VS_SHADER( SplineRope, "Help for SplineRope" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( SHADERSRGBREAD360, SHADER_PARAM_TYPE_BOOL, "0", "Simulate srgb read in shader code")
 		SHADER_PARAM( SHADOWDEPTH, SHADER_PARAM_TYPE_INTEGER, "0", "writing to a shadow depth buffer" )
 		SHADER_PARAM( BUMPMAP, SHADER_PARAM_TYPE_TEXTURE, "cable/cablenormalmap", "normal map" )

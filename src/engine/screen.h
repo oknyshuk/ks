@@ -1,17 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( SCREEN_H )
-#define SCREEN_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 void SCR_Init( void );
 void SCR_Shutdown( void );
@@ -23,6 +12,3 @@ void SCR_FatalDiskError( void );
 
 extern	bool	scr_disabled_for_loading;
 extern  int		scr_nextdrawtick;
-
-#endif // SCREEN_H
-

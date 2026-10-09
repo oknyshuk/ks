@@ -1,24 +1,28 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 //
 // hud.cpp
 //
 // implementation of CHud class
 //
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
 #include "hud_macros.h"
 #include "iinput.h"
 #include "clientmode.h"
 #include "in_buttons.h"
-#include <keyvalues.h>
 #include "hudelement.h"
-#include "tier1/fixed_pool.h"
-#include <keyvalues.h>
 #include "filesystem.h"
 	#include "c_cs_player.h"
 	#include "cs_gamerules.h"
@@ -45,19 +49,19 @@ void LoadHudTextures( CHudTextureList& list, const char *szFilenameWithoutExtens
 				auto pTex = std::make_unique< CHudTexture >();
 				CHudTexture *tex = pTex.get();
 				// Key Name is the sprite name
-				Q_strncpy( tex->szShortName, pTemp->GetName(), sizeof( tex->szShortName ) );
+				V_strncpy( tex->szShortName, pTemp->GetName(), sizeof( tex->szShortName ) );
 
 				if ( pTemp->GetString( "font", nullptr ) )
 				{
 					// it's a font-based icon
 					tex->bRenderUsingFont = true;
 					tex->cCharacterInFont = *( pTemp->GetString( "character", "" ));
-					Q_strncpy( tex->szTextureFile, pTemp->GetString( "font" ), sizeof( tex->szTextureFile ) );
+					V_strncpy( tex->szTextureFile, pTemp->GetString( "font" ), sizeof( tex->szTextureFile ) );
 				}
 				else
 				{
 					tex->bRenderUsingFont = false;
-					Q_strncpy( tex->szTextureFile, pTemp->GetString( "file" ), sizeof( tex->szTextureFile ) );
+					V_strncpy( tex->szTextureFile, pTemp->GetString( "file" ), sizeof( tex->szTextureFile ) );
 					tex->rc.left	= pTemp->GetInt( "x", 0 );
 					tex->rc.top		= pTemp->GetInt( "y", 0 );
 					tex->rc.right	= pTemp->GetInt( "width", 0 )	+ tex->rc.left;
@@ -505,7 +509,7 @@ CHudElement *CHud::FindElement( const char *pName )
 	}
 
 	DevWarning( 1, "[%d] Could not find Hud Element: %s\n", m_nSplitScreenSlot, pName );
-	Assert( 0 );
+	contract_assert( 0 );
 	return nullptr;
 }
 
@@ -655,7 +659,7 @@ int CHud::LookupRenderGroupIndexByName( const char *pszGroupName )
 {
 	int iIndex = ks::find_index( m_RenderGroupNames, pszGroupName );
 
-	Assert( ks::is_valid_index( m_RenderGroupNames, iIndex ) );
+	contract_assert( ks::is_valid_index( m_RenderGroupNames, iIndex ) );
 
 	return iIndex;
 }
@@ -672,7 +676,7 @@ bool CHud::LockRenderGroup( int iGroupIndex, CHudElement *pLocker /* = NULL */ )
 
 	CHudRenderGroup *group = m_RenderGroups.at( iGroupIndex ).get();
 
-	Assert( group );
+	contract_assert( group );
 
 	if ( group )
 	{
@@ -820,7 +824,9 @@ void CHud::OnSplitScreenStateChanged()
 //-----------------------------------------------------------------------------
 // Purpose: Force a Hud UI anim to play
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( testhudanim, "Test a hud element animation.\n\tArguments: <anim name>\n", FCVAR_CHEAT )
+static void testhudanim( const CCommand &args );
+static ConCommand testhudanim_command( "testhudanim", testhudanim, "Test a hud element animation.\n\tArguments: <anim name>\n", FCVAR_CHEAT );
+static void testhudanim( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -881,12 +887,12 @@ CHudTexture *CHudIcons::AddUnsearchableHudIconToList( CHudTexture& texture )
 
 	if ( texture.bRenderUsingFont )
 	{
-		Q_snprintf( composedName, sizeof( composedName ), "%s_c%i",
+		V_snprintf( composedName, sizeof( composedName ), "%s_c%i",
 			texture.szTextureFile, texture.cCharacterInFont );
 	}
 	else
 	{
-		Q_snprintf( composedName, sizeof( composedName ), "%s_%i_%i_%i_%i",
+		V_snprintf( composedName, sizeof( composedName ), "%s_%i_%i_%i_%i",
 			texture.szTextureFile, texture.rc.left, texture.rc.top, texture.rc.right, texture.rc.bottom );
 	}
 
@@ -958,7 +964,7 @@ void CHudIcons::RefreshHudTextures()
 {
 	if ( !m_bHudTexturesLoaded )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
@@ -973,14 +979,14 @@ void CHudIcons::RefreshHudTextures()
 	for ( auto &[name, pTex] : textureList )
 	{
 		CHudTexture *tex = pTex.get();
-		Assert( tex );
+		contract_assert( tex );
 
 		CHudTexture *icon = GetIcon( tex->szShortName );
 		if ( !icon )
 			continue;
 
 		// Update file
-		Q_strncpy( icon->szTextureFile, tex->szTextureFile, sizeof( icon->szTextureFile ) );
+		V_strncpy( icon->szTextureFile, tex->szTextureFile, sizeof( icon->szTextureFile ) );
 
 		if ( !icon->bRenderUsingFont )
 		{

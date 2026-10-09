@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2007, Valve LLC, All rights reserved. ============
-//
-// Purpose: Lightmap only shader
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
+// Purpose: Lightmap only shader
+
+import ks.tier1;
 #include "lightmappedgeneric_dx9_helper.h"
 #include "BaseVSShader.h"
 #include "shaderlib/commandbuilder.h"
-#include "convar.h"
+import std;
 #include "lightmappedgeneric_ps20.inc"
 #include "lightmappedgeneric_vs20.inc"
 #include "lightmappedgeneric_ps20b.inc"
@@ -18,7 +16,6 @@
 	#include "lightmappedgeneric_ps30.inc"
 
 #include "shaderapifast.h"
-#include "tier0/vprof.h"
 
 ConVar mat_disable_fancy_blending( "mat_disable_fancy_blending", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
@@ -578,7 +575,7 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 				staticCmdsBuf.End();
 				// now, copy buf
 				pContextData->m_pStaticCmds = new uint8[staticCmdsBuf.Size()];
-				memcpy( pContextData->m_pStaticCmds, staticCmdsBuf.Base(), staticCmdsBuf.Size() );
+				std::memcpy( pContextData->m_pStaticCmds, staticCmdsBuf.Base(), staticCmdsBuf.Size() );
 			}
 			if ( pShaderShadow )
 			{
@@ -1274,7 +1271,7 @@ void DrawLightmappedGeneric_DX9( CBaseVSShader *pShader, IMaterialVar** params, 
 			// Disabled for CS:GO - use full resolution depth resolve going forward
 			//bWriteDepthToAlpha = ShaderApiFast( pShaderAPI )->ShouldWriteDepthToDestAlpha();
 			bWriteWaterFogToAlpha = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z);
-			AssertMsg( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha), "Can't write two values to alpha at the same time." );
+			contract_assert( ( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha) ) && "Can't write two values to alpha at the same time." );
 		}
 		else
 		{

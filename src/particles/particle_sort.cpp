@@ -1,12 +1,10 @@
-//===== Copyright 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: particle system code
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include <algorithm>
-#include "tier0/platform.h"
-#include "tier0/vprof.h"
+// Purpose: particle system code
+
+import std;
+import ks.core;
 #include "particles/particles.h"
 #include "particles_internal.h"
 #include "bitmap/psheet.h"
@@ -16,9 +14,9 @@
 #define SORTBUFSIZE1 ( ( 1 + MAX_PARTICLES_IN_A_SYSTEM / 4 )* sizeof( ParticleFullRenderData_Scalar_View ) )
 #define SORTBUFSIZE2 ( ( 1 + MAX_PARTICLES_IN_A_SYSTEM / 4 )* sizeof( ParticleRenderDataWithOutlineInformation_Scalar_View ) )
 
-static ALIGN16 uint8 s_SortBuffer[ COMPILETIME_MAX( COMPILETIME_MAX( SORTBUFSIZE0, SORTBUFSIZE1 ), SORTBUFSIZE2 )] ALIGN16_POST;
+static uint8 s_SortBuffer[ COMPILETIME_MAX( COMPILETIME_MAX( SORTBUFSIZE0, SORTBUFSIZE1 ), SORTBUFSIZE2 )] [[gnu::aligned(16)]];
 
-static ALIGN16 ParticleFullRenderData_Scalar_View *s_pParticlePtrs[MAX_PARTICLES_IN_A_SYSTEM] ALIGN16_POST;
+static ParticleFullRenderData_Scalar_View *s_pParticlePtrs[MAX_PARTICLES_IN_A_SYSTEM] [[gnu::aligned(16)]];
 
 
 
@@ -35,7 +33,7 @@ void C4VInterpolatedAttributeIterator::Init( int nAttribute, CParticleCollection
 	// initializing this is somewhat complicated by the behavior of prev_xyz and xyz
 
 	m_pData = pParticles->Get4VAttributePtr( nAttribute, &m_nStride );
-	Assert( pParticles->GetPrevAttributeMemory() );
+	contract_assert( pParticles->GetPrevAttributeMemory() );
 	if ( m_nStride )
 	{
 		m_nOldDataOffset = 
@@ -155,7 +153,7 @@ static bool SortLessFunc( const ParticleRenderData_t &left, const ParticleRender
 
 int CParticleCollection::GenerateSortedIndexList( ParticleRenderData_t *pOut, Vector vecCamera, CParticleVisibilityData *pVisibilityData, bool bSorted )
 {
-	VPROF_BUDGET( "CParticleCollection::GenerateSortedIndexList", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "CParticleCollection::GenerateSortedIndexList", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	int nParticles = m_nActiveParticles;
 	if ( bSorted )
@@ -177,7 +175,7 @@ int CParticleCollection::GenerateSortedIndexList( ParticleRenderData_t *pOut, Ve
 int CParticleCollection::GenerateCulledSortedIndexList( 
 	ParticleRenderData_t *pOut, Vector vecCamera, Vector vecFwd, CParticleVisibilityData *pVisibilityData, bool bSorted )
 {
-	VPROF_BUDGET( "CParticleCollection::GenerateSortedIndexList", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "CParticleCollection::GenerateSortedIndexList", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	int nParticles = m_nActiveParticles;
 	if ( bSorted )
@@ -233,7 +231,7 @@ void GenerateExtendedData(
 	Vector CameraPos, Vector *pCameraFwd, CParticleVisibilityData *pVisibilityData, CParticleCollection *pParticles,
 	float flInterpT )
 {
-	OutType_t * RESTRICT pOutUnSorted = reinterpret_cast<OutType_t*>( pOutbuf );
+	OutType_t * __restrict__ pOutUnSorted = reinterpret_cast<OutType_t*>( pOutbuf );
 
 	// interpolated values
 	VECTORITERATOR pXYZ( PARTICLE_ATTRIBUTE_XYZ, pParticles );
@@ -467,7 +465,7 @@ int GenerateExtendedSortedIndexList( Vector vecCamera, Vector *pCameraFwd, CPart
 	{
 		float t = ( pParticles->m_flTargetDrawTime - pParticles->m_flPrevSimTime ) /
 			( pParticles->m_flCurTime - pParticles->m_flPrevSimTime );
-		Assert( ( t >= 0.0 ) && ( t <= 1.0 ) );
+		contract_assert( ( t >= 0.0 ) && ( t <= 1.0 ) );
 		s_GenerateExtendedData<false, true, ParticleFullRenderData_SIMD_View, false, false>( pOutBuf, pParticlePtrs, vecCamera, nullptr, pVisibilityData, pParticles, t, bSorted );
 	}
 	else
@@ -494,7 +492,7 @@ int GenerateExtendedSortedIndexListWithPerParticleGlow(
 	{
 		float t = ( pParticles->m_flTargetDrawTime - pParticles->m_flPrevSimTime ) /
 			( pParticles->m_flCurTime - pParticles->m_flPrevSimTime );
-		Assert( ( t >= 0.0 ) && ( t <= 1.0 ) );
+		contract_assert( ( t >= 0.0 ) && ( t <= 1.0 ) );
 		s_GenerateExtendedData<false, true, ParticleRenderDataWithOutlineInformation_SIMD_View, true, false>(
 			pOutBuf, ( ParticleFullRenderData_Scalar_View **) pParticlePtrs, vecCamera, nullptr, pVisibilityData, pParticles, t, bSorted );
 	}
@@ -523,7 +521,7 @@ int GenerateExtendedSortedIndexListWithNormals(
 	{
 		float t = ( pParticles->m_flTargetDrawTime - pParticles->m_flPrevSimTime ) /
 			( pParticles->m_flCurTime - pParticles->m_flPrevSimTime );
-		Assert( ( t >= 0.0 ) && ( t <= 1.0 ) );
+		contract_assert( ( t >= 0.0 ) && ( t <= 1.0 ) );
 		s_GenerateExtendedData<false, true, ParticleRenderDataWithNormal_SIMD_View, false, true>(
 			pOutBuf, ( ParticleFullRenderData_Scalar_View **) pParticlePtrs, vecCamera, nullptr, pVisibilityData, pParticles, t, bSorted );
 	}
@@ -550,7 +548,7 @@ ParticleFullRenderData_Scalar_View **GetExtendedRenderList( CParticleCollection 
 															bool bSorted, int *pNparticles,
 															CParticleVisibilityData *pVisibilityData)
 {
-	Assert( sizeof( ParticleFullRenderData_Scalar_View ) == sizeof( ParticleFullRenderData_SIMD_View ) );
+	contract_assert( sizeof( ParticleFullRenderData_Scalar_View ) == sizeof( ParticleFullRenderData_SIMD_View ) );
 	if ( bSorted )
 		bSorted = pParticles->m_pDef->m_bShouldSort;
 
@@ -567,7 +565,7 @@ ParticleRenderDataWithOutlineInformation_Scalar_View **GetExtendedRenderListWith
 	bool bSorted, int *pNparticles,
 	CParticleVisibilityData *pVisibilityData)
 {
-	Assert( sizeof( ParticleRenderDataWithOutlineInformation_Scalar_View ) == sizeof( ParticleRenderDataWithOutlineInformation_SIMD_View ) );
+	contract_assert( sizeof( ParticleRenderDataWithOutlineInformation_Scalar_View ) == sizeof( ParticleRenderDataWithOutlineInformation_SIMD_View ) );
 	if ( bSorted )
 		bSorted = pParticles->m_pDef->m_bShouldSort;
 
@@ -587,7 +585,7 @@ ParticleRenderDataWithNormal_Scalar_View **GetExtendedRenderListWithNormals(
 	bool bSorted, int *pNparticles,
 	CParticleVisibilityData *pVisibilityData)
 {
-	Assert( sizeof( ParticleRenderDataWithNormal_SIMD_View ) == sizeof( ParticleRenderDataWithNormal_Scalar_View ) );
+	contract_assert( sizeof( ParticleRenderDataWithNormal_SIMD_View ) == sizeof( ParticleRenderDataWithNormal_Scalar_View ) );
 	if ( bSorted )
 		bSorted = pParticles->m_pDef->m_bShouldSort;
 

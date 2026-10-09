@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SIMPLE_PHYSICS_H
-#define SIMPLE_PHYSICS_H
-
-
-#include "mathlib/vector.h"
-
+import std;
+import ks.math;
 
 // CSimplePhysics is a framework for simplified physics simulation.
 // It simulates at a fixed timestep and uses the Verlet integrator.
@@ -73,6 +66,3 @@ private:
 	float		m_flTimeStep;
 	float		m_flTimeStepMul;	// dt*dt*0.5
 };
-
- 
-#endif // SIMPLE_PHYSICS_H

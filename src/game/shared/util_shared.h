@@ -1,26 +1,28 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Shared util code between client and server.
-//
-//=============================================================================//
 
-#ifndef UTIL_SHARED_H
-#define UTIL_SHARED_H
-
+import ks.tier1;
 #include "reflect_annotations.h"
 
-#include "mathlib/vector.h"
+import std;
 #include "cmodel.h"
-#include "utlvector.h"
 #include "networkvar.h"
 #include "engine/IEngineTrace.h"
 #include "engine/IStaticPropMgr.h"
 #include "shared_classnames.h"
+#include "shareddefs.h"
 
 #ifdef CLIENT_DLL
 #include "cdll_client_int.h"
+#include "dt_recv.h"
+#else
+#include "enginecallback.h"
+#include "dt_send.h"
 #endif
-
+#include "predictable_entity.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -35,10 +37,10 @@ extern ConVar developer;	// developer mode
 //-----------------------------------------------------------------------------
 // Language IDs.
 //-----------------------------------------------------------------------------
-#define LANGUAGE_ENGLISH				0
-#define LANGUAGE_GERMAN					1
-#define LANGUAGE_FRENCH					2
-#define LANGUAGE_BRITISH				3
+inline constexpr auto LANGUAGE_ENGLISH = 0;
+inline constexpr auto LANGUAGE_GERMAN = 1;
+inline constexpr auto LANGUAGE_FRENCH = 2;
+inline constexpr auto LANGUAGE_BRITISH = 3;
 
 
 //-----------------------------------------------------------------------------
@@ -71,7 +73,7 @@ bool StandardFilterRules( IHandleEntity *pHandleEntity, int fContentsMask );
 
 
 // "weapon_"
-#define WEAPON_CLASSNAME_PREFIX_LENGTH 7
+inline constexpr auto WEAPON_CLASSNAME_PREFIX_LENGTH = 7;
 bool IsWeaponClassname( const char *pszClassName );
 
 //-----------------------------------------------------------------------------
@@ -103,7 +105,7 @@ inline CBaseEntity *EntityFromEntityHandle( IHandleEntity *pHandleEntity )
 		return nullptr;
 
 	IServerUnknown *pUnk = (IServerUnknown*)pHandleEntity;
-	Assert( !pUnk || pUnk->GetBaseEntity() );
+	contract_assert( !pUnk || pUnk->GetBaseEntity() );
 	return pUnk->GetBaseEntity();
 #endif
 }
@@ -274,57 +276,29 @@ void DebugDrawLine( const Vector& vecAbsStart, const Vector& vecAbsEnd, int r, i
 
 extern ConVar r_visualizetraces;
 
-#ifdef DETECT_TRACE_SPIKES
-#define BeginDetectTraceSpike() \
-	extern void DoReportExpensiveTrace( bool repeat, float time ); \
-	extern float g_TraceSpikeTolerance; \
-	CFastTimer spikeTimer; \
-	spikeTimer.Start()
-
-#define EndDetectTraceSpike() \
-	spikeTimer.End()
-
-#define DidTraceSpike() \
-	( spikeTimer.GetDuration().GetMillisecondsF() > g_TraceSpikeTolerance )
-
-#define ReportExpensiveTrace( repeat ) if ( DidTraceSpike() ) DoReportExpensiveTrace( repeat, spikeTimer.GetDuration().GetMillisecondsF() )
-
-#else
-
-#define BeginDetectTraceSpike() ((void)0)
-#define EndDetectTraceSpike() ((void)0)
-#define DidTraceSpike() false
-#define ReportExpensiveTrace( repeat ) ((void)0)
-#endif
+[[gnu::always_inline]] inline constexpr auto DidTraceSpike() { return false; }
 
 inline void UTIL_TraceLine( const Vector& vecAbsStart, const Vector& vecAbsEnd, unsigned int mask, 
 					 const IHandleEntity *ignore, int collisionGroup, trace_t *ptr )
 {
-	BeginDetectTraceSpike();
 	Ray_t ray;
 	ray.Init( vecAbsStart, vecAbsEnd );
 	CTraceFilterSimple traceFilter( ignore, collisionGroup );
 
 	enginetrace->TraceRay( ray, mask, &traceFilter, ptr );
-	EndDetectTraceSpike();
 
 	if( r_visualizetraces.GetBool() || DidTraceSpike() )
 	{
 		DebugDrawLine( ptr->startpos, ptr->endpos, 255, 0, 0, true, ( r_visualizetraces.GetBool() ) ? -1.0f : .5 );
-		ReportExpensiveTrace( false );
 		if ( DidTraceSpike() ) // Opimizer will remove this block
 		{
-			ReportExpensiveTrace( false );
-			BeginDetectTraceSpike();
 			Ray_t ray;
 			ray.Init( vecAbsStart, vecAbsEnd );
 			CTraceFilterSimple traceFilter( ignore, collisionGroup );
 
 			enginetrace->TraceRay( ray, mask, &traceFilter, ptr );
-			EndDetectTraceSpike();
 			if ( DidTraceSpike() )
 			{
-				ReportExpensiveTrace( true );
 			}
 		}
 	}
@@ -333,29 +307,23 @@ inline void UTIL_TraceLine( const Vector& vecAbsStart, const Vector& vecAbsEnd, 
 inline void UTIL_TraceLine( const Vector& vecAbsStart, const Vector& vecAbsEnd, unsigned int mask, 
 					 ITraceFilter *pFilter, trace_t *ptr )
 {
-	BeginDetectTraceSpike();
 	Ray_t ray;
 	ray.Init( vecAbsStart, vecAbsEnd );
 
 	enginetrace->TraceRay( ray, mask, pFilter, ptr );
-	EndDetectTraceSpike();
 
 	if( r_visualizetraces.GetBool() || DidTraceSpike() )
 	{
 		DebugDrawLine( ptr->startpos, ptr->endpos, 255, 0, 0, true, ( r_visualizetraces.GetBool() ) ? -1.0f : .5 );
-		ReportExpensiveTrace( false );
 		if ( DidTraceSpike() ) // Opimizer will remove this block
 		{
-			BeginDetectTraceSpike();
 			Ray_t ray;
 			ray.Init( vecAbsStart, vecAbsEnd );
 
 			enginetrace->TraceRay( ray, mask, pFilter, ptr );
-			EndDetectTraceSpike();
 
 			if ( DidTraceSpike() )
 			{
-				ReportExpensiveTrace( true );
 			}
 		}
 	}
@@ -365,31 +333,25 @@ inline void UTIL_TraceHull( const Vector &vecAbsStart, const Vector &vecAbsEnd, 
 					 const Vector &hullMax,	unsigned int mask, const IHandleEntity *ignore, 
 					 int collisionGroup, trace_t *ptr )
 {
-	BeginDetectTraceSpike();
 	Ray_t ray;
 	ray.Init( vecAbsStart, vecAbsEnd, hullMin, hullMax );
 	CTraceFilterSimple traceFilter( ignore, collisionGroup );
 
 	enginetrace->TraceRay( ray, mask, &traceFilter, ptr );
-	EndDetectTraceSpike();
 
 	if( r_visualizetraces.GetBool() || DidTraceSpike() )
 	{
 		DebugDrawLine( ptr->startpos, ptr->endpos, 255, 255, 0, true, ( r_visualizetraces.GetBool() ) ? -1.0f : .5 );
-		ReportExpensiveTrace( false );
 		if ( DidTraceSpike() ) // Opimizer will remove this block
 		{
-			BeginDetectTraceSpike();
 			Ray_t ray;
 			ray.Init( vecAbsStart, vecAbsEnd, hullMin, hullMax );
 			CTraceFilterSimple traceFilter( ignore, collisionGroup );
 
 			enginetrace->TraceRay( ray, mask, &traceFilter, ptr );
-			EndDetectTraceSpike();
 
 			if ( DidTraceSpike() )
 			{
-				ReportExpensiveTrace( true );
 			}
 		}
 	}
@@ -398,29 +360,23 @@ inline void UTIL_TraceHull( const Vector &vecAbsStart, const Vector &vecAbsEnd, 
 inline void UTIL_TraceHull( const Vector &vecAbsStart, const Vector &vecAbsEnd, const Vector &hullMin, 
 					 const Vector &hullMax,	unsigned int mask, ITraceFilter *pFilter, trace_t *ptr )
 {
-	BeginDetectTraceSpike();
 	Ray_t ray;
 	ray.Init( vecAbsStart, vecAbsEnd, hullMin, hullMax );
 
 	enginetrace->TraceRay( ray, mask, pFilter, ptr );
 
-	EndDetectTraceSpike();
 	if( r_visualizetraces.GetBool() || DidTraceSpike() )
 	{
 		DebugDrawLine( ptr->startpos, ptr->endpos, 255, 255, 0, true, ( r_visualizetraces.GetBool() ) ? -1.0f : .5 );
-		ReportExpensiveTrace( false );
 		if ( DidTraceSpike() ) // Opimizer will remove this block
 		{
-			BeginDetectTraceSpike();
 			Ray_t ray;
 			ray.Init( vecAbsStart, vecAbsEnd, hullMin, hullMax );
 
 			enginetrace->TraceRay( ray, mask, pFilter, ptr );
 
-			EndDetectTraceSpike();
 			if( DidTraceSpike() )
 			{
-				ReportExpensiveTrace( true );
 			}
 		}
 	}
@@ -503,13 +459,13 @@ void		UTIL_EncodeICE( unsigned char * buffer, unsigned int size, const unsigned 
 unsigned short UTIL_GetAchievementEventMask( void );	
 
 //assumes the object is already in a mostly passable space
-#define FL_AXIS_DIRECTION_NONE	( 0 )
-#define FL_AXIS_DIRECTION_X		( 1 << 0 )
-#define FL_AXIS_DIRECTION_NX	( 1 << 1 )
-#define FL_AXIS_DIRECTION_Y		( 1 << 2 )
-#define FL_AXIS_DIRECTION_NY	( 1 << 3 )
-#define FL_AXIS_DIRECTION_Z		( 1 << 4 )
-#define FL_AXIS_DIRECTION_NZ	( 1 << 5 )
+inline constexpr auto FL_AXIS_DIRECTION_NONE = ( 0 );
+inline constexpr auto FL_AXIS_DIRECTION_X = ( 1 << 0 );
+inline constexpr auto FL_AXIS_DIRECTION_NX = ( 1 << 1 );
+inline constexpr auto FL_AXIS_DIRECTION_Y = ( 1 << 2 );
+inline constexpr auto FL_AXIS_DIRECTION_NY = ( 1 << 3 );
+inline constexpr auto FL_AXIS_DIRECTION_Z = ( 1 << 4 );
+inline constexpr auto FL_AXIS_DIRECTION_NZ = ( 1 << 5 );
 
 struct FindClosestPassableSpace_TraceAdapter_t;
 typedef void (*FN_RayTraceAdapterFunc)( const Ray_t &ray, trace_t *pResult, FindClosestPassableSpace_TraceAdapter_t *pTraceAdapter );
@@ -594,7 +550,7 @@ inline float DistanceToRay( const Vector &pos, const Vector &rayStart, const Vec
 // interface for entities that want to a auto maintained global list
 #define DECLARE_AUTO_LIST( interfaceName ) \
 	class interfaceName; \
-	abstract_class interfaceName \
+	class interfaceName \
 	{ \
 	public: \
 		interfaceName( bool bAutoAdd = true ); \
@@ -874,12 +830,12 @@ public:
 			float remaining = GetRemainingTime();
 			if ( remaining < 0.0f)
 			{
-				float numIntervalsRequired = -floorf( remaining / m_duration );
+				float numIntervalsRequired = -std::floorf( remaining / m_duration );
 				m_timestamp += m_duration * numIntervalsRequired;
 			}
 
 			// We should no longer be elapsed
-			Assert( !IsElapsed() );
+			contract_assert( !IsElapsed() );
 
 			return true;
 		}
@@ -904,8 +860,8 @@ EXTERN_SEND_TABLE(DT_CountdownTimer);
 /**
 * Simple class for tracking change in values over time.
 */
-#define TIMELINE_ARRAY_SIZE 64
-#define TIMELINE_INTERVAL_START 0.25f
+inline constexpr auto TIMELINE_ARRAY_SIZE = 64;
+inline constexpr auto TIMELINE_INTERVAL_START = 0.25f;
 
 enum TimelineCompression_t
 {
@@ -946,7 +902,7 @@ public:
 
 	float GetValueTime( int i ) const
 	{
-		Assert( i >= 0 && i < m_nBucketCount );
+		contract_assert( i >= 0 && i < m_nBucketCount );
 		return static_cast<float>( i ) * m_flInterval;
 	}
 
@@ -1057,27 +1013,8 @@ inline int UTIL_EntitiesAlongRay( CBaseEntity **pList, int listMax, const Ray_t 
 }
 
 
-#include "shareddefs.h"
-#if (PREDICTION_ERROR_CHECK_LEVEL > 0)
-
-extern void _Easy_DiffPrint( CBaseEntity *pEntity, PRINTF_FORMAT_STRING const char *szFormatSTring, ... );
-
-#if defined( CLIENT_DLL )
-extern bool _Easy_DiffPrint_InternalConditions( C_BaseEntity *pEntity );
-#define _EASY_DIFFPRINT_INTERNALCONDITIONS(entity) _Easy_DiffPrint_InternalConditions( entity )
-#else
-#define _EASY_DIFFPRINT_INTERNALCONDITIONS(entity) true
-#endif
-
-#define EASY_DIFFPRINT_CONDITIONAL( conditions, entity, szFormatString, ... ) if( (conditions) && _EASY_DIFFPRINT_INTERNALCONDITIONS( entity ) ) { _Easy_DiffPrint( entity, szFormatString, __VA_ARGS__ ); }
-#define EASY_DIFFPRINT( entity, szFormatString, ... ) EASY_DIFFPRINT_CONDITIONAL( true, entity, szFormatString, __VA_ARGS__ )
-
-#else //#if (PREDICTION_ERROR_CHECK_LEVEL > 0)
-
 #define EASY_DIFFPRINT_CONDITIONAL( conditions, entity, szFormatString, ... )
 #define EASY_DIFFPRINT( entity, szFormatString, ... )
-
-#endif //#if (PREDICTION_ERROR_CHECK_LEVEL > 0)
 
 void		UTIL_GetNextCommandLength( const char *pText, int nMaxLen, int *pCommandLength, int *pNextCommandOffset );
 
@@ -1085,7 +1022,5 @@ void		UTIL_GetNextCommandLength( const char *pText, int nMaxLen, int *pCommandLe
 /**
  *  remove double spaces and empty bold/italic HTML tags from a string
  */
-void UTIL_TrimEmptyWhitespaceFromHTML( OUT_Z_BYTECAP( descWriterByteSize ) wchar_t* pszDescWriter, size_t descWriterByteSize, const wchar_t* pszDescReader );
-void UTIL_TrimEmptyWhitespaceFromHTML( OUT_Z_BYTECAP( descWriterByteSize ) char* pszDescWriter, size_t descWriterByteSize, const char* pszDescReader );
-
-#endif // UTIL_SHARED_H
+void UTIL_TrimEmptyWhitespaceFromHTML( wchar_t* pszDescWriter, std::size_t descWriterByteSize, const wchar_t* pszDescReader );
+void UTIL_TrimEmptyWhitespaceFromHTML( char* pszDescWriter, std::size_t descWriterByteSize, const char* pszDescReader );

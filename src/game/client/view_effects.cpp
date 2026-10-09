@@ -1,10 +1,22 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "ivieweffects.h"
@@ -20,7 +32,7 @@ extern IntroData_t *g_pIntroData;
 
 
 // Arbitrary limit so that bad entity logic on the server can't consume tons of memory on the client.
-#define MAX_SHAKES		32
+constexpr auto MAX_SHAKES = 32;
 
 
 //-----------------------------------------------------------------------------
@@ -137,8 +149,8 @@ private:
 	screentilt_t *FindLongestTilt();
 
 	// helper subfunctions used inside CalcShake
-	void CalcShake_Basic( screenshake_t * pShake, float * RESTRICT pflRumbleAngle );
-	void CalcShake_Directional( screenshake_t * pShake, float * RESTRICT pflRumbleAngle );
+	void CalcShake_Basic( screenshake_t * pShake, float * __restrict__ pflRumbleAngle );
+	void CalcShake_Directional( screenshake_t * pShake, float * __restrict__ pflRumbleAngle );
 
 	std::vector< screenfade_t * >	m_FadeList;
 
@@ -271,10 +283,6 @@ bool __MsgFunc_Fade( const ks::net::CCSUsrMsg_Fade &msg )
 void CViewEffects::Init( void )
 {
 	HOOK_MESSAGE( Shake );
-#ifdef HL2_CLIENT
-	// @TODO: Jeep, this causes assert in other games w/o this guard ifdef [6/3/2008 tom]
-	HOOK_MESSAGE( Tilt );
-#endif
 	HOOK_MESSAGE( Fade );
 }
 
@@ -355,12 +363,12 @@ void CViewEffects::CalcShake( void )
 
 	for ( int nShake = nShakeCount - 1; nShake >= 0; nShake-- )
 	{
-		screenshake_t * RESTRICT pShake = m_ShakeList[ nShake ];
+		screenshake_t * __restrict__ pShake = m_ShakeList[ nShake ];
 
 		if ( pShake->endtime == 0 )
 		{
 			// Shouldn't be any such shakes in the list.
-			AssertMsg( false, "A screenshake has null endtime in CViewEffects::CalcShake\n" );
+			contract_assert( false && "A screenshake has null endtime in CViewEffects::CalcShake\n" );
 			continue;
 		}
 
@@ -398,7 +406,7 @@ void CViewEffects::CalcShake( void )
 			CalcShake_Directional( pShake, &flRumbleAngle );
 			break;
 		default:
-			AssertMsg1( false, "Unknown shake type %d\n", pShake->nShakeType );
+			contract_assert( false && "Unknown shake type %d\n" );
 		}
 
 	}
@@ -409,7 +417,7 @@ void CViewEffects::CalcShake( void )
 
 
 
-void CViewEffects::CalcShake_Basic( screenshake_t * RESTRICT pShake, float * RESTRICT pflRumbleAngle )
+void CViewEffects::CalcShake_Basic( screenshake_t * __restrict__ pShake, float * __restrict__ pflRumbleAngle )
 {
 	float	fraction, freq;
 
@@ -449,7 +457,7 @@ void CViewEffects::CalcShake_Basic( screenshake_t * RESTRICT pShake, float * RES
 	{
 		angle = 1e8;
 	}
-	fraction = fraction * sin( angle );
+	fraction = fraction * std::sin( angle );
 
 	if( pShake->command != SHAKE_START_NORUMBLE )
 	{
@@ -474,7 +482,7 @@ void CViewEffects::CalcShake_Basic( screenshake_t * RESTRICT pShake, float * RES
 }
 
 
-void CViewEffects::CalcShake_Directional( screenshake_t * RESTRICT pShake, float * RESTRICT pflRumbleAngle )
+void CViewEffects::CalcShake_Directional( screenshake_t * __restrict__ pShake, float * __restrict__ pflRumbleAngle )
 {
 	// a screen punch follows an equation of the form 
 	// y = sin(fx) * ( 1 - x / (3pi) ) for x=0..3pi
@@ -490,10 +498,10 @@ void CViewEffects::CalcShake_Directional( screenshake_t * RESTRICT pShake, float
 	float fraction = ( 1 - t ); // compiler will hopefully elide the double subtraction
 
 	// transform the duration and so that x varies 0 .. 3PI over lifespan
-	t *= ( 3 * M_PI ); // t varies 0 .. 3PI 
+	t *= ( 3 * std::numbers::pi ); // t varies 0 .. 3PI 
 
 	const float x = t * pShake->frequency;
-	const float y = sin(x) * fraction;
+	const float y = std::sin(x) * fraction;
 
 	// transform this -1..1 sinusoid by amplitude and direction
 	pShake->offset = pShake->direction * ( pShake->amplitude * y );
@@ -545,7 +553,7 @@ void CViewEffects::CalcTilt( void )
 		if ( pTilt->endtime == 0 )
 		{
 			// Shouldn't be any such tilts in the list.
-			Assert( false );
+			contract_assert( false );
 			continue;
 		}
 
@@ -572,7 +580,7 @@ void CViewEffects::CalcTilt( void )
 		if ( pTilt->easeInOut )
 		{
 			// Do a smooth ease in and out
-			flSmoothInterp = 1.0f - 0.5f * ( cosf( flSmoothInterp * M_PI ) + 1.0f );
+			flSmoothInterp = 1.0f - 0.5f * ( std::cosf( flSmoothInterp * std::numbers::pi ) + 1.0f );
 		}
 
 		// Accumulate world tilt
@@ -665,7 +673,7 @@ void CViewEffects::Shake( const ScreenShake_t &data )
 {
 	if ( ( data.command == SHAKE_START || data.command == SHAKE_START_RUMBLEONLY ) && ( std::ssize( m_ShakeList ) < MAX_SHAKES ) )
 	{
-		screenshake_t * RESTRICT pNewShake = new screenshake_t; // ugh, should just make these a static array
+		screenshake_t * __restrict__ pNewShake = new screenshake_t; // ugh, should just make these a static array
 			
 		pNewShake->amplitude = data.amplitude;
 		pNewShake->frequency = data.frequency;
@@ -685,7 +693,7 @@ void CViewEffects::Shake( const ScreenShake_t &data )
 	else if ( data.command == SHAKE_AMPLITUDE )
 	{
 		// Look for the most likely shake to modify.
-		screenshake_t * RESTRICT pShake = FindLongestShake();
+		screenshake_t * __restrict__ pShake = FindLongestShake();
 		if ( pShake )
 		{
 			pShake->amplitude = data.amplitude;
@@ -694,7 +702,7 @@ void CViewEffects::Shake( const ScreenShake_t &data )
 	else if ( data.command == SHAKE_FREQUENCY )
 	{
 		// Look for the most likely shake to modify.
-		screenshake_t * RESTRICT pShake = FindLongestShake();
+		screenshake_t * __restrict__ pShake = FindLongestShake();
 		if ( pShake )
 		{
 			pShake->frequency = data.frequency;
@@ -981,5 +989,3 @@ static short VIEWEFFECTS_SAVE_RESTORE_VERSION = 2;
 
 
 //-----------------------------------------------------------------------------
-
-

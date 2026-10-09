@@ -1,5 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 sampler Texture1Sampler	: register( s0 );
 

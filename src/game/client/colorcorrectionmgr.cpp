@@ -1,15 +1,26 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose : Singleton manager for color correction on the client
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include "tier0/vprof.h"
+// Purpose: Singleton manager for color correction on the client
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "colorcorrectionmgr.h"
 #include "clientmode.h"
-
 
 //------------------------------------------------------------------------------
 // Singleton access
@@ -80,7 +91,7 @@ ClientCCHandle_t CColorCorrectionMgr::AddColorCorrectionEntity( C_ColorCorrectio
 	ClientCCHandle_t h = AddColorCorrection(pName, pFileName);
 	if ( h != INVALID_CLIENT_CCHANDLE )
 	{
-		Assert(ks::find_index( g_ColorCorrectionList, pEntity ) == -1);
+		contract_assert( ks::find_index( g_ColorCorrectionList, pEntity ) == -1 );
 		g_ColorCorrectionList.push_back( pEntity );
 	}
 	return h;
@@ -97,7 +108,7 @@ ClientCCHandle_t CColorCorrectionMgr::AddColorCorrectionVolume( C_ColorCorrectio
 	ClientCCHandle_t h = AddColorCorrection(pName, pFileName);
 	if ( h != INVALID_CLIENT_CCHANDLE )
 	{
-		Assert(ks::find_index( g_ColorCorrectionVolumeList, pVolume ) == -1);
+		contract_assert( ks::find_index( g_ColorCorrectionVolumeList, pVolume ) == -1 );
 		g_ColorCorrectionVolumeList.push_back( pVolume );
 	}
 	return h;
@@ -157,7 +168,7 @@ void CColorCorrectionMgr::CommitColorCorrectionWeights()
 
 void CColorCorrectionMgr::ResetColorCorrectionWeights()
 {
-	VPROF_("ResetColorCorrectionWeights", 2, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0);
+	CVProfScope _( "ResetColorCorrectionWeights", 2, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// FIXME: Where should I put this? It needs to happen prior to SimulateEntities()
 	// which is where the client thinks for c_colorcorrection + c_colorcorrectionvolumes
 	// update the color correction weights.
@@ -174,7 +185,7 @@ void CColorCorrectionMgr::SetResetable( ClientCCHandle_t h, bool bResetable )
 	// NOTE: Setting stuff to be not resettable doesn't work when in queued mode
 	// because the logic that sets m_nActiveWeightCount to 0 in ResetColorCorrectionWeights
 	// is no longer valid when stuff is not resettable.
-	Assert( bResetable || !g_pMaterialSystem->GetThreadMode() == MATERIAL_SINGLE_THREADED );
+	contract_assert( bResetable || !g_pMaterialSystem->GetThreadMode() == MATERIAL_SINGLE_THREADED );
 	if ( h != INVALID_CLIENT_CCHANDLE )
 	{
 		CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
@@ -198,7 +209,7 @@ void CColorCorrectionMgr::UpdateColorCorrection()
 	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	IClientMode *pClientMode = GetClientMode();
 
-	Assert( pClientMode );
+	contract_assert( pClientMode );
 	if ( !pPlayer || !pClientMode )
 	{
 		return;

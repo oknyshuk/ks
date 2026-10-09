@@ -1,28 +1,18 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include <tier0/platform.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <stdlib.h>
 #include "bitmap/floatbitmap.h"
 #include <tier2/tier2.h>
+import std;
+import ks.vstdlib;
 #include "bitmap/imageformat.h"
 #include "bitmap/tgaloader.h"
-#include "tier1/strtools.h"
 #include "filesystem.h"
-#include "vstdlib/jobthread.h"
 
 // for PSD loading
 #include "bitmap/bitmap.h"
 #include "bitmap/psd.h"
-#include "tier1/byte_reader.h"
 
-#include "tier0/memalloc.h"
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -92,7 +82,7 @@ static int GetInt( FileHandle_t & f )
 		*( bout++ ) = c;
 	}
 	*( bout++ ) = 0;
-	return atoi( buf );
+	return std::atoi( buf );
 }
 
 
@@ -128,7 +118,7 @@ static void ConstructFloatGammaTable( float* pTable, float flSrcGamma, float flD
 	float flOO1023 = 1.0f / 1023.0f;
 	for( int i = 0; i < 1024; i++ )
 	{
-		pTable[i] = pow( (float)i * flOO1023, flSrcGamma / flDstGamma );
+		pTable[i] = std::pow( (float)i * flOO1023, flSrcGamma / flDstGamma );
 	}
 }
 
@@ -137,7 +127,7 @@ static void ConstructShortGammaTable( uint16* pTable, float flSrcGamma, float fl
 	float flOO1023 = 1.0f / 1023.0f;
 	for( int i = 0; i < 1024; i++ )
 	{
-		pTable[i] = ( uint16 )( 1023.0f * pow( (float)i * flOO1023, flSrcGamma / flDstGamma ) + 0.5f );
+		pTable[i] = ( uint16 )( 1023.0f * std::pow( (float)i * flOO1023, flSrcGamma / flDstGamma ) + 0.5f );
 	}
 }
 
@@ -179,12 +169,12 @@ static const uint16 *GetShortGammaTable( float flDestGamma )
 //-----------------------------------------------------------------------------
 // Loads from a buffer, assumes dimensions match the bitmap size
 //-----------------------------------------------------------------------------
-void FloatBitMap_t::LoadFromBuffer( const void *pBuffer, size_t nBufSize, ImageFormat fmt, float flGamma )
+void FloatBitMap_t::LoadFromBuffer( const void *pBuffer, std::size_t nBufSize, ImageFormat fmt, float flGamma )
 {
 	if ( !pBuffer || !nBufSize )
 		return;
 
-	Assert( ImageLoader::GetMemRequired( NumCols(), NumRows(), NumSlices(), 1, fmt ) == (int)nBufSize );
+	contract_assert( ImageLoader::GetMemRequired( NumCols(), NumRows(), NumSlices(), 1, fmt ) == (int)nBufSize );
 	if( ImageLoader::GetMemRequired( NumCols(), NumRows(), NumSlices(), 1, fmt ) != (int)nBufSize )
 	{
 		Warning( "FloatBitMap_t::LoadFromBuffer: Received improper buffer size, skipping!\n" );
@@ -242,7 +232,7 @@ void FloatBitMap_t::LoadFromBuffer( const void *pBuffer, size_t nBufSize, ImageF
 
 	default:
 		Warning( "FloatBitMap_t::LoadFromBuffer: Unsupported color format, skipping!\n" );
-		Assert( 0 );
+		contract_assert( 0 );
 		break;
 	}
 
@@ -259,7 +249,7 @@ void FloatBitMap_t::LoadFromBuffer( const void *pBuffer, size_t nBufSize, ImageF
 
 void FloatBitMap_t::LoadFromFloatBitmap( const FloatBitMap_t *pOrig )
 {
-	Assert( ( NumCols() == pOrig->NumCols() ) && ( NumRows() == pOrig->NumRows() ) && ( NumSlices() == pOrig->NumSlices() ) );
+	contract_assert( ( NumCols() == pOrig->NumCols() ) && ( NumRows() == pOrig->NumRows() ) && ( NumSlices() == pOrig->NumSlices() ) );
 	if ( ( NumCols() != pOrig->NumCols() ) || ( NumRows() != pOrig->NumRows() ) || ( NumSlices() != pOrig->NumSlices() ) )
 	{
 		Warning( "FloatBitMap_t::LoadFromFloatBitmap: Received improper bitmap size, skipping!\n" );
@@ -284,12 +274,12 @@ void FloatBitMap_t::LoadFromFloatBitmap( const FloatBitMap_t *pOrig )
 //-----------------------------------------------------------------------------
 // Writes into a buffer, assumes dimensions match the bitmap size
 //-----------------------------------------------------------------------------
-void FloatBitMap_t::WriteToBuffer( void *pBuffer, size_t nBufSize, ImageFormat fmt, float flGamma ) const
+void FloatBitMap_t::WriteToBuffer( void *pBuffer, std::size_t nBufSize, ImageFormat fmt, float flGamma ) const
 {
 	if ( !pBuffer || !nBufSize )
 		return;
 
-	Assert( ImageLoader::GetMemRequired( NumCols(), NumRows(), NumSlices(), 1, fmt ) == (int)nBufSize );
+	contract_assert( ImageLoader::GetMemRequired( NumCols(), NumRows(), NumSlices(), 1, fmt ) == (int)nBufSize );
 	if( ImageLoader::GetMemRequired( NumCols(), NumRows(), NumSlices(), 1, fmt ) != (int)nBufSize )
 	{
 		Warning( "FloatBitMap_t::WriteToBuffer: Received improper buffer size, skipping!\n" );
@@ -336,7 +326,7 @@ void FloatBitMap_t::WriteToBuffer( void *pBuffer, size_t nBufSize, ImageFormat f
 
 	default:
 		Warning( "FloatBitMap_t::WriteToBuffer: Unsupported color format, skipping!\n" );
-		Assert( 0 );
+		contract_assert( 0 );
 		break;
 	}
 }
@@ -375,7 +365,7 @@ bool FloatBitMap_t::LoadFromPSD( const char *pFilename )
 //-----------------------------------------------------------------------------
 // Loads from a PFM file
 //-----------------------------------------------------------------------------
-#define PFM_MAX_XSIZE 2048
+constexpr auto PFM_MAX_XSIZE = 2048;
 bool FloatBitMap_t::LoadFromPFM( const char* fname )
 {
 	bool bSuccess = false;
@@ -444,7 +434,7 @@ bool FloatBitMap_t::WritePFM( const char* fname )
 
 float FloatBitMap_t::InterpolatedPixel( float x, float y, int comp ) const
 {
-	int Top = ( int )floor( y );
+	int Top = ( int )std::floor( y );
 	float Yfrac = y - Top;
 	int Bot = std::min( NumRows() - 1, Top + 1 );
 	int Left = ( int )floor( x );
@@ -461,7 +451,7 @@ float FloatBitMap_t::InterpolatedPixel( float x, float y, int comp ) const
 
 float FloatBitMap_t::InterpolatedPixel( float x, float y, float z, int comp ) const
 {
-	int Top = ( int )floor( y );
+	int Top = ( int )std::floor( y );
 	float Yfrac = y - Top;
 	int Bot = std::min( NumRows() - 1, Top + 1 );
 	int Left = ( int )floor( x );
@@ -516,7 +506,7 @@ void FloatBitMap_t::ReSize( int NewWidth, int NewHeight )
 	SourceY = 0;
 	for( int y = 0; y < NewHeight; y++ )
 	{
-		Yfrac = SourceY - floor( SourceY );
+		Yfrac = SourceY - std::floor( SourceY );
 		Top = ( int )SourceY;
 		Bot = ( int )(SourceY + 1 );
 		if ( Bot >= NumRows() )
@@ -621,7 +611,7 @@ bool FloatBitMap_t::WriteTGAFile( const char* filename ) const
 	if ( f )
 	{
 		TGAHeader_t myheader;
-		memset( & myheader, 0, sizeof( myheader ) );
+		std::memset( & myheader, 0, sizeof( myheader ) );
 		myheader.image_type = 2;
 		myheader.pixel_size = 32;
 		myheader.width0 = NumCols() & 0xff;
@@ -654,12 +644,12 @@ bool FloatBitMap_t::WriteTGAFile( const char* filename ) const
 FloatBitMap_t::FloatBitMap_t( const char* tgafilename )
 {
 	// load from a tga or pfm or psd
-	if ( Q_stristr( tgafilename, ".psd") )
+	if ( V_stristr( tgafilename, ".psd") )
 	{
 		LoadFromPSD( tgafilename );
 		return;
 	}
-	if ( Q_stristr( tgafilename, ".pfm") )
+	if ( V_stristr( tgafilename, ".pfm") )
 	{
 		LoadFromPFM( tgafilename );
 		return;
@@ -1171,7 +1161,7 @@ void FloatBitMap_t::DownsampleNiceFiltered( const DownsampleInfo_t& downsampleIn
 	{
 		int nSize = info.m_nSrcHeight * info.m_nSrcWidth * info.m_nSrcDepth * sizeof(float);
 		info.m_pAlphaResult = (float*)MemAlloc_Alloc( nSize );
-		memset( info.m_pAlphaResult, 0, nSize );
+		std::memset( info.m_pAlphaResult, 0, nSize );
 		type = KERNEL_ALPHATEST;
 	}
 	else
@@ -1243,7 +1233,7 @@ void FloatBitMap_t::RaiseToPower( float power )
 	for( int y = 0; y < NumRows(); y++ )
 		for( int x = 0; x < NumCols(); x++ )
 			for( int c = 0; c < 3; c++ )
-				Pixel( x, y, 0, c ) = pow( ( float )std::max<std::common_type_t<double, float>>( 0.0, Pixel( x, y, 0, c ) ), ( float )power );
+				Pixel( x, y, 0, c ) = std::pow( ( float )std::max<std::common_type_t<double, float>>( 0.0, Pixel( x, y, 0, c ) ), ( float )power );
 
 }
 
@@ -1252,7 +1242,7 @@ void FloatBitMap_t::Logize( void )
 	for( int y = 0; y < NumRows(); y++ )
 		for( int x = 0; x < NumCols(); x++ )
 			for( int c = 0; c < 3; c++ )
-				Pixel( x, y, 0, c ) = log( 1.0 + Pixel( x, y, 0, c ) );
+				Pixel( x, y, 0, c ) = std::log( 1.0 + Pixel( x, y, 0, c ) );
 
 }
 
@@ -1261,7 +1251,7 @@ void FloatBitMap_t::UnLogize( void )
 	for( int y = 0; y < NumRows(); y++ )
 		for( int x = 0; x < NumCols(); x++ )
 			for( int c = 0; c < 3; c++ )
-				Pixel( x, y, 0, c ) = exp( Pixel( x, y, 0, c ) ) - 1;
+				Pixel( x, y, 0, c ) = std::exp( Pixel( x, y, 0, c ) ) - 1;
 }
 
 
@@ -1293,7 +1283,7 @@ void FloatBitMap_t::ScaleRGB( float scale_factor )
 static int dx[4]={0, - 1, 1, 0};
 static int dy[4]={- 1, 0, 0, 1};
 
-#define NDELTAS 4
+constexpr auto NDELTAS = 4;
 
 void FloatBitMap_t::SmartPaste( const FloatBitMap_t & b, int xofs, int yofs, uint32 Flags )
 {
@@ -1564,7 +1554,7 @@ void FloatBitMap_t::Poisson( FloatBitMap_t * deltas[4],
 								FLerp( Pixel( x * 2 + xi, y * 2 + yi, 0, c ), tmp->Pixel( x, y, 0, c ), Alpha( x * 2 + xi, y * 2 + yi, 0 ) );
 						}
 						char fname[80];
-						sprintf(fname,"sub%dx%d.tga",tmp->NumCols(),tmp->NumRows());
+						std::sprintf(fname,"sub%dx%d.tga",tmp->NumCols(),tmp->NumRows());
 						tmp->WriteTGAFile( fname );
 						sprintf(fname,"submrg%dx%d.tga",tmp->NumCols(),tmp->NumRows());
 						WriteTGAFile( fname );
@@ -1613,5 +1603,3 @@ void FloatBitMap_t::Poisson( FloatBitMap_t * deltas[4],
 		}
 	}
 }
-
-

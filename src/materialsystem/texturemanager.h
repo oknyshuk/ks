@@ -1,14 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header:     $
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef TEXTUREMANAGER_H
-#define TEXTUREMANAGER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "itextureinternal.h"
 class ITexture;
@@ -26,7 +18,7 @@ enum
 //-----------------------------------------------------------------------------
 // Texture manager interface
 //-----------------------------------------------------------------------------
-abstract_class ITextureManager
+class ITextureManager
 {
 public:
 	// Initialization + shutdown
@@ -136,6 +128,3 @@ inline ITextureManager *TextureManager()
 	extern ITextureManager *g_pTextureManager;
 	return g_pTextureManager;
 }
-
-
-#endif // TEXTUREMANAGER_H

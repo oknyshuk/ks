@@ -1,14 +1,7 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef SHADERDEVICEBASE_H
-#define SHADERDEVICEBASE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.tier1;
 
 #include "togl/rendermechanism.h"
 #include "shaderapi/IShaderDevice.h"
@@ -17,11 +10,9 @@
 #include "materialsystem/imaterialsystem.h"
 #include "hardwareconfig.h"
 
-
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class KeyValues;
 
 
 //-----------------------------------------------------------------------------
@@ -170,7 +161,7 @@ protected:
 	void RemoveWindowHook( void *hWnd );
 	void SetCurrentThreadAsOwner();
 	void RemoveThreadOwner();
-	bool ThreadOwnsDevice();
+	bool ThreadOwnsDevice() const;
 
 	// Finds a child window
 	int  FindView( void* hWnd ) const;
@@ -208,7 +199,7 @@ class CShaderBuffer : public IShaderBuffer
 public:
 	CShaderBuffer( T *pBlob ) : m_pBlob( pBlob ) {}
 
-	virtual size_t GetSize() const
+	virtual std::size_t GetSize() const
 	{
 		return m_pBlob ? m_pBlob->GetBufferSize() : 0;
 	}
@@ -230,7 +221,3 @@ public:
 private:
 	T *m_pBlob;
 };
-
-
-
-#endif // SHADERDEVICEBASE_H

@@ -1,19 +1,12 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#ifndef CMATERIALLIGHTMAPS_H
-#define CMATERIALLIGHTMAPS_H
-
-#include "tier1/utlvector.h"
+import std;
+import ks.tier1;
 #include "imagepacker.h"
 
-#ifndef MATSYS_INTERNAL
-#error "This file is private to the implementation of IMaterialSystem/IMaterialSystemInternal"
-#endif
-
+#include "pixelwriter.h"
 
 //-----------------------------------------------------------------------------
 
@@ -110,7 +103,7 @@ private:
 		float *pFloatImageBump3, int pLightmapSize[2], int pOffsetIntoLightmapPage[2], FloatBitMap_t *pfmOut );
 
 	void		BumpedLightmapBitsToPixelWriter_HDRI( float* pFloatImage, float *pFloatImageBump1, float *pFloatImageBump2, 
-		float *pFloatImageBump3, int pLightmapSize[2], int pOffsetIntoLightmapPage[2], FloatBitMap_t *pfmOut ) RESTRICT;
+		float *pFloatImageBump3, int pLightmapSize[2], int pOffsetIntoLightmapPage[2], FloatBitMap_t *pfmOut ) __restrict__;
 
 	void		LightmapBitsToPixelWriter_LDR( float* pFloatImage, int pLightmapSize[2], int pOffsetIntoLightmapPage[2], FloatBitMap_t *pfmOut );
 	void		LightmapBitsToPixelWriter_HDRF( float* pFloatImage, int pLightmapSize[2], int pOffsetIntoLightmapPage[2], FloatBitMap_t *pfmOut );
@@ -192,5 +185,3 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-
-#endif // CMATERIALLIGHTMAPS_H

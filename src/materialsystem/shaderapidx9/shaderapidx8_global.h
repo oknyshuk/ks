@@ -1,21 +1,12 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SHADERAPIDX8_GLOBAL_H
-#define SHADERAPIDX8_GLOBAL_H
-
-
-#include "tier0/dbg.h"
-#include "tier0/memalloc.h"
+import std;
+import ks.core;
 #include "shaderapi_global.h"
 #include "tier2/tier2.h"
 #include "shaderdevicedx8.h"
-
 
 //-----------------------------------------------------------------------------
 // Use this to fill in structures with the current board state
@@ -92,6 +83,3 @@ inline IMaterialSystemHardwareConfig* HardwareConfig()
 {	
 	return g_pMaterialSystemHardwareConfig;
 }
-
-
-#endif // SHADERAPIDX8_GLOBAL_H

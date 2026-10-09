@@ -41,12 +41,12 @@ damage. */
 #include "ivoicecodec.h"
 #include "iframeencoder.h"
 
-#include <stdio.h>
+import std;
 #include "celt.h"
 
 
 
-#define CHANNELS 1
+inline constexpr int CHANNELS = 1;
 
 struct celt_versions
 {
@@ -55,7 +55,7 @@ struct celt_versions
 	int iPacketSize;
 };
 
-#define CELT_VERSION 4
+constexpr auto CELT_VERSION = 4;
 
 celt_versions g_CeltVersion[CELT_VERSION] = 
 {
@@ -110,7 +110,7 @@ void* CreateCeltVoiceCodec()
 	return CreateVoiceCodec_Frame( pEncoder );
 }
 
-EXPOSE_INTERFACE_FN(CreateCeltVoiceCodec, IVoiceCodec, "vaudio_celt")
+static InterfaceReg s_Reg_CreateCeltVoiceCodec( CreateCeltVoiceCodec, "vaudio_celt" );;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction

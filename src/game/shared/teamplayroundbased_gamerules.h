@@ -1,11 +1,8 @@
-//====== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. =======
-//
-// Purpose: Teamplay game rules that manage a round based structure for you
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#ifndef TEAMPLAYROUNDBASED_GAMERULES_H
-#define TEAMPLAYROUNDBASED_GAMERULES_H
+// Purpose: Teamplay game rules that manage a round based structure for you
 
 #include "reflect_annotations.h"
 #include "dt_recv.h"
@@ -464,5 +461,3 @@ inline CTeamplayRoundBasedRules* TeamplayRoundBasedRules()
 {
 	return static_cast<CTeamplayRoundBasedRules*>(g_pGameRules);
 }
-
-#endif // TEAMPLAYROUNDBASED_GAMERULES_H

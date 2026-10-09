@@ -1,19 +1,60 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include <keyvalues.h>
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "cs_weapon_parse.h"
 #include "cs_shareddefs.h"
 #include "weapon_csbase.h"
 #include "weapon_csbasegun.h"
-#include "icvar.h"
 #include "cs_gamerules.h"
-#include "econ/ihasattributes.h"
-
 
 //--------------------------------------------------------------------------------------------------------
 struct WeaponTypeInfo
@@ -148,15 +189,15 @@ EquipmentInfo g_EquipmentInfo[] =
 
 void LoadEquipmentData()
 {
-	for ( int i = 0; i < ARRAYSIZE( g_EquipmentInfo ); ++i )
+	for ( int i = 0; i < std::size( g_EquipmentInfo ); ++i )
 	{
 		WEAPON_FILE_INFO_HANDLE handle = g_WeaponDatabase.FindOrCreateWeaponInfo(g_EquipmentInfo[i].szClassName);
 		CCSWeaponInfo* pInfo = dynamic_cast<CCSWeaponInfo*>( g_WeaponDatabase.GetFileWeaponInfoFromHandle( handle ) );
 		if ( pInfo )
 		{
 			pInfo->m_weaponId = WeaponIdFromString( pInfo->szClassName );
-			Q_strncpy( pInfo->szClassName, g_EquipmentInfo[i].szClassName, MAX_WEAPON_STRING );
-			Q_strncpy( pInfo->szPrintName, g_EquipmentInfo[i].szPrintName, MAX_WEAPON_STRING );
+			V_strncpy( pInfo->szClassName, g_EquipmentInfo[i].szClassName, MAX_WEAPON_STRING );
+			V_strncpy( pInfo->szPrintName, g_EquipmentInfo[i].szPrintName, MAX_WEAPON_STRING );
 			pInfo->SetUsedByTeam( g_EquipmentInfo[i].iTeam );
 			pInfo->SetWeaponPrice( g_EquipmentInfo[i].iPrice );
 			pInfo->SetWeaponType( WEAPONTYPE_EQUIPMENT );
@@ -186,7 +227,7 @@ const CCSWeaponInfo* GetWeaponInfo( CSWeaponID weaponID )
 //--------------------------------------------------------------------------------------------------------
 const char* WeaponClassAsString( CSWeaponType weaponType )
 {
-	for ( int i = 0; i < ARRAYSIZE( s_weaponTypeInfo ); ++i )
+	for ( int i = 0; i < std::size( s_weaponTypeInfo ); ++i )
 	{
 		if ( s_weaponTypeInfo[i].type == weaponType )
 		{
@@ -201,7 +242,7 @@ const char* WeaponClassAsString( CSWeaponType weaponType )
 //--------------------------------------------------------------------------------------------------------
 CSWeaponType WeaponClassFromString( const char* weaponType )
 {
-	for ( int i = 0; i < ARRAYSIZE( s_weaponTypeInfo ); ++i )
+	for ( int i = 0; i < std::size( s_weaponTypeInfo ); ++i )
 	{
 		if ( !V_stricmp( s_weaponTypeInfo[i].name, weaponType ) )
 		{
@@ -234,7 +275,7 @@ CSWeaponType WeaponClassFromWeaponID( CSWeaponID weaponID )
 //--------------------------------------------------------------------------------------------------------
 const char * WeaponIdAsString( CSWeaponID weaponID )
 {
-	for ( int i = 0; i < ARRAYSIZE( s_weaponNameInfo ); ++i )
+	for ( int i = 0; i < std::size( s_weaponNameInfo ); ++i )
 	{
 		if ( s_weaponNameInfo[i].id == weaponID )
 			return s_weaponNameInfo[i].name;
@@ -247,7 +288,7 @@ const char * WeaponIdAsString( CSWeaponID weaponID )
 //--------------------------------------------------------------------------------------------------------
 CSWeaponID WeaponIdFromString( const char *szWeaponName )
 {
-	for ( int i = 0; i < ARRAYSIZE( s_weaponNameInfo ); ++i )
+	for ( int i = 0; i < std::size( s_weaponNameInfo ); ++i )
 	{
 		if ( V_stricmp( s_weaponNameInfo[i].name, szWeaponName ) == 0 )
 			return s_weaponNameInfo[i].id;
@@ -262,10 +303,10 @@ CSWeaponID WeaponIdFromString( const char *szWeaponName )
 //
 const char *WeaponIDToAlias( int id )
 {
-	for ( int i = 0; i < ARRAYSIZE( s_weaponNameInfo ); ++i )
+	for ( int i = 0; i < std::size( s_weaponNameInfo ); ++i )
 	{
 		if ( s_weaponNameInfo[i].id == id )
-			return ( strchr( s_weaponNameInfo[i].name, '_' ) + 1 );
+			return ( std::strchr( s_weaponNameInfo[i].name, '_' ) + 1 );
 	}
 
 	return nullptr;
@@ -280,10 +321,10 @@ CSWeaponID AliasToWeaponID( const char *szAlias )
 	if ( !szAlias )
 		return WEAPON_NONE;
 
-	for ( int i = 0; i < ARRAYSIZE( s_weaponNameInfo ); ++i )
+	for ( int i = 0; i < std::size( s_weaponNameInfo ); ++i )
 	{
-		Assert( strchr( s_weaponNameInfo[i].name, '_' ) );
-		if ( Q_stricmp( ( strchr( s_weaponNameInfo[i].name, '_' ) + 1 ), szAlias ) == 0 )
+		contract_assert( std::strchr( s_weaponNameInfo[i].name, '_' ) );
+		if ( V_stricmp( ( std::strchr( s_weaponNameInfo[i].name, '_' ) + 1 ), szAlias ) == 0 )
 			return s_weaponNameInfo[i].id;
 	}
 
@@ -319,7 +360,7 @@ void ParseVector( KeyValues *keyValues, const char *keyName, Vector& vec )
 	if ( vecString && *vecString )
 	{
 		float x, y, z;
-		if ( 3 == sscanf( vecString, "%f %f %f", &x, &y, &z ) )
+		if ( 3 == std::sscanf( vecString, "%f %f %f", &x, &y, &z ) )
 		{
 			vec.x = x;
 			vec.y = y;
@@ -347,7 +388,7 @@ int ParseEnumeration( KeyValues* pKeyValuesData, const char* szKeyName, const En
 			return enumStringTable[i].iValue;
 	}
 	
-	Assert( false );
+	contract_assert( false );
 	return iDefaultValue;
 }
 
@@ -361,7 +402,7 @@ FileWeaponInfo_t* CreateWeaponInfo()
 template <typename T>
 void ZeroObject( T* p )
 {
-	memset( p, 0x0, sizeof(T) );
+	std::memset( p, 0x0, sizeof(T) );
 }
 
 CCSWeaponInfo::CCSWeaponInfo()
@@ -445,73 +486,73 @@ CCSWeaponInfo::CCSWeaponInfo()
 
 	if ( !m_bCSWeaponInfoLookupInitialized )
 	{
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_bFullAuto ),					FIELD_BOOLEAN,	"is full auto" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_flHeatPerShot ),				FIELD_FLOAT,	"heat per shot" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_flAddonScale ),					FIELD_FLOAT,	"addon scale" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_iTracerFequency ),				FIELD_INTEGER,	"tracer frequency" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_flMaxSpeed[0] ),				FIELD_FLOAT,	"max player speed" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_flMaxSpeed[1] ),				FIELD_FLOAT,	"max player speed alt" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_iWeaponPrice ),					FIELD_INTEGER,	"in game price" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_flArmorRatio ),					FIELD_FLOAT,	"armor ratio" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_bFullAuto ),					FIELD_BOOLEAN,	"is full auto" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_flHeatPerShot ),				FIELD_FLOAT,	"heat per shot" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_flAddonScale ),					FIELD_FLOAT,	"addon scale" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_iTracerFequency ),				FIELD_INTEGER,	"tracer frequency" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_flMaxSpeed[0] ),				FIELD_FLOAT,	"max player speed" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_flMaxSpeed[1] ),				FIELD_FLOAT,	"max player speed alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_iWeaponPrice ),					FIELD_INTEGER,	"in game price" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_flArmorRatio ),					FIELD_FLOAT,	"armor ratio" ) );
 
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_iKillAward ),					FIELD_INTEGER,	"kill award" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_iKillAward ),					FIELD_INTEGER,	"kill award" ) );
 
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_iCrosshairMinDistance ),		FIELD_INTEGER,	"crosshair min distance" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_iCrosshairDeltaDistance ),		FIELD_INTEGER,	"crosshair delta distance" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_flPenetration ),				FIELD_FLOAT,	"penetration" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_iDamage ),						FIELD_INTEGER,	"damage" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_flRange ),						FIELD_FLOAT,	"range" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_flRangeModifier ),				FIELD_FLOAT,	"range modifier" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_iBullets ),						FIELD_INTEGER,	"bullets" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_flCycleTime ),					FIELD_FLOAT,	"cycletime" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_flCycleTimeAlt ),				FIELD_FLOAT,	"cycletime alt" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_flTimeToIdleAfterFire ),		FIELD_FLOAT,	"time to idle" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_flIdleInterval ),				FIELD_FLOAT,	"idle interval" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fFlinchVelocityModifierLarge ),	FIELD_FLOAT,	"flinch velocity modifier large" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fFlinchVelocityModifierSmall ),	FIELD_FLOAT,	"flinch velocity modifier small" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_iCrosshairMinDistance ),		FIELD_INTEGER,	"crosshair min distance" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_iCrosshairDeltaDistance ),		FIELD_INTEGER,	"crosshair delta distance" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_flPenetration ),				FIELD_FLOAT,	"penetration" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_iDamage ),						FIELD_INTEGER,	"damage" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_flRange ),						FIELD_FLOAT,	"range" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_flRangeModifier ),				FIELD_FLOAT,	"range modifier" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_iBullets ),						FIELD_INTEGER,	"bullets" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_flCycleTime ),					FIELD_FLOAT,	"cycletime" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_flCycleTimeAlt ),				FIELD_FLOAT,	"cycletime alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_flTimeToIdleAfterFire ),		FIELD_FLOAT,	"time to idle" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_flIdleInterval ),				FIELD_FLOAT,	"idle interval" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fFlinchVelocityModifierLarge ),	FIELD_FLOAT,	"flinch velocity modifier large" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fFlinchVelocityModifierSmall ),	FIELD_FLOAT,	"flinch velocity modifier small" ) );
 
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fZoomTime[ 0 ] ),				FIELD_FLOAT,	"zoom time 0" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fZoomTime[ 1 ] ),				FIELD_FLOAT,	"zoom time 1" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fZoomTime[ 2 ] ),				FIELD_FLOAT,	"zoom time 2" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_iZoomFov[1] ),					FIELD_INTEGER,	"zoom fov 1" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_iZoomFov[2] ),					FIELD_INTEGER,	"zoom fov 2" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_bHideViewModelZoomed ),			FIELD_BOOLEAN,	"hide view model zoomed" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_iZoomLevels ),					FIELD_INTEGER,	"zoom levels" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fZoomTime[ 0 ] ),				FIELD_FLOAT,	"zoom time 0" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fZoomTime[ 1 ] ),				FIELD_FLOAT,	"zoom time 1" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fZoomTime[ 2 ] ),				FIELD_FLOAT,	"zoom time 2" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_iZoomFov[1] ),					FIELD_INTEGER,	"zoom fov 1" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_iZoomFov[2] ),					FIELD_INTEGER,	"zoom fov 2" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_bHideViewModelZoomed ),			FIELD_BOOLEAN,	"hide view model zoomed" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_iZoomLevels ),					FIELD_INTEGER,	"zoom levels" ) );
 
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fSpread[0] ),					FIELD_FLOAT,	"spread" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyCrouch[0] ),			FIELD_FLOAT,	"inaccuracy crouch" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyStand[0] ),			FIELD_FLOAT,	"inaccuracy stand" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyJump[0] ),			FIELD_FLOAT,	"inaccuracy jump" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyLand[0] ),			FIELD_FLOAT,	"inaccuracy land" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyLadder[0] ),			FIELD_FLOAT,	"inaccuracy ladder" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyImpulseFire[0] ),	FIELD_FLOAT,	"inaccuracy fire" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyMove[0] ),			FIELD_FLOAT,	"inaccuracy move" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyReload ),			FIELD_FLOAT,	"inaccuracy reload" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fSpread[0] ),					FIELD_FLOAT,	"spread" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyCrouch[0] ),			FIELD_FLOAT,	"inaccuracy crouch" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyStand[0] ),			FIELD_FLOAT,	"inaccuracy stand" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyJump[0] ),			FIELD_FLOAT,	"inaccuracy jump" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyLand[0] ),			FIELD_FLOAT,	"inaccuracy land" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyLadder[0] ),			FIELD_FLOAT,	"inaccuracy ladder" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyImpulseFire[0] ),	FIELD_FLOAT,	"inaccuracy fire" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyMove[0] ),			FIELD_FLOAT,	"inaccuracy move" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyReload ),			FIELD_FLOAT,	"inaccuracy reload" ) );
 
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fSpread[1] ),					FIELD_FLOAT,	"spread alt" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyCrouch[1] ),			FIELD_FLOAT,	"inaccuracy crouch alt" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyStand[1] ),			FIELD_FLOAT,	"inaccuracy stand alt" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyJump[1] ),			FIELD_FLOAT,	"inaccuracy jump alt" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyLand[1] ),			FIELD_FLOAT,	"inaccuracy land alt" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyLadder[1] ),			FIELD_FLOAT,	"inaccuracy ladder alt" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyImpulseFire[1] ),	FIELD_FLOAT,	"inaccuracy fire alt" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fInaccuracyMove[1] ),			FIELD_FLOAT,	"inaccuracy move alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fSpread[1] ),					FIELD_FLOAT,	"spread alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyCrouch[1] ),			FIELD_FLOAT,	"inaccuracy crouch alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyStand[1] ),			FIELD_FLOAT,	"inaccuracy stand alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyJump[1] ),			FIELD_FLOAT,	"inaccuracy jump alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyLand[1] ),			FIELD_FLOAT,	"inaccuracy land alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyLadder[1] ),			FIELD_FLOAT,	"inaccuracy ladder alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyImpulseFire[1] ),	FIELD_FLOAT,	"inaccuracy fire alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fInaccuracyMove[1] ),			FIELD_FLOAT,	"inaccuracy move alt" ) );
 
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fRecoveryTimeCrouch ),			FIELD_FLOAT,	"recovery time crouch" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fRecoveryTimeStand ),			FIELD_FLOAT,	"recovery time stand" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fRecoveryTimeCrouchFinal ),		FIELD_FLOAT,	"recovery time crouch final" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fRecoveryTimeStandFinal ),		FIELD_FLOAT,	"recovery time stand final" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_iRecoilSeed ),					FIELD_INTEGER,	"recoil seed" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fRecoveryTimeCrouch ),			FIELD_FLOAT,	"recovery time crouch" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fRecoveryTimeStand ),			FIELD_FLOAT,	"recovery time stand" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fRecoveryTimeCrouchFinal ),		FIELD_FLOAT,	"recovery time crouch final" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fRecoveryTimeStandFinal ),		FIELD_FLOAT,	"recovery time stand final" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_iRecoilSeed ),					FIELD_INTEGER,	"recoil seed" ) );
 
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fRecoilAngle[0] ),				FIELD_FLOAT,	"recoil angle" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fRecoilAngleVariance[0] ),		FIELD_FLOAT,	"recoil angle variance" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fRecoilMagnitude[0] ),			FIELD_FLOAT,	"recoil magnitude" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fRecoilMagnitudeVariance[0] ),	FIELD_FLOAT,	"recoil magnitude variance" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fRecoilAngle[0] ),				FIELD_FLOAT,	"recoil angle" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fRecoilAngleVariance[0] ),		FIELD_FLOAT,	"recoil angle variance" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fRecoilMagnitude[0] ),			FIELD_FLOAT,	"recoil magnitude" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fRecoilMagnitudeVariance[0] ),	FIELD_FLOAT,	"recoil magnitude variance" ) );
 
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fRecoilAngle[1] ),				FIELD_FLOAT,	"recoil angle alt" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fRecoilAngleVariance[1] ),		FIELD_FLOAT,	"recoil angle variance alt" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fRecoilMagnitude[1] ),			FIELD_FLOAT,	"recoil magnitude alt" ) );
-		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( CCSWeaponInfo, m_fRecoilMagnitudeVariance[1] ),	FIELD_FLOAT,	"recoil magnitude variance alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fRecoilAngle[1] ),				FIELD_FLOAT,	"recoil angle alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fRecoilAngleVariance[1] ),		FIELD_FLOAT,	"recoil angle variance alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fRecoilMagnitude[1] ),			FIELD_FLOAT,	"recoil magnitude alt" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( __builtin_offsetof( CCSWeaponInfo, m_fRecoilMagnitudeVariance[1] ),	FIELD_FLOAT,	"recoil magnitude variance alt" ) );
 
 		std::ranges::stable_sort( ms_vecWeaponInfoLookup, CWeaponInfoLookupListLess() );
 		m_bCSWeaponInfoLookupInitialized = true;
@@ -599,8 +640,8 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	m_iZoomLevels = pKeyValuesData->GetInt( "ZoomLevels", 0 );
 
 	// sanity check
-	Assert( m_iZoomLevels < ARRAYSIZE( m_fZoomTime ) && m_iZoomLevels < ARRAYSIZE( m_iZoomFov ) );
-	m_iZoomLevels = std::min<std::common_type_t<int, long unsigned int>>( m_iZoomLevels, ARRAYSIZE( m_iZoomFov ) );
+	contract_assert( m_iZoomLevels < std::size( m_fZoomTime ) && m_iZoomLevels < std::size( m_iZoomFov ) );
+	m_iZoomLevels = std::min<std::common_type_t<int, long unsigned int>>( m_iZoomLevels, std::size( m_iZoomFov ) );
 
 	m_iZoomFov[0] = 0;	// not used -- always default FoV
 	m_fZoomTime[0] = pKeyValuesData->GetFloat( "ZoomTime0", 0.0f );
@@ -618,7 +659,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 	if ( m_iWeaponPrice == -1 )
 	{
 		// This weapon should have the price in its script.
-		Assert( false );
+		contract_assert( false );
 	}
 
 	m_flArmorRatio				= pKeyValuesData->GetFloat( "WeaponArmorRatio", 1 );
@@ -674,7 +715,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 
 		CRC32_t crc;
 		CRC32_Init( &crc );
-		CRC32_ProcessBuffer( &crc, (void *)weaponName, Q_strlen( weaponName )  );
+		CRC32_ProcessBuffer( &crc, (void *)weaponName, V_strlen( weaponName )  );
 		CRC32_Final( &crc );
 
 		m_iRecoilSeed = (int)crc & 0xFFFF;
@@ -715,7 +756,7 @@ void CCSWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName )
 		{ "TERRORIST",	TEAM_TERRORIST },
 		{ "ANY", TEAM_UNASSIGNED },
 	};
-	m_iTeam = ParseEnumeration(pKeyValuesData, "Team", teamEnums, ARRAYSIZE(teamEnums), TEAM_UNASSIGNED );
+	m_iTeam = ParseEnumeration(pKeyValuesData, "Team", teamEnums, std::size( teamEnums ), TEAM_UNASSIGNED );
 
 	const char *pWrongTeamMsg = pKeyValuesData->GetString( "WrongTeamMsg", "" );
 	V_strncpy( m_WrongTeamMsg, pWrongTeamMsg, sizeof( m_WrongTeamMsg ) );
@@ -796,7 +837,7 @@ void CCSWeaponInfo::GenerateRecoilTable()
 		float fAngle = 0.0f;
 		float fMagnitude = 0.0f;
 
-		for ( int j = 0; j < ARRAYSIZE( m_recoilTable[iMode] ); ++j )
+		for ( int j = 0; j < std::size( m_recoilTable[iMode] ); ++j )
 		{
 			float fAngleNew = m_fRecoilAngle[iMode] + recoilRandom.RandomFloat(-m_fRecoilAngleVariance[iMode], +m_fRecoilAngleVariance[iMode]);
 			float fMagnitudeNew = m_fRecoilMagnitude[iMode] + recoilRandom.RandomFloat(-m_fRecoilMagnitudeVariance[iMode], +m_fRecoilMagnitudeVariance[iMode]);
@@ -827,7 +868,7 @@ void CCSWeaponInfo::GenerateRecoilTable()
 // recoiltable in csweaponinfo is obsolete. remove this once confirmed that the new implementation generates the same result.
 void CCSWeaponInfo::GetRecoilOffsets( int iMode, int iIndex, float& fAngle, float &fMagnitude ) const
 {
-	iIndex = iIndex % ARRAYSIZE( m_recoilTable[iMode] );
+	iIndex = iIndex % std::size( m_recoilTable[iMode] );
 	fAngle = m_recoilTable[iMode][iIndex].fAngle;
 	fMagnitude = m_recoilTable[iMode][iIndex].fMagnitude;
 }
@@ -868,7 +909,7 @@ static bool GetAttribute_bool( const CCSWeaponInfo* pWeaponInfo, const char * is
 	}
 	else if ( index > -1 )
 	{
-		Assert( pWeaponInfo->ms_vecWeaponInfoLookup[ index ]->m_fieldType == FIELD_BOOLEAN );
+		contract_assert( pWeaponInfo->ms_vecWeaponInfoLookup[ index ]->m_fieldType == FIELD_BOOLEAN );
 		if ( pWeaponInfo->ms_vecWeaponInfoLookup[ index ]->m_fieldType != FIELD_BOOLEAN )
 			return false;
 
@@ -921,7 +962,7 @@ static int GetAttribute_int( const CCSWeaponInfo* pWeaponInfo, const char * iszA
 	}
 	else if ( index > -1 )
 	{
-		Assert( pWeaponInfo->ms_vecWeaponInfoLookup[ index ]->m_fieldType == FIELD_INTEGER );
+		contract_assert( pWeaponInfo->ms_vecWeaponInfoLookup[ index ]->m_fieldType == FIELD_INTEGER );
 		if ( pWeaponInfo->ms_vecWeaponInfoLookup[ index ]->m_fieldType != FIELD_INTEGER )
 			return false;
 
@@ -974,7 +1015,7 @@ static float GetAttribute_float( const CCSWeaponInfo* pWeaponInfo, const char * 
 	}
 	else if ( index > -1 )
 	{
-		Assert( pWeaponInfo->ms_vecWeaponInfoLookup[ index ]->m_fieldType == FIELD_FLOAT );
+		contract_assert( pWeaponInfo->ms_vecWeaponInfoLookup[ index ]->m_fieldType == FIELD_FLOAT );
 		if ( pWeaponInfo->ms_vecWeaponInfoLookup[ index ]->m_fieldType != FIELD_FLOAT )
 			return false;
 
@@ -1131,7 +1172,7 @@ WeaponRecoilData::~WeaponRecoilData()
 static inline float AttrValueAsFloat( attrib_value_t val )
 {
 	float flValue;
-	Q_memcpy( &flValue, &val, sizeof( float ) );
+	V_memcpy( &flValue, &val, sizeof( float ) );
 	return flValue;
 }
 
@@ -1181,7 +1222,7 @@ void WeaponRecoilData::GenerateRecoilTable( RecoilData *data )
 		float fAngle = 0.0f;
 		float fMagnitude = 0.0f;
 
-		for ( int j = 0; j < ARRAYSIZE( data->recoilTable[iMode] ); ++j )
+		for ( int j = 0; j < std::size( data->recoilTable[iMode] ); ++j )
 		{
 			float fAngleNew = flRecoilAngle[iMode] + recoilRandom.RandomFloat(- flRecoilAngleVariance[iMode], + flRecoilAngleVariance[iMode] );
 			float fMagnitudeNew = flRecoilMagnitude[iMode] + recoilRandom.RandomFloat(- flRecoilMagnitudeVariance[iMode], + flRecoilMagnitudeVariance[iMode] );
@@ -1220,7 +1261,7 @@ void WeaponRecoilData::GetRecoilOffsets( CWeaponCSBase *pWeapon, int iMode, int 
 	auto iMapLocation = m_mapRecoilTables.find( iDefIndex );
 	if ( iMapLocation == m_mapRecoilTables.end() )
 	{
-		Assert( !"Generating recoil table too late" ); // failed to find recoil table, need to re-generate!
+		contract_assert( !"Generating recoil table too late" ); // failed to find recoil table, need to re-generate!
 		wepData = m_mapRecoilTables.insert_or_assign( iDefIndex, std::make_unique< RecoilData >() ).first->second.get();
 		wepData->iItemDefIndex = iDefIndex;
 		GenerateRecoilTable( wepData );
@@ -1228,11 +1269,11 @@ void WeaponRecoilData::GetRecoilOffsets( CWeaponCSBase *pWeapon, int iMode, int 
 	else
 	{
 		wepData = iMapLocation->second.get();
-		Assert( wepData );
-		Assert( wepData->iItemDefIndex == iDefIndex );
+		contract_assert( wepData );
+		contract_assert( wepData->iItemDefIndex == iDefIndex );
 	}
 
-	iIndex = iIndex % ARRAYSIZE( wepData->recoilTable[iMode] );
+	iIndex = iIndex % std::size( wepData->recoilTable[iMode] );
 	fAngle = wepData->recoilTable[iMode][iIndex].fAngle;
 	fMagnitude = wepData->recoilTable[iMode][iIndex].fMagnitude;
 }
@@ -1255,6 +1296,3 @@ void GenerateWeaponRecoilPatternForItemDefinition( item_definition_index_t idx )
 {
 	g_WeaponRecoilData.GenerateRecoilPatternForItemDefinition( idx );
 }
-
-
-

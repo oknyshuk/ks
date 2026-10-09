@@ -1,15 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Exposes interfaces to the engine which allow the client to setup their own render targets
-//			during the proper period of material system's init. 
-//
-// $NoKeywords: $
-//=============================================================================//
+//			during the proper period of material system's init.
 
-#ifndef ICLIENTRENDERTARGETS_H
-#define ICLIENTRENDERTARGETS_H
-
-#include "interface.h"		// For base interface
+import std;
+import ks.tier1;
 
 class IMaterialSystem;
 class IMaterialSystemHardwareConfig;
@@ -18,7 +15,7 @@ class IMaterialSystemHardwareConfig;
 // Purpose: Exposes interfaces to the engine which allow the client to setup their own render targets
 //			during the proper period of material system's init.
 //---------------------------------------------------------------------------------------------------
-abstract_class IClientRenderTargets
+class IClientRenderTargets
 {
 public:
 	// Pass the material system interface to the client-- Their Material System singleton has not been created
@@ -31,8 +28,6 @@ public:
 
 };
 
-#define CLIENTRENDERTARGETS_INTERFACE_VERSION "ClientRenderTargets001"
+inline constexpr const char *CLIENTRENDERTARGETS_INTERFACE_VERSION = "ClientRenderTargets001";
 
 extern IClientRenderTargets * g_pClientRenderTargets;
-
-#endif // ICLIENTRENDERTARGETS_H

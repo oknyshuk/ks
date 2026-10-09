@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef C_TESLA_H
-#define C_TESLA_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "c_baseentity.h"
 #include "fx.h"
-#include <vector>
-
+import std;
 
 class [[= ks::reflect::NetTable{ .name = "DT_Tesla" } ]]
       C_Tesla : public C_BaseEntity
@@ -35,6 +28,3 @@ public:
 	[[= ks::reflect::Net{} ]] char m_SoundName[64];
 	[[= ks::reflect::Net{} ]] char m_iszSpriteName[256];
 };
-
-
-#endif // C_TESLA_H

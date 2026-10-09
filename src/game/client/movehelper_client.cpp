@@ -1,13 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
-#include <stdarg.h>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "engine/IEngineSound.h"
-#include "filesystem.h"
 #include "igamemovement.h"
 #include "engine/IEngineTrace.h"
 #include "engine/ivmodelinfo.h"
@@ -161,7 +169,7 @@ void CMoveHelperClient::ProcessImpacts( void )
 		if ( !entity )
 			continue;
 
-		Assert( entity != m_pHost );
+		contract_assert( entity != m_pHost );
 		// Don't ever collide with self!!!!
 		if ( entity == m_pHost )
 			continue;
@@ -251,9 +259,9 @@ void CMoveHelperClient::Con_NPrintf( int idx, char const* pFormat, ...)
 	va_list marker;
 	char msg[8192];
 
-	va_start(marker, pFormat);
-	Q_vsnprintf(msg, sizeof( msg ), pFormat, marker);
-	va_end(marker);
+	__builtin_va_start(marker, pFormat);
+	V_vsnprintf(msg, sizeof( msg ), pFormat, marker);
+	__builtin_va_end(marker);
 	
 #if defined( CSTRIKE_DLL )
 	engine->Con_NPrintf( idx, "%s", msg );

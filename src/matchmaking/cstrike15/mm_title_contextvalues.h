@@ -1,13 +1,9 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-#ifndef _MM_TITLE_CONTEXTVALUES_H
-#define _MM_TITLE_CONTEXTVALUES_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "csgo.spa.h"
+#include "../extkeyvalues.h"
 
 static ContextValue_t g_MapGroupContexts[] = 
 {
@@ -92,5 +88,3 @@ static ContextValue_t g_PrivacyContexts[] =
 	{ "friends",		CONTEXT_CSS_PRIVACY_FRIENDS },
 	{ nullptr,				0xFFFF },
 };
-
-#endif // _MM_TITLE_CONTEXTVALUES_H

@@ -1,9 +1,9 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#ifndef EMISSIVE_SCROLL_BLENDED_PASS_HELPER_H
-#define EMISSIVE_SCROLL_BLENDED_PASS_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -18,7 +18,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct EmissiveScrollBlendedPassVars_t
 {
-	EmissiveScrollBlendedPassVars_t() { memset( this, 0xFF, sizeof(EmissiveScrollBlendedPassVars_t) ); }
+	EmissiveScrollBlendedPassVars_t() { std::memset( this, 0xFF, sizeof(EmissiveScrollBlendedPassVars_t) ); }
 
 	int m_nBlendStrength; // Amount this layer is blended in globally
 	int m_nBaseTexture;
@@ -38,5 +38,3 @@ void InitParamsEmissiveScrollBlendedPass( CBaseVSShader *pShader, IMaterialVar**
 void InitEmissiveScrollBlendedPass( CBaseVSShader *pShader, IMaterialVar** params, EmissiveScrollBlendedPassVars_t &info );
 void DrawEmissiveScrollBlendedPass( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 									IShaderShadow* pShaderShadow, EmissiveScrollBlendedPassVars_t &info, VertexCompressionType_t vertexCompression );
-
-#endif // EMISSIVE_SCROLL_BLENDED_PASS_HELPER_H

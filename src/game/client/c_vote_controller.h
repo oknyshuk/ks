@@ -1,16 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Client VoteController
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_VoteController_H
-#define C_VoteController_H
+// Purpose: Client VoteController
 
 #include "shareddefs.h"
 #include "GameEventListener.h"
 #include "reflect_annotations.h"
+#include "dt_recv.h"
+#include "client_class.h"
+#include "c_baseentity.h"
 
 class [[= ks::reflect::NetTable{ .name = "DT_VoteController" } ]]
       C_VoteController : public C_BaseEntity, public CGameEventListener
@@ -43,5 +42,3 @@ protected:
 	bool			m_bTypeDirty;	// Vote type changed, so show or hide the Hud
 	[[= ks::reflect::Net{} ]] bool			m_bIsYesNoVote;
 };
-
-#endif // C_VoteController_H

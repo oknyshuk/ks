@@ -1,24 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: dll-agnostic routines (no dll dependencies here)
-//
-// $NoKeywords: $
-//=============================================================================//
 
 // Author: Matthew D. Campbell (matt@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.tier1;
 
-#include <ctype.h>
 #include "shared_util.h"
 
 static char s_shared_token[ 1500 ];
 static char s_shared_quote = '\"';
 
 //--------------------------------------------------------------------------------------------------------------
-char * SharedVarArgs(PRINTF_FORMAT_STRING const char *format, ...)
+char * SharedVarArgs(const char *format, ...)
 {
-	va_list argptr;
+	std::va_list argptr;
 	const int BufLen = 1024;
 	const int NumBuffers = 4;
 	static char string[NumBuffers][BufLen];
@@ -26,29 +24,29 @@ char * SharedVarArgs(PRINTF_FORMAT_STRING const char *format, ...)
 	
 	curstring = ( curstring + 1 ) % NumBuffers;
 
-	va_start (argptr, format);
-	_vsnprintf( string[curstring], BufLen, format, argptr );
-	va_end (argptr);
+	__builtin_va_start (argptr, format);
+	std::vsnprintf( string[curstring], BufLen, format, argptr );
+	__builtin_va_end (argptr);
 
 	return string[curstring];  
 }
 
 //--------------------------------------------------------------------------------------------------------------
-char * BufPrintf(char *buf, int& len, PRINTF_FORMAT_STRING const char *fmt, ...)
+char * BufPrintf(char *buf, int& len, const char *fmt, ...)
 {
 	if (len <= 0)
 		return nullptr;
 
-	va_list argptr;
+	std::va_list argptr;
 
-	va_start(argptr, fmt);
-	_vsnprintf(buf, len, fmt, argptr);
-	va_end(argptr);
+	__builtin_va_start(argptr, fmt);
+	std::vsnprintf(buf, len, fmt, argptr);
+	__builtin_va_end(argptr);
 	// Make sure the buffer is null-terminated.
 	buf[ len - 1 ] = 0;
 
-	len -= strlen(buf);
-	return buf + strlen(buf);
+	len -= std::strlen(buf);
+	return buf + std::strlen(buf);
 }
 
 

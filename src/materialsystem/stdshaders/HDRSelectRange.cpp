@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2004, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
 #include "BaseVSShader.h"
-#include "common_hlsl_cpp_consts.h"
 
 #include "HDRSelectRange_ps20.inc"
 #include "HDRSelectRange_ps20b.inc"
 
-
 BEGIN_VS_SHADER_FLAGS( HDRSelectRange, "Help for HDRSelectRange", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( SOURCEMRTRENDERTARGET, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 	END_SHADER_PARAMS
 

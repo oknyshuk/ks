@@ -1,18 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef CS_CLIENTMODE_H
-#define CS_CLIENTMODE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "clientmode_shared.h"
 #include "counterstrikeviewport.h"
 #include "matchmaking/imatchframework.h"
 #include "c_cs_player.h"
 #include "usermessages.h"
-#include <map>
+import std;
+#include "util_shared.h"
 
 enum PostProcessEffect_t
 {
@@ -97,7 +93,7 @@ public:
 
 	virtual void	FireGameEvent( IGameEvent *event );
 	virtual void	PostRenderVGui();
-	virtual void	PreRender(CViewSetup *pSetup) OVERRIDE;
+	virtual void	PreRender(CViewSetup *pSetup) override;
 
 	virtual bool	ShouldDrawViewModel( void );
 
@@ -199,6 +195,3 @@ public:
 
 extern IClientMode *GetClientModeNormal();
 extern ClientModeCSNormal* GetClientModeCSNormal();
-
-
-#endif // CS_CLIENTMODE_H

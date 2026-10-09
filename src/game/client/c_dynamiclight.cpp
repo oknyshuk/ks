@@ -1,20 +1,24 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Dynamic light
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Dynamic light
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "dlight.h"
 #include "iefx.h"
 #include "iviewrender.h"
-
-
-
 
 //-----------------------------------------------------------------------------
 // A dynamic light, with the goofy hack needed for spotlights
@@ -118,14 +122,8 @@ void C_DynamicLight::ClientThink(void)
 		// Deal with the model light
  		if ( !m_pDynamicLight || (m_pDynamicLight->key != index) )
 		{
-#if DLIGHT_NO_WORLD_USES_ELIGHT
-			m_pDynamicLight = ShouldBeElight() != 0
-				? effects->CL_AllocElight( index )
-				: effects->CL_AllocDlight( index );
-#else
 			m_pDynamicLight = effects->CL_AllocDlight( index );
-#endif
-			Assert (m_pDynamicLight);
+			contract_assert( m_pDynamicLight );
 			m_pDynamicLight->minlight = 0;
 		}
 
@@ -155,18 +153,14 @@ void C_DynamicLight::ClientThink(void)
 		}
 	}
 	
-#if DLIGHT_NO_WORLD_USES_ELIGHT
-	if (( m_OuterAngle > 0 ) && !ShouldBeElight())
-#else
 	if (( m_OuterAngle > 0 ) && ((m_Flags & DLIGHT_NO_WORLD_ILLUMINATION) == 0))
-#endif
 	{
 		// Raycast to where the endpoint goes
 		// Deal with the environment light
 		if ( !m_pSpotlightEnd || (m_pSpotlightEnd->key != -index) )
 		{
 			m_pSpotlightEnd = effects->CL_AllocDlight( -index );
-			Assert (m_pSpotlightEnd);
+			contract_assert( m_pSpotlightEnd );
 		}
 				  
 		// Trace a line outward, don't use hitboxes (too slow)
@@ -218,4 +212,3 @@ void C_DynamicLight::ClientThink(void)
 
 	SetNextClientThink(gpGlobals->curtime + 0.001);
 }
-

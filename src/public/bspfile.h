@@ -1,157 +1,100 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Defines and structures for the BSP file format.
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef BSPFILE_H
-#define BSPFILE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef MATHLIB_H
-#include "mathlib/mathlib.h"
-#endif
+// Purpose: Defines and structures for the BSP file format.
 
-#include "mathlib/vector4d.h"
+import std;
+import ks.math;
+
 #include "datamap.h"
-#include "mathlib/bumpvects.h"
-#include "mathlib/compressed_light_cube.h"
 #include "datalinker_interface.h"
 
 // little-endian "VBSP"
-#define IDBSPHEADER	(('P'<<24)+('S'<<16)+('B'<<8)+'V')		
+inline constexpr auto IDBSPHEADER = (('P'<<24)+('S'<<16)+('B'<<8)+'V');
 
 // MINBSPVERSION is the minimum acceptable version.  The engine will load MINBSPVERSION through BSPVERSION
-#define MINBSPVERSION 19
-#define BSPVERSION 21
+inline constexpr auto MINBSPVERSION = 19;
+inline constexpr auto BSPVERSION = 21;
 
 
 // This is one more than what vbsp cuts for to allow for rounding errors
-#define MAX_BRUSH_LIGHTMAP_DIM_INCLUDING_BORDER	35
+inline constexpr auto MAX_BRUSH_LIGHTMAP_DIM_INCLUDING_BORDER = 35;
 // Need to dynamically allocate the weights and light values in radial_t to make this variable.
-#define MAX_BRUSH_LIGHTMAP_DIM_WITHOUT_BORDER ( MAX_BRUSH_LIGHTMAP_DIM_INCLUDING_BORDER - 3 )
+inline constexpr auto MAX_BRUSH_LIGHTMAP_DIM_WITHOUT_BORDER = ( MAX_BRUSH_LIGHTMAP_DIM_INCLUDING_BORDER - 3 );
 
 // We can have larger lightmaps on displacements
-#define MAX_DISP_LIGHTMAP_DIM_INCLUDING_BORDER	128
-#define MAX_DISP_LIGHTMAP_DIM_WITHOUT_BORDER ( MAX_DISP_LIGHTMAP_DIM_INCLUDING_BORDER - 3 )
+inline constexpr auto MAX_DISP_LIGHTMAP_DIM_INCLUDING_BORDER = 128;
+inline constexpr auto MAX_DISP_LIGHTMAP_DIM_WITHOUT_BORDER = ( MAX_DISP_LIGHTMAP_DIM_INCLUDING_BORDER - 3 );
 
 
 // This is the actual max.. (change if you change the brush lightmap dim or disp lightmap dim
-#define MAX_LIGHTMAP_DIM_WITHOUT_BORDER		MAX_DISP_LIGHTMAP_DIM_WITHOUT_BORDER
-#define MAX_LIGHTMAP_DIM_INCLUDING_BORDER	MAX_DISP_LIGHTMAP_DIM_INCLUDING_BORDER
+inline constexpr auto MAX_LIGHTMAP_DIM_WITHOUT_BORDER = MAX_DISP_LIGHTMAP_DIM_WITHOUT_BORDER;
+inline constexpr auto MAX_LIGHTMAP_DIM_INCLUDING_BORDER = MAX_DISP_LIGHTMAP_DIM_INCLUDING_BORDER;
 
-#define	MAX_LIGHTSTYLES	64
+inline constexpr auto MAX_LIGHTSTYLES = 64;
 
 
 // upper design bounds
-#define MIN_MAP_DISP_POWER		2	// Minimum and maximum power a displacement can be.
-#define MAX_MAP_DISP_POWER		4	
+inline constexpr auto MIN_MAP_DISP_POWER = 2; // Minimum and maximum power a displacement can be.
+inline constexpr auto MAX_MAP_DISP_POWER = 4;
 
 // Max # of neighboring displacement touching a displacement's corner.
-#define MAX_DISP_CORNER_NEIGHBORS	4
+inline constexpr auto MAX_DISP_CORNER_NEIGHBORS = 4;
 
-#define NUM_DISP_POWER_VERTS(power)	( ((1 << (power)) + 1) * ((1 << (power)) + 1) )
-#define NUM_DISP_POWER_TRIS(power)	( (1 << (power)) * (1 << (power)) * 2 )
+template <typename T1> [[gnu::always_inline]] inline constexpr auto NUM_DISP_POWER_VERTS( T1 power ) { return ( ((1 << (power)) + 1) * ((1 << (power)) + 1) ); }
+template <typename T1> [[gnu::always_inline]] inline constexpr auto NUM_DISP_POWER_TRIS( T1 power ) { return ( (1 << (power)) * (1 << (power)) * 2 ); }
 
-#if !defined( BSP_USE_LESS_MEMORY )
 // Common limits
 // leaffaces, leafbrushes, planes, and verts are still bounded by
 // 16 bit short limits
-#define	MAX_MAP_MODELS					1024
-#define	MAX_MAP_BRUSHES					8192
-#define	MAX_MAP_ENTITIES				20480 // bumped from 16384
-#define	MAX_MAP_TEXINFO					12288
-#define MAX_MAP_TEXDATA					2048
-#define MAX_MAP_DISPINFO				32768
-#define MAX_MAP_DISP_VERTS				( MAX_MAP_DISPINFO * ((1<<MAX_MAP_DISP_POWER)+1) * ((1<<MAX_MAP_DISP_POWER)+1) )
-#define MAX_MAP_DISP_TRIS				( (1 << MAX_MAP_DISP_POWER) * (1 << MAX_MAP_DISP_POWER) * 2 )
+inline constexpr auto MAX_MAP_MODELS = 1024;
+inline constexpr auto MAX_MAP_BRUSHES = 8192;
+inline constexpr auto MAX_MAP_ENTITIES = 20480; // bumped from 16384
+inline constexpr auto MAX_MAP_TEXINFO = 12288;
+inline constexpr auto MAX_MAP_TEXDATA = 2048;
+inline constexpr auto MAX_MAP_DISPINFO = 32768;
+inline constexpr auto MAX_MAP_DISP_VERTS = ( MAX_MAP_DISPINFO * ((1<<MAX_MAP_DISP_POWER)+1) * ((1<<MAX_MAP_DISP_POWER)+1) );
+inline constexpr auto MAX_MAP_DISP_TRIS = ( (1 << MAX_MAP_DISP_POWER) * (1 << MAX_MAP_DISP_POWER) * 2 );
 #define MAX_DISPVERTS					NUM_DISP_POWER_VERTS( MAX_MAP_DISP_POWER )
-#define MAX_DISPTRIS					NUM_DISP_POWER_TRIS( MAX_MAP_DISP_POWER )
-#define	MAX_MAP_AREAS					1024
-#define MAX_MAP_AREA_BYTES				(MAX_MAP_AREAS/8)
-#define	MAX_MAP_AREAPORTALS				1024
+inline constexpr auto MAX_DISPTRIS = NUM_DISP_POWER_TRIS( MAX_MAP_DISP_POWER );
+inline constexpr auto MAX_MAP_AREAS = 1024;
+inline constexpr auto MAX_MAP_AREA_BYTES = (MAX_MAP_AREAS/8);
+inline constexpr auto MAX_MAP_AREAPORTALS = 1024;
 // Planes come in pairs, thus an even number.
-#define	MAX_MAP_PLANES					65536
-#define	MAX_MAP_NODES					65536
-#define	MAX_MAP_BRUSHSIDES				65536 
-#define	MAX_MAP_LEAFS					65536
-#define	MAX_MAP_VERTS					65536
-#define MAX_MAP_VERTNORMALS				256000
-#define MAX_MAP_VERTNORMALINDICES		256000
-#define	MAX_MAP_FACES					65536
-#define	MAX_MAP_LEAFFACES				65536
-#define	MAX_MAP_LEAFBRUSHES 			65536
-#define	MAX_MAP_PORTALS					65536
-#define MAX_MAP_CLUSTERS				65536
-#define MAX_MAP_LEAFWATERDATA			32768
-#define MAX_MAP_PORTALVERTS				128000
-#define	MAX_MAP_EDGES					256000
-#define	MAX_MAP_SURFEDGES				512000
-#define	MAX_MAP_LIGHTING				0x1000000
-#define	MAX_MAP_VISIBILITY				0x1000000			// increased BSPVERSION 7
-#define	MAX_MAP_TEXTURES				1024
-#define MAX_MAP_WORLDLIGHTS				8192
-#define MAX_MAP_CUBEMAPSAMPLES			1024
-#define MAX_MAP_OVERLAYS				1024 
-#define MAX_MAP_WATEROVERLAYS			16384
-#define MAX_MAP_TEXDATA_STRING_DATA		256000
-#define MAX_MAP_TEXDATA_STRING_TABLE	65536
+inline constexpr auto MAX_MAP_PLANES = 65536;
+inline constexpr auto MAX_MAP_NODES = 65536;
+inline constexpr auto MAX_MAP_BRUSHSIDES = 65536;
+inline constexpr auto MAX_MAP_LEAFS = 65536;
+inline constexpr auto MAX_MAP_VERTS = 65536;
+inline constexpr auto MAX_MAP_VERTNORMALS = 256000;
+inline constexpr auto MAX_MAP_VERTNORMALINDICES = 256000;
+inline constexpr auto MAX_MAP_FACES = 65536;
+inline constexpr auto MAX_MAP_LEAFFACES = 65536;
+inline constexpr auto MAX_MAP_LEAFBRUSHES = 65536;
+inline constexpr auto MAX_MAP_PORTALS = 65536;
+inline constexpr auto MAX_MAP_CLUSTERS = 65536;
+inline constexpr auto MAX_MAP_LEAFWATERDATA = 32768;
+inline constexpr auto MAX_MAP_PORTALVERTS = 128000;
+inline constexpr auto MAX_MAP_EDGES = 256000;
+inline constexpr auto MAX_MAP_SURFEDGES = 512000;
+inline constexpr auto MAX_MAP_LIGHTING = 0x1000000;
+inline constexpr auto MAX_MAP_VISIBILITY = 0x1000000; // increased BSPVERSION 7
+inline constexpr auto MAX_MAP_TEXTURES = 1024;
+inline constexpr auto MAX_MAP_WORLDLIGHTS = 8192;
+inline constexpr auto MAX_MAP_CUBEMAPSAMPLES = 1024;
+inline constexpr auto MAX_MAP_OVERLAYS = 1024;
+inline constexpr auto MAX_MAP_WATEROVERLAYS = 16384;
+inline constexpr auto MAX_MAP_TEXDATA_STRING_DATA = 256000;
+inline constexpr auto MAX_MAP_TEXDATA_STRING_TABLE = 65536;
 // this is stuff for trilist/tristrips, etc.
-#define MAX_MAP_PRIMITIVES				32768
-#define MAX_MAP_PRIMVERTS				65536
-#define MAX_MAP_PRIMINDICES				65536
-
-#else
-
-// Xbox 360 - Force static arrays to be very small
-#define	MAX_MAP_MODELS					2
-#define	MAX_MAP_BRUSHES					2
-#define	MAX_MAP_ENTITIES				2
-#define	MAX_MAP_TEXINFO					2
-#define MAX_MAP_TEXDATA					2
-#define MAX_MAP_DISPINFO				2
-#define MAX_MAP_DISP_VERTS				( MAX_MAP_DISPINFO * ((1<<MAX_MAP_DISP_POWER)+1) * ((1<<MAX_MAP_DISP_POWER)+1) )
-#define MAX_MAP_DISP_TRIS				( (1 << MAX_MAP_DISP_POWER) * (1 << MAX_MAP_DISP_POWER) * 2 )
-#define MAX_DISPVERTS					NUM_DISP_POWER_VERTS( MAX_MAP_DISP_POWER )
-#define MAX_DISPTRIS					NUM_DISP_POWER_TRIS( MAX_MAP_DISP_POWER )
-#define	MAX_MAP_AREAS					2
-#define MAX_MAP_AREA_BYTES				2
-#define	MAX_MAP_AREAPORTALS				2
-#define	MAX_MAP_PLANES					2
-#define	MAX_MAP_NODES					2
-#define	MAX_MAP_BRUSHSIDES				2
-#define	MAX_MAP_LEAFS					2
-#define	MAX_MAP_VERTS					2
-#define MAX_MAP_VERTNORMALS				2
-#define MAX_MAP_VERTNORMALINDICES		2
-#define	MAX_MAP_FACES					2
-#define	MAX_MAP_LEAFFACES				2
-#define	MAX_MAP_LEAFBRUSHES				2
-#define	MAX_MAP_PORTALS					2
-#define MAX_MAP_CLUSTERS				2
-#define MAX_MAP_LEAFWATERDATA			2
-#define MAX_MAP_PORTALVERTS				2
-#define	MAX_MAP_EDGES					2
-#define	MAX_MAP_SURFEDGES				2
-#define	MAX_MAP_LIGHTING				2
-#define	MAX_MAP_VISIBILITY				2
-#define	MAX_MAP_TEXTURES				2
-#define MAX_MAP_WORLDLIGHTS				2
-#define MAX_MAP_CUBEMAPSAMPLES			2
-#define MAX_MAP_OVERLAYS				2 
-#define MAX_MAP_WATEROVERLAYS			2
-#define MAX_MAP_TEXDATA_STRING_DATA		2
-#define MAX_MAP_TEXDATA_STRING_TABLE	2
-#define MAX_MAP_PRIMITIVES				2
-#define MAX_MAP_PRIMVERTS				2
-#define MAX_MAP_PRIMINDICES				2
-
-#endif // BSP_USE_LESS_MEMORY
+inline constexpr auto MAX_MAP_PRIMITIVES = 32768;
+inline constexpr auto MAX_MAP_PRIMVERTS = 65536;
+inline constexpr auto MAX_MAP_PRIMINDICES = 65536;
 
 // key / value pair sizes
-#define	MAX_KEY		32
-#define	MAX_VALUE	1024
+inline constexpr auto MAX_KEY = 32;
+inline constexpr auto MAX_VALUE = 1024;
 
 
 // ------------------------------------------------------------------------------------------------ //
@@ -373,7 +316,7 @@ enum
 };
 
 
-#define	HEADER_LUMPS		64
+inline constexpr auto HEADER_LUMPS = 64;
 
 #include "zip_uncompressed.h"
 
@@ -393,13 +336,13 @@ struct BSPHeader_t
 };
 
 // level feature flags
-#define LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_NONHDR 0x00000001	// was processed by vrad with -staticproplighting, no hdr data
-#define LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_HDR    0x00000002   // was processed by vrad with -staticproplighting, in hdr
-#define LVLFLAGS_LIGHTMAP_ALPHA                    0x00000004   // indicates that lightmap alpha data is interleved in the lighting lump
-#define LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_3      0x00000008   // was processed by vrad with -staticproplighting3
-#define LVLFLAGS_LIGHTMAP_ALPHA_3                  0x00000010   // indicates that 3 sets of lightmap alpha data are interleved in the lighting lump
-#define LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_3_NO_SUN  0x00000020// indicates that vertexlitgeneric static prop lighting does not contain direct sunlight in lighting vertex stream
-#define LVLFLAGS_LIGHTSTYLES_WITH_CSM			   0x00000040   // indicates that lightstyles now compatible with CSMs
+inline constexpr auto LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_NONHDR = 0x00000001; // was processed by vrad with -staticproplighting, no hdr data
+inline constexpr auto LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_HDR = 0x00000002; // was processed by vrad with -staticproplighting, in hdr
+inline constexpr auto LVLFLAGS_LIGHTMAP_ALPHA = 0x00000004; // indicates that lightmap alpha data is interleved in the lighting lump
+inline constexpr auto LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_3 = 0x00000008; // was processed by vrad with -staticproplighting3
+inline constexpr auto LVLFLAGS_LIGHTMAP_ALPHA_3 = 0x00000010; // indicates that 3 sets of lightmap alpha data are interleved in the lighting lump
+inline constexpr auto LVLFLAGS_BAKED_STATIC_PROP_LIGHTING_3_NO_SUN = 0x00000020; // indicates that vertexlitgeneric static prop lighting does not contain direct sunlight in lighting vertex stream
+inline constexpr auto LVLFLAGS_LIGHTSTYLES_WITH_CSM = 0x00000040; // indicates that lightstyles now compatible with CSMs
 
 struct dflagslump_t
 {
@@ -428,7 +371,7 @@ typedef int GameLumpId_t;
 // 360 only: game lump is compressed, filelen reflects original size
 // use next entry fileofs to determine actual disk lump compressed size
 // compression stage ensures a terminal null dictionary entry
-#define GAMELUMPFLAG_COMPRESSED	0x0001
+inline constexpr auto GAMELUMPFLAG_COMPRESSED = 0x0001;
 
 struct dgamelump_t
 {
@@ -538,9 +481,7 @@ struct dplane_t
 	int		type;		// PLANE_X - PLANE_ANYZ ?remove? trivial to regenerate
 };
 
-#ifndef BSPFLAGS_H
 #include "bspflags.h"
-#endif
 
 struct dnode_t
 {
@@ -562,7 +503,7 @@ typedef struct texinfo_s
 	int			texdata;			// Pointer to texture name, size, etc.
 } texinfo_t;
 
-#define TEXTURE_NAME_LENGTH	 128			// changed from 64 BSPVERSION 8
+inline constexpr auto TEXTURE_NAME_LENGTH = 128; // changed from 64 BSPVERSION 8
 
 struct dtexdata_t
 {
@@ -671,13 +612,13 @@ public:
 	float		m_flAlpha;		// "per vertex" alpha values.
 };
 
-#define DISPTRI_TAG_SURFACE			(1<<0)
-#define DISPTRI_TAG_WALKABLE		(1<<1)
-#define DISPTRI_TAG_BUILDABLE		(1<<2)
-#define DISPTRI_FLAG_SURFPROP1		(1<<3)
-#define DISPTRI_FLAG_SURFPROP2		(1<<4)
-#define DISPTRI_FLAG_SURFPROP3		(1<<5)
-#define DISPTRI_FLAG_SURFPROP4		(1<<6)
+inline constexpr auto DISPTRI_TAG_SURFACE = (1<<0);
+inline constexpr auto DISPTRI_TAG_WALKABLE = (1<<1);
+inline constexpr auto DISPTRI_TAG_BUILDABLE = (1<<2);
+inline constexpr auto DISPTRI_FLAG_SURFPROP1 = (1<<3);
+inline constexpr auto DISPTRI_FLAG_SURFPROP2 = (1<<4);
+inline constexpr auto DISPTRI_FLAG_SURFPROP3 = (1<<5);
+inline constexpr auto DISPTRI_FLAG_SURFPROP4 = (1<<6);
 
 class CDispTri
 {
@@ -685,7 +626,7 @@ public:
 	unsigned short m_uiTags;		// Displacement triangle tags.
 };
 
-#define MAX_MULTIBLEND_CHANNELS		4
+inline constexpr auto MAX_MULTIBLEND_CHANNELS = 4;
 
 class CDispMultiBlend
 {
@@ -696,10 +637,10 @@ public:
 	Vector		m_vMultiBlendColors[ MAX_MULTIBLEND_CHANNELS ];
 };
 
-#define DISP_MULTIBLEND_PROP_THRESHOLD	2.0f
+inline constexpr auto DISP_MULTIBLEND_PROP_THRESHOLD = 2.0f;
 
-#define DISP_INFO_FLAG_HAS_MULTIBLEND	0x40000000
-#define DISP_INFO_FLAG_MAGIC			0x80000000
+inline constexpr auto DISP_INFO_FLAG_HAS_MULTIBLEND = 0x40000000;
+inline constexpr auto DISP_INFO_FLAG_MAGIC = 0x80000000;
 
 class ddispinfo_t
 {
@@ -740,7 +681,7 @@ struct dedge_t
 	unsigned short	v[2];		// vertex numbers
 };
 
-#define	MAXLIGHTMAPS	4
+inline constexpr int MAXLIGHTMAPS = 4;
 
 enum dprimitive_type
 {
@@ -822,7 +763,7 @@ inline unsigned short dface_t::GetNumPrims() const
 
 inline void dface_t::SetNumPrims( unsigned short nPrims )
 {
-	Assert( (nPrims & 0x8000) == 0 );
+	contract_assert( (nPrims & 0x8000) == 0 );
 	m_NumPrims &= ~0x7FFF;
 	m_NumPrims |= (nPrims & 0x7FFF);
 }
@@ -853,10 +794,10 @@ struct dfacebrushlist_t
 
 
 // NOTE: Only 7-bits stored on disk!!!
-#define LEAF_FLAGS_SKY			0x01		// This leaf has 3D sky in its PVS
-#define LEAF_FLAGS_RADIAL		0x02		// This leaf culled away some portals due to radial vis
-#define LEAF_FLAGS_SKY2D		0x04		// This leaf has 2D sky in its PVS
-#define LEAF_FLAGS_CONTAINS_DETAILOBJECTS 0x08				// this leaf has at least one detail object in it (set by loader).
+inline constexpr auto LEAF_FLAGS_SKY = 0x01; // This leaf has 3D sky in its PVS
+inline constexpr auto LEAF_FLAGS_RADIAL = 0x02; // This leaf culled away some portals due to radial vis
+inline constexpr auto LEAF_FLAGS_SKY2D = 0x04; // This leaf has 2D sky in its PVS
+inline constexpr auto LEAF_FLAGS_CONTAINS_DETAILOBJECTS = 0x08; // this leaf has at least one detail object in it (set by loader).
 
 struct dleaf_version_0_t
 {
@@ -952,8 +893,8 @@ struct dbrush_t
 // the visibility lump consists of a header with a count, then
 // byte offsets for the PVS and PHS of each cluster, then the raw
 // compressed bit vectors
-#define	DVIS_PVS	0
-#define	DVIS_PAS	1
+inline constexpr auto DVIS_PVS = 0;
+inline constexpr auto DVIS_PAS = 1;
 struct dvis_t
 {
 	int			numclusters;
@@ -1012,8 +953,8 @@ enum emittype_t
 
 
 // Flags for dworldlight_t::flags
-#define DWL_FLAGS_INAMBIENTCUBE		0x0001	// This says that the light was put into the per-leaf ambient cubes.
-#define DWL_FLAGS_CASTENTITYSHADOWS	0x0002	// This says that the light will cast shadows from entities
+inline constexpr auto DWL_FLAGS_INAMBIENTCUBE = 0x0001; // This says that the light was put into the per-leaf ambient cubes.
+inline constexpr auto DWL_FLAGS_CASTENTITYSHADOWS = 0x0002; // This says that the light will cast shadows from entities
 
 // Old version of the worldlight struct, used for backward compatibility loading.
 struct dworldlight_version0_t
@@ -1069,11 +1010,11 @@ struct dcubemapsample_t
 									// otherwise, 1<<(size-1)
 };
 
-#define OVERLAY_BSP_FACE_COUNT	64
+inline constexpr auto OVERLAY_BSP_FACE_COUNT = 64;
 
-#define OVERLAY_NUM_RENDER_ORDERS		(1<<OVERLAY_RENDER_ORDER_NUM_BITS)
-#define OVERLAY_RENDER_ORDER_NUM_BITS	2
-#define OVERLAY_RENDER_ORDER_MASK		0xC000	// top 2 bits set
+inline constexpr auto OVERLAY_RENDER_ORDER_NUM_BITS = 2;
+inline constexpr auto OVERLAY_NUM_RENDER_ORDERS = (1<<OVERLAY_RENDER_ORDER_NUM_BITS);
+inline constexpr auto OVERLAY_RENDER_ORDER_MASK = 0xC000; // top 2 bits set
 
 struct doverlay_t
 {
@@ -1102,7 +1043,7 @@ public:
 
 inline void doverlay_t::SetFaceCount( unsigned short count )
 {
-	Assert( (count & OVERLAY_RENDER_ORDER_MASK) == 0 );
+	contract_assert( (count & OVERLAY_RENDER_ORDER_MASK) == 0 );
 	m_nFaceCountAndRenderOrder &= OVERLAY_RENDER_ORDER_MASK;
 	m_nFaceCountAndRenderOrder |= (count & ~OVERLAY_RENDER_ORDER_MASK);
 }
@@ -1114,7 +1055,7 @@ inline unsigned short doverlay_t::GetFaceCount() const
 
 inline void doverlay_t::SetRenderOrder( unsigned short order )
 {
-	Assert( order < OVERLAY_NUM_RENDER_ORDERS );
+	contract_assert( order < OVERLAY_NUM_RENDER_ORDERS );
 	m_nFaceCountAndRenderOrder &= ~OVERLAY_RENDER_ORDER_MASK;
 	m_nFaceCountAndRenderOrder |= (order << (16 - OVERLAY_RENDER_ORDER_NUM_BITS));	// leave 2 bits for render order.
 }
@@ -1143,10 +1084,10 @@ struct doverlaysystemlevel_t
 };
 
 
-#define WATEROVERLAY_BSP_FACE_COUNT				256
-#define WATEROVERLAY_RENDER_ORDER_NUM_BITS		2
-#define WATEROVERLAY_NUM_RENDER_ORDERS			(1<<WATEROVERLAY_RENDER_ORDER_NUM_BITS)
-#define WATEROVERLAY_RENDER_ORDER_MASK			0xC000	// top 2 bits set
+inline constexpr auto WATEROVERLAY_BSP_FACE_COUNT = 256;
+inline constexpr auto WATEROVERLAY_RENDER_ORDER_NUM_BITS = 2;
+inline constexpr auto WATEROVERLAY_NUM_RENDER_ORDERS = (1<<WATEROVERLAY_RENDER_ORDER_NUM_BITS);
+inline constexpr auto WATEROVERLAY_RENDER_ORDER_MASK = 0xC000; // top 2 bits set
 struct dwateroverlay_t
 {
 	int				nId;
@@ -1174,7 +1115,7 @@ public:
 
 inline void dwateroverlay_t::SetFaceCount( unsigned short count )
 {
-	Assert( (count & WATEROVERLAY_RENDER_ORDER_MASK) == 0 );
+	contract_assert( (count & WATEROVERLAY_RENDER_ORDER_MASK) == 0 );
 	m_nFaceCountAndRenderOrder &= WATEROVERLAY_RENDER_ORDER_MASK;
 	m_nFaceCountAndRenderOrder |= (count & ~WATEROVERLAY_RENDER_ORDER_MASK);
 }
@@ -1186,7 +1127,7 @@ inline unsigned short dwateroverlay_t::GetFaceCount() const
 
 inline void dwateroverlay_t::SetRenderOrder( unsigned short order )
 {
-	Assert( order < WATEROVERLAY_NUM_RENDER_ORDERS );
+	contract_assert( order < WATEROVERLAY_NUM_RENDER_ORDERS );
 	m_nFaceCountAndRenderOrder &= ~WATEROVERLAY_RENDER_ORDER_MASK;
 	m_nFaceCountAndRenderOrder |= ( order << ( 16 - WATEROVERLAY_RENDER_ORDER_NUM_BITS ) );	// leave 2 bits for render order.
 }
@@ -1218,8 +1159,8 @@ struct epair_t
 };
 
 // finalized page of surface's lightmaps
-#define MAX_LIGHTMAPPAGE_WIDTH	256
-#define MAX_LIGHTMAPPAGE_HEIGHT	128
+inline constexpr auto MAX_LIGHTMAPPAGE_WIDTH = 256;
+inline constexpr auto MAX_LIGHTMAPPAGE_HEIGHT = 128;
 typedef struct nameForDatadesc_dlightmappage_t // unnamed structs collide in the datadesc macros
 {
 	byte	data[MAX_LIGHTMAPPAGE_WIDTH*MAX_LIGHTMAPPAGE_HEIGHT];
@@ -1233,5 +1174,3 @@ typedef struct nameForDatadesc_dlightmappageinfo_t // unnamed structs collide in
 	byte			pad;			// unused
 	ColorRGBExp32	avgColor;		// average used for runtime lighting calcs
 } dlightmappageinfo_t;
-
-#endif // BSPFILE_H

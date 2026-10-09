@@ -1,9 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "materialsystem/imorph.h"
@@ -12,8 +10,7 @@
 #include "materialsystem/itexture.h"
 #include "materialsystem/imaterialvar.h"
 #include "bitmap/imageformat.h"
-#include "mathlib/vmatrix.h"
-#include "utlvector.h"
+import std;
 // GR
 #include "imaterialinternal.h"
 #include "materialsystem/materialsystem_config.h"
@@ -106,16 +103,12 @@ public:
 		static float dummyFloat[32];
 		static unsigned char dummyChar[32];
 
-		memset( &desc, 0, sizeof( desc ) );
+		std::memset( &desc, 0, sizeof( desc ) );
 
 		// Pointers to our current vertex data
 		desc.m_pPosition = dummyFloat;
 		desc.m_pBoneWeight = dummyFloat;
-#ifdef NEW_SKINNING
-		desc.m_pBoneMatrixIndex = dummyFloat;
-#else
 		desc.m_pBoneMatrixIndex = dummyChar;
-#endif
 
 		desc.m_pNormal = dummyFloat;
 		desc.m_pColor = dummyChar;
@@ -260,7 +253,7 @@ public:
 	//		pnumBytes		on return is the number of bytes available in the read-only data buffer or is undefined
 	// Returns:
 	//		pointer to the resource data, or NULL
-	virtual void *GetResourceData( uint32 eDataType, size_t *pNumBytes ) const
+	virtual void *GetResourceData( uint32 eDataType, std::size_t *pNumBytes ) const
 	{
 		return nullptr;
 	}
@@ -2317,13 +2310,13 @@ public:
 	}
 	virtual IVertexBuffer *		GetDynamicVertexBuffer( /*VertexFormat_t vertexFormat, */bool buffered = true )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return nullptr;
 //		return GetDummyMesh();
 	}
 	virtual IIndexBuffer *		GetDynamicIndexBuffer( )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return nullptr;
 //		return GetDummyMesh();
 	}
@@ -2331,12 +2324,12 @@ public:
 // ------------ New Vertex/Index Buffer interface ----------------------------
 	virtual IVertexBuffer *CreateStaticVertexBuffer( VertexFormat_t fmt, int nVertexCount, const char *pBudgetGroup )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return nullptr;
 	}
 	virtual IIndexBuffer *CreateStaticIndexBuffer( MaterialIndexFormat_t fmt, int nIndexCount, const char *pBudgetGroup )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return nullptr;
 	}
 	virtual void DestroyVertexBuffer( IVertexBuffer * )
@@ -2348,7 +2341,7 @@ public:
 	// Do we need to specify the stream here in the case of locking multiple dynamic VBs on different streams?
 	virtual IVertexBuffer *GetDynamicVertexBuffer( int streamID, VertexFormat_t vertexFormat, bool bBuffered = true )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return nullptr;
 	}
 	virtual void BindVertexBuffer( int streamID, IVertexBuffer *pVertexBuffer, int nOffsetInBytes, int nFirstVertex, int nVertexCount, VertexFormat_t fmt, int nRepetitions = 1 )
@@ -2461,7 +2454,7 @@ public:
 	// debug logging - no-op in queued context
 	//--------------------------------------------------------
 	virtual void							Printf( char *fmt, ... ) {};
-	virtual void							PrintfVA( char *fmt, va_list vargs ){};
+	virtual void							PrintfVA( char *fmt, std::va_list vargs ){};
 	virtual float							Knob( char *knobname, float *setvalue=nullptr ) { return 0.0f; };	
 
 	virtual void RegisterPaintmapDataManager( IPaintmapDataManager *pDataManager ) {}
@@ -2473,7 +2466,4 @@ public:
 
 static CDummyMaterialSystem g_DummyMaterialSystem;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CDummyMaterialSystem, IMaterialSystemStub, 
-						MATERIAL_SYSTEM_STUB_INTERFACE_VERSION, g_DummyMaterialSystem );
-
-
+static InterfaceReg s_Reg_CDummyMaterialSystem_IMaterialSystemStub( []() -> void * { return static_cast<IMaterialSystemStub *>( &g_DummyMaterialSystem ); }, MATERIAL_SYSTEM_STUB_INTERFACE_VERSION );;

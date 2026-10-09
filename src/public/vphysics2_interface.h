@@ -1,18 +1,12 @@
-//========= Copyright c 1996-2008, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
 // Purpose: Physics2 interfaces to vphysics DLL
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef VPHYSICS2_INTERFACE_HDR
-#define VPHYSICS2_INTERFACE_HDR
-
-
+import ks.tier1;
 #include "datalinker_interface.h"
-#include "mathlib/ssemath.h"
-#include "appframework/iappsystem.h"
-
+import std;
 
 class Vector4DAligned;
 
@@ -24,7 +18,7 @@ class CPhysics2Mopp: public CPhysics2Shape{};      // includes Mopp and vertex, 
 class CPhysics2Actor;	  // maps to hkpRigidBody
 class CPhysics2Inertia;   // maps to hkpMassProperties
 
-abstract_class IPhysics2CookedMeshBase
+class IPhysics2CookedMeshBase
 {
 public:
 	virtual uint GetType()const = 0;
@@ -35,7 +29,7 @@ public:
 	virtual uint GetSizeOf()const = 0;
 };
 
-abstract_class IPhysics2CookedPolytope : public IPhysics2CookedMeshBase
+class IPhysics2CookedPolytope : public IPhysics2CookedMeshBase
 {
 public:
 	virtual CPhysics2Polytope* GetPolytope() = 0;
@@ -43,7 +37,7 @@ protected:
 	virtual ~IPhysics2CookedPolytope(){}
 };
 
-abstract_class IPhysics2CookedPolysoup : public IPhysics2CookedMeshBase
+class IPhysics2CookedPolysoup : public IPhysics2CookedMeshBase
 {
 public:
 	virtual CPhysics2Polysoup* GetPolysoup() = 0;
@@ -52,7 +46,7 @@ protected:
 	virtual ~IPhysics2CookedPolysoup(){}
 };
 
-abstract_class IPhysics2CookedMopp: public IPhysics2CookedMeshBase
+class IPhysics2CookedMopp: public IPhysics2CookedMeshBase
 {
 public:
 	virtual CPhysics2Mopp* GetMopp() = 0;
@@ -61,7 +55,7 @@ protected:
 };
 
 
-abstract_class IPhysics2CookedInertia
+class IPhysics2CookedInertia
 {
 public:
 	virtual CPhysics2Inertia* GetInertia() = 0;
@@ -70,7 +64,7 @@ protected:
 };
 
 
-abstract_class IPhysics2Level
+class IPhysics2Level
 {
 public:
 	virtual bool HasMopp() = 0;
@@ -81,13 +75,13 @@ public:
 // all flags to these interfaces are located in vphysics2_interface_flags.h
 // so it's easy to change/add flags without recompiling everything
 //
-abstract_class IPhysics2Cook;
-abstract_class IPhysics2World;
-abstract_class IPhysics2ResourceManager;
-abstract_class IPhysics2Collision;
-abstract_class IPhysics2ActorManager;
+class IPhysics2Cook;
+class IPhysics2World;
+class IPhysics2ResourceManager;
+class IPhysics2Collision;
+class IPhysics2ActorManager;
 
-abstract_class IPhysics2: public IAppSystem
+class IPhysics2: public IAppSystem
 {
 public:
 	virtual IPhysics2World* CreateWorld(uint flags = 0) = 0; // NewWorld ?
@@ -106,7 +100,7 @@ public:
 };
 
 
-abstract_class IPhysics2ActorManager
+class IPhysics2ActorManager
 {
 public:
 	virtual uintp	GetUserData(const CPhysics2Actor *pActor) = 0;
@@ -122,7 +116,7 @@ public:
 
 
 
-abstract_class IPhysics2Collision
+class IPhysics2Collision
 {
 public:
 	virtual void Login(IPhysics2Level*) = 0;
@@ -138,7 +132,7 @@ public:
 
 
 // heavy-cooking interface, should not be used at runtime
-abstract_class IPhysics2Cook
+class IPhysics2Cook
 {
 public:
 	// produce a convex element from planes (csg of planes). ax+by+cz-d==0, the normal (a,b,c) shows OUTSIDE the polytope
@@ -170,7 +164,7 @@ public:
 //  all new objects are created with refCount == 1; you must release them when you are done with them. When you add them to the worlds, they add their refCounts.
 // Release() has a flag that allows you to Assert if it does NOT actually free the object
 //
-abstract_class IPhysics2ResourceManager // Data? Manager?
+class IPhysics2ResourceManager // Data? Manager?
 {
 public:
 	virtual CPhysics2Polytope *UnserializePolytope(const void *pBuffer/*, unsigned nSize*/) = 0;
@@ -202,7 +196,7 @@ public:
 
 
 // interface to individual worlds, there may be multiple worlds at the same time (e.g. client and server)
-abstract_class IPhysics2World
+class IPhysics2World
 {
 public:
 	// pInertia may be NULL - especially when flags make the actor static
@@ -216,9 +210,9 @@ public:
 };
 
 
-DECLARE_TIER1_INTERFACE( IPhysics2, g_pPhysics2 ); // this is extern from tier1 
-DECLARE_TIER1_INTERFACE( IPhysics2ActorManager, g_pPhysics2ActorManager );
-DECLARE_TIER1_INTERFACE( IPhysics2ResourceManager, g_pPhysics2ResourceManager );
+extern IPhysics2 *g_pPhysics2;; // this is extern from tier1 
+extern IPhysics2ActorManager *g_pPhysics2ActorManager;;
+extern IPhysics2ResourceManager *g_pPhysics2ResourceManager;;
 
 class CPhysics2Actor
 {
@@ -231,6 +225,3 @@ public:
 	inline void SetOrientation(const QuaternionAligned &q){g_pPhysics2ActorManager->SetOrientation(this, q);}
 	inline void SetVelocity(const fltx4 &vel){return g_pPhysics2ActorManager->SetVelocity(this, vel);}
 };
-
-
-#endif

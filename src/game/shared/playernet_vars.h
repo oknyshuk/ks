@@ -1,16 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef PLAYERNET_VARS_H
-#define PLAYERNET_VARS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "shared_classnames.h"
+#include "networkvar.h"
+#include "datamap.h"
 
-#define NUM_AUDIO_LOCAL_SOUNDS	8
+inline constexpr auto NUM_AUDIO_LOCAL_SOUNDS = 8;
 
 // These structs are contained in each player's local data and shared by the client & server
 
@@ -85,7 +81,6 @@ struct fogplayerparams_t
 
 	fogplayerparams_t()
 	{
-		m_hCtrl.Set( nullptr );
 		m_flTransitionTime = -1.0f;
 		m_OldColor.r = m_OldColor.g = m_OldColor.g = m_OldColor.a = 0.0f;
 		m_flOldStart = 0.0f;
@@ -135,6 +130,3 @@ struct audioparams_t
 	CNetworkVar( int, localBits );			// if bits 0,1,2,3 are set then position 0,1,2,3 are valid/used
 	CNetworkVar( int, entIndex );		// the entity setting the soundscape
 };
-
-
-#endif // PLAYERNET_VARS_H

@@ -1,11 +1,67 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Implements visual effects entities: sprites, beams, bubbles, etc.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Implements visual effects entities: sprites, beams, bubbles, etc.
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
@@ -32,7 +88,7 @@
 #include "toolframework_client.h"
 #endif
 
-#define BEAM_DEFAULT_HALO_SCALE		10
+constexpr auto BEAM_DEFAULT_HALO_SCALE = 10;
 
 #if !defined( CLIENT_DLL )
 
@@ -111,41 +167,11 @@ void RecvProxy_Beam_ScrollSpeed( const CRecvProxyData *pData, void *pStruct, voi
 	val *= 0.1;
 
 	beam = ( C_Beam * )pStruct;
-	Assert( pOut == &beam->m_fSpeed );
+	contract_assert( pOut == &beam->m_fSpeed );
 
 	beam->m_fSpeed = val;
 }
 #else
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-static void* SendProxy_SendPredictableId( const SendProp *pProp, const void *pStruct, const void *pVarData, CSendProxyRecipients *pRecipients, int objectID )
-{
-	CBaseEntity *pEntity = (CBaseEntity *)pStruct;
-	if ( !pEntity || !pEntity->m_PredictableID->IsActive() )
-		return nullptr;
-
-	if ( !pEntity->GetOwnerEntity() )
-		return nullptr;
-
-	CBaseEntity *owner = pEntity->GetOwnerEntity();
-	if ( !owner || !owner->IsPlayer() )
-		return nullptr;
-
-	CBasePlayer *pOwner = static_cast< CBasePlayer * >( owner );
-	if ( !pOwner )
-		return nullptr;
-
-	int id_player_index = pEntity->m_PredictableID->GetPlayer();
-	int owner_player_index = pOwner->entindex() - 1;
-	// Only send to owner player
-	// FIXME:  Is this ever not the case due to the SetOnly call?
-	if ( id_player_index != owner_player_index )
-		return nullptr;
-
-	pRecipients->SetOnly( owner_player_index );
-	return ( void * )pVarData;
-}
-REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendPredictableId );
-#endif
 #endif
 
 // This table encodes the CBeam data.
@@ -154,16 +180,6 @@ LINK_ENTITY_TO_CLASS_ALIASED( beam, Beam );
 
 
 IMPLEMENT_REFLECT_TABLE( CBeam, DT_Beam );
-#if !defined( CLIENT_DLL )
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-#endif
-#else
-#if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
-#endif
-#endif
-#if defined( CLIENT_DLL )
-#else
-#endif
 
 #if !defined( CLIENT_DLL )
 IMPLEMENT_REFLECT_DATAMAP( CBeam )
@@ -244,13 +260,13 @@ void CBeam::Precache( void )
 
 void CBeam::SetType( int type )		
 { 
-	Assert( type < NUM_BEAM_TYPES );
+	contract_assert( type < NUM_BEAM_TYPES );
 	m_nBeamType = type;
 }
 
 void CBeam::SetBeamFlags( int flags )	
 { 
-	Assert( flags < (1 << NUM_BEAM_FLAGS) );
+	contract_assert( flags < (1 << NUM_BEAM_FLAGS) );
 	m_nBeamFlags = flags;
 }
 
@@ -271,7 +287,7 @@ int CBeam::GetBeamFlags( void ) const
 
 void CBeam::SetStartEntity( CBaseEntity *pEntity )
 { 
-	Assert( m_nNumBeamEnts >= 2 );
+	contract_assert( m_nNumBeamEnts >= 2 );
 	m_hAttachEntity.Set( 0, pEntity );
 	SetOwnerEntity( pEntity );
 	RelinkBeam();
@@ -283,7 +299,7 @@ void CBeam::SetStartEntity( CBaseEntity *pEntity )
 
 void CBeam::SetEndEntity( CBaseEntity *pEntity ) 
 { 
-	Assert( m_nNumBeamEnts >= 2 );
+	contract_assert( m_nNumBeamEnts >= 2 );
 	m_hAttachEntity.Set( m_nNumBeamEnts-1, pEntity );
 	m_hEndEntity = pEntity;
 	RelinkBeam();
@@ -419,7 +435,6 @@ CBeam *CBeam::BeamCreate( const char *pSpriteName, float width )
 //-----------------------------------------------------------------------------
 CBeam *CBeam::BeamCreatePredictable( const char *module, int line, bool persist, const char *pSpriteName, float width, CBasePlayer *pOwner )
 {
-#if !defined( NO_ENTITY_PREDICTION )
 	CBeam *pBeam = ( CBeam * )CBaseEntity::CreatePredictedEntityByName( "beam", module, line, persist );
 	if ( pBeam )
 	{
@@ -429,9 +444,6 @@ CBeam *CBeam::BeamCreatePredictable( const char *module, int line, bool persist,
 	}
 
 	return pBeam;
-#else
-	return nullptr;
-#endif
 }
 
 void CBeam::BeamInit( const char *pSpriteName, float width )
@@ -748,11 +760,11 @@ int CBeam::DrawDebugTextOverlays(void)
 	{
 		// Print state
 		char tempstr[512];
-		Q_snprintf(tempstr, sizeof(tempstr), "start: (%.2f,%.2f,%.2f)", GetAbsOrigin().x, GetAbsOrigin().y, GetAbsOrigin().z);
+		V_snprintf(tempstr, sizeof(tempstr), "start: (%.2f,%.2f,%.2f)", GetAbsOrigin().x, GetAbsOrigin().y, GetAbsOrigin().z);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr, sizeof(tempstr), "end  : (%.2f,%.2f,%.2f)", m_vecEndPos.GetX(), m_vecEndPos.GetY(), m_vecEndPos.GetZ());
+		V_snprintf(tempstr, sizeof(tempstr), "end  : (%.2f,%.2f,%.2f)", m_vecEndPos.GetX(), m_vecEndPos.GetY(), m_vecEndPos.GetZ());
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}
@@ -778,7 +790,7 @@ bool CBeam::OnPredictedEntityRemove( bool isbeingremoved, C_BaseEntity *predicte
 	if ( !beam )
 	{
 		// Hrm, we didn't link up to correct type!!!
-		Assert( 0 );
+		contract_assert( 0 );
 		// Delete right away since it's fucked up
 		return true;
 	}
@@ -949,7 +961,7 @@ void CBeam::ComputeBounds( Vector& mins, Vector& maxs )
 					}
 					else
 					{
-						Assert(0);
+						contract_assert( 0 );
 					}
 
 					mins = mins.Min( attachmentPoint );

@@ -1,36 +1,34 @@
-//======= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
+
 // Purpose: Definitions that are shared by the game DLL and the client DLL.
-//
-//===============================================================================
 
-
-#ifndef SHAREDDEFS_H
-#define SHAREDDEFS_H
-
+import ks.math;
 #include "bittools.h"
+#include "in_buttons.h"
+import std;
 
 #define TICK_INTERVAL			(gpGlobals->interval_per_tick)
-
 
 #define TIME_TO_TICKS( dt )		( (int)( 0.5f + (float)(dt) / TICK_INTERVAL ) )
 #define TICKS_TO_TIME( t )		( TICK_INTERVAL *( t ) )
 #define ROUND_TO_TICKS( t )		( TICK_INTERVAL * TIME_TO_TICKS( t ) )
-#define TICK_NEVER_THINK		(-1)
+inline constexpr auto TICK_NEVER_THINK = (-1);
 
-#define ANIMATION_CYCLE_BITS		15
-#define ANIMATION_CYCLE_MINFRAC		(1.0f / (1<<ANIMATION_CYCLE_BITS))
+inline constexpr auto ANIMATION_CYCLE_BITS = 15;
+inline constexpr auto ANIMATION_CYCLE_MINFRAC = (1.0f / (1<<ANIMATION_CYCLE_BITS));
 
 // These describe how animation state is packed on the wire, so both sides need them: a send
 // annotation naming one sits in a shared header and the client has to compile it too. They were
 // in the server-only baseanimating.h, next to which ANIMATION_CYCLE_BITS was already the odd one
 // out here.
-#define ANIMATION_SEQUENCE_BITS			12	// 4096 sequences
-#define ANIMATION_SKIN_BITS				10	// 1024 body skin selections FIXME: this seems way high
-#define ANIMATION_BODY_BITS				32	// body combinations
-#define ANIMATION_HITBOXSET_BITS		2	// hit box sets
-#define ANIMATION_POSEPARAMETER_BITS	11	// pose parameter resolution
-#define ANIMATION_PLAYBACKRATE_BITS		8	// default playback rate, only used on leading edge detect sequence changes
+inline constexpr auto ANIMATION_SEQUENCE_BITS = 12; // 4096 sequences
+inline constexpr auto ANIMATION_SKIN_BITS = 10; // 1024 body skin selections FIXME: this seems way high
+inline constexpr auto ANIMATION_BODY_BITS = 32; // body combinations
+inline constexpr auto ANIMATION_HITBOXSET_BITS = 2; // hit box sets
+inline constexpr auto ANIMATION_POSEPARAMETER_BITS = 11; // pose parameter resolution
+inline constexpr auto ANIMATION_PLAYBACKRATE_BITS = 8; // default playback rate, only used on leading edge detect sequence changes
 
 // Each mod defines these for itself.
 class CViewVectors
@@ -91,15 +89,15 @@ public:
 #define VEC_DEAD_VIEWHEIGHT	g_pGameRules->GetViewVectors()->m_vDeadViewHeight
 
 
-#define WATERJUMP_HEIGHT			8
+inline constexpr auto WATERJUMP_HEIGHT = 8;
 
-#define MAX_CLIMB_SPEED		200
-
-
-	#define TIME_TO_DUCK_MSECS		200
+inline constexpr auto MAX_CLIMB_SPEED = 200;
 
 
-#define TIME_TO_UNDUCK_MSECS		200
+	inline constexpr auto TIME_TO_DUCK_MSECS = 200;
+
+
+inline constexpr auto TIME_TO_UNDUCK_MSECS = 200;
 
 inline float FractionDucked( int msecs )
 {
@@ -111,25 +109,25 @@ inline float FractionUnDucked( int msecs )
 	return clamp( (float)msecs / (float)TIME_TO_UNDUCK_MSECS, 0.0f, 1.0f );
 }
 
-#define MAX_WEAPON_SLOTS		6	// hud item selection slots
-#define MAX_WEAPON_POSITIONS	6	// max number of items within a slot
-#define MAX_ITEM_TYPES			6	// hud item selection slots
-#define MAX_WEAPONS				64	// Max number of weapons available
+inline constexpr auto MAX_WEAPON_SLOTS = 6; // hud item selection slots
+inline constexpr auto MAX_WEAPON_POSITIONS = 6; // max number of items within a slot
+inline constexpr auto MAX_ITEM_TYPES = 6; // hud item selection slots
+inline constexpr auto MAX_WEAPONS = 64; // Max number of weapons available
 
-#define MAX_ITEMS				5	// hard coded item types
+inline constexpr auto MAX_ITEMS = 5; // hard coded item types
 
-#define MAX_FOV			110
-#define MIN_FOV			80
+inline constexpr auto MAX_FOV = 110;
+inline constexpr auto MIN_FOV = 80;
 
-#define WEAPON_NOCLIP			-1	// clip sizes set to this tell the weapon it doesn't use a clip
+inline constexpr auto WEAPON_NOCLIP = -1; // clip sizes set to this tell the weapon it doesn't use a clip
 
-#define	MAX_AMMO_TYPES	32		// ???
-#define MAX_AMMO_SLOTS  32		// not really slots
+inline constexpr auto MAX_AMMO_TYPES = 32;	// ???
+inline constexpr auto MAX_AMMO_SLOTS = 32; // not really slots
 
-#define HUD_PRINTNOTIFY		1
-#define HUD_PRINTCONSOLE	2
-#define HUD_PRINTTALK		3
-#define HUD_PRINTCENTER		4
+inline constexpr auto HUD_PRINTNOTIFY = 1;
+inline constexpr auto HUD_PRINTCONSOLE = 2;
+inline constexpr auto HUD_PRINTTALK = 3;
+inline constexpr auto HUD_PRINTCENTER = 4;
 
 
 // Vote creation or processing failure codes
@@ -172,9 +170,9 @@ typedef enum
 	VOTE_FAILED_MAX,
 } vote_create_failed_t;
 
-#define MAX_VOTE_DETAILS_LENGTH 64
-#define INVALID_ISSUE -1
-#define MAX_VOTE_OPTIONS 5
+inline constexpr auto MAX_VOTE_DETAILS_LENGTH = 64;
+inline constexpr auto INVALID_ISSUE = -1;
+inline constexpr auto MAX_VOTE_OPTIONS = 5;
 
 enum
 {
@@ -218,37 +216,37 @@ enum AmmoPosition_t
 
 //===================================================================================================================
 // Close caption flags
-#define CLOSE_CAPTION_WARNIFMISSING	( 1<<0 )
-#define CLOSE_CAPTION_FROMPLAYER	( 1<<1 )
-#define CLOSE_CAPTION_GENDER_MALE	( 1<<2 )
-#define CLOSE_CAPTION_GENDER_FEMALE	( 1<<3 )
+inline constexpr auto CLOSE_CAPTION_WARNIFMISSING = ( 1<<0 );
+inline constexpr auto CLOSE_CAPTION_FROMPLAYER = ( 1<<1 );
+inline constexpr auto CLOSE_CAPTION_GENDER_MALE = ( 1<<2 );
+inline constexpr auto CLOSE_CAPTION_GENDER_FEMALE = ( 1<<3 );
 
 //===================================================================================================================
 // Hud Element hiding flags
-#define	HIDEHUD_WEAPONSELECTION		( 1<<0 )	// Hide ammo count & weapon selection
-#define	HIDEHUD_FLASHLIGHT			( 1<<1 )
-#define	HIDEHUD_ALL					( 1<<2 )
-#define HIDEHUD_HEALTH				( 1<<3 )	// Hide health & armor / suit battery
-#define HIDEHUD_PLAYERDEAD			( 1<<4 )	// Hide when local player's dead
-#define HIDEHUD_NEEDSUIT			( 1<<5 )	// Hide when the local player doesn't have the HEV suit
-#define HIDEHUD_MISCSTATUS			( 1<<6 )	// Hide miscellaneous status elements (trains, pickup history, death notices, etc)
-#define HIDEHUD_CHAT				( 1<<7 )	// Hide all communication elements (saytext, voice icon, etc)
-#define	HIDEHUD_CROSSHAIR			( 1<<8 )	// Hide crosshairs
-#define	HIDEHUD_VEHICLE_CROSSHAIR	( 1<<9 )	// Hide vehicle crosshair
-#define HIDEHUD_INVEHICLE			( 1<<10 )
-#define HIDEHUD_BONUS_PROGRESS		( 1<<11 )	// Hide bonus progress display (for bonus map challenges)
-#define HIDEHUD_RADAR				( 1<<12 )   // Hides the radar in CS1.5
-#define HIDEHUD_MINISCOREBOARD      ( 1<<13 )   // Hides the miniscoreboard in CS1.5
+inline constexpr auto HIDEHUD_WEAPONSELECTION = ( 1<<0 ); // Hide ammo count & weapon selection
+inline constexpr auto HIDEHUD_FLASHLIGHT = ( 1<<1 );
+inline constexpr int HIDEHUD_ALL = ( 1<<2 );
+inline constexpr auto HIDEHUD_HEALTH = ( 1<<3 ); // Hide health & armor / suit battery
+inline constexpr auto HIDEHUD_PLAYERDEAD = ( 1<<4 ); // Hide when local player's dead
+inline constexpr auto HIDEHUD_NEEDSUIT = ( 1<<5 ); // Hide when the local player doesn't have the HEV suit
+inline constexpr auto HIDEHUD_MISCSTATUS = ( 1<<6 ); // Hide miscellaneous status elements (trains, pickup history, death notices, etc)
+inline constexpr auto HIDEHUD_CHAT = ( 1<<7 ); // Hide all communication elements (saytext, voice icon, etc)
+inline constexpr auto HIDEHUD_CROSSHAIR = ( 1<<8 ); // Hide crosshairs
+inline constexpr auto HIDEHUD_VEHICLE_CROSSHAIR = ( 1<<9 ); // Hide vehicle crosshair
+inline constexpr auto HIDEHUD_INVEHICLE = ( 1<<10 );
+inline constexpr auto HIDEHUD_BONUS_PROGRESS = ( 1<<11 ); // Hide bonus progress display (for bonus map challenges)
+inline constexpr auto HIDEHUD_RADAR = ( 1<<12 ); // Hides the radar in CS1.5
+inline constexpr auto HIDEHUD_MINISCOREBOARD = ( 1<<13 ); // Hides the miniscoreboard in CS1.5
 
-#define HIDEHUD_BITCOUNT			14
+inline constexpr auto HIDEHUD_BITCOUNT = 14;
 
 //===================================================================================================================
 // suit usage bits
-#define bits_SUIT_DEVICE_SPRINT		0x00000001
-#define bits_SUIT_DEVICE_FLASHLIGHT	0x00000002
-#define bits_SUIT_DEVICE_BREATHER	0x00000004
+inline constexpr auto bits_SUIT_DEVICE_SPRINT = 0x00000001;
+inline constexpr auto bits_SUIT_DEVICE_FLASHLIGHT = 0x00000002;
+inline constexpr auto bits_SUIT_DEVICE_BREATHER = 0x00000004;
 
-#define MAX_SUIT_DEVICES			3
+inline constexpr auto MAX_SUIT_DEVICES = 3;
 
 
 //===================================================================================================================
@@ -263,81 +261,81 @@ enum AmmoPosition_t
 //This is ok since MAX_PLAYERS is used for code specific things like arrays and loops, but it doesn't really means that this is the max number of players allowed
 //Since this is decided by the gamerules (and it can be whatever number as long as its less than MAX_PLAYERS).
 #if defined( CSTRIKE_DLL )
-	#define MAX_PLAYERS				64  // Absolute max players supported
+inline constexpr auto MAX_PLAYERS = 64;	// Absolute max players supported
 #else
-	#define MAX_PLAYERS				33  // Absolute max players supported
+inline constexpr auto MAX_PLAYERS = 33;	// Absolute max players supported
 #endif
 
-#define MAX_PLACE_NAME_LENGTH		18
+inline constexpr auto MAX_PLACE_NAME_LENGTH = 18;
 
 //===================================================================================================================
 // Team Defines
-#define TEAM_ANY				-1	// for some team query methods
-#define	TEAM_INVALID			-1
-#define TEAM_UNASSIGNED			0	// not assigned to a team
-#define TEAM_SPECTATOR			1	// spectator team
+inline constexpr auto TEAM_ANY = -1; // for some team query methods
+inline constexpr auto TEAM_INVALID = -1;
+inline constexpr auto TEAM_UNASSIGNED = 0; // not assigned to a team
+inline constexpr auto TEAM_SPECTATOR = 1; // spectator team
 // Start your team numbers after this
-#define LAST_SHARED_TEAM		TEAM_SPECTATOR
+inline constexpr auto LAST_SHARED_TEAM = TEAM_SPECTATOR;
 
 // The first team that's game specific (i.e. not unassigned / spectator)
-#define FIRST_GAME_TEAM			(LAST_SHARED_TEAM+1)
+inline constexpr auto FIRST_GAME_TEAM = (LAST_SHARED_TEAM+1);
 
-#define MAX_TEAMS				32	// Max number of teams in a game
-#define MAX_TEAM_NAME_LENGTH	32	// Max length of a team's name
+inline constexpr auto MAX_TEAMS = 32;	// Max number of teams in a game
+inline constexpr auto MAX_TEAM_NAME_LENGTH = 32;	// Max length of a team's name
 
-#define MAX_TEAM_FLAG_ICON_LENGTH	8	// Max length of a team's flag icon (just the singlular country code)
-#define MAX_TEAM_LOGO_ICON_LENGTH	8	// Max length of a team's flag icon (just the singlular country code)
-#define MAX_TEAM_FLAG_HTML_LENGTH	64	// Max length of a team's flag html string
+inline constexpr auto MAX_TEAM_FLAG_ICON_LENGTH = 8;	// Max length of a team's flag icon (just the singlular country code)
+inline constexpr auto MAX_TEAM_LOGO_ICON_LENGTH = 8;	// Max length of a team's flag icon (just the singlular country code)
+inline constexpr auto MAX_TEAM_FLAG_HTML_LENGTH = 64; // Max length of a team's flag html string
 //#define TEAM_FLAG_IMG_STRING		"<img src='flag_%s.png' height='26' width='52'/>"
-#define TEAM_FLAG_IMG_STRING		"<img src='flag_%s.png'/>"//resource/Flash/images/flags/
-#define TEAM_LOGO_IMG_STRING		"%s.png"
-#define TEAM_FLAG_IMG_MOV_STRING		"%s"//.png
+inline constexpr const char *TEAM_FLAG_IMG_STRING = "<img src='flag_%s.png'/>";	//resource/Flash/images/flags/
+inline constexpr const char *TEAM_LOGO_IMG_STRING = "%s.png";
+inline constexpr const char *TEAM_FLAG_IMG_MOV_STRING = "%s";	//.png
 
 // Weapon m_iState
-#define WEAPON_NOT_CARRIED				0	// Weapon is on the ground
-#define WEAPON_IS_CARRIED_BY_PLAYER		1	// This client is carrying this weapon.
-#define WEAPON_IS_ACTIVE				2	// This client is carrying this weapon and it's the currently held weapon
+inline constexpr auto WEAPON_NOT_CARRIED = 0; // Weapon is on the ground
+inline constexpr auto WEAPON_IS_CARRIED_BY_PLAYER = 1; // This client is carrying this weapon.
+inline constexpr auto WEAPON_IS_ACTIVE = 2; // This client is carrying this weapon and it's the currently held weapon
 
 // -----------------------------------------
 // Skill Level
 // -----------------------------------------
-#define SKILL_EASY		1
-#define SKILL_MEDIUM	2
-#define SKILL_HARD		3
+inline constexpr auto SKILL_EASY = 1;
+inline constexpr auto SKILL_MEDIUM = 2;
+inline constexpr auto SKILL_HARD = 3;
 
 
 // Weapon flags
 // -----------------------------------------
 //	Flags - NOTE: KEEP g_ItemFlags IN WEAPON_PARSE.CPP UPDATED WITH THESE
 // -----------------------------------------
-#define ITEM_FLAG_SELECTONEMPTY		(1<<0)
-#define ITEM_FLAG_NOAUTORELOAD		(1<<1)
-#define ITEM_FLAG_NOAUTOSWITCHEMPTY	(1<<2)
-#define ITEM_FLAG_LIMITINWORLD		(1<<3)
-#define ITEM_FLAG_EXHAUSTIBLE		(1<<4)	// A player can totally exhaust their ammo supply and lose this weapon
-#define ITEM_FLAG_DOHITLOCATIONDMG	(1<<5)	// This weapon take hit location into account when applying damage
-#define ITEM_FLAG_NOAMMOPICKUPS		(1<<6)	// Don't draw ammo pickup sprites/sounds when ammo is received
-#define ITEM_FLAG_NOITEMPICKUP		(1<<7)	// Don't draw weapon pickup when this weapon is picked up by the player
+inline constexpr auto ITEM_FLAG_SELECTONEMPTY = (1<<0);
+inline constexpr auto ITEM_FLAG_NOAUTORELOAD = (1<<1);
+inline constexpr auto ITEM_FLAG_NOAUTOSWITCHEMPTY = (1<<2);
+inline constexpr auto ITEM_FLAG_LIMITINWORLD = (1<<3);
+inline constexpr auto ITEM_FLAG_EXHAUSTIBLE = (1<<4); // A player can totally exhaust their ammo supply and lose this weapon
+inline constexpr auto ITEM_FLAG_DOHITLOCATIONDMG = (1<<5); // This weapon take hit location into account when applying damage
+inline constexpr auto ITEM_FLAG_NOAMMOPICKUPS = (1<<6); // Don't draw ammo pickup sprites/sounds when ammo is received
+inline constexpr auto ITEM_FLAG_NOITEMPICKUP = (1<<7); // Don't draw weapon pickup when this weapon is picked up by the player
 // NOTE: KEEP g_ItemFlags IN WEAPON_PARSE.CPP UPDATED WITH THESE
 
 
 // Humans only have left and right hands, though we might have aliens with more
 //  than two, sigh
 
-#define MAX_VIEWMODELS			2
+inline constexpr auto MAX_VIEWMODELS = 2;
 
 
-#define MAX_BEAM_ENTS			10
+inline constexpr auto MAX_BEAM_ENTS = 10;
 
-#define TRACER_TYPE_DEFAULT		0x00000001
-#define TRACER_TYPE_GUNSHIP		0x00000002
-#define TRACER_TYPE_STRIDER		0x00000004 // Here ya go, Jay!
-#define TRACER_TYPE_GAUSS		0x00000008
-#define TRACER_TYPE_WATERBULLET	0x00000010
+inline constexpr auto TRACER_TYPE_DEFAULT = 0x00000001;
+inline constexpr auto TRACER_TYPE_GUNSHIP = 0x00000002;
+inline constexpr auto TRACER_TYPE_STRIDER = 0x00000004; // Here ya go, Jay!
+inline constexpr auto TRACER_TYPE_GAUSS = 0x00000008;
+inline constexpr auto TRACER_TYPE_WATERBULLET = 0x00000010;
 
-#define MUZZLEFLASH_TYPE_DEFAULT	0x00000001
-#define MUZZLEFLASH_TYPE_GUNSHIP	0x00000002
-#define MUZZLEFLASH_TYPE_STRIDER	0x00000004
+inline constexpr auto MUZZLEFLASH_TYPE_DEFAULT = 0x00000001;
+inline constexpr auto MUZZLEFLASH_TYPE_GUNSHIP = 0x00000002;
+inline constexpr auto MUZZLEFLASH_TYPE_STRIDER = 0x00000004;
 
 // Muzzle flash definitions (for the flags field of the "MuzzleFlash" DispatchEffect)
 enum
@@ -356,10 +354,10 @@ enum
 };
 
 // Tracer Flags
-#define TRACER_FLAG_WHIZ			0x0001
-#define TRACER_FLAG_USEATTACHMENT	0x0002
+inline constexpr auto TRACER_FLAG_WHIZ = 0x0001;
+inline constexpr auto TRACER_FLAG_USEATTACHMENT = 0x0002;
 
-#define TRACER_DONT_USE_ATTACHMENT	-1
+inline constexpr auto TRACER_DONT_USE_ATTACHMENT = -1;
 
 // Entity Dissolve types
 enum
@@ -376,15 +374,15 @@ enum
 // ---------------------------
 //  Hit Group standards
 // ---------------------------
-#define	HITGROUP_GENERIC	0
-#define	HITGROUP_HEAD		1
-#define	HITGROUP_CHEST		2
-#define	HITGROUP_STOMACH	3
-#define HITGROUP_LEFTARM	4	
-#define HITGROUP_RIGHTARM	5
-#define HITGROUP_LEFTLEG	6
-#define HITGROUP_RIGHTLEG	7
-#define HITGROUP_GEAR		10			// alerts NPC, but doesn't do damage or bleed (1/100th damage)
+inline constexpr auto HITGROUP_GENERIC = 0;
+inline constexpr auto HITGROUP_HEAD = 1;
+inline constexpr auto HITGROUP_CHEST = 2;
+inline constexpr auto HITGROUP_STOMACH = 3;
+inline constexpr auto HITGROUP_LEFTARM = 4;
+inline constexpr auto HITGROUP_RIGHTARM = 5;
+inline constexpr auto HITGROUP_LEFTLEG = 6;
+inline constexpr auto HITGROUP_RIGHTLEG = 7;
+inline constexpr auto HITGROUP_GEAR = 10; // alerts NPC, but doesn't do damage or bleed (1/100th damage)
 
 //
 // Enumerations for setting player animation.
@@ -405,80 +403,80 @@ enum PLAYER_ANIM
 	PLAYER_LEAVE_AIMING,
 };
 
-#define PLAYER_FATAL_FALL_SPEED		1024 // approx 60 feet
-#define PLAYER_MAX_SAFE_FALL_SPEED	580 // approx 20 feet
-#define PLAYER_LAND_ON_FLOATING_OBJECT	200 // Can go another 200 units without getting hurt
-#define PLAYER_MIN_BOUNCE_SPEED		200
-#define PLAYER_FALL_PUNCH_THRESHOLD (float)350 // won't punch player's screen/make scrape noise unless player falling at least this fast.
-#define DAMAGE_FOR_FALL_SPEED		100.0f / ( PLAYER_FATAL_FALL_SPEED - PLAYER_MAX_SAFE_FALL_SPEED ) // damage per unit per second.
+inline constexpr auto PLAYER_FATAL_FALL_SPEED = 1024; // approx 60 feet
+inline constexpr auto PLAYER_MAX_SAFE_FALL_SPEED = 580; // approx 20 feet
+inline constexpr auto PLAYER_LAND_ON_FLOATING_OBJECT = 200; // Can go another 200 units without getting hurt
+inline constexpr auto PLAYER_MIN_BOUNCE_SPEED = 200;
+inline constexpr auto PLAYER_FALL_PUNCH_THRESHOLD = (float)350; // won't punch player's screen/make scrape noise unless player falling at least this fast.
+inline constexpr auto DAMAGE_FOR_FALL_SPEED = 100.0f / ( PLAYER_FATAL_FALL_SPEED - PLAYER_MAX_SAFE_FALL_SPEED ); // damage per unit per second.
 
 
-#define AUTOAIM_2DEGREES  0.0348994967025
-#define AUTOAIM_5DEGREES  0.08715574274766
-#define AUTOAIM_8DEGREES  0.1391731009601
-#define AUTOAIM_10DEGREES 0.1736481776669
-#define AUTOAIM_20DEGREES 0.3490658503989
+inline constexpr auto AUTOAIM_2DEGREES = 0.0348994967025;
+inline constexpr auto AUTOAIM_5DEGREES = 0.08715574274766;
+inline constexpr auto AUTOAIM_8DEGREES = 0.1391731009601;
+inline constexpr auto AUTOAIM_10DEGREES = 0.1736481776669;
+inline constexpr auto AUTOAIM_20DEGREES = 0.3490658503989;
 
-#define AUTOAIM_SCALE_DEFAULT		1.0f
-#define AUTOAIM_SCALE_DIRECT_ONLY	0.0f
+inline constexpr auto AUTOAIM_SCALE_DEFAULT = 1.0f;
+inline constexpr auto AUTOAIM_SCALE_DIRECT_ONLY = 0.0f;
 
 // instant damage
 
 // For a means of resolving these consts into debug string text, see function
 // CTakeDamageInfo::DebugGetDamageTypeString(unsigned int DamageType, char *outbuf, unsigned int outbuflength )
-#define DMG_GENERIC			0			// generic damage was done
-#define DMG_CRUSH			(1 << 0)	// crushed by falling or moving object. 
+inline constexpr auto DMG_GENERIC = 0;	// generic damage was done
+inline constexpr int DMG_CRUSH = (1 << 0);	// crushed by falling or moving object.
 										// NOTE: It's assumed crush damage is occurring as a result of physics collision, so no extra physics force is generated by crush damage.
 										// DON'T use DMG_CRUSH when damaging entities unless it's the result of a physics collision. You probably want DMG_CLUB instead.
-#define DMG_BULLET			(1 << 1)	// shot
-#define DMG_SLASH			(1 << 2)	// cut, clawed, stabbed
-#define DMG_BURN			(1 << 3)	// heat burned
-#define DMG_VEHICLE			(1 << 4)	// hit by a vehicle
-#define DMG_FALL			(1 << 5)	// fell too far
-#define DMG_BLAST			(1 << 6)	// explosive blast damage
-#define DMG_CLUB			(1 << 7)	// crowbar, punch, headbutt
-#define DMG_SHOCK			(1 << 8)	// electric shock
-#define DMG_SONIC			(1 << 9)	// sound pulse shockwave
-#define DMG_ENERGYBEAM		(1 << 10)	// laser or other high energy beam 
-#define DMG_PREVENT_PHYSICS_FORCE		(1 << 11)	// Prevent a physics force 
-#define DMG_NEVERGIB		(1 << 12)	// with this bit OR'd in, no damage type will be able to gib victims upon death
-#define DMG_ALWAYSGIB		(1 << 13)	// with this bit OR'd in, any damage type can be made to gib victims upon death.
-#define DMG_DROWN			(1 << 14)	// Drowning
+inline constexpr int DMG_BULLET = (1 << 1);	// shot
+inline constexpr int DMG_SLASH = (1 << 2);	// cut, clawed, stabbed
+inline constexpr int DMG_BURN = (1 << 3);	// heat burned
+inline constexpr int DMG_VEHICLE = (1 << 4);	// hit by a vehicle
+inline constexpr int DMG_FALL = (1 << 5);	// fell too far
+inline constexpr int DMG_BLAST = (1 << 6);	// explosive blast damage
+inline constexpr int DMG_CLUB = (1 << 7);	// crowbar, punch, headbutt
+inline constexpr int DMG_SHOCK = (1 << 8);	// electric shock
+inline constexpr int DMG_SONIC = (1 << 9);	// sound pulse shockwave
+inline constexpr int DMG_ENERGYBEAM = (1 << 10);	// laser or other high energy beam
+inline constexpr int DMG_PREVENT_PHYSICS_FORCE = (1 << 11);	// Prevent a physics force
+inline constexpr int DMG_NEVERGIB = (1 << 12);	// with this bit OR'd in, no damage type will be able to gib victims upon death
+inline constexpr int DMG_ALWAYSGIB = (1 << 13);	// with this bit OR'd in, any damage type can be made to gib victims upon death.
+inline constexpr int DMG_DROWN = (1 << 14);	// Drowning
 
 
-#define DMG_PARALYZE		(1 << 15)	// slows affected creature down
-#define DMG_NERVEGAS		(1 << 16)	// nerve toxins, very bad
-#define DMG_POISON			(1 << 17)	// blood poisoning - heals over time like drowning damage
-#define DMG_RADIATION		(1 << 18)	// radiation exposure
-#define DMG_DROWNRECOVER	(1 << 19)	// drowning recovery
-#define DMG_ACID			(1 << 20)	// toxic chemicals or acid burns
-#define DMG_SLOWBURN		(1 << 21)	// in an oven
+inline constexpr int DMG_PARALYZE = (1 << 15);	// slows affected creature down
+inline constexpr int DMG_NERVEGAS = (1 << 16);	// nerve toxins, very bad
+inline constexpr int DMG_POISON = (1 << 17);	// blood poisoning - heals over time like drowning damage
+inline constexpr int DMG_RADIATION = (1 << 18);	// radiation exposure
+inline constexpr int DMG_DROWNRECOVER = (1 << 19);	// drowning recovery
+inline constexpr int DMG_ACID = (1 << 20);	// toxic chemicals or acid burns
+inline constexpr int DMG_SLOWBURN = (1 << 21);	// in an oven
 
-#define DMG_REMOVENORAGDOLL	(1<<22)		// with this bit OR'd in, no ragdoll will be created, and the target will be quietly removed.
+inline constexpr int DMG_REMOVENORAGDOLL = (1<<22);	// with this bit OR'd in, no ragdoll will be created, and the target will be quietly removed.
 										// use this to kill an entity that you've already got a server-side ragdoll for
 
-#define DMG_PHYSGUN			(1<<23)		// Hit by manipulator. Usually doesn't do any damage.
-#define DMG_PLASMA			(1<<24)		// Shot by Cremator
-#define DMG_AIRBOAT			(1<<25)		// Hit by the airboat's gun
+inline constexpr int DMG_PHYSGUN = (1<<23);	// Hit by manipulator. Usually doesn't do any damage.
+inline constexpr int DMG_PLASMA = (1<<24);	// Shot by Cremator
+inline constexpr int DMG_AIRBOAT = (1<<25);	// Hit by the airboat's gun
 
-#define DMG_DISSOLVE		(1<<26)		// Dissolving!
-#define DMG_BLAST_SURFACE	(1<<27)		// A blast on the surface of water that cannot harm things underwater
-#define DMG_DIRECT			(1<<28)
-#define DMG_BUCKSHOT		(1<<29)		// not quite a bullet. Little, rounder, different.
+inline constexpr int DMG_DISSOLVE = (1<<26);	// Dissolving!
+inline constexpr int DMG_BLAST_SURFACE = (1<<27);	// A blast on the surface of water that cannot harm things underwater
+inline constexpr int DMG_DIRECT = (1<<28);
+inline constexpr int DMG_BUCKSHOT = (1<<29);	// not quite a bullet. Little, rounder, different.
 
 // NOTE: DO NOT ADD ANY MORE CUSTOM DMG_ TYPES. MODS USE THE DMG_LASTGENERICFLAG BELOW, AND
 //		 IF YOU ADD NEW DMG_ TYPES, THEIR TYPES WILL BE HOSED. WE NEED A BETTER SOLUTION.
 
 // TODO: keep this up to date so all the mod-specific flags don't overlap anything.
-#define DMG_LASTGENERICFLAG	DMG_BUCKSHOT
+inline constexpr auto DMG_LASTGENERICFLAG = DMG_BUCKSHOT;
 
 
 
 // settings for m_takedamage
-#define	DAMAGE_NO				0
-#define DAMAGE_EVENTS_ONLY		1		// Call damage functions, but don't modify health
-#define	DAMAGE_YES				2
-#define	DAMAGE_AIM				3
+inline constexpr auto DAMAGE_NO = 0;
+inline constexpr auto DAMAGE_EVENTS_ONLY = 1; // Call damage functions, but don't modify health
+inline constexpr auto DAMAGE_YES = 2;
+inline constexpr auto DAMAGE_AIM = 3;
 
 
 enum RelativeDamagedDirection_t
@@ -507,7 +505,7 @@ enum
 	NUM_OBSERVER_MODES,
 };
 
-#define LAST_PLAYER_OBSERVERMODE	OBS_MODE_ROAMING
+inline constexpr auto LAST_PLAYER_OBSERVERMODE = OBS_MODE_ROAMING;
 
 // Force Camera Restrictions with mp_forcecamera
 enum {
@@ -561,13 +559,13 @@ typedef enum
 } USE_TYPE;
 
 // basic team colors
-#define COLOR_RED		Color(255, 64, 64, 255)
-#define COLOR_BLUE		Color(153, 204, 255, 255)
-#define COLOR_YELLOW	Color(255, 178, 0, 255)
-#define COLOR_GREEN		Color(153, 255, 153, 255)
-#define COLOR_GREY		Color(204, 204, 204, 255)
-#define COLOR_WHITE		Color(255, 255, 255, 255)
-#define COLOR_BLACK		Color(0, 0, 0, 255)
+inline constexpr Color COLOR_RED( 255, 64, 64, 255 );
+inline constexpr Color COLOR_BLUE( 153, 204, 255, 255 );
+inline constexpr Color COLOR_YELLOW( 255, 178, 0, 255 );
+inline constexpr Color COLOR_GREEN( 153, 255, 153, 255 );
+inline constexpr Color COLOR_GREY( 204, 204, 204, 255 );
+inline constexpr Color COLOR_WHITE( 255, 255, 255, 255 );
+inline constexpr Color COLOR_BLACK( 0, 0, 0, 255 );
 
 // All NPCs need this data
 enum
@@ -607,8 +605,8 @@ enum
 
 
 // Shared think context stuff
-#define	MAX_CONTEXT_LENGTH		32
-#define NO_THINK_CONTEXT	-1
+inline constexpr auto MAX_CONTEXT_LENGTH = 32;
+inline constexpr auto NO_THINK_CONTEXT = -1;
 
 // entity flags, CBaseEntity::m_iEFlags
 enum
@@ -670,7 +668,7 @@ const int FX_BLOODSPRAY_CLOUD	= 0x04;
 const int FX_BLOODSPRAY_ALL		= 0xFF;
 
 //-----------------------------------------------------------------------------
-#define MAX_SCREEN_OVERLAYS		10
+inline constexpr auto MAX_SCREEN_OVERLAYS = 10;
 
 // These are the types of data that hang off of CBaseEntities and the flag bits used to mark their presence
 enum
@@ -866,31 +864,31 @@ struct EmitSound_t
 	int							m_nSoundEntryVersion;
 };
 
-#define MAX_ACTORS_IN_SCENE 16
+inline constexpr auto MAX_ACTORS_IN_SCENE = 16;
 
 //-----------------------------------------------------------------------------
 // Multiplayer specific defines
 //-----------------------------------------------------------------------------
-#define MAX_CONTROL_POINTS			8
-#define MAX_CONTROL_POINT_GROUPS	8
+inline constexpr auto MAX_CONTROL_POINTS = 8;
+inline constexpr auto MAX_CONTROL_POINT_GROUPS = 8;
 
 // Maximum number of points that a control point may need owned to be cappable
-#define MAX_PREVIOUS_POINTS			3
+inline constexpr auto MAX_PREVIOUS_POINTS = 3;
 
 // The maximum number of teams the control point system knows how to deal with
-#define MAX_CONTROL_POINT_TEAMS		8
+inline constexpr auto MAX_CONTROL_POINT_TEAMS = 8;
 
 // Maximum length of the cap layout string
-#define MAX_CAPLAYOUT_LENGTH		32
+inline constexpr auto MAX_CAPLAYOUT_LENGTH = 32;
 
 // Maximum length of the current round printname
-#define MAX_ROUND_NAME				32
+inline constexpr auto MAX_ROUND_NAME = 32;
 
 // Maximum length of the current round name
-#define MAX_ROUND_IMAGE_NAME		64
+inline constexpr auto MAX_ROUND_IMAGE_NAME = 64;
 
 // Score added to the team score for a round win
-#define TEAMPLAY_ROUND_WIN_SCORE	1
+inline constexpr auto TEAMPLAY_ROUND_WIN_SCORE = 1;
 
 enum
 {
@@ -904,10 +902,10 @@ enum
 // Level 1 enables it, but doesn't force "full precision" networking, so you can still get lots of errors in position/velocity/etc.
 // Level 2 enables it but also forces origins/angles to be sent full precision, so other fields can be error / tolerance checked
 // NOTE:  This stuff only works on a listen server since it punches a hole from the client .dll to server .dll!!!
-#define PREDICTION_ERROR_CHECK_LEVEL 0
+inline constexpr auto PREDICTION_ERROR_CHECK_LEVEL = 0;
 
 // Set to 1 to spew a call stack in DiffPrint() for the existing side when the other side is missing
-#define PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING 0
+inline constexpr auto PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING = 0;
 
 //-----------------------------------------------------------------------------
 // Round timer states
@@ -930,24 +928,21 @@ enum
 //-----------------------------------------------------------------------------
 // Cell origin values
 //-----------------------------------------------------------------------------
-#define CELL_COUNT( bits ) ( (MAX_COORD_INTEGER*2) / (1 << (bits)) ) // How many cells on an axis based on the bit size of the cell
-#define CELL_COUNT_BITS( bits ) MINIMUM_BITS_NEEDED( CELL_COUNT( bits ) ) // How many bits are necessary to respresent that cell
-#define CELL_BASEENTITY_ORIGIN_CELL_BITS 5 // default amount of entropy bits for base entity
+#include "worldsize.h"
+
+inline constexpr int CELL_COUNT( int bits ) { return ( MAX_COORD_INTEGER * 2 ) / ( 1 << bits ); }
+inline constexpr int CELL_COUNT_BITS( int bits ) { return MINIMUM_BITS_NEEDED( CELL_COUNT( bits ) ); }
+inline constexpr auto CELL_BASEENTITY_ORIGIN_CELL_BITS = 5; // default amount of entropy bits for base entity
 
 
 // The player's method of starting / stopping commentary
-#ifdef GAME_HAS_NO_USE_KEY
-	#define COMMENTARY_BUTTONS		(IN_ATTACK | IN_ATTACK2 | IN_USE)
-#else
-		#define COMMENTARY_BUTTONS	(IN_USE)
-#endif
+inline constexpr auto COMMENTARY_BUTTONS = (IN_USE);
 
 bool IsHeadTrackingEnabled();
 
 // If this is defined, all of the scopeguard objects are NULL'd out to reduce overhead
-#define SPLIT_SCREEN_STUBS
 
-	#define MAX_SPLITSCREEN_PLAYERS 1
+inline constexpr auto MAX_SPLITSCREEN_PLAYERS = 1;
 
 inline bool IsSplitScreenSupported()
 {
@@ -1003,9 +998,9 @@ enum Class_T
 };
 
 // Factions
-#define FACTION_NONE				0					// Not assigned a faction.  Entities not assigned a faction will not do faction tests.
-#define LAST_SHARED_FACTION			(FACTION_NONE)
-#define NUM_SHARED_FACTIONS			(FACTION_NONE + 1)
+inline constexpr auto FACTION_NONE = 0; // Not assigned a faction.  Entities not assigned a faction will not do faction tests.
+inline constexpr auto LAST_SHARED_FACTION = (FACTION_NONE);
+inline constexpr auto NUM_SHARED_FACTIONS = (FACTION_NONE + 1);
 
 enum ModelScaleType_t
 {
@@ -1041,5 +1036,25 @@ enum
 // Used by base entity for spotted by masks
 static int const kNumSpottedByMask = ALIGN_VALUE( MAX_PLAYERS, 32 ) / 32;
 
+// entity capabilities
+// These are caps bits to indicate what an object's capabilities (currently used for +USE, save/restore and level transitions)
+// NOTE: (For portal 2 and paint) These +use related caps MUST be the first 6 bits!
+inline constexpr auto FCAP_IMPULSE_USE = 0x00000001; // can be used by the player
+inline constexpr auto FCAP_CONTINUOUS_USE = 0x00000002; // can be used by the player
+inline constexpr auto FCAP_ONOFF_USE = 0x00000004; // can be used by the player
+inline constexpr auto FCAP_DIRECTIONAL_USE = 0x00000008; // Player sends +/- 1 when using (currently only tracktrains)
+// NOTE: Normally +USE only works in direct line of sight.  Add these caps for additional searches
+inline constexpr auto FCAP_USE_ONGROUND = 0x00000010;
+inline constexpr auto FCAP_USE_IN_RADIUS = 0x00000020;
 
-#endif // SHAREDDEFS_H
+inline constexpr auto FCAP_MUST_SPAWN = 0x00000040; // Spawn after restore
+inline constexpr auto FCAP_ACROSS_TRANSITION = 0x00000080; // should transfer between transitions
+// UNDONE: This will ignore transition volumes (trigger_transition), but not the PVS!!!
+inline constexpr auto FCAP_FORCE_TRANSITION = 0x00000100; // ALWAYS goes across transitions
+inline constexpr auto FCAP_NOTIFY_ON_TRANSITION = 0x00000200; // Entity will receive Inside/Outside transition inputs when a transition occurs
+
+inline constexpr auto FCAP_SAVE_NON_NETWORKABLE = 0x00000400;
+
+inline constexpr auto FCAP_MASTER = 0x10000000; // Can be used to "master" other entities (like multisource)
+inline constexpr auto FCAP_WCEDIT_POSITION = 0x40000000; // Can change position and update Hammer in edit mode
+inline constexpr auto FCAP_DONT_SAVE = 0x80000000; // Don't save this

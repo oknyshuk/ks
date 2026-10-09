@@ -1,27 +1,106 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Memory allocation!
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#include "tier0/platform.h"
+import ks.core;
+import std;
 
+constexpr auto DEF_REGION = 0;
 
-#if !defined(STEAM) && !defined(NO_MALLOC_OVERRIDE)
+//-----------------------------------------------------------------------------
+// CStdMemAlloc is a thin adapter over the C library allocator (or whatever
+// allocator the executable linked in ahead of it), plus the accounting and
+// out-of-memory policy the engine expects from IMemAlloc. Valve's small block
+// heap and the vendored dlmalloc are gone; they were already compiled out.
+//-----------------------------------------------------------------------------
+class CStdMemAlloc : public IMemAlloc
+{
+public:
+	CStdMemAlloc();
 
+	// Internal versions
+	void *InternalAlloc( int region, std::size_t nSize );
+	void *InternalRealloc( void *pMem, std::size_t nSize );
+	void  InternalFree( void *pMem );
 
-#include <malloc.h>
-#include <mutex>
+	// Release versions
+	virtual void *Alloc( std::size_t nSize );
+	virtual void *Realloc( void *pMem, std::size_t nSize );
+	virtual void  Free( void *pMem );
+    virtual void *Expand_NoLongerSupported( void *pMem, std::size_t nSize );
 
-#include "tier0/dbg.h"
-#include "tier0/memalloc.h"
-#include "tier0/threadtools.h"
-#include "mem_helpers.h"
-#include "memstd.h"
-#include "tier0/minidump.h"
+	// Debug versions
+    virtual void *Alloc( std::size_t nSize, const char *pFileName, int nLine );
+    virtual void *Realloc( void *pMem, std::size_t nSize, const char *pFileName, int nLine );
+    virtual void  Free( void *pMem, const char *pFileName, int nLine );
+    virtual void *Expand_NoLongerSupported( void *pMem, std::size_t nSize, const char *pFileName, int nLine );
 
-#define DEF_REGION 0
+	virtual void *RegionAlloc( int region, std::size_t nSize );
+	virtual void *RegionAlloc( int region, std::size_t nSize, const char *pFileName, int nLine );
+
+	// Returns size of a particular allocation
+	virtual std::size_t GetSize( void *pMem );
+
+    // Force file + line information for an allocation
+    virtual void PushAllocDbgInfo( const char *pFileName, int nLine );
+    virtual void PopAllocDbgInfo();
+
+	virtual int32 CrtSetBreakAlloc( int32 lNewBreakAlloc );
+	virtual	int CrtSetReportMode( int nReportType, int nReportMode );
+	virtual int CrtIsValidHeapPointer( const void *pMem );
+	virtual int CrtIsValidPointer( const void *pMem, unsigned int size, int access );
+	virtual int CrtCheckMemory( void );
+	virtual int CrtSetDbgFlag( int nNewFlag );
+	virtual void CrtMemCheckpoint( _CrtMemState *pState );
+	void* CrtSetReportFile( int nRptType, void* hFile );
+	void* CrtSetReportHook( void* pfnNewHook );
+	int CrtDbgReport( int nRptType, const char * szFile,
+			int nLine, const char * szModule, const char * pMsg );
+	virtual int heapchk();
+
+	virtual void DumpStats();
+	virtual void DumpStatsFileBase( char const *pchFileBase, DumpStatsFormat_t nFormat = FORMAT_TEXT ) override;
+	virtual std::size_t ComputeMemoryUsedBy( char const *pchSubStr );
+	virtual void GlobalMemoryStatus( std::size_t *pUsedMemory, std::size_t *pFreeMemory );
+
+	virtual bool IsDebugHeap() { return false; }
+
+	virtual void GetActualDbgInfo( const char *&pFileName, int &nLine ) {}
+	virtual void RegisterAllocation( const char *pFileName, int nLine, std::size_t nLogicalSize, std::size_t nActualSize, unsigned nTime ) {}
+	virtual void RegisterDeallocation( const char *pFileName, int nLine, std::size_t nLogicalSize, std::size_t nActualSize, unsigned nTime ) {}
+
+	virtual int GetVersion() { return MEMALLOC_VERSION; }
+
+	virtual void OutOfMemory( std::size_t nBytesAttempted = 0 ) { SetCRTAllocFailed( nBytesAttempted ); }
+
+	virtual IVirtualMemorySection * AllocateVirtualMemorySection( std::size_t numMaxBytes );
+
+	virtual int GetGenericMemoryStats( GenericMemoryStat_t **ppMemoryStats );
+
+	virtual void CompactHeap();
+	virtual void CompactIncremental(); 
+
+	virtual MemAllocFailHandler_t SetAllocFailHandler( MemAllocFailHandler_t pfnMemAllocFailHandler );
+	std::size_t CallAllocFailHandler( std::size_t nBytes ) { return (*m_pfnFailHandler)( nBytes); }
+
+	virtual uint32 GetDebugInfoSize() { return 0; }
+	virtual void SaveDebugInfo( void *pvDebugInfo ) { }
+	virtual void RestoreDebugInfo( const void *pvDebugInfo ) {}	
+	virtual void InitDebugInfo( void *pvDebugInfo, const char *pchRootFileName, int nLine ) {}
+
+	static std::size_t DefaultFailHandler( std::size_t );
+	void DumpBlockStats( void *p ) {}
+
+	virtual void SetStatsExtraInfo( const char *pMapName, const char *pComment );
+
+	virtual std::size_t MemoryAllocFailed();
+
+	void		SetCRTAllocFailed( std::size_t nMemSize );
+
+	MemAllocFailHandler_t m_pfnFailHandler;
+	std::size_t				m_sMemoryAllocFailed;
+};
 
 
 // Record a list of memory callbacks for printing information
@@ -29,7 +108,7 @@
 // Allow a fixed maximum number of memory callbacks. We can't use
 // CUtlVector or other classes so a fixed maximum is necessary.
 IMemoryInfo* s_MemoryInfoCallbacks[100];
-static size_t s_nMemoryInfoCallbacks;
+static std::size_t s_nMemoryInfoCallbacks;
 // Don't modify the MemoryInfoCallbacks without acquiring this mutex
 static std::recursive_mutex s_callbackMutex;
 
@@ -37,15 +116,15 @@ void AddMemoryInfoCallback( IMemoryInfo* pMemoryInfo )
 {
 	std::scoped_lock lock( s_callbackMutex );
 	// This is O(n^2) but that's okay because n is just 10-20
-	for ( size_t i = 0; i < s_nMemoryInfoCallbacks; ++i )
+	for ( std::size_t i = 0; i < s_nMemoryInfoCallbacks; ++i )
 	{
 		if ( s_MemoryInfoCallbacks[ i ] == pMemoryInfo )
 		{
-			Assert( !"This pointer has already been added!" );
+			contract_assert( !"This pointer has already been added!" );
 		}
 	}
 
-	if ( s_nMemoryInfoCallbacks < ARRAYSIZE( s_MemoryInfoCallbacks ) )
+	if ( s_nMemoryInfoCallbacks < std::size( s_MemoryInfoCallbacks ) )
 	{
 		s_MemoryInfoCallbacks[ s_nMemoryInfoCallbacks ] = pMemoryInfo;
 		++s_nMemoryInfoCallbacks;
@@ -55,7 +134,7 @@ void AddMemoryInfoCallback( IMemoryInfo* pMemoryInfo )
 void RemoveMemoryInfoCallback( IMemoryInfo* pMemoryInfo )
 {
 	std::scoped_lock lock( s_callbackMutex );
-	for ( size_t i = 0; i < s_nMemoryInfoCallbacks; ++i )
+	for ( std::size_t i = 0; i < s_nMemoryInfoCallbacks; ++i )
 	{
 		if ( s_MemoryInfoCallbacks[ i ] == pMemoryInfo )
 		{
@@ -66,7 +145,7 @@ void RemoveMemoryInfoCallback( IMemoryInfo* pMemoryInfo )
 			return;
 		}
 	}
-	Assert( !"Tried removing a callback that wasn't there!" );
+	contract_assert( !"Tried removing a callback that wasn't there!" );
 }
 
 // Dump a summary of all of the non-heap memory blocks that have been
@@ -74,14 +153,14 @@ void RemoveMemoryInfoCallback( IMemoryInfo* pMemoryInfo )
 void DumpMemoryInfoStats()
 {
 	std::scoped_lock lock( s_callbackMutex );
-	size_t nTotalAllocatedBytes = 0;
-	size_t nTotalPeakBytes = 0;
-	size_t nTotalCommittedBytes = 0;
-	size_t nTotalReservedBytes = 0;
+	std::size_t nTotalAllocatedBytes = 0;
+	std::size_t nTotalPeakBytes = 0;
+	std::size_t nTotalCommittedBytes = 0;
+	std::size_t nTotalReservedBytes = 0;
 
 	const double MB = 1024.0 * 1024.0;
 
-	for ( size_t i = 0; i < s_nMemoryInfoCallbacks; ++i )
+	for ( std::size_t i = 0; i < s_nMemoryInfoCallbacks; ++i )
 	{
 		IMemoryInfo* pMemoryInfo = s_MemoryInfoCallbacks[ i ];
 		nTotalAllocatedBytes += pMemoryInfo->GetAllocatedBytes();
@@ -111,14 +190,7 @@ void DumpMemoryInfoStats()
 				nTotalCommittedBytes / MB, nTotalReservedBytes / MB );
 }
 
-#define malloc_internal( region, bytes) malloc(bytes)
-#define realloc_internal realloc
-#define free_internal free
-#define msize_internal malloc_usable_size
-
-#define PROFILE_ALLOC( name ) ((void)0)
-#define PrintAllocTimes() ((void)0)
-
+template <typename T1, typename T2> [[gnu::always_inline]] inline auto malloc_internal( T1 region, T2 bytes ) { return std::malloc(bytes); }
 
 
 //-----------------------------------------------------------------------------
@@ -126,7 +198,7 @@ void DumpMemoryInfoStats()
 //-----------------------------------------------------------------------------
 
 
-static CStdMemAlloc s_StdMemAlloc CONSTRUCT_EARLY;
+static CStdMemAlloc s_StdMemAlloc [[gnu::init_priority(101)]];
 
 IMemAlloc *g_pMemAlloc = &s_StdMemAlloc;
 void SetAllocatorObject( IMemAlloc* pAllocator )
@@ -136,10 +208,9 @@ void SetAllocatorObject( IMemAlloc* pAllocator )
 
 CStdMemAlloc::CStdMemAlloc()
 :	m_pfnFailHandler( DefaultFailHandler ),
-	m_sMemoryAllocFailed( (size_t)0 )
+	m_sMemoryAllocFailed( (std::size_t)0 )
 {
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -147,9 +218,8 @@ CStdMemAlloc::CStdMemAlloc()
 //-----------------------------------------------------------------------------
 
 
-void *CStdMemAlloc::InternalAlloc( int region, size_t nSize )
+void *CStdMemAlloc::InternalAlloc( int region, std::size_t nSize )
 {
-	PROFILE_ALLOC(Malloc);
 
 	void *pMem = malloc_internal( region, nSize );
 	if ( !pMem )
@@ -158,21 +228,19 @@ void *CStdMemAlloc::InternalAlloc( int region, size_t nSize )
 		return nullptr;
 	}
 
-	ApplyMemoryInitializations( pMem, nSize );
 	return pMem;
 }
 
 
-void *CStdMemAlloc::InternalRealloc( void *pMem, size_t nSize )
+void *CStdMemAlloc::InternalRealloc( void *pMem, std::size_t nSize )
 {
 	if ( !pMem )
 	{
 		return RegionAlloc( DEF_REGION, nSize );
 	}
 
-	PROFILE_ALLOC(Realloc);
 
-	void *pRet = realloc_internal( pMem, nSize );
+	void *pRet = std::realloc( pMem, nSize );
 	if ( !pRet )
 	{
 		SetCRTAllocFailed( nSize );
@@ -189,21 +257,20 @@ void CStdMemAlloc::InternalFree( void *pMem )
 		return;
 	}
 
-	PROFILE_ALLOC(Free);
 
-	free_internal( pMem );
+	std::free( pMem );
 }
 
 //-----------------------------------------------------------------------------
 // Release versions
 //-----------------------------------------------------------------------------
 
-void *CStdMemAlloc::Alloc( size_t nSize )
+void *CStdMemAlloc::Alloc( std::size_t nSize )
 {
 	return CStdMemAlloc::InternalAlloc( DEF_REGION, nSize );
 }
 
-void *CStdMemAlloc::Realloc( void *pMem, size_t nSize )
+void *CStdMemAlloc::Realloc( void *pMem, std::size_t nSize )
 {
 	return CStdMemAlloc::InternalRealloc( pMem, nSize );
 }
@@ -213,7 +280,7 @@ void  CStdMemAlloc::Free( void *pMem )
 	CStdMemAlloc::InternalFree( pMem );
 }
 
-void *CStdMemAlloc::Expand_NoLongerSupported( void *pMem, size_t nSize )
+void *CStdMemAlloc::Expand_NoLongerSupported( void *pMem, std::size_t nSize )
 {
 	return nullptr;
 }
@@ -221,12 +288,12 @@ void *CStdMemAlloc::Expand_NoLongerSupported( void *pMem, size_t nSize )
 //-----------------------------------------------------------------------------
 // Debug versions
 //-----------------------------------------------------------------------------
-void *CStdMemAlloc::Alloc( size_t nSize, const char *pFileName, int nLine )
+void *CStdMemAlloc::Alloc( std::size_t nSize, const char *pFileName, int nLine )
 {
 	return CStdMemAlloc::InternalAlloc( DEF_REGION, nSize );
 }
 
-void *CStdMemAlloc::Realloc( void *pMem, size_t nSize, const char *pFileName, int nLine )
+void *CStdMemAlloc::Realloc( void *pMem, std::size_t nSize, const char *pFileName, int nLine )
 {
 	return CStdMemAlloc::InternalRealloc( pMem, nSize );
 }
@@ -236,7 +303,7 @@ void  CStdMemAlloc::Free( void *pMem, const char *pFileName, int nLine )
 	CStdMemAlloc::InternalFree( pMem );
 }
 
-void *CStdMemAlloc::Expand_NoLongerSupported( void *pMem, size_t nSize, const char *pFileName, int nLine )
+void *CStdMemAlloc::Expand_NoLongerSupported( void *pMem, std::size_t nSize, const char *pFileName, int nLine )
 {
 	return nullptr;
 }
@@ -244,12 +311,12 @@ void *CStdMemAlloc::Expand_NoLongerSupported( void *pMem, size_t nSize, const ch
 //-----------------------------------------------------------------------------
 // Region support
 //-----------------------------------------------------------------------------
-void *CStdMemAlloc::RegionAlloc( int region, size_t nSize ) 
+void *CStdMemAlloc::RegionAlloc( int region, std::size_t nSize ) 
 {
 	return CStdMemAlloc::InternalAlloc( region, nSize );
 }
 
-void *CStdMemAlloc::RegionAlloc( int region, size_t nSize, const char *pFileName, int nLine )
+void *CStdMemAlloc::RegionAlloc( int region, std::size_t nSize, const char *pFileName, int nLine )
 {
 	return CStdMemAlloc::InternalAlloc( region, nSize );
 }
@@ -258,12 +325,12 @@ void *CStdMemAlloc::RegionAlloc( int region, size_t nSize, const char *pFileName
 //-----------------------------------------------------------------------------
 // Returns the size of a particular allocation (NOTE: may be larger than the size requested!)
 //-----------------------------------------------------------------------------
-size_t CStdMemAlloc::GetSize( void *pMem )
+std::size_t CStdMemAlloc::GetSize( void *pMem )
 {
 	if ( !pMem )
-		return CalcHeapUsed();
+		return 0;
 
-	return msize_internal( pMem );
+	return ks::platform::allocation_size( pMem );
 }
 
 
@@ -346,22 +413,22 @@ void CStdMemAlloc::DumpStatsFileBase( char const *pchFileBase, DumpStatsFormat_t
 {
 }
 
-IVirtualMemorySection * CStdMemAlloc::AllocateVirtualMemorySection( size_t numMaxBytes )
+IVirtualMemorySection * CStdMemAlloc::AllocateVirtualMemorySection( std::size_t numMaxBytes )
 {
 	return nullptr;
 }
 
-size_t CStdMemAlloc::ComputeMemoryUsedBy( char const *pchSubStr )
+std::size_t CStdMemAlloc::ComputeMemoryUsedBy( char const *pchSubStr )
 {
 	return 0;//dbg heap only.
 }
 
-static inline size_t ExtraDevkitMemory( void )
+static inline std::size_t ExtraDevkitMemory( void )
 {
 	return 0;
 }
 
-void CStdMemAlloc::GlobalMemoryStatus( size_t *pUsedMemory, size_t *pFreeMemory )
+void CStdMemAlloc::GlobalMemoryStatus( std::size_t *pUsedMemory, std::size_t *pFreeMemory )
 {
 	if ( !pUsedMemory || !pFreeMemory )
 		return;
@@ -371,12 +438,12 @@ void CStdMemAlloc::GlobalMemoryStatus( size_t *pUsedMemory, size_t *pFreeMemory 
 	*pUsedMemory = 0;
 }
 
-#define MAX_GENERIC_MEMORY_STATS 64
+constexpr auto MAX_GENERIC_MEMORY_STATS = 64;
 GenericMemoryStat_t g_MemStats[MAX_GENERIC_MEMORY_STATS];
 int g_nMemStats = 0;
 static inline int AddGenericMemoryStat( const char *name, int value )
 {
-	Assert( g_nMemStats < MAX_GENERIC_MEMORY_STATS );
+	contract_assert( g_nMemStats < MAX_GENERIC_MEMORY_STATS );
 	if ( g_nMemStats < MAX_GENERIC_MEMORY_STATS )
 	{
 		g_MemStats[ g_nMemStats ].name  = name;
@@ -393,11 +460,9 @@ int CStdMemAlloc::GetGenericMemoryStats( GenericMemoryStat_t **ppMemoryStats )
 	g_nMemStats = 0;
 
 
-
 	*ppMemoryStats = &g_MemStats[0];
 	return g_nMemStats;
 }
-
 
 
 MemAllocFailHandler_t CStdMemAlloc::SetAllocFailHandler( MemAllocFailHandler_t pfnMemAllocFailHandler )
@@ -407,7 +472,7 @@ MemAllocFailHandler_t CStdMemAlloc::SetAllocFailHandler( MemAllocFailHandler_t p
 	return pfnPrevious;
 }
 
-size_t CStdMemAlloc::DefaultFailHandler( size_t nBytes )
+std::size_t CStdMemAlloc::DefaultFailHandler( std::size_t nBytes )
 {
 	return 0;
 }
@@ -428,27 +493,24 @@ void CStdMemAlloc::CompactIncremental()
 {
 }
 
-void CStdMemAlloc::SetCRTAllocFailed( size_t nSize )
+void CStdMemAlloc::SetCRTAllocFailed( std::size_t nSize )
 {
 	m_sMemoryAllocFailed = nSize;
 
 	DebuggerBreakIfDebugging();
 
 	char buffer[256];
-	_snprintf( buffer, sizeof( buffer ), "***** OUT OF MEMORY! attempted allocation size: %u ****\n", nSize );
+	std::snprintf( buffer, sizeof( buffer ), "***** OUT OF MEMORY! attempted allocation size: %u ****\n", nSize );
 
-	printf( "%s\n", buffer );
+	std::printf( "%s\n", buffer );
 	if ( !Plat_IsInDebugSession() )
 	{
 		WriteMiniDump();
-		Plat_ExitProcess( EXIT_FAILURE );
+		Plat_ExitProcess( 1 );
 	}
 }
 
-size_t CStdMemAlloc::MemoryAllocFailed()
+std::size_t CStdMemAlloc::MemoryAllocFailed()
 {
 	return m_sMemoryAllocFailed;
 }
-
-
-#endif // STEAM

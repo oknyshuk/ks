@@ -1,16 +1,48 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: An entity for creating instructor hints entirely with map logic
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: An entity for creating instructor hints entirely with map logic
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "baseentity.h"
 #include "world.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -75,7 +107,7 @@ void CEnvInstructorHint::InputShowHint( inputdata_t &inputdata )
 			pTargetEntity = GetWorldEntity();
 
 		char szColorString[128];
-		Q_snprintf( szColorString, sizeof( szColorString ), "%.3d,%.3d,%.3d", m_Color.r, m_Color.g, m_Color.b );
+		V_snprintf( szColorString, sizeof( szColorString ), "%.3d,%.3d,%.3d", m_Color.r, m_Color.g, m_Color.b );
 
 		int iFlags = 0;
 		
@@ -109,7 +141,7 @@ void CEnvInstructorHint::InputShowHint( inputdata_t &inputdata )
 				if ( !pTargetEntity )
 				{
 					Warning( "Failed to play server side instructor hint: no player specified for hint\n" );
-					Assert( 0 );
+					contract_assert( 0 );
 				}
 			}
 		}
@@ -174,4 +206,3 @@ public:
 };
 
 LINK_ENTITY_TO_CLASS( info_target_instructor_hint, CInfoInstructorHintTarget );
-

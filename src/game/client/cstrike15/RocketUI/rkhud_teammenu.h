@@ -1,5 +1,8 @@
-#ifndef KISAKSTRIKE_RKHUD_TEAMMENU_H
-#define KISAKSTRIKE_RKHUD_TEAMMENU_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include <rocketui/rmlui.h>
 
 #include <rocketui/rocketui.h>
 #include "GameEventListener.h"
@@ -29,5 +32,3 @@ private:
     static bool m_bVisible;
     static RocketTeamMenuEventListener *m_pEventListener;
 };
-
-#endif //KISAKSTRIKE_RKHUD_TEAMMENU_H

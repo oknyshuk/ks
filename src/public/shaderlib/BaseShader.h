@@ -1,14 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-// This is what all shaders inherit from.
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BASESHADER_H
-#define BASESHADER_H
-
+// Purpose: This is what all shaders inherit from.
 
 #include "materialsystem/IShader.h"
 #include "materialsystem/imaterialvar.h"
@@ -165,7 +159,7 @@ private:
 	void PI_SetSkinningMatrices();
 	void PI_SetVertexShaderLocalLighting( );
 
-	FORCEINLINE void SetFogMode( ShaderFogMode_t fogMode );
+	[[gnu::always_inline]] inline void SetFogMode( ShaderFogMode_t fogMode );
 	
 protected:
 	static IMaterialVar **s_ppParams;	
@@ -228,5 +222,3 @@ inline IMaterialVar **CBaseShader::GetPPParams()
 {
 	return s_ppParams;
 }
-
-#endif // BASESHADER_H

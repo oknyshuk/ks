@@ -1,22 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef VOICE_GAMEMGR_H
-#define VOICE_GAMEMGR_H
 #pragma once
-
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "voice_common.h"
-
 
 class CGameRules;
 class CBasePlayer;
 
-abstract_class IVoiceGameMgrHelper
+class IVoiceGameMgrHelper
 {
 public:
 	virtual				~IVoiceGameMgrHelper() {}
@@ -75,7 +66,3 @@ private:
 
 // Use this to access CVoiceGameMgr.
 CVoiceGameMgr* GetVoiceGameMgr();
-
-
-
-#endif // VOICE_GAMEMGR_H

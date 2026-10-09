@@ -1,24 +1,23 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#ifndef BASE_CONTROL_H
-#define BASE_CONTROL_H
-
-
-#include <memory>
-#include <vector>
+import std;
+import ks.math;
+#include "util_shared.h"
+#include "player.h"
 
 extern float g_BotUpkeepInterval;					///< duration between bot upkeeps
 extern float g_BotUpdateInterval;					///< duration between bot updates
 const int g_BotUpdateSkipCount = 2;					///< number of upkeep periods to skip update
 
+struct edict_t;
+class CCommand;
 class CNavArea;
+class CBasePlayer;
+class CBaseEntity;
 
 //--------------------------------------------------------------------------------------------------------------
 class CBaseGrenade;
@@ -185,6 +184,3 @@ inline const CBotManager::DebugMessage *CBotManager::GetDebugMessage( int which 
 
 // global singleton to create and control bots
 extern CBotManager *TheBots;
-
-
-#endif

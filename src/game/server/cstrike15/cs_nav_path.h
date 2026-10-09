@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_path.h
 // Navigation Path encapsulation
 // Author: Michael S. Booth (mike@turtlerockstudios.com), November 2003
 
-#ifndef _CS_NAV_PATH_H_
-#define _CS_NAV_PATH_H_
-
 #include "nav_area.h"
 #include "bot_util.h"
+#include "nav_mesh.h"
 
 class CImprovLocomotor;
 
@@ -239,8 +234,3 @@ private:
 
 	CStuckMonitor m_stuckMonitor;
 };
-
-
-
-#endif	// _CS_NAV_PATH_H_
-

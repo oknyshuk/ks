@@ -1,24 +1,22 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: This is input priority system, allowing various clients to
 // cause input messages / cursor control to be routed to them as opposed to
 // other clients.
-//
-//===========================================================================//
 
-#ifndef IINPUTCLIENTSTACK_H
-#define IINPUTCLIENTSTACK_H
-
-#include "appframework/iappsystem.h"
+import std;
+import ks.tier1;
 #include "inputsystem/iinputsystem.h"
-
 
 ///-----------------------------------------------------------------------------
 /// A handle to an input context. These are arranged in a priority-based
 /// stack; the top context on the stack which is also enabled wins.
 ///-----------------------------------------------------------------------------
-DECLARE_POINTER_HANDLE( InputContextHandle_t );
-#define INPUT_CONTEXT_HANDLE_INVALID ( (InputContextHandle_t)0 )
+struct InputContextHandle_t__ { int unused; };
+using InputContextHandle_t = InputContextHandle_t__ *;
+inline constexpr auto INPUT_CONTEXT_HANDLE_INVALID = ( (InputContextHandle_t)0 );
 
 
 ///-----------------------------------------------------------------------------
@@ -31,7 +29,7 @@ DECLARE_POINTER_HANDLE( InputContextHandle_t );
 /// Therefore, I'm going to stick with only dealing with cursor control, 
 /// which is necessary for Jen's new gameUI system to interoperate with VGui.
 ///-----------------------------------------------------------------------------
-abstract_class IInputStackSystem : public IAppSystem
+class IInputStackSystem : public IAppSystem
 {
 public:
 	/// Allocates an input context, pushing it on top of the input stack, 
@@ -67,7 +65,4 @@ public:
 	virtual bool IsTopmostEnabledContext( InputContextHandle_t hContext ) const = 0;
 };
 
-DECLARE_TIER2_INTERFACE( IInputStackSystem, g_pInputStackSystem );
-
-
-#endif // IINPUTCLIENTSTACK_H
+extern IInputStackSystem *g_pInputStackSystem;;

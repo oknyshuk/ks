@@ -1,21 +1,19 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+#include <SDL3/SDL.h>
+
+import ks.tier1;
+import ks.desktop;
 #include "inputsystem.h"
 #include "key_translation.h"
 #include "inputsystem/ButtonCode.h"
 #include "inputsystem/AnalogCode.h"
-#include "tier0/etwprof.h"
-#include "tier1/convar.h"
+import std;
 #include "filesystem.h"
 #include "platforminputdevice.h"
 
 
-#include <SDL3/SDL.h>
-#include "appframework/sdlwindow.h"
 static void initKeymap(void);
 
 ConVar joy_xcontroller_found( "joy_xcontroller_found", "1", FCVAR_NONE, "Automatically set to 1 if an xcontroller has been detected." );
@@ -27,8 +25,7 @@ ConVar dev_force_selected_device( "dev_force_selected_device", "0", FCVAR_DEVELO
 // Singleton instance
 //-----------------------------------------------------------------------------
 static CInputSystem g_InputSystem;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CInputSystem, IInputSystem,
-						INPUTSYSTEM_INTERFACE_VERSION, g_InputSystem );
+static InterfaceReg s_Reg_CInputSystem_IInputSystem( []() -> void * { return static_cast<IInputSystem *>( &g_InputSystem ); }, INPUTSYSTEM_INTERFACE_VERSION );;
 
 
 
@@ -50,7 +47,6 @@ CInputSystem::CInputSystem()
 	m_bIsInGame = false;
 	m_JoysticksEnabled = 0;
 	m_nJoystickCount = 0;
-	m_nJoystickBaseline = 0;
 	m_nPollCount = 0;
 	m_nMouseButtonState = 0;
 	m_uiMouseWheel = 0;
@@ -75,11 +71,6 @@ CInputSystem::CInputSystem()
 
 	m_pXInputDLL = nullptr;
 	m_pRawInputDLL = nullptr;
-
-	for ( int i = 0; i < Q_ARRAYSIZE(m_nControllerType); i++)
-	{
-		m_nControllerType[i] = INPUT_TYPE_GENERIC_JOYSTICK;
-	}
 
 	InitPlatfromInputDeviceInfo();
 }
@@ -154,9 +145,6 @@ InitReturnVal_t CInputSystem::Init()
 
 	initKeymap();
 
-    m_unNumSteamControllerConnected = 0;
-    m_bSteamController = InitializeSteamControllers();
-
 	return INIT_OK; 
 }
 
@@ -225,7 +213,7 @@ PlatWindow_t CInputSystem::GetAttachedWindow() const
 //-----------------------------------------------------------------------------
 void CInputSystem::AttachToWindow( void* hWnd )
 {
-	Assert( m_hAttachedHWnd == 0 );
+	contract_assert( m_hAttachedHWnd == 0 );
 	if ( m_hAttachedHWnd )
 	{
 		Warning( "CInputSystem::AttachToWindow: Cannot attach to two windows at once!\n" );
@@ -359,11 +347,6 @@ ButtonCode_t CInputSystem::XKeyToButtonCode( int nPort, int nXKey ) const
 ButtonCode_t CInputSystem::ScanCodeToButtonCode( int lParam ) const
 {
 	return ButtonCode_ScanCodeToButtonCode( lParam );
-}
-
-ButtonCode_t CInputSystem::SKeyToButtonCode( int nPort, int nXKey ) const
-{
-	return ButtonCode_SKeyToButtonCode( nPort, nXKey );
 }
 
 //-----------------------------------------------------------------------------
@@ -567,7 +550,7 @@ void CInputSystem::PollInputState_Linux()
 	SDL_Event events[32];
 	while ( 1 )
 	{
-		int nEvents = m_pLauncherMgr->GetEvents( events, ARRAYSIZE( events ) );
+		int nEvents = m_pLauncherMgr->GetEvents( reinterpret_cast< ks::desktop::event * >( events ), std::size( events ) );
 		if ( nEvents == 0 )
 			break;
 
@@ -618,7 +601,7 @@ void CInputSystem::PollInputState_Linux()
 					wbuf[0] = 0;
 					V_UTF8ToUnicode( event.text.text, wbuf, sizeof( wbuf ) );
 
-					for ( int i = 0; i < ARRAYSIZE( wbuf ) && wbuf[i] != L'\0'; i++ )
+					for ( int i = 0; i < std::size( wbuf ) && wbuf[i] != L'\0'; i++ )
 					{
 						PostEvent( IE_KeyTyped, GetPollTick(), (wchar_t)wbuf[i] );
 					}
@@ -806,8 +789,6 @@ void CInputSystem::SampleDevices( void )
 	{
 		PollJoystick();
 	}
-
-	m_bSteamController = PollSteamControllers();
 }
 
 
@@ -840,7 +821,7 @@ int CInputSystem::GetJoystickCount() const
 void CInputSystem::EnableJoystickInput( int nJoystick, bool bEnable )
 {
 	unsigned short nMask = 1 << nJoystick;
-	Assert( nMask == ( 1 << nJoystick ) );
+	contract_assert( nMask == ( 1 << nJoystick ) );
 	m_JoysticksEnabled = bEnable ? ( m_JoysticksEnabled | nMask ) : ( m_JoysticksEnabled & ~nMask );
 }
 
@@ -1018,7 +999,7 @@ int CInputSystem::ButtonMaskFromMouseWParam( WPARAM wParam, ButtonCode_t code, b
 	{
 		int nMsgMask = 1 << ( code - MOUSE_FIRST );
 		int nTestMask = bDown ? nMsgMask : 0;
-		Assert( ( nButtonMask & nMsgMask ) == nTestMask );
+		contract_assert( ( nButtonMask & nMsgMask ) == nTestMask );
 	}
 #endif
 
@@ -1152,9 +1133,9 @@ InputCursorHandle_t CInputSystem::LoadCursorFromFile( const char *pFileName, con
 		return INPUT_CURSOR_HANDLE_INVALID;
 
 	char fn[ 512 ];
-	Q_strncpy( fn, pFileName, sizeof( fn ) );
-	Q_strlower( fn );
-	Q_FixSlashes( fn );
+	V_strncpy( fn, pFileName, sizeof( fn ) );
+	V_strlower( fn );
+	V_FixSlashes( fn );
 
 	if ( InputCursorHandle_t *pCursor = ks::find_ptr( m_UserCursors, fn ) )
 		return *pCursor;
@@ -1219,12 +1200,6 @@ void  CInputSystem::InitPlatfromInputDeviceInfo( void )
 
 void CInputSystem::ResetCurrentInputDevice( void )
 {
-	if ( m_currentInputDevice == INPUT_DEVICE_STEAM_CONTROLLER )
-	{
-		// Disable resetting away from the steam controller if it's being used.
-		return;
-	}
-
 	m_currentInputDevice = INPUT_DEVICE_KEYBOARD_MOUSE;
 
 }
@@ -1240,7 +1215,7 @@ bool CInputSystem::IsInputDeviceConnected( InputDevice_t device )
 {
 	if ( countBits( device ) != 1 || ( device & PlatformInputDevice::s_AllInputDevices ) != device )
 	{
-		AssertMsg( false, "invalid input device" );
+		contract_assert( false && "invalid input device" );
 		return false;
 	}
 
@@ -1252,7 +1227,7 @@ void CInputSystem::SetInputDeviceConnected( InputDevice_t device, bool connected
 {
 	if ( ( countBits( device ) != 1 ) || ( device & PlatformInputDevice::s_validPlatformInputDevices[PlatformInputDevice::s_LocalInputPlatform] ) != device   )
 	{
-		AssertMsg( false, "invalid input device" );
+		contract_assert( false && "invalid input device" );
 		return;
 	}
 
@@ -1311,7 +1286,7 @@ void CInputSystem::SetCurrentInputDevice( InputDevice_t device )
 	if ( ( device != INPUT_DEVICE_NONE ) && 
 		( ( countBits( device ) != 1 ) || ( device & PlatformInputDevice::s_validPlatformInputDevices[PlatformInputDevice::s_LocalInputPlatform] ) != device   ) )
 	{
-		AssertMsg( false, "invalid input device" );
+		contract_assert( false && "invalid input device" );
 		return;
 	}
 
@@ -1327,5 +1302,3 @@ bool CInputSystem::IsSamplingForCurrentDevice( void )
 {
 	return m_setCurrentInputDeviceOnNextButtonPress;
 }
-
-

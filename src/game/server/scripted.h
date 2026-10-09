@@ -1,41 +1,33 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef SCRIPTED_H
-#define SCRIPTED_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-#ifndef SCRIPTEVENT_H
 #include "scriptevent.h"
-#endif
 
 #include "ai_basenpc.h"
-
 
 //
 // The number of unique outputs that a script can fire from animation events.
 // These are fired via SCRIPT_EVENT_FIREEVENT in CAI_BaseNPC::HandleAnimEvent.
 //
-#define MAX_SCRIPT_EVENTS				8
+inline constexpr auto MAX_SCRIPT_EVENTS = 8;
 
 
-#define SF_SCRIPT_WAITTILLSEEN			1
-#define SF_SCRIPT_EXITAGITATED			2
-#define SF_SCRIPT_REPEATABLE			4		// Whether the script can be played more than once.
-#define SF_SCRIPT_LEAVECORPSE			8
-#define SF_SCRIPT_START_ON_SPAWN		16
-#define SF_SCRIPT_NOINTERRUPT			32
-#define SF_SCRIPT_OVERRIDESTATE			64
-#define SF_SCRIPT_DONT_TELEPORT_AT_END	128		// Don't fixup end position with a teleport when the SS is finished
-#define SF_SCRIPT_LOOP_IN_POST_IDLE		256		// Loop in the post idle animation after playing the action animation.
-#define SF_SCRIPT_HIGH_PRIORITY			512		// If set, we don't allow other scripts to steal our spot in the queue.
-#define SF_SCRIPT_SEARCH_CYCLICALLY		1024	// Start search from last entity found.
-#define SF_SCRIPT_NO_COMPLAINTS			2048	// doesn't bitch if it can't find anything
-#define SF_SCRIPT_ALLOW_DEATH			4096	// the actor using this scripted sequence may die without interrupting the scene (used for scripted deaths)
+inline constexpr auto SF_SCRIPT_WAITTILLSEEN = 1;
+inline constexpr auto SF_SCRIPT_EXITAGITATED = 2;
+inline constexpr auto SF_SCRIPT_REPEATABLE = 4; // Whether the script can be played more than once.
+inline constexpr auto SF_SCRIPT_LEAVECORPSE = 8;
+inline constexpr auto SF_SCRIPT_START_ON_SPAWN = 16;
+inline constexpr auto SF_SCRIPT_NOINTERRUPT = 32;
+inline constexpr auto SF_SCRIPT_OVERRIDESTATE = 64;
+inline constexpr auto SF_SCRIPT_DONT_TELEPORT_AT_END = 128; // Don't fixup end position with a teleport when the SS is finished
+inline constexpr auto SF_SCRIPT_LOOP_IN_POST_IDLE = 256; // Loop in the post idle animation after playing the action animation.
+inline constexpr auto SF_SCRIPT_HIGH_PRIORITY = 512; // If set, we don't allow other scripts to steal our spot in the queue.
+inline constexpr auto SF_SCRIPT_SEARCH_CYCLICALLY = 1024; // Start search from last entity found.
+inline constexpr auto SF_SCRIPT_NO_COMPLAINTS = 2048; // doesn't bitch if it can't find anything
+inline constexpr auto SF_SCRIPT_ALLOW_DEATH = 4096; // the actor using this scripted sequence may die without interrupting the scene (used for scripted deaths)
 
 
 enum script_moveto_t
@@ -69,8 +61,8 @@ enum SS_INTERRUPT
 // when a NPC finishes an AI scripted sequence, we can choose
 // a schedule to place them in. These defines are the aliases to
 // resolve worldcraft input to real schedules (sjb)
-#define SCRIPT_FINISHSCHED_DEFAULT	0
-#define SCRIPT_FINISHSCHED_AMBUSH	1
+inline constexpr auto SCRIPT_FINISHSCHED_DEFAULT = 0;
+inline constexpr auto SCRIPT_FINISHSCHED_AMBUSH = 1;
 
 class CAI_ScriptedSequence : public CBaseEntity
 {
@@ -223,6 +215,3 @@ private:
 
 	[[= ks::reflect::Key{ .name = "onplayerdeath" } ]] int			m_iPlayerDeathBehavior;
 };
-
-
-#endif // SCRIPTED_H

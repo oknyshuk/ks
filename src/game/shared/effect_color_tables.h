@@ -1,11 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef EFFECT_COLOR_TABLES_H
-#define EFFECT_COLOR_TABLES_H
+#include "shareddefs.h"
 
 struct colorentry_t
 {
@@ -43,5 +40,3 @@ static colorentry_t bloodcolors[] =
 	{ BLOOD_COLOR_MECH,		20,		20,		20	},
 	{ BLOOD_COLOR_BRIGHTGREEN,	0,		128,	0	},
 };
-
-#endif // EFFECT_COLOR_TABLES_H

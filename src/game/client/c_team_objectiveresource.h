@@ -1,11 +1,6 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef C_TEAM_OBJECTIVERESOURCE_H
-#define C_TEAM_OBJECTIVERESOURCE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "shareddefs.h"
 #include "const.h"
@@ -52,20 +47,20 @@ public:
 	// Is the point visible in the objective display
 	bool	IsCPVisible( int index )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 		return m_bCPIsVisible[index];
 	}
 
 	bool	IsCPBlocked( int index )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 		return m_bBlocked[index];
 	}
 
 	// Get the world location of this control point
 	Vector& GetCPPosition( int index )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 		return m_vCPPositions[index];
 	}
 
@@ -96,18 +91,18 @@ public:
 	// Icons
 	int GetCPCurrentOwnerIcon( int index, int iOwner )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 
 		return GetIconForTeam( index, iOwner );
 	}
 
 	int GetCPCappingIcon( int index )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 
 		int iCapper = GetCappingTeam(index);
 
-		Assert( iCapper != TEAM_UNASSIGNED );
+		contract_assert( iCapper != TEAM_UNASSIGNED );
 
 		return GetIconForTeam( index, iCapper );;
 	}
@@ -115,55 +110,55 @@ public:
 	// Icon for the specified team
 	int GetIconForTeam( int index, int team )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 		return m_iTeamIcons[ TEAM_ARRAY(index,team) ];
 	}
 
 	// Overlay for the specified team
 	int GetOverlayForTeam( int index, int team )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 		return m_iTeamOverlays[ TEAM_ARRAY(index,team) ];
 	}
 
 	// Number of players in the area
 	int GetNumPlayersInArea( int index, int team )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 		return m_iNumTeamMembers[ TEAM_ARRAY(index,team) ];
 	}
 	
 	// get the required cappers for the passed team
 	int GetRequiredCappers( int index, int team )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 		return m_iTeamReqCappers[ TEAM_ARRAY(index,team) ];
 	}
 
 	// Base Icon for the specified team
 	int GetBaseIconForTeam( int team )
 	{
-		Assert( team < MAX_TEAMS );
+		contract_assert( team < MAX_TEAMS );
 		return m_iTeamBaseIcons[ team ];
 	}
 
 	int GetBaseControlPointForTeam( int iTeam ) 
 	{ 
-		Assert( iTeam < MAX_TEAMS );
+		contract_assert( iTeam < MAX_TEAMS );
 		return m_iBaseControlPoints[iTeam]; 
 	}
 
 	int GetPreviousPointForPoint( int index, int team, int iPrevIndex )
 	{
-		Assert( index < m_iNumControlPoints );
-		Assert( iPrevIndex >= 0 && iPrevIndex < MAX_PREVIOUS_POINTS );
+		contract_assert( index < m_iNumControlPoints );
+		contract_assert( iPrevIndex >= 0 && iPrevIndex < MAX_PREVIOUS_POINTS );
 		int iIntIndex = iPrevIndex + (index * MAX_PREVIOUS_POINTS) + (team * MAX_CONTROL_POINTS * MAX_PREVIOUS_POINTS);
 		return m_iPreviousPoints[ iIntIndex ];
 	}
 
 	bool TeamCanCapPoint( int index, int team )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 		return m_bTeamCanCap[ TEAM_ARRAY( index, team ) ];
 	}
 
@@ -174,32 +169,32 @@ public:
 
 	int GetCapWarningLevel( int index )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 		return m_iWarnOnCap[index];
 	}
 
 	const char *GetWarnSound( int index )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 		return m_iszWarnSound[index];
 	}
 
 	virtual const char *GetGameSpecificCPCappingSwipe( int index, int iCappingTeam )
 	{
 		// You need to implement this in your game's objective resource.
-		Assert(0);
+		contract_assert( 0 );
 		return nullptr;
 	}
 	virtual const char *GetGameSpecificCPBarFG( int index, int iOwningTeam )
 	{
 		// You need to implement this in your game's objective resource.
-		Assert(0);
+		contract_assert( 0 );
 		return nullptr;
 	}
 	virtual const char *GetGameSpecificCPBarBG( int index, int iCappingTeam )
 	{
 		// You need to implement this in your game's objective resource.
-		Assert(0);
+		contract_assert( 0 );
 		return nullptr;
 	}
 
@@ -210,7 +205,7 @@ public:
 
 	float GetPathDistance( int index )
 	{
-		Assert( index < m_iNumControlPoints );
+		contract_assert( index < m_iNumControlPoints );
 		return m_flPathDistance[index];
 	}
 
@@ -266,5 +261,3 @@ inline C_BaseTeamObjectiveResource *ObjectiveResource()
 {
 	return g_pObjectiveResource;
 }
-
-#endif // C_TEAM_OBJECTIVERESOURCE_H

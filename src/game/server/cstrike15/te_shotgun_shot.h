@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef TE_SHOTGUN_SHOT_H
-#define TE_SHOTGUN_SHOT_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 void TE_FireBullets( 
 	int	iPlayerIndex,
@@ -24,6 +18,3 @@ void TE_FireBullets(
 	);
 
 void TE_PlantBomb( int iPlayerIndex, const Vector &vOrigin, PlantBombOption_t option );
-
-
-#endif // TE_SHOTGUN_SHOT_H

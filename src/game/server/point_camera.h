@@ -1,14 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CAMERA_H
-#define CAMERA_H
-
-#include "cbase.h"
+import std;
+import ks.math;
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
 #include "reflect_annotations.h"
 #include "sendproxy.h"
 
@@ -64,4 +70,3 @@ public:
 };
 
 CPointCamera *GetPointCameraList();
-#endif // CAMERA_H

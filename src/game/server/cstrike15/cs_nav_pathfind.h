@@ -1,18 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_pathfind.h
 // Path-finding mechanisms using the Navigation Mesh
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-#ifndef _CS_NAV_PATHFIND_H_
-#define _CS_NAV_PATHFIND_H_
-
 #include "nav_pathfind.h"
+#include "nav_mesh.h"
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -61,5 +56,3 @@ float NavAreaTravelDistance( const Vector &startPos, const Vector &goalPos, Cost
 		return distance;
 	}
 }
-
-#endif // _CS_NAV_PATHFIND_H_

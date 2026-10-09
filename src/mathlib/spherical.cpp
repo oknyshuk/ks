@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: spherical math routines
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include <math.h>
-#include <float.h>	// needed for flt_epsilon
-#include "basetypes.h"
-#include <memory.h>
-#include "tier0/dbg.h"
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include "mathlib/spherical_geometry.h"
+// Purpose: spherical math routines
+
+import std;
+import ks.math;
 
 float s_flFactorials[]={
 	1.,
@@ -56,7 +49,7 @@ float AssociatedLegendrePolynomial( int nL, int nM, float flX )
 	float flPmm = 1.;
 	if ( nM > 0 )
 	{
-		float flSomX2 = sqrt( ( 1 - flX ) * ( 1 + flX ) );
+		float flSomX2 = std::sqrt( ( 1 - flX ) * ( 1 + flX ) );
 		float flFact = 1.;
 		for( int i = 0 ; i < nM; i++ )
 		{
@@ -81,41 +74,40 @@ float AssociatedLegendrePolynomial( int nL, int nM, float flX )
 
 static float SHNormalizationFactor( int nL, int nM )
 {
-	double flTemp = ( ( 2. * nL + 1.0 ) * s_flFactorials[ nL - nM ] )/ ( 4. * M_PI * s_flFactorials[ nL + nM ] );
-	return sqrt( flTemp );
+	double flTemp = ( ( 2. * nL + 1.0 ) * s_flFactorials[ nL - nM ] )/ ( 4. * std::numbers::pi * s_flFactorials[ nL + nM ] );
+	return std::sqrt( flTemp );
 }
 
-#define SQRT_2 1.414213562373095 
+constexpr auto SQRT_2 = 1.414213562373095;
 
-FORCEINLINE float SphericalHarmonic( int nL, int nM, float flTheta, float flPhi, float flCosTheta )
+[[gnu::always_inline]] inline float SphericalHarmonic( int nL, int nM, float flTheta, float flPhi, float flCosTheta )
 {
 	if ( nM == 0 )
 		return SHNormalizationFactor( nL, 0 ) * AssociatedLegendrePolynomial( nL, nM, flCosTheta );
 
 	if ( nM > 0 )
-		return SQRT_2 * SHNormalizationFactor( nL, nM ) * cos ( nM * flPhi ) *
+		return SQRT_2 * SHNormalizationFactor( nL, nM ) * std::cos ( nM * flPhi ) *
 			AssociatedLegendrePolynomial( nL, nM, flCosTheta );
 
 	return 
-		SQRT_2 * SHNormalizationFactor( nL, -nM ) * sin( -nM * flPhi ) * AssociatedLegendrePolynomial( nL, -nM, flCosTheta );
+		SQRT_2 * SHNormalizationFactor( nL, -nM ) * std::sin( -nM * flPhi ) * AssociatedLegendrePolynomial( nL, -nM, flCosTheta );
 
 }
 
 float SphericalHarmonic( int nL, int nM, float flTheta, float flPhi )
 {
-	return SphericalHarmonic( nL, nM, flTheta, flPhi, cos( flTheta ) );
+	return SphericalHarmonic( nL, nM, flTheta, flPhi, std::cos( flTheta ) );
 }
 
 float SphericalHarmonic( int nL, int nM, Vector const &vecDirection )
 {
-	Assert( fabs( VectorLength( vecDirection ) - 1.0 ) < 0.0001 );
-	float flPhi = acos( vecDirection.z );
+	contract_assert( std::fabs( VectorLength( vecDirection ) - 1.0 ) < 0.0001 );
+	float flPhi = std::acos( vecDirection.z );
 	float flTheta = 0;
 	float S = Square( vecDirection.x ) + Square( vecDirection.y );
 	if ( S > 0 )
 	{
-		flTheta = atan2( vecDirection.y, vecDirection.x );
+		flTheta = std::atan2( vecDirection.y, vecDirection.x );
 	}
-	return SphericalHarmonic( nL, nM, flTheta, flPhi, cos( flTheta ) );
+	return SphericalHarmonic( nL, nM, flTheta, flPhi, std::cos( flTheta ) );
 }
-

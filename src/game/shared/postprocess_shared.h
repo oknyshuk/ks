@@ -1,12 +1,10 @@
-//====== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. =======
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
+
 // Purpose: common definitions for post-processing effects
-//
-//=============================================================================
 
-#ifndef POSTPROCESS_SHARED_H
-#define POSTPROCESS_SHARED_H
-
+import std;
 
 enum PostProcessParameterNames_t
 {
@@ -29,12 +27,10 @@ struct PostProcessParameters_t
 {
 	PostProcessParameters_t()
 	{
-		memset( m_flParameters, 0, sizeof( m_flParameters ) );
+		std::memset( m_flParameters, 0, sizeof( m_flParameters ) );
 		m_flParameters[ PPPN_VIGNETTE_START ] = 0.8f;
 		m_flParameters[ PPPN_VIGNETTE_END ] = 1.1f;
 	}
 
 	float m_flParameters[ POST_PROCESS_PARAMETER_COUNT ];
 };
-
-#endif // POSTPROCESS_SHARED_H

@@ -1,18 +1,61 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "base_playeranimstate.h"
-#include "tier0/vprof.h"
 #include "animation.h"
 #include "studio.h"
-#include "apparent_velocity_helper.h"
-#include "tier1/map_ops.h"
 #include "filesystem.h"
-
 
 #ifdef CLIENT_DLL
 	#include "c_baseplayer.h"
@@ -31,15 +74,15 @@
 
 
 // Below this many degrees, slow down turning rate linearly
-#define FADE_TURN_DEGREES	15.0f
+constexpr auto FADE_TURN_DEGREES = 15.0f;
 
 // After this, need to start turning feet
-#define MAX_TORSO_ANGLE		70.0f
+constexpr auto MAX_TORSO_ANGLE = 70.0f;
 
 // Below this amount, don't play a turning animation/perform IK
-#define MIN_TURN_ANGLE_REQUIRING_TURN_ANIMATION		15.0f
+constexpr auto MIN_TURN_ANGLE_REQUIRING_TURN_ANIMATION = 15.0f;
 
-#define POSE_PARAM_DELTA_DAMPEN 4.0f
+constexpr auto POSE_PARAM_DELTA_DAMPEN = 4.0f;
 
 ConVar mp_feetyawrate( 
 	"mp_feetyawrate", 
@@ -131,7 +174,7 @@ float CBasePlayerAnimState::TimeSinceLastAnimationStateClear() const
 
 void CBasePlayerAnimState::Update( float eyeYaw, float eyePitch )
 {
-	VPROF( "CBasePlayerAnimState::Update" );
+	CVProfScope _( "CBasePlayerAnimState::Update", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Clear animation overlays because we're about to completely reconstruct them.
 	ClearAnimationLayers();
@@ -218,9 +261,9 @@ void CBasePlayerAnimState::SetOuterPoseParameter( int iParam, float flValue )
 
 void CBasePlayerAnimState::ClearAnimationLayers()
 {
-	Assert( 0 ); // unused?
+	contract_assert( 0 ); // unused?
 
-	VPROF( "CBasePlayerAnimState::ClearAnimationLayers" );
+	CVProfScope _( "CBasePlayerAnimState::ClearAnimationLayers", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( !m_pOuter )
 		return;
 
@@ -246,7 +289,7 @@ void CBasePlayerAnimState::RestartMainSequence()
 
 void CBasePlayerAnimState::ComputeSequences( CStudioHdr *pStudioHdr )
 {
-	VPROF( "CBasePlayerAnimState::ComputeSequences" );
+	CVProfScope _( "CBasePlayerAnimState::ComputeSequences", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	ComputeMainSequence();		// Lower body (walk/run/idle).
 	UpdateInterpolators();		// The groundspeed interpolator uses the main sequence info.
@@ -264,7 +307,7 @@ void CBasePlayerAnimState::ResetGroundSpeed( void )
 
 void CBasePlayerAnimState::ComputeMainSequence()
 {
-	VPROF( "CBasePlayerAnimState::ComputeMainSequence" );
+	CVProfScope _( "CBasePlayerAnimState::ComputeMainSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CBaseAnimatingOverlay *pPlayer = GetOuter();
 
@@ -415,7 +458,7 @@ bool CBasePlayerAnimState::ShouldBlendAimSequenceToIdle()
 
 void CBasePlayerAnimState::ComputeAimSequence()
 {
-	VPROF( "CBasePlayerAnimState::ComputeAimSequence" );
+	CVProfScope _( "CBasePlayerAnimState::ComputeAimSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Synchronize the lower and upper body cycles.
 	float flCycle = m_pOuter->GetCycle();
@@ -443,13 +486,13 @@ void CBasePlayerAnimState::ComputeAimSequence()
 }
 
 
-int CBasePlayerAnimState::CalcSequenceIndex( PRINTF_FORMAT_STRING const char *pBaseName, ... )
+int CBasePlayerAnimState::CalcSequenceIndex( const char *pBaseName, ... )
 {
 	char szFullName[512];
-	va_list marker;
-	va_start( marker, pBaseName );
-	Q_vsnprintf( szFullName, sizeof( szFullName ), pBaseName, marker );
-	va_end( marker );
+	std::va_list marker;
+	__builtin_va_start( marker, pBaseName );
+	V_vsnprintf( szFullName, sizeof( szFullName ), pBaseName, marker );
+	__builtin_va_end( marker );
 	int iSequence = GetOuter()->LookupSequence( szFullName );
 	
 	// Show warnings if we can't find anything here.
@@ -471,7 +514,7 @@ int CBasePlayerAnimState::CalcSequenceIndex( PRINTF_FORMAT_STRING const char *pB
 
 void CBasePlayerAnimState::UpdateInterpolators()
 {
-	VPROF( "CBasePlayerAnimState::UpdateInterpolators" );
+	CVProfScope _( "CBasePlayerAnimState::UpdateInterpolators", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// First, figure out their current max speed based on their current activity.
 	float flCurMaxSpeed = GetCurrentMaxGroundSpeed();
@@ -524,7 +567,7 @@ bool CBasePlayerAnimState::CanThePlayerMove()
 
 void CBasePlayerAnimState::ComputePlaybackRate()
 {
-	VPROF( "CBasePlayerAnimState::ComputePlaybackRate" );
+	CVProfScope _( "CBasePlayerAnimState::ComputePlaybackRate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( m_AnimConfig.m_LegAnimType != LEGANIM_9WAY && m_AnimConfig.m_LegAnimType != LEGANIM_8WAY )
 	{
 		// When using a 9-way blend, playback rate is always 1 and we just scale the pose params
@@ -560,14 +603,14 @@ void CBasePlayerAnimState::EstimateYaw()
 	float flLength = est_velocity.Length2D();
 	if ( flLength > MOVING_MINIMUM_SPEED )
 	{
-		m_flGaitYaw = atan2( est_velocity[1], est_velocity[0] );
+		m_flGaitYaw = std::atan2( est_velocity[1], est_velocity[0] );
 		m_flGaitYaw = RAD2DEG( m_flGaitYaw );
 		m_flGaitYaw = AngleNormalize( m_flGaitYaw );
 	}
 }
 
-#define MOVEMENT_MINIMUM_ANIMATED_SPEED 10.0f
-#define MOVEMENT_MAXIMUM_PLAYBACK_RATE 1.3f
+constexpr auto MOVEMENT_MINIMUM_ANIMATED_SPEED = 10.0f;
+constexpr auto MOVEMENT_MAXIMUM_PLAYBACK_RATE = 1.3f;
 
 //-----------------------------------------------------------------------------
 // Purpose: Override for backpeddling
@@ -575,7 +618,7 @@ void CBasePlayerAnimState::EstimateYaw()
 //-----------------------------------------------------------------------------
 void CBasePlayerAnimState::ComputePoseParam_MoveYaw( CStudioHdr *pStudioHdr )
 {
-	VPROF( "CBasePlayerAnimState::ComputePoseParam_MoveYaw" );
+	CVProfScope _( "CBasePlayerAnimState::ComputePoseParam_MoveYaw", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	//Matt: Goldsrc style animations need to not rotate the model
 	if ( m_AnimConfig.m_LegAnimType == LEGANIM_GOLDSRC )
@@ -651,8 +694,8 @@ void CBasePlayerAnimState::ComputePoseParam_MoveYaw( CStudioHdr *pStudioHdr )
 
 		if ( bIsMoving )
 		{
-			vCurMovePose.x = cos( DEG2RAD( flYaw ) );
-			vCurMovePose.y = -sin( DEG2RAD( flYaw ) );
+			vCurMovePose.x = std::cos( DEG2RAD( flYaw ) );
+			vCurMovePose.y = -std::sin( DEG2RAD( flYaw ) );
 			// movement pose parameters on the diagonals are encoded at 1 instead of 0.707 (cos 45)
 			// scale to the outside of a box instead of the outside of a circle.
 			float scale = fabs( vCurMovePose.x );
@@ -769,7 +812,7 @@ void CBasePlayerAnimState::ComputePoseParam_MoveYaw( CStudioHdr *pStudioHdr )
 			
 			pLayer->SetPlaybackRate( 1 );
 			pLayer->SetCycle( pLayer->GetCycle() + m_pOuter->GetSequenceCycleRate( pStudioHdr, pLayer->GetSequence() ) * gpGlobals->frametime );
-			pLayer->SetCycle( fmod( pLayer->GetCycle(), 1 ) );
+			pLayer->SetCycle( std::fmod( pLayer->GetCycle(), 1 ) );
 			pLayer->SetOrder( MAIN_IDLE_SEQUENCE_LAYER );
 #endif
 		}
@@ -781,7 +824,7 @@ void CBasePlayerAnimState::ComputePoseParam_MoveYaw( CStudioHdr *pStudioHdr )
 //-----------------------------------------------------------------------------
 void CBasePlayerAnimState::ComputePoseParam_BodyPitch( CStudioHdr *pStudioHdr )
 {
-	VPROF( "CBasePlayerAnimState::ComputePoseParam_BodyPitch" );
+	CVProfScope _( "CBasePlayerAnimState::ComputePoseParam_BodyPitch", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Get pitch from v_angle
 	float flPitch = m_flEyePitch;
@@ -873,7 +916,7 @@ int CBasePlayerAnimState::ConvergeAngles( float goal,float maxrate, float maxgap
 
 void CBasePlayerAnimState::ComputePoseParam_BodyYaw()
 {
-	VPROF( "CBasePlayerAnimState::ComputePoseParam_BodyYaw" );
+	CVProfScope _( "CBasePlayerAnimState::ComputePoseParam_BodyYaw", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Find out which way he's running (m_flEyeYaw is the way he's looking).
 	Vector vel;
@@ -900,10 +943,10 @@ void CBasePlayerAnimState::ComputePoseParam_BodyYaw()
 		}
 		else
 		{
-			m_flGoalFeetYaw = RAD2DEG( atan2( vel.y, vel.x ) );
+			m_flGoalFeetYaw = RAD2DEG( std::atan2( vel.y, vel.x ) );
 
 			// If he's running backwards, flip his feet backwards.
-			Vector vEyeYaw( cos( DEG2RAD( m_flEyeYaw ) ), sin( DEG2RAD( m_flEyeYaw ) ), 0 );
+			Vector vEyeYaw( std::cos( DEG2RAD( m_flEyeYaw ) ), std::sin( DEG2RAD( m_flEyeYaw ) ), 0 );
 			Vector vFeetYaw( cos( DEG2RAD( m_flGoalFeetYaw ) ), sin( DEG2RAD( m_flGoalFeetYaw ) ), 0 );
 			if ( vEyeYaw.Dot( vFeetYaw ) < -0.01 )
 			{
@@ -1027,7 +1070,7 @@ Activity CBasePlayerAnimState::BodyYawTranslateActivity( Activity activity )
 		return mp_ik.GetBool() ? ACT_TURN : activity;
 	}
 
-	Assert( 0 );
+	contract_assert( 0 );
 	return activity;
 }
 
@@ -1060,14 +1103,14 @@ float CBasePlayerAnimState::GetOuterXYSpeed() const
 }
 
 // -----------------------------------------------------------------------------
-void CBasePlayerAnimState::AnimStateLog( PRINTF_FORMAT_STRING const char *pMsg, ... )
+void CBasePlayerAnimState::AnimStateLog( const char *pMsg, ... )
 {
 	// Format the string.
 	char str[4096];
-	va_list marker;
-	va_start( marker, pMsg );
-	Q_vsnprintf( str, sizeof( str ), pMsg, marker );
-	va_end( marker );
+	std::va_list marker;
+	__builtin_va_start( marker, pMsg );
+	V_vsnprintf( str, sizeof( str ), pMsg, marker );
+	__builtin_va_end( marker );
 
 	// Log it?	
 	if ( showanimstate_log.GetInt() == 1 || showanimstate_log.GetInt() == 3 )
@@ -1090,14 +1133,14 @@ void CBasePlayerAnimState::AnimStateLog( PRINTF_FORMAT_STRING const char *pMsg, 
 
 
 // -----------------------------------------------------------------------------
-void CBasePlayerAnimState::AnimStatePrintf( int iLine, PRINTF_FORMAT_STRING const char *pMsg, ... )
+void CBasePlayerAnimState::AnimStatePrintf( int iLine, const char *pMsg, ... )
 {
 	// Format the string.
 	char str[4096];
-	va_list marker;
-	va_start( marker, pMsg );
-	Q_vsnprintf( str, sizeof( str ), pMsg, marker );
-	va_end( marker );
+	std::va_list marker;
+	__builtin_va_start( marker, pMsg );
+	V_vsnprintf( str, sizeof( str ), pMsg, marker );
+	__builtin_va_end( marker );
 
 	// Show it with Con_NPrintf.
 	engine->Con_NPrintf( iLine, "%s", str );

@@ -1,18 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 
 #include "ai_behavior.h"
 #include "scripted.h"
 #include "env_debughistory.h"
-#include "checksum_crc.h"
 
 bool g_bBehaviorHost_PreventBaseClassGatherConditions;
 
@@ -67,7 +92,7 @@ int CAI_BehaviorBase::DrawDebugTextOverlays( int text_offset )
 
 	if ( GetOuter()->m_debugOverlays & OVERLAY_TEXT_BIT )
 	{
-		Q_snprintf( tempstr, sizeof( tempstr ), "Behv: %s, ", GetName() );
+		V_snprintf( tempstr, sizeof( tempstr ), "Behv: %s, ", GetName() );
 		GetOuter()->EntityText( text_offset, tempstr, 0 );
 		text_offset++;
 
@@ -83,18 +108,18 @@ int CAI_BehaviorBase::DrawDebugTextOverlays( int text_offset )
 				{
 					pName = "Unknown";
 				}
-				Q_snprintf(tempstr,sizeof(tempstr),"    Schd [%d]: %s, ", i, pName );
+				V_snprintf(tempstr,sizeof(tempstr),"    Schd [%d]: %s, ", i, pName );
 				GetOuter()->EntityText(text_offset,tempstr,0);
 				text_offset++;
 
 				const Task_t *pTask = GetCurTask( i );
 				if ( pTask )
 				{
-					Q_snprintf(tempstr,sizeof(tempstr),"    Task [%d]: %s (#%d), ", i, GetSchedulingSymbols()->TaskIdToSymbol( GetClassScheduleIdSpace()->TaskLocalToGlobal( pTask->iTask ) ), pScheduleState->iCurTask );
+					V_snprintf(tempstr,sizeof(tempstr),"    Task [%d]: %s (#%d), ", i, GetSchedulingSymbols()->TaskIdToSymbol( GetClassScheduleIdSpace()->TaskLocalToGlobal( pTask->iTask ) ), pScheduleState->iCurTask );
 				}
 				else
 				{
-					Q_snprintf(tempstr,sizeof(tempstr),"    Task [%d]: None",i);
+					V_snprintf(tempstr,sizeof(tempstr),"    Task [%d]: None",i);
 				}
 				GetOuter()->EntityText(text_offset,tempstr,0);
 				text_offset++;
@@ -111,7 +136,7 @@ int CAI_BehaviorBase::DrawDebugTextOverlays( int text_offset )
 
 void CAI_BehaviorBase::GatherConditions()
 {
-	Assert( m_pBackBridge != nullptr );
+	contract_assert( m_pBackBridge != nullptr );
 	
 	m_pBackBridge->BehaviorBridge_GatherConditions();
 }
@@ -126,7 +151,7 @@ void CAI_BehaviorBase::OnStartSchedule( int scheduleType )
 
 int CAI_BehaviorBase::SelectSchedule()
 {
-	Assert( m_pBackBridge != nullptr );
+	contract_assert( m_pBackBridge != nullptr );
 	
 	return m_pBackBridge->BehaviorBridge_SelectSchedule();
 }
@@ -157,7 +182,7 @@ void CAI_BehaviorBase::RunTask( const Task_t *pTask )
 
 int CAI_BehaviorBase::TranslateSchedule( int scheduleType )
 {
-	Assert( m_pBackBridge != nullptr );
+	contract_assert( m_pBackBridge != nullptr );
 	
 	return m_pBackBridge->BehaviorBridge_TranslateSchedule( scheduleType );
 }
@@ -168,7 +193,7 @@ CAI_Schedule *CAI_BehaviorBase::GetNewSchedule( int channel )
 {
 	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
-		AssertMsg( 0, "Bad schedule channel" );
+		contract_assert( false && "Bad schedule channel" );
 		return nullptr;
 	}
 
@@ -204,8 +229,8 @@ CAI_Schedule *CAI_BehaviorBase::GetFailSchedule( AIChannelScheduleState_t *pSche
 	else
 		failedTask = TASK_INVALID;
 
-	Assert( AI_IdIsLocal( prevSchedule ) );
-	Assert( AI_IdIsLocal( failedTask ) );
+	contract_assert( AI_IdIsLocal( prevSchedule ) );
+	contract_assert( AI_IdIsLocal( failedTask ) );
 
 	int scheduleType = SelectFailSchedule( prevSchedule, failedTask, pScheduleState->taskFailureCode );
 	return GetSchedule( scheduleType );
@@ -271,7 +296,7 @@ void CAI_BehaviorBase::StartChannel( int channel )
 {
 	if ( channel < 0 )
 	{
-		AssertMsg( 0, "Bad schedule channel" );
+		contract_assert( false && "Bad schedule channel" );
 		return;
 	}
 
@@ -285,7 +310,7 @@ void CAI_BehaviorBase::StopChannel( int channel )
 {
 	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
-		AssertMsg( 0, "Bad schedule channel" );
+		contract_assert( false && "Bad schedule channel" );
 		return;
 	}
 
@@ -305,14 +330,14 @@ void CAI_BehaviorBase::MaintainChannelSchedules()
 
 //-------------------------------------
 
-#define MAX_TASKS_RUN 10
+constexpr auto MAX_TASKS_RUN = 10;
 
 void CAI_BehaviorBase::MaintainSchedule( int channel )
 {
 	CAI_Schedule *pNewSchedule;
 	bool		runTask = true;
 
-	AssertMsg( ks::is_valid_index( m_ScheduleChannels, channel ), "Bad schedule channel" );
+	contract_assert( ( ks::is_valid_index( m_ScheduleChannels, channel ) ) && "Bad schedule channel" );
 
 	AIChannelScheduleState_t *pScheduleState = &m_ScheduleChannels[channel];
 
@@ -397,7 +422,7 @@ void CAI_BehaviorBase::MaintainSchedule( int channel )
 			}
 
 			const Task_t *pTask = GetCurTask( channel );
-			Assert( pTask != nullptr );
+			contract_assert( pTask != nullptr );
 
 			if ( GetOuter()->m_debugOverlays & OVERLAY_TASK_TEXT_BIT )
 			{
@@ -418,7 +443,7 @@ void CAI_BehaviorBase::MaintainSchedule( int channel )
 			if ( pScheduleState->fTaskStatus != TASKSTATUS_COMPLETE && pScheduleState->fTaskStatus != TASKSTATUS_RUN_MOVE && pScheduleState->taskFailureCode == NO_TASK_FAILURE && runTask )
 			{
 				const Task_t *pTask = GetCurTask( channel );
-				Assert( pTask != nullptr );
+				contract_assert( pTask != nullptr );
 
 				RunTask( channel, pTask );
 
@@ -501,7 +526,7 @@ void CAI_BehaviorBase::SetSchedule( int channel, CAI_Schedule *pNewSchedule )
 {
 	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
-		AssertMsg( 0, "Bad schedule channel" );
+		contract_assert( false && "Bad schedule channel" );
 		return;
 	}
 
@@ -536,7 +561,7 @@ bool CAI_BehaviorBase::SetSchedule( int channel, int localScheduleID )
 {
 	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
-		AssertMsg( 0, "Bad schedule channel" );
+		contract_assert( false && "Bad schedule channel" );
 		return false;
 	}
 
@@ -566,7 +591,7 @@ void CAI_BehaviorBase::ClearSchedule( int channel, const char *szReason )
 {
 	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
-		AssertMsg( 0, "Bad schedule channel" );
+		contract_assert( false && "Bad schedule channel" );
 		return;
 	}
 
@@ -596,7 +621,7 @@ CAI_Schedule *CAI_BehaviorBase::GetCurSchedule( int channel )
 {
 	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
-		AssertMsg( 0, "Bad schedule channel" );
+		contract_assert( false && "Bad schedule channel" );
 		return nullptr;
 	}
 
@@ -609,7 +634,7 @@ bool CAI_BehaviorBase::IsCurSchedule( int channel, int schedId, bool fIdeal )
 {
 	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
-		AssertMsg( 0, "Bad schedule channel" );
+		contract_assert( false && "Bad schedule channel" );
 		return false;
 	}
 
@@ -658,7 +683,7 @@ void CAI_BehaviorBase::TaskComplete( int channel, bool fIgnoreSetFailedCondition
 {
 	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
-		AssertMsg( 0, "Bad schedule channel" );
+		contract_assert( false && "Bad schedule channel" );
 		return;
 	}
 
@@ -675,7 +700,7 @@ void CAI_BehaviorBase::TaskFail( int channel, AI_TaskFailureCode_t code )
 {
 	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
-		AssertMsg( 0, "Bad schedule channel" );
+		contract_assert( false && "Bad schedule channel" );
 		return;
 	}
 
@@ -697,7 +722,7 @@ const Task_t *CAI_BehaviorBase::GetCurTask( int channel )
 {
 	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
-		AssertMsg( 0, "Bad schedule channel" );
+		contract_assert( false && "Bad schedule channel" );
 		return nullptr;
 	}
 
@@ -715,21 +740,21 @@ const Task_t *CAI_BehaviorBase::GetCurTask( int channel )
 
 void CAI_BehaviorBase::StartTask( int channel, const Task_t *pTask )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 }
 
 //-------------------------------------
 
 void CAI_BehaviorBase::RunTask( int channel, const Task_t *pTask )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 }
 
 //-------------------------------------
 
 float CAI_BehaviorBase::GetJumpGravity() const
 {
-	Assert( m_pBackBridge != nullptr );
+	contract_assert( m_pBackBridge != nullptr );
 
 	return m_pBackBridge->BehaviorBridge_GetJumpGravity();
 }
@@ -738,7 +763,7 @@ float CAI_BehaviorBase::GetJumpGravity() const
 
 bool CAI_BehaviorBase::IsJumpLegal( const Vector &startPos, const Vector &apex, const Vector &endPos, float maxUp, float maxDown, float maxDist ) const
 {
-	Assert( m_pBackBridge != nullptr );
+	contract_assert( m_pBackBridge != nullptr );
 
 	return m_pBackBridge->BehaviorBridge_IsJumpLegal( startPos, apex, endPos, maxUp, maxDown, maxDist );
 }
@@ -747,7 +772,7 @@ bool CAI_BehaviorBase::IsJumpLegal( const Vector &startPos, const Vector &apex, 
 
 bool CAI_BehaviorBase::MovementCost( int moveType, const Vector &vecStart, const Vector &vecEnd, float *pCost )
 {
-	Assert( m_pBackBridge != nullptr );
+	contract_assert( m_pBackBridge != nullptr );
 
 	return m_pBackBridge->BehaviorBridge_MovementCost( moveType, vecStart, vecEnd, pCost );
 }
@@ -817,8 +842,8 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AIBehaviorChannelSaveHeader_t )
 
 //-------------------------------------
 
-#define BEHAVIOR_SAVE_BLOCKNAME "AI_Behaviors"
-#define BEHAVIOR_SAVE_VERSION	2
+inline constexpr const char *BEHAVIOR_SAVE_BLOCKNAME = "AI_Behaviors";
+constexpr auto BEHAVIOR_SAVE_VERSION = 2;
 
 
 //-----------------------------------------------------------------------------

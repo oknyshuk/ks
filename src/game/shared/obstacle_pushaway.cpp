@@ -1,10 +1,64 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "const.h"
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "player.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "obstacle_pushaway.h"
 #include "props_shared.h"
 #ifdef CLIENT_DLL
@@ -13,7 +67,6 @@
 #else
 #include "vehicle_base.h"
 #endif
-
 
 //-----------------------------------------------------------------------------------------------------
 ConVar sv_pushaway_force( "sv_pushaway_force", "30000", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY, "How hard physics objects are pushed away from the players on the server." );
@@ -218,9 +271,9 @@ void AvoidPushawayProps( CBaseCombatCharacter *pPlayer, CUserCmd *pCmd )
 
 	CBaseEntity *props[512];
 #ifdef CLIENT_DLL
-	int nEnts = GetPushawayEnts( pPlayer, props, ARRAYSIZE( props ), 0.0f, PARTITION_CLIENT_SOLID_EDICTS, nullptr );
+	int nEnts = GetPushawayEnts( pPlayer, props, std::size( props ), 0.0f, PARTITION_CLIENT_SOLID_EDICTS, nullptr );
 #else
-	int nEnts = GetPushawayEnts( pPlayer, props, ARRAYSIZE( props ), 0.0f, PARTITION_ENGINE_SOLID_EDICTS, nullptr );
+	int nEnts = GetPushawayEnts( pPlayer, props, std::size( props ), 0.0f, PARTITION_ENGINE_SOLID_EDICTS, nullptr );
 #endif
 
 	const Vector & ourCenter = pPlayer->WorldSpaceCenter();
@@ -315,9 +368,9 @@ void PerformObstaclePushaway( CBaseCombatCharacter *pPushingEntity )
 	if ( (sv_pushaway_clientside.GetInt() == 1) && (!pPlayer || !C_BasePlayer::IsLocalPlayer( pPlayer )) )
 		return;
 
-	int nEnts = GetPushawayEnts( pPushingEntity, props, ARRAYSIZE( props ), 3.0f, PARTITION_CLIENT_RESPONSIVE_EDICTS, nullptr );
+	int nEnts = GetPushawayEnts( pPushingEntity, props, std::size( props ), 3.0f, PARTITION_CLIENT_RESPONSIVE_EDICTS, nullptr );
 #else
-	int nEnts = GetPushawayEnts( pPushingEntity, props, ARRAYSIZE( props ), 3.0f, PARTITION_ENGINE_SOLID_EDICTS, nullptr );
+	int nEnts = GetPushawayEnts( pPushingEntity, props, std::size( props ), 3.0f, PARTITION_ENGINE_SOLID_EDICTS, nullptr );
 #endif
 	
 	for ( int i=0; i < nEnts; i++ )

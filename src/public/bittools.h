@@ -1,43 +1,9 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef BITTOOLS_H
-#define BITTOOLS_H
+import std;
 
-namespace bittools
-{
-	template<int N, int C = 0>
-	struct RecurseBit
-	{
-		enum {result = RecurseBit<N/2, C+1>::result};
-	};
-	
-	template<int C>
-	struct RecurseBit<0, C>
-	{
-		enum {result = C};
-	};
-	
-	template<int N, int C = 1>
-	struct RecursePow2
-	{
-		enum {result = RecursePow2<N/2, C*2>::result};
-	};
-
-	template<int C>
-	struct RecursePow2<0, C>
-	{
-		enum {result = C};
-	};
-	
-}
-
-#define ROUND_TO_POWER_OF_2( n ) ( bittools::RecursePow2< (n) - 1 >::result )
-#define MINIMUM_BITS_NEEDED( n ) ( bittools::RecurseBit< (n) - 1 >::result )
-
-#endif //BITTOOLS_H
-
+// Number of bits needed to store the values [0, n) / the next power of two >= n.
+inline constexpr int MINIMUM_BITS_NEEDED( int n ) { return std::bit_width( static_cast<unsigned>( n - 1 ) ); }
+inline constexpr int ROUND_TO_POWER_OF_2( int n ) { return 1 << MINIMUM_BITS_NEEDED( n ); }

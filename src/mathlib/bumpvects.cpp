@@ -1,24 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-
-#ifdef QUIVER
-#include "r_local.h"
-#endif
-#include "mathlib/bumpvects.h"
-#include "mathlib/vector.h"
-#include <assert.h>
+import ks.math;
+import std;
 
 // z is coming out of the face.
 
@@ -29,7 +13,7 @@ void GetBumpNormals( const Vector& sVect, const Vector& tVect, const Vector& fla
 	bool leftHanded;
 	int i;
 
-	assert( NUM_BUMP_VECTS == 3 );
+	contract_assert( NUM_BUMP_VECTS == 3 );
 	
 	// Are we left or right handed?
 	CrossProduct( sVect, tVect, tmpNormal );
@@ -61,4 +45,3 @@ void GetBumpNormals( const Vector& sVect, const Vector& tVect, const Vector& fla
 		VectorIRotate( g_localBumpBasis[i], smoothBasis, bumpNormals[i] );
 	}
 }
-

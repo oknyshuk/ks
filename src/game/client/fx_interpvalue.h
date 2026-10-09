@@ -1,11 +1,6 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef FX_INTERPVALUE_H
-#define FX_INTERPVALUE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Types of supported interpolation
 enum InterpType_t
@@ -45,5 +40,3 @@ private:
 
 	int		m_nInterpType;
 };
-
-#endif // FX_INTERPVALUE_H

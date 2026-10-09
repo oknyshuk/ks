@@ -1,10 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "cs_hud_weaponselection.h"
 #include "iclientmode.h"
 #include "iinput.h"
@@ -12,11 +20,8 @@
 #include "cs_weapon_parse.h"
 #include "c_cs_player.h"
 
-#include <keyvalues.h>
 
-#include "localize/ilocalize.h"
 
-#include <string.h>
 
 DECLARE_HUDELEMENT( CHudWeaponSelection );
 
@@ -143,7 +148,6 @@ void CHudWeaponSelection::LevelInit()
 //-----------------------------------------------------------------------------
 void CHudWeaponSelection::OpenSelection( void )
 {
-	Assert(!IsInSelectionMode());
 
 	CBaseHudWeaponSelection::OpenSelection();
 	GetClientMode()->GetViewportAnimationController()->StartAnimationSequence("OpenWeaponSelectionMenu");

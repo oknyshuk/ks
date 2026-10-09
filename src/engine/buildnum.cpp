@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "quakedef.h"
-#include "tier1/strtools.h"
+import std;
+import ks.tier1;
 
 //char *date = "Nov 07 1998"; // "Oct 24 1996";
 const char *date = __DATE__ ;
@@ -40,14 +35,14 @@ private:
 
 		for (m = 0; m < 11; m++)
 		{
-			if (Q_strncasecmp( &date[0], mon[m], 3 ) == 0)
+			if (V_strncasecmp( &date[0], mon[m], 3 ) == 0)
 				break;
 			d += mond[m];
 		}
 
-		d += atoi( &date[4] ) - 1;
+		d += std::atoi( &date[4] ) - 1;
 
-		y = atoi( &date[7] ) - 1900;
+		y = std::atoi( &date[7] ) - 1900;
 
 		m_nBuildNumber = d + (int)((y - 1) * 365.25);
 

@@ -1,21 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( SV_FILTER_H )
-#define SV_FILTER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "utlvector.h"
+import std;
+import ks.tier1;
 #include "userid.h"
 #include "ipuserfilter.h"
+#include "userid.h"
 
 void Filter_Init( void );
 void Filter_Shutdown( void );
@@ -29,5 +20,3 @@ bool Filter_IsUserBanned( const USERID_t& userid );
 
 extern std::vector< ipfilter_t > g_IPFilters;
 extern std::vector< userfilter_t > g_UserFilters;
-
-#endif // SV_FILTER_H

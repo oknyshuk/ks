@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CHOREOCHANNEL_H
-#define CHOREOCHANNEL_H
-
-#include "tier1/utlvector.h"
-#include <vector>
+import ks.tier1;
+import std;
 
 class CChoreoEvent;
 class CChoreoActor;
@@ -89,5 +83,3 @@ private:
 	// Purely for save/load
 	bool			m_bMarkedForSave;
 };
-
-#endif // CHOREOCHANNEL_H

@@ -1,3 +1,4 @@
+#pragma once
 //
 //                 mxToolKit (c) 1999 by Mete Ciragan
 //
@@ -11,8 +12,6 @@
 //                 provided without guarantee or warrantee expressed or
 //                 implied.
 //
-#ifndef INCLUDED_MTKGL
-#define INCLUDED_MTKGL
 
 
 
@@ -23,4 +22,3 @@
 
 
 
-#endif // INCLUDED_MTKGL

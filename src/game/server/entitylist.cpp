@@ -1,26 +1,44 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include <flat_set>
-#include <unordered_map>
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "entitylist.h"
-#include "utlvector.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#include "entitylist.h"
 #include "igamesystem.h"
 #include "collisionutils.h"
-#include "tier0/vprof.h"
-#include "tier1/generichash.h"
 #include "mapentities.h"
 #include "client.h"
 #include "ai_initutils.h"
 #include "globalstate.h"
 #include "datacache/imdlcache.h"
-
-
 
 void SceneManager_ClientActive( CBasePlayer *player );
 
@@ -104,7 +122,7 @@ public:
 	int ListCopy( CBaseEntity *pList[], int listMax )
 	{
 		int count = std::min(listMax, ListCount() );
-		memcpy( pList, m_targetList.data(), sizeof(CBaseEntity *) * count );
+		std::memcpy( pList, m_targetList.data(), sizeof(CBaseEntity *) * count );
 		return count;
 	}
 	CBaseEntity *ListElement( int iIndex )
@@ -156,7 +174,7 @@ public:
 	void Clear()
 	{
 		m_simThinkList.clear(); m_simThinkList.shrink_to_fit();
-		for ( int i = 0; i < ARRAYSIZE(m_entinfoIndex); i++ )
+		for ( int i = 0; i < std::size( m_entinfoIndex ); i++ )
 		{
 			m_entinfoIndex[i] = 0xFFFF;
 		}
@@ -186,7 +204,7 @@ public:
 		// If this guy is in the active list, remove him
 		if ( listHandle != 0xFFFF )
 		{
-			Assert(m_simThinkList[listHandle].entEntry == index);
+			contract_assert( m_simThinkList[listHandle].entEntry == index );
 			ks::swap_remove( m_simThinkList, listHandle );
 			m_entinfoIndex[index] = 0xFFFF;
 			
@@ -211,14 +229,13 @@ public:
 			// only copy out entities that will simulate or think this frame
 			if ( m_simThinkList[i].nextThinkTick <= gpGlobals->tickcount )
 			{
-				Assert(m_simThinkList[i].nextThinkTick>=0);
+				contract_assert( m_simThinkList[i].nextThinkTick>=0 );
 				int entinfoIndex = m_simThinkList[i].entEntry;
 				const CEntInfo *pInfo = gEntList.GetEntInfoPtrByIndex( entinfoIndex );
 				if ( !pInfo->m_pEntity )
 					continue;
 				pList[out] = (CBaseEntity *)pInfo->m_pEntity;
-				Assert(m_simThinkList[i].nextThinkTick==0 || pList[out]->GetFirstThinkTick()==m_simThinkList[i].nextThinkTick);
-				Assert( gEntList.IsEntityPtr( pList[out] ) );
+				contract_assert( m_simThinkList[i].nextThinkTick==0 || pList[out]->GetFirstThinkTick()==m_simThinkList[i].nextThinkTick );
 				out++;
 			}
 		}
@@ -246,24 +263,23 @@ public:
 			// already in the list? (had think or sim last time, now has both - or had both last time, now just one)
 			if ( m_entinfoIndex[index] == 0xFFFF )
 			{
-				MEM_ALLOC_CREDIT();
 				m_entinfoIndex[index] = std::ssize( m_simThinkList ); m_simThinkList.emplace_back();
 				m_simThinkList[m_entinfoIndex[index]].entEntry = (unsigned short)index;
 				m_simThinkList[m_entinfoIndex[index]].nextThinkTick = 0;
 				if ( pEntity->IsEFlagSet(EFL_NO_GAME_PHYSICS_SIMULATION) )
 				{
 					m_simThinkList[m_entinfoIndex[index]].nextThinkTick = pEntity->GetFirstThinkTick();
-					Assert(m_simThinkList[m_entinfoIndex[index]].nextThinkTick>=0);
+					contract_assert( m_simThinkList[m_entinfoIndex[index]].nextThinkTick>=0 );
 				}
 			}
 			else
 			{
-				Assert( m_simThinkList[m_entinfoIndex[index]].entEntry == index );
+				contract_assert( m_simThinkList[m_entinfoIndex[index]].entEntry == index );
 				// updating existing entry - if no sim, reset think time
 				if ( pEntity->IsEFlagSet(EFL_NO_GAME_PHYSICS_SIMULATION) )
 				{
 					m_simThinkList[m_entinfoIndex[index]].nextThinkTick = pEntity->GetFirstThinkTick();
-					Assert(m_simThinkList[m_entinfoIndex[index]].nextThinkTick>=0);
+					contract_assert( m_simThinkList[m_entinfoIndex[index]].nextThinkTick>=0 );
 				}
 				else
 				{
@@ -305,7 +321,6 @@ public:
 	}
 	void AddEntity( CBaseEntity *pEntity )
 	{
-		MEM_ALLOC_CREDIT();
 		m_list.push_back( (unsigned short)pEntity->GetRefEHandle().GetEntryIndex() );
 	}
 	void PostClientMessagesSent()
@@ -344,9 +359,9 @@ CBaseEntityClassList::~CBaseEntityClassList()
 
 struct CEntsByStringHashFuncs
 {
-	size_t operator()( string_t iszStr ) const
+	std::size_t operator()( string_t iszStr ) const
 	{
-		COMPILE_TIME_ASSERT( sizeof( char * ) == sizeof( intp ) );
+		static_assert( sizeof( char * ) == sizeof( intp ) );
 		return HashIntp( ( intp )iszStr.ToCStr() );
 	}
 };
@@ -394,8 +409,7 @@ extern bool g_bDisableEhandleAccess;
 // call this before and after each frame to delete all of the marked entities.
 void CGlobalEntityList::CleanupDeleteList( void )
 {
-	VPROF( "CGlobalEntityList::CleanupDeleteList" );
-	SNPROF( "CGlobalEntityList::CleanupDeleteList" );
+	CVProfScope _( "CGlobalEntityList::CleanupDeleteList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	g_fInCleanupDelete = true;
 	// clean up the vphysics delete list as well
 	PhysOnCleanupDeleteList();
@@ -424,7 +438,7 @@ void CGlobalEntityList::AddListenerEntity( IEntityListener *pListener )
 {
 	if ( ks::find_index( m_entityListeners, pListener ) >= 0 )
 	{
-		AssertMsg( 0, "Can't add listeners multiple times\n" );
+		contract_assert( false && "Can't add listeners multiple times\n" );
 		return;
 	}
 	m_entityListeners.push_back( pListener );
@@ -460,7 +474,7 @@ void CGlobalEntityList::Clear( void )
 #ifdef _DEBUG
 	for ( const auto &[iszClassname, pHead] : g_EntsByClassname )
 	{
-		Assert( pHead == nullptr );
+		contract_assert( pHead == nullptr );
 	}
 #endif
 
@@ -664,7 +678,7 @@ CBaseEntity *CGlobalEntityList::FindEntityProcedural( const char *szName, CBaseE
 		else 
 		{
 			Warning( "Invalid entity search name %s\n", szName );
-			Assert(0);
+			contract_assert( 0 );
 		}
 	}
 
@@ -1341,7 +1355,7 @@ void CGlobalEntityList::OnAddEntity( IHandleEntity *pEnt, CBaseHandle handle )
 		m_iNumEdicts++;
 	
 	// NOTE: Must be a CBaseEntity on server
-	Assert( pBaseEnt );
+	contract_assert( pBaseEnt );
 	//DevMsg(2,"Created %s\n", pBaseEnt->GetClassname() );
 	for ( i = std::ssize( m_entityListeners )-1; i >= 0; i-- )
 	{
@@ -1381,10 +1395,10 @@ void CGlobalEntityList::NotifyCreateEntity( CBaseEntity *pEnt )
 		return;
 
 	// Make sure no one is trying to build an entity without game strings.
-	Assert( MAKE_STRING( pEnt->GetClassname() ) == FindPooledString( pEnt->GetClassname() ) && 
+	contract_assert( MAKE_STRING( pEnt->GetClassname() ) == FindPooledString( pEnt->GetClassname() ) && 
 		( pEnt->GetEntityName() == NULL_STRING || pEnt->GetEntityName() == FindPooledString( pEnt->GetEntityName().ToCStr() ) ) );
 
-	Assert( pEnt->m_pPrevByClass == nullptr && pEnt->m_pNextByClass == nullptr && pEnt->m_ppListByClassHead == nullptr );
+	contract_assert( pEnt->m_pPrevByClass == nullptr && pEnt->m_pNextByClass == nullptr && pEnt->m_ppListByClassHead == nullptr );
 
 	CBaseEntity *&pHead = g_EntsByClassname.try_emplace( MAKE_STRING( pEnt->GetClassname() ), nullptr ).first->second;
 	pEnt->m_ppListByClassHead = &pHead;
@@ -1392,7 +1406,7 @@ void CGlobalEntityList::NotifyCreateEntity( CBaseEntity *pEnt )
 	{
 		pHead->m_pPrevByClass = pEnt;
 		pEnt->m_pNextByClass = pHead;
-		Assert( pEnt->m_pPrevByClass == nullptr );
+		contract_assert( pEnt->m_pPrevByClass == nullptr );
 	}
 	pHead = pEnt;
 
@@ -1439,7 +1453,7 @@ void CGlobalEntityList::NotifyRemoveEntity( CBaseEntity *pBaseEnt )
 			// Plus during map load we get a lot of precache others that hit this [8/8/2008 tom]
 		}
 
-		Assert( pHead != pBaseEnt );
+		contract_assert( pHead != pBaseEnt );
 		if ( pBaseEnt->m_pNextByClass )
 		{
 			pBaseEnt->m_pNextByClass->m_pPrevByClass = pBaseEnt->m_pPrevByClass;
@@ -1616,7 +1630,7 @@ public:
 		if ( pEntity->IsMarkedForDeletion() )
 			return;
 
-		Assert( !ks::is_valid_index( m_updateList, ks::find_index( m_updateList, pEntity ) ) );
+		contract_assert( !ks::is_valid_index( m_updateList, ks::find_index( m_updateList, pEntity ) ) );
 		m_updateList.push_back( pEntity );
 	}
 
@@ -1644,16 +1658,16 @@ void EntityTouch_Remove( CBaseEntity *pEntity )
 
 void CEntityTouchManager::FrameUpdatePostEntityThink()
 {
-	VPROF( "CEntityTouchManager::FrameUpdatePostEntityThink" );
-	SNPROF( "CEntityTouchManager::FrameUpdatePostEntityThink" );
+	ks::ScratchArena<> scratch;
+	CVProfScope _( "CEntityTouchManager::FrameUpdatePostEntityThink", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// Loop through all entities again, checking their untouch if flagged to do so
 	
 	int count = std::ssize( m_updateList );
 	if ( count )
 	{
 		// copy off the list
-		CBaseEntity **ents = (CBaseEntity **)stackalloc( sizeof(CBaseEntity *) * count );
-		memcpy( ents, m_updateList.data(), sizeof(CBaseEntity *) * count );
+		CBaseEntity **ents = scratch.Alloc<CBaseEntity *>( count );
+		std::memcpy( ents, m_updateList.data(), sizeof(CBaseEntity *) * count );
 		// clear it
 		m_updateList.clear();
 		
@@ -1666,7 +1680,6 @@ void CEntityTouchManager::FrameUpdatePostEntityThink()
 				ents[i]->PhysicsCheckForEntityUntouch();
 			}
 		}
-		stackfree( ents );
 	}
 }
 
@@ -1676,7 +1689,7 @@ public:
 	virtual bool ShouldCreateEntity( const char *pClassname )
 	{
 		// Create everything but the world
-		return Q_stricmp( pClassname, "worldspawn" ) != 0;
+		return V_stricmp( pClassname, "worldspawn" ) != 0;
 	}
 
 	virtual CBaseEntity* CreateNextEntity( const char *pClassname )
@@ -1856,7 +1869,9 @@ private:
 
 
 
-CON_COMMAND(report_entities, "Lists all entities")
+static void report_entities( const CCommand &args );
+static ConCommand report_entities_command( "report_entities", report_entities, "Lists all entities" );
+static void report_entities( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1872,7 +1887,9 @@ CON_COMMAND(report_entities, "Lists all entities")
 }
 
 
-CON_COMMAND(report_touchlinks, "Lists all touchlinks")
+static void report_touchlinks( const CCommand &args );
+static ConCommand report_touchlinks_command( "report_touchlinks", report_touchlinks, "Lists all touchlinks" );
+static void report_touchlinks( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1904,13 +1921,15 @@ CON_COMMAND(report_touchlinks, "Lists all touchlinks")
 	list.ReportEntityList();
 }
 
-CON_COMMAND(report_simthinklist, "Lists all simulating/thinking entities")
+static void report_simthinklist( const CCommand &args );
+static ConCommand report_simthinklist_command( "report_simthinklist", report_simthinklist, "Lists all simulating/thinking entities" );
+static void report_simthinklist( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
 
 	CBaseEntity *pTmp[NUM_ENT_ENTRIES];
-	int count = SimThink_ListCopy( pTmp, ARRAYSIZE(pTmp) );
+	int count = SimThink_ListCopy( pTmp, std::size( pTmp ) );
 
 	CSortedEntityList list;
 	for ( int i = 0; i < count; i++ )
@@ -1922,4 +1941,3 @@ CON_COMMAND(report_simthinklist, "Lists all simulating/thinking entities")
 	}
 	list.ReportEntityList();
 }
-

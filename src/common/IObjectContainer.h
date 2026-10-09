@@ -1,14 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: IObjectContainer.h: interface for the ObjectContainer class.
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IOBJECTCONTAINER_H
-#define IOBJECTCONTAINER_H
-
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: IObjectContainer.h: interface for the ObjectContainer class.
 
 class IObjectContainer  
 {
@@ -28,5 +22,3 @@ public:
 	virtual bool		Contains(void * object) = 0;
 	virtual bool		IsEmpty() = 0;
 };
-
-#endif // !defined IOBJECTCONTAINER_H

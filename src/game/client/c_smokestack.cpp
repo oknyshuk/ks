@@ -1,18 +1,27 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Implements a particle system steam jet.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "particle_prototype.h"
 #include "baseparticleentity.h"
 #include "particles_simple.h"
-#include "filesystem.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 
-	#define SMOKESTACK_MAX_MATERIALS 1
+	constexpr auto SMOKESTACK_MAX_MATERIALS = 1;
 
 //==================================================
 // C_SmokeStack
@@ -131,7 +140,6 @@ private:
 // ------------------------------------------------------------------------- //
 
 // Expose to the particle app.
-EXPOSE_PROTOTYPE_EFFECT(SmokeStack, C_SmokeStack);
 
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_SmokeStack, DT_SmokeStack, CSmokeStack )
@@ -214,10 +222,10 @@ void C_SmokeStack::Start(CParticleMgr *pParticleMgr, IPrototypeArgAccess *pArgs)
 	const model_t *pModel = modelinfo->GetModel( m_iMaterialModel );
 	if ( pModel )
 	{
-		Q_strncpy( str, modelinfo->GetModelName( pModel ), sizeof( str ) );
+		V_strncpy( str, modelinfo->GetModelName( pModel ), sizeof( str ) );
 
 		// Get rid of the extension because the material system doesn't want it.
-		char *pExt = Q_stristr( str, ".vmt" );
+		char *pExt = V_stristr( str, ".vmt" );
 		if ( pExt )
 			pExt[0] = 0;
 	}
@@ -274,7 +282,7 @@ void C_SmokeStack::Update(float fTimeDelta)
 {
 	if( !m_pParticleMgr )
 	{
-		assert(false);
+		contract_assert( false );
 		return;
 	}
 
@@ -298,8 +306,8 @@ void C_SmokeStack::Update(float fTimeDelta)
 				float angle = FRand( 0, 2.0f*M_PI_F );
 				
 				pParticle->m_Pos = GetAbsOrigin() +
-					right * (cos( angle ) * m_flBaseSpread) +
-					forward * (sin( angle ) * m_flBaseSpread);
+					right * (std::cos( angle ) * m_flBaseSpread) +
+					forward * (std::sin( angle ) * m_flBaseSpread);
 
 				pParticle->m_Velocity = 
 					FRand(-m_SpreadSpeed,m_SpreadSpeed) * right +
@@ -320,8 +328,8 @@ void C_SmokeStack::Update(float fTimeDelta)
 	float flTwist = (m_flTwist * (M_PI_F * 2.f) / 360.0f) * Helper_GetFrameTime();
 	if( m_bTwist = !!flTwist )
 	{
-		m_TwistMat[0][0] =  cos(flTwist);
-		m_TwistMat[0][1] =  sin(flTwist);
+		m_TwistMat[0][0] =  std::cos(flTwist);
+		m_TwistMat[0][1] =  std::sin(flTwist);
 		m_TwistMat[1][0] = -sin(flTwist);
 		m_TwistMat[1][1] =  cos(flTwist);
 	}
@@ -446,5 +454,3 @@ void C_SmokeStack::SimulateParticles( CParticleSimulateIterator *pIterator )
 
 	m_bInView = bDrawn;
 }
-
-

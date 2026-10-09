@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "isaverestore.h"
 
-#ifndef STDSTRING_H
-#define STDSTRING_H
-
-
-
-#include <string>
-
+import std;
 
 class CStdStringSaveRestoreOps : public CDefSaveRestoreOps
 {
@@ -34,6 +26,4 @@ inline ISaveRestoreOps *GetStdStringDataOps()
 //-------------------------------------
 
 #define DEFINE_STDSTRING(name) \
-	{ FIELD_CUSTOM, #name, (int)offsetof(classNameTypedef,name), 1, FTYPEDESC_SAVE, nullptr, GetStdStringDataOps(), nullptr }
-
-#endif // STDSTRING_H
+	{ FIELD_CUSTOM, #name, (int)__builtin_offsetof(classNameTypedef,name), 1, FTYPEDESC_SAVE, nullptr, GetStdStringDataOps(), nullptr }

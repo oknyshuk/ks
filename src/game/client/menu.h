@@ -1,17 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef HUD_MENU_H
-#define HUD_MENU_H
-
-#include "utlvector.h"
+import std;
+import ks.tier1;
 #include "hudelement.h"
 
-#define MENU_SELECTION_TIMEOUT	5.0f
+inline constexpr auto MENU_SELECTION_TIMEOUT = 5.0f;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -62,5 +57,3 @@ private:
 
 	float			m_flOpenCloseTime;
 };
-
-#endif // HUD_MENU_H

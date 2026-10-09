@@ -1,17 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef CLIENTALPHAPROPERTY_H
-#define CLIENTALPHAPROPERTY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "iclientalphaproperty.h"
+#include "iclientrenderable.h"
 
-
-#define CLIENT_ALPHA_DISTANCE_FADE_MODE_BIT_COUNT 1
+inline constexpr auto CLIENT_ALPHA_DISTANCE_FADE_MODE_BIT_COUNT = 1;
 
 //-----------------------------------------------------------------------------
 // Implementation class
@@ -22,7 +16,7 @@ class CClientAlphaProperty : public IClientAlphaProperty
 public:
 	virtual IClientUnknown*	GetIClientUnknown();
 	virtual void SetAlphaModulation( uint8 a );
-	virtual void SetRenderFX( RenderFx_t nRenderFx, RenderMode_t nRenderMode, float flStartTime = FLT_MAX, float flDuration = 0.0f );
+	virtual void SetRenderFX( RenderFx_t nRenderFx, RenderMode_t nRenderMode, float flStartTime = std::numeric_limits<float>::max(), float flDuration = 0.0f );
 	virtual void SetFade( float flGlobalFadeScale, float flDistFadeMinDist, float flDistFadeMaxDist );	
 	virtual void SetDesyncOffset( int nOffset );
 	virtual void EnableAlphaModulationOverride( bool bEnable );
@@ -108,6 +102,3 @@ inline bool CClientAlphaProperty::IgnoresZBuffer( void ) const
 {
 	return m_nRenderMode == kRenderGlow || m_nRenderMode == kRenderWorldGlow;
 }
-
-
-#endif // CLIENTALPHAPROPERTY_H

@@ -1,15 +1,10 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Common pixel shader code specific to flashlights
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#ifndef COMMON_FLASHLIGHT_FXC_H_
-#define COMMON_FLASHLIGHT_FXC_H_
 
 #include "common_ps_fxc.h"
-
 
 // Superellipse soft clipping
 //
@@ -726,5 +721,3 @@ HALF3 DoFlashlight( float3 flashlightPos, float3 worldPos, float4 flashlightSpac
 
 	return diffuseLighting;
 }
-
-#endif //#ifndef COMMON_FLASHLIGHT_FXC_H_

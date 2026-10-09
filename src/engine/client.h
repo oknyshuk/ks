@@ -1,27 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( CLIENT_H )
-#define CLIENT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <qlimits.h>
-#include <list>
-#include <convar.h>
-#include <checksum_crc.h>
 #include <protocol.h>
 #include <cdll_int.h>
 #include <globalvars_base.h>
 #include <soundflags.h>
-#include <utlvector.h>
+import std;
+import ks.tier1;
 #include "host.h"
 #include "event_system.h"
 #include "precache.h"
@@ -29,16 +16,14 @@
 #include "clientframe.h"
 #include "netmessages.h"
 
-
-
 struct model_t;
 
 class ClientClass;
 class CSfxTable;
 class CPureServerWhitelist;
 
-#define	MAX_DEMOS		32
-#define	MAX_DEMONAME	32
+inline constexpr int MAX_DEMOS = 32;
+inline constexpr int MAX_DEMONAME = 32;
 
 struct AddAngle
 {
@@ -83,9 +68,9 @@ public: // IConnectionlessPacketHandler interface:
 
 public: // CBaseClientState overrides:
 	void Disconnect(bool bShowMainMenu);
-	virtual void ConnectionStart( INetChannel *chan ) OVERRIDE;
-	virtual void ConnectionStop() OVERRIDE;
-	virtual void FullConnect( const ns_address &adr, int nEncryptionKey ) OVERRIDE;
+	virtual void ConnectionStart( INetChannel *chan ) override;
+	virtual void ConnectionStop() override;
+	virtual void FullConnect( const ns_address &adr, int nEncryptionKey ) override;
 	bool SetSignonState ( int state, int count, const ks::net::CNETMsg_SignonState *msg );
 	void PacketStart(int incoming_sequence, int outgoing_acknowledged);
 	void PacketEnd( void );
@@ -105,8 +90,8 @@ public: // CBaseClientState overrides:
 	bool HookClientStringTable( char const *tableName );
 	bool InstallEngineStringTableCallback( char const *tableName );
 
-	void StartUpdatingSteamResources();
-	void CheckUpdatingSteamResources();
+	void StartUpdatingResources();
+	void CheckUpdatingResources();
 	void CheckFileCRCsWithServer();
 	void FinishSignonState_New();
 	void ConsistencyCheck(bool bForce);
@@ -131,25 +116,25 @@ public: // CBaseClientState overrides:
 
 public: // IServerMessageHandlers
 	
-	virtual bool NETMsg_Tick( const ks::net::CNETMsg_Tick& msg ) OVERRIDE;
-	virtual bool NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg ) OVERRIDE;
+	virtual bool NETMsg_Tick( const ks::net::CNETMsg_Tick& msg ) override;
+	virtual bool NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg ) override;
 
-	virtual bool SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg ) OVERRIDE;
-	virtual bool SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg ) OVERRIDE;
-	virtual bool SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg ) OVERRIDE;
-	virtual bool SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg ) OVERRIDE;
-	virtual bool SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData& msg ) OVERRIDE;
-	virtual bool SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle& msg ) OVERRIDE;
-	virtual bool SVCMsg_Prefetch( const ks::net::CSVCMsg_Prefetch& msg ) OVERRIDE;
-	virtual bool SVCMsg_CrosshairAngle( const ks::net::CSVCMsg_CrosshairAngle& msg ) OVERRIDE;
-	virtual bool SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg ) OVERRIDE;
-	virtual bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage& msg ) OVERRIDE;
-	virtual bool SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg ) OVERRIDE;
-	virtual bool SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg ) OVERRIDE;
-	virtual bool SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities& msg ) OVERRIDE;
-	virtual bool SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities &msg ) OVERRIDE;
-	virtual bool SVCMsg_Sounds( const ks::net::CSVCMsg_Sounds& msg ) OVERRIDE;
-	virtual bool SVCMsg_EntityMsg( const ks::net::CSVCMsg_EntityMsg& msg ) OVERRIDE;
+	virtual bool SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg ) override;
+	virtual bool SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg ) override;
+	virtual bool SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg ) override;
+	virtual bool SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg ) override;
+	virtual bool SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData& msg ) override;
+	virtual bool SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle& msg ) override;
+	virtual bool SVCMsg_Prefetch( const ks::net::CSVCMsg_Prefetch& msg ) override;
+	virtual bool SVCMsg_CrosshairAngle( const ks::net::CSVCMsg_CrosshairAngle& msg ) override;
+	virtual bool SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg ) override;
+	virtual bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage& msg ) override;
+	virtual bool SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg ) override;
+	virtual bool SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg ) override;
+	virtual bool SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities& msg ) override;
+	virtual bool SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities &msg ) override;
+	virtual bool SVCMsg_Sounds( const ks::net::CSVCMsg_Sounds& msg ) override;
+	virtual bool SVCMsg_EntityMsg( const ks::net::CSVCMsg_EntityMsg& msg ) override;
 	virtual bool SVCMsg_HltvReplay( const ks::net::CSVCMsg_HltvReplay &msg );
 
 	CNetMessageBinder m_SVCMsgHltvReplay;
@@ -175,9 +160,6 @@ public:
 	// information that is static for the entire time connected to a server
 	//
 	bool		ishltv;			// true if HLTV server/demo
-#if defined( REPLAY_ENABLED )
-	bool		isreplay;		// true if Replay server/demo
-#endif
 
 	CRC32_t		serverCRC;              // To determine if client is playing hacked .map. (entities lump is skipped)
 	CRC32_t		serverClientSideDllCRC; // To determine if client is playing on a hacked client dll.
@@ -270,10 +252,9 @@ public:
 	CPrecacheItem		decal_precache[ MAX_BASE_DECALS ];
 
 	WaitForResourcesHandle_t m_hWaitForResourcesHandle;
-	bool m_bUpdateSteamResources;
-	bool m_bShownSteamResourceUpdateProgress;
+	bool m_bUpdateResources;
+	bool m_bShownResourceUpdateProgress;
 	bool m_bDownloadResources;
-	bool m_bDownloadingUGCMap;
 	bool m_bCheckCRCsWithServer;
 	float m_flLastCRCBatchTime;
 
@@ -311,5 +292,3 @@ extern CGlobalVarsBase g_ClientGlobalVariables;
 #endif
 
 extern bool g_bClientGameDLLGreaterThanV13;
-
-#endif // CLIENT_H

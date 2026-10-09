@@ -1,13 +1,9 @@
-//===== Copyright (c) 1996-2010, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2010 Valve Corporation
 
 #include "inputsystem/iinputstacksystem.h"
 #include "tier2/tier2.h"
-#include <vector>
-
+import std;
 
 //-----------------------------------------------------------------------------
 // An input context
@@ -56,8 +52,7 @@ private:
 // Singleton instance
 //-----------------------------------------------------------------------------
 static CInputStackSystem s_InputStackSystem;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CInputStackSystem, IInputStackSystem, 
-						INPUTSTACKSYSTEM_INTERFACE_VERSION, s_InputStackSystem );
+static InterfaceReg s_Reg_CInputStackSystem_IInputStackSystem( []() -> void * { return static_cast<IInputStackSystem *>( &s_InputStackSystem ); }, INPUTSTACKSYSTEM_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -65,7 +60,7 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CInputStackSystem, IInputStackSystem,
 //-----------------------------------------------------------------------------
 static AppSystemInfo_t s_Dependencies[] =
 {
-	{ "engine" DLL_EXT_STRING, INPUTSYSTEM_INTERFACE_VERSION },
+	{ "engine.so", INPUTSYSTEM_INTERFACE_VERSION },
 	{ nullptr, nullptr }
 };
 

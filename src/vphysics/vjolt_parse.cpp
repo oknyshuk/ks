@@ -2,7 +2,53 @@
 // Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
 
 
-#include "cbase.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/TempAllocator.h>
+#include <Jolt/Core/JobSystemWithBarrier.h>
+#include <Jolt/Core/FixedSizeFreeList.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Skeleton/Skeleton.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/PhysicsScene.h>
+#include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollidePointResult.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Ragdoll/Ragdoll.h>
+#include <Jolt/Physics/Collision/ShapeCast.h>
+#include <Jolt/Physics/Collision/CollisionDispatch.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/GroupFilter.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
+#include <Jolt/Physics/Constraints/ConeConstraint.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
+#include <Jolt/Physics/Constraints/FixedConstraint.h>
+#include <Jolt/Physics/Constraints/SixDOFConstraint.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
+#include <Jolt/Physics/Constraints/SliderConstraint.h>
+#include <Jolt/Physics/Vehicle/VehicleConstraint.h>
+#include <Jolt/Physics/Vehicle/VehicleCollisionTester.h>
+#include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
+import std;
+import ks.tier1;
+#include "compat/branch_overrides.h"
+#include "vcollide_parse.h"
+#include "vphysics/collision_set.h"
+#include "vphysics/constraints.h"
+#include "vphysics/vehicles.h"
+#include "vjolt_interface.h"
 
 #include "vjolt_keyvalues_schema.h"
 #include "vjolt_surfaceprops.h"
@@ -26,8 +72,8 @@ public:
 	void		ParseCustom( void *pCustom, IVPhysicsKeyHandler *unknownKeyHandler ) override;
 	void		ParseVehicle( vehicleparams_t *pVehicle, IVPhysicsKeyHandler *unknownKeyHandler ) override;
 	void		SkipBlock() override;
-	void		ParseCollisionRules( ragdollcollisionrules_t *pRules, IVPhysicsKeyHandler *unknownKeyHandler ) override_asw;
-	void		ParseRagdollAnimatedFriction( ragdollanimatedfriction_t *pFriction, IVPhysicsKeyHandler *unknownKeyHandler ) override_asw;	
+	void		ParseCollisionRules( ragdollcollisionrules_t *pRules, IVPhysicsKeyHandler *unknownKeyHandler ) ;
+	void		ParseRagdollAnimatedFriction( ragdollanimatedfriction_t *pFriction, IVPhysicsKeyHandler *unknownKeyHandler ) ;	
 
 private:
 
@@ -154,7 +200,7 @@ static const JoltKVSchemaProp_t kVehicleAxleDescs[] =
 			[]( KeyValues *pProp, void *pPtr, size_t size )
 			{
 				vehicle_wheelparams_t *pWheelParams = reinterpret_cast< vehicle_wheelparams_t * >( pPtr );
-				ParseJoltKVSchema( pProp, kVehicleAxleWheelDescs, ARRAYSIZE( kVehicleAxleWheelDescs ), pWheelParams );
+				ParseJoltKVSchema( pProp, kVehicleAxleWheelDescs, std::size( kVehicleAxleWheelDescs ), pWheelParams );
 			}
 		}
 	},
@@ -164,7 +210,7 @@ static const JoltKVSchemaProp_t kVehicleAxleDescs[] =
 			[]( KeyValues *pProp, void *pPtr, size_t size )
 			{
 				vehicle_suspensionparams_t *pSuspensionParams = reinterpret_cast< vehicle_suspensionparams_t * >( pPtr );
-				ParseJoltKVSchema( pProp, kVehicleAxleSuspensionDescs, ARRAYSIZE( kVehicleAxleSuspensionDescs ), pSuspensionParams );
+				ParseJoltKVSchema( pProp, kVehicleAxleSuspensionDescs, std::size( kVehicleAxleSuspensionDescs ), pSuspensionParams );
 			}
 		}
 	},
@@ -203,7 +249,7 @@ static const JoltKVSchemaProp_t kVehicleEngineDescs[] =
 			[]( KeyValues *pProp, void *pPtr, size_t size )
 			{
 				vehicle_engineparams_t *pEngineParams = reinterpret_cast< vehicle_engineparams_t * >( pPtr );
-				ParseJoltKVSchema( pProp, kVehicleEngineBoostDescs, ARRAYSIZE( kVehicleEngineBoostDescs ), pEngineParams );
+				ParseJoltKVSchema( pProp, kVehicleEngineBoostDescs, std::size( kVehicleEngineBoostDescs ), pEngineParams );
 			}
 		}
 	},
@@ -259,7 +305,7 @@ static const JoltKVSchemaProp_t kVehicleDescs[] =
 			[]( KeyValues *pProp, void *pPtr, size_t size )
 			{
 				vehicle_axleparams_t *pAxleParams = reinterpret_cast< vehicle_axleparams_t * >( pPtr );
-				ParseJoltKVSchema( pProp, kVehicleAxleDescs, ARRAYSIZE( kVehicleAxleDescs ), pAxleParams );
+				ParseJoltKVSchema( pProp, kVehicleAxleDescs, std::size( kVehicleAxleDescs ), pAxleParams );
 			}
 		}
 	},
@@ -269,7 +315,7 @@ static const JoltKVSchemaProp_t kVehicleDescs[] =
 			[]( KeyValues *pProp, void *pPtr, size_t size )
 			{
 				vehicle_bodyparams_t *pBodyParams = reinterpret_cast< vehicle_bodyparams_t * >( pPtr );
-				ParseJoltKVSchema( pProp, kVehicleBodyDescs, ARRAYSIZE( kVehicleBodyDescs ), pBodyParams );
+				ParseJoltKVSchema( pProp, kVehicleBodyDescs, std::size( kVehicleBodyDescs ), pBodyParams );
 			}
 		}
 	},
@@ -279,7 +325,7 @@ static const JoltKVSchemaProp_t kVehicleDescs[] =
 			[]( KeyValues *pProp, void *pPtr, size_t size )
 			{
 				vehicle_engineparams_t *pEngineParams = reinterpret_cast< vehicle_engineparams_t * >( pPtr );
-				ParseJoltKVSchema( pProp, kVehicleEngineDescs, ARRAYSIZE( kVehicleEngineDescs ), pEngineParams );
+				ParseJoltKVSchema( pProp, kVehicleEngineDescs, std::size( kVehicleEngineDescs ), pEngineParams );
 			}
 		}
 	},
@@ -289,7 +335,7 @@ static const JoltKVSchemaProp_t kVehicleDescs[] =
 			[]( KeyValues *pProp, void *pPtr, size_t size )
 			{
 				vehicle_steeringparams_t *pSteeringParams = reinterpret_cast< vehicle_steeringparams_t * >( pPtr );
-				ParseJoltKVSchema( pProp, kVehicleSteeringDescs, ARRAYSIZE( kVehicleSteeringDescs ), pSteeringParams );
+				ParseJoltKVSchema( pProp, kVehicleSteeringDescs, std::size( kVehicleSteeringDescs ), pSteeringParams );
 			}
 		}
 	},
@@ -354,7 +400,7 @@ void		JoltPhysicsParseKV::ParseSolid( solid_t *pSolid, IVPhysicsKeyHandler *unkn
 	else
 		V_memset( pSolid, 0, sizeof( *pSolid ) );
 
-	ParseJoltKVSchema( m_pCurrentBlock, kSolidDescs, ARRAYSIZE( kSolidDescs ), pSolid, pSolid, unknownKeyHandler );
+	ParseJoltKVSchema( m_pCurrentBlock, kSolidDescs, std::size( kSolidDescs ), pSolid, pSolid, unknownKeyHandler );
 
 	NextBlock();
 }
@@ -369,7 +415,7 @@ void		JoltPhysicsParseKV::ParseFluid( fluid_t *pFluid, IVPhysicsKeyHandler *unkn
 		V_strncpy( pFluid->surfaceprop, "water", sizeof( pFluid->surfaceprop ) );
 	}
 
-	ParseJoltKVSchema( m_pCurrentBlock, kFluidDescs, ARRAYSIZE( kFluidDescs ), pFluid, pFluid, unknownKeyHandler );
+	ParseJoltKVSchema( m_pCurrentBlock, kFluidDescs, std::size( kFluidDescs ), pFluid, pFluid, unknownKeyHandler );
 
 	NextBlock();
 }
@@ -388,7 +434,7 @@ void		JoltPhysicsParseKV::ParseRagdollConstraint( constraint_ragdollparams_t *pC
 	// Josh: The KV specifies clockwise rotations.  
 	pConstraint->useClockwiseRotations = true;
 
-	ParseJoltKVSchema( m_pCurrentBlock, kRagdollDescs, ARRAYSIZE( kRagdollDescs ), pConstraint, pConstraint, unknownKeyHandler );
+	ParseJoltKVSchema( m_pCurrentBlock, kRagdollDescs, std::size( kRagdollDescs ), pConstraint, pConstraint, unknownKeyHandler );
 
 	NextBlock();
 }
@@ -424,7 +470,7 @@ void		JoltPhysicsParseKV::ParseVehicle( vehicleparams_t *pVehicle, IVPhysicsKeyH
 	else
 		V_memset( pVehicle, 0, sizeof( *pVehicle ) );
 
-	ParseJoltKVSchema( m_pCurrentBlock, kVehicleDescs, ARRAYSIZE( kVehicleDescs ), pVehicle, pVehicle, unknownKeyHandler);
+	ParseJoltKVSchema( m_pCurrentBlock, kVehicleDescs, std::size( kVehicleDescs ), pVehicle, pVehicle, unknownKeyHandler);
 
 	NextBlock();
 }
@@ -445,7 +491,7 @@ void		JoltPhysicsParseKV::ParseCollisionRules( ragdollcollisionrules_t *pRules, 
 		.pUnknownKeyHandler = unknownKeyHandler,
 	};
 
-	ParseJoltKVSchema( m_pCurrentBlock, kCollisionRulesDescs, ARRAYSIZE( kCollisionRulesDescs ), &helper, pRules, unknownKeyHandler );
+	ParseJoltKVSchema( m_pCurrentBlock, kCollisionRulesDescs, std::size( kCollisionRulesDescs ), &helper, pRules, unknownKeyHandler );
 
 	if ( pRules )
 		*pRules = helper.Rules;
@@ -460,7 +506,7 @@ void		JoltPhysicsParseKV::ParseRagdollAnimatedFriction( ragdollanimatedfriction_
 	else
 		V_memset( pFriction, 0, sizeof( *pFriction ) );
 
-	ParseJoltKVSchema( m_pCurrentBlock, kRagdollAnimatedFrictionDescs, ARRAYSIZE( kRagdollAnimatedFrictionDescs ), pFriction, pFriction, unknownKeyHandler );
+	ParseJoltKVSchema( m_pCurrentBlock, kRagdollAnimatedFrictionDescs, std::size( kRagdollAnimatedFrictionDescs ), pFriction, pFriction, unknownKeyHandler );
 
 	NextBlock();
 }
@@ -507,7 +553,7 @@ static constexpr const char* DummyParserKeyValues = R"(
 
 IVPhysicsKeyParser *CreateVPhysicsKeyParser( const char *pKeyData, bool bIsPacked )
 {
-	VJoltAssertMsg( !bIsPacked, "Packed VPhysics KV not supported. You should not get here anyway as we do not emit it." );
+	contract_assert( ( !bIsPacked ) && "Packed VPhysics KV not supported. You should not get here anyway as we do not emit it." );
 	if ( bIsPacked )
 		return nullptr;
 

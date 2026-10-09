@@ -1,14 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef GAME_H
-#define GAME_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "globals.h"
 
@@ -37,4 +29,3 @@ extern ConVar	suitvolume;
 
 // Engine Cvars
 extern const ConVar *g_pDeveloper;
-#endif		// GAME_H

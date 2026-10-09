@@ -1,14 +1,32 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Handles all the functions for implementing remote access to the engine
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "server_pch.h"
-#include "iclient.h"
+// Purpose: Handles all the functions for implementing remote access to the engine
+
+// main precompiled header for server files
+
+import ks.tier1;
+import std;
+
+#include "common.h"
+#include "qlimits.h"
+#include "quakedef.h"
+#include "decal.h"
+#include "host_cmd.h"
+#include "cmodel_engine.h"
+#include "sound.h"
+#include "EngineSoundInternal.h"
+#include "checksum_engine.h"
+#include "host.h"
+#include "keys.h"
+#include "vengineserver_impl.h"
+#include "server.h"
+#include "eiface.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+#include "console.h"
+#include "edict.h"
 #include "net.h"
-#include "tier1/byte_reader.h"
-#include "tier1/string_ops.h"
 #include "igameserverdata.h"
 #include "sv_remoteaccess.h"
 #include "sv_rcon.h"
@@ -17,12 +35,10 @@
 #include "sys_dll.h"
 #include "vprof_engine.h"
 #include "PlayerState.h"
-#include "sv_log.h"
 #ifndef DEDICATED
 #include "zip/XZip.h"
 #endif
 #include "cl_main.h"
-
 
 extern IServerGameDLL	*serverGameDLL;
 
@@ -240,7 +256,7 @@ void CServerRemoteAccess::WriteDataRequest( CRConServer *pNetworkListener, ra_li
 					if ( m_ListenerIDs[ listener ].authenticated )
 					{
 						// if the second string has a non-zero value, it is a userid.
-						int userID = atoi( password );
+						int userID = std::atoi( password );
 						ConCommandBase *cmd = g_pCVar->FindCommand( "mp_disable_autokick" );
 						if ( cmd )
 						{
@@ -270,7 +286,7 @@ void CServerRemoteAccess::WriteDataRequest( CRConServer *pNetworkListener, ra_li
 						ZipAdd( hZip, "console.log", (void *)buf.c_str(), buf.size(), ZIP_MEMORY );
 						ZipGetMemory( hZip, &pMem, &nLen );
 						SendResponseToClient( listener, SERVERDATA_CONSOLE_LOG_RESPONSE, pMem, nLen );
-						CloseZip( hZip );
+						CloseZipZ( hZip );
 					}
 					else
 					{
@@ -281,7 +297,6 @@ void CServerRemoteAccess::WriteDataRequest( CRConServer *pNetworkListener, ra_li
 				}
 				break;
 
-#ifdef VPROF_ENABLED
 			case SERVERDATA_VPROF:
 				{
 					char password[25];
@@ -325,7 +340,6 @@ void CServerRemoteAccess::WriteDataRequest( CRConServer *pNetworkListener, ra_li
 					}
 				}
 				break;
-#endif
 			case SERVERDATA_SEND_REMOTEBUG:
 				{
 					if ( CommandLine()->CheckParm( "-remotebug" ) == nullptr )
@@ -346,7 +360,7 @@ void CServerRemoteAccess::WriteDataRequest( CRConServer *pNetworkListener, ra_li
 				break;
 
 			default:
-				Assert(!("Unknown requestType in CServerRemoteAccess::WriteDataRequest()"));
+				contract_assert( !("Unknown requestType in CServerRemoteAccess::WriteDataRequest()") );
 				cmd.seek( cmd.size() );
 				invalidRequest = true;
 				break;
@@ -394,7 +408,7 @@ void CServerRemoteAccess::UploadScreenshot( const char *pFileName )
 		ZipAdd( hZip, "screenshot.jpg", buf->data(), buf->size(), ZIP_MEMORY );
 		ZipGetMemory( hZip, &pMem, &nLen );
 		SendResponseToClient( m_nScreenshotListener, SERVERDATA_SCREENSHOT_RESPONSE, pMem, nLen );
-		CloseZip( hZip );
+		CloseZipZ( hZip );
 	}
 	else
 	{
@@ -457,7 +471,7 @@ void CServerRemoteAccess::CheckPassword( CRConServer *pNetworkListener, ra_liste
 //-----------------------------------------------------------------------------
 bool CServerRemoteAccess::IsAuthenticated( ra_listener_id listener )
 {
-	Assert( listener >= 0 && listener < (ra_listener_id)std::ssize( m_ListenerIDs ) );
+	contract_assert( listener >= 0 && listener < (ra_listener_id)std::ssize( m_ListenerIDs ) );
 	return m_ListenerIDs[listener].authenticated;
 }
 
@@ -465,7 +479,7 @@ extern ConVar sv_rcon_maxfailures;
 
 //-----------------------------------------------------------------------------
 // Purpose: send a bad password packet
-// Returns TRUE if socket was closed
+// Returns true if socket was closed
 //-----------------------------------------------------------------------------
 void CServerRemoteAccess::BadPassword( CRConServer *pNetworkListener, ra_listener_id listener )
 {
@@ -525,7 +539,7 @@ int CServerRemoteAccess::ReadDataResponse( ra_listener_id listener, void *buffer
 
 		ks::byte_writer &response = it->packet;
 		int bytesToCopy = response.size();
-		Assert(bufferSize >= bytesToCopy);
+		contract_assert( bufferSize >= bytesToCopy );
 		if (bytesToCopy <= bufferSize)
 		{
 			memcpy(buffer, response.data(), bytesToCopy);
@@ -623,7 +637,7 @@ void CServerRemoteAccess::SetValue(const char *variable, const char *value)
 					return;
 				}
 			}
-			g_pFileSystem->Write(value, Q_strlen(value) + 1, f);
+			g_pFileSystem->Write(value, V_strlen(value) + 1, f);
 			g_pFileSystem->Close(f);
 		}
 	}
@@ -651,6 +665,7 @@ void CServerRemoteAccess::ExecCommand(const char *cmdString)
 //-----------------------------------------------------------------------------
 bool CServerRemoteAccess::LookupValue(const char *variable, ks::text_writer &value)
 {
+	ks::ScratchArena<> scratch;
 	// first see if it's a cvar
 	const char *strval = LookupStringValue(variable);
 	if (strval)
@@ -687,7 +702,7 @@ bool CServerRemoteAccess::LookupValue(const char *variable, ks::text_writer &val
 	else if (!stricmp(variable, "ipaddress"))
 	{
 		char addr[25];
-		Q_snprintf( addr, sizeof(addr), "%s:%i", net_local_adr.ToString(true), sv.GetUDPPort());
+		V_snprintf( addr, sizeof(addr), "%s:%i", net_local_adr.ToString(true), sv.GetUDPPort());
 		value.put( addr );
 		value.put('\0');
 	}
@@ -703,7 +718,7 @@ bool CServerRemoteAccess::LookupValue(const char *variable, ks::text_writer &val
 				return true;
 			
 			int len = g_pFileSystem->Size(f);
-			char *mapcycleData = (char *)stackalloc( len+1 );
+			char *mapcycleData = (char *)scratch.AllocBytes( len+1 );
 			if ( len && g_pFileSystem->Read( mapcycleData, len, f ) )
 			{
 				mapcycleData[len] = 0; // Make sure it's null terminated.
@@ -746,22 +761,22 @@ const char *CServerRemoteAccess::LookupStringValue(const char *variable)
 	}
 
 	// special types
-	if ( !Q_stricmp( variable, "map" ) )
+	if ( !V_stricmp( variable, "map" ) )
 		return sv.GetMapName();
 
-	if ( !Q_stricmp( variable, "playercount" ) )
+	if ( !V_stricmp( variable, "playercount" ) )
 	{
-		Q_snprintf( s_ReturnBuf, sizeof(s_ReturnBuf) - 1, "%d", sv.GetNumClients() - sv.GetNumProxies());
+		V_snprintf( s_ReturnBuf, sizeof(s_ReturnBuf) - 1, "%d", sv.GetNumClients() - sv.GetNumProxies());
 		return s_ReturnBuf;
 	}
 	
-	if ( !Q_stricmp( variable, "maxplayers" ) )
+	if ( !V_stricmp( variable, "maxplayers" ) )
 	{
-		Q_snprintf( s_ReturnBuf, sizeof(s_ReturnBuf) - 1, "%d", sv.GetMaxClients() );
+		V_snprintf( s_ReturnBuf, sizeof(s_ReturnBuf) - 1, "%d", sv.GetMaxClients() );
 		return s_ReturnBuf;
 	}
 	
-	if ( !Q_stricmp( variable, "gamedescription" ) && serverGameDLL )
+	if ( !V_stricmp( variable, "gamedescription" ) && serverGameDLL )
 		return serverGameDLL->GetGameDescription();
 
 	return nullptr;
@@ -797,11 +812,11 @@ void CServerRemoteAccess::GetStatsString(char *buf, int bufSize)
 	sv.GetNetStats( avgIn, avgOut );
 
 	// format: CPU percent, Bandwidth in, Bandwidth out, uptime, changelevels, framerate, total players
-	_snprintf(buf, bufSize - 1, "%6.1f %8.1f %8.1f %7i %5i %7.2f %7i %7.2f %7.2f %7.2f",
+	snprintf(buf, bufSize - 1, "%6.1f %8.1f %8.1f %7i %5i %7.2f %7i %7.2f %7.2f %7.2f",
 				sv.GetCPUUsage() * 100, 
 				avgIn, 
 				avgOut,
-				(int)(Sys_FloatTime()) / 60,
+				(int)(Plat_FloatTime()) / 60,
 				sv.GetSpawnCount() - 1,
 				1.0/host_frametime, // frame rate
 				sv.GetNumClients() - sv.GetNumProxies(),
@@ -863,19 +878,19 @@ void CServerRemoteAccess::GetMapList(ks::text_writer &value)
 	// search the directory structure.
 	char mapwild[MAX_QPATH];
 	char friendly_com_gamedir[ MAX_OSPATH ];
-	strcpy(mapwild, "maps/*.bsp");
-	Q_strncpy( friendly_com_gamedir, com_gamedir, sizeof(friendly_com_gamedir) );
-	Q_strlower( friendly_com_gamedir );
+	std::strcpy(mapwild, "maps/*.bsp");
+	V_strncpy( friendly_com_gamedir, com_gamedir, sizeof(friendly_com_gamedir) );
+	V_strlower( friendly_com_gamedir );
 	
 	char const *findfn = Sys_FindFirst( mapwild, nullptr, 0 );
 	while ( findfn )
 	{
 		char curDir[MAX_PATH];
-		_snprintf(curDir, MAX_PATH, "maps/%s", findfn);
+		snprintf(curDir, MAX_PATH, "maps/%s", findfn);
 		g_pFileSystem->GetLocalPath(curDir, curDir, MAX_PATH);
 		
 		// limit maps displayed to ones for the mod only
-		if (strstr(curDir, friendly_com_gamedir))
+		if (std::strstr(curDir, friendly_com_gamedir))
 		{
 			// clean up the map name
 			char mapName[MAX_PATH];
@@ -942,7 +957,6 @@ void CServerRemoteAccess::SendResponseToClient( ra_listener_id listenerID, Serve
 //-----------------------------------------------------------------------------
 void CServerRemoteAccess::SendVProfData( ra_listener_id listenerID, bool bGroupData, void *data, int len )
 {
-	Assert( listenerID != m_AdminUIID ); // only RCON clients support this right now
 	SendResponseToClient( listenerID, bGroupData ? SERVERDATA_VPROF_GROUPS : SERVERDATA_VPROF_DATA, data, len );
 }
 

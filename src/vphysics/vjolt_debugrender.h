@@ -4,6 +4,12 @@
 
 #pragma once
 
+
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+import std;
+#include "vphysics_interface.h"
+
 #ifdef JPH_DEBUG_RENDERER
 
 #include <Jolt/Renderer/DebugRendererSimple.h>

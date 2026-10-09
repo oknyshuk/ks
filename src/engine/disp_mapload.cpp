@@ -1,30 +1,28 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "render_pch.h"
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
 #include "modelloader.h"
 #include "gl_model_private.h"
-#include "gl_lightmap.h"
 #include "disp.h"
-#include "mathlib/mathlib.h"
 #include "gl_rsurf.h"
 #include "gl_matsysiface.h"
-#include "zone.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/ivballoctracker.h"
-#include "mathlib/vector.h"
-#include "iscratchpad3d.h"
-#include "tier0/fasttimer.h"
-#include "lowpassstream.h"
-#include "con_nprint.h"
-#include "tier2/tier2.h"
-#include "tier0/dbg.h"
+import std;
 
 void BuildTagData( CCoreDispInfo *pCoreDisp, CDispInfo *pDisp );
 void SmoothDispSurfNormals( CCoreDispInfo **ppListBase, int nListSize );
@@ -35,7 +33,7 @@ class CConstructorChecker
 {
 public:
 			CConstructorChecker()	{m_nConstructedObjects = 0;}
-			~CConstructorChecker()	{Assert(m_nConstructedObjects == 0);}
+			~CConstructorChecker()	{contract_assert( m_nConstructedObjects == 0 );}
 	int		m_nConstructedObjects;
 } g_ConstructorChecker;
  
@@ -254,8 +252,8 @@ void AddEmptyMesh(
 		pMesh->m_DispInfos[iDisp] = pDisp;
 	}
 
-	Assert( iVertOffset == nTotalVerts );
-	Assert( iIndexOffset == nTotalIndices );
+	contract_assert( iVertOffset == nTotalVerts );
+	contract_assert( iIndexOffset == nTotalIndices );
 }
 
 
@@ -289,10 +287,10 @@ void FillStaticBuffer(
 		
 		Vector vec;
 		pCoreDisp->GetTangentS( i, vec );
-		builder.TangentS3f( VectorExpand( vec ) );
+		builder.TangentS3f( vec.x, vec.y, vec.z );
 		
 		pCoreDisp->GetTangentT( i, vec );
-		builder.TangentT3f( VectorExpand( vec ) );
+		builder.TangentT3f( vec.x, vec.y, vec.z );
 		
 		Vector2D texCoord;
 		pCoreDisp->GetTexCoord( i, texCoord );
@@ -344,7 +342,7 @@ void CDispInfo::CopyMapDispData( const ddispinfo_t *pBuildDisp )
 	m_iLightmapAlphaStart = pBuildDisp->m_iLightmapAlphaStart;
 	m_Power = pBuildDisp->power;
 
-	Assert( m_Power >= 2 && m_Power <= NUM_POWERINFOS );
+	contract_assert( m_Power >= 2 && m_Power <= NUM_POWERINFOS );
 	m_pPowerInfo = ::GetPowerInfo( m_Power );
 
 	// Max # of indices:
@@ -374,7 +372,6 @@ void DispInfo_CreateMaterialGroups( model_t *pWorld, const MaterialSystem_SortIn
 		if( !pCombo )
 			pCombo = AddCombo( g_DispGroups, idLMPage, MSurf_TexInfo( pDisp->m_ParentSurfID )->material );
 
-		MEM_ALLOC_CREDIT();
 		pCombo->m_DispInfos.push_back( iDisp );
 	}
 }
@@ -389,8 +386,8 @@ void DispInfo_LinkToParentFaces( model_t *pWorld, const ddispinfo_t *pMapDisps, 
 
 		// Set its parent.
 		SurfaceHandle_t surfID = SurfaceHandleFromIndex( pMapDisp->m_iMapFace );
-		Assert( pMapDisp->m_iMapFace < pWorld->brush.pShared->numsurfaces );
-		Assert( MSurf_Flags( surfID ) & SURFDRAW_HAS_DISP );
+		contract_assert( pMapDisp->m_iMapFace < pWorld->brush.pShared->numsurfaces );
+		contract_assert( MSurf_Flags( surfID ) & SURFDRAW_HAS_DISP );
 		surfID->pDispInfo = pDisp;
 		pDisp->SetParent( surfID );
 	}
@@ -419,7 +416,7 @@ void DispInfo_CreateEmptyStaticBuffers( model_t *pWorld, const ddispinfo_t *pMap
 				(nTotalIndices + nIndices) > MAX_STATIC_BUFFER_INDICES )
 			{
 				AddEmptyMesh( pWorld, pCombo, pMapDisps, &pCombo->m_DispInfos[iStart], iDisp-iStart, nTotalVerts, nTotalIndices );
-				Assert( nTotalVerts > 0 && nTotalIndices > 0 );
+				contract_assert( nTotalVerts > 0 && nTotalIndices > 0 );
 
 				nTotalVerts = nTotalIndices = 0;
 				iStart = iDisp;
@@ -465,7 +462,7 @@ bool DispInfo_CreateFromMapDisp( model_t *pWorld, int iDisp, const ddispinfo_t *
 	pCoreDisp->SetNeighborData( pMapDisp->m_EdgeNeighbors, pMapDisp->m_CornerNeighbors );
 
 	// Copy the allowed verts list.
-	ErrorIfNot( pCoreDisp->AllowedVerts_GetNumDWords() == sizeof( pMapDisp->m_AllowedVerts ) / 4, ( "DispInfo_StoreMapData: size mismatch in 'allowed verts' list" ) );
+	if ( !( pCoreDisp->AllowedVerts_GetNumDWords() == sizeof( pMapDisp->m_AllowedVerts ) / 4 ) ) Error( "DispInfo_StoreMapData: size mismatch in 'allowed verts' list" );
 	for ( int iVert = 0; iVert < pCoreDisp->AllowedVerts_GetNumDWords(); ++iVert )
 	{
 		ks::set_word( pCoreDisp->GetAllowedVerts(), iVert, pMapDisp->m_AllowedVerts[iVert] );
@@ -524,7 +521,7 @@ void SetupMeshReaders( model_t *pWorld, int nDisplacements )
 		CDispInfo *pDisp = GetModelDisp( pWorld, iDisp );
 		
 		MeshDesc_t desc;
-		memset( &desc, 0, sizeof( desc ) );
+		std::memset( &desc, 0, sizeof( desc ) );
 		
 		desc.m_VertexSize_Position = sizeof( CDispRenderVert );
 		desc.m_VertexSize_TexCoord[0] = sizeof( CDispRenderVert );
@@ -560,7 +557,6 @@ void UpdateDispBBoxes( model_t *pWorld, int nDisplacements )
 
 bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 {
-	MEM_ALLOC_CREDIT_( "DispInfo_LoadDisplacements" );
 
 	const MaterialSystem_SortInfo_t *pSortInfos = materialSortInfoArray;
 
@@ -582,10 +578,7 @@ bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 			return false;
 		}
 
-		ErrorIfNot( 
-			pWorld->brush.pShared->numDispInfos == nDisplacements,
-			("DispInfo_LoadDisplacments: dispcounts (%d and %d) don't match.", pWorld->brush.pShared->numDispInfos, nDisplacements)
-			);
+		if ( !( pWorld->brush.pShared->numDispInfos == nDisplacements ) ) Error("DispInfo_LoadDisplacments: dispcounts (%d and %d) don't match.", pWorld->brush.pShared->numDispInfos, nDisplacements);
 	}
 	else
 	{
@@ -597,7 +590,6 @@ bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 		if ( r_dlightsenable.GetBool() )
 		{
 			// Load lightmap sample positions (only needed to support dlights).
-			MEM_ALLOC_CREDIT_( "g_DispLightmapSamplePositions" );
 			g_DispLightmapSamplePositions.assign( nSamplePositionBytes, {} );
 			CMapLoadHelper lhDispLMPositions( LUMP_DISP_LIGHTMAP_SAMPLE_POSITIONS );
 			lhDispLMPositions.LoadLumpData( 0, nSamplePositionBytes, g_DispLightmapSamplePositions.data() );
@@ -611,10 +603,7 @@ bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 	// using temporary storage that is not the stack for compatibility with console stack
 	std::vector< ddispinfo_t > m_DispInfoBuf( MAX_MAP_DISPINFO );
 	ddispinfo_t *tempDisps = m_DispInfoBuf.data();
-	ErrorIfNot( 
-		nDisplacements <= MAX_MAP_DISPINFO,
-		("DispInfo_LoadDisplacements: nDisplacements (%d) > MAX_MAP_DISPINFO (%d)", nDisplacements, MAX_MAP_DISPINFO)
-		);
+	if ( !( nDisplacements <= MAX_MAP_DISPINFO ) ) Error("DispInfo_LoadDisplacements: nDisplacements (%d) > MAX_MAP_DISPINFO (%d)", nDisplacements, MAX_MAP_DISPINFO);
 	CMapLoadHelper lhDispInfo( LUMP_DISPINFO );
 	lhDispInfo.LoadLumpData( 0, nDisplacements * sizeof( ddispinfo_t ), tempDisps );
 
@@ -667,7 +656,7 @@ bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 
 		// Load the vertices from the file.
 		int nVerts = NUM_DISP_POWER_VERTS( pMapDisp->power );
-		ErrorIfNot( nVerts <= MAX_DISPVERTS, ( "DispInfo_LoadDisplacements: invalid vertex count (%d)", nVerts ) );
+		if ( !( nVerts <= MAX_DISPVERTS ) ) Error( "DispInfo_LoadDisplacements: invalid vertex count (%d)", nVerts );
 		lhDispVerts.LoadLumpData( iCurVert * sizeof(CDispVert), nVerts*sizeof(CDispVert), tempVerts );
 
 		if ( ( pMapDisp->minTess & DISP_INFO_FLAG_HAS_MULTIBLEND ) != 0 )
@@ -680,7 +669,7 @@ bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 
 		// Load the triangle indices from the file.
 		int nTris = NUM_DISP_POWER_TRIS( pMapDisp->power );
-		ErrorIfNot( nTris <= MAX_DISPTRIS, ( "DispInfo_LoadDisplacements: invalid tri count (%d)", nTris ) );
+		if ( !( nTris <= MAX_DISPTRIS ) ) Error( "DispInfo_LoadDisplacements: invalid tri count (%d)", nTris );
 		lhDispTris.LoadLumpData( iCurTri * sizeof(CDispTri), nTris*sizeof(CDispTri), tempTris );
 		iCurTri += nTris;
 
@@ -752,7 +741,7 @@ void DispInfo_ReleaseMaterialSystemObjects( model_t *pWorld )
 			CDispInfo *pDisp = GetModelDisp( pWorld, iDisp );
 			if ( !pDisp )
 			{
-				AssertOnce( 0 );
+				contract_assert( 0 );
 				continue;
 			}
 			
@@ -816,8 +805,8 @@ CDispInfo::~CDispInfo()
 
 	// All the decals should have been freed through 
 	// CModelLoader::Map_UnloadModel -> R_DecalTerm
-	Assert( m_FirstDecal == DISP_DECAL_HANDLE_INVALID );
-	Assert( m_FirstShadowDecal == DISP_SHADOW_HANDLE_INVALID );
+	contract_assert( m_FirstDecal == DISP_DECAL_HANDLE_INVALID );
+	contract_assert( m_FirstShadowDecal == DISP_SHADOW_HANDLE_INVALID );
 }
 
 
@@ -829,7 +818,6 @@ void CDispInfo::CopyCoreDispVertData( const CCoreDispInfo *pCoreDisp, float bump
 		bumpSTexCoordOffset = 0.0f;
 	}
 	// Copy vertex positions (for backfacing tests).
-	MEM_ALLOC_CREDIT_( "CopyCoreDispVertData" );
 	m_Verts.assign( m_pPowerInfo->m_MaxVerts, {} );
 	m_BumpSTexCoordOffset = bumpSTexCoordOffset;
 	for( int i=0; i < NumVerts(); i++ )
@@ -967,10 +955,9 @@ void BuildTagData( CCoreDispInfo *pCoreDisp, CDispInfo *pDisp )
 		}
 	}
 
-	Assert( nWalkCount == nWalkTest );
-	Assert( nBuildCount == nBuildTest );
+	contract_assert( nWalkCount == nWalkTest );
+	contract_assert( nBuildCount == nBuildTest );
 
 	pDisp->m_nWalkIndexCount = nWalkCount;
 	pDisp->m_nBuildIndexCount = nBuildCount;
 }
-

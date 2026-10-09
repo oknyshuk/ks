@@ -1,7 +1,8 @@
 // $Id$
 
+import ks.math;
 #include "raytrace.h"
-#include <mathlib/halton.h>
+import std;
 
 
 static uint32 MapDistanceToPixel(float t)
@@ -14,12 +15,12 @@ static uint32 MapDistanceToPixel(float t)
 	return 0xff000000+(a<<16)+(b<<8)+c;
 }
 
-#define IGAMMA (1.0/2.2)
+constexpr auto IGAMMA = (1.0/2.2);
 
-#define MAGIC_NUMBER (1<<23)
+constexpr auto MAGIC_NUMBER = (1<<23);
 
 static fltx4 Four_MagicNumbers={ MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER };
-static ALIGN16 int32 Four_255s[4]= {0xff,0xff,0xff,0xff};
+static int32 Four_255s[4]= {0xff,0xff,0xff,0xff};
 #define PIXMASK ( * ( reinterpret_cast< fltx4 *>( &Four_255s ) ) )
 
 void MapLinearIntensities(FourVectors const &intens,uint32 *p1, uint32 *p2, uint32 *p3, uint32 *p4)
@@ -43,8 +44,8 @@ void MapLinearIntensities(FourVectors const &intens,uint32 *p1, uint32 *p2, uint
 	*(p4)=(SubInt(r, 3))|(SubInt(g, 3)<<8)|(SubInt(b, 3)<<16);
 }
 
-static ALIGN16 int32 signmask[4]={(int)0x80000000,(int)0x80000000,(int)0x80000000,(int)0x80000000};
-static ALIGN16 int32 all_ones[4]={-1,-1,-1,-1};
+static int32 signmask[4]={(int)0x80000000,(int)0x80000000,(int)0x80000000,(int)0x80000000};
+static int32 all_ones[4]={-1,-1,-1,-1};
 static fltx4 all_zeros={0,0,0,0};
 static fltx4 TraceLimit={1.0e20,1.0e20,1.0e20,1.0e20};
 
@@ -246,7 +247,7 @@ void RayTracingEnvironment::ComputeVirtualLightSources(void)
 						// and its radius scaled by the amount of the solid angle this probe
 						// represents.
 						float area_of_virtual_light=
-							4.0*M_PI*SQ( SubFloat( rslt.HitDistance, 0 ) )*(1.0/n_desired);
+							4.0*std::numbers::pi*SQ( SubFloat( rslt.HitDistance, 0 ) )*(1.0/n_desired);
 
 						FourVectors intens;
 						intens.DuplicateVector(Vector(0,0,0));
@@ -271,14 +272,14 @@ void RayTracingEnvironment::ComputeVirtualLightSources(void)
 						l1.m_Color=Vector(intens.X(0),intens.Y(0),intens.Z(0));
 						if (l1.m_Color.Length()>0)
 						{
-							l1.m_Color*=area_of_virtual_light/M_PI;
+							l1.m_Color*=area_of_virtual_light/std::numbers::pi;
 							l1.m_Range=0.0;
 							l1.m_Falloff=1.0;
 							l1.m_Attenuation0=1.0;
 							l1.m_Attenuation1=0.0;
 							l1.m_Attenuation2=1.0;			// intens falls off as 1/r^2
 							l1.m_Theta=0;
-							l1.m_Phi=M_PI;
+							l1.m_Phi=std::numbers::pi;
 							l1.RecalculateDerivedValues();
 							LightList.push_back( l1 );
 						}
@@ -306,8 +307,8 @@ static unsigned int GetSignMask(Vector const &v)
 
 inline void RayTracingEnvironment::FlushStreamEntry(RayStream &s,int msk, RTECullMode_t cullMode )
 {
-	assert(msk>=0);
-	assert(msk<8);
+	contract_assert( msk>=0 );
+	contract_assert( msk<8 );
 	fltx4 tmax=s.PendingRays[msk].direction.length();
 	fltx4 scl=ReciprocalSaturateSIMD(tmax);
 	s.PendingRays[msk].direction*=scl;					// normalize
@@ -335,10 +336,10 @@ void RayTracingEnvironment::AddToRayStream(RayStream &s,
 	Vector delta=end;
 	delta-=start;
 	int msk=GetSignMask(delta);
-	assert(msk>=0);
-	assert(msk<8);
+	contract_assert( msk>=0 );
+	contract_assert( msk<8 );
 	int pos=s.n_in_stream[msk];
-	assert(pos<4);
+	contract_assert( pos<4 );
 	s.PendingRays[msk].origin.X(pos)=start.x;
 	s.PendingRays[msk].origin.Y(pos)=start.y;
 	s.PendingRays[msk].origin.Z(pos)=start.z;

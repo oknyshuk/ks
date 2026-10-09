@@ -1,14 +1,9 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ITOOLDICTIONARY_H
-#define ITOOLDICTIONARY_H
-
-
-#include "appframework/iappsystem.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Forward declaration
@@ -31,6 +26,4 @@ public:
 	virtual IToolSystem	*GetTool( int index ) = 0;
 };
 
-#define VTOOLDICTIONARY_INTERFACE_VERSION "VTOOLDICTIONARY003"
-
-#endif // ITOOLDICTIONARY_H
+inline constexpr const char *VTOOLDICTIONARY_INTERFACE_VERSION = "VTOOLDICTIONARY003";

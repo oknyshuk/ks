@@ -1,11 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Default schedules.
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_DEFAULT_H
-#define AI_DEFAULT_H
+// Purpose: Default schedules.
 
 //=========================================================
 // These are the schedule types
@@ -115,5 +112,3 @@ enum
 	LAST_SHARED_SCHEDULE
 
 };
-
-#endif // AI_DEFAULT_H

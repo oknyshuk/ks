@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_PATHFINDER_H
-#define AI_PATHFINDER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ai_component.h"
 #include "ai_navtype.h"
-
 
 struct AIMoveTrace_t;
 struct OverlayLine_t;
@@ -202,5 +195,3 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_PATHFINDER_H

@@ -1,12 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.core;
 #include "engine/IEngineSound.h"
-#include "tier0/dbg.h"
+import std;
 #include "sound.h"
 #include "client.h"
 #include "vox.h"
@@ -14,9 +11,7 @@
 #include "icliententitylist.h"
 #include "enginesingleuserfilter.h"
 #include "snd_audio_source.h"
-#include "tier0/vprof.h"
 #include "audio/private/snd_sfx.h"
-#include "cl_splitscreen.h"
 #include "cl_demo.h"
 
 // HACK:  expose in sound.h maybe?
@@ -101,8 +96,7 @@ private:
 // Client-server neutral sound interface accessor
 //-----------------------------------------------------------------------------
 static CEngineSoundClient s_EngineSoundClient;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CEngineSoundClient, IEngineSound, 
-	IENGINESOUND_CLIENT_INTERFACE_VERSION, s_EngineSoundClient );
+static InterfaceReg s_Reg_CEngineSoundClient_IEngineSound( []() -> void * { return static_cast<IEngineSound *>( &s_EngineSoundClient ); }, IENGINESOUND_CLIENT_INTERFACE_VERSION );;
 
 IEngineSound *EngineSoundClient()
 {
@@ -189,7 +183,7 @@ int CEngineSoundClient::EmitSoundInternal( IRecipientFilter& filter, int iEntInd
 	float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
 	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
 {
-	FORCE_DEFAULT_SPLITSCREEN_PLAYER_GUARD;
+	;
 
 	if (flVolume < 0 || flVolume > 1)
 	{
@@ -350,7 +344,7 @@ void CEngineSoundClient::EmitSentenceByIndex( IRecipientFilter& filter, int iEnt
 	if ( iSentenceIndex >= 0 )
 	{
 		char pName[8];
-		Q_snprintf( pName, sizeof(pName), "!%d", iSentenceIndex );
+		V_snprintf( pName, sizeof(pName), "!%d", iSentenceIndex );
 		EmitSoundInternal( filter, iEntIndex, iChannel, nullptr, SOUNDEMITTER_INVALID_HASH, pName, flVolume, iSoundLevel, nSeed,
 			iFlags, iPitch, pOrigin, pDirection, pUtlVecOrigins, bUpdatePosition, soundtime, speakerentity );
 	}
@@ -364,7 +358,7 @@ int CEngineSoundClient::EmitSound( IRecipientFilter& filter, int iEntIndex, int 
 	float flVolume, float flAttenuation, int nSeed, int iFlags, int iPitch, 
 	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
 {
-	VPROF( "CEngineSoundClient::EmitSound" );
+	CVProfScope _( "CEngineSoundClient::EmitSound", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	return EmitSound( filter, iEntIndex, iChannel, pSoundEntry, nSoundEntryHash, pSample, flVolume, ATTN_TO_SNDLVL( flAttenuation ), nSeed, iFlags, 
 		iPitch, pOrigin, pDirection, pUtlVecOrigins, bUpdatePositions, soundtime, speakerentity );
 
@@ -375,7 +369,7 @@ int CEngineSoundClient::EmitSound( IRecipientFilter& filter, int iEntIndex, int 
 	float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
 	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
 {
-	VPROF( "CEngineSoundClient::EmitSound" );
+	CVProfScope _( "CEngineSoundClient::EmitSound", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( pSample && TestSoundChar(pSample, CHAR_SENTENCE) )
 	{
 		int iSentenceIndex = -1;
@@ -403,7 +397,7 @@ int CEngineSoundClient::EmitSound( IRecipientFilter& filter, int iEntIndex, int 
 //-----------------------------------------------------------------------------
 void CEngineSoundClient::StopSound( int iEntIndex, int iChannel, const char *pSample, HSOUNDSCRIPTHASH nSoundEntryHash )
 {
-	FORCE_DEFAULT_SPLITSCREEN_PLAYER_GUARD;
+	;
 
 	CEngineSingleUserFilter filter( GetLocalClient().m_nPlayerSlot + 1 );
 	EmitSound( filter, iEntIndex, iChannel, pSample, nSoundEntryHash, pSample, 0, SNDLVL_NONE, 0, SND_STOP, PITCH_NORM,
@@ -566,4 +560,3 @@ bool CEngineSoundClient::GetSoundChannelVolume( const char* sound, float &flVolu
 {
 	return S_GetSoundChannelVolume( sound, flVolumeLeft, flVolumeRight );
 }
-

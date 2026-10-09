@@ -1,11 +1,39 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Player for HL1.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Player for HL1.
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
@@ -14,11 +42,7 @@
 #include "trains.h"
 #include "vcollide_parse.h"
 #include "in_buttons.h"
-#include "igamemovement.h"
-#include "ai_hull.h"
-#include "ndebugoverlay.h"
 #include "weapon_csbase.h"
-#include "decals.h"
 #include "cs_ammodef.h"
 #include "IEffects.h"
 #include "cs_client.h"
@@ -31,7 +55,6 @@
 #include "weapon_parse.h"
 #include "weapon_knife.h"
 #include "movehelper_server.h"
-#include "tier0/vprof.h"
 #include "te_effect_dispatch.h"
 #include "vphysics/player_controller.h"
 #include "weapon_hegrenade.h"
@@ -41,14 +64,10 @@
 #include "weapon_decoy.h"
 #include "weapon_sensorgrenade.h"
 //#include "weapon_carriable_item.h"
-#include <keyvalues.h>
 #include "engine/IEngineSound.h"
 #include "bot.h"
 #include "studio.h"
-#include <coordsize.h>
 #include "predicted_viewmodel.h"
-#include "props_shared.h"
-#include "tier0/icommandline.h"
 #include "info_camera_link.h"
 #include "hintmessage.h"
 #include "obstacle_pushaway.h"
@@ -65,14 +84,10 @@
 #include "cs_achievement_constants.h"
 #include "cs_simple_hostage.h"
 #include "cs_weapon_parse.h"
-#include "sendprop_priorities.h"
 #include "achievementmgr.h"
-#include "fmtstr.h"
-#include "gametypes/igametypes.h"
 #include "weapon_c4.h"
 #include "cs_shareddefs.h"
 #include "inputsystem/iinputsystem.h"
-#include "platforminputdevice.h"
 #include "Effects/inferno.h"
 #include "cs_entity_spotting.h"
 #include "entityutil.h"
@@ -82,7 +97,6 @@
 #include "particle_parse.h"
 #include "mapinfo.h"
 //#include "particle_parse.h"
-#include "../public/vstdlib/vstrtools.h"
 #include "localize/ilocalize.h"
 #include "../shared/cstrike15/flashbang_projectile.h"
 #include "usermessages.h"
@@ -92,12 +106,9 @@
 #include "world.h"
 #include "item_healthshot.h"
 #include "hltvdirector.h"
-#include "ihltv.h"
 #include "netmessages_schema.h"
 #include "playerdecals_signature.h"
 #include "cs_item_inventory.h"
-#include <bitset>
-#include "tier1/bit_ops.h"
 
 #if defined( CLIENT_DLL )
 
@@ -108,13 +119,11 @@
 
 
 // HPE TEMP - REMOVE WHEN DONE TESTING
-#define REPORT_PLAYER_DAMAGE 0
 
 
 // Minimum interval between rate-limited commands that players can run.
-#define CS_COMMAND_MAX_RATE 0.3
+constexpr auto CS_COMMAND_MAX_RATE = 0.3;
 
-#define WEARABLE_VEST_IFF_KEVLAR 0	// If set to 1, character wears vest if and only if they have game kevlar.
 
 const char *g_pszHeavyPhoenixModel = "models/player/custom_player/legacy/tm_phoenix_heavy.mdl";
 
@@ -122,10 +131,10 @@ const float CycleLatchInterval = 0.2f;
 
 const int cGunGameSelectMaxAmmoAmount = 250;
 
-#define SPOTTED_ENTITY_UPDATE_INTERVAL 0.5f
-#define SPOTTED_ENTITY_COUNT_MESSAGE_MAX 40
+constexpr auto SPOTTED_ENTITY_UPDATE_INTERVAL = 0.5f;
+constexpr auto SPOTTED_ENTITY_COUNT_MESSAGE_MAX = 40;
 
-#define CS_PUSHAWAY_THINK_CONTEXT	"CSPushawayThink"
+inline constexpr const char *CS_PUSHAWAY_THINK_CONTEXT = "CSPushawayThink";
 
 extern ConVar mp_maxrounds;
 ConVar cs_ShowStateTransitions( "cs_ShowStateTransitions", "-2", FCVAR_CHEAT, "cs_ShowStateTransitions <ent index or -1 for all>. Show player state transitions." );
@@ -234,7 +243,7 @@ ConVar bot_mimic_yaw_offset( "bot_mimic_yaw_offset", "180", FCVAR_CHEAT );
 
 ConVar bot_chatter_use_rr( "bot_chatter_use_rr", "1", FCVAR_DEVELOPMENTONLY, "0 = Use old bot chatter system, 1 = Use response rules" );
 // [jpaquin] allow buy zones to refill carried ammo automatically
-#define SECONDS_BETWEEN_AUTOAMMOBUY_CHECKS .5f
+constexpr auto SECONDS_BETWEEN_AUTOAMMOBUY_CHECKS = .5f;
 ConVar sv_autobuyammo( "sv_autobuyammo", "0", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_RELEASE, "Enable automatic ammo purchase when inside buy zones during buy periods" );
 
 ConVar gg_knife_kill_demotes( "gg_knife_kill_demotes", "1", FCVAR_REPLICATED, "0 = knife kill in gungame has no effect on player level, 1 = knife kill demotes player by one level" );
@@ -262,7 +271,7 @@ ConVar cs_enable_player_physics_box( "cs_enable_player_physics_box", "0", FCVAR_
 
 ConVar mp_deathcam_skippable( "mp_deathcam_skippable", "1", FCVAR_REPLICATED | FCVAR_RELEASE, "Determines whether a player can early-out of the deathcam." );
 
-#define THROWGRENADE_COUNTER_BITS 3
+constexpr auto THROWGRENADE_COUNTER_BITS = 3;
 
 
 EHANDLE g_pLastCTSpawn;
@@ -320,7 +329,7 @@ public:
 
 	void Init( void )
 	{
-		CBasePlayer *pPlayer = assert_cast< CBasePlayer* >( m_hPlayer.Get() );
+		CBasePlayer *pPlayer = static_cast< CBasePlayer* >( m_hPlayer.Get() );
 
 		SetSolid( SOLID_BBOX );
 		SetMoveType( MOVETYPE_STEP );
@@ -423,7 +432,7 @@ void cc_CreatePredictionError_f( const CCommand &args )
 
 	if ( args.ArgC() >= 2 )
 	{
-		distance = atof(args[1] );
+		distance = std::atof(args[1] );
 	}
 
 	CBaseEntity *pEnt = CBaseEntity::Instance( 1 );
@@ -652,11 +661,9 @@ CCSPlayer::CCSPlayer()
 	m_flGuardianTooFarDistFrac = 0.0f;
 	m_flNextGuardianTooFarHurtTime = 0.0f;
 	m_flDetectedByEnemySensorTime = 0.0f;
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	m_bIsControllingBot = false;
 	m_bCanControlObservedBot = false;
 	m_iControlledBotEntIndex = -1;
-#endif
 	m_botsControlled = 0;
 	m_iFootsteps = 0;
 	m_iMediumHealthKills = 0;
@@ -668,7 +675,6 @@ CCSPlayer::CCSPlayer()
 
 	m_iLastTeam = TEAM_UNASSIGNED;
 	m_bHasSeenJoinGame = false;
-	m_bInvalidSteamLogonDelayed = false;
 
 	m_iPlayerState = -1;
 	m_storedSpawnPosition = vec3_origin;
@@ -784,10 +790,6 @@ void CCSPlayer::Precache()
 
 	}
 
-#ifdef CS_SHIELD_ENABLED
-	PrecacheModel( SHIELD_VIEW_MODEL );
-#endif
-
 	PrecacheScriptSound( "Player.DeathHeadShot" );
 	PrecacheScriptSound( "Player.Death" );
 	PrecacheScriptSound( "Player.DamageHelmet" );
@@ -877,7 +879,7 @@ void CCSPlayer::Precache()
 ConVar sv_runcmds( "sv_runcmds", "1" );
 void CCSPlayer::PlayerRunCommand( CUserCmd *ucmd, IMoveHelper *moveHelper )
 {
-	VPROF( "CCSPlayer::PlayerRunCommand" );
+	CVProfScope _( "CCSPlayer::PlayerRunCommand", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( !sv_runcmds.GetInt() )
 		return;
@@ -1036,11 +1038,6 @@ void CCSPlayer::RunPlayerMove( const QAngle& viewangles, float forwardmove, floa
 
 void CCSPlayer::InitialSpawn( void )
 {
-#if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
-	m_AttributeManager.InitializeAttributes( this );
-	m_AttributeManager.SetPlayer( this );
-	m_AttributeList.SetManager( &m_AttributeManager );
-#endif
 
 	BaseClass::InitialSpawn();
 
@@ -1076,7 +1073,7 @@ void CCSPlayer::InitialSpawn( void )
 		ClientPrint( this, HUD_PRINTCENTER, "The Navigation Mesh was built using a different version of this map." );
 	}
 
-	Assert( GetAbsVelocity().Length() == 0.0f );
+	contract_assert( GetAbsVelocity().Length() == 0.0f );
 	State_Enter( STATE_WELCOME );
 	UpdateInventory( true );
 
@@ -1511,10 +1508,10 @@ void CCSPlayer::Spawn()
 	//
 	// Transfer all parameters that we know about
 	//
-	CSteamID const *pThisSteamId = engine->GetClientSteamID( this->edict() );
-	if ( pThisSteamId && pThisSteamId->IsValid() && pThisSteamId->GetAccountID() && !IsBot() && CSGameRules() )
+	CPlayerId const *pThisPlayerId = engine->GetClientPlayerID( this->edict() );
+	if ( pThisPlayerId && pThisPlayerId->IsValid() && pThisPlayerId->GetAccountID() && !IsBot() && CSGameRules() )
 	{
-		SetHumanPlayerAccountID( pThisSteamId->GetAccountID() );
+		SetHumanPlayerAccountID( pThisPlayerId->GetAccountID() );
 	}
 
 	// If we're constantly respawning then reset damage stats on spawn. Otherwise this'll happen on roundrespawn after damage is reported.
@@ -1595,13 +1592,6 @@ void CCSPlayer::Spawn()
 			}
 		}
 	}
-
-	if ( m_bInvalidSteamLogonDelayed )
-	{
-		m_bInvalidSteamLogonDelayed = false;
-		Warning( "Invalid Steam Logon Delayed: Kicking client [U:1:%d] %s\n", GetHumanPlayerAccountID(), GetPlayerName() );
-		engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d No Steam logon\n", this->GetUserID(), /*bIsPlayingOffline*/ 1 ) );
-	}
 }
 
 void CCSPlayer::SetHumanPlayerAccountID( uint32 uiAccountId )
@@ -1658,7 +1648,7 @@ void CCSPlayer::SetHumanPlayerAccountID( uint32 uiAccountId )
 		}
 
 		// Store last known player name
-		Q_strncpy( qmmPlayerData.m_chPlayerName, this->GetPlayerName(), Q_ARRAYSIZE( qmmPlayerData.m_chPlayerName ) );
+		V_strncpy( qmmPlayerData.m_chPlayerName, this->GetPlayerName(), std::size( qmmPlayerData.m_chPlayerName ) );
 	}
 
 	// In tournament mode force clan tags for the players according to the reservation
@@ -2126,7 +2116,7 @@ void CCSPlayer::SetClanTag( const char *pTag )
 {
 	if ( pTag )
 	{
-		Q_strncpy( m_szClanTag, pTag, sizeof( m_szClanTag ) );
+		V_strncpy( m_szClanTag, pTag, sizeof( m_szClanTag ) );
 	}
 }
 
@@ -2134,14 +2124,14 @@ void CCSPlayer::SetClanName( const char *pName )
 {
 	if ( pName )
 	{
-		Q_strncpy( m_szClanName, pName, sizeof( m_szClanName ) );
+		V_strncpy( m_szClanName, pName, sizeof( m_szClanName ) );
 	}
 }
 
 void CCSPlayer::InitTeammatePreferredColor()
 {
 	const char *pColor = engine->GetClientConVarValue( entindex(), "cl_color" );
-	int nColor = atoi( pColor ); // convar.cpp code parses strings wierdly and cannot enforce range on a value e.g. " 4343" with leading space
+	int nColor = std::atoi( pColor ); // convar.cpp code parses strings wierdly and cannot enforce range on a value e.g. " 4343" with leading space
 	// so we have to just assume that whatever string user supplied would parse as zero
 
 	if ( nColor >= 0 && nColor <= 4 )
@@ -2158,7 +2148,7 @@ void CCSPlayer::SetTeammatePreferredColor( int nColor )
 {
 	if ( nColor < 0 || nColor > 4 )
 	{
-		AssertMsg( nColor >= 0 && nColor <= 4, "SetTeammatePreferredColor called with an invalid color (outside the range of 0 and 4)" );
+		contract_assert( ( nColor >= 0 && nColor <= 4 ) && "SetTeammatePreferredColor called with an invalid color (outside the range of 0 and 4)" );
 		return;
 	}
 
@@ -2431,7 +2421,7 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 				if ( pAttackerPlayer->IsOtherEnemy( pPlayer->entindex() ) )
 					continue;
 
-				Assert( pPlayer->GetTeamNumber() == pAttackerTeam->GetTeamNumber() );
+				contract_assert( pPlayer->GetTeamNumber() == pAttackerTeam->GetTeamNumber() );
 
 				if ( pPlayer->m_lifeState == LIFE_ALIVE )
 				{
@@ -2640,12 +2630,10 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	}
 
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	if ( IsControllingBot() )	// Should this be here, or at the top?
 	{
 		ReleaseControlOfBot();
 	}
-#endif
 
 	if ( pAttackerPlayer &&
 		!CSGameRules()->IsWarmupPeriod() &&
@@ -3241,21 +3229,13 @@ void CCSPlayer::VPhysicsShadowUpdate( IPhysicsObject *pPhysics )
 
 bool CCSPlayer::HasShield() const
 {
-#ifdef CS_SHIELD_ENABLED
-	return m_bHasShield;
-#else
 	return false;
-#endif
 }
 
 
 bool CCSPlayer::IsShieldDrawn() const
 {
-#ifdef CS_SHIELD_ENABLED
-	return m_bShieldDrawn;
-#else
 	return false;
-#endif
 }
 
 
@@ -3276,7 +3256,7 @@ void CCSPlayer::SprayPaint( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const
 		PushAwayDecalPaintingTime( 0.2f );	// prevent trace spamming
 
 		if ( int( msg.data->equipslot ) < 0 ) return;
-		if ( msg.data->equipslot >= Q_ARRAYSIZE( m_unEquippedPlayerSprayIDs ) ) return;
+		if ( msg.data->equipslot >= std::size( m_unEquippedPlayerSprayIDs ) ) return;
 		if ( !m_unEquippedPlayerSprayIDs[ msg.data->equipslot ] ) return;
 
 		// relax the server-side check, clients should just have a spray equipped and client message will
@@ -3424,7 +3404,6 @@ void CCSPlayer::ImpulseCommands()
 	int iImpulse = ( int ) m_nImpulse;
 	switch ( iImpulse )
 	{
-#if !CSTRIKE_BETA_BUILD || defined ( _DEBUG )
 	case 111:	// CS:GO has 4 sprays
 	case 112:
 	case 113:
@@ -3437,7 +3416,6 @@ void CCSPlayer::ImpulseCommands()
 			SprayPaint( msg );
 		}
 		break;
-#endif
 	}
 
 	// Fall through to generic implementation (and it resets the impulse state)
@@ -3497,8 +3475,8 @@ bool CCSPlayer::ShouldCheckOcclusion( CBasePlayer *pOtherPlayer )
 	if ( nMyTeam <= TEAM_SPECTATOR || nOtherTeam <= TEAM_SPECTATOR )
 		return false; // no need to check occlusion for spectators (or for active player looking at spectators), unless we really want to reduce network traffic a little bit
 
-	Assert( nMyTeam == TEAM_CT || nMyTeam == TEAM_TERRORIST );
-	Assert( nOtherTeam == TEAM_CT || nOtherTeam == TEAM_TERRORIST );
+	contract_assert( nMyTeam == TEAM_CT || nMyTeam == TEAM_TERRORIST );
+	contract_assert( nOtherTeam == TEAM_CT || nOtherTeam == TEAM_TERRORIST );
 
 	if ( nMyTeam == nOtherTeam )
 		return false; // no need to check occlusion between teammates
@@ -3506,7 +3484,7 @@ bool CCSPlayer::ShouldCheckOcclusion( CBasePlayer *pOtherPlayer )
 	if ( !IsAlive() || !pOtherPlayer->IsAlive() )
 		return false; // no need to check occlusion when one of the players is dead
 
-	Assert (! static_cast< CCSPlayer* >( pOtherPlayer )->m_isCurrentGunGameTeamLeader ); // we should not even try to check occlusion for a gun game team leader;  CServerGameEnts::CheckTransmit() shouldn't even call us here
+	contract_assert( ! static_cast< CCSPlayer* >( pOtherPlayer )->m_isCurrentGunGameTeamLeader ); // we should not even try to check occlusion for a gun game team leader;  CServerGameEnts::CheckTransmit() shouldn't even call us here
 
 	return true;
 }
@@ -3564,7 +3542,6 @@ CBaseEntity* CCSPlayer::FindNextObserverTarget( bool bReverse )
 
 void CCSPlayer::UpdateAddonBits()
 {
-	SNPROF( "CCSPlayer::UpdateAddonBits" );
 
 	int iNewBits = 0;
 
@@ -4064,7 +4041,7 @@ void CCSPlayer::PostThink()
 	if ( m_bNeedToUpdatePlayerSprayFromInventory )
 	{
 		m_bNeedToUpdatePlayerSprayFromInventory = false;
-		COMPILE_TIME_ASSERT( ARRAYSIZE( m_unEquippedPlayerSprayIDs ) == ( LOADOUT_POSITION_SPRAY0 /*LOADOUT_POSITION_SPRAY3*/ + 1 - LOADOUT_POSITION_SPRAY0 ) );
+		static_assert( std::size( m_unEquippedPlayerSprayIDs ) == ( LOADOUT_POSITION_SPRAY0 /*LOADOUT_POSITION_SPRAY3*/ + 1 - LOADOUT_POSITION_SPRAY0 ) );
 		for ( int iSprayLoadoutSlot = LOADOUT_POSITION_SPRAY0; iSprayLoadoutSlot <= LOADOUT_POSITION_SPRAY0 /*LOADOUT_POSITION_SPRAY3*/; ++ iSprayLoadoutSlot )
 		{
 			bool bHasEquippedPlayerSpray = false;
@@ -4179,7 +4156,7 @@ void CCSPlayer::PushawayThink()
 
 void CCSPlayer::SetModel( const char *szModelName )
 {
-	m_bUseNewAnimstate = ( Q_stristr( szModelName, "custom_player" ) != 0 );
+	m_bUseNewAnimstate = ( V_stristr( szModelName, "custom_player" ) != 0 );
 
 	if ( m_bUseNewAnimstate )
 	{
@@ -4439,7 +4416,7 @@ public:
 
 	virtual bool EnumEntity( IHandleEntity *pHandleEntity )
 	{
-		Assert( pHandleEntity );
+		contract_assert( pHandleEntity );
 
 		trace_t tr;
 		enginetrace->ClipRayToEntity( *m_pRay, MASK_ALL, pHandleEntity, &tr );
@@ -4471,7 +4448,7 @@ CCSPlayer::ITakeDamageListener::ITakeDamageListener()
 }
 CCSPlayer::ITakeDamageListener::~ITakeDamageListener()
 {
-	Verify( ks::erase_first( s_arrTakeDamageListeners, this ) );
+	( ks::erase_first( s_arrTakeDamageListeners, this ) );
 }
 
 int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
@@ -4558,11 +4535,11 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 			for ( int iPlayer=0; iPlayer < pAttackerTeam->GetNumPlayers(); iPlayer++ )
 			{
 				CCSPlayer *pPlayer = ToCSPlayer( pAttackerTeam->GetPlayer( iPlayer ) );
-				Assert( pPlayer );
+				contract_assert( pPlayer );
 				if ( !pPlayer )
 					continue;
 
-				Assert( pPlayer->GetTeamNumber() == pAttackerTeam->GetTeamNumber() );
+				contract_assert( pPlayer->GetTeamNumber() == pAttackerTeam->GetTeamNumber() );
 
 				if ( pPlayer->m_lifeState == LIFE_ALIVE )
 				{
@@ -4876,23 +4853,6 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	// round damage to integer
 	m_lastDamageHealth = (int )flDamage;
 	info.SetDamage( m_lastDamageHealth );
-
-#if REPORT_PLAYER_DAMAGE
-	// damage output spew
-	char dmgtype[64];
-	CTakeDamageInfo::DebugGetDamageTypeString( info.GetDamageType(), dmgtype, sizeof(dmgtype ) );
-
-	if ( info.GetDamageType() & DMG_HEADSHOT )
-		Q_strncat(dmgtype, "HEADSHOT", sizeof(dmgtype ) );
-
-	char outputString[256];
-	Q_snprintf( outputString, sizeof(outputString ), "%f: Player %s incoming %f damage from %s, type %s; applied %d health and %d armor\n",
-		gpGlobals->curtime, GetPlayerName(),
-		inputInfo.GetDamage(), info.GetInflictor()->GetDebugName(), dmgtype,
-		m_lastDamageHealth, m_lastDamageArmor );
-
-	Msg(outputString );
-#endif
 
 	if ( info.GetDamage() <= 0 )
 		return 0;
@@ -5544,7 +5504,7 @@ void CCSPlayer::InitializeAccount( int amount )
 	m_iAccountMoneyEarnedForNextRound = 0;
 
 	int MaxAmount = CSGameRules()->GetMaxMoney();
-	Assert( m_iAccount >= 0 && m_iAccount <= MaxAmount );
+	contract_assert( m_iAccount >= 0 && m_iAccount <= MaxAmount );
 
 	m_iAccount = clamp<int, int, int>( m_iAccount, 0, MaxAmount );
 
@@ -5584,7 +5544,7 @@ bool CCSPlayer::AreAccountAwardsEnabled( PlayerCashAward::Type reason ) const
 
 void CCSPlayer::AddAccountAward( PlayerCashAward::Type reason )
 {
-	Assert( reason != PlayerCashAward::NONE );
+	contract_assert( reason != PlayerCashAward::NONE );
 	AddAccountAward(reason, CSGameRules()->PlayerCashAwardValue ( reason ) );
 }
 
@@ -5674,7 +5634,7 @@ void CCSPlayer::AddAccountAward( PlayerCashAward::Type reason, int amount, const
 	}
 
 	char strAmount[64];
-	Q_snprintf( strAmount, sizeof( strAmount ), "%s%d", sign_string, abs( amount ));
+	V_snprintf( strAmount, sizeof( strAmount ), "%s%d", sign_string, abs( amount ));
 
 	// don't message 0 or negative values in coop
 	if ( CSGameRules() && CSGameRules()->IsPlayingCoopMission() && amount <= 0 )
@@ -5872,9 +5832,9 @@ int CCSPlayer::AddDeathmatchKillScore( int nScore, CSWeaponID wepID, int iSlot, 
 
 	char strnScore[64];
 	if ( nBonus > 0 )
-		Q_snprintf( strnScore, sizeof( strnScore ), "%d (+%d)", abs( nScore ), abs( nBonus ) );
+		V_snprintf( strnScore, sizeof( strnScore ), "%d (+%d)", abs( nScore ), abs( nBonus ) );
 	else
-		Q_snprintf( strnScore, sizeof( strnScore ), "%d", abs( nScore ));
+		V_snprintf( strnScore, sizeof( strnScore ), "%d", abs( nScore ));
 
 
 	ClientPrint( this, HUD_PRINTTALK, awardReasonToken, strnScore, szWeaponName );
@@ -5978,7 +5938,7 @@ void CCSPlayer::ProcessSuicideAsKillReward()
 			extern ConVar cash_player_killed_enemy_default;
 			int numBonusMoney = cash_player_killed_enemy_default.GetInt();
 			int arrSlots[] = { WEAPON_SLOT_RIFLE, WEAPON_SLOT_PISTOL };
-			for ( int k = 0; k < Q_ARRAYSIZE( arrSlots ); ++k )
+			for ( int k = 0; k < std::size( arrSlots ); ++k )
 			{
 				CBaseCombatWeapon *pWpn = player->Weapon_GetSlot( arrSlots[ k ] );
 				CWeaponCSBase *pWpnCsBase = dynamic_cast< CWeaponCSBase * >( pWpn );
@@ -6218,41 +6178,10 @@ void CCSPlayer::Deafen( float flDistance )
 
 void CCSPlayer::GiveShield( void )
 {
-#ifdef CS_SHIELD_ENABLED
-	m_bHasShield = true;
-	m_bShieldDrawn = false;
-
-	if ( HasSecondaryWeapon() )
-	{
-		CBaseCombatWeapon *pWeapon = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
-		pWeapon->SetModel( pWeapon->GetViewModel() );
-		pWeapon->Deploy();
-	}
-
-	CBaseViewModel *pVM = GetViewModel( 1 );
-
-	if ( pVM )
-	{
-		ShowViewModel( true );
-		pVM->RemoveEffects( EF_NODRAW );
-		pVM->SetWeaponModel( SHIELD_VIEW_MODEL, GetActiveWeapon() );
-		pVM->SendViewModelMatchingSequence( 1 );
-	}
-#endif
 }
 
 void CCSPlayer::RemoveShield( void )
 {
-#ifdef CS_SHIELD_ENABLED
-	m_bHasShield = false;
-
-	CBaseViewModel *pVM = GetViewModel( 1 );
-
-	if ( pVM )
-	{
-		pVM->AddEffects( EF_NODRAW );
-	}
-#endif
 }
 
 void CCSPlayer::RemoveAllItems( bool removeSuit )
@@ -6586,7 +6515,7 @@ void CCSPlayer::PreThink()
 				const char *placeName = TheNavMesh->PlaceToName( area->GetPlace() );
 				if ( placeName && *placeName )
 				{
-					Q_strncpy( m_szLastPlaceName.GetForModify(), placeName, MAX_PLACE_NAME_LENGTH );
+					V_strncpy( m_szLastPlaceName.GetForModify(), placeName, MAX_PLACE_NAME_LENGTH );
 				}
 			}
 		}
@@ -6657,7 +6586,9 @@ public:
 // Expose the VIP selection to plugins, since we don't have an official VIP mode.  This
 // allows plugins to access the (limited ) VIP functionality already present (scoreboard
 // identification and radar color ).
-CON_COMMAND( cs_make_vip, "Marks a player as the VIP" )
+static void cs_make_vip( const CCommand &args );
+static ConCommand cs_make_vip_command( "cs_make_vip", cs_make_vip, "Marks a player as the VIP" );
+static void cs_make_vip( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -6667,7 +6598,7 @@ CON_COMMAND( cs_make_vip, "Marks a player as the VIP" )
 		return;
 	}
 
-	CCSPlayer *player = static_cast< CCSPlayer * >(UTIL_PlayerByIndex( atoi( args[1] ) ) );
+	CCSPlayer *player = static_cast< CCSPlayer * >(UTIL_PlayerByIndex( std::atoi( args[1] ) ) );
 	if ( !player )
 	{
 		// Invalid value clears out VIP
@@ -6696,30 +6627,10 @@ bool CCSPlayer::IsVIP() const
 
 void CCSPlayer::DropShield( void )
 {
-#ifdef CS_SHIELD_ENABLED
-	//Drop an item_defuser
-	Vector vForward, vRight;
-	AngleVectors( GetAbsAngles(), &vForward, &vRight, nullptr );
-
-	RemoveShield();
-
-	CBaseAnimating *pShield = (CBaseAnimating * )CBaseEntity::Create( "item_shield", WorldSpaceCenter(), GetLocalAngles() );
-	pShield->ApplyAbsVelocityImpulse( vForward * 200 + vRight * random->RandomFloat( -50, 50 ) );
-
-	CBaseCombatWeapon *pActive = GetActiveWeapon();
-
-	if ( pActive )
-	{
-		pActive->Deploy();
-	}
-#endif
 }
 
 void CCSPlayer::SetShieldDrawnState( bool bState )
 {
-#ifdef CS_SHIELD_ENABLED
-	m_bShieldDrawn = bState;
-#endif
 }
 
 bool CCSPlayer::CSWeaponDrop(CBaseCombatWeapon *pWeapon, bool bDropShield, bool bThrowForward)
@@ -6839,7 +6750,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool
 
 			// dkorus: If we hit this assert, the model changed and we no longer have a valid "ValveBiped.weapon_bone" to use for our weapon drop position
 			//		   This code will have to change to match the new bone name
-			AssertMsg( iBIndex != -1, "Missing weapon bone from player!  Make sure the bone exists and or that the string is updated." );
+			contract_assert( ( iBIndex != -1 ) && "Missing weapon bone from player!  Make sure the bone exists and or that the string is updated." );
 
 			if ( iBIndex == -1 || iWeaponBoneIndex == -1 )
 			{
@@ -6913,7 +6824,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool
 		}
 		else
 		{
-			Assert( pWeapon->GetModel() );
+			contract_assert( pWeapon->GetModel() );
 
 			Vector vecWeaponThrowFromPos = EyePosition();
 			QAngle angWeaponThrowFromAngle = EyeAngles();
@@ -6922,7 +6833,7 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool
 			if ( nPlayerRightHandAttachment != -1 )
 			{
 				bool bAttachSuccess = GetAttachment( nPlayerRightHandAttachment, vecWeaponThrowFromPos );
-				Assert( bAttachSuccess ); bAttachSuccess;
+				contract_assert( bAttachSuccess ); bAttachSuccess;
 			}
 			else
 			{
@@ -7039,7 +6950,7 @@ bool CCSPlayer::DropWeaponSlot( int nSlot, bool fromDeath )
 {
 	bool bSuccess = false;
 
-	CWeaponCSBase *pWeapon = assert_cast< CWeaponCSBase* >( Weapon_GetSlot( nSlot ) );
+	CWeaponCSBase *pWeapon = static_cast< CWeaponCSBase* >( Weapon_GetSlot( nSlot ) );
 	if ( pWeapon )
 	{
 		bSuccess = CSWeaponDrop( pWeapon, false );
@@ -7106,80 +7017,12 @@ bool CCSPlayer::HasSecondaryWeapon( void )
 uint32 CCSPlayer::RecalculateCurrentEquipmentValue( void )
 {
 	m_unCurrentEquipmentValue = 0;
-#if !defined( NO_STEAM_GAMECOORDINATOR )
-	for ( int i = 0; i < MAX_WEAPONS; ++i )
-	{
-		CWeaponCSBase* pWeapon = dynamic_cast<CWeaponCSBase*>( GetWeapon( i ) );
-		if ( pWeapon != nullptr )
-		{
-			int nWeaponPrice = pWeapon->GetWeaponPrice();
-			if ( !nWeaponPrice )
-			{
-				nWeaponPrice = GetWeaponPrice( pWeapon->GetCSWeaponID() );
-			}
-
-			if ( pWeapon->GetWeaponType() == WEAPONTYPE_GRENADE )
-			{	// support for multiple grenades of same type
-				int numAmmoItems = GetAmmoCount( pWeapon->GetPrimaryAmmoType() );
-				if ( numAmmoItems > 1 )
-				{
-					nWeaponPrice *= numAmmoItems;
-				}
-			}
-
-			m_unCurrentEquipmentValue += nWeaponPrice;
-		}
-	}
-
-	if ( HasDefuser() )
-	{
-		m_unCurrentEquipmentValue += GetWeaponPrice ( ITEM_DEFUSER );
-	}
-
-	// HACK: possessing any armor is 'kevlar', posessing any armor and a helmet is 'assault suit'.
-	// Similar checks like this are scattered through out the code... would be better to centralize this check.
-	if ( ArmorValue() > 0 )
-	{
-		// Grr... Can't use GetWeaponPrice because it subtracts out what you already have-- which is what we're trying to count.
-		if ( m_bHasHelmet.Get() )
-		{
-			m_unCurrentEquipmentValue += (uint16)ITEM_PRICE_ASSAULTSUIT;
-		}
-		else
-		{
-			m_unCurrentEquipmentValue += (uint16)ITEM_PRICE_KEVLAR;
-		}
-	}
-#endif
 	return m_unCurrentEquipmentValue;
 }
 
 void CCSPlayer::UpdateFreezetimeEndEquipmentValue( void )
 {
 	m_unFreezetimeEndEquipmentValue = m_unCurrentEquipmentValue;
-#if !defined( NO_STEAM_GAMECOORDINATOR )
-	// Match Stats
-	if ( CSGameRules()->ShouldRecordMatchStats() )
-	{
-		int currentround = CSGameRules()->GetTotalRoundsPlayed();
-
-		m_iMatchStats_EquipmentValue.GetForModify( currentround ) = m_unCurrentEquipmentValue;
-
-		//	add post-freeze account balance to the match stats. This is approximately what the player is saving from this round.
-		// we may lose items purchased post freezetime but we also avoid money earned from kills that shouldn't be considered 'saved'
-		m_iMatchStats_MoneySaved.GetForModify( currentround ) = GetAccountBalance();
-
-		// Keep track in QMM data
-		if ( m_uiAccountId && CSGameRules() )
-		{
-			if ( CCSGameRules::CQMMPlayerData_t *pQMM = CSGameRules()->QueuedMatchmakingPlayersDataFind( m_uiAccountId ) )
-			{
-				pQMM->m_iMatchStats_EquipmentValue[ currentround ] = m_iMatchStats_EquipmentValue.Get( currentround );
-				pQMM->m_iMatchStats_MoneySaved[ currentround ] = m_iMatchStats_MoneySaved.Get( currentround );
-			}
-		}
-	}
-#endif
 }
 
 /*void CCSPlayer::UpdateAppearanceIndex( void )
@@ -7434,7 +7277,7 @@ BuyResult_e CCSPlayer::AttemptToBuyNightVision( void )
 {
 	int iNVGPrice = ITEM_PRICE_NVG;
 
-	if ( m_bHasNightVision == TRUE )
+	if ( m_bHasNightVision == true )
 	{
 		if( !m_bIsInAutoBuy && !m_bIsInRebuy )
 			ClientPrint( this, HUD_PRINTCENTER, "#Already_Have_One" );
@@ -7545,11 +7388,11 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char * wpnName, int nPo
 
 	if ( pWeaponInfo == nullptr )
 	{
-		if ( Q_stricmp( itemNameUsed, "primammo" ) == 0 )
+		if ( V_stricmp( itemNameUsed, "primammo" ) == 0 )
 		{
 			result = AttemptToBuyAmmo( 0 );
 		}
-		else if ( Q_stricmp( itemNameUsed, "secammo" ) == 0 )
+		else if ( V_stricmp( itemNameUsed, "secammo" ) == 0 )
 		{
 			result = AttemptToBuyAmmo( 1 );
 		}
@@ -7637,7 +7480,7 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char * wpnName, int nPo
 					AddToRebuy( weaponId, ullItemID );
 				}
 				m_iWeaponPurchasesThisRound.GetForModify(weaponId)++;
-				COMPILE_TIME_ASSERT( WEAPON_MAX < MAX_WEAPONS );
+				static_assert( WEAPON_MAX < MAX_WEAPONS );
 			}
 			return equipResult; // intentional early return here
 		}
@@ -7787,7 +7630,7 @@ BuyResult_e CCSPlayer::BuyAmmo( int nSlot, bool bBlinkMoney )
 
 BuyResult_e CCSPlayer::AttemptToBuyAmmo( int iAmmoType )
 {
-	Assert( iAmmoType == 0 || iAmmoType == 1 );
+	contract_assert( iAmmoType == 0 || iAmmoType == 1 );
 
 	BuyResult_e result = BuyAmmo( iAmmoType, true );
 
@@ -7840,7 +7683,7 @@ void CCSPlayer::AutoBuyAmmo( bool bForce )
 	if ( (sv_autobuyammo.GetBool() || bForce) && ( m_flNextAutoBuyAmmoTime < gpGlobals->curtime ) && (CanPlayerBuy( false ) || CSGameRules()->IsPlayingCoopMission()) )
 	{
 		// only allow this check to happen every 2 seconds.
-		m_flNextAutoBuyAmmoTime = gpGlobals->curtime + SECONDS_BETWEEN_AUTOAMMOBUY_CHECKS - fmodf( gpGlobals->curtime - m_flNextAutoBuyAmmoTime, SECONDS_BETWEEN_AUTOAMMOBUY_CHECKS );
+		m_flNextAutoBuyAmmoTime = gpGlobals->curtime + SECONDS_BETWEEN_AUTOAMMOBUY_CHECKS - std::fmodf( gpGlobals->curtime - m_flNextAutoBuyAmmoTime, SECONDS_BETWEEN_AUTOAMMOBUY_CHECKS );
 
 		InternalAutoBuyAmmo( WEAPON_SLOT_PISTOL );
 		InternalAutoBuyAmmo( WEAPON_SLOT_RIFLE );
@@ -8215,11 +8058,11 @@ void CCSPlayer::ListPlayers()
 		{
 			if ( pPlayer->IsBot() )
 			{
-				Q_snprintf( buf, sizeof(buf ), "B %d : %s", pPlayer->GetUserID(), pPlayer->GetPlayerName() );
+				V_snprintf( buf, sizeof(buf ), "B %d : %s", pPlayer->GetUserID(), pPlayer->GetPlayerName() );
 			}
 			else
 			{
-				Q_snprintf( buf, sizeof(buf ), "  %d : %s", pPlayer->GetUserID(), pPlayer->GetPlayerName() );
+				V_snprintf( buf, sizeof(buf ), "  %d : %s", pPlayer->GetUserID(), pPlayer->GetPlayerName() );
 			}
 			ClientPrint( this, HUD_PRINTCONSOLE, buf );
 		}
@@ -8339,7 +8182,7 @@ void CCSPlayer::ApplyDeafnessEffect()
 
 void CCSPlayer::NoteWeaponFired()
 {
-	Assert( m_pCurrentCommand );
+	contract_assert( m_pCurrentCommand );
 	if( m_pCurrentCommand )
 	{
 		m_iLastWeaponFireUsercmd = m_pCurrentCommand->command_number;
@@ -8652,7 +8495,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 
 		if ( ShouldRunRateLimitedCommand( args ) )
 		{
-			int iTeam = atoi( args[1] );
+			int iTeam = std::atoi( args[1] );
 			bool bForceChange = false;
 
 			if ( args.ArgC() > 2)
@@ -8834,7 +8677,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 		BuyResult_e result = BUY_INVALID_ITEM;
 		if ( args.ArgC() == 3 )
 		{
-			int nPos = atoi( args[2] );
+			int nPos = std::atoi( args[2] );
 			result = HandleCommand_Buy( args[1], nPos );
 		}
 		else if ( args.ArgC() == 2 )
@@ -9043,7 +8886,7 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 		if ( GetTeamNumber() == TEAM_SPECTATOR )
 			return false;
 
-		int index = atoi( args[1] );
+		int index = std::atoi( args[1] );
 
 		CCSPlayerResource *pResource = dynamic_cast< CCSPlayerResource * >( g_pPlayerResource );
 		if ( !pResource || pResource->EndMatchNextMapAllVoted() || ( m_nEndMatchNextMapVote > -1 ) ||
@@ -9313,15 +9156,15 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team, bool bQueue, int iCoachTeam  )
 	static ConVarRef sv_mmqueue_reservation( "sv_mmqueue_reservation" );
 	if ( !IsBot() && ( sv_mmqueue_reservation.GetString()[0] == 'Q' ) )
 	{
-		CSteamID const *pThisSteamId = engine->GetClientSteamID( this->edict() );
+		CPlayerId const *pThisPlayerId = engine->GetClientPlayerID( this->edict() );
 		int numTotalPlayers = 0;
 		int idxThisPlayer = -1;
 		for ( char const *pszPrev = sv_mmqueue_reservation.GetString(), *pszNext = pszPrev;
-			( pszNext = strchr( pszPrev, '[' ) ) != nullptr; pszPrev = pszNext + 1 )
+			( pszNext = std::strchr( pszPrev, '[' ) ) != nullptr; pszPrev = pszNext + 1 )
 		{
 			uint32 uiAccountId = 0;
-			sscanf( pszNext, "[%x]", &uiAccountId );
-			if ( uiAccountId && pThisSteamId && ( pThisSteamId->GetAccountID() == uiAccountId ) )
+			std::sscanf( pszNext, "[%x]", &uiAccountId );
+			if ( uiAccountId && pThisPlayerId && ( pThisPlayerId->GetAccountID() == uiAccountId ) )
 			{
 				idxThisPlayer = numTotalPlayers;
 			}
@@ -9330,12 +9173,12 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team, bool bQueue, int iCoachTeam  )
 
 		if ( idxThisPlayer == -1 )
 		{
-			if ( strstr( sv_mmqueue_reservation.GetString(), CFmtStr( "{%x}", pThisSteamId ? pThisSteamId->GetAccountID() : 0 ) ) )
+			if ( std::strstr( sv_mmqueue_reservation.GetString(), CFmtStr( "{%x}", pThisPlayerId ? pThisPlayerId->GetAccountID() : 0 ) ) )
 				idxThisPlayer = -2;
 
 			team = TEAM_SPECTATOR;
 			DevMsg( "Forcing spectator team for %s player/%d (%x - %s).\n", ( ( idxThisPlayer == -2 ) ? "caster" : "UNKNOWN" ),
-				numTotalPlayers, ( pThisSteamId ? pThisSteamId->GetAccountID() : 0 ),
+				numTotalPlayers, ( pThisPlayerId ? pThisPlayerId->GetAccountID() : 0 ),
 				GetPlayerName() );
 		}
 		else
@@ -9363,12 +9206,12 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team, bool bQueue, int iCoachTeam  )
 			}
 
 			DevMsg( "Team for queue player#%d/%d (%x - %s) on %s team for %s teams: %s\n",
-				idxThisPlayer+1, numTotalPlayers, ( pThisSteamId ? pThisSteamId->GetAccountID() : 0 ),
+				idxThisPlayer+1, numTotalPlayers, ( pThisPlayerId ? pThisPlayerId->GetAccountID() : 0 ),
 				GetPlayerName(), bThisPlayerIsFirstTeam ? "first" : "second", bAreTeamsSwitched ? "switched" : "normal",
 				( (team == TEAM_CT) ? "CT" : "T" ) );
 
 			// Mark player as having connected once
-			if ( CCSGameRules::CQMMPlayerData_t *pQMM = CSGameRules()->QueuedMatchmakingPlayersDataFind( pThisSteamId->GetAccountID() ) )
+			if ( CCSGameRules::CQMMPlayerData_t *pQMM = CSGameRules()->QueuedMatchmakingPlayersDataFind( pThisPlayerId->GetAccountID() ) )
 			{
 				if ( !pQMM->m_bEverFullyConnected )
 				{
@@ -9653,10 +9496,10 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team, bool bQueue, int iCoachTeam  )
 	//
 	// Transfer all parameters that we know about
 	//
-	CSteamID const *pThisSteamId = engine->GetClientSteamID( this->edict() );
-	if ( pThisSteamId && pThisSteamId->IsValid() && pThisSteamId->GetAccountID() && !IsBot() && CSGameRules() )
+	CPlayerId const *pThisPlayerId = engine->GetClientPlayerID( this->edict() );
+	if ( pThisPlayerId && pThisPlayerId->IsValid() && pThisPlayerId->GetAccountID() && !IsBot() && CSGameRules() )
 	{
-		SetHumanPlayerAccountID( pThisSteamId->GetAccountID() );
+		SetHumanPlayerAccountID( pThisPlayerId->GetAccountID() );
 	}
 
 	return true;
@@ -9795,7 +9638,7 @@ void CCSPlayer::GetIntoGame()
 			IGameEvent * event = gameeventmanager->CreateEvent( "player_spawned" );
 
 			// Check for a pending round restart in order to determine if the 'post team select' overlay needs to be shown
-			int nRestartTime = static_cast<int>( ceil( CSGameRules( )->GetRoundRestartTime() ) );
+			int nRestartTime = static_cast<int>( std::ceil( CSGameRules( )->GetRoundRestartTime() ) );
 
 			// If there are needed players then a round restart will be pending after they connect
 			bool bNeeded = false;
@@ -9885,7 +9728,7 @@ bool CCSPlayer::SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pStart
 		while ( true )
 		{
 			pSpot = gEntList.FindEntityByClassname( pSpot, pEntClassName );
-			SpawnPoint* pSpawnpoint = assert_cast< SpawnPoint* >( pSpot );
+			SpawnPoint* pSpawnpoint = static_cast< SpawnPoint* >( pSpot );
 
 			bool bSpawnValid = g_pGameRules->IsSpawnPointValid( pSpawnpoint, this );
 			// check if pSpot is valid
@@ -9968,7 +9811,7 @@ bool CCSPlayer::SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pStart
 		while ( true )
 		{
 			pSpot = gEntList.FindEntityByClassname( pSpot, pEntClassName );
-			SpawnPoint* pSpawnpoint = assert_cast< SpawnPoint* >( pSpot );
+			SpawnPoint* pSpawnpoint = static_cast< SpawnPoint* >( pSpot );
 
 			bool bSpawnValid = g_pGameRules->IsSpawnPointValid( pSpawnpoint, this );
 			// check if pSpot is valid
@@ -10248,7 +10091,7 @@ CCSPlayerStateInfo* CCSPlayer::State_LookupInfo( CSPlayerState state )
 		{ STATE_DORMANT,		"STATE_DORMANT",		nullptr, nullptr, nullptr },
 	};
 
-	for ( int i=0; i < ARRAYSIZE( playerStateInfos ); i++ )
+	for ( int i=0; i < std::size( playerStateInfos ); i++ )
 	{
 		if ( playerStateInfos[i].m_iPlayerState == state )
 			return &playerStateInfos[i];
@@ -10320,14 +10163,7 @@ void CCSPlayer::State_Enter_WELCOME()
 void CCSPlayer::State_PreThink_WELCOME()
 {
 	// Verify some state.
-	Assert( IsSolidFlagSet( FSOLID_NOT_SOLID ) );
-#ifdef DBGFLAG_ASSERT
-	if ( GetAbsVelocity().Length() != 0 && !engine->IsDedicatedServer() )
-	{
-		// This happens e.g. when player moves during warmup: the player is still in WELCOME state, but CPlayerMove::FinishMove() will happily set its velocity.
-		ExecuteOnce( Warning( "Player velocity != 0 in State_PreThink_WELCOME.\n" ) );
-	}
-#endif
+	contract_assert( IsSolidFlagSet( FSOLID_NOT_SOLID ) );
 
 	// Update whatever intro camera it's at.
 	if( m_pIntroCamera && (gpGlobals->curtime >= m_fIntroCamTime ) )
@@ -10612,7 +10448,7 @@ void CCSPlayer::State_Enter_OBSERVER_MODE()
 		const char *pIdealMode = engine->GetClientConVarValue( entindex(), "cl_spec_mode" );
 		if ( pIdealMode )
 		{
-			int nIdealMode = atoi( pIdealMode );
+			int nIdealMode = std::atoi( pIdealMode );
 
 			if ( nIdealMode < OBS_MODE_IN_EYE )
 			{
@@ -10634,9 +10470,7 @@ void CCSPlayer::State_Enter_OBSERVER_MODE()
 
 void CCSPlayer::State_Leave_OBSERVER_MODE()
 {
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	m_bCanControlObservedBot = false;
-#endif
 }
 
 void CCSPlayer::State_PreThink_OBSERVER_MODE()
@@ -10653,15 +10487,14 @@ void CCSPlayer::State_PreThink_OBSERVER_MODE()
 
 	// Make sure nobody has changed any of our state.
 //	Assert( GetMoveType() == MOVETYPE_FLY );
-	Assert( m_takedamage == DAMAGE_NO );
-	Assert( IsSolidFlagSet( FSOLID_NOT_SOLID ) );
+	contract_assert( m_takedamage == DAMAGE_NO );
+	contract_assert( IsSolidFlagSet( FSOLID_NOT_SOLID ) );
 //	Assert( IsEffectActive( EF_NODRAW ) );
 
 	// Must be dead.
-	Assert( m_lifeState == LIFE_DEAD );
-	Assert( pl.deadflag );
+	contract_assert( m_lifeState == LIFE_DEAD );
+	contract_assert( pl.deadflag );
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	m_bCanControlObservedBot = false;
 	if ( GetObserverMode() >= OBS_MODE_IN_EYE )
 	{
@@ -10671,7 +10504,6 @@ void CCSPlayer::State_PreThink_OBSERVER_MODE()
 			m_bCanControlObservedBot = true;
 		}
 	}
-#endif
 }
 
 void CCSPlayer::State_Enter_GUNGAME_RESPAWN()
@@ -10804,7 +10636,7 @@ void CCSPlayer::State_PreThink_ACTIVE()
 //		Assert( GetMoveType() == MOVETYPE_WALK );
 	}
 
-	Assert( !IsSolidFlagSet( FSOLID_NOT_SOLID ) );
+	contract_assert( !IsSolidFlagSet( FSOLID_NOT_SOLID ) );
 }
 
 bool CCSPlayer::StartObserverMode( int mode )
@@ -10941,7 +10773,7 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 	CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase* >( pBaseWeapon );
 	if ( !pWeapon )
 	{
-		Assert( !pWeapon );
+		contract_assert( !pWeapon );
 		pBaseWeapon->AddSolidFlags( FSOLID_NOT_SOLID );
 		pBaseWeapon->AddEffects( EF_NODRAW );
 		Weapon_Equip( pBaseWeapon );
@@ -11126,7 +10958,9 @@ void CCSPlayer::RescueZoneTouch( inputdata_t &inputdata )
 }
 
 //------------------------------------------------------------------------------------------
-CON_COMMAND_F( timeleft, "prints the time remaining in the match", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+static void timeleft( const CCommand &args );
+static ConCommand timeleft_command( "timeleft", timeleft, "prints the time remaining in the match", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void timeleft( const CCommand &args )
 {
 	CCSPlayer *pPlayer = ToCSPlayer( UTIL_GetCommandClient() );
 	if ( pPlayer && pPlayer->m_iNextTimeCheck >= gpGlobals->curtime )
@@ -11167,8 +11001,8 @@ CON_COMMAND_F( timeleft, "prints the time remaining in the match", FCVAR_GAMEDLL
 		char minutes[8];
 		char seconds[8];
 
-		Q_snprintf( minutes, sizeof(minutes ), "%d", iMinutes );
-		Q_snprintf( seconds, sizeof(seconds ), "%2.2d", iSeconds );
+		V_snprintf( minutes, sizeof(minutes ), "%d", iMinutes );
+		V_snprintf( seconds, sizeof(seconds ), "%2.2d", iSeconds );
 
 		if ( pPlayer )
 		{
@@ -11283,7 +11117,7 @@ void CCSPlayer::ParseAutoBuyString(const char *string, bool &boughtPrimary, bool
 		}
 
 		// make sure we actually have a command.
-		if (strlen(command ) == 0 )
+		if (std::strlen(command ) == 0 )
 		{
 			continue;
 		}
@@ -11440,7 +11274,7 @@ void CCSPlayer::PrioritizeAutoBuyString(char *autobuyString, const char *priorit
 			++priorityChar;
 		}
 
-		if (strlen(priorityToken ) == 0 )
+		if (std::strlen(priorityToken ) == 0 )
 		{
 			continue;
 		}
@@ -11448,7 +11282,7 @@ void CCSPlayer::PrioritizeAutoBuyString(char *autobuyString, const char *priorit
 		// see if the priority token is in the autobuy string.
 		// if  it is, copy that token to the new string and blank out
 		// that token in the autobuy string.
-		char *autoBuyPosition = strstr(autobuyString, priorityToken );
+		char *autoBuyPosition = std::strstr(autobuyString, priorityToken );
 		if (autoBuyPosition != nullptr )
 		{
 			while ((*autoBuyPosition != 0 ) && (*autoBuyPosition != ' ' ))
@@ -11488,7 +11322,7 @@ void CCSPlayer::PrioritizeAutoBuyString(char *autobuyString, const char *priorit
 	// terminate the string.  Trailing spaces shouldn't matter.
 	newString[newStringPos] = 0;
 
-	Q_snprintf(autobuyString, sizeof(autobuyString ), "%s", newString );
+	V_snprintf(autobuyString, sizeof(autobuyString ), "%s", newString );
 }
 
 bool CCSPlayer::AttemptToBuyDMBonusWeapon( void )
@@ -11683,27 +11517,27 @@ void CCSPlayer::Rebuy( const char *rebuyString )
 	{
 		BuyResult_e result = BUY_ALREADY_HAVE;
 
-		if ( Q_strcasecmp( token, "PrimaryWeapon" ) == 0 )
+		if ( V_strcasecmp( token, "PrimaryWeapon" ) == 0 )
 		{
 			result = RebuyPrimaryWeapon();
 		}
-		else if ( Q_strcasecmp(token, "SecondaryWeapon" ) == 0 )
+		else if ( V_strcasecmp(token, "SecondaryWeapon" ) == 0 )
 		{
 			result = RebuySecondaryWeapon();
 		}
-		else if ( Q_strcasecmp(token, "Taser" ) == 0 )		// TODO[pmf]: handle this better
+		else if ( V_strcasecmp(token, "Taser" ) == 0 )		// TODO[pmf]: handle this better
 		{
 			result = RebuyTaser();
 		}
-		else if ( Q_strcasecmp(token, "Armor" ) == 0 )
+		else if ( V_strcasecmp(token, "Armor" ) == 0 )
 		{
 			result = RebuyArmor();
 		}
-		else if ( Q_strcasecmp(token, "Defuser" ) == 0 )
+		else if ( V_strcasecmp(token, "Defuser" ) == 0 )
 		{
 			result = RebuyDefuser();
 		}
-		else if ( Q_strcasecmp(token, "NightVision" ) == 0 )
+		else if ( V_strcasecmp(token, "NightVision" ) == 0 )
 		{
 			result = RebuyNightVision();
 		}
@@ -11804,7 +11638,7 @@ BuyResult_e CCSPlayer::RebuyGrenade( CSWeaponID weaponId )
 
 			const CCStrike15ItemDefinition * pItemDef = dynamic_cast< const CCStrike15ItemDefinition * >( GetItemSchema()->GetItemDefinitionByName( wpnClassName ) );
 
-			Assert( pItemDef );
+			contract_assert( pItemDef );
 
 			nPos = pItemDef->GetLoadoutSlot( GetTeamNumber() );
 
@@ -12318,15 +12152,6 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pchName, int iSubType /*= 0*/
 		}
 	}
 
-#if WEARABLE_VEST_IFF_KEVLAR
-	if ( ( StringHasPrefix( pchName, "item_kevlar" ) ) ||
-		 ( StringHasPrefix( pchName, "item_heavyassaultsuit" ) ) ||
-		 ( StringHasPrefix( pchName, "item_assaultsuit" ) ) )
-	{
-		GiveWearableFromSlot( LOADOUT_POSITION_VEST );
-	}
-#endif
-
 	return pItem;
 }
 
@@ -12418,28 +12243,6 @@ void CCSPlayer::FlashlightTurnOff( bool playSound /*= false*/ )
 void CCSPlayer::SetViewModelArms( const char *armsModel )
 {
 	V_strncpy( m_szArmsModel.GetForModify(), armsModel, MAX_MODEL_STRING_SIZE );
-}
-
-void CCSPlayer::ReportCustomClothingModels( void )
-{
-	if ( !CSInventoryManager() )
-		return;
-
-	for ( int nSlot = LOADOUT_POSITION_FIRST_COSMETIC; nSlot <= LOADOUT_POSITION_LAST_COSMETIC; ++nSlot )
-	{
-		if ( steamgameserverapicontext->SteamGameServer() )
-		{
-			CSteamID steamIDForPlayer;
-			if ( GetSteamID( &steamIDForPlayer ) )
-			{
-				CEconItemView *pItemData = CSInventoryManager()->GetItemInLoadoutForTeam( GetTeamNumber(), nSlot, &steamIDForPlayer );
-
-				const char *pszItemName = pItemData->GetStaticData()->GetDefinitionName();
-
-				DevMsg( "             %s: %s \n", g_szLoadoutStrings[ nSlot ], pszItemName );
-			}
-		}
-	}
 }
 
 bool CCSPlayer::HandleDropWeapon( CBaseCombatWeapon *pWeapon, bool bSwapping )
@@ -12593,7 +12396,7 @@ void CCSPlayer::DestroyWeapons( bool bDropC4 /* = true */ )
 	};
 
 	CBaseCSGrenade *pGrenade = nullptr;
-	for ( int i = 0; i < ARRAYSIZE(GrenadePriorities ); ++i )
+	for ( int i = 0; i < std::size( GrenadePriorities ); ++i )
 	{
 		pGrenade = dynamic_cast< CBaseCSGrenade * >(Weapon_OwnsThisType(GrenadePriorities[i] ) );
 		if ( pGrenade && pGrenade->HasAmmo() )
@@ -12763,7 +12566,7 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool killedByEnemy )
 		}
 		m_nPreferredGrenadeDrop = 0; // after we drop a preferred grenade make sure we reset the field
 
-		for ( int i = 0; ( i < ARRAYSIZE(GrenadePriorities ) ) && !bGrenadeDropped; ++i )
+		for ( int i = 0; ( i < std::size( GrenadePriorities ) ) && !bGrenadeDropped; ++i )
 		{
 			pGrenade = dynamic_cast< CBaseCSGrenade * >(Weapon_OwnsThisType(GrenadePriorities[i] ) );
 			if ( pGrenade && pGrenade->HasAmmo() && !pGrenade->HasEmittedProjectile() )
@@ -13088,22 +12891,22 @@ CDamageRecord::CDamageRecord( CCSPlayer * pPlayerDamager, CCSPlayer * pPlayerRec
 	{
 		m_PlayerDamager = pPlayerDamager;
 		m_PlayerDamagerControlledBot = pPlayerDamager->IsControllingBot() ? pPlayerDamager->GetControlledBot() : nullptr;
-		Q_strncpy( m_szPlayerDamagerName, pPlayerDamager->GetPlayerName(), sizeof(m_szPlayerDamagerName) );
+		V_strncpy( m_szPlayerDamagerName, pPlayerDamager->GetPlayerName(), sizeof(m_szPlayerDamagerName) );
 	}
 	else
 	{
-		Q_strncpy( m_szPlayerDamagerName, "World", sizeof(m_szPlayerDamagerName) );
+		V_strncpy( m_szPlayerDamagerName, "World", sizeof(m_szPlayerDamagerName) );
 	}
 
 	if ( pPlayerRecipient )
 	{
 		m_PlayerRecipient = pPlayerRecipient;
 		m_PlayerRecipientControlledBot = pPlayerRecipient->IsControllingBot() ? pPlayerRecipient->GetControlledBot() : nullptr;
-		Q_strncpy( m_szPlayerRecipientName, pPlayerRecipient->GetPlayerName(), sizeof(m_szPlayerRecipientName) );
+		V_strncpy( m_szPlayerRecipientName, pPlayerRecipient->GetPlayerName(), sizeof(m_szPlayerRecipientName) );
 	}
 	else
 	{
-		Q_strncpy( m_szPlayerRecipientName, "World", sizeof(m_szPlayerRecipientName) );
+		V_strncpy( m_szPlayerRecipientName, "World", sizeof(m_szPlayerRecipientName) );
 	}
 
 	m_iDamage = iDamage;
@@ -13221,11 +13024,11 @@ void CCSPlayer::OutputDamageTaken( void )
 		{
 			if (pRecord->GetNumHits() == 1 )
 			{
-				Q_snprintf( buf, sizeof(buf ), "%d in %d hit", pRecord->GetDamage(), pRecord->GetNumHits() );
+				V_snprintf( buf, sizeof(buf ), "%d in %d hit", pRecord->GetDamage(), pRecord->GetNumHits() );
 			}
 			else
 			{
-				Q_snprintf( buf, sizeof(buf ), "%d in %d hits", pRecord->GetDamage(), pRecord->GetNumHits() );
+				V_snprintf( buf, sizeof(buf ), "%d in %d hits", pRecord->GetDamage(), pRecord->GetNumHits() );
 			}
 			ClientPrint( this, msg_dest, "Damage Taken from \"%s1\" - %s2\n", pRecord->GetPlayerDamagerName(), buf );
 		}
@@ -13278,11 +13081,11 @@ void CCSPlayer::OutputDamageGiven( void )
 		{
 			if (pRecord->GetNumHits() == 1 )
 			{
-				Q_snprintf( buf, sizeof(buf ), "%d in %d hit", pRecord->GetDamage(), pRecord->GetNumHits() );
+				V_snprintf( buf, sizeof(buf ), "%d in %d hit", pRecord->GetDamage(), pRecord->GetNumHits() );
 			}
 			else
 			{
-				Q_snprintf( buf, sizeof(buf ), "%d in %d hits", pRecord->GetDamage(), pRecord->GetNumHits() );
+				V_snprintf( buf, sizeof(buf ), "%d in %d hits", pRecord->GetDamage(), pRecord->GetNumHits() );
 			}
 			ClientPrint( this, msg_dest, "Damage Given to \"%s1\" - %s2\n", pRecord->GetPlayerRecipientName(), buf );
 		}
@@ -13331,7 +13134,7 @@ void CCSPlayer::SendLastKillerDamageToClient( CCSPlayer *pLastKiller )
 
 void CCSPlayer::CreateViewModel( int index /*=0*/ )
 {
-	Assert( index >= 0 && index < MAX_VIEWMODELS );
+	contract_assert( index >= 0 && index < MAX_VIEWMODELS );
 
 	if ( GetViewModel( index ) )
 		return;
@@ -13355,7 +13158,6 @@ bool CCSPlayer::HasC4() const
 
 int CCSPlayer::GetNextObserverSearchStartPoint( bool bReverse )
 {
-#if CS_CONTROLLABLE_BOTS_ENABLED
 	// Brock H. - TR - 05/05/09
 	// If the server is set up to allow controllable bots,
 	// and if we don't already have a target,
@@ -13374,7 +13176,6 @@ int CCSPlayer::GetNextObserverSearchStartPoint( bool bReverse )
 			}
 		}
 	}
-#endif
 
 	// If we are currently watching someone who is dead, they must have died while we were watching (since
 	// a dead guy is not a valid pick to start watching ).  He was given his killer as an observer target
@@ -13514,7 +13315,7 @@ void CCSPlayer::ChangeName( const char *pszNewName )
 {
 	// make sure name is not too long
 	char trimmedName[MAX_PLAYER_NAME_LENGTH];
-	Q_strncpy( trimmedName, pszNewName, sizeof( trimmedName ) );
+	V_strncpy( trimmedName, pszNewName, sizeof( trimmedName ) );
 
 	const char *pszOldName = GetPlayerName();
 
@@ -13543,7 +13344,7 @@ void CCSPlayer::ChangeName( const char *pszNewName )
 	{
 		if ( CCSGameRules::CQMMPlayerData_t *pQMM = CSGameRules()->QueuedMatchmakingPlayersDataFind( m_uiAccountId ) )
 		{
-			Q_strncpy( pQMM->m_chPlayerName, this->GetPlayerName(), Q_ARRAYSIZE( pQMM->m_chPlayerName ) );
+			V_strncpy( pQMM->m_chPlayerName, this->GetPlayerName(), std::size( pQMM->m_chPlayerName ) );
 		}
 	}
 
@@ -13589,8 +13390,9 @@ bool CCSPlayer::StartReplayMode( float fDelay, float fDuration, int iEntity )
 	return true;
 }
 
-#if HLTV_REPLAY_ENABLED
-CON_COMMAND_F( replay_start, "Start GOTV replay: replay_start <delay> [<player name or index>]", FCVAR_CHEAT )
+static void replay_start( const CCommand &args );
+static ConCommand replay_start_command( "replay_start", replay_start, "Start GOTV replay: replay_start <delay> [<player name or index>]", FCVAR_CHEAT );
+static void replay_start( const CCommand &args )
 {
 	if ( CBasePlayer *pPlayer = UTIL_GetCommandClient() )
 	{
@@ -13628,7 +13430,9 @@ CON_COMMAND_F( replay_start, "Start GOTV replay: replay_start <delay> [<player n
 	}
 }
 
-CON_COMMAND_F( replay_death, "start hltv replay of last death", FCVAR_CHEAT )
+static void replay_death( const CCommand &args );
+static ConCommand replay_death_command( "replay_death", replay_death, "start hltv replay of last death", FCVAR_CHEAT );
+static void replay_death( const CCommand &args )
 {
 	CBasePlayer *pBasePlayer = UTIL_GetCommandClient();
 	if ( !pBasePlayer )
@@ -13641,7 +13445,9 @@ CON_COMMAND_F( replay_death, "start hltv replay of last death", FCVAR_CHEAT )
 	pPlayer->StartHltvReplayEvent( params );
 }
 
-CON_COMMAND_F( replay_stop, "stop hltv replay", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+static void replay_stop( const CCommand &args );
+static ConCommand replay_stop_command( "replay_stop", replay_stop, "stop hltv replay", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void replay_stop( const CCommand &args )
 {
 	if ( CBasePlayer *pPlayer = UTIL_GetCommandClient() )
 	{
@@ -13649,7 +13455,6 @@ CON_COMMAND_F( replay_stop, "stop hltv replay", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS
 		engine->StopClientHltvReplay( nPlayerEntIndex - 1 );
 	}
 }
-#endif
 
 void CCSPlayer::StopReplayMode()
 {
@@ -13985,7 +13790,7 @@ void CCSPlayer::SetWasKilledThisRound(bool wasKilled )
  */
 void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer *pVictim, const CTakeDamageInfo &info )
 {
-	Assert(pVictim != nullptr );
+	contract_assert( pVictim != nullptr );
 	CBaseEntity *pInflictor = info.GetInflictor();
 	if ( pVictim )
 	{
@@ -14784,7 +14589,7 @@ void CCSPlayer::IncrementNumMVPs( CSMvpReason_t mvpReason )
 	CCS_GameStats.Event_MVPEarned( this );
 	IGameEvent *mvpEvent = gameeventmanager->CreateEvent( "round_mvp" );
 
-	CSteamID OwnerSteamID;
+	CPlayerId OwnerPlayerID;
 	uint32 unMusicKitMVPs = 0; // this will remain zero if we fail to send the stat increment to GC
 
 	if ( mvpEvent )
@@ -15143,7 +14948,6 @@ void CCSPlayer::ResetTRBombModeData( void )
 }
 
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 
 void CCSPlayer::SavePreControlData()
 {
@@ -15549,97 +15353,18 @@ CCSBot* CCSPlayer::FindNearestControllableBot( bool bMustBeValidObserverTarget )
 	return pNearestBot;
 }
 
-#endif // CONTROLABLE BOTS ENABLED
 
 
 
 void CCSPlayer::UpdateInventory( bool bInit )
 {
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
-	if ( IsFakeClient() )
-		return;
-
-	if ( bInit || !m_Inventory.GetSOC() )
-	{
-		if ( steamgameserverapicontext->SteamGameServer() )
-		{
-			CSteamID steamIDForPlayer;
-			if ( GetSteamID( &steamIDForPlayer ) )
-			{
-				CSInventoryManager()->SteamRequestInventory( &m_Inventory, steamIDForPlayer );
-			}
-		}
-	}
-
-	// If we have an SOCache, we've got a connection to the GC
-	bool bInvalid = true;
-	if ( m_Inventory.GetSOC() )
-	{
-		bInvalid = m_Inventory.GetSOC()->BIsInitialized() == false;
-	}
-	//m_Shared.SetLoadoutUnavailable( bInvalid );
-#endif
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: Request this player's inventories from the steam backend
-//-----------------------------------------------------------------------------
 void CCSPlayer::UpdateOnRemove( void )
 {
 	BaseClass::UpdateOnRemove();
 
-#if !defined(NO_STEAM) && !defined( NO_STEAM_GAMECOORDINATOR )
-	m_Inventory.RemoveListener( this );
-	m_Inventory.Shutdown();
-#endif
 }
-
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
-//-----------------------------------------------------------------------------
-// Purpose: Steam has just notified us that the player changed his inventory
-//-----------------------------------------------------------------------------
-void CCSPlayer::InventoryUpdated( CPlayerInventory *pInventory )
-{
-	UpdateEquippedCoinFromInventory();
-	UpdateEquippedMusicFromInventory();
-	UpdateEquippedPlayerSprayFromInventory();
-	UpdatePersonaDataFromInventory();
-
-	//m_Shared.SetLoadoutUnavailable( false );
-
-	// Make sure we're wearing the right skin.
-	//SetPlayerModel();
-
-	GiveDefaultItems();
-}
-
-void OnInventoryUpdatedForSteamID( CSteamID steamID )
-{
-	if ( !steamID.IsValid() ) return;
-	if ( !steamID.BIndividualAccount() ) return;
-	if ( !steamID.GetAccountID() ) return;
-
-	extern CCSPlayer* FindPlayerFromAccountID( uint32 account_id );
-	if ( CCSPlayer *pPlayer = FindPlayerFromAccountID( steamID.GetAccountID() ) )
-	{
-		pPlayer->UpdateEquippedCoinFromInventory();
-		pPlayer->UpdateEquippedMusicFromInventory();
-		pPlayer->UpdateEquippedPlayerSprayFromInventory();
-		pPlayer->UpdatePersonaDataFromInventory();
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Requests that the GC confirm that this player is supposed to have
-//			an SO cache on this gameserver and send it again if so.
-//-----------------------------------------------------------------------------
-void CCSPlayer::VerifySOCache()
-{
-	/** Removed for partner depot **/
-	return;
-}
-
-#endif //!defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 
 void CCSPlayer::IncrementFragCount( int nCount, int nHeadshots )
 {
@@ -15916,7 +15641,7 @@ void CCSPlayer::IncrementKillStreak( int nCount )
 	if ( CSGameRules()->IsPlayingGunGameProgressive() && m_iKillStreak > 1 )
 	{
 		char strStreak[64];
-		Q_snprintf( strStreak, sizeof( strStreak ), "%d", m_iKillStreak );
+		V_snprintf( strStreak, sizeof( strStreak ), "%d", m_iKillStreak );
 		if ( m_iKillStreak >= 4 )
 		{
 			Radio( "OnARollBrag" );
@@ -16033,7 +15758,9 @@ int CCSPlayer::GetNumConcurrentDominations( )
 }
 
 
-CON_COMMAND_F( observer_use, "", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+static void observer_use( const CCommand &args );
+static ConCommand observer_use_command( "observer_use", observer_use, "", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void observer_use( const CCommand &args )
 {
 	CCSPlayer *pPlayer = ToCSPlayer( UTIL_GetCommandClient() );
 
@@ -16173,7 +15900,6 @@ void CCSPlayer::ObserverUse( bool bIsPressed )
 	if ( !bIsPressed )
 		return;
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
  	CBasePlayer * target = ToBasePlayer( GetObserverTarget() );
 
  	if ( target && target->IsBot() )
@@ -16219,7 +15945,6 @@ void CCSPlayer::ObserverUse( bool bIsPressed )
  			return;
  		}
  	}
-#endif
 
 	BaseClass::ObserverUse( bIsPressed );
 
@@ -16251,42 +15976,3 @@ bool CCSPlayer::GetBulletHitLocalBoneOffset( const trace_t &tr, int &boneIndexOu
 
 	return ( angAngleOut.IsValid() && vecPositionOut.IsValid() );
 }
-
-#if defined( DEBUG_FLASH_BANG )
-void cc_CreateFlashbangAtEyes_f( const CCommand &args )
-{
-	CCSPlayer* pPlayer = ToCSPlayer(UTIL_PlayerByIndex(1));
-	if ( pPlayer )
-	{
-		CBaseCombatCharacter *pBaseCombatCharacter = nullptr;
-		if ( pPlayer->GetObserverTarget() )
-		{
-			pBaseCombatCharacter = pPlayer->GetObserverTarget()->MyCombatCharacterPointer();
-		}
-		else
-		{
-			pBaseCombatCharacter = pPlayer->MyCombatCharacterPointer();
-		}
-		if ( pBaseCombatCharacter )
-		{
-			Vector vForward;
-			pPlayer->EyeVectors( &vForward );
-			Vector vecSrc = pPlayer->GetAbsOrigin() + pPlayer->GetViewOffset() + vForward * 16;
-			Vector vecVel = pPlayer->GetAbsVelocity();
-
-			Vector vecThrow = vForward * 100 + (pPlayer->GetAbsVelocity() * 1.25);
-			const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( WEAPON_FLASHBANG );
-
-			CFlashbangProjectile::Create(
-				vecSrc,
-				vec3_angle,
-				vecThrow,
-				AngularImpulse(600,random->RandomInt(-1200,1200),0),
-				pBaseCombatCharacter,
-				*pWeaponInfo );
-		}
-	}
-}
-
-ConCommand cc_CreateFlashbangAtEyes( "CreateFlashbangAtEyes", cc_CreateFlashbangAtEyes_f, "Create a prediction error", FCVAR_CHEAT );
-#endif

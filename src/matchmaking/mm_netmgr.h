@@ -1,11 +1,6 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef MM_NETMGR_H
-#define MM_NETMGR_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 class CConnectionlessLanMgr;
 
@@ -36,5 +31,3 @@ protected:
 
 // Match events subscription singleton
 extern CConnectionlessLanMgr *g_pConnectionlessLanMgr;
-
-#endif // MM_EVENTS_H

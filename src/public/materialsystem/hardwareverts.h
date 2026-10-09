@@ -1,7 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Hardware Verts
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Hardware Verts
 // Contains data purposely formatted for a dma copy into a D3D Vertex Buffer.
 // The file is divided into two partitions, the foremost contains the static
 // portion (header), the latter contains the streamable compliant portion.
@@ -9,16 +10,11 @@
 // The header identifies the vertex format of the data and the atomic sizes of each component.
 // The hierarchial mesh is flattened for dma but the vertex counts are available
 // per mesh to transfer each mesh individually.
-//=============================================================================//
-
-#ifndef HARDWAREVERTS_H
-#define HARDWAREVERTS_H
-
 
 #include "datamap.h"
 
 // valve hardware vertexes
-#define VHV_VERSION	2
+inline constexpr auto VHV_VERSION = 2;
 
 namespace HardwareVerts
 {
@@ -76,6 +72,3 @@ struct FileHeader_t
 #pragma pack()
 
 }; // end namespace
-
-#endif // HARDWAREVERTS_H
-

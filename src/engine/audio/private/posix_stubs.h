@@ -1,73 +1,74 @@
-//========= Copyright 1996-2004, Valve LLC, All rights reserved. ============
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
+
 // Purpose: Posix win32 replacements - Mocks trivial windows flow
-//
-//=============================================================================
-#if !defined( POSIX_AUDIO_STUBS_H )
-#define POSIX_AUDIO_STUBS_H
 
-#define DSBCAPS_LOCSOFTWARE		0
+import ks.core;
+import std;
 
-#define DSERR_BUFFERLOST		0
+inline constexpr int DSBCAPS_LOCSOFTWARE = 0;
 
-#define DSBSTATUS_BUFFERLOST	0x02
+inline constexpr int DSERR_BUFFERLOST = 0;
 
-#define DSSPEAKER_GEOMETRY(x)	(((x)>>16) & 0xFFFF)
-#define DSSPEAKER_CONFIG(x)		((x) & 0xFFFF)
+inline constexpr int DSBSTATUS_BUFFERLOST = 0x02;
 
-#define DSSPEAKER_HEADPHONE		-1
-#define DSSPEAKER_QUAD			-2
-#define DSSPEAKER_5POINT1		-3
-#define DSSPEAKER_7POINT1		-4 
+inline constexpr int DSSPEAKER_GEOMETRY( int speakerConfig ) { return ( ( speakerConfig ) >> 16 ) & 0xFFFF; }
+inline constexpr int DSSPEAKER_CONFIG( int speakerConfig ) { return ( speakerConfig ) & 0xFFFF; }
 
-#define DISP_CHANGE_SUCCESSFUL	0
+inline constexpr int DSSPEAKER_HEADPHONE = -1;
+inline constexpr int DSSPEAKER_QUAD = -2;
+inline constexpr int DSSPEAKER_5POINT1 = -3;
+inline constexpr int DSSPEAKER_7POINT1 = -4;
 
-#define HKEY_CURRENT_USER		nullptr
-#define HKEY_LOCAL_MACHINE		nullptr
-#define KEY_QUERY_VALUE			0
+inline constexpr int DISP_CHANGE_SUCCESSFUL = 0;
 
-#define KEY_READ		0
-#define KEY_WRITE		1
-#define KEY_ALL_ACCESS	((ULONG)-1)
+inline constexpr auto HKEY_CURRENT_USER = nullptr;
+inline constexpr auto HKEY_LOCAL_MACHINE = nullptr;
+inline constexpr int KEY_QUERY_VALUE = 0;
 
-#define SMTO_ABORTIFHUNG		0
+inline constexpr int KEY_READ = 0;
+inline constexpr int KEY_WRITE = 1;
+inline constexpr unsigned long KEY_ALL_ACCESS = ~0ul;
 
-#define JOY_RETURNX	0x01
-#define JOY_RETURNY	0x02
-#define JOY_RETURNZ	0x04
-#define JOY_RETURNR	0x08
-#define JOY_RETURNU	0x10
-#define JOY_RETURNV	0x20
+inline constexpr int SMTO_ABORTIFHUNG = 0;
 
-#define JOYCAPS_HASPOV		0x01
-#define JOYCAPS_HASU		0x01
-#define JOYCAPS_HASV		0x01
-#define JOYCAPS_HASR		0x01
-#define JOYCAPS_HASZ		0x01
+inline constexpr int JOY_RETURNX = 0x01;
+inline constexpr int JOY_RETURNY = 0x02;
+inline constexpr int JOY_RETURNZ = 0x04;
+inline constexpr int JOY_RETURNR = 0x08;
+inline constexpr int JOY_RETURNU = 0x10;
+inline constexpr int JOY_RETURNV = 0x20;
 
-#define MMSYSERR_NODRIVER	1
-#define JOYERR_NOERROR		0
-#define	JOY_RETURNCENTERED	0
-#define JOY_RETURNBUTTONS	0
-#define	JOY_RETURNPOV		0
-#define JOY_POVCENTERED		0
-#define JOY_POVFORWARD		0
-#define JOY_POVRIGHT		0
-#define JOY_POVBACKWARD		0
-#define JOY_POVLEFT			0
+inline constexpr int JOYCAPS_HASPOV = 0x01;
+inline constexpr int JOYCAPS_HASU = 0x01;
+inline constexpr int JOYCAPS_HASV = 0x01;
+inline constexpr int JOYCAPS_HASR = 0x01;
+inline constexpr int JOYCAPS_HASZ = 0x01;
 
-#define CCHDEVICENAME		32
-#define CCHFORMNAME			32
+inline constexpr int MMSYSERR_NODRIVER = 1;
+inline constexpr int JOYERR_NOERROR = 0;
+inline constexpr int JOY_RETURNCENTERED = 0;
+inline constexpr int JOY_RETURNBUTTONS = 0;
+inline constexpr int JOY_RETURNPOV = 0;
+inline constexpr int JOY_POVCENTERED = 0;
+inline constexpr int JOY_POVFORWARD = 0;
+inline constexpr int JOY_POVRIGHT = 0;
+inline constexpr int JOY_POVBACKWARD = 0;
+inline constexpr int JOY_POVLEFT = 0;
+
+inline constexpr int CCHDEVICENAME = 32;
+inline constexpr int CCHFORMNAME = 32;
 
 typedef wchar_t BCHAR;
 
 typedef uint MMRESULT;
-typedef uintptr_t DWORD_PTR;
+typedef std::uintptr_t DWORD_PTR;
 typedef const char *LPCSTR;
 typedef uint POINTL;
 
-#define IDLE_PRIORITY_CLASS	1
-#define HIGH_PRIORITY_CLASS 2
+inline constexpr int IDLE_PRIORITY_CLASS = 1;
+inline constexpr int HIGH_PRIORITY_CLASS = 2;
 
 typedef struct _devicemode { 
   BCHAR  dmDeviceName[CCHDEVICENAME]; 
@@ -150,38 +151,35 @@ typedef struct {
     DWORD     dwAudio; 
 } MCI_SET_PARMS;
 
-#define MCI_MAKE_TMSF(t, m, s, f)	((DWORD)(((BYTE)(t) | ((WORD)(m) << 8)) | ((DWORD)(BYTE)(s) | ((WORD)(f)<<8)) << 16)) 
-#define MCI_MSF_MINUTE(msf)			((BYTE)(msf)) 
-#define MCI_MSF_SECOND(msf)			((BYTE)(((WORD)(msf)) >> 8)) 
 
-#define MCI_OPEN					0
-#define MCI_OPEN_TYPE				0
-#define MCI_OPEN_SHAREABLE			0
-#define MCI_FORMAT_TMSF				0
-#define MCI_SET_TIME_FORMAT			0
-#define MCI_CLOSE					0
-#define MCI_STOP					0
-#define MCI_PAUSE					0
-#define MCI_PLAY					0
-#define MCI_SET						0
-#define MCI_SET_DOOR_OPEN			0
-#define MCI_SET_DOOR_CLOSED			0
-#define MCI_STATUS_READY			0
-#define MCI_STATUS					0
-#define MCI_STATUS_ITEM				0
-#define MCI_STATUS_WAIT				0
-#define MCI_STATUS_NUMBER_OF_TRACKS	0
-#define MCI_CDA_STATUS_TYPE_TRACK	0
-#define MCI_TRACK					0
-#define MCI_WAIT					0
-#define MCI_CDA_TRACK_AUDIO			0
-#define MCI_STATUS_LENGTH			0
-#define MCI_NOTIFY					0
-#define MCI_FROM					0
-#define MCI_TO						0
-#define MCIERR_DRIVER				-1
+inline constexpr int MCI_OPEN = 0;
+inline constexpr int MCI_OPEN_TYPE = 0;
+inline constexpr int MCI_OPEN_SHAREABLE = 0;
+inline constexpr int MCI_FORMAT_TMSF = 0;
+inline constexpr int MCI_SET_TIME_FORMAT = 0;
+inline constexpr int MCI_CLOSE = 0;
+inline constexpr int MCI_STOP = 0;
+inline constexpr int MCI_PAUSE = 0;
+inline constexpr int MCI_PLAY = 0;
+inline constexpr int MCI_SET = 0;
+inline constexpr int MCI_SET_DOOR_OPEN = 0;
+inline constexpr int MCI_SET_DOOR_CLOSED = 0;
+inline constexpr int MCI_STATUS_READY = 0;
+inline constexpr int MCI_STATUS = 0;
+inline constexpr int MCI_STATUS_ITEM = 0;
+inline constexpr int MCI_STATUS_WAIT = 0;
+inline constexpr int MCI_STATUS_NUMBER_OF_TRACKS = 0;
+inline constexpr int MCI_CDA_STATUS_TYPE_TRACK = 0;
+inline constexpr int MCI_TRACK = 0;
+inline constexpr int MCI_WAIT = 0;
+inline constexpr int MCI_CDA_TRACK_AUDIO = 0;
+inline constexpr int MCI_STATUS_LENGTH = 0;
+inline constexpr int MCI_NOTIFY = 0;
+inline constexpr int MCI_FROM = 0;
+inline constexpr int MCI_TO = 0;
+inline constexpr int MCIERR_DRIVER = -1;
 
-#define	DSERR_ALLOCATED				0
+inline constexpr int DSERR_ALLOCATED = 0;
 
 #pragma pack(push, 1)
 typedef struct tWAVEFORMATEX
@@ -230,5 +228,3 @@ typedef struct adpcmwaveformat_tag {
 } ADPCMWAVEFORMAT;
 
 #pragma pack(pop)
-#endif
-

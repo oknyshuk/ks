@@ -1,21 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef VTF_H
-#define VTF_H
-
-
+import ks.math;
 #include "bitmap/imageformat.h"
-#include "tier0/platform.h"
 
 #include "vtf/vtf_declarations.h"
 
 // #define VTF_FILE_FORMAT_ONLY to just include the vtf header and none of the code declaration
-#ifndef VTF_FILE_FORMAT_ONLY
 
 
 
@@ -39,11 +31,11 @@ public:
 
 	// set the resource data (for writers). pass size=0 to delete data. if pdata is not null,
 	// the resource data will be copied from *pData
-	virtual void *SetResourceData( uint32 eType, void const *pData, size_t nDataSize ) = 0;
+	virtual void *SetResourceData( uint32 eType, void const *pData, std::size_t nDataSize ) = 0;
 
 	// find the resource data and return a pointer to it. The data pointed to by this pointer will
 	// go away when the ivtftexture does. retruns null if resource not present
-	virtual void *GetResourceData( uint32 eType, size_t *pDataSize ) const = 0;
+	virtual void *GetResourceData( uint32 eType, std::size_t *pDataSize ) const = 0;
 
 	// Locates the resource entry info if it's present, easier than crawling array types
 	virtual bool HasResourceEntry( uint32 eType ) const = 0;
@@ -221,9 +213,7 @@ bool SRGBCorrectImage( uint8 *pImage,int imageSize, ImageFormat	imageFormat);
 bool GetVTFPreload360Data( const char *pDebugName, ks::byte_reader &fileBufferIn, ks::byte_writer &preloadBufferOut );
 bool GetVTFPreloadPS3Data( const char *pDebugName, ks::byte_reader &fileBufferIn, ks::byte_writer &preloadBufferOut );
 
-#include "mathlib/vector.h"
-
-#endif // VTF_FILE_FORMAT_ONLY
+import std;
 
 //-----------------------------------------------------------------------------
 // Disk format for VTF files ver. 7.2 and earlier
@@ -274,8 +264,8 @@ bool GetVTFPreloadPS3Data( const char *pDebugName, ks::byte_reader &fileBufferIn
 #pragma pack(1)
 
 // version number for the disk texture cache
-#define VTF_MAJOR_VERSION 7
-#define VTF_MINOR_VERSION 5
+inline constexpr auto VTF_MAJOR_VERSION = 7;
+inline constexpr auto VTF_MINOR_VERSION = 5;
 
 //-----------------------------------------------------------------------------
 // !!!!CRITICAL!!!! BEFORE YOU CHANGE THE FORMAT
@@ -322,7 +312,7 @@ struct VTFFileHeaderV7_2_t : public VTFFileHeaderV7_1_t
 	uint16 depth;
 };
 
-#define BYTE_POS( byteVal, shft )	uint32( uint32(uint8(byteVal)) << uint8(shft * 8) )
+template <typename T1, typename T2> [[gnu::always_inline]] inline constexpr auto BYTE_POS( T1 byteVal, T2 shft ) { return uint32( uint32(uint8(byteVal)) << uint8(shft * 8) ); }
 #define MK_VTF_RSRC_ID(a, b, c)		uint32( BYTE_POS(a, 0) | BYTE_POS(b, 1) | BYTE_POS(c, 2) )
 #define MK_VTF_RSRCF(d)				BYTE_POS(d, 3)
 
@@ -379,8 +369,8 @@ struct VTFFileHeader_t : public VTFFileHeaderV7_3_t
 {
 };
 
-#define VTF_X360_MAJOR_VERSION	0x0360
-#define VTF_X360_MINOR_VERSION	8
+inline constexpr auto VTF_X360_MAJOR_VERSION = 0x0360;
+inline constexpr auto VTF_X360_MINOR_VERSION = 8;
 struct VTFFileHeaderX360_t : public VTFFileBaseHeader_t 
 {
 	uint32	flags;
@@ -401,9 +391,9 @@ struct VTFFileHeaderX360_t : public VTFFileBaseHeader_t
 };
 
 // PS3 version of the vtf file header. This is just a copy of the 360 file header
-#define VTF_PS3_MAJOR_VERSION	0x0333
-#define VTF_PS3_MINOR_VERSION	8
-struct ALIGN16 VTFFileHeaderPS3_t : public VTFFileBaseHeader_t 
+inline constexpr auto VTF_PS3_MAJOR_VERSION = 0x0333;
+inline constexpr auto VTF_PS3_MINOR_VERSION = 8;
+struct alignas( 16 ) VTFFileHeaderPS3_t : public VTFFileBaseHeader_t 
 {
 	uint32	flags;
 	uint16	width;					// actual width of data in file
@@ -422,8 +412,7 @@ struct ALIGN16 VTFFileHeaderPS3_t : public VTFFileBaseHeader_t
 	uint8 _padding_ps3[4];			// padding it to 64 bytes
 
 	// *** followed by *** ResourceEntryInfo resources[0];
-}
-ALIGN16_POST;
+};
 
 ///////////////////////////
 //  Resource Extensions  //
@@ -461,5 +450,3 @@ struct TextureSettingsEx_t
 #define VTF_RSRC_TEXTURE_CRC ( MK_VTF_RSRC_ID( 'C','R','C' ) )
 
 #pragma pack()
-
-#endif // VTF_H

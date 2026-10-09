@@ -1,10 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.core;
 #include "baseanimatedtextureproxy.h"
 
 #include "imaterialproxydict.h"
@@ -24,4 +22,3 @@ float CAnimatedTextureProxy::GetAnimationStartTime( void* pBaseEntity )
 {
 	return 0;
 }
-

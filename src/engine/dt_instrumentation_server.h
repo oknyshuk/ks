@@ -1,14 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DATATABLE_INSTRUMENTATION_SERVER_H
-#define DATATABLE_INSTRUMENTATION_SERVER_H
-
-#include "tier0/fasttimer.h"
+import ks.core;
 #include "iservernetworkable.h"
 
 
@@ -99,5 +93,3 @@ inline void ServerDTI_RegisterNetworkStateChange( SendTable *pTable, bool bState
 		_ServerDTI_RegisterNetworkStateChange( pTable, bStateChanged );
 	}
 }
-
-#endif // DATATABLE_INSTRUMENTATION_SERVER_H

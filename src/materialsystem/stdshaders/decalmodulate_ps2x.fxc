@@ -1,8 +1,10 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-// paired with "vertexlit_and_unlit_generic_vs##"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+// Purpose: paired with "vertexlit_and_unlit_generic_vs##"
 // STATIC: "VERTEXALPHA"		"0..1"
 // STATIC: "FOGFADE"		"0..1"
+
 #include "common_fog_ps_fxc.h"
 
 #include "common_ps_fxc.h"

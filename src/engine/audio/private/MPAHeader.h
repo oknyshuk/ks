@@ -1,16 +1,11 @@
-//====== Copyright 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef MPAHEADER_H
-#define MPAHEADER_H
-
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#define MPA_HEADER_SIZE 4	// MPEG-Audio Header Size 32bit
-#define MAXTIMESREAD 5
+import ks.core;
+
+inline constexpr auto MPA_HEADER_SIZE = 4; // MPEG-Audio Header Size 32bit
+inline constexpr auto MAXTIMESREAD = 5;
 
 class CMPAFile;
 
@@ -109,5 +104,3 @@ private:
 	HeaderError DecodeHeader( uint32 dwHeader, bool bSimpleDecode = false );
 	inline HeaderError IsSync( uint32 dwOffset, bool bExtended );
 };
-
-#endif // MPAHEADER_H

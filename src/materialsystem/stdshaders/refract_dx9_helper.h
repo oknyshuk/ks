@@ -1,13 +1,9 @@
-//====== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#ifndef REFRACT_DX9_HELPER_H
-#define REFRACT_DX9_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -22,7 +18,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct Refract_DX9_Vars_t
 {
-	Refract_DX9_Vars_t() { memset( this, 0xFF, sizeof( *this ) ); }
+	Refract_DX9_Vars_t() { std::memset( this, 0xFF, sizeof( *this ) ); }
 
 	int m_nBaseTexture;
 	int m_nFrame;
@@ -61,5 +57,3 @@ void InitParamsRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, const
 void InitRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, Refract_DX9_Vars_t &info );
 void DrawRefract_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 					 IShaderShadow* pShaderShadow, Refract_DX9_Vars_t &info, VertexCompressionType_t vertexCompression );
-
-#endif // REFRACT_DX9_HELPER_H

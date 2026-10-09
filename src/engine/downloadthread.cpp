@@ -1,10 +1,6 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 //--------------------------------------------------------------------------------------------------------------
 // downloadthread.cpp
 // 
@@ -19,20 +15,14 @@
 #undef PROTECT_FILEIO_FUNCTIONS
 #undef fopen
 
-#include <assert.h>
-#include <sys/stat.h>
-#include <stdio.h>
+import std;
 
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
-#include "tier0/threadtools.h"
+import ks.tier1;
 #include "download_internal.h"
-#include "tier1/strtools.h"
 
 
 uintp DownloadThread( void *voidPtr )
 {
-	Assert( !"Impl me" );
+	contract_assert( !"Impl me" );
 	return 0;
 }
-

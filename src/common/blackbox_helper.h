@@ -1,11 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-#ifndef BLACKBOX_HELPER_H
-#define BLACKBOX_HELPER_H 1
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-void BlackBox_Record(const char * type, PRINTF_FORMAT_STRING const char *fmt, ...);
-
-#endif
+void BlackBox_Record(const char * type, const char *fmt, ...);

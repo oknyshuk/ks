@@ -1,10 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+#include "cdll_util.h"
+#include "cdll_client_int.h"
+#elif defined(GAME_DLL)
+import ks.tier1;
+import ks.math;
+#include "string_t.h"
+#include "edict.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#endif
 #include "cs_shareddefs.h"
 #include "gametypes/igametypes.h"
 #include "econ/econ_item_schema_minimal.h"
@@ -135,14 +161,14 @@ const PlayerViewmodelArmConfig *GetPlayerViewmodelArmConfigForPlayerModel( const
 {
 	if ( szPlayerModel != nullptr )
 	{
-		for ( int i=0; i<ARRAYSIZE(s_playerViewmodelArmConfigs); i++ )
+		for ( int i=0; i<std::size( s_playerViewmodelArmConfigs ); i++ )
 		{
 			if ( V_stristr( szPlayerModel, s_playerViewmodelArmConfigs[i].szPlayerModelSearchSubStr ) )
 				return &s_playerViewmodelArmConfigs[i];
 		}
 	}
 
-	AssertMsg1( false, "Could not determine viewmodel config for character model: %s", szPlayerModel );
+	contract_assert( false && "Could not determine viewmodel config for character model: %s" );
 	return &s_playerViewmodelArmConfigs[0];
 }
 
@@ -162,13 +188,13 @@ bool PlayerModelInfo::IsCTClass( int i )
 
 const char *PlayerModelInfo::GetClassName( int classID )
 {
-	AssertMsg( classID >= GetFirstClass() && classID <= GetLastClass(), "Invalid class ID for models loaded.\n ");
+	contract_assert( ( classID >= GetFirstClass() && classID <= GetLastClass() ) && "Invalid class ID for models loaded.\n " );
 	return m_ClassNames[classID-1];
 }
 
 const char *PlayerModelInfo::GetClassModelPath( int classID )
 {
-	AssertMsg( classID >= GetFirstClass() && classID <= GetLastClass(), "Invalid class ID for models loaded.\n ");
+	contract_assert( ( classID >= GetFirstClass() && classID <= GetLastClass() ) && "Invalid class ID for models loaded.\n " );
 	return m_ClassModelPaths[classID-1];
 }
 
@@ -309,14 +335,14 @@ void PlayerModelInfo::InitializeForCurrentMap( void )
 
 void PlayerModelInfo::AddModel( const char *modelName )
 {
-	Assert( modelName );
+	contract_assert( modelName );
 	if ( !modelName ||
 		 modelName[0] == '\0' )
 	{
 		return;
 	}
 
-	Assert( m_NumModels >= 0 && m_NumModels < CS_MAX_PLAYER_MODELS );
+	contract_assert( m_NumModels >= 0 && m_NumModels < CS_MAX_PLAYER_MODELS );
 	if ( m_NumModels >= 0 && m_NumModels < CS_MAX_PLAYER_MODELS )
 	{
 		V_strcpy_safe( m_ClassNames[m_NumModels], modelName );
@@ -336,7 +362,7 @@ void PlayerModelInfo::AddModel( const char *modelName )
 
 			if ( !filesystem->FileExists( szRedirectedPath, "MOD" ) )
 			{
-				AssertMsg1( false, "Verify map .kv: Player model doesn't exist: %s.", szRedirectedPath );
+				contract_assert( false && "Verify map .kv: Player model doesn't exist: %s." );
 
 				// Get a full path to the mdl file.
 				if ( !V_stristr( modelName, "models/player" ) && !V_stristr( modelName, ".mdl" ) )
@@ -375,8 +401,6 @@ const char* QuestProgress::ReasonString(Reason reason)
 		return "not_enough_players";
 	case QUEST_WARMUP:
 		return "warmup";
-	case QUEST_NOT_CONNECTED_TO_STEAM:
-		return "not_connected_to_steam";
 	case QUEST_NONOFFICIAL_SERVER:
 		return "nonofficial_server";
 	case QUEST_NO_ENTITLEMENT:

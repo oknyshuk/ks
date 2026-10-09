@@ -3,18 +3,29 @@
 // Author: Michael Booth, February 2005
 // Copyright (c) 2005 Turtle Rock Studios, Inc. - All Rights Reserved
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
-#include "igamesystem.h"
 #include "hud_macros.h"
 #include "view.h"
 #include "enginesprite.h"
 #include "precache_register.h"
 #include "iefx.h"
 #include "dlight.h"
-#include "tier0/vprof.h"
-#include "debugoverlay_shared.h"
 #include "basecsgrenade_projectile.h"
 #include "clientinferno.h"
 
@@ -80,7 +91,7 @@ void C_Inferno::Spawn( void )
  */
 void C_Inferno::ClientThink()
 {
-	VPROF_BUDGET( "C_Inferno::ClientThink", "Magic" );
+	CVProfScope _( "C_Inferno::ClientThink", 0, "Magic", false, BUDGETFLAG_OTHER );
 
 	bool bIsAttachedToMovingObject = (GetMoveParent() != nullptr) ? true : false;
 
@@ -338,7 +349,7 @@ C_Inferno::Drawable *C_Inferno::GetDrawable( const Vector &pos )
  */
 void C_Inferno::SynchronizeDrawables( void )
 {
-	VPROF_BUDGET( "C_Inferno::SynchronizeDrawables", "Magic" );
+	CVProfScope _( "C_Inferno::SynchronizeDrawables", 0, "Magic", false, BUDGETFLAG_OTHER );
 
 	int i;
 
@@ -454,7 +465,7 @@ void C_Inferno::SynchronizeDrawables( void )
 //-----------------------------------------------------------------------------------------------
 int C_Inferno::DrawModel( int flags, const RenderableInstance_t &instance )
 {
-	VPROF_BUDGET( "C_Inferno::DrawModel", "DeadRun" );
+	CVProfScope _( "C_Inferno::DrawModel", 0, "DeadRun", false, BUDGETFLAG_OTHER );
 
 	IMaterial		*material;
 	CEngineSprite	*sprite;

@@ -1,14 +1,8 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =====//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <atomic>
-#include <mutex>
+import std;
+import ks.vstdlib;
 #include "engine/IEngineTrace.h"
 #include "icliententitylist.h"
 #include "ispatialpartitioninternal.h"
@@ -19,23 +13,11 @@
 #include "server.h"
 #include "edict.h"
 #include "gl_model_private.h"
-#include "world.h"
 #include "vphysics_interface.h"
 #include "client_class.h"
-#include "server_class.h"
 #include "debugoverlay.h"
 #include "collisionutils.h"
-#include "tier0/vprof.h"
-#include "convar.h"
-#include "mathlib/polyhedron.h"
-#include "sys_dll.h"
 #include "vphysics/virtualmesh.h"
-#include <deque>
-#include <unordered_map>
-#include "tier1/refcount.h"
-#include "vstdlib/jobthread.h"
-#include "tier0/microprofiler.h"
-
 
 //-----------------------------------------------------------------------------
 // Various statistics to gather
@@ -60,11 +42,6 @@ ConVar debugraylimit( "debugraylimit", "500", 0, "number of rays per frame that 
 static std::vector< Ray_t > s_FrameRays;
 #endif
 
-#define BENCHMARK_RAY_TEST 0
-
-#if BENCHMARK_RAY_TEST
-static std::vector< Ray_t > s_BenchmarkRays;
-#endif
 
 class CAsyncOcclusionQuery;
 
@@ -72,7 +49,7 @@ class CAsyncOcclusionQuery;
 //-----------------------------------------------------------------------------
 // Implementation of IEngineTrace
 //-----------------------------------------------------------------------------
-abstract_class CEngineTrace : public IEngineTrace
+class CEngineTrace : public IEngineTrace
 {
 public:
 	CEngineTrace()
@@ -149,10 +126,10 @@ public:
 	virtual int GetSetDebugTraceCounter( int value, DebugTraceCounterBehavior_t behavior );
 	virtual const char *GetDebugName( IHandleEntity *pHandleEntity ) = 0;
 
-	virtual bool IsFullyOccluded( int nOcclusionKey, const AABB_t &aabb1, const AABB_t &aabb2, const Vector &vShadow ) OVERRIDE;
-	virtual void SuspendOcclusionTests() OVERRIDE{ m_nOcclusionTestsSuspended++; }
-	virtual void ResumeOcclusionTests()OVERRIDE;
-	virtual void FlushOcclusionQueries() OVERRIDE;
+	virtual bool IsFullyOccluded( int nOcclusionKey, const AABB_t &aabb1, const AABB_t &aabb2, const Vector &vShadow ) override;
+	virtual void SuspendOcclusionTests() override{ m_nOcclusionTestsSuspended++; }
+	virtual void ResumeOcclusionTests()override;
+	virtual void FlushOcclusionQueries() override;
 private:
 	// FIXME: Different versions for client + server. Eventually we need to make these go away
 	virtual void SetTraceEntity( ICollideable *pCollideable, trace_t *pTrace ) = 0;
@@ -234,11 +211,11 @@ public:
 // Expose CVEngineServer to the game + client DLLs
 //-----------------------------------------------------------------------------
 static CEngineTraceServer	s_EngineTraceServer;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CEngineTraceServer, IEngineTrace, INTERFACEVERSION_ENGINETRACE_SERVER, s_EngineTraceServer);
+static InterfaceReg s_Reg_CEngineTraceServer_IEngineTrace( []() -> void * { return static_cast<IEngineTrace *>( &s_EngineTraceServer ); }, INTERFACEVERSION_ENGINETRACE_SERVER );;
 
 #ifndef DEDICATED
 static CEngineTraceClient	s_EngineTraceClient;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CEngineTraceClient, IEngineTrace, INTERFACEVERSION_ENGINETRACE_CLIENT, s_EngineTraceClient);
+static InterfaceReg s_Reg_CEngineTraceClient_IEngineTrace( []() -> void * { return static_cast<IEngineTrace *>( &s_EngineTraceClient ); }, INTERFACEVERSION_ENGINETRACE_CLIENT );;
 #endif
 
 //-----------------------------------------------------------------------------
@@ -255,7 +232,7 @@ IEngineTrace *g_pEngineTraceClient = &s_EngineTraceClient;
 #ifndef DEDICATED
 ICollideable *CEngineTraceClient::GetCollideable( IHandleEntity *pEntity )
 {
-	Assert( pEntity );
+	contract_assert( pEntity );
 
 	ICollideable *pProp = StaticPropMgr()->GetStaticProp( pEntity );
 	if ( pProp )
@@ -268,7 +245,7 @@ ICollideable *CEngineTraceClient::GetCollideable( IHandleEntity *pEntity )
 
 ICollideable *CEngineTraceServer::GetCollideable( IHandleEntity *pEntity )
 {
-	Assert( pEntity );
+	contract_assert( pEntity );
 
 	ICollideable *pProp = StaticPropMgr()->GetStaticProp( pEntity );
 	if ( pProp )
@@ -356,7 +333,7 @@ public:
 		model_t* pModel = (model_t*)pCollide->GetCollisionModel();
 		if ( pModel && pModel->type == mod_brush )
 		{
-			Assert( pCollide->GetCollisionModelIndex() < MAX_MODELS && pCollide->GetCollisionModelIndex() >= 0 );
+			contract_assert( pCollide->GetCollisionModelIndex() < MAX_MODELS && pCollide->GetCollisionModelIndex() >= 0 );
 			int nHeadNode = GetModelHeadNode( pCollide );
 			int contents = CM_TransformedPointContents( vPos, nHeadNode, 
 				pCollide->GetCollisionOrigin(), pCollide->GetCollisionAngles() );
@@ -429,7 +406,7 @@ int	CEngineTrace::GetPointContents_WorldOnly( const Vector &vecAbsPosition, int 
 //-----------------------------------------------------------------------------
 int	CEngineTrace::GetPointContents( const Vector &vecAbsPosition, int contentsMask, IHandleEntity** ppEntity )
 {
-	VPROF( "CEngineTrace_GetPointContents" );
+	CVProfScope _( "CEngineTrace_GetPointContents", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 //	VPROF_BUDGET( "CEngineTrace_GetPointContents", "CEngineTrace_GetPointContents" );
 	
 	m_traceStatCounters[TRACE_STAT_COUNTER_POINTCONTENTS]++;
@@ -551,9 +528,9 @@ bool CEngineTrace::ClipRayToHitboxes( const Ray_t& ray, unsigned int fMask, ICol
 		pTrace->hitbox = hitboxTrace.hitbox;
 		pTrace->physicsbone = hitboxTrace.physicsbone;
 		pTrace->surface = hitboxTrace.surface;
-		Assert( pTrace->physicsbone >= 0 );
+		contract_assert( pTrace->physicsbone >= 0 );
 		// Fill out the surfaceprop details from the hitbox. Use the physics bone instead of the hitbox bone
-		Assert(pTrace->surface.flags == SURF_HITBOX);
+		contract_assert( pTrace->surface.flags == SURF_HITBOX );
 	}
 
 	return true;
@@ -595,6 +572,7 @@ public:
 
 void CEngineTrace::GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, CBrushQuery &BrushQuery, int nContentsMask, int nCModelIndex )
 {
+	ks::ScratchArena<> scratch;
 	BrushQuery.ReleasePrivateData();
 
 	//similar to CM_BoxTraceAgainstLeafList() but tracking every brush we intersect
@@ -622,11 +600,11 @@ void CEngineTrace::GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, C
 	pTraceInfo->m_ispoint = false;
 	pTraceInfo->m_isswept = false;
 
-	int *pLeafList = (int *)stackalloc( pTraceInfo->m_pBSPData->numleafs * sizeof( int ) );
+	int *pLeafList = (int *)scratch.AllocBytes( pTraceInfo->m_pBSPData->numleafs * sizeof( int ) );
 	int iNumLeafs = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pTraceInfo->m_pBSPData->numleafs, nullptr, nCModelIndex );
 
 	TraceCounter_t *pVisitedBrushes = pTraceInfo->m_BrushCounters[0].data();
-	Plat_FastMemset( pVisitedBrushes, 0, std::ssize( pTraceInfo->m_BrushCounters[0] ) * sizeof(TraceCounter_t) );
+	std::memset( pVisitedBrushes, 0, std::ssize( pTraceInfo->m_BrushCounters[0] ) * sizeof(TraceCounter_t) );
 
 	TraceCounter_t *pKeepBrushes = pTraceInfo->m_BrushCounters[1].data();
 	int iKeepBrushCount = 0;
@@ -655,7 +633,7 @@ void CEngineTrace::GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, C
 			if ( pTraceInfo->m_trace.allsolid )
 			{
 				//store the brush
-				Assert( iKeepBrushCount < std::ssize( pTraceInfo->m_BrushCounters[0] ) );
+				contract_assert( iKeepBrushCount < std::ssize( pTraceInfo->m_BrushCounters[0] ) );
 
 				pKeepBrushes[iKeepBrushCount] = iBrushNumber;
 				++iKeepBrushCount;
@@ -740,7 +718,7 @@ void CEngineTrace::GetBrushesInCollideable( ICollideable *pCollideable, CBrushQu
 
 	for( int i = 0; i != 2; ++i )
 	{
-		memset( pTraceInfo->m_BrushCounters[i].data(), 0, std::ssize( pTraceInfo->m_BrushCounters[i] ) * sizeof(TraceCounter_t) );
+		std::memset( pTraceInfo->m_BrushCounters[i].data(), 0, std::ssize( pTraceInfo->m_BrushCounters[i] ) * sizeof(TraceCounter_t) );
 	}
 	
 	TraceCounter_t *pKeepBrushes = pTraceInfo->m_BrushCounters[1].data(); //will get modified by GetBrushesInCollideable_r
@@ -777,9 +755,10 @@ void CEngineTrace::GetBrushesInCollideable( ICollideable *pCollideable, CBrushQu
 //-----------------------------------------------------------------------------
 CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs )
 {
+	ks::ScratchArena<> scratch;
 	CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
-	int *pLeafList = (int *)stackalloc( pBSPData->numleafs * sizeof( int ) ); 
+	int *pLeafList = (int *)scratch.AllocBytes( pBSPData->numleafs * sizeof( int ) ); 
 	int iLeafCount = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pBSPData->numleafs, nullptr );
 
 	// Get all the triangles for displacement surfaces in this box, add them to a polysoup
@@ -817,16 +796,16 @@ CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& 
 			virtualmeshlist_t meshTriList;
 			pDispTree->GetVirtualMeshList( &meshTriList );
 
-			Assert ( meshTriList.indexCount%3 == 0 );
-			Assert ( meshTriList.indexCount != 0 );
-			Assert ( meshTriList.indexCount/3 == meshTriList.triangleCount );
+			contract_assert( meshTriList.indexCount%3 == 0 );
+			contract_assert( meshTriList.indexCount != 0 );
+			contract_assert( meshTriList.indexCount/3 == meshTriList.triangleCount );
 
 			// Don't allow more than 64k triangles in a collision model
 			// TODO: Return a list of collidables? How often do we break 64k triangles?
 			iTriCount += meshTriList.triangleCount;
 			if ( iTriCount > 65535 )
 			{
-				AssertMsg ( 0, "Displacement surfaces have too many triangles to duplicate in GetCollidableFromDisplacementsInBox." );
+				contract_assert( false && "Displacement surfaces have too many triangles to duplicate in GetCollidableFromDisplacementsInBox." );
 				EndTrace( pTraceInfo );
 				return nullptr;
 			}
@@ -834,7 +813,7 @@ CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& 
 			for ( int j = 0; j < meshTriList.indexCount; j+=3 )
 			{
 				// Don't index past the index list
-				Assert( j+2 < meshTriList.indexCount );
+				contract_assert( j+2 < meshTriList.indexCount );
 
 				if ( j+2 >= meshTriList.indexCount )
 				{
@@ -848,7 +827,7 @@ CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& 
 				unsigned short i2 = meshTriList.indices[j+2];
 
 				// Don't index past the end of the vert list
-				Assert ( i0 < meshTriList.vertexCount && i1 < meshTriList.vertexCount && i2 < meshTriList.vertexCount );
+				contract_assert( i0 < meshTriList.vertexCount && i1 < meshTriList.vertexCount && i2 < meshTriList.vertexCount );
 
 				if ( i0 >= meshTriList.vertexCount || i1 >= meshTriList.vertexCount || i2 >= meshTriList.vertexCount )
 				{
@@ -861,7 +840,7 @@ CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& 
 				Vector &v1 = meshTriList.pVerts[ i1 ];
 				Vector &v2 = meshTriList.pVerts[ i2 ];
 
-				Assert ( v0.IsValid() && v1.IsValid() && v2.IsValid() );
+				contract_assert( v0.IsValid() && v1.IsValid() && v2.IsValid() );
 
 				// We don't need exact clipping to the box... Include any triangle that has at least one vert on the inside
 				if ( IsPointInBox( v0, vMins, vMaxs ) || IsPointInBox( v1, vMins, vMaxs ) || IsPointInBox( v2, vMins, vMaxs ) )
@@ -896,10 +875,11 @@ CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& 
 //-----------------------------------------------------------------------------
 int CEngineTrace::GetMeshesFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs, virtualmeshlist_t *pOutputMeshes, int iMaxOutputMeshes )
 {
+	ks::ScratchArena<> scratch;
 	int iMeshesWritten = 0;
 	CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
-	int *pLeafList = (int *)stackalloc( pBSPData->numleafs * sizeof( int ) ); 
+	int *pLeafList = (int *)scratch.AllocBytes( pBSPData->numleafs * sizeof( int ) ); 
 	int iLeafCount = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pBSPData->numleafs, nullptr );
 
 	TraceInfo_t *pTraceInfo = BeginTrace();
@@ -943,7 +923,9 @@ int CEngineTrace::GetMeshesFromDisplacementsInAABB( const Vector& vMins, const V
 	return iMeshesWritten;
 }
 
-CON_COMMAND( disp_list_all_collideable, "List all collideable displacements" )
+static void disp_list_all_collideable( const CCommand &args );
+static ConCommand disp_list_all_collideable_command( "disp_list_all_collideable", disp_list_all_collideable, "List all collideable displacements" );
+static void disp_list_all_collideable( const CCommand &args )
 {
 	int nPhysicsCollide = 0, nHullCollide = 0, nRayCollide = 0;
 	ConMsg( "Displacement list:\n" );
@@ -1040,7 +1022,7 @@ int CEngineTrace::GetBrushInfo( int iBrush, int &ContentsOut, BrushSideInfo_t *p
 bool CEngineTrace::PointOutsideWorld( const Vector &ptTest )
 {
 	int iLeaf = CM_PointLeafnum( ptTest );
-	Assert( iLeaf >= 0 );
+	contract_assert( iLeaf >= 0 );
 
 	CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
@@ -1096,7 +1078,7 @@ public:
 			return m_pStudioHdr->contents;
 		}
 
-		Assert( convexGameData <= m_pStudioHdr->numbones );
+		contract_assert( convexGameData <= m_pStudioHdr->numbones );
 		const mstudiobone_t *pBone = m_pStudioHdr->pBone(convexGameData - 1);
 		return pBone->contents;
 	}
@@ -1162,7 +1144,7 @@ bool CEngineTrace::ClipRayToVPhysics( const Ray_t &ray, unsigned int fMask, ICol
 	}
 	else
 	{
-		Assert(pModel->type != mod_studio);
+		contract_assert( pModel->type != mod_studio );
 		// use the regular code for raytraces against brushes
 		// do ray traces with normal code, but use vphysics to do box traces
 		if ( !ray.m_IsRay || pModel->type != mod_brush )
@@ -1211,13 +1193,13 @@ bool CEngineTrace::ClipRayToBSP( const Ray_t &ray, unsigned int fMask, ICollidea
 // NOTE: Switched over to SIMD ray/box test since there is a bug we haven't hunted down yet in the scalar version
 bool CEngineTrace::ClipRayToBBox( const Ray_t &ray, unsigned int fMask, ICollideable *pEntity, trace_t *pTrace )
 {
-	extern bool IntersectRayWithBox( const Ray_t &ray, const VectorAligned &inInvDelta, const VectorAligned &inBoxMins, const VectorAligned &inBoxMaxs, trace_t *RESTRICT pTrace );
+	extern bool IntersectRayWithBox( const Ray_t &ray, const VectorAligned &inInvDelta, const VectorAligned &inBoxMins, const VectorAligned &inBoxMaxs, trace_t *__restrict__ pTrace );
 
 	if ( pEntity->GetSolid() != SOLID_BBOX )
 		return false;
 
 	// We can't use the OBBMins/Maxs unless the collision angles are world-aligned
-	Assert( pEntity->GetCollisionAngles() == vec3_angle );
+	contract_assert( pEntity->GetCollisionAngles() == vec3_angle );
 
 	VectorAligned vecAbsMins, vecAbsMaxs;
 	VectorAligned vecInvDelta;
@@ -1435,9 +1417,9 @@ void CEngineTrace::ClipRayToCollideable( const Ray_t &ray, unsigned int fMask, I
 	VectorAdd( ray.m_Start, ray.m_StartOffset, vecOffset );
 	VectorMA( vecOffset, pTrace->fractionleftsolid, ray.m_Delta, vecEndTest );
 	// <sergiy> changing this from absolute to relative error, because the vector lengths are often over 1000
-	Assert( ( vecEndTest - pTrace->startpos ).Length() < 0.01f + 0.001f * vecEndTest.Length() + pTrace->startpos.Length( ) ) ;
+	contract_assert( ( vecEndTest - pTrace->startpos ).Length() < 0.01f + 0.001f * vecEndTest.Length() + pTrace->startpos.Length( ) ) ;
 	VectorMA( vecOffset, pTrace->fraction, ray.m_Delta, vecEndTest );
-	Assert( ( vecEndTest - pTrace->endpos ).Length() < 0.01f + 0.001f * vecEndTest.Length() + pTrace->endpos.Length( ) ) ;
+	contract_assert( ( vecEndTest - pTrace->endpos ).Length() < 0.01f + 0.001f * vecEndTest.Length() + pTrace->endpos.Length( ) ) ;
 #endif
 	const_cast<Ray_t &>(ray).m_pWorldAxisTransform = pOldTransform;
 }
@@ -1636,7 +1618,7 @@ const char *CEngineTraceClient::GetDebugName( IHandleEntity *pHandleEntity )
 ICollideable *CEngineTraceClient::GetWorldCollideable()
 {
 	IClientEntity *pUnk = entitylist->GetClientEntity( 0 );
-	AssertOnce( pUnk );
+	contract_assert( pUnk );
 	return pUnk ? pUnk->GetCollideable() : nullptr;
 }
 #endif
@@ -1740,7 +1722,7 @@ IterationRetval_t CTraceListData::EnumElement( IHandleEntity *pHandleEntity )
 	// Check for error condition.
 	if ( !IsSolid( pCollideable->GetSolid(), pCollideable->GetSolidFlags() ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		if ( pCollideable->GetCollisionModel() )
 		{
 			Msg("%s in solid list (not solid) (%d, %04X) %.*s\n", m_pEngineTrace->GetDebugName(pHandleEntity), pCollideable->GetSolid(), pCollideable->GetSolidFlags(),
@@ -1785,7 +1767,7 @@ void CEngineTrace::SetupLeafAndEntityListRay( const Ray_t &ray, ITraceListData *
 //-----------------------------------------------------------------------------
 void CEngineTrace::SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, ITraceListData *pTraceData )
 {
-	VPROF("SetupLeafAndEntityListBox");
+	CVProfScope _( "SetupLeafAndEntityListBox", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	CTraceListData &traceData = *static_cast<CTraceListData *>(pTraceData);
 	traceData.Reset();
 	traceData.m_pEngineTrace = this;
@@ -1810,7 +1792,7 @@ void CEngineTrace::SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vec
 void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, ITraceListData *pTraceData,
 										             unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace )
 {
-	VPROF("TraceRayAgainstLeafAndEntityList");
+	CVProfScope _( "TraceRayAgainstLeafAndEntityList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	CTraceListData &traceData = *static_cast<CTraceListData *>(pTraceData);
 	Vector rayMins, rayMaxs;
 	ComputeRayBounds( ray, rayMins, rayMaxs );
@@ -1938,284 +1920,7 @@ void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, ITraceLis
 	}
 }
 
-#if BENCHMARK_RAY_TEST
-
-ConVar ray_count_max("ray_count_max","8");
-ConVar ray_batch_extents("ray_batch_extents","96");
-ConVar ray_batch_iterations("ray_batch_iterations","20");
-CON_COMMAND( ray_save, "Save the rays" )
-{
-	int count = s_BenchmarkRays.Count();
-	if ( count )
-	{
-		FileHandle_t hFile = g_pFileSystem->Open("rays.bin", "wb");
-		if ( hFile )
-		{
-			g_pFileSystem->Write( &count, sizeof(count), hFile );
-			g_pFileSystem->Write( s_BenchmarkRays.Base(), sizeof(s_BenchmarkRays[0])*count, hFile );
-			g_pFileSystem->Close( hFile );
-		}
-	}
-
-	Msg("Saved %d rays\n", count );
-}
-
-CON_COMMAND( ray_load, "Load the rays" )
-{
-	s_BenchmarkRays.RemoveAll();
-	FileHandle_t hFile = g_pFileSystem->Open("rays.bin", "rb");
-	if ( hFile )
-	{
-		int count = 0;
-		g_pFileSystem->Read( &count, sizeof(count), hFile );
-		if ( count )
-		{
-			s_BenchmarkRays.EnsureCount( count );
-			g_pFileSystem->Read( s_BenchmarkRays.Base(), sizeof(s_BenchmarkRays[0])*count, hFile );
-		}
-		g_pFileSystem->Close( hFile );
-	}
-
-	Msg("Loaded %d rays\n", s_BenchmarkRays.Count() );
-}
-
-CON_COMMAND( ray_clear, "Clear the current rays" )
-{
-	s_BenchmarkRays.RemoveAll();
-	Msg("Reset rays!\n");
-}
-
-
-struct ray_batch_t
-{
-	Vector mins;
-	Vector maxs;
-	int start;
-	int count;
-};
-
-CON_COMMAND_EXTERN( ray_batch_bench, RayBatchBench, "Time batches of rays" )
-{
-	const int MAX_RAY_BATCHES = 1024;
-	ray_batch_t batches[MAX_RAY_BATCHES];
-	int batchCount = 0;
-	for ( int i = 0; i < s_BenchmarkRays.Count(); i++ )
-	{
-		if ( !s_BenchmarkRays[i].m_IsRay )
-		{
-			int count = 0;
-			Vector mins, maxs;
-			ClearBounds(mins, maxs);
-			for ( int j = i; j < s_BenchmarkRays.Count(); j++ )
-			{
-				if ( s_BenchmarkRays[j].m_IsRay )
-					break;
-				Vector tmpMins, tmpMaxs;
-				ComputeRayBounds( s_BenchmarkRays[j], tmpMins, tmpMaxs );
-				AddPointToBounds( tmpMins, mins, maxs );
-				AddPointToBounds( tmpMaxs, mins, maxs );
-				Vector ext = maxs - mins;
-				float maxSize = std::max(ext[0], ext[1]);
-				maxSize = std::max(maxSize, ext[2]);
-				if ( maxSize > ray_batch_extents.GetFloat() )
-					break;
-				count++;
-				if ( count >= ray_count_max.GetInt() )
-					break;
-			}
-			if ( count >= ray_count_max.GetInt() && batchCount < MAX_RAY_BATCHES )
-			{
-				batches[batchCount].count = count;
-				batches[batchCount].start = i;
-				batches[batchCount].mins = mins;
-				batches[batchCount].maxs = maxs;
-				batchCount++;
-			}
-		}
-	}
-
-	Msg("Testing %d batches of %d\n", batchCount, ray_count_max.GetInt() );
-
-	const int ITERATION_COUNT = ray_batch_iterations.GetInt();
-	float normalTime = 1;
-	// normal trace test
-	if ( 1 )
-	{
-		g_VProfCurrentProfile.Start();
-		g_VProfCurrentProfile.Reset();
-		g_VProfCurrentProfile.ResetPeaks();
-		double tStart = Plat_FloatTime();
-		trace_t trace;
-		for ( int jj = 0; jj < ITERATION_COUNT; jj++ )
-		{
-			for ( int kk = 0; kk < batchCount; kk++)
-			{
-				int batchEnd = batches[kk].start + batches[kk].count;
-
-				for ( int i = batches[kk].start; i < batchEnd; i++ )
-				{
-					CM_BoxTrace( s_BenchmarkRays[i], 0, MASK_SOLID, true, trace );
-					if ( 1 )
-					{
-						// Create a ray that extends only until we hit the world and adjust the trace accordingly
-						Ray_t entityRay = s_BenchmarkRays[i];
-						VectorScale( entityRay.m_Delta, trace.fraction, entityRay.m_Delta );
-						CEntityListAlongRay enumerator;
-						enumerator.Reset();
-						SpatialPartition()->EnumerateElementsAlongRay( PARTITION_ENGINE_SOLID_EDICTS, entityRay, false, &enumerator );
-						trace_t tr;
-						ICollideable *pCollideable;
-						int nCount = enumerator.Count();
-						//float flWorldFraction = trace.fraction;
-						if ( 1 )
-						{
-
-							VPROF("IntersectStaticProps");
-							for ( int i = 0; i < nCount; ++i )
-							{
-								// Generate a collideable
-								IHandleEntity *pHandleEntity = enumerator.m_EntityHandles[i];
-
-								if ( !StaticPropMgr()->IsStaticProp( pHandleEntity ) )
-									continue;
-								pCollideable = s_EngineTraceServer.HandleEntityToCollideable( pHandleEntity );
-								s_EngineTraceServer.ClipRayToCollideable( entityRay, MASK_SOLID, pCollideable, &tr );
-
-								// Make sure the ray is always shorter than it currently is
-								s_EngineTraceServer.ClipTraceToTrace( tr, &trace );
-							}
-						}
-					}
-				}
-				g_VProfCurrentProfile.MarkFrame();
-			}
-		}
-		double tEnd = Plat_FloatTime();
-		float ms = (tEnd - tStart) * 1000.0f;
-		if ( ms > 0 )
-			normalTime = ms;
-		g_VProfCurrentProfile.MarkFrame();
-		g_VProfCurrentProfile.Stop();
-		g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, nullptr );
-		Msg("NORMAL RAY TEST: %.2fms\n", ms );
-	}
-
-	float batchedTime = 1;
-	// batched trace test
-	if ( 1 )
-	{
-		g_VProfCurrentProfile.Start();
-		g_VProfCurrentProfile.Reset();
-		g_VProfCurrentProfile.ResetPeaks();
-		double tStart = Plat_FloatTime();
-		trace_t trace;
-		CTraceFilterHitAll traceFilter;
-		CTraceListData traceData;
-		for ( int jj = 0; jj < ITERATION_COUNT; jj++ )
-		{
-			for ( int kk = 0; kk < batchCount; kk++)
-			{
-
-				int batchEnd = batches[kk].start + batches[kk].count;
-				s_EngineTraceServer.SetupLeafAndEntityListBox( batches[kk].mins, batches[kk].maxs, &traceData );
-				traceData.m_entityList.RemoveAll();	// normal list skips all but static props, so skip them here too for comparison
-				for ( int i = batches[kk].start; i < batchEnd; i++ )
-				{
-					s_EngineTraceServer.TraceRayAgainstLeafAndEntityList( s_BenchmarkRays[i], &traceData, MASK_SOLID, &traceFilter, &trace );
-				}
-				g_VProfCurrentProfile.MarkFrame();
-			}
-		}
-
-		double tEnd = Plat_FloatTime();
-		float ms = (tEnd - tStart) * 1000.0f;
-		if ( ms > 0 )
-			batchedTime = ms;
-
-		g_VProfCurrentProfile.MarkFrame();
-		g_VProfCurrentProfile.Stop();
-		g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, nullptr );
-		Msg("LEAFLIST RAY TEST: %.2fms\n", ms );
-	}
-	float improvement = (normalTime - batchedTime) / normalTime;
-	Msg("%.1f%% improvement due to batching at %d\n", improvement*100.0f, ray_count_max.GetInt());
-}
-
-CON_COMMAND_EXTERN( ray_bench, RayBench, "Time the rays" )
-{
-	g_VProfCurrentProfile.Start();
-	g_VProfCurrentProfile.Reset();
-	g_VProfCurrentProfile.ResetPeaks();
-	{
-		double tStart = Plat_FloatTime();
-		trace_t trace;
-		int hit = 0;
-		int miss = 0;
-		int rayVsProp = 0;
-		int boxVsProp = 0;
-		for ( int i = 0; i < s_BenchmarkRays.Count(); i++ )
-		{
-			CM_BoxTrace( s_BenchmarkRays[i], 0, MASK_SOLID, true, trace );
-			if ( 0 )
-			{
-				VPROF("QueryStaticProps");
-				// Create a ray that extends only until we hit the world and adjust the trace accordingly
-				Ray_t entityRay = s_BenchmarkRays[i];
-				VectorScale( entityRay.m_Delta, trace.fraction, entityRay.m_Delta );
-				CEntityListAlongRay enumerator;
-				enumerator.Reset();
-				SpatialPartition()->EnumerateElementsAlongRay( PARTITION_ENGINE_SOLID_EDICTS, entityRay, false, &enumerator );
-				trace_t tr;
-				ICollideable *pCollideable;
-				int nCount = enumerator.Count();
-				//float flWorldFraction = trace.fraction;
-				if ( 0 )
-				{
-
-					VPROF("IntersectStaticProps");
-				for ( int i = 0; i < nCount; ++i )
-				{
-					// Generate a collideable
-					IHandleEntity *pHandleEntity = enumerator.m_EntityHandles[i];
-
-					if ( !StaticPropMgr()->IsStaticProp( pHandleEntity ) )
-						continue;
-					if ( entityRay.m_IsRay )
-						rayVsProp++;
-					else
-						boxVsProp++;
-					pCollideable = s_EngineTraceServer.HandleEntityToCollideable( pHandleEntity );
-					s_EngineTraceServer.ClipRayToCollideable( entityRay, MASK_SOLID, pCollideable, &tr );
-
-					// Make sure the ray is always shorter than it currently is
-					s_EngineTraceServer.ClipTraceToTrace( tr, &trace );
-				}
-				}
-			}
-			if ( trace.DidHit() )
-				hit++;
-			else
-				miss++;
-			g_VProfCurrentProfile.MarkFrame();
-		}
-		double tEnd = Plat_FloatTime();
-		float ms = (tEnd - tStart) * 1000.0f;
-		int swept = 0;
-		int point = 0;
-		for ( int i = 0; i < s_BenchmarkRays.Count(); i++ )
-		{
-			swept += s_BenchmarkRays[i].m_IsSwept ? 1 : 0;
-			point += s_BenchmarkRays[i].m_IsRay ? 1 : 0;
-		}
-		Msg("RAY TEST: %d hits, %d misses, %.2fms   (%d rays, %d sweeps) (%d ray/prop, %d box/prop)\n", hit, miss, ms, point, swept, rayVsProp, boxVsProp );
-	}
-	g_VProfCurrentProfile.MarkFrame();
-	g_VProfCurrentProfile.Stop();
-	g_VProfCurrentProfile.OutputReport( VPRT_FULL & ~VPRT_HIERARCHY, nullptr );
-}
-#endif
-
-const int32 ALIGN16 g_ClearXYZSign[ 4 ] ALIGN16_POST = { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0 };
+const int32 g_ClearXYZSign[ 4 ] [[gnu::aligned(16)]] = { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0 };
 
 fltx4 TestBoxAinB( const VectorAligned &ptA, const VectorAligned &extA, const VectorAligned &ptB, const VectorAligned &extB )
 {
@@ -2379,11 +2084,11 @@ public:
 		s_occlusionStats.nJobs++;
 		s_occlusionStats.nJobsInFlight++;
 	}
-	virtual ~COcclusionQueryJob() OVERRIDE
+	virtual ~COcclusionQueryJob() override
 	{
 		s_occlusionStats.nJobs--;
 	}
-	virtual JobStatus_t	DoExecute() OVERRIDE;
+	virtual JobStatus_t	DoExecute() override;
 };
 
 static COcclusionQueryJob *s_pOcclusionQueryJob = nullptr;  // this is the job that was last queued to consume the s_occlusionQueries queue
@@ -2400,7 +2105,9 @@ void SpinUpOcclusionJob()
 	s_occlusionStats.nJobRestarts++;
 }
 
-CON_COMMAND_F( occlusion_stats, "Occlusion statistics; [-jitter] [-reset]", FCVAR_RELEASE )
+static void occlusion_stats( const CCommand &args );
+static ConCommand occlusion_stats_command( "occlusion_stats", occlusion_stats, "Occlusion statistics; [-jitter] [-reset]", FCVAR_RELEASE );
+static void occlusion_stats( const CCommand &args )
 {
 	bool bJitter = false, bReset = false, bFlush = false;
 	for ( int i = 1; i < args.ArgC(); ++i )
@@ -2441,7 +2148,7 @@ ConVar occlusion_test_async_jitter( "occlusion_test_async_jitter", "2", FCVAR_CH
 bool IsCastingShadow( const AABB_t &aabb )
 {
 	int nLeafArray[ 1024 ];
-	int nLeafCount = CM_BoxLeafnums( aabb.m_vMinBounds, aabb.m_vMaxBounds, nLeafArray, ARRAYSIZE( nLeafArray ), nullptr );
+	int nLeafCount = CM_BoxLeafnums( aabb.m_vMinBounds, aabb.m_vMaxBounds, nLeafArray, std::size( nLeafArray ), nullptr );
 	s_occlusionStats.nVisLeavesCollected+=nLeafCount;
 	s_occlusionStats.nVisShadowCullCalls++;
 
@@ -2503,7 +2210,7 @@ bool IsFullyOccluded_WithShadow( const AABB_t &aabb1, const AABB_t &aabb2, const
 		);
 }
 
-class ALIGN16 CAsyncOcclusionQuery : public CAlignedNewDelete< 16, CRefCounted< CRefCountServiceMT > >
+class alignas(16) CAsyncOcclusionQuery : public CAlignedNewDelete< 16, CRefCounted< CRefCountServiceMT > >
 {
 public:
 	Vector m_vShadow;
@@ -2521,7 +2228,7 @@ public:
 		s_occlusionStats.nQueries++;
 		Init( aabb0, aabb1, vShadow );
 	}
-	virtual ~CAsyncOcclusionQuery() OVERRIDE
+	virtual ~CAsyncOcclusionQuery() override
 	{
 		if ( !m_bCompleted )
 			s_occlusionStats.nQueriesInFlight--;
@@ -2567,8 +2274,8 @@ public:
 	}
 	void Queue( int nOcclusionTestsSuspended )
 	{
-		Assert( !m_bCancel );
-		Assert( !m_bCompleted );
+		contract_assert( !m_bCancel );
+		contract_assert( !m_bCompleted );
 		AddRef();
 		{
 			std::scoped_lock occlusionQueryLock( s_occlusionQueryMutex );
@@ -2582,7 +2289,7 @@ public:
 		if ( !nOcclusionTestsSuspended || occlusion_test_async.GetInt() >= 2 )
 			SpinUpOcclusionJob();
 	}
-} ALIGN16_POST;
+};
 
 
 JobStatus_t	COcclusionQueryJob::DoExecute()
@@ -2746,7 +2453,7 @@ bool CEngineTrace::IsFullyOccluded( int nOcclusionKey, const AABB_t &aabb0, cons
 void CEngineTrace::TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace )
 {	
 	// check ray extents for bugs
-	Assert(ray.m_Extents.x >=0 && ray.m_Extents.y >= 0 && ray.m_Extents.z >= 0);
+	contract_assert( ray.m_Extents.x >=0 && ray.m_Extents.y >= 0 && ray.m_Extents.z >= 0 );
 
 #if defined _DEBUG && !defined DEDICATED
 	if( debugrayenable.GetBool() )
@@ -2755,15 +2462,7 @@ void CEngineTrace::TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter 
 	}
 #endif
 
-#if BENCHMARK_RAY_TEST
-	if( s_BenchmarkRays.Count() < 15000 )
-	{
-		s_BenchmarkRays.EnsureCapacity(15000);
-		s_BenchmarkRays.AddToTail( ray );
-	}
-#endif
-
-	VPROF_INCREMENT_COUNTER( "TraceRay", 1 );
+	VProfIncrementCounter<"TraceRay">( 1 );
 	m_traceStatCounters[TRACE_STAT_COUNTER_TRACERAY]++;
 //	VPROF_BUDGET( "CEngineTrace::TraceRay", "Ray/Hull Trace" );
 	
@@ -2779,7 +2478,7 @@ void CEngineTrace::TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter 
 	if ( pTraceFilter->GetTraceType() != TRACE_ENTITIES_ONLY )
 	{
 		ICollideable *pCollide = GetWorldCollideable();
-		Assert( pCollide );
+		contract_assert( pCollide );
 
 		// Make sure the world entity is unrotated
 		// FIXME: BAH! The !pCollide test here is because of
@@ -2863,7 +2562,7 @@ void CEngineTrace::TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter 
 		// Check for error condition
 		if ( IsDebug() && !IsSolid( pCollideable->GetSolid(), pCollideable->GetSolidFlags() ) )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			Msg( "%s in solid list (not solid)\n", GetDebugName(pHandleEntity) );
 			continue;
 		}
@@ -2907,9 +2606,9 @@ void CEngineTrace::TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter 
 	Vector vecOffset, vecEndTest;
 	VectorAdd( ray.m_Start, ray.m_StartOffset, vecOffset );
 	VectorMA( vecOffset, pTrace->fractionleftsolid, ray.m_Delta, vecEndTest );
-	Assert( VectorsAreEqual( vecEndTest, pTrace->startpos, 0.1f ) );
+	contract_assert( VectorsAreEqual( vecEndTest, pTrace->startpos, 0.1f ) );
 	VectorMA( vecOffset, pTrace->fraction, ray.m_Delta, vecEndTest );
-	Assert( VectorsAreEqual( vecEndTest, pTrace->endpos, 0.1f ) );
+	contract_assert( VectorsAreEqual( vecEndTest, pTrace->endpos, 0.1f ) );
 //	Assert( !ray.m_IsRay || pTrace->allsolid || pTrace->fraction >= pTrace->fractionleftsolid );
 #endif
 
@@ -2934,7 +2633,7 @@ void CEngineTrace::SweepCollideable( ICollideable *pCollide,
 		unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace )
 {
 	Ray_t ray;
-	Assert( vecAngles == vec3_angle );
+	contract_assert( vecAngles == vec3_angle );
 	ray.Init( vecAbsStart, vecAbsEnd, pCollide->OBBMins(), pCollide->OBBMaxs() );
 	if ( pCollide->GetSolidFlags() & FSOLID_ROOT_PARENT_ALIGNED )
 	{
@@ -3043,8 +2742,7 @@ public:
 /// Used only in debugging: get/set/clear/increment the trace debug counter. See comment below for details.
 int CEngineTrace::GetSetDebugTraceCounter( int value, DebugTraceCounterBehavior_t behavior )
 {
-#ifdef THINK_TRACE_COUNTER_COMPILED
-	extern CTHREADLOCALINT g_DebugTracesRemainingBeforeTrap;
+	extern thread_local int g_DebugTracesRemainingBeforeTrap;
 	if ( DEBUG_THINK_TRACE_COUNTER_ALLOWED() )
 	{
 		const int retval = g_DebugTracesRemainingBeforeTrap;
@@ -3069,9 +2767,6 @@ int CEngineTrace::GetSetDebugTraceCounter( int value, DebugTraceCounterBehavior_
 	{
 		return 0;
 	}
-#else
-	return 0;
-#endif
 }
 
 #ifdef _DEBUG
@@ -3079,7 +2774,9 @@ int CEngineTrace::GetSetDebugTraceCounter( int value, DebugTraceCounterBehavior_
 	//-----------------------------------------------------------------------------
 	// A method to test out sweeps
 	//-----------------------------------------------------------------------------
-	CON_COMMAND( test_sweepaabb, "method to test out sweeps" )
+	static void test_sweepaabb( const CCommand &args );
+static ConCommand test_sweepaabb_command( "test_sweepaabb", test_sweepaabb, "method to test out sweeps" );
+static void test_sweepaabb( const CCommand &args )
 	{
 		Vector vecStartPoint;
 		VectorMA( MainViewOrigin(), 50.0f, MainViewForward(), vecStartPoint );
@@ -3096,7 +2793,7 @@ int CEngineTrace::GetSetDebugTraceCounter( int value, DebugTraceCounterBehavior_
 
 		CEntList list;
 		list.m_pClosest = nullptr;
-		list.m_flClosestDist = FLT_MAX;
+		list.m_flClosestDist = std::numeric_limits<float>::max();
 		g_pEngineTraceServer->EnumerateEntities( MainViewOrigin() - Vector( 200, 200, 200 ), MainViewOrigin() + Vector( 200, 200, 200 ), &list );
 
 		if ( !list.m_pClosest )

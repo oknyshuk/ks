@@ -1,7 +1,48 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#endif
 #include "datamap.h"
 #include "isaverestore.h"
 #include "gamestringpool.h"
@@ -51,11 +92,11 @@ bool ParseKeyvalue( void *pObject, typedescription_t *pFields, int iNumFields, c
 
 			case FIELD_TIME:
 			case FIELD_FLOAT:
-				(*(float *)((char *)pObject + fieldOffset)) = atof( szValue );
+				(*(float *)((char *)pObject + fieldOffset)) = std::atof( szValue );
 				return true;
 
 			case FIELD_BOOLEAN:
-				(*(bool *)((char *)pObject + fieldOffset)) = (bool)(atoi( szValue ) != 0);
+				(*(bool *)((char *)pObject + fieldOffset)) = (bool)(std::atoi( szValue ) != 0);
 				return true;
 
 			case FIELD_CHARACTER:
@@ -108,8 +149,7 @@ bool ParseKeyvalue( void *pObject, typedescription_t *pFields, int iNumFields, c
 			case FIELD_MATERIALINDEX:
 			case FIELD_EDICT:
 				Warning( "Bad field in entity!!\n" );
-				AssertMsg3( 0, "Bad field type %d for %s in entity %.16s!!\n" , pField->fieldType, pField->fieldName, 
-					reinterpret_cast<CBaseEntity *>(pObject)->GetDebugName() );
+				contract_assert( false && "Bad field type %d for %s in entity %.16s!!\n" );
 				break;
 			}
 		}
@@ -158,34 +198,34 @@ bool ExtractKeyvalue( void *pObject, typedescription_t *pFields, int iNumFields,
 			case FIELD_MODELNAME:
 			case FIELD_SOUNDNAME:
 			case FIELD_STRING:
-				Q_strncpy( szValue, ((char *)pObject + fieldOffset), iMaxLen );
+				V_strncpy( szValue, ((char *)pObject + fieldOffset), iMaxLen );
 				return true;
 
 			case FIELD_TIME:
 			case FIELD_FLOAT:
-				Q_snprintf( szValue, iMaxLen, "%f", (*(float *)((char *)pObject + fieldOffset)) );
+				V_snprintf( szValue, iMaxLen, "%f", (*(float *)((char *)pObject + fieldOffset)) );
 				return true;
 
 			case FIELD_BOOLEAN:
-				Q_snprintf( szValue, iMaxLen, "%d", (*(bool *)((char *)pObject + fieldOffset)) != 0);
+				V_snprintf( szValue, iMaxLen, "%d", (*(bool *)((char *)pObject + fieldOffset)) != 0);
 				return true;
 
 			case FIELD_CHARACTER:
-				Q_snprintf( szValue, iMaxLen, "%d", (*(char *)((char *)pObject + fieldOffset)) );
+				V_snprintf( szValue, iMaxLen, "%d", (*(char *)((char *)pObject + fieldOffset)) );
 				return true;
 
 			case FIELD_SHORT:
-				Q_snprintf( szValue, iMaxLen, "%d", (*(short *)((char *)pObject + fieldOffset)) );
+				V_snprintf( szValue, iMaxLen, "%d", (*(short *)((char *)pObject + fieldOffset)) );
 				return true;
 
 			case FIELD_INTEGER:
 			case FIELD_TICK:
-				Q_snprintf( szValue, iMaxLen, "%d", (*(int *)((char *)pObject + fieldOffset)) );
+				V_snprintf( szValue, iMaxLen, "%d", (*(int *)((char *)pObject + fieldOffset)) );
 				return true;
 
 			case FIELD_POSITION_VECTOR:
 			case FIELD_VECTOR:
-				Q_snprintf( szValue, iMaxLen, "%f %f %f", 
+				V_snprintf( szValue, iMaxLen, "%f %f %f", 
 							( (float *)((char *)pObject + fieldOffset) )[0],
 					        ( (float *)((char *)pObject + fieldOffset) )[1],
 							( (float *)((char *)pObject + fieldOffset) )[2] );
@@ -201,7 +241,7 @@ bool ExtractKeyvalue( void *pObject, typedescription_t *pFields, int iNumFields,
 				return false;
 
 			case FIELD_COLOR32:
-				Q_snprintf( szValue, iMaxLen, "%d %d %d %d", 
+				V_snprintf( szValue, iMaxLen, "%d %d %d %d", 
 							( (int *)((char *)pObject + fieldOffset) )[0],
 							( (int *)((char *)pObject + fieldOffset) )[1],
 							( (int *)((char *)pObject + fieldOffset) )[2],
@@ -229,7 +269,7 @@ bool ExtractKeyvalue( void *pObject, typedescription_t *pFields, int iNumFields,
 			case FIELD_MATERIALINDEX:
 			case FIELD_EDICT:
 				Warning( "Bad field in entity!!\n" );
-				Assert(0);
+				contract_assert( 0 );
 				break;
 			}
 		}

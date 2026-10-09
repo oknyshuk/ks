@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef C_AI_BASENPC_H
-#define C_AI_BASENPC_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-
 
 #include "c_basecombatcharacter.h"
 
@@ -57,6 +50,3 @@ private:
 	[[= ks::reflect::Net{} ]] bool m_bSpeedModActive;
 	[[= ks::reflect::Net{} ]] bool m_bImportanRagdoll;
 };
-
-
-#endif // C_AI_BASENPC_H

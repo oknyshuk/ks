@@ -1,7 +1,10 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+// Third-party notice: NVIDIA FXAA 3.11; see the license text below.
 
-// TODO: PC #defines here
+// Purpose: TODO: PC #defines here
+
 #define FXAA_PC 1
 #define FXAA_HLSL_3 1
 #define FXAA_QUALITY__PRESET 12
@@ -9,7 +12,6 @@
 
 // alpha may contain depth for dof, so use green as Luma for now
 #define FXAA_GREEN_AS_LUMA 1
-
 
 /*============================================================================
 
@@ -182,7 +184,6 @@ A. In the last opaque pass prior to FXAA,
 A. Or use FXAA_GREEN_AS_LUMA.
 
 ============================================================================*/
-
 /*============================================================================
 
                              INTEGRATION KNOBS
@@ -401,13 +402,11 @@ NOTE the other tuning knobs are now in the shader function inputs!
     #define FXAA_QUALITY__PRESET 12
 #endif
 
-
 /*============================================================================
 
                            FXAA QUALITY - PRESETS
 
 ============================================================================*/
-
 /*============================================================================
                      FXAA QUALITY - MEDIUM DITHER PRESETS
 ============================================================================*/
@@ -604,8 +603,6 @@ NOTE the other tuning knobs are now in the shader function inputs!
     #define FXAA_QUALITY__P10 4.0
     #define FXAA_QUALITY__P11 8.0
 #endif
-
-
 
 /*============================================================================
 

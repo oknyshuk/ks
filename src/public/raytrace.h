@@ -1,17 +1,9 @@
+#pragma once
 // $Id:$
 
-#ifndef RAYTRACE_H
-#define RAYTRACE_H
 
-#include <tier0/platform.h>
-#include <mathlib/vector.h>
-#include <mathlib/ssemath.h>
-#include <mathlib/lightdesc.h>
-#include <assert.h>
-#include <tier1/utlvector.h>
-#include <tier1/byte_reader.h>
-#include <tier1/byte_writer.h>
-#include <mathlib/mathlib.h>
+import std;
+import ks.tier1;
 
 // fast SSE-ONLY ray tracing module. Based upon various "real time ray tracing" research.
 //#define DEBUG_RAYTRACE 1
@@ -26,14 +18,6 @@ public:
 	{
 		// in order to be valid to trace as a group, all four rays must have the same signs in all
 		// of their direction components
-#ifndef NDEBUG
-		for(int c=1;c<4;c++)
-		{
-			Assert(direction.X(0)*direction.X(c)>=0);
-			Assert(direction.Y(0)*direction.Y(c)>=0);
-			Assert(direction.Z(0)*direction.Z(c)>=0);
-		}
-#endif
 	}
 	// returns direction sign mask for 4 rays. returns -1 if the rays can not be traced as a
 	// bundle.
@@ -89,7 +73,7 @@ struct TriGeometryData_t
 
 
 	// accessors to get around union annoyance
-	FORCEINLINE Vector &Vertex(int idx)
+	[[gnu::always_inline]] inline Vector &Vertex(int idx)
 	{
 		return * ( reinterpret_cast<Vector *> (  m_VertexCoordData+3*idx ) );
 	}
@@ -107,12 +91,12 @@ struct CacheOptimizedTriangle
 	} m_Data;
 
 	// accessors to get around union annoyance
-	FORCEINLINE Vector &Vertex(int idx)
+	[[gnu::always_inline]] inline Vector &Vertex(int idx)
 	{
 		return * ( reinterpret_cast<Vector *> (m_Data.m_GeometryData.m_VertexCoordData+3*idx ) );
 	}
 
-	FORCEINLINE const Vector &Vertex(int idx) const
+	[[gnu::always_inline]] inline const Vector &Vertex(int idx) const
 	{
 		return * ( reinterpret_cast<const Vector *> (m_Data.m_GeometryData.m_VertexCoordData+3*idx ) );
 	}
@@ -127,14 +111,14 @@ struct CacheOptimizedTriangle
 	void ExtractVerticesFromIntersectionFormat( Vector &v0, Vector &v1, Vector &v2 ) const;
 };
 
-#define PLANECHECK_POSITIVE 1
-#define PLANECHECK_NEGATIVE -1
-#define PLANECHECK_STRADDLING 0
+inline constexpr auto PLANECHECK_POSITIVE = 1;
+inline constexpr auto PLANECHECK_NEGATIVE = -1;
+inline constexpr auto PLANECHECK_STRADDLING = 0;
 
-#define KDNODE_STATE_XSPLIT 0								// this node is an x split
-#define KDNODE_STATE_YSPLIT 1								// this node is a ysplit
-#define KDNODE_STATE_ZSPLIT 2								// this node is a zsplit
-#define KDNODE_STATE_LEAF 3									// this node is a leaf
+inline constexpr auto KDNODE_STATE_XSPLIT = 0; // this node is an x split
+inline constexpr auto KDNODE_STATE_YSPLIT = 1; // this node is a ysplit
+inline constexpr auto KDNODE_STATE_ZSPLIT = 2; // this node is a zsplit
+inline constexpr auto KDNODE_STATE_LEAF = 3; // this node is a leaf
 
 struct CacheOptimizedKDNode
 {
@@ -151,11 +135,6 @@ struct CacheOptimizedKDNode
 	                                                        // "high" side of the splitting plane
 	                                                        // are on the right
 
-#ifdef DEBUG_RAYTRACE
-	Vector vecMins;
-	Vector vecMaxs;
-#endif
-
 	inline int NodeType(void) const
 
 	{
@@ -164,13 +143,13 @@ struct CacheOptimizedKDNode
 
 	inline int32 TriangleIndexStart(void) const
 	{
-		assert(NodeType()==KDNODE_STATE_LEAF);
+		contract_assert( NodeType()==KDNODE_STATE_LEAF );
 		return Children>>2;
 	}
 
 	inline int LeftChild(void) const
 	{
-		assert(NodeType()!=KDNODE_STATE_LEAF);
+		contract_assert( NodeType()!=KDNODE_STATE_LEAF );
 		return Children>>2;
 	}
 
@@ -181,7 +160,7 @@ struct CacheOptimizedKDNode
 
 	inline int NumberOfTrianglesInLeaf(void) const
 	{
-		assert(NodeType()==KDNODE_STATE_LEAF);
+		contract_assert( NodeType()==KDNODE_STATE_LEAF );
 		return *((int32 *) &SplittingPlaneValue);
 	}
 
@@ -207,7 +186,7 @@ struct RayTracingSingleResult
 struct RayTracingResult
 {
 	FourVectors surface_normal;								// surface normal at intersection
-	ALIGN16 int32 HitIds[4] ALIGN16_POST;								// -1=no hit. otherwise, triangle index
+	alignas( 16 ) int32 HitIds[4];								// -1=no hit. otherwise, triangle index
 	fltx4 HitDistance;										// distance to intersection
 };
 
@@ -220,9 +199,9 @@ public:
 };
 
 
-#define RTE_FLAGS_FAST_TREE_GENERATION 1
-#define RTE_FLAGS_DONT_STORE_TRIANGLE_COLORS 2				// saves memory if not needed
-#define RTE_FLAGS_DONT_STORE_TRIANGLE_MATERIALS 4
+inline constexpr auto RTE_FLAGS_FAST_TREE_GENERATION = 1;
+inline constexpr auto RTE_FLAGS_DONT_STORE_TRIANGLE_COLORS = 2; // saves memory if not needed
+inline constexpr auto RTE_FLAGS_DONT_STORE_TRIANGLE_MATERIALS = 4;
 
 enum RayTraceLightingMode_t {
 	DIRECT_LIGHTING,										// just dot product lighting
@@ -242,7 +221,7 @@ class RayStream
 public:
 	RayStream(void)
 	{
-		memset(n_in_stream,0,sizeof(n_in_stream));
+		std::memset(n_in_stream,0,sizeof(n_in_stream));
 	}
 };
 
@@ -264,7 +243,7 @@ enum RTECullMode_t
 };
 
 // serialization flag bits and defines
-#define RT_ENV_SERIALIZE_COLORS 1
+inline constexpr auto RT_ENV_SERIALIZE_COLORS = 1;
 
 class RayTracingEnvironment
 {
@@ -288,12 +267,10 @@ public:
 		Flags=0;
 	}
 
-#if !( defined ( _DEBUG ) && defined ( HAMMER_RAYTRACE ) )
-	inline void* operator new( size_t size ) { MEM_ALLOC_CREDIT_( "RayTracingEnvironment" ); return MemAlloc_AllocAligned( size, 16 ); }
-	inline void* operator new( size_t size, int nBlockUse, const char *pFileName, int nLine ) { MEM_ALLOC_CREDIT_( "RayTracingEnvironment" ); return MemAlloc_AllocAligned( size, 16 ); }
+	inline void* operator new( std::size_t size ) {  return MemAlloc_AllocAlignedUnattributed( size, 16 ); }
+	inline void* operator new( std::size_t size, int nBlockUse, const char *pFileName, int nLine ) {  return MemAlloc_AllocAlignedUnattributed( size, 16 ); }
 	inline void  operator delete( void* p ) { MemAlloc_FreeAligned( p ); }
 	inline void  operator delete( void* p, int nBlockUse, const char *pFileName, int nLine ) { MemAlloc_FreeAligned( p ); }
-#endif
 
 	// call AddTriangle to set up the world
 	void AddTriangle(int32 id, const Vector &v1, const Vector &v2, const Vector &v3,
@@ -403,7 +380,7 @@ public:
 	}
 
 	// (un)serialization
-	size_t GetSerializationNumBytes( uint32 nSerializationFlags = 0 ) const;
+	std::size_t GetSerializationNumBytes( uint32 nSerializationFlags = 0 ) const;
 	void Serialize( ks::byte_writer &outbuf, uint32 nSerializationFlags = 0 ) const;
 	void UnSerialize( ks::byte_reader &inbuf );
 
@@ -411,4 +388,3 @@ public:
 
 
 
-#endif

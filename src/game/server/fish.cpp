@@ -1,15 +1,45 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // fish.cpp
 // Simple fish behavior
 // Author: Michael S. Booth, April 2005
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "fish.h"
@@ -31,7 +61,7 @@ LINK_ENTITY_TO_CLASS( fish, CFish );
 void SendProxy_FishOriginX( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	CFish *fish = (CFish *)pStruct;
-	Assert( fish );
+	contract_assert( fish );
 
 	const Vector &v = fish->GetAbsOrigin();
 	Vector origin = fish->m_poolOrigin;
@@ -42,7 +72,7 @@ void SendProxy_FishOriginX( const SendProp *pProp, const void *pStruct, const vo
 void SendProxy_FishOriginY( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	CFish *fish = (CFish *)pStruct;
-	Assert( fish );
+	contract_assert( fish );
 
 	const Vector &v = fish->GetAbsOrigin();
 	Vector origin = fish->m_poolOrigin;
@@ -419,8 +449,8 @@ void CFish::Update( float deltaT )
 	m_angle += m_angleChange;
 	m_angleChange = 0.0f;
 
-	m_forward.x = cos( m_angle * M_PI/180.0f );
-	m_forward.y = sin( m_angle * M_PI/180.0f );
+	m_forward.x = std::cos( m_angle * std::numbers::pi/180.0f );
+	m_forward.y = std::sin( m_angle * std::numbers::pi/180.0f );
 	m_forward.z = 0.0f;
 
 	m_perp.x = -m_forward.y;
@@ -558,12 +588,12 @@ bool CFishPool::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq( szKeyName, "fish_count" ))
 	{
-		m_fishCount = atoi(szValue);
+		m_fishCount = std::atoi(szValue);
 		return true;
 	}
 	else if (FStrEq( szKeyName, "max_range" ))
 	{
-		m_maxRange = atof(szValue);
+		m_maxRange = std::atof(szValue);
 		if (m_maxRange <= 1.0f)
 		{
 			m_maxRange = 1.0f;
@@ -598,7 +628,7 @@ void CFishPool::FireGameEvent( IGameEvent *event )
 	const float loudRange = 500.0f;
 	const float quietRange = 75.0f;
 
-	float range = (Q_strcmp( "player_footstep", event->GetName() )) ? loudRange : quietRange;
+	float range = (V_strcmp( "player_footstep", event->GetName() )) ? loudRange : quietRange;
 
 	for( int i=0; i<std::ssize( m_fishes ); ++i )
 	{
@@ -687,4 +717,3 @@ void CFishPool::Update( void )
 		m_fishes[i]->Update( deltaT );
 	}
 }
-

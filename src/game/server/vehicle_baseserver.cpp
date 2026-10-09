@@ -1,10 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "player.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "vcollide_parse.h"
@@ -14,14 +41,12 @@
 #include "engine/IEngineSound.h"
 #include "soundenvelope.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "keyvalues.h"
 #include "studio.h"
 #include "bone_setup.h"
 #include "collisionutils.h"
 #include "animation.h"
 #include "env_player_surface_trigger.h"
 #include "rumble_shared.h"
-
 
 ConVar g_debug_vehiclesound( "g_debug_vehiclesound", "0", FCVAR_CHEAT );
 ConVar g_debug_vehicleexit( "g_debug_vehicleexit", "0", FCVAR_CHEAT );
@@ -30,7 +55,7 @@ ConVar sv_vehicle_autoaim_scale("sv_vehicle_autoaim_scale", "8");
 
 bool ShouldVehicleIgnoreEntity( CBaseEntity *pVehicle, CBaseEntity *pCollide );
 
-#define HITBOX_SET	2
+constexpr auto HITBOX_SET = 2;
 
 //-----------------------------------------------------------------------------
 // Save/load
@@ -130,7 +155,7 @@ void CBaseServerVehicle::SetVehicle( CBaseEntity *pVehicle )
 { 
 	m_pVehicle = pVehicle; 
 	m_pDrivableVehicle = dynamic_cast<IDrivableVehicle*>(m_pVehicle);
-	Assert( m_pDrivableVehicle );
+	contract_assert( m_pDrivableVehicle );
 }
 
 //-----------------------------------------------------------------------------
@@ -138,7 +163,7 @@ void CBaseServerVehicle::SetVehicle( CBaseEntity *pVehicle )
 //-----------------------------------------------------------------------------
 IDrivableVehicle *CBaseServerVehicle::GetDrivableVehicle( void )
 {
-	Assert( m_pDrivableVehicle );
+	contract_assert( m_pDrivableVehicle );
 	return m_pDrivableVehicle;
 }
 
@@ -156,7 +181,7 @@ CBaseEntity	*CBaseServerVehicle::GetDriver( void )
 //-----------------------------------------------------------------------------
 CBaseCombatCharacter *CBaseServerVehicle::GetPassenger( int nRole ) 
 { 
-	Assert( nRole == VEHICLE_ROLE_DRIVER ); 
+	contract_assert( nRole == VEHICLE_ROLE_DRIVER ); 
 	CBaseEntity *pDriver = GetDrivableVehicle()->GetDriver();
 
 	if ( pDriver == nullptr )
@@ -184,7 +209,7 @@ int CBaseServerVehicle::GetPassengerRole( CBaseCombatCharacter *pPassenger )
 bool CBaseServerVehicle::NPC_AddPassenger( CBaseCombatCharacter *pPassenger, string_t strRoleName, int nSeat )
 {
 	// Players cannot yet use this code! - jdw
-	Assert( pPassenger != nullptr && pPassenger->IsPlayer() == false );
+	contract_assert( pPassenger != nullptr && pPassenger->IsPlayer() == false );
 	if ( pPassenger == nullptr || pPassenger->IsPlayer() )
 		return false;
 
@@ -223,7 +248,7 @@ bool CBaseServerVehicle::NPC_AddPassenger( CBaseCombatCharacter *pPassenger, str
 bool CBaseServerVehicle::NPC_RemovePassenger( CBaseCombatCharacter *pPassenger )
 {
 	// Players cannot yet use this code! - jdw
-	Assert( pPassenger != nullptr && pPassenger->IsPlayer() == false );
+	contract_assert( pPassenger != nullptr && pPassenger->IsPlayer() == false );
 	if ( pPassenger == nullptr || pPassenger->IsPlayer() )
 		return false;
 
@@ -375,14 +400,14 @@ void CBaseServerVehicle::SetPassengerWeapon( bool bUseWeapon, CBaseCombatCharact
 
 	if ( pPassenger != nullptr && pPassenger->IsPlayer() == false )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
 	CBaseCombatWeapon *pWeapon = pPlayer->GetActiveWeapon();
 	if ( pWeapon == nullptr )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
@@ -404,12 +429,12 @@ void CBaseServerVehicle::SetPassengerWeapon( bool bUseWeapon, CBaseCombatCharact
 void CBaseServerVehicle::SetPassenger( int nRole, CBaseCombatCharacter *pPassenger )
 {
 	// Baseclass only handles vehicles with a single passenger
-	Assert( nRole == VEHICLE_ROLE_DRIVER ); 
+	contract_assert( nRole == VEHICLE_ROLE_DRIVER ); 
 
 	if ( pPassenger != nullptr && pPassenger->IsPlayer() == false )
 	{
 		// Use NPC_AddPassenger() for NPCs at the moment, these will all be collapsed into one system -- jdw
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
@@ -454,13 +479,13 @@ void CBaseServerVehicle::SetPassenger( int nRole, CBaseCombatCharacter *pPasseng
 //-----------------------------------------------------------------------------
 void CBaseServerVehicle::GetPassengerSeatPoint( int nRole, Vector *pPoint, QAngle *pAngles )
 {
-	Assert( nRole == VEHICLE_ROLE_DRIVER ); 
+	contract_assert( nRole == VEHICLE_ROLE_DRIVER ); 
 
 	CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>(m_pVehicle);
 	if ( pAnimating )
 	{
 		char pAttachmentName[32];
-		Q_snprintf( pAttachmentName, sizeof( pAttachmentName ), "vehicle_feet_passenger%d", nRole );
+		V_snprintf( pAttachmentName, sizeof( pAttachmentName ), "vehicle_feet_passenger%d", nRole );
 		int nFeetAttachmentIndex = pAnimating->LookupAttachment(pAttachmentName);
 		int nIdleSequence = pAnimating->SelectWeightedSequence( ACT_IDLE );
 		if ( nFeetAttachmentIndex > 0 && nIdleSequence != -1 )
@@ -533,7 +558,7 @@ bool CBaseServerVehicle::CheckExitPoint( float yaw, int distance, Vector *pEndPo
 //-----------------------------------------------------------------------------
 bool CBaseServerVehicle::GetPassengerExitPoint( int nRole, Vector *pExitPoint, QAngle *pAngles )
 { 
-	Assert( nRole == VEHICLE_ROLE_DRIVER ); 
+	contract_assert( nRole == VEHICLE_ROLE_DRIVER ); 
 
 	// First, see if we've got an attachment point
 	CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>(m_pVehicle);
@@ -602,7 +627,7 @@ void CBaseServerVehicle::ParseExitAnim( KeyValues *pkvExitList, bool bEscapeExit
 	{
 		// Add 'em to our list
 		int iIndex = std::ssize( m_ExitAnimations ); m_ExitAnimations.emplace_back();
-		Q_strncpy( m_ExitAnimations[iIndex].szAnimName, pkvExitAnim->GetName(), sizeof(m_ExitAnimations[iIndex].szAnimName) );
+		V_strncpy( m_ExitAnimations[iIndex].szAnimName, pkvExitAnim->GetName(), sizeof(m_ExitAnimations[iIndex].szAnimName) );
 		m_ExitAnimations[iIndex].bEscapeExit = bEscapeExit;
 		if ( StringHasPrefixCaseSensitive( pkvExitAnim->GetString(), "upsidedown" ) )
 		{
@@ -657,17 +682,17 @@ void CBaseServerVehicle::ParseNPCPassengerSeat( KeyValues *pSetKeyValues, CPasse
 	{
 		const char *lpszName = pKey->GetName();
 
-		if ( Q_stricmp( lpszName, "entry" ) == 0 )
+		if ( V_stricmp( lpszName, "entry" ) == 0 )
 		{
 			int nIndex = std::ssize( pSeat->m_EntryTransitions ); pSeat->m_EntryTransitions.emplace_back();
-			Assert( ks::is_valid_index( pSeat->m_EntryTransitions, nIndex ) );
+			contract_assert( ks::is_valid_index( pSeat->m_EntryTransitions, nIndex ) );
 
 			ParseNPCSeatTransition( pKey, &pSeat->m_EntryTransitions[nIndex] );
 		}
-		else if ( Q_stricmp( lpszName, "exit" ) == 0 )
+		else if ( V_stricmp( lpszName, "exit" ) == 0 )
 		{
 			int nIndex = std::ssize( pSeat->m_ExitTransitions ); pSeat->m_ExitTransitions.emplace_back();
-			Assert( ks::is_valid_index( pSeat->m_ExitTransitions, nIndex ) );
+			contract_assert( ks::is_valid_index( pSeat->m_ExitTransitions, nIndex ) );
 
 			ParseNPCSeatTransition( pKey, &pSeat->m_ExitTransitions[nIndex] );
 		}
@@ -707,7 +732,7 @@ CPassengerRole *CBaseServerVehicle::FindOrCreatePassengerRole( string_t strName,
 
 	// Create a new container
 	int nNewIndex = std::ssize( m_PassengerRoles ); m_PassengerRoles.emplace_back();
-	Assert( ks::is_valid_index( m_PassengerRoles, nNewIndex ) );
+	contract_assert( ks::is_valid_index( m_PassengerRoles, nNewIndex ) );
 	
 	m_PassengerRoles[nNewIndex].m_strName = strName;
 	
@@ -734,13 +759,13 @@ void CBaseServerVehicle::ParseNPCRoles( KeyValues *pkvPassengerList )
 
 	// Get our animating class
 	CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>(m_pVehicle);
-	Assert( pAnimating != nullptr );
+	contract_assert( pAnimating != nullptr );
 	if ( pAnimating == nullptr )
 		return;
 
 	// For attachment polling
 	CStudioHdr *pStudioHdr = pAnimating->GetModelPtr();
-	Assert( pStudioHdr != nullptr );
+	contract_assert( pStudioHdr != nullptr );
 	if ( pStudioHdr == nullptr )
 		return;
 
@@ -758,7 +783,7 @@ void CBaseServerVehicle::ParseNPCRoles( KeyValues *pkvPassengerList )
 
 		// Add a new role
 		int nSeatIndex = std::ssize( pRole->m_PassengerSeats ); pRole->m_PassengerSeats.emplace_back();
-		Assert( ks::is_valid_index( pRole->m_PassengerSeats, nSeatIndex ) );
+		contract_assert( ks::is_valid_index( pRole->m_PassengerSeats, nSeatIndex ) );
 
 		// Parse the information
 		ParseNPCPassengerSeat( pkvPassengerKey, &pRole->m_PassengerSeats[nSeatIndex] );
@@ -939,7 +964,7 @@ void CBaseServerVehicle::ParseEntryExitAnims( void )
 			{
 				// Add 'em to our list
 				int iIndex = std::ssize( m_EntryAnimations ); m_EntryAnimations.emplace_back();
-				Q_strncpy( m_EntryAnimations[iIndex].szAnimName, pkvEntryAnim->GetName(), sizeof(m_EntryAnimations[iIndex].szAnimName) );
+				V_strncpy( m_EntryAnimations[iIndex].szAnimName, pkvEntryAnim->GetName(), sizeof(m_EntryAnimations[iIndex].szAnimName) );
 				m_EntryAnimations[iIndex].iHitboxGroup = pkvEntryAnim->GetInt();
 
 				pkvEntryAnim = pkvEntryAnim->GetNextKey();
@@ -1024,7 +1049,7 @@ void CBaseServerVehicle::HandlePassengerEntry( CBaseCombatCharacter *pPassenger,
 	else
 	{
 		// NPCs handle transitioning themselves, they should NOT call this function
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 }
 
@@ -1111,7 +1136,7 @@ bool CBaseServerVehicle::HandlePassengerExit( CBaseCombatCharacter *pPassenger )
 	else
 	{
 		// NPCs handle transitioning themselves, they should NOT call this function
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 	return false;
@@ -1453,9 +1478,9 @@ void CBaseServerVehicle::HandleEntryExitFinish( bool bExitAnimOn, bool bResetAni
 //-----------------------------------------------------------------------------
 void CBaseServerVehicle::GetVehicleViewPosition( int nRole, Vector *pAbsOrigin, QAngle *pAbsAngles, float *pFOV /*= NULL*/ )
 {
-	Assert( nRole == VEHICLE_ROLE_DRIVER );
+	contract_assert( nRole == VEHICLE_ROLE_DRIVER );
 	CBaseCombatCharacter *pPassenger = GetPassenger( VEHICLE_ROLE_DRIVER );
-	Assert( pPassenger );
+	contract_assert( pPassenger );
 
 	CBasePlayer *pPlayer = ToBasePlayer( pPassenger );
 	if ( pPlayer != nullptr )
@@ -1479,7 +1504,7 @@ void CBaseServerVehicle::GetVehicleViewPosition( int nRole, Vector *pAbsOrigin, 
 	else
 	{
 		// NPCs are not supported
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 }
 
@@ -1528,7 +1553,6 @@ void CBaseServerVehicle::FinishMove( CBasePlayer *player, CUserCmd *ucmd, CMoveD
 //-----------------------------------------------------------------------------
 void CBaseServerVehicle::ItemPostFrame( CBasePlayer *player )
 {
-	Assert( player == GetDriver() );
 
 	GetDrivableVehicle()->ItemPostFrame( player );
 
@@ -1692,7 +1716,7 @@ static int SoundStateIndexFromName( const char *pName )
 {
 	for ( int i = 0; i < SS_NUM_STATES; i++ )
 	{
-		Assert( i < ARRAYSIZE(pSoundStateNames) );
+		contract_assert( i < std::size( pSoundStateNames ) );
 		if ( !strcmpi( pSoundStateNames[i], pName ) )
 			return i;
 	}
@@ -2356,7 +2380,7 @@ int CBaseServerVehicle::NPC_GetAvailableSeat_Any( CBaseCombatCharacter *pPasseng
 int CBaseServerVehicle::NPC_GetAvailableSeat_Nearest( CBaseCombatCharacter *pPassenger, int nRoleID )
 {
 	// Not yet implemented
-	Assert( 0 );
+	contract_assert( 0 );
 	return -1;
 }
 
@@ -2393,7 +2417,7 @@ int CBaseServerVehicle::NPC_GetAvailableSeat( CBaseCombatCharacter *pPassenger, 
 		break;
 
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		break;
 	};
 
@@ -2492,14 +2516,14 @@ void CBaseServerVehicle::RestorePassengerInfo( void )
 			{
 				// The seat attachment was not found.  This most likely means that the seat attachment name has changed
 				// in the target vehicle and the NPC passenger is now stranded!
-				Assert( 0 );
+				contract_assert( 0 );
 			}
 		}
 		else
 		{
 			// The role was not found.  This most likely means that the role names have changed
 			// in the target vehicle and the NPC passenger is now stranded!
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 	}
 }
@@ -2608,17 +2632,17 @@ void CVehicleSoundsParser::ParseKeyValue( void *pData, const char *pKey, const c
 		// Are we currently in a gear block?
 		if ( m_iCurrentGear >= 0 )
 		{
-			Assert( m_iCurrentGear < std::ssize( pSounds->pGears ) );
+			contract_assert( m_iCurrentGear < std::ssize( pSounds->pGears ) );
 
 			// Check gear keys
 			if ( !strcmpi( pKey, "max_speed" ) )
 			{
-				pSounds->pGears[m_iCurrentGear].flMaxSpeed = atof(pValue);
+				pSounds->pGears[m_iCurrentGear].flMaxSpeed = std::atof(pValue);
 				return;
 			}
 			if ( !strcmpi( pKey, "speed_approach_factor" ) )
 			{
-				pSounds->pGears[m_iCurrentGear].flSpeedApproachFactor = atof(pValue);
+				pSounds->pGears[m_iCurrentGear].flSpeedApproachFactor = std::atof(pValue);
 				return;
 			}
 		}
@@ -2641,7 +2665,7 @@ void CVehicleSoundsParser::ParseKeyValue( void *pData, const char *pKey, const c
 			}
 			else if ( !strcmpi( pKey, "min_time" ) )
 			{
-				pSounds->minStateTime[m_iCurrentState] = atof(pValue);
+				pSounds->minStateTime[m_iCurrentState] = std::atof(pValue);
 				return;
 			}
 		}
@@ -2652,7 +2676,7 @@ void CVehicleSoundsParser::ParseKeyValue( void *pData, const char *pKey, const c
 		{
 			if ( !strcmpi( pKey, "min_speed" ) )
 			{
-				pSounds->crashSounds[m_iCurrentCrashSound].flMinSpeed = atof(pValue);
+				pSounds->crashSounds[m_iCurrentCrashSound].flMinSpeed = std::atof(pValue);
 				return;
 			}
 			else if ( !strcmpi( pKey, "sound" ) )
@@ -2662,12 +2686,12 @@ void CVehicleSoundsParser::ParseKeyValue( void *pData, const char *pKey, const c
 			}
 			else if ( !strcmpi( pKey, "min_speed_change" ) )
 			{
-				pSounds->crashSounds[m_iCurrentCrashSound].flMinDeltaSpeed = atof(pValue);
+				pSounds->crashSounds[m_iCurrentCrashSound].flMinDeltaSpeed = std::atof(pValue);
 				return;
 			}
 			else if ( !strcmpi( pKey, "gear_limit" ) )
 			{
-				pSounds->crashSounds[m_iCurrentCrashSound].gearLimit = atoi(pValue);
+				pSounds->crashSounds[m_iCurrentCrashSound].gearLimit = std::atoi(pValue);
 				return;
 			}
 		}
@@ -2692,4 +2716,3 @@ void CVehicleSoundsParser::SetDefaults( void *pData )
 	vehiclesounds_t *pSounds = (vehiclesounds_t *)pData;
 	pSounds->Init();
 }
-

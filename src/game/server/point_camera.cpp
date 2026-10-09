@@ -1,24 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
 #include "reflect_datamap.h"
-#include "reflect_annotations.h"
 #include "reflect_sendtable.h"
-#include "igamesystem.h"
 #include "point_camera.h"
 
-#define CAM_THINK_INTERVAL 0.05
+constexpr auto CAM_THINK_INTERVAL = 0.05;
 
 // Spawnflags
-#define SF_CAMERA_START_OFF				0x01
+constexpr auto SF_CAMERA_START_OFF = 0x01;
 
 // UNDONE: Share properly with the client code!!!
-#define POINT_CAMERA_MSG_SETACTIVE		1
+constexpr auto POINT_CAMERA_MSG_SETACTIVE = 1;
 
 CEntityClassList<CPointCamera> g_PointCameraList;
 template <> CPointCamera *CEntityClassList<CPointCamera>::m_pClassList = nullptr;
@@ -114,13 +133,13 @@ void CPointCamera::InputChangeFOV( inputdata_t &inputdata )
 	// Parse the keyvalue data
 	char parseString[255];
 
-	Q_strncpy(parseString, inputdata.value.String(), sizeof(parseString));
+	V_strncpy(parseString, inputdata.value.String(), sizeof(parseString));
 
 	// Get FOV
-	char *pszParam = strtok(parseString," ");
+	char *pszParam = std::strtok(parseString," ");
 	if(pszParam)
 	{
-		m_TargetFOV = atof( pszParam );
+		m_TargetFOV = std::atof( pszParam );
 	}
 	else
 	{
@@ -133,7 +152,7 @@ void CPointCamera::InputChangeFOV( inputdata_t &inputdata )
 	pszParam = strtok(nullptr," ");
 	if(pszParam)
 	{
-		flChangeTime = atof( pszParam );
+		flChangeTime = std::atof( pszParam );
 	}
 	else
 	{

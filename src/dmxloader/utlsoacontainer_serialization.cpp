@@ -1,11 +1,10 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Purpose: see utlsoacontainer_serialization.h
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "tier0/platform.h"
-#include "tier1/utlsoacontainer.h"
+// Purpose: see utlsoacontainer_serialization.h
+
+import std;
+import ks.tier1;
 #include "dmxloader/dmxloader.h"
 #include "dmxloader/dmxelement.h"
 
@@ -39,8 +38,8 @@ bool CSOAContainer_Serializable::Serialize( CDmxElement *pRootElement )
 {
 	CDmxElementModifyScope modifyRoot( pRootElement );
 
-	COMPILE_TIME_ASSERT( ATTRDATATYPE_NONE  == -1 ); // If this changes, modify the line for m_nDataType in the BEGIN_DMXELEMENT_UNPACK block above
-	COMPILE_TIME_ASSERT( SOATHREADMODE_AUTO == -1 ); // If this changes, modify the line for m_eThreadMode in the BEGIN_DMXELEMENT_UNPACK block above
+	static_assert( ATTRDATATYPE_NONE  == -1 ); // If this changes, modify the line for m_nDataType in the BEGIN_DMXELEMENT_UNPACK block above
+	static_assert( SOATHREADMODE_AUTO == -1 ); // If this changes, modify the line for m_eThreadMode in the BEGIN_DMXELEMENT_UNPACK block above
 
 	if ( !ContainsValidAttributes() || ( !m_pDataMemory && !m_pConstantDataMemory ) )
 	{
@@ -58,13 +57,13 @@ bool CSOAContainer_Serializable::Serialize( CDmxElement *pRootElement )
 	// Now write out the data, as floats (NOTE: we have to at least init the attribute as a zero-element vector or it won't serialize!)
 	CDmxAttribute *pDataMemoryAttribute = pRootElement->AddAttribute( "memory_data" );
 	std::vector< float >& dataVector = pDataMemoryAttribute->GetArrayForEdit< float >();
-	size_t nDataMemorySize = DataMemorySize();
+	std::size_t nDataMemorySize = DataMemorySize();
 	dataVector.assign( nDataMemorySize  / sizeof( float ), {} );
 
 	// NOTE: Constant data is always zero for now, but we write it out in case that changes (non-zero constant values seem potentially useful)
 	CDmxAttribute *pConstantMemoryAttribute = pRootElement->AddAttribute( "constant_data" );
 	std::vector< float >& constantVector = pConstantMemoryAttribute->GetArrayForEdit< float >();
-	size_t nConstantMemorySize = ConstantMemorySize();
+	std::size_t nConstantMemorySize = ConstantMemorySize();
 	constantVector.assign( nConstantMemorySize / sizeof( float ), {} );
 
 	// To account for 'separate' memory allocations, we need to copy each attribute one at a time
@@ -77,12 +76,12 @@ bool CSOAContainer_Serializable::Serialize( CDmxElement *pRootElement )
 
 		if ( m_nFieldPresentMask & ( 1 << i ) )
 		{
-			memcpy( pBaseDataPtr, m_pAttributePtrs[ i ], AttributeMemorySize( i ) );
+			std::memcpy( pBaseDataPtr, m_pAttributePtrs[ i ], AttributeMemorySize( i ) );
 			pBaseDataPtr += AttributeMemorySize( i );
 		}
 		else
 		{
-			memcpy( pBaseConstantPtr, m_pAttributePtrs[ i ], AttributeMemorySize( i ) );
+			std::memcpy( pBaseConstantPtr, m_pAttributePtrs[ i ], AttributeMemorySize( i ) );
 			pBaseConstantPtr += AttributeMemorySize( i );
 		}
 	}
@@ -141,20 +140,20 @@ bool CSOAContainer_Serializable::Unserialize( const CDmxElement *pRootElement )
 		if ( m_pDataMemory )
 		{
 			const std::vector< float >& floatVector = pDataMemoryAttribute->GetArray< float >();
-			size_t nDataMemorySize = DataMemorySize();
+			std::size_t nDataMemorySize = DataMemorySize();
 			int nFloats = nDataMemorySize / sizeof( float );
 			if ( nFloats == std::ssize( floatVector ) )
-				memcpy( m_pDataMemory, floatVector.data(), nDataMemorySize );
+				std::memcpy( m_pDataMemory, floatVector.data(), nDataMemorySize );
 			else
 				nError = 2;
 		}
 		if ( m_pConstantDataMemory )
 		{
 			const std::vector< float >& floatVector = pConstantMemoryAttribute->GetArray< float >();
-			size_t nConstantMemorySize = ConstantMemorySize();
+			std::size_t nConstantMemorySize = ConstantMemorySize();
 			int nFloats = nConstantMemorySize / sizeof( float );
 			if ( nFloats == std::ssize( floatVector ) )
-				memcpy( m_pConstantDataMemory, floatVector.data(), nConstantMemorySize );
+				std::memcpy( m_pConstantDataMemory, floatVector.data(), nConstantMemorySize );
 			else
 				nError = 3;
 		}
@@ -168,7 +167,7 @@ bool CSOAContainer_Serializable::Unserialize( const CDmxElement *pRootElement )
 			case 2: Warning( "ERROR: CSOAContainer_Serializable::Unserialize - found wrong amount of memory data!\n" ); break;
 			case 3: Warning( "ERROR: CSOAContainer_Serializable::Unserialize - found wrong amount of constant data!\n" ); break;
 		}
-		Assert( 0 );
+		contract_assert( 0 );
 		Purge();
 		return false;
 	}

@@ -1,10 +1,60 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "const.h"
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "npcevent.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
@@ -16,7 +66,6 @@
 #endif
 #include "weapon_csbasegun.h"
 #include "fx_cs_shared.h"
-#include "in_buttons.h"
 
 #ifdef CLIENT_DLL
 #include "c_cs_player.h"
@@ -26,8 +75,7 @@
 #include "cs_player.h"
 #endif
 
-#define DETACHABLE_SILENCER 1
-#define SILENCER_BODYGROUP_UNSET -2
+constexpr auto SILENCER_BODYGROUP_UNSET = -2;
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponCSBaseGun, DT_WeaponCSBaseGun )
 
@@ -175,7 +223,7 @@ void CWeaponCSBaseGun::ItemPostFrame()
 
 	//GOOSEMAN : Return zoom level back to previous zoom level before we fired a shot. This is used only for the AWP.
 	// And Scout.
-	if ( (m_flNextPrimaryAttack <= gpGlobals->curtime) && (pPlayer->m_bResumeZoom == TRUE) 
+	if ( (m_flNextPrimaryAttack <= gpGlobals->curtime) && (pPlayer->m_bResumeZoom == true) 
 		&& m_zoomLevel > 0 ) // only need to re-zoom the zoom when there's a zoom to re-zoom to. who knew?
 	{
 		if ( m_iClip1 != 0 || ( GetWeaponFlags() & ITEM_FLAG_NOAUTORELOAD ) )
@@ -323,7 +371,6 @@ void CWeaponCSBaseGun::PrimaryAttack()
 
 	if ( IsZoomed() )
 	{
-        CALL_ATTRIB_HOOK_FLOAT( flCycleTime, cycletime_when_zoomed );
 	}
 																	
 	if ( !CSBaseGunFire( flCycleTime, m_weaponMode ) )								// <--	'PEW PEW' HAPPENS HERE
@@ -347,7 +394,7 @@ void CWeaponCSBaseGun::SecondaryAttack()
 	CCSPlayer *pPlayer = GetPlayerOwner();
 	if ( pPlayer == nullptr )
 	{
-		Assert(pPlayer != nullptr);
+		contract_assert( pPlayer != nullptr );
 		return;
 	}
 
@@ -544,7 +591,6 @@ void CWeaponCSBaseGun::SecondaryAttack()
 		pPlayer->EmitSound( "Weapon.AutoSemiAutoSwitch" );
 	}
 #endif
-#if DETACHABLE_SILENCER
 	else if ( HasSilencer() && m_flDoneSwitchingSilencer <= gpGlobals->curtime )
 	{
 		if ( m_bSilencerOn )
@@ -582,7 +628,6 @@ void CWeaponCSBaseGun::SecondaryAttack()
 		SetWeaponIdleTime( nextAttackTime );
 
 	}
-#endif
 	else if ( IsRevolver() && m_flNextSecondaryAttack < gpGlobals->curtime )
 	{
 		float flCycletimeAlt = GetCycleTime( Secondary_Mode );
@@ -634,7 +679,7 @@ void CWeaponCSBaseGun::BurstFireRemaining()
 		pPlayer->GetFinalAimAngle(),
 		GetCSWeaponID(),
 		Secondary_Mode,
-		CBaseEntity::GetPredictionRandomSeed( SERVER_PLATTIME_RNG ) & 255,
+		CBaseEntity::GetPredictionRandomSeed(  ) & 255,
 		GetInaccuracy(),
 		GetSpread(),
 		GetAccuracyFishtail(),
@@ -730,7 +775,7 @@ bool CWeaponCSBaseGun::CSBaseGunFire( float flCycleTime, CSWeaponMode weaponMode
 		pPlayer->GetFinalAimAngle(),
 		GetCSWeaponID(),
 		weaponMode,
-		CBaseEntity::GetPredictionRandomSeed( SERVER_PLATTIME_RNG ) & 255,
+		CBaseEntity::GetPredictionRandomSeed(  ) & 255,
 		GetInaccuracy(),
 		GetSpread(), 
 		GetAccuracyFishtail(),

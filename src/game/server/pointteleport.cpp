@@ -1,21 +1,51 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Teleports a named entity to a given position and restores
 //			it's physics state
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 
-
 #include "in_buttons.h"
 
-
-#define	SF_TELEPORT_TO_SPAWN_POS	0x00000001
-#define	SF_TELEPORT_INTO_DUCK		0x00000002 ///< episodic only: player should be ducked after this teleport
+constexpr auto SF_TELEPORT_TO_SPAWN_POS = 0x00000001;
+constexpr auto SF_TELEPORT_INTO_DUCK = 0x00000002; ///< episodic only: player should be ducked after this teleport
 
 class CPointTeleport : public CBaseEntity
 {
@@ -172,4 +202,3 @@ void CPointTeleport::DoTeleport( inputdata_t &inputdata, const Vector &vecOrigin
 
 	pTarget->Teleport( &vecOrigin, &angRotation, nullptr );
 }
-

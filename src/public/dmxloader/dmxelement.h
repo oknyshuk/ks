@@ -1,21 +1,11 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
-#ifndef DMXELEMENT_H
-#define DMXELEMENT_H
-
-
+import ks.tier1;
 #include "datamodel/dmattributetypes.h"
-#include "tier1/utlvector.h"
-#include "tier1/intern_pool.h"
-#include <functional>
-#include <memory>
-#include <vector>
+import std;
 #include "dmxloader/dmxattribute.h"
-
 
 //-----------------------------------------------------------------------------
 // Sort functor class for attributes: by pooled name address, null (and nameless) first
@@ -65,13 +55,13 @@ struct DmxElementUnpackStructure_t
 	int m_nArrayLength;			// For fixed-size arrays, this is a positive value (default is 0). For arrays, m_nSize is the size of an array element and m_pDefaultString is the default element value.
 };
 
-#define NO_BIT_OFFSET	-1
-#define UTL_STRING_SIZE	-1
-#define NO_USER_DATA	nullptr
-#define NO_EMBEDDED_TYPENAME	nullptr
-#define NO_EMBEDDED_STRUCT_PTR	nullptr
+inline constexpr auto NO_BIT_OFFSET = -1;
+inline constexpr auto UTL_STRING_SIZE = -1;
+inline constexpr auto NO_USER_DATA = nullptr;
+inline constexpr auto NO_EMBEDDED_TYPENAME = nullptr;
+inline constexpr auto NO_EMBEDDED_STRUCT_PTR = nullptr;
 #define NOT_A_BITFIELD	BITFIELD_TYPE_NONE
-#define NOT_AN_ARRAY 0
+inline constexpr auto NOT_AN_ARRAY = 0;
 
 #define DECLARE_DMXELEMENT_UNPACK() \
 	template <typename T> friend DmxElementUnpackStructure_t *DmxElementUnpackInit(T *);
@@ -91,10 +81,10 @@ struct DmxElementUnpackStructure_t
 		{ \
 
 #define DMXELEMENT_UNPACK_FLTX4( _attributeName, _defaultString, _varName )	\
-	{ _attributeName, _defaultString, CDmAttributeInfo<float>::AttributeType(), offsetof( DestStructType_t, _varName ), sizeof( fltx4 ), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
+	{ _attributeName, _defaultString, CDmAttributeInfo<float>::AttributeType(), __builtin_offsetof( DestStructType_t, _varName ), sizeof( fltx4 ), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
 
 #define DMXELEMENT_UNPACK_EMBEDDED( _typeName, _attributeName, _varName, _embeddedUnpackStructure ) \
-	{ _attributeName, "", AT_TYPE_COUNT, offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, _typeName, _embeddedUnpackStructure, NOT_AN_ARRAY },
+	{ _attributeName, "", AT_TYPE_COUNT, __builtin_offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, _typeName, _embeddedUnpackStructure, NOT_AN_ARRAY },
 
 #define DMXELEMENT_UNPACK_BASECLASS( _structName, _baseClass ) \
 	{ "Baseclass unpack", "", AT_TYPE_COUNT, size_cast< int >((intp) static_cast< _baseClass * >( (_structName*)0)), 0, NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, #_baseClass, DmxElementUnpackInit<_baseClass>( (_baseClass *)0 ), NOT_AN_ARRAY },
@@ -103,31 +93,31 @@ struct DmxElementUnpackStructure_t
 	{ "Baseclass unpack", "", AT_TYPE_COUNT, size_cast< int >((intp) static_cast< _baseClass * >( (_structName*)0)), 0, NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, #_baseClass, DmxElementUnpackInit##_namespace<_baseClass>( (_baseClass *)0 ), NOT_AN_ARRAY },
 
 #define DMXELEMENT_UNPACK_FIELD( _attributeName, _defaultString, _type, _varName )	\
-	{ _attributeName, _defaultString, CDmAttributeInfo<_type>::AttributeType(), offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
+	{ _attributeName, _defaultString, CDmAttributeInfo<_type>::AttributeType(), __builtin_offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
 // Use for preallocated char array
 #define DMXELEMENT_UNPACK_FIELD_STRING( _attributeName, _defaultString, _varName )	\
-	{ _attributeName, _defaultString, AT_STRING, offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
+	{ _attributeName, _defaultString, AT_STRING, __builtin_offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
 // Use for UtlString datatype
 #define DMXELEMENT_UNPACK_FIELD_UTLSTRING( _attributeName, _defaultString, _varName )	\
-	{ _attributeName, _defaultString, AT_STRING, offsetof( DestStructType_t, _varName ), UTL_STRING_SIZE, NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
+	{ _attributeName, _defaultString, AT_STRING, __builtin_offsetof( DestStructType_t, _varName ), UTL_STRING_SIZE, NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
 #define DMXELEMENT_UNPACK_SHORT( _attributeName, _defaultString, _varName )   \
-	{ _attributeName, _defaultString, AT_INT, offsetof( DestStructType_t, _varName ), sizeof( short ), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
+	{ _attributeName, _defaultString, AT_INT, __builtin_offsetof( DestStructType_t, _varName ), sizeof( short ), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
 #define DMXELEMENT_UNPACK_CHAR( _attributeName, _defaultString, _varName )    \
-	{ _attributeName, _defaultString, AT_INT, offsetof( DestStructType_t, _varName ), sizeof( char ), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
+	{ _attributeName, _defaultString, AT_INT, __builtin_offsetof( DestStructType_t, _varName ), sizeof( char ), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
 #define DMXELEMENT_UNPACK_BITFIELD( _attributeName, _defaultString, _bitfieldType, _varName ) \
 	{ _attributeName, _defaultString, CDmAttributeInfo<int>::AttributeType(), DestStructType_t::Get##_varName##ByteOffset(), DestStructType_t::Get##_varName##BitCount(), DestStructType_t::Get##_varName##BitOffset(), _bitfieldType, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
 
 // NOTE: DMXELEMENT_UNPACK_FIELD_ARRAY is for fixed-size arrays, not pointers or CUtlVectors (TODO: doesn't work for strings or bitfields yet!)
 #define DMXELEMENT_UNPACK_FIELD_ARRAY( _attributeName, _defaultString, _type, _varName )	\
-	{ _attributeName, _defaultString, CDmAttributeInfo< std::vector< _type > >::AttributeType(), offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName[0]), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, ARRAYSIZE( ((DestStructType_t *)0)->_varName ) },
+	{ _attributeName, _defaultString, CDmAttributeInfo< std::vector< _type > >::AttributeType(), __builtin_offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName[0]), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, std::size( ((DestStructType_t *)0)->_varName ) },
 
 
 #define DMXELEMENT_UNPACK_FIELD_USERDATA( _attributeName, _defaultString, _type, _varName, _userData )	\
-	{ _attributeName, _defaultString, CDmAttributeInfo<_type>::AttributeType(), offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NO_BIT_OFFSET, NOT_A_BITFIELD, _userData, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
+	{ _attributeName, _defaultString, CDmAttributeInfo<_type>::AttributeType(), __builtin_offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NO_BIT_OFFSET, NOT_A_BITFIELD, _userData, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
 #define DMXELEMENT_UNPACK_FIELD_STRING_USERDATA( _attributeName, _defaultString, _varName, _userData )	\
-	{ _attributeName, _defaultString, AT_STRING, offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NO_BIT_OFFSET, NOT_A_BITFIELD, _userData, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
+	{ _attributeName, _defaultString, AT_STRING, __builtin_offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName), NO_BIT_OFFSET, NOT_A_BITFIELD, _userData, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
 #define DMXELEMENT_UNPACK_FIELD_UTLSTRING_USERDATA( _attributeName, _defaultString, _varName, _userData )	\
-	{ _attributeName, _defaultString, AT_STRING, offsetof( DestStructType_t, _varName ), UTL_STRING_SIZE, NO_BIT_OFFSET, NOT_A_BITFIELD, _userData, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
+	{ _attributeName, _defaultString, AT_STRING, __builtin_offsetof( DestStructType_t, _varName ), UTL_STRING_SIZE, NO_BIT_OFFSET, NOT_A_BITFIELD, _userData, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, NOT_AN_ARRAY },
 
 #define END_DMXELEMENT_UNPACK( _structName, _varName )			\
 			{ nullptr, nullptr, AT_UNKNOWN, 0, 0, NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR }				\
@@ -511,6 +501,3 @@ inline CDmxAttribute* CDmxElement::SetValue( const char *pAttributeName, const T
 	pAttribute->SetValue( value );
 	return pAttribute;
 }
-
-
-#endif // DMXELEMENT_H

@@ -1,10 +1,33 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: CS's custom CPlayerResource
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 
@@ -13,6 +36,8 @@
 #include "cs_player_resource.h"
 #include "weapon_c4.h"
 #include <coordsize.h>
+import std;
+import ks.tier1;
 #include "cs_bot_manager.h"
 #include "cs_gamerules.h"
 #include "cs_bot.h"
@@ -22,8 +47,6 @@ extern bool	g_fGameOver;
 
 // Datatable
 IMPLEMENT_REFLECT_SERVERCLASS( CCSPlayerResource, DT_CSPlayerResource )
-#if CS_CONTROLLABLE_BOTS_ENABLED
-#endif
 
 
 LINK_ENTITY_TO_CLASS( cs_player_manager, CCSPlayerResource );
@@ -33,7 +56,7 @@ CCSPlayerResource::CCSPlayerResource( void )
 	m_bEndMatchNextMapAllVoted = false;
 	m_bPreferencesAssigned_T = false;
 	m_bPreferencesAssigned_CT = false;
-	memset( m_nAttemptedToGetColor, false, sizeof( m_nAttemptedToGetColor ) );
+	std::memset( m_nAttemptedToGetColor, false, sizeof( m_nAttemptedToGetColor ) );
 }
 
 
@@ -62,7 +85,7 @@ void CCSPlayerResource::UpdatePlayerData( void )
 			if ( pPlayer->IsVIP() )
 			{
 				// we should only have one VIP
-				Assert( m_iPlayerVIP == 0 );
+				contract_assert( m_iPlayerVIP == 0 );
 				m_iPlayerVIP = i;
 			}
 
@@ -312,7 +335,6 @@ void CCSPlayerResource::UpdatePlayerData( void )
 	}
 
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 
 	for ( int i=0; i < MAX_PLAYERS+1; i++ )
 	{
@@ -335,7 +357,6 @@ void CCSPlayerResource::UpdatePlayerData( void )
 
 	}
 
-#endif
 
 	BaseClass::UpdatePlayerData();
 }
@@ -349,7 +370,7 @@ void CCSPlayerResource::Spawn( void )
 	m_foundGoalPositions = false;
 	m_bPreferencesAssigned_CT = false;
 	m_bPreferencesAssigned_T = false;
-	memset( m_nAttemptedToGetColor, false, sizeof( m_nAttemptedToGetColor ) );
+	std::memset( m_nAttemptedToGetColor, false, sizeof( m_nAttemptedToGetColor ) );
 
 	for ( int i=0; i < MAX_HOSTAGES; i++ )
 	{
@@ -494,7 +515,7 @@ void CCSPlayerResource::SetPlayerTeammateColor( int index, bool bReset )
 			if ( CSGameRules()->IsQueuedMatchmaking() )
 			{
 				CCSPlayer *pThisPlayer = ( CCSPlayer* )UTIL_PlayerByIndex( index );
-				CSteamID steamID;
+				CPlayerId steamID;
 				pThisPlayer->GetSteamID( &steamID );
 				int numTotalPlayers = 0;		
 				static ConVarRef sv_mmqueue_reservation( "sv_mmqueue_reservation" );
@@ -588,7 +609,7 @@ void CCSPlayerResource::SetPlayerTeammateColor( int index, bool bReset )
 				}
 
 				// somehow this failed
-				AssertMsg( !bColorInUse, "Trying to assign a color to a teammate, but all colors are already in use!" );
+				contract_assert( ( !bColorInUse ) && "Trying to assign a color to a teammate, but all colors are already in use!" );
 
 				nAssignedColor = bColorInUse == false ? nAssignedColor : -1;
 				m_iCompTeammateColor.Set( index, nAssignedColor );

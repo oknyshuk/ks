@@ -1,28 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IVMODELINFO_H
-#define IVMODELINFO_H
-
-
-#include "tier0/platform.h"
+import ks.tier1;
 #include "datacache/imdlcache.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
 class IMaterial;
-class KeyValues;
 struct vcollide_t;
 struct model_t;
-class Vector;
-class QAngle;
 class CGameTrace;
-struct cplane_t;
 typedef CGameTrace trace_t;
 struct studiohdr_t;
 struct virtualmodel_t;
@@ -48,7 +37,7 @@ enum RenderableTranslucencyType_t
 //-----------------------------------------------------------------------------
 // Purpose: a callback class that is notified when a model has finished loading
 //-----------------------------------------------------------------------------
-abstract_class IModelLoadCallback
+class IModelLoadCallback
 {
 public:
 	virtual void OnModelLoadComplete( const model_t* pModel ) = 0;
@@ -90,8 +79,8 @@ public:
 //-----------------------------------------------------------------------------
 
 // change this when the new version is incompatable with the old
-#define VMODELINFO_CLIENT_INTERFACE_VERSION	"VModelInfoClient004"
-#define VMODELINFO_SERVER_INTERFACE_VERSION	"VModelInfoServer002"
+inline constexpr const char *VMODELINFO_CLIENT_INTERFACE_VERSION = "VModelInfoClient004";
+inline constexpr const char *VMODELINFO_SERVER_INTERFACE_VERSION = "VModelInfoServer002";
 
 // MODEL INDEX RULES
 // If index >= 0, then index references the precached model string table
@@ -234,5 +223,3 @@ struct virtualterrainparams_t
 	// UNDONE: Add grouping here, specified in BSP file? (test grouping to see if this is necessary)
 	int index;
 };
-
-#endif // IVMODELINFO_H

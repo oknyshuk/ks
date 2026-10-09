@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_pathfind.h
 // Path-finding mechanisms using the Navigation Mesh
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-#ifndef _NAV_PATHFIND_H_
-#define _NAV_PATHFIND_H_
-
-#include "tier0/vprof.h"
-#include "mathlib/ssemath.h"
+import std;
+import ks.math;
 #include "nav_area.h"
 
 extern int g_DebugPathfindCounter;
@@ -104,12 +98,11 @@ public:
  * If 'maxPathLength' is nonzero, path building will stop when this length is reached.
  * Returns true if a path exists.
  */
-#define IGNORE_NAV_BLOCKERS true
+inline constexpr auto IGNORE_NAV_BLOCKERS = true;
 template< typename CostFunctor >
 bool NavAreaBuildPath( CNavArea *startArea, CNavArea *goalArea, const Vector *goalPos, CostFunctor &costFunc, CNavArea **closestArea = nullptr, float maxPathLength = 0.0f, int teamID = TEAM_ANY, bool ignoreNavBlockers = false )
 {
-	VPROF_BUDGET( "NavAreaBuildPath", "NextBotSpiky" );
-	SNPROF("NavAreaBuildPath");
+	CVProfScope _( "NavAreaBuildPath", 0, "NextBotSpiky", false, BUDGETFLAG_OTHER );
 
 	if ( closestArea )
 	{
@@ -472,10 +465,10 @@ inline void AddAreaToOpenList( CNavArea *area, CNavArea *parent, const Vector &s
 /****************************************************************
  * DEPRECATED: Use filter-based SearchSurroundingAreas below
  ****************************************************************/
-#define INCLUDE_INCOMING_CONNECTIONS	0x1
-#define INCLUDE_BLOCKED_AREAS			0x2
-#define EXCLUDE_OUTGOING_CONNECTIONS	0x4
-#define EXCLUDE_ELEVATORS				0x8
+inline constexpr auto INCLUDE_INCOMING_CONNECTIONS = 0x1;
+inline constexpr auto INCLUDE_BLOCKED_AREAS = 0x2;
+inline constexpr auto EXCLUDE_OUTGOING_CONNECTIONS = 0x4;
+inline constexpr auto EXCLUDE_ELEVATORS = 0x8;
 template < typename Functor >
 void SearchSurroundingAreas( CNavArea *startArea, const Vector &startPos, Functor &func, float maxRange = -1.0f, unsigned int options = 0, int teamID = TEAM_ANY )
 {
@@ -794,6 +787,3 @@ CNavArea *FindMinimumCostArea( CNavArea *startArea, CostFunctor &costFunc )
 	}
 	return cheapAreaSet[ RandomInt( 0, cheapAreaSetCount-1 ) ].area;
 }
-
-
-#endif // _NAV_PATHFIND_H_

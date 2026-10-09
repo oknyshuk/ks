@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_NETWORKMANAGER_H
-#define AI_NETWORKMANAGER_H
-
-#include <atomic>
-#include <mutex>
-#include <vector>
-#include "utlvector.h"
+import std;
+import ks.tier1;
 #include "bitstring.h"
-#include "threadtools.h"
-
+#include "baseentity.h"
+#include "ai_hull.h"
 
 class CAI_NetworkEditTools;
 class CAI_Network;
@@ -62,7 +55,7 @@ public:
 
 public:
 	CAI_NetworkEditTools *	GetEditOps() { return m_pEditOps; }
-	CAI_Network *			GetNetwork() { Assert(!m_ThreadedBuild.pBuildingNetwork); return m_pNetwork; }
+	CAI_Network *			GetNetwork() { contract_assert( !m_ThreadedBuild.pBuildingNetwork ); return m_pNetwork; }
 	
 private:
 	
@@ -99,7 +92,7 @@ private:
 
 //-----------------------------------------------------------------------------
 
-abstract_class CAI_NetworkBuildHelper : public CLogicalEntity
+class CAI_NetworkBuildHelper : public CLogicalEntity
 {
 	DECLARE_CLASS( CAI_NetworkBuildHelper, CLogicalEntity );
 
@@ -196,15 +189,6 @@ public:
 	void				SetRebuildFlags();					
 	void				DrawEditInfoOverlay();
 
-#ifdef AI_PERF_MON	
-	//----------------------
-	// Performance stats
-	//----------------------
-	static	int			m_nPerfStatNN;
-	static	int			m_nPerfStatPB;
-	static	float		m_fNextPerfStatTime;
-#endif
-
 	CAI_NetworkManager *m_pManager;
 	CAI_Network *		m_pNetwork;
 
@@ -212,5 +196,3 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_NETWORKMANAGER_H

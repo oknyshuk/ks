@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CHOREOSCENE_H
-#define CHOREOSCENE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class CChoreoEvent;
 class CChoreoChannel;
@@ -18,18 +12,17 @@ class CFlexAnimationTrack;
 class ISceneTokenProcessor;
 class IChoreoStringPool;
 
-#include "tier1/utlvector.h"
-#include "tier1/map_ops.h"
-#include <bitset>
+import ks.tier1;
+import std;
 #include "expressionsample.h"
 #include "choreoevent.h"
 
-#define DEFAULT_SCENE_FPS	60
-#define MIN_SCENE_FPS		10
-#define MAX_SCENE_FPS		240
+inline constexpr auto DEFAULT_SCENE_FPS = 60;
+inline constexpr auto MIN_SCENE_FPS = 10;
+inline constexpr auto MAX_SCENE_FPS = 240;
 
 #define SCENE_BINARY_TAG		MAKEID( 'b', 'v', 'c', 'd' )
-#define SCENE_BINARY_VERSION	0x04
+inline constexpr auto SCENE_BINARY_VERSION = 0x04;
 
 //-----------------------------------------------------------------------------
 // Purpose: Container for choreographed scene of events for actors
@@ -92,7 +85,7 @@ public:
 	static void		ParseEdgeInfo( ISceneTokenProcessor *tokenizer, EdgeInfo_t *edgeinfo );
 
 	// Debugging
-	void			SceneMsg( PRINTF_FORMAT_STRING const char *pFormat, ... );
+	void			SceneMsg( const char *pFormat, ... );
 	void			Print( void );
 
 	// Sound system needs to have sounds pre-queued by this much time
@@ -259,7 +252,7 @@ private:
 						bool playing_forward, PROCESSING_TYPE& disposition );
 
 	// Prints to debug console, etc
-	void			choreoprintf( int level, PRINTF_FORMAT_STRING const char *fmt, ... );
+	void			choreoprintf( int level, const char *fmt, ... );
 
 	// Initialize scene
 	void			Init( IChoreoEventCallback *callback );
@@ -290,7 +283,7 @@ private:
 
 	// File I/O
 public:
-	static void		FilePrintf( ks::text_writer& buf, int level, PRINTF_FORMAT_STRING const char *fmt, ... );
+	static void		FilePrintf( ks::text_writer& buf, int level, const char *fmt, ... );
 private:
 	void			FileSaveEvent( ks::text_writer& buf, int level, CChoreoEvent *e );
 	void			FileSaveChannel( ks::text_writer& buf, int level, CChoreoChannel *c );
@@ -338,7 +331,7 @@ private:
 	float			m_flLastActiveTime;
 
 	// Print callback function
-	void ( *m_pfnPrint )( PRINTF_FORMAT_STRING const char *fmt, ... );
+	void ( *m_pfnPrint )( const char *fmt, ... );
 
 	IChoreoEventCallback			*m_pIChoreoEventCallback;
 
@@ -385,7 +378,7 @@ void CChoreoScene::SetRestoring( bool bRestoring )
 }
 
 
-abstract_class IChoreoStringPool
+class IChoreoStringPool
 {
 public:
 	virtual short	FindOrAddString( const char *pString ) = 0;
@@ -396,8 +389,6 @@ CChoreoScene *ChoreoLoadScene(
 	char const *filename,
 	IChoreoEventCallback *callback, 
 	ISceneTokenProcessor *tokenizer,
-	void ( *pfn ) ( PRINTF_FORMAT_STRING const char *fmt, ... ) );
+	void ( *pfn ) ( const char *fmt, ... ) );
 
 bool IsBufferBinaryVCD( char *pBuffer, int bufferSize );
-
-#endif // CHOREOSCENE_H

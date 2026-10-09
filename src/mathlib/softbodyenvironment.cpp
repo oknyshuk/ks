@@ -1,6 +1,8 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-// This is analogous to RnWorld from source2, but only for softbodies
-// 
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+// Purpose: This is analogous to RnWorld from source2, but only for softbodies
+
 #include "mathlib/softbodyenvironment.h"
 
 //-----------------------------------------------------------------------------------------------------------------------------
@@ -18,7 +20,7 @@ CSoftbodyCollisionFilter::CSoftbodyCollisionFilter()
 //-----------------------------------------------------------------------------------------------------------------------------
 uint16 CSoftbodyCollisionFilter::TestSimulation( const RnCollisionAttr_t &left, const RnCollisionAttr_t &right )const
 {
-	Assert( left.m_nCollisionGroup < MAX_GROUPS && right.m_nCollisionGroup < MAX_GROUPS );
+	contract_assert( left.m_nCollisionGroup < MAX_GROUPS && right.m_nCollisionGroup < MAX_GROUPS );
 
 	uint16 nIntersectionFlags = 0;
 
@@ -145,7 +147,7 @@ void CSoftbodyEnvironment::Remove( CSoftbodyCollisionShape * pShape )
 void CSoftbodyEnvironment::SetWind( const Vector & vWind )
 {
 	float flStrength = vWind.Length();
-	if ( fabsf( m_vWindDesc.w ) < FLT_EPSILON )
+	if ( std::fabsf( m_vWindDesc.w ) < std::numeric_limits<float>::epsilon() )
 	{
 		SetNoWind();
 	}

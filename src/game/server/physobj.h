@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef PHYSOBJ_H
-#define PHYSOBJ_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-#ifndef PHYSICS_H
 #include "physics.h"
-#endif
 
 #include "entityoutput.h"
 #include "func_break.h"
@@ -24,18 +16,18 @@
 //
 // ---------------------------------------------------------------------
 // Physbox Spawnflags. Start at 0x01000 to avoid collision with CBreakable's
-#define SF_PHYSBOX_ASLEEP					0x01000
-#define SF_PHYSBOX_IGNOREUSE				0x02000
-#define SF_PHYSBOX_DEBRIS					0x04000
-#define SF_PHYSBOX_MOTIONDISABLED			0x08000
-#define SF_PHYSBOX_USEPREFERRED				0x10000
-#define SF_PHYSBOX_ENABLE_ON_PHYSCANNON		0x20000
-#define SF_PHYSBOX_NO_ROTORWASH_PUSH		0x40000		// The rotorwash doesn't push these
-#define SF_PHYSBOX_ENABLE_PICKUP_OUTPUT		0x80000
-#define SF_PHYSBOX_ALWAYS_PICK_UP		    0x100000		// Physcannon can always pick this up, no matter what mass or constraints may apply.
-#define SF_PHYSBOX_NEVER_PICK_UP			0x200000		// Physcannon will never be able to pick this up.
-#define SF_PHYSBOX_NEVER_PUNT				0x400000		// Physcannon will never be able to punt this object.
-#define SF_PHYSBOX_PREVENT_PLAYER_TOUCH_ENABLE 0x800000		// If set, the player will not cause the object to enable its motion when bumped into
+inline constexpr auto SF_PHYSBOX_ASLEEP = 0x01000;
+inline constexpr auto SF_PHYSBOX_IGNOREUSE = 0x02000;
+inline constexpr auto SF_PHYSBOX_DEBRIS = 0x04000;
+inline constexpr auto SF_PHYSBOX_MOTIONDISABLED = 0x08000;
+inline constexpr auto SF_PHYSBOX_USEPREFERRED = 0x10000;
+inline constexpr auto SF_PHYSBOX_ENABLE_ON_PHYSCANNON = 0x20000;
+inline constexpr auto SF_PHYSBOX_NO_ROTORWASH_PUSH = 0x40000; // The rotorwash doesn't push these
+inline constexpr auto SF_PHYSBOX_ENABLE_PICKUP_OUTPUT = 0x80000;
+inline constexpr auto SF_PHYSBOX_ALWAYS_PICK_UP = 0x100000; // Physcannon can always pick this up, no matter what mass or constraints may apply.
+inline constexpr auto SF_PHYSBOX_NEVER_PICK_UP = 0x200000; // Physcannon will never be able to pick this up.
+inline constexpr auto SF_PHYSBOX_NEVER_PUNT = 0x400000; // Physcannon will never be able to punt this object.
+inline constexpr auto SF_PHYSBOX_PREVENT_PLAYER_TOUCH_ENABLE = 0x800000; // If set, the player will not cause the object to enable its motion when bumped into
 
 // UNDONE: Hook collisions into the physics system to generate touch functions and take damage on falls
 // UNDONE: Base class PhysBrush
@@ -112,11 +104,11 @@ protected:
 // CPhysExplosion -- physically simulated explosion
 //
 // ---------------------------------------------------------------------
-#define SF_PHYSEXPLOSION_NODAMAGE			0x0001
-#define SF_PHYSEXPLOSION_PUSH_PLAYER		0x0002
-#define SF_PHYSEXPLOSION_RADIAL				0x0004
-#define	SF_PHYSEXPLOSION_TEST_LOS			0x0008
-#define SF_PHYSEXPLOSION_DISORIENT_PLAYER	0x0010
+inline constexpr auto SF_PHYSEXPLOSION_NODAMAGE = 0x0001;
+inline constexpr auto SF_PHYSEXPLOSION_PUSH_PLAYER = 0x0002;
+inline constexpr auto SF_PHYSEXPLOSION_RADIAL = 0x0004;
+inline constexpr auto SF_PHYSEXPLOSION_TEST_LOS = 0x0008;
+inline constexpr auto SF_PHYSEXPLOSION_DISORIENT_PLAYER = 0x0010;
 
 class CPhysExplosion : public CPointEntity
 {
@@ -247,5 +239,3 @@ protected:
 	float			m_flNextSuckTime;
 	[[= ks::reflect::Key{ .name = "maxobjects" } ]] int				m_iMaxObjectsAttached;
 };
-
-#endif // PHYSOBJ_H

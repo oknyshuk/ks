@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//=============================================================================//
-#ifndef C_JIGGLEBONES_H
-#define C_JIGGLEBONES_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+import ks.tier1;
 #include "studio.h"
-#include "utlvector.h"
-#include <vector>
+import std;
 
 //-----------------------------------------------------------------------------
 /**
@@ -60,6 +53,4 @@ public:
 };
 
 
-extern void DevMsgRT( PRINTF_FORMAT_STRING char const* pMsg, ... );
-
-#endif // C_BASEANIMATING_H
+extern void DevMsgRT( char const* pMsg, ... );

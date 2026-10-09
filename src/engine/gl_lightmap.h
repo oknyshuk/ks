@@ -1,22 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef GL_LIGHTMAP_H
-#define GL_LIGHTMAP_H
-
+import ks.math;
 #include "surfacehandle.h"
+import std;
+#include "bspfile.h"
 
-#define	MAX_LIGHTMAPS	256
+inline constexpr auto MAX_LIGHTMAPS = 256;
 
 // NOTE: This is used for a hack that deals with viewmodels creating dlights 
 // behind walls
-#define DLIGHT_BEHIND_PLANE_DIST	-15
+inline constexpr auto DLIGHT_BEHIND_PLANE_DIST = -15;
 
 extern bool g_RebuildLightmaps;
 
@@ -45,6 +40,4 @@ void R_SetLightmapBlendingMode( void );
 void R_CheckForLightmapUpdates( SurfaceHandle_t surfID, int nTransformIndex );
 void R_BuildLightmapUpdateList();
 
-extern ALIGN128 Vector4D blocklights[NUM_BUMP_VECTS+1][ MAX_LIGHTMAP_DIM_INCLUDING_BORDER * MAX_LIGHTMAP_DIM_INCLUDING_BORDER ];
-
-#endif // GL_LIGHTMAP_H
+extern Vector4D blocklights[NUM_BUMP_VECTS+1][ MAX_LIGHTMAP_DIM_INCLUDING_BORDER * MAX_LIGHTMAP_DIM_INCLUDING_BORDER ];

@@ -1,25 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IDISPINFO_H
-#define IDISPINFO_H
-
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //=============================================================================
 
-#include <assert.h>
+import ks.tier1;
 #include "bspfile.h"
-#include "mathlib/vmatrix.h"
+import std;
 #include "dispnode.h"
 #include "builddisp.h"
-#include "utlvector.h"
 #include "engine/ishadowmgr.h"
 #include "getintersectingsurfaces_struct.h"
 #include "surfacehandle.h"
@@ -52,7 +41,7 @@ enum
 //-----------------------------------------------------------------------------
 // Displacement interface to the engine (and WorldCraft?)
 //-----------------------------------------------------------------------------
-abstract_class IDispInfo
+class IDispInfo
 {
 public:
 
@@ -136,6 +125,3 @@ bool			DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring );
 
 // Deletes all the static vertex buffers.
 void			DispInfo_ReleaseMaterialSystemObjects( model_t *pWorld );
-
-
-#endif // IDISPINFO_H

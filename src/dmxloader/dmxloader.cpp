@@ -1,35 +1,19 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
+import ks.tier1;
 #include "dmxloader/dmxelement.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier1/text_reader.h"
-#include "tier1/text_writer.h"
 #include "tier2/tier2.h"
 #include "filesystem.h"
 #include "datamodel/dmxheader.h"
 #include "dmxserializationdictionary.h"
-#include "tier1/memstack.h"
-#include <algorithm>
-#include <cstring>
-#include <format>
-#include <map>
-#include <optional>
-#include <span>
-#include <string>
-#include <string_view>
-#include <vector>
+import std;
 
+constexpr auto DMX_BINARY_VER_STRINGTABLE = 2;
+constexpr auto DMX_BINARY_VER_GLOBAL_STRINGTABLE = 4;
+constexpr auto DMX_BINARY_VER_STRINGTABLE_LARGESYMBOLS = 5;
 
-#define DMX_BINARY_VER_STRINGTABLE 2
-#define DMX_BINARY_VER_GLOBAL_STRINGTABLE 4
-#define DMX_BINARY_VER_STRINGTABLE_LARGESYMBOLS 5
-
-#define CURRENT_BINARY_ENCODING		5
+constexpr auto CURRENT_BINARY_ENCODING = 5;
 
 
 //-----------------------------------------------------------------------------
@@ -41,7 +25,7 @@ static bool s_bAllocatorInitialized;
 
 void BeginDMXContext( )
 {
-	Assert( !s_bInDMXContext );
+	contract_assert( !s_bInDMXContext );
 
 	if ( !s_bAllocatorInitialized )
 	{
@@ -55,7 +39,7 @@ void BeginDMXContext( )
 
 void EndDMXContext( bool bDecommitMemory )
 {
-	Assert( s_bInDMXContext );
+	contract_assert( s_bInDMXContext );
 	s_bInDMXContext = false;
 	s_DMXAllocator.FreeAll( bDecommitMemory );
 }
@@ -69,12 +53,11 @@ void DecommitDMXMemory()
 //-----------------------------------------------------------------------------
 // Used for allocation. All will be freed when we leave the DMX context
 //-----------------------------------------------------------------------------
-void* DMXAlloc( size_t size )
+void* DMXAlloc( std::size_t size )
 {
-	Assert( s_bInDMXContext );
+	contract_assert( s_bInDMXContext );
 	if ( !s_bInDMXContext )
 		return 0;
-	MEM_ALLOC_CREDIT_( "DMXAlloc" );
 	return s_DMXAllocator.Alloc( size, false );
 }
 
@@ -146,7 +129,7 @@ bool CDmxSerializer::ShouldWriteAttribute( const char *pAttributeName, CDmxAttri
 		return false;
 
 	// These are already written in the initial element dictionary
-	if ( !Q_stricmp( pAttributeName, "name" ) )
+	if ( !V_stricmp( pAttributeName, "name" ) )
 		return false;
 
 	return true;
@@ -368,8 +351,8 @@ CDmxElement* CDmxSerializer::UnserializeElementIndex( ks::byte_reader &buf, std:
 		return nullptr;
 	}
 
-	Assert( nElementIndex < std::ssize( elementList ) );
-	Assert( nElementIndex >= 0 || nElementIndex == ELEMENT_INDEX_NULL );
+	contract_assert( nElementIndex < std::ssize( elementList ) );
+	contract_assert( nElementIndex >= 0 || nElementIndex == ELEMENT_INDEX_NULL );
 	if ( nElementIndex < 0 || !elementList[ nElementIndex ] )
 		return nullptr;
 
@@ -434,7 +417,7 @@ bool CDmxSerializer::UnserializeAttributes( ks::byte_reader &buf, CDmxElement *p
 		}
 
 		DmAttributeType_t nAttributeType = (DmAttributeType_t)buf.read< char >();
-		Assert( nAttributeType >= AT_FIRST_VALUE_TYPE && nAttributeType < AT_TYPE_COUNT );
+		contract_assert( nAttributeType >= AT_FIRST_VALUE_TYPE && nAttributeType < AT_TYPE_COUNT );
 
 		CDmxAttribute *pAttribute = pElement->AddAttribute( pName );
 		if ( !pAttribute )
@@ -480,12 +463,12 @@ bool CDmxSerializer::UnserializeAttributes( ks::byte_reader &buf, CDmxElement *p
 int CDmxSerializer::GetStringOffsetTable( ks::byte_reader &buf, int *offsetTable, int nStrings )
 {
 	const std::string_view table = ks::text_view( buf.rest() );
-	size_t nPos = 0;
+	std::size_t nPos = 0;
 	for ( int i = 0; i < nStrings; ++i )
 	{
 		offsetTable[ i ] = nPos;
 
-		const size_t nEnd = table.find( '\0', nPos );
+		const std::size_t nEnd = table.find( '\0', nPos );
 		if ( nEnd == std::string_view::npos )
 			return -1;
 		nPos = nEnd + 1;
@@ -499,6 +482,7 @@ int CDmxSerializer::GetStringOffsetTable( ks::byte_reader &buf, int *offsetTable
 //-----------------------------------------------------------------------------
 bool CDmxSerializer::Unserialize( ks::byte_reader &buf, int nEncodingVersion, CDmxElement **ppRoot )
 {
+	ks::ScratchArena<> scratch;
 	if ( nEncodingVersion < 0 || nEncodingVersion > CURRENT_BINARY_ENCODING )
 		return false;
 
@@ -530,13 +514,13 @@ bool CDmxSerializer::Unserialize( ks::byte_reader &buf, int nEncodingVersion, CD
 
 		if ( nStrings > 0 )
 		{
-			offsetTable = ( int* )stackalloc( nStrings * sizeof( int ) );
+			offsetTable = scratch.Alloc<int>( nStrings );
 
 			// this causes entire string table to be mapped in memory at once
 			int nStringMemoryUsage = GetStringOffsetTable( buf, offsetTable, nStrings );
 			if ( nStringMemoryUsage < 0 )
 				return false;
-			stringTable = ( char* )stackalloc( nStringMemoryUsage * sizeof( char ) );
+			stringTable = scratch.Alloc<char>( nStringMemoryUsage );
 			buf.read_bytes( stringTable, nStringMemoryUsage );
 		}
 	}
@@ -649,13 +633,13 @@ bool SerializeDMX( const char *pFileName, const char *pPathID, bool bTextMode, C
 	// NOTE: This guarantees full path names for pathids
 	char pBuf[MAX_PATH];
 	const char *pFullPath = pFileName;
-	if ( !Q_IsAbsolutePath( pFullPath ) && !pPathID )
+	if ( !V_IsAbsolutePath( pFullPath ) && !pPathID )
 	{
 		char pDir[MAX_PATH];
 		if ( g_pFullFileSystem->GetCurrentDirectory( pDir, sizeof(pDir) ) )
 		{
-			Q_ComposeFileName( pDir, pFileName, pBuf, sizeof(pBuf) );
-			Q_RemoveDotSlashes( pBuf );
+			V_ComposeFileName( pDir, pFileName, pBuf, sizeof(pBuf) );
+			V_RemoveDotSlashes( pBuf );
 			pFullPath = pBuf;
 		}
 	}
@@ -691,8 +675,8 @@ bool SerializeDMX( const char *pFileName, const char *pPathID, bool bTextMode, C
 //-----------------------------------------------------------------------------
 static void CopyToBuffer( char *pDest, int nDestLen, std::string_view src )
 {
-	const size_t nCopy = std::min( src.size(), (size_t)nDestLen - 1 );
-	memcpy( pDest, src.data(), nCopy );
+	const std::size_t nCopy = std::min( src.size(), (std::size_t)nDestLen - 1 );
+	std::memcpy( pDest, src.data(), nCopy );
 	pDest[ nCopy ] = '\0';
 }
 
@@ -708,7 +692,7 @@ static bool ParseDMXHeader( ks::text_reader &buf, bool bBufIsText, char *pEncodi
 		// sscanf considered harmful. We don't have POSIX 2008 support on OS X and "C11 Annex K" is optional... (optional specs considered useful)
 		char pTmpEncodingName[ sizeof( header ) ] = { 0 };
 		char pTmpFormatName  [ sizeof( header ) ] = { 0 };
-		int nAssigned = sscanf( header, "encoding %s %d format %s %d\n", pTmpEncodingName, &nEncodingVersion, pTmpFormatName, &nFormatVersion );
+		int nAssigned = std::sscanf( header, "encoding %s %d format %s %d\n", pTmpEncodingName, &nEncodingVersion, pTmpFormatName, &nFormatVersion );
 		bOk = ( V_strlen( pTmpEncodingName ) < nEncodingNameLen ) && ( V_strlen( pTmpFormatName ) < nFormatNameLen );
 		V_strncpy( pEncodingName, pTmpEncodingName, nEncodingNameLen );
 		V_strncpy( pFormatName, pTmpFormatName, nFormatNameLen );
@@ -820,13 +804,13 @@ bool UnserializeDMX( const char *pFileName, const char *pPathID, bool bTextMode,
 	// NOTE: This guarantees full path names for pathids
 	char pBuf[MAX_PATH];
 	const char *pFullPath = pFileName;
-	if ( !Q_IsAbsolutePath( pFullPath ) && !pPathID )
+	if ( !V_IsAbsolutePath( pFullPath ) && !pPathID )
 	{
 		char pDir[MAX_PATH];
 		if ( g_pFullFileSystem->GetCurrentDirectory( pDir, sizeof(pDir) ) )
 		{
-			Q_ComposeFileName( pDir, pFileName, pBuf, sizeof(pBuf) );
-			Q_RemoveDotSlashes( pBuf );
+			V_ComposeFileName( pDir, pFileName, pBuf, sizeof(pBuf) );
+			V_RemoveDotSlashes( pBuf );
 			pFullPath = pBuf;
 		}
 	}

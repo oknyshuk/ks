@@ -1,22 +1,18 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-#ifndef SERIALIZE_HDR
-#define SERIALIZE_HDR	
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+import ks.tier1;
 #include "resourcefile/resourcestream.h"
-#include "mathlib/aabb.h"
-#include <vector>
+import std;
 #include "rubikon/serializehelpers.h"
 #include "rubikon/constants.h"
-#include "tier1/checksum_crc.h"
-#include "mathlib/transform.h"
-
 
 //---------------------------------------------------------------------------------------
 // Sphere serialization 
 //---------------------------------------------------------------------------------------
-schema struct RnSphere_t
+struct RnSphere_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnSphere_t );
 
 	AABB_t GetBbox() const;
@@ -56,9 +52,8 @@ inline RnSphere_t operator*( float flScale, const RnSphere_t& sphere )
 //---------------------------------------------------------------------------------------
 // Capsule serialization 
 //---------------------------------------------------------------------------------------
-schema struct RnCapsule_t
+struct RnCapsule_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnCapsule_t );
 
 	AABB_t GetBbox() const;
@@ -111,9 +106,9 @@ struct RnRay_t
 		vDelta = vEnd - vStart;
 
 		// Pre-compute inverse
-		vDeltaInv.x = vDelta.x != 0.0f ? 1.0f / vDelta.x : FLT_MAX;
-		vDeltaInv.y = vDelta.y != 0.0f ? 1.0f / vDelta.y : FLT_MAX;
-		vDeltaInv.z = vDelta.z != 0.0f ? 1.0f / vDelta.z : FLT_MAX;
+		vDeltaInv.x = vDelta.x != 0.0f ? 1.0f / vDelta.x : std::numeric_limits<float>::max();
+		vDeltaInv.y = vDelta.y != 0.0f ? 1.0f / vDelta.y : std::numeric_limits<float>::max();
+		vDeltaInv.z = vDelta.z != 0.0f ? 1.0f / vDelta.z : std::numeric_limits<float>::max();
 	}
 
 	VectorAligned vOrigin;
@@ -126,29 +121,27 @@ struct RnRay_t
 //---------------------------------------------------------------------------------------
 // Hull serialization 
 //---------------------------------------------------------------------------------------
-schema struct RnPlane_t
+struct RnPlane_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnPlane_t );
 
 	Vector m_vNormal;														// The plane normal
 	float32 m_flOffset;														// The plane offset such that P: n*x - d = 0
 
 	// Construction
-	FORCEINLINE RnPlane_t( void )											{ }
-	FORCEINLINE RnPlane_t( const Vector& n, float d )						{ m_vNormal = n; m_flOffset = d; }
-	FORCEINLINE RnPlane_t( const Vector& n, const Vector& p )				{ m_vNormal = n; m_flOffset = DotProduct( n, p ); }
+	[[gnu::always_inline]] inline RnPlane_t( void )											{ }
+	[[gnu::always_inline]] inline RnPlane_t( const Vector& n, float d )						{ m_vNormal = n; m_flOffset = d; }
+	[[gnu::always_inline]] inline RnPlane_t( const Vector& n, const Vector& p )				{ m_vNormal = n; m_flOffset = DotProduct( n, p ); }
 	
 	// Utilities
-	FORCEINLINE float Distance( const Vector &vPoint ) const				{ return DotProduct( m_vNormal, vPoint ) - m_flOffset; }
-	FORCEINLINE bool IsValid( void ) const									{ return m_vNormal != vec3_origin; }
+	[[gnu::always_inline]] inline float Distance( const Vector &vPoint ) const				{ return DotProduct( m_vNormal, vPoint ) - m_flOffset; }
+	[[gnu::always_inline]] inline bool IsValid( void ) const									{ return m_vNormal != vec3_origin; }
 
-	FORCEINLINE bool operator == ( const RnPlane_t &other )const			{ return m_vNormal == other.m_vNormal && m_flOffset == other.m_flOffset; }
+	[[gnu::always_inline]] inline bool operator == ( const RnPlane_t &other )const			{ return m_vNormal == other.m_vNormal && m_flOffset == other.m_flOffset; }
 };
 
-schema struct RnHalfEdge_t
+struct RnHalfEdge_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnHalfEdge_t );
 
 	uint8 m_nNext;															// Next edge index in CCW circular list around face
@@ -157,17 +150,15 @@ schema struct RnHalfEdge_t
 	uint8 m_nFace;															// Face index 
 };
 
-schema struct RnFace_t
+struct RnFace_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnFace_t );
 
 	uint8 m_nEdge;															// Start edge index for CCW circular list around face 
 };
 
-schema struct RnHull_t
+struct RnHull_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnHull_t );
 
 	Vector m_vCentroid;														// Hull centroid
@@ -183,16 +174,16 @@ schema struct RnHull_t
 	float m_flMinMotionThickness;
 	AABB_t m_Bounds;
 
-	FORCEINLINE int GetVertexCount( void ) const							{ return m_Vertices.Count();	}
-	FORCEINLINE const Vector GetVertex( int nVertex ) const					{ return m_Vertices[ nVertex ]; }
-	FORCEINLINE int GetPlaneCount( void ) const								{ return m_Planes.Count();		}
-	FORCEINLINE const RnPlane_t& GetPlane( int nFace ) const				{ return m_Planes[ nFace ];		}
-	FORCEINLINE const Vector& GetPlaneNormal( int nFace ) const				{ return m_Planes[ nFace ].m_vNormal;		}
-	FORCEINLINE int GetEdgeCount( void ) const								{ return m_Edges.Count();		}
-	FORCEINLINE const RnHalfEdge_t* GetEdge( int nEdge ) const				{ return &m_Edges[ nEdge ];		}
-	FORCEINLINE int GetFaceCount( void ) const								{ return m_Faces.Count();		}
-	FORCEINLINE const RnFace_t* GetFace( int nFace ) const					{ return &m_Faces[ nFace ];		}
-	FORCEINLINE const Vector ComputeFaceCentroid( int nFace )const;
+	[[gnu::always_inline]] inline int GetVertexCount( void ) const							{ return m_Vertices.Count();	}
+	[[gnu::always_inline]] inline const Vector GetVertex( int nVertex ) const					{ return m_Vertices[ nVertex ]; }
+	[[gnu::always_inline]] inline int GetPlaneCount( void ) const								{ return m_Planes.Count();		}
+	[[gnu::always_inline]] inline const RnPlane_t& GetPlane( int nFace ) const				{ return m_Planes[ nFace ];		}
+	[[gnu::always_inline]] inline const Vector& GetPlaneNormal( int nFace ) const				{ return m_Planes[ nFace ].m_vNormal;		}
+	[[gnu::always_inline]] inline int GetEdgeCount( void ) const								{ return m_Edges.Count();		}
+	[[gnu::always_inline]] inline const RnHalfEdge_t* GetEdge( int nEdge ) const				{ return &m_Edges[ nEdge ];		}
+	[[gnu::always_inline]] inline int GetFaceCount( void ) const								{ return m_Faces.Count();		}
+	[[gnu::always_inline]] inline const RnFace_t* GetFace( int nFace ) const					{ return &m_Faces[ nFace ];		}
+	[[gnu::always_inline]] inline const Vector ComputeFaceCentroid( int nFace )const;
 	int GetMemory( void ) const;
 
 	void Transform( const matrix3x4_t& transform );
@@ -204,7 +195,7 @@ schema struct RnHull_t
 	void GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices, float flScale = 1.0f ) const;
 	
 	float GetVolume( void ) const;
-	FORCEINLINE const Vector &GetCentroid( )const							{ return m_vCentroid; }
+	[[gnu::always_inline]] inline const Vector &GetCentroid( )const							{ return m_vCentroid; }
 
 	uintp GetRuntimeSize( void ) const;
 	
@@ -284,7 +275,7 @@ struct RnHullTriangle_t : public RnHull_t
 };
 
 
-struct RnHullBox_t : public RnHull_t
+struct alignas(16) RnHullBox_t : public RnHull_t
 {
 	void Init( const Vector& vMin, const Vector& vMax )
 	{	
@@ -371,23 +362,21 @@ struct RnHullBox_t : public RnHull_t
 //--------------------------------------------------------------------------------------------------
 // Mesh serialization
 //--------------------------------------------------------------------------------------------------
-#define RN_TYPE_SPLIT_X		0
-#define RN_TYPE_SPLIT_Y		1
-#define RN_TYPE_SPLIT_Z		2
-#define RN_TYPE_LEAF		3
+inline constexpr auto RN_TYPE_SPLIT_X = 0;
+inline constexpr auto RN_TYPE_SPLIT_Y = 1;
+inline constexpr auto RN_TYPE_SPLIT_Z = 2;
+inline constexpr auto RN_TYPE_LEAF = 3;
 
-schema struct RnTriangle_t
+struct RnTriangle_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnTriangle_t );
 
 	int32 m_nIndex[ 3 ];
 };
 
 // TODO: this wants to be ALIGN32, but it's currently stored in CUtlVector and CResourceArray, which do not support this.
-schema struct ALIGN16 RnNode_t // node needs to not stride over cache line boundary and min/max vectors need to be aligned for easy SIMD loading
+struct RnNode_t // node needs to not stride over cache line boundary and min/max vectors need to be aligned for easy SIMD loading
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnNode_t );	
 
 	Vector m_vMin;															// The node AABB 
@@ -396,17 +385,17 @@ schema struct ALIGN16 RnNode_t // node needs to not stride over cache line bound
 	uint32 m_nTriangleOffset;												// If leaf node this is the offset into the associated triangle array
 	
 	// Traversal
-	FORCEINLINE bool IsLeaf( void ) const									{ return GetType() == RN_TYPE_LEAF;	}
-	FORCEINLINE RnNode_t* GetLeftChild( void ) 								{ return this + 1; }
-	FORCEINLINE const RnNode_t* GetLeftChild( void ) const					{ return this + 1; }
-	FORCEINLINE RnNode_t* GetRightChild( void ) 							{ return this + GetChildOffset(); }
-	FORCEINLINE const RnNode_t* GetRightChild( void ) const					{ return this + GetChildOffset(); }
-	FORCEINLINE uint GetAxis( void ) const									{ AssertDbg( !IsLeaf() ); return m_nChildren >> 30; }
-	FORCEINLINE uint GetChildOffset( void) const							{ AssertDbg( !IsLeaf() ); return m_nChildren & 0x3FFFFFFF; }
-	FORCEINLINE uint GetType( void ) const									{ return m_nChildren >> 30; }
-	FORCEINLINE uint GetTriangleCount( void ) const							{ AssertDbg( IsLeaf() ); return m_nChildren & 0x3FFFFFFF; }
-	FORCEINLINE uint GetTriangleOffset( void ) const						{ AssertDbg( IsLeaf() ); return m_nTriangleOffset; }
-	FORCEINLINE void SetTriangleOffset( uint32 nTriangleOffset )			{ AssertDbg( IsLeaf( ) ); m_nTriangleOffset = nTriangleOffset; }
+	[[gnu::always_inline]] inline bool IsLeaf( void ) const									{ return GetType() == RN_TYPE_LEAF;	}
+	[[gnu::always_inline]] inline RnNode_t* GetLeftChild( void ) 								{ return this + 1; }
+	[[gnu::always_inline]] inline const RnNode_t* GetLeftChild( void ) const					{ return this + 1; }
+	[[gnu::always_inline]] inline RnNode_t* GetRightChild( void ) 							{ return this + GetChildOffset(); }
+	[[gnu::always_inline]] inline const RnNode_t* GetRightChild( void ) const					{ return this + GetChildOffset(); }
+	[[gnu::always_inline]] inline uint GetAxis( void ) const									{ contract_assert( !IsLeaf() ); return m_nChildren >> 30; }
+	[[gnu::always_inline]] inline uint GetChildOffset( void) const							{ contract_assert( !IsLeaf() ); return m_nChildren & 0x3FFFFFFF; }
+	[[gnu::always_inline]] inline uint GetType( void ) const									{ return m_nChildren >> 30; }
+	[[gnu::always_inline]] inline uint GetTriangleCount( void ) const							{ contract_assert( IsLeaf() ); return m_nChildren & 0x3FFFFFFF; }
+	[[gnu::always_inline]] inline uint GetTriangleOffset( void ) const						{ contract_assert( IsLeaf() ); return m_nTriangleOffset; }
+	[[gnu::always_inline]] inline void SetTriangleOffset( uint32 nTriangleOffset )			{ contract_assert( IsLeaf( ) ); m_nTriangleOffset = nTriangleOffset; }
 
 	// Construction
 	void SetLeaf( uint nOffset, uint nCount )
@@ -417,18 +406,17 @@ schema struct ALIGN16 RnNode_t // node needs to not stride over cache line bound
 
 	void SetNode( uint nAxis, uint nChildOffset )
 	{
-		AssertDbg( nAxis < 3 );
+		contract_assert( nAxis < 3 );
 		m_nChildren = ( nAxis << 30 ) | nChildOffset;
 	}
 
 	// Statistics
 	int GetHeight( void ) const;
 
-} ALIGN16_POST;
+};
 
-schema struct RnMesh_t
+struct RnMesh_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnMesh_t );
 
 	Vector m_vMin;															// The mesh AABB 
@@ -439,17 +427,17 @@ schema struct RnMesh_t
 	CResourceArray< uint8 > m_Materials;									// The per-triangle material indices for this mesh. Can be empty if all triangles share the same material.
 	Vector m_vOrthographicAreas; // fraction 0..1 of coverage along YZ,ZX,XY sides of AABB
 	
-	FORCEINLINE RnNode_t* GetRoot( void ) 									{ return &m_Nodes[ 0 ]; }
-	FORCEINLINE const RnNode_t* GetRoot( void ) const						{ return &m_Nodes[ 0 ]; }
-	FORCEINLINE int GetVertexCount( void ) const							{ return m_Vertices.Count();		}
-	FORCEINLINE const Vector &GetVertex( int nVertex ) const				{ return m_Vertices[ nVertex ];		}
-	FORCEINLINE int GetTriangleCount( void ) const							{ return m_Triangles.Count();		}
-	FORCEINLINE const RnTriangle_t* GetTriangle( int nTriangle ) const		{ return &m_Triangles[ nTriangle ];	}
-	FORCEINLINE int GetMaterialCount( void ) const							{ return m_Materials.Count();		}
-	FORCEINLINE uint8 GetMaterial( int nMaterial ) const					{ return m_Materials[ nMaterial ];  }									
-	FORCEINLINE const Vector ComputeTriangleUnitNormal( const Vector &vScale, int nIndex )const;
-	FORCEINLINE const Vector ComputeTriangleCentroid( int nIndex )const;
-	FORCEINLINE const Vector ComputeTriangleIncenter( int nIndex )const; // the center of inscribed circle
+	[[gnu::always_inline]] inline RnNode_t* GetRoot( void ) 									{ return &m_Nodes[ 0 ]; }
+	[[gnu::always_inline]] inline const RnNode_t* GetRoot( void ) const						{ return &m_Nodes[ 0 ]; }
+	[[gnu::always_inline]] inline int GetVertexCount( void ) const							{ return m_Vertices.Count();		}
+	[[gnu::always_inline]] inline const Vector &GetVertex( int nVertex ) const				{ return m_Vertices[ nVertex ];		}
+	[[gnu::always_inline]] inline int GetTriangleCount( void ) const							{ return m_Triangles.Count();		}
+	[[gnu::always_inline]] inline const RnTriangle_t* GetTriangle( int nTriangle ) const		{ return &m_Triangles[ nTriangle ];	}
+	[[gnu::always_inline]] inline int GetMaterialCount( void ) const							{ return m_Materials.Count();		}
+	[[gnu::always_inline]] inline uint8 GetMaterial( int nMaterial ) const					{ return m_Materials[ nMaterial ];  }									
+	[[gnu::always_inline]] inline const Vector ComputeTriangleUnitNormal( const Vector &vScale, int nIndex )const;
+	[[gnu::always_inline]] inline const Vector ComputeTriangleCentroid( int nIndex )const;
+	[[gnu::always_inline]] inline const Vector ComputeTriangleIncenter( int nIndex )const; // the center of inscribed circle
 
 	// Statistics
 	int GetHeight( void ) const;
@@ -472,42 +460,37 @@ schema struct RnMesh_t
 //--------------------------------------------------------------------------------------------------
 // Shape serialization
 //--------------------------------------------------------------------------------------------------
-schema struct RnShapeDesc_t
+struct RnShapeDesc_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnShapeDesc_t );
 
 	uint32 m_nCollisionAttributeIndex;
 	uint32 m_nSurfacePropertyIndex;
 };
 
-schema struct RnSphereDesc_t : public RnShapeDesc_t
+struct RnSphereDesc_t : public RnShapeDesc_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnSphereDesc_t );
 
 	RnSphere_t m_Sphere;
 };
 
-schema struct RnCapsuleDesc_t : public RnShapeDesc_t
+struct RnCapsuleDesc_t : public RnShapeDesc_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnCapsuleDesc_t );
 
 	RnCapsule_t m_Capsule;
 };
 
-schema struct RnHullDesc_t : public RnShapeDesc_t
+struct RnHullDesc_t : public RnShapeDesc_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnHullDesc_t );
 
 	RnHull_t m_Hull;
 };
 
-schema struct RnMeshDesc_t : public RnShapeDesc_t
+struct RnMeshDesc_t : public RnShapeDesc_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnMeshDesc_t );
 
 	RnMesh_t m_Mesh;
@@ -547,20 +530,6 @@ inline uintp RnMesh_t::GetRuntimeSize( void ) const
 //--------------------------------------------------------------------------------------------------
 inline void RnHull_t::Validate( void ) const
 {
-#ifdef DBGFLAG_ASSERT
-	Assert( m_flMaxAngularRadius > 0 && m_flMaxAngularRadius < 1e5f && m_vCentroid.Length() < 1e4f && uint( m_Vertices.Count() ) < 256 && uint( m_Planes.Count() ) < 256 && uint( m_Edges.Count() ) < 256 && uint( m_Faces.Count() ) < 256 );
-	for( int i = 0; i < m_Faces.Count(); ++i )
-	{
-		Assert( m_Faces[i].m_nEdge < ( uint )m_Edges.Count() );
-	}
-	for( int i = 0; i < m_Edges.Count(); ++i )
-	{
-		Assert( m_Edges[i].m_nNext < ( uint )m_Edges.Count() );
-		Assert( m_Edges[i].m_nTwin < ( uint )m_Edges.Count() );
-		Assert( m_Edges[i].m_nOrigin < ( uint )m_Vertices.Count() );
-		Assert( m_Edges[i].m_nFace < ( uint )m_Faces.Count() );
-	}
-#endif
 }
 
 
@@ -568,17 +537,6 @@ inline void RnHull_t::Validate( void ) const
 //--------------------------------------------------------------------------------------------------
 inline void RnMesh_t::Validate( void ) const
 {
-#ifdef DBGFLAG_ASSERT
-	Assert( m_vMin.Length() < 1e5f && m_vMax.Length() < 1e5f ); // check saneness
-	//for( int i = 0; i < m_Nodes.Count(); ++i )
-	{
-		
-	}
-	for( int i = 0; i < m_Vertices.Count(); ++i )
-	{
-		Assert( m_Vertices[i].Length() < 1e5f );
-	}
-#endif
 }
 
 
@@ -668,24 +626,21 @@ struct rnSpringDesc_t : public RnJointDesc_t
 	float32 m_flDampingRatio;
 };
 
-schema struct RnSoftbodyParticle_t
+struct RnSoftbodyParticle_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnSoftbodyParticle_t );
 	float32 m_flMassInv;
 };
 
-schema struct RnSoftbodySpring_t
+struct RnSoftbodySpring_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnSoftbodySpring_t );
 	uint16 m_nParticle[2];
 	float32 m_flLength;
 };
 
-schema struct RnSoftbodyCapsule_t
+struct RnSoftbodyCapsule_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnSoftbodyCapsule_t );
 	Vector m_vCenter[2];
 	float32 m_flRadius;
@@ -693,9 +648,8 @@ schema struct RnSoftbodyCapsule_t
 };
 
 
-schema struct ALIGN16 RnBlendVertex_t
+struct RnBlendVertex_t
 {
-	TYPEMETA( MNoScatter )
 	DECLARE_SCHEMA_DATA_CLASS( RnBlendVertex_t );
 	uint16 m_nWeight0;
 	uint16 m_nIndex0;
@@ -711,7 +665,7 @@ schema struct ALIGN16 RnBlendVertex_t
 
 inline Vector RnSphere_t::ComputeOrthographicAreas()const
 {
-	return Vector( M_PI/4, M_PI/4, M_PI/4 );
+	return Vector( std::numbers::pi/4, std::numbers::pi/4, std::numbers::pi/4 );
 }
 
 
@@ -720,13 +674,13 @@ inline float Compute2DCapsuleArea( float x0, float y0, float x1, float y1, float
 {
 	// it's really simple: the 2D pill, if you don't think of it as 2 circles and a rectangle, but think of it as 2 half-circles and a rectangle, 
 	// has no overlapping parts and is easy to compute the area of
-	float flAxisLength  = sqrtf( Sqr( x0 - x1 ) + Sqr( y0 - y1 ) );
-	return M_PI * flRadius * flRadius + flAxisLength * 2 * flRadius;
+	float flAxisLength  = std::sqrtf( Sqr( x0 - x1 ) + Sqr( y0 - y1 ) );
+	return std::numbers::pi * flRadius * flRadius + flAxisLength * 2 * flRadius;
 }
 
 inline float Compute2DCapsuleOrthographicArea( float x0, float y0, float x1, float y1, float flRadius )
 {
-	float flBboxArea = ( fabsf( x0 - x1 ) + 2 * flRadius ) * ( fabsf( y0 - y1 ) + 2 * flRadius ); // the area of bounding rectangle
+	float flBboxArea = ( std::fabsf( x0 - x1 ) + 2 * flRadius ) * ( std::fabsf( y0 - y1 ) + 2 * flRadius ); // the area of bounding rectangle
 	return Compute2DCapsuleArea( x0, y0, x1, y1, flRadius ) / flBboxArea;
 }
 
@@ -912,7 +866,7 @@ inline int RnSphere_t::GetTriangulation( Vector *pVerts ) const
 			*pOut++ = m_vCenter + Vector( 0, c1, s1 );
 			*pOut++ = m_vCenter + Vector( 0, c0, s0 );
 		}
-		Assert( 24 == pOut - pVerts );
+		contract_assert( 24 == pOut - pVerts );
 	}
 	return 24; // approximation with octahedron
 }
@@ -941,15 +895,15 @@ inline void RnSphere_t::GetTriangulation( std::vector< Vector > &vertices, std::
 
 	for( int i = 0; i < nSides; ++i )
 	{
-		float theta = ( -2 * M_PI * i ) / nSides;
-		float s0 = m_flRadius * sinf( theta ), c0 = m_flRadius * cosf( theta );
+		float theta = ( -2 * std::numbers::pi * i ) / nSides;
+		float s0 = m_flRadius * std::sinf( theta ), c0 = m_flRadius * std::cosf( theta );
 
 		int i1 = ( i + 1 ) % nSides;
 
 		// sides
 		for( int j = 0; ; ++j )
 		{
-			float psi = ( j + 1 ) * M_PI / ( nSlices + 1 ) - M_PI / 2, x0 = sinf( psi ), y0 = cosf( psi );
+			float psi = ( j + 1 ) * std::numbers::pi / ( nSlices + 1 ) - std::numbers::pi / 2, x0 = std::sinf( psi ), y0 = std::cosf( psi );
 			pVerts[ nSlices * i + j ] = Vector( x0 * m_flRadius, c0 * y0, s0 * y0 );
 
 			if( j + 1 < nSlices )
@@ -962,7 +916,7 @@ inline void RnSphere_t::GetTriangulation( std::vector< Vector > &vertices, std::
 				*pOut++ = nVertBase + nSlices * i  + j ;
 				*pOut++ = nVertBase + nSlices * i  + j + 1;
 
-				Assert( nVertBase + nSlices * i  + j + 1 < std::ssize( vertices ) );
+				contract_assert( nVertBase + nSlices * i  + j + 1 < std::ssize( vertices ) );
 			}
 			else
 			{
@@ -995,8 +949,8 @@ inline void RnSphere_t::GetTriangulation( std::vector< Vector > &vertices, std::
 
 	//indices.SetCount( pOut - indices.Base() );
 
-	Assert( pOut == indices.data() + indices.size() );
-	AssertDbg( IsTriangulationValid( vertices, indices ) );
+	contract_assert( pOut == indices.data() + indices.size() );
+	contract_assert( IsTriangulationValid( vertices, indices ) );
 }
 
 
@@ -1049,8 +1003,8 @@ inline int RnCapsule_t::GetTriangulation( Vector *pVerts ) const
 		float s0 = 0, c0 = m_flRadius;
 		for( int i = 0; i < nSides; ++i )
 		{
-			float theta = (2 * M_PI * ( i + 1 ) ) / nSides;
-			float s1 = m_flRadius * sinf( theta ), c1 = m_flRadius * cosf( theta );
+			float theta = (2 * std::numbers::pi * ( i + 1 ) ) / nSides;
+			float s1 = m_flRadius * std::sinf( theta ), c1 = m_flRadius * std::cosf( theta );
 
 			// cylinder sides
 			*pOut++ = Vector( 0, c1, s1 );
@@ -1065,9 +1019,9 @@ inline int RnCapsule_t::GetTriangulation( Vector *pVerts ) const
 			float x0 = 0, x1 = 0, y0 = 1, y1 = 0;
 			for( int j = 0; j < nSlices; ++j )
 			{
-				float psi = ( ( j + 1 ) * M_PI / 2 ) / ( nSlices + 1 );
-				x1 = sinf( psi );
-				y1 = cosf( psi );
+				float psi = ( ( j + 1 ) * std::numbers::pi / 2 ) / ( nSlices + 1 );
+				x1 = std::sinf( psi );
+				y1 = std::cosf( psi );
 				// top cap
 				*pOut++ = Vector( flHeight + x0 * m_flRadius, c1 * y0, s1 * y0 );
 				*pOut++ = Vector( flHeight + x0 * m_flRadius, c0 * y0, s0 * y0 );
@@ -1107,7 +1061,7 @@ inline int RnCapsule_t::GetTriangulation( Vector *pVerts ) const
 		{
 			*p = m_vCenter[0] + vAxisX * p->x + vAxisY * p->y + vAxisZ * p->z;
 		}
-		Assert( nSides * ( 2 + 2 * ( 2 * nSlices + 1 ) ) * 3 == pOut - pVerts );
+		contract_assert( nSides * ( 2 + 2 * ( 2 * nSlices + 1 ) ) * 3 == pOut - pVerts );
 	}
 
 	return nSides * ( 2 + 2 * ( 2 * nSlices + 1 ) ) * 3; // each side is 4 tris, each 3 verts
@@ -1153,8 +1107,8 @@ inline void RnCapsule_t::GetTriangulation( std::vector< Vector > &vertices, std:
 
 	for( int i = 0; i < nSides; ++i )
 	{
-		float theta = ( -2 * M_PI * i ) / nSides;
-		float s0 = m_flRadius * sinf( theta ), c0 = m_flRadius * cosf( theta );
+		float theta = ( -2 * std::numbers::pi * i ) / nSides;
+		float s0 = m_flRadius * std::sinf( theta ), c0 = m_flRadius * std::cosf( theta );
 
 		int i1 = ( i + 1 ) % nSides;
 		// cylinder sides
@@ -1170,7 +1124,7 @@ inline void RnCapsule_t::GetTriangulation( std::vector< Vector > &vertices, std:
 		for( int j = 0; ; ++j )
 		{
 			int j1 = j + 1;
-			float psi = ( j * M_PI / 2 ) / ( nSlices + 1 ), x0 = sinf( psi ), y0 = cosf( psi );
+			float psi = ( j * std::numbers::pi / 2 ) / ( nSlices + 1 ), x0 = std::sinf( psi ), y0 = std::cosf( psi );
 			pVerts[nSideVerts * i + j * 2 + 0 ] = Vector(          - x0 * m_flRadius, c0 * y0, s0 * y0 );
 			pVerts[nSideVerts * i + j * 2 + 1 ] = Vector( flHeight + x0 * m_flRadius, c0 * y0, s0 * y0 );
 
@@ -1215,8 +1169,8 @@ inline void RnCapsule_t::GetTriangulation( std::vector< Vector > &vertices, std:
 	{
 		pVerts[i] = m_vCenter[0] + vAxisX * pVerts[i].x + vAxisY * pVerts[i].y + vAxisZ * pVerts[i].z;
 	}
-	Assert( pOut == indices.data() + indices.size() );
-	AssertDbg( IsTriangulationValid( vertices, indices ) );
+	contract_assert( pOut == indices.data() + indices.size() );
+	contract_assert( IsTriangulationValid( vertices, indices ) );
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1302,7 +1256,7 @@ inline void RnHull_t::GetTriangulation( std::vector< Vector > &vertices, std::ve
 		const RnHalfEdge_t* pEdge1 = GetEdge( pFace->m_nEdge );
 		const RnHalfEdge_t* pEdge2 = GetEdge( pEdge1->m_nNext );
 		const RnHalfEdge_t* pEdge3 = GetEdge( pEdge2->m_nNext );
-		AssertDbg( pEdge1 != pEdge3 );
+		contract_assert( pEdge1 != pEdge3 );
 
 		int v1 = nVertBase + pEdge1->m_nOrigin;
 
@@ -1321,7 +1275,7 @@ inline void RnHull_t::GetTriangulation( std::vector< Vector > &vertices, std::ve
 		while ( pEdge1 != pEdge3 );
 	}
 
-	AssertDbg( IsTriangulationValid( vertices, indices ) );
+	contract_assert( IsTriangulationValid( vertices, indices ) );
 }
 
 
@@ -1374,21 +1328,21 @@ inline void RnMesh_t::GetTriangulation( std::vector< Vector > &vertices, std::ve
 		indices.push_back( nVertBase + pTriangle->m_nIndex[ 2 ] );
 	}
 
-	AssertDbg( IsTriangulationValid( vertices, indices ) );
+	contract_assert( IsTriangulationValid( vertices, indices ) );
 }
 
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------
 inline float RnSphere_t::GetVolume()const
 {
-	return m_flRadius * m_flRadius * m_flRadius * M_PI * ( 4.0f / 3.0f ); // http://en.wikipedia.org/wiki/Sphere#Volume_of_a_sphere
+	return m_flRadius * m_flRadius * m_flRadius * std::numbers::pi * ( 4.0f / 3.0f ); // http://en.wikipedia.org/wiki/Sphere#Volume_of_a_sphere
 }
 
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------
 inline float RnCapsule_t::GetVolume()const
 {
-	return m_flRadius * m_flRadius * M_PI * ( m_flRadius * ( 4.0f / 3.0f ) + ( m_vCenter[0] - m_vCenter[1] ).Length() ); // http://en.wikipedia.org/wiki/Sphere#Volume_of_a_sphere
+	return m_flRadius * m_flRadius * std::numbers::pi * ( m_flRadius * ( 4.0f / 3.0f ) + ( m_vCenter[0] - m_vCenter[1] ).Length() ); // http://en.wikipedia.org/wiki/Sphere#Volume_of_a_sphere
 }
 
 
@@ -1419,11 +1373,11 @@ inline float RnHull_t::GetVolume()const
 			nEdge = nNextEdge;
 		}
 	}
-	Assert( flVolume > 0 );
+	contract_assert( flVolume > 0 );
 	return flVolume;
 }
 
-FORCEINLINE const Vector RnMesh_t::ComputeTriangleUnitNormal( const Vector &vScale, int nTriIndex )const
+[[gnu::always_inline]] inline const Vector RnMesh_t::ComputeTriangleUnitNormal( const Vector &vScale, int nTriIndex )const
 {
 	const RnTriangle_t* pTriangle = GetTriangle( nTriIndex );
 
@@ -1438,7 +1392,7 @@ FORCEINLINE const Vector RnMesh_t::ComputeTriangleUnitNormal( const Vector &vSca
 }
 
 
-FORCEINLINE const Vector RnMesh_t::ComputeTriangleCentroid( int nTriIndex )const
+[[gnu::always_inline]] inline const Vector RnMesh_t::ComputeTriangleCentroid( int nTriIndex )const
 {
 	const RnTriangle_t* pTriangle = GetTriangle( nTriIndex );
 
@@ -1450,7 +1404,7 @@ FORCEINLINE const Vector RnMesh_t::ComputeTriangleCentroid( int nTriIndex )const
 }
 
 
-FORCEINLINE const Vector RnMesh_t::ComputeTriangleIncenter( int nTriIndex )const
+[[gnu::always_inline]] inline const Vector RnMesh_t::ComputeTriangleIncenter( int nTriIndex )const
 {
 	const RnTriangle_t* pTriangle = GetTriangle( nTriIndex );
 
@@ -1462,14 +1416,14 @@ FORCEINLINE const Vector RnMesh_t::ComputeTriangleIncenter( int nTriIndex )const
 	return ( a * la + b * lb + c * lc ) / ( la + lb + lc );
 }
 
-FORCEINLINE const Vector RnHull_t::ComputeFaceCentroid( int nFace )const
+[[gnu::always_inline]] inline const Vector RnHull_t::ComputeFaceCentroid( int nFace )const
 {
 	Vector vSum( 0,0,0 );
 	uint8 nFirstEdge = m_Faces[nFace].m_nEdge, nEdge = nFirstEdge;
 	float flNumEdges = 0;
 	do 
 	{
-		AssertDbg( m_Edges[nEdge].m_nFace == uint( nFace ) );
+		contract_assert( m_Edges[nEdge].m_nFace == uint( nFace ) );
 		vSum += m_Vertices[ m_Edges[nEdge].m_nOrigin ];
 		nEdge = m_Edges[ nEdge ].m_nNext;
 		
@@ -1486,7 +1440,7 @@ FORCEINLINE const Vector RnHull_t::ComputeFaceCentroid( int nFace )const
 //--------------------------------------------------------------------------------------------------
 // SIMD clipping
 //--------------------------------------------------------------------------------------------------
-FORCEINLINE fltx4 HMaxSIMD( fltx4 a )
+[[gnu::always_inline]] inline fltx4 HMaxSIMD( fltx4 a )
 {
 	fltx4 b = RotateLeft( a );
 	fltx4 c = MaxSIMD( a, b );
@@ -1496,7 +1450,7 @@ FORCEINLINE fltx4 HMaxSIMD( fltx4 a )
 
 
 //-------------------------------------------------------------------------------------------------
-FORCEINLINE fltx4 HMinSIMD( fltx4 a )
+[[gnu::always_inline]] inline fltx4 HMinSIMD( fltx4 a )
 {
 	fltx4 b = RotateLeft( a );
 	fltx4 c = MinSIMD( a, b );
@@ -1506,7 +1460,7 @@ FORCEINLINE fltx4 HMinSIMD( fltx4 a )
 
 
 //-------------------------------------------------------------------------------------------------
-FORCEINLINE int ClipRaySIMD( const RnRay_t& ray, const Vector& vMin, const Vector& vMax, float &flBestTime )
+[[gnu::always_inline]] inline int ClipRaySIMD( const RnRay_t& ray, const Vector& vMin, const Vector& vMax, float &flBestTime )
 {
 	fltx4 f4Min = LoadAlignedSIMD( &vMin.x ), f4Max = LoadAlignedSIMD( &vMax.x );
 	fltx4 f4Origin = LoadAlignedSIMD( &ray.vOrigin ), f4DeltaInv = LoadAlignedSIMD( &ray.vDeltaInv );
@@ -1524,7 +1478,7 @@ FORCEINLINE int ClipRaySIMD( const RnRay_t& ray, const Vector& vMin, const Vecto
 
 
 //-------------------------------------------------------------------------------------------------
-FORCEINLINE int ClipRaySIMD( const RnRay_t& ray, const fltx4 &f4Min , const fltx4& f4Max, float &flBestTime )
+[[gnu::always_inline]] inline int ClipRaySIMD( const RnRay_t& ray, const fltx4 &f4Min , const fltx4& f4Max, float &flBestTime )
 {
 	fltx4 f4Origin = LoadAlignedSIMD( &ray.vOrigin ), f4DeltaInv = LoadAlignedSIMD( &ray.vDeltaInv );
 	fltx4 t1 = ( f4Min - f4Origin ) * f4DeltaInv; // can be MADD
@@ -1540,7 +1494,7 @@ FORCEINLINE int ClipRaySIMD( const RnRay_t& ray, const fltx4 &f4Min , const fltx
 }
 
 //-------------------------------------------------------------------------------------------------
-FORCEINLINE int ClipRaySIMD( const RnRay_t& ray, const fltx4& f4Min, const fltx4& f4Max )
+[[gnu::always_inline]] inline int ClipRaySIMD( const RnRay_t& ray, const fltx4& f4Min, const fltx4& f4Max )
 {
 	fltx4 f4Origin = LoadAlignedSIMD( &ray.vOrigin ), f4DeltaInv = LoadAlignedSIMD( &ray.vDeltaInv );
 	fltx4 t1 = ( f4Min - f4Origin ) * f4DeltaInv; // can be MADD
@@ -1590,7 +1544,7 @@ void RnMesh_t::CastBox( const Functor &callback, const RnRay_t &ray, const Vecto
 				stack[ nCount++ ] = pLeft;
 				stack[ nCount++ ] = pRight;
 			}
-			AssertDbg( nCount < STACK_SIZE - 1 ); // there should always be space for at least 1 more entry in the stack
+			contract_assert( nCount < STACK_SIZE - 1 ); // there should always be space for at least 1 more entry in the stack
 		}
 		else
 		{
@@ -1670,6 +1624,3 @@ public:
 		return nCrc;
 	}
 };
-
-#endif
-

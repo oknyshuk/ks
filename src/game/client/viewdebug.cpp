@@ -1,12 +1,24 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 
-#include "tier0/vprof.h"
 
 #include "view_scene.h"
 #include "viewrender.h"
@@ -17,8 +29,6 @@
 #include "foundryhelpers_client.h"
 #include "c_env_cascade_light.h"
 #include "materialsystem/icustommaterialmanager.h"
-
-
 
 //-----------------------------------------------------------------------------
 // debugging overlays
@@ -213,7 +223,7 @@ static void OverlayFrameBufferTexture( int nFrameBufferIndex )
 	float offsetT = ( 0.5f / 256.0f );
 	IMaterial *pMaterial;
 	char buf[MAX_PATH];
-	Q_snprintf( buf, MAX_PATH, "debug/debugfbtexture%d", nFrameBufferIndex );
+	V_snprintf( buf, MAX_PATH, "debug/debugfbtexture%d", nFrameBufferIndex );
 	pMaterial = materials->FindMaterial( buf, TEXTURE_GROUP_OTHER, true );
 	if( !IsErrorMaterial( pMaterial ) )
 	{
@@ -308,7 +318,7 @@ static void OverlayShowTexture( const char* textureName, float scale )
 	pMesh->Draw();
 }
 
-#define DEBUG_CUSTOM_MATERIAL_COUNT_HISTORY 60
+constexpr auto DEBUG_CUSTOM_MATERIAL_COUNT_HISTORY = 60;
 int m_iDebugCustomMaterialCountHistory[60] = {0};
 float m_flDebugNextCustomMaterialCheckTime = 0.0f;
 
@@ -398,7 +408,7 @@ static void DebugOverlayNumActiveCustomMaterialsGraph()
 //-----------------------------------------------------------------------------
 void CDebugViewRender::Draw3DDebuggingInfo( const CViewSetup &view )
 {
-	VPROF("CViewRender::Draw3DDebuggingInfo");
+	CVProfScope _( "CViewRender::Draw3DDebuggingInfo", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Draw anything Foundry wants to.
 	FoundryHelpers_DrawAll();
@@ -445,7 +455,7 @@ void CDebugViewRender::Draw2DDebuggingInfo( const CViewSetup &view )
 	// Draw debugging lightmaps
 	if ( mat_showlightmappage.GetInt() != -1 )
 	{
-		CLightmapDebugView clientView( assert_cast<CViewRender *>( ::view ) );
+		CLightmapDebugView clientView( static_cast<CViewRender *>( ::view ) );
 		clientView.Setup( view );
 		clientView.Draw();
 	}
@@ -510,11 +520,13 @@ void CDebugViewRender::Draw2DDebuggingInfo( const CViewSetup &view )
 //-----------------------------------------------------------------------------
 // A console command allowing you to draw a material as an overlay
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( r_screenoverlay, "Draw specified material as an overlay", FCVAR_CHEAT|FCVAR_SERVER_CAN_EXECUTE )
+static void r_screenoverlay( const CCommand &args );
+static ConCommand r_screenoverlay_command( "r_screenoverlay", r_screenoverlay, "Draw specified material as an overlay", FCVAR_CHEAT|FCVAR_SERVER_CAN_EXECUTE );
+static void r_screenoverlay( const CCommand &args )
 {
 	if( args.ArgC() == 2 )
 	{
-		if ( !Q_stricmp( "off", args[1] ) )
+		if ( !V_stricmp( "off", args[1] ) )
 		{
 			view->SetScreenOverlayMaterial( nullptr );
 		}
@@ -556,5 +568,3 @@ void CDebugViewRender::GenerateOverdrawForTesting()
 	}
 	g_SmokeFogOverlayAlpha = 0;
 }
-
-

@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ENTITYDATAINSTANTIATOR_H
-#define ENTITYDATAINSTANTIATOR_H
-
-#include <memory>
-#include <type_traits>
-#include <unordered_map>
+import std;
 
 // This is the hash key type, but it could just as easily be and int or void *
 class CBaseEntity;
@@ -17,7 +10,7 @@ class CBaseEntity;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-abstract_class IEntityDataInstantiator
+class IEntityDataInstantiator
 {
 public:
 	virtual ~IEntityDataInstantiator() {};
@@ -60,7 +53,7 @@ public:
 
 			// Zero-fill legacy POD data objects; types owning resources construct themselves
 			if constexpr ( std::is_trivially_destructible_v<T> )
-				Q_memset( it->second.get(), 0, sizeof( T ) );
+				V_memset( it->second.get(), 0, sizeof( T ) );
 		}
 
 		return (void *)it->second.get();
@@ -74,5 +67,3 @@ public:
 private:
 	std::unordered_map< const CBaseEntity *, std::unique_ptr< T > > m_HashTable;
 };
-
-#endif // ENTITYDATAINSTANTIATOR_H

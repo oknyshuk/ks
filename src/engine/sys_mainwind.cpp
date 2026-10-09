@@ -1,59 +1,37 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-//===========================================================================//
-#undef PROTECTED_THINGS_ENABLE
-#include <SDL3/SDL.h>
-#include "tier1/text_reader.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import std;
+import ks.tier1;
 
-	#include "tier0/dynfunction.h"
+import ks.desktop;
 #include "appframework/ilaunchermgr.h"
-#include "appframework/sdlwindow.h"
 
 #include "igame.h"
 #include "cl_main.h"
 #include "host.h"
 #include "quakedef.h"
-#include "tier0/icommandline.h"
 #include "ivideomode.h"
 #include "gl_matsysiface.h"
 #include "materialsystem/materialsystem_config.h"
 #include "cdll_engine_int.h"
 #include "engineui.h"
 #include "iengine.h"
-#include "avi/iavi.h"
 #include "keys.h"
-#include "tier3/tier3.h"
 #include "sound.h"
-#include "sys_dll.h"
 #include "inputsystem/iinputsystem.h"
 #include "inputsystem/ButtonCode.h"
-#include "GameUI/IGameUI.h"
 #include "sv_main.h"
-#if defined( BINK_VIDEO )
-#include "bink/bink.h"
-#endif
 #include "inputsystem/iinputstacksystem.h"
-#include "avi/ibik.h"
-#include "materialsystem/imaterial.h"
-#include "characterset.h"
 #include "server.h"
 
 #include "rocketui/rocketui.h"
 
-#include "localize/ilocalize.h"
 
 
-#include "snd_dev_sdl.h"
 
-#include "matchmaking/imatchframework.h"
-#include "tier2/tier2.h"
 
-#include "tier1/fmtstr.h"
 
-#include "cl_steamauth.h"
 
 
 extern ConVar cv_uipanel_active;
@@ -144,7 +122,7 @@ private:
 
 	bool			m_bExternallySuppliedWindow;
 
-	SDL_Window		*m_hWindow;
+	ks::desktop::window	*m_hWindow;
 
 	int				m_x;
 	int				m_y;
@@ -329,7 +307,7 @@ void CGame::DispatchInputEvent( const InputEvent_t &event )
 		if ( g_pRocketUI && g_pRocketUI->HandleInputEvent( event ) )
 			break;
 
-		for ( int i=0; i < ARRAYSIZE( g_GameMessageHandlers ); i++ )
+		for ( int i=0; i < std::size( g_GameMessageHandlers ); i++ )
 		{
 			if ( g_GameMessageHandlers[i].m_nEventType == event.m_nType )
 			{
@@ -357,7 +335,7 @@ void VCR_EnterPausedState()
 	// Turn this off in case they're in single-step mode.
 	g_bVCRSingleStep = false;
 
-	Assert( !"Impl me" );
+	contract_assert( !"Impl me" );
 }
 
 
@@ -381,12 +359,12 @@ bool CGame::CreateGameWindow( void )
 	KeyValues *modinfo = new KeyValues("ModInfo");
 	if (modinfo->LoadFromFile(g_pFileSystem, "gameinfo.txt"))
 	{
-		Q_strncpy( windowName, modinfo->GetString("game"), sizeof(windowName) );
+		V_strncpy( windowName, modinfo->GetString("game"), sizeof(windowName) );
 	}
 
 	if (!windowName[0])
 	{
-		Q_strncpy( windowName, "HALF-LIFE 2", sizeof(windowName) );
+		V_strncpy( windowName, "HALF-LIFE 2", sizeof(windowName) );
 	}
 
 	if ( IsOpenGL() )
@@ -438,7 +416,7 @@ bool CGame::CreateGameWindow( void )
 		g_pLauncherMgr->SetApplicationIcon( localPath );
 	}
 
-	SetMainWindow( ( HWND )GetGameSDLWindow() );
+	SetMainWindow( ( HWND )ks::desktop::game_window() );
 
 	AttachToWindow( );
 	return true;
@@ -460,7 +438,7 @@ void CGame::DestroyGameWindow()
 void CGame::SetGameWindow( void *hWnd )
 {
 	m_bExternallySuppliedWindow = true;
-	SDL_RaiseWindow( (SDL_Window *)hWnd );
+	ks::desktop::raise_window( reinterpret_cast< ks::desktop::window * >( hWnd ) );
 }
 
 
@@ -509,7 +487,7 @@ bool CGame::InputAttachToGameWindow()
 	// We don't get WM_ACTIVATEAPP messages in this case; simulate one.
 	AppActivate( true );
 
-	Assert( !"Impl me" );
+	contract_assert( !"Impl me" );
 	return false;
 	return true;
 }
@@ -520,7 +498,7 @@ void CGame::InputDetachFromGameWindow()
 	if ( !m_bExternallySuppliedWindow )
 		return;
 
-	Assert( !"Impl me" );
+	contract_assert( !"Impl me" );
 
 	// We don't get WM_ACTIVATEAPP messages in this case; simulate one.
 	AppActivate( false );
@@ -555,7 +533,7 @@ void CGame::PlayStartupVideos( void )
 			CommandLine()->CheckParm( "-toconsole" ) ) )
 		return;
 
-	const char *pszFile = "media/startupvids" PLATFORM_EXT ".txt";
+	const char *pszFile = "media/startupvids"".txt";
 	if ( bEndGame )
 	{
 		// Don't go back into the map that triggered this.
@@ -600,8 +578,8 @@ void CGame::PlayVideoListAndWait( const char *szVideoFileList, bool bNeedHealthW
 	}
 	ks::text_reader vidBuffer( ks::text_view( *vidData ) );
 
-	bool CursorStateBak = SDL_CursorVisible();
-	SDL_HideCursor();
+	bool CursorStateBak = ks::desktop::cursor_visible();
+	ks::desktop::show_cursor( false );
 
 
 
@@ -622,10 +600,7 @@ void CGame::PlayVideoListAndWait( const char *szVideoFileList, bool bNeedHealthW
 
 
 
-	if ( CursorStateBak )
-		SDL_ShowCursor();
-	else
-		SDL_HideCursor();
+	ks::desktop::show_cursor( CursorStateBak );
 #endif // DEDICATED
 }
 
@@ -634,10 +609,6 @@ void CGame::PlayVideoListAndWait( const char *szVideoFileList, bool bNeedHealthW
 //-----------------------------------------------------------------------------
 void CGame::PlayVideoAndWait( const char *filename, bool bNeedHealthWarning )
 {
-#if defined( BINK_VIDEO )
-
-
-#endif // BINK_VIDEO
 }
 
 
@@ -704,7 +675,7 @@ void *CGame::GetMainWindow( void )
 
 void** CGame::GetMainWindowAddress( void )
 {
-	m_hWindow = GetGameSDLWindow();
+	m_hWindow = ks::desktop::game_window();
 	return (void**)&m_hWindow;
 }
 
@@ -717,48 +688,39 @@ void CGame::GetDesktopInfo( int &width, int &height, int &refreshrate )
 
 	// Go through all displays and return the size of the largest.
 	// Use SDL_GetDesktopDisplayMode for more reliable resolution info (especially on Wayland).
-	int numDisplays = 0;
-	SDL_DisplayID *displays = SDL_GetDisplays( &numDisplays );
-	if ( displays )
+	ks::desktop::display_id displays[16];
+	const int numDisplays = ks::desktop::displays( displays, 16 );
+	for( int i = 0; i < numDisplays; i++ )
 	{
-		for( int i = 0; i < numDisplays; i++ )
+		ks::desktop::display_mode mode;
+		if ( ks::desktop::desktop_mode( displays[i], &mode ) )
 		{
-			const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode( displays[i] );
-
-			if ( mode )
+			if ( ( mode.width > width ) || ( ( mode.width == width ) && ( mode.height > height ) ) )
 			{
-				if ( ( mode->w > width ) || ( ( mode->w == width ) && ( mode->h > height ) ) )
-				{
-					width = mode->w;
-					height = mode->h;
-					refreshrate = (int)mode->refresh_rate;
-				}
+				width = mode.width;
+				height = mode.height;
+				refreshrate = mode.refresh_rate;
 			}
 		}
-		SDL_free( displays );
 	}
 
 }
 
 void CGame::UpdateDesktopInformation( HWND hWnd )
 {
-	SDL_DisplayID displayID = SDL_GetDisplayForWindow( (SDL_Window *)hWnd );
-	if ( !displayID )
-		displayID = SDL_GetPrimaryDisplay();
-
-	const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode( displayID );
-	if ( mode )
+	ks::desktop::display_mode mode;
+	if ( ks::desktop::desktop_mode( ks::desktop::display_of( reinterpret_cast< ks::desktop::window * >( hWnd ) ), &mode ) )
 	{
-		m_iDesktopWidth = mode->w;
-		m_iDesktopHeight = mode->h;
-		m_iDesktopRefreshRate = (int)mode->refresh_rate;
+		m_iDesktopWidth = mode.width;
+		m_iDesktopHeight = mode.height;
+		m_iDesktopRefreshRate = mode.refresh_rate;
 	}
 }
 
 
 void CGame::SetMainWindow( HWND window )
 {
-	m_hWindow = (SDL_Window*)window;
+	m_hWindow = reinterpret_cast< ks::desktop::window * >( window );
 
 	// update our desktop info (since the results will change if we are going to fullscreen mode)
 	if ( !m_iDesktopWidth || !m_iDesktopHeight )

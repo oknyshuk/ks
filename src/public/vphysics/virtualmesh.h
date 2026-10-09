@@ -1,13 +1,11 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef VIRTUALMESH_H
-#define VIRTUALMESH_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // NOTE: These are fixed length to make it easy to fill these out without memory allocation or storage
+import std;
+import ks.math;
+
 const int MAX_VIRTUAL_TRIANGLES = 1024;
 struct virtualmeshlist_t
 {
@@ -39,5 +37,3 @@ struct virtualmeshparams_t
 	void				*userData;
 	bool				buildOuterHull;
 };
-
-#endif // VIRTUALMESH_H

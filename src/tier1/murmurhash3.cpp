@@ -1,22 +1,22 @@
-//======= Copyright (c) Valve Corporation, All rights reserved. =================
-//
-// Public domain MurmurHash3 by Austin Appleby is a very solid general-purpose
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
+// Purpose: Public domain MurmurHash3 by Austin Appleby is a very solid general-purpose
 // hash with a 32-bit output. References:
 // http://code.google.com/p/smhasher/ (home of MurmurHash3)
 // https://sites.google.com/site/murmurhash/avalanche
 // http://www.strchr.com/hash_functions
-//
-//=============================================================================
 
-#include "tier0/platform.h"
-#include "tier1/murmurhash3.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 
-uint32 MurmurHash3_32( const void * key, size_t len, uint32 seed, bool bCaselessStringVariant )
+uint32 MurmurHash3_32( const void * key, std::size_t len, uint32 seed, bool bCaselessStringVariant )
 {
 	const uint8 * data = (const uint8*)key;
-	const ptrdiff_t nblocks = len / 4;
+	const std::ptrdiff_t nblocks = len / 4;
 	uint32 uSourceBitwiseAndMask = 0xDFDFDFDF | ((uint32)bCaselessStringVariant - 1);
 
 	uint32 h1 = seed;
@@ -26,9 +26,9 @@ uint32 MurmurHash3_32( const void * key, size_t len, uint32 seed, bool bCaseless
 
 	const uint32 * blocks = (const uint32 *)(data + nblocks*4);
 
-	for(ptrdiff_t i = -nblocks; i; i++)
+	for(std::ptrdiff_t i = -nblocks; i; i++)
 	{
-		uint32 k1 = LittleDWord(blocks[i]);
+		uint32 k1 = (blocks[i]);
 		k1 &= uSourceBitwiseAndMask;
 
 		k1 *= 0xcc9e2d51;

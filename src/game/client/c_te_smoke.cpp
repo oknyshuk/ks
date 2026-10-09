@@ -1,19 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "IEffects.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
-#include "tier0/vprof.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Smoke TE
@@ -88,7 +86,7 @@ static inline void RecordSmoke( const Vector &start, float flScale, int nFrameRa
 //-----------------------------------------------------------------------------
 void C_TESmoke::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TESmoke::PostDataUpdate" );
+	CVProfScope _( "C_TESmoke::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// The number passed down is 10 times smaller...
 	g_pEffects->Smoke( m_vecOrigin, m_nModelIndex, m_fScale * 10.0f, m_nFrameRate );

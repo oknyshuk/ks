@@ -1,18 +1,17 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Material proxy to stuff a convar into a material var.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Material proxy to stuff a convar into a material var.
+
+import std;
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_client_int.h"
 // identifier was truncated to '255' characters in the debug information
 
-#include "convar.h"
 #include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterialvar.h"
 #include "imaterialproxydict.h"
-
 
 class CConVarMaterialProxy: public IMaterialProxy
 {
@@ -41,7 +40,7 @@ public:
 			return false;
 		}
 
-		if ( !Q_stricmp( pResult, "$alpha" ) )
+		if ( !V_stricmp( pResult, "$alpha" ) )
 		{
 			pMaterial->SetMaterialVarFlag( MATERIAL_VAR_ALPHA_MODIFIED_BY_PROXY, true );
 		}

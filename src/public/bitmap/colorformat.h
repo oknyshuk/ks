@@ -1,18 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef COLORFORMAT_H
-#define COLORFORMAT_H
-
-
-#include <stdio.h>
-#include "mathlib/vector.h"
-#include "mathlib/vector2d.h"
-#include "mathlib/vector4d.h"
-#include "mathlib/vertexcolor.h"
+import std;
+import ks.math;
 
 enum ColorFormat_t
 {
@@ -138,6 +129,3 @@ template <> inline ColorFormat_t ComputeColorFormat( VertexColor_t* )
 	// FIXME: How to get at SRGB formats?
 	return COLOR_FORMAT_R8G8B8A8_UNORM;
 }
-
-
-#endif // COLORFORMAT_H

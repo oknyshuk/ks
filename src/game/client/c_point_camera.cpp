@@ -1,18 +1,22 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
-#include "reflect_annotations.h"
 #include "c_point_camera.h"
 #include "toolframework/itoolframework.h"
 #include "toolframework_client.h"
-#include "tier1/keyvalues.h"
-
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_PointCamera, DT_PointCamera, CPointCamera )
 
@@ -101,5 +105,3 @@ void C_PointCamera::GetToolRecordingState( KeyValues *msg )
 					  
 	msg->SetPtr( "monitor", &state );
 }
-
-

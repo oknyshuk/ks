@@ -1,15 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Sunlight shadow control entity.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "c_baseplayer.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 
 #include "c_baseplayer.h"
-
 
 ConVar cl_sunlight_ortho_size("cl_sunlight_ortho_size", "0.0", FCVAR_CHEAT, "Set to values greater than 0 for ortho view render projections.");
 ConVar cl_sunlight_depthbias( "cl_sunlight_depthbias", "0.02" );
@@ -97,7 +104,7 @@ bool C_SunlightShadowControl::ShouldDraw()
 
 void C_SunlightShadowControl::ClientThink()
 {
-	VPROF("C_SunlightShadowControl::ClientThink");
+	CVProfScope _( "C_SunlightShadowControl::ClientThink", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( m_bEnabled )
 	{
 		Vector vLinearFloatLightColor( m_LightColor.r, m_LightColor.g, m_LightColor.b );

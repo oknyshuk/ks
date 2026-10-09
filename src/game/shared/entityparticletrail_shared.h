@@ -1,15 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef ENTITYPARTICLETRAIL_SHARED_H
-#define ENTITYPARTICLETRAIL_SHARED_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-
-
+#include "networkvar.h"
+#include "string_t.h"
+#ifdef CLIENT_DLL
+#include "dt_recv.h"
+#else
+#include "dt_send.h"
+#endif
 
 //-----------------------------------------------------------------------------
 // For networking this bad boy
@@ -41,7 +41,3 @@ struct [[= ks::reflect::NetTable{ .name = "DT_EntityParticleTrailInfo", .base = 
 	CNetworkVar( float, m_flStartSize, [[= ks::reflect::Key{ .name = "ParticleTrailStartSize" } ]] );
 	CNetworkVar( float, m_flEndSize, [[= ks::reflect::Key{ .name = "ParticleTrailEndSize" } ]] );
 };
-
-
-
-#endif // ENTITYPARTICLETRAIL_SHARED_H

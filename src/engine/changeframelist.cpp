@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "basetypes.h"
 #include "changeframelist.h"
-#include "dt.h"
-#include "utlvector.h"
 
 //-----------------------------------------------------------------------------
-DEFINE_FIXEDSIZE_ALLOCATOR_MT( CChangeFrameList, 2048, ks::fixed_pool::grow::fast );
+ks::fixed_pool_mt CChangeFrameList::s_Allocator( sizeof(CChangeFrameList), 2048, ks::fixed_pool::grow::fast, "CChangeFrameList pool", alignof(CChangeFrameList) );
 
 //-----------------------------------------------------------------------------
 
@@ -46,7 +39,7 @@ CChangeFrameList *CChangeFrameList::Copy()
 	return pRet;
 }
 
-void CChangeFrameList::SetChangeTick( const int* RESTRICT pProps, int nNumProps, const int iTick )
+void CChangeFrameList::SetChangeTick( const int* __restrict__ pProps, int nNumProps, const int iTick )
 {
 	//avoid loads inside the array by the compiler thinking they could overlap
 	int* pBuckets		= m_ChangeTicks.data() + m_nNumProps;
@@ -57,4 +50,3 @@ void CChangeFrameList::SetChangeTick( const int* RESTRICT pProps, int nNumProps,
 		pBuckets[ pProps[i] / knBucketSize ] = iTick;		
 	}
 }
-

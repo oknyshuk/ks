@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SND_CHANNELS_H
-#define SND_CHANNELS_H
-
-#include "mathlib/vector.h"
-#include "tier1/text_writer.h"
-
+import std;
+import ks.tier1;
+#include "SoundEmitterSystem/isoundemittersystembase.h"
 
 class CSfxTable;
 class CAudioMixer;
@@ -18,21 +13,21 @@ typedef int SoundSource;
 
 // DO NOT REORDER: indices to fvolume arrays in channel_t 
 
-#define IFRONT_LEFT		0			// NOTE: must correspond to order of fvolume array below!
-#define IFRONT_RIGHT	1
-#define	IREAR_LEFT		2
-#define IREAR_RIGHT		3
-#define IFRONT_CENTER	4
-#define IFRONT_CENTER0	5			// dummy slot - center channel is mono, but mixers reference volume[1] slot
+inline constexpr auto IFRONT_LEFT = 0; // NOTE: must correspond to order of fvolume array below!
+inline constexpr auto IFRONT_RIGHT = 1;
+inline constexpr auto IREAR_LEFT = 2;
+inline constexpr auto IREAR_RIGHT = 3;
+inline constexpr auto IFRONT_CENTER = 4;
+inline constexpr auto IFRONT_CENTER0 = 5; // dummy slot - center channel is mono, but mixers reference volume[1] slot
 
-#define IFRONT_LEFTD	6			// start of doppler right array			
-#define IFRONT_RIGHTD	7
-#define	IREAR_LEFTD		8
-#define IREAR_RIGHTD	9
-#define IFRONT_CENTERD	10
-#define IFRONT_CENTERD0 11			// dummy slot - center channel is mono, but mixers reference volume[1] slot
+inline constexpr auto IFRONT_LEFTD = 6; // start of doppler right array
+inline constexpr auto IFRONT_RIGHTD = 7;
+inline constexpr auto IREAR_LEFTD = 8;
+inline constexpr auto IREAR_RIGHTD = 9;
+inline constexpr auto IFRONT_CENTERD = 10;
+inline constexpr auto IFRONT_CENTERD0 = 11; // dummy slot - center channel is mono, but mixers reference volume[1] slot
 
-#define CCHANVOLUMES	12
+inline constexpr auto CCHANVOLUMES = 12;
 
 struct gain_t
 {
@@ -143,8 +138,8 @@ struct channel_t
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
-#define	MAX_CHANNELS			128
-#define	MAX_DYNAMIC_CHANNELS	32
+inline constexpr auto MAX_CHANNELS = 128;
+inline constexpr auto MAX_DYNAMIC_CHANNELS = 32;
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -233,5 +228,3 @@ private:
 extern CActiveChannels	g_ActiveChannels;
 
 //=============================================================================
-
-#endif // SND_CHANNELS_H

@@ -1,9 +1,6 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
@@ -12,13 +9,27 @@
 // auto-generate documentation.  Visit www.doxygen.org to download the system for free.
 //
 
-#ifndef BOT_H
-#define BOT_H
-
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "in_buttons.h"
 #include "movehelper_server.h"
-#include "mathlib/mathlib.h"
 
 #include "bot_manager.h"
 #include "bot_util.h"
@@ -30,15 +41,14 @@
 #include "util.h"
 #include "shareddefs.h"
 
-#include "tier0/vprof.h"
 
 class BotProfile;
 
 //--------------------------------------------------------------------------------------------------------
 static char *CloneString( const char *str )
 {
-	char *cloneStr = new char [ strlen(str)+1 ];
-	strcpy( cloneStr, str );
+	char *cloneStr = new char [ std::strlen(str)+1 ];
+	std::strcpy( cloneStr, str );
 	return cloneStr;
 }
 
@@ -102,7 +112,7 @@ template < class T > T * CreateBot( const BotProfile *profile, int team )
 	edict_t *botEdict = engine->CreateFakeClient( botName );
 
 	ClientPutInServerOverride( nullptr );
-	Assert( g_nClientPutInServerOverrides == 1 );
+	contract_assert( g_nClientPutInServerOverrides == 1 );
 
 
 	if ( botEdict == nullptr )
@@ -117,7 +127,7 @@ template < class T > T * CreateBot( const BotProfile *profile, int team )
 
 	if ( bot == nullptr )
 	{
-		Assert( false );
+		contract_assert( false );
 		Error( "Could not allocate and bind entity to bot edict.\n" );
 		return nullptr;
 	}
@@ -148,7 +158,7 @@ public:
 	unsigned int GetID( void ) const		{ return m_id; }	///< return bot's unique ID
 
 	virtual bool IsBot( void ) const { return true; }	
-	virtual bool IsNetClient( void ) const { return false; }	// Bots should return FALSE for this, they can't receive NET messages
+	virtual bool IsNetClient( void ) const { return false; }	// Bots should return false for this, they can't receive NET messages
 
 	virtual void Spawn( void );									///< (EXTEND) spawn the bot into the game
 
@@ -215,7 +225,7 @@ public:
 		PlayerType::Event_Killed( info );
 	}
 
-	bool IsEnemy( CBaseEntity *ent ) const;						///< returns TRUE if given entity is our enemy
+	bool IsEnemy( CBaseEntity *ent ) const;						///< returns true if given entity is our enemy
 	int GetEnemiesRemaining( void ) const;						///< return number of enemies left alive
 	int GetFriendsRemaining( void ) const;						///< return number of friends left alive
 
@@ -1074,13 +1084,13 @@ inline void CBot< PlayerType >::PrintIfWatched( const char *format, ... ) const
 	if ((IsLocalPlayerWatchingMe() && (cv_bot_debug.GetInt() == 1 || cv_bot_debug.GetInt() == 3)) ||
 		(cv_bot_debug.GetInt() == 2 || cv_bot_debug.GetInt() == 4))
 	{
-		va_list varg;
+		std::va_list varg;
 		char buffer[ CBotManager::MAX_DBG_MSG_SIZE ];
 		const char *name = const_cast< CBot< PlayerType > * >( this )->GetPlayerName();
 
-		va_start( varg, format );
-		vsprintf( buffer, format, varg );
-		va_end( varg );
+		__builtin_va_start( varg, format );
+		std::vsprintf( buffer, format, varg );
+		__builtin_va_end( varg );
 
 		// prefix the console message with the bot's name (this can be NULL if bot was just added)
 		if ( !engine->IsDedicatedServer() )
@@ -1107,6 +1117,3 @@ extern bool IsSpotOccupied( CBaseEntity *me, const Vector &pos );	// if a player
 extern const Vector *FindNearbyHidingSpot( CBaseEntity *me, const Vector &pos, float maxRange = 1000.0f, bool isSniper = false, bool useNearest = false );
 extern const Vector *FindRandomHidingSpot( CBaseEntity *me, Place place, bool isSniper = false );
 extern const Vector *FindNearbyRetreatSpot( CBaseEntity *me, const Vector &start, float maxRange = 1000.0f, int avoidTeam = 0 );
-
-
-#endif // BOT_H

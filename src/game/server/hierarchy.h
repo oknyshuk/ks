@@ -1,14 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Contains the set of functions for manipulating entity hierarchies.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef HIERARCHY_H
-#define HIERARCHY_H
-
-#include "utlvector.h"
+import std;
+import ks.tier1;
 
 class CBaseEntity;
 
@@ -19,5 +16,3 @@ void		UnlinkAllChildren( CBaseEntity *pParent );
 int			GetAllChildren( CBaseEntity *pParent, std::vector< CBaseEntity * > &list );
 bool		EntityIsParentOf( CBaseEntity *pParent, CBaseEntity *pEntity );
 int			GetAllInHierarchy( CBaseEntity *pParent, std::vector< CBaseEntity * > &list );
-
-#endif // HIERARCHY_H

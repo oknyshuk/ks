@@ -1,12 +1,23 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.math;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "simple_physics.h"
-#include "mathlib/vmatrix.h"
 #include "beamdraw.h"
 
 class C_Hairball : public C_BaseEntity
@@ -101,7 +112,7 @@ void C_Hairball::CHairballDelegate::ApplyConstraints( CSimplePhysics::CNode *pNo
 				float flDistSqr = vTo.LengthSqr();
 				if( flDistSqr > flSpringDistSqr )
 				{
-					float flDist = (float)sqrt( flDistSqr );
+					float flDist = (float)std::sqrt( flDistSqr );
 					vTo *= 1 - (m_pParent->m_flSpringDist / flDist);
 
 					vNode1 -= vTo * 0.5f;
@@ -138,14 +149,14 @@ C_Hairball::C_Hairball()
 	// Distribute on the sphere (need a better random distribution for the sphere).
 	for ( int i=0; i < std::ssize( m_HairPositions ); i++ )
 	{
-		float theta = RandomFloat( -M_PI, M_PI );
-		float phi   = RandomFloat( -M_PI/2, M_PI/2 );
+		float theta = RandomFloat( -std::numbers::pi, std::numbers::pi );
+		float phi   = RandomFloat( -std::numbers::pi/2, std::numbers::pi/2 );
 		
-		float cosPhi = cos( phi );
+		float cosPhi = std::cos( phi );
 
 		m_HairPositions[i].Init( 
 			cos(theta) * cosPhi * m_flSphereRadius, 
-			sin(theta) * cosPhi * m_flSphereRadius, 
+			std::sin(theta) * cosPhi * m_flSphereRadius, 
 			sin(phi) * m_flSphereRadius );
 	}
 
@@ -176,7 +187,7 @@ void C_Hairball::ClientThink()
 	//C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
 	//m_vecAngles = SetAbsAngles( pPlayer->GetAbsAngles() ); // copy player angles.
 
-	Assert( !GetMoveParent() );
+	contract_assert( !GetMoveParent() );
 
 	// Sophisticated AI.
 	m_flCurSpinTime += gpGlobals->frametime;
@@ -204,8 +215,8 @@ void C_Hairball::ClientThink()
 		{
 			static float flXSpeed = 3;
 			static float flYSpeed = flXSpeed * 0.1f;
-			m_flSpinRateX = RandomFloat( -M_PI*flXSpeed, M_PI*flXSpeed );
-			m_flSpinRateY = RandomFloat( -M_PI*flYSpeed, M_PI*flYSpeed );
+			m_flSpinRateX = RandomFloat( -std::numbers::pi*flXSpeed, std::numbers::pi*flXSpeed );
+			m_flSpinRateY = RandomFloat( -std::numbers::pi*flYSpeed, std::numbers::pi*flYSpeed );
 
 			m_flSpinDuration = RandomFloat( 1, 4 );
 		}
@@ -348,4 +359,3 @@ void CreateHairballCallback()
 }
 
 ConCommand cc_CreateHairball( "CreateHairball", CreateHairballCallback, 0, FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT );
-

@@ -1,11 +1,6 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef BONELIST_H
-#define BONELIST_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "studio.h"
 
@@ -54,5 +49,3 @@ public:
 private:
 	bool		m_bShouldDelete;
 };
-
-#endif // BONELIST_H

@@ -1,11 +1,44 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Implements visual effects entities: sprites, beams, bubbles, etc.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Implements visual effects entities: sprites, beams, bubbles, etc.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "te.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "beam_shared.h"
@@ -188,7 +221,7 @@ void CEnvBeam::Spawn( void )
 //-----------------------------------------------------------------------------
 void CEnvBeam::Precache( void )
 {
-	if ( !Q_stristr( STRING(m_iszSpriteName), ".vmt" ) )
+	if ( !V_stristr( STRING(m_iszSpriteName), ".vmt" ) )
 	{
 		// HACK/YWB:  This was almost always the laserbeam.spr, so alloc'ing the name a second time with the proper extension isn't going to
 		//  kill us on memrory.
@@ -196,9 +229,9 @@ void CEnvBeam::Precache( void )
 		//	STRING( m_iClassname ), entindex(), GetEntityName(), STRING(m_iszSpriteName) );
 
 		char fixedname[ 512 ];
-		Q_strncpy( fixedname, STRING( m_iszSpriteName ), sizeof( fixedname ) );
+		V_strncpy( fixedname, STRING( m_iszSpriteName ), sizeof( fixedname ) );
 
-		Q_SetExtension( fixedname, ".vmt", sizeof( fixedname ) );
+		V_SetExtension( fixedname, ".vmt", sizeof( fixedname ) );
 		
 		m_iszSpriteName = AllocPooledString( fixedname );
 	}
@@ -738,7 +771,7 @@ void CEnvBeam::BeamUpdateVars( void )
 	{
 		DevMsg("env_beams cannot have the end entity be the beam itself\n"
 			"unless the start entity is also the beam itself!\n" );
-		Assert(0);
+		contract_assert( 0 );
 	}
 
 	SetModelName( m_iszSpriteName );

@@ -1,10 +1,6 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 //--------------------------------------------------------------------------------------------------------------
 // download.cpp
 // 
@@ -21,25 +17,19 @@
 #undef fopen
 
 
-#include <assert.h>
-
+import ks.tier1;
 #include "download.h"
-#include "tier0/platform.h"
 #include "download_internal.h"
 
 #include "client.h"
 
-#include <keyvalues.h>
+import std;
 #include "filesystem.h"
-#include "filesystem_engine.h"
 #include "server.h"
 #include "engineui.h"
-#include "vprof.h"
 #include "net_chan.h"
-#include "tier1/interface.h"
-#include "interfaces/interfaces.h"
-#include "localize/ilocalize.h"
 
+#define BZ_NO_STDIO
 #include "../utils/bzip2/bzlib.h"
 
 
@@ -51,13 +41,13 @@ Color DownloadColor			(   0, 200, 100, 255 );
 Color DownloadErrorColor	( 200, 100, 100, 255 );
 Color DownloadCompleteColor	( 100, 200, 100, 255 );
 
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_DownloadManager, "DownloadManager" );
+LoggingChannelID_t LOG_DownloadManager = LoggingSystem_RegisterLoggingChannel( "DownloadManager", nullptr );;
 
 //--------------------------------------------------------------------------------------------------------------
 static char * CloneString( const char *original )
 {
-	char *newString = new char[ Q_strlen( original ) + 1 ];
-	Q_strcpy( newString, original );
+	char *newString = new char[ V_strlen( original ) + 1 ];
+	V_strcpy( newString, original );
 
 	return newString;
 }
@@ -83,8 +73,8 @@ public:
 private:
 	KeyValues *m_cache;
 
-	void GetCacheFilename( const RequestContext *rc, char cachePath[_MAX_PATH] );
-	void GenerateCacheFilename( const RequestContext *rc, char cachePath[_MAX_PATH] );
+	void GetCacheFilename( const RequestContext *rc, char cachePath[k_cMaxPath] );
+	void GenerateCacheFilename( const RequestContext *rc, char cachePath[k_cMaxPath] );
 
 	void BuildKeyNames( const char *gamePath );			///< Convenience function to build the keys to index into m_cache
 	char m_cachefileKey[BufferSize + 64];
@@ -123,8 +113,8 @@ void DownloadCache::BuildKeyNames( const char *gamePath )
 		}
 		++tmp;
 	}
-	Q_snprintf( m_cachefileKey, sizeof( m_cachefileKey ), "cachefile_%s", tmpGamePath );
-	Q_snprintf( m_timestampKey, sizeof( m_timestampKey ), "timestamp_%s", tmpGamePath );
+	V_snprintf( m_cachefileKey, sizeof( m_cachefileKey ), "cachefile_%s", tmpGamePath );
+	V_snprintf( m_timestampKey, sizeof( m_timestampKey ), "timestamp_%s", tmpGamePath );
 
 	delete[] tmpGamePath;
 }
@@ -148,7 +138,7 @@ void DownloadCache::GetCachedData( RequestContext *rc )
 	if ( !m_cache )
 		return;
 
-	char cachePath[_MAX_PATH];
+	char cachePath[k_cMaxPath];
 	GetCacheFilename( rc, cachePath );
 
 	if ( !(*cachePath) )
@@ -172,16 +162,15 @@ void DownloadCache::GetCachedData( RequestContext *rc )
 	{
 		BuildKeyNames( rc->gamePath );
 		rc->nBytesCached = size;
-		strncpy( rc->cachedTimestamp, m_cache->GetString( m_timestampKey, "" ), BufferSize );
+		std::strncpy( rc->cachedTimestamp, m_cache->GetString( m_timestampKey, "" ), BufferSize );
 	}
 }
 
 //--------------------------------------------------------------------------------------------------------------
 /**
- *  Takes a data stream compressed with bzip2, and writes it out to disk, uncompresses it, and deletes the
- *  compressed version.
+ *  Takes a data stream compressed with bzip2 and uncompresses it to disk.
  */
-static bool DecompressBZipToDisk( const char *outFilename, const char *srcFilename, char *data, int bytesTotal )
+static bool DecompressBZipToDisk( const char *outFilename, char *data, int bytesTotal )
 {
 	if ( g_pFileSystem->FileExists( outFilename ) || !data || bytesTotal < 1 )
 	{
@@ -193,50 +182,40 @@ static bool DecompressBZipToDisk( const char *outFilename, const char *srcFilena
 	COM_CreatePath( tmpDir );
 	delete[] tmpDir;
 
-	// open the file for writing
-	char fullSrcPath[MAX_PATH];
-	Q_MakeAbsolutePath( fullSrcPath, sizeof( fullSrcPath ), srcFilename, com_gamedir );
-
-	if ( !g_pFileSystem->FileExists( fullSrcPath ) )
-	{
-		// Write out the .bz2 file, for simplest decompression
-		FileHandle_t ifp = g_pFileSystem->Open( fullSrcPath, "wb" );
-		if ( !ifp )
-		{
-			return false;
-		}
-		int bytesWritten = g_pFileSystem->Write( data, bytesTotal, ifp );
-		g_pFileSystem->Close( ifp );
-		if ( bytesWritten != bytesTotal )
-		{
-			// couldn't write out all of the .bz2 file
-			g_pFileSystem->RemoveFile( srcFilename );
-			return false;
-		}
-	}
-
-	// Prepare the uncompressed filehandle
 	FileHandle_t ofp = g_pFileSystem->Open( outFilename, "wb" );
 	if ( !ofp )
 	{
-		g_pFileSystem->RemoveFile( srcFilename );
 		return false;
 	}
 
-	// And decompress!
+	bz_stream stream = {};
+	if ( BZ2_bzDecompressInit( &stream, 0, 0 ) != BZ_OK )
+	{
+		g_pFileSystem->Close( ofp );
+		g_pFileSystem->RemoveFile( outFilename );
+		return false;
+	}
+
 	const int OutBufSize = 65536;
 	char    buf[ OutBufSize ];
-	BZFILE *bzfp = BZ2_bzopen( fullSrcPath, "rb" );
 	int totalBytes = 0;
+	bool bDone = false;
 
-	while ( 1 )
+	stream.next_in = data;
+	stream.avail_in = bytesTotal;
+
+	while ( !bDone )
 	{
-		int bytesRead = BZ2_bzread( bzfp, buf, OutBufSize );
-		if ( bytesRead < 0 )
+		stream.next_out = buf;
+		stream.avail_out = OutBufSize;
+
+		const int result = BZ2_bzDecompress( &stream );
+		if ( result != BZ_OK && result != BZ_STREAM_END )
 		{
 			break; // error out
 		}
 
+		const int bytesRead = OutBufSize - stream.avail_out;
 		if ( bytesRead > 0 )
 		{
 			int bytesWritten = g_pFileSystem->Write( buf, bytesRead, ofp );
@@ -244,33 +223,34 @@ static bool DecompressBZipToDisk( const char *outFilename, const char *srcFilena
 			{
 				break; // error out
 			}
-			else
+
+			totalBytes += bytesWritten;
+
+			static const int s_numMaxFileSizeBytes = CommandLine()->ParmValue( "-maxdownloadfilesizemb", 150 )*1024*1024;
+			if ( totalBytes > s_numMaxFileSizeBytes )
 			{
-				totalBytes += bytesWritten;
-				
-				static const int s_numMaxFileSizeBytes = CommandLine()->ParmValue( "-maxdownloadfilesizemb", 150 )*1024*1024;
-				if ( totalBytes > s_numMaxFileSizeBytes )
-				{
-					Warning( "DecompressBZipToDisk: '%s' too big (max %.1f megabytes, use launch option -maxdownloadfilesizemb N to override).\n", srcFilename, float( s_numMaxFileSizeBytes )/float( 1024*1024 ) );
-					break; // error out
-				}
+				Warning( "DecompressBZipToDisk: '%s' too big (max %.1f megabytes, use launch option -maxdownloadfilesizemb N to override).\n", outFilename, float( s_numMaxFileSizeBytes )/float( 1024*1024 ) );
+				break; // error out
 			}
 		}
-		else
+
+		if ( result == BZ_STREAM_END )
 		{
-			g_pFileSystem->Close( ofp );
-			BZ2_bzclose( bzfp );
-			g_pFileSystem->RemoveFile( srcFilename );
-			return true;
+			bDone = true;
+		}
+		else if ( stream.avail_in == 0 && bytesRead == 0 )
+		{
+			break; // truncated stream
 		}
 	}
 
-	// We failed somewhere, so clean up and exit
+	BZ2_bzDecompressEnd( &stream );
 	g_pFileSystem->Close( ofp );
-	BZ2_bzclose( bzfp );
-	g_pFileSystem->RemoveFile( srcFilename );
-	g_pFileSystem->RemoveFile( outFilename );
-	return false;
+	if ( !bDone )
+	{
+		g_pFileSystem->RemoveFile( outFilename );
+	}
+	return bDone;
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -284,11 +264,11 @@ void DownloadCache::PersistToDisk( const RequestContext *rc )
 		char gamePath[MAX_PATH];
 		if ( rc->bIsBZ2 )
 		{
-			Q_StripExtension( rc->gamePath, gamePath, sizeof( gamePath ) );
+			V_StripExtension( rc->gamePath, gamePath, sizeof( gamePath ) );
 		}
 		else
 		{
-			Q_strncpy( gamePath, rc->gamePath, sizeof( gamePath ) );
+			V_strncpy( gamePath, rc->gamePath, sizeof( gamePath ) );
 		}
 
 		if ( !g_pFileSystem->FileExists( gamePath ) )
@@ -301,7 +281,7 @@ void DownloadCache::PersistToDisk( const RequestContext *rc )
 			bool success = false;
 			if ( rc->bIsBZ2 )
 			{
-				success = DecompressBZipToDisk( gamePath, rc->gamePath, reinterpret_cast< char * >(rc->data), rc->nBytesTotal );
+				success = DecompressBZipToDisk( gamePath, reinterpret_cast< char * >(rc->data), rc->nBytesTotal );
 			}
 			else
 			{
@@ -317,7 +297,7 @@ void DownloadCache::PersistToDisk( const RequestContext *rc )
 			if ( success )
 			{
 				// write succeeded.  remove any old data from the cache.
-				char cachePath[_MAX_PATH];
+				char cachePath[k_cMaxPath];
 				GetCacheFilename( rc, cachePath );
 				if ( cachePath[0] )
 				{
@@ -348,7 +328,7 @@ void DownloadCache::PersistToCache( const RequestContext *rc )
 	if ( !m_cache || !rc || !rc->data || !rc->nBytesTotal || !rc->nBytesCurrent )
 		return;
 
-	char cachePath[_MAX_PATH];
+	char cachePath[k_cMaxPath];
 	GenerateCacheFilename( rc, cachePath );
 
 	FileHandle_t fp = g_pFileSystem->Open( cachePath, "wb" );
@@ -362,7 +342,7 @@ void DownloadCache::PersistToCache( const RequestContext *rc )
 }
 
 //--------------------------------------------------------------------------------------------------------------
-void DownloadCache::GetCacheFilename( const RequestContext *rc, char cachePath[_MAX_PATH] )
+void DownloadCache::GetCacheFilename( const RequestContext *rc, char cachePath[k_cMaxPath] )
 {
 	BuildKeyNames( rc->gamePath );
 	const char *path = m_cache->GetString( m_cachefileKey, nullptr );
@@ -371,12 +351,12 @@ void DownloadCache::GetCacheFilename( const RequestContext *rc, char cachePath[_
 		cachePath[0] = 0;
 		return;
 	}
-	strncpy( cachePath, path, _MAX_PATH );
-	cachePath[_MAX_PATH-1] = 0;
+	std::strncpy( cachePath, path, k_cMaxPath );
+	cachePath[k_cMaxPath-1] = 0;
 }
 
 //--------------------------------------------------------------------------------------------------------------
-void DownloadCache::GenerateCacheFilename( const RequestContext *rc, char cachePath[_MAX_PATH] )
+void DownloadCache::GenerateCacheFilename( const RequestContext *rc, char cachePath[k_cMaxPath] )
 {
 	GetCacheFilename( rc, cachePath );
 	BuildKeyNames( rc->gamePath );
@@ -385,7 +365,7 @@ void DownloadCache::GenerateCacheFilename( const RequestContext *rc, char cacheP
 	
 	if ( !*cachePath )
 	{
-		const char * lastSlash = strrchr( rc->gamePath, '/' );
+		const char * lastSlash = std::strrchr( rc->gamePath, '/' );
 		const char * lastBackslash = strrchr( rc->gamePath, '\\' );
 		const char *gameFilename = rc->gamePath;
 		if ( lastSlash || lastBackslash )
@@ -394,7 +374,7 @@ void DownloadCache::GenerateCacheFilename( const RequestContext *rc, char cacheP
 		}
 		for( int i=0; i<1000; ++i )
 		{
-			Q_snprintf( cachePath, _MAX_PATH, "%s/%s%4.4d", CacheDirectory, gameFilename, i );
+			V_snprintf( cachePath, k_cMaxPath, "%s/%s%4.4d", CacheDirectory, gameFilename, i );
 			if ( !g_pFileSystem->FileExists( cachePath ) )
 			{
 				m_cache->SetString( m_cachefileKey, cachePath );
@@ -402,7 +382,7 @@ void DownloadCache::GenerateCacheFilename( const RequestContext *rc, char cacheP
 			}
 		}
 		// all 1000 were invalid?!?
-		Q_snprintf( cachePath, _MAX_PATH, "%s/overflow", CacheDirectory );
+		V_snprintf( cachePath, k_cMaxPath, "%s/overflow", CacheDirectory );
 		m_cache->SetString( m_cachefileKey, cachePath );
 	}
 }
@@ -536,12 +516,12 @@ bool DownloadManager::FileReceived( const char *filename, unsigned int requestID
 
 	// INFESTED_DLL
 	static char gamedir[MAX_OSPATH];
-	Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
-	if ( !Q_stricmp( gamedir, "infested" ) )
+	V_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
+	if ( !V_stricmp( gamedir, "infested" ) )
 	{
 		// see if we just recieved a map layout
 		const char *pExt = V_GetFileExtension( filename );
-		if ( !Q_stricmp( pExt, "layout" ) )
+		if ( !V_stricmp( pExt, "layout" ) )
 		{
 #if !defined( DEDICATED )
 			// start compiling the map
@@ -549,7 +529,7 @@ bool DownloadManager::FileReceived( const char *filename, unsigned int requestID
 #endif
 
 			char cmd[ 256 ];
-			Q_snprintf( cmd, sizeof( cmd ), "asw_build_map %s connecting\n", filename );
+			V_snprintf( cmd, sizeof( cmd ), "asw_build_map %s connecting\n", filename );
 			Cbuf_AddText( Cbuf_GetCurrentPlayer(), cmd );
 		}
 	}
@@ -583,7 +563,7 @@ void DownloadManager::Queue( const char *baseURL, const char *gamePath )
 	{
 		return;
 	}
-	VPROF_BUDGET( "DownloadManager::Queue", VPROF_BUDGETGROUP_STEAM );
+	CVProfScope _( "DownloadManager::Queue", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
 	if ( sv.IsActive() )
 	{
@@ -619,22 +599,22 @@ void DownloadManager::Queue( const char *baseURL, const char *gamePath )
 		RequestContext *rc = new RequestContext;
 		m_queuedRequests.push_back( rc );
 
-		memset( rc, 0, sizeof(RequestContext) );
+		std::memset( rc, 0, sizeof(RequestContext) );
 
 		rc->status = HTTP_CONNECTING;
 
-		Q_strncpy( rc->basePath, com_gamedir, BufferSize );
-		Q_strncpy( rc->gamePath, gamePath, BufferSize );
-		Q_strncat( rc->gamePath, ".bz2", BufferSize, COPY_ALL_CHARACTERS );
-		Q_FixSlashes( rc->gamePath, '/' ); // only matters for debug prints, which are full URLS, so we want forward slashes
+		V_strncpy( rc->basePath, com_gamedir, BufferSize );
+		V_strncpy( rc->gamePath, gamePath, BufferSize );
+		V_strncat( rc->gamePath, ".bz2", BufferSize, COPY_ALL_CHARACTERS );
+		V_FixSlashes( rc->gamePath, '/' ); // only matters for debug prints, which are full URLS, so we want forward slashes
 #ifndef DEDICATED
-		Q_strncpy( rc->serverURL, GetBaseLocalClient().m_NetChannel->GetAddress(), BufferSize );
+		V_strncpy( rc->serverURL, GetBaseLocalClient().m_NetChannel->GetAddress(), BufferSize );
 #endif
 
 		rc->bIsBZ2 = true;
 		rc->bAsHTTP = true;
-		Q_strncpy( rc->baseURL, baseURL, BufferSize );
-		Q_strncat( rc->baseURL, "/", BufferSize, COPY_ALL_CHARACTERS );
+		V_strncpy( rc->baseURL, baseURL, BufferSize );
+		V_strncat( rc->baseURL, "/", BufferSize, COPY_ALL_CHARACTERS );
 	}
 
 	++m_totalRequests;
@@ -647,22 +627,22 @@ void DownloadManager::Queue( const char *baseURL, const char *gamePath )
 	RequestContext *rc = new RequestContext;
 	m_queuedRequests.push_back( rc );
 
-	memset( rc, 0, sizeof(RequestContext) );
+	std::memset( rc, 0, sizeof(RequestContext) );
 
 	rc->status = HTTP_CONNECTING;
 
-	Q_strncpy( rc->basePath, com_gamedir, BufferSize );
-	Q_strncpy( rc->gamePath, gamePath, BufferSize );
-	Q_FixSlashes( rc->gamePath, '/' ); // only matters for debug prints, which are full URLS, so we want forward slashes
+	V_strncpy( rc->basePath, com_gamedir, BufferSize );
+	V_strncpy( rc->gamePath, gamePath, BufferSize );
+	V_FixSlashes( rc->gamePath, '/' ); // only matters for debug prints, which are full URLS, so we want forward slashes
 #ifndef DEDICATED
-	Q_strncpy( rc->serverURL, GetBaseLocalClient().m_NetChannel->GetAddress(), BufferSize );
+	V_strncpy( rc->serverURL, GetBaseLocalClient().m_NetChannel->GetAddress(), BufferSize );
 #endif
 
 	if ( bAsHTTP )
 	{
 		rc->bAsHTTP = true;
-		Q_strncpy( rc->baseURL, baseURL, BufferSize );
-		Q_strncat( rc->baseURL, "/", BufferSize, COPY_ALL_CHARACTERS );
+		V_strncpy( rc->baseURL, baseURL, BufferSize );
+		V_strncat( rc->baseURL, "/", BufferSize, COPY_ALL_CHARACTERS );
 	}
 	else
 	{
@@ -746,7 +726,6 @@ void DownloadManager::CheckActiveDownload()
 		UpdateProgressBar();
 		if ( m_activeRequest->nBytesTotal )
 		{
-// 			// change it to be updating steam resources
 #ifndef DEDICATED
  			EngineUI()->UpdateSecondaryProgressBarWithFile( 1, m_activeRequest->gamePath, m_activeRequest->nBytesTotal );
 #endif
@@ -977,16 +956,15 @@ bool CL_ShouldRedownloadFile( const char *filename )
 {
 	// INFESTED_DLL - allow redownloading of the .layout or .bsp files, as these may have changed since we last downloaded them
 	static char gamedir[MAX_OSPATH];
-	Q_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
-	if ( !Q_stricmp( gamedir, "infested" ) && ( StringHasPrefix( filename + 5, "gridrandom" ) || StringHasPrefix( filename + 5, "output" ) ) )
+	V_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
+	if ( !V_stricmp( gamedir, "infested" ) && ( StringHasPrefix( filename + 5, "gridrandom" ) || StringHasPrefix( filename + 5, "output" ) ) )
 	{
 		char extension[12];
-		Q_ExtractFileExtension( filename, extension, sizeof( extension ) );
-		if ( !Q_stricmp( extension, "layout" ) || !Q_stricmp( extension, "bsp" ) )
+		V_ExtractFileExtension( filename, extension, sizeof( extension ) );
+		if ( !V_stricmp( extension, "layout" ) || !V_stricmp( extension, "bsp" ) )
 		{
 			return true;
 		}
 	}
 	return false;
 }
-

@@ -1,15 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: This is a helper class for the situation where you want to build lists of 
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: This is a helper class for the situation where you want to build lists of
 // things that fall into buckets, and effeciently keep up with which buckets have
 // been used since flush.
-//
-//=============================================================================//
 
-#ifndef MATERIALBUCKETS_H
-#define MATERIALBUCKETS_H
-
-#include <vector>
+import std;
 
 // FLASHLIGHTFIXME: Make all of the buckets share the same m_Elements (ie. make m_Elements static)
 
@@ -134,5 +131,3 @@ private:
 	int m_FlushCount;
 		
 };
-
-#endif // MATERIALBUCKETS_H

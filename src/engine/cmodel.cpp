@@ -1,47 +1,28 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: BSP collision!
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: BSP collision!
+
+import ks.tier1;
 #include "cmodel_engine.h"
 #include "cmodel_private.h"
 #include "dispcoll_common.h"
 #include "coordsize.h"
 
 #include "quakedef.h"
-#include <string.h>
-#include <stdlib.h>
-#include "mathlib/mathlib.h"
+import std;
 #include "common.h"
 #include "sysexternal.h"
-#include "zone.h"
-#include "utlvector.h"
-#include "const.h"
 #include "gl_model_private.h"
 #include "vphysics_interface.h"
 #include "icliententity.h"
 #include "engine/ICollideable.h"
-#include "enginethreads.h"
-#include "sys_dll.h"
 #include "collisionutils.h"
-#include "tier0/tslist.h"
-#include "tier0/vprof.h"
-#include "tier0/microprofiler.h"
-#include "keyvalues.h"
 #include "paint.h"
-#include "tier1/fmtstr.h"
 #include "edict.h"
-#include "debugoverlay.h"
 #include "engine/IEngineTrace.h"
 
 CCollisionBSPData g_BSPData;								// the global collision bsp
-#define g_BSPData dont_use_g_BSPData_directly
-
-#ifdef COUNT_COLLISIONS
-CCollisionCounts  g_CollisionCounts;						// collision test counters
-#endif
 
 static const float kBoxCheckFloatEpsilon = 0.01f; // Used for box trace assert checks below.
 
@@ -64,7 +45,7 @@ TraceInfo_t *BeginTrace()
 	TraceInfo_t *pTraceInfo = g_TraceInfoPool.GetObject();
 	if ( std::ssize( pTraceInfo->m_BrushCounters[0] ) != GetCollisionBSPData()->numbrushes + 1 )
 	{
-		memset( pTraceInfo->m_Count, 0, sizeof( pTraceInfo->m_Count ) );
+		std::memset( pTraceInfo->m_Count, 0, sizeof( pTraceInfo->m_Count ) );
 		pTraceInfo->m_nCheckDepth = -1;
 
 		for ( int i = 0; i < MAX_CHECK_COUNT_DEPTH; i++ )
@@ -86,14 +67,14 @@ TraceInfo_t *BeginTrace()
 void PushTraceVisits( TraceInfo_t *pTraceInfo )
 {
 	++pTraceInfo->m_nCheckDepth;
-	Assert( (pTraceInfo->m_nCheckDepth >= 0) && (pTraceInfo->m_nCheckDepth < MAX_CHECK_COUNT_DEPTH) );
+	contract_assert( (pTraceInfo->m_nCheckDepth >= 0) && (pTraceInfo->m_nCheckDepth < MAX_CHECK_COUNT_DEPTH) );
 
 	int i = pTraceInfo->m_nCheckDepth;
 	pTraceInfo->m_Count[i]++;
 	if ( pTraceInfo->m_Count[i] == 0 )
 	{
 		pTraceInfo->m_Count[i]++;
-		memset( pTraceInfo->m_BrushCounters[i].data(), 0, std::ssize( pTraceInfo->m_BrushCounters[i] ) * sizeof(TraceCounter_t) );
+		std::memset( pTraceInfo->m_BrushCounters[i].data(), 0, std::ssize( pTraceInfo->m_BrushCounters[i] ) * sizeof(TraceCounter_t) );
 		memset( pTraceInfo->m_DispCounters[i].data(), 0, std::ssize( pTraceInfo->m_DispCounters[i] ) * sizeof(TraceCounter_t) );
 	}
 }
@@ -101,13 +82,13 @@ void PushTraceVisits( TraceInfo_t *pTraceInfo )
 void PopTraceVisits( TraceInfo_t *pTraceInfo )
 {
 	--pTraceInfo->m_nCheckDepth;
-	Assert( pTraceInfo->m_nCheckDepth >= -1 );
+	contract_assert( pTraceInfo->m_nCheckDepth >= -1 );
 }
 
 void EndTrace( TraceInfo_t *&pTraceInfo )
 {
 	PopTraceVisits( pTraceInfo );
-	Assert( pTraceInfo->m_nCheckDepth == -1 );
+	contract_assert( pTraceInfo->m_nCheckDepth == -1 );
 	g_TraceInfoPool.PutObject( pTraceInfo );
 	pTraceInfo = nullptr;
 }
@@ -148,7 +129,7 @@ cmodel_t *CM_InlineModel( const char *name )
 		Sys_Error( "CM_InlineModel: bad model name!" );
 
 	// check for valid model
-	int ndxModel = atoi( name + 1 );
+	int ndxModel = std::atoi( name + 1 );
 	if( ( ndxModel < 1 ) || ( ndxModel >= GetCollisionBSPData()->numcmodels ) )
 		Sys_Error( "CM_InlineModel: bad model number!" );
 
@@ -234,8 +215,8 @@ int	CM_LeafContents( int leafnum )
 {
 	const CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
-	Assert( leafnum >= 0 );
-	Assert( leafnum < pBSPData->numleafs );
+	contract_assert( leafnum >= 0 );
+	contract_assert( leafnum < pBSPData->numleafs );
 
 	return pBSPData->map_leafs[leafnum].contents;
 }
@@ -247,8 +228,8 @@ int	CM_LeafCluster( int leafnum )
 {
 	const CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
-	Assert( leafnum >= 0 );
-	Assert( leafnum < pBSPData->numleafs );
+	contract_assert( leafnum >= 0 );
+	contract_assert( leafnum < pBSPData->numleafs );
 
 	return pBSPData->map_leafs[leafnum].cluster;
 }
@@ -258,8 +239,8 @@ int	CM_LeafFlags( int leafnum )
 {
 	const CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
-	Assert( leafnum >= 0 );
-	Assert( leafnum < pBSPData->numleafs );
+	contract_assert( leafnum >= 0 );
+	contract_assert( leafnum < pBSPData->numleafs );
 
 	return pBSPData->map_leafs[leafnum].flags;
 }
@@ -271,8 +252,8 @@ int	CM_LeafArea( int leafnum )
 {
 	const CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
-	Assert( leafnum >= 0 );
-	Assert( leafnum < pBSPData->numleafs );
+	contract_assert( leafnum >= 0 );
+	contract_assert( leafnum < pBSPData->numleafs );
 
 	return pBSPData->map_leafs[leafnum].area;
 }
@@ -334,9 +315,9 @@ cmodel_t *CM_LoadMap( const char *pPathName, bool allowReusePrevious, texinfo_t 
 	// get the current bsp -- there is currently only one!
 	CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
-	Assert( physcollision );
+	contract_assert( physcollision );
 
-	if( !strcmp( pBSPData->mapPathName, pPathName ) && allowReusePrevious )
+	if( !std::strcmp( pBSPData->mapPathName, pPathName ) && allowReusePrevious )
 	{
 		*checksum = last_checksum;
 		return &pBSPData->map_cmodels[0];		// still have the right version
@@ -363,11 +344,6 @@ cmodel_t *CM_LoadMap( const char *pPathName, bool allowReusePrevious, texinfo_t 
 	FloodAreaConnections( pBSPData );
 	CM_RegisterPaintMap( pBSPData );
 
-#ifdef COUNT_COLLISIONS
-	// initialize counters
-	CollisionCounts_Init( &g_CollisionCounts );
-#endif
-
 	return &pBSPData->map_cmodels[0];
 }
 
@@ -389,7 +365,7 @@ vcollide_t* CM_VCollideForModel( int modelindex, const model_t* pModel )
 	case mod_brush:
 		return CM_GetVCollide( modelindex-1 );
 	case mod_studio:
-		Assert( modelloader->IsLoaded( pModel ) );
+		contract_assert( modelloader->IsLoaded( pModel ) );
 		return g_pMDLCache->GetVCollide( pModel->studio );
 	}
 
@@ -430,10 +406,6 @@ int CM_PointLeafnumMinDistSqr_r( CCollisionBSPData *pBSPData, const Vector& p, i
 			num = node->children[0];
 	}
 
-#ifdef COUNT_COLLISIONS
-	g_CollisionCounts.m_PointContents++;			// optimize counter
-#endif
-
 	return -1 - num;
 }
 
@@ -457,10 +429,6 @@ int CM_PointLeafnum_r( CCollisionBSPData *pBSPData, const Vector& p, int num)
 		else
 			num = node->children[0];
 	}
-
-#ifdef COUNT_COLLISIONS
-	g_CollisionCounts.m_PointContents++;			// optimize counter
-#endif
 
 	return -1 - num;
 }
@@ -596,7 +564,7 @@ int CM_BoxLeafnums( leafnums_t &context, const Vector &center, const Vector &ext
 				nodeList[nodeWriteIndex] = node->children[0];
 				nodeWriteIndex = (nodeWriteIndex+1) & (NODELIST_MAX-1);
 				// check for overflow of the ring buffer
-				Assert(nodeWriteIndex != nodeReadIndex);
+				contract_assert( nodeWriteIndex != nodeReadIndex );
 				nodenum = node->children[1];
 			}
 		}
@@ -613,7 +581,7 @@ int	CM_BoxLeafnums ( const Vector& mins, const Vector& maxs, int *list, int list
 	context.pBSPData = GetCollisionBSPData();
 	Vector center = (mins+maxs)*0.5f;
 	Vector extents = maxs - center;
-	AssertMsg( cmodelIndex >= 0 && cmodelIndex < context.pBSPData->numcmodels, "Collision model index out of bounds." );
+	contract_assert( ( cmodelIndex >= 0 && cmodelIndex < context.pBSPData->numcmodels ) && "Collision model index out of bounds." );
 	int leafCount = 0;
 	if( cmodelIndex >= 0 && cmodelIndex < context.pBSPData->numcmodels )
 		leafCount = CM_BoxLeafnums(context, center, extents, context.pBSPData->map_cmodels[cmodelIndex].headnode );
@@ -678,7 +646,7 @@ int CM_PointContents ( const Vector &p, int headnode, int contentsMask )
 		else
 		{
 			// must be on the back of each brush side to be inside, skip bevels because they aren't necessary for testing points
-			cbrushside_t *  RESTRICT pSide = &pBSPData->map_brushsides[pBrush->firstbrushside];
+			cbrushside_t *  __restrict__ pSide = &pBSPData->map_brushsides[pBrush->firstbrushside];
 			bool bInside = true;
 			for ( const cbrushside_t * const pSideLimit = pSide + pBrush->numsides; pSide < pSideLimit; pSide++ )
 			{
@@ -848,8 +816,8 @@ BOX TRACING
 // Custom SIMD implementation for box brushes
 
 const fltx4 Four_DistEpsilons={DIST_EPSILON,DIST_EPSILON,DIST_EPSILON,DIST_EPSILON};
-const int32 ALIGN16 g_CubeFaceIndex0[4] ALIGN16_POST = {0,1,2,-1};
-const int32 ALIGN16 g_CubeFaceIndex1[4] ALIGN16_POST = {3,4,5,-1};
+const int32 g_CubeFaceIndex0[4] [[gnu::aligned(16)]] = {0,1,2,-1};
+const int32 g_CubeFaceIndex1[4] [[gnu::aligned(16)]] = {3,4,5,-1};
 bool IntersectRayWithBoxBrush( TraceInfo_t *pTraceInfo, const cbrush_t *pBrush, cboxbrush_t *pBox )
 {
 	// Load the unaligned ray/box parameters into SIMD registers
@@ -940,13 +908,13 @@ bool IntersectRayWithBoxBrush( TraceInfo_t *pTraceInfo, const cbrush_t *pBrush, 
 		fltx4 firstOut = MinSIMD(firstOutTmp, Four_Ones);
 		fltx4 lastIn = MaxSIMD(lastInTmp, Four_Zeros);
 		bi32x4 separation = CmpGtSIMD(lastIn, firstOut);
-		Assert(IsAllZeros(separation));
+		contract_assert( IsAllZeros(separation) );
 		if ( IsAllZeros(separation) )
 		{
 			uint32 faceIndex = SubInt(faceId, 0);
-			Assert(faceIndex<6);
+			contract_assert( faceIndex<6 );
 			float t1 = SubFloat(lastIn,0);
-			trace_t * RESTRICT pTrace = &pTraceInfo->m_trace;
+			trace_t * __restrict__ pTrace = &pTraceInfo->m_trace;
 
 			// this condition is copied from the brush case to avoid hitting an assert and
 			// overwriting a previous start solid with a new shorter fraction
@@ -1010,7 +978,7 @@ bool IntersectRayWithBoxBrush( TraceInfo_t *pTraceInfo, const cbrush_t *pBrush, 
 
 // slightly different version of the above.  This folds in more of the trace_t output because CM_ComputeTraceEndpts() isn't called after this
 // so this routine needs to properly compute start/end points and fractions in all cases
-bool IntersectRayWithBox( const Ray_t &ray, const VectorAligned &inInvDelta, const VectorAligned &inBoxMins, const VectorAligned &inBoxMaxs, trace_t *RESTRICT pTrace )
+bool IntersectRayWithBox( const Ray_t &ray, const VectorAligned &inInvDelta, const VectorAligned &inBoxMins, const VectorAligned &inBoxMaxs, trace_t *__restrict__ pTrace )
 {
 	// mark trace as not hitting
 	pTrace->startsolid = false;
@@ -1106,11 +1074,11 @@ bool IntersectRayWithBox( const Ray_t &ray, const VectorAligned &inInvDelta, con
 		fltx4 firstOut = MinSIMD(firstOutTmp, Four_Ones);
 		fltx4 lastIn = MaxSIMD(lastInTmp, Four_Zeros);
 		bi32x4 separation = CmpGtSIMD(lastIn, firstOut);
-		Assert(IsAllZeros(separation));
+		contract_assert( IsAllZeros(separation) );
 		if ( IsAllZeros(separation) )
 		{
 			uint32 faceIndex = SubInt(faceId, 0);
-			Assert(faceIndex<6);
+			contract_assert( faceIndex<6 );
 			float t1 = SubFloat(lastIn,0);
 
 			// this condition is copied from the brush case to avoid hitting an assert and
@@ -1183,50 +1151,50 @@ bool IntersectRayWithBox( const Ray_t &ray, const VectorAligned &inInvDelta, con
 
 //const fltx4 Four_DistEpsilons = { DIST_EPSILON, DIST_EPSILON, DIST_EPSILON, DIST_EPSILON };
 const fltx4 Four_NegDistEpsilons = { -DIST_EPSILON, -DIST_EPSILON, -DIST_EPSILON, -DIST_EPSILON };
-const fltx4 Four_NegEpsilons = { -FLT_EPSILON, -FLT_EPSILON, -FLT_EPSILON, -FLT_EPSILON };
+const fltx4 Four_NegEpsilons = { -std::numeric_limits<float>::epsilon(), -std::numeric_limits<float>::epsilon(), -std::numeric_limits<float>::epsilon(), -std::numeric_limits<float>::epsilon() };
 const fltx4 Four_NegOnes = { -1.0, -1.0, -1.0, -1.0 };
 
-FORCEINLINE fltx4 ShuffleABXY( const fltx4 &abcd, const fltx4 &xyzw )
+[[gnu::always_inline]] inline fltx4 ShuffleABXY( const fltx4 &abcd, const fltx4 &xyzw )
 {
-	return _mm_shuffle_ps( abcd, xyzw, MM_SHUFFLE_REV( 0, 1, 0, 1 ) );
+	return ks::simd::shuffle<0,1,0,1>( abcd, xyzw );
 }
 
-FORCEINLINE fltx4 ShuffleCDZW( const fltx4 &abcd, const fltx4 &xyzw )
+[[gnu::always_inline]] inline fltx4 ShuffleCDZW( const fltx4 &abcd, const fltx4 &xyzw )
 {
-	return _mm_shuffle_ps( abcd, xyzw, MM_SHUFFLE_REV( 2,3,2,3 ) );
-}
-
-
-FORCEINLINE fltx4 ShuffleXZYW( const fltx4 &xyzw )
-{
-	return _mm_shuffle_ps( xyzw, xyzw, MM_SHUFFLE_REV( 0,2,1,3 ) );
-}
-FORCEINLINE fltx4 ShuffleYWXZ( const fltx4 &xyzw )
-{
-	return _mm_shuffle_ps( xyzw, xyzw, MM_SHUFFLE_REV( 1, 3, 0, 2 ) );
-}
-FORCEINLINE fltx4 ShuffleZWXY( const fltx4 &xyzw )
-{
-	return _mm_shuffle_ps( xyzw, xyzw, MM_SHUFFLE_REV( 2, 3, 0, 1 ) );
+	return ks::simd::shuffle<2,3,2,3>( abcd, xyzw );
 }
 
 
-FORCEINLINE fltx4 ShuffleYZWX( const fltx4 &xyzw )
+[[gnu::always_inline]] inline fltx4 ShuffleXZYW( const fltx4 &xyzw )
 {
-	return _mm_shuffle_ps( xyzw, xyzw, MM_SHUFFLE_REV( 1, 2, 3, 0 ) );
+	return ks::simd::shuffle<0,2,1,3>( xyzw );
+}
+[[gnu::always_inline]] inline fltx4 ShuffleYWXZ( const fltx4 &xyzw )
+{
+	return ks::simd::shuffle<1,3,0,2>( xyzw );
+}
+[[gnu::always_inline]] inline fltx4 ShuffleZWXY( const fltx4 &xyzw )
+{
+	return ks::simd::shuffle<2,3,0,1>( xyzw );
 }
 
-FORCEINLINE fltx4 ShuffleAAXX( const fltx4 &abcd, const fltx4 &xyzw )
+
+[[gnu::always_inline]] inline fltx4 ShuffleYZWX( const fltx4 &xyzw )
 {
-	return _mm_shuffle_ps( abcd, xyzw, MM_SHUFFLE_REV( 0,0, 0,0 ) );
+	return ks::simd::shuffle<1,2,3,0>( xyzw );
 }
-FORCEINLINE fltx4 ShuffleCCZZ( const fltx4 &abcd, const fltx4 &xyzw )
+
+[[gnu::always_inline]] inline fltx4 ShuffleAAXX( const fltx4 &abcd, const fltx4 &xyzw )
 {
-	return _mm_shuffle_ps( abcd, xyzw, MM_SHUFFLE_REV( 2,2,2,2 ) );
+	return ks::simd::shuffle<0,0,0,0>( abcd, xyzw );
+}
+[[gnu::always_inline]] inline fltx4 ShuffleCCZZ( const fltx4 &abcd, const fltx4 &xyzw )
+{
+	return ks::simd::shuffle<2,2,2,2>( abcd, xyzw );
 }
 
 
-FORCEINLINE int IntersectOcclusionInterval( fltx4 d0[ 2 ], fltx4 d1[ 2 ], fltx4 f4EnterNum[ 2 ], fltx4 f4EnterDenum[ 2 ], fltx4 f4LeaveNum[ 2 ], fltx4 f4LeaveDenum[ 2 ] )
+[[gnu::always_inline]] inline int IntersectOcclusionInterval( fltx4 d0[ 2 ], fltx4 d1[ 2 ], fltx4 f4EnterNum[ 2 ], fltx4 f4EnterDenum[ 2 ], fltx4 f4LeaveNum[ 2 ], fltx4 f4LeaveDenum[ 2 ] )
 {
 	// We enter the polytope if d0-d1 >= 0, and leave if d0-d1 < 0. Note that the math works when d0-d1==0: we enter at -inf or +inf correctly. -inf is ignored, +inf means we never enter, the line is outside of the polytope and we can terminate. The same line of reasoning works with the Leave side
 	fltx4 delta[ 2 ] = { d0[ 0 ] - d1[ 0 ], d0[ 1 ] - d1[ 1 ] };
@@ -1255,7 +1223,7 @@ FORCEINLINE int IntersectOcclusionInterval( fltx4 d0[ 2 ], fltx4 d1[ 2 ], fltx4 
 static fltx4 Four_OneAndRcpMargin = { 1.001f, 1.001f, 1.001f, 1.001f };
 static fltx4 Four_NegRcpMargin = { -0.001f, -0.001f, -0.001f, -0.001f };
 
-bool CM_BrushOcclusionPass( COcclusionInfo &oi, const cbrush_t * RESTRICT brush )
+bool CM_BrushOcclusionPass( COcclusionInfo &oi, const cbrush_t * __restrict__ brush )
 {
 	fltx4 fracHit[ 2 ] = { Four_Ones, Four_Ones };
 	if ( brush->IsBox() )
@@ -1302,9 +1270,9 @@ bool CM_BrushOcclusionPass( COcclusionInfo &oi, const cbrush_t * RESTRICT brush 
 		// We enter the polytope if d1-d2 >= 0, and leave if d1-d2 < 0. Note that the math works when d1-d2==0: we enter at -inf or +inf correctly. -inf is ignored, +inf means we never enter, the line is outside of the polytope and we can terminate. The same line of reasoning works with the Leave side
 		{
 			fltx4 deltaU = d0U - d1U; // this should be the same as deltaV, with flipped signs
-			Assert( IsAllGreaterThanOrEq( Four_DistEpsilons, AbsSIMD( deltaU + ( d0V - d1V ) ) ) );
+			contract_assert( IsAllGreaterThanOrEq( Four_DistEpsilons, AbsSIMD( deltaU + ( d0V - d1V ) ) ) );
 			fltx4 deltaZ = d0ZnZ - d1ZnZ; // same with +Z and -Z planes
-			Assert( IsAllGreaterThanOrEq( Four_DistEpsilons, AbsSIMD( deltaZ + ShuffleZWXY( deltaZ ) ) ) );
+			contract_assert( IsAllGreaterThanOrEq( Four_DistEpsilons, AbsSIMD( deltaZ + ShuffleZWXY( deltaZ ) ) ) );
 
 			//fltx4 isDirPosU = CmpGtSIMD( deltaU, Four_Zeros );// , isDirNegU = CmpLtSIMD( deltaU, Four_NegEpsilons ); // Pos => use U over V; Neg => use V over U
 			//fltx4 isDirPosZ = CmpGtSIMD( deltaZ, Four_Zeros );// , isDirNegZ = CmpLtSIMD( deltaZ, Four_NegEpsilons ); // note: this mask is valid in the XY and inverted in ZW
@@ -1319,7 +1287,7 @@ bool CM_BrushOcclusionPass( COcclusionInfo &oi, const cbrush_t * RESTRICT brush 
 			fltx4 fracZa = d01Z * deltaZrcp, fracZb = ( d01Z + SplatZSIMD( f4Size ) ) * deltaZrcp;
 			fltx4 fracZmin = MinSIMD( fracZa, fracZb ), fracZmax = MaxSIMD( fracZa, fracZb );
 
-			Assert( IsAllGreaterThanOrEq( Four_OneAndRcpMargin, MaxSIMD( fracUmin, fracZmin ) ) ); // at least one ray starts further than 1 along at least one dimension? This shouldn't happen
+			contract_assert( IsAllGreaterThanOrEq( Four_OneAndRcpMargin, MaxSIMD( fracUmin, fracZmin ) ) ); // at least one ray starts further than 1 along at least one dimension? This shouldn't happen
 			// There may be large-ish round-off errors due to using reciprocal estimates (deltaUrcp and deltaZrcp)
 			// There are 8 rays, in all combinations of +- with X, Y, Z - those are the intervals we'll need to intersect: 
 			// +-,+-,+-: fracU01, fracU23, fracZ01
@@ -1338,7 +1306,7 @@ bool CM_BrushOcclusionPass( COcclusionInfo &oi, const cbrush_t * RESTRICT brush 
 	}
 	else// support for non-box brushes
 	{
-		cbrushside_t *  RESTRICT pSidesBegin = &oi.m_pBSPData->map_brushsides[ brush->firstbrushside ], *pSide = pSidesBegin;
+		cbrushside_t *  __restrict__ pSidesBegin = &oi.m_pBSPData->map_brushsides[ brush->firstbrushside ], *pSide = pSidesBegin;
 
 		fltx4 f4EnterNum[ 2 ] = { Four_Zeros, Four_Zeros }, f4EnterDenum[ 2 ] = { Four_Ones, Four_Ones };
 		fltx4 f4LeaveNum[ 2 ] = { Four_NegOnes, Four_NegOnes }, f4LeaveDenum[ 2 ] = { Four_NegOnes, Four_NegOnes };
@@ -1348,7 +1316,7 @@ bool CM_BrushOcclusionPass( COcclusionInfo &oi, const cbrush_t * RESTRICT brush 
 			// don't trace rays against bevel planes
 			if ( pSide->bBevel )
 				continue;
-			DbgAssert( uintp( &pSide->plane->dist ) - uintp( &pSide->plane->normal ) == 12 ); // dist must follow the normal exactly
+			contract_assert( uintp( &pSide->plane->dist ) - uintp( &pSide->plane->normal ) == 12 ); // dist must follow the normal exactly
 			fltx4 plane = LoadUnalignedSIMD( &pSide->plane->normal );
 			//fltx4 dist = SplatWSIMD( plane );
 			//fltx4 planeNormalX = SplatXSIMD( plane ), planeNormalY = SplatYSIMD( plane ), planeNormalZ = SplatZSIMD( plane );
@@ -1384,8 +1352,8 @@ bool CM_BrushOcclusionPass( COcclusionInfo &oi, const cbrush_t * RESTRICT brush 
 	{
 		// compute the bbox of the ends of the rays. This is only executed at most once per occlusion query, so it's not a critical path
 		fltx4 fracAft[ 2 ] = { Four_Ones - fracHit[ 0 ], Four_Ones - fracHit[ 1 ] };
-		Assert( IsAllGreaterThanOrEq( fracHit[ 0 ], Four_Zeros ) && IsAllGreaterThanOrEq( fracHit[ 1 ], Four_Zeros ) && IsAllGreaterThanOrEq( Four_OneAndRcpMargin, fracHit[ 0 ] ) && IsAllGreaterThanOrEq( Four_OneAndRcpMargin, fracHit[ 1 ] ) );
-		Assert( IsAllGreaterThanOrEq( fracAft[ 0 ], Four_NegRcpMargin ) && IsAllGreaterThanOrEq( fracAft[ 1 ], Four_NegRcpMargin ) && IsAllGreaterThanOrEq( Four_Ones, fracAft[ 0 ] ) && IsAllGreaterThanOrEq( Four_Ones, fracAft[ 1 ] ) );
+		contract_assert( IsAllGreaterThanOrEq( fracHit[ 0 ], Four_Zeros ) && IsAllGreaterThanOrEq( fracHit[ 1 ], Four_Zeros ) && IsAllGreaterThanOrEq( Four_OneAndRcpMargin, fracHit[ 0 ] ) && IsAllGreaterThanOrEq( Four_OneAndRcpMargin, fracHit[ 1 ] ) );
+		contract_assert( IsAllGreaterThanOrEq( fracAft[ 0 ], Four_NegRcpMargin ) && IsAllGreaterThanOrEq( fracAft[ 1 ], Four_NegRcpMargin ) && IsAllGreaterThanOrEq( Four_Ones, fracAft[ 0 ] ) && IsAllGreaterThanOrEq( Four_Ones, fracAft[ 1 ] ) );
 		// the 8 start points' coordinates will need to multiply by enter; the end points' coordinates will need to multiply by 1-enter
 		fltx4 startX = oi.GetStartX(), endX = oi.GetEndX();
 		fltx4 hitX[ 2 ] = { fracHit[ 0 ] * endX + fracAft[ 0 ] * startX, fracHit[ 1 ] * endX + fracAft[ 1 ] * startX };
@@ -1405,7 +1373,7 @@ bool CM_BrushOcclusionPass( COcclusionInfo &oi, const cbrush_t * RESTRICT brush 
 		StoreAligned3SIMD( &oi.m_pResults->vEndMin, minXYZZ );
 		fltx4 maxXYZZ = ShuffleABXY( maxXYXY, maxZ );
 		StoreAligned3SIMD( &oi.m_pResults->vEndMax, maxXYZZ );
-		Assert( IsAllGreaterThanOrEq( maxXYZZ, minXYZZ ) );
+		contract_assert( IsAllGreaterThanOrEq( maxXYZZ, minXYZZ ) );
 	}
 
 	return true; // yes, we didn't exit early, so it means all rays are intersected by the polytope, which means we're completely occluded
@@ -1418,7 +1386,7 @@ CM_ClipBoxToBrush
 ================
 */
 template <bool IS_POINT>
-void FASTCALL CM_ClipBoxToBrush( TraceInfo_t * RESTRICT pTraceInfo, const cbrush_t * RESTRICT brush )
+void CM_ClipBoxToBrush( TraceInfo_t * __restrict__ pTraceInfo, const cbrush_t * __restrict__ brush )
 {
 	if ( brush->IsBox() )
 	{
@@ -1429,14 +1397,10 @@ void FASTCALL CM_ClipBoxToBrush( TraceInfo_t * RESTRICT pTraceInfo, const cbrush
 	if (!brush->numsides)
 		return;
 
-	trace_t * RESTRICT trace = &pTraceInfo->m_trace;
+	trace_t * __restrict__ trace = &pTraceInfo->m_trace;
 	const Vector& p1 = pTraceInfo->m_start;
 	const Vector& p2= pTraceInfo->m_end;
 	int brushContents = brush->contents;
-
-#ifdef COUNT_COLLISIONS
-	g_CollisionCounts.m_BrushTraces++;
-#endif
 
 	float enterfrac = NEVER_UPDATED;
 	float leavefrac = 1.f;
@@ -1447,7 +1411,7 @@ void FASTCALL CM_ClipBoxToBrush( TraceInfo_t * RESTRICT pTraceInfo, const cbrush
 
 	float dist;
 
-	cbrushside_t *  RESTRICT side = &pTraceInfo->m_pBSPData->map_brushsides[brush->firstbrushside];
+	cbrushside_t *  __restrict__ side = &pTraceInfo->m_pBSPData->map_brushsides[brush->firstbrushside];
 	for ( const cbrushside_t * const sidelimit = side + brush->numsides; side < sidelimit; side++ )
 	{
 		cplane_t *plane = side->plane;
@@ -1605,7 +1569,7 @@ inline bool IsTraceBoxIntersectingBoxBrush( TraceInfo_t *pTraceInfo, cboxbrush_t
 CM_TestBoxInBrush
 ================
 */
-void FASTCALL CM_TestBoxInBrush( TraceInfo_t *pTraceInfo, const cbrush_t *brush )
+void CM_TestBoxInBrush( TraceInfo_t *pTraceInfo, const cbrush_t *brush )
 {
 	if ( brush->IsBox())
 	{
@@ -1668,13 +1632,13 @@ void FASTCALL CM_TestBoxInBrush( TraceInfo_t *pTraceInfo, const cbrush_t *brush 
 }
 
 template<bool IS_POINT, bool CHECK_COUNTERS>
-FORCEINLINE_TEMPLATE void CM_TraceToDispList( TraceInfo_t * RESTRICT pTraceInfo, const unsigned short *pDispList, int dispListCount, float startFrac, float endFrac )
+inline void CM_TraceToDispList( TraceInfo_t * __restrict__ pTraceInfo, const unsigned short *pDispList, int dispListCount, float startFrac, float endFrac )
 {
-	VPROF("CM_TraceToDispList");
+	CVProfScope _( "CM_TraceToDispList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	//
 	// trace ray/swept box against all displacement surfaces in this leaf
 	//
-	TraceCounter_t * RESTRICT pCounters = 0;
+	TraceCounter_t * __restrict__ pCounters = 0;
 	TraceCounter_t count = 0;
 
 	if ( CHECK_COUNTERS )
@@ -1687,7 +1651,7 @@ FORCEINLINE_TEMPLATE void CM_TraceToDispList( TraceInfo_t * RESTRICT pTraceInfo,
 	for( int i = 0; i < dispListCount; i++ )
 	{
 		int dispIndex = pDispList[i];
-		alignedbbox_t * RESTRICT pDispBounds = &g_pDispBounds[dispIndex];
+		alignedbbox_t * __restrict__ pDispBounds = &g_pDispBounds[dispIndex];
 
 		// only collide with objects you are interested in
 		if( !( pDispBounds->GetContents() & pTraceInfo->m_contents ) )
@@ -1711,7 +1675,7 @@ FORCEINLINE_TEMPLATE void CM_TraceToDispList( TraceInfo_t * RESTRICT pTraceInfo,
 			continue;
 		}
 
-		CDispCollTree * RESTRICT pDispTree = &g_pDispCollTrees[dispIndex];
+		CDispCollTree * __restrict__ pDispTree = &g_pDispCollTrees[dispIndex];
 		CM_TraceToDispTree<IS_POINT>( pTraceInfo, pDispTree, startFrac, endFrac );
 		if( !pTraceInfo->m_trace.fraction )
 			break;
@@ -1721,7 +1685,7 @@ FORCEINLINE_TEMPLATE void CM_TraceToDispList( TraceInfo_t * RESTRICT pTraceInfo,
 }
 
 
-bool IsNoDrawBrush( CCollisionBSPData *pBSPData, const int relevantContents, const int traceContents, const cbrush_t * RESTRICT pBrush )
+bool IsNoDrawBrush( CCollisionBSPData *pBSPData, const int relevantContents, const int traceContents, const cbrush_t * __restrict__ pBrush )
 {
 	// Many traces rely on CONTENTS_OPAQUE always being hit, even if it is nodraw.  AI blocklos brushes
 	// need this, for instance.  CS and Terror visibility checks don't want this behavior, since
@@ -1765,7 +1729,7 @@ bool IsNoDrawBrush( CCollisionBSPData *pBSPData, const int relevantContents, con
 
 
 
-FORCEINLINE_TEMPLATE bool CM_BrushListOcclusionPass( COcclusionInfo &oi, const unsigned short *pBrushList, int brushListCount )
+inline bool CM_BrushListOcclusionPass( COcclusionInfo &oi, const unsigned short *pBrushList, int brushListCount )
 {
 	//
 	// trace ray/box sweep against all brushes in this leaf
@@ -1777,7 +1741,7 @@ FORCEINLINE_TEMPLATE bool CM_BrushListOcclusionPass( COcclusionInfo &oi, const u
 		// get the current brush
 		int ndxBrush = pBrushList[ ndxLeafBrush ];
 
-		cbrush_t * RESTRICT pBrush = &map_brushes[ ndxBrush ];
+		cbrush_t * __restrict__ pBrush = &map_brushes[ ndxBrush ];
 
 		const int traceContents = oi.m_contents;
 		const int relevantContents = ( pBrush->contents & traceContents );
@@ -1801,13 +1765,13 @@ FORCEINLINE_TEMPLATE bool CM_BrushListOcclusionPass( COcclusionInfo &oi, const u
 }
 
 template <bool IS_POINT, bool CHECK_COUNTERS>
-FORCEINLINE_TEMPLATE void CM_TraceToBrushList( TraceInfo_t * RESTRICT pTraceInfo, const unsigned short *pBrushList, int brushListCount )
+inline void CM_TraceToBrushList( TraceInfo_t * __restrict__ pTraceInfo, const unsigned short *pBrushList, int brushListCount )
 {
 	//
 	// trace ray/box sweep against all brushes in this leaf
 	//
 	CRangeValidatedArray<cbrush_t> & 			map_brushes = pTraceInfo->m_pBSPData->map_brushes;
-	TraceCounter_t * RESTRICT pCounters = nullptr;
+	TraceCounter_t * __restrict__ pCounters = nullptr;
 	TraceCounter_t count = 0;
 
 	if ( CHECK_COUNTERS )
@@ -1821,7 +1785,7 @@ FORCEINLINE_TEMPLATE void CM_TraceToBrushList( TraceInfo_t * RESTRICT pTraceInfo
 		// get the current brush
 		int ndxBrush = pBrushList[ndxLeafBrush];
 
-		cbrush_t * RESTRICT pBrush = &map_brushes[ndxBrush];
+		cbrush_t * __restrict__ pBrush = &map_brushes[ndxBrush];
 
 		// make sure we only check this brush once per trace/stab
 		if ( CHECK_COUNTERS && !pTraceInfo->Visit( pBrush, ndxBrush, count, pCounters ) )
@@ -1890,10 +1854,10 @@ FORCEINLINE_TEMPLATE void CM_TraceToBrushList( TraceInfo_t * RESTRICT pTraceInfo
 }
 
 
-bool FASTCALL CM_LeafOcclusionPass( COcclusionInfo &oi, int ndxLeaf, float startFrac, float endFrac )
+bool CM_LeafOcclusionPass( COcclusionInfo &oi, int ndxLeaf, float startFrac, float endFrac )
 {
 	// get the leaf
-	cleaf_t * RESTRICT pLeaf = &oi.m_pBSPData->map_leafs[ ndxLeaf ];
+	cleaf_t * __restrict__ pLeaf = &oi.m_pBSPData->map_leafs[ ndxLeaf ];
 
 	if ( pLeaf->numleafbrushes )
 	{
@@ -1913,11 +1877,11 @@ CM_TraceToLeaf
 */
 
 template <bool IS_POINT>
-void FASTCALL CM_TraceToLeaf( TraceInfo_t * RESTRICT pTraceInfo, int ndxLeaf, float startFrac, float endFrac )
+void CM_TraceToLeaf( TraceInfo_t * __restrict__ pTraceInfo, int ndxLeaf, float startFrac, float endFrac )
 {
-	VPROF("CM_TraceToLeaf");
+	CVProfScope _( "CM_TraceToLeaf", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// get the leaf
-	cleaf_t * RESTRICT pLeaf = &pTraceInfo->m_pBSPData->map_leafs[ndxLeaf];
+	cleaf_t * __restrict__ pLeaf = &pTraceInfo->m_pBSPData->map_leafs[ndxLeaf];
 
 	if ( pLeaf->numleafbrushes )
 	{
@@ -1936,10 +1900,10 @@ void FASTCALL CM_TraceToLeaf( TraceInfo_t * RESTRICT pTraceInfo, int ndxLeaf, fl
 	}
 }
 
-void FASTCALL CM_GetTraceDataForLeaf( TraceInfo_t * RESTRICT pTraceInfo, int ndxLeaf, CTraceListData &traceData )
+void CM_GetTraceDataForLeaf( TraceInfo_t * __restrict__ pTraceInfo, int ndxLeaf, CTraceListData &traceData )
 {
 	// get the leaf
-	cleaf_t * RESTRICT pLeaf = &pTraceInfo->m_pBSPData->map_leafs[ndxLeaf];
+	cleaf_t * __restrict__ pLeaf = &pTraceInfo->m_pBSPData->map_leafs[ndxLeaf];
 
 	if ((pLeaf->contents & CONTENTS_SOLID) == 0)
 	{
@@ -1955,14 +1919,14 @@ void FASTCALL CM_GetTraceDataForLeaf( TraceInfo_t * RESTRICT pTraceInfo, int ndx
 		const int lastleafbrush = pLeaf->firstleafbrush + numleafbrushes;
 		const CRangeValidatedArray<unsigned short> &map_leafbrushes = pTraceInfo->m_pBSPData->map_leafbrushes;
 		CRangeValidatedArray<cbrush_t> & 			map_brushes = pTraceInfo->m_pBSPData->map_brushes;
-		TraceCounter_t * RESTRICT pCounters = pTraceInfo->GetBrushCounters();
+		TraceCounter_t * __restrict__ pCounters = pTraceInfo->GetBrushCounters();
 		TraceCounter_t count = pTraceInfo->GetCount();
 		for( int ndxLeafBrush = pLeaf->firstleafbrush; ndxLeafBrush < lastleafbrush; ndxLeafBrush++ )
 		{
 			// get the current brush
 			int ndxBrush = map_leafbrushes[ndxLeafBrush];
 
-			cbrush_t * RESTRICT pBrush = &map_brushes[ndxBrush];
+			cbrush_t * __restrict__ pBrush = &map_brushes[ndxBrush];
 
 			// make sure we only add this brush once
 			if ( !pTraceInfo->Visit( pBrush, ndxBrush, count, pCounters ) )
@@ -1981,7 +1945,7 @@ void FASTCALL CM_GetTraceDataForLeaf( TraceInfo_t * RESTRICT pTraceInfo, int ndx
 		for( int i = 0; i < pLeaf->dispCount; i++ )
 		{
 			int dispIndex = pTraceInfo->m_pBSPData->map_dispList[pLeaf->dispListStart + i];
-			alignedbbox_t * RESTRICT pDispBounds = &g_pDispBounds[dispIndex];
+			alignedbbox_t * __restrict__ pDispBounds = &g_pDispBounds[dispIndex];
 			// make sure we only add this disp once
 			if ( !pTraceInfo->Visit( pDispBounds->GetCounter(), count, pCounters ) )
 				continue;
@@ -2036,7 +2000,7 @@ void CM_GetTraceDataForBSP( const Vector &mins, const Vector &maxs, CTraceListDa
 				nodeList[nodeWriteIndex] = node->children[0];
 				nodeWriteIndex = (nodeWriteIndex+1) & (NODELIST_MAX-1);
 				// check for overflow of the ring buffer
-				Assert(nodeWriteIndex != nodeReadIndex);
+				contract_assert( nodeWriteIndex != nodeReadIndex );
 				nodenum = node->children[1];
 			}
 		}
@@ -2051,7 +2015,7 @@ void CM_GetTraceDataForBSP( const Vector &mins, const Vector &maxs, CTraceListDa
 CM_TestInLeaf
 ================
 */
-static void FASTCALL CM_TestInLeaf( TraceInfo_t *pTraceInfo, int ndxLeaf )
+static void CM_TestInLeaf( TraceInfo_t *pTraceInfo, int ndxLeaf )
 {
 	// get the leaf
 	cleaf_t *pLeaf = &pTraceInfo->m_pBSPData->map_leafs[ndxLeaf];
@@ -2293,7 +2257,7 @@ void CM_RayLeafnums( const Ray_t &ray, int *pLeafList, int nMaxLeafCount, int &n
 }
 
 
-bool FASTCALL CM_RecursiveOcclusionPass( COcclusionInfo &oi, int num, const float p1f, const float p2f, const Vector& p1, const Vector& p2 )
+bool CM_RecursiveOcclusionPass( COcclusionInfo &oi, int num, const float p1f, const float p2f, const Vector& p1, const Vector& p2 )
 {
 	cnode_t		*node = nullptr;
 	cplane_t	*plane;
@@ -2325,7 +2289,7 @@ bool FASTCALL CM_RecursiveOcclusionPass( COcclusionInfo &oi, int num, const floa
 		{
 			t1 = DotProduct( plane->normal, p1 ) - dist;
 			t2 = DotProduct( plane->normal, p2 ) - dist;
-			offset = fabsf( oi.m_extents[ 0 ] * plane->normal[ 0 ] ) +
+			offset = std::fabsf( oi.m_extents[ 0 ] * plane->normal[ 0 ] ) +
 				fabsf( oi.m_extents[ 1 ] * plane->normal[ 1 ] ) +
 				fabsf( oi.m_extents[ 2 ] * plane->normal[ 2 ] );
 		}
@@ -2404,7 +2368,7 @@ CM_RecursiveHullCheck
 Attempt to do whatever is nessecary to get this function to unroll at least once
 */
 template <bool IS_POINT>
-static void FASTCALL CM_RecursiveHullCheckImpl( TraceInfo_t *pTraceInfo, int num, const float p1f, const float p2f, const Vector& p1, const Vector& p2)
+static void CM_RecursiveHullCheckImpl( TraceInfo_t *pTraceInfo, int num, const float p1f, const float p2f, const Vector& p1, const Vector& p2)
 {
 	if (pTraceInfo->m_trace.fraction <= p1f)
 		return;		// already hit something nearer
@@ -2445,9 +2409,9 @@ static void FASTCALL CM_RecursiveHullCheckImpl( TraceInfo_t *pTraceInfo, int num
 			}
 			else
 			{
-				offset = fabsf(pTraceInfo->m_extents[0]*plane->normal[0]) +
-					fabsf(pTraceInfo->m_extents[1]*plane->normal[1]) +
-					fabsf(pTraceInfo->m_extents[2]*plane->normal[2]);
+				offset = std::fabsf(pTraceInfo->m_extents[0]*plane->normal[0]) +
+					std::fabsf(pTraceInfo->m_extents[1]*plane->normal[1]) +
+					std::fabsf(pTraceInfo->m_extents[2]*plane->normal[2]);
 			}
 		}
 
@@ -2510,7 +2474,7 @@ static void FASTCALL CM_RecursiveHullCheckImpl( TraceInfo_t *pTraceInfo, int num
 	CM_RecursiveHullCheckImpl<IS_POINT>(pTraceInfo, node->children[side^1], midf, p2f, mid, p2);
 }
 
-void FASTCALL CM_RecursiveHullCheck ( TraceInfo_t *pTraceInfo, int num, const float p1f, const float p2f )
+void CM_RecursiveHullCheck ( TraceInfo_t *pTraceInfo, int num, const float p1f, const float p2f )
 {
 	const Vector& p1 = pTraceInfo->m_start;
 	const Vector& p2 =  pTraceInfo->m_end;
@@ -2527,7 +2491,7 @@ void FASTCALL CM_RecursiveHullCheck ( TraceInfo_t *pTraceInfo, int num, const fl
 
 void CM_ClearTrace( trace_t *trace )
 {
-	memset( trace, 0, sizeof(*trace));
+	std::memset( trace, 0, sizeof(*trace));
 	trace->fraction = 1.f;
 	trace->fractionleftsolid = 0;
 	trace->surface = CCollisionBSPData::nullsurface;
@@ -2553,7 +2517,7 @@ static inline void CM_UnsweptBoxTrace( TraceInfo_t *pTraceInfo, const Ray_t& ray
 	leafnums_t context;
 	context.pLeafList = leafs;
 	context.leafTopNode = -1;
-	context.leafMaxCount = ARRAYSIZE(leafs);
+	context.leafMaxCount = std::size( leafs );
 	context.pBSPData = pTraceInfo->m_pBSPData;
 
 	bool bFoundNonSolidLeaf = false;
@@ -2583,7 +2547,7 @@ static inline void CM_UnsweptBoxTrace( TraceInfo_t *pTraceInfo, const Ray_t& ray
 //-----------------------------------------------------------------------------
 void CM_BoxTraceAgainstLeafList( const Ray_t &ray, const CTraceListData &traceData, int nBrushMask, trace_t &trace )
 {
-	VPROF("CM_BoxTraceAgainstLeafList");
+	CVProfScope _( "CM_BoxTraceAgainstLeafList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	TraceInfo_t *pTraceInfo = BeginTrace();
 
 	CM_ClearTrace(&pTraceInfo->m_trace);
@@ -2663,7 +2627,7 @@ void CM_BoxTraceAgainstLeafList( const Ray_t &ray, const CTraceListData &traceDa
 	trace = pTraceInfo->m_trace;
 	EndTrace( pTraceInfo );
 
-	Assert( !ray.m_IsRay || trace.allsolid || ((trace.fraction + kBoxCheckFloatEpsilon) >= trace.fractionleftsolid) );
+	contract_assert( !ray.m_IsRay || trace.allsolid || ((trace.fraction + kBoxCheckFloatEpsilon) >= trace.fractionleftsolid) );
 }
 
 
@@ -2673,8 +2637,8 @@ uint64 COcclusionInfo::s_nAssocArrayMisses = 0;
 //uint64 s_nOccluded = 0, s_nUnoccluded = 0;
 
 
-const int32 ALIGN16 g_SIMD_0101_signmask[ 4 ] ALIGN16_POST = { 0, (int)0x80000000, 0, (int)0x80000000 };
-const int32 ALIGN16 g_SIMD_0011_signmask[ 4 ] ALIGN16_POST = { 0, 0, (int)0x80000000, (int)0x80000000 };
+const int32 g_SIMD_0101_signmask[ 4 ] [[gnu::aligned(16)]] = { 0, (int)0x80000000, 0, (int)0x80000000 };
+const int32 g_SIMD_0011_signmask[ 4 ] [[gnu::aligned(16)]] = { 0, 0, (int)0x80000000, (int)0x80000000 };
 
 struct OcclusionTestRec_t
 {
@@ -2689,7 +2653,9 @@ ConVar occlusion_test_rays( "occlusion_test_rays", "0", FCVAR_DEVELOPMENTONLY );
 static std::vector< OcclusionTestRec_t > s_OcclusionTestRecords;
 
 static int s_nOcclusionTestsToCollect = 0, s_nOcclusionTestsCollectionsToRun = 0, s_nOcclusionTestCollectionLock = 0;
-CON_COMMAND_F( occlusion_test_record, "dump occlusion tests - useful on server only", FCVAR_CHEAT )
+static void occlusion_test_record( const CCommand &args );
+static ConCommand occlusion_test_record_command( "occlusion_test_record", occlusion_test_record, "dump occlusion tests - useful on server only", FCVAR_CHEAT );
+static void occlusion_test_record( const CCommand &args )
 {
 	if ( args.ArgC() < 2 )
 	{
@@ -2797,7 +2763,7 @@ bool CM_IsFullyOccluded( const VectorAligned &p0, const VectorAligned &vExtents0
 		}
 	}
 
-	VPROF_BUDGET( "CM_IsFullyOccluded", VPROF_BUDGETGROUP_OTHER_UNACCOUNTED );
+	CVProfScope _( "CM_IsFullyOccluded", 0, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, BUDGETFLAG_OTHER );
 	Vector vExtents = VectorMax( vExtents0, vExtents1 );
 	COcclusionInfo oi;
 	oi.m_pBSPData = GetCollisionBSPData();
@@ -2822,7 +2788,7 @@ bool CM_IsFullyOccluded( const VectorAligned &p0, const VectorAligned &vExtents0
 	fltx4 f40101signmask = *( fltx4* )g_SIMD_0101_signmask;
 	oi.m_StartXnXYnY = ShuffleXXYY( f4Start ) + XorSIMD( f40101signmask, ShuffleXXYY( f4ExtentsStart ) );
 	oi.m_EndXnXYnY = ShuffleXXYY( f4End ) + XorSIMD( f40101signmask, ShuffleXXYY( f4ExtentsEnd ) );
-	oi.m_StartEndZnZ = _mm_shuffle_ps( f4Start, f4End, MM_SHUFFLE_REV( 2, 2, 2, 2 ) ) + XorSIMD( f40101signmask, _mm_shuffle_ps( f4ExtentsStart, f4ExtentsEnd, MM_SHUFFLE_REV( 2, 2, 2, 2 ) ) );
+	oi.m_StartEndZnZ = ks::simd::shuffle<2,2,2,2>( f4Start, f4End ) + XorSIMD( f40101signmask, ks::simd::shuffle<2,2,2,2>( f4ExtentsStart, f4ExtentsEnd ) );
 
 	oi.m_start = p0;
 	oi.m_end = p1;
@@ -2873,7 +2839,9 @@ bool CM_IsFullyOccluded( const AABB_t &aabb1, const AABB_t &aabb2 )
 
 
 
-CON_COMMAND_F( occlusion_test_run, "run occlusion test", FCVAR_CHEAT )
+static void occlusion_test_run( const CCommand &args );
+static ConCommand occlusion_test_run_command( "occlusion_test_run", occlusion_test_run, "run occlusion test", FCVAR_CHEAT );
+static void occlusion_test_run( const CCommand &args )
 {
 	if ( s_nOcclusionTestCollectionLock )
 	{
@@ -2984,14 +2952,9 @@ CON_COMMAND_F( occlusion_test_run, "run occlusion test", FCVAR_CHEAT )
 
 void CM_BoxTrace( const Ray_t& ray, int headnode, int brushmask, bool computeEndpt, trace_t& tr )
 {
-	VPROF("BoxTrace");
+	CVProfScope _( "BoxTrace", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// for multi-check avoidance
 	TraceInfo_t *pTraceInfo = BeginTrace();
-
-#ifdef COUNT_COLLISIONS
-	// for statistics, may be zeroed
-	g_CollisionCounts.m_Traces++;
-#endif
 
 	// fill in a default trace
 	CM_ClearTrace( &pTraceInfo->m_trace );
@@ -3037,7 +3000,7 @@ void CM_BoxTrace( const Ray_t& ray, int headnode, int brushmask, bool computeEnd
 	tr = pTraceInfo->m_trace;
 	EndTrace( pTraceInfo );
 
-	Assert( !ray.m_IsRay || tr.allsolid || ((tr.fraction + kBoxCheckFloatEpsilon) >= tr.fractionleftsolid) );
+	contract_assert( !ray.m_IsRay || tr.allsolid || ((tr.fraction + kBoxCheckFloatEpsilon) >= tr.fractionleftsolid) );
 }
 
 
@@ -3131,7 +3094,7 @@ void CM_DecompressVis( CCollisionBSPData *pBSPData, int cluster, int visType, by
 
 	if ( !pBSPData )
 	{
-		Assert( false ); // Shouldn't ever happen.
+		contract_assert( false ); // Shouldn't ever happen.
 	}
 
 	if ( cluster > pBSPData->numclusters || cluster < 0 )
@@ -3208,7 +3171,7 @@ const byte *CM_Vis( byte *dest, int destlen, int cluster, int visType )
 			Sys_Error( "CM_Vis:  buffer not big enough (%i but need %i)\n",
 				destlen, len );
 		}
-		memset( dest, 0, (pBSPData->numclusters+7)>>3 );
+		std::memset( dest, 0, (pBSPData->numclusters+7)>>3 );
 	}
 	else
 	{
@@ -3349,16 +3312,16 @@ void CM_LeavesConnected( const Vector &vecOrigin, int nCount, const int *pLeaves
 
 	if ( map_noareas.GetInt() )
 	{
-		memset( pIsConnected, 1, nCount * sizeof(bool) );
+		std::memset( pIsConnected, 1, nCount * sizeof(bool) );
 		return;
 	}
 
 	int nArea = CM_LeafArea( CM_PointLeafnum( vecOrigin ) );
-	Assert( nArea < pBSPData->numareas && nArea >= 0 );
+	contract_assert( nArea < pBSPData->numareas && nArea >= 0 );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		int nLeafArea = pBSPData->map_leafs[ pLeaves[i] ].area;
-		Assert( nLeafArea < pBSPData->numareas && nLeafArea >= 0 );
+		contract_assert( nLeafArea < pBSPData->numareas && nLeafArea >= 0 );
 		pIsConnected[i] = ( pBSPData->map_areas[nArea].floodnum == pBSPData->map_areas[ nLeafArea ].floodnum );
 	}
 }
@@ -3384,20 +3347,20 @@ int CM_WriteAreaBits( byte *buffer, int buflen, int area )
 
 	// get the current collision bsp -- there is only one!
 	CCollisionBSPData *pBSPData = GetCollisionBSPData();
-	Assert( pBSPData );
+	contract_assert( pBSPData );
 	bytes = ( pBSPData->numareas + 7 ) >> 3;
-	Assert( buflen >= bytes );
+	contract_assert( buflen >= bytes );
 
 	if ( map_noareas.GetInt() )
 	{
 		// for debugging, send everything (or nothing if map_noareas == 2 )
 		byte fill = ( map_noareas.GetInt() == 2 ) ? 0x00 : 0xff;
 
-		Q_memset( buffer, fill, buflen );
+		V_memset( buffer, fill, buflen );
 	}
 	else
 	{
-		Q_memset( buffer, 0x00, buflen );
+		V_memset( buffer, 0x00, buflen );
 
 		floodnum = pBSPData->map_areas[area].floodnum;
 		for ( i = 0 ; i < pBSPData->numareas; ++i )
@@ -3486,7 +3449,7 @@ bool CM_HeadnodeVisible (int nodenum, const byte *visbits, int vissize )
 //			*visbits - pvs or pas of some cluster
 // Output : true if visible, false if not
 //-----------------------------------------------------------------------------
-#define MAX_BOX_LEAVES	256
+constexpr auto MAX_BOX_LEAVES = 256;
 int	CM_BoxVisible( const Vector& mins, const Vector& maxs, const byte *visbits, int vissize )
 {
 	int leafList[MAX_BOX_LEAVES];
@@ -3579,7 +3542,7 @@ void CM_SetupAreaFloodNums( byte areaFloodNums[MAX_MAP_AREAS], int *pNumAreas )
 
 	for ( int i=0; i < pBSPData->numareas; i++ )
 	{
-		Assert( pBSPData->map_areas[i].floodnum < MAX_MAP_AREAS );
+		contract_assert( pBSPData->map_areas[i].floodnum < MAX_MAP_AREAS );
 		areaFloodNums[i] = (byte)pBSPData->map_areas[i].floodnum;
 	}
 }
@@ -3608,8 +3571,8 @@ int CFastPointLeafNum::GetLeaf( const Vector &vPos )
 		m_iCachedLeaf = CM_PointLeafnumMinDistSqr_r( pBSPData, vPos, 0, m_flDistToExitLeafSqr );
 	}
 
-	Assert( m_iCachedLeaf >= 0 );
-	Assert( m_iCachedLeaf < pBSPData->numleafs );
+	contract_assert( m_iCachedLeaf >= 0 );
+	contract_assert( m_iCachedLeaf < pBSPData->numleafs );
 	return m_iCachedLeaf;
 }
 
@@ -3620,7 +3583,7 @@ void CFastPointLeafNum::Reset( void )
 	m_vCachedPos.Init();
 }
 
-bool FASTCALL IsBoxIntersectingRayNoLowest( fltx4 boxMin, fltx4  boxMax,
+bool IsBoxIntersectingRayNoLowest( fltx4 boxMin, fltx4  boxMax,
 								   const fltx4 & origin, const fltx4 & delta, const fltx4 & invDelta, // ray parameters
 								   const fltx4 & vTolerance ///< eg from ReplicateX4(flTolerance)
 								   )
@@ -3702,6 +3665,3 @@ bool FASTCALL IsBoxIntersectingRayNoLowest( fltx4 boxMin, fltx4  boxMax,
 	failedComponents = AndNotSIMD(bvOriginOutsideBox,failedComponents);
 	return ( IsAllZeros( SetWToZeroSIMD( failedComponents ) ) );
 }
-
-
-

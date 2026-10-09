@@ -1,36 +1,33 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DYNAMICIB_H
-#define DYNAMICIB_H
-
-
+import ks.tier1;
 #include "locald3dtypes.h"
 #include "recording.h"
 #include "shaderapidx8_global.h"
 #include "shaderapidx8.h"
 #include "shaderapi/ishaderutil.h"
 #include "materialsystem/ivballoctracker.h"
-#include "tier1/memstack.h"
 
 /////////////////////////////
 // D. Sim Dietrich Jr.
 // sim.dietrich@nvidia.com
 /////////////////////////////
 
-
 #include "locald3dtypes.h"
-#include "tier1/strtools.h"
-#include "tier1/utlvector.h"
-#include "tier0/memalloc.h"
+import std;
+#include "materialsystem/imesh.h"
+
+static constexpr auto kTextureGroupStaticIndexBufferFrame = ks::Concat( "TexGroup_frame_", TEXTURE_GROUP_STATIC_INDEX_BUFFER );
+static constexpr auto kTextureGroupStaticIndexBufferGlobal = ks::Concat( "TexGroup_global_", TEXTURE_GROUP_STATIC_INDEX_BUFFER );
+static constexpr auto kTextureGroupDynamicIndexBufferD3D = ks::Concat( "D3D: ", TEXTURE_GROUP_DYNAMIC_INDEX_BUFFER );
+static constexpr auto kTextureGroupStaticIndexBufferD3D = ks::Concat( "D3D: ", TEXTURE_GROUP_STATIC_INDEX_BUFFER );
 
 // Helper function to unbind an index buffer
 void Unbind( IDirect3DIndexBuffer9 *pIndexBuffer );
 
-#define X360_INDEX_BUFFER_SIZE_MULTIPLIER 2.0 //minimum of 1, only affects dynamic buffers
+inline constexpr auto X360_INDEX_BUFFER_SIZE_MULTIPLIER = 2.0; //minimum of 1, only affects dynamic buffers
 //#define X360_BLOCK_ON_IB_FLUSH //uncomment to block until all data is consumed when a flush is requested. Otherwise we only block when absolutely necessary
 
 #define SPEW_INDEX_BUFFER_STALLS //uncomment to allow buffer stall spewing.
@@ -47,7 +44,7 @@ public:
 	LPDIRECT3DINDEXBUFFER GetInterface() const 
 	{ 
 		// If this buffer still exists, then Late Creation didn't happen. Best case: we'll render the wrong image. Worst case: Crash.
-		Assert( !m_pSysmemBuffer );
+		contract_assert( !m_pSysmemBuffer );
 		return m_pIB; 
 	}
 	
@@ -82,13 +79,13 @@ public:
 #ifdef CHECK_INDICES
 	void UpdateShadowIndices( unsigned short *pData )
 	{
-		Assert( m_LockedStartIndex + m_LockedNumIndices <= m_NumIndices );
+		contract_assert( m_LockedStartIndex + m_LockedNumIndices <= m_NumIndices );
 		memcpy( m_pShadowIndices + m_LockedStartIndex, pData, m_LockedNumIndices * IndexSize() );
 	}
 
 	unsigned short GetShadowIndex( int i )
 	{
-		Assert( i >= 0 && i < (int)m_NumIndices );
+		contract_assert( i >= 0 && i < (int)m_NumIndices );
 		return m_pShadowIndices[i];
 	}
 #endif
@@ -96,23 +93,16 @@ public:
 	// UID
 	unsigned int UID() const 
 	{ 
-#ifdef RECORDING
-		return m_UID; 
-#else
 		return 0;
-#endif
 	}
 
 	void HandlePerFrameTextureStats( int frame )
 	{
-#ifdef VPROF_ENABLED
 		if ( m_Frame != frame && !m_bDynamic )
 		{
 			m_Frame = frame;
-			VPROF_INCREMENT_GROUP_COUNTER( "TexGroup_frame_" TEXTURE_GROUP_STATIC_INDEX_BUFFER, 
-				COUNTER_GROUP_TEXTURE_PER_FRAME, IndexCount() * IndexSize() );
+			VProfIncrementCounter<kTextureGroupStaticIndexBufferFrame, COUNTER_GROUP_TEXTURE_PER_FRAME>( IndexCount() * IndexSize() );
 		}
-#endif
 	}
 	
 	static int BufferCount()
@@ -138,11 +128,7 @@ private :
 	inline void ReallyUnlock( int unlockBytes )
 	{
 			unlockBytes; // Unused here
-			#if SHADERAPI_NO_D3DDeviceWrapper
-			m_pIB->Unlock();
-			#else
 			Dx9Device()->Unlock( m_pIB );
-			#endif
 	}
 
 	enum LOCK_FLAGS
@@ -164,22 +150,13 @@ private :
 	unsigned char	m_bSoftwareVertexProcessing : 1;
 	unsigned char	m_bLateCreateShouldDiscard : 1;
 
-#ifdef VPROF_ENABLED
 	int				m_Frame;
-#endif
 
 #ifdef _DEBUG
 	static int		s_BufferCount;
 #endif
 
-#ifdef RECORDING
-	unsigned int	m_UID;
-#endif
-
-#if SHADERAPI_NO_D3DDeviceWrapper
-#else
 	LockedBufferContext m_LockData;
-#endif
 
 protected:
 #ifdef CHECK_INDICES
@@ -207,24 +184,15 @@ inline CIndexBuffer::CIndexBuffer( D3DDeviceWrapper *pD3D, int count,
 		m_bDynamic(dynamic),
 		m_bSoftwareVertexProcessing( bSoftwareVertexProcessing ),
 		m_bLateCreateShouldDiscard( false )
-#ifdef VPROF_ENABLED
 		,m_Frame( -1 )
-#endif
 {
 	// For write-combining, ensure we always have locked memory aligned to 4-byte boundaries
 	count = ALIGN_VALUE( count, 2 );
 	m_IndexCount = count; 
 
-	MEM_ALLOC_CREDIT_( m_bDynamic ? ( "D3D: " TEXTURE_GROUP_DYNAMIC_INDEX_BUFFER ) : ( "D3D: " TEXTURE_GROUP_STATIC_INDEX_BUFFER ) );
 
 #ifdef CHECK_INDICES
 	m_pShadowIndices = nullptr;
-#endif
-
-#ifdef RECORDING
-	// assign a UID
-	static unsigned int uid = 0;
-	m_UID = uid++;
 #endif
 
 #ifdef _DEBUG
@@ -250,20 +218,17 @@ inline CIndexBuffer::CIndexBuffer( D3DDeviceWrapper *pD3D, int count,
 
 
 
-#ifdef VPROF_ENABLED
 	if ( !m_bDynamic )
 	{
-		VPROF_INCREMENT_GROUP_COUNTER( "TexGroup_global_" TEXTURE_GROUP_STATIC_INDEX_BUFFER, 
-			COUNTER_GROUP_TEXTURE_GLOBAL, IndexCount() * IndexSize() );
+		VProfIncrementCounter<kTextureGroupStaticIndexBufferGlobal, COUNTER_GROUP_TEXTURE_GLOBAL>( IndexCount() * IndexSize() );
 	}
-#endif
 }
 
 
 void CIndexBuffer::Create( D3DDeviceWrapper *pD3D )
 {
 	D3DINDEXBUFFER_DESC desc;
-	memset( &desc, 0x00, sizeof( desc ) );
+	std::memset( &desc, 0x00, sizeof( desc ) );
 	desc.Format = D3DFMT_INDEX16;
 	desc.Size = sizeof(unsigned short) * m_IndexCount;
 	desc.Type = D3DRTYPE_INDEXBUFFER;
@@ -278,13 +243,6 @@ void CIndexBuffer::Create( D3DDeviceWrapper *pD3D )
 		desc.Usage |= D3DUSAGE_SOFTWAREPROCESSING;
 	}
 
-	RECORD_COMMAND( DX8_CREATE_INDEX_BUFFER, 6 );
-	RECORD_INT( m_UID );
-	RECORD_INT( m_IndexCount * IndexSize() );
-	RECORD_INT( desc.Usage );
-	RECORD_INT( desc.Format );
-	RECORD_INT( desc.Pool );
-	RECORD_INT( m_bDynamic );
 
 	HRESULT hr = pD3D->CreateIndexBuffer( 
 		m_IndexCount * IndexSize(),
@@ -308,22 +266,15 @@ void CIndexBuffer::Create( D3DDeviceWrapper *pD3D )
 			desc.Usage, desc.Format, desc.Pool, &m_pIB, nullptr );
 	}
 
-	Assert( m_pIB );
-	Assert( hr == D3D_OK );
-
-#ifdef MEASURE_DRIVER_ALLOCATIONS
-	int nMemUsed = 1024;
-	VPROF_INCREMENT_GROUP_COUNTER( "ib count", COUNTER_GROUP_NO_RESET, 1 );
-	VPROF_INCREMENT_GROUP_COUNTER( "ib driver mem", COUNTER_GROUP_NO_RESET, nMemUsed );
-	VPROF_INCREMENT_GROUP_COUNTER( "total driver mem", COUNTER_GROUP_NO_RESET, nMemUsed );
-#endif
+	contract_assert( m_pIB );
+	contract_assert( hr == D3D_OK );
 
 #if defined( _DEBUG )
 	if ( m_pIB && !m_pSysmemBuffer )
 	{
 		D3DINDEXBUFFER_DESC aDesc;
 		m_pIB->GetDesc( &aDesc );
-		Assert( memcmp( &aDesc, &desc, sizeof( desc ) ) == 0 );
+		contract_assert( memcmp( &aDesc, &desc, sizeof( desc ) ) == 0 );
 	}
 #endif
 }
@@ -356,38 +307,19 @@ inline CIndexBuffer::~CIndexBuffer()
 		m_pSysmemBuffer = nullptr;
 	}
 
-#ifdef MEASURE_DRIVER_ALLOCATIONS
-	if ( !m_bExternalMemory )
-	{
-		int nMemUsed = 1024;
-		VPROF_INCREMENT_GROUP_COUNTER( "ib count", COUNTER_GROUP_NO_RESET, -1 );
-		VPROF_INCREMENT_GROUP_COUNTER( "ib driver mem", COUNTER_GROUP_NO_RESET, -nMemUsed );
-		VPROF_INCREMENT_GROUP_COUNTER( "total driver mem", COUNTER_GROUP_NO_RESET, -nMemUsed );
-	}
-#endif
-
 	if ( m_pIB && !m_bExternalMemory )
 	{
-		RECORD_COMMAND( DX8_DESTROY_INDEX_BUFFER, 1 );
-		RECORD_INT( m_UID );
 
-		#if SHADERAPI_NO_D3DDeviceWrapper
-		m_pIB->Release();
-		#else
 		Dx9Device()->Release( m_pIB );
-		#endif
 	}
 
-#ifdef VPROF_ENABLED
 	if ( !m_bExternalMemory )
 	{
 		if ( !m_bDynamic )
 		{
-			VPROF_INCREMENT_GROUP_COUNTER( "TexGroup_global_" TEXTURE_GROUP_STATIC_INDEX_BUFFER,
-				COUNTER_GROUP_TEXTURE_GLOBAL, - IndexCount() * IndexSize() );
+			VProfIncrementCounter<kTextureGroupStaticIndexBufferGlobal, COUNTER_GROUP_TEXTURE_GLOBAL>( - IndexCount() * IndexSize() );
 		}
 	}
-#endif
 }
 	
 
@@ -411,7 +343,7 @@ inline int CIndexBuffer::GetIndicesLeft() const
 //-----------------------------------------------------------------------------
 inline void CIndexBuffer::BlockUntilUnused( int nAllocationSize )
 {
-	Assert( nAllocationSize <= m_IndexCount );
+	contract_assert( nAllocationSize <= m_IndexCount );
 
 }
 
@@ -421,7 +353,7 @@ inline void CIndexBuffer::BlockUntilUnused( int nAllocationSize )
 //-----------------------------------------------------------------------------
 inline unsigned short* CIndexBuffer::Lock( bool bReadOnly, int numIndices, int& startIndex, int startPosition )
 {
-	Assert( !m_bLocked );
+	contract_assert( !m_bLocked );
 
 
 	unsigned short* pLockedData = nullptr;
@@ -434,7 +366,7 @@ inline unsigned short* CIndexBuffer::Lock( bool bReadOnly, int numIndices, int& 
 	if ( numIndices > m_IndexCount ) 
 	{ 
 		Error( "too many indices for index buffer. . tell a programmer (%d>%d)\n", ( int )numIndices, ( int )m_IndexCount );
-		Assert( false ); 
+		contract_assert( false ); 
 		return 0; 
 	}
 	
@@ -480,11 +412,6 @@ inline unsigned short* CIndexBuffer::Lock( bool bReadOnly, int numIndices, int& 
 		position = startPosition;
 	}
 
-	RECORD_COMMAND( DX8_LOCK_INDEX_BUFFER, 4 );
-	RECORD_INT( m_UID );
-	RECORD_INT( position * IndexSize() );
-	RECORD_INT( numIndices * IndexSize() );
-	RECORD_INT( dwFlags );
 
 	m_LockedStartIndex = position;
 	m_LockedNumIndices = numIndices;
@@ -513,11 +440,7 @@ inline unsigned short* CIndexBuffer::Lock( bool bReadOnly, int numIndices, int& 
 	}
 	else 
 	{
-		#if SHADERAPI_NO_D3DDeviceWrapper
-		hr = m_pIB->Lock(
-		#else
 		hr = Dx9Device()->Lock( m_pIB,
-		#endif
 			position * IndexSize(),  numIndices * IndexSize(), 
 						   reinterpret_cast< void** >( &pLockedData ), dwFlags );
 	}
@@ -535,18 +458,18 @@ inline unsigned short* CIndexBuffer::Lock( bool bReadOnly, int numIndices, int& 
 			break;
 	}
 
-	Assert( pLockedData != nullptr );
+	contract_assert( pLockedData != nullptr );
 	   
 	startIndex = position;
 
-	Assert( m_bLocked == false );
+	contract_assert( m_bLocked == false );
 	m_bLocked = true;
 	return pLockedData;
 }
 
 inline void CIndexBuffer::Unlock( int numIndices )
 {
-	Assert( (m_Position + numIndices) <= m_IndexCount );
+	contract_assert( (m_Position + numIndices) <= m_IndexCount );
 
 	if ( !m_bLocked )
 		return;
@@ -558,8 +481,6 @@ inline void CIndexBuffer::Unlock( int numIndices )
 	if ( !m_pIB && !m_pSysmemBuffer )
 		return;
 
-	RECORD_COMMAND( DX8_UNLOCK_INDEX_BUFFER, 1 );
-	RECORD_INT( m_UID );
 
 	if ( m_pSysmemBuffer )
 	{
@@ -619,11 +540,7 @@ inline void CIndexBuffer::HandleLateCreation( )
 	}
 
 
-	#if SHADERAPI_NO_D3DDeviceWrapper
-	hr = m_pIB->Lock(
-	#else
 	hr = Dx9Device()->Lock( m_pIB,
-	#endif
 			m_nSysmemBufferStartBytes, 
 			dataToWriteBytes,
 			&pWritePtr,
@@ -631,9 +548,9 @@ inline void CIndexBuffer::HandleLateCreation( )
 
 	// If this fails we're about to crash. Consider skipping the update and leaving 
 	// m_pSysmemBuffer around to try again later. (For example in case of device loss)
-	Assert( SUCCEEDED( hr ) ); hr;
+	contract_assert( SUCCEEDED( hr ) ); hr;
 
-	memcpy( pWritePtr, m_pSysmemBuffer + m_nSysmemBufferStartBytes, dataToWriteBytes );
+	std::memcpy( pWritePtr, m_pSysmemBuffer + m_nSysmemBufferStartBytes, dataToWriteBytes );
 	ReallyUnlock( dataToWriteBytes );
 
 	g_pMemAlloc->Free( m_pSysmemBuffer );
@@ -651,6 +568,3 @@ inline int CIndexBuffer::AllocationCount() const
 {
 	return m_IndexCount;
 }
-
-
-#endif  // DYNAMICIB_H

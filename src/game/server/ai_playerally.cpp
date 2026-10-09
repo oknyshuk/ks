@@ -1,10 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 
@@ -134,12 +161,6 @@ bool ConceptStringLess::operator()( const string_t &lhs, const string_t &rhs ) c
 
 //-----------------------------------------------------------------------------
 
-#if AI_CONCEPTS_ARE_STRINGS
-
-typedef std::map<AIConcept_t, ConceptInfo_t *, ks::cstr_iless> CConceptInfoMap;
-
-#else
-
 struct ConceptIDLess
 {
 	bool operator()( const AIConcept_t::tGenericId &lhs, const AIConcept_t::tGenericId &rhs ) const
@@ -150,12 +171,10 @@ struct ConceptIDLess
 
 typedef std::map<AIConcept_t::tGenericId, ConceptInfo_t *, ConceptIDLess> CConceptInfoMap;
 
-#endif
-
 static CConceptInfoMap MakeConceptInfoMap()
 {
 	CConceptInfoMap map;
-	for ( int i = 0; i < ARRAYSIZE(g_ConceptInfos); i++ )
+	for ( int i = 0; i < std::size( g_ConceptInfos ); i++ )
 	{
 		CConceptInfoMap::key_type key = g_ConceptInfos[i].conc;
 		map.emplace( key, &g_ConceptInfos[i] );
@@ -169,7 +188,7 @@ static std::vector< std::unique_ptr< ConceptInfo_t > > g_CustomConceptInfos;
 
 CAI_AllySpeechManager::CAI_AllySpeechManager()
 {
-	Assert( !gm_pSpeechManager );
+	contract_assert( !gm_pSpeechManager );
 	gm_pSpeechManager = this;
 }
 
@@ -180,15 +199,15 @@ CAI_AllySpeechManager::~CAI_AllySpeechManager()
 
 void CAI_AllySpeechManager::Spawn()
 {
-	Assert( !g_ConceptInfoMap.empty() );
-	for ( int i = 0; i < ARRAYSIZE(g_ConceptInfos); i++ )
+	contract_assert( !g_ConceptInfoMap.empty() );
+	for ( int i = 0; i < std::size( g_ConceptInfos ); i++ )
 		m_ConceptTimers.try_emplace( AllocPooledString( g_ConceptInfos[i].conc ) );
 }
 
 void CAI_AllySpeechManager::AddCustomConcept( const ConceptInfo_t &conceptInfo )
 {
-	Assert( !g_ConceptInfoMap.empty() );
-	Assert( !m_ConceptTimers.empty() );
+	contract_assert( !g_ConceptInfoMap.empty() );
+	contract_assert( !m_ConceptTimers.empty() );
 
 	CConceptInfoMap::key_type key = conceptInfo.conc;
 	if ( !g_ConceptInfoMap.contains( key ) )
@@ -243,7 +262,7 @@ void CAI_AllySpeechManager::OnSpokeConcept( CAI_PlayerAlly *pPlayerAlly, AIConce
 	{
 		if ( pConceptInfo && pConceptInfo->minGlobalCategoryDelay != -1 )
 		{
-			Assert( pConceptInfo->maxGlobalCategoryDelay != -1 );
+			contract_assert( pConceptInfo->maxGlobalCategoryDelay != -1 );
 			SetCategoryDelay( pConceptInfo->category, pConceptInfo->minGlobalCategoryDelay, pConceptInfo->maxGlobalCategoryDelay );
 		}
 		else if ( pCategoryInfo->maxGlobalDelay > 0 )
@@ -253,7 +272,7 @@ void CAI_AllySpeechManager::OnSpokeConcept( CAI_PlayerAlly *pPlayerAlly, AIConce
 
 		if ( pConceptInfo && pConceptInfo->minPersonalCategoryDelay != -1 )
 		{
-			Assert( pConceptInfo->maxPersonalCategoryDelay != -1 );
+			contract_assert( pConceptInfo->maxPersonalCategoryDelay != -1 );
 			pPlayerAlly->SetCategoryDelay( pConceptInfo->category, pConceptInfo->minPersonalCategoryDelay, pConceptInfo->maxPersonalCategoryDelay );
 		}
 		else if ( pCategoryInfo->maxPersonalDelay > 0 )
@@ -263,7 +282,7 @@ void CAI_AllySpeechManager::OnSpokeConcept( CAI_PlayerAlly *pPlayerAlly, AIConce
 
 		if ( pConceptInfo && pConceptInfo->minConceptDelay != -1 )
 		{
-			Assert( pConceptInfo->maxConceptDelay != -1 );
+			contract_assert( pConceptInfo->maxConceptDelay != -1 );
 			auto itConceptTimer = m_ConceptTimers.find( MAKE_STRING(conc) );
 			if ( itConceptTimer != m_ConceptTimers.end() )
 				itConceptTimer->second.Set( pConceptInfo->minConceptDelay, pConceptInfo->minConceptDelay );
@@ -308,7 +327,7 @@ CAI_AllySpeechManager *GetAllySpeechManager()
 	if ( !CAI_AllySpeechManager::gm_pSpeechManager )
 	{
 		CreateEntityByName( "ai_ally_speech_manager" );
-		Assert( CAI_AllySpeechManager::gm_pSpeechManager );
+		contract_assert( CAI_AllySpeechManager::gm_pSpeechManager );
 		if ( CAI_AllySpeechManager::gm_pSpeechManager )
 			DispatchSpawn( CAI_AllySpeechManager::gm_pSpeechManager );
 	}
@@ -545,7 +564,7 @@ bool CAI_PlayerAlly::SelectIdleSpeech( AISpeechSelection_t *pSelection )
 	if ( !IsOkToSpeak( SPEECH_IDLE ) )
 		return false;
 
-	CBasePlayer *pTarget = assert_cast<CBasePlayer *>(FindSpeechTarget( AIST_PLAYERS | AIST_FACING_TARGET ));
+	CBasePlayer *pTarget = static_cast<CBasePlayer *>(FindSpeechTarget( AIST_PLAYERS | AIST_FACING_TARGET ));
 	if ( pTarget )
 	{
 		if ( SelectSpeechResponse( TLK_HELLO, nullptr, pTarget, pSelection ) )
@@ -727,7 +746,7 @@ void CAI_PlayerAlly::AnswerQuestion( CAI_PlayerAlly *pQuestioner, int iQARandomN
 			}
 		}
 
-		Assert( !selection.response.IsEmpty() );
+		contract_assert( !selection.response.IsEmpty() );
 		SetSpeechTarget( selection.hSpeechTarget );
 		SpeakDispatchResponse( selection.conc.c_str(), &selection.response, nullptr );
 
@@ -772,7 +791,7 @@ int CAI_PlayerAlly::SelectNonCombatSpeechSchedule()
 		AISpeechSelection_t selection;
 		if ( SelectNonCombatSpeech( &selection ) )
 		{
-			Assert( !selection.response.IsEmpty() );
+			contract_assert( !selection.response.IsEmpty() );
 			SetSpeechTarget( selection.hSpeechTarget );
 			SetPendingSpeech( selection.conc.c_str(), &selection.response );
 		}
@@ -1119,7 +1138,7 @@ bool CAI_PlayerAlly::IsValidSpeechTarget( int flags, CBaseEntity *pEntity )
 CBaseEntity *CAI_PlayerAlly::FindSpeechTarget( int flags )
 {
 	const Vector &	vAbsOrigin 		= GetAbsOrigin();
-	float 			closestDistSq 	= FLT_MAX;
+	float 			closestDistSq 	= std::numeric_limits<float>::max();
 	CBaseEntity *	pNearest 		= nullptr;
 	float			distSq;
 	int				i;
@@ -1351,7 +1370,7 @@ bool CAI_PlayerAlly::ShouldSpeakRandom( AIConcept_t conc, int iChance )
 			if ( flModifier < 0.001 )
 				return false;
 				
-			iChance = floor( (float)iChance / flModifier );
+			iChance = std::floor( (float)iChance / flModifier );
 		}
 	}
 	
@@ -1397,7 +1416,7 @@ bool CAI_PlayerAlly::IsAllowedToSpeak( AIConcept_t conc, bool bRespondingToPlaye
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-bool CAI_PlayerAlly::SpeakIfAllowed( AIConcept_t conc, const char *modifiers, bool bRespondingToPlayer, char *pszOutResponseChosen, size_t bufsize )
+bool CAI_PlayerAlly::SpeakIfAllowed( AIConcept_t conc, const char *modifiers, bool bRespondingToPlayer, char *pszOutResponseChosen, std::size_t bufsize )
 {
 	if ( IsAllowedToSpeak( conc, bRespondingToPlayer ) )
 	{

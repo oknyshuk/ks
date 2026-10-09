@@ -1,18 +1,26 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "c_smoke_trail.h"
 #include "smoke_fog_overlay.h"
 #include "engine/IEngineTrace.h"
 #include "view.h"
 #include "dlight.h"
 #include "iefx.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
@@ -213,7 +221,6 @@ private:
 
 
 // Expose to the particle app.
-EXPOSE_PROTOTYPE_EFFECT(SmokeGrenade, C_ParticleSmokeGrenade);
 
 
 // Datatable..
@@ -234,49 +241,27 @@ static inline void InterpColor(unsigned char dest[4], unsigned char src1[4], uns
 
 static inline int GetWorldPointContents(const Vector &vPos)
 {
-	#if defined(PARTICLEPROTOTYPE_APP)
-		return 0;
-	#else
 		return enginetrace->GetPointContents( vPos );
-	#endif
 }
 
 static inline void WorldTraceLine( const Vector &start, const Vector &end, int contentsMask, trace_t *trace )
 {
-	#if defined(PARTICLEPROTOTYPE_APP)
-		trace->fraction = 1;
-	#else
 		UTIL_TraceLine(start, end, contentsMask, nullptr, COLLISION_GROUP_NONE, trace);
-	#endif
 }
 
 static inline Vector EngineGetLightForPoint(const Vector &vPos)
 {
-	#if defined(PARTICLEPROTOTYPE_APP)
-		return Vector(1,1,1);
-	#else
 		return engine->GetLightForPoint(vPos, true);
-	#endif
 }
 
 static inline const Vector& EngineGetVecRenderOrigin()
 {
-	#if defined(PARTICLEPROTOTYPE_APP)
-		static Vector dummy(0,0,0);
-		return dummy;
-	#else
 		return CurrentViewOrigin();
-	#endif
 }
 
 static inline float& EngineGetSmokeFogOverlayAlpha()
 {
-	#if defined(PARTICLEPROTOTYPE_APP)
-		static float dummy;
-		return dummy;
-	#else
 		return g_SmokeFogOverlayAlpha;
-	#endif
 }
 
 static inline void EngineAddSmokeFogOverlayColor( Vector &color )
@@ -286,11 +271,7 @@ static inline void EngineAddSmokeFogOverlayColor( Vector &color )
 
 static inline C_BaseEntity* ParticleGetEntity(int index)
 {
-	#if defined(PARTICLEPROTOTYPE_APP)
-		return nullptr;
-	#else
 		return cl_entitylist->GetEnt(index);
-	#endif
 }
 
 
@@ -361,7 +342,7 @@ void C_ParticleSmokeGrenade::Start(CParticleMgr *pParticleMgr, IPrototypeArgAcce
 	for(int i=0; i < NUM_MATERIAL_HANDLES; i++)
 	{
 		char str[256];
-		Q_snprintf(str, sizeof( str ), "particle/particle_smokegrenade%d", i+1);
+		V_snprintf(str, sizeof( str ), "particle/particle_smokegrenade%d", i+1);
 		m_MaterialHandles[i] = m_ParticleEffect.FindOrAddMaterial(str);
 	}
 
@@ -463,7 +444,7 @@ inline void C_ParticleSmokeGrenade::UpdateParticleDuringTrade( int iParticle, fl
 {
 	SmokeParticleInfo *pInfo = &m_SmokeParticleInfos[iParticle];
 	SmokeParticleInfo *pOther = &m_SmokeParticleInfos[pInfo->m_TradeIndex];
-	Assert(pOther->m_TradeIndex == iParticle);
+	contract_assert( pOther->m_TradeIndex == iParticle );
 	
 	// This makes sure the trade only gets updated once per frame.
 	if(pInfo < pOther)
@@ -493,7 +474,7 @@ inline void C_ParticleSmokeGrenade::UpdateParticleDuringTrade( int iParticle, fl
 		else
 		{			
 			// Ok, move them closer.
-			float percent = (float)cos(pInfo->m_TradeClock * 2 * 1.57079632f / pInfo->m_TradeDuration);
+			float percent = (float)std::cos(pInfo->m_TradeClock * 2 * 1.57079632f / pInfo->m_TradeDuration);
 			percent = percent * 0.5 + 0.5;
 			
 			pInfo->m_pParticle->m_FadeAlpha  = pInfo->m_FadeAlpha + (pOther->m_FadeAlpha - pInfo->m_FadeAlpha) * (1 - percent);
@@ -576,7 +557,7 @@ void C_ParticleSmokeGrenade::Update(float fTimeDelta)
 	else if(flLifetime < m_FadeEndTime)
 	{
 		float fadePercent = (flLifetime - m_FadeStartTime) / (m_FadeEndTime - m_FadeStartTime);
-		m_FadeAlpha = cos(fadePercent * 3.14159) * 0.5 + 0.5;
+		m_FadeAlpha = std::cos(fadePercent * 3.14159) * 0.5 + 0.5;
 	}
 	else
 	{
@@ -604,7 +585,7 @@ void C_ParticleSmokeGrenade::Update(float fTimeDelta)
 		if(m_ExpandTimeCounter > SMOKESPHERE_EXPAND_TIME)
 			m_ExpandTimeCounter = SMOKESPHERE_EXPAND_TIME;
 
-		m_ExpandRadius = (m_SpacingRadius*2) * (float)sin(m_ExpandTimeCounter * M_PI * 0.5 / SMOKESPHERE_EXPAND_TIME);
+		m_ExpandRadius = (m_SpacingRadius*2) * (float)std::sin(m_ExpandTimeCounter * std::numbers::pi * 0.5 / SMOKESPHERE_EXPAND_TIME);
 	
 		// Update all the moving traders and establish new ones.
 		int nTotal = m_xCount * m_yCount * m_zCount;
@@ -803,7 +784,7 @@ void C_ParticleSmokeGrenade::GetParticlePosition( Particle *pParticle, Vector& w
 void C_ParticleSmokeGrenade::RecvProxy_CurrentStage(  const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	C_ParticleSmokeGrenade *pGrenade = (C_ParticleSmokeGrenade*)pStruct;
-	Assert( pOut == &pGrenade->m_CurrentStage );
+	contract_assert( pOut == &pGrenade->m_CurrentStage );
 
 	if ( pGrenade && pGrenade->m_CurrentStage == 0 && pData->m_Value.m_Int == 1 )
 	{
@@ -880,7 +861,7 @@ void C_ParticleSmokeGrenade::FillVolume()
 							int testX, testY, testZ;
 							int index = GetSmokeParticleIndex(x,y,z);
 							GetParticleInfoXYZ(index, testX, testY, testZ);
-							assert(testX == x && testY == y && testZ == z);
+							contract_assert( testX == x && testY == y && testZ == z );
 						#endif
 
 						Vector vColor = EngineGetLightForPoint(vPos);
@@ -1032,6 +1013,3 @@ void C_ParticleSmokeGrenade::CleanupToolRecordingState( KeyValues *msg )
 		msg->deleteThis();
 	}
 }
-
-
-

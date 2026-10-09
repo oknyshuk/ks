@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 #include "shaderlib/cshader.h"
@@ -11,7 +12,7 @@ private:
 public:
 	void SetADDBASETEXTURE2( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nADDBASETEXTURE2 = i;
 #ifdef _DEBUG
 		m_bADDBASETEXTURE2 = true;
@@ -19,7 +20,7 @@ public:
 	}
 	void SetADDBASETEXTURE2( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nADDBASETEXTURE2 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bADDBASETEXTURE2 = true;
@@ -33,7 +34,7 @@ private:
 public:
 	void SetEXTRACTGREENALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nEXTRACTGREENALPHA = i;
 #ifdef _DEBUG
 		m_bEXTRACTGREENALPHA = true;
@@ -41,7 +42,7 @@ public:
 	}
 	void SetEXTRACTGREENALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nEXTRACTGREENALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bEXTRACTGREENALPHA = true;
@@ -55,7 +56,7 @@ private:
 public:
 	void SetDUALSEQUENCE( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nDUALSEQUENCE = i;
 #ifdef _DEBUG
 		m_bDUALSEQUENCE = true;
@@ -63,7 +64,7 @@ public:
 	}
 	void SetDUALSEQUENCE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nDUALSEQUENCE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDUALSEQUENCE = true;
@@ -77,7 +78,7 @@ private:
 public:
 	void SetDEPTHBLEND( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nDEPTHBLEND = i;
 #ifdef _DEBUG
 		m_bDEPTHBLEND = true;
@@ -85,7 +86,7 @@ public:
 	}
 	void SetDEPTHBLEND( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nDEPTHBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDEPTHBLEND = true;
@@ -99,7 +100,7 @@ private:
 public:
 	void SetPACKED_INTERPOLATOR( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nPACKED_INTERPOLATOR = i;
 #ifdef _DEBUG
 		m_bPACKED_INTERPOLATOR = true;
@@ -107,7 +108,7 @@ public:
 	}
 	void SetPACKED_INTERPOLATOR( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nPACKED_INTERPOLATOR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPACKED_INTERPOLATOR = true;
@@ -121,7 +122,7 @@ private:
 public:
 	void SetANIMBLEND_OR_MAXLUMFRAMEBLEND1( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nANIMBLEND_OR_MAXLUMFRAMEBLEND1 = i;
 #ifdef _DEBUG
 		m_bANIMBLEND_OR_MAXLUMFRAMEBLEND1 = true;
@@ -129,7 +130,7 @@ public:
 	}
 	void SetANIMBLEND_OR_MAXLUMFRAMEBLEND1( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nANIMBLEND_OR_MAXLUMFRAMEBLEND1 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bANIMBLEND_OR_MAXLUMFRAMEBLEND1 = true;
@@ -170,7 +171,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bADDBASETEXTURE2 && m_bEXTRACTGREENALPHA && m_bDUALSEQUENCE && m_bDEPTHBLEND && m_bPACKED_INTERPOLATOR && m_bANIMBLEND_OR_MAXLUMFRAMEBLEND1;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 4 * m_nADDBASETEXTURE2 ) + ( 4 * m_nEXTRACTGREENALPHA ) + ( 4 * m_nDUALSEQUENCE ) + ( 4 * m_nDEPTHBLEND ) + ( 4 * m_nPACKED_INTERPOLATOR ) + ( 4 * m_nANIMBLEND_OR_MAXLUMFRAMEBLEND1 ) + 0;
 	}
@@ -186,7 +187,7 @@ private:
 public:
 	void SetORIENTATION( int i )
 	{
-		Assert( i >= 0 && i <= 3 );
+		contract_assert( i >= 0 && i <= 3 );
 		m_nORIENTATION = i;
 #ifdef _DEBUG
 		m_bORIENTATION = true;
@@ -194,7 +195,7 @@ public:
 	}
 	void SetORIENTATION( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
 		m_nORIENTATION = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bORIENTATION = true;
@@ -215,7 +216,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bORIENTATION;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nORIENTATION ) + 0;
 	}

@@ -1,25 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PURE_SERVER_H
-#define PURE_SERVER_H
-
-
+import ks.tier1;
 #include "ifilelist.h"
-#include "tier1/map_ops.h"
-#include <memory>
-#include <map>
-#include <set>
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
+import std;
 #include "filesystem.h"
+#include "userid.h"
 
-
-class KeyValues;
 
 
 class CPureServerWhitelist
@@ -47,7 +35,7 @@ public:
 	// Calls IFileSystem::CacheFileCRCs for all files and directories marked check_crc.
 	void				CacheFileCRCs();
 
-	// Instead of loading keyvalues, you can call this to make it force all files to come from Steam.
+	// Instead of loading keyvalues, you can call this to make it force no files to come from disk.
 	// This is used with sv_pure 2.
 	void				EnableFullyPureMode();
 	bool				IsInFullyPureMode() const;
@@ -127,7 +115,7 @@ private:
 	CAllowFromDiskList m_AllowFromDiskList;
 	CForceMatchList m_ForceMatchList;
 	
-	// In this mode, all files must come from Steam.
+	// In this mode, no files are allowed from disk.
 	bool m_bFullyPureMode;
 };
 
@@ -148,7 +136,7 @@ struct UserReportedFileHash_t
 				return true;
 			if ( lhs.m_idxFile > rhs.m_idxFile )
 				return false;
-			if ( lhs.m_userID.uid.steamid.m_SteamLocalUserID.As64bits < rhs.m_userID.uid.steamid.m_SteamLocalUserID.As64bits )
+			if ( lhs.m_userID.accountid < rhs.m_userID.accountid )
 				return true;
 			return false;
 		}
@@ -174,12 +162,12 @@ struct UserReportedFile_t
 				return true;
 			if ( lhs.m_nFileFraction > rhs.m_nFileFraction )
 				return false;
-			int nCmp = Q_strcmp( lhs.m_filename.c_str(), rhs.m_filename.c_str() );
+			int nCmp = V_strcmp( lhs.m_filename.c_str(), rhs.m_filename.c_str() );
 			if ( nCmp < 0 )
 				return true;
 			if ( nCmp > 0 )
 				return false;
-			nCmp = Q_strcmp( lhs.m_path.c_str(), rhs.m_path.c_str() );
+			nCmp = V_strcmp( lhs.m_path.c_str(), rhs.m_path.c_str() );
 			if ( nCmp < 0 )
 				return true;
 			return false;
@@ -235,7 +223,3 @@ public:
 };
 
 extern CPureFileTracker g_PureFileTracker;
-
-
-#endif // PURE_SERVER_H
-

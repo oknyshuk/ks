@@ -1,9 +1,10 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-#ifndef FE_MODEL_DESC
-#define FE_MODEL_DESC
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+import ks.tier1;
 #include "resourcefile/resourcestream.h"
-#include "tier1/utlvector.h"
+import std;
 
 class CTransform;
 class CFeModel;
@@ -160,6 +161,3 @@ protected:
 	std::vector< int > m_OldToNewNode, m_NewToOldNode;
 	std::vector< int > m_OldToNewCtrl, m_NewToOldCtrl;
 };
-
-
-#endif

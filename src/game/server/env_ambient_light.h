@@ -1,5 +1,4 @@
-#ifndef _INCLUDED_ENV_AMBIENT_LIGHT_H
-#define _INCLUDED_ENV_AMBIENT_LIGHT_H
+#pragma once
 
 #include "reflect_annotations.h"
 
@@ -28,4 +27,3 @@ private:
 	CNetworkVector( m_vecColor, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 };
 
-#endif // _INCLUDED_ENV_AMBIENT_LIGHT_H

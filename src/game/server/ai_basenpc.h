@@ -1,16 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Base NPC character with AI
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_BASENPC_H
-#define AI_BASENPC_H
+// Purpose: Base NPC character with AI
 
-#include <bitset>
+import std;
+import ks.tier1;
 #include "reflect_annotations.h"
 #include "shareddefs.h"
-
 
 #include "simtimer.h" 	 	   
 #include "basecombatcharacter.h"
@@ -28,17 +25,14 @@
 #include "ai_utils.h"
 #include "ai_moveshoot.h"
 #include "entityoutput.h"
-#include "utlvector.h"
 #include "activitylist.h"
 #include "bitstring.h"
 #include "ai_navgoaltype.h" //GoalType_t enum
 #include "eventlist.h"
 #include "soundent.h"
 #include "ai_navigator.h"
-#include "tier1/functors.h"
 
-
-#define PLAYER_SQUADNAME "player_squad"
+inline constexpr const char *PLAYER_SQUADNAME = "player_squad";
 
 class CAI_Schedule;
 class CAI_Network;
@@ -84,16 +78,16 @@ extern bool AIStrongOpt( void );
 // Constants & enumerations
 //
 //=============================================================================
-#define TURRET_CLOSE_RANGE	200
-#define TURRET_MEDIUM_RANGE 500
+inline constexpr auto TURRET_CLOSE_RANGE = 200;
+inline constexpr auto TURRET_MEDIUM_RANGE = 500;
 
-#define COMMAND_GOAL_TOLERANCE	48	// 48 inches.
-#define TIME_CARE_ABOUT_DAMAGE	3.0
+inline constexpr auto COMMAND_GOAL_TOLERANCE = 48; // 48 inches.
+inline constexpr auto TIME_CARE_ABOUT_DAMAGE = 3.0;
 
-#define ITEM_PICKUP_TOLERANCE	48.0f
+inline constexpr auto ITEM_PICKUP_TOLERANCE = 48.0f;
 
 // Max's of the box used to search for a weapon to pick up. 45x45x~8 ft.
-#define WEAPON_SEARCH_DELTA	Vector( 540, 540, 100 )
+inline const Vector WEAPON_SEARCH_DELTA = Vector( 540, 540, 100 );
 
 enum Interruptability_t
 {
@@ -106,52 +100,52 @@ enum Interruptability_t
 // Memory
 //-------------------------------------
 
-#define MEMORY_CLEAR					0
-#define bits_MEMORY_PROVOKED			( 1 << 0 )// right now only used for houndeyes.
-#define bits_MEMORY_INCOVER				( 1 << 1 )// npc knows it is in a covered position.
-#define bits_MEMORY_SUSPICIOUS			( 1 << 2 )// Ally is suspicious of the player, and will move to provoked more easily
-#define	bits_MEMORY_TASK_EXPENSIVE		( 1 << 3 )// NPC has completed a task which is considered costly, so don't do another task this frame
+inline constexpr auto MEMORY_CLEAR = 0;
+inline constexpr auto bits_MEMORY_PROVOKED = ( 1 << 0 ); // right now only used for houndeyes.
+inline constexpr auto bits_MEMORY_INCOVER = ( 1 << 1 ); // npc knows it is in a covered position.
+inline constexpr auto bits_MEMORY_SUSPICIOUS = ( 1 << 2 ); // Ally is suspicious of the player, and will move to provoked more easily
+inline constexpr auto bits_MEMORY_TASK_EXPENSIVE = ( 1 << 3 ); // NPC has completed a task which is considered costly, so don't do another task this frame
 //#define	bits_MEMORY_				( 1 << 4 )
-#define bits_MEMORY_PATH_FAILED			( 1 << 5 )// Failed to find a path
-#define bits_MEMORY_FLINCHED			( 1 << 6 )// Has already flinched
+inline constexpr auto bits_MEMORY_PATH_FAILED = ( 1 << 5 ); // Failed to find a path
+inline constexpr auto bits_MEMORY_FLINCHED = ( 1 << 6 ); // Has already flinched
 //#define bits_MEMORY_ 					( 1 << 7 )
-#define bits_MEMORY_TOURGUIDE			( 1 << 8 )// I have been acting as a tourguide.
+inline constexpr auto bits_MEMORY_TOURGUIDE = ( 1 << 8 ); // I have been acting as a tourguide.
 //#define bits_MEMORY_					( 1 << 9 )// 
-#define bits_MEMORY_LOCKED_HINT			( 1 << 10 )// 
+inline constexpr auto bits_MEMORY_LOCKED_HINT = ( 1 << 10 ); //
 //#define bits_MEMORY_					( 1 << 12 )
 
-#define bits_MEMORY_TURNING				( 1 << 13 )// Turning, don't interrupt me.
-#define bits_MEMORY_TURNHACK			( 1 << 14 )
+inline constexpr auto bits_MEMORY_TURNING = ( 1 << 13 ); // Turning, don't interrupt me.
+inline constexpr auto bits_MEMORY_TURNHACK = ( 1 << 14 );
 
-#define bits_MEMORY_HAD_ENEMY			( 1 << 15 )// Had an enemy
-#define bits_MEMORY_HAD_PLAYER			( 1 << 16 )// Had player
-#define bits_MEMORY_HAD_LOS				( 1 << 17 )// Had LOS to enemy
+inline constexpr auto bits_MEMORY_HAD_ENEMY = ( 1 << 15 ); // Had an enemy
+inline constexpr auto bits_MEMORY_HAD_PLAYER = ( 1 << 16 ); // Had player
+inline constexpr auto bits_MEMORY_HAD_LOS = ( 1 << 17 ); // Had LOS to enemy
 
-#define bits_MEMORY_MOVED_FROM_SPAWN	( 1 << 18 )// Has moved since spawning.
+inline constexpr auto bits_MEMORY_MOVED_FROM_SPAWN = ( 1 << 18 ); // Has moved since spawning.
 
-#define bits_MEMORY_CUSTOM4				( 1 << 28 )	// NPC-specific memory
-#define bits_MEMORY_CUSTOM3				( 1 << 29 )	// NPC-specific memory
-#define bits_MEMORY_CUSTOM2				( 1 << 30 )	// NPC-specific memory
-#define bits_MEMORY_CUSTOM1				( 1 << 31 )	// NPC-specific memory
+inline constexpr auto bits_MEMORY_CUSTOM4 = ( 1 << 28 ); // NPC-specific memory
+inline constexpr auto bits_MEMORY_CUSTOM3 = ( 1 << 29 ); // NPC-specific memory
+inline constexpr auto bits_MEMORY_CUSTOM2 = ( 1 << 30 ); // NPC-specific memory
+inline constexpr auto bits_MEMORY_CUSTOM1 = ( 1 << 31 ); // NPC-specific memory
 
 //-------------------------------------
 // Spawn flags
 //-------------------------------------
-#define SF_NPC_WAIT_TILL_SEEN			( 1 << 0  )	// spawnflag that makes npcs wait until player can see them before attacking.
-#define SF_NPC_GAG						( 1 << 1  )	// no idle noises from this npc
-#define SF_NPC_FALL_TO_GROUND			( 1 << 2  )	// used my NPC_Maker
-#define SF_NPC_DROP_HEALTHKIT			( 1 << 3  )	// Drop a healthkit upon death
-#define SF_NPC_START_EFFICIENT			( 1 << 4  ) // Set into efficiency mode from spawn
+inline constexpr auto SF_NPC_WAIT_TILL_SEEN = ( 1 << 0  ); // spawnflag that makes npcs wait until player can see them before attacking.
+inline constexpr auto SF_NPC_GAG = ( 1 << 1  ); // no idle noises from this npc
+inline constexpr auto SF_NPC_FALL_TO_GROUND = ( 1 << 2  ); // used my NPC_Maker
+inline constexpr auto SF_NPC_DROP_HEALTHKIT = ( 1 << 3  ); // Drop a healthkit upon death
+inline constexpr auto SF_NPC_START_EFFICIENT = ( 1 << 4  ); // Set into efficiency mode from spawn
 //										( 1 << 5  )
 //										( 1 << 6  )
-#define SF_NPC_WAIT_FOR_SCRIPT			( 1 << 7  )	// spawnflag that makes npcs wait to check for attacking until the script is done or they've been attacked
-#define SF_NPC_LONG_RANGE				( 1 << 8  )	// makes npcs look far and relaxes weapon range limit 
-#define SF_NPC_FADE_CORPSE				( 1 << 9  )	// Fade out corpse after death
-#define SF_NPC_ALWAYSTHINK				( 1 << 10 )	// Simulate even when player isn't in PVS.
-#define SF_NPC_TEMPLATE					( 1 << 11 )	// This NPC will be used as a template by an npc_maker -- do not spawn.
-#define SF_NPC_ALTCOLLISION				( 1 << 12 )
-#define SF_NPC_NO_WEAPON_DROP			( 1 << 13 )	// This NPC will not actually drop a weapon that can be picked up
-#define SF_NPC_NO_PLAYER_PUSHAWAY		( 1 << 14 )	
+inline constexpr auto SF_NPC_WAIT_FOR_SCRIPT = ( 1 << 7  ); // spawnflag that makes npcs wait to check for attacking until the script is done or they've been attacked
+inline constexpr auto SF_NPC_LONG_RANGE = ( 1 << 8  ); // makes npcs look far and relaxes weapon range limit
+inline constexpr auto SF_NPC_FADE_CORPSE = ( 1 << 9  ); // Fade out corpse after death
+inline constexpr auto SF_NPC_ALWAYSTHINK = ( 1 << 10 ); // Simulate even when player isn't in PVS.
+inline constexpr auto SF_NPC_TEMPLATE = ( 1 << 11 ); // This NPC will be used as a template by an npc_maker -- do not spawn.
+inline constexpr auto SF_NPC_ALTCOLLISION = ( 1 << 12 );
+inline constexpr auto SF_NPC_NO_WEAPON_DROP = ( 1 << 13 ); // This NPC will not actually drop a weapon that can be picked up
+inline constexpr auto SF_NPC_NO_PLAYER_PUSHAWAY = ( 1 << 14 );
 //										( 1 << 15 )	
 // !! Flags above ( 1 << 15 )	 are reserved for NPC sub-classes
 
@@ -227,9 +221,9 @@ enum AI_SleepState_t
 	AISS_AUTO_PVS_AFTER_PVS, // Same as AUTO_PVS, except doesn't activate until/unless the NPC is IN the player's PVS. 
 };
 
-#define AI_SLEEP_FLAGS_NONE					0x00000000
-#define AI_SLEEP_FLAG_AUTO_PVS				0x00000001
-#define AI_SLEEP_FLAG_AUTO_PVS_AFTER_PVS	0x00000002
+inline constexpr auto AI_SLEEP_FLAGS_NONE = 0x00000000;
+inline constexpr auto AI_SLEEP_FLAG_AUTO_PVS = 0x00000001;
+inline constexpr auto AI_SLEEP_FLAG_AUTO_PVS_AFTER_PVS = 0x00000002;
 
 
 //-------------------------------------
@@ -309,13 +303,13 @@ struct UnreachableEnt_t
 // -----------------------------------------
 //	Scripted NPC interaction flags
 // -----------------------------------------
-#define SCNPC_FLAG_TEST_OTHER_ANGLES			( 1 << 1 )
-#define SCNPC_FLAG_TEST_OTHER_VELOCITY			( 1 << 2 )
-#define SCNPC_FLAG_LOOP_IN_ACTION				( 1 << 3 )
-#define SCNPC_FLAG_NEEDS_WEAPON_ME				( 1 << 4 )
-#define SCNPC_FLAG_NEEDS_WEAPON_THEM			( 1 << 5 )
-#define SCNPC_FLAG_DONT_TELEPORT_AT_END_ME		( 1 << 6 )
-#define SCNPC_FLAG_DONT_TELEPORT_AT_END_THEM	( 1 << 7 )
+inline constexpr auto SCNPC_FLAG_TEST_OTHER_ANGLES = ( 1 << 1 );
+inline constexpr auto SCNPC_FLAG_TEST_OTHER_VELOCITY = ( 1 << 2 );
+inline constexpr auto SCNPC_FLAG_LOOP_IN_ACTION = ( 1 << 3 );
+inline constexpr auto SCNPC_FLAG_NEEDS_WEAPON_ME = ( 1 << 4 );
+inline constexpr auto SCNPC_FLAG_NEEDS_WEAPON_THEM = ( 1 << 5 );
+inline constexpr auto SCNPC_FLAG_DONT_TELEPORT_AT_END_ME = ( 1 << 6 );
+inline constexpr auto SCNPC_FLAG_DONT_TELEPORT_AT_END_THEM = ( 1 << 7 );
 
 // -----------------------------------------
 //	Scripted NPC interaction trigger methods
@@ -329,8 +323,8 @@ enum
 // -----------------------------------------
 //	Scripted NPC interaction loop breaking trigger methods
 // -----------------------------------------
-#define SNPCINT_LOOPBREAK_ON_DAMAGE				( 1 << 1 )
-#define SNPCINT_LOOPBREAK_ON_FLASHLIGHT_ILLUM	( 1 << 2 )
+inline constexpr auto SNPCINT_LOOPBREAK_ON_DAMAGE = ( 1 << 1 );
+inline constexpr auto SNPCINT_LOOPBREAK_ON_FLASHLIGHT_ILLUM = ( 1 << 2 );
 
 // -----------------------------------------
 //	Scripted NPC interaction anim phases
@@ -353,8 +347,8 @@ struct ScriptedNPCInteraction_Phases_t
 };
 
 // Allowable delta from the desired dynamic scripted sequence point
-#define DSS_MAX_DIST			6
-#define DSS_MAX_ANGLE_DIFF		4
+inline constexpr auto DSS_MAX_DIST = 6;
+inline constexpr auto DSS_MAX_ANGLE_DIFF = 4;
 
 // Interaction Logic States
 enum
@@ -365,9 +359,9 @@ enum
 	NPCINT_MOVING_TO_MARK,		// I'm moving to a position to do an interaction
 };
 
-#define NPCINT_NONE				-1
+inline constexpr auto NPCINT_NONE = -1;
 
-#define MAXTACLAT_IGNORE		-1
+inline constexpr auto MAXTACLAT_IGNORE = -1;
 
 // -----------------------------------------
 //	A scripted interaction between NPCs
@@ -482,11 +476,45 @@ extern CAI_Manager g_AI_Manager;
 //			what base class would do or control order in which it's done
 //=============================================================================
 
-abstract_class IAI_BehaviorBridge
+class IAI_BehaviorBridge
 {
 public:
-	#define AI_GENERATE_BRIDGE_INTERFACE
-	#include "ai_behavior_template.h"
+	// Bridge interface implemented by CAI_BehaviorBase
+	virtual void BehaviorBridge_PrescheduleThink() {}
+	virtual void BehaviorBridge_OnScheduleChange() {}
+	virtual bool BehaviorBridge_IsCrouching() { return (bool)0; }
+	virtual bool BehaviorBridge_IsValidEnemy( CBaseEntity * a1 ) { return (bool)0; }
+	virtual CBaseEntity * BehaviorBridge_BestEnemy() { return (CBaseEntity *)0; }
+	virtual bool BehaviorBridge_IsCoverPosition( const Vector & a1, const Vector & a2 ) { return (bool)0; }
+	virtual bool BehaviorBridge_IsValidCover( const Vector & a1, CAI_Hint const * a2 ) { return (bool)0; }
+	virtual bool BehaviorBridge_IsValidShootPosition( const Vector & a1, CAI_Node * a2, CAI_Hint const * a3 ) { return (bool)0; }
+	virtual bool BehaviorBridge_WeaponLOSCondition( const Vector & a1, const Vector & a2, bool a3 ) { return (bool)0; }
+	virtual float BehaviorBridge_GetMaxTacticalLateralMovement() { return (float)0; }
+	virtual bool BehaviorBridge_ShouldIgnoreSound( CSound * a1 ) { return (bool)0; }
+	virtual void BehaviorBridge_OnSeeEntity( CBaseEntity * a1 ) {}
+	virtual void BehaviorBridge_OnFriendDamaged( CBaseCombatCharacter * a1, CBaseEntity * a2 ) {}
+	virtual bool BehaviorBridge_IsInterruptable() { return (bool)0; }
+	virtual bool BehaviorBridge_IsNavigationUrgent() { return (bool)0; }
+	virtual bool BehaviorBridge_ShouldPlayerAvoid() { return (bool)0; }
+	virtual int BehaviorBridge_OnTakeDamage_Alive( const CTakeDamageInfo & a1 ) { return (int)0; }
+	virtual float BehaviorBridge_GetDefaultNavGoalTolerance() { return (float)0; }
+	virtual float BehaviorBridge_GetReasonableFacingDist() { return (float)0; }
+	virtual bool BehaviorBridge_CanFlinch() { return (bool)0; }
+	virtual bool BehaviorBridge_IsCrouchedActivity( Activity a1 ) { return (bool)0; }
+	virtual bool BehaviorBridge_QueryHearSound( CSound * a1 ) { return (bool)0; }
+	virtual bool BehaviorBridge_CanRunAScriptedNPCInteraction( bool a1 ) { return (bool)0; }
+	virtual Activity BehaviorBridge_GetFlinchActivity( bool a1, bool a2 ) { return (Activity)0; }
+	virtual bool BehaviorBridge_OnCalcBaseMove( AILocalMoveGoal_t * a1, float a2, AIMoveResult_t * a3 ) { return (bool)0; }
+	virtual void BehaviorBridge_ModifyOrAppendCriteria( AI_CriteriaSet& a1 ) {}
+	virtual void BehaviorBridge_Teleport( const Vector * a1, const QAngle * a2, const Vector * a3, bool a4 ) {}
+	virtual void BehaviorBridge_HandleAnimEvent( animevent_t * a1 ) {}
+	virtual bool BehaviorBridge_FValidateHintType( CAI_Hint * a1 ) { return (bool)0; }
+	virtual bool BehaviorBridge_ShouldAlwaysThink() { return (bool)0; }
+	virtual bool BehaviorBridge_IsCurTaskContinuousMove() { return (bool)0; }
+	virtual void BehaviorBridge_AimGun() {}
+	virtual Activity BehaviorBridge_NPC_TranslateActivity( Activity a1 ) { return (Activity)0; }
+	virtual void BehaviorBridge_OnMovementFailed() {}
+	virtual void BehaviorBridge_OnMovementComplete() {}
 
 	// Non-standard bridge methods
 	virtual void 		 BehaviorBridge_GatherConditions() {}
@@ -633,7 +661,7 @@ public:
 	void				ForceGatherConditions()	{ m_bForceConditionsGather = true; SetEfficiency( AIE_NORMAL ); }	// Force an NPC out of PVS to call GatherConditions on next think
 	bool				IsForceGatherConditionsSet() { return m_bForceConditionsGather; }
 
-	virtual float		LineOfSightDist( const Vector &vecDir = vec3_invalid, float zEye = FLT_MAX );
+	virtual float		LineOfSightDist( const Vector &vecDir = vec3_invalid, float zEye = std::numeric_limits<float>::max() );
 
 	virtual void		MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
 	virtual const char	*GetTracerType( void );
@@ -1168,7 +1196,7 @@ public:
 	virtual bool IsValidCommandTarget( CBaseEntity *pTarget )			{ return false; }
 	const Vector &GetCommandGoal() const								{ return m_vecCommandGoal; }
 	virtual void OnMoveToCommandGoalFailed()							{}
-	string_t GetPlayerSquadName() const									{ Assert( gm_iszPlayerSquad != NULL_STRING ); return gm_iszPlayerSquad; }
+	string_t GetPlayerSquadName() const									{ contract_assert( gm_iszPlayerSquad != NULL_STRING ); return gm_iszPlayerSquad; }
 	bool IsInPlayerSquad() const;
 	virtual CAI_BaseNPC *GetSquadCommandRepresentative()				{ return nullptr; }
 
@@ -1262,7 +1290,7 @@ public:
 
 	//---------------------------------
 
-	virtual CAI_Expresser *GetExpresser() { AssertMsg(false, "Called GetExpresser() on something that has no expresser!\n"); return nullptr; }
+	virtual CAI_Expresser *GetExpresser() { contract_assert( false && "Called GetExpresser() on something that has no expresser!\n" ); return nullptr; }
 	const CAI_Expresser *GetExpresser() const { return const_cast<CAI_BaseNPC *>(this)->GetExpresser(); }
 
 	//---------------------------------
@@ -1599,8 +1627,8 @@ public:
 
 	inline void			Remember( int iMemory ) 		{ m_afMemory |= iMemory; }
 	inline void			Forget( int iMemory ) 			{ m_afMemory &= ~iMemory; }
-	inline bool			HasMemory( int iMemory ) 		{ if ( m_afMemory & iMemory ) return TRUE; return FALSE; }
-	inline bool			HasAllMemories( int iMemory ) 	{ if ( (m_afMemory & iMemory) == iMemory ) return TRUE; return FALSE; }
+	inline bool			HasMemory( int iMemory ) 		{ if ( m_afMemory & iMemory ) return true; return false; }
+	inline bool			HasAllMemories( int iMemory ) 	{ if ( (m_afMemory & iMemory) == iMemory ) return true; return false; }
 
 	virtual CAI_Enemies *GetEnemies( void );
 	virtual void		RemoveMemory( void );
@@ -1710,7 +1738,7 @@ public:
 	virtual bool		IsCoverPosition( const Vector &vecThreat, const Vector &vecPosition );
 	virtual float		CoverRadius( void ) { return 1024; } // Default cover radius
 	virtual float		GetMaxTacticalLateralMovement( void ) { return MAXTACLAT_IGNORE; }
-			bool		FindCoverFromEnemy( bool bNodesOnly = false, float flMinDistance = 0, float flMaxDistance = FLT_MAX );
+			bool		FindCoverFromEnemy( bool bNodesOnly = false, float flMinDistance = 0, float flMaxDistance = std::numeric_limits<float>::max() );
 
 protected:
 	virtual void		OnChangeHintGroup( string_t oldGroup, string_t newGroup ) {}
@@ -1756,7 +1784,7 @@ public:
 	virtual int			MeleeAttack2Conditions( float flDot, float flDist );
 
 	virtual float		InnateRange1MinRange( void ) { return 0.0f; }
-	virtual float		InnateRange1MaxRange( void ) { return FLT_MAX; }
+	virtual float		InnateRange1MaxRange( void ) { return std::numeric_limits<float>::max(); }
 
 	virtual bool		OnBeginMoveAndShoot( void )	{ return true; }
 	virtual void		OnEndMoveAndShoot( void )	{}
@@ -2480,7 +2508,6 @@ typedef CHandle<CAI_BaseNPC> AIHANDLE;
 
 //-----------------
 
-#define DECLARE_USES_SCHEDULE_PROVIDER( classname )	reqiredOthers.AddToTail( ScheduleLoadHelper(classname) );
 
 //-----------------
 
@@ -2534,7 +2561,7 @@ inline bool ValidateConditionLimits( const char *pszNewCondition )
 	int nGlobalConditions = CAI_BaseNPC::GetSchedulingSymbols()->NumConditions();
 	if ( nGlobalConditions >= MAX_CONDITIONS )
 	{ 
-		AssertMsg2( 0, "Exceeded max number of conditions (%d), ignoring condition %s\n", MAX_CONDITIONS, pszNewCondition ); 
+		contract_assert( false && "Exceeded max number of conditions (%d), ignoring condition %s\n" ); 
 		DevWarning( "Exceeded max number of conditions (%d), ignoring condition %s\n", MAX_CONDITIONS, pszNewCondition ); 
 		return false;
 	}
@@ -2674,7 +2701,6 @@ public:
 	}
 };
 
-#define ScheduleLoadHelper( type ) (ScheduleLoadHelperImpl::AccessScheduleLoadFunc((type *)0))
 
 //-------------------------------------
 
@@ -3151,7 +3177,7 @@ inline float CAI_Component::GetLastThink( const char *szContext )
 }
 
 // ============================================================================
-abstract_class INPCInteractive
+class INPCInteractive
 {
 public:
 	virtual bool	CanInteractWith( CAI_BaseNPC *pUser ) = 0;
@@ -3224,5 +3250,3 @@ private:
 };
 
 extern CPostFrameNavigationHook *PostFrameNavigationSystem( void );
-
-#endif // AI_BASENPC_H

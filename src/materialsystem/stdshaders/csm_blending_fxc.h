@@ -1,5 +1,6 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 HALF3 BlendDiffuseLightmapWithCSM( HALF3 diffuseLighting, HALF a, float3 worldPos,
 								   out float flShadow, out float flSunAmount )
@@ -80,4 +81,3 @@ HALF3 BlendBumpDiffuseLightmapWithCSM( HALF3 diffuseLighting, HALF a1, HALF a2, 
 
 	return blendedDiffuseLighting;
 }
-

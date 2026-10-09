@@ -1,34 +1,13 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#if !defined( DONT_PROTECT_FILEIO_FUNCTIONS )
-#define DONT_PROTECT_FILEIO_FUNCTIONS // for protected_things.h
-#endif
-
-#if defined( PROTECTED_THINGS_ENABLE )
-#undef PROTECTED_THINGS_ENABLE // from protected_things.h
-#endif
-
-#include <stdio.h>
-#include "tier1/interface.h"
-#include "basetypes.h"
-#include "tier0/dbg.h"
-#include <string.h>
-#include <stdlib.h>
-#include "tier1/strtools.h"
-#include "tier0/icommandline.h"
-#include "tier0/dbg.h"
-#include "tier0/stacktools.h"
-#include "tier0/threadtools.h"
-#include "tier0/platform.h"
+import std;
+import ks.tier1;
 
 // ------------------------------------------------------------------------------------ //
 // InterfaceReg.
 // ------------------------------------------------------------------------------------ //
-DLL_GLOBAL_EXPORT
+
 static InterfaceReg *s_pInterfaceRegs;
 
 InterfaceReg::InterfaceReg( InstantiateInterfaceFn fn, const char *pName ) :
@@ -57,7 +36,7 @@ void* CreateInterfaceInternal( const char *pName, int *pReturnCode )
 	
 	for (pCur=s_pInterfaceRegs; pCur; pCur=pCur->m_pNext)
 	{
-		if (strcmp(pCur->m_pName, pName) == 0)
+		if (std::strcmp(pCur->m_pName, pName) == 0)
 		{
 			if (pReturnCode)
 			{
@@ -81,47 +60,19 @@ void* CreateInterface( const char *pName, int *pReturnCode )
 
 
 
-// Linux doesn't have this function so this emulates its functionality
-void *GetModuleHandle(const char *name)
-{
-	void *handle;
-
-	if( name == nullptr )
-	{
-		// hmm, how can this be handled under linux....
-		// is it even needed?
-		return nullptr;
-	}
-
-    if( (handle=dlopen(name, RTLD_NOW))==nullptr)
-    {
-            printf("DLOPEN Error:%s\n",dlerror());
-            // couldn't open this file
-            return nullptr;
-    }
-
-	// read "man dlopen" for details
-	// in short dlopen() inc a ref count
-	// so dec the ref count by performing the close
-	dlclose(handle);
-	return handle;
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: returns a pointer to a function, given a module
-// Input  : pModuleName - module name
-//			*pName - proc name
-//-----------------------------------------------------------------------------
 static void *Sys_GetProcAddress( const char *pModuleName, const char *pName )
 {
-	HMODULE hModule = (HMODULE)GetModuleHandle( pModuleName );
-	return (void *)dlsym( (void *)hModule, pName );
+	ks::platform::library *lib = ks::platform::load_library( pModuleName, nullptr );
+	if ( lib == nullptr )
+		return nullptr;
+	void *symbol = ks::platform::library_symbol( lib, pName );
+	ks::platform::close_library( lib );
+	return symbol;
 }
 
 static void *Sys_GetProcAddress( HMODULE hModule, const char *pName )
 {
-	return (void *)dlsym( (void *)hModule, pName );
+	return ks::platform::library_symbol( reinterpret_cast<ks::platform::library *>( hModule ), pName );
 }
 
 bool Sys_IsDebuggerPresent()
@@ -150,18 +101,18 @@ static HMODULE Sys_LoadLibraryGuts( const char *pLibraryName )
 	const char *pModuleExtension = DLL_EXT_STRING;	
 	const char *pModuleAddition = pModuleExtension;
 
-	Q_strncpy( str, pLibraryName, sizeof(str) );
-	if ( !Q_stristr( str, pModuleExtension ) )
+	V_strncpy( str, pLibraryName, sizeof(str) );
+	if ( !V_stristr( str, pModuleExtension ) )
 	{
-		Q_strncat( str, pModuleAddition, sizeof(str) );
+		V_strncat( str, pModuleAddition, sizeof(str) );
 	}
-	Q_FixSlashes( str );
+	V_FixSlashes( str );
 
-	HMODULE ret = (HMODULE)dlopen( str, RTLD_NOW );
+	HMODULE ret = reinterpret_cast<HMODULE>( ks::platform::load_library( str, nullptr ) );
 	if ( ! ret )
 	{
-		const char *pError = dlerror();
-		if ( pError && ( strstr( pError, "No such file" ) == 0 ) && ( strstr( pError, "image not found") == 0 ) )
+		const char *pError = ks::platform::library_error();
+		if ( pError && ( std::strstr( pError, "No such file" ) == 0 ) && ( std::strstr( pError, "image not found") == 0 ) )
 		{
 			Msg( " failed to dlopen %s error=%s\n", str, pError );
 
@@ -186,8 +137,8 @@ if ( CommandLine()->FindParm( "-valveinternal" ) )
 	if ( pSuffix )
 	{
 		char nameBuf[MAX_PATH];
-		strcpy( nameBuf, pLibraryName );
-		char *pDot = strchr( nameBuf, '.' );
+		std::strcpy( nameBuf, pLibraryName );
+		char *pDot = std::strchr( nameBuf, '.' );
 		if ( pDot )
 			*pDot = 0;
 		V_strncat( nameBuf, pSuffix, sizeof( nameBuf ), COPY_ALL_CHARACTERS );
@@ -215,24 +166,24 @@ static bool s_bRunningWithDebugModules = false;
 //-----------------------------------------------------------------------------
 CSysModule *Sys_LoadModule( const char *pModuleName )
 {
-	// If using the Steam filesystem, either the DLL must be a minimum footprint
+	// Either the DLL must be a minimum footprint
 	// file in the depot (MFP) or a filesystem GetLocalCopy() call must be made
 	// prior to the call to this routine.
 	HMODULE hDLL = nullptr;
 
-	if ( !Q_IsAbsolutePath( pModuleName ) )
+	if ( !V_IsAbsolutePath( pModuleName ) )
 	{
 		// full path wasn't passed in, using the current working dir
 		char szAbsoluteModuleName[1024];
 		char szCwd[1024];
-		_getcwd( szCwd, sizeof( szCwd ) );
-		if (szCwd[strlen(szCwd) - 1] == '/' || szCwd[strlen(szCwd) - 1] == '\\' )
+		ks::platform::current_directory( szCwd, sizeof( szCwd ) );
+		if (szCwd[std::strlen(szCwd) - 1] == '/' || szCwd[std::strlen(szCwd) - 1] == '\\' )
 		{
-			szCwd[strlen(szCwd) - 1] = 0;
+			szCwd[std::strlen(szCwd) - 1] = 0;
 		}
 
-		size_t cCwd = strlen( szCwd );
-		Q_snprintf( szAbsoluteModuleName, sizeof(szAbsoluteModuleName), "%s/bin/lib%s", szCwd, pModuleName );
+		std::size_t cCwd = std::strlen( szCwd );
+		V_snprintf( szAbsoluteModuleName, sizeof(szAbsoluteModuleName), "%s/bin/lib%s", szCwd, pModuleName );
 		hDLL = Sys_LoadLibrary( szAbsoluteModuleName );
 	}
 
@@ -240,25 +191,13 @@ CSysModule *Sys_LoadModule( const char *pModuleName )
 	{
 		// full path failed, let LoadLibrary() try to search the PATH now
 		hDLL = Sys_LoadLibrary( pModuleName );
-#if defined( _DEBUG )
-		if ( !hDLL )
-		{
-// So you can see what the error is in the debugger...
-			Msg( "Failed to load %s: %s\n", pModuleName, dlerror() );
-		}
-#endif // DEBUG
 	}
 
-//lwss - Was having issues with the "BuiltDebug" symbol here. Looked at source-sdk-2013 and they just ifdef it out
-//lwss end
+	// dlerror() is the only place the loader says *why* -- a missing dependency, an undefined
+	// symbol -- and a null handle on its own reads the same for all of them.
+	if ( !hDLL )
+		Warning( "Module %s failed to load! Error: (%s)\n", pModuleName, ks::platform::library_error() );
 
-//lwss - add dlopen error checking here.
-#if defined(LINUX64)
-    if( !hDLL ){
-        Warning( "Module %s failed to load! Error: (%s)\n", pModuleName, dlerror());
-	}
-#endif
-//lwss end
 	return reinterpret_cast<CSysModule *>(hDLL);
 }
 
@@ -308,7 +247,7 @@ CreateInterfaceFn Sys_GetFactory( CSysModule *pModule )
 	//pointer-to-function and pointer-to-object
 	//
 	// so lets get around it :)
-	return (CreateInterfaceFn)(GetProcAddress( (void *)hDLL, CREATEINTERFACE_PROCNAME ));
+	return (CreateInterfaceFn)( Sys_GetProcAddress( hDLL, CREATEINTERFACE_PROCNAME ) );
 }
 
 //-----------------------------------------------------------------------------

@@ -1,14 +1,9 @@
-// ===== Copyright 1996-2012, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//===========================================================================//
-#ifndef PLATFORMINPUTDEVICE_H
-#define PLATFORMINPUTDEVICE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2012 Valve Corporation
 
-
-#include "basetypes.h"
-#include "platform.h"
+import std;
+import ks.core;
 #include "input_device.h"
 
 class PlatformInputDevice
@@ -47,5 +42,3 @@ public:
 	// input device properties
 	static	bool			IsInputDeviceAPointer( InputDevice_t device );				// Returns true if the device is treated as a pointer for input.
 };
-
-#endif		// PLATFORMINPUTDEVICE_H

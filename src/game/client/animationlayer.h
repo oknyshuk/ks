@@ -1,17 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ANIMATIONLAYER_H
-#define ANIMATIONLAYER_H
-
-
-#include "rangecheckedvar.h"
-#include "tier1/lerp_functions.h"
+import std;
+import ks.tier1;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
+#include "client_class.h"
+#include "shareddefs.h"
+#include "ai_activity.h"
+
+class CStudioHdr;
 
 #ifdef CLIENT_DLL
 class C_BaseAnimatingOverlay;
@@ -137,52 +136,52 @@ inline void C_AnimationLayer::SetWeight( float flWeight )
 
 #endif // GAME_DLL
 
-FORCEINLINE void C_AnimationLayer::SetPrevCycle( float flPrevCycle )
+[[gnu::always_inline]] inline void C_AnimationLayer::SetPrevCycle( float flPrevCycle )
 {
 	m_flPrevCycle = flPrevCycle;
 }
 
-FORCEINLINE void C_AnimationLayer::SetPlaybackRate( float flPlaybackRate )
+[[gnu::always_inline]] inline void C_AnimationLayer::SetPlaybackRate( float flPlaybackRate )
 {
 	m_flPlaybackRate = flPlaybackRate;
 }
 
-FORCEINLINE void C_AnimationLayer::SetWeightDeltaRate( float flDelta )
+[[gnu::always_inline]] inline void C_AnimationLayer::SetWeightDeltaRate( float flDelta )
 {
 	m_flWeightDeltaRate = flDelta;
 }
 
-FORCEINLINE int	C_AnimationLayer::GetSequence( ) const
+[[gnu::always_inline]] inline int	C_AnimationLayer::GetSequence( ) const
 {
 	return m_nSequence;
 }
 
-FORCEINLINE float C_AnimationLayer::GetCycle( ) const
+[[gnu::always_inline]] inline float C_AnimationLayer::GetCycle( ) const
 {
 	return m_flCycle;
 }
 
-FORCEINLINE float C_AnimationLayer::GetPrevCycle( ) const
+[[gnu::always_inline]] inline float C_AnimationLayer::GetPrevCycle( ) const
 {
 	return m_flPrevCycle;
 }
 
-FORCEINLINE float C_AnimationLayer::GetPlaybackRate( ) const
+[[gnu::always_inline]] inline float C_AnimationLayer::GetPlaybackRate( ) const
 {
 	return m_flPlaybackRate;
 }
 
-FORCEINLINE float C_AnimationLayer::GetWeight( ) const
+[[gnu::always_inline]] inline float C_AnimationLayer::GetWeight( ) const
 {
 	return m_flWeight;
 }
 
-FORCEINLINE float C_AnimationLayer::GetWeightDeltaRate( ) const
+[[gnu::always_inline]] inline float C_AnimationLayer::GetWeightDeltaRate( ) const
 {
 	return m_flWeightDeltaRate;
 }
 
-FORCEINLINE int C_AnimationLayer::GetOrder() const
+[[gnu::always_inline]] inline int C_AnimationLayer::GetOrder() const
 {
 	return m_nOrder;
 }
@@ -214,7 +213,7 @@ inline float C_AnimationLayer::GetFadeout( float flCurTime )
 }
 
 #ifdef CLIENT_DLL
-FORCEINLINE int C_AnimationLayer::GetInvalidatePhysicsBits() const
+[[gnu::always_inline]] inline int C_AnimationLayer::GetInvalidatePhysicsBits() const
 {
 	return m_nInvalidatePhysicsBits;
 }
@@ -223,7 +222,7 @@ FORCEINLINE int C_AnimationLayer::GetInvalidatePhysicsBits() const
 inline C_AnimationLayer LoopingLerp( float flPercent, C_AnimationLayer& from, C_AnimationLayer& to )
 {
 #ifdef CLIENT_DLL
-	Assert( from.GetOwner() == to.GetOwner() );
+	contract_assert( from.GetOwner() == to.GetOwner() );
 #endif
 
 	C_AnimationLayer output;
@@ -245,7 +244,7 @@ inline C_AnimationLayer LoopingLerp( float flPercent, C_AnimationLayer& from, C_
 inline C_AnimationLayer Lerp( float flPercent, const C_AnimationLayer& from, const C_AnimationLayer& to )
 {
 #ifdef CLIENT_DLL
-	Assert( from.GetOwner() == to.GetOwner() );
+	contract_assert( from.GetOwner() == to.GetOwner() );
 #endif
 
 	C_AnimationLayer output;
@@ -293,8 +292,8 @@ inline int CheckForSequenceBoxChanges( const C_AnimationLayer& newLayer, const C
 inline C_AnimationLayer LoopingLerp_Hermite( const C_AnimationLayer& current, float flPercent, C_AnimationLayer& prev, C_AnimationLayer& from, C_AnimationLayer& to )
 {
 #ifdef CLIENT_DLL
-	Assert( prev.GetOwner() == from.GetOwner() );
-	Assert( from.GetOwner() == to.GetOwner() );
+	contract_assert( prev.GetOwner() == from.GetOwner() );
+	contract_assert( from.GetOwner() == to.GetOwner() );
 #endif
 
 	C_AnimationLayer output;
@@ -319,8 +318,8 @@ inline C_AnimationLayer LoopingLerp_Hermite( const C_AnimationLayer& current, fl
 inline C_AnimationLayer Lerp_Hermite( const C_AnimationLayer& current, float flPercent, const C_AnimationLayer& prev, const C_AnimationLayer& from, const C_AnimationLayer& to )
 {
 #ifdef CLIENT_DLL
-	Assert( prev.GetOwner() == from.GetOwner() );
-	Assert( from.GetOwner() == to.GetOwner() );
+	contract_assert( prev.GetOwner() == from.GetOwner() );
+	contract_assert( from.GetOwner() == to.GetOwner() );
 #endif
 
 	C_AnimationLayer output;
@@ -350,5 +349,3 @@ inline void Lerp_Clamp( C_AnimationLayer &val )
 	Lerp_Clamp( val.m_flLayerAnimtime );
 	Lerp_Clamp( val.m_flLayerFadeOuttime );
 }
-
-#endif // ANIMATIONLAYER_H

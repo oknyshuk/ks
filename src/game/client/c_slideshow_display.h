@@ -1,18 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#ifndef C_SLIDESHOW_DISPLAY_H
-#define C_SLIDESHOW_DISPLAY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+#include "rocketui/rmlui.h"
+import ks.tier1;
 #include "reflect_annotations.h"
 
-#include "cbase.h"
-#include "utlvector.h"
-
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
 
 struct SlideMaterialList_t
 {
@@ -40,7 +37,7 @@ public:
 
 	bool IsEnabled( void ) { return m_bEnabled; }
 
-	void GetDisplayText( char *pchText ) { Q_strcpy( pchText, m_szDisplayText ); }
+	void GetDisplayText( char *pchText ) { V_strcpy( pchText, m_szDisplayText ); }
 	int CurrentMaterialIndex( void ) { return m_iCurrentMaterialIndex; }
 	int GetMaterialIndex( int iSlideIndex );
 	int NumMaterials( void );
@@ -75,5 +72,3 @@ private:
 };
 
 extern std::vector< C_SlideshowDisplay* > g_SlideshowDisplays;
-
-#endif //C_SLIDESHOW_STATS_DISPLAY_H

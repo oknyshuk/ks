@@ -1,21 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_SPEECH_H
-#define AI_SPEECH_H
-
-
+import ks.tier1;
 #include "soundflags.h"
 #include "ai_responsesystem.h"
-#include "tier1/map_ops.h"
+import std;
 #include "ai_speechconcept.h"
+#include "util.h"
+#include "baseflex.h"
 
-
-class KeyValues;
 
 using ResponseRules::ResponseType_t;
 using ResponseRules::AI_ResponseFollowup;
@@ -54,7 +48,7 @@ private:
 extern CAI_TimedSemaphore g_AIFriendliesTalkSemaphore;
 extern CAI_TimedSemaphore g_AIFoesTalkSemaphore;
 
-#define GetSpeechSemaphore( pNpc ) (((pNpc)->IsPlayerAlly()) ? &g_AIFriendliesTalkSemaphore : &g_AIFoesTalkSemaphore )
+template <typename T1> [[gnu::always_inline]] inline auto GetSpeechSemaphore( T1 pNpc ) { return (((pNpc)->IsPlayerAlly()) ? &g_AIFriendliesTalkSemaphore : &g_AIFoesTalkSemaphore ); }
 //-----------------------------------------------------------------------------
 // Basic speech system types
 //-----------------------------------------------------------------------------
@@ -65,21 +59,17 @@ extern CAI_TimedSemaphore g_AIFoesTalkSemaphore;
 
 const float AIS_NO_DELAY  		= 0;
 const soundlevel_t AIS_DEF_SNDLVL 	 	= SNDLVL_TALKING;
-#define AI_NULL_CONCEPT nullptr
+inline constexpr auto AI_NULL_CONCEPT = nullptr;
 
-#define AI_NULL_SENTENCE nullptr
+inline constexpr auto AI_NULL_SENTENCE = nullptr;
 
 // Sentence prefix constants
-#define AI_SP_SPECIFIC_SENTENCE	'!'
-#define AI_SP_WAVFILE			'^'
-#define AI_SP_SCENE_GROUP		'='
-#define AI_SP_SPECIFIC_SCENE	'?'
+inline constexpr auto AI_SP_SPECIFIC_SENTENCE = '!';
+inline constexpr auto AI_SP_WAVFILE = '^';
+inline constexpr auto AI_SP_SCENE_GROUP = '=';
+inline constexpr auto AI_SP_SPECIFIC_SCENE = '?';
 
-#define AI_SPECIFIC_SENTENCE(str_constant)	"!" str_constant
-#define AI_WAVFILE(str_constant)			"^" str_constant
 // @Note (toml 09-12-02): as scene groups are not currently implemented, the string is a semi-colon delimited list
-#define AI_SCENE_GROUP(str_constant)		"=" str_constant
-#define AI_SPECIFIC_SCENE(str_constant)		"?" str_constant
 
 // Designer overriding modifiers
 #define AI_SPECIFIC_SCENE_MODIFIER "scene:"
@@ -90,19 +80,10 @@ const soundlevel_t AIS_DEF_SNDLVL 	 	= SNDLVL_TALKING;
 // An id that represents the core meaning of a spoken phrase,
 // eventually to be mapped to a sentence group or scene
 
-#if AI_CONCEPTS_ARE_STRINGS
-typedef const char *AIConcept_t;
-inline bool CompareConcepts( AIConcept_t c1, AIConcept_t c2 )
-{
-	return ( (void *)c1 == (void *)c2 || ( c1 && c2 && Q_stricmp( c1, c2 ) == 0 ) );
-}
-#else
-typedef CAI_Concept AIConcept_t;
 inline bool CompareConcepts( AIConcept_t c1, AIConcept_t c2 )
 {
 	return c1.m_iConcept == c2.m_iConcept;
 }
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -157,8 +138,8 @@ public:
 
 	// --------------------------------
 
-	bool Speak( AIConcept_t &conc, const char *modifiers = nullptr, char *pszOutResponseChosen = nullptr, size_t bufsize = 0, IRecipientFilter *filter = nullptr );
-	bool Speak( AIConcept_t &conc, AI_CriteriaSet *criteria, char *pszOutResponseChosen = nullptr, size_t bufsize = 0, IRecipientFilter *filter = nullptr );
+	bool Speak( AIConcept_t &conc, const char *modifiers = nullptr, char *pszOutResponseChosen = nullptr, std::size_t bufsize = 0, IRecipientFilter *filter = nullptr );
+	bool Speak( AIConcept_t &conc, AI_CriteriaSet *criteria, char *pszOutResponseChosen = nullptr, std::size_t bufsize = 0, IRecipientFilter *filter = nullptr );
 
 	// Given modifiers (which are colon-delimited strings), fill out a criteria set including this
 	// character's contexts and the ones in the modifier. This lets us hang on to them after a call
@@ -285,8 +266,8 @@ class CAI_ExpresserHost : public BASE_NPC, protected CAI_ExpresserSink
 public:
 	virtual void	NoteSpeaking( float duration, float delay );
 
-	virtual bool 	Speak( AIConcept_t conc, const char *modifiers = nullptr, char *pszOutResponseChosen = nullptr, size_t bufsize = 0, IRecipientFilter *filter = nullptr );
-	virtual bool 	Speak( AIConcept_t conc, AI_CriteriaSet *pCriteria, char *pszOutResponseChosen = nullptr, size_t bufsize = 0, IRecipientFilter *filter = nullptr );
+	virtual bool 	Speak( AIConcept_t conc, const char *modifiers = nullptr, char *pszOutResponseChosen = nullptr, std::size_t bufsize = 0, IRecipientFilter *filter = nullptr );
+	virtual bool 	Speak( AIConcept_t conc, AI_CriteriaSet *pCriteria, char *pszOutResponseChosen = nullptr, std::size_t bufsize = 0, IRecipientFilter *filter = nullptr );
 
 
 	void GatherCriteria( AI_CriteriaSet *outputCritera, const AIConcept_t &conc, const char *modifiers );
@@ -332,19 +313,19 @@ inline void CAI_ExpresserHost<BASE_NPC>::NoteSpeaking( float duration, float del
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 template <class BASE_NPC>
-inline bool CAI_ExpresserHost<BASE_NPC>::Speak( AIConcept_t conc, const char *modifiers /*= NULL*/, char *pszOutResponseChosen /*=NULL*/, size_t bufsize /* = 0 */, IRecipientFilter *filter /* = NULL */ )
+inline bool CAI_ExpresserHost<BASE_NPC>::Speak( AIConcept_t conc, const char *modifiers /*= NULL*/, char *pszOutResponseChosen /*=NULL*/, std::size_t bufsize /* = 0 */, IRecipientFilter *filter /* = NULL */ )
 {
-	AssertOnce( this->GetExpresser()->GetOuter() == this );
+	contract_assert( this->GetExpresser()->GetOuter() == this );
 	return this->GetExpresser()->Speak( conc, modifiers, pszOutResponseChosen, bufsize, filter );
 }
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 template <class BASE_NPC>
-inline bool CAI_ExpresserHost<BASE_NPC>::Speak( AIConcept_t conc, AI_CriteriaSet *pCriteria, char *pszOutResponseChosen /*=NULL*/, size_t bufsize /* = 0 */, IRecipientFilter *filter /* = NULL */ )
+inline bool CAI_ExpresserHost<BASE_NPC>::Speak( AIConcept_t conc, AI_CriteriaSet *pCriteria, char *pszOutResponseChosen /*=NULL*/, std::size_t bufsize /* = 0 */, IRecipientFilter *filter /* = NULL */ )
 {
-	AssertOnce( this->GetExpresser()->GetOuter() == this );
-	CAI_Expresser * const RESTRICT pExpresser = this->GetExpresser();
+	contract_assert( this->GetExpresser()->GetOuter() == this );
+	CAI_Expresser * const __restrict__ pExpresser = this->GetExpresser();
 	conc.SetSpeaker( this );
 	// add in any local criteria to the one passed on the command line.
 	pExpresser->GatherCriteria( pCriteria, conc, nullptr );
@@ -465,11 +446,11 @@ public:
 protected:
 	EXPRESSER_TYPE *CreateExpresser( void )
 	{
-		AssertMsg1( m_pExpresser == nullptr, "Tried to double-initialize expresser in %s\n", this->GetDebugName()  );
+		contract_assert( ( m_pExpresser == nullptr ) && "Tried to double-initialize expresser in %s\n" );
 		m_pExpresser = new EXPRESSER_TYPE(this);
 		if ( !m_pExpresser)
 		{
-			AssertMsg1( false, "Creating an expresser failed in %s\n", this->GetDebugName() );
+			contract_assert( false && "Creating an expresser failed in %s\n" );
 			return nullptr;
 		}
 
@@ -559,7 +540,7 @@ public:
 	CAI_ExpresserWithFollowup( CBaseFlex *pOuter = nullptr ) : CAI_Expresser(pOuter),
 		m_pPostponedFollowup(nullptr)
 		{};
-	virtual bool Speak( AIConcept_t &conc, const char *modifiers = nullptr, char *pszOutResponseChosen = nullptr, size_t bufsize = 0, IRecipientFilter *filter = nullptr );
+	virtual bool Speak( AIConcept_t &conc, const char *modifiers = nullptr, char *pszOutResponseChosen = nullptr, std::size_t bufsize = 0, IRecipientFilter *filter = nullptr );
 	virtual bool SpeakDispatchResponse( AIConcept_t &conc, AI_Response *response,  AI_CriteriaSet *criteria, IRecipientFilter *filter = nullptr );
 	virtual void SpeakDispatchFollowup( AI_ResponseFollowup &followup );
 
@@ -571,7 +552,7 @@ protected:
 		const char *criteriaStr,
 		const CResponseQueue::CFollowupTargetSpec_t &target,
 		float delay,
-		CBaseEntity * RESTRICT pOuter		);
+		CBaseEntity * __restrict__ pOuter		);
 
 	AI_ResponseFollowup *m_pPostponedFollowup; // TODO: save/restore
 	CResponseQueue::CFollowupTargetSpec_t	m_followupTarget;
@@ -592,6 +573,3 @@ private:
 	bool m_bAllowMultipleScenes;
 
 };
-
-
-#endif // AI_SPEECH_H

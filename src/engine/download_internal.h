@@ -1,10 +1,7 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 //--------------------------------------------------------------------------------------------------------------
 // download_internal.h
 //
@@ -12,10 +9,7 @@
 // Author: Matthew D. Campbell (matt@turtlerockstudios.com), 2004
 //--------------------------------------------------------------------------------------------------------------
 
-#ifndef DOWNLOAD_INTERNAL_H
-#define DOWNLOAD_INTERNAL_H
-
-#include "tier0/platform.h"
+import ks.core;
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -203,5 +197,3 @@ typedef struct {
 
 //--------------------------------------------------------------------------------------------------------------
 uintp DownloadThread( void *voidPtr );
-
-#endif // DOWNLOAD_INTERNAL_H

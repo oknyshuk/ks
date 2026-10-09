@@ -1,8 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #include "LocalNetworkBackdoor.h"
 #include "server_class.h"
 #include "client_class.h"
@@ -53,7 +51,7 @@ void CLocalNetworkBackdoor::InitFastCopy()
 		// This may not be a real problem, but at the time this code was added, 67% of the
 		// properties were able to be copied without proxies. If percentFast goes to 0 or some
 		// really low number suddenly, then something probably got screwed up.
-		Assert( false );
+		contract_assert( false );
 		Warning( "InitFastCopy: only %d%% fast props. Bug?\n", percentFast );
 	}
 } 
@@ -122,12 +120,12 @@ void CLocalNetworkBackdoor::EndEntityStateUpdate()
 						}
 						else
 						{
-							AssertOnce( !"EndEntityStateUpdate:  Would have crashed with NULL m_pNetworkable\n" );
+							contract_assert( !"EndEntityStateUpdate:  Would have crashed with NULL m_pNetworkable\n" );
 						}
 					}
 					else
 					{
-						AssertOnce( !"EndEntityStateUpdate:  Would have crashed with entity out of range\n" );
+						contract_assert( !"EndEntityStateUpdate:  Would have crashed with entity out of range\n" );
 					}
 				}
 			}
@@ -170,16 +168,16 @@ void CLocalNetworkBackdoor::EntityDormant( int iEnt, int iSerialNum )
 	CCachedEntState *pCached = &m_CachedEntState[iEnt];
 
 	IClientNetworkable *pNet = pCached->m_pNetworkable;
-	Assert( pNet == entitylist->GetClientNetworkable( iEnt ) );
+	contract_assert( pNet == entitylist->GetClientNetworkable( iEnt ) );
 	if ( pNet )
 	{
-		Assert( pCached->m_iSerialNumber == pNet->GetIClientUnknown()->GetRefEHandle().GetSerialNumber() );
+		contract_assert( pCached->m_iSerialNumber == pNet->GetIClientUnknown()->GetRefEHandle().GetSerialNumber() );
 		if ( pCached->m_iSerialNumber == iSerialNum )
 		{
 			m_EntsAlive.set( iEnt );
 
 			// Tell the game code that this guy is now dormant.
-			Assert( pCached->m_bDormant == pNet->IsDormant() );
+			contract_assert( pCached->m_bDormant == pNet->IsDormant() );
 			if ( !pCached->m_bDormant )
 			{
 				pNet->NotifyShouldTransmit( SHOULDTRANSMIT_END );
@@ -208,7 +206,7 @@ void CLocalNetworkBackdoor::AddToPendingDormantEntityList( unsigned short iEdict
 
 void CLocalNetworkBackdoor::ProcessDormantEntities()
 {
-	for ( size_t i = 0; i < m_PendingDormantEntities.size(); ++i )
+	for ( std::size_t i = 0; i < m_PendingDormantEntities.size(); ++i )
 	{
 		int iEdict = m_PendingDormantEntities[i];
 		edict_t *e = &sv.edicts[iEdict];
@@ -246,17 +244,17 @@ void CLocalNetworkBackdoor::EntState(
 		Error( "CLocalNetworkBackdoor::EntState - missing client class %d", iClass );
 
 	IClientNetworkable *pNet = pCached->m_pNetworkable;
-	Assert( pNet == entitylist->GetClientNetworkable( iEnt ) );
+	contract_assert( pNet == entitylist->GetClientNetworkable( iEnt ) );
 
 	if ( !bShouldTransmit )
 	{
 		if ( pNet )
 		{
-			Assert( pCached->m_iSerialNumber == pNet->GetIClientUnknown()->GetRefEHandle().GetSerialNumber() );
+			contract_assert( pCached->m_iSerialNumber == pNet->GetIClientUnknown()->GetRefEHandle().GetSerialNumber() );
 			if ( pCached->m_iSerialNumber == iSerialNum )
 			{
 				// Tell the game code that this guy is now dormant.
-				Assert( pCached->m_bDormant == pNet->IsDormant() );
+				contract_assert( pCached->m_bDormant == pNet->IsDormant() );
 				if ( !pCached->m_bDormant )
 				{
 					pNet->NotifyShouldTransmit( SHOULDTRANSMIT_END );
@@ -284,7 +282,7 @@ void CLocalNetworkBackdoor::EntState(
 	if ( pNet )
 	{
 		// If the serial numbers are different, make it recreate the ent.
-		Assert( pCached->m_iSerialNumber == pNet->GetIClientUnknown()->GetRefEHandle().GetSerialNumber() );
+		contract_assert( pCached->m_iSerialNumber == pNet->GetIClientUnknown()->GetRefEHandle().GetSerialNumber() );
 		if ( iSerialNum == pCached->m_iSerialNumber )
 		{
 			bExistedAndWasDormant = pCached->m_bDormant;
@@ -324,7 +322,7 @@ void CLocalNetworkBackdoor::EntState(
 	{
 		pNet->PreDataUpdate( updateType );
 
-		Assert( pCached->m_pDataPointer == pNet->GetDataTableBasePtr() );
+		contract_assert( pCached->m_pDataPointer == pNet->GetDataTableBasePtr() );
 
 		LocalTransfer_TransferEntity( 
 			&sv.edicts[iEnt], 
@@ -408,4 +406,3 @@ void CLocalNetworkBackdoor::ForceFlushEntity( int iEntity )
 	pCached->m_bDormant = false;
 	pCached->m_pDataPointer = nullptr;
 }
-

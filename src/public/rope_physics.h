@@ -1,17 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ROPE_PHYSICS_H
-#define ROPE_PHYSICS_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "simple_physics.h"
 #include "networkvar.h"
-
 
 class CRopeSpring
 {
@@ -109,6 +101,3 @@ CRopePhysics<NUM_NODES>::CRopePhysics() :
 	CBaseRopePhysics( m_Nodes, NUM_NODES, m_Springs, m_SpringDistsSqr )
 {
 }
-
-
-#endif // ROPE_PHYSICS_H

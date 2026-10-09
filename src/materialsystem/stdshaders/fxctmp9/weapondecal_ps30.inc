@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $CASCADED_SHADOW_MAPPING == 0 ) && ( $DYN_CSM_ENABLED == 1 )
 // ( $HIGHLIGHT == 1 ) 
@@ -33,7 +34,7 @@ private:
 public:
 	void SetPHONG( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPHONG = i;
 #ifdef _DEBUG
 		m_bPHONG = true;
@@ -41,7 +42,7 @@ public:
 	}
 	void SetPHONG( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPHONG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPHONG = true;
@@ -55,7 +56,7 @@ private:
 public:
 	void SetPHONGEXPONENTTEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPHONGEXPONENTTEXTURE = i;
 #ifdef _DEBUG
 		m_bPHONGEXPONENTTEXTURE = true;
@@ -63,7 +64,7 @@ public:
 	}
 	void SetPHONGEXPONENTTEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPHONGEXPONENTTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPHONGEXPONENTTEXTURE = true;
@@ -77,7 +78,7 @@ private:
 public:
 	void SetCUBEMAP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCUBEMAP = i;
 #ifdef _DEBUG
 		m_bCUBEMAP = true;
@@ -85,7 +86,7 @@ public:
 	}
 	void SetCUBEMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCUBEMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCUBEMAP = true;
@@ -99,7 +100,7 @@ private:
 public:
 	void SetDECALSTYLE( int i )
 	{
-		Assert( i >= 0 && i <= 5 );
+		contract_assert( i >= 0 && i <= 5 );
 		m_nDECALSTYLE = i;
 #ifdef _DEBUG
 		m_bDECALSTYLE = true;
@@ -107,7 +108,7 @@ public:
 	}
 	void SetDECALSTYLE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 5 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 5 );
 		m_nDECALSTYLE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDECALSTYLE = true;
@@ -121,7 +122,7 @@ private:
 public:
 	void SetTHIRDPERSON( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nTHIRDPERSON = i;
 #ifdef _DEBUG
 		m_bTHIRDPERSON = true;
@@ -129,7 +130,7 @@ public:
 	}
 	void SetTHIRDPERSON( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTHIRDPERSON = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTHIRDPERSON = true;
@@ -143,7 +144,7 @@ private:
 public:
 	void SetCASCADED_SHADOW_MAPPING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCASCADED_SHADOW_MAPPING = i;
 #ifdef _DEBUG
 		m_bCASCADED_SHADOW_MAPPING = true;
@@ -151,7 +152,7 @@ public:
 	}
 	void SetCASCADED_SHADOW_MAPPING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCASCADED_SHADOW_MAPPING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCASCADED_SHADOW_MAPPING = true;
@@ -165,7 +166,7 @@ private:
 public:
 	void SetALPHAMASK( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nALPHAMASK = i;
 #ifdef _DEBUG
 		m_bALPHAMASK = true;
@@ -173,7 +174,7 @@ public:
 	}
 	void SetALPHAMASK( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nALPHAMASK = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bALPHAMASK = true;
@@ -187,7 +188,7 @@ private:
 public:
 	void SetDESATBASETINT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDESATBASETINT = i;
 #ifdef _DEBUG
 		m_bDESATBASETINT = true;
@@ -195,7 +196,7 @@ public:
 	}
 	void SetDESATBASETINT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDESATBASETINT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDESATBASETINT = true;
@@ -244,7 +245,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bPHONG && m_bPHONGEXPONENTTEXTURE && m_bCUBEMAP && m_bDECALSTYLE && m_bTHIRDPERSON && m_bCASCADED_SHADOW_MAPPING && m_bALPHAMASK && m_bDESATBASETINT;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 60 * m_nPHONG ) + ( 120 * m_nPHONGEXPONENTTEXTURE ) + ( 240 * m_nCUBEMAP ) + ( 480 * m_nDECALSTYLE ) + ( 2880 * m_nTHIRDPERSON ) + ( 5760 * m_nCASCADED_SHADOW_MAPPING ) + ( 11520 * m_nALPHAMASK ) + ( 23040 * m_nDESATBASETINT ) + 0;
 	}
@@ -260,7 +261,7 @@ private:
 public:
 	void SetNUM_LIGHTS( int i )
 	{
-		Assert( i >= 0 && i <= 4 );
+		contract_assert( i >= 0 && i <= 4 );
 		m_nNUM_LIGHTS = i;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -268,7 +269,7 @@ public:
 	}
 	void SetNUM_LIGHTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nNUM_LIGHTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bNUM_LIGHTS = true;
@@ -282,7 +283,7 @@ private:
 public:
 	void SetDYN_CSM_ENABLED( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDYN_CSM_ENABLED = i;
 #ifdef _DEBUG
 		m_bDYN_CSM_ENABLED = true;
@@ -290,7 +291,7 @@ public:
 	}
 	void SetDYN_CSM_ENABLED( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDYN_CSM_ENABLED = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDYN_CSM_ENABLED = true;
@@ -304,7 +305,7 @@ private:
 public:
 	void SetHIGHLIGHT( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nHIGHLIGHT = i;
 #ifdef _DEBUG
 		m_bHIGHLIGHT = true;
@@ -312,7 +313,7 @@ public:
 	}
 	void SetHIGHLIGHT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nHIGHLIGHT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHIGHLIGHT = true;
@@ -326,7 +327,7 @@ private:
 public:
 	void SetPEEL( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPEEL = i;
 #ifdef _DEBUG
 		m_bPEEL = true;
@@ -334,7 +335,7 @@ public:
 	}
 	void SetPEEL( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPEEL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPEEL = true;
@@ -367,7 +368,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bNUM_LIGHTS && m_bDYN_CSM_ENABLED && m_bHIGHLIGHT && m_bPEEL;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nNUM_LIGHTS ) + ( 5 * m_nDYN_CSM_ENABLED ) + ( 10 * m_nHIGHLIGHT ) + ( 30 * m_nPEEL ) + 0;
 	}

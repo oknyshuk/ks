@@ -1,7 +1,14 @@
 /*
 	see copyright notice in squirrel.h
 */
-#include "sqpcheader.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+
+#include <squirrel.h>
+#include "sqobject.h"
+#include "sqstate.h"
 #include "sqvm.h"
 #include "sqstring.h"
 #include "sqtable.h"
@@ -678,13 +685,13 @@ void sq_settop(HSQUIRRELVM v, SQInteger newtop)
 
 void sq_pop(HSQUIRRELVM v, SQInteger nelemstopop)
 {
-	Assert(v->_top >= nelemstopop);
+	contract_assert( v->_top >= nelemstopop );
 	v->Pop(nelemstopop);
 }
 
 void sq_poptop(HSQUIRRELVM v)
 {
-	Assert(v->_top >= 1);
+	contract_assert( v->_top >= 1 );
     v->Pop();
 }
 

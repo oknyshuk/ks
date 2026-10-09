@@ -1,11 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: random steam class
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <tier0/dbg.h>
-#include <vstdlib/random.h>
+// Purpose: random stream class
+
+import std;
+import ks.vstdlib;
 #include "cdll_int.h"
 
 //-----------------------------------------------------------------------------
@@ -20,7 +19,7 @@ public:
 	void	SetSeed( int iSeed )
 	{
 		// Never call this from the client or game!
-		Assert(0);
+		contract_assert( 0 );
 	}
 
 	// Generates random numbers
@@ -41,5 +40,4 @@ public:
 };
 
 static CEngineUniformRandomStream s_EngineRandomStream;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CEngineUniformRandomStream, IUniformRandomStream, 
-	VENGINE_CLIENT_RANDOM_INTERFACE_VERSION, s_EngineRandomStream );
+static InterfaceReg s_Reg_CEngineUniformRandomStream_IUniformRandomStream( []() -> void * { return static_cast<IUniformRandomStream *>( &s_EngineRandomStream ); }, VENGINE_CLIENT_RANDOM_INTERFACE_VERSION );;

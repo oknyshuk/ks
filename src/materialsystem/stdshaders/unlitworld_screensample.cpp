@@ -1,14 +1,9 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
-#include "common_hlsl_cpp_consts.h" // hack hack hack!
-#include "convar.h"
+import std;
 
 #include "unlitworld_screensample_vs20.inc"
 #include "unlitworld_screensample_ps20.inc"
@@ -16,10 +11,9 @@
 
 #include "shaderlib/commandbuilder.h"
 
-
 BEGIN_VS_SHADER( UnLitWorld_ScreenSample, "Help for UnLitWorld_ScreenSample" )
 
-	BEGIN_SHADER_PARAMS
+	
 
 		//always required
 		SHADER_PARAM( BASETEXTURE,		SHADER_PARAM_TYPE_TEXTURE, "", "" )
@@ -185,5 +179,3 @@ BEGIN_VS_SHADER( UnLitWorld_ScreenSample, "Help for UnLitWorld_ScreenSample" )
 	}
 
 END_SHADER
-
-

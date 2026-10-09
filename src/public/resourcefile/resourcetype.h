@@ -1,26 +1,21 @@
-//===== Copyright c 1996-2008, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
 // Purpose: Describes our resource format. Resource files consist of two files:
 // The first is a resource descriptor file containing various blocks of
 // arbitrary data, including a resource dictionary describing raw data which
 // is stored in a second, parallel file.
-//
-// $NoKeywords: $
-//===========================================================================//
 
-#ifndef RESOURCETYPE_H
-#define RESOURCETYPE_H
-#pragma once
-
-#include <atomic>
+import std;
+import ks.core;
 #include "resourcefile/schema.h"
-#include "tier0/threadtools.h"
 #include "tier2/tier2.h" // g_nResourceFrameCount defn
 
 //-----------------------------------------------------------------------------
 // Enum definitions
 //-----------------------------------------------------------------------------
-schema enum ResourceTypeEngine_t
+enum ResourceTypeEngine_t
 {
 	RESOURCE_TYPE_NONE = -1,
 
@@ -96,21 +91,21 @@ struct ResourceBinding_t : public ResourceBindingBase_t
 
 // This is a 'weak reference' and can only be used if it's referenced
 // somewhere and if it's the appropriate frame
-template< class T > FORCEINLINE const T* ResourceHandleToData( const ResourceBinding_t< T > *hResource, bool bUnsafe = false )
+template< class T > [[gnu::always_inline]] inline const T* ResourceHandleToData( const ResourceBinding_t< T > *hResource, bool bUnsafe = false )
 {
-	Assert( !hResource || bUnsafe || hResource->m_nRefCount > 0 );
-	Assert( !hResource || bUnsafe || ( hResource->m_nFlags & RESOURCE_BINDING_PERMANENT ) || ( hResource->m_nLastBindFrame == g_nResourceFrameCount ) );
+	contract_assert( !hResource || bUnsafe || hResource->m_nRefCount > 0 );
+	contract_assert( !hResource || bUnsafe || ( hResource->m_nFlags & RESOURCE_BINDING_PERMANENT ) || ( hResource->m_nLastBindFrame == g_nResourceFrameCount ) );
 	return hResource ? ( const T* )hResource->m_pData : nullptr;
 }
 
-template< class T > FORCEINLINE int ResourceAddRef( const ResourceBinding_t< T > *hResource )
+template< class T > [[gnu::always_inline]] inline int ResourceAddRef( const ResourceBinding_t< T > *hResource )
 {
 	return ++hResource->m_nRefCount;
 }
 
-template< class T > FORCEINLINE int ResourceRelease( const ResourceBinding_t< T > *hResource )
+template< class T > [[gnu::always_inline]] inline int ResourceRelease( const ResourceBinding_t< T > *hResource )
 {
-	Assert( hResource->m_nRefCount > 0 );
+	contract_assert( hResource->m_nRefCount > 0 );
 	return --hResource->m_nRefCount;
 }
 
@@ -119,7 +114,7 @@ template< class T > FORCEINLINE int ResourceRelease( const ResourceBinding_t< T 
 // Declares a resource pointer
 //-----------------------------------------------------------------------------
 typedef const ResourceBindingBase_t *ResourceHandle_t;
-#define RESOURCE_HANDLE_INVALID ( (ResourceHandle_t)0 )
+inline constexpr auto RESOURCE_HANDLE_INVALID = ( (ResourceHandle_t)0 );
 
 
 //-----------------------------------------------------------------------------
@@ -202,7 +197,7 @@ public:
 
 	bool operator==( int nZero ) const
 	{
-		Assert( nZero == 0 );
+		contract_assert( nZero == 0 );
 		return m_nResourceId == 0;
 	}
 
@@ -214,7 +209,7 @@ public:
 	const ResourceBinding_t< T > *GetHandle() const
 	{
 		// validate
-		Assert( g_pResourceSystem );
+		contract_assert( g_pResourceSystem );
 
 		const ResourceBinding_t< T > *pBinding = (const ResourceBinding_t< T > *)m_hResource;
 		pBinding->m_nLastBindFrame = g_nResourceFrameCount;
@@ -224,7 +219,7 @@ public:
 	const T* GetPtr() const
 	{
 		// validate
-		Assert( g_pResourceSystem );
+		contract_assert( g_pResourceSystem );
 
 		const ResourceBinding_t< T > *pBinding = (const ResourceBinding_t< T > *)m_hResource;
 		pBinding->m_nLastBindFrame = g_nResourceFrameCount;
@@ -252,6 +247,3 @@ public:
 		m_hResource = hResource;
 	}
 };
-
-
-#endif // RESOURCETYPE_H

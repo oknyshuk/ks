@@ -1,19 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BITMAP_H
-#define BITMAP_H
-
-
-
+import ks.core;
 #include "bitmap/imageformat.h"
-#include "color.h"
-#include "dbg.h"
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -50,7 +41,7 @@ struct Bitmap_t
 	/// state of the bitmap.
 	void SetOwnsBuffer( bool bOwnsBuffer )
 	{
-		Assert( m_pBits );
+		contract_assert( m_pBits );
 		m_bOwnsBuffer = bOwnsBuffer;
 	}
 
@@ -162,6 +153,3 @@ bool PFMReadFileR32F( ks::byte_reader &fileBuffer, Bitmap_t &bitmap, float pfmSc
 bool PFMReadFileRGB323232F( ks::byte_reader &fileBuffer, Bitmap_t &bitmap, float pfmScale );
 bool PFMReadFileRGBA32323232F( ks::byte_reader &fileBuffer, Bitmap_t &bitmap, float pfmScale );
 bool PFMGetInfo_AndAdvanceToTextureBits( ks::byte_reader &pfmBuffer, int &nWidth, int &nHeight, ImageFormat &imageFormat );
-
-
-#endif // BITMAP_H

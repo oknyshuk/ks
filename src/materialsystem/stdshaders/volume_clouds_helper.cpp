@@ -1,15 +1,15 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
 #include "volume_clouds_helper.h"
-#include "convar.h"
+import std;
 
 // Auto generated inc files
 #include "volume_clouds_vs20.inc"
 #include "volume_clouds_ps20.inc"
 #include "volume_clouds_ps20b.inc"
-
 
 void InitParamsVolumeClouds( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, VolumeCloudsVars_t &info )
 {

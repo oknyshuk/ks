@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ENGINESOUNDINTERNAL_H
-#define ENGINESOUNDINTERNAL_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "engine/IEngineSound.h"
 
@@ -16,5 +9,3 @@
 //-----------------------------------------------------------------------------
 IEngineSound* EngineSoundClient();
 IEngineSound* EngineSoundServer();
-
-#endif // SOUNDENGINEINTERNAL_H

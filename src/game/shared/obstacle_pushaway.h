@@ -1,13 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef OBSTACLE_PUSHAWAY_H
-#define OBSTACLE_PUSHAWAY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "props_shared.h"
+#include "ispatialpartition.h"
+#include "usercmd.h"
+#include "shared_classnames.h"
+#ifdef CLIENT_DLL
+#include "cliententitylist.h"
+#include "c_basecombatcharacter.h"
+#else
+#include "basecombatcharacter.h"
+#endif
 #ifndef CLIENT_DLL
 #include "func_breakablesurf.h"
 #include "BasePropDoor.h"
@@ -177,6 +181,3 @@ int GetPushawayEnts( CBaseCombatCharacter *pPushingEntity, CBaseEntity **ents, i
 //--------------------------------------------------------------------------------------------------------------
 // Pushes physics objects away from the entity
 void PerformObstaclePushaway( CBaseCombatCharacter *pPushingEntity );
-
-
-#endif // OBSTACLE_PUSHAWAY_H

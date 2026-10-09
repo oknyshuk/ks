@@ -1,11 +1,14 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef VEHICLE_VIEWBLEND_SHARED_H
-#define VEHICLE_VIEWBLEND_SHARED_H
+import ks.math;
+#include "datamap.h"
+import std;
+#include "shared_classnames.h"
+
+class CBaseAnimating;
+class CBasePlayer;
 
 // Definition for how to calculate a point on the remap curve
 enum RemapAngleRange_CurvePart_t
@@ -72,5 +75,3 @@ void SharedVehicleViewSmoothing(CBasePlayer *pPlayer,
 								const Vector &vecEyeExitEndpoint, 
 								ViewSmoothingData_t *pData, 
 								float *pFOV, bool bForceViewToAttachment = false );
-
-#endif // VEHICLE_VIEWBLEND_SHARED_H

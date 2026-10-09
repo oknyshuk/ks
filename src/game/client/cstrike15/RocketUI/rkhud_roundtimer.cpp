@@ -1,13 +1,25 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include "rocketui/rmlui.h"
 #include "rkhud_roundtimer.h"
 
 #include "rkhud_model.h"
 
-#include "cbase.h"
-#include "hud_macros.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "c_cs_player.h"
 #include "c_playerresource.h"
 
 #include <rocketui/rmlui.h>
+import ks.core;
+import std;
 
 DECLARE_HUDELEMENT( RkHudRoundTimer );
 
@@ -67,11 +79,11 @@ void RkHudRoundTimer::ShowPanel(bool bShow, bool force)
         if ( CSGameRules()->IsFreezePeriod() )
         {
             // countdown to the start of the round while we're in freeze period
-            remainingTime = (int)ceil( CSGameRules()->GetRoundStartTime() - gpGlobals->curtime );
+            remainingTime = (int)std::ceil( CSGameRules()->GetRoundStartTime() - gpGlobals->curtime );
         }
         else
         {
-            remainingTime = (int)ceil( CSGameRules()->GetRoundRemainingTime() );
+            remainingTime = (int)std::ceil( CSGameRules()->GetRoundRemainingTime() );
         }
         roundTimerData.SecondsLeft = remainingTime % 60;
         roundTimerData.MinutesLeft = remainingTime / 60;

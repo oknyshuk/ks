@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		AI Utility classes for building the initial AI Networks
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_INITUTILS_H
-#define AI_INITUTILS_H
-
+// Purpose: AI Utility classes for building the initial AI Networks
 
 #include "ai_basenpc.h"
 #include "ai_node.h"
@@ -98,6 +93,3 @@ public:
 
 	~CAI_TestHull(void);
 };
-
-
-#endif // AI_INITUTILS_H

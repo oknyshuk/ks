@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef PHYSICS_CANNISTER_H
-#define PHYSICS_CANNISTER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
 #include "player_pickup.h"
+#include "basecombatcharacter.h"
+#include "vphysics_interface.h"
+#include "player.h"
 
 class CSteamJet;
 
@@ -140,5 +138,3 @@ public:
 private:
 	Vector CalcLocalThrust( const Vector &offset );
 };
-
-#endif // PHYSICS_CANNISTER_H

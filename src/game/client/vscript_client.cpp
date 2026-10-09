@@ -1,15 +1,15 @@
-//========== Copyright (c) 2008, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2008 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "vscript_client.h"
-#include "icommandline.h"
-#include "tier1/fmtstr.h"
-#include "filesystem.h"
-#include "characterset.h"
 #include "gamerules.h"
 
 #include "vscript_client_nut.h"
@@ -17,21 +17,6 @@
 
 extern IScriptManager *scriptmanager;
 extern ScriptClassDesc_t * GetScriptDesc( CBaseEntity * );
-
-// #define VMPROFILE 1
-
-#ifdef VMPROFILE
-
-#define VMPROF_START double debugStartTime = Plat_FloatTime();
-#define VMPROF_SHOW( funcname, funcdesc  ) DevMsg("***VSCRIPT PROFILE***: %s %s: %6.4f milliseconds\n", (##funcname), (##funcdesc), (Plat_FloatTime() - debugStartTime)*1000.0 );
-
-#else // !VMPROFILE
-
-#define VMPROF_START
-#define VMPROF_SHOW
-
-#endif // VMPROFILE
-
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
@@ -48,7 +33,7 @@ static const char *GetMapName()
 static const char *DoUniqueString( const char *pszBase )
 {
 	static char szBuf[512];
-	g_pScriptVM->GenerateUniqueKey( pszBase, szBuf, ARRAYSIZE(szBuf) );
+	g_pScriptVM->GenerateUniqueKey( pszBase, szBuf, std::size( szBuf ) );
 	return szBuf;
 }
 
@@ -69,8 +54,6 @@ int GetDeveloperLevel()
 
 bool VScriptClientInit()
 {
-	VMPROF_START
-
 	if( scriptmanager != nullptr )
 	{
 		ScriptLanguage_t scriptLanguage = SL_DEFAULT;
@@ -78,15 +61,15 @@ bool VScriptClientInit()
 		char const *pszScriptLanguage;
 		if ( CommandLine()->CheckParm( "-scriptlang", &pszScriptLanguage ) )
 		{
-			if( !Q_stricmp(pszScriptLanguage, "gamemonkey") )
+			if( !V_stricmp(pszScriptLanguage, "gamemonkey") )
 			{
 				scriptLanguage = SL_GAMEMONKEY;
 			}
-			else if( !Q_stricmp(pszScriptLanguage, "squirrel") )
+			else if( !V_stricmp(pszScriptLanguage, "squirrel") )
 			{
 				scriptLanguage = SL_SQUIRREL;
 			}
-			else if( !Q_stricmp(pszScriptLanguage, "python") )
+			else if( !V_stricmp(pszScriptLanguage, "python") )
 			{
 				scriptLanguage = SL_PYTHON;
 			}
@@ -123,9 +106,6 @@ bool VScriptClientInit()
 				}
 
 				VScriptRunScript( "mapspawn", false );
-
-				VMPROF_SHOW( pszScriptLanguage, "virtual machine startup" );
-
 				return true;
 			}
 			else
@@ -195,4 +175,3 @@ bool IsEntityCreationAllowedInScripts( void )
 {
 	return g_VScriptGameSystem.m_bAllowEntityCreationInScripts;
 }
-

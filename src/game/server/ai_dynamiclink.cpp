@@ -1,14 +1,46 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		A link that can be turned on and off.  Unlike normal links
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: A link that can be turned on and off.  Unlike normal links
 //				dyanimc links must be entities so they can receive messages.
 //				They update the state of the actual links.  Allows us to save
 //				a lot of memory by not making all links into entities
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "collisionutils.h"
@@ -19,7 +51,6 @@
 #include "ai_networkmanager.h"
 #include "editor_sendcommand.h"
 #include "bitstring.h"
-#include "tier0/vprof.h"
 
 //-----------------------------------------------------------------------------
 
@@ -29,7 +60,7 @@ IMPLEMENT_REFLECT_DATAMAP( CAI_DynamicLinkController )
 
 void CAI_DynamicLinkController::GenerateLinksFromVolume()
 {
-	Assert( std::ssize( m_ControlledLinks ) == 0 );
+	contract_assert( std::ssize( m_ControlledLinks ) == 0 );
 
 	int nNodes = g_pBigAINet->NumNodes();
 	CAI_Node **ppNodes = g_pBigAINet->AccessNodes();
@@ -72,7 +103,7 @@ void CAI_DynamicLinkController::GenerateLinksFromVolume()
 			if ( !IsBoxIntersectingRay( vAbsMins, vAbsMaxs, nodeOrigin, originOther - nodeOrigin ) )
 				continue;
 
-			Assert( IsBoxIntersectingRay( vAbsMins, vAbsMaxs, originOther, nodeOrigin - originOther ) );
+			contract_assert( IsBoxIntersectingRay( vAbsMins, vAbsMaxs, originOther, nodeOrigin - originOther ) );
 
 			CAI_DynamicLink *pDynamicLink = (CAI_DynamicLink *)CreateEntityByName( "info_node_link" );
 			pDynamicLink->m_nSrcID = i;
@@ -653,7 +684,7 @@ void CAI_RadialLinkController::ModifyNodeLinks( bool bMakeStale )
 	int nNodes = g_pBigAINet->NumNodes();
 	CAI_Node **ppNodes = g_pBigAINet->AccessNodes();
 
-	VPROF_BUDGET("ModifyLinks", "ModifyLinks");
+	CVProfScope _( "ModifyLinks", 0, "ModifyLinks", false, BUDGETFLAG_OTHER );
 
 	const float MinDistCareSq = Square( ai_radial_max_link_dist.GetFloat() + 0.1 );
 
@@ -687,7 +718,7 @@ void CAI_RadialLinkController::ModifyNodeLinks( bool bMakeStale )
 							if( bMakeStale )
 							{
 								pLink->m_LinkInfo |= bits_LINK_STALE_SUGGESTED;
-								pLink->m_timeStaleExpires = FLT_MAX;
+								pLink->m_timeStaleExpires = std::numeric_limits<float>::max();
 							}
 							else
 							{

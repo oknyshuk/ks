@@ -1,22 +1,16 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Manages the server moving things back in time to match up to where clients thought they were 
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
+
+// Purpose: Manages the server moving things back in time to match up to where clients thought they were
 //			when the client commited an action
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef _PLAYER_LAG_COMPENSATION_H_
-#define _PLAYER_LAG_COMPENSATION_H_
-
 
 #include "igamesystem.h"
 #include "ilagcompensationmanager.h"
 
-#include <deque>
-#include <map>
-#include <memory>
-#include <set>
+import std;
+#include "BaseAnimatingOverlay.h"
+#include "studio.h"
 
 #define MAX_LAYER_RECORDS (CBaseAnimatingOverlay::MAX_OVERLAYS)
 
@@ -199,5 +193,3 @@ private:
     // List of additional entities flagged by mappers for lag compensation (shouldn't be more than a few)
 	std::set< EHANDLE >		m_AdditionalEntities;
 };
-
-#endif

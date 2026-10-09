@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2013, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2013 Valve Corporation
 
-//#include "cbase.h"
 
+import ks.tier1;
 #include "materialsystem/imaterial.h"
 #include "custom_material.h"
 #include "composite_texture.h"
 #include "materialsystem/base_visuals_data_processor.h"
 #include "materialsystem_global.h"
-#include "keyvalues.h"
-#include "tier0/vprof.h"
+import std;
 
 #ifndef DEDICATED
 #include "filesystem.h"
@@ -72,8 +67,8 @@ bool CCustomMaterial::CheckRegenerate( int nSize )
 
 void CCustomMaterial::SetBaseMaterialName( const char* szName )
 {
-	Assert( !m_szBaseMaterialName );
-	m_szBaseMaterialName = strdup( szName );
+	contract_assert( !m_szBaseMaterialName );
+	m_szBaseMaterialName = __builtin_strdup( szName );
 }
 
 void CCustomMaterial::Shutdown()
@@ -95,7 +90,7 @@ void CCustomMaterial::Shutdown()
 		}
 	}
 	if ( m_szBaseMaterialName )
-		free( ( void * ) m_szBaseMaterialName );
+		std::free( ( void * ) m_szBaseMaterialName );
 
 	m_pTextures.clear();
 }
@@ -287,7 +282,6 @@ bool CCustomMaterialManager::GetVMTKeyValues( const char *pszVMTName, KeyValues 
 // handles finalizing materials once all the textures are ready, swapping materials that are pending swap and ready, and cleans up materials that are no longer used
 bool CCustomMaterialManager::Process()
 {
-	//TM_ZONE( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
 
 	for ( int i = 0; i < std::ssize( m_pCustomMaterials ); ++i )
 	{
@@ -297,9 +291,6 @@ bool CCustomMaterialManager::Process()
 		{
 			m_pCustomMaterials[ i ]->Finalize();
 			m_pCustomMaterials[ i ]->SetValid( true );
-#ifdef DEBUG_CUSTOMMATERIALS
-			DevMsg( "Finalized custom material: %s \n", m_pCustomMaterials[ i ]->GetMaterial() ? m_pCustomMaterials[ i ]->GetMaterial()->GetName() : "*unknown*" );
-#endif
 		}
 		else if ( !m_pCustomMaterials[ i ]->TexturesReady() &&
 				  m_pCustomMaterials[ i ]->IsValid() )
@@ -316,9 +307,6 @@ bool CCustomMaterialManager::Process()
 			// clean up materials that are no longer used (we are the only reference)
 			if ( m_pCustomMaterials[ i ]->ShouldRelease() )
 			{
-#ifdef DEBUG_CUSTOMMATERIALS
-				DevMsg( "Releasing custom material: %s \n", m_pCustomMaterials[ i ]->GetMaterial()->GetName() );
-#endif
 				m_pCustomMaterials[ i ]->Release();
 				m_pCustomMaterials[ i ] = nullptr;
 				m_pCustomMaterials.erase( m_pCustomMaterials.begin() + i );
@@ -334,7 +322,6 @@ ICustomMaterial * CCustomMaterialManager::GetOrCreateCustomMaterial( KeyValues *
 #if defined( DEDICATED ) || defined( DISABLE_CUSTOM_MATERIAL_GENERATION )
 	return nullptr;
 #endif
-	TM_MESSAGE( TELEMETRY_LEVEL0, TMMF_ICON_NOTE | TMMF_SEVERITY_WARNING, "%s %d", __FUNCTION__, vecTextureInfos[0].m_size );
 
 	for ( int i = 0; i < std::ssize( m_pCustomMaterials ); ++i )
 	{
@@ -358,17 +345,13 @@ ICustomMaterial * CCustomMaterialManager::GetOrCreateCustomMaterial( KeyValues *
 		}
 		else
 		{
-			AssertMsg( pTexture != nullptr, "Unable to get/create composite texture for custom material!" );
+			contract_assert( ( pTexture != nullptr ) && "Unable to get/create composite texture for custom material!" );
 			pMaterial->Release();
 			return nullptr;
 		}
 	}
 
 	m_pCustomMaterials.push_back( pMaterial );
-
-#ifdef DEBUG_CUSTOMMATERIALS
-	DevMsg( "Created custom material for: %s \n", pVisualsDataProcessor->GetOriginalMaterialName() );
-#endif
 
 	// The material may not be complete yet, but it will be completed over the next few frames via Process()
 	return pMaterial;

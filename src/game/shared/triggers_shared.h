@@ -1,11 +1,6 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef TRIGGERS_SHARED_H
-#define TRIGGERS_SHARED_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //
 // Spawnflags
@@ -32,5 +27,3 @@ enum
 const int SF_TRIGGER_MOVE_AUTODISABLE				= 0x0080;	// Disable auto movement
 const int SF_TRIGGER_AUTO_DUCK						= 0x0800;	// Duck automatically
 const int SF_TRIGGER_AUTO_WALK						= 0x1000;	// Walk automatically
-
-#endif // TRIGGERS_SHARED_H

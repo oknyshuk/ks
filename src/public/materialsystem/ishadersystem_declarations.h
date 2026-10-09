@@ -1,10 +1,9 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef ishadersystem_declarations_hdr
-#define ishadersystem_declarations_hdr
-//-----------------------------------------------------------------------------
-// Modulation flags
-//-----------------------------------------------------------------------------
+// Purpose: Modulation flags
+
 enum
 {
 	SHADER_USING_ALPHA_MODULATION				= 0x01,
@@ -21,5 +20,3 @@ enum
 	SHADER_USING_GBUFFER0                       = 0x10,
 	SHADER_USING_GBUFFER1                       = 0x20,
 };
-
-#endif

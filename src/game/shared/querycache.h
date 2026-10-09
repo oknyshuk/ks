@@ -1,14 +1,19 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef QUERYCACHE_H
-#define QUERYCACHE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "tier0/platform.h"
-#include "mathlib/vector.h"
+import std;
+import ks.math;
+#include "util_shared.h"
+#include "ehandle.h"
+
+#if defined( CLIENT_DLL )
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
+#else
+class CBaseEntity;
+typedef CHandle<CBaseEntity> EHANDLE;
+#endif
 
 // this system provides several piece of functionality to ai or other systems which wish to do
 // traces and other trace-like queries. 
@@ -36,7 +41,7 @@ enum EEntityOffsetMode_t
 };
 
 
-#define QCACHE_MAXPNTS 3									// maximum number of points/entities
+inline constexpr auto QCACHE_MAXPNTS = 3; // maximum number of points/entities
 															// involved in a query
 
 struct QueryCacheKey_t
@@ -92,5 +97,3 @@ void UpdateQueryCache( void );
 
 // call on level transition or other significant step-functions
 void InvalidateQueryCache( void );
-
-#endif // querycache_h

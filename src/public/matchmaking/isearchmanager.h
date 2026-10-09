@@ -1,12 +1,13 @@
-#ifndef _ISEARCHMANAGER_H_
-#define _ISEARCHMANAGER_H_
+#pragma once
+
+import ks.core;
 
 class IMatchSearchResult;
 class ISearchManager;
 
 #include "imatchsystem.h"
 
-abstract_class IMatchSearchResult
+class IMatchSearchResult
 {
 public:
 	//
@@ -29,7 +30,7 @@ public:
 	virtual void Join() = 0;
 };
 
-abstract_class ISearchManager
+class ISearchManager
 {
 public:
 	//
@@ -59,4 +60,3 @@ public:
 };
 
 
-#endif // _ISEARCHMANAGER_H_

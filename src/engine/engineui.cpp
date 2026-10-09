@@ -1,41 +1,52 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
 // Purpose: Implements all the functions exported by the GameUI dll
-//
-// $NoKeywords: $
-//===========================================================================//
+
+// main precompiled header for client files
 
 
-#include "client_pch.h"
+#include "common.h"
 
-#include "tier0/platform.h"
+#include "cmd.h"
+#include "render.h"
 
-#include "appframework/ilaunchermgr.h"
-#include "appframework/sdlwindow.h"
+
+#include "screen.h"
+
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+
+#include "host.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
+
+
 #include "keys.h"
-#include "console.h"
 #include "gl_matsysiface.h"
 #include "cdll_engine_int.h"
-#include "demo.h"
 #include "sys_dll.h"
 #include "sound.h"
 #include "soundflags.h"
 #include "filesystem_engine.h"
 #include "igame.h"
-#include "con_nprint.h"
-#include "tier0/vprof.h"
 #include "cl_demoactionmanager.h"
 #include "enginebugreporter.h"
 #include "icolorcorrectiontools.h"
-#include "tier0/icommandline.h"
 #include "client.h"
 #include "server.h"
-#include "sys.h" // Sys_GetRegKeyValue()
-#include "Steam.h" // for SteamGetUser()
 #include "ivideomode.h"
 #include "cl_pluginhelpers.h"
 #include "cl_main.h" // CL_IsHL2Demo()
-#include "cl_steamauth.h"
 #include "inputsystem/iinputstacksystem.h"
 
 // interface to gameui dll
@@ -43,17 +54,17 @@
 
 // interface to expose vgui root panels
 #include <iengineui.h>
+import std;
+import ks.tier1;
+import ks.desktop;
 
-#include <keyvalues.h>
 #include "localize/ilocalize.h"
 
 #include "engineui.h"
 #include "toolframework/itoolframework.h"
 #include "LoadScreenUpdate.h"
-#include "tier0/etwprof.h"
 
 
-#include "tier1/tokenset.h"
 
 #include "rocketui/rocketui.h"
 
@@ -129,7 +140,9 @@ static tokenset_t< LevelLoadingProgress_e > g_ProgressTokens[]=
 //-----------------------------------------------------------------------------
 // Purpose: Console command to hide the gameUI, most commonly called from gameUI.dll
 //-----------------------------------------------------------------------------
-CON_COMMAND( gameui_hide, "Hides the game UI" )
+static void gameui_hide( const CCommand &args );
+static ConCommand gameui_hide_command( "gameui_hide", gameui_hide, "Hides the game UI" );
+static void gameui_hide( const CCommand &args )
 {
 	EngineUI()->HideGameUI();
 }
@@ -137,7 +150,9 @@ CON_COMMAND( gameui_hide, "Hides the game UI" )
 //-----------------------------------------------------------------------------
 // Purpose: Console command to activate the gameUI, most commonly called from gameUI.dll
 //-----------------------------------------------------------------------------
-CON_COMMAND( gameui_activate, "Shows the game UI" )
+static void gameui_activate( const CCommand &args );
+static ConCommand gameui_activate_command( "gameui_activate", gameui_activate, "Shows the game UI" );
+static void gameui_activate( const CCommand &args )
 {
 	EngineUI()->ActivateGameUI();
 }
@@ -145,7 +160,9 @@ CON_COMMAND( gameui_activate, "Shows the game UI" )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( gameui_preventescape, "Escape key doesn't hide game UI" )
+static void gameui_preventescape( const CCommand &args );
+static ConCommand gameui_preventescape_command( "gameui_preventescape", gameui_preventescape, "Escape key doesn't hide game UI" );
+static void gameui_preventescape( const CCommand &args )
 {
 	EngineUI()->SetNotAllowedToHideGameUI( true );
 }
@@ -153,7 +170,9 @@ CON_COMMAND( gameui_preventescape, "Escape key doesn't hide game UI" )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( gameui_allowescapetoshow, "Escape key allowed to show game UI" )
+static void gameui_allowescapetoshow( const CCommand &args );
+static ConCommand gameui_allowescapetoshow_command( "gameui_allowescapetoshow", gameui_allowescapetoshow, "Escape key allowed to show game UI" );
+static void gameui_allowescapetoshow( const CCommand &args )
 {
 	EngineUI()->SetNotAllowedToShowGameUI( false );
 }
@@ -161,7 +180,9 @@ CON_COMMAND( gameui_allowescapetoshow, "Escape key allowed to show game UI" )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( gameui_preventescapetoshow, "Escape key doesn't show game UI" )
+static void gameui_preventescapetoshow( const CCommand &args );
+static ConCommand gameui_preventescapetoshow_command( "gameui_preventescapetoshow", gameui_preventescapetoshow, "Escape key doesn't show game UI" );
+static void gameui_preventescapetoshow( const CCommand &args )
 {
 	EngineUI()->SetNotAllowedToShowGameUI( true );
 }
@@ -169,7 +190,9 @@ CON_COMMAND( gameui_preventescapetoshow, "Escape key doesn't show game UI" )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( gameui_allowescape, "Escape key allowed to hide game UI" )
+static void gameui_allowescape( const CCommand &args );
+static ConCommand gameui_allowescape_command( "gameui_allowescape", gameui_allowescape, "Escape key allowed to hide game UI" );
+static void gameui_allowescape( const CCommand &args )
 {
 	EngineUI()->SetNotAllowedToHideGameUI( false );
 }
@@ -223,7 +246,7 @@ public:
 	// level loading
 	virtual void OnLevelLoadingStarted( char const *levelName, bool bLocalServer );
 	virtual void OnLevelLoadingFinished();
-	virtual void NotifyOfServerConnect(const char *game, int IP, int connectionPort, int queryPort);
+	virtual void NotifyOfServerConnect(const char *game, int IP, int connectionPort);
 	virtual void NotifyOfServerDisconnect();
 	virtual void UpdateProgressBar(LevelLoadingProgress_e progress, bool showDialog = true );
 	virtual void UpdateCustomProgressBar( float progress, const wchar_t *desc );
@@ -340,7 +363,7 @@ private:
 // Purpose: singleton accessor
 //-----------------------------------------------------------------------------
 static CEngineUI g_EngineUIImp;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CEngineUI, IEngineUI, VENGINE_UI_VERSION, g_EngineUIImp );
+static InterfaceReg s_Reg_CEngineUI_IEngineUI( []() -> void * { return static_cast<IEngineUI *>( &g_EngineUIImp ); }, VENGINE_UI_VERSION );;
 
 IEngineUIInternal *EngineUI()
 {
@@ -351,7 +374,7 @@ IEngineUIInternal *EngineUI()
 // The loader progress is updated by the queued loader. It uses an initial
 // reserved portion of the bar.
 //-----------------------------------------------------------------------------
-#define PROGRESS_RESERVE 0.50f
+constexpr auto PROGRESS_RESERVE = 0.50f;
 
 	
 //-----------------------------------------------------------------------------
@@ -459,7 +482,7 @@ void CEngineUI::Init()
 
 	// We also want to load the localization file for the base game.  Nomrally, all these values would already be in valve_language.txt, but
 	// with CSGO we decided to move them into csgo_language (which is NOT a mod).
-	Q_snprintf( szFileName, sizeof( szFileName ) - 1, "resource/%s_%%language%%.txt", GetCurrentGame() );
+	V_snprintf( szFileName, sizeof( szFileName ) - 1, "resource/%s_%%language%%.txt", GetCurrentGame() );
 	szFileName[ sizeof( szFileName ) - 1 ] = '\0';
 	g_pLocalize->AddFile( szFileName );
 
@@ -467,14 +490,14 @@ void CEngineUI::Init()
 	// don't need to load the "valve" localization file twice
 	// Each mod can have its own language.txt in addition to the valve_%%langauge%%.txt file under defaultgamedir.
 	// load mod-specific localization file for kb_act.lst, user.scr, settings.scr, etc.
-	Q_snprintf( szFileName, sizeof( szFileName ) - 1, "resource/%s_%%language%%.txt", GetCurrentMod() );
+	V_snprintf( szFileName, sizeof( szFileName ) - 1, "resource/%s_%%language%%.txt", GetCurrentMod() );
 	szFileName[ sizeof( szFileName ) - 1 ] = '\0';
 	g_pLocalize->AddFile( szFileName );
 
 	// Load a low-violence-specific string file to override strings in the mod string file
 	if ( g_bLowViolence )
 	{
-		Q_snprintf( szFileName, sizeof( szFileName ) - 1, "resource/%s_%%language%%_lv.txt", GetCurrentMod() );
+		V_snprintf( szFileName, sizeof( szFileName ) - 1, "resource/%s_%%language%%_lv.txt", GetCurrentMod() );
 		szFileName[ sizeof( szFileName ) - 1 ] = '\0';
 		g_pLocalize->AddFile( szFileName );
 	}
@@ -847,54 +870,6 @@ void CEngineUI::OnLevelLoadingFinished()
 	gszDisconnectReason[0] = 0;
 	gszExtendedDisconnectReason[0] = 0;
 
-#if defined(ENABLE_LOADING_PROGRESS_PROFILING)
-	// display progress bar stats (for debugging/tuning progress bar)
-	float flEndTime = (float)Plat_FloatTime();
-	// add a finished entry
-	LoadingProgressEntry_t &entry = m_LoadingProgress[m_LoadingProgress.AddToTail()];
-	entry.flTime = flEndTime - m_flLoadingStartTime;
-	entry.eProgress = PROGRESS_HIGHESTITEM;
-	// dump the info
-	Msg("Level load timings:\n");
-	float flTotalTime = flEndTime - m_flLoadingStartTime;
-	int nRepeatCount = 0;
-	float flTimeTaken = 0.0f;
-	float flFirstLoadProgressTime = 0.0f;
-	for (int i = 0; i < m_LoadingProgress.Count() - 1; i++)
-	{
-		// keep track of time
-		flTimeTaken += (float)m_LoadingProgress[i+1].flTime - m_LoadingProgress[i].flTime;
-
-		// keep track of how often something is repeated
-		if (m_LoadingProgress[i+1].eProgress == m_LoadingProgress[i].eProgress)
-		{
-			if (nRepeatCount == 0)
-			{
-				flFirstLoadProgressTime = m_LoadingProgress[i].flTime;
-			}
-			++nRepeatCount;
-			continue;
-		}
-
-		// work out the time it took to do this
-		if (nRepeatCount == 0)
-		{
-			flFirstLoadProgressTime = m_LoadingProgress[i].flTime;
-		}
-
-		int nPerc = (int)(100 * (flFirstLoadProgressTime / flTotalTime));
-		int nTickPerc = (int)(100 * ((float)m_LoadingProgress[i].eProgress / (float)PROGRESS_HIGHESTITEM));
-		
-		// interpolated percentage is in between the real times and the most ticks
-		int nInterpPerc = (nPerc + nTickPerc) / 2;
-		Msg("\t%2d/%50.50s\t%.3f\t\ttime: %d%%\t\tinterp: %d%%\t\trepeat: %d\n", m_LoadingProgress[i].eProgress, g_ProgressTokens->GetNameByToken( m_LoadingProgress[i].eProgress ), flTimeTaken, nPerc, nInterpPerc, nRepeatCount);
-
-		// reset accumlated vars
-		nRepeatCount = 0;
-		flTimeTaken = 0.0f;
-	}
-#endif // ENABLE_LOADING_PROGRESS_PROFILING
-
 
 	// Restore convar setting after level load
 	if ( g_syncReportLevel > 1 )
@@ -931,7 +906,7 @@ void CEngineUI::ShowErrorMessage()
 //-----------------------------------------------------------------------------
 // Purpose: Updates progress
 //-----------------------------------------------------------------------------
-#define LOADING_PRESENT_UPDATE_INTERVAL 0.05f
+constexpr auto LOADING_PRESENT_UPDATE_INTERVAL = 0.05f;
 static double g_flLastUpdateTime = 0.0f;
 void CEngineUI::UpdateProgressBar( LevelLoadingProgress_e progress, bool showDialog )
 {
@@ -963,35 +938,15 @@ void CEngineUI::UpdateProgressBar( LevelLoadingProgress_e progress, bool showDia
 		return;
 	}
 
-#if defined(ENABLE_LOADING_PROGRESS_PROFILING)
-	if ( dt > 0.5f )
-	{
-		Msg( "%f msec gap in %s\n", 1000.0f * dt, g_ProgressTokens->GetNameByToken( progress ) );
-	}
-	// track the progress times, for debugging & tuning
-	LoadingProgressEntry_t &entry = m_LoadingProgress[m_LoadingProgress.AddToTail()];
-	entry.flTime = Plat_FloatTime() - m_flLoadingStartTime;
-	entry.eProgress = progress;
-#endif
-
 	// count progress repeats
 	if ( !bNewCheckpoint )
 	{				         
 		++m_nLastProgressPointRepeatCount;
-#if defined(ENABLE_LOADING_PROGRESS_PROFILING)
-		//if ( !( m_nLastProgressPointRepeatCount % 500 ) )
-		{
-			Msg( "Repeating %s [%d] at %f\n", g_ProgressTokens->GetNameByToken( progress ), m_nLastProgressPointRepeatCount, t - m_flLoadingStartTime );
-		}
-#endif
 	}
 	else
 	{
 		m_nLastProgressPointRepeatCount = 0;
 
-#if defined(ENABLE_LOADING_PROGRESS_PROFILING)
-		Msg( "Entering %s at %f\n", g_ProgressTokens->GetNameByToken( progress ), t - m_flLoadingStartTime );
-#endif
 	}
 
 	// construct a string describing it
@@ -1108,12 +1063,12 @@ void CEngineUI::UpdateSecondaryProgressBarWithFile( float progress, const char *
 	V_strcpy_safe( szFile, pPath );
 	//V_StripFilename(szFile);
 	wchar_t wszPercent[ 10 ];
-	V_snwprintf( wszPercent, ARRAYSIZE( wszPercent ), L"%d%%",  (int)(100*progress) );
+	V_snwprintf( wszPercent, std::size( wszPercent ), L"%d%%",  (int)(100*progress) );
 	wchar_t wszMegs[ 64 ];
 	
 	char szBytes[32];
 	V_strcpy_safe( szBytes, V_pretifymem(nBytesTotal) );
-	V_strtowcs( szBytes, -1, wszMegs, ARRAYSIZE( wszMegs ) );
+	V_strtowcs( szBytes, -1, wszMegs, std::size( wszMegs ) );
 
 	wchar_t wszFile[ MAX_PLAYER_NAME_LENGTH ];
 	g_pLocalize->ConvertANSIToUnicode( szFile, wszFile, sizeof( wszFile ) );
@@ -1233,13 +1188,15 @@ void CEngineUI::Simulate()
 	toolframework->UI_PreSimulateAllTools();
 
 	{
-		VPROF_BUDGET( "CEngineUI::Simulate", "UI_Simulate" );
+		CVProfScope _( "CEngineUI::Simulate", 0, "UI_Simulate", false, BUDGETFLAG_OTHER );
 
 		int w = 0, h = 0;
 		// Pixel size of the drawable: this feeds the UI viewport, which must match the
 		// backbuffer. (Was ILauncherMgr::RenderedSize(), whose setter nobody ever called,
 		// so this had been silently setting a 0x0 viewport every frame.)
-		SDL_GetWindowSizeInPixels( GetGameSDLWindow(), &w, &h );
+		const ks::desktop::size pixels = ks::desktop::window_pixel_size( ks::desktop::game_window() );
+		w = pixels.width;
+		h = pixels.height;
 		// don't hold this reference over RunFrame()
 		{
 			CMatRenderContextPtr pRenderContext( materials );
@@ -1277,12 +1234,12 @@ bool CEngineUI::IsCtrlKeyDown( void )
 //-----------------------------------------------------------------------------
 // Purpose: notification
 //-----------------------------------------------------------------------------
-void CEngineUI::NotifyOfServerConnect(const char *game, int IP, int connectionPort, int queryPort)
+void CEngineUI::NotifyOfServerConnect(const char *game, int IP, int connectionPort)
 {
 	if (!staticGameUIFuncs)
 		return;
 
-	staticGameUIFuncs->OnConnectToServer2(game, IP, connectionPort, queryPort);
+	staticGameUIFuncs->OnConnectToServer2(game, IP, connectionPort);
 }
 
 //-----------------------------------------------------------------------------
@@ -1293,8 +1250,7 @@ void CEngineUI::NotifyOfServerDisconnect()
 	if (!staticGameUIFuncs)
 		return;
 
-	staticGameUIFuncs->OnDisconnectFromServer( g_eSteamLoginFailure );
-	g_eSteamLoginFailure = 0;
+	staticGameUIFuncs->OnDisconnectFromServer();
 }
 
 //-----------------------------------------------------------------------------
@@ -1304,7 +1260,7 @@ void UI_PlaySound( const char *pFileName )
 {
 	//Put '+' on the front of sounds to make them play without spatialization.
 	char buf[2048];
-	Q_snprintf( buf, sizeof( buf ), "%c%s", '+', pFileName );
+	V_snprintf( buf, sizeof( buf ), "%c%s", '+', pFileName );
 
 	// Point at origin if they didn't specify a sound source.
 	Vector vDummyOrigin;
@@ -1397,6 +1353,3 @@ bool CEngineUI::IsPlayingFullScreenVideo()
 {
 	return staticGameUIFuncs->IsPlayingFullScreenVideo();
 }
-
-
-

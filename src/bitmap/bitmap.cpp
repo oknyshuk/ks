@@ -1,23 +1,19 @@
-//======= Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "bitmap/bitmap.h"
-#include "dbg.h"
-#include "tier1/byte_reader.h"
 #include "bitmap/psd.h"
 #include "bitmap/tgaloader.h"
 
-#include "tier0/memalloc.h"
+import std;
 bool Bitmap_t::IsValid() const
 {
 	if ( m_nWidth <= 0 || m_nHeight <= 0 || m_pBits == nullptr )
 	{
-		Assert( m_nWidth == 0 );
-		Assert( m_nHeight == 0 );
-		Assert( m_pBits == nullptr );
+		contract_assert( m_nWidth == 0 );
+		contract_assert( m_nHeight == 0 );
+		contract_assert( m_pBits == nullptr );
 		return false;
 	}
 	return true;
@@ -38,8 +34,8 @@ void Bitmap_t::Init( int xs, int ys, ImageFormat imageFormat, int nStride )
 	// Check for bogus allocation sizes
 	if (xs <= 0 || ys <= 0 )
 	{
-		Assert( xs == 0 );
-		Assert( ys == 0 );
+		contract_assert( xs == 0 );
+		contract_assert( ys == 0 );
 		Clear();
 		return;
 	}
@@ -87,9 +83,9 @@ void Bitmap_t::Init( int xs, int ys, ImageFormat imageFormat, int nStride )
 
 void Bitmap_t::SetBuffer( int nWidth, int nHeight, ImageFormat imageFormat, unsigned char *pBits, bool bAssumeOwnership, int nStride )
 {
-	Assert( pBits );
-	Assert( nWidth > 0 );
-	Assert( nHeight > 0 );
+	contract_assert( pBits );
+	contract_assert( nWidth > 0 );
+	contract_assert( nHeight > 0 );
 
 	// Free up anything already allocated
 	Clear();
@@ -115,14 +111,14 @@ void Bitmap_t::SetBuffer( int nWidth, int nHeight, ImageFormat imageFormat, unsi
 	m_bOwnsBuffer = bAssumeOwnership;
 
 	// We should be good to go
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 }
 
 Color Bitmap_t::GetColor( int x, int y ) const
 {
-	Assert( x >= 0 && x < m_nWidth );
-	Assert( y >= 0 && y < m_nHeight );
-	Assert( m_pBits );
+	contract_assert( x >= 0 && x < m_nWidth );
+	contract_assert( y >= 0 && y < m_nHeight );
+	contract_assert( m_pBits );
 
 	// Get pointer to pixel data
 	byte *ptr = m_pBits + (y*m_nStride) + x* m_nPixelSize;
@@ -137,16 +133,16 @@ Color Bitmap_t::GetColor( int x, int y ) const
 			return Color( ptr[3], ptr[2], ptr[1], ptr[0] );
 
 		default:
-			Assert( !"Unsupport image format!");
+			contract_assert( !"Unsupport image format!" );
 			return Color( 255,0,255,255 );
 	}
 }
 
 void Bitmap_t::SetColor( int x, int y, Color c )
 {
-	Assert( x >= 0 && x < m_nWidth );
-	Assert( y >= 0 && y < m_nHeight );
-	Assert( m_pBits );
+	contract_assert( x >= 0 && x < m_nWidth );
+	contract_assert( y >= 0 && y < m_nHeight );
+	contract_assert( m_pBits );
 
 	// Get pointer to pixel data
 	byte *ptr = m_pBits + (y*m_nStride) + x* m_nPixelSize;
@@ -169,7 +165,7 @@ void Bitmap_t::SetColor( int x, int y, Color c )
 			break;
 
 		default:
-			Assert( !"Unsupport image format!");
+			contract_assert( !"Unsupport image format!" );
 			break;
 	}
 }
@@ -315,7 +311,7 @@ void Bitmap_t::MakeLogicalCopyOf( Bitmap_t &src, bool bTransferBufferOwnership )
 {
 	// What does it mean to make a logical copy of an
 	// invalid bitmap?  I'll tell you what it means: you have a bug.
-	Assert( src.IsValid() );
+	contract_assert( src.IsValid() );
 
 	// Free up anything we already own
 	Clear();
@@ -328,7 +324,7 @@ void Bitmap_t::MakeLogicalCopyOf( Bitmap_t &src, bool bTransferBufferOwnership )
 	m_nStride = src.m_nStride;
 	m_ImageFormat = src.m_ImageFormat;
 	m_pBits = src.m_pBits;
-	Assert( !m_bOwnsBuffer );
+	contract_assert( !m_bOwnsBuffer );
 
 	// Check for assuming ownership of the buffer
 	if ( bTransferBufferOwnership )
@@ -344,7 +340,7 @@ void Bitmap_t::MakeLogicalCopyOf( Bitmap_t &src, bool bTransferBufferOwnership )
 			// Maybe nobody, and it would safe to assume
 			// ownership.  But more than likely, this is a
 			// bug.
-			Assert( src.m_bOwnsBuffer );
+			contract_assert( src.m_bOwnsBuffer );
 
 			// And a leak is better than a double-free.
 			// Don't assume ownership of the buffer.
@@ -365,15 +361,15 @@ void Bitmap_t::Crop( int x0, int y0, int nWidth, int nHeight, const Bitmap_t *pI
 	// No source image?
 	if ( !pImgSource->IsValid() )
 	{
-		Assert( pImgSource->IsValid() );
+		contract_assert( pImgSource->IsValid() );
 		return;
 	}
 
 	// Sanity check crop rectangle
-	Assert( x0 >= 0 );
-	Assert( y0 >= 0 );
-	Assert( x0 + nWidth <= pImgSource->Width() );
-	Assert( y0 + nHeight <= pImgSource->Height() );
+	contract_assert( x0 >= 0 );
+	contract_assert( y0 >= 0 );
+	contract_assert( x0 + nWidth <= pImgSource->Width() );
+	contract_assert( y0 + nHeight <= pImgSource->Height() );
 
 	// Allocate buffer
 	Init( nWidth, nHeight, pImgSource->Format() );
@@ -381,7 +377,7 @@ void Bitmap_t::Crop( int x0, int y0, int nWidth, int nHeight, const Bitmap_t *pI
 	// Something wrong?
 	if ( !IsValid() )
 	{
-		Assert( IsValid() );
+		contract_assert( IsValid() );
 		return;
 	}
 
@@ -389,7 +385,7 @@ void Bitmap_t::Crop( int x0, int y0, int nWidth, int nHeight, const Bitmap_t *pI
 	int nRowSize = m_nWidth * m_nPixelSize;
 	for ( int y = 0 ; y < m_nHeight ; ++y )
 	{
-		memcpy( GetPixel(y,0), pImgSource->GetPixel( x0, y + y0 ), nRowSize );
+		std::memcpy( GetPixel(y,0), pImgSource->GetPixel( x0, y + y0 ), nRowSize );
 	}
 }
 
@@ -398,22 +394,22 @@ void Bitmap_t::SetPixelData( const Bitmap_t &src, int nSrcX1, int nSrcY1, int nC
 	// Safety
 	if ( !src.IsValid() )
 	{
-		Assert( src.IsValid() );
+		contract_assert( src.IsValid() );
 		return;
 	}
 	if ( !IsValid() )
 	{
-		Assert( IsValid() );
+		contract_assert( IsValid() );
 		return;
 	}
 
 	// You need to specify a valid source rectangle, we cannot clip that for you
 	if ( nSrcX1 < 0 || nSrcY1 < 0 || nSrcX1 + nCopySizeX > src.Width() || nSrcY1 + nCopySizeY > src.Height() )
 	{
-		Assert( nSrcX1 >= 0 );
-		Assert( nSrcY1 >= 0 );
-		Assert( nSrcX1 + nCopySizeX <= src.Width() );
-		Assert( nSrcY1 + nCopySizeY <= src.Height() );
+		contract_assert( nSrcX1 >= 0 );
+		contract_assert( nSrcY1 >= 0 );
+		contract_assert( nSrcX1 + nCopySizeX <= src.Width() );
+		contract_assert( nSrcY1 + nCopySizeY <= src.Height() );
 		return;
 	}
 
@@ -466,7 +462,7 @@ void Bitmap_t::SetPixelData( const Bitmap_t &src, int nDestX1, int nDestY1 )
 //-----------------------------------------------------------------------------
 bool IsPFMFile( ks::byte_reader &buf )
 {
-	const size_t nGet = buf.tell();
+	const std::size_t nGet = buf.tell();
 	char c0 = buf.read<char>();
 	char c1 = buf.read<char>();
 	char c2 = buf.read<char>();
@@ -527,7 +523,7 @@ bool PFMGetInfo_AndAdvanceToTextureBits( ks::byte_reader &pfmBuffer, int &nWidth
 	pfmBuffer.seek( 0 );
 	if( pfmBuffer.read<char>() != 'P' )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 	char c = pfmBuffer.read<char>();
@@ -541,13 +537,13 @@ bool PFMGetInfo_AndAdvanceToTextureBits( ks::byte_reader &pfmBuffer, int &nWidth
 	}
 	else
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
 	if( pfmBuffer.read<char>() != 0xa )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 	nWidth = ReadIntFromByteReader( pfmBuffer );
@@ -581,7 +577,7 @@ bool PFMReadFileRGBA32323232F( ks::byte_reader &fileBuffer, Bitmap_t &bitmap, fl
 	int nWidth = 0, nHeight = 0;
 	ImageFormat imageFormat = IMAGE_FORMAT_UNKNOWN;
 	PFMGetInfo_AndAdvanceToTextureBits( fileBuffer, nWidth, nHeight, imageFormat );		// Read the header (advances us to the texture bits)
-	Assert( imageFormat == IMAGE_FORMAT_RGB323232F );
+	contract_assert( imageFormat == IMAGE_FORMAT_RGB323232F );
 
 	bitmap.Init( nWidth, nHeight, IMAGE_FORMAT_RGBA32323232F );	// Init the bitmap
 
@@ -589,7 +585,7 @@ bool PFMReadFileRGBA32323232F( ks::byte_reader &fileBuffer, Bitmap_t &bitmap, fl
 	//       Reading rows in reverse order here is the correct thing to do:
 	for( int y = ( nHeight - 1 ); y >= 0; y-- )
 	{
-		Assert( fileBuffer.ok() );
+		contract_assert( fileBuffer.ok() );
 		if ( !fileBuffer.ok() )
 			return false;
 
@@ -624,7 +620,7 @@ bool PFMReadFileRGB323232F( ks::byte_reader &fileBuffer, Bitmap_t &bitmap, float
 	int nWidth = 0, nHeight = 0;
 	ImageFormat imageFormat = IMAGE_FORMAT_UNKNOWN;
 	PFMGetInfo_AndAdvanceToTextureBits( fileBuffer, nWidth, nHeight, imageFormat );
-	Assert( imageFormat == IMAGE_FORMAT_RGB323232F );
+	contract_assert( imageFormat == IMAGE_FORMAT_RGB323232F );
 
 	// Init the bitmap
 	bitmap.Init( nWidth, nHeight, IMAGE_FORMAT_RGB323232F );
@@ -632,7 +628,7 @@ bool PFMReadFileRGB323232F( ks::byte_reader &fileBuffer, Bitmap_t &bitmap, float
 	// Read the texels
 	for( int y = ( nHeight - 1 ); y >= 0; y-- )
 	{
-		Assert( fileBuffer.ok() );
+		contract_assert( fileBuffer.ok() );
 		if ( !fileBuffer.ok() )
 			return false;
 
@@ -660,18 +656,18 @@ bool PFMReadFileR32F( ks::byte_reader &fileBuffer, Bitmap_t &bitmap, float pfmSc
 	int nWidth, nHeight;
 	ImageFormat fileImageFormat; // Format of data in file
 	PFMGetInfo_AndAdvanceToTextureBits( fileBuffer, nWidth, nHeight, fileImageFormat );
-	Assert( fileImageFormat == IMAGE_FORMAT_RGB323232F );
+	contract_assert( fileImageFormat == IMAGE_FORMAT_RGB323232F );
 
 	// Init the bitmap
 	bitmap.Init( nWidth, nHeight, IMAGE_FORMAT_R32F );
 
-	float flMin = FLOAT32_MAX;
-	float flMax = FLOAT32_MIN;
+	float flMin = std::numeric_limits<float>::max();
+	float flMax = std::numeric_limits<float>::min();
 
 	// Read the texels, snarfing out just the x component
 	for( int y = ( nHeight - 1 ); y >= 0; y-- )
 	{
-		Assert( fileBuffer.ok() );
+		contract_assert( fileBuffer.ok() );
 		if ( !fileBuffer.ok() )
 			return false;
 
@@ -692,7 +688,7 @@ bool PFMReadFileR32F( ks::byte_reader &fileBuffer, Bitmap_t &bitmap, float pfmSc
 		}
 	}
 
-	printf( "Displacement Range: (%g, %g)\n", flMin, flMax );
+	std::printf( "Displacement Range: (%g, %g)\n", flMin, flMax );
 
 	return true;
 }
@@ -716,7 +712,7 @@ bool PFMReadFile( ks::byte_reader &buf, Bitmap_t *pBitmap )
 	// Read the texels
 	for( int y = ( nHeight - 1 ); y >= 0; y-- )
 	{
-		Assert( buf.ok() );
+		contract_assert( buf.ok() );
 		if ( !buf.ok() )
 			return false;
 
@@ -756,7 +752,7 @@ BitmapFileType_t LoadBitmapFile( ks::byte_reader &buf, Bitmap_t *pBitmap )
 	int nWidth, nHeight;
 	ImageFormat fmt;
 	float flGamma;
-	const size_t nGet = buf.tell();
+	const std::size_t nGet = buf.tell();
 	bool bOk = TGALoader::GetInfo( buf, &nWidth, &nHeight, &fmt, &flGamma );
 	buf.seek( nGet );
 	if ( !bOk )
@@ -770,4 +766,3 @@ BitmapFileType_t LoadBitmapFile( ks::byte_reader &buf, Bitmap_t *pBitmap )
 
 	return BITMAP_FILE_TYPE_TGA;
 }
-

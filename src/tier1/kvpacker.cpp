@@ -1,20 +1,13 @@
-//========= Copyright (c), Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Contains a branch-neutral binary packer for KeyValues trees. 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include <keyvalues.h>
-#include "kvpacker.h"
+// Purpose: Contains a branch-neutral binary packer for KeyValues trees.
 
-#include "tier0/dbg.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
+import ks.tier1;
 
-#include "tier0/memalloc.h"
-#define KEYVALUES_TOKEN_SIZE	1024
+
+import std;
+constexpr auto KEYVALUES_TOKEN_SIZE = 1024;
 
 // writes KeyValue as binary data to buffer
 bool KVPacker::WriteAsBinary( KeyValues *pNode, ks::byte_writer &buffer )
@@ -104,7 +97,7 @@ bool KVPacker::WriteAsBinary( KeyValues *pNode, ks::byte_writer &buffer )
 			}
 		case KeyValues::TYPE_WSTRING:
 			{
-				int nLength = dat->GetWString() ? Q_wcslen( dat->GetWString() ) : 0;
+				int nLength = dat->GetWString() ? V_wcslen( dat->GetWString() ) : 0;
 				buffer.write< short >( nLength );
 				for( int k = 0; k < nLength; ++ k )
 				{
@@ -141,7 +134,7 @@ bool KVPacker::WriteAsBinary( KeyValues *pNode, ks::byte_writer &buffer )
 			}
 		case KeyValues::TYPE_PTR:
 			{
-				buffer.write< uint64 >( reinterpret_cast< uintptr_t >( dat->GetPtr() ) );
+				buffer.write< uint64 >( reinterpret_cast< std::uintptr_t >( dat->GetPtr() ) );
 				break;
 			}
 
@@ -250,7 +243,7 @@ bool KVPacker::ReadAsBinary( KeyValues *pNode, ks::byte_reader &buffer )
 			}
 		case PACKTYPE_PTR:
 			{
-				dat->SetPtr( nullptr, reinterpret_cast< void * >( static_cast< uintptr_t >( buffer.read< uint64 >() ) ) );
+				dat->SetPtr( nullptr, reinterpret_cast< void * >( static_cast< std::uintptr_t >( buffer.read< uint64 >() ) ) );
 				break;
 			}
 
@@ -274,4 +267,3 @@ bool KVPacker::ReadAsBinary( KeyValues *pNode, ks::byte_reader &buffer )
 
 	return buffer.ok();
 }
-

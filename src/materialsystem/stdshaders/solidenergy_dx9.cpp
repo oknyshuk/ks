@@ -1,17 +1,15 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Shader for creating energy effects
-//
-//==========================================================================//
 
 #include "BaseVSShader.h"
 #include "solidenergy_dx9_helper.h"
-#include "cpp_shader_constant_register_map.h"
 
 DEFINE_FALLBACK_SHADER( SolidEnergy, SolidEnergy_dx9 )
 
 BEGIN_VS_SHADER( SolidEnergy_dx9, "SolidEnergy" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( DETAIL1, SHADER_PARAM_TYPE_TEXTURE, "shader/BaseTexture", "detail map 1" )
 		SHADER_PARAM( DETAIL1SCALE, SHADER_PARAM_TYPE_FLOAT, "1.0", "scale detail1 as multiplier of base UVs" )
 		SHADER_PARAM( DETAIL1FRAME, SHADER_PARAM_TYPE_INTEGER, "0", "frame number for detail1" )

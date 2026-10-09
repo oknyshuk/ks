@@ -1,10 +1,10 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Tier1 logging helpers.
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "tier1_logging.h"
+// Purpose: Tier1 logging helpers.
+
+import std;
+import ks.tier1;
 
 CBufferedLoggingListener::CBufferedLoggingListener() :
 m_StoredSpew( 512 )

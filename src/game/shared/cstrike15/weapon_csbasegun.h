@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef WEAPON_CSBASE_GUN_H
-#define WEAPON_CSBASE_GUN_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "weapon_csbase.h"
-
 
 // This is the base class for pistols and rifles.
 #if defined( CLIENT_DLL )
@@ -20,7 +13,6 @@
 
 #else
 #endif
-
 
 class [[= ks::reflect::NetTable{ .name = "DT_WeaponCSBaseGun" } ]]
       CWeaponCSBaseGun : public CWeaponCSBase
@@ -70,9 +62,9 @@ public:
 	virtual bool WeaponHasBurst( void ) const { return GetCSWpnData().HasBurstMode( GetEconItemView() ); }
 	virtual bool IsInBurstMode() const;
     //lwss - added some more that were missing
-    virtual float GetBurstModeTimeBetweenShots() OVERRIDE  { return GetCSWpnData().GetBurstModeTimeBetweenShots( GetEconItemView() ); }
-    virtual float GetBurstModeCycleTime() OVERRIDE { return GetCSWpnData().GetBurstModeCycleTime( GetEconItemView() ); }
-    virtual float GetZoomedCycleTime() OVERRIDE { return GetCSWpnData().GetZoomedCycleTime( GetEconItemView() ); }
+    virtual float GetBurstModeTimeBetweenShots() override  { return GetCSWpnData().GetBurstModeTimeBetweenShots( GetEconItemView() ); }
+    virtual float GetBurstModeCycleTime() override { return GetCSWpnData().GetBurstModeCycleTime( GetEconItemView() ); }
+    virtual float GetZoomedCycleTime() override { return GetCSWpnData().GetZoomedCycleTime( GetEconItemView() ); }
     //lwss end
 
 	virtual bool IsFullAuto() const;
@@ -108,6 +100,3 @@ private:
 
 
 };
-
-
-#endif // WEAPON_CSBASE_GUN_H

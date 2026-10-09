@@ -1,41 +1,25 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef SHADERDEVICEDX8_H
-#define SHADERDEVICEDX8_H
-
-
-
-#include <mutex>
+import std;
+import ks.tier1;
 #include "shaderdevicebase.h"
 #include "shaderapidx8_global.h"
-#include "tier1/utlvector.h"
 #include "materialsystem/imaterialsystem.h"
-
-
 
 //-----------------------------------------------------------------------------
 // Describes which D3DDEVTYPE to use
 //-----------------------------------------------------------------------------
-#ifndef USE_REFERENCE_RASTERIZER
 #define DX8_DEVTYPE	D3DDEVTYPE_HAL
-#else
-#define DX8_DEVTYPE	D3DDEVTYPE_REF
-#endif
     
-
 // PC:    By default, PIX profiling is explicitly disallowed using the D3DPERF_SetOptions(1) API on PC
 // X360:  PIX_INSTRUMENTATION will only generate PIX events in RELEASE builds on 360
 // Also be sure to enable PIX_ENABLE in imaterialsystem.h
 // Uncomment to use PIX instrumentation:
 //#define	PIX_INSTRUMENTATION
 
-#define MAX_PIX_ERRORS		3
+inline constexpr auto MAX_PIX_ERRORS = 3;
 
 
 //-----------------------------------------------------------------------------
@@ -77,7 +61,7 @@ public:
 	// Returns the amount of video memory in bytes for a particular adapter
 	virtual int GetVidMemBytes( int nAdapter ) const;
 
-	FORCEINLINE IDirect3D9 *D3D() const
+	[[gnu::always_inline]] inline IDirect3D9 *D3D() const
 	{ 
 		return m_pD3D; 
 	}
@@ -128,8 +112,8 @@ inline IDirect3D9* D3D()
 }
 
 
-#define NUM_FRAME_SYNC_QUERIES 2
-#define NUM_FRAME_SYNC_FRAMES_LATENCY 0
+inline constexpr auto NUM_FRAME_SYNC_QUERIES = 2;
+inline constexpr auto NUM_FRAME_SYNC_FRAMES_LATENCY = 0;
 
 //-----------------------------------------------------------------------------
 // The Dx8implementation of the shader device
@@ -143,7 +127,7 @@ public:
 	virtual void GetBackBufferDimensions( int& width, int& height ) const;
 	virtual const AspectRatioInfo_t &GetAspectRatioInfo( void ) const;
 	virtual void Present();
-	virtual IShaderBuffer* CompileShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion );
+	virtual IShaderBuffer* CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion );
 	virtual VertexShaderHandle_t CreateVertexShader( IShaderBuffer *pBuffer );
 	virtual void DestroyVertexShader( VertexShaderHandle_t hShader );
 	virtual GeometryShaderHandle_t CreateGeometryShader( IShaderBuffer* pShaderBuffer );
@@ -338,10 +322,7 @@ extern CShaderDeviceDx8* g_pShaderDeviceDx8;
 //-----------------------------------------------------------------------------
 
 // used to determine if we're deactivated
-FORCEINLINE bool CShaderDeviceDx8::IsDeactivated() const 
+[[gnu::always_inline]] inline bool CShaderDeviceDx8::IsDeactivated() const 
 { 
 	return ( ( ( m_DeviceState != DEVICE_STATE_OK ) || m_bQueuedDeviceLost || m_numReleaseResourcesRefCount ) ); 
 }
-
-
-#endif // SHADERDEVICEDX8_H

@@ -1,12 +1,9 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include <stdlib.h>
-#include <algorithm>
+import std;
 
+import ks.tier1;
 #include "studiorender.h"
 #include "studiorendercontext.h"
 #include "materialsystem/imaterialsystem.h"
@@ -15,12 +12,6 @@
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imesh.h"
 #include "optimize.h"
-#include "mathlib/vmatrix.h"
-#include "tier0/vprof.h"
-#include "tier1/strtools.h"
-#include "tier1/keyvalues.h"
-#include "tier0/memalloc.h"
-#include "convar.h"
 #include "materialsystem/itexture.h"
 #include "tier2/tier2.h"
 
@@ -35,12 +26,6 @@ CStudioRender *g_pStudioRenderImp = &g_StudioRender;
 // Activate to get stats
 //-----------------------------------------------------------------------------
 //#define REPORT_FLEX_STATS 1
-
-#ifdef REPORT_FLEX_STATS
-static int s_nModelsDrawn = 0;
-static int s_nActiveFlexCount = 0;
-static ConVar r_flexstats( "r_flexstats", "0", FCVAR_CHEAT );
-#endif
 
 // Multiplicative factor on LOD switch points. See GetLODForMetric() in studio.h
 static ConVar r_lod_switch_scale( "r_lod_switch_scale", "1", FCVAR_HIDDEN );
@@ -70,8 +55,8 @@ CStudioRender::CStudioRender()
 	// Cache-align our important matrices
 	g_pMemAlloc->PushAllocDbgInfo( __FILE__, __LINE__ );
 
-	m_PoseToWorld = (matrix3x4_t*)MemAlloc_AllocAligned( MAXSTUDIOBONES * sizeof(matrix3x4_t), 32 );
-	m_PoseToDecal = (matrix3x4_t*)MemAlloc_AllocAligned( MAXSTUDIOBONES * sizeof(matrix3x4_t), 32 );
+	m_PoseToWorld = (matrix3x4_t*)MemAlloc_AllocAlignedUnattributed( MAXSTUDIOBONES * sizeof(matrix3x4_t), 32 );
+	m_PoseToDecal = (matrix3x4_t*)MemAlloc_AllocAlignedUnattributed( MAXSTUDIOBONES * sizeof(matrix3x4_t), 32 );
 
 	g_pMemAlloc->PopAllocDbgInfo();
 	m_nDecalId = 1;
@@ -478,50 +463,6 @@ void CStudioRender::ClearAllShadows()
 
 void CStudioRender::GetFlexStats( )
 {
-#ifdef REPORT_FLEX_STATS
-	static bool s_bLastFlexStats = false;
-	bool bDoStats = r_flexstats.GetInt() != 0;
-	if ( bDoStats )
-	{
-		if ( !s_bLastFlexStats )
-		{
-			s_nModelsDrawn = 0;
-			s_nActiveFlexCount = 0;
-		}
-
-		// Count number of active weights
-		int nActiveFlexCount = 0;
-		for ( int i = 0; i < MAXSTUDIOFLEXDESC; ++i )
-		{
-			if ( fabs( m_FlexWeights[i] ) >= 0.001f || fabs( m_FlexDelayedWeights[i] ) >= 0.001f )
-			{
-				++nActiveFlexCount;
-			}
-		}
-
-		++s_nModelsDrawn;
-		s_nActiveFlexCount += nActiveFlexCount;
-	}
-	else
-	{
-		if ( s_bLastFlexStats )
-		{
-			if ( s_nModelsDrawn )
-			{
-				Msg( "Average number of flexes/model: %d\n", s_nActiveFlexCount / s_nModelsDrawn );
-			}
-			else
-			{
-				Msg( "No models rendered to take stats of\n" );
-			}
-
-			s_nModelsDrawn = 0;
-			s_nActiveFlexCount = 0;
-		}
-	}
-
-	s_bLastFlexStats = bDoStats;
-#endif
 }
 
 ConVar cl_skipslowpath( "cl_skipslowpath", "0", FCVAR_CHEAT | FCVAR_MATERIAL_SYSTEM_THREAD, "Set to 1 to skip any models that don't go through the model fast path" );
@@ -534,7 +475,7 @@ void CStudioRender::DrawModel( const DrawModelInfo_t& info, const StudioRenderCo
 {
 	if ( cl_skipslowpath.GetBool () )
 		return;
-	VPROF( "CStudioRender::DrawModel");
+	CVProfScope _( "CStudioRender::DrawModel", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( ( flags & STUDIORENDER_MODEL_IS_CACHEABLE ) && !g_pMDLCache->IsDataLoaded( VoidPtrToMDLHandle( info.m_pStudioHdr->VirtualModel() ), MDLCACHE_STUDIOHWDATA ) )
 	{
@@ -579,7 +520,7 @@ void CStudioRender::DrawModel( const DrawModelInfo_t& info, const StudioRenderCo
 #if PIX_ENABLE
 	char szPIXEventName[128];
 	sprintf( szPIXEventName, "%s*", m_pStudioHdr->name );	// PIX
-	PIXEVENT( pRenderContext, szPIXEventName );
+	( pRenderContext, szPIXEventName );
 #endif
 
 	// Bone to world must be set before calling drawmodel; it uses that here
@@ -628,10 +569,6 @@ void CStudioRender::DrawModel( const DrawModelInfo_t& info, const StudioRenderCo
 	m_pRC->m_Config.bFlex = flexConfig;
 	m_pRC->m_Config.bWireframe = bWireframe;
 
-#ifdef REPORT_FLEX_STATS
-	GetFlexStats();
-#endif
-
 	pRenderContext->SetNumBoneWeights( 0 );
 	m_pRC = nullptr;
 	m_pBoneToWorld = nullptr;
@@ -647,13 +584,13 @@ void CStudioRender::DrawModelStaticProp( const DrawModelInfo_t& info,
 {
 	if ( cl_skipslowpath.GetBool () )
 		return;
-	VPROF( "CStudioRender::DrawModelStaticProp");
+	CVProfScope _( "CStudioRender::DrawModelStaticProp", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	m_pRC = const_cast<StudioRenderContext_t*>( &rc );
 
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 
-	memcpy( &m_StaticPropRootToWorld, &rootToWorld, sizeof(matrix3x4_t) );
+	std::memcpy( &m_StaticPropRootToWorld, &rootToWorld, sizeof(matrix3x4_t) );
 	memcpy( &m_PoseToWorld[0], &rootToWorld, sizeof(matrix3x4_t) );
 	m_pBoneToWorld = &m_StaticPropRootToWorld;
 
@@ -749,7 +686,7 @@ struct MeshRenderData2_t : public BaseMeshRenderData_t
 //-----------------------------------------------------------------------------
 int CStudioRender::CountMeshesToDraw( const StudioModelArrayInfo_t &drawInfo, int nCount, StudioArrayInstanceData_t *pInstanceData, int nInstanceStride, int nTimesRendered )
 {
-	VPROF( "CStudioRender::CountMeshesToDraw" );
+	CVProfScope _( "CStudioRender::CountMeshesToDraw", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	bool bCountRenderedFaces = mat_rendered_faces_count.GetBool() || mat_print_top_model_vert_counts.GetBool();
 
@@ -794,7 +731,7 @@ int CStudioRender::CountMeshesToDraw( const StudioModelArrayInfo_t &drawInfo, in
 //-----------------------------------------------------------------------------
 int CStudioRender::CountMeshesToDraw( const StudioModelArrayInfo2_t &drawInfo, int nCount, StudioArrayData_t *pArrayData, int nInstanceStride, int nTimesRendered )
 {
-	VPROF( "CStudioRender::CountMeshesToDraw" );
+	CVProfScope _( "CStudioRender::CountMeshesToDraw", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	bool bCountRenderedFaces = mat_rendered_faces_count.GetBool() || mat_print_top_model_vert_counts.GetBool();
 
@@ -893,7 +830,6 @@ inline bool CStudioRender::SortLessFunc2( const MeshRenderData2_t &left, const M
 int CStudioRender::BuildSortedRenderList( MeshRenderData_t *pRenderData, int *pTotalStripCount, const StudioModelArrayInfo_t &drawInfo, 
 	int nCount, StudioArrayInstanceData_t *pInstanceData, int nInstanceStride, int nFlags )
 {
-	SNPROF( "CStudioRender::BuildSortedRenderList" );
 
 	studiohdr_t *pStudioHdr = drawInfo.m_pStudioHdr;
 	short *pSkinRefBase	= pStudioHdr->pSkinref( 0 );
@@ -941,7 +877,7 @@ int CStudioRender::BuildSortedRenderList( MeshRenderData_t *pRenderData, int *pT
 				else if ( bSkipOpaque && !bIsTranslucent )
 					continue;
 
-				Assert( pMeshData );
+				contract_assert( pMeshData );
 				// Assert( pMeshData->m_NumGroup ); // can't Assert on m_NumGroup since it can be zero on lods.
 
 				for ( int g = 0; g < pMeshData->m_NumGroup; ++g )
@@ -981,7 +917,6 @@ int CStudioRender::BuildSortedRenderList( MeshRenderData_t *pRenderData, int *pT
 int CStudioRender::BuildSortedRenderList( MeshRenderData2_t *pRenderData, int *pTotalStripCount, const StudioModelArrayInfo2_t &drawInfo, 
 	int nCount, StudioArrayData_t *pArrayData, int nInstanceStride, int nFlags )
 {
-	SNPROF( "CStudioRender::BuildSortedRenderList" );
 
 	bool bSkipTranslucent = ( nFlags & STUDIORENDER_DRAW_OPAQUE_ONLY ) != 0;
 	bool bSkipOpaque = ( nFlags & STUDIORENDER_DRAW_TRANSLUCENT_ONLY ) != 0;
@@ -1031,7 +966,7 @@ int CStudioRender::BuildSortedRenderList( MeshRenderData2_t *pRenderData, int *p
 					else if ( bSkipOpaque && !bIsTranslucent )
 						continue;
 
-					Assert( pMeshData );
+					contract_assert( pMeshData );
 					// Assert( pMeshData->m_NumGroup ); // can't Assert on m_NumGroup since it can be zero on lods.
 
 					for ( int g = 0; g < pMeshData->m_NumGroup; ++g )
@@ -1077,7 +1012,7 @@ void CStudioRender::BuildForcedMaterialRenderList( MeshRenderData_t *pRenderData
 	int *pTotalStripCount, const StudioModelArrayInfo_t &drawInfo, const StudioRenderContext_t &rc, 
 	int nCount, StudioArrayInstanceData_t *pInstanceData, int nInstanceStride )
 {
-	VPROF( "CStudioRender::BuildForcedMaterialRenderList" );
+	CVProfScope _( "CStudioRender::BuildForcedMaterialRenderList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	studiohdr_t *pStudioHdr = drawInfo.m_pStudioHdr;
 
@@ -1106,7 +1041,7 @@ void CStudioRender::BuildForcedMaterialRenderList( MeshRenderData_t *pRenderData
 			{
 				mstudiomesh_t *pMesh = pSubmodel->pMesh(meshIndex);
 				studiomeshdata_t *pMeshData = &pMeshDataBase[pMesh->meshid];
-				Assert( pMeshData && pMeshData->m_NumGroup );
+				contract_assert( pMeshData && pMeshData->m_NumGroup );
 
 				for ( int g = 0; g < pMeshData->m_NumGroup; ++g )
 				{
@@ -1133,7 +1068,7 @@ void CStudioRender::BuildForcedMaterialRenderList( MeshRenderData2_t *pRenderDat
 	int *pTotalStripCount, const StudioModelArrayInfo2_t &drawInfo, const StudioRenderContext_t &rc, 
 	int nCount, StudioArrayData_t *pArrayData, int nInstanceStride )
 {
-	VPROF( "CStudioRender::BuildForcedMaterialRenderList" );
+	CVProfScope _( "CStudioRender::BuildForcedMaterialRenderList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	*pTotalStripCount = 0;
 
@@ -1164,7 +1099,7 @@ void CStudioRender::BuildForcedMaterialRenderList( MeshRenderData2_t *pRenderDat
 				{
 					mstudiomesh_t *pMesh = pSubmodel->pMesh(meshIndex);
 					studiomeshdata_t *pMeshData = &pMeshDataBase[pMesh->meshid];
-					Assert( pMeshData && pMeshData->m_NumGroup );
+					contract_assert( pMeshData && pMeshData->m_NumGroup );
 
 					for ( int g = 0; g < pMeshData->m_NumGroup; ++g )
 					{
@@ -1195,22 +1130,15 @@ void CStudioRender::RestoreMeshes( int nCount, BaseMeshRenderData_t *pRenderData
 }
 
 //-----------------------------------------------------------------------------
-// Allocate temporary arrays either on the stack, or from the heap. 
-// Prevents using all the stack when *lots* of objects are rendered to CSM's.
-//-----------------------------------------------------------------------------
-	#define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) const int nTempDataSize##p = (n); void *pvFree##p = nullptr; typeName *p = (typeName *) ( ( nTempDataSize##p < 64*1024 ) ? stackalloc( nTempDataSize##p ) : ( pvFree##p = MemAlloc_Alloc( nTempDataSize##p ) ) );
-	#define STUDIORENDER_TEMP_DATA_FREE( p ) g_pMemAlloc->Free( pvFree##p )
-
-//-----------------------------------------------------------------------------
 // Draws meshes
 //-----------------------------------------------------------------------------
 void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext, 
 	const StudioModelArrayInfo_t &drawInfo, int nCount, MeshRenderData_t *pRenderData, int nTotalStripCount, int nFlashlightMask )
 {
-	SNPROF( "CStudioRender::DrawMeshRenderData" );
 
 	int nInstanceCount = 0;
-	STUDIORENDER_TEMP_DATA_MALLOC( MeshInstanceData_t, pInstance, nTotalStripCount * sizeof(MeshInstanceData_t) );
+	ks::ScratchArena<> scratch;
+	MeshInstanceData_t *pInstance = scratch.Alloc<MeshInstanceData_t>( nTotalStripCount );
 	IMaterial *pLastMaterial = nullptr;
 	IMesh *pLastMesh = nullptr;
 	int nMaxBoneCount = 0;
@@ -1220,7 +1148,7 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 #if PIX_ENABLE
 	char szPIXEventName[128];
 	sprintf( szPIXEventName, "%s*", drawInfo.m_pStudioHdr->name );	// PIX
-	PIXEVENT( pRenderContext, szPIXEventName );
+	( pRenderContext, szPIXEventName );
 #endif
 	for ( int i = 0; i < nCount; ++i )
 	{
@@ -1252,7 +1180,7 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 		{
 			OptimizedModel::StripHeader_t* pStrip = &pGroup->m_pStripData[j];
 
-			Assert( nInstanceCount < nTotalStripCount );
+			contract_assert( nInstanceCount < nTotalStripCount );
 
 			MeshInstanceData_t &instance = pInstance[nInstanceCount++];
 			instance.m_pEnvCubemap = pCurrInstance->m_pEnvCubemapTexture;
@@ -1296,7 +1224,6 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 
 	pRenderContext->SetNumBoneWeights( 0 );
 
-	STUDIORENDER_TEMP_DATA_FREE( pInstance );
 }
 
 
@@ -1306,11 +1233,11 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext, 
 	const StudioModelArrayInfo2_t &drawInfo, int nCount, MeshRenderData2_t *pRenderData, int nTotalStripCount, int nFlashlightMask )
 {
-	SNPROF( "CStudioRender::DrawMeshRenderData" );
 
 	int nInstanceCount = 0;
 	int nMaxBatchSize = false ? CONSOLE_MAX_MODEL_FAST_PATH_BATCH_SIZE : nTotalStripCount;
-	STUDIORENDER_TEMP_DATA_MALLOC( MeshInstanceData_t, pInstance, nMaxBatchSize * sizeof(MeshInstanceData_t) );
+	ks::ScratchArena<> scratch;
+	MeshInstanceData_t *pInstance = scratch.Alloc<MeshInstanceData_t>( nMaxBatchSize );
 	IMaterial *pLastMaterial = nullptr;
 	int nMaxBoneCount = 0;
 	int nMaxLightCount = 0;
@@ -1401,7 +1328,6 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 
 	pRenderContext->SetNumBoneWeights( 0 );
 
-	STUDIORENDER_TEMP_DATA_FREE( pInstance );
 }
 
 
@@ -1441,8 +1367,9 @@ void CStudioRender::DrawModelArrayFlashlight( IMatRenderContext *pRenderContext,
 			// Debugging mode where we render wireframe on models hit by the flashlight
 			// FIXME: Could make this faster, but why bother? It's a debugging mode.
 			int nSizeInBytes = nCount * sizeof(MeshRenderData_t);
-			STUDIORENDER_TEMP_DATA_MALLOC( MeshRenderData_t, pTempData, nSizeInBytes );
-			memcpy( pTempData, pRenderData, nSizeInBytes );
+			ks::ScratchArena<> scratch;
+			MeshRenderData_t *pTempData = (MeshRenderData_t *)scratch.AllocBytes( nSizeInBytes );
+			std::memcpy( pTempData, pRenderData, nSizeInBytes );
 			for ( int j = 0; j < nCount; ++j )
 			{
 				pTempData[j].m_pMaterial = flashlight.m_pDebugMaterial;
@@ -1451,7 +1378,6 @@ void CStudioRender::DrawModelArrayFlashlight( IMatRenderContext *pRenderContext,
 			DrawMeshRenderData( pRenderContext, drawInfo, nCount, pTempData, nTotalStripCount, ( 1 << i ) );
 			pRenderContext->SetFlashlightMode( true );
 
-			STUDIORENDER_TEMP_DATA_FREE( pTempData );
 		}
 		
 		if ( bDoScissor && state.DoScissor() )
@@ -1499,8 +1425,9 @@ void CStudioRender::DrawModelArrayFlashlight( IMatRenderContext *pRenderContext,
 			// Debugging mode where we render wireframe on models hit by the flashlight
 			// FIXME: Could make this faster, but why bother? It's a debugging mode.
 			int nSizeInBytes = nCount * sizeof(MeshRenderData2_t);
-			STUDIORENDER_TEMP_DATA_MALLOC( MeshRenderData2_t, pTempData, nSizeInBytes );
-			memcpy( pTempData, pRenderData, nSizeInBytes );
+			ks::ScratchArena<> scratch;
+			MeshRenderData2_t *pTempData = (MeshRenderData2_t *)scratch.AllocBytes( nSizeInBytes );
+			std::memcpy( pTempData, pRenderData, nSizeInBytes );
 			for ( int j = 0; j < nCount; ++j )
 			{
 				pTempData[j].m_pMaterial = flashlight.m_pDebugMaterial;
@@ -1509,7 +1436,6 @@ void CStudioRender::DrawModelArrayFlashlight( IMatRenderContext *pRenderContext,
 			DrawMeshRenderData( pRenderContext, drawInfo, nCount, pTempData, nTotalStripCount, ( 1 << i ) );
 			pRenderContext->SetFlashlightMode( true );
 
-			STUDIORENDER_TEMP_DATA_FREE( pTempData );
 		}
 
 		if ( bDoScissor && state.DoScissor() )
@@ -1556,8 +1482,9 @@ void CStudioRender::DrawModelArrayFlashlightDecals( IMatRenderContext *pRenderCo
 			// Debugging mode where we render wireframe on models hit by the flashlight
 			// FIXME: Could make this faster, but why bother? It's a debugging mode.
 			int nSizeInBytes = nCount * sizeof(DecalRenderData_t);
-			STUDIORENDER_TEMP_DATA_MALLOC( DecalRenderData_t, pTempData, nSizeInBytes );
-			memcpy( pTempData, pRenderData, nSizeInBytes );
+			ks::ScratchArena<> scratch;
+			DecalRenderData_t *pTempData = (DecalRenderData_t *)scratch.AllocBytes( nSizeInBytes );
+			std::memcpy( pTempData, pRenderData, nSizeInBytes );
 			for ( int j = 0; j < nCount; ++j )
 			{
 				pTempData[j].m_pRenderMaterial = flashlight.m_pDebugMaterial;
@@ -1566,7 +1493,6 @@ void CStudioRender::DrawModelArrayFlashlightDecals( IMatRenderContext *pRenderCo
 			DrawModelArrayDecals( pRenderContext, pStudioHdr, nCount, pTempData, ( 1 << i ) );
 			pRenderContext->SetFlashlightMode( true );
 
-			STUDIORENDER_TEMP_DATA_FREE( pTempData );
 		}
 
 		if ( bDoScissor && state.DoScissor() )
@@ -1580,7 +1506,7 @@ void CStudioRender::DrawModelArrayFlashlightDecals( IMatRenderContext *pRenderCo
 
 int CStudioRender::CountDecalMeshesToDraw( int nCount, StudioArrayInstanceData_t *pInstanceData, int nInstanceStride )
 {
-	VPROF( "CStudioRender::CountDecalMeshesToDraw" );
+	CVProfScope _( "CStudioRender::CountDecalMeshesToDraw", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	int nDecalMeshCount = 0;
 	StudioArrayInstanceData_t *pCurInstance = pInstanceData;
@@ -1634,7 +1560,7 @@ inline bool CStudioRender::SortDecalsLessFunc( const DecalRenderData_t &left, co
 //-----------------------------------------------------------------------------
 int CStudioRender::BuildSortedDecalRenderList( DecalRenderData_t *pDecalRenderData, int nCount, StudioArrayInstanceData_t *pInstanceData, int nInstanceStride )
 {
-	VPROF( "CStudioRender::BuildSortedDecalRenderList" );
+	CVProfScope _( "CStudioRender::BuildSortedDecalRenderList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	int nDecalMeshCount = 0;
 	StudioArrayInstanceData_t *pCurInstance = pInstanceData;
@@ -1699,7 +1625,8 @@ void CStudioRender::DrawModelArray( const StudioModelArrayInfo_t &drawInfo, cons
 
 	// Build list of meshes to render
 	int nTotalStripCount;
-	STUDIORENDER_TEMP_DATA_MALLOC( MeshRenderData_t, pRenderData, nTotalMeshCount * sizeof(MeshRenderData_t) );
+	ks::ScratchArena<> scratch;
+	MeshRenderData_t *pRenderData = scratch.Alloc<MeshRenderData_t>( nTotalMeshCount );
 	if ( !rc.m_pForcedMaterial[ 0 ] || rc.m_nForcedMaterialType == OVERRIDE_SELECTIVE )
 	{
 		nTotalMeshCount = BuildSortedRenderList( pRenderData, &nTotalStripCount, drawInfo, nCount, pInstanceData, nInstanceStride, nFlags );
@@ -1723,7 +1650,7 @@ void CStudioRender::DrawModelArray( const StudioModelArrayInfo_t &drawInfo, cons
 
 	// Count number of decals meshes per instance
 	int nTotalDecalCount = CountDecalMeshesToDraw( nCount, pInstanceData, nInstanceStride );
-	STUDIORENDER_TEMP_DATA_MALLOC( DecalRenderData_t, pDecalData, nTotalDecalCount * sizeof(DecalRenderData_t) );
+	DecalRenderData_t *pDecalData = scratch.Alloc<DecalRenderData_t>( nTotalDecalCount );
 
 	// Build list of decals to render
 	nTotalDecalCount = BuildSortedDecalRenderList( pDecalData, nCount, pInstanceData, nInstanceStride );
@@ -1741,8 +1668,6 @@ void CStudioRender::DrawModelArray( const StudioModelArrayInfo_t &drawInfo, cons
 	pRenderContext->PopMatrix();
 	pRenderContext->SetNumBoneWeights( 0 );
 
-	STUDIORENDER_TEMP_DATA_FREE( pRenderData );
-	STUDIORENDER_TEMP_DATA_FREE( pDecalData );
 }
 
 
@@ -1768,7 +1693,8 @@ void CStudioRender::DrawModelArray2( const StudioModelArrayInfo2_t &drawInfo, co
 
 	// Build list of meshes to render
 	int nTotalStripCount;
-	STUDIORENDER_TEMP_DATA_MALLOC( MeshRenderData2_t, pRenderData, nTotalMeshCount * sizeof(MeshRenderData2_t) );
+	ks::ScratchArena<> scratch;
+	MeshRenderData2_t *pRenderData = scratch.Alloc<MeshRenderData2_t>( nTotalMeshCount );
 	if ( !rc.m_pForcedMaterial[ 0 ] || rc.m_nForcedMaterialType == OVERRIDE_SELECTIVE )
 	{
 		nTotalMeshCount = BuildSortedRenderList( pRenderData, &nTotalStripCount, drawInfo, nCount, pArrayData, nInstanceStride, nFlags );
@@ -1796,7 +1722,8 @@ void CStudioRender::DrawModelArray2( const StudioModelArrayInfo2_t &drawInfo, co
 		StudioArrayData_t &arrayData = pArrayData[i];
 		StudioArrayInstanceData_t *pGroupInstances = ( StudioArrayInstanceData_t * )( arrayData.m_pInstanceData );
 		int nTotalDecalCount = CountDecalMeshesToDraw( arrayData.m_nCount, pGroupInstances, nInstanceStride );
-		STUDIORENDER_TEMP_DATA_MALLOC( DecalRenderData_t, pDecalData, nTotalDecalCount * sizeof(DecalRenderData_t) );
+		ks::ScratchArena<> scratch;
+		DecalRenderData_t *pDecalData = scratch.Alloc<DecalRenderData_t>( nTotalDecalCount );
 
 		// Build list of decals to render
 		nTotalDecalCount = BuildSortedDecalRenderList( pDecalData, arrayData.m_nCount, pGroupInstances, nInstanceStride );
@@ -1810,14 +1737,12 @@ void CStudioRender::DrawModelArray2( const StudioModelArrayInfo2_t &drawInfo, co
 			DrawModelArrayFlashlightDecals( pRenderContext, arrayData.m_pStudioHdr, drawInfo.m_nFlashlightCount, drawInfo.m_pFlashlights, nTotalDecalCount, pDecalData );
 		}
 		
-		STUDIORENDER_TEMP_DATA_FREE( pDecalData );
 	}
 
 	pRenderContext->MatrixMode( MATERIAL_MODEL );
 	pRenderContext->PopMatrix();
 	pRenderContext->SetNumBoneWeights( 0 );
 
-	STUDIORENDER_TEMP_DATA_FREE( pRenderData );
 }
 
 
@@ -1826,7 +1751,7 @@ void CStudioRender::DrawModelArray2( const StudioModelArrayInfo2_t &drawInfo, co
 //-----------------------------------------------------------------------------
 int CStudioRender::CountMeshesToDraw( int nCount, StudioArrayData_t *pShadowData, int nInstanceStride )
 {
-	VPROF( "CStudioRender::CountMeshesToDraw (shadow)" );
+	CVProfScope _( "CStudioRender::CountMeshesToDraw (shadow)", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	bool bCountRenderedFaces = mat_rendered_faces_count.GetBool() || mat_print_top_model_vert_counts.GetBool();
 
@@ -1965,7 +1890,7 @@ void CStudioRender::SetupTreeSwayDepthWrite( IMaterial* pDepthMaterial, IMateria
 	IMaterialVar *pOriginalVar = nullptr;
 	IMaterialVar *pVar = nullptr;
 
-	for ( int32 i = 0; i < ARRAYSIZE( paramNames ); i++ )
+	for ( int32 i = 0; i < std::size( paramNames ); i++ )
 	{
 		pOriginalVar = pSrcMaterial->FindVarFast( paramNames[i], originalVarCache + i );
 		pVar = pDepthMaterial->FindVarFast( paramNames[i], varCache + i );
@@ -2008,7 +1933,7 @@ inline bool CStudioRender::ShadowSortLessFunc( const ShadowMeshRenderData_t &lef
 int CStudioRender::BuildShadowRenderList( ShadowMeshRenderData_t *pRenderData, int *pTotalStripCount, 
 	int nCount, StudioArrayData_t *pShadowData, int nInstanceStride, int flags )
 {
-	VPROF( "CStudioRender::BuildShadowRenderList" );
+	CVProfScope _( "CStudioRender::BuildShadowRenderList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	*pTotalStripCount = 0;
 	int nRenderDataCount = 0;
@@ -2047,7 +1972,7 @@ int CStudioRender::BuildShadowRenderList( ShadowMeshRenderData_t *pRenderData, i
 				{
 					mstudiomesh_t *pMesh = pSubmodel->pMesh(meshIndex);
 					studiomeshdata_t *pMeshData = &pMeshDataBase[pMesh->meshid];
-					Assert( pMeshData );
+					contract_assert( pMeshData );
 					//Assert( pMeshData->m_NumGroup ); // Can't assume that this is non-zero for lods with removed meshes.
 
 					IMaterial *pMaterial = ppMaterials[ pSkinRef[ pMesh->material ] ];
@@ -2100,10 +2025,11 @@ int CStudioRender::BuildShadowRenderList( ShadowMeshRenderData_t *pRenderData, i
 void CStudioRender::DrawShadowMeshRenderData( IMatRenderContext *pRenderContext, 
 	int nCount, ShadowMeshRenderData_t *pRenderData, int nTotalStripCount )
 {
-	VPROF( "CStudioRender::DrawShadowMeshRenderData" );
+	CVProfScope _( "CStudioRender::DrawShadowMeshRenderData", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	int nInstanceCount = 0;
-	STUDIORENDER_TEMP_DATA_MALLOC( MeshInstanceData_t, pInstance, nTotalStripCount * sizeof(MeshInstanceData_t) );
+	ks::ScratchArena<> scratch;
+	MeshInstanceData_t *pInstance = scratch.Alloc<MeshInstanceData_t>( nTotalStripCount );
 	int nMaxBoneCount = 0;
 	int nLastMeshBoneCount = 0;
 	IMaterial *pLastMaterial = nullptr;
@@ -2152,7 +2078,7 @@ void CStudioRender::DrawShadowMeshRenderData( IMatRenderContext *pRenderContext,
 		{
 			OptimizedModel::StripHeader_t* pStrip = &pGroup->m_pStripData[j];
 
-			Assert( nInstanceCount < nTotalStripCount );
+			contract_assert( nInstanceCount < nTotalStripCount );
 
 			MeshInstanceData_t &instance = pInstance[nInstanceCount++];
 			instance.m_pEnvCubemap = nullptr;
@@ -2193,7 +2119,6 @@ void CStudioRender::DrawShadowMeshRenderData( IMatRenderContext *pRenderContext,
 
 	pRenderContext->SetNumBoneWeights( 0 );
 
-	STUDIORENDER_TEMP_DATA_FREE( pInstance );
 }
 
 
@@ -2216,7 +2141,8 @@ void CStudioRender::DrawModelShadowArray( const StudioRenderContext_t &rc, int n
 	// Build list of meshes to render
 	int nTotalStripCount;
 
-	STUDIORENDER_TEMP_DATA_MALLOC( ShadowMeshRenderData_t, pRenderData, nTotalMeshCount * sizeof(ShadowMeshRenderData_t) );
+	ks::ScratchArena<> scratch;
+	ShadowMeshRenderData_t *pRenderData = scratch.Alloc<ShadowMeshRenderData_t>( nTotalMeshCount );
 
 	nTotalMeshCount = BuildShadowRenderList( pRenderData, &nTotalStripCount, nCount, pShadowData, nInstanceStride, flags );
 
@@ -2230,7 +2156,6 @@ void CStudioRender::DrawModelShadowArray( const StudioRenderContext_t &rc, int n
 	pRenderContext->PopMatrix();
 	pRenderContext->SetNumBoneWeights( 0 );
 
-	STUDIORENDER_TEMP_DATA_FREE( pRenderData );
 }
 
 
@@ -2254,7 +2179,7 @@ void CStudioRender::ComputeDiffuseModulation( Vector4D *pDiffuseModulation )
 void CStudioRender::DrawModelArrayStaticProp( const DrawModelInfo_t& info, 
 											 const StudioRenderContext_t &rc, int nInstanceCount, const MeshInstanceData_t *pInstanceData, ColorMeshInfo_t **pColorMeshes )
 {
-	VPROF( "CStudioRender::DrawModelArrayStaticProp");
+	CVProfScope _( "CStudioRender::DrawModelArrayStaticProp", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	m_pRC = const_cast<StudioRenderContext_t*>( &rc );
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
@@ -2278,10 +2203,10 @@ void CStudioRender::DrawModelArrayStaticProp( const DrawModelInfo_t& info,
 #if PIX_ENABLE
 	char szPIXEventName[128];
 	sprintf( szPIXEventName, "%s*", m_pStudioHdr->name );	// PIX
-	PIXEVENT( pRenderContext, szPIXEventName );
+	( pRenderContext, szPIXEventName );
 #endif
 	// Build list of submodels
-	Assert(m_pStudioHdr->numbodyparts==1);
+	contract_assert( m_pStudioHdr->numbodyparts==1 );
 	mstudiobodyparts_t *pbodypart = m_pStudioHdr->pBodypart( 0 );
 	m_pSubModel = pbodypart->pModel( 0 );
 
@@ -2301,7 +2226,7 @@ void CStudioRender::DrawModelArrayStaticProp( const DrawModelInfo_t& info,
 	{
 		mstudiomesh_t *pmesh = m_pSubModel->pMesh(i);
 		studiomeshdata_t *pMeshData = &m_pStudioMeshes[pmesh->meshid];
-		Assert( pMeshData );
+		contract_assert( pMeshData );
 
 		if ( !pMeshData->m_NumGroup )
 			continue;
@@ -2316,7 +2241,7 @@ void CStudioRender::DrawModelArrayStaticProp( const DrawModelInfo_t& info,
 			continue;
 
 		// if this fails you've got a static prop with an eyeball!
-		Assert( pmesh->materialtype != 1 );
+		contract_assert( pmesh->materialtype != 1 );
 		for ( int j = 0; j < pMeshData->m_NumGroup; ++j )
 		{
 			studiomeshgroup_t* pGroup = &pMeshData->m_pMeshGroup[j];
@@ -2349,7 +2274,7 @@ void CStudioRender::DrawModelArrayStaticProp( const DrawModelInfo_t& info,
 					if ( k == 0 )
 					{
 						// This code does not work with SubD but we're not really using that anyways
-						Assert( GetPrimitiveTypeForStripHeaderFlags( pStrip->flags ) == MATERIAL_TRIANGLES );
+						contract_assert( GetPrimitiveTypeForStripHeaderFlags( pStrip->flags ) == MATERIAL_TRIANGLES );
 						nFacesPerModel += pStrip->numIndices / 3;
 					}
 				}
@@ -2448,7 +2373,7 @@ void UpdateAndSpewFacesRenderedHistory( std::vector< IStudioRender::FacesRendere
 		{
 			topItems.push_back( topItem );
 		}
-		qsort( topItems.data(), std::ssize( topItems ), sizeof( topItems[0] ), FacesRenderedInfoSort );
+		std::qsort( topItems.data(), std::ssize( topItems ), sizeof( topItems[0] ), FacesRenderedInfoSort );
 		for ( int j = 0; j < std::min( nSpewFromHistory, NUM_ITEMS_TO_TRACK ); j++ )
 		{
 			if ( j < std::ssize( topItems ) )
@@ -2472,7 +2397,7 @@ int BuildFacesRenderedInfoListForMostRecentFrame( std::vector< IStudioRender::Fa
 	}
 
 	// Sort models by face count (biggest first)
-	qsort( items.data(), std::ssize( items ), sizeof( items[0] ), FacesRenderedInfoSort );
+	std::qsort( items.data(), std::ssize( items ), sizeof( items[0] ), FacesRenderedInfoSort );
 
 	return nTotal;
 }
@@ -2526,9 +2451,11 @@ void CStudioRender::GatherRenderedFaceInfo( IStudioRender::FaceInfoCallbackFunc_
 	}
 }
 
-CON_COMMAND( mat_rendered_faces_spew, "'mat_rendered_faces_spew <n>' Spew the number of faces rendered for the top N models used this frame (mat_rendered_faces_count must be set to use this)" )
+static void mat_rendered_faces_spew( const CCommand &args );
+static ConCommand mat_rendered_faces_spew_command( "mat_rendered_faces_spew", mat_rendered_faces_spew, "'mat_rendered_faces_spew <n>' Spew the number of faces rendered for the top N models used this frame (mat_rendered_faces_count must be set to use this)" );
+static void mat_rendered_faces_spew( const CCommand &args )
 {
-	int nNumToSpew = ( args.ArgC() > 1 ) ? Q_atoi( args[ 1 ] ) : INT_MAX;
+	int nNumToSpew = ( args.ArgC() > 1 ) ? V_atoi( args[ 1 ] ) : std::numeric_limits<int>::max();
 	if ( !mat_rendered_faces_count.GetBool() )
 	{
 		Msg( "ERROR: mat_rendered_faces_count must be set in order to use mat_rendered_faces_spew\n" ); 
@@ -2536,4 +2463,3 @@ CON_COMMAND( mat_rendered_faces_spew, "'mat_rendered_faces_spew <n>' Spew the nu
 	}
 	g_StudioRender.UpdateModelFaceCounts( nNumToSpew );
 }
-

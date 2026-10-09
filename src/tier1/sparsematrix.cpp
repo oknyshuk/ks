@@ -1,9 +1,8 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include "tier1/sparsematrix.h"
-
+import std;
+import ks.tier1;
 
 void CSparseMatrix::AdjustAllRowIndicesAfter( int nStartRow, int nDelta )
 {
@@ -33,7 +32,7 @@ void CSparseMatrix::SetDimensions( int nNumRows, int nNumCols )
 
 void CSparseMatrix::SetElement( int nRow, int nCol, float flValue ) 
 {
-	Assert( nCol < m_nNumCols );
+	contract_assert( nCol < m_nNumCols );
 	int nCount = m_rowDescriptors[nRow].m_nNonZeroCount;
 	bool bValueIsZero = ( flValue == 0.0 );
 	int nFirstEntryIndex = m_rowDescriptors[nRow].m_nDataIndex;
@@ -118,7 +117,7 @@ void CSparseMatrix::AppendElement( int nRow, int nColumn, float flValue )
 	{
 		if ( m_nHighestRowAppendedTo != nRow )
 		{
-			Assert( nRow > m_nHighestRowAppendedTo );
+			contract_assert( nRow > m_nHighestRowAppendedTo );
 			for( int i = m_nHighestRowAppendedTo + 1; i <= nRow; i++ )
 			{
 				m_rowDescriptors[i].m_nDataIndex = std::ssize( m_entries );
@@ -132,7 +131,3 @@ void CSparseMatrix::AppendElement( int nRow, int nColumn, float flValue )
 		m_entries.push_back( newDesc );
 	}
 }
-	
-	
-
-

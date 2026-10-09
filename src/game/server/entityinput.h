@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef INPUTVAR_H
-#define INPUTVAR_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "entitylist.h"
+#include "variant_t.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Used to request a value, or a set of values, from a set of entities.
@@ -29,8 +22,8 @@ public:
 		inputitem_t *next;
 
 		// allocate and free from MPool memory
-		static void *operator new( size_t stAllocBlock );	
-		static void *operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
+		static void *operator new( std::size_t stAllocBlock );	
+		static void *operator new( std::size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine );
 		static void operator delete( void *pMem );
 		static void operator delete( void *pMem, int nBlockUse, const char *pFileName, int nLine ) { operator delete(pMem); }
 	};
@@ -42,5 +35,3 @@ public:
 	
 	DECLARE_SIMPLE_DATADESC();
 };
-
-#endif // INPUTVAR_H

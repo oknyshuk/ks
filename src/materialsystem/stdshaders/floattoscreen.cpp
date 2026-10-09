@@ -1,20 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
 
 #include "screenspaceeffect_vs20.inc"
 #include "floattoscreen_ps20.inc"
 #include "floattoscreen_ps20b.inc"
-#include "convar.h"
-
+import std;
 
 BEGIN_VS_SHADER_FLAGS( floattoscreen, "Help for floattoscreen", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( FBTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( PIXSHADER, SHADER_PARAM_TYPE_STRING, "floattoscreen_ps20", "Name of the pixel shader to use" )
 	END_SHADER_PARAMS
@@ -54,13 +50,14 @@ BEGIN_VS_SHADER_FLAGS( floattoscreen, "Help for floattoscreen", SHADER_NOT_EDITA
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
 				const char *szPixelShader = params[PIXSHADER]->GetStringValue();
-				size_t iLength = Q_strlen( szPixelShader );
+				std::size_t iLength = V_strlen( szPixelShader );
 
-				if( (iLength > 5) && (Q_stricmp( &szPixelShader[iLength - 5], "_ps20" ) == 0) ) //detect if it's trying to load a ps20 shader
+				if( (iLength > 5) && (V_stricmp( &szPixelShader[iLength - 5], "_ps20" ) == 0) ) //detect if it's trying to load a ps20 shader
 				{
 					//replace it with the ps20b shader
-					char *szNewName = (char *)stackalloc( sizeof( char ) * (iLength + 2) );
-					memcpy( szNewName, szPixelShader, sizeof( char ) * iLength );
+					ks::ScratchArena<> scratch;
+					char *szNewName = scratch.Alloc<char>( (iLength + 2) );
+					std::memcpy( szNewName, szPixelShader, sizeof( char ) * iLength );
 					szNewName[iLength] = 'b';
 					szNewName[iLength + 1] = '\0';
 					pShaderShadow->SetPixelShader( szNewName, 0 );

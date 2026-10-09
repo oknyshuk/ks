@@ -1,15 +1,11 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// work in progress
-//
-//===============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef __GLOBAL_EVENT_LOG_H
-#define __GLOBAL_EVENT_LOG_H
-
+// Purpose: work in progress
 
 #include "igamesystem.h"
-
+import std;
 
 class CGlobalEvent;
 
@@ -51,7 +47,3 @@ private:
 
 
 extern CGlobalEventLog	GlobalEventLog;
-
-
-#endif // #ifndef __GLOBAL_EVENT_LOG_H
-

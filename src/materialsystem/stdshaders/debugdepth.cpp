@@ -1,13 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "shaderlib/cshader.h"
-#include "convar.h"
+import std;
 #include "debugdrawdepth_vs20.inc"
 #include "debugdrawdepth_ps20.inc"
 #include "debugdrawdepth_ps20b.inc"
@@ -17,7 +13,7 @@ static ConVar mat_debugdepthval( "mat_debugdepthval", "128.0f", FCVAR_MATERIAL_S
 static ConVar mat_debugdepthvalmax( "mat_debugdepthvalmax", "256.0f", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 BEGIN_SHADER_FLAGS( DebugDepth, "Help for DebugDepth", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 	END_SHADER_PARAMS
 
 	SHADER_INIT_PARAMS()
@@ -102,4 +98,3 @@ BEGIN_SHADER_FLAGS( DebugDepth, "Help for DebugDepth", SHADER_NOT_EDITABLE )
 		Draw();
 	}
 END_SHADER
-

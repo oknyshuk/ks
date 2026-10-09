@@ -1,22 +1,29 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 #include "iviewrender_beams.h"
 #include "tempentity.h"
 #include "beam_shared.h"
-#include "ivieweffects.h"
 #include "beamdraw.h"
 #include "engine/ivdebugoverlay.h"
 #include "engine/ivmodelinfo.h"
 #include "view.h"
 #include "fx.h"
-#include "tier0/icommandline.h"
-#include "tier0/vprof.h"
 #include "c_pixel_visibility.h"
 #include "iviewrender.h"
 #include "view_shared.h"
@@ -191,12 +198,12 @@ static void SineNoise( float *noise, int divs )
 {
 	int i;
 	float freq;
-	float step = M_PI / (float)divs;
+	float step = std::numbers::pi / (float)divs;
 
 	freq = 0;
 	for ( i = 0; i < divs; i++ )
 	{
-		noise[i] = sin( freq );
+		noise[i] = std::sin( freq );
 		freq += step;
 	}
 }
@@ -466,7 +473,7 @@ void CViewRenderBeams::InitBeams( void )
 	}
 	
 	m_pBeamTrails = (BeamTrail_t *)new BeamTrail_t[ m_nNumBeamTrails ];
-	Assert( m_pBeamTrails );
+	contract_assert( m_pBeamTrails );
 
 	// Clear them out
 	ClearBeams();
@@ -543,7 +550,7 @@ Beam_t *CViewRenderBeams::BeamAlloc( bool bRenderable )
 		if( !pBeam )
 		{
 			DevMsg( "ERROR: failed to alloc Beam_t!\n" );
-			Assert( pBeam );
+			contract_assert( pBeam );
 		}
 	}
 	pBeam->next		= m_pActiveBeams;
@@ -679,7 +686,7 @@ void CViewRenderBeams::SetupBeam( Beam_t *pBeam, const BeamInfo_t &beamInfo )
 	VectorCopy( beamInfo.m_vecStart, pBeam->attachment[0] );
 	VectorCopy( beamInfo.m_vecEnd, pBeam->attachment[1] );
 	VectorSubtract( beamInfo.m_vecEnd, beamInfo.m_vecStart, pBeam->delta );
-	Assert( pBeam->delta.IsValid() );
+	contract_assert( pBeam->delta.IsValid() );
 
 	if ( beamInfo.m_nSegments == -1 )
 	{
@@ -1558,7 +1565,7 @@ void CViewRenderBeams::UpdateBeam( Beam_t *pbeam, float frametime, C_Beam *pcbea
 	// ------------------------------------------
 	if (pbeam->fadeLength == 0)
 	{
-		Assert( pbeam->delta.IsValid() );
+		contract_assert( pbeam->delta.IsValid() );
 		pbeam->fadeLength = pbeam->delta.Length();
 	}
 }
@@ -1569,7 +1576,7 @@ void CViewRenderBeams::UpdateBeam( Beam_t *pbeam, float frametime, C_Beam *pcbea
 //-----------------------------------------------------------------------------
 void CViewRenderBeams::UpdateTempEntBeams( void )
 {
-	VPROF_("UpdateTempEntBeams", 2, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_CLIENT);
+	CVProfScope _( "UpdateTempEntBeams", 2, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_CLIENT );
 	if ( !m_pActiveBeams )
 		return;
 
@@ -1834,7 +1841,7 @@ void CViewRenderBeams::DrawLaser( Beam_t *pbeam, int frame, int rendermode, floa
 	else
 	{
 		// Fade the beam if the player's not looking at the source
-		float flFade = pow( flDot, 10 );
+		float flFade = std::pow( flDot, 10 );
 
 		// Fade the beam based on the player's proximity to the beam
 		Vector localDir = CurrentViewOrigin() - pbeam->attachment[0];
@@ -1882,7 +1889,7 @@ void CViewRenderBeams::DrawTesla( Beam_t *pbeam, int frame, int rendermode, floa
 //-----------------------------------------------------------------------------
 void CViewRenderBeams::DrawBeam( Beam_t *pbeam )
 {
-	Assert( pbeam->delta.IsValid() );
+	contract_assert( pbeam->delta.IsValid() );
 
 	if ( !r_DrawBeams.GetInt() )
 		return;
@@ -2008,7 +2015,7 @@ void CViewRenderBeams::UpdateBeamInfo( Beam_t *pBeam, BeamInfo_t &beamInfo )
 	pBeam->attachment[1] = beamInfo.m_vecEnd;
 	pBeam->delta = beamInfo.m_vecEnd - beamInfo.m_vecStart;
 
-	Assert( pBeam->delta.IsValid() );
+	contract_assert( pBeam->delta.IsValid() );
 
 	SetBeamAttributes( pBeam, beamInfo );
 }
@@ -2066,14 +2073,10 @@ bool CViewRenderBeams::RecomputeBeamEndpoints( Beam_t *pbeam )
 }
 
 #include "debugoverlay_shared.h"
-#ifdef VPROF_ENABLED
 ConVar cl_beam_test_traces( "cl_beam_test_traces", "0", FCVAR_DEVELOPMENTONLY, "Enable debug overlay on traces that determine where the client-side visible env_beam is drawn. Has no bearing on the server-side damage-causing part of the beam." );
 static inline bool BeamDebugOverlay() { return cl_beam_test_traces.GetBool(); }
-#else
-static inline bool BeamDebugOverlay() { return false; }
-#endif
 
-void CViewRenderBeams::ClipBeam( C_Beam * RESTRICT pcbeam, Beam_t * RESTRICT pbeam )
+void CViewRenderBeams::ClipBeam( C_Beam * __restrict__ pcbeam, Beam_t * __restrict__ pbeam )
 {
 	// Assert( pbeam->GetClipStyle() != C_Beam::kNOCLIP );
 	int colmask = 0;
@@ -2087,7 +2090,7 @@ void CViewRenderBeams::ClipBeam( C_Beam * RESTRICT pcbeam, Beam_t * RESTRICT pbe
 		colmask = MASK_SOLID; 
 		break;
 	default:
-		AssertMsg1(false, "Unknown beam clipping type %d\n", pcbeam->GetClipStyle() );
+		contract_assert( false && "Unknown beam clipping type %d\n" );
 		return;
 	}
 

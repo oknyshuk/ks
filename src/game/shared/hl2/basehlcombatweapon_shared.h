@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "basecombatweapon_shared.h"
-
-#ifndef BASEHLCOMBATWEAPON_SHARED_H
-#define BASEHLCOMBATWEAPON_SHARED_H
 
 #if defined( CLIENT_DLL )
 #define CBaseHLCombatWeapon C_BaseHLCombatWeapon
@@ -55,5 +50,3 @@ protected:
 	float			m_flRaiseTime;		// If lowered, the time we should raise the viewmodel
 	float			m_flHolsterTime;	// When the weapon was holstered
 };
-
-#endif // BASEHLCOMBATWEAPON_SHARED_H

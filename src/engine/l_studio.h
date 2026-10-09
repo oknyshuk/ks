@@ -1,22 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
+
 // Purpose: Export functions from l_studio.cpp
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef L_STUDIO_H
-#define L_STUDIO_H
-
 
 #include "engine/ivmodelrender.h"
 #include "datacache/imdlcache.h"
-
+#include "bspfile.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-struct LightDesc_t;
 class IStudioRender;
 struct vcollide_t;
 
@@ -45,6 +40,3 @@ extern ConVar r_drawmodelstatsoverlay;
 extern ConVar r_drawmodelstatsoverlaydistance;
 extern ConVar r_lod;
 extern ConVar r_drawmodellightorigin;
-
-#endif
-

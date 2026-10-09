@@ -1,20 +1,18 @@
-//========= Copyright c 1996-2014, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2014 Valve Corporation
 
 static inline void CopyStringTruncatingMalformedUTF8Tail( char *pchBuffer, char const *szSrc, int numBufferBytes )
 {
 	//
-	// There's a bug in Steam client where the clan tag may be truncated
-	// in the middle of UTF-8 sequence. Also we have a more restrictive
-	// clan tags length in the game to not bloat the name string.
+	// Clan tags may be truncated in the middle of a UTF-8 sequence.
+	// Also we have a more restrictive clan tags length in the game
+	// to not bloat the name string.
 	//
 	
 	if ( numBufferBytes <= 0 )
 	{
-		Assert( numBufferBytes > 0 );
+		contract_assert( numBufferBytes > 0 );
 		return;
 	}
 

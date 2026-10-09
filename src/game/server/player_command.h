@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef PLAYER_COMMAND_H
-#define PLAYER_COMMAND_H
 #pragma once
-
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "edict.h"
 #include "usercmd.h"
-
+#include "networkvar.h"
 
 class IMoveHelper;
 class CMoveData;
@@ -59,6 +51,3 @@ protected:
 // Singleton accessor
 //-----------------------------------------------------------------------------
 CPlayerMove *PlayerMove();
-
-
-#endif // PLAYER_COMMAND_H

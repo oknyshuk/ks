@@ -1,3 +1,4 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
@@ -5,8 +6,6 @@
 // emitter (client). Nothing here reaches for entityoutput.h or predictable_entity.h, so both
 // sides can include it.
 
-#ifndef KS_REFLECT_FIELDDESC_H
-#define KS_REFLECT_FIELDDESC_H
 
 #include "datamap.h"
 
@@ -52,4 +51,3 @@ inline typedescription_t MakeField( const FieldDesc &d )
 
 } // namespace ks::reflect
 
-#endif // KS_REFLECT_FIELDDESC_H

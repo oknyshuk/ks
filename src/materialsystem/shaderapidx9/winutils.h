@@ -1,13 +1,6 @@
-//================ Copyright (c) 1996-2009 Valve Corporation. All Rights Reserved. =================
-//
-//
-//
-//==================================================================================================
-
-#ifndef WINUTILS_H
-#define WINUTILS_H
-
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "togl/rendermechanism.h"
 
@@ -22,5 +15,3 @@
 	void SetThreadAffinityMask( void *hThread, int nMask );
 	void GlobalMemoryStatus( MEMORYSTATUS *pOut );
 	void GetClientRect( void *hWnd, RECT *destRect );
-
-#endif // WINUTILS_H

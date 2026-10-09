@@ -1,10 +1,53 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
@@ -24,17 +67,15 @@
 #include "inputsystem/iinputsystem.h"
 #include "iclientmode.h"
 
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 #include "weapon_basecsgrenade.h"
-#endif
 
 #else
 #endif
 
 extern ConVar in_forceuser;
 
-#define VIEWMODEL_ANIMATION_PARITY_BITS 3
-#define SCREEN_OVERLAY_MATERIAL "vgui/screens/vgui_overlay"
+constexpr auto VIEWMODEL_ANIMATION_PARITY_BITS = 3;
+inline constexpr const char *SCREEN_OVERLAY_MATERIAL = "vgui/screens/vgui_overlay";
 
 #if defined( CLIENT_DLL )
 	ConVar viewmodel_offset_x( "viewmodel_offset_x", "0.0", FCVAR_ARCHIVE );	 // the viewmodel offset from default in X
@@ -123,16 +164,6 @@ void CBaseViewModel::Spawn( void )
 //-----------------------------------------------------------------------------
 void CBaseViewModel::SetControlPanelsActive( bool bState )
 {
-#if defined( VGUI_CONTROL_PANELS )
-	// Activate control panel screens
-	for ( int i = m_hScreens.Count(); --i >= 0; )
-	{
-		if (m_hScreens[i].Get())
-		{
-			m_hScreens[i]->SetActive( bState );
-		}
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -140,131 +171,10 @@ void CBaseViewModel::SetControlPanelsActive( bool bState )
 //-----------------------------------------------------------------------------
 void CBaseViewModel::SpawnControlPanels()
 {
-#if defined( VGUI_CONTROL_PANELS )
-	char buf[64];
-
-	// Destroy existing panels
-	DestroyControlPanels();
-
-	CBaseCombatWeapon *weapon = m_hWeapon.Get();
-
-	if ( weapon == nullptr )
-	{
-		return;
-	}
-
-	MDLCACHE_CRITICAL_SECTION();
-
-	// FIXME: Deal with dynamically resizing control panels?
-
-	// If we're attached to an entity, spawn control panels on it instead of use
-	CBaseAnimating *pEntityToSpawnOn = this;
-	const char *pOrgLL = "controlpanel%d_ll";
-	const char *pOrgUR = "controlpanel%d_ur";
-	const char *pAttachmentNameLL = pOrgLL;
-	const char *pAttachmentNameUR = pOrgUR;
-	/*
-	if ( IsBuiltOnAttachment() )
-	{
-		pEntityToSpawnOn = dynamic_cast<CBaseAnimating*>((CBaseEntity*)m_hBuiltOnEntity.Get());
-		if ( pEntityToSpawnOn )
-		{
-			char sBuildPointLL[64];
-			char sBuildPointUR[64];
-			Q_snprintf( sBuildPointLL, sizeof( sBuildPointLL ), "bp%d_controlpanel%%d_ll", m_iBuiltOnPoint );
-			Q_snprintf( sBuildPointUR, sizeof( sBuildPointUR ), "bp%d_controlpanel%%d_ur", m_iBuiltOnPoint );
-			pAttachmentNameLL = sBuildPointLL;
-			pAttachmentNameUR = sBuildPointUR;
-		}
-		else
-		{
-			pEntityToSpawnOn = this;
-		}
-	}
-	*/
-
-	Assert( pEntityToSpawnOn );
-
-	// Lookup the attachment point...
-	int nPanel;
-	for ( nPanel = 0; true; ++nPanel )
-	{
-		Q_snprintf( buf, sizeof( buf ), pAttachmentNameLL, nPanel );
-		int nLLAttachmentIndex = pEntityToSpawnOn->LookupAttachment(buf);
-		if (nLLAttachmentIndex <= 0)
-		{
-			// Try and use my panels then
-			pEntityToSpawnOn = this;
-			Q_snprintf( buf, sizeof( buf ), pOrgLL, nPanel );
-			nLLAttachmentIndex = pEntityToSpawnOn->LookupAttachment(buf);
-			if (nLLAttachmentIndex <= 0)
-				return;
-		}
-
-		Q_snprintf( buf, sizeof( buf ), pAttachmentNameUR, nPanel );
-		int nURAttachmentIndex = pEntityToSpawnOn->LookupAttachment(buf);
-		if (nURAttachmentIndex <= 0)
-		{
-			// Try and use my panels then
-			Q_snprintf( buf, sizeof( buf ), pOrgUR, nPanel );
-			nURAttachmentIndex = pEntityToSpawnOn->LookupAttachment(buf);
-			if (nURAttachmentIndex <= 0)
-				return;
-		}
-
-		const char *pScreenName;
-		weapon->GetControlPanelInfo( nPanel, pScreenName );
-		if (!pScreenName)
-			continue;
-
-		const char *pScreenClassname;
-		weapon->GetControlPanelClassName( nPanel, pScreenClassname );
-		if ( !pScreenClassname )
-			continue;
-
-		// Compute the screen size from the attachment points...
-		matrix3x4_t	panelToWorld;
-		pEntityToSpawnOn->GetAttachment( nLLAttachmentIndex, panelToWorld );
-
-		matrix3x4_t	worldToPanel;
-		MatrixInvert( panelToWorld, worldToPanel );
-
-		// Now get the lower right position + transform into panel space
-		Vector lr, lrlocal;
-		pEntityToSpawnOn->GetAttachment( nURAttachmentIndex, panelToWorld );
-		MatrixGetColumn( panelToWorld, 3, lr );
-		VectorTransform( lr, worldToPanel, lrlocal );
-
-		// Not sure why, but the transform for the vgui panel to the world is improperly scaling.
-		// We add a fudge value here to compensate.
-		const float SCALE_FUDGE = 1.6f;
-		float flWidth = fabs( lrlocal.x ) * SCALE_FUDGE;
-		float flHeight = fabs( lrlocal.y ) * SCALE_FUDGE;
-
-		CVGuiScreen *pScreen = CreateVGuiScreen( pScreenClassname, pScreenName, pEntityToSpawnOn, this, nLLAttachmentIndex );
-		pScreen->ChangeTeam( GetTeamNumber() );
-		pScreen->SetActualSize( flWidth, flHeight );
-		pScreen->SetActive( false );
-		pScreen->MakeVisibleOnlyToTeammates( false );
-	
-		pScreen->SetAttachedToViewModel( true );
-		int nScreen = m_hScreens.AddToTail( );
-		m_hScreens[nScreen].Set( pScreen );
-	}
-#endif
 }
 
 void CBaseViewModel::DestroyControlPanels()
 {
-#if defined( VGUI_CONTROL_PANELS )
-	// Kill the control panels
-	int i;
-	for ( i = m_hScreens.Count(); --i >= 0; )
-	{
-		DestroyVGuiScreen( m_hScreens[i].Get() );
-	}
-	m_hScreens.RemoveAll();
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -274,10 +184,6 @@ void CBaseViewModel::DestroyControlPanels()
 void CBaseViewModel::SetOwner( CBaseEntity *pEntity )
 {
 	m_hOwner = pEntity;
-#if !defined( CLIENT_DLL )
-	// Make sure we're linked into hierarchy
-	//SetParent( pEntity );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -287,7 +193,7 @@ void CBaseViewModel::SetOwner( CBaseEntity *pEntity )
 void CBaseViewModel::SetIndex( int nIndex )
 {
 	m_nViewModelIndex = nIndex;
-	Assert( m_nViewModelIndex < (1 << VIEWMODEL_INDEX_BITS) );
+	contract_assert( m_nViewModelIndex < (1 << VIEWMODEL_INDEX_BITS) );
 }
 
 //-----------------------------------------------------------------------------
@@ -424,7 +330,6 @@ void CBaseViewModel::PostBuildTransformations( CStudioHdr *pStudioHdr, BoneVecto
 void CBaseViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePosition, const QAngle& eyeAngles )
 {
 
-#ifdef GRENADE_UNDERHAND_FEATURE_ENABLED
 #ifdef CLIENT_DLL
 	// apply viewmodel pose param
 	if ( owner )
@@ -437,7 +342,6 @@ void CBaseViewModel::CalcViewModelView( CBasePlayer *owner, const Vector& eyePos
 				SetPoseParameter( iPoseParam, clamp(pGrenade->ApproachThrownStrength(), 0.0f, 1.0f) );
 		}
 	}
-#endif
 #endif
 
 	// UNDONE: Calc this on the server?  Disabled for now as it seems unnecessary to have this info on the server
@@ -549,7 +453,7 @@ void CBaseViewModel::CalcViewModelLag( Vector& origin, QAngle& angles, QAngle& o
 		VectorNormalize( m_vecLastFacing );
 		VectorMA( origin, 5.0f, vDifference * -1.0f, origin );
 
-		Assert( m_vecLastFacing.IsValid() );
+		contract_assert( m_vecLastFacing.IsValid() );
 	}
 
 	Vector right, up;

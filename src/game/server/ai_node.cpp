@@ -1,17 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Base combat character with no AI
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Base combat character with no AI
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "ai_hull.h"
 #include "ai_node.h"
 #include "ai_link.h"
@@ -21,7 +42,6 @@
 #include "ai_basenpc.h"
 #include "ai_navigator.h"
 #include "ai_moveprobe.h"
-#include "fmtstr.h"
 #include "game.h"			
 #include "ai_networkmanager.h"
 
@@ -60,12 +80,12 @@ void CAI_Node::AddLink(CAI_Link *newLink)
 	{
 		if (m_Links[link] == newLink)
 		{
-			AssertMsgOnce( 0, "Link added to node multiple times!" );
+			contract_assert( false && "Link added to node multiple times!" );
 			return;
 		}
 	}
 
-	AssertMsg( newLink->m_iDestID == m_iID || newLink->m_iSrcID == m_iID, "Added link to node that doesn't reference the node" );
+	contract_assert( ( newLink->m_iDestID == m_iID || newLink->m_iSrcID == m_iID ) && "Added link to node that doesn't reference the node" );
 #endif
 
 	m_Links.push_back( newLink );
@@ -202,7 +222,7 @@ Vector CAI_Node::GetPosition(int hull) const
 		// Shift by the length of the hull and some small fudge
 		float  shift  = (0.5*NAI_Hull::Length(hull)) + (NODE_CLIMB_OFFSET);
 
-		Vector offsetDir = Vector(cos(DEG2RAD(m_flYaw)),sin(DEG2RAD(m_flYaw)),0);
+		Vector offsetDir = Vector(std::cos(DEG2RAD(m_flYaw)),std::sin(DEG2RAD(m_flYaw)),0);
 
 		Vector origin;
 		if (m_eNodeInfo & bits_NODE_CLIMB_OFF_FORWARD)

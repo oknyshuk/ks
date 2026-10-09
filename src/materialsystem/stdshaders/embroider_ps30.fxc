@@ -1,8 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "MODE" "0..3"
 // STATIC: "PALETTIZE" "0..1"
-
 // SKIP: ( $MODE == 1 )
 
 #include "common_ps_fxc.h"

@@ -1,9 +1,7 @@
-//========= Copyright (c) 1996-2010, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2010 Valve Corporation
+
 // Purpose: Core types for the response rules -- criteria, responses, rules, and matchers.
-//
-// $NoKeywords: $
-//=============================================================================//
 
 #include "rrbase.h"
 
@@ -14,9 +12,9 @@ using namespace ResponseRules;
 
 ResponseRulePartition::ResponseRulePartition()
 {
-	Assert(true);
-	COMPILE_TIME_ASSERT( kIDX_ELEM_MASK < (1 << 16) );
-	COMPILE_TIME_ASSERT( (kIDX_ELEM_MASK & (kIDX_ELEM_MASK + 1)) == 0 ); /// assert is power of two minus one
+	contract_assert( true );
+	static_assert( kIDX_ELEM_MASK < (1 << 16) );
+	static_assert( (kIDX_ELEM_MASK & (kIDX_ELEM_MASK + 1)) == 0 ); /// assert is power of two minus one
 }
 
 ResponseRulePartition::~ResponseRulePartition()
@@ -26,11 +24,11 @@ ResponseRulePartition::~ResponseRulePartition()
 
 ResponseRulePartition::tIndex ResponseRulePartition::IndexFromDictElem( tRuleDict* pDict, int elem )
 {
-	Assert( pDict );
+	contract_assert( pDict );
 	// If this fails, you've tried to build an index for a rule that's not stored
 	// in this partition
-	Assert( pDict >= m_RuleParts && pDict < m_RuleParts + N_RESPONSE_PARTITIONS );
-	AssertMsg1( elem <= kIDX_ELEM_MASK, "A rule dictionary has %d elements; this exceeds the 255 that can be packed into an index.\n", elem );
+	contract_assert( pDict >= m_RuleParts && pDict < m_RuleParts + N_RESPONSE_PARTITIONS );
+	contract_assert( ( elem <= kIDX_ELEM_MASK ) && "A rule dictionary has %d elements; this exceeds the 255 that can be packed into an index.\n" );
 
 	int bucket = pDict - m_RuleParts;
 	return ( bucket << 16 ) | ( elem & kIDX_ELEM_MASK ); // this is a native op on PPC
@@ -39,7 +37,7 @@ ResponseRulePartition::tIndex ResponseRulePartition::IndexFromDictElem( tRuleDic
 
 char const *ResponseRulePartition::GetElementName( const tIndex &i ) const
 {
-	Assert( IsValid(i) );
+	contract_assert( IsValid(i) );
 	return m_RuleParts[ BucketFromIdx(i) ].GetElementName( PartFromIdx(i) );
 }
 
@@ -63,7 +61,7 @@ void ResponseRulePartition::RemoveAll( void )
 
 // don't bucket "subject" criteria that prefix with operators, since stripping all that out again would
 // be a big pain, and the most important rules that need subjects are tlk_remarks anyway. 
-static inline bool CanBucketBySubject( const char * RESTRICT pszSubject )
+static inline bool CanBucketBySubject( const char * __restrict__ pszSubject )
 {
 	return  pszSubject && 
 		( ( pszSubject[0] >= 'A' && pszSubject[0] <= 'Z' ) ||

@@ -39,11 +39,11 @@ struct ScriptNamespaceDecl  {
 #define _BEGIN_CLASS(classname)  \
 		int __##classname##__typeof(HSQUIRRELVM v) \
 		{ \
-			sq_pushstring(v,_T(#classname),-1); \
+			sq_pushstring(v,#classname,-1); \
 			return 1; \
 		} \
 		struct ScriptClassMemberDecl __##classname##_members[] = { \
-		{_T("_typeof"),__##classname##__typeof,1,nullptr},
+		{"_typeof",__##classname##__typeof,1,nullptr},
 
 #define _BEGIN_NAMESPACE(xnamespace) struct ScriptClassMemberDecl __##xnamespace##_members[] = {
 #define _BEGIN_NAMESPACE_CONSTANTS(xnamespace) {nullptr,nullptr,0,nullptr}}; \
@@ -53,24 +53,24 @@ struct ScriptNamespaceDecl  {
 #define _DELEGATE(xnamespace) __##xnamespace##_delegate
 #define _END_DELEGATE(classname) {nullptr,nullptr,nullptr,nullptr}};
 
-#define _CONSTANT(name,type,val) {_T(#name),type,val},
-#define _CONSTANT_IMPL(name,type) {_T(#name),type,name},
+#define _CONSTANT(name,type,val) {#name,type,val},
+#define _CONSTANT_IMPL(name,type) {#name,type,name},
 
 #define _MEMBER_FUNCTION(classname,name,nparams,typemask) \
-	{_T(#name),__##classname##_##name,nparams,typemask},
+	{#name,__##classname##_##name,nparams,typemask},
 
 #define _END_NAMESPACE(classname,delegate) {nullptr,OT_NULL,0}}; \
 struct ScriptNamespaceDecl __##classname##_decl = {   \
-	_T(#classname), __##classname##_members,__##classname##_constants,delegate };
+	#classname, __##classname##_members,__##classname##_constants,delegate };
 
 #define _END_CLASS(classname) {nullptr,nullptr,0,nullptr}}; \
 struct SquirrelClassDecl __##classname##_decl = {  \
-	_T(#classname), nullptr, __##classname##_members };
+	#classname, nullptr, __##classname##_members };
 
 
 #define _END_CLASS_INHERITANCE(classname,base) {nullptr,nullptr,nullptr,nullptr}}; \
 struct SquirrelClassDecl __##classname##_decl = {  \
-	_T(#classname), _T(#base), __##classname##_members };
+	#classname, #base, __##classname##_members };
 
 #define _MEMBER_FUNCTION_IMPL(classname,name) \
 	int __##classname##_##name(HSQUIRRELVM v)
@@ -84,13 +84,13 @@ struct SquirrelClassDecl __##classname##_decl = {  \
 #define _CHECK_SELF(cppclass,scriptclass) \
 	cppclass *self = nullptr; \
 	if(SQ_FAILED(sq_getinstanceup(v,1,(SQUserPointer*)&self,(SQUserPointer)&__##scriptclass##_decl))) { \
-		return sq_throwerror(v,_T("invalid instance type"));\
+		return sq_throwerror(v,"invalid instance type");\
 	}
 
 #define _CHECK_INST_PARAM(pname,idx,cppclass,scriptclass)  \
 	cppclass *pname = nullptr; \
 	if(SQ_FAILED(sq_getinstanceup(v,idx,(SQUserPointer*)&pname,(SQUserPointer)&__##scriptclass##_decl))) { \
-		return sq_throwerror(v,_T("invalid instance type"));\
+		return sq_throwerror(v,"invalid instance type");\
 	} \
 
 #define _CHECK_INST_PARAM_BREAK(pname,idx,cppclass,scriptclass)  \
@@ -119,11 +119,11 @@ BOOL push_##classname(cppclass &quat) \
 { \
 	cppclass *newquat = new cppclass; \
 	*newquat = quat; \
-	if(!CreateNativeClassInstance(SquirrelVM::GetVMPtr(),_T(#classname),newquat,classname##_release_hook)) { \
+	if(!CreateNativeClassInstance(SquirrelVM::GetVMPtr(),#classname,newquat,classname##_release_hook)) { \
 		delete newquat; \
-		return FALSE; \
+		return false; \
 	} \
-	return TRUE; \
+	return true; \
 } \
 SquirrelObject new_##classname(cppclass &quat) \
 { \

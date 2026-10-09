@@ -1,12 +1,12 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "bspfile.h"
-#include "strtools.h"
-#include "filesystem.h"
+#if defined(CLIENT_DLL)
+#endif
+import std;
+#if defined(CLIENT_DLL)
+#endif
+import ks.tier1;
 #include "lumpfiles.h"
 
 //-----------------------------------------------------------------------------
@@ -19,6 +19,5 @@ void GenerateLumpFileName( const char *bspfilename, char *lumpfilename, int iBuf
 {
 	char lumppre[MAX_PATH];
 	V_StripExtension( bspfilename, lumppre, MAX_PATH );
-	Q_snprintf( lumpfilename, iBufferSize, "%s_l_%d.lmp", lumppre, iIndex );
+	V_snprintf( lumpfilename, iBufferSize, "%s_l_%d.lmp", lumppre, iIndex );
 }
-

@@ -1,11 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_baseentity.h"
@@ -69,7 +73,7 @@ void C_FuncTrackTrain::OnDataChanged( DataUpdateType_t updateType )
 			nIndex1 = 0; nIndex2 = 1;
 		}
 
-		m_flRadius = sqrt( vecOBBSize[nIndex1] * vecOBBSize[nIndex1] + vecOBBSize[nIndex2] * vecOBBSize[nIndex2] ) * 0.5f;
+		m_flRadius = std::sqrt( vecOBBSize[nIndex1] * vecOBBSize[nIndex1] + vecOBBSize[nIndex2] * vecOBBSize[nIndex2] ) * 0.5f;
 		m_flLineLength = vecOBBSize[m_nLongAxis];
 	}
 }
@@ -117,5 +121,3 @@ bool C_FuncTrackTrain::GetSoundSpatialization( SpatializationInfo_t& info )
 
 	return true;
 }
-
-

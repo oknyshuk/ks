@@ -1,15 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "cbase.h"
+import std;
+import ks.core;
 #include "movevars_shared.h"
 
 // some cvars used by player movement system
-#define DEFAULT_GRAVITY_STRING	"800"
+inline constexpr const char *DEFAULT_GRAVITY_STRING = "800";
 
 ConVar	sv_gravity		( "sv_gravity", DEFAULT_GRAVITY_STRING, FCVAR_NOTIFY | FCVAR_REPLICATED | FCVAR_RELEASE, "World gravity." );
 

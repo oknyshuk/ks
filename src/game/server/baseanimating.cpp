@@ -1,11 +1,38 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Base class for all animating characters and objects.
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include <mutex>
+// Purpose: Base class for all animating characters and objects.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -14,15 +41,11 @@
 #include "activitylist.h"
 #include "studio.h"
 #include "bone_setup.h"
-#include "mathlib/mathlib.h"
 #include "model_types.h"
 #include "datacache/imdlcache.h"
 #include "physics.h"
 #include "ndebugoverlay.h"
-#include "tier1/strtools.h"
 #include "npcevent.h"
-#include "keyvalues.h"
-#include "tier0/vprof.h"
 #include "EntityFlame.h"
 #include "EntityDissolve.h"
 #include "ai_basenpc.h"
@@ -31,7 +54,6 @@
 #include "smoke_trail.h"
 #include "collisionutils.h"
 #include "toolframework/itoolframework.h"
-
 
 ConVar ai_sequence_debug( "ai_sequence_debug", "0" );
 
@@ -174,7 +196,7 @@ void CBaseAnimating::UseClientSideAnimation()
 	m_bClientSideAnimation = true;
 }
 
-#define MAX_ANIMTIME_INTERVAL 0.2f
+constexpr auto MAX_ANIMTIME_INTERVAL = 0.2f;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -391,23 +413,20 @@ void CBaseAnimating::InputSetLightingOrigin( inputdata_t &inputdata )
 //=========================================================
 int CBaseAnimating::SelectWeightedSequence ( Activity activity )
 {
-	Assert( activity != ACT_INVALID );
-	Assert( GetModelPtr() );
+	contract_assert( activity != ACT_INVALID );
 	return ::SelectWeightedSequence( GetModelPtr(), activity, GetSequence() );
 }
 
 
 int CBaseAnimating::SelectWeightedSequence ( Activity activity, int curSequence )
 {
-	Assert( activity != ACT_INVALID );
-	Assert( GetModelPtr() );
+	contract_assert( activity != ACT_INVALID );
 	return ::SelectWeightedSequence( GetModelPtr(), activity, curSequence );
 }
 
 int CBaseAnimating::SelectWeightedSequenceFromModifiers( Activity activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount )
 {
-	Assert( activity != ACT_INVALID );
-	Assert( GetModelPtr() );
+	contract_assert( activity != ACT_INVALID );
 	return GetModelPtr()->SelectWeightedSequenceFromModifiers( activity, pActivityModifiers, iModifierCount );
 }
 
@@ -416,7 +435,6 @@ int CBaseAnimating::SelectWeightedSequenceFromModifiers( Activity activity, cons
 //=========================================================
 void CBaseAnimating::ResetActivityIndexes ( void )
 {
-	Assert( GetModelPtr() );
 	::ResetActivityIndexes( GetModelPtr() );
 }
 
@@ -425,7 +443,6 @@ void CBaseAnimating::ResetActivityIndexes ( void )
 //=========================================================
 void CBaseAnimating::ResetEventIndexes ( void )
 {
-	Assert( GetModelPtr() );
 	::ResetEventIndexes( GetModelPtr() );
 }
 
@@ -437,7 +454,6 @@ void CBaseAnimating::ResetEventIndexes ( void )
 //=========================================================
 int CBaseAnimating::SelectHeaviestSequence ( Activity activity )
 {
-	Assert( GetModelPtr() );
 	return ::SelectHeaviestSequence( GetModelPtr(), activity );
 }
 
@@ -449,7 +465,6 @@ int CBaseAnimating::SelectHeaviestSequence ( Activity activity )
 //-----------------------------------------------------------------------------
 int CBaseAnimating::LookupActivity( const char *label )
 {
-	Assert( GetModelPtr() );
 	return ::LookupActivity( GetModelPtr(), label );
 }
 
@@ -457,13 +472,11 @@ int CBaseAnimating::LookupActivity( const char *label )
 //=========================================================
 float CBaseAnimating::GetFirstSequenceAnimTag( int sequence, int nDesiredTag, float flStart, float flEnd )
 {
-	Assert( GetModelPtr() );
 	return ::GetFirstSequenceAnimTag( GetModelPtr(), sequence, nDesiredTag, flStart, flEnd );
 }
 
 float CBaseAnimating::GetAnySequenceAnimTag( int sequence, int nDesiredTag, float flDefault )
 {
-	Assert( GetModelPtr() );
 	return ::GetAnySequenceAnimTag( GetModelPtr(), sequence, nDesiredTag, flDefault );
 }
 
@@ -471,13 +484,12 @@ float CBaseAnimating::GetAnySequenceAnimTag( int sequence, int nDesiredTag, floa
 //=========================================================
 int CBaseAnimating::LookupSequence( const char *label )
 {
-	Assert( GetModelPtr() );
 	return ::LookupSequence( GetModelPtr(), label );
 }
 
 int CBaseAnimating::LookupSequence( CStudioHdr* pHdr, const char *label )
 {
-	Assert( pHdr );
+	contract_assert( pHdr );
 	return ::LookupSequence( pHdr, label );
 }
 
@@ -515,7 +527,6 @@ float CBaseAnimating::GetSequenceMoveYaw( int iSequence )
 {
 	Vector				vecReturn;
 	
-	Assert( GetModelPtr() );
 	::GetSequenceLinearMotion( GetModelPtr(), iSequence, GetPoseParameterArray(), &vecReturn );
 
 	if (vecReturn.Length() > 0)
@@ -551,7 +562,6 @@ float CBaseAnimating::GetSequenceMoveDist( CStudioHdr *pStudioHdr, int iSequence
 //-----------------------------------------------------------------------------
 void CBaseAnimating::GetSequenceLinearMotion( int iSequence, Vector *pVec )
 {
-	Assert( GetModelPtr() );
 	::GetSequenceLinearMotion( GetModelPtr(), iSequence, GetPoseParameterArray(), pVec );
 }
 
@@ -697,7 +707,6 @@ void CBaseAnimating::ResetSequenceInfo ( )
 //=========================================================
 bool CBaseAnimating::IsValidSequence( int iSequence )
 {
-	Assert( GetModelPtr() );
 	CStudioHdr* pstudiohdr = GetModelPtr( );
 	if ( !pstudiohdr || iSequence < 0 || iSequence >= pstudiohdr->GetNumSeq() )
 	{
@@ -710,7 +719,6 @@ bool CBaseAnimating::IsValidSequence( int iSequence )
 //=========================================================
 void CBaseAnimating::SetSequence( int nSequence )
 {
-	Assert( GetModelPtr( ) && ( nSequence < GetModelPtr( )->GetNumSeq() ) && ( GetModelPtr( )->GetNumSeq() < (1 << ANIMATION_SEQUENCE_BITS) ) );
 
 	int oldSequence = m_nSequence;
 	m_nSequence = nSequence;
@@ -848,7 +856,7 @@ void CBaseAnimating::DispatchAnimEvents ( CBaseAnimating *eventHandler )
 
 	if ( !pstudiohdr )
 	{
-		Assert(!"CBaseAnimating::DispatchAnimEvents: model missing");
+		contract_assert( !"CBaseAnimating::DispatchAnimEvents: model missing" );
 		return;
 	}
 
@@ -927,7 +935,7 @@ void CBaseAnimating::DispatchAnimEvents ( CBaseAnimating *eventHandler )
 		CStudioHdr *pNowStudioHdr = GetModelPtr();
 		if ( pNowStudioHdr != pstudiohdr )
 		{
-			AssertMsg2(false, "%s has changed its model while processing AnimEvents on sequence %d. Aborting dispatch.\n", GetDebugName(), GetSequence() );
+			contract_assert( false && "%s has changed its model while processing AnimEvents on sequence %d. Aborting dispatch.\n" );
 			Warning( "%s has changed its model while processing AnimEvents on sequence %d. Aborting dispatch.\n", GetDebugName(), GetSequence() );
 			break;
 		}
@@ -984,7 +992,7 @@ void CBaseAnimating::HandleAnimEvent( animevent_t *pEvent )
 float CBaseAnimating::SetPoseParameter( CStudioHdr *pStudioHdr, const char *szName, float flValue )
 {
 	int poseParam = LookupPoseParameter( pStudioHdr, szName );
-	AssertMsg2(poseParam >= 0, "SetPoseParameter called with invalid argument %s by %s", szName, GetDebugName());
+	contract_assert( ( poseParam >= 0 ) && "SetPoseParameter called with invalid argument %s by %s" );
 	return SetPoseParameter( pStudioHdr, poseParam, flValue );
 }
 
@@ -1018,7 +1026,7 @@ float CBaseAnimating::GetPoseParameter( int iParameter )
 
 	if ( !pstudiohdr )
 	{
-		Assert(!"CBaseAnimating::GetPoseParameter: model missing");
+		contract_assert( !"CBaseAnimating::GetPoseParameter: model missing" );
 		return 0.0;
 	}
 
@@ -1068,7 +1076,7 @@ int CBaseAnimating::LookupPoseParameter( CStudioHdr *pStudioHdr, const char *szN
 
 	for (int i = 0; i < pStudioHdr->GetNumPoseParameters(); i++)
 	{
-		if (Q_stricmp( pStudioHdr->pPoseParameter( i ).pszName(), szName ) == 0)
+		if (V_stricmp( pStudioHdr->pPoseParameter( i ).pszName(), szName ) == 0)
 		{
 			return i;
 		}
@@ -1170,33 +1178,32 @@ float CBaseAnimating::EdgeLimitPoseParameter( int iParameter, float flValue, flo
 //-----------------------------------------------------------------------------
 int CBaseAnimating::LookupBone( const char *szName )
 {
-	Assert( GetModelPtr() );
 
 	if( !GetModelPtr() )
 	{
 		return -1;
 	}
 
-	//AssertMsg( !Q_stristr( szName, "ValveBiped" ), "ValveBiped bone names are deprecated!" );
+	//AssertMsg( !V_stristr( szName, "ValveBiped" ), "ValveBiped bone names are deprecated!" );
 
 	int ret = Studio_BoneIndexByName( GetModelPtr(), szName );
 
 	if ( ret == -1 )
 	{
 		// Try to fix up some common old bone names to new bone names, until I can go through the code and fix all cases or write a data-driven solution.
-		if ( Q_stristr( szName, "weapon_bone" ) )
+		if ( V_stristr( szName, "weapon_bone" ) )
 		{
 			ret = Studio_BoneIndexByName( GetModelPtr(), "hand_R" );
 		}
-		else if ( Q_stristr( szName, "Head" ) )
+		else if ( V_stristr( szName, "Head" ) )
 		{
 			ret = Studio_BoneIndexByName( GetModelPtr(), "head_0" );
 		}
-		else if ( Q_stristr( szName, "L_Hand" ) )
+		else if ( V_stristr( szName, "L_Hand" ) )
 		{
 			ret = Studio_BoneIndexByName( GetModelPtr(), "hand_L" );
 		}
-		else if ( Q_stristr( szName, "R_Hand" ) )
+		else if ( V_stristr( szName, "R_Hand" ) )
 		{
 			ret = Studio_BoneIndexByName( GetModelPtr(), "hand_R" );
 		}
@@ -1216,13 +1223,13 @@ void CBaseAnimating::GetBonePosition ( int iBone, Vector &origin, QAngle &angles
 	CStudioHdr *pStudioHdr = GetModelPtr( );
 	if (!pStudioHdr)
 	{
-		Assert(!"CBaseAnimating::GetBonePosition: model missing");
+		contract_assert( !"CBaseAnimating::GetBonePosition: model missing" );
 		return;
 	}
 
 	if (iBone < 0 || iBone >= pStudioHdr->numbones())
 	{
-		Assert(!"CBaseAnimating::GetBonePosition: invalid bone index");
+		contract_assert( !"CBaseAnimating::GetBonePosition: invalid bone index" );
 		return;
 	}
 
@@ -1239,13 +1246,13 @@ void CBaseAnimating::GetHitboxBonePosition ( int iBone, Vector &origin, QAngle &
 	CStudioHdr *pStudioHdr = GetModelPtr( );
 	if (!pStudioHdr)
 	{
-		Assert(!"CBaseAnimating::GetBonePosition: model missing");
+		contract_assert( !"CBaseAnimating::GetBonePosition: model missing" );
 		return;
 	}
 
 	if (iBone < 0 || iBone >= pStudioHdr->numbones())
 	{
-		Assert(!"CBaseAnimating::GetBonePosition: invalid bone index");
+		contract_assert( !"CBaseAnimating::GetBonePosition: invalid bone index" );
 		return;
 	}
 
@@ -1264,13 +1271,13 @@ void CBaseAnimating::GetHitboxBoneTransform( int iBone, QAngle hitboxOrientation
 	CStudioHdr *pStudioHdr = GetModelPtr( );
 	if (!pStudioHdr)
 	{
-		Assert(!"CBaseAnimating::GetBonePosition: model missing");
+		contract_assert( !"CBaseAnimating::GetBonePosition: model missing" );
 		return;
 	}
 
 	if (iBone < 0 || iBone >= pStudioHdr->numbones())
 	{
-		Assert(!"CBaseAnimating::GetBonePosition: invalid bone index");
+		contract_assert( !"CBaseAnimating::GetBonePosition: invalid bone index" );
 		return;
 	}
 
@@ -1291,13 +1298,13 @@ void CBaseAnimating::GetBoneTransform( int iBone, matrix3x4_t &pBoneToWorld )
 
 	if (!pStudioHdr)
 	{
-		Assert(!"CBaseAnimating::GetBoneTransform: model missing");
+		contract_assert( !"CBaseAnimating::GetBoneTransform: model missing" );
 		return;
 	}
 
 	if (iBone < 0 || iBone >= pStudioHdr->numbones())
 	{
-		Assert(!"CBaseAnimating::GetBoneTransform: invalid bone index");
+		contract_assert( !"CBaseAnimating::GetBoneTransform: invalid bone index" );
 		return;
 	}
 
@@ -1307,7 +1314,7 @@ void CBaseAnimating::GetBoneTransform( int iBone, matrix3x4_t &pBoneToWorld )
 
 	if ( !pmatrix )
 	{
-		Assert( false );
+		contract_assert( false );
 		Warning("Uncached query for bone (%d) transform. Please verify that there is an attachment or bounding box associated with this bone.\n", iBone);
 		MatrixCopy( EntityToWorldTransform(), pBoneToWorld );
 		return;
@@ -1452,7 +1459,6 @@ QAngle CBaseAnimating::GetStepAngles( void ) const
 
 void CBaseAnimating::CalculateIKLocks( float currentTime )
 {
-	SNPROF_ANIM( "CBaseAnimating::CalculateIKLocks" );
 
 	if ( m_pIk )
 	{
@@ -1578,21 +1584,20 @@ void CBaseAnimating::SetupBones( matrix3x4a_t *pBoneToWorld, int boneMask )
 {
 	std::scoped_lock lock( m_BoneSetupMutex );
 	
-	VPROF_BUDGET( "CBaseAnimating::SetupBones", VPROF_BUDGETGROUP_SERVER_ANIM );
+	CVProfScope _( "CBaseAnimating::SetupBones", 0, VPROF_BUDGETGROUP_SERVER_ANIM, false, BUDGETFLAG_OTHER );
 	
 	MDLCACHE_CRITICAL_SECTION();
 
-	Assert( GetModelPtr() );
 
 	CStudioHdr *pStudioHdr = GetModelPtr( );
 
 	if(!pStudioHdr)
 	{
-		Assert(!"CBaseAnimating::GetSkeleton() without a model");
+		contract_assert( !"CBaseAnimating::GetSkeleton() without a model" );
 		return;
 	}
 
-	Assert( !IsEFlagSet( EFL_SETTING_UP_BONES ) );
+	contract_assert( !IsEFlagSet( EFL_SETTING_UP_BONES ) );
 
 	AddEFlags( EFL_SETTING_UP_BONES );
 
@@ -1702,7 +1707,7 @@ int CBaseAnimating::GetNumBones ( void )
 	}
 	else
 	{
-		Assert(!"CBaseAnimating::GetNumBones: model missing");
+		contract_assert( !"CBaseAnimating::GetNumBones: model missing" );
 		return 0;
 	}
 }
@@ -1721,7 +1726,7 @@ int CBaseAnimating::LookupAttachment( const char *szName )
 	CStudioHdr *pStudioHdr = GetModelPtr( );
 	if (!pStudioHdr)
 	{
-		Assert(!"CBaseAnimating::LookupAttachment: model missing");
+		contract_assert( !"CBaseAnimating::LookupAttachment: model missing" );
 		return 0;
 	}
 
@@ -1801,7 +1806,7 @@ bool CBaseAnimating::GetAttachment( int iAttachment, matrix3x4_t &attachmentToWo
 	if (!pStudioHdr)
 	{
 		MatrixCopy(EntityToWorldTransform(), attachmentToWorld);
-		AssertOnce(!"CBaseAnimating::GetAttachment: model missing");
+		contract_assert( !"CBaseAnimating::GetAttachment: model missing" );
 		return false;
 	}
 
@@ -1840,7 +1845,7 @@ int CBaseAnimating::GetAttachmentBone( int iAttachment )
 	CStudioHdr *pStudioHdr = GetModelPtr( );
 	if (!pStudioHdr || iAttachment < 1 || iAttachment > pStudioHdr->GetNumAttachments() )
 	{
-		AssertOnce(pStudioHdr && "CBaseAnimating::GetAttachment: model missing");
+		contract_assert( pStudioHdr && "CBaseAnimating::GetAttachment: model missing" );
 		return 0;
 	}
 
@@ -1915,7 +1920,7 @@ void CBaseAnimating::GetEyeballs( Vector &origin, QAngle &angles )
 	CStudioHdr *pStudioHdr = GetModelPtr( );
 	if (!pStudioHdr)
 	{
-		Assert(!"CBaseAnimating::GetAttachment: model missing");
+		contract_assert( !"CBaseAnimating::GetAttachment: model missing" );
 		return;
 	}
 
@@ -1942,7 +1947,6 @@ void CBaseAnimating::GetEyeballs( Vector &origin, QAngle &angles )
 //=========================================================
 int CBaseAnimating::FindTransitionSequence( int iCurrentSequence, int iGoalSequence, int *piDir )
 {
-	Assert( GetModelPtr() );
 
 	if (piDir == nullptr)
 	{
@@ -1989,7 +1993,6 @@ int CBaseAnimating::GetExitNode( int iSequence )
 
 void CBaseAnimating::SetBodygroupPreset( char const *szName )
 {
-	Assert( GetModelPtr() );
 
 	int newBody = m_nBody;
 	::SetBodygroupPreset( GetModelPtr( ), newBody, szName );
@@ -1998,7 +2001,6 @@ void CBaseAnimating::SetBodygroupPreset( char const *szName )
 
 void CBaseAnimating::SetBodygroup( int iGroup, int iValue )
 {
-	Assert( GetModelPtr() );
 
 	int newBody = m_nBody;
 	::SetBodygroup( GetModelPtr( ), newBody, iGroup, iValue );
@@ -2007,48 +2009,41 @@ void CBaseAnimating::SetBodygroup( int iGroup, int iValue )
 
 int CBaseAnimating::GetBodygroup( int iGroup )
 {
-	Assert( GetModelPtr() );
 
 	return ::GetBodygroup( GetModelPtr( ), m_nBody, iGroup );
 }
 
 const char *CBaseAnimating::GetBodygroupName( int iGroup )
 {
-	Assert( GetModelPtr() );
 
 	return ::GetBodygroupName( GetModelPtr( ), iGroup );
 }
 
 const char *CBaseAnimating::GetBodygroupPartName( int iGroup, int iPart )
 {
-	Assert( GetModelPtr() );
 
 	return ::GetBodygroupPartName( GetModelPtr( ), iGroup, iPart );
 }
 
 int CBaseAnimating::FindBodygroupByName( const char *name )
 {
-	Assert( GetModelPtr() );
 
 	return ::FindBodygroupByName( GetModelPtr( ), name );
 }
 
 int CBaseAnimating::GetBodygroupCount( int iGroup )
 {
-	Assert( GetModelPtr() );
 
 	return ::GetBodygroupCount( GetModelPtr( ), iGroup );
 }
 
 int CBaseAnimating::GetNumBodyGroups( void )
 {
-	Assert( GetModelPtr() );
 
 	return ::GetNumBodyGroups( GetModelPtr( ) );
 }
 int CBaseAnimating::CountBodyGroupVariants( int group )
 {
-	Assert( GetModelPtr() );
 
 	int numVariants = 0;
 
@@ -2061,7 +2056,7 @@ int CBaseAnimating::CountBodyGroupVariants( int group )
 		int val = -1;
 		if ( c != '\0' )
 		{
-			val = atoi( partName + 1 );
+			val = std::atoi( partName + 1 );
 		}
 		if ( val != -1 && c != 'D' )
 		{
@@ -2077,7 +2072,6 @@ int CBaseAnimating::CountBodyGroupVariants( int group )
  */
 int CBaseAnimating::FindBodyGroupVariant( int group, int variant )
 {
-	Assert( GetModelPtr() );
 
 	int numVariants = 0;
 
@@ -2090,7 +2084,7 @@ int CBaseAnimating::FindBodyGroupVariant( int group, int variant )
 		int val = -1;
 		if ( c != '\0' )
 		{
-			val = atoi( partName + 1 );
+			val = std::atoi( partName + 1 );
 		}
 		if ( val != -1 && c != 'D' )
 		{
@@ -2112,7 +2106,6 @@ int CBaseAnimating::FindBodyGroupVariant( int group, int variant )
 */
 int CBaseAnimating::FindDamagedBodyGroupVariant( int group )
 {
-	Assert( GetModelPtr() );
 
 	if ( group < 0 || group >= GetNumBodyGroups() )
 		return -1;
@@ -2125,7 +2118,7 @@ int CBaseAnimating::FindDamagedBodyGroupVariant( int group )
 	for ( int j=0; j<count; ++j )
 	{
 		const char *partName = GetBodygroupPartName( group, j );
-		if ( *partName == 'D' && Q_strstr( partName, currentName ) )
+		if ( *partName == 'D' && V_strstr( partName, currentName ) )
 		{
 			damaged.push_back( j );
 		}
@@ -2177,7 +2170,6 @@ void CBaseAnimating::RandomizeBodygroups( std::vector< const char * >& groups )
 
 int CBaseAnimating::ExtractBbox( int sequence, Vector& mins, Vector& maxs )
 {
-	Assert( GetModelPtr() );
 
 	return ::ExtractBbox( GetModelPtr( ), sequence, mins, maxs );
 }
@@ -2194,11 +2186,11 @@ void CBaseAnimating::SetSequenceBox( void )
 	{
 		// expand box for rotation
 		// find min / max for rotations
-		float yaw = GetLocalAngles().y * (M_PI / 180.0);
+		float yaw = GetLocalAngles().y * (std::numbers::pi / 180.0);
 		
 		Vector xvector, yvector;
-		xvector.x = cos(yaw);
-		xvector.y = sin(yaw);
+		xvector.x = std::cos(yaw);
+		xvector.y = std::sin(yaw);
 		yvector.x = -sin(yaw);
 		yvector.y = cos(yaw);
 		Vector bounds[2];
@@ -2573,7 +2565,7 @@ void CBaseAnimating::LockStudioHdr()
 				pStudioHdrContainer = m_pStudioHdr;
 			}
 
-			Assert( ( pStudioHdr == nullptr && pStudioHdrContainer == nullptr ) || pStudioHdrContainer->GetRenderHdr() == pStudioHdr );
+			contract_assert( ( pStudioHdr == nullptr && pStudioHdrContainer == nullptr ) || pStudioHdrContainer->GetRenderHdr() == pStudioHdr );
 
 			if ( pStudioHdrContainer && pStudioHdrContainer->GetVirtualModel() )
 			{
@@ -2609,7 +2601,7 @@ void CBaseAnimating::UnlockStudioHdr()
 CBoneCache *CBaseAnimating::GetBoneCache( void )
 {
 	CStudioHdr *pStudioHdr = GetModelPtr( );
-	Assert(pStudioHdr);
+	contract_assert( pStudioHdr );
 
 	CBoneCache *pcache = Studio_GetBoneCache( m_boneCacheHandle );
 	int boneMask = BONE_USED_BY_HITBOX | BONE_USED_BY_ATTACHMENT;
@@ -2651,7 +2643,7 @@ CBoneCache *CBaseAnimating::GetBoneCache( void )
 		m_boneCacheHandle = Studio_CreateBoneCache( params );
 		pcache = Studio_GetBoneCache( m_boneCacheHandle );
 	}
-	Assert(pcache);
+	contract_assert( pcache );
 	return pcache;
 }
 
@@ -2686,7 +2678,7 @@ bool CBaseAnimating::TestCollision( const Ray_t &ray, unsigned int fContentsMask
 	}
 
 	// We shouldn't get here.
-	Assert(0);
+	contract_assert( 0 );
 	return false;
 }
 
@@ -2695,7 +2687,7 @@ bool CBaseAnimating::TestHitboxes( const Ray_t &ray, unsigned int fContentsMask,
 	CStudioHdr *pStudioHdr = GetModelPtr( );
 	if (!pStudioHdr)
 	{
-		Assert(!"CBaseAnimating::GetBonePosition: model missing");
+		contract_assert( !"CBaseAnimating::GetBonePosition: model missing" );
 		return false;
 	}
 
@@ -2742,7 +2734,7 @@ void CBaseAnimating::InitBoneControllers ( void ) // FIXME: rename
 		SetBoneController( i, 0.0 );
 	}
 
-	Assert( pStudioHdr->SequencesAvailable() );
+	contract_assert( pStudioHdr->SequencesAvailable() );
 
 	if ( pStudioHdr->SequencesAvailable() )
 	{
@@ -2757,11 +2749,10 @@ void CBaseAnimating::InitBoneControllers ( void ) // FIXME: rename
 //=========================================================
 float CBaseAnimating::SetBoneController ( int iController, float flValue )
 {
-	Assert( GetModelPtr() );
 
 	CStudioHdr *pmodel = (CStudioHdr*)GetModelPtr();
 
-	Assert(iController >= 0 && iController < NUM_BONECTRLS);
+	contract_assert( iController >= 0 && iController < NUM_BONECTRLS );
 
 	float newValue;
 	float retVal = Studio_SetController( pmodel, iController, flValue, newValue );
@@ -2774,7 +2765,6 @@ float CBaseAnimating::SetBoneController ( int iController, float flValue )
 //=========================================================
 float CBaseAnimating::GetBoneController ( int iController )
 {
-	Assert( GetModelPtr() );
 
 	CStudioHdr *pmodel = (CStudioHdr*)GetModelPtr();
 
@@ -2843,7 +2833,7 @@ CBaseAnimating* CBaseAnimating::FindFollowedEntity()
 		return nullptr;
 	}
 
-	return assert_cast< CBaseAnimating* >( follow );
+	return static_cast< CBaseAnimating* >( follow );
 }
 
 //=========================================================
@@ -2853,7 +2843,7 @@ void CBaseAnimating::GetSkeleton( CStudioHdr *pStudioHdr, BoneVector pos[], Bone
 {
 	if(!pStudioHdr)
 	{
-		Assert(!"CBaseAnimating::GetSkeleton() without a model");
+		contract_assert( !"CBaseAnimating::GetSkeleton() without a model" );
 		return;
 	}
 
@@ -2889,18 +2879,18 @@ int CBaseAnimating::DrawDebugTextOverlays(void)
 		// Print Look time
 		// ----------------
 		char tempstr[1024];
-		Q_snprintf(tempstr, sizeof(tempstr), "Sequence: (%3d) %s",GetSequence(), GetSequenceName( GetSequence() ) );
+		V_snprintf(tempstr, sizeof(tempstr), "Sequence: (%3d) %s",GetSequence(), GetSequenceName( GetSequence() ) );
 		EntityText(text_offset,tempstr,0,r,g,b);
 		text_offset++;
 		const char *pActname = GetSequenceActivityName(GetSequence());
-		if ( pActname && strlen(pActname) )
+		if ( pActname && std::strlen(pActname) )
 		{
-			Q_snprintf(tempstr, sizeof(tempstr), "Activity %s", pActname );
+			V_snprintf(tempstr, sizeof(tempstr), "Activity %s", pActname );
 			EntityText(text_offset,tempstr,0,r,g,b);
 			text_offset++;
 		}
 
-		Q_snprintf(tempstr, sizeof(tempstr), "Cycle: %.5f (%.5f)", (float)GetCycle(), m_flAnimTime.Get() );
+		V_snprintf(tempstr, sizeof(tempstr), "Cycle: %.5f (%.5f)", (float)GetCycle(), m_flAnimTime.Get() );
 		EntityText(text_offset,tempstr,0,r,g,b);
 		text_offset++;
 
@@ -2926,7 +2916,7 @@ int CBaseAnimating::DrawDebugTextOverlays(void)
 				NDebugOverlay::Line( vecPos, vecPos + ( vecRight * 4.0f ), 0, 255, 0, true, 0.05f );
 				NDebugOverlay::Line( vecPos, vecPos + ( vecUp * 4.0f ), 0, 0, 255, true, 0.05f );
 				
-				Q_snprintf( tempstr, sizeof(tempstr), " < %s (%d)", pStudioHdr->pAttachment(i-1).pszName(), i );
+				V_snprintf( tempstr, sizeof(tempstr), " < %s (%d)", pStudioHdr->pAttachment(i-1).pszName(), i );
 				NDebugOverlay::Text( vecPos, tempstr, true, 0.05f );
 			}
 		}
@@ -2978,7 +2968,6 @@ void CBaseAnimating::SetHitboxSet( int setnum )
 //-----------------------------------------------------------------------------
 void CBaseAnimating::SetHitboxSetByName( const char *setname )
 {
-	Assert( GetModelPtr() );
 	m_nHitboxSet = FindHitboxSetByName( GetModelPtr(), setname );
 }
 
@@ -2997,7 +2986,6 @@ int CBaseAnimating::GetHitboxSet( void )
 //-----------------------------------------------------------------------------
 const char *CBaseAnimating::GetHitboxSetName( void )
 {
-	Assert( GetModelPtr() );
 	return ::GetHitboxSetName( GetModelPtr(), m_nHitboxSet );
 }
 
@@ -3007,7 +2995,6 @@ const char *CBaseAnimating::GetHitboxSetName( void )
 //-----------------------------------------------------------------------------
 int CBaseAnimating::GetHitboxSetCount( void )
 {
-	Assert( GetModelPtr() );
 	return ::GetHitboxSetCount( GetModelPtr() );
 }
 
@@ -3145,8 +3132,8 @@ bool CBaseAnimating::ComputeHitboxSurroundingBox( Vector *pVecWorldMins, Vector 
 	CBoneCache *pCache = GetBoneCache();
 
 	// Compute a box in world space that surrounds this entity
-	pVecWorldMins->Init( FLT_MAX, FLT_MAX, FLT_MAX );
-	pVecWorldMaxs->Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
+	pVecWorldMins->Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+	pVecWorldMaxs->Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 
 	Vector vecBoxAbsMins, vecBoxAbsMaxs;
 	for ( int i = 0; i < set->numhitboxes; i++ )
@@ -3187,8 +3174,8 @@ bool CBaseAnimating::ComputeEntitySpaceHitboxSurroundingBox( Vector *pVecWorldMi
 	pCache->ReadCachedBonePointers( hitboxbones, pStudioHdr->numbones() );
 
 	// Compute a box in world space that surrounds this entity
-	pVecWorldMins->Init( FLT_MAX, FLT_MAX, FLT_MAX );
-	pVecWorldMaxs->Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
+	pVecWorldMins->Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+	pVecWorldMaxs->Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 
 	matrix3x4_t worldToEntity, boneToEntity;
 	MatrixInvert( EntityToWorldTransform(), worldToEntity );
@@ -3269,7 +3256,7 @@ bool CBaseAnimating::LookupHitbox( const char *szName, int& outSet, int& outBox 
 				continue;
 			
 			const char* szBoxName = pBox->pszHitboxName();
-			if( Q_stricmp( szBoxName, szName ) == 0 )
+			if( V_stricmp( szBoxName, szName ) == 0 )
 			{
 				outSet = set;
 				outBox = i;
@@ -3414,7 +3401,7 @@ void CBaseAnimating::UpdateModelScale()
 	}
 
 	float dt = mvs->m_flModelScaleFinishTime - mvs->m_flModelScaleStartTime;
-	Assert( dt > 0.0f );
+	contract_assert( dt > 0.0f );
 
 	float frac = ( gpGlobals->curtime - mvs->m_flModelScaleStartTime ) / dt;
 	frac = clamp( frac, 0.0f, 1.0f );
@@ -3675,4 +3662,3 @@ bool CBaseAnimating::IsSequenceLooping( CStudioHdr *pStudioHdr, int iSequence )
 {
 	return (::GetSequenceFlags( pStudioHdr, iSequence ) & STUDIO_LOOPING) != 0;
 }
-

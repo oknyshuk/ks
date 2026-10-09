@@ -1,31 +1,31 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:	Squad classes
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_SQUAD_H
-#define AI_SQUAD_H
+// Purpose: Squad classes
 
 #include "ai_memory.h"
 #include "ai_squadslot.h"
 #include "bitstring.h"
-#include <bitset>
-#include <vector>
+import std;
+#include "sharedInterface.h"
 
 class CAI_Squad;
+class CBaseCombatCharacter;
+class CAI_BaseNPC;
 typedef CHandle<CAI_BaseNPC> AIHANDLE;
 
-#define PER_ENEMY_SQUADSLOTS 1
 
 
 //-----------------------------------------------------------------------------
 
-DECLARE_POINTER_HANDLE(AISquadsIter_t);
-DECLARE_POINTER_HANDLE(AISquadIter_t);
+struct AISquadsIter_t__ { int unused; };
+using AISquadsIter_t = AISquadsIter_t__ *;
+struct AISquadIter_t__ { int unused; };
+using AISquadIter_t = AISquadIter_t__ *;
 
-#define	MAX_SQUAD_MEMBERS	16
-#define MAX_SQUAD_DATA_SLOTS 4
+inline constexpr auto MAX_SQUAD_MEMBERS = 16;
+inline constexpr auto MAX_SQUAD_DATA_SLOTS = 4;
 
 //-----------------------------------------------------------------------------
 // CAI_SquadManager
@@ -66,8 +66,6 @@ extern CAI_SquadManager g_AI_SquadManager;
 
 //-----------------------------------------------------------------------------
 
-#ifdef PER_ENEMY_SQUADSLOTS
-
 struct AISquadEnemyInfo_t
 {
 	EHANDLE 						hEnemy;
@@ -75,8 +73,6 @@ struct AISquadEnemyInfo_t
 
 	DECLARE_SIMPLE_DATADESC();
 };
-
-#endif
 
 //-----------------------------------------------------------------------------
 // CAI_Squad
@@ -133,7 +129,7 @@ public:
 	template <typename T>
 	void					SetSquadData( unsigned slot, const T &data )
 	{
-		Assert( slot < MAX_SQUAD_DATA_SLOTS );
+		contract_assert( slot < MAX_SQUAD_DATA_SLOTS );
 		if ( slot < MAX_SQUAD_DATA_SLOTS )
 		{
 			m_SquadData[slot] = *((int *)&data);
@@ -143,7 +139,7 @@ public:
 	template <typename T>
 	void					GetSquadData( unsigned slot, T *pData )
 	{
-		Assert( slot < MAX_SQUAD_DATA_SLOTS );
+		contract_assert( slot < MAX_SQUAD_DATA_SLOTS );
 		if ( slot < MAX_SQUAD_DATA_SLOTS )
 		{
 			*pData = *((T *)&m_SquadData[slot]);
@@ -180,8 +176,6 @@ private:
 
 	int												m_SquadData[MAX_SQUAD_DATA_SLOTS];
 
-#ifdef PER_ENEMY_SQUADSLOTS
-
 	AISquadEnemyInfo_t *FindEnemyInfo( CBaseEntity *pEnemy );
 	const AISquadEnemyInfo_t *FindEnemyInfo( CBaseEntity *pEnemy ) const	{ return const_cast<CAI_Squad *>(this)->FindEnemyInfo( pEnemy ); }
 
@@ -189,12 +183,6 @@ private:
 	
 	std::vector< AISquadEnemyInfo_t >	m_EnemyInfos;
 	float							m_flEnemyInfoCleanupTime;
-
-#else
-	
-	std::vector<bool>	m_squadSlotsUsed;							// What squad slots are filled?
-
-#endif
 
 	//---------------------------------
 public:
@@ -276,5 +264,3 @@ inline int CAI_Squad::GetSquadIndex( CAI_BaseNPC *pAI )
 
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_SQUAD_H

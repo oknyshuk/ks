@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $CASCADED_SHADOW_MAPPING == 0 ) && ( $DYN_CSM_ENABLED == 1 )
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
@@ -27,7 +28,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_cs_grass_ps20b 0
+inline constexpr int shaderStaticTest_cs_grass_ps20b = 0;
 class cs_grass_ps20b_Dynamic_Index
 {
 private:
@@ -38,7 +39,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -46,7 +47,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -67,12 +68,12 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nPIXELFOGTYPE ) + 0;
 	}
 };
-#define shaderDynamicTest_cs_grass_ps20b 0
+inline constexpr int shaderDynamicTest_cs_grass_ps20b = 0;
 
 static const ShaderComboInformation_t s_DynamicComboArray_cs_grass_ps20b[1] = 
 {
@@ -80,7 +81,7 @@ static const ShaderComboInformation_t s_DynamicComboArray_cs_grass_ps20b[1] =
 };
 static const ShaderComboSemantics_t cs_grass_ps20b_combos =
 {
-	"cs_grass_ps20b", s_DynamicComboArray_cs_grass_ps20b, 1, NULL, 0 
+	"cs_grass_ps20b", s_DynamicComboArray_cs_grass_ps20b, 1, nullptr, 0 
 };
 
 class ConstructMe_cs_grass_ps20b

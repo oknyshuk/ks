@@ -1,20 +1,15 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// work in progress
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
+// Purpose: work in progress
+
+import std;
+import ks.tier1;
+#include "shareddefs.h"
+#include "util.h"
 #include "global_event_log.h"
 #include "filesystem.h"
-#include "tier1/text_writer.h"
-#include "tier1/intern_pool.h"
-#include "tier1/string_ops.h"
 
-#include <map>
-#include <memory>
-
-#include "tier0/memalloc.h"
 
 
 CGlobalEventLog	GlobalEventLog;
@@ -88,8 +83,8 @@ bool CGlobalEventLine::SetVaryingText( const char *pszValue )
 
 	Clear();
 
-	m_pszValue = ( char * )MemAlloc_Alloc( strlen( pszValue ) + 1 );
-	strcpy( m_pszValue, pszValue );
+	m_pszValue = ( char * )MemAlloc_Alloc( std::strlen( pszValue ) + 1 );
+	std::strcpy( m_pszValue, pszValue );
 
 	return true;
 }
@@ -107,7 +102,7 @@ void CGlobalEventLine::Write( ks::text_writer &buffer )
 		pszValue = ks::nz( m_ValueSymbol.data() );
 	}
 
-	if ( strchr( pszValue, ' ' ) != nullptr )
+	if ( std::strchr( pszValue, ' ' ) != nullptr )
 	{
 		buffer.printf( "\"%s\"\n", pszValue );
 	}
@@ -201,7 +196,7 @@ void CGlobalEvent::Write( ks::text_writer &buffer )
 	{
 		const char *pszName = m_Name.data();
 
-		if ( strchr( pszName, ' ' ) != nullptr )
+		if ( std::strchr( pszName, ' ' ) != nullptr )
 		{
 			buffer.printf( "\tName\t\"%s\"\n", pszName );
 		}
@@ -227,7 +222,7 @@ void CGlobalEvent::Write( ks::text_writer &buffer )
 		{
 			const char *pszKey = key.data();
 
-			if ( strchr( pszKey, ' ' ) != nullptr )
+			if ( std::strchr( pszKey, ' ' ) != nullptr )
 			{
 				buffer.printf( "\t\"%s\"\t", pszKey );
 			}
@@ -294,15 +289,16 @@ void CGlobalEventLog::RemoveEvent( CGlobalEvent *pEvent )
 
 void CGlobalEventLog::AddKeyValue( CGlobalEvent *pEvent, bool bVarying, const char *pszKey, const char *pszValueFormat, ... )
 {
-	va_list		Args;
+	ks::ScratchArena<> scratch;
+	std::va_list		Args;
 	int			nLen;
 	char		*pszBuffer;
 	bool		bResult;
 
-	va_start( Args, pszValueFormat );
+	__builtin_va_start( Args, pszValueFormat );
 
-	nLen = vsnprintf( nullptr, 0, pszValueFormat, Args ) + 1;
-	pszBuffer = ( char * )stackalloc( nLen * sizeof( char ) );
+	nLen = std::vsnprintf( nullptr, 0, pszValueFormat, Args ) + 1;
+	pszBuffer = scratch.Alloc<char>( nLen );
 	V_vsnprintf( pszBuffer, nLen, pszValueFormat, Args );
 	
 	bResult = pEvent->AddValue( bVarying, pszKey, pszBuffer );

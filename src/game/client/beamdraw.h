@@ -1,17 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#if !defined( BEAMDRAW_H )
-#define BEAMDRAW_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.math;
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imesh.h"
-#include "mathlib/vector.h"
+import std;
 #include "tier2/beamsegdraw.h"
 #include "c_pixel_visibility.h"
+#include "iclientrenderable.h"
+#include "shareddefs.h"
+#include "c_baseentity.h"
 
 #define NOISE_DIVISIONS		128
 
@@ -158,5 +157,3 @@ class CEngineSprite *Draw_SetSpriteTexture( const model_t *pSpriteModel, int fra
 // Assumes the material has already been bound
 //-----------------------------------------------------------------------------
 void DrawSprite( const Vector &vecOrigin, float flWidth, float flHeight, color32 color );
-
-#endif // BEAMDRAW_H

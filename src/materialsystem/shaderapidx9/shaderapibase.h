@@ -1,14 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef SHADERRENDERBASE_H
-#define SHADERRENDERBASE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "togl/rendermechanism.h"
 #include "shaderapi/ishaderapi.h"
@@ -17,7 +9,6 @@
 
 // Colors for PIX graphs
 #define PIX_VALVE_ORANGE	0xFFF5940F
-
 
 //-----------------------------------------------------------------------------
 // The Base implementation of the shader rendering interface
@@ -77,6 +68,3 @@ public:
 			g_pShaderAPIBase->EndPIXEvent();
 	}
 };
-
-
-#endif // SHADERRENDERBASE_H

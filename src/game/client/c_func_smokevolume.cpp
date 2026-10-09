@@ -1,10 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_smoke_trail.h"
@@ -12,7 +19,7 @@
 #include "engine/IEngineTrace.h"
 #include "view.h"
 
-#define SF_EMISSIVE	0x00000001
+constexpr auto SF_EMISSIVE = 0x00000001;
 
 // ------------------------------------------------------------------------- //
 // Definitions
@@ -97,25 +104,22 @@ private:
 
 	inline int GetSmokeParticleIndex(int x, int y, int z)	
 	{
-		Assert( IsValidXYZCoords( x, y, z ) );
 		return z*m_xCount*m_yCount+y*m_xCount+x;
 	}
 
 	inline SmokeParticleInfo *GetSmokeParticleInfo(int x, int y, int z)	
 	{
-		Assert( IsValidXYZCoords( x, y, z ) );
 		return &m_pSmokeParticleInfos[GetSmokeParticleIndex(x,y,z)];
 	}
 
 	inline void	GetParticleInfoXYZ(int index, int &x, int &y, int &z)
 	{
-		Assert( index >= 0 && index < m_xCount * m_yCount * m_zCount );
+		contract_assert( index >= 0 && index < m_xCount * m_yCount * m_zCount );
 		z = index / (m_xCount*m_yCount);
 		int zIndex = z*m_xCount*m_yCount;
 		y = (index - zIndex) / m_xCount;
 		int yIndex = y*m_xCount;
 		x = index - zIndex - yIndex;
-		Assert( IsValidXYZCoords( x, y, z ) );
 	}
 
 	inline bool IsValidXYZCoords(int x, int y, int z)
@@ -191,59 +195,33 @@ static inline void InterpColor(unsigned char dest[4], unsigned char src1[4], uns
 
 static inline int GetWorldPointContents(const Vector &vPos)
 {
-#if defined(PARTICLEPROTOTYPE_APP)
-	return 0;
-#else
 	return enginetrace->GetPointContents( vPos );
-#endif
 }
 
 static inline void WorldTraceLine( const Vector &start, const Vector &end, int contentsMask, trace_t *trace )
 {
-#if defined(PARTICLEPROTOTYPE_APP)
-	trace->fraction = 1;
-#else
 	UTIL_TraceLine(start, end, contentsMask, nullptr, COLLISION_GROUP_NONE, trace);
-#endif
 }
 
 static inline Vector EngineGetLightForPoint(const Vector &vPos)
 {
-#if defined(PARTICLEPROTOTYPE_APP)
-	return Vector(1,1,1);
-#else
 	return engine->GetLightForPoint(vPos, true);
-#endif
 }
 
 static inline Vector& EngineGetVecRenderOrigin()
 {
-#if defined(PARTICLEPROTOTYPE_APP)
-	static Vector dummy(0,0,0);
-	return dummy;
-#else
 	extern Vector g_vecRenderOrigin[ MAX_SPLITSCREEN_PLAYERS ];
 	return g_vecRenderOrigin[ GET_ACTIVE_SPLITSCREEN_SLOT() ];
-#endif
 }
 
 static inline float& EngineGetSmokeFogOverlayAlpha()
 {
-#if defined(PARTICLEPROTOTYPE_APP)
-	static float dummy;
-	return dummy;
-#else
 	return g_SmokeFogOverlayAlpha;
-#endif
 }
 
 static inline C_BaseEntity* ParticleGetEntity( int index )
 {
-#if defined(PARTICLEPROTOTYPE_APP)
-	return nullptr;
-#else
 	return cl_entitylist->GetEnt( index );
-#endif
 }
 
 // ------------------------------------------------------------------------- //
@@ -337,7 +315,7 @@ void C_FuncSmokeVolume::Update( float fTimeDelta )
 		m_ParticleEffect.SetBBox( vWorldMins, vWorldMaxs );
 	}
 		
-	float minViewOrigingDistance = FLT_MAX;
+	float minViewOrigingDistance = std::numeric_limits<float>::max();
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 	{
 		float d = CollisionProp()->CalcDistanceFromPoint( MainViewOrigin(hh) );
@@ -447,7 +425,7 @@ void C_FuncSmokeVolume::Update( float fTimeDelta )
 		else
 		{
 			SmokeParticleInfo *pOther = &m_pSmokeParticleInfos[pInfo->m_TradeIndex];
-			assert(pOther->m_TradeIndex == i);
+			contract_assert( pOther->m_TradeIndex == i );
 			
 			// This makes sure the trade only gets updated once per frame.
 			if(pInfo < pOther)
@@ -477,7 +455,7 @@ void C_FuncSmokeVolume::Update( float fTimeDelta )
 				else
 				{			
 					// Ok, move them closer.
-					float percent = (float)cos(pInfo->m_TradeClock * 2 * 1.57079632f / pInfo->m_TradeDuration);
+					float percent = (float)std::cos(pInfo->m_TradeClock * 2 * 1.57079632f / pInfo->m_TradeDuration);
 					percent = percent * 0.5 + 0.5;
 					
 					pInfo->m_pParticle->m_FadeAlpha  = pInfo->m_FadeAlpha + (pOther->m_FadeAlpha - pInfo->m_FadeAlpha) * (1 - percent);
@@ -556,7 +534,7 @@ void C_FuncSmokeVolume::SimulateParticles( CParticleSimulateIterator *pIterator 
 	SmokeGrenadeParticle *pParticle = (SmokeGrenadeParticle*)pIterator->GetFirst();
 	while ( pParticle )
 	{
-		pParticle->m_CurRotation += pParticle->m_RotationFactor * ( M_PI / 180.0f ) * m_RotationSpeed * pIterator->GetTimeDelta();
+		pParticle->m_CurRotation += pParticle->m_RotationFactor * ( std::numbers::pi / 180.0f ) * m_RotationSpeed * pIterator->GetTimeDelta();
 		pParticle = (SmokeGrenadeParticle*)pIterator->GetNext();
 	}
 }
@@ -602,7 +580,7 @@ void C_FuncSmokeVolume::FillVolume()
 						int testX, testY, testZ;
 						int index = GetSmokeParticleIndex(x,y,z);
 						GetParticleInfoXYZ(index, testX, testY, testZ);
-						assert(testX == x && testY == y && testZ == z);
+						contract_assert( testX == x && testY == y && testZ == z );
 #endif
 
 						Vector vColor = EngineGetLightForPoint(vPos);

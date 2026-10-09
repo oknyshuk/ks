@@ -1,10 +1,66 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
@@ -14,17 +70,11 @@
 #ifdef GAME_DLL
 #include "reflect_sendtable.h"
 #endif
-#include "mathlib/mathlib.h"
 #include "util_shared.h"
 #include "model_types.h"
-#include "convar.h"
 #include "IEffects.h"
 #include "vphysics/object_hash.h"
 #include "mathlib/IceKey.H"
-#include "checksum_crc.h"
-#include "particle_parse.h"
-#include "keyvalues.h"
-#include "icommandline.h"
 
 #ifdef CLIENT_DLL
 	#include "clientleafsystem.h"
@@ -39,26 +89,12 @@ bool NPC_CheckBrushExclude( CBaseEntity *pEntity, CBaseEntity *pBrush );
 ConVar r_visualizetraces( "r_visualizetraces", "0", FCVAR_CHEAT );
 ConVar developer("developer", "0", FCVAR_RELEASE, "Set developer message level" ); // developer mode
 
-#ifdef DETECT_TRACE_SPIKES
-float g_TraceSpikeTolerance = 0.25;
-ConVar trace_spike_tolerance( "trace_spike_tolerance", "0.25" );
-
-void DoReportExpensiveTrace( bool repeat, float time )
-{
-	if ( g_TraceSpikeTolerance > 0.0f )
-	{
-		Msg( "%s%f!\n", ( repeat ) ? "    R: " : "", time );
-	}
-	g_TraceSpikeTolerance = trace_spike_tolerance.GetFloat();
-}
-#endif
-
 float UTIL_VecToYaw( const Vector &vec )
 {
 	if (vec.y == 0 && vec.x == 0)
 		return 0;
 	
-	float yaw = atan2( vec.y, vec.x );
+	float yaw = std::atan2( vec.y, vec.x );
 
 	yaw = RAD2DEG(yaw);
 
@@ -74,7 +110,7 @@ float UTIL_VecToPitch( const Vector &vec )
 	Vector tmp = vec;
 	if ( VectorNormalize( tmp ) > 0 )
 	{
-		pitch = RAD2DEG( asin( -tmp.z ) );
+		pitch = RAD2DEG( std::asin( -tmp.z ) );
 	}
 	return pitch;
 }
@@ -90,7 +126,7 @@ float UTIL_VecToYaw( const matrix3x4_t &matrix, const Vector &vec )
 	if (x == 0.0f && y == 0.0f)
 		return 0.0f;
 	
-	float yaw = atan2( -y, x );
+	float yaw = std::atan2( -y, x );
 
 	yaw = RAD2DEG(yaw);
 
@@ -107,7 +143,7 @@ float UTIL_VecToPitch( const matrix3x4_t &matrix, const Vector &vec )
 	if ( VectorNormalize( tmp ) > 0 )
 	{
 		float z = matrix[0][2] * tmp.x + matrix[1][2] * tmp.y + matrix[2][2] * tmp.z;
-		pitch = RAD2DEG( asin( -z ) );
+		pitch = RAD2DEG( std::asin( -z ) );
 		if (pitch < 0)
 			pitch += 360;
 	}
@@ -139,12 +175,12 @@ static int SeedFileLineHash( int seedvalue, const char *sharedname, int addition
 	CRC32_Init( &retval );
 
 	//ensure cross-platform agreement
-	seedvalue = LittleDWord( seedvalue );
-	additionalSeed = LittleDWord( additionalSeed );
+	seedvalue = ( seedvalue );
+	additionalSeed = ( additionalSeed );
 
 	CRC32_ProcessBuffer( &retval, (void *)&seedvalue, sizeof( int ) );
 	CRC32_ProcessBuffer( &retval, (void *)&additionalSeed, sizeof( int ) );
-	CRC32_ProcessBuffer( &retval, (void *)sharedname, Q_strlen( sharedname ) );
+	CRC32_ProcessBuffer( &retval, (void *)sharedname, V_strlen( sharedname ) );
 	
 	CRC32_Final( &retval );
 
@@ -153,7 +189,7 @@ static int SeedFileLineHash( int seedvalue, const char *sharedname, int addition
 
 float SharedRandomFloat( const char *sharedname, float flMinVal, float flMaxVal, int additionalSeed /*=0*/ )
 {
-	Assert( CBaseEntity::GetPredictionRandomSeed() != -1 );
+	contract_assert( CBaseEntity::GetPredictionRandomSeed() != -1 );
 
 	int seed = SeedFileLineHash( CBaseEntity::GetPredictionRandomSeed(), sharedname, additionalSeed );
 	RandomSeed( seed );
@@ -162,7 +198,7 @@ float SharedRandomFloat( const char *sharedname, float flMinVal, float flMaxVal,
 
 int SharedRandomInt( const char *sharedname, int iMinVal, int iMaxVal, int additionalSeed /*=0*/ )
 {
-	Assert( CBaseEntity::GetPredictionRandomSeed() != -1 );
+	contract_assert( CBaseEntity::GetPredictionRandomSeed() != -1 );
 
 	int seed = SeedFileLineHash( CBaseEntity::GetPredictionRandomSeed(), sharedname, additionalSeed );
 	RandomSeed( seed );
@@ -171,7 +207,7 @@ int SharedRandomInt( const char *sharedname, int iMinVal, int iMaxVal, int addit
 
 Vector SharedRandomVector( const char *sharedname, float minVal, float maxVal, int additionalSeed /*=0*/ )
 {
-	Assert( CBaseEntity::GetPredictionRandomSeed() != -1 );
+	contract_assert( CBaseEntity::GetPredictionRandomSeed() != -1 );
 
 	int seed = SeedFileLineHash( CBaseEntity::GetPredictionRandomSeed(), sharedname, additionalSeed );
 	RandomSeed( seed );
@@ -186,7 +222,7 @@ Vector SharedRandomVector( const char *sharedname, float minVal, float maxVal, i
 
 QAngle SharedRandomAngle( const char *sharedname, float minVal, float maxVal, int additionalSeed /*=0*/ )
 {
-	Assert( CBaseEntity::GetPredictionRandomSeed() != -1 );
+	contract_assert( CBaseEntity::GetPredictionRandomSeed() != -1 );
 
 	int seed = SeedFileLineHash( CBaseEntity::GetPredictionRandomSeed(), sharedname, additionalSeed );
 	RandomSeed( seed );
@@ -294,7 +330,7 @@ bool StandardFilterRules( IHandleEntity *pHandleEntity, int fContentsMask )
 bool IsWeaponClassname( const char *pszClassName )
 {
 	// Look at the name of the class to determine if this is a weapon.
-	return ( !Q_strnicmp( "weapon_", pszClassName, WEAPON_CLASSNAME_PREFIX_LENGTH ) );
+	return ( !V_strnicmp( "weapon_", pszClassName, WEAPON_CLASSNAME_PREFIX_LENGTH ) );
 }
 
 
@@ -407,7 +443,7 @@ CTraceFilterSkipTwoEntities::CTraceFilterSkipTwoEntities( const IHandleEntity *p
 
 bool CTraceFilterSkipTwoEntities::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
 {
-	Assert( pHandleEntity );
+	contract_assert( pHandleEntity );
 	if ( !PassServerEntityFilter( pHandleEntity, m_pPassEnt2 ) )
 		return false;
 
@@ -447,7 +483,7 @@ void CTraceFilterSimpleList::AddEntityToIgnore( IHandleEntity *pEntity )
 void CTraceFilterSimpleList::AddEntitiesToIgnore( int nCount, IHandleEntity **ppEntities )
 {
 	int nIndex = std::ssize( m_PassEntities ); m_PassEntities.resize( m_PassEntities.size() + nCount );
-	memcpy( &m_PassEntities[nIndex], ppEntities, nCount * sizeof( IHandleEntity* ) );
+	std::memcpy( &m_PassEntities[nIndex], ppEntities, nCount * sizeof( IHandleEntity* ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -604,7 +640,7 @@ void UTIL_TraceModel( const Vector &vecStart, const Vector &vecEnd, const Vector
 	}
 	else
 	{
-		memset( ptr, 0, sizeof(trace_t) );
+		std::memset( ptr, 0, sizeof(trace_t) );
 		ptr->fraction = 1.0f;
 	}
 }
@@ -704,7 +740,7 @@ void UTIL_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, const Ve
 	//Vector vec = pCollision->OBBMaxs();
 	// Adding this assertion here so game code catches it, but really the assertion belongs in the engine
 	// because one day, rotated collideables will work!
-	Assert( pCollision->GetCollisionAngles() == vec3_angle );
+	contract_assert( pCollision->GetCollisionAngles() == vec3_angle );
 
 	CTraceFilterEntity traceFilter( pEntity, pCollision->GetCollisionGroup() );
 
@@ -719,7 +755,7 @@ void UTIL_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, const Ve
 
 	// Adding this assertion here so game code catches it, but really the assertion belongs in the engine
 	// because one day, rotated collideables will work!
-	Assert( pCollision->GetCollisionAngles() == vec3_angle );
+	contract_assert( pCollision->GetCollisionAngles() == vec3_angle );
 
 	CTraceFilterEntityIgnoreOther traceFilter( pEntity, pIgnore, nCollisionGroup );
 
@@ -734,7 +770,7 @@ void UTIL_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, const Ve
 
 	// Adding this assertion here so game code catches it, but really the assertion belongs in the engine
 	// because one day, rotated collideables will work!
-	Assert( pCollision->GetCollisionAngles() == vec3_angle );
+	contract_assert( pCollision->GetCollisionAngles() == vec3_angle );
 
 	enginetrace->SweepCollideable( pCollision, vecAbsStart, vecAbsEnd, pCollision->GetCollisionAngles(), mask, pFilter, ptr );
 }
@@ -1064,12 +1100,12 @@ void UTIL_StringToFloatArray( float *pVector, int count, const char *pString )
 	char *pstr, *pfront, tempString[128];
 	int	j;
 
-	Q_strncpy( tempString, pString, sizeof(tempString) );
+	V_strncpy( tempString, pString, sizeof(tempString) );
 	pstr = pfront = tempString;
 
 	for ( j = 0; j < count; j++ )			// lifted from pr_edict.c
 	{
-		pVector[j] = atof( pfront );
+		pVector[j] = std::atof( pfront );
 
 		// skip any leading whitespace
 		while ( *pstr && *pstr <= ' ' )
@@ -1098,6 +1134,7 @@ void UTIL_StringToVector( float *pVector, const char *pString )
 
 void UTIL_DecodeICE( unsigned char * buffer, int size, const unsigned char *key )
 {
+	ks::ScratchArena<> scratch;
 	if ( !key )
 		return;
 
@@ -1106,7 +1143,7 @@ void UTIL_DecodeICE( unsigned char * buffer, int size, const unsigned char *key 
 
 	int blockSize = ice.blockSize();
 
-	unsigned char *temp = (unsigned char *) stackalloc( PAD_NUMBER( size, blockSize ) );
+	unsigned char *temp = (unsigned char *) scratch.AllocBytes( PAD_NUMBER( size, blockSize ) );
 	unsigned char *p1 = buffer;
 	unsigned char *p2 = temp;
 				
@@ -1121,7 +1158,7 @@ void UTIL_DecodeICE( unsigned char * buffer, int size, const unsigned char *key 
 	}
 
 	// copy encrypted data back to original buffer
-	Q_memcpy( buffer, temp, size-bytesLeft );
+	V_memcpy( buffer, temp, size-bytesLeft );
 }
 
 void UTIL_EncodeICE( unsigned char * buffer, unsigned int size, const unsigned char *key )
@@ -1166,8 +1203,6 @@ IMPLEMENT_REFLECT_TABLE( IntervalTimer, DT_IntervalTimer );
 IMPLEMENT_REFLECT_PREDMAP_NO_BASE( IntervalTimer );
 #endif
 
-#ifdef CLIENT_DLL
-#endif	
 #endif
 
 
@@ -1177,8 +1212,6 @@ IMPLEMENT_REFLECT_TABLE( CountdownTimer, DT_CountdownTimer );
 IMPLEMENT_REFLECT_PREDMAP_NO_BASE( CountdownTimer );
 #endif
 
-#ifdef CLIENT_DLL
-#endif	
 #else
 IMPLEMENT_REFLECT_TABLE( CountdownTimer, DT_CountdownTimer );
 #endif
@@ -1190,7 +1223,7 @@ void CTimeline::ClearValues( void )
 {
 	Invalidate();
 
-	memset( m_flValues.m_Value, 0, sizeof( m_flValues.m_Value ) );
+	std::memset( m_flValues.m_Value, 0, sizeof( m_flValues.m_Value ) );
 	memset( m_nValueCounts.m_Value, 0, sizeof( m_nValueCounts.m_Value ) );
 	m_nBucketCount = 0;
 	m_flInterval = TIMELINE_INTERVAL_START;
@@ -1205,7 +1238,7 @@ void CTimeline::RecordValue( float flValue )
 
 	int iBucket = GetCurrentBucket();
 
-	Assert( iBucket >= 0 );
+	contract_assert( iBucket >= 0 );
 
 	while ( iBucket >= TIMELINE_ARRAY_SIZE )
 	{
@@ -1291,7 +1324,7 @@ void CTimeline::RecordValue( float flValue )
 
 float CTimeline::GetValue( int i ) const
 {
-	Assert( i >= 0 && i < m_nBucketCount );
+	contract_assert( i >= 0 && i < m_nBucketCount );
 
 	if ( i < 0 || i >= m_nBucketCount )
 	{
@@ -1378,7 +1411,7 @@ void CTimeline::Compress( void )
 
 	int nRemainingBytes = ( TIMELINE_ARRAY_SIZE - j ) * sizeof( m_flValues[0] );
 
-	memset( &( m_flValues.GetForModify( j ) ), 0, nRemainingBytes );
+	std::memset( &( m_flValues.GetForModify( j ) ), 0, nRemainingBytes );
 	memset( &( m_nValueCounts.GetForModify( j ) ), 0, nRemainingBytes );
 
 	m_flInterval *= 2.0f;
@@ -1405,13 +1438,13 @@ unsigned short UTIL_GetAchievementEventMask( void )
 
 	char lowercase[ 256 ];
 #ifdef CLIENT_DLL
-	Q_FileBase( engine->GetLevelName(), lowercase, sizeof( lowercase ) );
+	V_FileBase( engine->GetLevelName(), lowercase, sizeof( lowercase ) );
 #else
-	Q_strncpy( lowercase, STRING( gpGlobals->mapname ), sizeof( lowercase ) );
+	V_strncpy( lowercase, STRING( gpGlobals->mapname ), sizeof( lowercase ) );
 #endif
-	Q_strlower( lowercase );
+	V_strlower( lowercase );
 
-	CRC32_ProcessBuffer( &mapCRC, lowercase, Q_strlen( lowercase ) );
+	CRC32_ProcessBuffer( &mapCRC, lowercase, V_strlen( lowercase ) );
 	CRC32_Final( &mapCRC );
 
 	return ( mapCRC & 0xFFFF );
@@ -1429,10 +1462,10 @@ const char* ReadAndAllocStringValue( KeyValues *pSub, const char *pName, const c
 		return "";
 	}
 
-	int len = Q_strlen( pValue ) + 1;
+	int len = V_strlen( pValue ) + 1;
 	char *pAlloced = new char[ len ];
-	Assert( pAlloced );
-	Q_strncpy( pAlloced, pValue, len );
+	contract_assert( pAlloced );
+	V_strncpy( pAlloced, pValue, len );
 	return pAlloced;
 }
 
@@ -1447,7 +1480,7 @@ int UTIL_StringFieldToInt( const char *szValue, const char **pValueStrings, int 
 			return i;
 	}
 
-	Assert(0);
+	contract_assert( 0 );
 	return -1;
 }
 
@@ -1505,7 +1538,7 @@ int UTIL_CountNumBitsSet( uint64 nVar )
 
 bool UTIL_FindClosestPassableSpace( const Vector &vOriginalCenter, const Vector &vExtents, const Vector &vIndecisivePush, unsigned int iIterations, Vector &vCenterOut, int nAxisRestrictionFlags, FindClosestPassableSpace_TraceAdapter_t *pTraceAdapter )
 {
-	Assert( vExtents != vec3_origin );
+	contract_assert( vExtents != vec3_origin );
 
 	trace_t traces[2];
 	Ray_t entRay;
@@ -1558,7 +1591,7 @@ bool UTIL_FindClosestPassableSpace( const Vector &vOriginalCenter, const Vector 
 		fOriginalExtentDists[0] = 0.0f; //should never get hit
 		fOriginalExtentDists[1] = fXDiff; //line along x axis		
 		fOriginalExtentDists[2] = fYDiff; //line along y axis
-		fOriginalExtentDists[3] = sqrt( fXSqr + fYSqr ); //diagonal perpendicular to z-axis
+		fOriginalExtentDists[3] = std::sqrt( fXSqr + fYSqr ); //diagonal perpendicular to z-axis
 		fOriginalExtentDists[4] = fZDiff; //line along z axis
 		fOriginalExtentDists[5] = sqrt( fXSqr + fZSqr ); //diagonal perpendicular to y-axis
 		fOriginalExtentDists[6] = sqrt( fYSqr + fZSqr ); //diagonal perpendicular to x-axis
@@ -1791,19 +1824,19 @@ bool UTIL_GetModDir( char *lpszTextOut, unsigned int nSize )
 {
 	// Must pass in a buffer at least large enough to hold the desired string
 	const char *pGameDir = CommandLine()->ParmValue( "-game", "hl2" );
-	Assert( strlen(pGameDir) <= nSize );
-	if ( strlen(pGameDir) > nSize )
+	contract_assert( std::strlen(pGameDir) <= nSize );
+	if ( std::strlen(pGameDir) > nSize )
 		return false;
 
-	Q_strncpy( lpszTextOut, pGameDir, nSize );
-	if ( Q_strnchr( lpszTextOut, '/', nSize ) || Q_strnchr( lpszTextOut, '\\', nSize ) )
+	V_strncpy( lpszTextOut, pGameDir, nSize );
+	if ( V_strnchr( lpszTextOut, '/', nSize ) || V_strnchr( lpszTextOut, '\\', nSize ) )
 	{
 		// Strip the last directory off (which will be our game dir)
-		Q_StripLastDir( lpszTextOut, nSize );
+		V_StripLastDir( lpszTextOut, nSize );
 
 		// Find the difference in string lengths and take that difference from the original string as the mod dir
-		int dirlen = Q_strlen( lpszTextOut );
-		Q_strncpy( lpszTextOut, pGameDir + dirlen, Q_strlen( pGameDir ) - dirlen + 1 );
+		int dirlen = V_strlen( lpszTextOut );
+		V_strncpy( lpszTextOut, pGameDir + dirlen, V_strlen( pGameDir ) - dirlen + 1 );
 	}
 
 	return true;
@@ -1813,16 +1846,11 @@ bool UTIL_GetModDir( char *lpszTextOut, unsigned int nSize )
 
 int UTIL_CalcFrustumThroughConvexPolygon( const Vector *pPolyVertices, int iPolyVertCount, const Vector &vFrustumOrigin, const VPlane *pInputFrustumPlanes, int iInputFrustumPlanes, VPlane *pOutputFrustumPlanes, int iMaxOutputPlanes, int iPreserveCount )
 {
-	Assert( iPreserveCount <= iMaxOutputPlanes );
-	Assert( iPreserveCount <= iInputFrustumPlanes );
+	ks::ScratchArena<> scratch;
+	contract_assert( iPreserveCount <= iMaxOutputPlanes );
+	contract_assert( iPreserveCount <= iInputFrustumPlanes );
 	if( iPolyVertCount < 3 )
 		return 0;
-
-#if defined( FRUSTUM_DEBUGGING )
-	//put case-specific debug logic here and it will propogate
-	const bool bDebugThisCall = (iInputFrustumPlanes > 0);
-	const float fDisplayTime = 0.0f;
-#endif
 
 	int iMaxComplexity = iMaxOutputPlanes - iPreserveCount;
 	
@@ -1834,7 +1862,7 @@ int UTIL_CalcFrustumThroughConvexPolygon( const Vector *pPolyVertices, int iPoly
 		int iAllocSize = iPolyVertCount + iInputFrustumPlanes;
 
 		Vector *pWorkVerts[2];
-		pWorkVerts[0] = (Vector *)stackalloc( sizeof( Vector ) * iAllocSize * 2 ); //possible to add 1 point per cut, iPolyVertCount starting points, iInputFrustumPlaneCount cuts
+		pWorkVerts[0] = scratch.Alloc<Vector>( iAllocSize * 2 ); //possible to add 1 point per cut, iPolyVertCount starting points, iInputFrustumPlaneCount cuts
 		pWorkVerts[1] = pWorkVerts[0] + iAllocSize;
 
 		//clip by first plane and put output into pInVerts
@@ -1860,8 +1888,8 @@ int UTIL_CalcFrustumThroughConvexPolygon( const Vector *pPolyVertices, int iPoly
 		if( iPolyVertCount > iMaxComplexity )
 		{
 			//we'll need to reduce our output frustum, copy the input polygon
-			pClippedVerts = (Vector *)stackalloc( sizeof( Vector ) * iPolyVertCount );
-			memcpy( pClippedVerts, pPolyVertices, sizeof( Vector ) * iPolyVertCount );
+			pClippedVerts = scratch.Alloc<Vector>( iPolyVertCount );
+			std::memcpy( pClippedVerts, pPolyVertices, sizeof( Vector ) * iPolyVertCount );
 		}
 		else
 		{
@@ -1871,32 +1899,11 @@ int UTIL_CalcFrustumThroughConvexPolygon( const Vector *pPolyVertices, int iPoly
 		iClippedVertCount = iPolyVertCount;
 	}
 
-#if defined( FRUSTUM_DEBUGGING ) //for visibility culling debugging
-	if( bDebugThisCall )
-	{
-		NDebugOverlay::Line( pClippedVerts[iClippedVertCount - 1], pClippedVerts[0], 255, 0, 0, true, fDisplayTime );
-		for( int j = 0; j != iClippedVertCount - 1; ++j )
-		{
-			NDebugOverlay::Line( pClippedVerts[j], pClippedVerts[j+1], 255, 0, 0, true, fDisplayTime );
-		}
-	}
-#endif
-
-	Assert( iClippedVertCount <= (iPolyVertCount + iInputFrustumPlanes) );
+	contract_assert( iClippedVertCount <= (iPolyVertCount + iInputFrustumPlanes) );
 
 	if( iClippedVertCount > iMaxComplexity )
 	{
-#if defined( FRUSTUM_DEBUGGING )
-		if( bDebugThisCall )
-		{
-			NDebugOverlay::Line( pClippedVerts[iClippedVertCount - 1], pClippedVerts[0], 0, 255, 0, false, fDisplayTime );
-			for( int j = 0; j != iClippedVertCount - 1; ++j )
-			{
-				NDebugOverlay::Line( pClippedVerts[j], pClippedVerts[j+1], 0, 255, 0, true, fDisplayTime );
-			}
-		}
-#endif
-		float *fLineLengthSqr = (float *)stackalloc( sizeof( float ) * iClippedVertCount );
+		float *fLineLengthSqr = scratch.Alloc<float>( iClippedVertCount );
 
 		for( int i = 0; i != (iClippedVertCount - 1); ++i )
 		{
@@ -1905,10 +1912,6 @@ int UTIL_CalcFrustumThroughConvexPolygon( const Vector *pPolyVertices, int iPoly
 		fLineLengthSqr[(iClippedVertCount - 1)] = (pClippedVerts[0] - pClippedVerts[(iClippedVertCount - 1)]).LengthSqr(); //wrap around
 
 
-#if defined( FRUSTUM_DEBUGGING ) //for visibility culling debugging
-		Vector vDebugBoxExtent;
-		vDebugBoxExtent.Init( 1.0f, 1.0f, 1.0f );
-#endif
 		while( iClippedVertCount > iMaxComplexity ) //vert count == number of planes we need to bound the polygon
 		{
 			//we have too many verts to represent this accurately in the output frustum plane count
@@ -1963,21 +1966,11 @@ int UTIL_CalcFrustumThroughConvexPolygon( const Vector *pPolyVertices, int iPoly
 				int iElementShift = (iOldVertCount - i4);
 
 				//eliminate p3, we merged p2+p3 and already stored the result in p2
-				memmove( p3, p4, sizeof( Vector ) * iElementShift );
+				std::memmove( p3, p4, sizeof( Vector ) * iElementShift );
 				memmove( &fLineLengthSqr[i3], &fLineLengthSqr[i4], sizeof( float ) * iElementShift );
 			}
 		}
 
-#if defined(FRUSTUM_DEBUGGING) //for visibility culling debugging
-		if( bDebugThisCall )
-		{
-			NDebugOverlay::Line( pClippedVerts[iClippedVertCount - 1], pClippedVerts[0], 0, 0, 255, false, fDisplayTime );
-			for( int j = 0; j != iClippedVertCount - 1; ++j )
-			{
-				NDebugOverlay::Line( pClippedVerts[j], pClippedVerts[j+1], 0, 0, 255, true, fDisplayTime );
-			}
-		}
-#endif
 	}
 
 	//generate planes defined by each line around the convex and the frustum origin
@@ -2008,7 +2001,7 @@ int UTIL_CalcFrustumThroughConvexPolygon( const Vector *pPolyVertices, int iPoly
 	//preserve input planes on request
 	if( iPreserveCount > 0 )
 	{
-		memcpy( &pOutputFrustumPlanes[iClippedVertCount], &pInputFrustumPlanes[iInputFrustumPlanes - iPreserveCount], sizeof( VPlane ) * iPreserveCount );
+		std::memcpy( &pOutputFrustumPlanes[iClippedVertCount], &pInputFrustumPlanes[iInputFrustumPlanes - iPreserveCount], sizeof( VPlane ) * iPreserveCount );
 	}
 
 	return (iClippedVertCount + iPreserveCount);
@@ -2032,7 +2025,7 @@ bool CFlaggedEntitiesEnum::AddToList( CBaseEntity *pEntity )
 {
 	if ( m_count >= m_listMax )
 	{
-		AssertMsgOnce( 0, "reached enumerated list limit.  Increase limit, decrease radius, or make it so entity flags will work for you" );
+		contract_assert( false && "reached enumerated list limit.  Increase limit, decrease radius, or make it so entity flags will work for you" );
 		return false;
 	}
 	m_pList[m_count] = pEntity;
@@ -2076,7 +2069,7 @@ bool CHurtableEntitiesEnum::AddToList( CBaseEntity *pEntity )
 {
 	if ( m_count >= m_listMax )
 	{
-		AssertMsgOnce( 0, "reached enumerated list limit.  Increase limit, decrease radius, or make it so entity flags will work for you" );
+		contract_assert( false && "reached enumerated list limit.  Increase limit, decrease radius, or make it so entity flags will work for you" );
 		return false;
 	}
 	m_pList[m_count] = pEntity;
@@ -2164,14 +2157,14 @@ void UTIL_GetNextCommandLength( const char *pText, int nMaxLen, int *pCommandLen
 /**
  *  remove double spaces and empty bold/italic HTML tags from a string
  */
-void UTIL_TrimEmptyWhitespaceFromHTML( OUT_Z_BYTECAP( descWriterByteSize ) wchar_t* pszDescWriter, size_t descWriterByteSize, const wchar_t* pszDescReader )
+void UTIL_TrimEmptyWhitespaceFromHTML( wchar_t* pszDescWriter, std::size_t descWriterByteSize, const wchar_t* pszDescReader )
 {
-	size_t writerArraySize = descWriterByteSize / sizeof( wchar_t );
+	std::size_t writerArraySize = descWriterByteSize / sizeof( wchar_t );
 	wchar_t* pszDescWriterEnd = pszDescWriter + writerArraySize - 1; // leave 1 character for '\0' terminator
 
 	while ( *pszDescReader != 0 && pszDescWriter < pszDescWriterEnd )
 	{
-		if ( !wcsncmp( pszDescReader, L" <b></b> ", 9 ) ||
+		if ( !std::wcsncmp( pszDescReader, L" <b></b> ", 9 ) ||
 			 !wcsncmp( pszDescReader, L" <i></i> ", 9 ) )
 		{
 			pszDescReader += 8;
@@ -2192,14 +2185,14 @@ void UTIL_TrimEmptyWhitespaceFromHTML( OUT_Z_BYTECAP( descWriterByteSize ) wchar
 	*pszDescWriter = 0;
 }
 
-void UTIL_TrimEmptyWhitespaceFromHTML( OUT_Z_BYTECAP( descWriterByteSize ) char* pszDescWriter, size_t descWriterByteSize, const char* pszDescReader )
+void UTIL_TrimEmptyWhitespaceFromHTML( char* pszDescWriter, std::size_t descWriterByteSize, const char* pszDescReader )
 {
-	size_t writerArraySize = descWriterByteSize / sizeof( char );
+	std::size_t writerArraySize = descWriterByteSize / sizeof( char );
 	char* pszDescWriterEnd = pszDescWriter + writerArraySize - 1; // leave 1 character for '\0' terminator
 
 	while ( *pszDescReader != 0 && pszDescWriter < pszDescWriterEnd )
 	{
-		if ( !strncmp( pszDescReader, " <b></b> ", 9 ) ||
+		if ( !std::strncmp( pszDescReader, " <b></b> ", 9 ) ||
 			 !strncmp( pszDescReader, " <i></i> ", 9 ) )
 		{
 			pszDescReader += 8;
@@ -2219,5 +2212,3 @@ void UTIL_TrimEmptyWhitespaceFromHTML( OUT_Z_BYTECAP( descWriterByteSize ) char*
 	// terminate buffer
 	*pszDescWriter = 0;
 }
-
-

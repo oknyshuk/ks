@@ -1,18 +1,32 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
+#include "rocketui/rmlui.h"
 #include "rkpanel_play.h"
 
 #include "rkpanel.h"
 
 #include "rkhud_model.h"
 
-#include "cbase.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "cdll_client_int.h"
 #include "filesystem.h"
-#include "tier1/convar.h"
 
 #include <rocketui/rmlui.h>
+import ks.tier1;
+import std;
 #include "rkhud_pausemenu.h"
 #include "rkmenu_main.h"
 
@@ -57,10 +71,10 @@ void RocketPlayDocument::PopulateMapList()
     while( pszFilename )
     {
         char mapname[256];
-        Q_strncpy( mapname, pszFilename, sizeof(mapname) );
+        V_strncpy( mapname, pszFilename, sizeof(mapname) );
 
         // Strip .bsp extension
-        char *ext = Q_strstr( mapname, ".bsp" );
+        char *ext = V_strstr( mapname, ".bsp" );
         if( ext )
             *ext = 0;
 
@@ -134,7 +148,7 @@ void RocketPlayDocument::StartServer()
 
     // Build the command string, matching VGUI's CCreateMultiplayerGameDialog::OnOK
     char szMapCommand[1024];
-    Q_snprintf( szMapCommand, sizeof(szMapCommand),
+    V_snprintf( szMapCommand, sizeof(szMapCommand),
         "disconnect\nwait\nwait\nsv_lan 1\nsetmaster enable\nmaxplayers %i\nsv_password \"%s\"\nhostname \"%s\"\nprogress_enable\nmap %s\n",
         maxPlayers,
         password.c_str(),

@@ -1,22 +1,29 @@
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "decals.h"
-#include "materialsystem/imaterialvar.h"
 #include "IEffects.h"
 #include "fx.h"
 #include "fx_impact.h"
-#include "view.h"
 #include "engine/IStaticPropMgr.h"
 #include "datacache/imdlcache.h"
-#include "debugoverlay_shared.h"
 #include "c_impact_effects.h"
-#include "tier0/vprof.h"
 
 static ConVar  r_drawflecks( "r_drawflecks", "1" );
 static ConVar  r_impacts_alt_orientation ( "r_impacts_alt_orientation", "1" );
@@ -99,9 +106,9 @@ DECLARE_CLIENT_EFFECT( RagdollImpact, RagdollImpactCallback );
 //-----------------------------------------------------------------------------
 bool Impact( Vector &vecOrigin, Vector &vecStart, int iMaterial, int iDamageType, int iHitbox, C_BaseEntity *pEntity, trace_t &tr, int nFlags, int maxLODToDecal )
 {
-	VPROF( "Impact" );
+	CVProfScope _( "Impact", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-	Assert ( pEntity );
+	contract_assert( pEntity );
 
 	MDLCACHE_CRITICAL_SECTION();
 
@@ -244,11 +251,11 @@ static ImpactEffect_t s_pImpactEffect2[12] =
 	{ "impact_sandbarrel",	"impact_sandbarrel" },	// CHAR_TEX_SANDBARREL	
 };
 
-static int s_pImpactEffectIndex[ ARRAYSIZE( s_pImpactEffect ) ][2];
-static int s_pImpactEffect2Index[ ARRAYSIZE( s_pImpactEffect2 ) ][2];
+static int s_pImpactEffectIndex[ std::size( s_pImpactEffect ) ][2];
+static int s_pImpactEffect2Index[ std::size( s_pImpactEffect2 ) ][2];
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheImpacts )
-	for ( int i = 0; i < ARRAYSIZE( s_pImpactEffect ); ++i )
+	for ( int i = 0; i < std::size( s_pImpactEffect ); ++i )
 	{
 		if ( s_pImpactEffect[i].m_pName )
 		{
@@ -260,7 +267,7 @@ PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheImpacts )
 		}
 	}
 
-	for ( int i = 0; i < ARRAYSIZE( s_pImpactEffect2 ); ++i )
+	for ( int i = 0; i < std::size( s_pImpactEffect2 ); ++i )
 	{
 		if ( s_pImpactEffect2[i].m_pName )
 		{
@@ -379,7 +386,7 @@ void PerformCustomEffects( const Vector &vecOrigin, trace_t &tr, const Vector &s
 //-----------------------------------------------------------------------------
 void PlayImpactSound( CBaseEntity *pEntity, trace_t &tr, Vector &vecServerOrigin, int nServerSurfaceProp )
 {
-	VPROF( "PlayImpactSound" );
+	CVProfScope _( "PlayImpactSound", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	surfacedata_t *pdata;
 	Vector vecOrigin;
 
@@ -507,4 +514,3 @@ C_BaseEntity *ParseImpactData( const CEffectData &data, Vector *vecOrigin, Vecto
 
 	return pEntity;
 }
-

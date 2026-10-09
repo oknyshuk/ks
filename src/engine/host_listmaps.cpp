@@ -1,16 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import ks.tier1;
 #include "quakedef.h"
 #include "bspfile.h"
 #include "host.h"
 #include "sys.h"
 #include "filesystem_engine.h"
-#include "tier1/map_ops.h"
+import std;
 #include "demo.h"
 #include "tier2/fileutils.h"
 #ifndef DEDICATED
@@ -133,7 +130,7 @@ long CMapListItem::GetFSTimeStamp( char const *name )
 int CMapListItem::CheckFSHeaderVersion( char const *name )
 {
 	BSPHeader_t header;
-	memset( &header, 0, sizeof( header ) );
+	std::memset( &header, 0, sizeof( header ) );
 
 	FileHandle_t fp = g_pFileSystem->Open ( name, "rb" );
 	if ( fp )
@@ -146,7 +143,7 @@ int CMapListItem::CheckFSHeaderVersion( char const *name )
 }
 
 // How often to check the filesystem for updated map info
-#define MIN_REFRESH_INTERVAL 60.0f
+constexpr auto MIN_REFRESH_INTERVAL = 60.0f;
 
 //-----------------------------------------------------------------------------
 // Purpose: Stores the current list of maps for the engine
@@ -261,7 +258,7 @@ void CMapListManager::RefreshList( void )
 	if ( host_maplist_recurse_subdirs.GetBool() )
 	{		
 		char mapwild[MAX_QPATH];
-		Q_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", "" );
+		V_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", "" );
 
 		std::vector< std::string > outList;
 		RecursiveFindFilesMatchingName( &outList, "maps", mapwild, "GAME" );
@@ -283,7 +280,7 @@ void CMapListManager::RefreshList( void )
 			else
 			{
 				CMapListItem *item = &idx->second;
-				Assert( item );
+				contract_assert( item );
 
 				// Make sure data is up to date
 				long timestamp = g_pFileSystem->GetFileTime( curMap );
@@ -301,7 +298,7 @@ void CMapListManager::RefreshList( void )
 	{
 		// Search the directory structure.
 		char mapwild[MAX_QPATH];
-		Q_strncpy(mapwild,"maps/*.bsp", sizeof( mapwild ) );
+		V_strncpy(mapwild,"maps/*.bsp", sizeof( mapwild ) );
 		char const *findfn = Sys_FindFirst( mapwild, nullptr, 0 );
 		while ( findfn )
 		{
@@ -313,7 +310,7 @@ void CMapListManager::RefreshList( void )
 			}
 
 			char sz[ MAX_QPATH ];
-			Q_snprintf( sz, sizeof( sz ), "maps/%s", findfn );
+			V_snprintf( sz, sizeof( sz ), "maps/%s", findfn );
 
 			auto idx = m_Items.find( sz );
 			if ( idx == m_Items.end() )
@@ -329,7 +326,6 @@ void CMapListManager::RefreshList( void )
 			else
 			{
 				CMapListItem *item = &idx->second;
-				Assert( item );
 
 				// Make sure data is up to date
 				long timestamp = g_pFileSystem->GetFileTime( sz );
@@ -372,7 +368,7 @@ void CMapListManager::BuildList( void )
 	{
 
 		char mapwild[MAX_QPATH];
-		Q_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", "" );
+		V_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", "" );
 
 		std::vector< std::string > outList;
 		RecursiveFindFilesMatchingName( &outList, "maps", mapwild, "GAME" );
@@ -398,7 +394,7 @@ void CMapListManager::BuildList( void )
 	{
 		// Search the directory structure.
 		char mapwild[MAX_QPATH];
-		Q_snprintf( mapwild, sizeof( mapwild ), "maps/*.%sbsp", "" );
+		V_snprintf( mapwild, sizeof( mapwild ), "maps/*.%sbsp", "" );
 		char const *findfn = Sys_FindFirst( mapwild, nullptr, 0 );
 		while ( findfn )
 		{
@@ -410,7 +406,7 @@ void CMapListManager::BuildList( void )
 			}
 
 			char sz[ MAX_QPATH ];
-			Q_snprintf( sz, sizeof( sz ), "maps/%s", findfn );
+			V_snprintf( sz, sizeof( sz ), "maps/%s", findfn );
 
 			CMapListItem item;
 			item.SetFileTimestamp( item.GetFSTimeStamp( sz ) );
@@ -455,10 +451,10 @@ static bool MapList_CheckPrintMap( const char *pakorfilesys, const char *mapname
 	case CMapListItem::VALID:
 		break;
 	case CMapListItem::PENDING:
-		Q_strncpy( prefix, "PENDING:  ", sizeof( prefix ) );
+		V_strncpy( prefix, "PENDING:  ", sizeof( prefix ) );
 		break;
 	case CMapListItem::INVALID:
-		Q_strncpy( prefix, "OUTDATED:  ", sizeof( prefix ) );
+		V_strncpy( prefix, "OUTDATED:  ", sizeof( prefix ) );
 		break;
 	}
 
@@ -486,7 +482,7 @@ static int MapList_CountMaps( const char *pszSubString, bool listobsolete, int& 
 	int substringlength = 0;
 	if ( pszSubString && pszSubString[0] )
 	{
-		substringlength = strlen(pszSubString);
+		substringlength = std::strlen(pszSubString);
 	}
 	
 	//
@@ -505,7 +501,7 @@ static int MapList_CountMaps( const char *pszSubString, bool listobsolete, int& 
 			{
 				if ( MapList_CheckPrintMap( "(fs)", &mapname[ 5 ], valid, showOutdated ? true : false, false ) )
 				{
-					maxitemlength = std::max( maxitemlength, (int)( strlen( &mapname[ 5 ] ) + 1 ) );
+					maxitemlength = std::max( maxitemlength, (int)( std::strlen( &mapname[ 5 ] ) + 1 ) );
 					count++;
 				}
 			}
@@ -526,7 +522,7 @@ static int MapList_ListMaps( const char *pszSubString, bool listobsolete, bool v
 	int substringlength = 0;
 	if (pszSubString && pszSubString[0])
 	{
-		substringlength = strlen(pszSubString);
+		substringlength = std::strlen(pszSubString);
 	}
 
 	//
@@ -560,7 +556,7 @@ static int MapList_ListMaps( const char *pszSubString, bool listobsolete, bool v
 				{
 					if ( maxitemlength != 0 )
 					{
-						Q_strncpy( maplist[ count ], &mapname[ 5 ], maxitemlength );
+						V_strncpy( maplist[ count ], &mapname[ 5 ], maxitemlength );
 					}
 					count++;
 				}
@@ -583,9 +579,9 @@ static int MapList_ListMaps( const char *pszSubString, bool listobsolete, bool v
 int _Host_Map_f_CompletionFunc( char const *cmdname, char const *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
 {
 	char *substring = (char *)partial;
-	if ( Q_strstr( partial, cmdname ) )
+	if ( V_strstr( partial, cmdname ) )
 	{
-		substring = (char *)partial + strlen( cmdname );
+		substring = (char *)partial + std::strlen( cmdname );
 	}
 
 	int longest = 0;
@@ -599,9 +595,9 @@ int _Host_Map_f_CompletionFunc( char const *cmdname, char const *partial, char c
 		for ( i = 0; i < count ; i++ )
 		{
 			char old[ COMMAND_COMPLETION_ITEM_LENGTH ];
-			Q_strncpy( old, commands[ i ], sizeof( old ) );
-			Q_snprintf( commands[ i ], sizeof( commands[ i ] ), "%s%s", cmdname, old );
-			commands[ i ][ strlen( commands[ i ] ) - 4 ] = 0;
+			V_strncpy( old, commands[ i ], sizeof( old ) );
+			V_snprintf( commands[ i ], sizeof( commands[ i ] ), "%s%s", cmdname, old );
+			commands[ i ][ std::strlen( commands[ i ] ) - 4 ] = 0;
 		}
 	}
 
@@ -724,7 +720,6 @@ static void Host_Maps_f( const CCommand &args )
 	}
 }
 
-#ifndef BENCHMARK
 static ConCommand maps("maps", Host_Maps_f, "Displays list of maps." );
 static ConCommand map("map", Host_Map_f, "Start playing on specified map.", FCVAR_DONTRECORD, Host_Map_f_CompletionFunc );
 static ConCommand mapgroup( "mapgroup", Host_MapGroup_f, "Specify a map group", FCVAR_DONTRECORD );
@@ -732,4 +727,3 @@ static ConCommand ss_map("ss_map", Host_SplitScreen_Map_f, "Start playing on spe
 static ConCommand map_background("map_background", Host_Map_Background_f, "Runs a map as the background to the main menu.", FCVAR_DONTRECORD, Host_Background_f_CompletionFunc );
 static ConCommand changelevel("changelevel", Host_Changelevel_f, "Change server to the specified map", FCVAR_DONTRECORD, Host_Changelevel_f_CompletionFunc );
 static ConCommand changelevel2("changelevel2", Host_Changelevel2_f, "Transition to the specified map in single player", FCVAR_DONTRECORD, Host_Changelevel2_f_CompletionFunc );
-#endif

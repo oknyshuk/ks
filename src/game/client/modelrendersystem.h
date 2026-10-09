@@ -1,19 +1,10 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Revision: $
-// $NoKeywords: $
-//
-// Fast path model rendering
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#ifndef MODELRENDERSYSTEM_H
-#define MODELRENDERSYSTEM_H
+// Purpose: Fast path model rendering
 
 #include "clientleafsystem.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -49,7 +40,7 @@ enum ModelRenderMode_t
 //-----------------------------------------------------------------------------
 // The client leaf system
 //-----------------------------------------------------------------------------
-abstract_class IModelRenderSystem
+class IModelRenderSystem
 {
 public:
 	virtual void DrawModels( ModelRenderSystemData_t *pModels, int nCount, ModelRenderMode_t renderMode, bool bShadowDepthIncludeTranslucentMaterials = false ) = 0;
@@ -66,8 +57,3 @@ public:
 // Singleton accessor
 //-----------------------------------------------------------------------------
 extern IModelRenderSystem *g_pModelRenderSystem;
-
-
-#endif	// MODELRENDERSYSTEM_H
-
-

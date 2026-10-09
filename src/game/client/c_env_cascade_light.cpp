@@ -1,10 +1,22 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Directional lighting with cascaded shadow mapping entity.
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 
@@ -17,11 +29,10 @@
 #include "c_world.h"
 #include "materialsystem/materialsystem_config.h"
 
-
 //#define CsmDbgMsg Msg
 #define CsmDbgMsg(x)
 
-#define MAX_CSM_CASCADES 3
+constexpr auto MAX_CSM_CASCADES = 3;
 
 // NOTE: cl_csm_enabled is driven by the video config system (it is in
 // videocfg.cpp's s_pConVarsAllowedInSystemLevel, set from gpu_level/cpu_level).
@@ -154,7 +165,7 @@ bool C_CascadeLight::ShouldDraw()
 
 void C_CascadeLight::ClientThink()
 {
-	VPROF("C_CascadeLight::ClientThink");
+	CVProfScope _( "C_CascadeLight::ClientThink", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	BaseClass::ClientThink();
 }
@@ -216,7 +227,7 @@ static void DebugRenderConvexPolyhedron( const Vector4D *pPlanes, uint nNumPlane
 	{
 		float l = pPlanes[nPlaneIndex].x*pPlanes[nPlaneIndex].x + pPlanes[nPlaneIndex].y*pPlanes[nPlaneIndex].y + pPlanes[nPlaneIndex].z*pPlanes[nPlaneIndex].z;
 		l = sqrt( l );
-		Assert( (fabs( l ) - 1.0f) < .00125f );
+		contract_assert( (fabs( l ) - 1.0f) < .00125f );
 	}
 #endif
 
@@ -358,9 +369,9 @@ static void	ScreenText( int x, int y, int r, int g, int b, int a, const char *te
 {
 	char buf[256];
 	va_list args;
-	va_start( args, text );
+	__builtin_va_start( args, text );
 	V_vsnprintf( buf, sizeof( buf ), text, args );
-	va_end( args );
+	__builtin_va_end( args );
 
 	const float flTextColWidth = 0.0044f; // 227
 	const float flTextRowHeight = 0.0083f; // 120		
@@ -612,9 +623,9 @@ void CDebugPrimRenderer2D::AddScreenspaceWireframeFrustum2D( const VMatrix &xfor
 // TODO: Break CCascadeLightManager out to a separate file?
 
 	// Important note: On PC, this depth texture resolution (or the inverse of it) is effectively hardcoded into the filter kernels sample offsets. Don't change it unless you fix this dependency.
-	#define CSM_DEFAULT_DEPTH_TEXTURE_RESOLUTION 1024*2
-	#define CSM_FALLBACK_DEPTH_TEXTURE_RESOLUTION 768*2
-	#define CSM_FALLBACK2_DEPTH_TEXTURE_RESOLUTION 640*2
+	constexpr auto CSM_DEFAULT_DEPTH_TEXTURE_RESOLUTION = 1024*2;
+	constexpr auto CSM_FALLBACK_DEPTH_TEXTURE_RESOLUTION = 768*2;
+	constexpr auto CSM_FALLBACK2_DEPTH_TEXTURE_RESOLUTION = 640*2;
 
 CCascadeLightManager::CCascadeLightManager() :
 	m_bRenderTargetsAllocated( false ),
@@ -637,7 +648,7 @@ CCascadeLightManager::~CCascadeLightManager()
 
 bool CCascadeLightManager::InitRenderTargets()
 {
-	VPROF_BUDGET( "CCascadeLightManager::InitRenderTargets", VPROF_BUDGETGROUP_SHADOW_DEPTH_TEXTURING );
+	CVProfScope _( "CCascadeLightManager::InitRenderTargets", 0, VPROF_BUDGETGROUP_SHADOW_DEPTH_TEXTURING, false, BUDGETFLAG_OTHER );
 	
 	CsmDbgMsg( "C_CascadeLight::InitRenderTargets\n" );
 
@@ -802,7 +813,7 @@ void CCascadeLightManager::Draw3DDebugInfo()
 
 	const Vector vDirToLight( -state.m_shadowDir );
 
-	COMPILE_TIME_ASSERT( 4 == MAX_SUN_LIGHT_SHADOW_CASCADE_SIZE );
+	static_assert( 4 == MAX_SUN_LIGHT_SHADOW_CASCADE_SIZE );
 
 	if ( cl_csm_debug_culling.GetBool() )
 	{

@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SV_PACKEDENTITIES_H
-#define SV_PACKEDENTITIES_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "server.h"
 #include "framesnapshot.h"
 #include "server_class.h"
-
 
 void SV_ComputeClientPacks( 
 	int clientCount, 
@@ -26,6 +18,3 @@ void SV_ComputeClassInfosCRC( CRC32_t* crc );
 void SV_EnsureInstanceBaseline( ServerClass *pServerClass, int iEdict, SerializedEntityHandle_t handle );
 
 void SV_EnableChangeFrames( bool state );
-
-
-#endif // SV_PACKEDENTITIES_H

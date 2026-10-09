@@ -1,25 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: A base class that deals with four-wheel vehicles
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef FOUR_WHEEL_VEHICLE_PHYSICS_H
-#define FOUR_WHEEL_VEHICLE_PHYSICS_H
+// Purpose: A base class that deals with four-wheel vehicles
 
 #include "reflect_annotations.h"
-
 
 #include "vphysics/vehicles.h"
 #include "vcollide_parse.h"
 #include "datamap.h"
 #include "vehicle_sounds.h"
+#include "usercmd.h"
+#include "ehandle.h"
 
 // in/sec to miles/hour
-#define INS2MPH_SCALE	( 3600 * (1/5280.0f) * (1/12.0f) )
-#define INS2MPH(x)		( (x) * INS2MPH_SCALE )
-#define MPH2INS(x)		( (x) * (1/INS2MPH_SCALE) )
+inline constexpr auto INS2MPH_SCALE = ( 3600 * (1/5280.0f) * (1/12.0f) );
+template <typename T1> [[gnu::always_inline]] inline auto INS2MPH( T1 x ) { return ( (x) * INS2MPH_SCALE ); }
+template <typename T1> [[gnu::always_inline]] inline auto MPH2INS( T1 x ) { return ( (x) * (1/INS2MPH_SCALE) ); }
 
 class CBaseAnimating;
 class CFourWheelServerVehicle;
@@ -214,5 +211,3 @@ float RemapAngleRange( float startInterval, float endInterval, float value );
 
 #define PITCH_CURVE_ZERO		10	// pitch less than this is clamped to zero
 #define PITCH_CURVE_LINEAR		45	// pitch greater than this is copied out
-
-#endif // FOUR_WHEEL_VEHICLE_PHYSICS_H

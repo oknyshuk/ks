@@ -1,11 +1,6 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//==========================================================================//
-#ifndef PAINT_H
-#define PAINT_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/ipaintmapdatamanager.h"
@@ -135,5 +130,3 @@ bool ShootPaintSphere( const model_t *pModel, const Vector& vPosition, BYTE colo
 void TracePaintSphere( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, std::vector< BYTE >& surfColors );
 
 void R_RedownloadAllPaintmaps();
-
-#endif // PAINT_H

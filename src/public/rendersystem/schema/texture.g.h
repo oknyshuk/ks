@@ -1,10 +1,10 @@
-#ifndef TEXTURE_G_H
-#define TEXTURE_G_H
+#pragma once
 
 
+import ks.math;
 #include "resourcefile/resourcefile.h"
 #include "resourcefile/resourcetype.h"
-#include "mathlib/vector4d.h"
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -17,7 +17,7 @@ struct TextureBits_t;
 //-----------------------------------------------------------------------------
 // Enum definitions
 //-----------------------------------------------------------------------------
-schema enum TextureSpecificationFlags_t
+enum TextureSpecificationFlags_t
 {
 	TSPEC_FLAGS						= 0x0000,// (explicit)
 	TSPEC_RENDER_TARGET				= 0x0001,// (explicit)
@@ -30,7 +30,7 @@ schema enum TextureSpecificationFlags_t
 	TSPEC_NO_LOD					= 0x0080,	// Don't downsample on lower-level cards
 };
 
-schema enum RenderMultisampleType_t
+enum RenderMultisampleType_t
 {
 	RENDER_MULTISAMPLE_INVALID = -1,// (explicit)
 	RENDER_MULTISAMPLE_NONE = 0,// (explicit)
@@ -45,7 +45,7 @@ schema enum RenderMultisampleType_t
 //-----------------------------------------------------------------------------
 // Structure definitions
 //-----------------------------------------------------------------------------
-schema struct TextureDesc_t
+struct TextureDesc_t
 {
 	uint16           m_nWidth;
 	uint16           m_nHeight;
@@ -54,7 +54,7 @@ schema struct TextureDesc_t
 	uint8            m_nNumMipLevels;
 };
 
-schema struct TextureHeader_t : public TextureDesc_t
+struct TextureHeader_t : public TextureDesc_t
 {
 	uint16           m_nMultisampleType;	// See RenderMultisampleType_t
 	uint16           m_nFlags;	// See TextureSpecificationFlags_t
@@ -62,7 +62,7 @@ schema struct TextureHeader_t : public TextureDesc_t
 };
 
 //! uncacheableStruct = TextureHeader_t
-schema struct TextureBits_t
+struct TextureBits_t
 {
 };
 
@@ -70,7 +70,6 @@ class CTextureBits;	// Forward declaration of associated runtime class
 DEFINE_RESOURCE_CLASS_TYPE( TextureBits_t, CTextureBits, RESOURCE_TYPE_TEXTURE );
 typedef const ResourceBinding_t< CTextureBits > *HRenderTexture;
 typedef CStrongHandle< CTextureBits > HRenderTextureStrong;
-#define RENDER_TEXTURE_HANDLE_INVALID ( (HRenderTexture)0 )
+inline constexpr auto RENDER_TEXTURE_HANDLE_INVALID = ( (HRenderTexture)0 );
 
 
-#endif // TEXTURE_G_H

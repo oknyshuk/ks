@@ -1,39 +1,88 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include <ctype.h>
-#include <keyvalues.h>
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "recipientfilter.h"
+#endif
 #include "engine/IEngineSound.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "igamesystem.h"
 #include "soundchars.h"
 #include "filesystem.h"
-#include "tier0/vprof.h"
-#include "checksum_crc.h"
-#include "tier0/icommandline.h"
-#include "tier1/intern_pool.h"
 #ifndef CLIENT_DLL
 #include "envmicrophone.h"
 #include "sceneentity.h"
 #include "closedcaptions.h"
 #include "usermessages.h"
 #else
-#ifdef GAMEUI_UISYSTEM2_ENABLED
-#include "gameui.h"
-#endif
 #define CRecipientFilter C_RecipientFilter
 #endif
 
 
 
-BEGIN_DEFINE_LOGGING_CHANNEL( LOG_SND_EMITTERSYSTEM, "SndEmitterSystem", LCF_CONSOLE_ONLY, LS_MESSAGE );
-ADD_LOGGING_CHANNEL_TAG( "SndEmitterSystem" );
+static void Register_LOG_SND_EMITTERSYSTEM_Tags();
+LoggingChannelID_t LOG_SND_EMITTERSYSTEM = LoggingSystem_RegisterLoggingChannel( "SndEmitterSystem", Register_LOG_SND_EMITTERSYSTEM_Tags, LCF_CONSOLE_ONLY, LS_MESSAGE );
+void Register_LOG_SND_EMITTERSYSTEM_Tags()
+{
+LoggingSystem_AddTagToCurrentChannel( "SndEmitterSystem" );
 
-END_DEFINE_LOGGING_CHANNEL();
+};
 
 
 ConVar sv_soundemitter_version( "sv_soundemitter_version", "2", FCVAR_REPLICATED | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "specfies what version of soundemitter system to use\n" );
@@ -170,9 +219,10 @@ EmitSound_t::EmitSound_t( const CSoundParameters &src )
 
 void Hack_FixEscapeChars( char *str )
 {
-	int len = Q_strlen( str ) + 1;
+	ks::ScratchArena<> scratch;
+	int len = V_strlen( str ) + 1;
 	char *i = str;
-	char *o = (char *)stackalloc( len );
+	char *o = (char *)scratch.AllocBytes( len );
 	char *osave = o;
 	while ( *i )
 	{
@@ -198,7 +248,7 @@ void Hack_FixEscapeChars( char *str )
 		++o;
 	}
 	*o = 0;
-	Q_strncpy( str, osave, len );
+	V_strncpy( str, osave, len );
 }
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -240,7 +290,7 @@ public:
 		if (m_hPrecacheLogFile != FILESYSTEM_INVALID_HANDLE)
 		{
 			filesystem->Write("\"", 1, m_hPrecacheLogFile);
-			filesystem->Write(soundname, Q_strlen(soundname), m_hPrecacheLogFile);
+			filesystem->Write(soundname, V_strlen(soundname), m_hPrecacheLogFile);
 			filesystem->Write("\"\n", 2, m_hPrecacheLogFile);
 		}
 		else
@@ -265,8 +315,8 @@ public:
 		filesystem->CreateDirHierarchy("reslists", "DEFAULT_WRITE_PATH");
 
 		// open the new level reslist
-		char path[_MAX_PATH];
-		Q_snprintf(path, sizeof(path), "reslists\\%s.snd", gpGlobals->mapname.ToCStr() );
+		char path[k_cMaxPath];
+		V_snprintf(path, sizeof(path), "reslists\\%s.snd", gpGlobals->mapname.ToCStr() );
 		m_hPrecacheLogFile = filesystem->Open(path, "wt", "MOD");
 		if (m_hPrecacheLogFile == FILESYSTEM_INVALID_HANDLE)
 		{
@@ -305,12 +355,12 @@ public:
 	// IServerSystem stuff
 	virtual bool Init()
 	{
-		Assert( soundemitterbase );
+		contract_assert( soundemitterbase );
 #if !defined( CLIENT_DLL )
 		m_bLogPrecache = CommandLine()->CheckParm( "-makereslists" ) ? true : false;
 #endif
 		g_pClosecaption = cvar->FindVar("closecaption");
-		Assert(g_pClosecaption);
+		contract_assert( g_pClosecaption );
 
 #if !defined( CLIENT_DLL )
 		LoadServerCaptions();
@@ -323,16 +373,17 @@ public:
 	void AddCaptionFile( const char *filename )
 	{
 		int searchPathLen = filesystem->GetSearchPath( "GAME", true, nullptr, 0 );
-		char *searchPaths = (char *)stackalloc( searchPathLen + 1 );
+		ks::ScratchArena<> scratch;
+		char *searchPaths = (char *)scratch.AllocBytes( searchPathLen + 1 );
 		filesystem->GetSearchPath( "GAME", true, searchPaths, searchPathLen );
 
-		for ( char *path = strtok( searchPaths, ";" ); path; path = strtok( nullptr, ";" ) )
+		for ( char *path = std::strtok( searchPaths, ";" ); path; path = strtok( nullptr, ";" ) )
 		{
 
 			char fullpath[MAX_PATH];
-			Q_snprintf( fullpath, sizeof( fullpath ), "%s%s", path, filename );
-			Q_FixSlashes( fullpath );
-			Q_strlower( fullpath );
+			V_snprintf( fullpath, sizeof( fullpath ), "%s%s", path, filename );
+			V_FixSlashes( fullpath );
+			V_strlower( fullpath );
 
 
 			int idx = std::ssize( m_ServerCaptions ); m_ServerCaptions.emplace_back();
@@ -351,7 +402,7 @@ public:
 
 	virtual void Shutdown()
 	{
-		Assert( soundemitterbase );
+		contract_assert( soundemitterbase );
 #if !defined( CLIENT_DLL )
 		FinishLog();
 #endif
@@ -361,11 +412,6 @@ public:
 	{
 		Shutdown();
 		soundemitterbase->Flush();
-#ifdef CLIENT_DLL
-#ifdef GAMEUI_UISYSTEM2_ENABLED
-		g_pGameUIGameSystem->ReloadSounds();
-#endif
-#endif
 		Init();
 	}
 
@@ -377,11 +423,11 @@ public:
 		if ( sv_soundemitter_trace.GetInt() != 0 && sv_soundemitter_trace.GetInt() != originEnt )
 			return;
 
-		va_list	argptr;
+		std::va_list	argptr;
 		char string[256];
-		va_start (argptr, fmt);
-		Q_vsnprintf( string, sizeof( string ), fmt, argptr );
-		va_end (argptr);
+		__builtin_va_start (argptr, fmt);
+		V_vsnprintf( string, sizeof( string ), fmt, argptr );
+		__builtin_va_end (argptr);
 
 		// Spew to console
 		Msg( "%s %s", CBaseEntity::IsServer() ? "(sv)" : "(cl)", string );
@@ -511,7 +557,7 @@ public:
 		int soundIndex = soundemitterbase->GetSoundIndexForHash( hash );
 		if ( !soundemitterbase->IsValidIndex( soundIndex ) )
 		{
-			if ( Q_stristr( soundname, ".wav" ) || Q_strstr( soundname, ".mp3" ) )
+			if ( V_stristr( soundname, ".wav" ) || V_strstr( soundname, ".mp3" ) )
 			{
 				g_bPermitDirectSoundPrecache = true;
 	
@@ -558,7 +604,7 @@ public:
 		int soundIndex = soundemitterbase->GetSoundIndex( soundname );
 		if ( !soundemitterbase->IsValidIndex( soundIndex ) )
 		{
-			if ( Q_stristr( soundname, ".wav" ) || Q_strstr( soundname, ".mp3" ) )
+			if ( V_stristr( soundname, ".wav" ) || V_strstr( soundname, ".mp3" ) )
 			{
 				CBaseEntity::PrefetchSound( soundname );
 			}
@@ -590,7 +636,7 @@ public:
 		if ( !params.soundname[0] )
 			return false;
 
-		if ( !Q_strncasecmp( params.soundname, "vo", 2 ) &&
+		if ( !V_strncasecmp( params.soundname, "vo", 2 ) &&
 			!( params.channel == CHAN_STREAM ||
 			params.channel == CHAN_VOICE ) &&
 			params.m_nSoundEntryVersion < 2 )
@@ -846,7 +892,7 @@ public:
 		// TERROR:
 		double startTime = Plat_FloatTime();
 		if ( ep.m_bWarnOnDirectWaveReference && 
-			Q_stristr( ep.m_pSoundName, ".wav" ) )
+			V_stristr( ep.m_pSoundName, ".wav" ) )
 		{
 			WaveTrace( ep.m_pSoundName, "Emitsound" );
 		}
@@ -898,7 +944,7 @@ public:
 #ifdef GAME_DLL
 			UTIL_LogPrintf( "getting wav duration for %s\n", ep.m_pSoundName );
 #endif
-			VPROF( "CSoundEmitterSystem::EmitSound GetSoundDuration (calls engine)" );
+			CVProfScope _( "CSoundEmitterSystem::EmitSound GetSoundDuration (calls engine)", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			*ep.m_pflSoundDuration = enginesound->GetSoundDuration( ep.m_pSoundName );
 		}
 
@@ -927,12 +973,12 @@ public:
 	//
 	int EmitSound( IRecipientFilter& filter, int entindex, const EmitSound_t & ep )
 	{
-		VPROF( "CSoundEmitterSystem::EmitSound (calls engine)" );
+		CVProfScope _( "CSoundEmitterSystem::EmitSound (calls engine)", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		// Is this a direct soundfile reference or pre-parameterized call?
 		if ( ep.m_pSoundName && 
-			( Q_stristr( ep.m_pSoundName, ".wav" ) || 
-			  Q_stristr( ep.m_pSoundName, ".mp3" ) || 
+			( V_stristr( ep.m_pSoundName, ".wav" ) || 
+			  V_stristr( ep.m_pSoundName, ".mp3" ) || 
 			  ep.m_pSoundName[0] == '!' ))
 		{
 			return EmitSoundBySoundFile(filter, entindex, ep);
@@ -972,9 +1018,9 @@ public:
 		}
 
 		char lowercase[ 256 ];
-		Q_strncpy( lowercase, token, sizeof( lowercase ) );
-		Q_strlower( lowercase );
-		if ( Q_strstr( lowercase, "\\" ) )
+		V_strncpy( lowercase, token, sizeof( lowercase ) );
+		V_strlower( lowercase );
+		if ( V_strstr( lowercase, "\\" ) )
 		{
 			Hack_FixEscapeChars( lowercase );
 		}
@@ -1025,7 +1071,7 @@ public:
 #if !defined( CLIENT_DLL )
 
 			char lowercase_nogender[ 256 ];
-			Q_strncpy( lowercase_nogender, lowercase, sizeof( lowercase_nogender ) );
+			V_strncpy( lowercase_nogender, lowercase, sizeof( lowercase_nogender ) );
 			bool bTriedGender = false;
 
 			CBaseEntity *pActor = CBaseEntity::Instance( entindex );
@@ -1036,12 +1082,12 @@ public:
 
 				if ( gender == GENDER_MALE )
 				{
-					Q_strncat( lowercase, "_male", sizeof( lowercase ), COPY_ALL_CHARACTERS );
+					V_strncat( lowercase, "_male", sizeof( lowercase ), COPY_ALL_CHARACTERS );
 					bTriedGender = true;
 				}
 				else if ( gender == GENDER_FEMALE )
 				{ 
-					Q_strncat( lowercase, "_female", sizeof( lowercase ), COPY_ALL_CHARACTERS );
+					V_strncat( lowercase, "_female", sizeof( lowercase ), COPY_ALL_CHARACTERS );
 					bTriedGender = true;
 				}
 			}
@@ -1281,7 +1327,7 @@ public:
 		for ( int i = 0; i < c; ++i )
 		{
 			char const *wavename = soundemitterbase->GetWaveName( params->GetSoundNames()[ i ].symbol );
-			Assert( wavename );
+			contract_assert( wavename );
 
 			enginesound->StopSound( 
 				entindex, 
@@ -1309,7 +1355,7 @@ public:
 
 	void StopSound( int iEntIndex, int iChannel, const char *pSample, bool bIsStoppingSpeakerSound = false )
 	{
-		if ( pSample && ( Q_stristr( pSample, ".wav" ) || Q_stristr( pSample, ".mp3" ) || pSample[0] == '!' ) )
+		if ( pSample && ( V_stristr( pSample, ".wav" ) || V_stristr( pSample, ".mp3" ) || pSample[0] == '!' ) )
 		{
 			enginesound->StopSound( iEntIndex, iChannel, pSample );
 
@@ -1350,7 +1396,7 @@ public:
 			return;
 #endif
 
-		if ( pSample && ( Q_stristr( pSample, ".wav" ) || Q_stristr( pSample, ".mp3" )) )
+		if ( pSample && ( V_stristr( pSample, ".wav" ) || V_stristr( pSample, ".mp3" )) )
 		{
 #if defined( CLIENT_DLL )
 			enginesound->EmitAmbientSound( pSample, volume, pitch, flags, soundtime );
@@ -1439,9 +1485,13 @@ void SoundSystemPreloadSounds( void )
 #if !defined( CLIENT_DLL )
 
 #if defined( CLIENT_DLL )
-CON_COMMAND_F( cl_soundemitter_flush, "Flushes the sounds.txt system (client only)", FCVAR_CHEAT )
+static void cl_soundemitter_flush( const CCommand &args );
+static ConCommand cl_soundemitter_flush_command( "cl_soundemitter_flush", cl_soundemitter_flush, "Flushes the sounds.txt system (client only)", FCVAR_CHEAT );
+static void cl_soundemitter_flush( const CCommand &args )
 #else
-CON_COMMAND_F( sv_soundemitter_flush, "Flushes the sounds.txt system (server only)", FCVAR_DEVELOPMENTONLY )
+static void sv_soundemitter_flush( const CCommand &args );
+static ConCommand sv_soundemitter_flush_command( "sv_soundemitter_flush", sv_soundemitter_flush, "Flushes the sounds.txt system (server only)", FCVAR_DEVELOPMENTONLY );
+static void sv_soundemitter_flush( const CCommand &args )
 #endif
 {
 #if !defined( CLIENT_DLL )
@@ -1461,7 +1511,9 @@ CON_COMMAND_F( sv_soundemitter_flush, "Flushes the sounds.txt system (server onl
 	// TODO:  when we go to a handle system, we'll need to invalidate handles somehow
 }
 
-CON_COMMAND_F( sv_soundemitter_filecheck, "Report missing wave files for sounds and game_sounds files.", FCVAR_DEVELOPMENTONLY )
+static void sv_soundemitter_filecheck( const CCommand &args );
+static ConCommand sv_soundemitter_filecheck_command( "sv_soundemitter_filecheck", sv_soundemitter_filecheck, "Report missing wave files for sounds and game_sounds files.", FCVAR_DEVELOPMENTONLY );
+static void sv_soundemitter_filecheck( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1473,13 +1525,17 @@ CON_COMMAND_F( sv_soundemitter_filecheck, "Report missing wave files for sounds 
 //!!!HACK- Zoid 8/9/2009
 //This hack is for L4D DLC2.  We need to reload the soundemitter, but its reference counted by the
 //client and the server, so we have to Shutdown() and Init() twice.  
-CON_COMMAND( sv_soundemitter_reload, "Flushes the sounds.txt system" )
+static void sv_soundemitter_reload( const CCommand &args );
+static ConCommand sv_soundemitter_reload_command( "sv_soundemitter_reload", sv_soundemitter_reload, "Flushes the sounds.txt system" );
+static void sv_soundemitter_reload( const CCommand &args )
 {
 	// Reload server side captions
 	g_SoundEmitterSystem.LoadServerCaptions();
 }
 
-CON_COMMAND_F( sv_findsoundname, "Find sound names which reference the specified wave files.", FCVAR_DEVELOPMENTONLY )
+static void sv_findsoundname( const CCommand &args );
+static ConCommand sv_findsoundname_command( "sv_findsoundname", sv_findsoundname, "Find sound names which reference the specified wave files.", FCVAR_DEVELOPMENTONLY );
+static void sv_findsoundname( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1507,7 +1563,7 @@ CON_COMMAND_F( sv_findsoundname, "Find sound names which reference the specified
 			{
 				char const *wavefilename = soundemitterbase->GetWaveName( internal->GetSoundNames()[ wave ].symbol );
 
-				if ( Q_stristr( wavefilename, search ) )
+				if ( V_stristr( wavefilename, search ) )
 				{
 					char const *soundname = soundemitterbase->GetSoundName( i );
 					char const *scriptname = soundemitterbase->GetSourceFileForSound( i );
@@ -1519,7 +1575,9 @@ CON_COMMAND_F( sv_findsoundname, "Find sound names which reference the specified
 	}
 }
 
-CON_COMMAND_F( sv_soundemitter_spew, "Print details about a sound.", FCVAR_DEVELOPMENTONLY )
+static void sv_soundemitter_spew( const CCommand &args );
+static ConCommand sv_soundemitter_spew_command( "sv_soundemitter_spew", sv_soundemitter_spew, "Print details about a sound.", FCVAR_DEVELOPMENTONLY );
+static void sv_soundemitter_spew( const CCommand &args )
 {
 	if ( args.ArgC() != 2 )
 	{
@@ -1535,7 +1593,9 @@ CON_COMMAND_F( sv_soundemitter_spew, "Print details about a sound.", FCVAR_DEVEL
 //!!!HACK- Zoid 8/9/2009
 //This hack is for L4D DLC2.  We need to reload the soundemitter, but its reference counted by the
 //client and the server, so we have to Shutdown() and Init() twice.  
-CON_COMMAND( cl_soundemitter_reload, "Flushes the sounds.txt system" )
+static void cl_soundemitter_reload( const CCommand &args );
+static ConCommand cl_soundemitter_reload_command( "cl_soundemitter_reload", cl_soundemitter_reload, "Flushes the sounds.txt system" );
+static void cl_soundemitter_reload( const CCommand &args )
 {
 	// kill the system
 	g_SoundEmitterSystem.Shutdown();
@@ -1544,7 +1604,9 @@ CON_COMMAND( cl_soundemitter_reload, "Flushes the sounds.txt system" )
 	g_SoundEmitterSystem.Init();
 }
 
-CON_COMMAND( cl_soundemitter_flush, "Flushes the sounds.txt system (server only)" )
+static void cl_soundemitter_flush( const CCommand &args );
+static ConCommand cl_soundemitter_flush_command( "cl_soundemitter_flush", cl_soundemitter_flush, "Flushes the sounds.txt system (server only)" );
+static void cl_soundemitter_flush( const CCommand &args )
 {
 	// save the current soundscape
 	// kill the system
@@ -1608,7 +1670,7 @@ static int GamesoundCompletion( const char *partial, char commands[ COMMAND_COMP
 	const char *cmdname = "playgamesound";
 	char *substring = nullptr;
 	int substringLen = 0;
-	if ( Q_strstr( partial, cmdname ) && strlen(partial) > strlen(cmdname) + 1 )
+	if ( V_strstr( partial, cmdname ) && strlen(partial) > strlen(cmdname) + 1 )
 	{
 		substring = (char *)partial + strlen( cmdname ) + 1;
 		substringLen = strlen(substring);
@@ -1619,9 +1681,9 @@ static int GamesoundCompletion( const char *partial, char commands[ COMMAND_COMP
 		const char *pSoundName = soundemitterbase->GetSoundName( i );
 		if ( pSoundName )
 		{
-			if ( !substring || !Q_strncasecmp( pSoundName, substring, substringLen ) )
+			if ( !substring || !V_strncasecmp( pSoundName, substring, substringLen ) )
 			{
-				Q_snprintf( commands[ current ], sizeof( commands[ current ] ), "%s %s", cmdname, pSoundName );
+				V_snprintf( commands[ current ], sizeof( commands[ current ] ), "%s %s", cmdname, pSoundName );
 				current++;
 			}
 		}
@@ -1648,7 +1710,7 @@ static int GamesoundCompletion2( const char *partial, char commands[ COMMAND_COM
 	const char *cmdname = "snd_playsounds";
 	char *substring = nullptr;
 	int substringLen = 0;
-	if ( Q_strstr( partial, cmdname ) && strlen(partial) > strlen(cmdname) + 1 )
+	if ( V_strstr( partial, cmdname ) && strlen(partial) > strlen(cmdname) + 1 )
 	{
 		substring = (char *)partial + strlen( cmdname ) + 1;
 		substringLen = strlen(substring);
@@ -1659,9 +1721,9 @@ static int GamesoundCompletion2( const char *partial, char commands[ COMMAND_COM
 		const char *pSoundName = soundemitterbase->GetSoundName( i );
 		if ( pSoundName )
 		{
-			if ( !substring || !Q_strncasecmp( pSoundName, substring, substringLen ) )
+			if ( !substring || !V_strncasecmp( pSoundName, substring, substringLen ) )
 			{
-				Q_snprintf( commands[ current ], sizeof( commands[ current ] ), "%s %s", cmdname, pSoundName );
+				V_snprintf( commands[ current ], sizeof( commands[ current ] ), "%s %s", cmdname, pSoundName );
 				current++;
 			}
 		}
@@ -1719,7 +1781,7 @@ static int GamesoundCompletion3( const char *partial, char commands[ COMMAND_COM
 	const char *cmdname = "snd_setsoundparam";
 	char *substring = nullptr;
 	int substringLen = 0;
-	if ( Q_strstr( partial, cmdname ) && strlen(partial) > strlen(cmdname) + 1 )
+	if ( V_strstr( partial, cmdname ) && strlen(partial) > strlen(cmdname) + 1 )
 	{
 		substring = (char *)partial + strlen( cmdname ) + 1;
 		substringLen = strlen(substring);
@@ -1730,9 +1792,9 @@ static int GamesoundCompletion3( const char *partial, char commands[ COMMAND_COM
 		const char *pSoundName = soundemitterbase->GetSoundName( i );
 		if ( pSoundName )
 		{
-			if ( !substring || !Q_strncasecmp( pSoundName, substring, substringLen ) )
+			if ( !substring || !V_strncasecmp( pSoundName, substring, substringLen ) )
 			{
-				Q_snprintf( commands[ current ], sizeof( commands[ current ] ), "%s %s", cmdname, pSoundName );
+				V_snprintf( commands[ current ], sizeof( commands[ current ] ), "%s %s", cmdname, pSoundName );
 				current++;
 			}
 		}
@@ -1778,9 +1840,9 @@ static void S_SetSoundParam( const CCommand &args )
 	CSoundParametersInternal newparams;
 	newparams.CopyFrom( *soundparams );
 				
-	if(!Q_stricmp("volume", szparam))
+	if(!V_stricmp("volume", szparam))
 		newparams.VolumeFromString( szValue);
-	else if(!Q_stricmp("level", szparam))
+	else if(!V_stricmp("level", szparam))
 		newparams.SoundLevelFromString( szValue );
 
 	// No change
@@ -1804,7 +1866,7 @@ static ConCommand SND_SetSoundParam( "snd_setsoundparam", S_SetSoundParam, "Set 
 int CBaseEntity::EmitSound( const char *soundname, float soundtime /*= 0.0f*/, float *duration /*=NULL*/ )
 {
 	//VPROF( "CBaseEntity::EmitSound" );
-	VPROF_BUDGET( "CBaseEntity::EmitSound", _T( "CBaseEntity::EmitSound" ) );
+	CVProfScope _( "CBaseEntity::EmitSound", 0, "CBaseEntity::EmitSound", false, BUDGETFLAG_OTHER );
 
 	ABS_QUERY_GUARD( true );
 	CBroadcastRecipientFilter filter;
@@ -1823,7 +1885,7 @@ int CBaseEntity::EmitSound( const char *soundname, float soundtime /*= 0.0f*/, f
 //-----------------------------------------------------------------------------
 int CBaseEntity::EmitSound( const char *soundname, HSOUNDSCRIPTHASH& handle, float soundtime /*= 0.0f*/, float *duration /*=NULL*/ )
 {
-	VPROF_BUDGET( "CBaseEntity::EmitSound", _T( "CBaseEntity::EmitSound" ) );
+	CVProfScope _( "CBaseEntity::EmitSound", 0, "CBaseEntity::EmitSound", false, BUDGETFLAG_OTHER );
 
 	// VPROF( "CBaseEntity::EmitSound" );
 	ABS_QUERY_GUARD( true );
@@ -1865,7 +1927,7 @@ float CBaseEntity::ScriptSoundDuration( const char *soundname, const char *actor
 //-----------------------------------------------------------------------------
 int CBaseEntity::EmitSound( IRecipientFilter& filter, int iEntIndex, const char *soundname, const Vector *pOrigin /*= NULL*/, float soundtime /*= 0.0f*/, float *duration /*=NULL*/ )
 {
-	VPROF_BUDGET( "CBaseEntity::EmitSound", _T( "CBaseEntity::EmitSound" ) );
+	CVProfScope _( "CBaseEntity::EmitSound", 0, "CBaseEntity::EmitSound", false, BUDGETFLAG_OTHER );
 
 	// VPROF( "CBaseEntity::EmitSound" );
 	EmitSound_t params;
@@ -1887,7 +1949,7 @@ int CBaseEntity::EmitSound( IRecipientFilter& filter, int iEntIndex, const char 
 //-----------------------------------------------------------------------------
 int CBaseEntity::EmitSound( IRecipientFilter& filter, int iEntIndex, const char *soundname, HSOUNDSCRIPTHASH& handle, const Vector *pOrigin /*= NULL*/, float soundtime /*= 0.0f*/, float *duration /*=NULL*/ )
 {
-	VPROF_BUDGET( "CBaseEntity::EmitSound", _T( "CBaseEntity::EmitSound" ) );
+	CVProfScope _( "CBaseEntity::EmitSound", 0, "CBaseEntity::EmitSound", false, BUDGETFLAG_OTHER );
 
 	//VPROF( "CBaseEntity::EmitSound" );
 	EmitSound_t params;
@@ -1932,7 +1994,7 @@ static void Helper_UpdateLastMadeNoiseTime( const IRecipientFilter &filter, int 
 //-----------------------------------------------------------------------------
 int CBaseEntity::EmitSound( IRecipientFilter& filter, int iEntIndex, const EmitSound_t & params )
 {
-	VPROF_BUDGET( "CBaseEntity::EmitSound", _T( "CBaseEntity::EmitSound" ) );
+	CVProfScope _( "CBaseEntity::EmitSound", 0, "CBaseEntity::EmitSound", false, BUDGETFLAG_OTHER );
 
 	Helper_UpdateLastMadeNoiseTime( filter, iEntIndex, params );
 	
@@ -1950,7 +2012,7 @@ int CBaseEntity::EmitSound( IRecipientFilter& filter, int iEntIndex, const EmitS
 //-----------------------------------------------------------------------------
 int CBaseEntity::EmitSound( IRecipientFilter& filter, int iEntIndex, const EmitSound_t & params, HSOUNDSCRIPTHASH& handle )
 {
-	VPROF_BUDGET( "CBaseEntity::EmitSound", _T( "CBaseEntity::EmitSound" ) );
+	CVProfScope _( "CBaseEntity::EmitSound", 0, "CBaseEntity::EmitSound", false, BUDGETFLAG_OTHER );
 
 	Helper_UpdateLastMadeNoiseTime( filter, iEntIndex, params );
 
@@ -2049,7 +2111,7 @@ void UTIL_EmitAmbientSound( int entindex, const Vector &vecOrigin, const char *s
 		if (sentenceIndex >= 0)
 		{
 			char name[32];
-			Q_snprintf( name, sizeof(name), "!%d", sentenceIndex );
+			V_snprintf( name, sizeof(name), "!%d", sentenceIndex );
 #if !defined( CLIENT_DLL )
 			engine->EmitAmbientSound( entindex, vecOrigin, name, vol, soundlevel, fFlags, pitch, soundtime );
 #else
@@ -2072,11 +2134,11 @@ void UTIL_EmitAmbientSound( int entindex, const Vector &vecOrigin, const char *s
 
 static const char *UTIL_TranslateSoundName( const char *soundname, const char *actormodel )
 {
-	Assert( soundname );
+	contract_assert( soundname );
 
-	if ( Q_stristr( soundname, ".wav" ) || Q_stristr( soundname, ".mp3" ) )
+	if ( V_stristr( soundname, ".wav" ) || V_stristr( soundname, ".mp3" ) )
 	{
-		if ( Q_stristr( soundname, ".wav" ) )
+		if ( V_stristr( soundname, ".wav" ) )
 		{
 			WaveTrace( soundname, "UTIL_TranslateSoundName" );
 		}
@@ -2183,7 +2245,7 @@ bool CBaseEntity::PrecacheSound( const char *name )
 	{
 		if ( !enginesound->IsSoundPrecached( name ) )
 		{
-			Assert( !"CBaseEntity::PrecacheSound:  too late" );
+			contract_assert( !"CBaseEntity::PrecacheSound:  too late" );
 
 			Warning( "Late precache of %s\n", name );
 		}

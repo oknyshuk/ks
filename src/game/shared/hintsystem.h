@@ -1,20 +1,16 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A class embedded in players to provide hints to that player
-//
-//=============================================================================
 
-#ifndef HINTSYSTEM_H
-#define HINTSYSTEM_H
+#include "networkvar.h"
+#include "datamap.h"
+#include "shared_classnames.h"
+#include "simtimer.h"
+import std;
 
-#ifdef CLIENT_DLL
-	#include "c_baseplayer.h"
-#else
-	#include "player.h"
-#endif
-
-#include <algorithm>
-#include <vector>
+class CBasePlayer;
 
 class CHintMessageQueue;
 class CHintMessageTimers;
@@ -104,11 +100,9 @@ private:
 #ifdef CLIENT_DLL
 // Derive from this if you have an entity that wants to display a hint
 // when the player waves his target ID over it on the client.
-abstract_class ITargetIDProvidesHint
+class ITargetIDProvidesHint
 {
 public:
 	virtual void	DisplayHintTo( C_BasePlayer *pPlayer ) = 0;
 };
 #endif
-
-#endif // HINTSYSTEM_H

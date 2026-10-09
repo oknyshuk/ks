@@ -5,14 +5,8 @@
 #define MAX_MSG_LEN 2049
 
 #include <ctype.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include "tier0/threadtools.h"
-typedef int SOCKET;
-#define INVALID_SOCKET -1
-#define SOCKET_ERROR   -1
+import ks.core;
+import ks.platform;
 
 // sqobject.h defines type(obj) as a function-like macro. This header used to replace it with an
 // object-like `type` aliasing SQ_TYPE, which rewrote every `::type` member of any std template
@@ -22,9 +16,7 @@ typedef int SOCKET;
 // polluting the identifier space, so the #undef/is-include dance below is only needed to avoid
 // redefining sqobject.h's version with a different body.
 #undef type
-#include <set>
-#include <string>
-#include <vector>
+import std;
 #define type(obj) SQ_TYPE(obj)
 
 /*
@@ -145,8 +137,8 @@ public:
 	HSQUIRRELVM _v;
 	HSQOBJECT _debugroot;
 	eDbgState _state;
-	SOCKET _accept;
-	SOCKET _endpoint;
+	ks::platform::socket *_accept;
+	ks::platform::socket *_endpoint;
 	BreakPointSet _breakpoints;
 	WatchSet _watches;
 	int _recursionlevel;
@@ -159,6 +151,6 @@ public:
 
 };
 
-#define sqdbg_closesocket(x) close((x))
+#define sqdbg_closesocket(x) ks::platform::close_socket((x))
 
 #endif //_SQ_DBGSERVER_H_

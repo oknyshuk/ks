@@ -1,19 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef TAKEDAMAGEINFO_H
-#define TAKEDAMAGEINFO_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "networkvar.h" // todo: change this when DECLARE_CLASS is moved into a better location.
+#include "datamap.h"
+#include "ehandle.h"
+
+#if defined( CLIENT_DLL )
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
+#else
+class CBaseEntity;
+typedef CHandle<CBaseEntity> EHANDLE;
+#endif
 
 // Used to initialize m_flBaseDamage to something that we know pretty much for sure
 // hasn't been modified by a user. 
-#define BASEDAMAGE_NOT_SPECIFIED	FLT_MAX
+inline constexpr auto BASEDAMAGE_NOT_SPECIFIED = std::numeric_limits<float>::max();
 
 class CBaseEntity;
 
@@ -381,6 +384,3 @@ inline void CMultiDamage::SetTarget( CBaseEntity *pTarget )
 {
 	m_hTarget = pTarget;
 }
-
-
-#endif // TAKEDAMAGEINFO_H

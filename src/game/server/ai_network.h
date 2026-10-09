@@ -1,17 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_NETWORK_H
-#define AI_NETWORK_H
-
-
-#include <vector>
+import std;
+import ks.tier1;
 #include "ispatialpartition.h"
-#include "tier1/vector_ops.h"
+#include "ai_hull.h"
+#include "basecombatcharacter.h"
 
 // ------------------------------------
 
@@ -20,6 +15,7 @@ class INodeListFilter;
 
 struct AI_Waypoint_t;
 class CAI_BaseNPC;
+class CBaseCombatCharacter;
 class CAI_Link;
 class CAI_DynamicLink;
 
@@ -29,8 +25,8 @@ class CAI_NetworkManager;
 
 //-----------------------------------------------------------------------------
 
-#define	AI_MAX_NODE_LINKS 30
-#define MAX_NODES 1500
+inline constexpr auto AI_MAX_NODE_LINKS = 30;
+inline constexpr auto MAX_NODES = 1500;
 
 //-----------------------------------------------------------------------------
 // 
@@ -38,7 +34,7 @@ class CAI_NetworkManager;
 //
 //-----------------------------------------------------------------------------
 
-abstract_class INearestNodeFilter
+class INearestNodeFilter
 {
 public:
 	virtual bool IsValid( CAI_Node *pNode ) = 0;
@@ -126,7 +122,7 @@ public:
 			static int warningCount = 0;
 			if ( ++warningCount < 10 )
 			{
-				AssertMsg2( 0, "Node (%i) out of range (%i total)\n", id, m_iNumNodes ); 
+				contract_assert( false && "Node (%i) out of range (%i total)\n" ); 
 			}
 		}
 		return nullptr; 
@@ -157,7 +153,7 @@ public:
 	/// Experimental: starting at a given nav-node, walk the network to try to find a node at least
 	/// mindist away from a point yet no more than maxdist. Returns NULL on failure. Recursive.
 	/// supply squares of min, max distance.
-	CAI_Node *	FindNodeDistanceAwayFromStart( CAI_Node *pStartNode, const Vector &point, float minDistSq, float maxDistSq, const Hull_t hulltype, const Capability_t movetype, const IPathingNodeValidator &validator = IPathingNodeValidator() ) RESTRICT;
+	CAI_Node *	FindNodeDistanceAwayFromStart( CAI_Node *pStartNode, const Vector &point, float minDistSq, float maxDistSq, const Hull_t hulltype, const Capability_t movetype, const IPathingNodeValidator &validator = IPathingNodeValidator() ) __restrict__;
 
 
 	
@@ -200,10 +196,6 @@ private:
 	NearNodeCache_T		m_NearestCache[NEARNODE_CACHE_SIZE];	// Cache of nearest nodes
 	int					m_iNearestCacheNext;					// Oldest record in the cache
 
-#ifdef AI_NODE_TREE
-	ISpatialPartition * m_pNodeTree;
-	std::vector< int >		m_GatheredNodes;
-#endif
 };
 
 //-----------------------------------------------------------------------------
@@ -251,5 +243,3 @@ extern CAI_NetworkManager *	g_pAINetworkManager;
 extern CAI_Network * 		g_pBigAINet;			
 
 //=============================================================================
-
-#endif // AI_NETWORK_H

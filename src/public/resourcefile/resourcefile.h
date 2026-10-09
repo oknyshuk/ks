@@ -1,29 +1,23 @@
-//===== Copyright c 1996-2008, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
 // Purpose: Describes our resource format. All resource files have a simplistic
 // dictionary of resource "blocks", which can be looked up using a block type id.
 // Each resource block type is expected to be associated with a well defined
 // structure. The macro DEFINE_RESOURCE_BLOCK_TYPE is used to create this
-// association. 
-//
+// association.
 // The current design choice is that we expect files using this resource format
 // to be small. Large-scale files, like sound or texture bits, are expected to
 // exist in a file parallel to the file containing these resource blocks owing
 // to issues of alignment or streaming. We therefore expect users of files
 // containing the data described in this header to load the entire file in
 // so that all blocks are in memory.
-//
-// $NoKeywords: $
-//===========================================================================//
 
-#ifndef RESOURCEFILE_H
-#define RESOURCEFILE_H
-#pragma once
+import ks.core;
+#include "resourcefile/resourcestream.h"
 
 #include "resourcefile/schema.h"
-
-#include "tier0/platform.h"
-#include "resourcefile/resourcestream.h"
 #include "datamap.h"
 
 
@@ -78,10 +72,10 @@ struct ResourceFileHeader_t
 //-----------------------------------------------------------------------------
 // Resource block IDs
 //-----------------------------------------------------------------------------
-#define RSRC_BYTE_POS( byteVal, shft )	ResourceBlockId_t( uint32(uint8(byteVal)) << uint8(shft * 8) )
+template <typename T1, typename T2> [[gnu::always_inline]] inline constexpr auto RSRC_BYTE_POS( T1 byteVal, T2 shft ) { return ResourceBlockId_t( uint32(uint8(byteVal)) << uint8(shft * 8) ); }
 #define MK_RSRC_BLOCK_ID(a, b, c, d)	ResourceBlockId_t( RSRC_BYTE_POS(a, 0) | RSRC_BYTE_POS(b, 1) | RSRC_BYTE_POS(c, 2) | RSRC_BYTE_POS(d, 3) )
 
-#define RESOURCE_BLOCK_ID_INVALID 0xFFFFFFFF
+inline constexpr auto RESOURCE_BLOCK_ID_INVALID = 0xFFFFFFFF;
 
 
 //-----------------------------------------------------------------------------
@@ -135,5 +129,3 @@ template< class T > inline T* Resource_AllocateBlock( CResourceStream *pStream, 
 	pHeader->m_ResourceBlocks[nBlockIndex].m_pBlockData = pBlockData;
 	return pBlockData;
 }
-
-#endif // RESOURCEFILE_H

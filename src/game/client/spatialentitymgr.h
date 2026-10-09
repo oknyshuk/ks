@@ -1,16 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose : Singleton manager for spatial entities on the client
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SPATIALENTITYMGR_H
-#define SPATIALENTITYMGR_H
-
+// Purpose: Singleton manager for spatial entities on the client
 
 #include "igamesystem.h"
-
+import std;
 
 class C_SpatialEntity;
 
@@ -36,6 +31,3 @@ public:
 
 	std::vector< C_SpatialEntity* > m_SpatialEntities;
 };
-
-
-#endif // SPATIALENTITYMGR_H

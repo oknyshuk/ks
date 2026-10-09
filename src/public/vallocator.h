@@ -1,10 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
 
 // These classes let you write your own allocators to be used with new and delete.
 // If you have an allocator: VAllocator *pAlloc, you can call new and delete like this:
@@ -13,12 +11,6 @@
 // VDelete(pAlloc, ptr);
 //
 // Note: allocating and freeing arrays of objects will not work using VAllocators.
-
-
-
-#ifndef VALLOCATOR_H
-#define VALLOCATOR_H
-
 
 class VAllocator
 {
@@ -41,8 +33,6 @@ extern VStdAllocator g_StdAllocator;
 
 // Use these to allocate classes through VAllocator.
 // Allocating arrays of classes is not supported.
-#define VNew(pAlloc)				new 
-#define VDelete(pAlloc, ptr)		delete ptr
 
 // Used internally.. just makes sure we call the right operator new.
 class DummyAllocatorHelper
@@ -51,7 +41,7 @@ public:
 	int x;
 };
 
-inline void* operator new(size_t size, void *ptr, DummyAllocatorHelper *asdf)
+inline void* operator new(std::size_t size, void *ptr, DummyAllocatorHelper *asdf)
 {
 	asdf=asdf;	// compiler warning.
 	size=size;
@@ -79,6 +69,3 @@ inline void VAllocator_CallDestructors(T *pObjects, int count)
 	for(int i=0; i < count; i++)
 		pObjects[i].~T();
 }
-
-#endif
-

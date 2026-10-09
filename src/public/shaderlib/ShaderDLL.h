@@ -1,14 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SHADERDLL_H
-#define SHADERDLL_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <materialsystem/IShader.h>
 #include "shaderlib/shadercombosemantics.h"
@@ -42,9 +34,3 @@ IShaderDLL *GetShaderDLL();
 // Singleton interface for CVars
 //-----------------------------------------------------------------------------
 ICvar *GetCVar();
-
-
-
-
-
-#endif // SHADERDLL_H

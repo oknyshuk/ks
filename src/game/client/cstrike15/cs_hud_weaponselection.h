@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef CS_HUD_WEAPONSELECTION_H
-#define CS_HUD_WEAPONSELECTION_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "weapon_selection.h"
 #include "cs_weapon_parse.h"
@@ -110,5 +105,3 @@ private:
 	int  m_iMaxSlots;
 	bool m_bPlaySelectionSounds;
 };
-
-#endif	//CS_HUD_CHAT_H

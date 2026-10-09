@@ -1,49 +1,52 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // HDRFIXME: reduce the number of include files here.
-#include "render_pch.h"
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialvar.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "r_local.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_lightmap.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
+#include "view.h"
+#include "sysexternal.h"
 #include "client.h"
 #include "cdll_int.h"
 #include "lightcache.h"
 #include "client_class.h"
 #include "icliententitylist.h"
-#include "traceinit.h"
 #include "server.h"
-#include "ispatialpartitioninternal.h"
 #include "cdll_engine_int.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
 #include "ivtex.h"
 #include "materialsystem/itexture.h"
 #include "view.h"
-#include "tier0/dbg.h"
+import std;
 #include "tier2/fileutils.h"
-#include "staticpropmgr.h"
 #include "icliententity.h"
 #include "gl_drawlights.h"
-#include "Overlay.h"
-#include "vmodes.h"
 #include "gl_cvars.h"
-#include "tier1/byte_writer.h"
-#include "tier1/text_writer.h"
-#include "tier1/intern_pool.h"
 #include "vtf/vtf.h"
 #include "bitmap/imageformat.h"
-#include "cbenchmark.h"
 #include "r_decal.h"
 #include "ivideomode.h"
-#include "tier0/icommandline.h"
 #include "dmxloader/dmxelement.h"
 #include "dmxloader/dmxloader.h"
 #include "bitmap/floatbitmap.h"
-#include "tier2/tier2.h"
 #include "../utils/common/bsplib.h"
 #include "ibsppack.h"
 
@@ -114,7 +117,7 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 	
 	char	name[1024];
 	CViewSetup	view;
-	memset( &view, 0, sizeof(view) );
+	std::memset( &view, 0, sizeof(view) );
 	view.origin = origin;
 	view.m_flAspectRatio = 1.0f;
 	view.m_bRenderToSubrectOfLargerScreen = true;
@@ -227,14 +230,14 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 					materials->SwapBuffers();
 				}
 				mat_force_tonemap_scale.SetValue( 0.0f );
-				Q_snprintf( name, sizeof( name ), "%s%s%s", pFileNameBase, facingName[side],pExtension );
+				V_snprintf( name, sizeof( name ), "%s%s%s", pFileNameBase, facingName[side],pExtension );
 //				hdr_map.WritePFM(name);
 			}
 			else
 			{
 				g_ClientDLL->RenderView( view, nFlags, 0 );
-				Q_snprintf( name, sizeof( name ), "%s%s%s", pFileNameBase, facingName[side],pExtension );
-				Assert( strlen( name ) < 1023 );
+				V_snprintf( name, sizeof( name ), "%s%s%s", pFileNameBase, facingName[side],pExtension );
+				contract_assert( std::strlen( name ) < 1023 );
 				videomode->TakeSnapshotTGARect( name, 0, 0, screenBufSize, screenBufSize, tgaSize, tgaSize, bPFM, face_idx[side]);
 			}
 		}
@@ -244,9 +247,9 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 // 			for(int f=0;f<6;f++)
 // 				OutEnvmap.face_maps[f].Clear(0,0,0,1);
 // 			Envmap.Resample(OutEnvmap,15.0);
- 			Q_snprintf( name, sizeof( name ), "%s", pFileNameBase);
+ 			V_snprintf( name, sizeof( name ), "%s", pFileNameBase);
  			Envmap.WritePFMs( name );
-// 			Q_snprintf( name, sizeof( name ), "%s_filtered", pFileNameBase);
+// 			V_snprintf( name, sizeof( name ), "%s_filtered", pFileNameBase);
 // 			OutEnvmap.WritePFMs( name );
 		}
 
@@ -264,8 +267,8 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 			
 			
 			g_ClientDLL->RenderView( view, nFlags, 0 );
-			Q_snprintf( name, sizeof( name ), "%s%s%s", pFileNameBase, facingName[side],pExtension );
-			Assert( strlen( name ) < 1023 );
+			V_snprintf( name, sizeof( name ), "%s%s%s", pFileNameBase, facingName[side],pExtension );
+			contract_assert( std::strlen( name ) < 1023 );
 			videomode->TakeSnapshotTGARect( name, 0, 0, screenBufSize, screenBufSize, tgaSize, tgaSize, bPFM, face_idx[side]);
 		}
 	}
@@ -289,7 +292,7 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 void* CubemapsFSFactory( const char *pName, int *pReturnCode )
 {
 
-	if ( Q_stricmp( pName, FILESYSTEM_INTERFACE_VERSION ) == 0 )
+	if ( V_stricmp( pName, FILESYSTEM_INTERFACE_VERSION ) == 0 )
 		return g_pFileSystem;
 
 	return nullptr;
@@ -339,8 +342,8 @@ static void BuildSingleCubemap( const char *pVTFName, const Vector &vecOrigin,
 	TakeCubemapSnapshot( vecOrigin, pVTFName, nScreenBufSize, nSize, bHDR );
 
 	char pTXTName[ MAX_PATH ];
-	Q_strncpy( pTXTName, pVTFName, sizeof(pTXTName) );
-	Q_SetExtension( pTXTName, ".txt", sizeof(pTXTName) );
+	V_strncpy( pTXTName, pVTFName, sizeof(pTXTName) );
+	V_SetExtension( pTXTName, ".txt", sizeof(pTXTName) );
 
 	// HDRFIXME: Make this go to a buffer instead.
 	FileHandle_t fp = g_pFileSystem->Open( pTXTName, "w" );
@@ -372,8 +375,8 @@ static void BuildSingleCubemap( const char *pVTFName, const Vector &vecOrigin,
 	for( int i = 0; i < 6; i++ )
 	{
 		char pTempName[MAX_PATH];
-		Q_snprintf( pTempName, sizeof( pTempName ), "%s%s", pVTFName, facingName[i] );
-		Q_SetExtension( pTempName, pSrcExtension, sizeof(pTempName) );
+		V_snprintf( pTempName, sizeof( pTempName ), "%s%s", pVTFName, facingName[i] );
+		V_SetExtension( pTempName, pSrcExtension, sizeof(pTempName) );
 		g_pFileSystem->RemoveFile( pTempName, nullptr );
 	}
 }
@@ -384,24 +387,27 @@ static void BuildSingleCubemap( const char *pVTFName, const Vector &vecOrigin,
 //-----------------------------------------------------------------------------
 // Grab six views for environment mapping tests
 //-----------------------------------------------------------------------------
-CON_COMMAND( envmap, "" )
+static void envmap( const CCommand &args );
+static ConCommand envmap_command( "envmap", envmap, "" );
+static void envmap( const CCommand &args )
 {
+	ks::ScratchArena<> scratch;
 
 	char	base[ 256 ];
 	IClientEntity *world = entitylist->GetClientEntity( 0 );
 
 	if( world && world->GetModel() )
 	{
-		Q_FileBase( modelloader->GetName( ( model_t *)world->GetModel() ), base, sizeof( base ) );
+		V_FileBase( modelloader->GetName( ( model_t *)world->GetModel() ), base, sizeof( base ) );
 	}
 	else
 	{
-		Q_strncpy( base, "Env", sizeof( base ) );
+		V_strncpy( base, "Env", sizeof( base ) );
 	}
 
-	int strLen = strlen( base ) + strlen( "cubemap_screenshots/" ) + 1;
-	char *str = ( char * )stackalloc( strLen );
-	Q_snprintf( str, strLen, "cubemap_screenshots/%s", base );
+	int strLen = std::strlen( base ) + strlen( "cubemap_screenshots/" ) + 1;
+	char *str = ( char * )scratch.AllocBytes( strLen );
+	V_snprintf( str, strLen, "cubemap_screenshots/%s", base );
 	g_pFileSystem->CreateDirHierarchy( "cubemap_screenshots", "DEFAULT_WRITE_PATH" );
 
 	TakeCubemapSnapshot( MainViewOrigin(), str, mat_envmapsize.GetInt(), mat_envmaptgasize.GetInt(), 
@@ -415,13 +421,13 @@ CON_COMMAND( envmap, "" )
 static void WriteLightProbe( const char *pBasePath, const LightingState_t& state, bool bHDR )
 {
 	char pFullPath[MAX_PATH];
-	Q_strncpy( pFullPath, pBasePath, sizeof(pFullPath) );
-	Q_SetExtension( pFullPath, ".prb", sizeof(pFullPath) );
+	V_strncpy( pFullPath, pBasePath, sizeof(pFullPath) );
+	V_SetExtension( pFullPath, ".prb", sizeof(pFullPath) );
 
 	DECLARE_DMX_CONTEXT();
 	CDmxElement *pLightProbe = CreateDmxElement( "DmeElement" );
 
-	const char *pCubemap = pBasePath + Q_strlen( "materials/" );
+	const char *pCubemap = pBasePath + V_strlen( "materials/" );
 	CDmxElementModifyScope modify( pLightProbe );
 	pLightProbe->SetValue( "name", "lightprobe" );
 	pLightProbe->SetValue( "cubemap", pCubemap );
@@ -429,7 +435,7 @@ static void WriteLightProbe( const char *pBasePath, const LightingState_t& state
 	if ( bHDR )
 	{
 		char pTemp[MAX_PATH];
-		Q_snprintf( pTemp, sizeof(pTemp), "%s_hdr", pCubemap );
+		V_snprintf( pTemp, sizeof(pTemp), "%s_hdr", pCubemap );
 		pLightProbe->SetValue( "cubemapHdr", pTemp );
 	}
 
@@ -469,7 +475,7 @@ static void WriteLightProbe( const char *pBasePath, const LightingState_t& state
 			pLight->SetValue( "origin", wl.origin );
 			pLight->SetValue( "direction", wl.normal );
 			pLight->SetValue( "attenuation", Vector( wl.constant_attn, wl.linear_attn, wl.quadratic_attn ) );
-			pLight->SetValue( "theta", 2.0f * acos( wl.stopdot ) );
+			pLight->SetValue( "theta", 2.0f * std::acos( wl.stopdot ) );
 			pLight->SetValue( "phi", 2.0f * acos( wl.stopdot2 ) );
 			pLight->SetValue( "exponent", wl.exponent ? wl.exponent : 1.0f );
 			pLight->SetValue( "maxDistance", wl.radius );
@@ -506,10 +512,11 @@ static void WriteLightProbe( const char *pBasePath, const LightingState_t& state
 //-----------------------------------------------------------------------------
 // Grab an envmap @ the view position + write lighting information
 //-----------------------------------------------------------------------------
-CON_COMMAND( lightprobe, 
-	"Samples the lighting environment.\n"
+static void lightprobe( const CCommand &args );
+static ConCommand lightprobe_command( "lightprobe", lightprobe, "Samples the lighting environment.\n"
 	"Creates a cubemap and a file indicating the local lighting in a subdirectory called 'materials/lightprobes'\n."
-	"The lightprobe command requires you specify a base file name.\n" )
+	"The lightprobe command requires you specify a base file name.\n" );
+static void lightprobe( const CCommand &args )
 {
 
 	if ( args.ArgC() < 2 ) 
@@ -521,7 +528,7 @@ CON_COMMAND( lightprobe,
 	int nTGASize = mat_envmaptgasize.GetInt();
 	if ( args.ArgC() >= 3 )
 	{
-		nTGASize = atoi( args[2] );
+		nTGASize = std::atoi( args[2] );
 	}
 
 	CSysModule *pModule;
@@ -530,15 +537,15 @@ CON_COMMAND( lightprobe,
 		return;
 
 	char pBasePath[MAX_PATH];
-	Q_snprintf( pBasePath, sizeof(pBasePath), "materials/lightprobes/%s", args[1] );
-	Q_StripFilename( pBasePath );
+	V_snprintf( pBasePath, sizeof(pBasePath), "materials/lightprobes/%s", args[1] );
+	V_StripFilename( pBasePath );
 	g_pFileSystem->CreateDirHierarchy( pBasePath, "DEFAULT_WRITE_PATH" );
 
 	char pTemp[MAX_PATH];
 	char pMaterialSrcPath[MAX_PATH];
-	Q_snprintf( pTemp, sizeof(pTemp), "materialsrc/lightprobes/%s", args[1] );
+	V_snprintf( pTemp, sizeof(pTemp), "materialsrc/lightprobes/%s", args[1] );
 	GetModContentSubdirectory( pTemp, pMaterialSrcPath, sizeof(pMaterialSrcPath) );
-	Q_StripFilename( pMaterialSrcPath );
+	V_StripFilename( pMaterialSrcPath );
 	g_pFileSystem->CreateDirHierarchy( pMaterialSrcPath, nullptr );
 
 	char pGameDir[MAX_OSPATH];
@@ -548,7 +555,7 @@ CON_COMMAND( lightprobe,
 	if ( bHDR )
 	{
 		char pTemp2[MAX_PATH];
-		Q_snprintf( pTemp2, sizeof(pTemp2), "materialsrc/lightprobes/%s_hdr", args[1] );
+		V_snprintf( pTemp2, sizeof(pTemp2), "materialsrc/lightprobes/%s_hdr", args[1] );
 
 		GetModContentSubdirectory( pTemp2, pMaterialSrcPath, sizeof(pMaterialSrcPath) );
 		BuildSingleCubemap( pMaterialSrcPath, MainViewOrigin(), nTGASize, true, pGameDir, pIVTex, nullptr );
@@ -564,7 +571,7 @@ CON_COMMAND( lightprobe,
 	LightcacheGetDynamic_Stats stats;
 	LightcacheGetDynamic( MainViewOrigin(), lightingState, stats, nullptr );
 
-	Q_snprintf( pBasePath, sizeof(pBasePath), "materials/lightprobes/%s", args[1] );
+	V_snprintf( pBasePath, sizeof(pBasePath), "materials/lightprobes/%s", args[1] );
 	WriteLightProbe( pBasePath, lightingState, bHDR );
 }
 
@@ -577,7 +584,7 @@ static bool LoadSrcVTFFiles( IVTFTexture *pSrcVTFTextures[6], const char *pSkybo
 		{
 			// !!! FIXME: This needs to open the vmt (or some other method) to find the correct LDR or HDR set of skybox textures! Look in vbsp\cubemap.cpp!
 			char srcVTFFileName[1024];
-			Q_snprintf( srcVTFFileName, sizeof( srcVTFFileName ), "materials/skybox/%s%s.vtf", pSkyboxBaseName, facingName[i] );
+			V_snprintf( srcVTFFileName, sizeof( srcVTFFileName ), "materials/skybox/%s%s.vtf", pSkyboxBaseName, facingName[i] );
 
 			auto data = g_pFileSystem->ReadFile( srcVTFFileName, nullptr );
 			if ( !data )
@@ -661,7 +668,7 @@ void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 				int iSrcMipSize = pSrcVTFTextures[iFace]->ComputeMipSize( iMip + iMipLevelOffset );
 
 				// !!! FIXME: Set this to black until the LDR/HDR issues are fixed on line ~563 in this file
-				memset( pDstBits, 0, iSize );
+				std::memset( pDstBits, 0, iSize );
 				continue;
 
 				if ( ( pSrcVTFTextures[iFace]->Width() == 4 ) && ( pSrcVTFTextures[iFace]->Height() == 4 ) ) // If texture is 4x4 square
@@ -674,7 +681,7 @@ void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 					//memset( pDstBits, 0, iSize ); 
 					for ( int i = 0; i < ( iSize / iSrcMipSize ); i++ )
 					{
-						memcpy( pDstBits + ( i * iSrcMipSize ), pSrcBits, iSrcMipSize ); 
+						std::memcpy( pDstBits + ( i * iSrcMipSize ), pSrcBits, iSrcMipSize ); 
 					}
 				}
 				else if ( pSrcVTFTextures[iFace]->Width() == pSrcVTFTextures[iFace]->Height() ) // If texture is square
@@ -687,7 +694,7 @@ void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 					else
 					{
 						// Just copy the mip level
-						memcpy( pDstBits, pSrcBits, iSize ); 
+						std::memcpy( pDstBits, pSrcBits, iSize ); 
 					}
 				}
 				else if ( pSrcVTFTextures[iFace]->Width() == pSrcVTFTextures[iFace]->Height()*2 ) // If texture is rectangle 2x wide
@@ -702,7 +709,7 @@ void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 					else
 					{
 						// Copy row at a time and repeat last row
-						memcpy( pDstBits, pSrcBits, iSize/2 ); 
+						std::memcpy( pDstBits, pSrcBits, iSize/2 ); 
 						//memcpy( pDstBits + iSize/2, pSrcBits, iSize/2 );
 						int nSrcRowSize = pSrcVTFTextures[iFace]->RowSizeInBytes( iMip + iMipLevelOffset );
 						int nDstRowSize = pDstCubemap->RowSizeInBytes( iMip );
@@ -767,7 +774,7 @@ void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 
 	// Write the puppy out!
 	char dstVTFFileName[1024];
-	Q_snprintf( dstVTFFileName, sizeof( dstVTFFileName ), "materials/maps/%s/cubemapdefault.vtf", pMapName );
+	V_snprintf( dstVTFFileName, sizeof( dstVTFFileName ), "materials/maps/%s/cubemapdefault.vtf", pMapName );
 
 	ks::byte_writer outputBuf;
 	if (!pDstCubemap->Serialize( outputBuf ))
@@ -792,7 +799,7 @@ static void AddSampleToBSPFile( bool bHDR, mcubemapsample_t *pSample, const char
 
 	char inputTextureName[512] = {};
 	const char *pHDRSuffix = bHDR ? "_hdr" : "";
-	Q_snprintf( inputTextureName, sizeof( inputTextureName ), "%s/c%d_%d_%d%s.vtf", matDir, ( int )pSample->origin[0], 
+	V_snprintf( inputTextureName, sizeof( inputTextureName ), "%s/c%d_%d_%d%s.vtf", matDir, ( int )pSample->origin[0], 
 		( int )pSample->origin[1], ( int )pSample->origin[2], pHDRSuffix );
 
 	if ( pCC && !pCC->Add( inputTextureName ) )
@@ -808,9 +815,9 @@ static void AddSampleToBSPFile( bool bHDR, mcubemapsample_t *pSample, const char
 		// Rename the cubemap for storage in the BPS ( "blah_hdr.vtf" -> "blah.hdr.vtf" )
 		char outputTextureName[512];
 		const char *pHDRExtension = bHDR ? ".hdr" : "";
-		Q_snprintf( outputTextureName, sizeof( outputTextureName ), "%s/c%d_%d_%d%s.vtf", matDir, ( int )pSample->origin[0], 
+		V_snprintf( outputTextureName, sizeof( outputTextureName ), "%s/c%d_%d_%d%s.vtf", matDir, ( int )pSample->origin[0], 
 			( int )pSample->origin[1], ( int )pSample->origin[2], pHDRExtension );
-		Q_FixSlashes( localPath );
+		V_FixSlashes( localPath );
 		iBSPPack->AddFileToPack( outputTextureName, localPath );
 	}
 	g_pFileSystem->RemoveFile( inputTextureName, "DEFAULT_WRITE_PATH" );
@@ -838,10 +845,10 @@ static int originaldrawMRMModelsVal = 1;
 void R_BuildCubemapSamples_PreBuild()
 {
 
-	FORCE_DEFAULT_SPLITSCREEN_PLAYER_GUARD;
+	;
 
 	// Make sure that the file is writable before building cubemaps.
-	Assert( g_pFileSystem->FileExists( GetBaseLocalClient().m_szLevelName, "GAME" ) );
+	contract_assert( g_pFileSystem->FileExists( GetBaseLocalClient().m_szLevelName, "GAME" ) );
 	if( !g_pFileSystem->IsFileWritable( GetBaseLocalClient().m_szLevelName, "GAME" ) )
 	{
 		Warning( "%s is not writable!!!  Check it out before running buildcubemaps.\n", GetBaseLocalClient().m_szLevelName );
@@ -1004,7 +1011,7 @@ void R_BuildCubemapSamples( int numIterations )
 {
 
 	// Make sure that the file is writable before building cubemaps.
-	Assert( g_pFileSystem->FileExists( GetBaseLocalClient().m_szLevelName, "GAME" ) );
+	contract_assert( g_pFileSystem->FileExists( GetBaseLocalClient().m_szLevelName, "GAME" ) );
 	if( !g_pFileSystem->IsFileWritable( GetBaseLocalClient().m_szLevelName, "GAME" ) )
 	{
 		Warning( "%s is not writable!!!  Check it out before running buildcubemaps.\n", GetBaseLocalClient().m_szLevelName );
@@ -1036,15 +1043,15 @@ void R_BuildCubemapSamples( int numIterations )
 			
 			// This handles the case where you have a map in a directory under maps. 
 			// We need to keep everything after "maps/" so it looks for the BSP file in the right place.
-			if ( Q_stristr( pModelName, "maps/" ) == pModelName ||
-				Q_stristr( pModelName, "maps\\" ) == pModelName )
+			if ( V_stristr( pModelName, "maps/" ) == pModelName ||
+				V_stristr( pModelName, "maps\\" ) == pModelName )
 			{
-				Q_strncpy( mapName, &pModelName[5], sizeof( mapName ) );
-				Q_StripExtension( mapName, mapName, sizeof( mapName ) );
+				V_strncpy( mapName, &pModelName[5], sizeof( mapName ) );
+				V_StripExtension( mapName, mapName, sizeof( mapName ) );
 			}
 			else
 			{
-				Q_FileBase( pModelName, mapName, sizeof( mapName ) );
+				V_FileBase( pModelName, mapName, sizeof( mapName ) );
 			}
 		}
 		else
@@ -1071,11 +1078,11 @@ void R_BuildCubemapSamples( int numIterations )
 			return;
 		
 		char matDir[MAX_PATH];
-		Q_snprintf( matDir, sizeof(matDir), "materials/maps/%s", mapName );
+		V_snprintf( matDir, sizeof(matDir), "materials/maps/%s", mapName );
 		g_pFileSystem->CreateDirHierarchy( matDir, "DEFAULT_WRITE_PATH" );
 
 		char pTemp[MAX_PATH];
-		Q_snprintf( pTemp, sizeof(pTemp), "materialsrc/maps/%s", mapName );
+		V_snprintf( pTemp, sizeof(pTemp), "materialsrc/maps/%s", mapName );
 
 		char pMaterialSrcDir[MAX_PATH];
 		GetModContentSubdirectory( pTemp, pMaterialSrcDir, sizeof(pMaterialSrcDir) );
@@ -1113,7 +1120,7 @@ void R_BuildCubemapSamples( int numIterations )
 
 			char pVTFName[ MAX_PATH ];
 			const char *pHDRSuffix = bSupportsHDR ? "_hdr" : "";
-			Q_snprintf( pVTFName, sizeof( pVTFName ), "%s/c%d_%d_%d%s", pMaterialSrcDir, 
+			V_snprintf( pVTFName, sizeof( pVTFName ), "%s/c%d_%d_%d%s", pMaterialSrcDir, 
 				( int )pCubemapSample->origin[0], ( int )pCubemapSample->origin[1],	
 				( int )pCubemapSample->origin[2], pHDRSuffix );
 
@@ -1147,11 +1154,11 @@ void R_BuildCubemapSamples( int numIterations )
 		iBSPPack->SetHDRMode( bSupportsHDR );
 
 		char mapPath[1024];
-		Q_snprintf( mapPath, sizeof( mapPath ), "maps/%s.bsp", mapName );
+		V_snprintf( mapPath, sizeof( mapPath ), "maps/%s.bsp", mapName );
 		iBSPPack->LoadBSPFile( g_pFileSystem, mapPath );
 		
 		// Cram the textures into the bsp.
-		Q_snprintf( matDir, sizeof(matDir), "materials/maps/%s", mapName );
+		V_snprintf( matDir, sizeof(matDir), "materials/maps/%s", mapName );
 
 		for ( i=0 ; i < pWorldModel->brush.pShared->m_nCubemapSamples ; i++ )
 		{
@@ -1188,7 +1195,9 @@ void R_BuildCubemapSamples( int numIterations )
 }
 
 #if !defined( DEDICATED )
-CON_COMMAND( buildcubemaps, "Rebuild cubemaps." )
+static void buildcubemaps( const CCommand &args );
+static ConCommand buildcubemaps_command( "buildcubemaps", buildcubemaps, "Rebuild cubemaps." );
+static void buildcubemaps( const CCommand &args )
 {
 	extern void V_RenderUIOnly();
 
@@ -1202,7 +1211,7 @@ CON_COMMAND( buildcubemaps, "Rebuild cubemaps." )
 	}
 	else if( args.ArgC() == 2 )
 	{
-		R_BuildCubemapSamples( atoi( args[ 1 ] ) );
+		R_BuildCubemapSamples( std::atoi( args[ 1 ] ) );
 	}
 	else
 	{

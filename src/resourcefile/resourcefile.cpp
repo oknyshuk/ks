@@ -1,20 +1,14 @@
-//===== Copyright c 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #include "resourcefile/resourcefile.h"
-#include "tier0/dbg.h"
-
 
 //-----------------------------------------------------------------------------
 // Does this resource file contain a particular block?
 //-----------------------------------------------------------------------------
 bool Resource_IsBlockDefined( const ResourceFileHeader_t *pHeader, ResourceBlockId_t id )
 {
-	Assert( pHeader->m_nVersion == RESOURCE_FILE_HEADER_VERSION );
+	contract_assert( pHeader->m_nVersion == RESOURCE_FILE_HEADER_VERSION );
 	if ( pHeader->m_nVersion != RESOURCE_FILE_HEADER_VERSION )
 		return false;
 
@@ -33,7 +27,7 @@ bool Resource_IsBlockDefined( const ResourceFileHeader_t *pHeader, ResourceBlock
 //-----------------------------------------------------------------------------
 const void *Resource_GetBlock( const ResourceFileHeader_t *pHeader, ResourceBlockId_t id )
 {
-	Assert( pHeader->m_nVersion == RESOURCE_FILE_HEADER_VERSION );
+	contract_assert( pHeader->m_nVersion == RESOURCE_FILE_HEADER_VERSION );
 	if ( pHeader->m_nVersion != RESOURCE_FILE_HEADER_VERSION )
 		return nullptr;
 

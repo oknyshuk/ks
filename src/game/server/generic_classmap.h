@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef ASW_GENERIC_CLASSMAP_H
-#define ASW_GENERIC_CLASSMAP_H
-
-#include "tier1/map_ops.h"
+import std;
+import ks.tier1;
 
 template <class T>
 class CGenericClassmap
@@ -42,7 +37,7 @@ private:
 
 		void SetMapName( char const *newname )
 		{
-			Q_strncpy( mapname, newname, sizeof( mapname ) );
+			V_strncpy( mapname, newname, sizeof( mapname ) );
 		}
 
 		DISPATCHFUNCTION	factory;
@@ -58,7 +53,7 @@ template <class T>
 void CGenericClassmap< T >::Add( const char *mapname, const char *classname, int size, DISPATCHFUNCTION factory )
 {
 	const char *map = Lookup( classname );
-	if ( map && !Q_strcasecmp( mapname, map ) )
+	if ( map && !V_strcasecmp( mapname, map ) )
 		return;
 
 	classentry_t element;
@@ -88,7 +83,7 @@ T *CGenericClassmap< T >::CreateInstance( const char *mapname )
 	{
 		classentry_t *lookup = &entry;
 
-		if ( Q_stricmp( lookup->GetMapName(), mapname ) )
+		if ( V_stricmp( lookup->GetMapName(), mapname ) )
 			continue;
 
 		if ( !lookup->factory )
@@ -112,7 +107,7 @@ int CGenericClassmap< T >::GetClassSize( const char *classname )
 	{
 		classentry_t *lookup = &entry;
 
-		if ( Q_strcmp( lookup->GetMapName(), classname ) )
+		if ( V_strcmp( lookup->GetMapName(), classname ) )
 			continue;
 
 		return lookup->size;
@@ -120,6 +115,3 @@ int CGenericClassmap< T >::GetClassSize( const char *classname )
 
 	return -1;
 }
-
-
-#endif // ASW_GENERIC_CLASSMAP_H

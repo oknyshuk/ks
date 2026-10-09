@@ -1,17 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef INTERVAL_H
-#define INTERVAL_H
-
-#include "basetypes.h"
-
+import std;
+import ks.core;
 
 interval_t ReadInterval( const char *pString );
 float RandomInterval( const interval_t &interval );
-
-#endif // INTERVAL_H

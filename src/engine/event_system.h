@@ -1,23 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( EVENT_SYSTEM_H )
-#define EVENT_SYSTEM_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "event_flags.h"
 #include "common.h"
 #include "enginesingleuserfilter.h"
 #include "ents_shared.h"
-
 
 class SendTable;
 class ClientClass;
@@ -78,6 +66,3 @@ public:
 	// clients that see that event
 	CEngineRecipientFilter filter;
 };
-
-
-#endif // EVENT_SYSTEM_H

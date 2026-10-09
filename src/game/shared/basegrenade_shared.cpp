@@ -1,10 +1,59 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
@@ -15,7 +64,6 @@
 #ifdef GAME_DLL
 #include "reflect_sendtable.h"
 #endif
-#include "decals.h"
 #include "basegrenade_shared.h"
 #include "shake.h"
 #include "engine/IEngineSound.h"
@@ -56,9 +104,9 @@ IMPLEMENT_REFLECT_PREDMAP( CBaseGrenade );
 #endif
 
 // Grenades flagged with this will be triggered when the owner calls detonateSatchelCharges
-#define SF_DETONATE		0x0001
+constexpr auto SF_DETONATE = 0x0001;
 
-#define	MAX_WATER_SURFACE_DISTANCE	512
+constexpr auto MAX_WATER_SURFACE_DISTANCE = 512;
 
 // UNDONE: temporary scorching for PreAlpha - find a less sleazy permenant solution.
 void CBaseGrenade::Explode( trace_t *pTrace, int bitsDamageType )
@@ -282,7 +330,7 @@ void CBaseGrenade::ExplodeTouch( CBaseEntity *pOther )
 	trace_t		tr;
 	Vector		vecSpot;// trace starts here!
 
-	Assert( pOther );
+	contract_assert( pOther );
 	if ( !pOther->IsSolid() )
 		return;
 
@@ -512,17 +560,3 @@ CBaseGrenade::CBaseGrenade(void)
 
 	SetSimulatedEveryTick( true );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-

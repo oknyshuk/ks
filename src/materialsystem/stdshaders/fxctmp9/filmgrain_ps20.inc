@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -21,7 +22,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_filmgrain_ps20 0
+inline constexpr int shaderStaticTest_filmgrain_ps20 = 0;
 class filmgrain_ps20_Dynamic_Index
 {
 public:
@@ -38,10 +39,10 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_filmgrain_ps20 0
+inline constexpr int shaderDynamicTest_filmgrain_ps20 = 0;
 static const ShaderComboSemantics_t filmgrain_ps20_combos =
 {
-	"filmgrain_ps20", NULL, 0, NULL, 0 
+	"filmgrain_ps20", nullptr, 0, nullptr, 0 
 };
 
 class ConstructMe_filmgrain_ps20

@@ -1,10 +1,9 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-#ifndef MATHLIB_CAPSULE_HDR
-#define MATHLIB_CAPSULE_HDR
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "vector.h"
+import std;
+import ks.math;
 #include "rubikon/param_types.h"
 
 void CastCapsuleRay( CShapeCastResult& out, const Vector& vRayStart, const Vector& vRayDelta, const Vector vCenter[], float flRadius );
-
-#endif

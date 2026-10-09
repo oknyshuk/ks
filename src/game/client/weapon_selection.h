@@ -1,14 +1,12 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Weapon selection handling
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( WEAPON_SELECTION_H )
-#define WEAPON_SELECTION_H
 
 #include "inputsystem/ButtonCode.h"
 #include "hudelement.h"
+#include "ehandle.h"
 
 class C_BaseCombatWeapon;
 class C_BasePlayer;
@@ -24,7 +22,7 @@ extern ConVar hud_fastswitch;
 //-----------------------------------------------------------------------------
 // Purpose: Base class for tf2 & hl2 weapon selection hud elements
 //-----------------------------------------------------------------------------
-abstract_class CBaseHudWeaponSelection : public CHudElement
+class CBaseHudWeaponSelection : public CHudElement
 {
 	DECLARE_CLASS( CBaseHudWeaponSelection, CHudElement );
 
@@ -123,5 +121,3 @@ protected:
 
 // accessor
 CBaseHudWeaponSelection *GetHudWeaponSelection();
-
-#endif // WEAPON_SELECTION_H

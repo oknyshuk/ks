@@ -1,11 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "particle_prototype.h"
@@ -17,8 +21,8 @@
 // Defines.
 // ------------------------------------------------------------------------- //
 
-#define MAX_FIRE_EMITTERS		128
-#define FIRE_PARTICLE_LIFETIME	2
+constexpr auto MAX_FIRE_EMITTERS = 128;
+constexpr auto FIRE_PARTICLE_LIFETIME = 2;
 
 Vector g_FireSpreadDirection(0,0,1);
 
@@ -41,10 +45,10 @@ FireRamp g_FireRamps[] =
 	FireRamp(Vector(1,0,0), Vector(1,1,0)),
 	FireRamp(Vector(0.5,0.5,0), Vector(0,0,0))
 };
-#define NUM_FIRE_RAMPS	(sizeof(g_FireRamps) / sizeof(g_FireRamps[0]))
+inline constexpr auto NUM_FIRE_RAMPS = (sizeof(g_FireRamps) / sizeof(g_FireRamps[0]));
 
 
-#define NUM_FIREGRID_OFFSETS	8
+constexpr auto NUM_FIREGRID_OFFSETS = 8;
 Vector g_Offsets[NUM_FIREGRID_OFFSETS] =
 {
 	Vector(-1,-1,-1),
@@ -142,7 +146,6 @@ private:
 // ------------------------------------------------------------------------- //
 
 // Expose to the particle app.
-EXPOSE_PROTOTYPE_EFFECT(ParticleFire, C_ParticleFire);
 
 
 // Datatable..
@@ -196,7 +199,7 @@ void C_ParticleFire::Update(float fTimeDelta)
 {
 	if(!m_pParticleMgr)
 	{
-		assert(false);
+		contract_assert( false );
 		return;
 	}
 
@@ -291,7 +294,7 @@ void C_ParticleFire::RenderParticles( CParticleRenderIterator *pIterator )
 	const FireParticle *pParticle = (const FireParticle*)pIterator->GetFirst();
 	while ( pParticle )
 	{
-		float smooth01 = 1 - (cos(pParticle->m_Lifetime * 3.14159 / FIRE_PARTICLE_LIFETIME) * 0.5 + 0.5);
+		float smooth01 = 1 - (std::cos(pParticle->m_Lifetime * 3.14159 / FIRE_PARTICLE_LIFETIME) * 0.5 + 0.5);
 		float smooth00 = 1 - (cos(pParticle->m_Lifetime * 3.14159 * 2 / FIRE_PARTICLE_LIFETIME) * 0.5 + 0.5);
 		
 		FireRamp *pRamp = &g_FireRamps[pParticle->m_iRamp];
@@ -327,12 +330,10 @@ void C_ParticleFire::SimulateParticles( CParticleSimulateIterator *pIterator )
 		}
 		else
 		{
-			float smooth01 = 1 - (cos(pParticle->m_Lifetime * 3.14159 / FIRE_PARTICLE_LIFETIME) * 0.5 + 0.5);
+			float smooth01 = 1 - (std::cos(pParticle->m_Lifetime * 3.14159 / FIRE_PARTICLE_LIFETIME) * 0.5 + 0.5);
 			pParticle->m_Pos = pParticle->m_StartPos + pParticle->m_Direction * smooth01;
 		}
 
 		pParticle = (FireParticle*)pIterator->GetNext();
 	}
 }
-
-

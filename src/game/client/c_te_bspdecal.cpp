@@ -1,18 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "iefx.h"
 #include "fx.h"
-#include "tier0/vprof.h"
 
 // UNDONE:  Get rid of this?
 #define FDECAL_PERMANENT			0x01
@@ -86,7 +88,7 @@ void TE_BSPDecal( IRecipientFilter& filter, float delay,
 //-----------------------------------------------------------------------------
 void C_TEBSPDecal::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEBSPDecal::PostDataUpdate" );
+	CVProfScope _( "C_TEBSPDecal::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	C_BaseEntity *ent;
 	if ( ( ent = cl_entitylist->GetEnt( m_nEntity ) ) == nullptr )
@@ -102,4 +104,3 @@ void C_TEBSPDecal::PostDataUpdate( DataUpdateType_t updateType )
 }
 
 IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEBSPDecal, DT_TEBSPDecal, CTEBSPDecal )
-

@@ -1,14 +1,8 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
-
-#ifndef SOS_OP_SPATIALIZE_H
-#define SOS_OP_SPATIALIZE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "sos_op.h"
-
 
 //-----------------------------------------------------------------------------
 // spatialize a sound in the speakers
@@ -31,5 +25,3 @@ class CSosOperatorSpatializeSpeakers : public CSosOperator
 {
 	SOS_HEADER_DESC( CSosOperatorSpatializeSpeakers )
 };
-
-#endif // SOS_OP_SPATIALIZE_H

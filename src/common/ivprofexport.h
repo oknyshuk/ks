@@ -1,20 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IVPROFEXPORT_H
-#define IVPROFEXPORT_H
+import ks.core;
 
+inline constexpr const char *VPROF_EXPORT_INTERFACE_VERSION = "VProfExport001";
+import std;
 
-#include "tier0/vprof.h"
-
-
-#define VPROF_EXPORT_INTERFACE_VERSION "VProfExport001"
-#include <color.h>
-
-abstract_class IVProfExport
+class IVProfExport
 {
 public:
 	enum
@@ -52,6 +45,3 @@ public:
 
 	virtual void GetBudgetGroupTimes( float times[MAX_BUDGETGROUP_TIMES] ) = 0;
 };
-
-
-#endif // IVPROFEXPORT_H

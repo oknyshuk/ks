@@ -1,11 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "itempents.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "materialsystem/imaterial.h"
@@ -18,14 +28,13 @@
 #include "c_physbox.h"
 #include "c_func_breakablesurf.h"
 
-
 //==================================================
 // C_BreakableSurface
 //==================================================
 
 // Bits for m_nPanelBits
-#define BITS_PANEL_IS_SOLID		(1<<0)
-#define BITS_PANEL_IS_STALE		(1<<1)
+constexpr auto BITS_PANEL_IS_SOLID = (1<<0);
+constexpr auto BITS_PANEL_IS_STALE = (1<<1);
 
 
 bool C_BreakableSurface::InLegalRange(int nWidth, int nHeight)
@@ -171,7 +180,7 @@ C_BreakableSurface::C_BreakableSurface()
 
 	m_pCurrentDetailTexture = nullptr;
 
-	Q_memset( m_PrevRawPanelBitVec, 0xff, sizeof( m_PrevRawPanelBitVec ) );
+	V_memset( m_PrevRawPanelBitVec, 0xff, sizeof( m_PrevRawPanelBitVec ) );
 }
 
 C_BreakableSurface::~C_BreakableSurface()
@@ -312,7 +321,7 @@ void C_BreakableSurface::OnDataChanged( DataUpdateType_t updateType )
 		}
 	}
 
-	Q_memcpy( m_PrevRawPanelBitVec, m_RawPanelBitVec.Base(), sizeof( m_PrevRawPanelBitVec ) );
+	V_memcpy( m_PrevRawPanelBitVec, m_RawPanelBitVec.Base(), sizeof( m_PrevRawPanelBitVec ) );
 }
 
 RenderableTranslucencyType_t C_BreakableSurface::ComputeTranslucencyType( void )
@@ -465,7 +474,7 @@ bool C_BreakableSurface::HavePanel(int nWidth, int nHeight)
 //------------------------------------------------------------------------------
 void C_BreakableSurface::UpdateEdgeType(int nWidth, int nHeight, int forceStyle /*=-1*/ )
 {
-	Assert( forceStyle < NUM_EDGE_STYLES );
+	contract_assert( forceStyle < NUM_EDGE_STYLES );
 
 	// -----------------------------------
 	//  Check edge conditions
@@ -703,7 +712,7 @@ void C_BreakableSurface::AddToRenderList(int nWidth, int nHeight, WinSide_t nSid
 		itNew->m_nSide		= nSide;
 		itNew->m_nStyle		= nStyle;
 
-		Assert( nStyle < NUM_EDGE_STYLES );
+		contract_assert( nStyle < NUM_EDGE_STYLES );
 		SetStyleType( nWidth, nHeight, nStyle );
 	}
 }

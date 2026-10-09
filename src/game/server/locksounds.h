@@ -1,16 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Defines a structure common to buttons and doors for playing locked
 //			and unlocked sounds.
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef LOCKSOUNDS_H
-#define LOCKSOUNDS_H
 
 #include "datamap.h"
-
+#include "string_t.h"
 
 struct locksound_t					// sounds that doors and buttons make when locked/unlocked
 {
@@ -28,6 +24,3 @@ struct locksound_t					// sounds that doors and buttons make when locked/unlocke
 	byte	bEOFLocked;				// true if hit end of list of locked sentences
 	byte	bEOFUnlocked;			// true if hit end of list of unlocked sentences
 };
-
-
-#endif // LOCKSOUNDS_H

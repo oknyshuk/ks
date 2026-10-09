@@ -1,14 +1,50 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: replaces the cl_*.cpp files with stubs
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "client_pch.h"
+// Purpose: replaces the cl_*.cpp files with stubs
+
+// main precompiled header for client files
+
+import std;
+import ks.tier1;
+
+#include "common.h"
+#include "qlimits.h"
+#include "iprediction.h"
+#include "icliententitylist.h"
+
+#include "sysexternal.h"
+#include "cmd.h"
+#include "protocol.h"
+#include "render.h"
+
+
+#include "screen.h"
+
+#include "gl_shader.h"
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+#include "cl_pred.h"
+
+#include "con_nprint.h"
+#include "debugoverlay.h"
+#include "demo.h"
+#include "host_state.h"
+#include "host.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+#include "sys.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #ifdef DEDICATED
 #include "hltvclientstate.h"
 #include "netconsole.h"
-#include "convar.h"
 #include "enginestats.h"
 #include "bspfile.h" // dworldlight_t
 #include "audio/public/soundservice.h"
@@ -50,9 +86,9 @@ void Con_ColorPrintf( const Color& clr, const char *fmt, ... )
 	if ( !host_initialized )
 		return;
 
-	va_start (argptr,fmt);
-	Q_vsnprintf (msg,sizeof( msg ), fmt,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,fmt);
+	V_vsnprintf (msg,sizeof( msg ), fmt,argptr);
+	__builtin_va_end (argptr);
 
 	if ( !HandleRedirectAndDebugLog( msg ) )
 	{
@@ -67,9 +103,9 @@ void Con_NPrintf( int pos, const char *fmt, ... )
 {
 	va_list		argptr;
 	char		text[4096];
-	va_start (argptr, fmt);
-	Q_vsnprintf(text, sizeof( text ), fmt, argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr, fmt);
+	V_vsnprintf(text, sizeof( text ), fmt, argptr);
+	__builtin_va_end (argptr);
 
 	return;
 //	printf( "%s", text );
@@ -162,20 +198,20 @@ const char *CClientState::GetCDKeyHash( void ) { return "123";}
 void CClientState::Clear( void ) {}
 bool CClientState::SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage& msg ) { return true; }
 bool CClientState::SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg) { return true; }
-bool CClientState::SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_CrosshairAngle( const ks::net::CSVCMsg_CrosshairAngle& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle &msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg ) OVERRIDE { return true; } 
-bool CClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg ) OVERRIDE { return true; }
-bool CClientState::NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg ) OVERRIDE { return true; }
-bool CClientState::NETMsg_Tick( const ks::net::CNETMsg_Tick& msg ) OVERRIDE { return true; }
+bool CClientState::SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg ) override { return true; }
+bool CClientState::SVCMsg_CrosshairAngle( const ks::net::CSVCMsg_CrosshairAngle& msg ) override { return true; }
+bool CClientState::SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle &msg ) override { return true; }
+bool CClientState::SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData& msg ) override { return true; }
+bool CClientState::SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg ) override { return true; }
+bool CClientState::SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg ) override { return true; } 
+bool CClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg ) override { return true; }
+bool CClientState::NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg ) override { return true; }
+bool CClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg ) override { return true; }
+bool CClientState::NETMsg_Tick( const ks::net::CNETMsg_Tick& msg ) override { return true; }
 bool CClientState::SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities& msg ) { return true; }
 bool CClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities& msg ) { return true; }
-bool CClientState::SVCMsg_Sounds( const ks::net::CSVCMsg_Sounds& msg ) OVERRIDE { return true; }
-bool CClientState::SVCMsg_Prefetch( const ks::net::CSVCMsg_Prefetch& msg ) OVERRIDE { return true; }
+bool CClientState::SVCMsg_Sounds( const ks::net::CSVCMsg_Sounds& msg ) override { return true; }
+bool CClientState::SVCMsg_Prefetch( const ks::net::CSVCMsg_Prefetch& msg ) override { return true; }
 bool CClientState::SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg ) { return true; }
 bool CClientState::SVCMsg_EntityMsg( const ks::net::CSVCMsg_EntityMsg& msg ) { return true; }
 float CClientState::GetTime() const { return 0.0f;}

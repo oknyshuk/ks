@@ -1,16 +1,11 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-
-#ifndef _GAME_H_
-#define _GAME_H_
-
+import ks.tier1;
 #include "mm_framework.h"
 #include "matchmaking/igame.h"
-#include "utlvector.h"
+import std;
 
 //In an idea world game is manageing all of the aspects of the game session, however in our case 
 //it will serve as an interface into the engine and matchmaking to get the information we need.
@@ -46,5 +41,3 @@ private:
 	typedef std::vector< IPlayer * > IPlayerList_t;
 	IPlayerList_t m_PlayerList;
 };
-
-#endif

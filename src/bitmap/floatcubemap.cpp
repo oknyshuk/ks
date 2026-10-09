@@ -1,13 +1,7 @@
 
-#include <tier0/platform.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <stdlib.h>
+import std;
+import ks.math;
 #include "bitmap/floatbitmap.h"
-#include <filesystem.h>
-#include <mathlib/vector.h>
-#include "mathlib/spherical_geometry.h"
 
 
 static Vector face_xvector[6]={								// direction of x pixels on face
@@ -46,7 +40,7 @@ FloatCubeMap_t::FloatCubeMap_t( char const *basename )
 	for( int f = 0;f < 6;f++ )
 	{
 		char fnamebuf[512];
-		sprintf( fnamebuf, namepts[f], basename );
+		std::sprintf( fnamebuf, namepts[f], basename );
 		face_maps[f].LoadFromPFM( fnamebuf );
 	}
 }
@@ -56,7 +50,7 @@ void FloatCubeMap_t::WritePFMs( char const *basename )
 	for( int f = 0;f < 6;f++ )
 	{
 		char fnamebuf[512];
-		sprintf( fnamebuf, namepts[f], basename );
+		std::sprintf( fnamebuf, namepts[f], basename );
 		face_maps[f].WritePFM( fnamebuf );
 	}
 }
@@ -104,7 +98,7 @@ void FloatCubeMap_t::Resample( FloatCubeMap_t & out, float flPhongExponent )
 								float dp = DotProduct( ddir, PixelDirection( sface, sx, sy ) );
 								if ( dp > 0.0 )
 								{
-									dp = pow( dp, flPhongExponent );
+									dp = std::pow( dp, flPhongExponent );
 									sum_weights += dp;
 									for( int c = 0;c < 3;c++ )
 										sum_rgb[c] += dp * face_maps[sface].Pixel( sx, sy, 0, c );
@@ -145,7 +139,7 @@ void FloatCubeMap_t::CalculateSphericalHarmonicApproximation( int nOrder, Vector
 						for( int c = 0; c < 3; c++ )
 							vecSum[c] += flHarmonic * face_maps[nFace].Pixel( nX, nY, 0, c ) * flArea;
 					}
-			vecSum *= ( ( 4 * M_PI ) / flSumWeights );
+			vecSum *= ( ( 4 * std::numbers::pi ) / flSumWeights );
 			*( flCoeffs++ ) = vecSum;
 		}
 	}

@@ -1,26 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_SENSES_H
-#define AI_SENSES_H
-
-#include "tier1/utlvector.h"
+import std;
+import ks.tier1;
 #include "simtimer.h"
 #include "ai_component.h"
 #include "soundent.h"
-
 
 class CBaseEntity;
 class CSound;
 
 //-------------------------------------
 
-DECLARE_POINTER_HANDLE( AISightIter_t );
-DECLARE_POINTER_HANDLE( AISoundIter_t );
+struct AISightIter_t__ { int unused; };
+using AISightIter_t = AISightIter_t__ *;
+struct AISoundIter_t__ { int unused; };
+using AISoundIter_t = AISoundIter_t__ *;
 
 // GetFirstSeenEntity can take these as optional parameters to search for 
 // a specific type of entity.
@@ -32,10 +28,10 @@ enum seentype_t
 	SEEN_MISC
 };
 
-#define SENSING_FLAGS_NONE			0x00000000
-#define SENSING_FLAGS_DONT_LOOK		0x00000001 // Effectively makes the NPC blind
-#define SENSING_FLAGS_DONT_LISTEN	0x00000002 // Effectively makes the NPC deaf
-#define SENSING_FLAGS_IGNORE_PORTALS	0x00000004 // Don't use portals to extend the senses
+inline constexpr auto SENSING_FLAGS_NONE = 0x00000000;
+inline constexpr auto SENSING_FLAGS_DONT_LOOK = 0x00000001; // Effectively makes the NPC blind
+inline constexpr auto SENSING_FLAGS_DONT_LISTEN = 0x00000002; // Effectively makes the NPC deaf
+inline constexpr auto SENSING_FLAGS_IGNORE_PORTALS = 0x00000004; // Don't use portals to extend the senses
 
 //-----------------------------------------------------------------------------
 // class CAI_ScriptConditions
@@ -158,7 +154,3 @@ private:
 extern CAI_SensedObjectsManager g_AI_SensedObjectsManager;
 
 //-----------------------------------------------------------------------------
-
-
-
-#endif // AI_SENSES_H

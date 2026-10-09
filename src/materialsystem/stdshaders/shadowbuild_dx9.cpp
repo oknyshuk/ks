@@ -1,14 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: A shader that builds the shadow using render-to-texture
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: A shader that builds the shadow using render-to-texture
+
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "convar.h"
-#include "mathlib/vmatrix.h"
+import std;
 
 #include "unlitgeneric_vs20.inc"
 #include "shadowbuildtexture_ps20.inc"
@@ -23,7 +20,7 @@ DEFINE_FALLBACK_SHADER( ShadowBuild, ShadowBuild_DX9 )
 
 BEGIN_VS_SHADER_FLAGS( ShadowBuild_DX9, "Help for ShadowBuild", SHADER_NOT_EDITABLE )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( TRANSLUCENT_MATERIAL, SHADER_PARAM_TYPE_MATERIAL, "", "Points to a material to grab translucency from" )
 	END_SHADER_PARAMS
 

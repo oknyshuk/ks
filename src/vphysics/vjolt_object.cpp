@@ -8,7 +8,42 @@
 //
 //=================================================================================================
 
-#include "cbase.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/JobSystemWithBarrier.h>
+#include <Jolt/Core/FixedSizeFreeList.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/PhysicsScene.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollidePointResult.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Ragdoll/Ragdoll.h>
+#include <Jolt/Physics/Collision/CollisionDispatch.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
+#include <Jolt/Physics/Constraints/ConeConstraint.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
+#include <Jolt/Physics/Constraints/SliderConstraint.h>
+import std;
+import ks.tier1;
+#include "cmodel.h"
+#include "vcollide_parse.h"
+#include "vphysics/collision_set.h"
+#include "vphysics/constraints.h"
+#include "vphysics/friction.h"
+#include "vphysics/performance.h"
+#include "vjolt_util.h"
 
 #include "vjolt_collide.h"
 #include "vjolt_surfaceprops.h"
@@ -99,7 +134,6 @@ bool JoltPhysicsObject::IsFluid() const
 
 bool JoltPhysicsObject::IsHinged() const
 {
-	Log_Stub( LOG_VJolt );
 	return false;
 }
 
@@ -121,7 +155,6 @@ bool JoltPhysicsObject::IsGravityEnabled() const
 
 bool JoltPhysicsObject::IsDragEnabled() const
 {
-	Log_Stub( LOG_VJolt );
 	return false;
 }
 
@@ -137,7 +170,6 @@ bool JoltPhysicsObject::IsMoveable() const
 
 bool JoltPhysicsObject::IsAttachedToConstraint( bool bExternalOnly ) const
 {
-	Log_Stub( LOG_VJolt );
 	return false;
 }
 
@@ -162,7 +194,6 @@ void JoltPhysicsObject::EnableGravity( bool enable )
 
 void JoltPhysicsObject::EnableDrag( bool enable )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 void JoltPhysicsObject::EnableMotion( bool enable )
@@ -317,7 +348,6 @@ void JoltPhysicsObject::SetInertia( const Vector &inertia )
 {
 	// TODO(Josh): Does anything use this?
 	// and if so, does this specify the local diagonal or rotated diagonal?
-	Log_Stub( LOG_VJolt );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -350,7 +380,6 @@ void JoltPhysicsObject::GetDamping( float *speed, float *rot ) const
 
 void JoltPhysicsObject::SetDragCoefficient( float *pDrag, float *pAngularDrag )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 void JoltPhysicsObject::SetBuoyancyRatio( float ratio )
@@ -406,7 +435,6 @@ void JoltPhysicsObject::SetSphereRadius( float radius )
 		return;
 
 	// Can't get this shape non-const... urg...
-	Log_Stub( LOG_VJolt );
 }
 
 float JoltPhysicsObject::GetEnergy() const
@@ -541,14 +569,13 @@ void JoltPhysicsObject::AddVelocity( const Vector *velocity, const AngularImpuls
 
 void JoltPhysicsObject::GetVelocityAtPoint( const Vector &worldPosition, Vector *pVelocity ) const
 {
-	VJoltAssert( pVelocity );
+	contract_assert( pVelocity );
 
 	*pVelocity = JoltToSource::Distance( m_pPhysicsSystem->GetBodyInterfaceNoLock().GetPointVelocity( m_pBody->GetID(), SourceToJolt::Distance( worldPosition ) ) );
 }
 
 void JoltPhysicsObject::GetImplicitVelocity( Vector *velocity, AngularImpulse *angularVelocity ) const
 {
-	Log_Stub( LOG_VJolt );
 	if ( velocity )
 		*velocity = vec3_origin;
 
@@ -674,13 +701,11 @@ void JoltPhysicsObject::CalculateVelocityOffset( const Vector &forceVector, cons
 
 float JoltPhysicsObject::CalculateLinearDrag( const Vector &unitDirection ) const
 {
-	Log_Stub( LOG_VJolt );
 	return 0.0f;
 }
 
 float JoltPhysicsObject::CalculateAngularDrag( const Vector &objectSpaceRotationAxis ) const
 {
-	Log_Stub( LOG_VJolt );
 	return 0.0f;
 }
 
@@ -688,7 +713,6 @@ float JoltPhysicsObject::CalculateAngularDrag( const Vector &objectSpaceRotation
 
 bool JoltPhysicsObject::GetContactPoint( Vector *contactPoint, IPhysicsObject **contactObject ) const
 {
-	Log_Stub( LOG_VJolt );
 	return false;
 }
 
@@ -989,12 +1013,10 @@ void JoltPhysicsObject::RemoveTrigger()
 
 void JoltPhysicsObject::BecomeHinged( int localAxis )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 void JoltPhysicsObject::RemoveHinged()
 {
-	Log_Stub( LOG_VJolt );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1013,14 +1035,12 @@ void JoltPhysicsObject::DestroyFrictionSnapshot( IPhysicsFrictionSnapshot *pSnap
 
 void JoltPhysicsObject::OutputDebugInfo() const
 {
-	Log_Stub( LOG_VJolt );
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void JoltPhysicsObject::SetUseAlternateGravity( bool bSet )
 {
-	Log_Stub( LOG_VJolt );
 }
 
 void JoltPhysicsObject::SetCollisionHints( uint32 collisionHints )
@@ -1038,7 +1058,6 @@ uint32 JoltPhysicsObject::GetCollisionHints() const
 
 IPredictedPhysicsObject *JoltPhysicsObject::GetPredictedInterface() const
 {
-	Log_Stub( LOG_VJolt );
 	return nullptr;
 }
 

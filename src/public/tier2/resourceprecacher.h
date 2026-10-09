@@ -1,18 +1,17 @@
- //===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+
 // Purpose: Utilities for setting vproject settings
-//
-//===========================================================================//
-
-#ifndef _RESOURCEPRECACHER_H
-#define _RESOURCEPRECACHER_H
-
 
 //-----------------------------------------------------------------------------
 // Resource list
 //-----------------------------------------------------------------------------
-FORWARD_DECLARE_HANDLE( ResourceList_t );
-#define RESOURCE_LIST_INVALID ( (ResourceList_t)-1 )
+struct ResourceList_t__;
+using ResourceList_t = ResourceList_t__ *;
+inline ResourceList_t const RESOURCE_LIST_INVALID = reinterpret_cast<ResourceList_t>( static_cast<std::intptr_t>( -1 ) );
 
 //-----------------------------------------------------------------------------
 // Resource 'systems', which use other resources
@@ -77,7 +76,7 @@ enum PrecacheResourceType_t
 //-----------------------------------------------------------------------------
 // Callback interface for handler who knows how to precache particular kinds of resources
 //-----------------------------------------------------------------------------
-abstract_class IPrecacheHandler
+class IPrecacheHandler
 {
 public:
 	virtual void CacheResource( PrecacheResourceType_t nType, const char *pName, 
@@ -87,7 +86,7 @@ public:
 //-----------------------------------------------------------------------------
 // Interface to automated system for precaching resources
 //-----------------------------------------------------------------------------
-abstract_class IResourcePrecacher
+class IResourcePrecacher
 {
 public:
 	virtual void Cache( IPrecacheHandler *pPrecacheHandler, bool bPrecache, ResourceList_t hResourceList, bool bIgnoreConditionals ) = 0;	
@@ -186,7 +185,3 @@ public:													\
 	PRECACHE_REGISTER_BEGIN( GLOBAL, _className )	\
 	PRECACHE( ENTITY, #_className )				\
 	PRECACHE_REGISTER_END()
-
-#endif // _RESOURCEPRECACHER_H
-
-

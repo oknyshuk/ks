@@ -1,14 +1,10 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
 
-#include "convar.h"
+import std;
 
 #include "lightmappedgeneric_vs30.inc"
 #include "worldtwotextureblend_ps30.inc"
@@ -19,8 +15,6 @@
 
 #include "shaderapifast.h"
 
-
-
 static ConVar r_shader_srgbread( "r_shader_srgbread", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "1 = use shader srgb texture reads, 0 = use HW" );
 
 
@@ -28,7 +22,7 @@ static ConVar r_shader_srgbread( "r_shader_srgbread", "0", FCVAR_MATERIAL_SYSTEM
 BEGIN_VS_SHADER( WorldTwoTextureBlend, 
 			  "Help for WorldTwoTextureBlend" )
 
-BEGIN_SHADER_PARAMS
+
     SHADER_PARAM_OVERRIDE( BASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shadertest/WorldTwoTextureBlend", "iris texture", 0 )
 	SHADER_PARAM( ALBEDO, SHADER_PARAM_TYPE_TEXTURE, "shadertest/WorldTwoTextureBlend", "albedo (Base texture with no baked lighting)" )
 	SHADER_PARAM( SELFILLUMTINT, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Self-illumination tint" )
@@ -423,7 +417,7 @@ END_SHADER_PARAMS
 				if( hasBump && !bHasDetailAlpha )
 				{
 					SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_2, BUMPTRANSFORM );
-					Assert( !hasDetailTexture );
+					contract_assert( !hasDetailTexture );
 				}
 			}
 
@@ -461,7 +455,7 @@ END_SHADER_PARAMS
 			{
 				bWriteDepthToAlpha = ShaderApiFast( pShaderAPI )->ShouldWriteDepthToDestAlpha();
 				bWriteWaterFogToAlpha = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z);
-				AssertMsg( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha), "Can't write two values to alpha at the same time." );
+				contract_assert( ( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha) ) && "Can't write two values to alpha at the same time." );
 			}
 			else
 			{
@@ -508,7 +502,7 @@ END_SHADER_PARAMS
 			if( hasDetailTexture )
 			{
 				SetVertexShaderTextureScaledTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_2, BASETEXTURETRANSFORM, DETAILSCALE );
-				Assert( !( hasBump && !bHasDetailAlpha ) );
+				contract_assert( !( hasBump && !bHasDetailAlpha ) );
 			}
 
 			SetPixelShaderConstantGammaToLinear( 7, SELFILLUMTINT );

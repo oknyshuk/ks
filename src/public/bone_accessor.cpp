@@ -1,10 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "bone_accessor.h"
 
 bool CBoneAccessor::isBoneAvailableForRead( int iBone ) const
@@ -49,13 +54,12 @@ bool CBoneAccessor::isBoneAvailableForWrite( int iBone ) const
 
 		if ( bReadable )
 		{
-			Assert( isBoneAvailableForRead( iBone ) );
+			contract_assert( isBoneAvailableForRead( iBone ) );
 		}
 		else
 		{
-			Assert( isBoneAvailableForWrite( iBone ) );
+			contract_assert( isBoneAvailableForWrite( iBone ) );
 		}
 	}
 
 #endif
-

@@ -1,11 +1,22 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "model_types.h"
 #include "view_shared.h"
 #include "iviewrender.h"
@@ -14,29 +25,24 @@
 #include "tempent.h"
 #include "c_te_legacytempents.h"
 #include "clientsideeffects.h"
-#include "cl_animevent.h"
 #include "iefx.h"
 #include "engine/IEngineSound.h"
 #include "env_wind_shared.h"
-#include "precache_register.h"
 #include "fx_sparks.h"
 #include "fx.h"
 #include "movevars_shared.h"
 #include "engine/ivmodelinfo.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "view.h"
-#include "tier0/vprof.h"
 #include "particles_localspace.h"
 #include "physpropclientside.h"
-#include "tier0/icommandline.h"
 #include "datacache/imdlcache.h"
-#include "engine/ivdebugoverlay.h"
 #include "effect_dispatch_data.h"
 #include "c_te_effect_dispatch.h"
 
 extern ConVar muzzleflash_light;
 
-#define TENT_WIND_ACCEL 50
+constexpr auto TENT_WIND_ACCEL = 50;
 
 color24 white24 = {255, 255, 255};
 
@@ -150,7 +156,7 @@ void C_LocalTempEntity::SetAcceleration( const Vector &vecVelocity )
 //-----------------------------------------------------------------------------
 int C_LocalTempEntity::DrawStudioModel( int flags )
 {
-	VPROF_BUDGET( "C_LocalTempEntity::DrawStudioModel", VPROF_BUDGETGROUP_MODEL_RENDERING );
+	CVProfScope _( "C_LocalTempEntity::DrawStudioModel", 0, VPROF_BUDGETGROUP_MODEL_RENDERING, false, BUDGETFLAG_OTHER );
 	int drawn = 0;
 
 	if ( !GetModel() || modelinfo->GetModelType( GetModel() ) != mod_studio )
@@ -292,7 +298,7 @@ bool C_LocalTempEntity::Frame( float frametime, int framenumber )
 	float gravitySlow = gravity * 0.5;
 	float traceFraction = 1;
 
-	Assert( !GetMoveParent() );
+	contract_assert( !GetMoveParent() );
 
 	m_vecPrevLocalOrigin = GetLocalOrigin();
 
@@ -311,7 +317,7 @@ bool C_LocalTempEntity::Frame( float frametime, int framenumber )
 		y += m_vecTempEntVelocity[1] * frametime;
 
 		SetLocalOrigin( Vector(
-			x + sin( m_vecTempEntVelocity[2] + gpGlobals->curtime /* * anim.prevframe */ ) * (10*m_flSpriteScale),
+			x + std::sin( m_vecTempEntVelocity[2] + gpGlobals->curtime /* * anim.prevframe */ ) * (10*m_flSpriteScale),
 			y + sin( m_vecTempEntVelocity[2] + fastFreq + 0.7 ) * (8*m_flSpriteScale),
 			GetLocalOriginDim( Z_INDEX ) + m_vecTempEntVelocity[2] * frametime ) );
 	}
@@ -321,7 +327,7 @@ bool C_LocalTempEntity::Frame( float frametime, int framenumber )
 		SinCos( m_vecTempEntVelocity[2] + fastFreq, &s, &c );
 
 		SetLocalOrigin( GetLocalOrigin() + Vector(
-			m_vecTempEntVelocity[0] * frametime + 8 * sin( gpGlobals->curtime * 20 ),
+			m_vecTempEntVelocity[0] * frametime + 8 * std::sin( gpGlobals->curtime * 20 ),
 			m_vecTempEntVelocity[1] * frametime + 4 * sin( gpGlobals->curtime * 30 ),
 			m_vecTempEntVelocity[2] * frametime ) );
 	}
@@ -568,7 +574,7 @@ bool C_LocalTempEntity::Frame( float frametime, int framenumber )
 
 	if ( flags & FTENT_SMOKETRAIL )
 	{
-		 Assert( !"FIXME:  Rework smoketrail to be client side\n" );
+		 contract_assert( !"FIXME:  Rework smoketrail to be client side\n" );
 	}
 
 	// add gravity if we didn't collide in this frame
@@ -708,7 +714,7 @@ const Vector *CBreakableHelper::GetLightingOrigin( C_LocalTempEntity *entity )
 
 		if ( e.entity == entity )
 		{
-			Assert( head );
+			contract_assert( head );
 			return head ? &head->GetAbsOrigin() : nullptr;
 		}
 	}
@@ -785,7 +791,7 @@ void CTempEnts::FizzEffect( C_BaseEntity *pent, int modelIndex, int density, int
 	depth = maxs[1] - mins[1];
 	speed = current;
 
-	SinCos( pent->GetLocalAngles()[1]*M_PI/180, &yspeed, &xspeed );
+	SinCos( pent->GetLocalAngles()[1]*std::numbers::pi/180, &yspeed, &xspeed );
 	xspeed *= speed;
 	yspeed *= speed;
 	frameCount = modelinfo->GetModelFrameCount( model );
@@ -854,7 +860,7 @@ void CTempEnts::Bubbles( const Vector &mins, const Vector &maxs, float height, i
 
 		pTemp->x = origin[0];
 		pTemp->y = origin[1];
-		SinCos( random->RandomInt( -M_PI, M_PI ), &sine, &cosine );
+		SinCos( random->RandomInt( -std::numbers::pi, std::numbers::pi ), &sine, &cosine );
 		
 		float zspeed = random->RandomInt(80,140);
 		pTemp->SetVelocity( Vector(speed * cosine, speed * sine, zspeed) );
@@ -908,10 +914,10 @@ void CTempEnts::BubbleTrail( const Vector &start, const Vector &end, float flWat
 
 		pTemp->x = origin[0];
 		pTemp->y = origin[1];
-		angle = random->RandomInt( -M_PI, M_PI );
+		angle = random->RandomInt( -std::numbers::pi, std::numbers::pi );
 
 		float zspeed = random->RandomInt(80,140);
-		pTemp->SetVelocity( Vector(speed * cos(angle), speed * sin(angle), zspeed) );
+		pTemp->SetVelocity( Vector(speed * std::cos(angle), speed * std::sin(angle), zspeed) );
 		pTemp->die = gpGlobals->curtime + ((flWaterZ - origin[2]) / zspeed) - 0.1;
 		pTemp->m_flFrame = random->RandomInt(0,frameCount-1);
 		// Set sprite scale
@@ -923,7 +929,7 @@ void CTempEnts::BubbleTrail( const Vector &start, const Vector &end, float flWat
 	}
 }
 
-#define SHARD_VOLUME 12.0	// on shard ever n^3 units
+constexpr auto SHARD_VOLUME = 12.0; // on shard ever n^3 units
 
 //-----------------------------------------------------------------------------
 // Purpose: Only used by BreakModel temp ents for now.  Allows them to share a single
@@ -1631,7 +1637,7 @@ void CTempEnts::Sprite_Smoke( C_LocalTempEntity *pTemp, float scale )
 //-----------------------------------------------------------------------------
 C_LocalTempEntity * CTempEnts::SpawnTempModel( model_t *pModel, const Vector &vecOrigin, const QAngle &vecAngles, const Vector &vecVelocity, float flLifeTime, int iFlags )
 {
-	Assert( pModel );
+	contract_assert( pModel );
 
 	// Alloc a new tempent
 	C_LocalTempEntity *pTemp = TempEntAlloc( vecOrigin, pModel );
@@ -1725,7 +1731,7 @@ void CTempEnts::MuzzleFlash( int type, ClientEntityHandle_t hEntity, int attachm
 	default:
 		{
 			//NOTENOTE: This means you specified an invalid muzzleflash type, check your spelling?
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 		break;
 	}
@@ -1946,7 +1952,6 @@ C_LocalTempEntity *CTempEnts::TempEntAlloc()
 	if ( (int)m_TempEnts.size() >= MAX_TEMP_ENTITIES )
 		return nullptr;
 
-	MEM_ALLOC_CREDIT();
 	C_LocalTempEntity *pTemp = m_TempEntsPool.alloc_zero();
 	return pTemp;
 }
@@ -2241,7 +2246,7 @@ int CTempEnts::AddVisibleTempEntity( C_LocalTempEntity *pEntity )
 //-----------------------------------------------------------------------------
 void CTempEnts::Update(void)
 {
-	VPROF_("CTempEnts::Update", 1, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_CLIENT);
+	CVProfScope _( "CTempEnts::Update", 1, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_CLIENT );
 	static int gTempEntFrame = 0;
 	float		frametime;
 
@@ -2407,7 +2412,7 @@ inline void CTempEnts::CacheMuzzleFlashes( void )
 //-----------------------------------------------------------------------------
 void CTempEnts::MuzzleFlash_Combine_Player( ClientEntityHandle_t hEntity, int attachmentIndex )
 {
-	VPROF_BUDGET( "MuzzleFlash_Combine_Player", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "MuzzleFlash_Combine_Player", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	ks::intrusive_ptr<CLocalSpaceEmitter> pSimple = CLocalSpaceEmitter::Create( "MuzzleFlash", hEntity, attachmentIndex, FLE_VIEWMODEL );
 
 	CacheMuzzleFlashes();
@@ -2480,7 +2485,7 @@ void CTempEnts::MuzzleFlash_Combine_Player( ClientEntityHandle_t hEntity, int at
 //-----------------------------------------------------------------------------
 void CTempEnts::MuzzleFlash_Combine_NPC( ClientEntityHandle_t hEntity, int attachmentIndex )
 {
-	VPROF_BUDGET( "MuzzleFlash_Combine_NPC", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "MuzzleFlash_Combine_NPC", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	ks::intrusive_ptr<CLocalSpaceEmitter> pSimple = CLocalSpaceEmitter::Create( "MuzzleFlash_Combine_NPC", hEntity, attachmentIndex );
 
 	SimpleParticle *pParticle;
@@ -2490,7 +2495,7 @@ void CTempEnts::MuzzleFlash_Combine_NPC( ClientEntityHandle_t hEntity, int attac
 
 	float burstSpeed = random->RandomFloat( 50.0f, 150.0f );
 
-#define	FRONT_LENGTH 6
+constexpr auto FRONT_LENGTH = 6;
 
 	// Front flash
 	for ( int i = 1; i < FRONT_LENGTH; i++ )
@@ -2522,7 +2527,7 @@ void CTempEnts::MuzzleFlash_Combine_NPC( ClientEntityHandle_t hEntity, int attac
 	Vector right(0,1,0), up(0,0,1);
 	Vector dir = right - up;
 
-#define	SIDE_LENGTH	6
+constexpr auto SIDE_LENGTH = 6;
 
 	burstSpeed = random->RandomFloat( 50.0f, 150.0f );
 
@@ -2648,7 +2653,7 @@ void CTempEnts::MuzzleFlash_Combine_NPC( ClientEntityHandle_t hEntity, int attac
 	else
 	{
 		//NOTENOTE: If you're here, you've specified an entity or an attachment that is invalid
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 
@@ -2698,7 +2703,7 @@ void CTempEnts::MuzzleFlash_SMG1_NPC( ClientEntityHandle_t hEntity, int attachme
 //-----------------------------------------------------------------------------
 void CTempEnts::MuzzleFlash_SMG1_Player( ClientEntityHandle_t hEntity, int attachmentIndex )
 {
-	VPROF_BUDGET( "MuzzleFlash_SMG1_Player", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "MuzzleFlash_SMG1_Player", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	ks::intrusive_ptr<CLocalSpaceEmitter> pSimple = CLocalSpaceEmitter::Create( "MuzzleFlash_SMG1_Player", hEntity, attachmentIndex, FLE_VIEWMODEL );
 
 	CacheMuzzleFlashes();
@@ -2746,7 +2751,7 @@ void CTempEnts::MuzzleFlash_SMG1_Player( ClientEntityHandle_t hEntity, int attac
 
 void CTempEnts::MuzzleFlash_Shotgun_Player( ClientEntityHandle_t hEntity, int attachmentIndex )
 {
-	VPROF_BUDGET( "MuzzleFlash_Shotgun_Player", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "MuzzleFlash_Shotgun_Player", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "MuzzleFlash_Shotgun_Player" );
 
 	pSimple->SetDrawBeforeViewModel( true );
@@ -2913,7 +2918,7 @@ void CTempEnts::MuzzleFlash_Shotgun_NPC( ClientEntityHandle_t hEntity, int attac
 //==================================================
 void CTempEnts::MuzzleFlash_357_Player( ClientEntityHandle_t hEntity, int attachmentIndex )
 {
-	VPROF_BUDGET( "MuzzleFlash_357_Player", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "MuzzleFlash_357_Player", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "MuzzleFlash_357_Player" );
 
 	pSimple->SetDrawBeforeViewModel( true );
@@ -3000,7 +3005,7 @@ void CTempEnts::MuzzleFlash_357_Player( ClientEntityHandle_t hEntity, int attach
 
 void CTempEnts::MuzzleFlash_Pistol_Player( ClientEntityHandle_t hEntity, int attachmentIndex )
 {
-	VPROF_BUDGET( "MuzzleFlash_Pistol_Player", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "MuzzleFlash_Pistol_Player", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "MuzzleFlash_Pistol_Player" );
 	pSimple->SetDrawBeforeViewModel( true );
 
@@ -3137,5 +3142,3 @@ void CTempEnts::RocketFlare( const Vector& pos )
 	pTemp->SetAbsOrigin( pos );
 	pTemp->die = gpGlobals->curtime + 0.01;
 }
-
-

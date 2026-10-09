@@ -1,20 +1,24 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "flashlighteffect.h"
-#include "dlight.h"
-#include "iefx.h"
 #include "iviewrender.h"
-#include "view.h"
 #include "engine/ivdebugoverlay.h"
-#include "tier0/vprof.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
-
 
 extern ConVar r_flashlightdepthres;
 
@@ -178,7 +182,7 @@ ConVar r_flashlightmuzzleflashfov( "r_flashlightmuzzleflashfov", "120", FCVAR_CH
 //-----------------------------------------------------------------------------
 void CFlashlightEffect::UpdateLightTopDown(const Vector &vecPos, const Vector &vecForward, const Vector &vecRight, const Vector &vecUp )
 {
-	VPROF_BUDGET( "CFlashlightEffect::UpdateLightTopDown", VPROF_BUDGETGROUP_SHADOW_DEPTH_TEXTURING );
+	CVProfScope _( "CFlashlightEffect::UpdateLightTopDown", 0, VPROF_BUDGETGROUP_SHADOW_DEPTH_TEXTURING, false, BUDGETFLAG_OTHER );
 
 	FlashlightState_t state;
 
@@ -202,9 +206,9 @@ void CFlashlightEffect::UpdateLightTopDown(const Vector &vecPos, const Vector &v
 	vRight -= DotProduct( vUp, vRight ) * vUp;
 	VectorNormalize( vRight );
 
-	AssertFloatEquals( DotProduct( vDir, vRight ), 0.0f, 1e-3 );
-	AssertFloatEquals( DotProduct( vDir, vUp    ), 0.0f, 1e-3 );
-	AssertFloatEquals( DotProduct( vRight, vUp  ), 0.0f, 1e-3 );
+	contract_assert( fabs( DotProduct( vDir, vRight ) - 0.0f ) <= 1e-3 );
+	contract_assert( fabs( DotProduct( vDir, vUp    ) - 0.0f ) <= 1e-3 );
+	contract_assert( fabs( DotProduct( vRight, vUp  ) - 0.0f ) <= 1e-3 );
 
 	BasisToQuaternion( vDir, vRight, vUp, state.m_quatOrientation );
 
@@ -248,7 +252,6 @@ void CFlashlightEffect::UpdateLightTopDown(const Vector &vecPos, const Vector &v
 	// FIXME: This doesn't compile
 //	LightOffOld();
 
-#ifndef NO_TOOLFRAMEWORK
 	if ( clienttools->IsInRecordingMode() )
 	{
 		KeyValues *msg = new KeyValues( "FlashlightState" );
@@ -259,7 +262,6 @@ void CFlashlightEffect::UpdateLightTopDown(const Vector &vecPos, const Vector &v
 		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
 		msg->deleteThis();
 	}
-#endif
 }
 
 
@@ -269,7 +271,7 @@ void CFlashlightEffect::UpdateLightTopDown(const Vector &vecPos, const Vector &v
 void CFlashlightEffect::UpdateLight(	int nEntIdx, const Vector &vecPos, const Vector &vecForward, const Vector &vecRight,
 										const Vector &vecUp, float flFov, float flFarZ, float flLinearAtten, bool castsShadows, const char* pTextureName )
 {
-	VPROF_BUDGET( __FUNCTION__, VPROF_BUDGETGROUP_SHADOW_DEPTH_TEXTURING );
+	CVProfScope _( __FUNCTION__, 0, VPROF_BUDGETGROUP_SHADOW_DEPTH_TEXTURING, false, BUDGETFLAG_OTHER );
 
 
 	if ( r_flashlight_topdown.GetBool() )
@@ -313,7 +315,6 @@ void CFlashlightEffect::UpdateLight(	int nEntIdx, const Vector &vecPos, const Ve
 	
 	g_pClientShadowMgr->UpdateProjectedTexture( m_FlashlightHandle, true );
 	
-#ifndef NO_TOOLFRAMEWORK
 	if ( clienttools->IsInRecordingMode() )
 	{
 		KeyValues *msg = new KeyValues( "FlashlightState" );
@@ -324,14 +325,13 @@ void CFlashlightEffect::UpdateLight(	int nEntIdx, const Vector &vecPos, const Ve
 		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
 		msg->deleteThis();
 	}
-#endif
 }
 
 void CFlashlightEffect::UpdateLight(	int nEntIdx, const Vector &vecPos, const Vector &vecDir, const Vector &vecRight, const Vector &vecUp, 
 										float flFov, bool castsShadows, ITexture *pFlashlightTexture, const Vector &vecBrightness,
 										bool bTracePlayers )
 {
-	VPROF_BUDGET( __FUNCTION__, VPROF_BUDGETGROUP_SHADOW_DEPTH_TEXTURING );
+	CVProfScope _( __FUNCTION__, 0, VPROF_BUDGETGROUP_SHADOW_DEPTH_TEXTURING, false, BUDGETFLAG_OTHER );
 
 	m_nEntIndex = nEntIdx;
 	if ( m_bCastsShadows != castsShadows )
@@ -375,7 +375,6 @@ void CFlashlightEffect::UpdateLight(	int nEntIdx, const Vector &vecPos, const Ve
 
 	g_pClientShadowMgr->UpdateProjectedTexture( m_FlashlightHandle, true );
 
-#ifndef NO_TOOLFRAMEWORK
 	if ( clienttools->IsInRecordingMode() )
 	{
 		KeyValues *msg = new KeyValues( "FlashlightState" );
@@ -386,13 +385,12 @@ void CFlashlightEffect::UpdateLight(	int nEntIdx, const Vector &vecPos, const Ve
 		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
 		msg->deleteThis();
 	}
-#endif
 }
 
 bool CFlashlightEffect::UpdateDefaultFlashlightState( FlashlightState_t& state, const Vector &vecPos, const Vector &vecForward,
 														const Vector &vecRight, const Vector &vecUp, bool castsShadows, bool bTracePlayers )
 {
-	VPROF_BUDGET( __FUNCTION__, VPROF_BUDGETGROUP_SHADOW_DEPTH_TEXTURING );
+	CVProfScope _( __FUNCTION__, 0, VPROF_BUDGETGROUP_SHADOW_DEPTH_TEXTURING, false, BUDGETFLAG_OTHER );
 
 	if ( !m_bIsOn )
 	{
@@ -516,7 +514,7 @@ bool CFlashlightEffect::ComputeLightPosAndOrientation( const Vector &vecPos, con
 		pPlayer = C_BasePlayer::GetLocalPlayer();
 		if ( !pPlayer )
 		{
-			Assert( false );
+			contract_assert( false );
 			return false;
 		}
 	}
@@ -592,9 +590,9 @@ bool CFlashlightEffect::ComputeLightPosAndOrientation( const Vector &vecPos, con
 	vRight -= DotProduct( vUp, vRight ) * vUp;
 	VectorNormalize( vRight );
 
-	AssertFloatEquals( DotProduct( vDir, vRight ), 0.0f, 1e-3 );
-	AssertFloatEquals( DotProduct( vDir, vUp    ), 0.0f, 1e-3 );
-	AssertFloatEquals( DotProduct( vRight, vUp  ), 0.0f, 1e-3 );
+	contract_assert( fabs( DotProduct( vDir, vRight ) - 0.0f ) <= 1e-3 );
+	contract_assert( fabs( DotProduct( vDir, vUp    ) - 0.0f ) <= 1e-3 );
+	contract_assert( fabs( DotProduct( vRight, vUp  ) - 0.0f ) <= 1e-3 );
 
 	trace_t pmDirectionTrace;
 	UTIL_TraceHull( vOrigin, vTarget, Vector( -1.5, -1.5, -1.5 ), Vector( 1.5, 1.5, 1.5 ), iMask, &traceFilter, &pmDirectionTrace );//.5
@@ -661,7 +659,6 @@ bool CFlashlightEffect::ComputeLightPosAndOrientation( const Vector &vecPos, con
 //-----------------------------------------------------------------------------
 void CFlashlightEffect::LightOff()
 {
-#ifndef NO_TOOLFRAMEWORK
 	if ( clienttools->IsInRecordingMode() )
 	{
 		KeyValues *msg = new KeyValues( "FlashlightState" );
@@ -672,7 +669,6 @@ void CFlashlightEffect::LightOff()
 		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
 		msg->deleteThis();
 	}
-#endif
 
 	// Clear out the light
 	if( m_FlashlightHandle != CLIENTSHADOW_INVALID_HANDLE )
@@ -737,4 +733,3 @@ void CHeadlightEffect::UpdateLight( const Vector &vecPos, const Vector &vecDir, 
 	
 	g_pClientShadowMgr->UpdateProjectedTexture( GetFlashlightHandle(), true );
 }
-

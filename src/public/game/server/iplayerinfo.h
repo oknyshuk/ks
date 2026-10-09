@@ -1,12 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: provides an interface for dlls to query information about players from the game dll
-//
-//=============================================================================//
-#ifndef IPLAYERINFO_H
-#define IPLAYERINFO_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "mathlib/vector.h"
+// Purpose: provides an interface for dlls to query information about players from the game dll
+
+import std;
+import ks.math;
+
+struct edict_t;
+class CGlobalVars;
 
 // helper class for user commands
 class CBotCmd
@@ -95,14 +97,14 @@ public:
 
 
 
-abstract_class IPlayerInfo
+class IPlayerInfo
 {
 public:
 	// returns the players name (UTF-8 encoded)
 	virtual const char *GetName() = 0;
 	// returns the userid (slot number)
 	virtual int		GetUserID() = 0;
-	// returns the string of their network (i.e Steam) ID
+	// returns the string of their network ID
 	virtual const char *GetNetworkIDString() = 0;
 	// returns the team the player is on
 	virtual int GetTeamIndex() = 0;
@@ -121,9 +123,6 @@ public:
 
 	// various player flags
 	virtual bool IsHLTV() = 0;
-#if defined( REPLAY_ENABLED )
-	virtual bool IsReplay() = 0;
-#endif
 	virtual bool IsPlayer() = 0;
 	virtual bool IsFakeClient() = 0;
 	virtual bool IsDead() = 0;
@@ -148,8 +147,8 @@ public:
 };
 
 
-#define INTERFACEVERSION_PLAYERINFOMANAGER			"PlayerInfoManager002"
-abstract_class IPlayerInfoManager
+inline constexpr const char *INTERFACEVERSION_PLAYERINFOMANAGER = "PlayerInfoManager002";
+class IPlayerInfoManager
 {
 public:
 	virtual IPlayerInfo *GetPlayerInfo( edict_t *pEdict ) = 0;
@@ -159,7 +158,7 @@ public:
 
 
 
-abstract_class IBotController
+class IBotController
 {
 public:
 	// change the bots position
@@ -183,13 +182,11 @@ public:
 };
 
 
-#define INTERFACEVERSION_PLAYERBOTMANAGER			"BotManager001"
-abstract_class IBotManager
+inline constexpr const char *INTERFACEVERSION_PLAYERBOTMANAGER = "BotManager001";
+class IBotManager
 {
 public:
 	virtual IBotController *GetBotController( edict_t *pEdict ) = 0;
 	// create a new bot and spawn it into the server
 	virtual edict_t *CreateBot( const char *botname ) = 0;
 };
-
-#endif // IPLAYERINFO_H

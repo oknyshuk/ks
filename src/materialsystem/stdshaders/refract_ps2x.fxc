@@ -1,4 +1,5 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "MAGNIFY"						"0..1"
 // STATIC: "BLUR"							"0..1"
@@ -24,7 +25,6 @@
 #if defined( SHADER_MODEL_PS_2_0 )
 	#define WRITE_DEPTH_TO_DESTALPHA 0
 #endif
-
 
 #include "common_ps_fxc.h"
 #include "shader_constant_register_map.h"

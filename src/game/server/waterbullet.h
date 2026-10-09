@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Entity that simulates bullets that are underwater.
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef WEAPON_WATERBULLET_H
-#define WEAPON_WATERBULLET_H
+// Purpose: Entity that simulates bullets that are underwater.
 
 #include "reflect_annotations.h"
+#include "baseanimating.h"
 
-#define WATER_BULLET_BUBBLES_PER_INCH 0.05f
+inline constexpr auto WATER_BULLET_BUBBLES_PER_INCH = 0.05f;
 
 //=========================================================
 //=========================================================
@@ -26,5 +24,3 @@ public:
 
 	DECLARE_SERVERCLASS();
 };
-
-#endif // WEAPON_WATERBULLET_H

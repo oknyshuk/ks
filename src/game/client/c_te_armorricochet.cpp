@@ -1,18 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "IEffects.h"
-#include "tier1/keyvalues.h"
-#include "tier0/vprof.h"
 #include "toolframework_client.h"
 
 //-----------------------------------------------------------------------------
@@ -95,7 +94,7 @@ static inline void RecordMetalSparks( const Vector &start, const Vector &directi
 //-----------------------------------------------------------------------------
 void C_TEMetalSparks::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEMetalSparks::PostDataUpdate" );
+	CVProfScope _( "C_TEMetalSparks::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	g_pEffects->MetalSparks( m_vecPos, m_vecDir );
 	RecordMetalSparks( m_vecPos, m_vecDir );

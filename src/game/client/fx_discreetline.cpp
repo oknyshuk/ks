@@ -1,16 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
 #include "fx_discreetline.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imesh.h"
@@ -21,12 +24,11 @@
 CFXLine
 ==================================================
 */
-
 CFXDiscreetLine::CFXDiscreetLine( const char *name, const Vector& start, const Vector& direction, 
 	float velocity, float length, float clipLength, float scale, float life, const char *shader )
 : CClientSideEffect( name )
 {
-	assert( materials );
+	contract_assert( materials );
 	if ( materials == nullptr )
 		return;
 
@@ -282,4 +284,3 @@ void CFXDiscreetLine::Update( double frametime )
 	//VectorMA( m_vecStart, frametime, m_vecStartVelocity, m_vecStart );
 	//VectorMA( m_vecEnd, frametime, m_vecStartVelocity, m_vecEnd );
 }
-

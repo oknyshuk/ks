@@ -1,15 +1,22 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_triggers.h"
 #include "in_buttons.h"
-#include "c_func_brush.h"
 #include "collisionutils.h"
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_BaseTrigger, DT_BaseTrigger, CBaseTrigger )
@@ -64,7 +71,7 @@ public:
 	{
 		m_pCollide = pEnt->GetCollideable();
 		m_nRequiredTriggerFlags = m_pCollide->GetRequiredTriggerFlags();
-		Assert( m_pCollide );
+		contract_assert( m_pCollide );
 
 		Vector vecMins, vecMaxs;
 		CM_GetCollideableTriggerTestBox( m_pCollide, &vecMins, &vecMaxs );
@@ -72,7 +79,7 @@ public:
 		m_Ray.Init( vecStart, vecStart, vecMins, vecMaxs );
 	}
 
-	FORCEINLINE void CM_GetCollideableTriggerTestBox( ICollideable *pCollide, Vector *pMins, Vector *pMaxs )
+	[[gnu::always_inline]] inline void CM_GetCollideableTriggerTestBox( ICollideable *pCollide, Vector *pMins, Vector *pMaxs )
 	{
 		if ( pCollide->GetSolid() == SOLID_BBOX )
 		{
@@ -88,7 +95,7 @@ public:
 		}
 	}
 
-	FORCEINLINE void Check( T *pEntity, bool bIgnoreTriggerSolidFlags )
+	[[gnu::always_inline]] inline void Check( T *pEntity, bool bIgnoreTriggerSolidFlags )
 	{
 		// Hmmm.. everything in this list should be a trigger....
 		ICollideable *pTriggerCollideable = pEntity->GetCollideable();
@@ -120,7 +127,7 @@ public:
 		m_pEnt->PhysicsMarkEntitiesAsTouching( pEntity, tr );
 	}
 
-	FORCEINLINE void Run( bool bIgnoreTriggerSolidFlags = false )
+	[[gnu::always_inline]] inline void Run( bool bIgnoreTriggerSolidFlags = false )
 	{
 		for ( T *trigger = m_pTriggers; trigger ; trigger = trigger->m_pNext )
 		{
@@ -259,7 +266,7 @@ static char const * g_szTriggerSoundOperatorVariables[] = {
 	"sosVarCustomVolume1",
 	"sosVarCustomVolume2"
 };
-static bool g_bTriggerSoundOperatorVariablesSet[ Q_ARRAYSIZE( g_szTriggerSoundOperatorVariables ) ] = {
+static bool g_bTriggerSoundOperatorVariablesSet[ std::size( g_szTriggerSoundOperatorVariables ) ] = {
 };
 
 void TouchTriggerSoundOperator( C_BaseEntity *pEntity )
@@ -270,7 +277,7 @@ void TouchTriggerSoundOperator( C_BaseEntity *pEntity )
 
 void UntouchAllTriggerSoundOperator( C_BaseEntity *pEntity )
 {
-	for ( int j = 0; j < Q_ARRAYSIZE( g_szTriggerSoundOperatorVariables ); ++ j )
+	for ( int j = 0; j < std::size( g_szTriggerSoundOperatorVariables ); ++ j )
 	{
 		if ( g_bTriggerSoundOperatorVariablesSet[ j ] )
 		{
@@ -317,12 +324,9 @@ void C_TriggerSoundOperator::UpdateSosVar( bool bTouchingNow )
 {
 	int nVar = 0;
 	if ( ( m_nSoundOperator >= 0 )
-		&& ( m_nSoundOperator < Q_ARRAYSIZE( g_szTriggerSoundOperatorVariables ) ) )
+		&& ( m_nSoundOperator < std::size( g_szTriggerSoundOperatorVariables ) ) )
 		nVar = m_nSoundOperator;
 	char const *szVar = g_szTriggerSoundOperatorVariables[ nVar ];
 	g_bTriggerSoundOperatorVariablesSet[ nVar ] = bTouchingNow;
 	engine->SOSSetOpvarFloat( szVar, bTouchingNow ? 1.0f : 0.0f );
 }
-
-
-

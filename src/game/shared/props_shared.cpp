@@ -1,12 +1,66 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: static_prop - don't move, don't animate, don't do anything.
 //			physics_prop - move, take damage, but don't animate
-//
-//=============================================================================//
 
-
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "const.h"
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#endif
 #include "props_shared.h"
 #ifdef GAME_DLL
 #include "reflect_annotations.h"
@@ -16,8 +70,8 @@
 #include "animation.h"
 #include <vcollide_parse.h>
 #include <bone_setup.h>
-#include "vstdlib/ikeyvaluessystem.h"
-#include <deque>
+import std;
+import ks.vstdlib;
 
 #ifdef CLIENT_DLL
 #include "gamestringpool.h"
@@ -413,14 +467,14 @@ int CPropData::ParsePropFromKV( CBaseEntity *pProp, IBreakableWithPropData *pBre
 	int iSmallest = SmallestAxis(vecSize);
 	vecSize[iSmallest] = 1;
 	float flVolume = vecSize.x * vecSize.y * vecSize.z;
-	int iMaxSize = floor( flVolume / (32.0*32.0) );
+	int iMaxSize = std::floor( flVolume / (32.0*32.0) );
 	pBreakableInterface->SetMaxBreakableSize( iMaxSize );
 
 	// Now parse our interactions
 	for ( int i = 0; i < PROPINTER_NUM_INTERACTIONS; i++ )
 	{
 		// If we hit this assert, we have too many interactions for our current storage solution to handle
-		Assert( i < 32 );
+		contract_assert( i < 32 );
 
 		propdata_interaction_s *pInteraction = &sPropdataInteractionSections[i];
 		if ( !pInteraction->pszSectionName )
@@ -538,19 +592,19 @@ static const char *FixupModelName( char *pOut, int sizeOut, const char *pModelNa
 {
 	char tmp[1024];
 
-	Q_strncpy( tmp, pModelNameIn, sizeof(tmp) );
+	V_strncpy( tmp, pModelNameIn, sizeof(tmp) );
 	if ( !StringHasPrefix( tmp, "models/" ) )
 	{
-		Q_snprintf( pOut, sizeOut, "models/%s", tmp );
+		V_snprintf( pOut, sizeOut, "models/%s", tmp );
 	}
 	else
 	{
-		Q_strncpy( pOut, tmp, sizeOut);
+		V_strncpy( pOut, tmp, sizeOut);
 	}
-	int len = Q_strlen(pOut);
-	if ( len < 4 || Q_stricmp( pOut + (len-4), ".mdl" ) )
+	int len = V_strlen(pOut);
+	if ( len < 4 || V_stricmp( pOut + (len-4), ".mdl" ) )
 	{
-		Q_strncat( pOut, ".mdl", sizeOut, COPY_ALL_CHARACTERS );
+		V_strncat( pOut, ".mdl", sizeOut, COPY_ALL_CHARACTERS );
 	}
 
 	return pOut;
@@ -595,11 +649,11 @@ public:
 		}
 		else if ( !strcmpi( pKey, "health" ) )
 		{
-			pModel->health = atof(pValue);
+			pModel->health = std::atof(pValue);
 		}
 		else if ( !strcmpi( pKey, "fadetime" ) )
 		{
-			pModel->fadeTime = atof(pValue);
+			pModel->fadeTime = std::atof(pValue);
 			if ( !m_wroteCollisionGroup )
 			{
 				pModel->collisionGroup = COLLISION_GROUP_DEBRIS;
@@ -607,29 +661,29 @@ public:
 		}
 		else if ( !strcmpi( pKey, "fademindist" ) )
 		{
-			pModel->fadeMinDist = atof(pValue);
+			pModel->fadeMinDist = std::atof(pValue);
 		}
 		else if ( !strcmpi( pKey, "fademaxdist" ) )
 		{
-			pModel->fadeMaxDist = atof(pValue);
+			pModel->fadeMaxDist = std::atof(pValue);
 		}
 		else if ( !strcmpi( pKey, "debris" ) )
 		{
-			pModel->collisionGroup = atoi(pValue) > 0 ? COLLISION_GROUP_DEBRIS : COLLISION_GROUP_INTERACTIVE;
+			pModel->collisionGroup = std::atoi(pValue) > 0 ? COLLISION_GROUP_DEBRIS : COLLISION_GROUP_INTERACTIVE;
 			m_wroteCollisionGroup = true;
 		}
 		else if ( !strcmpi( pKey, "burst" ) )
 		{
-			pModel->burstScale = atof( pValue );
+			pModel->burstScale = std::atof( pValue );
 		}
 		else if ( !strcmpi( pKey, "placementbone" ) )
 		{
-			Q_strncpy( pModel->placementName, pValue, sizeof(pModel->placementName) );
+			V_strncpy( pModel->placementName, pValue, sizeof(pModel->placementName) );
 			pModel->placementIsBone = true;
 		}
 		else if ( !strcmpi( pKey, "placementattachment" ) )
 		{
-			Q_strncpy( pModel->placementName, pValue, sizeof(pModel->placementName) );
+			V_strncpy( pModel->placementName, pValue, sizeof(pModel->placementName) );
 			pModel->placementIsBone = false;
 		}
 		else if ( !strcmpi( pKey, "multiplayer_break" ) )
@@ -1167,7 +1221,7 @@ void PropBreakableCreateAll( int modelindex, IPhysicsObject *pPhysics, const bre
 				if ( ( iPrecomputedBreakableCount != -1 ) && ( i >= iPrecomputedBreakableCount ) )
 					break;
 
-				Q_strncpy( breakModel.modelName, g_PropDataSystem.GetRandomChunkModel(STRING(pBreakableInterface->GetBreakableModel()), pBreakableInterface->GetMaxBreakableSize()), sizeof(breakModel.modelName) );
+				V_strncpy( breakModel.modelName, g_PropDataSystem.GetRandomChunkModel(STRING(pBreakableInterface->GetBreakableModel()), pBreakableInterface->GetMaxBreakableSize()), sizeof(breakModel.modelName) );
 
 				breakModel.health = 1;
 				breakModel.fadeTime = RandomFloat(5,10);
@@ -1582,7 +1636,7 @@ CBaseEntity *CreateGibsFromList( std::vector< breakmodel_t > &list, int modelind
 				if ( ( iPrecomputedBreakableCount != -1 ) && ( i >= iPrecomputedBreakableCount ) )
 					break;
 
-				Q_strncpy( breakModel.modelName, g_PropDataSystem.GetRandomChunkModel(STRING(pBreakableInterface->GetBreakableModel()), pBreakableInterface->GetMaxBreakableSize()), sizeof(breakModel.modelName) );
+				V_strncpy( breakModel.modelName, g_PropDataSystem.GetRandomChunkModel(STRING(pBreakableInterface->GetBreakableModel()), pBreakableInterface->GetMaxBreakableSize()), sizeof(breakModel.modelName) );
 
 				breakModel.health = 1;
 				breakModel.fadeTime = RandomFloat(5,10);

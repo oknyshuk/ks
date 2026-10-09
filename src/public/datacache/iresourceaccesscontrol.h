@@ -1,20 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IRESOURCEACCESSCONTROL_H
-#define IRESOURCEACCESSCONTROL_H
-
-
-
-#include "tier0/dbg.h"
+import std;
+import ks.tier1;
 #include "tier2/resourceprecacher.h"
-#include "appframework/iappsystem.h"
 
 //-----------------------------------------------------------------------------
 // Resource access control API
@@ -25,7 +15,7 @@
 // Purpose: Maintains lists of resources to use them as filters to prevent access
 // to ensure proper precache behavior in game code
 //-----------------------------------------------------------------------------
-abstract_class IResourceAccessControl : public IAppSystem
+class IResourceAccessControl : public IAppSystem
 {
 public:
 	// Creates, destroys a resource list
@@ -42,6 +32,3 @@ public:
 	// Is access to this resource allowed?
 	virtual bool IsAccessAllowed( ResourceTypeOld_t nType, const char *pResource ) = 0;
 };
-
-
-#endif // IRESOURCEACCESSCONTROL_H

@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $MORPHING || $SKINNING || $COMPRESSED_VERTS ) && $TESSELLATION
 // defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
@@ -12,7 +13,7 @@ private:
 public:
 	void SetONLY_PROJECT_POSITION( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nONLY_PROJECT_POSITION = i;
 #ifdef _DEBUG
 		m_bONLY_PROJECT_POSITION = true;
@@ -20,7 +21,7 @@ public:
 	}
 	void SetONLY_PROJECT_POSITION( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nONLY_PROJECT_POSITION = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bONLY_PROJECT_POSITION = true;
@@ -34,7 +35,7 @@ private:
 public:
 	void SetTREESWAY( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nTREESWAY = i;
 #ifdef _DEBUG
 		m_bTREESWAY = true;
@@ -42,7 +43,7 @@ public:
 	}
 	void SetTREESWAY( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nTREESWAY = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTREESWAY = true;
@@ -56,7 +57,7 @@ private:
 public:
 	void SetCOLOR_DEPTH( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOLOR_DEPTH = i;
 #ifdef _DEBUG
 		m_bCOLOR_DEPTH = true;
@@ -64,7 +65,7 @@ public:
 	}
 	void SetCOLOR_DEPTH( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOLOR_DEPTH = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOLOR_DEPTH = true;
@@ -93,7 +94,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bONLY_PROJECT_POSITION && m_bTREESWAY && m_bCOLOR_DEPTH;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 4 * m_nONLY_PROJECT_POSITION ) + ( 4 * m_nTREESWAY ) + ( 12 * m_nCOLOR_DEPTH ) + 0;
 	}
@@ -109,7 +110,7 @@ private:
 public:
 	void SetCOMPRESSED_VERTS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOMPRESSED_VERTS = i;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -117,7 +118,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -131,7 +132,7 @@ private:
 public:
 	void SetSKINNING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSKINNING = i;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -139,7 +140,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -153,7 +154,7 @@ private:
 public:
 	void SetMORPHING( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nMORPHING = i;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -161,7 +162,7 @@ public:
 	}
 	void SetMORPHING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nMORPHING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMORPHING = true;
@@ -175,7 +176,7 @@ private:
 public:
 	void SetTESSELLATION( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nTESSELLATION = i;
 #ifdef _DEBUG
 		m_bTESSELLATION = true;
@@ -183,7 +184,7 @@ public:
 	}
 	void SetTESSELLATION( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nTESSELLATION = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTESSELLATION = true;
@@ -216,7 +217,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS && m_bSKINNING && m_bMORPHING && m_bTESSELLATION;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nCOMPRESSED_VERTS ) + ( 2 * m_nSKINNING ) + ( 4 * m_nMORPHING ) + ( 4 * m_nTESSELLATION ) + 0;
 	}

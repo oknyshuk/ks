@@ -1,13 +1,11 @@
-//====== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
 #include "imaterialproxydict.h"
 #include "materialsystem/imaterialproxy.h"
-#include "tier1/map_ops.h"
 
 class CMaterialProxyDict : public IMaterialProxyDict
 {
@@ -20,7 +18,7 @@ private:
 
 void CMaterialProxyDict::Add( const char *pMaterialProxyName, MaterialProxyFactory_t *pMaterialProxyFactory )
 {
-	Assert( pMaterialProxyName );
+	contract_assert( pMaterialProxyName );
 	m_StringToProxyFactoryMap[pMaterialProxyName] = pMaterialProxyFactory;
 }
 
@@ -38,6 +36,6 @@ IMaterialProxy *CMaterialProxyDict::CreateProxy( const char *pMaterialProxyName 
 		return nullptr;
 	}
 	MaterialProxyFactory_t *pMaterialProxyFactory = *ppFactory;
-	Assert( pMaterialProxyFactory );
+	contract_assert( pMaterialProxyFactory );
 	return (*pMaterialProxyFactory)();
 }

@@ -1,17 +1,12 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Special case hash table for console commands
-//
-// $NoKeywords: $
-//
-//===========================================================================//
 
-#if !defined( CONCOMMANDHASH_H )
-#define CONCOMMANDHASH_H
+import std;
+import ks.tier1;
 
-#include <list>
-#include <vector>
-#include "generichash.h"
 
 // This is a hash table class very similar to the CUtlHashFast, but
 // modified specifically so that we can look up ConCommandBases
@@ -69,12 +64,12 @@ public:
 	CCommandHashHandle_t FastInsert( ConCommandBase *cmd );
 
 	// Removal.
-	void Remove( CCommandHashHandle_t hHash ) RESTRICT;
+	void Remove( CCommandHashHandle_t hHash ) __restrict__;
 	void RemoveAll( void );
 
 	// Retrieval.
 	inline CCommandHashHandle_t Find( const char *name ) const;
-	CCommandHashHandle_t Find( const ConCommandBase *cmd ) const RESTRICT;
+	CCommandHashHandle_t Find( const ConCommandBase *cmd ) const __restrict__;
 	// A convenience version of Find that skips the handle part
 	// and returns a pointer to a concommand, or NULL if none was found.
 	inline ConCommandBase * FindPtr( const char *name ) const;
@@ -105,7 +100,7 @@ private:
 	// a find func where we've already computed the hash for the string.
 	// (hidden private in case we decide to invent a custom string hash func
 	//  for this class)
-	CCommandHashHandle_t Find( const char *name, HashKey_t hash) const RESTRICT;
+	CCommandHashHandle_t Find( const char *name, HashKey_t hash) const __restrict__;
 
 protected:
 	enum 
@@ -210,5 +205,3 @@ inline ConCommandBase * CConCommandHash::FindPtr( const char *name ) const
 		return (*this)[handle];
 	}
 }
-
-#endif

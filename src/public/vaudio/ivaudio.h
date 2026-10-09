@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IVAUDIO_H
-#define IVAUDIO_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class IAudioStreamEvent
 {
@@ -47,7 +41,7 @@ public:
 };
 
 
-#define VAUDIO_INTERFACE_VERSION		"VAudio002"
+inline constexpr const char *VAUDIO_INTERFACE_VERSION = "VAudio002";
 class IVAudio
 {
 public:
@@ -59,6 +53,3 @@ public:
 	virtual void			*CreateMilesAudioEngine() = 0;
 	virtual void			DestroyMilesAudioEngine( void *pEngine ) = 0;
 };
-
-
-#endif // IVAUDIO_H

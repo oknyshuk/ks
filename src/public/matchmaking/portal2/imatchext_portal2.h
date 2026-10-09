@@ -1,16 +1,8 @@
-//===== Copyright c 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef IMATCHEXT_PORTAL2_H
-#define IMATCHEXT_PORTAL2_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #define STORAGE_COUNT_FOR_BITS( aStorageType, numBits ) ( ( (numBits) + 8*sizeof( aStorageType ) - 1 ) / ( 8* sizeof( aStorageType ) ) )
-
 
 //
 //
@@ -241,22 +233,18 @@ struct TitleData3
 		" } "
 
 
-#define PORTAL2_DLCID_RETAIL_DLC1			( 1ull << 0x01 )
-#define PORTAL2_DLCID_RETAIL_DLC2			( 1ull << 0x02 )
-#define PORTAL2_DLCID_COOP_BOT_SKINS		( 1ull << 0x12 )
-#define PORTAL2_DLCID_COOP_BOT_HELMETS		( 1ull << 0x13 )
-#define PORTAL2_DLCID_COOP_BOT_ANTENNA		( 1ull << 0x14 )
-#define PORTAL2_DLC_ALLMASK ( PORTAL2_DLCID_RETAIL_DLC1 | PORTAL2_DLCID_RETAIL_DLC2 | PORTAL2_DLCID_COOP_BOT_SKINS | PORTAL2_DLCID_COOP_BOT_HELMETS | PORTAL2_DLCID_COOP_BOT_ANTENNA )
+inline constexpr auto PORTAL2_DLCID_RETAIL_DLC1 = ( 1ull << 0x01 );
+inline constexpr auto PORTAL2_DLCID_RETAIL_DLC2 = ( 1ull << 0x02 );
+inline constexpr auto PORTAL2_DLCID_COOP_BOT_SKINS = ( 1ull << 0x12 );
+inline constexpr auto PORTAL2_DLCID_COOP_BOT_HELMETS = ( 1ull << 0x13 );
+inline constexpr auto PORTAL2_DLCID_COOP_BOT_ANTENNA = ( 1ull << 0x14 );
+inline constexpr auto PORTAL2_DLC_ALLMASK = ( PORTAL2_DLCID_RETAIL_DLC1 | PORTAL2_DLCID_RETAIL_DLC2 | PORTAL2_DLCID_COOP_BOT_SKINS | PORTAL2_DLCID_COOP_BOT_HELMETS | PORTAL2_DLCID_COOP_BOT_ANTENNA );
 
-#define PORTAL2_DLC_APPID_COOP_BOT_SKINS		651
-#define PORTAL2_DLC_APPID_COOP_BOT_HELMETS		652
-#define PORTAL2_DLC_APPID_COOP_BOT_ANTENNA		653
+inline constexpr auto PORTAL2_DLC_APPID_COOP_BOT_SKINS = 651;
+inline constexpr auto PORTAL2_DLC_APPID_COOP_BOT_HELMETS = 652;
+inline constexpr auto PORTAL2_DLC_APPID_COOP_BOT_ANTENNA = 653;
 
-#define PORTAL2_DLC_PKGID_COOP_BOT_SKINS		7364
-#define PORTAL2_DLC_PKGID_COOP_BOT_HELMETS		7365
-#define PORTAL2_DLC_PKGID_COOP_BOT_ANTENNA		7366
+inline constexpr auto PORTAL2_DLC_PKGID_COOP_BOT_SKINS = 7364;
+inline constexpr auto PORTAL2_DLC_PKGID_COOP_BOT_HELMETS = 7365;
+inline constexpr auto PORTAL2_DLC_PKGID_COOP_BOT_ANTENNA = 7366;
 
-#define PORTAL2_DLC_PKGID_PCSTEAMPLAY			7397
-
-
-#endif // IMATCHEXT_PORTAL2_H

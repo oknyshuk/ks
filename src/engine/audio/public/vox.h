@@ -1,21 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef VOX_H
-#define VOX_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <string_view>
+import std;
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,5 +30,3 @@ extern int				VOX_GroupPickSequential( int isentenceg, char *szfound, int szfoun
 #ifdef __cplusplus
 }
 #endif
-
-#endif // VOX_H

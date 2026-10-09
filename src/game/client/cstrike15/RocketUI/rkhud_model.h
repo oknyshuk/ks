@@ -1,8 +1,9 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-#ifndef KISAKSTRIKE_RKHUD_MODEL_H
-#define KISAKSTRIKE_RKHUD_MODEL_H
+#include <rocketui/rmlui.h>
+
 
 #include <rocketui/rocketui.h>
 #include <rocketui/rmlui.h>
@@ -52,4 +53,3 @@ Rml::ElementDocument *RkLoadDocument( RocketDesinationContext_t ctx, const char 
 // that section are re-evaluated, so one element updating does not cost the rest.
 void RkHudDirty( const char *section );
 
-#endif // KISAKSTRIKE_RKHUD_MODEL_H

@@ -1,20 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( PACKED_ENTITY_H )
-#define PACKED_ENTITY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <atomic>
-#include <span>
 #include <const.h>
-#include <basetypes.h>
-#include <utlvector.h>
-#include <tier0/dbg.h>
+import std;
+import ks.tier1;
 
 #include "common.h"
 #include "ents_shared.h"
@@ -22,16 +12,9 @@
 // This is extra spew to the files cltrace.txt + svtrace.txt
 // #define DEBUG_NETWORKING 1
 
-#if defined( DEBUG_NETWORKING )
-#include "convar.h"
-void SpewToFile( char const* pFmt, ... );
-extern ConVar  sv_packettrace;
-#define TRACE_PACKET( text ) if ( sv_packettrace.GetInt() ) { SpewToFile text ; };
-#else
 #define TRACE_PACKET( text )
-#endif
 
-#define	FLAG_IS_COMPRESSED	(1<<31)
+inline constexpr auto FLAG_IS_COMPRESSED = (1<<31);
 
 
 class CSendProxyRecipients;
@@ -120,7 +103,7 @@ inline const SerializedEntityHandle_t PackedEntity::GetPackedData() const
 
 inline void PackedEntity::SetChangeFrameList( CChangeFrameList *pList )
 {
-	Assert( !m_pChangeFrameList );
+	contract_assert( !m_pChangeFrameList );
 	m_pChangeFrameList = pList;
 }
 
@@ -160,6 +143,3 @@ inline bool PackedEntity::ShouldCheckCreationTick() const
 {
 	return m_nShouldCheckCreationTick == 1 ? true : false;
 }
-
-#endif // PACKED_ENTITY_H
-

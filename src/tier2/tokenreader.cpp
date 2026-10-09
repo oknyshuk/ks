@@ -1,18 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <ctype.h>
-#include <stdio.h>
-#include <string.h>
+import std;
+import ks.tier1;
 #include "tokenreader.h"
-#include "tier0/platform.h"
-#include "tier1/strtools.h"
 #include "filesystem.h"
-#include "tier0/dbg.h"
 
 
 //-----------------------------------------------------------------------------
@@ -40,7 +32,7 @@ bool TokenReader::Open(const char *pszFilename)
 	m_bOpen = data.has_value();
 	m_file = data ? std::move( *data ) : std::vector< std::byte >();
 	m_nPos = 0;
-	Q_strncpy(m_szFilename, pszFilename, sizeof( m_szFilename ) );
+	V_strncpy(m_szFilename, pszFilename, sizeof( m_szFilename ) );
 	m_nLine = 1;
 	m_nErrorCount = 0;
 	m_bStuffed = false;
@@ -68,8 +60,8 @@ void TokenReader::Close()
 const char *TokenReader::Error(char *error, ...)
 {
 	static char szErrorBuf[256];
-	Q_snprintf(szErrorBuf, sizeof( szErrorBuf ), "File %s, line %d: ", m_szFilename, m_nLine);
-	Q_strncat(szErrorBuf, error, sizeof( szErrorBuf ), COPY_ALL_CHARACTERS );
+	V_snprintf(szErrorBuf, sizeof( szErrorBuf ), "File %s, line %d: ", m_szFilename, m_nLine);
+	V_strncat(szErrorBuf, error, sizeof( szErrorBuf ), COPY_ALL_CHARACTERS );
 	m_nErrorCount++;
 	return(szErrorBuf);
 }
@@ -211,10 +203,10 @@ trtoken_t TokenReader::NextTokenDynamic(char **ppszStore)
 	char szTempBuffer[8192];
 	trtoken_t eType = NextToken(szTempBuffer, sizeof(szTempBuffer));
 
-	int len = Q_strlen(szTempBuffer) + 1;
+	int len = V_strlen(szTempBuffer) + 1;
 	*ppszStore = new char [len];
-	Assert( *ppszStore );
-	Q_strncpy(*ppszStore, szTempBuffer, len );
+	contract_assert( *ppszStore );
+	V_strncpy(*ppszStore, szTempBuffer, len );
 
 	return(eType);
 }
@@ -235,7 +227,7 @@ trtoken_t TokenReader::NextToken(char *pszStore, int nSize)
 	if (m_bStuffed)
 	{
 		m_bStuffed = false;
-		Q_strncpy( pszStore, m_szStuffed, nSize );
+		V_strncpy( pszStore, m_szStuffed, nSize );
 		return m_eStuffed;
 	}
 	
@@ -376,7 +368,7 @@ void TokenReader::IgnoreTill(trtoken_t ttype, const char *pszToken)
 void TokenReader::Stuff(trtoken_t eType, const char *pszToken)
 {
 	m_eStuffed = eType;
-	Q_strncpy(m_szStuffed, pszToken, sizeof( m_szStuffed ) );
+	V_strncpy(m_szStuffed, pszToken, sizeof( m_szStuffed ) );
 	m_bStuffed = true;
 }
 
@@ -413,7 +405,7 @@ trtoken_t TokenReader::PeekTokenType(char *pszStore, int maxlen )
 	
 	if (pszStore)
 	{
-		Q_strncpy(pszStore, m_szStuffed, maxlen );
+		V_strncpy(pszStore, m_szStuffed, maxlen );
 	}
 
 	return(m_eStuffed);
@@ -471,4 +463,3 @@ bool TokenReader::SkipWhiteSpace(void)
 	}
 	return bCombineStrings;
 }
-

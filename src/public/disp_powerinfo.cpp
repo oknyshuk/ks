@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "disp_powerinfo.h"
 #include "disp_common.h"
-#include "commonmacros.h"
 
 // ------------------------------------------------------------------------ //
 // Internal classes.
@@ -156,7 +151,7 @@ static int GetFreeDependency( CVertDependency *pDep, int nElements )
 			return i;
 	}
 
-	Assert( false );
+	contract_assert( false );
 	return 0;
 }
 
@@ -192,7 +187,7 @@ static void AddDependency(
 		int iConnection = GetEdgeIndexFromPoint( nodeIndex, iMaxPower );
 		if( iConnection != -1 )
 		{
-			Assert( !pNode->m_Dependencies[1].IsValid() );
+			contract_assert( !pNode->m_Dependencies[1].IsValid() );
 
 			CVertIndex delta( nodeIndex.x - dependency.x, nodeIndex.y - dependency.y );
 			CVertIndex newIndex( nodeIndex.x + delta.x, nodeIndex.y + delta.y );
@@ -542,7 +537,7 @@ class CPowerInfoInitializer
 public:
 	CPowerInfoInitializer()
 	{
-		Assert( MAX_MAP_DISP_POWER+1 == NUM_POWERINFOS );
+		contract_assert( MAX_MAP_DISP_POWER+1 == NUM_POWERINFOS );
 
 		for( int i=0; i <= MAX_MAP_DISP_POWER; i++ )
 		{
@@ -559,8 +554,8 @@ static CPowerInfoInitializer g_PowerInfoInitializer;
 
 const CPowerInfo* GetPowerInfo( int iPower )
 {
-	Assert( iPower >= 0 && iPower < ARRAYSIZE( g_PowerInfos ) );
-	Assert( g_PowerInfos[iPower] );
+	contract_assert( iPower >= 0 && iPower < std::size( g_PowerInfos ) );
+	contract_assert( g_PowerInfos[iPower] );
 	return g_PowerInfos[iPower];
 }
 
@@ -571,7 +566,6 @@ const CPowerInfo* GetPowerInfo( int iPower )
 
 const CVertIndex& CPowerInfo::GetCornerPointIndex( int iCorner ) const
 {
-	Assert( iCorner >= 0 && iCorner < 4 );
+	contract_assert( iCorner >= 0 && iCorner < 4 );
 	return m_CornerPointIndices[iCorner];
 }
-

@@ -1,25 +1,16 @@
-//====== Copyright (C), Valve Corporation, All rights reserved. =======
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: This file defines all of our over-the-wire net protocols for the
 //			Game Coordinator for CS:GO.  Note that we never use types
-//			with undefined length (like int).  Always use an explicit type 
+//			with undefined length (like int).  Always use an explicit type
 //			(like int32).
-//
-//=============================================================================
 
-#ifndef CSTRIKE15_GCCONSTANTS_H
-#define CSTRIKE15_GCCONSTANTS_H
+import std;
+import ks.core;
 
 //=============================================================================
-
-enum EMsgGCCStrike15_v2_ClientLogonFatalError
-{
-	k_EMsgGCCStrike15_v2_ClientLogonFatalError_None = 0,		// Should not be used (default = no error and logon can succeed)
-	k_EMsgGCCStrike15_v2_ClientLogonFatalError_MustUsePWLauncher = 1,	// Client must use PW launcher
-	k_EMsgGCCStrike15_v2_ClientLogonFatalError_MustUseSteamLauncher = 2,	// Client must use Steam launcher
-	k_EMsgGCCStrike15_v2_ClientLogonFatalError_AccountLinkPWMissing  = 3,	// Client hasn't linked their Steam and PW accounts
-	k_EMsgGCCStrike15_v2_ClientLogonFatalError_CustomMessageBase = 1000,	// Custom message has been provided by the 3rd party server (Perfect World)
-};
 
 //=============================================================================
 
@@ -801,5 +792,3 @@ enum EScoreLeaderboardDataEntryTag_t
 };
 
 //=============================================================================
-
-#endif //CSTRIKE15_GCCONSTANTS_H

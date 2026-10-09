@@ -1,23 +1,24 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-#include "cbase.h"
-#include "reflect_recvtable.h"
-#include "reflect_annotations.h"
-#include "model_types.h"
-#include "vcollide.h"
-#include "vcollide_parse.h"
-#include "solidsetdefaults.h"
-#include "bone_setup.h"
-#include "engine/ivmodelinfo.h"
-#include "physics.h"
-#include "view.h"
-#include "c_physicsprop.h"
-#include "tier0/vprof.h"
-#include "ivrenderview.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "reflect_recvtable.h"
+#include "model_types.h"
+#include "engine/ivmodelinfo.h"
+#include "c_physicsprop.h"
+#include "ivrenderview.h"
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_PhysicsProp, DT_PhysicsProp, CPhysicsProp )
 

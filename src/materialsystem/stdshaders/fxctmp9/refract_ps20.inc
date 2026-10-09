@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // $MASKED && $BLUR
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
@@ -21,7 +22,7 @@ private:
 public:
 	void SetMAGNIFY( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nMAGNIFY = i;
 #ifdef _DEBUG
 		m_bMAGNIFY = true;
@@ -29,7 +30,7 @@ public:
 	}
 	void SetMAGNIFY( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMAGNIFY = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMAGNIFY = true;
@@ -43,7 +44,7 @@ private:
 public:
 	void SetBLUR( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBLUR = i;
 #ifdef _DEBUG
 		m_bBLUR = true;
@@ -51,7 +52,7 @@ public:
 	}
 	void SetBLUR( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBLUR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBLUR = true;
@@ -65,7 +66,7 @@ private:
 public:
 	void SetFADEOUTONSILHOUETTE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFADEOUTONSILHOUETTE = i;
 #ifdef _DEBUG
 		m_bFADEOUTONSILHOUETTE = true;
@@ -73,7 +74,7 @@ public:
 	}
 	void SetFADEOUTONSILHOUETTE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFADEOUTONSILHOUETTE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFADEOUTONSILHOUETTE = true;
@@ -87,7 +88,7 @@ private:
 public:
 	void SetCUBEMAP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCUBEMAP = i;
 #ifdef _DEBUG
 		m_bCUBEMAP = true;
@@ -95,7 +96,7 @@ public:
 	}
 	void SetCUBEMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCUBEMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCUBEMAP = true;
@@ -109,7 +110,7 @@ private:
 public:
 	void SetREFRACTTINTTEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nREFRACTTINTTEXTURE = i;
 #ifdef _DEBUG
 		m_bREFRACTTINTTEXTURE = true;
@@ -117,7 +118,7 @@ public:
 	}
 	void SetREFRACTTINTTEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nREFRACTTINTTEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bREFRACTTINTTEXTURE = true;
@@ -131,7 +132,7 @@ private:
 public:
 	void SetMASKED( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nMASKED = i;
 #ifdef _DEBUG
 		m_bMASKED = true;
@@ -139,7 +140,7 @@ public:
 	}
 	void SetMASKED( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMASKED = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMASKED = true;
@@ -153,7 +154,7 @@ private:
 public:
 	void SetCOLORMODULATE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOLORMODULATE = i;
 #ifdef _DEBUG
 		m_bCOLORMODULATE = true;
@@ -161,7 +162,7 @@ public:
 	}
 	void SetCOLORMODULATE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOLORMODULATE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOLORMODULATE = true;
@@ -175,7 +176,7 @@ private:
 public:
 	void SetSECONDARY_NORMAL( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSECONDARY_NORMAL = i;
 #ifdef _DEBUG
 		m_bSECONDARY_NORMAL = true;
@@ -183,7 +184,7 @@ public:
 	}
 	void SetSECONDARY_NORMAL( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSECONDARY_NORMAL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSECONDARY_NORMAL = true;
@@ -197,7 +198,7 @@ private:
 public:
 	void SetMIRRORABOUTVIEWPORTEDGES( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nMIRRORABOUTVIEWPORTEDGES = i;
 #ifdef _DEBUG
 		m_bMIRRORABOUTVIEWPORTEDGES = true;
@@ -205,7 +206,7 @@ public:
 	}
 	void SetMIRRORABOUTVIEWPORTEDGES( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nMIRRORABOUTVIEWPORTEDGES = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMIRRORABOUTVIEWPORTEDGES = true;
@@ -219,7 +220,7 @@ private:
 public:
 	void SetLOCALREFRACT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nLOCALREFRACT = i;
 #ifdef _DEBUG
 		m_bLOCALREFRACT = true;
@@ -227,7 +228,7 @@ public:
 	}
 	void SetLOCALREFRACT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nLOCALREFRACT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bLOCALREFRACT = true;
@@ -284,7 +285,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bMAGNIFY && m_bBLUR && m_bFADEOUTONSILHOUETTE && m_bCUBEMAP && m_bREFRACTTINTTEXTURE && m_bMASKED && m_bCOLORMODULATE && m_bSECONDARY_NORMAL && m_bMIRRORABOUTVIEWPORTEDGES && m_bLOCALREFRACT;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 2 * m_nMAGNIFY ) + ( 4 * m_nBLUR ) + ( 8 * m_nFADEOUTONSILHOUETTE ) + ( 16 * m_nCUBEMAP ) + ( 32 * m_nREFRACTTINTTEXTURE ) + ( 64 * m_nMASKED ) + ( 128 * m_nCOLORMODULATE ) + ( 256 * m_nSECONDARY_NORMAL ) + ( 512 * m_nMIRRORABOUTVIEWPORTEDGES ) + ( 512 * m_nLOCALREFRACT ) + 0;
 	}
@@ -300,7 +301,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -308,7 +309,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -329,12 +330,12 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nPIXELFOGTYPE ) + 0;
 	}
 };
-#define shaderDynamicTest_refract_ps20 0
+inline constexpr int shaderDynamicTest_refract_ps20 = 0;
 
 static const ShaderComboInformation_t s_DynamicComboArray_refract_ps20[1] = 
 {

@@ -1,11 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: NPC that drives vehicles
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef NPC_VEHICLEDRIVER_H
-#define NPC_VEHICLEDRIVER_H
+// Purpose: NPC that drives vehicles
 
 #include "reflect_annotations.h"
 
@@ -16,7 +13,7 @@ class CPropVehicleDriveable;
 //------------------------------------
 // Spawnflags
 //------------------------------------
-#define SF_VEHICLEDRIVER_INACTIVE		(1 << 16)
+inline constexpr auto SF_VEHICLEDRIVER_INACTIVE = (1 << 16);
 
 //=========================================================
 // Custom schedules
@@ -188,5 +185,3 @@ public:
 	float				m_flInitialSpeed;	
 	float				m_flSteering;
 };
-
-#endif // NPC_VEHICLEDRIVER_H

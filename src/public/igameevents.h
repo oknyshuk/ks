@@ -1,24 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( IGAMEEVENTS_H )
-#define IGAMEEVENTS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier1/interface.h"
+import std;
+import ks.tier1;
 
 #define INTERFACEVERSION_GAMEEVENTSMANAGER	"GAMEEVENTSMANAGER001"	// old game event manager, don't use it!
 #define INTERFACEVERSION_GAMEEVENTSMANAGER2	"GAMEEVENTSMANAGER002"	// new game event manager,
 
-#include "tier1/bitbuf.h"
 //-----------------------------------------------------------------------------
 // Purpose: Engine interface into global game event management
 //-----------------------------------------------------------------------------
@@ -49,19 +38,16 @@ knows how to serialize/unserialize that event for network transmission.
 Valid data types are string, float, long, short, byte & bool. If a 
 data field should not be broadcasted to clients, use the type "local".
 */
-
-
 #define MAX_EVENT_NAME_LENGTH	32		// max game event name length
 #define MAX_EVENT_BITS			9		// max bits needed for an event index
 #define MAX_EVENT_NUMBER		(1<<MAX_EVENT_BITS)		// max number of events allowed
 #define MAX_EVENT_BYTES			1024	// max size in bytes for a serialized event
 
-class KeyValues;
 class CGameEvent;
 namespace ks::net { struct CSVCMsg_GameEvent; }
 
 // Class for visiting every key of data on an event
-abstract_class IGameEventVisitor2
+class IGameEventVisitor2
 {
 public:
 	// return true to keep iterating, false to abort iteration
@@ -74,7 +60,7 @@ public:
 	virtual bool VisitBool( const char* name, bool value ) { return true; }
 };
 
-abstract_class IGameEvent
+class IGameEvent
 {
 public:
 	virtual ~IGameEvent() {};
@@ -105,10 +91,10 @@ public:
 	virtual bool ForEventData( IGameEventVisitor2* event ) const = 0;
 };
 
-#define EVENT_DEBUG_ID_INIT			42
-#define EVENT_DEBUG_ID_SHUTDOWN		13
+inline constexpr int EVENT_DEBUG_ID_INIT = 42;
+inline constexpr int EVENT_DEBUG_ID_SHUTDOWN = 13;
 
-abstract_class IGameEventListener2
+class IGameEventListener2
 {
 public:
 	virtual	~IGameEventListener2( void ) {};
@@ -120,7 +106,7 @@ public:
 	virtual int	 GetEventDebugID( void ) = 0;
 };
 
-abstract_class IGameEventManager2 : public IBaseInterface
+class IGameEventManager2 : public IBaseInterface
 {
 public:
 	virtual	~IGameEventManager2( void ) {};
@@ -166,7 +152,7 @@ public:
 
 // the old game event manager interface, don't use it. Rest is legacy support:
 
-abstract_class IGameEventListener
+class IGameEventListener
 {
 public:
 	virtual	~IGameEventListener( void ) {};
@@ -176,7 +162,7 @@ public:
 	virtual void FireGameEvent( KeyValues * event) = 0;
 };
 
-abstract_class IGameEventManager : public IBaseInterface
+class IGameEventManager : public IBaseInterface
 {
 public:
 	virtual	~IGameEventManager( void ) {};
@@ -214,8 +200,3 @@ public:
 	virtual bool SerializeKeyValues( KeyValues *event, bf_write *buf, CGameEvent *eventtype = nullptr ) = 0;
 	virtual KeyValues *UnserializeKeyValue( bf_read *msg ) = 0; // create new KeyValues, must be deleted
 };
-
-
-
-
-#endif // IGAMEEVENTS_H

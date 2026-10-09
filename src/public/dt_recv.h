@@ -1,21 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DATATABLE_RECV_H
-#define DATATABLE_RECV_H
-
-
+import ks.core;
 #include "dt_common.h"
-#include "tier0/dbg.h"
+import std;
 
-
-#define ADDRESSPROXY_NONE	-1
-#define _offsetof(s,m)	(size_t)&(((s *)0)->m)
+inline constexpr auto ADDRESSPROXY_NONE = -1;
 
 
 class RecvTable;
@@ -223,7 +214,7 @@ inline int RecvTable::GetNumProps()
 
 inline RecvProp* RecvTable::GetProp( int i )
 {
-	Assert( i >= 0 && i < m_nProps ); 
+	contract_assert( i >= 0 && i < m_nProps ); 
 	return &m_pProps[i]; 
 }
 
@@ -554,5 +545,3 @@ inline void	RecvProp::SetParentArrayPropName( const char *pArrayPropName )
 {
 	m_pParentArrayPropName = pArrayPropName;
 }
-
-#endif // DATATABLE_RECV_H

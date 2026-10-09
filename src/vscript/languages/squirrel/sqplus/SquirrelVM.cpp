@@ -1,3 +1,5 @@
+
+
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -28,7 +30,7 @@ SquirrelError::SquirrelError()
 		desc = s;
 	}
 	else {
-		desc = _T("unknown error");
+		desc = "unknown error";
 	}
 }
 
@@ -51,7 +53,7 @@ void SquirrelVM::Init()
 BOOL SquirrelVM::Update()
 {
 	//update remote debugger
-	return TRUE;
+	return true;
 }
 
 void SquirrelVM::Cleanup()
@@ -130,26 +132,26 @@ SquirrelObject SquirrelVM::RunScript(const SquirrelObject &o,SquirrelObject *_th
 BOOL SquirrelVM::BeginCall(const SquirrelObject &func)
 {
 	if(_CallState != -1)
-		return FALSE;
+		return false;
 	_CallState = 1;
 	sq_pushobject(_VM,func._o);
 	sq_pushroottable(_VM);
-	return TRUE;
+	return true;
 }
 
 BOOL SquirrelVM::BeginCall(const SquirrelObject &func,SquirrelObject &_this)
 {
 	if(_CallState != -1)
-		throw SquirrelError(_T("call already initialized"));
+		throw SquirrelError("call already initialized");
 	_CallState = 1;
 	sq_pushobject(_VM,func._o);
 	sq_pushobject(_VM,_this._o);
-	return TRUE;
+	return true;
 }
 
 #define _CHECK_CALL_STATE \
 	if(_CallState == -1) \
-		throw SquirrelError(_T("call not initialized"));
+		throw SquirrelError("call not initialized");
 
 void SquirrelVM::PushParam(const SquirrelObject &o)
 {
@@ -295,13 +297,13 @@ SquirrelObject SquirrelVM::CreateFunction(SQFUNCTION func,const SQChar * scriptF
       ptm       = 0; // Variable args: don't check parameters.
       numParams = 0; // Clear SQ_MATCHTYPEMASKSTRING (does not mean match 0 params. See sq_setparamscheck()).
     } else {
-      if (SCSNPRINTF(tm,sizeof(tm),_T("t|y|x%s"),typeMask) < 0) {
+      if (SCSNPRINTF(tm,sizeof(tm),"t|y|x%s",typeMask) < 0) {
 //        sq_throwerror(_VM,_T("CreateFunction: typeMask string too long."));
-        throw SquirrelError(_T("CreateFunction: typeMask string too long."));
+        throw SquirrelError("CreateFunction: typeMask string too long.");
       } // if
     } // if
   } else { // <TODO> Need to check object type on stack: table, class, instance, etc.
-    SCSNPRINTF(tm,sizeof(tm),_T("%s"),_T("t|y|x")); // table, class, instance.
+    SCSNPRINTF(tm,sizeof(tm),"%s","t|y|x"); // table, class, instance.
 //    tm[0] = 't';
 //    tm[1] = 0;
   } // if

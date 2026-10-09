@@ -1,20 +1,32 @@
-//========== Copyright  2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#include "pch_materialsystem.h"
+import std;
 
-#include "tier1/functors.h"
-#include "tier1/fmtstr.h"
+
+import ks.tier1;
+
+#include "tier2/tier2.h"
+#include "bitmap/imageformat.h"
+#include "bitmap/tgawriter.h"
+#include "bitmap/tgaloader.h"
+#include "datacache/idatacache.h"
+#include "filesystem.h"
+#include "pixelwriter.h"
+
+#include "materialsystem_global.h"
+#include "materialsystem/imaterialvar.h"
+#include "materialsystem/imesh.h"
+#include "materialsystem/IColorCorrection.h"
+
+#include "imaterialinternal.h"
+#include "imaterialsysteminternal.h"
+
 #include "itextureinternal.h"
 
-#define MATSYS_INTERNAL
 
 #include "cmatqueuedrendercontext.h"
 #include "cmaterialsystem.h" // @HACKHACK
-
 
 ConVar mat_report_queue_status( "mat_report_queue_status", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
@@ -23,7 +35,6 @@ ConVar mat_report_queue_status( "mat_report_queue_status", "0", FCVAR_MATERIAL_S
 // 
 //-----------------------------------------------------------------------------
 
-#define FastCopy memcpy
 
 class CCachedPerFrameMeshData;
 //-----------------------------------------------------------------------------
@@ -131,7 +142,7 @@ public:
 	IMesh *MST_SetupExternalMesh( const MST_MeshInfo_t &info );
 	IMesh *MST_SetupDynamicMesh( const MST_MeshInfo_t &info, IMesh *pExternalMesh );
 	int MST_GetActualVertexOffsetInBytes() const { return m_nMSTActualVertexOffsetInBytes; }
-	void MST_CopyDynamicVB( const MeshDesc_t &desc, const uint8 *pVertexData, size_t nSizeInBytes );
+	void MST_CopyDynamicVB( const MeshDesc_t &desc, const uint8 *pVertexData, std::size_t nSizeInBytes );
 	void MST_CopyDynamicIB( const MeshDesc_t &desc, const uint16 *pIndexData, int nIndices );
 	void MST_BuildDynamicBuffers( const MST_MeshInfo_t &info );
 	void MST_Draw( const MST_DrawInfo_t &info );
@@ -249,51 +260,14 @@ CMatQueuedMesh::CMatQueuedMesh( CMatQueuedRenderContext *pOwner, IMatRenderConte
 //----------------------------------------------------------------------------
 IMesh *CMatQueuedMesh::MST_SetupExternalMesh( const MST_MeshInfo_t &info )
 {
-#ifndef MS_NO_DYNAMIC_BUFFER_COPY
 	return nullptr;
-#else
-	// If we don't have real external data on either VB or IB channel, no dynamic mesh
-	if ( !info.m_bExternalVB && !info.m_bExternalIB )
-		return nullptr;
-
-	// Ok, at at least one of VB or IB (maybe both) are external data.
-	// In this case, the other buffer may be an override, NULL, or dynamic data
-	// We are always going to treat external data as an override of a dynamic mesh
-	// because that way colormesh/flexmesh state tracking is simpler: it
-	// always goes through the dynamic mesh
-	ExternalMeshInfo_t extInfo;
-	extInfo.m_pMaterial = info.m_pMaterial;
-	extInfo.m_bFlexMesh = m_bFlexMesh;
-	extInfo.m_VertexFormat = info.m_VertexFormat;
-	extInfo.m_pVertexOverride = nullptr;
-	extInfo.m_pIndexOverride = nullptr;
-	IMesh *pExternalMesh = g_pShaderAPI->GetExternalMesh( extInfo );
-
-	// Now make the external mesh point at the externally allocated data
-	ExternalMeshData_t data;
-	memset( &data, 0, sizeof(data) );
-	if ( info.m_bExternalVB )
-	{
-		data.m_pVertexData = info.m_pVertexData;
-		data.m_nVertexCount = info.m_nVertexCount;
-		data.m_nVertexSizeInBytes = info.m_nVertexSizeInBytes;
-	}
-	if ( info.m_bExternalIB )
-	{
-		data.m_pIndexData = info.m_pIndexData;
-		data.m_nIndexCount = info.m_nIndexCount;
-	}
-	g_pShaderAPI->SetExternalMeshData( pExternalMesh, data );
-
-	return pExternalMesh;
-#endif
 }
 
 
 //-----------------------------------------------------------------------------
 // Copies queued vertex buffer data into the actual dynamic buffer
 //-----------------------------------------------------------------------------
-FORCEINLINE void CMatQueuedMesh::MST_CopyDynamicVB( const MeshDesc_t &desc, const uint8 *pVertexData, size_t nSizeInBytes )
+[[gnu::always_inline]] inline void CMatQueuedMesh::MST_CopyDynamicVB( const MeshDesc_t &desc, const uint8 *pVertexData, std::size_t nSizeInBytes )
 {
 	void *pDest;
 	if ( desc.m_VertexSize_Position != 0 )
@@ -326,10 +300,10 @@ FORCEINLINE void CMatQueuedMesh::MST_CopyDynamicVB( const MeshDesc_t &desc, cons
 #undef FindMin
 	}
 
-	Assert( pDest );
+	contract_assert( pDest );
 	if ( pDest )
 	{
-		FastCopy( (byte *)pDest, pVertexData, nSizeInBytes );
+		std::memcpy( (byte *)pDest, pVertexData, nSizeInBytes );
 	}
 }
 
@@ -337,31 +311,31 @@ FORCEINLINE void CMatQueuedMesh::MST_CopyDynamicVB( const MeshDesc_t &desc, cons
 //-----------------------------------------------------------------------------
 // Copies queued index buffer data into the actual dynamic buffer
 //-----------------------------------------------------------------------------
-FORCEINLINE void CMatQueuedMesh::MST_CopyDynamicIB( const MeshDesc_t &desc, const uint16 *pIndexData, int nIndices )
+[[gnu::always_inline]] inline void CMatQueuedMesh::MST_CopyDynamicIB( const MeshDesc_t &desc, const uint16 *pIndexData, int nIndices )
 {
 	if ( !desc.m_nFirstVertex )
 	{
 		// AssertMsg(desc.m_pIndices & 0x03 == 0,"desc.m_pIndices is misaligned in CMatQueuedMesh::ExecuteDefferedBuild\n");
-		FastCopy( (byte *)desc.m_pIndices, (const byte *)pIndexData, nIndices * sizeof(*pIndexData) );
+		std::memcpy( (byte *)desc.m_pIndices, (const byte *)pIndexData, nIndices * sizeof(*pIndexData) );
 		return;
 	}
 
-	ALIGN16 uint16 tempIndices[16];
+	uint16 tempIndices[16];
 
 	int i = 0;
-	if ( (size_t)desc.m_pIndices % 4 == 2 )
+	if ( (std::size_t)desc.m_pIndices % 4 == 2 )
 	{
 		desc.m_pIndices[i] = pIndexData[i] + desc.m_nFirstVertex;
 		i++;
 	}
 	while ( i < nIndices )
 	{
-		int nToCopy = std::min<std::common_type_t<long unsigned int, int>>( ARRAYSIZE(tempIndices), nIndices - i );
+		int nToCopy = std::min<std::common_type_t<long unsigned int, int>>( std::size( tempIndices ), nIndices - i );
 		for ( int j = 0; j < nToCopy; j++ )
 		{
 			tempIndices[j] = pIndexData[i+j] + desc.m_nFirstVertex;
 		}
-		FastCopy( (byte *)(desc.m_pIndices + i), (byte *)tempIndices, nToCopy * sizeof(uint16)  );
+		std::memcpy( (byte *)(desc.m_pIndices + i), (byte *)tempIndices, nToCopy * sizeof(uint16)  );
 		i += nToCopy;
 	}
 }
@@ -377,22 +351,6 @@ IMesh *CMatQueuedMesh::MST_SetupDynamicMesh( const MST_MeshInfo_t &info, IMesh *
 
 	int nVerticesToLock = info.m_nVertexCount;
 	int nIndicesToLock = info.m_nIndexCount;
-
-#ifdef MS_NO_DYNAMIC_BUFFER_COPY
-	// We are always going to treat external data as an override of a dynamic mesh
-	// because that way colormesh/flexmesh state tracking is simpler: it
-	// always goes through the dynamic mesh
-	if ( info.m_bExternalVB )
-	{
-		pVertexOverride = pExternalMesh;
-		nVerticesToLock = 0;
-	}
-	if ( info.m_bExternalIB )
-	{
-		pIndexOverride = pExternalMesh;
-		nIndicesToLock = 0;
-	}
-#endif
 
 	// Gets the dynamic mesh
 	IMesh *pDynamicMesh;
@@ -456,7 +414,7 @@ void CMatQueuedMesh::MST_BuildDynamicBuffers( const MST_MeshInfo_t &info )
 	//		This is an illegal case.
 
 	// We need data at least *somewhere* for this to make sense.
-	Assert( info.m_pVertexOverride || info.m_nVertexCount || info.m_pIndexOverride || info.m_nIndexCount );
+	contract_assert( info.m_pVertexOverride || info.m_nVertexCount || info.m_pIndexOverride || info.m_nIndexCount );
 
 	// First, see if we need any external buffers. Then see if we need
 	// dynamic buffers also
@@ -592,10 +550,10 @@ void CMatQueuedMesh::LockMesh( int numVerts, int numIndices, MeshDesc_t& desc, M
 
 	if( numVerts > 0 )
 	{
-		Assert( m_VertexSize );
-		Assert( !m_pVertexData );
+		contract_assert( m_VertexSize );
+		contract_assert( !m_pVertexData );
 		m_pVertexData = (byte *)m_pOwner->AllocVertices( numVerts, m_VertexSize, &m_bExternalVB );
-		Assert( (uintp)m_pVertexData % 16 == 0 );
+		contract_assert( (uintp)m_pVertexData % 16 == 0 );
 
 		// Compute the vertex index..
 		desc.m_nFirstVertex = 0;
@@ -614,7 +572,7 @@ void CMatQueuedMesh::LockMesh( int numVerts, int numIndices, MeshDesc_t& desc, M
 
 	if ( m_Type != MATERIAL_POINTS && numIndices > 0 )
 	{
-		Assert( !m_pIndexData );
+		contract_assert( !m_pIndexData );
 		m_pIndexData = (uint16*)m_pOwner->AllocIndices( numIndices, sizeof(uint16), &m_bExternalIB );
 		desc.m_pIndices = m_pIndexData;
 		desc.m_nIndexSize = 1;
@@ -679,7 +637,7 @@ void CMatQueuedMesh::QueueBuild( )
 	info.m_bExternalIB = m_bExternalIB;
 	info.m_pIndexOverride = m_pIndexOverride;
 	info.m_nPrimitiveType = m_Type;
-	Assert( info.m_pIndexData || ( m_nIndices == 0 ) );
+	contract_assert( info.m_pIndexData || ( m_nIndices == 0 ) );
 					  
 	if ( info.m_pMaterial )
 	{
@@ -697,33 +655,33 @@ void CMatQueuedMesh::QueueBuild( )
 void CMatQueuedMesh::SetColorMesh( IMesh *pColorMesh, int nVertexOffset )
 {
 	// This only works on the main dynamic mesh
-	Assert( !m_bFlexMesh );
+	contract_assert( !m_bFlexMesh );
 
 	// This cannot be called in between the call to GetDynamicMesh + UnlockMesh;
 	// the late bound mesh is in an indeterminant state during that point
-	Assert( m_bCanSetAuxMeshes );
+	contract_assert( m_bCanSetAuxMeshes );
 	m_pCallQueue->QueueCall( m_pLateBoundMesh, &IMesh::SetColorMesh, pColorMesh, nVertexOffset );
 }
 
 void CMatQueuedMesh::SetFlexMesh( IMesh *pMesh, int nVertexOffset )
 {
 	// This only works on the main dynamic mesh
-	Assert( !m_bFlexMesh );
+	contract_assert( !m_bFlexMesh );
 
 	// This cannot be called in between the call to GetDynamicMesh + UnlockMesh;
 	// the late bound mesh is in an indeterminant state during that point
-	Assert( m_bCanSetAuxMeshes );
+	contract_assert( m_bCanSetAuxMeshes );
 	m_pCallQueue->QueueCall( m_pLateBoundMesh, &IMesh::SetFlexMesh, pMesh, nVertexOffset );
 }
 
 void CMatQueuedMesh::DisableFlexMesh()
 {
 	// This only works on the color mesh
-	Assert( !m_bFlexMesh );
+	contract_assert( !m_bFlexMesh );
 
 	// This cannot be called in between the call to GetDynamicMesh + UnlockMesh;
 	// the late bound mesh is in an indeterminant state during that point
-	Assert( m_bCanSetAuxMeshes );
+	contract_assert( m_bCanSetAuxMeshes );
 	m_pCallQueue->QueueCall( m_pLateBoundMesh, &IMesh::DisableFlexMesh );
 }
 
@@ -802,7 +760,7 @@ ICachedPerFrameMeshData *CMatQueuedMesh::GetCachedPerFrameMeshData()
 	info.m_bExternalIB = m_bExternalIB;
 	info.m_pIndexOverride = m_pIndexOverride;
 	info.m_nPrimitiveType = m_Type;
-	Assert( info.m_pIndexData || ( m_nIndices == 0 ) );
+	contract_assert( info.m_pIndexData || ( m_nIndices == 0 ) );
 
 	return pNewPerFrameData;
 }
@@ -1010,7 +968,7 @@ void CMatQueuedIndexBuffer::FreeIndexData( int nIndexCount, MaterialIndexFormat_
 {
 	if ( pIndexData )
 	{
-		Assert( fmt != MATERIAL_INDEX_FORMAT_UNKNOWN );
+		contract_assert( fmt != MATERIAL_INDEX_FORMAT_UNKNOWN );
 		int nIndexSize = ( fmt == MATERIAL_INDEX_FORMAT_16BIT ) ? sizeof(uint16) : sizeof(uint32);
 		m_pOwner->FreeIndices( (byte*)pIndexData, nIndexCount, nIndexSize );
 	}
@@ -1018,19 +976,9 @@ void CMatQueuedIndexBuffer::FreeIndexData( int nIndexCount, MaterialIndexFormat_
 
 void CMatQueuedIndexBuffer::RT_CopyIndexData( int nIndexCount, MaterialIndexFormat_t fmt, void *pIndexData, bool bIsExternal )
 {
-#ifdef MS_NO_DYNAMIC_BUFFER_COPY
-	if ( bIsExternal )
-	{
-		Assert( !m_pRTDynamicIndexBuffer );
-		Assert( fmt == MATERIAL_INDEX_FORMAT_16BIT || fmt == MATERIAL_INDEX_FORMAT_UNKNOWN );
-		m_pRTDynamicIndexBuffer = g_pShaderAPI->GetExternalIndexBuffer( nIndexCount, (uint16*)pIndexData );
-		m_nRTStartIndex = 0;
-		return;
-	}
-#endif
 
 	IndexDesc_t desc;
-	Assert( !m_pRTDynamicIndexBuffer );
+	contract_assert( !m_pRTDynamicIndexBuffer );
 	m_pRTDynamicIndexBuffer = m_pHardwareContext->GetDynamicIndexBuffer();
 	if ( !m_pRTDynamicIndexBuffer->Lock( nIndexCount, false, desc ) )
 	{
@@ -1043,7 +991,7 @@ void CMatQueuedIndexBuffer::RT_CopyIndexData( int nIndexCount, MaterialIndexForm
 	m_nRTStartIndex = desc.m_nOffset / nIndexSize;
 	if ( pIndexData && desc.m_nIndexSize )
 	{
-		FastCopy( (byte *)desc.m_pIndices, (byte *)pIndexData, nIndexCount * nIndexSize );
+		std::memcpy( (byte *)desc.m_pIndices, (byte *)pIndexData, nIndexCount * nIndexSize );
 	}
 	m_pRTDynamicIndexBuffer->Unlock( nIndexCount, desc );
 }
@@ -1127,24 +1075,6 @@ void CMatQueuedIndexBuffer::ValidateData( int nIndexCount, const IndexDesc_t &de
 // MatQueuedRenderContext starts here
 //
 //-----------------------------------------------------------------------------
-#ifdef MS_NO_DYNAMIC_BUFFER_COPY
-CMemoryStack CMatQueuedRenderContext::s_Vertices[RENDER_CONTEXT_STACKS];
-CMemoryStack CMatQueuedRenderContext::s_Indices[RENDER_CONTEXT_STACKS];
-
-
-int CMatQueuedRenderContext::s_nCurStack = 0;
-bool CMatQueuedRenderContext::s_bInitializedStacks = false;
-
-
-#define DYNAMIC_VERTEX_BUFFER_BLOCK_SIZE	128 * 1024 
-#define DYNAMIC_INDEX_BUFFER_BLOCK_SIZE		 16 * 1024
-
-#define DYNAMIC_VERTEX_BUFFER_TOTAL_SIZE	(1536+128) * 1024
-#define DYNAMIC_INDEX_BUFFER_TOTAL_SIZE		(128+128) * 1024
-
-#define DYNAMIC_VERTEX_BUFFER_ALIGNMENT		16
-#define DYNAMIC_INDEX_BUFFER_ALIGNMENT		4
-#endif
 
 void AllocateScratchRSXMemory()
 {
@@ -1161,29 +1091,6 @@ void CMatQueuedRenderContext::Init( CMaterialSystem *pMaterialSystem, CMatRender
 	m_pQueuedFlexMesh = new CMatQueuedMesh( this, pHardwareContext, true );
 	m_pQueuedIndexBuffer = new CMatQueuedIndexBuffer( this, pHardwareContext );
 
-	MEM_ALLOC_CREDIT();
-
-#ifdef MS_NO_DYNAMIC_BUFFER_COPY
-	if ( !s_bInitializedStacks )
-	{
-		// NOTE: Allocation size must be at least double DYNAMIC_VERTEX_BUFFER_BLOCK_SIZE
-		// or DYNAMIC_INDEX_BUFFER_BLOCK_SIZE to avoid massive overflow
-		for ( int i = 0; i < RENDER_CONTEXT_STACKS; ++i )
-		{
-			CFmtStr verticesName( "CMatQueuedRenderContext::s_Vertices[%d]", i );
-			CFmtStr indicesName(  "CMatQueuedRenderContext::s_Vertices[%d]", i );
-#pragma error
-		}
-		s_bInitializedStacks = true;
-	}
-	s_nCurStack++;
-	if ( s_nCurStack > 2 )
-	{
-		s_nCurStack = 0;
-	}
-	m_pVertices = &s_Vertices[ s_nCurStack ];
-	m_pIndices = &s_Indices[ s_nCurStack ];
-#endif
 
 	unsigned int vertSize	= 16 * 1024 * 1024;
 	unsigned int indSize	= 16 * 1024 * 1024;
@@ -1201,7 +1108,7 @@ void CMatQueuedRenderContext::Shutdown()
 	if ( !m_pHardwareContext )
 		return;
 
-	Assert( !m_pCurrentMaterial );
+	contract_assert( !m_pCurrentMaterial );
 
 	delete m_pQueuedMesh;
 	delete m_pQueuedFlexMesh;
@@ -1216,7 +1123,7 @@ void CMatQueuedRenderContext::Shutdown()
 	m_Indices.Term();
 
 	BaseClass::Shutdown();
-	Assert(m_queue.Count() == 0);
+	contract_assert( m_queue.Count() == 0 );
 }
 
 
@@ -1237,19 +1144,6 @@ void CMatQueuedRenderContext::CompactMemory()
 //-----------------------------------------------------------------------------
 void CMatQueuedRenderContext::CycleDynamicBuffers( )
 {
-#ifdef MS_NO_DYNAMIC_BUFFER_COPY
-	s_nCurStack++;
-	if ( s_nCurStack > 2 )
-	{
-		s_nCurStack = 0;
-	}
-	m_pVertices = &s_Vertices[ s_nCurStack ];
-	m_pIndices = &s_Indices[ s_nCurStack ];
-	g_pShaderAPI->FlushGPUCache( m_pVertices->GetBase(), m_pVertices->GetUsed() );
-	g_pShaderAPI->FlushGPUCache( m_pIndices->GetBase(), m_pIndices->GetUsed() );
-	m_pVertices->FreeAll( false );
-	m_pIndices->FreeAll( false );
-#endif
 }
 
 void CMatQueuedRenderContext::BeginQueue( CMatRenderContextBase *pInitialState )
@@ -1366,7 +1260,7 @@ void CMatQueuedRenderContext::BeginRender()
 void CMatQueuedRenderContext::EndRender()
 {
 	// This can fail if someone holds a render context pointer over a video mode change.  Find it if you hit this.
-	Assert(m_pHardwareContext);
+	contract_assert( m_pHardwareContext );
 	if ( --m_iRenderDepth == 0 )
 	{
 		m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::EndRender );
@@ -1380,61 +1274,11 @@ void CMatQueuedRenderContext::CallQueued( bool bTermAfterCall )
 {
 	if ( mat_report_queue_status.GetBool() )
 	{
-#ifndef MS_NO_DYNAMIC_BUFFER_COPY
 		Msg( "%d calls queued for %d bytes in parameters and overhead, %d bytes verts, %d bytes indices, %d bytes other\n", 
 			m_queue.Count(), (int)m_queue.GetMemoryUsed(), Vertices().GetUsed(), Indices().GetUsed(), RenderDataSizeUsed() );
-#else
-		Msg( "%d calls queued for %d bytes in parameters and overhead, %d bytes verts, %d bytes indices, %d bytes other\n", 
-			m_queue.Count(), (int)m_queue.GetMemoryUsed(), Vertices().GetUsed() + m_Vertices.GetUsed(), Indices().GetUsed() + m_Indices.GetUsed(), RenderDataSizeUsed() );
-#endif
 	}
 
 	m_queue.CallQueued();
-
-#if defined( MS_NO_DYNAMIC_BUFFER_COPY )
-	static int s_nFrameCount = 0;
-	static int s_nVBOverflowCount = 0;
-	static int s_nIBOverflowCount = 0;
-
-	++s_nFrameCount;
-	if ( m_Vertices.GetUsed() > 0 )
-	{
-		++s_nVBOverflowCount;
-	}
-
-	if ( m_Indices.GetUsed() > 0 )
-	{
-		++s_nIBOverflowCount;
-	}
-
-	if ( s_nFrameCount > 1024 )
-	{
-		static bool s_bVBWarned = false;
-		static bool s_bIBWarned = false;
-		if ( !s_bVBWarned )
-		{
-			if ( ( (float)s_nVBOverflowCount / (float)s_nFrameCount ) > 0.1f )
-			{
-				for ( int w = 0; w < 30; ++w )
-				{
-					Msg( "[Ignore this for splitscreen] Tell Brian to up the VB memory (and which map this occurred on)!\n" );
-				}
-				s_bVBWarned = true;
-			}
-		}
-		if ( !s_bIBWarned )
-		{
-			if ( ( (float)s_nIBOverflowCount / (float)s_nFrameCount ) > 0.1f )
-			{
-				for ( int w = 0; w < 30; ++w )
-				{
-					Msg( "[Ignore this for splitscreen] Tell Brian to up the IB memory (and which map this occurred on)!\n" );
-				}
-				s_bIBWarned = true;
-			}
-		}
-	}
-#endif
 
 
 	m_Vertices.FreeAll( false );
@@ -1634,7 +1478,7 @@ void CMatQueuedRenderContext::GetFogDistances( float *fStart, float *fEnd, float
 void CMatQueuedRenderContext::GetViewport( int& x, int& y, int& width, int& height ) const
 {
 	// Verify valid top of RT stack
-	Assert ( !m_RenderTargetStack.empty() );
+	contract_assert( !m_RenderTargetStack.empty() );
 
 	// Grab the top of stack
 	const RenderTargetStackElement_t& element = m_RenderTargetStack.back();
@@ -1718,7 +1562,7 @@ IMesh* CMatQueuedRenderContext::GetDynamicMeshEx( VertexFormat_t vertexFormat, b
 
 	// For anything more than 1 bone, imply the last weight from the 1 - the sum of the others.
 	int nCurrentBoneCount = GetCurrentNumBones();
-	Assert( nCurrentBoneCount <= 4 );
+	contract_assert( nCurrentBoneCount <= 4 );
 	if ( nCurrentBoneCount > 1 )
 	{
 		--nCurrentBoneCount;
@@ -1747,11 +1591,7 @@ int CMatQueuedRenderContext::GetMaxVerticesToRender( IMaterial *pMaterial )
 		return 65535;
 	}
 
-#ifdef MS_NO_DYNAMIC_BUFFER_COPY
-	int nDynamicVBSize = DYNAMIC_VERTEX_BUFFER_BLOCK_SIZE;
-#else
 	int nDynamicVBSize = g_pShaderAPI->GetCurrentDynamicVBSize();
-#endif
 	int maxVerts = nDynamicVBSize / nVertexFormatSize;
 	if ( maxVerts > 65535 )
 	{
@@ -1762,11 +1602,7 @@ int CMatQueuedRenderContext::GetMaxVerticesToRender( IMaterial *pMaterial )
 
 int CMatQueuedRenderContext::GetMaxIndicesToRender( )
 {
-#ifdef MS_NO_DYNAMIC_BUFFER_COPY
-	return DYNAMIC_INDEX_BUFFER_BLOCK_SIZE / sizeof(uint16);
-#else
 	return INDEX_BUFFER_SIZE;
-#endif
 }
 
 
@@ -1775,15 +1611,10 @@ int CMatQueuedRenderContext::GetMaxIndicesToRender( )
 //-----------------------------------------------------------------------------
 void CMatQueuedRenderContext::GetMaxToRender( IMesh *pMesh, bool bMaxUntilFlush, int *pMaxVerts, int *pMaxIndices )
 {
-	Assert( !bMaxUntilFlush );
+	contract_assert( !bMaxUntilFlush );
 
-#ifdef MS_NO_DYNAMIC_BUFFER_COPY
-	int nDynamicVBSize = DYNAMIC_VERTEX_BUFFER_BLOCK_SIZE;
-	int nDynamicIBSize = DYNAMIC_INDEX_BUFFER_BLOCK_SIZE;
-#else
 	int nDynamicVBSize = g_pShaderAPI->GetCurrentDynamicVBSize();
 	int nDynamicIBSize = INDEX_BUFFER_SIZE * sizeof(uint16);
-#endif
 
 	*pMaxVerts = nDynamicVBSize / m_pQueuedMesh->GetVertexSize();
 	if ( *pMaxVerts > 65535 )
@@ -1904,7 +1735,7 @@ void CMatQueuedRenderContext::CopyTextureToRenderTargetEx( int i, ITexture *pTex
 //-----------------------------------------------------------------------------
 bool CMatQueuedRenderContext::OnDrawMesh( IMesh *pMesh, int firstIndex, int numIndices )
 {
-	Assert( pMesh != m_pQueuedMesh );
+	contract_assert( pMesh != m_pQueuedMesh );
 	void (IMesh::*pfnDraw)( int, int) = &IMesh::Draw; // need assignment to disambiguate overloaded function
 	m_queue.QueueCall( pMesh, pfnDraw, firstIndex, numIndices );
 	return false;
@@ -1925,7 +1756,7 @@ bool CMatQueuedRenderContext::OnDrawMesh( IMesh *pMesh, CPrimList *pLists, int n
 //-----------------------------------------------------------------------------
 bool CMatQueuedRenderContext::OnDrawMeshModulated( IMesh *pMesh, const Vector4D& vecDiffuseModulation, int firstIndex, int numIndices )
 {
-	Assert( pMesh != m_pQueuedMesh );
+	contract_assert( pMesh != m_pQueuedMesh );
 	m_queue.QueueCall( pMesh, &IMesh::DrawModulated, vecDiffuseModulation, firstIndex, numIndices );
 	return false;
 }
@@ -1933,7 +1764,7 @@ bool CMatQueuedRenderContext::OnDrawMeshModulated( IMesh *pMesh, const Vector4D&
 
 void CMatQueuedRenderContext::DeferredDrawPrimList( IMesh *pMesh, CPrimList *pLists, int nLists )
 {
-	Assert( pMesh != m_pQueuedMesh );
+	contract_assert( pMesh != m_pQueuedMesh );
 	pMesh->Draw( pLists, nLists );
 }
 
@@ -1948,7 +1779,7 @@ void CMatQueuedRenderContext::DeferredSetFlexMesh( IMesh *pStaticMesh, int nVert
 
 bool CMatQueuedRenderContext::OnSetFlexMesh( IMesh *pStaticMesh, IMesh *pMesh, int nVertexOffsetInBytes )
 {
-	Assert( pMesh == m_pQueuedFlexMesh || !pMesh );
+	contract_assert( pMesh == m_pQueuedFlexMesh || !pMesh );
 	if ( pMesh )
 	{
 		m_queue.QueueCall( this, &CMatQueuedRenderContext::DeferredSetFlexMesh, pStaticMesh, nVertexOffsetInBytes );
@@ -1965,7 +1796,7 @@ bool CMatQueuedRenderContext::OnSetFlexMesh( IMesh *pStaticMesh, IMesh *pMesh, i
 //-----------------------------------------------------------------------------
 bool CMatQueuedRenderContext::OnSetColorMesh( IMesh *pStaticMesh, IMesh *pMesh, int nVertexOffsetInBytes )
 {
-	Assert( pStaticMesh != m_pQueuedMesh && pStaticMesh != m_pQueuedFlexMesh );
+	contract_assert( pStaticMesh != m_pQueuedMesh && pStaticMesh != m_pQueuedFlexMesh );
 	m_queue.QueueCall( pStaticMesh, &IMesh::SetColorMesh, pMesh, nVertexOffsetInBytes );
 	return false;
 }
@@ -1975,7 +1806,7 @@ bool CMatQueuedRenderContext::OnSetColorMesh( IMesh *pStaticMesh, IMesh *pMesh, 
 //-----------------------------------------------------------------------------
 bool CMatQueuedRenderContext::OnSetPrimitiveType( IMesh *pMesh, MaterialPrimitiveType_t type )
 {
-	Assert( pMesh != m_pQueuedMesh && pMesh != m_pQueuedFlexMesh );
+	contract_assert( pMesh != m_pQueuedMesh && pMesh != m_pQueuedFlexMesh );
 	m_queue.QueueCall( pMesh, &IMesh::SetPrimitiveType, type );
 	return false;
 }
@@ -2094,14 +1925,14 @@ void CMatQueuedRenderContext::Scale( float x, float y, float z )
 
 void CMatQueuedRenderContext::BeginBatch( IMesh* pIndices ) 
 {
-	Assert( pIndices == (IMesh *)m_pQueuedMesh );
+	contract_assert( pIndices == (IMesh *)m_pQueuedMesh );
 	m_pQueuedMesh->InvalidateAuxMeshSet();
 	m_queue.QueueCall( this, &CMatQueuedRenderContext::DeferredBeginBatch );
 }
 
 void CMatQueuedRenderContext::BindBatch( IMesh* pVertices, IMaterial *pAutoBind ) 
 {
-	Assert( pVertices != (IMesh *)m_pQueuedMesh );
+	contract_assert( pVertices != (IMesh *)m_pQueuedMesh );
 	m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::BindBatch, pVertices, pAutoBind );
 }
 
@@ -2126,74 +1957,34 @@ void CMatQueuedRenderContext::DeferredBeginBatch( )
 //-----------------------------------------------------------------------------
 byte *CMatQueuedRenderContext::AllocVertices( int nVerts, int nVertexSize, bool *pExternalVB )
 {
-	MEM_ALLOC_CREDIT();
-	size_t nSizeInBytes = nVerts * nVertexSize;
+	std::size_t nSizeInBytes = nVerts * nVertexSize;
 	byte *pMemory = ( byte * )Vertices().Alloc( nSizeInBytes, false );
 
-#ifdef MS_NO_DYNAMIC_BUFFER_COPY
-	if ( nSizeInBytes > DYNAMIC_VERTEX_BUFFER_BLOCK_SIZE )
-	{
-		Warning( "AllocVertices: Tried to allocate vertex buffer too large! (%d/%d)\n", nSizeInBytes, DYNAMIC_VERTEX_BUFFER_BLOCK_SIZE );
-	}
-
-	if ( pMemory )
-	{
-		*pExternalVB = true;
-	}
-	else
-	{
-		*pExternalVB = false;
-		pMemory = ( byte * )m_Vertices.Alloc( nSizeInBytes, false );
-	}
-#else
 	*pExternalVB = false;
-#endif
 
-	Assert( pMemory );
+	contract_assert( pMemory );
 	return pMemory;
 }
 
 byte *CMatQueuedRenderContext::AllocIndices( int nIndices, int nIndexSize, bool *pExternalIB )
 {
-	MEM_ALLOC_CREDIT();
-	size_t nSizeInBytes = nIndices * nIndexSize;
+	std::size_t nSizeInBytes = nIndices * nIndexSize;
 	byte *pMemory = ( byte * )Indices().Alloc( nSizeInBytes, false );
 
-#ifdef MS_NO_DYNAMIC_BUFFER_COPY
-	if ( nSizeInBytes > DYNAMIC_INDEX_BUFFER_BLOCK_SIZE )
-	{
-		Warning( "AllocIndices: Tried to allocate index buffer too large! (%d/%d)\n", nSizeInBytes, DYNAMIC_INDEX_BUFFER_BLOCK_SIZE );
-	}
-
-	if ( pMemory )
-	{
-		*pExternalIB = true;
-	}
-	else
-	{
-		*pExternalIB = false;
-		pMemory = ( byte * )m_Indices.Alloc( nSizeInBytes, false );
-	}
-#else
 	*pExternalIB = false;
-#endif
 
-	Assert( pMemory );
+	contract_assert( pMemory );
 	return pMemory;
 }
 
 byte *CMatQueuedRenderContext::ReallocVertices( byte *pVerts, int nVertsOld, int nVertsNew, int nVertexSize, bool bExternalMemory )
 {
-	Assert( nVertsNew <= nVertsOld );
+	contract_assert( nVertsNew <= nVertsOld );
 
 	if ( nVertsNew < nVertsOld )
 	{
 		unsigned nBytes = ( ( nVertsOld - nVertsNew ) * nVertexSize );
-#ifdef MS_NO_DYNAMIC_BUFFER_COPY
-		CMemoryStack &stack = bExternalMemory ? Vertices() : m_Vertices;
-#else
 		CMemoryStack &stack = Vertices();
-#endif
 		stack.FreeToAllocPoint( stack.GetCurrentAllocPoint() - nBytes, false ); // memstacks 128 bit aligned
 	}
 	return pVerts;
@@ -2201,15 +1992,11 @@ byte *CMatQueuedRenderContext::ReallocVertices( byte *pVerts, int nVertsOld, int
 
 byte *CMatQueuedRenderContext::ReallocIndices( byte *pIndices, int nIndicesOld, int nIndicesNew, int nIndexSize, bool bExternalMemory )
 {
-	Assert( nIndicesNew <= nIndicesOld );
+	contract_assert( nIndicesNew <= nIndicesOld );
 	if ( nIndicesNew < nIndicesOld )
 	{
 		unsigned nBytes = ( ( nIndicesOld - nIndicesNew ) * nIndexSize );
-#ifdef MS_NO_DYNAMIC_BUFFER_COPY
-		CMemoryStack &stack = bExternalMemory ? Indices() : m_Indices;
-#else
 		CMemoryStack &stack = Indices();
-#endif
 		stack.FreeToAllocPoint( stack.GetCurrentAllocPoint() - nBytes, false ); // memstacks 128 bit aligned
 	}
 	return pIndices;
@@ -2244,7 +2031,7 @@ void CMatQueuedRenderContext::DeferredDrawInstances( int nInstanceCount, const M
 		MeshInstanceData_t &instance = pInstance[i];
 
 		// FIXME: Make dynamic vertex buffers work!
-		Assert( !instance.m_pVertexBuffer->IsDynamic() );
+		contract_assert( !instance.m_pVertexBuffer->IsDynamic() );
 		if ( !instance.m_pIndexBuffer->IsDynamic() )
 			continue;
 		
@@ -2265,17 +2052,17 @@ void CMatQueuedRenderContext::DrawInstances( int nInstanceCount, const MeshInsta
 	if ( !IsRenderData( pInstance ) )
 	{
 		renderData.Lock( nInstanceCount );
-		memcpy( renderData.Base(), pInstance, nInstanceCount * sizeof(MeshInstanceData_t) );
+		std::memcpy( renderData.Base(), pInstance, nInstanceCount * sizeof(MeshInstanceData_t) );
 		pInstance = renderData.Base();
 	}
 
 #ifdef _DEBUG
 	for ( int i = 0; i < nInstanceCount; ++i )
 	{
-		Assert( !pInstance[i].m_pPoseToWorld || IsRenderData( pInstance[i].m_pPoseToWorld ) );
-		Assert( !pInstance[i].m_pLightingState || IsRenderData( pInstance[i].m_pLightingState ) );
-		Assert( !pInstance[i].m_pBoneRemap || IsRenderData( pInstance[i].m_pBoneRemap ) );
-		Assert( !pInstance[i].m_pStencilState || IsRenderData( pInstance[i].m_pStencilState ) );
+		contract_assert( !pInstance[i].m_pPoseToWorld || IsRenderData( pInstance[i].m_pPoseToWorld ) );
+		contract_assert( !pInstance[i].m_pLightingState || IsRenderData( pInstance[i].m_pLightingState ) );
+		contract_assert( !pInstance[i].m_pBoneRemap || IsRenderData( pInstance[i].m_pBoneRemap ) );
+		contract_assert( !pInstance[i].m_pStencilState || IsRenderData( pInstance[i].m_pStencilState ) );
 	}
 #endif
 
@@ -2357,4 +2144,3 @@ void CMatQueuedRenderContext::ReadPixelsAndStretch( Rect_t *pSrcRect, Rect_t *pD
 	g_pShaderAPI->ReadPixels( pSrcRect, pDstRect, pBuffer, dstFormat, nDstStride );
 	m_pMaterialSystem->Unlock( hLock );
 }
-

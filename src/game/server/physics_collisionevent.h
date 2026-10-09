@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Pulling CCollisionEvent's definition out of physics.cpp so it can be abstracted upon (for the portal mod)
-//			
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef PHYSICS_COLLISIONEVENT_H
-#define PHYSICS_COLLISIONEVENT_H
-
-
+import ks.vstdlib;
 #include "physics.h"
-#include "tier1/callqueue.h"
+import std;
+#include "takedamageinfo.h"
+#include "baseentity.h"
 
 extern CCallQueue g_PostSimulationQueue;
 
@@ -171,5 +166,3 @@ private:
 	int							m_lastTickFrictionError;	// counter to control printing of the dev warning for large contact systems
 	bool						m_bBufferTouchEvents;
 };
-
-#endif //#ifndef PHYSICS_COLLISIONEVENT_H

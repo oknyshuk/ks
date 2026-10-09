@@ -1,14 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "particles_ez.h"
 #include "igamesystem.h"
 #include "model_types.h"
-
 
 // Singletons for each type of particle system.
 // 0 = world, 1 = skybox
@@ -158,6 +161,3 @@ void DrawParticleSingletons( bool bInSkybox )
 		g_pFireSingleton[bInSkybox]->GetBinding().DrawModel( STUDIO_RENDER, instance );
 	}
 }
-
-
-

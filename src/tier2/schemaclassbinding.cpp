@@ -1,12 +1,6 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#include "tier2/tier2.h"
 #include "resourcefile/schema.h"
 #include "resourcesystem/iresourcesystem.h"
 

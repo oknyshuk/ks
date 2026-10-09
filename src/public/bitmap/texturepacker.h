@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef TEXTUREPACKER_H
-#define TEXTUREPACKER_H
-
-#include "tier0/basetypes.h"
-#include <vector>
-
+import ks.core;
+import std;
 
 #define DEFAULT_TEXTURE_PAGE_WIDTH	1024
 #define DEFAULT_TEXTURE_PAGE_WIDTH	1024
@@ -60,8 +53,8 @@ private:
 	};
 
 	bool IsLeaf( int nodeIndex );
-	bool IsLeftChild( int nodeIndexParent, int nodeIndexChild );
-	bool IsRightChild( int nodeIndexParent, int nodeIndexChild );
+	bool IsLeftChild( int nodeIndexParent, int nodeIndexChild ) const;
+	bool IsRightChild( int nodeIndexParent, int nodeIndexChild ) const;
 	bool IsInTree( int nodeIndex ) const { return nodeIndex >= 0 && nodeIndex < (int)m_Nodes.size() && m_Nodes[nodeIndex].bInTree; }
 	int AllocNode( int parentIndex );
 	void FreeLeaf( int nodeIndex );
@@ -76,6 +69,3 @@ private:
 	std::vector< int > m_FreeNodes;
 	int m_Root;
 };
-
-
-#endif // TEXTUREPACKER_H

@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#ifndef IFILESYSTEM_H
-#define IFILESYSTEM_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "interface.h"
-
+import std;
+import ks.tier1;
 
 class IFileSystem;
 
@@ -30,5 +23,3 @@ void FileSystem_Shutdown( void );
 bool FileSystem_SetGameDirectory( char const* pGameDir );
 
 extern IFileSystem *g_pFileSystem;
-
-#endif // IFILESYSTEM_H

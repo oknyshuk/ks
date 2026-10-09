@@ -1,30 +1,24 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: noise() primitives.
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include <math.h>
-#include "basetypes.h"
-#include <memory.h>
-#include "tier0/dbg.h"
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include "mathlib/noise.h"
+// Purpose: noise() primitives.
+
+import std;
+import ks.math;
 
 // generate high quality noise based upon "sparse convolution". HIgher quality than perlin noise,
 // and no direcitonal artifacts.
 
 #include "noisedata.h"
 
-#define N_IMPULSES_PER_CELL 5
-#define NORMALIZING_FACTOR 1.0
+constexpr auto N_IMPULSES_PER_CELL = 5;
+constexpr auto NORMALIZING_FACTOR = 1.0;
 
 //(0.5/N_IMPULSES_PER_CELL)
 
 static inline int LatticeCoord(float x)
 {
-	return ((int) floor(x)) & 0xff;
+	return ((int) std::floor(x)) & 0xff;
 }
 
 static inline int Hash4D(int ix, int iy, int iz, int idx)
@@ -36,7 +30,7 @@ static inline int Hash4D(int ix, int iy, int iz, int idx)
 	return ret;
 }
 
-#define SQ(x) ((x)*(x))
+static constexpr auto Sq( auto x ) { return x * x; }
 
 static float CellNoise( int ix, int iy, int iz, float xfrac, float yfrac, float zfrac,
 						float (*pNoiseShapeFunction)(float) )
@@ -45,10 +39,10 @@ static float CellNoise( int ix, int iy, int iz, float xfrac, float yfrac, float 
 	for(int idx=0;idx<N_IMPULSES_PER_CELL;idx++)
 	{
 		int coord_idx=Hash4D( ix, iy, iz, idx );
-		float dsq=SQ(impulse_xcoords[coord_idx]-xfrac)+
-			SQ(impulse_ycoords[coord_idx]-yfrac)+
-			SQ(impulse_zcoords[coord_idx]-zfrac);
-		dsq = sqrt( dsq );
+		float dsq=Sq(impulse_xcoords[coord_idx]-xfrac)+
+			Sq(impulse_ycoords[coord_idx]-yfrac)+
+			Sq(impulse_zcoords[coord_idx]-zfrac);
+		dsq = std::sqrt( dsq );
 		if (dsq < 1.0 )
 		{
 			ret += (*pNoiseShapeFunction)( 1-dsq );
@@ -91,18 +85,13 @@ float Turbulence( Vector const &pnt, int n_octaves)
 	{
 		Vector p1=pnt;
 		p1 *= scale;
-		ret+=iscale * fabs ( 2.0*( SparseConvolutionNoise( p1 )-.5 ) );
+		ret+=iscale * std::fabs ( 2.0*( SparseConvolutionNoise( p1 )-.5 ) );
 		sumscale += iscale;
 		scale *= 2.0;
 		iscale *= 0.5;
 	}
 	return ret * ( 1.0/sumscale );
 }
-
-#ifdef MEASURE_RANGE
-float fmin1=10000000.0;
-float fmax1=-1000000.0;
-#endif
 
 float SparseConvolutionNoise(Vector const &pnt, float (*pNoiseShapeFunction)(float) )
 {
@@ -112,9 +101,9 @@ float SparseConvolutionNoise(Vector const &pnt, float (*pNoiseShapeFunction)(flo
 	int iz=LatticeCoord(pnt.z);
 
 	// compute offsets within unit cube
-	float xfrac=pnt.x-floor(pnt.x);
-	float yfrac=pnt.y-floor(pnt.y);
-	float zfrac=pnt.z-floor(pnt.z);
+	float xfrac=pnt.x-std::floor(pnt.x);
+	float yfrac=pnt.y-std::floor(pnt.y);
+	float zfrac=pnt.z-std::floor(pnt.z);
 
 	float sum_out=0.;
 
@@ -126,10 +115,6 @@ float SparseConvolutionNoise(Vector const &pnt, float (*pNoiseShapeFunction)(flo
 									  xfrac-ox, yfrac-oy, zfrac-oz,
 									  pNoiseShapeFunction );
 			}
-#ifdef MEASURE_RANGE
-	fmin1=min(sum_out,fmin1);
-	fmax1=max(sum_out,fmax1);
-#endif
 	return RemapValClamped( sum_out, .544487, 9.219176, 0.0, 1.0 );
 }
 
@@ -142,9 +127,9 @@ float TileableSparseConvolutionNoise(Vector const &pnt, float (*pNoiseShapeFunct
 	int iz=LatticeCoord(pnt.z);
 
 	// compute offsets within unit cube
-	float xfrac=pnt.x-floor(pnt.x);
-	float yfrac=pnt.y-floor(pnt.y);
-	float zfrac=pnt.z-floor(pnt.z);
+	float xfrac=pnt.x-std::floor(pnt.x);
+	float yfrac=pnt.y-std::floor(pnt.y);
+	float zfrac=pnt.z-std::floor(pnt.z);
 
 	float sum_out=0.;
 
@@ -156,10 +141,6 @@ float TileableSparseConvolutionNoise(Vector const &pnt, float (*pNoiseShapeFunct
 									  xfrac-ox, yfrac-oy, zfrac-oz,
 									  pNoiseShapeFunction );
 			}
-#ifdef MEASURE_RANGE
-	fmin1=min(sum_out,fmin1);
-	fmax1=max(sum_out,fmax1);
-#endif
 	return RemapValClamped( sum_out, .544487, 9.219176, 0.0, 1.0 );
 }
 
@@ -202,9 +183,9 @@ int NoiseHashIndex( int i )
 
 float ImprovedPerlinNoise( Vector const &pnt )
 {
-	float fx = floor(pnt.x);
-	float fy = floor(pnt.y);
-	float fz = floor(pnt.z);
+	float fx = std::floor(pnt.x);
+	float fy = std::floor(pnt.y);
+	float fz = std::floor(pnt.z);
 
 	int X = (int)fx & 255;								// FIND UNIT CUBE THAT
 	int Y = (int)fy & 255;								// CONTAINS POINT.

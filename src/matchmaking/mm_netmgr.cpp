@@ -1,12 +1,8 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "mm_netmgr.h"
 
-#include "proto_oob.h"
 #include "protocol.h"
 
 //
@@ -52,7 +48,6 @@ KeyValues * CConnectionlessLanMgr::UnpackPacket( netpacket_t *packet )
 	if ( packet->message.ReadLong() != g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() )
 		return nullptr;
 
-	MEM_ALLOC_CREDIT();
 	int nDataLen = packet->message.ReadLong();
 
 	m_buffer.assign( nDataLen, std::byte{} );
@@ -87,7 +82,6 @@ bool CConnectionlessLanMgr::ProcessConnectionlessPacket( netpacket_t *packet )
 	if ( !pMsg )
 		return false;
 		
-	MEM_ALLOC_CREDIT();
 	KeyValues *notify = new KeyValues( "OnNetLanConnectionlessPacket" );
 	notify->SetString( "from", ns_address_render( packet->from ).String() );
 	notify->AddSubKey( pMsg );
@@ -114,7 +108,7 @@ void CConnectionlessLanMgr::SendPacket( KeyValues *pMsg, char const *szAddress /
 
 	msg.WriteLong( data.size() );
 	msg.WriteBytes( data.data(), data.size() );
-	Assert( !msg.IsOverflowed() );
+	contract_assert( !msg.IsOverflowed() );
 
 	// Special case when encoding binary data
 	KeyValues *kvPtr = pMsg->FindKey( "binary/ptr" );
@@ -129,7 +123,7 @@ void CConnectionlessLanMgr::SendPacket( KeyValues *pMsg, char const *szAddress /
 			msg.WriteLong( nSize );
 			if ( !msg.WriteBytes( pvData, nSize ) )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				return;
 			}
 		}
@@ -142,7 +136,7 @@ void CConnectionlessLanMgr::SendPacket( KeyValues *pMsg, char const *szAddress /
 	{
 		msg.WriteLong( 0 );
 	}
-	Assert( !msg.IsOverflowed() );
+	contract_assert( !msg.IsOverflowed() );
 
 	// Prepare the address
 	netadr_t inetAddr;
@@ -151,7 +145,7 @@ void CConnectionlessLanMgr::SendPacket( KeyValues *pMsg, char const *szAddress /
 		if ( szAddress[0] == '*' && szAddress[1] == ':' )
 		{
 			inetAddr.SetType( NA_BROADCAST );
-			inetAddr.SetPort( atoi( szAddress + 2 ) );
+			inetAddr.SetPort( std::atoi( szAddress + 2 ) );
 		}
 		else
 		{

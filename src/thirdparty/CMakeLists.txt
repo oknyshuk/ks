@@ -1,3 +1,8 @@
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+set(CMAKE_CXX_MODULE_STD OFF)
+
+pkg_check_modules(FREETYPE REQUIRED IMPORTED_TARGET freetype2)
+
 file(GLOB _celt_dir   "${CMAKE_CURRENT_SOURCE_DIR}/celt-v*")
 file(GLOB _mojoal_dir "${CMAKE_CURRENT_SOURCE_DIR}/mojoAL")
 file(GLOB _dxvk_dir   "${CMAKE_CURRENT_SOURCE_DIR}/dxvk-*")
@@ -6,12 +11,14 @@ file(GLOB _celt_src "${_celt_dir}/libcelt/*.c")
 list(FILTER _celt_src EXCLUDE REGEX "static_modes_")
 add_library(celt STATIC ${_celt_src})
 target_link_libraries(celt PRIVATE ks_common)
+target_include_directories(celt PUBLIC "${_celt_dir}/libcelt")
 target_compile_definitions(celt PRIVATE USE_ALLOCA FLOAT_APPROX CUSTOM_MODES)
 
 file(GLOB _mojo_src "${_mojoal_dir}/*.c")
 add_library(mojoAL STATIC ${_mojo_src})
 target_link_libraries(mojoAL PRIVATE ks_common)
-target_include_directories(mojoAL PRIVATE "${_mojoal_dir}/AL" "${_mojoal_dir}")
+target_include_directories(mojoAL PRIVATE "${_mojoal_dir}/AL")
+target_include_directories(mojoAL PUBLIC "${_mojoal_dir}")
 target_compile_definitions(mojoAL PRIVATE AL_LIBTYPE_STATIC)
 
 find_program(GLSLANG NAMES glslang glslangValidator REQUIRED)
@@ -77,6 +84,26 @@ set_target_properties(joltphysics PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SI
 file(GLOB _rmlui_dir "${CMAKE_CURRENT_SOURCE_DIR}/RmlUi-*")
 set(_patched "${CMAKE_BINARY_DIR}/patched")
 file(MAKE_DIRECTORY "${_patched}")
+
+set(_dxvk_native "${_patched}/dxvk-native")
+file(COPY "${_dxvk_dir}/include/native/windows" "${_dxvk_dir}/include/native/directx"
+     DESTINATION "${_dxvk_native}")
+file(READ "${_dxvk_native}/windows/windows_base.h" _wb)
+string(REPLACE [==[#ifdef __cplusplus
+#include <cstdint>
+#include <cstring>
+#else
+#include <stdint.h>
+#include <string.h>
+#include <wchar.h>
+#endif // __cplusplus
+]==] "" _wb "${_wb}")
+file(WRITE "${_dxvk_native}/windows/windows_base.h" "${_wb}")
+file(READ "${_dxvk_native}/directx/d3d9.h" _d9)
+string(REPLACE "#include <stdlib.h>\n" "" _d9 "${_d9}")
+file(WRITE "${_dxvk_native}/directx/d3d9.h" "${_d9}")
+target_include_directories(ks_common_base INTERFACE
+    "${_dxvk_native}/windows" "${_dxvk_native}/directx")
 
 file(READ "${_rmlui_dir}/Source/Core/Elements/WidgetTextInput.cpp" _wt)
 string(REPLACE [==[bool WidgetTextInput::AddCharacters(String string)
@@ -175,7 +202,7 @@ dxvk_lib(spirv "${_dxvk_dir}/src/spirv")
 dxvk_lib(dxvk_vulkan "${_dxvk_dir}/src/vulkan")
 dxvk_lib(dxvk "${_dxvk_dir}/src/dxvk"
     INC "${_dxvk_dir}/src/dxvk" "${_dxvk_dir}/src" "${_dxvk_dir}/subprojects/dxbc-spirv"
-    OPT -Wno-nontrivial-memcall USE dxvk_headers)
+    OPT -Wno-nontrivial-memcall USE dxvk_headers dxbc_spv)
 dxvk_lib(wsi "${_dxvk_dir}/src/wsi"
     INC "${_dxvk_dir}/src/wsi" "${_dxvk_dir}/subprojects/libdisplay-info/include"
     USE display-info)

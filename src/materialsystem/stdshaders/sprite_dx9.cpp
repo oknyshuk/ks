@@ -1,27 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
-#include <string.h>
+import std;
 #include "const.h"
 
-#include "cpp_shader_constant_register_map.h"
 
 #include "sprite_vs20.inc"
 #include "sprite_ps20.inc"
 #include "sprite_ps20b.inc"
 
 // WARNING!  Change these in engine/SpriteGn.h if you change them here!
-#define SPR_VP_PARALLEL_UPRIGHT		0
-#define SPR_FACING_UPRIGHT			1
-#define SPR_VP_PARALLEL				2
-#define SPR_ORIENTED				3
-#define SPR_VP_PARALLEL_ORIENTED	4
+constexpr auto SPR_VP_PARALLEL_UPRIGHT = 0;
+constexpr auto SPR_FACING_UPRIGHT = 1;
+constexpr auto SPR_VP_PARALLEL = 2;
+constexpr auto SPR_ORIENTED = 3;
+constexpr auto SPR_VP_PARALLEL_ORIENTED = 4;
 
 
 DEFINE_FALLBACK_SHADER( Sprite, Sprite_DX9 )
@@ -29,7 +23,7 @@ DEFINE_FALLBACK_SHADER( Sprite, Sprite_DX9 )
 BEGIN_VS_SHADER( Sprite_DX9, 
 			  "Help for Sprite_DX9" )
 			  
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( SPRITEORIGIN, SHADER_PARAM_TYPE_VEC3, "[0 0 0]", "sprite origin" )
 		SHADER_PARAM( SPRITEORIENTATION, SHADER_PARAM_TYPE_INTEGER, "0", "sprite orientation" )
 		SHADER_PARAM( SPRITERENDERMODE, SHADER_PARAM_TYPE_INTEGER, "0", "sprite rendermode" )

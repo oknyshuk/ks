@@ -1,11 +1,9 @@
-//====== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef KEYBINDINGLISTENER_H
-#define KEYBINDINGLISTENER_H
+
+#include "inputsystem/ButtonCode.h"
 
 enum ButtonCode_t;
 
@@ -27,5 +25,3 @@ public:
 };
 
 extern IKeyBindingListenerMgr *g_pKeyBindingListenerMgr;
-
-#endif // KEYBINDINGLISTENER_H

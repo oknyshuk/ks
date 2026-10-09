@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef PERFORMANCE_H
-#define PERFORMANCE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 const float k_flMaxVelocity = 2000.0f;
 const float k_flMaxAngularVelocity = 360.0f * 10.0f;
@@ -35,6 +30,3 @@ struct physics_performanceparams_t
 		maxFrictionMass = DEFAULT_MAX_FRICTION_MASS;
 	}
 };
-
-
-#endif // PERFORMANCE_H

@@ -1,32 +1,20 @@
-//=========== (C) Copyright 1999 Valve, L.L.C. All rights reserved. ===========
-//
-// The copyright to the contents herein is the property of Valve, L.L.C.
-// The contents may be used and/or copied only with the written permission of
-// Valve, L.L.C., or in accordance with the terms and conditions stipulated in
-// the agreement/contract under which the contents have been supplied.
-//
-// $Header: $
-// $NoKeywords: $
-//
-// The application object for apps that use tier2
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1999 Valve Corporation
 
-#ifndef TIER2APP_H
-#define TIER2APP_H
+// Purpose: The application object for apps that use tier2
 
-
-
+import ks.tier1;
 #include "appframework/AppFramework.h"
 #include "tier2/tier2dm.h"
-#include "tier1/convar.h"
-
+import std;
 
 //-----------------------------------------------------------------------------
 // The application object for apps that use tier2
 //-----------------------------------------------------------------------------
-class CTier2SteamApp : public CSteamAppSystemGroup
+class CTier2FSApp : public CFSAppSystemGroup
 {
-	typedef CSteamAppSystemGroup BaseClass;
+	typedef CFSAppSystemGroup BaseClass;
 
 public:
 	// Methods of IApplication
@@ -55,9 +43,9 @@ public:
 //-----------------------------------------------------------------------------
 // The application object for apps that use tier2 and datamodel
 //-----------------------------------------------------------------------------
-class CTier2DmSteamApp : public CTier2SteamApp
+class CTier2DmFSApp : public CTier2FSApp
 {
-	typedef CTier2SteamApp BaseClass;
+	typedef CTier2FSApp BaseClass;
 
 public:
 	// Methods of IApplication
@@ -81,6 +69,3 @@ public:
 		BaseClass::PostShutdown();
 	}
 };
-
-
-#endif // TIER2APP_H

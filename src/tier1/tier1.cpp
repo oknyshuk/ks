@@ -1,15 +1,10 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
+
 // Purpose: A higher level link library for general use in the game and tools.
-//
-//===========================================================================//
 
-#include <tier1/tier1.h>
-#include "tier0/dbg.h"
-#include "interfaces/interfaces.h"
-
-
-
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Call this to connect to all tier 1 libraries.

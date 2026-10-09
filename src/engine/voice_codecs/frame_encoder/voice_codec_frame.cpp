@@ -1,24 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.core;
 #include "audio/public/ivoicecodec.h"
-#include <string.h>
-#include "tier0/dbg.h"
+import std;
 #include "iframeencoder.h"
-
 
 #ifndef min
 	#define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
-
-
-
-
 
 // VoiceCodec_Frame can be used to wrap a frame encoder for the engine. As it gets sound data, it will queue it
 // until it has enough for a frame, then it will compress it. Same thing for decompression.
@@ -45,7 +35,7 @@ public:
 		if(m_pFrameEncoder && m_pFrameEncoder->Init(quality, m_nRawBytes, m_nEncodedBytes))
 		{
 			m_nRawSamples = m_nRawBytes >> 1;
-			Assert(m_nRawBytes <= MAX_FRAMEBUFFER_SAMPLES && m_nEncodedBytes <= MAX_FRAMEBUFFER_SAMPLES);
+			contract_assert( m_nRawBytes <= MAX_FRAMEBUFFER_SAMPLES && m_nEncodedBytes <= MAX_FRAMEBUFFER_SAMPLES );
 			return true;
 		}
 		else
@@ -75,8 +65,8 @@ public:
 		{
 			// Get the data block out.
 			short samples[MAX_FRAMEBUFFER_SAMPLES];
-			memcpy(samples, m_EncodeBuffer, m_nEncodeBufferSamples*BYTES_PER_SAMPLE);
-			memcpy(&samples[m_nEncodeBufferSamples], pUncompressed, (m_nRawSamples - m_nEncodeBufferSamples) * BYTES_PER_SAMPLE);
+			std::memcpy(samples, m_EncodeBuffer, m_nEncodeBufferSamples*BYTES_PER_SAMPLE);
+			std::memcpy(&samples[m_nEncodeBufferSamples], pUncompressed, (m_nRawSamples - m_nEncodeBufferSamples) * BYTES_PER_SAMPLE);
 			nSamples -= m_nRawSamples - m_nEncodeBufferSamples;
 			pUncompressed += m_nRawSamples - m_nEncodeBufferSamples;
 			m_nEncodeBufferSamples = 0;
@@ -90,14 +80,14 @@ public:
 		int nNewSamples = min(nSamples, min(m_nRawSamples-m_nEncodeBufferSamples, m_nRawSamples));
 		if(nNewSamples)
 		{
-			memcpy(&m_EncodeBuffer[m_nEncodeBufferSamples], &pUncompressed[nSamples - nNewSamples], nNewSamples*BYTES_PER_SAMPLE);
+			std::memcpy(&m_EncodeBuffer[m_nEncodeBufferSamples], &pUncompressed[nSamples - nNewSamples], nNewSamples*BYTES_PER_SAMPLE);
 			m_nEncodeBufferSamples += nNewSamples;
 		}
 
 		// If it must get the last data, just pad with zeros..
 		if(bFinal && m_nEncodeBufferSamples && (maxCompressedBytes - nCompressedBytes) >= m_nEncodedBytes)
 		{
-			memset(&m_EncodeBuffer[m_nEncodeBufferSamples], 0, (m_nRawSamples - m_nEncodeBufferSamples) * BYTES_PER_SAMPLE);
+			std::memset(&m_EncodeBuffer[m_nEncodeBufferSamples], 0, (m_nRawSamples - m_nEncodeBufferSamples) * BYTES_PER_SAMPLE);
 			m_pFrameEncoder->EncodeFrame((const char*)m_EncodeBuffer, &pCompressed[nCompressedBytes]);
 			nCompressedBytes += m_nEncodedBytes;
 			m_nEncodeBufferSamples = 0;
@@ -111,7 +101,7 @@ public:
 		if(!m_pFrameEncoder)
 			return 0;
 
-		Assert((compressedBytes % m_nEncodedBytes) == 0);
+		contract_assert( (compressedBytes % m_nEncodedBytes) == 0 );
 		int nDecompressedBytes = 0;
 		int curCompressedByte = 0;
 		while((compressedBytes - curCompressedByte)  >= m_nEncodedBytes && (maxUncompressedBytes - nDecompressedBytes) >= m_nRawBytes)
@@ -149,4 +139,3 @@ IVoiceCodec* CreateVoiceCodec_Frame(IFrameEncoder *pEncoder)
 {
 	return new VoiceCodec_Frame(pEncoder);
 }
-

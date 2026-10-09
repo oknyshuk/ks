@@ -1,3 +1,4 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
@@ -9,8 +10,6 @@
 // from the matching send prop -- so the annotation is read for its name override and flags
 // only, and a client member needs no bits stated.
 
-#ifndef KS_REFLECT_RECVTABLE_H
-#define KS_REFLECT_RECVTABLE_H
 
 #include "reflect.h"
 #include "dt_recv.h"
@@ -18,8 +17,7 @@
 #include "recvproxy.h"
 #include "client_class.h"
 
-#include <span>
-#include <vector>
+import std;
 
 namespace ks::reflect::recv
 {
@@ -656,4 +654,3 @@ RecvTable &table()
 		return 1;                                                                                \
 	}();                                                                                         \
 
-#endif // KS_REFLECT_RECVTABLE_H

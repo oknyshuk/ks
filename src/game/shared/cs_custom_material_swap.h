@@ -1,12 +1,19 @@
-//========= Copyright (c) 1996-2012, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Provide custom material swapping for weapons (when switch from world to view or vice versa)
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2012 Valve Corporation
 
-#ifndef CS_CUSTOM_MATERIAL_SWAP_H
-#define CS_CUSTOM_MATERIAL_SWAP_H
+// Purpose: Provide custom material swapping for weapons (when switch from world to view or vice versa)
+
+#include "ehandle.h"
+#include "igamesystem.h"
+
+#if defined( CLIENT_DLL )
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
+#else
+class CBaseEntity;
+typedef CHandle<CBaseEntity> EHANDLE;
+#endif
 
 class ICustomMaterial;
 
@@ -39,5 +46,3 @@ private:
 };
 
 extern CCSCustomMaterialSwapManager g_CSCustomMaterialSwapManager;
-
-#endif // CS_CUSTOM_MATERIAL_SWAP_H

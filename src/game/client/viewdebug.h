@@ -1,12 +1,9 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#ifndef VIEWDEBUG_H
-#define VIEWDEBUG_H
 
+#include "networkvar.h"
 
 class CViewSetup;
 
@@ -22,5 +19,3 @@ public:
 	static void	Draw2DDebuggingInfo( const CViewSetup &view );
 	static void GenerateOverdrawForTesting();
 };
-
-#endif // VIEWDEBUG_H

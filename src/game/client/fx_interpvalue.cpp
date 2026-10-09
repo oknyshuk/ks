@@ -1,12 +1,10 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.core;
+#include "cdll_client_int.h"
 #include "fx_interpvalue.h"
-
 
 CInterpolatedValue::CInterpolatedValue( void ) :  m_flStartTime( 0.0f ), m_flEndTime( 0.0f ), m_flStartValue( 0.0f ), m_flEndValue( 0.0f ), m_nInterpType( INTERP_LINEAR ) 
 {
@@ -89,6 +87,6 @@ float CInterpolatedValue::Interp( float curTime )
 	}
 
 	// NOTENOTE: You managed to pass in a bogus interpolation type!
-	Assert(0);
+	contract_assert( 0 );
 	return -1.0f;
 }

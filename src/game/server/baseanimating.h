@@ -1,32 +1,29 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BASEANIMATING_H
-#define BASEANIMATING_H
-
-#include <mutex>
+import ks.tier1;
+import std;
 #include "reflect_annotations.h"
 #include "const.h"
 #include "shareddefs.h"
+#include "dt_send.h"
+#include "baseentity.h"
+#include "ai_activity.h"
 
 #include "entityoutput.h"
 #include "studio.h"
 #include "bone_merge_cache.h"
 #include "datacache/idatacache.h"
-#include "tier0/threadtools.h"
 
 struct animevent_t;
-struct matrix3x4_t;
 class CIKContext;
-class KeyValues;
 class CAnimationLayer;
-FORWARD_DECLARE_HANDLE( memhandle_t );
+struct memhandle_t__;
+using memhandle_t = memhandle_t__ *;
 
-#define	BCF_NO_ANIMATION_SKIP	( 1 << 0 )	// Do not allow PVS animation skipping (mostly for attachments being critical to an entity)
-#define	BCF_IS_IN_SPAWN			( 1 << 1 )	// Is currently inside of spawn, always evaluate animations
+inline constexpr auto BCF_NO_ANIMATION_SKIP = ( 1 << 0 ); // Do not allow PVS animation skipping (mostly for attachments being critical to an entity)
+inline constexpr auto BCF_IS_IN_SPAWN = ( 1 << 1 ); // Is currently inside of spawn, always evaluate animations
 
 extern IDataCache *datacache;
 
@@ -498,7 +495,7 @@ inline CStudioHdr *CBaseAnimating::GetModelPtr( void )
 	// Consoles don't need to lock the modeldata cache since it never flushes
 	// GetModelPtr() is often called before OnNewModel() so go ahead and set it up first chance.
 	static IDataCacheSection *pModelCache = g_pDataCache->FindSection( "ModelData" );
-	AssertOnce( pModelCache->IsFrameLocking() );
+	contract_assert( pModelCache->IsFrameLocking() );
 #endif
 	if ( !m_pStudioHdr && GetModel() )
 	{
@@ -577,7 +574,3 @@ inline void CBaseAnimating::ForceCycle( float flCycle )
 }
 
 EXTERN_SEND_TABLE(DT_BaseAnimating);
-
-
-
-#endif // BASEANIMATING_H

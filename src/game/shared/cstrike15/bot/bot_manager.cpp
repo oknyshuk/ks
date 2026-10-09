@@ -1,13 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
+import std;
+import ks.core;
 
 #include "bot.h"
 #include "bot_manager.h"
@@ -16,8 +13,6 @@
 #include "basegrenade_shared.h"
 
 #include "cs_bot.h"
-
-#include "tier0/vprof.h"
 
 
 float g_BotUpkeepInterval = 0.0f;
@@ -53,7 +48,7 @@ void CBotManager::RestartRound( void )
  */
 void CBotManager::StartFrame( void )
 {
-	VPROF_BUDGET( "CBotManager::StartFrame", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CBotManager::StartFrame", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	ValidateActiveGrenades();
 
@@ -124,25 +119,21 @@ void CBotManager::StartFrame( void )
 			if ( bot )
 			{
 				{
-					SNPROF("Upkeep");
 					bot->Upkeep();
 				}
 
 				if (((gpGlobals->tickcount + bot->entindex()) % g_BotUpdateSkipCount) == 0)
 				{
 					{
-						SNPROF("ResetCommand");
 						bot->ResetCommand();
 					}
 					
 					{
-						SNPROF("Bot Update");
 						bot->Update();
 					}
 				}
 
 				{
-					SNPROF("UpdatePlayer");
 					bot->UpdatePlayer();
 				}
 			}
@@ -265,7 +256,7 @@ bool CBotManager::IsInsideSmokeCloud( const Vector *pos, float radius )
  */
 bool CBotManager::IsLineBlockedBySmoke( const Vector &from, const Vector &to, float grenadeBloat )
 {
-	VPROF_BUDGET( "CBotManager::IsLineBlockedBySmoke", VPROF_BUDGETGROUP_NPCS );
+	CVProfScope _( "CBotManager::IsLineBlockedBySmoke", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 	float totalSmokedLength = 0.0f;	// distance along line of sight covered by smoke
 
@@ -321,6 +312,6 @@ void CBotManager::AddDebugMessage( const char *msg )
 		++m_debugMessageCount;
 	}
 
-	Q_strncpy( m_debugMessage[ m_currentDebugMessage ].m_string, msg, MAX_DBG_MSG_SIZE );
+	V_strncpy( m_debugMessage[ m_currentDebugMessage ].m_string, msg, MAX_DBG_MSG_SIZE );
 	m_debugMessage[ m_currentDebugMessage ].m_age.Start();
 }

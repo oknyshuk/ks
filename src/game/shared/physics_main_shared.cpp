@@ -1,25 +1,52 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+#if defined(CLIENT_DLL)
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#endif
+import ks.vstdlib;
 #include "engine/IEngineSound.h"
-#include "tier1/fixed_pool.h"
 #include "movevars_shared.h"
-#include "tier0/vprof.h"
 #include "entitydatainstantiator.h"
 #include "positionwatcher.h"
 #include "movetype_push.h"
 #include "vphysicsupdateai.h"
 #include "igamesystem.h"
-#include "tier1/callqueue.h"
 #include "engine/ivdebugoverlay.h"
-#include <algorithm>
-#include <vector>
-
 
 // memory pool for storing links between entities
 static ks::fixed_pool g_EdictTouchLinks( sizeof(touchlink_t), MAX_EDICTS, ks::fixed_pool::grow::none, "g_EdictTouchLinks", alignof(touchlink_t) );
@@ -105,7 +132,7 @@ CPortalTouchScope::CPortalTouchScope()
 
 CPortalTouchScope::~CPortalTouchScope()
 {
-	Assert( m_nDepth >= 1 );
+	contract_assert( m_nDepth >= 1 );
 	if ( --m_nDepth == 0 )
 	{
 		m_CallQueue.CallQueued();
@@ -128,9 +155,9 @@ public:
 
 	CDataObjectAccessSystem()
 	{
-    	COMPILE_TIME_ASSERT( (int)NUM_DATAOBJECT_TYPES <= (int)MAX_ACCESSORS );
+    	static_assert( (int)NUM_DATAOBJECT_TYPES <= (int)MAX_ACCESSORS );
 
-		Q_memset( m_Accessors, 0, sizeof( m_Accessors ) );
+		V_memset( m_Accessors, 0, sizeof( m_Accessors ) );
 	}
 
 	virtual bool Init()
@@ -160,7 +187,7 @@ public:
 	{
 		if ( !IsValidType( type ) )
 		{
-			Assert( !"Bogus type" );
+			contract_assert( !"Bogus type" );
 			return nullptr;
 		}
 		return m_Accessors[ type ]->GetDataObject( instance );
@@ -170,7 +197,7 @@ public:
 	{
 		if ( !IsValidType( type ) )
 		{
-			Assert( !"Bogus type" );
+			contract_assert( !"Bogus type" );
 			return nullptr;
 		}
 
@@ -181,7 +208,7 @@ public:
 	{
 		if ( !IsValidType( type ) )
 		{
-			Assert( !"Bogus type" );
+			contract_assert( !"Bogus type" );
 			return;
 		}
 
@@ -204,15 +231,15 @@ private:
 	{
 		if ( type < 0 || type >= MAX_ACCESSORS )
 		{
-			Assert( !"AddDataAccessor with out of range type!!!\n" );
+			contract_assert( !"AddDataAccessor with out of range type!!!\n" );
 			return;
 		}
 
-		Assert( instantiator );
+		contract_assert( instantiator );
 
 		if ( m_Accessors[ type ] != nullptr )
 		{
-			Assert( !"AddDataAccessor, duplicate adds!!!\n" );
+			contract_assert( !"AddDataAccessor, duplicate adds!!!\n" );
 			return;
 		}
 
@@ -226,25 +253,25 @@ static CDataObjectAccessSystem g_DataObjectAccessSystem;
 
 bool CBaseEntity::HasDataObjectType( int type ) const
 {
-	Assert( type >= 0 && type < NUM_DATAOBJECT_TYPES );
+	contract_assert( type >= 0 && type < NUM_DATAOBJECT_TYPES );
 	return ( m_fDataObjectTypes	& (1<<type) ) ? true : false;
 }
 
 void CBaseEntity::AddDataObjectType( int type )
 {
-	Assert( type >= 0 && type < NUM_DATAOBJECT_TYPES );
+	contract_assert( type >= 0 && type < NUM_DATAOBJECT_TYPES );
 	m_fDataObjectTypes |= (1<<type);
 }
 
 void CBaseEntity::RemoveDataObjectType( int type )
 {
-	Assert( type >= 0 && type < NUM_DATAOBJECT_TYPES );
+	contract_assert( type >= 0 && type < NUM_DATAOBJECT_TYPES );
 	m_fDataObjectTypes &= ~(1<<type);
 }
 
 void *CBaseEntity::GetDataObject( int type )
 {
-	Assert( type >= 0 && type < NUM_DATAOBJECT_TYPES );
+	contract_assert( type >= 0 && type < NUM_DATAOBJECT_TYPES );
 	if ( !HasDataObjectType( type ) )
 		return nullptr;
 	return g_DataObjectAccessSystem.GetDataObject( type, this );
@@ -252,14 +279,14 @@ void *CBaseEntity::GetDataObject( int type )
 
 void *CBaseEntity::CreateDataObject( int type )
 {
-	Assert( type >= 0 && type < NUM_DATAOBJECT_TYPES );
+	contract_assert( type >= 0 && type < NUM_DATAOBJECT_TYPES );
 	AddDataObjectType( type );
 	return g_DataObjectAccessSystem.CreateDataObject( type, this );
 }
 
 void CBaseEntity::DestroyDataObject( int type )
 {
-	Assert( type >= 0 && type < NUM_DATAOBJECT_TYPES );
+	contract_assert( type >= 0 && type < NUM_DATAOBJECT_TYPES );
 	if ( !HasDataObjectType( type ) )
 		return;
 	g_DataObjectAccessSystem.DestroyDataObject( type, this );
@@ -277,7 +304,7 @@ int CWatcherList::GetCallbackObjects( IWatcherCallback **pList, int listMax )
 			index++;
 			if ( index >= listMax )
 			{
-				Assert(0);
+				contract_assert( 0 );
 				return index;
 			}
 			++it;
@@ -293,10 +320,10 @@ int CWatcherList::GetCallbackObjects( IWatcherCallback **pList, int listMax )
 void CWatcherList::NotifyPositionChanged( CBaseEntity *pEntity )
 {
 	IWatcherCallback *pCallbacks[1024]; // HACKHACK: Assumes this list is big enough
-	int count = GetCallbackObjects( pCallbacks, ARRAYSIZE(pCallbacks) );
+	int count = GetCallbackObjects( pCallbacks, std::size( pCallbacks ) );
 	for ( int i = 0; i < count; i++ )
 	{
-		IPositionWatcher *pWatcher = assert_cast<IPositionWatcher *>(pCallbacks[i]);
+		IPositionWatcher *pWatcher = static_cast<IPositionWatcher *>(pCallbacks[i]);
 		if ( pWatcher )
 		{
 			pWatcher->NotifyPositionChanged(pEntity);
@@ -307,10 +334,10 @@ void CWatcherList::NotifyPositionChanged( CBaseEntity *pEntity )
 void CWatcherList::NotifyVPhysicsStateChanged( IPhysicsObject *pPhysics, CBaseEntity *pEntity, bool bAwake )
 {
 	IWatcherCallback *pCallbacks[1024];	// HACKHACK: Assumes this list is big enough!
-	int count = GetCallbackObjects( pCallbacks, ARRAYSIZE(pCallbacks) );
+	int count = GetCallbackObjects( pCallbacks, std::size( pCallbacks ) );
 	for ( int i = 0; i < count; i++ )
 	{
-		IVPhysicsWatcher *pWatcher = assert_cast<IVPhysicsWatcher *>(pCallbacks[i]);
+		IVPhysicsWatcher *pWatcher = static_cast<IVPhysicsWatcher *>(pCallbacks[i]);
 		if ( pWatcher )
 		{
 			pWatcher->NotifyVPhysicsStateChanged(pPhysics, pEntity, bAwake);
@@ -568,7 +595,7 @@ static bool g_bCleanupDatObject = true;
 //-----------------------------------------------------------------------------
 void CBaseEntity::PhysicsCheckForEntityUntouch( void )
 {
-	Assert( g_pNextLink == nullptr );
+	contract_assert( g_pNextLink == nullptr );
 
 	touchlink_t *link;
 
@@ -1236,7 +1263,7 @@ void CBaseEntity::PhysicsAddGravityMove( Vector &move )
 }
 
 
-#define	STOP_EPSILON	0.1
+constexpr auto STOP_EPSILON = 0.1;
 //-----------------------------------------------------------------------------
 // Purpose: Slide off of the impacting object.  Returns the blocked flags (1 = floor, 2 = step / wall)
 // Input  : in - 
@@ -1310,7 +1337,7 @@ void CBaseEntity::ResolveFlyCollisionBounce( trace_t &trace, Vector &vecVelocity
 	{
 		// Verify that we have an entity.
 		CBaseEntity *pEntity = trace.Ent<CBaseEntity>();
-		Assert( pEntity );
+		contract_assert( pEntity );
 
 		// Are we on the ground?
 		if ( vecVelocity.z < ( GetActualGravity( this ) * gpGlobals->frametime ) )
@@ -1391,7 +1418,7 @@ void CBaseEntity::ResolveFlyCollisionSlide( trace_t &trace, Vector &vecVelocity 
 
 	// Verify that we have an entity.
 	CBaseEntity *pEntity = trace.Ent<CBaseEntity>();
-	Assert( pEntity );
+	contract_assert( pEntity );
 
 	// Are we on the ground?
 	if ( vecVelocity.z < ( GetActualGravity( this ) * gpGlobals->frametime ) )
@@ -1437,7 +1464,7 @@ void CBaseEntity::ResolveFlyCollisionCustom( trace_t &trace, Vector &vecVelocity
 
 		// Verify that we have an entity.
 		CBaseEntity *pEntity = trace.Ent<CBaseEntity>();
-		Assert( pEntity );
+		contract_assert( pEntity );
 
 		// Are we on the ground?
 		if ( vecVelocity.z < ( GetActualGravity( this ) * gpGlobals->frametime ) )
@@ -1484,7 +1511,7 @@ void CBaseEntity::PerformFlyCollisionResolution( trace_t &trace, Vector &move )
 	default:
 		{
 			// Invalid MOVECOLLIDE_<type>
-			Assert( 0 );
+			contract_assert( 0 );
 			break;
 		}
 	}
@@ -1633,7 +1660,7 @@ void CBaseEntity::PhysicsToss( void )
 		float flGrTraThickness = sv_grenade_trajectory_thickness.GetFloat();
 		Vector vec3_GrTrajMin = Vector( 0, -flGrTraThickness, -flGrTraThickness );
 		Vector vec3_GrTrajMax = Vector( vec3tempOrientation.Length(), flGrTraThickness, flGrTraThickness );
-		bool bDotted = ( sv_grenade_trajectory_dash.GetInt() && (fmod( gpGlobals->curtime, 0.1f ) < 0.05f) );
+		bool bDotted = ( sv_grenade_trajectory_dash.GetInt() && (std::fmod( gpGlobals->curtime, 0.1f ) < 0.05f) );
 		
 		//extruded "line" is really a box for more visible thickness
 		debugoverlay->AddBoxOverlay( trace.startpos, vec3_GrTrajMin, vec3_GrTrajMax, angGrTrajAngles, 0, (bDotted ? 20 : 200), 0, 255, sv_grenade_trajectory_time.GetFloat() );
@@ -1658,7 +1685,7 @@ void CBaseEntity::PhysicsToss( void )
 //-----------------------------------------------------------------------------
 void CBaseEntity::PhysicsRigidChild( void )
 {
-	VPROF("CBaseEntity::PhysicsRigidChild");
+	CVProfScope _( "CBaseEntity::PhysicsRigidChild", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// NOTE: rigidly attached children do simulation in local space
 	// Collision impulses will be handled either not at all, or by
 	// forwarding the information to the highest move parent
@@ -1669,7 +1696,7 @@ void CBaseEntity::PhysicsRigidChild( void )
 	if ( !PhysicsRunThink() )
 		return;
 
-	VPROF_SCOPE_BEGIN("CBaseEntity::PhysicsRigidChild-2");
+	{ CVProfScope _( "CBaseEntity::PhysicsRigidChild-2", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 #if !defined( CLIENT_DLL )
 	// Cause touch functions to be called
@@ -1684,7 +1711,7 @@ void CBaseEntity::PhysicsRigidChild( void )
 	}
 #endif
 
-	VPROF_SCOPE_END();
+	};
 }
 
 
@@ -1723,7 +1750,7 @@ void CBaseEntity::UpdateBaseVelocity( void )
 //-----------------------------------------------------------------------------
 void CBaseEntity::PhysicsSimulate( void )
 {
-	VPROF( "CBaseEntity::PhysicsSimulate" );
+	CVProfScope _( "CBaseEntity::PhysicsSimulate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// NOTE:  Players override PhysicsSimulate and drive through their CUserCmds at that point instead of
 	//  processng through this function call!!!  They shouldn't chain to here ever.
 	// Make sure not to simulate this guy twice per frame
@@ -1734,7 +1761,7 @@ void CBaseEntity::PhysicsSimulate( void )
 
 	m_nSimulationTick = gpGlobals->tickcount;
 
-	Assert( !IsPlayer() );
+	contract_assert( !IsPlayer() );
 
 	// If we've got a moveparent, we must simulate that first.
 	CBaseEntity *pMoveParent = GetMoveParent();
@@ -1753,12 +1780,12 @@ void CBaseEntity::PhysicsSimulate( void )
 
 	if (pMoveParent)
 	{
-		VPROF( "CBaseEntity::PhysicsSimulate-MoveParent" );
+		CVProfScope _( "CBaseEntity::PhysicsSimulate-MoveParent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		pMoveParent->PhysicsSimulate();
 	}
 	else
 	{
-		VPROF( "CBaseEntity::PhysicsSimulate-BaseVelocity" );
+		CVProfScope _( "CBaseEntity::PhysicsSimulate-BaseVelocity", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		UpdateBaseVelocity();
 
@@ -1778,7 +1805,7 @@ void CBaseEntity::PhysicsSimulate( void )
 	{
 	case MOVETYPE_PUSH:
 		{
-			VPROF( "CBaseEntity::PhysicsSimulate-MOVETYPE_PUSH" );
+			CVProfScope _( "CBaseEntity::PhysicsSimulate-MOVETYPE_PUSH", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			PhysicsPusher();
 		}
 		break;
@@ -1791,22 +1818,22 @@ void CBaseEntity::PhysicsSimulate( void )
 
 	case MOVETYPE_NONE:
 		{
-			VPROF( "CBaseEntity::PhysicsSimulate-MOVETYPE_NONE" );
-			Assert(pMoveParent);
+			CVProfScope _( "CBaseEntity::PhysicsSimulate-MOVETYPE_NONE", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+			contract_assert( pMoveParent );
 			PhysicsRigidChild();
 		}
 		break;
 
 	case MOVETYPE_NOCLIP:
 		{
-			VPROF( "CBaseEntity::PhysicsSimulate-MOVETYPE_NOCLIP" );
+			CVProfScope _( "CBaseEntity::PhysicsSimulate-MOVETYPE_NOCLIP", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			PhysicsNoclip();
 		}
 		break;
 
 	case MOVETYPE_STEP:
 		{
-			VPROF( "CBaseEntity::PhysicsSimulate-MOVETYPE_STEP" );
+			CVProfScope _( "CBaseEntity::PhysicsSimulate-MOVETYPE_STEP", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			PhysicsStep();
 		}
 		break;
@@ -1814,21 +1841,21 @@ void CBaseEntity::PhysicsSimulate( void )
 	case MOVETYPE_FLY:
 	case MOVETYPE_FLYGRAVITY:
 		{
-			VPROF( "CBaseEntity::PhysicsSimulate-MOVETYPE_FLY" );
+			CVProfScope _( "CBaseEntity::PhysicsSimulate-MOVETYPE_FLY", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			PhysicsToss();
 		}
 		break;
 
 	case MOVETYPE_CUSTOM:
 		{
-			VPROF( "CBaseEntity::PhysicsSimulate-MOVETYPE_CUSTOM" );
+			CVProfScope _( "CBaseEntity::PhysicsSimulate-MOVETYPE_CUSTOM", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			PhysicsCustom();
 		}
 		break;
 
 	default:
 		Warning( "PhysicsSimulate: %s bad movetype %d", GetClassname(), GetMoveType() );
-		Assert(0);
+		contract_assert( 0 );
 		break;
 	}
 }
@@ -1945,7 +1972,7 @@ public:
 		ThinkSync *p = FindOrAddItem( ent, thinktime );
 		if ( !p )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 		}
 
 		p->thinktime = thinktime;
@@ -1975,7 +2002,7 @@ private:
 		for ( auto &[flThinkTime, item] : m_Thinkers )
 		{
 			ThinkSync *p = &item;
-			Assert( p );
+			contract_assert( p );
 			if ( !p )
 				continue;
 

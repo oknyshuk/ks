@@ -1,10 +1,36 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Precaches and defs for entities and other data that must always be available.
-//
-//===========================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Precaches and defs for entities and other data that must always be available.
+
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "te.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_sendtable.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
@@ -39,13 +65,12 @@
 
 #include "gametypes.h"
 
-
 extern CBaseEntity				*g_pLastSpawn;
 void InitBodyQue(void);
 extern void W_Precache(void);
 extern void ActivityList_Free( void );
 
-#define SF_DECAL_NOTINDEATHMATCH		2048
+constexpr auto SF_DECAL_NOTINDEATHMATCH = 2048;
 
 
 #if !defined( CLIENT_DLL )
@@ -122,7 +147,7 @@ void CInfoGameEventProxy::InputGenerateGameEvent( inputdata_t &inputdata )
 //---------------------------------------------------------
 bool CInfoGameEventProxy::GameEventProxyCallback( CBaseEntity *pProxy, CBasePlayer *pViewingPlayer )
 {
-	CInfoGameEventProxy *pProxyPtr = assert_cast <CInfoGameEventProxy *>(pProxy);
+	CInfoGameEventProxy *pProxyPtr = static_cast<CInfoGameEventProxy *>(pProxy);
 
 	if( !pProxyPtr )
 		return true;
@@ -140,7 +165,7 @@ bool CInfoGameEventProxy::GameEventProxyCallback( CBaseEntity *pProxy, CBasePlay
 
 bool CInfoGameEventProxy::GameEventProxyEvaluator( CBaseEntity *pProxy, CBasePlayer *pViewingPlayer )
 {
-	CInfoGameEventProxy *pProxyPtr = assert_cast <CInfoGameEventProxy *>(pProxy);
+	CInfoGameEventProxy *pProxyPtr = static_cast<CInfoGameEventProxy *>(pProxy);
 
 	if( !pProxyPtr )
 		return false;
@@ -243,7 +268,7 @@ public:
 		if ( pEntity->IsEffectActive( EF_NODRAW ) )
 			return false;
 
-		for ( int i = 0; i < ARRAYSIZE(ppszIgnoredClasses); i++ )
+		for ( int i = 0; i < std::size( ppszIgnoredClasses ); i++ )
 		{
 			if ( pEntity->ClassMatches( ppszIgnoredClasses[i] ) )
 				return false;
@@ -509,7 +534,7 @@ bool CWorld::KeyValue( const char *szKeyName, const char *szValue )
 	else if ( FStrEq(szKeyName, "newunit") )
 	{
 		// Single player only.  Clear save directory if set
-		if ( atoi(szValue) )
+		if ( std::atoi(szValue) )
 		{
 			extern void Game_SetOneWayTransition();
 			Game_SetOneWayTransition();
@@ -518,18 +543,18 @@ bool CWorld::KeyValue( const char *szKeyName, const char *szValue )
 	else if ( FStrEq(szKeyName, "world_mins") )
 	{
 		Vector vec;
-		sscanf(	szValue, "%f %f %f", &vec.x, &vec.y, &vec.z );
+		std::sscanf(	szValue, "%f %f %f", &vec.x, &vec.y, &vec.z );
 		m_WorldMins = vec;
 	}
 	else if ( FStrEq(szKeyName, "world_maxs") )
 	{
 		Vector vec;
-		sscanf(	szValue, "%f %f %f", &vec.x, &vec.y, &vec.z ); 
+		std::sscanf(	szValue, "%f %f %f", &vec.x, &vec.y, &vec.z ); 
 		m_WorldMaxs = vec;
 	}
 	else if ( FStrEq(szKeyName, "timeofday" ) )
 	{
-		SetTimeOfDay( atoi( szValue ) );
+		SetTimeOfDay( std::atoi( szValue ) );
 	}
 	else
 		return BaseClass::KeyValue( szKeyName, szValue );
@@ -667,7 +692,7 @@ static const char *g_DefaultLightstyles[] =
 
 const char *GetDefaultLightstyleString( int styleIndex )
 {
-	if ( styleIndex < ARRAYSIZE(g_DefaultLightstyles) )
+	if ( styleIndex < std::size( g_DefaultLightstyles ) )
 	{
 		return g_DefaultLightstyles[styleIndex];
 	}
@@ -695,14 +720,14 @@ void CWorld::Precache( void )
 	roomtype.SetValue( 0 );
 
 	// Set up game rules
-	Assert( !g_pGameRules );
+	contract_assert( !g_pGameRules );
 	if (g_pGameRules)
 	{
 		delete g_pGameRules;
 	}
 
 	InstallGameRules();
-	Assert( g_pGameRules );
+	contract_assert( g_pGameRules );
 	g_pGameRules->Init();
 
 	CSoundEnt::InitSoundEnt();
@@ -755,7 +780,7 @@ void CWorld::Precache( void )
 	//
 	// Setup light animation tables. 'a' is total darkness, 'z' is maxbright.
 	//
-	for ( int i = 0; i < ARRAYSIZE(g_DefaultLightstyles); i++ )
+	for ( int i = 0; i < std::size( g_DefaultLightstyles ); i++ )
 	{
 		engine->LightStyle( i, GetDefaultLightstyleString(i) );
 	}

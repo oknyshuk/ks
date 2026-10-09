@@ -1,19 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A global class that holds a prioritized queue of entity I/O events.
 //			Events can be posted with a nonzero delay, which determines how long
 //			they are held before being dispatched to their recipients.
-//
 //			The queue is serviced once per server frame.
-//
-//=============================================================================//
 
-#ifndef EVENTQUEUE_H
-#define EVENTQUEUE_H
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "entitylist.h"
+#include "variant_t.h"
 
-#include "tier1/fixed_pool.h"
-
-struct EventQueuePrioritizedEvent_t
+struct EventQueuePrioritizedEvent_t : public ks::pooled< EventQueuePrioritizedEvent_t >
 {
 	float m_flFireTime;
 	string_t m_iTarget;
@@ -30,7 +30,9 @@ struct EventQueuePrioritizedEvent_t
 
 	DECLARE_SIMPLE_DATADESC();
 
-	DECLARE_FIXEDSIZE_ALLOCATOR( PrioritizedEvent_t );
+	private:
+		static ks::fixed_pool s_Allocator;
+		friend class ks::pooled< EventQueuePrioritizedEvent_t >;
 };
 
 class CEventQueue
@@ -72,7 +74,3 @@ private:
 };
 
 extern CEventQueue g_EventQueue;
-
-
-#endif // EVENTQUEUE_H
-

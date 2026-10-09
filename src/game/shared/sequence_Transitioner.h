@@ -1,11 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SEQUENCE_TRANSITIONER_H
-#define SEQUENCE_TRANSITIONER_H
+import std;
+import ks.math;
+#ifdef CLIENT_DLL
+#include "animationlayer.h"
+#else
+#include "BaseAnimatingOverlay.h"
+#endif
 
 class CStudioHdr;
 
@@ -42,5 +45,3 @@ public:
 public:
 	std::vector< CAnimationLayer >	m_animationQueue;
 };
-
-#endif // SEQUENCE_TRANSITIONER_H

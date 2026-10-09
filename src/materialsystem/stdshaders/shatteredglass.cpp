@@ -1,10 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Lightmap only shader
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
 
 #include "BaseVSShader.h"
 
@@ -12,11 +9,10 @@
 #include "ShatteredGlass_ps20b.inc"
 #include "ShatteredGlass_vs20.inc"
 
-
 BEGIN_VS_SHADER( ShatteredGlass,
 			  "Help for ShatteredGlass" )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM_OVERRIDE( BASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "Glass/glasswindowbreak070b", "unused", SHADER_PARAM_NOT_EDITABLE )
 		SHADER_PARAM( DETAIL, SHADER_PARAM_TYPE_TEXTURE, "Glass/glasswindowbreak070b", "detail" )
 		SHADER_PARAM( DETAILSCALE, SHADER_PARAM_TYPE_FLOAT, "1.0", "detail scale" )

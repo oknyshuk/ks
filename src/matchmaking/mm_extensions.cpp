@@ -1,8 +1,5 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "mm_extensions.h"
 
@@ -25,23 +22,23 @@ CMatchExtensions *g_pMatchExtensions = &g_MatchExtensions;
 
 void CMatchExtensions::RegisterExtensionInterface( char const *szInterfaceString, void *pvInterface )
 {
-	Assert( szInterfaceString );
-	Assert( pvInterface );
+	contract_assert( szInterfaceString );
+	contract_assert( pvInterface );
 	if ( !szInterfaceString || !pvInterface )
 		return;
 
 	RegisteredInterface_t &rInfo = m_mapRegisteredInterfaces[ szInterfaceString ];
-	Assert( rInfo.m_nRefCount >= 0 );
+	contract_assert( rInfo.m_nRefCount >= 0 );
 
 	if ( rInfo.m_nRefCount > 0 )
 	{
 		// Interface already registered
-		Assert( pvInterface == rInfo.m_pvInterface );
+		contract_assert( pvInterface == rInfo.m_pvInterface );
 	}
 	else
 	{
 		// Fresh registration of the interface
-		Assert( !rInfo.m_pvInterface );
+		contract_assert( !rInfo.m_pvInterface );
 		rInfo.m_pvInterface = pvInterface;
 	}
 
@@ -54,17 +51,17 @@ void CMatchExtensions::RegisterExtensionInterface( char const *szInterfaceString
 
 void CMatchExtensions::UnregisterExtensionInterface( char const *szInterfaceString, void *pvInterface )
 {
-	Assert( szInterfaceString );
-	Assert( pvInterface );
+	contract_assert( szInterfaceString );
+	contract_assert( pvInterface );
 	if ( !szInterfaceString || !pvInterface )
 		return;
 
 	RegisteredInterface_t &rInfo = m_mapRegisteredInterfaces[ szInterfaceString ];
-	Assert( rInfo.m_nRefCount > 0 );
+	contract_assert( rInfo.m_nRefCount > 0 );
 	if ( rInfo.m_nRefCount <= 0 )
 		return;
 
-	Assert( pvInterface == rInfo.m_pvInterface );
+	contract_assert( pvInterface == rInfo.m_pvInterface );
 
 	-- rInfo.m_nRefCount;
 	if ( 0 == rInfo.m_nRefCount )
@@ -113,7 +110,7 @@ void CMatchExtensions::OnExtensionInterfaceUpdated( char const *szInterfaceStrin
 
 	for ( CachedInterfacePtr_t *ptr = s_table; ptr->m_szName; ++ ptr )
 	{
-		if ( !Q_stricmp( ptr->m_szName, szInterfaceString ) )
+		if ( !V_stricmp( ptr->m_szName, szInterfaceString ) )
 		{
 			m_exts.*(ptr->m_ppInterface) = pvInterface;
 		}

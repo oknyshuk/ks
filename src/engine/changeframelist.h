@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CHANGEFRAMELIST_H
-#define CHANGEFRAMELIST_H
-
-#include "tier1/fixed_pool.h"
+import std;
+import ks.tier1;
 #include "dt_common.h"
 
 // This class holds the last tick (from host_tickcount) that each property in 
@@ -19,7 +14,7 @@
 // These are created once per entity per frame. Since usually a very small percentage of an
 // entity's properties actually change each frame, this allows you to get a small set of 
 // properties to delta for each client.
-class CChangeFrameList
+class CChangeFrameList : public ks::pooled< CChangeFrameList >
 {
 public:
 
@@ -40,7 +35,7 @@ public:
 	int GetPropTick( int nProp ) const								{ return m_ChangeTicks[ nProp ]; }
 
 	// Sets the change frames for the specified properties to iFrame.
-	void SetChangeTick( const int* RESTRICT pProps, int nNumProps, const int iTick );
+	void SetChangeTick( const int* __restrict__ pProps, int nNumProps, const int iTick );
 	void SetChangeTick( const int nProp, const int iTick )			{ m_ChangeTicks[ nProp ] = iTick; m_ChangeTicks[ m_nNumProps + nProp / knBucketSize ] = iTick; }
 	
 	//given a bucket index, this will determine the lastest tick on that bucket
@@ -60,6 +55,7 @@ private:
 
 	CChangeFrameList &operator=( const CChangeFrameList &rhs );
 
-	DECLARE_FIXEDSIZE_ALLOCATOR_MT( CChangeFrameList );
+	private:
+		static ks::fixed_pool_mt s_Allocator;
+		friend class ks::pooled< CChangeFrameList >;
 };				
-#endif // CHANGEFRAMELIST_H

@@ -1,17 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IGAMEUIFUNCS_H
-#define IGAMEUIFUNCS_H
-
-#include "tier0/platform.h"
+import ks.core;
 #include "inputsystem/ButtonCode.h"
 
-abstract_class IGameUIFuncs
+class IGameUIFuncs
 {
 public:
 	virtual bool		IsKeyDown( const char *keyname, bool& isdown ) = 0;
@@ -20,9 +14,6 @@ public:
 	virtual void		GetVideoModes( struct vmode_s **liststart, int *count ) = 0;
 	virtual void		SetFriendsID( uint friendsID, const char *friendsName ) = 0;
 	virtual void		GetDesktopResolution( int &width, int &height ) = 0;
-	virtual bool		IsConnectedToVACSecureServer() = 0;
 };
 
-#define VENGINE_GAMEUIFUNCS_VERSION "VENGINE_GAMEUIFUNCS_VERSION005"
-
-#endif // IGAMEUIFUNCS_H
+inline constexpr const char *VENGINE_GAMEUIFUNCS_VERSION = "VENGINE_GAMEUIFUNCS_VERSION005";

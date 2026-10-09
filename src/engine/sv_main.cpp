@@ -1,14 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "server_pch.h"
-#include <mutex>
-#include "tier0/memalloc.h"
+// main precompiled header for server files
+
+
+#include <syscall.h>
+
+
+import ks.vstdlib;
+#include "common.h"
+#include "qlimits.h"
+#include "quakedef.h"
 #include "decal.h"
 #include "host_cmd.h"
 #include "cmodel_engine.h"
@@ -18,7 +20,27 @@
 #include "vox.h"
 #include "EngineSoundInternal.h"
 #include "checksum_engine.h"
-#include "master.h"
+#include "host.h"
+#include "keys.h"
+#include "vengineserver_impl.h"
+#include "server.h"
+#include "eiface.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+#include "console.h"
+#include "proto_oob.h"
+#include "edict.h"
+#include "server_class.h"
+import std;
+#include "decal.h"
+#include "host_cmd.h"
+#include "cmodel_engine.h"
+#include "sv_log.h"
+#include "zone.h"
+#include "sound.h"
+#include "vox.h"
+#include "EngineSoundInternal.h"
+#include "checksum_engine.h"
 #include "host.h"
 #include "keys.h"
 #include "vengineserver_impl.h"
@@ -32,18 +54,14 @@
 #include "datamap.h"
 #include "filesystem_engine.h"
 #include "string_t.h"
-#include "vstdlib/random.h"
 #include "networkstringtable.h"
 #include "dt_send_eng.h"
 #include "sv_packedentities.h"
 #include "testscriptmgr.h"
 #include "PlayerState.h"
-#include "tier0/vprof.h"
 #include "proto_oob.h"
 #include "staticpropmgr.h"
-#include "checksum_crc.h"
 #include "console.h"
-#include "tier0/icommandline.h"
 #include "host_state.h"
 #include "gl_matsysiface.h"
 #include "GameEventManager.h"
@@ -57,27 +75,14 @@
 #include "cbenchmark.h"
 #include "client.h"
 #include "hltvserver.h"
-#if defined( REPLAY_ENABLED )
-#include "replay.h"
-#include "replayserver.h"
-#include "replayhistorymanager.h"
-#endif
-#include "keyvalues.h"
 #include "sv_logofile.h"
-#include "cl_steamauth.h"
-#include "sv_steamauth.h"
 #include "sv_plugin.h"
 #include "DownloadListGenerator.h"
-#include "sv_steamauth.h"
 #include "LocalNetworkBackdoor.h"
 #include "cvar.h"
 #include "enginethreads.h"
-#include "tier1/functors.h"
-#include "vstdlib/jobthread.h"
 #include "pure_server.h"
 #include "datacache/idatacache.h"
-#include "vstdlib/jobthread.h"
-#include "SourceAppInfo.h"
 #include "cl_rcon.h"
 #include "toolframework/itoolframework.h"
 #include "snd_audio_source.h"
@@ -86,7 +91,6 @@
 #include "matchmaking/imatchframework.h"
 
 
-#include <syscall.h>
 
 
 extern CNetworkStringTableContainer *networkStringTableContainerServer;
@@ -107,9 +111,9 @@ static ConVar sv_pausable_dev( "sv_pausable_dev", "1", FCVAR_DEVELOPMENTONLY, "W
 static ConVar sv_pausable_dev_ds( "sv_pausable_dev_ds", "0", FCVAR_DEVELOPMENTONLY, "Whether dedicated server is pausable when running -dev and playing solo against bots" );
 
 // Server default maxplayers value
-#define DEFAULT_SERVER_CLIENTS	6
+constexpr auto DEFAULT_SERVER_CLIENTS = 6;
 // This many players on a Lan with same key, is ok.
-#define MAX_IDENTICAL_CDKEYS	5
+constexpr auto MAX_IDENTICAL_CDKEYS = 5;
 
 CGameServer	sv;
 
@@ -167,7 +171,7 @@ static void SV_Pure_f( const CCommand &args )
     int pure_mode = -1;
     if ( args.ArgC() == 2 )
     {
-        pure_mode = atoi( args[1] );
+        pure_mode = std::atoi( args[1] );
     }
 
     Msg( "--------------------------------------------------------\n" );
@@ -368,62 +372,6 @@ ConVar  sv_deltatrace( "sv_deltatrace", "0", 0, "For debugging, print entity cre
 #endif
 
 
-#if defined( DEBUG_NETWORKING )
-
-//-----------------------------------------------------------------------------
-// Opens the recording file
-//-----------------------------------------------------------------------------
-
-static FILE* OpenRecordingFile()
-{
-    FILE* fp = 0;
-    static bool s_CantOpenFile = false;
-    static bool s_NeverOpened = true;
-    if (!s_CantOpenFile)
-    {
-        fp = fopen( "svtrace.txt", s_NeverOpened ? "wt" : "at" );
-        if (!fp)
-        {
-            s_CantOpenFile = true;
-        }
-        s_NeverOpened = false;
-    }
-    return fp;
-}
-
-//-----------------------------------------------------------------------------
-// Records an argument for a command, flushes when the command is done
-//-----------------------------------------------------------------------------
-/*
-void SpewToFile( char const* pFmt, ... )
-static void SpewToFile( const char* pFmt, ... )
-{
-    static std::vector< unsigned char > s_RecordingBuffer;
-
-    char temp[2048];
-    va_list args;
-
-    va_start( args, pFmt );
-    int len = Q_vsnprintf( temp, sizeof( temp ), pFmt, args );
-    va_end( args );
-    Assert( len < 2048 );
-
-    int idx = s_RecordingBuffer.AddMultipleToTail( len );
-    memcpy( &s_RecordingBuffer[idx], temp, len );
-    if ( 1 ) //s_RecordingBuffer.Size() > 8192)
-    {
-        FILE* fp = OpenRecordingFile();
-        fwrite( s_RecordingBuffer.Base(), 1, s_RecordingBuffer.Size(), fp );
-        fclose( fp );
-
-        s_RecordingBuffer.RemoveAll();
-    }
-}
-*/
-
-#endif // #if defined( DEBUG_NETWORKING )
-
-
 /*void SV_Init(bool isDedicated)
 {
     sv.Init( isDedicated );
@@ -444,13 +392,17 @@ void CGameServer::Clear( void )
 	m_pGenericPrecacheTable = nullptr;
 	m_pSoundPrecacheTable = nullptr;
 	m_pDecalPrecacheTable = nullptr;
+	std::ranges::fill( model_precache, CPrecacheItem() );
+	std::ranges::fill( generic_precache, CPrecacheItem() );
+	std::ranges::fill( sound_precache, CPrecacheItem() );
+	std::ranges::fill( decal_precache, CPrecacheItem() );
 	m_bIsLevelMainMenuBackground = false;
 
     m_bLoadgame = false;
     
     host_state.SetWorldModel( nullptr );	
 
-    Q_memset( m_szStartspot, 0, sizeof( m_szStartspot ) );
+    V_memset( m_szStartspot, 0, sizeof( m_szStartspot ) );
     
     num_edicts = 0;
     max_edicts = 0;
@@ -482,7 +434,7 @@ void CGameServer::Clear( void )
 //-----------------------------------------------------------------------------
 // Purpose: Create any client/server string tables needed internally by the engine
 //-----------------------------------------------------------------------------
-ASSERT_INVARIANT( ABSOLUTE_PLAYER_LIMIT <= 2048 ); // must be reasonable number that has a power-of-2 value not less than it
+static_assert( ABSOLUTE_PLAYER_LIMIT <= 2048 ); // must be reasonable number that has a power-of-2 value not less than it
 void CGameServer::CreateEngineStringTables( void )
 {
     int i,j;
@@ -551,11 +503,10 @@ void CGameServer::CreateEngineStringTables( void )
     m_pServerStartupTable = m_StringTables->CreateStringTable( 
         SERVER_STARTUP_DATA_TABLENAME,
         4 );
-    SetQueryPortFromSteamServer();
     CopyPureServerWhitelistToStringTable();
 
 
-    Assert ( m_pModelPrecacheTable && 
+    contract_assert( m_pModelPrecacheTable && 
              m_pGenericPrecacheTable &&
              m_pSoundPrecacheTable &&
              m_pDecalPrecacheTable &&
@@ -568,29 +519,20 @@ void CGameServer::CreateEngineStringTables( void )
     // create an empty lightstyle table with unique index names
     for ( i = 0; i<MAX_LIGHTSTYLES; i++ )
     {
-        char name[8]; Q_snprintf( name, 8, "%i", i );
+        char name[8]; V_snprintf( name, 8, "%i", i );
         j = m_pLightStyleTable->AddString( true, name );
-        Assert( j==i ); // indices must match 
+        contract_assert( j==i ); // indices must match 
     }
 
     for ( i = 0; i<ABSOLUTE_PLAYER_LIMIT; i++ )
     {
-        char name[8]; Q_snprintf( name, 8, "%i", i );
+        char name[8]; V_snprintf( name, 8, "%i", i );
         j = m_pUserInfoTable->AddString( true, name );
-        Assert( j==i ); // indices must match 
+        contract_assert( j==i ); // indices must match 
     }
 
     // set up the downloadable files generator
     DownloadListGenerator().SetStringTable( m_pDownloadableFileTable );
-}
-
-void CGameServer::SetQueryPortFromSteamServer()
-{
-    if ( !m_pServerStartupTable )
-        return;
-        
-    int queryPort = Steam3Server().GetQueryPort();
-    m_pServerStartupTable->AddString( true, "QueryPort", sizeof( queryPort ), &queryPort );
 }
 
 void CGameServer::CopyPureServerWhitelistToStringTable()
@@ -607,7 +549,6 @@ void CGameServer::CopyPureServerWhitelistToStringTable()
 void SV_InstallClientStringTableMirrors( void )
 {
 #ifndef DEDICATED
-#ifndef SHARED_NET_STRING_TABLES
 
     int numTables = networkStringTableContainerServer->GetNumTables();
 
@@ -634,7 +575,6 @@ void SV_InstallClientStringTableMirrors( void )
         serverTable->SetMirrorTable( 0, clientTable );
     }
 #endif
-#endif
 }
 
 
@@ -644,7 +584,9 @@ void SV_InstallClientStringTableMirrors( void )
 //
 // Dump userdata / masterdata for a user
 //-----------------------------------------------------------------------------
-CON_COMMAND( user, "Show user data." )
+static void user( const CCommand &args );
+static ConCommand user_command( "user", user, "Show user data." );
+static void user( const CCommand &args )
 {
     int		uid;
     int		i;
@@ -661,7 +603,7 @@ CON_COMMAND( user, "Show user data." )
         return;
     }
 
-    uid = atoi(args[1]);
+    uid = std::atoi(args[1]);
 
     for (i=0 ; i< sv.GetClientCount() ; i++)
     {
@@ -670,7 +612,7 @@ CON_COMMAND( user, "Show user data." )
         if ( !cl->IsConnected() )
             continue;
 
-        if ( ( cl->GetPlayerSlot()== uid ) || !Q_strcmp( cl->GetClientName(), args[1]) )
+        if ( ( cl->GetPlayerSlot()== uid ) || !V_strcmp( cl->GetClientName(), args[1]) )
         {
             ConMsg ("TODO: SV_User_f.\n");
             return;
@@ -684,7 +626,9 @@ CON_COMMAND( user, "Show user data." )
 //-----------------------------------------------------------------------------
 // Dump userids for all current players
 //-----------------------------------------------------------------------------
-CON_COMMAND( users, "Show user info for players on server." )
+static void users( const CCommand &args );
+static ConCommand users_command( "users", users, "Show user info for players on server." );
+static void users( const CCommand &args )
 {
     if ( !sv.IsActive() )
     {
@@ -753,11 +697,7 @@ void CGameServer::InitMaxClients( void )
 
 	for ( int nHltvServerIndex = 0; nHltvServerIndex < HLTV_SERVER_MAX_COUNT; ++nHltvServerIndex )
 	{
-#if defined( REPLAY_ENABLED )
-		if ( GetIndexedConVar( tv_enable, nHltvServerIndex ).GetBool() || Replay_IsEnabled() ) 
-#else
 		if ( GetIndexedConVar( tv_enable, nHltvServerIndex ).GetBool() )
-#endif
 		{
 			newmaxplayers += 1;
 			m_nMaxClientsLimit += 1;
@@ -791,7 +731,9 @@ void CGameServer::InitMaxClients( void )
 // Purpose: Changes the maximum # of players allowed on the server.
 //  Server cannot be running when command is issued.
 //-----------------------------------------------------------------------------
-CON_COMMAND( maxplayers, "Change the maximum number of players allowed on this server." )
+static void maxplayers( const CCommand &args );
+static ConCommand maxplayers_command( "maxplayers", maxplayers, "Change the maximum number of players allowed on this server." );
+static void maxplayers( const CCommand &args )
 {
 	ConMsg( "Maxplayers is deprecated, set it in gamemodes_server.txt.example or use -maxplayers_override instead.\n");
 	return;
@@ -833,7 +775,7 @@ CON_COMMAND( maxplayers, "Change the maximum number of players allowed on this s
         return;
     }
 
-    sv.SetMaxClients( Q_atoi( args[ 1 ] ) );
+    sv.SetMaxClients( V_atoi( args[ 1 ] ) );
 }
 
 int SV_BuildSendTablesArray( ServerClass *pClasses, SendTable **pTables, int nMaxTables )
@@ -842,7 +784,7 @@ int SV_BuildSendTablesArray( ServerClass *pClasses, SendTable **pTables, int nMa
 
         for( ServerClass *pCur=pClasses; pCur; pCur=pCur->m_pNext )
         {
-                ErrorIfNot( nTables < nMaxTables, ("SV_BuildSendTablesArray: too many SendTables!") );
+                if ( !( nTables < nMaxTables ) ) Error("SV_BuildSendTablesArray: too many SendTables!");
                 pTables[nTables] = pCur->m_pTable;
                 ++nTables;
         }
@@ -855,7 +797,7 @@ int SV_BuildSendTablesArray( ServerClass *pClasses, SendTable **pTables, int nMa
 void SV_InitSendTables( ServerClass *pClasses )
 {
     SendTable *pTables[kMaxDatatables];
-    int nTables = SV_BuildSendTablesArray( pClasses, pTables, ARRAYSIZE( pTables ) );
+    int nTables = SV_BuildSendTablesArray( pClasses, pTables, std::size( pTables ) );
 
     SendTable_Init( pTables, nTables );
 }
@@ -866,30 +808,6 @@ void SV_TermSendTables( ServerClass *pClasses )
     SendTable_Term();
 }
 
-
-//-----------------------------------------------------------------------------
-// Purpose: returns which games/mods we're allowed to play
-//-----------------------------------------------------------------------------
-struct ModDirPermissions_t
-{
-    int m_iAppID;
-    const char *m_pchGameDir;
-};
-
-static ModDirPermissions_t g_ModDirPermissions[] =
-{
-    { GetAppSteamAppId( k_App_CSS ),        GetAppModName( k_App_CSS ) },
-    { GetAppSteamAppId( k_App_DODS ),       GetAppModName( k_App_DODS ) },
-    { GetAppSteamAppId( k_App_HL2MP ),      GetAppModName( k_App_HL2MP ) },
-    { GetAppSteamAppId( k_App_LOST_COAST ), GetAppModName( k_App_LOST_COAST ) },
-    { GetAppSteamAppId( k_App_HL1DM ),      GetAppModName( k_App_HL1DM ) },
-    { GetAppSteamAppId( k_App_PORTAL ),     GetAppModName( k_App_PORTAL ) },
-    { GetAppSteamAppId( k_App_HL2 ),        GetAppModName( k_App_HL2 ) },
-    { GetAppSteamAppId( k_App_HL2_EP1 ),    GetAppModName( k_App_HL2_EP1 ) },
-    { GetAppSteamAppId( k_App_HL2_EP2 ),    GetAppModName( k_App_HL2_EP2 ) },
-    { GetAppSteamAppId( k_App_TF2 ),        GetAppModName( k_App_TF2 ) },
-    { GetAppSteamAppId( k_App_L4D ),        GetAppModName( k_App_L4D ) },
-};
 
 bool ServerDLL_Load( bool bServerOnly )
 {
@@ -910,8 +828,6 @@ void SV_InitGameDLL( void )
 {
     COM_TimestampedLog( "SV_InitGameDLL" );
 
-	SV_SetSteamCrashComment();
-
     // Clear out the command buffer.
     Cbuf_Execute();
 
@@ -923,54 +839,18 @@ void SV_InitGameDLL( void )
 
 #if !defined(DEDICATED)
     bool CL_IsHL2Demo();
-    if ( CL_IsHL2Demo() && !sv.IsDedicated() && Q_stricmp( COM_GetModDirectory(), "hl2" ) )
+    if ( CL_IsHL2Demo() && !sv.IsDedicated() && V_stricmp( COM_GetModDirectory(), "hl2" ) )
     {
         Error( "The HL2 demo is unable to run Mods.\n" );
         return;			
     } 
 
-    if ( CL_IsPortalDemo() && !sv.IsDedicated() && Q_stricmp( COM_GetModDirectory(), "portal" ) )
+    if ( CL_IsPortalDemo() && !sv.IsDedicated() && V_stricmp( COM_GetModDirectory(), "portal" ) )
     {
         Error( "The Portal demo is unable to run Mods.\n" );
         return;			
     } 
 
-    // check permissions
-
-    if ( Steam3Client().SteamApps() && g_pFileSystem->IsSteam() && !CL_IsHL2Demo() && !CL_IsPortalDemo() )
-    {
-        bool bVerifiedMod = false;
-
-        // find the game dir we're running
-        for ( int i = 0; i < ARRAYSIZE( g_ModDirPermissions ); i++ )
-        {
-            if ( !Q_stricmp( COM_GetModDirectory(), g_ModDirPermissions[i].m_pchGameDir ) )
-            {
-                // we've found the mod, make sure we own the app
-                if (  Steam3Client().SteamApps()->BIsSubscribedApp( g_ModDirPermissions[i].m_iAppID ) )
-                {
-                    bVerifiedMod = true;
-                }
-                else
-                {
-                    Error( "No permissions to run '%s'\n", COM_GetModDirectory() );
-                    return;			
-                }
-
-                break;
-            }
-        }
-
-        if ( !bVerifiedMod )
-        {
-            // make sure they can run the Source engine
-            if ( ! Steam3Client().SteamApps()->BIsSubscribedApp( 215  ) )
-            {
-                Error( "A Source engine game is required to run mods\n" );
-                return;
-            }
-        }
-    }
 #endif
 
     if ( !serverGameDLL )
@@ -1058,9 +938,6 @@ void SV_ShutdownGameDLL( void )
     UnloadEntityDLLs();
 
     sv.dll_initialized = false;
-
-    // Shutdown the steam interfaces
-    Steam3Server().Shutdown();
 }
 
 
@@ -1103,7 +980,7 @@ ServerClass* SV_FindServerClass( const char *pName )
     ServerClass *pCur = serverGameDLL->GetAllServerClasses();
     while ( pCur )
     {
-        if ( Q_stricmp( pCur->GetName(), pName ) == 0 )
+        if ( V_stricmp( pCur->GetName(), pName ) == 0 )
             return pCur;
 
         pCur = pCur->m_pNext;
@@ -1153,7 +1030,7 @@ void CGameServer::Init (bool isDedicated)
 	// Install signal handlers for the dedicated server
 		if ( isDedicated )
 		{
-			signal( SIGINT,
+			ks::platform::set_signal_handler( ks::platform::signal_kind::interrupt,
 				[](int) -> void
 				{
 					char const *szMsg;
@@ -1168,7 +1045,7 @@ void CGameServer::Init (bool isDedicated)
 					sv_ShutDownMsg( szMsg );
 				}
 			);
-			signal( SIGTERM,
+			ks::platform::set_signal_handler( ks::platform::signal_kind::terminate,
 				[](int) -> void
 				{
 					extern char const *g_szHostStateDelayedMessage;
@@ -1262,7 +1139,7 @@ void SV_StartSound ( IRecipientFilter& filter, edict_t *pSoundEmittingEntity, in
 
     if ( iFlags & SND_STOP )
     {
-        Assert( filter.IsReliable() );
+        contract_assert( filter.IsReliable() );
     }
 
     // Compute the sound origin
@@ -1304,7 +1181,7 @@ void SV_StartSound ( IRecipientFilter& filter, edict_t *pSoundEmittingEntity, in
     if ( pSample && TestSoundChar(pSample, CHAR_SENTENCE) )
     {
         sound.bIsSentence = true;
-        sound.nSoundNum = Q_atoi( PSkipSoundChars(pSample) );
+        sound.nSoundNum = V_atoi( PSkipSoundChars(pSample) );
         if ( sound.nSoundNum >= VOX_SentenceCount() )
         {
             ConMsg("SV_StartSound: invalid sentence number: %s", PSkipSoundChars(pSample));
@@ -1362,11 +1239,7 @@ void SV_DetermineMulticastRecipients( bool usepas, const Vector& origin, CPlayer
             continue;
         
         // Always add the HLTV or Replay client
-#if defined( REPLAY_ENABLED )
-        if ( pClient->IsHLTV() || pClient->IsReplay() )
-#else
         if ( pClient->IsHLTV() )
-#endif
         {
             playerbits.set( i );
             continue;
@@ -1395,9 +1268,9 @@ void SV_DetermineMulticastRecipients( bool usepas, const Vector& origin, CPlayer
 //-----------------------------------------------------------------------------
 void SV_ReplicateConVarChange( ConVar const *var, const char *newValue )
 {
-    Assert( var );
-    Assert( var->IsFlagSet( FCVAR_REPLICATED ) );
-    Assert( newValue );
+    contract_assert( var );
+    contract_assert( var->IsFlagSet( FCVAR_REPLICATED ) );
+    contract_assert( newValue );
 
     if ( !sv.IsActive() || !sv.IsMultiplayer() )
         return;
@@ -1473,7 +1346,7 @@ void CGameServer::RemoveClientFromGame( CBaseClient *client )
     if ( !cl->edict || !cl->IsSpawned() || !IsActive() )
         return;
 
-    Assert( g_pServerPluginHandler );
+    contract_assert( g_pServerPluginHandler );
 
     g_pServerPluginHandler->ClientDisconnect( cl->edict );
     // release the DLL entity that's attached to this edict, if any
@@ -1488,7 +1361,7 @@ CBaseClient *CGameServer::CreateNewClient(int slot )
     if ( cl && CommandLine()->CheckParm( "-netspike", &pszValue ) && 
         pszValue )
     {
-        cl->SetTraceThreshold( Q_atoi( pszValue ) );
+        cl->SetTraceThreshold( V_atoi( pszValue ) );
     }
 
     return cl;
@@ -1515,10 +1388,6 @@ bool CGameServer::FinishCertificateCheck( netadr_t &adr, int nAuthProtocol, cons
         RejectConnection( adr, "Authentication disabled!!!\n");
         return false;
 
-    case PROTOCOL_STEAM:
-        return true; // the SteamAuthServer() state machine checks this
-        break;
-
     case PROTOCOL_HASHEDCDKEY:
         if ( !UseCDKeyAuth() )
         {
@@ -1526,7 +1395,7 @@ bool CGameServer::FinishCertificateCheck( netadr_t &adr, int nAuthProtocol, cons
             return false;
         }
 
-        if ( Q_strlen( szRawCertificate ) != 32 )
+        if ( V_strlen( szRawCertificate ) != 32 )
         {
             RejectConnection( adr, "#Valve_Reject_Invalid_CD_Key" );
             return false;
@@ -1542,7 +1411,7 @@ bool CGameServer::FinishCertificateCheck( netadr_t &adr, int nAuthProtocol, cons
             if ( !cl->IsConnected() )
                 continue;
 
-            if ( Q_strnicmp ( szRawCertificate, cl->m_GUID, SIGNED_GUID_LEN ) )
+            if ( V_strnicmp ( szRawCertificate, cl->m_GUID, SIGNED_GUID_LEN ) )
                 continue;
 
             nHashCount++;
@@ -1608,7 +1477,7 @@ void SV_ResetPVS( byte* pvs, int nPVSSize )
         Sys_Error( "SV_ResetPVS:  Size %i too big for buffer %i\n", s_FatBytes, nPVSSize );
     }
 
-    Q_memset (s_pFatPVS, 0, s_FatBytes);
+    V_memset (s_pFatPVS, 0, s_FatBytes);
     g_ClustersNetworked.clear();
     g_AreasNetworked.clear();
 }
@@ -1693,9 +1562,6 @@ bool CGameServer::IsHibernating() const
 {
     return m_bHibernating;
 }
-
-void Heartbeat_f();
-
 
 
 static ConVar sv_memlimit(  "sv_memlimit", "0", FCVAR_RELEASE, 
@@ -1796,7 +1662,7 @@ void CGameServer::SetHibernating( bool bHibernating )
             // if we are a child process running forked, we want to exit now. We want to "really" exit. no destructors, no nothing
             if ( IsChildProcess() )							// are we a subprocess?
             {
-                syscall( SYS_exit, 0 );	// we are not going to perform a normal c++ exit. We _dont_ want to run destructors, etc.
+                Plat_ExitProcess( 0 );	// we are not going to perform a normal c++ exit. We _dont_ want to run destructors, etc.
             }
             if ( bExit )
             {
@@ -1813,13 +1679,8 @@ void CGameServer::SetHibernating( bool bHibernating )
 
         UpdateGameData();
 
-        // Force a heartbeat to update the master servers
-        Heartbeat_f();
-
 		if ( serverGameDLL )
 			serverGameDLL->ServerHibernationUpdate( m_bHibernating );
-
-		SV_SetSteamCrashComment();
     }
 }
 
@@ -1947,7 +1808,7 @@ void CGameServer::FinishRestore()
 
 void CGameServer::CopyTempEntities( CFrameSnapshot* pSnapshot )	
 {
-    Assert( pSnapshot->m_pTempEntities == nullptr );
+    contract_assert( pSnapshot->m_pTempEntities == nullptr );
 
     if ( !m_TempEntities.empty() )
     {
@@ -1956,7 +1817,7 @@ void CGameServer::CopyTempEntities( CFrameSnapshot* pSnapshot )
 
         pSnapshot->m_pTempEntities = new CEventInfo*[pSnapshot->m_nTempEntities];
 
-        Q_memcpy( pSnapshot->m_pTempEntities, m_TempEntities.data(), std::ssize( m_TempEntities ) * sizeof( CEventInfo * ) );
+        V_memcpy( pSnapshot->m_pTempEntities, m_TempEntities.data(), std::ssize( m_TempEntities ) * sizeof( CEventInfo * ) );
 
         // clear server list
         m_TempEntities.clear();
@@ -1982,7 +1843,7 @@ void SV_ParallelSendSnapshot( CGameClient *& pClient )
 
 void CGameServer::SendClientMessages ( bool bSendSnapshots )
 {
-    VPROF_BUDGET( "SendClientMessages", VPROF_BUDGETGROUP_OTHER_NETWORKING );
+    CVProfScope _( "SendClientMessages", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
     // build individual updates
     int receivingClientCount = 0;
@@ -2042,10 +1903,6 @@ void CGameServer::SendClientMessages ( bool bSendSnapshots )
                 NET_OutOfBandPrintf ( m_Socket, client->m_NetChannel->GetRemoteAddress(), "%c00000000000000", S2C_CONNECTION );
             }
 
-#ifdef SHARED_NET_STRING_TABLES
-            sv.m_StringTables->TriggerCallbacks( client->m_nDeltaTick );
-#endif
-
             client->m_NetChannel->Transmit();
             client->UpdateSendState();
         }
@@ -2058,9 +1915,6 @@ void CGameServer::SendClientMessages ( bool bSendSnapshots )
 		{
 			// if any client wants an update, take new snapshot now
 			CFrameSnapshot* pSnapshot = framesnapshotmanager->TakeTickSnapshot(
-#ifdef DEBUG_SNAPSHOT_REFERENCES
-				"CGameServer::SendClientMessages",
-#endif
 				m_nTickCount );
 
 			// copy temp ents references to pSnapshot
@@ -2069,22 +1923,20 @@ void CGameServer::SendClientMessages ( bool bSendSnapshots )
 			// Compute the client packs
 			SV_ComputeClientPacks( receivingClientCount, pReceivingClients, pSnapshot );
 
-#ifndef SHARED_NET_STRING_TABLES
 			if ( nHltvMaxAckCount >= 0 )
 			{// copy string updates from server to hltv stringtable
 				networkStringTableContainerServer->DirectUpdate( nHltvMaxAckCount ); // !!!! WARNING: THIS IS NOT THREAD SAFE! MEMORY CORRUPTION GUARANTEED WITH MULTIPLE HLTV SERVERS!
 			}
-#endif
 
 			if ( receivingClientCount > 1 && sv_parallel_sendsnapshot.GetBool() )
 			{
-				VPROF_BUDGET( "SendSnapshots(Parallel)", VPROF_BUDGETGROUP_OTHER_NETWORKING );
+				CVProfScope _( "SendSnapshots(Parallel)", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
 				ParallelProcess( pReceivingClients, receivingClientCount, &SV_ParallelSendSnapshot );
 			}
 			else
 			{
-				VPROF_BUDGET( "SendSnapshots", VPROF_BUDGETGROUP_OTHER_NETWORKING );
+				CVProfScope _( "SendSnapshots", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
 				for (int i = 0; i < receivingClientCount; ++i)
 				{
@@ -2117,7 +1969,7 @@ bool CGameServer::AnyClientsInHltvReplayMode()
 		CGameClient* client = Client( i );
 		if ( client->GetHltvReplayDelay() )
 		{																																
-			Assert( !client->IsFakeClient() ); // fake clients should never be in hltv replay mode; it's technically possible, but logically doesn't make sense and has no use case
+			contract_assert( !client->IsFakeClient() ); // fake clients should never be in hltv replay mode; it's technically possible, but logically doesn't make sense and has no use case
 			return true;
 		}
 	}
@@ -2226,7 +2078,7 @@ void SV_BroadcastVoiceData(IClient * cl, const ks::net::CCLCMsg_VoiceData& msg )
 		voiceData.proximity = pDestClient->IsProximityHearingClient( voiceData.client );
 
 		// If any of the parasites of the host can hear it, send it to the host
-		for ( int i = 1; i < ARRAYSIZE( pDestClient->m_SplitScreenUsers ); ++i )
+		for ( int i = 1; i < std::size( pDestClient->m_SplitScreenUsers ); ++i )
 		{
 			voiceData.audible_mask = voiceData.audible_mask | ( i << 1);
 			CBaseClient *splitUser = pDestClient->m_SplitScreenUsers[ i ];
@@ -2342,7 +2194,7 @@ void SV_CreateBaseline (void)
 
             if ( !pClass )
             {
-                Assert( pClass );
+                contract_assert( pClass );
                 continue;	// no Class ?
             }
 
@@ -2421,11 +2273,11 @@ bool SV_ActivateServer()
 
     if ( skyname )
     {
-        Q_strncpy( sv.m_szSkyname, skyname->GetString(), sizeof( sv.m_szSkyname ) );
+        V_strncpy( sv.m_szSkyname, skyname->GetString(), sizeof( sv.m_szSkyname ) );
     }
     else
     {
-        Q_strncpy( sv.m_szSkyname, "unknown", sizeof( sv.m_szSkyname ) );
+        V_strncpy( sv.m_szSkyname, "unknown", sizeof( sv.m_szSkyname ) );
     }
 
     COM_TimestampedLog( "Send Reconnects" );
@@ -2444,51 +2296,6 @@ bool SV_ActivateServer()
     }
 
     // Replay setup
-#if defined( REPLAY_ENABLED )
-    if ( !g_pServerReplayHistoryManager )
-    {
-        g_pServerReplayHistoryManager = CreateServerReplayHistoryManager();
-        g_pServerReplayHistoryManager->Init();
-    }
-
-    if ( Replay_IsEnabled() )
-    {
-        if ( CommandLine()->FindParm("-noreplay") )
-        {
-            // let user know that Replay will not work
-            ConMsg ("Replay is disabled on this server.\n");
-        }
-        else
-        {
-            if ( !replay )
-            {
-                replay = new CReplayServer;
-                replay->Init( NET_IsDedicated() );
-            }
-
-
-            if ( replay->IsActive() )
-            {
-                // replay master already running, just activate client
-                replay->m_MasterClient->ActivatePlayer();
-                replay->StartMaster( replay->m_MasterClient );
-            }
-            else
-            {
-                // create new replay client
-                CGameClient *cl = (CGameClient*)sv.CreateFakeClient( "Replay" );
-                replay->StartMaster( cl );
-            }
-        }
-    }
-    else
-    {
-
-        // make sure replay is disabled
-        if ( replay )
-            replay->Shutdown();
-    }
-#endif
 
     if (sv.IsDedicated())
     {
@@ -2497,18 +2304,9 @@ bool SV_ActivateServer()
 		g_pMDLCache->UnloadQueuedHardwareData(); // need to do this to properly remove the data associated with purged models (on the client this is called by materialsystem, but not on the dedicated server)
     }
 
-	// Steam is required for proper hltv server startup if the server is broadcasting in http
-    if ( sv.IsMultiplayer() || serverGameDLL->ShouldPreferSteamAuth() )
+    if ( sv.IsMultiplayer() )
     {
-        // We always need to activate the Steam3Server
-        // it will have different auth modes for SP and MP
-        Steam3Server().Activate();
-        sv.SetQueryPortFromSteamServer();
         sv.UpdateGameData();	// Set server tags after server creation
-        if ( serverGameDLL )
-        {
-            serverGameDLL->GameServerSteamAPIActivated( true );
-        }
     }
 
 	// HLTV setup
@@ -2561,12 +2359,6 @@ bool SV_ActivateServer()
 		}
 	}
     networkStringTableContainerServer->Lock( bPrevState );
-
-    // Heartbeat the master server in case we turned SrcTV on or off.
-    Steam3Server().SendUpdatedServerDetails();
-
-	if ( serverGameDLL && Steam3Server().GetGSSteamID().IsValid() )
-		serverGameDLL->UpdateGCInformation();
 
     COM_TimestampedLog( "SV_ActivateServer(finished)" );
 
@@ -2621,7 +2413,7 @@ void CGameServer::ReloadWhitelist( const char *pMapName )
     m_pPureServerWhitelist = CPureServerWhitelist::Create( g_pFileSystem );
     if ( g_sv_pure_mode == 2 )
     {
-        // sv_pure 2 means to ignore the pure_server_whitelist.txt file and force everything to come from Steam.
+        // sv_pure 2 means to ignore the pure_server_whitelist.txt file and force no files to come from disk.
         m_pPureServerWhitelist->EnableFullyPureMode();
         Msg( "Server using sv_pure 2.\n" );
     }
@@ -2661,7 +2453,6 @@ void CGameServer::ReloadWhitelist( const char *pMapName )
 // map).
 void CGameServer::ExecGameTypeCfg( const char *mapname )
 {
-    MEM_ALLOC_CREDIT();
     KeyValues *pGameSettings = new KeyValues( "::ExecGameTypeCfg" );
     KeyValues::AutoDelete autodelete( pGameSettings );
 
@@ -2702,9 +2493,8 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
     int		i;
     char	szDllName[MAX_QPATH];
 
-    Assert( serverGameClients );
+    contract_assert( serverGameClients );
 
-	SV_SetSteamCrashComment();
 
     if ( CommandLine()->FindParm( "-NoLoadPluginsForClient" ) != 0 )
     {
@@ -2800,18 +2590,18 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
     framesnapshotmanager->LevelChanged();
 
     // set map name and mapgroup name
-	Q_FileBase( mapname, m_szBaseMapname, sizeof ( m_szBaseMapname ) );
+	V_FileBase( mapname, m_szBaseMapname, sizeof ( m_szBaseMapname ) );
     V_strcpy_safe( m_szMapname, mapname );
     
     if ( mapGroupName && mapGroupName[0] )
     {
-        Q_strncpy( m_szMapGroupName, mapGroupName, sizeof( m_szMapGroupName ) );
+        V_strncpy( m_szMapGroupName, mapGroupName, sizeof( m_szMapGroupName ) );
     }
 
     // set startspot
     if (startspot)
     {
-        Q_strncpy(m_szStartspot, startspot, sizeof( m_szStartspot ) );
+        V_strncpy(m_szStartspot, startspot, sizeof( m_szStartspot ) );
     }
     else
     {
@@ -2890,7 +2680,7 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
     // Load the world model.
     char szModelName[MAX_PATH];
     char szNameOnDisk[MAX_PATH];
-    Q_snprintf( szModelName, sizeof( szModelName ), "maps/%s.bsp", mapname );
+    V_snprintf( szModelName, sizeof( szModelName ), "maps/%s.bsp", mapname );
     GetMapPathNameOnDisk( szNameOnDisk, szModelName, sizeof( szNameOnDisk ) );
     g_pFileSystem->AddSearchPath( szNameOnDisk, "GAME", PATH_ADD_TO_HEAD );
     g_pFileSystem->BeginMapAccess();
@@ -2946,8 +2736,8 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
 #endif
 
         // DLL CRC check.
-        Q_snprintf( szDllName, sizeof( szDllName ), "bin\\client.dll" );
-        Q_FixSlashes( szDllName );
+        V_snprintf( szDllName, sizeof( szDllName ), "bin\\client.dll" );
+        V_FixSlashes( szDllName );
         if ( !CRC_File( &clientDllCRC, szDllName ) )
         {
             clientDllCRC = 0xFFFFFFFF; // we don't require a CRC, its optional
@@ -2991,7 +2781,7 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
     {
         // Add in world brush models
         char localmodel[5]; // inline model names "*1", "*2" etc
-        Q_snprintf( localmodel, sizeof( localmodel ), "*%i", i );
+        V_snprintf( localmodel, sizeof( localmodel ), "*%i", i );
 
         PrecacheModel( localmodel, RES_FATALIFMISSING | RES_PRELOAD, modelloader->GetModelForName( localmodel, IModelLoader::FMODELLOADER_SERVER ) );
     }
@@ -3043,36 +2833,7 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
     COM_TimestampedLog( "SV_SpawnServer -- Finished" );
 
     g_pFileSystem->EndMapAccess();
-	SV_SetSteamCrashComment();
     return true;
-}
-
-
-void CGameServer::UpdateMasterServerPlayers()
-{
-    if ( !Steam3Server().SteamGameServer() )
-        return;
-
-    for ( int i=0; i < GetClientCount() ; i++ )
-    {
-        CGameClient *client = Client(i);
-        
-        if ( !client->IsConnected() )
-            continue;
-
-        CPlayerState *pl = serverGameClients->GetPlayerState( client->edict );
-        if ( !pl )
-            continue;
-
-        if ( !client->m_SteamID.IsValid() )
-            continue;
-
-		extern bool CanShowHostTvStatus();
-		if ( client->IsHLTV() && !CanShowHostTvStatus() )
-			continue;
-
-        Steam3Server().SteamGameServer()->BUpdateUserData( client->m_SteamID, client->GetClientName(), pl->score );
-    }
 }
 
 
@@ -3113,7 +2874,7 @@ extern bool g_bIsVGuiBasedDedicatedServer;
 //-----------------------------------------------------------------------------
 void SV_Think( bool bIsSimulating )
 {
-    VPROF( "SV_Physics" );
+    CVProfScope _( "SV_Physics", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
         
     if ( sv.IsDedicated() )
     {
@@ -3205,7 +2966,7 @@ void SV_SendClientUpdates( bool bIsSimulating, bool bSendDuringPause )
 
 void SV_ProcessVoice( void )
 {
-    VPROF( "SV_ProcessVoice" );
+    CVProfScope _( "SV_ProcessVoice", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
     sv.ProcessVoice();
 }
@@ -3215,8 +2976,7 @@ extern void PrintPropSkippedReport();
 void SV_Frame( bool finalTick )
 {
 	PrintPropSkippedReport();
-    VPROF( "SV_Frame" );
-    SNPROF( "SV_Frame" );
+    CVProfScope _( "SV_Frame", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
     if ( serverGameDLL && finalTick )
     {
@@ -3273,42 +3033,3 @@ void SV_Frame( bool finalTick )
     networkStringTableContainerServer->Lock( true );
 
 }
-
-void SV_SetSteamCrashComment( void )
-{
-	static bool s_bSteamApiWasInitialized = false;
-	if ( Steam3Server().BIsActive() )
-		s_bSteamApiWasInitialized = true;
-	
-	if ( sv.IsDedicated() && s_bSteamApiWasInitialized )
-	{
-		extern char g_minidumpinfo[ 4094 ];
-
-		char osversion[ 256 ];
-		osversion[ 0 ] = 0;
-
-		struct tm newtime;
-		char tString[ 128 ];
-		Plat_GetLocalTime( &newtime );
-		Plat_GetTimeString( &newtime, tString, sizeof( tString ) );
-		int tLen = Q_strlen( tString );
-		if ( tLen > 0 && tString[ tLen - 1 ] == '\n' )
-		{
-			tString[ tLen - 1 ] = 0;
-		}
-
-		Q_snprintf( g_minidumpinfo, sizeof(g_minidumpinfo),
-			"Map: %s  Group: %s  Ver: %d\n"\
-			"Game: %s\n"\
-			"Build: %i\n"\
-			"OS: %s\n"\
-			"Time: %s\n"\
-			"cmdline:%s\n" \
-			"protocol:%d\n",
-			g_ServerGlobalVariables.mapname.ToCStr(), g_ServerGlobalVariables.mapGroupName.ToCStr(), g_ServerGlobalVariables.mapversion,
-			com_gamedir, build_number(), osversion, tString, CommandLine()->GetCmdLine(),
-			g_ServerGlobalVariables.network_protocol );
-
-	}
-}
-

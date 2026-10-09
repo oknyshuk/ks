@@ -1,26 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#ifndef MATERIALSYSTEMUTIL_H
-#define MATERIALSYSTEMUTIL_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+import ks.tier1;
 #include "bitmap/imageformat.h" //ImageFormat enum definition
 #include "materialsystem/imaterialsystem.h"  // RenderTargetSizeMode_t and MaterialRenderTargetDepth_t definition
 #include "materialsystem/itexture.h"
-#include <utility>
+import std;
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
 class IMaterial;
-class KeyValues;
 
-class KeyValues;
 
 
 //-----------------------------------------------------------------------------
@@ -42,7 +33,7 @@ public:
 
 	// Detach from a material
 	void Shutdown( bool bDeleteIfUnreferenced = false );
-	bool IsValid() { return m_pMaterial != 0; }
+	bool IsValid() const { return m_pMaterial != 0; }
 
 	// Automatic casts to IMaterial
 	operator IMaterial*() { return m_pMaterial; }
@@ -86,7 +77,7 @@ public:
 
 	// Detach from a texture
 	void Shutdown( bool bDeleteIfUnReferenced = false );
-	bool IsValid() { return m_pTexture != 0; }
+	bool IsValid() const { return m_pTexture != 0; }
 
 	// Automatic casts to ITexture
 	operator ITexture*() { return m_pTexture; }
@@ -109,6 +100,3 @@ public:
 private:
 	ITexture* m_pTexture;
 };
-
-
-#endif // !MATERIALSYSTEMUTIL_H

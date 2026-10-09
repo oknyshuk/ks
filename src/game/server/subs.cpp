@@ -1,12 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Frequently used global functions.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -158,11 +184,11 @@ bool CBaseToggle::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "lip"))
 	{
-		m_flLip = atof(szValue);
+		m_flLip = std::atof(szValue);
 	}
 	else if (FStrEq(szKeyName, "wait"))
 	{
-		m_flWait = atof(szValue);
+		m_flWait = std::atof(szValue);
 	}
 	else if (FStrEq(szKeyName, "master"))
 	{
@@ -170,7 +196,7 @@ bool CBaseToggle::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else if (FStrEq(szKeyName, "distance"))
 	{
-		m_flMoveDistance = atof(szValue);
+		m_flMoveDistance = std::atof(szValue);
 	}
 	else
 		return BaseClass::KeyValue( szKeyName, szValue );
@@ -335,5 +361,3 @@ float CBaseToggle::AxisDelta( int flags, const QAngle &angle1, const QAngle &ang
 
 	return angle1.y - angle2.y;
 }
-
-

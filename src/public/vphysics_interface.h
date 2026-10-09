@@ -1,18 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Public interfaces to vphysics DLL
-//
-// $NoKeywords: $
-//===========================================================================//
 
-#ifndef VPHYSICS_INTERFACE_H
-#define VPHYSICS_INTERFACE_H
-
-
-#include "tier1/interface.h"
-#include "appframework/iappsystem.h"
-#include "mathlib/vector.h"
-#include "mathlib/vector4d.h"
+import ks.tier1;
+import std;
 #include "vcollide.h"
 #include "tier3/tier3.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
@@ -35,15 +28,15 @@
 // Torque is applied using impulses (kg*degrees/s)
 // ------------------------------------------------------------------------------------
 
-#define METERS_PER_INCH					(0.0254f)
-#define CUBIC_METERS_PER_CUBIC_INCH		(METERS_PER_INCH*METERS_PER_INCH*METERS_PER_INCH)
+inline constexpr auto METERS_PER_INCH = (0.0254f);
+inline constexpr auto CUBIC_METERS_PER_CUBIC_INCH = (METERS_PER_INCH*METERS_PER_INCH*METERS_PER_INCH);
 // 2.2 lbs / kg
-#define POUNDS_PER_KG	(2.2f)
-#define KG_PER_POUND	(1.0f/POUNDS_PER_KG)
+inline constexpr auto POUNDS_PER_KG = (2.2f);
+inline constexpr auto KG_PER_POUND = (1.0f/POUNDS_PER_KG);
 
 // convert from pounds to kg
-#define lbs2kg(x)		((x)*KG_PER_POUND)
-#define kg2lbs(x)		((x)*POUNDS_PER_KG)
+template <typename T1> [[gnu::always_inline]] inline auto lbs2kg( T1 x ) { return ((x)*KG_PER_POUND); }
+template <typename T1> [[gnu::always_inline]] inline auto kg2lbs( T1 x ) { return ((x)*POUNDS_PER_KG); }
 
 const float VPHYSICS_MIN_MASS = 0.1f;
 const float VPHYSICS_MAX_MASS = 5e4f;
@@ -73,7 +66,6 @@ struct constraint_lengthparams_t;
 struct constraint_groupparams_t;
 
 struct vehicleparams_t;
-struct matrix3x4_t;
 
 struct fluidparams_t;
 struct springparams_t;
@@ -105,25 +97,25 @@ enum PhysInterfaceId_t
 };
 
 
-#define VPHYSICS_DEBUG_OVERLAY_INTERFACE_VERSION	"VPhysicsDebugOverlay001"
+inline constexpr const char *VPHYSICS_DEBUG_OVERLAY_INTERFACE_VERSION = "VPhysicsDebugOverlay001";
 
-abstract_class IVPhysicsDebugOverlay
+class IVPhysicsDebugOverlay
 {
 public:
-	virtual void AddEntityTextOverlay(int ent_index, int line_offset, float duration, int r, int g, int b, int a, PRINTF_FORMAT_STRING const char *format, ...) = 0;
+	virtual void AddEntityTextOverlay(int ent_index, int line_offset, float duration, int r, int g, int b, int a, const char *format, ...) = 0;
 	virtual void AddBoxOverlay(const Vector& origin, const Vector& mins, const Vector& max, QAngle const& orientation, int r, int g, int b, int a, float duration) = 0;
 	virtual void AddTriangleOverlay(const Vector& p1, const Vector& p2, const Vector& p3, int r, int g, int b, int a, bool noDepthTest, float duration) = 0;
 	virtual void AddLineOverlay(const Vector& origin, const Vector& dest, int r, int g, int b,bool noDepthTest, float duration) = 0;
-	virtual void AddTextOverlay(const Vector& origin, float duration, PRINTF_FORMAT_STRING const char *format, ...) = 0;
-	virtual void AddTextOverlay(const Vector& origin, int line_offset, float duration, PRINTF_FORMAT_STRING const char *format, ...) = 0;
+	virtual void AddTextOverlay(const Vector& origin, float duration, const char *format, ...) = 0;
+	virtual void AddTextOverlay(const Vector& origin, int line_offset, float duration, const char *format, ...) = 0;
 	virtual void AddScreenTextOverlay(float flXPos, float flYPos,float flDuration, int r, int g, int b, int a, const char *text) = 0;
 	virtual void AddSweptBoxOverlay(const Vector& start, const Vector& end, const Vector& mins, const Vector& max, const QAngle & angles, int r, int g, int b, int a, float flDuration) = 0;
-	virtual void AddTextOverlayRGB(const Vector& origin, int line_offset, float duration, float r, float g, float b, float alpha, PRINTF_FORMAT_STRING const char *format, ...) = 0;
+	virtual void AddTextOverlayRGB(const Vector& origin, int line_offset, float duration, float r, float g, float b, float alpha, const char *format, ...) = 0;
 };
 
-#define VPHYSICS_INTERFACE_VERSION	"VPhysics031"
+inline constexpr const char *VPHYSICS_INTERFACE_VERSION = "VPhysics031";
 
-abstract_class IPhysics : public IAppSystem
+class IPhysics : public IAppSystem
 {
 public:
 	virtual	IPhysicsEnvironment		*CreateEnvironment( void ) = 0;
@@ -138,8 +130,8 @@ public:
 	// holds a cache of these by id.  So you can get by id to search for the previously created set
 	// UNDONE: Sets are currently limited to 32 elements.  More elements will return NULL in create.
 	// NOTE: id is not allowed to be zero.
-	virtual IPhysicsCollisionSet		*FindOrCreateCollisionSet( uintptr_t id, int maxElementCount ) = 0;
-	virtual IPhysicsCollisionSet		*FindCollisionSet( uintptr_t id ) = 0;
+	virtual IPhysicsCollisionSet		*FindOrCreateCollisionSet( std::uintptr_t id, int maxElementCount ) = 0;
+	virtual IPhysicsCollisionSet		*FindCollisionSet( std::uintptr_t id ) = 0;
 	virtual void						DestroyAllCollisionSets() = 0;
 };
 
@@ -153,7 +145,6 @@ class IVPhysicsKeyParser;
 struct convertconvexparams_t;
 class CPackedPhysicsDescription;
 
-class CPolyhedron;
 
 // UNDONE: Find a better place for this?  Should be in collisionutils, but it's needs VPHYSICS' solver.
 struct truncatedcone_t
@@ -165,7 +156,7 @@ struct truncatedcone_t
 };
 
 
-abstract_class IPhysicsCollision
+class IPhysicsCollision
 {
 public:
 	virtual ~IPhysicsCollision( void ) {}
@@ -292,7 +283,7 @@ public:
 	// Get an AABB for an oriented collision model
 	virtual float			CollideGetRadius( const CPhysCollide *pCollide ) = 0;
 
-	virtual void			*VCollideAllocUserData( vcollide_t *pVCollide, size_t userDataSize ) = 0;
+	virtual void			*VCollideAllocUserData( vcollide_t *pVCollide, std::size_t userDataSize ) = 0;
 	virtual void			VCollideFreeUserData( vcollide_t *pVCollide ) = 0;
 	virtual void			VCollideCheck( vcollide_t *pVCollide, const char *pName ) = 0;
 	virtual bool			TraceBoxAA( const Ray_t &ray, const CPhysCollide *pCollide, trace_t *ptr ) = 0;
@@ -301,7 +292,7 @@ public:
 
 
 // this can be used to post-process a collision model
-abstract_class ICollisionQuery
+class ICollisionQuery
 {
 public:
 	virtual ~ICollisionQuery() {}
@@ -326,7 +317,7 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: Ray traces from game engine.
 //-----------------------------------------------------------------------------
-abstract_class IPhysicsGameTrace
+class IPhysicsGameTrace
 {
 public:
 	virtual void VehicleTraceRay( const Ray_t &ray, void *pVehicle, trace_t *pTrace ) = 0;
@@ -335,14 +326,14 @@ public:
 };
 
 // The caller should implement this to return contents masks per convex on a collide
-abstract_class IConvexInfo
+class IConvexInfo
 {
 public:
 	virtual unsigned int GetContents( int convexGameData ) = 0;
 };
 
 class CPhysicsEventHandler;
-abstract_class IPhysicsCollisionData
+class IPhysicsCollisionData
 {
 public:
 	virtual void GetSurfaceNormal( Vector &out ) = 0;		// normal points toward second object (object index 1)
@@ -363,7 +354,7 @@ struct vcollisionevent_t
 	IPhysicsCollisionData *pInternalData;		// may change pre/post collision
 };
 
-abstract_class IPhysicsCollisionEvent
+class IPhysicsCollisionEvent
 {
 public:
 	// returns the two objects that collided, time between last collision of these objects
@@ -388,7 +379,7 @@ public:
 };
 
 
-abstract_class IPhysicsObjectEvent
+class IPhysicsObjectEvent
 {
 public:
 	// these can be used to optimize out queries on sleeping objects
@@ -398,7 +389,7 @@ public:
 	virtual void ObjectSleep( IPhysicsObject *pObject ) = 0;
 };
 
-abstract_class IPhysicsConstraintEvent
+class IPhysicsConstraintEvent
 {
 public:
 	// the constraint is now inactive, the game code is required to delete it or re-activate it.
@@ -419,7 +410,7 @@ struct hlshadowcontrol_params_t
 
 // UNDONE: At some point allow this to be parameterized using hlshadowcontrol_params_t.
 // All of the infrastructure is in place to do that.
-abstract_class IPhysicsShadowController
+class IPhysicsShadowController
 {
 public:
 	virtual ~IPhysicsShadowController( void ) {}
@@ -467,7 +458,7 @@ public:
 
 
 
-abstract_class IPhysicsMotionController
+class IPhysicsMotionController
 {
 public:
 	virtual ~IPhysicsMotionController( void ) {}
@@ -497,7 +488,7 @@ public:
 // Collision filter function.  Return 0 if objects should not be tested for collisions, nonzero otherwise
 // Install with IPhysicsEnvironment::SetCollisionFilter()
 // -------------------
-abstract_class IPhysicsCollisionSolver
+class IPhysicsCollisionSolver
 {
 public:
 	virtual int ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject *pObj1, void *pGameData0, void *pGameData1 ) = 0;
@@ -524,14 +515,14 @@ enum PhysicsTraceType_t
 	VPHYSICS_TRACE_STATIC_AND_MOVING,
 };
 
-abstract_class IPhysicsTraceFilter
+class IPhysicsTraceFilter
 {
 public:
 	virtual bool ShouldHitObject( IPhysicsObject *pObject, int contentsMask ) = 0;
 	virtual PhysicsTraceType_t	GetTraceType() const = 0;
 };
 
-abstract_class IPhysicsEnvironment
+class IPhysicsEnvironment
 {
 public:
 	virtual ~IPhysicsEnvironment( void ) {}
@@ -700,7 +691,7 @@ enum collisionhints
 
 class IPredictedPhysicsObject;
 
-abstract_class IPhysicsObject
+class IPhysicsObject
 {
 public:
 	virtual ~IPhysicsObject( void ) {}
@@ -876,12 +867,6 @@ public:
 	// dumps info about the object to Msg()
 	virtual void			OutputDebugInfo() const = 0;
 
-#if OBJECT_WELDING
-	virtual void			WeldToObject( IPhysicsObject *pParent ) = 0;
-	virtual void			RemoveWeld( IPhysicsObject *pOther ) = 0;
-	virtual void			RemoveAllWelds( void ) = 0;
-#endif
-
 	// EnableGravity still determines whether to apply gravity
 	// This flag determines which gravity constant to use for an alternate gravity effect
 	virtual void			SetUseAlternateGravity( bool bSet ) = 0;
@@ -893,7 +878,7 @@ public:
 	virtual void			SyncWith( IPhysicsObject *pOther ) = 0;
 };
 
-abstract_class IPredictedPhysicsObject : public IPhysicsObject
+class IPredictedPhysicsObject : public IPhysicsObject
 {
 public:
 	virtual ~IPredictedPhysicsObject( void ) {}
@@ -903,7 +888,7 @@ public:
 };
 
 
-abstract_class IPhysicsSpring
+class IPhysicsSpring
 {
 public:
 	virtual ~IPhysicsSpring( void ) {}
@@ -1017,8 +1002,8 @@ struct surfacedata_t
 
 class ISaveRestoreOps;
 
-#define VPHYSICS_SURFACEPROPS_INTERFACE_VERSION	"VPhysicsSurfaceProps001"
-abstract_class IPhysicsSurfaceProps
+inline constexpr const char *VPHYSICS_SURFACEPROPS_INTERFACE_VERSION = "VPhysicsSurfaceProps001";
+class IPhysicsSurfaceProps
 {
 public:
 	virtual ~IPhysicsSurfaceProps( void ) {}
@@ -1048,7 +1033,7 @@ public:
 	//virtual ISaveRestoreOps* GetMaterialIndexDataOps() const = 0;
 };
 
-abstract_class IPhysicsFluidController
+class IPhysicsFluidController
 {
 public:
 	virtual ~IPhysicsFluidController( void ) {}
@@ -1098,7 +1083,7 @@ struct springparams_t
 {
 	springparams_t()
 	{
-		memset( this, 0, sizeof(*this) );
+		std::memset( this, 0, sizeof(*this) );
 	}
 	float	constant;		// spring constant
 	float	naturalLength;// relaxed length
@@ -1177,5 +1162,3 @@ DEFINE_PIID( IPhysicsVehicleController,	PIID_IPHYSICSVEHICLECONTROLLER );
 DEFINE_PIID( IPhysicsGameTrace,			PIID_IPHYSICSGAMETRACE );
 
 //-----------------------------------------------------------------------------
-
-#endif // VPHYSICS_INTERFACE_H

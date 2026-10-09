@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $MODE == 1 )
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
@@ -21,7 +22,7 @@ private:
 public:
 	void SetMODE( int i )
 	{
-		Assert( i >= 0 && i <= 3 );
+		contract_assert( i >= 0 && i <= 3 );
 		m_nMODE = i;
 #ifdef _DEBUG
 		m_bMODE = true;
@@ -29,7 +30,7 @@ public:
 	}
 	void SetMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
 		m_nMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMODE = true;
@@ -43,7 +44,7 @@ private:
 public:
 	void SetPALETTIZE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPALETTIZE = i;
 #ifdef _DEBUG
 		m_bPALETTIZE = true;
@@ -51,7 +52,7 @@ public:
 	}
 	void SetPALETTIZE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPALETTIZE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPALETTIZE = true;
@@ -76,7 +77,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bMODE && m_bPALETTIZE;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nMODE ) + ( 4 * m_nPALETTIZE ) + 0;
 	}
@@ -98,7 +99,7 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_embroider_ps30 0
+inline constexpr int shaderDynamicTest_embroider_ps30 = 0;
 
 static const ShaderComboInformation_t s_StaticComboArray_embroider_ps30[2] = 
 {
@@ -107,7 +108,7 @@ static const ShaderComboInformation_t s_StaticComboArray_embroider_ps30[2] =
 };
 static const ShaderComboSemantics_t embroider_ps30_combos =
 {
-	"embroider_ps30", NULL, 0, s_StaticComboArray_embroider_ps30, 2 
+	"embroider_ps30", nullptr, 0, s_StaticComboArray_embroider_ps30, 2 
 };
 
 class ConstructMe_embroider_ps30

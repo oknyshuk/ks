@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef STUDIO_INTERNAL_H
-#define STUDIO_INTERNAL_H
-
-#include "mathlib/vector.h"
-
-#endif // STUDIO_INTERNAL_H
+import std;
+import ks.math;

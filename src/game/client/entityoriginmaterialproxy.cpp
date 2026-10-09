@@ -1,11 +1,21 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: A base class for all material proxies in the client dll
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include "cbase.h"
+// Purpose: A base class for all material proxies in the client dll
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
 // identifier was truncated to '255' characters in the debug information
 
 #include "proxyentity.h"
@@ -58,7 +68,7 @@ EXPOSE_MATERIAL_PROXY( CEntityOriginMaterialProxy, EntityOrigin );
 /*
 extern std::vector< EHANDLE > g_SmokeGrenadeHandles;
 
-#define SMOKE_PROXY_RADIUS_SQUARED 30000 //approx smoke radius ^2
+constexpr auto SMOKE_PROXY_RADIUS_SQUARED = 30000; //approx smoke radius ^2
 ConVar cl_debug_smoke_proxy( "cl_debug_smoke_proxy", "0", FCVAR_CHEAT );
 class CSmokeOriginMaterialProxy : public CEntityMaterialProxy
 {

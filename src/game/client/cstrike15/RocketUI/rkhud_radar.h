@@ -1,5 +1,8 @@
-#ifndef KISAKSTRIKE_RKHUD_RADAR_H
-#define KISAKSTRIKE_RKHUD_RADAR_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include <rocketui/rmlui.h>
 
 #include <rocketui/rocketui.h>
 #include "rkhud_document.h"
@@ -56,6 +59,3 @@ public:
 
     CUserMessageBinder m_UMCMsgProcessSpottedEntityUpdate;
 };
-
-
-#endif //KISAKSTRIKE_RKHUD_RADAR_H

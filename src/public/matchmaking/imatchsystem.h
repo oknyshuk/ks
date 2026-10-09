@@ -1,7 +1,8 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
+import ks.tier1;
 
-#ifndef _IMATCHSYSTEM_H_
-#define _IMATCHSYSTEM_H_
 
 class IPlayerManager;
 class IGameManager;
@@ -26,6 +27,3 @@ public:
 
 	virtual IDlcManager * GetDlcManager() = 0;
 };
-
-#endif
-

@@ -1,12 +1,12 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Tier2 logging helpers.
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+// Purpose: Tier2 logging helpers.
+
+import ks.tier1;
 #include "tier2_logging.h"
 #include "filesystem.h"
-#include "interfaces/interfaces.h"
+import std;
 
 CFileLoggingListener::CFileLoggingListener()
 {
@@ -44,7 +44,7 @@ LoggingFileHandle_t CFileLoggingListener::BeginLoggingToFile( const char *pFilen
 
 void CFileLoggingListener::EndLoggingToFile( LoggingFileHandle_t fileHandle )
 {
-	Assert( fileHandle >= 0 && fileHandle < MAX_SIMULTANEOUS_LOGGING_FILE_COUNT );
+	contract_assert( fileHandle >= 0 && fileHandle < MAX_SIMULTANEOUS_LOGGING_FILE_COUNT );
 	/* if the file had any channels associated with it, disassociate them. */
 	if ( fileHandle != INVALID_LOGGING_FILE_HANDLE )
 	{
@@ -61,22 +61,22 @@ void CFileLoggingListener::EndLoggingToFile( LoggingFileHandle_t fileHandle )
 
 void CFileLoggingListener::AssignLogChannel( LoggingChannelID_t channelID, LoggingFileHandle_t loggingFileHandle )
 {
-	Assert( loggingFileHandle >= 0 && loggingFileHandle < MAX_SIMULTANEOUS_LOGGING_FILE_COUNT );
-	Assert( m_OpenFiles[loggingFileHandle].IsOpen() );
-	Assert( channelID >= 0 && channelID < MAX_LOGGING_CHANNEL_COUNT );
+	contract_assert( loggingFileHandle >= 0 && loggingFileHandle < MAX_SIMULTANEOUS_LOGGING_FILE_COUNT );
+	contract_assert( m_OpenFiles[loggingFileHandle].IsOpen() );
+	contract_assert( channelID >= 0 && channelID < MAX_LOGGING_CHANNEL_COUNT );
 	m_FileIndices[channelID] = loggingFileHandle;
 }
 
 void CFileLoggingListener::UnassignLogChannel( LoggingChannelID_t channelID )
 {
-	Assert( channelID >= 0 && channelID < MAX_LOGGING_CHANNEL_COUNT );
+	contract_assert( channelID >= 0 && channelID < MAX_LOGGING_CHANNEL_COUNT );
 	m_FileIndices[channelID] = INVALID_LOGGING_FILE_HANDLE;
 }
 
 void CFileLoggingListener::AssignAllLogChannels( LoggingFileHandle_t loggingFileHandle )
 {
-	Assert( loggingFileHandle >= 0 && loggingFileHandle < MAX_SIMULTANEOUS_LOGGING_FILE_COUNT );
-	Assert( m_OpenFiles[loggingFileHandle].IsOpen() );
+	contract_assert( loggingFileHandle >= 0 && loggingFileHandle < MAX_SIMULTANEOUS_LOGGING_FILE_COUNT );
+	contract_assert( m_OpenFiles[loggingFileHandle].IsOpen() );
 	for ( int i = 0; i < MAX_LOGGING_CHANNEL_COUNT; ++ i )
 	{
 		m_FileIndices[i] = loggingFileHandle;
@@ -98,14 +98,14 @@ void CFileLoggingListener::Log( const LoggingContext_t *pContext, const char *pM
 		return;
 	}
 
-	Assert( pContext->m_ChannelID >= 0 && pContext->m_ChannelID < MAX_LOGGING_CHANNEL_COUNT );
+	contract_assert( pContext->m_ChannelID >= 0 && pContext->m_ChannelID < MAX_LOGGING_CHANNEL_COUNT );
 	int nFileIndex = m_FileIndices[pContext->m_ChannelID];
 	if ( nFileIndex >= 0 && nFileIndex < MAX_SIMULTANEOUS_LOGGING_FILE_COUNT )
 	{
 		// Shouldn't be trying to log to a closed file.
-		Assert( m_OpenFiles[nFileIndex].IsOpen() );
+		contract_assert( m_OpenFiles[nFileIndex].IsOpen() );
 
-		g_pFullFileSystem->Write( pMessage, Q_strlen( pMessage ), m_OpenFiles[nFileIndex].m_FileHandle );
+		g_pFullFileSystem->Write( pMessage, V_strlen( pMessage ), m_OpenFiles[nFileIndex].m_FileHandle );
 		g_pFullFileSystem->Flush( m_OpenFiles[nFileIndex].m_FileHandle );
 	}
 }

@@ -1,17 +1,12 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef MODELSOUNDSCACHE_H
-#define MODELSOUNDSCACHE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "cached_file_data.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include <flat_set>
+import std;
 
-#define MODELSOUNDSCACHE_VERSION		5
+inline constexpr auto MODELSOUNDSCACHE_VERSION = 5;
 
 class CStudioHdr;
 
@@ -37,5 +32,3 @@ private:
 	char const *GetSoundName( int index );
 };
 #pragma pack()
-
-#endif // MODELSOUNDSCACHE_H

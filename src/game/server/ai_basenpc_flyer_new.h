@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_BASENPC_FLYER_NEW_H
-#define AI_BASENPC_FLYER_NEW_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ai_basenpc.h"
 #include "ai_condition.h"
-
 
 enum BaseNPCFlyerConditions_t 
 {
@@ -51,5 +44,3 @@ protected:
 	// Override this when we had to abort movement
 	virtual void AbortedMovement( void ) {}
 };
-
-#endif // AI_BASENPC_FLYER_NEW_H

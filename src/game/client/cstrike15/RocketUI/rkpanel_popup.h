@@ -1,11 +1,14 @@
-#ifndef KISAKSTRIKE_RKPANEL_POPUP_H
-#define KISAKSTRIKE_RKPANEL_POPUP_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include <rocketui/rmlui.h>
 
 #include <rocketui/rocketui.h>
 
 #include <rocketui/rmlui.h>
 
-#define MAX_POPUP_TEXT 256
+inline constexpr auto MAX_POPUP_TEXT = 256;
 
 class RocketPopupDocument : Rml::EventListener
 {
@@ -25,5 +28,3 @@ private:
     bool m_bVisible;
     bool m_bGrabbingInput;
 };
-
-#endif //KISAKSTRIKE_RKPANEL_POPUP_H

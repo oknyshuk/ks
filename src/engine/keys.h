@@ -1,14 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-	   
-#ifndef KEYS_H
-#define KEYS_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "inputsystem/ButtonCode.h"
 #include "cdll_int.h"
@@ -30,6 +22,3 @@ int			Key_CodeForBinding( const char *pBinding , int userId = -1, int iStartCoun
 
 void		Key_StartTrapMode( void );
 bool		Key_CheckDoneTrapping( ButtonCode_t& key );
-
-
-#endif // KEYS_H

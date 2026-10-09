@@ -1,6 +1,5 @@
+#pragma once
 
-#ifndef RENDERABLE_G_H
-#define RENDERABLE_G_H
 
 
 #include "resourcefile/resourcefile.h"
@@ -32,14 +31,14 @@ enum RenderPrimitiveType_t
 // Structure definitions
 //-----------------------------------------------------------------------------
 
-schema struct RenderBufferBinding_t
+struct RenderBufferBinding_t
 {
 	CResourceReference< RenderBufferBits_t > m_pRenderBuffer;
 	uint32           m_nBindOffsetBytes;
 	uint8            m_padding[4];
 };
 
-schema struct MaterialDrawDescriptor_t
+struct MaterialDrawDescriptor_t
 {
 	int32            m_nBaseVertex;
 	int32            m_nVertexCount;
@@ -56,14 +55,14 @@ schema struct MaterialDrawDescriptor_t
 	void           *m_pMaterial;
 };
 
-schema struct PermRenderableBounds_t
+struct PermRenderableBounds_t
 {
 	Vector           m_MinBounds;
 	Vector           m_MaxBounds;
 };
 
 //! uncacheableStruct = PermRenderableBounds_t
-schema struct Renderable_t
+struct Renderable_t
 {
 	CResourceArray< MaterialDrawDescriptor_t > m_DrawCalls;
 };
@@ -72,7 +71,6 @@ class CRenderable;	// Forward declaration of associated runtime class
 DEFINE_RESOURCE_CLASS_TYPE( Renderable_t, CRenderable, RESOURCE_TYPE_RENDERABLE );
 typedef const ResourceBinding_t< CRenderable > *HRenderable;
 typedef CStrongHandle< CRenderable > HRenderableStrong;
-#define RENDERABLE_HANDLE_INVALID ( (HRenderable)0 )
+inline constexpr auto RENDERABLE_HANDLE_INVALID = ( (HRenderable)0 );
 
 
-#endif // RENDERABLE_G_H

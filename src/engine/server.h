@@ -1,20 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( SERVER_H )
-#define SERVER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "basetypes.h"
 #include "filesystem.h"
 #include "packed_entity.h"
-#include "bitbuf.h"
-#include "netadr.h"
-#include "checksum_crc.h"
 #include "quakedef.h"
 #include "engine/IEngineSound.h"
 #include "precache.h"
@@ -22,7 +11,8 @@
 #include "baseserver.h"
 #include <ihltvdirector.h>
 #include <ireplaydirector.h>
-
+import std;
+import ks.tier1;
 
 class CGameTrace;
 class ITraceFilter;
@@ -63,7 +53,6 @@ public:
 	void	InitMaxClients( void );
 	bool	SpawnServer( char *mapname, char *mapGroupNmae, char *startspot );
 	void	SetMapGroupName( char const *mapGroupName );
-	void	SetQueryPortFromSteamServer();
 	void	CopyPureServerWhitelistToStringTable();
 	void 	RemoveClientFromGame( CBaseClient *client );
 
@@ -93,7 +82,6 @@ protected :
 	void		CopyTempEntities( CFrameSnapshot* pSnapshot );
 	void		AssignClassIds();
 
-	virtual void UpdateMasterServerPlayers();
 
 	// Data
 public:
@@ -198,13 +186,9 @@ extern IReplayDirector *serverReplayDirector;
 
 extern IServerGameTags *serverGameTags;
 
-// Master server address struct for use in building heartbeats
 extern	ConVar	skill;
 extern	ConVar	deathmatch;
 extern	ConVar	coop;
 
 extern	CGameServer	sv;				// local server
 extern	CGameClient	*host_client;	// current processing client
-
-
-#endif // SERVER_H

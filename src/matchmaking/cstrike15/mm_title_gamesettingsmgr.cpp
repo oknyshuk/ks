@@ -1,32 +1,20 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
+import ks.vstdlib;
 #include "mm_title.h"
-#include "mm_title_richpresence.h"
-#include "matchmaking/cstrike15/imatchext_cstrike15.h"
 
-#include "vstdlib/random.h"
-#include "fmtstr.h"
+import std;
 
-#include "../engine/filesystem_engine.h"
 #include "filesystem.h"
 #include "gametypes/igametypes.h"
 #include "mathlib/expressioncalculator.h"
 
 #include "csgo.spa.h"
 
-#include "mm_title_contextvalues.h"
 
 #include "inputsystem/iinputsystem.h"
 
-#include "steam/steam_api.h"
-extern CSteamAPIContext *steamapicontext;
-
-#include "csgo_limits.h"
-#include "csgo_limits.inl"
 
 extern IGameTypes *g_pGameTypes;
 
@@ -48,69 +36,18 @@ static AggregateSkillProperty g_AggregateSkillProperties[] =
 	nullptr,
 };
 
-#define MATCH_MAX_SKILL_FIELDS	5
-
-ConVar mm_sv_load_test( "mm_sv_load_test", "0", FCVAR_DEVELOPMENTONLY );
-ConVar mm_title_debug_version( "mm_title_debug_version", "0", FCVAR_DEVELOPMENTONLY, "This matchmaking version will override .res file version for isolating matchmaking" );
-ConVar mm_title_debug_dccheck( "mm_title_debug_dccheck", "0", FCVAR_DEVELOPMENTONLY, "This matchmaking query will override datacenter connectivity: -1 for local, 1 for dedicated" );
-ConVar mm_title_debug_minquery( "mm_title_debug_minquery", "0", FCVAR_DEVELOPMENTONLY, "This matchmaking query will run with minimal set of parameters" );
-ConVar mm_csgo_community_search_players_min( "mm_csgo_community_search_players_min", "3", FCVAR_RELEASE | FCVAR_ARCHIVE, "When performing CSGO community matchmaking look for servers with at least so many human players" );
-
 class CMatchTitleGameSettingsMgr : public IMatchTitleGameSettingsMgr
 {
 public:
-
-	CMatchTitleGameSettingsMgr()
-	{
-		m_pMatchSystemData = nullptr;
-	}
-
-	~CMatchTitleGameSettingsMgr()
-	{
-		if ( m_pMatchSystemData )
-		{
-			m_pMatchSystemData->deleteThis();
-		}
-	}
-
 	// Extends server game details
 	virtual void ExtendServerDetails( KeyValues *pDetails, KeyValues *pRequest );
 
 	// Adds the essential part of game details to be broadcast
 	virtual void ExtendLobbyDetailsTemplate( KeyValues *pDetails, char const *szReason, KeyValues *pFullSettings );
 
-	// Extends game settings update packet for lobby transition,
-	// either due to a migration or due to an endgame condition
-	virtual void ExtendGameSettingsForLobbyTransition( KeyValues *pSettings, KeyValues *pSettingsUpdate, bool bEndGame );
-
-	// Allows title to migrate data cached in client sys session data
-	// into host sys session data
-	virtual void MigrateSysSessionData( IMatchSession *pNewMatchSession, KeyValues *pSysSessionData );
-
-	// Adds data for datacenter reporting
-	virtual void ExtendDatacenterReport( KeyValues *pReportMsg, char const *szReason );
-
-	// Rolls up game details for matches grouping
-	virtual KeyValues * RollupGameDetails( KeyValues *pDetails, KeyValues *pRollup, KeyValues *pQuery );
-
-
-	// Defines session search keys for matchmaking
-	virtual KeyValues * DefineSessionSearchKeys( KeyValues *pSettings );
-
-	// Defines dedicated server search key
-	virtual KeyValues * DefineDedicatedSearchKeys( KeyValues *pSettings, bool bNeedOfficialServer, int nSearchPass );
-
-
 	// Extends game settings update packet before it gets merged with
 	// session settings and networked to remote clients
 	virtual void ExtendGameSettingsUpdateKeys( KeyValues *pSettings, KeyValues *pUpdateDeleteKeys );
-
-	// Update a team session to be a game session by filling in map name, updating number of slots etc
-	virtual KeyValues * ExtendTeamLobbyToGame( KeyValues *pSettings );
-
-	// Prepares system for session creation
-	virtual KeyValues * PrepareForSessionCreate( KeyValues *pSettings );
-
 
 	// Executes the command on the session settings, this function on host
 	// is allowed to modify Members/Game subkeys and has to fill in modified players KeyValues
@@ -123,90 +60,11 @@ public:
 	// Members/Game subkeys and has to fill in modified players KeyValues
 	virtual void PrepareLobbyForGame( KeyValues *pSettings, KeyValues **ppPlayersUpdated );
 
-	// Prepares the host team lobby for game adjusting the game settings
-	// this function is allowed to prepare modification package to update
-	// Game subkeys.
-	// Returns the update/delete package to be applied to session settings
-	// and pushed to dependent two sesssion of the two teams.
-	virtual KeyValues * PrepareTeamLinkForGame( KeyValues *pSettingsLocal, KeyValues *pSettingsRemote );
-
 	// Initializes full game settings from potentially abbreviated game settings
 	virtual void InitializeGameSettings( KeyValues *pSettings, char const *szReason );
 
 	// Sets the bspname key given a mapgroup
 	virtual void SetBspnameFromMapgroup( KeyValues *pSettings );
-
-	// Prepares the client lobby for migration
-	// this function is called when the client session is still in the state
-	// of "client" while handling the original host disconnection and decision
-	// has been made that local machine will be elected as new "host"
-	// Returns NULL if migration should proceed normally
-	// Returns [ kvroot { "error" "n/a" } ] if migration should be aborted.
-	virtual KeyValues * PrepareClientLobbyForMigration( KeyValues *pSettingsLocal, KeyValues *pMigrationInfo ) { return nullptr; }
-
-	// Prepares the session for server disconnect
-	// this function is called when the session is still in the active gameplay
-	// state and while localhost is handling the disconnection from game server.
-	// Returns NULL to allow default flow
-	// Returns [ kvroot { "disconnecthdlr" "<opt>" } ] where <opt> can be:
-	//		"destroy" : to trigger a disconnection error and destroy the session
-	//		"lobby" : to initiate a "salvaging" lobby transition
-	virtual KeyValues * PrepareClientLobbyForGameDisconnect( KeyValues *pSettingsLocal, KeyValues *pDisconnectInfo )
-	{
-		// Every event that causes a disconnection from game server is unsalvagable in CS:GO
-		// in other products it should be possible to keep all players that were playing on game server
-		// in the lobby together and send them to lobby UI
-		return new KeyValues( "disconnecthdrl", "disconnecthdlr", "destroy" );
-	}
-
-	// Retrieves the indexed formula from the match system settings file. (MatchSystem.360.res)
-	virtual char const * GetFormulaAverage( int index );
-
-	// Called by the client to notify matchmaking that it should update matchmaking properties based
-	// on player distribution among the teams.
-	virtual void UpdateTeamProperties( KeyValues *pCurrentSettings, KeyValues *pTeamProperties );
-
-	// Validates if client profile can set a stat or get awarded an achievement
-	virtual bool AllowClientProfileUpdate( KeyValues *kvUpdate )
-	{
-		return true;			// Always all profile to be updated for CStrike15, all platforms
-	}
-
-
-protected:
-	// Loads the games match settings from the KeyValues object.  The match settings contain
-	// data on how to expand the search passes formulas to use for computing skill.
-	void LoadMatchSettings( void );
-
-	// Add filters necessary to implement matchmaking rule on Steam
-	void AddSteamMatchmakingRule( KeyValues *pResult, bool bAllSessions, KeyValues *pSettings, 
-		bool bCssMatchVersion, bool bCssLevel, bool bCssGameType, bool bCssGameMode,
-		bool bTeamMatch );
-		
-	KeyValues *m_pMatchSystemData;
-
-	std::vector< std::string > m_FormulaAverage;
-
-	std::vector< std::string > m_FormulaExperience;
-	int m_nFormulaExperienceRangeMin;
-	int m_nFormulaExperienceRangeMax;
-
-	struct SkillFormulas
-	{
-		std::vector< std::string > formulas;
-		int rangeMin;
-		int rangeMax;
-	};
-	std::vector< SkillFormulas* > m_FormulaSkill;
-
-	struct SearchPass
-	{
-		bool checkExperience;
-		int experienceRange;
-		std::vector< bool > checkSkill;
-		std::vector< int > skillRange;
-	};
-	std::vector< SearchPass* > m_SearchPass;
 };
 
 CMatchTitleGameSettingsMgr g_MatchTitleGameSettingsMgr;
@@ -267,8 +125,6 @@ void CMatchTitleGameSettingsMgr::ExtendLobbyDetailsTemplate( KeyValues *pDetails
 			" apr 0 "
 			" ark 0 "
 			" loc #empty# "
-			" clanid #empty# "
-			" clantag #empty# "
 		" } "
 		);
 
@@ -277,198 +133,9 @@ void CMatchTitleGameSettingsMgr::ExtendLobbyDetailsTemplate( KeyValues *pDetails
 	pDetails->MergeFrom( pkvExt, KeyValues::MERGE_KV_UPDATE );
 }
 
-// Extends game settings update packet for lobby transition,
-// either due to a migration or due to an endgame condition
-void CMatchTitleGameSettingsMgr::ExtendGameSettingsForLobbyTransition( KeyValues *pSettings, KeyValues *pSettingsUpdate, bool bEndGame )
-{
-	pSettingsUpdate->SetString( "game/state", "lobby" );
-
-	extern void UpdateAggregateMembersSettings( KeyValues *pFullGameSettings, KeyValues *pUpdate );
-	UpdateAggregateMembersSettings( pSettings, pSettingsUpdate );
-}
-
-// Allows title to migrate data cached in client sys session data
-// into host sys session data
-void CMatchTitleGameSettingsMgr::MigrateSysSessionData( IMatchSession *pNewMatchSession, KeyValues *pSysSessionData )
-{
-}
-
-// Adds data for datacenter reporting
-void CMatchTitleGameSettingsMgr::ExtendDatacenterReport( KeyValues *cmd, char const *szReason )
-{
-}
-
-// Rolls up game details for matches grouping
-KeyValues * CMatchTitleGameSettingsMgr::RollupGameDetails( KeyValues *pDetails, KeyValues *pRollup, KeyValues *pQuery )
-{
-	// TODO: keep each individual results, roll up to the party leader XUID
-	return nullptr;
-}
-
-// Defines dedicated server search key
-KeyValues * CMatchTitleGameSettingsMgr::DefineDedicatedSearchKeys( KeyValues *pSettings, bool bNeedOfficialServer, int nSearchPass )
-{
-
-	static ConVarRef sv_search_key( "sv_search_key" );
-
-	KeyValues *pKeys = new KeyValues( "SearchKeys" );
-
-	CFmtStr fmtExtraGameData;
-
-	if ( bNeedOfficialServer )
-	{
-		pKeys->SetString( "gametype", "valve_ds,empty" );
-	}
-	else
-	{
-		pKeys->SetString( "gametype", "empty" );
-
-		if ( char const *szMapGroup = pSettings->GetString( "game/mapgroupname", nullptr ) )
-		{
-			if ( char const *szWorkshop = Q_stristr( szMapGroup, "@workshop" ) )
-			{
-				if ( szWorkshop != szMapGroup )
-				{	// When searching for a workshop map only consider servers that are empty and advertise support for it
-					// and are running the same game type and mode as requested
-					// First search will be for explicitly supported map in rotation, but second search will be for
-					// servers that are willing to host public players
-					if ( 0 == ( nSearchPass % 2 ) )
-					{	// First search pass: request map ID tag
-						fmtExtraGameData.AppendFormat( "%.*s,", (int)( szWorkshop - szMapGroup ), szMapGroup );
-					}
-					else
-					{	// Second search pass: request any map support
-						fmtExtraGameData.AppendFormat( "wks:1," );
-					}
-
-					// if ( !pSettings->GetBool( "options/anytypemode" ) ) -- maybe allow reserving community servers regardless of game modes?
-					{
-						int nGameType = 0, nGameMode = 0;
-						g_pGameTypes->GetGameModeAndTypeIntsFromStrings( pSettings->GetString( "game/type" ), pSettings->GetString( "game/mode" ),
-							nGameType, nGameMode );
-						fmtExtraGameData.AppendFormat( "gt:%u,gm:%u,", nGameType, nGameMode );
-					}
-				}
-			}
-		}
-	}
-
-	pKeys->SetString( "gamedata", CFmtStr( "%s%skey:%s%d",
-		fmtExtraGameData.Access(),
-		bNeedOfficialServer ? "v" : "c",
-		sv_search_key.GetString(),
-		g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() ) );
-
-	return pKeys;
-
-}
-
-
-static void DescribeX360QueryDefineSessionSearchKeys( KeyValues *pkv )
-{
-}
-
-// Defines session search keys for matchmaking
-KeyValues * CMatchTitleGameSettingsMgr::DefineSessionSearchKeys( KeyValues *pSettings )
-{
-	MEM_ALLOC_CREDIT();
-
-	DevMsg( "DefineSessionSearchKeys settings:\n" );
-	KeyValuesDumpAsDevMsg( pSettings, 1 );
-
-	// Process the match system data here.  This will bail early without loading if the
-	// input file from above doesn't bump it's version number.
-	LoadMatchSettings();
-
-	KeyValues *pResult = new KeyValues( "SessionSearch" );
-
-	int numPlayers = pSettings->GetInt( "members/numPlayers", XBX_GetNumGameUsers() );
-	pResult->SetInt( "numPlayers",  numPlayers);
-
-	// Certain contexts and properties can not be part of the search parameters unless they are explictly
-	// required by the matchmaking query.  Setting contexts/parameters that the query doesn't expect will
-	// cause the query to fail.
-	bool bCssMatchVersion = true;
-	bool bCssLevel = true;
-	bool bCssGameType = true;
-	bool bCssGameMode = true;
-	bool bTeamMatch = true;
-	bool bTeamMatchTypeClan = false;
-	bool bTeamMatchTypeClanPreferred = false;
-
-	// Determine if this is a team matchmaking query: 
-	//  On Consoles we define "conteammatch" for team lobbies; 
-	//  On PC, we do NOT set bypasslobby for team lobbies
-	bTeamMatch = ( pSettings->GetBool( "options/bypasslobby", false ) == false );
-
-
-	// Set the appropriate query based on if we're quickmatching or custommatching.
-	char const *szAction = pSettings->GetString( "options/action", "" );
-	bool bMatchmakingQueryForGameInProgress = true;
-	if ( !Q_stricmp( "quickmatch", szAction ) )
-	{
-		bCssLevel = false;
-		bMatchmakingQueryForGameInProgress = true;
-	}
-	else if ( !Q_stricmp( "custommatch", szAction ) )
-	{
-		bMatchmakingQueryForGameInProgress = true;
-		// If a mapgroup is specified use the player match query, but if no mapgroup is specified,
-		// use the player query that doesn't filter based on mapgroup name.
-		const char *pszMapGroupName = pSettings->GetString( "game/mapgroupname", nullptr );
-		if ( pszMapGroupName != nullptr && Q_strlen( pszMapGroupName ) > 0 )
-		{
-		}
-		else
-		{
-			bCssLevel = false;
-		}
-	}
-
-
-	// Determine if we're playing gungameprogressive mode so we can use the proper matchmaking data fields.
-	MatchmakingDataType mmDataType = MMDATA_TYPE_GENERAL;
-	if ( !V_stricmp( "gungameprogressive", pSettings->GetString( "game/mode" ) ) )
-	{
-		mmDataType = MMDATA_TYPE_GGPROGRESSIVE;
-	}
-
-	// Add steam version of rule
-	AddSteamMatchmakingRule(pResult, !bMatchmakingQueryForGameInProgress, pSettings, bCssMatchVersion, bCssLevel, bCssGameType, bCssGameMode, bTeamMatch);
-
-	// If we want a clan-preferred match, duplicate search keys. First search for clan only
-	// matches and then regular matches
-	const char *szOppTeamType = pSettings->GetString( "game/opp_team_type", "");
-	bTeamMatchTypeClan = !Q_stricmp( "clan", szOppTeamType );
-	if ( !bTeamMatchTypeClan )
-	{
-		bTeamMatchTypeClanPreferred = !Q_stricmp( "clan_preferred", szOppTeamType );
-	}
-
-	KeyValues *pTemplate = pResult->MakeCopy();
-	KeyValues::AutoDelete autoDeleteEvent( pTemplate );
-
-	{
-		if ( uint64 uiDependentLobby = pSettings->GetUint64( "System/dependentlobby", 0ull ) )
-		{
-			pResult->SetUint64( "DependentLobby", uiDependentLobby );
-		}	
-	}
-
-	DescribeX360QueryDefineSessionSearchKeys( pResult );
-	return pResult;
-}
-
 // Initializes full game settings from potentially abbreviated game settings
 void CMatchTitleGameSettingsMgr::InitializeGameSettings( KeyValues *pSettings, const char *szReason )
 {
-	// GS - Make sure match settings are loaded. For team lobbies we create a lobby without first
-	// searching for one, so this function will be called before others (like DefineSessionSearchKeys)
-	// that also call LoadMatchSettings()
-	LoadMatchSettings();
-
-	//char const *szNetwork = pSettings->GetString( "system/network", "LIVE" );
-
 	if ( KeyValues *kv = pSettings->FindKey( "game", true ) )
 	{
 		kv->SetString( "state", "lobby" );
@@ -493,18 +160,11 @@ void CMatchTitleGameSettingsMgr::InitializeGameSettings( KeyValues *pSettings, c
 	// map name should not be coming in here, only mapgroup, so set mapname from mapgroupname
 	SetBspnameFromMapgroup( pSettings );
 
-	// Set the number of slots and the rich presence context based on the map.
-	const char *szMap = pSettings->GetString( "game/map", nullptr );
+	// Set the number of slots
 	int numSlots = pSettings->GetInt( "members/numSlots", 10 );
-	uint32 dwRichPresenceContext = 0xFFFF;
-
-	if ( szMap )
-	{
-		g_pGameTypes->GetMapInfo( szMap, dwRichPresenceContext );
-	}
 
 	// If this is an official game, then we know how many slots we will force
-	if ( !Q_stricmp( "searchempty", pSettings->GetString( "options/createreason" ) ) &&
+	if ( !V_stricmp( "searchempty", pSettings->GetString( "options/createreason" ) ) &&
 		!pSettings->GetBool( "game/hosted" ) )
 	{
 		const char *pGameTypeName = pSettings->GetString( "game/type" );
@@ -517,103 +177,12 @@ void CMatchTitleGameSettingsMgr::InitializeGameSettings( KeyValues *pSettings, c
 	pSettings->SetInt( "members/numSlots", numSlots );
 
 
-	// Add search key as a filter
-	static ConVarRef sv_search_key( "sv_search_key" );
-	CFmtStr searchKey( "k%s%d",
-		sv_search_key.GetString(),
-		g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() );
-
-	pSettings->SetString( "game/search_key", searchKey.Access());
-	
-	// Temp: Check for sv_load_test
-
-
-	if ( mm_sv_load_test.GetBool() )
-	{
-		const char* playerCountry = steamapicontext->SteamUtils()->GetIPCountry();
-		if ( !Q_stricmp( playerCountry, "US") )
-		{
-			pSettings->SetInt( "options/sv_load_test", 1 );
-		}
-	}
-
-
-
 	if ( KeyValues *kvLocalPlayer = pSettings->FindKey( "members/machine0/player0" ) )
 	{
-		//
-		// Clan information
-		//
-		SplitScreenConVarRef varOption( "cl_clanid" );
-		const char *pClanID = varOption.GetString( 0 );
-		uint32 iPlayerClanID = atoi( pClanID );
-
-		kvLocalPlayer->SetInt( "game/clanID", iPlayerClanID );
-		ISteamFriends *pFriends = steamapicontext->SteamFriends();
-		if ( pFriends )
-		{
-			int iGroupCount = pFriends->GetClanCount();
-			for ( int k = 0; k < iGroupCount; ++ k )
-			{
-				CSteamID clanID = pFriends->GetClanByIndex( k );
-				if ( clanID.GetAccountID() == iPlayerClanID )
-				{
-					CSteamID clanID( iPlayerClanID, steamapicontext->SteamUtils()->GetConnectedUniverse(), k_EAccountTypeClan );
-					// valid clan, accept the change
-					const char *szClanTag = pFriends->GetClanTag( clanID );
-					char chLimitedTag[ MAX_CLAN_TAG_LENGTH ];
-					CopyStringTruncatingMalformedUTF8Tail( chLimitedTag, szClanTag, MAX_CLAN_TAG_LENGTH );
-					
-					const char *szClanName = pFriends->GetClanName( clanID );
-
-					kvLocalPlayer->SetString( "game/clantag", chLimitedTag );
-					kvLocalPlayer->SetString( "game/clanname", szClanName );
-				}
-			}
-		}
-
-		//
-		// Ticketing information for friends
-		//
-		if ( g_pMatchExtensions->GetIBaseClientDLL() )
-		{
-			g_pMatchExtensions->GetIBaseClientDLL()->DetermineSubscriptionKvToAdvertise( kvLocalPlayer );
-		}
-
-		// If we are joining via friend discovery then pass it to the host
-		if ( uint64 xuidFriendJoin = pSettings->GetUint64( "options/friendxuid" ) )
-		{
-			kvLocalPlayer->SetUint64( "game/jfriend", xuidFriendJoin );
-		}
-
 		// If we are joining via nearby discovery then pass it to the host
 		if ( int nNearbyJoin = pSettings->GetInt( "options/nby" ) )
 		{
 			kvLocalPlayer->SetInt( "game/nby", nNearbyJoin );
-		}
-
-		// If we are joining via clan discovery then pass it to the host
-		if ( char const *szClanIdOption = pSettings->GetString( "options/clanid", nullptr ) )
-		{
-			kvLocalPlayer->SetString( "game/jclanid", szClanIdOption );
-
-			if ( pFriends )
-			{
-				int iGroupCount = pFriends->GetClanCount();
-				for ( int k = 0; k < iGroupCount; ++k )
-				{
-					CSteamID clanID = pFriends->GetClanByIndex( k );
-					if ( clanID.GetAccountID() == iPlayerClanID )
-					{
-						CSteamID clanID( iPlayerClanID, steamapicontext->SteamUtils()->GetConnectedUniverse(), k_EAccountTypeClan );
-						// valid clan, accept the change
-						const char *szClanTag = pFriends->GetClanTag( clanID );
-						char chLimitedTag[ MAX_CLAN_TAG_LENGTH ];
-						CopyStringTruncatingMalformedUTF8Tail( chLimitedTag, szClanTag, MAX_CLAN_TAG_LENGTH );
-						kvLocalPlayer->SetString( "game/jclantag", chLimitedTag );
-					}
-				}
-			}
 		}
 
 		// After we initialized local player transfer that data into session
@@ -641,30 +210,6 @@ void CMatchTitleGameSettingsMgr::SetBspnameFromMapgroup( KeyValues *pSettings )
 // session settings and networked to remote clients
 void CMatchTitleGameSettingsMgr::ExtendGameSettingsUpdateKeys( KeyValues *pSettings, KeyValues *pUpdateDeleteKeys )
 {
-	if ( char const *szClanIdUpdate = pUpdateDeleteKeys->GetString( "update/game/clanid", nullptr ) )
-	{	// Ensure that clantag is also set when setting clanid
-		if ( uint64 xuid = V_atoui64( szClanIdUpdate ) )
-		{
-			CSteamID steamIdClan( xuid );
-			const char *pTag = steamapicontext->SteamFriends()->GetClanTag( steamIdClan );
-			if ( pTag && *pTag )
-			{
-				char chLimitedTag[ MAX_CLAN_TAG_LENGTH ];
-				CopyStringTruncatingMalformedUTF8Tail( chLimitedTag, pTag, MAX_CLAN_TAG_LENGTH );
-				pUpdateDeleteKeys->SetString( "update/game/clantag", chLimitedTag );
-			}
-			else
-			{
-				pUpdateDeleteKeys->SetString( "update/game/clantag", "" );
-			}
-		}
-	}
-
-	if ( char const *szClanIdUpdate = pUpdateDeleteKeys->GetString( "delete/game/clanid", nullptr ) )
-	{
-		pUpdateDeleteKeys->SetString( "delete/game/clantag", "" );
-	}
-
 	if ( char const *szMmQueueUpdate = pUpdateDeleteKeys->GetString( "update/game/mmqueue", nullptr ) )
 	{
 		int nAPR = pSettings->GetInt( "game/apr" );
@@ -684,67 +229,12 @@ void CMatchTitleGameSettingsMgr::ExtendGameSettingsUpdateKeys( KeyValues *pSetti
 	}
 }
 
-KeyValues *CMatchTitleGameSettingsMgr::ExtendTeamLobbyToGame( KeyValues *pSettings )
-{
-	KeyValues *pUpdate = KeyValues::FromString(
-		"update",
-		" update { "
-			" system { "
-				" network LIVE "
-				" netFlag #empty#"
-			" } "
-			" options { "
-				" bypasslobby 1"
-			" } "
-			" game {"				
-			" } "
-			" members {"
-			" } "
-		" } "
-	);
-
-	// Add in bsp name from map group name
-	const char *pMapGroupName = pSettings->GetString( "game/mapgroupname", nullptr );
-	Assert( pMapGroupName );
-	const char *pMapName = pSettings->GetString( "game/map", nullptr );
-	Assert( pMapName );
-	if ( !pMapName )
-	{
-		pMapName = g_pGameTypes->GetRandomMap( pMapGroupName );
-		pUpdate->SetString( "udpate/game/map", pMapName );
-	}
-
-	DevMsg( "CMatchTitleGameSettingsMgr::ExtendTeamLobbyToGame\n" );
-	KeyValuesDumpAsDevMsg( pUpdate );
-
-	return pUpdate;
-}
-
-// Prepares system for session creation
-KeyValues * CMatchTitleGameSettingsMgr::PrepareForSessionCreate( KeyValues *pSettings )
-{
-	// It's at this point that we need to set all of the appropriate properties on the local machine
-	// for matchmaking searches.
-
-	return MM_Title_RichPresence_PrepareForSessionCreate( pSettings );
-}
-
 // Prepares the lobby for game or adjust settings of new players who
 // join a game in progress, this function is allowed to modify
 // Members/Game subkeys and has to write modified players XUIDs
 void CMatchTitleGameSettingsMgr::PrepareLobbyForGame( KeyValues *pSettings, KeyValues **ppPlayersUpdated )
 {
 	// set player avatar/teams, etc	
-}
-
-// Prepares the host team lobby for game adjusting the game settings
-// this function is allowed to prepare modification package to update
-// Game subkeys.
-// Returns the update/delete package to be applied to session settings
-// and pushed to dependent two sesssion of the two teams.
-KeyValues * CMatchTitleGameSettingsMgr::PrepareTeamLinkForGame( KeyValues *pSettingsLocal, KeyValues *pSettingsRemote )
-{
-	return nullptr;
 }
 
 void UpdateAggregateMembersSettings( KeyValues *pFullGameSettings, KeyValues *pUpdate )
@@ -757,7 +247,8 @@ void UpdateAggregateMembersSettings( KeyValues *pFullGameSettings, KeyValues *pU
 	char const *szBestCountry = "";
 	float flBestCountryWeight = 0.0f;
 	ks::idict< float > mapPlayerCountries;
-	static CSteamID s_mysteamid = steamapicontext->SteamUser()->GetSteamID();
+	IPlayerLocal *pLocalPlayer = g_pPlayerManager->GetLocalPlayer( XBX_GetPrimaryUserId() );
+	CPlayerId idLocalPlayer( pLocalPlayer ? pLocalPlayer->GetXUID() : 0ull );
 	for ( int iMachine = 0, numMachines = pFullGameSettings->GetInt( "members/numMachines" ); iMachine < numMachines; ++iMachine )
 	{
 		KeyValues *pMachine = pFullGameSettings->FindKey( CFmtStr( "members/machine%d", iMachine ) );
@@ -783,7 +274,7 @@ void UpdateAggregateMembersSettings( KeyValues *pFullGameSettings, KeyValues *pU
 				continue;
 
 			float flNewWeightOfThisCountry = (
-				mapPlayerCountries[szLocation] += ( 1.0f + ( ( CSteamID( pPlayer->GetUint64( "xuid" ) ).GetAccountID() == s_mysteamid.GetAccountID() ) ? 0.5f : 0.0f ) )
+				mapPlayerCountries[szLocation] += ( 1.0f + ( ( CPlayerId( pPlayer->GetUint64( "xuid" ) ).GetAccountID() == idLocalPlayer.GetAccountID() ) ? 0.5f : 0.0f ) )
 				);
 			if ( flNewWeightOfThisCountry > flBestCountryWeight )
 			{
@@ -841,10 +332,10 @@ void CMatchTitleGameSettingsMgr::ExecuteCommand( KeyValues *pCommand, KeyValues 
 {
 	char const *szCommand = pCommand->GetName();
 
-	if ( !Q_stricmp( "Game::SetPlayerRanking", szCommand ) )
+	if ( !V_stricmp( "Game::SetPlayerRanking", szCommand ) )
 	{
-		if ( !Q_stricmp( "host", pSessionSystemData->GetString( "type", "host" ) ) &&
-			// !Q_stricmp( "lobby", pSessionSystemData->GetString( "state", "lobby" ) ) && - avatars also update when players change team ingame
+		if ( !V_stricmp( "host", pSessionSystemData->GetString( "type", "host" ) ) &&
+			// !V_stricmp( "lobby", pSessionSystemData->GetString( "state", "lobby" ) ) && - avatars also update when players change team ingame
 			ppPlayersUpdated )
 		{
 			XUID xuidPlayer = pCommand->GetUint64( "xuid" );
@@ -891,308 +382,3 @@ void CMatchTitleGameSettingsMgr::ExecuteCommand( KeyValues *pCommand, KeyValues 
 		}
 	}
 }
-
-void CMatchTitleGameSettingsMgr::LoadMatchSettings( void )
-{
-	// Only load the match settings once.
-	if ( m_pMatchSystemData )
-	{
-		return;
-	}
-
-	m_pMatchSystemData = new KeyValues( "" );
-
-	// Load the match system keyvalues file if we haven't already.
-	if ( !m_pMatchSystemData->LoadFromFile( g_pFullFileSystem, "resource\\MatchSystem.res", "GAME" ) )
-	{
-		m_pMatchSystemData->deleteThis();
-		m_pMatchSystemData = nullptr;
-	}
-
-	if ( !m_pMatchSystemData )
-		return;
-
-	// Get the version of the match file and compare to our latest parsed version.
-	// Will be used for PROPERTY_CSS_MATCH_VERSION.
-	int version = m_pMatchSystemData->GetInt( "version", -1 );
-	if ( ( mm_title_debug_version.GetInt() < 100 ) && ( mm_title_debug_version.GetInt() >= version ) )
-	{
-		// Version file is not newer, so use what we already have.
-		AssertMsg( mm_title_debug_version.GetInt() >= 0, "Failed to load any match settings.  Matchmaking will likely fail." );
-		return;
-	}
-	if ( mm_title_debug_version.GetInt() < 100 )
-		mm_title_debug_version.SetValue( version );
-
-	// Remove all previous formulas.
-	m_FormulaExperience.clear(); m_FormulaExperience.shrink_to_fit();
-
-	// Load the experience formula.
-	KeyValues *pExperienceFormula = m_pMatchSystemData->FindKey( "ExperienceFormula" );
-	if ( pExperienceFormula )
-	{
-		// Search for keys that are a number that corresponds to the skill number they should be used for.
-		for ( int nSkillIndex=0; ; ++nSkillIndex )
-		{
-			char const *pszFormula = pExperienceFormula->GetString( CFmtStr( "%d", nSkillIndex ), nullptr );
-			if ( !pszFormula || !*pszFormula )
-			{
-				// No more formulas specified.
-				break;
-			}
-			m_FormulaExperience.push_back( ks::nz( pszFormula ) );
-		}
-
-		// Get the min/max range for valid values for these formulas.
-		m_nFormulaExperienceRangeMin = pExperienceFormula->GetInt( "minvalue", 0 );
-		m_nFormulaExperienceRangeMax = pExperienceFormula->GetInt( "maxvalue", INT_MAX );
-	}
-
-	// Remove all previous formulas.
-	for ( int i=0; i<std::ssize( m_FormulaSkill ); ++i )
-	{
-		delete m_FormulaSkill[i];
-	}
-	m_FormulaSkill.clear(); m_FormulaSkill.shrink_to_fit();
-
-	// Load the skill formulas.
-	for ( int nSkillFormulaIndex=0; ; ++nSkillFormulaIndex )
-	{
-		KeyValues *pSkillFormulaInfo = m_pMatchSystemData->FindKey( CFmtStr( "Skill%dFormula", nSkillFormulaIndex ) );
-		if ( !pSkillFormulaInfo )
-		{
-			// No more formulas specified.
-			break;
-		}
-
-		SkillFormulas *pSkillFormulas = new SkillFormulas();
-
-		// Search for keys that are a number that corresponds to the skill number they should be used for.
-		for ( int nSkillIndex=0; ; ++nSkillIndex )
-		{
-			char const *pszFormula = pSkillFormulaInfo->GetString( CFmtStr( "%d", nSkillIndex ), nullptr );
-			if ( !pszFormula || !*pszFormula )
-			{
-				// No more formulas specified.
-				break;
-			}
-			pSkillFormulas->formulas.push_back( ks::nz( pszFormula ) );
-		}
-
-		// Get the min/max range for valid values for these formulas.
-		pSkillFormulas->rangeMin = pSkillFormulaInfo->GetInt( "minvalue", 0 );
-		pSkillFormulas->rangeMax = pSkillFormulaInfo->GetInt( "maxvalue", INT_MAX );
-
-		m_FormulaSkill.push_back( pSkillFormulas );
-	}
-
-	// Load the average formula.
-	KeyValues *pAverageFormula = m_pMatchSystemData->FindKey( "AvgFormula" );
-	if ( pAverageFormula )
-	{
-		// Search for keys that are a number that corresponds to the skill number they should be used for.
-		for ( int nSkillIndex=0; ; ++nSkillIndex )
-		{
-			char const *pszFormula = pAverageFormula->GetString( CFmtStr( "%d", nSkillIndex ), nullptr );
-			if ( !pszFormula || !*pszFormula )
-			{
-				// No more formulas specified.
-				break;
-			}
-			m_FormulaAverage.push_back( ks::nz( pszFormula ) );
-		}
-	}
-
-	// Remove all previous search passes.
-	for ( int i=0; i<std::ssize( m_SearchPass ); ++i )
-	{
-		delete m_SearchPass[i];
-	}
-	m_SearchPass.clear(); m_SearchPass.shrink_to_fit();
-
-	// Load the search passes.
-	for ( int nSearchPassIndex=0; ; ++nSearchPassIndex )
-	{
-		KeyValues *pSearchPassInfo = m_pMatchSystemData->FindKey( CFmtStr( "SearchPass%d", nSearchPassIndex ) );
-		if ( !pSearchPassInfo )
-		{
-			// No more passes specified.
-			break;
-		}
-
-		SearchPass *pSearchPass = new SearchPass();
-
-		// Get the experience checks for this search pass.
-		pSearchPass->checkExperience = ( pSearchPassInfo->GetInt( "ExpCheck", 0 ) != 0 );
-		pSearchPass->experienceRange = pSearchPassInfo->GetInt( "ExperienceRange", 0 );
-
-		// Loop over all of the possible Skill#Check and Skill#Range entries
-		// so we can store their values for quick reference.
-		for ( int nSkillIndex=0; nSkillIndex<MATCH_MAX_SKILL_FIELDS; ++nSkillIndex )
-		{
-			pSearchPass->checkSkill.push_back( ( pSearchPassInfo->GetInt( CFmtStr( "Skill%dCheck", nSkillIndex ), 0 ) != 0 ) );
-			pSearchPass->skillRange.push_back( pSearchPassInfo->GetInt( CFmtStr( "Skill%dRange", nSkillIndex ), 0 ) );
-		}
-
-		m_SearchPass.push_back( pSearchPass );
-	}
-}
-
-// Retrieves the indexed formula from the match system settings file. (MatchSystem.360.res)
-char const * CMatchTitleGameSettingsMgr::GetFormulaAverage( int index )
-{
-	// Ensure the matchmaking settings are loaded.
-	LoadMatchSettings();
-
-	if ( m_FormulaAverage.empty() )
-		return "newValue";
-
-	int indexClamped = clamp( index, 0, std::ssize( m_FormulaAverage ) - 1 );
-	return m_FormulaAverage[ indexClamped ].c_str();
-}
-
-// Add Steam version of X360 matchmaking rules. Writes to pResult
-void CMatchTitleGameSettingsMgr::AddSteamMatchmakingRule( KeyValues *pResult, bool bAllSessions, 
-	KeyValues *pSettings, bool bCssMatchVersion, bool bCssLevel, bool bCssGameType, 
-	bool bCssGameMode, bool bTeamMatch )
-{
-	// Check for official server
-	char const *serverType = pSettings->GetString( "options/server", "");
-	if ( !Q_stricmp( serverType, "official" ))
-	{
-		pResult->SetString( "Filter=/options:server", serverType);
-	}
-
-	// Determine whether we are looking for community games or not
-	int iHosted = pSettings->GetInt( "game/hosted", 0 );
-	pResult->SetInt( "Filter=/game:hosted", iHosted );
-	int minPlayers = mm_csgo_community_search_players_min.GetInt();
-
-	// even if the key is not set on the lobby the MMS code for numerical compares
-	// must pass the check due to comparing it against default zero value
-
-	// Check for sv_search_key
-	char const *searchKey = pSettings->GetString( "game/search_key", nullptr );
-	if ( searchKey )
-	{
-		pResult->SetString( "Filter=/game:search_key", searchKey );
-	}
-
-	// Set up key values that are common across SESSION_MATCH_QUERY_PLAYER_MATCH 
-	// and SESSION_MATCH_QUERY_PLAYER_MATCH_ANY_LEVEL
-	if ( !bAllSessions )
-	{
-		const char *pMapGroupName = pSettings->GetString( "game/mapgroupname", nullptr );
-		if ( pMapGroupName && strstr( pMapGroupName, "@workshop" ) && pSettings->GetBool( "options/anytypemode" ) )
-		{
-			bCssGameMode = false;
-			bCssGameType = false;
-		}
-
-		// Game mode
-		if (bCssGameMode)
-		{
-			char const *gameMode = pSettings->GetString( "game/mode", nullptr );
-			AssertMsg(gameMode, "Matchmaking: Rule SESSION_MATCH_QUERY_PLAYER_MATCH - no game mode; ignoring this filter");
-			if ( gameMode )
-			{
-				pResult->SetString("Filter=/game:mode", gameMode);
-			}
-		}
-
-
-		// Privacy
-		char const *privacy = pSettings->GetString( "system/access", nullptr );
-		AssertMsg(privacy, "Matchmaking: Rule SESSION_MATCH_QUERY_PLAYER_MATCH - no access mode; ignoring this filter");
-		if ( privacy )
-		{
-			pResult->SetString("Filter=/system:access", privacy);
-		}
-
-		// Game type
-		if (bCssGameType)
-		{
-			char const *gameType = pSettings->GetString( "game/type", nullptr );
-			//AssertMsg(gameType, "Matchmaking: Rule SESSION_MATCH_QUERY_PLAYER_MATCH - no game type; ignoring this filter");
-			if (gameType)
-			{
-				pResult->SetString("Filter=/game:type", gameType);
-			}
-		}
-	}
-
-	// Map name
-	if (bCssLevel)
-	{
-		const char *pMapGroupName = pSettings->GetString( "game/mapgroupname", nullptr );
-		//AssertMsg(pMapGroupName, "Matchmaking: Rule SESSION_MATCH_QUERY_PLAYER_MATCH - no mapgroup name; ignoring this filter");
-		if ( pMapGroupName )
-		{
-			// Check for workshop map matchmaking case
-			if ( char const *pszWorkshopMapGroup = strstr( pMapGroupName, "@workshop" ) )
-			{
-				// search based on workshop map group regardless of the collection
-				pResult->SetString( "Filter=/game:map", pszWorkshopMapGroup + 1 );
-				minPlayers = 0; // when searching for a workshop map don't require min players
-			}
-			else
-			{
-				pResult->SetString("Filter=/game:mapgroupname", pMapGroupName);
-			}
-		}
-	}
-
-	if ( iHosted && ( minPlayers > 0 ) )
-	{
-		pResult->SetInt( "Filter>=/members:numPlayers", minPlayers );
-	}
-	else
-	{
-		pResult->SetInt( "Filter</members:numPlayers", 5 );	// always look for lobbies that are not full
-	}
-
-	if ( const char *pGameState = pSettings->GetString( "game/state", nullptr ) )
-	{
-		pResult->SetString( "Filter=/game:state", pGameState );
-	}
-
-	if ( KeyValues *kvAllPrime = pSettings->FindKey( "game/apr" ) )
-	{
-		pResult->SetInt( "Filter=/game:apr", kvAllPrime->GetInt() );
-	}
-
-	if ( KeyValues *kvNearRank = pSettings->FindKey( "game/ark" ) )
-	{
-		if ( !kvNearRank->GetInt() )
-		{
-			pResult->SetInt( "Filter>=/game:ark", 7*10 );	// Nova 1
-			pResult->SetInt( "Filter<=/game:ark", 12*10 );	// MG II
-			pResult->SetInt( "Near/game:ark", 9*10 );	// Nova III
-		}
-		else
-		{
-			pResult->SetInt( "Filter>=/game:ark", ( kvNearRank->GetInt() - 2 ) * 10 );
-			pResult->SetInt( "Filter<=/game:ark", ( kvNearRank->GetInt() + 2 ) * 10 );
-			pResult->SetInt( "Near/game:ark", kvNearRank->GetInt()*10 );
-		}
-		pResult->SetInt( "Near/members:numPlayers", 5 );	// always look for lobbies that are close to full
-	}
-
-	if ( const char *pMMQueue = pSettings->GetString( "game/mmqueue", nullptr ) )
-	{
-		pResult->SetString( "Filter=/game:mmqueue", pMMQueue );
-	}
-
-	if ( const char *szClanID = pSettings->GetString( "game/clanid", nullptr ) )
-	{
-		pResult->SetString( "Filter=/game:clanid", szClanID );
-	}
-}
-
-// Called by the client to notify matchmaking that it should update matchmaking properties based
-// on player distribution among the teams.
-void CMatchTitleGameSettingsMgr::UpdateTeamProperties( KeyValues *pCurrentSettings, KeyValues *pTeamProperties )
-{
-	MM_Title_RichPresence_UpdateTeamPropertiesCSGO( pCurrentSettings, pTeamProperties );
-}
-

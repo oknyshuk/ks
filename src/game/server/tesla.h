@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef TESLA_H
-#define TESLA_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "baseentity.h"
-
 
 class [[= ks::reflect::NetTable{ .name = "DT_Tesla" } ]]
       CTesla : public CBaseEntity
@@ -57,6 +50,3 @@ public:
 
 	CNetworkVar( string_t, m_iszSpriteName, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "texture" } ]] );
 };
-
-
-#endif // TESLA_H

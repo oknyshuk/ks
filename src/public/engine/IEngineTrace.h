@@ -1,31 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ENGINE_IENGINETRACE_H
-#define ENGINE_IENGINETRACE_H
-
+import ks.math;
 #include "basehandle.h"
-#include <vector>
-#include "mathlib/vector4d.h"
+import std;
 #include "bspflags.h"
 
-class Vector;
 class IHandleEntity;
 struct Ray_t;
 class CGameTrace;
 typedef CGameTrace trace_t;
 class ICollideable;
-class QAngle;
 class ITraceListData;
 class CPhysCollide;
-struct cplane_t;
 struct virtualmeshlist_t;
-struct AABB_t;
 
 //-----------------------------------------------------------------------------
 // The standard trace filter... NOTE: Most normal traces inherit from CTraceFilter!!!
@@ -38,7 +27,7 @@ enum TraceType_t
 	TRACE_EVERYTHING_FILTER_PROPS,	// NOTE: This version will pass the IHandleEntity for props through the filter, unlike all other filters
 };
 
-abstract_class ITraceFilter
+class ITraceFilter
 {
 public:
 	virtual bool ShouldHitEntity( IHandleEntity *pEntity, int contentsMask ) = 0;
@@ -122,7 +111,7 @@ enum DebugTraceCounterBehavior_t
 //-----------------------------------------------------------------------------
 // Enumeration interface for EnumerateLinkEntities
 //-----------------------------------------------------------------------------
-abstract_class IEntityEnumerator
+class IEntityEnumerator
 {
 public:
 	// This gets called with each handle
@@ -186,9 +175,9 @@ protected:
 //-----------------------------------------------------------------------------
 // Interface the engine exposes to the game DLL
 //-----------------------------------------------------------------------------
-#define INTERFACEVERSION_ENGINETRACE_SERVER	"EngineTraceServer004"
-#define INTERFACEVERSION_ENGINETRACE_CLIENT	"EngineTraceClient004"
-abstract_class IEngineTrace
+inline constexpr const char *INTERFACEVERSION_ENGINETRACE_SERVER = "EngineTraceServer004";
+inline constexpr const char *INTERFACEVERSION_ENGINETRACE_CLIENT = "EngineTraceClient004";
+class IEngineTrace
 {
 public:
 	// Returns the contents mask + entity at a particular world-space position
@@ -297,5 +286,3 @@ public:
 /// This may seem redundant with the VPROF_INCREMENT_COUNTER( "TraceRay" ), but it's not, because while
 /// that's readable across DLLs, there's no way to trap on its exceeding a certain value, nor can we reset
 /// it for each think. 
-
-#endif // ENGINE_IENGINETRACE_H

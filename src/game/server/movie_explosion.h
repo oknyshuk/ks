@@ -1,19 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef MOVIE_EXPLOSION_H
-#define MOVIE_EXPLOSION_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "baseparticleentity.h"
-
 
 class [[= ks::reflect::NetTable{ .name = "DT_MovieExplosion" } ]]
       MovieExplosion : public CBaseParticleEntity
@@ -24,8 +15,3 @@ public:
 
 	static MovieExplosion* CreateMovieExplosion(const Vector &pos);
 };
-
-
-#endif
-
-

@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Provides access to cvars that are bounded in the client DLL.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef CDLL_BOUNDED_CVARS_H
-#define CDLL_BOUNDED_CVARS_H
-
-
-#include "convar_serverbounded.h"
-
+import std;
+import ks.tier1;
 
 extern ConVar_ServerBounded *cl_predict;
 extern ConVar_ServerBounded *cl_interp;
@@ -19,11 +14,4 @@ extern ConVar_ServerBounded *cl_interp;
 float GetClientInterpAmount();
 
 
-#if !defined( NO_ENTITY_PREDICTION )
 extern bool g_bForceCLPredictOff;	// If this is set to true, then prediction is forced off. Used temporarily for kill cam.
-#endif
-
-
-
-#endif // CDLL_BOUNDED_CVARS_H
-

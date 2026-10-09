@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Base NPC character with AI
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_AGENT_H
-#define AI_AGENT_H
-
+// Purpose: Base NPC character with AI
 
 #include "ai_debug.h"
 #include "ai_default.h"
@@ -15,15 +11,14 @@
 #include "ai_task.h"
 #include "ai_namespaces.h"
 #include "bitstring.h"
-#include <bitset>
-
+import std;
+#include "datamap.h"
+#include "string_t.h"
 
 class CAI_Agent;
 
-#ifndef DBGFLAG_STRINGS_STRIP
-void DevMsg( CAI_Agent *pAI, unsigned flags, PRINTF_FORMAT_STRING const char *pszFormat, ... ) FMTFUNCTION( 3, 4 );
-void DevMsg( CAI_Agent *pAI, PRINTF_FORMAT_STRING const char *pszFormat, ... ) FMTFUNCTION( 2, 3 );
-#endif
+void DevMsg( CAI_Agent *pAI, unsigned flags, const char *pszFormat, ... ) [[gnu::format(printf, 3, 4)]];
+void DevMsg( CAI_Agent *pAI, const char *pszFormat, ... ) [[gnu::format(printf, 2, 3)]];
 
 typedef std::bitset<MAX_CONDITIONS> CAI_ScheduleBits;
 
@@ -473,7 +468,7 @@ inline bool AIAgentValidateConditionLimits( const char *pszNewCondition )
 	int nGlobalConditions = CAI_Agent::GetSchedulingSymbols()->NumConditions();
 	if ( nGlobalConditions >= MAX_CONDITIONS )
 	{ 
-		AssertMsg2( 0, "Exceeded max number of conditions (%d), ignoring condition %s\n", MAX_CONDITIONS, pszNewCondition ); 
+		contract_assert( false && "Exceeded max number of conditions (%d), ignoring condition %s\n" ); 
 		DevWarning( "Exceeded max number of conditions (%d), ignoring condition %s\n", MAX_CONDITIONS, pszNewCondition ); 
 		return false;
 	}
@@ -629,7 +624,3 @@ public:
 	if ( !derivedClass::AccessClassScheduleIdSpaceDirect().AddCondition( condName, condEN, derivedClass::gm_pszErrorClassName ) ) return;
 
 #define ADD_CUSTOM_CONDITION(derivedClass,condEN) ADD_CUSTOM_CONDITION_NAMED(derivedClass,#condEN,condEN)
-
-
-
-#endif // AI_AGENT_H

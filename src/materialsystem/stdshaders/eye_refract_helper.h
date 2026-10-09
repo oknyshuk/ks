@@ -1,9 +1,9 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#ifndef EYE_REFRACT_HELPER_H
-#define EYE_REFRACT_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -18,7 +18,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct Eye_Refract_Vars_t
 {
-	Eye_Refract_Vars_t() { memset( this, 0xFF, sizeof(Eye_Refract_Vars_t) ); }
+	Eye_Refract_Vars_t() { std::memset( this, 0xFF, sizeof(Eye_Refract_Vars_t) ); }
 
 	int m_nFrame;
 	int m_nIris;
@@ -62,5 +62,3 @@ void InitParams_Eyes_Refract( CBaseVSShader *pShader, IMaterialVar** params, con
 void Init_Eyes_Refract( CBaseVSShader *pShader, IMaterialVar** params, Eye_Refract_Vars_t &info );
 void Draw_Eyes_Refract( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 					    IShaderShadow* pShaderShadow, Eye_Refract_Vars_t &info, VertexCompressionType_t vertexCompression );
-
-#endif // EYES_DX8_DX9_HELPER_H

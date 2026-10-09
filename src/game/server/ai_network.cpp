@@ -1,13 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Base combat character with no AI
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Base combat character with no AI
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 
 #include "ai_network.h"
 #include "ai_node.h"
@@ -30,7 +55,7 @@ CAI_Network*		g_pBigAINet;
 
 //-----------------------------------------------------------------------------
 
-abstract_class INodeListFilter
+class INodeListFilter
 {
 public:
 	virtual bool	NodeIsValid( CAI_Node &node ) = 0;
@@ -97,7 +122,7 @@ public:
 
 // for searching for the nearest node
 // PERFORMANCE: Tune this number
-#define MAX_NEAR_NODES	10			// Trace to 10 nodes at most
+constexpr auto MAX_NEAR_NODES = 10; // Trace to 10 nodes at most
 
 //-----------------------------------------------------------------------------
 
@@ -111,31 +136,21 @@ CAI_Network::CAI_Network()
 	for (int node=0;node<NEARNODE_CACHE_SIZE;node++)
 	{
 		m_NearestCache[node].hull = HULL_NONE;
-		m_NearestCache[node].expiration	= FLT_MIN;
+		m_NearestCache[node].expiration	= std::numeric_limits<float>::min();
 	}
 
-#ifdef AI_NODE_TREE
-	m_pNodeTree = nullptr;
-#endif
 }
 
 //-----------------------------------------------------------------------------
 
 CAI_Network::~CAI_Network()
 {
-#ifdef AI_NODE_TREE
-	if ( m_pNodeTree )
-	{
-		engine->DestroySpatialPartition( m_pNodeTree );
-		m_pNodeTree = nullptr;
-	}
-#endif
 	if ( m_pAInode )
 	{
 		for ( int node = 0; node < m_iNumNodes; node++ )
 		{
 			CAI_Node *pNode = m_pAInode[node];
-			Assert( pNode && pNode->m_iID == node );
+			contract_assert( pNode && pNode->m_iID == node );
 
 			for ( int link = 0; link < pNode->NumLinks(); link++ )
 			{
@@ -143,11 +158,11 @@ CAI_Network::~CAI_Network()
 				if ( pLink )
 				{
 					int destID = pLink->DestNodeID( node );
-					Assert( destID > node && destID < m_iNumNodes );
+					contract_assert( destID > node && destID < m_iNumNodes );
 					if ( destID > node && destID < m_iNumNodes )
 					{
 						CAI_Node *pDestNode = m_pAInode[destID];
-						Assert( pDestNode );
+						contract_assert( pDestNode );
 
 						for ( int destLink = 0; destLink < pDestNode->NumLinks(); destLink++ )
 						{
@@ -175,7 +190,7 @@ CAI_Network::~CAI_Network()
 int	CAI_Network::FindBSSmallest(std::vector< bool > *bitString, float *float_array, int array_size) 
 {
 	int	  winIndex = -1;
-	float winSize  = FLT_MAX;
+	float winSize  = std::numeric_limits<float>::max();
 	for (int i=0;i<array_size;i++) 
 	{
 		if ((*bitString)[i] && (float_array[i]<winSize)) 
@@ -255,7 +270,6 @@ int CAI_Network::ListNodesInBox( CNodeList &list, int maxListCount, const Vector
 
 int	CAI_Network::NearestNodeToPoint( CAI_BaseNPC *pNPC, const Vector &vecOrigin, bool bCheckVisibility, INearestNodeFilter *pFilter )
 {
-	AI_PROFILE_SCOPE( CAI_Network_NearestNodeToNPCAtPoint );
 	
 	// --------------------------------
 	//  Check if network has no nodes
@@ -297,10 +311,6 @@ int	CAI_Network::NearestNodeToPoint( CAI_BaseNPC *pNPC, const Vector &vecOrigin,
 	// the maximum allowed distance for local movements
 	// ---------------------------------------------------------------
 	CNodeFilter filter( pNPC, vecOrigin );
-
-#ifdef AI_PERF_MON
-		m_nPerfStatNN++;
-#endif
 
 	CNodeList list( MAX_NEAR_NODES );
 
@@ -458,13 +468,13 @@ Vector CAI_Network::GetNodePosition( Hull_t hull, int nodeID )
 {
 	if ( !m_pAInode )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return vec3_origin;
 	}
 	
 	if ( ( nodeID < 0 ) || ( nodeID > m_iNumNodes ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return vec3_origin;
 	}
 
@@ -477,7 +487,7 @@ Vector CAI_Network::GetNodePosition( CBaseCombatCharacter *pNPC, int nodeID )
 {
 	if ( pNPC == nullptr )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return vec3_origin;
 	}
 
@@ -490,13 +500,13 @@ float CAI_Network::GetNodeYaw( int nodeID )
 {
 	if ( !m_pAInode )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return 0.0f;
 	}
 	
 	if ( ( nodeID < 0 ) || ( nodeID > m_iNumNodes ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return 0.0f;
 	}
 
@@ -528,17 +538,6 @@ CAI_Node *CAI_Network::AddNode( const Vector &origin, float yaw )
 
 	m_pAInode[m_iNumNodes] = new CAI_Node( m_iNumNodes, origin, yaw );
 
-#ifdef AI_NODE_TREE
-	if ( !m_pNodeTree )
-	{
-		Vector worldMins, worldMaxs;
-		GetWorldEntity()->GetWorldBounds( worldMins, worldMaxs );
-		m_pNodeTree = engine->CreateSpatialPartition( worldMins, worldMaxs );
-	}
-
-	m_pNodeTree->CreateHandle( (IHandleEntity *)m_iNumNodes, PARTITION_NODE, origin, origin ); // ignore result for now as we'll never move or remove
-#endif
-
 	m_iNumNodes++;
 
 	return m_pAInode[m_iNumNodes-1];
@@ -552,7 +551,7 @@ CAI_Link *CAI_Network::CreateLink( int srcID, int destID, CAI_DynamicLink *pDyna
 	CAI_Node *pSrcNode = GetNode( srcID );
 	CAI_Node *pDestNode = GetNode( destID );
 
-	Assert( pSrcNode && pDestNode && pSrcNode != pDestNode );
+	contract_assert( pSrcNode && pDestNode && pSrcNode != pDestNode );
 
 	if ( !pSrcNode || !pDestNode )
 	{
@@ -629,9 +628,6 @@ bool CAI_Network::IsConnected(int srcID, int destID)
 
 IterationRetval_t CAI_Network::EnumElement( IHandleEntity *pHandleEntity )
 {
-#ifdef AI_NODE_TREE
-	m_GatheredNodes.AddToTail( (int)pHandleEntity );
-#endif
 	return ITERATION_CONTINUE;
 }
 
@@ -650,10 +646,10 @@ struct AiNetwork_FindNode_linkpair
 	float distFromStartSq;  ///< dot product
 	inline AiNetwork_FindNode_linkpair(CAI_Node *_node, float _dist) : node(_node), distFromStartSq(_dist) {};
 };
-CAI_Node *CAI_Network::FindNodeDistanceAwayFromStart( CAI_Node * RESTRICT pStartNode, const Vector &point, float minDistSq, float maxDistSq, const Hull_t hulltype, const Capability_t movetype, const IPathingNodeValidator &validator ) RESTRICT
+CAI_Node *CAI_Network::FindNodeDistanceAwayFromStart( CAI_Node * __restrict__ pStartNode, const Vector &point, float minDistSq, float maxDistSq, const Hull_t hulltype, const Capability_t movetype, const IPathingNodeValidator &validator ) __restrict__
 {
-	VPROF("CAI_Network::FindNodeDistanceAwayFromStart()");
-	AssertMsg( pStartNode, "FindNodeDistanceAwayFromStart called with NULL start\n" );
+	CVProfScope _( "CAI_Network::FindNodeDistanceAwayFromStart()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	contract_assert( pStartNode && "FindNodeDistanceAwayFromStart called with NULL start\n" );
 	if ( pStartNode == nullptr ) 
 		return nullptr;
 
@@ -684,12 +680,12 @@ CAI_Node *CAI_Network::FindNodeDistanceAwayFromStart( CAI_Node * RESTRICT pStart
 	for ( int i = 0 ; i < maxlinks ; ++i )
 	{
 		// can this hull go through this link
-		CAI_Link * RESTRICT link = pStartNode->GetLinkByIndex(i);
+		CAI_Link * __restrict__ link = pStartNode->GetLinkByIndex(i);
 		if ( link->m_iAcceptedMoveTypes[hulltype] & movetype )
 		{	// yes, we can move through this node
 			// find where to add it into the list 
-			CAI_Node *RESTRICT destNode = this->GetNode(link->DestNodeID( pStartNode->GetId() )); //this->GetNode(link->m_iDestID);
-			Assert(destNode);
+			CAI_Node *__restrict__ destNode = this->GetNode(link->DestNodeID( pStartNode->GetId() )); //this->GetNode(link->m_iDestID);
+			contract_assert( destNode );
 
 			float distToDestSq = (destNode->GetOrigin() - point).LengthSqr();
 

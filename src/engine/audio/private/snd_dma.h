@@ -1,13 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SND_DMA_H
-#define SND_DMA_H
-
+import ks.tier1;
+#include "bspflags.h"
+#include "soundflags.h"
+#include "snd_channels.h"
+import std;
 
 extern ConVar snd_obscured_gain_db;
 extern ConVar snd_showstart;
@@ -20,12 +19,12 @@ extern int g_snd_trace_count;
 // convert sound db level to approximate sound source radius,
 // used only for determining how much of sound is obscured by world
 
-#define SND_RADIUS_MAX		(20.0 * 12.0)	// max sound source radius
-#define SND_RADIUS_MIN		(2.0 * 12.0)	// min sound source radius
+inline constexpr auto SND_RADIUS_MAX = (20.0 * 12.0); // max sound source radius
+inline constexpr auto SND_RADIUS_MIN = (2.0 * 12.0); // min sound source radius
 
 #define SND_DB_MAX				140.0	// max db of any sound source
 #define SND_DB_MED				90.0	// db at which compression curve changes
-#define SND_DB_MIN				60.0	// min db of any sound source
+inline constexpr auto SND_DB_MIN = 60.0; // min db of any sound source
 
 inline float dB_To_Radius ( float db )
 {
@@ -37,7 +36,7 @@ class CScratchPad;
 const int MASK_BLOCK_AUDIO = CONTENTS_SOLID|CONTENTS_MOVEABLE|CONTENTS_WINDOW;
 
 #define SNDLVL_TO_DIST_MULT( sndlvl ) ( sndlvl ? ((snd_refdb_dist_mult / FastPow10( (float)sndlvl / 20 )) / snd_refdist.GetFloat()) : 0 )
-#define DIST_MULT_TO_SNDLVL( dist_mult ) (soundlevel_t)(int)( dist_mult ? ( 20 * log10( (float)(snd_refdb_dist_mult / (dist_mult * snd_refdist.GetFloat()) )) ) : 0 )
+#define DIST_MULT_TO_SNDLVL( dist_mult ) (soundlevel_t)(int)( dist_mult ? ( 20 * std::log10( (float)(snd_refdb_dist_mult / (dist_mult * snd_refdist.GetFloat()) )) ) : 0 )
 
 float SND_GetGainFromMult( float gain, float dist_mult, vec_t dist );
 float SND_GetDspMix( channel_t *pchannel, int idist, float flSndlvl );
@@ -59,7 +58,3 @@ bool SND_IsInGame();
 float SND_FadeToNewGain( gain_t *gs, const channel_t *ch, float gain_new );
 bool SND_IsLongWave( channel_t pChannel );
 float dB_To_Gain( float );
-
-
-
-#endif // SND_DMA_H

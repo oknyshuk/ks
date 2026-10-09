@@ -1,18 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DATATABLE_RECV_ENG_H
-#define DATATABLE_RECV_ENG_H
-
-
+import ks.tier1;
 #include "dt_recv.h"
-#include "bitbuf.h"
+import std;
 #include "dt.h"
-#include "tier1/utlvector.h"
 
 class CStandardSendProxies;
 namespace ks::net { struct CSVCMsg_SendTable; }
@@ -79,5 +72,3 @@ bool RecvTable_ReadFieldList(
 	int nObjectId, 
 	bool bUpdateDTI
 	);
-
-#endif // DATATABLE_RECV_ENG_H

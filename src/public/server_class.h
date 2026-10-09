@@ -1,19 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SERVER_CLASS_H
-#define SERVER_CLASS_H
-
-
-#include "tier0/dbg.h"
+import std;
+import ks.core;
 #include "dt_send.h"
 #include "networkstringtabledefs.h"
-
 
 class ServerClass;
 class SendTable;
@@ -41,7 +33,7 @@ public:
 						ServerClass *p2 = p1->m_pNext;
 
 						// Comment from Alfred on 7/2/2004 6:43:24 PM in CL 91253, //ValveGames/main/src/public/server_class.h#18:
-						// --->  use _stricmp because Q_stricmp isn't hooked up properly yet
+						// --->  use _stricmp because V_stricmp isn't hooked up properly yet
 						// [Sergiy, 10/19/2009] hooking up V_stricmp
 						if ( V_stricmp( p1->GetName(), pNetworkName ) > 0)
 						{
@@ -100,20 +92,6 @@ class CBaseNetworkable;
 
 
 
-#ifdef VALIDATE_DECLARE_CLASS
-	#define CHECK_DECLARE_CLASS( DLLClassName, sendTable ) \
-		template <typename T> int CheckDeclareClass_Access(T *); \
-		template <> int CheckDeclareClass_Access<sendTable::ignored>(sendTable::ignored *, const char *pIgnored) \
-		{ \
-			return DLLClassName::CheckDeclareClass( #DLLClassName ); \
-		} \
-		namespace sendTable \
-		{ \
-			int verifyDeclareClass = CheckDeclareClass_Access( (sendTable::ignored*)0 ); \
-		}
-#else
-	#define CHECK_DECLARE_CLASS( DLLClassName, sendTable )
-#endif
 
 
 #define IMPLEMENT_SERVERCLASS_INTERNAL( DLLClassName, sendTable ) \
@@ -122,7 +100,7 @@ class CBaseNetworkable;
 		struct ignored; \
 		extern SendTable g_SendTable; \
 	} \
-	CHECK_DECLARE_CLASS( DLLClassName, sendTable ) \
+	\
 	static ServerClass g_##DLLClassName##_ClassReg(\
 		#DLLClassName, \
 		&sendTable::g_SendTable\
@@ -131,9 +109,3 @@ class CBaseNetworkable;
 	ServerClass* DLLClassName::GetServerClass() {return &g_##DLLClassName##_ClassReg;} \
 	SendTable *DLLClassName::m_pClassSendTable = &sendTable::g_SendTable;\
 	int DLLClassName::YouForgotToImplementOrDeclareServerClass() {return 0;}
-
-
-#endif
-
-
-

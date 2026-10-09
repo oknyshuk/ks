@@ -4,17 +4,10 @@
 //
 //==================================================================================================
 
+import ks.tier1;
 #include "togl/rendermechanism.h"
-#include "tier0/dynfunction.h"
-#include "tier0/vprof_telemetry.h"
-#include "tier0/dbg.h"
-#include "tier0/threadtools.h"
-#include "tier0/vprof.h"
-#include "tier1/strtools.h"
-#include "mathlib/vmatrix.h"
-#include "materialsystem/IShader.h"
+import std;
 
-#include "tier0/icommandline.h"
 
 // ------------------------------------------------------------------------------------------------------------------------------ //
 
@@ -42,7 +35,7 @@ const float& D3DXMATRIX::operator()( int row, int column ) const
 	return m[row][column];
 }
 
-bool D3DXMATRIX::operator != ( CONST D3DXMATRIX& src ) const 
+bool D3DXMATRIX::operator != ( const D3DXMATRIX& src ) const 
 {
  	return V_memcmp( (void*)this, (void*)&src, sizeof(this) ) != 0;
 }
@@ -81,7 +74,7 @@ D3DXVECTOR2::operator FLOAT* ()
 	return (float*)this;
 }
 
-D3DXVECTOR2::operator CONST FLOAT* () const
+D3DXVECTOR2::operator const FLOAT* () const
 {
 	return (const float*)this;
 }
@@ -100,7 +93,7 @@ D3DXVECTOR3::operator FLOAT* ()
 	return (float*)this;
 }
 
-D3DXVECTOR3::operator CONST FLOAT* () const
+D3DXVECTOR3::operator const FLOAT* () const
 {
 	return (const float*)this;
 }
@@ -139,15 +132,15 @@ ID3DXMatrixStack::ID3DXMatrixStack( void )
 		
 void ID3DXMatrixStack::AddRef( int which, char *comment )
 {
-	Assert( which >= 0 );
-	Assert( which < 2 );
+	contract_assert( which >= 0 );
+	contract_assert( which < 2 );
 	m_refcount[which]++;
 };
 		
 ULONG ID3DXMatrixStack::Release( int which, char *comment )
 {
-	Assert( which >= 0 );
-	Assert( which < 2 );
+	contract_assert( which >= 0 );
+	contract_assert( which < 2 );
 			
 	bool deleting = false;
 			
@@ -258,7 +251,7 @@ HRESULT ID3DXMatrixStack::ScaleLocal(FLOAT x, FLOAT y, FLOAT z)
 }
 
 
-HRESULT ID3DXMatrixStack::RotateAxisLocal(CONST D3DXVECTOR3* pV, FLOAT Angle)
+HRESULT ID3DXMatrixStack::RotateAxisLocal(const D3DXVECTOR3* pV, FLOAT Angle)
 {
 	//	http://msdn.microsoft.com/en-us/library/bb174062(VS.85).aspx
 	//	Left multiply the current matrix with the computed rotation
@@ -298,7 +291,7 @@ const char* D3DXGetPixelShaderProfile( IDirect3DDevice9 *pDevice )
 	return "";
 }
 
-D3DXMATRIX* D3DXMatrixMultiply( D3DXMATRIX *pOut, CONST D3DXMATRIX *pM1, CONST D3DXMATRIX *pM2 )
+D3DXMATRIX* D3DXMatrixMultiply( D3DXMATRIX *pOut, const D3DXMATRIX *pM1, const D3DXMATRIX *pM2 )
 {
 	D3DXMATRIX temp;
 	
@@ -318,7 +311,7 @@ D3DXMATRIX* D3DXMatrixMultiply( D3DXMATRIX *pOut, CONST D3DXMATRIX *pM1, CONST D
 
 // Transform a 3D vector by a given matrix, projecting the result back into w = 1
 // http://msdn.microsoft.com/en-us/library/ee417622(VS.85).aspx
-D3DXVECTOR3* D3DXVec3TransformCoord(D3DXVECTOR3 *pOut, CONST D3DXVECTOR3 *pV, CONST D3DXMATRIX *pM)
+D3DXVECTOR3* D3DXVec3TransformCoord(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM)
 {
 	D3DXVECTOR3 vOut;
 
@@ -357,23 +350,23 @@ D3DXMATRIX* D3DXMatrixTranslation( D3DXMATRIX *pOut, FLOAT x, FLOAT y, FLOAT z )
 	return pOut;
 }
 
-D3DXMATRIX* D3DXMatrixInverse( D3DXMATRIX *pOut, FLOAT *pDeterminant, CONST D3DXMATRIX *pM )
+D3DXMATRIX* D3DXMatrixInverse( D3DXMATRIX *pOut, FLOAT *pDeterminant, const D3DXMATRIX *pM )
 {
-	Assert( sizeof( D3DXMATRIX ) == (16 * sizeof(float) ) );
-	Assert( sizeof( VMatrix ) == (16 * sizeof(float) ) );
-	Assert( pDeterminant == nullptr );	// homey don't play that
+	contract_assert( sizeof( D3DXMATRIX ) == (16 * sizeof(float) ) );
+	contract_assert( sizeof( VMatrix ) == (16 * sizeof(float) ) );
+	contract_assert( pDeterminant == nullptr );	// homey don't play that
 	
 	VMatrix *origM = (VMatrix*)pM;
 	VMatrix *destM = (VMatrix*)pOut;
 	
 	bool success = MatrixInverseGeneral( *origM, *destM ); (void)success;
-	Assert( success );
+	contract_assert( success );
 	
 	return pOut;
 }
 
 
-D3DXMATRIX* D3DXMatrixTranspose( D3DXMATRIX *pOut, CONST D3DXMATRIX *pM )
+D3DXMATRIX* D3DXMatrixTranspose( D3DXMATRIX *pOut, const D3DXMATRIX *pM )
 {
 	if (pOut != pM)
 	{
@@ -395,7 +388,7 @@ D3DXMATRIX* D3DXMatrixTranspose( D3DXMATRIX *pOut, CONST D3DXMATRIX *pM )
 }
 
 
-D3DXPLANE* D3DXPlaneNormalize( D3DXPLANE *pOut, CONST D3DXPLANE *pP)
+D3DXPLANE* D3DXPlaneNormalize( D3DXPLANE *pOut, const D3DXPLANE *pP)
 {
 	// not very different from normalizing a vector.
 	// figure out the square root of the sum-of-squares of the x,y,z components
@@ -403,7 +396,7 @@ D3DXPLANE* D3DXPlaneNormalize( D3DXPLANE *pOut, CONST D3DXPLANE *pP)
 	// then divide all four components by that value
 	// or return some dummy plane like 0,0,1,0 if it fails
 	
-	float	len = sqrt( (pP->a * pP->a) + (pP->b * pP->b) + (pP->c * pP->c) );
+	float	len = std::sqrt( (pP->a * pP->a) + (pP->b * pP->b) + (pP->c * pP->c) );
 	if (len > 1e-10)	//FIXME need a real epsilon here ?
 	{
 		pOut->a = pP->a / len;		pOut->b = pP->b / len;		pOut->c = pP->c / len;		pOut->d = pP->d / len;
@@ -416,7 +409,7 @@ D3DXPLANE* D3DXPlaneNormalize( D3DXPLANE *pOut, CONST D3DXPLANE *pP)
 }
 
 
-D3DXVECTOR4* D3DXVec4Transform( D3DXVECTOR4 *pOut, CONST D3DXVECTOR4 *pV, CONST D3DXMATRIX *pM )
+D3DXVECTOR4* D3DXVec4Transform( D3DXVECTOR4 *pOut, const D3DXVECTOR4 *pV, const D3DXMATRIX *pM )
 {
 	VMatrix *mat = (VMatrix*)pM;
 	Vector4D *vIn = (Vector4D*)pV;
@@ -429,7 +422,7 @@ D3DXVECTOR4* D3DXVec4Transform( D3DXVECTOR4 *pOut, CONST D3DXVECTOR4 *pV, CONST 
 
 
 
-D3DXVECTOR4* D3DXVec4Normalize( D3DXVECTOR4 *pOut, CONST D3DXVECTOR4 *pV )
+D3DXVECTOR4* D3DXVec4Normalize( D3DXVECTOR4 *pOut, const D3DXVECTOR4 *pV )
 {
 	Vector4D *vIn = (Vector4D*) pV;
 	Vector4D *vOut = (Vector4D*) pOut;
@@ -462,7 +455,7 @@ D3DXMATRIX* D3DXMatrixPerspectiveOffCenterRH( D3DXMATRIX *pOut, FLOAT l, FLOAT r
 }
 
 
-D3DXPLANE* D3DXPlaneTransform( D3DXPLANE *pOut, CONST D3DXPLANE *pP, CONST D3DXMATRIX *pM )
+D3DXPLANE* D3DXPlaneTransform( D3DXPLANE *pOut, const D3DXPLANE *pP, const D3DXMATRIX *pM )
 {
 	float *out = &pOut->a;
 

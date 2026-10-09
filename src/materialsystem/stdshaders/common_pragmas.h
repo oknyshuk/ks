@@ -1,12 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Common shader compiler pragmas
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#ifndef COMMON_PRAGMAS_H_
-#define COMMON_PRAGMAS_H_
 
 //
 // Validated shader models:
@@ -30,5 +26,3 @@
 //
 
 // Special pragmas silencing common warnings
-
-#endif //#ifndef COMMON_PRAGMAS_H_

@@ -1,13 +1,43 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: static_prop - don't move, don't animate, don't do anything.
 //			physics_prop - move, take damage, but don't animate
-//
-//===========================================================================//
 
-
-#include "cbase.h"
-#include <map>
+import std;
+import ks.vstdlib;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "player.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -23,15 +53,12 @@
 #include "vcollide_parse.h"
 #include "studio.h"
 #include "explode.h"
-#include "tier1/strtools.h"
 #include "physics_impact_damage.h"
-#include "keyvalues.h"
 #include "filesystem.h"
 #include "scriptevent.h"
 #include "entityblocker.h"
 #include "soundent.h"
 #include "EntityFlame.h"
-#include "game.h"
 #include "physics_prop_ragdoll.h"
 #include "decals.h"
 #include "hierarchy.h"
@@ -44,7 +71,6 @@
 #include "physics_collisionevent.h"
 #include "GameStats.h"
 #include "vehicle_base.h"
-#include "tier0/icommandline.h"
 #include "pushentity.h"
 #include "cvisibilitymonitor.h"
 #include "usermessages.h"
@@ -54,16 +80,15 @@
 #include "phys_controller.h"
 
 
-#include "vstdlib/ikeyvaluessystem.h"
 
-#define DOOR_HARDWARE_GROUP 1
+constexpr auto DOOR_HARDWARE_GROUP = 1;
 
 // Any barrel farther away than this is ignited rather than exploded.
 #define PROP_EXPLOSION_IGNITE_RADIUS	32.0f
 
 // How many times to remind the player that supply crates can be broken
 // (displayed when the supply crate is picked up)
-#define NUM_SUPPLY_CRATE_HUD_HINTS		3
+constexpr auto NUM_SUPPLY_CRATE_HUD_HINTS = 3;
 
 
 ConVar g_debug_doors( "g_debug_doors", "0" );
@@ -77,8 +102,8 @@ int	g_interactionPlayerPuntedHeavyObject = 0;
 int g_ActiveGibCount = 0;
 ConVar prop_active_gib_limit( "prop_active_gib_limit", "64" );
 ConVar prop_active_gib_max_fade_time( "prop_active_gib_max_fade_time", "12" );
-#define ACTIVE_GIB_LIMIT prop_active_gib_limit.GetInt()
-#define ACTIVE_GIB_FADE prop_active_gib_max_fade_time.GetInt()
+inline auto ACTIVE_GIB_LIMIT() { return prop_active_gib_limit.GetInt(); }
+inline auto ACTIVE_GIB_FADE() { return prop_active_gib_max_fade_time.GetInt(); }
 
 // Damage type modifiers for breakable objects.
 ConVar func_breakdmg_bullet( "func_breakdmg_bullet", "0.5" );
@@ -755,7 +780,7 @@ CBreakableProp::CBreakableProp()
 
 	// This defaults to on. Most times mapmakers won't specify a punt sound to play.
 	m_bUsePuntSound = true;
-	m_qPreferredPlayerCarryAngles.GetForModify().Init( FLT_MAX, FLT_MAX, FLT_MAX );
+	m_qPreferredPlayerCarryAngles.GetForModify().Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
 }
 
 //-----------------------------------------------------------------------------
@@ -790,7 +815,7 @@ void CBreakableProp::Spawn()
 	// If we have no custom breakable chunks, see if we're breaking into generic ones
 	if ( !m_iNumBreakableChunks )
 	{
-		IBreakableWithPropData *pBreakableInterface = assert_cast<IBreakableWithPropData*>(this);
+		IBreakableWithPropData *pBreakableInterface = static_cast<IBreakableWithPropData*>(this);
 		if ( pBreakableInterface->GetBreakableModel() != NULL_STRING && pBreakableInterface->GetBreakableCount() )
 		{
 			m_iNumBreakableChunks = pBreakableInterface->GetBreakableCount();
@@ -982,7 +1007,7 @@ int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		}
 	}
 
-	float flPropDamage = GetBreakableDamage( info, assert_cast<IBreakableWithPropData*>(this) );
+	float flPropDamage = GetBreakableDamage( info, static_cast<IBreakableWithPropData*>(this) );
 	info.SetDamage( flPropDamage );
 
 	// If attacker can't do at least the MIN required damage to us, don't take any damage from them
@@ -1168,7 +1193,7 @@ bool CBreakableProp::UpdateHealth( int iNewHealth, CBaseEntity *pActivator )
 
 		if ( m_iMaxHealth == 0 )
 		{
-			Assert( false );
+			contract_assert( false );
 			m_iMaxHealth = 1;
 		}
 
@@ -1491,7 +1516,7 @@ static int g_BreakPropEvent = 0;
 void CBreakableProp::Break( CBaseEntity *pBreaker, const CTakeDamageInfo &info )
 {
 	const char *pModelName = STRING( GetModelName() );
-	if ( pModelName && Q_stristr( pModelName, "crate" ) )
+	if ( pModelName && V_stristr( pModelName, "crate" ) )
 	{
 		bool bSmashed = false;
 		if ( pBreaker && pBreaker->IsPlayer() )
@@ -2024,7 +2049,7 @@ int CDynamicProp::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 //-----------------------------------------------------------------------------
 void CDynamicProp::NotifyPositionChanged( CBaseEntity *pEntity )
 {
-	Assert(pEntity==this);
+	contract_assert( pEntity==this );
 	UpdateBoneFollowers();
 }
 
@@ -2054,13 +2079,13 @@ void CDynamicProp::AnimThink( void )
 	bool bPlayingForward = (flPlaybackRate >= 0.0f);
 	
 	// if transition is negative, assert that playbackrate is also negative
-	Assert( ((m_iTransitionDirection > 0) && (flPlaybackRate >= 0)) || ((m_iTransitionDirection < 0) && (flPlaybackRate <= 0)) );
+	contract_assert( ((m_iTransitionDirection > 0) && (flPlaybackRate >= 0)) || ((m_iTransitionDirection < 0) && (flPlaybackRate <= 0)) );
 
 	bool bPropFinished = ((bPlayingForward && GetCycle() >= 0.999f) || (!bPlayingForward && GetCycle() <= 0.0f)) && !SequenceLoops();
 
 	if ( bPropFinished )
 	{
-		Assert( m_iGoalSequence >= 0 );
+		contract_assert( m_iGoalSequence >= 0 );
 		if (GetSequence() != m_iGoalSequence)
 		{
 			PropSetSequence( m_iGoalSequence );
@@ -2502,7 +2527,7 @@ void CPhysicsProp::Spawn( )
 
 	//Episode 1 change:
 	//Hi, since we're trying to ship this game we'll just go ahead and make all these doors not fade out instead of changing all the levels.
-	if ( Q_strcmp( STRING( GetModelName() ), "models/props_c17/door01_left.mdl" ) == 0 )
+	if ( V_strcmp( STRING( GetModelName() ), "models/props_c17/door01_left.mdl" ) == 0 )
 	{
 		SetFadeDistance( -1, 0 );
 		DisableAutoFade();
@@ -3133,7 +3158,7 @@ void CPhysicsProp::ComputeEnablingImpulse( int index, gamevcollisionevent_t *pEv
 	Vector vecLocalContactVelocity, vecContactVelocity;
 
 	AngularImpulse vecAngularVelocity = pEvent->preAngularVelocity[!index]; 
-	vecAngularVelocity *= M_PI / 180.0f;
+	vecAngularVelocity *= std::numbers::pi / 180.0f;
 	CrossProduct( vecAngularVelocity, vecLocalContactPoint, vecLocalContactVelocity );
 	pImpactObject->LocalToWorldVector( &vecContactVelocity, vecLocalContactVelocity );
 
@@ -3193,7 +3218,7 @@ void CPhysicsProp::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 	{
 		int damageType = 0;
 
-		IBreakableWithPropData *pBreakableInterface = assert_cast<IBreakableWithPropData*>(this);
+		IBreakableWithPropData *pBreakableInterface = static_cast<IBreakableWithPropData*>(this);
 		float damage = CalculateDefaultPhysicsDamage( index, pEvent, m_impactEnergyScale, true, damageType, pBreakableInterface->GetPhysicsDamageTable() );
 		if ( damage > 0 )
 		{
@@ -3360,45 +3385,45 @@ int CPhysicsProp::DrawDebugTextOverlays(void)
 		if (VPhysicsGetObject())
 		{
 			char tempstr[512];
-			Q_snprintf(tempstr, sizeof(tempstr),"Mass: %.2f kg / %.2f lb (%s)", VPhysicsGetObject()->GetMass(), kg2lbs(VPhysicsGetObject()->GetMass()), GetMassEquivalent(VPhysicsGetObject()->GetMass()));
+			V_snprintf(tempstr, sizeof(tempstr),"Mass: %.2f kg / %.2f lb (%s)", VPhysicsGetObject()->GetMass(), kg2lbs(VPhysicsGetObject()->GetMass()), GetMassEquivalent(VPhysicsGetObject()->GetMass()));
 			EntityText( text_offset, tempstr, 0,r,g,b);
 			text_offset++;
 
 			{
 				vphysics_objectstress_t stressOut;
 				float stress = CalculateObjectStress( VPhysicsGetObject(), this, &stressOut );
-				Q_snprintf(tempstr, sizeof(tempstr),"Stress: %.2f (%.2f / %.2f)", stress, stressOut.exertedStress, stressOut.receivedStress );
+				V_snprintf(tempstr, sizeof(tempstr),"Stress: %.2f (%.2f / %.2f)", stress, stressOut.exertedStress, stressOut.receivedStress );
 				EntityText( text_offset, tempstr, 0,r,g,b);
 				text_offset++;
 			}
 
 			if ( !VPhysicsGetObject()->IsMoveable() )
 			{
-				Q_snprintf(tempstr, sizeof(tempstr),"Motion Disabled" );
+				V_snprintf(tempstr, sizeof(tempstr),"Motion Disabled" );
 				EntityText( text_offset, tempstr, 0,r,g,b);
 				text_offset++;
 			}
 
 			if ( m_iszBasePropData != NULL_STRING )
 			{
-				Q_snprintf(tempstr, sizeof(tempstr),"Base PropData: %s", STRING(m_iszBasePropData) );
+				V_snprintf(tempstr, sizeof(tempstr),"Base PropData: %s", STRING(m_iszBasePropData) );
 				EntityText( text_offset, tempstr, 0,r,g,b);
 				text_offset++;
 			}
 
 			if ( m_iNumBreakableChunks != 0 )
 			{
-				IBreakableWithPropData *pBreakableInterface = assert_cast<IBreakableWithPropData*>(this);
-				Q_snprintf(tempstr, sizeof(tempstr),"Breakable Chunks: %d (Max Size %d)", (int) m_iNumBreakableChunks, pBreakableInterface->GetMaxBreakableSize() );
+				IBreakableWithPropData *pBreakableInterface = static_cast<IBreakableWithPropData*>(this);
+				V_snprintf(tempstr, sizeof(tempstr),"Breakable Chunks: %d (Max Size %d)", (int) m_iNumBreakableChunks, pBreakableInterface->GetMaxBreakableSize() );
 				EntityText( text_offset, tempstr, 0,r,g,b);
 				text_offset++;
 			}
 
-			Q_snprintf(tempstr, sizeof(tempstr),"Skin: %d", m_nSkin.Get() );
+			V_snprintf(tempstr, sizeof(tempstr),"Skin: %d", m_nSkin.Get() );
 			EntityText( text_offset, tempstr, 0,r,g,b);
 			text_offset++;
 
-			Q_snprintf(tempstr, sizeof(tempstr),"Health: %d, collision group %d", GetHealth(), GetCollisionGroup() );
+			V_snprintf(tempstr, sizeof(tempstr),"Health: %d, collision group %d", GetHealth(), GetCollisionGroup() );
 			EntityText( text_offset, tempstr, 0,r,g,b);
 			text_offset++;
 		}
@@ -3486,7 +3511,7 @@ CBaseEntity *BreakModelCreateSingle( CBaseEntity *pOwner, breakmodel_t *pModel, 
 {
 	CBaseAnimating *pEntity = nullptr;
 	// stop creating gibs if too many
-	if ( g_ActiveGibCount >= ACTIVE_GIB_LIMIT )
+	if ( g_ActiveGibCount >= ACTIVE_GIB_LIMIT() )
 	{
 		//DevMsg(1,"Gib limit on %s\n", pModel->modelName );
 		return nullptr;
@@ -3504,7 +3529,7 @@ CBaseEntity *BreakModelCreateSingle( CBaseEntity *pOwner, breakmodel_t *pModel, 
 	{
 		pEntity->m_nSkin = nSkin;
 		pEntity->m_iHealth = pModel->health;
-		if ( g_ActiveGibCount >= ACTIVE_GIB_FADE )
+		if ( g_ActiveGibCount >= ACTIVE_GIB_FADE() )
 		{
 			pModel->fadeTime = std::min<std::common_type_t<int, float>>( 3, pModel->fadeTime );
 		}
@@ -3520,7 +3545,7 @@ CBaseEntity *BreakModelCreateSingle( CBaseEntity *pOwner, breakmodel_t *pModel, 
 		}
 
 		IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-		int count = pEntity->VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+		int count = pEntity->VPhysicsGetObjectList( pList, std::size( pList ) );
 		if ( count )
 		{
 			for ( int i = 0; i < count; i++ )
@@ -3849,7 +3874,7 @@ void CBasePropDoor::HandleAnimEvent(animevent_t *pEvent)
 //-----------------------------------------------------------------------------
 void CBasePropDoor::CalcDoorSounds()
 {
-	ErrorIfNot( GetModel() != nullptr, ( "prop_door with no model at %.2f %.2f %.2f\n", GetAbsOrigin().x, GetAbsOrigin().y, GetAbsOrigin().z ) );
+	if ( !( GetModel() != nullptr ) ) Error( "prop_door with no model at %.2f %.2f %.2f\n", GetAbsOrigin().x, GetAbsOrigin().y, GetAbsOrigin().z );
 
 	string_t strSoundOpen = NULL_STRING;
 	string_t strSoundClose = NULL_STRING;
@@ -3868,7 +3893,7 @@ void CBasePropDoor::CalcDoorSounds()
 			// Open / close / move sounds are looked up by skin index.
 			char szSkin[80];
 			int skin = m_nSkin;
-			Q_snprintf( szSkin, sizeof( szSkin ), "skin%d", skin );
+			V_snprintf( szSkin, sizeof( szSkin ), "skin%d", skin );
 			KeyValues *pkvSkinData = pkvDoorSounds->FindKey( szSkin );
 			if ( pkvSkinData )
 			{
@@ -3888,7 +3913,7 @@ void CBasePropDoor::CalcDoorSounds()
 
 			// Locked / unlocked sounds are looked up by hardware index.
 			char szHardware[80];
-			Q_snprintf( szHardware, sizeof( szHardware ), "hardware%d", m_nHardwareType );
+			V_snprintf( szHardware, sizeof( szHardware ), "hardware%d", m_nHardwareType );
 			KeyValues *pkvHardwareData = pkvDoorSounds->FindKey( szHardware );
 			if ( pkvHardwareData )
 			{
@@ -4061,14 +4086,14 @@ void CBasePropDoor::OnUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 			if ( nSequence >= 0 )
 				PropSetSequence( SelectWeightedSequence((Activity)ACT_DOOR_LOCKED) );
 
-			PlayLockSounds(this, &m_ls, TRUE, FALSE);
+			PlayLockSounds(this, &m_ls, true, false);
 			m_OnLockedUse.FireOutput( pActivator, pCaller );
 		}
 		else
 		{
 			m_hActivator = pActivator;
 
-			PlayLockSounds(this, &m_ls, FALSE, FALSE);
+			PlayLockSounds(this, &m_ls, false, false);
 			int nSequence = SelectWeightedSequence((Activity)ACT_DOOR_OPEN);
 			PropSetSequence( (nSequence >= 0 ) ? nSequence : GetSequence() );
 
@@ -4793,7 +4818,7 @@ public:
 			if ( pEntity->GetMoveType() == MOVETYPE_VPHYSICS )
 			{
 				IPhysicsObject *pPhysics = pEntity->VPhysicsGetObject();
-				Assert(pPhysics);
+				contract_assert( pPhysics );
 				
 				// Must either be squashable or very light
 				if ( pPhysics->IsMoveable() && pPhysics->GetMass() < 32 )
@@ -5234,7 +5259,7 @@ void CPropDoorRotating::DoorTeleportToSpawnPosition()
 	else
 	{
 		// Bogus spawn position setting!
-		Assert( false );
+		contract_assert( false );
 		angSpawn = m_angRotationClosed;
 		SetDoorState( DOOR_STATE_CLOSED );
 	}
@@ -5540,7 +5565,7 @@ int CPropDoorRotating::DrawDebugTextOverlays(void)
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
 		char tempstr[512];
-		Q_snprintf(tempstr, sizeof(tempstr),"Avelocity: %.2f %.2f %.2f", GetLocalAngularVelocity().x,  GetLocalAngularVelocity().y,  GetLocalAngularVelocity().z);
+		V_snprintf(tempstr, sizeof(tempstr),"Avelocity: %.2f %.2f %.2f", GetLocalAngularVelocity().x,  GetLocalAngularVelocity().y,  GetLocalAngularVelocity().z);
 		EntityText( text_offset, tempstr, 0);
 		text_offset++;
 
@@ -5552,23 +5577,23 @@ int CPropDoorRotating::DrawDebugTextOverlays(void)
 
 		if ( IsDoorOpen() )
 		{
-			Q_strncpy(tempstr, "DOOR STATE: OPEN", sizeof(tempstr));
+			V_strncpy(tempstr, "DOOR STATE: OPEN", sizeof(tempstr));
 		}
 		else if ( IsDoorClosed() )
 		{
-			Q_strncpy(tempstr, "DOOR STATE: CLOSED", sizeof(tempstr));
+			V_strncpy(tempstr, "DOOR STATE: CLOSED", sizeof(tempstr));
 		}
 		else if ( IsDoorOpening() )
 		{
-			Q_strncpy(tempstr, "DOOR STATE: OPENING", sizeof(tempstr));
+			V_strncpy(tempstr, "DOOR STATE: OPENING", sizeof(tempstr));
 		}
 		else if ( IsDoorClosing() )
 		{
-			Q_strncpy(tempstr, "DOOR STATE: CLOSING", sizeof(tempstr));
+			V_strncpy(tempstr, "DOOR STATE: CLOSING", sizeof(tempstr));
 		}
 		else if ( IsDoorAjar() )
 		{
-			Q_strncpy(tempstr, "DOOR STATE: AJAR", sizeof(tempstr));
+			V_strncpy(tempstr, "DOOR STATE: AJAR", sizeof(tempstr));
 		}
 		EntityText( text_offset, tempstr, 0);
 		text_offset++;
@@ -5626,7 +5651,7 @@ public:
 
 void CPropDoorRotating::InputSetSpeed(inputdata_t &inputdata)
 {
-	AssertMsg1(inputdata.value.Float() > 0.0f, "InputSetSpeed on %s called with negative parameter!", GetDebugName() );
+	contract_assert( ( inputdata.value.Float() > 0.0f ) && "InputSetSpeed on %s called with negative parameter!" );
 	m_flSpeed = inputdata.value.Float();
 	DoorResume();
 }
@@ -5637,11 +5662,11 @@ void CPropDoorRotating::InputSetSpeed(inputdata_t &inputdata)
 
 LINK_ENTITY_TO_CLASS(prop_exploding_barrel, CCSPropExplodingBarrel);
 
-#define EXPLODING_BARREL_MODEL_WHOLE "models/props/coop_cementplant/exloding_barrel/exploding_barrel.mdl"
-#define EXPLODING_BARREL_MODEL_TOP "models/props/coop_cementplant/exloding_barrel/exploding_barrel_top.mdl"
-#define EXPLODING_BARREL_MODEL_BOTTOM "models/props/coop_cementplant/exloding_barrel/exploding_barrel_bottom.mdl"
-#define EXPLODING_BARREL_EXPLODE_SND1 "BaseGrenade.Explode"
-#define EXPLODING_BARREL_EXPLODE_SND2 "Inferno.Start_IncGrenade"
+inline constexpr const char *EXPLODING_BARREL_MODEL_WHOLE = "models/props/coop_cementplant/exloding_barrel/exploding_barrel.mdl";
+inline constexpr const char *EXPLODING_BARREL_MODEL_TOP = "models/props/coop_cementplant/exloding_barrel/exploding_barrel_top.mdl";
+inline constexpr const char *EXPLODING_BARREL_MODEL_BOTTOM = "models/props/coop_cementplant/exloding_barrel/exploding_barrel_bottom.mdl";
+inline constexpr const char *EXPLODING_BARREL_EXPLODE_SND1 = "BaseGrenade.Explode";
+inline constexpr const char *EXPLODING_BARREL_EXPLODE_SND2 = "Inferno.Start_IncGrenade";
 
 //--------------------------------------------------------------------------------------------------------
 void CCSPropExplodingBarrel::Precache( void )
@@ -5725,12 +5750,12 @@ int CCSPropExplodingBarrel::OnTakeDamage( const CTakeDamageInfo &info )
 		{
 			char buf[512];
 			// Pass in standard key values
-			Q_snprintf( buf, sizeof( buf ), "%.10f %.10f %.10f", GetAbsOrigin().x, GetAbsOrigin().y, GetAbsOrigin().z );
+			V_snprintf( buf, sizeof( buf ), "%.10f %.10f %.10f", GetAbsOrigin().x, GetAbsOrigin().y, GetAbsOrigin().z );
 			pBarrelTop->KeyValue( "origin", buf );
-			Q_snprintf( buf, sizeof( buf ), "%.10f %.10f %.10f", GetAbsAngles().x, GetAbsAngles().y, GetAbsAngles().z );
+			V_snprintf( buf, sizeof( buf ), "%.10f %.10f %.10f", GetAbsAngles().x, GetAbsAngles().y, GetAbsAngles().z );
 			pBarrelTop->KeyValue( "angles", buf );
 			pBarrelTop->KeyValue( "model", EXPLODING_BARREL_MODEL_TOP );
-			Q_snprintf( buf, sizeof( buf ), "%d", 1792 );
+			V_snprintf( buf, sizeof( buf ), "%d", 1792 );
 			pBarrelTop->KeyValue( "spawnflags", buf );
 			pBarrelTop->Precache();
 			DispatchSpawn( pBarrelTop );
@@ -5862,7 +5887,6 @@ void CPropDoorRotatingBreakable::Precache( void )
 //--------------------------------------------------------------------------------------------------------
 void CPropDoorRotatingBreakable::PrecacheBreakables( void )
 {
-	MEM_ALLOC_CREDIT();
 	KeyValues *modelKeyValues = new KeyValues("");
 	const model_t *model = GetModel();
 	const char *modelName = modelinfo->GetModelName( model );
@@ -5908,7 +5932,6 @@ void CPropDoorRotatingBreakable::PrecacheBreakables( void )
 //--------------------------------------------------------------------------------------------------------
 void CPropDoorRotatingBreakable::Spawn( void )
 {
-	MEM_ALLOC_CREDIT();
 	m_isAbleToCloseAreaPortals = true;
 
 	BaseClass::Spawn();
@@ -6173,7 +6196,6 @@ void CPropDoorRotatingBreakable::Event_Killed( const CTakeDamageInfo &info )
 //--------------------------------------------------------------------------------------------------------
 int CPropDoorRotatingBreakable::OnTakeDamage( const CTakeDamageInfo &info )
 {
-	MEM_ALLOC_CREDIT();
 	int oldHealth = m_iHealth;
 	CTakeDamageInfo subInfo = info;
 	const float DoorExplosionBreakDamage = 40.0f;
@@ -6295,11 +6317,11 @@ int CPropDoorRotatingBreakable::DrawDebugTextOverlays( void )
 		char tempstr[512];
 		if ( m_bBreakable )
 		{
-			Q_strncpy( tempstr, "DOOR IS BREAKABLE", sizeof(tempstr) );
+			V_strncpy( tempstr, "DOOR IS BREAKABLE", sizeof(tempstr) );
 		}
 		else
 		{
-			Q_strncpy( tempstr, "DOOR IS NOT BREAKABLE", sizeof(tempstr) );
+			V_strncpy( tempstr, "DOOR IS NOT BREAKABLE", sizeof(tempstr) );
 		}
 		EntityText( text_offset, tempstr, 0 );
 		text_offset++;
@@ -6512,8 +6534,8 @@ class [[= ks::reflect::NetTable{ .name = "DT_PhysicsPropMultiplayer" } ]]
 
 	virtual void ComputeWorldSpaceSurroundingBox( Vector *mins, Vector *maxs )
 	{
-		Assert( m_usingCustomCollisionBounds );
-		Assert( mins != nullptr && maxs != nullptr );
+		contract_assert( m_usingCustomCollisionBounds );
+		contract_assert( mins != nullptr && maxs != nullptr );
 		if ( !mins || !maxs )
 			return;
 
@@ -6533,7 +6555,7 @@ IMPLEMENT_REFLECT_DATAMAP( CPhysicsPropMultiplayer )
 
 IMPLEMENT_REFLECT_SERVERCLASS( CPhysicsPropMultiplayer, DT_PhysicsPropMultiplayer )
 
-#define RESPAWNABLE_PROP_DEFAULT_TIME 60.0f
+constexpr auto RESPAWNABLE_PROP_DEFAULT_TIME = 60.0f;
 
 class CPhysicsPropRespawnable : public CPhysicsProp
 {
@@ -6663,8 +6685,8 @@ void CC_Prop_Dynamic_Create( const CCommand &args )
 	MDLCACHE_CRITICAL_SECTION();
 
 	char pModelName[512];
-	Q_snprintf( pModelName, sizeof(pModelName), "models/%s", args[1] );
-	Q_DefaultExtension( pModelName, ".mdl", sizeof(pModelName) );
+	V_snprintf( pModelName, sizeof(pModelName), "models/%s", args[1] );
+	V_DefaultExtension( pModelName, ".mdl", sizeof(pModelName) );
 	MDLHandle_t h = mdlcache->FindMDL( pModelName );
 	if ( h == MDLHANDLE_INVALID )
 		return;
@@ -6698,9 +6720,9 @@ void CC_Prop_Dynamic_Create( const CCommand &args )
 	{
 		char buf[512];
 		// Pass in standard key values
-		Q_snprintf( buf, sizeof(buf), "%.10f %.10f %.10f", tr.endpos.x, tr.endpos.y, tr.endpos.z );
+		V_snprintf( buf, sizeof(buf), "%.10f %.10f %.10f", tr.endpos.x, tr.endpos.y, tr.endpos.z );
 		pProp->KeyValue( "origin", buf );
-		Q_snprintf( buf, sizeof(buf), "%.10f %.10f %.10f", angles.x, angles.y, angles.z );
+		V_snprintf( buf, sizeof(buf), "%.10f %.10f %.10f", angles.x, angles.y, angles.z );
 		pProp->KeyValue( "angles", buf );
 		pProp->KeyValue( "model", pModelName );
 		pProp->KeyValue( "solid", pVCollide ? "6" : "2" );
@@ -6729,8 +6751,8 @@ void CC_Prop_Physics_Create( const CCommand &args )
 		return;
 
 	char pModelName[512];
-	Q_snprintf( pModelName, sizeof(pModelName), "models/%s", args[1] );
-	Q_DefaultExtension( pModelName, ".mdl", sizeof(pModelName) );
+	V_snprintf( pModelName, sizeof(pModelName), "models/%s", args[1] );
+	V_DefaultExtension( pModelName, ".mdl", sizeof(pModelName) );
 
 	// Figure out where to place it
 	CBasePlayer* pPlayer = UTIL_GetCommandClient();
@@ -6783,9 +6805,9 @@ CPhysicsProp* CreatePhysicsProp( const char *pModelName, const Vector &vTraceSta
 	{
 		char buf[512];
 		// Pass in standard key values
-		Q_snprintf( buf, sizeof(buf), "%.10f %.10f %.10f", tr.endpos.x, tr.endpos.y, tr.endpos.z );
+		V_snprintf( buf, sizeof(buf), "%.10f %.10f %.10f", tr.endpos.x, tr.endpos.y, tr.endpos.z );
 		pProp->KeyValue( "origin", buf );
-		Q_snprintf( buf, sizeof(buf), "%.10f %.10f %.10f", angles.x, angles.y, angles.z );
+		V_snprintf( buf, sizeof(buf), "%.10f %.10f %.10f", angles.x, angles.y, angles.z );
 		pProp->KeyValue( "angles", buf );
 		pProp->KeyValue( "model", pModelName );
 		pProp->KeyValue( "fademindist", "-1" );
@@ -6816,7 +6838,7 @@ void CC_Ent_Rotate( const CCommand &args )
 		return;
 
 	QAngle angles = pEntity->GetLocalAngles();
-	float flAngle = (args.ArgC() == 2) ? atof( args[1] ) : 7.5f;
+	float flAngle = (args.ArgC() == 2) ? std::atof( args[1] ) : 7.5f;
 	   
 	VMatrix entToWorld, rot, newEntToWorld;
 	MatrixBuildRotateZ( rot, flAngle );
@@ -6830,4 +6852,3 @@ static ConCommand ent_rotate("ent_rotate", CC_Ent_Rotate, "Rotates an entity by 
 
 // This is a dummy. The entity is entirely clientside.
 LINK_ENTITY_TO_CLASS( func_proprrespawnzone, CBaseEntity );
-

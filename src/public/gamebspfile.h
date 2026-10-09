@@ -1,19 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Defines game-specific data
-//
-// $Revision: $
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef GAMEBSPFILE_H
-#define GAMEBSPFILE_H
-
-
-
-#include "mathlib/vector.h"
-#include "basetypes.h"
-
+import std;
+import ks.math;
 
 //-----------------------------------------------------------------------------
 // This enumerations defines all the four-CC codes for the client lump names
@@ -42,7 +34,7 @@ enum
 //-----------------------------------------------------------------------------
 // This is the data associated with the GAMELUMP_DETAIL_PROPS lump
 //-----------------------------------------------------------------------------
-#define DETAIL_NAME_LENGTH 128
+inline constexpr auto DETAIL_NAME_LENGTH = 128;
 
 enum DetailPropOrientation_t
 {
@@ -301,5 +293,3 @@ struct StaticPropLightstylesLump_t
 {
 	ColorRGBExp32	m_Lighting;
 };
-
-#endif // GAMEBSPFILE_H

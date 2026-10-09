@@ -1,4 +1,22 @@
-#include "render_pch.h"
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialvar.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+import std;
+#include "gl_model.h"
+#include "r_local.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
 
 #if !defined( DEDICATED )
 
@@ -8,8 +26,7 @@
 #include "bitmap/tgawriter.h"
 #include "client.h"
 #include "tier2/fileutils.h"
-#include "vstdlib/iprocessutils.h"
-#include "appframework/iappsystem.h"
+import ks.vstdlib;
 #include "appframework/IAppSystemGroup.h"
 #include "appframework/AppFramework.h"
 #include "../utils/common/bsplib.h"
@@ -53,7 +70,7 @@ static void UnloadBSPPackInterface( void )
 
 static void RandomColor( Vector& color )
 {
-	color[0] = ( ( float )rand() ) / ( float )VALVE_RAND_MAX;
+	color[0] = ( ( float )std::rand() ) / ( float )VALVE_RAND_MAX;
 	color[1] = ( ( float )rand() ) / ( float )VALVE_RAND_MAX;
 	color[2] = ( ( float )rand() ) / ( float )VALVE_RAND_MAX;
 	VectorNormalize( color );
@@ -105,13 +122,8 @@ static void SurfComputeAtlasedTextureCoordinate( SurfaceCtx_t const& ctx, Surfac
 		uv *= ctx.m_Scale;
 		uv += ctx.m_Offset;
 
-		assert( uv.IsValid() );
+		contract_assert( uv.IsValid() );
 	}
-#if _DEBUG
-	// This was here for check against displacements and they actually get calculated later correctly.
-	//	CheckTexCoord( uv.x );
-	//	CheckTexCoord( uv.y );
-#endif
 	uv.x = clamp(uv.x, 0.0f, 1.0f);
 	uv.y = clamp(uv.y, 0.0f, 1.0f);
 }
@@ -241,8 +253,8 @@ static void CalculateLuxelToWorldTransform( const mtexinfo_t *pTexInfo, const Ve
 		VectorMA( ( *pLuxelOrigin ), -pTexInfo->lightmapVecsLuxelsPerWorldUnits[0][3], ( *pS ), ( *pLuxelOrigin ) );
 		VectorMA( ( *pLuxelOrigin ), -pTexInfo->lightmapVecsLuxelsPerWorldUnits[1][3], ( *pT ), ( *pLuxelOrigin ) );
 
-		Assert( fabsf( DOT_PRODUCT( *pLuxelOrigin, pTexInfo->lightmapVecsLuxelsPerWorldUnits[0] ) + pTexInfo->lightmapVecsLuxelsPerWorldUnits[0][3] ) < LUXEL_WORLD_SPACE_EPSILON );
-		Assert( fabsf( DOT_PRODUCT( *pLuxelOrigin, pTexInfo->lightmapVecsLuxelsPerWorldUnits[1] ) + pTexInfo->lightmapVecsLuxelsPerWorldUnits[1][3] ) < LUXEL_WORLD_SPACE_EPSILON );
+		contract_assert( std::fabsf( DOT_PRODUCT( *pLuxelOrigin, pTexInfo->lightmapVecsLuxelsPerWorldUnits[0] ) + pTexInfo->lightmapVecsLuxelsPerWorldUnits[0][3] ) < LUXEL_WORLD_SPACE_EPSILON );
+		contract_assert( std::fabsf( DOT_PRODUCT( *pLuxelOrigin, pTexInfo->lightmapVecsLuxelsPerWorldUnits[1] ) + pTexInfo->lightmapVecsLuxelsPerWorldUnits[1][3] ) < LUXEL_WORLD_SPACE_EPSILON );
 	}
 }
 
@@ -292,7 +304,7 @@ static bool KeepSurface( SurfaceHandle_t surfID )
 	return true;
 }
 
-static bool ComputeMapName( char *pMapName, size_t nMapNameSize )
+static bool ComputeMapName( char *pMapName, std::size_t nMapNameSize )
 {
 	IClientEntity *world = entitylist->GetClientEntity( 0 );
 
@@ -303,15 +315,15 @@ static bool ComputeMapName( char *pMapName, size_t nMapNameSize )
 
 		// This handles the case where you have a map in a directory under maps. 
 		// We need to keep everything after "maps/" so it looks for the BSP file in the right place.
-		if ( Q_stristr( pModelName, "maps/" ) == pModelName ||
-			Q_stristr( pModelName, "maps\\" ) == pModelName )
+		if ( V_stristr( pModelName, "maps/" ) == pModelName ||
+			V_stristr( pModelName, "maps\\" ) == pModelName )
 		{
-			Q_strncpy( pMapName, &pModelName[5], nMapNameSize );
-			Q_StripExtension( pMapName, pMapName, nMapNameSize );
+			V_strncpy( pMapName, &pModelName[5], nMapNameSize );
+			V_StripExtension( pMapName, pMapName, nMapNameSize );
 		}
 		else
 		{
-			Q_FileBase( pModelName, pMapName, nMapNameSize );
+			V_FileBase( pModelName, pMapName, nMapNameSize );
 		}
 		return true;
 	}
@@ -321,24 +333,24 @@ static bool ComputeMapName( char *pMapName, size_t nMapNameSize )
 	}
 }
 
-static void ComputeAndMakeDirectories( const char *pMapName, char *pMatDir, size_t nMatDirSize, char *pMaterialSrcDir, size_t nMaterialSrcDirSize, char *pModelDir, size_t nModelDirSize, char *pModelSrcDir, size_t nModelSrcDirSize )
+static void ComputeAndMakeDirectories( const char *pMapName, char *pMatDir, std::size_t nMatDirSize, char *pMaterialSrcDir, std::size_t nMaterialSrcDirSize, char *pModelDir, std::size_t nModelDirSize, char *pModelSrcDir, std::size_t nModelSrcDirSize )
 {
 	// materials dir
-	Q_snprintf( pMatDir, nMatDirSize, "materials/models/maps/%s", pMapName );
+	V_snprintf( pMatDir, nMatDirSize, "materials/models/maps/%s", pMapName );
 	g_pFileSystem->CreateDirHierarchy( pMatDir, "DEFAULT_WRITE_PATH" );
 
 	// materialsrc dir
 	char pTemp[MAX_PATH];
-	Q_snprintf( pTemp, sizeof( pTemp ), "materialsrc/models/maps/%s", pMapName );
+	V_snprintf( pTemp, sizeof( pTemp ), "materialsrc/models/maps/%s", pMapName );
 	GetModContentSubdirectory( pTemp, pMaterialSrcDir, nMaterialSrcDirSize );
 	g_pFileSystem->CreateDirHierarchy( pMaterialSrcDir, nullptr );
 
 	// model dir
-	Q_snprintf( pModelDir, nModelDirSize, "models/maps//%s", pMapName );
+	V_snprintf( pModelDir, nModelDirSize, "models/maps//%s", pMapName );
 	g_pFileSystem->CreateDirHierarchy( pModelDir, "DEFAULT_WRITE_PATH" );
 
 	// model src dir
-	Q_snprintf( pTemp, sizeof( pTemp ), "models/maps/%s", pMapName );
+	V_snprintf( pTemp, sizeof( pTemp ), "models/maps/%s", pMapName );
 	GetModContentSubdirectory( pTemp, pModelSrcDir, nModelSrcDirSize );
 	g_pFileSystem->CreateDirHierarchy( pModelSrcDir, nullptr );
 }
@@ -472,7 +484,7 @@ static void RemoveContentFile( const char *mapName, const char *pFormatString )
 	{
 		char pTemp[MAX_PATH];
 		char absolutePath[MAX_PATH];
-		Q_snprintf( pTemp, sizeof( pTemp ), pFormatString, mapName );
+		V_snprintf( pTemp, sizeof( pTemp ), pFormatString, mapName );
 		GetModContentSubdirectory( pTemp, absolutePath, sizeof( absolutePath ) );
 		g_pFileSystem->RemoveFile( absolutePath );	
 	}
@@ -751,10 +763,10 @@ void DrawSurfaceRectToAtlasedTexture( float left, float top, float right, float 
 	float flTopSnapped = ctx.m_Scale.y * ( float )( int )( ctx.m_LightmapPageSize[1] * flTop + 0.5f );
 	float flBottomSnapped = ctx.m_Scale.y * ( float )( int )( ctx.m_LightmapPageSize[1] * flBottom + 0.5f );
 
-	Assert( flLeftSnapped == lightmapLeft );
-	Assert( flRightSnapped == lightmapRight );
-	Assert( flTopSnapped == lightmapTop );
-	Assert( flBottomSnapped == lightmapBottom );
+	contract_assert( flLeftSnapped == lightmapLeft );
+	contract_assert( flRightSnapped == lightmapRight );
+	contract_assert( flTopSnapped == lightmapTop );
+	contract_assert( flBottomSnapped == lightmapBottom );
 
 	surfaceRect.m_LMCoords[0].Init( flLeftSnapped, flBottomSnapped );
 	surfaceRect.m_LMCoords[1].Init( flLeftSnapped, flTopSnapped );
@@ -975,7 +987,9 @@ static int WriteSMD( const std::vector< CPackedSurfaceInfo > &packedSurfaces, in
 
 ConVar r_buildingmapforworld( "r_buildingmapforworld", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
-CON_COMMAND( buildmodelforworld, "buildmodelforworld" )
+static void buildmodelforworld( const CCommand &args );
+static ConCommand buildmodelforworld_command( "buildmodelforworld", buildmodelforworld, "buildmodelforworld" );
+static void buildmodelforworld( const CCommand &args )
 {
 	r_buildingmapforworld.SetValue( 1 );
 	extern void V_RenderUIOnly();
@@ -987,7 +1001,7 @@ CON_COMMAND( buildmodelforworld, "buildmodelforworld" )
 	}
 
 	// Make sure that the file is writable before building cubemaps.
-	Assert( g_pFileSystem->FileExists( GetBaseLocalClient().m_szLevelName, "GAME" ) );
+	contract_assert( g_pFileSystem->FileExists( GetBaseLocalClient().m_szLevelName, "GAME" ) );
 	if( !g_pFileSystem->IsFileWritable( GetBaseLocalClient().m_szLevelName, "GAME" ) )
 	{
 		Warning( "%s is not writable!!!  Check it out before running buildmodelforworld.\n", GetBaseLocalClient().m_szLevelName );
@@ -1042,7 +1056,7 @@ CON_COMMAND( buildmodelforworld, "buildmodelforworld" )
 	materials->BeginRenderTargetAllocation();
 	ITexture *pRenderTarget = materials->CreateRenderTargetTexture( nAtlasedTextureWidth, nAtlasedTextureHeight, RT_SIZE_NO_CHANGE, IMAGE_FORMAT_RGBA8888, MATERIAL_RT_DEPTH_NONE );
 	materials->EndRenderTargetAllocation();
-	Assert( pRenderTarget );
+	contract_assert( pRenderTarget );
 
 	RenderToAtlasedTexture( packedSurfaces, pRenderContext, pRenderTarget, nAtlasedTextureWidth, nAtlasedTextureHeight, materialSrcDir, "simpleworldmodel", RENDER_TO_ATLASED_TEXTURE_FULL_RENDERING, dispData, BASE_TIMES_LIGHTMAP_LINEAR_TONEMAP_SCALE );
 	RenderToAtlasedTexture( packedSurfaces, pRenderContext, pRenderTarget, nAtlasedTextureWidth, nAtlasedTextureHeight, materialSrcDir, "simpleworldmodel_lightmap", RENDER_TO_ATLASED_TEXTURE_LIGHTING_ONLY, dispData, 1.0f );
@@ -1064,7 +1078,7 @@ CON_COMMAND( buildmodelforworld, "buildmodelforworld" )
 	LoadBSPPackInterface();
 
 	char mapPath[MAX_PATH];
-	Q_snprintf( mapPath, sizeof( mapPath ), "maps/%s.bsp", mapName );
+	V_snprintf( mapPath, sizeof( mapPath ), "maps/%s.bsp", mapName );
 	s_pBSPPack->LoadBSPFile( g_pFileSystem, mapPath );
 
 	// add files to bsp zip file and nuke local copies (fixme. .move these closer to the code that creates and compiles the assets)

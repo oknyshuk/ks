@@ -1,8 +1,22 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include "rocketui/rmlui.h"
 #include "rkhud_scoreboard.h"
 
 #include "rkhud_model.h"
 
-#include "cbase.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
 #include "hud_macros.h"
 #include "c_cs_player.h"
 #include "in_buttons.h"
@@ -11,6 +25,8 @@
 #include <c_team.h>
 
 #include <rocketui/rmlui.h>
+import ks.core;
+import std;
 
 DECLARE_HUDELEMENT( RkHudScoreboard );
 

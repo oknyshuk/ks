@@ -1,33 +1,19 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-
-#include "basetypes.h"
-#include <stdio.h>
+import std;
+import ks.tier1;
 #include "choreoscene.h"
 #include "choreoevent.h"
 #include "choreochannel.h"
 #include "choreoactor.h"
 #include "ichoreoeventcallback.h"
 #include "iscenetokenprocessor.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier1/text_writer.h"
 #include "filesystem.h"
-#include <set>
-#include "mathlib/mathlib.h"
-#include "tier1/strtools.h"
 #include "tier2/tier2.h"
 
-
 // Let scene linger for 1/4 second so blends can finish
-#define SCENE_LINGER_TIME 0.25f
+constexpr auto SCENE_LINGER_TIME = 0.25f;
 
 // The engine turns this to true in dlls/sceneentity.cpp at bool SceneCacheInit()!!!
 bool	CChoreoScene::s_bEditingDisabled = false;
@@ -44,9 +30,8 @@ CChoreoScene *ChoreoLoadScene(
 	ISceneTokenProcessor *tokenizer,
 	void ( *pfn ) ( const char *fmt, ... ) )
 {
-	MEM_ALLOC_CREDIT();
 	CChoreoScene *scene = new CChoreoScene( callback );
-	Assert( scene );
+	contract_assert( scene );
 	scene->ParseFromBuffer( filename, tokenizer );
 	scene->SetPrintFunc( pfn );
 	return scene;
@@ -71,10 +56,10 @@ bool IsBufferBinaryVCD( char *pBuffer, int bufferSize )
 void CChoreoScene::choreoprintf( int level, const char *fmt, ... )
 {
 	char string[ 2048 ];
-	va_list argptr;
-	va_start( argptr, fmt );
-	Q_vsnprintf( string, sizeof(string), fmt, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, fmt );
+	V_vsnprintf( string, sizeof(string), fmt, argptr );
+	__builtin_va_end( argptr );
 
 	while ( level-- > 0 )
 	{
@@ -84,7 +69,7 @@ void CChoreoScene::choreoprintf( int level, const char *fmt, ... )
 		} 
 		else
 		{
-			 printf( "  " );
+			 std::printf( "  " );
 		}
 		Msg( "  " );
 	}
@@ -95,7 +80,7 @@ void CChoreoScene::choreoprintf( int level, const char *fmt, ... )
 	}
 	else
 	{
-		printf( "%s", string );
+		std::printf( "%s", string );
 	}
 	
 	Msg( "%s", string );
@@ -124,7 +109,7 @@ CChoreoScene& CChoreoScene::operator=( const CChoreoScene& src )
 	for ( i = 0; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
-		Assert( a );
+		contract_assert( a );
 		delete a;
 	}
 
@@ -133,7 +118,7 @@ CChoreoScene& CChoreoScene::operator=( const CChoreoScene& src )
 	for ( i = 0; i < std::ssize( m_Events ); i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
-		Assert( e );
+		contract_assert( e );
 		delete e;
 	}
 
@@ -142,7 +127,7 @@ CChoreoScene& CChoreoScene::operator=( const CChoreoScene& src )
 	for ( i = 0 ; i < std::ssize( m_Channels ); i++ )
 	{
 		CChoreoChannel *c = m_Channels[ i ];
-		Assert( c );
+		contract_assert( c );
 		delete c;
 	}
 
@@ -170,7 +155,6 @@ CChoreoScene& CChoreoScene::operator=( const CChoreoScene& src )
 		CChoreoEvent *event = src.m_Events[ i ];
 		if ( event->GetActor() == nullptr )
 		{
-			MEM_ALLOC_CREDIT();
 
 			// Copy it
 			CChoreoEvent *newEvent = AllocEvent();
@@ -199,13 +183,13 @@ CChoreoScene& CChoreoScene::operator=( const CChoreoScene& src )
 		}
 	}
 
-	Q_strncpy( m_szMapname, src.m_szMapname, sizeof( m_szMapname ) );
+	V_strncpy( m_szMapname, src.m_szMapname, sizeof( m_szMapname ) );
 
 	m_SceneRamp = src.m_SceneRamp;
 
 	m_TimeZoomLookup = src.m_TimeZoomLookup;
 
-	Q_strncpy( m_szFileName, src.m_szFileName, sizeof( m_szFileName ) );
+	V_strncpy( m_szFileName, src.m_szFileName, sizeof( m_szFileName ) );
 
 	m_nLastPauseEvent = src.m_nLastPauseEvent;
 	m_flPrecomputedStopTime = src.m_flPrecomputedStopTime;
@@ -257,7 +241,7 @@ CChoreoScene::~CChoreoScene( void )
 	for ( i = 0; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
-		Assert( a );
+		contract_assert( a );
 		delete a;
 	}
 
@@ -266,7 +250,7 @@ CChoreoScene::~CChoreoScene( void )
 	for ( i = 0; i < std::ssize( m_Events ); i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
-		Assert( e );
+		contract_assert( e );
 		delete e;
 	}
 
@@ -275,7 +259,7 @@ CChoreoScene::~CChoreoScene( void )
 	for ( i = 0 ; i < std::ssize( m_Channels ); i++ )
 	{
 		CChoreoChannel *c = m_Channels[ i ];
-		Assert( c );
+		contract_assert( c );
 		delete c;
 	}
 
@@ -317,11 +301,11 @@ void CChoreoScene::PrintEvent( int level, CChoreoEvent *e )
 	choreoprintf( level, "{\n" );
 	choreoprintf( level + 1, "time %f %f\n", e->GetStartTime(), e->GetEndTime() );
 	choreoprintf( level + 1, "param \"%s\"\n", e->GetParameters() );
-	if ( strlen( e->GetParameters2() ) > 0 )
+	if ( std::strlen( e->GetParameters2() ) > 0 )
 	{
 		choreoprintf( level + 1, "param2 \"%s\"\n", e->GetParameters2() );
 	}
-	if ( strlen( e->GetParameters3() ) > 0 )
+	if ( std::strlen( e->GetParameters3() ) > 0 )
 	{
 		choreoprintf( level + 1, "param3 \"%s\"\n", e->GetParameters3() );
 	}
@@ -407,10 +391,10 @@ void CChoreoScene::Print( void )
 void CChoreoScene::SceneMsg( const char *pFormat, ... )
 {
 	char string[ 2048 ];
-	va_list argptr;
-	va_start( argptr, pFormat );
-	Q_vsnprintf( string, sizeof(string), pFormat, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, pFormat );
+	V_vsnprintf( string, sizeof(string), pFormat, argptr );
+	__builtin_va_end( argptr );
 
 	if ( m_pfnPrint )
 	{
@@ -428,9 +412,8 @@ void CChoreoScene::SceneMsg( const char *pFormat, ... )
 //-----------------------------------------------------------------------------
 CChoreoEvent *CChoreoScene::AllocEvent( void )
 {
-	MEM_ALLOC_CREDIT_CLASS();
 	CChoreoEvent *e = new CChoreoEvent( this );
-	Assert( e );
+	contract_assert( e );
 	m_Events.push_back( e );
 	return e;
 }
@@ -441,9 +424,8 @@ CChoreoEvent *CChoreoScene::AllocEvent( void )
 //-----------------------------------------------------------------------------
 CChoreoChannel *CChoreoScene::AllocChannel( void )
 {
-	MEM_ALLOC_CREDIT_CLASS();
 	CChoreoChannel *c = new CChoreoChannel();
-	Assert( c );
+	contract_assert( c );
 	m_Channels.push_back( c );
 	return c;
 }
@@ -454,9 +436,8 @@ CChoreoChannel *CChoreoScene::AllocChannel( void )
 //-----------------------------------------------------------------------------
 CChoreoActor *CChoreoScene::AllocActor( void )
 {
-	MEM_ALLOC_CREDIT_CLASS();
 	CChoreoActor *a = new CChoreoActor;
-	Assert( a );
+	contract_assert( a );
 	m_Actors.push_back( a );
 	return a;
 }
@@ -474,7 +455,7 @@ CChoreoActor *CChoreoScene::FindActor( const char *name )
 		if ( !a )
 			continue;
 
-		if ( !Q_stricmp( a->GetName(), name ) )
+		if ( !V_stricmp( a->GetName(), name ) )
 			return a;
 	}
 
@@ -561,12 +542,12 @@ void CCurveData::Parse( ISceneTokenProcessor *tokenizer, ICurveDataAccessor *dat
 
 	tokenizer->GetToken( true );
 
-	if ( !Q_stricmp( tokenizer->CurrentToken(), "leftedge" ) )
+	if ( !V_stricmp( tokenizer->CurrentToken(), "leftedge" ) )
 	{
 		CChoreoScene::ParseEdgeInfo( tokenizer, &m_RampEdgeInfo[ 0 ] );
 	}
 
-	if ( !Q_stricmp( tokenizer->CurrentToken(), "rightedge" ) )
+	if ( !V_stricmp( tokenizer->CurrentToken(), "rightedge" ) )
 	{
 		CChoreoScene::ParseEdgeInfo( tokenizer, &m_RampEdgeInfo[ 1 ] );
 	}
@@ -579,20 +560,20 @@ void CCurveData::Parse( ISceneTokenProcessor *tokenizer, ICurveDataAccessor *dat
 		// Parse until }
 		tokenizer->GetToken( true );
 		
-		if ( strlen( tokenizer->CurrentToken() ) <= 0 )
+		if ( std::strlen( tokenizer->CurrentToken() ) <= 0 )
 		{
 			tokenizer->Error( "expecting ramp data\n" );
 			break;
 		}
 		
-		if ( !Q_stricmp( tokenizer->CurrentToken(), "}" ) )
+		if ( !V_stricmp( tokenizer->CurrentToken(), "}" ) )
 			break;
 		
 		std::vector< CExpressionSample > samples;
 		
-		float time = (float)atof( tokenizer->CurrentToken() );
+		float time = (float)std::atof( tokenizer->CurrentToken() );
 		tokenizer->GetToken( false );
-		float value = (float)atof( tokenizer->CurrentToken() );
+		float value = (float)std::atof( tokenizer->CurrentToken() );
 		
 		// Add to counter
 		int idx = std::ssize( samples ); samples.emplace_back();
@@ -630,14 +611,14 @@ void CCurveData::Parse( ISceneTokenProcessor *tokenizer, ICurveDataAccessor *dat
 //-----------------------------------------------------------------------------
 void CChoreoScene::ParseEdgeInfo( ISceneTokenProcessor *tokenizer, EdgeInfo_t *edgeinfo )
 {
-	Assert( edgeinfo );
-	Assert( tokenizer );
+	contract_assert( edgeinfo );
+	contract_assert( tokenizer );
 
 	tokenizer->GetToken( false );
 	edgeinfo->m_bActive = true;
 	edgeinfo->m_CurveType = Interpolator_CurveTypeForName( tokenizer->CurrentToken() );
 	tokenizer->GetToken( false );
-	edgeinfo->m_flZeroPos = atof( tokenizer->CurrentToken() );
+	edgeinfo->m_flZeroPos = std::atof( tokenizer->CurrentToken() );
 	tokenizer->GetToken( true );
 }
 
@@ -648,7 +629,7 @@ void CChoreoScene::ParseEdgeInfo( ISceneTokenProcessor *tokenizer, EdgeInfo_t *e
 //-----------------------------------------------------------------------------
 void CChoreoScene::ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreoEvent *e, bool removeold /*= true*/ )
 {
-	Assert( e );
+	contract_assert( e );
 
 	if ( removeold )
 	{
@@ -666,7 +647,7 @@ void CChoreoScene::ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreo
 	//
 	tokenizer->GetToken( true );
 
-	Assert( e->HasEndTime() );
+	contract_assert( e->HasEndTime() );
 
 	float endtime		= e->GetEndTime();
 	float starttime		= e->GetStartTime();
@@ -674,14 +655,14 @@ void CChoreoScene::ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreo
 	int nDefaultCurveType = CURVE_DEFAULT;
 
 	// Is it the new file format?
-	if ( !Q_stricmp( tokenizer->CurrentToken(), "samples_use_time" ) )
+	if ( !V_stricmp( tokenizer->CurrentToken(), "samples_use_time" ) )
 	{
 		samples_use_realtime = true;
 		tokenizer->GetToken( true );
 	}
 
 	// Check for default curve type
-	if ( !Q_strnicmp( tokenizer->CurrentToken(), "defaultcurvetype", 16 ) )
+	if ( !V_strnicmp( tokenizer->CurrentToken(), "defaultcurvetype", 16 ) )
 	{
 		const char *pTest = tokenizer->CurrentToken() + 16;
 		if ( *pTest == 0 )
@@ -716,17 +697,17 @@ void CChoreoScene::ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreo
 		// Parse until }
 		tokenizer->GetToken( true );
 		
-		if ( strlen( tokenizer->CurrentToken() ) <= 0 )
+		if ( std::strlen( tokenizer->CurrentToken() ) <= 0 )
 		{
 			tokenizer->Error( "expecting flex animation data\n" );
 			break;
 		}
 		
-		if ( !Q_stricmp( tokenizer->CurrentToken(), "}" ) )
+		if ( !V_stricmp( tokenizer->CurrentToken(), "}" ) )
 			break;
 		
 		char flexcontroller[ CFlexAnimationTrack::MAX_CONTROLLER_NAME ];
-		Q_strncpy( flexcontroller, tokenizer->CurrentToken(), sizeof( flexcontroller ) );
+		V_strncpy( flexcontroller, tokenizer->CurrentToken(), sizeof( flexcontroller ) );
 		
 		// Animations default to active
 		bool active = true;
@@ -737,33 +718,33 @@ void CChoreoScene::ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreo
 
 		EdgeInfo_t edgeinfo[ 2 ];
 		
-		if ( !Q_stricmp( tokenizer->CurrentToken(), "disabled" ) )
+		if ( !V_stricmp( tokenizer->CurrentToken(), "disabled" ) )
 		{
 			active = false;
 			tokenizer->GetToken( true );
 		}
 		
-		if ( !Q_stricmp( tokenizer->CurrentToken(), "combo" ) )
+		if ( !V_stricmp( tokenizer->CurrentToken(), "combo" ) )
 		{
 			combo = true;
 			tokenizer->GetToken( true );
 		}
 		
-		if ( !Q_stricmp( tokenizer->CurrentToken(), "range" ) )
+		if ( !V_stricmp( tokenizer->CurrentToken(), "range" ) )
 		{
 			tokenizer->GetToken( false );
-			range_min = atof( tokenizer->CurrentToken() );
+			range_min = std::atof( tokenizer->CurrentToken() );
 			tokenizer->GetToken( false );
-			range_max = atof( tokenizer->CurrentToken() );
+			range_max = std::atof( tokenizer->CurrentToken() );
 			tokenizer->GetToken( true );
 		}
 		
-		if ( !Q_stricmp( tokenizer->CurrentToken(), "leftedge" ) )
+		if ( !V_stricmp( tokenizer->CurrentToken(), "leftedge" ) )
 		{
 			ParseEdgeInfo( tokenizer, &edgeinfo[ 0 ] );
 		}
 
-		if ( !Q_stricmp( tokenizer->CurrentToken(), "rightedge" ) )
+		if ( !V_stricmp( tokenizer->CurrentToken(), "rightedge" ) )
 		{
 			ParseEdgeInfo( tokenizer, &edgeinfo[ 1 ] );
 		}
@@ -781,18 +762,18 @@ void CChoreoScene::ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreo
 			{
 				tokenizer->GetToken( true );
 				
-				if ( strlen( tokenizer->CurrentToken() ) <= 0 )
+				if ( std::strlen( tokenizer->CurrentToken() ) <= 0 )
 				{
 					tokenizer->Error( "expecting flex animation data\n" );
 					break;
 				}
 				
-				if ( !Q_stricmp( tokenizer->CurrentToken(), "}" ) )
+				if ( !V_stricmp( tokenizer->CurrentToken(), "}" ) )
 					break;
 				
-				float time = (float)atof( tokenizer->CurrentToken() );
+				float time = (float)std::atof( tokenizer->CurrentToken() );
 				tokenizer->GetToken( false );
-				float value = (float)atof( tokenizer->CurrentToken() );
+				float value = (float)std::atof( tokenizer->CurrentToken() );
 				
 				// Add to counter
 				int idx = std::ssize( samples[ samplecount ] ); samples[ samplecount ].emplace_back();
@@ -834,7 +815,7 @@ void CChoreoScene::ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreo
 		{
 			// Add it in
 			CFlexAnimationTrack *track = e->AddTrack( flexcontroller );
-			Assert( track );
+			contract_assert( track );
 			track->SetTrackActive( active );
 			track->SetComboType( combo );
 			
@@ -848,7 +829,7 @@ void CChoreoScene::ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreo
 					CExpressionSample *sample = &samples[ t ][ i ];
 					
 					CExpressionSample *added = track->AddSample( sample->time, sample->value, t );
-					Assert( added );
+					contract_assert( added );
 					added->SetCurveType( sample->GetCurveType() );
 				}
 			}
@@ -882,13 +863,11 @@ CChoreoEvent *CChoreoScene::ParseEvent( CChoreoActor *actor, CChoreoChannel *cha
 
 	CChoreoEvent *e;
 	{
-	MEM_ALLOC_CREDIT();
 	e = AllocEvent();
 	}
 
-	MEM_ALLOC_CREDIT();
 
-	Assert( e );
+	contract_assert( e );
 
 	// read event type
 	m_pTokenizer->GetToken( false );
@@ -905,115 +884,115 @@ CChoreoEvent *CChoreoScene::ParseEvent( CChoreoActor *actor, CChoreoChannel *cha
 	while ( 1 )
 	{
 		m_pTokenizer->GetToken( true );
-		if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "}" ) )
+		if ( !V_stricmp( m_pTokenizer->CurrentToken(), "}" ) )
 			break;
 
-		if ( strlen( m_pTokenizer->CurrentToken() ) <= 0 )
+		if ( std::strlen( m_pTokenizer->CurrentToken() ) <= 0 )
 		{
 			m_pTokenizer->Error( "expecting more tokens!" );
 			break;
 		}
 
-		if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "time" ) )
+		if ( !V_stricmp( m_pTokenizer->CurrentToken(), "time" ) )
 		{
 			float start, end = 1.0f;
 
 			m_pTokenizer->GetToken( false );
-			start = (float)atof( m_pTokenizer->CurrentToken() );
+			start = (float)std::atof( m_pTokenizer->CurrentToken() );
 			if ( m_pTokenizer->TokenAvailable() )
 			{
 				m_pTokenizer->GetToken( false );
-				end = (float)atof( m_pTokenizer->CurrentToken() );
+				end = (float)std::atof( m_pTokenizer->CurrentToken() );
 			}
 
 			e->SetStartTime( start );
 			e->SetEndTime( end );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "ramp" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "ramp" ) )
 		{
 			hadramp = true;
 
 			m_pTokenizer->GetToken( false );
-			attack = (float)atof( m_pTokenizer->CurrentToken() );
+			attack = (float)std::atof( m_pTokenizer->CurrentToken() );
 			if ( m_pTokenizer->TokenAvailable() )
 			{
 				m_pTokenizer->GetToken( false );
-				sustain = (float)atof( m_pTokenizer->CurrentToken() );
+				sustain = (float)std::atof( m_pTokenizer->CurrentToken() );
 			}
 			if ( m_pTokenizer->TokenAvailable() )
 			{
 				m_pTokenizer->GetToken( false );
-				decay = (float)atof( m_pTokenizer->CurrentToken() );
+				decay = (float)std::atof( m_pTokenizer->CurrentToken() );
 			}
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "param" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "param" ) )
 		{
 			m_pTokenizer->GetToken( false );
 
 			e->SetParameters( m_pTokenizer->CurrentToken() );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "param2" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "param2" ) )
 		{
 			m_pTokenizer->GetToken( false );
 
 			e->SetParameters2( m_pTokenizer->CurrentToken() );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "param3" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "param3" ) )
 		{
 			m_pTokenizer->GetToken( false );
 
 			e->SetParameters3( m_pTokenizer->CurrentToken() );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "pitch" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "pitch" ) )
 		{
 			m_pTokenizer->GetToken( false );
-			e->SetPitch( atoi( m_pTokenizer->CurrentToken() )  );
+			e->SetPitch( std::atoi( m_pTokenizer->CurrentToken() )  );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "yaw" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "yaw" ) )
 		{
 			m_pTokenizer->GetToken( false );
-			e->SetYaw( atoi( m_pTokenizer->CurrentToken() )  );
+			e->SetYaw( std::atoi( m_pTokenizer->CurrentToken() )  );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "loopcount" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "loopcount" ) )
 		{
 			m_pTokenizer->GetToken( false );
-			e->SetLoopCount( atoi( m_pTokenizer->CurrentToken() ) );
+			e->SetLoopCount( std::atoi( m_pTokenizer->CurrentToken() ) );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "resumecondition" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "resumecondition" ) )
 		{
 			e->SetResumeCondition( true );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "fixedlength" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "fixedlength" ) )
 		{
 			e->SetFixedLength( true );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "lockbodyfacing" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "lockbodyfacing" ) )
 		{
 			e->SetLockBodyFacing( true );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "distancetotarget" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "distancetotarget" ) )
 		{
 			m_pTokenizer->GetToken( false );
-			e->SetDistanceToTarget( atof( m_pTokenizer->CurrentToken() ) );
+			e->SetDistanceToTarget( std::atof( m_pTokenizer->CurrentToken() ) );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "forceshortmovement" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "forceshortmovement" ) )
 		{
 			e->SetForceShortMovement( true );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "synctofollowinggesture" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "synctofollowinggesture" ) )
 		{
 			e->SetSyncToFollowingGesture( true );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "active" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "active" ) )
 		{
 			m_pTokenizer->GetToken( false );
-			e->SetActive( atoi( m_pTokenizer->CurrentToken() ) ? true : false );
+			e->SetActive( std::atoi( m_pTokenizer->CurrentToken() ) ? true : false );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "playoverscript" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "playoverscript" ) )
 		{
 			e->SetPlayOverScript( true );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "tags" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "tags" ) )
 		{
 			// Parse tags between { }
 			//
@@ -1026,35 +1005,35 @@ CChoreoEvent *CChoreoScene::ParseEvent( CChoreoActor *actor, CChoreoChannel *cha
 				// Parse until }
 				m_pTokenizer->GetToken( true );
 
-				if ( strlen( m_pTokenizer->CurrentToken() ) <= 0 )
+				if ( std::strlen( m_pTokenizer->CurrentToken() ) <= 0 )
 				{
 					m_pTokenizer->Error( "expecting relative tag\n" );
 					break;
 				}
 
-				if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "}" ) )
+				if ( !V_stricmp( m_pTokenizer->CurrentToken(), "}" ) )
 					break;
 
 				char tagname[ CEventRelativeTag::MAX_EVENTTAG_LENGTH ];
 				float percentage;
 
-				Q_strncpy( tagname, m_pTokenizer->CurrentToken(), sizeof( tagname ) );
+				V_strncpy( tagname, m_pTokenizer->CurrentToken(), sizeof( tagname ) );
 				m_pTokenizer->GetToken( false );
-				percentage = (float)atof( m_pTokenizer->CurrentToken() );
+				percentage = (float)std::atof( m_pTokenizer->CurrentToken() );
 
 				e->AddRelativeTag( tagname, percentage );
 			}
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "sequenceduration" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "sequenceduration" ) )
 		{
 			float duration = 0.0f;
 
 			m_pTokenizer->GetToken( false );
-			duration = (float)atof( m_pTokenizer->CurrentToken() );
+			duration = (float)std::atof( m_pTokenizer->CurrentToken() );
 
 			e->SetGestureSequenceDuration( duration );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "absolutetags" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "absolutetags" ) )
 		{
 			m_pTokenizer->GetToken( true );
 			CChoreoEvent::AbsTagType tagtype;
@@ -1077,26 +1056,26 @@ CChoreoEvent *CChoreoScene::ParseEvent( CChoreoActor *actor, CChoreoChannel *cha
 				// Parse until }
 				m_pTokenizer->GetToken( true );
 
-				if ( strlen( m_pTokenizer->CurrentToken() ) <= 0 )
+				if ( std::strlen( m_pTokenizer->CurrentToken() ) <= 0 )
 				{
 					m_pTokenizer->Error( "expecting relative tag\n" );
 					break;
 				}
 
-				if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "}" ) )
+				if ( !V_stricmp( m_pTokenizer->CurrentToken(), "}" ) )
 					break;
 
 				char tagname[ CFlexTimingTag::MAX_EVENTTAG_LENGTH ];
 				float t;
 
-				Q_strncpy( tagname, m_pTokenizer->CurrentToken(), sizeof( tagname ) );
+				V_strncpy( tagname, m_pTokenizer->CurrentToken(), sizeof( tagname ) );
 				m_pTokenizer->GetToken( false );
-				t = (float)atof( m_pTokenizer->CurrentToken() );
+				t = (float)std::atof( m_pTokenizer->CurrentToken() );
 
 				e->AddAbsoluteTag( tagtype, tagname, t );
 			}
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "flextimingtags" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "flextimingtags" ) )
 		{
 			// Parse tags between { }
 			//
@@ -1109,68 +1088,68 @@ CChoreoEvent *CChoreoScene::ParseEvent( CChoreoActor *actor, CChoreoChannel *cha
 				// Parse until }
 				m_pTokenizer->GetToken( true );
 
-				if ( strlen( m_pTokenizer->CurrentToken() ) <= 0 )
+				if ( std::strlen( m_pTokenizer->CurrentToken() ) <= 0 )
 				{
 					m_pTokenizer->Error( "expecting relative tag\n" );
 					break;
 				}
 
-				if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "}" ) )
+				if ( !V_stricmp( m_pTokenizer->CurrentToken(), "}" ) )
 					break;
 
 				char tagname[ CFlexTimingTag::MAX_EVENTTAG_LENGTH ];
 				float percentage;
 				bool locked;
 
-				Q_strncpy( tagname, m_pTokenizer->CurrentToken(), sizeof( tagname ) );
+				V_strncpy( tagname, m_pTokenizer->CurrentToken(), sizeof( tagname ) );
 				m_pTokenizer->GetToken( false );
-				percentage = (float)atof( m_pTokenizer->CurrentToken() );
+				percentage = (float)std::atof( m_pTokenizer->CurrentToken() );
 
 				m_pTokenizer->GetToken( false );
-				locked = atoi( m_pTokenizer->CurrentToken() ) ? true : false;
+				locked = std::atoi( m_pTokenizer->CurrentToken() ) ? true : false;
 
 				e->AddTimingTag( tagname, percentage, locked );
 			}
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "relativetag" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "relativetag" ) )
 		{
 			char tagname[ CChoreoEvent::MAX_TAGNAME_STRING ];
 			char wavname[ CChoreoEvent::MAX_TAGNAME_STRING ];
 
 			m_pTokenizer->GetToken( false );
-			Q_strncpy( tagname, m_pTokenizer->CurrentToken(), sizeof( tagname ) );
+			V_strncpy( tagname, m_pTokenizer->CurrentToken(), sizeof( tagname ) );
 			m_pTokenizer->GetToken( false );
-			Q_strncpy( wavname, m_pTokenizer->CurrentToken(), sizeof( wavname ) );
+			V_strncpy( wavname, m_pTokenizer->CurrentToken(), sizeof( wavname ) );
 
 			e->SetUsingRelativeTag( true, tagname, wavname );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "flexanimations" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "flexanimations" ) )
 		{
 			ParseFlexAnimations( m_pTokenizer, e );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "event_ramp" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "event_ramp" ) )
 		{
 			ParseRamp( m_pTokenizer, e );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "cctype" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "cctype" ) )
 		{
 			m_pTokenizer->GetToken( false );
 			e->SetCloseCaptionType( CChoreoEvent::CCTypeForName( m_pTokenizer->CurrentToken() ) );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "cctoken" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "cctoken" ) )
 		{
 			m_pTokenizer->GetToken( false );
 			e->SetCloseCaptionToken( m_pTokenizer->CurrentToken() );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "cc_usingcombinedfile" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "cc_usingcombinedfile" ) )
 		{
 			e->SetUsingCombinedFile( true );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "cc_combinedusesgender" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "cc_combinedusesgender" ) )
 		{
 			e->SetCombinedUsingGenderToken( true );
 		}
-		else if( !Q_stricmp( m_pTokenizer->CurrentToken(), "cc_noattenuate" ) )
+		else if( !V_stricmp( m_pTokenizer->CurrentToken(), "cc_noattenuate" ) )
 		{
 			e->SetSuppressingCaptionAttenuation( true );
 		}
@@ -1214,7 +1193,7 @@ CChoreoEvent *CChoreoScene::ParseEvent( CChoreoActor *actor, CChoreoChannel *cha
 CChoreoActor *CChoreoScene::ParseActor( void )
 {
 	CChoreoActor *a = AllocActor();
-	Assert( a );
+	contract_assert( a );
 
 	m_pTokenizer->GetToken( false );
 	a->SetName( m_pTokenizer->CurrentToken() );
@@ -1227,21 +1206,21 @@ CChoreoActor *CChoreoScene::ParseActor( void )
 	while ( 1 )
 	{
 		m_pTokenizer->GetToken( true );
-		if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "}" ) )
+		if ( !V_stricmp( m_pTokenizer->CurrentToken(), "}" ) )
 			break;
 
-		if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "channel" ) )
+		if ( !V_stricmp( m_pTokenizer->CurrentToken(), "channel" ) )
 		{
 			ParseChannel( a );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "faceposermodel" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "faceposermodel" ) )
 		{
 			ParseFacePoserModel( a );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "active" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "active" ) )
 		{
 			m_pTokenizer->GetToken( true );
-			a->SetActive( atoi( m_pTokenizer->CurrentToken() ) ? true : false );
+			a->SetActive( std::atoi( m_pTokenizer->CurrentToken() ) ? true : false );
 		}
 		else
 		{
@@ -1266,7 +1245,7 @@ const char *CChoreoScene::GetMapname( void )
 //-----------------------------------------------------------------------------
 void CChoreoScene::SetMapname( const char *name )
 {
-	Q_strncpy( m_szMapname, name, sizeof( m_szMapname ) );
+	V_strncpy( m_szMapname, name, sizeof( m_szMapname ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -1277,7 +1256,7 @@ void CChoreoScene::ParseMapname( void )
 	m_szMapname[ 0 ] = 0;
 
 	m_pTokenizer->GetToken( true );
-	Q_strncpy( m_szMapname, m_pTokenizer->CurrentToken(), sizeof( m_szMapname ) );
+	V_strncpy( m_szMapname, m_pTokenizer->CurrentToken(), sizeof( m_szMapname ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -1286,7 +1265,7 @@ void CChoreoScene::ParseMapname( void )
 void CChoreoScene::ParseFPS( void )
 {
 	m_pTokenizer->GetToken( true );
-	m_nSceneFPS = atoi( m_pTokenizer->CurrentToken() );
+	m_nSceneFPS = std::atoi( m_pTokenizer->CurrentToken() );
 	// Clamp to valid range
 	m_nSceneFPS = clamp( m_nSceneFPS, MIN_SCENE_FPS, MAX_SCENE_FPS);
 }
@@ -1298,7 +1277,7 @@ void CChoreoScene::ParseFPS( void )
 void CChoreoScene::ParseSnap( void )
 {
 	m_pTokenizer->GetToken( true );
-	m_bUseFrameSnap = !Q_stricmp( m_pTokenizer->CurrentToken(), "on" ) ? true : false;
+	m_bUseFrameSnap = !V_stricmp( m_pTokenizer->CurrentToken(), "on" ) ? true : false;
 }
 
 
@@ -1308,7 +1287,7 @@ void CChoreoScene::ParseSnap( void )
 void CChoreoScene::ParseIgnorePhonemes( void )
 {
 	m_pTokenizer->GetToken( true );
-	m_bIgnorePhonemes = !Q_stricmp( m_pTokenizer->CurrentToken(), "on" ) ? true : false;
+	m_bIgnorePhonemes = !V_stricmp( m_pTokenizer->CurrentToken(), "on" ) ? true : false;
 }
 
 
@@ -1330,7 +1309,7 @@ void CChoreoScene::ParseFacePoserModel( CChoreoActor *actor )
 CChoreoChannel *CChoreoScene::ParseChannel( CChoreoActor *actor )
 {
 	CChoreoChannel *c = AllocChannel();
-	Assert( c );
+	contract_assert( c );
 
 	m_pTokenizer->GetToken( false );
 	c->SetName( m_pTokenizer->CurrentToken() );
@@ -1343,17 +1322,17 @@ CChoreoChannel *CChoreoScene::ParseChannel( CChoreoActor *actor )
 	while ( 1 )
 	{
 		m_pTokenizer->GetToken( true );
-		if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "}" ) )
+		if ( !V_stricmp( m_pTokenizer->CurrentToken(), "}" ) )
 			break;
 
-		if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "event" ) )
+		if ( !V_stricmp( m_pTokenizer->CurrentToken(), "event" ) )
 		{
 			ParseEvent( actor, c );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "active" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "active" ) )
 		{
 			m_pTokenizer->GetToken( true );
-			c->SetActive( atoi( m_pTokenizer->CurrentToken() ) ? true : false );
+			c->SetActive( std::atoi( m_pTokenizer->CurrentToken() ) ? true : false );
 		}
 		else
 		{
@@ -1361,7 +1340,7 @@ CChoreoChannel *CChoreoScene::ParseChannel( CChoreoActor *actor )
 		}
 	}
 
-	Assert( actor );
+	contract_assert( actor );
 	if ( actor )
 	{
 		actor->AddChannel( c );
@@ -1377,7 +1356,7 @@ CChoreoChannel *CChoreoScene::ParseChannel( CChoreoActor *actor )
 //-----------------------------------------------------------------------------
 bool CChoreoScene::ParseFromBuffer( const char *pFilename, ISceneTokenProcessor *tokenizer )
 {
-	Q_strncpy( m_szFileName, pFilename, sizeof(m_szFileName) );
+	V_strncpy( m_szFileName, pFilename, sizeof(m_szFileName) );
 	m_pTokenizer = tokenizer;
 
 	while ( 1 )
@@ -1387,38 +1366,38 @@ bool CChoreoScene::ParseFromBuffer( const char *pFilename, ISceneTokenProcessor 
 			break;
 		}
 
-		if ( strlen( m_pTokenizer->CurrentToken() ) <= 0 )
+		if ( std::strlen( m_pTokenizer->CurrentToken() ) <= 0 )
 			break;
 
-		if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "event" ) )
+		if ( !V_stricmp( m_pTokenizer->CurrentToken(), "event" ) )
 		{
 			ParseEvent( nullptr, nullptr );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "actor" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "actor" ) )
 		{
 			ParseActor();
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "mapname" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "mapname" ) )
 		{
 			ParseMapname();
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "fps" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "fps" ) )
 		{
 			ParseFPS();
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "snap" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "snap" ) )
 		{
 			ParseSnap();
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "ignorePhonemes" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "ignorePhonemes" ) )
 		{
 			ParseIgnorePhonemes();
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "scene_ramp" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "scene_ramp" ) )
 		{
 			ParseSceneRamp( m_pTokenizer, this );
 		}
-		else if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "scalesettings" ) )
+		else if ( !V_stricmp( m_pTokenizer->CurrentToken(), "scalesettings" ) )
 		{
 			ParseScaleSettings( m_pTokenizer, this );
 		}
@@ -1558,7 +1537,7 @@ float CChoreoScene::FindStopTime( void )
 	for ( int i = 0; i < c ; i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
-		Assert( e );
+		contract_assert( e );
 
 		float checktime = e->HasEndTime() ? e->GetEndTime() : e->GetStartTime();
 		if ( checktime > lasttime )
@@ -1578,8 +1557,8 @@ float CChoreoScene::FindLastSpeakTime( void ) const
 	int lastSpeakEvent;
 	for ( lastSpeakEvent = c-1 ; lastSpeakEvent >= 0 ; --lastSpeakEvent )
 	{
-		CChoreoEvent * RESTRICT e = m_Events[ lastSpeakEvent ];
-		Assert( e );
+		CChoreoEvent * __restrict__ e = m_Events[ lastSpeakEvent ];
+		contract_assert( e );
 		if ( e->GetType() == CChoreoEvent::SPEAK )
 			break;
 	}
@@ -1607,7 +1586,7 @@ float CChoreoScene::FindLastSpeakTime( void ) const
 	return lasttime;
 	*/
 
-	CChoreoEvent * RESTRICT finalSpeechEvent = m_Events[lastSpeakEvent];
+	CChoreoEvent * __restrict__ finalSpeechEvent = m_Events[lastSpeakEvent];
 	return finalSpeechEvent->HasEndTime() ? finalSpeechEvent->GetEndTime() : finalSpeechEvent->GetStartTime();
 }
 
@@ -1620,8 +1599,8 @@ float CChoreoScene::FindLastSpeakTime( void ) const
 //-----------------------------------------------------------------------------
 void CChoreoScene::FilePrintf( ks::text_writer& buf, int level, const char *fmt, ... )
 {
-	va_list argptr;
-	va_start( argptr, fmt );
+	std::va_list argptr;
+	__builtin_va_start( argptr, fmt );
 
 	while ( level-- > 0 )
 	{
@@ -1629,7 +1608,7 @@ void CChoreoScene::FilePrintf( ks::text_writer& buf, int level, const char *fmt,
 	}
 
 	buf.vprintf( fmt, argptr );
-	va_end( argptr );
+	__builtin_va_end( argptr );
 }
 
 //-----------------------------------------------------------------------------
@@ -1800,21 +1779,21 @@ void CCurveData::FileSave( ks::text_writer& buf, int level, const char *name )
 		return;
 
 	char line[ 1024 ];
-	Q_strncpy( line, name, sizeof( line ) );
+	V_strncpy( line, name, sizeof( line ) );
 
 	if ( IsEdgeActive( true ) || IsEdgeActive( false ) )
 	{
 		if ( IsEdgeActive( true ) )
 		{
 			char sz[ 256 ];
-			Q_snprintf( sz, sizeof( sz ), " leftedge %s %.3f", Interpolator_NameForCurveType( GetEdgeCurveType( true ), false ), GetEdgeZeroValue( true ) );
-			Q_strncat( line, sz, sizeof( line ), COPY_ALL_CHARACTERS );
+			V_snprintf( sz, sizeof( sz ), " leftedge %s %.3f", Interpolator_NameForCurveType( GetEdgeCurveType( true ), false ), GetEdgeZeroValue( true ) );
+			V_strncat( line, sz, sizeof( line ), COPY_ALL_CHARACTERS );
 		}
 		if ( IsEdgeActive( false ) )
 		{
 			char sz[ 256 ];
-			Q_snprintf( sz, sizeof( sz )," rightedge %s %.3f", Interpolator_NameForCurveType( GetEdgeCurveType( false ), false ), GetEdgeZeroValue( false ) );
-			Q_strncat( line, sz, sizeof( line ), COPY_ALL_CHARACTERS );
+			V_snprintf( sz, sizeof( sz )," rightedge %s %.3f", Interpolator_NameForCurveType( GetEdgeCurveType( false ), false ), GetEdgeZeroValue( false ) );
+			V_strncat( line, sz, sizeof( line ), COPY_ALL_CHARACTERS );
 		}
 	}
 
@@ -1877,24 +1856,24 @@ void CChoreoScene::FileSaveFlexAnimationTrack( ks::text_writer& buf, int level, 
 		return;
 
 	char line[ 1024 ];
-	Q_snprintf( line, sizeof( line ), "\"%s\" ", track->GetFlexControllerName() );
+	V_snprintf( line, sizeof( line ), "\"%s\" ", track->GetFlexControllerName() );
 	if ( !track->IsTrackActive() )
 	{
 		char sz[ 256 ];
-		Q_snprintf( sz, sizeof( sz ), "disabled " );
-		Q_strncat( line, sz, sizeof( line ), COPY_ALL_CHARACTERS );
+		V_snprintf( sz, sizeof( sz ), "disabled " );
+		V_strncat( line, sz, sizeof( line ), COPY_ALL_CHARACTERS );
 	}
 	if ( track->IsComboType() )
 	{
 		char sz[ 256 ];
-		Q_snprintf( sz, sizeof( sz ), "combo " );
-		Q_strncat( line, sz, sizeof( line ), COPY_ALL_CHARACTERS );
+		V_snprintf( sz, sizeof( sz ), "combo " );
+		V_strncat( line, sz, sizeof( line ), COPY_ALL_CHARACTERS );
 	}
 	if ( track->GetMin() != 0.0f || track->GetMax() != 1.0f)
 	{
 		char sz[ 256 ];
-		Q_snprintf( sz, sizeof( sz ), "range %.1f %.1f ", track->GetMin(), track->GetMax() );
-		Q_strncat( line, sz, sizeof( line ), COPY_ALL_CHARACTERS );
+		V_snprintf( sz, sizeof( sz ), "range %.1f %.1f ", track->GetMin(), track->GetMax() );
+		V_strncat( line, sz, sizeof( line ), COPY_ALL_CHARACTERS );
 	}
 	if ( track->IsEdgeActive( true ) || track->IsEdgeActive( false ) )
 	{
@@ -1904,17 +1883,17 @@ void CChoreoScene::FileSaveFlexAnimationTrack( ks::text_writer& buf, int level, 
 		if ( track->IsEdgeActive( true ) )
 		{
 			char sz[ 256 ];
-			Q_snprintf( sz, sizeof( sz ), "leftedge %s %.3f ", Interpolator_NameForCurveType( track->GetEdgeCurveType( true ), false ), track->GetEdgeZeroValue( true ) );
-			Q_strncat( edgestr, sz, sizeof( edgestr ), COPY_ALL_CHARACTERS );
+			V_snprintf( sz, sizeof( sz ), "leftedge %s %.3f ", Interpolator_NameForCurveType( track->GetEdgeCurveType( true ), false ), track->GetEdgeZeroValue( true ) );
+			V_strncat( edgestr, sz, sizeof( edgestr ), COPY_ALL_CHARACTERS );
 		}
 		if ( track->IsEdgeActive( false ) )
 		{
 			char sz[ 256 ];
-			Q_snprintf( sz, sizeof( sz ), "rightedge %s %.3f ", Interpolator_NameForCurveType( track->GetEdgeCurveType( false ), false ), track->GetEdgeZeroValue( false ) );
-			Q_strncat( edgestr, sz, sizeof( edgestr ), COPY_ALL_CHARACTERS );
+			V_snprintf( sz, sizeof( sz ), "rightedge %s %.3f ", Interpolator_NameForCurveType( track->GetEdgeCurveType( false ), false ), track->GetEdgeZeroValue( false ) );
+			V_strncat( edgestr, sz, sizeof( edgestr ), COPY_ALL_CHARACTERS );
 		}
 
-		Q_strncat( line, edgestr, sizeof( line ), COPY_ALL_CHARACTERS );
+		V_strncat( line, edgestr, sizeof( line ), COPY_ALL_CHARACTERS );
 	}
 
 
@@ -2028,11 +2007,11 @@ void CChoreoScene::FileSaveEvent( ks::text_writer& buf, int level, CChoreoEvent 
 
 	FilePrintf( buf, level + 1, "time %f %f\n", st, et );
 	FilePrintf( buf, level + 1, "param \"%s\"\n", e->GetParameters() );
-	if ( strlen( e->GetParameters2() ) > 0 )
+	if ( std::strlen( e->GetParameters2() ) > 0 )
 	{
 		FilePrintf( buf, level + 1, "param2 \"%s\"\n", e->GetParameters2() );
 	}
-	if ( strlen( e->GetParameters3() ) > 0 )
+	if ( std::strlen( e->GetParameters3() ) > 0 )
 	{
 		FilePrintf( buf, level + 1, "param3 \"%s\"\n", e->GetParameters3() );
 	}
@@ -2087,7 +2066,7 @@ void CChoreoScene::FileSaveEvent( ks::text_writer& buf, int level, CChoreoEvent 
 		for ( int t = 0; t < e->GetNumRelativeTags(); t++ )
 		{
 			CEventRelativeTag *rt = e->GetRelativeTag( t );
-			Assert( rt );
+			contract_assert( rt );
 			FilePrintf( buf, level + 2, "\"%s\" %f\n", rt->GetName(), rt->GetPercentage() );
 		}
 		FilePrintf( buf, level + 1, "}\n" );
@@ -2099,7 +2078,7 @@ void CChoreoScene::FileSaveEvent( ks::text_writer& buf, int level, CChoreoEvent 
 		for ( int t = 0; t < e->GetNumTimingTags(); t++ )
 		{
 			CFlexTimingTag *tt = e->GetTimingTag( t );
-			Assert( tt );
+			contract_assert( tt );
 			FilePrintf( buf, level + 2, "\"%s\" %f %i\n", tt->GetName(), tt->GetPercentage(), tt->GetLocked() ? 1 : 0 );
 		}
 		FilePrintf( buf, level + 1, "}\n" );
@@ -2114,7 +2093,7 @@ void CChoreoScene::FileSaveEvent( ks::text_writer& buf, int level, CChoreoEvent 
 			for ( int t = 0; t < e->GetNumAbsoluteTags( (CChoreoEvent::AbsTagType)tagtype ); t++ )
 			{
 				CEventAbsoluteTag *abstag = e->GetAbsoluteTag( (CChoreoEvent::AbsTagType)tagtype, t );
-				Assert( abstag );
+				contract_assert( abstag );
 				FilePrintf( buf, level + 2, "\"%s\" %f\n", abstag->GetName(), abstag->GetPercentage() );
 			}
 			FilePrintf( buf, level + 1, "}\n" );
@@ -2223,7 +2202,7 @@ void CChoreoScene::FileSaveActor( ks::text_writer& buf, int level, CChoreoActor 
 		}
 	}
 
-	if ( Q_strlen( a->GetFacePoserModelName() ) > 0 )
+	if ( V_strlen( a->GetFacePoserModelName() ) > 0 )
 	{
 		FilePrintf( buf, level + 1, "faceposermodel \"%s\"\n", a->GetFacePoserModelName() );
 	}
@@ -2452,7 +2431,7 @@ CChoreoEvent *CChoreoScene::FindPauseBetweenTimes( float starttime, float endtim
 		if ( !e )
 			continue;
 
-		Assert( e->GetType() == CChoreoEvent::SECTION );
+		contract_assert( e->GetType() == CChoreoEvent::SECTION );
 
 		int time_is = IsTimeInRange( e->GetStartTime(), starttime, endtime );
 		if ( IN_RANGE != time_is )
@@ -2717,7 +2696,7 @@ bool CChoreoScene::EventLess( const CChoreoScene::ActiveList &al0, const CChoreo
 	// Start time equal, go to order in channel
 	if ( !a0 || !a1 || a0 != a1 )
 	{
-		return strcmp( event0->GetName(), event1->GetName() ) == -1;
+		return std::strcmp( event0->GetName(), event1->GetName() ) == -1;
 	}
 
 	CChoreoChannel *c0 = event0->GetChannel();
@@ -2725,7 +2704,7 @@ bool CChoreoScene::EventLess( const CChoreoScene::ActiveList &al0, const CChoreo
 
 	if ( !c0 || !c1 || c0 != c1 )
 	{
-		return strcmp( event0->GetName(), event1->GetName() ) == -1;
+		return std::strcmp( event0->GetName(), event1->GetName() ) == -1;
 	}
 
 	// Go by slot within channel
@@ -2744,7 +2723,7 @@ void CChoreoScene::ClearPauseEventDependencies()
 	for ( int i = 0 ; i < c; ++i )
 	{
 		CChoreoEvent *pause = m_PauseEvents[ i ];
-		Assert( pause );
+		contract_assert( pause );
 		pause->ClearEventDependencies();
 	}
 }
@@ -2756,8 +2735,8 @@ void CChoreoScene::ClearPauseEventDependencies()
 //-----------------------------------------------------------------------------
 void CChoreoScene::AddPauseEventDependency( CChoreoEvent *pauseEvent, CChoreoEvent *suppressed )
 {
-	Assert( pauseEvent );
-	Assert( pauseEvent != suppressed );
+	contract_assert( pauseEvent );
+	contract_assert( pauseEvent != suppressed );
 	pauseEvent->AddEventDependency( suppressed );
 }
 
@@ -2814,7 +2793,7 @@ void CChoreoScene::Think( float curtime )
 	{
 		const ActiveList *entry = &pendingEntry;
 
-		Assert( entry->e );
+		contract_assert( entry->e );
 
 		if ( dump )
 		{
@@ -2828,7 +2807,7 @@ void CChoreoScene::Think( float curtime )
 		default:
 		case PROCESSING_TYPE_IGNORE:
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 			}
 			break;
 		case PROCESSING_TYPE_START:
@@ -2838,7 +2817,7 @@ void CChoreoScene::Think( float curtime )
 				
 				if ( entry->pt == PROCESSING_TYPE_START_RESUMECONDITION )
 				{
-					Assert( entry->e->IsResumeCondition() );
+					contract_assert( entry->e->IsResumeCondition() );
 					m_ActiveResumeConditions.push_back( entry->e );
 				}
 
@@ -3084,13 +3063,13 @@ void CChoreoScene::ResumeSimulation( void )
 		//  now that the SECTION pause is being resumed from
 		std::vector< CChoreoEvent * > deps;
 		CChoreoEvent *pauseEvent = m_PauseEvents[ m_nLastPauseEvent ];
-		Assert( pauseEvent );
+		contract_assert( pauseEvent );
 		
 		// Sanity check ( this should be about 1 tick usually  15 msec)
 		float timeSincePaused = m_flCurrentTime - pauseEvent->GetStartTime();
-		if ( fabs( timeSincePaused ) > 1.0f )
+		if ( std::fabs( timeSincePaused ) > 1.0f )
 		{
-			Assert( !"Resume simulation with unexpected pause event" );
+			contract_assert( !"Resume simulation with unexpected pause event" );
 		}
 		
 		// Snag any sounds which were suppressed by this issue
@@ -3098,7 +3077,7 @@ void CChoreoScene::ResumeSimulation( void )
 		for ( int j = 0; j < std::ssize( deps ); ++j )
 		{
 			CChoreoEvent *startEvent = deps[ j ];
-			Assert( startEvent );
+			contract_assert( startEvent );
 			// Start them now.  Yes, they won't pre-queue, but it's better than totally skipping the sound!!!
 			startEvent->StartProcessing( m_pIChoreoEventCallback, this, m_flCurrentTime );
 		}
@@ -3264,7 +3243,7 @@ CEventRelativeTag *CChoreoScene::FindTagByName( const char *wavname, const char 
 					continue;
 
 				// Search for tag by name
-				if ( !strstr( e->GetParameters(), wavname ) )
+				if ( !std::strstr( e->GetParameters(), wavname ) )
 					continue;
 
 				CEventRelativeTag *tag = e->FindRelativeTag( name );
@@ -3328,10 +3307,10 @@ void CChoreoScene::ImportEvents( ISceneTokenProcessor *tokenizer, CChoreoActor *
 			break;
 		}
 
-		if ( strlen( m_pTokenizer->CurrentToken() ) <= 0 )
+		if ( std::strlen( m_pTokenizer->CurrentToken() ) <= 0 )
 			break;
 
-		if ( !Q_stricmp( m_pTokenizer->CurrentToken(), "event" ) )
+		if ( !V_stricmp( m_pTokenizer->CurrentToken(), "event" ) )
 		{
 			ParseEvent( actor, channel );
 		}
@@ -3403,7 +3382,7 @@ float CChoreoScene::SnapTime( float t )
 		return t;
 
 	float fps = (float)GetSceneFPS();
-	Assert( fps > 0 );
+	contract_assert( fps > 0 );
 
 	int itime = (int)( t * fps + 0.5f );
 	
@@ -3470,21 +3449,21 @@ void CChoreoScene::ParseScaleSettings( ISceneTokenProcessor *tokenizer, CChoreoS
 		// Parse until }
 		tokenizer->GetToken( true );
 		
-		if ( strlen( tokenizer->CurrentToken() ) <= 0 )
+		if ( std::strlen( tokenizer->CurrentToken() ) <= 0 )
 		{
 			tokenizer->Error( "expecting scalesettings data\n" );
 			break;
 		}
 		
-		if ( !Q_stricmp( tokenizer->CurrentToken(), "}" ) )
+		if ( !V_stricmp( tokenizer->CurrentToken(), "}" ) )
 			break;
 
 		char tool[ 256 ];
-		Q_strncpy( tool, tokenizer->CurrentToken(), sizeof( tool ) );
+		V_strncpy( tool, tokenizer->CurrentToken(), sizeof( tool ) );
 
 		tokenizer->GetToken( false );
 
-		int tz = Q_atoi( tokenizer->CurrentToken() );
+		int tz = V_atoi( tokenizer->CurrentToken() );
 		if ( tz <= 0 )
 			tz = 100;
 
@@ -3507,7 +3486,6 @@ bool CChoreoScene::Merge( CChoreoScene *other )
 		if ( e->GetActor() )
 			continue;
 
-		MEM_ALLOC_CREDIT();
 		// Make a copy of the other event and add it to this scene
 		CChoreoEvent *newEvent = AllocEvent();
 		*newEvent = *e;
@@ -3560,7 +3538,6 @@ bool CChoreoScene::Merge( CChoreoScene *other )
 				CChoreoEvent *e = ch->GetEvent( k );
 
 				// Just import them wholesale, no checking
-				MEM_ALLOC_CREDIT();
 				CChoreoEvent *newEvent = AllocEvent();
 				*newEvent = *e;
 				newEvent->SetScene( this );
@@ -3615,7 +3592,7 @@ char const *CChoreoScene::GetFilename() const
 
 void CChoreoScene::SetFileName( char const *fn )
 {
-	Q_strncpy( m_szFileName, fn, sizeof( m_szFileName ) );
+	V_strncpy( m_szFileName, fn, sizeof( m_szFileName ) );
 }
 
 
@@ -3626,7 +3603,7 @@ bool CChoreoScene::GetPlayingSoundName( char *pchBuff, int iBuffLength )
 		CChoreoEvent *e = m_Events[ i ];
 		if ( e->GetType() == CChoreoEvent::SPEAK && e->IsProcessing() )
 		{
-			Q_strncpy( pchBuff, e->GetParameters(), iBuffLength );
+			V_strncpy( pchBuff, e->GetParameters(), iBuffLength );
 			return true;
 		}
 	}
@@ -3755,7 +3732,7 @@ void CChoreoScene::SaveToBinaryBuffer( ks::byte_writer& buf, unsigned int nTextV
 	}
 
 	int c = std::ssize( eventList );
-	Assert( c <= 255 );
+	contract_assert( c <= 255 );
 	buf.write< unsigned char >( c );
 	for ( i = 0; i < c; ++i )
 	{
@@ -3775,7 +3752,7 @@ void CChoreoScene::SaveToBinaryBuffer( ks::byte_writer& buf, unsigned int nTextV
 	}
 
 	c = std::ssize( actorList );
-	Assert( c <= 255 );
+	contract_assert( c <= 255 );
 	buf.write< unsigned char >( c );
 	for ( i = 0; i < c; ++i )
 	{
@@ -3812,7 +3789,7 @@ bool CChoreoScene::GetCRCFromBinaryBuffer( ks::byte_reader& buf, unsigned int& c
 {
 	bool bret = false;
 
-	size_t pos = buf.tell();
+	std::size_t pos = buf.tell();
 
 	int tag = buf.read< int >();
 	if ( tag == SCENE_BINARY_TAG )
@@ -3832,7 +3809,7 @@ bool CChoreoScene::GetCRCFromBinaryBuffer( ks::byte_reader& buf, unsigned int& c
 
 bool CChoreoScene::RestoreFromBinaryBuffer( ks::byte_reader& buf, char const *filename, IChoreoStringPool *pStringPool )
 {
-	Q_strncpy( m_szFileName, filename, sizeof( m_szFileName ) );
+	V_strncpy( m_szFileName, filename, sizeof( m_szFileName ) );
 
 	int tag = buf.read< int >();
 	if ( tag != SCENE_BINARY_TAG )
@@ -3849,9 +3826,8 @@ bool CChoreoScene::RestoreFromBinaryBuffer( ks::byte_reader& buf, char const *fi
 	int eventCount = buf.read< unsigned char >();
 	for ( i = 0; i < eventCount; ++i )
 	{
-		MEM_ALLOC_CREDIT();
 		CChoreoEvent *e = AllocEvent();
-		Assert( e );
+		contract_assert( e );
 		
 		if ( e->RestoreFromBuffer( buf, this, pStringPool ) )
 		{
@@ -3865,7 +3841,7 @@ bool CChoreoScene::RestoreFromBinaryBuffer( ks::byte_reader& buf, char const *fi
 	for ( i = 0; i < actorCount; ++i )
 	{
 		CChoreoActor *a = AllocActor();
-		Assert( a );
+		contract_assert( a );
 		if ( a->RestoreFromBuffer( buf, this, pStringPool ) )
 		{
 			continue;

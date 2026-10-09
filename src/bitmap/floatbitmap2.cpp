@@ -1,14 +1,8 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include <tier0/platform.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <stdlib.h>
+import ks.core;
+import std;
 #include "bitmap/floatbitmap.h"
 
 
@@ -22,7 +16,7 @@ static float ScaleValue( float f, float overbright )
 static float IScaleValue( float f, float overbright )
 {
 	f *= ( 1.0 / overbright );
-	int ival = ( int )std::min<std::common_type_t<int, double>>( 255, ceil( f * 255.0 ));
+	int ival = ( int )std::min<std::common_type_t<int, double>>( 255, std::ceil( f * 255.0 ));
 	return ival;
 }
 
@@ -69,7 +63,7 @@ void FloatBitMap_t::Uncompress( float overbright )
 		}
 }
 
-#define GAUSSIAN_WIDTH 5
+constexpr auto GAUSSIAN_WIDTH = 5;
 #define SQ(x) ((x)*(x))
 
 void FloatBitMap_t::CompressTo8Bits( float overbright )
@@ -102,39 +96,6 @@ void FloatBitMap_t::CompressTo8Bits( float overbright )
 			}
 		}
 	// now, refine scale values
-#ifdef FILTER_TO_REDUCE_LERP_ARTIFACTS
-// I haven't been able to come up with a filter which eleiminates objectionable artifacts on all
-// source textures. So, I've gone to doing the lerping in the shader.
-	int pass = 0;
-	while( pass < 1 )
-	{
-		FloatBitMap_t temp_filtered( & TmpFBM );
-		for( int y = 0;y < NumRows();y++ )
-		{
-			for( int x = 0;x < NumCols();x++ )
-			{
-				float sum_scales = 0.0;
-				float sum_weights = 0.0;
-				for( int yofs =- GAUSSIAN_WIDTH;yofs <= GAUSSIAN_WIDTH;yofs++ )
-					for( int xofs =- GAUSSIAN_WIDTH;xofs <= GAUSSIAN_WIDTH;xofs++ )
-					{
-						float r = 0.456 * GAUSSIAN_WIDTH;
-						r = 0.26 * GAUSSIAN_WIDTH;
-						float x1 = xofs / r;
-						float y1 = yofs / r;
-						float a = ( SQ( x1 ) + SQ( y1 )) / ( 2.0 * SQ( r ));
-						float w = exp( - a );
-						sum_scales += w * TmpFBM.PixelClamped( x + xofs, y + yofs, 3 );
-						sum_weights += w;
-					}
-				int new_trial_scale = sum_scales * ( 1.0 / sum_weights );
-				MaybeSetScaleVaue( * this, temp_filtered, x, y, new_trial_scale, overbright );
-			}
-		}
-		pass++;
-		memcpy( TmpFBM.RGBAData, temp_filtered.RGBAData, NumCols() * NumRows() * 4 * sizeof( float ));
-	}
-#endif
 
 	CopyAttrFrom( TmpFBM, FBM_ATTR_RED );
 	CopyAttrFrom( TmpFBM, FBM_ATTR_GREEN );

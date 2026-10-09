@@ -1,18 +1,26 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
-#include "iefx.h"
 #include "fx.h"
-#include "decals.h"
 #include "materialsystem/imaterialsystem.h"
 #include "filesystem.h"
 #include "materialsystem/imaterial.h"
@@ -21,10 +29,7 @@
 #include "functionproxy.h"
 #include "imaterialproxydict.h"
 #include "precache_register.h"
-#include "tier0/vprof.h"
 #include "playerdecals_signature.h"
-#include "tier1/callqueue.h"
-#include "tier1/fmtstr.h"
 #include "engine/decal_flags.h"
 #include "c_cs_player.h"
 #include "cs_item_inventory.h"
@@ -33,7 +38,6 @@ PRECACHE_REGISTER_BEGIN( GLOBAL, PrecachePlayerDecal )
 PRECACHE( MATERIAL, "decals/playerlogo01" )
 PRECACHE_REGISTER_END()
 
-#define PLAYERDECAL_VERBOSE_DEBUG 0
 
 void QcCreatePreviewDecal( uint32 nStickerKitDefinition, uint32 nTintID, const trace_t& trace, const Vector* pRight );
 
@@ -86,7 +90,7 @@ static std::map< int, DecalData_t > s_mapUniqueId2DecalData;
 
 void CreateDecalData( int nKey, ITexture* pTex, int nRarity, int nTintID, float flCreateTime )
 {
-	Assert( pTex );
+	contract_assert( pTex );
 	if ( !pTex )
 		return;
 
@@ -96,7 +100,7 @@ void CreateDecalData( int nKey, ITexture* pTex, int nRarity, int nTintID, float 
 		DecalData_t &ddata = itExisting->second;
 
 		// Release the old texture
-		Assert( ddata.m_pTex );
+		contract_assert( ddata.m_pTex );
 		ddata.m_pTex->DecrementReferenceCount();
 		ddata.m_pTex = nullptr;
 
@@ -117,12 +121,12 @@ void CreateDecalData( int nKey, ITexture* pTex, int nRarity, int nTintID, float 
 void DeleteDecalData( int nKey )
 {
 	auto it = s_mapUniqueId2DecalData.find( nKey );
-	Assert ( ( nKey == g_nPlayerLogoProxyForPreviewKey )
+	contract_assert( ( nKey == g_nPlayerLogoProxyForPreviewKey )
 		|| ( it != s_mapUniqueId2DecalData.end() ) );
 	if ( it == s_mapUniqueId2DecalData.end() )
 		return;
 
-	Assert( it->second.m_pTex );
+	contract_assert( it->second.m_pTex );
 	it->second.m_pTex->DecrementReferenceCount();
 
 	s_mapUniqueId2DecalData.erase( it );
@@ -156,9 +160,6 @@ void OnPlayerDecalsLevelShutdown()
 	// so add all client-side decals that we know about into the IDs to apply map
 	for ( const auto &[nUniqueID, pDecal] : s_mapPlayerDecalsUniqueIDsAll )
 	{
-#if PLAYERDECAL_VERBOSE_DEBUG
-		DevMsg( "DECAL: schedule for reapply ( %d )\n", nUniqueID );
-#endif
 		s_mapPlayerDecalsUniqueIDsToApply.insert_or_assign( nUniqueID, pDecal );
 	}
 	s_mapPlayerDecalsUniqueIDsRecreating.clear();
@@ -201,26 +202,19 @@ public:
 
 		if ( m_nUniqueID )
 		{
-#if PLAYERDECAL_VERBOSE_DEBUG
-			DevMsg( "DECAL: entity removed ( %d ): %s %s %s\n",
-				m_nUniqueID,
-				( !s_mapPlayerDecalsUniqueIDsToApply.contains( m_nUniqueID ) ? "" : "{was scheduled for application}" ),
-				( !s_mapPlayerDecalsUniqueIDsAll.contains( m_nUniqueID ) ? "[NOT REGISTERED IN MAP]" : "" ),
-				( !s_mapPlayerDecalsUniqueIDsRecreating.contains( m_nUniqueID ) ? "" : ( ( s_mapPlayerDecalsUniqueIDsRecreating.at( m_nUniqueID ) ? "{recreate and reapply pending}" : "{recreating, but already applied}" ) ) ) );
-#endif
 
-			Assert( !s_mapPlayerDecalsUniqueIDsToApply.contains( m_nUniqueID ) ||
+			contract_assert( !s_mapPlayerDecalsUniqueIDsToApply.contains( m_nUniqueID ) ||
 				( s_mapPlayerDecalsUniqueIDsToApply.at( m_nUniqueID ) == this ) );
 			s_mapPlayerDecalsUniqueIDsToApply.erase( m_nUniqueID );
 
-			Assert( s_mapPlayerDecalsUniqueIDsAll.contains( m_nUniqueID ) &&
+			contract_assert( s_mapPlayerDecalsUniqueIDsAll.contains( m_nUniqueID ) &&
 				( s_mapPlayerDecalsUniqueIDsAll.at( m_nUniqueID ) == this ) );
 			s_mapPlayerDecalsUniqueIDsAll.erase( m_nUniqueID );
 		}
 	}
 
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
-	virtual void SetDestroyedOnRecreateEntities( void ) OVERRIDE;
+	virtual void SetDestroyedOnRecreateEntities( void ) override;
 	
 	bool BMakeDecalReadyToApplyToWorld();
 	void ApplyDecalDataToWorld();
@@ -327,10 +321,6 @@ void C_FEPlayerDecal::PostDataUpdate( DataUpdateType_t updateType )
 				s_mapPlayerDecalsUniqueIDsRecreating.erase( idxRecreate );
 			}
 
-#if PLAYERDECAL_VERBOSE_DEBUG
-			DevMsg( "DECAL: PostDataUpdate %s decal ( %d ) %s\n", bRecreating ? "recreating" : "new", m_nUniqueID, bApplyImmediate ? "apply" : "already applied, skipping application" );
-#endif
-
 			s_mapPlayerDecalsUniqueIDsAll.insert_or_assign( m_nUniqueID, this );
 			if ( bApplyImmediate )
 				s_mapPlayerDecalsUniqueIDsToApply.insert_or_assign( m_nUniqueID, this );
@@ -341,7 +331,7 @@ void C_FEPlayerDecal::PostDataUpdate( DataUpdateType_t updateType )
 	m_bDecalReadyToApplyToWorld = BMakeDecalReadyToApplyToWorld();
 }
 
-DEVELOPMENT_ONLY_CONVAR( cl_playerspray_debug_pulse_force, 0 );
+struct CompileTimeConstant_cl_playerspray_debug_pulse_force { inline int GetInt() { return 0; } inline float GetFloat() { return 0; } } cl_playerspray_debug_pulse_force;
 
 // Checks if the local player has an equipped spray and is aiming in a sprayable area with the rosetta menu up and if cooldown is ready
 // Note: rosetta menu code is using this check to determine if we're passing all the validity checks to spray. 
@@ -415,25 +405,16 @@ void OnPlayerDecalsUpdate()
 {
 	for ( const auto &[nUniqueID, pDecal] : s_mapPlayerDecalsUniqueIDsToApply )
 	{
-#if PLAYERDECAL_VERBOSE_DEBUG
-		DevMsg( "DECAL: ApplyDecalDataToWorld( %d )\n", nUniqueID );
-#endif
 		pDecal->ApplyDecalDataToWorld();
 	}
 	s_mapPlayerDecalsUniqueIDsToApply.clear();
 
-#if PLAYERDECAL_VERBOSE_DEBUG
-	if ( !s_mapPlayerDecalsUniqueIDsRecreating.empty() )
-	{
-		DevMsg( "DECAL: Was recreating %d decals, cleared recreate cache\n", (int)s_mapPlayerDecalsUniqueIDsRecreating.size() );
-	}
-#endif
 	s_mapPlayerDecalsUniqueIDsRecreating.clear();
 }
 
 bool C_FEPlayerDecal::BMakeDecalReadyToApplyToWorld()
 {
-	VPROF( "C_FEPlayerDecal::BMakeDecalReadyToApplyToWorld" );
+	CVProfScope _( "C_FEPlayerDecal::BMakeDecalReadyToApplyToWorld", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Validate the signature before applying on the client
 	ks::net::PlayerDecalDigitalSignature data;
@@ -496,7 +477,7 @@ void QcCreateDecalData( int nKey, int nStickerKitDefinition, int nTintID, bool b
 
 		if ( !texture || texture->IsError() )
 		{
-			Assert( !"Failed to find a texture for this decal. We're never going to see it." );
+			contract_assert( !"Failed to find a texture for this decal. We're never going to see it." );
 			Warning( "Failed to find spray '%s', this is never going to render.\n", fmtTextureName.Access() );
 
 			return;
@@ -584,7 +565,7 @@ void C_FEPlayerDecal::MakeDecalReady( int nKey )
 //-----------------------------------------------------------------------------
 void C_TEPlayerDecal::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEPlayerDecal::PostDataUpdate" );
+	CVProfScope _( "C_TEPlayerDecal::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Decals disabled?
 	if ( !r_decals.GetBool() )
@@ -710,175 +691,14 @@ void CPlayerLogoProxy::OnBind( void *pC_BaseEntity )
 }
 
 
-DEVELOPMENT_ONLY_CONVAR( cl_playerspray_debug_pulse_timescale, 0.6 );
-DEVELOPMENT_ONLY_CONVAR( cl_playerspray_debug_pulse_alpha_low, 0.125 );
-DEVELOPMENT_ONLY_CONVAR( cl_playerspray_debug_pulse_alpha_fraction, 1.0 );
-
-
-#if ECON_SPRAY_TINT_IDS_FLOAT_COLORSPACE
-void Helper_TintColorSpaceToRGBf( uint8 unHSVID, float arrFlcs[3], float flRenderRGB[3] )
-{
-	//
-	// Tint processing
-	// see: csgo_english.txt and econ_item_schema.cpp Helper_ExtractIntegerFromValueStringEntry for tint color names
-	//
-	struct CHSVSprayTintDefinition_t
-	{
-		// Based on the hue value the correct lerped bucket will be used
-		int m_hue[3]; // HUE      low-mid-hi
-		int m_slo[3]; // SAT low  low-mid-hi
-		int m_shi[3]; // SAT high low-mid-hi
-		int m_vlo[3]; // VAL low  low-mid-hi
-		int m_vhi[3]; // VAL high low-mid-hi
-	}
-	const arrSprayTintDefinitions[] =
-	{
-		{	// zero-index: all white
-			{	180,	180,	180 },	// hue
-			{	0,		0,		0 },	// sat low
-			{	0,		0,		0 },	// sat high
-			{	100,	100,	100 },	// val low
-			{	100,	100,	100 },	// val high
-		},
-		{	// index #1 - Aqua
-			{ 158, 174, 190 }, // hue
-			{ 50, 60, 40 },  // sat low
-			{ 90, 90, 90 },  // sat high
-			{ 60, 60, 60 },  // val low
-			{ 90, 90, 90 }, // val high
-		},
-		{	// index #2 - Red
-			{ 348, 358, 368 }, // hue
-			{ 78, 80, 70 },  // sat low
-			{ 90, 90, 90 },  // sat high
-			{ 48, 50, 50 },  // val low
-			{ 82, 80, 80 }, // val high
-		},
-		{	// index #3 - Orange
-			{ 18, 28, 38 }, // hue
-			{ 74, 72, 70 },  // sat low
-			{ 94, 92, 90 },  // sat high
-			{ 58, 78, 74 },  // val low
-			{ 84, 92, 98 }, // val high
-		},
-		{	// index #4 - Yellow
-			{ 48, 54, 61 }, // hue
-			{ 40, 40, 40 },  // sat low
-			{ 92, 92, 92 },  // sat high
-			{ 82, 82, 82 },  // val low
-			{ 98, 98, 98 }, // val high
-		},
-		{	// index #5 - Green
-			{ 108, 129, 150 }, // hue
-			{ 40, 50, 54 },  // sat low
-			{ 90, 90, 90 },  // sat high
-			{ 60, 60, 58 },  // val low
-			{ 90, 90, 90 }, // val high
-		},
-		{	// index #6 - Blue
-			{ 207, 223, 238 }, // hue
-			{ 70, 40, 50 },  // sat low
-			{ 90, 90, 90 },  // sat high
-			{ 60, 50, 70 },  // val low
-			{ 100, 80, 100 }, // val high
-		},
-		{	// index #7 - Purple
-			{ 258, 272, 289 }, // hue
-			{ 50, 40, 40 },  // sat low
-			{ 90, 80, 80 },  // sat high
-			{ 60, 60, 60 },  // val low
-			{ 100, 90, 80 }, // val high
-		},
-		{	// index #8 - Pink
-			{ 308, 340, 372 }, // hue
-			{ 20, 20, 20 },  // sat low
-			{ 67, 50, 64 },  // sat high
-			{ 84, 80, 86 },  // val low
-			{ 98, 98, 98 }, // val high
-		},
-		{	// index #9 - Lime
-			{ 68, 78, 94 }, // hue
-			{ 50, 50, 50 },  // sat low
-			{ 92, 90, 90 },  // sat high
-			{ 62, 70, 80 },  // val low
-			{ 98, 98, 98 }, // val high
-		},
-		{	// index #10 - White
-			{ 0, 180, 360 }, // hue
-			{ 2, 2, 2 },  // sat low
-			{ 7, 7, 7 },  // sat high
-			{ 90, 90, 90 },  // val low
-			{ 97, 97, 97 }, // val high
-		},
-	};
-	COMPILE_TIME_ASSERT( 1 + NUM_SPRAY_TINT_IDS_SUPPORTED == Q_ARRAYSIZE( arrSprayTintDefinitions ) );
-	if ( ( unHSVID > 0 ) && ( unHSVID <= NUM_SPRAY_TINT_IDS_SUPPORTED ) )
-	{
-		CHSVSprayTintDefinition_t const &tintdef = arrSprayTintDefinitions[unHSVID];
-		
-		//
-		// Hue percentage value
-		//
-		float flHuePct = arrFlcs[0]*2.0f;
-		int nHueIdx = 0; // 0 when in first half, 1 when in second half
-		if ( flHuePct > 1.0f )
-		{
-			nHueIdx = 1;
-			flHuePct -= 1.0f;
-		}
-
-		//
-		// Actual HSV interpolated value
-		//
-		float flHue = Lerp<float>( flHuePct, tintdef.m_hue[nHueIdx], tintdef.m_hue[nHueIdx+1] );
-		float flSat = Lerp<float>( arrFlcs[1],
-			Lerp<float>( flHuePct, tintdef.m_slo[nHueIdx], tintdef.m_slo[nHueIdx+1] ),
-			Lerp<float>( flHuePct, tintdef.m_shi[nHueIdx], tintdef.m_shi[nHueIdx+1] ) ) / 100.0f;
-		float flVal = Lerp<float>( arrFlcs[2],
-			Lerp<float>( flHuePct, tintdef.m_vlo[nHueIdx], tintdef.m_vlo[nHueIdx+1] ),
-			Lerp<float>( flHuePct, tintdef.m_vhi[nHueIdx], tintdef.m_vhi[nHueIdx+1] ) ) / 100.0f;
-		if ( flHue >= 360.0f )
-			flHue -= 360.0f; // rotate into [0:360) range if needed overlapping area for lerps
-
-		//
-		// Now we just need to convert HSV->RGB
-		//
-		float hh = flHue/60.0f;
-		int numhh = int( hh );
-		float ff = hh - numhh;
-		float xp = flVal * ( 1.0f - flSat );
-		float xq = flVal * ( 1.0f - ( flSat * ff ) );
-		float xt = flVal * ( 1.0f - ( flSat * ( 1.0f - ff ) ) );
-		switch ( numhh )
-		{
-		case 0:
-			flRenderRGB[ 0 ] = flVal; flRenderRGB[ 1 ] = xt; flRenderRGB[ 2 ] = xp;
-			break;
-		case 1:
-			flRenderRGB[ 0 ] = xq; flRenderRGB[ 1 ] = flVal; flRenderRGB[ 2 ] = xp;
-			break;
-		case 2:
-			flRenderRGB[ 0 ] = xp; flRenderRGB[ 1 ] = flVal; flRenderRGB[ 2 ] = xt;
-			break;
-		case 3:
-			flRenderRGB[ 0 ] = xp; flRenderRGB[ 1 ] = xq; flRenderRGB[ 2 ] = flVal;
-			break;
-		case 4:
-			flRenderRGB[ 0 ] = xt; flRenderRGB[ 1 ] = xp; flRenderRGB[ 2 ] = flVal;
-			break;
-		case 5:
-		default:
-			flRenderRGB[ 0 ] = flVal; flRenderRGB[ 1 ] = xp; flRenderRGB[ 2 ] = xq;
-			break;
-		}
-	}
-}
-#endif
+struct CompileTimeConstant_cl_playerspray_debug_pulse_timescale { inline int GetInt() { return 0.6; } inline float GetFloat() { return 0.6; } } cl_playerspray_debug_pulse_timescale;
+struct CompileTimeConstant_cl_playerspray_debug_pulse_alpha_low { inline int GetInt() { return 0.125; } inline float GetFloat() { return 0.125; } } cl_playerspray_debug_pulse_alpha_low;
+struct CompileTimeConstant_cl_playerspray_debug_pulse_alpha_fraction { inline int GetInt() { return 1.0; } inline float GetFloat() { return 1.0; } } cl_playerspray_debug_pulse_alpha_fraction;
 
 
 void CPlayerLogoProxy::OnLogoBindInternal( const DecalData_t& decalData, bool bPreviewMaterial )
 {
-	Assert( decalData.m_pTex );
+	contract_assert( decalData.m_pTex );
 
 	m_pBaseTextureVar->SetTextureValue( decalData.m_pTex );
 
@@ -891,8 +711,8 @@ void CPlayerLogoProxy::OnLogoBindInternal( const DecalData_t& decalData, bool bP
 		if ( !m_bInspectInModelPreviewWindow && bPreviewMaterial )
 		{
 			flRenderAlpha = flDecalTime * cl_playerspray_debug_pulse_timescale.GetFloat(); // make the full cycle longer than 1 second
-			flRenderAlpha -= floorf( flRenderAlpha ); // [0..1)[0..1)
-			flRenderAlpha = fabsf( flRenderAlpha - 0.5f ); // 0.5..0..0.5..0..0.5
+			flRenderAlpha -= std::floorf( flRenderAlpha ); // [0..1)[0..1)
+			flRenderAlpha = std::fabsf( flRenderAlpha - 0.5f ); // 0.5..0..0.5..0..0.5
 			flRenderAlpha = cl_playerspray_debug_pulse_alpha_low.GetFloat() + flRenderAlpha/cl_playerspray_debug_pulse_alpha_fraction.GetFloat(); // 12.5% ... 63% opacity cycle over 0.85 sec
 		}
 		else if ( gpGlobals->curtime >= decalData.m_flCreationTime + PLAYERDECALS_DURATION_APPLY )
@@ -920,10 +740,6 @@ void CPlayerLogoProxy::OnLogoBindInternal( const DecalData_t& decalData, bool bP
 	uint8 unRenderHSVID = CombinedTintIDGetHSVID( decalData.m_nTintID );
 	if ( unRenderHSVID )
 	{
-#if ECON_SPRAY_TINT_IDS_FLOAT_COLORSPACE
-		float arrFlcs[ 3 ] = { CombinedTintIDGetHSVc( decalData.m_nTintID, 0 ), CombinedTintIDGetHSVc( decalData.m_nTintID, 1 ), CombinedTintIDGetHSVc( decalData.m_nTintID, 2 ) };
-		Helper_TintColorSpaceToRGBf( unRenderHSVID, arrFlcs, flRenderRGB );
-#else
 		if ( const CEconGraffitiTintDefinition *pDef = GEconItemSchema().GetGraffitiTintDefinitionByID( unRenderHSVID ) )
 		{
 			uint32 uiRGB = pDef->GetHexColorRGB();
@@ -931,7 +747,6 @@ void CPlayerLogoProxy::OnLogoBindInternal( const DecalData_t& decalData, bool bP
 			flRenderRGB[ 1 ] = float( ( uiRGB >> 8 ) & 0xFF ) / float( 0xFF );
 			flRenderRGB[ 2 ] = float( ( uiRGB ) & 0xFF ) / float( 0xFF );
 		}
-#endif
 	}
 
 	// Do srgb color transform when applied to brush models via lightmapped generic
@@ -962,7 +777,7 @@ public:
 	{
 		m_bInspectInModelPreviewWindow = true;
 	}
-	virtual void OnBind( void *pC_BaseEntity ) OVERRIDE
+	virtual void OnBind( void *pC_BaseEntity ) override
 	{
 		CPlayerLogoProxy::OnBind( ( void * ) ( intp ) g_nPlayerLogoProxyForPreviewKey );
 	}

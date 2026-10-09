@@ -1,19 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Parsing of entity network packets.
-//
-// $NoKeywords: $
-//=============================================================================//
+
+// main precompiled header for client files
+
+import ks.tier1;
+
+#include "common.h"
+#include "iprediction.h"
+#include "icliententitylist.h"
+
+#include "cmd.h"
+#include "render.h"
 
 
-#include "client_pch.h"
-#include <bitset>
+
+#include "gl_shader.h"
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+#include "cl_pred.h"
+
+#include "con_nprint.h"
+#include "demo.h"
+#include "host.h"
+#include "filesystem.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
+import std;
 #include "con_nprint.h"
 #include "iprediction.h"
 #include "cl_entityreport.h"
 #include "dt_recv_eng.h"
-#include "net_synctags.h"
-#include "ispatialpartitioninternal.h"
 #include "LocalNetworkBackdoor.h"
 #include "basehandle.h"
 #include "dt_localtransfer.h"
@@ -42,67 +66,8 @@ static ConVar cl_deltatrace( "cl_deltatrace", "0", 0, "For debugging, print enti
 
 // #define DEBUG_NETWORKING 1
 
-#if defined( DEBUG_NETWORKING )
-void SpewToFile( char const* pFmt, ... );
-static ConVar cl_packettrace( "cl_packettrace", "1", 0, "For debugging, massive spew to file." );
-#define TRACE_PACKET( text ) if ( cl_packettrace.GetInt() ) { SpewToFile text ; };
-#else
 #define TRACE_PACKET( text )
-#endif
 
-
-#if defined( DEBUG_NETWORKING )
-
-//-----------------------------------------------------------------------------
-// Opens the recording file
-//-----------------------------------------------------------------------------
-
-static FileHandle_t OpenRecordingFile()
-{
-	FileHandle_t fp = 0;
-	static bool s_CantOpenFile = false;
-	static bool s_NeverOpened = true;
-	if (!s_CantOpenFile)
-	{
-		fp = g_pFileSystem->Open( "cltrace.txt", s_NeverOpened ? "wt" : "at" );
-		if (!fp)
-		{
-			s_CantOpenFile = true;			
-		}
-		s_NeverOpened = false;
-	}
-	return fp;
-}
-
-//-----------------------------------------------------------------------------
-// Records an argument for a command, flushes when the command is done
-//-----------------------------------------------------------------------------
-
-void SpewToFile( char const* pFmt, ... )
-{
-	static std::vector< unsigned char > s_RecordingBuffer;
-
-	char temp[2048];
-	va_list args;
-
-	va_start( args, pFmt );
-	int len = Q_vsnprintf( temp, sizeof( temp ), pFmt, args );
-	va_end( args );
-	assert( len < 2048 );
-
-	int idx = s_RecordingBuffer.AddMultipleToTail( len );
-	memcpy( &s_RecordingBuffer[idx], temp, len );
-	if ( 1 ) //s_RecordingBuffer.Size() > 8192)
-	{
-		FileHandle_t fp = OpenRecordingFile();
-		g_pFileSystem->Write( s_RecordingBuffer.Base(), s_RecordingBuffer.Size(), fp );
-		g_pFileSystem->Close( fp );
-
-		s_RecordingBuffer.RemoveAll();
-	}
-}
-
-#endif // DEBUG_NETWORKING
 
 //-----------------------------------------------------------------------------
 // 
@@ -130,7 +95,7 @@ void CL_DeleteDLLEntity( int iEnt, const char *reason, bool bOnRecreatingAllEnti
 		}
 
 		pNet->Release();
-		Assert( !entitylist->GetClientNetworkable( iEnt ) );
+		contract_assert( !entitylist->GetClientNetworkable( iEnt ) );
 	}
 }
 
@@ -144,7 +109,7 @@ IClientNetworkable* CL_CreateDLLEntity( int iEnt, int iClass, int iSerialNum )
 {
 #if defined( _DEBUG )
 	IClientNetworkable *pOldNetworkable = entitylist->GetClientNetworkable( iEnt );
-	Assert( !pOldNetworkable );
+	contract_assert( !pOldNetworkable );
 #endif
 
 	ClientClass *pClientClass;
@@ -164,7 +129,7 @@ IClientNetworkable* CL_CreateDLLEntity( int iEnt, int iClass, int iSerialNum )
 		return pClientClass->m_pCreateFn( iEnt, iSerialNum );
 	}
 
-	Assert(false);
+	contract_assert( false );
 	return nullptr;
 }
 
@@ -225,8 +190,7 @@ void	SpewBitStream( unsigned char* pMem, int bit, int lastbit )
 
 inline static void CL_AddPostDataUpdateCall( CEntityReadInfo &u, int iEnt, DataUpdateType_t updateType )
 {
-	ErrorIfNot( u.m_nPostDataUpdateCalls < MAX_EDICTS,
-		("CL_AddPostDataUpdateCall: overflowed u.m_PostDataUpdateCalls") );
+	if ( !( u.m_nPostDataUpdateCalls < MAX_EDICTS ) ) Error("CL_AddPostDataUpdateCall: overflowed u.m_PostDataUpdateCalls");
 
 	u.m_PostDataUpdateCalls[u.m_nPostDataUpdateCalls].m_iEnt = iEnt;
 	u.m_PostDataUpdateCalls[u.m_nPostDataUpdateCalls].m_UpdateType = updateType;
@@ -268,12 +232,12 @@ void CL_FlushEntityPacket( CClientFrame *packet, char const *errorString, ... )
 {
 	con_nprint_t np;
 	char str[2048];
-	va_list marker;
+	std::va_list marker;
 
 	// Spit out an error.
-	va_start(marker, errorString);
-	Q_vsnprintf(str, sizeof(str), errorString, marker);
-	va_end(marker);
+	__builtin_va_start(marker, errorString);
+	V_vsnprintf(str, sizeof(str), errorString, marker);
+	__builtin_va_end(marker);
 	
 	ConMsg("%s", str);
 
@@ -357,10 +321,7 @@ void CL_CopyNewEntity(
 	else
 	{
 		// Every entity must have a static or an instance baseline when we get here.
-		ErrorIfNot(
-			GetBaseLocalClient().GetClassBaseline( iClass, &oldbaseline ),
-			("CL_CopyNewEntity: GetClassBaseline(%d) failed.", iClass)
-		);
+		if ( !( GetBaseLocalClient().GetClassBaseline( iClass, &oldbaseline ) ) ) Error("CL_CopyNewEntity: GetClassBaseline(%d) failed.", iClass);
 	}
 
 	RecvTable *pRecvTable = GetEntRecvTable( u.m_nNewEntity );
@@ -399,9 +360,9 @@ void CL_CopyNewEntity(
 	CL_AddPostDataUpdateCall( u, u.m_nNewEntity, updateType );
 
 	// If ent doesn't think it's in PVS, signal that it is
-	Assert( u.m_pTo->last_entity <= u.m_nNewEntity );
+	contract_assert( u.m_pTo->last_entity <= u.m_nNewEntity );
 	u.m_pTo->last_entity = u.m_nNewEntity;
-	Assert( !u.m_pTo->transmit_entity[u.m_nNewEntity] );
+	contract_assert( !u.m_pTo->transmit_entity[u.m_nNewEntity] );
 	u.m_pTo->transmit_entity.set( u.m_nNewEntity );
 
 	//
@@ -448,7 +409,7 @@ void CL_CopyExistingEntity( CEntityReadInfo &u )
 		return;
 	}
 
-	Assert( u.m_pFrom->transmit_entity[u.m_nNewEntity] );
+	contract_assert( u.m_pFrom->transmit_entity[u.m_nNewEntity] );
 
 	// Read raw data from the network stream
 	pEnt->PreDataUpdate( DATA_UPDATE_DATATABLE_CHANGED );
@@ -473,7 +434,7 @@ void CL_CopyExistingEntity( CEntityReadInfo &u )
 	CL_AddPostDataUpdateCall( u, u.m_nNewEntity, DATA_UPDATE_DATATABLE_CHANGED );
 
 	u.m_pTo->last_entity = u.m_nNewEntity;
-	Assert( !u.m_pTo->transmit_entity[u.m_nNewEntity] );
+	contract_assert( !u.m_pTo->transmit_entity[u.m_nNewEntity] );
 	u.m_pTo->transmit_entity.set( u.m_nNewEntity );
 
 	int bit_count = u.m_pBuf->GetNumBitsRead() - start_bit;
@@ -501,7 +462,6 @@ void CL_CopyExistingEntity( CEntityReadInfo &u )
 //-----------------------------------------------------------------------------
 void CL_MarkEntitiesOutOfPVS( std::bitset<MAX_EDICTS> *pvs_flags )
 {
-	PREFETCH360(pvs_flags, 0);
 	EntityCacheInfo_t *pInfo = entitylist->GetClientNetworkableArray();
 	int entityMax = entitylist->GetHighestEntityIndex() + 1;
 	// Note that we go up to and including the highest_index
@@ -544,8 +504,7 @@ static void CL_CallPostDataUpdates( CEntityReadInfo &u )
 		CPostDataUpdateCall *pCall = &u.m_PostDataUpdateCalls[i];
 	
 		IClientNetworkable *pEnt = entitylist->GetClientNetworkable( pCall->m_iEnt );
-		ErrorIfNot( pEnt, 
-			("CL_CallPostDataUpdates: missing ent %d", pCall->m_iEnt) );
+		if ( !( pEnt ) ) Error("CL_CallPostDataUpdates: missing ent %d", pCall->m_iEnt);
 
 		pEnt->PostDataUpdate( pCall->m_UpdateType );
 	}
@@ -565,7 +524,7 @@ static void CL_CallPostDataUpdates( CEntityReadInfo &u )
 //-----------------------------------------------------------------------------
 bool CL_ProcessPacketEntities( const ks::net::CSVCMsg_PacketEntities &msg )
 {
-	VPROF( "_CL_ParsePacketEntities" );
+	CVProfScope _( "_CL_ParsePacketEntities", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Packed entities for that frame
 	// Allocate space for new packet info.
@@ -622,7 +581,7 @@ bool CL_ProcessPacketEntities( const ks::net::CSVCMsg_PacketEntities &msg )
 	// signal client DLL that we have started updating entities
 	ClientDLL_FrameStageNotify( FRAME_NET_UPDATE_START );
 
-	Assert( msg.baseline >= 0 && msg.baseline < 2 );
+	contract_assert( msg.baseline >= 0 && msg.baseline < 2 );
 
 	if ( msg.update_baseline )
 	{
@@ -735,8 +694,3 @@ void CL_PreprocessEntities( void )
 
 	CDebugOverlay::PurgeServerOverlays();
 }
-
-
-
-
-

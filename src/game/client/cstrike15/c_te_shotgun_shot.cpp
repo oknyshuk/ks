@@ -1,16 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_baseplayer.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "fx_cs_shared.h"
 #include "c_cs_player.h"
 #include "c_basetempentity.h"
-#include <cliententitylist.h>
 
 class [[= ks::reflect::NetTable{ .name = "DT_TEFireBullets", .base = false } ]]
       C_TEFireBullets : public C_BaseTempEntity
@@ -34,9 +37,6 @@ public:
 	[[= ks::reflect::Net{} ]] float			m_fInaccuracy;
 	[[= ks::reflect::Net{} ]] float			m_flRecoilIndex;
 	[[= ks::reflect::Net{} ]] float			m_fSpread;
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-	float			m_fAccuracyFishtail;
-#endif
 	[[= ks::reflect::Net{} ]] WeaponSound_t	m_iSoundType;
 };
 
@@ -63,8 +63,7 @@ void C_TEFireBullets::PostDataUpdate( DataUpdateType_t updateType )
 	// networked in the previous demo recordings, force the sound type
 	// to the default SINGLE value if it didn't network correctly
 	//
-	Assert(
-		( m_iSoundType == EMPTY ) ||	// pre-economy update ver. 1.23.1.4
+	contract_assert( ( m_iSoundType == EMPTY ) ||	// pre-economy update ver. 1.23.1.4
 		( m_iSoundType == SINGLE ) ||	// default sound for firing
 		( m_iSoundType == SPECIAL1 ) ||	// silenced weapons use this sound
 		0 );
@@ -88,11 +87,7 @@ void C_TEFireBullets::PostDataUpdate( DataUpdateType_t updateType )
 		m_iSeed,
 		m_fInaccuracy,
 		m_fSpread,
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-		m_fAccuracyFishtail,
-#else
 		0.0f,
-#endif
 		0,
 		wpnSoundToUse,
 		m_flRecoilIndex
@@ -133,5 +128,3 @@ IMPLEMENT_CLIENTCLASS_EVENT( C_TEPlantBomb, DT_TEPlantBomb, CTEPlantBomb );
 
 
 IMPLEMENT_REFLECT_TABLE( C_TEPlantBomb, DT_TEPlantBomb );
-
-

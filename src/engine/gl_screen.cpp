@@ -1,39 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: master for refresh, status bar, console, chat, notify, etc
-//
-//=====================================================================================//
 
+// main precompiled header for client rendering code
 
-#include "render_pch.h"
+import ks.vstdlib;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+import std;
+#include "gl_shader.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
 #include "client.h"
 #include "console.h"
 #include "screen.h"
 #include "sound.h"
-#include "sbar.h"
-#include "debugoverlay.h"
 #include "cdll_int.h"
 #include "gl_matsysiface.h"
 #include "cdll_engine_int.h"
 #include "demo.h"
 #include "cl_main.h"
 #include "engineui.h"
-#include "con_nprint.h"
-#include "sys_mainwind.h"
-#include "ivideomode.h"
 #include "lightcache.h"
 #include "toolframework/itoolframework.h"
-#include "datacache/idatacache.h"
-#include "sys_dll.h"
 #include "host.h"
-#include "MapReslistGenerator.h"
-#include "tier1/callqueue.h"
-#include "tier0/icommandline.h"
 #include "matchmaking/imatchframework.h"
-#include "cl_steamauth.h"
 
-ConVar g_cv_miniprofiler_dump( "miniprofiler_dump", "0" );
-DLL_IMPORT void PublishAllMiniProfilers(int nHistoryMax);
 
 // In other C files.
 extern bool V_CheckGamma( void );
@@ -73,7 +72,6 @@ void SCR_BeginLoadingPlaque( const char *levelName /*= NULL*/ )
 {
 	if ( !scr_drawloading )
 	{
-		MEM_ALLOC_CREDIT();
 
 
 		scr_loadingStartTime = Plat_FloatTime();
@@ -151,7 +149,6 @@ void SCR_EndLoadingPlaque( void )
 				kv->SetString( "reason", gszDisconnectReason );
 			}
 
-#ifndef NO_TOOLFRAMEWORK
 			if ( toolframework->InToolMode() )
 			{				
 				// Make a copy of the message to send to the tools framework
@@ -161,7 +158,6 @@ void SCR_EndLoadingPlaque( void )
 				toolframework->PostMessage( pToolMsg );
 				pToolMsg->deleteThis();
 			}
-#endif
 
 			g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( kv );
 			return;
@@ -243,7 +239,7 @@ void SCR_UpdateScreen( void )
 	CMatRenderContextPtr pRenderContext;
 	pRenderContext.GetFrom( materials );
 
-	if( EngineUI()->IsGameUIVisible() || IsSteam3ClientGameOverlayActive() )
+	if( EngineUI()->IsGameUIVisible() )
 	{
 		pRenderContext->AntiAliasingHint( AA_HINT_MENU );
 	}
@@ -258,7 +254,7 @@ void SCR_UpdateScreen( void )
 
 	{
 		CMatRenderContextPtr pRenderContext( materials );
-		PIXEVENT( pRenderContext, "framestagenotify" );
+		( pRenderContext, "framestagenotify" );
 		ClientDLL_FrameStageNotify( FRAME_RENDER_START );
 	}
 
@@ -293,8 +289,6 @@ void SCR_UpdateScreen( void )
 
 	materials->EndFrame();
 
-	PublishAllMiniProfilers( g_cv_miniprofiler_dump.GetInt() );
-
 	// NOTE: It isn't super awesome to do this here, but it has to occur after
 	// the client DLL where it knows its read in all entities, which happens in
 	// ClientDLL_FrameStageNotify( FRAME_RENDER_START )
@@ -312,7 +306,7 @@ void SCR_UpdateScreen( void )
 				int numIterations = 1;
 				if( CommandLine()->ParmCount() > i + 1 )
 				{
-					numIterations = atoi( CommandLine()->GetParm(i+1) );
+					numIterations = std::atoi( CommandLine()->GetParm(i+1) );
 				}
 				if( numIterations == 0 )
 				{

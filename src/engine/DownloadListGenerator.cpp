@@ -1,10 +1,7 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "mathlib/vector.h"
+import ks.tier1;
 #include "DownloadListGenerator.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
@@ -13,13 +10,8 @@
 #include "common.h"
 #include "quakedef.h"
 #include "vengineserver_impl.h"
-#include "tier1/strtools.h"
-#include "tier0/icommandline.h"
 #include "checksum_engine.h"
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <tier0/dbg.h>
+import std;
 
 CDownloadListGenerator g_DownloadListGenerator;
 CDownloadListGenerator &DownloadListGenerator()
@@ -51,8 +43,8 @@ void CDownloadListGenerator::SetStringTable( INetworkStringTable *pStringTable )
 	m_AlreadyWrittenFileNames.clear();
 
 	// add in the bsp file to the list, and its node graph and nav mesh
-	char path[_MAX_PATH];
-	Q_snprintf(path, sizeof(path), "maps\\%s.bsp", m_mapName);
+	char path[k_cMaxPath];
+	V_snprintf(path, sizeof(path), "maps\\%s.bsp", m_mapName);
 	OnResourcePrecached(path);
 
 	bool useNodeGraph = true;
@@ -65,15 +57,15 @@ void CDownloadListGenerator::SetStringTable( INetworkStringTable *pStringTable )
 
 	if ( useNodeGraph )
 	{
-		Q_snprintf(path, sizeof(path), "maps\\graphs\\%s.ain", m_mapName);
+		V_snprintf(path, sizeof(path), "maps\\graphs\\%s.ain", m_mapName);
 		OnResourcePrecached(path);
 	}
 
-	Q_snprintf(path, sizeof(path), "maps\\%s.nav", m_mapName);
+	V_snprintf(path, sizeof(path), "maps\\%s.nav", m_mapName);
 	OnResourcePrecached(path);
 
 	char resfilename[MAX_OSPATH];
-	Q_snprintf( resfilename, sizeof( resfilename), "maps/%s.res", m_mapName );
+	V_snprintf( resfilename, sizeof( resfilename), "maps/%s.res", m_mapName );
 
 	KeyValues::AutoDelete resfilekeys( "resourcefiles" );
 	if ( resfilekeys->LoadFromFile( g_pFileSystem, resfilename, "GAME" ) )
@@ -106,12 +98,12 @@ void CDownloadListGenerator::OnLevelLoadStart(const char *levelName)
 		// open the new level reslist
 		char path[MAX_OSPATH];
 		g_pFileSystem->CreateDirHierarchy( "DownloadLists", "MOD" );
-		Q_snprintf(path, sizeof(path), "DownloadLists/%s.lst", levelName);
+		V_snprintf(path, sizeof(path), "DownloadLists/%s.lst", levelName);
 		m_hReslistFile = g_pFileSystem->Open(path, "wt", "GAME");
 	}
 
 	// add a slash to the end of com_gamedir, so we can only deal with files for this mod
-	Q_snprintf( m_gameDir, sizeof(m_gameDir), "%s/", com_gamedir );
+	V_snprintf( m_gameDir, sizeof(m_gameDir), "%s/", com_gamedir );
 	V_FixSlashes( m_gameDir, '/' );
 
 	// save off the map name
@@ -138,28 +130,28 @@ void CDownloadListGenerator::OnLevelLoadEnd()
 void CDownloadListGenerator::OnModelPrecached(const char *relativePathFileName)
 {
 
-	if (Q_strstr(relativePathFileName, ".vmt"))
+	if (V_strstr(relativePathFileName, ".vmt"))
 	{
 		// it's a materials file, make sure that it starts in the materials directory, and we get the .vtf
-		char file[_MAX_PATH];
+		char file[k_cMaxPath];
 
 		if ( StringHasPrefix( relativePathFileName, "materials" ) )
 		{
-			Q_strncpy(file, relativePathFileName, sizeof(file));
+			V_strncpy(file, relativePathFileName, sizeof(file));
 		}
 		else
 		{
 			// prepend the materials directory
-			Q_snprintf(file, sizeof(file), "materials\\%s", relativePathFileName);
+			V_snprintf(file, sizeof(file), "materials\\%s", relativePathFileName);
 		}
 
 		OnResourcePrecached(file);
 
 		// get the matching vtf file
-		char *ext = Q_strstr(file, ".vmt");
+		char *ext = V_strstr(file, ".vmt");
 		if (ext)
 		{
-			Q_strncpy(ext, ".vtf", 5);
+			V_strncpy(ext, ".vtf", 5);
 			OnResourcePrecached(file);
 		}
 	}
@@ -182,15 +174,15 @@ void CDownloadListGenerator::OnSoundPrecached(const char *relativePathFileName)
 	}
 
 	// prepend the sound/ directory if necessary
-	char file[_MAX_PATH];
+	char file[k_cMaxPath];
 	if ( StringHasPrefix( relativePathFileName, "sound" ) )
 	{
-		Q_strncpy(file, relativePathFileName, sizeof(file));
+		V_strncpy(file, relativePathFileName, sizeof(file));
 	}
 	else
 	{
 		// prepend the materials directory
-		Q_snprintf(file, sizeof(file), "sound\\%s", relativePathFileName);
+		V_snprintf(file, sizeof(file), "sound\\%s", relativePathFileName);
 	}
 
 	OnResourcePrecached(file);
@@ -211,15 +203,15 @@ void CDownloadListGenerator::OnResourcePrecached( const char *pRelativePathFileN
 	if ( pRelativePathFileName[0] == '*' )
 		return;
 
-	if ( Q_IsAbsolutePath( pRelativePathFileName ) )
+	if ( V_IsAbsolutePath( pRelativePathFileName ) )
 	{
 		Warning( "*** CDownloadListGenerator::OnResourcePrecached: Encountered full path %s!\n", pRelativePathFileName );
 		return;
 	}
 
 	char pRelativePath[MAX_PATH];
-	Q_strncpy( pRelativePath, pRelativePathFileName, sizeof(pRelativePath) );
-	Q_FixSlashes( pRelativePath, '/' );
+	V_strncpy( pRelativePath, pRelativePathFileName, sizeof(pRelativePath) );
+	V_FixSlashes( pRelativePath, '/' );
 
 	// make sure the filename hasn't already been written
 	if ( m_AlreadyWrittenFileNames.contains( pRelativePath ) )
@@ -233,22 +225,22 @@ void CDownloadListGenerator::OnResourcePrecached( const char *pRelativePathFileN
 		return;	
 
 	// add extras for mdl's
-	char *pExt = const_cast< char* >( Q_GetFileExtension( pRelativePath ) );
-	if ( !Q_stricmp( pExt, "mdl" ) )
+	char *pExt = const_cast< char* >( V_GetFileExtension( pRelativePath ) );
+	if ( !V_stricmp( pExt, "mdl" ) )
 	{
-		Q_strncpy(pExt, "vvd", 10);
+		V_strncpy(pExt, "vvd", 10);
 		OnResourcePrecached(pRelativePath);
 
-		Q_strncpy(pExt, "ani", 10);
+		V_strncpy(pExt, "ani", 10);
 		OnResourcePrecached(pRelativePath);
 
-		Q_strncpy(pExt, "dx90.vtx", 10);
+		V_strncpy(pExt, "dx90.vtx", 10);
 		OnResourcePrecached(pRelativePath);
 
-		Q_strncpy(pExt, "phy", 10);
+		V_strncpy(pExt, "phy", 10);
 		OnResourcePrecached(pRelativePath);
 
-		Q_strncpy(pExt, "jpg", 10);
+		V_strncpy(pExt, "jpg", 10);
 		OnResourcePrecached(pRelativePath);
 	}
 
@@ -256,7 +248,7 @@ void CDownloadListGenerator::OnResourcePrecached( const char *pRelativePathFileN
 	if ( handle != FILESYSTEM_INVALID_HANDLE )
 	{
 		g_pFileSystem->Write("\"", 1, handle);
-		g_pFileSystem->Write( pRelativePath, Q_strlen(pRelativePath), handle );
+		g_pFileSystem->Write( pRelativePath, V_strlen(pRelativePath), handle );
 		g_pFileSystem->Write("\"\n", 2, handle);
 	}
 	if ( m_pStringTable )
@@ -282,20 +274,20 @@ void CDownloadListGenerator::ForceExactFile( const char *relativePathFileName, C
 
 	CRC32_t crc;
 	bool error = true;
-	char file[_MAX_PATH];
+	char file[k_cMaxPath];
 	const char *filePtr = relativePathFileName;
 
-	if (Q_strstr(relativePathFileName, ".vmt") || Q_strstr(relativePathFileName, ".vtf"))
+	if (V_strstr(relativePathFileName, ".vmt") || V_strstr(relativePathFileName, ".vtf"))
 	{
 		// it's a materials file, make sure that it starts in the materials directory, and we get the .vtf
 		if ( StringHasPrefix(relativePathFileName, "materials" ) )
 		{
-			Q_strncpy(file, relativePathFileName, sizeof(file));
+			V_strncpy(file, relativePathFileName, sizeof(file));
 		}
 		else
 		{
 			// prepend the materials directory
-			Q_snprintf(file, sizeof(file), "materials\\%s", relativePathFileName);
+			V_snprintf(file, sizeof(file), "materials\\%s", relativePathFileName);
 		}
 		error = !CRC_File( &crc, file );
 		filePtr = file;
@@ -311,8 +303,8 @@ void CDownloadListGenerator::ForceExactFile( const char *relativePathFileName, C
 	}
 	else
 	{
-		char relativeFileName[_MAX_PATH];
-		Q_strncpy( relativeFileName, filePtr, sizeof( relativeFileName ) );
+		char relativeFileName[k_cMaxPath];
+		V_strncpy( relativeFileName, filePtr, sizeof( relativeFileName ) );
 		V_FixSlashes( relativeFileName, '/' );
 
 		ExactFileUserData userData;
@@ -343,14 +335,14 @@ void CDownloadListGenerator::ForceModelBounds( const char *relativePathFileName,
 	if ( !relativePathFileName )
 		relativePathFileName = "";
 
-	if (!Q_stristr(relativePathFileName, ".mdl"))
+	if (!V_stristr(relativePathFileName, ".mdl"))
 	{
 		DevWarning( "Warning - trying to enforce model bounds on %s\n", relativePathFileName );
 		return;
 	}
 
-	char relativeFileName[_MAX_PATH];
-	Q_strncpy( relativeFileName, relativePathFileName, sizeof( relativeFileName ) );
+	char relativeFileName[k_cMaxPath];
+	V_strncpy( relativeFileName, relativePathFileName, sizeof( relativeFileName ) );
 	V_FixSlashes( relativeFileName, '/' );
 
 	ModelBoundsUserData userData;
@@ -368,7 +360,3 @@ void CDownloadListGenerator::ForceModelBounds( const char *relativePathFileName,
 		m_pStringTable->AddString( true, relativeFileName, sizeof( ModelBoundsUserData ), &userData );
 	}
 }
-
-
-
-	

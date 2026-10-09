@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Defines a class for objects that break after taking a certain amount
 //			of damage.
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef FUNC_BREAK_H
-#define FUNC_BREAK_H
 
 #include "reflect_annotations.h"
-#pragma once
 
 #include "entityoutput.h"
 #include "props.h"
@@ -19,19 +14,19 @@ typedef enum { expRandom = 0, expDirected, expUsePrecise} Explosions;
 typedef enum { matGlass = 0, matWood, matMetal, matFlesh, matCinderBlock, matCeilingTile, matComputer, matUnbreakableGlass, matRocks, matMetalPanel, matNone, matLastMaterial } Materials;
 
 
-#define	NUM_SHARDS 6 // this many shards spawned when breakable objects break;
+inline constexpr auto NUM_SHARDS = 6; // this many shards spawned when breakable objects break;
 
 // Spawnflags for func breakable
-#define SF_BREAK_TRIGGER_ONLY				0x0001	// may only be broken by trigger
-#define	SF_BREAK_TOUCH						0x0002	// can be 'crashed through' by running player (plate glass)
-#define SF_BREAK_PRESSURE					0x0004	// can be broken by a player standing on it
-#define SF_BREAK_PHYSICS_BREAK_IMMEDIATELY	0x0200	// the first physics collision this breakable has will immediately break it
-#define SF_BREAK_DONT_TAKE_PHYSICS_DAMAGE	0x0400	// this breakable doesn't take damage from physics collisions
-#define SF_BREAK_NO_BULLET_PENETRATION		0x0800  // don't allow bullets to penetrate
+inline constexpr auto SF_BREAK_TRIGGER_ONLY = 0x0001; // may only be broken by trigger
+inline constexpr auto SF_BREAK_TOUCH = 0x0002; // can be 'crashed through' by running player (plate glass)
+inline constexpr auto SF_BREAK_PRESSURE = 0x0004; // can be broken by a player standing on it
+inline constexpr auto SF_BREAK_PHYSICS_BREAK_IMMEDIATELY = 0x0200; // the first physics collision this breakable has will immediately break it
+inline constexpr auto SF_BREAK_DONT_TAKE_PHYSICS_DAMAGE = 0x0400; // this breakable doesn't take damage from physics collisions
+inline constexpr auto SF_BREAK_NO_BULLET_PENETRATION = 0x0800; // don't allow bullets to penetrate
 
 // Spawnflags for func_pushable (it's also func_breakable, so don't collide with those flags)
-#define SF_PUSH_BREAKABLE					0x0080
-#define SF_PUSH_NO_USE						0x0100	// player cannot +use pickup this ent
+inline constexpr auto SF_PUSH_BREAKABLE = 0x0080;
+inline constexpr auto SF_PUSH_NO_USE = 0x0100; // player cannot +use pickup this ent
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -174,5 +169,3 @@ private:
 	CHandle<CBasePlayer>	m_hPhysicsAttacker;
 	float					m_flLastPhysicsInfluenceTime;
 };
-
-#endif	// FUNC_BREAK_H

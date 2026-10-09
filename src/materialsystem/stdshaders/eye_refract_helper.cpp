@@ -1,10 +1,11 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
+import std;
 #include "eye_refract_helper.h"
 
-#include "cpp_shader_constant_register_map.h"
 
 #include "eye_refract_vs20.inc"
 #include "eye_refract_ps20.inc"
@@ -12,8 +13,6 @@
 
 #include "eye_refract_vs30.inc"
 #include "eye_refract_ps30.inc"
-
-#include "convar.h"
 
 
 static ConVar r_lightwarpidentity( "r_lightwarpidentity","0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );

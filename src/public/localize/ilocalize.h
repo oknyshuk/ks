@@ -1,29 +1,15 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ILOCALIZE_H
-#define ILOCALIZE_H
-
-
-#include "appframework/iappsystem.h"
-#include <tier1/keyvalues.h>
-
-// unicode character type
-// for more unicode manipulation functions #include <wchar.h>
-#if !defined( _WCHAR_T_DEFINED ) && !defined(__clang__)
-typedef unsigned short wchar_t;
-#define _WCHAR_T_DEFINED
-#endif
+import ks.tier1;
+import std;
 
 
 //-----------------------------------------------------------------------------
 // Interface used to query text size so we can choose the longest one
 //-----------------------------------------------------------------------------
-abstract_class ILocalizeTextQuery
+class ILocalizeTextQuery
 {
 public:
 	virtual int ComputeTextWidth( const wchar_t *pString ) = 0;
@@ -34,7 +20,7 @@ public:
 // Callback which is triggered when any localization string changes
 // Is not called when a localization string is added
 //-----------------------------------------------------------------------------
-abstract_class ILocalizationChangeCallback
+class ILocalizationChangeCallback
 {
 public:
 	virtual void OnLocalizationChanged() = 0;
@@ -49,7 +35,7 @@ public:
 typedef uint32 LocalizeStringIndex_t;
 const uint32 LOCALIZE_INVALID_STRING_INDEX = (LocalizeStringIndex_t)-1;
 
-abstract_class ILocalize : public IAppSystem
+class ILocalize : public IAppSystem
 {
 public:
 	// adds the contents of a file to the localization table
@@ -66,12 +52,12 @@ public:
 
 	// converts an english string to unicode
 	// returns the number of wchar_t in resulting string, including null terminator
-	virtual int ConvertANSIToUnicode(const char *ansi, OUT_Z_BYTECAP(unicodeBufferSizeInBytes) wchar_t *unicode, int unicodeBufferSizeInBytes) = 0;
+	virtual int ConvertANSIToUnicode(const char *ansi, wchar_t *unicode, int unicodeBufferSizeInBytes) = 0;
 
 	// converts an unicode string to an english string
 	// unrepresentable characters are converted to system default
 	// returns the number of characters in resulting string, including null terminator
-	virtual int ConvertUnicodeToANSI(const wchar_t *unicode, OUT_Z_CAP(ansiBufferSize) char *ansi, int ansiBufferSize) = 0;
+	virtual int ConvertUnicodeToANSI(const wchar_t *unicode, char *ansi, int ansiBufferSize) = 0;
 
 	// finds the index of a token by token name, INVALID_STRING_INDEX if not found
 	virtual LocalizeStringIndex_t FindIndex(const char *tokenName) = 0;
@@ -108,8 +94,8 @@ public:
 	virtual void ReloadLocalizationFiles( ) = 0;
 
 	// need to replace the existing ConstructString with this
-	virtual void ConstructString(OUT_Z_BYTECAP(unicodeBufferSizeInBytes) wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const char *tokenName, KeyValues *localizationVariables) = 0;
-	virtual void ConstructString(OUT_Z_BYTECAP(unicodeBufferSizeInBytes) wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, LocalizeStringIndex_t unlocalizedTextSymbol, KeyValues *localizationVariables) = 0;
+	virtual void ConstructString(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const char *tokenName, KeyValues *localizationVariables) = 0;
+	virtual void ConstructString(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, LocalizeStringIndex_t unlocalizedTextSymbol, KeyValues *localizationVariables) = 0;
 
 	// Used to install a callback to query which localized strings are the longest
 	virtual void SetTextQuery( ILocalizeTextQuery *pQuery ) = 0;
@@ -125,36 +111,33 @@ public:
 	// builds a localized formatted string
 	// uses the format strings first: %s1, %s2, ...  unicode strings (wchar_t *)
 	template < typename T >
-	void ConstructString(OUT_Z_BYTECAP(unicodeBufferSizeInBytes) T *unicodeOuput, int unicodeBufferSizeInBytes, const T *formatString, int numFormatParameters, ...)
+	void ConstructString(T *unicodeOuput, int unicodeBufferSizeInBytes, const T *formatString, int numFormatParameters, ...)
 	{
-		va_list argList;
-		va_start( argList, numFormatParameters );
+		std::va_list argList;
+		__builtin_va_start( argList, numFormatParameters );
 
 		ConstructStringVArgsInternal( unicodeOuput, unicodeBufferSizeInBytes, formatString, numFormatParameters, argList );
 
-		va_end( argList );
+		__builtin_va_end( argList );
 	}
 
 	template < typename T >
-	void ConstructStringVArgs(OUT_Z_BYTECAP(unicodeBufferSizeInBytes) T *unicodeOuput, int unicodeBufferSizeInBytes, const T *formatString, int numFormatParameters, va_list argList)
+	void ConstructStringVArgs(T *unicodeOuput, int unicodeBufferSizeInBytes, const T *formatString, int numFormatParameters, std::va_list argList)
 	{
 		ConstructStringVArgsInternal( unicodeOuput, unicodeBufferSizeInBytes, formatString, numFormatParameters, argList );
 	}
 
 	template < typename T >
-	void ConstructString(OUT_Z_BYTECAP(unicodeBufferSizeInBytes) T *unicodeOutput, int unicodeBufferSizeInBytes, const T *formatString, KeyValues *localizationVariables)
+	void ConstructString(T *unicodeOutput, int unicodeBufferSizeInBytes, const T *formatString, KeyValues *localizationVariables)
 	{
 		ConstructStringKeyValuesInternal( unicodeOutput, unicodeBufferSizeInBytes, formatString, localizationVariables );
 	}
 
 protected:
 	// internal "interface"
-	virtual void ConstructStringVArgsInternal(char *unicodeOutput, int unicodeBufferSizeInBytes, const char *formatString, int numFormatParameters, va_list argList) = 0;
-	virtual void ConstructStringVArgsInternal(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const wchar_t *formatString, int numFormatParameters, va_list argList) = 0;
+	virtual void ConstructStringVArgsInternal(char *unicodeOutput, int unicodeBufferSizeInBytes, const char *formatString, int numFormatParameters, std::va_list argList) = 0;
+	virtual void ConstructStringVArgsInternal(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const wchar_t *formatString, int numFormatParameters, std::va_list argList) = 0;
 
 	virtual void ConstructStringKeyValuesInternal(char *unicodeOutput, int unicodeBufferSizeInBytes, const char *formatString, KeyValues *localizationVariables) = 0;
 	virtual void ConstructStringKeyValuesInternal(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const wchar_t *formatString, KeyValues *localizationVariables) = 0;
 };
-
-
-#endif // ILOCALIZE_H

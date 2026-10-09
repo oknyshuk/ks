@@ -1,17 +1,15 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
+
 // Purpose: Ice surface shader (for the ice gun)
-//
-//=============================================================================//
 
 #include "BaseVSShader.h"
 #include "paintblob_helper.h"
-#include "cpp_shader_constant_register_map.h"
 
 DEFINE_FALLBACK_SHADER( paintblob, paintblob_dx9 )
 
 BEGIN_VS_SHADER( paintblob_dx9, "paintblob" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( BACKSURFACE, SHADER_PARAM_TYPE_BOOL, "0.0", "specify that this is the back surface of the ice" )
 
 		SHADER_PARAM( NORMALMAP, SHADER_PARAM_TYPE_TEXTURE, "models/shadertest/shader1_normal", "normal map" )

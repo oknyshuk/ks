@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef ENTITYPARTICLETRAIL_H
-#define ENTITYPARTICLETRAIL_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 #include "networkstringtable_gamedll.h"
 
-
 #include "baseparticleentity.h"
 #include "entityparticletrail_shared.h"
-
 
 //-----------------------------------------------------------------------------
 // Spawns particles after  the entity
@@ -49,5 +42,3 @@ private:
 
 	int	m_nRefCount;
 };
-
-#endif // ENTITYPARTICLETRAIL_H

@@ -1,26 +1,19 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
-
-#if !defined( ITEMPENTS_H )
-#define ITEMPENTS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.tier1;
 
 #include "ipredictionsystem.h"
 #include "shattersurfacetypes.h"
 #include "irecipientfilter.h"
 
 class CEffectData;
-class KeyValues;
 
 
 //-----------------------------------------------------------------------------
 // Purpose:  Shared interface to temp entities
 //-----------------------------------------------------------------------------
-abstract_class ITempEntsSystem : public IPredictionSystem
+class ITempEntsSystem : public IPredictionSystem
 {
 public:
 	virtual bool SuppressTE( IRecipientFilter& filter ) = 0;
@@ -123,5 +116,3 @@ public:
 };
 
 extern ITempEntsSystem *te;
-
-#endif // ITEMPENTS_H

@@ -1,20 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <quantize.h>
+import ks.math;
 
-#include <algorithm>
+import std;
 
+constexpr auto N_EXTRAVALUES = 1;
+constexpr auto N_DIMENSIONS = (3+N_EXTRAVALUES);
 
-#define N_EXTRAVALUES 1
-#define N_DIMENSIONS (3+N_EXTRAVALUES)
-
-#define PIXEL(x,y,c) Image[4*((x)+((Width*(y))))+c]
 
 static uint8 Weights[]={5,7,4,8};
 static int ExtraValueXForms[3*N_EXTRAVALUES]={
@@ -23,7 +16,7 @@ static int ExtraValueXForms[3*N_EXTRAVALUES]={
 
   
 
-#define MAX_QUANTIZE_IMAGE_WIDTH 4096
+constexpr auto MAX_QUANTIZE_IMAGE_WIDTH = 4096;
 
 void ColorQuantize(uint8 const *Image,
 				   int Width,
@@ -34,19 +27,22 @@ void ColorQuantize(uint8 const *Image,
 				   int firstcolor)
 {
 	int Error[MAX_QUANTIZE_IMAGE_WIDTH+1][3][2];
+	// Reads the channel c of the pixel at (x, y) from the image being quantized.
+	auto PixelAt = [&]( int x, int y, int c ) { return Image[4*((x)+((Width*(y))))+c]; };
+
 	struct Sample *s=AllocSamples(Width*Height,N_DIMENSIONS);
 	int x,y,c;
 	for(y=0;y<Height;y++)
 		for(x=0;x<Width;x++)
 		{
 			for(c=0;c<3;c++)
-				NthSample(s,y*Width+x,N_DIMENSIONS)->Value[c]=PIXEL(x,y,c);
+				NthSample(s,y*Width+x,N_DIMENSIONS)->Value[c]=PixelAt(x,y,c);
 			// now, let's generate extra values to quantize on
 			for(int i=0;i<N_EXTRAVALUES;i++)
 			{
 				int val1=0;
 				for(c=0;c<3;c++)
-					val1+=PIXEL(x,y,c)*ExtraValueXForms[i*3+c];
+					val1+=PixelAt(x,y,c)*ExtraValueXForms[i*3+c];
 				val1>>=8;
 				NthSample(s,y*Width+x,N_DIMENSIONS)->Value[c]=(uint8)
 					(std::clamp(val1, 0, 255));
@@ -55,7 +51,7 @@ void ColorQuantize(uint8 const *Image,
 	struct QuantizedValue *q=Quantize(s,Width*Height,N_DIMENSIONS,
 									  ncolors,Weights,firstcolor);
 	delete[] s;
-	memset(out_palette,0x55,768);
+	std::memset(out_palette,0x55,768);
 	for(int p=0;p<256;p++)
 	{
 		struct QuantizedValue *v=FindQNode(q,p);
@@ -63,7 +59,7 @@ void ColorQuantize(uint8 const *Image,
 			for(int c=0;c<3;c++)
 				out_palette[p*3+c]=v->Mean[c];
 	}
-	memset(Error,0,sizeof(Error));
+	std::memset(Error,0,sizeof(Error));
 	for(y=0;y<Height;y++)
 	{
 		int ErrorUse=y & 1;
@@ -73,7 +69,7 @@ void ColorQuantize(uint8 const *Image,
 			uint8 samp[3];
 			for(c=0;c<3;c++)
 			{
-				int tryc=PIXEL(x,y,c);
+				int tryc=PixelAt(x,y,c);
 				if (! (flags & QUANTFLAGS_NODITHER))
 				{
 					tryc+=Error[x][c][ErrorUse];
@@ -96,4 +92,3 @@ void ColorQuantize(uint8 const *Image,
 	}
 	if (q) FreeQuantization(q);
 }
-

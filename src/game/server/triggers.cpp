@@ -1,10 +1,38 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Spawn and use functions for editor-placed triggers.
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Spawn and use functions for editor-placed triggers.
+
+import std;
+import ks.vstdlib;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -16,7 +44,6 @@
 #include "ndebugoverlay.h"
 #include "globalstate.h"
 #include "filters.h"
-#include "vstdlib/random.h"
 #include "triggers.h"
 #include "hierarchy.h"
 #include "bspfile.h"
@@ -32,13 +59,9 @@
 #include "ai_behavior_follow.h"
 #include "ai_behavior_lead.h"
 #include "gameinterface.h"
-#include "fmtstr.h"
 #include "weapon_c4.h"
 
-
-
-
-#define DEBUG_TRANSITIONS_VERBOSE	2
+constexpr auto DEBUG_TRANSITIONS_VERBOSE = 2;
 ConVar g_debug_transitions( "g_debug_transitions", "0", FCVAR_NONE, "Set to 1 and restart the map to be warned if the map has no trigger_transition volumes. Set to 2 to see a dump of all entities & associated results during a transition." );
 
 // Global list of triggers that care about weapon fire
@@ -265,11 +288,11 @@ int CBaseTrigger::DrawDebugTextOverlays(void)
 		char tempstr[255];
 		if (IsSolidFlagSet(FSOLID_TRIGGER)) 
 		{
-			Q_strncpy(tempstr,"State: Enabled",sizeof(tempstr));
+			V_strncpy(tempstr,"State: Enabled",sizeof(tempstr));
 		}
 		else
 		{
-			Q_strncpy(tempstr,"State: Disabled",sizeof(tempstr));
+			V_strncpy(tempstr,"State: Disabled",sizeof(tempstr));
 		}
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
@@ -759,7 +782,7 @@ void CTriggerHurt::EndTouch( CBaseEntity *pOther )
 // Input  : dt - time since last call
 // Output : int - number of entities actually hurt
 //-----------------------------------------------------------------------------
-#define TRIGGER_HURT_FORGIVE_TIME	3.0f	// time in seconds
+constexpr auto TRIGGER_HURT_FORGIVE_TIME = 3.0f; // time in seconds
 int CTriggerHurt::HurtAllTouchers( float dt )
 {
 	int hurtCount = 0;
@@ -933,8 +956,8 @@ void CTriggerOnce::Spawn( void )
 //  Triggers once when player is looking at m_target
 //
 // ##################################################################################
-#define SF_TRIGGERLOOK_FIREONCE		128
-#define SF_TRIGGERLOOK_USEVELOCITY	256
+constexpr auto SF_TRIGGERLOOK_FIREONCE = 128;
+constexpr auto SF_TRIGGERLOOK_USEVELOCITY = 256;
 
 class CTriggerLook : public CTriggerOnce
 {
@@ -1164,7 +1187,7 @@ int CTriggerLook::DrawDebugTextOverlays(void)
 		// Print Look time
 		// ----------------
 		char tempstr[255];
-		Q_snprintf(tempstr,sizeof(tempstr),"Time:   %3.2f",m_flLookTime - std::max<std::common_type_t<int, float>>(0,m_flLookTimeTotal));
+		V_snprintf(tempstr,sizeof(tempstr),"Time:   %3.2f",m_flLookTime - std::max<std::common_type_t<int, float>>(0,m_flLookTimeTotal));
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}
@@ -1206,10 +1229,10 @@ void CTriggerVolume::Activate( void )
 
 }
 
-#define SF_CHANGELEVEL_NOTOUCH		0x0002
-#define SF_CHANGELEVEL_CHAPTER		0x0004
+constexpr auto SF_CHANGELEVEL_NOTOUCH = 0x0002;
+constexpr auto SF_CHANGELEVEL_CHAPTER = 0x0004;
 
-#define cchMapNameMost 32
+constexpr auto cchMapNameMost = 32;
 
 enum
 {
@@ -1288,22 +1311,22 @@ bool CChangeLevel::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "map"))
 	{
-		if (strlen(szValue) >= cchMapNameMost)
+		if (std::strlen(szValue) >= cchMapNameMost)
 		{
 			Warning( "Map name '%s' too long (32 chars)\n", szValue );
-			Assert(0);
+			contract_assert( 0 );
 		}
-		Q_strncpy(m_szMapName, szValue, sizeof(m_szMapName));
+		V_strncpy(m_szMapName, szValue, sizeof(m_szMapName));
 	}
 	else if (FStrEq(szKeyName, "landmark"))
 	{
-		if (strlen(szValue) >= cchMapNameMost)
+		if (std::strlen(szValue) >= cchMapNameMost)
 		{
 			Warning( "Landmark name '%s' too long (32 chars)\n", szValue );
-			Assert(0);
+			contract_assert( 0 );
 		}
 		
-		Q_strncpy(m_szLandmarkName, szValue, sizeof( m_szLandmarkName ));
+		V_strncpy(m_szLandmarkName, szValue, sizeof( m_szLandmarkName ));
 	}
 	else
 		return BaseClass::KeyValue( szKeyName, szValue );
@@ -1495,7 +1518,7 @@ void CChangeLevel::ChangeLevelNow( CBaseEntity *pActivator )
 	CBaseEntity	*pLandmark;
 	levellist_t	levels[16];
 
-	Assert(!FStrEq(m_szMapName, ""));
+	contract_assert( !FStrEq(m_szMapName, "") );
 
 	// Don't work in deathmatch
 	if ( g_pGameRules->IsDeathmatch() )
@@ -1547,9 +1570,9 @@ void CChangeLevel::ChangeLevelNow( CBaseEntity *pActivator )
 
 	g_iDebuggingTransition = 0;
 	st_szNextSpot[0] = 0;	// Init landmark to NULL
-	Q_strncpy(st_szNextSpot, m_szLandmarkName,sizeof(st_szNextSpot));
+	V_strncpy(st_szNextSpot, m_szLandmarkName,sizeof(st_szNextSpot));
 	// This object will get removed in the call to engine->ChangeLevel, copy the params into "safe" memory
-	Q_strncpy(st_szNextMap, m_szMapName, sizeof(st_szNextMap));
+	V_strncpy(st_szNextMap, m_szMapName, sizeof(st_szNextMap));
 
 	m_hActivator = pActivator;
 
@@ -1625,12 +1648,12 @@ int CChangeLevel::AddTransitionToList( levellist_t *pLevelList, int listCount, c
 		if ( pLevelList[i].pentLandmark == pentLandmark && stricmp( pLevelList[i].mapName, pMapName ) == 0 )
 			return 0;
 	}
-	Q_strncpy( pLevelList[listCount].mapName, pMapName, sizeof(pLevelList[listCount].mapName) );
-	Q_strncpy( pLevelList[listCount].landmarkName, pLandmarkName, sizeof(pLevelList[listCount].landmarkName) );
+	V_strncpy( pLevelList[listCount].mapName, pMapName, sizeof(pLevelList[listCount].mapName) );
+	V_strncpy( pLevelList[listCount].landmarkName, pLandmarkName, sizeof(pLevelList[listCount].landmarkName) );
 	pLevelList[listCount].pentLandmark = pentLandmark;
 
 	CBaseEntity *ent = CBaseEntity::Instance( pentLandmark );
-	Assert( ent );
+	contract_assert( ent );
 
 	pLevelList[listCount].vecLandmarkOrigin = ent->GetAbsOrigin();
 
@@ -1654,7 +1677,7 @@ struct collidelist_t
 // UNDONE: Expand this to the full matrix of solid types on each side and move into enginetrace
 static bool TestEntityTriggerIntersection_Accurate( CBaseEntity *pTrigger, CBaseEntity *pEntity )
 {
-	Assert( pTrigger->GetSolid() == SOLID_BSP );
+	contract_assert( pTrigger->GetSolid() == SOLID_BSP );
 
 	if ( pTrigger->Intersects( pEntity ) )	// It touches one, it's in the volume
 	{
@@ -1676,11 +1699,11 @@ static bool TestEntityTriggerIntersection_Accurate( CBaseEntity *pTrigger, CBase
 		case SOLID_VPHYSICS:
 			{
 				CPhysCollide *pTriggerCollide = modelinfo->GetVCollide( pTrigger->GetModelIndex() )->solids[0];
-				Assert( pTriggerCollide );
+				contract_assert( pTriggerCollide );
 
 				std::vector< collidelist_t > collideList;
 				IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-				int physicsCount = pEntity->VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+				int physicsCount = pEntity->VPhysicsGetObjectList( pList, std::size( pList ) );
 				if ( physicsCount )
 				{
 					for ( int i = 0; i < physicsCount; i++ )
@@ -1788,8 +1811,8 @@ int CChangeLevel::BuildChangeLevelList( levellist_t *pLevelList, int maxList )
 
 // Entity transition flags. These used to live with the save/restore entity table;
 // the save system is gone but the changelevel transition list still tags entities.
-#define FENTTABLE_MOVEABLE		0x20000000
-#define FENTTABLE_GLOBAL		0x10000000
+constexpr auto FENTTABLE_MOVEABLE = 0x20000000;
+constexpr auto FENTTABLE_GLOBAL = 0x10000000;
 
 //------------------------------------------------------------------------------
 // Adds a single entity to the transition list, if appropriate. Returns the new count
@@ -1903,7 +1926,7 @@ int CChangeLevel::BuildEntityTransitionList( CBaseEntity *pLandmarkEntity, const
 		if ( iEntity >= nMaxList )
 		{
 			Warning( "Too many entities across a transition!\n" );
-			Assert( 0 );
+			contract_assert( 0 );
 			return iEntity;
 		}
 
@@ -1931,7 +1954,7 @@ static inline void Set( char *pBuf, int nBit )
 //------------------------------------------------------------------------------
 // Adds in all entities depended on by entities near the transition
 //------------------------------------------------------------------------------
-#define MAX_ENTITY_BYTE_COUNT	(NUM_ENT_ENTRIES >> 3)
+constexpr auto MAX_ENTITY_BYTE_COUNT = (NUM_ENT_ENTRIES >> 3);
 
 
 //------------------------------------------------------------------------------
@@ -1940,7 +1963,7 @@ static inline void Set( char *pBuf, int nBit )
 //------------------------------------------------------------------------------
 
 // We can only ever move 512 entities across a transition
-#define MAX_ENTITY 512
+constexpr auto MAX_ENTITY = 512;
 
 // FIXME: This has grown into a complicated beast. Can we make this more elegant?
 int CChangeLevel::ChangeList( levellist_t *pLevelList, int maxList )
@@ -1986,8 +2009,8 @@ IMPLEMENT_REFLECT_DATAMAP( CTriggerSoftBarrier )
 
 LINK_ENTITY_TO_CLASS( trigger_softbarrier, CTriggerSoftBarrier );
 
-#define SOFTPLANE_FRONT 0
-#define SOFTPLANE_BACK 1
+constexpr auto SOFTPLANE_FRONT = 0;
+constexpr auto SOFTPLANE_BACK = 1;
 
 void CTriggerSoftBarrier::SetupFrontAndBackPlanes()
 {
@@ -2862,7 +2885,7 @@ CAI_BaseNPC *CAI_ChangeHintGroup::FindQualifiedNPC( CAI_BaseNPC *pPrev, CBaseEnt
 
 			case 2:
 			{
-				pEntity = gEntList.FindEntityInSphere( pEntity, GetLocalOrigin(), ( m_flRadius != 0.0 ) ? m_flRadius : FLT_MAX );
+				pEntity = gEntList.FindEntityInSphere( pEntity, GetLocalOrigin(), ( m_flRadius != 0.0 ) ? m_flRadius : std::numeric_limits<float>::max() );
 				break;
 			}
 		}
@@ -2891,14 +2914,14 @@ void CAI_ChangeHintGroup::InputActivate( inputdata_t &inputdata )
 	}
 }
 
-#define SF_CAMERA_PLAYER_POSITION		1
-#define SF_CAMERA_PLAYER_TARGET			2
-#define SF_CAMERA_PLAYER_TAKECONTROL	4
-#define SF_CAMERA_PLAYER_INFINITE_WAIT	8
-#define SF_CAMERA_PLAYER_SNAP_TO		16
-#define SF_CAMERA_PLAYER_NOT_SOLID		32
-#define SF_CAMERA_PLAYER_INTERRUPT		64
-#define SF_CAMERA_PLAYER_SETFOV			128
+constexpr auto SF_CAMERA_PLAYER_POSITION = 1;
+constexpr auto SF_CAMERA_PLAYER_TARGET = 2;
+constexpr auto SF_CAMERA_PLAYER_TAKECONTROL = 4;
+constexpr auto SF_CAMERA_PLAYER_INFINITE_WAIT = 8;
+constexpr auto SF_CAMERA_PLAYER_SNAP_TO = 16;
+constexpr auto SF_CAMERA_PLAYER_NOT_SOLID = 32;
+constexpr auto SF_CAMERA_PLAYER_INTERRUPT = 64;
+constexpr auto SF_CAMERA_PLAYER_SETFOV = 128;
 
 
 LINK_ENTITY_TO_CLASS( point_viewcontrol, CTriggerCamera );
@@ -2967,7 +2990,7 @@ bool CTriggerCamera::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "wait"))
 	{
-		m_flWait = atof(szValue);
+		m_flWait = std::atof(szValue);
 	}
 	else if (FStrEq(szKeyName, "moveto"))
 	{
@@ -2975,11 +2998,11 @@ bool CTriggerCamera::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else if (FStrEq(szKeyName, "acceleration"))
 	{
-		m_acceleration = atof( szValue );
+		m_acceleration = std::atof( szValue );
 	}
 	else if (FStrEq(szKeyName, "deceleration"))
 	{
-		m_deceleration = atof( szValue );
+		m_deceleration = std::atof( szValue );
 	}
 	else
 		return BaseClass::KeyValue( szKeyName, szValue );
@@ -3120,7 +3143,7 @@ void CTriggerCamera::Enable( void )
 		return;
 	}
 
-	Assert( m_hPlayer->IsPlayer() );
+	contract_assert( m_hPlayer->IsPlayer() );
 	CBasePlayer *pPlayer = nullptr;
 
 	if ( m_hPlayer->IsPlayer() )
@@ -3203,7 +3226,7 @@ void CTriggerCamera::Enable( void )
 
 	if (HasSpawnFlags(SF_CAMERA_PLAYER_TAKECONTROL ) )
 	{
-		((CBasePlayer*)m_hPlayer.Get())->EnableControl(FALSE);
+		((CBasePlayer*)m_hPlayer.Get())->EnableControl(false);
 	}
 
 	if ( m_sPath != NULL_STRING )
@@ -3307,7 +3330,7 @@ void CTriggerCamera::Disable( void )
 			}
 
 			pBasePlayer->SetViewEntity( nullptr );
-			pBasePlayer->EnableControl(TRUE);
+			pBasePlayer->EnableControl(true);
 			pBasePlayer->m_Local.m_bDrawViewmodel = true;
 		}
 
@@ -3606,8 +3629,8 @@ void CTriggerCamera::Move()
 }
 
 
-#define SF_CAMERA_MULTIPLAYER_DISABLE_ON_MOVEEND	1
-#define SF_CAMERA_MULTIPLAYER_PLAYER_SETFOV			2
+constexpr auto SF_CAMERA_MULTIPLAYER_DISABLE_ON_MOVEEND = 1;
+constexpr auto SF_CAMERA_MULTIPLAYER_PLAYER_SETFOV = 2;
 
 
 //-----------------------------------------------------------------------------
@@ -3790,7 +3813,7 @@ void CMoveableCamera::Move( void )
 	}
 	else
 	{
-		Assert( tt >= 0 );
+		contract_assert( tt >= 0 );
 
 		Vector nextPos = ( (vEndPos - m_vStartPos) * MoveTime(tt) ) + m_vStartPos;
 
@@ -4141,7 +4164,7 @@ void CTriggerViewProxy::Enable( void )
 		return;
 	}
 
-	Assert( m_hPlayer->IsPlayer() );
+	contract_assert( m_hPlayer->IsPlayer() );
 	CBasePlayer *pPlayer = nullptr;
 
 	if ( m_hPlayer->IsPlayer() )
@@ -4169,7 +4192,7 @@ void CTriggerViewProxy::Enable( void )
 	
 	if (HasSpawnFlags(SF_CAMERA_PLAYER_TAKECONTROL ) )
 	{
-		((CBasePlayer*)m_hPlayer.Get())->AddFlag( FL_ATCONTROLS );//EnableControl(FALSE);
+		((CBasePlayer*)m_hPlayer.Get())->AddFlag( FL_ATCONTROLS );//EnableControl(false);
 	}
 	
 	SetAbsVelocity( vec3_origin );
@@ -4211,7 +4234,7 @@ void CTriggerViewProxy::Disable( void )
 			}
 
 			pBasePlayer->SetViewEntity( nullptr );
-			pBasePlayer->EnableControl(TRUE);
+			pBasePlayer->EnableControl(true);
 			((CBasePlayer*)m_hPlayer.Get())->RemoveFlag( FL_ATCONTROLS );
 			pBasePlayer->m_Local.m_bDrawViewmodel = true;
 		}
@@ -4422,7 +4445,7 @@ static void PlayCDTrack( int iTrack )
 	// manually find the single player. 
 	pClient = INDEXENT( 1 );
 
-	Assert(gpGlobals->maxClients == 1);
+	contract_assert( gpGlobals->maxClients == 1 );
 	
 	// Can't play if the client is not connected!
 	if ( !pClient )
@@ -4636,7 +4659,7 @@ void CTriggerProximity::MeasureThink( void )
 //
 // ##################################################################################
 
-#define MAX_WIND_CHANGE		5.0f
+constexpr auto MAX_WIND_CHANGE = 5.0f;
 
 //------------------------------------------------------------------------------
 // Purpose :
@@ -4659,12 +4682,12 @@ public:
 
 		// Turn wind yaw direction into a vector and add noise
 		QAngle vWindAngle = vec3_angle;	
-		vWindAngle[1] = m_nWindYaw+(30*cos(nNoiseMod * gpGlobals->curtime + nNoiseMod));
+		vWindAngle[1] = m_nWindYaw+(30*std::cos(nNoiseMod * gpGlobals->curtime + nNoiseMod));
 		Vector vWind;
 		AngleVectors(vWindAngle,&vWind);
 
 		// Add lift with noise
-		vWind.z = 1.1 + (1.0 * sin(nNoiseMod * gpGlobals->curtime + nNoiseMod));
+		vWind.z = 1.1 + (1.0 * std::sin(nNoiseMod * gpGlobals->curtime + nNoiseMod));
 
 		linear = 3*vWind*m_flWindSpeed;
 		angular = vec3_origin;
@@ -4680,7 +4703,7 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CPhysicsWind )
 
 extern int g_sModelIndexSmoke;
 extern float	GetFloorZ(const Vector &origin);
-#define WIND_THINK_CONTEXT		"WindThinkContext"
+inline constexpr const char *WIND_THINK_CONTEXT = "WindThinkContext";
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -4755,7 +4778,7 @@ bool CTriggerWind::KeyValue( const char *szKeyName, const char *szValue )
 	// Done here to avoid collision with CBaseEntity's speed key
 	if ( FStrEq(szKeyName, "Speed") )
 	{
-		m_nSpeedBase = atoi( szValue );
+		m_nSpeedBase = std::atoi( szValue );
 	}
 	else
 		return BaseClass::KeyValue( szKeyName, szValue );
@@ -4931,11 +4954,11 @@ int CTriggerWind::DrawDebugTextOverlays(void)
 		// Print Target
 		// --------------
 		char tempstr[255];
-		Q_snprintf(tempstr,sizeof(tempstr),"Dir: %i (%i)",m_nDirCurrent,m_nDirTarget);
+		V_snprintf(tempstr,sizeof(tempstr),"Dir: %i (%i)",m_nDirCurrent,m_nDirTarget);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"Speed: %i (%i)",m_nSpeedCurrent,m_nSpeedTarget);
+		V_snprintf(tempstr,sizeof(tempstr),"Speed: %i (%i)",m_nSpeedCurrent,m_nSpeedTarget);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}
@@ -5022,7 +5045,7 @@ bool CTriggerHierarchy::HasChildThatPassesChildFilter( CBaseEntity *pEnt )
 //  Blows physics objects in the trigger
 //
 // ##################################################################################
-#define TRIGGERIMPACT_VIEWKICK_SCALE 0.1
+constexpr auto TRIGGERIMPACT_VIEWKICK_SCALE = 0.1;
 
 class CTriggerImpact : public CTriggerMultiple
 {
@@ -5131,7 +5154,7 @@ int CTriggerImpact::DrawDebugTextOverlays(void)
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
 		char tempstr[255];
-		Q_snprintf(tempstr,sizeof(tempstr),"Magnitude: %3.2f",m_flMagnitude);
+		V_snprintf(tempstr,sizeof(tempstr),"Magnitude: %3.2f",m_flMagnitude);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}
@@ -5954,7 +5977,7 @@ void CTriggerCallback::StartTouch( CBaseEntity *pOther )
 	if ( PassesTriggerFilters( pOther ) == false )
 		return;
 
-	Assert( m_pfnCallback );
+	contract_assert( m_pfnCallback );
 
 	if ( GetParent() && m_pfnCallback )
 	{

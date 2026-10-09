@@ -1,16 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef PHYSICS_PROP_RAGDOLL_H
-#define PHYSICS_PROP_RAGDOLL_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
 #include "ragdoll_shared.h"
 #include "player_pickup.h"
+#include "baseanimating.h"
 
 namespace ResponseRules { class IResponseSystem; };
 
@@ -160,5 +156,3 @@ CBaseAnimating *CreateServerRagdollSubmodel( CBaseAnimating *pOwner, const char 
 bool Ragdoll_IsPropRagdoll( CBaseEntity *pEntity );
 void Ragdoll_GetAngleOverrideString( char *pOut, int size, CBaseEntity *pEntity );
 ragdoll_t *Ragdoll_GetRagdoll( CBaseEntity *pEntity );
-
-#endif // PHYSICS_PROP_RAGDOLL_H

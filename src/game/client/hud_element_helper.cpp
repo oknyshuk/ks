@@ -1,10 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Helper for the CHudElement class to add themselves to the list of hud elements
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "hud_element_helper.h"
 
 // Start with empty list
@@ -47,7 +56,7 @@ CHudElementHelper::CHudElementHelper( CHudElement *( *pfnCreate )( void ), int d
 	m_iFlags = flags;
 
 	// Set attributes
-	assert( pfnCreate );
+	contract_assert( pfnCreate );
 	m_pfnCreate		= pfnCreate;
 }
 
@@ -90,4 +99,3 @@ void CHudElementHelper::CreateAllElements( void )
 		p = p->GetNext();
 	}
 }
-

@@ -1,14 +1,8 @@
-//========= Copyright (c) 1996-2012, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2012 Valve Corporation
 
-#ifndef CS_CUSTOM_EPIDERMIS_VISUALSDATA_PROCESSOR_H
-#define CS_CUSTOM_EPIDERMIS_VISUALSDATA_PROCESSOR_H
-
-#define CUSTOM_EPIDERMIS_MAX_VALID_STYLE 4
+inline constexpr auto CUSTOM_EPIDERMIS_MAX_VALID_STYLE = 4;
 
 #include "cs_shareddefs.h"
 #include "materialsystem/base_visuals_data_processor.h"
@@ -79,6 +73,3 @@ private:
 	CCSSEpidermisVisualsData_t m_visualsData;
 	char *m_pCompositingShaderName;
 };
-
-
-#endif // CUSTOM_EPIDERMIS_VISUALSDATA_PROCESSOR

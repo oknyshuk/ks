@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef DAMAGEMODIFIER_H
-#define DAMAGEMODIFIER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class CBaseEntity;
 
@@ -38,6 +31,3 @@ private:
 	CHandle<CBaseEntity>			m_hEnt;
 	bool							m_bDoneToMe;	// True = modifies damage done to the entity, false = damage done by the entity
 };
-
-
-#endif // DAMAGEMODIFIER_H

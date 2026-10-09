@@ -1,20 +1,23 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "hudelement.h"
-#include "localize/ilocalize.h"
 #include "c_baseplayer.h"
 #include "voice_status.h"
 #include "clientmode_shared.h"
 #include "c_playerresource.h"
-#include "voice_common.h"
 #include "engineinterface.h"
-#include "steam/steam_api.h"
-
 
 extern ConVar sv_talk_enemy_dead;
 extern ConVar sv_talk_enemy_living;

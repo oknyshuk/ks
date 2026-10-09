@@ -1,15 +1,10 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
+
 // Purpose: Helper methods + classes for sound
-//
-//===========================================================================//
-
-#ifndef SOUNDUTILS_H
-#define SOUNDUTILS_H
-
 
 #include "tier2/riff.h"
-
 
 //-----------------------------------------------------------------------------
 // RIFF reader/writers that use the file system
@@ -22,7 +17,3 @@ extern IFileWriteBinary *g_pFSIOWriteBinary;
 // Returns the duration of a wav file
 //-----------------------------------------------------------------------------
 float GetWavSoundDuration( const char *pWavFile );
-
-
-#endif // SOUNDUTILS_H
-

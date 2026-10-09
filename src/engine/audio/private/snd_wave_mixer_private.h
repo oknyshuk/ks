@@ -1,19 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SND_WAVE_MIXER_PRIVATE_H
-#define SND_WAVE_MIXER_PRIVATE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "snd_audio_source.h"
 #include "snd_wave_mixer.h"
@@ -22,7 +9,7 @@
 
 class IWaveData;
 
-abstract_class CAudioMixerWave : public CAudioMixer
+class CAudioMixerWave : public CAudioMixer
 {
 public:
 							CAudioMixerWave( IWaveData *data );
@@ -70,6 +57,3 @@ protected:
 	bool				m_finished;
 	int					m_delaySamples;
 };
-
-
-#endif // SND_WAVE_MIXER_PRIVATE_H

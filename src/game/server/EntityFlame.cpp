@@ -1,15 +1,39 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Flame entity to be attached to target entity. Serves two purposes:
-//
 //			1) An entity that can be placed by a level designer and triggered
 //			   to ignite a target entity.
-//
 //			2) An entity that can be created at runtime to ignite a target entity.
-//
-//===========================================================================//
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "EntityFlame.h"
@@ -21,9 +45,6 @@
 #include "ai_node.h"
 #include "ai_network.h"
 #include "ai_localnavigator.h"
-
-
-
 
 IMPLEMENT_REFLECT_SERVERCLASS( CEntityFlame, DT_EntityFlame )
 
@@ -352,4 +373,3 @@ void CEnvEntityIgniter::InputIgnite( inputdata_t &inputdata )
 		CEntityFlame::Create( pTarget, m_flLifetime );
 	}
 }
-

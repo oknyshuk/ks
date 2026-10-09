@@ -1,26 +1,18 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_PLANE_SOLVER_H
-#define AI_PLANE_SOLVER_H
-
-
-#include "utlvector.h"
-#include <list>
+import ks.tier1;
+import std;
 #include "ai_movesolver.h"
 #include "ehandle.h"
-#include "mathlib/vector.h"
 #include "simtimer.h"
 #include "ai_navtype.h"
+#include "entitylist.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class Vector2D;
 class CBaseEntity;
 struct edict_t;
 class CAI_BaseNPC;
@@ -38,8 +30,9 @@ enum AI_SuggestorResult_t
 	SR_FAIL
 };
 
-DECLARE_POINTER_HANDLE( Obstacle_t );
-#define OBSTACLE_INVALID ( (Obstacle_t)0 )
+struct Obstacle_t__ { int unused; };
+using Obstacle_t = Obstacle_t__ *;
+inline constexpr auto OBSTACLE_INVALID = ( (Obstacle_t)0 );
 
 class CAI_PlaneSolver
 {
@@ -169,13 +162,11 @@ inline void CAI_PlaneSolver::Reset()
 	m_RefreshSamplesTimer.Force();
 
 	m_fSolvedPrev = false;
-	m_PrevTarget.Init( FLT_MAX, FLT_MAX, FLT_MAX ),
+	m_PrevTarget.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() ),
 	m_PrevSolution = 0;
-	m_ClosestHaveBeenToCurrent = FLT_MAX;
-	m_TimeLastProgress = FLT_MAX;
+	m_ClosestHaveBeenToCurrent = std::numeric_limits<float>::max();
+	m_TimeLastProgress = std::numeric_limits<float>::max();
 	m_fCannotSolveCurrent = false;
 }
 	
 //=============================================================================
-
-#endif // AI_PLANE_SOLVER_H

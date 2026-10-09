@@ -1,24 +1,32 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: A blood spray effect to expose successful hits.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: A blood spray effect to expose successful hits.
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
 #include "precache_register.h"
 #include "fx_sparks.h"
-#include "iefx.h"
 #include "c_te_effect_dispatch.h"
 #include "particles_ez.h"
-#include "decals.h"
 #include "engine/IEngineSound.h"
 #include "fx_quad.h"
-#include "engine/ivdebugoverlay.h"
 #include "shareddefs.h"
 #include "fx_blood.h"
-#include "view.h"
 #include "c_cs_player.h"
-
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectCSBloodSpray )
 PRECACHE( PARTICLE_SYSTEM, "blood_impact_basic" )

@@ -1,13 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Base combat character with no AI
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef BASECOMBATCHARACTER_H
-#define BASECOMBATCHARACTER_H
-
 
 #include "reflect_annotations.h"
 #include "baseflex.h"
@@ -15,7 +10,6 @@
 #include "ai_hull.h"
 #include "ai_utils.h"
 #include "physics_impact_damage.h"
-#include <limits.h>
 #include "weapon_proficiency.h"
 
 #if   defined( CSTRIKE_DLL )
@@ -70,10 +64,10 @@ enum Capability_t
 	bits_CAP_SIMPLE_RADIUS_DAMAGE	= 0x80000000, // Do not use robust radius damage model on this character.
 };
 
-#define bits_CAP_DOORS_GROUP    (bits_CAP_AUTO_DOORS | bits_CAP_OPEN_DOORS)
-#define bits_CAP_RANGE_ATTACK_GROUP	(bits_CAP_WEAPON_RANGE_ATTACK1 | bits_CAP_WEAPON_RANGE_ATTACK2)
-#define bits_CAP_MELEE_ATTACK_GROUP	(bits_CAP_WEAPON_MELEE_ATTACK1 | bits_CAP_WEAPON_MELEE_ATTACK2)
-#define bits_CAP_MOVE_GROUP    (bits_CAP_MOVE_GROUND | bits_CAP_MOVE_JUMP | bits_CAP_MOVE_FLY | bits_CAP_MOVE_CLIMB | bits_CAP_MOVE_CRAWL | bits_CAP_MOVE_SWIM)
+inline constexpr auto bits_CAP_DOORS_GROUP = (bits_CAP_AUTO_DOORS | bits_CAP_OPEN_DOORS);
+inline constexpr auto bits_CAP_RANGE_ATTACK_GROUP = (bits_CAP_WEAPON_RANGE_ATTACK1 | bits_CAP_WEAPON_RANGE_ATTACK2);
+inline constexpr auto bits_CAP_MELEE_ATTACK_GROUP = (bits_CAP_WEAPON_MELEE_ATTACK1 | bits_CAP_WEAPON_MELEE_ATTACK2);
+inline constexpr auto bits_CAP_MOVE_GROUP = (bits_CAP_MOVE_GROUND | bits_CAP_MOVE_JUMP | bits_CAP_MOVE_FLY | bits_CAP_MOVE_CLIMB | bits_CAP_MOVE_CRAWL | bits_CAP_MOVE_SWIM);
 
 
 class CBaseCombatWeapon;
@@ -96,7 +90,7 @@ enum Disposition_t
 	D_NEUTRAL = D_NU,	// Neutral
 };
 
-const int DEF_RELATIONSHIP_PRIORITY = INT_MIN;
+const int DEF_RELATIONSHIP_PRIORITY = std::numeric_limits<int>::min();
 
 struct Relationship_t
 {
@@ -454,7 +448,7 @@ public:
 	// -----------------------
 	// Notification from INextBots.
 	// -----------------------
-	virtual void OnPursuedBy( INextBot * RESTRICT pPursuer ){} // called every frame while pursued by a bot in DirectChase.
+	virtual void OnPursuedBy( INextBot * __restrict__ pPursuer ){} // called every frame while pursued by a bot in DirectChase.
 
 
 public:
@@ -605,5 +599,3 @@ public:
 	float				m_flForceScale;
 	bool				m_bDamageAnyNPC;
 };
-
-#endif // BASECOMBATCHARACTER_H

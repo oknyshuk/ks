@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( IENGINEUI_H )
-#define IENGINEUI_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
-
-#include "interface.h"
+import std;
+import ks.tier1;
 
 // In-game panels are cropped to the current engine viewport size
 enum PaintMode_t
@@ -19,7 +13,7 @@ enum PaintMode_t
 	PAINT_INGAMEPANELS  = (1<<1),
 };
 
-abstract_class IEngineUI
+class IEngineUI
 {
 public:
 	virtual					~IEngineUI( void ) { }
@@ -29,8 +23,6 @@ public:
 	virtual void			ActivateGameUI() = 0;
 };
 
-#define VENGINE_UI_VERSION	"VEngineUI001"
+inline constexpr const char *VENGINE_UI_VERSION = "VEngineUI001";
 
 extern IEngineUI *engineui;
-
-#endif // IENGINEUI_H

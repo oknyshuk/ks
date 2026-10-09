@@ -1,19 +1,45 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Implements an explosion entity and a support spark shower entity.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Implements an explosion entity and a support spark shower entity.
+
+import std;
+import ks.vstdlib;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "decals.h"
 #include "explode.h"
 #include "ai_basenpc.h"
 #include "IEffects.h"
-#include "vstdlib/random.h"
-#include "tier1/strtools.h"
 #include "shareddefs.h"
 
 //-----------------------------------------------------------------------------
@@ -378,7 +404,7 @@ void ExplosionCreate( const Vector &center, const QAngle &angles,
 	char			buf[128];
 
 	CEnvExplosion *pExplosion = (CEnvExplosion*)CBaseEntity::Create( "env_explosion", center, angles, pOwner );
-	Q_snprintf( buf,sizeof(buf), "%3d", magnitude );
+	V_snprintf( buf,sizeof(buf), "%3d", magnitude );
 	const char *szKeyName = "iMagnitude";
 	char *szValue = buf;
 	pExplosion->KeyValue( szKeyName, szValue );
@@ -387,13 +413,13 @@ void ExplosionCreate( const Vector &center, const QAngle &angles,
 
 	if ( radius )
 	{
-		Q_snprintf( buf,sizeof(buf), "%d", radius );
+		V_snprintf( buf,sizeof(buf), "%d", radius );
 		pExplosion->KeyValue( "iRadiusOverride", buf );
 	}
 
 	if ( flExplosionForce != 0.0f )
 	{
-		Q_snprintf( buf,sizeof(buf), "%.3f", flExplosionForce );
+		V_snprintf( buf,sizeof(buf), "%.3f", flExplosionForce );
 		pExplosion->KeyValue( "DamageForce", buf );
 	}
 
@@ -474,7 +500,7 @@ int CEnvExplosion::DrawDebugTextOverlays( void )
 	{
 		char tempstr[512];
 
-		Q_snprintf(tempstr,sizeof(tempstr),"    magnitude: %i", m_iMagnitude);
+		V_snprintf(tempstr,sizeof(tempstr),"    magnitude: %i", m_iMagnitude);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}

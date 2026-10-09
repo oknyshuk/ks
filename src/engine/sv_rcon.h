@@ -1,28 +1,19 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-#ifndef SV_RCON_H
-#define SV_RCON_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+import ks.tier1;
 #include "sv_main.h"
 #include "netmessages.h"
 #include "net.h"
 #include "client.h"
-#include "utlvector.h"
-#include <cstddef>
-#include <deque>
-#include <span>
-#include <vector>
-#include "netadr.h"
+import std;
 #include "sv_remoteaccess.h"
 #include "tier2/socketcreator.h"
 #include "igameserverdata.h"
 
-#define RCON_MAX_OUTSTANDING_SENDS 100 // max packets to queue before dropping connection
-#define RCON_MAX_RCON_COMMAND_LEN 1024  // max size of an incoming command in bytes
+inline constexpr auto RCON_MAX_OUTSTANDING_SENDS = 100; // max packets to queue before dropping connection
+inline constexpr auto RCON_MAX_RCON_COMMAND_LEN = 1024; // max size of an incoming command in bytes
 
 //-----------------------------------------------------------------------------
 // container class to handle network streams
@@ -62,7 +53,7 @@ private:
 		std::span< const std::byte > Remaining() const { return std::span( data ).subspan( nSent ); }
 
 		std::vector< std::byte >	data;
-		size_t						nSent = 0;
+		std::size_t						nSent = 0;
 	};
 
 	struct ConnectedRConSocket_t
@@ -71,7 +62,7 @@ private:
 		int				lastRequestID;
 		ra_listener_id	listenerID;
 		std::vector< std::byte >	packetbuffer; // data buffer containing pending incoming data for this connection
-		std::deque< PendingSend_t > m_OutstandingSends; // packets pending to be send (queued because of WSAEWOULDBLOCK )
+		std::deque< PendingSend_t > m_OutstandingSends; // packets pending to be send (queued because the socket would block )
 	};
 
 	struct FailedRCon_t
@@ -104,8 +95,3 @@ inline CRConServer::ConnectedRConSocket_t* CRConServer::GetSocketData( int nInde
 }
 
 CRConServer & RCONServer();
-#ifdef ENABLE_RPT
-CRConServer & RPTServer();
-#endif // ENABLE_RPT
-
-#endif // SV_RCON_H

@@ -1,13 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#include <stdio.h>
-#include <string.h>
-#include "tier0/dbg.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.core;
 
 struct PhonemeMap_t
 {
@@ -88,7 +83,7 @@ static PhonemeMap_t g_Phonemes[] =
 //-----------------------------------------------------------------------------
 const char *ConvertPhoneme( int code )
 {
-	for ( int i = 0; i < ARRAYSIZE( g_Phonemes ); ++i )
+	for ( int i = 0; i < std::size( g_Phonemes ); ++i )
 	{
 		PhonemeMap_t *test = &g_Phonemes[ i ];
 		if ( test->code == code )
@@ -106,7 +101,7 @@ const char *ConvertPhoneme( int code )
 //-----------------------------------------------------------------------------
 int TextToPhoneme( const char *text )
 {
-	for ( int i = 0; i < ARRAYSIZE( g_Phonemes ); ++i )
+	for ( int i = 0; i < std::size( g_Phonemes ); ++i )
 	{
 		PhonemeMap_t *test = &g_Phonemes[ i ];
 		if ( !stricmp( test->string, text ) )
@@ -124,7 +119,7 @@ int TextToPhoneme( const char *text )
 //-----------------------------------------------------------------------------
 float WeightForPhonemeCode( int code )
 {
-	for ( int i = 0; i < ARRAYSIZE( g_Phonemes ); ++i )
+	for ( int i = 0; i < std::size( g_Phonemes ); ++i )
 	{
 		PhonemeMap_t *test = &g_Phonemes[ i ];
 		if ( test->code == code )
@@ -142,7 +137,7 @@ float WeightForPhonemeCode( int code )
 //-----------------------------------------------------------------------------
 float WeightForPhoneme( char *text )
 {
-	for ( int i = 0; i < ARRAYSIZE( g_Phonemes ); ++i )
+	for ( int i = 0; i < std::size( g_Phonemes ); ++i )
 	{
 		PhonemeMap_t *test = &g_Phonemes[ i ];
 		if ( !stricmp( test->string, text ) )
@@ -155,12 +150,12 @@ float WeightForPhoneme( char *text )
 
 int NumPhonemes()
 {
-	return ARRAYSIZE( g_Phonemes );
+	return std::size( g_Phonemes );
 }
 
 const char *NameForPhonemeByIndex( int index )
 {
-	Assert( index >= 0 && index < NumPhonemes() );
+	contract_assert( index >= 0 && index < NumPhonemes() );
 	return g_Phonemes[ index ].string;
 }
 
@@ -171,7 +166,7 @@ const char *NameForPhonemeByIndex( int index )
 //-----------------------------------------------------------------------------
 int TextToPhonemeIndex( const char *text )
 {
-	for ( int i = 0; i < ARRAYSIZE( g_Phonemes ); ++i )
+	for ( int i = 0; i < std::size( g_Phonemes ); ++i )
 	{
 		PhonemeMap_t *test = &g_Phonemes[ i ];
 		if ( !stricmp( test->string, text ) )
@@ -204,7 +199,7 @@ const char *DescForPhonemeByIndex( int index )
 
 unsigned char CodeToByteCode( int code )
 {
-	for ( int i = 0; i < ARRAYSIZE( g_Phonemes ); ++i )
+	for ( int i = 0; i < std::size( g_Phonemes ); ++i )
 	{
 		if ( g_Phonemes[ i ].code == code )
 		{
@@ -217,7 +212,7 @@ unsigned char CodeToByteCode( int code )
 
 int ByteCodeToCode( unsigned char byteCode )
 {
-	for ( int i = 0; i < ARRAYSIZE( g_Phonemes ); ++i )
+	for ( int i = 0; i < std::size( g_Phonemes ); ++i )
 	{
 		if ( g_Phonemes[ i ].byteCode == byteCode )
 		{

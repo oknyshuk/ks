@@ -1,13 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#ifndef C_FIRE_SMOKE_H
-#define C_FIRE_SMOKE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 
@@ -16,9 +11,9 @@
 #include "glow_overlay.h"
 #include "view.h"
 #include "particle_litsmokeemitter.h"
-#include "tier1/tracked_ref.h"
-#include "tier1/intrusive_ptr.h"
-
+import std;
+#include "sharedInterface.h"
+#include "c_baseplayer.h"
 
 void RecvProxy_Scale( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
@@ -94,13 +89,13 @@ class C_FireFromAboveSprite : public C_Sprite
 
 #define	NUM_CHILD_FLAMES	4
 
-#define	SMOKE_RISE_RATE		92.0f
-#define	SMOKE_LIFETIME		2.0f
-#define	EMBER_LIFETIME		2.0f
+inline constexpr auto SMOKE_RISE_RATE = 92.0f;
+inline constexpr auto SMOKE_LIFETIME = 2.0f;
+inline constexpr auto EMBER_LIFETIME = 2.0f;
 
-#define	FLAME_CHILD_SPREAD	64.0f
-#define	FLAME_SOURCE_HEIGHT	128.0f
-#define	FLAME_FROM_ABOVE_SOURCE_HEIGHT	32.0f
+inline constexpr auto FLAME_CHILD_SPREAD = 64.0f;
+inline constexpr auto FLAME_SOURCE_HEIGHT = 128.0f;
+inline constexpr auto FLAME_FROM_ABOVE_SOURCE_HEIGHT = 32.0f;
 
 //==================================================
 // C_FireSmoke
@@ -109,12 +104,12 @@ class C_FireFromAboveSprite : public C_Sprite
 //NOTENOTE: Mirrored in dlls/fire_smoke.h
 #define	bitsFIRESMOKE_NONE					0x00000000
 #define	bitsFIRESMOKE_ACTIVE				0x00000001
-#define	bitsFIRESMOKE_SMOKE					0x00000002
-#define	bitsFIRESMOKE_SMOKE_COLLISION		0x00000004
-#define	bitsFIRESMOKE_GLOW					0x00000008
-#define	bitsFIRESMOKE_VISIBLE_FROM_ABOVE	0x00000010
+inline constexpr int bitsFIRESMOKE_SMOKE = 0x00000002;
+inline constexpr int bitsFIRESMOKE_SMOKE_COLLISION = 0x00000004;
+inline constexpr int bitsFIRESMOKE_GLOW = 0x00000008;
+inline constexpr int bitsFIRESMOKE_VISIBLE_FROM_ABOVE = 0x00000010;
 
-#define	OVERLAY_MAX_VISIBLE_RANGE	512.0f
+inline constexpr auto OVERLAY_MAX_VISIBLE_RANGE = 512.0f;
 
 
 class [[= ks::reflect::NetTable{ .name = "DT_FireSmoke" } ]]
@@ -217,9 +212,9 @@ public:
 
 		float	time = Helper_GetTime() + m_nGUID;
 
-		result = sin( time * 1000.0f );
+		result = std::sin( time * 1000.0f );
 		result += 0.5f * sin( time * 2000.0f );
-		result -= 0.5f * cos( time * 8000.0f );
+		result -= 0.5f * std::cos( time * 8000.0f );
 		
 		return result;
 	}
@@ -273,5 +268,3 @@ public:
 	float		m_flScale;
 	int			m_nGUID;
 };
-
-#endif // C_FIRE_SMOKE_H

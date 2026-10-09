@@ -1,13 +1,9 @@
-//====== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#ifndef CLOAK_DX9_HELPER_H
-#define CLOAK_DX9_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -22,7 +18,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct Cloak_DX9_Vars_t
 {
-	Cloak_DX9_Vars_t() { memset( this, 0xFF, sizeof( *this ) ); }
+	Cloak_DX9_Vars_t() { std::memset( this, 0xFF, sizeof( *this ) ); }
 
 	int m_nBaseTexture;
 	int m_nRefractAmount;
@@ -56,5 +52,3 @@ void InitParamsCloak_DX9( CBaseVSShader *pShader, IMaterialVar** params, const c
 void InitCloak_DX9( CBaseVSShader *pShader, IMaterialVar** params, Cloak_DX9_Vars_t &info );
 void DrawCloak_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 				   IShaderShadow* pShaderShadow, Cloak_DX9_Vars_t &info, VertexCompressionType_t vertexCompression );
-
-#endif // CLOAK_DX9_HELPER_H

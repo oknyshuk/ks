@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_BLENDED_MOVEMENT_H
-#define AI_BLENDED_MOVEMENT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ai_basenpc.h"
 #include "ai_motor.h"
@@ -122,7 +116,7 @@ private:
 
 		void Init( void )
 		{
-			memset( this, 0, sizeof(*this) );
+			std::memset( this, 0, sizeof(*this) );
 		};
 
 		float	flTime;			// time till next entry
@@ -215,12 +209,11 @@ class CAI_BlendingHost : public BASE_NPC
 {
 	DECLARE_CLASS_NOFRIEND( CAI_BlendingHost, BASE_NPC );
 public:
-	const CAI_BlendedMotor *GetBlendedMotor() const { return assert_cast<const CAI_BlendedMotor *>(this->GetMotor()); }
-	CAI_BlendedMotor *		GetBlendedMotor()		{ return assert_cast<CAI_BlendedMotor *>(this->GetMotor()); }
+	const CAI_BlendedMotor *GetBlendedMotor() const { return static_cast<const CAI_BlendedMotor *>(this->GetMotor()); }
+	CAI_BlendedMotor *		GetBlendedMotor()		{ return static_cast<CAI_BlendedMotor *>(this->GetMotor()); }
 
 	CAI_Motor *CreateMotor()
 	{
-		MEM_ALLOC_CREDIT();
 		return new CAI_BlendedMotor( this );
 	}
 
@@ -257,5 +250,3 @@ class CAI_BlendedNPC : public CAI_BlendingHost<CAI_BaseNPC>
 };
 
 //-----------------------------------------------------------------------------	
-
-#endif

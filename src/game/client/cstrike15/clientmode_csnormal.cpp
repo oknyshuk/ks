@@ -1,12 +1,21 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 #include "hud.h"
 #include "clientmode_csnormal.h"
 #include "cdll_client_int.h"
@@ -16,7 +25,6 @@
 #include "filesystem.h"
 #include "hud_basechat.h"
 #include "view_shared.h"
-#include "view.h"
 #include "ivrenderview.h"
 #include "cs_gamerules.h"
 #include "gameui/gameui_interface.h"
@@ -25,40 +33,28 @@
 #include "cs_item_inventory.h"
 #include "c_props.h"
 #include "c_baseplayer.h"
-#include "model_types.h"
-#include "iefx.h"
-#include "dlight.h"
-#include <imapoverview.h>
 #include "c_playerresource.h"
 #include "c_soundscape.h"
-#include <keyvalues.h>
-#include "text_message.h"
 #include "uicenterprint.h"
 #include "physpropclientside.h"
 #include "c_weapon__stubs.h"
 #include <engine/IEngineSound.h>
+import ks.tier1;
+import std;
 #include "c_cs_hostage.h"
 #include "buy_presets/buy_presets.h"
-#include "bitbuf.h"
 #include "usermessages.h"
 #include "prediction.h"
-#include "datacache/imdlcache.h"
-#include "iachievementmgr.h"
 #include "achievementmgr.h"
-#include "cs_achievementdefs.h"
 #include "achievements_cs.h"
 #include "hud_macros.h"
 #include "c_plantedc4.h"
-#include "tier1/fmtstr.h"
 #include "cs_client_gamestats.h"
 #include "viewpostprocess.h"
 #include "../../engine/keys.h"
-#include "inputsystem/iinputsystem.h"
-#include "matchmaking/mm_helpers.h"
 #include "RocketUI/rkmenu_main.h"
 #include "gameui/uigamedata.h"
 #include "GameStats.h"
-#include "platforminputdevice.h"
 #include "glow_outline_effect.h"
 #include "hltvcamera.h"
 #include "basecsgrenade_projectile.h"
@@ -66,8 +62,6 @@
 #include "localize/ilocalize.h"
 #include "hltvreplaysystem.h"
 #include "netmessages.h"
-#include "playerdecals_signature.h"
-
 
 //
 // WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!!
@@ -148,9 +142,20 @@ struct PlayerSprayClientRequestData_t
 static uint64 s_flLastDigitalSignatureTime = 0;
 static std::map< int, PlayerSprayClientRequestData_t > s_mapClientDigitalSignatureRequests;
 
+static uint32 GetLocalAccountID()
+{
+	CPlayerId localId;
+	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	if ( pLocalPlayer && pLocalPlayer->GetPlayerID( &localId ) )
+		return localId.GetAccountID();
+	return 0;
+}
+
 
 //--------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( cl_reloadpostprocessparams, "", FCVAR_CHEAT )
+static void cl_reloadpostprocessparams( const CCommand &args );
+static ConCommand cl_reloadpostprocessparams_command( "cl_reloadpostprocessparams", cl_reloadpostprocessparams, "", FCVAR_CHEAT );
+static void cl_reloadpostprocessparams( const CCommand &args )
 {
 	// get optional filename
 	if ( args.ArgC() == 2 )
@@ -162,15 +167,19 @@ CON_COMMAND_F( cl_reloadpostprocessparams, "", FCVAR_CHEAT )
 		GetClientModeCSNormal()->LoadPostProcessParamsFromFile();
 	}
 }
-CON_COMMAND_F( cl_sos_test_set_opvar, "", FCVAR_CHEAT )
+static void cl_sos_test_set_opvar( const CCommand &args );
+static ConCommand cl_sos_test_set_opvar_command( "cl_sos_test_set_opvar", cl_sos_test_set_opvar, "", FCVAR_CHEAT );
+static void cl_sos_test_set_opvar( const CCommand &args )
 {
 	// get optional filename
 	if ( args.ArgC() > 2 )
 	{
-		engine->SOSSetOpvarFloat( args[1], Q_atof( args[2] ));
+		engine->SOSSetOpvarFloat( args[1], V_atof( args[2] ));
 	}
 }
-CON_COMMAND_F( cl_sos_test_get_opvar, "", FCVAR_CHEAT )
+static void cl_sos_test_get_opvar( const CCommand &args );
+static ConCommand cl_sos_test_get_opvar_command( "cl_sos_test_get_opvar", cl_sos_test_get_opvar, "", FCVAR_CHEAT );
+static void cl_sos_test_get_opvar( const CCommand &args )
 {
 	// get optional filename
 	if ( args.ArgC() > 2 )
@@ -183,7 +192,9 @@ CON_COMMAND_F( cl_sos_test_get_opvar, "", FCVAR_CHEAT )
 
 
 
-CON_COMMAND_F( toggleRdrOpt, "", FCVAR_DEVELOPMENTONLY )
+static void toggleRdrOpt( const CCommand &args );
+static ConCommand toggleRdrOpt_command( "toggleRdrOpt", toggleRdrOpt, "", FCVAR_DEVELOPMENTONLY );
+static void toggleRdrOpt( const CCommand &args )
 {
 	static bool s_fastMode = false;
 	s_fastMode = !s_fastMode;
@@ -290,10 +301,10 @@ static void SetBuyData( ConVar &buyVar, const char *filename )
 		}
 		else
 		{
-			Q_strncat(buystring, " ", sizeof(buystring), COPY_ALL_CHARACTERS);
+			V_strncat(buystring, " ", sizeof(buystring), COPY_ALL_CHARACTERS);
 		}
 
-		Q_strncat(buystring, token, sizeof(buystring), COPY_ALL_CHARACTERS);
+		V_strncat(buystring, token, sizeof(buystring), COPY_ALL_CHARACTERS);
 
 		pfile = engine->ParseFile( pfile, token, sizeof(token) );
 	}
@@ -314,7 +325,6 @@ bool MsgFunc_KillCam( const ks::net::CCSUsrMsg_KillCam &msg )
 
 	if ( newMode != g_nKillCamMode )
 	{
-#if !defined( NO_ENTITY_PREDICTION )
 		if ( g_nKillCamMode == OBS_MODE_NONE )
 		{
 			// kill cam is switch on, turn off prediction
@@ -325,7 +335,6 @@ bool MsgFunc_KillCam( const ks::net::CCSUsrMsg_KillCam &msg )
 			// kill cam is switched off, restore old prediction setting is we switch back to normal mode
 			g_bForceCLPredictOff = false;
 		}
-#endif
 		g_nKillCamMode = newMode;
 	}
 
@@ -395,12 +404,10 @@ void CCSModeManager::LevelInit( const char *newmap )
 
 	GetClientModeCSNormal()->SetupStaticCameras();
 
-#if !defined( NO_ENTITY_PREDICTION )
 	if ( g_nKillCamMode > OBS_MODE_NONE )
 	{
 		g_bForceCLPredictOff = false;
 	}
-#endif
 
 	g_nKillCamMode		= OBS_MODE_NONE;
 	g_nKillCamTarget1	= 0;
@@ -430,27 +437,6 @@ void CCSModeManager::LevelShutdown( void )
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( i );
 		GetClientMode()->LevelShutdown();
 	}
-}
-
-static void EnableSteamScreenshots( bool bEnable )
-{
-	if ( steamapicontext && steamapicontext->SteamScreenshots() )
-	{
-		ConVarRef cl_savescreenshotstosteam( "cl_savescreenshotstosteam" );
-		if ( cl_savescreenshotstosteam.IsValid() )
-		{
-			cl_savescreenshotstosteam.SetValue( bEnable );
-			steamapicontext->SteamScreenshots()->HookScreenshots( bEnable );
-		}
-	}
-}
-
-CON_COMMAND( cl_steamscreenshots, "Enable/disable saving screenshots to Steam" )
-{
-	bool bEnable = true;
-	if ( args.ArgC() == 2 )
-		bEnable = atoi(args[1]) ? true : false;
-	EnableSteamScreenshots( bEnable );
 }
 
 
@@ -625,8 +611,6 @@ void ClientModeCSNormal::Init()
 	LoadPostProcessParamsFromFile();
 
 	m_hCurrentColorCorrection = nullptr;
-
-	EnableSteamScreenshots( true );
 }
 
 
@@ -660,8 +644,8 @@ void ClientModeCSNormal::SetupStaticCameras()
 	m_SpecCameraPositions.clear();
 
 	char szMapName[MAX_MAP_NAME];
-	Q_FileBase( engine->GetLevelName(), szMapName, sizeof(szMapName) );
-	Q_strlower( szMapName );
+	V_FileBase( engine->GetLevelName(), szMapName, sizeof(szMapName) );
+	V_strlower( szMapName );
 
 	char szFileName[ MAX_PATH ] = "";
 	V_snprintf( szFileName, sizeof( szFileName ), "maps/%s_cameras.txt", szMapName );
@@ -754,7 +738,7 @@ bool ClientModeCSNormal::GetIdealCameraPosForPlayer( int playerindex )
 			Vector vecMaxDist = vecStartPos + Vector( 1024.0f, 1024.0f, 256.0f );
 
 			CBaseEntity	*pEntList[128];
-			int count = UTIL_EntitiesInBox( pEntList, ARRAYSIZE(pEntList), vecMinDist, vecMaxDist, 0 );
+			int count = UTIL_EntitiesInBox( pEntList, std::size( pEntList ), vecMinDist, vecMaxDist, 0 );
 
 			const int nMaxFocusPoints = 32;
 			Vector vecFocusPos[nMaxFocusPoints];
@@ -973,14 +957,14 @@ void ClientModeCSNormal::Update()
 				// Quest string keys
 				KeyValues *pKVLocalizedQuestStrings = new KeyValues( "LocalizedQuestStrings" );
 				KeyValues::AutoDelete autodelete( pKVLocalizedQuestStrings );
-				FOR_EACH_SUBKEY( pQuestDef->GetStringTokens(), keyvalue )
+				for ( KeyValues *keyvalue = pQuestDef->GetStringTokens()->GetFirstSubKey(); keyvalue != nullptr; keyvalue = keyvalue->GetNextKey() )
 				{
 					pKVLocalizedQuestStrings->SetWString( keyvalue->GetName(), g_pLocalize->Find( keyvalue->GetString() ) );
 				}
 				
 				// Points earned
 				wchar_t wchPoints[ 64 ] = {};
-				V_snwprintf( wchPoints, ARRAYSIZE( wchPoints ), PRI_S_FOR_WS, V_FormatNumber( numPointsEarned ) );
+				V_snwprintf( wchPoints, std::size( wchPoints ), L"%s", V_FormatNumber( numPointsEarned ) );
 				pKVLocalizedQuestStrings->SetWString( "points", wchPoints );
 
 				if ( questProgress.m_bIsEventQuest )
@@ -1070,7 +1054,9 @@ void ClientModeCSNormal::Update()
 }
 
 #ifdef _DEBUG
-CON_COMMAND_F(quest_ui_test, "Test quest ui", FCVAR_CLIENTCMD_CAN_EXECUTE)
+static void quest_ui_test( const CCommand &args );
+static ConCommand quest_ui_test_command( "quest_ui_test", quest_ui_test, "Test quest ui", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void quest_ui_test( const CCommand &args )
 {
 	int newPoints = 1;
 	int totalPoints = 10;
@@ -1078,17 +1064,17 @@ CON_COMMAND_F(quest_ui_test, "Test quest ui", FCVAR_CLIENTCMD_CAN_EXECUTE)
 
 	if (args.ArgC() > 1)
 	{
-		newPoints = Q_atoi(args.ArgV()[1]);
+		newPoints = V_atoi(args.ArgV()[1]);
 	}
 
 	if (args.ArgC() > 2)
 	{
-		totalPoints = Q_atoi(args.ArgV()[2]);
+		totalPoints = V_atoi(args.ArgV()[2]);
 	}
 
 	if (args.ArgC() > 3)
 	{
-		maxPoints = Q_atoi(args.ArgV()[3]);
+		maxPoints = V_atoi(args.ArgV()[3]);
 	}
 }
 #endif
@@ -1449,7 +1435,7 @@ void ClientModeCSNormal::PostProcessLerpTo( PostProcessEffect_t effectID, float 
 //--------------------------------------------------------------------------------------------------------
 void ClientModeCSNormal::PostProcessLerpTo( PostProcessEffect_t effectID, const C_PostProcessController* pPostProcessController )
 {
-	Assert( pPostProcessController );
+	contract_assert( pPostProcessController );
 
 	m_lastPostProcessEffect = m_activePostProcessEffect;
 	m_activePostProcessEffect = effectID;
@@ -1523,7 +1509,7 @@ void ClientModeCSNormal::LerpPostProcessParam( float fAmount, PostProcessParamet
 //--------------------------------------------------------------------------------------------------------
 void ClientModeCSNormal::GetDefaultPostProcessingParams( C_CSPlayer* pPlayer, PostProcessEffectParams_t* pParams )
 {
-	Assert( pParams );
+	contract_assert( pParams );
 
 	C_PostProcessController* pPPCtrl = nullptr;
 	if ( pPlayer )
@@ -1611,44 +1597,6 @@ void ClientModeCSNormal::UpdateSpectatorMode( void )
 } */
 
 
-// Sets convars to tag the current mapname and the player in your crosshairs.
-// The player tagged will be overridden for killcam shots to be the killer
-static void ScreenshotTaggingKeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding )
-{
-	if ( pszCurrentBinding && ( FStrEq( pszCurrentBinding, "screenshot" ) || FStrEq( pszCurrentBinding, "jpeg" ) ) )
-	{
-		// Tag the player in the crosshairs
-		C_CSPlayer *pPlayer = ToCSPlayer( C_BasePlayer::GetLocalPlayer() );
-		if ( pPlayer )
-		{
-			C_CSPlayer *pCrosshairs = ToCSPlayer( UTIL_PlayerByIndex( pPlayer->GetIDTarget() ) );
-			if ( pCrosshairs && !pCrosshairs->IsBot() )
-			{
-				CSteamID steamID;
-				if ( pCrosshairs->GetSteamID( &steamID ) && steamID.IsValid() )
-				{
-					ConVarRef cl_screenshotusertag( "cl_screenshotusertag" );
-					if ( cl_screenshotusertag.IsValid() )
-					{
-						cl_screenshotusertag.SetValue( (int)steamID.GetAccountID() );
-					}
-				}
-			}
-		}
-
-		// Tag the current map
-		ConVarRef cl_screenshotlocation( "cl_screenshotlocation" );
-		if ( cl_screenshotlocation.IsValid() )
-		{
-			char szMapName[MAX_MAP_NAME];
-			Q_FileBase( engine->GetLevelName(), szMapName, sizeof(szMapName) );
-			Q_strlower( szMapName );
-			cl_screenshotlocation.SetValue( szMapName );
-		}
-	}
-}
-
-
 ConVar cl_scoreboard_mouse_enable_binding( "cl_scoreboard_mouse_enable_binding", "+attack2", FCVAR_ARCHIVE, "Name of the binding to enable mouse selection in the scoreboard" );
 //-----------------------------------------------------------------------------
 // Purpose: We've received a keypress from the engine. Return 1 if the engine is allowed to handle it.
@@ -1658,9 +1606,6 @@ int	ClientModeCSNormal::KeyInput( int down, ButtonCode_t keynum, const char *psz
 	// don't process input in LogoMaps
 	if( CSGameRules() && CSGameRules()->IsLogoMap() )
 		return 1;
-
-	// Applies basic tags if we're going to take a screenshot
-	ScreenshotTaggingKeyInput( down, keynum, pszCurrentBinding );
 
 	return BaseClass::KeyInput( down, keynum, pszCurrentBinding );
 }
@@ -1743,7 +1688,7 @@ IClientMode *GetClientModeNormal()
 
 ClientModeCSNormal* GetClientModeCSNormal()
 {
-	return assert_cast< ClientModeCSNormal* >( GetClientModeNormal() );
+	return static_cast< ClientModeCSNormal* >( GetClientModeNormal() );
 }
 
 int ClientModeCSNormal::GetDeathMessageStartHeight( void )
@@ -1768,7 +1713,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
 	// we want to i/o title profile data from menu screens (not just in game) so we bypass checking for C_BasePlayer since we know we have a matchmaking local player
 	bool bIgnoreLocalPlayerCheck = false;
-	if ( Q_strcmp( "read_game_titledata", event->GetName() ) ==0 || Q_strcmp( "write_game_titledata", event->GetName() ) ==0  )
+	if ( V_strcmp( "read_game_titledata", event->GetName() ) ==0 || V_strcmp( "write_game_titledata", event->GetName() ) ==0  )
 		bIgnoreLocalPlayerCheck = true;
 	
 	if ( !bIgnoreLocalPlayerCheck && ( !pLocalPlayer || !pHudChat ) )
@@ -1779,15 +1724,15 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 	if ( !eventname || !eventname[0] )
 		return;
 
-	if ( Q_strcmp( "reset_player_controls", eventname ) == 0 )
+	if ( V_strcmp( "reset_player_controls", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
 
-		engine->ExecuteClientCmd( "exec config" PLATFORM_EXT ".cfg game\n" );
+		engine->ExecuteClientCmd( "exec config"".cfg game\n" );
 
 	}
-	if ( Q_strcmp( "round_start", eventname ) == 0 )
+	if ( V_strcmp( "round_start", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -1902,7 +1847,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-	else if ( Q_strcmp( "round_end", eventname ) == 0 )
+	else if ( V_strcmp( "round_end", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -2003,7 +1948,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			g_CSClientGameStats.ResetRoundStats();
 		}
 	}
-	else if ( Q_strcmp( "player_team", eventname ) == 0 )
+	else if ( V_strcmp( "player_team", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -2070,7 +2015,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		}
 	}
 
-	else if ( Q_strcmp( "bomb_planted", eventname ) == 0 )
+	else if ( V_strcmp( "bomb_planted", eventname ) == 0 )
 	{
 		// C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
 		if ( this == GetFullscreenClientMode() )
@@ -2095,7 +2040,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		 C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.BombPlanted" );
 		
 	}
-// 	else if ( Q_strcmp( "bomb_defused", eventname ) == 0 )
+// 	else if ( V_strcmp( "bomb_defused", eventname ) == 0 )
 // 	{
 // 		if ( !CSGameRules()->IsPlayingTraining() )
 // 		{
@@ -2121,7 +2066,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 // 	}
 
 	// [menglish] Tell the client side bomb that the bomb has exploding here creating the explosion particle effect
-	else if ( Q_strcmp( "bomb_exploded", eventname ) == 0 )
+	else if ( V_strcmp( "bomb_exploded", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -2137,7 +2082,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
 	}
 
-	else if ( Q_strcmp( "hostage_follows", eventname ) == 0 )
+	else if ( V_strcmp( "hostage_follows", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -2155,7 +2100,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		}
 	}
 
-	else if ( Q_strcmp( "hostage_killed", eventname ) == 0 )
+	else if ( V_strcmp( "hostage_killed", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -2173,7 +2118,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		}
 	}
 
-	else if ( Q_strcmp( "hostage_hurt", eventname ) == 0 )
+	else if ( V_strcmp( "hostage_hurt", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -2185,7 +2130,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		}
 	}
 
-	else if ( Q_strcmp( "player_death", eventname ) == 0 )
+	else if ( V_strcmp( "player_death", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 			return;
@@ -2205,12 +2150,12 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		}
 	}
 
-	else if ( Q_strcmp( "player_changename", eventname ) == 0 )
+	else if ( V_strcmp( "player_changename", eventname ) == 0 )
 	{
 		return; // server sends a colorized text string for this
 	}
 
-	else if ( Q_strcmp( "seasoncoin_levelup", eventname ) == 0 )
+	else if ( V_strcmp( "seasoncoin_levelup", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 		{
@@ -2241,62 +2186,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-
-	// [tj] We handle this here instead of in the base class 
-	//      The reason is that we don't use string tables to localize.
-	//      Instead, we use the steam localization mechanism.
-	else if ( Q_strcmp( "achievement_earned", eventname ) == 0 )
-	{
-		if ( this == GetFullscreenClientMode() )
-		{
-			CBaseHudChat *hudChat = (CBaseHudChat *)GET_HUDELEMENT( CHudChat );
-			int iPlayerIndex = event->GetInt( "player" );
-			C_BasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
-			int iAchievement = event->GetInt( "achievement" );
-
-			if ( !hudChat || !pPlayer )
-				return;
-
-			if ( !g_AchievementMgrCS.CheckAchievementsEnabled() )
-				return;
-
-			IAchievement *pAchievement = g_AchievementMgrCS.GetAchievementByID( iAchievement, GetSplitScreenPlayerSlot() );
-			if ( pAchievement )
-			{
-				if ( pPlayer->ShouldAnnounceAchievement() || C_BasePlayer::IsLocalPlayer( pPlayer ) )
-				{
-					pPlayer->SetNextAchievementAnnounceTime( gpGlobals->curtime + ACHIEVEMENT_ANNOUNCEMENT_MIN_TIME );
-
-					//Do something for the player - Actually we should probably do this client-side when the achievement is first earned.
-					if (pPlayer->IsLocalPlayer()) 
-					{
-					}
-					pPlayer->OnAchievementAchieved( iAchievement );
-
-					if ( C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>( g_PR ) )
-					{
-						wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
-						cs_PR->GetDecoratedPlayerName( iPlayerIndex, wszPlayerName, sizeof( wszPlayerName ), (EDecoratedPlayerNameFlag_t)( k_EDecoratedPlayerNameFlag_DontMakeStringSafe | k_EDecoratedPlayerNameFlag_DontUseAssassinationTargetName ) );
-
-
-						wchar_t achievementName[1024];
-						const wchar_t* constAchievementName = &achievementName[0];
-
-						constAchievementName = ACHIEVEMENT_LOCALIZED_NAME( pAchievement );
-
-						if (constAchievementName)
-						{
-							wchar_t wszLocalizedString[2 * MAX_DECORATED_PLAYER_NAME_LENGTH];
-							g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), g_pLocalize->Find( "#Achievement_Earned" ), 2, wszPlayerName, constAchievementName/*wszAchievementString*/ );
-
-							hudChat->ChatPrintfW( iPlayerIndex, CHAT_FILTER_ACHIEVEMENT, wszLocalizedString );
-						}
-					}
-				}
-			}
-		}
-	}
-	else if ( Q_strcmp( "item_found", eventname ) == 0 )
+	else if ( V_strcmp( "item_found", eventname ) == 0 )
 	{
 		if ( this == GetFullscreenClientMode() )
 		{
@@ -2329,7 +2219,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 				wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 				cs_PR->GetDecoratedPlayerName( iPlayerIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_DontMakeStringSafe );
 
-				if ( iMethod < 0 || iMethod >= ARRAYSIZE( g_pszItemFoundMethodStrings ) )
+				if ( iMethod < 0 || iMethod >= std::size( g_pszItemFoundMethodStrings ) )
 				{
 					iMethod = 0;
 				}
@@ -2340,12 +2230,12 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 				{
 					// TODO: Update the localization strings to only have two format parameters since that's all we need.
 					
-					CSteamID steamID;
+					CPlayerId playerUID;
 					wchar_t wszLocalizedString[2 * MAX_DECORATED_PLAYER_NAME_LENGTH] = {};
 					bool bUsingFullName = false;
-					if ( itemID != -1 && pPlayer->GetSteamID( &steamID ) )
+					if ( itemID != -1 && pPlayer->GetPlayerID( &playerUID ) )
 					{
-						CCSPlayerInventory* pPlayerInv = CSInventoryManager()->GetInventoryForPlayer( steamID );
+						CCSPlayerInventory* pPlayerInv = CSInventoryManager()->GetInventoryForPlayer( playerUID );
 						if ( pPlayerInv )
 						{
 							CEconItemView* pEconItem = pPlayerInv->GetInventoryItemByItemID( itemID );
@@ -2354,7 +2244,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 								int nRarity = pEconItem->GetRarity() - 1;
 
 								wchar_t wszItemName[256];
-								_snwprintf( wszItemName, ARRAYSIZE( wszItemName ), L"%c" PRI_WS_FOR_WS L"\01", nRarity + COLOR_RARITY_FIRST, pEconItem->GetItemName() );
+								swprintf( wszItemName, std::size( wszItemName ), L"%c" L"%ls" L"\01", nRarity + COLOR_RARITY_FIRST, pEconItem->GetItemName() );
 
 								g_pLocalize->ConstructString( wszLocalizedString, sizeof( wszLocalizedString ), wszItemFound, 3, wszPlayerName, wszItemName, L"" );
 								bUsingFullName = true;
@@ -2373,7 +2263,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			}		
 		}
 	}
-	else if ( Q_strcmp( "items_gifted", eventname ) == 0 )
+	else if ( V_strcmp( "items_gifted", eventname ) == 0 )
 	{
 		if ( ( this == GetFullscreenClientMode() ) && ( event->GetInt( "giftidx" ) == 0 ) )
 		{	// PUBLIC GIFT ANNOUNCEMENT -- print info when event comes about the first gift in the batch
@@ -2391,7 +2281,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			{	// [VITALIY] has given out a gift! ///OR/// [VITALIY] has given out 25 gifts!
 				char const *fmtMessageLoc = ( numGifts > 1 ) ? "#Item_GiftsSentMany" : "#Item_GiftsSent1Anon";
 				wchar_t wszArg2[MAX_DECORATED_PLAYER_NAME_LENGTH] = {};
-				V_snwprintf( wszArg2, Q_ARRAYSIZE( wszArg2 ), L"%d", numGifts );
+				V_snwprintf( wszArg2, std::size( wszArg2 ), L"%d", numGifts );
 
 				wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH] = {};
 				cs_PR->GetDecoratedPlayerName( iPlayerIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_DontMakeStringSafe );
@@ -2422,7 +2312,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			if ( pLocalPlayer == pPlayer )
 			{
 				// Local player is the gifter!
-				CSteamID steamID;
+				CPlayerId playerUID;
 				CBasePlayer *pFoundRecipient = nullptr;
 				for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 				{
@@ -2430,10 +2320,10 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 					if ( pPlayer == nullptr )
 						continue;
 
-					if ( pPlayer->GetSteamID( &steamID ) == false )
+					if ( pPlayer->GetPlayerID( &playerUID ) == false )
 						continue;
 
-					if ( steamID.GetAccountID() == unAccountID )
+					if ( playerUID.GetAccountID() == unAccountID )
 					{
 						pFoundRecipient = pPlayer;
 						break;
@@ -2456,7 +2346,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 					}
 				}
 			}
-			else if ( unAccountID == steamapicontext->SteamUser()->GetSteamID().GetAccountID() )
+			else if ( unAccountID == GetLocalAccountID() )
 			{
 				// Local player got a gift!
 				wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH] = {};
@@ -2477,11 +2367,11 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			}
 		}
 	}
-	else if ( Q_strcmp( "write_game_titledata", eventname ) == 0 )
+	else if ( V_strcmp( "write_game_titledata", eventname ) == 0 )
 	{
 		SyncCurrentKeyBindingsToDeviceTitleData( event->GetInt( "controllerId" ), INPUT_DEVICE_NONE, KEYBINDING_WRITE_TO_TITLEDATA );
 	}
-	else if ( Q_strcmp( "read_game_titledata", eventname ) == 0 )
+	else if ( V_strcmp( "read_game_titledata", eventname ) == 0 )
 	{
 		SyncCurrentKeyBindingsToDeviceTitleData( event->GetInt( "controllerId" ), INPUT_DEVICE_NONE, KEYBINDING_READ_FROM_TITLEDATA );
 	}
@@ -2543,7 +2433,7 @@ bool __MsgFunc_SendPlayerItemFound( const ks::net::CCSUsrMsg_SendPlayerItemFound
 		wchar_t wszPlayerName[ MAX_DECORATED_PLAYER_NAME_LENGTH ];
 		cs_PR->GetDecoratedPlayerName( iPlayerIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_DontMakeStringSafe );
 
-		if ( iMethod < 0 || iMethod >= ARRAYSIZE( g_pszItemFoundMethodStrings ) )
+		if ( iMethod < 0 || iMethod >= std::size( g_pszItemFoundMethodStrings ) )
 		{
 			iMethod = 0;
 		}
@@ -2567,7 +2457,7 @@ void ClientModeCSNormal::OnEvent( KeyValues *pEvent )
 {
 	const char *pEventName = pEvent->GetName();
 
-	if ( 0 == Q_strcmp( pEventName, "OnSysStorageDevicesChanged" ) )
+	if ( 0 == V_strcmp( pEventName, "OnSysStorageDevicesChanged" ) )
 	{
 		CheckTitleDataStorageConnected();
 	}
@@ -2618,7 +2508,7 @@ bool ShouldRecreateClassImageEntity( C_BaseAnimating *pEnt, const char *pNewMode
 	// reload only if names are different
 	const char *pNameNoPath = V_UnqualifiedFileName( pName );
 	const char *pNewModelNameNoPath = V_UnqualifiedFileName( pNewModelName );
-	return( Q_stricmp( pNameNoPath, pNewModelNameNoPath ) != 0 );
+	return( V_stricmp( pNameNoPath, pNewModelNameNoPath ) != 0 );
 }
 
 
@@ -2670,7 +2560,7 @@ bool ClientModeCSNormal::CanRecordDemo( char *errorMsg, int length ) const
 	// don't start recording while flashed, as it would remove the flash
 	if ( player->m_flFlashBangTime > gpGlobals->curtime )
 	{
-		Q_strncpy( errorMsg, "Cannot record demos while blind.", length );
+		V_strncpy( errorMsg, "Cannot record demos while blind.", length );
 		return false;
 	}
 
@@ -2679,9 +2569,9 @@ bool ClientModeCSNormal::CanRecordDemo( char *errorMsg, int length ) const
 	C_BaseEntity *ent;
 	while ( (ent = it.Next()) != nullptr )
 	{
-		if ( Q_strcmp( ent->GetClassname(), "class C_ParticleSmokeGrenade" ) == 0 )
+		if ( V_strcmp( ent->GetClassname(), "class C_ParticleSmokeGrenade" ) == 0 )
 		{
-			Q_strncpy( errorMsg, "Cannot record demos while a smoke grenade is active.", length );
+			V_strncpy( errorMsg, "Cannot record demos while a smoke grenade is active.", length );
 			return false;
 		}
 	}
@@ -2830,11 +2720,11 @@ bool __MsgFunc_PlayerDecalDigitalSignature( const ks::net::CCSUsrMsg_PlayerDecal
 	PlayerSprayClientRequestData_t data = itRequest->second;
 	s_mapClientDigitalSignatureRequests.erase( itRequest );
 
-	static CSteamID s_mysteamid = steamapicontext->SteamUser()->GetSteamID();
+	uint32 unMyAccountID = GetLocalAccountID();
 
 	// Ensure that creation time is within reasonable range from when it was requested
 	// and all the fields match
-	if ( s_mysteamid.GetAccountID() != msg.data->accountid ) return true;
+	if ( unMyAccountID != msg.data->accountid ) return true;
 	if ( data.m_nEquipSlot != msg.data->equipslot ) return true;
 	if ( data.m_nDefIdx != msg.data->tx_defidx ) return true;
 	if ( data.m_unTintID != msg.data->tint_id ) return true;
@@ -2876,9 +2766,6 @@ bool __MsgFunc_PlayerDecalDigitalSignature( const ks::net::CCSUsrMsg_PlayerDecal
 	if ( unTintID != data.m_unTintID )
 		return true;
 
-	// Record our spray into OGS:
-	g_CSClientGameStats.AddClientCSGOGameEvent( k_CSClientCsgoGameEventType_SprayApplication, vecCheck, pLocalPlayer->EyeAngles(), ( uint64( unStickerKitID ) << 32 ) | uint64( unTintID ) );
-
 #ifdef _DEBUG
 	//DevMsg( "Client decal signature (%llu) @(%.2f,%.2f,%.2f) T%u requested\n", cl2gc.Body().itemid, msg.data->endpos[ 0 ], msg.data->endpos[ 1 ], msg.data->endpos[ 2 ], msg.data->rtime );
 	DevMsg( "Client decal signature @(%.2f,%.2f,%.2f) T%u requested\n", msg.data->endpos[ 0 ], msg.data->endpos[ 1 ], msg.data->endpos[ 2 ], msg.data->rtime );
@@ -2903,7 +2790,7 @@ void PlayerDecalDataSendActionSprayToServer( int nSlot )
 
 	static CSchemaAttributeDefHandle hAttrSprayTintID( "spray tint id" );
 
-	int nRandomKey = RandomInt( 2, INT_MAX/2 );
+	int nRandomKey = RandomInt( 2, std::numeric_limits<int>::max()/2 );
 	PlayerSprayClientRequestData_t data;
 	data.m_nEquipSlot = nSlot;
 	data.m_nDefIdx = unStickerKitID;
@@ -2915,11 +2802,11 @@ void PlayerDecalDataSendActionSprayToServer( int nSlot )
 	s_mapClientDigitalSignatureRequests.clear();
 	s_mapClientDigitalSignatureRequests.insert_or_assign( nRandomKey, data );
 
-	static CSteamID s_mysteamid = steamapicontext->SteamUser()->GetSteamID();
+	uint32 unMyAccountID = GetLocalAccountID();
 
 	ks::net::CCSUsrMsg_PlayerDecalDigitalSignature msg;
 	ks::net::PlayerDecalDigitalSignature &dd = msg.data.mut();
-	dd.accountid = s_mysteamid.GetAccountID();
+	dd.accountid = unMyAccountID;
 	dd.equipslot = data.m_nEquipSlot;
 	dd.tx_defidx = data.m_nDefIdx;
 	dd.tint_id = data.m_unTintID;
@@ -2941,15 +2828,13 @@ void ClientModeCSFullscreen::Init( void )
 	ListenForGameEvent( "smokegrenade_expired" );
 }
 
-bool g_bClientIsAllowedToPlayOnSecureServers = true;
-
 void ClientModeCSFullscreen::OnEvent( KeyValues *pEvent )
 {
 	BaseClass::OnEvent( pEvent );
 
 	const char *pEventName = pEvent->GetName();
 
-	if ( !Q_stricmp( pEventName, "OnEngineDisconnectReason" ) )
+	if ( !V_stricmp( pEventName, "OnEngineDisconnectReason" ) )
 	{
 		DevMsg( "ClientModeCSNormal::OnEvent" );
 		KeyValuesDumpAsDevMsg( pEvent, 1 );
@@ -2980,7 +2865,6 @@ void ClientModeCSFullscreen::OnEvent( KeyValues *pEvent )
 			{ "Added to banned list", "#SFUI_SessionError_Kicked", RemapText_t::MATCH_SUBSTR },
 			{ "Kicked and banned", "#SFUI_SessionError_Kicked", RemapText_t::MATCH_SUBSTR },
 			{ "You have been voted off", "#SFUI_SessionError_Kicked", RemapText_t::MATCH_SUBSTR },
-			{ "VAC authentication error", "#SFUI_DisconnectReason_VAC", RemapText_t::MATCH_SUBSTR },
 			{ "Player idle", "#SFUI_DisconnectReason_Idle", RemapText_t::MATCH_SUBSTR },
 			{ "For suiciding too many times", "#SFUI_DisconnectionReason_Suicide", RemapText_t::MATCH_SUBSTR },
 			{ "You must use matchmaking to connect to this CS:GO server", "#SFUI_DisconnectReason_MustUseMatchmaking", RemapText_t::MATCH_SUBSTR },
@@ -2992,23 +2876,14 @@ void ClientModeCSFullscreen::OnEvent( KeyValues *pEvent )
 		szReason = RemapText_t::RemapRawText( arrText, szReason );
 
 		const char *okCommand = nullptr;
-		if ( !V_strcmp( szReason, "#SFUI_DisconnectReason_VAC" ) )
-			okCommand = "error_message_explain_vac";
-		else if ( !V_strcmp( szReason, "#GameUI_Disconnect_PureServer_Mismatch" ) )
+		if ( !V_strcmp( szReason, "#GameUI_Disconnect_PureServer_Mismatch" ) )
 			okCommand = "error_message_explain_pure";
 	}
-	else if ( !Q_stricmp( pEventName, "OnClientInsecureBlocked" ) )
-	{
-		g_bClientIsAllowedToPlayOnSecureServers = false;
-		RocketMainMenuDocument::RestorePanel();
-	}
 }
 
-CON_COMMAND_F( error_message_explain_vac, "Take user to Steam support article", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_HIDDEN )
-{
-}
-
-CON_COMMAND_F( error_message_explain_pure, "Take user to Steam support article", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_HIDDEN )
+static void error_message_explain_pure( const CCommand &args );
+static ConCommand error_message_explain_pure_command( "error_message_explain_pure", error_message_explain_pure, "Take user to support article", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_HIDDEN );
+static void error_message_explain_pure( const CCommand &args )
 {
 }
 
@@ -3019,7 +2894,7 @@ void ClientModeCSFullscreen::FireGameEvent( IGameEvent *event )
 	if ( !eventname || !eventname[0] )
 		return;
 
-	if ( Q_strcmp( "tr_show_finish_msgbox", eventname ) == 0 )
+	if ( V_strcmp( "tr_show_finish_msgbox", eventname ) == 0 )
 	{
 		GameUI().CreateCommandMsgBoxInSlot( 
 			CMB_SLOT_PLAYER_0, 
@@ -3032,7 +2907,7 @@ void ClientModeCSFullscreen::FireGameEvent( IGameEvent *event )
 			nullptr, 
 			nullptr );
 	}
-	else if ( Q_strcmp( "tr_show_exit_msgbox", eventname ) == 0 )
+	else if ( V_strcmp( "tr_show_exit_msgbox", eventname ) == 0 )
 	{
 		GameUI().CreateCommandMsgBoxInSlot( 
 			CMB_SLOT_PLAYER_0, 

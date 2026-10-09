@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IHLTV_H
-#define IHLTV_H
-
-
-#include "interface.h"
+import std;
+import ks.tier1;
 
 class IServer;
 class IHLTVDirector;
@@ -18,13 +11,12 @@ class IGameEvent;
 class CGameInfo;
 struct netadr_s;
 
-#define HLTV_REPLAY_ENABLED 1
 
 
 //-----------------------------------------------------------------------------
 // Interface the HLTV module exposes to the engine
 //-----------------------------------------------------------------------------
-#define INTERFACEVERSION_HLTVSERVER	"HLTVServer001"
+inline constexpr const char *INTERFACEVERSION_HLTVSERVER = "HLTVServer001";
 
 class IHLTVServer : public IBaseInterface
 {
@@ -51,5 +43,3 @@ public:
 	virtual void		StartAutoRecording() = 0;
 	virtual void		StopRecording( const CGameInfo *pGameInfo = nullptr ) = 0;
 };
-
-#endif

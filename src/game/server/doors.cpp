@@ -1,11 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Implements two types of doors: linear and rotating.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Implements two types of doors: linear and rotating.
+
+import std;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -17,10 +41,10 @@
 #include "physics_npc_solver.h"
 
 #ifdef CSTRIKE_DLL
-#include "keyvalues.h"
+import ks.tier1;
 #endif
 
-#define CLOSE_AREAPORTAL_THINK_CONTEXT "CloseAreaportalThink"
+inline constexpr const char *CLOSE_AREAPORTAL_THINK_CONTEXT = "CloseAreaportalThink";
 
 IMPLEMENT_REFLECT_DATAMAP( CBaseDoor )
 
@@ -36,9 +60,9 @@ LINK_ENTITY_TO_CLASS( func_water, CBaseDoor );
 // SendTable stuff.
 IMPLEMENT_REFLECT_SERVERCLASS( CBaseDoor, DT_BaseDoor )
 
-#define DOOR_SENTENCEWAIT	6
-#define DOOR_SOUNDWAIT		1
-#define BUTTON_SOUNDWAIT	0.5
+constexpr auto DOOR_SENTENCEWAIT = 6;
+constexpr auto DOOR_SOUNDWAIT = 1;
+constexpr auto BUTTON_SOUNDWAIT = 0.5;
 
 
 //-----------------------------------------------------------------------------
@@ -93,7 +117,7 @@ void PlayLockSounds(CBaseEntity *pEdict, locksound_t *pls, int flocked, int fbut
 																0, 
 																100, 
 																pls->iLockedSentence, 
-																FALSE);
+																false);
 			pls->iUnlockedSentence = 0;
 
 			// make sure we don't keep calling last sentence in list
@@ -134,7 +158,7 @@ void PlayLockSounds(CBaseEntity *pEdict, locksound_t *pls, int flocked, int fbut
 			int iprev = pls->iUnlockedSentence;
 			
 			pls->iUnlockedSentence = SENTENCEG_PlaySequentialSz(pEdict->edict(), STRING(pls->sUnlockedSentence), 
-					  0.85, SNDLVL_NORM, 0, 100, pls->iUnlockedSentence, FALSE);
+					  0.85, SNDLVL_NORM, 0, 100, pls->iUnlockedSentence, false);
 			pls->iLockedSentence = 0;
 
 			// make sure we don't keep calling last sentence in list
@@ -155,11 +179,11 @@ bool CBaseDoor::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "locked_sentence"))
 	{
-		m_bLockedSentence = atof(szValue);
+		m_bLockedSentence = std::atof(szValue);
 	}
 	else if (FStrEq(szKeyName, "unlocked_sentence"))
 	{
-		m_bUnlockedSentence = atof(szValue);
+		m_bUnlockedSentence = std::atof(szValue);
 	}
 	else
 		return BaseClass::KeyValue( szKeyName, szValue );
@@ -257,7 +281,7 @@ void CBaseDoor::Spawn()
 		{
 			// both of these flags want to set the collision group and 
 			// there isn't a combo group
-			Assert( !HasSpawnFlags( SF_DOOR_NONSOLID_TO_PLAYER ) );
+			contract_assert( !HasSpawnFlags( SF_DOOR_NONSOLID_TO_PLAYER ) );
 			if ( HasSpawnFlags( SF_DOOR_NONSOLID_TO_PLAYER ) )
 			{
 				Warning("Door %s with conflicting collision settings, removing ignoredebris\n", GetDebugName() );
@@ -363,7 +387,7 @@ bool CBaseDoor::CreateVPhysics( )
 		IPhysicsObject *pPhysics = VPhysicsInitShadow( false, false );
 		fluidparams_t fluid;
 		
-		Assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
+		contract_assert( CollisionProp()->GetCollisionAngles() == vec3_angle );
 		fluid.damping = 0.01f;
 		fluid.surfacePlane[0] = 0;
 		fluid.surfacePlane[1] = 0;
@@ -393,7 +417,7 @@ void CBaseDoor::Activate( void )
 	m_bDoorGroup = true;
 
 	// force movement groups to sync!!!
-	int doorCount = GetDoorMovementGroup( pDoorList, ARRAYSIZE(pDoorList) );
+	int doorCount = GetDoorMovementGroup( pDoorList, std::size( pDoorList ) );
 	for ( int i = 0; i < doorCount; i++ )
 	{
 		if ( pDoorList[i]->m_vecMoveDir == m_vecMoveDir )
@@ -533,13 +557,13 @@ void CBaseDoor::DoorTouch( CBaseEntity *pOther )
 	// play 'locked' sound.
 	if (m_sMaster != NULL_STRING && !UTIL_IsMasterTriggered(m_sMaster, pOther))
 	{
-		PlayLockSounds(this, &m_ls, TRUE, FALSE);
+		PlayLockSounds(this, &m_ls, true, false);
 	}
 
 	if (m_bLocked)
 	{
 		m_OnLockedUse.FireOutput( pOther, pOther );
-		PlayLockSounds(this, &m_ls, TRUE, FALSE);
+		PlayLockSounds(this, &m_ls, true, false);
 		return; 
 	}
 	
@@ -609,7 +633,7 @@ void CBaseDoor::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 	// We can't +use this if it can't be +used
 	if ( m_hActivator != nullptr && m_hActivator->IsPlayer() && HasSpawnFlags( SF_DOOR_PUSE ) == false )
 	{
-		PlayLockSounds( this, &m_ls, TRUE, FALSE );
+		PlayLockSounds( this, &m_ls, true, false );
 		return;
 	}
 
@@ -638,7 +662,7 @@ void CBaseDoor::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 		if (m_bLocked)
 		{
 			m_OnLockedUse.FireOutput( pActivator, pCaller );
-			PlayLockSounds(this, &m_ls, TRUE, FALSE);
+			PlayLockSounds(this, &m_ls, true, false);
 		}
 		else
 		{
@@ -807,7 +831,7 @@ int CBaseDoor::DoorActivate( )
 	{
 		// door should open
 		// play door unlock sounds
-		PlayLockSounds(this, &m_ls, FALSE, FALSE);
+		PlayLockSounds(this, &m_ls, false, false);
 
 		if ( m_toggle_state != TS_AT_TOP && m_toggle_state != TS_GOING_UP )
 		{
@@ -972,9 +996,6 @@ void CBaseDoor::DoorGoDown( void )
 		}
 	}
 	
-#ifdef DOOR_ASSERT
-	ASSERT(m_toggle_state == TS_AT_TOP);
-#endif // DOOR_ASSERT
 	m_toggle_state = TS_GOING_DOWN;
 
 	SetMoveDone( &CBaseDoor::DoorHitBottom );
@@ -1130,7 +1151,7 @@ void CBaseDoor::Blocked( CBaseEntity *pOther )
 	if ( GetEntityName() != NULL_STRING )
 	{
 		CBaseDoor *pDoorList[64];
-		int doorCount = GetDoorMovementGroup( pDoorList, ARRAYSIZE(pDoorList) );
+		int doorCount = GetDoorMovementGroup( pDoorList, std::size( pDoorList ) );
 
 		for ( int i = 0; i < doorCount; i++ )
 		{

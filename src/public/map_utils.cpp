@@ -1,10 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "mathlib/vector.h"
+#if defined(GAME_DLL)
+#endif
+#if defined(GAME_DLL)
+import std;
+import ks.core;
+#endif
+import ks.math;
 #include "bspfile.h"
 
 void SetupLightNormalFromProps( const QAngle &angles, float angle, float pitch, Vector &output )
@@ -28,8 +31,8 @@ void SetupLightNormalFromProps( const QAngle &angles, float angle, float pitch, 
 		}
 		
 		output[2] = 0;
-		output[0] = (float)cos (angle/180*M_PI);
-		output[1] = (float)sin (angle/180*M_PI);
+		output[0] = (float)std::cos (angle/180*std::numbers::pi);
+		output[1] = (float)std::sin (angle/180*std::numbers::pi);
 	}
 	
 	if ( !pitch )
@@ -38,8 +41,7 @@ void SetupLightNormalFromProps( const QAngle &angles, float angle, float pitch, 
 		pitch = angles[PITCH];
 	}
 	
-	output[2] = (float)sin(pitch/180*M_PI);
-	output[0] *= (float)cos(pitch/180*M_PI);
-	output[1] *= (float)cos(pitch/180*M_PI);
+	output[2] = (float)std::sin(pitch/180*std::numbers::pi);
+	output[0] *= (float)std::cos(pitch/180*std::numbers::pi);
+	output[1] *= (float)std::cos(pitch/180*std::numbers::pi);
 }
-

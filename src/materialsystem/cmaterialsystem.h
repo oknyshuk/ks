@@ -1,14 +1,9 @@
-//========== Copyright 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#ifndef CMATERIALSYSTEM_H
-#define CMATERIALSYSTEM_H
-
-#include "tier1/delegates.h"
-#include <mutex>
+import ks.tier1;
+import std;
 
 #include "materialsystem_global.h"
 #include "materialsystem/imaterialsystem.h"
@@ -26,12 +21,6 @@
 #include "materialsystem_global.h"
 #include "custom_material.h"
 #include "composite_texture.h"
-
-#ifndef MATSYS_INTERNAL
-#error "This file is private to the implementation of IMaterialSystem/IMaterialSystemInternal"
-#endif
-
-
 
 //-----------------------------------------------------------------------------
 
@@ -215,16 +204,16 @@ public:
 	// Use this to spew information about the 3D layer 
 	void									SpewDriverInfo() const;
 
-	DELEGATE_TO_OBJECT_2VC(					GetBackBufferDimensions, int &, int &, g_pShaderDevice );
-	DELEGATE_TO_OBJECT_0C( ImageFormat,		GetBackBufferFormat, g_pShaderDevice );
-	DELEGATE_TO_OBJECT_0C( const AspectRatioInfo_t &, GetAspectRatioInfo, g_pShaderAPI );
+	void GetBackBufferDimensions( int & a1, int & a2 )	const { (g_pShaderDevice)->GetBackBufferDimensions( a1, a2 ); };
+	ImageFormat GetBackBufferFormat()	const { return (g_pShaderDevice)->GetBackBufferFormat(); };
+	const AspectRatioInfo_t & GetAspectRatioInfo()	const { return (g_pShaderAPI)->GetAspectRatioInfo(); };
 
 
-	DELEGATE_TO_OBJECT_1V(                  PushDeformation, DeformationBase_t const *, g_pShaderAPI );
+	void PushDeformation( DeformationBase_t const * a1 )	{ (g_pShaderAPI)->PushDeformation( a1 ); };
 
-	DELEGATE_TO_OBJECT_0V(                  PopDeformation, g_pShaderAPI );
+	void PopDeformation()	{ (g_pShaderAPI)->PopDeformation(); };
 
-	DELEGATE_TO_OBJECT_0C(int,				GetNumActiveDeformations, g_pShaderAPI );
+	int GetNumActiveDeformations()	const { return (g_pShaderAPI)->GetNumActiveDeformations(); };
 
 	// -----------------------------------------------------------
 	// Window methods
@@ -422,15 +411,15 @@ public:
 
 	//---------------------------------
 
-	DELEGATE_TO_OBJECT_0C( MaterialHandle_t, FirstMaterial, &m_MaterialDict );
-	DELEGATE_TO_OBJECT_1C( MaterialHandle_t, NextMaterial, MaterialHandle_t, &m_MaterialDict );
-	DELEGATE_TO_OBJECT_0C( MaterialHandle_t, InvalidMaterial, &m_MaterialDict );
-	DELEGATE_TO_OBJECT_1C( IMaterial *,		GetMaterial, MaterialHandle_t, &m_MaterialDict );
-	DELEGATE_TO_OBJECT_1C( IMaterialInternal *, GetMaterialInternal, MaterialHandle_t, &m_MaterialDict );
-	DELEGATE_TO_OBJECT_0C( int,				GetNumMaterials, &m_MaterialDict );
-	DELEGATE_TO_OBJECT_1V(					AddMaterialToMaterialList, IMaterialInternal *, &m_MaterialDict );
-	DELEGATE_TO_OBJECT_1V(					RemoveMaterial, IMaterialInternal *, &m_MaterialDict );
-	DELEGATE_TO_OBJECT_1V(					RemoveMaterialSubRect, IMaterialInternal *, &m_MaterialDict );
+	MaterialHandle_t FirstMaterial()	const { return (&m_MaterialDict)->FirstMaterial(); };
+	MaterialHandle_t NextMaterial( MaterialHandle_t a1 )	const { return (&m_MaterialDict)->NextMaterial( a1 ); };
+	MaterialHandle_t InvalidMaterial()	const { return (&m_MaterialDict)->InvalidMaterial(); };
+	IMaterial * GetMaterial( MaterialHandle_t a1 )	const { return (&m_MaterialDict)->GetMaterial( a1 ); };
+	IMaterialInternal * GetMaterialInternal( MaterialHandle_t a1 )	const { return (&m_MaterialDict)->GetMaterialInternal( a1 ); };
+	int GetNumMaterials()	const { return (&m_MaterialDict)->GetNumMaterials(); };
+	void AddMaterialToMaterialList( IMaterialInternal * a1 )	{ (&m_MaterialDict)->AddMaterialToMaterialList( a1 ); };
+	void RemoveMaterial( IMaterialInternal * a1 )	{ (&m_MaterialDict)->RemoveMaterial( a1 ); };
+	void RemoveMaterialSubRect( IMaterialInternal * a1 )	{ (&m_MaterialDict)->RemoveMaterialSubRect( a1 ); };
 
 	//---------------------------------
 
@@ -518,20 +507,20 @@ public:
 	bool									OnDrawMesh( IMesh *pMesh, int firstIndex, int numIndices );
 	bool									OnDrawMesh( IMesh *pMesh, CPrimList *pLists, int nLists );
 	bool									OnDrawMeshModulated( IMesh *pMesh, const Vector4D &diffuseModulation, int firstIndex, int numIndices );
-	DELEGATE_TO_OBJECT_3( bool,				OnSetFlexMesh, IMesh *, IMesh *, int, GetRenderContextInternal() );
-	DELEGATE_TO_OBJECT_3( bool,				OnSetColorMesh, IMesh *, IMesh *, int, GetRenderContextInternal() );
-	DELEGATE_TO_OBJECT_2( bool,				OnSetPrimitiveType, IMesh *, MaterialPrimitiveType_t, GetRenderContextInternal() );
-	DELEGATE_TO_OBJECT_0V(					SyncMatrices, GetRenderContextInternal() );
-	DELEGATE_TO_OBJECT_1V(					SyncMatrix, MaterialMatrixMode_t, GetRenderContextInternal() );
+	bool OnSetFlexMesh( IMesh * a1, IMesh * a2, int a3 )	{ return (GetRenderContextInternal())->OnSetFlexMesh( a1, a2, a3 ); };
+	bool OnSetColorMesh( IMesh * a1, IMesh * a2, int a3 )	{ return (GetRenderContextInternal())->OnSetColorMesh( a1, a2, a3 ); };
+	bool OnSetPrimitiveType( IMesh * a1, MaterialPrimitiveType_t a2 )	{ return (GetRenderContextInternal())->OnSetPrimitiveType( a1, a2 ); };
+	void SyncMatrices()	{ (GetRenderContextInternal())->SyncMatrices(); };
+	void SyncMatrix( MaterialMatrixMode_t a1 )	{ (GetRenderContextInternal())->SyncMatrix( a1 ); };
 	void									OnThreadEvent( uint32 threadEvent );
-	DELEGATE_TO_OBJECT_1( ShaderAPITextureHandle_t,	GetLightmapTexture, ShaderAPITextureHandle_t, GetRenderContextInternal() );
-	DELEGATE_TO_OBJECT_1( ShaderAPITextureHandle_t,	GetPaintmapTexture, ShaderAPITextureHandle_t, GetRenderContextInternal() );
+	ShaderAPITextureHandle_t GetLightmapTexture( ShaderAPITextureHandle_t a1 )	{ return (GetRenderContextInternal())->GetLightmapTexture( a1 ); };
+	ShaderAPITextureHandle_t GetPaintmapTexture( ShaderAPITextureHandle_t a1 )	{ return (GetRenderContextInternal())->GetPaintmapTexture( a1 ); };
 
 
 	// -----------------------------------------------------------
 	// Lightmaps delegates
 	// -----------------------------------------------------------
-	DELEGATE_TO_OBJECT_0V(					BeginLightmapAllocation, &m_Lightmaps );
+	void BeginLightmapAllocation()	{ (&m_Lightmaps)->BeginLightmapAllocation(); };
 
 	void EndLightmapAllocation()
 	{
@@ -544,27 +533,27 @@ public:
 		GetLightmaps()->CleanupLightmaps();
 	}
 
-	DELEGATE_TO_OBJECT_4( int,				AllocateLightmap, int, int, LightmapOffset_t, IMaterial *, &m_Lightmaps );
-	DELEGATE_TO_OBJECT_1( int,				AllocateWhiteLightmap, IMaterial *, &m_Lightmaps );
-	DELEGATE_TO_OBJECT_3( int,				AllocateDynamicLightmap, LightmapOffset_t, int *, int, &m_Lightmaps );
+	int AllocateLightmap( int a1, int a2, LightmapOffset_t a3, IMaterial * a4 )	{ return (&m_Lightmaps)->AllocateLightmap( a1, a2, a3, a4 ); };
+	int AllocateWhiteLightmap( IMaterial * a1 )	{ return (&m_Lightmaps)->AllocateWhiteLightmap( a1 ); };
+	int AllocateDynamicLightmap( LightmapOffset_t a1, int * a2, int a3 )	{ return (&m_Lightmaps)->AllocateDynamicLightmap( a1, a2, a3 ); };
 	void									UpdateLightmap( int, LightmapOffset_t, LightmapOffset_t, float *, float *, float *, float * );
-	DELEGATE_TO_OBJECT_0( int,				GetNumSortIDs, &m_Lightmaps );
-	DELEGATE_TO_OBJECT_1V(					GetSortInfo, MaterialSystem_SortInfo_t *, &m_Lightmaps );
-	DELEGATE_TO_OBJECT_3VC(					GetLightmapPageSize, int, int *, int *, &m_Lightmaps );
-	DELEGATE_TO_OBJECT_0V(					ResetMaterialLightmapPageInfo, &m_Lightmaps );
-	DELEGATE_TO_OBJECT_0C( int,				GetNumLightmapPages, &m_Lightmaps );
-	DELEGATE_TO_OBJECT_1C( int,				GetLightmapWidth, int, &m_Lightmaps );
-	DELEGATE_TO_OBJECT_1C( int,				GetLightmapHeight, int, &m_Lightmaps );
-	DELEGATE_TO_OBJECT_0V(					BeginUpdateLightmaps, &m_Lightmaps );
-	DELEGATE_TO_OBJECT_0V(					EndUpdateLightmaps, &m_Lightmaps );
+	int GetNumSortIDs()	{ return (&m_Lightmaps)->GetNumSortIDs(); };
+	void GetSortInfo( MaterialSystem_SortInfo_t * a1 )	{ (&m_Lightmaps)->GetSortInfo( a1 ); };
+	void GetLightmapPageSize( int a1, int * a2, int * a3 )	const { (&m_Lightmaps)->GetLightmapPageSize( a1, a2, a3 ); };
+	void ResetMaterialLightmapPageInfo()	{ (&m_Lightmaps)->ResetMaterialLightmapPageInfo(); };
+	int GetNumLightmapPages()	const { return (&m_Lightmaps)->GetNumLightmapPages(); };
+	int GetLightmapWidth( int a1 )	const { return (&m_Lightmaps)->GetLightmapWidth( a1 ); };
+	int GetLightmapHeight( int a1 )	const { return (&m_Lightmaps)->GetLightmapHeight( a1 ); };
+	void BeginUpdateLightmaps()	{ (&m_Lightmaps)->BeginUpdateLightmaps(); };
+	void EndUpdateLightmaps()	{ (&m_Lightmaps)->EndUpdateLightmaps(); };
 
 
 	// -----------------------------------------------------------
 	// Paint map delegates
 	// -----------------------------------------------------------
-	DELEGATE_TO_OBJECT_1( void, RegisterPaintmapDataManager, IPaintmapDataManager *, &m_Paintmaps );
-	DELEGATE_TO_OBJECT_0V( BeginUpdatePaintmaps, &m_Paintmaps );
-	DELEGATE_TO_OBJECT_0V( EndUpdatePaintmaps, &m_Paintmaps );
+	void RegisterPaintmapDataManager( IPaintmapDataManager * a1 )	{ return (&m_Paintmaps)->RegisterPaintmapDataManager( a1 ); };
+	void BeginUpdatePaintmaps()	{ (&m_Paintmaps)->BeginUpdatePaintmaps(); };
+	void EndUpdatePaintmaps()	{ (&m_Paintmaps)->EndUpdatePaintmaps(); };
 	void UpdatePaintmap( int paintmap, BYTE* pPaintData, int numRects, Rect_t* pRects );
 
 	// -----------------------------------------------------------
@@ -583,33 +572,33 @@ public:
 	// -----------------------------------------------------------
 
 	// IMaterialSystem
-	DELEGATE_TO_OBJECT_3V(					ClearBuffers, bool, bool, bool, GetRenderContextInternal() );
+	void ClearBuffers( bool a1, bool a2, bool a3 )	{ (GetRenderContextInternal())->ClearBuffers( a1, a2, a3 ); };
 
 	// IMaterialSystemInternal
-	DELEGATE_TO_OBJECT_0( IMaterial *,		GetCurrentMaterial, GetRenderContextInternal() );
-	DELEGATE_TO_OBJECT_0( int,				GetLightmapPage, GetRenderContextInternal() );
-	DELEGATE_TO_OBJECT_0( ITexture *,		GetLocalCubemap, GetRenderContextInternal() );
-	DELEGATE_TO_OBJECT_1V(					ForceDepthFuncEquals, bool, GetRenderContextInternal() );
-	DELEGATE_TO_OBJECT_0( MaterialHeightClipMode_t, GetHeightClipMode, GetRenderContextInternal() );
-	DELEGATE_TO_OBJECT_0C( bool,			InFlashlightMode, GetRenderContextInternal() );
-	DELEGATE_TO_OBJECT_0C( bool,			IsRenderingPaint, GetRenderContextInternal() );
-	DELEGATE_TO_OBJECT_0C( bool,			IsCascadedShadowMapping, GetRenderContextInternal() );
+	IMaterial * GetCurrentMaterial()	{ return (GetRenderContextInternal())->GetCurrentMaterial(); };
+	int GetLightmapPage()	{ return (GetRenderContextInternal())->GetLightmapPage(); };
+	ITexture * GetLocalCubemap()	{ return (GetRenderContextInternal())->GetLocalCubemap(); };
+	void ForceDepthFuncEquals( bool a1 )	{ (GetRenderContextInternal())->ForceDepthFuncEquals( a1 ); };
+	MaterialHeightClipMode_t GetHeightClipMode()	{ return (GetRenderContextInternal())->GetHeightClipMode(); };
+	bool InFlashlightMode()	const { return (GetRenderContextInternal())->InFlashlightMode(); };
+	bool IsRenderingPaint()	const { return (GetRenderContextInternal())->IsRenderingPaint(); };
+	bool IsCascadedShadowMapping()	const { return (GetRenderContextInternal())->IsCascadedShadowMapping(); };
 
 	// IShaderUtil
-	DELEGATE_TO_OBJECT_3V(					BindStandardTexture, Sampler_t, TextureBindFlags_t, StandardTextureId_t, &m_HardwareRenderContext );
+	void BindStandardTexture( Sampler_t a1, TextureBindFlags_t a2, StandardTextureId_t a3 )	{ (&m_HardwareRenderContext)->BindStandardTexture( a1, a2, a3 ); };
 
-	DELEGATE_TO_OBJECT_1( ShaderAPITextureHandle_t,		GetStandardTexture, StandardTextureId_t, &m_HardwareRenderContext );
+	ShaderAPITextureHandle_t GetStandardTexture( StandardTextureId_t a1 )	{ return (&m_HardwareRenderContext)->GetStandardTexture( a1 ); };
 
-	DELEGATE_TO_OBJECT_2V(					BindStandardVertexTexture, VertexTextureSampler_t, StandardTextureId_t, &m_HardwareRenderContext );
-	DELEGATE_TO_OBJECT_2V(					GetLightmapDimensions, int *, int *, &m_HardwareRenderContext );
-	DELEGATE_TO_OBJECT_3V(					GetStandardTextureDimensions, int *, int *, StandardTextureId_t, &m_HardwareRenderContext );
-	DELEGATE_TO_OBJECT_0( float,			GetSubDHeight, &m_HardwareRenderContext );
+	void BindStandardVertexTexture( VertexTextureSampler_t a1, StandardTextureId_t a2 )	{ (&m_HardwareRenderContext)->BindStandardVertexTexture( a1, a2 ); };
+	void GetLightmapDimensions( int * a1, int * a2 )	{ (&m_HardwareRenderContext)->GetLightmapDimensions( a1, a2 ); };
+	void GetStandardTextureDimensions( int * a1, int * a2, StandardTextureId_t a3 )	{ (&m_HardwareRenderContext)->GetStandardTextureDimensions( a1, a2, a3 ); };
+	float GetSubDHeight()	{ return (&m_HardwareRenderContext)->GetSubDHeight(); };
 
-	DELEGATE_TO_OBJECT_0( MorphFormat_t,	GetBoundMorphFormat, &m_HardwareRenderContext );
-	DELEGATE_TO_OBJECT_1( ITexture *,		GetRenderTargetEx, int, &m_HardwareRenderContext );
-	DELEGATE_TO_OBJECT_7V(					DrawClearBufferQuad, unsigned char, unsigned char, unsigned char, unsigned char, bool, bool, bool, &m_HardwareRenderContext );
-	DELEGATE_TO_OBJECT_0C( int,				MaxHWMorphBatchCount, g_pMorphMgr );
-	DELEGATE_TO_OBJECT_1V(					GetCurrentColorCorrection, ShaderColorCorrectionInfo_t*, g_pColorCorrectionSystem );
+	MorphFormat_t GetBoundMorphFormat()	{ return (&m_HardwareRenderContext)->GetBoundMorphFormat(); };
+	ITexture * GetRenderTargetEx( int a1 )	{ return (&m_HardwareRenderContext)->GetRenderTargetEx( a1 ); };
+	void DrawClearBufferQuad( unsigned char a1, unsigned char a2, unsigned char a3, unsigned char a4, bool a5, bool a6, bool a7 )	{ (&m_HardwareRenderContext)->DrawClearBufferQuad( a1, a2, a3, a4, a5, a6, a7 ); };
+	int MaxHWMorphBatchCount()	const { return (g_pMorphMgr)->MaxHWMorphBatchCount(); };
+	void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* a1 )	{ (g_pColorCorrectionSystem)->GetCurrentColorCorrection( a1 ); };
 	virtual ShaderAPITextureHandle_t		GetShaderAPITextureBindHandle( ITexture *pTexture, int nFrameVar, int nTextureChannel = 0 );
 
 	virtual void SpinPresent( uint nFrames );
@@ -631,13 +620,20 @@ public:
 
 	// -----------------------------------------------------------
 private:
-	CON_COMMAND_MEMBER_F( CMaterialSystem, "mat_showmaterials", DebugPrintUsedMaterials, "Show materials.", 0 );
-	CON_COMMAND_MEMBER_F( CMaterialSystem, "mat_showmaterialsverbose", DebugPrintUsedMaterialsVerbose, "Show materials (verbose version).", 0 );
-	CON_COMMAND_MEMBER_F( CMaterialSystem, "mat_showtextures", DebugPrintUsedTextures, "Show used textures.", 0 );
-	CON_COMMAND_MEMBER_F( CMaterialSystem, "mat_reloadallmaterials", ReloadAllMaterials, "Reloads all materials", FCVAR_CHEAT );
-	CON_COMMAND_MEMBER_F( CMaterialSystem, "mat_reloadmaterial", ReloadMaterials, "Reloads a single material", FCVAR_CHEAT );
-	CON_COMMAND_MEMBER_F( CMaterialSystem, "mat_reloadtextures", ReloadTextures, "Reloads all textures", FCVAR_CHEAT );
-	CON_COMMAND_MEMBER_F( CMaterialSystem, "mat_showaspectratioinfo", DebugPrintAspectRatioInfo, "Spew info about the hardware aspect ratio", FCVAR_DEVELOPMENTONLY );
+	void DebugPrintUsedMaterials( const CCommand &args );
+	CConCommandMemberAccessor< CMaterialSystem > m_DebugPrintUsedMaterials_register{ this, "mat_showmaterials", &CMaterialSystem::DebugPrintUsedMaterials, "Show materials.", 0 };
+	void DebugPrintUsedMaterialsVerbose( const CCommand &args );
+	CConCommandMemberAccessor< CMaterialSystem > m_DebugPrintUsedMaterialsVerbose_register{ this, "mat_showmaterialsverbose", &CMaterialSystem::DebugPrintUsedMaterialsVerbose, "Show materials (verbose version).", 0 };
+	void DebugPrintUsedTextures( const CCommand &args );
+	CConCommandMemberAccessor< CMaterialSystem > m_DebugPrintUsedTextures_register{ this, "mat_showtextures", &CMaterialSystem::DebugPrintUsedTextures, "Show used textures.", 0 };
+	void ReloadAllMaterials( const CCommand &args );
+	CConCommandMemberAccessor< CMaterialSystem > m_ReloadAllMaterials_register{ this, "mat_reloadallmaterials", &CMaterialSystem::ReloadAllMaterials, "Reloads all materials", FCVAR_CHEAT };
+	void ReloadMaterials( const CCommand &args );
+	CConCommandMemberAccessor< CMaterialSystem > m_ReloadMaterials_register{ this, "mat_reloadmaterial", &CMaterialSystem::ReloadMaterials, "Reloads a single material", FCVAR_CHEAT };
+	void ReloadTextures( const CCommand &args );
+	CConCommandMemberAccessor< CMaterialSystem > m_ReloadTextures_register{ this, "mat_reloadtextures", &CMaterialSystem::ReloadTextures, "Reloads all textures", FCVAR_CHEAT };
+	void DebugPrintAspectRatioInfo( const CCommand &args );
+	CConCommandMemberAccessor< CMaterialSystem > m_DebugPrintAspectRatioInfo_register{ this, "mat_showaspectratioinfo", &CMaterialSystem::DebugPrintAspectRatioInfo, "Spew info about the hardware aspect ratio", FCVAR_DEVELOPMENTONLY };
 
 
 	friend void* InstantiateMaterialSystemV76Interface();
@@ -660,7 +656,7 @@ private:
 	CMatPaintmaps							m_Paintmaps;
 
 
-	static CTHREADLOCALPTR(IMatRenderContextInternal) m_pRenderContext;
+	static thread_local IMatRenderContextInternal * m_pRenderContext;
 	CMatRenderContext						m_HardwareRenderContext;
 
 	CMatQueuedRenderContext					m_QueuedRenderContexts[2];
@@ -806,14 +802,12 @@ private:
 
 inline CMaterialSystem *CMatLightmaps::GetMaterialSystem() const
 {
-	return GET_OUTER( CMaterialSystem, m_Lightmaps );
+	return ( ( CMaterialSystem * ) ( (uint8 *)this - __builtin_offsetof( CMaterialSystem, m_Lightmaps ) ) );
 }
 
 inline CMaterialSystem *CMatPaintmaps::GetMaterialSystem() const
 {
-	return GET_OUTER( CMaterialSystem, m_Paintmaps );
+	return ( ( CMaterialSystem * ) ( (uint8 *)this - __builtin_offsetof( CMaterialSystem, m_Paintmaps ) ) );
 }
 
 //-----------------------------------------------------------------------------
-
-#endif // CMATERIALSYSTEM_H

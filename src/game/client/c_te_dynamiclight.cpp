@@ -1,20 +1,18 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "dlight.h"
 #include "iefx.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
-#include "tier0/vprof.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Dynamic Light
@@ -118,7 +116,7 @@ void TE_DynamicLight( IRecipientFilter& filter, float delay,
 //-----------------------------------------------------------------------------
 void C_TEDynamicLight::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEDynamicLight::PostDataUpdate" );
+	CVProfScope _( "C_TEDynamicLight::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CBroadcastRecipientFilter filter;
 	TE_DynamicLight( filter, 0.0f, &m_vecOrigin, r, g, b, exponent, m_fRadius, m_fTime, m_fDecay, LIGHT_INDEX_TE_DYNAMIC );
@@ -140,4 +138,3 @@ void TE_DynamicLight( IRecipientFilter& filter, float delay, KeyValues *pKeyValu
 	TE_DynamicLight( filter, 0.0f, &vecOrigin, c.r(), c.g(), c.b(), nExponent, 
 		flRadius, flDuration, flDecay, nLightIndex );
 }
-

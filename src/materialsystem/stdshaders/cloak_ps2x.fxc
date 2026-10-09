@@ -1,12 +1,13 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC:  "LIGHTWARPTEXTURE"			"0..1"
+
 #include "common_fog_ps_fxc.h"
 // DYNAMIC: "WRITEWATERFOGTODESTALPHA"	"0..1"
 // DYNAMIC: "NUM_LIGHTS"				"0..2"	[ps20]
 // DYNAMIC: "NUM_LIGHTS"				"0..4"	[ps20b]
 // DYNAMIC: "NUM_LIGHTS"				"0..4"	[ps30]
-
 
 #include "shader_constant_register_map.h"
 

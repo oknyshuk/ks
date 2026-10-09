@@ -1,11 +1,11 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef CSM_PARALLEL_SPLIT_H
-#define CSM_PARALLEL_SPLIT_H
-
-
-#include "mathlib/volumeculler.h"
+import std;
+import ks.math;
 #include "mathlib/camera.h"
+#include "materialsystem/imaterialsystem.h"
 
 namespace CCSMFrustumDefinition
 {
@@ -127,6 +127,3 @@ private:
 	
 	SunLightState_t m_lightState;
 };
-
-#endif //CSM_PARALLEL_SPLIT_H
-

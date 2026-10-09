@@ -1,24 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <unistd.h>
 
-#include <stdio.h>
-#include <sys/stat.h>
-#include "tier1/strtools.h"
+import std;
+import ks.tier1;
 #include "filesystem_tools.h"
-#include "tier0/icommandline.h"
-#include "keyvalues.h"
-#include "tier2/tier2.h"
-
-#ifdef MPI
-	#include "vmpi.h"
-	#include "vmpi_tools_shared.h"
-	#include "vmpi_filesystem.h"
-#endif
 
 
 // ---------------------------------------------------------------------------------------------------- //
@@ -51,17 +37,17 @@ void FileSystem_SetupStandardDirectories( const char *pFilename, const char *pGa
 		pFilename = ".";
 	}
 
-	Q_MakeAbsolutePath( qdir, sizeof( qdir ), pFilename, nullptr );
-	Q_StripFilename( qdir );
-	Q_strlower( qdir );
+	V_MakeAbsolutePath( qdir, sizeof( qdir ), pFilename, nullptr );
+	V_StripFilename( qdir );
+	V_strlower( qdir );
 	if ( qdir[0] != 0 )
 	{
-		Q_AppendSlash( qdir, sizeof( qdir ) );
+		V_AppendSlash( qdir, sizeof( qdir ) );
 	}
 
 	// Set gamedir.
-	Q_MakeAbsolutePath( gamedir, sizeof( gamedir ), pGameInfoPath );
-	Q_AppendSlash( gamedir, sizeof( gamedir ) );
+	V_MakeAbsolutePath( gamedir, sizeof( gamedir ), pGameInfoPath );
+	V_AppendSlash( gamedir, sizeof( gamedir ) );
 }
 
 
@@ -71,12 +57,8 @@ bool FileSystem_Init_Normal( const char *pFilename, FSInitType_t initType, bool 
 	{
 		// First, get the name of the module
 		char fileSystemDLLName[MAX_PATH];
-		bool bSteam;
-		if ( FileSystem_GetFileSystemDLLName( fileSystemDLLName, MAX_PATH, bSteam ) != FS_OK )
+		if ( FileSystem_GetFileSystemDLLName( fileSystemDLLName, MAX_PATH ) != FS_OK )
 			return false;
-
-		// If we're under Steam we need extra setup to let us find the proper modules
-		FileSystem_SetupSteamInstallPath();
 
 		// Next, load the module, call Connect/Init.
 		CFSLoadModuleInfo loadModuleInfo;
@@ -84,17 +66,11 @@ bool FileSystem_Init_Normal( const char *pFilename, FSInitType_t initType, bool 
 		loadModuleInfo.m_pDirectoryName = pFilename;
 		loadModuleInfo.m_bOnlyUseDirectoryName = bOnlyUseDirectoryName;
 		loadModuleInfo.m_ConnectFactory = Sys_GetFactoryThis();
-		loadModuleInfo.m_bSteam = bSteam;
-		loadModuleInfo.m_bToolsMode = true;
 		if ( FileSystem_LoadFileSystemModule( loadModuleInfo ) != FS_OK )
 			return false;
 
-		// Next, mount the content
-		CFSMountContentInfo mountContentInfo;
-		mountContentInfo.m_pDirectoryName=  loadModuleInfo.m_GameInfoPath;
-		mountContentInfo.m_pFileSystem = loadModuleInfo.m_pFileSystem;
-		mountContentInfo.m_bToolsMode = true;
-		if ( FileSystem_MountContent( mountContentInfo ) != FS_OK )
+		// Next, set up the base paths
+		if ( FileSystem_SetBasePaths( loadModuleInfo.m_pFileSystem ) != FS_OK )
 			return false;
 		
 		// Finally, load the search paths.
@@ -139,28 +115,9 @@ bool FileSystem_Init_Normal( const char *pFilename, FSInitType_t initType, bool 
 
 bool FileSystem_Init( const char *pBSPFilename, int maxMemoryUsage, FSInitType_t initType, bool bOnlyUseFilename )
 {
-	Assert( CommandLine()->GetCmdLine() != nullptr ); // Should have called CreateCmdLine by now.
+	contract_assert( CommandLine()->GetCmdLine() != nullptr ); // Should have called CreateCmdLine by now.
 
 	// If this app uses VMPI, then let VMPI intercept all filesystem calls.
-#if defined( MPI )
-	if ( g_bUseMPI )
-	{
-		if ( g_bMPIMaster )
-		{
-			if ( !FileSystem_Init_Normal( pBSPFilename, initType, bOnlyUseFilename ) )
-				return false;
-
-			g_pFileSystem = g_pFullFileSystem = VMPI_FileSystem_Init( maxMemoryUsage, g_pFullFileSystem );
-			SendQDirInfo();
-		}
-		else
-		{
-			g_pFileSystem = g_pFullFileSystem = VMPI_FileSystem_Init( maxMemoryUsage, nullptr );
-			RecvQDirInfo();
-		}
-		return true;
-	}
-#endif
 
 	return FileSystem_Init_Normal( pBSPFilename, initType, bOnlyUseFilename );
 }
@@ -168,12 +125,6 @@ bool FileSystem_Init( const char *pBSPFilename, int maxMemoryUsage, FSInitType_t
 
 void FileSystem_Term()
 {
-#if defined( MPI )
-	if ( g_bUseMPI )
-	{
-		g_pFileSystem = g_pFullFileSystem = VMPI_FileSystem_Term();
-	}
-#endif
 
 	if ( g_pFullFileSystem )
 	{
@@ -192,10 +143,6 @@ void FileSystem_Term()
 
 CreateInterfaceFn FileSystem_GetFactory()
 {
-#if defined( MPI )
-	if ( g_bUseMPI )
-		return VMPI_FileSystem_GetFactory();
-#endif
 	return Sys_GetFactory( g_pFullFileSystemModule );
 }
 
@@ -211,4 +158,3 @@ bool FileSystem_SetGame( const char *szModDir )
 	fsInit.m_pFileSystem = g_pFullFileSystem;
 	return ( FileSystem_LoadSearchPaths( fsInit ) == FS_OK );
 }
-

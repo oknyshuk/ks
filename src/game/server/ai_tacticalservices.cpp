@@ -1,8 +1,35 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ====
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 
@@ -58,17 +85,16 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_TacticalServices )
 
 void CAI_TacticalServices::Init( CAI_Network *pNetwork )
 {
-	Assert( pNetwork );
+	contract_assert( pNetwork );
 	m_pNetwork = pNetwork;
 	m_pPathfinder = GetOuter()->GetPathfinder();
-	Assert( m_pPathfinder );
+	contract_assert( m_pPathfinder );
 }
 	
 //-------------------------------------
 
 bool CAI_TacticalServices::FindLos(const Vector &threatPos, const Vector &threatEyePos, float minThreatDist, float maxThreatDist, float blockTime, FlankType_t eFlankType, const Vector &vecFlankRefPos, float flFlankParam, Vector *pResult)
 {
-	AI_PROFILE_SCOPE( CAI_TacticalServices_FindLos );
 
 	MARK_TASK_EXPENSIVE();
 
@@ -127,7 +153,6 @@ bool CAI_TacticalServices::FindCoverPos( const Vector &vThreatPos, const Vector 
 
 bool CAI_TacticalServices::FindCoverPos( const Vector &vNearPos, const Vector &vThreatPos, const Vector &vThreatEyePos, float flMinDist, float flMaxDist, Vector *pResult )
 {
-	AI_PROFILE_SCOPE( CAI_TacticalServices_FindCoverPos );
 
 	MARK_TASK_EXPENSIVE();
 
@@ -176,8 +201,8 @@ bool CAI_TacticalServices::TestLateralCover( const Vector &vecCheckStart, const 
 // conceal them from view of pSightEnt
 //-------------------------------------
 
-#define	COVER_CHECKS	5// how many checks are made
-#define COVER_DELTA		48// distance between checks
+constexpr auto COVER_CHECKS = 5; // how many checks are made
+constexpr auto COVER_DELTA = 48; // distance between checks
 bool CAI_TacticalServices::FindLateralCover( const Vector &vecThreat, float flMinDist, Vector *pResult )
 {
 	return FindLateralCover( vecThreat, flMinDist, COVER_CHECKS * COVER_DELTA, COVER_CHECKS, pResult );
@@ -190,7 +215,6 @@ bool CAI_TacticalServices::FindLateralCover( const Vector &vecThreat, float flMi
 
 bool CAI_TacticalServices::FindLateralCover( const Vector &vNearPos, const Vector &vecThreat, float flMinDist, float distToCheck, int numChecksPerDir, Vector *pResult )
 {
-	AI_PROFILE_SCOPE( CAI_TacticalServices_FindLateralCover );
 
 	MARK_TASK_EXPENSIVE();
 
@@ -337,7 +361,6 @@ int CAI_TacticalServices::FindCoverNode(const Vector &vNearPos, const Vector &vT
 	if ( !CAI_NetworkManager::NetworksLoaded() )
 		return NO_NODE;
 
-	AI_PROFILE_SCOPE( CAI_TacticalServices_FindCoverNode );
 
 	MARK_TASK_EXPENSIVE();
 
@@ -498,7 +521,6 @@ int CAI_TacticalServices::FindLosNode(const Vector &vThreatPos, const Vector &vT
 	if ( !CAI_NetworkManager::NetworksLoaded() )
 		return NO_NODE;
 
-	AI_PROFILE_SCOPE( CAI_TacticalServices_FindLosNode );
 
 	MARK_TASK_EXPENSIVE();
 
@@ -564,7 +586,7 @@ int CAI_TacticalServices::FindLosNode(const Vector &vThreatPos, const Vector &vT
 					
 					float flDot = DotProduct( vecEnemyToRef, vecEnemyToNode );
 					
-					if ( RAD2DEG( acos( flDot ) ) < flFlankParam )
+					if ( RAD2DEG( std::acos( flDot ) ) < flFlankParam )
 					{
 						skip = true;
 					}
@@ -687,7 +709,6 @@ bool CAI_TacticalServices::TestLateralLos( const Vector &vecCheckStart, const Ve
 
 bool CAI_TacticalServices::FindLateralLos( const Vector &vecThreat, Vector *pResult )
 {
-	AI_PROFILE_SCOPE( CAI_TacticalServices_FindLateralLos );
 
 	if( !m_bAllowFindLateralLos )
 	{

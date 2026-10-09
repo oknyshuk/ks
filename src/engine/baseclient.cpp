@@ -1,11 +1,29 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:  baseclient.cpp: implementation of the CBaseClient class.
-//
-//===========================================================================//
- 
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "server_pch.h"
+// Purpose: baseclient.cpp: implementation of the CBaseClient class.
+
+// main precompiled header for server files
+
+import ks.tier1;
+
+#include "common.h"
+#include "quakedef.h"
+#include "decal.h"
+#include "host_cmd.h"
+#include "cmodel_engine.h"
+#include "sv_log.h"
+#include "sound.h"
+#include "EngineSoundInternal.h"
+#include "checksum_engine.h"
+#include "host.h"
+#include "keys.h"
+#include "vengineserver_impl.h"
+#include "server.h"
+#include "eiface.h"
+#include "filesystem.h"
+#include "console.h"
+#include "edict.h"
 #include "baseclient.h"
 #include "server.h"
 #include "networkstringtable.h"
@@ -17,7 +35,6 @@
 #endif
 #include "sv_remoteaccess.h" // NotifyDedicatedServerUI()
 #include "MapReslistGenerator.h"
-#include "sv_steamauth.h"
 #include "sv_main.h"
 #include "host_state.h"
 #include "net_chan.h"
@@ -26,11 +43,10 @@
 
 #include "matchmaking/imatchframework.h"
 #include "tier2/tier2.h"
-#include "tier0/etwprof.h"
-#include "tier1/bit_ops.h"
-#include <bitset>
+import std;
 
 extern IServerGameDLL	*serverGameDLL;
+extern ConVar sv_lan;
 
 ConVar	sv_reliableavatardata( "sv_reliableavatardata", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "When enabled player avatars are exchanged via gameserver (0: off, 1: players, 2: server)" );
 ConVar	sv_duplicate_playernames_ok( "sv_duplicate_playernames_ok", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "When enabled player names won't have the (#) in front of their names its the same as another player." );
@@ -49,9 +65,6 @@ CBaseClient::CBaseClient()
 	m_pBaseline = nullptr;
 	m_bIsHLTV = false;
 	m_pHltvSlaveServer = nullptr;
-#if defined( REPLAY_ENABLED )
-	m_bIsReplay = false;
-#endif
 	m_bConVarsChanged = false;
 	m_bSendServerInfo = false;
 	m_bFullyAuthenticated = false;
@@ -61,7 +74,7 @@ CBaseClient::CBaseClient()
 	m_bSplitPlayerDisconnecting = false;
 	m_nSplitScreenPlayerSlot = 0;
 	m_pAttachedTo = nullptr;
-	Q_memset( m_SplitScreenUsers, 0, sizeof( m_SplitScreenUsers ) );
+	V_memset( m_SplitScreenUsers, 0, sizeof( m_SplitScreenUsers ) );
 	m_SplitScreenUsers[ 0 ] = this;
 	m_ClientPlatform = CROSSPLAYPLATFORM_THISPLATFORM;
 
@@ -97,24 +110,21 @@ int	CBaseClient::GetRate( void ) const
 
 bool CBaseClient::FillUserInfo( player_info_s &userInfo )
 {
-	Q_memset( &userInfo, 0, sizeof(userInfo) );
+	V_memset( &userInfo, 0, sizeof(userInfo) );
 
 	if ( !IsConnected() )
 		return false; // inactive user, no more data available
 
 	userInfo.version = CDLL_PLAYER_INFO_S_VERSION_CURRENT;
-	Q_strncpy( userInfo.name, GetClientName(), MAX_PLAYER_NAME_LENGTH );
-	Q_strncpy( userInfo.guid, GetNetworkIDString(), SIGNED_GUID_LEN + 1 );
-	userInfo.friendsID = m_SteamID.GetAccountID();
+	V_strncpy( userInfo.name, GetClientName(), MAX_PLAYER_NAME_LENGTH );
+	V_strncpy( userInfo.guid, GetNetworkIDString(), SIGNED_GUID_LEN + 1 );
+	userInfo.friendsID = m_PlayerUID.GetAccountID();
 	userInfo.xuid = GetClientXuid();
 
-	Q_strncpy( userInfo.friendsName, m_FriendsName, sizeof(m_FriendsName) );
+	V_strncpy( userInfo.friendsName, m_FriendsName, sizeof(m_FriendsName) );
 	userInfo.userID = GetUserID();
 	userInfo.fakeplayer = ( IsFakeClient() && !IsSplitScreenUser() );
 	userInfo.ishltv = IsHLTV();
-#if defined( REPLAY_ENABLED )
-	userInfo.isreplay = IsReplay();
-#endif		
 	for( int i=0; i< MAX_CUSTOM_FILES; i++ )
 		userInfo.customFiles[i] = m_nCustomFiles[i].crc;
 
@@ -130,12 +140,12 @@ bool CBaseClient::FillUserInfo( player_info_s &userInfo )
 //-----------------------------------------------------------------------------
 void CBaseClient::ClientPrintf (const char *fmt, ...)
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		string[1024];
 
-	va_start (argptr,fmt);
-	Q_vsnprintf (string, sizeof( string ), fmt,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,fmt);
+	V_vsnprintf (string, sizeof( string ), fmt,argptr);
+	__builtin_va_end (argptr);
 
 	CSVCMsg_Print_t print;
 	print.text = string;
@@ -174,7 +184,7 @@ CHLTVServer	* CBaseClient::GetHltvServer()
 		return static_cast< CHLTVServer* >( m_Server );
 	else
 	{
-		Assert( !m_bIsHLTV || m_pHltvSlaveServer ); // if we have m_bIsHLTV mark, it means we connect to HLTV data source, either as a client listening to the HLTV port, or as a master client of HLTV Slave server. We can't be m_bIsHLTV and not be connected to any HLTV server from any end
+		contract_assert( !m_bIsHLTV || m_pHltvSlaveServer ); // if we have m_bIsHLTV mark, it means we connect to HLTV data source, either as a client listening to the HLTV port, or as a master client of HLTV Slave server. We can't be m_bIsHLTV and not be connected to any HLTV server from any end
 		return nullptr;
 	}
 }
@@ -183,7 +193,7 @@ CHLTVServer	* CBaseClient::GetAnyConnectedHltvServer()
 {
 	if ( m_pHltvSlaveServer )
 	{
-		Assert( !m_Server->IsHLTV() ); // we shouldn't cascade hltv->hltv within the same process
+		contract_assert( !m_Server->IsHLTV() ); // we shouldn't cascade hltv->hltv within the same process
 		return m_pHltvSlaveServer;
 	}
 	else
@@ -306,15 +316,12 @@ void CBaseClient::Clear()
 	m_bIsHLTV = false;
 	//???TODO: do we need to disconnect slave hltv server?
 	//m_pHltvSlaveServer = NULL;
-#if defined( REPLAY_ENABLED )
-	m_bIsReplay = false;
-#endif
 	m_fNextMessageTime = 0;
 	m_fSnapshotInterval = 0;
 	m_bReceivedPacket = false;
 	m_UserID = 0;
 	m_Name[0] = 0;
-	strcpy(m_Name, "EMPTY");
+	std::strcpy(m_Name, "EMPTY");
 	m_FriendsName[0] = 0;
 	m_nSendtableCRC = 0;
 	m_nBaselineUpdateTick = -1;
@@ -328,7 +335,7 @@ void CBaseClient::Clear()
 
 	m_msgAvatarData.Clear();
 
-	Q_memset( m_nCustomFiles, 0, sizeof(m_nCustomFiles) );
+	V_memset( m_nCustomFiles, 0, sizeof(m_nCustomFiles) );
 }
 
 bool CBaseClient::ProcessSignonStateMsg(int state, int spawncount)
@@ -381,12 +388,12 @@ bool CBaseClient::ProcessSignonStateMsg(int state, int spawncount)
 											if ( ( GetServer() == &sv ) &&
 												( sv_reliableavatardata.GetInt() == 2 ) &&
 												!this->IsFakeClient() && !this->IsHLTV() &&
-												m_SteamID.IsValid() )
+												m_PlayerUID.IsValid() )
 											{
 												//
 												// Try to load the avatar data for this player
 												//
-												auto avatarData = g_pFullFileSystem->ReadFile( CFmtStr( "avatars/%llu.rgb", m_SteamID.ConvertToUint64() ), "MOD" );
+												auto avatarData = g_pFullFileSystem->ReadFile( CFmtStr( "avatars/%llu.rgb", m_PlayerUID.ConvertToUint64() ), "MOD" );
 												if ( !avatarData || avatarData->size() != 64*64*3 )
 												{
 													avatarData = g_pFullFileSystem->ReadFile( "avatars/default.rgb", "MOD" );
@@ -397,7 +404,7 @@ bool CBaseClient::ProcessSignonStateMsg(int state, int spawncount)
 												if ( avatarData )
 												{
 													m_msgAvatarData.rgb = std::string( ks::text_view( *avatarData ) );
-													m_msgAvatarData.accountid = m_SteamID.GetAccountID();
+													m_msgAvatarData.accountid = m_PlayerUID.GetAccountID();
 
 													OnPlayerAvatarDataChanged();
 
@@ -517,9 +524,9 @@ void CBaseClient::SetName(const char * name)
 	}
 	*pTo = 0;
 
-	if ( Q_strlen( m_Name ) <= 0 )
+	if ( V_strlen( m_Name ) <= 0 )
 	{
-		Q_snprintf( m_Name, sizeof(m_Name), "unnamed" );
+		V_snprintf( m_Name, sizeof(m_Name), "unnamed" );
 	}
 
 	val = m_Name;
@@ -541,7 +548,7 @@ void CBaseClient::SetName(const char * name)
 				if( !client->IsConnected() || client == this )
 					continue;
 				
-				if( !Q_stricmp( client->GetClientName(), val ) )
+				if( !V_stricmp( client->GetClientName(), val ) )
 					break;
 			}
 
@@ -562,8 +569,8 @@ void CBaseClient::SetName(const char * name)
 				}
 			}
 
-			Q_snprintf(newname, sizeof(newname), "(%d)%-.*s", dupc++, MAX_PLAYER_NAME_LENGTH - 4, p );
-			Q_strncpy(m_Name, newname, sizeof(m_Name));
+			V_snprintf(newname, sizeof(newname), "(%d)%-.*s", dupc++, MAX_PLAYER_NAME_LENGTH - 4, p );
+			V_strncpy(m_Name, newname, sizeof(m_Name));
 			
 			val = m_Name;		
 		}	
@@ -599,9 +606,6 @@ void CBaseClient::SpawnPlayer( void )
 		
 		// create baseline snapshot for real clients
 		m_pBaseline = framesnapshotmanager->CreateEmptySnapshot( 
-#ifdef DEBUG_SNAPSHOT_REFERENCES
-			CFmtStr( "CBaseClient[%d,%s]::SpawnPlayer", m_nClientSlot, GetClientName() ).Access(),
-#endif
 			0, MAX_EDICTS );
 	}
 
@@ -666,19 +670,19 @@ void CBaseClient::Connect( const char *szName, int nUserID, INetChannel *pNetCha
 	{
 		ApplyConVars( *pVecCvars, true ); // set all initial user info cvars
 		char const *pchName = GetUserSetting( "name" );
-		pchName = serverGameClients->ClientNameHandler( m_SteamID.ConvertToUint64(), pchName );
+		pchName = serverGameClients->ClientNameHandler( m_PlayerUID.ConvertToUint64(), pchName );
 		SetName( ( pchName && *pchName ) ? pchName : szName );
 	}
 	else
 	{
-		szName = serverGameClients->ClientNameHandler( m_SteamID.ConvertToUint64(), szName );
+		szName = serverGameClients->ClientNameHandler( m_PlayerUID.ConvertToUint64(), szName );
 		SetName( szName );
 	}
 
 	m_bFakePlayer = bFakePlayer;
 	if ( bFakePlayer )
 	{
-		Steam3Server().NotifyLocalClientConnect( this );
+		SetPlayerID( CPlayerId() );
 	}
 	m_NetChannel = pNetChannel;
 
@@ -701,11 +705,6 @@ void CBaseClient::Connect( const char *szName, int nUserID, INetChannel *pNetCha
 //-----------------------------------------------------------------------------
 void CBaseClient::PerformDisconnection( const char *pReason )
 {
-#if !defined( DEDICATED ) && defined( ENABLE_RPT )
-	SV_NotifyRPTOfDisconnect( m_nClientSlot );
-#endif
-
-	Steam3Server().NotifyClientDisconnect( this );
 
 	SetSignonState( SIGNONSTATE_NONE );
 
@@ -798,8 +797,6 @@ void CBaseClient::Disconnect( const char *fmt )
 	PerformDisconnection( fmt );
 
 	NotifyDedicatedServerUI("UpdatePlayers");
-
-	Steam3Server().SendUpdatedServerDetails(); // Update the master server.
 }
 
 
@@ -818,7 +815,7 @@ void CBaseClient::FireGameEvent( IGameEvent *event, bool bPassthrough )
 
 			// This is our last chance to deliver this message out since the
 			// secure channels will be closed!
-			if ( !Q_stricmp( event->GetName(), "server_pre_shutdown" ) )
+			if ( !V_stricmp( event->GetName(), "server_pre_shutdown" ) )
 				m_NetChannel->Transmit();
 		}
 	}
@@ -853,7 +850,7 @@ bool CBaseClient::SendServerInfo( void )
 
 		sv.GetMasterServerPlayerCounts( nHumans, nMaxHumans, nBots );
 
-		Q_snprintf( devtext, sizeof( devtext ), 
+		V_snprintf( devtext, sizeof( devtext ), 
 			"\n%s\nMap: %s\nPlayers: %i (%i bots) / %i humans\nBuild: %d\nServer Number: %i\n\n",
 			serverGameDLL->GetGameDescription(),
 			m_Server->GetMapName(),
@@ -891,8 +888,6 @@ bool CBaseClient::SendServerInfo( void )
 	if ( g_pMatchFramework && !sv.GetReservationCookie() )
 	{
 		KeyValues *kvUpdate = new KeyValues( "OnEngineListenServerStarted" );
-		if ( Steam3Server().SteamGameServer() )
-			kvUpdate->SetInt( "externalIP", Steam3Server().SteamGameServer()->GetPublicIP() );
 		g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( kvUpdate );
 	}
 
@@ -915,9 +910,7 @@ bool CBaseClient::SendServerInfo( void )
 	}
 
 	// write stringtable baselines
-#ifndef SHARED_NET_STRING_TABLES
 	m_Server->m_StringTables->WriteBaselines( m_Server->GetMapName(), msg );
-#endif
 
 	m_bSendServerInfo = false;
 
@@ -943,19 +936,9 @@ bool CBaseClient::SendServerInfo( void )
 	return true;
 }
 
-void CBaseClient::OnSteamServerLogonSuccess( uint32 externalIP )
-{
-	if ( g_pMatchFramework && !sv.GetReservationCookie() )
-	{
-		KeyValues *kvUpdate = new KeyValues( "OnEngineListenServerStarted" );
-		kvUpdate->SetInt( "externalIP", externalIP );		
-		g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( kvUpdate );
-	}
-}
-
 CClientFrame *CBaseClient::GetDeltaFrame( int nTick )
 {
-	Assert( 0 ); // derive moe
+	contract_assert( 0 ); // derive moe
 	return nullptr; // CBaseClient has no delta frames
 }
 
@@ -1044,7 +1027,7 @@ bool CBaseClient::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarDa
 	if ( ( GetServer() == &sv ) && ( msg.rgb->size() == 64*64*3 ) )
 	{
 		m_msgAvatarData.CopyFrom( msg );
-		m_msgAvatarData.accountid = m_SteamID.GetAccountID();
+		m_msgAvatarData.accountid = m_PlayerUID.GetAccountID();
 
 		OnPlayerAvatarDataChanged();
 	}
@@ -1092,7 +1075,7 @@ void CBaseClient::ApplyConVars( const ks::net::CMsg_CVars& list, bool bCreateIfN
 
 		if ( !V_stricmp( name, "name" ) )
 		{
-			value = serverGameClients->ClientNameHandler( m_SteamID.ConvertToUint64(), value );
+			value = serverGameClients->ClientNameHandler( m_PlayerUID.ConvertToUint64(), value );
 		}
 
 		if ( !bCreateIfNotExisting && !m_ConVars->FindKey( name ) )
@@ -1105,7 +1088,7 @@ void CBaseClient::ApplyConVars( const ks::net::CMsg_CVars& list, bool bCreateIfN
 			{
 				s_dblLastWarned = dblTimeNow;
 				Warning( "Client \"%s\" SteamID %s userinfo ignored: \"%s\" = \"%s\"\n",
-					this->GetClientName(), CSteamID( this->GetClientXuid() ).Render(), name, value );
+					this->GetClientName(), CPlayerId( this->GetClientXuid() ).Render(), name, value );
 			}
 			continue;
 		}
@@ -1153,12 +1136,8 @@ bool CBaseClient::CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg )
 
 	m_bIsHLTV = msg.is_hltv;
 
-#if defined( REPLAY_ENABLED )
-	m_bIsReplay = msg.is_replay;
-#endif
-
 	m_nFilesDownloaded = 0;
-	Q_strncpy( m_FriendsName, msg.friends_name->c_str(), sizeof(m_FriendsName) );
+	V_strncpy( m_FriendsName, msg.friends_name->c_str(), sizeof(m_FriendsName) );
 
 	for ( int i=0; i<MAX_CUSTOM_FILES; i++ ) 
 	{
@@ -1196,7 +1175,7 @@ bool CBaseClient::CLCMsg_BaselineAck( const ks::net::CCLCMsg_BaselineAck& msg )
 		return true;
 	}
 
-	Assert( m_pBaseline );	
+	contract_assert( m_pBaseline );	
 
 	// copy ents send as full updates this frame into baseline stuff
 	CClientFrame *frame = GetDeltaFrame( m_nBaselineUpdateTick );
@@ -1315,7 +1294,7 @@ void CBaseClient::StartTrace( bf_write &msg )
 	m_Trace.m_nCurBit = m_Trace.m_nStartBit;
 }
 
-#define SERVER_PACKETS_LOG	"netspike.txt"
+inline constexpr const char *SERVER_PACKETS_LOG = "netspike.txt";
 
 void CBaseClient::EndTrace( bf_write &msg )
 {
@@ -1372,13 +1351,13 @@ void CBaseClient::TraceNetworkData( bf_write &msg, char const *fmt, ... )
 	if ( !IsTracing() )
 		return;
 	char buf[ 64 ];
-	va_list argptr;
-	va_start( argptr, fmt );
-	Q_vsnprintf( buf, sizeof( buf ), fmt, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, fmt );
+	V_vsnprintf( buf, sizeof( buf ), fmt, argptr );
+	__builtin_va_end( argptr );
 
 	Spike_t t;
-	Q_strncpy( t.m_szDesc, buf, sizeof( t.m_szDesc ) );
+	V_strncpy( t.m_szDesc, buf, sizeof( t.m_szDesc ) );
 	t.m_nBits = msg.GetNumBitsWritten() - m_Trace.m_nCurBit;
 	m_Trace.m_Records.push_back( t );
 	m_Trace.m_nCurBit = msg.GetNumBitsWritten();
@@ -1389,13 +1368,13 @@ void CBaseClient::TraceNetworkMsg( int nBits, char const *fmt, ... )
 	if ( !IsTracing() )
 		return;
 	char buf[ 64 ];
-	va_list argptr;
-	va_start( argptr, fmt );
-	Q_vsnprintf( buf, sizeof( buf ), fmt, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, fmt );
+	V_vsnprintf( buf, sizeof( buf ), fmt, argptr );
+	__builtin_va_end( argptr );
 
 	Spike_t t;
-	Q_strncpy( t.m_szDesc, buf, sizeof( t.m_szDesc ) );
+	V_strncpy( t.m_szDesc, buf, sizeof( t.m_szDesc ) );
 	t.m_nBits = nBits;
 	m_Trace.m_Records.push_back( t );
 }
@@ -1410,7 +1389,6 @@ ConVar sv_multiplayer_maxsounds( "sv_multiplayer_sounds", "20" );
 
 bool CBaseClient::SendSnapshot( CClientFrame *pFrame )
 {
-    SNPROF( "SendSnapshot" );
 
 	// never send the same snapshot twice
 	if ( m_pLastSnapshot == pFrame->GetSnapshot() )
@@ -1428,7 +1406,7 @@ bool CBaseClient::SendSnapshot( CClientFrame *pFrame )
 		return false;
 	}
 
-	VPROF_BUDGET( "SendSnapshot", VPROF_BUDGETGROUP_OTHER_NETWORKING );
+	CVProfScope _( "SendSnapshot", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
 	net_scratchbuffer_t scratch;
 	bf_write msg( "CBaseClient::SendSnapshot",
@@ -1442,7 +1420,7 @@ bool CBaseClient::SendSnapshot( CClientFrame *pFrame )
 	{
 		// We need to send a full update and reset the instanced baselines
 		char reason[ 128 ];
-		Q_snprintf( reason, sizeof( reason ), "%s can't find frame from tick %d", GetClientName(), m_nDeltaTick );
+		V_snprintf( reason, sizeof( reason ), "%s can't find frame from tick %d", GetClientName(), m_nDeltaTick );
 		OnRequestFullUpdate( reason );
 	}
 
@@ -1466,14 +1444,12 @@ bool CBaseClient::SendSnapshot( CClientFrame *pFrame )
 		TraceNetworkData( msg, "NET_Tick" );
 	}
 
-#ifndef SHARED_NET_STRING_TABLES
 	// in LocalNetworkBackdoor mode we updated the stringtables already in SV_ComputeClientPacks()
 	if ( !g_pLocalNetworkBackdoor )
 	{
 		// Update shared client/server string tables. Must be done before sending entities
 		m_Server->m_StringTables->WriteUpdateMessage( this, GetMaxAckTickCount(), msg );
 	}
-#endif
 
 	int nDeltaStartBit = 0;
 	if ( IsTracing() )
@@ -1580,7 +1556,7 @@ bool CBaseClient::ExecuteStringCommand( const char *pCommand )
 	if ( !pCommand || !pCommand[0] )
 		return false;
 
-	if ( !Q_stricmp( pCommand, "demorestart" ) )
+	if ( !V_stricmp( pCommand, "demorestart" ) )
 	{
 		DemoRestart();
 		// trick, dont return true, so serverGameClients gets this command too
@@ -1702,9 +1678,6 @@ void CBaseClient::OnRequestFullUpdate( char const *pchReason )
 
 	// and create new baseline snapshot
 	m_pBaseline = framesnapshotmanager->CreateEmptySnapshot( 
-#ifdef DEBUG_SNAPSHOT_REFERENCES
-		CFmtStr( "CBaseClient[%d,%s]::OnRequestFullUpdate(%s)", m_nClientSlot, GetClientName(), pchReason ).Access(),
-#endif
 		0, MAX_EDICTS );
 
 	DevMsg("Sending full update to Client %s (%s)\n", GetClientName(), pchReason );
@@ -1814,41 +1787,38 @@ const char *GetUserIDString( const USERID_t& id )
 
 	switch ( id.idtype )
 	{
-	case IDTYPE_STEAM:
+	case IDTYPE_PLAYER:
 		{
-			TSteamGlobalUserID nullID;
-			Q_memset( &nullID, 0, sizeof( TSteamGlobalUserID ) );
+			const bool bNull = ( id.instance == 0 && id.accountid == 0 );
 
-			if ( Steam3Server().BLanOnly() && !Q_memcmp( &id.uid.steamid, &nullID, sizeof( TSteamGlobalUserID ) ) ) 
+			if ( sv_lan.GetBool() && bNull ) 
 			{
-				strcpy( idstr, "STEAM_ID_LAN" );
+				std::strcpy( idstr, "STEAM_ID_LAN" );
 			}
-			else if ( !Q_memcmp( &id.uid.steamid, &nullID, sizeof( TSteamGlobalUserID ) ))
+			else if ( bNull )
 			{
-				strcpy( idstr, "STEAM_ID_PENDING" );
+				std::strcpy( idstr, "STEAM_ID_PENDING" );
 			}
 			else
 			{			
-				Q_snprintf( idstr, sizeof( idstr ) - 1, "STEAM_%u:%u:%u", (SteamInstanceID_t)id.uid.steamid.m_SteamInstanceID, 
-													(unsigned int)((SteamLocalUserID_t)id.uid.steamid.m_SteamLocalUserID.Split.High32bits), 
-													(unsigned int)((SteamLocalUserID_t)id.uid.steamid.m_SteamLocalUserID.Split.Low32bits ));			
+				V_snprintf( idstr, sizeof( idstr ) - 1, "STEAM_%u:%u:%u", id.instance, id.accountid % 2, id.accountid / 2 );
 				idstr[ sizeof( idstr ) - 1 ] = '\0';
 			}
 		}
 		break;		
 	case IDTYPE_HLTV:
 		{
-			strcpy( idstr, "HLTV" );
+			std::strcpy( idstr, "HLTV" );
 		}
 		break;
 	case IDTYPE_REPLAY:
 		{
-			strcpy( idstr, "REPLAY" );
+			std::strcpy( idstr, "REPLAY" );
 		}
 		break;
 	default:
 		{
-			strcpy( idstr, "UNKNOWN" );
+			std::strcpy( idstr, "UNKNOWN" );
 		}
 		break;
 	}
@@ -1886,13 +1856,13 @@ uint64 CBaseClient::GetClientXuid() const
 		value = m_ConVars->GetString( "networkid_force", nullptr );
 	}
 
-	if ( value && *value && strlen( value ) > 10 )
-		return ( uint64( strtoul( value, nullptr, 16 ) ) << 32 ) | uint64( strtoul( value + 9, nullptr, 16 ) );
+	if ( value && *value && std::strlen( value ) > 10 )
+		return ( uint64( std::strtoul( value, nullptr, 16 ) ) << 32 ) | uint64( strtoul( value + 9, nullptr, 16 ) );
 
 	if ( IsFakeClient() )
 		return 0ull;
 	else
-		return m_SteamID.ConvertToUint64();
+		return m_PlayerUID.ConvertToUint64();
 }
 
 bool CBaseClient::IgnoreTempEntity( CEventInfo *event )
@@ -1906,17 +1876,16 @@ const USERID_t CBaseClient::GetNetworkID() const
 {
 	USERID_t userID;
 
-	m_SteamID.ConvertToSteam2( &userID.uid.steamid );
-
-	userID.idtype = IDTYPE_STEAM; 
-	userID.uid.steamid.m_SteamInstanceID = 1;
+	userID.idtype = IDTYPE_PLAYER; 
+	userID.instance = 1;
+	userID.accountid = m_PlayerUID.GetAccountID();
 
 	return userID;
 }
 
-void CBaseClient::SetSteamID( const CSteamID &steamID )
+void CBaseClient::SetPlayerID( const CPlayerId &playerUID )
 {
-	m_SteamID = steamID;
+	m_PlayerUID = playerUID;
 }
 
 void CBaseClient::SetMaxRoutablePayloadSize( int nMaxRoutablePayloadSize )
@@ -2049,7 +2018,7 @@ void HostValidateSessionImpl()
 		// Now we have a client who is a real human client
 		const char *szSession = client->GetUserSetting( "cl_session" );
 		uint64 uid = 0;
-		if ( sscanf( szSession, "$%llx", &uid ) != 1 )
+		if ( std::sscanf( szSession, "$%llx", &uid ) != 1 )
 		{
 			Warning( "couldn't parse cl_session %s\n", szSession );
 		}
@@ -2117,10 +2086,10 @@ bool CBaseClient::CLCMsg_SplitPlayerConnect( const ks::net::CCLCMsg_SplitPlayerC
 	CBaseClient *pSplitClient = sv.CreateSplitClient( msg.convars, this );
 	if ( pSplitClient )
 	{
-		Assert( pSplitClient->m_bSplitScreenUser );
+		contract_assert( pSplitClient->m_bSplitScreenUser );
 		pSplitClient->m_nSplitScreenPlayerSlot = slot;
 
-		Assert( slot < ARRAYSIZE(m_SplitScreenUsers) );
+		contract_assert( slot < std::size( m_SplitScreenUsers ) );
 		m_SplitScreenUsers[ slot ] = pSplitClient;
 		
 		CSVCMsg_SplitScreen_t splitscreenmsg;
@@ -2153,7 +2122,7 @@ void CBaseClient::SplitScreenDisconnect( const CCommand &args )
 	int nSlot = 1;
 	if ( args.ArgC() > 1 )
 	{
-		nSlot = Q_atoi( args.Arg( 1 ) );
+		nSlot = V_atoi( args.Arg( 1 ) );
 	}
 
 	if ( nSlot <= 0 )
@@ -2196,7 +2165,7 @@ bool CBaseClient::ChangeSplitscreenUser( int nSplitScreenUserSlot )
 	}
 	else
 	{
-		if ( ( other >= 0 ) && ( other < ARRAYSIZE(m_SplitScreenUsers) ) && m_SplitScreenUsers[ other ] )
+		if ( ( other >= 0 ) && ( other < std::size( m_SplitScreenUsers ) ) && m_SplitScreenUsers[ other ] )
 		{
 			success = m_NetChannel->SetActiveChannel( m_SplitScreenUsers[ other ]->m_NetChannel );
 		}
@@ -2208,7 +2177,7 @@ bool CBaseClient::ChangeSplitscreenUser( int nSplitScreenUserSlot )
 		{
 			Msg( "Unable to set SetActiveChannel to user in slot %d\n", nSplitScreenUserSlot );
 		}
-		Assert( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 	return true;
@@ -2242,7 +2211,7 @@ int CBaseClient::GetNumPlayers()
 	else
 	{
 		int numPlayers = 0;
-		for ( int k = 0; k < ARRAYSIZE( m_SplitScreenUsers ); ++ k )
+		for ( int k = 0; k < std::size( m_SplitScreenUsers ); ++ k )
 		{
 			if ( m_SplitScreenUsers[k] )
 				++ numPlayers;

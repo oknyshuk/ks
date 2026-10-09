@@ -1,23 +1,27 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Color correction entity.
-//
-// $NoKeywords: $
-//===========================================================================//
 
-#ifndef COLOR_CORRECTION_H
-#define COLOR_CORRECTION_H
-
+import std;
+import ks.math;
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "baseentity_shared.h"
 #include "reflect_annotations.h"
 #include "dt_common.h"
-
-#include <string.h>
-#include "cbase.h"
+#include "igamesystem.h"
 #include "GameEventListener.h"
 
 // Spawn Flags
-#define SF_COLORCORRECTION_MASTER		0x0001
-#define SF_COLORCORRECTION_CLIENTSIDE	0x0002
+inline constexpr auto SF_COLORCORRECTION_MASTER = 0x0001;
+inline constexpr auto SF_COLORCORRECTION_CLIENTSIDE = 0x0002;
 
 //------------------------------------------------------------------------------
 // FIXME: This really should inherit from something	more lightweight
@@ -122,5 +126,3 @@ private:
 };
 
 CColorCorrectionSystem *ColorCorrectionSystem( void );
-
-#endif // COLOR_CORRECTION_H

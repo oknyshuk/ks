@@ -1,18 +1,13 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef DEMOFILE_H
-#define DEMOFILE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "demo.h"
 
 #include <filesystem.h>
+import ks.tier1;
 
-
-#include "tier1/bitbuf.h"
+import std;
 #include "demostream.h"
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -68,7 +63,7 @@ public:
 	void	WriteUserCmd( int cmdnumber, const char *buffer, unsigned char bytes, int tick, int nPlayerSlot );
 	int		ReadUserCmd( char *buffer, int &size );
 
-	void	WriteCustomData( int iCallbackIndex, const void *pData, size_t iDataSize, int tick);
+	void	WriteCustomData( int iCallbackIndex, const void *pData, std::size_t iDataSize, int tick);
 	int		ReadCustomData( int *pCallbackIndex, uint8 **ppDataChunk ); //returns message size, both parameters are outputs.
 
 	void	WriteDemoHeader();
@@ -76,10 +71,10 @@ public:
 
 	void	WriteFileBytes( FileHandle_t fh, int length );
 
-	virtual const char* GetUrl( void ) OVERRIDE { return m_szFileName; }
-	virtual float GetTicksPerSecond() OVERRIDE;
-	virtual float GetTicksPerFrame() OVERRIDE;
-	virtual int	GetTotalTicks( void ) OVERRIDE;
+	virtual const char* GetUrl( void ) override { return m_szFileName; }
+	virtual float GetTicksPerSecond() override;
+	virtual float GetTicksPerFrame() override;
+	virtual int	GetTotalTicks( void ) override;
 public:
 	char			m_szFileName[MAX_PATH];	//name of current demo file
 	demoheader_t    m_DemoHeader;  //general demo info
@@ -88,6 +83,4 @@ private:
 	IDemoBuffer		*m_pBuffer;
 };
 
-#define DEMO_RECORD_BUFFER_SIZE 2*1024*1024 // temp buffer big enough to fit both string tables and server classes
-
-#endif // DEMOFILE_H
+inline constexpr auto DEMO_RECORD_BUFFER_SIZE = 2*1024*1024; // temp buffer big enough to fit both string tables and server classes

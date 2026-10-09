@@ -1,4 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC:  "PHONG"						"0..1"
 // STATIC:  "PHONGEXPONENTTEXTURE"		"0..1"
@@ -8,14 +9,12 @@
 // STATIC:  "CASCADED_SHADOW_MAPPING"	"0..1" [ps30]
 // STATIC:  "ALPHAMASK"					"0..1" [ps30]
 // STATIC:	"DESATBASETINT"				"0..1"
-
 // DYNAMIC: "NUM_LIGHTS"				"0..2" [ps20]
 // DYNAMIC: "NUM_LIGHTS"				"0..4" [ps20b] [ps30]
 // DYNAMIC: "DYN_CSM_ENABLED"			"0..1"
 // DYNAMIC:	"HIGHLIGHT"					"0..1" [ps20] [ps20b]
 // DYNAMIC:	"HIGHLIGHT"					"0..2" [ps30]
 // DYNAMIC: "PEEL"						"0..1"
-
 // SKIP: ( $CASCADED_SHADOW_MAPPING == 0 ) && ( $DYN_CSM_ENABLED == 1 )
 // SKIP: ( $HIGHLIGHT == 1 ) [ps30]
 // SKIP: ( $HIGHLIGHT > 0 ) && ( $THIRDPERSON == 1 )
@@ -28,7 +27,6 @@
 #include "common_ps_fxc.h"
 //#include "common_vertexlitgeneric_dx9.h"
 #include "shader_constant_register_map.h"
-
 
 // SAMPLERS
 sampler			BaseSampler							: register( s0 );

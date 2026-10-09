@@ -1,19 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( IVMODEMANAGER_H )
-#define IVMODEMANAGER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-abstract_class IVModeManager
+class IVModeManager
 {
 public:
 	virtual void	Init( void ) = 0;
@@ -24,5 +13,3 @@ public:
 };
 
 extern IVModeManager *modemanager;
-
-#endif // IVMODEMANAGER_H

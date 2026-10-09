@@ -1,10 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #include <netmessages.h>
 #include "hltvclientstate.h"
 #include "hltvserver.h"
@@ -24,18 +20,9 @@
 #include "changeframelist.h"
 #include "GameEventManager.h"
 #include "dt_recv_decoder.h"
-#include <memory>
-#include <vector>
+import std;
 #include "cl_demo.h"
-#include "sv_steamauth.h"
 
-// copy message data from in to out buffer
-#define CopyDataInToOut(msg)									\
-	int	 size = PAD_NUMBER( Bits2Bytes(msg->m_nLength), 4);		\
-	byte *buffer = (byte*) stackalloc( size );					\
-	msg->m_DataIn.ReadBits( buffer, msg->m_nLength );			\
-	msg->m_DataOut.StartWriting( buffer, size, msg->m_nLength );\
-	
 static void HLTV_Callback_InstanceBaseline( void *object, INetworkStringTable *stringTable, int stringNumber, char const *newString, void const *newData )
 {
 	// relink server classes to instance baselines
@@ -80,10 +67,10 @@ void CHLTVClientState::CopyNewEntity(
 	)
 {
 	ServerClass *pServerClass = SV_FindServerClass( iClass );
-	Assert( pServerClass );
+	contract_assert( pServerClass );
 	
 	ClientClass *pClientClass = GetClientClass( iClass );
-	Assert( pClientClass );
+	contract_assert( pClientClass );
 
 	const int ent = u.m_nNewEntity;
 
@@ -106,10 +93,7 @@ void CHLTVClientState::CopyNewEntity(
 	else
 	{
 		// Every entity must have a static or an instance baseline when we get here.
-		ErrorIfNot(
-			GetClassBaseline( iClass, &oldbaseline ),
-			("HLTV_CopyNewEntity: GetDynamicBaseline(%d) failed.", iClass)
-		);
+		if ( !( GetClassBaseline( iClass, &oldbaseline ) ) ) Error("HLTV_CopyNewEntity: GetDynamicBaseline(%d) failed.", iClass);
 	}
 
 	// create new ChangeFrameList containing all properties set as changed
@@ -150,7 +134,7 @@ void CHLTVClientState::CopyNewEntity(
 	pPackedEntity->CopyPackedData( newbaseline );
 
 	// If ent doesn't think it's in PVS, signal that it is
-	Assert( u.m_pTo->last_entity <= ent );
+	contract_assert( u.m_pTo->last_entity <= ent );
 	u.m_pTo->last_entity = ent;
 	u.m_pTo->transmit_entity.set( ent );
 }
@@ -159,7 +143,7 @@ static inline void HLTV_CopyExitingEnt( CEntityReadInfo &u )
 {
 	if ( !u.m_bAsDelta )  // Should never happen on a full update.
 	{
-		Assert(0); // GetBaseLocalClient().validsequence = 0;
+		contract_assert( 0 ); // GetBaseLocalClient().validsequence = 0;
 		ConMsg( "WARNING: CopyExitingEnt on full update.\n" );
 		u.m_UpdateType = Failed;	// break out
 		return;
@@ -172,18 +156,18 @@ static inline void HLTV_CopyExitingEnt( CEntityReadInfo &u )
 	CFrameSnapshot *pSnapshot = u.m_pTo->GetSnapshot(); // get to snapshot
 	
 	// copy ent handle, serial numbers & class info
-	Assert( ent < pFromSnapshot->m_nNumEntities );
+	contract_assert( ent < pFromSnapshot->m_nNumEntities );
 	pSnapshot->m_pEntities[ent] = pFromSnapshot->m_pEntities[ent];
 	
-	Assert( pSnapshot->m_pEntities[ent].m_pPackedData != INVALID_PACKED_ENTITY_HANDLE );
+	contract_assert( pSnapshot->m_pEntities[ent].m_pPackedData != INVALID_PACKED_ENTITY_HANDLE );
 
 	// increase PackedEntity reference counter
 	PackedEntity *pEntity =	framesnapshotmanager->GetPackedEntity( *pSnapshot, ent );
-	Assert( pEntity );
+	contract_assert( pEntity );
 	pEntity->m_ReferenceCount++;
 
 
-	Assert( u.m_pTo->last_entity <= ent );
+	contract_assert( u.m_pTo->last_entity <= ent );
 	
 	// mark flags as received
 	u.m_pTo->last_entity = ent;
@@ -202,7 +186,7 @@ bool CHLTVClientState::SetSignonState ( int state, int count, const ks::net::CNE
 	if ( !CBaseClientState::SetSignonState( state, count, msg ) )
 		return false;
 	
-	Assert ( m_nSignonState == state );
+	contract_assert( m_nSignonState == state );
 
 	switch ( m_nSignonState )
 	{
@@ -262,9 +246,6 @@ void CHLTVClientState::SendClientInfo( void )
 	info.send_table_crc = SendTable_GetCRC();
 	info.server_count = m_nServerCount;
 	info.is_hltv = true;
-#if defined( REPLAY_ENABLED )
-	info.is_replay = false;
-#endif
 	info.friends_id = 0;
 	// info.friends_name = "";
 
@@ -379,12 +360,10 @@ bool CHLTVClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 
 	m_StringTableContainer = m_pHLTV->m_StringTables;
 
-	Assert( m_StringTableContainer->GetNumTables() == 0); // must be empty
+	contract_assert( m_StringTableContainer->GetNumTables() == 0 ); // must be empty
 
-#ifndef SHARED_NET_STRING_TABLES
 	// relay uses normal string tables without a change history
 	m_StringTableContainer->EnableRollback( false );
-#endif
 
 	// copy setting from HLTV client to HLTV server 
 	m_pHLTV->m_nGameServerMaxClients = m_nMaxClients;
@@ -400,8 +379,8 @@ bool CHLTVClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 
 	host_state.interval_per_tick = msg.tick_interval;
 
-	Q_strncpy( m_pHLTV->m_szMapname, msg.map_name->c_str(), sizeof(m_pHLTV->m_szMapname) );
-	Q_strncpy( m_pHLTV->m_szSkyname, msg.sky_name->c_str(), sizeof(m_pHLTV->m_szSkyname) );
+	V_strncpy( m_pHLTV->m_szMapname, msg.map_name->c_str(), sizeof(m_pHLTV->m_szMapname) );
+	V_strncpy( m_pHLTV->m_szSkyname, msg.sky_name->c_str(), sizeof(m_pHLTV->m_szSkyname) );
 
 	return true;
 }
@@ -414,10 +393,6 @@ bool CHLTVClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg )
 		Disconnect();
 		return false;
 	}
-
-#ifdef _HLTVTEST
-	RecvTable_Term( false );
-#endif
 
 	// Create all of the send tables locally
 	DataTable_CreateClientTablesFromServerTables();
@@ -460,7 +435,7 @@ bool CHLTVClientState::HookClientStringTable( char const *tableName )
 		return false;
 
 	// Hook instance baseline table
-	if ( !Q_strcasecmp( tableName, INSTANCE_BASELINE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, INSTANCE_BASELINE_TABLENAME ) )
 	{
 		table->SetStringChangedCallback( m_pHLTV,  HLTV_Callback_InstanceBaseline );
 		return true;
@@ -477,7 +452,7 @@ void CHLTVClientState::InstallStringTableCallback( char const *tableName )
 		return;
 
 	// Hook instance baseline table
-	if ( !Q_strcasecmp( tableName, INSTANCE_BASELINE_TABLENAME ) )
+	if ( !V_strcasecmp( tableName, INSTANCE_BASELINE_TABLENAME ) )
 	{
 		table->SetStringChangedCallback( m_pHLTV,  HLTV_Callback_InstanceBaseline );
 		return;
@@ -565,7 +540,7 @@ bool CHLTVClientState::SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg )
 
 	bool bDontForward = false;
 
-	if ( msg.eventid == eventid_hltv_status || Q_strcmp( pszName, "hltv_status" ) == 0 )
+	if ( msg.eventid == eventid_hltv_status || V_strcmp( pszName, "hltv_status" ) == 0 )
 	{
 		IGameEvent *event = g_GameEventManager.UnserializeEvent( msg );
 		m_pHLTV->m_nGlobalSlots = event->GetInt("slots");
@@ -582,12 +557,8 @@ bool CHLTVClientState::SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg )
 
 		g_GameEventManager.FreeEvent( event );
 		bDontForward = true;
-
-		// make sure we update GC information now that we updated HLTV status
-		if ( serverGameDLL && Steam3Server().GetGSSteamID().IsValid() )
-			serverGameDLL->UpdateGCInformation();
 	}
-	else if ( msg.eventid == eventid_hltv_title || Q_strcmp( pszName, "hltv_title" ) == 0 )
+	else if ( msg.eventid == eventid_hltv_title || V_strcmp( pszName, "hltv_title" ) == 0 )
 	{
 		// ignore title messages
 		bDontForward = true;
@@ -656,11 +627,6 @@ bool CHLTVClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntit
 {
 	CClientFrame *oldFrame = nullptr;
 
-#ifdef _HLTVTEST
-	if ( g_RecvDecoders.empty() )
-		return false;
-#endif
-
 	if ( msg.is_delta )
 	{
 		if ( GetServerTickCount() == msg.delta_from )
@@ -675,16 +641,13 @@ bool CHLTVClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntit
 
 	// create new empty snapshot
 	CFrameSnapshot* pSnapshot = framesnapshotmanager->CreateEmptySnapshot(
-#ifdef DEBUG_SNAPSHOT_REFERENCES
-		"CHLTVClientState::SVCMsg_PacketEntities",
-#endif
 		GetServerTickCount(), msg.max_entries );
 
-	Assert( m_pNewClientFrame == nullptr );
+	contract_assert( m_pNewClientFrame == nullptr );
 	
 	m_pNewClientFrame = new CClientFrame( pSnapshot );
 
-	Assert( msg.baseline >= 0 && msg.baseline < 2 );
+	contract_assert( msg.baseline >= 0 && msg.baseline < 2 );
 
 	if ( msg.update_baseline )
 	{
@@ -706,7 +669,7 @@ bool CHLTVClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntit
 		CFrameSnapshotEntry *pEntry = pSnapshot->m_pEntities;
 		CFrameSnapshotEntry *pLastEntry = pLastSnapshot->m_pEntities;
 
-		Assert( pLastSnapshot->m_nNumEntities <= pSnapshot->m_nNumEntities );
+		contract_assert( pLastSnapshot->m_nNumEntities <= pSnapshot->m_nNumEntities );
 
 		for ( int i = 0; i<pLastSnapshot->m_nNumEntities; i++ )
 		{
@@ -768,7 +731,7 @@ void CHLTVClientState::ReadEnterPVS( CEntityReadInfo &u )
 void CHLTVClientState::ReadLeavePVS( CEntityReadInfo &u )
 {
 	// do nothing, this entity was removed
-	Assert( !u.m_pTo->transmit_entity[u.m_nOldEntity] );
+	contract_assert( !u.m_pTo->transmit_entity[u.m_nOldEntity] );
 
 	if ( u.m_UpdateFlags & FHDR_DELETE )
 	{
@@ -778,7 +741,7 @@ void CHLTVClientState::ReadLeavePVS( CEntityReadInfo &u )
 		// clear entity references
 		pEntry->m_nSerialNumber = -1;
 		pEntry->m_pClass = nullptr;
-		Assert( pEntry->m_pPackedData == INVALID_PACKED_ENTITY_HANDLE );
+		contract_assert( pEntry->m_pPackedData == INVALID_PACKED_ENTITY_HANDLE );
 	}
 
 	u.NextOldEntity();
@@ -792,7 +755,7 @@ void CHLTVClientState::ReadDeltaEnt( CEntityReadInfo &u )
 
 	CFrameSnapshot *pSnapshot = u.m_pTo->GetSnapshot();
 
-	Assert( i < pFromSnapshot->m_nNumEntities );
+	contract_assert( i < pFromSnapshot->m_nNumEntities );
 	pSnapshot->m_pEntities[i] = pFromSnapshot->m_pEntities[i];
 	
 	PackedEntity *pToPackedEntity = framesnapshotmanager->CreatePackedEntity( pSnapshot, i );
@@ -856,7 +819,7 @@ void CHLTVClientState::ReadDeletions( CEntityReadInfo &u )
 		int nDelta = u.m_pBuf->ReadUBitVar();
 		int nSlot = nBase + nDelta;
 
-		Assert( !u.m_pTo->transmit_entity[nSlot] );
+		contract_assert( !u.m_pTo->transmit_entity[nSlot] );
 
 		CFrameSnapshot *pSnapshot = u.m_pTo->GetSnapshot();
 		CFrameSnapshotEntry *pEntry = &pSnapshot->m_pEntities[nSlot];
@@ -864,7 +827,7 @@ void CHLTVClientState::ReadDeletions( CEntityReadInfo &u )
 		// clear entity references
 		pEntry->m_nSerialNumber = -1;
 		pEntry->m_pClass = nullptr;
-		Assert( pEntry->m_pPackedData == INVALID_PACKED_ENTITY_HANDLE );
+		contract_assert( pEntry->m_pPackedData == INVALID_PACKED_ENTITY_HANDLE );
 		
 		nBase = nSlot;
 	}
@@ -879,7 +842,7 @@ inline static bool CL_DetermineUpdateType( CEntityReadInfo &u )
 		// If newnum > oldnum, then the server skipped sending entities that it wants to leave the state alone for.
 		if ( !u.m_pFrom	 || ( u.m_nOldEntity > u.m_pFrom->last_entity ) )
 		{
-			Assert( !u.m_bIsEntity );
+			contract_assert( !u.m_bIsEntity );
 			u.m_UpdateType = Finished;
 			return false;
 		}
@@ -911,9 +874,6 @@ static inline void CL_ParseDeltaHeader( CEntityReadInfo &u )
 {
 	u.m_UpdateFlags = FHDR_ZERO;
 
-#ifdef DEBUG_NETWORKING
-	int startbit = u.m_pBuf->GetNumBitsRead();
-#endif
 	u.m_nNewEntity = u.m_nHeaderBase + 1 + u.m_pBuf->ReadUBitVar();
 
 
@@ -939,13 +899,6 @@ static inline void CL_ParseDeltaHeader( CEntityReadInfo &u )
 		}
 	}
 	// Output the bitstream...
-#ifdef DEBUG_NETWORKING
-	int lastbit = u.m_pBuf->GetNumBitsRead();
-	{
-		void	SpewBitStream( unsigned char* pMem, int bit, int lastbit );
-		SpewBitStream( (byte *)u.m_pBuf->m_pData, startbit, lastbit );
-	}
-#endif
 }
 
 
@@ -1140,4 +1093,3 @@ void CHLTVClientState::UpdateStats()
 	SetLocalInfoConvarsForUpstreamConnection( conVars.convars.mut() );
 	m_NetChannel->SendNetMsg( conVars );
 }
-	

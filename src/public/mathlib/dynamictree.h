@@ -1,11 +1,10 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-#ifndef DYNAMIC_TREE_HDR
-#define DYNAMIC_TREE_HDR
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "vector.h"
-#include "aabb.h"
+import std;
 
-#include "utlvector.h"
+import ks.tier1;
 
 // This class implements a dynamic AABB tree and allows node insertion, removal and updates.
 // The user needs to provide an AABB on construction and will receive a unique identifier
@@ -32,7 +31,6 @@
 // * The dynamic tree supports sphere and box queries to find all proxies intersected by
 //   the specified volume.
 // * The dynamic tree supports 'closest proxy' queries
-
 
 //--------------------------------------------------------------------------------------------------
 // Proxy vector
@@ -99,9 +97,9 @@ private:
 			vDelta = vEnd - vStart;
 
 			// Pre-compute inverse
-			vDeltaInv.x = vDelta.x != 0.0f ? 1.0f / vDelta.x : FLT_MAX;
-			vDeltaInv.y = vDelta.y != 0.0f ? 1.0f / vDelta.y : FLT_MAX;
-			vDeltaInv.z = vDelta.z != 0.0f ? 1.0f / vDelta.z : FLT_MAX;
+			vDeltaInv.x = vDelta.x != 0.0f ? 1.0f / vDelta.x : std::numeric_limits<float>::max();
+			vDeltaInv.y = vDelta.y != 0.0f ? 1.0f / vDelta.y : std::numeric_limits<float>::max();
+			vDeltaInv.z = vDelta.z != 0.0f ? 1.0f / vDelta.z : std::numeric_limits<float>::max();
 		}
 
 		Vector vOrigin;
@@ -124,7 +122,7 @@ private:
 		int32 m_nChild2;
 		void* m_pUserData;
 
-		FORCEINLINE bool IsLeaf() const	
+		[[gnu::always_inline]] inline bool IsLeaf() const	
 		{
 			return m_nChild1 == NULL_NODE;
 		}
@@ -145,15 +143,15 @@ private:
 		void Free( int32 id );
 
 		// Accessors
-		FORCEINLINE Node_t& operator[]( int32 id )
+		[[gnu::always_inline]] inline Node_t& operator[]( int32 id )
 		{
-			AssertDbg( 0 <= id && id < m_nCapacity );
+			contract_assert( 0 <= id && id < m_nCapacity );
 			return m_pObjects[ id ];
 		}
 
-		FORCEINLINE const Node_t& operator[]( int32 id ) const
+		[[gnu::always_inline]] inline const Node_t& operator[]( int32 id ) const
 		{
-			AssertDbg( 0 <= id && id < m_nCapacity );
+			contract_assert( 0 <= id && id < m_nCapacity );
 			return m_pObjects[ id ];
 		}
 
@@ -173,5 +171,3 @@ private:
 
 
 #include "dynamictree.inl"
-
-#endif

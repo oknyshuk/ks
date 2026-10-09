@@ -1,20 +1,28 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-	   
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "render_pch.h"
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "r_local.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_lightmap.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
 #include "client.h"
 #include "bitmap/imageformat.h"
 #include "bitmap/tgawriter.h"
-#include <float.h>
 #include "collisionutils.h"
 #include "cl_main.h"
-#include "tier0/vprof.h"
+import std;
 #include "debugoverlay.h"
 
 //-----------------------------------------------------------------------------
@@ -165,7 +173,7 @@ int R_TryLightMarkSurface( dlight_t *light, msurfacelighting_t *pLighting, Surfa
 		tex->lightmapVecsLuxelsPerWorldUnits[1][3];
 
 	// convert from world space to luxel space and convert to int
-	float flInPlaneLuxelRadius = sqrtf( flInPlaneRadiusSq * tex->luxelsPerWorldUnit * tex->luxelsPerWorldUnit );
+	float flInPlaneLuxelRadius = std::sqrtf( flInPlaneRadiusSq * tex->luxelsPerWorldUnit * tex->luxelsPerWorldUnit );
 
 	// Does the circle intersect the square?
 	if ( !IsCircleIntersectingRectangle( mins, maxs, vecCircleCenter, flInPlaneLuxelRadius ) )
@@ -414,7 +422,7 @@ static void ComputeLightmapColor( SurfaceHandle_t surfID, int ds, int dt, bool b
 //-----------------------------------------------------------------------------
 // Tests a particular surface
 //-----------------------------------------------------------------------------
-static bool FASTCALL FindIntersectionAtSurface( SurfaceHandle_t surfID, float f, 
+static bool FindIntersectionAtSurface( SurfaceHandle_t surfID, float f, 
 	Vector& c, LightVecState_t& state )
 {
 	// no lightmaps on this surface? punt...
@@ -618,7 +626,7 @@ static void AddDisplacementsInLeafToTestList( mleaf_t* pLeaf, LightVecState_t& s
 //-----------------------------------------------------------------------------
 
 // returns surfID
-static SurfaceHandle_t FASTCALL FindIntersectionSurfaceAtLeaf( mleaf_t *pLeaf, 
+static SurfaceHandle_t FindIntersectionSurfaceAtLeaf( mleaf_t *pLeaf, 
 					float start, float end, Vector& c, LightVecState_t& state )
 {
 	Vector pt;
@@ -641,7 +649,7 @@ static SurfaceHandle_t FASTCALL FindIntersectionSurfaceAtLeaf( mleaf_t *pLeaf,
 		// displacement code
 		if ( SurfaceHasDispInfo(surfID) )
 			continue;
-		Assert(!(MSurf_Flags( surfID ) & SURFDRAW_NODE));
+		contract_assert( !(MSurf_Flags( surfID ) & SURFDRAW_NODE) );
 
 		if ( MSurf_Flags( surfID ) & (SURFDRAW_NODE|SURFDRAW_NODRAW | SURFDRAW_WATERSURFACE) )
 			continue;
@@ -755,7 +763,7 @@ void R_LightVecUseModel( model_t* pModel )
 SurfaceHandle_t R_LightVec (const Vector& start, const Vector& end, bool bUseLightStyles, Vector& c, 
 		float *textureS, float *textureT, float *lightmapS, float *lightmapT )
 {
-	VPROF_INCREMENT_COUNTER( "R_LightVec", 1 );
+	VProfIncrementCounter<"R_LightVec">( 1 );
 
 	SurfaceHandle_t retSurfID;
 	SurfaceHandle_t dispSurfID;

@@ -1,15 +1,22 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PARTICLE_SYSTEM_H
-#define PARTICLE_SYSTEM_H
-
+import ks.math;
 #include "reflect_annotations.h"
 
-#include "cbase.h"
+import std;
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
 #include "networkstringtable_gamedll.h"
 
 void SendProxy_Angles( const SendProp *pProp, const void *pStruct,
@@ -96,5 +103,3 @@ protected:
 	               [[= ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED } ]]
 	               [[= ks::reflect::Key{ .name = "cpoint1_parent", .index = 0 } ]] [[= ks::reflect::Key{ .name = "cpoint2_parent", .index = 1 } ]] [[= ks::reflect::Key{ .name = "cpoint3_parent", .index = 2 } ]] [[= ks::reflect::Key{ .name = "cpoint4_parent", .index = 3 } ]] [[= ks::reflect::Key{ .name = "cpoint5_parent", .index = 4 } ]] [[= ks::reflect::Key{ .name = "cpoint6_parent", .index = 5 } ]] [[= ks::reflect::Key{ .name = "cpoint7_parent", .index = 6 } ]] );
 };
-
-#endif // PARTICLE_SYSTEM_H

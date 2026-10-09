@@ -1,10 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+#include "cdll_client_int.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "shareddefs.h"
+#include "util.h"
+#endif
 #include "studio.h"
 #include "engine/ivmodelinfo.h"
 

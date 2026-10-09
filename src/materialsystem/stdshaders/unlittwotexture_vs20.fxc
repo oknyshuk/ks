@@ -1,6 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-//	DYNAMIC: "COMPRESSED_VERTS"		"0..1"
+// DYNAMIC: "COMPRESSED_VERTS"		"0..1"
+
 #include "common_fog_vs_fxc.h"
 //	DYNAMIC: "SKINNING"				"0..1"
 //	DYNAMIC: "WORLD_NORMAL"			"0..1"	[PC]

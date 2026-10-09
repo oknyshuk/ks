@@ -1,16 +1,10 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
+
 // Purpose: A higher level link library for general use in the game and tools.
-//
-//===========================================================================//
-
-
-#ifndef TIER3_H
-#define TIER3_H
-
 
 #include "tier2/tier2.h"
-
 
 //-----------------------------------------------------------------------------
 // Call this to connect to/disconnect from all tier 3 libraries.
@@ -49,7 +43,3 @@ public:
 		return APP_SYSTEM_TIER3;
 	}
 };
-
-
-#endif // TIER3_H
-

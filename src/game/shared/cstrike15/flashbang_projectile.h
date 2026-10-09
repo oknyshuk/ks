@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef FLASHBANG_PROJECTILE_H
-#define FLASHBANG_PROJECTILE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
 #include "basecsgrenade_projectile.h"
-
 
 class CFlashbangProjectile : public CBaseCSGrenadeProjectile
 {
@@ -51,6 +44,3 @@ public:
 	uint8 m_numOpponentsHit; // note: opponents are considered to be anybody not on the flasher's team.
 	uint8 m_numTeammatesHit;
 };
-
-
-#endif // FLASHBANG_PROJECTILE_H

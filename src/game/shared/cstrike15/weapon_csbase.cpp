@@ -1,11 +1,62 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Laser Rifle & Shield combo
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Laser Rifle & Shield combo
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "npcevent.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
@@ -25,17 +76,13 @@
 #include "weapon_basecsgrenade.h"
 #include "platforminputdevice.h"
 #include "inputsystem/iinputsystem.h"
-#include "tier1/fmtstr.h"
-#include "tier1/bit_ops.h"
-
 
 // CS-PRO TEST CHANGE: instant movement inaccuracy, curve exponent x^0.25
-#define MOVEMENT_ACCURACY_DECAYED	0
-#define MOVEMENT_WALK_CURVE01_EXPONENT   0.85
-#define MOVEMENT_CURVE01_EXPONENT   0.25
+constexpr auto MOVEMENT_WALK_CURVE01_EXPONENT = 0.85;
+constexpr auto MOVEMENT_CURVE01_EXPONENT = 0.25;
 
-#define SILENCER_VISIBLE 0
-#define SILENCER_HIDDEN 1
+constexpr auto SILENCER_VISIBLE = 0;
+constexpr auto SILENCER_HIDDEN = 1;
 
 #if defined( CLIENT_DLL )
 
@@ -59,7 +106,6 @@
 
 	#include "cs_player.h"
 	#include "te_effect_dispatch.h"
-	#include "keyvalues.h"
 	#include "cs_ammodef.h"
 	#include "cvisibilitymonitor.h"
 
@@ -106,14 +152,15 @@ ConVar cl_weapon_debug_show_accuracy("cl_weapon_debug_show_accuracy", "0", FCVAR
 ConVar cl_weapon_debug_show_accuracy_duration( "cl_weapon_debug_show_accuracy_duration", "10", FCVAR_RELEASE | FCVAR_CHEAT );
 #endif
 
-#define MP_WEAPON_ACCURACY_SEPARATE_WALK_FUNCTION true
 
 /*
 // TODO[pmf] make these work with recoil tables
 ConVar weapon_recoil_seed( "weapon_recoil_seed", "0", FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT | FCVAR_REPLICATED  );
 
 #if defined( GAME_DLL )
-CON_COMMAND_F( weapon_recoil_reseed, "Randomly generate a new recoil seed for the current weapon", FCVAR_DEVELOPMENTONLY )
+static void weapon_recoil_reseed( const CCommand &args );
+static ConCommand weapon_recoil_reseed_command( "weapon_recoil_reseed", weapon_recoil_reseed, "Randomly generate a new recoil seed for the current weapon", FCVAR_DEVELOPMENTONLY );
+static void weapon_recoil_reseed( const CCommand &args )
 {
 	int iNewSeed = RandomInt(0, 0xFFFF);
 	weapon_recoil_seed.SetValue(iNewSeed);
@@ -184,9 +231,9 @@ bool IsAmmoType( int iAmmoType, const char *pAmmoName )
 //
 const char * GetTranslatedWeaponAlias( const char *szAlias )
 {
-	for ( int i = 0; i < ARRAYSIZE( s_WeaponAliasTranslationInfo ); ++i )
+	for ( int i = 0; i < std::size( s_WeaponAliasTranslationInfo ); ++i )
 	{
-		if ( Q_stricmp( s_WeaponAliasTranslationInfo[i].alias, szAlias ) == 0 )
+		if ( V_stricmp( s_WeaponAliasTranslationInfo[i].alias, szAlias ) == 0 )
 		{
 			return s_WeaponAliasTranslationInfo[i].translatedAlias;
 		}
@@ -206,7 +253,7 @@ const char * GetWeaponAliasFromTranslated( const char *translatedAlias )
 
 	while ( info->alias[0] != 0 )
 	{
-		if ( Q_stricmp( translatedAlias, info->translatedAlias ) == 0 )
+		if ( V_stricmp( translatedAlias, info->translatedAlias ) == 0 )
 		{
 			return info->alias;
 		}
@@ -271,19 +318,19 @@ bool IsArmor( CSWeaponID id )
 #ifdef CLIENT_DLL
 int GetShellForAmmoType( const char *ammoname )
 {
-	if ( !Q_strcmp( BULLET_PLAYER_762MM, ammoname ) )
+	if ( !V_strcmp( BULLET_PLAYER_762MM, ammoname ) )
 		return CS_SHELL_762NATO;
 
-	if ( !Q_strcmp( BULLET_PLAYER_556MM, ammoname ) )
+	if ( !V_strcmp( BULLET_PLAYER_556MM, ammoname ) )
 		return CS_SHELL_556;
 
-	if ( !Q_strcmp( BULLET_PLAYER_338MAG, ammoname ) )
+	if ( !V_strcmp( BULLET_PLAYER_338MAG, ammoname ) )
 		return CS_SHELL_338MAG;
 
-	if ( !Q_strcmp( BULLET_PLAYER_BUCKSHOT, ammoname ) )
+	if ( !V_strcmp( BULLET_PLAYER_BUCKSHOT, ammoname ) )
 		return CS_SHELL_12GAUGE;
 
-	if ( !Q_strcmp( BULLET_PLAYER_57MM, ammoname ) )
+	if ( !V_strcmp( BULLET_PLAYER_57MM, ammoname ) )
 		return CS_SHELL_57;
 
 	// default 9 mm
@@ -310,7 +357,7 @@ LINK_ENTITY_TO_CLASS_ALIASED( weapon_cs_base, WeaponCSBase );
 
 #ifdef GAME_DLL
 
-#define REMOVEUNOWNEDWEAPON_THINK_CONTEXT			"WeaponCSBase_RemoveUnownedWeaponThink"
+inline constexpr const char *REMOVEUNOWNEDWEAPON_THINK_CONTEXT = "WeaponCSBase_RemoveUnownedWeaponThink";
 #define REMOVEUNOWNEDWEAPON_THINK_INTERVAL			0.2
 #define REMOVEUNOWNEDWEAPON_THINK_REMOVE			3
 
@@ -374,9 +421,6 @@ CWeaponCSBase::CWeaponCSBase()
 	m_bCanBePickedUp = true;
 
 	m_fAccuracyPenalty = 0.0f;
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-	m_fAccuracyFishtail = 0.0f;
-#endif
 	m_fLastShotTime = 0.0f;
 	m_weaponMode = Primary_Mode;
 	m_fAccuracySmoothedForZoom = 0.0f;
@@ -461,7 +505,7 @@ bool CWeaponCSBase::KeyValue( const char *szKeyName, const char *szValue )
 	{
 		if ( FStrEq( szKeyName, "ammo" ) )
 		{
-			int bullets = atoi( szValue );
+			int bullets = std::atoi( szValue );
 			if ( bullets < 0 )
 				return false;
 
@@ -684,26 +728,6 @@ void CWeaponCSBase::SecondaryAttack( void )
 
 bool CWeaponCSBase::SendWeaponAnim( int iActivity )
 {
-#ifdef CS_SHIELD_ENABLED
-	CCSPlayer *pPlayer = GetPlayerOwner();
-
-	if ( pPlayer && pPlayer->HasShield() )
-	{
-		CBaseViewModel *vm = pPlayer->GetViewModel( 1 );
-
-		if ( vm == nullptr )
-			return false;
-
-		vm->SetWeaponModel( SHIELD_VIEW_MODEL, this );
-
-		int	idealSequence = vm->SelectWeightedSequence( ( Activity )iActivity );
-
-		if ( idealSequence >= 0 )
-		{
-			vm->SendViewModelMatchingSequence( idealSequence );
-		}
-	}
-#endif
 
 	return BaseClass::SendWeaponAnim( iActivity );
 }
@@ -748,7 +772,7 @@ void CWeaponCSBase::CallSecondaryAttack()
 
 	if ( m_iClip2 != -1 && !GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) )
 	{
-		m_bFireOnEmpty = TRUE;
+		m_bFireOnEmpty = true;
 	}
 
 	if ( pPlayer->HasShield() )
@@ -792,7 +816,7 @@ void CWeaponCSBase::UpdateGunHeat( float heat, int iAttachmentIndex )
 		{
 			const char *pszHeatEffect = GetCSWpnData().GetHeatEffectName();
 
-			if ( pszHeatEffect && Q_strlen( pszHeatEffect ) > 0 )
+			if ( pszHeatEffect && V_strlen( pszHeatEffect ) > 0 )
 			{
 				static const int MAX_SMOKE_ATTACHMENT_INDEX = 16;
 				for ( int i=0; i<MAX_SMOKE_ATTACHMENT_INDEX && m_smokeAttachments > 0x0; ++i )
@@ -881,7 +905,7 @@ void CWeaponCSBase::ItemPostFrame_ProcessPrimaryAttack( CCSPlayer *pPlayer )
 {
 	if ( ( m_iClip1 == 0 ) || ( GetMaxClip1() == -1 && !GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) ) )
 	{
-		m_bFireOnEmpty = TRUE;
+		m_bFireOnEmpty = true;
 	}
 
 	if ( CSGameRules()->IsFreezePeriod() )	// Can't shoot during the freeze period
@@ -974,7 +998,7 @@ bool CWeaponCSBase::ItemPostFrame_ProcessSecondaryAttack( CCSPlayer *pPlayer )
 
 		if ( ( m_iClip1 == 0 ) || ( GetMaxClip1() == -1 && !GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) ) )
 		{
-			m_bFireOnEmpty = TRUE;
+			m_bFireOnEmpty = true;
 		}
 
 		m_weaponMode = Secondary_Mode;
@@ -1043,7 +1067,7 @@ void CWeaponCSBase::ItemPostFrame_ProcessIdleNoAction( CCSPlayer *pPlayer )
 	ItemPostFrame_RevolverResetHaulback();
 
 	// no fire buttons down
-	m_bFireOnEmpty = FALSE;
+	m_bFireOnEmpty = false;
 
 	// we can fire after this
 	pPlayer->m_bWaitForNoAttack = false;
@@ -1136,7 +1160,6 @@ float CWeaponCSBase::GetInaccuracy() const
 
 	// CS-PRO TEST FEATURE
 	// Adding movement penalty here results in an instaneous penalty that doesn't persist.
-#if !MOVEMENT_ACCURACY_DECAYED
 	float flVerticalSpeed = abs( pPlayer->GetAbsVelocity().z );
 
 	float flMovementInaccuracyScale = RemapValClamped(pPlayer->GetAbsVelocity().Length2D(),
@@ -1147,14 +1170,14 @@ float CWeaponCSBase::GetInaccuracy() const
 	if ( flMovementInaccuracyScale > 0.0f )
 	{
 		// power curve only applies at speeds greater than walk
-		if (( MP_WEAPON_ACCURACY_SEPARATE_WALK_FUNCTION ) && ( pPlayer->m_bIsWalking ) )
+		if (( true ) && ( pPlayer->m_bIsWalking ) )
 		{
 			//flMovementInaccuracyScale *= 1.0;	// reduce inaccuracy when walking or slower. This is commented out because at 1.0, it's a noop but preserved in case a different value is desired.
 			//flMovementInaccuracyScale = powf( flMovementInaccuracyScale, float( MOVEMENT_WALK_CURVE01_EXPONENT ) );
 		}
 		else
 		{
-			flMovementInaccuracyScale = powf( flMovementInaccuracyScale, float( MOVEMENT_CURVE01_EXPONENT ));
+			flMovementInaccuracyScale = std::powf( flMovementInaccuracyScale, float( MOVEMENT_CURVE01_EXPONENT ));
 		}
 
 
@@ -1168,7 +1191,7 @@ float CWeaponCSBase::GetInaccuracy() const
 		static const float kMaxFallingPenalty = 2.0f;	// Accuracy is never worse than 2x starting penalty
 
 		// Use sqrt here to make the curve more "sudden" around the accurate point at the apex of the jump
-		float fSqrtMaxJumpSpeed = sqrtf( sv_jump_impulse.GetFloat() );
+		float fSqrtMaxJumpSpeed = std::sqrtf( sv_jump_impulse.GetFloat() );
 		float fSqrtVerticalSpeed = sqrtf( flVerticalSpeed );
 
 		float flAirSpeedInaccuracy = RemapVal( fSqrtVerticalSpeed,
@@ -1187,7 +1210,6 @@ float CWeaponCSBase::GetInaccuracy() const
 		// (There is an additional penalty for being in the air at all applied in UpdateAccuracyPenalty())
 		fAccuracy += flAirSpeedInaccuracy;
 	}
-#endif // !MOVEMENT_ACCURACY_DECAYED
 
 	if ( fAccuracy > 1.0f )
 		fAccuracy = 1.0f;
@@ -1219,11 +1241,11 @@ const CCSWeaponInfo &CWeaponCSBase::GetCSWpnData() const
 	if ( GetWeaponFileInfoHandle() == GetInvalidWeaponInfoHandle() )
 	{
 		CFmtStr outputStr( "Weapon '%s' script file not found, but its data was accessed. This error is fatal.\n", GetName() ? GetName() : "<unknown>" );
-		AssertFatalMsg( 0, outputStr.Access() );
+		contract_assert( 0 );
 	}
 
 	const FileWeaponInfo_t *pWeaponInfo = &GetWpnData();
-	const CCSWeaponInfo *pCSInfo = assert_cast< const CCSWeaponInfo* >( pWeaponInfo );
+	const CCSWeaponInfo *pCSInfo = static_cast< const CCSWeaponInfo* >( pWeaponInfo );
 	return *pCSInfo;
 }
 
@@ -1255,13 +1277,6 @@ const char *CWeaponCSBase::GetViewModel( int /*viewmodelindex = 0 -- this is ign
 void CWeaponCSBase::Precache( void )
 {
 	BaseClass::Precache();
-
-#ifdef CS_SHIELD_ENABLED
-	if ( CanBeUsedWithShield() )
-	{
-		 PrecacheModel( GetShieldViewModel() );
-	}
-#endif
 
 	if ( GetSilencerModel()[0] != 0 )
 	{
@@ -1479,9 +1494,6 @@ bool CWeaponCSBase::Deploy()
 		pPlayer->m_bWaitForNoAttack = true;
 	}
 	m_fAccuracyPenalty = 0.0f;
-#if defined( WEAPON_FIRE_BULLETS_ACCURACY_FISHTAIL_FEATURE )
-	m_fAccuracyFishtail = 0.0f;
-#endif
 //	m_iRecoilIndex = 0;	DEPRECATED
 	m_flRecoilIndex = 0.0f;
 
@@ -1700,7 +1712,7 @@ int CWeaponCSBase::GetReticleWeaponSpread( void )
 
 
 		float fHalfFov = DEG2RAD( pPlayer->GetFOV() ) * 0.5f;
-		float fSpreadDistance = ( GetInaccuracy() + GetSpread() ) * 320.0f / tanf( fHalfFov );
+		float fSpreadDistance = ( GetInaccuracy() + GetSpread() ) * 320.0f / std::tanf( fHalfFov );
 		result = RoundFloatToInt( YRES( fSpreadDistance ));
 	}
 
@@ -1779,7 +1791,7 @@ void CWeaponCSBase::DrawCrosshair()
 	if ( !pPlayer || GetPlayerOwner() == nullptr )
 		return;
 
-	Assert( (pPlayer == GetPlayerOwner()) || ( pPlayer->GetObserverMode()==OBS_MODE_IN_EYE) );
+	contract_assert( (pPlayer == GetPlayerOwner()) || ( pPlayer->GetObserverMode()==OBS_MODE_IN_EYE) );
 	if ( pPlayer->IsInVGuiInputMode() )
 		return;
 
@@ -1851,7 +1863,7 @@ void CWeaponCSBase::DrawCrosshair()
 	float flSpread = GetSpread();
 
 //	float flCrossDistanceScale = cl_crosshair_dynamic_distancescale.GetFloat();
-	float fSpreadDistance = ((flInaccuracy + flSpread) * 320.0f / tanf(fHalfFov))/* * flCrossDistanceScale*/;
+	float fSpreadDistance = ((flInaccuracy + flSpread) * 320.0f / std::tanf(fHalfFov))/* * flCrossDistanceScale*/;
 	float flCappedSpreadDistance = fSpreadDistance;
 	float flMaxCrossDistance = cl_crosshair_dynamic_splitdist.GetFloat();
  	if (fSpreadDistance > flMaxCrossDistance)
@@ -1970,7 +1982,7 @@ void CWeaponCSBase::DrawCrosshair()
 				if ( angCamDriver.x != 0 || angCamDriver.y != 0  )
 				{
 					flAngleToScreenPixel = VIEWPUNCH_COMPENSATE_MAGIC_SCALAR * 2 * ( ScreenHeight() / ( 2.0f * tanf(DEG2RAD( pPlayer->GetFOV() ) / 2.0f) ) );
-					iCenterY -= ( flAngleToScreenPixel * sinf( DEG2RAD( angCamDriver.x ) ) ) ;
+					iCenterY -= ( flAngleToScreenPixel * std::sinf( DEG2RAD( angCamDriver.x ) ) ) ;
 					iCenterX += ( flAngleToScreenPixel * sinf( DEG2RAD( angCamDriver.y ) ) ) ;
 				}
 			}
@@ -2022,8 +2034,8 @@ void CWeaponCSBase::DrawCrosshair()
 		iInnerCrossDist = iCappedCrosshairDistance;
 		flLineAlphaInner = alpha * flAlphaSplitInner;
 		flLineAlphaOuter = alpha * flAlphaSplitOuter;
-		iBarSizeInner = ceil((float)iBarSize * (1.0f - flSplitRatio));
-		iBarSizeOuter = floor((float)iBarSize * flSplitRatio);
+		iBarSizeInner = std::ceil((float)iBarSize * (1.0f - flSplitRatio));
+		iBarSizeOuter = std::floor((float)iBarSize * flSplitRatio);
 
 		// draw horizontal crosshair lines
 		int iInnerLeft = (iCenterX - iCrosshairDistance - iBarThickness / 2 + nFishTaleShift) - iBarSizeInner;
@@ -2248,7 +2260,7 @@ bool CWeaponCSBase::OnFireEvent( C_BaseViewModel *pViewModel, const Vector& orig
 		int iAttachmentIndex = GetMuzzleAttachmentIndex_1stPerson( pViewModel );
 		const char *pszEffect = GetMuzzleFlashEffectName_1stPerson();
 
-		if ( pszEffect && Q_strlen( pszEffect ) > 0 && iAttachmentIndex >= 0 )
+		if ( pszEffect && V_strlen( pszEffect ) > 0 && iAttachmentIndex >= 0 )
 		{
 			// The view model fixes up the split screen visibility of any effects spawned off of it.
 			if ( !bLocalThirdPerson )
@@ -2290,7 +2302,7 @@ bool CWeaponCSBase::OnFireEvent( C_BaseViewModel *pViewModel, const Vector& orig
 		int iAttachmentIndex = -1;
 
 		// If options is non-zero in length, treat as an attachment name to use for this particle effect.
-		if ( options && Q_strlen( options ) > 0 )
+		if ( options && V_strlen( options ) > 0 )
 		{
 			iAttachmentIndex = pViewModel->LookupAttachment( options );
 		}
@@ -2299,7 +2311,7 @@ bool CWeaponCSBase::OnFireEvent( C_BaseViewModel *pViewModel, const Vector& orig
 			iAttachmentIndex = GetEjectBrassAttachmentIndex_1stPerson( pViewModel );
 		}
 
-		if ( pszEffect && Q_strlen( pszEffect ) > 0 && iAttachmentIndex >= 0 )
+		if ( pszEffect && V_strlen( pszEffect ) > 0 && iAttachmentIndex >= 0 )
 		{
 
 			C_BasePlayer* pLocalPlayer = C_BasePlayer::GetLocalPlayer();
@@ -2355,7 +2367,7 @@ bool CWeaponCSBase::OnFireEvent( C_BaseViewModel *pViewModel, const Vector& orig
 			CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
 			if ( vm )
 			{
-				vm->SetPoseParameter( options, fmod( m_iNumEmptyAttacks, (float)GetMaxClip1() ) / (float)GetMaxClip1() );
+				vm->SetPoseParameter( options, std::fmod( m_iNumEmptyAttacks, (float)GetMaxClip1() ) / (float)GetMaxClip1() );
 			}
 		}
 		return true;
@@ -2704,7 +2716,7 @@ void CWeaponCSBase::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCh
 				CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
 				if ( vm )
 				{
-					vm->SetPoseParameter( pEvent->options, fmod( m_iNumEmptyAttacks, (float)GetMaxClip1() ) / (float)GetMaxClip1() );
+					vm->SetPoseParameter( pEvent->options, std::fmod( m_iNumEmptyAttacks, (float)GetMaxClip1() ) / (float)GetMaxClip1() );
 				}
 			}
 		}
@@ -2835,7 +2847,7 @@ void CWeaponCSBase::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCh
 			p = nexttoken(token, p, ' ');
 			if ( token )
 			{
-				SetPostponeFireReadyTime( gpGlobals->curtime + atof( token ) );
+				SetPostponeFireReadyTime( gpGlobals->curtime + std::atof( token ) );
 
 				// play the prepare warning sound to other players
 				CCSPlayer *pCSPlayer = GetPlayerOwner();
@@ -2886,14 +2898,14 @@ void CWeaponCSBase::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCh
 					p = nexttoken(token, p, ' ');
 					if ( token )
 					{
-						Q_strncpy( szBodygroupName, token, sizeof(szBodygroupName) );
+						V_strncpy( szBodygroupName, token, sizeof(szBodygroupName) );
 					}
 
 					// Get the desired value
 					p = nexttoken(token, p, ' ');
 					if ( token )
 					{
-						value = atoi( token );
+						value = std::atoi( token );
 					}
 
 					int index = vm->FindBodygroupByName( szBodygroupName );
@@ -3098,7 +3110,7 @@ float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nV
 	if ( cl_use_new_headbob.GetBool() == false )
 		return 0;
 
-	Assert( pBobState );
+	contract_assert( pBobState );
 	if ( !pBobState )
 		return 0;
 
@@ -3234,11 +3246,11 @@ float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nV
 
 	if ( cycle < cl_bobup.GetFloat() )
 	{
-		cycle = M_PI * cycle / cl_bobup.GetFloat();
+		cycle = std::numbers::pi * cycle / cl_bobup.GetFloat();
 	}
 	else
 	{
-		cycle = M_PI + M_PI*(cycle-cl_bobup.GetFloat())/(1.0 - cl_bobup.GetFloat());
+		cycle = std::numbers::pi + std::numbers::pi*(cycle-cl_bobup.GetFloat())/(1.0 - cl_bobup.GetFloat());
 	}
 	float flBobMultiplier = 0.00625f;
 	// if we're in the air, slow our bob down a bit
@@ -3247,7 +3259,7 @@ float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nV
 
 	float flBobVert = bShouldIgnoreOffsetAndAccuracy ? 0.3 : cl_bobamt_vert.GetFloat();
 	pBobState->m_flVerticalBob = speed*( flBobMultiplier * flBobVert );
-	pBobState->m_flVerticalBob = ( pBobState->m_flVerticalBob*0.3 + pBobState->m_flVerticalBob*0.7*sin(cycle) );
+	pBobState->m_flVerticalBob = ( pBobState->m_flVerticalBob*0.3 + pBobState->m_flVerticalBob*0.7*std::sin(cycle) );
 	pBobState->m_flRawVerticalBob = pBobState->m_flVerticalBob;
 
 	pBobState->m_flVerticalBob = clamp( ( pBobState->m_flVerticalBob - ( flRunAddAmt - (flGunAccPos*0.2) ) ), -7.0f, 4.0f );
@@ -3260,11 +3272,11 @@ float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nV
 
 	if ( cycle < cl_bobup.GetFloat() )
 	{
-		cycle = M_PI * cycle / cl_bobup.GetFloat();
+		cycle = std::numbers::pi * cycle / cl_bobup.GetFloat();
 	}
 	else
 	{
-		cycle = M_PI + M_PI*(cycle-cl_bobup.GetFloat())/(1.0 - cl_bobup.GetFloat());
+		cycle = std::numbers::pi + std::numbers::pi*(cycle-cl_bobup.GetFloat())/(1.0 - cl_bobup.GetFloat());
 	}
 
 	float flBobLat = bShouldIgnoreOffsetAndAccuracy ? 0.5 : cl_bobamt_lat.GetFloat();
@@ -3290,7 +3302,7 @@ void AddViewModelBobHelper( Vector &origin, QAngle &angles, BobState_t *pBobStat
 	if ( cl_use_new_headbob.GetBool() == false )
 		return;
 
-	Assert( pBobState );
+	contract_assert( pBobState );
 	if ( !pBobState )
 		return;
 
@@ -3374,15 +3386,15 @@ float CWeaponCSBase::CalcViewmodelBob( void )
 
 	if ( cycle < cl_bobup.GetFloat() )
 	{
-		cycle = M_PI * cycle / cl_bobup.GetFloat();
+		cycle = std::numbers::pi * cycle / cl_bobup.GetFloat();
 	}
 	else
 	{
-		cycle = M_PI + M_PI*( cycle-cl_bobup.GetFloat() )/( 1.0 - cl_bobup.GetFloat() );
+		cycle = std::numbers::pi + std::numbers::pi*( cycle-cl_bobup.GetFloat() )/( 1.0 - cl_bobup.GetFloat() );
 	}
 
 	g_verticalBob = speed*0.005f;
-	g_verticalBob = g_verticalBob*0.3 + g_verticalBob*0.7*sin( cycle );
+	g_verticalBob = g_verticalBob*0.3 + g_verticalBob*0.7*std::sin( cycle );
 
 	g_verticalBob = clamp( g_verticalBob, -7.0f, 4.0f );
 
@@ -3392,11 +3404,11 @@ float CWeaponCSBase::CalcViewmodelBob( void )
 
 	if ( cycle < cl_bobup.GetFloat() )
 	{
-		cycle = M_PI * cycle / cl_bobup.GetFloat();
+		cycle = std::numbers::pi * cycle / cl_bobup.GetFloat();
 	}
 	else
 	{
-		cycle = M_PI + M_PI*( cycle-cl_bobup.GetFloat() )/( 1.0 - cl_bobup.GetFloat() );
+		cycle = std::numbers::pi + std::numbers::pi*( cycle-cl_bobup.GetFloat() )/( 1.0 - cl_bobup.GetFloat() );
 	}
 
 	g_lateralBob = speed*0.005f;
@@ -3572,13 +3584,6 @@ void CWeaponCSBase::UpdateAccuracyPenalty( )
 	float fNewPenalty = 0.0f;
 
 	// Adding movement penalty here results in a penalty that persists and requires decay to eliminate.
-#if MOVEMENT_ACCURACY_DECAYED
-	// movement penalty
-	fNewPenalty += RemapValClamped( pPlayer->GetAbsVelocity().Length2D(),
-		weaponInfo.GetMaxSpeed(m_weaponMode, GetEconItemView()) * CS_PLAYER_SPEED_DUCK_MODIFIER,
-		weaponInfo.GetMaxSpeed(m_weaponMode, GetEconItemView()) * 0.95f,							// max out at 95% of run speed to avoid jitter near max speed
-		0.0f, weaponInfo.GetInaccuracyMove( m_weaponMode, GetEconItemView( ) );
-#endif
 
 
 	// on ladder?
@@ -3613,20 +3618,20 @@ void CWeaponCSBase::UpdateAccuracyPenalty( )
 	}
 	else
 	{
-		float fDecayFactor = logf( 10.0f ) / GetRecoveryTime( );
+		float fDecayFactor = std::logf( 10.0f ) / GetRecoveryTime( );
 
-		m_fAccuracyPenalty = Lerp( expf( TICK_INTERVAL * -fDecayFactor ), fNewPenalty, ( float ) m_fAccuracyPenalty );
+		m_fAccuracyPenalty = Lerp( std::expf( TICK_INTERVAL * -fDecayFactor ), fNewPenalty, ( float ) m_fAccuracyPenalty );
 	}
 
 
-#define WEAPON_RECOIL_DECAY_THRESHOLD 1.10
+constexpr auto WEAPON_RECOIL_DECAY_THRESHOLD = 1.10;
 	// Decay the recoil index if a little more than cycle time has elapsed since the last shot. In other words,
 	// don't decay if we're firing full-auto.
 	if ( gpGlobals->curtime > m_fLastShotTime + ( GetCycleTime() * WEAPON_RECOIL_DECAY_THRESHOLD ) )
 	{
-		float fDecayFactor = logf( 10.0f ) * weapon_recoil_decay_coefficient.GetFloat( );
+		float fDecayFactor = std::logf( 10.0f ) * weapon_recoil_decay_coefficient.GetFloat( );
 
-		m_flRecoilIndex = Lerp( expf( TICK_INTERVAL * -fDecayFactor ), 0.0f, ( float ) m_flRecoilIndex );
+		m_flRecoilIndex = Lerp( std::expf( TICK_INTERVAL * -fDecayFactor ), 0.0f, ( float ) m_flRecoilIndex );
 	}
 }
 
@@ -3699,7 +3704,7 @@ void CWeaponCSBase::OnLand( float fVelocity )
 	// NOTE: do NOT call GetAimPunchAngle() here because it may be adjusted by some recoil scalar.
 	// We just want to update the raw punch angle.
 	QAngle angle = pPlayer->GetRawAimPunchAngle();
-	float fVKick = RAD2DEG(asinf(fPenalty)) * 0.2f;
+	float fVKick = RAD2DEG(std::asinf(fPenalty)) * 0.2f;
 	float fHKick = SharedRandomFloat("LandPunchAngleYaw", -1.0f, +1.0f) * fVKick * 0.1f;
 
 	angle.x += fVKick;	// pitch
@@ -3802,7 +3807,7 @@ int CWeaponCSBase::GetZoomFOV( int nZoomLevel ) const
 	case 0: return 0; // not used -- always default FoV
 	case 1:	return GetCSWpnData().GetZoomFOV1();
 	case 2:	return GetCSWpnData().GetZoomFOV2();
-	default: Assert(0); return 0;
+	default: contract_assert( 0 ); return 0;
 	}
 }
 
@@ -3813,7 +3818,7 @@ float CWeaponCSBase::GetZoomTime( int nZoomLevel ) const
 	case 0:	return GetCSWpnData().GetZoomTime0();
 	case 1:	return GetCSWpnData().GetZoomTime1();
 	case 2:	return GetCSWpnData().GetZoomTime2();
-	default: Assert( 0 ); return 0;
+	default: contract_assert( 0 ); return 0;
 	}
 }
 

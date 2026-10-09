@@ -1,16 +1,11 @@
-//========== Copyright (c) 2007, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2007 Valve Corporation
 
-#include "pch_tier0.h"
-#include "tier0/tslist.h"
+import ks.core;
 
-#include <stdlib.h>
-#include <atomic>
-#include <mutex>
-#include "tier0/threadtools.h"											// for rand()
+// First include standard libraries
+import std;
+
 
 extern ThreadHandle_t * CreateTestThreads( ThreadFunc_t fnThread, int numThreads, int nProcessorsToDistribute );
 extern void JoinTestThreads( ThreadHandle_t *pHandles );
@@ -127,7 +122,7 @@ CTestOps *g_pTestOps;
 
 void ClearBuckets()
 {
-	memset( g_pTestBuckets, 0, sizeof(int) * NUM_TEST );
+	std::memset( g_pTestBuckets, 0, sizeof(int) * NUM_TEST );
 }
 
 void IncBucket( int i )
@@ -296,7 +291,7 @@ void PushPopInterleavedTestGuts()
 	int value;
 	for (;;)
 	{
-		bool bPush = ( rand() % 2 == 0 );
+		bool bPush = ( std::rand() % 2 == 0 );
 		if ( bPush && ( value = g_nTested++ ) < NUM_TEST )
 		{
 			g_pTestOps->Push( value );
@@ -319,7 +314,7 @@ void PushPopInterleavedTestGuts()
 void PushPopInterleavedTest()
 {
 	Msg( "%s test: single thread push/pop, interleaved... ", g_pListType );
-	srand( Plat_MSTime() );
+	std::srand( Plat_MSTime() );
 	g_nTested = 0;
 	ClearBuckets();
 	PushPopInterleavedTestGuts();
@@ -338,7 +333,6 @@ uintp PushPopInterleavedTestThreadFunc( void * )
 	g_nThreads--;
 	return 0;
 }
-
 
 
 void STPushMTPop( bool bDistribute )
@@ -372,10 +366,11 @@ void MTPushSTPop( bool bDistribute )
 
 void MTPushMTPop( bool bDistribute )
 {
+	ks::ScratchArena<> scratch;
 	Msg( "%s test: multithread push, multithread pop, %s", g_pListType, bDistribute ? "distributed..." : "no affinity..." );
 	TestStart();
 	int ct = 0;
-	ThreadHandle_t *threadHandles = (ThreadHandle_t *)stackalloc( NUM_THREADS * sizeof(ThreadHandle_t) );
+	ThreadHandle_t *threadHandles = scratch.Alloc<ThreadHandle_t>( NUM_THREADS );
 	int nHandles = 0;
 
 	for ( int i = 0; i < NUM_THREADS / 2 ; i++ )
@@ -411,14 +406,13 @@ void MTPushMTPop( bool bDistribute )
 void MTPushPopPopInterleaved( bool bDistribute )
 {
 	Msg( "%s test: multithread interleaved push/pop, %s", g_pListType, bDistribute ? "distributed..." : "no affinity..." );
-	srand( Plat_MSTime() );
+	std::srand( Plat_MSTime() );
 	TestStart();
 	ThreadHandle_t * arrPushPops = CreateTestThreads( &PushPopInterleavedTestThreadFunc, NUM_THREADS, ( bDistribute ) ? NUM_PROCESSORS : 0 );
 	TestWait();
 	TestEnd();
 	JoinTestThreads( arrPushPops );
 }
-
 
 
 void MTPushSeqPop( bool bDistribute )
@@ -512,13 +506,7 @@ bool RunTSListTests( int nListSize, int nTests )
 	using namespace TSListTests;
 	NUM_TEST = nListSize;
 
-#ifdef USE_NATIVE_SLIST
-
-	int maxSize = ( 1 << (sizeof( ((TSLHead_t *)(0))->Depth ) * 8) ) - 1;
-
-#else
 	int maxSize = ( 1 << (sizeof( ((TSLHead_t *)(0))->value.Depth ) * 8) ) - 1;
-#endif
 	if ( NUM_TEST > maxSize )
 	{
 		Msg( "TSList cannot hold more that %d nodes\n", maxSize );

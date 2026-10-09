@@ -1,11 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -20,7 +46,6 @@
 #include "in_buttons.h"
 #include "soundent.h"
 #include "ndebugoverlay.h"
-#include "vstdlib/random.h"
 #include "engine/IEngineSound.h"
 #include "physics_cannister.h"
 #include "decals.h"
@@ -36,7 +61,6 @@
 #include "effect_dispatch_data.h"
 #include "te_effect_dispatch.h"
 #include "props.h"
-
 
 ConVar mortar_visualize("mortar_visualize", "0" );
 
@@ -279,11 +303,11 @@ int CFuncTank::DrawDebugTextOverlays(void)
 		char tempstr[255];
 		if (IsActive()) 
 		{
-			Q_strncpy(tempstr,"State: Active",sizeof(tempstr));
+			V_strncpy(tempstr,"State: Active",sizeof(tempstr));
 		}
 		else 
 		{
-			Q_strncpy(tempstr,"State: Inactive",sizeof(tempstr));
+			V_strncpy(tempstr,"State: Inactive",sizeof(tempstr));
 		}
 		NDebugOverlay::EntityText(entindex(),text_offset,tempstr,0);
 		text_offset++;
@@ -291,7 +315,7 @@ int CFuncTank::DrawDebugTextOverlays(void)
 		// -------------------
 		// Print Firing Speed
 		// --------------------
-		Q_snprintf(tempstr,sizeof(tempstr),"Fire Rate: %f",m_fireRate);
+		V_snprintf(tempstr,sizeof(tempstr),"Fire Rate: %f",m_fireRate);
 
 		NDebugOverlay::EntityText(entindex(),text_offset,tempstr,0);
 		text_offset++;
@@ -301,11 +325,11 @@ int CFuncTank::DrawDebugTextOverlays(void)
 		// --------------
 		if (m_hTarget!=nullptr) 
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Target: %s",m_hTarget->GetDebugName());
+			V_snprintf(tempstr,sizeof(tempstr),"Target: %s",m_hTarget->GetDebugName());
 		}
 		else
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Target:   -  ");
+			V_snprintf(tempstr,sizeof(tempstr),"Target:   -  ");
 		}
 		NDebugOverlay::EntityText(entindex(),text_offset,tempstr,0);
 		text_offset++;
@@ -315,11 +339,11 @@ int CFuncTank::DrawDebugTextOverlays(void)
 		// --------------
 		if (m_spawnflags & SF_TANK_AIM_AT_POS) 
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Aim Pos: %3.0f %3.0f %3.0f",m_vTargetPosition.x,m_vTargetPosition.y,m_vTargetPosition.z);
+			V_snprintf(tempstr,sizeof(tempstr),"Aim Pos: %3.0f %3.0f %3.0f",m_vTargetPosition.x,m_vTargetPosition.y,m_vTargetPosition.z);
 		}
 		else
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Aim Pos:    -  ");
+			V_snprintf(tempstr,sizeof(tempstr),"Aim Pos:    -  ");
 		}
 		NDebugOverlay::EntityText(entindex(),text_offset,tempstr,0);
 		text_offset++;
@@ -437,19 +461,19 @@ bool CFuncTank::KeyValue( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "barrel"))
 	{
-		m_barrelPos.x = atof(szValue);
+		m_barrelPos.x = std::atof(szValue);
 		return true;
 	}
 	
 	if (FStrEq(szKeyName, "barrely"))
 	{
-		m_barrelPos.y = atof(szValue);
+		m_barrelPos.y = std::atof(szValue);
 		return true;
 	}
 	
 	if (FStrEq(szKeyName, "barrelz"))
 	{
-		m_barrelPos.z = atof(szValue);
+		m_barrelPos.z = std::atof(szValue);
 		return true;
 	}
 
@@ -465,7 +489,7 @@ static Vector gTankSpread[] =
 	Vector( 0.1, 0.1, 0.1 ),	// large cone
 	Vector( 0.25, 0.25, 0.25 ),	// extra-large cone
 };
-#define MAX_FIRING_SPREADS ARRAYSIZE(gTankSpread)
+inline constexpr int MAX_FIRING_SPREADS = std::size( gTankSpread );
 
 
 //-----------------------------------------------------------------------------
@@ -855,7 +879,7 @@ void CFuncTank::StopControl()
 void CFuncTank::ControllerPostFrame( void )
 {
 	// Make sure we have a contoller.
-	Assert( m_hController != nullptr );
+	contract_assert( m_hController != nullptr );
 
 	// Control the firing rate.
 	if ( gpGlobals->curtime < m_flNextAttack )
@@ -1048,7 +1072,7 @@ bool CFuncTank::NPC_HasEnemy( void )
 		return false;
 
 	CAI_BaseNPC *pNPC = m_hController->MyNPCPointer();
-	Assert( pNPC );
+	contract_assert( pNPC );
 
 	return ( pNPC->GetEnemy() != nullptr );
 }
@@ -1077,7 +1101,7 @@ bool CFuncTank::NPC_InterruptController( void )
 //-----------------------------------------------------------------------------
 float CFuncTank::GetRandomFireTime( void )
 {
-	Assert( m_fireRate != 0 );
+	contract_assert( m_fireRate != 0 );
 	float flOOFireRate = 1.0f / m_fireRate;
 	float flOOFireRateBy2 = flOOFireRate * 0.5f;
 	float flOOFireRateBy4 = flOOFireRate * 0.25f;
@@ -1167,11 +1191,11 @@ void CFuncTank::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 bool CFuncTank::InRange( float range )
 {
 	if ( range < m_minRange )
-		return FALSE;
+		return false;
 	if ( (m_maxRange > 0) && (range > m_maxRange) )
-		return FALSE;
+		return false;
 
-	return TRUE;
+	return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -1261,8 +1285,8 @@ QAngle CFuncTank::AimBarrelAt( const Vector &parentTarget )
 		// and use atan2() to get angles
 
 		// angles from target pos to center
-		float targetToCenterYaw = atan2( target.y, target.x );
-		float centerToGunYaw = atan2( m_barrelPos.y, sqrt( quadTarget - (m_barrelPos.y*m_barrelPos.y) ) );
+		float targetToCenterYaw = std::atan2( target.y, target.x );
+		float centerToGunYaw = atan2( m_barrelPos.y, std::sqrt( quadTarget - (m_barrelPos.y*m_barrelPos.y) ) );
 
 		float targetToCenterPitch = atan2( target.z, sqrt( quadTargetXY ) );
 		float centerToGunPitch = atan2( -m_barrelPos.z, sqrt( quadTarget - (m_barrelPos.z*m_barrelPos.z) ) );
@@ -1463,7 +1487,7 @@ void CFuncTank::ComputeLeadingPosition( const Vector &vecShootPosition, CBaseEnt
 		return;
 	}
 
-	flDiscrim = sqrt(flDiscrim);
+	flDiscrim = std::sqrt(flDiscrim);
 	float t = (-b + flDiscrim) / (2.0f * a);
 	float t2 = (-b - flDiscrim) / (2.0f * a);
 	if ( t < t2 )
@@ -1519,7 +1543,7 @@ void CFuncTank::AimFuncTankAtTarget( void )
 		worldTargetPosition = pEntity->EyePosition();
 		if ( pEntity->IsPlayer() )
 		{
-			CBasePlayer *pPlayer = assert_cast<CBasePlayer*>(pEntity);
+			CBasePlayer *pPlayer = static_cast<CBasePlayer*>(pEntity);
 			pTargetVehicle = pPlayer->GetVehicleEntity();
 			if ( pTargetVehicle )
 			{
@@ -1776,7 +1800,7 @@ void CFuncTank::Fire( int bulletCount, const Vector &barrelEnd, const Vector &fo
 	{
 		if ( m_iszSpriteSmoke != NULL_STRING )
 		{
-			CSprite *pSprite = CSprite::SpriteCreate( STRING(m_iszSpriteSmoke), barrelEnd, TRUE );
+			CSprite *pSprite = CSprite::SpriteCreate( STRING(m_iszSpriteSmoke), barrelEnd, true );
 			pSprite->AnimateAndDie( random->RandomFloat( 15.0, 20.0 ) );
 			pSprite->SetTransparency( kRenderTransAlpha, m_clrRender->r, m_clrRender->g, m_clrRender->b, 255, kRenderFxNone );
 
@@ -1786,7 +1810,7 @@ void CFuncTank::Fire( int bulletCount, const Vector &barrelEnd, const Vector &fo
 		}
 		if ( m_iszSpriteFlash != NULL_STRING )
 		{
-			CSprite *pSprite = CSprite::SpriteCreate( STRING(m_iszSpriteFlash), barrelEnd, TRUE );
+			CSprite *pSprite = CSprite::SpriteCreate( STRING(m_iszSpriteFlash), barrelEnd, true );
 			pSprite->AnimateAndDie( 5 );
 			pSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNoDissipation );
 			pSprite->SetScale( m_spriteScale );
@@ -2384,7 +2408,7 @@ void CFuncTankAirboatGun::DoImpactEffect( trace_t &tr, int nDamageType )
 //-----------------------------------------------------------------------------
 // Fires bullets
 //-----------------------------------------------------------------------------
-#define AIRBOAT_GUN_HEAVY_SHOT_INTERVAL	0.2f
+constexpr auto AIRBOAT_GUN_HEAVY_SHOT_INTERVAL = 0.2f;
 
 void CFuncTankAirboatGun::Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CBaseEntity *pAttacker )
 {
@@ -2424,9 +2448,9 @@ void CFuncTankAirboatGun::Fire( int bulletCount, const Vector &barrelEnd, const 
 //-----------------------------------------------------------------------------
 // APC Rocket 
 //-----------------------------------------------------------------------------
-#define DEATH_VOLLEY_MISSILE_COUNT 10
-#define DEATH_VOLLEY_MIN_FIRE_RATE 3
-#define DEATH_VOLLEY_MAX_FIRE_RATE 6
+constexpr auto DEATH_VOLLEY_MISSILE_COUNT = 10;
+constexpr auto DEATH_VOLLEY_MIN_FIRE_RATE = 3;
+constexpr auto DEATH_VOLLEY_MAX_FIRE_RATE = 6;
 
 class CFuncTankAPCRocket : public CFuncTank
 {
@@ -2524,4 +2548,3 @@ void CFuncTankAPCRocket::InputDeathVolley( inputdata_t &inputdata )
 		m_bDying = true;
 	}
 }
-

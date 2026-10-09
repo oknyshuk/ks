@@ -1,21 +1,20 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Defines the interface that the GameUI dll exports
-//
-// $NoKeywords: $
-//=============================================================================//
 
 #ifndef GAMEUI_INTERFACE_H
 #define GAMEUI_INTERFACE_H
-#pragma once
 
 #include "GameUI/IGameUI.h"
 
-#include "convar.h"
+import std;
+import ks.tier1;
 
-	#define BACKGROUND_MUSIC_FILENAME "mainmenu.mp3"
+	inline constexpr const char *BACKGROUND_MUSIC_FILENAME = "mainmenu.mp3";
 
-#define MAX_BACKGROUND_MUSIC 3
+inline constexpr auto MAX_BACKGROUND_MUSIC = 3;
 
 class IGameClientExports;
 class CCommand;
@@ -51,11 +50,10 @@ public:
 	virtual void OnGameUIActivated();
 	virtual void OnGameUIHidden();
 	virtual void OLD_OnConnectToServer( const char *game, int IP, int port );	// OLD: use OnConnectToServer2
-	virtual void OnConnectToServer2( const char *game, int IP, int connectionPort, int queryPort );
-	virtual void OnDisconnectFromServer( uint8 eSteamLoginFailure );
+	virtual void OnConnectToServer2( const char *game, int IP, int connectionPort );
+	virtual void OnDisconnectFromServer();
 	virtual void OnLevelLoadingStarted( const char *levelName, bool bShowProgressDialog );
 	virtual void OnLevelLoadingFinished( bool bError, const char *failureReason, const char *extendedReason );
-	virtual void OnDisconnectFromServer_OLD( uint8 eSteamLoginFailure, const char *username ) { OnDisconnectFromServer( eSteamLoginFailure ); }
 	virtual void StartLoadingScreenForCommand( const char* command );
 	virtual void StartLoadingScreenForKeyValues( KeyValues* keyValues );
 
@@ -114,13 +112,6 @@ public:
 	void StopQuestAudio( void );
 	bool IsQuestAudioPlaying( void );
 
-#ifdef PANORAMA_ENABLE
-	void ChangeGameUIState(CSGOGameUIState_t nNewState);
-	CSGOGameUIState_t GetGameUIState();
-	void RegisterGameUIStateListener(ICSGOGameUIStateListener *pListener);
-	void UnregisterGameUIStateListener(ICSGOGameUIStateListener *pListener);
-#endif // PANORAMA_ENABLE 
-
 private:
 
 	virtual void StartProgressBar();
@@ -150,7 +141,6 @@ private:
 
 	int m_iGameIP;
 	int m_iGameConnectionPort;
-	int m_iGameQueryPort;
 	
 	int m_iFriendsLoadPauseFrames;
 	int m_iPlayGameStartupSound;
@@ -175,14 +165,6 @@ private:
 	int m_nQuestAudioGUID;
 
 	const char * m_pAudioFile;
-
-#ifdef PANORAMA_ENABLE
-	CSGOGameUIState_t m_CSGOGameUIState;
-	std::vector< ICSGOGameUIStateListener* > m_GameUIStateListeners;
-
-	bool m_bFirstActivationForSession = true;
-	bool m_bInLevelLoading = false;
-#endif
 
 };
 

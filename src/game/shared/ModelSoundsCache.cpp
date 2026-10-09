@@ -1,15 +1,29 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "npcevent.h"
 #include "ModelSoundsCache.h"
 #include "studio.h"
 #include "eventlist.h"
 #include "scriptevent.h"
-
 
 extern ISoundEmitterSystemBase *soundemitterbase;
 
@@ -60,7 +74,6 @@ void CModelSoundsCache::Save( ks::byte_writer& buf )
 
 void CModelSoundsCache::Restore( ks::byte_reader& buf )
 {
-	MEM_ALLOC_CREDIT();
 	unsigned short c;
 
 	c = (unsigned short)buf.read< short >();
@@ -112,7 +125,6 @@ void CModelSoundsCache::FindOrAddScriptSound( std::flat_set< int >& sounds, char
 	if ( soundemitterbase->IsValidIndex( soundindex ) )
 	{
 		// Only add it once per model...
-		MEM_ALLOC_CREDIT();
 		sounds.insert( soundindex );
 	}
 }
@@ -124,7 +136,7 @@ void CModelSoundsCache::FindOrAddScriptSound( std::flat_set< int >& sounds, char
 //-----------------------------------------------------------------------------
 void CModelSoundsCache::BuildAnimationEventSoundList( CStudioHdr *hdr, std::flat_set< int >& sounds )
 {
-	Assert( hdr );
+	contract_assert( hdr );
 	
 	// force animation event resolution!!!
 	VerifySequenceIndex( hdr );
@@ -170,13 +182,13 @@ void CModelSoundsCache::BuildAnimationEventSoundList( CStudioHdr *hdr, std::flat
 						options = "NPC_CombineS";
 					}
 
-					Q_snprintf( soundname, 256, "%s.RunFootstepLeft", options );
+					V_snprintf( soundname, 256, "%s.RunFootstepLeft", options );
 					FindOrAddScriptSound( sounds, soundname );
-					Q_snprintf( soundname, 256, "%s.RunFootstepRight", options );
+					V_snprintf( soundname, 256, "%s.RunFootstepRight", options );
 					FindOrAddScriptSound( sounds, soundname );
-					Q_snprintf( soundname, 256, "%s.FootstepLeft", options );
+					V_snprintf( soundname, 256, "%s.FootstepLeft", options );
 					FindOrAddScriptSound( sounds, soundname );
-					Q_snprintf( soundname, 256, "%s.FootstepRight", options );
+					V_snprintf( soundname, 256, "%s.FootstepRight", options );
 					FindOrAddScriptSound( sounds, soundname );
 				}
 				break;

@@ -1,18 +1,17 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-// $NoKeywords: $
-//
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "c_te_legacytempents.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
-#include "tier0/vprof.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Sprite Spray TE
@@ -106,7 +105,7 @@ static inline void RecordSpriteSpray( const Vector& start, const Vector &directi
 //-----------------------------------------------------------------------------
 void C_TESpriteSpray::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TESpriteSpray::PostDataUpdate" );
+	CVProfScope _( "C_TESpriteSpray::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	tempents->Sprite_Spray( m_vecOrigin, m_vecDirection, m_nModelIndex, m_nCount, m_nSpeed * 0.2, m_fNoise * 100.0 );
 	RecordSpriteSpray( m_vecOrigin, m_vecDirection, m_nModelIndex, m_nSpeed, m_fNoise, m_nCount );
@@ -136,4 +135,3 @@ void TE_SpriteSpray( IRecipientFilter& filter, float delay, KeyValues *pKeyValue
 
 	TE_SpriteSpray( filter, delay, &vecOrigin, &vecDirection, nModelIndex, nSpeed, flNoise, nCount );
 }
-

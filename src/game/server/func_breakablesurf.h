@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef FUNC_BREAKABLESURF_H
-#define FUNC_BREAKABLESURF_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-
 
 #define MAX_NUM_PANELS 16	//Must match client
 
 #include "func_break.h"
+#include "shattersurfacetypes.h"
 
 //#############################################################################
 //  > CWindowPane
@@ -96,6 +90,3 @@ private:
 	// One bit per pane
 	CNetworkArray( bool, m_RawPanelBitVec, MAX_NUM_PANELS * MAX_NUM_PANELS, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 };
-
-#endif // FUNC_BREAKABLESURF_H
-

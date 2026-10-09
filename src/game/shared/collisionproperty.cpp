@@ -1,13 +1,66 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include <shared_mutex>
-#include <mutex>
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "physics.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "reflect_predmap.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
@@ -20,9 +73,6 @@
 #endif
 #include "collisionproperty.h"
 #include "igamesystem.h"
-#include "utlvector.h"
-#include "tier0/threadtools.h"
-#include "tier0/tslist.h"
 
 #ifdef CLIENT_DLL
 
@@ -42,12 +92,7 @@
 
 #include "predictable_entity.h"
 
-
-
 //#define DEBUG_SNC_TYPE_PUN_BUG
-
-
-
 
 //-----------------------------------------------------------------------------
 // KD tree query callbacks
@@ -125,7 +170,7 @@ void UpdateDirtySpatialPartitionEntities()
 CDirtySpatialPartitionEntityList::CDirtySpatialPartitionEntityList( char const *name ) : CAutoGameSystem( name )
 {
 	m_DirtyEntities.Purge();
-	memset( m_nReadLockCount, 0, sizeof( m_nReadLockCount ) );
+	std::memset( m_nReadLockCount, 0, sizeof( m_nReadLockCount ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -431,7 +476,7 @@ const matrix3x4_t *CCollisionProperty::GetRootParentToWorldTransform() const
 	if ( IsSolidFlagSet( FSOLID_ROOT_PARENT_ALIGNED ) )
 	{
 		CBaseEntity *pEntity = m_pOuter->GetRootMoveParent();
-		Assert(pEntity);
+		contract_assert( pEntity );
 		if ( pEntity )
 		{
 			return &pEntity->CollisionProp()->CollisionToWorldTransform();
@@ -682,12 +727,12 @@ void CCollisionProperty::WorldSpaceTriggerBounds( Vector *pVecWorldMins, Vector 
 
 void CCollisionProperty::UseTriggerBounds( bool bEnable, float flBloat )
 {
-	Assert( flBloat <= 127.0f );
+	contract_assert( flBloat <= 127.0f );
 	m_triggerBloat = (char )flBloat;
 	if ( bEnable )
 	{
 		AddSolidFlags( FSOLID_USE_TRIGGER_BOUNDS );
-		Assert( flBloat > 0.0f );
+		contract_assert( flBloat > 0.0f );
 	}
 	else
 	{
@@ -787,9 +832,7 @@ void CCollisionProperty::RandomPointInBounds( const Vector &vecNormalizedMins, c
 }
 
 
-#ifndef DEBUG_SNC_TYPE_PUN_BUG
 const
-#endif
 bool g_bRepeatTransformAABB = false;
 
 
@@ -1072,7 +1115,7 @@ void CCollisionProperty::ComputeRotationExpandedBounds( Vector *pVecWorldMins, V
 //-----------------------------------------------------------------------------
 void CCollisionProperty::ComputeCollisionSurroundingBox( bool bUseVPhysics, Vector *pVecWorldMins, Vector *pVecWorldMaxs )
 {
-	Assert( GetSolid() != SOLID_CUSTOM );
+	contract_assert( GetSolid() != SOLID_CUSTOM );
 
 	// NOTE: For solid none, we are still going to use the bounds; necessary because
 	// the surrounding box is used for the PVS...
@@ -1118,12 +1161,12 @@ void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *p
 	switch( m_nSurroundType )
 	{
 	case USE_OBB_COLLISION_BOUNDS:
-		Assert( GetSolid() != SOLID_CUSTOM );
+		contract_assert( GetSolid() != SOLID_CUSTOM );
 		ComputeOBBBounds( pVecWorldMins, pVecWorldMaxs );
 		break;
 
 	case USE_BEST_COLLISION_BOUNDS:
-		Assert( GetSolid() != SOLID_CUSTOM );
+		contract_assert( GetSolid() != SOLID_CUSTOM );
 		ComputeCollisionSurroundingBox( (GetSolid() == SOLID_VPHYSICS), pVecWorldMins, pVecWorldMaxs );
 		break;
 
@@ -1132,7 +1175,7 @@ void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *p
 		break;
 
 	case USE_COLLISION_BOUNDS_NEVER_VPHYSICS:
-		Assert( GetSolid() != SOLID_CUSTOM );
+		contract_assert( GetSolid() != SOLID_CUSTOM );
 		ComputeCollisionSurroundingBox( false, pVecWorldMins, pVecWorldMaxs );
 		break;
 
@@ -1151,9 +1194,9 @@ void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *p
 
 	case USE_GAME_CODE:
 		GetOuter()->ComputeWorldSpaceSurroundingBox( pVecWorldMins, pVecWorldMaxs );
-		Assert( pVecWorldMins->x <= pVecWorldMaxs->x );
-		Assert( pVecWorldMins->y <= pVecWorldMaxs->y );
-		Assert( pVecWorldMins->z <= pVecWorldMaxs->z );
+		contract_assert( pVecWorldMins->x <= pVecWorldMaxs->x );
+		contract_assert( pVecWorldMins->y <= pVecWorldMaxs->y );
+		contract_assert( pVecWorldMins->z <= pVecWorldMaxs->z );
 		return;
 	}
 
@@ -1170,8 +1213,8 @@ void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *p
 		}
 		ComputeHitboxSurroundingBox( &vecTestMins, &vecTestMaxs );
 		
-		Assert( vecTestMins.x >= pVecWorldMins->x && vecTestMins.y >= pVecWorldMins->y && vecTestMins.z >= pVecWorldMins->z );
-		Assert( vecTestMaxs.x <= pVecWorldMaxs->x && vecTestMaxs.y <= pVecWorldMaxs->y && vecTestMaxs.z <= pVecWorldMaxs->z );
+		contract_assert( vecTestMins.x >= pVecWorldMins->x && vecTestMins.y >= pVecWorldMins->y && vecTestMins.z >= pVecWorldMins->z );
+		contract_assert( vecTestMaxs.x <= pVecWorldMaxs->x && vecTestMaxs.y <= pVecWorldMaxs->y && vecTestMaxs.z <= pVecWorldMaxs->z );
 
 		if ( vecTestMins.x < pVecWorldMins->x || vecTestMins.y < pVecWorldMins->y || vecTestMins.z < pVecWorldMins->z ||
 			 vecTestMaxs.x > pVecWorldMaxs->x || vecTestMaxs.y > pVecWorldMaxs->y || vecTestMaxs.z > pVecWorldMaxs->z )
@@ -1198,7 +1241,7 @@ void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *p
 			Msg( "\n" );
 
 			char pTemp[MAX_PATH];
-			Q_snprintf( pTemp, sizeof(pTemp), "%s [seq: %s]", GetOuter()->GetClassname(), pSeqName ); 
+			V_snprintf( pTemp, sizeof(pTemp), "%s [seq: %s]", GetOuter()->GetClassname(), pSeqName ); 
 
 			debugoverlay->AddBoxOverlay( vec3_origin, vecTestMins, vecTestMaxs, vec3_angle, 255, 0, 0, 0, 2 );
 			debugoverlay->AddBoxOverlay( vec3_origin, *pVecWorldMins, *pVecWorldMaxs, vec3_angle, 0, 0, 255, 0, 2 );
@@ -1218,12 +1261,12 @@ void CCollisionProperty::SetSurroundingBoundsType( SurroundingBoundsType_t type,
 	m_nSurroundType = type;
 	if (type != USE_SPECIFIED_BOUNDS)
 	{
-		Assert( !pMins && !pMaxs );
+		contract_assert( !pMins && !pMaxs );
 		MarkSurroundingBoundsDirty();
 	}
 	else
 	{
-		Assert( pMins && pMaxs );
+		contract_assert( pMins && pMaxs );
 		ASSERT_COORD( *pMins );
 		ASSERT_COORD( *pMaxs );
 		m_vecSpecifiedSurroundingMins = *pMins;
@@ -1284,7 +1327,7 @@ bool CCollisionProperty::DoesVPhysicsInvalidateSurroundingBox( ) const
 		return false;
 
 	default:
-		Assert(0);
+		contract_assert( 0 );
 		return true;
 	}
 }
@@ -1322,7 +1365,7 @@ void CCollisionProperty::WorldSpaceSurroundingBounds( Vector *pVecMins, Vector *
 void CCollisionProperty::CreatePartitionHandle()
 {
 	// Put the entity into the spatial partition.
-	Assert( m_Partition == PARTITION_INVALID_HANDLE );
+	contract_assert( m_Partition == PARTITION_INVALID_HANDLE );
 	m_Partition = ::partition->CreateHandle( GetEntityHandle() );
 }
 
@@ -1416,7 +1459,7 @@ void CCollisionProperty::UpdatePartition( )
 		m_pOuter->RemoveEFlags( EFL_DIRTY_SPATIAL_PARTITION );
 
 #ifndef CLIENT_DLL
-		Assert( m_pOuter->entindex() != 0 );
+		contract_assert( m_pOuter->entindex() != 0 );
 
 		// Don't bother with deleted things
 		if ( !m_pOuter->edict() )
@@ -1455,5 +1498,3 @@ void CCollisionProperty::UpdatePartition( )
 		}
 	}
 }
-
-

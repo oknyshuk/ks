@@ -1,20 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include <stdio.h>
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
 // dgoodenough - malloc.h doesn't exist on PS3
 // PS3_BUILDFIX
-#include <malloc.h>
+import ks.tier1;
 #include "ObjectList.h"
-#include "tier1/strtools.h"
 
 //#include "port.h"
 //#include "mem.h"
-#include "tier0/memalloc.h"
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -241,4 +235,3 @@ bool ObjectList::Add(void *newObject)
 {
 	return AddTail( newObject );
 }
-

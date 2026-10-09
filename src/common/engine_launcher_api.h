@@ -1,15 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ========//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-// engine/launcher interface
-#ifndef ENGINE_LAUNCHER_APIH
-#define ENGINE_LAUNCHER_APIH
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "appframework/iappsystem.h"
+// engine/launcher interface
+
+import std;
+import ks.tier1;
 
 class CAppSystemGroup;
 
@@ -48,9 +44,9 @@ enum
 //-----------------------------------------------------------------------------
 // Main engine interface to launcher + tools
 //-----------------------------------------------------------------------------
-#define VENGINE_LAUNCHER_API_VERSION "VENGINE_LAUNCHER_API_VERSION004"
+inline constexpr const char *VENGINE_LAUNCHER_API_VERSION = "VENGINE_LAUNCHER_API_VERSION004";
 
-abstract_class IEngineAPI : public IAppSystem
+class IEngineAPI : public IAppSystem
 {
 // Functions
 public:
@@ -75,6 +71,3 @@ public:
 	// Reset the map we're on
 	virtual void SetMap( const char *pMapName ) = 0;
 };
-
-
-#endif // ENGINE_LAUNCHER_APIH

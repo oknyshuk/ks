@@ -1,14 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: dll-agnostic routines (no dll dependencies here)
-//
-// $NoKeywords: $
-//=============================================================================//
 
 // Author: Matthew D. Campbell (matt@turtlerockstudios.com), 2003
-
-#ifndef SHARED_UTIL_H
-#define SHARED_UTIL_H
 
 //--------------------------------------------------------------------------------------------------------
 /**
@@ -56,7 +52,7 @@ inline char *CloneString( const char *str )
 /**
  *  snprintf-alike that allows multiple prints into a buffer
  */
-char * BufPrintf(char *buf, int& len, PRINTF_FORMAT_STRING const char *fmt, ...);
+char * BufPrintf(char *buf, int& len, const char *fmt, ...);
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -79,6 +75,4 @@ const char * NumAsString( int val );
 /**
  *  convenience function that composes a string into a static char*
  */
-char * SharedVarArgs(PRINTF_FORMAT_STRING const char *format, ...);
-
-#endif // SHARED_UTIL_H
+char * SharedVarArgs(const char *format, ...);

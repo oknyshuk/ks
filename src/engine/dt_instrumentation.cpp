@@ -1,26 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
+import ks.core;
 #include "dt_instrumentation.h"
-#include "utlvector.h"
-#include "tier0/fasttimer.h"
-#include "tier0/dbg.h"
-#include "tier1/utlstring.h"
 #include "dt_recv_decoder.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
-#include "tier0/icommandline.h"
 #include "cdll_int.h"
 #include "client.h"
-#include "common.h"
-#include <time.h>
-#include <memory>
-#include <vector>
+import std;
 
 bool g_bDTIEnabled = false;
 const char *g_pDTIFilename;
@@ -217,6 +205,3 @@ void _DTI_HookDeltaBits( CRecvDecoder *pDecoder, int iProp, int nDataBits, int n
 
 	pTable->m_bSawAction = true;
 }
-
-
-

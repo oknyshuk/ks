@@ -1,10 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A wet version of base * lightmap
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
 
 #include "BaseVSShader.h"
 
@@ -13,7 +10,6 @@
 #include "particlesphere_ps20b.inc"
 #include "common_hlsl_cpp_consts.h"
 
-#include "cpp_shader_constant_register_map.h"
 
 static ConVar mat_depthfeather_enable( "mat_depthfeather_enable", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
 
@@ -23,7 +19,7 @@ DEFINE_FALLBACK_SHADER( ParticleSphere, ParticleSphere_DX9 )
 
 BEGIN_VS_SHADER_FLAGS( ParticleSphere_DX9, "Help for BumpmappedEnvMap", SHADER_NOT_EDITABLE  )
 			   
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( DEPTHBLEND, SHADER_PARAM_TYPE_INTEGER, "0", "fade at intersection boundaries" )
 		SHADER_PARAM( SCENEDEPTH, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( DEPTHBLENDSCALE, SHADER_PARAM_TYPE_FLOAT, "50.0", "Amplify or reduce DEPTHBLEND fading. Lower values make harder edges." )

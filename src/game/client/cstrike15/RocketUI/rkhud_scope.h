@@ -1,8 +1,9 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-#ifndef KISAKSTRIKE_RKHUD_SCOPE_H
-#define KISAKSTRIKE_RKHUD_SCOPE_H
+#include <rocketui/rmlui.h>
+
 
 #include <rocketui/rocketui.h>
 #include "rkhud_document.h"
@@ -31,4 +32,3 @@ private:
     float m_fLineSpreadDistance;
 };
 
-#endif //KISAKSTRIKE_RKHUD_SCOPE_H

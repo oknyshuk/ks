@@ -1,12 +1,10 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// Code to compute the equation of a plane with a least-squares residual fit.
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "vplane.h"
-#include "mathlib.h"
-#include <algorithm>
+// Purpose: Code to compute the equation of a plane with a least-squares residual fit.
+
+import ks.math;
+import std;
 using namespace std;
 
 //////////////////////////////////////////////////////////////////////////
@@ -223,105 +221,3 @@ struct Complex_t
 
 // [kutta]
 // This code is a work-in-progress; need to write code to robustly find an eigenvector given its eigenvalue.
-#if USE_ORTHOGONAL_LEAST_SQUARES
-
-template< int PRIMARY_AXIS = 0 >
-bool TryFindEigenvector( float flEigenvalue, const Vector *pMatrix, Vector *pEigenvector )
-{
-	const float flCoefficientEpsilon = 1e-3;
-
-	const int nOtherRow1 = ( PRIMARY_AXIS + 1 ) % 3;
-	const int nOtherRow2 = ( PRIMARY_AXIS + 2 ) % 3;
-
-	bool bUseRow1 = fabsf( pMatrix[0][nOtherRow1] / flEigenvalue ) > flCoefficientEpsilon && fabsf( pMatrix[0][nOtherRow2] / flEigenvalue ) > flCoefficientEpsilon );
-	bool bUseRow2 = fabsf( pMatrix[1][nOtherRow1] / flEigenvalue ) > flCoefficientEpsilon && fabsf( pMatrix[1][nOtherRow2] / flEigenvalue ) > flCoefficientEpsilon );
-	bool bUseRow3 = fabsf( pMatrix[2][nOtherRow1] / flEigenvalue ) > flCoefficientEpsilon && fabsf( pMatrix[2][nOtherRow2] / flEigenvalue ) > flCoefficientEpsilon );
-
-	// ...
-}
-
-bool ComputeLeastSquaresOrthogonalPlaneFit( const Vector *pPoints, int nNumPoints, VPlane *pFitPlane )
-{
-	memset( pFitPlane, 0, sizeof( VPlane ) );
-
-	if ( nNumPoints < 3 )
-	{
-		// We must have at least 3 points to fit a plane
-		return false;
-	}
-
-	Vector vCentroid( 0, 0, 0 ); // averages: x-bar, y-bar, z-bar
-	Vector vSquaredSums( 0, 0, 0 ); // x => x*x, y => y*y, z => z*z
-	Vector vCrossSums( 0, 0, 0 ); // x => y*z, y => x*z, z >= x*y
-	float flNumPoints = ( float )nNumPoints;
-
-	for ( int i = 0; i < nNumPoints; ++ i )
-	{
-		vCentroid += pPoints[i];
-		vSquaredSums += pPoints[i] * pPoints[i];
-		vCrossSums.x += pPoints[i].y * pPoints[i].z;
-		vCrossSums.y += pPoints[i].x * pPoints[i].z;
-		vCrossSums.z += pPoints[i].x * pPoints[i].y;
-	}
-
-	vCentroid /= ( float ) nNumPoints;
-
-	// Re-center the squared and cross sums
-	vSquaredSums.x -= flNumPoints * vCentroid.x * vCentroid.x;
-	vSquaredSums.y -= flNumPoints * vCentroid.y * vCentroid.y;
-	vSquaredSums.z -= flNumPoints * vCentroid.z * vCentroid.z;
-	vCrossSums.x -= flNumPoints * vCentroid.y * vCentroid.z;
-	vCrossSums.y -= flNumPoints * vCentroid.x * vCentroid.z;
-	vCrossSums.z -= flNumPoints * vCentroid.x * vCentroid.y;
-
-	// Best fit normal occurs at the minimum of the Rayleigh quotient:
-	//
-	// n' * M * n
-	// ----------
-	//   n' *  n
-	//
-	// Where M is the covariance matrix.
-	// M is computed from ( A' * A ) where A is a 3xN matrix of x/y/z residuals for each point in the data set.
-
-
-	// Solve for eigenvalues & eigenvectors of 3x3 real symmetric covariance matrix.
-	// The resulting characteristic polynormial equation is a cubic of the form:
-	// x^3 + Ax^2 + Bx + C = 0
-	//
-	// All roots of the equation and eigenvalues are positive real values; the lowest one corresponds to the eigenvalue which is the normal to the best fit plane.
-
-	float flA = -( vSquaredSums.x + vSquaredSums.y + vSquaredSums.z );
-	float flB = vSquaredSums.x * vSquaredSums.z + vSquaredSums.x * vSquaredSums.y + vSquaredSums.y * vSquaredSums.z - vCrossSums.x * vCrossSums.x - vCrossSums.y * vCrossSums.y - vCrossSums.z * vCrossSums.z;
-	float flC = -( vSquaredSums.x * vSquaredSums.y * vSquaredSums.z + 2.0f * vCrossSums.x * vCrossSums.y * vCrossSums.z ) + ( vSquaredSums.x * vCrossSums.x * vCrossSums.x + vSquaredSums.y * vCrossSums.y * vCrossSums.y + vSquaredSums.z * vCrossSums.z * vCrossSums.z );
-
-	// Using formula for roots of cubic polynomial, see http://en.wikipedia.org/wiki/Cubic_function
-	float flM = 2.0f * flA * flA * flA - 9.0f * flA * flB + 27.0f * flC;
-	float flK = flA * flA - 3.0f * flB;
-	float flN = flM * flM - 4.0f * flK * flK * flK;
-
-	Complex_t flSolutions[3];
-	const Complex_t omega1( -0.5f, 0.5f * sqrtf( 3.0f ) );
-	const Complex_t omega2( -0.5f, -0.5f * sqrtf( 3.0f ) );
-	Complex_t complexA = Complex_t( flA, 0.0f );
-	Complex_t complexM = Complex_t( flM, 0.0f );
-	Complex_t intermediateA = ( ( complexM + Complex_t::SquareRoot( flN ) ) / 2.0f );
-	Complex_t intermediateB = ( ( complexM - Complex_t::SquareRoot( flN ) ) / 2.0f );
-	Complex_t cubeA = intermediateA.CubeRoot(); 
-	Complex_t cubeB = intermediateB.CubeRoot();
-	Complex_t tempA = cubeA * cubeA * cubeA;
-	Complex_t tempB = cubeB * cubeB * cubeB;
-
-	flSolutions[0] = ( complexA + cubeA + cubeB ) * -1.0f / 3.0f;
-	flSolutions[1] = ( complexA + ( omega2 * cubeA ) + ( omega1 * cubeB ) ) * -1.0f / 3.0f;
-	flSolutions[2] = ( complexA + ( omega1 * cubeA ) + ( omega2 * cubeB ) ) * -1.0f / 3.0f;
-
-	float flMinEigenvalue = std::min( flSolutions[0].r, flSolutions[1].r );
-	flMinEigenvalue = std::min( flMinEigenvalue, flSolutions[2].r );
-
-	// Subtract eigenvalue from the diagonal of the matrix to get a 3x3, real-symmetric, non-invertible matrix.
-	// Pick 2 non-zero rows from this matrix and construct a system of 2 equations.
-	
-	return true;
-}
-
-#endif // USE_ORTHOGONAL_LEAST_SQUARES

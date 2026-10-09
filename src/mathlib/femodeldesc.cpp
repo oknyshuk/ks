@@ -1,20 +1,22 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+import ks.tier1;
 #include "mathlib/femodeldesc.h"
 #include "mathlib/femodel.h"
-#include "tier1/heapsort.h"
-#include "tier1/fmtstr.h"
+import std;
 
 template < typename T >
 inline CLockedResource< T > CloneArrayWithMarkers( CResourceStream *pStream, const T *pArray, uint nCount, const char *pName )
 {
 	// create the marker for the start of the array
-	CFmtStr beginMsg( "Begin of %s, %d byte aligned, here: <", pName, VALIGNOF( T ) );
+	CFmtStr beginMsg( "Begin of %s, %d byte aligned, here: <", pName, __alignof( T ) );
 	// align the marker so that it ends aligned, right before the array data
 	int nBeginMsgLength = beginMsg.Length( );
-	int nPreAlign = ( -int( pStream->GetTotalSize() + nBeginMsgLength ) ) & ( VALIGNOF( T ) - 1 );
+	int nPreAlign = ( -int( pStream->GetTotalSize() + nBeginMsgLength ) ) & ( __alignof( T ) - 1 );
 	V_memset( pStream->AllocateBytes( nPreAlign ), '-', nPreAlign );
 	void *pPrefixData = pStream->AllocateBytes( nBeginMsgLength );
-	Assert( !( ( uintp( pPrefixData ) + nBeginMsgLength ) & ( VALIGNOF( T ) - 1 ) ) );
+	contract_assert( !( ( uintp( pPrefixData ) + nBeginMsgLength ) & ( __alignof( T ) - 1 ) ) );
 	V_memcpy( pPrefixData, beginMsg.Get(), nBeginMsgLength );
 	// write out the array
 	CLockedResource< T > result = CloneArray( pStream, pArray, nCount );
@@ -146,7 +148,7 @@ void Clone( const PhysFeModelDesc_t *pFeDesc, intp nOffsetBytes, char **pCtrlNam
 	pFeModel->m_nNodeCount = pFeDesc->m_nNodeCount;
 	pFeModel->m_nStaticNodes = pFeDesc->m_nStaticNodes;
 	pFeModel->m_nRotLockStaticNodes = pFeDesc->m_nRotLockStaticNodes;
-	AssertDbg( pFeModel->m_nRotLockStaticNodes <= pFeModel->m_nStaticNodes );
+	contract_assert( pFeModel->m_nRotLockStaticNodes <= pFeModel->m_nStaticNodes );
 	pFeModel->m_nTreeDepth = pFeDesc->m_nTreeDepth;
 	// no scalar data
 	pFeModel->m_nQuadCount[ 0 ] = 0;
@@ -238,7 +240,7 @@ void Clone( const PhysFeModelDesc_t *pFeDesc, intp nOffsetBytes, char **pCtrlNam
 	pFeModel->m_pSimdFitMatrices = ConstCastOffsetPointer( pFeDesc->m_SimdFitMatrices.Base(), nOffsetBytes );
 	pFeModel->m_pFitWeights = ConstCastOffsetPointer( pFeDesc->m_FitWeights.Base(), nOffsetBytes );
 	pFeModel->m_pReverseOffsets = ConstCastOffsetPointer( pFeDesc->m_ReverseOffsets.Base(), nOffsetBytes );
-	AssertDbg( pFeModel->m_pWorldCollisionParams ? pFeModel->m_pWorldCollisionParams[ pFeModel->m_nWorldCollisionParamCount - 1 ].nListEnd == pFeModel->m_nWorldCollisionNodeCount : !pFeModel->m_pWorldCollisionNodes && !pFeModel->m_nWorldCollisionParamCount && !pFeModel->m_nWorldCollisionNodeCount );
+	contract_assert( pFeModel->m_pWorldCollisionParams ? pFeModel->m_pWorldCollisionParams[ pFeModel->m_nWorldCollisionParamCount - 1 ].nListEnd == pFeModel->m_nWorldCollisionNodeCount : !pFeModel->m_pWorldCollisionNodes && !pFeModel->m_nWorldCollisionParamCount && !pFeModel->m_nWorldCollisionNodeCount );
 	pFeModel->m_nRopeCount = pFeDesc->m_nRopeCount;
 	pFeModel->m_nRopeIndexCount = pFeDesc->m_Ropes.Count();
 	pFeModel->m_nNodeBaseCount = pFeDesc->m_NodeBases.Count();
@@ -246,13 +248,13 @@ void Clone( const PhysFeModelDesc_t *pFeDesc, intp nOffsetBytes, char **pCtrlNam
 	pFeModel->m_nCollisionSpheres[ 0 ] = pFeDesc->m_CollisionSpheres.Count();
 	pFeModel->m_nCollisionSpheres[ 1 ] = pFeDesc->m_nCollisionSphereInclusiveCount;
 	pFeModel->m_nCollisionPlanes = pFeDesc->m_CollisionPlanes.Count();
-	Assert( pFeDesc->m_TreeChildren.Count() == 0 || pFeDesc->m_TreeChildren.Count() == ( int )pFeDesc->GetDynamicNodeCount() - 1 );
+	contract_assert( pFeDesc->m_TreeChildren.Count() == 0 || pFeDesc->m_TreeChildren.Count() == ( int )pFeDesc->GetDynamicNodeCount() - 1 );
 	pFeModel->m_pTreeChildren = ConstCastOffsetPointer( pFeDesc->m_TreeChildren.Base(), nOffsetBytes );
-	Assert( pFeDesc->m_TreeParents.Count() == 0 || pFeDesc->m_TreeParents.Count() == 2 * ( int )pFeDesc->GetDynamicNodeCount() - 1 );
+	contract_assert( pFeDesc->m_TreeParents.Count() == 0 || pFeDesc->m_TreeParents.Count() == 2 * ( int )pFeDesc->GetDynamicNodeCount() - 1 );
 	pFeModel->m_pTreeParents = ConstCastOffsetPointer( pFeDesc->m_TreeParents.Base(), nOffsetBytes );
-	Assert( pFeDesc->m_TreeParents.Count() == pFeDesc->m_TreeCollisionMasks.Count() );
+	contract_assert( pFeDesc->m_TreeParents.Count() == pFeDesc->m_TreeCollisionMasks.Count() );
 	pFeModel->m_pTreeCollisionMasks = ConstCastOffsetPointer( pFeDesc->m_TreeCollisionMasks.Base(), nOffsetBytes );
-	Assert( pFeDesc->m_NodeInvMasses.Count() == 0 || pFeDesc->m_NodeInvMasses.Count() == pFeDesc->m_nNodeCount );
+	contract_assert( pFeDesc->m_NodeInvMasses.Count() == 0 || pFeDesc->m_NodeInvMasses.Count() == pFeDesc->m_nNodeCount );
 	pFeModel->m_pNodeInvMasses = pFeDesc->m_NodeInvMasses.Count() ? ConstCastOffsetPointer( pFeDesc->m_NodeInvMasses.Base(), nOffsetBytes ) : nullptr;
 	if ( pFeDesc->m_CtrlName.IsEmpty() || !pCtrlNames )
 	{
@@ -274,7 +276,7 @@ void Clone( const PhysFeModelDesc_t *pFeDesc, intp nOffsetBytes, char **pCtrlNam
 			}
 		}
 	}
-	AssertDbg( pFeDesc->m_InitPose.Count() == pFeModel->m_nCtrlCount );
+	contract_assert( pFeDesc->m_InitPose.Count() == pFeModel->m_nCtrlCount );
 	pFeModel->m_pInitPose = ConstCastOffsetPointer( pFeDesc->m_InitPose.Base(), nOffsetBytes );
 }
 
@@ -334,15 +336,13 @@ CFeModelReplaceContext::CFeModelReplaceContext( const CFeModel *pOld, const CFeM
 		}
 		else if ( nOldCtrlHash < nNewCtrlHash )
 		{
-			AssertDbg( m_OldToNewCtrl[ nOldCtrl ] == -1 );
+			contract_assert( m_OldToNewCtrl[ nOldCtrl ] == -1 );
 			nOld++;
 		}
 		else
 		{
-			AssertDbg( m_NewToOldCtrl[ nNewCtrl ] == -1 );
+			contract_assert( m_NewToOldCtrl[ nNewCtrl ] == -1 );
 			nNew++;
 		}
 	}
 }
-
-

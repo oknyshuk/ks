@@ -1,15 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:  baseclientstate.cpp: implementation of the CBaseClientState class.
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: baseclientstate.cpp: implementation of the CBaseClientState class.
+
+import ks.tier1;
 #include "client.h"
-#include "convar.h"
-#include "convar_serverbounded.h"
-#include "sys.h"
-#include "net.h"
-
+import std;
 
 // These are the server cvars that control our cvars.
 extern int ClampClientRate( int nRate );
@@ -38,7 +34,7 @@ public:
 	CBoundedCvar_Rate() :
 	  ConVar_ServerBounded( 
 		  "rate", 
-		  STRINGIFY( DEFAULT_RATE ),
+		  "DEFAULT_RATE",
 		  FCVAR_ARCHIVE | FCVAR_USERINFO,
 		  "Max bytes/sec the host can receive data", 
 		  CL_RateCvarChanged )

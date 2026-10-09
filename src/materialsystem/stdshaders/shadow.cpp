@@ -1,10 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 
@@ -12,10 +7,9 @@
 #include "shadow_ps20b.inc"
 #include "shadow_vs20.inc"
 
-
 BEGIN_VS_SHADER_FLAGS( Shadow, "Help for Shadow", SHADER_NOT_EDITABLE )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( MAXFALLOFFAMOUNT, SHADER_PARAM_TYPE_FLOAT, "240", "" )
 		SHADER_PARAM( DEFERREDSHADOWS, SHADER_PARAM_TYPE_BOOL, "0", "" )
 		SHADER_PARAM( ZFAILENABLE, SHADER_PARAM_TYPE_BOOL, "0", "" )

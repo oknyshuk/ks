@@ -1,18 +1,21 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
 #include "functionproxy.h"
-#include <keyvalues.h>
-#include "mathlib/vmatrix.h"
 
 #include "imaterialproxydict.h"
 
@@ -112,8 +115,8 @@ void CConveyorMaterialProxy::OnBind( void *pC_BaseEntity )
 	float flRate			= abs( flConveyorSpeed ) / 128.0;
 	float flAngle			= (flConveyorSpeed >= 0) ? 180 : 0;
 
-	float sOffset = gpGlobals->curtime * cos( flAngle * ( M_PI / 180.0f ) ) * flRate;
-	float tOffset = gpGlobals->curtime * sin( flAngle * ( M_PI / 180.0f ) ) * flRate;
+	float sOffset = gpGlobals->curtime * std::cos( flAngle * ( std::numbers::pi / 180.0f ) ) * flRate;
+	float tOffset = gpGlobals->curtime * std::sin( flAngle * ( std::numbers::pi / 180.0f ) ) * flRate;
 	
 	// make sure that we are positive
 	if( sOffset < 0.0f )

@@ -1,40 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CMDLIB_H
-#define CMDLIB_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // cmdlib.h																   
 
-#include "basetypes.h"
+import ks.core;
 
 // This can go away when everything is in bin.
-#if defined( CMDLIB_NODBGLIB )
-	void Error( char const *pMsg, ... );
-#else
-	#include "tier0/dbg.h"
-#endif
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <ctype.h>
-#include <time.h>
-#include <stdarg.h>
+import std;
 #include "filesystem.h"
 #include "filesystem_tools.h"
 
-
 // Tools should use this as the read path ID. It'll look into the paths specified by gameinfo.txt
-#define TOOLS_READ_PATH_ID "GAME"
+inline constexpr const char *TOOLS_READ_PATH_ID = "GAME";
 
 
 // Tools should use this to fprintf data to files.
@@ -57,7 +36,7 @@ CreateInterfaceFn	CmdLib_GetFileSystemFactory();
 
 
 // the dec offsetof macro doesnt work very well...
-#define myoffsetof(type,identifier) offsetof( type, identifier )
+#define myoffsetof(type,identifier) __builtin_offsetof( type, identifier )
 
 
 // set these before calling CheckParm
@@ -92,7 +71,7 @@ int 	ParseNum (char *str);
 #define CP_WARNING	stderr, 1, 1, 0, 1		
 #define CP_STARTUP	stdout, 0, 1, 1, 1		
 #define CP_NOTIFY	stdout, 1, 1, 1, 1
-void ColorPrintf( FILE *pFile, bool red, bool green, bool blue, bool intensity, char const *pFormat, ... );
+void ColorPrintf( std::FILE *pFile, bool red, bool green, bool blue, bool intensity, char const *pFormat, ... );
 
 // Initialize spew output.
 void InstallSpewFunction();
@@ -165,6 +144,3 @@ typedef struct
 	byte	*data;
 	int		count;
 } cblock_t;
-
-
-#endif // CMDLIB_H

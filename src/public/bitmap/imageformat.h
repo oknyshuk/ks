@@ -1,16 +1,9 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IMAGEFORMAT_H
-#define IMAGEFORMAT_H
-
-
-#include <stdio.h>
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
+import std;
+import ks.core;
 
 #include "bitmap/imageformat_declarations.h"
 
@@ -18,7 +11,7 @@
 //-----------------------------------------------------------------------------
 // Color structures
 //-----------------------------------------------------------------------------
-template< int nBitCount > FORCEINLINE int ConvertTo10Bit( int x )
+template< int nBitCount > [[gnu::always_inline]] inline int ConvertTo10Bit( int x )
 {
 	switch ( nBitCount )
 	{
@@ -35,7 +28,7 @@ template< int nBitCount > FORCEINLINE int ConvertTo10Bit( int x )
 	}
 }
 
-template< int nBitCount > FORCEINLINE int ConvertFrom10Bit( int x )
+template< int nBitCount > [[gnu::always_inline]] inline int ConvertFrom10Bit( int x )
 {
 	return ( x >> ( 10 - nBitCount ) );
 }
@@ -361,8 +354,8 @@ struct UVLX8888_t
 //-----------------------------------------------------------------------------
 // some important constants
 //-----------------------------------------------------------------------------
-#define ARTWORK_GAMMA ( 2.2f )
-#define IMAGE_MAX_DIM ( 2048 )
+inline constexpr auto ARTWORK_GAMMA = ( 2.2f );
+inline constexpr auto IMAGE_MAX_DIM = ( 2048 );
 
 
 //-----------------------------------------------------------------------------
@@ -433,7 +426,7 @@ namespace ImageLoader
 	void GetMipMapLevelDimensions( int &nWidth, int &nHeight, int &nDepth, int nMipLevel );
 	int  GetNumMipMapLevels( int width, int height, int depth = 1 );
 	bool Load( unsigned char *imageData, const char *fileName, int width, int height, ImageFormat imageFormat, float targetGamma, bool mipmap );
-	bool Load( unsigned char *imageData, FILE *fp, int width, int height, 
+	bool Load( unsigned char *imageData, std::FILE *fp, int width, int height, 
 			   enum ImageFormat imageFormat, float targetGamma, bool mipmap );
 
 	// convert from any image format to any other image format.
@@ -653,6 +646,3 @@ namespace ImageLoader
 	}
 
 } // end namespace ImageLoader
-
-
-#endif // IMAGEFORMAT_H

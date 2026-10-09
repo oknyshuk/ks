@@ -1,14 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ACTIVITYLIST_H
-#define ACTIVITYLIST_H
-
-#include <keyvalues.h>
+import ks.tier1;
+#include "ai_activity.h"
+import std;
 
 typedef struct activityentry_s activityentry_t;
 
@@ -90,5 +86,3 @@ extern int ActivityList_HighestIndex();
 
 // Implemented in shared code
 extern void ActivityList_RegisterSharedActivities( void );
-
-#endif // ACTIVITYLIST_H

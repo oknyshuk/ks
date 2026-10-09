@@ -1,18 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef COUNTERSTRIKEVIEWPORT_H
-#define COUNTERSTRIKEVIEWPORT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "cs_shareddefs.h"
 #include "baseviewport.h"
-
-
-
 
 class CCSTeamMenu;
 class CCSClassMenu;
@@ -67,6 +58,3 @@ private:
 	// HPE_END
 	//=============================================================================
 };
-
-
-#endif // COUNTERSTRIKEVIEWPORT_H

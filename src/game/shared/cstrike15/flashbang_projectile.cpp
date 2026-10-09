@@ -1,10 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "te.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #ifdef GAME_DLL
 #include "reflect_datamap.h"
 #endif
@@ -13,13 +39,11 @@
 #include "engine/IEngineSound.h"
 #include "cs_player.h"
 #include "dlight.h"
-#include "keyvalues.h"
 #include "weapon_csbase.h"
 #include "cs_gamerules.h"
 #include "animation.h"
 
 #define GRENADE_MODEL "models/Weapons/w_eq_flashbang_dropped.mdl"
-
 
 LINK_ENTITY_TO_CLASS( flashbang_projectile, CFlashbangProjectile );
 PRECACHE_REGISTER( flashbang_projectile );
@@ -426,9 +450,6 @@ void CFlashbangProjectile::Detonate()
 	Vector		vecSpot = GetAbsOrigin() + Vector ( 0 , 0 , 2 );
 	UTIL_TraceLine ( vecSpot, vecSpot + Vector ( 0, 0, -64 ), MASK_SHOT_HULL, this, COLLISION_GROUP_NONE, & tr);
 	UTIL_DecalTrace( &tr, "Scorch" );
-
-	// Because we don't chain to base, tell ogs to record this detonation here
-	RecordDetonation();
 
 	UTIL_Remove( this );
 }

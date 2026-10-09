@@ -1,11 +1,44 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Physics constraint entities
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Physics constraint entities
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "physics.h"
@@ -15,7 +48,6 @@
 #include "igamesystem.h"
 #include "vcollide_parse.h"
 #include "positionwatcher.h"
-#include "fmtstr.h"
 #include "physics_prop_ragdoll.h"
 
 #define HINGE_NOTIFY HL2_EPISODIC
@@ -23,14 +55,14 @@
 #include "physconstraint_sounds.h"
 #endif
 
-#define SF_CONSTRAINT_DISABLE_COLLISION			0x0001
-#define SF_SLIDE_LIMIT_ENDS						0x0002
-#define SF_PULLEY_RIGID							0x0002
-#define SF_LENGTH_RIGID							0x0002
-#define SF_RAGDOLL_FREEMOVEMENT					0x0002
-#define SF_CONSTRAINT_START_INACTIVE			0x0004
-#define SF_CONSTRAINT_ASSUME_WORLD_GEOMETRY		0x0008
-#define SF_CONSTRAINT_NO_CONNECT_UNTIL_ACTIVATED	0x0010	// Will only check the two attached entities at activation
+constexpr auto SF_CONSTRAINT_DISABLE_COLLISION = 0x0001;
+constexpr auto SF_SLIDE_LIMIT_ENDS = 0x0002;
+constexpr auto SF_PULLEY_RIGID = 0x0002;
+constexpr auto SF_LENGTH_RIGID = 0x0002;
+constexpr auto SF_RAGDOLL_FREEMOVEMENT = 0x0002;
+constexpr auto SF_CONSTRAINT_START_INACTIVE = 0x0004;
+constexpr auto SF_CONSTRAINT_ASSUME_WORLD_GEOMETRY = 0x0008;
+constexpr auto SF_CONSTRAINT_NO_CONNECT_UNTIL_ACTIVATED = 0x0010; // Will only check the two attached entities at activation
 
 
 ConVar    g_debug_constraint_sounds	  ( "g_debug_constraint_sounds", "0", FCVAR_CHEAT, "Enable debug printing about constraint sounds.");
@@ -257,7 +289,7 @@ static void DrawConstraintObjectsAxes(CBaseEntity *pConstraintEntity, IPhysicsCo
 	}
 }
 
-abstract_class CPhysConstraint : public CLogicalEntity
+class CPhysConstraint : public CLogicalEntity
 {
 	DECLARE_CLASS( CPhysConstraint, CLogicalEntity );
 public:
@@ -384,7 +416,7 @@ public:
 		if ( m_pConstraint && (m_debugOverlays & OVERLAY_TEXT_BIT) )
 		{
 			constraint_breakableparams_t params;
-			Q_memset(&params,0,sizeof(params));
+			V_memset(&params,0,sizeof(params));
 			m_pConstraint->GetConstraintParams( &params );
 			
 			if ( (params.bodyMassScale[0] != 1.0f && params.bodyMassScale[0] != 0.0f) || (params.bodyMassScale[1] != 1.0f && params.bodyMassScale[1] != 0.0f) )
@@ -533,7 +565,7 @@ void FindPhysicsAnchor( string_t name, hl_constraint_info_t &info, int index, CB
 				if ( pAnim )
 				{
 					IPhysicsObject *list[VPHYSICS_MAX_OBJECT_LIST_COUNT];
-					int listCount = pAnchor->hEntity->VPhysicsGetObjectList( list, ARRAYSIZE(list) );
+					int listCount = pAnchor->hEntity->VPhysicsGetObjectList( list, std::size( list ) );
 					int iPhysicsBone = pAnim->GetPhysicsBone( pAnim->GetAttachmentBone( pAnchor->parentAttachment ) );
 					if ( iPhysicsBone < listCount )
 					{
@@ -611,7 +643,7 @@ void CPhysConstraint::GetConstraintObjects( hl_constraint_info_t &info )
 	// Missing one object, assume the world instead
 	if ( info.pObjects[0] == nullptr && info.pObjects[1] )
 	{
-		if ( Q_strlen(STRING(m_nameAttach1)) )
+		if ( V_strlen(STRING(m_nameAttach1)) )
 		{
 			Warning("Bogus constraint %s (attaches ENTITY NOT FOUND:%s to %s)\n", GetDebugName(), STRING(m_nameAttach1), STRING(m_nameAttach2));
 		}
@@ -620,7 +652,7 @@ void CPhysConstraint::GetConstraintObjects( hl_constraint_info_t &info )
 	}
 	else if ( info.pObjects[0] && !info.pObjects[1] )
 	{
-		if ( Q_strlen(STRING(m_nameAttach2)) )
+		if ( V_strlen(STRING(m_nameAttach2)) )
 		{
 			Warning("Bogus constraint %s (attaches %s to ENTITY NOT FOUND:%s)\n", GetDebugName(), STRING(m_nameAttach1), STRING(m_nameAttach2));
 		}
@@ -833,7 +865,7 @@ public:
 	void NotifyVPhysicsStateChanged( IPhysicsObject *pPhysics, CBaseEntity *pEntity, bool bAwake )
 	{
 #if HINGE_NOTIFY
-		Assert(m_pConstraint);
+		contract_assert( m_pConstraint );
 		if (!m_pConstraint) 
 			return;
 
@@ -1013,12 +1045,12 @@ bool CPhysHinge::IsWorldHinge( const hl_constraint_info_t &info, int *pAxisOut )
 #if HINGE_NOTIFY
 void CPhysHinge::SoundThink( void )
 {
-	Assert(m_pConstraint);
+	contract_assert( m_pConstraint );
 	if (!m_pConstraint)
 		return;
 
 	IPhysicsObject * pAttached = m_pConstraint->GetAttachedObject(), *pReference = m_pConstraint->GetReferenceObject();
-	Assert( pAttached && pReference );
+	contract_assert( pAttached && pReference );
 	if (pAttached && pReference)
 	{
 		Vector relativeVel = VelocitySampler::GetRelativeAngularVelocity(pAttached,pReference);
@@ -1107,7 +1139,7 @@ public:
 	void NotifyVPhysicsStateChanged( IPhysicsObject *pPhysics, CBaseEntity *pEntity, bool bAwake )
 	{
 #if HINGE_NOTIFY
-		Assert(m_pConstraint);
+		contract_assert( m_pConstraint );
 		if (!m_pConstraint) 
 			return;
 
@@ -1230,12 +1262,12 @@ IPhysicsConstraint *CPhysSlideConstraint::CreateConstraint( IPhysicsConstraintGr
 #if HINGE_NOTIFY
 void CPhysSlideConstraint::SoundThink( void )
 {
-	Assert(m_pConstraint);
+	contract_assert( m_pConstraint );
 	if (!m_pConstraint)
 		return;
 
 	IPhysicsObject * pAttached = m_pConstraint->GetAttachedObject(), *pReference = m_pConstraint->GetReferenceObject();
-	Assert( pAttached && pReference );
+	contract_assert( pAttached && pReference );
 	if (pAttached && pReference)
 	{
 		Vector relativeVel = VelocitySampler::GetRelativeVelocity(pAttached,pReference);
@@ -1761,15 +1793,15 @@ void ConstraintSoundInfo::OnThink( CPhysConstraint *pOuter, const Vector &relati
 	if (g_debug_constraint_sounds.GetBool())
 	{
 		char tempstr[512];
-		Q_snprintf(tempstr,sizeof(tempstr),"Velocity: %.3f", relativeVelMag );
+		V_snprintf(tempstr,sizeof(tempstr),"Velocity: %.3f", relativeVelMag );
 		pChildEntity->EntityText( 0, tempstr, m_vSampler.getSampleRate() );
 
-		Q_snprintf(tempstr,sizeof(tempstr),"Sound volume: %.3f", soundVol );
+		V_snprintf(tempstr,sizeof(tempstr),"Sound volume: %.3f", soundVol );
 		pChildEntity->EntityText( 1, tempstr, m_vSampler.getSampleRate() );
 
 		if (playReversal >= 0)
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Reversal [%d]", playReversal );
+			V_snprintf(tempstr,sizeof(tempstr),"Reversal [%d]", playReversal );
 			pChildEntity->EntityText(2,tempstr,m_vSampler.getSampleRate());
 		}
 	}

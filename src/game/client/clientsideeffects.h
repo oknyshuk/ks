@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
 
-#ifndef CLIENTSIDEEFFECTS_H
-#define CLIENTSIDEEFFECTS_H
-
-class	Vector;
 struct	FXQuadData_t;
 struct	FXLineData_t;
 //-----------------------------------------------------------------------------
 // Purpose: Base class for client side effects
 //-----------------------------------------------------------------------------
-abstract_class CClientSideEffect
+class CClientSideEffect
 {
 public:
 	// Constructs the named effect
@@ -40,7 +35,7 @@ private:
 //-----------------------------------------------------------------------------
 // Purpose: Base interface to effects list
 //-----------------------------------------------------------------------------
-abstract_class IEffectsList
+class IEffectsList
 {
 public:
 	virtual			~IEffectsList( void ) {}
@@ -85,5 +80,3 @@ void FX_AddQuad( const Vector &origin,
 // For safe addition of client effects
 void SetFXCreationAllowed( bool state );
 bool FXCreationAllowed( void );
-
-#endif // CLIENTSIDEEFFECTS_H

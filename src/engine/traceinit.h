@@ -1,11 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Allows matching of initialization and shutdown function calls
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( TRACEINIT_H )
-#define TRACEINIT_H
 
 void TraceInit( const char *i, const char *s, int list );
 void TraceShutdown( const char *s, int list );
@@ -20,5 +17,3 @@ void TraceShutdown( const char *s, int list );
 
 #define TRACEINIT( initfunc, shutdownfunc )	TRACEINITNUM( initfunc, shutdownfunc, 0 )
 #define TRACESHUTDOWN( shutdownfunc ) TRACESHUTDOWNNUM( shutdownfunc, 0 )
-
-#endif // TRACEINIT_H

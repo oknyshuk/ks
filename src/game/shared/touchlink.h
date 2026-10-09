@@ -1,12 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Shared data definition file for touch links
-//
-//=============================================================================//
 
-#ifndef TOUCHLINK_H
-#define TOUCHLINK_H
+#include "ehandle.h"
 
+#if defined( CLIENT_DLL )
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
+#else
+class CBaseEntity;
+typedef CHandle<CBaseEntity> EHANDLE;
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: for resolving touch/untouch pairs
@@ -30,7 +36,4 @@ struct touchlink_t
 };
 
 // means this touchlink is managed external to the main physics system
-#define TOUCHSTAMP_EVENT_DRIVEN		-1
-
-
-#endif // TOUCHLINK_H
+inline constexpr auto TOUCHSTAMP_EVENT_DRIVEN = -1;

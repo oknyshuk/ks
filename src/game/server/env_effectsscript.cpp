@@ -1,17 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "baseanimating.h"
 #include "Sprite.h"
 #include "SpriteTrail.h"
-#include <ctype.h>
 #include "animation.h"
 #include "eventlist.h"
 #include "npcevent.h"
@@ -129,7 +155,7 @@ private:
 //-----------------------------------------------------------------------------
 	bool IsRootCommand( void )
 	{
-		if ( !Q_stricmp( token, "effect" ) )
+		if ( !V_stricmp( token, "effect" ) )
 			return true;
 
 		return false;
@@ -373,7 +399,7 @@ void CEnvEffectsScript::ParseScriptFile( void )
 	g_bUnget = false;
 	currenttoken = nullptr;
 	tokencount = 0;
-	memset( token, 0, 1204 );
+	std::memset( token, 0, 1204 );
 	memset( name, 0, 256 );
 
 
@@ -401,7 +427,7 @@ void CEnvEffectsScript::LoadFromBuffer( const char *scriptfile, const char *buff
 			break;
 		}
 
-		if ( !Q_stricmp( token, "effect" ) )
+		if ( !V_stricmp( token, "effect" ) )
 		{
 			ParseNewEffect();
 		}
@@ -420,7 +446,7 @@ void CEnvEffectsScript::ParseNewEffect( void )
 	
 	// Effect Group Name
 	ParseToken();
-	Q_strncpy( NewElement.m_szEffectName, token, sizeof( NewElement.m_szEffectName ) );
+	V_strncpy( NewElement.m_szEffectName, token, sizeof( NewElement.m_szEffectName ) );
 
 	while ( 1 )
 	{
@@ -433,81 +459,81 @@ void CEnvEffectsScript::ParseNewEffect( void )
 			break;
 		}
 
-		if ( !Q_stricmp( token, "{" ) )
+		if ( !V_stricmp( token, "{" ) )
 		{
 			while ( 1 )
 			{
 				ParseToken();
-				if ( !Q_stricmp( token, "}" ) )
+				if ( !V_stricmp( token, "}" ) )
 					break;
 
-				if ( !Q_stricmp( token, "type" ) )
+				if ( !V_stricmp( token, "type" ) )
 				{
 					ParseToken();
 
-					if ( !Q_stricmp( token, "trail" ) )
+					if ( !V_stricmp( token, "trail" ) )
 						NewElement.m_iType = EFFECT_TYPE_TRAIL;
-					else if ( !Q_stricmp( token, "sprite" ) )
+					else if ( !V_stricmp( token, "sprite" ) )
 						NewElement.m_iType = EFFECT_TYPE_SPRITE;
 
 					continue;
 				}
 
-				if ( !Q_stricmp( token, "material" ) )
+				if ( !V_stricmp( token, "material" ) )
 				{
 					ParseToken();
-					Q_strncpy( NewElement.m_szMaterial, token, sizeof( NewElement.m_szMaterial ) );
+					V_strncpy( NewElement.m_szMaterial, token, sizeof( NewElement.m_szMaterial ) );
 					PrecacheModel( NewElement.m_szMaterial );
 
 					continue;
 				}
 
-				if ( !Q_stricmp( token, "attachment" ) )
+				if ( !V_stricmp( token, "attachment" ) )
 				{
 					ParseToken();
-					Q_strncpy( NewElement.m_szAttachment, token, sizeof( NewElement.m_szAttachment ) );
+					V_strncpy( NewElement.m_szAttachment, token, sizeof( NewElement.m_szAttachment ) );
 
 					continue;
 				}
 
-				if ( !Q_stricmp( token, "color" ) )
+				if ( !V_stricmp( token, "color" ) )
 				{
 					ParseToken();
-					sscanf( token, "%i %i %i %i", &NewElement.m_iR, &NewElement.m_iG, &NewElement.m_iB, &NewElement.m_iA );
+					std::sscanf( token, "%i %i %i %i", &NewElement.m_iR, &NewElement.m_iG, &NewElement.m_iB, &NewElement.m_iA );
 
 					continue;
 				}
 
-				if ( !Q_stricmp( token, "scale" ) )
+				if ( !V_stricmp( token, "scale" ) )
 				{
 					ParseToken();
 
-					NewElement.m_flScale = atof( token );
+					NewElement.m_flScale = std::atof( token );
 					continue;
 				}
 
-				if ( !Q_stricmp( token, "texturescale" ) )
+				if ( !V_stricmp( token, "texturescale" ) )
 				{
 					ParseToken();
 
-					float flTextureScale = atof( token );
+					float flTextureScale = std::atof( token );
 					NewElement.m_flTextureRes = (flTextureScale > 0.0f) ? 1.0f / flTextureScale : 0.0f;
 					continue;
 				}
 
-				if ( !Q_stricmp( token, "fadetime" ) )
+				if ( !V_stricmp( token, "fadetime" ) )
 				{
 					ParseToken();
 
-					NewElement.m_flFadeTime = atof( token );
+					NewElement.m_flFadeTime = std::atof( token );
 					continue;
 				}
 
-				if ( !Q_stricmp( token, "stopfollowonkill" ) )
+				if ( !V_stricmp( token, "stopfollowonkill" ) )
 				{
 					ParseToken();
 
-					NewElement.m_bStopFollowOnKill = !!atoi( token );
+					NewElement.m_bStopFollowOnKill = !!std::atoi( token );
 					continue;
 				}
 
@@ -525,7 +551,7 @@ CEffectScriptElement *CEnvEffectsScript::GetScriptElementByName( const char *pNa
 	{
 		CEffectScriptElement *pCurrent = &m_ScriptElements[ i ];
 
-		if ( pCurrent && !Q_stricmp( pCurrent->m_szEffectName, pName ) ) 
+		if ( pCurrent && !V_stricmp( pCurrent->m_szEffectName, pName ) ) 
 		{
 			return pCurrent;
 		}

@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( CROSSHAIR_MODE == 1 ) && ( LIGHTING_PREVIEW > 0 )
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
@@ -21,7 +22,7 @@ private:
 public:
 	void SetTRANSLUCENT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nTRANSLUCENT = i;
 #ifdef _DEBUG
 		m_bTRANSLUCENT = true;
@@ -29,7 +30,7 @@ public:
 	}
 	void SetTRANSLUCENT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTRANSLUCENT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTRANSLUCENT = true;
@@ -43,7 +44,7 @@ private:
 public:
 	void SetLIGHTING_PREVIEW( int i )
 	{
-		Assert( i >= 0 && i <= 3 );
+		contract_assert( i >= 0 && i <= 3 );
 		m_nLIGHTING_PREVIEW = i;
 #ifdef _DEBUG
 		m_bLIGHTING_PREVIEW = true;
@@ -51,7 +52,7 @@ public:
 	}
 	void SetLIGHTING_PREVIEW( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
 		m_nLIGHTING_PREVIEW = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bLIGHTING_PREVIEW = true;
@@ -65,7 +66,7 @@ private:
 public:
 	void SetCROSSHAIR_MODE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCROSSHAIR_MODE = i;
 #ifdef _DEBUG
 		m_bCROSSHAIR_MODE = true;
@@ -73,7 +74,7 @@ public:
 	}
 	void SetCROSSHAIR_MODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCROSSHAIR_MODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCROSSHAIR_MODE = true;
@@ -102,7 +103,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bTRANSLUCENT && m_bLIGHTING_PREVIEW && m_bCROSSHAIR_MODE;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 4 * m_nTRANSLUCENT ) + ( 8 * m_nLIGHTING_PREVIEW ) + ( 32 * m_nCROSSHAIR_MODE ) + 0;
 	}
@@ -118,7 +119,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -126,7 +127,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -140,7 +141,7 @@ private:
 public:
 	void SetWRITE_DEPTH_TO_DESTALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nWRITE_DEPTH_TO_DESTALPHA = i;
 #ifdef _DEBUG
 		m_bWRITE_DEPTH_TO_DESTALPHA = true;
@@ -148,7 +149,7 @@ public:
 	}
 	void SetWRITE_DEPTH_TO_DESTALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nWRITE_DEPTH_TO_DESTALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bWRITE_DEPTH_TO_DESTALPHA = true;
@@ -173,7 +174,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bPIXELFOGTYPE && m_bWRITE_DEPTH_TO_DESTALPHA;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nPIXELFOGTYPE ) + ( 2 * m_nWRITE_DEPTH_TO_DESTALPHA ) + 0;
 	}

@@ -1,13 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef PRECACHE_REGISTER_H
-#define PRECACHE_REGISTER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "igamesystem.h"
 #include "datacache/iprecachesystem.h"
@@ -48,6 +41,3 @@ private:
 //-----------------------------------------------------------------------------
 extern IPrecacheHandler *g_pPrecacheHandler;
 extern CPrecacheRegister *g_pPrecacheRegister;
-
-
-#endif // PRECACHE_REGISTER_H

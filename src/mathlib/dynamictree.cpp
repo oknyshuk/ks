@@ -1,6 +1,8 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
-#include "dynamictree.h" 
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+import ks.core;
+#include "dynamictree.h"
 
 //--------------------------------------------------------------------------------------------------
 // Local utilities
@@ -107,7 +109,7 @@ int32 CDynamicTree::CreateProxy( const AABB_t& bounds, void* pUserData )
 //--------------------------------------------------------------------------------------------------
 void* CDynamicTree::DestroyProxy( int32 nProxyId )
 {
-	AssertDbg( m_NodePool[ nProxyId ].IsLeaf() );
+	contract_assert( m_NodePool[ nProxyId ].IsLeaf() );
 
 	// Grab user data from the node to return it
 	void* pUserData = m_NodePool[ nProxyId ].m_pUserData;
@@ -125,7 +127,7 @@ void* CDynamicTree::DestroyProxy( int32 nProxyId )
 //--------------------------------------------------------------------------------------------------
 void CDynamicTree::MoveProxy( int32 nProxyId, const AABB_t& bounds )
 {
-	AssertDbg ( m_NodePool[ nProxyId ].IsLeaf() );
+	contract_assert( m_NodePool[ nProxyId ].IsLeaf() );
 
 	RemoveLeaf( nProxyId );
 
@@ -231,7 +233,7 @@ void CDynamicTree::InsertLeaf( int32 nLeaf )
 //--------------------------------------------------------------------------------------------------
 void CDynamicTree::RemoveLeaf( int32 nLeaf )
 {
-	AssertDbg( m_NodePool[ nLeaf ].IsLeaf() );
+	contract_assert( m_NodePool[ nLeaf ].IsLeaf() );
 
 	if ( nLeaf == m_nRoot )
 	{
@@ -287,9 +289,9 @@ void CDynamicTree::AdjustAncestors( int32 nNode )
 		nNode = Balance( nNode );
 
 		int32 nChild1 = m_NodePool[ nNode ].m_nChild1;
-		AssertDbg( nChild1 != NULL_NODE );
+		contract_assert( nChild1 != NULL_NODE );
 		int32 nChild2 = m_NodePool[ nNode ].m_nChild2;
-		AssertDbg( nChild2 != NULL_NODE );
+		contract_assert( nChild2 != NULL_NODE );
 
 		m_NodePool[ nNode ].m_nHeight = 1 + std::max( m_NodePool[ nChild1 ].m_nHeight, m_NodePool[ nChild2 ].m_nHeight );
 		m_NodePool[ nNode ].m_Bounds = Merge( m_NodePool[ nChild1 ].m_Bounds, m_NodePool[ nChild2 ].m_Bounds );
@@ -339,7 +341,7 @@ int32 CDynamicTree::Balance( int32 nNode )
 			}
 			else
 			{
-				AssertDbg( m_NodePool[ C.m_nParent ].m_nChild2 == nIndexA );
+				contract_assert( m_NodePool[ C.m_nParent ].m_nChild2 == nIndexA );
 				m_NodePool[ C.m_nParent ].m_nChild2 = nIndexC;
 			}
 		}
@@ -395,7 +397,7 @@ int32 CDynamicTree::Balance( int32 nNode )
 			}
 			else
 			{
-				AssertDbg( m_NodePool[ B.m_nParent ].m_nChild2 == nIndexA );
+				contract_assert( m_NodePool[ B.m_nParent ].m_nChild2 == nIndexA );
 				m_NodePool[ B.m_nParent ].m_nChild2 = nIndexB;
 			}
 		}
@@ -454,7 +456,7 @@ void CDynamicTree::Query( CProxyVector& proxies, const AABB_t& bounds ) const
 		{
 			if ( !node.IsLeaf() )
 			{
-				AssertDbg( nCount + 2 <= STACK_DEPTH );
+				contract_assert( nCount + 2 <= STACK_DEPTH );
 				stack[ nCount++ ] = node.m_nChild2;
 				stack[ nCount++ ] = node.m_nChild1;
 			}
@@ -488,7 +490,7 @@ void CDynamicTree::Query( CProxyVector& proxies, const Vector& vCenter, float fl
 		{
 			if ( !node.IsLeaf() )
 			{
-				AssertDbg( nCount + 2 <= STACK_DEPTH );
+				contract_assert( nCount + 2 <= STACK_DEPTH );
 				stack[ nCount++ ] = node.m_nChild2;
 				stack[ nCount++ ] = node.m_nChild1;
 			}
@@ -506,14 +508,14 @@ float CDynamicTree::ClosestProxies( CProxyVector& proxies, const Vector &vQuery 
 {
 	if ( m_nRoot == NULL_NODE )
 	{
-		return FLT_MAX;
+		return std::numeric_limits<float>::max();
 	}
 
     int nCount = 0;
 	int32 stack[ STACK_DEPTH ];
 	stack[ nCount++ ] = m_nRoot;
 
-    float bestDistance = FLT_MAX;
+    float bestDistance = std::numeric_limits<float>::max();
     
 	while ( nCount > 0 )
 	{
@@ -525,7 +527,7 @@ float CDynamicTree::ClosestProxies( CProxyVector& proxies, const Vector &vQuery 
 		{
 			if ( !node.IsLeaf() )
 			{
-				AssertDbg( nCount + 2 <= STACK_DEPTH );
+				contract_assert( nCount + 2 <= STACK_DEPTH );
 				stack[ nCount++ ] = node.m_nChild2;
 				stack[ nCount++ ] = node.m_nChild1;
 			}
@@ -621,10 +623,6 @@ int32 CDynamicTree::CNodePool::Alloc()
 	int32 id = m_nNext;
 	m_nNext = *(int32*)( m_pObjects + id );
 
-#if _DEBUG
-	// Do reuse old objects accidentally
-	V_memset( m_pObjects + id, 0xcd, sizeof( Node_t ) );
-#endif
 
 	return id;
 }
@@ -634,7 +632,7 @@ int32 CDynamicTree::CNodePool::Alloc()
 void CDynamicTree::CNodePool::Free( int32 id )
 {
 	// Return node to the pool
-	AssertDbg( 0 <= id && id < m_nCapacity );
+	contract_assert( 0 <= id && id < m_nCapacity );
 
 	*(int32*)( m_pObjects + id ) = m_nNext;
 	m_nNext = id;	

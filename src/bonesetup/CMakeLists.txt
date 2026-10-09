@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 oknyshuk
+
 add_library(bonesetup STATIC
     bone_setup.cpp
     bone_ik.cpp

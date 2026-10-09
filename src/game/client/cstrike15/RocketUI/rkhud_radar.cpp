@@ -1,13 +1,26 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include "rocketui/rmlui.h"
 #include "rkhud_radar.h"
 
 #include "rkhud_model.h"
 
-#include "cbase.h"
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "hud_macros.h"
 #include "c_cs_player.h"
 #include "c_playerresource.h"
 
 #include <rocketui/rmlui.h>
+import ks.tier1;
+import std;
 
 DECLARE_HUDELEMENT( RkHudRadar );
 
@@ -161,8 +174,8 @@ static inline void RotatePoint( float x, float y, float centerX, float centerY, 
 {
     angle = DEG2RAD( angle );
 
-    float cosTheta = cosf( angle );
-    float sinTheta = sinf( angle );
+    float cosTheta = std::cosf( angle );
+    float sinTheta = std::sinf( angle );
 
     *outX = (cosTheta * ( x - centerX )) - (sinTheta * ( y - centerY ));
     *outY = (sinTheta * ( x - centerX )) + (cosTheta * ( y - centerY ));

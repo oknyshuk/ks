@@ -1,12 +1,23 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include "rocketui/rmlui.h"
 #include "rkhud_infobar.h"
 
 #include "rkhud_model.h"
 
-#include "cbase.h"
-#include "hud_macros.h"
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
 #include "c_cs_player.h"
 
 #include <rocketui/rmlui.h>
+import ks.tier1;
+import std;
 
 DECLARE_HUDELEMENT( RkHudInfoBar );
 

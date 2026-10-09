@@ -1,17 +1,64 @@
- //========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#endif
 #include "csgo_playeranimstate.h"
 #include "iplayeranimstate.h"
 #include "animation.h"
 #include "weapon_csbase.h"
 #include "gamemovement.h"
 #include "in_buttons.h"
-#include "tier1/text_writer.h"
 
 #ifdef CLIENT_DLL
 	#include "c_cs_player.h"
@@ -39,31 +86,31 @@ float ClampCycle( float flCycleIn )
 CCSGOPlayerAnimState *CreateCSGOPlayerAnimstate( CBaseAnimatingOverlay *pEntity )
 {
 	CCSPlayer *pPlayer = ToCSPlayer( pEntity );
-	Assert( pPlayer );
+	contract_assert( pPlayer );
 
 	CCSGOPlayerAnimState *pRet = new CCSGOPlayerAnimState( pPlayer );
 	return pRet;
 }
 
-#define CURRENT_ANIMSTATE_VERSION 2
+constexpr auto CURRENT_ANIMSTATE_VERSION = 2;
 CCSGOPlayerAnimState::CCSGOPlayerAnimState( CCSPlayer *pPlayer )
 {
 	m_pPlayer = pPlayer;
-	Assert( m_pPlayer );
+	contract_assert( m_pPlayer );
 
 	m_cachedModelIndex = -1;
 	m_nAnimstateModelVersion = CURRENT_ANIMSTATE_VERSION;
 	Reset();
 }
 
-#define CSGO_ANIM_AIMMATRIX_DEFAULT_YAW_MAX 58.0f
-#define CSGO_ANIM_AIMMATRIX_DEFAULT_YAW_MIN -58.0f
-#define CSGO_ANIM_AIMMATRIX_DEFAULT_PITCH_MAX 90.0f
-#define CSGO_ANIM_AIMMATRIX_DEFAULT_PITCH_MIN -90.0f
+constexpr auto CSGO_ANIM_AIMMATRIX_DEFAULT_YAW_MAX = 58.0f;
+constexpr auto CSGO_ANIM_AIMMATRIX_DEFAULT_YAW_MIN = -58.0f;
+constexpr auto CSGO_ANIM_AIMMATRIX_DEFAULT_PITCH_MAX = 90.0f;
+constexpr auto CSGO_ANIM_AIMMATRIX_DEFAULT_PITCH_MIN = -90.0f;
 
 void CCSGOPlayerAnimState::Reset( void )
 {
-	Assert( m_pPlayer );
+	contract_assert( m_pPlayer );
 
 #ifndef CLIENT_DLL
 	m_pPlayer->SetNumAnimOverlays( ANIMATION_LAYER_COUNT );
@@ -231,7 +278,7 @@ void CCSGOPlayerAnimState::Reset( void )
 }
 
 #define bonesnapshot_def( _name, _val ) const float _name = _val;
-#define bonesnapshot_get( _name ) _name
+template <typename T1> [[gnu::always_inline]] inline constexpr auto bonesnapshot_get( T1 _name ) { return _name; }
 
 bonesnapshot_def( cl_bonesnapshot_speed_weaponchange,	0.25 )
 bonesnapshot_def( cl_bonesnapshot_speed_strafestart,	0.15 )
@@ -239,10 +286,10 @@ bonesnapshot_def( cl_bonesnapshot_speed_movebegin,		0.3 )
 bonesnapshot_def( cl_bonesnapshot_speed_ladderenter,	0.25 )
 bonesnapshot_def( cl_bonesnapshot_speed_ladderexit,		0.1 )
 
-#define CSGO_ANIM_DEPLOY_RATELIMIT 0.15f
+constexpr auto CSGO_ANIM_DEPLOY_RATELIMIT = 0.15f;
 
-#define CSGO_ANIM_DUCK_APPROACH_SPEED_DOWN 3.1f
-#define CSGO_ANIM_DUCK_APPROACH_SPEED_UP 6.0f
+constexpr auto CSGO_ANIM_DUCK_APPROACH_SPEED_DOWN = 3.1f;
+constexpr auto CSGO_ANIM_DUCK_APPROACH_SPEED_UP = 6.0f;
 
 void CCSGOPlayerAnimState::Update( float eyeYaw, float eyePitch, bool bForce )
 {
@@ -364,19 +411,19 @@ float CCSGOPlayerAnimState::LerpCrouchWalkRun( float flCrouchVal, float flWalkVa
 	return Lerp( m_flAnimDuckAmount, Lerp( m_flWalkToRunTransition, flWalkVal, flRunVal ), flCrouchVal );
 }
 
-#define HYPEREXTENSION_LIMIT 34.2 // The length of a CS player's leg (hip to ankle) when nearly fully extended
-#define HYPEREXTENSION_LIMIT_SQR HYPEREXTENSION_LIMIT * HYPEREXTENSION_LIMIT
-#define FOOT_SAFE_ZONE_LEFT_SQR 7 * 7
-#define FOOT_SAFE_ZONE_RIGHT_SQR 8 * 8
-#define ANKLE_HEIGHT 4.5f
-#define FOOT_PROXIMITY_LIMIT_SQR 12 * 12 // don't let feet come to rest this close together
-#define LATERAL_BLENDOUT_HEIGHT 1
-#define LATERAL_BLENDIN_TIME 20
-#define LATERAL_BLENDOUT_TIME 6
+constexpr auto HYPEREXTENSION_LIMIT = 34.2; // The length of a CS player's leg (hip to ankle) when nearly fully extended
+inline constexpr auto HYPEREXTENSION_LIMIT_SQR = HYPEREXTENSION_LIMIT * HYPEREXTENSION_LIMIT;
+constexpr auto FOOT_SAFE_ZONE_LEFT_SQR = 7 * 7;
+constexpr auto FOOT_SAFE_ZONE_RIGHT_SQR = 8 * 8;
+constexpr auto ANKLE_HEIGHT = 4.5f;
+constexpr auto FOOT_PROXIMITY_LIMIT_SQR = 12 * 12; // don't let feet come to rest this close together
+constexpr auto LATERAL_BLENDOUT_HEIGHT = 1;
+constexpr auto LATERAL_BLENDIN_TIME = 20;
+constexpr auto LATERAL_BLENDOUT_TIME = 6;
 
 
-#define FIRSTPERSON_TO_THIRDPERSON_VERTICAL_TOLERANCE_MIN 4.0f
-#define FIRSTPERSON_TO_THIRDPERSON_VERTICAL_TOLERANCE_MAX 10.0f
+constexpr auto FIRSTPERSON_TO_THIRDPERSON_VERTICAL_TOLERANCE_MIN = 4.0f;
+constexpr auto FIRSTPERSON_TO_THIRDPERSON_VERTICAL_TOLERANCE_MAX = 10.0f;
 #ifdef CLIENT_DLL
 extern ConVar cl_camera_height_restriction_debug;
 #endif
@@ -702,7 +749,7 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4a_t boneToWorld[], ms
 				float flEyeFootAngleDiff = abs( AngleDiff(m_flEyeYaw, m_flFootYaw) );
 				if ( flEyeFootAngleDiff > 56.0f || flTimeStill < 1.0f ) // when turning rapidly, allow the feet to step faster
 				{
-					float flFmod = fmod( gpGlobals->curtime, 0.33f );
+					float flFmod = std::fmod( gpGlobals->curtime, 0.33f );
 					if ( flFmod < 0.16f )
 					{
 						flVelLimitLeft = 110.0f;
@@ -714,7 +761,7 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4a_t boneToWorld[], ms
 				}
 				else
 				{
-					float flFmod = fmod( gpGlobals->curtime, 0.66f );
+					float flFmod = std::fmod( gpGlobals->curtime, 0.66f );
 					if ( flFmod > 0.02 && flFmod < 0.31f )
 					{
 						flVelLimitLeft = 80.0f;
@@ -1025,10 +1072,10 @@ void CCSGOPlayerAnimState::SetUpFlashedReaction( void )
 #endif
 }
 
-#define CSGO_ANIM_BOMBPLANT_ABORT_SPEED 12.0f
-#define CSGO_ANIM_DEFUSE_ABORT_SPEED 8.0f
-#define CSGO_ANIM_TWITCH_ABORT_SPEED 6.0f
-#define CSGO_ANIM_BOMBPLANT_BLEND_RATE 1.2f
+constexpr auto CSGO_ANIM_BOMBPLANT_ABORT_SPEED = 12.0f;
+constexpr auto CSGO_ANIM_DEFUSE_ABORT_SPEED = 8.0f;
+constexpr auto CSGO_ANIM_TWITCH_ABORT_SPEED = 6.0f;
+constexpr auto CSGO_ANIM_BOMBPLANT_BLEND_RATE = 1.2f;
 void CCSGOPlayerAnimState::SetUpWholeBodyAction( void )
 {
 	animstate_layer_t nLayer = ANIMATION_LAYER_WHOLE_BODY;
@@ -1342,11 +1389,11 @@ void CCSGOPlayerAnimState::SetUpWeaponAction( void )
 	}
 }
 
-#define CSGO_ANIM_WALK_TO_RUN_TRANSITION_SPEED 2.0f
-#define CSGO_ANIM_ONGROUND_FUZZY_APPROACH 8.0f
-#define CSGO_ANIM_ONGROUND_FUZZY_APPROACH_CROUCH 16.0f
-#define CSGO_ANIM_LADDER_CLIMB_COVERAGE 100.0f
-#define CSGO_ANIM_RUN_ANIM_PLAYBACK_MULTIPLIER 0.85f
+constexpr auto CSGO_ANIM_WALK_TO_RUN_TRANSITION_SPEED = 2.0f;
+constexpr auto CSGO_ANIM_ONGROUND_FUZZY_APPROACH = 8.0f;
+constexpr auto CSGO_ANIM_ONGROUND_FUZZY_APPROACH_CROUCH = 16.0f;
+constexpr auto CSGO_ANIM_LADDER_CLIMB_COVERAGE = 100.0f;
+constexpr auto CSGO_ANIM_RUN_ANIM_PLAYBACK_MULTIPLIER = 0.85f;
 void CCSGOPlayerAnimState::SetUpMovement( void )
 {
 	MDLCACHE_CRITICAL_SECTION();
@@ -1397,7 +1444,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 	{
 		nWeaponMoveSeq = m_pPlayer->LookupSequence( "move" );
 	}
-	Assert( nWeaponMoveSeq > 0 );
+	contract_assert( nWeaponMoveSeq > 0 );
 
 	
 	if ( m_pPlayer->m_iMoveState != m_nPreviousMoveState )
@@ -1602,10 +1649,6 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 
 	if ( bStartedLadderingThisFrame || bStoppedLadderingThisFrame )
 	{
-#ifdef CLIENT_DLL
-		//m_footLeft.m_flLateralWeight = 0;
-		//m_footRight.m_flLateralWeight = 0;
-#endif
 	}
 	
 	if ( m_flLadderWeight > 0 || m_bOnLadder )
@@ -1866,7 +1909,7 @@ void CCSGOPlayerAnimState::IncrementLayerWeight( animstate_layer_t nLayerIndex )
 
 void CCSGOPlayerAnimState::SetLayerSequence( animstate_layer_t nLayerIndex, int nSequence )
 {
-	Assert( nSequence > 1 );
+	contract_assert( nSequence > 1 );
 	if ( nSequence > 1 )
 	{
 		MDLCACHE_CRITICAL_SECTION();
@@ -1976,11 +2019,11 @@ void CCSGOPlayerAnimState::SetLayerWeightRate( animstate_layer_t nLayerIndex, fl
 
 void CCSGOPlayerAnimState::UpdateAnimLayer( animstate_layer_t nLayerIndex, int nSequence, float flPlaybackRate, float flWeight, float flCycle )
 {
-	AssertOnce( flWeight >= 0 && flWeight <= 1 );
-	AssertOnce( flCycle >= 0 && flCycle <= 1 );
-	Assert( nSequence > 1 );
+	contract_assert( flWeight >= 0 && flWeight <= 1 );
+	contract_assert( flCycle >= 0 && flCycle <= 1 );
+	contract_assert( nSequence > 1 );
 	
-	Assert( nSequence > 1 );
+	contract_assert( nSequence > 1 );
 	if ( nSequence > 1 )
 	{
 		MDLCACHE_CRITICAL_SECTION();	
@@ -2058,8 +2101,8 @@ bool CCSGOPlayerAnimState::LayerSequenceHasActMod( animstate_layer_t nLayerIndex
 	return false;
 }
 
-#define CSGO_ANIM_SPEED_TO_CHANGE_AIM_MATRIX 0.8f
-#define CSGO_ANIM_SPEED_TO_CHANGE_AIM_MATRIX_SCOPED 4.2f
+constexpr auto CSGO_ANIM_SPEED_TO_CHANGE_AIM_MATRIX = 0.8f;
+constexpr auto CSGO_ANIM_SPEED_TO_CHANGE_AIM_MATRIX_SCOPED = 4.2f;
 void CCSGOPlayerAnimState::SetUpAimMatrix( void )
 {
 	MDLCACHE_CRITICAL_SECTION();
@@ -2202,14 +2245,14 @@ void CCSGOPlayerAnimState::SetUpAimMatrix( void )
 	UpdateAnimLayer( ANIMATION_LAYER_AIMMATRIX, nSeqStand, 0, 1, 0 );
 }
 
-#define CSGO_ANIM_LOWER_CATCHUP_IDLE	100.0f
-#define CSGO_ANIM_AIM_NARROW_WALK	0.8f
-#define CSGO_ANIM_AIM_NARROW_RUN	0.5f
-#define CSGO_ANIM_AIM_NARROW_CROUCHMOVING	0.5f
-#define CSGO_ANIM_LOWER_CATCHUP_WITHIN	3.0f
-#define CSGO_ANIM_LOWER_REALIGN_DELAY	1.1f
-#define CSGO_ANIM_READJUST_THRESHOLD	120.0f
-#define EIGHT_WAY_WIDTH 22.5f
+constexpr auto CSGO_ANIM_LOWER_CATCHUP_IDLE = 100.0f;
+constexpr auto CSGO_ANIM_AIM_NARROW_WALK = 0.8f;
+constexpr auto CSGO_ANIM_AIM_NARROW_RUN = 0.5f;
+constexpr auto CSGO_ANIM_AIM_NARROW_CROUCHMOVING = 0.5f;
+constexpr auto CSGO_ANIM_LOWER_CATCHUP_WITHIN = 3.0f;
+constexpr auto CSGO_ANIM_LOWER_REALIGN_DELAY = 1.1f;
+constexpr auto CSGO_ANIM_READJUST_THRESHOLD = 120.0f;
+constexpr auto EIGHT_WAY_WIDTH = 22.5f;
 void CCSGOPlayerAnimState::SetUpVelocity( void )
 {
 	MDLCACHE_CRITICAL_SECTION();
@@ -2264,7 +2307,7 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 
 	//compute speed in various normalized forms
 	float flMaxSpeedRun = m_pWeapon ? std::max( m_pWeapon->GetMaxSpeed(), 0.001f ) : CS_PLAYER_SPEED_RUN;
-	Assert( flMaxSpeedRun > 0 );
+	contract_assert( flMaxSpeedRun > 0 );
 
 	m_flSpeedAsPortionOfRunTopSpeed = clamp( m_flVelocityLengthXY / flMaxSpeedRun, 0, 1 );
 	m_flSpeedAsPortionOfWalkTopSpeed = m_flVelocityLengthXY / (flMaxSpeedRun * CS_PLAYER_SPEED_WALK_MODIFIER);
@@ -2396,7 +2439,7 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 	if ( m_flVelocityLengthXY > 0 && m_bOnGround )
 	{
 		// convert horizontal velocity vec to angular yaw
-		float flRawYawIdeal = (atan2(-m_vecVelocity[1], -m_vecVelocity[0]) * 180 / M_PI);
+		float flRawYawIdeal = (std::atan2(-m_vecVelocity[1], -m_vecVelocity[0]) * 180 / std::numbers::pi);
 		if (flRawYawIdeal < 0)
 			flRawYawIdeal += 360;
 
@@ -2517,10 +2560,10 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 int CCSGOPlayerAnimState::SelectSequenceFromActMods( Activity iAct )
 {
 	MDLCACHE_CRITICAL_SECTION();
-	Assert( m_pPlayer );
+	contract_assert( m_pPlayer );
 	int nSelectedActivity = m_pPlayer->SelectWeightedSequenceFromModifiers( iAct, m_ActivityModifiers.data(), std::ssize( m_ActivityModifiers ) );
 
-	Assert( nSelectedActivity != ACT_INVALID );
+	contract_assert( nSelectedActivity != ACT_INVALID );
 	return nSelectedActivity;
 }
 
@@ -2680,7 +2723,7 @@ void CCSGOPlayerAnimState::AddActivityModifier( const char *szName )
 {
 	if ( szName == nullptr )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 	
@@ -2801,7 +2844,7 @@ bool CCSGOPlayerAnimState::CacheSequences( void )
 			KeyValues::AutoDelete autodelete_key( modelKeyValues );
 			if ( modelKeyValues->LoadFromBuffer( modelinfo->GetModelName( m_pPlayer->GetModel() ), buf.view() ) )
 			{
-				FOR_EACH_SUBKEY( modelKeyValues, pSubKey )
+				for ( KeyValues *pSubKey = modelKeyValues->GetFirstSubKey(); pSubKey != nullptr; pSubKey = pSubKey->GetNextKey() )
 				{
 					//KeyValuesDumpAsDevMsg( pSubKey );
 					if ( pSubKey->FindKey( "animset_version" ) )
@@ -2813,7 +2856,7 @@ bool CCSGOPlayerAnimState::CacheSequences( void )
 			}
 		}
 
-		AssertMsgOnce( m_nAnimstateModelVersion == CURRENT_ANIMSTATE_VERSION, "Animset version is out of date!" );
+		contract_assert( ( m_nAnimstateModelVersion == CURRENT_ANIMSTATE_VERSION ) && "Animset version is out of date!" );
 
 		// cache pose param indices
 		m_tPoseParamMappings[ PLAYER_POSE_PARAM_LEAN_YAW				].Init( m_pPlayer, "lean_yaw"				);
@@ -2870,7 +2913,7 @@ bool CCSGOPlayerAnimState::CacheSequences( void )
 //----------------------------------------------------------------------------------
 int animstate_pose_param_cache_t::GetIndex( void )
 {
-	Assert( m_bInitialized );
+	contract_assert( m_bInitialized );
 	return m_nIndex;
 }
 

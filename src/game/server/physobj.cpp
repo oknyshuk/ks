@@ -1,11 +1,32 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -26,7 +47,6 @@
 #include "decals.h"
 #include "bone_setup.h"
 
-
 ConVar debug_physimpact("debug_physimpact", "0" );
 
 const char *GetMassEquivalent(float flMass);
@@ -38,7 +58,7 @@ const char *GetMassEquivalent(float flMass);
 // and infinite force), they can penetrate any other object (or spring). They do not occupy any space.
 // 
 
-#define SF_SPRING_ONLYSTRETCH		0x0001
+constexpr auto SF_SPRING_ONLYSTRETCH = 0x0001;
 
 class CPhysicsSpring : public CBaseEntity
 {
@@ -171,15 +191,15 @@ int CPhysicsSpring::DrawDebugTextOverlays(void)
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
 		char tempstr[512];
-		Q_snprintf(tempstr,sizeof(tempstr),"Constant: %3.2f",m_tempConstant);
+		V_snprintf(tempstr,sizeof(tempstr),"Constant: %3.2f",m_tempConstant);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"Length: %3.2f",m_tempLength);
+		V_snprintf(tempstr,sizeof(tempstr),"Length: %3.2f",m_tempLength);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
-		Q_snprintf(tempstr,sizeof(tempstr),"Damping: %3.2f",m_tempDamping);
+		V_snprintf(tempstr,sizeof(tempstr),"Damping: %3.2f",m_tempDamping);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
@@ -560,7 +580,7 @@ int CPhysBox::DrawDebugTextOverlays(void)
 		if (VPhysicsGetObject())
 		{
 			char tempstr[512];
-			Q_snprintf(tempstr, sizeof(tempstr),"Mass: %.2f kg / %.2f lb (%s)", VPhysicsGetObject()->GetMass(), kg2lbs(VPhysicsGetObject()->GetMass()), GetMassEquivalent(VPhysicsGetObject()->GetMass()));
+			V_snprintf(tempstr, sizeof(tempstr),"Mass: %.2f kg / %.2f lb (%s)", VPhysicsGetObject()->GetMass(), kg2lbs(VPhysicsGetObject()->GetMass()), GetMassEquivalent(VPhysicsGetObject()->GetMass()));
 			EntityText( text_offset, tempstr, 0);
 			text_offset++;
 		}
@@ -1028,12 +1048,12 @@ int CPhysExplosion::DrawDebugTextOverlays( void )
 		char tempstr[512];
 
 		// print magnitude
-		Q_snprintf(tempstr,sizeof(tempstr),"    magnitude: %f", m_damage);
+		V_snprintf(tempstr,sizeof(tempstr),"    magnitude: %f", m_damage);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		// print target entity
-		Q_snprintf(tempstr,sizeof(tempstr),"    limit to: %s", STRING( m_targetEntityName ) );
+		V_snprintf(tempstr,sizeof(tempstr),"    limit to: %s", STRING( m_targetEntityName ) );
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}
@@ -1064,12 +1084,12 @@ void CreatePhysExplosion( Vector origin, float magnitude, float radius, string_t
 // CPhysImpact
 //==================================================
 
-#define	bitsPHYSIMPACT_NOFALLOFF		0x00000001
-#define	bitsPHYSIMPACT_INFINITE_LENGTH	0x00000002
-#define	bitsPHYSIMPACT_IGNORE_MASS		0x00000004
-#define bitsPHYSIMPACT_IGNORE_NORMAL	0x00000008
+constexpr auto bitsPHYSIMPACT_NOFALLOFF = 0x00000001;
+constexpr auto bitsPHYSIMPACT_INFINITE_LENGTH = 0x00000002;
+constexpr auto bitsPHYSIMPACT_IGNORE_MASS = 0x00000004;
+constexpr auto bitsPHYSIMPACT_IGNORE_NORMAL = 0x00000008;
 
-#define	DEFAULT_EXPLODE_DISTANCE	256
+constexpr auto DEFAULT_EXPLODE_DISTANCE = 256;
 LINK_ENTITY_TO_CLASS( env_physimpact, CPhysImpact );
 
 IMPLEMENT_REFLECT_DATAMAP( CPhysImpact )
@@ -1305,8 +1325,8 @@ static CBaseEntity *CreateSimplePhysicsObject( CBaseEntity *pEntity, bool create
 	return pPhysEntity;
 }
 
-#define SF_CONVERT_ASLEEP		0x0001
-#define SF_CONVERT_AS_DEBRIS	0x0002
+constexpr auto SF_CONVERT_ASLEEP = 0x0001;
+constexpr auto SF_CONVERT_AS_DEBRIS = 0x0002;
 
 class CPhysConvert : public CLogicalEntity
 {
@@ -1350,7 +1370,7 @@ void CPhysConvert::InputConvertTarget( inputdata_t &inputdata )
 	while ( (pEntity = gEntList.FindEntityByName( pEntity, m_target, nullptr, inputdata.pActivator, inputdata.pCaller )) != nullptr )
 	{
 		entlist[count++] = pEntity;
-		if ( count >= ARRAYSIZE(entlist) )
+		if ( count >= std::size( entlist ) )
 			break;
 	}
 
@@ -1409,11 +1429,11 @@ void CPhysConvert::InputConvertTarget( inputdata_t &inputdata )
 //============================================================================================================
 // PHYS MAGNET
 //============================================================================================================
-#define SF_MAGNET_ASLEEP			0x0001
-#define SF_MAGNET_MOTIONDISABLED	0x0002
-#define SF_MAGNET_SUCK				0x0004
-#define SF_MAGNET_ALLOWROTATION		0x0008
-#define SF_MAGNET_COAST_HACK		0x0010
+constexpr auto SF_MAGNET_ASLEEP = 0x0001;
+constexpr auto SF_MAGNET_MOTIONDISABLED = 0x0002;
+constexpr auto SF_MAGNET_SUCK = 0x0004;
+constexpr auto SF_MAGNET_ALLOWROTATION = 0x0008;
+constexpr auto SF_MAGNET_COAST_HACK = 0x0010;
 
 LINK_ENTITY_TO_CLASS( phys_magnet, CPhysMagnet );
 
@@ -1430,7 +1450,7 @@ void SendProxy_MagnetAttachedObjectList( const void *pStruct, const void *pData,
 	CPhysMagnet *pMagnet = (CPhysMagnet*)pData;
 
 	// If this assertion fails, then SendProxyArrayLength_MagnetAttachedArray must have failed.
-	Assert( iElement < pMagnet->GetNumAttachedObjects() );
+	contract_assert( iElement < pMagnet->GetNumAttachedObjects() );
 
 	pOut->m_Int = pMagnet->GetAttachedObject(iElement)->entindex();
 }
@@ -1598,7 +1618,7 @@ void CPhysMagnet::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 
 		// Create a constraint between the magnet and this sucker
 		IPhysicsObject *pMagnetPhysObject = VPhysicsGetObject();
-		Assert( pMagnetPhysObject );
+		contract_assert( pMagnetPhysObject );
 
 		magnetted_objects_t newEntityOnMagnet;
 		newEntityOnMagnet.hEntity = pOther;
@@ -1807,7 +1827,6 @@ float CPhysMagnet::GetTotalMassAttachedObjects( void )
 //-----------------------------------------------------------------------------
 CBaseEntity *CPhysMagnet::GetAttachedObject( int iIndex )
 {
-	Assert( iIndex < GetNumAttachedObjects() );
 
 	return m_MagnettedEntities[iIndex].hEntity;
 }

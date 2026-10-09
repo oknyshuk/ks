@@ -1,18 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Deals with singleton  
-//
-// $Revision: $
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#if !defined( DETAILOBJECTSYSTEM_H )
-#define DETAILOBJECTSYSTEM_H
+// Purpose: Deals with singleton
 
+import ks.math;
 #include "igamesystem.h"
 #include "icliententityinternal.h"
 #include "engine/ivmodelrender.h"
-#include "mathlib/vector.h"
+import std;
 #include "ivrenderview.h"
 
 struct model_t;
@@ -38,7 +34,7 @@ typedef ks::small_vector< DetailRenderableInfo_t, 2048 > DetailRenderableList_t;
 //-----------------------------------------------------------------------------
 // Responsible for managing detail objects
 //-----------------------------------------------------------------------------
-abstract_class IDetailObjectSystem : public IGameSystem
+class IDetailObjectSystem : public IGameSystem
 {
 public:
 	// How many detail models (as opposed to sprites) are there in the level?
@@ -74,7 +70,3 @@ inline IDetailObjectSystem* DetailObjectSystem()
 {
 	return g_pDetailObjectSystem;
 }
-
-
-#endif // DETAILOBJECTSYSTEM_H
-

@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2014, Valve LLC, All rights reserved. ============
-//
-// Purpose: Lightmapped_4WayBlend shader
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2014 Valve Corporation
 
+// Purpose: Lightmapped_4WayBlend shader
+
+import ks.tier1;
 #include "lightmapped_4wayblend_dx9_helper.h"
 #include "BaseVSShader.h"
 #include "shaderlib/commandbuilder.h"
-#include "convar.h"
+import std;
 #include "lightmapped_4wayblend_vs20.inc"
 #include "lightmapped_4wayblend_ps20b.inc"
 
@@ -17,7 +15,6 @@
 	#include "lightmapped_4wayblend_ps30.inc"
 
 #include "shaderapifast.h"
-#include "tier0/vprof.h"
 
 extern ConVar mat_ambient_light_r;
 extern ConVar mat_ambient_light_g;
@@ -413,7 +410,7 @@ void DrawLightmapped_4WayBlend_DX9( CBaseVSShader *pShader, IMaterialVar** param
 				staticCmdsBuf.End();
 				// now, copy buf
 				pContextData->m_pStaticCmds = new uint8[staticCmdsBuf.Size()];
-				memcpy( pContextData->m_pStaticCmds, staticCmdsBuf.Base(), staticCmdsBuf.Size() );
+				std::memcpy( pContextData->m_pStaticCmds, staticCmdsBuf.Base(), staticCmdsBuf.Size() );
 			}
 			if ( pShaderShadow )
 			{
@@ -949,7 +946,7 @@ void DrawLightmapped_4WayBlend_DX9( CBaseVSShader *pShader, IMaterialVar** param
 		{
 			bWriteDepthToAlpha = ShaderApiFast( pShaderAPI )->ShouldWriteDepthToDestAlpha();
 			bWriteWaterFogToAlpha = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z);
-			AssertMsg( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha), "Can't write two values to alpha at the same time." );
+			contract_assert( ( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha) ) && "Can't write two values to alpha at the same time." );
 		}
 		else
 		{

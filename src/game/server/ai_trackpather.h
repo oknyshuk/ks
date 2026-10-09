@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
-
-#ifndef AI_TRACKPATHER_H
-#define AI_TRACKPATHER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
-
-
 #include "ai_basenpc.h"
-
 
 class CPathTrack;
 
@@ -274,5 +266,3 @@ private:
 };
 
 //------------------------------------------------------------------------------
-
-#endif // AI_TRACKPATHER_H

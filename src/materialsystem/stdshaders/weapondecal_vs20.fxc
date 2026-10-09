@@ -1,8 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC:	"MIRROR"					"0..1"
 // STATIC:	"NORMALMAP"					"0..1"
-
 // DYNAMIC: "SKINNING"					"0..1"
 // DYNAMIC: "COMPRESSED_VERTS"			"0..1"
 // DYNAMIC: "NUM_LIGHTS"				"0..4"

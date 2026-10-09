@@ -1,18 +1,66 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: The TF Game rules 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: The TF Game rules
 
 //
 // Crazy compiler problems fix -- deque must be included first before any of the Valve game headers, which introduce
 // macro defines that completely break STL compile process. STL include dependencies happen as part of RSA crypto
 // library dependencies included at the bottom of this file.
 //
-#include <deque>
-
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "player.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_annotations.h"
 #ifdef GAME_DLL
 #include "reflect_sendtable.h"
@@ -25,9 +73,7 @@
 #include "weapon_csbase.h"
 #include "basecsgrenade_projectile.h"
 #include "cs_shareddefs.h"
-#include "keyvalues.h"
 #include "cs_achievement_constants.h"
-#include "iachievementmgr.h"
 #include "matchmaking/imatchframework.h"
 #include "inputsystem/iinputsystem.h"
 #include "platforminputdevice.h"
@@ -42,7 +88,6 @@
 #ifdef CLIENT_DLL
     #include "networkstringtable_clientdll.h"
     #include "c_cs_player.h"
-    #include "fmtstr.h"
     #include "localize/ilocalize.h"		// temp - needed for GetFriendlyMapName()
 	#include "c_team.h"
 	#include "weapon_selection.h"
@@ -53,7 +98,6 @@
     #include "vote_controller.h"
     #include "cs_voteissues.h"
     #include "bot.h"
-    #include "tier1/map_ops.h"
     #include "cs_player.h"
     #include "cs_team.h"
     #include "cs_gamerules.h"
@@ -71,7 +115,6 @@
     #include "cs_bot_manager.h"
     #include "cs_bot.h"
     #include "eventqueue.h"
-    #include "fmtstr.h"
     #include "teamplayroundbased_gamerules.h"
     #include "gameweaponmanager.h"
     #include "cs_gamestats.h"
@@ -79,7 +122,7 @@
     #include "networkstringtable_gamedll.h"
     #include "func_bomb_target.h"
     #include "func_hostage_rescue.h"
-    #include "vstdlib/vstrtools.h"
+    import ks.vstdlib;
     #include "platforminputdevice.h"
     #include "cs_entity_spotting.h"
     #include "props.h"
@@ -127,9 +170,6 @@ ConVar sv_show_team_equipment_prohibit( "sv_show_team_equipment_prohibit", "0", 
 
 
 #if defined( GAME_DLL )
-ConVar sv_kick_players_with_cooldown( "sv_kick_players_with_cooldown", "1", FCVAR_RELEASE | FCVAR_GAMEDLL | FCVAR_REPLICATED,
-	"(0: do not kick on insecure servers; 1: kick players with Untrusted status or convicted by Overwatch; 2: kick players with any cooldown)" );
-
 ConVar sv_matchend_drops_enabled( "sv_matchend_drops_enabled", "1", FCVAR_RELEASE | FCVAR_GAMEDLL,
 	"Rewards gameplay time is always accumulated for players, but drops at the end of the match can be prevented" );
 
@@ -170,7 +210,7 @@ void MaxAllowedNetGraphCallback( IConVar *var, const char *pOldValue, float flOl
 #endif
 }
 
-#define SV_QMM_MIN_PLAYERS_FOR_CANCEL_MATCH 0
+constexpr auto SV_QMM_MIN_PLAYERS_FOR_CANCEL_MATCH = 0;
 
 extern ConVar mp_maxrounds;
 extern ConVar mp_match_restart_delay;
@@ -179,9 +219,13 @@ ConVar sv_disable_show_team_select_menu( "sv_disable_show_team_select_menu", "0"
 ConVar sv_disable_motd( "sv_disable_motd", "0", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT, "Prevent the motd from showing." );
 
 #ifdef CLIENT_DLL
-CON_COMMAND_F( print_mapgroup, "Prints the current mapgroup and the contained maps", FCVAR_RELEASE )
+static void print_mapgroup( const CCommand &args );
+static ConCommand print_mapgroup_command( "print_mapgroup", print_mapgroup, "Prints the current mapgroup and the contained maps", FCVAR_RELEASE );
+static void print_mapgroup( const CCommand &args )
 #else
-CON_COMMAND_F( print_mapgroup_sv, "Prints the current mapgroup and the contained maps", FCVAR_RELEASE )
+static void print_mapgroup_sv( const CCommand &args );
+static ConCommand print_mapgroup_sv_command( "print_mapgroup_sv", print_mapgroup_sv, "Prints the current mapgroup and the contained maps", FCVAR_RELEASE );
+static void print_mapgroup_sv( const CCommand &args )
 #endif
 {
 #if defined ( CLIENT_DLL )
@@ -311,7 +355,7 @@ IMPLEMENT_REFLECT_DATAMAP( SpawnPointCoopEnemy )
 SpawnPointCoopEnemy::SpawnPointCoopEnemy( void )
 {
 	//m_szWeaponsToGive = NULL_STRING;
-	Assert( CSGameRules()->IsPlayingCoopMission() );
+	contract_assert( CSGameRules()->IsPlayingCoopMission() );
 	m_pMyArea = nullptr;
 }
 
@@ -452,7 +496,7 @@ class CCoopBonusCoin : public CDynamicProp
 	void CoinFadeOut( void );
 	//void CoinThink( void );
 	void Precache( void );
-	void Spawn( void ) OVERRIDE; 
+	void Spawn( void ) override; 
 	void StartFadeOut( float delay );
 };
 
@@ -557,11 +601,6 @@ void CCoopBonusCoin::CoinFadeOut( void )
 REGISTER_GAMERULES_CLASS( CCSGameRules );
 
 IMPLEMENT_REFLECT_TABLE( CCSGameRules, DT_CSGameRules );
-    #ifdef CLIENT_DLL
-    #else
-    #endif
-#ifdef GAME_DLL
-#endif
 
 
 IMPLEMENT_NETWORKCLASS_ALIASED( CSGameRulesProxy, DT_CSGameRulesProxy )
@@ -603,9 +642,9 @@ ConVar mp_teammatchstat_cycletime( "mp_teammatchstat_cycletime", "45", FCVAR_REL
 #endif
 
 // COOP
-#define COOPMISSION_SCORE_MULTIPLIER_TIMELEFT 40
-#define COOPMISSION_SCORE_MULTIPLIER_DAMTAKEN -10
-#define COOPMISSION_SCORE_MULTIPLIER_ROUNDSFAILED -1000
+constexpr auto COOPMISSION_SCORE_MULTIPLIER_TIMELEFT = 40;
+constexpr auto COOPMISSION_SCORE_MULTIPLIER_DAMTAKEN = -10;
+constexpr auto COOPMISSION_SCORE_MULTIPLIER_ROUNDSFAILED = -1000;
 
 static uint32 Helper_ScoreLeaderboardData_FindEntryValue( uint32 nTag, const std::vector< ks::net::ScoreLeaderboardData::Entry > &arr )
 {
@@ -627,7 +666,7 @@ static uint32 Helper_ScoreLeaderboardData_FindEntryValueSum( uint32 nTag, const 
 }
 
 int32 CoopScoreGetRatingEntryFromLeaderboardData( ks::net::ScoreLeaderboardData &sld, bool bBonus, int nIndex, bool bAsScore )
-{	// Note: this function should not be referencing gamerules because we can be looking at scores from Steam friends leaderboards
+{	// Note: this function should not be referencing gamerules
 	bool bGuardian = false;
 	bool bCoopMission = true;
 	if ( sld.quest_id )
@@ -841,7 +880,7 @@ static bool Helper_mp_backup_round_IsEnabled()
 
 static int Helper_mp_backup_restore_from_file_sorter( char const * const *a, char const * const *b )
 {
-	return -Q_stricmp( *a, *b ); // sort more recent files earlier
+	return -V_stricmp( *a, *b ); // sort more recent files earlier
 }
 
 
@@ -854,17 +893,17 @@ static void Helper_FilenameTokenReplace( char* pchBufFilename, int nSize, const 
 	pchReplacePattern = aReplacePattern;
 	pchActualValue = theActualValue;
 
-	while ( char *pchReplace = Q_strstr( pchBufFilename, pchReplacePattern ) )
+	while ( char *pchReplace = V_strstr( pchBufFilename, pchReplacePattern ) )
 	{
-		int lenReplace = Q_strlen( pchReplacePattern ), lenValue = Q_strlen( pchActualValue );
+		int lenReplace = V_strlen( pchReplacePattern ), lenValue = V_strlen( pchActualValue );
 
 		if ( pchReplace + lenValue >= pchEndFilename )
 		{
 			break;
 		}
 	
-		Q_memmove( pchReplace + lenValue, pchReplace + lenReplace, pchEndFilename - pchReplace - std::max( lenReplace, lenValue ) );
-		Q_memmove( pchReplace, pchActualValue, lenValue );
+		V_memmove( pchReplace + lenValue, pchReplace + lenReplace, pchEndFilename - pchReplace - std::max( lenReplace, lenValue ) );
+		V_memmove( pchReplace, pchActualValue, lenValue );
 
 	}
 }
@@ -891,9 +930,7 @@ static bool Helper_ShouldBroadcastCoopScoreLeaderboardData()
 static void Helper_FillScoreLeaderboardData( ks::net::ScoreLeaderboardData &sld )
 {
 	//
-	// This function is used in both official and community server build
-	// In official build it will deliver the leaderboard data to GC
-	// in both official and community build this data is also replicated to clients for the end of match scoreboard
+	// This data is replicated to clients for the end of match scoreboard
 	//
 
 	if ( !Helper_ShouldBroadcastCoopScoreLeaderboardData() )
@@ -1087,10 +1124,6 @@ bool IsAssassinationQuestActive( const CEconQuestDefinition *pQuest )
 
 
 
-#if BACKUPSUPPORTZEROZERO
-static char const * const g_szRoundBackupZeroZero = "0:0";
-static char const * const g_szRoundBackupZeroZeroFileName = "00restart";
-#endif
 class CBackupFilesEnumerator : public std::vector< char const * >
 {
 public:
@@ -1109,7 +1142,7 @@ public:
 		constexpr int nBufSize = 1024;
 		char pchBufFilename[ nBufSize ] = {};
 
-		Q_snprintf( pchBufFilename, nBufSize, "%s", mp_backup_round_file_pattern.GetString() );
+		V_snprintf( pchBufFilename, nBufSize, "%s", mp_backup_round_file_pattern.GetString() );
 
 		Helper_FilenameTokenReplace( pchBufFilename, nBufSize, "%prefix%", mp_backup_round_file.GetString() );
 		Helper_FilenameTokenReplace( pchBufFilename, nBufSize, "%date%", "*" );
@@ -1120,7 +1153,7 @@ public:
 		
 
 		char chTeam1[64] = {0};
-		Q_snprintf( chTeam1, sizeof( chTeam1 ), "%s", GetGlobalTeam( CSGameRules()->AreTeamsPlayingSwitchedSides() ? TEAM_TERRORIST : TEAM_CT )->GetClanName() );
+		V_snprintf( chTeam1, sizeof( chTeam1 ), "%s", GetGlobalTeam( CSGameRules()->AreTeamsPlayingSwitchedSides() ? TEAM_TERRORIST : TEAM_CT )->GetClanName() );
 		for ( char *pch = chTeam1; *pch; ++ pch )
 		{
 			if (
@@ -1131,12 +1164,12 @@ public:
 				;
 			else
 			{
-				Q_memmove( pch, pch + 1, sizeof( chTeam1 ) - ( pch - chTeam1 ) - 1 );
+				V_memmove( pch, pch + 1, sizeof( chTeam1 ) - ( pch - chTeam1 ) - 1 );
 				-- pch;
 			}
 		}
 		char chTeam2[64] = {0};
-		Q_snprintf( chTeam2, sizeof( chTeam2 ), "%s", GetGlobalTeam( CSGameRules()->AreTeamsPlayingSwitchedSides() ? TEAM_CT : TEAM_TERRORIST )->GetClanName() );
+		V_snprintf( chTeam2, sizeof( chTeam2 ), "%s", GetGlobalTeam( CSGameRules()->AreTeamsPlayingSwitchedSides() ? TEAM_CT : TEAM_TERRORIST )->GetClanName() );
 		for ( char *pch = chTeam2; *pch; ++ pch )
 		{
 			if (
@@ -1147,7 +1180,7 @@ public:
 				;
 			else
 			{
-				Q_memmove( pch, pch + 1, sizeof( chTeam2 ) - ( pch - chTeam2 ) - 1 );
+				V_memmove( pch, pch + 1, sizeof( chTeam2 ) - ( pch - chTeam2 ) - 1 );
 				-- pch;
 			}
 		}
@@ -1156,9 +1189,9 @@ public:
 		Helper_FilenameTokenReplace( pchBufFilename, nBufSize, "%team2%", chTeam2 );
 		{	// Map might have a path in it, make sure we strip it
 			const char *szMapNameToken = STRING( gpGlobals->mapname );
-			if ( const char *pchSlash = strrchr( szMapNameToken, '/' ) )
+			if ( const char *pchSlash = std::strrchr( szMapNameToken, '/' ) )
 				szMapNameToken = pchSlash + 1;
-			if ( const char *pchSlash2 = strrchr( szMapNameToken, '\\' ) )
+			if ( const char *pchSlash2 = std::strrchr( szMapNameToken, '\\' ) )
 				szMapNameToken = pchSlash2 + 1;
 			Helper_FilenameTokenReplace( pchBufFilename, nBufSize, "%map%", szMapNameToken );
 		}
@@ -1178,12 +1211,6 @@ public:
 
 		ks::qsort( *this, Helper_mp_backup_restore_from_file_sorter );
 
-		#if BACKUPSUPPORTZEROZERO
-		// add 0:0 backup
-		static char const * s_pchTournamentServer = CommandLine()->ParmValue( "-tournament", ( char const * ) nullptr );
-		if ( s_pchTournamentServer )
-			AddToTail( g_szRoundBackupZeroZeroFileName );
-		#endif
 	}
 
 private:
@@ -1198,7 +1225,9 @@ private:
 #endif
 
 // concommand that requests a user message with the round backup filenames in it.
-CON_COMMAND_F ( send_round_backup_file_list, "", FCVAR_GAMEDLL | FCVAR_RELEASE |FCVAR_HIDDEN|FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+static void send_round_backup_file_list( const CCommand &args );
+static ConCommand send_round_backup_file_list_command( "send_round_backup_file_list", send_round_backup_file_list, "", FCVAR_GAMEDLL | FCVAR_RELEASE |FCVAR_HIDDEN|FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void send_round_backup_file_list( const CCommand &args )
 {
 
 	CBasePlayer* pPlayer = UTIL_GetCommandClient();
@@ -1240,13 +1269,6 @@ CON_COMMAND_F ( send_round_backup_file_list, "", FCVAR_GAMEDLL | FCVAR_RELEASE |
 
 		std::string nicefilename = arrStrings[ idx ];
 
-		#if BACKUPSUPPORTZEROZERO
-		if ( !V_strcmp( arrStrings[ idx ], g_szRoundBackupZeroZeroFileName ) )
-		{
-			nicefilename = g_szRoundBackupZeroZero;
-		}
-		else
-		#endif
 		if ( kvSaveFile->LoadFromFile( filesystem, arrStrings[ idx ] ) )
 		{
 			nicefilename = CFmtStr( "%s score %d:%d",
@@ -1265,7 +1287,9 @@ CON_COMMAND_F ( send_round_backup_file_list, "", FCVAR_GAMEDLL | FCVAR_RELEASE |
 
 }
 
-CON_COMMAND_F ( mp_backup_restore_list_files, "Lists recent backup round files matching the prefix, most recent files first, accepts a numeric parameter to limit the number of files displayed", FCVAR_GAMEDLL | FCVAR_RELEASE )
+static void mp_backup_restore_list_files( const CCommand &args );
+static ConCommand mp_backup_restore_list_files_command( "mp_backup_restore_list_files", mp_backup_restore_list_files, "Lists recent backup round files matching the prefix, most recent files first, accepts a numeric parameter to limit the number of files displayed", FCVAR_GAMEDLL | FCVAR_RELEASE );
+static void mp_backup_restore_list_files( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1273,7 +1297,7 @@ CON_COMMAND_F ( mp_backup_restore_list_files, "Lists recent backup round files m
 	int numFilesToList = 5;
 	if ( args.ArgC() >= 2 )
 	{
-		numFilesToList = Q_atoi( args.Arg( 1 ) );
+		numFilesToList = V_atoi( args.Arg( 1 ) );
 	}
 
 	CBackupFilesEnumerator arrStrings;
@@ -1301,7 +1325,9 @@ CON_COMMAND_F ( mp_backup_restore_list_files, "Lists recent backup round files m
 
 
 ConVar mp_backup_restore_load_autopause( "mp_backup_restore_load_autopause", "1", FCVAR_RELEASE, "Whether to automatically pause the match after restoring round data from backup" );
-CON_COMMAND_F ( mp_backup_restore_load_file, "Loads player cash, KDA, scores and team scores; resets to the next round after the backup", FCVAR_GAMEDLL | FCVAR_RELEASE )
+static void mp_backup_restore_load_file( const CCommand &args );
+static ConCommand mp_backup_restore_load_file_command( "mp_backup_restore_load_file", mp_backup_restore_load_file, "Loads player cash, KDA, scores and team scores; resets to the next round after the backup", FCVAR_GAMEDLL | FCVAR_RELEASE );
+static void mp_backup_restore_load_file( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1321,7 +1347,7 @@ ks::net::CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve CCSGameRules::sm_QueuedS
     void RecvProxy_CSGameRules( const RecvProp *pProp, void **pOut, void *pData, int objectID )
     {
         CCSGameRules *pRules = CSGameRules();
-        Assert( pRules );
+        contract_assert( pRules );
         *pOut = pRules;
     }
 
@@ -1330,7 +1356,7 @@ ks::net::CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve CCSGameRules::sm_QueuedS
     void* SendProxy_CSGameRules( const SendProp *pProp, const void *pStructBase, const void *pData, CSendProxyRecipients *pRecipients, int objectID )
     {
         CCSGameRules *pRules = CSGameRules();
-        Assert( pRules );
+        contract_assert( pRules );
         return pRules;
     }
 
@@ -1579,7 +1605,9 @@ ConVar sv_party_mode(
 // 	"1 = hostages are picked up when used, 0 == hostages uyse the old method of following behind players." );
 
 #ifndef CLIENT_DLL
-CON_COMMAND( timeout_terrorist_start, "" )
+static void timeout_terrorist_start( const CCommand &args );
+static ConCommand timeout_terrorist_start_command( "timeout_terrorist_start", timeout_terrorist_start, "" );
+static void timeout_terrorist_start( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1587,14 +1615,18 @@ CON_COMMAND( timeout_terrorist_start, "" )
 	CSGameRules()->StartTerroristTimeOut();
 }
 
-CON_COMMAND( timeout_ct_start, "" )
+static void timeout_ct_start( const CCommand &args );
+static ConCommand timeout_ct_start_command( "timeout_ct_start", timeout_ct_start, "" );
+static void timeout_ct_start( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
 
 	CSGameRules()->StartCTTimeOut();
 }
-CON_COMMAND( mp_warmup_start, "Start warmup." )
+static void mp_warmup_start( const CCommand &args );
+static ConCommand mp_warmup_start_command( "mp_warmup_start", mp_warmup_start, "Start warmup." );
+static void mp_warmup_start( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1612,7 +1644,9 @@ CON_COMMAND( mp_warmup_start, "Start warmup." )
 	}
 }
 
-CON_COMMAND( mp_warmup_end, "End warmup immediately." )
+static void mp_warmup_end( const CCommand &args );
+static ConCommand mp_warmup_end_command( "mp_warmup_end", mp_warmup_end, "End warmup immediately." );
+static void mp_warmup_end( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 	{
@@ -2737,7 +2771,9 @@ ConVar cl_autohelp(
 
 		//number_of_entities = gEntList.NumberOfEntities();
 
-	CON_COMMAND_F ( tv_time_remaining, "Print remaining tv broadcast time", FCVAR_RELEASE | FCVAR_GAMEDLL | FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS )
+	static void tv_time_remaining( const CCommand &args );
+static ConCommand tv_time_remaining_command( "tv_time_remaining", tv_time_remaining, "Print remaining tv broadcast time", FCVAR_RELEASE | FCVAR_GAMEDLL | FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static void tv_time_remaining( const CCommand &args )
 	{
 #ifdef GAME_DLL
 		if ( HLTVDirector() && HLTVDirector()->IsActive() )
@@ -2774,12 +2810,16 @@ ConVar cl_autohelp(
 			ConMsg( "GOTV is not active.\n" );
 	}
 
-    CON_COMMAND_F ( reset_expo, "Reset player scores, player controls, team scores, and end the round", FCVAR_CHEAT | FCVAR_GAMEDLL )
+    static void reset_expo( const CCommand &args );
+static ConCommand reset_expo_command( "reset_expo", reset_expo, "Reset player scores, player controls, team scores, and end the round", FCVAR_CHEAT | FCVAR_GAMEDLL );
+static void reset_expo( const CCommand &args )
     {
         CSGameRules()->ResetForTradeshow();
     }
     
-    CON_COMMAND_F ( tweak_ammo_impulses, "Allow real-time tweaking of the ammo impulse values.", FCVAR_CHEAT | FCVAR_GAMEDLL)
+    static void tweak_ammo_impulses( const CCommand &args );
+static ConCommand tweak_ammo_impulses_command( "tweak_ammo_impulses", tweak_ammo_impulses, "Allow real-time tweaking of the ammo impulse values.", FCVAR_CHEAT | FCVAR_GAMEDLL );
+static void tweak_ammo_impulses( const CCommand &args )
     {
         for  (int ii=0; ii<MAX_AMMO_TYPES; ++ii )
         {
@@ -3277,7 +3317,6 @@ ConVar cl_autohelp(
 	}
 #endif
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
  // DK TODO: Make a similar method run AFTER all loops of this to look for orphaned bots that think they are still player controlled
     class RevertBotsFunctor
     {
@@ -3297,7 +3336,6 @@ ConVar cl_autohelp(
             return true;
         }
     };
-#endif
 
 
     CCSMatch::CCSMatch()
@@ -3530,8 +3568,6 @@ ConVar cl_autohelp(
 	// --------------------------------------------------------------------------------------------------- //
 	// CCSGameRules implementation.
 	// --------------------------------------------------------------------------------------------------- //
-	CCSGameRules::GcBanInformationMap_t CCSGameRules::sm_mapGcBanInformation;
-
 	CCSGameRules::CCSGameRules()
 	{
 		m_flLastThinkTime = gpGlobals->curtime;
@@ -3649,7 +3685,6 @@ ConVar cl_autohelp(
 			m_arrFeaturedGiftersAccounts.Set( j, 0 );
 			m_arrFeaturedGiftersGifts.Set( j, 0 );
 		}
-		CheckForGiftsLeaderboardUpdate();
 
 		for ( int j = 0; j < MAX_TOURNAMENT_ACTIVE_CASTER_COUNT; ++ j )
 		{
@@ -3672,8 +3707,8 @@ ConVar cl_autohelp(
 
 		m_szTournamentEventName.GetForModify()[0] = 0;
 		m_szTournamentEventStage.GetForModify()[0] = 0;
-		Q_strncpy( m_szTournamentPredictionsTxt.GetForModify(), mp_teamprediction_txt.GetString(), MAX_PATH );
-		Q_strncpy( m_szMatchStatTxt.GetForModify(), mp_teammatchstat_txt.GetString(), MAX_PATH );
+		V_strncpy( m_szTournamentPredictionsTxt.GetForModify(), mp_teamprediction_txt.GetString(), MAX_PATH );
+		V_strncpy( m_szMatchStatTxt.GetForModify(), mp_teammatchstat_txt.GetString(), MAX_PATH );
 		m_nTournamentPredictionsPct = 0;
 		m_nMatchInfoShowType = k_MapMatchInfoShownCounts_None;
 		m_flMatchInfoDecidedTime = gpGlobals->curtime;
@@ -3692,14 +3727,14 @@ ConVar cl_autohelp(
 		if ( m_bIsQueuedMatchmaking )
 		{
 			static ConVarRef sv_mmqueue_reservation( "sv_mmqueue_reservation" );
-			m_pQueuedMatchmakingReservationString = new char[ Q_strlen( sv_mmqueue_reservation.GetString() ) + 1 ];
-			Q_strcpy( m_pQueuedMatchmakingReservationString, sv_mmqueue_reservation.GetString() );
+			m_pQueuedMatchmakingReservationString = new char[ V_strlen( sv_mmqueue_reservation.GetString() ) + 1 ];
+			V_strcpy( m_pQueuedMatchmakingReservationString, sv_mmqueue_reservation.GetString() );
 			int iDraftIndex = 0;
 			for ( char const *pszPrev = sv_mmqueue_reservation.GetString(), *pszNext = pszPrev;
-				( pszNext = strchr( pszPrev, '[' ) ) != nullptr; ( pszPrev = pszNext + 1 ), ( ++ iDraftIndex ) )
+				( pszNext = std::strchr( pszPrev, '[' ) ) != nullptr; ( pszPrev = pszNext + 1 ), ( ++ iDraftIndex ) )
 			{
 				uint32 uiAccountId = 0;
-				sscanf( pszNext, "[%x]", &uiAccountId );
+				std::sscanf( pszNext, "[%x]", &uiAccountId );
 				if ( uiAccountId )
 				{
 					++ m_numQueuedMatchmakingAccounts;
@@ -3717,10 +3752,10 @@ ConVar cl_autohelp(
 			// Set the tournament settings
 			if ( sm_QueuedServerReservation.tournament_event.has_value() &&
 				sm_QueuedServerReservation.tournament_event->event_name.has_value() )
-				Q_strncpy( m_szTournamentEventName.GetForModify(), sm_QueuedServerReservation.tournament_event->event_name->c_str(), MAX_PATH );
+				V_strncpy( m_szTournamentEventName.GetForModify(), sm_QueuedServerReservation.tournament_event->event_name->c_str(), MAX_PATH );
 			if ( sm_QueuedServerReservation.tournament_event.has_value() &&
 				sm_QueuedServerReservation.tournament_event->event_stage_name.has_value() )
-				Q_strncpy( m_szTournamentEventStage.GetForModify(), sm_QueuedServerReservation.tournament_event->event_stage_name->c_str(), MAX_PATH );
+				V_strncpy( m_szTournamentEventStage.GetForModify(), sm_QueuedServerReservation.tournament_event->event_stage_name->c_str(), MAX_PATH );
 		}
 
 		// [tj] reset flawless and lossless round related flags
@@ -3782,7 +3817,7 @@ ConVar cl_autohelp(
 		m_fNextUpdateTeamClanNamesTime = 0.0f;
 
 		// Create the team managers
-		for ( int i = 0; i < ARRAYSIZE( sTeamNames ); i++ )
+		for ( int i = 0; i < std::size( sTeamNames ); i++ )
 		{
 			CTeam *pTeam = static_cast<CTeam*>(CreateEntityByName( "cs_team_manager" ));
 			pTeam->Init( sTeamNames[i], i );
@@ -3795,7 +3830,6 @@ ConVar cl_autohelp(
 
 		InitializeGameTypeAndMode();
 
-#ifndef VALVE_DEDICATED_SERVER
 		if ( const char* szMapNameBase = V_GetFileName( STRING(gpGlobals->mapname) ) )
 		{
 			if ( (IsPlayingCustomGametype() ) 
@@ -3834,7 +3868,6 @@ ConVar cl_autohelp(
 				engine->ServerExecute();
 			}
 		}
-#endif
 
 		ReadMultiplayCvars();
 
@@ -3928,7 +3961,7 @@ ConVar cl_autohelp(
         if ( !pPlayer )
             return;
 
-		if ( ( 0 == Q_strcmp( pKeyValues->GetName(), "ClanTagChanged" ) ) &&
+		if ( ( 0 == V_strcmp( pKeyValues->GetName(), "ClanTagChanged" ) ) &&
 			// When we have tournament system enabled then players cannot change their clan tags from client
 			CanClientCustomizeOwnIdentity() )
         {
@@ -3948,13 +3981,6 @@ ConVar cl_autohelp(
 				pPlayer->GetTeam() ? pPlayer->GetTeam()->GetName() : "UNKNOWN",
                 pKeyValues->GetString( "tag", "unknown" ) );
         }
-		else if ( 0 == Q_strcmp( pKeyValues->GetName(), "InvalidSteamLogon" ) )
-		{
-			if ( IsWarmupPeriod() || IsFreezePeriod() || !pPlayer->IsAlive() )
-				pKeyValues->SetBool( "disconnect", true );
-			else
-				pPlayer->m_bInvalidSteamLogonDelayed = true;
-		}
     }
 
 static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
@@ -3992,8 +4018,8 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 		if ( ( m_match.GetPhase() == GAMEPHASE_HALFTIME ) || ( m_match.GetPhase() == GAMEPHASE_MATCH_ENDED ) )
 			nWantPrediction = 0;
 
-		if ( Q_strncmp( m_szTournamentPredictionsTxt, mp_teamprediction_txt.GetString(), MAX_PATH - 1 ) )
-			Q_strncpy( m_szTournamentPredictionsTxt.GetForModify(), mp_teamprediction_txt.GetString(), MAX_PATH );
+		if ( V_strncmp( m_szTournamentPredictionsTxt, mp_teamprediction_txt.GetString(), MAX_PATH - 1 ) )
+			V_strncpy( m_szTournamentPredictionsTxt.GetForModify(), mp_teamprediction_txt.GetString(), MAX_PATH );
 
 		char const *szWantMatchStatTxt = mp_teammatchstat_txt.GetString(); // can override from reservation later
 		if ( sm_QueuedServerReservation.pre_match_data->stats.size() )
@@ -4127,13 +4153,13 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 			}
 		}
 
-		if ( Q_strncmp( m_szMatchStatTxt, szWantMatchStatTxt, MAX_PATH - 1 ) )
-			Q_strncpy( m_szMatchStatTxt.GetForModify(), szWantMatchStatTxt, MAX_PATH );
+		if ( V_strncmp( m_szMatchStatTxt, szWantMatchStatTxt, MAX_PATH - 1 ) )
+			V_strncpy( m_szMatchStatTxt.GetForModify(), szWantMatchStatTxt, MAX_PATH );
 	}
 
 	void CCSGameRules::UpdateTeamClanNames( int nTeam )
 	{
-		Assert( ( nTeam == TEAM_CT ) || ( nTeam == TEAM_TERRORIST ) );
+		contract_assert( ( nTeam == TEAM_CT ) || ( nTeam == TEAM_TERRORIST ) );
 
 		CTeam *pTeam = GetGlobalTeam( nTeam );
 		//pTeam->SetName( GetDefaultTeamName(nTeam) );
@@ -4175,7 +4201,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 					pClanName = pPlayer->GetClanName();
 
 					const char *pClanID = engine->GetClientConVarValue( pPlayer->entindex(), "cl_clanid" );
-					uiClanID = Q_atoi( pClanID );
+					uiClanID = V_atoi( pClanID );
 
 					break;
 				}
@@ -4267,7 +4293,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 		if ( bUsingReservation && !Helper_CheckFieldAppliesToTeam( pMatchStat, nTeam ) )
 			pMatchStat = "";
 
-		Q_strncpy( pTeam->m_szTeamMatchStat.GetForModify(), pMatchStat, MAX_PATH );
+		V_strncpy( pTeam->m_szTeamMatchStat.GetForModify(), pMatchStat, MAX_PATH );
 	}
 
     // registered VSCRIPT functions
@@ -4723,7 +4749,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
                 char szNextMap[MAX_PATH];
                 if ( nextlevel.GetString() && *nextlevel.GetString() && engine->IsMapValid( nextlevel.GetString() ) )
                 {
-                    Q_strncpy( szNextMap, nextlevel.GetString(), sizeof( szNextMap ) );
+                    V_strncpy( szNextMap, nextlevel.GetString(), sizeof( szNextMap ) );
                 }
                 else
                 {
@@ -5096,7 +5122,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
                     float fDist = vecToTarget.Length();
                     float fSigma = flRadius / 3.0f; // flRadius specifies 3rd standard deviation (0.0111 damage at this range)
-                    float fGaussianFalloff = exp(-fDist * fDist / (2.0f * fSigma * fSigma));
+                    float fGaussianFalloff = std::exp(-fDist * fDist / (2.0f * fSigma * fSigma));
                     float flAdjustedDamage = info.GetDamage() * fGaussianFalloff * damagePercentage;
                 
                     if ( flAdjustedDamage > 0 )
@@ -5257,7 +5283,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 		{
 			killer_ID = pScorer->GetUserID();
 
-			V_sprintf_safe( killer_XUID, "%llu", pScorer->GetSteamIDAsUInt64() );
+			V_sprintf_safe( killer_XUID, "%llu", pScorer->GetPlayerIDAsUInt64() );
 
 			if( info.GetDamageType() & DMG_HEADSHOT )
 			{
@@ -5436,16 +5462,16 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
 		// Don't bother sending a message to the GC if either party is a bot, unless we're tracking events against
 		// bots specifically.
-		CSteamID KillerSteamID, VictimSteamID;
-		if ( !pOwner->GetSteamID( &KillerSteamID ) )
+		CPlayerId KillerPlayerID, VictimPlayerID;
+		if ( !pOwner->GetPlayerID( &KillerPlayerID ) )
 			return false;
 
 		// comment this out to have StatTrak count bot kills
-		if ( pVictim && !pVictim->GetSteamID( &VictimSteamID ) )
+		if ( pVictim && !pVictim->GetPlayerID( &VictimPlayerID ) )
 			return false;
 
 		// we don't want to increment the killeater if the weapon owner is not the killer
-		if ( pEconItemView->GetAccountID() != KillerSteamID.GetAccountID() )
+		if ( pEconItemView->GetAccountID() != KillerPlayerID.GetAccountID() )
 			return false;
 
 		// comment this out to have StatTrak count bot kills
@@ -5455,7 +5481,6 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 		// Also require that we have whatever event type we're looking for, unless we're looking for regular
 		// player kills in which case we may or may not have a field to describe that.
 		
-		AssertMsg( GetKillEaterAttrPairCount() == 1, "This function is now assuming there is only one stattrak value being updated when called. If we're adding multiple killeaters per item, this needs to be revisited." );
 		const CEconItemAttributeDefinition *pScoreAttribDef = GetKillEaterAttrPair_Score(0);
 		if ( !pScoreAttribDef )
 			return false;
@@ -5530,7 +5555,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
         // If we're killed by the C4, we do a subset of BaseClass::PlayerKilled()
         // Specifically, we shouldn't lose any points or show death notices, to match goldsrc
-        if ( Q_strcmp(pKiller->GetClassname(), "planted_c4" ) == 0 )
+        if ( V_strcmp(pKiller->GetClassname(), "planted_c4" ) == 0 )
         {
             // dvsents2: uncomment when removing all FireTargets
             // variant_t value;
@@ -5626,7 +5651,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 				if ( !IsPlayingOffline() )
 				{
 					char strTeamKills[64];
-					Q_snprintf( strTeamKills, sizeof( strTeamKills ), "%d", (3 - pCSScorer->m_iTeamKills) );
+					V_snprintf( strTeamKills, sizeof( strTeamKills ), "%d", (3 - pCSScorer->m_iTeamKills) );
 					ClientPrint( pCSScorer, HUD_PRINTTALK, "#SFUI_Notice_Game_teammate_kills", strTeamKills ); // this includes a " of 3" in it
 				}
 
@@ -5822,7 +5847,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         {
             // Player has an active item, so let's check cl_autowepswitch.
             const char *cl_autowepswitch = engine->GetClientConVarValue( ENTINDEX( pPlayer->edict() ), "cl_autowepswitch" );
-            if ( cl_autowepswitch && atoi( cl_autowepswitch ) <= 0 )
+            if ( cl_autowepswitch && std::atoi( cl_autowepswitch ) <= 0 )
             {
                 return false;
             }
@@ -5866,7 +5891,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
     //-----------------------------------------------------------------------------
     const char *CCSGameRules::SetDefaultPlayerTeam( CBasePlayer *pPlayer )
     {
-        Assert( pPlayer );
+        contract_assert( pPlayer );
         return BaseClass::SetDefaultPlayerTeam( pPlayer );
     }
 
@@ -6118,11 +6143,11 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
             for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
             {
                 CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
-                Assert( pPlayer );
+                contract_assert( pPlayer );
                 if ( !pPlayer )
                     continue;
 
-                Assert( pPlayer->GetTeamNumber() == pTeam->GetTeamNumber() );
+                contract_assert( pPlayer->GetTeamNumber() == pTeam->GetTeamNumber() );
 
                 switch ( pTeam->GetTeamNumber() )
                 {
@@ -6380,7 +6405,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
                 for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
                 {
                     CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
-                    Assert( pPlayer );
+                    contract_assert( pPlayer );
                     if ( !pPlayer )
                         continue;
 
@@ -6405,7 +6430,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
                 for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
                 {
                     CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
-                    Assert( pPlayer );
+                    contract_assert( pPlayer );
                     if ( !pPlayer )
                         continue;
 
@@ -6474,7 +6499,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
             for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
             {
                 CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
-                Assert( pPlayer );
+                contract_assert( pPlayer );
                 if ( !pPlayer )
                     continue;
 
@@ -6780,7 +6805,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 							}
 
 							char szSec[32];
-							Q_snprintf(szSec, sizeof(szSec), "%d", (int)GetRespawnWaveMaxLength( nOtherTeam ));
+							V_snprintf(szSec, sizeof(szSec), "%d", (int)GetRespawnWaveMaxLength( nOtherTeam ));
 
 							CBroadcastRecipientFilter filter;
 							UTIL_ClientPrintFilter(filter, HUD_PRINTCENTER, "#SFUI_Notice_NextWaveIn", szSec);
@@ -7390,10 +7415,8 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
         // Brock H. - TR - 03/31/09
         // Revert any player controlled bots
-#if CS_CONTROLLABLE_BOTS_ENABLED
         RevertBotsFunctor revertBots;
         ForEachPlayer( revertBots );
-#endif
 
         m_iTotalRoundsPlayed++;
         
@@ -7817,7 +7840,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
 		int iHostageCount = mp_hostages_max.GetInt();
 
-		if (	( mp_hostages_max.GetInt() != atoi( mp_hostages_max.GetDefault() ) ) &&
+		if (	( mp_hostages_max.GetInt() != std::atoi( mp_hostages_max.GetDefault() ) ) &&
 				( g_pMapInfo ) &&
 				( g_pMapInfo->m_iHostageCount != 0 ) )
 		{
@@ -7853,7 +7876,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 				arrBestHostageIdx.reserve( std::ssize( tagStrings ) );
 				for ( const std::string &sTagString : tagStrings )
 				{
-					arrBestHostageIdx.push_back( Q_atoi( sTagString.c_str() ) );
+					arrBestHostageIdx.push_back( V_atoi( sTagString.c_str() ) );
 				}
 
 				// Now we have selected best hostage indices, keep only them
@@ -7996,7 +8019,6 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 				for ( CHostage *pPickedHostage : g_Hostages )
 				{
 					int idxOriginalSpawnPoint = ks::find_index( arrCopyOfOriginalHostageIndices, pPickedHostage );
-					Assert( idxOriginalSpawnPoint != -1 );
 					m_arrSelectedHostageSpawnIndices.push_back( idxOriginalSpawnPoint );
 				}
 			}
@@ -8007,7 +8029,6 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 			for ( CHostage *pPickedHostage : g_Hostages )
 			{
 				int idxOriginalSpawnPoint = ks::find_index( arrCopyOfOriginalHostageIndices, pPickedHostage );
-				Assert( idxOriginalSpawnPoint != -1 );
 				fmtHostagePositions.AppendFormat( "%d,", idxOriginalSpawnPoint );
 			}
 			fmtHostagePositions.Access()[ fmtHostagePositions.Length() - 1 ] = '\'';
@@ -8373,18 +8394,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
             IGameEvent * event = gameeventmanager->CreateEvent( "round_announce_warmup" );
             if ( event )
                 gameeventmanager->FireEvent( event );
-
-			#ifndef CLIENT_DLL
-			CheckForGiftsLeaderboardUpdate();
-			#endif
         }
-
-		#ifndef CLIENT_DLL
-		if ( m_match.GetRoundsPlayed() <= 0 )
-		{
-			CheckForGiftsLeaderboardUpdate();
-		}
-		#endif
 
         // We need to reassign the player's pointers to entities that were killed during the map clean up but have been recreated since the round_start event was called.
         for ( int i = 1; i <= gpGlobals->maxClients; i++ )
@@ -8578,7 +8588,6 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         if ( !candidates.empty() )
         {
             CCSPlayer *pPlayer = candidates[0];
-            Assert( pPlayer && pPlayer->GetTeamNumber() == TEAM_TERRORIST && pPlayer->IsAlive() );
 
             pPlayer->GiveNamedItem( WEAPON_C4_CLASSNAME );
             pPlayer->SelectItem( "weapon_c4" );
@@ -8640,7 +8649,6 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         for ( int i = 0; i < iDefusersToGive && i < std::ssize( candidates ); ++i )
         {
             CCSPlayer *pPlayer = candidates[i];
-            Assert( pPlayer && pPlayer->GetTeamNumber() == TEAM_CT && pPlayer->IsAlive() );
             pPlayer->GiveDefuser(false);
             pPlayer->HintMessage( "#Hint_you_have_the_defuser", false, true );
         }
@@ -8655,63 +8663,6 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 // 		{
 // 			m_DeferredCallQueue.CallQueued();
 // 		}
-
-		//
-		// Check if connected players have bans on record
-		//
-		int nCooldownMode = sv_kick_players_with_cooldown.GetInt();
-		if ( ( nCooldownMode <= 0 ) && steamgameserverapicontext && steamgameserverapicontext->SteamGameServer() && steamgameserverapicontext->SteamGameServer()->BSecure() )
-			nCooldownMode = 1; // On VAC secure servers enforce global cooldowns
-		if ( ( nCooldownMode > 0 ) && !CCSGameRules::sm_mapGcBanInformation.empty() )
-		{
-			for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-			{
-				CBasePlayer *pBasePlayer = UTIL_PlayerByIndex( i );
-				if ( !pBasePlayer )
-					continue;
-
-				CSteamID steamID;
-				if ( pBasePlayer->GetSteamID( &steamID ) && steamID.IsValid() &&
-					steamID.GetAccountID() )
-				{
-					auto itBan = CCSGameRules::sm_mapGcBanInformation.find( steamID.GetAccountID() );
-					if ( itBan != CCSGameRules::sm_mapGcBanInformation.end() )
-					{
-						CCSGameRules::CGcBanInformation_t &banInfo = itBan->second;
-						if ((banInfo.m_dblExpiration > Plat_FloatTime()) && !EMsgGCCStrike15_v2_MatchmakingKickBanReason_IsGreen(banInfo.m_uiReason) &&
-							( ( nCooldownMode > 1 ) || EMsgGCCStrike15_v2_MatchmakingKickBanReason_IsGlobal( banInfo.m_uiReason ) ) )
-						{
-							// Kick this guy
-							Msg( "Kicking user %s (sv_kick_players_with_cooldown=%d)\n", pBasePlayer->GetPlayerName(), nCooldownMode );
-
-							if ( sv_kick_ban_duration.GetInt() > 0 )
-							{
-								// don't roll the kick command into this, it will fail on a lan, where kickid will go through
-								engine->ServerCommand( CFmtStr( "banid %d %d;", sv_kick_ban_duration.GetInt(), pBasePlayer->GetUserID() ) );
-							}
-							char const *szReasonForKick = "Player has competitive matchmaking cooldown";
-							switch ( banInfo.m_uiReason )
-							{
-							case k_EMsgGCCStrike15_v2_MatchmakingKickBanReason_OfficialBan:
-							case k_EMsgGCCStrike15_v2_MatchmakingKickBanReason_ChallengeNotification:
-								szReasonForKick = "Account is Untrusted";
-								break;
-							case k_EMsgGCCStrike15_v2_MatchmakingKickBanReason_GsltViolation:
-							case k_EMsgGCCStrike15_v2_MatchmakingKickBanReason_ConvictedForBehavior:
-							case k_EMsgGCCStrike15_v2_MatchmakingKickBanReason_ConvictedForCheating:
-								szReasonForKick = "Account is Convicted";
-								break;
-							case k_EMsgGCCStrike15_v2_MatchmakingKickBanReason_NoUserSession:
-								szReasonForKick = INVALID_STEAM_TICKET;
-								break;
-							}
-							engine->ServerCommand( UTIL_VarArgs( "kickid_ex %d %d %s\n", pBasePlayer->GetUserID(), ( g_pGameRules && ((CCSGameRules *) g_pGameRules)->IsPlayingOffline() ) ? 0 : 1,
-								szReasonForKick ) );
-						}
-					}
-				}
-			}
-		}
 
 		extern void ServerThinkReplayUploader();
 		ServerThinkReplayUploader();
@@ -8735,8 +8686,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 		}
 
 		// This fires begin_new_match once when a new match starts... there are other similar game events
-		// but they all get fired multiple times between ending and starting a new match. Since we're using
-		// this event to restart an OGS session we can't let it spam like that. 
+		// but they all get fired multiple times between ending and starting a new match.
 		if ( !m_bHasMatchStarted && // Turned off when we go to intermission, turned on once we fire the even
 			m_match.GetPhase() != GAMEPHASE_MATCH_ENDED && // Don't try to run this while we're still in intermission
 			!IsWarmupPeriod() && // Don't start the match until the first round after warmup
@@ -9106,9 +9056,6 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 				{
 					UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, "#SFUI_Notice_Match_Will_Start_Chat" );
 				}
-
-				if ( !m_numGlobalGiftsGiven )
-					CheckForGiftsLeaderboardUpdate();
             }
 #endif
             //bool bIsPlayingProgressive = CSGameRules() && CSGameRules()->IsPlayingGunGameProgressive();
@@ -9483,7 +9430,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 // 					const char *szWeaponName = pWeaponInfo ? pWeaponInfo->szPrintName : "";
 // 
 // 					char szSec[32];
-// 					Q_snprintf(szSec, sizeof(szSec), "%d", (int)m_flDMBonusTimeLength);
+// 					V_snprintf(szSec, sizeof(szSec), "%d", (int)m_flDMBonusTimeLength);
 // 
 // 					CReliableBroadcastRecipientFilter filter;
 // 					UTIL_ClientPrintFilter(filter, HUD_PRINTTALK, "#SFUI_Notice_DM_BonusWeaponText", szSec, szWeaponName);
@@ -9542,54 +9489,7 @@ void ServerThinkReplayUploader()
 				case k_EQueuedMatchmakingRematchState_VoteStarting:
 					{
 
-#if VALVE_COMPETITIVE_REMATCH_FEATURE_ENABLED
-						char const *szCannotRematchExplanation = "#SFUI_vote_failed_rematch_explain";
-						static char const * s_pchTournamentServer = CommandLine()->ParmValue( "-tournament", ( char const * ) nullptr );
-						if ( m_pQueuedMatchmakingReportedRoundStats )
-						{
-							uint32 numHumansPresent = 0;
-							for ( int k = 0; k < m_pQueuedMatchmakingReportedRoundStats->pings.size(); ++ k )
-							{
-								if ( m_pQueuedMatchmakingReportedRoundStats->pings[ k ] > 0 )
-									++ numHumansPresent;
-							}
-							if ( numHumansPresent == m_numQueuedMatchmakingAccounts )
-								szCannotRematchExplanation = nullptr;
-						}
-						szCannotRematchExplanation = "#SFUI_vote_failed_rematch_mmsvr";
-						if ( !s_pchTournamentServer && !szCannotRematchExplanation )
-						{
-							m_eQueuedMatchmakingRematchState = k_EQueuedMatchmakingRematchState_VoteStarting;
-							engine->ServerCommand( "callvote rematch;\n" );
-						}
-						else
-						{
-							m_eQueuedMatchmakingRematchState = k_EQueuedMatchmakingRematchState_VoteToRematchFailed;
-
-							if ( !s_pchTournamentServer )
-							{
-								// Send chat message to let players know why match cannot proceed
-								CRecipientFilter filter;
-
-								for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-								{
-									CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
-
-									if ( pPlayer && ( pPlayer->GetTeamNumber() == TEAM_SPECTATOR || pPlayer->GetTeamNumber() == TEAM_CT || pPlayer->GetTeamNumber() == TEAM_TERRORIST ) )
-									{
-										filter.AddRecipient( pPlayer );
-									}
-								}
-
-								filter.MakeReliable();
-
-								// CTs have surrendered
-								UTIL_ClientPrintFilter( filter, HUD_PRINTTALK, szCannotRematchExplanation );
-							}
-						}
-#else  // VALVE_COMPETITIVE_REMATCH_FEATURE_ENABLED
 						m_eQueuedMatchmakingRematchState = k_EQueuedMatchmakingRematchState_VoteToRematchFailed;
-#endif // VALVE_COMPETITIVE_REMATCH_FEATURE_ENABLED
 					}
 					return true;
 
@@ -9620,11 +9520,7 @@ void ServerThinkReplayUploader()
 					break;
 
 				case k_EQueuedMatchmakingRematchState_VoteToRematchSucceeded:
-#if VALVE_COMPETITIVE_REMATCH_FEATURE_ENABLED
-					m_eQueuedMatchmakingRematchState = k_EQueuedMatchmakingRematchState_VoteToRematch_Done;
-#else  // VALVE_COMPETITIVE_REMATCH_FEATURE_ENABLED
 					m_eQueuedMatchmakingRematchState = k_EQueuedMatchmakingRematchState_VoteToRematchFailed;
-#endif // VALVE_COMPETITIVE_REMATCH_FEATURE_ENABLED
 					break;	// let the normal logic proceed and change level
 					
 				case k_EQueuedMatchmakingRematchState_VoteToRematch_Done:
@@ -9891,7 +9787,7 @@ void ServerThinkReplayUploader()
 						Msg( "CHANGELEVEL: ConVar '%s' is set, next map will be '%s'\n", nextlevel.GetName(), nextlevel.GetString() );
 					}
 
-                    Q_strncpy( szNextMap, nextlevel.GetString(), sizeof( szNextMap ) );
+                    V_strncpy( szNextMap, nextlevel.GetString(), sizeof( szNextMap ) );
 				}
                 else
 				{
@@ -9904,7 +9800,7 @@ void ServerThinkReplayUploader()
 				// mp_match_end_changelevel will force a changelevel even if next map matches current map
                 // otherwise if the next map is the same one we are on, don't reload it, just restart the map instead
 				// if the next map is different then changelevel
-				bool bNextLevelDiffers = !!Q_strcmp( szNextMap, STRING( gpGlobals->mapname ) );
+				bool bNextLevelDiffers = !!V_strcmp( szNextMap, STRING( gpGlobals->mapname ) );
 				bool bWantsChangeLevel = !mp_match_end_restart.GetBool() && ( mp_match_end_changelevel.GetBool() || bNextLevelDiffers );
 				if ( bWantsChangeLevel == false && mp_verbose_changelevel_spew.GetBool() )
 				{
@@ -10103,31 +9999,31 @@ void ServerThinkReplayUploader()
         switch ( random->RandomInt( 0, 3 ) )
         {
         case 0:
-            Q_strncpy(CT_sentence,"radio.moveout", sizeof( CT_sentence ) ); 
-            Q_strncpy(T_sentence ,"radio.moveout", sizeof( T_sentence ) ); 
+            V_strncpy(CT_sentence,"radio.moveout", sizeof( CT_sentence ) ); 
+            V_strncpy(T_sentence ,"radio.moveout", sizeof( T_sentence ) ); 
             break;
 
         case 1:
-            Q_strncpy(CT_sentence, "radio.letsgo", sizeof( CT_sentence ) ); 
-            Q_strncpy(T_sentence , "radio.letsgo", sizeof( T_sentence ) ); 
+            V_strncpy(CT_sentence, "radio.letsgo", sizeof( CT_sentence ) ); 
+            V_strncpy(T_sentence , "radio.letsgo", sizeof( T_sentence ) ); 
             break;
 
         case 2:
-            Q_strncpy(CT_sentence , "radio.locknload", sizeof( CT_sentence ) );
-            Q_strncpy(T_sentence , "radio.locknload", sizeof( T_sentence ) );
+            V_strncpy(CT_sentence , "radio.locknload", sizeof( CT_sentence ) );
+            V_strncpy(T_sentence , "radio.locknload", sizeof( T_sentence ) );
             break;
 
         default:
-            Q_strncpy(CT_sentence , "radio.go", sizeof( CT_sentence ) );
-            Q_strncpy(T_sentence , "radio.go", sizeof( T_sentence ) );
+            V_strncpy(CT_sentence , "radio.go", sizeof( CT_sentence ) );
+            V_strncpy(T_sentence , "radio.go", sizeof( T_sentence ) );
             break;
         }
 
         // More specific radio commands for the new scenarios : Prison & Assasination
-        if (m_bMapHasEscapeZone == TRUE)
+        if (m_bMapHasEscapeZone == true)
         {
-            Q_strncpy(CT_sentence , "radio.elim", sizeof( CT_sentence ) );
-            Q_strncpy(T_sentence , "radio.getout", sizeof( T_sentence ) );
+            V_strncpy(CT_sentence , "radio.elim", sizeof( CT_sentence ) );
+            V_strncpy(T_sentence , "radio.getout", sizeof( T_sentence ) );
         }
 
         // Freeze period expired: kill the flag
@@ -10203,10 +10099,10 @@ void ServerThinkReplayUploader()
 
 					const char *szTeam = (nTeam == TEAM_CT) ? "CT" : "T";
 					char szNotice[512];
-					Q_snprintf( szNotice, sizeof( szNotice ), "#SFUI_Notice_NewWaveBegun_%s0", szTeam );
+					V_snprintf( szNotice, sizeof( szNotice ), "#SFUI_Notice_NewWaveBegun_%s0", szTeam );
 
 					char szWave[32];
-					Q_snprintf( szWave, sizeof( szWave ), "%d", ( int )m_nGuardianModeWaveNumber );
+					V_snprintf( szWave, sizeof( szWave ), "%d", ( int )m_nGuardianModeWaveNumber );
 					UTIL_ClientPrintFilter( filter, HUD_PRINTCENTER, szNotice, szWave );
 				}
 			}
@@ -10415,7 +10311,7 @@ void ServerThinkReplayUploader()
 		if ( nextlevel.GetString() && *nextlevel.GetString() && engine->IsMapValid( nextlevel.GetString() ) )
 		{
 			bNextMapAlreadySet = true;
-			Q_strncpy( szNextMap, nextlevel.GetString(), sizeof( szNextMap ) );
+			V_strncpy( szNextMap, nextlevel.GetString(), sizeof( szNextMap ) );
 		}
 		else
 		{
@@ -10610,7 +10506,7 @@ void ServerThinkReplayUploader()
     void CCSGameRules::SplitScoreAmongPlayersInZone( int iPoints, int iTeam, CCSPlayer* pExcludePlayer, uint iPlace )
     {
         float fWeights[MAX_PLAYERS+1];
-        memset( fWeights, 0, sizeof( fWeights ) );
+        std::memset( fWeights, 0, sizeof( fWeights ) );
         float fWeightSum = 0.0f;
 
         for ( int i = 1; i <= MAX_PLAYERS; i++ )
@@ -10652,7 +10548,7 @@ void ServerThinkReplayUploader()
     {
         float fMaxRangeSquared = fRangeOuter * fRangeOuter;
         float fWeights[MAX_PLAYERS+1];
-        memset( fWeights, 0, sizeof( fWeights ) );
+        std::memset( fWeights, 0, sizeof( fWeights ) );
         float fWeightSum = 0.0f;
 
         for ( int i = 1; i <= MAX_PLAYERS; i++ )
@@ -10803,7 +10699,7 @@ void ServerThinkReplayUploader()
         // bonus for being near hostage
         const float fRadiusInner = score_hostage_proximity_damage_radius_inner.GetFloat();
         const float fRadiusOuter = score_hostage_proximity_damage_radius_outer.GetFloat();
-        float fClosestSquared = FLT_MAX;
+        float fClosestSquared = std::numeric_limits<float>::max();
         for ( CHostage* pHostage : g_Hostages )
         {
             if ( pHostage->m_iHealth > 0 && !pHostage->IsRescued() )
@@ -10817,7 +10713,7 @@ void ServerThinkReplayUploader()
         }
         if ( fClosestSquared < fRadiusOuter * fRadiusOuter )
         {
-            float fWeight = FalloffWeight( sqrtf( fClosestSquared ), fRadiusInner, fRadiusOuter );
+            float fWeight = FalloffWeight( std::sqrtf( fClosestSquared ), fRadiusInner, fRadiusOuter );
             int score = RoundFloatToInt( fDamage * fWeight * score_hostage_proximity_damage_bonus.GetFloat() );
             pPlayer->AddScore( score );
             pPlayer->AddRoundProximityScore( score );
@@ -11037,7 +10933,9 @@ void ServerThinkReplayUploader()
         PrintToConsole( player, str.sprintf( "\n" ) );
     }
 
-    CON_COMMAND( mp_dump_timers, "Prints round timers to the console for debugging" )
+    static void mp_dump_timers( const CCommand &args );
+static ConCommand mp_dump_timers_command( "mp_dump_timers", mp_dump_timers, "Prints round timers to the console for debugging" );
+static void mp_dump_timers( const CCommand &args )
     {
         if ( !UTIL_IsCommandIssuedByServerAdmin() )
             return;
@@ -11142,7 +11040,7 @@ void ServerThinkReplayUploader()
 			{
 				if ( IsSpawnPointValid( ent, nullptr ) )
 				{
-					SpawnPoint* pSpawnPoint = assert_cast< SpawnPoint* >( ent );
+					SpawnPoint* pSpawnPoint = static_cast< SpawnPoint* >( ent );
 					if ( pSpawnPoint )
 					{
 						m_vecMainCTSpawnPos = pSpawnPoint->GetAbsOrigin();
@@ -11180,7 +11078,7 @@ void ServerThinkReplayUploader()
 			// check to make sure it isn't already in the list
 			if ( ks::find_index( m_TerroristSpawnPointsMasterList, pSpawnPoint ) != -1 )
 			{
-				AssertMsg( false, "AddSpawnPointToMasterList tried to add a spawn point to the list, but it already exists in the list!" );
+				contract_assert( false && "AddSpawnPointToMasterList tried to add a spawn point to the list, but it already exists in the list!" );
 				return;
 			}
 
@@ -11191,7 +11089,7 @@ void ServerThinkReplayUploader()
 		{
 			if ( ks::find_index( m_CTSpawnPointsMasterList, pSpawnPoint ) != -1 )
 			{
-				AssertMsg( false, "AddSpawnPointToMasterList tried to add a spawn point to the list, but it already exists in the list!" );
+				contract_assert( false && "AddSpawnPointToMasterList tried to add a spawn point to the list, but it already exists in the list!" );
 				return;
 			}
 
@@ -11204,7 +11102,7 @@ void ServerThinkReplayUploader()
 		else
 		{
 			// doesn't match any classes we are aware of!
-			AssertMsg( false, "AddSpawnPointToMasterList is looking to adda  class to the master spawn list, but it doesn't recognize the class type!" );
+			contract_assert( false && "AddSpawnPointToMasterList is looking to adda  class to the master spawn list, but it doesn't recognize the class type!" );
 		}
 
 		RefreshCurrentSpawnPointLists();
@@ -11228,7 +11126,7 @@ void ServerThinkReplayUploader()
 		{
 			if ( IsSpawnPointValid( ent, nullptr ) )
 			{
-				SpawnPoint* pSpawnPoint = assert_cast< SpawnPoint* >( ent );
+				SpawnPoint* pSpawnPoint = static_cast< SpawnPoint* >( ent );
 				if ( pSpawnPoint )
 				{
 					// Store off the terrorist spawn point
@@ -11246,7 +11144,7 @@ void ServerThinkReplayUploader()
 		{
 			if ( IsSpawnPointValid( ent, nullptr ) ) 
 			{
-				SpawnPoint* pSpawnPoint = assert_cast< SpawnPoint* >( ent );
+				SpawnPoint* pSpawnPoint = static_cast< SpawnPoint* >( ent );
 				if ( pSpawnPoint )
 				{
 					// Store off the CT spawn point
@@ -11268,7 +11166,7 @@ void ServerThinkReplayUploader()
 			{
 				if ( IsSpawnPointValid( ent, nullptr ) )
 				{
-					SpawnPoint* pSpawnPoint = assert_cast< SpawnPoint* >( ent );
+					SpawnPoint* pSpawnPoint = static_cast< SpawnPoint* >( ent );
 					if ( pSpawnPoint )
 					{
 						pSpawnPoint->m_nType = SpawnPoint::ArmsRace;
@@ -11287,7 +11185,7 @@ void ServerThinkReplayUploader()
 			{
 				if ( IsSpawnPointValid( ent, nullptr ) )
 				{
-					SpawnPoint* pSpawnPoint = assert_cast< SpawnPoint* >( ent );
+					SpawnPoint* pSpawnPoint = static_cast< SpawnPoint* >( ent );
 					if ( pSpawnPoint )
 					{
 						pSpawnPoint->m_nType = SpawnPoint::ArmsRace;
@@ -11515,7 +11413,7 @@ void ServerThinkReplayUploader()
             {
 				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, duration );
             }
-            else if ( !( assert_cast< SpawnPoint* >( ent )->IsEnabled() ) )
+            else if ( !( static_cast< SpawnPoint* >( ent )->IsEnabled() ) )
             {
                 NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 255, 200, duration );
             }
@@ -11531,7 +11429,7 @@ void ServerThinkReplayUploader()
             {
 				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, duration );
 			}
-			else if ( !( assert_cast< SpawnPoint* >( ent )->IsEnabled() ) )
+			else if ( !( static_cast< SpawnPoint* >( ent )->IsEnabled() ) )
 			{
 				NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 255, 200, duration );
 			}
@@ -11545,7 +11443,7 @@ void ServerThinkReplayUploader()
 		{
 			if ( IsSpawnPointValid( ent, nullptr ) )
 			{
-				if ( !( assert_cast< SpawnPoint* >( ent )->IsEnabled() ) )
+				if ( !( static_cast< SpawnPoint* >( ent )->IsEnabled() ) )
 				{
 					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 255, 200, duration );
 				}
@@ -11572,7 +11470,7 @@ void ServerThinkReplayUploader()
 				{
 					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, duration );
 				}
-				else if ( !( assert_cast< SpawnPoint* >( ent )->IsEnabled() ) )
+				else if ( !( static_cast< SpawnPoint* >( ent )->IsEnabled() ) )
 				{
 					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 255, 200, duration );
 				}
@@ -11588,7 +11486,7 @@ void ServerThinkReplayUploader()
 				{
 					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 0, 200, duration );
 				}
-				else if ( !( assert_cast< SpawnPoint* >( ent )->IsEnabled() ) )
+				else if ( !( static_cast< SpawnPoint* >( ent )->IsEnabled() ) )
 				{
 					NDebugOverlay::Box( ent->GetAbsOrigin(), VEC_HULL_MIN, VEC_HULL_MAX, 255, 0, 255, 200, duration );
 				}
@@ -11618,7 +11516,7 @@ void ServerThinkReplayUploader()
 
             // let the players know
             char strRestartDelay[64];
-            Q_snprintf( strRestartDelay, sizeof( strRestartDelay ), "%d", iRestartDelay );
+            V_snprintf( strRestartDelay, sizeof( strRestartDelay ), "%d", iRestartDelay );
             UTIL_ClientPrintAll( HUD_PRINTCENTER, "#SFUI_Notice_Game_will_restart_in", strRestartDelay, iRestartDelay == 1 ? "#SFUI_Second" : "#SFUI_Seconds" );
             UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "#SFUI_Notice_Game_will_restart_in", strRestartDelay, iRestartDelay == 1 ? "#SFUI_Second" : "#SFUI_Seconds" );
 
@@ -12039,7 +11937,7 @@ void ServerThinkReplayUploader()
                 //Keep alternating until out of players.
                 if ( !assignToOpposingTeam )
                 {
-                    team = ( rand() % 2 ) ? TEAM_TERRORIST : TEAM_CT;
+                    team = ( std::rand() % 2 ) ? TEAM_TERRORIST : TEAM_CT;
                 }
                 else
                 {
@@ -12451,18 +12349,6 @@ void ServerThinkReplayUploader()
 
 	void CCSGameRules::LoadRoundDataInformation( char const *szFilename )
 	{
-		#if BACKUPSUPPORTZEROZERO
-		//
-		// Custom handling for loading 0:0 backup
-		//
-		if ( !V_strcmp( szFilename, g_szRoundBackupZeroZeroFileName ) )
-		{	// Ensure that the warmup starts and stays paused
-			extern ConVar mp_warmup_pausetimer;
-			mp_warmup_pausetimer.SetValue( 1 );
-			StartWarmup();
-			return;
-		}
-		#endif
 
 		KeyValues *kvSaveFile = new KeyValues( "" );
 		KeyValues::AutoDelete autodelete_kvSaveFile( kvSaveFile );
@@ -12489,7 +12375,7 @@ void ServerThinkReplayUploader()
 
 		// Send all CT and T players to spectators for now
 		int nSavedSpectatorSlotsCount = m_iSpectatorSlotCount;
-		m_iSpectatorSlotCount = INT_MAX;
+		m_iSpectatorSlotCount = std::numeric_limits<int>::max();
 		m_bForceTeamChangeSilent = true;	// silence all the messages about players changing teams
 		m_bLoadingRoundBackupData = true;	// make sure the game rules don't do any additional round restarts
 		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
@@ -12535,7 +12421,7 @@ void ServerThinkReplayUploader()
 				m_arrSelectedHostageSpawnIndices.reserve( std::ssize( tagStrings ) );
 				for ( const std::string &sTagString : tagStrings )
 				{
-					m_arrSelectedHostageSpawnIndices.push_back( Q_atoi( sTagString.c_str() ) );
+					m_arrSelectedHostageSpawnIndices.push_back( V_atoi( sTagString.c_str() ) );
 				}
 			}
 		}
@@ -12604,20 +12490,20 @@ void ServerThinkReplayUploader()
 			CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
 			if ( pPlayer && pPlayer->IsConnected() && !pPlayer->IsBot() )
 			{
-				CSteamID steamIdHumanPlayer;
-				if ( pPlayer->GetSteamID( &steamIdHumanPlayer ) )
+				CPlayerId playerIdHumanPlayer;
+				if ( pPlayer->GetPlayerID( &playerIdHumanPlayer ) )
 				{
 					int iTeamOrder = 0;
 					KeyValues *kvPlayerData = nullptr;
 					for ( ; iTeamOrder < 2; ++ iTeamOrder )
 					{
-						kvPlayerData = kvSaveFile->FindKey( CFmtStr( "PlayersOnTeam%d/%u", iTeamOrder + 1, steamIdHumanPlayer.GetAccountID() ), false );
+						kvPlayerData = kvSaveFile->FindKey( CFmtStr( "PlayersOnTeam%d/%u", iTeamOrder + 1, playerIdHumanPlayer.GetAccountID() ), false );
 						if ( kvPlayerData )
 							break;
 					}
 					if ( !kvPlayerData )
 					{
-						Warning( "Server checkpoint has no information for player %u: %s\n", steamIdHumanPlayer.GetAccountID(), pPlayer->GetPlayerName() );
+						Warning( "Server checkpoint has no information for player %u: %s\n", playerIdHumanPlayer.GetAccountID(), pPlayer->GetPlayerName() );
 					}
 					else
 					{
@@ -12670,43 +12556,43 @@ void ServerThinkReplayUploader()
 						{
 							char szKey[64] = {};
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/Kills/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/Kills/round%d", r + 1 );
 							pPlayer->m_iMatchStats_Kills.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/Damage/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/Damage/round%d", r + 1 );
 							pPlayer->m_iMatchStats_Damage.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/EquipmentValue/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/EquipmentValue/round%d", r + 1 );
 							pPlayer->m_iMatchStats_EquipmentValue.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/MoneySaved/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/MoneySaved/round%d", r + 1 );
 							pPlayer->m_iMatchStats_MoneySaved.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/KillReward/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/KillReward/round%d", r + 1 );
 							pPlayer->m_iMatchStats_KillReward.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/LiveTime/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/LiveTime/round%d", r + 1 );
 							pPlayer->m_iMatchStats_LiveTime.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/Deaths/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/Deaths/round%d", r + 1 );
 							pPlayer->m_iMatchStats_Deaths.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/Assists/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/Assists/round%d", r + 1 );
 							pPlayer->m_iMatchStats_Assists.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/HeadShotKills/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/HeadShotKills/round%d", r + 1 );
 							pPlayer->m_iMatchStats_HeadShotKills.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/Objective/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/Objective/round%d", r + 1 );
 							pPlayer->m_iMatchStats_Objective.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/CashEarned/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/CashEarned/round%d", r + 1 );
 							pPlayer->m_iMatchStats_CashEarned.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/UtilityDamage/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/UtilityDamage/round%d", r + 1 );
 							pPlayer->m_iMatchStats_UtilityDamage.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
-							V_snprintf( szKey, ARRAYSIZE( szKey ), "MatchStats/EnemiesFlashed/round%d", r + 1 );
+							V_snprintf( szKey, std::size( szKey ), "MatchStats/EnemiesFlashed/round%d", r + 1 );
 							pPlayer->m_iMatchStats_EnemiesFlashed.GetForModify( r ) = ( r < numRoundsPlayed ) ? kvPlayerData->GetInt( szKey ) : 0;
 
 						}
@@ -12751,7 +12637,7 @@ void ServerThinkReplayUploader()
 
 	static void Helper_CleanupStringForSaveRoundDataInformation( char *pch )
 	{
-		int nLength = Q_strlen( pch );
+		int nLength = V_strlen( pch );
 		char *pchStart = pch;
 		for ( ; *pch; ++pch )
 		{
@@ -12763,7 +12649,7 @@ void ServerThinkReplayUploader()
 				;
 			else
 			{
-				Q_memmove( pch, pch + 1, nLength - ( pch - pchStart ) );
+				V_memmove( pch, pch + 1, nLength - ( pch - pchStart ) );
 				--pch;
 			}
 		}
@@ -12776,15 +12662,15 @@ void ServerThinkReplayUploader()
 
 	CCSGameRules::CQMMPlayerData_t * CCSGameRules::QueuedMatchmakingPlayersDataFindOrCreate( CCSPlayer *pPlayer )
 	{
-		CSteamID steamIdHumanPlayer;
-		if ( !pPlayer->GetSteamID( &steamIdHumanPlayer ) )
+		CPlayerId playerIdHumanPlayer;
+		if ( !pPlayer->GetPlayerID( &playerIdHumanPlayer ) )
 			return nullptr;
-		if ( !steamIdHumanPlayer.IsValid() || !steamIdHumanPlayer.BIndividualAccount() )
+		if ( !playerIdHumanPlayer.IsValid() || !playerIdHumanPlayer.BIndividualAccount() )
 			return nullptr;
-		if ( steamIdHumanPlayer.GetAccountID() != pPlayer->GetHumanPlayerAccountID() )
+		if ( playerIdHumanPlayer.GetAccountID() != pPlayer->GetHumanPlayerAccountID() )
 			return nullptr;
 
-		CCSGameRules::CQMMPlayerData_t *pQMM = QueuedMatchmakingPlayersDataFind( steamIdHumanPlayer.GetAccountID() );
+		CCSGameRules::CQMMPlayerData_t *pQMM = QueuedMatchmakingPlayersDataFind( playerIdHumanPlayer.GetAccountID() );
 		if ( pQMM )	// Already exists
 			return pQMM;
 
@@ -12812,9 +12698,9 @@ void ServerThinkReplayUploader()
 		//
 		auto pNewQMM = std::make_unique< CQMMPlayerData_t >();
 		CQMMPlayerData_t &qmmPlayerData = *pNewQMM;
-		qmmPlayerData.m_uiPlayerAccountId = steamIdHumanPlayer.GetAccountID();
+		qmmPlayerData.m_uiPlayerAccountId = playerIdHumanPlayer.GetAccountID();
 		qmmPlayerData.m_iDraftIndex = iTeamOrder * 5;
-		Q_strncpy( qmmPlayerData.m_chPlayerName, pPlayer->GetPlayerName(), sizeof( qmmPlayerData.m_chPlayerName ) );
+		V_strncpy( qmmPlayerData.m_chPlayerName, pPlayer->GetPlayerName(), sizeof( qmmPlayerData.m_chPlayerName ) );
 
 		qmmPlayerData.m_numKills = bControllingBot ? pPlayer->GetBotPreControlData().m_iFrags : pPlayer->FragCount();
 		qmmPlayerData.m_numAssists = bControllingBot ? pPlayer->GetBotPreControlData().m_iAssists : pPlayer->AssistsCount();
@@ -12882,7 +12768,7 @@ void ServerThinkReplayUploader()
 		}
 		else
 		{
-			Assert( !"IncrementAndTerminateRound not implemented for the reason passed" );
+			contract_assert( !"IncrementAndTerminateRound not implemented for the reason passed" );
 			return;
 		}
 
@@ -13050,7 +12936,7 @@ void ServerThinkReplayUploader()
         }
         else
         {
-            Assert( iWinnerTeam == WINNER_NONE || iWinnerTeam == WINNER_DRAW );
+            contract_assert( iWinnerTeam == WINNER_NONE || iWinnerTeam == WINNER_DRAW );
         }
 
         for ( int i = 1; i <= gpGlobals->maxClients; i++ )
@@ -13354,7 +13240,7 @@ void ServerThinkReplayUploader()
 				continue;
 
             const char *pClanID = engine->GetClientConVarValue( pPlayer->entindex(), "cl_clanid" );
-            uint32 iPlayerClan = atoi( pClanID );
+            uint32 iPlayerClan = std::atoi( pClanID );
 
 			// Initialize the team clan
 			if ( !bTeamInitialized )
@@ -13713,7 +13599,7 @@ void ServerThinkReplayUploader()
                 for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
                 {
                     CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
-                    Assert( pPlayer );
+                    contract_assert( pPlayer );
                     if ( !pPlayer )
                         continue;
 
@@ -13731,7 +13617,7 @@ void ServerThinkReplayUploader()
                 for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
                 {
                     CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
-                    Assert( pPlayer );
+                    contract_assert( pPlayer );
                     if ( !pPlayer )
                         continue;
 
@@ -13748,7 +13634,7 @@ void ServerThinkReplayUploader()
                 for ( int iPlayer=0; iPlayer < pTeam->GetNumPlayers(); iPlayer++ )
                 {
                     CCSPlayer *pPlayer = ToCSPlayer( pTeam->GetPlayer( iPlayer ) );
-                    Assert( pPlayer );
+                    contract_assert( pPlayer );
                     if ( !pPlayer )
                         continue;
 
@@ -13763,7 +13649,7 @@ void ServerThinkReplayUploader()
     //[tj] Counts the number of players in each category in the struct (dead, alive, etc...)
     void CCSGameRules::GetPlayerCounts(TeamPlayerCounts teamCounts[TEAM_MAXCOUNT])
     {
-        memset(teamCounts, 0, sizeof(TeamPlayerCounts) * TEAM_MAXCOUNT);
+        std::memset(teamCounts, 0, sizeof(TeamPlayerCounts) * TEAM_MAXCOUNT);
 
         for ( int i = 1; i <= gpGlobals->maxClients; i++ )
         {
@@ -13866,7 +13752,7 @@ void ServerThinkReplayUploader()
     void CCSGameRules::SwapAllPlayers()
     {
         // MOTODO we have to make sure that enought spaning points exits
-        Assert ( 0 );
+        contract_assert( 0 );
         for ( int i = 1; i <= gpGlobals->maxClients; i++ )
         {
             /* CCSPlayer *pPlayer = CCSPlayer::Instance( i );
@@ -14002,7 +13888,7 @@ void ServerThinkReplayUploader()
                     // This shouldn't be possible. When we loaded the map, it should have used 
                     // CCSMapLoadEntityFilter, which should have built the g_MapEntityRefs list
                     // with the same list of entities we're referring to here.
-                    Assert( false );
+                    contract_assert( false );
                     return nullptr;
                 }
                 else
@@ -14203,11 +14089,7 @@ void ServerThinkReplayUploader()
         g_pPlayerResource = (CPlayerResource*)CBaseEntity::Create( "cs_player_manager", vec3_origin, vec3_angle );
     
         // Create the entity that will send our data to the client.
-#ifdef DBGFLAG_ASSERT
-        CBaseEntity *pEnt = 
-#endif
             CBaseEntity::Create( "cs_gamerules", vec3_origin, vec3_angle );
-        Assert( pEnt );
 
 		g_voteControllerGlobal =	static_cast< CVoteController *>( CBaseEntity::Create("vote_controller", vec3_origin, vec3_angle) );
 		g_voteControllerCT =		static_cast< CVoteController *>( CBaseEntity::Create("vote_controller", vec3_origin, vec3_angle) );
@@ -14404,7 +14286,7 @@ int CCSGameRules::TeamCashAwardValue( TeamCashAward::Type reason)
 	case TeamCashAward::SURVIVE_GUARDIAN_WAVE:			return cash_team_survive_guardian_wave.GetInt();
 
     default:
-        AssertMsg( false, "Unhandled TeamCashAwardReason" );
+        contract_assert( false && "Unhandled TeamCashAwardReason" );
         return 0;
     };
 }
@@ -14425,7 +14307,7 @@ int CCSGameRules::PlayerCashAwardValue( PlayerCashAward::Type reason)
 	case PlayerCashAward::RESPAWN:					return cash_player_respawn_amount.GetInt();
 	case PlayerCashAward::GET_KILLED:				return cash_player_get_killed.GetInt();
     default:
-        AssertMsg( false, "Unhandled PlayerCashAwardReason" );
+        contract_assert( false && "Unhandled PlayerCashAwardReason" );
         return 0;
     };
 }
@@ -15048,7 +14930,7 @@ bool CCSGameRules::IsMatchWaitingForResume()
 		CTeam
 		#endif
 			*arrTeams[2] = { GetGlobalTeam( TEAM_CT ), GetGlobalTeam( TEAM_TERRORIST ) };
-		for ( int iTeam = 0; iTeam < Q_ARRAYSIZE( arrTeams ); ++ iTeam )
+		for ( int iTeam = 0; iTeam < std::size( arrTeams ); ++ iTeam )
 		{
 			if ( !arrTeams[iTeam] ) continue;
 			int numPlayers = arrTeams[iTeam]->GetNumPlayers();
@@ -15133,7 +15015,7 @@ int CCSGameRules::IPointsForKill( CBasePlayer *pAttacker, CBasePlayer *pKilled )
 */
 bool CanPlayerHear( CBasePlayer* pListener, CBasePlayer *pSpeaker, bool bTeamOnly, bool bHearEnemies )
 {
-	Assert(pListener != nullptr && pSpeaker != nullptr);
+	contract_assert( pListener != nullptr && pSpeaker != nullptr );
 	if ( pListener == nullptr || pSpeaker == nullptr )
 		return false;
 
@@ -15295,12 +15177,12 @@ void CCSGameRules::CheckRespawnWaves( void )
 							pPlayer->EmitSound( filter, pPlayer->entindex(), "UI.DeathMatchBonusAlertEnd" );
 
 							char szWave[32];
-							Q_snprintf( szWave, sizeof( szWave ), "%d", ( int )m_nGuardianModeWaveNumber );
+							V_snprintf( szWave, sizeof( szWave ), "%d", ( int )m_nGuardianModeWaveNumber );
 
 							const char *szTeam = (nTeam == TEAM_CT) ? "CT" : "T";
 							int nMsg = RandomInt( 1, 8 );
 							char szNotice[512];
-							Q_snprintf( szNotice, sizeof( szNotice ), "#SFUI_Notice_NewWaveBegun_%s%d", szTeam, ( int )nMsg );
+							V_snprintf( szNotice, sizeof( szNotice ), "#SFUI_Notice_NewWaveBegun_%s%d", szTeam, ( int )nMsg );
 
 							// send the message
 							UTIL_ClientPrintFilter(filter, HUD_PRINTCENTER, szNotice, szWave );
@@ -15551,7 +15433,7 @@ float CCSGameRules::GetNextRespawnWave( int iTeam, CBasePlayer *pPlayer )
 
 // shared ammo definition
 // JAY: Trying to make a more physical bullet response
-#define BULLET_MASS_GRAINS_TO_LB(grains)	(0.002285*(grains)/16.0f)
+template <typename T1> [[gnu::always_inline]] inline auto BULLET_MASS_GRAINS_TO_LB( T1 grains ) { return (0.002285*(grains)/16.0f); }
 #define BULLET_MASS_GRAINS_TO_KG(grains)	lbs2kg(BULLET_MASS_GRAINS_TO_LB(grains))
 
 static CCSAmmoDef ammoDef;
@@ -15668,9 +15550,9 @@ void CCSGameRules::RecordPlayerItemDrop( const ks::net::CEconItemPreviewDataBloc
 		CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( j ) );
 		if ( pPlayer )
 		{
-			CSteamID steamID;
-			pPlayer->GetSteamID( &steamID );
-			if ( steamID.GetAccountID() == iteminfo.accountid )
+			CPlayerId playerUID;
+			pPlayer->GetPlayerID( &playerUID );
+			if ( playerUID.GetAccountID() == iteminfo.accountid )
 			{
 				bFoundPlayer = true;
 				break;
@@ -15699,7 +15581,7 @@ const char *CCSGameRules::GetChatPrefix( bool bTeamOnly, CBasePlayer *pPlayer )
     else
     {
         // team only
-        if ( bTeamOnly == TRUE )
+        if ( bTeamOnly == true )
         {
             if ( pPlayer->GetTeamNumber() == TEAM_CT )
             {
@@ -15783,7 +15665,7 @@ const char *CCSGameRules::GetChatFormat( bool bTeamOnly, CBasePlayer *pPlayer )
     const char *pszFormat = nullptr;
 
     // team only
-    if ( bTeamOnly == TRUE )
+    if ( bTeamOnly == true )
     {
         if ( pPlayer->GetAssociatedTeamNumber() == TEAM_CT )
         {
@@ -15857,7 +15739,7 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
     if ( pCSPlayer )
     {
         // NOTE[pmf]: Before testing if the name has changed, we first copy it into a buffer of MAX_PLAYER_NAME_LENGTH length,
-        // trimming malformed utf8 (truncated) characters at the end (which we get from Steam); otherwise, when this
+        // trimming malformed utf8 (truncated) characters at the end; otherwise, when this
         // correction happens as a result of CBasePlayer::SetPlayerName(), we'll always see the name as different,
         // and continue to spam name change attempts.
 		if ( CSGameRules()->IsPlayingCoopMission() && pCSPlayer->IsBot() )
@@ -15869,7 +15751,7 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 			char szNewName[MAX_PLAYER_NAME_LENGTH];
 			V_UTF8_strncpy( szNewName, engine->GetClientConVarValue( pCSPlayer->entindex(), "name" ), sizeof(szNewName) );
 			const char *pszOldName = pCSPlayer->GetPlayerName();
-			if ( pszOldName[0] != 0 && Q_strcmp( pszOldName, szNewName ) )		
+			if ( pszOldName[0] != 0 && V_strcmp( pszOldName, szNewName ) )		
 			{
 				pCSPlayer->ChangeName( szNewName );		
 			}
@@ -15879,7 +15761,7 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
         if ( pCSPlayer->IsNetClient() )
         {
             const char *pShowHints = engine->GetClientConVarValue( ENTINDEX( pCSPlayer->edict() ), "cl_autohelp" );
-            if ( pShowHints && atoi( pShowHints ) <= 0 )
+            if ( pShowHints && std::atoi( pShowHints ) <= 0 )
             {
                 pCSPlayer->m_bShowHints = false;
             }
@@ -15890,7 +15772,7 @@ void CCSGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 		const char *pszFov = engine->GetClientConVarValue( pPlayer->entindex(), "fov_desired" );
 		if( pszFov )
 		{
-			int iFov = atoi( pszFov );
+			int iFov = std::atoi( pszFov );
 			iFov = clamp( iFov, MIN_FOV, MAX_FOV );
 			pCSPlayer->SetDefaultFOV( iFov );
 		}
@@ -15936,13 +15818,15 @@ bool CCSGameRules::IsLastRoundBeforeHalfTime( void )
     return false;
 }
 
-CON_COMMAND( map_showspawnpoints, "Shows player spawn points (red=invalid). Optionally pass in the duration." )
+static void map_showspawnpoints( const CCommand &args );
+static ConCommand map_showspawnpoints_command( "map_showspawnpoints", map_showspawnpoints, "Shows player spawn points (red=invalid). Optionally pass in the duration." );
+static void map_showspawnpoints( const CCommand &args )
 {
 	int duration = 600;
 
 	if ( args.ArgC() == 2 )
 	{
-		duration = Q_atoi( args[1] );
+		duration = V_atoi( args[1] );
 	}
 
 	CSGameRules()->ShowSpawnPoints( duration );
@@ -15992,7 +15876,9 @@ void DrawSphere( const Vector& pos, float radius, int r, int g, int b, float lif
     }
 }
 
-CON_COMMAND_F( map_showbombradius, "Shows bomb radius from the center of each bomb site and planted bomb.", FCVAR_CHEAT )
+static void map_showbombradius( const CCommand &args );
+static ConCommand map_showbombradius_command( "map_showbombradius", map_showbombradius, "Shows bomb radius from the center of each bomb site and planted bomb.", FCVAR_CHEAT );
+static void map_showbombradius( const CCommand &args )
 {
     float flBombDamage = 500.0f;
     if ( g_pMapInfo )
@@ -16015,7 +15901,9 @@ CON_COMMAND_F( map_showbombradius, "Shows bomb radius from the center of each bo
     }
 }
 
-CON_COMMAND_F( map_setbombradius, "Sets the bomb radius for the map.", FCVAR_CHEAT )
+static void map_setbombradius( const CCommand &args );
+static ConCommand map_setbombradius_command( "map_setbombradius", map_setbombradius, "Sets the bomb radius for the map.", FCVAR_CHEAT );
+static void map_setbombradius( const CCommand &args )
 {
     if ( args.ArgC() != 2 )
         return;
@@ -16029,7 +15917,7 @@ CON_COMMAND_F( map_setbombradius, "Sets the bomb radius for the map.", FCVAR_CHE
     if ( !g_pMapInfo )
         return;
 
-    g_pMapInfo->m_flBombRadius = atof( args[1] );
+    g_pMapInfo->m_flBombRadius = std::atof( args[1] );
     map_showbombradius( args );
 }
 
@@ -16266,7 +16154,7 @@ void CCSGameRules::AddTeamAccount( int team, TeamCashAward::Type reason, int amo
 			if ( szAwardText && szAwardText[0] != 0 )
 			{
 				awardReasonToken = "#Team_Cash_Award_Custom";
-				Q_snprintf( customAwardText, sizeof( customAwardText ), "%s", szAwardText );
+				V_snprintf( customAwardText, sizeof( customAwardText ), "%s", szAwardText );
 				bUsingCustom = true;
 			}
 			else
@@ -16288,7 +16176,7 @@ void CCSGameRules::AddTeamAccount( int team, TeamCashAward::Type reason, int amo
 	}
 
 	char strAmount[64];
-	Q_snprintf( strAmount, sizeof( strAmount ), "%s$%d", amount >= 0 ? "+" : "-", abs( amount ));
+	V_snprintf( strAmount, sizeof( strAmount ), "%s$%d", amount >= 0 ? "+" : "-", abs( amount ));
 
 	// Update all QMM records for the teams
 	bool bTeamsArePlayingSwitchedSides = AreTeamsPlayingSwitchedSides();
@@ -16576,7 +16464,7 @@ int CCSGameRules::GetWeaponScoreForDeathmatch( int nPos )
 			int nPrice = std::min( 4500, std::max(100, pWeaponInfo->GetWeaponPrice() - (pWeaponInfo->GetKillAward()/2)) );
 			float flScore1 = std::max( 0.05f, ((1 - ((float)nPrice/4500.0f)) * 10)/5);
 			float flScore2 = flScore1 + std::min( 2.0f, (((pWeaponInfo->GetCycleTime() / pWeaponInfo->GetDamage() ) *10 ) + ( ( 2.0f-pWeaponInfo->GetArmorRatio() ) /2 ) ) / 4 );
-			float flFinal = ceil(flScore2-0.5f);//ceil((flScore2/6) * 10 );
+			float flFinal = std::ceil(flScore2-0.5f);//ceil((flScore2/6) * 10 );
 			nScore = std::max<std::common_type_t<int, float>>( 0, flFinal ) + 10;
 		}
 	}
@@ -16719,7 +16607,7 @@ void CCSGameRules::CoopCollectBonusCoin( void )
 	filter.MakeReliable();
 	filter.AddRecipientsByTeam( GetGlobalTeam( TEAM_CT ) );
 	char szCoins[32];
-	Q_snprintf( szCoins, sizeof( szCoins ), "%d", ( int )m_coopBonusCoinsFound );
+	V_snprintf( szCoins, sizeof( szCoins ), "%d", ( int )m_coopBonusCoinsFound );
 	UTIL_ClientPrintFilter( filter, HUD_PRINTCENTER, "#SFUIHUD_InfoPanel_Coop_CollectCoin", szCoins );
 }
 
@@ -16851,7 +16739,7 @@ const wchar_t* CCSGameRules::GetFriendlyMapName( const char* szShortName )
     // Look up the nice version of the name.
     char szToken[MAX_MAP_NAME+10+1]; // includes prefix size
     szToken[0] = '\0';
-    V_snprintf( szToken, ARRAYSIZE( szToken ), "#SFUI_Map_%s", szShortName );
+    V_snprintf( szToken, std::size( szToken ), "#SFUI_Map_%s", szShortName );
     wchar_t* szTranslated = g_pLocalize->Find( szToken );
     if ( szTranslated )
         return szTranslated;
@@ -16891,7 +16779,7 @@ char const * CCSGameRules::GetTournamentEventName() const
 ,"ESL One Cologne 2016 CS:GO Championship"
 ,"ELEAGUE Atlanta 2017 CS:GO Championship"
 		};
-		for ( int k = Q_ARRAYSIZE( arrEvents ) - 1; k > 0; -- k )
+		for ( int k = std::size( arrEvents ) - 1; k > 0; -- k )
 		{
 			if ( !V_strcmp( sz, arrEvents[k] ) )
 			{
@@ -16937,7 +16825,7 @@ char const * CCSGameRules::GetTournamentEventStage() const
 ,"Group Stage | Second Stage (Lower Pool)"
 ,"Group Stage | Third Stage"
 		};
-		for ( int k = Q_ARRAYSIZE( arrEvents ) - 1; k > 0; --k )
+		for ( int k = std::size( arrEvents ) - 1; k > 0; --k )
 		{
 			if ( !V_strcmp( sz, arrEvents[ k ] ) )
 			{
@@ -17044,7 +16932,7 @@ float CCSGameRules::GetCMMItemDropRevealDuration()
 void CCSGameRules::CreateFriendlyMapNameToken( const char* szShortName, char* szOutBuffer, int nBuffSize )
 {
     // must be able to fit the token below
-    Assert( nBuffSize >= MAX_MAP_NAME+10+1 );
+    contract_assert( nBuffSize >= MAX_MAP_NAME+10+1 );
 
     // Create the nice version of the name.
     // right now we blindly create the token because we can assume (on consoles) that we don't have any maps
@@ -17054,7 +16942,7 @@ void CCSGameRules::CreateFriendlyMapNameToken( const char* szShortName, char* sz
 
 const char *CCSGameRules::GetDefaultTeamName( int nTeam )
 {
-	Assert( nTeam >= 0 && nTeam < ARRAYSIZE( sTeamNames ) );
+	contract_assert( nTeam >= 0 && nTeam < std::size( sTeamNames ) );
 
 	return sTeamNames[nTeam];
 }
@@ -17066,7 +16954,7 @@ void CCSGameRules::AddGunGameWeapon( const char* pWeaponName, int nNumKillsToUpg
         return;
     }
 
-    Assert( nNumKillsToUpgrade > 0 );
+    contract_assert( nNumKillsToUpgrade > 0 );
     if ( nNumKillsToUpgrade <= 0 )
     {
         Warning( "CCSGameRules: Invalid number of kills-to-upgrade (%d) for weapon %s.\n", nNumKillsToUpgrade, pWeaponName );
@@ -17703,7 +17591,7 @@ float CCSGameRules::CheckTotalSmokedLength( float flSmokeRadiusSq, Vector vecGre
 	Vector vecSmokeCenterOffset = Vector( 0, 0, 60 );
 	const Vector &smokeOrigin = vecGrenadePos + vecSmokeCenterOffset;
 
-	float flSmokeRadius = sqrt(flSmokeRadiusSq);
+	float flSmokeRadius = std::sqrt(flSmokeRadiusSq);
 	// if the start point or the end point is inside the radius of the smoke, then the line goes through the smoke
 	if ( (smokeOrigin - from).IsLengthLessThan( flSmokeRadius*0.95f ) || (smokeOrigin - to).IsLengthLessThan( flSmokeRadius ) )
 		return -1;
@@ -17755,22 +17643,16 @@ float CCSGameRules::CheckTotalSmokedLength( float flSmokeRadiusSq, Vector vecGre
             if ( !pPlayer || pPlayer->IsBot() || !pPlayer->IsConnected() )
                 continue;
 
-            CSteamID steamID;
-            pPlayer->GetSteamID( &steamID );
+            CPlayerId playerUID;
+            pPlayer->GetPlayerID( &playerUID );
 
-            if ( steamID.GetAccountID() == account_id )
+            if ( playerUID.GetAccountID() == account_id )
                 return pPlayer;
         }
         return nullptr;
     }
 #endif
 
-
-#ifdef GAME_DLL
-	void CCSGameRules::CheckForGiftsLeaderboardUpdate()
-	{
-	}
-#endif // GAME_DLL
 
 #ifndef CLIENT_DLL
 bool CCSGameRules::OnReplayPrompt( CBasePlayer *pVictim, CBasePlayer *pScorer )
@@ -17784,5 +17666,3 @@ bool CCSGameRules::OnReplayPrompt( CBasePlayer *pVictim, CBasePlayer *pScorer )
 	return CTeamplayRules::OnReplayPrompt( pVictim, pScorer ); // delegate to the base class
 }
 #endif
-
-

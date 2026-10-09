@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "cbase.h"
+import std;
+import ks.core;
 #include "cs_bot.h"
 
 //--------------------------------------------------------------------------------------------------------------
@@ -33,7 +29,7 @@ public:
 	CNonDamagingScan( void )
 	{
 		m_safeArea = nullptr;
-		m_safeAreaTravelRange = FLT_MAX;
+		m_safeAreaTravelRange = std::numeric_limits<float>::max();
 	}
 
 	virtual ~CNonDamagingScan() { }

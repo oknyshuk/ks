@@ -1,31 +1,34 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Implements the Sticky Bolt code. This constraints ragdolls to the world
 //			after being hit by a crossbow bolt. If something here is acting funny
 //			let me know - Adrian.
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "cdll_client_int.h"
 #include "c_basetempentity.h"
 #include "fx.h"
-#include "decals.h"
-#include "iefx.h"
 #include "engine/IEngineSound.h"
-#include "materialsystem/imaterialvar.h"
 #include "IEffects.h"
 #include "engine/IEngineTrace.h"
 #include "vphysics/constraints.h"
 #include "engine/ivmodelinfo.h"
 #include "tempent.h"
 #include "c_te_legacytempents.h"
-#include "engine/ivdebugoverlay.h"
 #include "c_te_effect_dispatch.h"
 
 extern IPhysicsSurfaceProps *physprops;
@@ -123,7 +126,7 @@ private:
 	Vector  m_vWorld;
 };
 
-#define CROSSBOW_BOLT_MODEL "models/crossbow_bolt.mdl" 
+inline constexpr const char *CROSSBOW_BOLT_MODEL = "models/crossbow_bolt.mdl";
 void CreateCrossbowBolt( const Vector &vecOrigin, const Vector &vecDirection )
 {
 	model_t *pModel = (model_t *)engine->LoadModel( CROSSBOW_BOLT_MODEL );

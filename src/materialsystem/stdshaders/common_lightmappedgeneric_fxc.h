@@ -1,5 +1,6 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 void GetBaseTextureAndNormal( sampler base, sampler base2, sampler bump, bool bBase2, bool bBump,
 							  float3 coords, float3 coords2, float2 bumpcoords, HALF3 vWeights,
@@ -138,4 +139,3 @@ struct VS_OUTPUT
 #if !SEAMLESS
 #define BLENDMODULATECOORD baseTexCoord_blendmodulateTexCoord.zw
 #endif
-

@@ -1,23 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // #include "BaseAnimating.h"
 
-#ifndef BASE_ANIMATING_OVERLAY_H
-#define BASE_ANIMATING_OVERLAY_H
-
 #include "reflect_annotations.h"
 #include "shareddefs.h"
-#include <vector>
+#include "baseanimating.h"
+import std;
 
-#define ORDER_BITS			4
+inline constexpr auto ORDER_BITS = 4;
 
-#define WEIGHT_BITS			8
+inline constexpr auto WEIGHT_BITS = 8;
 
 class CBaseAnimatingOverlay;
 class IBoneSetup;
@@ -149,62 +143,62 @@ inline float CAnimationLayer::GetFadeout( float flCurTime )
 	return s;
 }
 
-FORCEINLINE void CAnimationLayer::SetSequence( int nSequence )
+[[gnu::always_inline]] inline void CAnimationLayer::SetSequence( int nSequence )
 {
 	m_nSequence = nSequence;
 }
 
-FORCEINLINE void CAnimationLayer::SetCycle( float flCycle )
+[[gnu::always_inline]] inline void CAnimationLayer::SetCycle( float flCycle )
 {
 	m_flCycle = flCycle;
 }
 
-FORCEINLINE void CAnimationLayer::SetWeight( float flWeight )
+[[gnu::always_inline]] inline void CAnimationLayer::SetWeight( float flWeight )
 {
 	m_flWeight = flWeight;
 }
 
-FORCEINLINE void CAnimationLayer::SetWeightDeltaRate( float flDelta )
+[[gnu::always_inline]] inline void CAnimationLayer::SetWeightDeltaRate( float flDelta )
 {
 	m_flWeightDeltaRate = flDelta;
 }
 
-FORCEINLINE void CAnimationLayer::SetPrevCycle( float flPrevCycle )
+[[gnu::always_inline]] inline void CAnimationLayer::SetPrevCycle( float flPrevCycle )
 {
 	m_flPrevCycle = flPrevCycle;
 }
 
-FORCEINLINE void CAnimationLayer::SetPlaybackRate( float flPlaybackRate )
+[[gnu::always_inline]] inline void CAnimationLayer::SetPlaybackRate( float flPlaybackRate )
 {
 	m_flPlaybackRate = flPlaybackRate;
 }
 
-FORCEINLINE int	CAnimationLayer::GetSequence( ) const
+[[gnu::always_inline]] inline int	CAnimationLayer::GetSequence( ) const
 {
 	return m_nSequence;
 }
 
-FORCEINLINE float CAnimationLayer::GetCycle( ) const
+[[gnu::always_inline]] inline float CAnimationLayer::GetCycle( ) const
 {
 	return m_flCycle;
 }
 
-FORCEINLINE float CAnimationLayer::GetPrevCycle( ) const
+[[gnu::always_inline]] inline float CAnimationLayer::GetPrevCycle( ) const
 {
 	return m_flPrevCycle;
 }
 
-FORCEINLINE float CAnimationLayer::GetPlaybackRate( ) const
+[[gnu::always_inline]] inline float CAnimationLayer::GetPlaybackRate( ) const
 {
 	return m_flPlaybackRate;
 }
 
-FORCEINLINE float CAnimationLayer::GetWeight( ) const
+[[gnu::always_inline]] inline float CAnimationLayer::GetWeight( ) const
 {
 	return m_flWeight;
 }
 
-FORCEINLINE float CAnimationLayer::GetWeightDeltaRate( ) const
+[[gnu::always_inline]] inline float CAnimationLayer::GetWeightDeltaRate( ) const
 {
 	return m_flWeightDeltaRate;
 }
@@ -331,5 +325,3 @@ inline void CAnimationLayer::NetworkStateChanged( void *pVar )
 	if ( m_pOwnerEntity )
 		m_pOwnerEntity->NetworkStateChanged();
 }
-
-#endif // BASE_ANIMATING_OVERLAY_H

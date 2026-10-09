@@ -1,15 +1,27 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// main precompiled header for server files
 
-#include "server_pch.h"
+import std;
+import ks.tier1;
+
+#include "common.h"
+#include "quakedef.h"
+#include "decal.h"
+#include "cmodel_engine.h"
+#include "sv_log.h"
+#include "sound.h"
+#include "EngineSoundInternal.h"
+#include "checksum_engine.h"
+#include "host.h"
+#include "keys.h"
+#include "vengineserver_impl.h"
+#include "server.h"
+#include "eiface.h"
+#include "edict.h"
 #include "sv_precache.h"
 #include "host.h"
-#include "tier0/icommandline.h"
 #include "MapReslistGenerator.h"
 #include "DownloadListGenerator.h"
 #include "soundchars.h"
@@ -274,7 +286,7 @@ model_t *CGameServer::GetModel( int index )
 	}
 
 	char const *modelname = m_pModelPrecacheTable->GetString( index );
-	Assert( modelname );
+	contract_assert( modelname );
 
 	if ( host_showcachemiss.GetBool() )
 	{
@@ -594,9 +606,7 @@ void CGameServer::DumpPrecacheStats( INetworkStringTable *table )
 		
 		int testLength;
 		const CPrecacheUserData *p = ( const CPrecacheUserData * )table->GetStringUserData( i, &testLength );
-		ErrorIfNot( testLength == sizeof( *p ),
-			("CGameServer::DumpPrecacheStats: invalid CPrecacheUserData length (%d)", testLength)
-		);
+		if ( !( testLength == sizeof( *p ) ) ) Error("CGameServer::DumpPrecacheStats: invalid CPrecacheUserData length (%d)", testLength);
 
 		if ( !name || !slot || !p )
 			continue;
@@ -626,26 +636,28 @@ void CGameServer::DumpPrecacheStats( INetworkStringTable *table )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( sv_precacheinfo, "Show precache info." )
+static void sv_precacheinfo( const CCommand &args );
+static ConCommand sv_precacheinfo_command( "sv_precacheinfo", sv_precacheinfo, "Show precache info." );
+static void sv_precacheinfo( const CCommand &args )
 {
 	if ( args.ArgC() == 2 )
 	{
 		char const *table = args[ 1 ];
 
 		bool dumped = true;
-		if ( !Q_strcasecmp( table, "generic" ) )
+		if ( !V_strcasecmp( table, "generic" ) )
 		{
 			sv.DumpPrecacheStats( sv.GetGenericPrecacheTable() );
 		}
-		else if ( !Q_strcasecmp( table, "sound" ) )
+		else if ( !V_strcasecmp( table, "sound" ) )
 		{
 			sv.DumpPrecacheStats( sv.GetSoundPrecacheTable() );
 		}
-		else if ( !Q_strcasecmp( table, "decal" ) )
+		else if ( !V_strcasecmp( table, "decal" ) )
 		{
 			sv.DumpPrecacheStats( sv.GetDecalPrecacheTable() );
 		}
-		else if ( !Q_strcasecmp( table, "model" ) )
+		else if ( !V_strcasecmp( table, "model" ) )
 		{
 			sv.DumpPrecacheStats( sv.GetModelPrecacheTable() );
 		}

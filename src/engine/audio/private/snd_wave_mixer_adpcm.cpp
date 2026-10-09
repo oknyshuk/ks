@@ -1,14 +1,30 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "audio_pch.h"
+
+
+
+import ks.tier1;
+#include "sound.h"
+import std;
+#include "soundservice.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_mix_buf.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_common.h"
+#include "snd_dev_xaudio.h"
+#include "snd_wave_source.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+#include "snd_wave_mixer_adpcm.h"
+
+#include "audio/private/posix_stubs.h"
 
 // max size of ADPCM block in bytes
 #define MAX_BLOCK_SIZE	4096
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Mixer for ADPCM encoded audio
@@ -59,7 +75,7 @@ CAudioMixerWaveADPCM::CAudioMixerWaveADPCM( IWaveData *data ) : CAudioMixerWave(
 #ifdef _DEBUG
 	CAudioSource *pSource = nullptr;
 	pSource = &m_pData->Source();
-	Assert( dynamic_cast<CAudioSourceWave *>(pSource) != nullptr );
+	contract_assert( dynamic_cast<CAudioSourceWave *>(pSource) != nullptr );
 #endif
 
 	m_pFormat = (const ADPCMWAVEFORMAT *)source.GetHeader();
@@ -74,7 +90,7 @@ CAudioMixerWaveADPCM::CAudioMixerWaveADPCM( IWaveData *data ) : CAudioMixerWave(
 		m_blockSize = ((m_pFormat->wSamplesPerBlock - 2) * m_pFormat->wfx.nChannels ) / 2;
 		// size of channel header
 		m_blockSize += 7 * m_pFormat->wfx.nChannels;
-		Assert( m_blockSize < MAX_BLOCK_SIZE );
+		contract_assert( m_blockSize < MAX_BLOCK_SIZE );
 
 		m_totalBytes = source.DataSize();
 	}
@@ -352,7 +368,7 @@ bool CAudioMixerWaveADPCM::DecodeBlock( void )
 		int total = 0;
 		while ( available && total < blockSize )
 		{
-			memcpy( tmpBlock + total, pData, available );
+			std::memcpy( tmpBlock + total, pData, available );
 			total += available;
 			available = m_pData->ReadSourceData( (void **)(&pData), m_offset + total, blockSize - total, nullptr );
 		}

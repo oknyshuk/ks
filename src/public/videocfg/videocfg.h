@@ -1,16 +1,11 @@
-//===== Copyright (c) 2005-2008, Valve Corporation, All rights reserved. ======//
-//
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005-2008 Valve Corporation
 
-#ifndef VIDEOCFG_H
-#define VIDEOCFG_H
-
-
-#include "tier1/utlvector.h"
+import std;
+import ks.tier1;
 #include "shaderapi/IShaderDevice.h"
 
-class KeyValues;
 
 enum ConsoleSystemLevel_t
 {
@@ -106,5 +101,3 @@ bool UpdateVideoConfigConVars( KeyValues *pConfigKeys = nullptr );
 bool ReadCurrentVideoConfig( KeyValues *pConfigKeys, bool bDefault = false );
 bool UpdateCurrentVideoConfig( int nWidth, int nHeight, int nAspectRatioMode, bool bFullscreen, bool bNoWindowBorder, bool bUseRestartConvars = false );
 void UpdateSystemLevel( int nCPULevel, int nGPULevel, int nMemLevel, int nGPUMemLevel, bool bVGUIIsSplitscreen, const char *pModName );
-
-#endif // VIDEOCFG_H

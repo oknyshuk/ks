@@ -1,10 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
 #include "particles_attractor.h"
 
 //-----------------------------------------------------------------------------
@@ -47,7 +51,7 @@ void CParticleAttractor::UpdateVelocity( SimpleParticle *pParticle, float timeDe
 //-----------------------------------------------------------------------------
 float CParticleAttractor::UpdateScale( const SimpleParticle *pParticle )
 {
-	return ( ((float)pParticle->m_uchStartSize) * sin( M_PI * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
+	return ( ((float)pParticle->m_uchStartSize) * std::sin( std::numbers::pi * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -58,7 +62,7 @@ float CParticleAttractor::UpdateScale( const SimpleParticle *pParticle )
 //-----------------------------------------------------------------------------
 float CParticleAttractor::UpdateAlpha( const SimpleParticle *pParticle )
 {
-	return ( ((float)pParticle->m_uchStartAlpha/255.0f) * sin( M_PI * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
+	return ( ((float)pParticle->m_uchStartAlpha/255.0f) * std::sin( std::numbers::pi * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
 }
 
 //-----------------------------------------------------------------------------

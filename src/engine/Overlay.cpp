@@ -1,11 +1,23 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Model loading / unloading interface
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "render_pch.h"
+// Purpose: Model loading / unloading interface
+
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
 #include "Overlay.h"
 #include "bspfile.h"
 #include "modelloader.h"
@@ -13,12 +25,10 @@
 #include "materialsystem/ivballoctracker.h"
 #include "disp.h"
 #include "collisionutils.h"
-#include "tier0/vprof.h"
 #include "render.h"
 #include "r_decal.h"
-#include "fmtstr.h"
+import std;
 #include "chain_pool.h"
-#include "tier1/slot_pool.h"
 
 //-----------------------------------------------------------------------------
 // Externs
@@ -88,7 +98,7 @@ struct moverlayfragment_t
 };
 
 // this draws in the unlit pass
-#define FOVERLAY_DRAW_UNLIT		0x0001
+constexpr auto FOVERLAY_DRAW_UNLIT = 0x0001;
 
 struct moverlay_t
 {
@@ -450,7 +460,7 @@ void COverlayMgr::CleanupMaterial( unsigned short nSortOrder )
 	for ( int i = 0; i < MAX_MAT_SORT_GROUPS; ++i )
 	{
 		// Shouldn't be cleaning up while we've got a render list
-		Assert( renderQueue.m_Queue[i].m_nVertexCount == 0 );
+		contract_assert( renderQueue.m_Queue[i].m_nVertexCount == 0 );
 	}
 #endif
 
@@ -633,7 +643,7 @@ void COverlayMgr::AddFragmentListToRenderList( int nSortGroup, OverlayFragmentHa
 		pFragment->m_hNextRender = info.m_hFirstFragment;
 		info.m_hFirstFragment = i;
 
-		Assert( info.m_nVertexCount + nVertexCount < 65535 );
+		contract_assert( info.m_nVertexCount + nVertexCount < 65535 );
 		info.m_nVertexCount += nVertexCount;
 		info.m_nIndexCount += 3 * (nVertexCount - 2);
 	}
@@ -749,7 +759,6 @@ void COverlayMgr::DrawFadedFragments( IMatRenderContext *pRenderContext, int nSo
 		nCurrIndexCount += nIndexCount;
 
 		const overlayvert_t *pVert = &(pFragment->m_aPrimVerts[0]);
-		PREFETCH360(pVert,0);
 
 		int iVert;
 		if ( !pMesh )								// have we output any vertices yet? if first verts, init material and meshbuilder
@@ -773,10 +782,8 @@ void COverlayMgr::DrawFadedFragments( IMatRenderContext *pRenderContext, int nSo
 		{
 			float flOffset = pFragment->decalOffset;
 
-			PREFETCH360(pVert+1,0);
 			for ( iVert = 0; iVert < nVertCount; ++iVert, ++pVert )
 			{
-				PREFETCH360(pVert+2,0);
 				meshBuilder.Position3fv( pVert->pos.Base() );
 				meshBuilder.Normal3fv( pVert->normal.Base() );
 				meshBuilder.Color4Packed( pVert->packedColor );
@@ -788,10 +795,8 @@ void COverlayMgr::DrawFadedFragments( IMatRenderContext *pRenderContext, int nSo
 		}
 		else
 		{
-			PREFETCH360(pVert+1,0);
 			for ( iVert = 0; iVert < nVertCount; ++iVert, ++pVert )
 			{
-				PREFETCH360(pVert+2,0);
 				meshBuilder.Position3fv( pVert->pos.Base() );
 				meshBuilder.Normal3fv( pVert->normal.Base() );
 				meshBuilder.Color4Packed( pVert->packedColor );
@@ -849,7 +854,7 @@ void COverlayMgr::RenderOverlaysBatch( IMatRenderContext *pRenderContext, int nS
 			RenderQueueInfo_t &renderQueue = renderQueueHead.m_Queue[nSortGroup];
 			nNextRenderQueue = renderQueue.m_nNextRenderQueue;
 
-			Assert( renderQueue.m_nVertexCount > 0 );
+			contract_assert( renderQueue.m_nVertexCount > 0 );
 
 			// Run this list for each bind proxy
 			OverlayFragmentHandle_t hStartFragment = renderQueue.m_hFirstFragment;
@@ -993,7 +998,7 @@ void COverlayMgr::RenderOverlaysBatch( IMatRenderContext *pRenderContext, int nS
 void COverlayMgr::RenderOverlays( IMatRenderContext *pRenderContext, int nSortGroup )
 {
 #ifndef DEDICATED
-	VPROF_BUDGET( "COverlayMgr::RenderOverlays", VPROF_BUDGETGROUP_OVERLAYS );
+	CVProfScope _( "COverlayMgr::RenderOverlays", 0, VPROF_BUDGETGROUP_OVERLAYS, false, BUDGETFLAG_OTHER );
 
 	if ( r_renderoverlayfragment.GetInt() == 0 )
 	{
@@ -1028,7 +1033,7 @@ void COverlayMgr::RenderOverlays( IMatRenderContext *pRenderContext, int nSortGr
  			RenderQueueInfo_t &renderQueue = renderQueueHead.m_Queue[nSortGroup];
 			nNextRenderQueue = renderQueue.m_nNextRenderQueue;
 
-			Assert( renderQueue.m_nVertexCount > 0 );
+			contract_assert( renderQueue.m_nVertexCount > 0 );
 
 			int nMaxVertices = pRenderContext->GetMaxVerticesToRender( !bWireframeFragments ? renderQueueHead.m_pMaterial : g_materialWorldWireframe );
 
@@ -1094,7 +1099,6 @@ void COverlayMgr::RenderOverlays( IMatRenderContext *pRenderContext, int nSortGr
 					nCurrIndexCount += nIndexCount;
 
 					const overlayvert_t *pVert = &(pFragment->m_aPrimVerts[0]);
-					PREFETCH360(pVert,0);
 								 
 					int iVert;
 					if ( !pMesh )								// have we output any vertices yet? if first verts, init material and meshbuilder
@@ -1117,10 +1121,8 @@ void COverlayMgr::RenderOverlays( IMatRenderContext *pRenderContext, int nSortGr
 					{
 						float flOffset = pFragment->decalOffset;
 
-						PREFETCH360(pVert+1,0);
 						for ( iVert = 0; iVert < nVertCount; ++iVert, ++pVert )
 						{
-							PREFETCH360(pVert+2,0);
 							meshBuilder.Position3fv( pVert->pos.Base() );
 							meshBuilder.Normal3fv( pVert->normal.Base() );
 							meshBuilder.Color4Packed( pVert->packedColor );
@@ -1132,10 +1134,8 @@ void COverlayMgr::RenderOverlays( IMatRenderContext *pRenderContext, int nSortGr
 					}
 					else
 					{
-						PREFETCH360(pVert+1,0);
 						for ( iVert = 0; iVert < nVertCount; ++iVert, ++pVert )
 						{
-							PREFETCH360(pVert+2,0);
 							meshBuilder.Position3fv( pVert->pos.Base() );
 							meshBuilder.Normal3fv( pVert->normal.Base() );
 							meshBuilder.Color4Packed( pVert->packedColor );
@@ -1192,7 +1192,6 @@ void COverlayMgr::SetOverlayBindProxy( int iOverlayID, void *pBindProxy )
 bool COverlayMgr::Surf_PreClipFragment( moverlay_t *pOverlay, moverlayfragment_t &overlayFrag, 
 								        SurfaceHandle_t surfID, moverlayfragment_t &surfaceFrag )
 {
-	MEM_ALLOC_CREDIT();
 	// Convert the overlay uv points to overlay plane points.
 	overlayFrag.m_aPrimVerts.assign( 4, {} );
 	for( int iVert = 0; iVert < 4; ++iVert )
@@ -1297,7 +1296,6 @@ void COverlayMgr::Surf_PostClipFragment( moverlay_t *pOverlay, moverlayfragment_
 	pFragment->m_nMaterialSortID = GetMaterialSortID( pTexInfo->material, sortInfo.lightmapPageID );
 
 	// Add to list of fragments for this overlay
-	MEM_ALLOC_CREDIT();
 	m_OverlayFragments.push_front( pOverlay->m_hFirstFragment, m_OverlayFragments.alloc( hFragment ) );
 
 	// Add to list of fragments for this surface
@@ -1315,7 +1313,6 @@ void COverlayMgr::Surf_PostClipFragment( moverlay_t *pOverlay, moverlayfragment_
 void COverlayMgr::Surf_ClipFragment( moverlay_t *pOverlay, moverlayfragment_t &overlayFrag, 
 								     SurfaceHandle_t surfID, moverlayfragment_t &surfaceFrag )
 {
-	MEM_ALLOC_CREDIT();
 	// Create the clip planes.
 	std::vector< cplane_t > m_ClipPlanes;
 	BuildClipPlanes( surfID, surfaceFrag, pOverlay->m_vecBasis[2], m_ClipPlanes );
@@ -1352,7 +1349,7 @@ void COverlayMgr::Surf_ClipFragment( moverlay_t *pOverlay, moverlayfragment_t &o
 		for ( int iVert = 0; iVert < std::ssize( pClippedFrag->m_aPrimVerts ); ++iVert )
 		{
 			overlayFrag.m_aPrimVerts[iVert].pos = pClippedFrag->m_aPrimVerts[iVert].pos;
-			memcpy( overlayFrag.m_aPrimVerts[iVert].texCoord, pClippedFrag->m_aPrimVerts[iVert].texCoord, sizeof( overlayFrag.m_aPrimVerts[iVert].texCoord ) );
+			std::memcpy( overlayFrag.m_aPrimVerts[iVert].texCoord, pClippedFrag->m_aPrimVerts[iVert].texCoord, sizeof( overlayFrag.m_aPrimVerts[iVert].texCoord ) );
 		}
 	}
 
@@ -1456,7 +1453,7 @@ void COverlayMgr::CreateFragments( void )
 				flRadiusSq = std::max( flRadiusSq, flDistSq );
 			}
 		}
-		pOverlay->m_flRadius = sqrt( flRadiusSq );
+		pOverlay->m_flRadius = std::sqrt( flRadiusSq );
 	}
 
 	// Overlay checking!
@@ -1482,7 +1479,7 @@ void COverlayMgr::CreateFragments( void )
 
 			if ( !IsFinite( pFrag->decalOffset ) )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				DevMsg( 1, "Bad overlay decal offset - %d with material '%s'\n", iOverlay,
 					( pTexInfo && pTexInfo->material ) ? pTexInfo->material->GetName() : ""	);
 			}
@@ -1493,7 +1490,7 @@ void COverlayMgr::CreateFragments( void )
 				overlayvert_t *pVert = &pFrag->m_aPrimVerts[iVert];
 				if ( !pVert->pos.IsValid() )
 				{
-					Assert( 0 );
+					contract_assert( 0 );
 					DevMsg( 1, "Bad overlay vert - %d at (%f, %f, %f) with material '%s'\n", iOverlay,
 						pOverlay->m_vecOrigin.x, pOverlay->m_vecOrigin.y, pOverlay->m_vecOrigin.z,
 						( pTexInfo && pTexInfo->material ) ? pTexInfo->material->GetName() : ""	);
@@ -1501,7 +1498,7 @@ void COverlayMgr::CreateFragments( void )
 
 				if ( !pVert->normal.IsValid() )
 				{
-					Assert( 0 );
+					contract_assert( 0 );
 					DevMsg( 1, "Bad overlay normal - %d at (%f, %f, %f) with material '%s'\n", iOverlay,
 						pOverlay->m_vecOrigin.x, pOverlay->m_vecOrigin.y, pOverlay->m_vecOrigin.z,
 						( pTexInfo && pTexInfo->material ) ? pTexInfo->material->GetName() : ""	);
@@ -1509,7 +1506,7 @@ void COverlayMgr::CreateFragments( void )
 
 				if ( !pVert->texCoord[0].IsValid() || !pVert->texCoord[1].IsValid() )
 				{
-					Assert( 0 );
+					contract_assert( 0 );
 					DevMsg( 1, "Bad overlay texture coords - %d at (%f, %f, %f) with material '%s'\n", iOverlay,
 						pOverlay->m_vecOrigin.x, pOverlay->m_vecOrigin.y, pOverlay->m_vecOrigin.z,
 						( pTexInfo && pTexInfo->material ) ? pTexInfo->material->GetName() : ""	);
@@ -1551,7 +1548,7 @@ void COverlayMgr::BuildStaticBuffers()
 
 	for ( int iMesh = 0; iMesh < std::ssize( m_RenderMeshes ); ++iMesh )
 	{
-		Assert( m_RenderMeshes[iMesh].m_nVertCount > 0 );
+		contract_assert( m_RenderMeshes[iMesh].m_nVertCount > 0 );
 		if ( g_VBAllocTracker )
 			g_VBAllocTracker->TrackMeshAllocations( "OverlayMeshCreate" );
 		m_RenderMeshes[iMesh].m_pMesh = pRenderContext->CreateStaticMesh( m_RenderMeshes[iMesh].m_VertexFormat, TEXTURE_GROUP_STATIC_VERTEX_BUFFER_OTHER, m_RenderMeshes[iMesh].m_pMaterial );
@@ -1615,7 +1612,7 @@ void COverlayMgr::BuildStaticBuffers()
 		}
 
 		meshBuilder.End();
-		Assert(vertBufferIndex == m_RenderMeshes[iMesh].m_nVertCount);
+		contract_assert( vertBufferIndex == m_RenderMeshes[iMesh].m_nVertCount );
 		if ( g_VBAllocTracker )
 			g_VBAllocTracker->TrackMeshAllocations( nullptr );
 	}
@@ -1975,7 +1972,6 @@ void COverlayMgr::Disp_CreateFragments( moverlay_t *pOverlay, SurfaceHandle_t su
 bool COverlayMgr::Disp_PreClipFragment( moverlay_t *pOverlay, OverlayFragmentVector_t &aDispFragments, 
 								        SurfaceHandle_t surfID )
 {
-	MEM_ALLOC_CREDIT();
 
 	// The faces are not tesselated when they are displaced faces.
 	int iFirstVert = MSurf_FirstVertIndex( surfID );
@@ -2023,7 +2019,7 @@ bool COverlayMgr::Disp_PreClipFragment( moverlay_t *pOverlay, OverlayFragmentVec
 		if ( !vecTmpUV.IsValid() )
 		{
 			mtexinfo_t *pTexInfo = &host_state.worldbrush->texinfo[pOverlay->m_nTexInfo];
-			DevWarning( 1, "Bad overlay geometry at %s with material '%s'\n", VecToString(pOverlay->m_vecOrigin), 
+			DevWarning( 1, "Bad overlay geometry at %s with material '%s'\n", VecToString(pOverlay->m_vecOrigin).c_str(), 
 				( pTexInfo && pTexInfo->material ) ? pTexInfo->material->GetName() : ""	);
 			return false;
 		}
@@ -2124,7 +2120,6 @@ void COverlayMgr::Disp_PostClipFragment( CDispInfo *pDisp, CMeshReader *pReader,
 		pFragment->m_nMaterialSortID = GetMaterialSortID( pTexInfo->material, sortInfo.lightmapPageID );
 
 		// Add to list of fragments for this overlay
-		MEM_ALLOC_CREDIT();
 
 		m_OverlayFragments.push_front( pOverlay->m_hFirstFragment, m_OverlayFragments.alloc( hFragment ) );
 
@@ -2301,7 +2296,6 @@ void COverlayMgr::DoClipFragment( moverlayfragment_t *pFragment, cplane_t *pClip
 		return;
 	}
 
-	MEM_ALLOC_CREDIT();
 
 	int nVertCount = std::ssize( pFragment->m_aPrimVerts );
 	for ( iVert = 0; iVert < nVertCount; ++iVert )
@@ -2357,7 +2351,6 @@ void COverlayMgr::DoClipFragment( moverlayfragment_t *pFragment, cplane_t *pClip
 //-----------------------------------------------------------------------------
 OverlayFragmentHandle_t COverlayMgr::AddFragmentToFragmentList( int nSize )
 {
-	MEM_ALLOC_CREDIT();
 
 	// Add to list of fragments.
 	int iFragment = m_aFragments.alloc();
@@ -2384,7 +2377,6 @@ OverlayFragmentHandle_t COverlayMgr::AddFragmentToFragmentList( int nSize )
 //-----------------------------------------------------------------------------
 OverlayFragmentHandle_t COverlayMgr::AddFragmentToFragmentList( moverlayfragment_t *pSrc )
 {
-	MEM_ALLOC_CREDIT();
 
 	// Add to list of fragments.
 	int iFragment = m_aFragments.alloc();
@@ -2405,7 +2397,6 @@ OverlayFragmentHandle_t COverlayMgr::AddFragmentToFragmentList( moverlayfragment
 //-----------------------------------------------------------------------------
 moverlayfragment_t *COverlayMgr::CreateTempFragment( int nSize )
 {
-	MEM_ALLOC_CREDIT();
 	moverlayfragment_t *pDst =  new moverlayfragment_t;
 	if ( pDst )
 	{
@@ -2426,7 +2417,6 @@ moverlayfragment_t *COverlayMgr::CreateTempFragment( int nSize )
 //-----------------------------------------------------------------------------
 moverlayfragment_t *COverlayMgr::CopyTempFragment( moverlayfragment_t *pSrc )
 {
-	MEM_ALLOC_CREDIT();
 	moverlayfragment_t *pDst =  new moverlayfragment_t;
 	if ( pDst )
 	{
@@ -2518,7 +2508,7 @@ bool Overlay_IsBasisFlipped( int *pFlip, int iAxis, int iComponent )
 void Overlay_BuildBasis( const Vector &vecBasisNormal, Vector &vecBasisU, Vector &vecBasisV, bool bFlip )
 {
 	// Verify incoming data.
-	Assert( vecBasisNormal.IsValid() );
+	contract_assert( vecBasisNormal.IsValid() );
 	if ( !vecBasisNormal.IsValid() )	
 		return;
 

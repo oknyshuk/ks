@@ -1,24 +1,22 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: particle system code
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include "tier0/platform.h"
+// Purpose: particle system code
+
+import ks.tier1;
 #include "particles/particles.h"
 #include "filesystem.h"
 #include "tier2/tier2.h"
 #include "tier2/fileutils.h"
 #include "tier2/renderutils.h"
 #include "tier2/beamsegdraw.h"
-#include "tier1/strtools.h"
+import std;
 #include "materialsystem/imesh.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
 #include "bitmap/psheet.h"
 #include "particles_internal.h"
-#include "tier0/vprof.h"
 
 #ifdef USE_BLOBULATOR
 // TODO: These should be in public by the time the SDK ships
@@ -119,7 +117,7 @@ void SetupParticleVisibility( CParticleCollection *pParticles, CParticleVisibili
 
 		pRenderContext->GetMatrix( MATERIAL_PROJECTION, &projMatrix );
 		float flMatrixX = projMatrix.m_flMatVal[0][0];
-		float flNeutralMatrixX = 1.0f / tanf( 0.5f*pVisibilityInputs->m_flRadiusScaleFOVBase*DEGREES_TO_RADIANS );
+		float flNeutralMatrixX = 1.0f / std::tanf( 0.5f*pVisibilityInputs->m_flRadiusScaleFOVBase*DEGREES_TO_RADIANS );
 
 		pVisibilityData->m_flRadiusVisibility *= ( flNeutralMatrixX / flMatrixX );
 	}
@@ -129,8 +127,8 @@ void SetupParticleVisibility( CParticleCollection *pParticles, CParticleVisibili
 // Cull systems by control point attributes
 // Cull if dot( camera.Position - controlpoint.Position, controlpoint.forward ) < 0
 //-----------------------------------------------------------------------------
-#define CULL_CP_NORMAL_DESCRIPTOR "cull system when CP normal faces away from camera"
-#define CULL_RECURSION_DEPTH_DESCRIPTOR "cull system starting at this recursion depth"
+inline constexpr const char *CULL_CP_NORMAL_DESCRIPTOR = "cull system when CP normal faces away from camera";
+inline constexpr const char *CULL_RECURSION_DEPTH_DESCRIPTOR = "cull system starting at this recursion depth";
 	
 struct CullSystemByControlPointData_t
 {
@@ -211,7 +209,7 @@ class C_OP_RenderPoints : public CParticleRenderOperatorInstance
 		int		m_nQueryHandle;
 	};
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( C_OP_RenderPointsContext_t );
 	}
@@ -238,7 +236,7 @@ void C_OP_RenderPoints::Render( IMatRenderContext *pRenderContext, CParticleColl
 	const ParticleRenderData_t *pRenderList = 
 		pParticles->GetRenderList( pRenderContext, true, &nParticles, &pCtx->m_VisibilityData  );
 
-	size_t xyz_stride;
+	std::size_t xyz_stride;
 	const fltx4 *xyz = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_XYZ, &xyz_stride );
 
 	pRenderContext->Bind( pMaterial );
@@ -279,19 +277,19 @@ void C_OP_RenderPoints::Render( IMatRenderContext *pRenderContext, CParticleColl
 //-----------------------------------------------------------------------------
 struct SpriteRenderInfo_t
 {
-	size_t m_nXYZStride;
+	std::size_t m_nXYZStride;
 	const fltx4 *m_pXYZ;
-	size_t m_nRotStride;
+	std::size_t m_nRotStride;
 	const fltx4 *m_pRot;
-	size_t m_nYawStride;
+	std::size_t m_nYawStride;
 	const fltx4 *m_pYaw;
-	size_t m_nRGBStride;
+	std::size_t m_nRGBStride;
 	const fltx4 *m_pRGB;
-	size_t m_nCreationTimeStride;
+	std::size_t m_nCreationTimeStride;
 	const fltx4 *m_pCreationTimeStamp;
-	size_t m_nSequenceStride;
+	std::size_t m_nSequenceStride;
 	const fltx4 *m_pSequenceNumber;
-	size_t m_nSequence1Stride;
+	std::size_t m_nSequence1Stride;
 	const fltx4 *m_pSequence1Number;
 	float m_flAgeScale;
 	float m_flAgeScale2;
@@ -332,7 +330,7 @@ class C_OP_RenderSprites : public C_OP_RenderPoints
 		
 	};
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( C_OP_RenderSpritesContext_t );
 	}
@@ -480,7 +478,7 @@ void C_OP_RenderSprites::RenderNonSpriteCardCameraFacingOld( CParticleCollection
 	pRenderContext->PushMatrix();
 	pRenderContext->LoadIdentity();
 
-	size_t xyz_stride;
+	std::size_t xyz_stride;
 	const fltx4 *xyz = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_XYZ, &xyz_stride );
 
 	size_t rot_stride;
@@ -525,9 +523,9 @@ void C_OP_RenderSprites::RenderNonSpriteCardCameraFacingOld( CParticleCollection
 			float g = SubFloat( pRGB[nColorIndex+1], nOffset );
 			float b = SubFloat( pRGB[nColorIndex+2], nOffset );
 
-			Assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );
-			Assert( (r >= 0.0f) && (g >= 0.0f) && (b >= 0.0f) );
-			Assert( (r <= 1.0f) && (g <= 1.0f) && (b <= 1.0f) );
+			contract_assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );
+			contract_assert( (r >= 0.0f) && (g >= 0.0f) && (b >= 0.0f) );
+			contract_assert( (r <= 1.0f) && (g <= 1.0f) && (b <= 1.0f) );
 
 			unsigned char rc = FastFToC( r );
 			unsigned char gc = FastFToC( g );
@@ -714,7 +712,7 @@ void C_OP_RenderSprites::RenderNonSpriteCardCameraFacing( CParticleCollection *p
 
 void C_OP_RenderSprites::RenderNonSpriteCardZRotating( CMeshBuilder &meshBuilder, SpriteRenderInfo_t& info, int hParticle, const Vector& vecCameraPos, ParticleRenderData_t const *pSortList ) const
 {
-	Assert( hParticle != -1 );
+	contract_assert( hParticle != -1 );
 	int nGroup = hParticle / 4;
 	int nOffset = hParticle & 0x3;
 
@@ -728,9 +726,9 @@ void C_OP_RenderSprites::RenderNonSpriteCardZRotating( CMeshBuilder &meshBuilder
 	float g = SubFloat( info.m_pRGB[nColorIndex+1], nOffset );
 	float b = SubFloat( info.m_pRGB[nColorIndex+2], nOffset );
 
-	Assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );
-	Assert( (r >= 0.0f) && (g >= 0.0f) && (b >= 0.0f) );
-	Assert( (r <= 1.0f) && (g <= 1.0f) && (b <= 1.0f) );
+	contract_assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );
+	contract_assert( (r >= 0.0f) && (g >= 0.0f) && (b >= 0.0f) );
+	contract_assert( (r <= 1.0f) && (g <= 1.0f) && (b <= 1.0f) );
 
 	unsigned char rc = FastFToC( r );
 	unsigned char gc = FastFToC( g );
@@ -872,7 +870,7 @@ void C_OP_RenderSprites::RenderUnsortedNonSpriteCardZRotating( CParticleCollecti
 //-----------------------------------------------------------------------------
 void C_OP_RenderSprites::RenderNonSpriteCardOriented( CMeshBuilder &meshBuilder, SpriteRenderInfo_t& info, int hParticle, const Vector& vecCameraPos, ParticleRenderData_t const *pSortList ) const
 {
-	Assert( hParticle != -1 );
+	contract_assert( hParticle != -1 );
 	int nGroup = hParticle / 4;
 	int nOffset = hParticle & 0x3;
 
@@ -885,8 +883,8 @@ void C_OP_RenderSprites::RenderNonSpriteCardOriented( CMeshBuilder &meshBuilder,
 	float g = SubFloat( info.m_pRGB[nColorIndex+1], nOffset );
 	float b = SubFloat( info.m_pRGB[nColorIndex+2], nOffset );
 
-	Assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );	// infinite color = bad
-	Assert( (r >= 0.0f) && (g >= 0.0f) && (b >= 0.0f) );	// negative color = bad
+	contract_assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );	// infinite color = bad
+	contract_assert( (r >= 0.0f) && (g >= 0.0f) && (b >= 0.0f) );	// negative color = bad
 	//Assert( (r <= 1.0f) && (g <= 1.0f) && (b <= 1.0f) );
 
 	unsigned char rc = FastFToC( r );
@@ -1116,7 +1114,7 @@ template<bool bPerParticleOutline, bool bDoNormals, class T> void C_OP_RenderSpr
 
 void C_OP_RenderSprites::RenderSpriteCard( CMeshBuilder &meshBuilder, SpriteRenderInfo_t& info, int hParticle, ParticleRenderData_t const *pSortList ) const
 {
-	Assert( hParticle != -1 );
+	contract_assert( hParticle != -1 );
 	unsigned char ac = pSortList->m_nAlpha;
 	if (! ac )
 		return;
@@ -1128,9 +1126,9 @@ void C_OP_RenderSprites::RenderSpriteCard( CMeshBuilder &meshBuilder, SpriteRend
 	float g = SubFloat( info.m_pRGB[nColorIndex+1], nOffset );
 	float b = SubFloat( info.m_pRGB[nColorIndex+2], nOffset );
 
-	Assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );
-	Assert( (r >= 0.0f) && (g >= 0.0f) && (b >= 0.0f) );
-	Assert( (r <= 1.0f) && (g <= 1.0f) && (b <= 1.0f) );
+	contract_assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );
+	contract_assert( (r >= 0.0f) && (g >= 0.0f) && (b >= 0.0f) );
+	contract_assert( (r <= 1.0f) && (g <= 1.0f) && (b <= 1.0f) );
 
 	unsigned char rc = FastFToC( r );
 	unsigned char gc = FastFToC( g );
@@ -1637,13 +1635,13 @@ void C_OP_RenderSprites::RenderUnsorted( CParticleCollection *pParticles, void *
 
 struct SpriteTrailRenderInfo_t : public SpriteRenderInfo_t
 {
-	size_t m_nPrevXYZStride;
+	std::size_t m_nPrevXYZStride;
 	const fltx4 *m_pPrevXYZ;
-	size_t length_stride;
+	std::size_t length_stride;
 	const fltx4 *m_pLength;
 
 	const fltx4 *m_pCreationTime;
-	size_t m_nCreationTimeStride;
+	std::size_t m_nCreationTimeStride;
 
 
 	void Init( CParticleCollection *pParticles, int nVertexOffset, float flAgeScale, CSheet *pSheet )
@@ -1681,7 +1679,7 @@ class C_OP_RenderSpritesTrail : public CParticleRenderOperatorInstance
 		return nMask;
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( C_OP_RenderSpriteTrailContext_t );
 	}
@@ -1723,7 +1721,7 @@ class C_OP_RenderSpritesTrail : public CParticleRenderOperatorInstance
 
 	template <bool bFastPath>
 	bool RenderSpriteTrailSpriteCard( CMeshBuilder &meshBuilder, int nCurrentVertex, // Slow method params
-							FastSpriteTrailVertex_t *RESTRICT pVertices, uint32 *RESTRICT pIndices, int nIndexOffset,	// Fast method params
+							FastSpriteTrailVertex_t *__restrict__ pVertices, uint32 *__restrict__ pIndices, int nIndexOffset,	// Fast method params
 							SpriteTrailRenderInfo_t& info, int hParticle, 
 							float flOODt, ParticleRenderData_t const *pSortlist ) const;
 
@@ -1770,7 +1768,7 @@ int C_OP_RenderSpritesTrail::GetParticlesToRender( CParticleCollection *pParticl
 template <bool bFastPath>
 bool C_OP_RenderSpritesTrail::RenderSpriteTrailSpriteCard( CMeshBuilder &meshBuilder, int nCurrentVertex, // Slow method params
 
-														   FastSpriteTrailVertex_t *RESTRICT pVertices, uint32 *RESTRICT pIndices, int nIndexOffset,	// Fast method params
+														   FastSpriteTrailVertex_t *__restrict__ pVertices, uint32 *__restrict__ pIndices, int nIndexOffset,	// Fast method params
 
 														   // Common params
 														   SpriteTrailRenderInfo_t& info, int hParticle,
@@ -1780,7 +1778,7 @@ bool C_OP_RenderSpritesTrail::RenderSpriteTrailSpriteCard( CMeshBuilder &meshBui
 	unsigned char ac = pSortList->m_nAlpha;
 	if ( ac == 0 )
 		return false;
-	Assert( hParticle != -1 );
+	contract_assert( hParticle != -1 );
 	int nGroup = hParticle / 4;
 	int nOffset = hParticle & 0x3;
 
@@ -1795,9 +1793,9 @@ bool C_OP_RenderSpritesTrail::RenderSpriteTrailSpriteCard( CMeshBuilder &meshBui
 	float g = SubFloat( info.m_pRGB[nColorIndex+1], nOffset );
 	float b = SubFloat( info.m_pRGB[nColorIndex+2], nOffset );
 	
-	Assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );
-	Assert( (r >= -FLT_EPSILON) && (g >= -FLT_EPSILON) && (b >= -FLT_EPSILON) );
-	Assert( (r <= 1.0f + FLT_EPSILON) && (g <= 1.0f + FLT_EPSILON) && (b <= 1.0f + FLT_EPSILON) );
+	contract_assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );
+	contract_assert( (r >= -std::numeric_limits<float>::epsilon()) && (g >= -std::numeric_limits<float>::epsilon()) && (b >= -std::numeric_limits<float>::epsilon()) );
+	contract_assert( (r <= 1.0f + std::numeric_limits<float>::epsilon()) && (g <= 1.0f + std::numeric_limits<float>::epsilon()) && (b <= 1.0f + std::numeric_limits<float>::epsilon()) );
 		
 	rc = FastFToC( r );
 	gc = FastFToC( g );
@@ -1970,7 +1968,7 @@ bool C_OP_RenderSpritesTrail::RenderSpriteTrail( CMeshBuilder &meshBuilder,
 												 SpriteTrailRenderInfo_t& info, int hParticle,
 												 const Vector &vecCameraPos, float flOODt, ParticleRenderData_t const *pSortList ) const
 {
-	Assert( hParticle != -1 );
+	contract_assert( hParticle != -1 );
 	// Setup our alpha
 	unsigned char ac = pSortList->m_nAlpha;
 	if ( ac == 0 )
@@ -1985,9 +1983,9 @@ bool C_OP_RenderSpritesTrail::RenderSpriteTrail( CMeshBuilder &meshBuilder,
 	float g = SubFloat( info.m_pRGB[nColorIndex+1], nOffset );
 	float b = SubFloat( info.m_pRGB[nColorIndex+2], nOffset );
 
-	Assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );
-	Assert( (r >= 0.0f) && (g >= 0.0f) && (b >= 0.0f) );
-	Assert( (r <= 1.0f) && (g <= 1.0f) && (b <= 1.0f) );
+	contract_assert( IsFinite(r) && IsFinite(g) && IsFinite(b) );
+	contract_assert( (r >= 0.0f) && (g >= 0.0f) && (b >= 0.0f) );
+	contract_assert( (r <= 1.0f) && (g <= 1.0f) && (b <= 1.0f) );
 
 	unsigned char rc = FastFToC( r );
 	unsigned char gc = FastFToC( g );
@@ -2030,7 +2028,7 @@ bool C_OP_RenderSpritesTrail::RenderSpriteTrail( CMeshBuilder &meshBuilder,
 	vecDelta.x = vecPrevViewPos.x - vecViewPos.x;
 	vecDelta.y = vecPrevViewPos.y - vecViewPos.y;
 	vecDelta.z = vecPrevViewPos.z - vecViewPos.z;
-	float flMag = sqrtf( vecDelta.x * vecDelta.x + vecDelta.y * vecDelta.y + vecDelta.z * vecDelta.z );
+	float flMag = std::sqrtf( vecDelta.x * vecDelta.x + vecDelta.y * vecDelta.y + vecDelta.z * vecDelta.z );
 	float flInvMag = 1.0f / flMag;
 	vecDelta.x *= flInvMag;
 	vecDelta.y *= flInvMag;
@@ -2066,7 +2064,7 @@ bool C_OP_RenderSpritesTrail::RenderSpriteTrail( CMeshBuilder &meshBuilder,
 	VectorMA( vecWorldPos, -rad*0.5f, vTangentY, verts[1] );
 	VectorAdd( verts[0], vecDelta, verts[3] );
 	VectorAdd( verts[1], vecDelta, verts[2] );
-	Assert( verts[0].IsValid() && verts[1].IsValid() && verts[2].IsValid() && verts[3].IsValid() );
+	contract_assert( verts[0].IsValid() && verts[1].IsValid() && verts[2].IsValid() && verts[3].IsValid() );
 
 	meshBuilder.Position3fv( nCurrentVertex, verts[0].Base() );
 	meshBuilder.Color4ub( nCurrentVertex, rc, gc, bc, ac );
@@ -2181,7 +2179,7 @@ void C_OP_RenderSpritesTrail::Render( IMatRenderContext *pRenderContext, CPartic
 					pSortList -= nSkipAheadParticles;
 
 					// We have a different number of particles from when we cached in the beginning of the frame!
-					Assert( nNewParticles == nParticles );
+					contract_assert( nNewParticles == nParticles );
 
 					bFirstBatchBatched = false;
 				}
@@ -2319,15 +2317,15 @@ void C_OP_RenderSpritesTrail::RenderUnsorted( CParticleCollection *pParticles, v
 //-----------------------------------------------------------------------------
 struct RopeRenderInfo_t
 {
-	size_t m_nXYZStride;
+	std::size_t m_nXYZStride;
 	const fltx4 *m_pXYZ;
-	size_t m_nRadStride;
+	std::size_t m_nRadStride;
 	const fltx4 *m_pRadius;
-	size_t m_nRGBStride;
+	std::size_t m_nRGBStride;
 	const fltx4 *m_pRGB;
-	size_t m_nAlphaStride;
+	std::size_t m_nAlphaStride;
 	const fltx4 *m_pAlpha;
-	size_t m_nAlpha2Stride;
+	std::size_t m_nAlpha2Stride;
 	const fltx4 *m_pAlpha2;
 	CParticleCollection *m_pParticles;
 
@@ -2343,7 +2341,7 @@ struct RopeRenderInfo_t
 
 	void GenerateSeg( int hParticle, BeamSeg_t& seg )
 	{
-		Assert( hParticle != -1 );
+		contract_assert( hParticle != -1 );
 		int nGroup = hParticle / 4;
 		int nOffset = hParticle & 0x3;
 
@@ -2397,7 +2395,7 @@ class C_OP_RenderRope : public CParticleOperatorInstance
 		const_cast<C_OP_RenderRope*>( this )->m_flTextureScale = flTscale; // this is a little bogus but safe
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( RenderRopeContext_t ) + m_nSubdivCount * sizeof(float);
 	}
@@ -2508,7 +2506,7 @@ int C_OP_RenderRope::GetParticlesToRender( CParticleCollection *pParticles,
 	if ( nMaxParticleCount == nParticleCount - 1 )
 	{
 		--nMaxParticleCount;
-		Assert( nMaxParticleCount > 0 );
+		contract_assert( nMaxParticleCount > 0 );
 	}
 
 	if ( nParticleCount > nMaxParticleCount )
@@ -2532,7 +2530,7 @@ struct FastRopeVertex_t
 	Vector4D m_vCorners;
 	Vector4D m_vEndPointColor;
 	
-	FORCEINLINE void SetNormals( Vector &vecNorm0, Vector &vecNorm1 )
+	[[gnu::always_inline]] inline void SetNormals( Vector &vecNorm0, Vector &vecNorm1 )
 	{
 		// Intentionally do nothing, no normals on a FastRopeVertex_t
 	}
@@ -2551,7 +2549,7 @@ struct FastRopeVertexNormal_t
 	Vector m_vNormal0;
 	Vector m_vNormal1;
 	
-	FORCEINLINE void SetNormals( Vector &vecNorm0, Vector &vecNorm1 )
+	[[gnu::always_inline]] inline void SetNormals( Vector &vecNorm0, Vector &vecNorm1 )
 	{
 		m_vNormal0 = vecNorm0;
 		m_vNormal1 = vecNorm1;
@@ -2563,11 +2561,11 @@ struct FastRopeVertexNormalCacheAligned_t : public FastRopeVertexNormal_t
 	int m_nPadding[ 2 ];
 	
 	// On the PC, vertex structures need to be sized in multiples of 16 bytes
-	FORCEINLINE void Check() { COMPILE_TIME_ASSERT( ( sizeof( *this ) % 16 ) == 0 ); }
+	[[gnu::always_inline]] inline void Check() { static_assert( ( sizeof( *this ) % 16 ) == 0 ); }
 };
 
 template < class T >
-FORCEINLINE void Output2SplineVerts( T *&pVertices, int &nVertices, int nPackedColor, float flT, float flU, Vector4D &vecP0, Vector4D &vecP1, Vector4D &vecP2, Vector4D &vecP3, Vector4D &vecEndPointColor, Vector &vecNorm0, Vector &vecNorm1 )
+[[gnu::always_inline]] inline void Output2SplineVerts( T *&pVertices, int &nVertices, int nPackedColor, float flT, float flU, Vector4D &vecP0, Vector4D &vecP1, Vector4D &vecP2, Vector4D &vecP3, Vector4D &vecEndPointColor, Vector &vecNorm0, Vector &vecNorm1 )
 {
 	pVertices->m_vPosition.Init( flT, flU, 0 );
 	pVertices->m_vColor = nPackedColor;	
@@ -2633,7 +2631,7 @@ void C_OP_RenderRope::RenderSpriteCard_Internal( T *pVertices, CCachedParticleBa
 
 		if ( m_bScaleByControlPointDistance )
 		{
-			flTextureScale = 1.0f / ( ( flDist * m_flTexelSizeInUnits ) + FLT_EPSILON );
+			flTextureScale = 1.0f / ( ( flDist * m_flTexelSizeInUnits ) + std::numeric_limits<float>::epsilon() );
 		}
 		if ( m_bScaleScrollByControlPointDistance )
 		{
@@ -2902,7 +2900,7 @@ void C_OP_RenderRope::RenderSpriteCard( CParticleCollection *pParticles, const V
 			}
 			else
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 			}
 		}
 	}
@@ -2962,7 +2960,7 @@ void C_OP_RenderRope::RenderUnsorted( CParticleCollection *pParticles, void *pCo
 	IMaterial *pMaterial = pParticles->m_pDef->GetMaterial();
 
 	// Right now we only have a meshbuilder version!
-	Assert( pMaterial->IsSpriteCard() == false );
+	contract_assert( pMaterial->IsSpriteCard() == false );
 	if ( pMaterial->IsSpriteCard() )
 		return;
 
@@ -2989,7 +2987,7 @@ void C_OP_RenderRope::RenderUnsorted( CParticleCollection *pParticles, void *pCo
 
 		if ( m_bScaleByControlPointDistance )		// scale by distance to first control point?
 		{
-			flTextureScale = 1.0f / ( ( flDist * m_flTexelSizeInUnits ) + FLT_EPSILON );
+			flTextureScale = 1.0f / ( ( flDist * m_flTexelSizeInUnits ) + std::numeric_limits<float>::epsilon() );
 		}
 		if ( m_bScaleScrollByControlPointDistance )
 		{
@@ -3226,7 +3224,7 @@ class C_OP_RenderScreenVelocityRotate : public CParticleRenderOperatorInstance
 		int		m_nQueryHandle;
 	};
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( C_OP_RenderScreenVelocityRotateContext_t );
 	}
@@ -3286,7 +3284,7 @@ void C_OP_RenderScreenVelocityRotate::Render( IMatRenderContext *pRenderContext,
 	int nParticles;
 	const ParticleRenderData_t *pSortList = pParticles->GetRenderList( pRenderContext, false, &nParticles, &pCtx->m_VisibilityData );
 
-	size_t xyz_stride;
+	std::size_t xyz_stride;
 	const fltx4 *xyz = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_XYZ, &xyz_stride );
 
 	size_t prev_xyz_stride;
@@ -3296,7 +3294,7 @@ void C_OP_RenderScreenVelocityRotate::Render( IMatRenderContext *pRenderContext,
 	// const fltx4 *pRot = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_ROTATION, &rot_stride );
 	fltx4 *pRot = pParticles->GetM128AttributePtrForWrite( PARTICLE_ATTRIBUTE_ROTATION, &rot_stride );
 
-	float flForwardRadians = m_flForwardDegrees * ( M_PI / 180.0f );
+	float flForwardRadians = m_flForwardDegrees * ( std::numbers::pi / 180.0f );
 	//float flRotateRateRadians = m_flRotateRateDegrees * ( M_PI / 180.0f );
 
 	for( int i = 0; i < nParticles; i++ )
@@ -3318,7 +3316,7 @@ void C_OP_RenderScreenVelocityRotate::Render( IMatRenderContext *pRenderContext,
 		Vector vecPrevViewPos;
 		Vector3DMultiplyPosition( tempView, vecPrevWorldPos, vecPrevViewPos );
 
-		float rot = atan2( vecViewPos.y - vecPrevViewPos.y, vecViewPos.x - vecPrevViewPos.x ) + flForwardRadians;
+		float rot = std::atan2( vecViewPos.y - vecPrevViewPos.y, vecViewPos.x - vecPrevViewPos.x ) + flForwardRadians;
 		SubFloat( pRot[ nGroup * rot_stride ], nOffset ) = rot;
 	}
 }
@@ -3327,7 +3325,7 @@ void C_OP_RenderScreenVelocityRotate::Render( IMatRenderContext *pRenderContext,
 
 
 
-#define MAX_MODEL_CHOICES	1
+constexpr auto MAX_MODEL_CHOICES = 1;
 
 
 class C_OP_RenderModels : public CParticleRenderOperatorInstance
@@ -3382,7 +3380,7 @@ END_PARTICLE_OPERATOR_UNPACK( C_OP_RenderModels )
 void C_OP_RenderModels::Precache( void )
 {
 	// this is the the render operator sequences above, as each one has to be hard coded
-	Assert( MAX_MODEL_CHOICES == 1 );	
+	contract_assert( MAX_MODEL_CHOICES == 1 );	
 
 	for( int i = 0; i < MAX_MODEL_CHOICES ; i++ )
 	{
@@ -3421,7 +3419,7 @@ void C_OP_RenderModels::Render( IMatRenderContext *pRenderContext, CParticleColl
 		pParticles->GetRenderList( pRenderContext, false, &nNumParticles, &visibilityData );
 
 	g_pParticleSystemMgr->Query()->BeginDrawModels( nNumParticles, pParticles->m_Center, pParticles );
-	size_t xyz_stride;
+	std::size_t xyz_stride;
 	const fltx4 *xyz = pParticles->GetM128AttributePtr( PARTICLE_ATTRIBUTE_XYZ, &xyz_stride );
 
 	size_t seq_stride;
@@ -3477,14 +3475,14 @@ void C_OP_RenderModels::Render( IMatRenderContext *pRenderContext, CParticleColl
 		vecFwd.NormalizeInPlace();
 		AVectorPerpendicularToVector( vecFwd, &vecRight );
 		float flDot = fabs( DotProduct( vecFwd, vecRight ) );
-		Assert( flDot < 0.1f );
+		contract_assert( flDot < 0.1f );
 		if ( flDot >= 0.1f )
 		{
 			AVectorPerpendicularToVector( vecFwd, &vecRight );
 		}
 		vecUp = CrossProduct( vecFwd, vecRight );
-		Assert( fabs( DotProduct( vecFwd, vecUp ) ) < 0.1f );
-		Assert( fabs( DotProduct( vecRight, vecUp ) ) < 0.1f );
+		contract_assert( fabs( DotProduct( vecFwd, vecUp ) ) < 0.1f );
+		contract_assert( fabs( DotProduct( vecRight, vecUp ) ) < 0.1f );
 
 		int nColorIndex = nGroup * rgb_stride;
 		float r = SubFloat( pRGB[ nColorIndex ], nOffset );
@@ -3555,7 +3553,7 @@ class C_OP_RenderProjected : public CParticleRenderOperatorInstance
 		*pCtx = nullptr;
 	}
 
-	size_t GetRequiredContextBytes( void ) const
+	std::size_t GetRequiredContextBytes( void ) const
 	{
 		return sizeof( void * );
 	}
@@ -3698,7 +3696,3 @@ void AddBuiltInParticleRenderers( void )
 #endif // blobs
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_RENDERER, C_OP_RenderProjected );
 }
-
-
-
-

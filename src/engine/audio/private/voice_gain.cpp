@@ -1,13 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
 
 
-#include "audio_pch.h"
-#include "basetypes.h"
+
+import ks.tier1;
+
+
+#include "audio/private/posix_stubs.h"
 #include "voice_gain.h"
 
 CAutoGain::CAutoGain()

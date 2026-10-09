@@ -1,17 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CL_DEMOACTION_H
-#define CL_DEMOACTION_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Forward declarations
-#include <keyvalues.h>
+import std;
+import ks.tier1;
 
-#include "tier1/text_writer.h"
 class CBaseDemoAction;
 class CBaseActionEditDialog;
 class CDemoEditorPanel;
@@ -81,7 +75,7 @@ struct DemoActionTimingContext
 typedef CBaseDemoAction * (*DEMOACTIONFACTORY_FUNC)( void );
 typedef CBaseActionEditDialog *(*DEMOACTIONEDIT_FUNC)( CDemoEditorPanel *parent, CBaseDemoAction *action, bool newaction );
 
-abstract_class CBaseDemoAction
+class CBaseDemoAction
 {
 public:
 
@@ -131,7 +125,7 @@ public:
 
 public:
 
-	static void				*operator new( size_t sz );
+	static void				*operator new( std::size_t sz );
 	static void				operator delete( void *pMem );
 
 	static char const		*NameForType( DEMOACTION actionType );
@@ -212,5 +206,3 @@ public:													\
 	}													\
 };														\
 static CFactoryEditor##classname g_FactoryEditor##classname;
-
-#endif // CL_DEMOACTION_H

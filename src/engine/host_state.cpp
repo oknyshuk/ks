@@ -1,11 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Runs the state machine for the host & server
-//
-// $NoKeywords: $
-//=============================================================================//
 
 
+
+import ks.core;
 #include "host_state.h"
 #include "eiface.h"
 #include "quakedef.h"
@@ -19,21 +19,16 @@
 #include "client.h"
 #include "host_jmp.h"
 #include "cdll_engine_int.h"
-#include "tier0/vprof.h"
-#include "tier0/icommandline.h"
+import std;
 #include "filesystem_engine.h"
-#include "zone.h"
 #include "iengine.h"
 #include "snd_audio_source.h"
-#include "sv_steamauth.h"
 #ifndef DEDICATED
 #include "engineui.h"
 #endif
 #include "sv_plugin.h"
 #include "cl_main.h"
-#include "sv_steamauth.h"
 #include "datacache/imdlcache.h"
-#include "sys_dll.h"
 #include "testscriptmgr.h"
 #include "cvar.h"
 #include "MapReslistGenerator.h"
@@ -102,7 +97,6 @@ public:
 	bool		m_bLetToolsOverrideLoadGameEnts;	// During a load game, this tells Foundry to override ents that are selected in Hammer.
 	bool		m_bSplitScreenConnect;
 	bool		m_bGameHasShutDownAndFlushedMemory;	// This is false once we load a map into memory, and set to true once the map is unloaded and all memory flushed
-	bool		m_bWorkshopMapDownloadPending;
 };
 
 static bool Host_ValidGame( void );
@@ -133,10 +127,10 @@ void HostState_RunGameInit()
 //-----------------------------------------------------------------------------
 void HostState_NewGame( char const *pMapName, bool remember_location, bool background, bool bSplitScreenConnect )
 {
-	char szMapName[_MAX_PATH];
-	Q_StripExtension( pMapName, szMapName, sizeof(szMapName) );
-	Q_strncpy( g_HostState.m_levelName, szMapName, sizeof( g_HostState.m_levelName ) );
-	Q_FixSlashes( g_HostState.m_levelName, '/' ); // Store with forward slashes internally to be consistent. 
+	char szMapName[k_cMaxPath];
+	V_StripExtension( pMapName, szMapName, sizeof(szMapName) );
+	V_strncpy( g_HostState.m_levelName, szMapName, sizeof( g_HostState.m_levelName ) );
+	V_FixSlashes( g_HostState.m_levelName, '/' ); // Store with forward slashes internally to be consistent. 
 
 	g_HostState.m_landmarkName[0] = 0;
 	g_HostState.m_bRememberLocation = remember_location;
@@ -160,32 +154,19 @@ void HostState_LoadGame( char const *pSaveFileName, bool remember_location, bool
 // change level (single player style - smooth transition)
 void HostState_ChangeLevelSP( char const *pNewLevel, char const *pLandmarkName )
 {
-	Q_strncpy( g_HostState.m_levelName, pNewLevel, sizeof( g_HostState.m_levelName ) );
-	Q_FixSlashes( g_HostState.m_levelName, '/' ); // Store with forward slashes internally to be consistent. 
-	Q_strncpy( g_HostState.m_landmarkName, pLandmarkName, sizeof( g_HostState.m_landmarkName ) );
+	V_strncpy( g_HostState.m_levelName, pNewLevel, sizeof( g_HostState.m_levelName ) );
+	V_FixSlashes( g_HostState.m_levelName, '/' ); // Store with forward slashes internally to be consistent. 
+	V_strncpy( g_HostState.m_landmarkName, pLandmarkName, sizeof( g_HostState.m_landmarkName ) );
 	g_HostState.SetNextState( HS_CHANGE_LEVEL_SP );
 }
 
 // change level (multiplayer style - respawn all connected clients)
 void HostState_ChangeLevelMP( char const *pNewLevel, char const *pLandmarkName )
 {
-	Steam3Server().NotifyOfLevelChange();
-
-	Q_strncpy( g_HostState.m_levelName, pNewLevel, sizeof( g_HostState.m_levelName ) );
-	Q_FixSlashes( g_HostState.m_levelName, '/' ); // Store with forward slashes internally to be consistent. 
-	Q_strncpy( g_HostState.m_landmarkName, pLandmarkName, sizeof( g_HostState.m_landmarkName ) );
-
-	PublishedFileId_t id = serverGameDLL->GetUGCMapFileID( pNewLevel );
-	if ( sv.IsDedicated() && id != 0 )
-	{
-		// If we're hosting a workshop map, don't change level until we've made sure we're hosting the latest version.
-		serverGameDLL->UpdateUGCMap( id );
-		g_HostState.m_bWorkshopMapDownloadPending = true;
-	}	
-	else
-	{
-		g_HostState.SetNextState( HS_CHANGE_LEVEL_MP );
-	}
+	V_strncpy( g_HostState.m_levelName, pNewLevel, sizeof( g_HostState.m_levelName ) );
+	V_FixSlashes( g_HostState.m_levelName, '/' ); // Store with forward slashes internally to be consistent. 
+	V_strncpy( g_HostState.m_landmarkName, pLandmarkName, sizeof( g_HostState.m_landmarkName ) );
+	g_HostState.SetNextState( HS_CHANGE_LEVEL_MP );
 }
 
 // set the mapgroup name
@@ -201,8 +182,6 @@ void HostState_SetMapGroupName( char const *pMapGroupName )
 // shutdown the game as soon as possible
 void HostState_GameShutdown()
 {
-	Steam3Server().NotifyOfLevelChange();
-
 	// This will get called during shutdown, ignore it.
 	if ( g_HostState.m_currentState != HS_SHUTDOWN &&
 		 g_HostState.m_currentState != HS_RESTART &&
@@ -329,7 +308,6 @@ void CHostState::Init()
 	m_bWaitingForConnection = false;
 	m_flShortFrameTime = 1.0;
 	m_bGameHasShutDownAndFlushedMemory = true;
-	m_bWorkshopMapDownloadPending = false;
 }
 
 void CHostState::SetState( HOSTSTATES newState, bool clearNext )
@@ -343,14 +321,14 @@ void CHostState::SetState( HOSTSTATES newState, bool clearNext )
 
 void CHostState::SetNextState( HOSTSTATES next )
 {
-	Assert( m_currentState == HS_RUN );
+	contract_assert( m_currentState == HS_RUN );
 	m_nextState = next;
 }
 
 void CHostState::RunGameInit()
 {
 	materials->OnDebugEvent( "CHostState::RunGameInit" );
-	Assert( !m_activeGame );
+	contract_assert( !m_activeGame );
 
 	if ( serverGameDLL )
 	{
@@ -430,8 +408,6 @@ void CHostState::State_ChangeLevelMP()
 	materials->OnDebugEvent( "CHostState::State_ChangeLevelMP" );
 	if ( Host_ValidGame() )
 	{
-		Steam3Server().NotifyOfLevelChange();
-
 		g_pServerPluginHandler->LevelShutdown();
 #if !defined(DEDICATED)
 		audiosourcecache->LevelShutdown();
@@ -542,13 +518,6 @@ void CHostState::State_Run( float frameTime )
 	if ( sv.IsDedicated() )
 		EndWatchdogTimer();
 
-	// Continue loading process once we've tried to update the new map
-	if ( sv.IsDedicated() && g_HostState.m_bWorkshopMapDownloadPending && !serverGameDLL->HasPendingMapDownloads() )
-	{
-		g_HostState.SetNextState( HS_CHANGE_LEVEL_MP );
-		g_HostState.m_bWorkshopMapDownloadPending = false;
-	}
-
 	switch( m_nextState )
 	{
 	case HS_RUN:
@@ -587,7 +556,6 @@ void CHostState::State_GameShutdown()
 	materials->OnDebugEvent( "CHostState::State_GameShutdown" );
 	if ( serverGameDLL )
 	{
-		Steam3Server().NotifyOfLevelChange();
 		g_pServerPluginHandler->LevelShutdown();
 #if !defined(DEDICATED)
 		audiosourcecache->LevelShutdown();
@@ -595,8 +563,6 @@ void CHostState::State_GameShutdown()
 	}
 
 	GameShutdown();
-#ifndef DEDICATED
-#endif
 	Host_ShutdownServer();
 
 	MapReslistGenerator().OnLevelShutdown();
@@ -658,13 +624,10 @@ void CHostState::FrameUpdate( float time )
 	int loopCount = 0;
 #endif
 
-	if ( setjmp (host_abortserver) )
-	{
-		Init();
-		return;
-	}
-
 	g_bAbortServerSet = true;
+
+	try
+	{
 
 	while ( true )
 	{
@@ -743,6 +706,11 @@ void CHostState::FrameUpdate( float time )
 		}
 #endif
 	}
+	}
+	catch ( const CHostAbortServer & )
+	{
+		Init();
+	}
 }
 
 
@@ -754,7 +722,7 @@ bool CHostState::IsGameShuttingDown( void )
 void CHostState::RememberLocation()
 {
 #ifndef DEDICATED
-	Assert( m_bRememberLocation );
+	contract_assert( m_bRememberLocation );
 
 	m_vecLocation = MainViewOrigin();
 	VectorAngles( MainViewForward(), m_angLocation );
@@ -800,7 +768,6 @@ void CHostState::OnClientConnected()
 
 		g_pFileSystem->FPrintf( fp, "%s:\n", g_HostState.m_levelName );
 	
-#ifdef VPROF_ENABLED
 		CVProfile *pProf = &g_VProfCurrentProfile;
 
 		int prefixLen = V_strlen( "TexGroup_Global_" );
@@ -821,7 +788,6 @@ void CHostState::OnClientConnected()
 			}
 		}
 		g_pFileSystem->FPrintf( fp, "vidmem total: %0.3fMB\n", total );
-#endif
 
 		g_pFileSystem->FPrintf( fp, "---------------------------------\n" );
 		g_pFileSystem->Close( fp );
@@ -852,4 +818,3 @@ static bool Host_ValidGame( void )
 {
 	return true;
 }
-

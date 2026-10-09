@@ -1,13 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
+import ks.tier1;
+
 // Purpose: Defines the interface that the GameUI dll exports
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef ENGINEUI_H
-#define ENGINEUI_H
-
 
 #include "iengineui.h"
 #include "inputsystem/ButtonCode.h"
@@ -16,11 +13,10 @@
 // Foward declarations
 //-----------------------------------------------------------------------------
 class IMatSystemSurface;
-class Color;
 class IGameUI;
-class KeyValues;
 struct InputEvent_t;
-FORWARD_DECLARE_HANDLE( InputContextHandle_t );
+struct InputContextHandle_t__;
+using InputContextHandle_t = InputContextHandle_t__ *;
 
 IGameUI* GetGameUI( void );
 
@@ -69,7 +65,7 @@ enum LevelLoadingProgress_e
 //-----------------------------------------------------------------------------
 // Purpose: Centerpoint for handling all user interface in the engine
 //-----------------------------------------------------------------------------
-abstract_class IEngineUIInternal : public IEngineUI
+class IEngineUIInternal : public IEngineUI
 {
 public:
 
@@ -99,7 +95,7 @@ public:
 	// level loading
 	virtual void OnLevelLoadingStarted( const char *levelName, bool bLocalServer ) = 0;
 	virtual void OnLevelLoadingFinished() = 0;
-	virtual void NotifyOfServerConnect(const char *game, int IP, int connectionPort, int queryPort) = 0;
+	virtual void NotifyOfServerConnect(const char *game, int IP, int connectionPort) = 0;
 	virtual void NotifyOfServerDisconnect() = 0;
 	virtual void EnabledProgressBarForNextLoad() = 0;
 	virtual void UpdateProgressBar(LevelLoadingProgress_e progress, bool showDialog = true ) = 0;
@@ -137,6 +133,3 @@ public:
 #ifndef DEDICATED
 extern IEngineUIInternal *EngineUI();
 #endif
-
-
-#endif // ENGINEUI_H

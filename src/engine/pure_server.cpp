@@ -1,24 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "utlstring.h"
-#include "checksum_crc.h"
+import ks.tier1;
 #include "userid.h"
 #include "pure_server.h"
 #include "common.h"
-#include "tier1/keyvalues.h"
-#include "convar.h"
 #include "filesystem_engine.h"
 #include "server.h"
 #include "sv_filter.h"
-#include <flat_set>
-#include <iterator>
+import std;
 
 extern ConVar sv_pure_consensus;
 extern ConVar sv_pure_retiretime;
@@ -33,7 +23,7 @@ static char *g_SvPure2_ProtectedDirs[] =
 
 static bool IsProtectedBySvPure2( const char *pFilename )
 {
-	for ( int i=0; i < ARRAYSIZE( g_SvPure2_ProtectedDirs ); i++ )
+	for ( int i=0; i < std::size( g_SvPure2_ProtectedDirs ); i++ )
 	{
 		const char *pProtectedDir = g_SvPure2_ProtectedDirs[i];
 		int len = V_strlen( pProtectedDir );
@@ -42,8 +32,8 @@ static bool IsProtectedBySvPure2( const char *pFilename )
 			return false;
 		
 		char tempStr[512];
-		Assert( len < ARRAYSIZE( tempStr ) );
-		memcpy( tempStr, pFilename, len );
+		contract_assert( len < std::size( tempStr ) );
+		std::memcpy( tempStr, pFilename, len );
 		tempStr[len] = 0;
 		
 		if ( V_stricmp( tempStr, pProtectedDir ) == 0 )
@@ -118,33 +108,23 @@ bool CPureServerWhitelist::LoadFromKeyValues( KeyValues *kv )
 		if ( !pKeyValue || !pModifiers )
 			continue;
 	
-		Q_strncpy( szPathName, pKeyValue, sizeof(szPathName) );
-		Q_FixSlashes( szPathName );
+		V_strncpy( szPathName, pKeyValue, sizeof(szPathName) );
+		V_FixSlashes( szPathName );
 		const char *pValue = szPathName;
 
 		// Figure out the modifiers.
-		bool bFromSteam = false, bAllowFromDisk = false, bCheckCRC = false;
+		bool bAllowFromDisk = false, bCheckCRC = false;
 		std::vector< std::string > mods;
 		V_SplitString( pModifiers, "+", mods );
 		for ( int i=0; i < std::ssize( mods ); i++ )
 		{
-			if ( V_stricmp( mods[i].c_str(), "from_steam" ) == 0 )
-				bFromSteam = true;
-			else if ( V_stricmp( mods[i].c_str(), "allow_from_disk" ) == 0 )
+			if ( V_stricmp( mods[i].c_str(), "allow_from_disk" ) == 0 )
 				bAllowFromDisk = true;
 			else if ( V_stricmp( mods[i].c_str(), "check_crc" ) == 0 )
 				bCheckCRC = true;
 			else
 				Warning( "Unknown modifier in whitelist file: %s.\n", mods[i].c_str() );
 		}
-		// we don't have to purge really; and if we do, we CAN'T delete elements 
-		if ( bFromSteam && (bAllowFromDisk || bCheckCRC) )
-		{
-			bAllowFromDisk = bCheckCRC = false;
-			Warning( "Whitelist: from_steam not compatible with other modifiers (used on %s).\n", pValue );
-			Warning( "           Other markers removed.\n" );
-		}
-
 		
 		// Setup a new CCommand to hold this command.
 		auto pCommand = std::make_unique< CPureServerWhitelist::CCommand >();
@@ -155,9 +135,9 @@ bool CPureServerWhitelist::LoadFromKeyValues( KeyValues *kv )
 		// Figure out if they're referencing a file, a recursive directory, or a nonrecursive directory.		
 		CommandDict_t *pList;
 		const char *pEndPart = V_UnqualifiedFileName( pValue );
-		if ( Q_stricmp( pEndPart, "..." ) == 0 )
+		if ( V_stricmp( pEndPart, "..." ) == 0 )
 			pList = &m_RecursiveDirCommands;
-		else if ( Q_stricmp( pEndPart, "*.*" ) == 0 )
+		else if ( V_stricmp( pEndPart, "*.*" ) == 0 )
 			pList = &m_NonRecursiveDirCommands;
 		else
 			pList = &m_FileCommands;
@@ -188,7 +168,7 @@ bool CPureServerWhitelist::LoadFromKeyValues( KeyValues *kv )
 
 void CPureServerWhitelist::EnableFullyPureMode()
 {
-	// In this mode, all files must come from Steam.
+	// In this mode, no files are allowed from disk.
 	m_FileCommands.clear();
 	m_RecursiveDirCommands.clear();
 	m_NonRecursiveDirCommands.clear();
@@ -579,17 +559,17 @@ void FileRenderHelper( USERID_t userID, const char *pchMessage, const char *pchP
 {
 	char rgch[256];
 	char hex[ 34 ];
-	Q_memset( hex, 0, sizeof( hex ) );
-	Q_binarytohex( (const byte *)&pFileHash->m_md5contents.bits, sizeof( pFileHash->m_md5contents.bits ), hex, sizeof( hex ) );
+	V_memset( hex, 0, sizeof( hex ) );
+	V_binarytohex( (const byte *)&pFileHash->m_md5contents.bits, sizeof( pFileHash->m_md5contents.bits ), hex, sizeof( hex ) );
 
 	char hex2[ 34 ];
-	Q_memset( hex2, 0, sizeof( hex2 ) );
+	V_memset( hex2, 0, sizeof( hex2 ) );
 	if ( pFileHashLocal )
-		Q_binarytohex( (const byte *)&pFileHashLocal->m_md5contents.bits, sizeof( pFileHashLocal->m_md5contents.bits ), hex2, sizeof( hex2 ) );
+		V_binarytohex( (const byte *)&pFileHashLocal->m_md5contents.bits, sizeof( pFileHashLocal->m_md5contents.bits ), hex2, sizeof( hex2 ) );
 
 	if ( pFileHash->m_PackFileID )
 	{
-		Q_snprintf( rgch, 256, "Pure server: file: %s\\%s ( %d %d %8.8x %6.6x ) %s : %s : %s\n", 
+		V_snprintf( rgch, 256, "Pure server: file: %s\\%s ( %d %d %8.8x %6.6x ) %s : %s : %s\n", 
 			pchPath, pchFileName,
 			pFileHash->m_PackFileID, pFileHash->m_nPackFileNumber, nFileFraction, pFileHash->m_cbFileLen,
 			pchMessage, 
@@ -597,7 +577,7 @@ void FileRenderHelper( USERID_t userID, const char *pchMessage, const char *pchP
 	}
 	else
 	{
-		Q_snprintf( rgch, 256, "Pure server: file: %s\\%s ( %d %d %lx ) %s : %s : %s\n", 
+		V_snprintf( rgch, 256, "Pure server: file: %s\\%s ( %d %d %lx ) %s : %s : %s\n", 
 			pchPath, pchFileName,
 			pFileHash->m_eFileHashType, pFileHash->m_cbFileLen, pFileHash->m_eFileHashType ? pFileHash->m_crcIOSequence : 0,
 			pchMessage, 
@@ -640,14 +620,14 @@ bool CPureFileTracker::DoesFileMatch( const char *pPathID, const char *pRelative
 	}
 
 	char rgchFilenameFixed[MAX_PATH];
-	Q_strncpy( rgchFilenameFixed, pRelativeFilename, sizeof( rgchFilenameFixed ) );
-	Q_FixSlashes( rgchFilenameFixed );
+	V_strncpy( rgchFilenameFixed, pRelativeFilename, sizeof( rgchFilenameFixed ) );
+	V_FixSlashes( rgchFilenameFixed );
 
 	// first look up the file and see if we have ever seen it before
 	CRC32_t crcFilename;
 	CRC32_Init( &crcFilename );
-	CRC32_ProcessBuffer( &crcFilename, rgchFilenameFixed, Q_strlen( rgchFilenameFixed ) );
-	CRC32_ProcessBuffer( &crcFilename, pPathID, Q_strlen( pPathID ) );
+	CRC32_ProcessBuffer( &crcFilename, rgchFilenameFixed, V_strlen( rgchFilenameFixed ) );
+	CRC32_ProcessBuffer( &crcFilename, pPathID, V_strlen( pPathID ) );
 	CRC32_Final( &crcFilename );
 	UserReportedFile_t ufile;
 	ufile.m_crcIdentifier = crcFilename;
@@ -694,7 +674,7 @@ bool CPureFileTracker::DoesFileMatch( const char *pPathID, const char *pRelative
 			unsigned bufSize = g_pFileSystem->GetOptimalReadSize( f, fileSize );
 
 			char *buffer = (char*)g_pFileSystem->AllocOptimalReadBuffer( f, bufSize );
-			Assert( buffer );
+			contract_assert( buffer );
 
 			// read into local buffer
 			bool bRetOK = ( g_pFileSystem->ReadEx( buffer, bufSize, fileSize, f ) != 0 );
@@ -780,7 +760,7 @@ int CPureFileTracker::ListUserFiles( bool bListAll, const char *pchFilenameFind 
 	std::flat_set< int > m_vecReportedFiles;
 	for ( const auto &[ufile, idxFindFile] : m_treeAllReportedFiles )
 	{
-		if ( pchFilenameFind && Q_stristr( ufile.m_filename.c_str(), pchFilenameFind ) )
+		if ( pchFilenameFind && V_stristr( ufile.m_filename.c_str(), pchFilenameFind ) )
 		{
 			FileHash_t filehashLocal;
 			EFileCRCStatus eStatus = g_pFileSystem->CheckCachedFileHash( ufile.m_path.c_str(), ufile.m_filename.c_str(), 0, &filehashLocal );
@@ -827,7 +807,7 @@ int CPureFileTracker::ListUserFiles( bool bListAll, const char *pchFilenameFind 
 		const UserReportedFile_t &ufile = *m_vecReportedFilesByIndex[file.m_idxFile];
 
 		bool bOutput = false;
-		if ( Q_stristr( ufile.m_filename.c_str(), "bin\\pak01" )!=nullptr || Q_stristr( ufile.m_filename.c_str(), ".vpk" )!=nullptr )
+		if ( V_stristr( ufile.m_filename.c_str(), "bin\\pak01" )!=nullptr || V_stristr( ufile.m_filename.c_str(), ".vpk" )!=nullptr )
 			bOutput = true;
 		else
 		{
@@ -871,9 +851,9 @@ int CPureFileTracker::ListAllTrackedFiles( bool bListAll, const char *pchFilenam
 	do
 	{
 		CUnverifiedFileHash rgUnverifiedFiles[1];
-		count = g_pFileSystem->GetUnverifiedFileHashes( rgUnverifiedFiles, ARRAYSIZE( rgUnverifiedFiles ) );
+		count = g_pFileSystem->GetUnverifiedFileHashes( rgUnverifiedFiles, std::size( rgUnverifiedFiles ) );
 
-		if ( count && ( bListAll || ( pchFilenameFind && Q_stristr( rgUnverifiedFiles[0].m_Filename, pchFilenameFind ) && rgUnverifiedFiles[0].m_nFileFraction >= nFileFractionMin && rgUnverifiedFiles[0].m_nFileFraction <= nFileFractionMax ) ) )
+		if ( count && ( bListAll || ( pchFilenameFind && V_stristr( rgUnverifiedFiles[0].m_Filename, pchFilenameFind ) && rgUnverifiedFiles[0].m_nFileFraction >= nFileFractionMin && rgUnverifiedFiles[0].m_nFileFraction <= nFileFractionMax ) ) )
 		{
 			USERID_t useridFake = { 0, 0 };
 			FileRenderHelper( useridFake, "", rgUnverifiedFiles[0].m_PathID, rgUnverifiedFiles[0].m_Filename, &rgUnverifiedFiles[0].m_FileHash, rgUnverifiedFiles[0].m_nFileFraction, nullptr );
@@ -895,13 +875,11 @@ int CPureFileTracker::ListAllTrackedFiles( bool bListAll, const char *pchFilenam
 
 CPureFileTracker g_PureFileTracker;
 
-#define DEBUG_PURE_SERVER
-#ifdef DEBUG_PURE_SERVER
 void CC_ListPureServerFiles(const CCommand &args)
 {
 	if ( !sv.IsDedicated() )
 		return;
-	g_PureFileTracker.ListUserFiles( args.ArgC() > 1 && (atoi(args[1]) > 0), nullptr );
+	g_PureFileTracker.ListUserFiles( args.ArgC() > 1 && (std::atoi(args[1]) > 0), nullptr );
 }
 
 static ConCommand svpurelistuserfiles("sv_pure_listuserfiles", CC_ListPureServerFiles, "ListPureServerFiles");
@@ -922,8 +900,8 @@ void CC_PureServerListTrackedFiles(const CCommand &args)
 	// Remove this command from client before shipping for realz.
 	//if ( !sv.IsDedicated() )
 	//	return;
-	int nFileFractionMin = args.ArgC() >= 3 ? Q_atoi(args[2]) : 0;
-	int nFileFractionMax = args.ArgC() >= 4 ? Q_atoi(args[3]) : nFileFractionMin;
+	int nFileFractionMin = args.ArgC() >= 3 ? V_atoi(args[2]) : 0;
+	int nFileFractionMax = args.ArgC() >= 4 ? V_atoi(args[3]) : nFileFractionMin;
 	if ( nFileFractionMax < 0 ) 
 		nFileFractionMax = 0x7FFFFFFF;
 	g_PureFileTracker.ListAllTrackedFiles( args.ArgC() <= 1, args.ArgC() >= 2 ? args[1] : nullptr, nFileFractionMin, nFileFractionMax );
@@ -941,5 +919,3 @@ void CC_PureServerCheckVPKFiles(const CCommand &args)
 }
 
 static ConCommand svpurecheckvpks("sv_pure_checkvpk", CC_PureServerCheckVPKFiles, "CheckPureServerVPKFiles");
-
-#endif

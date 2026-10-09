@@ -1,5 +1,8 @@
-#ifndef KISAKSTRIKE_HUD_CHAT_H
-#define KISAKSTRIKE_HUD_CHAT_H
+#pragma once
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include <rocketui/rmlui.h>
 
 #include "rkhud_document.h"
 #include "iclientmode.h" // message mode enum
@@ -52,5 +55,3 @@ public:
     CUserMessageBinder m_UMCMsgSayText2;
     CUserMessageBinder m_UMCMsgTextMsg;
 };
-
-#endif //KISAKSTRIKE_HUD_CHAT_H

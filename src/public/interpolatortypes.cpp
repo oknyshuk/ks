@@ -1,13 +1,9 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-#include "basetypes.h"
-#include "tier1/strtools.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
 #include "interpolatortypes.h"
-#include "tier0/dbg.h"
-#include "mathlib/mathlib.h"
 
 struct InterpolatorNameMap_t
 {
@@ -41,21 +37,21 @@ int Interpolator_InterpolatorForName( char const *name )
 	for ( int i = 0; i < NUM_INTERPOLATE_TYPES; ++i )
 	{
 		InterpolatorNameMap_t *slot = &g_InterpolatorNameMap[ i ];
-		if ( !Q_stricmp( name, slot->name ) )
+		if ( !V_stricmp( name, slot->name ) )
 			return slot->type;
 	}
 	
-	Assert( !"Interpolator_InterpolatorForName failed!!!" );
+	contract_assert( !"Interpolator_InterpolatorForName failed!!!" );
 	return INTERPOLATE_DEFAULT;
 }
 
 char const *Interpolator_NameForInterpolator( int type, bool printname )
 {
 	int i = (int)type;
-	int c = ARRAYSIZE( g_InterpolatorNameMap );
+	int c = std::size( g_InterpolatorNameMap );
 	if ( i < 0 || i >= c )
 	{
-		Assert( "!Interpolator_NameForInterpolator:  bogus type!" );
+		contract_assert( "!Interpolator_NameForInterpolator:  bogus type!" );
 		// returns "unspecified!!!";
 		return printname ? g_InterpolatorNameMap[ 0 ].printname : g_InterpolatorNameMap[ 0 ].name;
 	}
@@ -91,17 +87,17 @@ static CurveNameMap_t g_CurveNameMap[] =
 int Interpolator_CurveTypeForName( const char *name )
 {
 	char sz[ 128 ];
-	Q_strncpy( sz, name, sizeof( sz ) );
+	V_strncpy( sz, name, sizeof( sz ) );
 
 	int leftcurve = 0;
 	int rightcurve = 0;
 
-	int skip = Q_strlen( "curve_" );
+	int skip = V_strlen( "curve_" );
 
 	if ( StringHasPrefix( sz, "curve_" ) )
 	{
 		char *p = sz + skip;
-		char *second = Q_stristr( p, "_to_curve_" );
+		char *second = V_stristr( p, "_to_curve_" );
 		
 		char save = *second;
 		*second = 0;
@@ -110,7 +106,7 @@ int Interpolator_CurveTypeForName( const char *name )
 
 		*second = save;
 
-		p = second + Q_strlen( "_to_curve_" );
+		p = second + V_strlen( "_to_curve_" );
 
 		rightcurve = Interpolator_InterpolatorForName( p );
 	}
@@ -127,13 +123,13 @@ const char *Interpolator_NameForCurveType( int type, bool printname )
 
 	if ( !printname )
 	{
-		Q_snprintf( outname, sizeof( outname ), "curve_%s_to_curve_%s", 
+		V_snprintf( outname, sizeof( outname ), "curve_%s_to_curve_%s", 
 			Interpolator_NameForInterpolator( leftside, printname ),
 			Interpolator_NameForInterpolator( rightside, printname ) );
 	}
 	else
 	{
-		Q_snprintf( outname, sizeof( outname ), "%s <-> %s", 
+		V_snprintf( outname, sizeof( outname ), "%s <-> %s", 
 			Interpolator_NameForInterpolator( leftside, printname ),
 			Interpolator_NameForInterpolator( rightside, printname ) );
 	}
@@ -149,7 +145,7 @@ void Interpolator_CurveInterpolatorsForType( int type, int& inbound, int& outbou
 
 int Interpolator_CurveTypeForHotkey( int key )
 {
-	int c = ARRAYSIZE( g_CurveNameMap );
+	int c = std::size( g_CurveNameMap );
 	for ( int i = 0; i < c; ++i )
 	{
 		CurveNameMap_t *slot = &g_CurveNameMap[ i ];
@@ -168,7 +164,7 @@ void Interpolator_GetKochanekBartelsParams( int interpolationType, float& tensio
 		tension = 0.0f;
 		bias = 0.0f;
 		continuity = 0.0f;
-		Assert( 0 );
+		contract_assert( 0 );
 		break;
 	case INTERPOLATE_KOCHANEK_BARTELS:
         tension		= 0.77f;
@@ -243,14 +239,14 @@ void Interpolator_CurveInterpolate( int interpolationType,
 		break;
 	case INTERPOLATE_EASE_IN:
 		{
-			f = sin( M_PI * f * 0.5f );
+			f = std::sin( std::numbers::pi * f * 0.5f );
 			// Fixme, since this ignores vPre and vNext we could omit computing them aove
 			VectorLerp( vStart, vEnd, f, vOut );
 		}
 		break;
 	case INTERPOLATE_EASE_OUT:
 		{
-			f = 1.0f - sin( M_PI * f * 0.5f + 0.5f * M_PI );
+			f = 1.0f - std::sin( std::numbers::pi * f * 0.5f + 0.5f * std::numbers::pi );
 			// Fixme, since this ignores vPre and vNext we could omit computing them aove
 			VectorLerp( vStart, vEnd, f, vOut );
 		}
@@ -355,14 +351,14 @@ void Interpolator_CurveInterpolate_NonNormalized( int interpolationType,
 		break;
 	case INTERPOLATE_EASE_IN:
 		{
-			f = sin( M_PI * f * 0.5f );
+			f = std::sin( std::numbers::pi * f * 0.5f );
 			// Fixme, since this ignores vPre and vNext we could omit computing them aove
 			VectorLerp( vStart, vEnd, f, vOut );
 		}
 		break;
 	case INTERPOLATE_EASE_OUT:
 		{
-			f = 1.0f - sin( M_PI * f * 0.5f + 0.5f * M_PI );
+			f = 1.0f - std::sin( std::numbers::pi * f * 0.5f + 0.5f * std::numbers::pi );
 			// Fixme, since this ignores vPre and vNext we could omit computing them aove
 			VectorLerp( vStart, vEnd, f, vOut );
 		}
@@ -468,14 +464,14 @@ void Interpolator_CurveInterpolate_NonNormalized( int interpolationType,
 		break;
 	case INTERPOLATE_EASE_IN:
 		{
-			f = sin( M_PI * f * 0.5f );
+			f = std::sin( std::numbers::pi * f * 0.5f );
 			// Fixme, since this ignores vPre and vNext we could omit computing them aove
 			QuaternionSlerp( vStart, vEnd, f, vOut );
 		}
 		break;
 	case INTERPOLATE_EASE_OUT:
 		{
-			f = 1.0f - sin( M_PI * f * 0.5f + 0.5f * M_PI );
+			f = 1.0f - std::sin( std::numbers::pi * f * 0.5f + 0.5f * std::numbers::pi );
 			// Fixme, since this ignores vPre and vNext we could omit computing them aove
 			QuaternionSlerp( vStart, vEnd, f, vOut );
 		}

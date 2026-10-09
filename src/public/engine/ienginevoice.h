@@ -1,25 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Engine voice interface
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef IENGINEVOICE_H
-#define IENGINEVOICE_H
+import std;
+import ks.core;
 
-
-
-#include "basetypes.h"
-
-#define IENGINEVOICE_INTERFACE_VERSION	"IEngineVoice001"
+inline constexpr const char *IENGINEVOICE_INTERFACE_VERSION = "IEngineVoice001";
 
 enum EngineVoiceFlags_t
 {
 	ENGINE_VOICE_FLAG_PS3		=	( 1 << 0 )
 };
 
-abstract_class IEngineVoice
+class IEngineVoice
 {
 public:
 	virtual bool IsHeadsetPresent( int iController ) = 0;
@@ -39,6 +34,3 @@ public:
 
 	virtual void RemoveAllTalkers() = 0;
 };
-
-
-#endif // IENGINEVOICE_H

@@ -1,15 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Dissolve entity to be attached to target entity. Serves two purposes:
-//
 //			1) An entity that can be placed by a level designer and triggered
 //			   to ignite a target entity.
-//
 //			2) An entity that can be created at runtime to ignite a target entity.
-//
-//=============================================================================//
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "EntityDissolve.h"
@@ -24,17 +45,17 @@ static const char *s_pElectroThinkContext = "ElectroThinkContext";
 //-----------------------------------------------------------------------------
 // Lifetime 
 //-----------------------------------------------------------------------------
-#define DISSOLVE_FADE_IN_START_TIME			0.0f
-#define DISSOLVE_FADE_IN_END_TIME			1.0f
-#define DISSOLVE_FADE_OUT_MODEL_START_TIME	1.9f
-#define DISSOLVE_FADE_OUT_MODEL_END_TIME	2.0f
-#define DISSOLVE_FADE_OUT_START_TIME		2.0f
-#define DISSOLVE_FADE_OUT_END_TIME			2.0f
+constexpr auto DISSOLVE_FADE_IN_START_TIME = 0.0f;
+constexpr auto DISSOLVE_FADE_IN_END_TIME = 1.0f;
+constexpr auto DISSOLVE_FADE_OUT_MODEL_START_TIME = 1.9f;
+constexpr auto DISSOLVE_FADE_OUT_MODEL_END_TIME = 2.0f;
+constexpr auto DISSOLVE_FADE_OUT_START_TIME = 2.0f;
+constexpr auto DISSOLVE_FADE_OUT_END_TIME = 2.0f;
 
 //-----------------------------------------------------------------------------
 // Model 
 //-----------------------------------------------------------------------------
-#define DISSOLVE_SPRITE_NAME	"sprites/blueglow1.vmt"	
+inline constexpr const char *DISSOLVE_SPRITE_NAME = "sprites/blueglow1.vmt";
 
 //-----------------------------------------------------------------------------
 // Save/load 
@@ -180,7 +201,7 @@ CEntityDissolve *CEntityDissolve::Create( CBaseEntity *pTarget, const char *pMat
 	if ( pTarget->IsPlayer() )
 	{
 		// Simply immediately kill the player.
-		CBasePlayer *pPlayer = assert_cast< CBasePlayer* >( pTarget );
+		CBasePlayer *pPlayer = static_cast< CBasePlayer* >( pTarget );
 		pPlayer->SetArmorValue( 0 );
 		CTakeDamageInfo info( pPlayer, pPlayer, pPlayer->GetHealth(), DMG_GENERIC | DMG_REMOVENORAGDOLL | DMG_PREVENT_PHYSICS_FORCE );
 		pPlayer->TakeDamage( info );

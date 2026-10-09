@@ -1,18 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( FRAMESNAPSHOT_H )
-#define FRAMESNAPSHOT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/platform.h"
 
-#include "tier1/fixed_pool.h"
-#include <atomic>
-#include <list>
-#include <mutex>
+import ks.tier1;
+import std;
+#include "const.h"
+#include "packed_entity.h"
 
 
 class PackedEntity;
@@ -21,12 +15,11 @@ class ReplayEntityData;
 class ServerClass;
 class CEventInfo;
 
-#define INVALID_PACKED_ENTITY_HANDLE (0)
+inline constexpr auto INVALID_PACKED_ENTITY_HANDLE = (0);
 typedef intp PackedEntityHandle_t;
 
 #ifdef _DEBUG
 // You can also enable snapshot references debugging in release mode
-#define DEBUG_SNAPSHOT_REFERENCES
 #endif
 
 //-----------------------------------------------------------------------------
@@ -40,7 +33,7 @@ public:
 	// Keeps track of the fullpack info for this frame for all entities in any pvs:
 	PackedEntityHandle_t	m_pPackedData;
 
-	size_t GetMemSize() const;
+	std::size_t GetMemSize() const;
 };
 
 // HLTV needs some more data per entity 
@@ -64,7 +57,7 @@ typedef struct
 	PackedEntity	*pEntity;	// original packed entity
 	int				counter;	// increaseing counter to find LRU entries
 	int				bits;		// uncompressed data length in bits
-	ALIGN4 char		data[MAX_PACKEDENTITY_DATA] ALIGN4_POST; // uncompressed data cache
+	char		data[MAX_PACKEDENTITY_DATA] [[gnu::aligned(4)]]; // uncompressed data cache
 } UnpackedDataCache_t;
 
 
@@ -74,9 +67,11 @@ typedef struct
 //  snapshot is for.  Also tracks whether the snapshot is still referenced.  When no
 //  longer referenced, it's freed
 //-----------------------------------------------------------------------------
-class CFrameSnapshot
+class CFrameSnapshot : public ks::pooled< CFrameSnapshot >
 {
-	DECLARE_FIXEDSIZE_ALLOCATOR( CFrameSnapshot );
+	private:
+		static ks::fixed_pool s_Allocator;
+		friend class ks::pooled< CFrameSnapshot >;
 
 public:
 	// Reference-counting.
@@ -85,7 +80,7 @@ public:
 	void					AddRef() { AddReference(); }
 	void					Release() { ReleaseReference(); }
 
-	size_t					GetMemSize()const;
+	std::size_t					GetMemSize()const;
 public:
 	// Associated frame. 
 	int						m_nTickCount; // = sv.tickcount
@@ -123,9 +118,7 @@ private:
 	// Snapshots auto-delete themselves when their refcount goes to zero.
 	std::atomic<int>			m_nReferences;
 
-#ifdef DEBUG_SNAPSHOT_REFERENCES
 	char					m_chDebugSnapshotName[128];
-#endif
 };
 
 class CReferencedSnapshotList
@@ -167,14 +160,8 @@ public:
 	// Note: the returned snapshot has a recount of 1 so you MUST call ReleaseReference on it. Snapshots are created into different sets,
 	// so when enumerating snapshots, you only collect those in the desired set
 	CFrameSnapshot*	CreateEmptySnapshot(
-#ifdef DEBUG_SNAPSHOT_REFERENCES
-		char const *szDebugName,
-#endif
 		int ticknumber, int maxEntities, uint32 nSnapshotSet = knDefaultSnapshotSet );
 	CFrameSnapshot*	TakeTickSnapshot(
-#ifdef DEBUG_SNAPSHOT_REFERENCES
-		char const *szDebugName,
-#endif
 		int ticknumber, uint32 nSnapshotSet = knDefaultSnapshotSet );
 
 	// Creates pack data for a particular entity for a particular snapshot
@@ -234,16 +221,13 @@ private:
 
 PackedEntity* CFrameSnapshotManager::GetPackedEntity( CFrameSnapshot& Snapshot, int entity )
 {
-	Assert( entity < Snapshot.m_nNumEntities );
+	contract_assert( entity < Snapshot.m_nNumEntities );
 	PackedEntityHandle_t index = Snapshot.m_pEntities[entity].m_pPackedData;
 	if ( index == INVALID_PACKED_ENTITY_HANDLE )
 		return nullptr;
 
-	Assert( PackedEntityFromHandle( index )->m_nEntityIndex == entity );
+	contract_assert( PackedEntityFromHandle( index )->m_nEntityIndex == entity );
 	return PackedEntityFromHandle( index );
 }
 
 extern CFrameSnapshotManager *framesnapshotmanager;
-
-
-#endif // FRAMESNAPSHOT_H

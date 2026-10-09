@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
-
-#ifndef AI_BEHAVIOR_LEAD_H
-#define AI_BEHAVIOR_LEAD_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -13,20 +8,18 @@
 #include "ai_behavior.h"
 #include "ai_speech.h"
 
-
-
 // Speak concepts
-#define TLK_LEAD_START				"TLK_LEAD_START"
-#define TLK_LEAD_ARRIVAL			"TLK_LEAD_ARRIVAL"
-#define TLK_LEAD_SUCCESS			"TLK_LEAD_SUCCESS"
-#define TLK_LEAD_FAILURE			"lead_fail"
-#define TLK_LEAD_COMINGBACK			"TLK_LEAD_COMINGBACK"
-#define TLK_LEAD_CATCHUP			"TLK_LEAD_CATCHUP"
-#define TLK_LEAD_RETRIEVE			"TLK_LEAD_RETRIEVE"
-#define TLK_LEAD_ATTRACTPLAYER		"TLK_LEAD_ATTRACTPLAYER"
-#define TLK_LEAD_WAITOVER			"TLK_LEAD_WAITOVER"
-#define TLK_LEAD_MISSINGWEAPON		"TLK_LEAD_MISSING_WEAPON"
-#define TLK_LEAD_IDLE				"TLK_LEAD_IDLE"
+inline constexpr const char *TLK_LEAD_START = "TLK_LEAD_START";
+inline constexpr const char *TLK_LEAD_ARRIVAL = "TLK_LEAD_ARRIVAL";
+inline constexpr const char *TLK_LEAD_SUCCESS = "TLK_LEAD_SUCCESS";
+inline constexpr const char *TLK_LEAD_FAILURE = "lead_fail";
+inline constexpr const char *TLK_LEAD_COMINGBACK = "TLK_LEAD_COMINGBACK";
+inline constexpr const char *TLK_LEAD_CATCHUP = "TLK_LEAD_CATCHUP";
+inline constexpr const char *TLK_LEAD_RETRIEVE = "TLK_LEAD_RETRIEVE";
+inline constexpr const char *TLK_LEAD_ATTRACTPLAYER = "TLK_LEAD_ATTRACTPLAYER";
+inline constexpr const char *TLK_LEAD_WAITOVER = "TLK_LEAD_WAITOVER";
+inline constexpr const char *TLK_LEAD_MISSINGWEAPON = "TLK_LEAD_MISSING_WEAPON";
+inline constexpr const char *TLK_LEAD_IDLE = "TLK_LEAD_IDLE";
 
 //-----------------------------------------------------------------------------
 // class CAI_LeadBehavior
@@ -97,7 +90,7 @@ public:
 		m_LostTimer( 3.0, 4.0 ),
 		m_LostLOSTimer( 2.0, 3.0 )
 	{
-		memset( &m_args, 0, sizeof(m_args) );
+		std::memset( &m_args, 0, sizeof(m_args) );
 		ClearGoal();
 	}
 	
@@ -231,5 +224,3 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_BEHAVIOR_LEAD_H

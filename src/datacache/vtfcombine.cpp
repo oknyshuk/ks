@@ -1,24 +1,15 @@
+import ks.tier1;
 #include "datacache/imdlcache.h"
 #include "vtfcombine.h"
-#include "strtools.h"
-#include "keyvalues.h"
+import std;
 #include "filesystem.h"
 #include "vtf/vtf.h"
-#include "tier0/cache_hints.h"
 #include "materialsystem/imaterialsystem.h"
 
 
 //#define DEBUG_VMT_COMBINE 1
 
-#ifdef DEBUG_VMT_COMBINE
-
-#define DebugCombineMsg( ... ) Msg( __VA_ARGS__ )
-
-#else
-
 #define DebugCombineMsg( ... )
-
-#endif
 
 
 CTextureCombine& GetTextureCombiner()
@@ -104,7 +95,7 @@ void CSimpleTexturePacker::AddTexture( int nID, int nWidth, int nHeight )
 {
 	if ( m_nNumTextures >= m_nMaxTextures )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		V_sprintf_safe( GetTextureCombiner().m_pCombinedStudioData->m_Results.m_szErrorMessage, "too many textures added to packer" );
 		throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
 	}
@@ -172,7 +163,7 @@ bool CSimpleTexturePacker::FindOpenSpace( TTextureInfo *pTexture )
 		m_nNumSubDivisions--;
 		if ( nSubDivision < m_nNumSubDivisions )
 		{
-			memmove( &m_SubDivisions[ nSubDivision ], &m_SubDivisions[ nSubDivision + 1 ], sizeof( m_SubDivisions[ nSubDivision ] ) * ( m_nNumSubDivisions - nSubDivision ) );
+			std::memmove( &m_SubDivisions[ nSubDivision ], &m_SubDivisions[ nSubDivision + 1 ], sizeof( m_SubDivisions[ nSubDivision ] ) * ( m_nNumSubDivisions - nSubDivision ) );
 		}
 	}
 	else
@@ -191,7 +182,7 @@ bool CSimpleTexturePacker::FindOpenSpace( TTextureInfo *pTexture )
 		{
 			if ( m_nNumSubDivisions >= m_nMaxSubdivisions )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				V_sprintf_safe( GetTextureCombiner().m_pCombinedStudioData->m_Results.m_szErrorMessage, "too many subdivision within texture packer" );
 				throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
 			}
@@ -215,7 +206,7 @@ bool CSimpleTexturePacker::FindOpenSpace( TTextureInfo *pTexture )
 void CSimpleTexturePacker::Resolve( )
 {
 	Reset();
-	qsort( m_TextureOrder, m_nNumTextures, sizeof( m_TextureOrder[ 0 ] ), CSimpleTexturePacker::TextureSizeCompare );
+	std::qsort( m_TextureOrder, m_nNumTextures, sizeof( m_TextureOrder[ 0 ] ), CSimpleTexturePacker::TextureSizeCompare );
 	GetTextureCombiner().m_pCombinedStudioData->m_Results.m_nNumTexturePackIterations++;
 
 	for( int nTexture = 0; nTexture < m_nNumTextures; nTexture++ )
@@ -230,7 +221,7 @@ void CSimpleTexturePacker::Resolve( )
 			// put them back in order
 			qsort( m_TextureOrder, m_nNumTextures, sizeof( m_TextureOrder[ 0 ] ), CSimpleTexturePacker::TextureSizeCompare );
 
-			AssertMsg( false, "Could not find open space for texture in packer" );
+			contract_assert( false && "Could not find open space for texture in packer" );
 
 			V_sprintf_safe( GetTextureCombiner().m_pCombinedStudioData->m_Results.m_szErrorMessage, "could not find open space for texture in packer" );
 			GetTextureCombiner().m_pCombinedStudioData->m_Results.m_nDetailedError = COMBINED_DETAIL_ERROR_TEXTURE_PACKER_NO_SPACE;
@@ -288,7 +279,7 @@ bool CSimpleTexturePacker::IterateTextures( )
 	TTextureInfo *pSaveSwap;
 	int nCounters[ m_nMaxTextures ];
 
-	memset( nCounters, 0, m_nNumTextures * sizeof( int )  );
+	std::memset( nCounters, 0, m_nNumTextures * sizeof( int )  );
  
 	// Boothroyd method
 	if ( BruteIterate() )
@@ -425,7 +416,7 @@ void CTextureCombine::Init( TCombinedStudioData *pCombinedStudioData )
 
 	m_nNumMaterials = 0;
 
-	memset( m_szMaterials, 0, sizeof( m_szMaterials ) );
+	std::memset( m_szMaterials, 0, sizeof( m_szMaterials ) );
 	memset( m_nMaterialAtlasInfo, 0, sizeof( m_nMaterialAtlasInfo ) );
 	m_nMaxAtlasGroup = 0;
 
@@ -542,7 +533,7 @@ void CTextureCombine::Resolve( )
 {
 	if ( m_nNumMaterials <= 0 )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "no materials specified for texture combiner" );
 		throw( COMBINE_RESULT_FLAG_MISSING_ASSET_FILE );
 	}
@@ -638,7 +629,7 @@ void CTextureCombine::FindMaterialToTexture( )
 
 		if ( MaterialToTexture[ m_nMaterialToTexture ].m_pszMaterialName == nullptr )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "unsupported shader for texture combiner: %s", pszShaderName );
 			throw( COMBINE_RESULT_FLAG_UNSUPPORTED_SHADER );
 		}
@@ -653,8 +644,8 @@ void CTextureCombine::FindMaterialToTexture( )
 
 			if ( bUsed )
 			{
-				m_pCombinedStudioData->m_AtlasGroups[ nAtlasGroup ].m_pCombinedTextures[ nTexture ] = ( unsigned char * )malloc( m_AtlasGroups[ nAtlasGroup ].m_nCombinedTextureSize[ nTexture ] );
-				memcpy( m_pCombinedStudioData->m_AtlasGroups[ nAtlasGroup ].m_pCombinedTextures[ nTexture ], m_AtlasGroups[ nAtlasGroup ].m_CombinedTextureMemory[ nTexture ], m_AtlasGroups[ nAtlasGroup ].m_nCombinedTextureSize[ nTexture ] );
+				m_pCombinedStudioData->m_AtlasGroups[ nAtlasGroup ].m_pCombinedTextures[ nTexture ] = ( unsigned char * )std::malloc( m_AtlasGroups[ nAtlasGroup ].m_nCombinedTextureSize[ nTexture ] );
+				std::memcpy( m_pCombinedStudioData->m_AtlasGroups[ nAtlasGroup ].m_pCombinedTextures[ nTexture ], m_AtlasGroups[ nAtlasGroup ].m_CombinedTextureMemory[ nTexture ], m_AtlasGroups[ nAtlasGroup ].m_nCombinedTextureSize[ nTexture ] );
 				m_pCombinedStudioData->m_AtlasGroups[ nAtlasGroup ].m_nCombinedTextureSizes[ nTexture ] = m_AtlasGroups[ nAtlasGroup ].m_nCombinedTextureSize[ nTexture ];
 
 				V_sprintf_safe( NewFieldValue, "!%s|%d|%d|%hu|%d!", m_pCombinedStudioData->m_szCombinedModelName, nAtlasGroup, nTexture, m_pCombinedStudioData->m_FinalHandle, CModelCombine::GetNextAssetID() );
@@ -667,7 +658,7 @@ void CTextureCombine::FindMaterialToTexture( )
 }
 
 
-#define IGNORE_TEXTURE_FLAGS ( TEXTUREFLAGS_HINT_DXT5 | TEXTUREFLAGS_ONEBITALPHA | TEXTUREFLAGS_EIGHTBITALPHA | TEXTUREFLAGS_SKIP_INITIAL_DOWNLOAD )
+inline constexpr auto IGNORE_TEXTURE_FLAGS = ( TEXTUREFLAGS_HINT_DXT5 | TEXTUREFLAGS_ONEBITALPHA | TEXTUREFLAGS_EIGHTBITALPHA | TEXTUREFLAGS_SKIP_INITIAL_DOWNLOAD );
 
 bool CTextureCombine::LoadVTFs( int nAtlasGroup, const char *pszTextureField, const char *pszFlatReplacement, char szTextureNames[ COMBINER_MAX_MATERIALS ][ MAX_PATH ] )
 {
@@ -688,7 +679,7 @@ bool CTextureCombine::LoadVTFs( int nAtlasGroup, const char *pszTextureField, co
 			}
 			else
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "could not located required texture in material %s", pszTexture );
 				throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
 			}
@@ -704,7 +695,7 @@ bool CTextureCombine::LoadVTFs( int nAtlasGroup, const char *pszTextureField, co
 		auto vtfFile = g_pFullFileSystem->ReadFile( szFinalPath, "GAME" );
 		if ( !vtfFile )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "could not read texture %s", szFinalPath );
 			throw( COMBINE_RESULT_FLAG_MISSING_ASSET_FILE );
 		}
@@ -714,7 +705,7 @@ bool CTextureCombine::LoadVTFs( int nAtlasGroup, const char *pszTextureField, co
 		VTFFileBaseHeader_t	*pVTFFileBaseHeader = ( VTFFileBaseHeader_t * )m_AtlasGroups[ nAtlasGroup ].m_pVTFData[ nMaterial ].data();
 		if ( pVTFFileBaseHeader->version[ 0 ] != VTF_MAJOR_VERSION || pVTFFileBaseHeader->version[ 1 ] != VTF_MINOR_VERSION )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "texture is invalid version %s", szFinalPath );
 			throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
 		}
@@ -723,7 +714,7 @@ bool CTextureCombine::LoadVTFs( int nAtlasGroup, const char *pszTextureField, co
 
 		if ( m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ nMaterial ]->numFrames != 1 || m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ nMaterial ]->startFrame != 0 )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "texture has frame information %s", szFinalPath );
 			throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
 		}
@@ -732,7 +723,7 @@ bool CTextureCombine::LoadVTFs( int nAtlasGroup, const char *pszTextureField, co
 
 		if ( m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ nMaterial ]->numMipLevels > MAX_COMBINED_MIP_LEVELS )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "texture %s has too many mip levels: %d > %d", szFinalPath, m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ nMaterial ]->numMipLevels, MAX_COMBINED_MIP_LEVELS );
 			throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
 		}
@@ -743,8 +734,8 @@ bool CTextureCombine::LoadVTFs( int nAtlasGroup, const char *pszTextureField, co
 
 bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char *pszTextureField, const char *pszFlatReplacement )
 {
-	Assert( nAtlasGroup >= 0 && nAtlasGroup <= m_nMaxAtlasGroup );
-	Assert( nTexture >= 0 && nTexture < COMBINER_MAX_TEXTURES_PER_MATERIAL );
+	contract_assert( nAtlasGroup >= 0 && nAtlasGroup <= m_nMaxAtlasGroup );
+	contract_assert( nTexture >= 0 && nTexture < COMBINER_MAX_TEXTURES_PER_MATERIAL );
 
 	double	flStartLoadTime = Plat_FloatTime();
 	char	szTextureNames[ COMBINER_MAX_MATERIALS ][ MAX_PATH ];
@@ -764,7 +755,7 @@ bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char 
 	int		nMipHeight[ COMBINER_MAX_MATERIALS ][ MAX_COMBINED_MIP_LEVELS ];
 	int		nBlockSize;
 
-	memset( pMipOffset, 0, sizeof( pMipOffset ) );
+	std::memset( pMipOffset, 0, sizeof( pMipOffset ) );
 
 	switch ( m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ 0 ]->imageFormat )
 	{
@@ -785,7 +776,7 @@ bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char 
 			break;
 
 		default:
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "texture '%s' has unsupported format: %d", szTextureNames[ 0 ], m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ 0 ]->imageFormat );
 			throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
 			break;
@@ -803,7 +794,7 @@ bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char 
 
 		if ( ( m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ nMaterial ]->flags & ~( IGNORE_TEXTURE_FLAGS ) ) != ( m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ 0 ]->flags & ~( IGNORE_TEXTURE_FLAGS ) ) )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "texture '%s' has different flags than base: %d != %d", szTextureNames[ nMaterial ],
 							m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ nMaterial ]->flags, m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ 0 ]->flags );
 			throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
@@ -821,7 +812,7 @@ bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char 
 
 		if ( pImageResource == nullptr )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "could not locate image resource for texture '%s'", szTextureNames[ nMaterial ] );
 			throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
 		}
@@ -894,9 +885,6 @@ bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char 
 		m_AtlasGroups[ nAtlasGroup ].m_pSimpleTexturePacker->Init( MAX_COMBINED_WIDTH, MAX_COMBINED_HEIGHT );
 		for( int nMaterial = 0; nMaterial < m_AtlasGroups[ nAtlasGroup ].m_nNumMaterials; nMaterial++ )
 		{
-#ifdef DEBUG_VTF_COMBINE
-			const char *pszTexture = m_pMaterialKVs[ nMaterial ]->GetString( pszTextureField, nullptr );
-#endif
 			DebugCombineMsg( "Material: %d ( %s ) Width=%d, Height=%d\n", nMaterial, szTextureNames[ nMaterial ], m_pVTFFileHeader[ nMaterial ]->width, m_pVTFFileHeader[ nMaterial ]->height );
 			m_AtlasGroups[ nAtlasGroup ].m_pSimpleTexturePacker->AddTexture( nMaterial, m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ nMaterial ]->width, m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ nMaterial ]->height );
 		}
@@ -959,7 +947,7 @@ bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char 
 
 			if ( nMipWidth[ nMaterial ][ 0 ] != nWriteWidth || nMipHeight[ nMaterial ][ 0 ] != nWriteHeight )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "texture '%s' size ( %d, %d ) differs expected size ( %d, %d )", 
 					szTextureNames[ nMaterial ], nMipWidth[ nMaterial ][ 0 ] << 2, nMipHeight[ nMaterial ][ 0 ] << 2, nWriteWidth << 2, nWriteHeight << 2 );
 				throw( COMBINE_RESULT_FLAG_UNHANDLED_ISSUE );
@@ -992,7 +980,7 @@ bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char 
 		nMaxSize >>= 1;
 	}
 
-	Q_strncpy( m_AtlasGroups[ nAtlasGroup ].m_CombinedHeaders[ nTexture ]->fileTypeString, "VTF", 4 );
+	V_strncpy( m_AtlasGroups[ nAtlasGroup ].m_CombinedHeaders[ nTexture ]->fileTypeString, "VTF", 4 );
 	m_AtlasGroups[ nAtlasGroup ].m_CombinedHeaders[ nTexture ]->version[ 0 ] = VTF_MAJOR_VERSION;
 	m_AtlasGroups[ nAtlasGroup ].m_CombinedHeaders[ nTexture ]->version[ 1 ] = VTF_MINOR_VERSION;
 	m_AtlasGroups[ nAtlasGroup ].m_CombinedHeaders[ nTexture ]->headerSize = pPtr - ( ( byte * )m_AtlasGroups[ nAtlasGroup ].m_CombinedHeaders[ nTexture ] );
@@ -1101,7 +1089,7 @@ bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char 
 				{
 					for( int x = 0; x < nWriteWidth; x++, pWriteOffset += nBlockSize )
 					{
-						memcpy( pWriteOffset, pReadOffset, nBlockSize );
+						std::memcpy( pWriteOffset, pReadOffset, nBlockSize );
 					}
 					pWriteOffset += nCombinedLineSizeDelta;
 				}
@@ -1110,8 +1098,8 @@ bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char 
 			{
 				int nReadWidth = nMipWidth[ nMaterial ][ nMip ];
 
-				Assert( nWriteWidth == nReadWidth );
-				Assert( nWriteHeight == nMipHeight[ nMaterial ][ nMip ] );
+				contract_assert( nWriteWidth == nReadWidth );
+				contract_assert( nWriteHeight == nMipHeight[ nMaterial ][ nMip ] );
 
 				int nReadSize = nReadWidth * nBlockSize;
 
@@ -1126,7 +1114,7 @@ bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char 
 						nReadCacheSize -= CACHE_LINE_SIZE;
 					}
 					*/
-					memcpy( pWriteOffset, pReadOffset, nReadSize );
+					std::memcpy( pWriteOffset, pReadOffset, nReadSize );
 					pReadOffset += nReadSize;
 					pWriteOffset += nCombinedLineSize;
 				}

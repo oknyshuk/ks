@@ -1,8 +1,11 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
-#ifndef PHYSICS_SOFTBODY_HDR
-#define PHYSICS_SOFTBODY_HDR
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+import ks.tier1;
 #include "mathlib/softbodyenvironment.h"
+#include "igamesystem.h"
+import std;
 
 #ifndef CLIENT_DLL
 #error Softbodies should only be used on client
@@ -15,10 +18,8 @@ class CSoftbodyProcess : public CAutoGameSystemPerFrame
 {
 public:
 	CSoftbodyProcess() : CAutoGameSystemPerFrame( "SoftbodyProcess" ) {}
-	virtual void OnRestore() OVERRIDE;
-	virtual void Update( float frametime ) OVERRIDE;
+	virtual void OnRestore() override;
+	virtual void Update( float frametime ) override;
 
-	virtual void PostRender() OVERRIDE;
+	virtual void PostRender() override;
 };
-
-#endif

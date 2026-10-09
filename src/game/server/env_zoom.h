@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef ENV_ZOOM_H
-#define ENV_ZOOM_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
 bool CanOverrideEnvZoomOwner( CBaseEntity *pZoomOwner );
 float GetZoomOwnerDesiredFOV( CBaseEntity *pZoomOwner );
-
-#endif //ENV_ZOOM_H

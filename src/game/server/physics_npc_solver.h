@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PHYSICS_NPC_SOLVER_H
-#define PHYSICS_NPC_SOLVER_H
-
+class CBaseEntity;
+class CAI_BaseNPC;
 
 extern CBaseEntity *NPCPhysics_CreateSolver( CAI_BaseNPC *pNPC, CBaseEntity *pPhysicsObject, bool disableCollisions, float separationDuration );
 extern CBaseEntity *EntityPhysics_CreateSolver( CBaseEntity *pMovingEntity, CBaseEntity *pPhysicsBlocker, bool disableCollisions, float separationDuration );
 bool NPCPhysics_SolverExists( CAI_BaseNPC *pNPC, CBaseEntity *pPhysicsObject );
-
-
-#endif // PHYSICS_NPC_SOLVER_H

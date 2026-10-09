@@ -1,16 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.vstdlib;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 
 #include "ai_basenpc.h"
-#include "fmtstr.h"
 #include "activitylist.h"
 #include "animation.h"
 #include "basecombatweapon.h"
@@ -25,7 +52,6 @@
 #include "worldsize.h"
 #include "game.h"
 #include "shot_manipulator.h"
-
 
 #include "ai_network.h"
 #include "ai_networkmanager.h"
@@ -52,19 +78,15 @@
 #include "player.h"
 #include "sceneentity.h"
 #include "ndebugoverlay.h"
-#include "mathlib/mathlib.h"
 #include "bone_setup.h"
 #include "IEffects.h"
-#include "vstdlib/random.h"
 #include "engine/IEngineSound.h"
-#include "tier1/strtools.h"
 #include "doors.h"
 #include "BasePropDoor.h"
 #include "npcevent.h"
 #include "movevars_shared.h"
 #include "te_effect_dispatch.h"
 #include "globals.h"
-#include "checksum_crc.h"
 #include "iservervehicle.h"
 #include "filters.h"
 #include "waterbullet.h"
@@ -76,10 +98,7 @@
 #include "physics_npc_solver.h"
 #include "death_pose.h"
 #include "datacache/imdlcache.h"
-#include "vstdlib/jobthread.h"
 #include "ai_addon.h"
-
-
 
 #include "env_debughistory.h"
 #include "collisionutils.h"
@@ -90,7 +109,6 @@ extern ConVar sk_healthkit;
 #include "ai_route.h"
 #include "ai_waypoint.h"
 
-#include "tier1/text_writer.h"
 #include "GameStats.h"
 #include "physics_prop_statue.h"
 
@@ -98,12 +116,12 @@ extern ConVar sk_healthkit;
 
 bool RagdollManager_SaveImportant( CAI_BaseNPC *pNPC );
 
-#define	MIN_PHYSICS_FLINCH_DAMAGE	5.0f
+constexpr auto MIN_PHYSICS_FLINCH_DAMAGE = 5.0f;
 
-#define	NPC_GRENADE_FEAR_DIST		200
-#define	MAX_GLASS_PENETRATION_DEPTH	16.0f
+constexpr auto NPC_GRENADE_FEAR_DIST = 200;
+constexpr auto MAX_GLASS_PENETRATION_DEPTH = 16.0f;
 
-#define FINDNAMEDENTITY_MAX_ENTITIES	32		// max number of entities to be considered for random entity selection in FindNamedEntity
+constexpr auto FINDNAMEDENTITY_MAX_ENTITIES = 32; // max number of entities to be considered for random entity selection in FindNamedEntity
 
 extern bool			g_fDrawLines;
 extern short		g_sModelIndexLaser;		// holds the index for the laser beam
@@ -149,11 +167,9 @@ ConVar	ai_test_moveprobe_ignoresmall( "ai_test_moveprobe_ignoresmall", "0" );
 #define DbgEnemyMsg if ( 0 ) ; else DevMsg
 #endif
 
-#ifdef DEBUG_AI_FRAME_THINK_LIMITS
-#define DbgFrameLimitMsg DevMsg
-#else
-#define DbgFrameLimitMsg (void)
-#endif
+// Frame-limit tracing is compiled out; the no-op keeps the call sites unchanged.
+template <typename... Args>
+inline void DbgFrameLimitMsg( Args &&... ) {}
 
 // NPC damage adjusters
 ConVar	sk_npc_head( "sk_npc_head","2" );
@@ -329,7 +345,7 @@ void CPostFrameNavigationHook::FrameUpdatePostEntityThink( void )
 	SetGrameFrameRunning( false );
 
 	// Throw this off to a thread job
-	g_pQueuedNavigationQueryJob = ThreadExecute( &ProcessNavigationQueries, m_Functors.data(), std::ssize( m_Functors ) );
+	g_pQueuedNavigationQueryJob = g_pThreadPool->QueueCall(&ProcessNavigationQueries, m_Functors.data(), std::ssize( m_Functors ));
 }
 
 //-----------------------------------------------------------------------------
@@ -358,10 +374,10 @@ void CPostFrameNavigationHook::EnqueueEntityNavigationQuery( CAI_BaseNPC *pNPC, 
 void CAI_BaseNPC::AddBehavior( CAI_BehaviorBase *pBehavior )
 {
 #ifdef DEBUG
-	Assert( ks::find_index( m_Behaviors, pBehavior ) == -1 );
+	contract_assert( ks::find_index( m_Behaviors, pBehavior ) == -1 );
 	for ( int i = 0; i < std::ssize( m_Behaviors ); i++)
 	{
-		Assert( typeid(*m_Behaviors[i]) != typeid(*pBehavior) );
+		contract_assert( typeid(*m_Behaviors[i]) != typeid(*pBehavior) );
 	}
 #endif
 	m_Behaviors.push_back( pBehavior );
@@ -383,7 +399,7 @@ void CAI_BaseNPC::RemoveAndDestroyBehavior( CAI_BehaviorBase *pBehavior )
 			break;
 		}
 	}
-	Assert( bFound && !pBehavior->IsRunning() );
+	contract_assert( bFound && !pBehavior->IsRunning() );
 #endif
 
 	ks::erase_first( m_Behaviors, pBehavior );
@@ -1038,7 +1054,7 @@ void CAI_BaseNPC::NotifyFriendsOfDamage( CBaseEntity *pAttackerEntity )
 			if ( pNpc && pNpc != this )
 			{
 				const Vector &originNpc = pNpc->GetAbsOrigin();
-				if ( fabsf( originNpc.z - origin.z ) < NEAR_Z )
+				if ( std::fabsf( originNpc.z - origin.z ) < NEAR_Z )
 				{
 					if ( (originNpc.AsVector2D() - origin.AsVector2D()).LengthSqr() < NEAR_XY_SQ )
 					{
@@ -1180,7 +1196,7 @@ void CAI_BaseNPC::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir
 	SetLastHitGroup( ptr->hitgroup );
 	m_nForceBone = ptr->physicsbone;		// save this bone for physics forces
 
-	Assert( m_nForceBone > -255 && m_nForceBone < 256 );
+	contract_assert( m_nForceBone > -255 && m_nForceBone < 256 );
 
 	bool bDebug = showhitlocation.GetBool();
 
@@ -1364,8 +1380,8 @@ CBaseEntity *CAI_BaseNPC::PlayerInRange( const Vector &vecLocation, float flDist
 }
 
 
-#define BULLET_WIZZDIST	80.0
-#define SLOPE ( -1.0 / BULLET_WIZZDIST )
+constexpr auto BULLET_WIZZDIST = 80.0;
+constexpr auto SLOPE = ( -1.0 / BULLET_WIZZDIST );
 
 void BulletWizz( Vector vecSrc, Vector vecEndPos, edict_t *pShooter, bool isTracer )
 {
@@ -1566,7 +1582,7 @@ void CBaseEntity::HandleShotImpactingGlass( const FireBulletsInfo_t &info,
 //-----------------------------------------------------------------------------
 // Computes the tracer start position
 //-----------------------------------------------------------------------------
-#define SHOT_UNDERWATER_BUBBLE_DIST 400
+constexpr auto SHOT_UNDERWATER_BUBBLE_DIST = 400;
 
 void CBaseEntity::CreateBubbleTrailTracer( const Vector &vecShotSrc, const Vector &vecShotEnd, const Vector &vecShotDir )
 {
@@ -1580,7 +1596,7 @@ void CBaseEntity::CreateBubbleTrailTracer( const Vector &vecShotSrc, const Vecto
 	}
 	else
 	{
-		float flLength = sqrt(flLengthSqr) - 0.1f;
+		float flLength = std::sqrt(flLengthSqr) - 0.1f;
 		nBubbles = WATER_BULLET_BUBBLES_PER_INCH * flLength;
 		VectorMA( vecShotSrc, flLength, vecShotDir, vecBubbleEnd );
 	}
@@ -1659,7 +1675,7 @@ void CAI_BaseNPC::SetCondition( int iCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 	
@@ -1679,7 +1695,7 @@ bool CAI_BaseNPC::HasCondition( int iCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	
@@ -1698,7 +1714,7 @@ bool CAI_BaseNPC::HasCondition( int iCondition, bool bUseIgnoreConditions )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	
@@ -1714,7 +1730,7 @@ void CAI_BaseNPC::ClearCondition( int iCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 
@@ -1737,7 +1753,7 @@ void CAI_BaseNPC::ClearConditions( int *pConditions, int nConditions )
 		
 		if ( interrupt == -1 )
 		{
-			Assert(0);
+			contract_assert( 0 );
 			continue;
 		}
 		
@@ -1756,7 +1772,7 @@ void CAI_BaseNPC::SetIgnoreConditions( int *pConditions, int nConditions )
 		
 		if ( interrupt == -1 )
 		{
-			Assert(0);
+			contract_assert( 0 );
 			continue;
 		}
 		
@@ -1773,7 +1789,7 @@ void CAI_BaseNPC::ClearIgnoreConditions( int *pConditions, int nConditions )
 		
 		if ( interrupt == -1 )
 		{
-			Assert(0);
+			contract_assert( 0 );
 			continue;
 		}
 		
@@ -1794,7 +1810,7 @@ bool CAI_BaseNPC::HasInterruptCondition( int iCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	return ( m_Conditions[interrupt] && GetCurSchedule()->HasInterrupt( interrupt ) );
@@ -1813,7 +1829,7 @@ bool CAI_BaseNPC::ConditionInterruptsCurSchedule( int iCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	return ( GetCurSchedule()->HasInterrupt( interrupt ) );
@@ -1831,7 +1847,7 @@ bool CAI_BaseNPC::ConditionInterruptsSchedule( int localScheduleID, int iConditi
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	return ( pSchedule->HasInterrupt( interrupt ) );
@@ -1869,14 +1885,14 @@ void CAI_BaseNPC::SetScriptedScheduleIgnoreConditions( Interruptability_t interr
 		COND_RECEIVED_ORDERS,
 	};
 
-	ClearIgnoreConditions( g_GeneralConditions, ARRAYSIZE(g_GeneralConditions) );
-	ClearIgnoreConditions( g_DamageConditions, ARRAYSIZE(g_DamageConditions) );
+	ClearIgnoreConditions( g_GeneralConditions, std::size( g_GeneralConditions ) );
+	ClearIgnoreConditions( g_DamageConditions, std::size( g_DamageConditions ) );
 
 	if ( interrupt > GENERAL_INTERRUPTABILITY )
-		SetIgnoreConditions( g_GeneralConditions, ARRAYSIZE(g_GeneralConditions) );
+		SetIgnoreConditions( g_GeneralConditions, std::size( g_GeneralConditions ) );
 
 	if ( interrupt > DAMAGEORDEATH_INTERRUPTABILITY )
-		SetIgnoreConditions( g_DamageConditions, ARRAYSIZE(g_DamageConditions) );
+		SetIgnoreConditions( g_DamageConditions, std::size( g_DamageConditions ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -1906,7 +1922,7 @@ bool CAI_BaseNPC::IsCustomInterruptConditionSet( int nCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return false;
 	}
 	
@@ -1923,7 +1939,7 @@ void CAI_BaseNPC::SetCustomInterruptCondition( int nCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 	
@@ -1940,7 +1956,7 @@ void CAI_BaseNPC::ClearCustomInterruptCondition( int nCondition )
 	
 	if ( interrupt == -1 )
 	{
-		Assert(0);
+		contract_assert( 0 );
 		return;
 	}
 	
@@ -2031,7 +2047,7 @@ void CAI_BaseNPC::OnLooked( int iDistance )
 
 	bool bHadSeePlayer = HasCondition(COND_SEE_PLAYER);
 
-	ClearConditions( conditionsToClear, ARRAYSIZE( conditionsToClear ) );
+	ClearConditions( conditionsToClear, std::size( conditionsToClear ) );
 
 	AISightIter_t iter;
 	CBaseEntity *pSightEnt;
@@ -2130,7 +2146,7 @@ void CAI_BaseNPC::OnListened()
 		COND_SMELL,
 	};
 
-	ClearConditions( conditionsToClear, ARRAYSIZE( conditionsToClear ) );
+	ClearConditions( conditionsToClear, std::size( conditionsToClear ) );
 
 	pCurrentSound = GetSenses()->GetFirstHeardSound( &iter );
 
@@ -2443,23 +2459,6 @@ void CAI_BaseNPC::SetHeadDirection( const Vector &vTargetPos, float flInterval)
 	if (!(CapabilitiesGet() & bits_CAP_TURN_HEAD))
 		return;
 
-#ifdef DEBUG_LOOK
-	// Draw line in body, head, and eye directions
-	Vector vEyePos = EyePosition();
-	Vector vHeadDir;
-	HeadDirection3D(&vHeadDir);
-	Vector vBodyDir;
-	BodyDirection2D(&vBodyDir);
-
-	//UNDONE <<TODO>>
-	// currently eye dir just returns head dir, so use vTargetPos for now
-	//Vector vEyeDir;	w
-	//EyeDirection3D(&vEyeDir);
-	NDebugOverlay::Line( vEyePos, vEyePos+(50*vHeadDir), 255, 0, 0, false, 0.1 );
-	NDebugOverlay::Line( vEyePos, vEyePos+(50*vBodyDir), 0, 255, 0, false, 0.1 );
-	NDebugOverlay::Line( vEyePos, vTargetPos, 0, 0, 255, false, 0.1 );
-#endif
-
 	//--------------------------------------
 	// Set head yaw
 	//--------------------------------------
@@ -2489,7 +2488,7 @@ void CAI_BaseNPC::SetHeadDirection( const Vector &vTargetPos, float flInterval)
 	Vector	vEyePosition	= EyePosition();
 	float	fTargetDist		= (vTargetPos - vEyePosition).Length();
 	float	fVertDist		= vTargetPos.z - vEyePosition.z;
-	float	flDesiredPitch	= -RAD2DEG(atan(fVertDist/fTargetDist));
+	float	flDesiredPitch	= -RAD2DEG(std::atan(fVertDist/fTargetDist));
 
 	// Make frame rate independent
 	timeToUse = flInterval;
@@ -2857,7 +2856,6 @@ void CAI_BaseNPC::MaintainTurnActivity( )
 	if ( IsInAVehicle() )
 		return;
 
-	AI_PROFILE_SCOPE( CAI_BaseNPC_MaintainTurnActivity );
 	GetMotor()->MaintainTurnActivity( );
 }
 
@@ -2871,10 +2869,9 @@ void CAI_BaseNPC::PerformMovement()
 	if (!IsAlive())
 		return;
 
-	AI_PROFILE_SCOPE(CAI_BaseNPC_PerformMovement);
 	g_AIMoveTimer.Start();
 
-	float flInterval = ( m_flTimeLastMovement != FLT_MAX ) ? gpGlobals->curtime - m_flTimeLastMovement : 0.1;
+	float flInterval = ( m_flTimeLastMovement != std::numeric_limits<float>::max() ) ? gpGlobals->curtime - m_flTimeLastMovement : 0.1;
 
 	m_pNavigator->Move( ROUND_TO_TICKS( flInterval ) );
 	m_flTimeLastMovement = gpGlobals->curtime;
@@ -2889,7 +2886,6 @@ void CAI_BaseNPC::PerformMovement()
 
 void CAI_BaseNPC::PostMovement()
 {
-	AI_PROFILE_SCOPE( CAI_BaseNPC_PostMovement );
 
 	InvalidateBoneCache();
 
@@ -2899,7 +2895,6 @@ void CAI_BaseNPC::PostMovement()
 
 		if ( CapabilitiesGet() & bits_CAP_AIM_GUN )
 		{
-			AI_PROFILE_SCOPE( CAI_BaseNPC_PM_AimGun );
 			AimGun();
 		}
 		else
@@ -2911,13 +2906,11 @@ void CAI_BaseNPC::PostMovement()
 		// set look targets for npcs with animated faces
 		if ( CapabilitiesGet() & bits_CAP_ANIMATEDFACE )
 		{
-			AI_PROFILE_SCOPE( CAI_BaseNPC_PM_MaintainLookTargets );
 			MaintainLookTargets(flInterval);
 		}
 	}
 
 	{
-	AI_PROFILE_SCOPE( CAI_BaseNPC_PM_MaintainTurnActivity );
 	// update turning as needed
 	MaintainTurnActivity( );
 	}
@@ -2996,7 +2989,7 @@ bool CAI_BaseNPC::PreThink( void )
 extern ConVar ai_sequence_debug;
 void CAI_BaseNPC::RunAnimation( void )
 {
-	VPROF_BUDGET( "CAI_BaseNPC_RunAnimation", VPROF_BUDGETGROUP_SERVER_ANIM );
+	CVProfScope _( "CAI_BaseNPC_RunAnimation", 0, VPROF_BUDGETGROUP_SERVER_ANIM, false, BUDGETFLAG_OTHER );
 
 	if ( !GetModelPtr() )
 		return;
@@ -3056,7 +3049,6 @@ void CAI_BaseNPC::RunAnimation( void )
 
 void CAI_BaseNPC::PostRun( void )
 {
-	AI_PROFILE_SCOPE(CAI_BaseNPC_PostRun);
 
 	g_AIPostRunTimer.Start();
 
@@ -3360,7 +3352,7 @@ void CAI_BaseNPC::UpdateEfficiency( bool bInPVS )
 	int iPVSOffset = (bInPVS) ? 0 : NO_PVS_OFFSET;
 	int iMapping = iStateOffset + iPVSOffset + iFacingOffset + range;
 
-	Assert( iMapping < ARRAYSIZE( mappings ) );
+	contract_assert( iMapping < std::size( mappings ) );
 
 	AI_Efficiency_t efficiency = mappings[iMapping];
 
@@ -3433,7 +3425,7 @@ void CAI_BaseNPC::UpdateSleepState( bool bInPVS )
 					while ( iSound != SOUNDLIST_EMPTY )
 					{
 						CSound *pCurrentSound = CSoundEnt::SoundPointerForIndex( iSound );
-						Assert( pCurrentSound );
+						contract_assert( pCurrentSound );
 
 						if ( (pCurrentSound->SoundType() & SOUND_DANGER) && 
 							 GetSenses()->CanHearSound( pCurrentSound ) &&
@@ -3581,7 +3573,6 @@ void CAI_BaseNPC::RebalanceThinks()
 
 	if ( ShouldRebalanceThinks() && gpGlobals->tickcount >= gm_iNextThinkRebalanceTick )
 	{
-		AI_PROFILE_SCOPE(AI_Think_Rebalance );
 
 		static std::vector< AIRebalanceInfo_t > rebalanceCandidates;
 		gm_iNextThinkRebalanceTick = gpGlobals->tickcount + TIME_TO_TICKS( random->RandomFloat( 3, 5) );
@@ -3642,7 +3633,7 @@ void CAI_BaseNPC::RebalanceThinks()
 		{
 			ks::qsort( rebalanceCandidates, ThinkRebalanceCompare );
 
-			int iMaxThinkersPerTick = ceil( (float)( std::ssize( rebalanceCandidates ) + 1 ) / (float)iTicksPer10Hz ); // +1 to account for "this"
+			int iMaxThinkersPerTick = std::ceil( (float)( std::ssize( rebalanceCandidates ) + 1 ) / (float)iTicksPer10Hz ); // +1 to account for "this"
 
 			int iCurTickDistributing = std::min( gpGlobals->tickcount, rebalanceCandidates[0].iNextThinkTick );
 			int iRemainingThinksToDistribute = iMaxThinkersPerTick - 1; // Start with one fewer first time because "this" is 
@@ -3701,7 +3692,6 @@ void CAI_BaseNPC::RebalanceThinks()
 			}
 		}
 
-		Assert( GetNextThinkTick() == TICK_NEVER_THINK ); // never change this objects tick
 	}
 }
 
@@ -3711,7 +3701,7 @@ static float g_StartTimeCurThink;
 bool CAI_BaseNPC::PreNPCThink()
 {
 	static int iPrevFrame = -1;
-	static float frameTimeLimit = FLT_MAX;
+	static float frameTimeLimit = std::numeric_limits<float>::max();
 
 	bool bUseThinkLimits = ( !m_bInChoreo && ShouldUseFrameThinkLimits() );
 
@@ -3935,7 +3925,7 @@ void CAI_BaseNPC::NPCThink( void )
 		CheckPhysicsContacts();
 	}
 
-	Assert( !(m_NPCState == NPC_STATE_DEAD && m_lifeState == LIFE_ALIVE) );
+	contract_assert( !(m_NPCState == NPC_STATE_DEAD && m_lifeState == LIFE_ALIVE) );
 
 	//---------------------------------
 
@@ -3962,7 +3952,7 @@ void CAI_BaseNPC::NPCThink( void )
 
 		if ( g_pAINetworkManager && g_pAINetworkManager->IsInitialized() )
 		{
-			VPROF_BUDGET( "NPCs", VPROF_BUDGETGROUP_NPCS );
+			CVProfScope _( "NPCs", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
 			AI_PROFILE_SCOPE_BEGIN_( GetClassScheduleIdSpace()->GetClassName() ); // need to use a string stable from map load to map load
 
@@ -3996,7 +3986,7 @@ void CAI_BaseNPC::NPCThink( void )
 				SetSimulationTime( gpGlobals->curtime );
 			}
 			else
-				m_flTimeLastMovement = FLT_MAX;
+				m_flTimeLastMovement = std::numeric_limits<float>::max();
 
 			AI_PROFILE_SCOPE_END();
 		}
@@ -4244,7 +4234,6 @@ void CAI_BaseNPC::ClearAttackConditions( )
 
 void CAI_BaseNPC::GatherAttackConditions( CBaseEntity *pTarget, float flDist )
 {
-	AI_PROFILE_SCOPE(CAI_BaseNPC_GatherAttackConditions);
 	
 	Vector vecLOS = ( pTarget->GetAbsOrigin() - GetAbsOrigin() );
 	vecLOS.z = 0;
@@ -4282,7 +4271,6 @@ void CAI_BaseNPC::GatherAttackConditions( CBaseEntity *pTarget, float flDist )
 
 	if ( !bWeaponHasLOS )
 	{
-		AI_PROFILE_SCOPE( CAI_BaseNPC_GatherAttackConditions_SecondaryWeaponLOS );
 		ClearAttackConditions( );
 		targetPos		= pTarget->BodyTarget( GetAbsOrigin() );
 		bWeaponHasLOS	= CurrentWeaponLOSCondition( targetPos, true );
@@ -4304,7 +4292,6 @@ void CAI_BaseNPC::GatherAttackConditions( CBaseEntity *pTarget, float flDist )
 	// FIXME: move this out of here
 	if ( (capability & bits_CAP_WEAPON_RANGE_ATTACK1) && bWeaponIsReady )
 	{
-		AI_PROFILE_SCOPE( CAI_BaseNPC_GatherAttackConditions_WeaponRangeAttack1Condition );
 
 		condition = GetActiveWeapon()->WeaponRangeAttack1Condition(flDot, flDist);
 
@@ -4318,7 +4305,6 @@ void CAI_BaseNPC::GatherAttackConditions( CBaseEntity *pTarget, float flDist )
 	}
 	else if ( capability & bits_CAP_INNATE_RANGE_ATTACK1 )
 	{
-		AI_PROFILE_SCOPE( CAI_BaseNPC_GatherAttackConditions_RangeAttack1Condition );
 
 		condition = RangeAttack1Conditions( flDot, flDist );
 		if (condition != COND_CAN_RANGE_ATTACK1 || bWeaponHasLOS)
@@ -4329,7 +4315,6 @@ void CAI_BaseNPC::GatherAttackConditions( CBaseEntity *pTarget, float flDist )
 
 	if ( (capability & bits_CAP_WEAPON_RANGE_ATTACK2) && bWeaponIsReady && ( GetActiveWeapon()->CapabilitiesGet() & bits_CAP_WEAPON_RANGE_ATTACK2 ) )
 	{
-		AI_PROFILE_SCOPE( CAI_BaseNPC_GatherAttackConditions_WeaponRangeAttack2Condition );
 
 		condition = GetActiveWeapon()->WeaponRangeAttack2Condition(flDot, flDist);
 		if (condition != COND_CAN_RANGE_ATTACK2 || bWeaponHasLOS)
@@ -4339,7 +4324,6 @@ void CAI_BaseNPC::GatherAttackConditions( CBaseEntity *pTarget, float flDist )
 	}
 	else if ( capability & bits_CAP_INNATE_RANGE_ATTACK2 )
 	{
-		AI_PROFILE_SCOPE( CAI_BaseNPC_GatherAttackConditions_RangeAttack2Condition );
 
 		condition = RangeAttack2Conditions( flDot, flDist );
 		if (condition != COND_CAN_RANGE_ATTACK2 || bWeaponHasLOS)
@@ -4350,23 +4334,19 @@ void CAI_BaseNPC::GatherAttackConditions( CBaseEntity *pTarget, float flDist )
 
 	if ( (capability & bits_CAP_WEAPON_MELEE_ATTACK1) && bWeaponIsReady)
 	{
-		AI_PROFILE_SCOPE( CAI_BaseNPC_GatherAttackConditions_WeaponMeleeAttack1Condition );
 		SetCondition(GetActiveWeapon()->WeaponMeleeAttack1Condition(flDot, flDist));
 	}
 	else if ( capability & bits_CAP_INNATE_MELEE_ATTACK1 )
 	{
-		AI_PROFILE_SCOPE( CAI_BaseNPC_GatherAttackConditions_MeleeAttack1Condition );
 		SetCondition(MeleeAttack1Conditions ( flDot, flDist ));
 	}
 
 	if ( (capability & bits_CAP_WEAPON_MELEE_ATTACK2) && bWeaponIsReady)
 	{
-		AI_PROFILE_SCOPE( CAI_BaseNPC_GatherAttackConditions_WeaponMeleeAttack2Condition );
 		SetCondition(GetActiveWeapon()->WeaponMeleeAttack2Condition(flDot, flDist));
 	}
 	else if ( capability & bits_CAP_INNATE_MELEE_ATTACK2 )
 	{
-		AI_PROFILE_SCOPE( CAI_BaseNPC_GatherAttackConditions_MeleeAttack2Condition );
 		SetCondition(MeleeAttack2Conditions ( flDot, flDist ));
 	}
 
@@ -4515,7 +4495,7 @@ void CAI_BaseNPC::ClearSenseConditions( void )
 		COND_SMELL,
 	};
 
-	ClearConditions( conditionsToClear, ARRAYSIZE( conditionsToClear ) );
+	ClearConditions( conditionsToClear, std::size( conditionsToClear ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -4702,7 +4682,6 @@ void CAI_BaseNPC::GatherConditions( void )
 
 			if ( ShouldPlayIdleSound() )
 			{
-				AI_PROFILE_SCOPE(CAI_BaseNPC_IdleSound);
 				IdleSound();
 			}
 
@@ -4808,7 +4787,6 @@ void CAI_BaseNPC::PrescheduleThink( void )
 
 void CAI_BaseNPC::RunAI( void )
 {
-	AI_PROFILE_SCOPE(CAI_BaseNPC_RunAI);
 	g_AIRunTimer.Start();
 
 	if( ai_debug_squads.GetBool() )
@@ -4964,7 +4942,7 @@ NPC_STATE CAI_BaseNPC::SelectIdleIdealState()
 		CSound *pSound;
 
 		pSound = GetBestSound();
-		Assert( pSound != nullptr );
+		contract_assert( pSound != nullptr );
 		if ( pSound )
 		{
 			// BRJ 1/7/04: This code used to set the ideal yaw.
@@ -5037,7 +5015,7 @@ NPC_STATE CAI_BaseNPC::SelectAlertIdealState()
 		 HasCondition(COND_HEAR_COMBAT) )
 	{
 		CSound *pSound = GetBestSound();
-		AssertOnce( pSound != nullptr );
+		contract_assert( pSound != nullptr );
 
 		if ( pSound )
 		{
@@ -5299,7 +5277,7 @@ bool CAI_BaseNPC::WeaponLOSCondition(const Vector &ownerPos, const Vector &targe
 		{
 			Vector vSpread = GetAttackSpread( GetActiveWeapon() );
 			if ( vSpread.x > VECTOR_CONE_15DEGREES.x )
-				spread = TableCos(asin(vSpread.x));
+				spread = TableCos(std::asin(vSpread.x));
 			else // too much error because using point not box
 				spread = 0.99145; // "15 degrees"
 		}
@@ -5479,7 +5457,6 @@ bool CAI_BaseNPC::UpdateEnemyMemory( CBaseEntity *pEnemy, const Vector &position
 {
 	bool firstHand = ( pInformer == nullptr || pInformer == this );
 	
-	AI_PROFILE_SCOPE(CAI_BaseNPC_UpdateEnemyMemory);
 	
 	if ( GetEnemies() )
 	{
@@ -5534,7 +5511,6 @@ CBaseEntity *CAI_BaseNPC::GetEnemyOccluder(void)
 //-----------------------------------------------------------------------------
 void CAI_BaseNPC::GatherEnemyConditions( CBaseEntity *pEnemy )
 {
-	AI_PROFILE_SCOPE(CAI_BaseNPC_GatherEnemyConditions);
 
 	ClearCondition( COND_ENEMY_FACING_ME  );
 	ClearCondition( COND_BEHIND_ENEMY   );
@@ -5563,7 +5539,6 @@ void CAI_BaseNPC::GatherEnemyConditions( CBaseEntity *pEnemy )
 
 			if (HasMemory( bits_MEMORY_HAD_LOS ))
 			{
-				AI_PROFILE_SCOPE(CAI_BaseNPC_GatherEnemyConditions_Outputs);
 				// Send output event
 				if (GetEnemy()->IsPlayer())
 				{
@@ -5590,7 +5565,6 @@ void CAI_BaseNPC::GatherEnemyConditions( CBaseEntity *pEnemy )
 
 			if (!HasMemory( bits_MEMORY_HAD_LOS ))
 			{
-				AI_PROFILE_SCOPE(CAI_BaseNPC_GatherEnemyConditions_Outputs);
 				// Send output event
 				EHANDLE hEnemy;
 				hEnemy.Set( GetEnemy() );
@@ -5842,7 +5816,6 @@ void CAI_BaseNPC::UpdateTargetPos()
 //-----------------------------------------------------------------------------
 void CAI_BaseNPC::CheckTarget( CBaseEntity *pTarget )
 {
-	AI_PROFILE_SCOPE(CAI_Enemies_CheckTarget);
 
 	ClearCondition ( COND_HAVE_TARGET_LOS );
 	ClearCondition ( COND_TARGET_OCCLUDED  );
@@ -5885,7 +5858,7 @@ CAI_BaseNPC *CAI_BaseNPC::CreateCustomTarget( const Vector &vecOrigin, float dur
 //-----------------------------------------------------------------------------
 Activity CAI_BaseNPC::NPC_TranslateActivity( Activity eNewActivity )
 {
-	Assert( eNewActivity != ACT_INVALID );
+	contract_assert( eNewActivity != ACT_INVALID );
 
 	if (eNewActivity == ACT_RANGE_ATTACK1)
 	{
@@ -5980,7 +5953,7 @@ Activity CAI_BaseNPC::TranslateActivity( Activity idealActivity, Activity *pIdea
 
 		last = weaponTranslation;
 	}
-	AssertMsg( count < MAX_TRIES, "Circular activity translation!" );
+	contract_assert( ( count < MAX_TRIES ) && "Circular activity translation!" );
 
 	if ( last == ACT_SCRIPT_CUSTOM_MOVE )
 		return ACT_SCRIPT_CUSTOM_MOVE;
@@ -6012,7 +5985,6 @@ Activity CAI_BaseNPC::TranslateActivity( Activity idealActivity, Activity *pIdea
 	if ( idealActivity != idealWeaponActivity && HaveSequenceForActivity( idealActivity ) )
 		return idealActivity;
 
-	Assert( !HaveSequenceForActivity( idealActivity ) );
 	if ( idealActivity == ACT_RUN )
 	{
 		idealActivity = ACT_WALK;
@@ -6034,7 +6006,6 @@ Activity CAI_BaseNPC::TranslateActivity( Activity idealActivity, Activity *pIdea
 //-----------------------------------------------------------------------------
 void CAI_BaseNPC::ResolveActivityToSequence(Activity NewActivity, int &iSequence, Activity &translatedActivity, Activity &weaponActivity)
 {
-	AI_PROFILE_SCOPE( CAI_BaseNPC_ResolveActivityToSequence );
 
 	if ( NewActivity == ACT_SPECIFIC_SEQUENCE )
 	{
@@ -6202,7 +6173,7 @@ void CAI_BaseNPC::SetIdealActivity( Activity NewActivity )
   	// ignore if it's an ACT_TRANSITION, it means somewhere we're setting IdealActivity with a bogus intermediate value
 	if (NewActivity == ACT_TRANSITION)
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
@@ -6306,7 +6277,6 @@ void CAI_BaseNPC::AdvanceToIdealActivity(void)
 //-----------------------------------------------------------------------------
 void CAI_BaseNPC::MaintainActivity(void)
 {
-	AI_PROFILE_SCOPE( CAI_BaseNPC_MaintainActivity );
 
 	if ( m_lifeState == LIFE_DEAD )
 	{
@@ -6524,9 +6494,6 @@ float CAI_BaseNPC::ThrowLimit(	const Vector &vecStart,
 				return 0;
 			}
 
-#ifdef _THROWDEBUG
-			NDebugOverlay::Line( vecFrom, nextPos, 255, 0, 0, true, 1.0 );
-#endif
 			// ----------------------------------------------------------
 			// If blocked by an npc remember
 			// ----------------------------------------------------------
@@ -6535,12 +6502,6 @@ float CAI_BaseNPC::ThrowLimit(	const Vector &vecStart,
 			// Return distance sucessfully traveled before block encountered
 			return ((tr.endpos - vecStart).Length());
 		}
-#ifdef _THROWDEBUG
-		else
-		{
-			NDebugOverlay::Line( vecFrom, nextPos, 255, 255, 255, true, 1.0 );
-		}
-#endif
 
 
 		rawJumpVel  = rawJumpVel - gravity * timeStep;
@@ -6649,7 +6610,7 @@ void CAI_BaseNPC::CheckPhysicsContacts()
 							}
 
 							//Msg("Dropping %s from %s\n", pOtherEntity->GetClassname(), GetClassname() );
-							Assert( !NPCPhysics_SolverExists(this, pOtherEntity) );
+							contract_assert( !NPCPhysics_SolverExists(this, pOtherEntity) );
 							createSolver = true;
 							break;
 						}
@@ -6728,7 +6689,7 @@ bool CAI_BaseNPC::SetHullSizeSmall( bool force )
 //-----------------------------------------------------------------------------
 bool CAI_BaseNPC::IsNavHullValid() const
 {
-	Assert( GetSolid() != SOLID_BSP );
+	contract_assert( GetSolid() != SOLID_BSP );
 
 	Vector hullMin = GetHullMins();
 	Vector hullMax = GetHullMaxs();
@@ -6740,7 +6701,7 @@ bool CAI_BaseNPC::IsNavHullValid() const
 	}
 	else if ( GetSolid() == SOLID_VPHYSICS )
 	{
-		Assert( VPhysicsGetObject() );
+		contract_assert( VPhysicsGetObject() );
 		const CPhysCollide *pPhysCollide = VPhysicsGetObject()->GetCollide();
 		physcollision->CollideGetAABB( &vecMins, &vecMaxs, pPhysCollide, GetAbsOrigin(), GetAbsAngles() ); 
 		vecMins -= GetAbsOrigin();
@@ -6853,7 +6814,7 @@ void CAI_BaseNPC::NPCInit ( void )
 	// Only give weapon of allowed to have one
 	if (CapabilitiesGet() & bits_CAP_USE_WEAPONS)
 	{	// Does this npc spawn with a weapon
-		if ( m_spawnEquipment != NULL_STRING && strcmp(STRING(m_spawnEquipment), "0"))
+		if ( m_spawnEquipment != NULL_STRING && std::strcmp(STRING(m_spawnEquipment), "0"))
 		{
 			CBaseCombatWeapon *pWeapon = Weapon_Create( STRING(m_spawnEquipment) );
 			if ( pWeapon )
@@ -6910,7 +6871,7 @@ void CAI_BaseNPC::NPCInit ( void )
 
 	m_GiveUpOnDeadEnemyTimer.Set( 0.75, 2.0 );
 
-	m_flTimeLastMovement = FLT_MAX;
+	m_flTimeLastMovement = std::numeric_limits<float>::max();
 
 	m_flIgnoreDangerSoundsUntil = 0;
 	
@@ -7126,7 +7087,6 @@ void CAI_BaseNPC::OnRangeAttack1()
 	SetLastAttackTime( gpGlobals->curtime );
 
 	// Houston, there is a problem!
-	AssertOnce( GetShotRegulator()->ShouldShoot() );
 
 	m_ShotRegulator.OnFiredWeapon();
 	if ( m_ShotRegulator.IsInRestInterval() )
@@ -7156,10 +7116,10 @@ void CAI_BaseNPC::AddRelationship( const char *pszRelationship, CBaseEntity *pAc
 {
 	// Parse the keyvalue data
 	char parseString[1000];
-	Q_strncpy(parseString, pszRelationship, sizeof(parseString));
+	V_strncpy(parseString, pszRelationship, sizeof(parseString));
 
 	// Look for an entity string
-	char *entityString = strtok(parseString," ");
+	char *entityString = std::strtok(parseString," ");
 	while (entityString)
 	{
 		// Get the disposition
@@ -7187,20 +7147,20 @@ void CAI_BaseNPC::AddRelationship( const char *pszRelationship, CBaseEntity *pAc
 			{
 				disposition = D_NU;
 				Warning( "***ERROR***\nBad relationship type (%s) to unknown entity (%s)!\n", dispositionString,entityString );
-				Assert( 0 );
+				contract_assert( 0 );
 				return;
 			}
 		}
 		else
 		{
 			Warning("Can't parse relationship info (%s) - Expecting 'name [D_HT, D_FR, D_LI, D_NU] [1-99]'\n", pszRelationship );
-			Assert(0);
+			contract_assert( 0 );
 			return;
 		}
 
 		// Get the priority
 		char *priorityString	= strtok(nullptr," ");
-		int	priority = ( priorityString ) ? atoi(priorityString) : DEF_RELATIONSHIP_PRIORITY;
+		int	priority = ( priorityString ) ? std::atoi(priorityString) : DEF_RELATIONSHIP_PRIORITY;
 
 		bool bFoundEntity = false;
 
@@ -7697,7 +7657,6 @@ bool CAI_BaseNPC::CanBeAnEnemyOf( CBaseEntity *pEnemy )
 
 CBaseEntity *CAI_BaseNPC::BestEnemy( void )
 {
-	AI_PROFILE_SCOPE( CAI_BaseNPC_BestEnemy );
 	// TODO - may want to consider distance, attack types, back turned, etc.
 
 	CBaseEntity*	pBestEnemy			= nullptr;
@@ -8184,7 +8143,7 @@ void CAI_BaseNPC::HandleAnimEvent( animevent_t *pEvent )
 		//
 		if ( m_hCine != nullptr )
 		{
-			m_hCine->FireScriptEvent( atoi( pEvent->options ) );
+			m_hCine->FireScriptEvent( std::atoi( pEvent->options ) );
 		}
 		else
 		{
@@ -8258,7 +8217,7 @@ void CAI_BaseNPC::HandleAnimEvent( animevent_t *pEvent )
 			//
 			// Figure out what we're supposed to pick up.
 			//
-			if ( pEvent->options && strlen( pEvent->options ) > 0 )
+			if ( pEvent->options && std::strlen( pEvent->options ) > 0 )
 			{
 				// Pick up the weapon or item that was specified in the anim event.
 				pPickup = gEntList.FindEntityGenericNearest( pEvent->options, GetAbsOrigin(), 256, this );
@@ -8323,7 +8282,7 @@ void CAI_BaseNPC::HandleAnimEvent( animevent_t *pEvent )
 		CBaseCombatWeapon *pWeapon = GetActiveWeapon();
 		if ((pWeapon) && (pEvent->options))
 		{
-			int nSequence = atoi(pEvent->options);
+			int nSequence = std::atoi(pEvent->options);
 			if (nSequence != -1)
 			{
 				pWeapon->ResetSequence(nSequence);
@@ -8443,7 +8402,7 @@ void CAI_BaseNPC::HandleAnimEvent( animevent_t *pEvent )
 				// Cache off the weapon.
 				CBaseCombatWeapon *pWeapon = GetActiveWeapon(); 
 
-				Assert( pWeapon != nullptr	); 
+				contract_assert( pWeapon != nullptr ); 
 
  				GetActiveWeapon()->Holster();
 				SetActiveWeapon( nullptr );
@@ -8568,7 +8527,7 @@ void CAI_BaseNPC::HandleAnimEvent( animevent_t *pEvent )
 			}
 			else if ( nEvent == AE_NPC_SET_INTERACTION_CANTDIE )
 			{
-				SetInteractionCantDie( (atoi(pEvent->options) != 0) );
+				SetInteractionCantDie( (std::atoi(pEvent->options) != 0) );
 				return;
 			}
 			else if ( nEvent == AE_NPC_HURT_INTERACTION_PARTNER )
@@ -8581,8 +8540,8 @@ void CAI_BaseNPC::HandleAnimEvent( animevent_t *pEvent )
 					if ( pEvent->options )
 					{
 						char szEventOptions[128];
-						Q_strncpy( szEventOptions, pEvent->options, sizeof(szEventOptions) );
-						char *pszParam = strtok( szEventOptions, " " );
+						V_strncpy( szEventOptions, pEvent->options, sizeof(szEventOptions) );
+						char *pszParam = std::strtok( szEventOptions, " " );
 						if ( pszParam )
 						{
 							if ( StringHasPrefixCaseSensitive( pszParam, "ME" ) )
@@ -8599,7 +8558,7 @@ void CAI_BaseNPC::HandleAnimEvent( animevent_t *pEvent )
 							pszParam = strtok(nullptr," ");
 							if ( pAttacker && pTarget && pszParam )
 							{
-								int iDamage = atoi( pszParam );
+								int iDamage = std::atoi( pszParam );
  								if ( iDamage )
 								{
 									// We've got a target, and damage. Now hurt them.
@@ -8726,7 +8685,7 @@ void CAI_BaseNPC::DrawDebugGeometryOverlays(void)
 	// ------------------------------
 	if ((m_debugOverlays & OVERLAY_NPC_VIEWCONE_BIT))
 	{
-		float flViewRange	= acos(m_flFieldOfView);
+		float flViewRange	= std::acos(m_flFieldOfView);
 		Vector vEyeDir = EyeDirection2D( );
 		Vector vLeftDir, vRightDir;
 		float fSin, fCos;
@@ -8735,8 +8694,8 @@ void CAI_BaseNPC::DrawDebugGeometryOverlays(void)
 		vLeftDir.x			= vEyeDir.x * fCos - vEyeDir.y * fSin;
 		vLeftDir.y			= vEyeDir.x * fSin + vEyeDir.y * fCos;
 		vLeftDir.z			=  vEyeDir.z;
-		fSin				= sin(-flViewRange);
-		fCos				= cos(-flViewRange);
+		fSin				= std::sin(-flViewRange);
+		fCos				= std::cos(-flViewRange);
 		vRightDir.x			= vEyeDir.x * fCos - vEyeDir.y * fSin;
 		vRightDir.y			= vEyeDir.x * fSin + vEyeDir.y * fCos;
 		vRightDir.z			=  vEyeDir.z;
@@ -8814,23 +8773,23 @@ void CAI_BaseNPC::DrawDebugGeometryOverlays(void)
 
 					if (npcEnemy == GetEnemy())
 					{
-						Q_strncat(debugText,"Current Enemy", sizeof( debugText ), COPY_ALL_CHARACTERS );
+						V_strncat(debugText,"Current Enemy", sizeof( debugText ), COPY_ALL_CHARACTERS );
 					}
 					else if (npcEnemy == GetTarget())
 					{
-						Q_strncat(debugText,"Current Target", sizeof( debugText ), COPY_ALL_CHARACTERS );
+						V_strncat(debugText,"Current Target", sizeof( debugText ), COPY_ALL_CHARACTERS );
 					}
 					else
 					{
-						Q_strncat(debugText,"Other Memory", sizeof( debugText ), COPY_ALL_CHARACTERS );
+						V_strncat(debugText,"Other Memory", sizeof( debugText ), COPY_ALL_CHARACTERS );
 					}
 					if (IsUnreachable(npcEnemy))
 					{
-						Q_strncat(debugText," (Unreachable)", sizeof( debugText ), COPY_ALL_CHARACTERS );
+						V_strncat(debugText," (Unreachable)", sizeof( debugText ), COPY_ALL_CHARACTERS );
 					}
 					if (eMemory->bEludedMe)
 					{
-						Q_strncat(debugText," (Eluded)", sizeof( debugText ), COPY_ALL_CHARACTERS );
+						V_strncat(debugText," (Eluded)", sizeof( debugText ), COPY_ALL_CHARACTERS );
 					}
 					// Unreachable enemy drawn in green
 					if (IsUnreachable(npcEnemy))
@@ -8934,54 +8893,54 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 	{
 		// Print health
 		char tempstr[512];
-		Q_snprintf(tempstr,sizeof(tempstr),"Health: %i",m_iHealth.Get());
+		V_snprintf(tempstr,sizeof(tempstr),"Health: %i",m_iHealth.Get());
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		// Print squad name
-		Q_strncpy(tempstr,"Squad: ",sizeof(tempstr));
+		V_strncpy(tempstr,"Squad: ",sizeof(tempstr));
 		if (m_pSquad)
 		{
-			Q_strncat(tempstr,m_pSquad->GetName(),sizeof(tempstr), COPY_ALL_CHARACTERS);
+			V_strncat(tempstr,m_pSquad->GetName(),sizeof(tempstr), COPY_ALL_CHARACTERS);
 
 			if( m_pSquad->GetLeader() == this )
 			{
-				Q_strncat(tempstr," (LEADER)",sizeof(tempstr), COPY_ALL_CHARACTERS);
+				V_strncat(tempstr," (LEADER)",sizeof(tempstr), COPY_ALL_CHARACTERS);
 			}
 
-			Q_strncat(tempstr,"\n",sizeof(tempstr), COPY_ALL_CHARACTERS);
+			V_strncat(tempstr,"\n",sizeof(tempstr), COPY_ALL_CHARACTERS);
 		}
 		else
 		{
-			Q_strncat(tempstr," - \n",sizeof(tempstr), COPY_ALL_CHARACTERS);
+			V_strncat(tempstr," - \n",sizeof(tempstr), COPY_ALL_CHARACTERS);
 		}
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		// Print enemy name
-		Q_strncpy(tempstr,"Enemy: ",sizeof(tempstr));
+		V_strncpy(tempstr,"Enemy: ",sizeof(tempstr));
 		if (GetEnemy())
 		{
 			if (GetEnemy()->GetEntityName() != NULL_STRING)
 			{
-				Q_strncat(tempstr,STRING(GetEnemy()->GetEntityName()),sizeof(tempstr), COPY_ALL_CHARACTERS);
-				Q_strncat(tempstr,"\n",sizeof(tempstr), COPY_ALL_CHARACTERS);
+				V_strncat(tempstr,STRING(GetEnemy()->GetEntityName()),sizeof(tempstr), COPY_ALL_CHARACTERS);
+				V_strncat(tempstr,"\n",sizeof(tempstr), COPY_ALL_CHARACTERS);
 			}
 			else
 			{
-				Q_strncat(tempstr,STRING(GetEnemy()->m_iClassname),sizeof(tempstr), COPY_ALL_CHARACTERS);
-				Q_strncat(tempstr,"\n",sizeof(tempstr), COPY_ALL_CHARACTERS);
+				V_strncat(tempstr,STRING(GetEnemy()->m_iClassname),sizeof(tempstr), COPY_ALL_CHARACTERS);
+				V_strncat(tempstr,"\n",sizeof(tempstr), COPY_ALL_CHARACTERS);
 			}
 		}
 		else
 		{
-			Q_strncat(tempstr," - \n",sizeof(tempstr), COPY_ALL_CHARACTERS);
+			V_strncat(tempstr," - \n",sizeof(tempstr), COPY_ALL_CHARACTERS);
 		}
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
 		// Print slot
-		Q_snprintf(tempstr,sizeof(tempstr),"Slot:  %s (%d)\n",
+		V_snprintf(tempstr,sizeof(tempstr),"Slot:  %s (%d)\n",
 			SquadSlotName(m_iMySquadSlot), m_iMySquadSlot);
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
@@ -8998,7 +8957,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 		// --------------
 		// Print Health
 		// --------------
-		Q_snprintf(tempstr,sizeof(tempstr),"Health: %i  (DACC:%1.2f)",m_iHealth.Get(), GetDamageAccumulator() );
+		V_snprintf(tempstr,sizeof(tempstr),"Health: %i  (DACC:%1.2f)",m_iHealth.Get(), GetDamageAccumulator() );
 		EntityText(text_offset,tempstr,0,r,g,b);
 		text_offset++;
 
@@ -9006,9 +8965,9 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 		// Print State
 		// --------------
 		static const char *pStateNames[] = { "None", "Idle", "Alert", "Combat", "Scripted", "PlayDead", "Dead" };
-		if ( (int)m_NPCState < ARRAYSIZE(pStateNames) )
+		if ( (int)m_NPCState < std::size( pStateNames ) )
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Stat: %s, ", pStateNames[m_NPCState] );
+			V_snprintf(tempstr,sizeof(tempstr),"Stat: %s, ", pStateNames[m_NPCState] );
 			EntityText(text_offset,tempstr,0,r,g,b);
 			text_offset++;
 		}
@@ -9018,7 +8977,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 		// -----------------
 		if( IsInAScript() )
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"STARTSCRIPTING" );
+			V_snprintf(tempstr,sizeof(tempstr),"STARTSCRIPTING" );
 			EntityText(text_offset,tempstr,0,r,g,b);
 			text_offset++;
 		}
@@ -9028,7 +8987,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 		// -----------------
 		if( GetHintGroup() != NULL_STRING )
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Hint Group: %s", STRING(GetHintGroup()) );
+			V_snprintf(tempstr,sizeof(tempstr),"Hint Group: %s", STRING(GetHintGroup()) );
 			EntityText(text_offset,tempstr,0,r,g,b);
 			text_offset++;
 		}
@@ -9038,10 +8997,10 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 		// -----------------
 		int navTypeIndex = (int)GetNavType() + 1;
 		static const char *pMoveNames[] = { "None", "Ground", "Jump", "Fly", "Climb", "Crawl" };
-		Assert( navTypeIndex >= 0 && navTypeIndex < ARRAYSIZE(pMoveNames) );
-		if ( navTypeIndex < ARRAYSIZE(pMoveNames) )
+		contract_assert( navTypeIndex >= 0 && navTypeIndex < std::size( pMoveNames ) );
+		if ( navTypeIndex < std::size( pMoveNames ) )
 		{
-			Q_snprintf(tempstr,sizeof(tempstr),"Move: %s, ", pMoveNames[navTypeIndex] );
+			V_snprintf(tempstr,sizeof(tempstr),"Move: %s, ", pMoveNames[navTypeIndex] );
 			EntityText(text_offset,tempstr,0,r,g,b);
 			text_offset++;
 		}
@@ -9054,7 +9013,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 			CAI_BehaviorBase *pBehavior = GetPrimaryBehavior();
 			if ( pBehavior )
 			{
-				Q_snprintf(tempstr,sizeof(tempstr),"Behv: %s, ", pBehavior->GetName() );
+				V_snprintf(tempstr,sizeof(tempstr),"Behv: %s, ", pBehavior->GetName() );
 				EntityText(text_offset,tempstr,0,r,g,b);
 				text_offset++;
 			}
@@ -9065,7 +9024,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 			{
 				pName = "Unknown";
 			}
-			Q_snprintf(tempstr,sizeof(tempstr),"Schd: %s, ", pName );
+			V_snprintf(tempstr,sizeof(tempstr),"Schd: %s, ", pName );
 			EntityText(text_offset,tempstr,0,r,g,b);
 			text_offset++;
 
@@ -9073,7 +9032,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 			{
 				for (int i = 0 ; i < GetCurSchedule()->NumTasks(); i++)
 				{
-					Q_snprintf(tempstr,sizeof(tempstr),"%s%s%s%s",
+					V_snprintf(tempstr,sizeof(tempstr),"%s%s%s%s",
 						((i==0)					? "Task:":"       "),
 						((i==GetScheduleCurTaskIndex())	? "->"   :"   "),
 						TaskName(GetCurSchedule()->GetTaskList()[i].iTask),
@@ -9088,11 +9047,11 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 				const Task_t *pTask = GetTask();
 				if ( pTask )
 				{
-					Q_snprintf(tempstr,sizeof(tempstr),"Task: %s (#%d), ", TaskName(pTask->iTask), GetScheduleCurTaskIndex() );
+					V_snprintf(tempstr,sizeof(tempstr),"Task: %s (#%d), ", TaskName(pTask->iTask), GetScheduleCurTaskIndex() );
 				}
 				else
 				{
-					Q_strncpy(tempstr,"Task: None",sizeof(tempstr));
+					V_strncpy(tempstr,"Task: None",sizeof(tempstr));
 				}
 				EntityText(text_offset,tempstr,0,r,g,b);
 				text_offset++;
@@ -9113,15 +9072,15 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 			const char *pszIdealActivity = GetActivityName( iIdealActivity );
 			const char *pszRootActivity = GetActivityName( m_Activity );
 
-			Q_snprintf(tempstr,sizeof(tempstr),"Actv: %s (%s) [%s]\n", pszActivity, pszIdealActivity, pszRootActivity );
+			V_snprintf(tempstr,sizeof(tempstr),"Actv: %s (%s) [%s]\n", pszActivity, pszIdealActivity, pszRootActivity );
 		}
 		else if (m_Activity == ACT_RESET)
 		{
-			Q_strncpy(tempstr,"Actv: RESET",sizeof(tempstr) );
+			V_strncpy(tempstr,"Actv: RESET",sizeof(tempstr) );
 		}
 		else
 		{
-			Q_strncpy(tempstr,"Actv: INVALID", sizeof(tempstr) );
+			V_strncpy(tempstr,"Actv: INVALID", sizeof(tempstr) );
 		}
 		EntityText(text_offset,tempstr,0,r,g,b);
 		text_offset++;
@@ -9136,7 +9095,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 			{
 				if (m_Conditions[i])
 				{
-					Q_snprintf(tempstr, sizeof(tempstr), "Cond: %s\n", ConditionName(AI_RemapToGlobal(i)));
+					V_snprintf(tempstr, sizeof(tempstr), "Cond: %s\n", ConditionName(AI_RemapToGlobal(i)));
 					EntityText(text_offset, tempstr, 0,r,g,b);
 					text_offset++;
 					bHasConditions = true;
@@ -9144,7 +9103,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 			}
 			if (!bHasConditions)
 			{
-				Q_snprintf(tempstr,sizeof(tempstr),"(no conditions)");
+				V_snprintf(tempstr,sizeof(tempstr),"(no conditions)");
 				EntityText(text_offset,tempstr,0,r,g,b);
 				text_offset++;
 			}
@@ -9168,7 +9127,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 				pName = "Unknown";
 			}
 
-			Q_snprintf(tempstr,sizeof(tempstr),"Intr: %s (%s)\n", pName, m_interruptText );
+			V_snprintf(tempstr,sizeof(tempstr),"Intr: %s (%s)\n", pName, m_interruptText );
 			EntityText(text_offset,tempstr,0,r,g,b);
 			text_offset++;
 		}
@@ -9184,7 +9143,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 			{
 				pName = "Unknown";
 			}
-			Q_snprintf(tempstr,sizeof(tempstr),"Fail: %s (%s)\n", pName,m_failText );
+			V_snprintf(tempstr,sizeof(tempstr),"Fail: %s (%s)\n", pName,m_failText );
 			EntityText(text_offset,tempstr,0,r,g,b);
 			text_offset++;
 		}
@@ -9201,7 +9160,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 		if ( GetAbsVelocity() != vec3_origin || GetLocalAngularVelocity() != vec3_angle )
 		{
 			char tmp[512];
-			Q_snprintf( tmp, sizeof(tmp), "Vel %.1f %.1f %.1f   Ang: %.1f %.1f %.1f\n", 
+			V_snprintf( tmp, sizeof(tmp), "Vel %.1f %.1f %.1f   Ang: %.1f %.1f %.1f\n", 
 				GetAbsVelocity().x, GetAbsVelocity().y, GetAbsVelocity().z, 
 				GetLocalAngularVelocity().x, GetLocalAngularVelocity().y, GetLocalAngularVelocity().z );
 			EntityText(text_offset,tmp,0,r,g,b);
@@ -9225,7 +9184,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 			if ( GetActiveWeapon() && GetEnemy() )
 			{
 				Vector curSpread = GetAttackSpread(GetActiveWeapon(), GetEnemy());
-				float curCone = RAD2DEG(asin(curSpread.x)) * 2;
+				float curCone = RAD2DEG(std::asin(curSpread.x)) * 2;
 				float bias = GetSpreadBias( GetActiveWeapon(), GetEnemy());
 				EntityText(text_offset,msg.sprintf("Cone %.1f, Bias %.2f", curCone, bias),0,r,g,b);
 				text_offset++;
@@ -9234,14 +9193,14 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 
 		if ( GetGoalEnt() && GetNavigator()->GetGoalType() == GOALTYPE_PATHCORNER )
 		{
-			Q_strncpy(tempstr,"Pathcorner/goal ent: ",sizeof(tempstr));
+			V_strncpy(tempstr,"Pathcorner/goal ent: ",sizeof(tempstr));
 			if (GetGoalEnt()->GetEntityName() != NULL_STRING)
 			{
-				Q_strncat(tempstr,STRING(GetGoalEnt()->GetEntityName()),sizeof(tempstr), COPY_ALL_CHARACTERS);
+				V_strncat(tempstr,STRING(GetGoalEnt()->GetEntityName()),sizeof(tempstr), COPY_ALL_CHARACTERS);
 			}
 			else
 			{
-				Q_strncat(tempstr,STRING(GetGoalEnt()->m_iClassname),sizeof(tempstr), COPY_ALL_CHARACTERS);
+				V_strncat(tempstr,STRING(GetGoalEnt()->m_iClassname),sizeof(tempstr), COPY_ALL_CHARACTERS);
 			}
 			EntityText(text_offset, tempstr, 0,r,g,b);
 			text_offset++;
@@ -9251,7 +9210,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 		{
 			vphysics_objectstress_t stressOut;
 			CalculateObjectStress( VPhysicsGetObject(), this, &stressOut );
-			Q_snprintf(tempstr, sizeof(tempstr),"Stress: %.2f", stressOut.receivedStress );
+			V_snprintf(tempstr, sizeof(tempstr),"Stress: %.2f", stressOut.receivedStress );
 			EntityText(text_offset, tempstr, 0,r,g,b);
 			text_offset++;
 		}
@@ -9259,12 +9218,12 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 		{
 			if( m_pSquad->IsLeader(this) )
 			{
-				Q_snprintf(tempstr, sizeof(tempstr),"**Squad Leader**" );
+				V_snprintf(tempstr, sizeof(tempstr),"**Squad Leader**" );
 				EntityText(text_offset, tempstr, 0,r,g,b);
 				text_offset++;
 			}
 
-			Q_snprintf(tempstr, sizeof(tempstr), "SquadSlot:%s", GetSquadSlotDebugName( GetMyStrategySlot() ) );
+			V_snprintf(tempstr, sizeof(tempstr), "SquadSlot:%s", GetSquadSlotDebugName( GetMyStrategySlot() ) );
 			EntityText(text_offset, tempstr, 0,r,g,b);
 			text_offset++;
 		}
@@ -9286,7 +9245,7 @@ void CAI_BaseNPC::ReportAIState( void )
 	static const char *pStateNames[] = { "None", "Idle", "Alert", "Combat", "Scripted", "PlayDead", "Dead" };
 
 	DevMsg( "%s: ", GetClassname() );
-	if ( (int)m_NPCState < ARRAYSIZE(pStateNames) )
+	if ( (int)m_NPCState < std::size( pStateNames ) )
 		DevMsg( "State: %s, ", pStateNames[m_NPCState] );
 
 	if( m_Activity != ACT_INVALID && m_IdealActivity != ACT_INVALID )
@@ -9550,13 +9509,13 @@ float CAI_BaseNPC::GetSpreadBias( CBaseCombatWeapon *pWeapon, CBaseEntity *pTarg
 			if ( timeSinceValidEnemy < timeToFocus )
 			{
 				float scale = timeSinceValidEnemy / timeToFocus;
-				Assert( scale >= 0.0 && scale <= 1.0 );
+				contract_assert( scale >= 0.0 && scale <= 1.0 );
 				bias *= scale;
 			}
 			else if ( timeSinceReacquire < timeToFocus ) // handled seperately as might be tuning seperately
 			{
 				float scale = timeSinceReacquire / timeToFocus;
-				Assert( scale >= 0.0 && scale <= 1.0 );
+				contract_assert( scale >= 0.0 && scale <= 1.0 );
 				bias *= scale;
 			}
 
@@ -9585,7 +9544,7 @@ Vector CAI_BaseNPC::GetAttackSpread( CBaseCombatWeapon *pWeapon, CBaseEntity *pT
 				if ( coneMultiplier > 1.0 )
 				{
 					float scale = 1.0 - timeSinceValidEnemy / timeToFocus;
-					Assert( scale >= 0.0 && scale <= 1.0 );
+					contract_assert( scale >= 0.0 && scale <= 1.0 );
 					float multiplier = ( (coneMultiplier - 1.0) * scale ) + 1.0;
 					baseResult *= multiplier;
 				}
@@ -10108,7 +10067,6 @@ bool CAI_BaseNPC::ShouldChooseNewEnemy()
 
 bool CAI_BaseNPC::ChooseEnemy( void )
 {
-	AI_PROFILE_SCOPE(CAI_Enemies_ChooseEnemy);
 
 	DbgEnemyMsg( this, "ChooseEnemy() {\n" );
 
@@ -10136,7 +10094,6 @@ bool CAI_BaseNPC::ChooseEnemy( void )
 
 	if ( !m_ScheduleState.bScheduleWasInterrupted && GetCurSchedule() && !FScheduleDone() )
 	{
-		Assert( InterruptFromCondition( COND_NEW_ENEMY ) == COND_NEW_ENEMY && InterruptFromCondition( COND_LOST_ENEMY ) == COND_LOST_ENEMY );
 		fHaveCondNewEnemy  = GetCurSchedule()->HasInterrupt( COND_NEW_ENEMY );
 		fHaveCondLostEnemy = GetCurSchedule()->HasInterrupt( COND_LOST_ENEMY );
 
@@ -10514,7 +10471,7 @@ void CAI_BaseNPC::Precache( void )
 {
 	gm_iszPlayerSquad = AllocPooledString( PLAYER_SQUADNAME ); // cache for fast IsPlayerSquad calls
 
-	if ( m_spawnEquipment != NULL_STRING && strcmp(STRING(m_spawnEquipment), "0") )
+	if ( m_spawnEquipment != NULL_STRING && std::strcmp(STRING(m_spawnEquipment), "0") )
 	{
 		UTIL_PrecacheOther( STRING(m_spawnEquipment) );
 	}
@@ -11083,7 +11040,7 @@ void CAI_BaseNPC::InputForgetEntity( inputdata_t &inputdata )
 {
 	const char *pszEntityToForget = inputdata.value.String();
 
-	if ( g_pDeveloper->GetInt() && pszEntityToForget[strlen( pszEntityToForget ) - 1] == '*' )
+	if ( g_pDeveloper->GetInt() && pszEntityToForget[std::strlen( pszEntityToForget ) - 1] == '*' )
 		DevMsg( "InputForgetEntity does not support wildcards\n" );
 
 	CBaseEntity *pEntity = gEntList.FindEntityByName( nullptr, pszEntityToForget );
@@ -11145,7 +11102,7 @@ void CAI_BaseNPC::InputCreateAddon( inputdata_t &inputdata )
 		DispatchSpawn( pItem );
 
 		// install the addon
-		assert_cast< CAI_AddOn *>( pItem )->Install( this );
+		static_cast< CAI_AddOn *>( pItem )->Install( this );
 	}
 }
 
@@ -11909,10 +11866,9 @@ int CAI_BaseNPC::WalkMove( const Vector& vecPosition, unsigned int mask )
 }
 
 //-----------------------------------------------------------------------------
-#ifndef DBGFLAG_STRINGS_STRIP
 static void AIMsgGuts( CAI_BaseNPC *pAI, unsigned flags, const char *pszMsg )
 {
-	int			len		= strlen( pszMsg );
+	int			len		= std::strlen( pszMsg );
 	const char *pszFmt2 = nullptr;
 
 	if ( len && pszMsg[len-1] == '\n' )
@@ -11948,7 +11904,6 @@ void DevMsg( CAI_BaseNPC *pAI, const char *pszFormat, ... )
 		AIMsgGuts( pAI, 0, CFmtStr( &pszFormat ) );
 	}
 }
-#endif
 
 //-----------------------------------------------------------------------------
 
@@ -12085,7 +12040,7 @@ float CAI_BaseNPC::SetWait( float minWait, float maxWait )
 
 void CAI_BaseNPC::ClearWait()
 {
-	m_flWaitFinished = FLT_MAX;
+	m_flWaitFinished = std::numeric_limits<float>::max();
 }
 
 //-----------------------------------------------------------------------------
@@ -12099,7 +12054,7 @@ bool CAI_BaseNPC::IsWaitFinished()
 
 bool CAI_BaseNPC::IsWaitSet()
 {
-	return ( m_flWaitFinished != FLT_MAX );
+	return ( m_flWaitFinished != std::numeric_limits<float>::max() );
 }
 
 void CAI_BaseNPC::TestPlayerPushing( CBaseEntity *pEntity )
@@ -12143,7 +12098,7 @@ void CAI_BaseNPC::CascadePlayerPush( const Vector &push, const Vector &pushOrigi
 		if ( pOther != this && pOther->IRelationType(this) == D_LI && !pOther->HasCondition( COND_PLAYER_PUSHING ) )
 		{
 			const Vector &friendOrigin = pOther->GetAbsOrigin();
-			if ( fabsf( friendOrigin.z - origin.z ) < MIN_Z_TO_TRANSMIT &&
+			if ( std::fabsf( friendOrigin.z - origin.z ) < MIN_Z_TO_TRANSMIT &&
 				 ( friendOrigin.AsVector2D() - origin.AsVector2D() ).LengthSqr() < DIST_REQD_TO_TRANSMIT_PUSH_SQ )
 			{
 				if ( pushTestPoint == vec2_invalid )
@@ -12307,7 +12262,7 @@ float CAI_BaseNPC::LineOfSightDist( const Vector &vecDir, float zEye )
 		testDir = vecDir;
 	}
 
-	if ( zEye == FLT_MAX ) 
+	if ( zEye == std::numeric_limits<float>::max() ) 
 		zEye = EyePosition().z;
 	
 	trace_t tr;
@@ -12325,7 +12280,6 @@ ConVar ai_LOS_mode( "ai_LOS_mode", "0", FCVAR_REPLICATED );
 //-----------------------------------------------------------------------------
 void AI_TraceLOS( const Vector& vecAbsStart, const Vector& vecAbsEnd, CBaseEntity *pLooker, trace_t *ptr, ITraceFilter *pFilter )
 {
-	AI_PROFILE_SCOPE( AI_TraceLOS );
 
 	if ( ai_LOS_mode.GetBool() )
 	{
@@ -12407,8 +12361,8 @@ void CAI_BaseNPC::ParseScriptedNPCInteractions( void )
 				if ( pszTrigger )
 				{
 					char szTrigger[256];
-					Q_strncpy( szTrigger, pszTrigger, sizeof(szTrigger) );
-					char *pszParam = strtok( szTrigger, " " );
+					V_strncpy( szTrigger, pszTrigger, sizeof(szTrigger) );
+					char *pszParam = std::strtok( szTrigger, " " );
 					while (pszParam)
 					{
 						if ( StringHasPrefixCaseSensitive( pszParam, "on_damage" ) )
@@ -12499,11 +12453,11 @@ void CAI_BaseNPC::ParseScriptedNPCInteractions( void )
 				const char *pszDontFixup = pkvNode->GetString( "dont_teleport_at_end", nullptr );
 				if ( pszDontFixup )
 				{
-					if ( !Q_stricmp( pszDontFixup, "me" ) || !Q_stricmp( pszDontFixup, "both" ) )
+					if ( !V_stricmp( pszDontFixup, "me" ) || !V_stricmp( pszDontFixup, "both" ) )
 					{
 						sInteraction.iFlags |= SCNPC_FLAG_DONT_TELEPORT_AT_END_ME;
 					}
-					else if ( !Q_stricmp( pszDontFixup, "them" ) || !Q_stricmp( pszDontFixup, "both" ) ) 
+					else if ( !V_stricmp( pszDontFixup, "them" ) || !V_stricmp( pszDontFixup, "both" ) ) 
 					{
 						sInteraction.iFlags |= SCNPC_FLAG_DONT_TELEPORT_AT_END_THEM;
 					}
@@ -12566,7 +12520,7 @@ void CAI_BaseNPC::AddScriptedNPCInteraction( ScriptedNPCInteraction_t *pInteract
 
 	// Copy the interaction over
 	ScriptedNPCInteraction_t *pNewInt = &(m_ScriptedInteractions[nNewIndex]);
-	memcpy( pNewInt, pInteraction, sizeof(ScriptedNPCInteraction_t) );
+	std::memcpy( pNewInt, pInteraction, sizeof(ScriptedNPCInteraction_t) );
 
 	// Calculate the local to world matrix
 	m_ScriptedInteractions[nNewIndex].matDesiredLocalToWorld.SetupMatrixOrgAngles( pInteraction->vecRelativeOrigin, pInteraction->angRelativeAngles );
@@ -12660,11 +12614,11 @@ void CAI_BaseNPC::StartScriptedNPCInteraction( CAI_BaseNPC *pOtherNPC, ScriptedN
 	char szSSName[256];
 	if ( pOtherNPC )
 	{
-		Q_snprintf( szSSName, sizeof(szSSName), "dss_%s%d%s%d", GetDebugName(), entindex(), pOtherNPC->GetDebugName(), pOtherNPC->entindex() );
+		V_snprintf( szSSName, sizeof(szSSName), "dss_%s%d%s%d", GetDebugName(), entindex(), pOtherNPC->GetDebugName(), pOtherNPC->entindex() );
 	}
 	else
 	{
-		Q_snprintf( szSSName, sizeof(szSSName), "dss_%s%d", GetDebugName(), entindex() );
+		V_snprintf( szSSName, sizeof(szSSName), "dss_%s%d", GetDebugName(), entindex() );
 	}
   	string_t iszSSName = AllocPooledString(szSSName);
 
@@ -13256,10 +13210,10 @@ void CAI_BaseNPC::InputForceInteractionWithNPC( inputdata_t &inputdata )
 {
 	// Get the interaction name & target
 	char parseString[255];
-	Q_strncpy(parseString, inputdata.value.String(), sizeof(parseString));
+	V_strncpy(parseString, inputdata.value.String(), sizeof(parseString));
 
 	// First, the target's name
-	char *pszParam = strtok(parseString," ");
+	char *pszParam = std::strtok(parseString," ");
 	if ( !pszParam || !pszParam[0] )
 	{
 		Warning("%s(%s) received ForceInteractionWithNPC input with bad parameters: %s\nFormat should be: ForceInteractionWithNPC <target NPC> <interaction name>\n", GetClassname(), GetDebugName(), inputdata.value.String() );

@@ -1,17 +1,25 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "render_pch.h"
-#include "draw.h"
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
 #include "server.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
-#include "tier1/text_reader.h"
-#include "tier1/utlvector.h"
+import std;
 #include "tier2/renderutils.h"
 
 std::vector< Vector >	g_Points;
@@ -45,7 +53,7 @@ void Linefile_Read_f( void )
 
 	g_Points.clear(); g_Points.shrink_to_fit();
 
-	Q_snprintf( name, sizeof( name ), "maps/%s.lin", sv.GetMapName() );
+	V_snprintf( name, sizeof( name ), "maps/%s.lin", sv.GetMapName() );
 
 	auto data = g_pFileSystem->ReadFile( name, nullptr );
 	if ( !data )

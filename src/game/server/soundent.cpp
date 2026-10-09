@@ -1,11 +1,42 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "soundent.h"
@@ -17,8 +48,8 @@
 //-----------------------------------------------------------------------------
 
 // identifiers passed to functions that can operate on either list, to indicate which list to operate on.
-#define SOUNDLISTTYPE_FREE		1
-#define SOUNDLISTTYPE_ACTIVE	2
+constexpr auto SOUNDLISTTYPE_FREE = 1;
+constexpr auto SOUNDLISTTYPE_ACTIVE = 2;
 
 
 
@@ -238,7 +269,7 @@ void CSoundEnt::OnRestore()
 	// Make sure the singleton points to the restored version of this.
 	if ( g_pSoundEnt )
 	{
-		Assert( g_pSoundEnt != this );
+		contract_assert( g_pSoundEnt != this );
 		UTIL_Remove( g_pSoundEnt );
 	}
 	g_pSoundEnt = this;
@@ -469,14 +500,14 @@ int CSoundEnt::InsertSound ( int iType, const Vector &vecOrigin, int iVolume, fl
 	pSound->m_iType = iType;
 	pSound->m_iVolume = iVolume;
 	pSound->m_flOcclusionScale = 0.5;
-	if ( flDuration != FLT_MAX )
+	if ( flDuration != std::numeric_limits<float>::max() )
 	{
 		pSound->m_flExpireTime = gpGlobals->curtime + flDuration;
 		pSound->m_bNoExpirationTime = false;
 	}
 	else
 	{
-		pSound->m_flExpireTime = FLT_MAX;
+		pSound->m_flExpireTime = std::numeric_limits<float>::max();
 		pSound->m_bNoExpirationTime = true;
 	}
 	pSound->m_hOwner.Set( pOwner );
@@ -813,5 +844,3 @@ void CAISound::InputEmitAISound( inputdata_t &inputdata )
 
 	g_pSoundEnt->InsertSound( m_iSoundType | m_iSoundContext, vecLocation, m_iVolume, m_flDuration, this );
 }
-
-

@@ -1,9 +1,10 @@
-//========= Copyright (c) Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef CUSTOMWEAPON_HELPER_H
-#define CUSTOMWEAPON_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+class CBasePerMaterialContextData;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -20,7 +21,7 @@ struct CustomWeaponVars_t
 {
 	CustomWeaponVars_t()
 	{
-		memset( this, 0xFF, sizeof( CustomWeaponVars_t ) );
+		std::memset( this, 0xFF, sizeof( CustomWeaponVars_t ) );
 	}
 
 	int m_nBaseTexture;
@@ -93,5 +94,3 @@ void InitCustomWeapon( CBaseVSShader *pShader, IMaterialVar** params, CustomWeap
 void DrawCustomWeapon( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 	IShaderShadow* pShaderShadow, CustomWeaponVars_t &info, VertexCompressionType_t vertexCompression,
 	CBasePerMaterialContextData **pContextDataPtr );
-
-#endif // CUSTOMWEAPON_HELPER_H

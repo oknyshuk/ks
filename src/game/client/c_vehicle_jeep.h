@@ -1,15 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-#ifndef C_VEHICLE_JEEP_H
-#define C_VEHICLE_JEEP_H
-
-#include "reflect_annotations.h"
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+#include "reflect_annotations.h"
+
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
 #include "c_prop_vehicle.h"
 //#include "movevars_shared.h"
 //#include "view.h"
@@ -30,7 +31,6 @@ class [[= ks::reflect::NetTable{ .name = "DT_PropJeep" } ]]
 public:
 
 	DECLARE_CLIENTCLASS();
-	DECLARE_INTERPOLATION();
 
 	C_PropJeep();
 	~C_PropJeep();
@@ -62,5 +62,3 @@ private:
 	CHeadlightEffect *m_pHeadlight;
 	[[= ks::reflect::Net{} ]] bool		m_bHeadlightIsOn;
 };
-
-#endif // C_VEHICLE_JEEP_H

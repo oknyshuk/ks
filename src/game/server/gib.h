@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:			A gib is a chunk of a body, or a piece of wood/metal/rocks/etc.
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef GIB_H
-#define GIB_H
-
+// Purpose: A gib is a chunk of a body, or a piece of wood/metal/rocks/etc.
 
 #include "baseanimating.h"
 #include "player_pickup.h"
@@ -17,9 +10,9 @@
 
 extern CBaseEntity *CreateRagGib( const char *szModel, const Vector &vecOrigin, const QAngle &vecAngles, const Vector &vecForce, float flFadeTime = 0.0, bool bShouldIgnite = false );
 
-#define GERMAN_GIB_COUNT		4
-#define	HUMAN_GIB_COUNT			6
-#define ALIEN_GIB_COUNT			4
+inline constexpr auto GERMAN_GIB_COUNT = 4;
+inline constexpr auto HUMAN_GIB_COUNT = 6;
+inline constexpr auto ALIEN_GIB_COUNT = 4;
 
 enum GibType_e
 {
@@ -111,6 +104,3 @@ public:
 
 	void Spawn( const char *szModel, const Vector &vecOrigin, const Vector &vecForce, float flFadeTime );
 };
-
-
-#endif	//GIB_H

@@ -1,24 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: A redirection tool that allows the DLLs to reside elsewhere.
-//
-//=====================================================================================//
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <dlfcn.h>
-#include <limits.h>
-#include <string.h>
-#define MAX_PATH PATH_MAX
+import std;
 
-#include "tier0/platform.h"
-#include "tier0/basetypes.h"
-
-#if defined( VPCGAME )
-#define _VPCGAME_STRING_HACK2(x) #x
-#define _VPCGAME_STRING_HACK1(x) _VPCGAME_STRING_HACK2(x)
-#define VPCGAME_STRING _VPCGAME_STRING_HACK1(VPCGAME)
-#endif
+import ks.core;
 
 typedef int (*LauncherMain_t)( int argc, char **argv );
 
@@ -34,27 +21,24 @@ typedef int (*LauncherMain_t)( int argc, char **argv );
 
 int main( int argc, char *argv[] )
 {
-	const char *pLauncherPath = "bin/libengine" DLL_EXT_STRING;
+	const char *pLauncherPath = "bin/libengine.so";
 
-	void *launcher = dlopen( pLauncherPath, RTLD_NOW );
+	ks::platform::library *launcher = ks::platform::load_library( pLauncherPath, nullptr );
 	
 	if ( !launcher )
 	{
-		printf( "Failed to load the launcher (%s)\n", dlerror() );
+		std::printf( "Failed to load the launcher (%s)\n", ks::platform::library_error() );
 		while(1);
 		return 0;
 	}
 	
-	LauncherMain_t main = (LauncherMain_t)dlsym( launcher, "LauncherMain" );
+	LauncherMain_t main = (LauncherMain_t)ks::platform::library_symbol( launcher, "LauncherMain" );
 	if ( !main )
 	{
-		printf( "Failed to load the launcher entry proc\n" );
+		std::printf( "Failed to load the launcher entry proc\n" );
 		while(1);
 		return 0;
 	}
 
 	return main( argc, argv );
 }
-
-
-

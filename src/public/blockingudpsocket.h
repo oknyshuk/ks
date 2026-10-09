@@ -1,13 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BLOCKINGUDPSOCKET_H
-#define BLOCKINGUDPSOCKET_H
+import std;
+import ks.tier1;
 
-#include "netadr.h"
 
 class CBlockingUDPSocket
 {
@@ -16,23 +13,18 @@ public:
 	virtual ~CBlockingUDPSocket();
 
 	bool WaitForMessage( float timeOutInSeconds );
-	unsigned int ReceiveSocketMessage( struct sockaddr_in *packet_from, unsigned char *buf, size_t bufsize );
-	bool SendSocketMessage( const struct sockaddr_in& rRecipient, const unsigned char *buf, size_t bufsize );
+	unsigned int ReceiveSocketMessage( ks::platform::address *packet_from, unsigned char *buf, std::size_t bufsize );
+	bool SendSocketMessage( const ks::platform::address& rRecipient, const unsigned char *buf, std::size_t bufsize );
 
-	bool	IsValid() const { return m_Socket != 0; }
+	bool	IsValid() const { return m_Socket != nullptr; }
 
 protected:
 	bool CreateSocket (void);
 
-	class CImpl;
-	CImpl				*m_pImpl;
-
 	netadr_t			m_cserIP;
-	unsigned int		m_Socket;
+	ks::platform::socket *m_Socket = nullptr;
 
 private:
 	CBlockingUDPSocket( const CBlockingUDPSocket& ); // = delete
 	CBlockingUDPSocket& operator= ( const CBlockingUDPSocket& ); // = delete
 };
-
-#endif // BLOCKINGUDPSOCKET_H

@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef BONE_MERGE_CACHE_H
-#define BONE_MERGE_CACHE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #if defined( CLIENT_DLL )
 #undef CBaseAnimating
@@ -16,13 +11,13 @@ class CBaseAnimating;
 class CStudioHdr;
 struct studiohdr_t;
 
-#include <vector>
+import std;
 
 #ifndef CLIENT_DLL
 #include "bone_setup.h"
 #endif
 
-#include "mathlib/vector.h"
+import ks.math;
 
 
 class CBoneMergeCache
@@ -111,6 +106,3 @@ inline int CBoneMergeCache::IsBoneMerged( int iBone ) const
 	else
 		return 0;
 }
-
-
-#endif // BONE_MERGE_CACHE_H

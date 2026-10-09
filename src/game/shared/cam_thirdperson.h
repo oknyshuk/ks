@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
-
-#ifndef CAM_THIRDPERSON_H
-#define CAM_THIRDPERSON_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #ifdef CLIENT_DLL
 #include "c_baseplayer.h"
@@ -14,9 +8,9 @@
 #include "baseplayer.h"
 #endif
 
-#define DIST_FORWARD 0
-#define DIST_RIGHT 1
-#define DIST_UP 2
+inline constexpr auto DIST_FORWARD = 0;
+inline constexpr auto DIST_RIGHT = 1;
+inline constexpr auto DIST_UP = 2;
 
 //-------------------------------------------------- Constants
 
@@ -30,9 +24,9 @@
 #define	DIST	 2
 #define CAM_HULL_OFFSET		14.0    // the size of the bounding hull used for collision checking
 
-#define CAMERA_UP_OFFSET	25.0f
-#define CAMERA_OFFSET_LERP_TIME 0.5f
-#define CAMERA_UP_OFFSET_LERP_TIME 0.25f
+inline constexpr auto CAMERA_UP_OFFSET = 25.0f;
+inline constexpr auto CAMERA_OFFSET_LERP_TIME = 0.5f;
+inline constexpr auto CAMERA_UP_OFFSET_LERP_TIME = 0.25f;
 
 class CThirdPersonManager
 {
@@ -101,5 +95,3 @@ private:
 };
 
 extern CThirdPersonManager g_ThirdPersonManager;
-
-#endif // CAM_THIRDPERSON_H

@@ -1,15 +1,24 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
 #include "engine/iblackbox.h"
 
 extern IBlackBox *blackboxrecorder;
 
-void BlackBox_Record( const char *type, PRINTF_FORMAT_STRING const char *pFormat, ... )
+void BlackBox_Record( const char *type, const char *pFormat, ... )
 {
 	static ConVarRef blackbox( "blackbox" );
 
@@ -32,11 +41,10 @@ void BlackBox_Record( const char *type, PRINTF_FORMAT_STRING const char *pFormat
 	char szMessage[1024];	
 	va_list marker;
 
-	va_start( marker, pFormat);
-	Q_vsnprintf( szMessage, sizeof( szMessage ), pFormat, marker);
-	va_end( marker );	
+	__builtin_va_start( marker, pFormat);
+	V_vsnprintf( szMessage, sizeof( szMessage ), pFormat, marker);
+	__builtin_va_end( marker );	
 
 	//Msg( "Record: %s: %s\n", type, szMessage );
 	blackboxrecorder->Record( type_num, szMessage );
 }
-

@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.core;
 #include "rope_helpers.h"
-#include "basetypes.h"
-#include "mathlib/mathlib.h"
 #include "rope_shared.h"
 #include "rope_physics.h"
 #include "networkvar.h"
@@ -41,7 +36,7 @@ public:
 		float flCurHangDist = 0;
 		for ( int i=0; i < NumNodes(); i++ )
 		{
-			float hang = fabs( m_flStartZ - GetNode(i)->m_vPos.z );
+			float hang = std::fabs( m_flStartZ - GetNode(i)->m_vPos.z );
 			if ( hang > flCurHangDist )
 				flCurHangDist = hang;
 		}
@@ -133,5 +128,3 @@ void CalcRopeStartingConditions(
 	*pOutputLength = rope.m_flRopeLength;
 	*pOutputSlack = rope.m_flCurSlack;
 }
-
-

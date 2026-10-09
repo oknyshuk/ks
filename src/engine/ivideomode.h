@@ -1,18 +1,10 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IVIDEOMODE_H
-#define IVIDEOMODE_H
-
-
+import ks.tier1;
 #include "vmodes.h"
-#include "tier1/byte_writer.h"
+import std;
 #include "vtf/vtf.h"
 
 struct MovieInfo_t;
@@ -21,7 +13,7 @@ struct MovieInfo_t;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-abstract_class IVideoMode
+class IVideoMode
 {
 public:	
 	virtual					~IVideoMode() {}
@@ -111,6 +103,3 @@ extern IVideoMode *videomode;
 //-----------------------------------------------------------------------------
 void VideoMode_Create();
 void VideoMode_Destroy();
-
-
-#endif // IVIDEOMODE_H

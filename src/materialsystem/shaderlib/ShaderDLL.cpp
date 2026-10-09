@@ -1,19 +1,15 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.math;
 #include "shaderlib/ShaderDLL.h"
 #include "materialsystem/IShader.h"
-#include "tier1/utlvector.h"
-#include "tier0/dbg.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "materialsystem/materialsystem_config.h"
 #include "materialsystem/ishadersystem.h"
 #include "materialsystem/ishaderapi.h"
 #include "shaderlib_cvar.h"
-#include "mathlib/mathlib.h"
+import std;
 #include "tier2/tier2.h"
 
 //-----------------------------------------------------------------------------
@@ -90,7 +86,7 @@ IShaderDLLInternal *GetShaderDLLInternal()
 //-----------------------------------------------------------------------------
 // Singleton interface
 //-----------------------------------------------------------------------------
-EXPOSE_INTERFACE_FN( (InstantiateInterfaceFn)GetShaderDLLInternal, IShaderDLLInternal, SHADER_DLL_INTERFACE_VERSION );
+static InterfaceReg s_Reg__InstantiateInterfaceFn_GetShaderDLLInternal( (InstantiateInterfaceFn)GetShaderDLLInternal, SHADER_DLL_INTERFACE_VERSION );;
 
 //-----------------------------------------------------------------------------
 // Connect, disconnect...
@@ -165,7 +161,7 @@ IShader *CShaderDLL::GetShader( int nShader )
 //-----------------------------------------------------------------------------
 void CShaderDLL::InsertShader( IShader *pShader )
 {
-	Assert( pShader );
+	contract_assert( pShader );
 	m_ShaderList.push_back( pShader );
 }
 

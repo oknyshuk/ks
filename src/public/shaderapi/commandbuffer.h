@@ -1,20 +1,11 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-// This file defines a number of constants and structured which are used to build up a command
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
+
+// Purpose: This file defines a number of constants and structured which are used to build up a command
 // buffer to pass to ShaderAPI for state setting and other operations.  Since the prupose of these
 // command buffers is to minimize and optimize calls into shaderapi, their structure is not
 // abstract - they are built out by the calling process.
-//
-//===========================================================================//
-
-#ifndef COMMANDBUFFER_H
-#define COMMANDBUFFER_H
-
-
 
 //-----------------------------------------------------------------------------
 // Commands used by the per-pass command buffers
@@ -99,5 +90,3 @@ enum CommandBufferInstanceCommand_t
 	// This must be last
 	CBICMD_COUNT,
 };
-
-#endif // COMMANDBUFFER_H

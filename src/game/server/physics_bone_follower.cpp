@@ -1,18 +1,40 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "physics.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "bone_setup.h"
 #include "physics_bone_follower.h"
 #include "vcollide_parse.h"
-
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( physfollower_t )
 
@@ -29,7 +51,7 @@ CBoneFollowerManager::CBoneFollowerManager()
 CBoneFollowerManager::~CBoneFollowerManager()
 {
 	// if this fires then someone isn't destroying their bonefollowers in UpdateOnRemove
-	Assert(m_iNumBones==0);
+	contract_assert( m_iNumBones==0 );
 	DestroyBoneFollowers();
 }
 
@@ -176,7 +198,7 @@ void CBoneFollowerManager::DestroyBoneFollowers( void )
 //-----------------------------------------------------------------------------
 physfollower_t *CBoneFollowerManager::GetBoneFollower( int iFollowerIndex )
 {
-	Assert( iFollowerIndex >= 0 && iFollowerIndex < m_iNumBones );
+	contract_assert( iFollowerIndex >= 0 && iFollowerIndex < m_iNumBones );
 	if ( iFollowerIndex >= 0 && iFollowerIndex < m_iNumBones )
 		return &m_physBones[iFollowerIndex];
 	return nullptr;
@@ -279,8 +301,8 @@ class CPhysicsSwapTemp
 public:
 	CPhysicsSwapTemp( CBaseEntity *pEntity, IPhysicsObject *pTmpPhysics )
 	{
-		Assert(pEntity);
-		Assert(pTmpPhysics);
+		contract_assert( pEntity );
+		contract_assert( pTmpPhysics );
 		m_pEntity = pEntity;
 		m_pPhysics = m_pEntity->VPhysicsGetObject();
 		if ( m_pPhysics )
@@ -336,7 +358,7 @@ void CBoneFollower::VPhysicsFriction( IPhysicsObject *pObject, float energy, int
 bool CBoneFollower::TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace )
 {
 	vcollide_t *pCollide = modelinfo->GetVCollide( GetModelIndex() );
-	Assert( pCollide && pCollide->solidCount > m_solidIndex );
+	contract_assert( pCollide && pCollide->solidCount > m_solidIndex );
 
 	UTIL_ClearTrace( trace );
 

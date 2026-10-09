@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef TF_PLAYERANIMSTATE_H
-#define TF_PLAYERANIMSTATE_H
-
-
-#include "convar.h"
+import std;
+import ks.tier1;
 #include "iplayeranimstate.h"
 #include "base_playeranimstate.h"
 
@@ -26,14 +21,14 @@
 
 
 // When moving this fast, he plays run anim.
-#define ARBITRARY_RUN_SPEED		175.0f
+inline constexpr auto ARBITRARY_RUN_SPEED = 175.0f;
 
-#define HOSTAGE_JUMP_POWER		200.0f
-#define HOSTAGE_ANIM_MODEL		"models/hostage/hostage.mdl"
+inline constexpr auto HOSTAGE_JUMP_POWER = 200.0f;
+inline constexpr const char *HOSTAGE_ANIM_MODEL = "models/hostage/hostage.mdl";
 
-#define MOVESTATE_IDLE	0
-#define MOVESTATE_WALK	1
-#define MOVESTATE_RUN	2
+inline constexpr auto MOVESTATE_IDLE = 0;
+inline constexpr auto MOVESTATE_WALK = 1;
+inline constexpr auto MOVESTATE_RUN = 2;
 
 
 // This abstracts the differences between CS players and hostages.
@@ -51,6 +46,3 @@ IPlayerAnimState* CreateHostageAnimState( CBaseAnimatingOverlay *pEntity, ICSPla
 // If this is set, then the game code needs to make sure to send player animation events
 // to the local player if he's the one being watched.
 extern ConVar cl_showanimstate;
-
-
-#endif // TF_PLAYERANIMSTATE_H

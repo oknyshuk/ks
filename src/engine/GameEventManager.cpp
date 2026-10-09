@@ -1,27 +1,20 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // GameEventManager.cpp: implementation of the CGameEventManager class.
 //
 //////////////////////////////////////////////////////////////////////
 
+import ks.tier1;
 #include "GameEventManager.h"
-#include <bitset>
-#include <mutex>
+import std;
 #include "filesystem_engine.h"
 #include "server.h"
 #include "client.h"
-#include "tier0/vprof.h"
 #include "cl_splitscreen.h"
-#include "tier1/tokenset.h"
-#include "tier1/bit_ops.h"
 #include "gameeventtransmitter.h"
 
-#define NETWORKED_TYPE_BITS 4
+constexpr auto NETWORKED_TYPE_BITS = 4;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -59,11 +52,11 @@ static ConVar net_showeventlisteners( "net_showeventlisteners", "0", 0, "Show li
 
 // Expose CVEngineServer to the engine.
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CGameEventManager, IGameEventManager2, INTERFACEVERSION_GAMEEVENTSMANAGER2, s_GameEventManager );
+static InterfaceReg s_Reg_CGameEventManager_IGameEventManager2( []() -> void * { return static_cast<IGameEventManager2 *>( &s_GameEventManager ); }, INTERFACEVERSION_GAMEEVENTSMANAGER2 );;
 
 CGameEvent::CGameEvent( CGameEventDescriptor *descriptor, const char *name )
 {
-	Assert( descriptor );
+	contract_assert( descriptor );
 
 	m_pDescriptor = descriptor;
 	m_pDataKeys = new KeyValues( name );
@@ -102,7 +95,7 @@ const char *CGameEvent::GetString( const char *keyName, const char *defaultValue
 
 const void *CGameEvent::GetPtr( const char *keyName ) const
 {
-	Assert( IsLocal() );
+	contract_assert( IsLocal() );
 	return m_pDataKeys->GetPtr( keyName );
 }
 
@@ -139,7 +132,7 @@ void CGameEvent::SetString( const char *keyName, const char *value )
 
 void CGameEvent::SetPtr( const char *keyName, const void *value )
 {
-	Assert( IsLocal() );
+	contract_assert( IsLocal() );
 	m_pDataKeys->SetPtr( keyName, const_cast< void *>( value ) );
 }
 
@@ -248,7 +241,7 @@ void CGameEventManager::Reset()
 	m_EventMap.clear();
 	m_bClientListenersChanged = true;
 
-	Assert( std::ssize( m_GameEvents ) == 0 );
+	contract_assert( std::ssize( m_GameEvents ) == 0 );
 }
 
 bool CGameEventManager::HasClientListenersChanged( bool bReset /* = true  */)
@@ -271,7 +264,7 @@ void CGameEventManager::WriteEventList(ks::net::CSVCMsg_GameEventList *msg)
 		if ( descriptor.local )
 			continue;
 
-		Assert( descriptor.eventid >= 0 && descriptor.eventid < MAX_EVENT_NUMBER );
+		contract_assert( descriptor.eventid >= 0 && descriptor.eventid < MAX_EVENT_NUMBER );
 
 		ks::net::CSVCMsg_GameEventList::descriptor_t *pDescriptor = &msg->descriptors.emplace_back();
 		const char *pName = descriptor.name;
@@ -484,7 +477,7 @@ void CGameEventManager::ConPrintEvent( IGameEvent *event)
 		{
 		case TYPE_LOCAL : ConMsg( "- \"%s\" = \"%s\" (local)\n", keyName, event->GetString(keyName) ); break;
 		case TYPE_STRING : ConMsg( "- \"%s\" = \"%s\"\n", keyName, event->GetString(keyName) ); break;
-		case TYPE_WSTRING : ConMsg( "- \"%s\" = \"" PRI_WS_FOR_S "\"\n", keyName, event->GetWString(keyName) ); break;
+		case TYPE_WSTRING : ConMsg( "- \"%s\" = \"" "%ls" "\"\n", keyName, event->GetWString(keyName) ); break;
 		case TYPE_FLOAT : ConMsg( "- \"%s\" = \"%.2f\"\n", keyName, event->GetFloat(keyName) ); break;
 		default: ConMsg( "- \"%s\" = \"%i\"\n", keyName, event->GetInt(keyName) ); break;
 		}
@@ -498,10 +491,9 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 	if ( event == nullptr )
 		return false;
 
-	Assert( !(bServerOnly && bClientOnly) ); // it can't be both
+	contract_assert( !(bServerOnly && bClientOnly) ); // it can't be both
 
-	VPROF_("CGameEventManager::FireEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false,
-		bClientOnly ? BUDGETFLAG_CLIENT : ( bServerOnly ? BUDGETFLAG_SERVER : BUDGETFLAG_OTHER ) );
+	CVProfScope _( "CGameEventManager::FireEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, bClientOnly ? BUDGETFLAG_CLIENT : ( bServerOnly ? BUDGETFLAG_SERVER : BUDGETFLAG_OTHER ) );
 
 	CGameEventDescriptor *descriptor = GetEventDescriptor( event );
 
@@ -537,7 +529,7 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 	{
 		CGameEventCallback *listener = descriptor->listeners[ i ];
 
-		Assert ( listener );
+		contract_assert( listener );
 
 		// don't trigger server listners for clientside only events
 		if ( ( listener->m_nListenerType == SERVERSIDE ||
@@ -575,13 +567,13 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 		{
 			// new system
 			IGameEventListener2 *pCallback =  static_cast<IGameEventListener2*>(listener->m_pCallback);
-			Assert( pCallback );
+			contract_assert( pCallback );
 			if ( pCallback )
 			{
 				if ( pCallback->GetEventDebugID() != EVENT_DEBUG_ID_INIT )
 				{
 					Msg( "GameEventListener2 callback in list that should NOT be - %s!\n", event->GetName() );
-					Assert( 0 );
+					contract_assert( 0 );
 				}
 				else
 				{
@@ -595,7 +587,7 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 		}
 	}
 
-	if ( bClientOnly || ( !Q_stricmp( "portal2", COM_GetModDirectory() ) ) )
+	if ( bClientOnly || ( !V_stricmp( "portal2", COM_GetModDirectory() ) ) )
 	{
 		// Pass all client only events  to the game event transmiter
 		g_GameEventTransmitter.TransmitGameEvent( event );
@@ -612,7 +604,7 @@ bool CGameEventManager::SerializeEvent( IGameEvent *event, ks::net::CSVCMsg_Game
 	std::scoped_lock lock( m_mutex );
 	CGameEventDescriptor *descriptor = GetEventDescriptor( event );
 
-	Assert( descriptor );
+	contract_assert( descriptor );
 
 	eventMsg->eventid = descriptor->eventid;
 
@@ -659,7 +651,7 @@ bool CGameEventManager::SerializeEvent( IGameEvent *event, ks::net::CSVCMsg_Game
 			case TYPE_WSTRING:
 				{
 					const wchar_t *pStr = event->GetWString( keyName, L"");
-					pKey->val_wstring = std::string( ( const char * ) pStr, wcslen( pStr ) + 1 );
+					pKey->val_wstring = std::string( ( const char * ) pStr, std::wcslen( pStr ) + 1 );
 				}
 				break;
 			default: DevMsg(1, "CGameEventManager: unknown type %i for key '%s'.\n", type, key->GetName() ); break;
@@ -918,8 +910,8 @@ bool CGameEventManager::AddListener( void *listener, CGameEventDescriptor *descr
 	else
 	{
 		// make sure that it hasn't changed:
-		Assert( pCallback->m_nListenerType == nListenerType	 );
-		Assert( pCallback->m_pCallback == listener );
+		contract_assert( pCallback->m_nListenerType == nListenerType );
+		contract_assert( pCallback->m_pCallback == listener );
 	}
 
 	// add to event listeners list if not already in there
@@ -989,13 +981,13 @@ bool CGameEventManager::RegisterEvent( KeyValues * event)
 		// ok, check it's data type
 		const char * type = subkey->GetString();
 
-		if ( !Q_strcmp( "local", keyName) )
+		if ( !V_strcmp( "local", keyName) )
 		{
-			descriptor->local = Q_atoi( type ) != 0;
+			descriptor->local = V_atoi( type ) != 0;
 		}
-		else if ( !Q_strcmp( "reliable", keyName) )
+		else if ( !V_strcmp( "reliable", keyName) )
 		{
-			descriptor->reliable = Q_atoi( type ) != 0;
+			descriptor->reliable = V_atoi( type ) != 0;
 		}
 		else
 		{
@@ -1173,7 +1165,7 @@ void CGameEventManager::DumpEventNetworkStats( void )
 			continue;
 		}
 
-		int l = Q_strlen( name );
+		int l = V_strlen( name );
 		if ( l > len )
 		{
 			len = l;
@@ -1222,7 +1214,9 @@ void CGameEventManager::DumpEventNetworkStats( void )
 }
 
 
-CON_COMMAND_F( net_dumpeventstats, "Dumps out a report of game event network usage", 0 )
+static void net_dumpeventstats( const CCommand &args );
+static ConCommand net_dumpeventstats_command( "net_dumpeventstats", net_dumpeventstats, "Dumps out a report of game event network usage", 0 );
+static void net_dumpeventstats( const CCommand &args )
 {
 	s_GameEventManager.DumpEventNetworkStats();
 }

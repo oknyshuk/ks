@@ -1,12 +1,12 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-// ps2b cascaded shadow mapping
+// Purpose: ps2b cascaded shadow mapping
 // can be used for OSX in absence of GL3.x
-
-
 // 1 2 1
 // 2 4 2
-// 1 2 1
+
 float CSMSampleShadowBuffer( sampler DepthSampler, const float3 shadowMapPos )
 {
 	float fTexelEpsilon = g_flInvCascadeResolution; 

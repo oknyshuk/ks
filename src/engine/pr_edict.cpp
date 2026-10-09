@@ -1,27 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 #include "quakedef.h"
-#include <stddef.h>
 #include "vengineserver_impl.h"
 #include "server.h"
 #include "pr_edict.h"
-#include "world.h"
-#include "ispatialpartition.h"
 #include "framesnapshot.h"
-#include "tier0/cache_hints.h"
 
 // Edicts won't get reallocated for this many seconds after being freed.
-#define EDICT_FREETIME	1.0
+constexpr auto EDICT_FREETIME = 1.0;
 
 
 
@@ -95,7 +82,7 @@ edict_t *ED_Alloc( int iForceEdictIndex )
 	{
 		if ( sv.edicts[i].IsFree() )
 		{
-			Assert(0);
+			contract_assert( 0 );
 			DebuggerBreakIfDebugging();
 		}
 	}
@@ -152,7 +139,7 @@ edict_t *ED_Alloc( int iForceEdictIndex )
 			}
 		}
 
-		AssertMsg( 0, "Can't allocate edict" );
+		contract_assert( false && "Can't allocate edict" );
 		if ( sv.max_edicts == 0 )
 			Sys_Error( "ED_Alloc: No edicts yet" );
 		Sys_Error ("ED_Alloc: no free edicts");
@@ -204,9 +191,6 @@ void ED_Free (edict_t *ed)
 
 	if (ed->IsFree())
 	{
-#ifdef _DEBUG
-//		ConDMsg("duplicate free on '%s'\n", pr_strings + ed->classname );
-#endif
 		return;
 	}
 
@@ -235,22 +219,22 @@ void ED_Free (edict_t *ed)
 void InitializeEntityDLLFields( edict_t *pEdict )
 {
 	// clear all the game variables
-	size_t sz = offsetof( edict_t, m_pUnk ) + sizeof( void* );
-	memset( ((byte*)pEdict) + sz, 0, sizeof(edict_t) - sz );
+	std::size_t sz = __builtin_offsetof( edict_t, m_pUnk ) + sizeof( void* );
+	std::memset( ((byte*)pEdict) + sz, 0, sizeof(edict_t) - sz );
 	int edictIndex = pEdict - sv.edicts;
 	g_EdictFreeTime[edictIndex] = 0;
 }
 
 edict_t *EDICT_NUM(int n)
 {
-	Assert( n >= 0 && n < sv.max_edicts );
+	contract_assert( n >= 0 && n < sv.max_edicts );
 	return &sv.edicts[n];
 }
 
 int NUM_FOR_EDICT(const edict_t *e)
 {
 	int b = e - sv.edicts;
-	Assert( b >= 0 && b < sv.num_edicts );
+	contract_assert( b >= 0 && b < sv.num_edicts );
 	return b;
 }
 
@@ -259,7 +243,7 @@ int NUM_FOR_EDICTINFO( const edict_t * e )
 {
 	int b = e - sv.edicts;
 	
-	Assert( b >= 0 && b < sv.max_edicts );
+	contract_assert( b >= 0 && b < sv.max_edicts );
 	return b;
 }
 

@@ -1,11 +1,12 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "volume_clouds_helper.h"
 
 DEFINE_FALLBACK_SHADER( VolumeClouds, VolumeClouds_dx9 )
 BEGIN_VS_SHADER( VolumeClouds_dx9, "VolumeClouds" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( REFRACTAMOUNT, SHADER_PARAM_TYPE_FLOAT, "2", "" )
 		SHADER_PARAM( BASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "Texture 1" )
 		SHADER_PARAM( BASETEXTURE2, SHADER_PARAM_TYPE_TEXTURE, "", "Texture 2" )

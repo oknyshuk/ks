@@ -1,18 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Matthew D. Campbell (matt@turtlerockstudios.com), 2003
 
-#ifndef BOT_CONSTANTS_H
-#define BOT_CONSTANTS_H
-
 /// version number is MAJOR.MINOR
-#define BOT_VERSION_MAJOR			1
-#define BOT_VERSION_MINOR			50
+inline constexpr auto BOT_VERSION_MAJOR = 1;
+inline constexpr auto BOT_VERSION_MINOR = 50;
 
 //--------------------------------------------------------------------------------------------------------
 /**
@@ -52,7 +46,3 @@ namespace BotProfileInputDevice
 	};
 };
 typedef BotProfileInputDevice::Device  BotProfileDevice_t;
-
-
-
-#endif // BOT_CONSTANTS_H

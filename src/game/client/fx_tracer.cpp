@@ -1,9 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
 #include "fx.h"
 #include "c_te_effect_dispatch.h"
 #include "basecombatweapon_shared.h"
@@ -16,7 +26,7 @@ ConVar r_drawtracers_movetonotintersect( "r_drawtracers_movetonotintersect", "1"
 extern ConVar cl_righthand;
 void FormatViewModelAttachment( C_BasePlayer *pPlayer, Vector &vOrigin, bool bInverse );
 
-#define	TRACER_SPEED			5000 
+constexpr auto TRACER_SPEED = 5000;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -241,4 +251,3 @@ void TracerSoundCallback( const CEffectData &data )
 }
 
 DECLARE_CLIENT_EFFECT( TracerSound, TracerSoundCallback );
-

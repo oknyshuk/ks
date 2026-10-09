@@ -1,19 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CLIENTFRAME_H
-#define CLIENTFRAME_H
-
-#include <bitset>
 #include <const.h>
-#include "tier1/fixed_pool.h"
+import std;
+import ks.tier1;
 
 class CFrameSnapshot;
 
-#define MAX_CLIENT_FRAMES	128
+inline constexpr auto MAX_CLIENT_FRAMES = 128;
 
 class CClientFrame
 {
@@ -76,5 +71,3 @@ private:
 	CClientFrame	*m_Frames;		// updates can be delta'ed from here
 	ks::object_pool< CClientFrame >	m_ClientFramePool;
 };
-
-#endif // CLIENTFRAME_H

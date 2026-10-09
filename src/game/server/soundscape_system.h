@@ -1,15 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SOUNDSCAPE_SYSTEM_H
-#define SOUNDSCAPE_SYSTEM_H
-
-
+import ks.tier1;
 #include "stringregistry.h"
-#include "tier1/utlstring.h"
+import std;
+#include "igamesystem.h"
 class CEnvSoundscape;
 
 struct clusterSoundscapeList_t
@@ -57,6 +53,3 @@ private:
 };
 
 extern CSoundscapeSystem g_SoundscapeSystem;
-
-
-#endif // SOUNDSCAPE_SYSTEM_H

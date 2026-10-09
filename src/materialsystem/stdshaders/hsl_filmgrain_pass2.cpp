@@ -1,23 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "convar.h"
+import std;
 #include "filmgrain_vs20.inc"
 #include "hsl_filmgrain_pass2_ps20.inc"
 #include "hsl_filmgrain_pass2_ps20b.inc"
-
 
 //
 // Second pass merely converts from HSL back to RGB space, noise was already applied in first pass
 //
 
 BEGIN_VS_SHADER( hsl_filmgrain_pass2, "Help for Film Grain" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( INPUT, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 
 	END_SHADER_PARAMS
@@ -83,5 +79,3 @@ BEGIN_VS_SHADER( hsl_filmgrain_pass2, "Help for Film Grain" )
 		Draw();
 	}
 END_SHADER
-
-

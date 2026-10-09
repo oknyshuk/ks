@@ -1,17 +1,9 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// The copyright to the contents herein is the property of Valve, L.L.C.
-// The contents may be used and/or copied only with the written permission of
-// Valve, L.L.C., or in accordance with the terms and conditions stipulated in
-// the agreement/contract under which the contents have been supplied.
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IAVI_H
-#define IAVI_H
-
-
-#include "appframework/iappsystem.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -91,7 +83,7 @@ public:
 	virtual void	FinishAVI( AVIHandle_t handle ) = 0;
 
 	// Add frames to an AVI
-	virtual void	AppendMovieSound( AVIHandle_t h, short *buf, size_t bufsize ) = 0;
+	virtual void	AppendMovieSound( AVIHandle_t h, short *buf, std::size_t bufsize ) = 0;
 	virtual void	AppendMovieFrame( AVIHandle_t h, const BGR888_t *pRGBData ) = 0;
 
 	// Create/destroy an AVI material (a materialsystem IMaterial)
@@ -121,5 +113,3 @@ public:
 };
 
 extern IAvi *g_pAVI;
-
-#endif // IAVI_H

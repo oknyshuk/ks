@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef C_IMPACT_EFFECTS_H
-#define C_IMPACT_EFFECTS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // Purpose: DustParticle emitter 
 //-----------------------------------------------------------------------------
+
+#include "particles_simple.h"
+
 class CDustParticle : public CSimpleEmitter
 {
 public:
@@ -49,7 +47,7 @@ public:
 		{
 			dtime = timeDelta;
 			float expected = 0.5;
-			decay = exp( log( 0.0001f ) * dtime / expected );
+			decay = std::exp( std::log( 0.0001f ) * dtime / expected );
 		}
 
 		pParticle->m_vecVelocity = pParticle->m_vecVelocity * decay;
@@ -79,5 +77,3 @@ private:
 };
 
 void GetColorForSurface( trace_t *trace, Vector *color );
-
-#endif // C_IMPACT_EFFECTS_H

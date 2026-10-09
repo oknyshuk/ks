@@ -1,10 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Defuser kit that drops from counter-strike CTS 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Defuser kit that drops from counter-strike CTS
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "items.h"
 #include "cs_player.h"
 #include "cs_gamerules.h"
@@ -109,7 +135,7 @@ void CItemDefuser::DefuserTouch( CBaseEntity *pOther )
 
 		if ( !pPlayer )
 		{
-			Assert( false );
+			contract_assert( false );
 			return;
 		}
 
@@ -145,5 +171,3 @@ void CItemDefuser::DefuserTouch( CBaseEntity *pOther )
 		}	
 	}
 }
-
-

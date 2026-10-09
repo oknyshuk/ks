@@ -1,16 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Linux Joystick implementation for inputsystem.dll
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-/* For force feedback testing. */
-#include "inputsystem.h"
-#include "tier1/convar.h"
-#include "tier0/icommandline.h"
+// Purpose: Linux Joystick implementation for inputsystem.dll
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_haptic.h>
+
+/* For force feedback testing. */
+import ks.tier1;
+#include "inputsystem.h"
+import std;
+
 
 static ButtonCode_t ControllerButtonToButtonCode( SDL_GamepadButton button );
 static AnalogCode_t ControllerAxisToAnalogCode( SDL_GamepadAxis axis );
@@ -23,7 +23,7 @@ static void joy_active_changed_f( IConVar *var, const char *pOldValue, float flO
 ConVar joy_active( "joy_active", "-1", FCVAR_NONE, "Which of the connected joysticks / gamepads to use (-1 means first found)", &joy_active_changed_f);
 
 static void joy_gamecontroller_config_changed_f( IConVar *var, const char *pOldValue, float flOldValue );
-ConVar joy_gamecontroller_config( "joy_gamecontroller_config", "", FCVAR_ARCHIVE, "Game controller mapping (passed to SDL with SDL_HINT_GAMECONTROLLERCONFIG), can also be configured in Steam Big Picture mode.", &joy_gamecontroller_config_changed_f );
+ConVar joy_gamecontroller_config( "joy_gamecontroller_config", "", FCVAR_ARCHIVE, "Game controller mapping (passed to SDL with SDL_HINT_GAMECONTROLLERCONFIG).", &joy_gamecontroller_config_changed_f );
 
 void SearchForDevice()
 {
@@ -97,11 +97,11 @@ bool JoystickSDLWatcher( void *userInfo, SDL_Event *event )
 	// which then calls SDL_PushEvent for the various events below. PushEvent invokes this callback.
 	// SDL_PollEvent is called in PumpWindowsMessageLoop which is coming from PollInputState_Linux, so there's
 	// no worry about calling PostEvent (which doesn't seem to be thread safe) from other threads.
-	Assert(ThreadInMainThread());
+	contract_assert( ThreadInMainThread() );
 
 	CInputSystem *pInputSystem = (CInputSystem *)userInfo;
-	Assert(pInputSystem != nullptr);
-	Assert(event != nullptr);
+	contract_assert( pInputSystem != nullptr );
+	contract_assert( event != nullptr );
 
 	if ( event == nullptr || pInputSystem == nullptr )
 	{
@@ -230,7 +230,7 @@ void CInputSystem::JoystickHotplugAdded( int instanceId )
 {
 	if ( !SDL_IsGamepad(instanceId) )
 	{
-		Warning("Joystick is not recognized by the gamepad system. You can configure the controller in Steam Big Picture mode.\n");
+		Warning("Joystick is not recognized by the gamepad system.\n");
 		return;
 	}
 
@@ -361,7 +361,7 @@ void CInputSystem::JoystickButtonRelease( int joystickId, int button )
 void CInputSystem::AxisAnalogButtonEvent( ButtonCode_t buttonCode, bool bState, int nLastSampleTick )
 {
 	int keyIndex = buttonCode - JOYSTICK_FIRST_AXIS_BUTTON;
-	Assert(keyIndex >= 0 && keyIndex < ARRAYSIZE(m_appXKeys[0]));
+	contract_assert( keyIndex >= 0 && keyIndex < std::size( m_appXKeys[0] ) );
 	bool bExistingState = m_appXKeys[0][keyIndex].repeats > 0;
 	if ( bState != bExistingState )
 	{
@@ -506,7 +506,7 @@ ButtonCode_t ControllerButtonToButtonCode( SDL_GamepadButton button )
 			return KEY_XBUTTON_START;
 
 		case SDL_GAMEPAD_BUTTON_GUIDE:
-			return KEY_XBUTTON_BACK; // XXX: How are we supposed to handle this? Steam overlay etc.
+			return KEY_XBUTTON_BACK; // XXX: How are we supposed to handle this?
 
 		case SDL_GAMEPAD_BUTTON_LEFT_STICK:
 			return KEY_XBUTTON_STICK1;

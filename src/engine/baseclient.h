@@ -1,26 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef BASECLIENT_H
-#define BASECLIENT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include <const.h>
-#include <checksum_crc.h>
 #include <iclient.h>
 #include <protocol.h>
 #include <iservernetworkable.h>
 #include <bspfile.h>
-#include <keyvalues.h>
-#include <bitset>
 #include <igameevents.h>
-#include "tier1/intrusive_ptr.h"
+import ks.tier1;
+import std;
 #include "userid.h"
-#include "tier1/bitbuf.h"
-#include "steam/steamclientpublic.h"
-#include <array>
 #include "netmessages.h"
 
 // class CClientFrame;
@@ -88,9 +78,9 @@ public:
 	void			UpdateName( const char *pszDefault );
 
 	virtual	void	Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars = nullptr );
-	virtual	void	Inactivate( void )OVERRIDE;
-	virtual	void	Reconnect( void )OVERRIDE;
-	virtual	void	Disconnect( const char *reason ) OVERRIDE;
+	virtual	void	Inactivate( void )override;
+	virtual	void	Reconnect( void )override;
+	virtual	void	Disconnect( const char *reason ) override;
 	virtual bool	CheckConnect( void );
 	virtual bool	ChangeSplitscreenUser( int nSplitScreenUserSlot );
 
@@ -108,18 +98,14 @@ public:
 	virtual bool	ExecuteStringCommand( const char *s );
 	virtual bool	SendNetMsg( INetMessage &msg, bool bForceReliable = false, bool bVoice = false );
 	
-	virtual void	ClientPrintf ( PRINTF_FORMAT_STRING const char *fmt, ...) FMTFUNCTION( 2, 3 );
+	[[gnu::format(printf, 2, 3)]] virtual void	ClientPrintf ( const char *fmt, ...);
 
 	virtual	bool	IsConnected( void ) const { return m_nSignonState >= SIGNONSTATE_CONNECTED; };	
 	virtual	bool	IsSpawned( void ) const { return m_nSignonState >= SIGNONSTATE_NEW; };	
 	virtual	bool	IsActive( void ) const { return m_nSignonState == SIGNONSTATE_FULL; };
 	virtual	bool	IsFakeClient( void ) const { return m_bFakePlayer; };
 	virtual	bool	IsHLTV( void ) const { return m_bIsHLTV; }
-#if defined( REPLAY_ENABLED )
-	virtual bool	IsReplay( void ) const { return m_bIsReplay; }
-#else
 	virtual bool	IsReplay( void ) const { return false; }
-#endif  // REPLAY_ENABLED
 	// Is an actual human player or splitscreen player (not a bot and not a HLTV slot)
 	virtual bool	IsHumanPlayer() const;
 	virtual	bool	IsHearingClient( int index ) const { return false; };
@@ -140,15 +126,15 @@ public: // Message Handlers
 	virtual bool NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg );
 
 	virtual bool CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg );
-	virtual bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg ) { Assert( 0 ); return true; }
-	virtual bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg ) { Assert( 0 ); return true; }
+	virtual bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg ) { contract_assert( 0 ); return true; }
+	virtual bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg ) { contract_assert( 0 ); return true; }
 
 	bool CLCMsg_BaselineAck( const ks::net::CCLCMsg_BaselineAck& msg );
 	virtual bool CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg );
-	virtual bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg ) { Assert( 0 ); return true; }
+	virtual bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg ) { contract_assert( 0 ); return true; }
 	bool CLCMsg_LoadingProgress( const ks::net::CCLCMsg_LoadingProgress& msg );	
 	bool CLCMsg_SplitPlayerConnect( const ks::net::CCLCMsg_SplitPlayerConnect& msg );
-	virtual bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg ) { Assert( 0 ); return true; }
+	virtual bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg ) { contract_assert( 0 ); return true; }
 	virtual bool CLCMsg_CmdKeyValues( const ks::net::CCLCMsg_CmdKeyValues& msg );
 	virtual bool CLCMsg_HltvReplay( const ks::net::CCLCMsg_HltvReplay &msg ) { return false; }
 
@@ -179,11 +165,11 @@ public: // Message Handlers
 
 	std::array< CNetMessageBinder, NETMSG_Max > m_NetMessages;
 
-	virtual void	ConnectionStart(INetChannel *chan) OVERRIDE;
-	virtual void	ConnectionStop()OVERRIDE;
+	virtual void	ConnectionStart(INetChannel *chan) override;
+	virtual void	ConnectionStop()override;
 
 public: // IGameEventListener
-	virtual void	FireGameEvent( IGameEvent *event ) OVERRIDE { FireGameEvent( event, false ); }
+	virtual void	FireGameEvent( IGameEvent *event ) override { FireGameEvent( event, false ); }
 	void FireGameEvent( IGameEvent *event, bool bPassthrough );
 	int				m_nDebugID;
 	virtual int		GetEventDebugID( void );
@@ -202,7 +188,6 @@ public:
 	virtual CClientFrame *GetDeltaFrame( int nTick );
 	virtual bool	SendSnapshot( CClientFrame *pFrame );
 	virtual bool	SendServerInfo( void );
-	virtual void	OnSteamServerLogonSuccess( uint32 externalIP );
 	virtual bool	SendSignonData( void );
 	virtual void	SpawnPlayer( void );
 	virtual void	ActivatePlayer( void );
@@ -211,15 +196,15 @@ public:
 	virtual void	FreeBaselines();
 	virtual bool	IgnoreTempEntity( CEventInfo *event );
 	
-	void			SetSteamID( const CSteamID &steamID );
+	void			SetPlayerID( const CPlayerId &playerUID );
 
 	int				GetSignonState() const { return m_nSignonState; }
 	void			SetSignonState( int nState );
 
 	bool			IsTracing() const;
 	void			SetTraceThreshold( int nThreshold );
-	void			TraceNetworkData( bf_write &msg, PRINTF_FORMAT_STRING char const *fmt, ... ) FMTFUNCTION( 3, 4 );
-	void			TraceNetworkMsg( int nBits, PRINTF_FORMAT_STRING char const *fmt, ... ) FMTFUNCTION( 3, 4 );
+	[[gnu::format(printf, 3, 4)]] void			TraceNetworkData( bf_write &msg, char const *fmt, ... );
+	[[gnu::format(printf, 3, 4)]] void			TraceNetworkMsg( int nBits, char const *fmt, ... );
 
 	bool			IsFullyAuthenticated( void ) { return m_bFullyAuthenticated; }
 	void			SetFullyAuthenticated( void ) { m_bFullyAuthenticated = true; }
@@ -235,11 +220,11 @@ public:
 	virtual IClient	*GetSplitScreenOwner() { return m_pAttachedTo; }
 	
 	virtual int		GetNumPlayers();
-	virtual bool	StartHltvReplay( const HltvReplayParams_t &params ) OVERRIDE { return false; } // not implemented for most clients
-	virtual void	StopHltvReplay() OVERRIDE { }
-	virtual int		GetHltvReplayDelay() OVERRIDE { return 0; }
-	virtual bool	CanStartHltvReplay() OVERRIDE { return false; }
-	virtual void	ResetReplayRequestTime() OVERRIDE { }
+	virtual bool	StartHltvReplay( const HltvReplayParams_t &params ) override { return false; } // not implemented for most clients
+	virtual void	StopHltvReplay() override { }
+	virtual int		GetHltvReplayDelay() override { return 0; }
+	virtual bool	CanStartHltvReplay() override { return false; }
+	virtual void	ResetReplayRequestTime() override { }
 	virtual CBaseClient *GetPropCullClient() { return this; }
 	void			OverrideSignonStateTransparent( int nState ){ m_nSignonState = nState; }
 protected:
@@ -273,7 +258,7 @@ public:
 	char			m_GUID[SIGNED_GUID_LEN + 1]; // the clients CD key
 	CNETMsg_PlayerAvatarData_t m_msgAvatarData;	// Client avatar
 
-	CSteamID		m_SteamID;			// This is valid when the client is authenticated
+	CPlayerId		m_PlayerUID;			// This is valid when the client is authenticated
 	
 	uint32			m_nFriendsID;		// client's friends' ID
 	char			m_FriendsName[MAX_PLAYER_NAME_LENGTH];
@@ -284,9 +269,6 @@ public:
 	CBaseServer		*m_Server;			// pointer to server object
 	bool			m_bIsHLTV;			// if this a HLTV proxy ?
 	CHLTVServer		*m_pHltvSlaveServer;
-#if defined( REPLAY_ENABLED )
-	bool			m_bIsReplay;		// if this is a Replay proxy ?
-#endif
 
 	// Client sends this during connection, so we can see if
 	//  we need to send sendtable info or if the .dll matches
@@ -354,7 +336,3 @@ private:
 
 	CNetworkStatTrace	m_Trace;
 };
-
-
-
-#endif // BASECLIENT_H

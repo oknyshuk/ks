@@ -1,14 +1,8 @@
-//========= Copyright (c) 1996-2012, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2012 Valve Corporation
+
 // Purpose: Client side interactive, shootable chicken
-//
-// $NoKeywords: $
-//=============================================================================//
-
-
-#ifndef C_CHICKEN_H
-#define C_CHICKEN_H
-
 
 #include "c_props.h"
 
@@ -46,5 +40,3 @@ private:
 	CNetworkVar( EHANDLE, m_leader, [[= ks::reflect::Net{} ]] );				// who we are following, or NULL
 
 };
-
-#endif // C_CHICKEN_H

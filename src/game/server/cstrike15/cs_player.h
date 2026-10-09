@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Player for HL1.
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef CS_PLAYER_H
-#define CS_PLAYER_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: Player for HL1.
 
-#include <bitset>
+import std;
+import ks.tier1;
 #include "basemultiplayerplayer.h"
 #include "server_class.h"
 // the SENDPROP_*_PRIORITY constants the Net annotations below name
@@ -19,8 +14,8 @@
 #include "cs_playeranimstate.h"
 #include "cs_shareddefs.h"
 #include "cs_autobuy.h"
-#include "tier1/map_ops.h"
 #include "usermessages.h"
+#include "basecombatweapon.h"
 
 class CWeaponCSBase;
 class CMenu;
@@ -40,10 +35,10 @@ namespace ks::net { struct CCSUsrMsg_PlayerDecalDigitalSignature; }
 
 #include "csgo_playeranimstate.h"
 
-#define MENU_STRING_BUFFER_SIZE	1024
-#define MENU_MSG_TEXTCHUNK_SIZE	50
+inline constexpr auto MENU_STRING_BUFFER_SIZE = 1024;
+inline constexpr auto MENU_MSG_TEXTCHUNK_SIZE = 50;
 
-#define CS_FORCE_TEAM_THINK_CONTEXT	"CSForceTeamThink"
+inline constexpr const char *CS_FORCE_TEAM_THINK_CONTEXT = "CSForceTeamThink";
 
 enum
 {
@@ -129,54 +124,35 @@ typedef std::vector< std::unique_ptr< CDamageRecord > > DamageRecordList_t;
 // These bits are set when hint messages are displayed, and cleared at
 // different times, according to the DHM_xxx bitmasks that follow
 
-#define DHF_ROUND_STARTED		( 1 << 1 )
-#define DHF_HOSTAGE_SEEN_FAR	( 1 << 2 )
-#define DHF_HOSTAGE_SEEN_NEAR	( 1 << 3 )
-#define DHF_HOSTAGE_USED		( 1 << 4 )
-#define DHF_HOSTAGE_INJURED		( 1 << 5 )
-#define DHF_HOSTAGE_KILLED		( 1 << 6 )
-#define DHF_FRIEND_SEEN			( 1 << 7 )
-#define DHF_ENEMY_SEEN			( 1 << 8 )
-#define DHF_FRIEND_INJURED		( 1 << 9 )
-#define DHF_FRIEND_KILLED		( 1 << 10 )
-#define DHF_ENEMY_KILLED		( 1 << 11 )
-#define DHF_BOMB_RETRIEVED		( 1 << 12 )
-#define DHF_AMMO_EXHAUSTED		( 1 << 15 )
-#define DHF_IN_TARGET_ZONE		( 1 << 16 )
-#define DHF_IN_RESCUE_ZONE		( 1 << 17 )
-#define DHF_IN_ESCAPE_ZONE		( 1 << 18 ) // unimplemented
-#define DHF_IN_VIPSAFETY_ZONE	( 1 << 19 ) // unimplemented
-#define	DHF_NIGHTVISION			( 1 << 20 )
-#define	DHF_HOSTAGE_CTMOVE		( 1 << 21 )
-#define	DHF_SPEC_DUCK			( 1 << 22 )
+inline constexpr auto DHF_ROUND_STARTED = ( 1 << 1 );
+inline constexpr auto DHF_HOSTAGE_SEEN_FAR = ( 1 << 2 );
+inline constexpr auto DHF_HOSTAGE_SEEN_NEAR = ( 1 << 3 );
+inline constexpr auto DHF_HOSTAGE_USED = ( 1 << 4 );
+inline constexpr auto DHF_HOSTAGE_INJURED = ( 1 << 5 );
+inline constexpr auto DHF_HOSTAGE_KILLED = ( 1 << 6 );
+inline constexpr auto DHF_FRIEND_SEEN = ( 1 << 7 );
+inline constexpr auto DHF_ENEMY_SEEN = ( 1 << 8 );
+inline constexpr auto DHF_FRIEND_INJURED = ( 1 << 9 );
+inline constexpr auto DHF_FRIEND_KILLED = ( 1 << 10 );
+inline constexpr auto DHF_ENEMY_KILLED = ( 1 << 11 );
+inline constexpr auto DHF_BOMB_RETRIEVED = ( 1 << 12 );
+inline constexpr auto DHF_AMMO_EXHAUSTED = ( 1 << 15 );
+inline constexpr auto DHF_IN_TARGET_ZONE = ( 1 << 16 );
+inline constexpr auto DHF_IN_RESCUE_ZONE = ( 1 << 17 );
+inline constexpr auto DHF_IN_ESCAPE_ZONE = ( 1 << 18 ); // unimplemented
+inline constexpr auto DHF_IN_VIPSAFETY_ZONE = ( 1 << 19 ); // unimplemented
+inline constexpr auto DHF_NIGHTVISION = ( 1 << 20 );
+inline constexpr auto DHF_HOSTAGE_CTMOVE = ( 1 << 21 );
+inline constexpr auto DHF_SPEC_DUCK = ( 1 << 22 );
 
 // DHF_xxx bits to clear when the round restarts
 
-#define DHM_ROUND_CLEAR ( \
-	DHF_ROUND_STARTED | \
-	DHF_HOSTAGE_KILLED | \
-	DHF_FRIEND_KILLED | \
-	DHF_BOMB_RETRIEVED )
+inline constexpr auto DHM_ROUND_CLEAR = ( DHF_ROUND_STARTED | DHF_HOSTAGE_KILLED | DHF_FRIEND_KILLED | DHF_BOMB_RETRIEVED );
 
 
 // DHF_xxx bits to clear when the player is restored
 
-#define DHM_CONNECT_CLEAR ( \
-	DHF_HOSTAGE_SEEN_FAR | \
-	DHF_HOSTAGE_SEEN_NEAR | \
-	DHF_HOSTAGE_USED | \
-	DHF_HOSTAGE_INJURED | \
-	DHF_FRIEND_SEEN | \
-	DHF_ENEMY_SEEN | \
-	DHF_FRIEND_INJURED | \
-	DHF_ENEMY_KILLED | \
-	DHF_AMMO_EXHAUSTED | \
-	DHF_IN_TARGET_ZONE | \
-	DHF_IN_RESCUE_ZONE | \
-	DHF_IN_ESCAPE_ZONE | \
-	DHF_IN_VIPSAFETY_ZONE | \
-	DHF_HOSTAGE_CTMOVE | \
-	DHF_SPEC_DUCK )
+inline constexpr auto DHM_CONNECT_CLEAR = ( DHF_HOSTAGE_SEEN_FAR | DHF_HOSTAGE_SEEN_NEAR | DHF_HOSTAGE_USED | DHF_HOSTAGE_INJURED | DHF_FRIEND_SEEN | DHF_ENEMY_SEEN | DHF_FRIEND_INJURED | DHF_ENEMY_KILLED | DHF_AMMO_EXHAUSTED | DHF_IN_TARGET_ZONE | DHF_IN_RESCUE_ZONE | DHF_IN_ESCAPE_ZONE | DHF_IN_VIPSAFETY_ZONE | DHF_HOSTAGE_CTMOVE | DHF_SPEC_DUCK );
 
 // radio messages (these must be kept in sync with actual radio) -------------------------------------
 enum RadioType
@@ -314,9 +290,6 @@ class
       [[= ks::reflect::SubTable<"cslocaldata", &DT_CSLocalPlayerExclusive::g_SendTable, SendProxy_SendLocalDataTable>{} ]]
       [[= ks::reflect::SubTable<"csnonlocaldata", &DT_CSNonLocalPlayerExclusive::g_SendTable, SendProxy_SendNonLocalDataTable>{} ]]
       CCSPlayer : public CBaseMultiplayerPlayer, public ICSPlayerAnimStateHelpers
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
-	, public IHasAttributes, public IInventoryUpdateListener
-#endif
 {
 public:
 	DECLARE_CLASS( CCSPlayer, CBaseMultiplayerPlayer );
@@ -338,7 +311,7 @@ public:
 	
 	void SetCSSpawnLocation( Vector position, QAngle angle );
 	
-	virtual void		ImpulseCommands() OVERRIDE;
+	virtual void		ImpulseCommands() override;
 	virtual void		CheatImpulseCommands( int iImpulse );
 	virtual void		PlayerRunCommand( CUserCmd *ucmd, IMoveHelper *moveHelper );
 	virtual void		PostThink();
@@ -361,7 +334,7 @@ public:
 	virtual void		TraceAttack( const CTakeDamageInfo &inputInfo, const Vector &vecDir, trace_t *ptr );
 
 	void FindMatchingWeaponsForTeamLoadout( const char *pchName, int nTeam, bool bMustBeTeamSpecific, std::vector< CEconItemView* > &matchingWeapons );
-	virtual CBaseEntity	*GiveNamedItem( const char *pchName, int iSubType = 0, CEconItemView *pScriptItem = nullptr, bool bForce = false ) OVERRIDE;
+	virtual CBaseEntity	*GiveNamedItem( const char *pchName, int iSubType = 0, CEconItemView *pScriptItem = nullptr, bool bForce = false ) override;
 
 	virtual bool		IsBeingGivenItem() const { return m_bIsBeingGivenItem; }
 	
@@ -378,7 +351,7 @@ public:
 	// from CBasePlayer
 	virtual void		SetupVisibility( CBaseEntity *pViewEntity, unsigned char *pvs, int pvssize );
 
-	virtual bool		ShouldCheckOcclusion( CBasePlayer *pOtherPlayer ) OVERRIDE;
+	virtual bool		ShouldCheckOcclusion( CBasePlayer *pOtherPlayer ) override;
 
 
 	virtual	bool		ShouldCollide( int collisionGroup, int contentsMask ) const;
@@ -389,7 +362,7 @@ public:
 
 	virtual int 		GetNextObserverSearchStartPoint( bool bReverse );
 
-	virtual bool UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence ) OVERRIDE;
+	virtual bool UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence ) override;
 
 // In shared code.
 public:
@@ -470,9 +443,9 @@ public:
 	virtual void SetAnimation( PLAYER_ANIM playerAnim );
 	void DoAnimStateEvent( PlayerAnimEvent_t evt );
 
-	virtual bool StartReplayMode( float fDelay, float fDuration, int iEntity ) OVERRIDE;
-	virtual void StopReplayMode() OVERRIDE;
-	virtual void PlayUseDenySound() OVERRIDE;
+	virtual bool StartReplayMode( float fDelay, float fDuration, int iEntity ) override;
+	virtual void StopReplayMode() override;
+	virtual void PlayUseDenySound() override;
 
 	bool IsOtherSameTeam( int nTeam );
 	bool IsOtherEnemy( CCSPlayer *pPlayer );
@@ -679,7 +652,7 @@ public:
 	virtual void PlayerForceTeamThink();
 	virtual void ResetForceTeamThink();
 
-	virtual bool StartObserverMode( int mode ) OVERRIDE;
+	virtual bool StartObserverMode( int mode ) override;
 	virtual bool SetObserverTarget( CBaseEntity *target );
 	virtual void ValidateCurrentObserverTarget( void );
 	virtual void CheckObserverSettings( void );
@@ -976,7 +949,6 @@ public:
 	
 	bool m_bJustKilledTeammate;
 	bool m_bPunishedForTK;
-	bool m_bInvalidSteamLogonDelayed;
 	int m_iTeamKills;
 	float m_flLastAction;
 	int m_iNextTimeCheck;		// Next time the player can execute a "timeleft" command
@@ -1137,7 +1109,6 @@ public:
 
 	void SetViewModelArms( const char *armsModel );
 
-	void ReportCustomClothingModels( void );
 
 	void DestroyWeapon( CBaseCombatWeapon *pWeapon );
 
@@ -1280,11 +1251,6 @@ public:
 	void			BuyRandom();
 
 
-#ifdef CS_SHIELD_ENABLED
-	CNetworkVar( bool, m_bHasShield );
-	CNetworkVar( bool, m_bShieldDrawn );
-#endif
-	
 	CNetworkVar( bool, m_bHud_MiniScoreHidden, [[= ks::reflect::Net{} ]] );
 	CNetworkVar( bool, m_bHud_RadarHidden, [[= ks::reflect::Net{} ]] );
 
@@ -1520,13 +1486,8 @@ public:
 	void	ClearScore( void ); 
 	void	AddScore( int iPoints );
 
-#define USE_OLD_SCORE_SYSTEM 0
 
-#if ( USE_OLD_SCORE_SYSTEM )
-	int		GetScore() const { return m_iScore; }
-#else
 	int		GetScore() const { return m_iContributionScore; }
-#endif
 
 	int	GetContributionScore( void ) { return m_iContributionScore; }
 	void ClearContributionScore( void ){ m_iContributionScore = 0; pl.score = 0; }
@@ -1641,7 +1602,6 @@ public:
 private:
 	CNetworkVar( bool, m_bIsAssassinationTarget );	// This player is an assassination target for an active mission
 
-#if CS_CONTROLLABLE_BOTS_ENABLED
 public: 
 
 	bool CanControlBot( CCSBot *pBot ,bool bSkipTeamCheck = false );
@@ -1665,7 +1625,7 @@ public:
 
 private:
 	CNetworkVar( bool, m_bIsControllingBot, [[= ks::reflect::Net{} ]] );	// Are we controlling a bot? 
-	// Note that this can be TRUE even if GetControlledPlayer() returns NULL, 
+	// Note that this can be true even if GetControlledPlayer() returns NULL, 
 	// IFF we started controlling a bot and then the bot was deleted for some reason. 
 
 	CNetworkVar( bool, m_bCanControlObservedBot, [[= ks::reflect::Net{} ]] );	// set to true if we can take control of the bot we are observing, for client UI feedback. 
@@ -1697,43 +1657,6 @@ private:
 public:
 	PreControlData	GetBotPreControlData( void ) { return m_PreControlData; }
 
-#endif // #if CS_CONTROLLABLE_BOTS_ENABLED
-
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
-
-public:
-	// IHasAttributes
-	CAttributeManager		*GetAttributeManager( void ) {
-#if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
-		return &m_AttributeManager;
-#else
-		return nullptr;
-#endif
-	}
-	CAttributeContainer		*GetAttributeContainer( void ) { return nullptr; }
-	CBaseEntity				*GetAttributeOwner( void ) { return nullptr; }
-	CAttributeList			*GetAttributeList( void ) {
-#if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
-		return &m_AttributeList;
-#else
-		return nullptr;
-#endif
-	}
-	virtual void			ReapplyProvision( void ) { return; }
-
-#if defined( USE_PLAYER_ATTRIBUTE_MANAGER )
-protected:
-	CNetworkVarEmbedded( CAttributeContainerPlayer, m_AttributeManager );
-#endif
-
-	//----------------------------
-	// ECONOMY INVENTORY MANAGEMENT
-public:
-	// IInventoryUpdateListener
-	virtual void InventoryUpdated( CPlayerInventory *pInventory );
-	virtual void SOCacheUnsubscribed( const CSteamID & steamIDOwner ) { /*m_Shared.SetLoadoutUnavailable( true );*/ }
-	void		VerifySOCache();
-#endif //!defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 
 	void		UpdateInventory( bool bInit );
 
@@ -1845,5 +1768,3 @@ inline const char *CCSPlayer::GetClanName( void ) const
 {
 	return m_szClanName;
 }
-
-#endif	//CS_PLAYER_H

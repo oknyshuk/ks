@@ -1,31 +1,30 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // wrapper for the material system for the engine.
 
-#include "render_pch.h"
-#include "view.h"
-#include "zone.h"
-#include <float.h>
-#include "sys_dll.h"
+// main precompiled header for client rendering code
+
+import ks.tier1;
 #include "materialsystem/imesh.h"
-#include "gl_water.h"
-#include <algorithm>
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
+#include "materialsystem/imesh.h"
+import std;
 #include "istudiorender.h"
-#include "tier0/dbg.h"
-#include "keyvalues.h"
-#include "vstdlib/random.h"
 #include "lightcache.h"
-#include "sysexternal.h"
 #include "cmd.h"
 #include "modelloader.h"
-#include "tier0/icommandline.h"
 #include "materialsystem/imaterial.h"
 #include "toolframework/itoolframework.h"
 #include "toolframework/itoolsystem.h"
@@ -63,11 +62,7 @@ IMaterial*	g_pMaterialDepthWrite[2][2];
 IMaterial*	g_pMaterialSSAODepthWrite[ 2 ][ 2 ];
 
 
-#ifdef NEWMESH
-std::vector< IVertexBuffer * > g_WorldStaticMeshes;  // fixme - rename to g_WorldStaticVertexBuffers
-#else
 std::vector< IMesh * > g_WorldStaticMeshes;
-#endif
 
 void WorldStaticMeshCreate( void );
 void WorldStaticMeshDestroy( void );
@@ -80,7 +75,9 @@ void TangentSpaceComputeBasis( Vector& tangent, Vector& binormal, const Vector& 
 //-----------------------------------------------------------------------------
 // A console command edit a particular material
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( mat_edit, "Bring up the material under the crosshair in the editor", FCVAR_CHEAT )
+static void mat_edit( const CCommand &args );
+static ConCommand mat_edit_command( "mat_edit", mat_edit, "Bring up the material under the crosshair in the editor", FCVAR_CHEAT );
+static void mat_edit( const CCommand &args )
 {
 	if ( !toolframework->InToolMode() )
 		return;
@@ -119,7 +116,9 @@ CON_COMMAND_F( mat_edit, "Bring up the material under the crosshair in the edito
 //-----------------------------------------------------------------------------
 // A console command to spew out the material under the crosshair
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( mat_crosshair, "Display the name of the material under the crosshair", FCVAR_CHEAT )
+static void mat_crosshair( const CCommand &args );
+static ConCommand mat_crosshair_command( "mat_crosshair", mat_crosshair, "Display the name of the material under the crosshair", FCVAR_CHEAT );
+static void mat_crosshair( const CCommand &args )
 {
 	IMaterial* pMaterial = GetMaterialAtCrossHair();
 	if (!pMaterial)
@@ -132,7 +131,9 @@ CON_COMMAND_F( mat_crosshair, "Display the name of the material under the crossh
 //-----------------------------------------------------------------------------
 // A console command to open the material under the crosshair in the associated editor.
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( mat_crosshair_reloadmaterial, "reload the material under the crosshair", FCVAR_CHEAT )
+static void mat_crosshair_reloadmaterial( const CCommand &args );
+static ConCommand mat_crosshair_reloadmaterial_command( "mat_crosshair_reloadmaterial", mat_crosshair_reloadmaterial, "reload the material under the crosshair", FCVAR_CHEAT );
+static void mat_crosshair_reloadmaterial( const CCommand &args )
 {
 	IMaterial* pMaterial = GetMaterialAtCrossHair();
 	if (!pMaterial)
@@ -145,7 +146,9 @@ CON_COMMAND_F( mat_crosshair_reloadmaterial, "reload the material under the cros
 	}
 }
 
-CON_COMMAND_F( mat_crosshair_printmaterial, "print the material under the crosshair", FCVAR_CHEAT )
+static void mat_crosshair_printmaterial( const CCommand &args );
+static ConCommand mat_crosshair_printmaterial_command( "mat_crosshair_printmaterial", mat_crosshair_printmaterial, "print the material under the crosshair", FCVAR_CHEAT );
+static void mat_crosshair_printmaterial( const CCommand &args )
 {
 	IMaterial* pMaterial = GetMaterialAtCrossHair();
 	if (!pMaterial)
@@ -347,7 +350,7 @@ static void GenerateTexCoordsForPrimVerts( void )
 		for( j = 0; j < MSurf_NumPrims( surfID ); j++ )
 		{
 			mprimitive_t *pPrim;
-			assert( MSurf_FirstPrimID( surfID ) + j < host_state.worldbrush->numprimitives );
+			contract_assert( MSurf_FirstPrimID( surfID ) + j < host_state.worldbrush->numprimitives );
 			pPrim = &host_state.worldbrush->primitives[MSurf_FirstPrimID( surfID ) + j];
 			for( k = 0; k < pPrim->vertCount; k++ )
 			{
@@ -372,7 +375,7 @@ static void GenerateTexCoordsForPrimVerts( void )
 				for ( l = 0; l < pPrim->vertCount; l++ )
 				{
 					// world-space vertex
-					assert( l+pPrim->firstVert < host_state.worldbrush->numprimverts );
+					contract_assert( l+pPrim->firstVert < host_state.worldbrush->numprimverts );
 					mprimvert_t &vert = host_state.worldbrush->primverts[l+pPrim->firstVert];
 					Vector& vec = vert.pos;
 
@@ -438,15 +441,16 @@ int SortMapCompareFunc( const void *pElem0, const void *pElem1 )
 //-----------------------------------------------------------------------------
 void MaterialSystem_CreateSortinfo( void )
 {
-	Assert( !materialSortInfoArray );
+	ks::ScratchArena<> scratch;
+	contract_assert( !materialSortInfoArray );
 
 	int nSortIDs = materials->GetNumSortIDs();
 	materialSortInfoArray = ( MaterialSystem_SortInfo_t * )new MaterialSystem_SortInfo_t[ nSortIDs ];
-	Assert( materialSortInfoArray );
+	contract_assert( materialSortInfoArray );
 	materials->GetSortInfo( materialSortInfoArray );
 
 	int i = 0;
-	sortmap_t *pMap = (sortmap_t *)stackalloc( sizeof(sortmap_t) * nSortIDs );
+	sortmap_t *pMap = scratch.Alloc<sortmap_t>( nSortIDs );
 	for ( i = 0; i < nSortIDs; i++ )
 	{
 		pMap[i].info = materialSortInfoArray[i];
@@ -456,9 +460,9 @@ void MaterialSystem_CreateSortinfo( void )
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 	pSortMapRenderContext = pRenderContext;
 
-	qsort( pMap, nSortIDs, sizeof( sortmap_t ), SortMapCompareFunc );
+	std::qsort( pMap, nSortIDs, sizeof( sortmap_t ), SortMapCompareFunc );
 
-	int *pSortIDRemap = (int *)stackalloc( sizeof(int) * nSortIDs );
+	int *pSortIDRemap = scratch.Alloc<int>( nSortIDs );
 	for ( i = 0; i < nSortIDs; i++ )
 	{
 		materialSortInfoArray[i] = pMap[i].info;
@@ -472,7 +476,7 @@ void MaterialSystem_CreateSortinfo( void )
 		int sortID = MSurf_MaterialSortID( surfID );
 #if _DEBUG
 		IMaterial *pMaterial = MSurf_TexInfo( surfID )->material;
-		Assert ( materialSortInfoArray[pSortIDRemap[sortID]].material == pMaterial );
+		contract_assert( materialSortInfoArray[pSortIDRemap[sortID]].material == pMaterial );
 #endif
 		MSurf_MaterialSortID( surfID ) = pSortIDRemap[sortID];
 	}
@@ -504,8 +508,8 @@ bool SurfHasBumpedLightmaps( SurfaceHandle_t surfID )
 bool SurfNeedsBumpedLightmaps( SurfaceHandle_t surfID )
 {
 	ASSERT_SURF_VALID( surfID );
-	assert( MSurf_TexInfo( surfID ) );
-	assert( MSurf_TexInfo( surfID )->material );
+	contract_assert( MSurf_TexInfo( surfID ) );
+	contract_assert( MSurf_TexInfo( surfID )->material );
 	return MSurf_TexInfo( surfID )->material->GetPropertyFlag( MATERIAL_PROPERTY_NEEDS_BUMPED_LIGHTMAPS );
 }
 
@@ -526,8 +530,8 @@ bool SurfHasLightmap( SurfaceHandle_t surfID )
 bool SurfNeedsLightmap( SurfaceHandle_t surfID )
 {
 	ASSERT_SURF_VALID( surfID );
-	assert( MSurf_TexInfo( surfID ) );
-	assert( MSurf_TexInfo( surfID )->material );
+	contract_assert( MSurf_TexInfo( surfID ) );
+	contract_assert( MSurf_TexInfo( surfID )->material );
 	if (MSurf_TexInfo( surfID )->flags & SURF_NOLIGHT)
 		return false;
 
@@ -709,7 +713,7 @@ void CMSurfaceSortList::Init( int maxSortIDs, int minMaterialLists )
 	ks::ensure_size( m_groups, groupMax );
 	int groupBytes = (groupMax+7)>>3;
 	ks::ensure_size( m_groupUsed, groupBytes );
-	Q_memset(m_groupUsed.data(), 0, groupBytes);
+	V_memset(m_groupUsed.data(), 0, groupBytes);
 
 	for ( int i = 0; i < MAX_MAT_SORT_GROUPS; i++ )
 	{
@@ -797,10 +801,10 @@ void CMSurfaceSortList::EnsureMaxSortIDs( int newMaxSortIDs )
 
 void CMSurfaceSortList::AddSurfaceToTail( msurface2_t *pSurface, int sortGroup, int sortID )
 {
-	Assert(sortGroup<MAX_MAT_SORT_GROUPS);
+	contract_assert( sortGroup<MAX_MAT_SORT_GROUPS );
 	int index = groupOffset[sortGroup] + sortID;
 
-	surfacesortgroup_t * RESTRICT pGroup = &m_groups[index];
+	surfacesortgroup_t * __restrict__ pGroup = &m_groups[index];
 	if ( !IsGroupUsed(index) )
 	{
 		MarkGroupUsed(index);
@@ -824,7 +828,7 @@ void CMSurfaceSortList::AddSurfaceToTail( msurface2_t *pSurface, int sortGroup, 
 	{
 		// existing block
 		pList = &m_list[pGroup->listTail];
-		if ( pList->count >= ARRAYSIZE(pList->pSurfaces) )
+		if ( pList->count >= std::size( pList->pSurfaces ) )
 		{
 			prevIndex = pGroup->listTail;
 			// no space in existing block
@@ -866,7 +870,7 @@ msurface2_t *CMSurfaceSortList::GetSurfaceAtHead( const surfacesortgroup_t &grou
 {
 	if ( group.listHead == -1 )
 		return nullptr;
-	Assert(m_list[group.listHead].count>0);
+	contract_assert( m_list[group.listHead].count>0 );
 	return m_list[group.listHead].pSurfaces[0];
 }
 
@@ -882,7 +886,7 @@ void CMSurfaceSortList::GetSurfaceListForGroup( std::vector< msurface2_t * > &li
 #ifndef DEDICATED
 IMaterial *GetMaterialAtCrossHair( void )
 {
-	Assert( false );	// return value was not defined for this platform - returning NULL
+	contract_assert( false );	// return value was not defined for this platform - returning NULL
 	return nullptr;
 }
 

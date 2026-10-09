@@ -1,18 +1,14 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Helper for the CHudElement class to add themselves to the list of hud elements
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef HUD_ELEMENT_HELPER_H
-#define HUD_ELEMENT_HELPER_H
+// Purpose: Helper for the CHudElement class to add themselves to the list of hud elements
 
 class CHudElement;
 
 
-#define HUDELEMENT_DEFAULT		0	// default, hud elements present in all split contexts
-#define HUDELEMENT_SS_FULLSCREEN_ONLY		1	// hud element only created in fullscreen context
+inline constexpr auto HUDELEMENT_DEFAULT = 0; // default, hud elements present in all split contexts
+inline constexpr auto HUDELEMENT_SS_FULLSCREEN_ONLY = 1; // hud element only created in fullscreen context
 
 
 //-----------------------------------------------------------------------------
@@ -126,6 +122,3 @@ private:
 	}
 
 // Alias for base hud element
-#define IMPLEMENT_OPERATORS_NEW_AND_DELETE			DECLARE_MULTIPLY_INHERITED
-
-#endif // HUD_ELEMENT_HELPER_H

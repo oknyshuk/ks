@@ -1,22 +1,15 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ====//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
+import ks.core;
+
 // Purpose: Contains all utility methods for the new game UI system
-//
-//===========================================================================//
-
-
-#ifndef GAMEUI_H
-#define GAMEUI_H
-
-
 
 #include "igamesystem.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-struct Rect_t;
 struct InputEvent_t;
 
 
@@ -52,6 +45,3 @@ private:
 };
 
 extern CGameUIGameSystem *g_pGameUIGameSystem;
-
-
-#endif // GAMEUI_H

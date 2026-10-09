@@ -1,17 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef C_RECIPIENTFILTER_H
-#define C_RECIPIENTFILTER_H
-
+import ks.tier1;
 #include "irecipientfilter.h"
-#include "utlvector.h"
 #include "soundflags.h"
-#include <bitset>
+import std;
+#include "const.h"
+#include "SoundEmitterSystem/isoundemittersystembase.h"
+#include "c_baseentity.h"
 
 class C_BasePlayer;
 class C_Team;
@@ -176,5 +173,3 @@ class CLocalPlayerFilter : public C_RecipientFilter
 public:
 	CLocalPlayerFilter( void );
 };
-
-#endif // C_RECIPIENTFILTER_H

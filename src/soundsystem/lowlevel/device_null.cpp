@@ -1,6 +1,5 @@
-#include "basetypes.h"
-#include <atomic>
-#include "commonmacros.h"
+import ks.core;
+import std;
 #include "soundsystem/lowlevel.h"
 
 std::atomic<int> g_nDetectedAudioError(0);
@@ -40,7 +39,7 @@ public:
 	{
 		Msg( "Sound Disabled.\n" );
 	}
-	virtual bool		SetShouldPlayWhenNotInFocus( bool bPlayEvenWhenNotInFocus ) OVERRIDE
+	virtual bool		SetShouldPlayWhenNotInFocus( bool bPlayEvenWhenNotInFocus ) override
 	{
 		return true;
 	}
@@ -88,7 +87,7 @@ int CAudioDeviceList::FindDeviceById( const wchar_t *pId, finddevice_t nFind )
 audio_device_description_t *CAudioDeviceList::FindDeviceById( const char *pId )
 {
 	wchar_t tempName[256];
-	V_strtowcs( pId, -1, tempName, Q_ARRAYSIZE(tempName) );
+	V_strtowcs( pId, -1, tempName, std::size( tempName ) );
 	int nDevice = FindDeviceById( tempName, FIND_AVAILABLE_DEVICE_ONLY );
 	if ( nDevice >= 0 && nDevice < std::ssize( m_list ) )
 		return &m_list[nDevice];
@@ -100,20 +99,20 @@ void CAudioDeviceList::BuildDeviceList( eSubSystems_t nPreferredSubsystem )
 {
 	m_nDeviceStamp = g_nDeviceStamp;
 	audio_device_description_t initList[32];
-	int nCount = Audio_EnumerateDevices( nPreferredSubsystem, initList, Q_ARRAYSIZE(initList) );
+	int nCount = Audio_EnumerateDevices( nPreferredSubsystem, initList, std::size( initList ) );
 
 	// No XAudio2?  Fall back to direct sound.
 	if ( nCount == 0 && nPreferredSubsystem == AUDIO_SUBSYSTEM_XAUDIO )
 	{
 		nPreferredSubsystem = AUDIO_SUBSYSTEM_DSOUND;
-		nCount = Audio_EnumerateDevices( nPreferredSubsystem, initList, Q_ARRAYSIZE(initList) );
+		nCount = Audio_EnumerateDevices( nPreferredSubsystem, initList, std::size( initList ) );
 	}
 
 	m_nSubsystem = nPreferredSubsystem;
 	// No sound devices?  Add a NULL device.
 	if ( nCount == 0 )
 	{
-		nCount = Audio_EnumerateDevices( AUDIO_SUBSYSTEM_NULL, initList, Q_ARRAYSIZE(initList) );
+		nCount = Audio_EnumerateDevices( AUDIO_SUBSYSTEM_NULL, initList, std::size( initList ) );
 	}
 	if ( m_list.empty() )
 	{
@@ -182,7 +181,7 @@ void CAudioDeviceList::UpdateDefaultDevice()
 
 IAudioDevice2 *CAudioDeviceList::CreateDevice( audio_device_init_params_t &params )
 {
-	Assert( IsValid() );
+	contract_assert( IsValid() );
 	int nSubsystem = m_nSubsystem;
 
 	if ( params.m_bOverrideDevice )
@@ -216,7 +215,7 @@ const wchar_t *CAudioDeviceList::GetDeviceToCreate( audio_device_init_params_t &
 			return m_list[nIndex].m_deviceName;
 		}
 	}
-	Assert( m_nDefaultDevice >= 0 && m_nDefaultDevice < std::ssize( m_list ) );
+	contract_assert( m_nDefaultDevice >= 0 && m_nDefaultDevice < std::ssize( m_list ) );
 	return m_list[m_nDefaultDevice].m_deviceName;
 }
 
@@ -242,7 +241,7 @@ int SpeakerConfigValueToChannelCount( int nSpeakerConfig )
 	}
 
 	// doesn't map to anything, return stereo
-	AssertMsg( 0, "Bad speaker config requested\n");
+	contract_assert( false && "Bad speaker config requested\n" );
 	return 2;
 }
 
@@ -259,7 +258,7 @@ int ChannelCountToSpeakerConfigValue( int nChannelCount, bool bIsHeadphone )
 	case 8:
 		return 7;
 	}
-	AssertMsg(0, "Bad channel count\n");
+	contract_assert( false && "Bad channel count\n" );
 	return 2;
 }
 

@@ -1,19 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#if !defined( CLIENTSTATS_H )
-#define CLIENTSTATS_H
+import ks.tier1;
+import std;
 
-#include "interface.h"
-#include <limits.h>
-#include "tier0/dbg.h"
-
-#define INTERFACEVERSION_CLIENTSTATS "ClientStats004"
+inline constexpr const char *INTERFACEVERSION_CLIENTSTATS = "ClientStats004";
 
 //-----------------------------------------------------------------------------
 // An interface used to help the client stats implementation tell time
@@ -32,7 +24,7 @@ struct IClientStatsTime
 struct IClientStatsTextDisplay
 {
 	// Draws the stats
-	virtual void DrawStatsText( PRINTF_FORMAT_STRING const char *fmt, ... ) = 0;
+	virtual void DrawStatsText( const char *fmt, ... ) = 0;
 
 	virtual void SetDrawColor( unsigned char r, unsigned char g, unsigned char b ) = 0;
 
@@ -46,7 +38,7 @@ struct IClientStatsTextDisplay
 // the engine to allow clients to render their own stats.
 //-----------------------------------------------------------------------------
 
-abstract_class IClientStats
+class IClientStats
 {
 public:
 	// This is called at startup to tell the stats about time
@@ -77,7 +69,7 @@ public:
 //-----------------------------------------------------------------------------
 
 template <int timedStatCount, int countedStatCount>
-abstract_class CBaseClientStats : public IClientStats
+class CBaseClientStats : public IClientStats
 {
 public:
 	void Init( IClientStatsTime* pTime );
@@ -96,14 +88,14 @@ public:
 	// returns timed stats
 	double TimedStatInFrame( int statID ) const
 	{
-		Assert( statID >= 0 && statID < timedStatCount );
-		Assert( m_StatFrameTime[statID] >= 0.0 );
+		contract_assert( statID >= 0 && statID < timedStatCount );
+		contract_assert( m_StatFrameTime[statID] >= 0.0 );
 		return m_StatFrameTime[statID];
 	}
 
 	double TotalTimedStat( int statID ) const
 	{
-		Assert( statID >= 0 && statID < timedStatCount );
+		contract_assert( statID >= 0 && statID < timedStatCount );
 		return m_TotalStatTime[statID];
 	}
 	virtual const char *GetCountedStatName( int statID ) const = 0;
@@ -128,7 +120,7 @@ private:
 template <int timedStatCount, int countedStatCount>
 void CBaseClientStats<timedStatCount, countedStatCount>::Init( IClientStatsTime* pTime )
 {
-	Assert( pTime );
+	contract_assert( pTime );
 	m_pTime = pTime;
 }
 
@@ -190,6 +182,3 @@ void CBaseClientStats<timedStatCount, countedStatCount>::EndTimedStat( int stat 
 	if (m_pTime)
 		m_StatFrameTime[stat] += m_pTime->GetTime() - m_StatStartTime[stat];
 }
-
-
-#endif // CLIENTSTATS_H

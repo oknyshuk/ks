@@ -1,18 +1,31 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// main precompiled header for server files
 
-#include "server_pch.h"
+import std;
+import ks.tier1;
+
+#include "qlimits.h"
+#include "quakedef.h"
+#include "decal.h"
+#include "cmodel_engine.h"
+#include "sound.h"
+#include "checksum_engine.h"
+#include "host.h"
+#include "keys.h"
+#include "vengineserver_impl.h"
+#include "server.h"
+#include "eiface.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+#include "console.h"
+#include "proto_oob.h"
+#include "edict.h"
 #include "ipuserfilter.h"
 #include "sv_filter.h"
-#include "sv_steamauth.h"
 #include "GameEventManager.h"
 #include "proto_oob.h"
-#include "tier1/commandbuffer.h"
 #include "net.h"
 
 static ConVar sv_filterban( "sv_filterban", "1", 0, "Set packet filtering by IP mode" );
@@ -22,8 +35,8 @@ std::vector< userfilter_t > g_UserFilters;
 
 #define BANNED_IP_FILENAME "banned_ip.cfg"
 #define BANNED_USER_FILENAME "banned_user.cfg"
-#define CONFIG_DIR "cfg/"
-#define STEAM_PREFIX "STEAM_"
+inline constexpr char CONFIG_DIR[] = "cfg/";
+#define PLAYERID_PREFIX "STEAM_"
 
 //-----------------------------------------------------------------------------
 // Purpose: Sends a message to prospective clients letting them know they're banned
@@ -107,7 +120,7 @@ bool Filter_ConvertString( const char *s, ipfilter_t *f )
 			num[j++] = *s++;
 		}
 		num[j] = 0;
-		b[i] = atoi(num);
+		b[i] = std::atoi(num);
 		if (b[i] != 0)
 			m[i] = 255;
 
@@ -134,7 +147,7 @@ static void Filter_Add_f( const CCommand& args )
 	char		szDuration[256];
 	CGameClient *client = nullptr;
 
-	if ( !Q_stricmp( args[0], "banip" ) )
+	if ( !V_stricmp( args[0], "banip" ) )
 	{
 		ConMsg( "Note: should use \"addip\" instead of \"banip\".\n" );
 	}
@@ -171,7 +184,7 @@ static void Filter_Add_f( const CCommand& args )
 		bKick = false;
 	}
 	
-	banTime = atof( args[1] );
+	banTime = std::atof( args[1] );
 	if (banTime < 0.01f)
 	{
 		banTime = 0.0f;
@@ -210,11 +223,11 @@ static void Filter_Add_f( const CCommand& args )
 	// Build a duration string for the ban
 	if ( banTime == 0.0 )
 	{
-		Q_snprintf( szDuration, sizeof( szDuration ), "permanently" );
+		V_snprintf( szDuration, sizeof( szDuration ), "permanently" );
 	}
 	else
 	{
-		Q_snprintf( szDuration, sizeof( szDuration ), "for %.2f minutes", banTime );
+		V_snprintf( szDuration, sizeof( szDuration ), "for %.2f minutes", banTime );
 	}
 	
 	// fire the event
@@ -259,7 +272,9 @@ static ConCommand banip( "banip", Filter_Add_f, "Add an IP address to the ban li
 //-----------------------------------------------------------------------------
 // Purpose: Removes an IP ban
 //-----------------------------------------------------------------------------
-CON_COMMAND( removeip, "Remove an IP address from the ban list." )
+static void removeip( const CCommand &args );
+static ConCommand removeip_command( "removeip", removeip, "Remove an IP address from the ban list." );
+static void removeip( const CCommand &args )
 {
 	ipfilter_t	f;
 	int			i;
@@ -271,9 +286,9 @@ CON_COMMAND( removeip, "Remove an IP address from the ban list." )
 	}
 
 	// if no "." in the string we'll assume it's a slot number
-	if ( !Q_strstr( args[1], "." ) )
+	if ( !V_strstr( args[1], "." ) )
 	{
-		int slot = Q_atoi( args[1] );
+		int slot = V_atoi( args[1] );
 		if ( slot > 0 && slot <= std::ssize( g_IPFilters ) )
 		{
 			byte b[4];
@@ -283,7 +298,7 @@ CON_COMMAND( removeip, "Remove an IP address from the ban list." )
 			slot--;
 
 			*(unsigned *)b = g_IPFilters[slot].compare;
-			Q_snprintf( szIP, sizeof( szIP ), "%3i.%3i.%3i.%3i", b[0], b[1], b[2], b[3] );
+			V_snprintf( szIP, sizeof( szIP ), "%3i.%3i.%3i.%3i", b[0], b[1], b[2], b[3] );
 
 			g_IPFilters.erase( g_IPFilters.begin() + slot );
 
@@ -341,7 +356,9 @@ CON_COMMAND( removeip, "Remove an IP address from the ban list." )
 //-----------------------------------------------------------------------------
 // Purpose: Lists IP bans
 //-----------------------------------------------------------------------------
-CON_COMMAND( listip, "List IP addresses on the ban list." )
+static void listip( const CCommand &args );
+static ConCommand listip_command( "listip", listip, "List IP addresses on the ban list." );
+static void listip( const CCommand &args )
 {
 	int		i;
 	byte	b[4];
@@ -382,7 +399,9 @@ CON_COMMAND( listip, "List IP addresses on the ban list." )
 //-----------------------------------------------------------------------------
 // Purpose: Saves IP bans to a file
 //-----------------------------------------------------------------------------
-CON_COMMAND( writeip, "Save the ban list to " BANNED_IP_FILENAME "." )
+static void writeip( const CCommand &args );
+static ConCommand writeip_command( "writeip", writeip, "Save the ban list to " BANNED_IP_FILENAME "." );
+static void writeip( const CCommand &args )
 {
 	FileHandle_t f;
 	char	name[MAX_OSPATH];
@@ -390,7 +409,7 @@ CON_COMMAND( writeip, "Save the ban list to " BANNED_IP_FILENAME "." )
 	int		i;
 	float banTime;
 
-	Q_strncpy( name, CONFIG_DIR BANNED_IP_FILENAME, sizeof( name ) );
+	V_strncpy( name, ks::Concat( CONFIG_DIR, BANNED_IP_FILENAME ).c_str(), sizeof( name ) );
 
 	ConMsg( "Writing %s.\n", name );
 
@@ -422,7 +441,29 @@ CON_COMMAND( writeip, "Save the ban list to " BANNED_IP_FILENAME "." )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Checks a USERID_t to see if the Steam ID has been banned
+// Purpose: returns true if the userid's are the same
+//-----------------------------------------------------------------------------
+static bool Filter_CompareUserID( const USERID_t & id1, const USERID_t & id2 )
+{
+	if ( id1.idtype != id2.idtype )
+		return false;
+
+	switch ( id1.idtype )
+	{
+	case IDTYPE_PLAYER:
+	case IDTYPE_VALVE:
+		{
+			return ( id1.instance == id2.instance && id1.accountid == id2.accountid );
+		}
+	default:
+		break;
+	}
+
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Checks a USERID_t to see if the player ID has been banned
 //-----------------------------------------------------------------------------
 bool Filter_IsUserBanned( const USERID_t& userid )
 {
@@ -443,7 +484,7 @@ bool Filter_IsUserBanned( const USERID_t& userid )
 		}
 
 		// Only get here if ban is still in effect.
-		if ( Steam3Server().CompareUserID( userid, g_UserFilters[i].userid ) )
+		if ( Filter_CompareUserID( userid, g_UserFilters[i].userid ) )
 		{
 			return bNegativeFilter;
 		}
@@ -458,15 +499,15 @@ bool Filter_IsUserBanned( const USERID_t& userid )
 USERID_t *Filter_StringToUserID( const char *str )
 {
 	static USERID_t id;
-	Q_memset( &id, 0, sizeof( id ) );
+	V_memset( &id, 0, sizeof( id ) );
 
 	if ( str && str[ 0 ] )
 	{
 		char szTemp[128];
-		if ( StringHasPrefix( str, STEAM_PREFIX ) )
+		if ( StringHasPrefix( str, PLAYERID_PREFIX ) )
 		{
-			Q_strncpy( szTemp, str + Q_strlen( STEAM_PREFIX ), sizeof( szTemp ) - 1 );
-			id.idtype = IDTYPE_STEAM;
+			V_strncpy( szTemp, str + V_strlen( PLAYERID_PREFIX ), sizeof( szTemp ) - 1 );
+			id.idtype = IDTYPE_PLAYER;
 		} 
 
 		szTemp[ sizeof( szTemp ) - 1 ] = '\0';
@@ -475,9 +516,8 @@ USERID_t *Filter_StringToUserID( const char *str )
 		args.Tokenize( szTemp );
 		if ( args.ArgC() >= 5 )
 		{
-			id.uid.steamid.m_SteamInstanceID = ( SteamInstanceID_t )atoi( args[ 0 ] );
-			id.uid.steamid.m_SteamLocalUserID.Split.High32bits = (int)atoi( args[ 2 ] );
-			id.uid.steamid.m_SteamLocalUserID.Split.Low32bits = (int)atoi( args[ 4 ] );
+			id.instance = (uint32)std::atoi( args[ 0 ] );
+			id.accountid = (AccountID_t)atoi( args[ 4 ] ) * 2 + (AccountID_t)atoi( args[ 2 ] );
 		}
 	}
 	return &id;
@@ -485,31 +525,32 @@ USERID_t *Filter_StringToUserID( const char *str )
 USERID_t *Filter_Steam64bitIdToUserID( uint64 uiAccountID )
 {
 	static USERID_t id;
-	Q_memset( &id, 0, sizeof( id ) );
+	V_memset( &id, 0, sizeof( id ) );
 
 	if ( uiAccountID )
 	{
-		CSteamID steamID( uiAccountID );
-		steamID.ConvertToSteam2( &id.uid.steamid );
-		
-		id.idtype = IDTYPE_STEAM;
-		id.uid.steamid.m_SteamInstanceID = 1;
+		CPlayerId playerUID( uiAccountID );
+		id.accountid = playerUID.GetAccountID();
+		id.idtype = IDTYPE_PLAYER;
+		id.instance = 1;
 	}
 	return &id;
 }
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Saves Steam ID bans to a file
+// Purpose: Saves player ID bans to a file
 //-----------------------------------------------------------------------------
-CON_COMMAND( writeid, "Writes a list of permanently-banned user IDs to " BANNED_USER_FILENAME "." )
+static void writeid( const CCommand &args );
+static ConCommand writeid_command( "writeid", writeid, "Writes a list of permanently-banned user IDs to " BANNED_USER_FILENAME "." );
+static void writeid( const CCommand &args )
 {
 	FileHandle_t f;
 	char name[MAX_OSPATH];
 	int i;
 	float banTime;
 
-	Q_strncpy( name, CONFIG_DIR BANNED_USER_FILENAME, sizeof( name ) );
+	V_strncpy( name, ks::Concat( CONFIG_DIR, BANNED_USER_FILENAME ).c_str(), sizeof( name ) );
 
 	ConMsg( "Writing %s.\n", name );
 
@@ -537,9 +578,11 @@ CON_COMMAND( writeid, "Writes a list of permanently-banned user IDs to " BANNED_
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Removes all Steam ID bans from the ban list
+// Purpose: Removes all player ID bans from the ban list
 //-----------------------------------------------------------------------------
-CON_COMMAND( removeallids, "Remove all user IDs from the ban list." )
+static void removeallids( const CCommand &args );
+static ConCommand removeallids_command( "removeallids", removeallids, "Remove all user IDs from the ban list." );
+static void removeallids( const CCommand &args )
 {
 	int nCount = std::ssize( g_UserFilters );
 	g_UserFilters.clear();
@@ -548,9 +591,11 @@ CON_COMMAND( removeallids, "Remove all user IDs from the ban list." )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Removes a Steam ID ban
+// Purpose: Removes a player ID ban
 //-----------------------------------------------------------------------------
-CON_COMMAND( removeid, "Remove a user ID from the ban list." )
+static void removeid( const CCommand &args );
+static ConCommand removeid_command( "removeid", removeid, "Remove a user ID from the ban list." );
+static void removeid( const CCommand &args )
 {
 	int			i = 0;
 	const char	*pszArg1 = nullptr;
@@ -578,9 +623,9 @@ CON_COMMAND( removeid, "Remove a user ID from the ban list." )
 	if ( *pszArg1 < '0' || *pszArg1 > '9' )
 	{
 		// SteamID (need to reassemble it)
-		if ( StringHasPrefix( pszArg1, STEAM_PREFIX ) && Q_strstr( args[2], ":" ) )
+		if ( StringHasPrefix( pszArg1, PLAYERID_PREFIX ) && V_strstr( args[2], ":" ) )
 		{
-			Q_snprintf( szSearchString, sizeof( szSearchString ), "%s:%s:%s", pszArg1, args[3], args[5] );
+			V_snprintf( szSearchString, sizeof( szSearchString ), "%s:%s:%s", pszArg1, args[3], args[5] );
 		}
 		// some other ID (e.g. "UNKNOWN", "STEAM_ID_PENDING", "STEAM_ID_LAN")
 		// NOTE: assumed to be one argument
@@ -592,7 +637,7 @@ CON_COMMAND( removeid, "Remove a user ID from the ban list." )
 
 		for ( i = 0 ; i < std::ssize( g_UserFilters ) ; i++ )
 		{
-			if ( Q_stricmp( GetUserIDString( g_UserFilters[i].userid ), szSearchString ) )
+			if ( V_stricmp( GetUserIDString( g_UserFilters[i].userid ), szSearchString ) )
 				continue;
 
 			g_UserFilters.erase( g_UserFilters.begin() + i );
@@ -617,7 +662,7 @@ CON_COMMAND( removeid, "Remove a user ID from the ban list." )
 	// this is a userid
 	else
 	{
-		int slot = Q_atoi( pszArg1 );
+		int slot = V_atoi( pszArg1 );
 		if ( slot > 0 && slot <= std::ssize( g_UserFilters ) )
 		{
 			USERID_t id;
@@ -652,9 +697,11 @@ CON_COMMAND( removeid, "Remove a user ID from the ban list." )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Prints Steam ID bans to the console
+// Purpose: Prints player ID bans to the console
 //-----------------------------------------------------------------------------
-CON_COMMAND( listid, "Lists banned users." )
+static void listid( const CCommand &args );
+static ConCommand listid_command( "listid", listid, "Lists banned users." );
+static void listid( const CCommand &args )
 {
 	int i;
 	int count = std::ssize( g_UserFilters );
@@ -690,9 +737,11 @@ CON_COMMAND( listid, "Lists banned users." )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Bans a Steam ID
+// Purpose: Bans a player ID
 //-----------------------------------------------------------------------------
-CON_COMMAND( banid, "Add a user ID to the ban list." )
+static void banid( const CCommand &args );
+static ConCommand banid_command( "banid", banid, "Add a user ID to the ban list." );
+static void banid( const CCommand &args )
 {
 	int			i;
 	float		banTime;
@@ -700,14 +749,15 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 	USERID_t *	id = nullptr;
 	int			iSearchIndex = -1;
 	char		szDuration[256];
-	uint64		uiSteam64bitID = 0;
+	uint64		uiPlayerID64 = 0;
 	char		szSearchString[64];
 	bool		bKick = false;
 	bool		bPlaying = false;
 	const char	*pszArg2 = nullptr;
 	CGameClient *client = nullptr;
 
-	if ( Steam3Server().BLanOnly() )
+	extern ConVar sv_lan;
+	if ( sv_lan.GetBool() )
 	{
 		ConMsg( "Can't ban users on a LAN\n" );
 		return;
@@ -720,7 +770,7 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 		return;
 	}
 
-	banTime = Q_atof( args[1] );
+	banTime = V_atof( args[1] );
 	if ( banTime < 0.01 )
 	{
 		banTime = 0.0;
@@ -737,7 +787,7 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 		return;
 	}
 
-	bKick = ( args.ArgC() >= 4 && Q_strcasecmp( args[ args.ArgC() - 1 ], "kick" ) == 0 );
+	bKick = ( args.ArgC() >= 4 && V_strcasecmp( args[ args.ArgC() - 1 ], "kick" ) == 0 );
 
 	// if the first letter is a charcter then
 	// we're searching for a uniqueid ( e.g. STEAM_ )
@@ -745,12 +795,12 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 	{
 		if ( char const *sz64bitID = StringAfterPrefix( pszArg2, "STEAM64BITID_" ) )
 		{
-			uiSteam64bitID = Q_atoui64( sz64bitID );
+			uiPlayerID64 = V_atoui64( sz64bitID );
 		}
 		// SteamID (need to reassemble it)
-		else if ( StringHasPrefix( pszArg2, STEAM_PREFIX ) && Q_strstr( args[3], ":" ) )
+		else if ( StringHasPrefix( pszArg2, PLAYERID_PREFIX ) && V_strstr( args[3], ":" ) )
 		{
-			Q_snprintf( szSearchString, sizeof( szSearchString ), "%s:%s:%s", pszArg2, args[4], args[6] );
+			V_snprintf( szSearchString, sizeof( szSearchString ), "%s:%s:%s", pszArg2, args[4], args[6] );
 		}
 		// some other ID (e.g. "UNKNOWN", "STEAM_ID_PENDING", "STEAM_ID_LAN")
 		// NOTE: assumed to be one argument
@@ -763,7 +813,7 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 	// this is a userid
 	else
 	{
-		iSearchIndex = Q_atoi( pszArg2 );
+		iSearchIndex = V_atoi( pszArg2 );
 	}
 
 	// find this client (if they're currently in the server)
@@ -793,9 +843,9 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 				break;
 			}
 		}
-		else if ( uiSteam64bitID )
+		else if ( uiPlayerID64 )
 		{
-			if ( client->m_SteamID.IsValid() && client->m_SteamID.BIndividualAccount() && ( client->m_SteamID.ConvertToUint64() == uiSteam64bitID ) )
+			if ( client->m_PlayerUID.IsValid() && client->m_PlayerUID.BIndividualAccount() && ( client->m_PlayerUID.ConvertToUint64() == uiPlayerID64 ) )
 			{
 				// found!
 				localId = client->GetNetworkID();
@@ -807,7 +857,7 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 		// searching by UniqueID
 		else	
 		{
-			if ( Q_stricmp( client->GetNetworkIDString(), szSearchString ) == 0 ) 
+			if ( V_stricmp( client->GetNetworkIDString(), szSearchString ) == 0 ) 
 			{
 				// found!
 				localId = client->GetNetworkID();
@@ -827,16 +877,16 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 
 	if ( !id )
 	{
-		if ( uiSteam64bitID )
-			id = Filter_Steam64bitIdToUserID( uiSteam64bitID );
+		if ( uiPlayerID64 )
+			id = Filter_Steam64bitIdToUserID( uiPlayerID64 );
 		else
 			// we're searching by SteamID and we haven't found them actively playing
 			id = Filter_StringToUserID( szSearchString );
 
 		if ( !id )
 		{
-			if ( uiSteam64bitID )
-				ConMsg( "banid:  Couldn't resolve 64bit id \"%llu\".\n", uiSteam64bitID );
+			if ( uiPlayerID64 )
+				ConMsg( "banid:  Couldn't resolve 64bit id \"%llu\".\n", uiPlayerID64 );
 			else
 				ConMsg( "banid:  Couldn't resolve uniqueid \"%s\".\n", szSearchString );
 
@@ -857,7 +907,7 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 	for ( i = 0 ; i < std::ssize( g_UserFilters ) ; i++ )
 	{
 		// We're just updating an existing id
-		if ( Steam3Server().CompareUserID( g_UserFilters[i].userid, *id ) )
+		if ( Filter_CompareUserID( g_UserFilters[i].userid, *id ) )
 			break;
 	}
 
@@ -872,7 +922,7 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 			return;
 		}
 		userfilter_t nullUser;
-		memset( &nullUser, 0, sizeof(nullUser) );
+		std::memset( &nullUser, 0, sizeof(nullUser) );
 		i = std::ssize( g_UserFilters ); g_UserFilters.push_back( nullUser );
 	}
 
@@ -883,11 +933,11 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 	// Build a duration string for the ban
 	if ( banTime == 0.0 )
 	{
-		Q_snprintf( szDuration, sizeof( szDuration ), "permanently" );
+		V_snprintf( szDuration, sizeof( szDuration ), "permanently" );
 	}
 	else
 	{
-		Q_snprintf( szDuration, sizeof( szDuration ), "for %.2f minutes", banTime );
+		V_snprintf( szDuration, sizeof( szDuration ), "for %.2f minutes", banTime );
 	}
 
 	// fire the event

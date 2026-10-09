@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef REPLAYCAMERA_H
-#define REPLAYCAMERA_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "GameEventListener.h"
 
@@ -74,7 +69,3 @@ protected:
 
 
 extern C_ReplayCamera *ReplayCamera();	// get Singleton
-
-
-
-#endif // REPLAYCAMERA_H

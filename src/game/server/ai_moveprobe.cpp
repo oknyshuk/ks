@@ -1,10 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 
@@ -47,11 +74,13 @@ ConVar ai_old_check_stand_position( "ai_old_check_stand_position", "0" );
 // function is called, but for now, that appears to not be a problem.
 float MOVE_HEIGHT_EPSILON = 0.0625f;
 
-CON_COMMAND( ai_set_move_height_epsilon, "Set how high AI bumps up ground walkers when checking steps" )
+static void ai_set_move_height_epsilon( const CCommand &args );
+static ConCommand ai_set_move_height_epsilon_command( "ai_set_move_height_epsilon", ai_set_move_height_epsilon, "Set how high AI bumps up ground walkers when checking steps" );
+static void ai_set_move_height_epsilon( const CCommand &args )
 {
 	if ( args.ArgC() > 1 )
 	{
-		float newEps = atof( args[1] );
+		float newEps = std::atof( args[1] );
 		if ( newEps >= 0.0  && newEps < 1.0 )
 		{
 			MOVE_HEIGHT_EPSILON = newEps;
@@ -82,7 +111,7 @@ bool CAI_MoveProbe::ShouldBrushBeIgnored( CBaseEntity *pEntity )
 {
 	if ( pEntity->m_iClassname == g_iszFuncBrushClassname )
 	{
-		CFuncBrush *pFuncBrush = assert_cast<CFuncBrush *>(pEntity);
+		CFuncBrush *pFuncBrush = static_cast<CFuncBrush *>(pEntity);
 		
 		if ( pFuncBrush->m_iszExcludedClass == NULL_STRING )
 			return false;
@@ -114,7 +143,7 @@ void CAI_MoveProbe::TraceLine( const Vector &vecStart, const Vector &vecEnd, uns
 	// Just to make sure; I'm not sure that this is always the case but it should be
 	if (pResult->allsolid)
 	{
-		Assert( pResult->startsolid );
+		contract_assert( pResult->startsolid );
 	}
 #endif
 }
@@ -141,7 +170,6 @@ void CAI_MoveProbe::TraceHull(
 	const Vector &vecStart, const Vector &vecEnd, const Vector &hullMin, 
 	const Vector &hullMax, unsigned int mask, trace_t *pResult ) const
 {
-	AI_PROFILE_SCOPE( CAI_MoveProbe_TraceHull );
 
 	CTraceFilterNav traceFilter( const_cast<CAI_BaseNPC *>(GetOuter()), m_bIgnoreTransientEntities, GetOuter(), GetCollisionGroup() );
 
@@ -162,7 +190,7 @@ void CAI_MoveProbe::TraceHull(
 
 	//NDebugOverlay::SweptBox( vecStart, vecEnd, hullMin, hullMax, vec3_angle, 255, 255, 0, 0, 10 );
 	// Just to make sure; I'm not sure that this is always the case but it should be
-	Assert( !pResult->allsolid || pResult->startsolid );
+	contract_assert( !pResult->allsolid || pResult->startsolid );
 }
 
 //-----------------------------------------------------------------------------
@@ -268,7 +296,6 @@ void CAI_MoveProbe::CheckStepOverLargeCrawl( CheckStepResult_t *pResult,
 bool g_bAIDebugStep = false;
 bool CAI_MoveProbe::CheckStep( const CheckStepArgs_t &args, CheckStepResult_t *pResult ) const
 {
-	AI_PROFILE_SCOPE( CAI_MoveProbe_CheckStep );
 
 	Vector vecEnd;
 	unsigned collisionMask = args.collisionMask;
@@ -410,7 +437,7 @@ bool CAI_MoveProbe::CheckStep( const CheckStepArgs_t &args, CheckStepResult_t *p
 		AI_PROFILE_SCOPE_BEGIN( CAI_Motor_CheckStep_Down );
 		// seems okay, now find the ground
 		// The ground is only valid if it's within a step height of the original position
-		Assert( VectorsAreEqual( trace.endpos, stepEnd, 1e-3 ) );
+		contract_assert( VectorsAreEqual( trace.endpos, stepEnd, 1e-3 ) );
 		stepStart = stepEnd; 
 		stepEnd.z = args.vecStart.z - args.stepHeight * args.stepDownMultiplier - MOVE_HEIGHT_EPSILON;
 
@@ -442,7 +469,7 @@ bool CAI_MoveProbe::CheckStep( const CheckStepArgs_t &args, CheckStepResult_t *p
 				if ( g_bAIDebugStep )
 					NDebugOverlay::Box( trace.endpos, WorldAlignMins(), WorldAlignMaxs(), 255, 0, 0, 0, 5 );
 
-				Assert( pResult->endPoint == args.vecStart );
+				contract_assert( pResult->endPoint == args.vecStart );
 				if ( const_cast<CAI_MoveProbe *>(this)->GetOuter()->GetGroundEntity() )
 				{
 					pResult->pBlocker = const_cast<CAI_MoveProbe *>(this)->GetOuter()->GetGroundEntity();
@@ -472,7 +499,7 @@ bool CAI_MoveProbe::CheckStep( const CheckStepArgs_t &args, CheckStepResult_t *p
 				if ( g_bAIDebugStep )
 					NDebugOverlay::Cross3D( trace.endpos, 32, 255, 0, 0, true, 5 );
 
-				Assert( pResult->endPoint == args.vecStart );
+				contract_assert( pResult->endPoint == args.vecStart );
 				pResult->pBlocker = pFloor;
 				return false;
 			}
@@ -482,9 +509,9 @@ bool CAI_MoveProbe::CheckStep( const CheckStepArgs_t &args, CheckStepResult_t *p
 				 ( ( pFloor->IsWorld() && trace.hitbox > 0 ) ||
 				   dynamic_cast<CPhysicsProp *>( pFloor ) ) )
 			{
-				if ( fabsf( trace.plane.normal.Dot( Vector(1, 0, 0) ) ) > .4 )
+				if ( std::fabsf( trace.plane.normal.Dot( Vector(1, 0, 0) ) ) > .4 )
 				{
-					Assert( pResult->endPoint == args.vecStart );
+					contract_assert( pResult->endPoint == args.vecStart );
 					pResult->pBlocker = pFloor;
 
 					if ( g_bAIDebugStep )
@@ -495,7 +522,6 @@ bool CAI_MoveProbe::CheckStep( const CheckStepArgs_t &args, CheckStepResult_t *p
 
 			if (args.groundTest != STEP_DONT_CHECK_GROUND )
 			{
-				AI_PROFILE_SCOPE( CAI_Motor_CheckStep_Stand );
 				// Next, check to see if we can *geometrically* stand on the floor
 				bool bIsFloorFlat = CheckStandPosition( trace.endpos, collisionMask );
 				if (args.groundTest != STEP_ON_INVALID_GROUND && !bIsFloorFlat)
@@ -628,7 +654,7 @@ bool CAI_MoveProbe::TestGroundMove( const Vector &vecActualStart, const Vector &
 	checkStepResult.pBlocker = nullptr;
 	
 	float distStartToIgnoreGround = (pctToCheckStandPositions == 100) ? pMoveTrace->flTotalDist : pMoveTrace->flTotalDist * ( pctToCheckStandPositions * 0.01);
-	bool bTryNavIgnore = ( ( vecActualStart - GetLocalOrigin() ).Length2DSqr() < 0.1 && fabsf(vecActualStart.z - GetLocalOrigin().z) < checkStepArgs.stepHeight * 0.5 );
+	bool bTryNavIgnore = ( ( vecActualStart - GetLocalOrigin() ).Length2DSqr() < 0.1 && std::fabsf(vecActualStart.z - GetLocalOrigin().z) < checkStepArgs.stepHeight * 0.5 );
 
 	std::vector< CBaseEntity * > ignoredEntities;
 
@@ -642,7 +668,7 @@ bool CAI_MoveProbe::TestGroundMove( const Vector &vecActualStart, const Vector &
 		if ( distClear - distStartToIgnoreGround > 0.001 )
 			checkStepArgs.groundTest = STEP_DONT_CHECK_GROUND;
 
-		Assert( !m_pTraceListData || m_pTraceListData->IsEmpty() );
+		contract_assert( !m_pTraceListData || m_pTraceListData->IsEmpty() );
 		SetupCheckStepTraceListData( checkStepArgs );
 		
 		for ( i = 0; i < 16; i++ )
@@ -763,9 +789,8 @@ void CAI_MoveProbe::GroundMoveLimit( const Vector &vecStart, const Vector &vecEn
 {
 	// NOTE: Never call this directly!!! Always use MoveLimit!!
 	// This assertion should ensure this happens
-	Assert( !IsMoveBlocked( *pTrace ) );
+	contract_assert( !IsMoveBlocked( *pTrace ) );
 
-	AI_PROFILE_SCOPE( CAI_Motor_GroundMoveLimit );
 
 	Vector vecActualStart, vecDesiredEnd;
 
@@ -830,7 +855,7 @@ void CAI_MoveProbe::FlyMoveLimit( const Vector &vecStart, const Vector &vecEnd,
 {
 	// NOTE: Never call this directly!!! Always use MoveLimit!!
 	// This assertion should ensure this happens
-	Assert( !IsMoveBlocked( *pMoveTrace) );
+	contract_assert( !IsMoveBlocked( *pMoveTrace) );
 
 	trace_t tr;
 	TraceHull( vecStart, vecEnd, collisionMask, &tr );
@@ -1130,7 +1155,7 @@ bool CAI_MoveProbe::MoveLimit( Navigation_t navType, const Vector &vecStart,
 		bool bDoIt = true;
 		if ( flags & AIMLF_QUICK_REJECT )
 		{
-			Assert( vecStart == GetLocalOrigin() );
+			contract_assert( vecStart == GetLocalOrigin() );
 			trace_t tr;
 			TraceLine(const_cast<CAI_MoveProbe *>(this)->GetOuter()->EyePosition(), vecEnd, collisionMask, true, &tr);
 			bDoIt = ( tr.fraction > 0.99 );
@@ -1197,7 +1222,7 @@ Vector CAI_MoveProbe::CalcJumpLaunchVelocity(const Vector &startPos, const Vecto
 	targetDir2D.z = 0;
 	float distance = VectorNormalize(targetDir2D);
 
-	Assert( maxHorzVelocity > 0 );
+	contract_assert( maxHorzVelocity > 0 );
 
 	// get minimum times and heights to meet ideal horz velocity
 	float minHorzTime = distance / maxHorzVelocity;
@@ -1209,7 +1234,7 @@ Vector CAI_MoveProbe::CalcJumpLaunchVelocity(const Vector &startPos, const Vecto
 	*pminHeight = std::max( *pminHeight, stepHeight );
 
 	// time from start to apex
-	float t0 = sqrt( ( 2.0 * *pminHeight) / flGravity );
+	float t0 = std::sqrt( ( 2.0 * *pminHeight) / flGravity );
 	// time from apex to end
 	float t1 = sqrt( ( 2.0 * fabs( *pminHeight - stepHeight) ) / flGravity );
 
@@ -1246,7 +1271,6 @@ bool CAI_MoveProbe::CheckStandPosition( const Vector &vecStart, unsigned int col
 	if ( UseOldCheckStandPosition() )
 		return OldCheckStandPosition( vecStart, collisionMask );
 
-	AI_PROFILE_SCOPE( CAI_Motor_CheckStandPosition );
 
 	Vector contactMin, contactMax;
 
@@ -1276,7 +1300,6 @@ bool CAI_MoveProbe::CheckStandPosition( const Vector &vecStart, unsigned int col
 	
 	if ( !GetOuter()->IsFlaggedEfficient() )
 	{
-		AI_PROFILE_SCOPE( CAI_Motor_CheckStandPosition_Sides );
 		
 		Vector vHullBottomCenter;
 		vHullBottomCenter.Init( 0, 0, vHullMins.z );
@@ -1312,7 +1335,6 @@ bool CAI_MoveProbe::CheckStandPosition( const Vector &vecStart, unsigned int col
 	}
 	else
 	{
-		AI_PROFILE_SCOPE( CAI_Motor_CheckStandPosition_Center );
 		TraceHull( vecUp, vecDown, contactMin, contactMax, collisionMask, &trace1 );
 		if ( trace1.fraction != 1.0 && CanStandOn( trace1.Ent<CBaseEntity>() ) )
 			return true;
@@ -1325,7 +1347,6 @@ bool CAI_MoveProbe::CheckStandPosition( const Vector &vecStart, unsigned int col
 
 bool CAI_MoveProbe::OldCheckStandPosition( const Vector &vecStart, unsigned int collisionMask ) const
 {
-	AI_PROFILE_SCOPE( CAI_Motor_CheckStandPosition );
 
 	Vector contactMin, contactMax;
 
@@ -1357,7 +1378,6 @@ bool CAI_MoveProbe::OldCheckStandPosition( const Vector &vecStart, unsigned int 
 
 	if ( !GetOuter()->IsFlaggedEfficient() )
 	{
-		AI_PROFILE_SCOPE( CAI_Motor_CheckStandPosition_Sides );
 		
 		// check a box for each quadrant, allow one failure
 		int already_failed = false;
@@ -1405,7 +1425,6 @@ bool CAI_MoveProbe::OldCheckStandPosition( const Vector &vecStart, unsigned int 
 bool CAI_MoveProbe::FloorPoint( const Vector &vecStart, unsigned int collisionMask, 
 						   float flStartZ, float flEndZ, Vector *pVecResult ) const
 {
-	AI_PROFILE_SCOPE( CAI_Motor_FloorPoint );
 
 	// make a pizzabox shaped bounding hull
 	Vector mins = WorldAlignMins();
@@ -1486,4 +1505,3 @@ bool CAI_MoveProbe::IsJumpLegal( const Vector &startPos, const Vector &apex, con
 }
 
 //-----------------------------------------------------------------------------
-

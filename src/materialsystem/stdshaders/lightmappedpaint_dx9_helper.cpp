@@ -1,20 +1,17 @@
-//========= Copyright (c) 1996-2007, Valve LLC, All rights reserved. ============
-//
-// Purpose: Lightmapped paint shader
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
+// Purpose: Lightmapped paint shader
+
+import ks.tier1;
 #include "lightmappedpaint_dx9_helper.h"
 #include "BaseVSShader.h"
 #include "shaderlib/commandbuilder.h"
-#include "convar.h"
+import std;
 #include "lightmappedgeneric_vs20.inc"
 #include "lightmappedpaint_ps20.inc"
 #include "lightmappedpaint_ps20b.inc"
 
-#include "tier0/vprof.h"
 #include "shaderapifast.h"
 
 extern ConVar mat_ambient_light_r;
@@ -107,7 +104,7 @@ void DrawLightmappedPaint_DX9( CBaseVSShader *pShader, IMaterialVar** params, IS
 				staticCmdsBuf.End();
 				// now, copy buf
 				pContextData->m_pStaticCmds = new uint8[staticCmdsBuf.Size()];
-				memcpy( pContextData->m_pStaticCmds, staticCmdsBuf.Base(), staticCmdsBuf.Size() );
+				std::memcpy( pContextData->m_pStaticCmds, staticCmdsBuf.Base(), staticCmdsBuf.Size() );
 			}
 			if ( pShaderShadow )
 			{
@@ -427,7 +424,7 @@ void DrawLightmappedPaint_DX9( CBaseVSShader *pShader, IMaterialVar** params, IS
 		{
 			bWriteDepthToAlpha = ShaderApiFast( pShaderAPI )->ShouldWriteDepthToDestAlpha();
 			bWriteWaterFogToAlpha = (fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z);
-			AssertMsg( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha), "Can't write two values to alpha at the same time." );
+			contract_assert( ( !(bWriteDepthToAlpha && bWriteWaterFogToAlpha) ) && "Can't write two values to alpha at the same time." );
 		}
 		else
 		{

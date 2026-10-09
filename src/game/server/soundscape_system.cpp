@@ -1,20 +1,34 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "eiface.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "soundscape_system.h"
 #include "soundscape.h"
-#include "keyvalues.h"
 #include "filesystem.h"
 #include "game.h"
 
 #define SOUNDSCAPE_MANIFEST_FILE				"scripts/soundscapes_manifest.txt"
 
-CON_COMMAND(soundscape_flush, "Flushes the server & client side soundscapes")
+static void soundscape_flush( const CCommand &args );
+static ConCommand soundscape_flush_command( "soundscape_flush", soundscape_flush, "Flushes the server & client side soundscapes" );
+static void soundscape_flush( const CCommand &args )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( UTIL_GetCommandClient() );
 	if ( engine->IsDedicatedServer() )
@@ -56,7 +70,6 @@ extern ConVar soundscape_debug;
 
 void CSoundscapeSystem::AddSoundscapeFile( const char *filename )
 {
-	MEM_ALLOC_CREDIT();
 	// Open the soundscape data file, and abort if we can't
 	KeyValues *pKeyValuesData = new KeyValues( filename );
 	if ( filesystem->LoadKeyValues( *pKeyValuesData, IFileSystem::TYPE_SOUNDSCAPE, filename, "GAME" ) )
@@ -69,7 +82,7 @@ void CSoundscapeSystem::AddSoundscapeFile( const char *filename )
 			{
 				if ( g_pDeveloper->GetBool() )
 				{
-					if ( strstr( pKeys->GetName(), "{" ) )
+					if ( std::strstr( pKeys->GetName(), "{" ) )
 					{
 						Msg("Error parsing soundscape file %s after %s\n", filename, m_soundscapeCount>0 ?m_soundscapes.GetStringText( m_soundscapeCount-1 ) : "FIRST" );
 					}
@@ -84,7 +97,9 @@ void CSoundscapeSystem::AddSoundscapeFile( const char *filename )
 	pKeyValuesData->deleteThis();
 }
 
-CON_COMMAND_F(sv_soundscape_printdebuginfo, "print soundscapes", FCVAR_CHEAT)
+static void sv_soundscape_printdebuginfo( const CCommand &args );
+static ConCommand sv_soundscape_printdebuginfo_command( "sv_soundscape_printdebuginfo", sv_soundscape_printdebuginfo, "print soundscapes", FCVAR_CHEAT );
+static void sv_soundscape_printdebuginfo( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -134,7 +149,7 @@ bool CSoundscapeSystem::Init()
 	{
 		for ( KeyValues *sub = manifest->GetFirstSubKey(); sub != nullptr; sub = sub->GetNextKey() )
 		{
-			if ( !Q_stricmp( sub->GetName(), "file" ) )
+			if ( !V_stricmp( sub->GetName(), "file" ) )
 			{
 				// Add
 				AddSoundscapeFile( sub->GetString() );

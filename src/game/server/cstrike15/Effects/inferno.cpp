@@ -5,14 +5,39 @@
  * Copyright (c) 2005 Turtle Rock Studios, Inc. - All Rights Reserved
  */
 
-#include "cbase.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "inferno.h"
 #include "engine/IEngineSound.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include <coordsize.h>
-#include "tier0/vprof.h"
+import std;
+import ks.tier1;
 #include "igameevents.h"
 #include "particle_parse.h"
 #include "entityutil.h"
@@ -59,15 +84,14 @@ ConVar inferno_max_trace_per_tick("inferno_max_trace_per_tick", "16");
 ConVar inferno_forward_reduction_factor( "inferno_forward_reduction_factor", "0.9", FCVAR_CHEAT );
 
 // Inferno trace masks can allow to do different traces for spreading fire
-#define INFERNO_MASK_TO_GROUND ((MASK_SOLID_BRUSHONLY) & (~CONTENTS_GRATE))
-#define INFERNO_MASK_LOS_CHECK ( INFERNO_MASK_TO_GROUND | CONTENTS_MONSTER )
-#define INFERNO_MASK_DAMAGE INFERNO_MASK_LOS_CHECK
+inline constexpr auto INFERNO_MASK_TO_GROUND = ((MASK_SOLID_BRUSHONLY) & (~CONTENTS_GRATE));
+inline constexpr auto INFERNO_MASK_LOS_CHECK = ( INFERNO_MASK_TO_GROUND | CONTENTS_MONSTER );
 
 // Smoke grenade radius constant is actually tuned for the bots
 // and not for gameplay. Visualizing smoke will show that it goes
 // up from the emitter by 128 units (fuzzy top), nothing goes down,
 // and it makes a wide XY-donut with a radius of *128* units (fuzzy edges).
-ASSERT_INVARIANT( CONSTANT_UNITS_SMOKEGRENADERADIUS == 166 );
+static_assert( CONSTANT_UNITS_SMOKEGRENADERADIUS == 166 );
 // When interacting with fire we don't want any vertical interactions unless
 // contact points are definitely in smoke vertically.
 static const float SmokeGrenadeRadius_InfernoAffectingZ = 120.0f;
@@ -217,7 +241,7 @@ void CInferno::FireGameEvent( IGameEvent *event )
 {
 	const char *eventname = event->GetName();
 
-// 	if ( Q_strcmp( "hegrenade_detonate", eventname ) == 0 )
+// 	if ( V_strcmp( "hegrenade_detonate", eventname ) == 0 )
 // 	{
 // 		Vector vecGrenade = Vector( ( float )event->GetInt( "x" ), ( float )event->GetInt( "y" ), ( float )event->GetInt( "z" ) );
 // 		float flGrenadeRadius = HEGrenadeRadius*1.5;
@@ -228,22 +252,12 @@ void CInferno::FireGameEvent( IGameEvent *event )
 // 		}
 // 	}
 
-	if ( Q_strcmp( "smokegrenade_detonate", eventname ) == 0 )
+	if ( V_strcmp( "smokegrenade_detonate", eventname ) == 0 )
 	{
 		Vector vecGrenade = Vector( ( float )event->GetInt( "x" ), ( float )event->GetInt( "y" ), ( float )event->GetInt( "z" ) );
 		if ((vecGrenade - m_startPos).IsLengthLessThan( SmokeGrenadeRadius*4 ))
 		{
-			int extinguishCount = ExtinguishFlamesAroundSmokeGrenade( vecGrenade );
-
-			if ( extinguishCount == m_fireCount )
-			{
-				CSmokeGrenadeProjectile* pEnt = (CSmokeGrenadeProjectile*)CBaseEntity::Instance( INDEXENT( event->GetInt( "entityid" ) ) );
-				if ( pEnt )
-				{
-					// If we were extinguished by a detonating smoke grenade, record it so we can report to OGS
-					pEnt->m_unOGSExtraFlags |= CBaseCSGrenadeProjectile::GRENADE_EXTINGUISHED_INFERNO; 
-				}
-			}
+			ExtinguishFlamesAroundSmokeGrenade( vecGrenade );
 		}
 	}
 }
@@ -402,7 +416,7 @@ void CInferno::Spread( const Vector &spreadVelocity )
 			{
 				// initial fire spreads outward in a circle
 				float angle = random->RandomFloat( -3.14159f, 3.14159f );
-				out = Vector( cos(angle), sin(angle), 0.0f );				
+				out = Vector( std::cos(angle), std::sin(angle), 0.0f );				
 			}
 			else
 			{
@@ -420,7 +434,7 @@ void CInferno::Spread( const Vector &spreadVelocity )
 
 			// If we're going into a wall, don't keep trying to spread into a wall the entire lifetime - back off to
 			// a circular spread at the end.
-			float velocityDecay = pow( InfernoVelocityDecayFactor.GetFloat(), float(fire->m_treeDepth) );
+			float velocityDecay = std::pow( InfernoVelocityDecayFactor.GetFloat(), float(fire->m_treeDepth) );
 			Vector timeAdjustedSpreadVelocity = spreadVelocity * fire->m_lifetime.GetRemainingRatio() * velocityDecay;
 			out += InfernoVelocityFactor.GetFloat() * timeAdjustedSpreadVelocity;
 
@@ -728,7 +742,7 @@ int CInferno::ExtinguishFlamesAroundSmokeGrenade( Vector vecStart )
 
 bool CInferno::CheckExpired()
 {
-	VPROF_BUDGET( "CInferno::CheckExpired (check lifetimes)", "Fire" );
+	CVProfScope _( "CInferno::CheckExpired (check lifetimes)", 0, "Fire", false, BUDGETFLAG_OTHER );
 
 	bool bIsAttachedToMovingObject = GetParent() != nullptr;
 	Vector vecInfernoOrigin = GetAbsOrigin();
@@ -825,7 +839,7 @@ void CInferno::MarkCoveredAreaAsDamaging()
  */
 void CInferno::InfernoThink( void )
 {
-	VPROF_BUDGET( "CInferno::InfernoThink", "Fire" );
+	CVProfScope _( "CInferno::InfernoThink", 0, "Fire", false, BUDGETFLAG_OTHER );
 
 	bool bExpiryCheckPerformed = false;
 
@@ -839,7 +853,7 @@ void CInferno::InfernoThink( void )
 		// the fire grows...
 		if ( m_fireCount > 0 && m_fireCount < std::min( m_nMaxFlames, ( int )MAX_INFERNO_FIRES ) )
 		{
-			VPROF_BUDGET( "CInferno::InfernoThink (spread)", "Fire" );
+			CVProfScope _( "CInferno::InfernoThink (spread)", 0, "Fire", false, BUDGETFLAG_OTHER );
 			Spread( m_splashVelocity );
 		}
 
@@ -862,7 +876,7 @@ void CInferno::InfernoThink( void )
 				return;
 		}
 
-		VPROF_BUDGET( "CInferno::InfernoThink (damage)", "Fire" );
+		CVProfScope _( "CInferno::InfernoThink (damage)", 0, "Fire", false, BUDGETFLAG_OTHER );
 
 		const int maxVictims = 256;
 		CBaseEntity *damageList[ maxVictims ];
@@ -971,9 +985,9 @@ bool CInferno::BShouldExtinguishSmokeGrenadeBounce( CBaseEntity *entity, Vector 
 			// doublecheck los if required
 			trace_t tr;
 			const Vector fireHeight( 0, 0, InfernoFire_HalfWidth );
-			UTIL_TraceLine( fire->m_center + fireHeight, posDropSmoke, INFERNO_MASK_DAMAGE, entity, COLLISION_GROUP_NONE, &tr );
+			UTIL_TraceLine( fire->m_center + fireHeight, posDropSmoke, INFERNO_MASK_LOS_CHECK, entity, COLLISION_GROUP_NONE, &tr );
 			if ( tr.fraction < 1.0f )
-				UTIL_TraceLine( fire->m_center, posDropSmoke, INFERNO_MASK_DAMAGE, entity, COLLISION_GROUP_NONE, &tr );
+				UTIL_TraceLine( fire->m_center, posDropSmoke, INFERNO_MASK_LOS_CHECK, entity, COLLISION_GROUP_NONE, &tr );
 			if ( tr.fraction == 1.0f )
 			{
 				if ( InfernoDebug.GetBool() )
@@ -1028,13 +1042,13 @@ bool CInferno::IsTouching( CBaseEntity *entity, float radius, bool checkLOS ) co
 				{
 					// doublecheck los if required
 					trace_t tr;
-					UTIL_TraceLine( fireCheck, pos, INFERNO_MASK_DAMAGE, entity, COLLISION_GROUP_NONE, &tr );
+					UTIL_TraceLine( fireCheck, pos, INFERNO_MASK_LOS_CHECK, entity, COLLISION_GROUP_NONE, &tr );
 					if ( tr.fraction < 1.0f )
 					{
 						fireCheck = fire->m_center;
 						entity->CollisionProp()->CalcNearestPoint( fireCheck, &pos );
 						if ( ( pos - fireCheck ).IsLengthLessThan( radius ) )
-							UTIL_TraceLine( fireCheck, pos, INFERNO_MASK_DAMAGE, entity, COLLISION_GROUP_NONE, &tr );
+							UTIL_TraceLine( fireCheck, pos, INFERNO_MASK_LOS_CHECK, entity, COLLISION_GROUP_NONE, &tr );
 					}
 					if( tr.fraction == 1.0f )
 					{

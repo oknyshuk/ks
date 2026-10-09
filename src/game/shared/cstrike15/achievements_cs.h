@@ -1,16 +1,21 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
 #if !defined ( ACHIEVEMENTS_CS_H )
 #define ACHIEVEMENTS_CS_H
 
-#include "cbase.h"
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+#elif defined(GAME_DLL)
+#endif
 #include "cs_gamestats_shared.h"
 #include "baseachievement.h"
-
 
 #ifdef CLIENT_DLL
 
@@ -59,10 +64,8 @@ class CAchievement_Meta : public CCSBaseAchievement
 {
 	DECLARE_CLASS( CAchievement_Meta, CCSBaseAchievement );
 public:
-	CAchievement_Meta();
 	virtual void Init();
-
-	STEAM_CALLBACK( CAchievement_Meta, Steam_OnUserAchievementStored, UserAchievementStored_t, m_CallbackUserAchievement );
+	virtual void OnAchievementAwarded();
 
 protected:
 	void AddRequirement( int nAchievementId );

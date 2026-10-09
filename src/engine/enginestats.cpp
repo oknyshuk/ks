@@ -1,19 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "quakedef.h"
 #include "enginestats.h"
-#include "basetypes.h"
 #include "clientstats.h"
-#include "limits.h"
-#include "sysexternal.h"
-#include "gl_matsysiface.h"
-#include "filesystem_engine.h"
-#include "tier0/vprof.h"
 
 //-----------------------------------------------------------------------------
 // itty bitty interface for stat time
@@ -24,7 +13,7 @@ class CStatTime : public IClientStatsTime
 public:
 	float GetTime()
 	{
-		return Sys_FloatTime();
+		return Plat_FloatTime();
 	}
 };
 
@@ -37,40 +26,34 @@ CEngineStats::CEngineStats() : m_InFrame( false )
 	m_szVProfStatsFileName[0] = '\0';
 }
 
-#ifdef VPROF_ENABLED 
 extern void VProf_StartRecording( const char *pFilename );
 extern void VProf_StopRecording( void );
-#endif
 
 void CEngineStats::BeginRun( void )
 {
 	m_bInRun = true;
 	m_totalNumFrames = 0;
 
-#ifdef VPROF_ENABLED 
 	if ( m_szVProfStatsFileName[0] != '\0' )
 	{
 		VProf_StartRecording( m_szVProfStatsFileName );
 	}
-#endif
 
 	// frame timing data
-	m_runStartTime = Sys_FloatTime();
+	m_runStartTime = Plat_FloatTime();
 }
 
 
 void CEngineStats::EndRun( void )
 {
-	m_runEndTime = Sys_FloatTime();
+	m_runEndTime = Plat_FloatTime();
 	m_bInRun = false;
 
-#ifdef VPROF_ENABLED 
 	if ( m_szVProfStatsFileName[0] != '\0' )
 	{
 		VProf_StopRecording();
 		m_szVProfStatsFileName[0] = '\0';
 	}
-#endif
 }
 
 void CEngineStats::BeginFrame( void )
@@ -149,5 +132,5 @@ double CEngineStats::GetRunTime( void )
 
 void CEngineStats::EnableVProfStatsRecording( const char *pFileName )
 {
-	Q_strncpy( m_szVProfStatsFileName, pFileName, sizeof( m_szVProfStatsFileName ) );
+	V_strncpy( m_szVProfStatsFileName, pFileName, sizeof( m_szVProfStatsFileName ) );
 }

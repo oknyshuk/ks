@@ -1,24 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		A link that can be turned on and off.  Unlike normal links
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: A link that can be turned on and off.  Unlike normal links
 //				dyanimc links must be entities so they and receive messages.
 //				They update the state of the actual links.  Allows us to save
 //				a lot of memory by not making all links into entities
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef AI_DYNAMICLINK_H
-#define AI_DYNAMICLINK_H
 
 #include "reflect_annotations.h"
-#pragma once
+#include "baseentity.h"
 
 enum DynamicLinkState_t
 {
@@ -126,5 +116,3 @@ public:
 
 	DECLARE_DATADESC();
 };
-
-#endif // AI_DYNAMICLINK_H

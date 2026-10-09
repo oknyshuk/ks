@@ -1,17 +1,75 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "npcevent.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#endif
 #include "ragdoll_shared.h"
 #include "bone_setup.h"
 #include "vphysics/constraints.h"
 #include "vphysics/collision_set.h"
 #include "vcollide_parse.h"
 #include "vphysics_interface.h"
-#include "tier0/vprof.h"
 #include "engine/ivdebugoverlay.h"
 #include "solidsetdefaults.h"
 
@@ -48,19 +106,19 @@ void CRagdollLowViolenceManager::SetLowViolence( const char *pMapName )
 	// the player has the super gravity gun and fading ragdolls will break things.
 	if( hl2_episodic.GetBool() )
 	{
-		if ( Q_stricmp( pMapName, "ep1_citadel_02" ) == 0 ||
-			Q_stricmp( pMapName, "ep1_citadel_02b" ) == 0 ||
-			Q_stricmp( pMapName, "ep1_citadel_03" ) == 0 )
+		if ( V_stricmp( pMapName, "ep1_citadel_02" ) == 0 ||
+			V_stricmp( pMapName, "ep1_citadel_02b" ) == 0 ||
+			V_stricmp( pMapName, "ep1_citadel_03" ) == 0 )
 		{
 			m_bLowViolence = false;
 		}
 	}
 	else
 	{
-		if ( Q_stricmp( pMapName, "d3_citadel_03" ) == 0 ||
-			Q_stricmp( pMapName, "d3_citadel_04" ) == 0 ||
-			Q_stricmp( pMapName, "d3_citadel_05" ) == 0 ||
-			Q_stricmp( pMapName, "d3_breen_01" ) == 0 )
+		if ( V_stricmp( pMapName, "d3_citadel_03" ) == 0 ||
+			V_stricmp( pMapName, "d3_citadel_04" ) == 0 ||
+			V_stricmp( pMapName, "d3_citadel_05" ) == 0 ||
+			V_stricmp( pMapName, "d3_breen_01" ) == 0 )
 		{
 			m_bLowViolence = false;
 		}
@@ -99,7 +157,7 @@ struct cache_ragdoll_t
 
 cache_ragdoll_t *CreateRagdollCache( vcollide_t *pOutput, cache_ragdollsolid_t *pSolids, cache_ragdollconstraint_t *pConstraints, cache_ragdoll_t *pRagdoll )
 {
-	size_t memSize = sizeof(cache_ragdoll_t);
+	std::size_t memSize = sizeof(cache_ragdoll_t);
 	size_t solidSize = sizeof(cache_ragdollsolid_t) * pRagdoll->solidCount;
 	size_t constraintSize = sizeof(cache_ragdollconstraint_t) * pRagdoll->constraintCount;
 
@@ -173,7 +231,7 @@ static void RagdollAddSolids( IPhysicsEnvironment *pPhysEnv, ragdoll_t &ragdoll,
 		MatrixCopy( params.pCurrentBones[ragdoll.boneIndex[i]], xform );
 		if ( parentIndex >= 0 )
 		{
-			Assert(parentIndex<i);
+			contract_assert( parentIndex<i );
 			ragdoll.list[parentIndex].pObject->LocalToWorld( &position, ragdoll.list[i].originParentSpace );
 			MatrixSetColumn( position, 3, xform );
 		}
@@ -304,20 +362,20 @@ static void RagdollCreateObjects( IPhysicsEnvironment *pPhysEnv, ragdoll_t &ragd
 	ragdoll.listCount = 0;
 	ragdoll.pGroup = nullptr;
 	ragdoll.allowStretch = params.allowStretch;
-	memset( ragdoll.list, 0, sizeof(ragdoll.list) );
+	std::memset( ragdoll.list, 0, sizeof(ragdoll.list) );
 	memset( &ragdoll.animfriction, 0, sizeof(ragdoll.animfriction) );
 	
 	if ( !params.pCollide )
 	{
 		Warning( "Ragdoll has no pCollide!" );
-		Assert( false );
+		contract_assert( false );
 		return;
 	}
 
 	if ( params.pCollide->solidCount > RAGDOLL_MAX_ELEMENTS )
 	{
 		Warning( "Ragdoll solid count %d exceeds maximum limit of %d - Ragdoll not created", params.pCollide->solidCount, RAGDOLL_MAX_ELEMENTS );
-		Assert( false );
+		contract_assert( false );
 		return;
 	}
 
@@ -337,7 +395,7 @@ static void RagdollCreateObjects( IPhysicsEnvironment *pPhysEnv, ragdoll_t &ragd
 
 void RagdollSetupCollisions( ragdoll_t &ragdoll, vcollide_t *pCollide, int modelIndex )
 {
-	Assert(pCollide);
+	contract_assert( pCollide );
 	if (!pCollide)
 		return;
 
@@ -359,7 +417,7 @@ void RagdollSetupCollisions( ragdoll_t &ragdoll, vcollide_t *pCollide, int model
 				ragdollcollisionrules_t rules;
 				rules.Defaults(physics, pSet);
 				pParse->ParseCollisionRules( &rules, nullptr );
-				Assert(rules.pCollisionSet == pSet);
+				contract_assert( rules.pCollisionSet == pSet );
 				bFoundRules = true;
 			}
 			else
@@ -386,8 +444,8 @@ void RagdollSetupCollisions( ragdoll_t &ragdoll, vcollide_t *pCollide, int model
   				int parent = ragdoll.list[i].parentIndex;
 				if ( parent >= 0 )
 				{
-  					Assert( ragdoll.list[i].pObject );
-  					Assert( ragdoll.list[i].pConstraint );
+  					contract_assert( ragdoll.list[i].pObject );
+  					contract_assert( ragdoll.list[i].pConstraint );
 					pSet->DisableCollisions( i, parent );
 				}
  			}
@@ -664,7 +722,7 @@ void RagdollSolveSeparation( ragdoll_t &ragdoll, CBaseEntity *pEntity )
 {
 	byte needsFix[256];
 	int fixCount = 0;
-	Assert(ragdoll.listCount<=ARRAYSIZE(needsFix));
+	contract_assert( ragdoll.listCount<=std::size( needsFix ) );
 	for ( int i = 0; i < ragdoll.listCount; i++ )
 	{
 		needsFix[i] = 0;
@@ -832,7 +890,7 @@ bool ShouldRemoveThisRagdoll( CBaseAnimating *pRagdoll )
 
 void CRagdollLRURetirement::Update( float frametime ) // Non-episodic version
 {
-	VPROF( "CRagdollLRURetirement::Update" );
+	CVProfScope _( "CRagdollLRURetirement::Update", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	int iMaxRagdollCount = m_iMaxRagdolls;
 
 	if ( iMaxRagdollCount == -1 )

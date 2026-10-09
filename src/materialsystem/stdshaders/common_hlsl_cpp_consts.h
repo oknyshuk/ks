@@ -1,12 +1,6 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#ifndef COMMON_HLSL_CONSTS_H_
-#define COMMON_HLSL_CONSTS_H_
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #ifdef NV3X
   #define PSHADER_VECT_SCALE 20.0
@@ -27,5 +21,3 @@
 #define DEPTH_FEATHER_PROJ_TO_VIEW_Z 	13
 #define DEPTH_FEATHER_PROJ_TO_VIEW_W 	14
 #define DEPTH_FEATHER_VIEWPORT_MAD 		15
-
-#endif //#ifndef COMMON_HLSL_CONSTS_H_

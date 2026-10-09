@@ -1,11 +1,10 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC:  "COMPOSITEMODE"					"0..2"
-
 // DYNAMIC: "SKINNING"					"0..1"
 // DYNAMIC: "COMPRESSED_VERTS"			"0..1"
 // DYNAMIC: "NUM_LIGHTS"				"0..4"
-
 // SKIP: ( ( $COMPOSITEMODE == 1 ) && ( $SKINNING != 0 ) )
 // SKIP: ( ( $COMPOSITEMODE == 1 ) && ( $NUM_LIGHTS != 0 ) )
 

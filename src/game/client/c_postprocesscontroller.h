@@ -1,14 +1,12 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef C_POSTPROCESSCONTROLLER_H
-#define C_POSTPROCESSCONTROLLER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #include "postprocess_shared.h"
 #include "reflect_annotations.h"
+#include "dt_recv.h"
+#include "client_class.h"
+#include "c_baseentity.h"
 
 //=============================================================================
 //
@@ -37,6 +35,3 @@ private:
 
 	static C_PostProcessController* ms_pMasterController;
 };
-
-
-#endif // C_POSTPROCESSCONTROLLER_H

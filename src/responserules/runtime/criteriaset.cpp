@@ -1,13 +1,10 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import ks.tier1;
 #include "rrbase.h"
 
-#include "tier1/map_ops.h"
+import std;
 
 using namespace ResponseRules;
 
@@ -28,7 +25,7 @@ ks::intern_pool CriteriaSet::sm_CriteriaSymbols( true );
 //-----------------------------------------------------------------------------
 const char *SplitContext( const char *raw, char *key, int keylen, char *value, int valuelen, float *duration, const char *entireContext )
 {
-	char *colon1 = Q_strstr( raw, ":" );
+	char *colon1 = V_strstr( raw, ":" );
 	if ( !colon1 )
 	{
 		DevMsg( "SplitContext:  warning, ignoring context '%s', missing colon separator!\n", raw );
@@ -37,23 +34,23 @@ const char *SplitContext( const char *raw, char *key, int keylen, char *value, i
 	}
 
 	int len = colon1 - raw;
-	Q_strncpy( key, raw, std::min( len + 1, keylen ) );
+	V_strncpy( key, raw, std::min( len + 1, keylen ) );
 	key[ std::min( len, keylen - 1 ) ] = 0;
 
 	bool last = false;
-	char *end = Q_strstr( colon1 + 1, "," );
+	char *end = V_strstr( colon1 + 1, "," );
 	if ( !end )
 	{
-		int remaining = Q_strlen( colon1 + 1 );
+		int remaining = V_strlen( colon1 + 1 );
 		end = colon1 + 1 + remaining;
 		last = true;
 	}
 
-	char *colon2 = Q_strstr( colon1 + 1, ":" );
+	char *colon2 = V_strstr( colon1 + 1, ":" );
 	if ( colon2 && ( colon2 < end ) )
 	{
 		if ( duration )
-			*duration = atof( colon2 + 1 );
+			*duration = std::atof( colon2 + 1 );
 
 		char durationStartChar = *(colon2 + 1);
 		if ( durationStartChar < '0' || durationStartChar > '9' )
@@ -64,7 +61,7 @@ const char *SplitContext( const char *raw, char *key, int keylen, char *value, i
 		}
 
 		len = std::min<std::common_type_t<long int, int>>( colon2 - ( colon1 + 1 ), valuelen - 1 );
-		Q_strncpy( value, colon1 + 1, len + 1 );
+		V_strncpy( value, colon1 + 1, len + 1 );
 		value[ len ] = 0;
 	}
 	else
@@ -73,7 +70,7 @@ const char *SplitContext( const char *raw, char *key, int keylen, char *value, i
 			*duration = 0.0;
 
 		len = std::min<std::common_type_t<long int, int>>( end - ( colon1 + 1 ), valuelen - 1 );
-		Q_strncpy( value, colon1 + 1, len + 1 );
+		V_strncpy( value, colon1 + 1, len + 1 );
 		value[ len ] = 0;
 	}
 
@@ -122,7 +119,6 @@ void CriteriaSet::AppendCriteria( CriteriaSet::CritSymbol_t criteria, const char
 	{
 		CritEntry_t entry;
 		entry.criterianame = criteria;
-		MEM_ALLOC_CREDIT();
 		m_Lookup.insert( it, entry );
 		if ( criteria.starts_with( kAPPLYTOWORLDPREFIX ) )
 		{
@@ -179,7 +175,7 @@ void CriteriaSet::RemoveCriteria( const char *criteria )
 
 	if ( criteria[0] == kAPPLYTOWORLDPREFIX )
 	{
-		Assert( m_nNumPrefixedContexts > 0 );
+		contract_assert( m_nNumPrefixedContexts > 0 );
 		m_nNumPrefixedContexts = isel( m_nNumPrefixedContexts - 1, m_nNumPrefixedContexts - 1, 0 );
 	}
 	RemoveCriteria( idx, false );
@@ -190,12 +186,12 @@ void CriteriaSet::RemoveCriteria( const char *criteria )
 // or if this function should do that (true).
 void CriteriaSet::RemoveCriteria( int idx, bool bTestForPrefix )
 {
-	Assert( IsValidIndex(idx) );
+	contract_assert( IsValidIndex(idx) );
 	if ( bTestForPrefix )
 	{
 		if ( m_Lookup[idx].criterianame.starts_with( kAPPLYTOWORLDPREFIX ) )
 		{
-			Assert( m_nNumPrefixedContexts > 0 );
+			contract_assert( m_nNumPrefixedContexts > 0 );
 			m_nNumPrefixedContexts = isel( m_nNumPrefixedContexts - 1, m_nNumPrefixedContexts - 1, 0 );
 		}
 	}
@@ -292,9 +288,9 @@ float CriteriaSet::GetWeight( int index ) const
 //-----------------------------------------------------------------------------
 // Purpose: Merge another criteria set into this one.
 //-----------------------------------------------------------------------------
-void CriteriaSet::Merge( const CriteriaSet * RESTRICT otherCriteria )
+void CriteriaSet::Merge( const CriteriaSet * __restrict__ otherCriteria )
 {
-	Assert(otherCriteria);
+	contract_assert( otherCriteria );
 	if (!otherCriteria)
 		return;
 
@@ -318,7 +314,7 @@ void CriteriaSet::Merge( const char *modifiers ) // add criteria parsed from a t
 	char key[ 128 ] = { 0 };
 	char value[ 128 ] = { 0 };
 
-	Q_strncpy( copy_modifiers, modifiers, sizeof( copy_modifiers ) );
+	V_strncpy( copy_modifiers, modifiers, sizeof( copy_modifiers ) );
 	pCopy = copy_modifiers;
 
 	while( pCopy )
@@ -383,14 +379,14 @@ void CriteriaSet::Reset()
 
 void CriteriaSet::WriteToEntity( CBaseEntity *pEntity )
 {
-	AssertMsg( false, "CriteriaSet::WriteToEntity has not been ported from l4d2.\n" );
+	contract_assert( false && "CriteriaSet::WriteToEntity has not been ported from l4d2.\n" );
 }
 
-int CriteriaSet::InterceptWorldSetContexts( CriteriaSet * RESTRICT pFrom, CriteriaSet * RESTRICT pSetOnWorld )
+int CriteriaSet::InterceptWorldSetContexts( CriteriaSet * __restrict__ pFrom, CriteriaSet * __restrict__ pSetOnWorld )
 {
 	// Assert( pFrom ); Assert( pTo ); Assert( pSetOnWorld );
-	Assert( pSetOnWorld != pFrom );
-	Assert( pSetOnWorld->GetCount() == 0 );
+	contract_assert( pSetOnWorld != pFrom );
+	contract_assert( pSetOnWorld->GetCount() == 0 );
 
 	if ( pFrom->m_nNumPrefixedContexts == 0 )
 	{
@@ -430,8 +426,6 @@ int CriteriaSet::InterceptWorldSetContexts( CriteriaSet * RESTRICT pFrom, Criter
 			rewrite.AppendCriteria( pFrom->GetNameSymbol(i), pFrom->GetValue(i), pFrom->GetWeight(i) );
 		}
 	}
-	AssertMsg2( pSetOnWorld->GetCount() == nPrefixedContexts, "Count of $ persistent RR contexts is inconsistent (%d vs %d)! Call Elan.",
-		pSetOnWorld->GetCount(), nPrefixedContexts	);
 
 	pFrom->m_nNumPrefixedContexts = 0;
 	pFrom->m_Lookup.swap(rewrite.m_Lookup);

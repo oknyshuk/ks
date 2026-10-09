@@ -1,10 +1,6 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //
 // This module implements the particle manager for the client DLL.
@@ -100,29 +96,12 @@ entities. Each one is useful under different conditions.
    and a particle system at the same time. This gets nasty and is not encouraged anymore.
 
 */
-
-
-#ifndef PARTICLEMGR_H
-#define PARTICLEMGR_H
-
-
+import ks.tier1;
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystem.h"
-#include "mathlib/vector.h"
-#include "mathlib/vmatrix.h"
-#include "mathlib/mathlib.h"
 #include "iclientrenderable.h"
 #include "clientleafsystem.h"
-#include "tier0/fasttimer.h"
-#include <list>
-#include <optional>
-#include <vector>
-#include "tier1/map_ops.h"
-#include <typeinfo>
-#include <memory>
-#include "tier1/intrusive_list.h"
-#include "tier1/tracked_ref.h"
-#include "tier1/utlstring.h"
+import std;
 
 
 //-----------------------------------------------------------------------------
@@ -143,7 +122,7 @@ class CParticleMgr;
 class CNewParticleEffect;
 class CParticleCollection;
 
-#define INVALID_MATERIAL_HANDLE	nullptr
+inline constexpr auto INVALID_MATERIAL_HANDLE = nullptr;
 
 
 // Various stats, disabled
@@ -241,7 +220,7 @@ public:
 // will get the callbacks it needs to simulate and render the particles.
 //-----------------------------------------------------------------------------
 
-abstract_class IParticleEffect
+class IParticleEffect
 {
 // Overridables.
 public:
@@ -575,10 +554,6 @@ private:
 	enum { EFFECT_MATERIAL_HASH_SIZE = 8 };
 	CEffectMaterial *m_EffectMaterialHash[EFFECT_MATERIAL_HASH_SIZE];
 
-#ifdef INFESTED_PARTICLES
-	// We'll remove this when we move Infested to using the new particle system
-	public:
-#endif
 	// For faster iteration.
 	std::vector< std::unique_ptr< CEffectMaterial > > m_Materials;
 
@@ -612,12 +587,12 @@ public:
 	CNonDrawingParticleSystem *m_pPrev;
 	CParticleCollection *m_pSystem;
 
-	FORCEINLINE CParticleCollection *operator()( void ) const
+	[[gnu::always_inline]] inline CParticleCollection *operator()( void ) const
 	{
 		return m_pSystem;
 	}
 
-	FORCEINLINE CParticleCollection *Get( void ) const
+	[[gnu::always_inline]] inline CParticleCollection *Get( void ) const
 	{
 		return m_pSystem;
 	}
@@ -937,8 +912,3 @@ inline void SwapParticles( Particle *pPrev, Particle *pCur )
 
 
 #include "particle_iterators.h"
-
-
-#endif
-
-

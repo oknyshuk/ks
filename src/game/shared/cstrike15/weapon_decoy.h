@@ -1,14 +1,8 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose:
-//
-//=============================================================================
-
-#ifndef WEAPON_DECOY_H
-#define WEAPON_DECOY_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
-
 
 #include "weapon_basecsgrenade.h"
 
@@ -39,5 +33,3 @@ public:
 private:
 	CDecoyGrenade( const CDecoyGrenade& );
 };
-
-#endif // WEAPON_DECOY_H

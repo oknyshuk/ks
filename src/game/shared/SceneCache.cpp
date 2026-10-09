@@ -1,14 +1,11 @@
-//====== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.core;
 #include "SceneCache.h"
 #include "choreoscene.h"
 #include "choreoevent.h"
-
 
 extern ISoundEmitterSystemBase *soundemitterbase;
 CChoreoScene *BlockingLoadScene( const char *filename );
@@ -41,7 +38,7 @@ void CSceneCache::Save( ks::byte_writer& buf )
 	unsigned short c = GetSoundCount();
 	buf.write< short >( c );
 	
-	Assert( std::ssize( sounds ) <= 65536 );
+	contract_assert( std::ssize( sounds ) <= 65536 );
 
 	for ( int i = 0; i < c; ++i )
 	{
@@ -51,7 +48,6 @@ void CSceneCache::Save( ks::byte_writer& buf )
 
 void CSceneCache::Restore( ks::byte_reader& buf )
 {
-	MEM_ALLOC_CREDIT();
 
 	msecs = buf.read< unsigned int >();
 
@@ -86,7 +82,6 @@ void CSceneCache::PrecacheSceneEvent( CChoreoEvent *event, std::flat_multiset< i
 	int idx = soundemitterbase->GetSoundIndex( event->GetParameters() );
 	if ( soundemitterbase->IsValidIndex( idx ) )
 	{
-		MEM_ALLOC_CREDIT();
 		soundlist.insert( idx );
 	}
 
@@ -98,7 +93,6 @@ void CSceneCache::PrecacheSceneEvent( CChoreoEvent *event, std::flat_multiset< i
 			int idx = soundemitterbase->GetSoundIndex( tok );
 			if ( soundemitterbase->IsValidIndex( idx ) && !soundlist.contains( idx ) )
 			{
-				MEM_ALLOC_CREDIT();
 				soundlist.insert( idx );
 			}
 		}

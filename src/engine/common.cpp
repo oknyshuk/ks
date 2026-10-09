@@ -1,50 +1,31 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "host.h"
-#include <ctype.h>
-#include "draw.h"
 #include "zone.h"
 #include "sys.h"
-#include <edict.h>
-#include <coordsize.h>
-#include <characterset.h>
-#include <bitbuf.h>
 #include "common.h"
-#include "traceinit.h"
 #include <filesystem.h>
 #include "filesystem_engine.h"
-#include <convar.h>
 #include "gl_matsysiface.h"
 #include "filesystem_init.h"
 #include <materialsystem/imaterialsystemhardwareconfig.h>
-#include <tier0/icommandline.h>
-#include <vstdlib/random.h>
-#include "sys_dll.h"
-#include "datacache/idatacache.h"
-#include "tier1/keyvalues.h"
+import ks.vstdlib;
+import std;
 #ifndef DEDICATED
 #include "engineui.h"
 #endif
 #include "matchmaking/imatchframework.h"
-#include "tier2/tier2.h"
-#include "cl_steamauth.h"
 
-#include "tier0/memalloc.h"
 // Things in other C files.
-#define MAX_LOG_DIRECTORIES	10000
+constexpr auto MAX_LOG_DIRECTORIES = 10000;
 
 bool com_ignorecolons = false; 
 
 // wordbreak parsing set
 static characterset_t	g_BreakSet, g_BreakSetIncludingColons;
 
-#define COM_TOKEN_MAX_LENGTH 1024
+constexpr auto COM_TOKEN_MAX_LENGTH = 1024;
 char	com_token[COM_TOKEN_MAX_LENGTH];
 unsigned char    com_character;
 
@@ -86,14 +67,14 @@ COM_ExplainDisconnection
 */
 void COM_ExplainDisconnection( bool bPrint, const char *fmt, ... )
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		szString[1024];
 
-	va_start ( argptr, fmt );
-	Q_vsnprintf( szString, sizeof( szString ), fmt,argptr );
-	va_end ( argptr );
+	__builtin_va_start ( argptr, fmt );
+	V_vsnprintf( szString, sizeof( szString ), fmt,argptr );
+	__builtin_va_end ( argptr );
 
-	Q_strncpy( gszDisconnectReason, szString, 256 );
+	V_strncpy( gszDisconnectReason, szString, 256 );
 	gfExtendedError = true;
 
 	if ( bPrint )
@@ -117,14 +98,14 @@ COM_ExtendedExplainDisconnection
 */
 void COM_ExtendedExplainDisconnection( bool bPrint, const char *fmt, ... )
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		string[1024];
 	
-	va_start (argptr, fmt);
-	Q_vsnprintf(string, sizeof( string ), fmt,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr, fmt);
+	V_vsnprintf(string, sizeof( string ), fmt,argptr);
+	__builtin_va_end (argptr);
 
-	Q_strncpy( gszExtendedDisconnectReason, string, 256 );
+	V_strncpy( gszExtendedDisconnectReason, string, 256 );
 
 	if ( bPrint )
 	{
@@ -355,15 +336,15 @@ varargs versions of all text functions.
 */
 char *va( const char *format, ... )
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	static char	string[8][512];
 	static int	curstring = 0;
 	
 	curstring = ( curstring + 1 ) % 8;
 
-	va_start (argptr, format);
-	Q_vsnprintf( string[curstring], sizeof( string[curstring] ), format, argptr );
-	va_end (argptr);
+	__builtin_va_start (argptr, format);
+	V_vsnprintf( string[curstring], sizeof( string[curstring] ), format, argptr );
+	__builtin_va_end (argptr);
 
 	return string[curstring];  
 }
@@ -384,7 +365,7 @@ const char *vstr(Vector& v)
 	idx++;
 	idx &= 15;
 
-	Q_snprintf(string[idx], sizeof( string[idx] ), "%.2f %.2f %.2f", v[0], v[1], v[2]);
+	V_snprintf(string[idx], sizeof( string[idx] ), "%.2f %.2f %.2f", v[0], v[1], v[2]);
 	return string[idx];  
 }
 
@@ -410,13 +391,13 @@ bool COM_CheckGameDirectory( const char *gamedir )
 	}
 
 	// Rip out the current gamedir.
-	Q_FileBase( com_gamedir, szGD, sizeof( szGD ) );
+	V_FileBase( com_gamedir, szGD, sizeof( szGD ) );
 
-	if ( Q_stricmp( szGD, gamedir ) )
+	if ( V_stricmp( szGD, gamedir ) )
 	{
 		// We know szGD and gamedir aren't the same, but as long as one is 'portal2' and the other is 'portal_sixense2', go ahead and connect
 		bool sixense_vs_not_sixense = false;
-		if( (!Q_stricmp( szGD, "portal2" ) || !Q_stricmp( szGD, "portal2_sixense" )) && (!Q_stricmp( gamedir, "portal2" ) || !Q_stricmp( gamedir, "portal2_sixense" )) )
+		if( (!V_stricmp( szGD, "portal2" ) || !V_stricmp( szGD, "portal2_sixense" )) && (!V_stricmp( gamedir, "portal2" ) || !V_stricmp( gamedir, "portal2_sixense" )) )
 		{
 			sixense_vs_not_sixense = true;
 		}
@@ -440,7 +421,7 @@ bool COM_CheckGameDirectory( const char *gamedir )
 //-----------------------------------------------------------------------------
 int COM_FindFile( const char *filename, FileHandle_t *file )
 {
-	Assert( file );
+	contract_assert( file );
 	int filesize = -1;
 	*file = g_pFileSystem->Open( filename, "rb" );
 	if ( *file )
@@ -470,14 +451,15 @@ The filename will be prefixed by the current game directory
 */
 void COM_WriteFile (const char *filename, void *data, int len)
 {
+	ks::ScratchArena<> scratch;
 	FileHandle_t  handle;
 	
-	int nameLen = strlen( filename ) + 2;
-	char *pName = ( char * )stackalloc( nameLen );
+	int nameLen = std::strlen( filename ) + 2;
+	char *pName = ( char * )scratch.AllocBytes( nameLen );
 
-	Q_snprintf( pName, nameLen, "%s", filename);
+	V_snprintf( pName, nameLen, "%s", filename);
 
-	Q_FixSlashes( pName );
+	V_FixSlashes( pName );
 	COM_CreatePath( pName );
 
 	handle = g_pFileSystem->Open( pName, "wb" );
@@ -501,7 +483,7 @@ Only used for CopyFile
 void COM_CreatePath (const char *path)
 {
 	char temppath[512];
-	Q_strncpy( temppath, path, sizeof(temppath) );
+	V_strncpy( temppath, path, sizeof(temppath) );
 	
 	for (char *ofs = temppath+1 ; *ofs ; ofs++)
 	{
@@ -533,7 +515,7 @@ bool COM_CopyFile ( const char *netpath, const char *cachepath)
 
 	in = g_pFileSystem->Open( netpath, "rb" );
 
-	Assert( in );
+	contract_assert( in );
 
 	if ( in == FILESYSTEM_INVALID_HANDLE )
 		return false;
@@ -543,7 +525,7 @@ bool COM_CopyFile ( const char *netpath, const char *cachepath)
 
 	out = g_pFileSystem->Open( cachepath, "wb", "MOD" );
 
-	Assert( out );
+	contract_assert( out );
 	
 	if ( out == FILESYSTEM_INVALID_HANDLE )
 	{
@@ -588,7 +570,7 @@ int COM_ExpandFilename( char *filename, int maxlength )
 
 	if ( g_pFileSystem->GetLocalPath( filename, expanded, sizeof(expanded) ) != nullptr )
 	{
-		Q_strncpy( filename, expanded, maxlength );
+		V_strncpy( filename, expanded, maxlength );
 		return 1;
 	}
 
@@ -653,7 +635,7 @@ byte *COM_LoadFile (const char *path, int usehunk, int *pLength)
 	}
 
 	// Extract the filename base name for hunk tag
-	Q_FileBase( path, base, sizeof( base ) );
+	V_FileBase( path, base, sizeof( base ) );
 
 	unsigned bufSize = len + 1;
 
@@ -663,10 +645,10 @@ byte *COM_LoadFile (const char *path, int usehunk, int *pLength)
 		buf = (byte *)Hunk_AllocName (bufSize, base);
 		break;
 	case 2:
-		AssertMsg( 0, "Temp alloc no longer supported\n" );
+		contract_assert( false && "Temp alloc no longer supported\n" );
 		break;
 	case 3:
-		AssertMsg( 0, "Cache alloc no longer supported\n" );
+		contract_assert( false && "Cache alloc no longer supported\n" );
 		break;
 	case 4:
 		{
@@ -759,9 +741,9 @@ void COM_Shutdown( void )
 //-----------------------------------------------------------------------------
 char *COM_StringCopy(const char *in)
 {
-	int len = Q_strlen(in)+1;
+	int len = V_strlen(in)+1;
 	char *out = (char *)new char[ len ];
-	Q_strncpy (out, in, len );
+	V_strncpy (out, in, len );
 	return out;
 }
 
@@ -787,7 +769,7 @@ void COM_SetupLogDir( const char *mapname )
 		char sRelativeLogDir[MAX_PATH];
 		for ( i = 0; i < MAX_LOG_DIRECTORIES; i++ )
 		{
-			Q_snprintf( sRelativeLogDir, sizeof( sRelativeLogDir ), "logs/%s/%04i", mapname, i );
+			V_snprintf( sRelativeLogDir, sizeof( sRelativeLogDir ), "logs/%s/%04i", mapname, i );
 			if ( !g_pFileSystem->IsDirectory( sRelativeLogDir, "GAME" ) )
 				break;
 		}
@@ -796,7 +778,7 @@ void COM_SetupLogDir( const char *mapname )
 		if ( i == MAX_LOG_DIRECTORIES )
 		{
 			i = 0;	
-			Q_snprintf( sRelativeLogDir, sizeof( sRelativeLogDir ), "logs/%s/%04i", mapname, i );
+			V_snprintf( sRelativeLogDir, sizeof( sRelativeLogDir ), "logs/%s/%04i", mapname, i );
 		}
 
 		// Make sure the directories we need exist.
@@ -811,7 +793,7 @@ void COM_SetupLogDir( const char *mapname )
 
 				// Set the search path
 				char sLogDir[MAX_PATH];
-				Q_snprintf( sLogDir, sizeof( sLogDir ), "%s/%s", gameDir, sRelativeLogDir );
+				V_snprintf( sLogDir, sizeof( sLogDir ), "%s/%s", gameDir, sRelativeLogDir );
 				g_pFileSystem->AddSearchPath( sLogDir, "LOGDIR" );
 			}
 		}
@@ -850,7 +832,7 @@ void COM_InitFilesystem( const char *pFullModPath )
 
 
 
-	if ( ( Q_strlen( language ) > 0 ) && ( Q_stricmp( language, "english" ) != 0 ) )
+	if ( ( V_strlen( language ) > 0 ) && ( V_stricmp( language, "english" ) != 0 ) )
 	{
 		initInfo.m_pLanguage = language;
 	}
@@ -868,12 +850,12 @@ void COM_InitFilesystem( const char *pFullModPath )
 	FileSystem_LoadSearchPaths( initInfo );
 
 	// The mod path becomes com_gamedir.
-	Q_MakeAbsolutePath( com_gamedir, sizeof( com_gamedir ), initInfo.m_ModPath );
+	V_MakeAbsolutePath( com_gamedir, sizeof( com_gamedir ), initInfo.m_ModPath );
 							  	
 	// Set com_basedir.
-	Q_strncpy ( com_basedir, GetBaseDirectory(), sizeof( com_basedir ) ); // the "root" directory where hl2.exe is
-	Q_strlower( com_basedir );
-	Q_FixSlashes( com_basedir );
+	V_strncpy ( com_basedir, GetBaseDirectory(), sizeof( com_basedir ) ); // the "root" directory where hl2.exe is
+	V_strlower( com_basedir );
+	V_FixSlashes( com_basedir );
 	
 #ifndef DEDICATED
 	EngineUI()->SetVGUIDirectories();
@@ -888,7 +870,7 @@ const char *COM_DXLevelToString( int dxlevel )
 	bool bHalfPrecision = false;
 
 	const char *pShaderDLLName = g_pMaterialSystemHardwareConfig->GetShaderDLLName();
-	if( pShaderDLLName && Q_stristr( pShaderDLLName, "nvfx" ) )
+	if( pShaderDLLName && V_stristr( pShaderDLLName, "nvfx" ) )
 	{
 		bHalfPrecision = true;
 	}
@@ -954,11 +936,11 @@ const char *COM_FormatSeconds( int seconds )
 	
 	if ( hours > 0 )
 	{
-		Q_snprintf( string, sizeof(string), "%2i:%02i:%02i", hours, minutes, seconds );
+		V_snprintf( string, sizeof(string), "%2i:%02i:%02i", hours, minutes, seconds );
 	}
 	else
 	{
-		Q_snprintf( string, sizeof(string), "%02i:%02i", minutes, seconds );
+		V_snprintf( string, sizeof(string), "%02i:%02i", minutes, seconds );
 	}
 
 	return string;
@@ -969,7 +951,7 @@ void COM_LogString( char const *pchFile, char const *pchString )
 {
 	if ( !g_pFileSystem )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
@@ -997,16 +979,16 @@ void COM_Log( const char *pszFile, const char *fmt, ...)
 {
 	if ( !g_pFileSystem )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return;
 	}
 
-	va_list		argptr;
+	std::va_list		argptr;
 	char		string[8192];
 
-	va_start (argptr,fmt);
-	Q_vsnprintf(string, sizeof( string ), fmt,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,fmt);
+	V_vsnprintf(string, sizeof( string ), fmt,argptr);
+	__builtin_va_end (argptr);
 
 	COM_LogString( pszFile, string );
 }
@@ -1048,7 +1030,7 @@ int COM_CompareFileTime(const char *filename1, const char *filename2, int *iComp
 void COM_GetGameDir(char *szGameDir, int maxlen)
 {
 	if (!szGameDir) return;
-	Q_strncpy(szGameDir, com_gamedir, maxlen );
+	V_strncpy(szGameDir, com_gamedir, maxlen );
 }
 
 //-----------------------------------------------------------------------------
@@ -1060,7 +1042,7 @@ void COM_GetGameDir(char *szGameDir, int maxlen)
 const char *COM_ParseFile(const char *data, char *token, int maxtoken )
 {
 	const char *return_data = COM_Parse(data);
-	Q_strncpy(token, com_token, maxtoken);
+	V_strncpy(token, com_token, maxtoken);
 	return return_data;	
 }
 
@@ -1081,12 +1063,12 @@ bool COM_IsValidPath( const char *pszFilename )
 		return false;
 	}
 
-	if ( Q_strlen( pszFilename ) <= 0    ||
-		Q_strstr( pszFilename, "\\\\" ) ||	// to protect network paths
-		Q_strstr( pszFilename, ":" )    || // to protect absolute paths
-		Q_strstr( pszFilename, ".." ) ||   // to protect relative paths
-		Q_strstr( pszFilename, "\n" ) ||   // CFileSystem_Stdio::FS_fopen doesn't allow this
-		Q_strstr( pszFilename, "\r" ) )    // CFileSystem_Stdio::FS_fopen doesn't allow this
+	if ( V_strlen( pszFilename ) <= 0    ||
+		V_strstr( pszFilename, "\\\\" ) ||	// to protect network paths
+		V_strstr( pszFilename, ":" )    || // to protect absolute paths
+		V_strstr( pszFilename, ".." ) ||   // to protect relative paths
+		V_strstr( pszFilename, "\n" ) ||   // CFileSystem_Stdio::FS_fopen doesn't allow this
+		V_strstr( pszFilename, "\r" ) )    // CFileSystem_Stdio::FS_fopen doesn't allow this
 	{
 		return false;
 	}

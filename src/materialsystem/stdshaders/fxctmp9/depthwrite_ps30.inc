@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 #include "shaderlib/cshader.h"
 class depthwrite_ps30_Static_Index
@@ -10,7 +11,7 @@ private:
 public:
 	void SetCOLOR_DEPTH( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOLOR_DEPTH = i;
 #ifdef _DEBUG
 		m_bCOLOR_DEPTH = true;
@@ -18,7 +19,7 @@ public:
 	}
 	void SetCOLOR_DEPTH( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOLOR_DEPTH = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOLOR_DEPTH = true;
@@ -39,7 +40,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bCOLOR_DEPTH;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 2 * m_nCOLOR_DEPTH ) + 0;
 	}
@@ -55,7 +56,7 @@ private:
 public:
 	void SetALPHACLIP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nALPHACLIP = i;
 #ifdef _DEBUG
 		m_bALPHACLIP = true;
@@ -63,7 +64,7 @@ public:
 	}
 	void SetALPHACLIP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nALPHACLIP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bALPHACLIP = true;
@@ -84,7 +85,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bALPHACLIP;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nALPHACLIP ) + 0;
 	}

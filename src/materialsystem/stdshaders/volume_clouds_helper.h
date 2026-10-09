@@ -1,9 +1,9 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#ifndef VOLUME_CLOUDS_HELPER_H
-#define VOLUME_CLOUDS_HELPER_H
-
-#include <string.h>
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -18,7 +18,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct VolumeCloudsVars_t
 {
-	VolumeCloudsVars_t() { memset( this, 0xFF, sizeof( VolumeCloudsVars_t ) ); }
+	VolumeCloudsVars_t() { std::memset( this, 0xFF, sizeof( VolumeCloudsVars_t ) ); }
 
 	int m_nRefractAmount;
 	int m_nTexture1;
@@ -34,5 +34,3 @@ void InitParamsVolumeClouds( CBaseVSShader *pShader, IMaterialVar** params, cons
 void InitVolumeClouds( CBaseVSShader *pShader, IMaterialVar** params, VolumeCloudsVars_t &info );
 void DrawVolumeClouds( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynamicAPI *pShaderAPI,
 					  IShaderShadow* pShaderShadow, VolumeCloudsVars_t &info, VertexCompressionType_t vertexCompression );
-
-#endif // VolumeClouds_HELPER_H

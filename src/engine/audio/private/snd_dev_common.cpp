@@ -1,23 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Device Common Base Class.
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "audio_pch.h"
-#include "../../cl_splitscreen.h"
-#include "snd_dma.h"
+// Purpose: Device Common Base Class.
+
+import std;
+
+
+import ks.tier1;
+
+#include "sound.h"
+#include "soundservice.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_mix_buf.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_convars.h"
+#include "snd_dev_common.h"
+#include "snd_dev_xaudio.h"
+#include "snd_wave_mixer_private.h"
+
+#include "audio/private/posix_stubs.h"
 #include "../../debugoverlay.h"
 #include "server.h"
 #include "client.h"
 
-
-#define ISPEAKER_RIGHT_FRONT	0
-#define ISPEAKER_LEFT_FRONT		1
-#define ISPEAKER_RIGHT_REAR		2
-#define ISPEAKER_LEFT_REAR		3
-#define ISPEAKER_CENTER_FRONT	4
-#define ISPEAKER_DIR_STEREO		99
+constexpr auto ISPEAKER_RIGHT_FRONT = 0;
+constexpr auto ISPEAKER_LEFT_FRONT = 1;
+constexpr auto ISPEAKER_RIGHT_REAR = 2;
+constexpr auto ISPEAKER_LEFT_REAR = 3;
+constexpr auto ISPEAKER_CENTER_FRONT = 4;
+constexpr auto ISPEAKER_DIR_STEREO = 99;
 
 extern Vector		listener_right[ MAX_SPLITSCREEN_CLIENTS ];
 
@@ -90,9 +104,9 @@ XfadeExit:
 // return: scale from 0-1.0 for speaker volume.
 // NOTE: as pitch angle goes to +/- 90, sound goes to mono, all speakers.
 
-#define PITCH_ANGLE_THRESHOLD	45.0
-#define REAR_VOL_DROP			0.5
-#define VOLCURVEPOWER			1.5		// 1.0 is a linear crossfade of volume between speakers.
+constexpr auto PITCH_ANGLE_THRESHOLD = 45.0;
+constexpr auto REAR_VOL_DROP = 0.5;
+constexpr auto VOLCURVEPOWER = 1.5; // 1.0 is a linear crossfade of volume between speakers.
 										// 1.5 provides a smoother, nonlinear volume transition - this is done
 										// because a volume of 255 played in a single speaker is
 										// percieved as louder than 128 + 128 in two speakers
@@ -256,14 +270,14 @@ static float GetSpeakerVol( float yaw_source, float pitch_source, float mono, fl
 	}
 
 GetVolExit:
-	Assert(mono <= 1.0 && mono >= 0.0);
-	Assert(scale <= 1.0 && scale >= 0.0);
+	contract_assert( mono <= 1.0 && mono >= 0.0 );
+	contract_assert( scale <= 1.0 && scale >= 0.0 );
 
 	// crossfade speaker volumes towards mono with increased pitch angle of sound source
 
 	scale = XfadeSpeakerVolToMono(scale, mono, ispeaker, cspeaker, fmix2channels);
 
-	Assert(scale <= 1.0 && scale >= 0.0);
+	contract_assert( scale <= 1.0 && scale >= 0.0 );
 
 	return scale;
 }
@@ -271,49 +285,58 @@ GetVolExit:
 extern ConVar sv_cheats;
 
 // counterstrike options
-#define SND_SVACTIVE_CONCMD( VARIABLENAME, DEFAULTVALUE, DESCSTRING ) \
-	float g_##VARIABLENAME = DEFAULTVALUE; \
-CON_COMMAND( VARIABLENAME , DESCSTRING ) \
-{ \
-	if ( args.ArgC () < 2 ) \
-	{ \
-	ConMsg ("%s = %f\n", #VARIABLENAME, g_##VARIABLENAME ); \
-	} \
-	else if ( sv.IsActive() && !sv_cheats.GetBool() ) \
-	{ \
-	ConMsg( "Cannot change %s while the server is running and sv_cheats = 0. To change settings set sv_cheats 1\n", #VARIABLENAME ); \
-		return; \
-	} \
-	else \
-	{ \
-	g_##VARIABLENAME = V_atof( args[1] ); \
-	} \
-} \
+static void SvActiveFloatCommand( const char *pszName, float &flValue, const CCommand &args )
+{
+	if ( args.ArgC() < 2 )
+	{
+		ConMsg( "%s = %f\n", pszName, flValue );
+	}
+	else if ( sv.IsActive() && !sv_cheats.GetBool() )
+	{
+		ConMsg( "Cannot change %s while the server is running and sv_cheats = 0. To change settings set sv_cheats 1\n", pszName );
+	}
+	else
+	{
+		flValue = V_atof( args[1] );
+	}
+}
 
 // headphones
-SND_SVACTIVE_CONCMD( snd_front_headphone_position, 90.0, "Specifies the position (in degrees) of the virtual front left/right headphones." )
-SND_SVACTIVE_CONCMD( snd_rear_headphone_position, 90.0, "Specifies the position  (in degrees) of the virtual rear left/right headphones." )
+float g_snd_front_headphone_position = 90.0;
+static ConCommand snd_front_headphone_position_command( "snd_front_headphone_position", []( const CCommand &args ) { SvActiveFloatCommand( "snd_front_headphone_position", g_snd_front_headphone_position, args ); }, "Specifies the position (in degrees) of the virtual front left/right headphones." );
+float g_snd_rear_headphone_position = 90.0;
+static ConCommand snd_rear_headphone_position_command( "snd_rear_headphone_position", []( const CCommand &args ) { SvActiveFloatCommand( "snd_rear_headphone_position", g_snd_rear_headphone_position, args ); }, "Specifies the position  (in degrees) of the virtual rear left/right headphones." );
 
 // speakers 
-SND_SVACTIVE_CONCMD( snd_front_stereo_speaker_position, 90.0, "Specifies the position (in degrees) of the virtual front left/right speakers." );
-SND_SVACTIVE_CONCMD( snd_rear_stereo_speaker_position, 90.0, "Specifies the position (in degrees) of the virtual rear left/right speakers." );
+float g_snd_front_stereo_speaker_position = 90.0;
+static ConCommand snd_front_stereo_speaker_position_command( "snd_front_stereo_speaker_position", []( const CCommand &args ) { SvActiveFloatCommand( "snd_front_stereo_speaker_position", g_snd_front_stereo_speaker_position, args ); }, "Specifies the position (in degrees) of the virtual front left/right speakers." );
+float g_snd_rear_stereo_speaker_position = 90.0;
+static ConCommand snd_rear_stereo_speaker_position_command( "snd_rear_stereo_speaker_position", []( const CCommand &args ) { SvActiveFloatCommand( "snd_rear_stereo_speaker_position", g_snd_rear_stereo_speaker_position, args ); }, "Specifies the position (in degrees) of the virtual rear left/right speakers." );
 
 // speakers 4, 5 or 7
-SND_SVACTIVE_CONCMD( snd_front_surround_speaker_position, 45.0, "Specifies the position (in degrees) of the virtual front left/right speakers." );
-SND_SVACTIVE_CONCMD( snd_rear_surround_speaker_position, 135.0,"Specifies the position (in degrees) of the virtual rear left/right speakers." );
+float g_snd_front_surround_speaker_position = 45.0;
+static ConCommand snd_front_surround_speaker_position_command( "snd_front_surround_speaker_position", []( const CCommand &args ) { SvActiveFloatCommand( "snd_front_surround_speaker_position", g_snd_front_surround_speaker_position, args ); }, "Specifies the position (in degrees) of the virtual front left/right speakers." );
+float g_snd_rear_surround_speaker_position = 135.0;
+static ConCommand snd_rear_surround_speaker_position_command( "snd_rear_surround_speaker_position", []( const CCommand &args ) { SvActiveFloatCommand( "snd_rear_surround_speaker_position", g_snd_rear_surround_speaker_position, args ); }, "Specifies the position (in degrees) of the virtual rear left/right speakers." );
 
 // given unit vector from listener to sound source,
 // determine proportion of volume for sound in FL, FC, FR, RL, RR quadrants
 // Scale this proportion by the distance scalar 'gain'
 // If sound has 'mono' radius, blend sound to mono over 50% of radius.
-SND_SVACTIVE_CONCMD( snd_headphone_pan_exponent, 1.0, "Specifies the exponent for the pan xfade from phone to phone if the \"exp\" pan law is being used." );
-SND_SVACTIVE_CONCMD( snd_stereo_speaker_pan_exponent, 1.5, "Specifies the exponent for the pan xfade from speaker to speaker if the \"exp\" pan law is being used." );
-SND_SVACTIVE_CONCMD( snd_surround_speaker_pan_exponent, 1.5, "Specifies the exponent for the pan xfade from speaker to speaker if the \"exp\" pan law is being used." );
+float g_snd_headphone_pan_exponent = 1.0;
+static ConCommand snd_headphone_pan_exponent_command( "snd_headphone_pan_exponent", []( const CCommand &args ) { SvActiveFloatCommand( "snd_headphone_pan_exponent", g_snd_headphone_pan_exponent, args ); }, "Specifies the exponent for the pan xfade from phone to phone if the \"exp\" pan law is being used." );
+float g_snd_stereo_speaker_pan_exponent = 1.5;
+static ConCommand snd_stereo_speaker_pan_exponent_command( "snd_stereo_speaker_pan_exponent", []( const CCommand &args ) { SvActiveFloatCommand( "snd_stereo_speaker_pan_exponent", g_snd_stereo_speaker_pan_exponent, args ); }, "Specifies the exponent for the pan xfade from speaker to speaker if the \"exp\" pan law is being used." );
+float g_snd_surround_speaker_pan_exponent = 1.5;
+static ConCommand snd_surround_speaker_pan_exponent_command( "snd_surround_speaker_pan_exponent", []( const CCommand &args ) { SvActiveFloatCommand( "snd_surround_speaker_pan_exponent", g_snd_surround_speaker_pan_exponent, args ); }, "Specifies the exponent for the pan xfade from speaker to speaker if the \"exp\" pan law is being used." );
 
 
-SND_SVACTIVE_CONCMD( snd_headphone_pan_radial_weight, 1.0, "Apply cos(angle) * weight before pan law" );
-SND_SVACTIVE_CONCMD( snd_stereo_speaker_pan_radial_weight, 0.0, "Apply cos(angle) * weight before pan law" );
-SND_SVACTIVE_CONCMD( snd_surround_speaker_pan_radial_weight, 0.0, "Apply cos(angle) * weight before pan law" );
+float g_snd_headphone_pan_radial_weight = 1.0;
+static ConCommand snd_headphone_pan_radial_weight_command( "snd_headphone_pan_radial_weight", []( const CCommand &args ) { SvActiveFloatCommand( "snd_headphone_pan_radial_weight", g_snd_headphone_pan_radial_weight, args ); }, "Apply cos(angle) * weight before pan law" );
+float g_snd_stereo_speaker_pan_radial_weight = 0.0;
+static ConCommand snd_stereo_speaker_pan_radial_weight_command( "snd_stereo_speaker_pan_radial_weight", []( const CCommand &args ) { SvActiveFloatCommand( "snd_stereo_speaker_pan_radial_weight", g_snd_stereo_speaker_pan_radial_weight, args ); }, "Apply cos(angle) * weight before pan law" );
+float g_snd_surround_speaker_pan_radial_weight = 0.0;
+static ConCommand snd_surround_speaker_pan_radial_weight_command( "snd_surround_speaker_pan_radial_weight", []( const CCommand &args ) { SvActiveFloatCommand( "snd_surround_speaker_pan_radial_weight", g_snd_surround_speaker_pan_radial_weight, args ); }, "Apply cos(angle) * weight before pan law" );
 
 enum snd_pan_mode_t
 {
@@ -367,7 +390,7 @@ void DEBUG_DrawPanCurvesLocation( float flYawSource, float flSpeakerMin, float f
 // If sound has 'mono' radius, blend sound to mono over 50% of radius.
 void Device_SpatializeChannel( int nSlot, float volume[CCHANVOLUMES/2], int master_vol, const Vector& sourceDir, float gain, float mono, int nWaveType )
 {
-	VPROF("Device_SpatializeChannel");
+	CVProfScope _( "Device_SpatializeChannel", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	float rfscale, rrscale, lfscale, lrscale, fcscale;
 
 	fcscale = rfscale = lfscale = rrscale = lrscale = 0.0;	
@@ -553,7 +576,7 @@ void DEBUG_DrawSpeakerValues( float volume[CCHANVOLUMES/2] )
 	CDebugOverlay::AddScreenTextOverlay(flMidX , startY - totalY -0.04, .01, 0, 0, 255, 255,  "#");
 	CDebugOverlay::AddScreenTextOverlay(flMidX , startY + 0.04, .01, 0, 0, 255, 255,  "#");
 
-	sprintf( valueString, "%.3f", volume[IFRONT_CENTER] );
+	std::sprintf( valueString, "%.3f", volume[IFRONT_CENTER] );
 	CDebugOverlay::AddScreenTextOverlay(flMidX -0.01 , startY - totalY -0.015, .01, 255, 255, 255, 255,  valueString );
 
 	int nCenterVol = volume[IFRONT_CENTER] * 15;
@@ -765,15 +788,15 @@ static float InterpPitchAngle( float flPitchAngle, float flMono )
 
 static float InterpMonoSpread( float flMono, float flScale, int ispeaker, int cspeaker, bool fmix2channels )
 {
-	Assert(flMono <= 1.0 && flMono >= 0.0);
+	contract_assert( flMono <= 1.0 && flMono >= 0.0 );
 
-	Assert( flScale <= 1.0 && flScale >= 0.0 );
+	contract_assert( flScale <= 1.0 && flScale >= 0.0 );
  	
 	// crossfade speaker volumes towards mono with increased pitch angle of sound source
 
 	float flNewScale = XfadeSpeakerVolToMono( flScale, flMono, ispeaker, cspeaker, fmix2channels );  
 	
-	Assert( flScale <= 1.0 && flScale >= 0.0);
+	contract_assert( flScale <= 1.0 && flScale >= 0.0 );
 	
 	return flNewScale;
 
@@ -786,7 +809,7 @@ static float InterpMonoSpread( float flMono, float flScale, int ispeaker, int cs
 //////////////////////////////////////////////////////////////////////////
 void Device_SpatializeChannel( int nSlot, float volume[CCHANVOLUMES/2], const Vector& sourceDir, float mono, float flRearToStereoScale /* = 0.75 */ )
 {
-	VPROF("CAudioDeviceBase::SpatializeChannel - 2");
+	CVProfScope _( "CAudioDeviceBase::SpatializeChannel - 2", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	float rfscale, rrscale, lfscale, lrscale, fcscale;
 	bool bSurround = g_AudioDevice->IsSurround();
@@ -945,19 +968,19 @@ void Device_SpatializeChannel( int nSlot, float volume[CCHANVOLUMES/2], const Ve
 		InterpSpeakerVol( flRadialPan, nPanMode, flPanExponent, yaw, flRearRight - 360, flFrontRight, rrscale, rfscale );
 	}
 
-	Assert( fcscale <= 1.0 && fcscale >= 0.0 );
+	contract_assert( fcscale <= 1.0 && fcscale >= 0.0 );
 
 	if( bSurroundCenter )
 	{
 		fcscale = InterpMonoSpread( flMono, fcscale, ISPEAKER_CENTER_FRONT, nSpkeakerCount, bMixToTwoChannels  );
 	}
-	Assert( rfscale <= 1.0 && rfscale >= 0.0 );
+	contract_assert( rfscale <= 1.0 && rfscale >= 0.0 );
 	rfscale = InterpMonoSpread( flMono, rfscale, ISPEAKER_RIGHT_FRONT, nSpkeakerCount, bMixToTwoChannels  );
-	Assert( lfscale <= 1.0 && lfscale >= 0.0 );
+	contract_assert( lfscale <= 1.0 && lfscale >= 0.0 );
 	lfscale = InterpMonoSpread( flMono, lfscale, ISPEAKER_LEFT_FRONT, nSpkeakerCount, bMixToTwoChannels );
-	Assert( rrscale <= 1.0 && rrscale >= 0.0 );
+	contract_assert( rrscale <= 1.0 && rrscale >= 0.0 );
 	rrscale = InterpMonoSpread( flMono, rrscale, ISPEAKER_RIGHT_REAR, nSpkeakerCount, bMixToTwoChannels );
-	Assert( lrscale <= 1.0 && lrscale >= 0.0 );
+	contract_assert( lrscale <= 1.0 && lrscale >= 0.0 );
 	lrscale = InterpMonoSpread( flMono, lrscale, ISPEAKER_LEFT_REAR, nSpkeakerCount, bMixToTwoChannels );
 
 
@@ -996,7 +1019,7 @@ ConVar snd_rear_speaker_scale("snd_rear_speaker_scale", "1.0", FCVAR_CHEAT, "How
 
 void Device_ApplyDSPEffects( int idsp, portable_samplepair_t *pbuffront, portable_samplepair_t *pbufrear, portable_samplepair_t *pbufcenter, int samplecount)
 {
-	VPROF("CAudioDeviceBase::ApplyDSPEffects");
+	CVProfScope _( "CAudioDeviceBase::ApplyDSPEffects", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	DEBUG_StartSoundMeasure( 1, samplecount );
 
 	DSP_Process( idsp, pbuffront, pbufrear, pbufcenter, samplecount );
@@ -1006,23 +1029,23 @@ void Device_ApplyDSPEffects( int idsp, portable_samplepair_t *pbuffront, portabl
 
 void Device_MixUpsample( int sampleCount, int filtertype )
 {
-	VPROF( "CAudioDeviceBase::MixUpsample" );
+	CVProfScope _( "CAudioDeviceBase::MixUpsample", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	paintbuffer_t *pPaint = MIX_GetCurrentPaintbufferPtr();
 	int ifilter = pPaint->ifilter;
 
-	Assert (ifilter < CPAINTFILTERS);
+	contract_assert( ifilter < CPAINTFILTERS );
 
 	S_MixBufferUpsample2x( sampleCount, pPaint->pbuf, &(pPaint->fltmem[ifilter][0]), CPAINTFILTERMEM, filtertype );
 
 	if ( pPaint->fsurround )
 	{
-		Assert( pPaint->pbufrear );
+		contract_assert( pPaint->pbufrear );
 		S_MixBufferUpsample2x( sampleCount, pPaint->pbufrear, &(pPaint->fltmemrear[ifilter][0]), CPAINTFILTERMEM, filtertype );
 
 		if ( pPaint->fsurround_center )
 		{
-			Assert( pPaint->pbufcenter );
+			contract_assert( pPaint->pbufcenter );
 			S_MixBufferUpsample2x( sampleCount, pPaint->pbufcenter, &(pPaint->fltmemcenter[ifilter][0]), CPAINTFILTERMEM, filtertype );
 		}
 	}
@@ -1033,7 +1056,7 @@ void Device_MixUpsample( int sampleCount, int filtertype )
 
 void Device_Mix8Mono( channel_t *pChannel, char *pData, int outputOffset, int inputOffset, fixedint rateScaleFix, int outCount, int timecompress )
 {
-	VPROF( "CAudioDeviceBase::Mix8Mono" );
+	CVProfScope _( "CAudioDeviceBase::Mix8Mono", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	float volume[CCHANVOLUMES];
 
@@ -1051,13 +1074,13 @@ void Device_Mix8Mono( channel_t *pChannel, char *pData, int outputOffset, int in
 	{
 		if ( FVolumeRearNonZero(volume) )
 		{
-			Assert( pPaint->pbufrear );
+			contract_assert( pPaint->pbufrear );
 			Mix8MonoWavtype( pChannel, pPaint->pbufrear + outputOffset, &volume[IREAR_LEFT], (byte *)pData, inputOffset, rateScaleFix, outCount  );
 		}
 
 		if ( pPaint->fsurround_center && FVolumeCenterNonZero(volume) )
 		{
-			Assert( pPaint->pbufcenter );
+			contract_assert( pPaint->pbufcenter );
 			Mix8MonoWavtype( pChannel, pPaint->pbufcenter + outputOffset, &volume[IFRONT_CENTER], (byte *)pData, inputOffset, rateScaleFix, outCount  );
 		}
 	}
@@ -1065,7 +1088,7 @@ void Device_Mix8Mono( channel_t *pChannel, char *pData, int outputOffset, int in
 
 void Device_Mix8Stereo( channel_t *pChannel, char *pData, int outputOffset, int inputOffset, fixedint rateScaleFix, int outCount, int timecompress )
 {
-	VPROF( "CAudioDeviceBase::Mix8Stereo" );
+	CVProfScope _( "CAudioDeviceBase::Mix8Stereo", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	float volume[CCHANVOLUMES];
 
@@ -1083,13 +1106,13 @@ void Device_Mix8Stereo( channel_t *pChannel, char *pData, int outputOffset, int 
 	{
 		if ( FVolumeRearNonZero(volume) )
 		{
-			Assert( pPaint->pbufrear );
+			contract_assert( pPaint->pbufrear );
 			Mix8StereoWavtype( pChannel, pPaint->pbufrear + outputOffset, &volume[IREAR_LEFT], (byte *)pData, inputOffset, rateScaleFix, outCount );
 		}
 
 		if ( pPaint->fsurround_center && FVolumeCenterNonZero(volume) )
 		{
-			Assert( pPaint->pbufcenter );
+			contract_assert( pPaint->pbufcenter );
 			Mix8StereoWavtype( pChannel, pPaint->pbufcenter + outputOffset, &volume[IFRONT_CENTER], (byte *)pData, inputOffset, rateScaleFix, outCount );
 		}
 	}
@@ -1097,7 +1120,7 @@ void Device_Mix8Stereo( channel_t *pChannel, char *pData, int outputOffset, int 
 
 void Device_Mix16Mono( channel_t *pChannel, short *pData, int outputOffset, int inputOffset, fixedint rateScaleFix, int outCount, int timecompress )
 {
-	VPROF( "CAudioDeviceBase::Mix16Mono" );
+	CVProfScope _( "CAudioDeviceBase::Mix16Mono", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	float volume[CCHANVOLUMES];
 
@@ -1115,13 +1138,13 @@ void Device_Mix16Mono( channel_t *pChannel, short *pData, int outputOffset, int 
 	{		
 		if ( FVolumeRearNonZero(volume) )
 		{
-			Assert( pPaint->pbufrear );
+			contract_assert( pPaint->pbufrear );
 			Mix16MonoWavtype( pChannel, pPaint->pbufrear + outputOffset, &volume[IREAR_LEFT], pData, inputOffset, rateScaleFix, outCount );
 		}
 
 		if ( pPaint->fsurround_center && FVolumeCenterNonZero(volume) )
 		{
-			Assert( pPaint->pbufcenter );
+			contract_assert( pPaint->pbufcenter );
 			Mix16MonoWavtype( pChannel, pPaint->pbufcenter + outputOffset, &volume[IFRONT_CENTER], pData, inputOffset, rateScaleFix, outCount );
 		}
 	}
@@ -1129,7 +1152,7 @@ void Device_Mix16Mono( channel_t *pChannel, short *pData, int outputOffset, int 
 
 void Device_Mix16Stereo( channel_t *pChannel, short *pData, int outputOffset, int inputOffset, fixedint rateScaleFix, int outCount, int timecompress )
 {
-	VPROF( "CAudioDeviceBase::Mix16Stereo" );
+	CVProfScope _( "CAudioDeviceBase::Mix16Stereo", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	float volume[CCHANVOLUMES];
 
@@ -1147,62 +1170,25 @@ void Device_Mix16Stereo( channel_t *pChannel, short *pData, int outputOffset, in
 	{
 		if ( FVolumeRearNonZero(volume) )
 		{
-			Assert( pPaint->pbufrear );
+			contract_assert( pPaint->pbufrear );
 			Mix16StereoWavtype( pChannel, pPaint->pbufrear  + outputOffset, &volume[IREAR_LEFT], pData, inputOffset, rateScaleFix, outCount );
 		}
 
 		if ( pPaint->fsurround_center && FVolumeCenterNonZero(volume) )
 		{
-			Assert( pPaint->pbufcenter );
+			contract_assert( pPaint->pbufcenter );
 			Mix16StereoWavtype( pChannel, pPaint->pbufcenter  + outputOffset, &volume[IFRONT_CENTER], pData, inputOffset, rateScaleFix, outCount );
 		}
 	}
 }
 
-#if USE_AUDIO_DEVICE_V1
-
-// Null Audio Device
-class CAudioDeviceNull : public CAudioDeviceBase
-{
-public:
-	CAudioDeviceNull()
-	{
-		m_pName = "Sound Disabled";
-		m_nChannels = 2;
-		m_nSampleBits = 16;
-		m_nSampleRate = SOUND_DMA_SPEED;
-		m_bIsActive = false;
-	}
-	bool		IsActive( void ) { return false; }
-	bool		Init( void ) { return true; }
-	void		Shutdown( void ) {}
-	void		Pause( void ) {} 
-	void		UnPause( void ) {}
-	
-	int64		PaintBegin( float, int64, int64 ) { return 0; }
-	void		PaintEnd( void ) {}
-
-	int			GetOutputPosition( void ) { return 0; }
-	void		ClearBuffer( void ) {}
-
-	void		TransferSamples( int end ) {}
-	
-	int			DeviceSampleCount( void )	{ return 0; }
-};
-
-IAudioDevice *Audio_GetNullDevice( void )
-{
-	return new CAudioDeviceNull;
-}
-#else
-
 void IAudioDevice2::TransferSamples( uint32 )
 {
 	CAudioMixBuffer mixBuffers[SOUND_DEVICE_MAX_CHANNELS];
 
-	const portable_samplepair_t *pFront = PAINTBUFFER;
-	const portable_samplepair_t *pRear = REARPAINTBUFFER;
-	const portable_samplepair_t *pCenter = CENTERPAINTBUFFER;
+	const portable_samplepair_t *pFront = g_curpaintbuffer;
+	const portable_samplepair_t *pRear = g_currearpaintbuffer;
+	const portable_samplepair_t *pCenter = g_curcenterpaintbuffer;
 
 	float flMasterVolume = S_GetMasterVolume();
 
@@ -1244,4 +1230,3 @@ void IAudioDevice2::TransferSamples( uint32 )
 	}
 	OutputBuffer( ChannelCount(), mixBuffers );
 }
-#endif

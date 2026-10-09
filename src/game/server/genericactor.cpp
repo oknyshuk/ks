@@ -1,14 +1,39 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 //=========================================================
 // Generic NPC - purely for scripted sequence work.
 //=========================================================
-#include "cbase.h"
+import std;
+import ks.vstdlib;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "shareddefs.h"
@@ -16,8 +41,6 @@
 #include "ai_basenpc.h"
 #include "ai_hull.h"
 #include "ai_baseactor.h"
-#include "tier1/strtools.h"
-#include "vstdlib/random.h"
 #include "engine/IEngineSound.h"
 
 ConVar flex_looktime( "flex_looktime", "5" );
@@ -204,7 +227,7 @@ public:
 	virtual void ProcessSceneEvents( void );
 
 	// Don't treat as a live target
-	//virtual bool IsAlive( void ) { return FALSE; }
+	//virtual bool IsAlive( void ) { return false; }
 
 	float m_flextime;
 	LocalFlexController_t m_flexnum;
@@ -306,7 +329,7 @@ void CFlextalkActor::ProcessSceneEvents( void )
 		if (pszExpression && pszExpression[0] == '+' && pszExpression[1] != '\0')
 		{
 			int i;
-			int j = atoi( &pszExpression[1] );
+			int j = std::atoi( &pszExpression[1] );
 			for (i = 0; i < GetNumFlexControllers(); i++)
 			{
 				m_flextarget[m_flexnum] = 0;
@@ -319,12 +342,12 @@ void CFlextalkActor::ProcessSceneEvents( void )
 				// Msg( "%s %.3f\n", predef_flexcontroller_names[i], predef_flexcontroller_values[j][i] );
 			}
 		}
-		else if (pszExpression && pszExpression[0] != '\0' && strcmp(pszExpression, "+") != 0)
+		else if (pszExpression && pszExpression[0] != '\0' && std::strcmp(pszExpression, "+") != 0)
 		{
 			char szExpression[128];
 			char szTemp[32];
 
-			Q_strncpy( szExpression, pszExpression ,sizeof(szExpression));
+			V_strncpy( szExpression, pszExpression ,sizeof(szExpression));
 			char *pszExpression = szExpression;
 
 			while (*pszExpression != '\0')
@@ -359,7 +382,7 @@ void CFlextalkActor::ProcessSceneEvents( void )
 					}
 					else
 					{
-						if (sscanf( pszExpression, "%31s", szTemp ) == 1)
+						if (std::sscanf( pszExpression, "%31s", szTemp ) == 1)
 						{
 							m_flexnum = LookupFlex( szTemp );
 
@@ -368,7 +391,7 @@ void CFlextalkActor::ProcessSceneEvents( void )
 								m_flextarget[m_flexnum] = 1.0;
 								// SetFlexTarget( m_flexnum );
 							}
-							pszExpression += strlen( szTemp ) - 1;
+							pszExpression += std::strlen( szTemp ) - 1;
 						}
 					}
 				}
@@ -386,7 +409,7 @@ void CFlextalkActor::ProcessSceneEvents( void )
 			}
 			else if (stricmp( GetFlexControllerType( m_flexnum ), "phoneme" ) != 0)
 			{
-				if (strstr( GetFlexControllerName( m_flexnum ), "upper_raiser" ) == nullptr)
+				if (std::strstr( GetFlexControllerName( m_flexnum ), "upper_raiser" ) == nullptr)
 				{
 					Msg( "%s:%s\n", GetFlexControllerType( m_flexnum ), GetFlexControllerName( m_flexnum ) );
 					SetFlexTarget( m_flexnum, random->RandomFloat( 0.5, 1.0 ) );
@@ -412,7 +435,7 @@ void CFlextalkActor::ProcessSceneEvents( void )
 			m_istalking = 1;
 
 			char pszSentence[256];
-			Q_snprintf( pszSentence,sizeof(pszSentence), "%s%d", STRING(m_iszSentence), m_sentence++ );
+			V_snprintf( pszSentence,sizeof(pszSentence), "%s%d", STRING(m_iszSentence), m_sentence++ );
 			int sentenceIndex = engine->SentenceIndexFromName( pszSentence );
 			if (sentenceIndex >= 0)
 			{

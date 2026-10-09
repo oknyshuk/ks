@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "quakedef.h"
 #include "dt.h"
 #include "dt_encode.h"
 #include "coordsize.h"
@@ -200,7 +195,7 @@ static inline void DecodeVector(SendProp const *pProp, bf_read *pIn, float *v)
 		float v0v0v1v1 = v[0] * v[0] +
 			v[1] * v[1];
 		if (v0v0v1v1 < 1.0f)
-			v[2] = sqrtf( 1.0f - v0v0v1v1 );
+			v[2] = std::sqrtf( 1.0f - v0v0v1v1 );
 		else
 			v[2] = 0.0f;
 
@@ -289,29 +284,6 @@ void DecodeInfo::CopyVars( const DecodeInfo *pOther )
 
 void Int_Encode( const unsigned char *pStruct, DVariant *pVar, const SendProp *pProp, bf_write *pOut, int objectID )
 {
-#ifdef DBGFLAG_ASSERT
-	// Assert that either the property is unsigned and in valid range,
-	// or signed with a consistant sign extension in the high bits
-	if ( !(pProp->GetFlags() & SPROP_VARINT) )
-	{
-		if ( pProp->m_nBits < 32 )
-		{
-			if ( pProp->GetFlags() & SPROP_UNSIGNED )
-			{
-				int32 nMaskedValue = pVar->m_Int;
-				nMaskedValue &= (1u << pProp->m_nBits) - 1;
-				Assert( nMaskedValue == pVar->m_Int );
-			}
-			else 
-			{
-				int32 nSignExtendedValue = pVar->m_Int;
-				nSignExtendedValue <<= 32 - pProp->m_nBits;
-				nSignExtendedValue >>= 32 - pProp->m_nBits;
-				Assert( nSignExtendedValue == pVar->m_Int );
-			}
-		}
-	}
-#endif
 	if ( pProp->GetFlags() & SPROP_VARINT)
 	{
 		if ( pProp->GetFlags() & SPROP_UNSIGNED )
@@ -895,7 +867,7 @@ int Array_GetLength( const unsigned char *pStruct, const SendProp *pProp, int ob
 		// Make sure it's not too big.
 		if ( nElements > pProp->GetNumElements() )
 		{
-			Assert( false );
+			contract_assert( false );
 			nElements = pProp->GetNumElements();
 		}
 
@@ -911,7 +883,7 @@ int Array_GetLength( const unsigned char *pStruct, const SendProp *pProp, int ob
 void Array_Encode( const unsigned char *pStruct, DVariant *pVar, const SendProp *pProp, bf_write *pOut, int objectID )
 {
 	SendProp *pArrayProp = pProp->GetArrayProp();
-	AssertMsg( pArrayProp, ("Array_Encode: missing m_pArrayProp for SendProp '%s'.", pProp->m_pVarName) );
+	contract_assert( pArrayProp );
 	
 	int nElements = Array_GetLength( pStruct, pProp, objectID );
 
@@ -935,7 +907,7 @@ void Array_Encode( const unsigned char *pStruct, DVariant *pVar, const SendProp 
 void Array_Decode( DecodeInfo *pInfo )
 {
 	SendProp *pArrayProp = pInfo->m_pProp->GetArrayProp();
-	AssertMsg( pArrayProp, ("Array_Decode: missing m_pArrayProp for a property.") );
+	contract_assert( pArrayProp );
 
 	// Setup a DecodeInfo that is used to decode each of the child properties.
 	DecodeInfo subDecodeInfo;
@@ -952,7 +924,7 @@ void Array_Decode( DecodeInfo *pInfo )
 		// Note we get the OFFSET from the array element property and the STRIDE from the array itself.
 		subDecodeInfo.m_pData = (char*)pInfo->m_pData + pArrayRecvProp->GetOffset();
 		elementStride = pInfo->m_pRecvProp->GetElementStride();
-		Assert( elementStride != -1 ); // (Make sure it was set..)
+		contract_assert( elementStride != -1 ); // (Make sure it was set..)
 
 		lengthProxy = pInfo->m_pRecvProp->GetArrayLengthProxy();
 	}
@@ -973,7 +945,7 @@ void Array_Decode( DecodeInfo *pInfo )
 int Array_CompareDeltas( const SendProp *pProp, bf_read *p1, bf_read *p2 )
 {
 	SendProp *pArrayProp = pProp->GetArrayProp();
-	AssertMsg( pArrayProp, ("Array_CompareDeltas: missing m_pArrayProp for SendProp '%s'.", pProp->m_pVarName) );
+	contract_assert( pArrayProp );
 
 	int nLengthBits = pProp->GetNumArrayLengthBits(); 
 	int length1 = p1->ReadUBitLong( nLengthBits );
@@ -1065,7 +1037,7 @@ void Array_DecodeZero( DecodeInfo *pInfo )
 bool Array_IsEncodedZero( const SendProp *pProp, bf_read *pIn )
 {
 	SendProp *pArrayProp = pProp->GetArrayProp();
-	AssertMsg( pArrayProp, ("Array_IsEncodedZero: missing m_pArrayProp for a property.") );
+	contract_assert( pArrayProp );
 
 	int nElements = pIn->ReadUBitLong( pProp->GetNumArrayLengthBits() );
 
@@ -1081,7 +1053,7 @@ bool Array_IsEncodedZero( const SendProp *pProp, bf_read *pIn )
 void Array_SkipProp( const SendProp *pProp, bf_read *pIn )
 {
 	SendProp *pArrayProp = pProp->GetArrayProp();
-	AssertMsg( pArrayProp, ("Array_SkipProp: missing m_pArrayProp for a property.") );
+	contract_assert( pArrayProp );
 
 	int nElements = pIn->ReadUBitLong( pProp->GetNumArrayLengthBits() );
 

@@ -1,15 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "pch_tier0.h"
+import ks.core;
 
-#include "tier0/perfstats.h"
+// First include standard libraries
+import std;
 
-CPerfStatsData g_PerfStats CONSTRUCT_EARLY;
+
+CPerfStatsData g_PerfStats [[gnu::init_priority(101)]];
 
 CPerfStatsData::CPerfStatsData()
 {

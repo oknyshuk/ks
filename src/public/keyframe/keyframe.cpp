@@ -1,22 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <stdio.h>
-#include <math.h>
-#include <string.h>
+import std;
 
 typedef unsigned char byte;
 
-#include "tier0/dbg.h"
-#include "mathlib/vector.h"
+import ks.math;
 #include "keyframe.h"
-#include "mathlib/mathlib.h"
 #include "rope_shared.h"
 
 //-----------------------------------------------------------------------------
@@ -29,10 +19,10 @@ typedef unsigned char byte;
 //-----------------------------------------------------------------------------
 //  Key Frames
 //-----------------------------------------------------------------------------
-#define HIGHEST_KEYFRAME	3
-#define LOWEST_KEYFRAME		-3
+constexpr auto HIGHEST_KEYFRAME = 3;
+constexpr auto LOWEST_KEYFRAME = -3;
 
-#define TOTAL_KEYFRAMES		(HIGHEST_KEYFRAME - LOWEST_KEYFRAME + 1)
+constexpr auto TOTAL_KEYFRAMES = (HIGHEST_KEYFRAME - LOWEST_KEYFRAME + 1);
 
 //
 
@@ -79,7 +69,7 @@ float TimeModifierFunc_Linear( float time )
 
 float TimeModifierFunc_Cosine( float time )
 {
-	return ( cos((time+1) * M_PI) * 0.5 ) + 0.5;
+	return ( std::cos((time+1) * std::numbers::pi) * 0.5 ) + 0.5;
 }
 
 float TimeModifierFunc_TimeSquared( float time )
@@ -96,7 +86,7 @@ TimeModifier_t g_TimeModifiers[] =
 
 int Motion_GetNumberOfTimeModifiers( void )
 {
-	return ARRAYSIZE(g_TimeModifiers);
+	return std::size( g_TimeModifiers );
 }
 
 bool Motion_GetTimeModifierDetails( int timeInterpNum, char **outName )
@@ -175,7 +165,7 @@ void CPositionInterpolator_Linear::GetDetails( char **outName, int *outMinKeyReq
 
 void CPositionInterpolator_Linear::SetKeyPosition( int keyNum, Vector const &vPos )
 {
-	Assert ( keyNum <= HIGHEST_KEYFRAME && keyNum >= LOWEST_KEYFRAME );
+	contract_assert( keyNum <= HIGHEST_KEYFRAME && keyNum >= LOWEST_KEYFRAME );
 	VectorCopy( vPos, g_KeyFramePtr[keyNum].vPos );
 }
 
@@ -222,7 +212,7 @@ void CPositionInterpolator_CatmullRom::GetDetails( char **outName, int *outMinKe
 
 void CPositionInterpolator_CatmullRom::SetKeyPosition( int keyNum, Vector const &vPos )
 {
-	Assert ( keyNum <= HIGHEST_KEYFRAME && keyNum >= LOWEST_KEYFRAME );
+	contract_assert( keyNum <= HIGHEST_KEYFRAME && keyNum >= LOWEST_KEYFRAME );
 	VectorCopy( vPos, g_KeyFramePtr[keyNum].vPos );
 }
 
@@ -369,13 +359,13 @@ bool CPositionInterpolator_Rope::ProcessKey( char const *pName, char const *pVal
 {
 	if( stricmp( pName, "Slack" ) == 0 )
 	{
-		m_flSlack = atof( pValue ) + ROPESLACK_FUDGEFACTOR;
+		m_flSlack = std::atof( pValue ) + ROPESLACK_FUDGEFACTOR;
 		m_bChange = true;
 		return true;
 	}
 	else if( stricmp( pName, "Type" ) == 0 )
 	{
-		int iType = atoi( pValue );
+		int iType = std::atoi( pValue );
 		if( iType == 0 )
 			m_nSegments = ROPE_MAX_SEGMENTS;
 		else if( iType == 1 )
@@ -406,13 +396,13 @@ PositionInterpolatorCreateFn g_PositionInterpolatorCreateFns[] =
 
 int Motion_GetNumberOfPositionInterpolators( void )
 {
-	return ARRAYSIZE(g_PositionInterpolatorCreateFns);
+	return std::size( g_PositionInterpolatorCreateFns );
 }
 
 
 IPositionInterpolator* Motion_GetPositionInterpolator( int interpNum )
 {
-	Assert( interpNum >= 0 && interpNum < Motion_GetNumberOfPositionInterpolators() );
+	contract_assert( interpNum >= 0 && interpNum < Motion_GetNumberOfPositionInterpolators() );
 	return g_PositionInterpolatorCreateFns[clamp( interpNum, 0, Motion_GetNumberOfPositionInterpolators() - 1 )]();
 }
 
@@ -450,7 +440,7 @@ RotationInterpolator_t g_RotationInterpolators[] =
 
 int Motion_GetNumberOfRotationInterpolators( void )
 {
-	return ARRAYSIZE(g_RotationInterpolators);
+	return std::size( g_RotationInterpolators );
 }
 
 bool Motion_GetRotationInterpolatorDetails( int rotInterpNum, char **outName, int *outMinKeyReq, int *outMaxKeyReq )

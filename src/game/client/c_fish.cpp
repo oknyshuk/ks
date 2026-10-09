@@ -1,18 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // c_fish.cpp
 // Simple fish client-side logic
 // Author: Michael S. Booth, April 2005
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
-#include <bitbuf.h>
 #include "engine/ivdebugoverlay.h"
 
 extern float UTIL_WaterLevel( const Vector &position, float minz, float maxz );
@@ -199,7 +202,7 @@ void C_Fish::ClientThink()
 			// bob on surface
 			const float rollAmp = 5.0f;
 			const float rollFreq = 2.33f;
-			m_angles.z += rollAmp * sin( rollFreq * (gpGlobals->curtime + 10.0f * entindex()) ) * deltaT;
+			m_angles.z += rollAmp * std::sin( rollFreq * (gpGlobals->curtime + 10.0f * entindex()) ) * deltaT;
 
 			const float rollAmp2 = 7.0f;
 			const float rollFreq2 = 4.0f;
@@ -233,7 +236,7 @@ void C_Fish::ClientThink()
 			{
 				float swimPower = 1.0f - (m_wiggleTimer.GetElapsedTime() / m_wiggleTimer.GetCountdownDuration());
 				const float amp = 6.0f * swimPower;
-				float wiggle = amp * sin( m_wigglePhase );
+				float wiggle = amp * std::sin( m_wigglePhase );
 
 				m_wigglePhase += m_wiggleRate * deltaT;
 
@@ -344,4 +347,3 @@ void C_Fish::OnDataChanged( DataUpdateType_t type )
 		return;
 	}
 }
-

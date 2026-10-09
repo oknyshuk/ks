@@ -1,13 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <ssemath.h>
-#include <lightdesc.h>
-#include "mathlib.h"
-
+import ks.math;
+import std;
 
 void LightDesc_t::RecalculateOneOverThetaDotMinusPhiDot()
 {
@@ -43,8 +38,8 @@ void LightDesc_t::RecalculateDerivedValues(void)
 	
 	if ( m_Type == MATERIAL_LIGHT_SPOT )
 	{
-		m_ThetaDot = cos( m_Theta );
-		m_PhiDot = cos( m_Phi );
+		m_ThetaDot = std::cos( m_Theta );
+		m_PhiDot = std::cos( m_Phi );
 		RecalculateOneOverThetaDotMinusPhiDot();
 	}	
 	if ( m_Type == MATERIAL_LIGHT_DIRECTIONAL )
@@ -94,13 +89,6 @@ float LightDesc_t::DistanceAtWhichBrightnessIsLessThan( float flAmount ) const
 		if ( SolveQuadratic( a, b, c, r0, r1 ) )
 		{
 			float rslt = std::max( 0.0f, std::max( r0, r1 ) );
-#ifdef _DEBUG
-			if ( rslt > 0.0 )
-			{
-				float fltest = 1.0 / ( m_Attenuation0 + rslt * m_Attenuation1 + rslt * rslt * m_Attenuation2 );
-				Assert( fabs( fltest - flAmount ) < 0.1 );
-			}
-#endif
 			return rslt;
 		}
 	}
@@ -111,7 +99,7 @@ void LightDesc_t::ComputeLightAtPoints( const FourVectors &pos, const FourVector
 										FourVectors &color, bool DoHalfLambert ) const
 {
 	FourVectors delta;
-	Assert((m_Type==MATERIAL_LIGHT_POINT) || (m_Type==MATERIAL_LIGHT_SPOT) || (m_Type==MATERIAL_LIGHT_DIRECTIONAL));
+	contract_assert( (m_Type==MATERIAL_LIGHT_POINT) || (m_Type==MATERIAL_LIGHT_SPOT) || (m_Type==MATERIAL_LIGHT_DIRECTIONAL) );
 	switch (m_Type)
 	{
 		case MATERIAL_LIGHT_POINT:
@@ -208,7 +196,7 @@ void LightDesc_t::ComputeLightAtPoints( const FourVectors &pos, const FourVector
 void LightDesc_t::ComputeNonincidenceLightAtPoints( const FourVectors &pos, FourVectors &color ) const
 {
 	FourVectors delta;
-	Assert((m_Type==MATERIAL_LIGHT_POINT) || (m_Type==MATERIAL_LIGHT_SPOT) || (m_Type==MATERIAL_LIGHT_DIRECTIONAL));
+	contract_assert( (m_Type==MATERIAL_LIGHT_POINT) || (m_Type==MATERIAL_LIGHT_SPOT) || (m_Type==MATERIAL_LIGHT_DIRECTIONAL) );
 	switch (m_Type)
 	{
 		case MATERIAL_LIGHT_POINT:
@@ -349,4 +337,3 @@ void LightDesc_t::SetupNewStyleAttenuation( float fFiftyPercentDistance,
 	m_Attenuation1=b;
 	m_Attenuation0=c;
 }
-

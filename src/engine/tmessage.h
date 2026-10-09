@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#ifndef TMESSAGE_H
-#define TMESSAGE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "client_textmessage.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,8 +17,6 @@ extern "C" {
 #define NETWORK_MESSAGE6 "__NETMESSAGE__6"
 
 #define MAX_NETMESSAGE	6
-
-#include "client_textmessage.h"
 
 extern client_textmessage_t	*gMessageTable;
 extern int					gMessageTableCount;
@@ -43,5 +36,3 @@ void TextMessage_DemoMessageFull( const char *pszMessage, client_textmessage_t c
 #ifdef __cplusplus
 }
 #endif // __cplusplus
-
-#endif		//TMESSAGE_H

@@ -1,16 +1,16 @@
+#pragma once
 // Inferno.h
 // An Inferno
 // Author: Michael S. Booth, February 2005
 // Copyright (c) 2005 Turtle Rock Studios, Inc. - All Rights Reserved
 
-#ifndef _INFERNO_H_
-#define _INFERNO_H_
 
 #include "reflect_annotations.h"
 #include "coordsize.h"
 
 #include "nav.h"			// for extent class - should be moved somewhere more general
 #include "GameEventListener.h"
+#include "cs_weapon_parse.h"
 
 // Forward declaration
 class CBasePlayer;
@@ -164,4 +164,3 @@ public:
 };
 
 
-#endif // _INFERNO_H_

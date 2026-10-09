@@ -1,6 +1,7 @@
 // svd.cpp : Defines the entry point for the console application.
 //
-#include "svd.h"
+import std;
+import ks.math;
 
 namespace SVD
 {
@@ -29,7 +30,7 @@ namespace SVD
 
 				// Msg( "\t%g", logf( flRec ) / logf( 10 ) );
 				// Msg( "\t%g", logf( flOrtho ) / logf( 10 ) );
-				Msg( "\t%g", logf( flOffDiagError ) / logf( 10 ) );
+				Msg( "\t%g", std::logf( flOffDiagError ) / std::logf( 10 ) );
 
 				test.Iterate( 1 );
 			}

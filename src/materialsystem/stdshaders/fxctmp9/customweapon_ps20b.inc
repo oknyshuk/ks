@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $PAINTSTYLE == 0 )
 // ( ( $CHEAPMODE == 1 ) && !( ( $PAINTSTYLE == 3 ) || ( $PAINTSTYLE == 6 ) ) )
@@ -31,7 +32,7 @@ private:
 public:
 	void SetPAINTSTYLE( int i )
 	{
-		Assert( i >= 0 && i <= 9 );
+		contract_assert( i >= 0 && i <= 9 );
 		m_nPAINTSTYLE = i;
 #ifdef _DEBUG
 		m_bPAINTSTYLE = true;
@@ -39,7 +40,7 @@ public:
 	}
 	void SetPAINTSTYLE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 9 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 9 );
 		m_nPAINTSTYLE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPAINTSTYLE = true;
@@ -53,7 +54,7 @@ private:
 public:
 	void SetEXPONENTMODE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nEXPONENTMODE = i;
 #ifdef _DEBUG
 		m_bEXPONENTMODE = true;
@@ -61,7 +62,7 @@ public:
 	}
 	void SetEXPONENTMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nEXPONENTMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bEXPONENTMODE = true;
@@ -75,7 +76,7 @@ private:
 public:
 	void SetCHEAPMODE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCHEAPMODE = i;
 #ifdef _DEBUG
 		m_bCHEAPMODE = true;
@@ -83,7 +84,7 @@ public:
 	}
 	void SetCHEAPMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCHEAPMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCHEAPMODE = true;
@@ -97,7 +98,7 @@ private:
 public:
 	void SetPHONGALBEDOFACTORMODE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPHONGALBEDOFACTORMODE = i;
 #ifdef _DEBUG
 		m_bPHONGALBEDOFACTORMODE = true;
@@ -105,7 +106,7 @@ public:
 	}
 	void SetPHONGALBEDOFACTORMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPHONGALBEDOFACTORMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPHONGALBEDOFACTORMODE = true;
@@ -138,7 +139,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bPAINTSTYLE && m_bEXPONENTMODE && m_bCHEAPMODE && m_bPHONGALBEDOFACTORMODE;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nPAINTSTYLE ) + ( 10 * m_nEXPONENTMODE ) + ( 20 * m_nCHEAPMODE ) + ( 40 * m_nPHONGALBEDOFACTORMODE ) + 0;
 	}
@@ -160,7 +161,7 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_customweapon_ps20b 0
+inline constexpr int shaderDynamicTest_customweapon_ps20b = 0;
 
 static const ShaderComboInformation_t s_StaticComboArray_customweapon_ps20b[4] = 
 {
@@ -171,7 +172,7 @@ static const ShaderComboInformation_t s_StaticComboArray_customweapon_ps20b[4] =
 };
 static const ShaderComboSemantics_t customweapon_ps20b_combos =
 {
-	"customweapon_ps20b", NULL, 0, s_StaticComboArray_customweapon_ps20b, 4 
+	"customweapon_ps20b", nullptr, 0, s_StaticComboArray_customweapon_ps20b, 4 
 };
 
 class ConstructMe_customweapon_ps20b

@@ -1,10 +1,13 @@
-//====== Copyright  Valve Corporation, All rights reserved. =================
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "cs_custom_texture_saver.h"
 
 bool CCSCustomTextureSaver::Init()
@@ -82,5 +85,3 @@ void CCSCustomTextureSaver::Update( float frameTime )
 		// TODO: add saved files to perforce
 	}
 }
-
-

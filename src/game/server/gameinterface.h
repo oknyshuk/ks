@@ -1,18 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved.
-//============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Expose things from GameInterface.cpp. Mostly the engine interfaces.
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef GAMEINTERFACE_H
-#define GAMEINTERFACE_H
-
 
 #include "mapentities.h"
-
-#include "steam/steam_gameserver.h"
+#include "eiface.h"
+#include "networkstringtabledefs.h"
+#include "baseentity.h"
+class CBasePlayer;
 
 namespace ks::net { struct CEngineGotvSyncPacket; }
 
@@ -44,7 +40,7 @@ public:
   virtual void ClientEarPosition(edict_t *pEntity, Vector *pEarOrigin);
   virtual bool
   ClientReplayEvent(edict_t *pEdict,
-                    const ClientReplayEventParams_t &params) OVERRIDE;
+                    const ClientReplayEventParams_t &params) override;
 
   virtual void GetPlayerLimits(int &minplayers, int &maxplayers,
                                int &defaultMaxPlayers) const;
@@ -61,7 +57,7 @@ public:
 
   virtual void NetworkIDValidated(const char *pszUserName,
                                   const char *pszNetworkID,
-                                  CSteamID steamID) OVERRIDE;
+                                  CPlayerId playerUID) override;
   virtual int GetMaxSplitscreenPlayers();
   virtual int GetMaxHumanPlayers();
 
@@ -70,11 +66,11 @@ public:
 
   // Server override for supplied client name
   virtual const char *ClientNameHandler(uint64 xuid,
-                                        const char *pchName) OVERRIDE;
+                                        const char *pchName) override;
 
   virtual void ClientSvcUserMessage(edict_t *pEntity, int nType,
                                     int nPassthrough, uint32 cbSize,
-                                    const void *pvBuffer) OVERRIDE;
+                                    const void *pvBuffer) override;
 };
 
 class CServerGameDLL : public IServerGameDLL {
@@ -131,11 +127,9 @@ public:
   // Called to apply lobby settings to a dedicated server
   virtual void ApplyGameSettings(KeyValues *pKV);
 
-  virtual void GetMatchmakingTags(char *buf, size_t bufSize);
+  virtual void GetMatchmakingTags(char *buf, std::size_t bufSize);
 
   virtual void ServerHibernationUpdate(bool bHibernating);
-
-  virtual bool ShouldPreferSteamAuth();
 
   virtual bool ShouldAllowDirectConnect(void);
   virtual bool FriendsReqdForDirectConnect(void);
@@ -146,39 +140,20 @@ public:
   // Builds extended server info for new connecting client
   virtual KeyValues *GetExtendedServerInfoForNewClient();
 
-  virtual void UpdateGCInformation();
-
   // Marks the queue matchmaking game as starting
   virtual void ReportGCQueuedMatchStart(int32 iReservationStage,
                                         uint32 *puiConfirmedAccounts,
                                         int numConfirmedAccounts);
 
-  // Given a path to a map (relative to the game dir) returns a publish file id
-  // if its a UGC file known by the server, or 0 otherwise.
-  virtual PublishedFileId_t GetUGCMapFileID(const char *szMapPath);
-
-  // Query steam for the latest file info, download new version if needed.
-  virtual bool GetNewestSubscribedFiles(void);
-
-  // Same as above but for a single ugc map
-  virtual void UpdateUGCMap(PublishedFileId_t id);
-
-  // Returns true if we are currently downloading a new version of the map, or
-  // if there is a query pending to check for a newer version.
-  virtual bool HasPendingMapDownloads(void) const;
-
   // Precaches particle systems defined in the specific file
   virtual void PrecacheParticleSystemFile(const char *pParticleSystemFile);
 
-  // Matchmaking game data buffer to set into SteamGameServer()->SetGameData
-  virtual void GetMatchmakingGameData(char *buf, size_t bufSize);
+  // Matchmaking game data buffer
+  virtual void GetMatchmakingGameData(char *buf, std::size_t bufSize);
 
   float m_fAutoSaveDangerousTime;
   float m_fAutoSaveDangerousMinHealthToCommit;
   bool m_bIsHibernating;
-
-  // Called after the steam API has been activated post-level startup
-  virtual void GameServerSteamAPIActivated(bool bActive);
 
   // Returns which encryption key to use for messages to be encrypted for TV
   virtual EncryptedMessageKeyType_t
@@ -202,26 +177,22 @@ public:
   virtual char const *ClientConnectionValidatePreNetChan(bool bGameServer,
                                                          char const *adr,
                                                          int nAuthProtocol,
-                                                         uint64 ullSteamID);
+                                                         uint64 ullPlayerID);
 
   // validate if player is a caster and add them to the active caster list
-  virtual bool ValidateAndAddActiveCaster(const CSteamID &steamID);
+  virtual bool ValidateAndAddActiveCaster(const CPlayerId &playerUID);
 
   // Network channel notification from engine to game server code
   virtual void OnEngineClientNetworkEvent(edict_t *edictClient,
-                                          uint64 ullSteamID, int nEventType,
-                                          void *pvParam) OVERRIDE;
+                                          uint64 ullPlayerID, int nEventType,
+                                          void *pvParam) override;
 
   virtual void EngineGotvSyncPacket(const ks::net::CEngineGotvSyncPacket *pPkt);
 
   // GOTV client attempt redirect over SDR
   virtual bool OnEngineClientProxiedRedirect(uint64 ullClient,
                                              const char *adrProxiedRedirect,
-                                             const char *adrRegular) OVERRIDE;
-
-  // Tell server about a line we will write to the log file which may be sent to
-  // remote listeners
-  bool LogForHTTPListeners(const char *szLogLine) OVERRIDE;
+                                             const char *adrRegular) override;
 
 private:
   // This can just be a wrapper on MapEntity_ParseAllEntities, but CS does some
@@ -286,34 +257,5 @@ class CServerGameTags : public IServerGameTags {
 public:
   virtual void GetTaggedConVarList(KeyValues *pCvarTagList);
 };
-EXPOSE_SINGLE_INTERFACE(CServerGameTags, IServerGameTags,
-                        INTERFACEVERSION_SERVERGAMETAGS);
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-class CSteam3Server : public CSteamGameServerAPIContext {
-public:
-  CSteam3Server();
-
-  void Shutdown(void) {
-    Clear();
-    m_bInitialized = false;
-  }
-
-  bool CheckInitialized(void) {
-    if (!m_bInitialized) {
-      Init();
-      m_bInitialized = true;
-      return true;
-    }
-
-    return false;
-  }
-
-private:
-  bool m_bInitialized;
-};
-CSteam3Server &Steam3Server();
-
-#endif // GAMEINTERFACE_H
+static CServerGameTags s_Singleton_CServerGameTags;
+static InterfaceReg s_Reg_CServerGameTags_IServerGameTags( []() -> void * { return static_cast<IServerGameTags *>( &s_Singleton_CServerGameTags ); }, INTERFACEVERSION_SERVERGAMETAGS );;

@@ -1,15 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "mathlib/ssemath.h"
-#include "mathlib/ssequaternion.h"
+import std;
+import ks.math;
 
 // get the kdop vectors for k=32
 #include "dopvectors.h"
-
 
 void KDop32_t::AddPointSet( Vector const *pPoints, int nPnts )
 {

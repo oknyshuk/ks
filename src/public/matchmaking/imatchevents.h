@@ -1,14 +1,10 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef IMATCHEVENTS_H
-#define IMATCHEVENTS_H
+import ks.tier1;
 
-
-abstract_class IMatchEventsSink
+class IMatchEventsSink
 {
 public:
 	virtual void OnEvent( KeyValues *pEvent ) {}
@@ -206,7 +202,7 @@ public:
 
 };
 
-abstract_class IMatchEventsSubscription
+class IMatchEventsSubscription
 {
 public:
 	virtual void Subscribe( IMatchEventsSink *pSink ) = 0;
@@ -250,7 +246,3 @@ public:
 private:
 	PFnDerivedHandler_t m_pfnDerived;
 };
-
-
-#endif // IMATCHEVENTS_H
-

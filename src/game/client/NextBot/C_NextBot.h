@@ -1,14 +1,14 @@
+#pragma once
 // C_NextBot.h
 // Next generation bot system
 // Author: Michael Booth, April 2005
 // Copyright (c) 2005 Turtle Rock Studios, Inc. - All Rights Reserved
 
-#ifndef _C_NEXT_BOT_H_
-#define _C_NEXT_BOT_H_
 
 #include "reflect_annotations.h"
 
 #include "c_ai_basenpc.h"
+#include "util_shared.h"
 
 //----------------------------------------------------------------------------------------------------------------
 /**
@@ -51,7 +51,7 @@ public:
 	bool GetForcedShadowCastType( ShadowType_t* pForcedShadowType ) const;
 
 	// Local In View Data.
-	void InitFrustumData( void )						{ m_bInFrustum = false; m_flFrustumDistanceSqr = FLT_MAX; m_nInFrustumFrame = gpGlobals->framecount; }
+	void InitFrustumData( void )						{ m_bInFrustum = false; m_flFrustumDistanceSqr = std::numeric_limits<float>::max(); m_nInFrustumFrame = gpGlobals->framecount; }
 	bool IsInFrustumValid( void )						{ return ( m_nInFrustumFrame == gpGlobals->framecount ); }
 	void SetInFrustum( bool bInFrustum )				{ m_bInFrustum = bInFrustum; }
 	bool IsInFrustum( void )							{ return m_bInFrustum; }
@@ -134,4 +134,3 @@ private:
 extern C_NextBotManager &TheClientNextBots( void );
 
 
-#endif // _C_NEXT_BOT_H_

@@ -1,21 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		A registry of strings and associated ints
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+// Purpose: A registry of strings and associated ints
 
-#include <stdio.h>
-#include <string.h>
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+#elif defined(GAME_DLL)
+#endif
 #include "stringregistry.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Add null terminated string to the string registry 

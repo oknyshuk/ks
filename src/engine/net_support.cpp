@@ -1,14 +1,7 @@
-//====== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. =======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/stat.h>
+import std;
 
 #include "net_support.h"
 
@@ -32,8 +25,7 @@ CNetSupportImpl::~CNetSupportImpl()
 }
 
 static CNetSupportImpl g_NetSupport;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CNetSupportImpl, INetSupport,
-								   INETSUPPORT_VERSION_STRING, g_NetSupport );
+static InterfaceReg s_Reg_CNetSupportImpl_INetSupport( []() -> void * { return static_cast<INetSupport *>( &g_NetSupport ); }, INETSUPPORT_VERSION_STRING );;
 
 //
 // IAppSystem implementation
@@ -69,7 +61,7 @@ static void * InternalFactory( const char *pName, int *pReturnCode )
 
 bool CNetSupportImpl::Connect( CreateInterfaceFn factory )
 {
-	Assert( !s_pfnDelegateFactory );
+	contract_assert( !s_pfnDelegateFactory );
 
 	s_pfnDelegateFactory = factory;
 
@@ -90,7 +82,7 @@ void CNetSupportImpl::Disconnect()
 
 void * CNetSupportImpl::QueryInterface( const char *pInterfaceName )
 {
-	if ( !Q_stricmp( pInterfaceName, INETSUPPORT_VERSION_STRING ) )
+	if ( !V_stricmp( pInterfaceName, INETSUPPORT_VERSION_STRING ) )
 		return static_cast< INetSupport * >( this );
 
 	return nullptr;
@@ -119,10 +111,9 @@ void CNetSupportImpl::GetServerInfo( ServerInfo_t *pServerInfo )
 {
 	if ( !pServerInfo )
 		return;
-	memset( pServerInfo, 0, sizeof( *pServerInfo ) );
+	std::memset( pServerInfo, 0, sizeof( *pServerInfo ) );
 
 	extern netadr_t net_local_adr;
-	extern ConVar sv_steamgroup_exclusive;
 
 	pServerInfo->m_netAdr = net_local_adr;
 	static bool s_bHideHostIP = !!CommandLine()->FindParm( "-hidehostip" );
@@ -147,7 +138,7 @@ void CNetSupportImpl::GetServerInfo( ServerInfo_t *pServerInfo )
 	pServerInfo->m_bActive = sv.IsActive() || sv.IsLoading();
 	pServerInfo->m_bDedicated = sv.IsDedicated();
 	pServerInfo->m_bLobbyExclusive = sv.IsExclusiveToLobbyConnections();
-	pServerInfo->m_bGroupExclusive = sv_steamgroup_exclusive.GetBool() || sv.GetPassword();
+	pServerInfo->m_bGroupExclusive = sv.GetPassword() != nullptr;
 	pServerInfo->m_bInMainMenuBkgnd = sv.IsLevelMainMenuBackground();
 
 	pServerInfo->m_szServerName = sv.GetName();
@@ -163,7 +154,7 @@ void CNetSupportImpl::GetClientInfo( ClientInfo_t *pClientInfo )
 #ifndef DEDICATED
 	if ( !pClientInfo )
 		return;
-	memset( pClientInfo, 0, sizeof( *pClientInfo ) );
+	std::memset( pClientInfo, 0, sizeof( *pClientInfo ) );
 
 #ifndef DEDICATED
 	CClientState &rcs = GetBaseLocalClient();
@@ -197,7 +188,6 @@ void CNetSupportImpl::UpdateClientReservation( uint64 uiReservation, uint64 uiMa
 {
 #ifndef DEDICATED
 	GetBaseLocalClient().SetServerReservationCookie( uiReservation );
-	GetBaseLocalClient().m_ListenServerSteamID = uiMachineIdHost;
 #endif
 }
 
@@ -218,7 +208,7 @@ void CNetSupportImpl::ReserveServer(
 		nServerReservationCookie, pKVGameSettings,
 		pCallback, ppAsyncOperation );
 #else
-	Assert( 0 );
+	contract_assert( 0 );
 #endif
 }
 
@@ -230,7 +220,7 @@ bool CNetSupportImpl::CheckServerReservation(
 	return GetBaseLocalClient().CheckServerReservation( netAdrPublic, 
 		nServerReservationCookie, uiReservationStage, pCallback, ppAsyncOperation );
 #else
-	Assert( 0 );
+	contract_assert( 0 );
 	return false;
 #endif
 }
@@ -241,7 +231,7 @@ bool CNetSupportImpl::ServerPing( const ns_address &netAdrPublic,
 #ifndef DEDICATED
 	return GetBaseLocalClient().ServerPing( netAdrPublic, pCallback, ppAsyncOperation );
 #else
-	Assert( 0 );
+	contract_assert( 0 );
 	return false;
 #endif
 }
@@ -275,8 +265,3 @@ int CNetSupportImpl::SendPacket (
 	return NET_SendPacket( chan, sock, inetAddr, ( const unsigned char * ) data, length, pVoicePayload, bUseCompression );
 }
 
-ISteamNetworkingUtils *CNetSupportImpl::GetSteamNetworkingUtils()
-{
-	Assert( false ); // why are we asking?
-	return nullptr;
-}

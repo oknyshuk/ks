@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef GL_DRAWLIGHTS_H
-#define GL_DRAWLIGHTS_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Should we draw light sprites over visible lights?
+#include "bspfile.h"
+
 bool ActivateLightSprites( bool bActive );
 
 // Draws sprites over all visible lights
@@ -21,5 +14,3 @@ void DrawLightSprites( void );
 void DrawLightDebuggingInfo( void );
 
 float ComputeLightRadius( dworldlight_t *pLight, bool bIsHDR );
-
-#endif // GL_DRAWLIGHTS_H

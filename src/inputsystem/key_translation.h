@@ -1,11 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef KEY_TRANSLATION_H
-#define KEY_TRANSLATION_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "inputsystem/ButtonCode.h"
 #include "inputsystem/AnalogCode.h"
@@ -25,12 +20,8 @@ int ButtonCode_ButtonCodeToVirtualKey( ButtonCode_t code );
 
 ButtonCode_t ButtonCode_XKeyToButtonCode( int nPort, int keyCode );
 
-ButtonCode_t ButtonCode_SKeyToButtonCode( int nPort, int keyCode );
-
 // Convert back + forth between ButtonCode/AnalogCode + strings
 const char *ButtonCode_ButtonCodeToString( ButtonCode_t code, bool bXController );
 const char *AnalogCode_AnalogCodeToString( AnalogCode_t code );
 ButtonCode_t ButtonCode_StringToButtonCode( const char *pString, bool bXController );
 AnalogCode_t AnalogCode_StringToAnalogCode( const char *pString );
-
-#endif // KEY_TRANSLATION_H

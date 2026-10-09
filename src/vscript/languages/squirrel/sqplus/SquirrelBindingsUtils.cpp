@@ -53,7 +53,7 @@ BOOL CreateStaticNamespace(HSQUIRRELVM v,ScriptNamespaceDecl *sn)
 	sq_createslot(v,-3);
 	sq_pop(v,1);
 	
-	return TRUE;
+	return true;
 }
 
 BOOL CreateClass(HSQUIRRELVM v,SquirrelClassDecl *cd)
@@ -66,12 +66,12 @@ BOOL CreateClass(HSQUIRRELVM v,SquirrelClassDecl *cd)
 		sq_pushstring(v,cd->base,-1);
 		if(SQ_FAILED(sq_get(v,-3))) { // Make sure the base exists if specified by cd->base name.
 			sq_settop(v,oldtop);
-			return FALSE;
+			return false;
 		}
 	}
 	if(SQ_FAILED(sq_newclass(v,cd->base?1:0))) { // Will inherit from base class on stack from sq_get() above.
 		sq_settop(v,oldtop);
-		return FALSE;
+		return false;
 	}
 //  sq_settypetag(v,-1,(unsigned int)cd);
 	sq_settypetag(v,-1,reinterpret_cast<SQUserPointer>(cd));
@@ -90,7 +90,7 @@ BOOL CreateClass(HSQUIRRELVM v,SquirrelClassDecl *cd)
   } // if
 	sq_createslot(v,-3);
 	sq_pop(v,1);
-	return TRUE;
+	return true;
 }
 
 BOOL CreateNativeClassInstance(HSQUIRRELVM v,const SQChar *classname,SQUserPointer ud,SQRELEASEHOOK hook)
@@ -100,19 +100,19 @@ BOOL CreateNativeClassInstance(HSQUIRRELVM v,const SQChar *classname,SQUserPoint
 	sq_pushstring(v,classname,-1);
 	if(SQ_FAILED(sq_rawget(v,-2))){ // Get the class (created with sq_newclass()).
 		sq_settop(v,oldtop);
-		return FALSE;
+		return false;
 	}
 	//sq_pushroottable(v);
 	if(SQ_FAILED(sq_createinstance(v,-1))) {
 		sq_settop(v,oldtop);
-		return FALSE;
+		return false;
 	}
 	sq_remove(v,-3); //removes the root table
 	sq_remove(v,-2); //removes the class
 	if(SQ_FAILED(sq_setinstanceup(v,-1,ud))) {
 		sq_settop(v,oldtop);
-		return FALSE;
+		return false;
 	}
 	sq_setreleasehook(v,-1,hook);
-	return TRUE;
+	return true;
 }

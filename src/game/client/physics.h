@@ -1,15 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: insulates client DLL from dependencies on vphysics
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef PHYSICS_H
-#define PHYSICS_H
-
-
-#include "interface.h"
+import std;
+import ks.tier1;
 #include "physics_shared.h"
 
 struct objectparams_t;
@@ -26,5 +22,3 @@ extern void VPhysicsShadowDataChanged( bool bCreate, C_BaseEntity *pEntity );
 void PhysAddShadow( C_BaseEntity *pEntity );
 void PhysRemoveShadow( C_BaseEntity *pEntity );
 void PhysSetPredictionCommandNum( int iCommandNum );
-
-#endif // PHYSICS_H

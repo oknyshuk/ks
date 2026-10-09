@@ -1,20 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef DECAL_PRIVATE_H
-#define DECAL_PRIVATE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "gl_model_private.h"
 #include "idispinfo.h"
 
-#define DECAL_NORMAL 0x00  // Default
-#define DECAL_CUSTOM 0x01  // Clan logo, etc.
+inline constexpr auto DECAL_NORMAL = 0x00; // Default
+inline constexpr auto DECAL_CUSTOM = 0x01; // Clan logo, etc.
 
 // JAY: Compress this as much as possible
 // decal instance
@@ -57,20 +49,20 @@ struct decal_t
 
 
 #define FDECAL_PERMANENT			0x01		// This decal should not be removed in favor of any new decals
-#define FDECAL_REFERENCE			0x02		// This is a decal that's been moved from another level
-#define FDECAL_CUSTOM               0x04        // This is a custom clan logo and should not be saved/restored
-#define FDECAL_HFLIP				0x08		// Flip horizontal (U/S) axis
-#define FDECAL_VFLIP				0x10		// Flip vertical (V/T) axis
+inline constexpr auto FDECAL_REFERENCE = 0x02; // This is a decal that's been moved from another level
+inline constexpr auto FDECAL_CUSTOM = 0x04; // This is a custom clan logo and should not be saved/restored
+inline constexpr auto FDECAL_HFLIP = 0x08; // Flip horizontal (U/S) axis
+inline constexpr auto FDECAL_VFLIP = 0x10; // Flip vertical (V/T) axis
 
 // NOTE: There are used by footprints; maybe we separate into a separate struct?
-#define FDECAL_USESAXIS				0x80		// Uses the s axis field to determine orientation
-#define FDECAL_DYNAMIC				0x100		// Indicates the decal is dynamic
-#define FDECAL_SECONDPASS			0x200		// Decals that have to be drawn after everything else
-#define FDECAL_DONTSAVE				0x800		// Decal was loaded from adjacent level, don't save out to save file for this level
-#define FDECAL_PLAYERSPRAY			0x1000		// Decal is a player spray
-#define FDECAL_DISTANCESCALE		0x2000		// Decal is dynamically scaled based on distance.
-#define FDECAL_HASUPDATED			0x4000		// Decal has not been updated this frame yet
-#define FDECAL_IMMEDIATECLEANUP		0x8000		// Decal should be drawn for a single frame only, then cleaned up.
+inline constexpr auto FDECAL_USESAXIS = 0x80; // Uses the s axis field to determine orientation
+inline constexpr auto FDECAL_DYNAMIC = 0x100; // Indicates the decal is dynamic
+inline constexpr auto FDECAL_SECONDPASS = 0x200; // Decals that have to be drawn after everything else
+inline constexpr auto FDECAL_DONTSAVE = 0x800; // Decal was loaded from adjacent level, don't save out to save file for this level
+inline constexpr auto FDECAL_PLAYERSPRAY = 0x1000; // Decal is a player spray
+inline constexpr auto FDECAL_DISTANCESCALE = 0x2000; // Decal is dynamically scaled based on distance.
+inline constexpr auto FDECAL_HASUPDATED = 0x4000; // Decal has not been updated this frame yet
+inline constexpr auto FDECAL_IMMEDIATECLEANUP = 0x8000; // Decal should be drawn for a single frame only, then cleaned up.
 
 
 // Max decal (see r_decal.cpp for initialization).
@@ -78,5 +70,3 @@ extern int g_nMaxDecals;
 
 struct worldbrushdata_t;
 void R_DecalUnlink( decal_t *pdecal, worldbrushdata_t *model );
-
-#endif			// DECAL_PRIVATE_H

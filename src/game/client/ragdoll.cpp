@@ -1,22 +1,28 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "physics.h"
 #include "reflect_datamap.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
-#include "mathlib/vmatrix.h"
 #include "ragdoll_shared.h"
 #include "bone_setup.h"
 #include "materialsystem/imesh.h"
 #include "engine/ivmodelinfo.h"
 #include "iviewrender.h"
-#include "tier0/vprof.h"
-#include "view.h"
 #include "vphysics/constraints.h"
 #include "clientalphaproperty.h"
 
@@ -32,7 +38,7 @@ CRagdoll::CRagdoll()
 	m_vecLastOrigin.Init();
 	m_flLastOriginChangeTime = - 1.0f;
 	m_flAwakeTime = -1.0f;
-	m_lastUpdate = -FLT_MAX;
+	m_lastUpdate = -std::numeric_limits<float>::max();
 }
 
 
@@ -246,7 +252,7 @@ void CRagdoll::PhysForceRagdollToSleep()
 	physenv->ForceObjectsToSleep(pList, m_ragdoll.listCount);
 }
 
-#define RAGDOLL_SLEEP_TOLERANCE	1.0f
+constexpr auto RAGDOLL_SLEEP_TOLERANCE = 1.0f;
 static ConVar ragdoll_sleepaftertime( "ragdoll_sleepaftertime", "4", 0, "After this many seconds of being basically stationary, the ragdoll will go to sleep." );
 
 void CRagdoll::CheckSettleStationaryRagdoll()
@@ -289,20 +295,9 @@ void CRagdoll::ResetRagdollSleepAfterTime( void )
 	m_flAwakeTime = physenv->GetSimulationTime();
 }
 
-#define ALLOW_BLOOD_POOL 0
 
 void CRagdoll::CreateBloodPool( void )
 {
-
-#if ALLOW_BLOOD_POOL
-	
-	if ( m_doBleedOut )
-	{
-		DispatchParticleEffect( "blood_pool", GetRagdollOrigin(), QAngle( 0, 0, 0 ) );
-		m_doBleedOut = false;
-	}
-
-#endif
 
 }
 
@@ -382,7 +377,6 @@ class [[= ks::reflect::NetTable{ .name = "DT_Ragdoll" } ]]
 public:
 	DECLARE_CLASS( C_ServerRagdoll, C_BaseAnimating );
 	DECLARE_CLIENTCLASS();
-	DECLARE_INTERPOLATION();
 
 	C_ServerRagdoll( void );
 
@@ -437,7 +431,7 @@ C_ServerRagdoll::C_ServerRagdoll( void ) :
 	m_iv_ragAngles("C_ServerRagdoll::m_iv_ragAngles")
 {
 	m_elementCount = 0;
-	m_flLastBoneChangeTime = -FLT_MAX;
+	m_flLastBoneChangeTime = -std::numeric_limits<float>::max();
 
 	AddVar( m_ragPos, &m_iv_ragPos, LATCH_SIMULATION_VAR  );
 	AddVar( m_ragAngles, &m_iv_ragAngles, LATCH_SIMULATION_VAR );
@@ -714,7 +708,7 @@ static int GetHighestBit( int flags )
 	return 0;
 }
 
-#define ATTACH_INTERP_TIME	0.2
+constexpr auto ATTACH_INTERP_TIME = 0.2;
 class [[= ks::reflect::NetTable{ .name = "DT_Ragdoll_Attached" } ]]
       C_ServerRagdollAttached : public C_ServerRagdoll
 {
@@ -745,7 +739,7 @@ public:
 
 	virtual void BuildTransformations( CStudioHdr *hdr, BoneVector *pos, BoneQuaternion q[], const matrix3x4_t& cameraTransform, int boneMask, CBoneBitList &boneComputed )
 	{
-		VPROF_BUDGET( "C_ServerRagdollAttached::SetupBones", VPROF_BUDGETGROUP_CLIENT_ANIMATION );
+		CVProfScope _( "C_ServerRagdollAttached::SetupBones", 0, VPROF_BUDGETGROUP_CLIENT_ANIMATION, false, BUDGETFLAG_OTHER );
 
 		if ( !hdr )
 			return;
@@ -755,14 +749,14 @@ public:
 		// interpolate offset over some time
 		Vector offset = m_vecOffset * (1-frac);
 
-		C_BaseAnimating *parent = assert_cast< C_BaseAnimating* >( GetMoveParent() );
+		C_BaseAnimating *parent = static_cast< C_BaseAnimating* >( GetMoveParent() );
 		Vector worldOrigin;
 		worldOrigin.Init();
 
 
 		if ( parent )
 		{
-			Assert( parent != this );
+			contract_assert( parent != this );
 			parent->SetupBones( nullptr, -1, BONE_USED_BY_ANYTHING, gpGlobals->curtime );
 
 			matrix3x4_t boneToWorld;
@@ -796,7 +790,7 @@ public:
 		}
 	}
 	void OnDataChanged( DataUpdateType_t updateType );
-	virtual float LastBoneChangedTime() { return FLT_MAX; }
+	virtual float LastBoneChangedTime() { return std::numeric_limits<float>::max(); }
 
 	[[= ks::reflect::Net{} ]] Vector		m_attachmentPointBoneSpace;
 	Vector		m_vecOffset;
@@ -888,4 +882,3 @@ bool WasRagdollCreatedOnCurrentTick( C_BaseEntity *pRagdoll )
 	gRagdolls.Update();
 	return gRagdolls.IsInList( pRagdoll );
 }
-

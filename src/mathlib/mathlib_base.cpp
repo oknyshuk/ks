@@ -1,42 +1,26 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Math primitives.
-//
-//===========================================================================//
 
 /// FIXME: As soon as all references to mathlib.c are gone, include it in here
 
-#include <math.h>
-#include <float.h>	// needed for flt_epsilon
+import std;
 
-#include "tier0/basetypes.h"
 //#include <memory.h>
-#include "tier0/dbg.h"
 
-#include "tier0/vprof.h"
 //#define _VPROF_MATHLIB
 
+import ks.vstdlib;
 
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include "mathlib/vplane.h"
-#include "mathlib/vmatrix.h"
 
-#include "sse.h"
-
-#include "mathlib/ssemath.h"
-#include "mathlib/ssequaternion.h"
 
 bool s_bMathlibInitialized = false;
-#ifdef PARANOID
-// User must provide an implementation of Sys_Error()
-void Sys_Error (char *error, ...);
-#endif
 
 const Vector vec3_origin(0,0,0);
 const QAngle vec3_angle(0,0,0);
 const Quaternion quat_identity(0,0,0,1);
-const Vector vec3_invalid( FLT_MAX, FLT_MAX, FLT_MAX );
+const Vector vec3_invalid( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
 const int nanmask = 255<<23;
 
 const matrix3x4a_t g_MatrixIdentity(
@@ -50,27 +34,24 @@ const matrix3x4a_t g_MatrixIdentity(
 //-----------------------------------------------------------------------------
 float _sqrtf(float _X)
 {
-	Assert( s_bMathlibInitialized );
-	return sqrtf(_X); 
+	contract_assert( s_bMathlibInitialized );
+	return std::sqrtf(_X); 
 }
 
 float _rsqrtf(float x)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 
 	return 1.f / _sqrtf( x );
 }
 
 float VectorNormalize (Vector& vec)
 {
-#ifdef _VPROF_MATHLIB
-	VPROF_BUDGET( "_VectorNormalize", "Mathlib" );
-#endif
-	Assert( s_bMathlibInitialized );
-	float radius = sqrtf(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z);
+	contract_assert( s_bMathlibInitialized );
+	float radius = std::sqrtf(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z);
 
 	// FLT_EPSILON is added to the radius to eliminate the possibility of divide by zero.
-	float iradius = 1.f / ( radius + FLT_EPSILON );
+	float iradius = 1.f / ( radius + std::numeric_limits<float>::epsilon() );
 	
 	vec.x *= iradius;
 	vec.y *= iradius;
@@ -82,12 +63,12 @@ float VectorNormalize (Vector& vec)
 
 // TODO: Add fast C VectorNormalizeFast.
 // Perhaps use approximate rsqrt trick, if the accuracy isn't too bad.
-void FASTCALL _VectorNormalizeFast (Vector& vec)
+void _VectorNormalizeFast (Vector& vec)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 
 	// FLT_EPSILON is added to the radius to eliminate the possibility of divide by zero.
-	float iradius = 1.f / ( sqrtf(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z) + FLT_EPSILON );
+	float iradius = 1.f / ( std::sqrtf(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z) + std::numeric_limits<float>::epsilon() );
 	
 	vec.x *= iradius;
 	vec.y *= iradius;
@@ -97,7 +78,7 @@ void FASTCALL _VectorNormalizeFast (Vector& vec)
 
 float _InvRSquared(const float* v)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float	r2 = DotProduct(v, v);
 	return r2 < 1.f ? 1.f : 1/r2;
 }
@@ -105,21 +86,21 @@ float _InvRSquared(const float* v)
 //-----------------------------------------------------------------------------
 // Function pointers selecting the appropriate implementation
 //-----------------------------------------------------------------------------
-void  (FASTCALL *pfVectorNormalizeFast)(Vector& v) = _VectorNormalizeFast;
+void  (*pfVectorNormalizeFast)(Vector& v) = _VectorNormalizeFast;
 
 float SinCosTable[SIN_TABLE_SIZE];
 void InitSinCosTable()
 {
 	for( int i = 0; i < SIN_TABLE_SIZE; i++ )
 	{
-		SinCosTable[i] = sin(i * 2.0 * M_PI / SIN_TABLE_SIZE);
+		SinCosTable[i] = std::sin(i * 2.0 * std::numbers::pi / SIN_TABLE_SIZE);
 	}
 }
 
 
 qboolean VectorsEqual( const float *v1, const float *v2 )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	return ( ( v1[0] == v2[0] ) &&
 		     ( v1[1] == v2[1] ) &&
 			 ( v1[2] == v2[2] ) );
@@ -141,12 +122,9 @@ void MatrixAngles( const matrix3x4_t& matrix, RadianEuler &angles, Vector &posit
 
 void MatrixAngles( const matrix3x4_t &matrix, Quaternion &q, Vector &pos )
 {
-#ifdef _VPROF_MATHLIB
-	VPROF_BUDGET( "MatrixQuaternion", "Mathlib" );
-#endif
 	float trace;
 	trace = matrix[0][0] + matrix[1][1] + matrix[2][2] + 1.0f;
-	if( trace > 1.0f + FLT_EPSILON ) 
+	if( trace > 1.0f + std::numeric_limits<float>::epsilon() ) 
 	{
 		// VPROF_INCREMENT_COUNTER("MatrixQuaternion A",1);
 		q.x = ( matrix[2][1] - matrix[1][2] );
@@ -190,10 +168,7 @@ void MatrixAngles( const matrix3x4_t &matrix, Quaternion &q, Vector &pos )
 
 void MatrixAngles( const matrix3x4_t& matrix, float *angles )
 { 
-#ifdef _VPROF_MATHLIB
-	VPROF_BUDGET( "MatrixAngles", "Mathlib" );
-#endif
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float forward[3];
 	float left[3];
 	float up[3];
@@ -210,27 +185,27 @@ void MatrixAngles( const matrix3x4_t& matrix, float *angles )
 	left[2] = matrix[2][1];
 	up[2] = matrix[2][2];
 
-	float xyDist = sqrtf( forward[0] * forward[0] + forward[1] * forward[1] );
+	float xyDist = std::sqrtf( forward[0] * forward[0] + forward[1] * forward[1] );
 	
 	// enough here to get angles?
 	if ( xyDist > 0.001f )
 	{
 		// (yaw)	y = ATAN( forward.y, forward.x );		-- in our space, forward is the X axis
-		angles[1] = RAD2DEG( atan2f( forward[1], forward[0] ) );
+		angles[1] = RAD2DEG( std::atan2f( forward[1], forward[0] ) );
 
 		// (pitch)	x = ATAN( -forward.z, sqrt(forward.x*forward.x+forward.y*forward.y) );
-		angles[0] = RAD2DEG( atan2f( -forward[2], xyDist ) );
+		angles[0] = RAD2DEG( std::atan2f( -forward[2], xyDist ) );
 
 		// (roll)	z = ATAN( left.z, up.z );
-		angles[2] = RAD2DEG( atan2f( left[2], up[2] ) );
+		angles[2] = RAD2DEG( std::atan2f( left[2], up[2] ) );
 	}
 	else	// forward is mostly Z, gimbal lock-
 	{
 		// (yaw)	y = ATAN( -left.x, left.y );			-- forward is mostly z, so use right for yaw
-		angles[1] = RAD2DEG( atan2f( -left[0], left[1] ) );
+		angles[1] = RAD2DEG( std::atan2f( -left[0], left[1] ) );
 
 		// (pitch)	x = ATAN( -forward.z, sqrt(forward.x*forward.x+forward.y*forward.y) );
-		angles[0] = RAD2DEG( atan2f( -forward[2], xyDist ) );
+		angles[0] = RAD2DEG( std::atan2f( -forward[2], xyDist ) );
 
 		// Assume no roll in this case as one degree of freedom has been lost (i.e. yaw == roll)
 		angles[2] = 0;
@@ -240,9 +215,9 @@ void MatrixAngles( const matrix3x4_t& matrix, float *angles )
 Vector MatrixNormalize( const matrix3x4_t &in, matrix3x4_t &out )
 {
 	Vector vScale;
-	vScale.x = sqrt( in[ 0 ][ 0 ] * in[ 0 ][ 0 ] + in[ 1 ][ 0 ] * in[ 1 ][ 0 ] + in[ 2 ][ 0 ] * in[ 2 ][ 0 ] );
-	vScale.y = sqrt( in[ 0 ][ 1 ] * in[ 0 ][ 1 ] + in[ 1 ][ 1 ] * in[ 1 ][ 1 ] + in[ 2 ][ 1 ] * in[ 2 ][ 1 ] );
-	vScale.z = sqrt( in[ 0 ][ 2 ] * in[ 0 ][ 2 ] + in[ 1 ][ 2 ] * in[ 1 ][ 2 ] + in[ 2 ][ 2 ] * in[ 2 ][ 2 ] );
+	vScale.x = std::sqrt( in[ 0 ][ 0 ] * in[ 0 ][ 0 ] + in[ 1 ][ 0 ] * in[ 1 ][ 0 ] + in[ 2 ][ 0 ] * in[ 2 ][ 0 ] );
+	vScale.y = std::sqrt( in[ 0 ][ 1 ] * in[ 0 ][ 1 ] + in[ 1 ][ 1 ] * in[ 1 ][ 1 ] + in[ 2 ][ 1 ] * in[ 2 ][ 1 ] );
+	vScale.z = std::sqrt( in[ 0 ][ 2 ] * in[ 0 ][ 2 ] + in[ 1 ][ 2 ] * in[ 1 ][ 2 ] + in[ 2 ][ 2 ] * in[ 2 ][ 2 ] );
 
 	matrix3x4_t norm;
 	float flInvScaleX = 1.0f / vScale.x;
@@ -259,9 +234,9 @@ Vector MatrixNormalize( const matrix3x4_t &in, matrix3x4_t &out )
 
 
 // transform in1 by the matrix in2
-void VectorTransform (const float * RESTRICT in1, const matrix3x4_t& in2, float * RESTRICT out)
+void VectorTransform (const float * __restrict__ in1, const matrix3x4_t& in2, float * __restrict__ out)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float x = DotProduct(in1, in2[0]) + in2[0][3];
 	float y = DotProduct(in1, in2[1]) + in2[1][3];
 	float z = DotProduct(in1, in2[2]) + in2[2][3];
@@ -275,7 +250,7 @@ void VectorTransform (const float * RESTRICT in1, const matrix3x4_t& in2, float 
 // assuming the matrix is orthonormal, transform in1 by the transpose (also the inverse in this case) of in2.
 void VectorITransform (const float *in1, const matrix3x4_t& in2, float *out)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float in1t[3];
 
 	in1t[0] = in1[0] - in2[0][3];
@@ -292,9 +267,9 @@ void VectorITransform (const float *in1, const matrix3x4_t& in2, float *out)
 }
 
 // assume in2 is a rotation and rotate the input vector
-void VectorRotate( const float * RESTRICT in1, const matrix3x4_t& in2, float * RESTRICT out )
+void VectorRotate( const float * __restrict__ in1, const matrix3x4_t& in2, float * __restrict__ out )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float x = DotProduct( in1, in2[ 0 ] );
 	float y = DotProduct( in1, in2[ 1 ] );
 	float z = DotProduct( in1, in2[ 2 ] );
@@ -315,11 +290,6 @@ void VectorRotate( const Vector &in1, const QAngle &in2, Vector &out )
 // assume in2 is a rotation and rotate the input vector
 void VectorRotate( const Vector &in1, const Quaternion &in2, Vector &out )
 {
-#if WE_WANT_OUR_CODE_TO_BE_POINTLESSLY_SLOW
-	matrix3x4_t matRotate;
-	QuaternionMatrix( in2, matRotate );
-	VectorRotate( in1, matRotate, out );
-#else
 	// rotation is  q * v * q^-1
 
 	Quaternion conjugate = in2.Conjugate();
@@ -337,22 +307,20 @@ void VectorRotate( const Vector &in1, const Quaternion &in2, Vector &out )
 	out.x =  temp.x * conjugate.w + temp.y * conjugate.z - temp.z * conjugate.y + temp.w * conjugate.x;
 	out.y = -temp.x * conjugate.z + temp.y * conjugate.w + temp.z * conjugate.x + temp.w * conjugate.y;
 	out.z =  temp.x * conjugate.y - temp.y * conjugate.x + temp.z * conjugate.w + temp.w * conjugate.z;
-	Assert( fabs(-temp.x * conjugate.x - temp.y * conjugate.y - temp.z * conjugate.z + temp.w * conjugate.w) < 0.0001 );
-#endif
+	contract_assert( std::fabs(-temp.x * conjugate.x - temp.y * conjugate.y - temp.z * conjugate.z + temp.w * conjugate.w) < 0.0001 );
 }
 
 
 // rotate by the inverse of the matrix
-void VectorIRotate( const float * RESTRICT in1, const matrix3x4_t& in2, float * RESTRICT out )
+void VectorIRotate( const float * __restrict__ in1, const matrix3x4_t& in2, float * __restrict__ out )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( in1 != out );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( in1 != out );
 	out[0] = in1[0]*in2[0][0] + in1[1]*in2[1][0] + in1[2]*in2[2][0];
 	out[1] = in1[0]*in2[0][1] + in1[1]*in2[1][1] + in1[2]*in2[2][1];
 	out[2] = in1[0]*in2[0][2] + in1[1]*in2[1][2] + in1[2]*in2[2][2];
 }
 
-#ifndef VECTOR_NO_SLOW_OPERATIONS
 // transform a set of angles in the output space of parentMatrix to the input space
 QAngle TransformAnglesToLocalSpace( const QAngle &angles, const matrix3x4_t &parentMatrix )
 {
@@ -377,8 +345,6 @@ QAngle TransformAnglesToWorldSpace( const QAngle &angles, const matrix3x4_t &par
 	return out;
 }
 
-#endif // VECTOR_NO_SLOW_OPERATIONS
-
 void MatrixInitialize( matrix3x4_t &mat, const Vector &vecOrigin, const Vector &vecXAxis, const Vector &vecYAxis, const Vector &vecZAxis )
 {
 	MatrixSetColumn( vecXAxis, 0, mat );
@@ -389,8 +355,8 @@ void MatrixInitialize( matrix3x4_t &mat, const Vector &vecOrigin, const Vector &
 
 void MatrixCopy( const matrix3x4_t& in, matrix3x4_t& out )
 {
-	Assert( s_bMathlibInitialized );
-	memcpy( out.Base(), in.Base(), sizeof( float ) * 3 * 4 );
+	contract_assert( s_bMathlibInitialized );
+	std::memcpy( out.Base(), in.Base(), sizeof( float ) * 3 * 4 );
 }
 
 //-----------------------------------------------------------------------------
@@ -402,7 +368,7 @@ bool MatricesAreEqual( const matrix3x4_t &src1, const matrix3x4_t &src2, float f
 	{
 		for ( int j = 0; j < 4; ++j )
 		{
-			if ( fabs( src1[i][j] - src2[i][j] ) > flTolerance )
+			if ( std::fabs( src1[i][j] - src2[i][j] ) > flTolerance )
 				return false;
 		}
 	}
@@ -413,7 +379,7 @@ bool MatricesAreEqual( const matrix3x4_t &src1, const matrix3x4_t &src2, float f
 // NOTE: This is just the transpose not a general inverse
 void MatrixInvert( const matrix3x4_t& in, matrix3x4_t& out )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	if ( &in == &out )
 	{
 		V_swap(out[0][1],out[1][0]);
@@ -463,7 +429,7 @@ void MatrixSetColumn( const Vector &in, int column, matrix3x4_t& out )
 
 int VectorCompare (const float *v1, const float *v2)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	int		i;
 	
 	for (i=0 ; i<3 ; i++)
@@ -475,15 +441,15 @@ int VectorCompare (const float *v1, const float *v2)
 
 void CrossProduct (const float* v1, const float* v2, float* cross)
 {
-	Assert( s_bMathlibInitialized );
-	Assert( v1 != cross );
-	Assert( v2 != cross );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( v1 != cross );
+	contract_assert( v2 != cross );
 	cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
 	cross[1] = v1[2]*v2[0] - v1[0]*v2[2];
 	cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
 }
 
-size_t Q_log2( unsigned int val )
+std::size_t Q_log2( unsigned int val )
 {
 	int answer=0;
 	while (val>>=1)
@@ -511,10 +477,10 @@ void MatrixVectors( const matrix3x4_t &matrix, Vector* pForward, Vector *pRight,
 
 void VectorVectors( const Vector &forward, Vector &right, Vector &up )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector tmp;
 
-	if ( fabs( forward[0] ) < 1e-6 && fabs( forward[1] ) < 1e-6 )
+	if ( std::fabs( forward[0] ) < 1e-6 && std::fabs( forward[1] ) < 1e-6 )
 	{
 		// pitch 90 degrees up/down from identity
 		right[0] = 0;	
@@ -536,7 +502,7 @@ void VectorVectors( const Vector &forward, Vector &right, Vector &up )
 
 void VectorMatrix( const Vector &forward, matrix3x4_t& matrix)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector right, up;
 	VectorVectors(forward, right, up);
 
@@ -562,7 +528,7 @@ void VectorPerpendicularToVector( Vector const &in, Vector *pvecOut )
 //-----------------------------------------------------------------------------
 void AngleVectorsFLU( const QAngle &angles, Vector *pForward, Vector *pLeft, Vector *pUp )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 
 	float sr, sp, sy, cr, cp, cy;
 
@@ -594,7 +560,7 @@ void AngleVectorsFLU( const QAngle &angles, Vector *pForward, Vector *pLeft, Vec
 
 void VectorAngles( const float *forward, float *angles )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float	tmp, yaw, pitch;
 	
 	if (forward[1] == 0 && forward[0] == 0)
@@ -607,12 +573,12 @@ void VectorAngles( const float *forward, float *angles )
 	}
 	else
 	{
-		yaw = (atan2(forward[1], forward[0]) * 180 / M_PI);
+		yaw = (std::atan2(forward[1], forward[0]) * 180 / std::numbers::pi);
 		if (yaw < 0)
 			yaw += 360;
 
-		tmp = sqrt (forward[0]*forward[0] + forward[1]*forward[1]);
-		pitch = (atan2(-forward[2], tmp) * 180 / M_PI);
+		tmp = std::sqrt (forward[0]*forward[0] + forward[1]*forward[1]);
+		pitch = (std::atan2(-forward[2], tmp) * 180 / std::numbers::pi);
 		if (pitch < 0)
 			pitch += 360;
 	}
@@ -630,9 +596,9 @@ R_ConcatRotations
 */
 void ConcatRotations (const float in1[3][3], const float in2[3][3], float out[3][3])
 {
-	Assert( s_bMathlibInitialized );
-	Assert( in1 != out );
-	Assert( in2 != out );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( in1 != out );
+	contract_assert( in2 != out );
 	out[0][0] = in1[0][0] * in2[0][0] + in1[0][1] * in2[1][0] +
 				in1[0][2] * in2[2][0];
 	out[0][1] = in1[0][0] * in2[0][1] + in1[0][1] * in2[1][1] +
@@ -656,9 +622,9 @@ void ConcatRotations (const float in1[3][3], const float in2[3][3], float out[3]
 
 void ConcatTransforms_Aligned( const matrix3x4a_t &m0, const matrix3x4a_t &m1, matrix3x4a_t &out )
 {
-	AssertAligned( &m0 );
-	AssertAligned( &m1 );
-	AssertAligned( &out );
+	contract_assert( ( (uintp)( &m0 ) & 15 ) == 0 );
+	contract_assert( ( (uintp)( &m1 ) & 15 ) == 0 );
+	contract_assert( ( (uintp)( &out ) & 15 ) == 0 );
 
 	fltx4 lastMask = *(fltx4 *)(&g_SIMD_ComponentMask[3]);
 	fltx4 rowA0 = LoadAlignedSIMD( m0.m_flMatVal[0] );
@@ -783,23 +749,14 @@ quotient must fit in 32 bits.
 void FloorDivMod (double numer, double denom, int *quotient,
 		int *rem)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	int		q, r;
 	double	x;
-
-#ifdef PARANOID
-	if (denom <= 0.0)
-		Sys_Error ("FloorDivMod: bad denominator %d\n", denom);
-
-//	if ((floor(numer) != numer) || (floor(denom) != denom))
-//		Sys_Error ("FloorDivMod: non-integer numer or denom %f %f\n",
-//				numer, denom);
-#endif
 
 	if (numer >= 0.0)
 	{
 
-		x = floor(numer / denom);
+		x = std::floor(numer / denom);
 		q = (int)x;
 		r = Floor2Int(numer - (x * denom));
 	}
@@ -808,7 +765,7 @@ void FloorDivMod (double numer, double denom, int *quotient,
 		//
 		// perform operations with positive values, and fix mod to make floor-based
 		//
-		x = floor(-numer / denom);
+		x = std::floor(-numer / denom);
 		q = -(int)x;
 		r = Floor2Int(-numer - (x * denom));
 		if (r != 0)
@@ -830,7 +787,7 @@ GreatestCommonDivisor
 */
 int GreatestCommonDivisor (int i1, int i2)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	if (i1 > i2)
 	{
 		if (i2 == 0)
@@ -857,7 +814,7 @@ bool IsDenormal( const float &val )
 
 int SignbitsForPlane (cplane_t *out)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	int	bits, j;
 
 	// for fast box on planeside test
@@ -880,7 +837,7 @@ Returns 1, 2, or 1 + 2
 */
 int BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane_t *p)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float	dist1, dist2;
 	int		sides;
 
@@ -931,7 +888,7 @@ int BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane_t *p)
 		break;
 	default:
 		dist1 = dist2 = 0;		// shut up compiler
-		Assert( 0 );
+		contract_assert( 0 );
 		break;
 	}
 
@@ -941,7 +898,7 @@ int BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane_t *p)
 	if (dist2 < p->dist)
 		sides |= 2;
 
-	Assert( sides != 0 );
+	contract_assert( sides != 0 );
 
 	return sides;
 }
@@ -952,8 +909,8 @@ int BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane_t *p)
 
 void AngleVectors (const QAngle &angles, Vector *forward)
 {
-	Assert( s_bMathlibInitialized );
-	Assert( forward );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( forward );
 	
 	float	sp, sy, cp, cy;
 	
@@ -970,7 +927,7 @@ void AngleVectors (const QAngle &angles, Vector *forward)
 //-----------------------------------------------------------------------------
 void AngleVectors( const QAngle &angles, Vector *forward, Vector *right, Vector *up )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	
 	float sr, sp, sy, cr, cp, cy;
 
@@ -1006,7 +963,7 @@ void AngleVectors( const QAngle &angles, Vector *forward, Vector *right, Vector 
 
 void AngleVectorsTranspose (const QAngle &angles, Vector *forward, Vector *right, Vector *up)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float sr, sp, sy, cr, cp, cy;
 	
 	SinCos( DEG2RAD( angles[YAW] ), &sy, &cy );
@@ -1041,7 +998,7 @@ void AngleVectorsTranspose (const QAngle &angles, Vector *forward, Vector *right
 
 void VectorAngles( const Vector& forward, QAngle &angles )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float	tmp, yaw, pitch;
 	
 	if (forward[1] == 0 && forward[0] == 0)
@@ -1054,12 +1011,12 @@ void VectorAngles( const Vector& forward, QAngle &angles )
 	}
 	else
 	{
-		yaw = (atan2(forward[1], forward[0]) * 180 / M_PI);
+		yaw = (std::atan2(forward[1], forward[0]) * 180 / std::numbers::pi);
 		if (yaw < 0)
 			yaw += 360;
 
 		tmp = FastSqrt (forward[0]*forward[0] + forward[1]*forward[1]);
-		pitch = (atan2(-forward[2], tmp) * 180 / M_PI);
+		pitch = (std::atan2(-forward[2], tmp) * 180 / std::numbers::pi);
 		if (pitch < 0)
 			pitch += 360;
 	}
@@ -1075,40 +1032,40 @@ void VectorAngles( const Vector& forward, QAngle &angles )
 
 void VectorAngles( const Vector &forward, const Vector &pseudoup, QAngle &angles )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 
 	Vector left;
 
 	CrossProduct( pseudoup, forward, left );
 	VectorNormalizeFast( left );		
 	
-	float xyDist = sqrtf( forward[0] * forward[0] + forward[1] * forward[1] );
+	float xyDist = std::sqrtf( forward[0] * forward[0] + forward[1] * forward[1] );
 
 	// enough here to get angles?
 	if ( xyDist > 0.001f )
 	{
 		// (yaw)	y = ATAN( forward.y, forward.x );		-- in our space, forward is the X axis
-		angles[1] = RAD2DEG( atan2f( forward[1], forward[0] ) );
+		angles[1] = RAD2DEG( std::atan2f( forward[1], forward[0] ) );
 
 		// The engine does pitch inverted from this, but we always end up negating it in the DLL
 		// UNDONE: Fix the engine to make it consistent
 		// (pitch)	x = ATAN( -forward.z, sqrt(forward.x*forward.x+forward.y*forward.y) );
-		angles[0] = RAD2DEG( atan2f( -forward[2], xyDist ) );
+		angles[0] = RAD2DEG( std::atan2f( -forward[2], xyDist ) );
 
 		float up_z = (left[1] * forward[0]) - (left[0] * forward[1]);
 
 		// (roll)	z = ATAN( left.z, up.z );
-		angles[2] = RAD2DEG( atan2f( left[2], up_z ) );
+		angles[2] = RAD2DEG( std::atan2f( left[2], up_z ) );
 	}
 	else	// forward is mostly Z, gimbal lock-
 	{
 		// (yaw)	y = ATAN( -left.x, left.y );			-- forward is mostly z, so use right for yaw
-		angles[1] = RAD2DEG( atan2f( -left[0], left[1] ) ); //This was originally copied from the "void MatrixAngles( const matrix3x4_t& matrix, float *angles )" code, and it's 180 degrees off, negated the values and it all works now (Dave Kircher)
+		angles[1] = RAD2DEG( std::atan2f( -left[0], left[1] ) ); //This was originally copied from the "void MatrixAngles( const matrix3x4_t& matrix, float *angles )" code, and it's 180 degrees off, negated the values and it all works now (Dave Kircher)
 
 		// The engine does pitch inverted from this, but we always end up negating it in the DLL
 		// UNDONE: Fix the engine to make it consistent
 		// (pitch)	x = ATAN( -forward.z, sqrt(forward.x*forward.x+forward.y*forward.y) );
-		angles[0] = RAD2DEG( atan2f( -forward[2], xyDist ) );
+		angles[0] = RAD2DEG( std::atan2f( -forward[2], xyDist ) );
 
 		// Assume no roll in this case as one degree of freedom has been lost (i.e. yaw == roll)
 		angles[2] = 0;
@@ -1118,7 +1075,7 @@ void VectorAngles( const Vector &forward, const Vector &pseudoup, QAngle &angles
 
 void SetIdentityMatrix( matrix3x4_t& matrix )
 {
-	memset( matrix.Base(), 0, sizeof(float)*3*4 );
+	std::memset( matrix.Base(), 0, sizeof(float)*3*4 );
 	matrix[0][0] = 1.0;
 	matrix[1][1] = 1.0;
 	matrix[2][2] = 1.0;
@@ -1156,9 +1113,9 @@ void MatrixBuildRotationAboutAxis( const Vector &vAxisOfRot, float angleDegrees,
 	float fSin;
 	float fCos;
 
-	radians = angleDegrees * ( M_PI / 180.0 );
-	fSin = sin( radians );
-	fCos = cos( radians );
+	radians = angleDegrees * ( std::numbers::pi / 180.0 );
+	fSin = std::sin( radians );
+	fCos = std::cos( radians );
 
 	axisXSquared = vAxisOfRot[0] * vAxisOfRot[0];
 	axisYSquared = vAxisOfRot[1] * vAxisOfRot[1];
@@ -1235,10 +1192,7 @@ void AngleMatrix( const QAngle &angles, const Vector &position, matrix3x4_t& mat
 
 void AngleMatrix( const QAngle &angles, matrix3x4_t& matrix )
 {
-#ifdef _VPROF_MATHLIB
-	VPROF_BUDGET( "AngleMatrix", "Mathlib" );
-#endif
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 
 	float sr, sp, sy, cr, cp, cy;
 
@@ -1273,7 +1227,7 @@ void AngleIMatrix( const RadianEuler& angles, matrix3x4_t& matrix )
 
 void AngleIMatrix (const QAngle& angles, matrix3x4_t& matrix )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float		sr, sp, sy, cr, cp, cy;
 	
 	SinCos( DEG2RAD( angles[YAW] ), &sy, &cy );
@@ -1311,14 +1265,14 @@ void AngleIMatrix (const QAngle &angles, const Vector &position, matrix3x4_t &ma
 
 void ClearBounds (Vector& mins, Vector& maxs)
 {
-	Assert( s_bMathlibInitialized );
-	mins[0] = mins[1] = mins[2] = FLT_MAX;
-	maxs[0] = maxs[1] = maxs[2] = -FLT_MAX;
+	contract_assert( s_bMathlibInitialized );
+	mins[0] = mins[1] = mins[2] = std::numeric_limits<float>::max();
+	maxs[0] = maxs[1] = maxs[2] = -std::numeric_limits<float>::max();
 }
 
 void AddPointToBounds (const Vector& v, Vector& mins, Vector& maxs)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	int		i;
 	vec_t	val;
 
@@ -1361,7 +1315,7 @@ bool IsPointInBounds( const Vector &vPoint, const Vector &vMin, const Vector &vM
 // solve a x^2 + b x + c = 0
 bool SolveQuadratic( float a, float b, float c, float &root1, float &root2 )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	if (a == 0)
 	{
 		if (b != 0)
@@ -1387,7 +1341,7 @@ bool SolveQuadratic( float a, float b, float c, float &root1, float &root2 )
 		return false;
 	}
 
-	tmp = sqrt( tmp );
+	tmp = std::sqrt( tmp );
 	root1 = (-b + tmp) / (2.0f * a);
 	root2 = (-b - tmp) / (2.0f * a);
 	return true;
@@ -1484,7 +1438,7 @@ bool SolveInverseReciprocalQuadratic( float x1, float y1, float x2, float y2, fl
 // Rotate a vector around the Z axis (YAW)
 void VectorYawRotate( const Vector &in, float flYaw, Vector &out)
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	if (&in == &out )
 	{
 		Vector tmp;
@@ -1511,9 +1465,9 @@ float Bias( float x, float biasAmt )
 	static float lastExponent = 0;
 	if( lastAmt != biasAmt )
 	{
-		lastExponent = log( biasAmt ) * -1.4427f; // (-1.4427 = 1 / log(0.5))
+		lastExponent = std::log( biasAmt ) * -1.4427f; // (-1.4427 = 1 / log(0.5))
 	}
-	return pow( x, lastExponent );
+	return std::pow( x, lastExponent );
 }
 
 
@@ -1529,7 +1483,7 @@ float Gain( float x, float biasAmt )
 
 float SmoothCurve( float x )
 {
-	return (1 - cos( x * M_PI )) * 0.5f;
+	return (1 - std::cos( x * std::numbers::pi )) * 0.5f;
 }
 
 
@@ -1557,7 +1511,7 @@ float SmoothCurve_Tweak( float x, float flPeakPos, float flPeakSharpness )
 
 void QuaternionAlign( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 
 	// FIXME: can this be done with a quat dot product?
 
@@ -1593,7 +1547,7 @@ void QuaternionAlign( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 //-----------------------------------------------------------------------------
 void QuaternionBlend( const Quaternion &p, const Quaternion &q, float t, Quaternion &qt )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	fltx4 psimd, qsimd, qtsimd;
 	psimd = LoadUnalignedSIMD( p.Base() );
 	qsimd = LoadUnalignedSIMD( q.Base() );
@@ -1604,7 +1558,7 @@ void QuaternionBlend( const Quaternion &p, const Quaternion &q, float t, Quatern
 
 void QuaternionBlendNoAlign( const Quaternion &p, const Quaternion &q, float t, Quaternion &qt )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float sclp, sclq;
 	int i;
 
@@ -1621,7 +1575,7 @@ void QuaternionBlendNoAlign( const Quaternion &p, const Quaternion &q, float t, 
 
 void QuaternionIdentityBlend( const Quaternion &p, float t, Quaternion &qt )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float sclp;
 
 	sclp = 1.0f - t;
@@ -1658,7 +1612,7 @@ void QuaternionSlerp( const Quaternion &p, const Quaternion &q, float t, Quatern
 
 void QuaternionSlerpNoAlign( const Quaternion &p, const Quaternion &q, float t, Quaternion &qt )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float omega, cosom, sinom, sclp, sclq;
 	int i;
 
@@ -1668,10 +1622,10 @@ void QuaternionSlerpNoAlign( const Quaternion &p, const Quaternion &q, float t, 
 
 	if ((1.0f + cosom) > 0.000001f) {
 		if ((1.0f - cosom) > 0.000001f) {
-			omega = acos( cosom );
-			sinom = sin( omega );
-			sclp = sin( (1.0f - t)*omega) / sinom;
-			sclq = sin( t*omega ) / sinom;
+			omega = std::acos( cosom );
+			sinom = std::sin( omega );
+			sclp = std::sin( (1.0f - t)*omega) / sinom;
+			sclq = std::sin( t*omega ) / sinom;
 		}
 		else {
 			// TODO: add short circuit for cosom == 1.0f?
@@ -1683,20 +1637,20 @@ void QuaternionSlerpNoAlign( const Quaternion &p, const Quaternion &q, float t, 
 		}
 	}
 	else {
-		Assert( &qt != &q );
+		contract_assert( &qt != &q );
 
 		qt[0] = -q[1];
 		qt[1] = q[0];
 		qt[2] = -q[3];
 		qt[3] = q[2];
-		sclp = sin( (1.0f - t) * (0.5f * M_PI));
-		sclq = sin( t * (0.5f * M_PI));
+		sclp = std::sin( (1.0f - t) * (0.5f * std::numbers::pi));
+		sclq = std::sin( t * (0.5f * std::numbers::pi));
 		for (i = 0; i < 3; i++) {
 			qt[i] = sclp * p[i] + sclq * qt[i];
 		}
 	}
 
-	Assert( qt.IsValid() );
+	contract_assert( qt.IsValid() );
 }
 
 //-----------------------------------------------------------------------------
@@ -1715,15 +1669,15 @@ float QuaternionAngleDiff( const Quaternion &p, const Quaternion &q )
 
 	// Note if the quaternion is slightly non-normalized the square root below may be more than 1,
 	// the value is clamped to one otherwise it may result in asin() returning an undefined result.
-	float sinang = std::min( 1.0f, sqrt( diff.x * diff.x + diff.y * diff.y + diff.z * diff.z ) );
-	float angle = RAD2DEG( 2 * asin( sinang ) );
+	float sinang = std::min( 1.0f, std::sqrt( diff.x * diff.x + diff.y * diff.y + diff.z * diff.z ) );
+	float angle = RAD2DEG( 2 * std::asin( sinang ) );
 	return angle;
 }
 
 void QuaternionConjugate( const Quaternion &p, Quaternion &q )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( q.IsValid() );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( q.IsValid() );
 
 	q.x = -p.x;
 	q.y = -p.y;
@@ -1733,13 +1687,13 @@ void QuaternionConjugate( const Quaternion &p, Quaternion &q )
 
 void QuaternionInvert( const Quaternion &p, Quaternion &q )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( q.IsValid() );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( q.IsValid() );
 
 	QuaternionConjugate( p, q );
 
 	float magnitudeSqr = QuaternionDotProduct( p, p );
-	Assert( magnitudeSqr );
+	contract_assert( magnitudeSqr );
 	if ( magnitudeSqr )
 	{
 		float inv = 1.0f / magnitudeSqr;
@@ -1766,16 +1720,16 @@ void QuaternionMultiply( const Quaternion &q, const Vector &v, Vector &result )
 //-----------------------------------------------------------------------------
 float QuaternionNormalize( Quaternion &q )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float radius, iradius;
 
-	Assert( q.IsValid() );
+	contract_assert( q.IsValid() );
 
 	radius = q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3];
 
 	if ( radius ) // > FLT_EPSILON && ((radius < 1.0f - 4*FLT_EPSILON) || (radius > 1.0f + 4*FLT_EPSILON))
 	{
-		radius = sqrt(radius);
+		radius = std::sqrt(radius);
 		iradius = 1.0f/radius;
 		q[3] *= iradius;
 		q[2] *= iradius;
@@ -1788,18 +1742,18 @@ float QuaternionNormalize( Quaternion &q )
 
 void QuaternionScale( const Quaternion &p, float t, Quaternion &q )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 
 	float r;
 
 	// FIXME: nick, this isn't overly sensitive to accuracy, and it may be faster to 
 	// use the cos part (w) of the quaternion (sin(omega)*N,cos(omega)) to figure the new scale.
-	float sinom = sqrt( DotProduct( &p.x, &p.x ) );
+	float sinom = std::sqrt( DotProduct( &p.x, &p.x ) );
 	sinom = std::min( sinom, 1.f );
 
-	float sinsom = sin( asin( sinom ) * t );
+	float sinsom = std::sin( std::asin( sinom ) * t );
 
-	t = sinsom / (sinom + FLT_EPSILON);
+	t = sinsom / (sinom + std::numeric_limits<float>::epsilon());
 	VectorScale( &p.x, t, &q.x );
 
 	// rescale rotation
@@ -1808,7 +1762,7 @@ void QuaternionScale( const Quaternion &p, float t, Quaternion &q )
 	// Assert( r >= 0 );
 	if (r < 0.0f) 
 		r = 0.0f;
-	r = sqrt( r );
+	r = std::sqrt( r );
 
 	// keep sign of rotation
 	if (p.w < 0)
@@ -1816,7 +1770,7 @@ void QuaternionScale( const Quaternion &p, float t, Quaternion &q )
 	else
 		q.w = r;
 
-	Assert( q.IsValid() );
+	contract_assert( q.IsValid() );
 
 	return;
 }
@@ -1824,9 +1778,9 @@ void QuaternionScale( const Quaternion &p, float t, Quaternion &q )
 
 void QuaternionAdd( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( p.IsValid() );
-	Assert( q.IsValid() );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( p.IsValid() );
+	contract_assert( q.IsValid() );
 
 	// decide if one of the quaternions is backwards
 	Quaternion q2;
@@ -1844,9 +1798,9 @@ void QuaternionAdd( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 
 float QuaternionDotProduct( const Quaternion &p, const Quaternion &q )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( p.IsValid() );
-	Assert( q.IsValid() );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( p.IsValid() );
+	contract_assert( q.IsValid() );
 
 	return p.x * q.x + p.y * q.y + p.z * q.z + p.w * q.w;
 }
@@ -1855,9 +1809,9 @@ float QuaternionDotProduct( const Quaternion &p, const Quaternion &q )
 // qt = p * q
 void QuaternionMult( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( p.IsValid() );
-	Assert( q.IsValid() );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( p.IsValid() );
+	contract_assert( q.IsValid() );
 
 	if (&p == &qt)
 	{
@@ -1880,18 +1834,18 @@ void QuaternionMult( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 
 void QuaternionExp( const Quaternion &p, Quaternion &q )
 {
-	float r  = sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
-	float et = exp(p[3]);
-	float s  = r>=0.00001f? et*sin(r)/r: 0.f;
-	q.Init( s*p[0],s*p[1],s*p[2], et*cos( r ) );
+	float r  = std::sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
+	float et = std::exp(p[3]);
+	float s  = r>=0.00001f? et*std::sin(r)/r: 0.f;
+	q.Init( s*p[0],s*p[1],s*p[2], et*std::cos( r ) );
 }
 
 void QuaternionLn( const Quaternion &p, Quaternion &q )
 {
-	float r  = sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
-	float t  = r>0.00001f? atan2(r,p[3])/r: 0.f;
+	float r  = std::sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
+	float t  = r>0.00001f? std::atan2(r,p[3])/r: 0.f;
 	float norm = p[0]*p[0] + p[1]*p[1] + p[2]*p[2] + p[3]*p[3];
-	q.Init( t*p[0],t*p[1],t*p[2],0.5*log(norm) );
+	q.Init( t*p[0],t*p[1],t*p[2],0.5*std::log(norm) );
 }
 
 // Average using exponential method
@@ -1899,8 +1853,8 @@ void QuaternionLn( const Quaternion &p, Quaternion &q )
 // if pflWeights passed in 1/n is replaced by normalized weighting
 void QuaternionAverageExponential( Quaternion &q, int nCount, const Quaternion *pQuaternions, const float *pflWeights /*=NULL*/ )
 {
-	Assert( nCount >= 1 );
-	Assert( pQuaternions );
+	contract_assert( nCount >= 1 );
+	contract_assert( pQuaternions );
 
 	// Nothing to do if only one input quaternions
 	if ( nCount == 1 )
@@ -1994,7 +1948,7 @@ void QuaternionLookAt( const Vector &vecForward, const Vector &referenceUp, Quat
 
 void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t& matrix )
 {
-	Assert( pos.IsValid() );
+	contract_assert( pos.IsValid() );
 
 	QuaternionMatrix( q, matrix );
 
@@ -2005,9 +1959,9 @@ void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t& matr
 
 void QuaternionMatrix( const Quaternion &q, const Vector &pos, const Vector &vScale, matrix3x4_t& mat )
 {
-	Assert( pos.IsValid() );
-	Assert( q.IsValid() );
-	Assert( vScale.IsValid() );
+	contract_assert( pos.IsValid() );
+	contract_assert( q.IsValid() );
+	contract_assert( vScale.IsValid() );
 
 	QuaternionMatrix( q, mat );
 
@@ -2020,12 +1974,8 @@ void QuaternionMatrix( const Quaternion &q, const Vector &pos, const Vector &vSc
 
 void QuaternionMatrix( const Quaternion &q, matrix3x4_t& matrix )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( q.IsValid() );
-
-#ifdef _VPROF_MATHLIB
-	VPROF_BUDGET( "QuaternionMatrix", "Mathlib" );
-#endif
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( q.IsValid() );
 
 // Original code
 // This should produce the same code as below with optimization, but looking at the assmebly,
@@ -2093,7 +2043,7 @@ const Quaternion RotateBetween( const Vector& v1, const Vector& v2 )
 	else
 	{
 		// Anti-parallel: Use a perpendicular vector
-		if ( fabsf( v1.x ) > 0.5f )
+		if ( std::fabsf( v1.x ) > 0.5f )
 		{
 			qOut.x = v1.y;
 			qOut.y = -v1.x;
@@ -2112,7 +2062,7 @@ const Quaternion RotateBetween( const Vector& v1, const Vector& v2 )
 	// The algorithm is simplified and made more accurate by normalizing at the end
 	QuaternionNormalize( qOut );
 
-	Assert( ( VectorTransform( v1, QuaternionMatrix( qOut ) ) - v2 ).Length() < 2e-3f );
+	contract_assert( ( VectorTransform( v1, QuaternionMatrix( qOut ) ) - v2 ).Length() < 2e-3f );
 
 	return qOut;
 }
@@ -2125,7 +2075,7 @@ void UnitTestQuatExpLog()
 		Quaternion q = RandomQuaternion();
 		Vector l = QuaternionLog( q );
 		Quaternion q2 = Exp( l );
-		Assert( QuaternionLength( q - q2 ) < 0.0001f );
+		contract_assert( QuaternionLength( q - q2 ) < 0.0001f );
 	}
 }
 
@@ -2147,7 +2097,7 @@ void UnitTestRotateBetween()
 			nMaxError = i;
 		}
 	}
-	Assert( flMaxError < 0.001f );
+	contract_assert( flMaxError < 0.001f );
 }
 
 
@@ -2158,19 +2108,15 @@ void UnitTestRotateBetween()
 //-----------------------------------------------------------------------------
 void QuaternionAngles( const Quaternion &q, QAngle &angles )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( q.IsValid() );
-
-#ifdef _VPROF_MATHLIB
-	VPROF_BUDGET( "QuaternionAngles", "Mathlib" );
-#endif
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( q.IsValid() );
 
 	// FIXME: doing it this way calculates too much data, needs to do an optimized version...
 	matrix3x4_t matrix;
 	QuaternionMatrix( q, matrix );
 	MatrixAngles( matrix, angles );
 
-	Assert( angles.IsValid() );
+	contract_assert( angles.IsValid() );
 }
 
 
@@ -2212,41 +2158,21 @@ float QuaternionionGetRoll( const Quaternion &q )
 //-----------------------------------------------------------------------------
 void QuaternionVectorsFLU( Quaternion const &q, Vector *pForward, Vector *pLeft, Vector *pUp )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( q.IsValid() );
-
-#ifdef _VPROF_MATHLIB
-	// @TODO: VPROF_BUDGET( "QuaternionVectorsFLU", "Mathlib" );
-#endif
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( q.IsValid() );
 
 	// Note: it's pretty much identical to just computing the quaternion matrix and assigning its columns to the vectors
 	*pForward = q.GetForward();
 	*pLeft = q.GetLeft();
 	*pUp = q.GetUp();
-#ifdef DBGFLAG_ASSERT
-	matrix3x4_t matrix;
-	QuaternionMatrix( q, matrix );
-	Vector forward, left, up;
-	MatrixVectorsFLU( matrix, &forward, &left, &up );
-	Assert( ( forward - *pForward ).Length() + ( left - *pLeft ).Length() + ( up - *pUp ).Length() < 1e-4f );
-#endif
 }
 
 void QuaternionVectorsForward( const Quaternion& q, Vector *pForward )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( q.IsValid() );
-
-#ifdef _VPROF_MATHLIB
-	// @TODO: VPROF_BUDGET( "QuaternionVectorsForward", "Mathlib" );
-#endif
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( q.IsValid() );
 
 	*pForward = q.GetForward();
-#ifdef DBGFLAG_ASSERT
-	matrix3x4_t matrix;
-	QuaternionMatrix( q, matrix );
-	Assert( ( MatrixGetColumn( matrix, FORWARD_AXIS ) - *pForward ).Length() < 1e-4f );
-#endif
 }
 
 
@@ -2269,7 +2195,7 @@ void UnitTestVectorFLU()
 //-----------------------------------------------------------------------------
 void QuaternionAxisAngle( const Quaternion &q, Vector &axis, float &angle )
 {
-	angle = RAD2DEG(2 * acos(q.w));
+	angle = RAD2DEG(2 * std::acos(q.w));
 	if ( angle > 180 )
 	{
 		angle -= 360;
@@ -2302,12 +2228,8 @@ void AxisAngleQuaternion( const Vector &axis, float angle, Quaternion &q )
 //-----------------------------------------------------------------------------
 void AngleQuaternion( const RadianEuler &angles, Quaternion &outQuat )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 //	Assert( angles.IsValid() );
-
-#ifdef _VPROF_MATHLIB
-	VPROF_BUDGET( "AngleQuaternion", "Mathlib" );
-#endif
 
 	float sr, sp, sy, cr, cp, cy;
 
@@ -2337,9 +2259,6 @@ void AngleQuaternion( const RadianEuler &angles, Quaternion &outQuat )
 //-----------------------------------------------------------------------------
 void AngleQuaternion( const QAngle &angles, Quaternion &outQuat )
 {
-#ifdef _VPROF_MATHLIB
-	VPROF_BUDGET( "AngleQuaternion", "Mathlib" );
-#endif
 
 	float sr, sp, sy, cr, cp, cy;
 
@@ -2362,9 +2281,9 @@ void AngleQuaternion( const QAngle &angles, Quaternion &outQuat )
 //-----------------------------------------------------------------------------
 void BasisToQuaternion( const Vector &vecForward, const Vector &vecRight, const Vector &vecUp, Quaternion &q )
 {
-	Assert( fabs( vecForward.LengthSqr() - 1.0f ) < 1e-3 );
-	Assert( fabs( vecRight.LengthSqr() - 1.0f ) < 1e-3 );
-	Assert( fabs( vecUp.LengthSqr() - 1.0f ) < 1e-3 );
+	contract_assert( std::fabs( vecForward.LengthSqr() - 1.0f ) < 1e-3 );
+	contract_assert( std::fabs( vecRight.LengthSqr() - 1.0f ) < 1e-3 );
+	contract_assert( std::fabs( vecUp.LengthSqr() - 1.0f ) < 1e-3 );
 
 	Vector vecLeft;
 	VectorMultiply( vecRight, -1.0f, vecLeft );
@@ -2472,7 +2391,7 @@ void MatrixQuaternionFast( const matrix3x4_t &mat, Quaternion &q )
 			q.Init( mat[ 2 ][ 1 ] - mat[ 1 ][ 2 ], mat[ 0 ][ 2 ] - mat[ 2 ][ 0 ], mat[ 1 ][ 0 ] - mat[ 0 ][ 1 ], t );
 		}
 	}
-	q = q * ( 0.5f / sqrtf( t ) );
+	q = q * ( 0.5f / std::sqrtf( t ) );
 }
 
 
@@ -2482,7 +2401,7 @@ float MatrixQuaternionTest( uint nCount )
 	for ( uint i = 0; i < nCount; ++i )
 	{
 		Quaternion q = RandomQuaternion(), r;
-		Assert( fabsf( q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w - 1 ) < 1e-5f );
+		contract_assert( std::fabsf( q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w - 1 ) < 1e-5f );
 		matrix3x4_t mat;
 		QuaternionMatrix( q, mat );
 		MatrixQuaternion( mat, r );
@@ -2497,7 +2416,7 @@ float MatrixQuaternionTest( uint nCount )
 			flMaxError = flError;
 		}
 	}
-	NOTE_UNUSED( flMaxError ); NOTE_UNUSED( flSumError );
+	(void)flMaxError; (void)flSumError;
 	return flSumError / nCount;
 }
 
@@ -2507,7 +2426,7 @@ float MatrixQuaternionFastTest( uint nCount )
 	for ( uint i = 0; i < nCount; ++i )
 	{
 		Quaternion q = RandomQuaternion(), r;
-		Assert( fabsf( q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w - 1 ) < 1e-5f );
+		contract_assert( std::fabsf( q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w - 1 ) < 1e-5f );
 		matrix3x4_t mat;
 		QuaternionMatrix( q, mat );
 		MatrixQuaternionFast( mat, r );
@@ -2522,7 +2441,7 @@ float MatrixQuaternionFastTest( uint nCount )
 			flMaxError = flError;
 		}
 	}
-	NOTE_UNUSED( flMaxError ); NOTE_UNUSED( flSumError );
+	(void)flMaxError; (void)flSumError;
 	return flSumError / nCount;
 }
 
@@ -2534,7 +2453,7 @@ float MatrixQuaternionTest2( uint nCount )
 	for ( uint i = 0; i < nCount; ++i )
 	{
 		Quaternion q = RandomQuaternion(), r;
-		Assert( fabsf( q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w - 1 ) < 1e-5f );
+		contract_assert( std::fabsf( q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w - 1 ) < 1e-5f );
 		matrix3x4_t mat = QuaternionMatrix( q );
 		r = MatrixQuaternion( mat );
 		if ( QuaternionDotProduct( q, r ) < 0 )
@@ -2548,7 +2467,7 @@ float MatrixQuaternionTest2( uint nCount )
 			flMaxError = flError;
 		}
 	}
-	NOTE_UNUSED( flMaxError ); NOTE_UNUSED( flSumError );
+	(void)flMaxError; (void)flSumError;
 	return flSumError / nCount;
 }
 
@@ -2559,15 +2478,15 @@ float MatrixQuaternionTest2( uint nCount )
 //-----------------------------------------------------------------------------
 void QuaternionAngles( const Quaternion &q, RadianEuler &angles )
 {
-	Assert( s_bMathlibInitialized );
-	Assert( q.IsValid() );
+	contract_assert( s_bMathlibInitialized );
+	contract_assert( q.IsValid() );
 
 	// FIXME: doing it this way calculates too much data, needs to do an optimized version...
 	matrix3x4_t matrix;
 	QuaternionMatrix( q, matrix );
 	MatrixAngles( matrix, angles );
 
-	Assert( angles.IsValid() );
+	contract_assert( angles.IsValid() );
 }
 
 //-----------------------------------------------------------------------------
@@ -2618,15 +2537,15 @@ void Catmull_Rom_Spline(
 	float t, 
 	Vector& output )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float tSqr = t*t*0.5f;
 	float tSqrSqr = t*tSqr;
 	t *= 0.5f;
 
-	Assert( &output != &p1 );
-	Assert( &output != &p2 );
-	Assert( &output != &p3 );
-	Assert( &output != &p4 );
+	contract_assert( &output != &p1 );
+	contract_assert( &output != &p2 );
+	contract_assert( &output != &p3 );
+	contract_assert( &output != &p4 );
 
 	output.Init();
 
@@ -2673,15 +2592,15 @@ void Catmull_Rom_Spline_Tangent(
 	float t, 
 	Vector& output )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float tOne = 3*t*t*0.5f;
 	float tTwo = 2*t*0.5f;
 	float tThree = 0.5;
 
-	Assert( &output != &p1 );
-	Assert( &output != &p2 );
-	Assert( &output != &p3 );
-	Assert( &output != &p4 );
+	contract_assert( &output != &p1 );
+	contract_assert( &output != &p2 );
+	contract_assert( &output != &p3 );
+	contract_assert( &output != &p4 );
 
 	output.Init();
 
@@ -2823,14 +2742,14 @@ void Hermite_Spline(
 	float t, 
 	Vector& output )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float tSqr = t*t;
 	float tCube = t*tSqr;
 
-	Assert( &output != &p1 );
-	Assert( &output != &p2 );
-	Assert( &output != &d1 );
-	Assert( &output != &d2 );
+	contract_assert( &output != &p1 );
+	contract_assert( &output != &p2 );
+	contract_assert( &output != &d1 );
+	contract_assert( &output != &d2 );
 
 	float b1 = 2.0f*tCube-3.0f*tSqr+1.0f;
 	float b2 = 1.0f - b1; // -2*tCube+3*tSqr;
@@ -2850,7 +2769,7 @@ float Hermite_Spline(
 	float d2,
 	float t )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	float output;
 	float tSqr = t*t;
 	float tCube = t*tSqr;
@@ -2947,7 +2866,7 @@ void Kochanek_Bartels_Spline(
 	float t, 
 	Vector& output )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 
 	float ffa, ffb, ffc, ffd;
 
@@ -2960,10 +2879,10 @@ void Kochanek_Bartels_Spline(
 	float tSqrSqr = t*tSqr;
 	t *= 0.5f;
 
-	Assert( &output != &p1 );
-	Assert( &output != &p2 );
-	Assert( &output != &p3 );
-	Assert( &output != &p4 );
+	contract_assert( &output != &p1 );
+	contract_assert( &output != &p2 );
+	contract_assert( &output != &p3 );
+	contract_assert( &output != &p4 );
 
 	output.Init();
 
@@ -3032,15 +2951,15 @@ void Cubic_Spline(
 	float t, 
 	Vector& output )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 
 	float tSqr = t*t;
 	float tSqrSqr = t*tSqr;
 
-	Assert( &output != &p1 );
-	Assert( &output != &p2 );
-	Assert( &output != &p3 );
-	Assert( &output != &p4 );
+	contract_assert( &output != &p1 );
+	contract_assert( &output != &p2 );
+	contract_assert( &output != &p3 );
+	contract_assert( &output != &p4 );
 
 	output.Init();
 
@@ -3090,7 +3009,7 @@ void BSpline(
 	float t, 
 	Vector& output )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 
 	float oneOver6 = 1.0f / 6.0f;
 
@@ -3098,10 +3017,10 @@ void BSpline(
 	float tSqrSqr = t*tSqr;
 	t *= oneOver6;
 
-	Assert( &output != &p1 );
-	Assert( &output != &p2 );
-	Assert( &output != &p3 );
-	Assert( &output != &p4 );
+	contract_assert( &output != &p1 );
+	contract_assert( &output != &p2 );
+	contract_assert( &output != &p3 );
+	contract_assert( &output != &p4 );
 
 	output.Init();
 
@@ -3167,15 +3086,15 @@ void Parabolic_Spline(
 	float t, 
 	Vector& output )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 
 	float tSqr = t*t*0.5f;
 	t *= 0.5f;
 
-	Assert( &output != &p1 );
-	Assert( &output != &p2 );
-	Assert( &output != &p3 );
-	Assert( &output != &p4 );
+	contract_assert( &output != &p1 );
+	contract_assert( &output != &p2 );
+	contract_assert( &output != &p3 );
+	contract_assert( &output != &p4 );
 
 	output.Init();
 
@@ -3268,9 +3187,9 @@ float RangeCompressor( float flValue, float flMin, float flMax, float flBase )
 	// convert to -1 to 1 value
 	float flTarget = flMid * 2 - 1;
 
-	if (fabs(flTarget) > 0.75)
+	if (std::fabs(flTarget) > 0.75)
 	{
-		float t = (fabs(flTarget) - 0.75) / (1.25);
+		float t = (std::fabs(flTarget) - 0.75) / (1.25);
 		if (t < 1.0)
 		{
 			if (flTarget > 0)
@@ -3321,7 +3240,7 @@ void TransformAABB( const matrix3x4_t& transform, const Vector &vecMinsIn, const
 	VectorSubtract( worldCenter, worldExtents, vecMinsOut );
 	VectorAdd( worldCenter, worldExtents, vecMaxsOut );
 	// sanity chec	
-	Assert( vecMinsOut.LengthSqr()  + vecMaxsOut.LengthSqr() < 1e+12 ); 
+	contract_assert( vecMinsOut.LengthSqr()  + vecMaxsOut.LengthSqr() < 1e+12 ); 
 }
 
 
@@ -3489,7 +3408,7 @@ void CalcSqrDistAndClosestPointOnAABB( const Vector &mins, const Vector &maxs, c
 
 float CalcClosestPointToLineT( const Vector &P, const Vector &vLineA, const Vector &vLineB, Vector &vDir )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	VectorSubtract( vLineB, vLineA, vDir );
 
 	// D dot [P - (A + D*t)] = 0
@@ -3507,7 +3426,7 @@ float CalcClosestPointToLineT( const Vector &P, const Vector &vLineA, const Vect
 
 void CalcClosestPointOnLine( const Vector &P, const Vector &vLineA, const Vector &vLineB, Vector &vClosest, float *outT )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector vDir;
 	float t = CalcClosestPointToLineT( P, vLineA, vLineB, vDir );
 	if ( outT ) *outT = t;
@@ -3517,7 +3436,7 @@ void CalcClosestPointOnLine( const Vector &P, const Vector &vLineA, const Vector
 
 float CalcDistanceToLine( const Vector &P, const Vector &vLineA, const Vector &vLineB, float *outT )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector vClosest;
 	CalcClosestPointOnLine( P, vLineA, vLineB, vClosest, outT );
 	return P.DistTo(vClosest);
@@ -3525,7 +3444,7 @@ float CalcDistanceToLine( const Vector &P, const Vector &vLineA, const Vector &v
 
 float CalcDistanceSqrToLine( const Vector &P, const Vector &vLineA, const Vector &vLineB, float *outT )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector vClosest;
 	CalcClosestPointOnLine( P, vLineA, vLineB, vClosest, outT );
 	return P.DistToSqr(vClosest);
@@ -3546,7 +3465,7 @@ void CalcClosestPointOnLineSegment( const Vector &P, const Vector &vLineA, const
 
 float CalcDistanceToLineSegment( const Vector &P, const Vector &vLineA, const Vector &vLineB, float *outT )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector vClosest;
 	CalcClosestPointOnLineSegment( P, vLineA, vLineB, vClosest, outT );
 	return P.DistTo( vClosest );
@@ -3554,7 +3473,7 @@ float CalcDistanceToLineSegment( const Vector &P, const Vector &vLineA, const Ve
 
 float CalcDistanceSqrToLineSegment( const Vector &P, const Vector &vLineA, const Vector &vLineB, float *outT )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector vClosest;
 	CalcClosestPointOnLineSegment( P, vLineA, vLineB, vClosest, outT );
 	return P.DistToSqr(vClosest);
@@ -3562,7 +3481,7 @@ float CalcDistanceSqrToLineSegment( const Vector &P, const Vector &vLineA, const
 
 float CalcClosestPointToLineT2D( const Vector2D &P, const Vector2D &vLineA, const Vector2D &vLineB, Vector2D &vDir )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector2DSubtract( vLineB, vLineA, vDir );
 
 	// D dot [P - (A + D*t)] = 0
@@ -3580,7 +3499,7 @@ float CalcClosestPointToLineT2D( const Vector2D &P, const Vector2D &vLineA, cons
 
 void CalcClosestPointOnLine2D( const Vector2D &P, const Vector2D &vLineA, const Vector2D &vLineB, Vector2D &vClosest, float *outT )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector2D vDir;
 	float t = CalcClosestPointToLineT2D( P, vLineA, vLineB, vDir );
 	if ( outT ) *outT = t;
@@ -3589,7 +3508,7 @@ void CalcClosestPointOnLine2D( const Vector2D &P, const Vector2D &vLineA, const 
 
 float CalcDistanceToLine2D( const Vector2D &P, const Vector2D &vLineA, const Vector2D &vLineB, float *outT )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector2D vClosest;
 	CalcClosestPointOnLine2D( P, vLineA, vLineB, vClosest, outT );
 	return P.DistTo( vClosest );
@@ -3597,7 +3516,7 @@ float CalcDistanceToLine2D( const Vector2D &P, const Vector2D &vLineA, const Vec
 
 float CalcDistanceSqrToLine2D( const Vector2D &P, const Vector2D &vLineA, const Vector2D &vLineB, float *outT )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector2D vClosest;
 	CalcClosestPointOnLine2D( P, vLineA, vLineB, vClosest, outT );
 	return P.DistToSqr(vClosest);
@@ -3617,7 +3536,7 @@ void CalcClosestPointOnLineSegment2D( const Vector2D &P, const Vector2D &vLineA,
 
 float CalcDistanceToLineSegment2D( const Vector2D &P, const Vector2D &vLineA, const Vector2D &vLineB, float *outT )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector2D vClosest;
 	CalcClosestPointOnLineSegment2D( P, vLineA, vLineB, vClosest, outT );
 	return P.DistTo( vClosest );
@@ -3625,14 +3544,14 @@ float CalcDistanceToLineSegment2D( const Vector2D &P, const Vector2D &vLineA, co
 
 float CalcDistanceSqrToLineSegment2D( const Vector2D &P, const Vector2D &vLineA, const Vector2D &vLineB, float *outT )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	Vector2D vClosest;
 	CalcClosestPointOnLineSegment2D( P, vLineA, vLineB, vClosest, outT );
 	return P.DistToSqr( vClosest );
 }
 
 // Do we have another epsilon we could use
-#define LINE_EPS ( 0.000001f )
+constexpr auto LINE_EPS = ( 0.000001f );
 
 //-----------------------------------------------------------------------------
 // Purpose: Given lines p1->p2 and p3->p4, computes a line segment (pa->pb) and returns the parameters 0->1 multipliers
@@ -3660,12 +3579,12 @@ bool CalcLineToLineIntersectionSegment(
    p43.y = p4.y - p3.y;
    p43.z = p4.z - p3.z;
 
-   if (fabs(p43.x)  < LINE_EPS && fabs(p43.y)  < LINE_EPS && fabs(p43.z)  < LINE_EPS)
+   if (std::fabs(p43.x)  < LINE_EPS && std::fabs(p43.y)  < LINE_EPS && std::fabs(p43.z)  < LINE_EPS)
       return false;
    p21.x = p2.x - p1.x;
    p21.y = p2.y - p1.y;
    p21.z = p2.z - p1.z;
-   if (fabs(p21.x)  < LINE_EPS && fabs(p21.y)  < LINE_EPS && fabs(p21.z)  < LINE_EPS)
+   if (std::fabs(p21.x)  < LINE_EPS && std::fabs(p21.y)  < LINE_EPS && std::fabs(p21.z)  < LINE_EPS)
       return false;
 
    d1343 = p13.x * p43.x + p13.y * p43.y + p13.z * p43.z;
@@ -3675,7 +3594,7 @@ bool CalcLineToLineIntersectionSegment(
    d2121 = p21.x * p21.x + p21.y * p21.y + p21.z * p21.z;
 
    denom = d2121 * d4343 - d4321 * d4321;
-   if (fabs(denom) < LINE_EPS)
+   if (std::fabs(denom) < LINE_EPS)
       return false;
    numer = d1343 * d4321 - d1321 * d4343;
 
@@ -3696,36 +3615,22 @@ bool CalcLineToLineIntersectionSegment(
 }
 
 
-#ifndef EXCEPTION_EXECUTE_HANDLER
-#define EXCEPTION_EXECUTE_HANDLER       1
-#endif
-
-
-
-#ifndef NDEBUG
-volatile static char const *pDebugString;
-#endif
 
 void MathLib_Init( float gamma, float texGamma, float brightness, int overbright, bool bAllowSSE, bool bAllowSSE2, bool bAllowMMX )
 {
 	if ( s_bMathlibInitialized )
 		return;
-#ifndef NDEBUG
-	pDebugString = "mathlib.lib built debug!";
-#endif
 
 	// FIXME: Hook SSE into VectorAligned + Vector4DAligned
 
-#if !defined(PLATFORM_ARM)
 	// Grab the processor information:
 	const CPUInformation& pi = GetCPUInformation();
 
 	if ( ! ( pi.m_bSSE && pi.m_bSSE2 ) )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		Error( "SSE and SSE2 are required." );
 	}
-#endif //!360
 
 	s_bMathlibInitialized = true;
 
@@ -3737,19 +3642,19 @@ void MathLib_Init( float gamma, float texGamma, float brightness, int overbright
 
 bool MathLib_MMXEnabled( void )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	return true;
 }
 
 bool MathLib_SSEEnabled( void )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	return true;
 }
 
 bool MathLib_SSE2Enabled( void )
 {
-	Assert( s_bMathlibInitialized );
+	contract_assert( s_bMathlibInitialized );
 	return true;
 }
 
@@ -3787,7 +3692,7 @@ float AngleDiff( float destAngle, float srcAngle )
 {
 	float delta;
 
-	delta = fmodf(destAngle - srcAngle, 360.0f);
+	delta = std::fmodf(destAngle - srcAngle, 360.0f);
 	if ( destAngle > srcAngle )
 	{
 		if ( delta >= 180 )
@@ -3817,7 +3722,7 @@ float AngleDistance( float next, float cur )
 
 float AngleNormalize( float angle )
 {
-	angle = fmodf(angle, 360.0f);
+	angle = std::fmodf(angle, 360.0f);
 	if (angle > 180) 
 	{
 		angle -= 360;
@@ -3833,7 +3738,7 @@ float AngleNormalize( float angle )
 // ensure that 0 <= angle <= 360
 float AngleNormalizePositive( float angle )
 {
-	angle = fmodf( angle, 360.0f );
+	angle = std::fmodf( angle, 360.0f );
 
 	if (angle < 0.0f)
 	{
@@ -3846,7 +3751,7 @@ float AngleNormalizePositive( float angle )
 //--------------------------------------------------------------------------------------------------------------
 bool AnglesAreEqual( float a, float b, float tolerance )
 {
-	return (fabs( AngleDiff( a, b ) ) < tolerance);
+	return (std::fabs( AngleDiff( a, b ) ) < tolerance);
 }
 
 void RotationDeltaAxisAngle( const QAngle &srcAngles, const QAngle &destAngles, Vector &deltaAxis, float &deltaAngle )
@@ -3974,7 +3879,7 @@ int PolyFromPlane( Vector *pOutVerts, const Vector& normal, float dist, float fH
 	x = -1;
 	for (i=0 ; i<3; i++)
 	{
-		v = fabs(normal[i]);
+		v = std::fabs(normal[i]);
 		if (v > max)
 		{
 			x = i;
@@ -4092,8 +3997,9 @@ void PolyFromPlane_SIMD( fltx4 *pOutVerts, const fltx4 & plane, float fHalfScale
 
 int ClipPolyToPlane( Vector *inVerts, int vertCount, Vector *outVerts, const Vector& normal, float dist, float fOnPlaneEpsilon )
 {
-	vec_t	*dists = (vec_t *)stackalloc( sizeof(vec_t) * vertCount * 4 ); //4x vertcount should cover all cases
-	int		*sides = (int *)stackalloc( sizeof(vec_t) * vertCount * 4 );
+	ks::ScratchArena<> scratch;
+	vec_t	*dists = scratch.Alloc<vec_t>( vertCount * 4 ); //4x vertcount should cover all cases
+	int		*sides = (int *)scratch.AllocBytes( sizeof(vec_t) * vertCount * 4 );
 	int		counts[3];
 	vec_t	dot;
 	int		i, j;
@@ -4181,8 +4087,9 @@ int ClipPolyToPlane( Vector *inVerts, int vertCount, Vector *outVerts, const Vec
 
 int ClipPolyToPlane_SIMD( fltx4 *pInVerts, int nVertCount, fltx4 *pOutVerts, const fltx4& plane, float fOnPlaneEpsilon )
 {
-	vec_t	*dists = (vec_t *)stackalloc( sizeof(vec_t) * nVertCount * 4 ); //4* nVertCount should cover all cases
-	uint8	*sides = (uint8 *)stackalloc( sizeof(uint8) * nVertCount * 4 );
+	ks::ScratchArena<> scratch;
+	vec_t	*dists = scratch.Alloc<vec_t>( nVertCount * 4 ); //4* nVertCount should cover all cases
+	uint8	*sides = scratch.Alloc<uint8>( nVertCount * 4 );
 	int		i;
 
 /*
@@ -4227,7 +4134,7 @@ int ClipPolyToPlane_SIMD( fltx4 *pInVerts, int nVertCount, fltx4 *pOutVerts, con
 	if ( ( nAllSides & OR_SIDE_BACK ) == 0 )
 	{
 		// Not clipped at all, copy to output verts
-		Assert ( i == nVertCount );
+		contract_assert( i == nVertCount );
 		int nIndex = 0;
 		while ( i >= 4 )
 		{
@@ -4295,8 +4202,9 @@ int ClipPolyToPlane_SIMD( fltx4 *pInVerts, int nVertCount, fltx4 *pOutVerts, con
 
 int ClipPolyToPlane_Precise( double *inVerts, int vertCount, double *outVerts, const double *normal, double dist, double fOnPlaneEpsilon )
 {
-	double	*dists = (double *)stackalloc( sizeof(double) * vertCount * 4 ); //4x vertcount should cover all cases
-	int		*sides = (int *)stackalloc( sizeof(double) * vertCount * 4 );
+	ks::ScratchArena<> scratch;
+	double	*dists = scratch.Alloc<double>( vertCount * 4 ); //4x vertcount should cover all cases
+	int		*sides = (int *)scratch.AllocBytes( sizeof(double) * vertCount * 4 );
 	int		counts[3];
 	double	dot;
 	int		i, j;
@@ -4442,14 +4350,14 @@ float CalcFovY( float flFovX, float flAspect )
 	//return RAD2DEG( yRadians ) * 2;
 
 	// The short and sweet version.
-	float val = atan( tan( DEG2RAD( flFovX ) * 0.5f ) / flAspect );
+	float val = std::atan( std::tan( DEG2RAD( flFovX ) * 0.5f ) / flAspect );
 	val = RAD2DEG( val ) * 2.0f;
 	return val;
 }
 
 float CalcFovX( float flFovY, float flAspect )
 {
-	return RAD2DEG( atan( tan( DEG2RAD( flFovY ) * 0.5f ) * flAspect ) ) * 2.0f;
+	return RAD2DEG( std::atan( std::tan( DEG2RAD( flFovY ) * 0.5f ) * flAspect ) ) * 2.0f;
 }
 
 
@@ -4469,8 +4377,8 @@ void GeneratePerspectiveFrustum( const Vector& origin, const Vector &forward,
 	flFovX *= 0.5f;
 	flFovY *= 0.5f;
 
-	float flTanX = tan( DEG2RAD( flFovX ) );
-	float flTanY = tan( DEG2RAD( flFovY ) );
+	float flTanX = std::tan( DEG2RAD( flFovX ) );
+	float flTanY = std::tan( DEG2RAD( flFovY ) );
 
 	// OPTIMIZE: Normalizing these planes is not necessary for culling
 	Vector normalPos, normalNeg;
@@ -4601,7 +4509,7 @@ void fourplanes_t::Get2Planes( VPlane *pPlanesOut ) const
 
 Frustum_t::Frustum_t()
 {
-	memset(this, 0, sizeof(*this));
+	std::memset(this, 0, sizeof(*this));
 }
 
 void Frustum_t::SetPlane( int i, const Vector &vecNormal, float dist )
@@ -4782,13 +4690,13 @@ bool Frustum_t::Intersects( Frustum_t &otherFrustum ) const
 	Vector pPointsA[8];
 	bool bResult = false;
 	bResult = GetCorners( pPointsA );
-	Assert( bResult );
+	contract_assert( bResult );
 	VPlane pPlanesA[FRUSTUM_NUMPLANES];
 	GetPlanes( pPlanesA );
 
 	Vector pPointsB[8];
 	bResult = otherFrustum.GetCorners( pPointsB );
-	Assert( bResult );
+	contract_assert( bResult );
 	VPlane pPlanesB[FRUSTUM_NUMPLANES];
 	otherFrustum.GetPlanes( pPlanesB );
 
@@ -4990,7 +4898,7 @@ void GeneratePerspectiveFrustumFLU( const Vector& origin, const Vector &forward,
 
 	flFovX *= 0.5f;
 
-	float flTanX = tan( DEG2RAD( flFovX ) );
+	float flTanX = std::tan( DEG2RAD( flFovX ) );
 	float flTanY = flTanX / flAspect;
 
 	// OPTIMIZE: Normalizing these planes is not necessary for culling
@@ -5118,7 +5026,7 @@ bool Frustum_t::GetCorners( Vector *pPoints ) const
 // Creates basis vectors, based on a vertex and index list.
 // See the NVidia white paper 'GDC2K PerPixel Lighting' for a description
 // of how this computation works
-#define SMALL_FLOAT 1e-12
+constexpr auto SMALL_FLOAT = 1e-12;
 
 void CalcTriangleTangentSpace( const Vector &p0, const Vector &p1, const Vector &p2,
 							   const Vector2D &t0, const Vector2D &t1, const Vector2D& t2,
@@ -5134,7 +5042,7 @@ void CalcTriangleTangentSpace( const Vector &p0, const Vector &p1, const Vector 
 
 	Vector cross;
 	CrossProduct( edge01, edge02, cross );
-	if ( fabs( cross.x ) > SMALL_FLOAT )
+	if ( std::fabs( cross.x ) > SMALL_FLOAT )
 	{
 		sVect.x += -cross.y / cross.x;
 		tVect.x += -cross.z / cross.x;
@@ -5145,7 +5053,7 @@ void CalcTriangleTangentSpace( const Vector &p0, const Vector &p1, const Vector 
 	edge02.Init( p2.y - p0.y, t2.x - t0.x, t2.y - t0.y );
 
 	CrossProduct( edge01, edge02, cross );
-	if ( fabs( cross.x ) > SMALL_FLOAT )
+	if ( std::fabs( cross.x ) > SMALL_FLOAT )
 	{
 		sVect.y += -cross.y / cross.x;
 		tVect.y += -cross.z / cross.x;
@@ -5156,7 +5064,7 @@ void CalcTriangleTangentSpace( const Vector &p0, const Vector &p1, const Vector 
 	edge02.Init( p2.z - p0.z, t2.x - t0.x, t2.y - t0.y );
 
 	CrossProduct( edge01, edge02, cross );
-	if( fabs( cross.x ) > SMALL_FLOAT )
+	if( std::fabs( cross.x ) > SMALL_FLOAT )
 	{
 		sVect.z += -cross.y / cross.x;
 		tVect.z += -cross.z / cross.x;
@@ -5327,8 +5235,8 @@ void GetInterpolationData( float const *pKnotPositions,
 
 static Vector RandomVectorOnUnitSphere( float u, float v )
 {
-	float flPhi = acos( 1 - 2 * u );
-	float flTheta = 2 * M_PI * v;
+	float flPhi = std::acos( 1 - 2 * u );
+	float flTheta = 2 * std::numbers::pi * v;
 
 	float flSinPhi, flCosPhi;
 	float flSinTheta, flCosTheta;
@@ -5358,13 +5266,13 @@ float RandomVectorInUnitSphere( Vector *pVector )
 {
 	// Guarantee uniform random distribution within a sphere
 	// Graphics gems III contains this algorithm ("Nonuniform random point sets via warping")
-	float u = ((float)rand() / VALVE_RAND_MAX);
-	float v = ((float)rand() / VALVE_RAND_MAX);
-	float w = ((float)rand() / VALVE_RAND_MAX);
+	float u = ((float)std::rand() / VALVE_RAND_MAX);
+	float v = ((float)std::rand() / VALVE_RAND_MAX);
+	float w = ((float)std::rand() / VALVE_RAND_MAX);
 
-	float flPhi = acos( 1 - 2 * u );
-	float flTheta = 2 * M_PI * v;
-	float flRadius = powf( w, 1.0f / 3.0f );
+	float flPhi = std::acos( 1 - 2 * u );
+	float flTheta = 2 * std::numbers::pi * v;
+	float flRadius = std::powf( w, 1.0f / 3.0f );
 
 	float flSinPhi, flCosPhi;
 	float flSinTheta, flCosTheta;
@@ -5388,7 +5296,7 @@ Vector RandomVectorInUnitSphere()
 Vector RandomVectorInUnitSphere( IUniformRandomStream *pRnd )
 {
 	float w = pRnd->RandomFloat();
-	float flRadius = powf( w, 1.0f / 3.0f );
+	float flRadius = std::powf( w, 1.0f / 3.0f );
 
 	Vector v = RandomVectorOnUnitSphere( pRnd ) * flRadius;
 
@@ -5402,11 +5310,11 @@ float RandomVectorInUnitCircle( Vector2D *pVector )
 {
 	// Guarantee uniform random distribution within a sphere
 	// Graphics gems III contains this algorithm ("Nonuniform random point sets via warping")
-	float u = ((float)rand() / VALVE_RAND_MAX);
-	float v = ((float)rand() / VALVE_RAND_MAX);
+	float u = ((float)std::rand() / VALVE_RAND_MAX);
+	float v = ((float)std::rand() / VALVE_RAND_MAX);
 
-	float flTheta = 2 * M_PI * v;
-	float flRadius = powf( u, 1.0f / 2.0f );
+	float flTheta = 2 * std::numbers::pi * v;
+	float flRadius = std::powf( u, 1.0f / 2.0f );
 
 	float flSinTheta, flCosTheta;
 	SinCos( flTheta, &flSinTheta, &flCosTheta );
@@ -5421,20 +5329,20 @@ const Quaternion RandomQuaternion()
 {
 	// Guarantee uniform distribution within S^3. Found on the internet, looked through the proof very briefly, looks sound enough to tentatively trust it before testing or checking the proof for real.
 	// http://mathproofs.blogspot.com/2005/05/uniformly-distributed-random-unit.html
-	float u = RandomFloat( 0, 2 * M_PI ), flSinU = sinf( u );
-	float v = acosf( RandomFloat( -1, 1 ) ), flSinV = sinf( v );
-	float w = 0.5f * ( RandomFloat( 0, M_PI ) + acosf( RandomFloat( 0, 1 ) ) + M_PI / 2 ), flSinW = sinf( w );
-	return Quaternion( cosf( u ), flSinU * cosf( v ), flSinU * flSinV * cosf( w ), flSinU * flSinV * flSinW );
+	float u = RandomFloat( 0, 2 * std::numbers::pi ), flSinU = std::sinf( u );
+	float v = std::acosf( RandomFloat( -1, 1 ) ), flSinV = std::sinf( v );
+	float w = 0.5f * ( RandomFloat( 0, std::numbers::pi ) + std::acosf( RandomFloat( 0, 1 ) ) + std::numbers::pi / 2 ), flSinW = std::sinf( w );
+	return Quaternion( std::cosf( u ), flSinU * std::cosf( v ), flSinU * flSinV * std::cosf( w ), flSinU * flSinV * flSinW );
 }
 
 const Quaternion RandomQuaternion( IUniformRandomStream *pRnd )
 {
 	// Guarantee uniform distribution within S^3. Found on the internet, looked through the proof very briefly, looks sound enough to tentatively trust it before testing or checking the proof for real.
 	// http://mathproofs.blogspot.com/2005/05/uniformly-distributed-random-unit.html
-	float u = pRnd->RandomFloat( 0, 2 * M_PI ), flSinU = sinf( u );
-	float v = acosf( pRnd->RandomFloat( -1, 1 ) ), flSinV = sinf( v );
-	float w = 0.5f * ( pRnd->RandomFloat( 0, M_PI ) + acosf( pRnd->RandomFloat( 0, 1 ) ) + M_PI / 2 ), flSinW = sinf( w );
-	return Quaternion( cosf( u ), flSinU * cosf( v ), flSinU * flSinV * cosf( w ), flSinU * flSinV * flSinW );
+	float u = pRnd->RandomFloat( 0, 2 * std::numbers::pi ), flSinU = std::sinf( u );
+	float v = std::acosf( pRnd->RandomFloat( -1, 1 ) ), flSinV = std::sinf( v );
+	float w = 0.5f * ( pRnd->RandomFloat( 0, std::numbers::pi ) + std::acosf( pRnd->RandomFloat( 0, 1 ) ) + std::numbers::pi / 2 ), flSinW = std::sinf( w );
+	return Quaternion( std::cosf( u ), flSinU * std::cosf( v ), flSinU * flSinV * std::cosf( w ), flSinU * flSinV * flSinW );
 }
 
 // Originally from hammer_mathlib.cpp
@@ -5501,5 +5409,3 @@ void BuildTransformedBox( Vector *v2, Vector const &bbmin, Vector const &bbmax, 
 	VectorTransform( v[ 6 ], m, v2[ 6 ] );
 	VectorTransform( v[ 7 ], m, v2[ 7 ] );
 }
-
-

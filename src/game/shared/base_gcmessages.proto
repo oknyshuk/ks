@@ -1,10 +1,9 @@
-//====== Copyright 1996-2010, Valve Corporation, All rights reserved. =======
-//
-// Purpose: The file defines our Google Protocol Buffers which are used in over 
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2010 Valve Corporation
+
+// Purpose: The file defines our Google Protocol Buffers which are used in over
 // the wire messages between servers as well as between the TF GC and TF gameservers
 // and clients.
-//
-//=============================================================================
 
 // We care more about speed than code size
 option optimize_for = SPEED;
@@ -18,14 +17,14 @@ option cc_generic_services = false;
 //
 // Use CamelCase CMsgMyMessageName style names for messages.
 // 
-// Use lowercase _ delimited names like my_steam_id for field names, this is non-standard for Steam,
-// but plays nice with the Google formatted code generation.  
+// Use lowercase _ delimited names like my_player_id for field names, which plays nice with the
+// Google formatted code generation.
 // 
 // Try not to use required fields ever. Only do so if you are really really sure you'll never want them removed. 
 // Optional should be preffered as it will make versioning easier and cleaner in the future if someone refactors
 // your message and wants to remove or rename fields.
 //
-// Use fixed64 for JobId_t, GID_t, or SteamID.  This is appropriate for any field that is normally
+// Use fixed64 for JobId_t, GID_t, or 64-bit player ids.  This is appropriate for any field that is normally
 // going to be larger than 2^56.  Otherwise use int64 for 64 bit values that are frequently smaller
 // than 2^56 as it will safe space on the wire in those cases.
 //
@@ -34,8 +33,6 @@ option cc_generic_services = false;
 // An exception to this rule for RTime32 is if the value will frequently be zero rather than set to an actual 
 // time.
 //
-
-import "steammessages.proto";
 
 // Messages
 enum EGCBaseMsg
@@ -88,9 +85,9 @@ message CGCStorePurchaseInit_LineItem
 // k_EMsgGCStorePurchaseInit
 message CMsgGCStorePurchaseInit
 {
-	optional	string	country = 1;				// Country the purchase is being made from (obtained from Steam)
+	optional	string	country = 1;				// Country the purchase is being made from
 	optional	int32	language = 2;				// Client's language
-	optional	int32	currency = 3;				// Currency the purchase is in (obtained from Steam)
+	optional	int32	currency = 3;				// Currency the purchase is in
 	
 	repeated	CGCStorePurchaseInit_LineItem	line_items = 4;
 };
@@ -284,7 +281,7 @@ message CSOItemRecipe
 //
 message CMsgDevNewItemRequest
 {
-	//using fixed64 since steamids have lots of entropy in their bits
+	//using fixed64 since player ids have lots of entropy in their bits
 	optional fixed64 receiver = 1;
 	optional CSOItemCriteria criteria = 2;
 };
@@ -843,14 +840,13 @@ message CMsgGameServerInfo
 	optional	float server_loadavg = 9; // current load average
 	optional	float server_tv_broadcast_time = 10; // This may be negative if the game hasn't started broadcasting
 	optional	float server_game_time = 11; // Current game clock time
-	optional	fixed64 server_relay_connected_steam_id = 12; // SteamID of the game or relay server this relay is connected to
+	optional	fixed64 server_relay_connected_steam_id = 12; // Player id of the game or relay server this relay is connected to
 	optional	uint32 relay_slots_max = 13; // slots total on relay
 	optional	int32 relays_connected = 14; // count of relays connected
 	optional	int32 relay_clients_connected = 15; // count of clients connected (all types)
-	optional	fixed64 relayed_game_server_steam_id = 16; // SteamID of the game server this relay is relaying
+	optional	fixed64 relayed_game_server_steam_id = 16; // Player id of the game server this relay is relaying
 	optional	uint32 parent_relay_count = 17; // The count of parent relays above this relay
-	optional	fixed64 tv_secret_code = 18; // The randomly generated ID for this server that requesting connections must use to hash the connecting steam ID to create a unique connection code
+	optional	fixed64 tv_secret_code = 18; // The randomly generated ID for this server that requesting connections must use to hash the connecting player id to create a unique connection code
 };
 
 // Do not remove this comment due to a bug on the Mac OS X protobuf compiler - lol
-

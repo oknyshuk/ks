@@ -9,24 +9,21 @@
 
 #pragma once
 
-#include <unordered_map>
+#include <Jolt/Jolt.h>
+import std;
+import ks.core;
+#include "vphysics_interface.h"
+#include "vphysics/collision_set.h"
+namespace JPH { class TempAllocator; class JobSystem; }
 
 //-------------------------------------------------------------------------------------------------
 
 // Call this in stubbed functions to spew when they're hit
-#define Log_Stub( Channel )
 
 // So we can toggle assertions in this module at our discretion
-#if DEVELOPMENT_ONLY
-#define VJoltAssert	DevAssert
-#define VJoltAssertMsg DevAssertMsg
-#else
-#define VJoltAssert Assert
-#define VJoltAssertMsg AssertMsg
-#endif
 
-DECLARE_LOGGING_CHANNEL( LOG_VJolt );			// For our vphysics_jolt code
-DECLARE_LOGGING_CHANNEL( LOG_JoltInternal );	// For Jolt's traces/assertions. Do NOT use for our code.
+extern LoggingChannelID_t LOG_VJolt;;			// For our vphysics_jolt code
+extern LoggingChannelID_t LOG_JoltInternal;;	// For Jolt's traces/assertions. Do NOT use for our code.
 
 //-------------------------------------------------------------------------------------------------
 

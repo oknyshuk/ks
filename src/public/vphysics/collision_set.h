@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#ifndef COLLISION_SET_H
-#define COLLISION_SET_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // A set of collision rules
 // NOTE: Defaults to all indices disabled
@@ -21,5 +14,3 @@ public:
 
 	virtual bool ShouldCollide( int index0, int index1 ) = 0;
 };
-
-#endif // COLLISION_SET_H

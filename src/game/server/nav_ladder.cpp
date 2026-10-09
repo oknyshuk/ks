@@ -1,14 +1,32 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // AI Navigation areas
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
 
 #include "nav_mesh.h"
 #include "nav_node.h"
@@ -327,7 +345,7 @@ void CNavLadder::DrawLadder( void ) const
 	VectorVectors( GetNormal(), right, up );
 	if ( up.z <= 0.0f )
 	{
-		AssertMsg( false, "A nav ladder has an invalid normal" );
+		contract_assert( false && "A nav ladder has an invalid normal" );
 		up.Init( 0, 0, 1 );
 	}
 
@@ -339,7 +357,7 @@ void CNavLadder::DrawLadder( void ) const
 	Vector topRight = m_top + right;
 
 	int bgcolor[4];
-	if ( 4 == sscanf( nav_area_bgcolor.GetString(), "%d %d %d %d", &(bgcolor[0]), &(bgcolor[1]), &(bgcolor[2]), &(bgcolor[3]) ) )
+	if ( 4 == std::sscanf( nav_area_bgcolor.GetString(), "%d %d %d %d", &(bgcolor[0]), &(bgcolor[1]), &(bgcolor[2]), &(bgcolor[3]) ) )
 	{
 		for ( int i=0; i<4; ++i )
 			bgcolor[i] = clamp( bgcolor[i], 0, 255 );

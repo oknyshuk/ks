@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef GL_MODEL_H
-#define GL_MODEL_H
-
+import std;
+import ks.math;
 
 struct mnode_t;
 struct mleaf_t;
@@ -34,5 +28,3 @@ extern int			DecalListCreate( decallist_t *pList );
 extern int		r_visframecount;
 
 #include "modelloader.h"
-
-#endif // GL_MODEL_H

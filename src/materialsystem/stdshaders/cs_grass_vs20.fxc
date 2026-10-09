@@ -1,4 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // DYNAMIC:	"DZONE"				"0..1"
 
@@ -83,5 +84,3 @@ VS_OUTPUT main( const VS_INPUT v )
 
 	return o;
 }
-
-

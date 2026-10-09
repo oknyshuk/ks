@@ -1,21 +1,14 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =====//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef TOOLFRAMEWORK_CLIENT_H
-#define TOOLFRAMEWORK_CLIENT_H
-
-
+import ks.vstdlib;
 #include "toolframework/itoolentity.h"
-#include "vstdlib/ikeyvaluessystem.h"
-
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class KeyValues;
 struct AudioState_t;
 
 
@@ -34,11 +27,7 @@ bool ToolFramework_IsThirdPersonCamera( );
 //-----------------------------------------------------------------------------
 // Are tools enabled? 
 //-----------------------------------------------------------------------------
-#ifndef NO_TOOLFRAMEWORK
 bool ToolsEnabled();
-#else
-#define ToolsEnabled() 0
-#endif
 
 
 //-----------------------------------------------------------------------------
@@ -151,5 +140,3 @@ private:
 
 	std::vector< RecordedEntity_t > m_PlaybackEntities;
 };
-
-#endif // TOOLFRAMEWORK_CLIENT_H

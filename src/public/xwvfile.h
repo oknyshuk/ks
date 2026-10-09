@@ -1,16 +1,14 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef XWVFILE_H
-#define XWVFILE_H
+import std;
+import ks.core;
 
 #pragma pack(1)
 
-#define XWV_ID		(('X'<<24)|('W'<<16)|('V'<<8)|(' '<<0))
-#define XWV_VERSION 4
+inline constexpr auto XWV_ID = (('X'<<24)|('W'<<16)|('V'<<8)|(' '<<0));
+inline constexpr auto XWV_VERSION = 4;
 
 enum xwvSampleRate_t
 {
@@ -30,7 +28,7 @@ enum xwvFormat_t
 };
 
 // 1152 samples for one MP3 frame. 2304 bytes in mono, 4608 in stereo.
-#define NUMBER_OF_SAMPLES_PER_MP3_FRAME 1152
+inline constexpr auto NUMBER_OF_SAMPLES_PER_MP3_FRAME = 1152;
 
 // generated in big-endian
 struct xwvHeader_t
@@ -84,5 +82,3 @@ struct xwvHeader_t
 };
 
 #pragma pack()
-
-#endif // XWVFILE_H

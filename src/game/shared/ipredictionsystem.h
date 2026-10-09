@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IPREDICTIONSYSTEM_H
-#define IPREDICTIONSYSTEM_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "predictable_entity.h"
 
@@ -157,5 +151,3 @@ public:
 private:
 	bool	m_bDisabled;
 };
-
-#endif // IPREDICTIONSYSTEM_H

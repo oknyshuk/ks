@@ -1,19 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( CLIENTMODE_NORMAL_H )
-#define CLIENTMODE_NORMAL_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "iclientmode.h"
 #include "GameEventListener.h"
 #include <baseviewport.h>
 #include "usermessages.h"
 #include "noopanimcontroller.h"
+#include "cliententitylist.h"
+#include "cdll_client_int.h"
+#include "networkvar.h"
+#include "baseplayer_shared.h"
 
 class CBaseHudChat;
 class CBaseHudWeaponSelection;
@@ -22,8 +19,8 @@ class C_BaseEntity;
 class C_BasePlayer;
 
 
-#define ACHIEVEMENT_ANNOUNCEMENT_MIN_TIME 10
-#define USERID2PLAYER(i) ToBasePlayer( ClientEntityList().GetEnt( engine->GetPlayerForUserID( i ) ) )	
+inline constexpr int ACHIEVEMENT_ANNOUNCEMENT_MIN_TIME = 10;
+template <typename T1> [[gnu::always_inline]] inline auto USERID2PLAYER( T1 i ) { return ToBasePlayer( ClientEntityList().GetEnt( engine->GetPlayerForUserID( i ) ) ); }
 
 extern IClientMode *GetClientModeNormal(); // must be implemented
 extern IClientMode *GetFullscreenClientMode();
@@ -122,6 +119,3 @@ private:
 bool ContainsBinding( const char *pszBindingString, const char *pszBinding, bool bSearchAliases = true );
 
 void SendCameraManUIStateChange( HltvUiType_t eventType, int nOptionalParam = 0 );
-
-#endif // CLIENTMODE_NORMAL_H
-

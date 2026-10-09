@@ -1,24 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef DISPNODE_H
-#define DISPNODE_H
-
-//=========== (C) Copyright 2000 Valve, L.L.C. All rights reserved. ===========
-//
-// The copyright to the contents herein is the property of Valve, L.L.C.
-// The contents may be used and/or copied only with the written permission of
-// Valve, L.L.C., or in accordance with the terms and conditions stipulated in
-// the agreement/contract under which the contents have been supplied.
-//
-// $Revision: $
-// $NoKeywords: $
-//=============================================================================
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //=============================================================================
 //
@@ -33,6 +15,9 @@
 //                           | /  |  \ |
 //                           4----3----5
 //
+
+import std;
+import ks.math;
 
 class CDispNode
 {
@@ -189,4 +174,3 @@ inline bool CDispNode::IsActive( void )
 {
     return m_bActive;
 }
-#endif // DISPNODE_H

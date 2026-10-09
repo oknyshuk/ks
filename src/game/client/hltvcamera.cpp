@@ -1,11 +1,21 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include "tier1/fmtstr.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "hltvcamera.h"
 #include "cdll_client_int.h"
 #include "util_shared.h"
@@ -16,10 +26,8 @@
 #include "localize/ilocalize.h"
 #include "uicenterprint.h"
 #include "game/client/iviewport.h"
-#include <keyvalues.h>
 #include "matchmaking/imatchframework.h"
 #include "view_shared.h"
-#include "view.h"
 #include "ivrenderview.h"
 #include "c_plantedc4.h"
 #include "basecsgrenade_projectile.h"
@@ -80,9 +88,6 @@ C_HLTVCamera::~C_HLTVCamera()
 void C_HLTVCamera::Init()
 {
 	ListenForGameEvent( "game_newmap" );
-#ifdef CAMERAMAN_OLD_WAY
-	ListenForGameEvent( "hltv_cameraman" );
-#endif
 	ListenForGameEvent( "hltv_fixed" );
 	ListenForGameEvent( "hltv_chase" );
 	ListenForGameEvent( "hltv_message" );
@@ -447,7 +452,7 @@ Vector C_HLTVCamera::CalcIdealOverviewPosition( Vector vecStartPos, Vector vOldO
 	Vector vecMaxDist = vecStartPos + Vector( 1024.0f, 1024.0f, 256.0f );
 
 	CBaseEntity	*pEntList[128];
-	int count = UTIL_EntitiesInBox( pEntList, ARRAYSIZE(pEntList), vecMinDist, vecMaxDist, 0 );
+	int count = UTIL_EntitiesInBox( pEntList, std::size( pEntList ), vecMinDist, vecMaxDist, 0 );
 	//CBaseEntity *pFarthestEnt = NULL;
 	float flFarthestEntDist = 0;
 
@@ -1014,7 +1019,7 @@ void C_HLTVCamera::SetMode(int iMode)
 	if ( m_nCameraMode == iMode )
 		return;
 
-    Assert( iMode > OBS_MODE_NONE && iMode <= LAST_PLAYER_OBSERVERMODE );
+    contract_assert( iMode > OBS_MODE_NONE && iMode <= LAST_PLAYER_OBSERVERMODE );
 
 	int iOldMode = m_nCameraMode;
 	m_nCameraMode = iMode;
@@ -1065,9 +1070,9 @@ void C_HLTVCamera::SetPrimaryTarget( int nEntity )
 				if ( !player )
 					continue;
 
-				CSteamID steamID;
-				if ( player->GetSteamID( &steamID ) && steamID.IsValid() &&
-					( steamID.GetAccountID() == pParameters->m_uiLockFirstPersonAccountID ) )
+				CPlayerId playerUID;
+				if ( player->GetPlayerID( &playerUID ) && playerUID.IsValid() &&
+					( playerUID.GetAccountID() == pParameters->m_uiLockFirstPersonAccountID ) )
 				{
 					// when playback wants to lock to a specific account force PVS lock
 					// regardless of player states to see exactly what that player was seeing
@@ -1211,7 +1216,7 @@ void C_HLTVCamera::SpecNextPlayer( bool bReverse )
 	}
 }
 
-void C_HLTVCamera::SpecPlayerByAccountID( const char *pszSteamID )
+void C_HLTVCamera::SpecPlayerByAccountID( const char *pszPlayerID )
 {
 	for ( int index = 1; index <= gpGlobals->maxClients; ++index )
 	{
@@ -1220,10 +1225,10 @@ void C_HLTVCamera::SpecPlayerByAccountID( const char *pszSteamID )
 		if ( !pPlayer )
 			continue;
 
-		CSteamID steamID;
-		pPlayer->GetSteamID( &steamID );
+		CPlayerId playerUID;
+		pPlayer->GetPlayerID( &playerUID );
 
-		if ( CSteamID( pszSteamID ).GetAccountID() != steamID.GetAccountID( ) )
+		if ( CPlayerId( pszPlayerID ).GetAccountID() != playerUID.GetAccountID( ) )
 			continue;
 
 		// only follow living players or dedicated spectators
@@ -1336,9 +1341,9 @@ void C_HLTVCamera::Update()
 					if ( target && target->IsPlayer() )
 					{
 						CBasePlayer * player = ToBasePlayer( target );
-						CSteamID steamID;
-						if ( player && player->GetSteamID( &steamID ) && steamID.IsValid() &&
-							( steamID.GetAccountID() == pParameters->m_uiLockFirstPersonAccountID ) )
+						CPlayerId playerUID;
+						if ( player && player->GetPlayerID( &playerUID ) && playerUID.IsValid() &&
+							( playerUID.GetAccountID() == pParameters->m_uiLockFirstPersonAccountID ) )
 						{
 							// Check if the player that we are locked to is doing non-interesting stuff
 							if ( player->IsEffectActive( EF_NODRAW ) || // don't watch invisible players
@@ -1456,17 +1461,11 @@ void C_HLTVCamera::FireGameEvent( IGameEvent * event)
 
 	if ( !engine->IsHLTV() )
 	{
-#ifdef CAMERAMAN_OLD_WAY
-		if ( Q_strcmp( "hltv_cameraman", type ) == 0 )
-		{
-			m_iCameraMan = event->GetInt( "index" ); 
-		}
-#endif
 		return;	// not in HLTV mode
 	}
 
 	// in HLTV mode
-	if ( Q_strcmp( "game_newmap", type ) == 0 )
+	if ( V_strcmp( "game_newmap", type ) == 0 )
 	{
 		Reset();	// reset all camera settings
 
@@ -1486,7 +1485,7 @@ void C_HLTVCamera::FireGameEvent( IGameEvent * event)
 		return;
 	}
 
-	if ( Q_strcmp( "hltv_message", type ) == 0 )
+	if ( V_strcmp( "hltv_message", type ) == 0 )
 	{
 		wchar_t outputBuf[1024];
 		const char *pszText = event->GetString( "text", "" );
@@ -1509,13 +1508,13 @@ void C_HLTVCamera::FireGameEvent( IGameEvent * event)
 		return ;
 	}
 
-	if ( Q_strcmp( "hltv_title", type ) == 0 )
+	if ( V_strcmp( "hltv_title", type ) == 0 )
 	{
-		Q_strncpy( m_szTitleText, event->GetString( "text", "" ), sizeof(m_szTitleText) );
+		V_strncpy( m_szTitleText, event->GetString( "text", "" ), sizeof(m_szTitleText) );
 		return;
 	}
 
-	if ( Q_strcmp( "hltv_status", type ) == 0 )
+	if ( V_strcmp( "hltv_status", type ) == 0 )
 	{
 		int nNumProxies = event->GetInt( "proxies" );
 		m_nNumSpectators = event->GetInt( "clients" ) - nNumProxies;
@@ -1532,9 +1531,9 @@ void C_HLTVCamera::FireGameEvent( IGameEvent * event)
 		if ( pParameters->m_uiLockFirstPersonAccountID )
 		{
 			// Whenever a player connects we will force lookup of the required player
-			if ( !Q_strcmp( "player_connect", type ) ||
-				!Q_strcmp( "player_connect_full", type ) ||
-				!Q_strcmp( "player_team", type ) )
+			if ( !V_strcmp( "player_connect", type ) ||
+				!V_strcmp( "player_connect_full", type ) ||
+				!V_strcmp( "player_team", type ) )
 			{
 				SetPrimaryTarget( 0 );
 				return;
@@ -1549,19 +1548,7 @@ void C_HLTVCamera::FireGameEvent( IGameEvent * event)
 		return;
 	}
 
-#ifdef CAMERAMAN_OLD_WAY
-	if ( Q_strcmp( "hltv_cameraman", type ) == 0 )
-	{
-		Reset();
-
-		m_nCameraMode = OBS_MODE_ROAMING;
-		m_iCameraMan = event->GetInt( "index" ); 
-
-		return;
-	}
-#endif
-
-	if ( Q_strcmp( "hltv_fixed", type ) == 0 )
+	if ( V_strcmp( "hltv_fixed", type ) == 0 )
 	{
 		m_iCameraMan  = 0;
 		
@@ -1591,7 +1578,7 @@ void C_HLTVCamera::FireGameEvent( IGameEvent * event)
 		return;
 	}
 
-	if ( Q_strcmp( "hltv_chase", type ) == 0 )
+	if ( V_strcmp( "hltv_chase", type ) == 0 )
 	{
 		bool bInEye	= event->GetBool( "ineye" );
 
@@ -1713,16 +1700,16 @@ void C_HLTVCamera::SetAutoDirector( AutodirectorState_t eState )
 		for ( int i = 1; i <= MAX_PLAYERS; i++ )
 		{
 			CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
-			CSteamID compareSteamID;
-			if ( pPlayer && pPlayer->GetSteamID( &compareSteamID ) )
+			CPlayerId comparePlayerID;
+			if ( pPlayer && pPlayer->GetPlayerID( &comparePlayerID ) )
 			{
 				// is this played the selected cameraman
-				if ( ( uint32 )( spec_autodirector_cameraman.GetInt() ) == compareSteamID.GetAccountID() )
+				if ( ( uint32 )( spec_autodirector_cameraman.GetInt() ) == comparePlayerID.GetAccountID() )
 				{
 					// validate that they are a tournament caster
 					for ( int j = 0; j < MAX_TOURNAMENT_ACTIVE_CASTER_COUNT; j++ )
 					{
-						if ( compareSteamID.GetAccountID() == CSGameRules()->m_arrTournamentActiveCasterAccounts[ j ] )
+						if ( comparePlayerID.GetAccountID() == CSGameRules()->m_arrTournamentActiveCasterAccounts[ j ] )
 						{
 							if ( pPlayer->IsActiveCameraMan() )
 							{
@@ -1803,7 +1790,9 @@ bool C_HLTVCamera::IsAutoDirectorOn() const
 }
 
 #ifdef CSTRIKE_DLL
-CON_COMMAND_F( list_active_casters, "List currently active casters.", FCVAR_CLIENTDLL | FCVAR_RELEASE |FCVAR_HIDDEN )
+static void list_active_casters( const CCommand &args );
+static ConCommand list_active_casters_command( "list_active_casters", list_active_casters, "List currently active casters.", FCVAR_CLIENTDLL | FCVAR_RELEASE |FCVAR_HIDDEN );
+static void list_active_casters( const CCommand &args )
 {
 	if ( !CSGameRules() )
 	{
@@ -1813,10 +1802,10 @@ CON_COMMAND_F( list_active_casters, "List currently active casters.", FCVAR_CLIE
 
 	Msg( "Active Casters:\n" );
 
-	CSteamID cameraManSteamID;
+	CPlayerId cameraManPlayerID;
 	if ( CBasePlayer *pPlayer = HLTVCamera()->GetCameraMan() )
 	{
-		pPlayer->GetSteamID( &cameraManSteamID );
+		pPlayer->GetPlayerID( &cameraManPlayerID );
 	}
 
 	int nActiveCasters = 0;
@@ -1826,7 +1815,7 @@ CON_COMMAND_F( list_active_casters, "List currently active casters.", FCVAR_CLIE
 		{
 			nActiveCasters++;
 			Msg( "%d, ID: %d  %s\n", i, CSGameRules()->m_arrTournamentActiveCasterAccounts[ i ],
-				 ( cameraManSteamID.GetAccountID() == CSGameRules()->m_arrTournamentActiveCasterAccounts[ i ] ) ? "*Camera Man*" : "" );
+				 ( cameraManPlayerID.GetAccountID() == CSGameRules()->m_arrTournamentActiveCasterAccounts[ i ] ) ? "*Camera Man*" : "" );
 		}
 	}
 	if ( nActiveCasters == 0 )

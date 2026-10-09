@@ -1,29 +1,15 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/dbg.h"
-#include "mathlib/mathlib.h"
+import ks.tier1;
 #include "bone_setup.h"
-#include <string.h>
+import std;
 
 #include "collisionutils.h"
-#include "vstdlib/random.h"
-#include "tier0/vprof.h"
 #include "bone_accessor.h"
-#include "mathlib/ssequaternion.h"
-#include "datamanager.h"
-#include "convar.h"
-#include "tier0/tslist.h"
 #include "vphysics_interface.h"
-#include "datacache/idatacache.h"
 #include "posedebugger.h"
 #include "mathlib/softbody.h"
-#include "tier0/miniprofiler.h"
 
 #ifdef CLIENT_DLL
 	#include "posedebugger.h"
@@ -42,19 +28,17 @@ void InitPose(
 	)
 {
 	// const fltx4 zeroQ = Four_Origin;
-	BONE_PROFILE_FUNC();
-	SNPROF_ANIM("InitPose");
 
 	if( mstudiolinearbone_t *pLinearBones = pStudioHdr->pLinearBones() )
 	{
 		int numBones = pStudioHdr->numbones();
 
-		Assert( sizeof(Quaternion) == sizeof(BoneQuaternion) );
-		memcpy( q, (((byte *)pLinearBones) + pLinearBones->quatindex), sizeof( Quaternion ) * numBones );
+		contract_assert( sizeof(Quaternion) == sizeof(BoneQuaternion) );
+		std::memcpy( q, (((byte *)pLinearBones) + pLinearBones->quatindex), sizeof( Quaternion ) * numBones );
 
 		if( sizeof(Vector) == sizeof(BoneVector) )
 		{
-			memcpy( pos, (((byte *)pLinearBones) + pLinearBones->posindex), sizeof( Vector ) * numBones );
+			std::memcpy( pos, (((byte *)pLinearBones) + pLinearBones->posindex), sizeof( Vector ) * numBones );
 		}
 		else
 		{
@@ -117,7 +101,6 @@ static ConVar anim_3wayblend( "anim_3wayblend", "1", FCVAR_REPLICATED, "Toggle t
 
 void Calc3WayBlendIndices( int i0, int i1, float s0, float s1, const mstudioseqdesc_t &seqdesc, int *pAnimIndices, float *pWeight )
 {
-	BONE_PROFILE_FUNC();
 	// Figure out which bi-section direction we are using to make triangles.
 	bool bEven = ( ( ( i0 + i1 ) & 0x1 ) == 0 );
 
@@ -188,9 +171,9 @@ void Calc3WayBlendIndices( int i0, int i1, float s0, float s1, const mstudioseqd
 		pWeight[1] = 0.0f;
 	pWeight[2] = 1.0f - pWeight[0] - pWeight[1];
 
-	Assert( pWeight[0] >= 0.0f && pWeight[0] <= 1.0f );
-	Assert( pWeight[1] >= 0.0f && pWeight[1] <= 1.0f );
-	Assert( pWeight[2] >= 0.0f && pWeight[2] <= 1.0f );
+	contract_assert( pWeight[0] >= 0.0f && pWeight[0] <= 1.0f );
+	contract_assert( pWeight[1] >= 0.0f && pWeight[1] <= 1.0f );
+	contract_assert( pWeight[2] >= 0.0f && pWeight[2] <= 1.0f );
 }
 
 
@@ -209,8 +192,7 @@ bool CalcPoseSingle(
 	float flTime
 	)
 {
-	BONE_PROFILE_FUNC(); // ex: x360: up to 1.3ms
-	SNPROF_ANIM("CalcPoseSingle");
+	 // ex: x360: up to 1.3ms
 
 	bool bResult = true;
 	
@@ -222,7 +204,7 @@ bool CalcPoseSingle(
 
 	if ( sequence < 0 || sequence >= pStudioHdr->GetNumSeq()) 
 	{
-		AssertMsg( false, "Trying to CalcPoseSingle with an out-of-range sequence!\n" );
+		contract_assert( false && "Trying to CalcPoseSingle with an out-of-range sequence!\n" );
 		return false;
 
 		//sequence = 0;
@@ -417,8 +399,7 @@ void CBoneSetup::AddSequenceLayers(
 	CIKContext *pIKContext
 	)
 {
-	BONE_PROFILE_FUNC(); // ex: x360: 1.84ms
-	SNPROF_ANIM("CBoneSetup::AddSequenceLayers");
+	 // ex: x360: 1.84ms
 
 	for (int i = 0; i < seqdesc.numautolayers; i++)
 	{
@@ -501,7 +482,7 @@ void CBoneSetup::AddSequenceLayers(
 			const mstudioposeparamdesc_t &Pose = ((CStudioHdr *)m_pStudioHdr)->pPoseParameter( iPose );
 			float s = m_flPoseParameter[ iPose ] * (Pose.end - Pose.start) + Pose.start;
 
-			Assert( (pLayer->tail - pLayer->peak) != 0 );
+			contract_assert( (pLayer->tail - pLayer->peak) != 0 );
 
 			s = clamp( (s - pLayer->peak) / (pLayer->tail - pLayer->peak), 0, 1 );
 
@@ -534,8 +515,6 @@ void CBoneSetup::AddLocalLayers(
 	CIKContext *pIKContext
 	)
 {
-	BONE_PROFILE_FUNC();
-	SNPROF_ANIM("CBoneSetup::AddLocalLayers");
 
 	if (!(seqdesc.flags & STUDIO_LOCAL))
 	{
@@ -664,31 +643,28 @@ void CBoneSetup::AccumulatePose(
 	CIKContext *pIKContext
 	)
 {
-	BONE_PROFILE_FUNC(); // ex: x360: up to 3.6ms
+	 // ex: x360: up to 3.6ms
 #if _DEBUG
-	VPROF_INCREMENT_COUNTER("AccumulatePose",1);
+	VProfIncrementCounter<"AccumulatePose">( 1 );
 #endif
 
-	VPROF( "AccumulatePose" );
+	CVProfScope _( "AccumulatePose", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-	SNPROF_ANIM( "CBoneSetup::AccumulatePose" );
 
 	// Check alignment.
 	if ( cl_use_simd_bones.GetBool() && (!  (reinterpret_cast<uintp>(q) & 0x0F) == 0 ) )
 	{
 		DebuggerBreakIfDebugging();
-		AssertMsg(false,
-		"Arguments to AccumulatePose are unaligned. Disaster will result.\n"
-		);
+		contract_assert( false && "Arguments to AccumulatePose are unaligned. Disaster will result.\n" );
 	}
 
-	Assert( flWeight >= 0.0f && flWeight <= 1.0f );
+	contract_assert( flWeight >= 0.0f && flWeight <= 1.0f );
 	// This shouldn't be necessary, but the Assert should help us catch whoever is screwing this up
 	flWeight = clamp( flWeight, 0.0f, 1.0f );
 
 	if ( sequence < 0 || sequence >= m_pStudioHdr->GetNumSeq() )
 	{
-		AssertMsg( false, "Trying to AccumulatePose with an out-of-range sequence!\n" );
+		contract_assert( false && "Trying to AccumulatePose with an out-of-range sequence!\n" );
 		return;
 	}
 
@@ -698,8 +674,6 @@ void CBoneSetup::AccumulatePose(
 	BoneVector *pos2 = g_VectorPool.Alloc();
 	BoneQuaternionAligned * q2 = ( BoneQuaternionAligned * ) g_QuaternionPool.Alloc();
 
-	PREFETCH360( pos2, 0 );
-	PREFETCH360( q2, 0 );
 
 	// Trigger pose debugger
 	if (m_pPoseDebugger)
@@ -788,7 +762,6 @@ void CalcBoneAdj(
 	int boneMask
 	)
 {
-	BONE_PROFILE_FUNC();
 	int					i, j, k;
 	float				value;
 	mstudiobonecontroller_t *pbonecontroller;
@@ -812,17 +785,17 @@ void CalcBoneAdj(
 			switch(pbonecontroller->type & STUDIO_TYPES)
 			{
 			case STUDIO_XR: 
-				a0.Init( value * (M_PI / 180.0), 0, 0 ); 
+				a0.Init( value * (std::numbers::pi / 180.0), 0, 0 ); 
 				AngleQuaternion( a0, q0 );
 				QuaternionSM( 1.0, q0, q[k], q[k] );
 				break;
 			case STUDIO_YR: 
-				a0.Init( 0, value * (M_PI / 180.0), 0 ); 
+				a0.Init( 0, value * (std::numbers::pi / 180.0), 0 ); 
 				AngleQuaternion( a0, q0 );
 				QuaternionSM( 1.0, q0, q[k], q[k] );
 				break;
 			case STUDIO_ZR: 
-				a0.Init( 0, 0, value * (M_PI / 180.0) ); 
+				a0.Init( 0, 0, value * (std::numbers::pi / 180.0) ); 
 				AngleQuaternion( a0, q0 );
 				QuaternionSM( 1.0, q0, q[k], q[k] );
 				break;
@@ -893,10 +866,8 @@ void CBoneSetup::CalcAutoplaySequences(
 	CIKContext *pIKContext
 	)
 {
-	BONE_PROFILE_FUNC();
 //	ASSERT_NO_REENTRY();
 
-	SNPROF_ANIM( "CBoneSetup::CalcAutoplaySequences" );
 	
 	int			i;
 	if ( pIKContext )
@@ -943,7 +914,6 @@ void Studio_BuildMatrices(
 	int boneMask
 	)
 {
-	BONE_PROFILE_FUNC();
 	int i, j;
 
 	int					chain[MAXSTUDIOBONES] = {};
@@ -978,7 +948,7 @@ void Studio_BuildMatrices(
 	AngleMatrix( angles, origin, rotationmatrix );
 
 	// Account for a change in scale
-	if ( flScale < 1.0f-FLT_EPSILON || flScale > 1.0f+FLT_EPSILON )
+	if ( flScale < 1.0f-std::numeric_limits<float>::epsilon() || flScale > 1.0f+std::numeric_limits<float>::epsilon() )
 	{
 		Vector vecOffset;
 		MatrixGetColumn( rotationmatrix, 3, vecOffset );
@@ -994,7 +964,7 @@ void Studio_BuildMatrices(
 	}
 
 	// check for 16 byte alignment
-	if ((((size_t)bonetoworld) % 16) != 0)
+	if ((((std::size_t)bonetoworld) % 16) != 0)
 	{
 		for (j = chainlength - 1; j >= 0; j--)
 		{
@@ -1049,7 +1019,6 @@ void DoAxisInterpBone(
 	CBoneAccessor &bonetoworld
 	)
 {
-	BONE_PROFILE_FUNC();
 	matrix3x4a_t	bonematrix;
 	Vector				control;
 
@@ -1153,7 +1122,6 @@ void DoQuatInterpBone(
 	CBoneAccessor &bonetoworld
 	)
 {
-	BONE_PROFILE_FUNC();
 	matrix3x4a_t	bonematrix;
 	Vector				control;
 
@@ -1176,10 +1144,10 @@ void DoQuatInterpBone(
 		int i;
 		for (i = 0; i < pProc->numtriggers; i++)
 		{
-			float dot = fabs( QuaternionDotProduct( pProc->pTrigger( i )->trigger, src ) );
+			float dot = std::fabs( QuaternionDotProduct( pProc->pTrigger( i )->trigger, src ) );
 			// FIXME: a fast acos should be acceptable
 			dot = clamp( dot, -1, 1 );
-			weight[i] = 1 - (2 * acos( dot ) * pProc->pTrigger( i )->inv_tolerance );
+			weight[i] = 1 - (2 * std::acos( dot ) * pProc->pTrigger( i )->inv_tolerance );
 			weight[i] = std::max<std::common_type_t<int, float>>( 0, weight[i] );
 			scale += weight[i];
 		}
@@ -1214,7 +1182,6 @@ void DoQuatInterpBone(
 				pos.z = pos.z + s * pTrigger->pos.z;
 			}
 		}
-		Assert( QuaternionNormalize( quat ) != 0);
 		QuaternionMatrix( quat, pos, bonematrix );
 	}
 
@@ -1241,7 +1208,6 @@ void DoAimAtBone(
 	const CStudioHdr *pStudioHdr
 	)
 {
-	BONE_PROFILE_FUNC();
 	mstudioaimatbone_t *pProc = (mstudioaimatbone_t *)pBones[iBone].pProcedure();
 
 	if ( !pProc )
@@ -1307,9 +1273,9 @@ void DoAimAtBone(
 	MatrixGetColumn( aimAtSpace, 3, aimAtWorldPosition );
 
 	// make sure the redundant parent info is correct
-	Assert( pProc->parent == pBones[iBone].parent );
+	contract_assert( pProc->parent == pBones[iBone].parent );
 	// make sure the redundant position info is correct
-	Assert( pProc->basepos.DistToSqr( pBones[iBone].pos ) < 0.1 );
+	contract_assert( pProc->basepos.DistToSqr( pBones[iBone].pos ) < 0.1 );
 
 	// The aim and up data is relative to this bone, not the parent bone
 	matrix3x4a_t bonematrix;
@@ -1324,12 +1290,12 @@ void DoAimAtBone(
 	Vector axis;
 	CrossProduct( userAimVector, aimVector, axis );
 	VectorNormalizeFast( axis );
-	Assert( 1.0f - fabs( DotProduct( userAimVector, aimVector ) ) > FLT_EPSILON );
-	float angle( acosf( DotProduct( userAimVector, aimVector ) ) );
+	contract_assert( 1.0f - std::fabs( DotProduct( userAimVector, aimVector ) ) > std::numeric_limits<float>::epsilon() );
+	float angle( std::acosf( DotProduct( userAimVector, aimVector ) ) );
 	Quaternion aimRotation;
 	AxisAngleQuaternion( axis, RAD2DEG( angle ), aimRotation );
 
-	if ( ( 1.0f - fabs( DotProduct( userUpVector, userAimVector ) ) ) > FLT_EPSILON )
+	if ( ( 1.0f - std::fabs( DotProduct( userUpVector, userAimVector ) ) ) > std::numeric_limits<float>::epsilon() )
 	{
 		matrix3x4a_t aimRotationMatrix;
 		QuaternionMatrix( aimRotation, aimRotationMatrix );
@@ -1352,9 +1318,9 @@ void DoAimAtBone(
 
 		Quaternion upRotation;
 		//Assert( 1.0f - fabs( DotProduct( pUp, pParentUp ) ) > FLT_EPSILON );
-		if( 1.0f - fabs( DotProduct( pUp, pParentUp ) ) > FLT_EPSILON )
+		if( 1.0f - std::fabs( DotProduct( pUp, pParentUp ) ) > std::numeric_limits<float>::epsilon() )
 		{
-			angle = acos( DotProduct( pUp, pParentUp ) );
+			angle = std::acos( DotProduct( pUp, pParentUp ) );
 			CrossProduct( pUp, pParentUp, axis );			
 		}
 		else
@@ -1389,7 +1355,7 @@ void DoTwistBones(
 	CBoneAccessor &bonetoworld,
 	const CStudioHdr *pStudioHdr )
 {
-	BONE_PROFILE_FUNC();
+	ks::ScratchArena<> scratch;
 
 	mstudiotwistbone_t *pProc = ( mstudiotwistbone_t * )pBones[iBone].pProcedure();
 
@@ -1419,9 +1385,9 @@ void DoTwistBones(
 	MatrixInvert( mParentToWorld, mTmp );
 	ConcatTransforms_Aligned( mTmp, bonetoworld.GetBone( pProc->m_nChildBone ), mChild );
 
-	float *pflWeights = ( float * )stackalloc( pProc->m_nTargetCount * sizeof( float ) );
-	Quaternion *pqTwistBases = ( Quaternion * )stackalloc( pProc->m_nTargetCount * sizeof( Quaternion ) );
-	Quaternion *pqTwists = ( Quaternion * )stackalloc( pProc->m_nTargetCount * sizeof( Quaternion ) );
+	float *pflWeights = ( float * )scratch.AllocBytes( pProc->m_nTargetCount * sizeof( float ) );
+	Quaternion *pqTwistBases = ( Quaternion * )scratch.AllocBytes( pProc->m_nTargetCount * sizeof( Quaternion ) );
+	Quaternion *pqTwists = ( Quaternion * )scratch.AllocBytes( pProc->m_nTargetCount * sizeof( Quaternion ) );
 
 	for ( int i = 0; i < pProc->m_nTargetCount; ++i )
 	{

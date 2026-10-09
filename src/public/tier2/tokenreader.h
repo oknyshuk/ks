@@ -1,18 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef TOKENREADER_H
-#define TOKENREADER_H
-
-#include "tier0/basetypes.h"
-#include <assert.h>
-#include <cstddef>
-#include <vector>
-
+import ks.core;
+import std;
 
 typedef enum
 {
@@ -27,11 +18,11 @@ typedef enum
 } trtoken_t;
 
 
-#define IsToken(s1, s2)	!strcmpi(s1, s2)
+template <typename T1, typename T2> [[gnu::always_inline]] inline auto IsToken( T1 s1, T2 s2 ) { return !strcmpi(s1, s2); }
 
-#define MAX_TOKEN 128 + 1
-#define MAX_IDENT 64 + 1
-#define MAX_STRING 128 + 1
+inline constexpr auto MAX_TOKEN = 128 + 1;
+inline constexpr auto MAX_IDENT = 64 + 1;
+inline constexpr auto MAX_STRING = 128 + 1;
 
 
 class TokenReader
@@ -60,11 +51,11 @@ private:
 
 	bool AtEnd() const { return m_nPos >= m_file.size(); }
 	char PeekChar() const { return AtEnd() ? '\0' : static_cast< char >( m_file[m_nPos] ); }
-	char PeekChar( size_t nOffset ) const { return m_nPos + nOffset < m_file.size() ? static_cast< char >( m_file[m_nPos + nOffset] ) : '\0'; }
+	char PeekChar( std::size_t nOffset ) const { return m_nPos + nOffset < m_file.size() ? static_cast< char >( m_file[m_nPos + nOffset] ) : '\0'; }
 	char GetChar() { return AtEnd() ? '\0' : static_cast< char >( m_file[m_nPos++] ); }
 
 	std::vector< std::byte > m_file;
-	size_t m_nPos;
+	std::size_t m_nPos;
 	bool m_bOpen;
 	int m_nLine;
 	int m_nErrorCount;
@@ -83,6 +74,3 @@ int TokenReader::GetErrorCount(void)
 {
 	return(m_nErrorCount);
 }
-
-
-#endif // TOKENREADER_H

@@ -1,19 +1,17 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: sheet code for particles and other sprite functions
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
+// Purpose: sheet code for particles and other sprite functions
+
+import ks.tier1;
 #include "bitmap/psheet.h"
-#include "tier1/byte_reader.h"
-#include "tier2/fileutils.h"
+import std;
 
 // MOC_TODO: These probably shouldn't be here - maybe we should put CSheetExtended somewhere else, like materialsystem?
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/itexture.h"
-
 
 CSheet::CSheet( void )
 {
@@ -73,7 +71,7 @@ CSheet::CSheet( ks::byte_reader &buf )
 		int nFrameCount = buf.read<int>();
 		// Save off how many frames we have for this sequence
 		m_SheetInfo[nSequenceIndex].m_nNumFrames = nFrameCount;
-		Assert( nFrameCount >= 0 );
+		contract_assert( nFrameCount >= 0 );
 		bool bSingleFrameSequence = ( nFrameCount == 1 );
 
 		int nTimeSamples = bSingleFrameSequence ? 1 : SEQUENCE_SAMPLE_COUNT;
@@ -168,7 +166,7 @@ CSheet::CSheet( ks::byte_reader &buf )
 				m_SheetInfo[i].m_pSamples = m_SheetInfo[nFirstSequence].m_pSamples;
 				m_SheetInfo[i].m_SeqFlags = m_SheetInfo[nFirstSequence].m_SeqFlags;
 				m_SheetInfo[i].m_nNumFrames = m_SheetInfo[nFirstSequence].m_nNumFrames;
-				Assert( m_SheetInfo[i].m_nNumFrames >= 1 );
+				contract_assert( m_SheetInfo[i].m_nNumFrames >= 1 );
 				m_SheetInfo[i].m_bSequenceIsCopyOfAnotherSequence = true;
 			}
 		}
@@ -235,7 +233,7 @@ void CSheetExtended::LoadFromMaterial( IMaterial* pMaterial )
 	if ( !pTex || pTex->IsError() )
 		return;
 
-	size_t nBytes;
+	std::size_t nBytes;
 	void const *pSheetData = pTex->GetResourceData( VTF_RSRC_SHEET, &nBytes );
 
 	if ( pSheetData )

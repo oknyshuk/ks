@@ -1,19 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.vstdlib;
 #include "cmaterial_queuefriendly.h"
-#include "tier1/callqueue.h"
-
-
-#define USE_QUEUED_MATERIAL_CALLS //uncomment to queue up material changing calls. Comment out to always use instant calls.
-
-
-#ifdef USE_QUEUED_MATERIAL_CALLS
+import std;
 
 #define QUEUE_MATERIAL_CALL( FuncName, ... )														\
 	{																								\
@@ -27,12 +17,6 @@
 			pCallQueue->QueueCall( m_pRealTimeVersion, &IMaterialInternal::FuncName, ##__VA_ARGS__ );	\
 		}																							\
 	}
-
-#else
-
-#define QUEUE_MATERIAL_CALL( FuncName, ... ) m_pRealTimeVersion->FuncName( __VA_ARGS__ );
-
-#endif
 
 
 const char *CMaterial_QueueFriendly::GetName() const
@@ -308,22 +292,14 @@ void CMaterial_QueueFriendly::RefreshPreservingMaterialVars()
 
 float CMaterial_QueueFriendly::GetAlphaModulation()
 {
-#ifdef USE_QUEUED_MATERIAL_CALLS
 	return m_fAlphaModulationOnQueueCompletion;
-#else
-	return m_pRealTimeVersion->GetAlphaModulation();
-#endif
 }
 
 void CMaterial_QueueFriendly::GetColorModulation( float *r, float *g, float *b )
 {
-#ifdef USE_QUEUED_MATERIAL_CALLS
 	*r = m_vColorModulationOnQueueCompletion.x;
 	*g = m_vColorModulationOnQueueCompletion.y;
 	*b = m_vColorModulationOnQueueCompletion.z;
-#else
-	m_pRealTimeVersion->GetColorModulation( r, g, b );
-#endif
 }
 
 void CMaterial_QueueFriendly::CallBindProxy( void *proxyData, ICallQueue *pCallQueue )
@@ -370,19 +346,3 @@ bool CMaterial_QueueFriendly::SetTempExcluded( bool bSet, int nExcludedDimension
 {
 	return m_pRealTimeVersion->SetTempExcluded( bSet, nExcludedDimensionLimit );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

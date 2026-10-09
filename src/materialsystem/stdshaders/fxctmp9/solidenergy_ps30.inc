@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( ( $DETAIL1 == 0 ) && ( $DETAIL2 != 0 ) )
 // ( ( $DETAIL1 == 0 ) && ( $DETAIL1BLENDMODE != 0 ) )
@@ -24,7 +25,7 @@ private:
 public:
 	void SetADDITIVE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nADDITIVE = i;
 #ifdef _DEBUG
 		m_bADDITIVE = true;
@@ -32,7 +33,7 @@ public:
 	}
 	void SetADDITIVE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nADDITIVE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bADDITIVE = true;
@@ -46,7 +47,7 @@ private:
 public:
 	void SetDETAIL1( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDETAIL1 = i;
 #ifdef _DEBUG
 		m_bDETAIL1 = true;
@@ -54,7 +55,7 @@ public:
 	}
 	void SetDETAIL1( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDETAIL1 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAIL1 = true;
@@ -68,7 +69,7 @@ private:
 public:
 	void SetDETAIL1BLENDMODE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDETAIL1BLENDMODE = i;
 #ifdef _DEBUG
 		m_bDETAIL1BLENDMODE = true;
@@ -76,7 +77,7 @@ public:
 	}
 	void SetDETAIL1BLENDMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDETAIL1BLENDMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAIL1BLENDMODE = true;
@@ -90,7 +91,7 @@ private:
 public:
 	void SetDETAIL2( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDETAIL2 = i;
 #ifdef _DEBUG
 		m_bDETAIL2 = true;
@@ -98,7 +99,7 @@ public:
 	}
 	void SetDETAIL2( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDETAIL2 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAIL2 = true;
@@ -112,7 +113,7 @@ private:
 public:
 	void SetDETAIL2BLENDMODE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDETAIL2BLENDMODE = i;
 #ifdef _DEBUG
 		m_bDETAIL2BLENDMODE = true;
@@ -120,7 +121,7 @@ public:
 	}
 	void SetDETAIL2BLENDMODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDETAIL2BLENDMODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAIL2BLENDMODE = true;
@@ -134,7 +135,7 @@ private:
 public:
 	void SetTANGENTTOPACITY( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nTANGENTTOPACITY = i;
 #ifdef _DEBUG
 		m_bTANGENTTOPACITY = true;
@@ -142,7 +143,7 @@ public:
 	}
 	void SetTANGENTTOPACITY( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTANGENTTOPACITY = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTANGENTTOPACITY = true;
@@ -156,7 +157,7 @@ private:
 public:
 	void SetTANGENTSOPACITY( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nTANGENTSOPACITY = i;
 #ifdef _DEBUG
 		m_bTANGENTSOPACITY = true;
@@ -164,7 +165,7 @@ public:
 	}
 	void SetTANGENTSOPACITY( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTANGENTSOPACITY = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTANGENTSOPACITY = true;
@@ -178,7 +179,7 @@ private:
 public:
 	void SetFRESNELOPACITY( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFRESNELOPACITY = i;
 #ifdef _DEBUG
 		m_bFRESNELOPACITY = true;
@@ -186,7 +187,7 @@ public:
 	}
 	void SetFRESNELOPACITY( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFRESNELOPACITY = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFRESNELOPACITY = true;
@@ -200,7 +201,7 @@ private:
 public:
 	void SetDEPTHBLEND( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nDEPTHBLEND = i;
 #ifdef _DEBUG
 		m_bDEPTHBLEND = true;
@@ -208,7 +209,7 @@ public:
 	}
 	void SetDEPTHBLEND( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nDEPTHBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDEPTHBLEND = true;
@@ -222,7 +223,7 @@ private:
 public:
 	void SetVERTEXCOLOR( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nVERTEXCOLOR = i;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -230,7 +231,7 @@ public:
 	}
 	void SetVERTEXCOLOR( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nVERTEXCOLOR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -244,7 +245,7 @@ private:
 public:
 	void SetFLOWMAP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLOWMAP = i;
 #ifdef _DEBUG
 		m_bFLOWMAP = true;
@@ -252,7 +253,7 @@ public:
 	}
 	void SetFLOWMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLOWMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLOWMAP = true;
@@ -266,7 +267,7 @@ private:
 public:
 	void SetFLOW_CHEAP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLOW_CHEAP = i;
 #ifdef _DEBUG
 		m_bFLOW_CHEAP = true;
@@ -274,7 +275,7 @@ public:
 	}
 	void SetFLOW_CHEAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLOW_CHEAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLOW_CHEAP = true;
@@ -339,7 +340,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bADDITIVE && m_bDETAIL1 && m_bDETAIL1BLENDMODE && m_bDETAIL2 && m_bDETAIL2BLENDMODE && m_bTANGENTTOPACITY && m_bTANGENTSOPACITY && m_bFRESNELOPACITY && m_bDEPTHBLEND && m_bVERTEXCOLOR && m_bFLOWMAP && m_bFLOW_CHEAP;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 32 * m_nADDITIVE ) + ( 64 * m_nDETAIL1 ) + ( 128 * m_nDETAIL1BLENDMODE ) + ( 256 * m_nDETAIL2 ) + ( 512 * m_nDETAIL2BLENDMODE ) + ( 1024 * m_nTANGENTTOPACITY ) + ( 2048 * m_nTANGENTSOPACITY ) + ( 4096 * m_nFRESNELOPACITY ) + ( 8192 * m_nDEPTHBLEND ) + ( 8192 * m_nVERTEXCOLOR ) + ( 16384 * m_nFLOWMAP ) + ( 32768 * m_nFLOW_CHEAP ) + 0;
 	}
@@ -355,7 +356,7 @@ private:
 public:
 	void SetACTIVE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nACTIVE = i;
 #ifdef _DEBUG
 		m_bACTIVE = true;
@@ -363,7 +364,7 @@ public:
 	}
 	void SetACTIVE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nACTIVE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bACTIVE = true;
@@ -377,7 +378,7 @@ private:
 public:
 	void SetPOWERUP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPOWERUP = i;
 #ifdef _DEBUG
 		m_bPOWERUP = true;
@@ -385,7 +386,7 @@ public:
 	}
 	void SetPOWERUP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPOWERUP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPOWERUP = true;
@@ -399,7 +400,7 @@ private:
 public:
 	void SetVORTEX1( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nVORTEX1 = i;
 #ifdef _DEBUG
 		m_bVORTEX1 = true;
@@ -407,7 +408,7 @@ public:
 	}
 	void SetVORTEX1( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nVORTEX1 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVORTEX1 = true;
@@ -421,7 +422,7 @@ private:
 public:
 	void SetVORTEX2( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nVORTEX2 = i;
 #ifdef _DEBUG
 		m_bVORTEX2 = true;
@@ -429,7 +430,7 @@ public:
 	}
 	void SetVORTEX2( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nVORTEX2 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVORTEX2 = true;
@@ -443,7 +444,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -451,7 +452,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -488,7 +489,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bACTIVE && m_bPOWERUP && m_bVORTEX1 && m_bVORTEX2 && m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nACTIVE ) + ( 2 * m_nPOWERUP ) + ( 4 * m_nVORTEX1 ) + ( 8 * m_nVORTEX2 ) + ( 16 * m_nPIXELFOGTYPE ) + 0;
 	}

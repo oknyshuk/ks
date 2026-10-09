@@ -1,13 +1,27 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//==================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+// main precompiled header for client rendering code
 
-#include "render_pch.h"
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialvar.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "r_local.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_lightmap.h"
+#include "gl_matsysiface.h"
+#include "gl_rmain.h"
+#include "gl_rsurf.h"
+#include "render.h"
+#include "view.h"
 #include "client.h"
 #include "sound.h"
 #include "debug_leafvis.h"
@@ -23,15 +37,11 @@
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "istudiorender.h"
 #include "staticpropmgr.h"
-#include "tier0/vprof.h"
 #include "IOcclusionSystem.h"
 #include "con_nprint.h"
-#include "debugoverlay.h"
 #include "demo.h"
 #include "ivideomode.h"
-#include "sys_dll.h"
-#include "collisionutils.h"
-#include <vector>
+import std;
 #include "r_decal.h"
 #include "cl_main.h"
 #include "paint.h"
@@ -202,12 +212,12 @@ void R_DrawPortals()
 			unsigned short iVert;
 
 			iVert = pAreaPortal->m_FirstClipPortalVert + j;
-			builder.Position3f( VectorExpand( pBrushData->m_pClipPortalVerts[iVert] ) );
+			builder.Position3f( pBrushData->m_pClipPortalVerts[iVert].x, pBrushData->m_pClipPortalVerts[iVert].y, pBrushData->m_pClipPortalVerts[iVert].z );
 			builder.Color4f( 0, 0, 0, 1 );
 			builder.AdvanceVertex();
 
 			iVert = pAreaPortal->m_FirstClipPortalVert + (j+1) % pAreaPortal->m_nClipPortalVerts;
-			builder.Position3f( VectorExpand( pBrushData->m_pClipPortalVerts[iVert] ) );
+			builder.Position3f( pBrushData->m_pClipPortalVerts[iVert].x, pBrushData->m_pClipPortalVerts[iVert].y, pBrushData->m_pClipPortalVerts[iVert].z );
 			builder.Color4f( 0, 0, 0, 1 );
 			builder.AdvanceVertex();
 		}
@@ -351,7 +361,7 @@ CRender::CRender()
 	// Make sure the stack isn't empty
 	const int i = std::ssize( m_ViewStack );
 	m_ViewStack.emplace_back();
-	memset( &m_ViewStack[i], 0, sizeof( CViewSetup ) );
+	std::memset( &m_ViewStack[i], 0, sizeof( CViewSetup ) );
 	m_ViewStack[i].m_bIs2DView = true;
 	m_iLightmapUpdateDepth = 0;
 }
@@ -748,14 +758,14 @@ void CRender::BeginUpdateLightmaps( void )
 {
 	if ( ++m_iLightmapUpdateDepth  == 1)
 	{
-		Assert( std::ssize( g_LightmapUpdateList ) == 0 );
+		contract_assert( std::ssize( g_LightmapUpdateList ) == 0 );
 		materials->BeginUpdateLightmaps();
 	}
 }
 
 void CRender::UpdateBrushModelLightmap( model_t *model, IClientRenderable *pRenderable )
 {
-	AssertOnce( m_iLightmapUpdateDepth );
+	contract_assert( m_iLightmapUpdateDepth );
 
 	if( !r_drawbrushmodels.GetBool() || !m_iLightmapUpdateDepth )
 		return;
@@ -795,22 +805,22 @@ void CRender::UpdateBrushModelLightmap( model_t *model, IClientRenderable *pRend
 
 void CRender::EndUpdateLightmaps( void )
 {
-	Assert( m_iLightmapUpdateDepth > 0 );
+	contract_assert( m_iLightmapUpdateDepth > 0 );
 	if ( --m_iLightmapUpdateDepth == 0 )
 	{
-		VPROF_BUDGET( "EndUpdateLightmaps", VPROF_BUDGETGROUP_DLIGHT_RENDERING );
+		CVProfScope _( "EndUpdateLightmaps", 0, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, BUDGETFLAG_OTHER );
 		if ( std::ssize( g_LightmapUpdateList ) && r_dynamiclighting.GetBool() && !r_unloadlightmaps.GetBool() )
 		{
-			VPROF_("R_BuildLightmapUpdateList", 1, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0);
+			CVProfScope _( "R_BuildLightmapUpdateList", 1, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0 );
 			R_BuildLightmapUpdateList();
 		}
 		{
-			VPROF_("materials_EndUpdateLightmaps", 1, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0);
+			CVProfScope _( "materials_EndUpdateLightmaps", 1, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0 );
 			materials->EndUpdateLightmaps();
 		}
 		{
 			g_LightmapUpdateList.clear();
-			VPROF_("lightmap_RemoveAll", 1, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0);
+			CVProfScope _( "lightmap_RemoveAll", 1, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0 );
 		}
 	}
 }
@@ -1149,7 +1159,7 @@ void R_CheckForPaintmapChanges()
 	}
 
 	{
-		VPROF_BUDGET( "R_CheckForPaintmapChanges", "paint" );
+		CVProfScope _( "R_CheckForPaintmapChanges", 0, "paint", false, BUDGETFLAG_OTHER );
 		g_PaintManager.UpdatePaintmapTextures();
 	}
 }
@@ -1176,10 +1186,10 @@ IWorldRenderList * CRender::CreateWorldList()
 // JasonM TODO: optimize in the case of shadow depth mapping (i.e. don't update lightmaps)
 void CRender::BuildWorldLists( IWorldRenderList *pList, WorldListInfo_t* pInfo, int iForceViewLeaf, const VisOverrideData_t* pVisData, bool bShadowDepth, float *pWaterReflectionHeight )
 {	
-	VPROF_INCREMENT_COUNTER( "BuildWorldLists", 1 );
+	VProfIncrementCounter<"BuildWorldLists">( 1 );
 
-	Assert( pList );
-	Assert( m_iLightmapUpdateDepth > 0 || std::ssize( g_LightmapUpdateList ) == 0 );
+	contract_assert( pList );
+	contract_assert( m_iLightmapUpdateDepth > 0 || std::ssize( g_LightmapUpdateList ) == 0 );
 
 	if ( !bShadowDepth )
 	{
@@ -1193,13 +1203,13 @@ void CRender::BuildWorldLists( IWorldRenderList *pList, WorldListInfo_t* pInfo, 
 		EndUpdateLightmaps();
 	}
 
-	Assert( m_iLightmapUpdateDepth > 0 || std::ssize( g_LightmapUpdateList ) == 0 );
+	contract_assert( m_iLightmapUpdateDepth > 0 || std::ssize( g_LightmapUpdateList ) == 0 );
 }
 
 void CRender::BuildWorldLists_Epilogue( IWorldRenderList *pList, WorldListInfo_t* pInfo, bool bShadowDepth )
 {	
-	Assert( pList );
-	Assert( m_iLightmapUpdateDepth > 0 || std::ssize( g_LightmapUpdateList ) == 0 );
+	contract_assert( pList );
+	contract_assert( m_iLightmapUpdateDepth > 0 || std::ssize( g_LightmapUpdateList ) == 0 );
 
 	if ( !bShadowDepth )
 	{
@@ -1213,12 +1223,11 @@ void CRender::BuildWorldLists_Epilogue( IWorldRenderList *pList, WorldListInfo_t
 		EndUpdateLightmaps();
 	}
 
-	Assert( m_iLightmapUpdateDepth > 0 || std::ssize( g_LightmapUpdateList ) == 0 );
+	contract_assert( m_iLightmapUpdateDepth > 0 || std::ssize( g_LightmapUpdateList ) == 0 );
 }
 
 void CRender::DrawWorldLists( IMatRenderContext *pRenderContext, IWorldRenderList *pList, unsigned long flags, float flWaterZAdjust )
 {
-	Assert( ( flags & DRAWWORLDLISTS_DRAW_SIMPLE_WORLD_MODEL ) || pList );
+	contract_assert( ( flags & DRAWWORLDLISTS_DRAW_SIMPLE_WORLD_MODEL ) || pList );
 	R_DrawWorldLists( pRenderContext, pList, flags, flWaterZAdjust );
 }
-

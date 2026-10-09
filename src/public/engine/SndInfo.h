@@ -1,14 +1,9 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SNDINFO_H
-#define SNDINFO_H
-
-class Vector;
-#include "tier1/filename_table.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Purpose:  Client side only 
@@ -59,5 +54,3 @@ struct AudioState_t
 	QAngle m_Angles;
 	bool m_bIsUnderwater;
 };
-
-#endif // SNDINFO_H

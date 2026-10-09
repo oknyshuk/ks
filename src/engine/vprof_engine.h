@@ -1,12 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Real-Time Hierarchical Profiling
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef __VPROF_ENGINE_H__
-#define __VPROF_ENGINE_H__
+// Purpose: Real-Time Hierarchical Profiling
 
 #include "igameserverdata.h"
 
@@ -42,5 +38,3 @@ extern IVProfExport *g_pVProfExport; // used by engine's budget panel
 extern CVProfile *g_pVProfileForDisplay;
 
 extern unsigned g_VProfTargetThread;
-
-#endif

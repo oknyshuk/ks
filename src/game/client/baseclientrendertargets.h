@@ -1,26 +1,20 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Has init functions for all the standard render targets used by most games.
 //			Mods who wish to make their own render targets can inherit from this class
 //			and in the 'InitClientRenderTargets' interface called by the engine, set up
 //			their own render targets as well as calling the init functions for various
 //			common render targets provided by this class.
-//
 //			Note: Unless the client defines a singleton interface by inheriting from
 //			this class and exposing the singleton instance, these init and shutdown
 //			functions WILL NOT be called by the engine.
-//
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#ifndef CLIENTRENDERTARTETS_H_
-#define CLIENTRENDERTARTETS_H_
 
 #include "game/client/iclientrendertargets.h"		// base class with interfaces called by the engine
 #include "materialsystem/imaterialsystem.h"		// for material system classes and interfaces
-
+#include "networkvar.h"
+#include "materialsystem/MaterialSystemUtil.h"
 
 // Externs
 class IMaterialSystem;
@@ -57,5 +51,3 @@ protected:
 	ITexture* CreateCameraTexture( IMaterialSystem* pMaterialSystem, int iSize = 256 );
 
 };
-
-#endif // CLIENTRENDERTARTETS_H_

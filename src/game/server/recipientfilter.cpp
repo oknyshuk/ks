@@ -1,14 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "recipientfilter.h"
 #include "team.h"
-#include "tier1/bit_ops.h"
 #include "ipredictionsystem.h"
 
 static IPredictionSystem g_RecipientFilterPredictionSystem;
@@ -98,7 +121,7 @@ void CRecipientFilter::AddAllPlayers( void )
 
 void CRecipientFilter::AddRecipient( CBasePlayer *player )
 {
-	Assert( player );
+	contract_assert( player );
 
 	if ( !player )
 		return;
@@ -130,7 +153,7 @@ void CRecipientFilter::RemoveAllRecipients( void )
 
 void CRecipientFilter::RemoveRecipient( CBasePlayer *player )
 {
-	Assert( player );
+	contract_assert( player );
 	if ( player )
 	{
 		int index = player->entindex();
@@ -142,14 +165,14 @@ void CRecipientFilter::RemoveRecipient( CBasePlayer *player )
 
 void CRecipientFilter::RemoveRecipientByPlayerIndex( int playerindex )
 {
-	Assert( playerindex >= 1 && playerindex <= MAX_PLAYERS );
+	contract_assert( playerindex >= 1 && playerindex <= MAX_PLAYERS );
 
 	ks::erase_first( m_Recipients, playerindex );
 }
 
 void CRecipientFilter::AddRecipientsByTeam( CTeam *team )
 {
-	Assert( team );
+	contract_assert( team );
 
 	int i;
 	int c = team->GetNumPlayers();
@@ -165,7 +188,7 @@ void CRecipientFilter::AddRecipientsByTeam( CTeam *team )
 
 void CRecipientFilter::RemoveRecipientsByTeam( CTeam *team )
 {
-	Assert( team );
+	contract_assert( team );
 
 	int i;
 	int c = team->GetNumPlayers();
@@ -181,7 +204,7 @@ void CRecipientFilter::RemoveRecipientsByTeam( CTeam *team )
 
 void CRecipientFilter::RemoveRecipientsNotOnTeam( CTeam *team )
 {
-	Assert( team );
+	contract_assert( team );
 
 	int i;
 	for ( i = 1; i <= gpGlobals->maxClients; i++ )
@@ -464,14 +487,14 @@ void CPASAttenuationFilter::Filter( const Vector& origin, float attenuation /*= 
 		CBaseEntity *ent = CBaseEntity::Instance( index );
 		if ( !ent || !ent->IsPlayer() )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			continue;
 		}
 
 		CBasePlayer *player = ToBasePlayer( ent );
 		if ( !player )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			continue;
 		}
 
@@ -528,13 +551,13 @@ CSingleUserAndReplayRecipientFilter::CSingleUserAndReplayRecipientFilter( CBaseP
 		{
 			continue;
 		}
-		Assert( pPlayer->entindex() == i );
+		contract_assert( pPlayer->entindex() == i );
 
 		if ( pPlayer == pAddPlayer || pPlayer->IsHLTV() || pPlayer->IsReplay() )
 		{
 			// If we're predicting and this is not the first time we've predicted this sound
 			//  then don't send it to the local player again.
-			Assert( !IsUsingPredictionRules ());
+			contract_assert( !IsUsingPredictionRules () );
 
 			m_Recipients.push_back( i );
 		}

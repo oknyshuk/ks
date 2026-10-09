@@ -1,17 +1,44 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
-#include "basetypes.h"
 #include "globalstate.h"
 #include "igamesystem.h"
-#include "tier1/intern_pool.h"
 
 struct globalentity_t
 {
@@ -36,13 +63,13 @@ public:
 	virtual void LevelShutdownPreEntity() 
 	{
 		// don't allow state updates during shutdowns
-		Assert( !m_disableStateUpdates );
+		contract_assert( !m_disableStateUpdates );
 		m_disableStateUpdates = true;
 	}
 	
 	virtual void LevelShutdownPostEntity() 
 	{
-		Assert( m_disableStateUpdates );
+		contract_assert( m_disableStateUpdates );
 		m_disableStateUpdates = false;
 	}
 
@@ -245,7 +272,9 @@ int GlobalEntity_GetNumGlobals( void )
 	return gGlobalState.GetNumGlobals();
 }
 
-CON_COMMAND(dump_globals, "Dump all global entities/states")
+static void dump_globals( const CCommand &args );
+static ConCommand dump_globals_command( "dump_globals", dump_globals, "Dump all global entities/states" );
+static void dump_globals( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -295,7 +324,9 @@ void ShowServerGameTime()
 	Msg( "Server game time: %f\n", gpGlobals->curtime );
 }
 
-CON_COMMAND(server_game_time, "Gives the game time in seconds (server's curtime)")
+static void server_game_time( const CCommand &args );
+static ConCommand server_game_time_command( "server_game_time", server_game_time, "Gives the game time in seconds (server's curtime)" );
+static void server_game_time( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;

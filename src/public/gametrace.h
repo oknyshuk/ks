@@ -1,18 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef GAMETRACE_H
-#define GAMETRACE_H
-
-
+import ks.tier1;
 #include "cmodel.h"
-#include "utlvector.h"
+import std;
 #include "ihandleentity.h"
 #include "ispatialpartition.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: A trace is returned when a box is swept through the world
@@ -92,5 +86,3 @@ public:
 	// against the culled volume exclusively.
 	virtual bool CanTraceRay( const Ray_t &ray ) = 0;
 };
-#endif // GAMETRACE_H
-

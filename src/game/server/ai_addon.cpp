@@ -1,11 +1,34 @@
 // ai_addon.cpp
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "ai_addon.h"
 #include "ai_basenpc.h"
 #include "ai_behavior_addonhost.h"
-#include "strtools.h"
 
 
 //---------------------------------------------------------
@@ -29,7 +52,7 @@ bool IsAddOnAttachmentAvailable( CAI_BaseNPC *pHost, char *pszAttachmentName )
 	while ( iCount < 20 )
 	{
 		// Try another
-		Q_strcpy( pszAttachmentName, szOrigialAttachmentName );
+		V_strcpy( pszAttachmentName, szOrigialAttachmentName );
 
 		pHost->TranslateAddOnAttachment( pszAttachmentName, iCount );
 
@@ -266,7 +289,6 @@ void CAI_AddOn::SetPhysReplacement( CBaseEntity *pEntity )
 bool CAI_AddOn::Attach( CAI_BaseNPC *pHost )
 {
 	// Make sure we're not already attached to someone else!
-	Assert( GetAttachmentID() == INVALID_ADDON_ATTACHMENT_ID );
 
 	char szAttachmentName[ 256 ];
 	szAttachmentName[ 0 ] = '\0';
@@ -415,7 +437,7 @@ bool CAI_AddOn::Install( CAI_BaseNPC *pHost, bool bRemoveOnFail )
 		return false;
 
 	// Associate the addon with this host
-	Assert( m_hNPCHost == nullptr ); // For now, prevent slamming from one host to the next.
+	contract_assert( m_hNPCHost == nullptr ); // For now, prevent slamming from one host to the next.
 	m_hNPCHost.Set( pHost );
 
 	// Parent and 

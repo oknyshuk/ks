@@ -1,18 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.math;
+
 // Purpose: IGameResources interface
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IGAMERESOURCES_H
-#define IGAMERESOURCES_H
-
-class Color;
-class Vector;
 
 
-abstract_class IGameResources
+
+class IGameResources
 {
 public:
 	virtual	~IGameResources() {};
@@ -39,6 +34,3 @@ public:
 };
 
 extern IGameResources *GameResources( void ); // singelton accessor
-
-#endif
-

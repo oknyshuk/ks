@@ -1,24 +1,16 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DATAMAP_H
-#define DATAMAP_H
+import std;
 
-#ifndef VECTOR_H
-#include "mathlib/vector.h"
-#endif
-
-#include "tier1/utlvector.h"
+import ks.tier1;
 
 // SINGLE_INHERITANCE restricts the size of CBaseEntity pointers-to-member-functions to 4 bytes
-class SINGLE_INHERITANCE CBaseEntity;
+class CBaseEntity;
 struct inputdata_t;
 
-#define INVALID_TIME (FLT_MAX * -1.0) // Special value not rebased on save/load
+inline constexpr auto INVALID_TIME = (std::numeric_limits<float>::max() * -1.0); // Special value not rebased on save/load
 
 typedef enum _fieldtypes
 {
@@ -87,7 +79,7 @@ public:
 
 #define DECLARE_FIELD_SIZE( _fieldType, _fieldSize )	\
 	template< > class CDatamapFieldSizeDeducer<_fieldType> { public: enum { SIZE = _fieldSize }; static int FieldSize() { return _fieldSize; } };
-#define FIELD_SIZE( _fieldType )	CDatamapFieldSizeDeducer<_fieldType>::SIZE
+template <typename T1> [[gnu::always_inline]] inline auto FIELD_SIZE( T1 _fieldType ) { return CDatamapFieldSizeDeducer<_fieldType>::SIZE; }
 #define FIELD_BITS( _fieldType )	(FIELD_SIZE( _fieldType ) * 8)
 
 DECLARE_FIELD_SIZE( FIELD_FLOAT,		sizeof(float) )
@@ -122,7 +114,7 @@ DECLARE_FIELD_SIZE( FIELD_MATERIALINDEX,	sizeof(int) )
 
 
 #define ARRAYSIZE2D(p)		(sizeof(p)/sizeof(p[0][0]))
-#define SIZE_OF_ARRAY(p)	_ARRAYSIZE(p)
+#define SIZE_OF_ARRAY(p)	std::size(p)
 
 // Extensions to datamap.h macros for predicted entities only
 // Predictable macros, which include a tolerance for floating point values...
@@ -136,31 +128,31 @@ class ISaveRestoreOps;
 extern ISaveRestoreOps *eventFuncs;
 
 
-#define FTYPEDESC_GLOBAL			0x0001		// This field is masked for global entity save/restore
-#define FTYPEDESC_SAVE				0x0002		// This field is saved to disk
-#define FTYPEDESC_KEY				0x0004		// This field can be requested and written to by string name at load time
-#define FTYPEDESC_INPUT				0x0008		// This field can be written to by string name at run time, and a function called
-#define FTYPEDESC_OUTPUT			0x0010		// This field propogates it's value to all targets whenever it changes
-#define FTYPEDESC_FUNCTIONTABLE		0x0020		// This is a table entry for a member function pointer
-#define FTYPEDESC_PTR				0x0040		// This field is a pointer, not an embedded object
-#define FTYPEDESC_OVERRIDE			0x0080		// The field is an override for one in a base class (only used by prediction system for now)
+inline constexpr auto FTYPEDESC_GLOBAL = 0x0001; // This field is masked for global entity save/restore
+inline constexpr auto FTYPEDESC_SAVE = 0x0002; // This field is saved to disk
+inline constexpr auto FTYPEDESC_KEY = 0x0004; // This field can be requested and written to by string name at load time
+inline constexpr auto FTYPEDESC_INPUT = 0x0008; // This field can be written to by string name at run time, and a function called
+inline constexpr auto FTYPEDESC_OUTPUT = 0x0010; // This field propogates it's value to all targets whenever it changes
+inline constexpr auto FTYPEDESC_FUNCTIONTABLE = 0x0020; // This is a table entry for a member function pointer
+inline constexpr auto FTYPEDESC_PTR = 0x0040; // This field is a pointer, not an embedded object
+inline constexpr auto FTYPEDESC_OVERRIDE = 0x0080; // The field is an override for one in a base class (only used by prediction system for now)
 
 // Flags used by other systems (e.g., prediction system)
-#define FTYPEDESC_INSENDTABLE		0x0100		// This field is present in a network SendTable
-#define FTYPEDESC_PRIVATE			0x0200		// The field is local to the client or server only (not referenced by prediction code and not replicated by networking)
-#define FTYPEDESC_NOERRORCHECK		0x0400		// The field is part of the prediction typedescription, but doesn't get compared when checking for errors
+inline constexpr auto FTYPEDESC_INSENDTABLE = 0x0100; // This field is present in a network SendTable
+inline constexpr auto FTYPEDESC_PRIVATE = 0x0200; // The field is local to the client or server only (not referenced by prediction code and not replicated by networking)
+inline constexpr auto FTYPEDESC_NOERRORCHECK = 0x0400; // The field is part of the prediction typedescription, but doesn't get compared when checking for errors
 
-#define FTYPEDESC_MODELINDEX		0x0800		// The field is a model index (used for debugging output)
+inline constexpr auto FTYPEDESC_MODELINDEX = 0x0800; // The field is a model index (used for debugging output)
 
-#define FTYPEDESC_INDEX				0x1000		// The field is an index into file data, used for byteswapping. 
+inline constexpr auto FTYPEDESC_INDEX = 0x1000; // The field is an index into file data, used for byteswapping.
 
 // These flags apply to C_BasePlayer derived objects only
-#define FTYPEDESC_VIEW_OTHER_PLAYER		0x2000		// By default you can only view fields on the local player (yourself), 
+inline constexpr auto FTYPEDESC_VIEW_OTHER_PLAYER = 0x2000; // By default you can only view fields on the local player (yourself),
 													//   but if this is set, then we allow you to see fields on other players
-#define FTYPEDESC_VIEW_OWN_TEAM			0x4000		// Only show this data if the player is on the same team as the local player
-#define FTYPEDESC_VIEW_NEVER			0x8000		// Never show this field to anyone, even the local player (unusual)
+inline constexpr auto FTYPEDESC_VIEW_OWN_TEAM = 0x4000; // Only show this data if the player is on the same team as the local player
+inline constexpr auto FTYPEDESC_VIEW_NEVER = 0x8000; // Never show this field to anyone, even the local player (unusual)
 
-#define TD_MSECTOLERANCE		0.001f		// This is a FIELD_FLOAT and should only be checked to be within 0.001 of the networked info
+inline constexpr auto TD_MSECTOLERANCE = 0.001f; // This is a FIELD_FLOAT and should only be checked to be within 0.001 of the networked info
 
 struct typedescription_t;
 
@@ -284,5 +276,3 @@ struct datamap_t
 #define END_BITFIELD() \
 		}; \
 	};
-
-#endif // DATAMAP_H

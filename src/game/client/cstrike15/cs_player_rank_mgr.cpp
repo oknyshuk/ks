@@ -1,19 +1,26 @@
-//====== Copyright  Valve Corporation, All rights reserved. =================
-//
-// Purpose:
-//
-//=============================================================================
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "cs_player_rank_mgr.h"
 #include "achievementmgr.h"
 #include "achievements_cs.h"
 #include "cs_client_gamestats.h"
-#include "keyvalues.h"
 #include "c_playerresource.h"
 #include "cs_hud_chat.h"
-
-
-
 
 ConVar cl_player_rank_debug( "cl_player_rank_debug", "0", FCVAR_DEVELOPMENTONLY );
 ConVar cl_force_progress_notice_every_change( "cl_force_progress_notice_every_change", "0", FCVAR_DEVELOPMENTONLY );
@@ -48,10 +55,10 @@ CPlayerRankManager::CPlayerRankManager()
 	  m_iEloBracketDelta( 0 ),
 	  m_iNewEloBracket( -1 )
 {
-	COMPILE_TIME_ASSERT( ARRAYSIZE( s_MedalCategoryRankNames ) == MEDAL_RANK_COUNT );
-	COMPILE_TIME_ASSERT( ARRAYSIZE( s_MedalCategoryNames ) == MEDAL_CATEGORY_COUNT );
+	static_assert( std::size( s_MedalCategoryRankNames ) == MEDAL_RANK_COUNT );
+	static_assert( std::size( s_MedalCategoryNames ) == MEDAL_CATEGORY_COUNT );
 
-	Q_memset( m_rank, 0, sizeof( m_rank ) );
+	V_memset( m_rank, 0, sizeof( m_rank ) );
 }
 
 CPlayerRankManager::~CPlayerRankManager()
@@ -86,21 +93,21 @@ void CPlayerRankManager::LevelInitPostEntity()
 void CPlayerRankManager::FireGameEvent( IGameEvent *event )
 {
 	const char *name = event->GetName();
-	if ( 0 == Q_strcmp( name, "round_start" ) )
+	if ( 0 == V_strcmp( name, "round_start" ) )
 	{
 		OnRoundStart();
 	}
-	else if ( 0 == Q_strcmp( name, "achievement_earned_local" ) )
+	else if ( 0 == V_strcmp( name, "achievement_earned_local" ) )
 	{
 		OnAchievementEarned( event->GetInt( "achievement", CSInvalidAchievement ) );
 	}
-	else if ( 0 == Q_strcmp( name, "achievement_info_loaded" ) )
+	else if ( 0 == V_strcmp( name, "achievement_info_loaded" ) )
 	{
-		// After we retrieve achievement info from steam or titledata, 
+		// After we retrieve achievement info or titledata, 
 		// get lists of our achievements in each category and determine the 'rank' for the player.
 		BuildMedalCategories();
 	}
-	else if ( 0 == Q_strcmp( name, "seasoncoin_levelup" ) )
+	else if ( 0 == V_strcmp( name, "seasoncoin_levelup" ) )
 	{
 		int iPlayerIndex = event->GetInt( "player" );
 		int iCategory = event->GetInt( "category" );
@@ -158,7 +165,7 @@ void CPlayerRankManager::BuildMedalCategories( void )
 			if ( !pAchievement->IsAchieved() && pAchievement->GetGoal() > 1 )	
 			{
 				CAchievement_StatGoal *pStatGoal = dynamic_cast<CAchievement_StatGoal*>(pAchievement);
-				Assert( pStatGoal );
+				contract_assert( pStatGoal );
 				if ( pStatGoal )
 				{
 					m_StatBasedAchievements.push_back( pStatGoal );	
@@ -189,7 +196,7 @@ void CPlayerRankManager::BuildMedalCategories( void )
 		}
 	}
 	// If you implement a new achievement, give it a category. 
-	Assert( dbgCatCount == g_AchievementMgrCS.GetAchievementCount() );
+	contract_assert( dbgCatCount == g_AchievementMgrCS.GetAchievementCount() );
 #endif
 
 	m_bMedalCategoriesBuilt = true;
@@ -230,7 +237,7 @@ MedalRank_t CPlayerRankManager::CalculateRankForCategory( MedalCategory_t catego
 
 int CPlayerRankManager::CountAchievedInCategory( MedalCategory_t category ) const
 {
-	Assert( category >= MEDAL_CATEGORY_START && category < MEDAL_CATEGORY_COUNT );
+	contract_assert( category >= MEDAL_CATEGORY_START && category < MEDAL_CATEGORY_COUNT );
 	if( category < MEDAL_CATEGORY_START || category >= MEDAL_CATEGORY_COUNT )
 		return 0;
 
@@ -335,7 +342,7 @@ bool CPlayerRankManager::CheckCategoryRankLevelUp( int iCategory, int iRank )
 
 int CPlayerRankManager::GetTotalMedalsInCategory( MedalCategory_t category ) const
 {
-	Assert( category >= MEDAL_CATEGORY_START && category < MEDAL_CATEGORY_COUNT );
+	contract_assert( category >= MEDAL_CATEGORY_START && category < MEDAL_CATEGORY_COUNT );
 	if( category < MEDAL_CATEGORY_START || category >= MEDAL_CATEGORY_COUNT )
 		return 0;
 
@@ -344,11 +351,11 @@ int CPlayerRankManager::GetTotalMedalsInCategory( MedalCategory_t category ) con
 
 int CPlayerRankManager::GetMinMedalsForRank( MedalCategory_t category, MedalRank_t rank ) const
 {
-	Assert( category >= MEDAL_CATEGORY_START && category < MEDAL_CATEGORY_COUNT );
+	contract_assert( category >= MEDAL_CATEGORY_START && category < MEDAL_CATEGORY_COUNT );
 	if( category < MEDAL_CATEGORY_START || category >= MEDAL_CATEGORY_COUNT )
 		return 0;
 
-	Assert( rank >= MEDAL_RANK_NONE && rank < MEDAL_RANK_COUNT );
+	contract_assert( rank >= MEDAL_RANK_NONE && rank < MEDAL_RANK_COUNT );
 	if( rank < MEDAL_RANK_NONE || rank >= MEDAL_RANK_COUNT )
 		return 0;
 
@@ -366,7 +373,7 @@ void CPlayerRankManager::GetMedalStatsEarnedThisRound( std::vector< MedalStatEve
 			MedalCategory_t cat = GetAchievementCategory( pStatGoal->GetAchievementID() );
 			if ( cat == MEDAL_CATEGORY_NONE )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				continue;
 			}
 
@@ -415,14 +422,14 @@ const std::vector< MedalEarnedEvent_t >& CPlayerRankManager::GetMedalsEarnedThis
 
 const char *CPlayerRankManager::GetMedalCatagoryName( MedalCategory_t category )
 {
-	Assert( category >= 0 && category < ARRAYSIZE( s_MedalCategoryNames ) );
+	contract_assert( category >= 0 && category < std::size( s_MedalCategoryNames ) );
 
 	return s_MedalCategoryNames[category];
 }
 
 const char *CPlayerRankManager::GetMedalCatagoryRankName( int nRank )
 {
-	Assert( nRank >= 0 && nRank < ARRAYSIZE( s_MedalCategoryRankNames ) );
+	contract_assert( nRank >= 0 && nRank < std::size( s_MedalCategoryRankNames ) );
 
 	return s_MedalCategoryRankNames[nRank];
 }
@@ -476,7 +483,7 @@ int CPlayerRankManager::GetEloBracketChange( int &iOutNewEloBracket )
 {
 	if ( m_iEloBracketDelta != 0 ) 
 	{
-		Assert( m_iNewEloBracket >= 0 );
+		contract_assert( m_iNewEloBracket >= 0 );
 		iOutNewEloBracket = m_iNewEloBracket;
 	}
 	return m_iEloBracketDelta;
@@ -489,12 +496,16 @@ void CPlayerRankManager::ResetRecordedEloBracketChange( void )
 	m_iNewEloBracket = -1;
 }
 
-CON_COMMAND_F( cl_player_rank_events_spew, "Spews the contents of all events this round that could be displayed to the player, as well as the player's current ranks.", FCVAR_DEVELOPMENTONLY )
+static void cl_player_rank_events_spew( const CCommand &args );
+static ConCommand cl_player_rank_events_spew_command( "cl_player_rank_events_spew", cl_player_rank_events_spew, "Spews the contents of all events this round that could be displayed to the player, as well as the player's current ranks.", FCVAR_DEVELOPMENTONLY );
+static void cl_player_rank_events_spew( const CCommand &args )
 {
 	g_PlayerRankManager.PrintRankProgressThisRound();
 }
 
-CON_COMMAND_F( print_achievement_categories, "Spews achievements for each category", FCVAR_DEVELOPMENTONLY )
+static void print_achievement_categories( const CCommand &args );
+static ConCommand print_achievement_categories_command( "print_achievement_categories", print_achievement_categories, "Spews achievements for each category", FCVAR_DEVELOPMENTONLY );
+static void print_achievement_categories( const CCommand &args )
 {
 	CAchievementMgr::AchievementMap_t &achievements = g_AchievementMgrCS.GetAchievements( 0 );
 	for( int i = MEDAL_CATEGORY_START; i < MEDAL_CATEGORY_COUNT; ++i )
@@ -832,7 +843,3 @@ bool CPlayerRankManager::HasBuiltMedalCategories( void ) const
 {
 	return m_bMedalCategoriesBuilt;
 }
-
-
-
-

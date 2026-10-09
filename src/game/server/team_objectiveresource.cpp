@@ -1,22 +1,47 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: An entity that networks the state of the game's objectives.
 //			May contain data for objectives that aren't used by your mod, but
 //			the extra data will never be networked as long as it's zeroed out.
-//
-//=============================================================================
-#include "cbase.h"
+
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "team_objectiveresource.h"
 #include "shareddefs.h"
 #include <coordsize.h>
+import std;
+import ks.tier1;
 #include "team.h"
 
 #define CAPHUD_PARITY_BITS		6
-#define CAPHUD_PARITY_MASK		((1<<CAPHUD_PARITY_BITS)-1)
+constexpr auto CAPHUD_PARITY_MASK = ((1<<CAPHUD_PARITY_BITS)-1);
 
-#define LAZY_UPDATE_TIME		3
+constexpr auto LAZY_UPDATE_TIME = 3;
 
 // Datatable
 IMPLEMENT_REFLECT_SERVERCLASS( CBaseTeamObjectiveResource, DT_BaseTeamObjectiveResource )
@@ -40,7 +65,7 @@ CBaseTeamObjectiveResource::CBaseTeamObjectiveResource()
 //-----------------------------------------------------------------------------
 CBaseTeamObjectiveResource::~CBaseTeamObjectiveResource()
 {
-	Assert( g_pObjectiveResource == this );
+	contract_assert( g_pObjectiveResource == this );
 	g_pObjectiveResource = nullptr;	
 }
 
@@ -52,7 +77,7 @@ void CBaseTeamObjectiveResource::Spawn( void )
 	m_iNumControlPoints = 0;
 
 	// If you hit this, you've got too many teams for the control point system to handle.
-	Assert( GetNumberOfTeams() < MAX_CONTROL_POINT_TEAMS );
+	contract_assert( GetNumberOfTeams() < MAX_CONTROL_POINT_TEAMS );
 
 	for ( int i=0; i < MAX_CONTROL_POINTS; i++ )
 	{
@@ -147,7 +172,7 @@ void CBaseTeamObjectiveResource::ResetControlPoints( void )
 //-----------------------------------------------------------------------------
 void CBaseTeamObjectiveResource::SetNumControlPoints( int num )
 {
-	Assert( num <= MAX_CONTROL_POINTS );
+	contract_assert( num <= MAX_CONTROL_POINTS );
 	m_iNumControlPoints = num;
 }
 
@@ -174,7 +199,7 @@ void CBaseTeamObjectiveResource::SetCPOverlays( int index, int iTeam, int iIcon 
 //-----------------------------------------------------------------------------
 void CBaseTeamObjectiveResource::SetTeamBaseIcons( int iTeam, int iBaseIcon )
 {
-	Assert( iTeam >= 0 && iTeam < MAX_TEAMS );
+	contract_assert( iTeam >= 0 && iTeam < MAX_TEAMS );
 	m_iTeamBaseIcons.Set( iTeam, iBaseIcon );
 }
 
@@ -265,7 +290,7 @@ void CBaseTeamObjectiveResource::SetTeamCanCap( int index, int iTeam, bool bCanC
 //-----------------------------------------------------------------------------
 void CBaseTeamObjectiveResource::SetBaseCP( int index, int iTeam )
 {
-	Assert( iTeam < MAX_TEAMS );
+	contract_assert( iTeam < MAX_TEAMS );
 	m_iBaseControlPoints.Set( iTeam, index );
 }
 
@@ -275,7 +300,7 @@ void CBaseTeamObjectiveResource::SetBaseCP( int index, int iTeam )
 void CBaseTeamObjectiveResource::SetPreviousPoint( int index, int iTeam, int iPrevIndex, int iPrevPoint )
 {
 	AssertValidIndex(index);
-	Assert( iPrevIndex >= 0 && iPrevIndex < MAX_PREVIOUS_POINTS );
+	contract_assert( iPrevIndex >= 0 && iPrevIndex < MAX_PREVIOUS_POINTS );
 	int iIntIndex = iPrevIndex + (index * MAX_PREVIOUS_POINTS) + (iTeam * MAX_CONTROL_POINTS * MAX_PREVIOUS_POINTS);
 	m_iPreviousPoints.Set( iIntIndex, iPrevPoint );
 }
@@ -286,7 +311,7 @@ void CBaseTeamObjectiveResource::SetPreviousPoint( int index, int iTeam, int iPr
 int CBaseTeamObjectiveResource::GetPreviousPointForPoint( int index, int team, int iPrevIndex )
 {
 	AssertValidIndex(index);
-	Assert( iPrevIndex >= 0 && iPrevIndex < MAX_PREVIOUS_POINTS );
+	contract_assert( iPrevIndex >= 0 && iPrevIndex < MAX_PREVIOUS_POINTS );
 	int iIntIndex = iPrevIndex + (index * MAX_PREVIOUS_POINTS) + (team * MAX_CONTROL_POINTS * MAX_PREVIOUS_POINTS);
 	return m_iPreviousPoints[ iIntIndex ];
 }

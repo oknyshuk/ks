@@ -1,14 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
-#include "view.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "materialsystem/imesh.h"
 #include "fx_quad.h"
-#include "tier0/vprof.h"
 
 CFXQuad::CFXQuad( const FXQuadData_t &data )
 
@@ -28,7 +36,7 @@ CFXQuad::~CFXQuad( void )
 //-----------------------------------------------------------------------------
 void CFXQuad::Draw( double frametime )
 {
-	VPROF_BUDGET( "FX_Quad::Draw", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_Quad::Draw", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 
 	// Update the effect
 	Update( frametime );
@@ -107,7 +115,7 @@ void CFXQuad::Draw( double frametime )
 
 	Vector	rRight, rUp;
 
-	rRight	= ( vRight * cos( DEG2RAD( m_FXData.m_flYaw ) ) ) - ( vUp * sin( DEG2RAD( m_FXData.m_flYaw ) ) );
+	rRight	= ( vRight * std::cos( DEG2RAD( m_FXData.m_flYaw ) ) ) - ( vUp * std::sin( DEG2RAD( m_FXData.m_flYaw ) ) );
 	rUp		= ( vRight * cos( DEG2RAD( m_FXData.m_flYaw+90.0f ) ) ) - ( vUp * sin( DEG2RAD( m_FXData.m_flYaw+90.0f ) ) );
 
 	vRight	= rRight * ( scale * 0.5f );

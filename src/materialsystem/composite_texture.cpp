@@ -1,22 +1,16 @@
-//========= Copyright (c) 1996-2013, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Provide custom texture generation (compositing) 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2013 Valve Corporation
 
+// Purpose: Provide custom texture generation (compositing)
+
+import ks.vstdlib;
 #include "composite_texture.h"
-#include "vstdlib/jobthread.h"
 #include "materialsystem/base_visuals_data_processor.h"
 #include "materialsystem_global.h"
-#include "tier0/vprof.h"
-#include "keyvalues.h"
+import std;
 #include "texturemanager.h"
 
 //#define WRITE_OUT_VTF_PRE_COMPRESS
-#ifdef WRITE_OUT_VTF_PRE_COMPRESS
-#include "filesystem.h"
-#endif
 
 ConVar mat_verbose_texture_gen( "mat_verbose_texture_gen", "0" );
 
@@ -79,7 +73,6 @@ int GetRTIndex( int nSize )
 // pRect is ignored, this always does the whole texture
 void CCompositeTextureResult::RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect )
 {
-	TM_ZONE_FILTERED( TELEMETRY_LEVEL1, 200, TMZF_NONE, "%s", __FUNCTION__ );
 
 	if ( m_pOwner && m_pOwner->GenerationComplete() )
 	{
@@ -198,7 +191,6 @@ bool CCompositeTexture::Init()
 	}
 
 	{
-		TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "CreateResultVTF" );
 		// create the final result VTF that we'll keep around. It's compressed and used to copy over to the actual texture whenever the texture needs downloading
 		m_pResultVTF = CreateVTFTexture();
 		m_pResultVTF->Init( m_pScratchVTF->Width(), m_pScratchVTF->Height(), m_pScratchVTF->Depth(), ( Format() == COMPOSITE_TEXTURE_FORMAT_DXT1 ) ? IMAGE_FORMAT_DXT1_RUNTIME : IMAGE_FORMAT_DXT5_RUNTIME, TEXTUREFLAGS_ALL_MIPS, 1, m_pScratchVTF->MipCount() );
@@ -262,7 +254,6 @@ void CCompositeTexture::ReleasePreloadedTextures()
 // this is called from the GenerationStep which is called from the generate thread
 void CCompositeTexture::GenerateComposite( void )
 {
-	TM_ZONE_FILTERED( TELEMETRY_LEVEL1, 100, TMZF_NONE, "GenerateComposite" );
 
 	if ( m_nRegenerateStage == COMPOSITE_TEXTURE_STATE_NOT_STARTED )
 	{
@@ -281,28 +272,10 @@ void CCompositeTexture::GenerateComposite( void )
 			}
 			
 			{
-				TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "MipGen" );
 				m_pScratchVTF->GenerateMipmaps();
 			}
 
-#ifdef WRITE_OUT_VTF_PRE_COMPRESS
-			ks::byte_writer buf;
-			m_pScratchVTF->Serialize(buf);
-
-			char szTextureName[MAX_PATH];
-			V_snprintf(szTextureName, MAX_PATH, "d:/temp/%s.vtf", m_szTextureName );
-			
-			FileHandle_t f = g_pFullFileSystem->Open(szTextureName, "wb", nullptr);
-
-			if ( f != FILESYSTEM_INVALID_HANDLE )
 			{
-				g_pFullFileSystem->Write( buf.data(), buf.size(), f );
-				g_pFullFileSystem->Close(f);
-			}
-#endif
-
-			{
-				TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "DXT Compress" );
 				// compress and copy the Scratch VTF mip maps to the Result VTF
 				for (int nMip = 0; nMip < m_pScratchVTF->MipCount(); nMip++)
 				{
@@ -326,7 +299,6 @@ void CCompositeTexture::GenerationStep( void )
 {
 	if ( m_nRegenerateStage == COMPOSITE_TEXTURE_STATE_REQUESTED_READ )
 	{
-		TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "ReadPixelsEventWait" );
 		// wait on ReadPixelsAsync() to signal up that it's completed
 		if ( m_pPixelsReadEvent->Wait( 20 ) )
 		{
@@ -335,7 +307,6 @@ void CCompositeTexture::GenerationStep( void )
 	}
 	if ( m_nRegenerateStage == COMPOSITE_TEXTURE_STATE_REQUESTED_GETRESULT )
 	{
-		TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "ReadPixelsGetResultEventWait" );
 		// wait on ReadPixelsAsyncGetResult() to signal up that it's completed
 		if ( m_pPixelsReadEvent->Wait( 20 ) )
 		{
@@ -347,7 +318,6 @@ void CCompositeTexture::GenerationStep( void )
 	}
 	if ( m_nRegenerateStage == COMPOSITE_TEXTURE_STATE_WAITING_FOR_ASYNC_TEXTURE_LOAD_FINISH )
 	{
-		TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "WaitForAsyncTextureLoads" );
 		bool bDone = true;
 		for ( int i = 0; i < NUM_PRELOAD_TEXTURES; i++ )
 		{
@@ -382,7 +352,6 @@ struct materialTextureParams
 
 void CCompositeTexture::DoAsyncTextureLoad( void )
 {
-	TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "DoAsyncTextureLoad" );
 
 	materialTextureParams materialParams[ NUM_PRELOAD_TEXTURES ] =
 	{
@@ -443,7 +412,6 @@ void CCompositeTexture::DoAsyncTextureLoad( void )
 void CCompositeTexture::CreateCompositingMaterial( void )
 {
 	{
-		TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "CreateCompositingMat" );
 
 		char szCompositeMaterialName[32];
 		V_sprintf_safe( szCompositeMaterialName, "compositing_material_%d", s_nCompositeMaterialIndex++ );
@@ -464,7 +432,6 @@ void CCompositeTexture::CreateCompositingMaterial( void )
 	}
 
 	{
-		TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "RefreshCompositingMat" );
 		// this causes a precache of the material
 		m_pCompositingMaterial->Refresh();
 	}
@@ -481,7 +448,6 @@ void CCompositeTexture::RenderToRT( void )
 			int resolutionX = m_pCustomMaterialRT->GetActualWidth();
 			int resolutionY = m_pCustomMaterialRT->GetActualHeight();
 
-			TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "RenderToRT %d", resolutionX );
 
 			//init render context and set the the custom weapon RT as the current target
 			CMatRenderContextPtr pRenderContext( materials );
@@ -511,7 +477,6 @@ void CCompositeTexture::ReadRT( void )
 {
 	if ( m_nRegenerateStage == COMPOSITE_TEXTURE_STATE_WAITING_FOR_READ_RT )
 	{
-		TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "ReadRT" );
 		if ( materials->CanDownloadTextures() )
 		{
 			int resolutionX = m_pCustomMaterialRT->GetActualWidth();
@@ -532,7 +497,6 @@ void CCompositeTexture::GetReadRTResult( void )
 {
 	if ( m_nRegenerateStage == COMPOSITE_TEXTURE_STATE_WAITING_FOR_GETRESULT )
 	{
-		TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "GetReadRTResult" );
 		if ( materials->CanDownloadTextures() )
 		{
 			int resolutionX = m_pCustomMaterialRT->GetActualWidth();
@@ -555,7 +519,6 @@ void CCompositeTexture::CleanupCompositingMaterial( void )
 	{
 		if ( m_pCompositingMaterial != nullptr )
 		{
-			TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "CleanupCompositingMat" );
 			m_pCompositingMaterial->DecrementReferenceCount();
 			m_pCompositingMaterial->DeleteIfUnreferenced();
 			m_pCompositingMaterial = nullptr;
@@ -574,7 +537,6 @@ void CCompositeTexture::Usage( int &nTextures, int &nBackingTextures )
 
 void CCompositeTexture::Finalize()
 {
-	TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "Finalize" );
 
 	if ( m_ResultTexture.m_pTexture == nullptr )
 	{
@@ -635,7 +597,6 @@ bool ProcessCompositeTextureGenerator( void )
 // triggers regenerations as needed, and handles swapping materials that are pending swap and ready, and cleans up materials that are no longer used
 bool CCompositeTextureGenerator::Process( void )
 {
-	TM_ZONE( TELEMETRY_LEVEL1, TMZF_NONE, "%s", __FUNCTION__ );
 
 	bool bDidWork = false;
 

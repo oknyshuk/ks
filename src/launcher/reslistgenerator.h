@@ -1,14 +1,8 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// Defines the entry point for the application.
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef RESLISTGENERATOR_H
-#define RESLISTGENERATOR_H
-
+// Purpose: Defines the entry point for the application.
 
 class IResListGenerator
 {
@@ -23,6 +17,3 @@ public:
 };
 
 extern IResListGenerator *reslistgenerator;
-
-#endif // RESLISTGENERATOR_H
-

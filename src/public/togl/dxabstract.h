@@ -1,25 +1,17 @@
-//================ Copyright (c) 1996-2012 Valve Corporation. All Rights Reserved. =================
-//
-// dxabstract.h
-//
-//==================================================================================================
-
-#ifndef DXABSTRACT_H
-#define DXABSTRACT_H
-
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2012 Valve Corporation
 
+import ks.tier1;
 #include "togl/rendermechanism.h"
 #include "togl/dxabstract_types.h"
 
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
-#include "tier1/utlvector.h"
+import std;
 
 
 typedef std::vector< D3DMATRIX > CD3DMATRIXStack;
 
-struct TOGL_CLASS ID3DXMatrixStack
+struct  ID3DXMatrixStack
 {
 	int	m_refcount[2];
 	bool m_mark;
@@ -44,7 +36,7 @@ struct TOGL_CLASS ID3DXMatrixStack
 	// Left multiply the current matrix with the computed rotation
 	// matrix, counterclockwise about the given axis with the given angle.
 	// (rotation is about the local origin of the object)
-	HRESULT RotateAxisLocal(CONST D3DXVECTOR3* pV, FLOAT Angle);
+	HRESULT RotateAxisLocal(const D3DXVECTOR3* pV, FLOAT Angle);
 
 	// Left multiply the current matrix with the computed translation
 	// matrix. (transformation is about the local origin of the object)
@@ -65,7 +57,7 @@ struct ID3DXInclude
 typedef ID3DXInclude* LPD3DXINCLUDE;
 
 
-struct TOGL_CLASS ID3DXBuffer : public IUnknown
+struct  ID3DXBuffer : public IUnknown
 {
 	void* GetBufferPointer();
 	DWORD GetBufferSize();
@@ -78,15 +70,15 @@ class ID3DXConstantTable : public IUnknown
 };
 typedef ID3DXConstantTable* LPD3DXCONSTANTTABLE;
 
-TOGL_INTERFACE const char* D3DXGetPixelShaderProfile( IDirect3DDevice9 *pDevice );
+ const char* D3DXGetPixelShaderProfile( IDirect3DDevice9 *pDevice );
 
-TOGL_INTERFACE D3DXMATRIX* D3DXMatrixMultiply( D3DXMATRIX *pOut, CONST D3DXMATRIX *pM1, CONST D3DXMATRIX *pM2 );
-TOGL_INTERFACE D3DXVECTOR3* D3DXVec3TransformCoord( D3DXVECTOR3 *pOut, CONST D3DXVECTOR3 *pV, CONST D3DXMATRIX *pM );
+ D3DXMATRIX* D3DXMatrixMultiply( D3DXMATRIX *pOut, const D3DXMATRIX *pM1, const D3DXMATRIX *pM2 );
+ D3DXVECTOR3* D3DXVec3TransformCoord( D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM );
 
-TOGL_INTERFACE HRESULT D3DXCreateMatrixStack( DWORD Flags, LPD3DXMATRIXSTACK* ppStack);
-TOGL_INTERFACE void D3DXMatrixIdentity( D3DXMATRIX * );
+ HRESULT D3DXCreateMatrixStack( DWORD Flags, LPD3DXMATRIXSTACK* ppStack);
+ void D3DXMatrixIdentity( D3DXMATRIX * );
 
-TOGL_INTERFACE D3DXINLINE D3DXVECTOR3* D3DXVec3Subtract( D3DXVECTOR3 *pOut, CONST D3DXVECTOR3 *pV1, CONST D3DXVECTOR3 *pV2 )
+ D3DXINLINE D3DXVECTOR3* D3DXVec3Subtract( D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2 )
 {
 	pOut->x = pV1->x - pV2->x;
 	pOut->y = pV1->y - pV2->y;
@@ -94,7 +86,7 @@ TOGL_INTERFACE D3DXINLINE D3DXVECTOR3* D3DXVec3Subtract( D3DXVECTOR3 *pOut, CONS
 	return pOut;
 }
 
-TOGL_INTERFACE D3DXINLINE D3DXVECTOR3* D3DXVec3Cross( D3DXVECTOR3 *pOut, CONST D3DXVECTOR3 *pV1, CONST D3DXVECTOR3 *pV2 )
+ D3DXINLINE D3DXVECTOR3* D3DXVec3Cross( D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2 )
 {
 	D3DXVECTOR3 v;
 
@@ -106,33 +98,31 @@ TOGL_INTERFACE D3DXINLINE D3DXVECTOR3* D3DXVec3Cross( D3DXVECTOR3 *pOut, CONST D
 	return pOut;
 }
 
-TOGL_INTERFACE D3DXINLINE FLOAT D3DXVec3Dot( CONST D3DXVECTOR3 *pV1, CONST D3DXVECTOR3 *pV2 )
+ D3DXINLINE FLOAT D3DXVec3Dot( const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2 )
 {
 	return pV1->x * pV2->x + pV1->y * pV2->y + pV1->z * pV2->z;
 }
 
-TOGL_INTERFACE D3DXMATRIX* D3DXMatrixInverse( D3DXMATRIX *pOut, FLOAT *pDeterminant, CONST D3DXMATRIX *pM );
+ D3DXMATRIX* D3DXMatrixInverse( D3DXMATRIX *pOut, FLOAT *pDeterminant, const D3DXMATRIX *pM );
 
-TOGL_INTERFACE D3DXMATRIX* D3DXMatrixTranspose( D3DXMATRIX *pOut, CONST D3DXMATRIX *pM );
+ D3DXMATRIX* D3DXMatrixTranspose( D3DXMATRIX *pOut, const D3DXMATRIX *pM );
 
-TOGL_INTERFACE D3DXPLANE* D3DXPlaneNormalize( D3DXPLANE *pOut, CONST D3DXPLANE *pP);
+ D3DXPLANE* D3DXPlaneNormalize( D3DXPLANE *pOut, const D3DXPLANE *pP);
 
-TOGL_INTERFACE D3DXVECTOR4* D3DXVec4Transform( D3DXVECTOR4 *pOut, CONST D3DXVECTOR4 *pV, CONST D3DXMATRIX *pM );
+ D3DXVECTOR4* D3DXVec4Transform( D3DXVECTOR4 *pOut, const D3DXVECTOR4 *pV, const D3DXMATRIX *pM );
 
 
-TOGL_INTERFACE D3DXVECTOR4* D3DXVec4Normalize( D3DXVECTOR4 *pOut, CONST D3DXVECTOR4 *pV );
+ D3DXVECTOR4* D3DXVec4Normalize( D3DXVECTOR4 *pOut, const D3DXVECTOR4 *pV );
 
-TOGL_INTERFACE D3DXMATRIX* D3DXMatrixTranslation( D3DXMATRIX *pOut, FLOAT x, FLOAT y, FLOAT z );
+ D3DXMATRIX* D3DXMatrixTranslation( D3DXMATRIX *pOut, FLOAT x, FLOAT y, FLOAT z );
 
 // Build an ortho projection matrix. (right-handed)
-TOGL_INTERFACE D3DXMATRIX* D3DXMatrixOrthoOffCenterRH( D3DXMATRIX *pOut, FLOAT l, FLOAT r, FLOAT b, FLOAT t, FLOAT zn,FLOAT zf );
+ D3DXMATRIX* D3DXMatrixOrthoOffCenterRH( D3DXMATRIX *pOut, FLOAT l, FLOAT r, FLOAT b, FLOAT t, FLOAT zn,FLOAT zf );
 
-TOGL_INTERFACE D3DXMATRIX* D3DXMatrixPerspectiveRH( D3DXMATRIX *pOut, FLOAT w, FLOAT h, FLOAT zn, FLOAT zf );
+ D3DXMATRIX* D3DXMatrixPerspectiveRH( D3DXMATRIX *pOut, FLOAT w, FLOAT h, FLOAT zn, FLOAT zf );
 
-TOGL_INTERFACE D3DXMATRIX* D3DXMatrixPerspectiveOffCenterRH( D3DXMATRIX *pOut, FLOAT l, FLOAT r, FLOAT b, FLOAT t, FLOAT zn, FLOAT zf );
+ D3DXMATRIX* D3DXMatrixPerspectiveOffCenterRH( D3DXMATRIX *pOut, FLOAT l, FLOAT r, FLOAT b, FLOAT t, FLOAT zn, FLOAT zf );
 
 // Transform a plane by a matrix.  The vector (a,b,c) must be normal.
 // M should be the inverse transpose of the transformation desired.
-TOGL_INTERFACE D3DXPLANE* D3DXPlaneTransform( D3DXPLANE *pOut, CONST D3DXPLANE *pP, CONST D3DXMATRIX *pM );
-
-#endif // DXABSTRACT_H
+ D3DXPLANE* D3DXPlaneTransform( D3DXPLANE *pOut, const D3DXPLANE *pP, const D3DXMATRIX *pM );

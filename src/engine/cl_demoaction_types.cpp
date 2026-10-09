@@ -1,12 +1,33 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "client_pch.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// main precompiled header for client files
+
+import std;
+import ks.tier1;
+
+#include "common.h"
+
+#include "cmd.h"
+#include "render.h"
+
+
+
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+
+#include "demo.h"
+#include "host.h"
+#include "filesystem.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "cl_demoaction.h"
-#include "cl_demoactionmanager.h"
 #include "demo.h"
 #include "shake.h"
 #include "cdll_engine_int.h"
@@ -165,7 +186,7 @@ bool CDemoActionPlayCommands::Init( KeyValues *pInitData )
 //-----------------------------------------------------------------------------
 void CDemoActionPlayCommands::SetCommandStream( char const *stream )
 {
-	Q_strncpy( m_szCommandStream, stream, sizeof( m_szCommandStream ) );
+	V_strncpy( m_szCommandStream, stream, sizeof( m_szCommandStream ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -319,7 +340,7 @@ DECLARE_DEMOACTION( DEMO_ACTION_SCREENFADE_START, CDemoActionScreenFadeStart );
 //-----------------------------------------------------------------------------
 void CDemoActionTextMessageStart::SetMessageText( char const *text )
 {
-	Q_strncpy( m_szMessageText, text, sizeof( m_szMessageText ) );
+	V_strncpy( m_szMessageText, text, sizeof( m_szMessageText ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -337,7 +358,7 @@ char const *CDemoActionTextMessageStart::GetMessageText( void ) const
 //-----------------------------------------------------------------------------
 void CDemoActionTextMessageStart::SetFontName( char const *font )
 {
-	Q_strncpy( m_szUIFont, font, sizeof( m_szUIFont ) );
+	V_strncpy( m_szUIFont, font, sizeof( m_szUIFont ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -346,7 +367,7 @@ void CDemoActionTextMessageStart::SetFontName( char const *font )
 //-----------------------------------------------------------------------------
 char const *CDemoActionTextMessageStart::GetFontName( void ) const
 {
-	if ( !Q_strcasecmp( "TextMessageDefault", m_szUIFont ) )
+	if ( !V_strcasecmp( "TextMessageDefault", m_szUIFont ) )
 	{
 		return "";
 	}
@@ -561,7 +582,7 @@ bool CDemoActionPlaySoundStart::Init( KeyValues *pInitData )
 //-----------------------------------------------------------------------------
 void CDemoActionPlaySoundStart::SetSoundName( char const *name )
 {
-	Q_strncpy( m_szSoundName, name, sizeof( m_szSoundName ) );
+	V_strncpy( m_szSoundName, name, sizeof( m_szSoundName ) );
 }
 
 //-----------------------------------------------------------------------------

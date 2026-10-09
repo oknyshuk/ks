@@ -1,19 +1,44 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Spatial entity.
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Spatial entity.
+
+import std;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "te.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 
 #include "spatialentity.h"
 
-
-#define SPATIAL_ENT_THINK_RATE TICK_INTERVAL
+inline float SPATIAL_ENT_THINK_RATE() { return TICK_INTERVAL; }
 
 
 static const char *s_pFadeInContextThink = "SpatialEntityFadeInThink";
@@ -87,7 +112,7 @@ void CSpatialEntity::FadeIn ( void )
 	m_bEnabled = true;
 	m_flTimeStartFadeIn = gpGlobals->curtime;
 	m_flStartFadeInWeight = m_flCurWeight;
-	SetNextThink ( gpGlobals->curtime + SPATIAL_ENT_THINK_RATE, s_pFadeInContextThink );
+	SetNextThink ( gpGlobals->curtime + SPATIAL_ENT_THINK_RATE(), s_pFadeInContextThink );
 }
 
 //-----------------------------------------------------------------------------
@@ -98,7 +123,7 @@ void CSpatialEntity::FadeOut ( void )
 	m_bEnabled = false;
 	m_flTimeStartFadeOut = gpGlobals->curtime;
 	m_flStartFadeOutWeight = m_flCurWeight;
-	SetNextThink ( gpGlobals->curtime + SPATIAL_ENT_THINK_RATE, s_pFadeOutContextThink );
+	SetNextThink ( gpGlobals->curtime + SPATIAL_ENT_THINK_RATE(), s_pFadeOutContextThink );
 }
 
 //-----------------------------------------------------------------------------
@@ -126,14 +151,14 @@ void CSpatialEntity::FadeInThink( void )
 		flTimeToFade			= m_flFadeInDuration * (1.0 - flWeightRatio);
 	}	
 
-	Assert ( flTimeToFade > 0.0f );
+	contract_assert( flTimeToFade > 0.0f );
 	float flFadeRatio = (gpGlobals->curtime - m_flTimeStartFadeIn) / flTimeToFade;
 	flFadeRatio = clamp ( flFadeRatio, 0.0f, 1.0f );
 	m_flStartFadeInWeight = clamp ( m_flStartFadeInWeight, 0.0f, 1.0f );
 
 	m_flCurWeight = Lerp( flFadeRatio, m_flStartFadeInWeight, m_flMaxWeight );
 
-	SetNextThink( gpGlobals->curtime + SPATIAL_ENT_THINK_RATE, s_pFadeInContextThink );
+	SetNextThink( gpGlobals->curtime + SPATIAL_ENT_THINK_RATE(), s_pFadeInContextThink );
 }
 
 //-----------------------------------------------------------------------------
@@ -161,14 +186,14 @@ void CSpatialEntity::FadeOutThink( void )
 		flTimeToFade			= m_flFadeOutDuration * flWeightRatio;
 	}	
 
-	Assert ( flTimeToFade > 0.0f );
+	contract_assert( flTimeToFade > 0.0f );
 	float flFadeRatio = (gpGlobals->curtime - m_flTimeStartFadeOut) / flTimeToFade;
 	flFadeRatio = clamp ( flFadeRatio, 0.0f, 1.0f );
 	m_flStartFadeOutWeight = clamp ( m_flStartFadeOutWeight, 0.0f, 1.0f );
 
 	m_flCurWeight = Lerp( 1.0f - flFadeRatio, 0.0f, m_flStartFadeOutWeight );
 
-	SetNextThink( gpGlobals->curtime + SPATIAL_ENT_THINK_RATE, s_pFadeOutContextThink );
+	SetNextThink( gpGlobals->curtime + SPATIAL_ENT_THINK_RATE(), s_pFadeOutContextThink );
 }
 
 //------------------------------------------------------------------------------

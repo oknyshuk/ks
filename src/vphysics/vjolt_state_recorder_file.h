@@ -4,6 +4,11 @@
 
 #pragma once
 
+
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/StateRecorder.h>
+import std;
+
 class JoltStateRecorderFile final : public JPH::StateRecorder
 {
 public:

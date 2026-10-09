@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef USERMESSAGES_H
-#define USERMESSAGES_H
-
-#include <map>
-#include <utlvector.h>
-#include <bitbuf.h>
-#include <functional>
+import std;
+import ks.tier1;
 #include "shareddefs.h"
 
 #include "networksystem/inetworksystem.h"
@@ -128,7 +121,7 @@ private:
 			return msgType;
 		}
 
-		virtual void *Parse( int32 nPassthroughFlags, const void *msg, int size, bool &bSilentIgnore ) OVERRIDE
+		virtual void *Parse( int32 nPassthroughFlags, const void *msg, int size, bool &bSilentIgnore ) override
 		{
 			if ( size < 0 || size > NET_MAX_PAYLOAD )
 			{
@@ -157,27 +150,27 @@ private:
 			return pMsg;
 		}
 
-		virtual bool Invoke( const void *msg ) OVERRIDE
+		virtual bool Invoke( const void *msg ) override
 		{
 			return msg && m_handler( *static_cast< const PB_OBJECT_TYPE * >( msg ) );
 		}
 
-		virtual void Destroy( void *msg ) const OVERRIDE
+		virtual void Destroy( void *msg ) const override
 		{
 			delete static_cast< PB_OBJECT_TYPE * >( msg );
 		}
 
-		virtual const char *TypeName() const OVERRIDE
+		virtual const char *TypeName() const override
 		{
 			return ks::proto::type_name< PB_OBJECT_TYPE >();
 		}
 
-		virtual std::size_t ByteSize( const void *msg ) const OVERRIDE
+		virtual std::size_t ByteSize( const void *msg ) const override
 		{
 			return ks::proto::byte_size( *static_cast< const PB_OBJECT_TYPE * >( msg ) );
 		}
 
-		virtual std::string Describe( const void *msg ) const OVERRIDE
+		virtual std::string Describe( const void *msg ) const override
 		{
 			return ks::proto::to_text( *static_cast< const PB_OBJECT_TYPE * >( msg ) );
 		}
@@ -187,5 +180,3 @@ private:
 
 	IUserMessageBinder *m_pBind;
 };
-
-#endif // USERMESSAGES_H

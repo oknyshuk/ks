@@ -1,17 +1,37 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Color correction entity.
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Color correction entity.
+
+import std;
+import ks.math;
+#include "string_t.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "colorcorrection.h"
 
-#define COLOR_CORRECTION_ENT_THINK_RATE TICK_INTERVAL
+inline float COLOR_CORRECTION_ENT_THINK_RATE() { return TICK_INTERVAL; }
 
 static const char *s_pFadeInContextThink = "ColorCorrectionFadeInThink";
 static const char *s_pFadeOutContextThink = "ColorCorrectionFadeOutThink";
@@ -88,7 +108,7 @@ void CColorCorrection::Activate( void )
 {
 	BaseClass::Activate();
 
-	Q_strncpy( m_netlookupFilename.GetForModify(), STRING( m_lookupFilename ), MAX_PATH );
+	V_strncpy( m_netlookupFilename.GetForModify(), STRING( m_lookupFilename ), MAX_PATH );
 }
 
 //-----------------------------------------------------------------------------
@@ -102,7 +122,7 @@ void CColorCorrection::FadeIn ( void )
 	m_bEnabled = true;
 	m_flTimeStartFadeIn = gpGlobals->curtime;
 	m_flStartFadeInWeight = m_flCurWeight;
-	SetNextThink ( gpGlobals->curtime + COLOR_CORRECTION_ENT_THINK_RATE, s_pFadeInContextThink );
+	SetNextThink ( gpGlobals->curtime + COLOR_CORRECTION_ENT_THINK_RATE(), s_pFadeInContextThink );
 }
 
 //-----------------------------------------------------------------------------
@@ -116,7 +136,7 @@ void CColorCorrection::FadeOut ( void )
 	m_bEnabled = false;
 	m_flTimeStartFadeOut = gpGlobals->curtime;
 	m_flStartFadeOutWeight = m_flCurWeight;
-	SetNextThink ( gpGlobals->curtime + COLOR_CORRECTION_ENT_THINK_RATE, s_pFadeOutContextThink );
+	SetNextThink ( gpGlobals->curtime + COLOR_CORRECTION_ENT_THINK_RATE(), s_pFadeOutContextThink );
 }
 
 //-----------------------------------------------------------------------------
@@ -144,14 +164,14 @@ void CColorCorrection::FadeInThink( void )
 		flTimeToFade			= m_flFadeInDuration * (1.0 - flWeightRatio);
 	}	
 	
-	Assert ( flTimeToFade > 0.0f );
+	contract_assert( flTimeToFade > 0.0f );
 	float flFadeRatio = (gpGlobals->curtime - m_flTimeStartFadeIn) / flTimeToFade;
 	flFadeRatio = clamp ( flFadeRatio, 0.0f, 1.0f );
 	m_flStartFadeInWeight = clamp ( m_flStartFadeInWeight, 0.0f, 1.0f );
 
 	m_flCurWeight = Lerp( flFadeRatio, (float)m_flStartFadeInWeight, (float)m_flMaxWeight );
 
-	SetNextThink( gpGlobals->curtime + COLOR_CORRECTION_ENT_THINK_RATE, s_pFadeInContextThink );
+	SetNextThink( gpGlobals->curtime + COLOR_CORRECTION_ENT_THINK_RATE(), s_pFadeInContextThink );
 }
 
 //-----------------------------------------------------------------------------
@@ -179,14 +199,14 @@ void CColorCorrection::FadeOutThink( void )
 		flTimeToFade			= m_flFadeOutDuration * flWeightRatio;
 	}	
 	
-	Assert ( flTimeToFade > 0.0f );
+	contract_assert( flTimeToFade > 0.0f );
 	float flFadeRatio = (gpGlobals->curtime - m_flTimeStartFadeOut) / flTimeToFade;
 	flFadeRatio = clamp ( flFadeRatio, 0.0f, 1.0f );
 	m_flStartFadeOutWeight = clamp ( m_flStartFadeOutWeight, 0.0f, 1.0f );
 
 	m_flCurWeight = Lerp( 1.0f - flFadeRatio, 0.0f, m_flStartFadeOutWeight );
 
-	SetNextThink( gpGlobals->curtime + COLOR_CORRECTION_ENT_THINK_RATE, s_pFadeOutContextThink );
+	SetNextThink( gpGlobals->curtime + COLOR_CORRECTION_ENT_THINK_RATE(), s_pFadeOutContextThink );
 }
 
 //------------------------------------------------------------------------------

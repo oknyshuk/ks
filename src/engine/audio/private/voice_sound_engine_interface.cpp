@@ -1,15 +1,28 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "audio_pch.h"
-#include <assert.h>
-#include "voice.h"
+import std;
+
+
+import ks.tier1;
+
+#include "tier2/riff.h"
+#include "sound.h"
+#include "soundservice.h"
+#include "voice_sound_engine_interface.h"
+#include "soundflags.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+#include "snd_wave_source.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+
+#include "audio/private/posix_stubs.h"
 #include "ivoicecodec.h"
-
 
 // ------------------------------------------------------------------------- //
 // CAudioSourceVoice.
@@ -29,7 +42,7 @@ public:
 	}
 	virtual void				GetCacheData( CAudioSourceCachedInfo *info )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 
@@ -100,7 +113,7 @@ private:
 		void UpdateLoopPosition( int nLoopPosition )
 		{
 			// Should not be necessary in this implementation...
-			Assert( false );
+			contract_assert( false );
 		}
 
 	private:
@@ -130,7 +143,7 @@ extern WAVEFORMATEX g_VoiceSampleFormat;
 class CVoiceSfx : public CSfxTable
 {
 public:
-	virtual const char	*getname( char *pBuf, size_t bufLen )
+	virtual const char	*getname( char *pBuf, std::size_t bufLen )
 	{
 		const char *pName = "?VoiceSfx";
 		V_strncpy( pBuf, pName, bufLen );
@@ -183,7 +196,7 @@ CAudioMixer *CAudioSourceVoice::CreateMixer( int initialStreamPosition, int skip
 	CWaveDataVoice *pVoice = new CWaveDataVoice(*this);
 	if(!pVoice)
 	{
-		Assert( false );
+		contract_assert( false );
 		soundError = SE_CANT_CREATE_MIXER;
 		return nullptr;
 	}
@@ -214,7 +227,7 @@ int CAudioSourceVoice::GetOutputData( void **pData, int64 samplePosition, int sa
 	{
 		if ( copyBuf != nullptr )
 		{
-			memset( &copyBuf[nSamplesGotten], 0, (sampleCount - nSamplesGotten) * BYTES_PER_SAMPLE );
+			std::memset( &copyBuf[nSamplesGotten], 0, (sampleCount - nSamplesGotten) * BYTES_PER_SAMPLE );
 		}
 		nSamplesGotten = sampleCount;
 	}
@@ -293,7 +306,7 @@ void VoiceSE_Idle(float frametime)
 	}
 
 	float percent = g_VoiceOverdriveDuration / voice_overdrivefadetime.GetFloat();
-	percent = (float)(-cos(percent * 3.1415926535) * 0.5 + 0.5);		// Smooth it out..
+	percent = (float)(-std::cos(percent * 3.1415926535) * 0.5 + 0.5);		// Smooth it out..
 	float voiceOverdrive = 1 + (voice_overdrive.GetFloat() - 1) * percent;
 	g_SND_VoiceOverdriveInt = (int)(256 / voiceOverdrive);
 }
@@ -305,7 +318,7 @@ int VoiceSE_StartChannel(
 	bool bProximity,
 	int nViewEntityIndex )
 {
-	Assert( iChannel >= 0 && iChannel < VOICE_NUM_CHANNELS );
+	contract_assert( iChannel >= 0 && iChannel < VOICE_NUM_CHANNELS );
 
 	// Start the sound.
 	CSfxTable *sfx = &g_CVoiceSfx[iChannel];
@@ -343,7 +356,7 @@ void VoiceSE_EndChannel(
 	int iEntity
 	)
 {
-	Assert( iChannel >= 0 && iChannel < VOICE_NUM_CHANNELS );
+	contract_assert( iChannel >= 0 && iChannel < VOICE_NUM_CHANNELS );
 
 	S_StopSound( iEntity, CHAN_VOICE_BASE+iChannel );
 
@@ -387,5 +400,3 @@ CAudioSource* Voice_SetupAudioSource( int soundsource, int entchannel )
 	else
 		return nullptr;
 }
-
-

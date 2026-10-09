@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef IMATERIALSYSTEMSTUB_H
-#define IMATERIALSYSTEMSTUB_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "materialsystem/imaterialsystem.h"
 
-
 // If you get this interface out of the material system, it'll return an IMaterialSystem
 // with everything stubbed. This is used for running the client in text mode.
-#define MATERIAL_SYSTEM_STUB_INTERFACE_VERSION "VMaterialSystemStub001"
+inline constexpr const char *MATERIAL_SYSTEM_STUB_INTERFACE_VERSION = "VMaterialSystemStub001";
 
 
 class IMaterialSystemStub : public IMaterialSystem
@@ -23,6 +16,3 @@ public:
 	// system in some functions.
 	virtual void	SetRealMaterialSystem( IMaterialSystem *pSys ) = 0;
 };
-
-
-#endif // IMATERIALSYSTEMSTUB_H

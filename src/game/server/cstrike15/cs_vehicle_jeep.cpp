@@ -1,11 +1,31 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "player.h"
+#include "te.h"
+#include "physics.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -16,37 +36,34 @@
 #include "IEffects.h"
 #include "beam_shared.h"
 #include "soundenvelope.h"
-#include "decals.h"
 #include "soundent.h"
 #include "te_effect_dispatch.h"
-#include "ndebugoverlay.h"
 #include "movevars_shared.h"
 #include "bone_setup.h"
 #include "ai_basenpc.h"
 #include "ai_hint.h"
-#include "globalstate.h"
 
-#define	VEHICLE_HITBOX_DRIVER		1
-#define LOCK_SPEED					10
-#define JEEP_GUN_YAW				"vehicle_weapon_yaw"
-#define JEEP_GUN_PITCH				"vehicle_weapon_pitch"
-#define JEEP_GUN_SPIN				"gun_spin"
-#define	JEEP_GUN_SPIN_RATE			20
+constexpr auto VEHICLE_HITBOX_DRIVER = 1;
+constexpr auto LOCK_SPEED = 10;
+inline constexpr const char *JEEP_GUN_YAW = "vehicle_weapon_yaw";
+inline constexpr const char *JEEP_GUN_PITCH = "vehicle_weapon_pitch";
+inline constexpr const char *JEEP_GUN_SPIN = "gun_spin";
+constexpr auto JEEP_GUN_SPIN_RATE = 20;
 
-#define CANNON_MAX_UP_PITCH			20
-#define CANNON_MAX_DOWN_PITCH		20
-#define CANNON_MAX_LEFT_YAW			90
-#define CANNON_MAX_RIGHT_YAW		90
+constexpr auto CANNON_MAX_UP_PITCH = 20;
+constexpr auto CANNON_MAX_DOWN_PITCH = 20;
+constexpr auto CANNON_MAX_LEFT_YAW = 90;
+constexpr auto CANNON_MAX_RIGHT_YAW = 90;
 
-#define OVERTURNED_EXIT_WAITTIME	2.0f
+constexpr auto OVERTURNED_EXIT_WAITTIME = 2.0f;
 
-#define JEEP_AMMOCRATE_HITGROUP		5
-#define JEEP_WHEEL_COUNT			4
+constexpr auto JEEP_AMMOCRATE_HITGROUP = 5;
+constexpr auto JEEP_WHEEL_COUNT = 4;
 
-#define	JEEP_AMMO_CRATE_CLOSE_DELAY	2.0f
+constexpr auto JEEP_AMMO_CRATE_CLOSE_DELAY = 2.0f;
 
-#define JEEP_DELTA_LENGTH_MAX	12.0f			// 1 foot
-#define JEEP_FRAMETIME_MIN		1e-6
+constexpr auto JEEP_DELTA_LENGTH_MAX = 12.0f; // 1 foot
+constexpr auto JEEP_FRAMETIME_MIN = 1e-6;
 
 ConVar	hud_jeephint_numentries( "hud_jeephint_numentries", "10", FCVAR_NONE );
 ConVar	g_jeepexitspeed( "g_jeepexitspeed", "100", FCVAR_CHEAT );
@@ -1051,7 +1068,7 @@ void CPropJeep::ChargeCannon( void )
 		CBroadcastRecipientFilter filter;
 		m_sndCannonCharge = (CSoundEnvelopeController::GetController()).SoundCreate( filter, entindex(), CHAN_STATIC, "Jeep.GaussCharge", ATTN_NORM );
 
-		assert(m_sndCannonCharge!=nullptr);
+		contract_assert( m_sndCannonCharge!=nullptr );
 		if ( m_sndCannonCharge != nullptr )
 		{
 			(CSoundEnvelopeController::GetController()).Play( m_sndCannonCharge, 1.0f, 50 );
@@ -1505,7 +1522,7 @@ int CJeepFourWheelServerVehicle::GetExitAnimToUse( Vector &vecEyeExitEndpoint, b
 		Vector vecEnd = vehicleExitOrigin - vecMove;
   		UTIL_TraceHull( vecStart, vecEnd, VEC_HULL_MIN, VEC_HULL_MAX, MASK_SOLID, nullptr, COLLISION_GROUP_NONE, &tr );
 
-		Assert( !tr.startsolid && tr.fraction < 1.0 );
+		contract_assert( !tr.startsolid && tr.fraction < 1.0 );
 		m_vecCurrentExitEndPoint = vecStart + ((vecEnd - vecStart) * tr.fraction);
 		vecEyeExitEndpoint = m_vecCurrentExitEndPoint + VEC_VIEW;
 		m_iCurrentExitAnim = 0;

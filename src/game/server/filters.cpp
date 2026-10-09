@@ -1,10 +1,42 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "filters.h"
@@ -68,7 +100,7 @@ void CBaseFilter::InputTestActivator( inputdata_t &inputdata )
 //
 //   Allows one to filter through mutiple filters
 // ###################################################################
-#define MAX_FILTERS 10
+constexpr auto MAX_FILTERS = 10;
 enum filter_t
 {
 	FILTER_AND,
@@ -271,7 +303,7 @@ public:
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity )
 	{
 		int i = pEntity->FindContextByName( STRING( m_iFilterContext ) );
-		return ( ( i != -1 && atoi( pEntity->GetContextValue( i ) ) > 0 ) );
+		return ( ( i != -1 && std::atoi( pEntity->GetContextValue( i ) ) > 0 ) );
 	}
 };
 
@@ -380,7 +412,7 @@ IMPLEMENT_REFLECT_DATAMAP( FilterDamageType )
 //	> CFilterEnemy
 // ###################################################################
 
-#define SF_FILTER_ENEMY_NO_LOSE_AQUIRED	(1<<0)
+constexpr auto SF_FILTER_ENEMY_NO_LOSE_AQUIRED = (1<<0);
 
 class CFilterEnemy : public CBaseFilter
 {
@@ -446,7 +478,7 @@ bool CFilterEnemy::PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity 
 bool CFilterEnemy::PassesDamageFilterImpl( const CTakeDamageInfo &info )
 {
 	// NOTE: This function has no meaning to this implementation of the filter class!
-	Assert( 0 );
+	contract_assert( 0 );
 	return false;
 }
 
@@ -613,4 +645,3 @@ bool CFilterEnemy::PassesMobbedFilter( CBaseEntity *pCaller, CBaseEntity *pEnemy
 LINK_ENTITY_TO_CLASS( filter_enemy, CFilterEnemy );
 
 IMPLEMENT_REFLECT_DATAMAP( CFilterEnemy )
-

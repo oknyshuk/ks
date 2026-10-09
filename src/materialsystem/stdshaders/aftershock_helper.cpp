@@ -1,15 +1,15 @@
-//========= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ============//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "mathlib/vmatrix.h"
+import std;
 #include "aftershock_helper.h"
-#include "convar.h"
 
 // Auto generated inc files
 #include "aftershock_vs20.inc"
 #include "aftershock_ps20.inc"
 #include "aftershock_ps20b.inc"
-
 
 void InitParamsAftershock( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, AftershockVars_t &info )
 {

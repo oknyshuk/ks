@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $APPROX_SRGB_ADAPTER == 1 ) && ( $KERNEL == 0 )  [PC]
 // ( $APPROX_SRGB_ADAPTER == 1 ) && ( $CLEAR_COLOR == 1 )  [PC]
@@ -17,7 +18,7 @@ private:
 public:
 	void SetKERNEL( int i )
 	{
-		Assert( i >= 0 && i <= 4 );
+		contract_assert( i >= 0 && i <= 4 );
 		m_nKERNEL = i;
 #ifdef _DEBUG
 		m_bKERNEL = true;
@@ -25,7 +26,7 @@ public:
 	}
 	void SetKERNEL( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nKERNEL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bKERNEL = true;
@@ -39,7 +40,7 @@ private:
 public:
 	void SetCLEAR_COLOR( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCLEAR_COLOR = i;
 #ifdef _DEBUG
 		m_bCLEAR_COLOR = true;
@@ -47,7 +48,7 @@ public:
 	}
 	void SetCLEAR_COLOR( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCLEAR_COLOR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCLEAR_COLOR = true;
@@ -61,7 +62,7 @@ private:
 public:
 	void SetAPPROX_SRGB_ADAPTER( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nAPPROX_SRGB_ADAPTER = i;
 #ifdef _DEBUG
 		m_bAPPROX_SRGB_ADAPTER = true;
@@ -69,7 +70,7 @@ public:
 	}
 	void SetAPPROX_SRGB_ADAPTER( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nAPPROX_SRGB_ADAPTER = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bAPPROX_SRGB_ADAPTER = true;
@@ -98,7 +99,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bKERNEL && m_bCLEAR_COLOR && m_bAPPROX_SRGB_ADAPTER;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nKERNEL ) + ( 5 * m_nCLEAR_COLOR ) + ( 10 * m_nAPPROX_SRGB_ADAPTER ) + 0;
 	}
@@ -120,7 +121,7 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_blurfilter_ps20b 0
+inline constexpr int shaderDynamicTest_blurfilter_ps20b = 0;
 
 static const ShaderComboInformation_t s_StaticComboArray_BlurFilter_ps20b[3] = 
 {
@@ -130,7 +131,7 @@ static const ShaderComboInformation_t s_StaticComboArray_BlurFilter_ps20b[3] =
 };
 static const ShaderComboSemantics_t BlurFilter_ps20b_combos =
 {
-	"BlurFilter_ps20b", NULL, 0, s_StaticComboArray_BlurFilter_ps20b, 3 
+	"BlurFilter_ps20b", nullptr, 0, s_StaticComboArray_BlurFilter_ps20b, 3 
 };
 
 class ConstructMe_BlurFilter_ps20b

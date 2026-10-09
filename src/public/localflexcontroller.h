@@ -1,16 +1,8 @@
-//===== Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#ifndef LOCALFLEXCONTROLLER_H
-#define LOCALFLEXCONTROLLER_H
-
-
-#include "tier0/platform.h"
+import ks.core;
 
 enum LocalFlexController_t
 {
@@ -25,6 +17,3 @@ inline LocalFlexController_t &operator++( LocalFlexController_t &a      ) { retu
 inline LocalFlexController_t &operator--( LocalFlexController_t &a      ) { return a = LocalFlexController_t( int( a ) - 1 ); }
 inline LocalFlexController_t  operator++( LocalFlexController_t &a, int ) { LocalFlexController_t t = a; a = LocalFlexController_t( int( a ) + 1 ); return t; }
 inline LocalFlexController_t  operator--( LocalFlexController_t &a, int ) { LocalFlexController_t t = a; a = LocalFlexController_t( int( a ) - 1 ); return t; }
-
-
-#endif	// LOCALFLEXCONTROLLER_H

@@ -1,8 +1,7 @@
+#pragma once
 // func_elevator.h
 // Copyright 2007 Turtle Rock Studios, Inc.
 
-#ifndef FUNC_ELEVATOR_H
-#define FUNC_ELEVATOR_H
 
 #include "basetoggle.h"
 
@@ -149,4 +148,3 @@ inline bool CFuncElevator::IsEnabled( void ) const
 
 
 
-#endif // FUNC_ELEVATOR_H

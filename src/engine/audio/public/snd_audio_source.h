@@ -1,23 +1,10 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SND_AUDIO_SOURCE_H
-#define SND_AUDIO_SOURCE_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #define MP3_SUPPORT	1
 
-#define AUDIOSOURCE_COPYBUF_SIZE	4096
+inline constexpr auto AUDIOSOURCE_COPYBUF_SIZE = 4096;
 
 struct channel_t;
 class CSentence;
@@ -26,10 +13,8 @@ class CSfxTable;
 class CAudioSource;
 class IAudioDevice;
 
-#include "tier0/vprof.h"
-#include "tier1/handle_table.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Purpose: This is an instance of an audio source.
@@ -38,7 +23,7 @@ class IAudioDevice;
 //			Mixers are never re-used, so they can track instance data like
 //			sample position, fractional sample, stream cache, faders, etc.
 //-----------------------------------------------------------------------------
-abstract_class CAudioMixer
+class CAudioMixer
 {
 public:
 	virtual ~CAudioMixer( void ) {}
@@ -349,7 +334,7 @@ enum SoundError
 	SE_OK	=	1,
 };
 
-abstract_class IAsyncWavDataCache
+class IAsyncWavDataCache
 {
 public:
 	virtual bool			Init( unsigned int memSize ) = 0;
@@ -397,7 +382,7 @@ struct CAudioSourceCachedInfoHandle_t
 
 	inline CAudioSourceCachedInfo *Get( int audiosourcetype, bool soundisprecached, CSfxTable *sfx, int *pcacheddatasize )
 	{
-		VPROF("CAudioSourceCachedInfoHandle_t::Get");
+		CVProfScope _( "CAudioSourceCachedInfoHandle_t::Get", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		if ( m_FlushCount != s_nCurrentFlushCount )
 		{
@@ -422,7 +407,7 @@ struct CAudioSourceCachedInfoHandle_t
 
 	inline CAudioSourceCachedInfo *FastGet()
 	{
-		VPROF("CAudioSourceCachedInfoHandle_t::FastGet");
+		CVProfScope _( "CAudioSourceCachedInfoHandle_t::FastGet", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		if ( m_FlushCount != s_nCurrentFlushCount )
 		{
@@ -440,7 +425,7 @@ struct CAudioSourceCachedInfoHandle_t
 // Purpose: A source is an abstraction for a stream, cached file, or procedural
 //			source of audio.
 //-----------------------------------------------------------------------------
-abstract_class CAudioSource
+class CAudioSource
 {
 public:
 	enum
@@ -525,7 +510,7 @@ public:
 	// Make sure our data is rebuilt into the per-level cache
 	virtual void				CheckAudioSourceCache() = 0;
 
-	virtual char const			*GetFileName(char *pBuf, size_t bufLen) = 0;
+	virtual char const			*GetFileName(char *pBuf, std::size_t bufLen) = 0;
 
 	virtual void				SetPlayOnce( bool ) = 0;
 	virtual bool				IsPlayOnce() = 0;
@@ -543,5 +528,3 @@ extern float AudioSource_GetSoundDuration( char const *pName );
 
 // uses wave file cached in memory already
 extern float AudioSource_GetSoundDuration( CSfxTable *pSfx );
-
-#endif // SND_AUDIO_SOURCE_H

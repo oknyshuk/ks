@@ -1,11 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SIMPLE_KEYS_H
-#define SIMPLE_KEYS_H
+
+import std;
+import ks.math;
 
 enum simplekeyinterp_t
 {
@@ -42,5 +41,3 @@ public:
 
 	std::vector< CSimpleKeyInterp >	m_list;
 };
-
-#endif // SIMPLE_KEYS_H

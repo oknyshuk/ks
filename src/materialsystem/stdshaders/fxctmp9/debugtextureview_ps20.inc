@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // $ISCUBEMAP && $ISVOLUME
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
@@ -16,7 +17,7 @@ private:
 public:
 	void SetSHOWALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSHOWALPHA = i;
 #ifdef _DEBUG
 		m_bSHOWALPHA = true;
@@ -24,7 +25,7 @@ public:
 	}
 	void SetSHOWALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSHOWALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSHOWALPHA = true;
@@ -45,7 +46,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bSHOWALPHA;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 4 * m_nSHOWALPHA ) + 0;
 	}
@@ -61,7 +62,7 @@ private:
 public:
 	void SetISCUBEMAP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nISCUBEMAP = i;
 #ifdef _DEBUG
 		m_bISCUBEMAP = true;
@@ -69,7 +70,7 @@ public:
 	}
 	void SetISCUBEMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nISCUBEMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bISCUBEMAP = true;
@@ -83,7 +84,7 @@ private:
 public:
 	void SetISVOLUME( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nISVOLUME = i;
 #ifdef _DEBUG
 		m_bISVOLUME = true;
@@ -91,7 +92,7 @@ public:
 	}
 	void SetISVOLUME( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nISVOLUME = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bISVOLUME = true;
@@ -116,7 +117,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bISCUBEMAP && m_bISVOLUME;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nISCUBEMAP ) + ( 2 * m_nISVOLUME ) + 0;
 	}

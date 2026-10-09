@@ -1,23 +1,17 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
 // Purpose: Minimal econ item schema for CS:GO weapon system
-//          Provides essential item definitions for weapon creation and lookups
-//
-//=============================================================================
+//         Provides essential item definitions for weapon creation and lookups
 
-#ifndef ECON_ITEM_SCHEMA_MINIMAL_H
-#define ECON_ITEM_SCHEMA_MINIMAL_H
-
-#include "tier1/map_ops.h"
-#include <memory>
-#include <unordered_map>
-#include <vector>
-#include "tier1/keyvalues.h"
+import ks.tier1;
+import std;
 
 // Forward declarations
 class CEconItemSchema;
 class CEconItemDefinition;
-class KeyValues;
 
 // Include cs_shareddefs.h for loadout_positions_t enum and team constants
 // This avoids duplicate definitions
@@ -25,7 +19,7 @@ class KeyValues;
 
 // Number of team slots for loadout arrays (noteam, undefined, terrorists, counter-terrorists)
 // This matches the team indexing used in the original econ code
-#define LOADOUT_COUNT 4
+inline constexpr auto LOADOUT_COUNT = 4;
 
 //-----------------------------------------------------------------------------
 // CEconItemDefinition - Minimal item definition
@@ -166,5 +160,3 @@ int LoadoutSlotFromString( const char *pszSlot );
 
 // Helper to get team index from string
 int TeamFromString( const char *pszTeam );
-
-#endif // ECON_ITEM_SCHEMA_MINIMAL_H

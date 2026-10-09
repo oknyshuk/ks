@@ -1,10 +1,11 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #define CSM_MODE_VERY_LOW_OR_LOW 	(0)
 #define CSM_MODE_MEDIUM 			(1)
 #define CSM_MODE_HIGH 				(2)
 #define CSM_MODE_ATI_FETCH4 		(3)
-
 
 #if defined( SHADER_MODEL_PS_2_B ) && !defined( _GAMECONSOLE ) && !defined( _CONSOLE )
 

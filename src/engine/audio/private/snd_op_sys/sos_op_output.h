@@ -1,15 +1,8 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//
-//===============================================================================
-
-#ifndef SOS_OP_OUTPUT_H
-#define SOS_OP_OUTPUT_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "sos_op.h"
-
-
 
 //-----------------------------------------------------------------------------
 // 
@@ -44,6 +37,3 @@ class CSosOperatorOutput : public CSosOperator
 {
 	SOS_HEADER_DESC( CSosOperatorOutput )
 };
-
-
-#endif // SOS_OP_OUTPUT_H

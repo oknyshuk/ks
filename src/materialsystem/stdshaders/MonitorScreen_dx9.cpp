@@ -1,21 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "unlittwotexture_vs20.inc"
 #include "monitorscreen_ps20.inc"
 #include "monitorscreen_ps20b.inc"
-#include "cpp_shader_constant_register_map.h"
 
 DEFINE_FALLBACK_SHADER( MonitorScreen, MonitorScreen_DX9 )
 
 BEGIN_VS_SHADER( MonitorScreen_DX9,
 			  "This is a shader that does a contrast/saturation version of base times lightmap." )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( CONTRAST, SHADER_PARAM_TYPE_FLOAT, "0.0", "contrast 0 == normal 1 == color*color" )
 		SHADER_PARAM( SATURATION, SHADER_PARAM_TYPE_FLOAT, "1.0", "saturation 0 == greyscale 1 == normal" )
 		SHADER_PARAM( TINT, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "monitor tint" )

@@ -1,14 +1,12 @@
-//======= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======
-//
-//===============================================================================
-
-#ifndef DEMOBUFFER_H
-#define DEMOBUFFER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // Includes
 //-----------------------------------------------------------------------------
-#include "interface.h"
+import std;
+import ks.tier1;
 #include "demofile/demoformat.h"
 
 //-----------------------------------------------------------------------------
@@ -81,5 +79,3 @@ public:
 };
 
 IDemoBuffer *CreateDemoBuffer( bool bMemoryBuffer, const DemoBufferInitParams_t &params );
-
-#endif // DEMOBUFFER_H

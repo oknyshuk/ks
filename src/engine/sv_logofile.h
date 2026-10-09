@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SV_LOGOFILE_H
-#define SV_LOGOFILE_H
-
-
-#include "checksum_crc.h"
-
+import std;
+import ks.tier1;
 
 class CGameClient;
 class CPerClientLogoInfo;	// (private to this module)
@@ -28,6 +22,3 @@ class CServerLogoInfo;
 // Called when the client connects. The client sends its logo file CRC to the server. If the server
 // already has it, then it's fine.
 // void SV_LogoFile_OnConnect( CGameClient *pClient, bool bValid, CRC32_t crcValue );
-
-
-#endif // SV_LOGOFILE_H

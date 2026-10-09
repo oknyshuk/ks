@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BASEHANDLE_H
-#define BASEHANDLE_H
-
-
+import ks.core;
 #include "const.h"
-#include "tier0/platform.h"
-#include "tier0/dbg.h"
+import std;
 
 
 class IHandleEntity;
@@ -115,8 +109,8 @@ inline CBaseHandle CBaseHandle::UnsafeFromIndex( int index )
 
 inline void CBaseHandle::Init( int iEntry, int iSerialNumber )
 {
-	Assert( iEntry >= 0 && (iEntry & ENT_ENTRY_MASK) == iEntry);
-	Assert( iSerialNumber >= 0 && iSerialNumber < (1 << NUM_SERIAL_NUM_BITS) );
+	contract_assert( iEntry >= 0 && (iEntry & ENT_ENTRY_MASK) == iEntry );
+	contract_assert( iSerialNumber >= 0 && iSerialNumber < (1 << NUM_SERIAL_NUM_BITS) );
 
 	m_Index = iEntry | (iSerialNumber << NUM_SERIAL_NUM_SHIFT_BITS);
 }
@@ -209,6 +203,3 @@ inline const CBaseHandle& CBaseHandle::Set( const IHandleEntity *pEntity )
 	
 	return *this;
 }
-
-
-#endif // BASEHANDLE_H

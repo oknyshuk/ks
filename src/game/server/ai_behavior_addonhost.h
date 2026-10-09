@@ -1,12 +1,11 @@
-//========= Copyright (c) 1996-2007, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
+
 // Purpose: A single behavior that handles running all of the NPC's add ons
-//
-//=====================================================================================//
+
 /*
 
-#ifndef AI_BEHAVIOR_ADDONHOST_H
-#define AI_BEHAVIOR_ADDONHOST_H
+#ifndef 
 #ifdef _WIN32
 #pragma once
 #endif
@@ -45,5 +44,5 @@ private:
 	DECLARE_DATADESC();
 };
 
-#endif//AI_BEHAVIOR_ADDONHOST_H
+#endif//
 */

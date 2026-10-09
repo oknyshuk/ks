@@ -1,11 +1,28 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 
@@ -228,7 +245,7 @@ void CAI_Motor::MoveClimbStart(  const Vector &climbDest, const Vector &climbDir
 	//	> code are not reciprocal for all state, and furthermore, stomp 
 	//	> other state?
 
-	if ( fabsf( climbDir.z ) < .1 )
+	if ( std::fabsf( climbDir.z ) < .1 )
 	{
 		SetActivity( GetNavigator()->GetMovementActivity() );
 	}
@@ -255,7 +272,7 @@ void CAI_Motor::MoveClimbStart(  const Vector &climbDest, const Vector &climbDir
 
 AIMoveResult_t CAI_Motor::MoveClimbExecute( const Vector &climbDest, const Vector &climbDir, float climbDist, float yaw, int climbNodesLeft )
 {
-	if ( fabsf( climbDir.z ) > .1 )
+	if ( std::fabsf( climbDir.z ) > .1 )
 	{
 		if ( GetActivity() != ACT_CLIMB_DISMOUNT )
 		{
@@ -462,7 +479,7 @@ void CAI_Motor::MoveStart()
 
 void CAI_Motor::MoveStop()
 { 
-	memset( &m_vecVelocity, 0, sizeof(m_vecVelocity) ); 
+	std::memset( &m_vecVelocity, 0, sizeof(m_vecVelocity) ); 
 	GetOuter()->GetLocalNavigator()->ResetMoveCalculations();
 }
 
@@ -882,7 +899,6 @@ float CAI_Motor::GetFacingDirection( Vector &vecDir )
 
 AIMoveResult_t CAI_Motor::MoveNormalExecute( const AILocalMoveGoal_t &move )
 {
-	AI_PROFILE_SCOPE(CAI_Motor_MoveNormalExecute);
 	
 	// --------------------------------
 
@@ -895,7 +911,7 @@ AIMoveResult_t CAI_Motor::MoveNormalExecute( const AILocalMoveGoal_t &move )
 	}
 	else
 	{
-		Assert( move.navType == NAV_FLY );
+		contract_assert( move.navType == NAV_FLY );
 		fMotorResult = MoveFlyExecute( move, &moveTrace );
 	}
 
@@ -907,7 +923,7 @@ AIMoveResult_t CAI_Motor::MoveNormalExecute( const AILocalMoveGoal_t &move )
 		AIMR_BLOCKED_WORLD,                      // AIM_PARTIAL_HIT_WORLD
 		AIMR_BLOCKED_WORLD,                      // AIM_PARTIAL_HIT_TARGET
 	};
-	Assert( ARRAYSIZE( moveResults ) == AIM_NUM_RESULTS && fMotorResult >= 0 && fMotorResult <= ARRAYSIZE( moveResults ) );
+	contract_assert( std::size( moveResults ) == AIM_NUM_RESULTS && fMotorResult >= 0 && fMotorResult <= std::size( moveResults ) );
 	
 	AIMoveResult_t result = moveResults[fMotorResult];
 	
@@ -1029,4 +1045,3 @@ void CAI_Motor::SetMoveType( MoveType_t val, MoveCollide_t moveCollide )
 }
 
 //=============================================================================
-

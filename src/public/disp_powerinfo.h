@@ -1,22 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: This module defines the CPowerInfo class, which contains a 
-//          whole bunch of precalculated data for each displacement power.
-//          It holds data that indicates how to tesselate, how to access
-//          neighbor displacements, etc.
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DISP_POWERINFO_H
-#define DISP_POWERINFO_H
-
+// Purpose: This module defines the CPowerInfo class, which contains a
+//         whole bunch of precalculated data for each displacement power.
+//         It holds data that indicates how to tesselate, how to access
+//         neighbor displacements, etc.
 
 #include "disp_vertindex.h"
 #include "bspfile.h"
 
-
-#define NUM_POWERINFOS				(MAX_MAP_DISP_POWER+1)
+inline constexpr auto NUM_POWERINFOS = (MAX_MAP_DISP_POWER+1);
 
 
 struct DispNodeInfo_t
@@ -207,6 +201,3 @@ extern CTesselateWinding	g_TWinding;
 
 // Valid indices are MIN_MAP_DISP_POWER through (and including) MAX_MAP_DISP_POWER.
 const CPowerInfo* GetPowerInfo( int iPower );
-
-
-#endif // DISP_POWERINFO_H

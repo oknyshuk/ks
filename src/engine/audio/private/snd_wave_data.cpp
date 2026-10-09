@@ -1,22 +1,30 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "audio_pch.h"
-#include <mutex>
-#include <list>
-#include "tier1/slot_pool.h"
+
+
+import ks.tier1;
+
+#include "tier2/riff.h"
+#include "sound.h"
+#include "soundservice.h"
+#include "filesystem.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_audio_source.h"
+#include "snd_convars.h"
+#include "snd_dev_xaudio.h"
+#include "snd_sfx.h"
+#include "snd_wave_source.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+
+#include "audio/private/posix_stubs.h"
+import std;
 #include "cdll_int.h"
-#include "memstack.h"
 #include "ienginetoolinternal.h"
-#include "vstdlib/jobthread.h"
 #include "tier3/tier3.h"
-#include <map>
-#include <set>
 
 extern IVEngineClient *engineClient;
 extern IFileSystem *g_pFileSystem;
@@ -32,28 +40,28 @@ extern double realtime;
 // For non-looped sounds, only 2 buffers are needed for streaming.
 // For looped sounds, we may need up to 4 buffers. (assuming that the last sound frame is at the beginning of the buffer, and the first loop sound frame is at the end of a buffer).
 
-# define STREAM_BUFFER_COUNT				4
-# define STREAM_BUFFER_DATASIZE				( 64 * 1024 )
-# define CONSOLE_STREAMING_AUDIO_PORTAL2	( 4 * 1024 * 1024 )
-# define ASIAN_FONT_MEMORY_USAGE			( 0 )
+constexpr auto STREAM_BUFFER_COUNT = 4;
+constexpr auto STREAM_BUFFER_DATASIZE = ( 64 * 1024 );
+constexpr auto CONSOLE_STREAMING_AUDIO_PORTAL2 = ( 4 * 1024 * 1024 );
+constexpr auto ASIAN_FONT_MEMORY_USAGE = ( 0 );
 
 // PC single buffering implementation
 // UNDONE: Allocate this in cache instead?
-#define SINGLE_BUFFER_SIZE		( 16 * 1024 )
+constexpr auto SINGLE_BUFFER_SIZE = ( 16 * 1024 );
 
 // console streaming pool
-#define CONSOLE_STREAMING_AUDIO_DEFAULT			( 4 * 1024 * 1024 )
-#define CONSOLE_STREAMING_AUDIO_TF				( 12 * 1024 * 1024 )
-#define CONSOLE_STREAMING_AUDIO_LEFT4DEAD		( 10 * 1024 * 1024 )
-#define CONSOLE_STREAMING_AUDIO_LEFT4DEAD_DVD	( 12 * 1024 * 1024 )
-#define CONSOLE_STREAMING_AUDIO_CSTRIKE15		( 9 * 1024 * 1024 )
+constexpr auto CONSOLE_STREAMING_AUDIO_DEFAULT = ( 4 * 1024 * 1024 );
+constexpr auto CONSOLE_STREAMING_AUDIO_TF = ( 12 * 1024 * 1024 );
+constexpr auto CONSOLE_STREAMING_AUDIO_LEFT4DEAD = ( 10 * 1024 * 1024 );
+constexpr auto CONSOLE_STREAMING_AUDIO_LEFT4DEAD_DVD = ( 12 * 1024 * 1024 );
+constexpr auto CONSOLE_STREAMING_AUDIO_CSTRIKE15 = ( 9 * 1024 * 1024 );
 
 // console static pool
-#define CONSOLE_STATIC_AUDIO_DEFAULT			( 8.7 * 1024 * 1024 )
-#define CONSOLE_STATIC_AUDIO_PORTAL2			( 2 * 1024 * 1024 )
-#define CONSOLE_STATIC_AUDIO_CSTRIKE15			( 0.3 * 1024 * 1024 )
+constexpr auto CONSOLE_STATIC_AUDIO_DEFAULT = ( 8.7 * 1024 * 1024 );
+constexpr auto CONSOLE_STATIC_AUDIO_PORTAL2 = ( 2 * 1024 * 1024 );
+constexpr auto CONSOLE_STATIC_AUDIO_CSTRIKE15 = ( 0.3 * 1024 * 1024 );
 
-#define DEFAULT_WAV_MEMORY_CACHE				( 20 * 1024 * 1024 )
+constexpr auto DEFAULT_WAV_MEMORY_CACHE = ( 20 * 1024 * 1024 );
 
 ConVar snd_async_spew_blocking( "snd_async_spew_blocking", "0", 0, "Spew message to console any time async sound loading blocks on file i/o." );
 ConVar snd_async_fullyasync( "snd_async_fullyasync", "1", 0, "All playback is fully async (sound doesn't play until data arrives)." );
@@ -68,7 +76,7 @@ ConVar snd_async_stream_spew_delayed_start_time( "snd_async_stream_spew_delayed_
 ConVar snd_async_stream_spew_delayed_start_filter( "snd_async_stream_spew_delayed_start_filter", "vo", 0, "Filter used to spew sounds that starts late. Use an empty string \"\" to display all sounds. By default only the VO are displayed.");
 extern ConVar snd_report_loop_sound;
 
-#define SndAlignReads() 1
+[[gnu::always_inline]] inline constexpr auto SndAlignReads() { return 1; }
 
 void MaybeReportMissingWav( char const *wav );
 
@@ -180,13 +188,13 @@ public:
 	CWaveCache()
 	{
 		m_nCurrentMemorySize = 0;
-		m_nMaxMemorySize = UINT_MAX;
+		m_nMaxMemorySize = std::numeric_limits<unsigned int>::max();
 		m_nAgeStamp = 1;
 
 		// reserve the 0 entry, want to use 0 as invalid to remain compliant to datacache code
 		// which used 0 as an invalid handle
 		WaveCacheHandle_t hData = m_HandleTable.add();
-		Assert( hData == 0 );
+		contract_assert( hData == 0 );
 		hData;
 	}
 
@@ -298,7 +306,7 @@ public:
 	{
 		std::scoped_lock lock( m_WaveCacheMutex );
 
-		if ( m_nMaxMemorySize != UINT_MAX )
+		if ( m_nMaxMemorySize != std::numeric_limits<unsigned int>::max() )
 		{
 			unsigned int nBytesToPurge = CAsyncWaveData::EstimatedSize( params );
 
@@ -466,7 +474,7 @@ public:
 		while ( nBytesPurged < nBytesToPurge )
 		{
 			unsigned int nCandidateSize = 0;
-			unsigned int nCandidateAge = UINT_MAX;
+			unsigned int nCandidateAge = std::numeric_limits<unsigned int>::max();
 			WaveCacheHandle_t hCandidate = INVALID_WAVECACHE_HANDLE;
 			for ( WaveCacheHandle_t hData : m_UnlockedList )
 			{
@@ -601,7 +609,7 @@ char const *CAsyncWaveData::GetFileName()
 		}
 	}
 	
-	Assert( 0 );
+	contract_assert( 0 );
 	return "";
 }
 
@@ -635,13 +643,12 @@ unsigned int CAsyncWaveData::Size()
 //-----------------------------------------------------------------------------
 CAsyncWaveData *CAsyncWaveData::CreateResource( const asyncwaveparams_t &params )
 {
-	MEM_ALLOC_CREDIT_( "CAsyncWaveData::CreateResource" );
 
 	CAsyncWaveData *pData = nullptr;
 
 	{
 		pData = new CAsyncWaveData;
-		Assert( pData );
+		contract_assert( pData );
 	}
 
 	if ( pData )
@@ -676,7 +683,7 @@ unsigned int CAsyncWaveData::EstimatedSize( const asyncwaveparams_t &params )
 void CAsyncWaveData::AsyncCallback(const FileAsyncRequest_t &asyncRequest, int numReadBytes, FSAsyncStatus_t err )
 {
 	CAsyncWaveData *pObject = reinterpret_cast< CAsyncWaveData * >( asyncRequest.pContext );
-	Assert( pObject );
+	contract_assert( pObject );
 	if ( pObject )
 	{
 		pObject->OnAsyncCompleted( &asyncRequest, numReadBytes, err );
@@ -742,7 +749,7 @@ bool CAsyncWaveData::BlockingCopyData( void *destbuffer, int destbufsize, int st
 {
 	if ( !m_bLoaded )
 	{
-		Assert( m_hAsyncControl );
+		contract_assert( m_hAsyncControl );
 		// Force it to finish
 		// It could finish between the above line and here, but the AsyncFinish call will just have a bogus id, not a big deal
 		if ( snd_async_spew_blocking.GetBool() )
@@ -794,7 +801,7 @@ bool CAsyncWaveData::BlockingCopyData( void *destbuffer, int destbufsize, int st
 	}
 
 	// Copy data from stream buffer
-	Q_memcpy( destbuffer, (char *)m_pvData + ( startoffset - m_async.nOffset ), count );
+	V_memcpy( destbuffer, (char *)m_pvData + ( startoffset - m_async.nOffset ), count );
 
 	g_pFileSystem->AsyncRelease( m_hAsyncControl );
 	m_hAsyncControl = nullptr;
@@ -821,7 +828,7 @@ bool CAsyncWaveData::IsCurrentlyLoading()
 //-----------------------------------------------------------------------------
 bool CAsyncWaveData::BlockingGetDataPointer( void **ppData )
 {
-	Assert( ppData );
+	contract_assert( ppData );
 	if ( !m_bLoaded )
 	{
 		// Force it to finish
@@ -889,14 +896,14 @@ void CAsyncWaveData::SetAsyncPriority( int priority )
 //-----------------------------------------------------------------------------
 void CAsyncWaveData::StartAsyncLoading( const asyncwaveparams_t& params )
 {
-	Assert( !m_bLoaded );
+	contract_assert( !m_bLoaded );
 
 	// expected to be relative to the sound\ dir
 	m_hFileNameHandle = params.hFilename;
 
 	// build the real filename
 	char szFilename[MAX_PATH];
-	Q_snprintf( szFilename, sizeof( szFilename ), "sound\\%s", GetFileName() );
+	V_snprintf( szFilename, sizeof( szFilename ), "sound\\%s", GetFileName() );
 
 	int nPriority = 1;
 	if ( params.bPrefetch )
@@ -935,10 +942,9 @@ void CAsyncWaveData::StartAsyncLoading( const asyncwaveparams_t& params )
 
 	char szFullName[MAX_PATH];
 
-	MEM_ALLOC_CREDIT();
 	
 	// Commence async I/O
-	Assert( !m_hAsyncControl );
+	contract_assert( !m_hAsyncControl );
 	g_pFileSystem->AsyncRead( m_async, &m_hAsyncControl );
 }
 
@@ -1151,7 +1157,7 @@ void CAsyncWavDataCache::Shutdown()
 //-----------------------------------------------------------------------------
 WaveCacheHandle_t CAsyncWavDataCache::AsyncLoadCache( char const *filename, int datasize, int startpos, bool bIsPrefetch )
 {
-	VPROF( "CAsyncWavDataCache::AsyncLoadCache" );
+	CVProfScope _( "CAsyncWavDataCache::AsyncLoadCache", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	FileNameHandle_t fnh = g_pFileSystem->FindOrAddFileName( filename );
 
@@ -1227,7 +1233,7 @@ WaveCacheHandle_t CAsyncWavDataCache::FindOrCreateBuffer( asyncwaveparams_t &par
 			{
 				// yikes!, creation can fail if out of system memory or the stream memory pool was full
 				// only transient streams would fail if the stream pool was full
-				Assert( 0 );
+				contract_assert( 0 );
 				return INVALID_WAVECACHE_HANDLE;
 			}
 
@@ -1236,7 +1242,7 @@ WaveCacheHandle_t CAsyncWavDataCache::FindOrCreateBuffer( asyncwaveparams_t &par
 			{
 				// second attempt
 				// yikes!, stream pool isn't getting purged, all must be locked
-				Assert( 0 );
+				contract_assert( 0 );
 				if ( snd_async_stream_fail.GetBool() )
 				{
 					Warning( "Stream pool: No buffers available! (dead:%d)\n", (int)std::ssize( m_DeadBuffers ) );
@@ -1273,27 +1279,27 @@ WaveCacheHandle_t CAsyncWavDataCache::FindOrCreateBuffer( asyncwaveparams_t &par
 //-----------------------------------------------------------------------------
 StreamHandle_t CAsyncWavDataCache::OpenStreamedLoad( char const *pFileName, int dataSize, int dataStart, int startPos, int loopPos, int bufferSize, int numBuffers, streamFlags_t flags, SoundError &soundError )
 {
-	VPROF( "CAsyncWavDataCache::OpenStreamedLoad" );
+	CVProfScope _( "CAsyncWavDataCache::OpenStreamedLoad", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	StreamedEntry_t			streamedEntry;
 	StreamHandle_t			hStream;
 	asyncwaveparams_t		params;
 
-	Assert( numBuffers > 0 && numBuffers <= STREAM_BUFFER_COUNT );
+	contract_assert( numBuffers > 0 && numBuffers <= STREAM_BUFFER_COUNT );
 
 	if ( flags & STREAMED_QUEUEDLOAD )
 	{
 		if ( numBuffers != 1 )
 		{
 			// queued load mandates one buffer, caller has violated code expectations
-			Assert( 0 );
+			contract_assert( 0 );
 			numBuffers = 1;
 		}
 
 		if ( flags & STREAMED_TRANSIENT )
 		{
 			// not allowed, queued loads are for static resident sounds
-			Assert( 0 );
+			contract_assert( 0 );
 			flags &= ~STREAMED_TRANSIENT;
 		}
 	}
@@ -1301,7 +1307,7 @@ StreamHandle_t CAsyncWavDataCache::OpenStreamedLoad( char const *pFileName, int 
 	if ( ( flags & STREAMED_TRANSIENT ) && ( bufferSize != STREAM_BUFFER_DATASIZE ) )
 	{
 		// stream pool mandates the pool block size, caller has violated code expectations
-		Assert( 0 );
+		contract_assert( 0 );
 		bufferSize = STREAM_BUFFER_DATASIZE;
 	}
 
@@ -1310,7 +1316,7 @@ StreamHandle_t CAsyncWavDataCache::OpenStreamedLoad( char const *pFileName, int 
 		// singleplay is a streaming concept requiring transient buffers
 		// nonsense concept if used by memory resident wavs
 		// caller has violated code expectations
-		Assert( 0 );
+		contract_assert( 0 );
 		flags &= ~STREAMED_SINGLEPLAY;
 	}
 
@@ -1369,7 +1375,7 @@ StreamHandle_t CAsyncWavDataCache::OpenStreamedLoad( char const *pFileName, int 
 
 	// get a unique handle for each stream request
 	hStream = m_StreamedHandles.emplace( streamedEntry );
-	Assert( hStream != m_StreamedHandles.invalid );
+	contract_assert( hStream != m_StreamedHandles.invalid );
 
 	if ( bFailed )
 	{
@@ -1396,7 +1402,7 @@ StreamHandle_t CAsyncWavDataCache::OpenStreamedLoad( char const *pFileName, int 
 //-----------------------------------------------------------------------------
 void CAsyncWavDataCache::CloseStreamedLoad( StreamHandle_t hStream )
 {
-	VPROF( "CAsyncWavDataCache::CloseStreamedLoad" );
+	CVProfScope _( "CAsyncWavDataCache::CloseStreamedLoad", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( hStream == INVALID_STREAM_HANDLE )
 	{
@@ -1417,7 +1423,7 @@ void CAsyncWavDataCache::CloseStreamedLoad( StreamHandle_t hStream )
 
 		// multiple streams could be using the same buffer, keeping the lock count nonzero
 		lockCount = s_WaveCache.GetLockCount( hWaveData );
-		Assert( lockCount >= 1 );
+		contract_assert( lockCount >= 1 );
 		if ( lockCount > 1 )
 		{
 			// just remove our lock, it will eventuall free when the last consumer releases
@@ -1446,7 +1452,7 @@ void CAsyncWavDataCache::CloseStreamedLoad( StreamHandle_t hStream )
 			// a buffering single play stream has no reason to reuse its own buffers and destroys them
 			// these buffers are uniquely owned, so the lock count can/should only be 0 at this point
 			// if !=0 the remove will respect the lock and do nothing and the buffer becomes a zombie
-			Assert( lockCount == 0 );
+			contract_assert( lockCount == 0 );
 			s_WaveCache.CacheRemove( hWaveData );
 		}
 	}
@@ -1491,7 +1497,7 @@ void CAsyncWavDataCache::PrefetchCache( char const *filename, int datasize, int 
 //-----------------------------------------------------------------------------
 bool CAsyncWavDataCache::CopyDataIntoMemory( char const *filename, int datasize, int startpos, void *buffer, int bufsize, int copystartpos, int bytestocopy, bool *pbPostProcessed )
 {
-	VPROF( "CAsyncWavDataCache::CopyDataIntoMemory" );
+	CVProfScope _( "CAsyncWavDataCache::CopyDataIntoMemory", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	bool bret = false;
 
@@ -1504,7 +1510,7 @@ bool CAsyncWavDataCache::CopyDataIntoMemory( char const *filename, int datasize,
 	auto it = m_CacheHandles.find( fnh );
 	if ( it == m_CacheHandles.end() )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return bret;
 	}
 
@@ -1527,7 +1533,7 @@ bool CAsyncWavDataCache::CopyDataIntoMemory( char const *filename, int datasize,
 //-----------------------------------------------------------------------------
 bool CAsyncWavDataCache::CopyDataIntoMemory( WaveCacheHandle_t& handle, char const *filename, int datasize, int startpos, void *buffer, int bufsize, int copystartpos, int bytestocopy, bool *pbPostProcessed )
 {
-	VPROF( "CAsyncWavDataCache::CopyDataIntoMemory" );
+	CVProfScope _( "CAsyncWavDataCache::CopyDataIntoMemory", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	*pbPostProcessed = false;
 
@@ -1542,7 +1548,7 @@ bool CAsyncWavDataCache::CopyDataIntoMemory( WaveCacheHandle_t& handle, char con
 		auto it = m_CacheHandles.find( fnh );
 		if ( it == m_CacheHandles.end() )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			return false;
 		}
 
@@ -1578,7 +1584,7 @@ bool CAsyncWavDataCache::InitializeStreamData( const StreamedEntry_t &streamedEn
 	for ( int i=0; i<streamedEntry.m_numBuffers; ++i )
 	{
 		streamData.pWaveData[i] = s_WaveCache.CacheGetNoTouch( streamedEntry.m_hWaveData[i] );
-		Assert( streamData.pWaveData[i] );
+		contract_assert( streamData.pWaveData[i] );
 		if ( streamData.pWaveData[i] == nullptr )
 		{
 			// oops, where are our locked buffers?
@@ -1655,7 +1661,7 @@ void CAsyncWavDataCache::CopyFromCurrentBuffers( StreamedEntry_t &streamedEntry,
 					// We have to test for count as in some cases it could be negative (as BufferSize gets reduced if it spans over more than one loop).
 					// This is actually very rare though.
 
-					Q_memcpy( pBuffer, (char *)pFront->m_pvData + bufferPos, count );
+					V_memcpy( pBuffer, (char *)pFront->m_pvData + bufferPos, count );
 
 					// advance past consumed bytes
 					streamData.actualCopied += count;
@@ -1831,7 +1837,7 @@ void CAsyncWavDataCache::PrefetchNextBuffers( StreamedEntry_t &streamedEntry, St
 //-----------------------------------------------------------------------------
 int CAsyncWavDataCache::CopyStreamedDataIntoMemory( StreamHandle_t hStream, void *pBuffer, int bufferSize, int copyStartPos, int bytesToCopy )
 {
-	VPROF( "CAsyncWavDataCache::CopyStreamedDataIntoMemory" );
+	CVProfScope _( "CAsyncWavDataCache::CopyStreamedDataIntoMemory", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	StreamedEntry_t		&streamedEntry = m_StreamedHandles[hStream];
 	if ( copyStartPos >= streamedEntry.m_DataStart + streamedEntry.m_DataSize )
@@ -1864,7 +1870,7 @@ void *CAsyncWavDataCache::GetStreamedDataPointer( StreamHandle_t hStream, bool b
 
 	index  = streamedEntry.m_Front % streamedEntry.m_numBuffers;
 	pFront = s_WaveCache.CacheGetNoTouch( streamedEntry.m_hWaveData[index] );
-	Assert( pFront );
+	contract_assert( pFront );
 	if ( !pFront )
 	{
 		// shouldn't happen
@@ -1890,7 +1896,7 @@ void *CAsyncWavDataCache::GetStreamedDataPointer( StreamHandle_t hStream, bool b
 //-----------------------------------------------------------------------------
 bool CAsyncWavDataCache::IsStreamedDataReady( int hStream )
 {
-	VPROF( "CAsyncWavDataCache::IsStreamedDataReady" );
+	CVProfScope _( "CAsyncWavDataCache::IsStreamedDataReady", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( hStream == INVALID_STREAM_HANDLE )
 	{
@@ -1907,7 +1913,7 @@ bool CAsyncWavDataCache::IsStreamedDataReady( int hStream )
 
 	// only the first front buffer must be present
 	CAsyncWaveData *pFront = s_WaveCache.CacheGetNoTouch( streamedEntry.m_hWaveData[0] );
-	Assert( pFront );
+	contract_assert( pFront );
 	if ( !pFront )
 	{
 		// shouldn't happen
@@ -1960,10 +1966,10 @@ void CAsyncWavDataCache::Unload( WaveCacheHandle_t handle )
 //-----------------------------------------------------------------------------
 bool CAsyncWavDataCache::GetDataPointer( WaveCacheHandle_t& handle, char const *filename, int datasize, int startpos, void **pData, int copystartpos, bool *pbPostProcessed )
 {
-	VPROF( "CAsyncWavDataCache::GetDataPointer" );
+	CVProfScope _( "CAsyncWavDataCache::GetDataPointer", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-	Assert( pbPostProcessed );
-	Assert( pData );
+	contract_assert( pbPostProcessed );
+	contract_assert( pData );
 
 	*pbPostProcessed = false;
 
@@ -1978,7 +1984,7 @@ bool CAsyncWavDataCache::GetDataPointer( WaveCacheHandle_t& handle, char const *
 		auto it = m_CacheHandles.find( fnh );
 		if ( it == m_CacheHandles.end() )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			return bret;
 		}
 
@@ -2024,7 +2030,7 @@ bool CAsyncWavDataCache::GetDataPointer( WaveCacheHandle_t& handle, char const *
 //-----------------------------------------------------------------------------
 bool CAsyncWavDataCache::IsDataLoadCompleted( WaveCacheHandle_t handle, bool *pIsValid, bool *pIsMissing )
 {
-	VPROF( "CAsyncWavDataCache::IsDataLoadCompleted" );
+	CVProfScope _( "CAsyncWavDataCache::IsDataLoadCompleted", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CAsyncWaveData *data = s_WaveCache.CacheGet( handle );
 	if ( !data )
@@ -2098,7 +2104,7 @@ void CAsyncWavDataCache::UpdateLoopPosition( StreamHandle_t hStream, int nLoopPo
 bool CAsyncWavDataCache::GetItemName( DataCacheClientID_t clientId, const void *pItem, char *pDest, unsigned nMaxLen  )
 {
 	CAsyncWaveData *pWaveData = (CAsyncWaveData *)pItem;
-	Q_strncpy( pDest, pWaveData->GetFileName(), nMaxLen );
+	V_strncpy( pDest, pWaveData->GetFileName(), nMaxLen );
 	return true;
 }
 
@@ -2122,7 +2128,7 @@ void CAsyncWavDataCache::SpewMemoryUsage( MemoryUsageType level )
 			char name[MAX_PATH];
 			if ( !g_pFileSystem->String( hName, name, sizeof( name ) ) )
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				continue;
 			}
 
@@ -2132,7 +2138,7 @@ void CAsyncWavDataCache::SpewMemoryUsage( MemoryUsageType level )
 			CAsyncWaveData *data = s_WaveCache.CacheGetNoTouch( handle );
 			if ( data )
 			{
-				Msg( "\t%16.16s : %s\n", Q_pretifymem(data->Size()),name);
+				Msg( "\t%16.16s : %s\n", V_pretifymem(data->Size()),name);
 			}
 			else
 			{
@@ -2152,7 +2158,7 @@ void CAsyncWavDataCache::SpewMemoryUsage( MemoryUsageType level )
 	{
 		percent = 100.0f * (float)bytesUsed / (float)bytesTotal;
 	}
-	Msg( "CAsyncWavDataCache:  %i .wavs total %s, %.2f %% of capacity\n", (int)m_CacheHandles.size(), Q_pretifymem( bytesUsed, 2 ), percent );
+	Msg( "CAsyncWavDataCache:  %i .wavs total %s, %.2f %% of capacity\n", (int)m_CacheHandles.size(), V_pretifymem( bytesUsed, 2 ), percent );
 	
 }
 
@@ -2193,22 +2199,30 @@ void CAsyncWavDataCache::Clear()
 static CAsyncWavDataCache g_AsyncWaveDataCache;
 IAsyncWavDataCache *wavedatacache = &g_AsyncWaveDataCache;
 
-CON_COMMAND( snd_async_flush, "Flush all unlocked async audio data" )
+static void snd_async_flush( const CCommand &args );
+static ConCommand snd_async_flush_command( "snd_async_flush", snd_async_flush, "Flush all unlocked async audio data" );
+static void snd_async_flush( const CCommand &args )
 {
 	g_AsyncWaveDataCache.Flush();
 }
 
-CON_COMMAND( snd_async_showmem, "Show async memory stats" )
+static void snd_async_showmem( const CCommand &args );
+static ConCommand snd_async_showmem_command( "snd_async_showmem", snd_async_showmem, "Show async memory stats" );
+static void snd_async_showmem( const CCommand &args )
 {
 	g_AsyncWaveDataCache.SpewMemoryUsage( CAsyncWavDataCache::SPEW_ALL );
 }
 
-CON_COMMAND( snd_async_showmem_summary, "Show brief async memory stats" )
+static void snd_async_showmem_summary( const CCommand &args );
+static ConCommand snd_async_showmem_summary_command( "snd_async_showmem_summary", snd_async_showmem_summary, "Show brief async memory stats" );
+static void snd_async_showmem_summary( const CCommand &args )
 {
 	g_AsyncWaveDataCache.SpewMemoryUsage( CAsyncWavDataCache::SPEW_BASIC );
 }
 
-CON_COMMAND( snd_async_showmem_music, "Show async memory stats for just non-streamed music" )
+static void snd_async_showmem_music( const CCommand &args );
+static ConCommand snd_async_showmem_music_command( "snd_async_showmem_music", snd_async_showmem_music, "Show async memory stats for just non-streamed music" );
+static void snd_async_showmem_music( const CCommand &args )
 {
 	g_AsyncWaveDataCache.SpewMemoryUsage( CAsyncWavDataCache::SPEW_MUSIC_NONSTREAMING );
 }
@@ -2256,12 +2270,12 @@ private:
 	//-----------------------------------------------------------------------------
 	inline byte *GetCachedDataPointer()
 	{
-		VPROF( "CWaveDataStreamAsync::GetCachedDataPointer" );
+		CVProfScope _( "CWaveDataStreamAsync::GetCachedDataPointer", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		CAudioSourceCachedInfo *info = m_AudioCacheHandle.Get( CAudioSource::AUDIO_SOURCE_WAV, m_pSfx->IsPrecachedSound(), m_pSfx, &m_nCachedDataSize );
 		if ( !info )
 		{
-			Assert( !"CAudioSourceWave::GetCachedDataPointer info == NULL" );
+			contract_assert( !"CAudioSourceWave::GetCachedDataPointer info == NULL" );
 			return nullptr;
 		}
 
@@ -2337,7 +2351,7 @@ CWaveDataStreamAsync::CWaveDataStreamAsync
 	m_hCache = wavedatacache->AsyncLoadCache( GetFileName(), m_dataSize, m_dataStart );
 
 	m_pBuffer = new char[SINGLE_BUFFER_SIZE];
-	Q_memset( m_pBuffer, 0, SINGLE_BUFFER_SIZE );
+	V_memset( m_pBuffer, 0, SINGLE_BUFFER_SIZE );
 
 	// size of a sample
 	m_sampleSize = source.SampleSize();
@@ -2385,7 +2399,7 @@ char const *CWaveDataStreamAsync::GetFileName()
 		}
 	}
 
-	Assert( 0 );
+	contract_assert( 0 );
 	return "";
 }
 
@@ -2549,7 +2563,7 @@ int CWaveDataStreamAsync::ReadSourceData( void **pData, int64 sampleIndex, int s
 				// Mark how many we are returning
 				m_bufferCount = availSamples;
 				// Copy raw sample data directly out of cache
-				Q_memcpy( m_pBuffer, ( char * )cacheddata + cacheddatastartpos, availSamples * m_sampleSize );
+				V_memcpy( m_pBuffer, ( char * )cacheddata + cacheddatastartpos, availSamples * m_sampleSize );
 
 				startupCacheUsed = true;
 			}
@@ -2682,7 +2696,7 @@ bool CWaveDataMemoryAsync::IsReadyToMix()
 void CWaveDataMemoryAsync::UpdateLoopPosition( int nLoopPosition )
 {
 	// Should not be necessary in this implementation...
-	Assert( false );
+	contract_assert( false );
 }
 
 //-----------------------------------------------------------------------------
@@ -2716,4 +2730,3 @@ IWaveData *CreateWaveDataMemory( CAudioSource &source )
 	CWaveDataMemoryAsync *mem = new CWaveDataMemoryAsync( source );
 	return mem;
 }
-

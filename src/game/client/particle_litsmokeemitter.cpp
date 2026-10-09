@@ -1,12 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "debugoverlay_shared.h"
 #include "particle_litsmokeemitter.h"
-
 
 //
 // CLitSmokeEmitter
@@ -99,7 +105,7 @@ void CLitSmokeEmitter::RenderParticles( CParticleRenderIterator *pIterator )
 		TransformParticle( ParticleMgr()->GetModelView(), pParticle->m_Pos, tPos );
 		float sortKey = tPos.z;
 		
-		float alpha255 = ( ( (float) pParticle->m_uchColor[3]/255.0f ) * sin( M_PI_F * tLifetime ) ) * 255.0f;
+		float alpha255 = ( ( (float) pParticle->m_uchColor[3]/255.0f ) * std::sin( M_PI_F * tLifetime ) ) * 255.0f;
 
 		Vector	color01 = Vector( pParticle->m_uchColor[0], pParticle->m_uchColor[1], pParticle->m_uchColor[2] ) * (tLifetime / 255.0f);
 
@@ -120,7 +126,7 @@ void CLitSmokeEmitter::RenderParticles( CParticleRenderIterator *pIterator )
 void CLitSmokeEmitter::SimulateParticles( CParticleSimulateIterator *pIterator )
 {
 	// Make sure they've called Init().
-	Assert( m_bInitted );
+	contract_assert( m_bInitted );
 	
 	LitSmokeParticle *pParticle = (LitSmokeParticle*)pIterator->GetFirst();
 	while ( pParticle )
@@ -135,5 +141,3 @@ void CLitSmokeEmitter::SimulateParticles( CParticleSimulateIterator *pIterator )
 		pParticle = (LitSmokeParticle*)pIterator->GetNext();
 	}
 }
-
-

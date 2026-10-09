@@ -1,17 +1,26 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "render_pch.h"
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+import std;
+#include "gl_model.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
 #include "draw.h"
 #include "decal.h"
 #include "gl_cvars.h"
-#include "view.h"
-#include "screen.h"
 #include "gl_matsysiface.h"
 #include "cdll_int.h"
 #include "materialsystem/imesh.h"
@@ -95,4 +104,3 @@ IMaterial *GL_LoadMaterial( const char *pName, const char *pTextureGroupName, bo
 	}
 	return material;
 }
-

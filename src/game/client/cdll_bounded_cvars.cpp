@@ -1,14 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
 #include "cdll_bounded_cvars.h"
-#include "convar_serverbounded.h"
-#include "tier0/icommandline.h"
 
 
 bool g_bForceCLPredictOff = false;
@@ -140,8 +140,7 @@ float GetClientInterpAmount()
 	}
 	else
 	{
-		AssertMsgOnce( false, "GetInterpolationAmount: can't get cl_updaterate cvar." );	
+		contract_assert( false && "GetInterpolationAmount: can't get cl_updaterate cvar." );	
 		return 0.1f;
 	}
 }
-

@@ -1,46 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef BASECLIENTSTATE_H
-#define BASECLIENTSTATE_H
-
+import ks.tier1;
 #include "inetmsghandler.h"
 #include "protocol.h"
 #include "client_class.h"
 #include "cdll_int.h"
-#include "tier1/netadr.h"
 #include "common.h"
 #include "clockdriftmgr.h"
-#include "convar.h"
 #include "cl_bounded_cvars.h"
-#include "tier1/utlstring.h"
 #include "netmessages.h"
-#include <map>
-#include <memory>
+import std;
 
 #include "matchmaking/imatchasync.h"
 #include "netmessages_schema.h"
 
  // Only send this many requests before timing out.
-#define CL_CONNECTION_RETRIES		4 
+inline constexpr auto CL_CONNECTION_RETRIES = 4;
 
 // Mininum time gap (in seconds) before a subsequent connection request is sent.
-#define CL_MIN_RESEND_TIME			1.5f   
+inline constexpr auto CL_MIN_RESEND_TIME = 1.5f;
 // Max time.  The cvar cl_resend is bounded by these.
-#define CL_MAX_RESEND_TIME			20.0f   
+inline constexpr auto CL_MAX_RESEND_TIME = 20.0f;
 
 // In release, send commands at least this many times per second
-#define MIN_CMD_RATE				10.0f
-#define MAX_CMD_RATE				128.0f
+inline constexpr auto MIN_CMD_RATE = 10.0f;
+inline constexpr auto MAX_CMD_RATE = 128.0f;
 
 typedef intp SerializedEntityHandle_t;
 
 extern ConVar cl_name;
 
-abstract_class CBaseClientState;
+class CBaseClientState;
 
 // This represents a server's 
 class C_ServerClassInfo
@@ -59,10 +51,6 @@ public:
 	int			m_InstanceBaselineIndex; // INVALID_STRING_INDEX if not initialized yet.
 };
 
-#define EndGameAssertMsg( assertion, msg ) \
-	if ( !(assertion) )\
-		Host_EndGame msg
-
 
 class CNetworkStringTableContainer;
 class PackedEntity;
@@ -76,19 +64,16 @@ struct DeferredConnection_t
 		m_bActive = false;
 		m_nChallenge = 0;
 		m_nAuthprotocol = 0;
-		m_unGSSteamID = 0ull;;
 		m_unLobbyID = 0ull;
-		m_bGSSecure = false;
 		m_bRequiresPassword = false;
 		m_bDCFriendsReqd = false;
 		m_bOfficialValveServer = false;
 		m_nEncryptionKey = 0;
 		m_nEncryptedSize = 0;
-		memset( m_chLobbyType, 0, sizeof( m_chLobbyType ) );
+		std::memset( m_chLobbyType, 0, sizeof( m_chLobbyType ) );
 	}
 
 	bool	m_bActive;
-	bool	m_bGSSecure;
 	bool	m_bRequiresPassword;
 	bool	m_bDCFriendsReqd;
 	bool	m_bOfficialValveServer;
@@ -96,7 +81,6 @@ struct DeferredConnection_t
 
 	int		m_nChallenge;
 	int		m_nAuthprotocol;
-	uint64	m_unGSSteamID;
 	uint64	m_unLobbyID;
 	ns_address m_adrServerAddress;
 	int		m_nEncryptionKey;
@@ -230,7 +214,7 @@ public:
 };
 
 // CBaseClientState
-abstract_class CBaseClientState :
+class CBaseClientState :
 	public INetChannelHandler,
 	public IConnectionlessPacketHandler
 {
@@ -245,8 +229,8 @@ public: // IConnectionlessPacketHandler interface:
 
 public: // INetMsgHandler interface:
 		
-	virtual void ConnectionStart(INetChannel *chan) OVERRIDE;
-	virtual void ConnectionStop( ) OVERRIDE;
+	virtual void ConnectionStart(INetChannel *chan) override;
+	virtual void ConnectionStop( ) override;
 	virtual void ConnectionClosing( const char *reason );
 	virtual void ConnectionCrashed(const char *reason);
 
@@ -344,7 +328,7 @@ public:
 	virtual void ConnectSplitScreen( const char *pchPublicAddress, char const *pchPrivateAddress, int numPlayers, const char* szJoinType ); // start a connection challenge
 	virtual bool SetSignonState ( int state, int count, const ks::net::CNETMsg_SignonState *msg );
 	virtual void Disconnect( bool bShowMainMenu = true );
-	virtual void SendConnectPacket ( const ns_address &netAdrRemote, int challengeNr, int authProtocol, uint64 unGSSteamID, bool bGSSecure );
+	virtual void SendConnectPacket ( const ns_address &netAdrRemote, int challengeNr, int authProtocol );
 	virtual const char *GetCDKeyHash() { return "123"; }
 	virtual void RunFrame ( void );
 	virtual void CheckForResend ( bool bForceResendNow = false );
@@ -412,7 +396,6 @@ protected:
 	bool InternalProcessStringCmd( const ks::net::CNETMsg_StringCmd& msg );
 
 private:
-	bool PrepareSteamConnectResponse( uint64 unGSSteamID, bool bGSSecure, const ns_address &adr, bf_write &msg );
 	void SendReserveServerMsg();	
 	void SendReserveServerChallenge();
 	void BuildReserveServerPayload( bf_write &msg, int nChallengeNr );
@@ -451,7 +434,6 @@ public:
 
 	DirectConnectLobby_t	m_DirectConnectLobby;
 
-	uint64			m_ListenServerSteamID;
 
 	int				m_nSignonState;    // see SIGNONSTATE_* definitions
 	double			m_flNextCmdTime; // When can we send the next command packet?
@@ -461,8 +443,6 @@ public:
 									// but downloading models, sounds, etc.  So much time that it is possible that the
 									// server might change levels again and, if so, we need to know that.
 	int			m_nCurrentSequence;	// this is the sequence number of the current incoming packet	
-
-	uint64		m_ulGameServerSteamID; // Steam ID of the game server we are trying to connect to, or are connected to.  Zero if unknown
 
 	CClockDriftMgr m_ClockDriftMgr;
 
@@ -477,7 +457,6 @@ public:
 	char		m_szLevelNameShort[ 40 ]; // removes maps/ and .bsp extension
 	char		m_szMapGroupName[ 40 ]; //the name of the map group we are currently playing in
 	char		m_szLastLevelNameShort[ 40 ]; // stores the previous value of m_szLevelNameShort when that gets cleared
-	PublishedFileId_t m_unUGCMapFileID; // If a community map, this is the published file id
 
 	int			m_nMaxClients;		// max clients on server
 	int			m_nNumPlayersToConnect;	// number of clients to connect to server.
@@ -526,10 +505,6 @@ public:
 	bool	m_bEnteredPassword;
 	bool	m_bWaitingForPassword;
 
-#if ENGINE_CONNECT_VIA_MMS
-	bool	m_bWaitingForServerGameDetails;
-#endif
-
 	DeferredConnection_t			m_DeferredConnection;
 	std::map< int32, std::unique_ptr< byte[] > > m_mapGeneratedEncryptionKeys;
 
@@ -540,7 +515,7 @@ public:
 	C_ServerClassInfo	*m_pServerClasses;
 	int					m_nServerClasses;
 	int					m_nServerClassBits;
-	char				m_szEncryptionKey[STEAM_KEYSIZE];
+	char				m_szEncryptionKey[AUTH_KEYSIZE];
 	unsigned int		m_iEncryptionKeySize;
 
 	CNetworkStringTableContainer *m_StringTableContainer;
@@ -549,7 +524,6 @@ public:
 
 	typedef std::map< uint32, std::unique_ptr< CNETMsg_PlayerAvatarData_t > > PlayerAvatarDataMap_t;
 	PlayerAvatarDataMap_t m_mapPlayerAvatarData;
-	CNETMsg_PlayerAvatarData_t * AllocOwnPlayerAvatarData() const;
 	
 	bool m_bRestrictServerCommands;	// If true, then the server is only allowed to execute commands marked with FCVAR_SERVER_CAN_EXECUTE on the client.
 	bool m_bRestrictClientCommands;	// If true, then IVEngineClient::ClientCmd is only allowed to execute commands marked with FCVAR_CLIENTCMD_CAN_EXECUTE on the client.
@@ -592,5 +566,3 @@ inline void CBaseClientState::SetClientAndServerTickCount( int tick )
 {
 	m_ClockDriftMgr.m_nServerTick = m_ClockDriftMgr.m_nClientTick = tick;
 }
-
-#endif // BASECLIENTSTATE_H

@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
 
 #include "writez_vs20.inc"
 #include "black_ps20.inc"
-
 
 // Enables alpha blending workaround for an (apparently) weird color/alpha write disable bug on NVidia GL drivers.
 // For NVidia, the actual bug is in glBlitFramebuffer() (it doesn't ignore the currently set colormask), which we fix in glmgr.cpp Blit2(), so I'm disabling this more expensive workaround.
@@ -20,7 +15,7 @@ DEFINE_FALLBACK_SHADER( Occlusion, Occlusion_DX9 )
 
 BEGIN_VS_SHADER_FLAGS( Occlusion_DX9, "Help for Occlusion", SHADER_NOT_EDITABLE )
 
-	BEGIN_SHADER_PARAMS
+	
 	END_SHADER_PARAMS
 
 	SHADER_INIT_PARAMS()
@@ -96,4 +91,3 @@ BEGIN_VS_SHADER_FLAGS( Occlusion_DX9, "Help for Occlusion", SHADER_NOT_EDITABLE 
 		Draw();
 	}
 END_SHADER
-

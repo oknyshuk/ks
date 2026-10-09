@@ -1,32 +1,18 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef RRBASE_H
-#define RRBASE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #ifdef _DEBUG
 #define DEBUG 1
 #endif
 
 // Misc C-runtime library headers
-#include <math.h>
-#include <ctype.h>
-#include <stdio.h>
+import std;
 
 // tier 0
-#include "tier0/dbg.h"
-#include "tier0/platform.h"
-#include "basetypes.h"
 
 // tier 1
-#include "tier1/strtools.h"
-#include "utlvector.h"
-#include "tier1/intern_pool.h"
+import ks.tier1;
 
 // tier 2
 #include "string_t.h"
@@ -40,6 +26,3 @@
 #include "responserules/response_types.h"
 #include "responserules/response_types_internal.h"
 #include "responserules/response_host_interface.h"
-
-
-#endif // CBASE_H

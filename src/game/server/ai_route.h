@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_ROUTE_H
-#define AI_ROUTE_H
-
+import ks.math;
 #include "ai_basenpc.h"
-#include "mathlib/vector.h"
+import std;
 #include "ai_network.h"
 #include "ai_node.h"
 #include "ai_waypoint.h"
@@ -23,7 +18,7 @@ class CAI_BaseNPC;
 //	>> CAI_Path
 //=============================================================================
 
-#define DEF_WAYPOINT_TOLERANCE (0.1)
+inline constexpr auto DEF_WAYPOINT_TOLERANCE = (0.1);
 
 class CAI_Path
 {
@@ -183,5 +178,3 @@ private:
 	DECLARE_SIMPLE_DATADESC();
 
 };
-
-#endif // AI_ROUTE_H

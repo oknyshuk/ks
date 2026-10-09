@@ -1,18 +1,14 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
+import ks.core;
 #include "studiorendercontext.h"
 #include "optimize.h"
-#include "tier0/vprof.h"
+import std;
 
 void CStudioRenderContext::GetTriangles( const DrawModelInfo_t& info, matrix3x4_t *pBoneToWorld, GetTriangles_Output_t &out )
 {
-	VPROF( "CStudioRender::GetTriangles");
+	CVProfScope _( "CStudioRender::GetTriangles", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	out.m_MaterialBatches.clear(); // clear out data.
 
@@ -62,7 +58,7 @@ void CStudioRenderContext::GetTriangles( const DrawModelInfo_t& info, matrix3x4_
 				continue;
 			}
 			const mstudio_meshvertexdata_t *vertData = pMesh->GetVertexData( info.m_pStudioHdr );
-			Assert( vertData ); // This can only return NULL on X360 for now
+			contract_assert( vertData ); // This can only return NULL on X360 for now
 
 			// add the verts from this mesh to the materialBatch
 			materialBatch.m_Verts.assign( pMesh->numvertices, {} );
@@ -95,7 +91,7 @@ void CStudioRenderContext::GetTriangles( const DrawModelInfo_t& info, matrix3x4_
 			}
 
 			IMaterial *pMaterial = ppMaterials[pSkinRef[pMesh->material]];
-			Assert( pMaterial );
+			contract_assert( pMaterial );
 			materialBatch.m_pMaterial = pMaterial;
 			studiomeshdata_t *pMeshData = &pStudioMeshes[pMesh->meshid];
 			if ( pMeshData->m_NumGroup == 0 )

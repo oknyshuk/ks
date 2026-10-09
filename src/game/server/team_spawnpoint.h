@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Team spawnpoint entity
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef TF_TEAMSPAWNPOINT_H
-#define TF_TEAMSPAWNPOINT_H
+// Purpose: Team spawnpoint entity
 
 #include "reflect_annotations.h"
-#pragma once
 
 #include "baseentity.h"
 #include "entityoutput.h"
@@ -53,6 +48,3 @@ public:
 
 	DECLARE_DATADESC();
 };
-
-
-#endif // TF_TEAMSPAWNPOINT_H

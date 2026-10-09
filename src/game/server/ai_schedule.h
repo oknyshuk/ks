@@ -1,24 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		A schedule
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: A schedule
 
 #include "bitstring.h"
 
-#ifndef AI_SCHEDULE_H
-#define AI_SCHEDULE_H
-
-#pragma once
-
-#include <bitset>
+import std;
 
 class	CStringRegistry;
 class   CAI_ClassScheduleIdSpace;
@@ -199,5 +187,3 @@ private:
 
 
 //-----------------------------------------------------------------------------
-
-#endif // AI_SCHEDULE_H

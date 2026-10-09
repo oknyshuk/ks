@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -21,7 +22,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_debugdrawenvmapmask_ps20b 0
+inline constexpr int shaderStaticTest_debugdrawenvmapmask_ps20b = 0;
 class debugdrawenvmapmask_ps20b_Dynamic_Index
 {
 private:
@@ -32,7 +33,7 @@ private:
 public:
 	void SetSHOWALPHA( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSHOWALPHA = i;
 #ifdef _DEBUG
 		m_bSHOWALPHA = true;
@@ -40,7 +41,7 @@ public:
 	}
 	void SetSHOWALPHA( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSHOWALPHA = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSHOWALPHA = true;
@@ -61,7 +62,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bSHOWALPHA;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nSHOWALPHA ) + 0;
 	}
@@ -74,7 +75,7 @@ static const ShaderComboInformation_t s_DynamicComboArray_DebugDrawEnvmapMask_ps
 };
 static const ShaderComboSemantics_t DebugDrawEnvmapMask_ps20b_combos =
 {
-	"DebugDrawEnvmapMask_ps20b", s_DynamicComboArray_DebugDrawEnvmapMask_ps20b, 1, NULL, 0 
+	"DebugDrawEnvmapMask_ps20b", s_DynamicComboArray_DebugDrawEnvmapMask_ps20b, 1, nullptr, 0 
 };
 
 class ConstructMe_DebugDrawEnvmapMask_ps20b

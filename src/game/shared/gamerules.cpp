@@ -1,10 +1,67 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
 #include "reflect_recvtable.h"
@@ -15,8 +72,6 @@
 #endif
 #include "gamerules.h"
 #include "ammodef.h"
-#include "tier0/vprof.h"
-#include "keyvalues.h"
 #include "usermessages.h"
 #ifdef CLIENT_DLL
 
@@ -35,7 +90,6 @@
 #include "GameStats.h"
 
 #endif
-
 
 ConVar g_Language( "g_Language", "0", FCVAR_REPLICATED );
 ConVar sk_autoaim_mode( "sk_autoaim_mode", "1", FCVAR_ARCHIVE | FCVAR_REPLICATED );
@@ -121,7 +175,7 @@ bool CGameRules::IsBonusChallengeTimeBased( void )
 
 CGameRules::CGameRules() : CAutoGameSystemPerFrame( "CGameRules" )
 {
-	Assert( !g_pGameRules );
+	contract_assert( !g_pGameRules );
 	g_pGameRules = this;
 }	
 
@@ -139,7 +193,7 @@ extern bool	g_fGameOver;
 //-----------------------------------------------------------------------------
 CGameRules::CGameRules() : CAutoGameSystemPerFrame( "CGameRules" )
 {
-	Assert( !g_pGameRules );
+	contract_assert( !g_pGameRules );
 	g_pGameRules = this;
 
 	GetVoiceGameMgr()->Init( g_pVoiceGameMgrHelper, gpGlobals->maxClients );
@@ -203,7 +257,7 @@ bool CGameRules::CanHaveAmmo( CBaseCombatCharacter *pPlayer, const char *szName 
 CBaseEntity *CGameRules::GetPlayerSpawnSpot( CBasePlayer *pPlayer )
 {
 	CBaseEntity *pSpawnSpot = pPlayer->EntSelectSpawnPoint();
-	Assert( pSpawnSpot );
+	contract_assert( pSpawnSpot );
 	if ( pSpawnSpot == nullptr )
 		return nullptr;
 
@@ -265,7 +319,7 @@ bool CGameRules::CanHavePlayerItem( CBasePlayer *pPlayer, CBaseCombatWeapon *pWe
 	}
 */
 	// note: will fall through to here if GetItemInfo doesn't fill the struct!
-	return TRUE;
+	return true;
 }
 
 //=========================================================
@@ -286,7 +340,7 @@ void CGameRules::RefreshSkillData ( bool forceUpdate )
 
 	SetSkillLevel( skill.IsValid() ? skill.GetInt() : 1 );
 
-	Q_snprintf( szExec,sizeof(szExec), "exec skill%d.cfg\n", GetSkillLevel() );
+	V_snprintf( szExec,sizeof(szExec), "exec skill%d.cfg\n", GetSkillLevel() );
 
 	engine->ServerCommand( szExec );
 	engine->ServerExecute();
@@ -561,8 +615,7 @@ bool CGameRules::ClientCommand( CBaseEntity *pEdict, const CCommand &args )
 
 void CGameRules::FrameUpdatePostEntityThink()
 {
-	VPROF( "CGameRules::FrameUpdatePostEntityThink" );
-    SNPROF( "CGameRules::FrameUpdatePostEntityThink" );
+	CVProfScope _( "CGameRules::FrameUpdatePostEntityThink", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	Think();
 }
 
@@ -584,7 +637,6 @@ void CGameRules::EndGameFrame( void )
 {
 	// If you hit this assert, it means something called AddMultiDamage() and didn't ApplyMultiDamage().
 	// The g_MultiDamage.m_hAttacker & g_MultiDamage.m_hInflictor should give help you figure out the culprit.
-	Assert( g_MultiDamage.IsClear() );
 	if ( !g_MultiDamage.IsClear() )
 	{
 		Warning("Unapplied multidamage left in the system:\nTarget: %s\nInflictor: %s\nAttacker: %s\nDamage: %.2f\n", 
@@ -641,7 +693,7 @@ edict_t *CGameRules::DoFindClientInPVS( edict_t *pEdict, unsigned char *pvs, uns
 
 CGameRules::~CGameRules()
 {
-	Assert( g_pGameRules == this );
+	contract_assert( g_pGameRules == this );
 	g_pGameRules = nullptr;
 }
 
@@ -831,7 +883,7 @@ void CGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 
 	// msg everyone if someone changes their name, and it isn't the first time (changing no name to current name)
 	// Note, this is case sensitive
-	if ( ( Q_strcmp( pszOldName, pszName ) != 0 ) &&
+	if ( ( V_strcmp( pszOldName, pszName ) != 0 ) &&
 		CanClientCustomizeOwnIdentity() )
 	{
 		if ( pszOldName[0] != '\0' )
@@ -852,7 +904,7 @@ void CGameRules::ClientSettingsChanged( CBasePlayer *pPlayer )
 	const char *pszFov = engine->GetClientConVarValue( pPlayer->entindex(), "fov_desired" );
 	if ( pszFov )
 	{
-		int iFov = atoi(pszFov);
+		int iFov = std::atoi(pszFov);
 		iFov = clamp( iFov, 1, 90 );
 		pPlayer->SetDefaultFOV( iFov );
 	}

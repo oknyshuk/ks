@@ -1,25 +1,54 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
-#include "tier1/fixed_pool.h"
 #include "ai_navtype.h"
 #include "ai_node.h"
 #include "ai_waypoint.h"
 
-#define	WAYPOINT_POOL_SIZE 512
+inline constexpr int WAYPOINT_POOL_SIZE = 512;
 
 //-----------------------------------------------------------------------------
 // Init static variables
 //-----------------------------------------------------------------------------
 
-DEFINE_FIXEDSIZE_ALLOCATOR( AI_Waypoint_t, WAYPOINT_POOL_SIZE, ks::fixed_pool::grow::fast );
+ks::fixed_pool AI_Waypoint_t::s_Allocator( sizeof(AI_Waypoint_t), WAYPOINT_POOL_SIZE, ks::fixed_pool::grow::fast, "AI_Waypoint_t pool", alignof(AI_Waypoint_t) );
 
 //-------------------------------------
 
@@ -29,7 +58,7 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( AI_Waypoint_t )
 
 AI_Waypoint_t::AI_Waypoint_t()
 {
-	memset( this, 0, sizeof(*this) );
+	std::memset( this, 0, sizeof(*this) );
 	vecLocation	= vec3_invalid;
 	iNodeID		= NO_NODE;
 	flPathDistGoal = -1;
@@ -39,7 +68,7 @@ AI_Waypoint_t::AI_Waypoint_t()
 
 AI_Waypoint_t::AI_Waypoint_t( const Vector &initPosition, float initYaw, Navigation_t initNavType, int initWaypointFlags, int initNodeID )
 {
-	memset( this, 0, sizeof(*this) );
+	std::memset( this, 0, sizeof(*this) );
 
 	// A Route of length one to the endpoint
 	vecLocation	= initPosition;
@@ -55,7 +84,7 @@ AI_Waypoint_t::AI_Waypoint_t( const Vector &initPosition, float initYaw, Navigat
 
 AI_Waypoint_t *	AI_Waypoint_t::GetLast()
 {
-	Assert( !pNext || pNext->pPrev == this ); 
+	contract_assert( !pNext || pNext->pPrev == this ); 
 	AI_Waypoint_t *pCurr = this;
 	while (pCurr->GetNext())
 	{
@@ -71,7 +100,7 @@ AI_Waypoint_t *	AI_Waypoint_t::GetLast()
 void CAI_WaypointList::RemoveAll()
 {
 	DeleteAll( &m_pFirstWaypoint );
-	Assert( m_pFirstWaypoint == nullptr );
+	contract_assert( m_pFirstWaypoint == nullptr );
 }
 
 //-------------------------------------
@@ -128,12 +157,6 @@ void AssertRouteValid( AI_Waypoint_t* route )
 
 		while (waypoint)
 		{
-#ifdef _GOALDEBUG
-			if (!waypoint->GetNext() && !(waypoint->Flags() & (bits_WP_TO_GOAL|bits_WP_TO_PATHCORNER)))
-			{
-				DevMsg( "!!ERROR!! Final waypoint is not a goal!\n");
-			}
-#endif
 			waypoint->AssertValid();
 			waypoint = waypoint->GetNext();
 		}

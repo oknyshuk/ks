@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -24,7 +25,7 @@ private:
 public:
 	void SetGENERATEBASETEXTURE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nGENERATEBASETEXTURE = i;
 #ifdef _DEBUG
 		m_bGENERATEBASETEXTURE = true;
@@ -32,7 +33,7 @@ public:
 	}
 	void SetGENERATEBASETEXTURE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nGENERATEBASETEXTURE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bGENERATEBASETEXTURE = true;
@@ -46,7 +47,7 @@ private:
 public:
 	void SetGENERATENORMAL( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nGENERATENORMAL = i;
 #ifdef _DEBUG
 		m_bGENERATENORMAL = true;
@@ -54,7 +55,7 @@ public:
 	}
 	void SetGENERATENORMAL( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nGENERATENORMAL = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bGENERATENORMAL = true;
@@ -68,7 +69,7 @@ private:
 public:
 	void SetGENERATEMASKS1( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nGENERATEMASKS1 = i;
 #ifdef _DEBUG
 		m_bGENERATEMASKS1 = true;
@@ -76,7 +77,7 @@ public:
 	}
 	void SetGENERATEMASKS1( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nGENERATEMASKS1 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bGENERATEMASKS1 = true;
@@ -90,7 +91,7 @@ private:
 public:
 	void SetCHEAPFILTERING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCHEAPFILTERING = i;
 #ifdef _DEBUG
 		m_bCHEAPFILTERING = true;
@@ -98,7 +99,7 @@ public:
 	}
 	void SetCHEAPFILTERING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCHEAPFILTERING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCHEAPFILTERING = true;
@@ -112,7 +113,7 @@ private:
 public:
 	void SetBASEALPHAPHONGMASK( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBASEALPHAPHONGMASK = i;
 #ifdef _DEBUG
 		m_bBASEALPHAPHONGMASK = true;
@@ -120,7 +121,7 @@ public:
 	}
 	void SetBASEALPHAPHONGMASK( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBASEALPHAPHONGMASK = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBASEALPHAPHONGMASK = true;
@@ -134,7 +135,7 @@ private:
 public:
 	void SetBASEALPHAENVMASK( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBASEALPHAENVMASK = i;
 #ifdef _DEBUG
 		m_bBASEALPHAENVMASK = true;
@@ -142,7 +143,7 @@ public:
 	}
 	void SetBASEALPHAENVMASK( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBASEALPHAENVMASK = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBASEALPHAENVMASK = true;
@@ -156,7 +157,7 @@ private:
 public:
 	void SetBUMPALPHAENVMASK( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBUMPALPHAENVMASK = i;
 #ifdef _DEBUG
 		m_bBUMPALPHAENVMASK = true;
@@ -164,7 +165,7 @@ public:
 	}
 	void SetBUMPALPHAENVMASK( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBUMPALPHAENVMASK = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBUMPALPHAENVMASK = true;
@@ -178,7 +179,7 @@ private:
 public:
 	void SetUSEPATTERN( int i )
 	{
-		Assert( i >= 0 && i <= 4 );
+		contract_assert( i >= 0 && i <= 4 );
 		m_nUSEPATTERN = i;
 #ifdef _DEBUG
 		m_bUSEPATTERN = true;
@@ -186,7 +187,7 @@ public:
 	}
 	void SetUSEPATTERN( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 4 );
 		m_nUSEPATTERN = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bUSEPATTERN = true;
@@ -235,7 +236,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bGENERATEBASETEXTURE && m_bGENERATENORMAL && m_bGENERATEMASKS1 && m_bCHEAPFILTERING && m_bBASEALPHAPHONGMASK && m_bBASEALPHAENVMASK && m_bBUMPALPHAENVMASK && m_bUSEPATTERN;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nGENERATEBASETEXTURE ) + ( 2 * m_nGENERATENORMAL ) + ( 4 * m_nGENERATEMASKS1 ) + ( 8 * m_nCHEAPFILTERING ) + ( 16 * m_nBASEALPHAPHONGMASK ) + ( 32 * m_nBASEALPHAENVMASK ) + ( 64 * m_nBUMPALPHAENVMASK ) + ( 128 * m_nUSEPATTERN ) + 0;
 	}
@@ -257,7 +258,7 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_customcharacter_ps30 0
+inline constexpr int shaderDynamicTest_customcharacter_ps30 = 0;
 
 static const ShaderComboInformation_t s_StaticComboArray_customcharacter_ps30[8] = 
 {
@@ -272,7 +273,7 @@ static const ShaderComboInformation_t s_StaticComboArray_customcharacter_ps30[8]
 };
 static const ShaderComboSemantics_t customcharacter_ps30_combos =
 {
-	"customcharacter_ps30", NULL, 0, s_StaticComboArray_customcharacter_ps30, 8 
+	"customcharacter_ps30", nullptr, 0, s_StaticComboArray_customcharacter_ps30, 8 
 };
 
 class ConstructMe_customcharacter_ps30

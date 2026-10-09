@@ -1,23 +1,37 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "server_pch.h"
+// main precompiled header for server files
+
+import std;
+import ks.tier1;
+
+#include "common.h"
+#include "quakedef.h"
+#include "decal.h"
+#include "host_cmd.h"
+#include "cmodel_engine.h"
+#include "sv_log.h"
+#include "sound.h"
+#include "EngineSoundInternal.h"
+#include "checksum_engine.h"
+#include "host.h"
+#include "keys.h"
+#include "vengineserver_impl.h"
+#include "server.h"
+#include "eiface.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+#include "console.h"
+#include "edict.h"
 #include "sv_plugin.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
 #include "eiface.h"
 #include "sys.h"
-#include "sys_dll.h"
 #include "pr_edict.h"
 #include "networkstringtable.h"
-#include "networkstringtableserver.h"
 #include "matchmaking/imatchframework.h"
-
 
 extern IMatchFramework *g_pMatchFramework;
 extern CreateInterfaceFn g_AppSystemFactory;
@@ -25,7 +39,7 @@ extern CSysModule *g_GameDLL;
 
 CServerPlugin s_ServerPlugin;
 CServerPlugin *g_pServerPluginHandler = &s_ServerPlugin;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CServerPlugin, IServerPluginHelpers, INTERFACEVERSION_ISERVERPLUGINHELPERS, s_ServerPlugin );
+static InterfaceReg s_Reg_CServerPlugin_IServerPluginHelpers( []() -> void * { return static_cast<IServerPluginHelpers *>( &s_ServerPlugin ); }, INTERFACEVERSION_ISERVERPLUGINHELPERS );;
 
 // Ascending value so they have a unique cookie to relate queries to the responses.
 static int g_iQueryCvarCookie = 1;
@@ -81,16 +95,8 @@ bool CPlugin::Load( const char *fileName )
 {
 
 	char fixedFileName[ MAX_PATH ];
-	Q_strncpy( fixedFileName, fileName, sizeof(fixedFileName) );
-	Q_FixSlashes( fixedFileName );
-
-	// Linux doesn't check signatures, so in that case disable plugins on the client completely unless -insecure is specified
-	if ( !sv.IsDedicated() && Host_IsSecureServerAllowed() )
-		return false;
-
-	// Only allow unsigned plugins in -insecure mode
-	if ( !Host_AllowLoadModule( fixedFileName, "GAME", false ) )
-		return false;
+	V_strncpy( fixedFileName, fileName, sizeof(fixedFileName) );
+	V_FixSlashes( fixedFileName );
 
 	m_pPluginModule = g_pFileSystem->LoadModule( fixedFileName, "GAME", false );
 	if ( m_pPluginModule )
@@ -159,7 +165,7 @@ void CPlugin::Unload()
 //---------------------------------------------------------------------------------
 void CPlugin::SetName( const char *name )
 {
-	Q_strncpy( m_szName, name, sizeof(m_szName) );
+	V_strncpy( m_szName, name, sizeof(m_szName) );
 }
 
 //---------------------------------------------------------------------------------
@@ -175,14 +181,14 @@ const char *CPlugin::GetName()
 //---------------------------------------------------------------------------------
 IServerPluginCallbacks *CPlugin::GetCallback()
 {
-	Assert( m_pPlugin );
+	contract_assert( m_pPlugin );
 	if ( m_pPlugin ) 
 	{	
 		return m_pPlugin;
 	}
 	else
 	{
-		Assert( !"Unable to get plugin callback interface" );
+		contract_assert( !"Unable to get plugin callback interface" );
 		Warning( "Unable to get callback interface for \"%s\"\n", GetName() );
 		return nullptr;
 	}
@@ -193,7 +199,7 @@ IServerPluginCallbacks *CPlugin::GetCallback()
 //---------------------------------------------------------------------------------
 void CPlugin::Disable( bool state )
 {
-	Assert( m_pPlugin );
+	contract_assert( m_pPlugin );
 	if ( state )
 	{
 		m_pPlugin->Pause();
@@ -513,7 +519,6 @@ bool CServerPlugin::ClientConnect( edict_t *pEntity, const char *pszName, const 
 			result = m_Plugins[i]->GetCallback()->ClientConnect( &bAllowConnect, pEntity, pszName, pszAddress, reject, maxrejectlen );
 			if ( result == PLUGIN_STOP ) // stop executing right away
 			{
-				Assert( bAllowConnect == false );
 				return bAllowConnect;
 			}
 			else if ( result == PLUGIN_OVERRIDE && bRetValOverridden == false ) // only the first PLUGIN_OVERRIDE return set the retval
@@ -743,12 +748,16 @@ void CServerPlugin::ClientCommand( edict_t *pEntity, const char *cmd )
 //
 //
 //---------------------------------------------------------------------------------
-CON_COMMAND( plugin_print, "Prints details about loaded plugins" )
+static void plugin_print( const CCommand &args );
+static ConCommand plugin_print_command( "plugin_print", plugin_print, "Prints details about loaded plugins" );
+static void plugin_print( const CCommand &args )
 {
 	g_pServerPluginHandler->PrintDetails();
 }
  
-CON_COMMAND( plugin_pause, "plugin_pause <index> : pauses a loaded plugin" )
+static void plugin_pause( const CCommand &args );
+static ConCommand plugin_pause_command( "plugin_pause", plugin_pause, "plugin_pause <index> : pauses a loaded plugin" );
+static void plugin_pause( const CCommand &args )
 {
 	if ( args.ArgC() < 2 )
 	{
@@ -756,12 +765,14 @@ CON_COMMAND( plugin_pause, "plugin_pause <index> : pauses a loaded plugin" )
 	}
 	else
 	{
-		g_pServerPluginHandler->DisablePlugin( atoi(args[2]) );
+		g_pServerPluginHandler->DisablePlugin( std::atoi(args[2]) );
 		ConMsg( "Plugin disabled\n" );
 	}
 }
 
-CON_COMMAND( plugin_unpause, "plugin_unpause <index> : unpauses a disabled plugin" )
+static void plugin_unpause( const CCommand &args );
+static ConCommand plugin_unpause_command( "plugin_unpause", plugin_unpause, "plugin_unpause <index> : unpauses a disabled plugin" );
+static void plugin_unpause( const CCommand &args )
 {
 	if ( args.ArgC() < 2 )
 	{
@@ -769,24 +780,30 @@ CON_COMMAND( plugin_unpause, "plugin_unpause <index> : unpauses a disabled plugi
 	}
 	else
 	{
-		g_pServerPluginHandler->EnablePlugin( atoi(args[2]) );
+		g_pServerPluginHandler->EnablePlugin( std::atoi(args[2]) );
 		ConMsg( "Plugin enabled\n" );
 	}
 }
 
-CON_COMMAND( plugin_pause_all, "pauses all loaded plugins" )
+static void plugin_pause_all( const CCommand &args );
+static ConCommand plugin_pause_all_command( "plugin_pause_all", plugin_pause_all, "pauses all loaded plugins" );
+static void plugin_pause_all( const CCommand &args )
 {
 	g_pServerPluginHandler->DisablePlugins();
 	ConMsg( "Plugins disabled\n" );
 }
 
-CON_COMMAND( plugin_unpause_all, "unpauses all disabled plugins" )
+static void plugin_unpause_all( const CCommand &args );
+static ConCommand plugin_unpause_all_command( "plugin_unpause_all", plugin_unpause_all, "unpauses all disabled plugins" );
+static void plugin_unpause_all( const CCommand &args )
 {
 	g_pServerPluginHandler->EnablePlugins();
 	ConMsg( "Plugins enabled\n" );
 }
 
-CON_COMMAND( plugin_load, "plugin_load <filename> : loads a plugin" )
+static void plugin_load( const CCommand &args );
+static ConCommand plugin_load_command( "plugin_load", plugin_load, "plugin_load <filename> : loads a plugin" );
+static void plugin_load( const CCommand &args )
 {
 	if ( args.ArgC() < 2 )
 	{
@@ -803,7 +820,9 @@ CON_COMMAND( plugin_load, "plugin_load <filename> : loads a plugin" )
 	}
 }
 
-CON_COMMAND( plugin_unload, "plugin_unload <index> : unloads a plugin" )
+static void plugin_unload( const CCommand &args );
+static ConCommand plugin_unload_command( "plugin_unload", plugin_unload, "plugin_unload <index> : unloads a plugin" );
+static void plugin_unload( const CCommand &args )
 {
 	if ( args.ArgC() < 2 )
 	{
@@ -811,7 +830,7 @@ CON_COMMAND( plugin_unload, "plugin_unload <index> : unloads a plugin" )
 	}
 	else
 	{
-		if ( !g_pServerPluginHandler->UnloadPlugin( atoi(args[1]) ) )
+		if ( !g_pServerPluginHandler->UnloadPlugin( std::atoi(args[1]) ) )
 		{
 			Warning( "Unable to unload plugin \"%s\", not found\n", args[1] );
 			return;
@@ -819,4 +838,3 @@ CON_COMMAND( plugin_unload, "plugin_unload <index> : unloads a plugin" )
 		ConMsg( "Unloaded plugin \"%s\"\n", args[1] );
 	}
 }
-

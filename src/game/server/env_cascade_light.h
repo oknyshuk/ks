@@ -1,7 +1,7 @@
-#ifndef ENV_CASCADE_LIGHT_H
-#define ENV_CASCADE_LIGHT_H
+#pragma once
 
 #include "reflect_annotations.h"
+#include "baseentity.h"
 
 
 //------------------------------------------------------------------------------
@@ -67,4 +67,3 @@ private:
 
 extern CCascadeLight *g_pCascadeLight;
 
-#endif // #ifndef ENV_CASCADE_LIGHT_H

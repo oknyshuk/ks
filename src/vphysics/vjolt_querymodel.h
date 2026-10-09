@@ -4,6 +4,12 @@
 
 #pragma once
 
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Collision/Shape/Shape.h>
+import ks.math;
+#include "vphysics_interface.h"
+import std;
+
 class JoltCollisionQuery final : public ICollisionQuery
 {
 public:

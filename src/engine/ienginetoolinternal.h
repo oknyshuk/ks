@@ -1,14 +1,10 @@
-//====== Copyright  1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: Methods of IEngineTool visible only inside the engine
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IENGINETOOLINTERNAL_H
-#define IENGINETOOLINTERNAL_H
+// Purpose: Methods of IEngineTool visible only inside the engine
 
 #include "toolframework/ienginetool.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Singleton implementation of external tools callback interface
@@ -19,9 +15,4 @@ public:
 	virtual void	SetIsInGame( bool bIsInGame ) = 0;
 };
 
-#if !defined( DEICATED )
 extern IEngineToolInternal *g_pEngineToolInternal;
-#endif // !LINUX
-
-#endif // IENGINETOOLINTERNAL_H
-

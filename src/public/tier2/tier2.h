@@ -1,16 +1,11 @@
-//===== Copyright (c) 2005-2005, Valve Corporation, All rights reserved. ======//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
+
 // Purpose: A higher level link library for general use in the game and tools.
-//
-//===========================================================================//
 
-
-#ifndef TIER2_H
-#define TIER2_H
-
-
-#include "tier1/tier1.h"
-
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Call this to connect to/disconnect from all tier 2 libraries.
@@ -114,7 +109,3 @@ extern FadeData_t g_aFadeData[FADE_MODE_COUNT];
 // Used by the resource system for fast resource frame counter
 //-----------------------------------------------------------------------------
 extern uint32 g_nResourceFrameCount;
-
-
-#endif // TIER2_H
-

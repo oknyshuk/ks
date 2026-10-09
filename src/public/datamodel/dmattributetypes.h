@@ -1,24 +1,10 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
-#ifndef DMATTRIBUTETYPES_H
-#define DMATTRIBUTETYPES_H
-
-#include "tier1/utlvector.h"
-#include "tier1/utlstring.h"
-#include "tier1/uniqueid.h"
-#include "color.h"
-#include "mathlib/vector2d.h"
-#include "mathlib/vector.h"
-#include "mathlib/vector4d.h"
-#include "mathlib/vmatrix.h"
+import ks.tier1;
 #include "datamodel/dmelementhandle.h"
-#include <string_view>
-#include "tier1/timeutils.h"
-
+import std;
 
 //-----------------------------------------------------------------------------
 // Object Id
@@ -119,13 +105,13 @@ inline bool IsTopological( DmAttributeType_t type )
 
 inline DmAttributeType_t ValueTypeToArrayType( DmAttributeType_t type )
 {
-	Assert( IsValueType( type ) );
+	contract_assert( IsValueType( type ) );
 	return ( DmAttributeType_t )( ( type - AT_FIRST_VALUE_TYPE ) + AT_FIRST_ARRAY_TYPE );
 }
 
 inline DmAttributeType_t ArrayTypeToValueType( DmAttributeType_t type )
 {
-	Assert( IsArrayType( type ) );
+	contract_assert( IsArrayType( type ) );
 	return ( DmAttributeType_t )( ( type - AT_FIRST_ARRAY_TYPE ) + AT_FIRST_VALUE_TYPE );
 }
 
@@ -165,31 +151,31 @@ inline int NumComponents( DmAttributeType_t type )
 template< typename T >
 inline float GetComponent( const T &value, int i )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 	return 0.0f;
 }
 
 template <> inline float GetComponent( const bool &value, int i )
 {
-	Assert( i == 0 );
+	contract_assert( i == 0 );
 	return value ? 1.0f : 0.0f;
 }
 
 template <> inline float GetComponent( const int &value, int i )
 {
-	Assert( i == 0 );
+	contract_assert( i == 0 );
 	return float( value );
 }
 
 template <> inline float GetComponent( const float &value, int i )
 {
-	Assert( i == 0 );
+	contract_assert( i == 0 );
 	return value;
 }
 
 template <> inline float GetComponent( const DmeTime_t &value, int i )
 {
-	Assert( i == 0 );
+	contract_assert( i == 0 );
 	return value.GetSeconds();
 }
 
@@ -254,7 +240,7 @@ private:
 
 	static void SetDefaultValue( T& value )
 	{
-		Assert(0);
+		contract_assert( 0 );
 	}
 };
 
@@ -279,7 +265,7 @@ public:
 
 	static void SetDefaultValue( DmUnknownAttribute_t& value )
 	{
-		Assert(0);
+		contract_assert( 0 );
 	}
 };
 
@@ -341,6 +327,3 @@ DECLARE_ATTRIBUTE_ARRAY_TYPE( VMatrix,			AT_VMATRIX_ARRAY,		"matrix_array" )
 DECLARE_ATTRIBUTE_ARRAY_TYPE( std::vector< unsigned char >,	AT_VOID_ARRAY,			"binary_array" )
 DECLARE_ATTRIBUTE_ARRAY_TYPE( DmeTime_t,		AT_TIME_ARRAY,			"time_array" )
 DECLARE_ATTRIBUTE_ARRAY_TYPE_INTERNAL( DmElementHandle_t, DmElementArray_t,	AT_ELEMENT_ARRAY, "element_array" )
-
-
-#endif // DMATTRIBUTETYPES_H

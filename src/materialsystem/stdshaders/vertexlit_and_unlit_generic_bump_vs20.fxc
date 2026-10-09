@@ -1,9 +1,9 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "SFM"						"0..0" [vs20] [PC]
 // STATIC: "SFM"						"0..1" [vs30] [PC]
 // STATIC: "SFM"						"0..0" [CONSOLE]
-
 // STATIC: "HALFLAMBERT"					"0..1"
 // STATIC: "USE_WITH_2B"					"0..1"
 // STATIC: "DECAL"							"0..1" [vs30]
@@ -15,7 +15,6 @@
 // STATIC: "FLATTEN_STATIC_CONTROL_FLOW"	"0..0" [CONSOLE]
 // STATIC: "CASCADED_SHADOW_MAPPING"		"0..1" [vs20] [PC]
 // STATIC: "CASCADED_SHADOW_MAPPING"		"0..0" [vs30] [PC]
-
 // DYNAMIC: "COMPRESSED_VERTS"				"0..1"
 // DYNAMIC: "SKINNING"						"0..1"
 // DYNAMIC: "MORPHING"						"0..0" [ = false ]
@@ -24,14 +23,11 @@
 // DYNAMIC: "TESSELLATION"					"0..0" [vs20] [PC]
 // DYNAMIC: "NUM_LIGHTS"					"0..2" [vs20] [PC]
 // DYNAMIC: "NUM_LIGHTS"					"0..0" [vs20] [CONSOLE]
-// DYNAMIC: "STATICLIGHT3"					"0..2" 
-
+// DYNAMIC: "STATICLIGHT3"					"0..2"
 // If using static control flow on Direct3D, we should use the NUM_LIGHTS=0 combo
-//  SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 ) [vs20] [PC]
-
+// SKIP: ( $FLATTEN_STATIC_CONTROL_FLOW == 0 ) && ( $NUM_LIGHTS > 0 ) [vs20] [PC]
 // When tessellating, we don't have room in the super-prim vertices for more colors, tex coords or objects space positions
 // SKIP: ( $STATICLIGHT3 || $MORPHING || $SKINNING || $COMPRESSED_VERTS) && $TESSELLATION
-
 //	SKIP: ( $SFM == 0 ) && ( $MORPHING )
 //	SKIP: ( $SFM == 0 ) && ( $TESSELLATION )
 

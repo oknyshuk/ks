@@ -1,13 +1,38 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
 // Purpose: System to generate events as specified entities become visible to players.
 //			This contains some specific early-outs and culling code, so it's not
 //			exactly general purpose yet. (sjb)
-//
-// $NoKeywords: $
-//=====================================================================================//
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "player.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "cvisibilitymonitor.h"
 
 ConVar debug_visibility_monitor("debug_visibility_monitor", "0", FCVAR_CHEAT );
@@ -17,7 +42,7 @@ ConVar vismon_trace_limit("vismon_trace_limit", "12", FCVAR_CHEAT );
 //=============================================================================
 // This structure packages up an entity for the visibility monitor.
 //=============================================================================
-#define NO_VISIBILITY_MEMORY	0
+constexpr auto NO_VISIBILITY_MEMORY = 0;
 struct visibility_target_t
 {
 	EHANDLE						entity;
@@ -314,7 +339,7 @@ void CVisibilityMonitor::LevelShutdownPreEntity()
 //---------------------------------------------------------
 void CVisibilityMonitor::AddEntity( CBaseEntity *pEntity, float flMinDist, VisibilityMonitorCallback pfnCallback, VisibilityMonitorEvaluator pfnEvaluator, bool bNotVisibleThroughGlass )
 {
-	Assert( pEntity != nullptr );
+	contract_assert( pEntity != nullptr );
 
 	if( !IsTrackingEntity( pEntity ) )
 	{
@@ -340,7 +365,7 @@ void CVisibilityMonitor::AddEntity( CBaseEntity *pEntity, float flMinDist, Visib
 //---------------------------------------------------------
 void CVisibilityMonitor::RemoveEntity( CBaseEntity *pEntity )
 {
-	Assert( pEntity != nullptr );
+	contract_assert( pEntity != nullptr );
 
 	for( int i = 0 ; i < std::ssize( m_Entities ) ; i++ )
 	{
@@ -362,7 +387,7 @@ void CVisibilityMonitor::RemoveEntity( CBaseEntity *pEntity )
 //---------------------------------------------------------
 bool CVisibilityMonitor::IsTrackingEntity( CBaseEntity *pEntity )
 {
-	Assert( pEntity != nullptr );
+	contract_assert( pEntity != nullptr );
 
 	for( int i = 0 ; i < std::ssize( m_Entities ) ; i++ )
 	{
@@ -396,4 +421,3 @@ void VisibilityMonitor_RemoveEntity( CBaseEntity *pEntity )
 {
 	VisibilityMonitor.RemoveEntity( pEntity );
 }
-

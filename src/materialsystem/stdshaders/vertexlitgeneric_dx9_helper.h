@@ -1,15 +1,10 @@
-//========= Copyright (c) 1996-2007, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#ifndef VERTEXLITGENERIC_DX9_HELPER_H
-#define VERTEXLITGENERIC_DX9_HELPER_H
-
-#include <string.h>
-
+import std;
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+class CBasePerMaterialContextData;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -25,7 +20,7 @@ class IShaderShadow;
 //-----------------------------------------------------------------------------
 struct VertexLitGeneric_DX9_Vars_t
 {
-	VertexLitGeneric_DX9_Vars_t() { memset( this, 0xFF, sizeof(*this) ); }
+	VertexLitGeneric_DX9_Vars_t() { std::memset( this, 0xFF, sizeof(*this) ); }
 
 	int m_nBaseTexture;
 	int m_nWrinkle;
@@ -198,5 +193,3 @@ void DrawVertexLitGeneric_DX9_ExecuteFastPath( int *vsDynIndex, int *psDynIndex,
 											  VertexLitGeneric_DX9_Vars_t &info, 
 											  VertexCompressionType_t vertexCompression, CBasePerMaterialContextData **pContextDataPtr,
 											  BOOL bCSMEnabled, BOOL bVertexLitGeneric = true  );
-
-#endif // VERTEXLITGENERIC_DX9_HELPER_H

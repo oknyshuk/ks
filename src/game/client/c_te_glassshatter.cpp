@@ -1,27 +1,36 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "const.h"
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
+#include "vphysics_interface.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "particle_simple3d.h"
-#include "tier1/keyvalues.h"
 #include "toolframework_client.h"
 #include "fx.h"
-#include "tier0/vprof.h"
-
 
 #define PI 3.14159265359
-#define GLASS_SHARD_MIN_LIFE 2
-#define GLASS_SHARD_MAX_LIFE 5
-#define GLASS_SHARD_NOISE	 0.3
-#define GLASS_SHARD_GRAVITY  500
-#define GLASS_SHARD_DAMPING	 0.3
+constexpr auto GLASS_SHARD_MIN_LIFE = 2;
+constexpr auto GLASS_SHARD_MAX_LIFE = 5;
+constexpr auto GLASS_SHARD_NOISE = 0.3;
+constexpr auto GLASS_SHARD_GRAVITY = 500;
+constexpr auto GLASS_SHARD_DAMPING = 0.3;
  
 #include "precache_register.h"
 
@@ -148,7 +157,7 @@ void C_TEShatterSurface::RecordShatterSurface( )
 //-----------------------------------------------------------------------------
 void C_TEShatterSurface::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEShatterSurface::PostDataUpdate" );
+	CVProfScope _( "C_TEShatterSurface::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	RecordShatterSurface();
 

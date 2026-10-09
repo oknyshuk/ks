@@ -1,17 +1,21 @@
-//========== Copyright (c) 2005, Valve Corporation, All rights reserved. ========
-//
-// Purpose:
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005 Valve Corporation
 
-#include "pch_materialsystem.h"
+import std;
 
-#define MATSYS_INTERNAL
+
+import ks.tier1;
+
+
+#include "materialsystem_global.h"
+#include "materialsystem/imesh.h"
+
+#include "imaterialinternal.h"
+#include "imaterialsysteminternal.h"
+
 
 #include "occlusionquerymgr.h"
 #include "imaterialsysteminternal.h"
-#include "imatrendercontextinternal.h"
-
 
 //-----------------------------------------------------------------------------
 // Singleton
@@ -75,7 +79,7 @@ void COcclusionQueryMgr::FlushQuery( OcclusionQueryObjectHandle_t hOcclusionQuer
 
 void COcclusionQueryMgr::DestroyOcclusionQueryObject( OcclusionQueryObjectHandle_t hOcclusionQuery )
 {
-	Assert( IsValidHandle( hOcclusionQuery ) );
+	contract_assert( IsValidHandle( hOcclusionQuery ) );
 	if ( IsValidHandle( hOcclusionQuery ) )
 	{
 		OcclusionQueryObject_t &query = FromHandle( hOcclusionQuery );
@@ -145,7 +149,7 @@ void COcclusionQueryMgr::FreeOcclusionQueryObjects( void )
 //-----------------------------------------------------------------------------
 void COcclusionQueryMgr::ResetOcclusionQueryObject( OcclusionQueryObjectHandle_t hOcclusionQuery )
 {
-	Assert( IsValidHandle( hOcclusionQuery ) );
+	contract_assert( IsValidHandle( hOcclusionQuery ) );
 	if ( IsValidHandle( hOcclusionQuery ) )
 	{
 		OcclusionQueryObject_t &query = FromHandle( hOcclusionQuery );
@@ -166,7 +170,7 @@ void COcclusionQueryMgr::ResetOcclusionQueryObject( OcclusionQueryObjectHandle_t
 //-----------------------------------------------------------------------------
 void COcclusionQueryMgr::BeginOcclusionQueryDrawing( OcclusionQueryObjectHandle_t hOcclusionQuery )
 {
-	Assert( IsValidHandle( hOcclusionQuery ) );
+	contract_assert( IsValidHandle( hOcclusionQuery ) );
 	if ( IsValidHandle( hOcclusionQuery ) )
 	{
 		OcclusionQueryObject_t &query = FromHandle( hOcclusionQuery );
@@ -206,7 +210,7 @@ void COcclusionQueryMgr::BeginOcclusionQueryDrawing( OcclusionQueryObjectHandle_
 
 void COcclusionQueryMgr::EndOcclusionQueryDrawing( OcclusionQueryObjectHandle_t hOcclusionQuery )
 {
-	Assert( IsValidHandle( hOcclusionQuery ) );
+	contract_assert( IsValidHandle( hOcclusionQuery ) );
 	if ( IsValidHandle( hOcclusionQuery ) )
 	{
 		OcclusionQueryObject_t &query = FromHandle( hOcclusionQuery );
@@ -232,7 +236,7 @@ void COcclusionQueryMgr::EndOcclusionQueryDrawing( OcclusionQueryObjectHandle_t 
 //-----------------------------------------------------------------------------
 void COcclusionQueryMgr::OcclusionQuery_IssueNumPixelsRenderedQuery( OcclusionQueryObjectHandle_t hOcclusionQuery )
 {
-	Assert( IsValidHandle( hOcclusionQuery ) );
+	contract_assert( IsValidHandle( hOcclusionQuery ) );
 	if ( IsValidHandle( hOcclusionQuery ) )
 	{
 		OcclusionQueryObject_t &query = FromHandle( hOcclusionQuery );

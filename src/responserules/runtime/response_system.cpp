@@ -1,31 +1,22 @@
-//========= Copyright (c) 1996-2010, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2010 Valve Corporation
+
 // Purpose: Core types for the response rules -- criteria, responses, rules, and matchers.
-//
-// $NoKeywords: $
-//=============================================================================//
 
+import ks.vstdlib;
 #include "rrbase.h"
-#include "vstdlib/random.h"
-#include "tier1/byte_reader.h"
+import std;
 #include "tier2/interval.h"
-#include "fmtstr.h"
-#include "generichash.h"
-
 
 using namespace ResponseRules;
-#if RESPONSE_RULES_DEBUG_ENABLED // this is an exploit to crash game servers, it is now disabled
-static void CC_RR_Debug_ResponseConcept_Exclude( const CCommand &args );
-static ConCommand rr_debug_responseconcept_exclude( "rr_debugresponseconcept_exclude", CC_RR_Debug_ResponseConcept_Exclude, "Set a list of concepts to exclude from rr_debugresponseconcept. Separate multiple concepts with spaces. Call with no arguments to see current list. Call 'rr_debug_responseconcept_exclude !' to reset.");
-#endif
 static void CC_RR_DumpHashInfo( const CCommand &args );
 
 namespace ResponseRules
 {
 	// ick
 	// Wrap string lookup with a hash on the string so that all of the repetitive playerxxx type strings get bucketed out better
-	#define STRING_BUCKETS_COUNT 64		// Must be power of two
-	#define STRING_BUCKETS_MASK ( STRING_BUCKETS_COUNT - 1 )
+	constexpr auto STRING_BUCKETS_COUNT = 64; // Must be power of two
+	constexpr auto STRING_BUCKETS_MASK = ( STRING_BUCKETS_COUNT - 1 );
 
 	// Interned copies, never freed: callers keep the pointers.
 	std::set< const char *, ks::cstr_less > g_ResponseStrings[ STRING_BUCKETS_COUNT ];
@@ -47,9 +38,9 @@ namespace ResponseRules
 			return *it;
 		}
 
-		int len = Q_strlen( in );
+		int len = V_strlen( in );
 		char *out = new char[ len + 1 ];
-		Q_memcpy( out, in, len );
+		V_memcpy( out, in, len );
 		out[ len ] = 0;
 		list.insert( out );
 		return out;
@@ -58,7 +49,7 @@ namespace ResponseRules
 
 IEngineEmulator *IEngineEmulator::Get()
 {
-	AssertMsg( IEngineEmulator::s_pSingleton, "Response rules fail: no IEngineEmulator" );
+	contract_assert( IEngineEmulator::s_pSingleton && "Response rules fail: no IEngineEmulator" );
 	return IEngineEmulator::s_pSingleton;
 }
 
@@ -72,7 +63,7 @@ ConVar rr_debugresponses( "rr_debugresponses", "0", FCVAR_NONE, "Show verbose ma
 ConVar rr_debugrule( "rr_debugrule", "", FCVAR_NONE, "If set to the name of the rule, that rule's score will be shown whenever a concept is passed into the response rules system.");
 ConVar rr_dumpresponses( "rr_dumpresponses", "0", FCVAR_NONE, "Dump all response_rules.txt and rules (requires restart)" );
 ConVar rr_debugresponseconcept( "rr_debugresponseconcept", "", FCVAR_NONE, "If set, rr_debugresponses will print only responses testing for the specified concept" );
-#define RR_DEBUGRESPONSES_SPECIALCASE 4
+constexpr auto RR_DEBUGRESPONSES_SPECIALCASE = 4;
 
 
 
@@ -127,25 +118,25 @@ static soundlevel_t TextToSoundLevel( const char *key )
 {
 	if ( !key )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return SNDLVL_NORM;
 	}
 
-	int c = ARRAYSIZE( g_pSoundLevels );
+	int c = std::size( g_pSoundLevels );
 
 	int i;
 
 		for ( i = 0; i < c; i++ )
 	{
 		SoundLevelLookup *entry = &g_pSoundLevels[ i ];
-		if ( !Q_strcasecmp( key, entry->name ) )
+		if ( !V_strcasecmp( key, entry->name ) )
 			return entry->level;
 	}
 
-	if ( !Q_strnicmp( key, SNDLVL_PREFIX, Q_strlen( SNDLVL_PREFIX ) ) )
+	if ( !V_strnicmp( key, SNDLVL_PREFIX, V_strlen( SNDLVL_PREFIX ) ) )
 	{
-		char const *val = key + Q_strlen( SNDLVL_PREFIX );
-		int sndlvl = atoi( val );
+		char const *val = key + V_strlen( SNDLVL_PREFIX );
+		int sndlvl = std::atoi( val );
 		if ( sndlvl > 0 && sndlvl <= 180 )
 		{
 			return ( soundlevel_t )sndlvl;
@@ -182,9 +173,9 @@ CResponseSystem::~CResponseSystem()
 // Purpose: 
 // Output : char const
 //-----------------------------------------------------------------------------
-void CResponseSystem::GetCurrentScript( char *buf, size_t buflen )
+void CResponseSystem::GetCurrentScript( char *buf, std::size_t buflen )
 {
-	Assert( buf );
+	contract_assert( buf );
 	buf[ 0 ] = 0;
 	if ( std::ssize( m_ScriptStack ) <= 0 )
 		return;
@@ -208,7 +199,7 @@ void CResponseSystem::PushScript( const char *scriptfile, unsigned char *buffer 
 
 void CResponseSystem::PopScript(void)
 {
-	Assert( std::ssize( m_ScriptStack ) >= 1 );
+	contract_assert( std::ssize( m_ScriptStack ) >= 1 );
 	if ( std::ssize( m_ScriptStack ) <= 0 )
 		return;
 
@@ -251,11 +242,11 @@ float CResponseSystem::LookupEnumeration( const char *name, bool& found )
 // Purpose: 
 // Input  : matcher - 
 //-----------------------------------------------------------------------------
-void CResponseSystem::ResolveToken( Matcher& matcher, char *token, size_t bufsize, char const *rawtoken )
+void CResponseSystem::ResolveToken( Matcher& matcher, char *token, std::size_t bufsize, char const *rawtoken )
 {
 	if ( rawtoken[0] != '[' )
 	{
-		Q_strncpy( token, rawtoken, bufsize );
+		V_strncpy( token, rawtoken, bufsize );
 		return;
 	}
 
@@ -264,18 +255,18 @@ void CResponseSystem::ResolveToken( Matcher& matcher, char *token, size_t bufsiz
 	float f = LookupEnumeration( rawtoken, found );
 	if ( !found )
 	{
-		Q_strncpy( token, rawtoken, bufsize );
+		V_strncpy( token, rawtoken, bufsize );
 		ResponseWarning( "No such enumeration '%s'\n", token );
 		return;
 	}
 
-	Q_snprintf( token, bufsize, "%f", f );
+	V_snprintf( token, bufsize, "%f", f );
 }
 
 
 static bool AppearsToBeANumber( char const *token )
 {
-	if ( atof( token ) != 0.0f )
+	if ( std::atof( token ) != 0.0f )
 		return true;
 
 	char const *p = token;
@@ -322,13 +313,13 @@ void CResponseSystem::ComputeMatcher( Criteria *c, Matcher& matcher )
 		case '>':
 			{
 				gt = true;
-				Assert( !lt ); // Can't be both
+				contract_assert( !lt ); // Can't be both
 			}
 			break;
 		case '<':
 			{
 				lt = true;
-				Assert( !gt );  // Can't be both
+				contract_assert( !gt );  // Can't be both
 			}
 			break;
 		case '=':
@@ -350,7 +341,7 @@ void CResponseSystem::ComputeMatcher( Criteria *c, Matcher& matcher )
 				{
 					matcher.usemin = true;
 					matcher.minequals = eq;
-					matcher.minval = (float)atof( token );
+					matcher.minval = (float)std::atof( token );
 
 					matcher.isnumeric = true;
 				}
@@ -358,7 +349,7 @@ void CResponseSystem::ComputeMatcher( Criteria *c, Matcher& matcher )
 				{
 					matcher.usemax = true;
 					matcher.maxequals = eq;
-					matcher.maxval = (float)atof( token );
+					matcher.maxval = (float)std::atof( token );
 
 					matcher.isnumeric = true;
 				}
@@ -367,7 +358,7 @@ void CResponseSystem::ComputeMatcher( Criteria *c, Matcher& matcher )
 					if ( *in == ',' )
 					{
 						// If there's a comma, this better have been a less than or a gt key
-						Assert( 0 );
+						contract_assert( 0 );
 					}
 
 					matcher.notequal = nt;
@@ -404,7 +395,7 @@ bool CResponseSystem::CompareUsingMatcher( const char *setValue, Matcher& m, boo
 	if ( !m.valid )
 		return false;
 
-	float v = (float)atof( setValue );
+	float v = (float)std::atof( setValue );
 	if ( setValue[0] == '[' )
 	{
 		bool found = false;
@@ -455,12 +446,12 @@ bool CResponseSystem::CompareUsingMatcher( const char *setValue, Matcher& m, boo
 	{
 		if ( m.isnumeric )
 		{
-			if ( v == (float)atof( m.GetToken() ) )
+			if ( v == (float)std::atof( m.GetToken() ) )
 				return false;
 		}
 		else
 		{
-			if ( !Q_stricmp( setValue, m.GetToken() ) )
+			if ( !V_stricmp( setValue, m.GetToken() ) )
 				return false;
 		}
 
@@ -474,16 +465,16 @@ bool CResponseSystem::CompareUsingMatcher( const char *setValue, Matcher& m, boo
 		if ( !setValue || !setValue[0] )
 			return false;
 
-		return v == (float)atof( m.GetToken() );
+		return v == (float)std::atof( m.GetToken() );
 	}
 
-	return !Q_stricmp( setValue, m.GetToken() ) ? true : false;
+	return !V_stricmp( setValue, m.GetToken() ) ? true : false;
 }
 
 bool CResponseSystem::Compare( const char *setValue, Criteria *c, bool verbose /*= false*/ )
 {
-	Assert( c );
-	Assert( setValue );
+	contract_assert( c );
+	contract_assert( setValue );
 
 	bool bret = CompareUsingMatcher( setValue, c->matcher, verbose );
 
@@ -540,8 +531,8 @@ float CResponseSystem::LookForCriteria( const CriteriaSet &criteriaSet, Criteria
 	if ( iIndex == -1 )
 		return 0.0f;
 
-	Assert( criteriaSet.GetValue( iIndex ) );
-	if ( Q_stricmp( criteriaSet.GetValue( iIndex ), pCriteria->value ) )
+	contract_assert( criteriaSet.GetValue( iIndex ) );
+	if ( V_stricmp( criteriaSet.GetValue( iIndex ), pCriteria->value ) )
 		return 0.0f;
 
 	return 1.0f;
@@ -577,12 +568,12 @@ float CResponseSystem::ScoreCriteriaAgainstRuleCriteria( const CriteriaSet& set,
 		actualValue = set.GetValue( found );
 		if ( !actualValue )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			return score;
 		}
 	}
 
-	Assert( actualValue );
+	contract_assert( actualValue );
 
 	if ( Compare( actualValue, c, verbose ) )
 	{
@@ -619,14 +610,14 @@ float CResponseSystem::ScoreCriteriaAgainstRuleCriteria( const CriteriaSet& set,
 
 float CResponseSystem::ScoreCriteriaAgainstRule( const CriteriaSet& set, ResponseRulePartition::tRuleDict &dict, int irule, bool verbose /*=false*/ )
 {
-	Rule * RESTRICT rule = dict[ irule ].get();
+	Rule * __restrict__ rule = dict[ irule ].get();
 	float score = 0.0f;
 
 	bool bBeingWatched = false;
 
 	// See if we're trying to debug this rule
 	const char *pszText = rr_debugrule.GetString();
-	if ( pszText && pszText[0] && !Q_stricmp( pszText, dict.GetElementName( irule ) ) )
+	if ( pszText && pszText[0] && !V_stricmp( pszText, dict.GetElementName( irule ) ) )
 	{
 		bBeingWatched = true;
 	}
@@ -676,7 +667,7 @@ float CResponseSystem::ScoreCriteriaAgainstRule( const CriteriaSet& set, Respons
 	if ( rule->m_nForceWeight > 0 )
 	{	// this means override the cumulative weight of criteria and just force the rule's total score,
 		// assuming it matched at all.
-		return fsel( score - FLT_MIN, rule->m_nForceWeight, 0 );
+		return fsel( score - std::numeric_limits<float>::min(), rule->m_nForceWeight, 0 );
 	}
 	else
 	{
@@ -686,8 +677,9 @@ float CResponseSystem::ScoreCriteriaAgainstRule( const CriteriaSet& set, Respons
 
 void CResponseSystem::DebugPrint( int depth, const char *fmt, ... )
 {
+	ks::ScratchArena<> scratch;
 	int indentchars = 3 * depth;
-	char *indent = (char *) stackalloc( indentchars + 1);
+	char *indent = (char *) scratch.AllocBytes( indentchars + 1);
 	indent[ indentchars ] = 0;
 	while ( --indentchars >= 0 )
 	{
@@ -695,12 +687,12 @@ void CResponseSystem::DebugPrint( int depth, const char *fmt, ... )
 	}
 
 	// Dump text to debugging console.
-	va_list argptr;
+	std::va_list argptr;
 	char szText[1024];
 
-	va_start (argptr, fmt);
-	Q_vsnprintf (szText, sizeof( szText ), fmt, argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr, fmt);
+	V_vsnprintf (szText, sizeof( szText ), fmt, argptr);
+	__builtin_va_end (argptr);
 
 	DevMsg( "%s%s", indent, szText );
 }
@@ -772,7 +764,7 @@ int CResponseSystem::SelectWeightedResponseFromResponseGroup( ResponseGroup *g, 
 	int c = std::ssize( g->group );
 	if ( !c )
 	{
-		Assert( !"Expecting response group with >= 1 elements" );
+		contract_assert( !"Expecting response group with >= 1 elements" );
 		return -1;
 	}
 
@@ -825,7 +817,7 @@ int CResponseSystem::SelectWeightedResponseFromResponseGroup( ResponseGroup *g, 
 
 				if ( r->last )
 				{
-					Assert( i == check );
+					contract_assert( i == check );
 					continue;
 				}
 
@@ -1192,18 +1184,18 @@ bool CResponseSystem::FindBestResponse( const CriteriaSet& set, CRR_Response& re
 	bcontexttoworld = false;
 	if ( m_RulePartitions.IsValid( bestRule ) )
 	{
-		Rule * RESTRICT r = &m_RulePartitions[ bestRule ];
+		Rule * __restrict__ r = &m_RulePartitions[ bestRule ];
 
 		ResponseSearchResult result;
 		if ( GetBestResponse( result, r, showResult, pFilter ) )
 		{
-			Q_strncpy( responseName, result.action->value, sizeof( responseName ) );
+			V_strncpy( responseName, result.action->value, sizeof( responseName ) );
 			responseType = result.action->GetType();
 			rp = result.action->params;
 			rp.m_pFollowup = &result.action->m_followup;
 		}
 
-		Q_strncpy( ruleName, m_RulePartitions.GetElementName( bestRule ), sizeof( ruleName ) );
+		V_strncpy( ruleName, m_RulePartitions.GetElementName( bestRule ), sizeof( ruleName ) );
 
 		// Disable the rule if it only allows for matching one time
 		if ( r->IsMatchOnce() )
@@ -1293,7 +1285,7 @@ void CResponseSystem::ParseInclude()
 {
 	char includefile[ 256 ];
 	ParseToken();
-	Q_snprintf( includefile, sizeof( includefile ), "scripts/%s", token );
+	V_snprintf( includefile, sizeof( includefile ), "scripts/%s", token );
 
 	// check if the file is already included
 	if ( m_IncludedFiles.contains( includefile ) )
@@ -1301,7 +1293,6 @@ void CResponseSystem::ParseInclude()
 		return;
 	}
 
-	MEM_ALLOC_CREDIT();
 
 	// Try and load it
 	auto file = IEngineEmulator::Get()->GetFilesystem()->ReadFile( includefile, "GAME" );
@@ -1382,7 +1373,7 @@ void CResponseSystem::LoadRuleSet( const char *basescript )
 
 	IEngineEmulator::Get()->FreeFile( buffer );
 
-	Assert( std::ssize( m_ScriptStack ) == 0 );
+	contract_assert( std::ssize( m_ScriptStack ) == 0 );
 	float flEnd = Plat_FloatTime();
 	COM_TimestampedLog( "CResponseSystem::LoadRuleSet took %f msec", 1000.0f * ( flEnd - flStart ) );
 }
@@ -1420,7 +1411,7 @@ inline ResponseType_t ComputeResponseType( const char *s )
 void CResponseSystem::ParseResponse_Weight( ParserResponse &newResponse, ResponseGroup& group, AI_ResponseParams *rp )
 {
 	ParseToken();
-	newResponse.weight.SetFloat( (float)atof( token ) );
+	newResponse.weight.SetFloat( (float)std::atof( token ) );
 }
 
 void CResponseSystem::ParseResponse_PreDelay( ParserResponse &newResponse, ResponseGroup& group, AI_ResponseParams *rp )
@@ -1471,7 +1462,7 @@ void CResponseSystem::ParseResponse_Odds( ParserResponse &newResponse, ResponseG
 {
 	ParseToken();
 	rp->flags |= AI_ResponseParams::RG_ODDS;
-	rp->odds = clamp( atoi( token ), 0, 100 );
+	rp->odds = clamp( std::atoi( token ), 0, 100 );
 }
 
 void CResponseSystem::ParseResponse_RespeakDelay( ParserResponse &newResponse, ResponseGroup& group, AI_ResponseParams *rp )
@@ -1532,7 +1523,7 @@ void CResponseSystem::ParseResponse_Fire( ParserResponse &newResponse, ResponseG
 		ResponseWarning( "FIRE token in response needs exactly three parameters." );
 		return;
 	}
-	newResponse.m_followup.followup_entityiodelay = atof( token );
+	newResponse.m_followup.followup_entityiodelay = std::atof( token );
 	/*
 	m_followup.followup_entityioinput = ResponseCopyString(src.m_followup.followup_entityioinput);
 	m_followup.followup_entityiotarget = ResponseCopyString(src.m_followup.followup_entityiotarget);
@@ -1545,7 +1536,7 @@ void CResponseSystem::ParseResponse_Then( ParserResponse &newResponse, ResponseG
 	bool bSuc = ParseToken();
 	if (!bSuc)
 	{
-		AssertMsg(false, "THEN token in response lacked any further info.\n");
+		contract_assert( false && "THEN token in response lacked any further info.\n" );
 		ResponseWarning( "THEN token in response lacked any further info.\n" );
 		return;
 	}
@@ -1555,7 +1546,7 @@ void CResponseSystem::ParseResponse_Then( ParserResponse &newResponse, ResponseG
 	bSuc = ParseToken(); // get another token
 	if (!bSuc)
 	{
-		AssertMsg1(false, "THEN token in response had a target '%s', but lacked any further info.\n", newResponse.m_followup.followup_target );
+		contract_assert( false && "THEN token in response had a target '%s', but lacked any further info.\n" );
 		ResponseWarning( "THEN token in response had a target '%s', but lacked any further info.\n", newResponse.m_followup.followup_target );
 		return;
 	}
@@ -1572,7 +1563,7 @@ void CResponseSystem::ParseResponse_Then( ParserResponse &newResponse, ResponseG
 	bSuc = ParseToken();
 	if (!bSuc)
 	{
-		AssertMsg(false, "THEN token in response lacked contexts.\n");
+		contract_assert( false && "THEN token in response lacked contexts.\n" );
 		ResponseWarning( "THEN token in response lacked contexts.\n" );
 		return;
 	}
@@ -1584,15 +1575,15 @@ void CResponseSystem::ParseResponse_Then( ParserResponse &newResponse, ResponseG
 	buf[0] = '\0';
 	while ( TokenWaiting() )
 	{
-		Q_strncat( buf, token, 4096 );
+		V_strncat( buf, token, 4096 );
 		bSuc = ParseToken();
-		AssertMsg(bSuc, "Token parsing mysteriously failed.");
+		contract_assert( bSuc && "Token parsing mysteriously failed." );
 	}
 
 	// down here, token is the last token, and buf is everything up to there.
 	newResponse.m_followup.followup_contexts = ResponseCopyString( buf );
 
-	newResponse.m_followup.followup_delay = atof( token );
+	newResponse.m_followup.followup_delay = std::atof( token );
 }
 
 void CResponseSystem::ParseOneResponse( const char *responseGroupName, ResponseGroup& group, ResponseParams *defaultParams )
@@ -1637,20 +1628,20 @@ void CResponseSystem::ParseResponseGroup_Start( char const *responseGroupName, R
 			while ( 1 )
 			{
 				ParseToken();
-				if ( !Q_stricmp( token, "}" ) )
+				if ( !V_stricmp( token, "}" ) )
 					break;
 
-				if ( !Q_stricmp( token, "permitrepeats" ) )
+				if ( !V_stricmp( token, "permitrepeats" ) )
 				{
 					newGroup.m_bDepleteBeforeRepeat = false;
 					continue;
 				}
-				else if ( !Q_stricmp( token, "sequential" ) )
+				else if ( !V_stricmp( token, "sequential" ) )
 				{
 					newGroup.SetSequential( true );
 					continue;
 				}
-				else if ( !Q_stricmp( token, "norepeat" ) )
+				else if ( !V_stricmp( token, "norepeat" ) )
 				{
 					newGroup.SetNoRepeat( true );
 					continue;
@@ -1708,7 +1699,7 @@ void CResponseSystem::ParseResponseGroup_Odds( char const *responseGroupName, Re
 		{
 			ParseToken();
 	groupResponseParams.flags |= AI_ResponseParams::RG_ODDS;
-			groupResponseParams.odds = clamp( atoi( token ), 0, 100 );
+			groupResponseParams.odds = clamp( std::atoi( token ), 0, 100 );
 		}
 
 void CResponseSystem::ParseResponseGroup_RespeakDelay( char const *responseGroupName, ResponseGroup &newGroup, AI_ResponseParams &groupResponseParams )
@@ -1742,7 +1733,7 @@ void CResponseSystem::ParseResponse( void )
 	// Should have groupname at start
 	ParseToken();
 	char responseGroupName[ 128 ];
-	Q_strncpy( responseGroupName, token, sizeof( responseGroupName ) );
+	V_strncpy( responseGroupName, token, sizeof( responseGroupName ) );
 
 	ResponseGroup &newGroup = m_Responses.emplace( responseGroupName, ResponseGroup() )->second;
 
@@ -1807,14 +1798,14 @@ CriteriaEntry_t *CResponseSystem::ParseOneCriterion( const char *criterionName )
 			break;
 		}
 
-		if ( !Q_stricmp( token, "{" ) )
+		if ( !V_stricmp( token, "{" ) )
 		{
 			gotbody = true;
 
 			while ( 1 )
 			{
 				ParseToken();
-				if ( !Q_stricmp( token, "}" ) )
+				if ( !V_stricmp( token, "}" ) )
 					break;
 
 				// Look up subcriteria
@@ -1830,23 +1821,23 @@ CriteriaEntry_t *CResponseSystem::ParseOneCriterion( const char *criterionName )
 			}
 			continue;
 		}
-		else if ( !Q_stricmp( token, "required" ) )
+		else if ( !V_stricmp( token, "required" ) )
 		{
 			pNewCriterion->required = true;
 		}
-		else if ( !Q_stricmp( token, "weight" ) )
+		else if ( !V_stricmp( token, "weight" ) )
 		{
 			ParseToken();
-			pNewCriterion->weight.SetFloat( (float)atof( token ) );
+			pNewCriterion->weight.SetFloat( (float)std::atof( token ) );
 		}
 		else
 		{
-			Assert( pNewCriterion->subcriteria.empty() );
+			contract_assert( pNewCriterion->subcriteria.empty() );
 
 			// Assume it's the math info for a non-subcriteria resposne
-			Q_strncpy( key, token, sizeof( key ) );
+			V_strncpy( key, token, sizeof( key ) );
 			ParseToken();
-			Q_strncpy( value, token, sizeof( value ) );
+			V_strncpy( value, token, sizeof( value ) );
 
 			V_strlower( key );
 			pNewCriterion->nameSym = CriteriaSet::ComputeCriteriaSymbol( key );
@@ -1873,7 +1864,7 @@ void CResponseSystem::ParseCriterion( void )
 	// Should have groupname at start
 	char criterionName[ 128 ];
 	ParseToken();
-	Q_strncpy( criterionName, token, sizeof( criterionName ) );
+	V_strncpy( criterionName, token, sizeof( criterionName ) );
 
 	ParseOneCriterion( criterionName );
 }
@@ -1886,10 +1877,10 @@ void CResponseSystem::ParseEnumeration( void )
 {
 	char enumerationName[ 128 ];
 	ParseToken();
-	Q_strncpy( enumerationName, token, sizeof( enumerationName ) );
+	V_strncpy( enumerationName, token, sizeof( enumerationName ) );
 
 	ParseToken();
-	if ( Q_stricmp( token, "{" ) )
+	if ( V_stricmp( token, "{" ) )
 	{
 		ResponseWarning( "Expecting '{' in enumeration '%s', got '%s'\n", enumerationName, token );
 		return;
@@ -1898,10 +1889,10 @@ void CResponseSystem::ParseEnumeration( void )
 	while ( 1 )
 	{
 		ParseToken();
-		if ( !Q_stricmp( token, "}" ) )
+		if ( !V_stricmp( token, "}" ) )
 			break;
 
-		if ( Q_strlen( token ) <= 0 )
+		if ( V_strlen( token ) <= 0 )
 		{
 			ResponseWarning( "Expecting more tokens in enumeration '%s'\n", enumerationName );
 			break;
@@ -1909,13 +1900,13 @@ void CResponseSystem::ParseEnumeration( void )
 
 		char key[ 128 ];
 
-		Q_strncpy( key, token, sizeof( key ) );
+		V_strncpy( key, token, sizeof( key ) );
 		ParseToken();
-		float value = (float)atof( token );
+		float value = (float)std::atof( token );
 
 		char sz[ 128 ];
-		Q_snprintf( sz, sizeof( sz ), "[%s::%s]", enumerationName, key );
-		Q_strlower( sz );
+		V_snprintf( sz, sizeof( sz ), "[%s::%s]", enumerationName, key );
+		V_strlower( sz );
 
 		Enumeration newEnum;
 		newEnum.value = value;
@@ -1963,7 +1954,6 @@ void CResponseSystem::ParseRule_Response( Rule &newRule )
 				auto it = m_Responses.find( token );
 				if ( it != m_Responses.end() )
 				{
-					MEM_ALLOC_CREDIT();
 					newRule.m_Responses.push_back( &*it );
 				}
 				else
@@ -2005,7 +1995,6 @@ void CResponseSystem::ParseRule_Criteria( Rule &newRule )
 				auto it = m_Criteria.find( token );
 				if ( it != m_Criteria.end() )
 				{
-					MEM_ALLOC_CREDIT();
 					newRule.m_Criteria.push_back( &*it );
 				}
 				else
@@ -2026,10 +2015,10 @@ void CResponseSystem::ParseRule( void )
 
 	char ruleName[ 128 ];
 	ParseToken();
-	Q_strncpy( ruleName, token, sizeof( ruleName ) );
+	V_strncpy( ruleName, token, sizeof( ruleName ) );
 
 	ParseToken();
-	if ( Q_stricmp( token, "{" ) )
+	if ( V_stricmp( token, "{" ) )
 	{
 		ResponseWarning( "Expecting '{' in rule '%s', got '%s'\n", ruleName, token );
 		return;
@@ -2045,12 +2034,12 @@ void CResponseSystem::ParseRule( void )
 	while ( 1 )
 	{
 		ParseToken();
-		if ( !Q_stricmp( token, "}" ) )
+		if ( !V_stricmp( token, "}" ) )
 		{
 			break;
 		}
 
-		if ( Q_strlen( token ) <= 0 )
+		if ( V_strlen( token ) <= 0 )
 		{
 			ResponseWarning( "Expecting more tokens in rule '%s'\n", ruleName );
 			break;
@@ -2061,7 +2050,7 @@ void CResponseSystem::ParseRule( void )
 			continue;
 
 		// It's an inline criteria, generate a name and parse it in
-		Q_snprintf( sz, sizeof( sz ), "[%s%03i]", ruleName, ++instancedCriteria );
+		V_snprintf( sz, sizeof( sz ), "[%s%03i]", ruleName, ++instancedCriteria );
 		Unget();
 		if ( CriteriaEntry_t *pCriterion = ParseOneCriterion( sz ) )
 		{
@@ -2093,12 +2082,12 @@ int	CResponseSystem::GetCurrentToken() const
 
 void CResponseSystem::ResponseWarning( const char *fmt, ... )
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		string[1024];
 
-	va_start (argptr, fmt);
-	Q_vsnprintf(string, sizeof(string), fmt,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr, fmt);
+	V_vsnprintf(string, sizeof(string), fmt,argptr);
+	__builtin_va_end (argptr);
 
 	char cur[ 256 ];
 	GetCurrentScript( cur, sizeof( cur ) );
@@ -2227,8 +2216,8 @@ void CResponseSystem::CopyEnumerationsFrom( CResponseSystem *pCustomSystem )
 void CResponseSystem::CopyRuleFrom( Rule *pSrcRule, ResponseRulePartition::tIndex iRule, CResponseSystem *pCustomSystem )
 {
 	// Verify data.
-	Assert( pSrcRule );
-	Assert( pCustomSystem );
+	contract_assert( pSrcRule );
+	contract_assert( pCustomSystem );
 	if ( !pSrcRule || !pCustomSystem )
 		return;
 
@@ -2419,7 +2408,7 @@ bool CResponseSystem::DispatchParseResponseGroup( char const *pToken, unsigned i
 unsigned int ResponseRulePartition::GetBucketForSpeakerAndConcept( const char *pszSpeaker, const char *pszConcept, const char *pszSubject )
 {
 	// make sure is a power of two
-	COMPILE_TIME_ASSERT( ( N_RESPONSE_PARTITIONS & ( N_RESPONSE_PARTITIONS - 1 ) ) == 0 );
+	static_assert( ( N_RESPONSE_PARTITIONS & ( N_RESPONSE_PARTITIONS - 1 ) ) == 0 );
 
 	// hash together the speaker and concept strings, and mask off by the bucket mask
 	unsigned hashSpeaker = 0; // pszSpeaker ? HashStringCaseless( pszSpeaker ) : 0;
@@ -2429,7 +2418,7 @@ unsigned int ResponseRulePartition::GetBucketForSpeakerAndConcept( const char *p
 	return hashBrowns;
 }
 
-const char *Rule::GetValueForRuleCriterionByName( CResponseSystem * RESTRICT pSystem, CriteriaSet::CritSymbol_t pCritNameSym )
+const char *Rule::GetValueForRuleCriterionByName( CResponseSystem * __restrict__ pSystem, CriteriaSet::CritSymbol_t pCritNameSym )
 {
 	const char * retval = nullptr;
 	// for each rule criterion...
@@ -2463,10 +2452,10 @@ const Criteria *Rule::GetPointerForRuleCriterionByName( CResponseSystem *pSystem
 	return retval;
 }
 
-const char *Rule::RecursiveGetValueForRuleCriterionByName( CResponseSystem * RESTRICT pSystem, 
-														    const Criteria * RESTRICT pCrit, CriteriaSet::CritSymbol_t pCritNameSym )
+const char *Rule::RecursiveGetValueForRuleCriterionByName( CResponseSystem * __restrict__ pSystem, 
+														    const Criteria * __restrict__ pCrit, CriteriaSet::CritSymbol_t pCritNameSym )
 {
-	Assert( pCrit );
+	contract_assert( pCrit );
 	if ( !pCrit ) return nullptr;
 	if ( pCrit->IsSubCriteriaType() )
 	{
@@ -2497,7 +2486,7 @@ const char *Rule::RecursiveGetValueForRuleCriterionByName( CResponseSystem * RES
 
 const Criteria *Rule::RecursiveGetPointerForRuleCriterionByName( CResponseSystem *pSystem, const Criteria *pCrit, CriteriaSet::CritSymbol_t pCritNameSym )
 {
-	Assert( pCrit );
+	contract_assert( pCrit );
 	if ( !pCrit ) return nullptr;
 	if ( pCrit->IsSubCriteriaType() )
 	{
@@ -2526,69 +2515,6 @@ const Criteria *Rule::RecursiveGetPointerForRuleCriterionByName( CResponseSystem
 }
 
 
-#if RESPONSE_RULES_DEBUG_ENABLED
-static void CC_RR_Debug_ResponseConcept_Exclude( const CCommand &args )
-{
-	// shouldn't use this extern elsewhere -- it's meant to be a hidden
-	// implementation detail
-	extern CRR_ConceptSymbolTable *g_pRRConceptTable;
-	Assert( g_pRRConceptTable );
-	if ( !g_pRRConceptTable ) return;
-
-
-	// different things for different argument lengths
-	switch ( args.ArgC() )
-	{
-	case 0:
-	{
-		AssertMsg( args.ArgC() > 0, "WTF error in ccommand parsing: zero arguments!\n" );
-		return;
-	}
-	case 1:
-	{
-		// print usage info
-		Msg("Usage:  rr_debugresponseconcept_exclude  Concept1 Concept2 Concept3...\n");
-		Msg("\tseparate multiple concepts with spaces.\n");
-		Msg("\tcall with no arguments to see this message and a list of current excludes.\n");
-		Msg("\tto reset the exclude list, type \"rr_debugresponseconcept_exclude !\"\n");
-		
-		// print current excludes
-		Msg("\nCurrent exclude list:\n");
-		if ( CResponseSystem::m_DebugExcludeList.empty() )
-		{
-			Msg("\t<none>\n");
-		}
-		else
-		{
-			for ( const CRR_Concept &rrConcept : CResponseSystem::m_DebugExcludeList )
-			{
-				Msg( "\t%s\n", rrConcept.GetStringConcept() );
-			}
-		}
-		return;
-	}
-	case 2:
-		// deal with the erase operator
-		if ( args[1][0] == '!' )
-		{
-			CResponseSystem::m_DebugExcludeList.clear();
-			Msg( "Exclude list emptied.\n" );
-			return;
-		}
-		// else, FALL THROUGH:
-	default:
-		// add each arg to the exclude list
-		for ( int i = 1 ; i < args.ArgC() ; ++i )
-		{
-			if ( !g_pRRConceptTable->contains( args[i] ) )
-			{
-				Msg( "\t'%s' is not a known concept (adding it anyway)\n", args[i] );
-			}
-			CResponseSystem::m_DebugExcludeList.emplace_back( args[i] );
-		}
-	}
-}
-#endif
 #if RR_DUMPHASHINFO_ENABLED
 static void CC_RR_DumpHashInfo( const CCommand &args )
 {

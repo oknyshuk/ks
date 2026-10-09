@@ -1,12 +1,12 @@
-//=========== Copyright (c) Valve Corporation, All rights reserved. =============//
-//
-// Purpose: Stub - clothing skin visualization removed with econ
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#include "cbase.h"
-#include "serialization.h"
+// Purpose: Stub - clothing skin visualization removed with econ
+
+import std;
+import ks.tier1;
+#include "cdll_util.h"
+#include "cdll_client_int.h"
 #include "cs_custom_clothing_visualsdata_processor.h"
 
 void CCSClothingVisualsDataCompare::SerializeToBuffer( ks::byte_writer &buf )
@@ -22,7 +22,7 @@ CCSClothingVisualsDataProcessor::CCSClothingVisualsDataProcessor( CCSClothingVis
 {
 	m_compareObject = std::move( compareObject );
 	m_compareObject.FillCompareBlob();
-	memset( &m_visualsData, 0, sizeof( m_visualsData ) );
+	std::memset( &m_visualsData, 0, sizeof( m_visualsData ) );
 }
 
 CCSClothingVisualsDataProcessor::~CCSClothingVisualsDataProcessor()

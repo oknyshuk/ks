@@ -1,14 +1,19 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Client handler for instruction players how to play
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
-#ifndef _C_GAMEINSTRUCTOR_H_
-#define _C_GAMEINSTRUCTOR_H_
+// Purpose: Client handler for instruction players how to play
 
-
+import ks.tier1;
 #include "GameEventListener.h"
+import std;
+#include "igamesystem.h"
+#include "ehandle.h"
+
+class C_BaseEntity;
+typedef CHandle<C_BaseEntity> EHANDLE;
+
+class C_BasePlayer;
 
 class CBaseLesson;
 
@@ -116,6 +121,3 @@ private:
 
 
 C_GameInstructor &GetGameInstructor();
-
-
-#endif // _C_GAMEINSTRUCTOR_H_

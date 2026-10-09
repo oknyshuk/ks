@@ -1,4 +1,5 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 #include "common_fog_ps_fxc.h"
 
@@ -42,13 +43,11 @@
 // We don't care about uberlight unless the flashlight is on
 // SKIP: ( $FLASHLIGHT == 0 ) && ( $UBERLIGHT == 1 )	[ps30]
 
-
 // Debug 2.0 shader locally
 //#ifdef SHADER_MODEL_PS_2_B
 //#undef SHADER_MODEL_PS_2_B
 //#define SHADER_MODEL_PS_2_0
 //#endif
-
 
 // Includes =======================================================================================
 #include "common_flashlight_fxc.h"

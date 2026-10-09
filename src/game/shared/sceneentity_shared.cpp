@@ -1,10 +1,63 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
+#endif
 #include "sceneentity_shared.h"
 
 ConVar scene_print( "scene_print", "0", FCVAR_REPLICATED, "When playing back a scene, print timing and event info to console." );
@@ -64,12 +117,12 @@ void Scene_Printf( const char *pFormat, ... )
 		}
 	}
 
-	va_list marker;
+	std::va_list marker;
 	char msg[8192];
 
-	va_start(marker, pFormat);
-	Q_vsnprintf(msg, sizeof(msg), pFormat, marker);
-	va_end(marker);	
+	__builtin_va_start(marker, pFormat);
+	V_vsnprintf(msg, sizeof(msg), pFormat, marker);
+	__builtin_va_end(marker);	
 	
 	Msg( "%8.3f[%d] %s:  %s", gpGlobals->curtime, gpGlobals->tickcount, CBaseEntity::IsServer() ? "sv" : "cl", msg );
 }
@@ -92,7 +145,7 @@ bool CSceneTokenProcessor::GetToken( bool crossline )
 {
 	// NOTE: crossline is ignored here, may need to implement if needed
 	m_pBuffer = engine->ParseFile( m_pBuffer, m_szToken, sizeof( m_szToken ) );
-	if ( 0 <= (int)strlen( m_szToken ) )
+	if ( 0 <= (int)std::strlen( m_szToken ) )
 		return true;
 	return false;
 }
@@ -130,13 +183,13 @@ bool CSceneTokenProcessor::TokenAvailable( void )
 void CSceneTokenProcessor::Error( const char *fmt, ... )
 {
 	char string[ 2048 ];
-	va_list argptr;
-	va_start( argptr, fmt );
-	Q_vsnprintf( string, sizeof(string), fmt, argptr );
-	va_end( argptr );
+	std::va_list argptr;
+	__builtin_va_start( argptr, fmt );
+	V_vsnprintf( string, sizeof(string), fmt, argptr );
+	__builtin_va_end( argptr );
 
 	Warning( "%s", string );
-	Assert(0);
+	contract_assert( 0 );
 }
 
 //-----------------------------------------------------------------------------

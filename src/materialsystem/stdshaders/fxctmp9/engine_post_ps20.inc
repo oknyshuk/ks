@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( $CONVERT_FROM_LINEAR == 0 ) && ( $CONVERT_TO_LINEAR == 1 )
 // ( $TOOL_MODE == 0 ) && ( $CONVERT_FROM_LINEAR == 1 )
@@ -23,7 +24,7 @@ private:
 public:
 	void SetTOOL_MODE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nTOOL_MODE = i;
 #ifdef _DEBUG
 		m_bTOOL_MODE = true;
@@ -31,7 +32,7 @@ public:
 	}
 	void SetTOOL_MODE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTOOL_MODE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTOOL_MODE = true;
@@ -45,7 +46,7 @@ private:
 public:
 	void SetDEPTH_BLUR_ENABLE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDEPTH_BLUR_ENABLE = i;
 #ifdef _DEBUG
 		m_bDEPTH_BLUR_ENABLE = true;
@@ -53,7 +54,7 @@ public:
 	}
 	void SetDEPTH_BLUR_ENABLE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDEPTH_BLUR_ENABLE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDEPTH_BLUR_ENABLE = true;
@@ -78,7 +79,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bTOOL_MODE && m_bDEPTH_BLUR_ENABLE;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 24 * m_nTOOL_MODE ) + ( 48 * m_nDEPTH_BLUR_ENABLE ) + 0;
 	}
@@ -94,7 +95,7 @@ private:
 public:
 	void SetAA_ENABLE( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nAA_ENABLE = i;
 #ifdef _DEBUG
 		m_bAA_ENABLE = true;
@@ -102,7 +103,7 @@ public:
 	}
 	void SetAA_ENABLE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nAA_ENABLE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bAA_ENABLE = true;
@@ -116,7 +117,7 @@ private:
 public:
 	void SetCOL_CORRECT_NUM_LOOKUPS( int i )
 	{
-		Assert( i >= 0 && i <= 3 );
+		contract_assert( i >= 0 && i <= 3 );
 		m_nCOL_CORRECT_NUM_LOOKUPS = i;
 #ifdef _DEBUG
 		m_bCOL_CORRECT_NUM_LOOKUPS = true;
@@ -124,7 +125,7 @@ public:
 	}
 	void SetCOL_CORRECT_NUM_LOOKUPS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 3 );
 		m_nCOL_CORRECT_NUM_LOOKUPS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOL_CORRECT_NUM_LOOKUPS = true;
@@ -138,7 +139,7 @@ private:
 public:
 	void SetFADE_TO_BLACK( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFADE_TO_BLACK = i;
 #ifdef _DEBUG
 		m_bFADE_TO_BLACK = true;
@@ -146,7 +147,7 @@ public:
 	}
 	void SetFADE_TO_BLACK( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFADE_TO_BLACK = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFADE_TO_BLACK = true;
@@ -160,7 +161,7 @@ private:
 public:
 	void SetFADE_TYPE( int i )
 	{
-		Assert( i >= 0 && i <= 2 );
+		contract_assert( i >= 0 && i <= 2 );
 		m_nFADE_TYPE = i;
 #ifdef _DEBUG
 		m_bFADE_TYPE = true;
@@ -168,7 +169,7 @@ public:
 	}
 	void SetFADE_TYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 2 );
 		m_nFADE_TYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFADE_TYPE = true;
@@ -182,7 +183,7 @@ private:
 public:
 	void SetVOMIT_ENABLE( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nVOMIT_ENABLE = i;
 #ifdef _DEBUG
 		m_bVOMIT_ENABLE = true;
@@ -190,7 +191,7 @@ public:
 	}
 	void SetVOMIT_ENABLE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nVOMIT_ENABLE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVOMIT_ENABLE = true;
@@ -227,7 +228,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bAA_ENABLE && m_bCOL_CORRECT_NUM_LOOKUPS && m_bFADE_TO_BLACK && m_bFADE_TYPE && m_bVOMIT_ENABLE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nAA_ENABLE ) + ( 1 * m_nCOL_CORRECT_NUM_LOOKUPS ) + ( 4 * m_nFADE_TO_BLACK ) + ( 8 * m_nFADE_TYPE ) + ( 24 * m_nVOMIT_ENABLE ) + 0;
 	}

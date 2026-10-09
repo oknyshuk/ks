@@ -1,10 +1,59 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "const.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "fx_cs_shared.h"
 #include "weapon_csbase.h"
 #include "rumble_shared.h"
@@ -14,13 +63,6 @@
 #endif
 
 ConVar weapon_accuracy_logging( "weapon_accuracy_logging", "0", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY | FCVAR_ARCHIVE );
-#ifdef CLIENT_DLL
-// Client-only preference: haptics are a local input concern. Defining it in
-// shared code registers it in both client.dll and server.dll, which the cvar
-// system cannot link (not FCVAR_REPLICATED) -> "Parent cvar in client.dll not
-// allowed". Only the client reads it (see the CLIENT_DLL block below).
-ConVar steam_controller_haptics( "steam_controller_haptics", "1", FCVAR_RELEASE );
-#endif
 ConVar weapon_near_empty_sound( "weapon_near_empty_sound", "1", FCVAR_REPLICATED | FCVAR_CHEAT );
 ConVar weapon_debug_max_inaccuracy( "weapon_debug_max_inaccuracy", "0", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT, "Force all shots to have maximum inaccuracy" );
 ConVar weapon_debug_inaccuracy_only_up( "weapon_debug_inaccuracy_only_up", "0", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT, "Force weapon inaccuracy to be in exactly the up direction" );
@@ -35,8 +77,6 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 #include "fx_impact.h"
 #include "c_rumble.h"
 #include "inputsystem/iinputsystem.h"
-
-#include "steam/steam_api.h"
 
 	// this is a cheap ripoff from CBaseCombatWeapon::WeaponSound():
 	void FX_WeaponSound(
@@ -106,7 +146,7 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 
 			if ( vEndPos.DistToSqr( pSound->m_vPos ) < 300*300 )
 			{
-				if ( Q_stricmp( pSound->m_SoundName, pSoundName ) == 0 )
+				if ( V_stricmp( pSound->m_SoundName, pSoundName ) == 0 )
 					return;
 			}
 		}
@@ -123,7 +163,7 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 
 	void StartGroupingSounds()
 	{
-		Assert( std::ssize( g_GroupedSounds ) == 0 );
+		contract_assert( std::ssize( g_GroupedSounds ) == 0 );
 		SetImpactSoundRoute( ShotgunImpactSoundGroup );
 	}
 
@@ -406,18 +446,6 @@ void FX_FireBullets(
 		{
 			RumbleEffect( XBX_GetUserId( pPlayer->GetSplitScreenPlayerSlot() ), rumbleEffect, 0, RUMBLE_FLAG_RESTART );
 		}
-		
-		if ( rumbleEffect != RUMBLE_INVALID && rumbleEffect <= 6 && steam_controller_haptics.GetBool() && g_pInputSystem->IsSteamControllerActive() && steamapicontext && steamapicontext->SteamController() )
-		{
-			ControllerHandle_t handles[STEAM_CONTROLLER_MAX_COUNT];
-			int nControllers = steamapicontext->SteamController()->GetConnectedControllers( handles );
-
-			for ( int i = 0; i < nControllers; ++i )
-			{
-				steamapicontext->SteamController()->TriggerHapticPulse( handles[ i ], k_ESteamControllerPad_Right, (2000*rumbleEffect)/5 );
-				steamapicontext->SteamController()->TriggerHapticPulse( handles[ i ], k_ESteamControllerPad_Left, (2000*rumbleEffect)/5 );
-			}
-		}
 	}
 #endif
 
@@ -445,18 +473,18 @@ void FX_FireBullets(
 		flRadiusCurveDensity = 1.0f;
 
 	// Get accuracy displacement
-	float fTheta0 = RandomFloat(0.0f, 2.0f * M_PI);
+	float fTheta0 = RandomFloat(0.0f, 2.0f * std::numbers::pi);
 	
 	if ( bForceInaccuracyDirection )
-		fTheta0 = M_PI * 0.5f;
+		fTheta0 = std::numbers::pi * 0.5f;
 
 	float fRadius0 = flRadiusCurveDensity * fInaccuracy;
-	float x0 = fRadius0 * cosf(fTheta0);
-	float y0 = fRadius0 * sinf(fTheta0);
+	float x0 = fRadius0 * std::cosf(fTheta0);
+	float y0 = fRadius0 * std::sinf(fTheta0);
 
 	const int kMaxBullets = 16;
 	float x1[kMaxBullets], y1[kMaxBullets];
-	Assert(pWeaponInfo->GetBullets() <= kMaxBullets);
+	contract_assert( pWeaponInfo->GetBullets() <= kMaxBullets );
 
 	// the RNG can be desynchronized by FireBullet(), so pre-generate all spread offsets
 	for ( int iBullet=0; iBullet < pWeaponInfo->GetBullets(); iBullet++ )
@@ -479,9 +507,9 @@ void FX_FireBullets(
 		if ( bForceMaxInaccuracy )
 			flSpreadCurveDensity = 1.0f;
 
-		float fTheta1 = RandomFloat(0.0f, 2.0f * M_PI);
+		float fTheta1 = RandomFloat(0.0f, 2.0f * std::numbers::pi);
 		if ( bForceInaccuracyDirection )
-			fTheta1 = M_PI * 0.5f;
+			fTheta1 = std::numbers::pi * 0.5f;
 
 		float fRadius1 = flSpreadCurveDensity * fSpread;
 		x1[iBullet] = fRadius1 * cosf(fTheta1);
@@ -498,7 +526,7 @@ void FX_FireBullets(
 			m_bEnemyHit( false ),
 			m_bShotFiredAndOnTargetRecorded( false )
 		{}
-		virtual void OnTakeDamageListenerCallback( CCSPlayer *pVictim, CTakeDamageInfo &infoTweakable ) OVERRIDE
+		virtual void OnTakeDamageListenerCallback( CCSPlayer *pVictim, CTakeDamageInfo &infoTweakable ) override
 		{
 			if ( m_pPlayerShooting && pVictim->IsOtherEnemy( m_pPlayerShooting ) )
 			{
@@ -619,4 +647,3 @@ void FX_PlantBomb( int iPlayerIndex, const Vector &vOrigin, PlantBombOption_t op
 	TE_PlantBomb( iPlayerIndex, vOrigin, option );
 #endif
 }
-

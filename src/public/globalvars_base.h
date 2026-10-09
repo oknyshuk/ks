@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef GLOBALVARS_BASE_H
-#define GLOBALVARS_BASE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // Purpose: Global variables used by shared code
@@ -107,5 +101,3 @@ inline bool CGlobalVarsBase::IsRemoteClient() const
 {
 	return m_bRemoteClient;
 }
-
-#endif // GLOBALVARS_BASE_H

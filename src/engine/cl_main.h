@@ -1,30 +1,21 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef CL_MAIN_H
-#define CL_MAIN_H
-
-
-#include "basetypes.h"
+import std;
+import ks.tier1;
 #include "networkstringtable.h"
 #include "const.h"
-#include "utlvector.h"
-#include "checksum_crc.h"
 #include "cdll_int.h"
 #include "netmessages.h"
 #include "dlight.h"
 #include "iefx.h"
-#include "tier1/convar.h"
 #include "cmodel_engine.h"
 
 class CCommand;
 
-#define	MAX_STYLESTRING	64
-#define	MAX_ELIGHTS		64		// entity only point lights
+inline constexpr auto MAX_STYLESTRING = 64;
+inline constexpr auto MAX_ELIGHTS = 64; // entity only point lights
 
 extern	dlight_t		cl_dlights[MAX_DLIGHTS];
 extern	dlight_t		cl_elights[MAX_ELIGHTS];
@@ -44,7 +35,7 @@ class CEntityReadInfo;
 class CPureServerWhitelist;
 struct SoundInfo_t;
 
-#define DEFAULT_JPEG_QUALITY 50
+inline constexpr auto DEFAULT_JPEG_QUALITY = 50;
 
 void CL_TakeJpeg( const char *name = nullptr, int quality = DEFAULT_JPEG_QUALITY );
 
@@ -179,7 +170,7 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args );
 
 bool CL_IsHL2Demo();
 bool CL_IsPortalDemo();
-void CL_SetSteamCrashComment();
+void CL_SetCrashComment();
 
 void CL_CheckForPureServerWhitelist();
 void CL_HandlePureServerWhitelist( CPureServerWhitelist *pWhitelist );
@@ -192,6 +183,3 @@ extern bool g_bTextMode;
 
 extern bool cl_takesnapshot;
 extern ConVar cl_language;
-
-
-#endif // CL_MAIN_H

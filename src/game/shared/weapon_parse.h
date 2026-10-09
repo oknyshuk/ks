@@ -1,22 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Weapon data file parsing, shared by game & client dlls.
-//
-// $NoKeywords: $
-//=============================================================================//
 
-#ifndef WEAPON_PARSE_H
-#define WEAPON_PARSE_H
-
+import ks.tier1;
 #include "shareddefs.h"
 #include "GameEventListener.h"
+#include "igamesystem.h"
+#include "datamap.h"
 #include "gamestringpool.h"
 #include "econ/econ_item_schema_minimal.h"
-#include "tier0/t0constants.h"
-#include "tier1/map_ops.h"
-#include <flat_set>
-#include <memory>
-#include <vector>
+import std;
+
+class IMaterial;
 
 #ifdef CLIENT_DLL
 #define CEconItemView C_EconItemView
@@ -322,21 +319,20 @@ enum WeaponSound_t {
 
 int GetWeaponSoundFromString( const char *pszString );
 
-#define MAX_SHOOT_SOUNDS	16			// Maximum number of shoot sounds per shoot type
+inline constexpr auto MAX_SHOOT_SOUNDS = 16; // Maximum number of shoot sounds per shoot type
 
-#define MAX_WEAPON_STRING	80
-#define MAX_WEAPON_PREFIX	16
-#define MAX_WEAPON_AMMO_NAME		32
+inline constexpr auto MAX_WEAPON_STRING = 80;
+inline constexpr auto MAX_WEAPON_PREFIX = 16;
+inline constexpr auto MAX_WEAPON_AMMO_NAME = 32;
 
-#define WEAPON_PRINTNAME_MISSING "!!! Missing printname on weapon"
+inline constexpr const char *WEAPON_PRINTNAME_MISSING = "!!! Missing printname on weapon";
 
 
 class CHudTexture;
-class KeyValues;
 
 struct WeaponInfoLookup
 {
-	size_t m_nWeaponParseDataOffset;
+	std::size_t m_nWeaponParseDataOffset;
 	_fieldtypes m_fieldType;
 	CGameString m_iszAttribClassName;
 
@@ -513,6 +509,3 @@ private:
 };
 
 extern CWeaponDatabase g_WeaponDatabase;
-
-
-#endif // WEAPON_PARSE_H

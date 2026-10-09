@@ -1,12 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef SCENEIMAGE_H
-#define SCENEIMAGE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 class ISceneTokenProcessor;
 
@@ -17,7 +11,7 @@ public:
 };
 
 namespace ks { class byte_writer; }
-#include <string>
+import std;
 
 class ISceneImage
 {
@@ -30,5 +24,3 @@ public:
 
 extern ISceneImage *g_pSceneImage;
 extern ISceneTokenProcessor *tokenprocessor;
-
-#endif // SCENEIMAGE_H

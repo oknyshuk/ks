@@ -1,66 +1,73 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "audio_pch.h"
-#include "tier1/circularbuffer.h"
+
+
+import ks.tier1;
+
+#include "tier2/riff.h"
+#include "sound.h"
+#include "soundservice.h"
+#include "voice_sound_engine_interface.h"
+#include "filesystem.h"
+#include "../filesystem_engine.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_convars.h"
+#include "snd_dev_xaudio.h"
+#include "snd_wave_source.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+#include "voice_mixer_controls.h"
+
+#include "audio/private/posix_stubs.h"
 #include "voice.h"
 #include "voice_wavefile.h"
-#include "r_efx.h"
 #include "cdll_int.h"
-#include "voice_gain.h"
 #include "voice_mixer_controls.h"
-#include "snd_dma.h"
 #include "ivoicerecord.h"
 #include "ivoicecodec.h"
 #include "filesystem.h"
 #include "../../filesystem_engine.h"
-#include <vector>
+import std;
 #include "../../cl_splitscreen.h"
 #include "engineui.h"
 #include "demo.h"
-#include <map>
 
 extern IVEngineClient *engineClient;
 
-
-#include "steam/steam_api.h"
-
-static CSteamAPIContext g_SteamAPIContext;
-static CSteamAPIContext *steamapicontext = nullptr;
 
 void Voice_EndChannel( int iChannel );
 void VoiceTweak_EndVoiceTweakMode();
 void EngineTool_OverrideSampleRate( int& rate );
 
 // Special entity index used for tweak mode.
-#define TWEAKMODE_ENTITYINDEX				-500
+constexpr auto TWEAKMODE_ENTITYINDEX = -500;
 
 // Special channel index passed to Voice_AddIncomingData when in tweak mode.
-#define TWEAKMODE_CHANNELINDEX				-100
+constexpr auto TWEAKMODE_CHANNELINDEX = -100;
 
 
 // How long does the sign stay above someone's head when they talk?
-#define SPARK_TIME		0.2
+constexpr auto SPARK_TIME = 0.2;
 
 // How long a voice channel has to be inactive before we free it.
-#define DIE_COUNTDOWN	0.5
+constexpr auto DIE_COUNTDOWN = 0.5;
 
 // Size of the circular buffer.  This should be BIGGER than the pad time,
 // or else a little burst of data right as we fil the buffer will cause
 // us to have nowhere to put the data and overflow the buffer!
-#define VOICE_RECEIVE_BUFFER_SECONDS		2.0
+constexpr auto VOICE_RECEIVE_BUFFER_SECONDS = 2.0;
 
 // If you can figure out how to get OSX to just compute this value (and use it as a template argument)
 // in the circular buffer below.  Then go for it.
-#define VOICE_RECEIVE_BUFFER_SIZE			88200
-COMPILE_TIME_ASSERT( VOICE_RECEIVE_BUFFER_SIZE == VOICE_OUTPUT_SAMPLE_RATE * BYTES_PER_SAMPLE * VOICE_RECEIVE_BUFFER_SECONDS );
+constexpr auto VOICE_RECEIVE_BUFFER_SIZE = 88200;
+static_assert( VOICE_RECEIVE_BUFFER_SIZE == VOICE_OUTPUT_SAMPLE_RATE * BYTES_PER_SAMPLE * VOICE_RECEIVE_BUFFER_SECONDS );
 
-#define LOCALPLAYERTALKING_TIMEOUT			0.2f	// How long it takes for the client to decide the server isn't sending acks
+constexpr auto LOCALPLAYERTALKING_TIMEOUT = 0.2f; // How long it takes for the client to decide the server isn't sending acks
 													// of voice data back.
 
 // true when using the speex codec
@@ -86,8 +93,6 @@ ConVar voice_loopback( "voice_loopback", "0", FCVAR_USERINFO );
 ConVar voice_fadeouttime( "voice_fadeouttime", "0.0" );	// It fades to no sound at the tail end of your voice data when you release the key.
 ConVar voice_threshold_delay( "voice_thresold_delay", "0.5" );
 
-ConVar voice_record_steam( "voice_record_steam", "0", 0, "If true use Steam to record voice (not the engine codec)" );
-
 ConVar voice_scale("voice_scale", "1.0", FCVAR_ARCHIVE | FCVAR_RELEASE, "Overall volume of voice over IP" );
 ConVar voice_caster_scale( "voice_caster_scale", "1", FCVAR_ARCHIVE );
 
@@ -100,9 +105,6 @@ ConVar voice_showincoming( "voice_showincoming", "0" );	// show incoming voice d
 
 int Voice_SamplesPerSec()
 {
-	if ( voice_record_steam.GetBool() && steamapicontext && steamapicontext->SteamUser()  )
-		return steamapicontext->SteamUser()->GetVoiceOptimalSampleRate();
-
 	int rate = ( g_bIsSpeex ? VOICE_OUTPUT_SAMPLE_RATE_SPEEX : VOICE_OUTPUT_SAMPLE_RATE ); //g_VoiceSampleFormat.nSamplesPerSec;
 	EngineTool_OverrideSampleRate( rate );
 	return rate;
@@ -256,12 +258,7 @@ static bool VoiceRecord_Start()
 	VoiceRecord_ForceAdvanceSampleOffsetUsingPlatTime();
 	VoiceRecord_MarkSectionBoundary();
 
-	if ( voice_record_steam.GetBool() && steamapicontext && steamapicontext->SteamUser() )
-	{
-		steamapicontext->SteamUser()->StartVoiceRecording();
-		return true;
-	}
-	else if ( g_pVoiceRecord )
+	if ( g_pVoiceRecord )
 	{
 		return g_pVoiceRecord->RecordStart();
 	}
@@ -274,11 +271,7 @@ static void VoiceRecord_Stop()
 	VoiceRecord_ForceAdvanceSampleOffsetUsingPlatTime();
 	VoiceRecord_MarkSectionBoundary();
 
-	if ( voice_record_steam.GetBool() && steamapicontext && steamapicontext->SteamUser() )
-	{
-		steamapicontext->SteamUser()->StopVoiceRecording();
-	}
-	else if ( g_pVoiceRecord )
+	if ( g_pVoiceRecord )
 	{
 		return g_pVoiceRecord->RecordStop();
 	}
@@ -422,7 +415,7 @@ void CVoiceChannel::Init( int nEntity, float timePadding, bool bCaster )
 	m_TimePad = timePadding;
 	if ( m_TimePad <= 0.0f )
 	{
-		m_TimePad = FLT_EPSILON;  // Must have at least one update
+		m_TimePad = std::numeric_limits<float>::epsilon();  // Must have at least one update
 	}
 
 	// Don't aim to fill the buffer up too full, or we will overflow.
@@ -431,7 +424,7 @@ void CVoiceChannel::Init( int nEntity, float timePadding, bool bCaster )
 	const float kflMaxTimePad = VOICE_RECEIVE_BUFFER_SECONDS * 0.8f;
 	if ( m_TimePad > kflMaxTimePad )
 	{
-		Assert( m_TimePad < kflMaxTimePad );
+		contract_assert( m_TimePad < kflMaxTimePad );
 		m_TimePad = kflMaxTimePad;
 	}
 
@@ -464,7 +457,7 @@ CVoiceChannel g_VoiceChannels[VOICE_NUM_CHANNELS];
 
 
 // These are used for recording the wave data into files for debugging.
-#define MAX_WAVEFILEDATA_LEN	1024*1024
+constexpr auto MAX_WAVEFILEDATA_LEN = 1024*1024;
 char *g_pUncompressedFileData = nullptr;
 int g_nUncompressedDataBytes = 0;
 const char *g_pUncompressedDataFilename = nullptr;
@@ -524,14 +517,14 @@ public:
 				continue;
 
 			int index = pChannel - g_VoiceChannels;
-			Assert( index >= 0 && index < ARRAYSIZE( g_VoiceChannels ) );
+			contract_assert( index >= 0 && index < std::size( g_VoiceChannels ) );
 
 			char path[ MAX_PATH ];
-			Q_snprintf( path, sizeof( path ), "%s/voice", g_pSoundServices->GetGameDir() );
+			V_snprintf( path, sizeof( path ), "%s/voice", g_pSoundServices->GetGameDir() );
 			g_pFileSystem->CreateDirHierarchy( path );
 
 			char fn[ MAX_PATH ];
-			Q_snprintf( fn, sizeof( fn ), "%s/pl%02d_slot%d-time%d.wav", path, index, data->m_nCount, (int)g_pSoundServices->GetClientTime() );
+			V_snprintf( fn, sizeof( fn ), "%s/pl%02d_slot%d-time%d.wav", path, index, data->m_nCount, (int)g_pSoundServices->GetClientTime() );
 
 			WriteWaveFile( fn, (const char *)data->m_Buffer.data(), (int)data->m_Buffer.size(), g_VoiceSampleFormat.wBitsPerSample, g_VoiceSampleFormat.nChannels, Voice_SamplesPerSec() );
 
@@ -544,7 +537,7 @@ public:
 	}
 
 
-	void AddDecompressedData( CVoiceChannel *ch, const byte *data, size_t datalen )
+	void AddDecompressedData( CVoiceChannel *ch, const byte *data, std::size_t datalen )
 	{
 		if ( !voice_writevoices.GetBool() )
 			return;
@@ -653,7 +646,7 @@ int Voice_GetOutputData(
 			int nSamplesToDuplicate = std::min( nSamplesGotten, nAdditionalNeeded );
 			const short *src = (short *)&pCopyBuf[ nSamplesGotten - nSamplesToDuplicate ];
 
-			Q_memcpy( dest, src, nSamplesToDuplicate * BYTES_PER_SAMPLE );
+			V_memcpy( dest, src, nSamplesToDuplicate * BYTES_PER_SAMPLE );
 
 			if ( voice_buffer_debug.GetBool() )
 			{
@@ -664,19 +657,19 @@ int Voice_GetOutputData(
 			if ( nAdditionalNeeded > 0  )
 			{
 				dest = (short *)&pCopyBuf[ nSamplesGotten + nSamplesToDuplicate ];
-				Q_memset(dest, 0, nAdditionalNeeded * BYTES_PER_SAMPLE);
+				V_memset(dest, 0, nAdditionalNeeded * BYTES_PER_SAMPLE);
 
 				if ( voice_buffer_debug.GetBool() )
 				{
 					Msg( "zeroing %d samples\n", nAdditionalNeeded );
 				}
 
-				Assert( ( nAdditionalNeeded + nSamplesGotten + nSamplesToDuplicate ) == wantedSampleCount );
+				contract_assert( ( nAdditionalNeeded + nSamplesGotten + nSamplesToDuplicate ) == wantedSampleCount );
 			}
 		}
 		else
 		{
-			Q_memset( &pCopyBuf[ nSamplesGotten ], 0, nAdditionalNeeded * BYTES_PER_SAMPLE );
+			V_memset( &pCopyBuf[ nSamplesGotten ], 0, nAdditionalNeeded * BYTES_PER_SAMPLE );
 
 			if ( voice_buffer_debug.GetBool() )
 			{
@@ -723,7 +716,7 @@ CVoiceChannel* GetVoiceChannel(int iChannel, bool bAssert=true)
 	{
 		if(bAssert)
 		{
-			Assert(false);
+			contract_assert( false );
 		}
 		return nullptr;
 	}
@@ -777,12 +770,6 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 		Msg( "Unable to initialize DirectSoundCapture. You won't be able to speak to other players." );
 	}
 
-	if ( steamapicontext == nullptr )
-	{
-		steamapicontext = &g_SteamAPIContext;
-		steamapicontext->Init();
-	}
-	
 	EngineUI()->UpdateProgressBar( PROGRESS_DEFAULT );
 
 	// Get the codec.
@@ -838,7 +825,7 @@ bool Voice_Init(const char *pCodecName, int iVersion )
 
 void Voice_EndChannel(int iChannel)
 {
-	Assert(iChannel >= 0 && iChannel < VOICE_NUM_CHANNELS);
+	contract_assert( iChannel >= 0 && iChannel < VOICE_NUM_CHANNELS );
 
 	CVoiceChannel *pChannel = &g_VoiceChannels[iChannel];
 	
@@ -937,7 +924,7 @@ void Voice_LocalPlayerTalkingAck( int iSsSlot )
 	if( !g_bLocalPlayerTalkingAck[ iSsSlot ] )
 	{
 		// Tell the client DLL when this changes.
-		g_pSoundServices->OnChangeVoiceStatus( -2, iSsSlot, TRUE );
+		g_pSoundServices->OnChangeVoiceStatus( -2, iSsSlot, true );
 	}
 
 	g_bLocalPlayerTalkingAck[ iSsSlot ] = true;
@@ -990,7 +977,7 @@ bool Voice_Idle(float frametime)
 				g_bLocalPlayerTalkingAck[k] = false;
 
 				// Tell the client DLL.
-				g_pSoundServices->OnChangeVoiceStatus(-2, k, FALSE);
+				g_pSoundServices->OnChangeVoiceStatus(-2, k, false);
 			}
 		}
 	}
@@ -1041,7 +1028,7 @@ bool Voice_Idle(float frametime)
 					}
 
 					// Start its audio.
-					FORCE_DEFAULT_SPLITSCREEN_PLAYER_GUARD;
+					;
 
 					pChannel->m_nViewEntityIndex = g_pSoundServices->GetViewEntity( 0 );
 					pChannel->m_nSoundGuid = VoiceSE_StartChannel( i, pChannel->m_iEntity, pChannel->m_bProximity, pChannel->m_nViewEntityIndex );
@@ -1147,7 +1134,7 @@ bool Voice_RecordStart(
 		g_bVoiceRecording = VoiceRecord_Start();
 		if(g_bVoiceRecording)
 		{
-			g_pSoundServices->OnChangeVoiceStatus(-1, GET_ACTIVE_SPLITSCREEN_SLOT(), TRUE);		// Tell the client DLL.
+			g_pSoundServices->OnChangeVoiceStatus(-1, GET_ACTIVE_SPLITSCREEN_SLOT(), true);		// Tell the client DLL.
 		}
 	}
 
@@ -1184,7 +1171,7 @@ bool Voice_RecordStop()
 
 	if(g_bVoiceRecording)
 	{
-		g_pSoundServices->OnChangeVoiceStatus(-1, GET_ACTIVE_SPLITSCREEN_SLOT(), FALSE);		// Tell the client DLL.
+		g_pSoundServices->OnChangeVoiceStatus(-1, GET_ACTIVE_SPLITSCREEN_SLOT(), false);		// Tell the client DLL.
 	}
 
 	g_bVoiceRecording = false;
@@ -1220,46 +1207,6 @@ int Voice_GetCompressedData(char *pchDest, int nCount, bool bFinal, VoiceFormat_
 	if ( pnOutUncompressedSampleOffset )
 		*pnOutUncompressedSampleOffset = 0;
 
-	if ( voice_record_steam.GetBool() && steamapicontext && steamapicontext->SteamUser() )
-	{
-		uint32 cbCompressedWritten = 0;
-		uint32 cbCompressed = 0;
-//		uint32 cbUncompressed = 0;
-		EVoiceResult result = steamapicontext->SteamUser()->GetAvailableVoice( &cbCompressed, nullptr, 0 );
-		if ( result == k_EVoiceResultOK )
-		{
-			result = steamapicontext->SteamUser()->GetVoice( true, pchDest, nCount, &cbCompressedWritten, false, nullptr, 0, nullptr, 0 );
-
-			g_pSoundServices->OnChangeVoiceStatus( -3, GET_ACTIVE_SPLITSCREEN_SLOT(), true );
-		}
-		else
-		{
-			g_pSoundServices->OnChangeVoiceStatus( -3, GET_ACTIVE_SPLITSCREEN_SLOT(), false );
-		}
-		if ( pOutFormat )
-		{
-			*pOutFormat = VoiceFormat_Steam;
-		}
-
-		if ( cbCompressedWritten > 0 )
-		{
-			s_nRecordingSectionCompressedByteOffset += cbCompressedWritten;
-
-			if ( pnOutSectionNumber )
-				*pnOutSectionNumber = s_nRecordingSection;
-			if ( pnOutSectionSequenceNumber )
-				*pnOutSectionSequenceNumber = s_nRecordingSectionCompressedByteOffset;
-
-			// !FIXME! Uncompressed sample offset doesn't work right now with the Steam codec.
-			// We'd have to get the uncompressed audio in order to advance it properly.
-			//if ( pnOutUncompressedSampleOffset )
-			//	*pnOutUncompressedSampleOffset = s_nRecordingTimestamp_UncompressedSampleOffset;
-			// s_nRecordingTimestamp_UncompressedSampleOffset += xxxxx
-		}
-
-		return cbCompressedWritten;
-	}
-
 	IVoiceCodec *pCodec = g_pEncodeCodec;
 	if( g_pVoiceRecord && pCodec )
 	{
@@ -1278,7 +1225,7 @@ int Voice_GetCompressedData(char *pchDest, int nCount, bool bFinal, VoiceFormat_
 		{
 			int nShouldGet = (flNow - g_MicStartTime) * Voice_SamplesPerSec();
 			gotten = std::min(sizeof(tempData)/BYTES_PER_SAMPLE, std::min<std::common_type_t<long unsigned int, int>>(nShouldGet, (g_nMicInputFileBytes - g_CurMicInputFileByte) / BYTES_PER_SAMPLE));
-			memcpy(tempData, &g_pMicInputFileData[g_CurMicInputFileByte], gotten*BYTES_PER_SAMPLE);
+			std::memcpy(tempData, &g_pMicInputFileData[g_CurMicInputFileByte], gotten*BYTES_PER_SAMPLE);
 			g_CurMicInputFileByte += gotten * BYTES_PER_SAMPLE;
 			g_MicStartTime = flNow;
 		}
@@ -1328,21 +1275,13 @@ int Voice_GetCompressedData(char *pchDest, int nCount, bool bFinal, VoiceFormat_
 			}
 		}
 
-#ifdef VOICE_SEND_RAW_TEST
-		int nCompressedBytes = std::min( gotten, nCount );
-		for ( int i=0; i < nCompressedBytes; i++ )
-		{
-			pchDest[i] = (char)(tempData[i] >> 8);
-		}
-#else			
 		int nCompressedBytes = pCodec->Compress((char*)tempData, gotten, pchDest, nCount, !!bFinal);
-#endif
 
 		// Write to our file buffers..
 		if(g_pUncompressedFileData)
 		{
 			int nToWrite = std::min(gotten*BYTES_PER_SAMPLE, MAX_WAVEFILEDATA_LEN - g_nUncompressedDataBytes);
-			memcpy(&g_pUncompressedFileData[g_nUncompressedDataBytes], tempData, nToWrite);
+			std::memcpy(&g_pUncompressedFileData[g_nUncompressedDataBytes], tempData, nToWrite);
 			g_nUncompressedDataBytes += nToWrite;
 		}
 
@@ -1376,14 +1315,14 @@ int Voice_GetCompressedData(char *pchDest, int nCount, bool bFinal, VoiceFormat_
 		{
 			// speex compresses 160 samples into 20 bytes with our settings (quality 4, which is quality 6 internally)
 			int nPackets = nCompressedBytes / 20;
-			Assert( nCompressedBytes == nPackets * 20 );
+			contract_assert( nCompressedBytes == nPackets * 20 );
 			s_nRecordingTimestamp_UncompressedSampleOffset += nPackets*160;
 		}
 		else
 		{
 			// celt compresses 512 samples into 64 bytes with our settings
 			int nPackets = nCompressedBytes / 64;
-			Assert( nCompressedBytes == nPackets * 64 );
+			contract_assert( nCompressedBytes == nPackets * 64 );
 			s_nRecordingTimestamp_UncompressedSampleOffset += nPackets*512;
 		}
 
@@ -1480,7 +1419,7 @@ static void UpsampleIntoBuffer(
 		{
 			double flSrc = (double)nSrcSamples * i / nDestSamples;
 			int iSample = (int)flSrc;
-			double frac = flSrc - floor(flSrc);
+			double frac = flSrc - std::floor(flSrc);
 			int iSampleNext = Min( iSample + 1, nSrcSamples - 1 );
 
 			double val1 = pSrc[iSample];
@@ -1559,7 +1498,7 @@ void Voice_AddIncomingData(
 	}
 	else
 	{
-		Assert( nUncompressedSampleOffset == 0 ); // section number and uncompressed sample offset were added in the same protocol change.  How could we have one without the other?
+		contract_assert( nUncompressedSampleOffset == 0 ); // section number and uncompressed sample offset were added in the same protocol change.  How could we have one without the other?
 	}
 
 	// If this is the first packet, or we were starved and getting rebooted, then
@@ -1600,64 +1539,33 @@ void Voice_AddIncomingData(
 
 	// Decompress.
 	short decompressedBuffer[11500];
-	COMPILE_TIME_ASSERT( BYTES_PER_SAMPLE == sizeof(decompressedBuffer[0]) );
+	static_assert( BYTES_PER_SAMPLE == sizeof(decompressedBuffer[0]) );
 	int nDecompressedSamplesForDroppedPacket = 0;
 	int nDecompressedSamplesForThisPacket = 0;
 
-#ifdef VOICE_SEND_RAW_TEST
-		for ( int i=0; i < nCount; i++ )
-			decompressedBuffer[i] = pchData[i] << 8;
-		nDecompressedSamplesForThisPacket = nCount
+	char *decompressedDest = (char*)decompressedBuffer;
+	int nDecompressBytesRemaining = sizeof(decompressedBuffer);
 
-#else
+	// First, if we lost some data, let the codec know.
+	if ( nLostBytes > 0 )
+	{
+		nDecompressedSamplesForDroppedPacket = pChannel->m_pVoiceCodec->Decompress( nullptr, nLostBytes, decompressedDest, nDecompressBytesRemaining );
+		int nDecompressedBytesForDroppedPacket = nDecompressedSamplesForDroppedPacket * BYTES_PER_SAMPLE;
+		decompressedDest += nDecompressedBytesForDroppedPacket;
+		nDecompressBytesRemaining -= nDecompressedBytesForDroppedPacket;
+	}
 
+	// Now decompress the actual data
+	nDecompressedSamplesForThisPacket = pChannel->m_pVoiceCodec->Decompress( pchData, nCount, decompressedDest, nDecompressBytesRemaining );
+	if ( nDecompressedSamplesForThisPacket <= 0 )
+	{
+		Warning( "%.2f: Voice_AddIncomingData channel %d Size %d engine failed to decompress\n", Plat_FloatTime(), nChannel, nCount );
+		nDecompressedSamplesForThisPacket = 0;
+	}
 	const int nDesiredSampleRate = g_bIsSpeex ? VOICE_OUTPUT_SAMPLE_RATE_SPEEX : VOICE_OUTPUT_SAMPLE_RATE;
 
-	int samplesPerSec;
-
-	if ( format == VoiceFormat_Steam )
-	{
-		uint32 nBytesWritten = 0;
-		EVoiceResult result = steamapicontext->SteamUser()->DecompressVoice( pchData, nCount, decompressedBuffer, sizeof(decompressedBuffer), &nBytesWritten, nDesiredSampleRate );
-
-		if ( result == k_EVoiceResultOK )
-		{
-			nDecompressedSamplesForThisPacket = nBytesWritten / BYTES_PER_SAMPLE;
-		}
-		else
-		{
-			Warning( "%.2f: Voice_AddIncomingData channel %d Size %d failed to decompress steam data result %d\n", Plat_FloatTime(), nChannel, nCount, result );
-		}
-
-		samplesPerSec = nDesiredSampleRate;
-	}
-	else
-	{
-
-		char *decompressedDest = (char*)decompressedBuffer;
-		int nDecompressBytesRemaining = sizeof(decompressedBuffer);
-
-		// First, if we lost some data, let the codec know.
-		if ( nLostBytes > 0 )
-		{
-			nDecompressedSamplesForDroppedPacket = pChannel->m_pVoiceCodec->Decompress( nullptr, nLostBytes, decompressedDest, nDecompressBytesRemaining );
-			int nDecompressedBytesForDroppedPacket = nDecompressedSamplesForDroppedPacket * BYTES_PER_SAMPLE;
-			decompressedDest += nDecompressedBytesForDroppedPacket;
-			nDecompressBytesRemaining -= nDecompressedBytesForDroppedPacket;
-		}
-
-		// Now decompress the actual data
-		nDecompressedSamplesForThisPacket = pChannel->m_pVoiceCodec->Decompress( pchData, nCount, decompressedDest, nDecompressBytesRemaining );
-		if ( nDecompressedSamplesForThisPacket <= 0 )
-		{
-			Warning( "%.2f: Voice_AddIncomingData channel %d Size %d engine failed to decompress\n", Plat_FloatTime(), nChannel, nCount );
-			nDecompressedSamplesForThisPacket = 0;
-		}
-		samplesPerSec = g_VoiceSampleFormat.nSamplesPerSec;
-		EngineTool_OverrideSampleRate( samplesPerSec );
-	}
-
-#endif
+	int samplesPerSec = g_VoiceSampleFormat.nSamplesPerSec;
+	EngineTool_OverrideSampleRate( samplesPerSec );
 
 	int nDecompressedSamplesTotal = nDecompressedSamplesForDroppedPacket + nDecompressedSamplesForThisPacket;
 	int nDecompressedBytesTotal = nDecompressedSamplesTotal * BYTES_PER_SAMPLE;
@@ -1742,8 +1650,8 @@ void Voice_AddIncomingData(
 	int nSamplesOfSilenceMax = Max( 0, nMaxSamplesToWrite - nDecompressedSamplesAtMixerRate );
 	int nSamplesOfSilenceToReachMinDesiredLeadTime = Clamp( nSamplesNeededToReachMinDesiredLeadTime - nDecompressedSamplesAtMixerRate, 0, nSamplesOfSilenceMax );
 	int nSamplesOfSilenceToReachMaxDesiredLeadTime = Clamp( nSamplesNeededToReachMaxDesiredLeadTime - nDecompressedSamplesAtMixerRate, 0, nSamplesOfSilenceMax );
-	Assert( nSamplesOfSilenceToReachMinDesiredLeadTime <= nSamplesOfSilenceToReachMaxDesiredLeadTime );
-	Assert( nSamplesOfSilenceToReachMaxDesiredLeadTime <= nSamplesOfSilenceMax );
+	contract_assert( nSamplesOfSilenceToReachMinDesiredLeadTime <= nSamplesOfSilenceToReachMaxDesiredLeadTime );
+	contract_assert( nSamplesOfSilenceToReachMaxDesiredLeadTime <= nSamplesOfSilenceMax );
 
 	// Check if something went wrong with a previous batch of audio in this buffer,
 	// and we should just try to reset the buffering to a healthy position by
@@ -1829,7 +1737,7 @@ void Voice_AddIncomingData(
 		if(g_pDecompressedFileData)
 		{											  
 			int nToWrite = std::min(nDecompressedSamplesTotal*BYTES_PER_SAMPLE, MAX_WAVEFILEDATA_LEN - g_nDecompressedDataBytes);
-			memcpy(&g_pDecompressedFileData[g_nDecompressedDataBytes], decompressedBuffer, nToWrite);
+			std::memcpy(&g_pDecompressedFileData[g_nDecompressedDataBytes], decompressedBuffer, nToWrite);
 			g_nDecompressedDataBytes += nToWrite;
 		}
 
@@ -1862,24 +1770,6 @@ void Voice_AddIncomingData(
 
 
 
-#if DEAD
-//------------------ Copyright (c) 1999 Valve, LLC. ----------------------------
-// Purpose: Flushes a given receive channel.
-// Input  : nChannel - index of channel to flush.
-//------------------------------------------------------------------------------
-void Voice_FlushChannel(int nChannel)
-{
-	if ((nChannel < 0) || (nChannel >= VOICE_NUM_CHANNELS))
-	{
-		Assert(false);
-		return;
-	}
-
-	g_VoiceChannels[nChannel].m_Buffer.Flush();
-}
-#endif
-
-
 //------------------------------------------------------------------------------
 // IVoiceTweak implementation.
 //------------------------------------------------------------------------------
@@ -1889,7 +1779,7 @@ int VoiceTweak_StartVoiceTweakMode()
 	// If we're already in voice tweak mode, return an error.
 	if ( g_bInTweakMode )
 	{
-		Assert(!"VoiceTweak_StartVoiceTweakMode called while already in tweak mode.");
+		contract_assert( !"VoiceTweak_StartVoiceTweakMode called while already in tweak mode." );
 		return 0;
 	}
 
@@ -1908,7 +1798,7 @@ void VoiceTweak_EndVoiceTweakMode()
 {
 	if(!g_bInTweakMode)
 	{
-		Assert(!"VoiceTweak_EndVoiceTweakMode called when not in tweak mode.");
+		contract_assert( !"VoiceTweak_EndVoiceTweakMode called when not in tweak mode." );
 		return;
 	}
 
@@ -2033,5 +1923,3 @@ IVoiceTweak g_VoiceTweakAPI =
 	VoiceTweak_IsStillTweaking,
 	VoiceTweak_IsControlFound,
 };
-
-

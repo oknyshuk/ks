@@ -1,11 +1,10 @@
-#ifndef _IDLCMANAGER_H_
-#define _IDLCMANAGER_H_
+#pragma once
 
 class IDlcManager;
 
 #include "imatchsystem.h"
 
-abstract_class IDlcManager
+class IDlcManager
 {
 public:
 	//
@@ -22,4 +21,3 @@ public:
 	virtual KeyValues * GetDataInfo() = 0;
 };
 
-#endif // _IDLCMANAGER_H_

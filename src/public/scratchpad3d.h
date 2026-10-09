@@ -1,17 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SCRATCHPAD3D_H
-#define SCRATCHPAD3D_H
-
-
-#include <stdio.h>
+import std;
+import ks.math;
 #include "iscratchpad3d.h"
-#include "mathlib/vmatrix.h"
 #include "filesystem.h"
 
 class CFileRead;
@@ -216,6 +209,3 @@ public:
 
 
 IFileSystem* ScratchPad3D_SetupFileSystem();
-
-
-#endif // SCRATCHPAD3D_H

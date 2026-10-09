@@ -1,10 +1,58 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "basetempentity.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
@@ -14,7 +62,6 @@
 #ifdef GAME_DLL
 #include "reflect_sendtable.h"
 #endif
-#include "tier1/fmtstr.h"
 #include "mp_shareddefs.h"
 #include "teamplayroundbased_gamerules.h"
 
@@ -56,7 +103,7 @@ IMPLEMENT_NETWORKCLASS_ALIASED( TeamplayRoundBasedRulesProxy, DT_TeamplayRoundBa
 void RecvProxy_TeamplayRoundBasedRules( const RecvProp *pProp, void **pOut, void *pData, int objectID )
 {
 	CTeamplayRoundBasedRules *pRules = dynamic_cast<CTeamplayRoundBasedRules*>( GameRules() );
-	Assert( pRules );
+	contract_assert( pRules );
 	*pOut = pRules;
 }
 
@@ -67,7 +114,7 @@ void CTeamplayRoundBasedRulesProxy::OnPreDataChanged( DataUpdateType_t updateTyp
 	BaseClass::OnPreDataChanged( updateType );
 	// Reroute data changed calls to the non-entity gamerules 
 	CTeamplayRoundBasedRules *pRules = dynamic_cast<CTeamplayRoundBasedRules*>( GameRules() );
-	Assert( pRules );
+	contract_assert( pRules );
 	pRules->OnPreDataChanged(updateType);
 }
 void CTeamplayRoundBasedRulesProxy::OnDataChanged( DataUpdateType_t updateType )
@@ -75,7 +122,7 @@ void CTeamplayRoundBasedRulesProxy::OnDataChanged( DataUpdateType_t updateType )
 	BaseClass::OnDataChanged( updateType );
 	// Reroute data changed calls to the non-entity gamerules 
 	CTeamplayRoundBasedRules *pRules = dynamic_cast<CTeamplayRoundBasedRules*>( GameRules() );
-	Assert( pRules );
+	contract_assert( pRules );
 	pRules->OnDataChanged(updateType);
 }
 
@@ -83,7 +130,7 @@ void CTeamplayRoundBasedRulesProxy::OnDataChanged( DataUpdateType_t updateType )
 void* SendProxy_TeamplayRoundBasedRules( const SendProp *pProp, const void *pStructBase, const void *pData, CSendProxyRecipients *pRecipients, int objectID )
 {
 	CTeamplayRoundBasedRules *pRules = dynamic_cast<CTeamplayRoundBasedRules*>( GameRules() );
-	Assert( pRules );
+	contract_assert( pRules );
 	pRecipients->SetAllRecipients();
 	return pRules;
 }
@@ -194,7 +241,9 @@ static const char *s_PreserveEnts[] =
 	"", // END Marker
 };
 
-CON_COMMAND_F( mp_forcewin, "Forces team to win", FCVAR_CHEAT )
+static void mp_forcewin( const CCommand &args );
+static ConCommand mp_forcewin_command( "mp_forcewin", mp_forcewin, "Forces team to win", FCVAR_CHEAT );
+static void mp_forcewin( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -211,7 +260,7 @@ CON_COMMAND_F( mp_forcewin, "Forces team to win", FCVAR_CHEAT )
 		else if ( args.ArgC() == 2 )
 		{
 			// if team # specified, use that
-			iTeam = atoi( args[1] );
+			iTeam = std::atoi( args[1] );
 		}
 		else
 		{
@@ -680,7 +729,7 @@ void CTeamplayRoundBasedRules::CheckRestartRound( void )
 		UTIL_ClientPrintAll( HUD_PRINTTALK, "#clan_ready_rules", pszReadyString );
 
 		// Don't let them put anything malicious in there
-		if( pszReadyString == nullptr || Q_strlen(pszReadyString) > 16 )
+		if( pszReadyString == nullptr || V_strlen(pszReadyString) > 16 )
 		{
 			pszReadyString = "ready";
 		}
@@ -757,7 +806,7 @@ void CTeamplayRoundBasedRules::CheckRestartRound( void )
 			if ( pFormat )
 			{
 				char strRestartDelay[64];
-				Q_snprintf( strRestartDelay, sizeof( strRestartDelay ), "%d", iRestartDelay );
+				V_snprintf( strRestartDelay, sizeof( strRestartDelay ), "%d", iRestartDelay );
 				UTIL_ClientPrintAll( HUD_PRINTCENTER, pFormat, strRestartDelay );
 				UTIL_ClientPrintAll( HUD_PRINTCONSOLE, pFormat, strRestartDelay );
 			}
@@ -875,7 +924,7 @@ bool CTeamplayRoundBasedRules::CheckWinLimit( void )
 		for ( int i = LAST_SHARED_TEAM+1; i < GetNumberOfTeams(); i++ )
 		{
 			CTeam *pTeam = GetGlobalTeam(i);
-			Assert( pTeam );
+			contract_assert( pTeam );
 
 			if ( pTeam->GetScore() >= iWinLimit )
 			{
@@ -992,7 +1041,7 @@ CGameRulesRoundStateInfo* CTeamplayRoundBasedRules::State_LookupInfo( gamerules_
 		{ GR_STATE_GAME_OVER,	"GR_STATE_GAME_OVER",	nullptr, nullptr, nullptr },
 	};
 
-	for ( int i=0; i < ARRAYSIZE( playerStateInfos ); i++ )
+	for ( int i=0; i < std::size( playerStateInfos ); i++ )
 	{
 		if ( playerStateInfos[i].m_iRoundState == state )
 			return &playerStateInfos[i];
@@ -1387,7 +1436,7 @@ void CTeamplayRoundBasedRules::State_Think_STALEMATE( void )
 	for ( int i = LAST_SHARED_TEAM+1; i < GetNumberOfTeams(); i++ )
 	{
 		CTeam *pTeam = GetGlobalTeam(i);
-		Assert( pTeam );
+		contract_assert( pTeam );
 
 		int iPlayers = pTeam->GetNumPlayers();
 		if ( iPlayers )
@@ -1461,7 +1510,7 @@ void CTeamplayRoundBasedRules::State_Enter_RESTART( void )
 void CTeamplayRoundBasedRules::State_Think_RESTART( void )
 {
 	// should never get here, State_Enter_RESTART sets us into a different state
-	Assert( 0 ); 
+	contract_assert( 0 ); 
 }
 
 //-----------------------------------------------------------------------------
@@ -1471,7 +1520,7 @@ void CTeamplayRoundBasedRules::SetWinningTeam( int team, int iWinReason, bool bF
 {
 	if ( ( team != TEAM_UNASSIGNED ) && ( team <= LAST_SHARED_TEAM || team >= GetNumberOfTeams() ) )
 	{
-		Assert( !"SetWinningTeam() called with invalid team." );
+		contract_assert( !"SetWinningTeam() called with invalid team." );
 		return;
 	}
 
@@ -1620,7 +1669,7 @@ void CTeamplayRoundBasedRules::RespawnPlayers( bool bForceRespawn, bool bTeam /*
 {
 	if ( bTeam )
 	{
-		Assert( iTeam > LAST_SHARED_TEAM && iTeam < GetNumberOfTeams() );
+		contract_assert( iTeam > LAST_SHARED_TEAM && iTeam < GetNumberOfTeams() );
 	}	
 
 	int iPlayersSpawned = 0;
@@ -1844,7 +1893,7 @@ void CTeamplayRoundBasedRules::CleanUpMap()
 	public:
 		CTeamplayMapEntityFilter()
 		{
-			m_pRules = assert_cast<CTeamplayRoundBasedRules*>( GameRules() );
+			m_pRules = static_cast<CTeamplayRoundBasedRules*>( GameRules() );
 		}
 
 		virtual bool ShouldCreateEntity( const char *pClassname )
@@ -1870,7 +1919,7 @@ void CTeamplayRoundBasedRules::CleanUpMap()
 				// This shouldn't be possible. When we loaded the map, it should have used 
 				// CTeamplayMapEntityFilter, which should have built the g_MapEntityRefs list
 				// with the same list of entities we're referring to here.
-				Assert( false );
+				contract_assert( false );
 				return nullptr;
 			}
 			else
@@ -1911,7 +1960,7 @@ bool FindInList( const char **pStrings, const char *pToFind )
 	int i = 0;
 	while ( pStrings[i][0] != 0 )
 	{
-		if ( Q_stricmp( pStrings[i], pToFind ) == 0 )
+		if ( V_stricmp( pStrings[i], pToFind ) == 0 )
 			return true;
 		i++;
 	}
@@ -2008,7 +2057,7 @@ bool CBalanceTeamGroup::AllDead() const
 void CBalanceTeamGroup::Build( CGameRules *pGameRules, CBasePlayer *pl )
 {
 	m_Players.clear();
-	m_nScore = INT_MIN;
+	m_nScore = std::numeric_limits<int>::min();
 	m_nAlive = m_nDead = 0;
 
 	// These are built by the "parent" player
@@ -2095,7 +2144,7 @@ void CTeamplayRoundBasedRules::BalanceTeams( bool bRequireSwitcheesToBeDead )
 	CTeam *pHeavyTeam = GetGlobalTeam( iHeaviestTeam );
 	CTeam *pLightTeam = GetGlobalTeam( iLightestTeam );
 
-	Assert( pHeavyTeam && pLightTeam );
+	contract_assert( pHeavyTeam && pLightTeam );
 
 	int iNumSwitchesRequired = ( pHeavyTeam->GetNumPlayers() - pLightTeam->GetNumPlayers() ) / 2;
 
@@ -2408,7 +2457,7 @@ bool CTeamplayRoundBasedRules::WouldChangeUnbalanceTeams( int iNumPlayersToMove,
 
 	if ( !pNewTeam )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 		return true;
 	}
 

@@ -1,15 +1,12 @@
-//========= Copyright (c) 1996-2014, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2014 Valve Corporation
+
 // Purpose: Multiblend shader
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
 
+import ks.tier1;
 #include "BaseVSShader.h"
-#include "convar.h"
+import std;
 #include "lightmapped_4wayblend_dx9_helper.h"
-
 
 static Lightmapped_4WayBlend_DX9_Vars_t s_info;
 
@@ -17,7 +14,7 @@ static Lightmapped_4WayBlend_DX9_Vars_t s_info;
 BEGIN_VS_SHADER( Lightmapped_4WayBlend,
 				 "Help for Lightmapped_4WayBlend" )
 
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( SELFILLUMTINT, SHADER_PARAM_TYPE_COLOR, "[1 1 1]", "Self-illumination tint" )
 		SHADER_PARAM( DETAIL, SHADER_PARAM_TYPE_TEXTURE, "shadertest/detail", "detail texture" )
 		SHADER_PARAM( DETAILFRAME, SHADER_PARAM_TYPE_INTEGER, "0", "frame number for $detail" )

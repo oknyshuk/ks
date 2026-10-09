@@ -1,14 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DEBUGOVERLAY_SHARED_H
-#define DEBUGOVERLAY_SHARED_H
-
+import ks.math;
 #include "engine/ivdebugoverlay.h"
-#include "mathlib/vector.h"
+import std;
+#include "shared_classnames.h"
+
+class CBaseEntity;
 
 //=============================================================================
 // NDebugOverlay
@@ -48,5 +47,3 @@ namespace NDebugOverlay
 	void	Capsule(const Vector &vStart, const Vector &vEnd, const float &flRadius, int r, int g, int b, int a, float flDuration);
 	void	PurgeTextOverlays();
 };
-
-#endif // DEBUGOVERLAY_SHARED_H

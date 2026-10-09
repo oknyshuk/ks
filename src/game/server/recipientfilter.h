@@ -1,16 +1,14 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef RECIPIENTFILTER_H
-#define RECIPIENTFILTER_H
-
+import ks.math;
 #include "irecipientfilter.h"
 #include "const.h"
-#include <bitset>
+import std;
+#include "baseentity.h"
+#include "soundflags.h"
+class CTeam;
 
 class CBasePlayer;
 
@@ -232,5 +230,3 @@ public:
 		AddRecipientsByPVS( origin );
 	}
 };
-
-#endif // RECIPIENTFILTER_H

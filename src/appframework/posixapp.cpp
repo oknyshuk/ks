@@ -1,19 +1,14 @@
-//====== Copyright  1996-2005, Valve Corporation, All rights reserved. =======//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Pieces of the application framework, shared between POSIX systems (Mac OS X, Linux, etc)
-//
-// $Revision: $
-// $NoKeywords: $
-//=============================================================================//
+
+import ks.vstdlib;
 #include "appframework/AppFramework.h"
-#include "tier0/dbg.h"
-#include "tier0/icommandline.h"
-#include "interface.h"
+import std;
 #include "filesystem.h"
 #include "appframework/IAppSystemGroup.h"
 #include "filesystem_init.h"
-#include "tier1/convar.h"
-#include "vstdlib/cvar.h"
 #include "togl/rendermechanism.h"
 
 //-----------------------------------------------------------------------------
@@ -48,7 +43,7 @@ void SetAppInstance( void* hInstance )
 
 int AppMain( void* hInstance, void* hPrevInstance, const char* lpCmdLine, int nCmdShow, CAppSystemGroup *pAppSystemGroup )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 	return -1;
 }
 
@@ -59,7 +54,7 @@ static CNonFatalLoggingResponsePolicy s_NonFatalLoggingResponsePolicy;
 //-----------------------------------------------------------------------------
 int AppMain( int argc, char **argv, CAppSystemGroup *pAppSystemGroup )
 {
-	Assert( pAppSystemGroup );
+	contract_assert( pAppSystemGroup );
 
 	LoggingSystem_SetLoggingResponsePolicy( &s_NonFatalLoggingResponsePolicy );
 	s_HInstance = nullptr;
@@ -72,7 +67,7 @@ int AppMain( int argc, char **argv, CAppSystemGroup *pAppSystemGroup )
 
 //-----------------------------------------------------------------------------
 //
-// Default implementation of an application meant to be run using Steam
+// Default implementation of an application meant to be run using the file system
 //
 //-----------------------------------------------------------------------------
 
@@ -80,18 +75,17 @@ int AppMain( int argc, char **argv, CAppSystemGroup *pAppSystemGroup )
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
-CSteamApplication::CSteamApplication( CSteamAppSystemGroup *pAppSystemGroup )
+CFSApplication::CFSApplication( CFSAppSystemGroup *pAppSystemGroup )
 {
 	m_pChildAppSystemGroup = pAppSystemGroup;
 	m_pFileSystem = nullptr;
-	m_bSteam = false;
 }
 
 
 //-----------------------------------------------------------------------------
 // Create necessary interfaces
 //-----------------------------------------------------------------------------
-bool CSteamApplication::Create( )
+bool CFSApplication::Create( )
 {
 	FileSystem_SetErrorMode( FS_ERRORMODE_NONE );
 
@@ -110,15 +104,15 @@ bool CSteamApplication::Create( )
 	return true;
 }
 
-bool CSteamApplication::GetFileSystemDLLName( char *pOut, int nMaxBytes, bool &bIsSteam )
+bool CFSApplication::GetFileSystemDLLName( char *pOut, int nMaxBytes )
 {
-	return FileSystem_GetFileSystemDLLName( pOut, nMaxBytes, bIsSteam ) == FS_OK;
+	return FileSystem_GetFileSystemDLLName( pOut, nMaxBytes ) == FS_OK;
 }
 
 //-----------------------------------------------------------------------------
 // The file system pointer is invalid at this point
 //-----------------------------------------------------------------------------
-void CSteamApplication::Destroy()
+void CFSApplication::Destroy()
 {
 	m_pFileSystem = nullptr;
 }
@@ -127,28 +121,28 @@ void CSteamApplication::Destroy()
 //-----------------------------------------------------------------------------
 // Pre-init, shutdown
 //-----------------------------------------------------------------------------
-bool CSteamApplication::PreInit( )
+bool CFSApplication::PreInit( )
 {
 	return true;
 }
 
-void CSteamApplication::PostShutdown( )
+void CFSApplication::PostShutdown( )
 {
 }
 
 
 //-----------------------------------------------------------------------------
-// Run steam main loop
+// Run main loop
 //-----------------------------------------------------------------------------
-int CSteamApplication::Main( )
+int CFSApplication::Main( )
 {
-	// Now that Steam is loaded, we can load up main libraries through steam
+	// Now that the file system is loaded, we can load up main libraries through it
 	m_pChildAppSystemGroup->Setup( m_pFileSystem, this );
 	return m_pChildAppSystemGroup->Run( );
 }
 
 
-int CSteamApplication::Startup()
+int CFSApplication::Startup()
 {
 	int nRetVal = BaseClass::Startup();
 	if ( GetCurrentStage() != NONE )
@@ -157,15 +151,14 @@ int CSteamApplication::Startup()
 	if ( FileSystem_SetBasePaths( m_pFileSystem ) != FS_OK )
 		return 0;
 	
-	// Now that Steam is loaded, we can load up main libraries through steam
+	// Now that the file system is loaded, we can load up main libraries through it
 	m_pChildAppSystemGroup->Setup( m_pFileSystem, this );
 	return m_pChildAppSystemGroup->Startup();
 }
 
 
-void CSteamApplication::Shutdown()
+void CFSApplication::Shutdown()
 {
 	m_pChildAppSystemGroup->Shutdown();
 	BaseClass::Shutdown();
 }
-

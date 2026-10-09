@@ -1,24 +1,22 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Client DLL VGUI2 Viewport
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Client DLL VGUI2 Viewport
+
+#include "rocketui/rmlui.h"
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 
 // vgui panel includes
-#include <keyvalues.h>
-#include "localize/ilocalize.h"
 
 // client dll/engine defines
-#include "hud.h"
 #include <voice_status.h>
 
 // cstrike specific dialogs
@@ -27,11 +25,12 @@
 
 // viewport definitions
 #include <baseviewport.h>
+import ks.tier1;
+import std;
 #include "counterstrikeviewport.h"
 #include "cs_gamerules.h"
 // #include "c_user_message_register.h"
 #include "uicenterprint.h"
-#include "text_message.h"
 #include "../RocketUI/rkhud_teammenu.h"
 
 ConVar crosshair( "crosshair", "1", FCVAR_ARCHIVE  | FCVAR_SS );
@@ -55,7 +54,9 @@ void PrintBuyTimeOverMessage( void )
 }
 
 
-CON_COMMAND_F( teammenu, "Show team selection window", FCVAR_SERVER_CAN_EXECUTE )
+static void teammenu( const CCommand &args );
+static ConCommand teammenu_command( "teammenu", teammenu, "Show team selection window", FCVAR_SERVER_CAN_EXECUTE );
+static void teammenu( const CCommand &args )
 {
 	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
 	
@@ -68,7 +69,9 @@ CON_COMMAND_F( teammenu, "Show team selection window", FCVAR_SERVER_CAN_EXECUTE 
 
 }
 
-CON_COMMAND_F( buymenu, "Show or hide main buy menu", FCVAR_SERVER_CAN_EXECUTE )
+static void buymenu( const CCommand &args );
+static ConCommand buymenu_command( "buymenu", buymenu, "Show or hide main buy menu", FCVAR_SERVER_CAN_EXECUTE );
+static void buymenu( const CCommand &args )
 {
 	bool bShowIt = true;
 
@@ -137,7 +140,9 @@ CON_COMMAND_F( buymenu, "Show or hide main buy menu", FCVAR_SERVER_CAN_EXECUTE )
 //		GetViewPortInterface()->ShowPanel( PANEL_INFO, true );
 //}
 
-CON_COMMAND_F( spec_menu, "Activates spectator menu", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void spec_menu( const CCommand &args );
+static ConCommand spec_menu_command( "spec_menu", spec_menu, "Activates spectator menu", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void spec_menu( const CCommand &args )
 {
 	bool bShowIt = true;
 
@@ -155,7 +160,9 @@ CON_COMMAND_F( spec_menu, "Activates spectator menu", FCVAR_CLIENTCMD_CAN_EXECUT
 		GetViewPortInterface()->ShowPanel( PANEL_SPECMENU, bShowIt );
 }
 
-CON_COMMAND_F( spec_gui, "Shows or hides the spectator bar", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void spec_gui( const CCommand &args );
+static ConCommand spec_gui_command( "spec_gui", spec_gui, "Shows or hides the spectator bar", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void spec_gui( const CCommand &args )
 {
 	bool bShowIt = true;
 
@@ -180,7 +187,9 @@ CON_COMMAND_F( spec_gui, "Shows or hides the spectator bar", FCVAR_CLIENTCMD_CAN
 		GetViewPortInterface()->ShowPanel( PANEL_SPECGUI, bShowIt );
 }
 
-CON_COMMAND_F( togglescores, "Toggles score panel", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void togglescores( const CCommand &args );
+static ConCommand togglescores_command( "togglescores", togglescores, "Toggles score panel", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void togglescores( const CCommand &args )
 {
 	if ( !GetViewPortInterface() )
 		return;
@@ -201,7 +210,9 @@ CON_COMMAND_F( togglescores, "Toggles score panel", FCVAR_CLIENTCMD_CAN_EXECUTE 
 	}
 }
 
-CON_COMMAND_F( hidescores, "Forcibly hide score panel", FCVAR_CLIENTCMD_CAN_EXECUTE )
+static void hidescores( const CCommand &args );
+static ConCommand hidescores_command( "hidescores", hidescores, "Forcibly hide score panel", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static void hidescores( const CCommand &args )
 {
 	if ( !GetViewPortInterface() )
 		return;
@@ -261,7 +272,7 @@ void CounterStrikeViewport::FireGameEvent( IGameEvent * event )
 {
 	const char * type = event->GetName();
 
-	if ( Q_strcmp( type, "game_newmap" ) == 0 || Q_strcmp( type, "cs_win_panel_match" ) == 0 )
+	if ( V_strcmp( type, "game_newmap" ) == 0 || V_strcmp( type, "cs_win_panel_match" ) == 0 )
 	{
 		SetChoseTeamAndClass( false );
 	}

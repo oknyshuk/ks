@@ -1,21 +1,15 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//==================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
+import ks.tier1;
 #include "locald3dtypes.h"
 #include "imeshdx8.h"
 #include "shaderapidx8_global.h"
 #include "materialsystem/IShader.h"
-#include "tier0/vprof.h"
 #include "studio.h"
-#include "tier1/fmtstr.h"
 
-#include "tier0/platform.h"
-#include "tier0/systeminformation.h"
 
-#include <memory>
+import std;
 
 // fixme - stick this in a header file.
 #if defined( _DEBUG )
@@ -28,20 +22,17 @@
 
 #include "dynamicib.h"
 #include "dynamicvb.h"
-#include "utlvector.h"
 #include "shaderapi/ishaderapi.h"
 #include "imaterialinternal.h"
 #include "imaterialsysteminternal.h"
 #include "shaderapidx8.h"
 #include "shaderapi/ishaderutil.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
-#include "materialsystem/materialsystem_config.h"
 #include "materialsystem/ivballoctracker.h"
-#include "tier1/strtools.h"
-#include "convar.h"
 #include "shaderdevicedx8.h"
 
-#include "tier0/memalloc.h"
+
+static constexpr auto kTextureGroupDynamicIndexBufferGlobal = ks::Concat( "TexGroup_global_", TEXTURE_GROUP_DYNAMIC_INDEX_BUFFER );
 
 //-----------------------------------------------------------------------------
 
@@ -51,9 +42,9 @@ void FailedLock( const char *pszMsg )
 	g_pMemAlloc->OutOfMemory();
 }
 
-#define MAX_DX8_STREAMS 16
+constexpr auto MAX_DX8_STREAMS = 16;
 
-#define VERTEX_FORMAT_INVALID	0xFFFFFFFFFFFFFFFFull
+constexpr auto VERTEX_FORMAT_INVALID = 0xFFFFFFFFFFFFFFFFull;
 
 // this is hooked into the engines convar
 extern ConVar mat_debugalttab;
@@ -139,11 +130,9 @@ protected:
 	bool m_bIsDynamic : 1;
 	bool m_bFlush : 1;				// Used only for dynamic buffers, indicates to discard the next time
 
-#ifdef VPROF_ENABLED
 	int m_nVProfFrame;
 	int	*m_pFrameCounter;
 	int	*m_pGlobalCounter;
-#endif
 
 #ifdef _DEBUG
 	static int s_nBufferCount;
@@ -170,8 +159,8 @@ public:
 	virtual void BeginCastBuffer( MaterialIndexFormat_t format );
 	virtual void EndCastBuffer( );
 	virtual bool IsDynamic() const;
-	virtual void ModifyBegin( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t& desc ) { Assert(0); }
-	virtual void ModifyEnd( IndexDesc_t& desc ) { Assert(0); }
+	virtual void ModifyBegin( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t& desc ) { contract_assert( 0 ); }
+	virtual void ModifyEnd( IndexDesc_t& desc ) { contract_assert( 0 ); }
 
 public:
 	// constructor
@@ -223,9 +212,7 @@ private:
 	int m_nLockIndexOffset;
 #endif
 
-#ifdef VPROF_ENABLED
 	int m_nVProfFrame;
-#endif
 
 #ifdef _DEBUG
 	static int s_nBufferCount;
@@ -235,13 +222,12 @@ private:
 };
 
 
-
 //-----------------------------------------------------------------------------
 //
 // Backward compat mesh code; will go away soon
 //
 //-----------------------------------------------------------------------------
-abstract_class CBaseMeshDX8 : public CMeshBase
+class CBaseMeshDX8 : public CMeshBase
 {
 public:
 	// constructor, destructor
@@ -249,16 +235,16 @@ public:
 	virtual ~CBaseMeshDX8();
 
 	// FIXME: Make this work! Unsupported methods of IIndexBuffer + IVertexBuffer
-	virtual bool Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t& desc ) { Assert(0); return false; }
-	virtual void Unlock( int nWrittenIndexCount, IndexDesc_t& desc ) { Assert(0); }
-	virtual void ModifyBegin( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t& desc ) { Assert(0); }
-	virtual void ModifyEnd( IndexDesc_t& desc ) { Assert(0); }
-	virtual void Spew( int nIndexCount, const IndexDesc_t & desc ) { Assert(0); }
-	virtual void ValidateData( int nIndexCount, const IndexDesc_t &desc ) { Assert(0); }
-	virtual bool Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc ) { Assert(0); return false; }
-	virtual void Unlock( int nVertexCount, VertexDesc_t &desc ) { Assert(0); }
-	virtual void Spew( int nVertexCount, const VertexDesc_t &desc ) { Assert(0); }
-	virtual void ValidateData( int nVertexCount, const VertexDesc_t & desc ) { Assert(0); }
+	virtual bool Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t& desc ) { contract_assert( 0 ); return false; }
+	virtual void Unlock( int nWrittenIndexCount, IndexDesc_t& desc ) { contract_assert( 0 ); }
+	virtual void ModifyBegin( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t& desc ) { contract_assert( 0 ); }
+	virtual void ModifyEnd( IndexDesc_t& desc ) { contract_assert( 0 ); }
+	virtual void Spew( int nIndexCount, const IndexDesc_t & desc ) { contract_assert( 0 ); }
+	virtual void ValidateData( int nIndexCount, const IndexDesc_t &desc ) { contract_assert( 0 ); }
+	virtual bool Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc ) { contract_assert( 0 ); return false; }
+	virtual void Unlock( int nVertexCount, VertexDesc_t &desc ) { contract_assert( 0 ); }
+	virtual void Spew( int nVertexCount, const VertexDesc_t &desc ) { contract_assert( 0 ); }
+	virtual void ValidateData( int nVertexCount, const VertexDesc_t & desc ) { contract_assert( 0 ); }
 
 	// Locks mesh for modifying
 	void ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc );
@@ -286,7 +272,7 @@ public:
 
 	void SetColorMesh( IMesh *pColorMesh, int nVertexOffsetInBytes )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 	virtual void GetColorMesh( const IVertexBuffer** pMesh, int *pMeshVertexOffsetInBytes ) const
@@ -296,12 +282,12 @@ public:
 
 	void SetFlexMesh( IMesh *pMesh, int nVertexOffsetInBytes )
 	{
-		Assert( pMesh == nullptr && nVertexOffsetInBytes == 0 );
+		contract_assert( pMesh == nullptr && nVertexOffsetInBytes == 0 );
 	}
 
 	void DisableFlexMesh( )
 	{
-		Assert( 0 );
+		contract_assert( 0 );
 	}
 
 	void MarkAsDrawn() {}
@@ -346,10 +332,10 @@ public:
 
 	// NOTE: For dynamic index buffers only!
 	// Casts the memory of the dynamic index buffer to the appropriate type
-	virtual void BeginCastBuffer( MaterialIndexFormat_t format ) { Assert(0); }
-	virtual void BeginCastBuffer( VertexFormat_t format ) { Assert(0); }
-	virtual void EndCastBuffer( ) { Assert(0); }
-	virtual int GetRoomRemaining() const { Assert(0); return 0; }
+	virtual void BeginCastBuffer( MaterialIndexFormat_t format ) { contract_assert( 0 ); }
+	virtual void BeginCastBuffer( VertexFormat_t format ) { contract_assert( 0 ); }
+	virtual void EndCastBuffer( ) { contract_assert( 0 ); }
+	virtual int GetRoomRemaining() const { contract_assert( 0 ); return 0; }
 
 	// returns a static vertex buffer...
 	virtual CVertexBuffer *GetVertexBuffer() { return 0; }
@@ -374,10 +360,6 @@ protected:
 	// The vertex format we're using...
 	VertexFormat_t m_VertexFormat;
 	
-#ifdef DBGFLAG_ASSERT
-	IMaterialInternal* m_pMaterial;
-	bool m_IsDrawing;
-#endif
 };
 
 //-----------------------------------------------------------------------------
@@ -445,11 +427,7 @@ public:
 	MaterialPrimitiveType_t GetPrimitiveType() const;
 
 	// Is it using tessellation
-#if ENABLE_TESSELLATION
-	TessellationMode_t GetTessellationType() const;
-#else
 	TessellationMode_t GetTessellationType() const { return TESSELLATION_MODE_DISABLED; }
-#endif
 
 	// Is it using vertexID for morphs or subdivision surfaces?
 	bool IsUsingVertexID() const;
@@ -530,11 +508,6 @@ protected:
 	static unsigned int s_FirstVertex; // Gets reset during CMeshDX8::DrawInternal
 	static unsigned int s_NumVertices;
 	int	m_FirstIndex;
-
-#ifdef RECORDING
-	int	m_LockVertexBufferSize;
-	void *m_LockVertexBuffer;
-#endif
 
 #if defined( RECORDING ) || defined( CHECK_INDICES )
 	void *m_LockIndexBuffer;
@@ -623,8 +596,6 @@ private:
 };
 
 
-
-
 //-----------------------------------------------------------------------------
 // A mesh that stores temporary vertex data in the correct format (for modification)
 //-----------------------------------------------------------------------------
@@ -669,7 +640,7 @@ public:
 
 	virtual void HandleLateCreation() 
 	{ 
-		Assert( !"TBD - CTempMeshDX8::HandleLateCreation()" ); 
+		contract_assert( !"TBD - CTempMeshDX8::HandleLateCreation()" ); 
 	}
 
 	// Draws the entire beast
@@ -704,12 +675,7 @@ private:
 	static unsigned int s_NumIndices;
 	static unsigned int s_FirstIndex;
 
-#ifdef DBGFLAG_ASSERT
-	bool m_Locked;
-	bool m_InPass;
-#endif
 };
-
 
 
 //-----------------------------------------------------------------------------
@@ -988,7 +954,6 @@ inline void D3DSetIndices( IDirect3DIndexBuffer9 *pIndexBuffer )
 }
 
 
-
 //-----------------------------------------------------------------------------
 // Tracks stream state and queued data
 //-----------------------------------------------------------------------------
@@ -1092,9 +1057,7 @@ CIndexBufferDx8::CIndexBufferDx8( ShaderBufferType_t bufferType, MaterialIndexFo
 	m_pShadowIndices = nullptr;
 #endif
 
-#ifdef VPROF_ENABLED
 	m_nVProfFrame = -1;
-#endif
 }
 
 CIndexBufferDx8::~CIndexBufferDx8()
@@ -1108,7 +1071,7 @@ CIndexBufferDx8::~CIndexBufferDx8()
 //-----------------------------------------------------------------------------
 inline int CIndexBufferDx8::IndexSize() const
 {
-	Assert( m_IndexFormat != MATERIAL_INDEX_FORMAT_UNKNOWN );
+	contract_assert( m_IndexFormat != MATERIAL_INDEX_FORMAT_UNKNOWN );
 	return ( m_IndexFormat == MATERIAL_INDEX_FORMAT_16BIT ) ? 2 : 4;
 }
 
@@ -1118,7 +1081,7 @@ inline int CIndexBufferDx8::IndexSize() const
 //-----------------------------------------------------------------------------
 bool CIndexBufferDx8::Allocate()
 {
-	Assert( !m_pIndexBuffer );
+	contract_assert( !m_pIndexBuffer );
 	m_nFirstUnwrittenOffset = 0;
 
 	// FIXME: This doesn't really work for dynamic buffers; dynamic buffers
@@ -1154,17 +1117,15 @@ bool CIndexBufferDx8::Allocate()
 
 	if ( !m_bIsDynamic )
 	{
-		VPROF_INCREMENT_GROUP_COUNTER( "TexGroup_global_" TEXTURE_GROUP_STATIC_INDEX_BUFFER, 
-			COUNTER_GROUP_TEXTURE_GLOBAL, m_nBufferSize );
+		VProfIncrementCounter<kTextureGroupStaticIndexBufferGlobal, COUNTER_GROUP_TEXTURE_GLOBAL>( m_nBufferSize );
 	}
 	else
 	{
-		VPROF_INCREMENT_GROUP_COUNTER( "TexGroup_global_" TEXTURE_GROUP_DYNAMIC_INDEX_BUFFER, 
-			COUNTER_GROUP_TEXTURE_GLOBAL, m_nBufferSize );
+		VProfIncrementCounter<kTextureGroupDynamicIndexBufferGlobal, COUNTER_GROUP_TEXTURE_GLOBAL>( m_nBufferSize );
 	}
 
 #ifdef CHECK_INDICES
-	Assert ( !m_pShadowIndices );
+	contract_assert( !m_pShadowIndices );
 	m_pShadowIndices = new unsigned char[ m_nBufferSize ];
 	memset( m_pShadowIndices, 0xFF, m_nBufferSize );
 #endif // CHECK_INDICES
@@ -1185,22 +1146,16 @@ void CIndexBufferDx8::Free()
 		--s_nBufferCount;
 #endif
 
-#if SHADERAPI_NO_D3DDeviceWrapper
-		m_pIndexBuffer->Release();
-#else
 		Dx9Device()->Release( m_pIndexBuffer );
-#endif
 		m_pIndexBuffer = nullptr;
 
 		if ( !m_bIsDynamic )
 		{
-			VPROF_INCREMENT_GROUP_COUNTER( "TexGroup_global_" TEXTURE_GROUP_STATIC_INDEX_BUFFER, 
-				COUNTER_GROUP_TEXTURE_GLOBAL, - m_nBufferSize );
+			VProfIncrementCounter<kTextureGroupStaticIndexBufferGlobal, COUNTER_GROUP_TEXTURE_GLOBAL>( - m_nBufferSize );
 		}
 		else
 		{
-			VPROF_INCREMENT_GROUP_COUNTER( "TexGroup_global_" TEXTURE_GROUP_DYNAMIC_INDEX_BUFFER, 
-				COUNTER_GROUP_TEXTURE_GLOBAL, - m_nBufferSize );
+			VProfIncrementCounter<kTextureGroupDynamicIndexBufferGlobal, COUNTER_GROUP_TEXTURE_GLOBAL>( - m_nBufferSize );
 		}
 	}
 
@@ -1219,13 +1174,13 @@ void CIndexBufferDx8::Free()
 //-----------------------------------------------------------------------------
 int CIndexBufferDx8::IndexCount( ) const
 {
-	Assert( !m_bIsDynamic );
+	contract_assert( !m_bIsDynamic );
 	return m_nIndexCount;
 }
 
 MaterialIndexFormat_t CIndexBufferDx8::IndexFormat() const
 {
-	Assert( !m_bIsDynamic );
+	contract_assert( !m_bIsDynamic );
 	return m_IndexFormat;
 }
 
@@ -1264,8 +1219,8 @@ IDirect3DIndexBuffer9* CIndexBufferDx8::GetDx9Buffer()
 #ifdef CHECK_INDICES
 unsigned short CIndexBufferDx8::GetShadowIndex( int i ) const
 {
-	Assert( i >= 0 && i < m_nIndexCount );
-	Assert( m_IndexFormat == MATERIAL_INDEX_FORMAT_16BIT );
+	contract_assert( i >= 0 && i < m_nIndexCount );
+	contract_assert( m_IndexFormat == MATERIAL_INDEX_FORMAT_16BIT );
 	return *(unsigned short*)( &m_pShadowIndices[ i * IndexSize() ] );
 }
 #endif // CHECK_INDICES
@@ -1276,14 +1231,11 @@ unsigned short CIndexBufferDx8::GetShadowIndex( int i ) const
 //-----------------------------------------------------------------------------
 void CIndexBufferDx8::HandlePerFrameTextureStats( int nFrame )
 {
-#ifdef VPROF_ENABLED
 	if ( m_nVProfFrame != nFrame && !m_bIsDynamic )
 	{
 		m_nVProfFrame = nFrame;
-		VPROF_INCREMENT_GROUP_COUNTER( "TexGroup_frame_" TEXTURE_GROUP_STATIC_INDEX_BUFFER, 
-			COUNTER_GROUP_TEXTURE_PER_FRAME, m_nBufferSize );
+		VProfIncrementCounter<kTextureGroupStaticIndexBufferFrame, COUNTER_GROUP_TEXTURE_PER_FRAME>( m_nBufferSize );
 	}
-#endif
 }
 
 
@@ -1293,8 +1245,8 @@ void CIndexBufferDx8::HandlePerFrameTextureStats( int nFrame )
 void CIndexBufferDx8::BeginCastBuffer( MaterialIndexFormat_t format )
 {
 	// NOTE: This should have no effect under Dx9, since we can't recast index buffers.
-	Assert( format != MATERIAL_INDEX_FORMAT_UNKNOWN );
-	Assert( m_bIsDynamic && ( m_IndexFormat == format ) );
+	contract_assert( format != MATERIAL_INDEX_FORMAT_UNKNOWN );
+	contract_assert( m_bIsDynamic && ( m_IndexFormat == format ) );
 }
 
 void CIndexBufferDx8::EndCastBuffer( )
@@ -1313,14 +1265,14 @@ int CIndexBufferDx8::GetRoomRemaining() const
 //-----------------------------------------------------------------------------
 bool CIndexBufferDx8::Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t &desc )
 {
-	Assert( !m_bIsLocked && ( nMaxIndexCount != 0 ) && ( nMaxIndexCount <= m_nIndexCount ) );
-	Assert( m_IndexFormat != MATERIAL_INDEX_FORMAT_UNKNOWN );
+	contract_assert( !m_bIsLocked && ( nMaxIndexCount != 0 ) && ( nMaxIndexCount <= m_nIndexCount ) );
+	contract_assert( m_IndexFormat != MATERIAL_INDEX_FORMAT_UNKNOWN );
 
 	// FIXME: Why do we need to sync matrices now?
 	ShaderUtil()->SyncMatrices();
 	g_ShaderMutex.lock();
 
-	VPROF( "CIndexBufferX8::Lock" );		
+	CVProfScope _( "CIndexBufferX8::Lock", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );		
 
 	void *pLockedData = nullptr;
 	HRESULT hr;
@@ -1366,7 +1318,7 @@ bool CIndexBufferDx8::Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t &desc 
 	if ( bAppend )
 	{
 		// Can't have the first lock after a flush be an appending lock
-		Assert( !m_bFlush );
+		contract_assert( !m_bFlush );
 
 		// If we're appending and we don't have enough room, then puke!
 		if ( !bHasEnoughMemory || m_bFlush )
@@ -1392,11 +1344,7 @@ bool CIndexBufferDx8::Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t &desc 
 		}
 	}
 
-	#if SHADERAPI_NO_D3DDeviceWrapper
-	hr = m_pIndexBuffer->Lock( m_nFirstUnwrittenOffset, nMemoryRequired, &pLockedData, nLockFlags );
-	#else
 	hr = Dx9Device()->Lock( m_pIndexBuffer, m_nFirstUnwrittenOffset, nMemoryRequired, &pLockedData, nLockFlags );
-	#endif
 
 	if ( FAILED( hr ) )
 	{
@@ -1414,7 +1362,7 @@ bool CIndexBufferDx8::Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t &desc 
 	else
 	{
 		desc.m_nFirstIndex = m_nFirstUnwrittenOffset / IndexSize();
-		Assert( (int)( desc.m_nFirstIndex * IndexSize() ) == m_nFirstUnwrittenOffset );
+		contract_assert( (int)( desc.m_nFirstIndex * IndexSize() ) == m_nFirstUnwrittenOffset );
 		desc.m_nOffset = 0;
 	}
 	m_bIsLocked = true;
@@ -1440,7 +1388,7 @@ indexBufferLockFailed:
 
 void CIndexBufferDx8::Unlock( int nWrittenIndexCount, IndexDesc_t &desc )
 {
-	Assert( nWrittenIndexCount <= m_nIndexCount );
+	contract_assert( nWrittenIndexCount <= m_nIndexCount );
 
 	// NOTE: This can happen if another application finishes
 	// initializing during the construction of a mesh
@@ -1453,11 +1401,7 @@ void CIndexBufferDx8::Unlock( int nWrittenIndexCount, IndexDesc_t &desc )
 
 	if ( m_pIndexBuffer )
 	{
-#if SHADERAPI_NO_D3DDeviceWrapper
-		m_pIndexBuffer->Unlock();
-#else
 		Dx9Device()->Unlock( m_pIndexBuffer );
-#endif
 	}
 
 	m_nFirstUnwrittenOffset += nWrittenIndexCount * IndexSize();
@@ -1501,7 +1445,7 @@ CVertexBufferDx8::CVertexBufferDx8( ShaderBufferType_t type, VertexFormat_t fmt,
 	BaseClass( pBudgetGroupName )
 {
 //	Debugger();
-	Assert( nVertexCount != 0 );
+	contract_assert( nVertexCount != 0 );
 
 	m_pVertexBuffer = nullptr;
 	m_VertexFormat = fmt;
@@ -1512,7 +1456,6 @@ CVertexBufferDx8::CVertexBufferDx8( ShaderBufferType_t type, VertexFormat_t fmt,
 	m_bIsDynamic = ( type == SHADER_BUFFER_TYPE_DYNAMIC ) || ( type == SHADER_BUFFER_TYPE_DYNAMIC_TEMP );
 	m_bFlush = false;
 
-#ifdef VPROF_ENABLED
 	if ( !m_bIsDynamic )
 	{
 		char name[256];
@@ -1526,11 +1469,10 @@ CVertexBufferDx8::CVertexBufferDx8( ShaderBufferType_t type, VertexFormat_t fmt,
 	}
 	else
 	{
-		m_pGlobalCounter = g_VProfCurrentProfile.FindOrCreateCounter( "TexGroup_global_" TEXTURE_GROUP_DYNAMIC_VERTEX_BUFFER, COUNTER_GROUP_TEXTURE_GLOBAL );
+		m_pGlobalCounter = g_VProfCurrentProfile.FindOrCreateCounter( kTextureGroupDynamicVertexBufferGlobal.c_str(), COUNTER_GROUP_TEXTURE_GLOBAL );
 		m_pFrameCounter = nullptr;
 	}
 	m_nVProfFrame = -1;
-#endif
 }
 
 CVertexBufferDx8::~CVertexBufferDx8()
@@ -1544,7 +1486,7 @@ CVertexBufferDx8::~CVertexBufferDx8()
 //-----------------------------------------------------------------------------
 inline int CVertexBufferDx8::VertexSize() const
 {
-	Assert( m_VertexFormat != VERTEX_FORMAT_UNKNOWN );
+	contract_assert( m_VertexFormat != VERTEX_FORMAT_UNKNOWN );
 	return VertexFormatSize( m_VertexFormat );
 }
 
@@ -1553,7 +1495,7 @@ inline int CVertexBufferDx8::VertexSize() const
 //-----------------------------------------------------------------------------
 bool CVertexBufferDx8::Allocate()
 {
-	Assert( !m_pVertexBuffer );
+	contract_assert( !m_pVertexBuffer );
 	m_nFirstUnwrittenOffset = 0;
 
 	D3DPOOL pool = D3DPOOL_MANAGED;
@@ -1593,13 +1535,11 @@ bool CVertexBufferDx8::Allocate()
 	// Track VB allocations
 	g_VBAllocTracker->CountVB( m_pVertexBuffer, m_bIsDynamic, m_nBufferSize, m_bIsDynamic ? 0 : VertexSize(), m_VertexFormat );
 
-#ifdef VPROF_ENABLED
 	if ( !m_bIsDynamic )
 	{
-		Assert( m_pGlobalCounter );
+		contract_assert( m_pGlobalCounter );
 		*m_pGlobalCounter += m_nBufferSize;
 	}
-#endif
 
 #ifdef _DEBUG
 		++s_nBufferCount;
@@ -1620,19 +1560,13 @@ void CVertexBufferDx8::Free()
 	// Track VB allocations
 	g_VBAllocTracker->UnCountVB( m_pVertexBuffer );
 
-#ifdef VPROF_ENABLED
 		if ( !m_bIsDynamic )
 		{
-			Assert( m_pGlobalCounter );
+			contract_assert( m_pGlobalCounter );
 			*m_pGlobalCounter -= m_nBufferSize;
 		}
-#endif
 
-#if SHADERAPI_NO_D3DDeviceWrapper
-		m_pVertexBuffer->Release();
-#else
 		Dx9Device()->Release( m_pVertexBuffer );
-#endif
 		m_pVertexBuffer = nullptr;
 	}
 }
@@ -1643,13 +1577,13 @@ void CVertexBufferDx8::Free()
 //-----------------------------------------------------------------------------
 int CVertexBufferDx8::VertexCount() const
 {
-	Assert( !m_bIsDynamic );
+	contract_assert( !m_bIsDynamic );
 	return m_nVertexCount;
 }
 
 VertexFormat_t CVertexBufferDx8::GetVertexFormat() const
 {
-	Assert( !m_bIsDynamic );
+	contract_assert( !m_bIsDynamic );
 	return m_VertexFormat;
 }
 
@@ -1687,8 +1621,8 @@ IDirect3DVertexBuffer9* CVertexBufferDx8::GetDx9Buffer()
 //-----------------------------------------------------------------------------
 void CVertexBufferDx8::BeginCastBuffer( VertexFormat_t format )
 {
-	Assert( format != MATERIAL_INDEX_FORMAT_UNKNOWN );
-	Assert( m_bIsDynamic && ( m_VertexFormat == 0 || m_VertexFormat == format ) );
+	contract_assert( format != MATERIAL_INDEX_FORMAT_UNKNOWN );
+	contract_assert( m_bIsDynamic && ( m_VertexFormat == 0 || m_VertexFormat == format ) );
 	if ( !m_bIsDynamic )
 		return;
 
@@ -1711,7 +1645,7 @@ void CVertexBufferDx8::BeginCastBuffer( VertexFormat_t format )
 
 void CVertexBufferDx8::EndCastBuffer( )
 {
-	Assert( m_bIsDynamic && m_VertexFormat != 0 );
+	contract_assert( m_bIsDynamic && m_VertexFormat != 0 );
 	if ( !m_bIsDynamic )
 		return;
 	m_VertexFormat = 0;
@@ -1733,14 +1667,14 @@ int CVertexBufferDx8::GetRoomRemaining() const
 //-----------------------------------------------------------------------------
 bool CVertexBufferDx8::Lock( int nMaxVertexCount, bool bAppend, VertexDesc_t &desc )
 {
-	Assert( !m_bIsLocked && ( nMaxVertexCount != 0 ) && ( nMaxVertexCount <= m_nVertexCount ) );
-	Assert( m_VertexFormat != VERTEX_FORMAT_UNKNOWN );
+	contract_assert( !m_bIsLocked && ( nMaxVertexCount != 0 ) && ( nMaxVertexCount <= m_nVertexCount ) );
+	contract_assert( m_VertexFormat != VERTEX_FORMAT_UNKNOWN );
 
 	// FIXME: Why do we need to sync matrices now?
 	ShaderUtil()->SyncMatrices();
 	g_ShaderMutex.lock();
 
-	VPROF( "CVertexBufferDx8::Lock" );		
+	CVProfScope _( "CVertexBufferDx8::Lock", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );		
 
 	void *pLockedData = nullptr;
 	HRESULT hr;
@@ -1778,7 +1712,7 @@ bool CVertexBufferDx8::Lock( int nMaxVertexCount, bool bAppend, VertexDesc_t &de
 	if ( bAppend )
 	{
 		// Can't have the first lock after a flush be an appending lock
-		Assert( !m_bFlush );
+		contract_assert( !m_bFlush );
 
 		// If we're appending and we don't have enough room, then puke!
 		if ( !bHasEnoughMemory || m_bFlush )
@@ -1804,11 +1738,7 @@ bool CVertexBufferDx8::Lock( int nMaxVertexCount, bool bAppend, VertexDesc_t &de
 		}
 	}
 
-	#if SHADERAPI_NO_D3DDeviceWrapper
-	hr = m_pVertexBuffer->Lock( m_nFirstUnwrittenOffset, nMemoryRequired, &pLockedData, nLockFlags );
-	#else
 	hr = Dx9Device()->Lock( m_pVertexBuffer, m_nFirstUnwrittenOffset, nMemoryRequired, &pLockedData, nLockFlags );
-	#endif
 
 	if ( FAILED( hr ) )
 	{
@@ -1817,7 +1747,7 @@ bool CVertexBufferDx8::Lock( int nMaxVertexCount, bool bAppend, VertexDesc_t &de
 		if ( ( SYSCALL_SUCCESS == Plat_GetPagedPoolInfo( &ppi ) ) &&
 			( ( ppi.numPagesFree * 20 ) < ( ppi.numPagesUsed + ppi.numPagesFree ) ) )
 		{
-			FailedLock( "Out of OS Paged Pool Memory! For more information, please see\nhttp://support.steampowered.com\n" );
+			FailedLock( "Out of OS Paged Pool Memory!\n" );
 		}
 		else
 		{
@@ -1836,7 +1766,7 @@ bool CVertexBufferDx8::Lock( int nMaxVertexCount, bool bAppend, VertexDesc_t &de
 	{
 		desc.m_nFirstVertex = m_nFirstUnwrittenOffset / VertexSize();
 		desc.m_nOffset = 0;
-		Assert( m_nFirstUnwrittenOffset == VertexSize() * desc.m_nFirstVertex );
+		contract_assert( m_nFirstUnwrittenOffset == VertexSize() * desc.m_nFirstVertex );
 	}
 	m_bIsLocked = true;
 	return true;
@@ -1851,7 +1781,7 @@ vertexBufferLockFailed:
 
 void CVertexBufferDx8::Unlock( int nWrittenVertexCount, VertexDesc_t &desc )
 {
-	Assert( nWrittenVertexCount <= m_nVertexCount );
+	contract_assert( nWrittenVertexCount <= m_nVertexCount );
 
 	// NOTE: This can happen if another application finishes
 	// initializing during the construction of a mesh
@@ -1860,11 +1790,7 @@ void CVertexBufferDx8::Unlock( int nWrittenVertexCount, VertexDesc_t &desc )
 
 	if ( m_pVertexBuffer )
 	{
-#if SHADERAPI_NO_D3DDeviceWrapper
-		m_pVertexBuffer->Unlock();
-#else
 		Dx9Device()->Unlock( m_pVertexBuffer );
-#endif
 	}
 
 	m_nFirstUnwrittenOffset += nWrittenVertexCount * VertexSize();
@@ -1878,13 +1804,11 @@ void CVertexBufferDx8::Unlock( int nWrittenVertexCount, VertexDesc_t &desc )
 //-----------------------------------------------------------------------------
 void CVertexBufferDx8::HandlePerFrameTextureStats( int nFrame )
 {
-#ifdef VPROF_ENABLED
 	if ( m_nVProfFrame != nFrame && !m_bIsDynamic )
 	{
 		m_nVProfFrame = nFrame;
 		m_pFrameCounter += m_nBufferSize;
 	}
-#endif
 }
 
 
@@ -1904,7 +1828,7 @@ inline float Wrinkle( MeshDesc_t const &desc, int vert )
 
 inline D3DXVECTOR3 &BoneWeight( MeshDesc_t const &desc, int vert )
 {
-	Assert( desc.m_CompressionType == VERTEX_COMPRESSION_NONE );
+	contract_assert( desc.m_CompressionType == VERTEX_COMPRESSION_NONE );
 	return *(D3DXVECTOR3*)((unsigned char*)desc.m_pBoneWeight + vert * desc.m_VertexSize_BoneWeight );
 }
 
@@ -1915,11 +1839,11 @@ inline unsigned char *BoneIndex( MeshDesc_t const &desc, int vert )
 
 inline D3DXVECTOR3 &Normal( MeshDesc_t const &desc, int vert )
 {
-	Assert( desc.m_CompressionType == VERTEX_COMPRESSION_NONE );
+	contract_assert( desc.m_CompressionType == VERTEX_COMPRESSION_NONE );
 	return *(D3DXVECTOR3*)((unsigned char*)desc.m_pNormal + vert * desc.m_VertexSize_Normal );
 }
 
-inline unsigned char *Color( MeshDesc_t const &desc, int vert )
+inline unsigned char *ColorPtr( MeshDesc_t const &desc, int vert )
 {
 	return desc.m_pColor + vert * desc.m_VertexSize_Color;
 }
@@ -1953,10 +1877,6 @@ inline D3DXVECTOR3 &TangentT( MeshDesc_t const &desc, int vert )
 CBaseMeshDX8::CBaseMeshDX8() : m_VertexFormat(0)
 {
 	m_bMeshLocked = false;
-#ifdef DBGFLAG_ASSERT
-	m_IsDrawing = false;
-	m_pMaterial = 0;
-#endif
 }
 
 CBaseMeshDX8::~CBaseMeshDX8()
@@ -1969,19 +1889,12 @@ CBaseMeshDX8::~CBaseMeshDX8()
 //-----------------------------------------------------------------------------
 bool CBaseMeshDX8::DebugTrace() const
 {
-#ifdef DBGFLAG_ASSERT
-	if (m_pMaterial)
-		return m_pMaterial->PerformDebugTrace();
-#endif
 
 	return false;
 }
 
 void CBaseMeshDX8::SetMaterial( IMaterial *pMaterial )
 {
-#ifdef DBGFLAG_ASSERT
-	m_pMaterial = static_cast<IMaterialInternal *>(pMaterial);
-#endif
 }
 
 
@@ -2043,23 +1956,20 @@ unsigned int CBaseMeshDX8::ComputeMemoryUsed()
 //-----------------------------------------------------------------------------
 void CBaseMeshDX8::ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc )
 {
-	LOCK_SHADERAPI();
 	// for the time being, disallow for most cases
-	Assert(0);
+	contract_assert( 0 );
 }
 
 void CBaseMeshDX8::ModifyBegin( int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc )
 {
-	LOCK_SHADERAPI();
 	// for the time being, disallow for most cases
-	Assert(0);
+	contract_assert( 0 );
 }
 
 void CBaseMeshDX8::ModifyEnd( MeshDesc_t& desc )
 {
-	LOCK_SHADERAPI();
 	// for the time being, disallow for most cases
-	Assert(0);
+	contract_assert( 0 );
 }
 
 
@@ -2068,7 +1978,6 @@ void CBaseMeshDX8::ModifyEnd( MeshDesc_t& desc )
 //-----------------------------------------------------------------------------
 void CBaseMeshDX8::BeginPass( )
 {
-	LOCK_SHADERAPI();
 }
 
 //-----------------------------------------------------------------------------
@@ -2076,13 +1985,8 @@ void CBaseMeshDX8::BeginPass( )
 //-----------------------------------------------------------------------------
 inline void CBaseMeshDX8::DrawMesh( const Vector4D *pVecDiffuseModulation )
 {
-#ifdef DBGFLAG_ASSERT
-	// Make sure we're not drawing...
-	Assert( !m_IsDrawing );
-	m_IsDrawing = true;
-#endif
 
-	Assert( !g_pInstanceData );
+	contract_assert( !g_pInstanceData );
 
 	MeshInstanceData_t instance;
 	CompiledLightingState_t *pCompiledLightingState;
@@ -2121,9 +2025,6 @@ inline void CBaseMeshDX8::DrawMesh( const Vector4D *pVecDiffuseModulation )
 		ShaderAPI()->SetTessellationMode( TESSELLATION_MODE_DISABLED );
 	}	
 
-#ifdef DBGFLAG_ASSERT
-	m_IsDrawing = false;
-#endif
 }
 
 
@@ -2132,7 +2033,6 @@ inline void CBaseMeshDX8::DrawMesh( const Vector4D *pVecDiffuseModulation )
 //-----------------------------------------------------------------------------
 void CBaseMeshDX8::Spew( int nVertexCount, int nIndexCount, const MeshDesc_t &spewDesc )
 {
-	LOCK_SHADERAPI();
 	// This has regressed.
 	int i;
 
@@ -2140,14 +2040,6 @@ void CBaseMeshDX8::Spew( int nVertexCount, int nIndexCount, const MeshDesc_t &sp
 	// FIXME: just fall back to the base class (CVertexBufferBase) version of this function!
 
 
-#ifdef DBGFLAG_ASSERT
-	if( m_pMaterial )
-	{
-		Plat_DebugString( ( const char * )m_pMaterial->GetName() );
-		Plat_DebugString( "\n" );
-	}
-#endif // _DEBUG
-	
 	// This is needed so buffering can just use this
 	VertexFormat_t fmt = m_VertexFormat;
 
@@ -2156,8 +2048,7 @@ void CBaseMeshDX8::Spew( int nVertexCount, int nIndexCount, const MeshDesc_t &sp
 
 	char tempbuf[256];
 	char* temp = tempbuf;
-	sprintf( tempbuf,"\nVerts: (Vertex Format %llx)\n", fmt);
-	Plat_DebugString(tempbuf);
+	std::sprintf( tempbuf,"\nVerts: (Vertex Format %llx)\n", fmt);
 
 	CVertexBufferBase::PrintVertexFormat( fmt );
 
@@ -2191,10 +2082,10 @@ void CBaseMeshDX8::Spew( int nVertexCount, int nIndexCount, const MeshDesc_t &sp
 		{
 			unsigned char *pIndex = BoneIndex( desc, i );
 			temp += sprintf( temp, "BI %d %d %d %d ", ( int )pIndex[0], ( int )pIndex[1], ( int )pIndex[2], ( int )pIndex[3] );
-			Assert( uint( pIndex[0] ) < 16 );
-			Assert( uint( pIndex[1] ) < 16 );
-			Assert( uint( pIndex[2] ) < 16 );
-			Assert( uint( pIndex[3] ) < 16 );
+			contract_assert( uint( pIndex[0] ) < 16 );
+			contract_assert( uint( pIndex[1] ) < 16 );
+			contract_assert( uint( pIndex[2] ) < 16 );
+			contract_assert( uint( pIndex[3] ) < 16 );
 		}
 
 		if ( fmt & VERTEX_NORMAL )
@@ -2206,7 +2097,7 @@ void CBaseMeshDX8::Spew( int nVertexCount, int nIndexCount, const MeshDesc_t &sp
 		
 		if (fmt & VERTEX_COLOR)
 		{
-			unsigned char* pColor = Color( desc, i );
+			unsigned char* pColor = ColorPtr( desc, i );
 			temp += sprintf(temp, "C b %3d g %3d r %3d a %3d ",
 				pColor[0], pColor[1], pColor[2], pColor[3]);
 		}
@@ -2235,114 +2126,30 @@ void CBaseMeshDX8::Spew( int nVertexCount, int nIndexCount, const MeshDesc_t &sp
 		}
 
 		sprintf(temp,"\n");
-		Plat_DebugString(tempbuf);
 		temp = tempbuf;
 	}
 
 	sprintf( tempbuf,"\nIndices: %d\n", nIndexCount );
-	Plat_DebugString(tempbuf);
 	for ( i = 0; i < nIndexCount; ++i )
 	{
 		temp += sprintf( temp, "%d ", ( int )desc.m_pIndices[i] );
 		if ((i & 0x0F) == 0x0F)
 		{
 			sprintf( temp, "\n" );
-			Plat_DebugString(tempbuf);
 			tempbuf[0] = '\0';
 			temp = tempbuf;
 		}
 	}
 	sprintf(temp,"\n");
-	Plat_DebugString( tempbuf );
 }
 
 void CBaseMeshDX8::ValidateData( int nVertexCount, int nIndexCount, const MeshDesc_t &spewDesc )
 {
-	LOCK_SHADERAPI();
-#ifdef VALIDATE_DEBUG
-	int i;
-
-
-	// FIXME: just fall back to the base class (CVertexBufferBase) version of this function!
-
-
-	// This is needed so buffering can just use this
-	VertexFormat_t fmt = m_pMaterial->GetVertexUsage();
-
-	// Set up the vertex descriptor
-	MeshDesc_t desc = spewDesc;
-
-	int numBoneWeights = NumBoneWeights( fmt );
-	for ( i = 0; i < nVertexCount; ++i )
-	{
-		if( fmt & VERTEX_POSITION )
-		{
-			D3DXVECTOR3& pos = Position( desc, i );
-			Assert( IsFinite( pos[0] ) && IsFinite( pos[1] ) && IsFinite( pos[2] ) );
-		}
-		if( fmt & VERTEX_WRINKLE )
-		{
-			float flWrinkle = Wrinkle( desc, i );
-			Assert( IsFinite( flWrinkle ) );
-		}
-		if (numBoneWeights > 0)
-		{
-			float* pWeight = BoneWeight( desc, i );
-			for (int j = 0; j < numBoneWeights; ++j)
-			{
-				Assert( pWeight[j] >= 0.0f && pWeight[j] <= 1.0f );
-			}
-		}
-		if( fmt & VERTEX_BONE_INDEX )
-		{
-			unsigned char *pIndex = BoneIndex( desc, i );
-			Assert( pIndex[0] >= 0 && pIndex[0] < 16 );
-			Assert( pIndex[1] >= 0 && pIndex[1] < 16 );
-			Assert( pIndex[2] >= 0 && pIndex[2] < 16 );
-			Assert( pIndex[3] >= 0 && pIndex[3] < 16 );
-		}
-		if( fmt & VERTEX_NORMAL )
-		{
-			D3DXVECTOR3& normal = Normal( desc, i );
-			Assert( normal[0] >= -1.05f && normal[0] <= 1.05f );
-			Assert( normal[1] >= -1.05f && normal[1] <= 1.05f );
-			Assert( normal[2] >= -1.05f && normal[2] <= 1.05f );
-		}
-		
-		if (fmt & VERTEX_COLOR)
-		{
-			int* pColor = (int*)Color( desc, i );
-			Assert( *pColor != FLOAT32_NAN_BITS );
-		}
-
-		for (int j = 0; j < VERTEX_MAX_TEXTURE_COORDINATES; ++j)
-		{
-			if( TexCoordSize( j, fmt ) > 0)
-			{
-				D3DXVECTOR2& texcoord = TexCoord( desc, i, j );
-				Assert( IsFinite( texcoord[0] ) && IsFinite( texcoord[1] ) );
-			}
-		}
-
-		if (fmt & VERTEX_TANGENT_S)
-		{
-			D3DXVECTOR3& tangentS = TangentS( desc, i );
-			Assert( IsFinite( tangentS[0] ) && IsFinite( tangentS[1] ) && IsFinite( tangentS[2] ) );
-		}
-
-		if (fmt & VERTEX_TANGENT_T)
-		{
-			D3DXVECTOR3& tangentT = TangentT( desc, i );
-			Assert( IsFinite( tangentT[0] ) && IsFinite( tangentT[1] ) && IsFinite( tangentT[2] ) );
-		}
-	}
-#endif // _DEBUG
 }
 
 void CBaseMeshDX8::Draw( CPrimList *pLists, int nLists )
 {
-	LOCK_SHADERAPI();
-	Assert( !"CBaseMeshDX8::Draw(CPrimList, int): should never get here." );
+	contract_assert( !"CBaseMeshDX8::Draw(CPrimList, int): should never get here." );
 }
 
 
@@ -2355,8 +2162,7 @@ void CBaseMeshDX8::CopyToMeshBuilder(
 	int indexOffset,	// This is added to each index.
 	CMeshBuilder &builder )
 {
-	LOCK_SHADERAPI();
-	Assert( false );
+	contract_assert( false );
 	Warning( "CopyToMeshBuilder called on something other than a temp mesh.\n" );
 }
 
@@ -2372,7 +2178,7 @@ int CMeshDX8::s_nPrims;
 unsigned int CMeshDX8::s_FirstVertex;
 unsigned int CMeshDX8::s_NumVertices;
 
-#define PLATFORM_SUPPORTS_TRIANGLE_FANS 0
+constexpr auto PLATFORM_SUPPORTS_TRIANGLE_FANS = 0;
 
 //-----------------------------------------------------------------------------
 // Computes the mode
@@ -2399,7 +2205,7 @@ inline D3DPRIMITIVETYPE ComputeMode( MaterialPrimitiveType_t type )
 		return (D3DPRIMITIVETYPE)-1;
 
 	default:
-		Assert(0);
+		contract_assert( 0 );
 		return (D3DPRIMITIVETYPE)-1;
 	}
 }
@@ -2434,7 +2240,7 @@ CMeshDX8::~CMeshDX8()
 		delete m_pVertexBuffer;
 		delete m_pIndexBuffer;
 
-		for ( int k = 0; k < ARRAYSIZE( m_arrRawHardwareDataStreams ); ++ k )
+		for ( int k = 0; k < std::size( m_arrRawHardwareDataStreams ); ++ k )
 		{
 			if ( m_arrRawHardwareDataStreams[k] )
 			{
@@ -2451,7 +2257,6 @@ void CMeshDX8::SetFlexMesh( IMesh *pMesh, int nVertexOffsetInBytes )
 	if ( !ShaderUtil()->OnSetFlexMesh( this, pMesh, nVertexOffsetInBytes ) )
 		return;
 
-	LOCK_SHADERAPI();
 	m_nFlexVertOffsetInBytes = nVertexOffsetInBytes;	// Offset into dynamic mesh (in bytes)
 
 	if ( pMesh )
@@ -2479,7 +2284,6 @@ void CMeshDX8::DisableFlexMesh( )
 
 bool CMeshDX8::HasFlexMesh( ) const
 {
-	LOCK_SHADERAPI();
 	return m_bHasFlexVerts;
 }
 
@@ -2488,17 +2292,16 @@ void CMeshDX8::SetColorMesh( IMesh *pColorMesh, int nVertexOffsetInBytes )
 	if ( !ShaderUtil()->OnSetColorMesh( this, pColorMesh, nVertexOffsetInBytes ) )
 		return;
 		
-	LOCK_SHADERAPI();
 	m_pColorMesh = ( CMeshDX8 * )pColorMesh; // dangerous conversion! garymcthack
 	m_nColorMeshVertOffsetInBytes = nVertexOffsetInBytes;
-	Assert( m_pColorMesh || ( nVertexOffsetInBytes == 0 ) );
+	contract_assert( m_pColorMesh || ( nVertexOffsetInBytes == 0 ) );
 
 #ifdef _DEBUG
 	if ( pColorMesh )
 	{
 		int nVertexCount = VertexCount();
  		int numVertsColorMesh = m_pColorMesh->VertexCount();
-		Assert( numVertsColorMesh >= nVertexCount );
+		contract_assert( numVertsColorMesh >= nVertexCount );
 	}
 #endif
 }
@@ -2528,7 +2331,6 @@ void CMeshDX8::HandleLateCreation( )
 
 bool CMeshDX8::HasColorMesh( ) const
 {
-	LOCK_SHADERAPI();
 	return (m_pColorMesh != nullptr);
 }
 
@@ -2561,7 +2363,7 @@ void CMeshDX8::SetVertexStreamSpec( VertexStreamSpec_t *pStreamSpec )
 		return;
 
 	m_pVertexStreamSpec.reset( new VertexStreamSpec_t[ numSpecs + 1 ] );
-	memcpy( m_pVertexStreamSpec.get(), pStreamSpec, (numSpecs + 1)*sizeof( VertexStreamSpec_t ) );
+	std::memcpy( m_pVertexStreamSpec.get(), pStreamSpec, (numSpecs + 1)*sizeof( VertexStreamSpec_t ) );
 }
 
 
@@ -2570,7 +2372,7 @@ void CMeshDX8::SetVertexStreamSpec( VertexStreamSpec_t *pStreamSpec )
 //-----------------------------------------------------------------------------
 bool CMeshDX8::Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc )
 {
-	Assert( !m_IsVBLocked );
+	contract_assert( !m_IsVBLocked );
 
 	// Just give the app crap buffers to fill up while we're suppressed...
 	if ( g_pShaderDeviceDx8->IsDeactivated() || (nVertexCount == 0))
@@ -2615,7 +2417,7 @@ bool CMeshDX8::Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc )
 	if ( !g_pHardwareConfigDx8->SupportsStreamOffset() )
 	{
 		// Without stream offset, we can't use VBs greater than 65535 verts (due to our using 16-bit indices)
-		Assert( nVertexCount <= nMaxVerts );
+		contract_assert( nVertexCount <= nMaxVerts );
 	}
 
 	unsigned char *pVertexMemory = m_pVertexBuffer->Lock( nVertexCount, desc.m_nFirstVertex );
@@ -2623,11 +2425,11 @@ bool CMeshDX8::Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc )
 	{
 		// For debugging: when we get a dump crash of this, we'll know how many vertices were allocated
 		volatile int nVertexBuffer_VertexCount = m_pVertexBuffer->VertexCount(), nVertexBuffer_VertexSize = m_pVertexBuffer->VertexSize();
-		NOTE_UNUSED( nVertexBuffer_VertexCount );
-		NOTE_UNUSED( nVertexBuffer_VertexSize );
+		(void)nVertexBuffer_VertexCount;
+		(void)nVertexBuffer_VertexSize;
 		if ( nVertexCount > nMaxVerts )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			Error( "Too many verts for a dynamic vertex buffer (%d>%d) Tell a programmer to up VERTEX_BUFFER_SIZE.\n", 
 				( int )nVertexCount, ( int )nMaxVerts );
 		}
@@ -2638,11 +2440,11 @@ bool CMeshDX8::Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc )
 			if ( ( SYSCALL_SUCCESS == Plat_GetPagedPoolInfo( &ppi ) ) &&
 				 ( ( ppi.numPagesFree * 20 ) < ( ppi.numPagesUsed + ppi.numPagesFree ) ) )
 			{
-				FailedLock( "Out of OS Paged Pool Memory! For more information, please see\nhttp://support.steampowered.com\n" );
+				FailedLock( "Out of OS Paged Pool Memory!\n" );
 			}
 			else
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				FailedLock( "failed to lock vertex buffer in CMeshDX8::LockVertexBuffer\n" );
 			}
 		}
@@ -2653,11 +2455,6 @@ bool CMeshDX8::Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc )
 	// Set up the vertex descriptor
 	CVertexBufferBase::ComputeVertexDescription( pVertexMemory, m_VertexFormat &~ m_fmtStreamSpec, desc );
 	m_IsVBLocked = true;
-
-#ifdef RECORDING
-	m_LockVertexBufferSize = nVertexCount * desc.m_ActualVertexSize;
-	m_LockVertexBuffer = pVertexMemory;
-#endif
 
 	return true;
 }
@@ -2670,16 +2467,9 @@ void CMeshDX8::Unlock( int nVertexCount, VertexDesc_t& desc )
 		return;
 
 	// This is recorded for debugging. . not sent to dx.
-	RECORD_COMMAND( DX8_SET_VERTEX_BUFFER_FORMAT, 2 );
-	RECORD_INT( m_pVertexBuffer->UID() );
-	RECORD_INT( m_VertexFormat &~ m_fmtStreamSpec );
 	
-	RECORD_COMMAND( DX8_VERTEX_DATA, 3 );
-	RECORD_INT( m_pVertexBuffer->UID() );
-	RECORD_INT( m_LockVertexBufferSize );
-	RECORD_STRUCT( m_LockVertexBuffer, m_LockVertexBufferSize );
 
-	Assert(m_pVertexBuffer);
+	contract_assert( m_pVertexBuffer );
 	m_pVertexBuffer->Unlock(nVertexCount);
 	m_IsVBLocked = false;
 }
@@ -2689,7 +2479,7 @@ void CMeshDX8::Unlock( int nVertexCount, VertexDesc_t& desc )
 //-----------------------------------------------------------------------------
 int CMeshDX8::Lock( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t &desc, MeshBuffersAllocationSettings_t *pSettings )
 {
-	Assert( !m_IsIBLocked );
+	contract_assert( !m_IsIBLocked );
 
 	// Just give the app crap buffers to fill up while we're suppressed...
 	if ( g_pShaderDeviceDx8->IsDeactivated() || (nIndexCount == 0))
@@ -2718,11 +2508,11 @@ int CMeshDX8::Lock( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_
 		if ( ( SYSCALL_SUCCESS == Plat_GetPagedPoolInfo( &ppi ) ) &&
 			( ( ppi.numPagesFree * 20 ) < ( ppi.numPagesUsed + ppi.numPagesFree ) ) )
 		{
-			FailedLock( "Out of OS Paged Pool Memory! For more information, please see\nhttp://support.steampowered.com\n" );
+			FailedLock( "Out of OS Paged Pool Memory!\n" );
 		}
 		else
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			FailedLock( "failed to lock index buffer in CMeshDX8::LockIndexBuffer\n" );
 		}
 
@@ -2749,12 +2539,8 @@ void CMeshDX8::Unlock( int nIndexCount, IndexDesc_t &desc )
 	if (!m_IsIBLocked)
 		return;
 
-	RECORD_COMMAND( DX8_INDEX_DATA, 3 );
-	RECORD_INT( m_pIndexBuffer->UID() );
-	RECORD_INT( m_LockIndexBufferSize );
-	RECORD_STRUCT( m_LockIndexBuffer, m_LockIndexBufferSize );
 
-	Assert(m_pIndexBuffer);
+	contract_assert( m_pIndexBuffer );
 
 #ifdef CHECK_INDICES
 	m_pIndexBuffer->UpdateShadowIndices( ( unsigned short * )m_LockIndexBuffer );
@@ -2774,7 +2560,7 @@ void CMeshDX8::LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc, Me
 	ShaderUtil()->SyncMatrices();
 
 	g_ShaderMutex.lock();
-	VPROF( "CMeshDX8::LockMesh" );		
+	CVProfScope _( "CMeshDX8::LockMesh", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );		
 	Lock( nVertexCount, false, *static_cast<VertexDesc_t*>( &desc ) );
 	if ( m_Type != MATERIAL_POINTS )
 	{
@@ -2792,9 +2578,9 @@ void CMeshDX8::LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc, Me
 
 void CMeshDX8::UnlockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc )
 {
-	VPROF( "CMeshDX8::UnlockMesh" );
+	CVProfScope _( "CMeshDX8::UnlockMesh", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-	Assert( CBaseMeshDX8::m_bMeshLocked );
+	contract_assert( CBaseMeshDX8::m_bMeshLocked );
 
 	Unlock( nVertexCount, *static_cast<VertexDesc_t*>( &desc ) );
 	if ( m_Type != MATERIAL_POINTS )
@@ -2816,7 +2602,7 @@ void CMeshDX8::UnlockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc )
 //-----------------------------------------------------------------------------
 void CMeshDX8::ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc )
 {
-	VPROF( "CMeshDX8::ModifyBegin" );
+	CVProfScope _( "CMeshDX8::ModifyBegin", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Just give the app crap buffers to fill up while we're suppressed...
 	if ( g_pShaderDeviceDx8->IsDeactivated())
@@ -2828,7 +2614,7 @@ void CMeshDX8::ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexCount
 		return;
 	}
 
-	Assert( m_pVertexBuffer );
+	contract_assert( m_pVertexBuffer );
 
 	// Lock it baby
 	unsigned char* pVertexMemory = m_pVertexBuffer->Modify( bReadOnly, nFirstVertex, nVertexCount );
@@ -2837,10 +2623,6 @@ void CMeshDX8::ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexCount
 		m_IsVBLocked = true;
 		g_MeshMgr.ComputeVertexDescription( pVertexMemory, m_VertexFormat &~ m_fmtStreamSpec, desc );
 
-#ifdef RECORDING
-		m_LockVertexBufferSize = nVertexCount * desc.m_ActualVertexSize;
-		m_LockVertexBuffer = pVertexMemory;
-#endif
 	}
 
 	desc.m_nFirstVertex = nFirstVertex;
@@ -2855,7 +2637,7 @@ void CMeshDX8::ModifyBegin( int nFirstVertex, int nVertexCount, int nFirstIndex,
 
 void CMeshDX8::ModifyEnd( MeshDesc_t& desc )
 {
-	VPROF( "CMeshDX8::ModifyEnd" );
+	CVProfScope _( "CMeshDX8::ModifyEnd", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	Unlock( 0, *static_cast<IndexDesc_t*>( &desc ) );
 	Unlock( 0, *static_cast<VertexDesc_t*>( &desc ) );
 }
@@ -2898,13 +2680,12 @@ void CMeshDX8::UseVertexBuffer( CVertexBuffer* pBuffer )
 //-----------------------------------------------------------------------------
 void CMeshDX8::SetPrimitiveType( MaterialPrimitiveType_t type )
 {
-	Assert( type != MATERIAL_INSTANCED_QUADS );
+	contract_assert( type != MATERIAL_INSTANCED_QUADS );
 	if ( !ShaderUtil()->OnSetPrimitiveType( this, type ) )
 	{
 		return;
 	}
 
-	LOCK_SHADERAPI();
 	m_Type = type;
 	m_Mode = ComputeMode( type );
 }
@@ -2913,21 +2694,6 @@ MaterialPrimitiveType_t CMeshDX8::GetPrimitiveType( ) const
 {
 	return m_Type;
 }
-
-#if ENABLE_TESSELLATION
-TessellationMode_t CMeshDX8::GetTessellationType() const
-{
-	switch( GetPrimitiveType() )
-	{
-		case MATERIAL_SUBD_QUADS_EXTRA:
-			return TESSELLATION_MODE_ACC_PATCHES_EXTRA;
-		case MATERIAL_SUBD_QUADS_REG:
-			return TESSELLATION_MODE_ACC_PATCHES_REG;
-	}
-
-	return TESSELLATION_MODE_DISABLED;
-}
-#endif
 
 bool CMeshDX8::IsUsingVertexID() const
 {
@@ -2963,7 +2729,7 @@ int CMeshDX8::NumPrimitives( int nVertexCount, int nIndexCount ) const
 
 		default:
 			// invalid, baby!
-			Assert(0);
+			contract_assert( 0 );
 	}
 
 	return 0;
@@ -2989,7 +2755,7 @@ static int NumPrimitives( MaterialPrimitiveType_t type, int nIndexCount )
 
 		default:
 			// invalid, baby!
-			Assert(0);
+			contract_assert( 0 );
 	}
 
 	return 0;
@@ -3050,7 +2816,7 @@ static bool IsValidVertexFormat_Internal( VertexFormat_t meshFormat, IMaterial* 
 	// the material format should match the vertex usage, unless another format is passed in
 	if ( materialFormat == VERTEX_FORMAT_INVALID )
 	{
-		Assert( pMaterial );
+		contract_assert( pMaterial );
 		materialFormat = static_cast<IMaterialInternal*>( pMaterial )->GetVertexUsage() & ~( VERTEX_COLOR_STREAM_1 | VERTEX_FORMAT_USE_EXACT_FORMAT );
 
 		// Blat out unused fields
@@ -3086,7 +2852,7 @@ static bool IsValidVertexFormat_Internal( VertexFormat_t meshFormat, IMaterial* 
 				else
 					Warning( "ERROR: Compressed vertices in use but material does not support them!\n" );
 			}
-			Assert( 0 );
+			contract_assert( 0 );
 			bIsValid = false;
 		}
 	}
@@ -3163,25 +2929,19 @@ void CMeshDX8::SetVertexIDStreamState( int nIDOffsetBytes )
 
 			// NOTE: SubDivivison surfaces are now using vertex id for the instanced patch case.
 			// These are dynamic buffers, so now we've bifurcated the VertexID code for dynamic buffers.
-			Assert( !g_pShaderAPIBase->IsHWMorphingEnabled() || !m_pVertexBuffer->IsDynamic() || GetTessellationType() > 0 );
+			contract_assert( !g_pShaderAPIBase->IsHWMorphingEnabled() || !m_pVertexBuffer->IsDynamic() || GetTessellationType() > 0 );
 
 			CVertexBuffer *pVertexIDBuffer = g_MeshMgr.GetVertexIDBuffer( );
-			RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-			RECORD_INT( pVertexIDBuffer->UID() );
-			RECORD_INT( VertexStreamSpec_t::STREAM_MORPH );
-			RECORD_INT( nIDOffsetBytes );
-			RECORD_INT( pVertexIDBuffer->VertexSize() );
 
 			D3DSetStreamSource( VertexStreamSpec_t::STREAM_MORPH, pVertexIDBuffer->GetInterface(), nIDOffsetBytes, pVertexIDBuffer->VertexSize() );
 			pVertexIDBuffer->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
 		}
 		else
 		{
-			RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-			RECORD_INT( -1 );	// vertex buffer id
-			RECORD_INT( VertexStreamSpec_t::STREAM_MORPH );	// stream
-			RECORD_INT( 0 );	// vertex offset
-			RECORD_INT( 0 );	// vertex size
+				// vertex buffer id
+				// stream
+				// vertex offset
+				// vertex size
 
 			D3DSetStreamSource( VertexStreamSpec_t::STREAM_MORPH, 0, 0, 0 );
 		}
@@ -3205,11 +2965,6 @@ void CMeshDX8::SetTessellationStreamState( int nVertOffsetInBytes, int iSubdivLe
 
 			// Bind our patches VB to stream 0
 			CVertexBuffer *pPatchVB = g_MeshMgr.GetPreTessPatchVertexBuffer( iSubdivLevel );
-			RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-			RECORD_INT( pPatchVB->UID() );
-			RECORD_INT( 0 );
-			RECORD_INT( 0 );
-			RECORD_INT( pPatchVB->VertexSize() );
 			D3DSetStreamSource( 0, pPatchVB->GetInterface(), 0, pPatchVB->VertexSize() );
 			pPatchVB->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
 			g_pLastVertex = pPatchVB;
@@ -3217,9 +2972,6 @@ void CMeshDX8::SetTessellationStreamState( int nVertOffsetInBytes, int iSubdivLe
 
 			// Override the index buffer with our patch index buffer
 			CIndexBuffer* pPatchIB = g_MeshMgr.GetPreTessPatchIndexBuffer( iSubdivLevel );
-			RECORD_COMMAND( DX8_SET_INDICES, 2 );
-			RECORD_INT( pPatchIB->UID() );
-			RECORD_INT( 0 );
 			Dx9Device()->SetIndices( pPatchIB->GetInterface() );
 			pPatchIB->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
 
@@ -3229,11 +2981,10 @@ void CMeshDX8::SetTessellationStreamState( int nVertOffsetInBytes, int iSubdivLe
 		}
 		else
 		{
-			RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-			RECORD_INT( -1 );	// vertex buffer id
-			RECORD_INT( VertexStreamSpec_t::STREAM_SUBDQUADS );	// stream
-			RECORD_INT( 0 );	// vertex offset
-			RECORD_INT( 0 );	// vertex size
+				// vertex buffer id
+				// stream
+				// vertex offset
+				// vertex size
 			D3DSetStreamSource( VertexStreamSpec_t::STREAM_SUBDQUADS, 0, 0, 0 );
 		}
 		g_bUsingPreTessPatches = bUsingPreTessPatches;
@@ -3262,11 +3013,6 @@ void CMeshDX8::SetCustomStreamsState()
 			VertexStreamSpec_t *pTexCoord1 = FindVertexStreamSpec( VERTEX_TEXCOORD_SIZE( 1, 2 ), m_pVertexStreamSpec.get() );
 			VertexStreamSpec_t::StreamSpec_t iStream = pTexCoord1 ? pTexCoord1->iStreamSpec : VertexStreamSpec_t::STREAM_UNIQUE_A;
 
-			RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-			RECORD_INT( m_pVbTexCoord1->UID() );
-			RECORD_INT( iStream );
-			RECORD_INT( 0 );
-			RECORD_INT( 0 );
 
 			D3DSetStreamSource( iStream, m_pVbTexCoord1->GetInterface(), 0, 0 );
 			g_bCustomStreamsSet[ iStream ] = true;
@@ -3278,11 +3024,10 @@ void CMeshDX8::SetCustomStreamsState()
 			VertexStreamSpec_t *pTexCoord1 = FindVertexStreamSpec( VERTEX_TEXCOORD_SIZE( 1, 2 ), m_pVertexStreamSpec.get() );
 			VertexStreamSpec_t::StreamSpec_t iStream = pTexCoord1 ? pTexCoord1->iStreamSpec : VertexStreamSpec_t::STREAM_UNIQUE_A;
 
-			RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-			RECORD_INT( -1 );	// vertex buffer id
-			RECORD_INT( iStream );	// stream
-			RECORD_INT( 0 );	// vertex offset
-			RECORD_INT( 0 );	// vertex size
+				// vertex buffer id
+				// stream
+				// vertex offset
+				// vertex size
 
 			D3DSetStreamSource( iStream, 0, 0, 0 );
 			g_bCustomStreamsSet[ iStream ] = false;
@@ -3308,11 +3053,6 @@ inline void CMeshDX8::SetColorStreamState( )
 
 void CMeshDX8::SetColorStreamState_Internal( CVertexBuffer *pColorVB, int nVertOffset )
 {
-	RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-	RECORD_INT( pColorVB->UID() );
-	RECORD_INT( VertexStreamSpec_t::STREAM_SPECULAR1 );
-	RECORD_INT( nVertOffset );
-	RECORD_INT( pColorVB->VertexSize() );
 
 	D3DSetStreamSource( VertexStreamSpec_t::STREAM_SPECULAR1, pColorVB->GetInterface(), nVertOffset, pColorVB->VertexSize() );
 	pColorVB->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
@@ -3338,12 +3078,7 @@ void CMeshDX8::SetVertexStreamState( int nVertOffsetInBytes, bool bIsRenderingIn
 	else if ( bUsingPreTessPatches )
 	{
 		// Override the original vertex buffer because we cannot have instance data in stream 0
-		Assert( m_pVertexBuffer );
-		RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-		RECORD_INT( m_pVertexBuffer->UID() );
-		RECORD_INT( VertexStreamSpec_t::STREAM_SUBDQUADS );
-		RECORD_INT( nVertOffsetInBytes );
-		RECORD_INT( m_pVertexBuffer->VertexSize() * 4 );
+		contract_assert( m_pVertexBuffer );
 		D3DSetStreamSource( VertexStreamSpec_t::STREAM_SUBDQUADS, m_pVertexBuffer->GetInterface(), nVertOffsetInBytes, m_pVertexBuffer->VertexSize() * 4 );
 		m_pVertexBuffer->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
 
@@ -3352,8 +3087,8 @@ void CMeshDX8::SetVertexStreamState( int nVertOffsetInBytes, bool bIsRenderingIn
 	}
 	else if( GetTessellationType() == 0 )
 	{
-		Assert( nVertOffsetInBytes == 0 );
-		Assert( m_pVertexBuffer );
+		contract_assert( nVertOffsetInBytes == 0 );
+		contract_assert( m_pVertexBuffer );
 
 		// HACK...point stream 2 at the same VB which is bound to stream 0...
 		// NOTE: D3D debug DLLs will RIP if stream 0 has a smaller stride than the largest
@@ -3361,7 +3096,7 @@ void CMeshDX8::SetVertexStreamState( int nVertOffsetInBytes, bool bIsRenderingIn
 		// If this fires, go find the material/shader which is requesting a really 'thin'
 		// stream 0 vertex, and fatten it up slightly (e.g. add a D3DCOLOR element)
 		int minimumStreamZeroStride = 4 * sizeof( float );
-		Assert( m_pVertexBuffer->VertexSize() >= minimumStreamZeroStride );
+		contract_assert( m_pVertexBuffer->VertexSize() >= minimumStreamZeroStride );
 		if ( m_pVertexBuffer->VertexSize() < minimumStreamZeroStride )
 		{
 			static bool bWarned = false;
@@ -3390,13 +3125,8 @@ void CMeshDX8::SetVertexStreamState( int nVertOffsetInBytes, bool bIsRenderingIn
 		// [will] - Added defined( OSX ) because Scaleform renderer circumvents the MeshMgr and changes internal vertex buffer, so we can't rely on caching it.
 		if ( ( g_pLastVertex != m_pVertexBuffer ) || ( g_nLastVertOffsetInBytes != nVertOffsetInBytes ) )
 		{
-			Assert( m_pVertexBuffer );
+			contract_assert( m_pVertexBuffer );
 
-			RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-			RECORD_INT( m_pVertexBuffer->UID() );
-			RECORD_INT( 0 );
-			RECORD_INT( nVertOffsetInBytes );
-			RECORD_INT( m_pVertexBuffer->VertexSize() );
 
 			D3DSetStreamSource( 0, m_pVertexBuffer->GetInterface(), nVertOffsetInBytes, m_pVertexBuffer->VertexSize() );
 			m_pVertexBuffer->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
@@ -3426,11 +3156,8 @@ void CMeshDX8::SetIndexStreamState( int firstVertexIdx )
 	{
 		if ( ( g_pLastIndexBuffer != nullptr ) || (g_pLastIndex != m_pIndexBuffer) || ( firstVertexIdx != g_LastVertexIdx ) )
 		{
-			Assert( m_pIndexBuffer );
+			contract_assert( m_pIndexBuffer );
 
-			RECORD_COMMAND( DX8_SET_INDICES, 2 );
-			RECORD_INT( m_pIndexBuffer->UID() );
-			RECORD_INT( firstVertexIdx );
 
 			D3DSetIndices( m_pIndexBuffer->GetInterface() );
 			m_pIndexBuffer->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
@@ -3454,7 +3181,7 @@ bool CMeshDX8::SetRenderState( int nVertexOffsetInBytes, int nFirstVertexIdx, in
 	}
 
 	g_LastVertexFormat = vertexFormat;
-	int iSubdivLevel = (int)ceil( mat_tessellationlevel.GetFloat() );
+	int iSubdivLevel = (int)std::ceil( mat_tessellationlevel.GetFloat() );
 
 	if ( iSubdivLevel  > MAX_TESS_DIVISIONS_PER_SIDE )
 	{
@@ -3552,7 +3279,7 @@ void CMeshDX8::DrawInternal( const Vector4D *pDiffuseModulation, CPrimList *pLis
 		return;
 
 	// can't do these in selection mode!
-	Assert( !ShaderAPI()->IsInSelectionMode() );
+	contract_assert( !ShaderAPI()->IsInSelectionMode() );
 
 	if ( !SetRenderState( 0, 0 ) )
 		return;
@@ -3563,7 +3290,7 @@ void CMeshDX8::DrawInternal( const Vector4D *pDiffuseModulation, CPrimList *pLis
 #ifdef _DEBUG
 	for ( i = 0; i < nLists; ++i)
 	{
-		Assert( pLists[i].m_NumIndices > 0 );
+		contract_assert( pLists[i].m_NumIndices > 0 );
 	}
 #endif
 
@@ -3588,7 +3315,7 @@ void CheckIndices( D3DPRIMITIVETYPE nMode, int nFirstVertex, int nVertexCount, i
 
 	if( nMode == D3DPT_TRIANGLELIST || nMode == D3DPT_TRIANGLESTRIP )
 	{
-		Assert( nFirstIndex >= 0 && nFirstIndex < g_pLastIndex->IndexCount() );
+		contract_assert( nFirstIndex >= 0 && nFirstIndex < g_pLastIndex->IndexCount() );
 		int i;
 		for( i = 0; i < 2; i++ )
 		{
@@ -3596,7 +3323,7 @@ void CheckIndices( D3DPRIMITIVETYPE nMode, int nFirstVertex, int nVertexCount, i
 			if( i == 0 )
 			{
 				pMesh = g_pLastVertex;
-				Assert( pMesh );
+				contract_assert( pMesh );
 			}
 			else
 			{
@@ -3606,7 +3333,7 @@ void CheckIndices( D3DPRIMITIVETYPE nMode, int nFirstVertex, int nVertexCount, i
 				if( !pMesh )
 					continue;
 			}
-			Assert( nFirstVertex >= 0 && 
+			contract_assert( nFirstVertex >= 0 && 
 				(int)( nFirstVertex + nBaseIndex ) < pMesh->VertexCount() );
 			int nIndexCount = 0;
 			if( nMode == D3DPT_TRIANGLELIST )
@@ -3619,14 +3346,14 @@ void CheckIndices( D3DPRIMITIVETYPE nMode, int nFirstVertex, int nVertexCount, i
 			}
 			else
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 			}
 			int j;
 			for( j = 0; j < nIndexCount; j++ )
 			{
 				int index = g_pLastIndex->GetShadowIndex( j + nFirstIndex );
-				Assert( index >= (int)nFirstVertex );
-				Assert( index < (int)(nFirstVertex + nVertexCount) );
+				contract_assert( index >= (int)nFirstVertex );
+				contract_assert( index < (int)(nFirstVertex + nVertexCount) );
 			}
 		}
 	}
@@ -3658,9 +3385,9 @@ void CMeshDX8::DrawPrims( const unsigned char *pInstanceCommandBuffer )
 		int numPrimitives = NumPrimitives( s_NumVertices, pPrim->m_NumIndices );
 
 		{
-			VPROF( "Dx9Device()->DrawIndexedPrimitive" );
-			VPROF_INCREMENT_COUNTER( "DrawIndexedPrimitive", 1 );
-			VPROF_INCREMENT_COUNTER( "numPrimitives", numPrimitives );
+			CVProfScope _( "Dx9Device()->DrawIndexedPrimitive", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+			VProfIncrementCounter<"DrawIndexedPrimitive">( 1 );
+			VProfIncrementCounter<"numPrimitives">( numPrimitives );
 
 			Dx9Device()->DrawIndexedPrimitive( m_Mode, m_FirstIndex,
 											   s_FirstVertex, s_NumVertices, pPrim->m_FirstIndex, numPrimitives );
@@ -3670,8 +3397,7 @@ void CMeshDX8::DrawPrims( const unsigned char *pInstanceCommandBuffer )
 
 void CMeshDX8::RenderPass( const unsigned char *pInstanceCommandBuffer )
 {
-	LOCK_SHADERAPI();
-	VPROF( "CMeshDX8::RenderPass" );
+	CVProfScope _( "CMeshDX8::RenderPass", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	HandleLateCreation();
 
@@ -3681,7 +3407,7 @@ void CMeshDX8::RenderPass( const unsigned char *pInstanceCommandBuffer )
 		return;
 	}
 
-	Assert( m_Type != MATERIAL_HETEROGENOUS );
+	contract_assert( m_Type != MATERIAL_HETEROGENOUS );
 
 	// JasonM - skip this validation for subd quads
 	if ( m_Type != MATERIAL_SUBD_QUADS_EXTRA && m_Type != MATERIAL_SUBD_QUADS_REG )
@@ -3714,7 +3440,7 @@ void CMeshDX8::RenderPass( const unsigned char *pInstanceCommandBuffer )
 		else if ( m_Type == MATERIAL_SUBD_QUADS_EXTRA || m_Type == MATERIAL_SUBD_QUADS_REG )
 		{
 //#if ( defined ( _X360 ) || defined ( DX_TO_GL_ABSTRACTION ) )
-			AssertMsg( false, "MATERIAL_SUBD_QUADS are not supported" );
+			contract_assert( false && "MATERIAL_SUBD_QUADS are not supported" );
 		}
 		else
 		{
@@ -3724,9 +3450,9 @@ void CMeshDX8::RenderPass( const unsigned char *pInstanceCommandBuffer )
 			CheckIndices( pPrim, numPrimitives );
 #endif // CHECK_INDICES
 			{
-				VPROF( "Dx9Device()->DrawIndexedPrimitive" );
-				VPROF_INCREMENT_COUNTER( "DrawIndexedPrimitive", 1 );
-				VPROF_INCREMENT_COUNTER( "numPrimitives", numPrimitives );
+				CVProfScope _( "Dx9Device()->DrawIndexedPrimitive", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+				VProfIncrementCounter<"DrawIndexedPrimitive">( 1 );
+				VProfIncrementCounter<"numPrimitives">( numPrimitives );
 
 				Dx9Device()->DrawIndexedPrimitive( 
 					m_Mode,			// Member of the D3DPRIMITIVETYPE enumerated type, describing the type of primitive to render. D3DPT_POINTLIST is not supported with this method.
@@ -3822,7 +3548,7 @@ void CDynamicMeshDX8::SetVertexFormat( VertexFormat_t format, bool bHasVertexOve
 	{
 		// UNDONE: support compressed dynamic meshes if needed (pro: less VB memory, con: CMeshBuilder gets slower)
 		Warning( "ERROR: dynamic meshes cannot use compressed vertices!\n" );
-		Assert( 0 );
+		contract_assert( 0 );
 		format &= ~VERTEX_FORMAT_COMPRESSED;
 	}
 
@@ -3868,13 +3594,12 @@ bool CDynamicMeshDX8::NeedsVertexFormatReset( VertexFormat_t fmt ) const
 }
 
 
-
 //-----------------------------------------------------------------------------
 // Locks/unlocks the entire mesh
 //-----------------------------------------------------------------------------
 bool CDynamicMeshDX8::HasEnoughRoom( int nVertexCount, int nIndexCount ) const
 {
-	Assert( m_pVertexBuffer != nullptr );
+	contract_assert( m_pVertexBuffer != nullptr );
 
 	if ( g_pShaderDeviceDx8->IsDeactivated() )
 		return false;
@@ -3992,14 +3717,13 @@ void CDynamicMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int n
 		return;
 	}
 
-	VPROF( "CDynamicMeshDX8::Draw" );
+	CVProfScope _( "CDynamicMeshDX8::Draw", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	m_HasDrawn = true;
 
 	if (m_IndexOverride || m_VertexOverride || 
 		( ( m_TotalVertices > 0 ) && ( m_TotalIndices > 0 || m_Type == MATERIAL_POINTS || m_Type == MATERIAL_INSTANCED_QUADS ) ) )
 	{
-		Assert( !m_IsDrawing );
 		HandleLateCreation();
 
 		// only have a non-zero first vertex when we are using static indices
@@ -4035,7 +3759,7 @@ void CDynamicMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int n
 		int numVertices = m_VertexOverride ? m_pVertexBuffer->VertexCount() : m_TotalVertices;
 		if ((nFirstIndex != -1) && (nIndexCount != 0))
 		{
-			Assert( ( m_Type != MATERIAL_POINTS ) && ( m_Type != MATERIAL_INSTANCED_QUADS ) );
+			contract_assert( ( m_Type != MATERIAL_POINTS ) && ( m_Type != MATERIAL_INSTANCED_QUADS ) );
 			nFirstIndex += baseIndex;
 		}
 		else
@@ -4045,8 +3769,8 @@ void CDynamicMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int n
 			if( m_IndexOverride )
 			{
 				nIndexCount = m_pIndexBuffer->IndexCount();
-				Assert( ( m_Type != MATERIAL_POINTS ) && ( m_Type != MATERIAL_INSTANCED_QUADS ) );
-				Assert( nIndexCount != 0 );
+				contract_assert( ( m_Type != MATERIAL_POINTS ) && ( m_Type != MATERIAL_INSTANCED_QUADS ) );
+				contract_assert( nIndexCount != 0 );
 			}
 			else
 			{
@@ -4056,7 +3780,7 @@ void CDynamicMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int n
 				{
 					nIndexCount = numVertices;
 				}
-				Assert( nIndexCount != 0 );
+				contract_assert( nIndexCount != 0 );
 			}
 		}
 
@@ -4073,7 +3797,7 @@ void CDynamicMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int n
 		CPrimList prim;
 		prim.m_FirstIndex = nFirstIndex;
 		prim.m_NumIndices = nIndexCount;
-		Assert( nIndexCount != 0 );
+		contract_assert( nIndexCount != 0 );
 		s_pPrims = &prim;
 		s_nPrims = 1;
 
@@ -4102,7 +3826,6 @@ void CDynamicMeshDX8::DrawSinglePassImmediately()
 {
 	if ((m_TotalVertices > 0) || (m_TotalIndices > 0))
 	{
-		Assert( !m_IsDrawing );
 
 		// Set the render state
 		if ( SetRenderState( 0, 0 ) )
@@ -4112,7 +3835,7 @@ void CDynamicMeshDX8::DrawSinglePassImmediately()
 
 			// Make a temporary PrimList to hold the indices.
 			CPrimList prim( m_FirstIndex, m_TotalIndices );
-			Assert( m_TotalIndices != 0 );
+			contract_assert( m_TotalIndices != 0 );
 			s_pPrims = &prim;
 			s_nPrims = 1;
 
@@ -4139,10 +3862,6 @@ unsigned int CTempMeshDX8::s_FirstIndex;
 //-----------------------------------------------------------------------------
 CTempMeshDX8::CTempMeshDX8( bool isDynamic ) : m_VertexSize(0xFFFF), m_IsDynamic(isDynamic)
 {
-#ifdef DBGFLAG_ASSERT
-	m_Locked = false;
-	m_InPass = false;
-#endif
 }
 
 CTempMeshDX8::~CTempMeshDX8()
@@ -4185,7 +3904,6 @@ int CTempMeshDX8::IndexCount( ) const
 
 void CTempMeshDX8::ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc )
 {
-	Assert( !m_Locked );
 
 	m_LockedVerts = nVertexCount;
 	m_LockedIndices = nIndexCount;
@@ -4221,9 +3939,6 @@ void CTempMeshDX8::ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexC
 		desc.m_nIndexSize = 0;
 	}
 
-#ifdef DBGFLAG_ASSERT
-	m_Locked = true;
-#endif
 }
 
 void CTempMeshDX8::ModifyBegin( int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc )
@@ -4233,10 +3948,6 @@ void CTempMeshDX8::ModifyBegin( int nFirstVertex, int nVertexCount, int nFirstIn
 
 void CTempMeshDX8::ModifyEnd( MeshDesc_t& desc )
 {
-#ifdef DBGFLAG_ASSERT
-	Assert( m_Locked );
-	m_Locked = false;
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -4248,7 +3959,6 @@ void CTempMeshDX8::LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc
 
 	g_ShaderMutex.lock();
 
-	Assert( !m_Locked );
 
 	m_LockedVerts = nVertexCount;
 	m_LockedIndices = nIndexCount;
@@ -4285,16 +3995,11 @@ void CTempMeshDX8::LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc
 		desc.m_nIndexSize = 0;
 	}
 
-#ifdef DBGFLAG_ASSERT
-	m_Locked = true;
-#endif
-
 	CBaseMeshDX8::m_bMeshLocked = true;
 }
 
 void CTempMeshDX8::UnlockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc )
 {
-	Assert( m_Locked );
 
 	// Remove unused vertices and indices
 	int verticesToRemove = m_LockedVerts - nVertexCount;
@@ -4309,10 +4014,6 @@ void CTempMeshDX8::UnlockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& de
 		m_IndexData.resize( m_IndexData.size() - indicesToRemove );
 	}
 
-#ifdef DBGFLAG_ASSERT
-	m_Locked = false;
-#endif
-
 	CBaseMeshDX8::m_bMeshLocked = false;
 
 	g_ShaderMutex.unlock();
@@ -4324,7 +4025,7 @@ void CTempMeshDX8::UnlockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& de
 void CTempMeshDX8::SetPrimitiveType( MaterialPrimitiveType_t type )
 {
 	// FIXME: Support MATERIAL_INSTANCED_QUADS for CTempMeshDX8 (X360 only)
-	Assert( ( type != MATERIAL_INSTANCED_QUADS ) /* || false */ );
+	contract_assert( ( type != MATERIAL_INSTANCED_QUADS ) /* || false */ );
 	m_Type = type;
 }
 
@@ -4356,11 +4057,7 @@ void CTempMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int nFir
 	{
 		if ( !g_pShaderDeviceDx8->IsDeactivated() )
 		{
-#ifdef DRAW_SELECTION
-			if (!g_bDrawSelection && !ShaderAPI()->IsInSelectionMode())
-#else
 			if (!ShaderAPI()->IsInSelectionMode())
-#endif
 			{
 				s_FirstIndex = nFirstIndex;
 				s_NumIndices = nIndexCount;
@@ -4369,7 +4066,6 @@ void CTempMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int nFir
 
 				// This assertion fails if a BeginPass() call was not matched by 
 				// a RenderPass() call
-				Assert(!m_InPass);
 			}
 			else
 			{
@@ -4407,13 +4103,13 @@ void CTempMeshDX8::CopyToMeshBuilder(
 {
 	int startOffset = iStartVert * m_VertexSize;
 	int endOffset = (iStartVert + nVerts) * m_VertexSize;
-	Assert( startOffset >= 0 && startOffset <= std::ssize( m_VertexData ) );
-	Assert( endOffset >= 0 && endOffset <= std::ssize( m_VertexData ) && endOffset >= startOffset );
+	contract_assert( startOffset >= 0 && startOffset <= std::ssize( m_VertexData ) );
+	contract_assert( endOffset >= 0 && endOffset <= std::ssize( m_VertexData ) && endOffset >= startOffset );
 	if ( endOffset > startOffset )
 	{
 		// FIXME: make this a method of CMeshBuilder (so the 'Position' pointer accessor can be removed)
 		//        make sure it takes a VertexFormat_t parameter for src/dest match validation
-		memcpy( (void*)builder.Position(), &m_VertexData[startOffset], endOffset - startOffset );
+		std::memcpy( (void*)builder.Position(), &m_VertexData[startOffset], endOffset - startOffset );
 		builder.AdvanceVertices( nVerts );
 	}
 
@@ -4478,7 +4174,7 @@ static void IntersectPlane( D3DXVECTOR3* pStart, D3DXVECTOR3* pEnd,
 {
 	D3DXVECTOR3 dir;
 	D3DXVec3Subtract( &dir, pEnd, pStart );
-	Assert( dir[normalInd] != 0.0f );
+	contract_assert( dir[normalInd] != 0.0f );
 	float t = (val - (*pStart)[normalInd]) / dir[normalInd];
 	pOutVert->x = pStart->x + dir.x * t;
 	pOutVert->y = pStart->y + dir.y * t;
@@ -4541,7 +4237,7 @@ void CTempMeshDX8::ClipTriangle( D3DXVECTOR3** ppVert, float zNear, D3DXMATRIX& 
 	// Sucks that I have to do this, but I have to clip near plane in view space 
 	// Clipping in projection space is screwy when w < 0
 	// Transform the clipped points into projection space
-	Assert( g_NumClipVerts <= 2 );
+	contract_assert( g_NumClipVerts <= 2 );
 	for (i = 0; i < nVertexCount; ++i)
 	{
 		if (ppClipVert1[i] == &g_ClipVerts[0])
@@ -4579,44 +4275,6 @@ void CTempMeshDX8::ClipTriangle( D3DXVECTOR3** ppVert, float zNear, D3DXMATRIX& 
 	nVertexCount = ClipTriangleAgainstPlane( ppClipVert1, nVertexCount, ppClipVert2, 1, -1.0f );
 	if (nVertexCount < 3)
 		return;
-
-#ifdef DRAW_SELECTION
-	if( 1 || g_bDrawSelection )
-	{
-		srand( *(int*)(&ppClipVert2[0]->x) ); 
-		unsigned char r = (unsigned char)(rand() * 191.0f / VALVE_RAND_MAX) + 64;
-		unsigned char g = (unsigned char)(rand() * 191.0f / VALVE_RAND_MAX) + 64;
-		unsigned char b = (unsigned char)(rand() * 191.0f / VALVE_RAND_MAX) + 64;
-
-		ShaderAPI()->SetupSelectionModeVisualizationState();
-
-		CMeshBuilder* pMeshBuilder = ShaderAPI()->GetVertexModifyBuilder();
-		IMesh* pMesh = GetDynamicMesh();
-		pMeshBuilder->Begin( pMesh, MATERIAL_POLYGON, nVertexCount );
-		
-		for ( i = 0; i < nVertexCount; ++i)
-		{
-			pMeshBuilder->Position3fv( *ppClipVert2[i] );
-			pMeshBuilder->Color3ub( r, g, b );
-			pMeshBuilder->AdvanceVertex();
-		}
-
-		pMeshBuilder->End();
-		pMesh->Draw();
-
-		pMeshBuilder->Begin( pMesh, MATERIAL_LINE_LOOP, nVertexCount );
-		
-		for ( i = 0; i < nVertexCount; ++i)
-		{
-			pMeshBuilder->Position3fv( *ppClipVert2[i] );
-			pMeshBuilder->Color3ub( 255, 255, 255 );
-			pMeshBuilder->AdvanceVertex();
-		}
-
-		pMeshBuilder->End();
-		pMesh->Draw();
-	}
-#endif
 
 	// Compute closest and furthest verts
 	float minz = ppClipVert2[0]->z;
@@ -4673,7 +4331,7 @@ void CTempMeshDX8::TestSelection()
 	transformedVert.clear();
 	transformedVert.reserve( transformedVertSize );
 	transformedVert.resize( transformedVert.size() + transformedVertSize );
-	memset( transformedVert.data(), 0, transformedVertSize );
+	std::memset( transformedVert.data(), 0, transformedVertSize );
 
 	int indexPos;
 	for (int i = 0; i < numTriangles; ++i)
@@ -4685,7 +4343,7 @@ void CTempMeshDX8::TestSelection()
 		}
 		else
 		{
-			Assert( m_Type == MATERIAL_TRIANGLE_STRIP );
+			contract_assert( m_Type == MATERIAL_TRIANGLE_STRIP );
 			cullFactor *= -1.0f;
 			indexPos = i;
 		}
@@ -4733,11 +4391,6 @@ void CTempMeshDX8::TestSelection()
 //-----------------------------------------------------------------------------
 void CTempMeshDX8::BeginPass( )
 {
-	Assert( !m_InPass );
-
-#ifdef DBGFLAG_ASSERT
-	m_InPass = true;
-#endif
 
 	CMeshBuilder* pMeshBuilder = &g_MeshMgr.m_ModifyBuilder;
 
@@ -4763,8 +4416,8 @@ void CTempMeshDX8::BeginPass( )
 	// Copy in the vertex data...
 	// Note that since we pad the vertices, it's faster for us to simply
 	// copy the fields we're using...
-	Assert( pMeshBuilder->BaseVertexData() );
-	memcpy( pMeshBuilder->BaseVertexData(), m_VertexData.data(), std::ssize( m_VertexData ) );
+	contract_assert( pMeshBuilder->BaseVertexData() );
+	std::memcpy( pMeshBuilder->BaseVertexData(), m_VertexData.data(), std::ssize( m_VertexData ) );
 	pMeshBuilder->AdvanceVertices( std::ssize( m_VertexData ) / m_VertexSize );
 
 	for ( i = 0; i < nIndexCount; ++i )
@@ -4782,11 +4435,6 @@ void CTempMeshDX8::BeginPass( )
 //-----------------------------------------------------------------------------
 void CTempMeshDX8::RenderPass( const unsigned char *pInstanceCommandBuffer )
 {
-	Assert( m_InPass );
-
-#ifdef DBGFLAG_ASSERT
-	m_InPass = false;
-#endif
 
 	// Done building the mesh
 	g_MeshMgr.m_ModifyBuilder.End();
@@ -4818,7 +4466,7 @@ CMeshMgr::CMeshMgr() :
 {
 	m_bUseFatVertices = false;
 	m_nIndexBufferOffset = 0;
-	memset( m_pVertexBufferOffset, 0, sizeof(m_pVertexBufferOffset) );
+	std::memset( m_pVertexBufferOffset, 0, sizeof(m_pVertexBufferOffset) );
 	memset( m_pCurrentVertexStride, 0, sizeof(m_pCurrentVertexStride) );
 	memset( m_pFirstVertex, 0, sizeof(m_pFirstVertex) );
 	memset( m_pVertexCount, 0, sizeof(m_pVertexCount) );
@@ -5105,7 +4753,7 @@ void CMeshMgr::FillEmptyColorBuffer( CVertexBuffer *pEmptyColorBuffer, int nCoun
 	// Fill the buffer with the values 0->(nCount-1)
 	int nBaseVertexIndex = 0;
 	D3DCOLOR *pBuffer = (D3DCOLOR*)pEmptyColorBuffer->Lock( nCount, nBaseVertexIndex );
-	memset( pBuffer, 0, nCount * sizeof(D3DCOLOR) );
+	std::memset( pBuffer, 0, nCount * sizeof(D3DCOLOR) );
 	pEmptyColorBuffer->Unlock( nCount );
 }
 
@@ -5217,15 +4865,15 @@ void CMeshMgr::DestroyPreTessPatchVertexBuffers()
 
 CIndexBuffer *CMeshMgr::GetPreTessPatchIndexBuffer( int iSubdivLevel )
 {
-	Assert( iSubdivLevel > -1 && iSubdivLevel < MAX_TESS_DIVISIONS_PER_SIDE );
-	Assert( m_pPreTessPatchIndexBuffer[ iSubdivLevel ] );
+	contract_assert( iSubdivLevel > -1 && iSubdivLevel < MAX_TESS_DIVISIONS_PER_SIDE );
+	contract_assert( m_pPreTessPatchIndexBuffer[ iSubdivLevel ] );
 	return m_pPreTessPatchIndexBuffer[ iSubdivLevel ];
 }
 
 CVertexBuffer *CMeshMgr::GetPreTessPatchVertexBuffer( int iSubdivLevel )
 {
-	Assert( iSubdivLevel > -1 && iSubdivLevel < MAX_TESS_DIVISIONS_PER_SIDE );
-	Assert( m_pPreTessPatchVertexBuffer[ iSubdivLevel ] );
+	contract_assert( iSubdivLevel > -1 && iSubdivLevel < MAX_TESS_DIVISIONS_PER_SIDE );
+	contract_assert( m_pPreTessPatchVertexBuffer[ iSubdivLevel ] );
 	return m_pPreTessPatchVertexBuffer[ iSubdivLevel ];
 }
 
@@ -5245,13 +4893,6 @@ void CMeshMgr::MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, 
 	}
 }
 
-//-----------------------------------------------------------------------------
-// Allocate temporary arrays either on the stack, or from the heap. 
-// Prevents using all the stack when *lots* of objects are rendered to CSM's.
-//-----------------------------------------------------------------------------
-#define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) const int nTempDataSize##p = (n); void *pvFree##p = nullptr; typeName *p = (typeName *) ( ( nTempDataSize##p < 64*1024 ) ? stackalloc( nTempDataSize##p ) : ( pvFree##p = MemAlloc_Alloc( nTempDataSize##p ) ) );
-#define STUDIORENDER_TEMP_DATA_FREE( p ) g_pMemAlloc->Free( pvFree##p )
-
 
 //-----------------------------------------------------------------------------
 // Draws instanced meshes
@@ -5269,7 +4910,7 @@ void CMeshMgr::DrawInstances( int nInstanceCount, const MeshInstanceData_t *pIns
 	//	}
 
 	// can't do these in selection mode!
-	Assert( !ShaderAPI()->IsInSelectionMode() );
+	contract_assert( !ShaderAPI()->IsInSelectionMode() );
 
 	// NOTE: on the 360/PS3, we can't do too many instances at the same time because
 	// we overflow the stack in the compiled state allocation.
@@ -5277,10 +4918,11 @@ void CMeshMgr::DrawInstances( int nInstanceCount, const MeshInstanceData_t *pIns
 
 	// Compute info necessary for the entire render
 	const int nCompiledStateSize = nBatchSize * sizeof(CompiledLightingState_t);
-	STUDIORENDER_TEMP_DATA_MALLOC( CompiledLightingState_t, pCompiledState, nCompiledStateSize );
+	ks::ScratchArena<> scratch;
+	CompiledLightingState_t *pCompiledState = (CompiledLightingState_t *)scratch.AllocBytes( nCompiledStateSize );
 
 	const int nInfoSize = nBatchSize * sizeof(InstanceInfo_t);
-	STUDIORENDER_TEMP_DATA_MALLOC( InstanceInfo_t, pCompiledInfo, nInfoSize );
+	InstanceInfo_t *pCompiledInfo = (InstanceInfo_t *)scratch.AllocBytes( nInfoSize );
 
 	// No flexing allowed if rendering instances
 	float c[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -5291,7 +4933,7 @@ void CMeshMgr::DrawInstances( int nInstanceCount, const MeshInstanceData_t *pIns
 #ifdef _DEBUG
 	for ( int i = 0; i < nInstanceCount; ++i )
 	{
-		Assert( nCompression == CompressionType( pInstanceData[i].m_pVertexBuffer->GetVertexFormat() ) );
+		contract_assert( nCompression == CompressionType( pInstanceData[i].m_pVertexBuffer->GetVertexFormat() ) );
 	}
 #endif
 
@@ -5300,7 +4942,7 @@ void CMeshMgr::DrawInstances( int nInstanceCount, const MeshInstanceData_t *pIns
 						   
 	while ( nInstanceCount > 0 )
 	{
-		memset( pCompiledInfo, 0, nBatchSize * sizeof(InstanceInfo_t) );
+		std::memset( pCompiledInfo, 0, nBatchSize * sizeof(InstanceInfo_t) );
 
 		g_nInstanceCount = nBatchSize;
 		g_pInstanceData = pInstanceData;
@@ -5318,8 +4960,6 @@ void CMeshMgr::DrawInstances( int nInstanceCount, const MeshInstanceData_t *pIns
 	g_nInstanceCount = 0;
 	g_pInstanceData = nullptr;
 
-	STUDIORENDER_TEMP_DATA_FREE( pCompiledInfo );
-	STUDIORENDER_TEMP_DATA_FREE( pCompiledState );
 }
 
 
@@ -5346,7 +4986,7 @@ bool CMeshMgr::IsDynamicIndexBuffer( IIndexBuffer *pIndexBuffer ) const
 //-----------------------------------------------------------------------------
 void CMeshMgr::DiscardVertexBuffers()
 {
-	VPROF_BUDGET( "CMeshMgr::DiscardVertexBuffers", VPROF_BUDGETGROUP_SWAP_BUFFERS );
+	CVProfScope _( "CMeshMgr::DiscardVertexBuffers", 0, VPROF_BUDGETGROUP_SWAP_BUFFERS, false, BUDGETFLAG_OTHER );
 	// This shouldn't be necessary, but it seems to be on GeForce 2
 	// It helps when running WC and the engine simultaneously.
 	ResetMeshRenderState();
@@ -5384,32 +5024,12 @@ void CMeshMgr::DestroyVertexBuffers()
 	}
 
 	// Necessary for cleanup
-	RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-	RECORD_INT( -1 );
-	RECORD_INT( 0 );
-	RECORD_INT( 0 );
-	RECORD_INT( 0 );
 	D3DSetStreamSource( 0, 0, 0, 0 );
 
-	RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-	RECORD_INT( -1 );
-	RECORD_INT( 1 );
-	RECORD_INT( 0 );
-	RECORD_INT( 0 );
 	D3DSetStreamSource( 1, 0, 0, 0 );
 
-	RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-	RECORD_INT( -1 );
-	RECORD_INT( 2 );
-	RECORD_INT( 0 );
-	RECORD_INT( 0 );
 	D3DSetStreamSource( 2, 0, 0, 0 );
 
-	RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-	RECORD_INT( -1 );
-	RECORD_INT( 3 );
-	RECORD_INT( 0 );
-	RECORD_INT( 0 );
 	D3DSetStreamSource( 3, 0, 0, 0 );
 
 	for (int i = std::ssize( m_DynamicVertexBuffers ); --i >= 0; )
@@ -5444,7 +5064,7 @@ IMesh* CMeshMgr::CreateStaticMesh( VertexFormat_t format, const char *pTextureBu
 void CMeshMgr::DestroyStaticMesh( IMesh* pMesh )
 {
 	// Don't destroy the dynamic mesh!
-	Assert( !IsDynamicMesh( pMesh ) );
+	contract_assert( !IsDynamicMesh( pMesh ) );
 	CBaseMeshDX8* pMeshImp = static_cast<CBaseMeshDX8*>(pMesh);
 	if (pMeshImp)
 	{
@@ -5467,7 +5087,7 @@ IMesh* CMeshMgr::GetActualDynamicMesh( VertexFormat_t format )
 void CMeshMgr::CopyStaticMeshIndexBufferToTempMeshIndexBuffer( CTempMeshDX8 *pDstIndexMesh,
 															   CMeshDX8 *pSrcIndexMesh )
 {
-	Assert( !pSrcIndexMesh->IsDynamic() );
+	contract_assert( !pSrcIndexMesh->IsDynamic() );
 	int nIndexCount = pSrcIndexMesh->IndexCount();
 	
 	CMeshBuilder dstMeshBuilder;
@@ -5507,18 +5127,11 @@ IMesh *CMeshMgr::GetFlexMesh()
 IMesh* CMeshMgr::GetDynamicMesh( IMaterial* pMaterial, VertexFormat_t vertexFormat, int nHWSkinBoneCount,
 	bool buffered, IMesh* pVertexOverride, IMesh* pIndexOverride )
 {
-	Assert( (pMaterial == nullptr) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
+	contract_assert( (pMaterial == nullptr) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
 
 	IMaterialInternal* pMatInternal = static_cast<IMaterialInternal*>(pMaterial);
 
 	bool needTempMesh = ShaderAPI()->IsInSelectionMode();
-
-#ifdef DRAW_SELECTION
-	if( g_bDrawSelection )
-	{
-		needTempMesh = true;
-	}
-#endif
 
 	CBaseMeshDX8* pMesh;
 
@@ -5528,7 +5141,7 @@ IMesh* CMeshMgr::GetDynamicMesh( IMaterial* pMaterial, VertexFormat_t vertexForm
 		// I'm not a hundred percent sure how to implement them; it would
 		// involve a lock and a copy at least, which would stall the entire
 		// rendering pipeline.
-		Assert( !pVertexOverride );
+		contract_assert( !pVertexOverride );
 		
 		if( pIndexOverride )
 		{
@@ -5629,7 +5242,7 @@ VertexFormat_t CMeshMgr::ComputeVertexFormat( unsigned int flags,
 	}
 
 	// This'll take 3 bits at most
-	Assert( numBoneWeights <= 4 );
+	contract_assert( numBoneWeights <= 4 );
 
 	if ( numBoneWeights > 0 )
 	{
@@ -5637,7 +5250,7 @@ VertexFormat_t CMeshMgr::ComputeVertexFormat( unsigned int flags,
 	}
 
 	// Size is measured in # of floats
-	Assert( userDataSize <= 4 );
+	contract_assert( userDataSize <= 4 );
 	fmt |= VERTEX_USERDATA_SIZE(userDataSize);
 
 	// NOTE: If pTexCoordDimensions isn't specified, then nTexCoordArraySize
@@ -5647,7 +5260,7 @@ VertexFormat_t CMeshMgr::ComputeVertexFormat( unsigned int flags,
 	{
 		if ( pTexCoordDimensions )
 		{
-			Assert( pTexCoordDimensions[i] >= 0 && pTexCoordDimensions[i] <= 4 );
+			contract_assert( pTexCoordDimensions[i] >= 0 && pTexCoordDimensions[i] <= 4 );
 			fmt |= VERTEX_TEXCOORD_SIZE( i, pTexCoordDimensions[i] );
 		}
 		else 
@@ -5729,7 +5342,7 @@ void CMeshMgr::GetMaxToRender( IMesh *pMesh, bool bMaxUntilFlush, int *pMaxVerts
 
 int CMeshMgr::GetMaxVerticesToRender( IMaterial *pMaterial )
 {
-	Assert( (pMaterial == nullptr) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
+	contract_assert( (pMaterial == nullptr) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
 	// Be conservative, assume no compression (in here, we don't know if the caller will used a compressed VB or not)
 	// FIXME: allow the caller to specify which compression type should be used to compute size from the vertex format
 	//        (this can vary between multiple VBs/Meshes using the same material)
@@ -5809,7 +5422,7 @@ CIndexBuffer *CMeshMgr::GetDynamicIndexBufferInternal()
 
 IVertexBuffer *CMeshMgr::GetDynamicVertexBuffer( IMaterial *pMaterial, bool buffered )
 {
-	Assert( 0 );
+	contract_assert( 0 );
 	return nullptr;
 //	return ( IMeshDX8 * )GetDynamicMesh( pMaterial, buffered, NULL, NULL );
 }
@@ -5839,10 +5452,10 @@ IIndexBuffer *CMeshMgr::CreateIndexBuffer( ShaderBufferType_t bufferType, Materi
 		}
 	case SHADER_BUFFER_TYPE_STATIC_TEMP:
 	case SHADER_BUFFER_TYPE_DYNAMIC_TEMP:
-		Assert( 0 );
+		contract_assert( 0 );
 		return nullptr;
 	default:
-		Assert( 0 );
+		contract_assert( 0 );
 		return nullptr;
 	}
 }
@@ -5875,20 +5488,12 @@ IVertexBuffer *CMeshMgr::GetDynamicVertexBuffer( int streamID, VertexFormat_t ve
 
 	bool needTempMesh = ShaderAPI()->IsInSelectionMode();
 	
-#ifdef DRAW_SELECTION
-	if( g_bDrawSelection )
-	{
-		needTempMesh = true;
-	}
-#endif
-
-	Assert( !needTempMesh ); // MESHFIXME: don't support temp meshes here yet.
 
 	CVertexBufferDx8 *pVertexBuffer;
 
 	if ( needTempMesh )
 	{
-		Assert( 0 ); // MESHFIXME: don't do this yet.
+		contract_assert( 0 ); // MESHFIXME: don't do this yet.
 //		pVertexBuffer = &m_DynamicTempVertexBuffer;
 		pVertexBuffer = nullptr;
 	}
@@ -5902,19 +5507,8 @@ IVertexBuffer *CMeshMgr::GetDynamicVertexBuffer( int streamID, VertexFormat_t ve
 
 IIndexBuffer *CMeshMgr::GetDynamicIndexBuffer()
 {
-#ifdef DBGFLAG_ASSERT
-	bool needTempMesh = 
-#endif
 		ShaderAPI()->IsInSelectionMode();
 
-#ifdef DRAW_SELECTION
-	if( g_bDrawSelection )
-	{
-		needTempMesh = true;
-	}
-#endif
-
-	Assert( !needTempMesh ); // don't handle this yet. MESHFIXME
 	return &m_DynamicIndexBuffer;
 }
 
@@ -5932,25 +5526,19 @@ void CMeshMgr::SetVertexIDStreamState( int nIDOffsetBytes )
 			// It's because the indices (which are not 0 based for dynamic buffers)
 			// are accessing both the vertexID buffer + the regular vertex buffer.
 			// This *might* be fixable with baseVertexIndex?
-			Assert( !m_pCurrentVertexBuffer->IsDynamic() );
+			contract_assert( !m_pCurrentVertexBuffer->IsDynamic() );
 
 			CVertexBuffer *pVertexIDBuffer = g_MeshMgr.GetVertexIDBuffer( );
-			RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-			RECORD_INT( pVertexIDBuffer->UID() );
-			RECORD_INT( 3 );
-			RECORD_INT( 0 );
-			RECORD_INT( pVertexIDBuffer->VertexSize() );
 
 			D3DSetStreamSource( 3, pVertexIDBuffer->GetInterface(), 0, pVertexIDBuffer->VertexSize() );
 			pVertexIDBuffer->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
 		}
 		else
 		{
-			RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-			RECORD_INT( -1 );	// vertex buffer id
-			RECORD_INT( 3 );	// stream
-			RECORD_INT( 0 );	// vertex offset
-			RECORD_INT( 0 );	// vertex size
+				// vertex buffer id
+				// stream
+				// vertex offset
+				// vertex size
 
 			D3DSetStreamSource( 3, 0, 0, 0 );
 		}
@@ -5968,15 +5556,14 @@ void CMeshMgr::SetCustomStreamsState()
 {
 	if ( g_pLastStreamSpec )
 	{
-		for ( int k = 0; k < ARRAYSIZE( g_bCustomStreamsSet ); ++ k )
+		for ( int k = 0; k < std::size( g_bCustomStreamsSet ); ++ k )
 		{
 			if ( g_bCustomStreamsSet[k] )
 			{
-				RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-				RECORD_INT( -1 );	// vertex buffer id
-				RECORD_INT( k );	// stream
-				RECORD_INT( 0 );	// vertex offset
-				RECORD_INT( 0 );	// vertex size
+					// vertex buffer id
+					// stream
+					// vertex offset
+					// vertex size
 
 				D3DSetStreamSource( k, 0, 0, 0 );
 
@@ -5991,11 +5578,10 @@ void CMeshMgr::SetColorStreamState()
 {
 	if ( g_pLastColorBuffer )
 	{
-		RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
-		RECORD_INT( -1 );	// vertex buffer id
-		RECORD_INT( 1 );	// stream
-		RECORD_INT( 0 );	// vertex offset
-		RECORD_INT( 0 );	// vertex size
+			// vertex buffer id
+			// stream
+			// vertex offset
+			// vertex size
 									  
 		D3DSetStreamSource( 1, 0, 0, 0 );
 	}
@@ -6022,7 +5608,7 @@ void CMeshMgr::SetVertexStreamState( int nVertOffsetInBytes, int nVertexStride )
 	if ( g_pLastVertex || ( g_pLastVertexBuffer != m_pCurrentVertexBuffer->GetDx9Buffer() ) || 
 		( g_nLastVertOffsetInBytes != nVertOffsetInBytes ) || ( g_nLastVertStride != nVertexStride ))
 	{
-		Assert( m_pCurrentVertexBuffer && m_pCurrentVertexBuffer->GetDx9Buffer() );
+		contract_assert( m_pCurrentVertexBuffer && m_pCurrentVertexBuffer->GetDx9Buffer() );
 
 		D3DSetStreamSource( 0, m_pCurrentVertexBuffer->GetDx9Buffer(), nVertOffsetInBytes, nVertexStride );
 		m_pCurrentVertexBuffer->HandlePerFrameTextureStats( ShaderAPI()->GetCurrentFrameCounter() );
@@ -6060,7 +5646,7 @@ bool CMeshMgr::SetRenderState( int nVertexOffsetInBytes, int nFirstVertexIdx, Ve
 void CMeshMgr::BindVertexBuffer( int nStreamID, IVertexBuffer *pVertexBuffer, int nOffsetInBytes, int nFirstVertex, int nVertexCount, VertexFormat_t fmt, int nRepetitions )
 {
 	// FIXME: Multiple stream support isn't implemented yet
-	Assert( nStreamID == 0 );
+	contract_assert( nStreamID == 0 );
 
 	m_pCurrentVertexBuffer = static_cast< CVertexBufferDx8 * >( pVertexBuffer ); 
 	m_CurrentVertexFormat = fmt;
@@ -6086,7 +5672,7 @@ void CMeshMgr::Draw( MaterialPrimitiveType_t primitiveType, int nFirstIndex, int
 	SetRenderState( m_pVertexBufferOffset[0], /* nFirstVertexIdx */0, m_CurrentVertexFormat, m_pCurrentVertexStride[0] );
 
 	m_PrimitiveType = MATERIAL_TRIANGLES;
-	Assert( primitiveType == MATERIAL_TRIANGLES );
+	contract_assert( primitiveType == MATERIAL_TRIANGLES );
 
 	m_nFirstIndex = nFirstIndex;
 	m_nNumIndices = nIndexCount;
@@ -6174,9 +5760,9 @@ void CMeshMgr::DrawInstancedPrims( const unsigned char *pInstanceCommandBuffer )
 		}
 
 		{
-			VPROF( "Dx9Device()->DrawIndexedPrimitive" );
-			VPROF_INCREMENT_COUNTER( "DrawIndexedPrimitive", 1 );
-			VPROF_INCREMENT_COUNTER( "numPrimitives", nPrimitiveCount );
+			CVProfScope _( "Dx9Device()->DrawIndexedPrimitive", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+			VProfIncrementCounter<"DrawIndexedPrimitive">( 1 );
+			VProfIncrementCounter<"numPrimitives">( nPrimitiveCount );
 
 			Dx9Device()->DrawIndexedPrimitive(
 				nMode, 0, 0,
@@ -6189,7 +5775,7 @@ void CMeshMgr::DrawInstancedPrims( const unsigned char *pInstanceCommandBuffer )
 
 void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuffer )
 {
-	VPROF( "CMeshMgr::RenderPassForInstances" );
+	CVProfScope _( "CMeshMgr::RenderPassForInstances", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	IMaterialInternal *pMaterial = ShaderAPI()->GetBoundMaterial();
 	bool bUsingVertexID = pMaterial->IsUsingVertexID();
@@ -6198,7 +5784,7 @@ void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuff
 	for ( int i = 0; i < g_nInstanceCount; ++i )
 	{
 		const MeshInstanceData_t &instance = g_pInstanceData[i];
-		Assert( ( instance.m_nPrimType != MATERIAL_POINTS ) && ( instance.m_nPrimType != MATERIAL_INSTANCED_QUADS ) );
+		contract_assert( ( instance.m_nPrimType != MATERIAL_POINTS ) && ( instance.m_nPrimType != MATERIAL_INSTANCED_QUADS ) );
 		int nPrimitiveCount = NumPrimitives( instance.m_nPrimType, instance.m_nIndexCount );
 
 		// make sure the vertex format is a superset of the current material's
@@ -6206,7 +5792,7 @@ void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuff
 		CMeshDX8 *pVertexMesh = static_cast<CMeshDX8*>( const_cast<IVertexBuffer*>( instance.m_pVertexBuffer ) );
 		pVertexMesh->HandleLateCreation();
 
-		Assert( pVertexMesh );
+		contract_assert( pVertexMesh );
 		VertexFormat_t nMeshFormat = pVertexMesh->GetVertexFormat();
 		if ( !IsValidVertexFormat( nMeshFormat, pMaterial ) )
 		{
@@ -6224,14 +5810,14 @@ void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuff
 		if ( pIndexBuffer->GetMesh() )
 		{
 			CMeshDX8 *pMesh = static_cast<CMeshDX8*>( pIndexBuffer );
-			Assert( pMesh );
+			contract_assert( pMesh );
 			pMesh->HandleLateCreation();
 			pMesh->SetIndexStreamState( 0 );
 		}
 		else
 		{
 			CIndexBufferDx8 *pCIndexBuffer = static_cast<CIndexBufferDx8*>( pIndexBuffer );
-			Assert( pCIndexBuffer );
+			contract_assert( pCIndexBuffer );
 			pCIndexBuffer->SetIndexStreamState( 0 );
 		}
 
@@ -6258,9 +5844,9 @@ void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuff
 
 		ShaderAPI()->ExecuteInstanceCommandBuffer( pInstanceCommandBuffer, i, true );
 
-		VPROF( "Dx9Device()->DrawIndexedPrimitive" );
-		VPROF_INCREMENT_COUNTER( "DrawIndexedPrimitive", 1 );
-		VPROF_INCREMENT_COUNTER( "numPrimitives", nPrimitiveCount );
+		CVProfScope _( "Dx9Device()->DrawIndexedPrimitive", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+		VProfIncrementCounter<"DrawIndexedPrimitive">( 1 );
+		VProfIncrementCounter<"numPrimitives">( nPrimitiveCount );
 
 		Dx9Device()->DrawIndexedPrimitive( 
 			nMode,			// Member of the D3DPRIMITIVETYPE enumerated type, describing the type
@@ -6288,7 +5874,7 @@ void CMeshMgr::RenderPassForInstances( const unsigned char *pInstanceCommandBuff
 void CMeshMgr::RenderPassWithVertexAndIndexBuffers( const unsigned char *pInstanceCommandBuffer )
 {
 //	LOCK_SHADERAPI(); MESHFIXME
-	VPROF( "CShaderAPIDX8::RenderPassWithVertexAndIndexBuffers" );
+	CVProfScope _( "CShaderAPIDX8::RenderPassWithVertexAndIndexBuffers", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( g_nInstanceCount )
 	{
@@ -6296,7 +5882,7 @@ void CMeshMgr::RenderPassWithVertexAndIndexBuffers( const unsigned char *pInstan
 		return;
 	}
 
-	Assert( m_PrimitiveType != MATERIAL_HETEROGENOUS );
+	contract_assert( m_PrimitiveType != MATERIAL_HETEROGENOUS );
 
 //	for ( int iPrim=0; iPrim < s_nPrims; iPrim++ )
 	{
@@ -6309,7 +5895,7 @@ void CMeshMgr::RenderPassWithVertexAndIndexBuffers( const unsigned char *pInstan
 		{
 			// (For point lists, we don't actually fill in indices, but we treat it as
 			// though there are indices for the list up until here).
-			Assert( 0 );
+			contract_assert( 0 );
 //			Dx9Device()->DrawPrimitive( ComputeMode( m_PrimitiveType ), s_FirstVertex, pPrim->m_NumIndices );
 		}
 		else
@@ -6318,7 +5904,7 @@ void CMeshMgr::RenderPassWithVertexAndIndexBuffers( const unsigned char *pInstan
 
 //			Warning( "CMeshMgr::RenderPassWithVertexAndIndexBuffers: DrawIndexedPrimitive: m_nFirstIndex = %d numPrimitives = %d\n", ( int )( ( CDynamiCIndexBufferDx8 * )m_pCurrentIndexBuffer )->m_FirstIndex, ( int )( m_nNumIndices / 3 ) );
 			{
-				VPROF( "Dx9Device()->DrawIndexedPrimitive" );
+				CVProfScope _( "Dx9Device()->DrawIndexedPrimitive", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 //				VPROF_INCREMENT_COUNTER( "DrawIndexedPrimitive", 1 );
 //				VPROF_INCREMENT_COUNTER( "numPrimitives", numPrimitives );
 
@@ -6330,14 +5916,14 @@ void CMeshMgr::RenderPassWithVertexAndIndexBuffers( const unsigned char *pInstan
 //					pPrim->m_FirstIndex,
 //					numPrimitives );
 
-				Assert( m_nFirstIndex >= 0 );
+				contract_assert( m_nFirstIndex >= 0 );
 
 #ifdef CHECK_INDICES
 				// g_pLastVertex - this is the current vertex buffer
 				// g_pLastColorBuffer - this is the curent color mesh, if there is one.
 				// g_pLastIndex - this is the current index buffer.
 				// vertoffset : m_FirstIndex
-				CIndexBufferDx8 *pIndexBuffer = assert_cast< CIndexBufferDx8 * >( m_pCurrentIndexBuffer );
+				CIndexBufferDx8 *pIndexBuffer = static_cast< CIndexBufferDx8 * >( m_pCurrentIndexBuffer );
 				if( m_PrimitiveType == MATERIAL_TRIANGLES || m_PrimitiveType == MATERIAL_TRIANGLE_STRIP )
 				{
 					// FIXME: need to be able to deal with multiple stream here, but don't bother for now.
@@ -6346,8 +5932,8 @@ void CMeshMgr::RenderPassWithVertexAndIndexBuffers( const unsigned char *pInstan
 					for( j = 0; j < m_nNumIndices; j++ )
 					{
 						int index = pIndexBuffer->GetShadowIndex( j + m_nFirstIndex );
-						Assert( index >= m_pFirstVertex[0] );
-						Assert( index < m_pFirstVertex[0] + numVerts );
+						contract_assert( index >= m_pFirstVertex[0] );
+						contract_assert( index < m_pFirstVertex[0] + numVerts );
 					}
 				}
 #endif // CHECK_INDICES
@@ -6368,8 +5954,8 @@ void CMeshMgr::RenderPassWithVertexAndIndexBuffers( const unsigned char *pInstan
 					m_nNumIndices / 3/*numPrimitives*/  // Number of primitives to render. The number of vertices used is a function of the primitive count and the primitive type.
 					);
 
-				Assert( CMeshDX8::s_FirstVertex == 0 );
-				Assert( CMeshDX8::s_NumVertices == 0 );
+				contract_assert( CMeshDX8::s_FirstVertex == 0 );
+				contract_assert( CMeshDX8::s_NumVertices == 0 );
 			}
 		}
 	}
@@ -6378,7 +5964,7 @@ void CMeshMgr::RenderPassWithVertexAndIndexBuffers( const unsigned char *pInstan
 //-----------------------------------------------------------------------------
 void CMeshMgr::SetIndexStreamState( int firstVertexIdx )
 {
-	CIndexBufferDx8 *pIndexBuffer = assert_cast< CIndexBufferDx8* >( m_pCurrentIndexBuffer );
+	CIndexBufferDx8 *pIndexBuffer = static_cast< CIndexBufferDx8* >( m_pCurrentIndexBuffer );
 	IDirect3DIndexBuffer9 *pDx9Buffer = pIndexBuffer ? pIndexBuffer->GetDx9Buffer() : nullptr;
 	if ( g_pLastIndex || g_pLastIndexBuffer != pDx9Buffer )
 	{
@@ -6389,5 +5975,3 @@ void CMeshMgr::SetIndexStreamState( int firstVertexIdx )
 		g_LastVertexIdx = -1;
 	}
 }
-
-

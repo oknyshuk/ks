@@ -1,16 +1,40 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-// @TODO (toml 06-26-02): The entry points in this file need to be organized
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: @TODO (toml 06-26-02): The entry points in this file need to be organized
+
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 
-#include <float.h> // for FLT_MAX
 
 #include "animation.h"		// for NOMOTION
 #include "collisionutils.h"
@@ -32,7 +56,6 @@
 #include "props.h"
 #include "physics_npc_solver.h"
 
-
 const char * g_ppszGoalTypes[] =
 {
 	"GOALTYPE_NONE",
@@ -45,13 +68,11 @@ const char * g_ppszGoalTypes[] =
 	"GOALTYPE_COVER",
 };
 
-#define AIGetGoalTypeText(type)	(g_ppszGoalTypes[(type)])
+template <typename T1> [[gnu::always_inline]] inline auto AIGetGoalTypeText( T1 type ) { return (g_ppszGoalTypes[(type)]); }
 
 ConVar ai_vehicle_avoidance("ai_vehicle_avoidance", "1", FCVAR_CHEAT );
 
-#ifdef DEBUG_AI_NAVIGATION
 ConVar ai_debug_nav("ai_debug_nav", "0");
-#endif
 
 #ifdef DEBUG
 ConVar ai_test_nav_failure_handling("ai_test_nav_failure_handling", "0");
@@ -106,12 +127,12 @@ public:
 
 //-----------------------------------------------------------------------------
 
-const Vector AIN_NO_DEST( FLT_MAX, FLT_MAX, FLT_MAX );
-#define NavVecToString(v) ((v == AIN_NO_DEST) ? "AIN_NO_DEST" : VecToString(v))
+const Vector AIN_NO_DEST( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+#define NavVecToString(v) ((v == AIN_NO_DEST) ? "AIN_NO_DEST" : VecToString(v).c_str())
 
-#define FLIER_CUT_CORNER_DIST		16 // 8 means the npc's bounding box is contained without the box of the node in WC
+constexpr auto FLIER_CUT_CORNER_DIST = 16; // 8 means the npc's bounding box is contained without the box of the node in WC
 
-#define NAV_STOP_MOVING_TOLERANCE	6	// Goal tolerance for TASK_STOP_MOVING stopping paths
+constexpr auto NAV_STOP_MOVING_TOLERANCE = 6; // Goal tolerance for TASK_STOP_MOVING stopping paths
 
 //-----------------------------------------------------------------------------
 // class CAI_Navigator
@@ -151,7 +172,7 @@ CAI_Navigator::CAI_Navigator(CAI_BaseNPC *pOuter)
 	m_NextSidestepTimer.Set(5.0);
 
 	m_vPosBeginFailedSteer = vec3_invalid;
-	m_timeBeginFailedSteer = FLT_MAX;
+	m_timeBeginFailedSteer = std::numeric_limits<float>::max();
 
 	m_flTimeLastAvoidanceTriangulate = -1;
 
@@ -292,7 +313,7 @@ bool CAI_Navigator::FindPath( const AI_NavGoal_t &goal, unsigned flags )
 		else
 			pPathTarget = GetEnemy();
 
-		Assert( goal.pTarget == AIN_DEF_TARGET || goal.pTarget == pPathTarget );
+		contract_assert( goal.pTarget == AIN_DEF_TARGET || goal.pTarget == pPathTarget );
 
 		// Set the goal offset
 		if ( goal.dest != AIN_NO_DEST )
@@ -649,7 +670,6 @@ bool CAI_Navigator::PrependLocalAvoidance( float distObstacle, const AIMoveTrace
 
 	m_flTimeLastAvoidanceTriangulate = gpGlobals->curtime;
 
-	AI_PROFILE_SCOPE(CAI_Navigator_PrependLocalAvoidance);
 
 	AI_Waypoint_t *pAvoidanceRoute = nullptr;
 
@@ -790,14 +810,14 @@ bool CAI_Navigator::UpdateGoalPos( const Vector &goalPos )
 	if ( GetNavType() == NAV_JUMP )
 	{
 		DevMsg( "Updating goal pos while jumping!\n" );
-		AssertOnce( 0 );
+		contract_assert( 0 );
 		return false;
 	}
 
 	// FindPath should be finding the goal position if the goal type is
 	// one of these two... We could just ignore the suggested position
 	// in these two cases I suppose!
-	Assert( (GetPath()->GoalType() != GOALTYPE_ENEMY) && (GetPath()->GoalType() != GOALTYPE_TARGETENT) );
+	contract_assert( (GetPath()->GoalType() != GOALTYPE_ENEMY) && (GetPath()->GoalType() != GOALTYPE_TARGETENT) );
 
 	GetPath()->ResetGoalPosition( goalPos );
 	if ( FindPath( !GetOuter()->IsCurTaskContinuousMove() ) )
@@ -849,7 +869,7 @@ int CAI_Navigator::GetMovementSequence( )
 	if (sequence == ACT_INVALID)
 	{
 		Activity activity = GetPath()->GetMovementActivity();
-		Assert( activity != ACT_INVALID );
+		contract_assert( activity != ACT_INVALID );
 
 		sequence = GetOuter()->SelectWeightedSequence( GetOuter()->TranslateActivity( activity ) );
 		if ( sequence == ACT_INVALID )
@@ -865,7 +885,7 @@ int CAI_Navigator::GetMovementSequence( )
 				sequence = GetOuter()->SelectWeightedSequence( GetOuter()->TranslateActivity( ACT_WALK ) );
 			}
 		}
-		Assert( sequence != ACT_INVALID );
+		contract_assert( sequence != ACT_INVALID );
 		GetPath()->SetMovementSequence( sequence );
 	}
 	return sequence;
@@ -902,7 +922,7 @@ int CAI_Navigator::GetArrivalSequence( int curSequence )
 	{
 		Activity activity = GetOuter()->GetStoppedActivity();
 
-		Assert( activity != ACT_INVALID );
+		contract_assert( activity != ACT_INVALID );
 		if (activity == ACT_INVALID)
 		{
 			activity = ACT_IDLE;
@@ -915,7 +935,7 @@ int CAI_Navigator::GetArrivalSequence( int curSequence )
 			DevMsg( GetOuter(), "No appropriate sequence for arrival activity %s (%d)\n", GetOuter()->GetActivityName( GetPath()->GetArrivalActivity() ), GetPath()->GetArrivalActivity() );
 			sequence = GetOuter()->SelectWeightedSequence( GetOuter()->TranslateActivity( ACT_IDLE ), curSequence );
 		}
-		Assert( sequence != ACT_INVALID );
+		contract_assert( sequence != ACT_INVALID );
 		GetPath()->SetArrivalSequence( sequence );
 	}
 	return sequence;
@@ -1221,7 +1241,7 @@ void CAI_Navigator::OnNavFailed( AI_TaskFailureCode_t code, bool bMovement )
 			if (bMovement)
 			{
 
-				m_timeBeginFailedSteer = FLT_MAX;
+				m_timeBeginFailedSteer = std::numeric_limits<float>::max();
 
 				// if failing, turn off collisions with the object
 				CBaseEntity *pBlocker = GetBlockingEntity();
@@ -1336,7 +1356,7 @@ void CAI_Navigator::ResetCalculations()
 	m_bCalledStartMove = false;
 
 	m_vPosBeginFailedSteer = vec3_invalid;
-	m_timeBeginFailedSteer = FLT_MAX;
+	m_timeBeginFailedSteer = std::numeric_limits<float>::max();
 
 	m_flLastSuccessfulSimplifyTime = -1;
 
@@ -1604,7 +1624,6 @@ AIMoveResult_t CAI_Navigator::MoveJump()
 
 void CAI_Navigator::MoveCalcBaseGoal( AILocalMoveGoal_t *pMoveGoal )
 {
-	AI_PROFILE_SCOPE( CAI_Navigator_MoveCalcBaseGoal );
 
 	pMoveGoal->navType			= GetNavType();
 	pMoveGoal->target			= GetPath()->CurWaypointPos();
@@ -1683,25 +1702,12 @@ bool CAI_Navigator::OnObstructionPreSteer( AILocalMoveGoal_t *pMoveGoal, float d
 	{
 		if ( distClear > pMoveGoal->maxDist )
 		{
-#ifdef PHYSICS_NPC_SHADOW_DISCREPENCY
-			if ( distClear < AI_EPS_CASTS ) // needed because vphysics can pull us back up to this far
-			{
-				DebugNoteMovementFailure();
-				*pResult = pMoveGoal->directTrace.fStatus;
-				pMoveGoal->maxDist = 0;
-				return true;
-			}
-#endif
 			*pResult = AIMR_OK;
 			return true;
 		}
 
 
-#ifdef PHYSICS_NPC_SHADOW_DISCREPENCY
-		if ( pMoveGoal->maxDist + AI_EPS_CASTS < tolerance )
-#else
 		if ( pMoveGoal->maxDist < tolerance )
-#endif
 		{
 			if ( !fTargetIsGoal ||
 				 ( pMoveGoal->directTrace.fStatus != AIMR_BLOCKED_NPC ) ||
@@ -1757,16 +1763,6 @@ bool CAI_Navigator::OnInsufficientStopDist( AILocalMoveGoal_t *pMoveGoal, float 
 		return true;
 	}
 
-#ifdef PHYSICS_NPC_SHADOW_DISCREPENCY
-	if ( distClear < AI_EPS_CASTS ) // needed because vphysics can pull us back up to this far
-	{
-		DebugNoteMovementFailure();
-		*pResult = pMoveGoal->directTrace.fStatus;
-		pMoveGoal->maxDist = 0;
-		return true;
-	}
-#endif
-
 	if ( !IsMovingOutOfWay( *pMoveGoal, distClear ) )
 	{
 		float goalDist = ComputePathDistance( GetNavType(), GetAbsOrigin(), GetPath()->ActualGoalPosition() );
@@ -1811,7 +1807,6 @@ bool CAI_Navigator::OnInsufficientStopDist( AILocalMoveGoal_t *pMoveGoal, float 
 		if ( distClear < 1.0 )
 		{
 			// too close, nothing happening, I'm screwed
-			DebugNoteMovementFailure();
 			*pResult = pMoveGoal->directTrace.fStatus;
 			pMoveGoal->maxDist = 0;
 			return true;
@@ -1846,7 +1841,7 @@ bool CAI_Navigator::OnFailedSteer( AILocalMoveGoal_t *pMoveGoal, float distClear
 
 		if ( distClear > pMoveGoal->maxDist - GetPath()->GetGoalTolerance() )
 		{
-			Assert( CurWaypointIsGoal() && fabs(pMoveGoal->maxDist - GetPathDistToCurWaypoint()) < 0.01 );
+			contract_assert( CurWaypointIsGoal() && fabs(pMoveGoal->maxDist - GetPathDistToCurWaypoint()) < 0.01 );
 
 			if ( pMoveGoal->maxDist > distClear )
 				pMoveGoal->maxDist = distClear;
@@ -1961,7 +1956,7 @@ bool CAI_Navigator::DelayNavigationFailure( const AIMoveTrace_t &trace )
 	// in front of it.
 
 	CAI_BaseNPC *pBlocker = trace.pObstruction ? trace.pObstruction->MyNPCPointer() : nullptr;
-	Assert( m_fPeerMoveWait == false || pBlocker == m_hPeerWaitingOn ); // expected to be cleared each frame, and never call this function twice
+	contract_assert( m_fPeerMoveWait == false || pBlocker == m_hPeerWaitingOn ); // expected to be cleared each frame, and never call this function twice
 	
 	if ( !m_fPeerMoveWait || pBlocker != m_hPeerWaitingOn )
 	{
@@ -2167,7 +2162,7 @@ AIMoveResult_t CAI_Navigator::MoveEnact( const AILocalMoveGoal_t &baseMove )
 	
 	if ( result == AIMR_OK && !m_fNavComplete )
 	{
-		Assert( GetPath()->GetCurWaypoint() );
+		contract_assert( GetPath()->GetCurWaypoint() );
 		result = GetMotor()->MoveNormalExecute( move );
 	}
 	else if ( result != AIMR_CHANGE_TYPE )
@@ -2283,13 +2278,12 @@ bool CAI_Navigator::PreMove()
 	}
 	else if ( goalType == NAV_FLY && curType != NAV_FLY )
 	{
-		AssertMsg( 0, ( "GetNavType() == NAV_FLY" ) );
+		contract_assert( 0 );
 		return false;
 	}
 
 	// --------------------------------
 	
-	Assert( GetMotor()->GetMoveInterval() > 0 );
 
 	// --------------------------------
 	
@@ -2408,7 +2402,6 @@ bool CAI_Navigator::Move( float flInterval )
 			SetNavType( NAV_GROUND );
 		}
 		GetMotor()->MoveStop();
-		AssertMsg( TaskIsRunning() || TaskIsComplete(), ("Schedule stalled!!\n") );
 		return false;
 	}
 
@@ -2635,7 +2628,7 @@ void CAI_Navigator::AdvancePath()
 
 	if ( bPassingPathcorner )
 	{
-		Assert( !pCurWaypoint->GetNext() || (pCurWaypoint->GetNext()->Flags() & (bits_WP_TO_PATHCORNER | bits_WP_TO_GOAL )) == (bits_WP_TO_PATHCORNER | bits_WP_TO_GOAL ));
+		contract_assert( !pCurWaypoint->GetNext() || (pCurWaypoint->GetNext()->Flags() & (bits_WP_TO_PATHCORNER | bits_WP_TO_GOAL )) == (bits_WP_TO_PATHCORNER | bits_WP_TO_GOAL ) );
 		CBaseEntity *pEntity = pCurWaypoint->hPathCorner;
 		if ( pEntity )
 		{
@@ -2669,7 +2662,7 @@ void CAI_Navigator::AdvancePath()
 
 		if ( pCurWaypoint )
 		{
-			Assert( (pCurWaypoint->Flags() & (bits_WP_TO_PATHCORNER | bits_WP_TO_GOAL )) == (bits_WP_TO_PATHCORNER | bits_WP_TO_GOAL ));
+			contract_assert( (pCurWaypoint->Flags() & (bits_WP_TO_PATHCORNER | bits_WP_TO_GOAL )) == (bits_WP_TO_PATHCORNER | bits_WP_TO_GOAL ) );
 
 			SetGoalEnt( pCurWaypoint->hPathCorner );
 			DoFindPathToPathcorner( pCurWaypoint->hPathCorner );
@@ -2714,10 +2707,8 @@ bool CAI_Navigator::ShouldSimplifyTo( bool passedDetour, const Vector &pos )
 {
 	int flags = AIMLF_QUICK_REJECT;
 
-#ifndef NPCS_BLOCK_SIMPLIFICATION
 	if ( !passedDetour )
 		flags |= AIMLF_IGNORE_TRANSIENTS;
-#endif
 
 	AIMoveTrace_t moveTrace;
 	GetMoveProbe()->MoveLimit( GetNavType(), 
@@ -2734,14 +2725,13 @@ void CAI_Navigator::SimplifyPathInsertSimplification( AI_Waypoint_t *pSegmentSta
 	if ( point != pSegmentStart->GetPos() )
 	{
 		AI_Waypoint_t *pNextWaypoint = pSegmentStart->GetNext();
-		Assert( pNextWaypoint );
-		Assert( pSegmentStart->NavType() == pNextWaypoint->NavType() );
+		contract_assert( pNextWaypoint );
+		contract_assert( pSegmentStart->NavType() == pNextWaypoint->NavType() );
 
 		AI_Waypoint_t *pNewWaypoint = new AI_Waypoint_t( point, 0, pSegmentStart->NavType(), 0, NO_NODE );
 
 		while ( GetPath()->GetCurWaypoint() != pNextWaypoint )
 		{
-			Assert( GetPath()->GetCurWaypoint()->IsReducible() );
 			GetPath()->Advance();
 		}
 		pNewWaypoint->SetNext( pNextWaypoint );
@@ -2751,7 +2741,6 @@ void CAI_Navigator::SimplifyPathInsertSimplification( AI_Waypoint_t *pSegmentSta
 	{
 		while ( GetPath()->GetCurWaypoint() != pSegmentStart )
 		{
-			Assert( GetPath()->GetCurWaypoint()->IsReducible() );
 			GetPath()->Advance();
 		}
 	}
@@ -2842,7 +2831,6 @@ bool CAI_Navigator::SimplifyPathForward( float maxDist )
 	if ( !pNextWaypoint )
 		return false;
 
-	AI_PROFILE_SCOPE(CAI_Navigator_SimplifyPathForward);
 
 	static SimplifyForwardScanParams fullScanParams = 
 	{
@@ -2881,7 +2869,6 @@ bool CAI_Navigator::SimplifyPathForward( float maxDist )
 
 bool CAI_Navigator::SimplifyPathBacktrack()
 {
-	AI_PROFILE_SCOPE(CAI_Navigator_SimplifyPathBacktrack);
 
 	AI_Waypoint_t *pCurWaypoint = GetPath()->GetCurWaypoint();
 	AI_Waypoint_t *pNextWaypoint = pCurWaypoint->GetNext();
@@ -2952,7 +2939,6 @@ bool CAI_Navigator::SimplifyPathBacktrack()
 
 bool CAI_Navigator::SimplifyPathQuick()
 {
-	AI_PROFILE_SCOPE(CAI_Navigator_SimplifyPathQuick);
 
 	static SimplifyForwardScanParams quickScanParams[2] = 
 	{ 
@@ -2982,13 +2968,12 @@ bool CAI_Navigator::SimplifyPathQuick()
 // Second entry is the strong opt version
 const float ROUTE_SIMPLIFY_TIME_DELAY[2]		= { 0.5, 1.0f };
 const float NO_PVS_ROUTE_SIMPLIFY_TIME_DELAY[2]	= { 1.0, 2.0f };
-const float QUICK_SIMPLIFY_TIME_DELAY[2]		= { FLT_MIN, 0.3f };
+const float QUICK_SIMPLIFY_TIME_DELAY[2]		= { std::numeric_limits<float>::min(), 0.3f };
 
 int g_iFrameLastSimplified;
 
 bool CAI_Navigator::SimplifyPath( bool bFirstForPath, float scanDist )
 {
-	AI_PROFILE_SCOPE(CAI_Navigator_SimplifyPath);
 	
 	if ( TestingSteering() || IsSimplifyPathDisabled() )
 		return false;
@@ -3115,8 +3100,8 @@ void CAI_Navigator::SimplifyFlyPath( unsigned collisionMask, const CBaseEntity *
 
 //-----------------------------------------------------------------------------
 
-#define FLY_ROUTE_SIMPLIFY_TIME_DELAY 0.3
-#define FLY_ROUTE_SIMPLIFY_LOOK_DIST (12.0*12.0)
+constexpr auto FLY_ROUTE_SIMPLIFY_TIME_DELAY = 0.3;
+constexpr auto FLY_ROUTE_SIMPLIFY_LOOK_DIST = (12.0*12.0);
 
 bool CAI_Navigator::SimplifyFlyPath(  const AI_ProgressFlyPathParams_t &params )
 {
@@ -3315,7 +3300,7 @@ bool CAI_Navigator::FindPath( bool fSignalTaskStatus, bool bDontIgnoreBadLinks )
 	// Test to see if we're resolving spiking problems via threading
 	if ( ai_navigator_generate_spikes.GetBool() )
 	{
-		unsigned int nLargeCount = (INT_MAX>>(ai_navigator_generate_spikes_strength.GetInt()));
+		unsigned int nLargeCount = (std::numeric_limits<int>::max()>>(ai_navigator_generate_spikes_strength.GetInt()));
 		while ( nLargeCount-- ) {}
 	}
 
@@ -3571,7 +3556,7 @@ CBaseEntity *CAI_Navigator::GetNextPathcorner( CBaseEntity *pPathCorner )
 {
 	CBaseEntity *pNextPathCorner = nullptr;
 
-	Assert( pPathCorner );
+	contract_assert( pPathCorner );
 	if ( pPathCorner )
 	{
 		pNextPathCorner = pPathCorner->GetNextTarget();
@@ -3599,7 +3584,7 @@ bool CAI_Navigator::DoFindPathToPathcorner( CBaseEntity *pPathCorner )
 // UNDONE: Remove this and change the pathing code to be able to refresh itself and support
 // circular paths, etc.
 	bool returnCode = false;
-	Assert( GetPath()->GoalType() == GOALTYPE_PATHCORNER );
+	contract_assert( GetPath()->GoalType() == GOALTYPE_PATHCORNER );
 
 	// NPC is on a path_corner loop
 	if ( pPathCorner != nullptr )
@@ -3652,7 +3637,7 @@ bool CAI_Navigator::DoFindPathToPathcorner( CBaseEntity *pPathCorner )
 				}
 
 				AI_Waypoint_t *lastWaypoint	= GetPath()->GetGoalWaypoint();
-				Assert(lastWaypoint);
+				contract_assert( lastWaypoint );
 
 				lastWaypoint->ModifyFlags( bits_WP_TO_PATHCORNER, true );
 				lastWaypoint->hPathCorner = pPathCorner;
@@ -3687,7 +3672,6 @@ bool CAI_Navigator::DoFindPathToPathcorner( CBaseEntity *pPathCorner )
 //-----------------------------------------------------------------------------
 bool CAI_Navigator::DoFindPath( void )
 {
-	AI_PROFILE_SCOPE(CAI_Navigator_DoFindPath);
 
 	DbgNavMsg( GetOuter(), "Finding new path\n" );
 
@@ -3712,7 +3696,6 @@ bool CAI_Navigator::DoFindPath( void )
 			CBaseEntity *pEnemy = GetPath()->GetTarget();
 			if (pEnemy)
 			{
-				Assert( pEnemy == GetEnemy() );
 
 				Vector newPos = GetEnemyLKP();
 
@@ -3776,7 +3759,6 @@ bool CAI_Navigator::DoFindPath( void )
 			
 			if ( pTarget )
 			{
-				Assert( pTarget == GetTarget() );
 
 				// NOTE: Calling reset here because this can get called
 				// any time we have to update our goal position
@@ -3817,7 +3799,7 @@ void CAI_Navigator::ClearPath( void )
 
 		if( m_pClippedWaypoints && m_pClippedWaypoints->GetFirst() )
 		{
-			Assert( m_PreviousMoveActivity > ACT_RESET );
+			contract_assert( m_PreviousMoveActivity > ACT_RESET );
 		}
 
 		while ( pWaypoint )
@@ -3881,13 +3863,6 @@ bool CAI_Navigator::GetStoppingPath( CAI_WaypointList *	pClippedWaypoints )
 					break;
 				}
 
-#if PARANOID_NAV_CHECK_ON_MOMENTUM
-				if ( !CanFitAtPosition( pNextPoint->GetPos(), GetAITraceMask() ) )
-				{
-					break;
-				}
-#endif
-
 				if ( pNextPoint->NavType() != NAV_CLIMB || !pNextPoint->GetNext() || pNextPoint->GetNext()->NavType() != NAV_CLIMB )
 					bMustCompleteCurrent = false;
 
@@ -3921,7 +3896,7 @@ bool CAI_Navigator::GetStoppingPath( CAI_WaypointList *	pClippedWaypoints )
 				}
 				else
 				{
-					Assert( !( pNextPoint->NavType() == NAV_CLIMB || pNextPoint->NavType() == NAV_JUMP ) );
+					contract_assert( !( pNextPoint->NavType() == NAV_CLIMB || pNextPoint->NavType() == NAV_JUMP ) );
 					Vector remainder = pNextPoint->GetPos() - vPosPrev;
 					VectorNormalize( remainder );
 					float yaw = UTIL_VecToYaw( remainder );
@@ -4023,9 +3998,9 @@ bool CAI_Navigator::SetGoalFromStoppingPath()
 		GetPath()->SetGoalType( GOALTYPE_NONE );
 		GetPath()->SetGoalType( GOALTYPE_LOCATION );
 		GetPath()->SetGoalTolerance( NAV_STOP_MOVING_TOLERANCE );
-		Assert( GetPath()->GetCurWaypoint() );
+		contract_assert( GetPath()->GetCurWaypoint() );
 
-		Assert( m_PreviousMoveActivity != ACT_INVALID );
+		contract_assert( m_PreviousMoveActivity != ACT_INVALID );
 		
 
 		if ( m_PreviousMoveActivity != ACT_RESET )

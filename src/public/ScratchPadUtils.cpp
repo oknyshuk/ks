@@ -1,16 +1,38 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#endif
 #include "iscratchpad3d.h"
-#include "mathlib/mathlib.h"
 #include "ScratchPadUtils.h"
-
 
 // --------------------------------------------------------------------------------------------------------------------- //
 // CScratchPadGraph implementation.
@@ -149,7 +171,7 @@ void CScratchPadGraph::UpdateTicksAndStuff( float flTime, float flValue )
 	}
 
 	// More text labels?
-	int iHighestTextLabel = (int)ceil( (flTime - m_flTimeOrigin) / m_flTimeLabelEveryNSeconds + 0.5f );
+	int iHighestTextLabel = (int)std::ceil( (flTime - m_flTimeOrigin) / m_flTimeLabelEveryNSeconds + 0.5f );
 	while ( m_nTimeLabelsDrawn < iHighestTextLabel )
 	{
 		CTextParams params;
@@ -161,7 +183,7 @@ void CScratchPadGraph::UpdateTicksAndStuff( float flTime, float flValue )
 		params.m_bTwoSided = true;
 		
 		char str[512];
-		Q_snprintf( str, sizeof( str ), "time: %.2f", flTime );
+		V_snprintf( str, sizeof( str ), "time: %.2f", flTime );
 		m_pPad->DrawText( str, params );
 
 
@@ -226,8 +248,8 @@ void ScratchPad_DrawLitCone(
 	
 	for ( int i=0; i < nSegments; i++ )
 	{
-		float flAngle = (float)(i+1) * M_PI * 2.0 / nSegments;
-		Vector vOffset = vRight * cos( flAngle ) + vUp * sin( flAngle );
+		float flAngle = (float)(i+1) * std::numbers::pi * 2.0 / nSegments;
+		Vector vOffset = vRight * std::cos( flAngle ) + vUp * std::sin( flAngle );
 		Vector vCurBottom = vBaseCenter + vOffset;
 
 		const Vector &v1 = vTip;
@@ -293,8 +315,8 @@ void ScratchPad_DrawLitCylinder(
 	
 	for ( int i=0; i < nSegments; i++ )
 	{
-		float flAngle = (float)(i+1) * M_PI * 2.0 / nSegments;
-		Vector vOffset = vRight * cos( flAngle ) + vUp * sin( flAngle );
+		float flAngle = (float)(i+1) * std::numbers::pi * 2.0 / nSegments;
+		Vector vOffset = vRight * std::cos( flAngle ) + vUp * std::sin( flAngle );
 		Vector vCurTop = v1 + vOffset;
 		Vector vCurBottom = v2 + vOffset;
 
@@ -383,7 +405,7 @@ void ScratchPad_DrawSphere(
 	// For each vertical slice.. (the top and bottom ones are just a single point).
 	for ( int iSlice=0; iSlice < nSubDivs; iSlice++ )
 	{
-		float flHalfSliceAngle = M_PI * (float)iSlice / (nSubDivs - 1);
+		float flHalfSliceAngle = std::numbers::pi * (float)iSlice / (nSubDivs - 1);
 
 		if ( iSlice == 0 )
 		{
@@ -395,7 +417,7 @@ void ScratchPad_DrawSphere(
 		{
 			for ( int iSubPt=0; iSubPt < nSubDivs; iSubPt++ )
 			{
-				float flHalfAngle = M_PI * (float)iSubPt / (nSubDivs - 1);
+				float flHalfAngle = std::numbers::pi * (float)iSubPt / (nSubDivs - 1);
 				float flAngle = flHalfAngle * 2;
 				
 				Vector pt;
@@ -405,9 +427,9 @@ void ScratchPad_DrawSphere(
 				}
 				else
 				{
-					pt.x = cos( flAngle ) * sin( flHalfSliceAngle );
-					pt.y = sin( flAngle ) * sin( flHalfSliceAngle );
-					pt.z = cos( flHalfSliceAngle );
+					pt.x = std::cos( flAngle ) * std::sin( flHalfSliceAngle );
+					pt.y = std::sin( flAngle ) * std::sin( flHalfSliceAngle );
+					pt.z = std::cos( flHalfSliceAngle );
 					
 					pt *= flRadius;
 					pt += vCenter;
@@ -457,6 +479,3 @@ void ScratchPad_DrawAABB(
 		vPrevBottom = vBottom;
 	}
 }
-
-
-

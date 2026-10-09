@@ -1,15 +1,8 @@
-//===== Copyright c 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef IMATCHEXTENSIONS_H
-#define IMATCHEXTENSIONS_H
-
-
-abstract_class IMatchExtensions
+class IMatchExtensions
 {
 public:
 	// Registers an extension interface
@@ -21,5 +14,3 @@ public:
 	// Gets a pointer to a registered extension interface
 	virtual void * GetRegisteredExtensionInterface( char const *szInterfaceString ) = 0;
 };
-
-#endif // IMATCHEXTENSIONS_H

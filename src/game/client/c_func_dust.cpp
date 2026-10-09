@@ -1,10 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.vstdlib;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "fx.h"
@@ -13,7 +19,6 @@
 #include "c_te_particlesystem.h"
 #include "env_wind_shared.h"
 #include "engine/IEngineTrace.h"
-#include "tier0/vprof.h"
 #include "particles_ez.h"
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_Func_Dust, DT_Func_Dust, CFunc_Dust )
@@ -23,7 +28,7 @@ IMPLEMENT_REFLECT_CLIENTCLASS( C_Func_Dust, DT_Func_Dust, CFunc_Dust )
 // ------------------------------------------------------------------------------------ //
 // CDustEffect implementation.
 // ------------------------------------------------------------------------------------ //
-#define DUST_ACCEL 50
+constexpr auto DUST_ACCEL = 50;
 
 
 void CDustEffect::RenderParticles( CParticleRenderIterator *pIterator )
@@ -40,8 +45,8 @@ void CDustEffect::RenderParticles( CParticleRenderIterator *pIterator )
 		else
 		{
 			// Alpha.
-			float flAngle = (pParticle->m_flLifetime / pParticle->m_flDieTime) * M_PI * 2;
-			flAlpha = sin( flAngle - (M_PI * 0.5f) ) * 0.5f + 0.5f;
+			float flAngle = (pParticle->m_flLifetime / pParticle->m_flDieTime) * std::numbers::pi * 2;
+			flAlpha = std::sin( flAngle - (std::numbers::pi * 0.5f) ) * 0.5f + 0.5f;
 		}
 
 		Vector tPos;
@@ -239,7 +244,7 @@ void C_Func_Dust::AttemptSpawnNewParticle()
 //-----------------------------------------------------------------------------
 void FX_Dust( const Vector &vecOrigin, const Vector &vecDirection, float flSize, float flSpeed )
 {
-	VPROF_BUDGET( "FX_Dust", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
+	CVProfScope _( "FX_Dust", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
 	
 	int	numPuffs = (flSize*0.5f);
 

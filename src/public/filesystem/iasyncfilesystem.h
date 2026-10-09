@@ -1,28 +1,14 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:   Provides IAsyncFileRequest and IAsyncFileSystem Interfaces
-//                     and supporting objects and values
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IASYNCFILESYSTEM_H
-#define IASYNCFILESYSTEM_H
+// Purpose: Provides IAsyncFileRequest and IAsyncFileSystem Interfaces
+//                    and supporting objects and values
 
 
-#include <limits.h>
-
-#include "tier0/threadtools.h"
-#include "tier0/memalloc.h"
-#include "tier0/tslist.h"
-#include "tier1/interface.h"
-#include "tier1/functors.h" 
-#include "tier1/checksum_crc.h"
-#include "tier1/utlvector.h"
-#include "appframework/iappsystem.h"
+import std;
+import ks.tier1;
 #include "tier2/tier2.h"
-
-
 
 //-----------------------------------------------------------------------------
 // "New" (circa 2009) Async FileSystem Interface
@@ -74,7 +60,7 @@ enum AsyncRequestStatus_t
 	ASYNC_REQUEST_OK               			= 0,			// operation is successful
 
 	
-	ASYNC_REQUEST_FORCE_INT32				= INT32_MAX		// force AsyncRequestStatus_t to 32 bits
+	ASYNC_REQUEST_FORCE_INT32				= std::numeric_limits<std::int32_t>::max()		// force AsyncRequestStatus_t to 32 bits
 };
 
 
@@ -91,7 +77,7 @@ enum AsyncRequestState_t
 	ASYNC_REQUEST_STATE_AWATING_FINISH,						// The request has completed IO, and waiting to be post-processed by user code
 	ASYNC_REQUEST_STATE_COMPLETED,							// The request has completed all tasks
 	
-	ASYNC_REQUEST_STATE_FORCE_INT32		= INT32_MAX			// force AsyncRequestStatus_t to 32 bits
+	ASYNC_REQUEST_STATE_FORCE_INT32		= std::numeric_limits<std::int32_t>::max()			// force AsyncRequestStatus_t to 32 bits
 };
 
 
@@ -112,7 +98,7 @@ enum AsyncFileOperation_t
 	
 	ASYNC_OP_GROUP,									// Object is a container of requests
 	
-	ASYNC_OP_FORCE_INT32		= INT32_MAX
+	ASYNC_OP_FORCE_INT32		= std::numeric_limits<std::int32_t>::max()
 };
 
 
@@ -203,24 +189,24 @@ class IAsyncFileRequest : public IAsyncRequestBase
 		virtual const char*					GetFileName() = 0;										// get the filename we've assigned
 		
 		// Buffer control functions	- user supplied data buffer
-		virtual void						SetUserBuffer( void* pDataBuffer, size_t nBufferSize ) = 0;		// User supplies a memory buffer to use, which they own the memory for
+		virtual void						SetUserBuffer( void* pDataBuffer, std::size_t nBufferSize ) = 0;		// User supplies a memory buffer to use, which they own the memory for
 		virtual void*						GetUserBuffer() = 0;											// returns the address of the user supplied buffer
-		virtual size_t						GetUserBufferSize() = 0;										// returns the size of the user supplied buffer
+		virtual std::size_t						GetUserBufferSize() = 0;										// returns the size of the user supplied buffer
 		
 		virtual void						ProvideDataBuffer() = 0;								// Let the async file system provide a buffer to hold the data transferred (valid for Load/Read only)
 
 		// Buffer results - the data buffer can be user supplied or async system supplied
 		virtual void*						GetResultBuffer() = 0;									// Returns the address of the data transferred
-		virtual size_t						GetResultBufferSize() = 0;								// Returns the size of the buffer holding the data transferred
-		virtual size_t						GetIOTransferredSize() = 0;								// Returns the number of bytes of data actually transferred
+		virtual std::size_t						GetResultBufferSize() = 0;								// Returns the size of the buffer holding the data transferred
+		virtual std::size_t						GetIOTransferredSize() = 0;								// Returns the number of bytes of data actually transferred
 
 		// Memory control functions for buffers allocated by the async file system
 		virtual void						KeepResultBuffer() = 0;									// User wants to keeps buffer allocated by the file system
 		virtual void						ReleaseResultBuffer() = 0;								// User decides they want the request to take care of releasing the buffer
 
 		// file position functions											
-		virtual void						ReadFileDataAt( int64 nFileOffset, size_t nReadSize = 0 ) = 0;		// Read file data starting at supplied offset, optional max size to read
-		virtual void						WriteFileDataAt( int64 nFileOffset, size_t nWriteSize = 0 )	= 0;	// Write data to file at supplied offset, optional size to write (max size of buffer)
+		virtual void						ReadFileDataAt( int64 nFileOffset, std::size_t nReadSize = 0 ) = 0;		// Read file data starting at supplied offset, optional max size to read
+		virtual void						WriteFileDataAt( int64 nFileOffset, std::size_t nWriteSize = 0 )	= 0;	// Write data to file at supplied offset, optional size to write (max size of buffer)
 		
 };
 
@@ -403,7 +389,7 @@ public:
 	virtual void							ReleaseAsyncRequest( const IAsyncRequestBase* pRequest ) = 0;
 	virtual bool							BlockUntilAsyncIOComplete( const IAsyncRequestBase* pRequest ) = 0;
 
-	virtual void*							AllocateBuffer( size_t nBufferSize, int nAlignment = 4 ) = 0;
+	virtual void*							AllocateBuffer( std::size_t nBufferSize, int nAlignment = 4 ) = 0;
 	virtual void							ReleaseBuffer( void* pBuffer ) = 0;
 
 	
@@ -414,7 +400,7 @@ public:
 //-----------------------------------------------------------------------------
 // Globals Exposed
 //-----------------------------------------------------------------------------
-DECLARE_TIER2_INTERFACE( IAsyncFileSystem, g_pAsyncFileSystem );
+extern IAsyncFileSystem *g_pAsyncFileSystem;;
 
 
 //-----------------------------------------------------------------------------
@@ -445,7 +431,7 @@ inline IAsyncFileRequest*  AsyncReadFile( const char* pFileName )
 // ::AsyncReadFileToBuffer() - Helper function to setup a New Async Request
 //		load an entire file file, to a supplied buffer, use all defaults
 //-----------------------------------------------------------------------------
-inline IAsyncFileRequest*  AsyncReadFileToBuffer( const char* pFileName, void* pBuffer, size_t nBufferSize )
+inline IAsyncFileRequest*  AsyncReadFileToBuffer( const char* pFileName, void* pBuffer, std::size_t nBufferSize )
 {
 	IAsyncFileRequest*	theRequest = g_pAsyncFileSystem->CreateNewFileRequest();	// Open a new request
 	theRequest->LoadFile( pFileName );					// specify file and set request type to read
@@ -458,7 +444,7 @@ inline IAsyncFileRequest*  AsyncReadFileToBuffer( const char* pFileName, void* p
 // ::AsyncReadFileBlock() - Helper function to setup a New Async Request
 //		load an portion of a file, allocate a buffer, use all defaults
 //-----------------------------------------------------------------------------
-inline IAsyncFileRequest*  AsyncReadFileBlock( const char* pFileName, int64 nOffset, size_t nLoadSize )
+inline IAsyncFileRequest*  AsyncReadFileBlock( const char* pFileName, int64 nOffset, std::size_t nLoadSize )
 {
 	IAsyncFileRequest*	theRequest = g_pAsyncFileSystem->CreateNewFileRequest();	// Open a new request
 	theRequest->LoadFile( pFileName );					// specify file and set request type to read
@@ -472,7 +458,7 @@ inline IAsyncFileRequest*  AsyncReadFileBlock( const char* pFileName, int64 nOff
 // ::AsyncReadFileBlockToBuffer() - Helper function to setup a New Async Request
 //		load an portion of a file, to a supplied buffer, use all defaults
 //-----------------------------------------------------------------------------
-inline IAsyncFileRequest*  AsyncReadFileBlockToBuffer( const char* pFileName, int64 nOffset, size_t nLoadSize, void* pBuffer, size_t nBufferSize )
+inline IAsyncFileRequest*  AsyncReadFileBlockToBuffer( const char* pFileName, int64 nOffset, std::size_t nLoadSize, void* pBuffer, std::size_t nBufferSize )
 {
 	IAsyncFileRequest*	theRequest = g_pAsyncFileSystem->CreateNewFileRequest();	// Open a new request
 	
@@ -488,7 +474,7 @@ inline IAsyncFileRequest*  AsyncReadFileBlockToBuffer( const char* pFileName, in
 // ::AsyncWriteBufferToFile() - Helper function to setup a New Async Request
 //		write a buffer to a file, overwriting existing, use all defaults
 //-----------------------------------------------------------------------------
-inline IAsyncFileRequest*  AsyncWriteBufferToFile( const char* pFileName, void* pBuffer, size_t nBufferSize )
+inline IAsyncFileRequest*  AsyncWriteBufferToFile( const char* pFileName, void* pBuffer, std::size_t nBufferSize )
 {
 	IAsyncFileRequest*	theRequest = g_pAsyncFileSystem->CreateNewFileRequest();	// Open a new request
 	
@@ -503,7 +489,7 @@ inline IAsyncFileRequest*  AsyncWriteBufferToFile( const char* pFileName, void* 
 // ::AsyncAppendBufferToFile() - Helper function to setup a New Async Request
 //		write a buffer to a file, append to if existing, use all defaults
 //-----------------------------------------------------------------------------
-inline IAsyncFileRequest*  AsyncAppendBufferToFile( const char* pFileName, void* pBuffer, size_t nBufferSize )
+inline IAsyncFileRequest*  AsyncAppendBufferToFile( const char* pFileName, void* pBuffer, std::size_t nBufferSize )
 {
 	IAsyncFileRequest*	theRequest = g_pAsyncFileSystem->CreateNewFileRequest();	// Open a new request
 	
@@ -547,9 +533,3 @@ inline IAsyncGroupRequest* NewAsyncRequestGroup()
 {
 	return g_pAsyncFileSystem->CreateNewAsyncRequestGroup();
 }
-
-
-
-
-#endif	// IASYNCFILESYSTEM_H
-

@@ -1,19 +1,14 @@
-//===== Copyright 1996-2007, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: tracks VB allocations (and compressed/uncompressed vertex memory usage)
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2007 Valve Corporation
 
-#include <mutex>
+// Purpose: tracks VB allocations (and compressed/uncompressed vertex memory usage)
+
+import std;
+import ks.tier1;
 #include "materialsystem/imaterial.h"
 #include "imeshdx8.h"
-#include "convar.h"
-#include "tier1/generichash.h"
-#include <unordered_map>
-#include <vector>
 
 #include "materialsystem/ivballoctracker.h"
-
 
 //-----------------------------------------------------------------------------
 //
@@ -165,11 +160,7 @@ static const ElementData boneWeight4Element	= { VERTEX_ELEMENT_BONEWEIGHTS4,	16,
 static const ElementData userData1Element	= { VERTEX_ELEMENT_USERDATA1,		 4,  4,  4, "USERDATA1   "	}; // (unused)
 static const ElementData userData2Element	= { VERTEX_ELEMENT_USERDATA2,		 8,  8,  4, "USERDATA2   "	}; // (unused)
 static const ElementData userData3Element	= { VERTEX_ELEMENT_USERDATA3,		12, 12,  4, "USERDATA3   "	}; // (unused)
-#if ( COMPRESSED_NORMALS_TYPE == COMPRESSED_NORMALS_SEPARATETANGENTS_SHORT2 )
-static const ElementData userData4Element	= { VERTEX_ELEMENT_USERDATA4,		16,  4,  4, "USERDATA4   "	}; // (UNDONE: PC (2x16-byte Raphael method) or 360 (D3DDECLTYPE_HEND3N))
-#else // ( COMPRESSED_NORMALS_TYPE == COMPRESSED_NORMALS_COMBINEDTANGENTS_UBYTE4 )
 static const ElementData userData4Element	= { VERTEX_ELEMENT_USERDATA4,		16,  0,  0, "USERDATA4   "	}; // (UNDONE: PC (2x16-byte Raphael method) or 360 (D3DDECLTYPE_HEND3N))
-#endif
 static const ElementData texCoord1D0Element	= { VERTEX_ELEMENT_TEXCOORD1D_0,	 4,  4,  4, "TEXCOORD1D_0"	}; // (not worth compressing)
 static const ElementData texCoord1D1Element	= { VERTEX_ELEMENT_TEXCOORD1D_1,	 4,  4,  4, "TEXCOORD1D_1"	}; // (not worth compressing)
 static const ElementData texCoord1D2Element	= { VERTEX_ELEMENT_TEXCOORD1D_2,	 4,  4,  4, "TEXCOORD1D_2"	}; // (not worth compressing)
@@ -229,8 +220,7 @@ static ConVar mem_vballocspew( "mem_vballocspew", "0", FCVAR_MATERIAL_SYSTEM_THR
 //-----------------------------------------------------------------------------
 
 static CVBAllocTracker s_VBAllocTracker;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CVBAllocTracker, IVBAllocTracker, 
-						VB_ALLOC_TRACKER_INTERFACE_VERSION, s_VBAllocTracker );
+static InterfaceReg s_Reg_CVBAllocTracker_IVBAllocTracker( []() -> void * { return static_cast<IVBAllocTracker *>( &s_VBAllocTracker ); }, VB_ALLOC_TRACKER_INTERFACE_VERSION );;
 
 //-----------------------------------------------------------------------------
 //
@@ -243,7 +233,7 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CVBAllocTracker, IVBAllocTracker,
 
 CVBAllocTracker::CVBAllocTracker()
 {
-	COMPILE_TIME_ASSERT( VERTEX_ELEMENT_NUMELEMENTS == ARRAYSIZE( elementTable ) );
+	static_assert( VERTEX_ELEMENT_NUMELEMENTS == std::size( elementTable ) );
 	m_bSuperSpew = false;
 	m_MeshAllocatorName[0] = 0;
 	m_VBCountTable.reserve( 64 );
@@ -277,7 +267,7 @@ CounterData *CVBAllocTracker::GetCounterHandle( const char * allocatorName, shor
 	auto [it, bInserted] = m_VBCountTable.try_emplace( allocatorHash );
 	if ( bInserted )
 	{
-		Assert( ( allocatorName != nullptr ) && ( allocatorName[0] != 0 ) );
+		contract_assert( ( allocatorName != nullptr ) && ( allocatorName[0] != 0 ) );
 		V_strncpy( it->second.m_AllocatorName, allocatorName, CounterData::MAX_NAME_SIZE );
 		m_VBTableNameHashes.push_back( allocatorHash );
 	}
@@ -288,7 +278,7 @@ void CheckForElementTableUpdates( const ElementData & element )
 {
 	// Ensure that 'elementTable' gets updated if VertexElement_t ever changes:
 	int tableIndex = &element - &( elementTable[0] );
-	Assert( tableIndex == element.element );
+	contract_assert( tableIndex == element.element );
 	if ( tableIndex != element.element )
 	{
 		static int timesToSpew = 20;
@@ -395,7 +385,7 @@ VertexElementMap_t CVBAllocTracker::ComputeElementMap( VertexFormat_t fmt, int v
 		int nCoordSize = TexCoordSize( i, fmt );
 		if ( nCoordSize > 0 )
 		{
-			Assert( nCoordSize <= 4 );
+			contract_assert( nCoordSize <= 4 );
 			if ( nCoordSize <= 4 )
 			{
 				map |= LSB << ( texCoordElements[ nCoordSize - 1 ] + i );
@@ -424,7 +414,7 @@ VertexElementMap_t CVBAllocTracker::ComputeElementMap( VertexFormat_t fmt, int v
 			//        elementTable to reflect that and re-enable this assert for compressed verts
 			if ( !isCompressedAlloc )
 			{
-				Assert( vertexSize == ComputeVertexSize( map, fmt, isCompressedAlloc ) );
+				contract_assert( vertexSize == ComputeVertexSize( map, fmt, isCompressedAlloc ) );
 			}
 		}
 	}
@@ -486,7 +476,7 @@ void CVBAllocTracker::AddSaving( int & alreadySaved, int & yetToSave, const char
 			yetToSave		+= counterData.m_paddingCount;
 			break;
 		default:
-			Assert(0);
+			contract_assert( 0 );
 			break;
 		}
 	}
@@ -542,9 +532,9 @@ void CVBAllocTracker::UpdateData( const char * allocatorName, short allocatorKey
 	{
 		CounterData & data = *pCounter;
 		data.m_memCount += bufferSize;
-		Assert( data.m_memCount  >= 0 );
+		contract_assert( data.m_memCount  >= 0 );
 		data.m_vertCount += numVerts;
-		Assert( data.m_vertCount  >= 0 );
+		contract_assert( data.m_vertCount  >= 0 );
 		data.m_paddingCount += ( bufferSize < 0 ? -1 : +1 )*ComputeAlignmentWastage( abs( bufferSize ) );
 		UpdateElements( data, fmt, numVerts, vertexSize, isDynamic, isCompressed );
 	}
@@ -589,7 +579,7 @@ void CVBAllocTracker::SpewDataSometimes( int inc )
 	static int count = 0;
 
 	if ( inc < 0 ) count += inc;
-	Assert( count >= 0 );
+	contract_assert( count >= 0 );
 
 	int period = mem_vballocspew.GetInt();
 	if ( period >= 1 )
@@ -744,8 +734,6 @@ bool CVBAllocTracker::TrackMeshAllocations( const char * allocatorName )
 	return false;
 }
 
-#ifndef RETAIL
-
 static void CC_DumpVBMemAllocs()
 {
 #if ( ENABLE_VB_ALLOC_TRACKER == 0 )
@@ -756,5 +744,3 @@ static void CC_DumpVBMemAllocs()
 }
 
 static ConCommand mem_dumpvballocs( "mem_dumpvballocs", CC_DumpVBMemAllocs, "Dump VB memory allocation stats.", FCVAR_CHEAT );
-
-#endif // RETAIL

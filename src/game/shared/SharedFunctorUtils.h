@@ -1,3 +1,4 @@
+#pragma once
 // SharedFunctorUtils.h
 // Useful functors for client and server
 // Author: Graham Smallwood, August 2006, Copyright 2006 Turtle Rock Studios, Inc.
@@ -8,11 +9,16 @@
 * and work for any Source based game
 */
 //--------------------------------------------------------------------------------------------------------
-#ifndef _SHARED_FUNCTOR_UTILS_H_
-#define _SHARED_FUNCTOR_UTILS_H_
 
+import ks.core;
 #include "debugoverlay_shared.h"
-#include "vprof.h"
+import std;
+#include "shareddefs.h"
+#ifdef CLIENT_DLL
+#include "c_basecombatcharacter.h"
+#else
+#include "basecombatcharacter.h"
+#endif
 
 //--------------------------------------------------------------------------------------------------------
 /**
@@ -40,7 +46,7 @@ public:
 
 	virtual bool operator() ( PlayerType *them )
 	{
-		VPROF( "TargetScan()" );
+		CVProfScope _( "TargetScan()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 		if ( them != m_me && 
 			 them->IsAlive() && 
 			 (m_team == TEAM_ANY || them->GetTeamNumber() == m_team) &&
@@ -153,4 +159,3 @@ protected:
 };
 
 
-#endif

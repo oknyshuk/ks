@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
+import ks.core;
 #include "BaseVSShader.h"
-#include "common_hlsl_cpp_consts.h"
-
 
 BEGIN_VS_SHADER_FLAGS( Sample4x4, "Help for Sample4x4", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( BASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( PIXSHADER, SHADER_PARAM_TYPE_STRING, "sample4x4_ps20", "Name of the pixel shader to use" )
 	END_SHADER_PARAMS
@@ -41,13 +36,14 @@ BEGIN_VS_SHADER_FLAGS( Sample4x4, "Help for Sample4x4", SHADER_NOT_EDITABLE )
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
 				const char *szPixelShader = params[PIXSHADER]->GetStringValue();
-				size_t iLength = Q_strlen( szPixelShader );
+				std::size_t iLength = V_strlen( szPixelShader );
 
-				if( (iLength > 5) && (Q_stricmp( &szPixelShader[iLength - 5], "_ps20" ) == 0) ) //detect if it's trying to load a ps20 shader
+				if( (iLength > 5) && (V_stricmp( &szPixelShader[iLength - 5], "_ps20" ) == 0) ) //detect if it's trying to load a ps20 shader
 				{
 					//replace it with the ps20b shader
-					char *szNewName = (char *)stackalloc( sizeof( char ) * (iLength + 2) );
-					memcpy( szNewName, szPixelShader, sizeof( char ) * iLength );
+					ks::ScratchArena<> scratch;
+					char *szNewName = scratch.Alloc<char>( (iLength + 2) );
+					std::memcpy( szNewName, szPixelShader, sizeof( char ) * iLength );
 					szNewName[iLength] = 'b';
 					szNewName[iLength + 1] = '\0';
 					pShaderShadow->SetPixelShader( szNewName, 0 );

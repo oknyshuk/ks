@@ -1,11 +1,43 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Sunlight shadow control entity.
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Sunlight shadow control entity.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "player.h"
+#include "ndebugoverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -13,7 +45,6 @@
 //------------------------------------------------------------------------------
 // FIXME: This really should inherit from something	more lightweight
 //------------------------------------------------------------------------------
-
 
 //------------------------------------------------------------------------------
 // Purpose : Sunlight shadow control entity
@@ -70,7 +101,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CSunlightShadowControl, DT_SunlightShadowControl 
 
 CSunlightShadowControl::CSunlightShadowControl()
 {
-	Q_strcpy( m_TextureName.GetForModify(), "effects/flashlight001" );
+	V_strcpy( m_TextureName.GetForModify(), "effects/flashlight001" );
 	m_LightColor.Init( 255, 255, 255, 1 );
 	m_flColorTransitionTime = 0.5f;
 	m_flSunDistance = 10000.0f;
@@ -116,7 +147,7 @@ bool CSunlightShadowControl::KeyValue( const char *szKeyName, const char *szValu
 	}
 	else if ( FStrEq( szKeyName, "texturename" ) )
 	{
-		Q_strcpy( m_TextureName.GetForModify(), szValue );
+		V_strcpy( m_TextureName.GetForModify(), szValue );
 	}
 
 	return BaseClass::KeyValue( szKeyName, szValue );
@@ -126,12 +157,12 @@ bool CSunlightShadowControl::GetKeyValue( const char *szKeyName, char *szValue, 
 {
 	if ( FStrEq( szKeyName, "color" ) )
 	{
-		Q_snprintf( szValue, iMaxLen, "%d %d %d %d", m_LightColor.GetR(), m_LightColor.GetG(), m_LightColor.GetB(), m_LightColor.GetA() );
+		V_snprintf( szValue, iMaxLen, "%d %d %d %d", m_LightColor.GetR(), m_LightColor.GetG(), m_LightColor.GetB(), m_LightColor.GetA() );
 		return true;
 	}
 	else if ( FStrEq( szKeyName, "texturename" ) )
 	{
-		Q_snprintf( szValue, iMaxLen, "%s", m_TextureName.Get() );
+		V_snprintf( szValue, iMaxLen, "%s", m_TextureName.Get() );
 		return true;
 	}
 	return BaseClass::GetKeyValue( szKeyName, szValue, iMaxLen );
@@ -185,7 +216,7 @@ void CSunlightShadowControl::InputDisable( inputdata_t &inputdata )
 
 void CSunlightShadowControl::InputSetTexture( inputdata_t &inputdata )
 {
-	Q_strcpy( m_TextureName.GetForModify(), inputdata.value.String() );
+	V_strcpy( m_TextureName.GetForModify(), inputdata.value.String() );
 }
 
 void CSunlightShadowControl::InputSetEnableShadows( inputdata_t &inputdata )

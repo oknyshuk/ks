@@ -1,23 +1,15 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // HACKHACK fix this include
-#include "tier0/vprof.h"
-#include "tier0/memalloc.h"
+import std;
+import ks.tier1;
 #include "server.h"
 #include "host_cmd.h"
 #include "keys.h"
-#include "screen.h"
 #include "vengineserver_impl.h"
-#include "sv_filter.h"
 #include "gl_matsysiface.h"
-#include "pr_edict.h"
-#include "world.h"
 #include "checksum_engine.h"
-#include "const.h"
 #include "sv_main.h"
 #include "host.h"
 #include "demo.h"
@@ -25,32 +17,19 @@
 #include "networkstringtableserver.h"
 #include "networkstringtableclient.h"
 #include "host_state.h"
-#include "string_t.h"
-#include "tier0/dbg.h"
-#include "testscriptmgr.h"
 #include "r_local.h"
 #include "PlayerState.h"
-#include "enginesingleuserfilter.h"
 #include "profile.h"
-#include "protocol.h"
 #include "cl_main.h"
-#include "sv_steamauth.h"
 #include "zone.h"
 #include "GameEventManager.h"
 #include "datacache/idatacache.h"
 #include "sys_dll.h"
 #include "cmd.h"
-#include "tier0/icommandline.h"
 #include "filesystem.h"
-#include "filesystem_engine.h"
-#include "icliententitylist.h"
 #include "icliententity.h"
 #include "hltvserver.h"
-#if defined( REPLAY_ENABLED )
-#include "replayserver.h"
-#endif
 #include "cdll_engine_int.h"
-#include "cl_steamauth.h"
 #include "cl_splitscreen.h"
 #ifndef DEDICATED
 #include "engineui.h"
@@ -59,24 +38,13 @@
 #include "voice.h"
 #include "sv_rcon.h"
 #include "toolframework/itoolframework.h"
-#include "fmtstr.h"
-#include "tier3/tier3.h"
 #include "matchmaking/imatchframework.h"
-#include "tier2/tier2.h"
-#include "shaderapi/gpumemorystats.h"
 #include "snd_audio_source.h"
 #include "netconsole.h"
-#include "tier2/fileutils.h"
-
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/syscall.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 extern IVEngineClient *engineClient;
 
-#define STEAM_PREFIX "STEAM_"
+#define PLAYERID_PREFIX "STEAM_"
 
 #ifndef DEDICATED
 bool g_bInEditMode = false;
@@ -86,13 +54,9 @@ KeyValues *g_pLaunchOptions = nullptr;
 void PerformKick( cmd_source_t commandSource, int iSearchIndex, char* szSearchString, bool bForceKick, const char* pszMessage );
 
 ConVar host_name_store( "host_name_store", "1", FCVAR_RELEASE, "Whether hostname is recorded in game events and GOTV." );
-ConVar host_players_show( "host_players_show", "1", FCVAR_RELEASE, "How players are disclosed in server queries: 0 - query disabled, 1 - show only max players count, 2 - show all players" );
 ConVar host_info_show( "host_info_show", "1", FCVAR_RELEASE, "How server info gets disclosed in server queries: 0 - query disabled, 1 - show only general info, 2 - show full info" );
-ConVar host_rules_show( "host_rules_show", "1", FCVAR_RELEASE, "How server rules get disclosed in server queries: 0 - query disabled, 1 - query enabled" );
 static void HostnameChanged( IConVar *pConVar, const char *pOldValue, float flOldValue )
 {
-	Steam3Server().NotifyOfServerNameChange();
-
 	if ( sv.IsActive() && host_name_store.GetBool() )
 	{
 		// look up the descriptor first to avoid a DevMsg for HL2 and mods that don't define a
@@ -138,30 +102,9 @@ bool CanShowHostTvStatus()
 ConVar voice_recordtofile("voice_recordtofile", "0", FCVAR_RELEASE, "Record mic data and decompressed voice data into 'voice_micdata.wav' and 'voice_decompressed.wav'");
 ConVar voice_inputfromfile("voice_inputfromfile", "0",FCVAR_RELEASE, "Get voice input from 'voice_input.wav' rather than from the microphone.");
 
-uint GetSteamAppID()
+uint GetGameAppID()
 {
-#ifndef DEDICATED
-	if ( Steam3Client().SteamUtils() )
-		return Steam3Client().SteamUtils()->GetAppID();
-#endif
-
-	if ( Steam3Server().SteamGameServerUtils() )
-		return Steam3Server().SteamGameServerUtils()->GetAppID();
-
-	return 215;	// defaults to Source SDK Base (215) if no steam.inf can be found.
-}
-
-EUniverse GetSteamUniverse()
-{
-#ifndef DEDICATED
-	if ( Steam3Client().SteamUtils() )
-		return Steam3Client().SteamUtils()->GetConnectedUniverse();
-#endif
-
-	if ( Steam3Server().SteamGameServerUtils() )
-		return Steam3Server().SteamGameServerUtils()->GetConnectedUniverse();
-
-	return k_EUniverseInvalid;
+	return 215;
 }
 
 // Globals
@@ -206,7 +149,9 @@ void Host_Quit_f (void)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( _restart, "Shutdown and restart the engine." )
+static void _restart( const CCommand &args );
+static ConCommand _restart_command( "_restart", _restart, "Shutdown and restart the engine." );
+static void _restart( const CCommand &args )
 {
 	/*
 	// FIXME:  How to handle restarts?
@@ -291,12 +236,12 @@ typedef void ( *FnPrintf_t )(const char *fmt, ...);
 
 void Host_Client_Printf(const char *fmt, ...)
 {
-	va_list		argptr;
+	std::va_list		argptr;
 	char		string[1024];
 
-	va_start (argptr,fmt);
-	Q_vsnprintf (string, sizeof( string ), fmt,argptr);
-	va_end (argptr);
+	__builtin_va_start (argptr,fmt);
+	V_vsnprintf (string, sizeof( string ), fmt,argptr);
+	__builtin_va_end (argptr);
 
 	host_client->ClientPrintf( "%s", string );
 }
@@ -318,79 +263,21 @@ void Host_PrintStatus( cmd_source_t commandSource, void ( *print )(const char *f
 	// Server status information.
 	print( "hostname: %s\n", host_name.GetString() );
 
-	const char *pchSecureReasonString = "";
-	const char *pchUniverse = "";
-	bool bGSSecure = Steam3Server().BSecure();
-	if ( !bGSSecure && Steam3Server().BWantsSecure() )
-	{
-		if ( Steam3Server().BLoggedOn() )
-		{
-			pchSecureReasonString = "(secure mode enabled, connected to Steam3)";
-		}
-		else
-		{
-			pchSecureReasonString = "(secure mode enabled, disconnected from Steam3)";
-		}
-	}
-
-	switch ( GetSteamUniverse() )
-	{
-		case k_EUniversePublic:
-			pchUniverse = "";
-			break;
-		case k_EUniverseBeta:
-			pchUniverse = "(beta)";
-			break;
-		case k_EUniverseInternal:
-			pchUniverse = "(internal)";
-			break;
-		case k_EUniverseDev:
-			pchUniverse = "(dev)";
-			break;
-			/* no such universe anymore
-		case k_EUniverseRC:
-			pchUniverse = "(rc)";
-			break;
-			*/
-		default:
-			pchUniverse = "(unknown)";
-			break;
-	}
-	
 	if ( bWithAddresses )
 	{
-		print( "version : %s/%d %d/%d %s %s %s %s\n",
+		print( "version : %s/%d %d/%d\n",
 			Sys_GetVersionString(), GetHostVersion(),
-			GetServerVersion(), build_number(),
-			bGSSecure ? "secure" : "insecure", pchSecureReasonString,
-			Steam3Server().GetGSSteamID().IsValid() ? Steam3Server().GetGSSteamID().Render() : "[INVALID_STEAMID]", pchUniverse );
+			GetServerVersion(), build_number() );
 	}
 	else
 	{
-		print( "version : %s %s\n",
-			Sys_GetVersionString(),
-			bGSSecure ? "secure" : "insecure" );
+		print( "version : %s\n",
+			Sys_GetVersionString() );
 	}
 
 	if ( NET_IsMultiplayer() )
 	{
-		std::string sPublicIPInfo;
-		if ( !Steam3Server().BLanOnly() )
-		{
-			uint32 unPublicIP = Steam3Server().GetPublicIP();
-			if ( ( unPublicIP != 0 ) && bWithAddresses && sv.IsDedicated() )
-			{
-				netadr_t addr;
-				addr.SetIP( unPublicIP );
-				sPublicIPInfo = ks::format_printf( "  (public ip: %s)", addr.ToString( true ) );
-			}
-		}
-		print( "udp/ip  : %s:%i%s\n", net_local_adr.ToString(true), sv.GetUDPPort(), sPublicIPInfo.c_str() );
-		static ConVarRef sv_steamdatagramtransport_port( "sv_steamdatagramtransport_port" );
-		if ( bWithAddresses && sv_steamdatagramtransport_port.GetInt() > 0 )
-		{
-			print( "sdt     : =%s on port %d\n", Steam3Server().GetGSSteamID().Render(), sv_steamdatagramtransport_port.GetInt() );
-		}
+		print( "udp/ip  : %s:%i\n", net_local_adr.ToString(true), sv.GetUDPPort() );
 
 		const char *osType =
 			"Linux";
@@ -419,13 +306,6 @@ void Host_PrintStatus( cmd_source_t commandSource, void ( *print )(const char *f
 			print( "gotv[%i]:  port %i, delay %.1fs, rate %.1f\n", hltv.GetIndex(), hltv->GetUDPPort(), hltv->GetDirector() ? hltv->GetDirector()->GetDelay() : 0.0f, hltv->GetSnapshotRate() );
 		}
 	}
-
-#if defined( REPLAY_ENABLED )
-	if ( replay && replay->IsActive() )
-	{
-		print( "replay:  port %i, delay %.1fs\n", replay->GetUDPPort(), replay->GetDirector()->GetDelay() );
-	}
-#endif
 
 	int nHumans;
 	int nMaxHumans;
@@ -488,7 +368,9 @@ void Host_PrintStatus( cmd_source_t commandSource, void ( *print )(const char *f
 //-----------------------------------------------------------------------------
 // Host_Status_f
 //-----------------------------------------------------------------------------
-CON_COMMAND( status, "Display map and connection status." )
+static void status( const CCommand &args );
+static ConCommand status_command( "status", status, "Display map and connection status." );
+static void status( const CCommand &args )
 {
 	void (*print) (const char *fmt, ...) = Host_Client_PrintfStub;
 
@@ -499,9 +381,7 @@ CON_COMMAND( status, "Display map and connection status." )
 			Cmd_ForwardToServer( args );
 			return;
 		}
-#ifndef DBGFLAG_STRINGS_STRIP
 		print = ConMsg;
-#endif
 	}
 	else
 	{
@@ -511,7 +391,7 @@ CON_COMMAND( status, "Display map and connection status." )
 	bool bShort = false;
 	if ( args.ArgC() == 2 )
 	{
-		if ( !Q_stricmp( args[1], "short" ) )
+		if ( !V_stricmp( args[1], "short" ) )
 		{
 			bShort = true;
 		}
@@ -520,7 +400,9 @@ CON_COMMAND( status, "Display map and connection status." )
 	Host_PrintStatus( args.Source(), print, bShort );
 }
 
-CON_COMMAND( hltv_replay_status, "Show Killer Replay status and some statistics, works on listen or dedicated server." )
+static void hltv_replay_status( const CCommand &args );
+static ConCommand hltv_replay_status_command( "hltv_replay_status", hltv_replay_status, "Show Killer Replay status and some statistics, works on listen or dedicated server." );
+static void hltv_replay_status( const CCommand &args )
 {
 	HltvReplayStats_t hltvStats;
 
@@ -589,7 +471,9 @@ CON_COMMAND( hltv_replay_status, "Show Killer Replay status and some statistics,
 //-----------------------------------------------------------------------------
 // Host_Ping_f
 //-----------------------------------------------------------------------------
-CON_COMMAND( ping, "Display ping to server." )
+static void ping( const CCommand &args );
+static ConCommand ping_command( "ping", ping, "Display ping to server." );
+static void ping( const CCommand &args )
 {
 	if ( args.Source() != kCommandSrcNetClient )
 	{
@@ -621,14 +505,14 @@ bool CL_HL2Demo_MapCheck( const char *name )
 {
 	if ( CL_IsHL2Demo() && !sv.IsDedicated() )
 	{
-		if (    !Q_stricmp( name, "d1_trainstation_01" ) || 
-				!Q_stricmp( name, "d1_trainstation_02" ) || 
-				!Q_stricmp( name, "d1_town_01" ) || 
-				!Q_stricmp( name, "d1_town_01a" ) || 
-				!Q_stricmp( name, "d1_town_02" ) || 
-				!Q_stricmp( name, "d1_town_03" ) ||
-				!Q_stricmp( name, "background01" ) ||
-				!Q_stricmp( name, "background03" ) 
+		if (    !V_stricmp( name, "d1_trainstation_01" ) || 
+				!V_stricmp( name, "d1_trainstation_02" ) || 
+				!V_stricmp( name, "d1_town_01" ) || 
+				!V_stricmp( name, "d1_town_01a" ) || 
+				!V_stricmp( name, "d1_town_02" ) || 
+				!V_stricmp( name, "d1_town_03" ) ||
+				!V_stricmp( name, "background01" ) ||
+				!V_stricmp( name, "background03" ) 
 			)
 		{
 			return true;
@@ -643,14 +527,14 @@ bool CL_PortalDemo_MapCheck( const char *name )
 {
 	if ( CL_IsPortalDemo() && !sv.IsDedicated() )
 	{
-		if (    !Q_stricmp( name, "testchmb_a_00" ) || 
-				!Q_stricmp( name, "testchmb_a_01" ) || 
-				!Q_stricmp( name, "testchmb_a_02" ) || 
-				!Q_stricmp( name, "testchmb_a_03" ) || 
-				!Q_stricmp( name, "testchmb_a_04" ) || 
-				!Q_stricmp( name, "testchmb_a_05" ) ||
-				!Q_stricmp( name, "testchmb_a_06" ) ||
-				!Q_stricmp( name, "background1" ) 
+		if (    !V_stricmp( name, "testchmb_a_00" ) || 
+				!V_stricmp( name, "testchmb_a_01" ) || 
+				!V_stricmp( name, "testchmb_a_02" ) || 
+				!V_stricmp( name, "testchmb_a_03" ) || 
+				!V_stricmp( name, "testchmb_a_04" ) || 
+				!V_stricmp( name, "testchmb_a_05" ) ||
+				!V_stricmp( name, "testchmb_a_06" ) ||
+				!V_stricmp( name, "background1" ) 
 			)
 		{
 			return true;
@@ -674,7 +558,7 @@ enum EMapFlags
 int _Host_Map_f_CompletionFunc( char const *cmdname, char const *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] );
 
 // Note, leaves name alone if no match possible
-static bool Host_Map_Helper_FuzzyName( const CCommand &args, char *name, size_t bufsize )
+static bool Host_Map_Helper_FuzzyName( const CCommand &args, char *name, std::size_t bufsize )
 {
 	char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ];
 	std::string argv0;
@@ -683,7 +567,7 @@ static bool Host_Map_Helper_FuzzyName( const CCommand &args, char *name, size_t 
 
 	if ( _Host_Map_f_CompletionFunc( argv0.c_str(), args[1], commands ) > 0 )
 	{
-		Q_strncpy( name, &commands[ 0 ][ std::ssize( argv0 ) ], bufsize );
+		V_strncpy( name, &commands[ 0 ][ std::ssize( argv0 ) ], bufsize );
 		return true;
 	}
 	return false;
@@ -715,7 +599,7 @@ void Host_Map_Helper( const CCommand &args, EMapFlags flags )
 	char ppath[ MAX_QPATH ];
 
 	// If there is a .bsp on the end, strip it off!
-	Q_StripExtension( args[ 1 ], ppath, sizeof( ppath ) );
+	V_StripExtension( args[ 1 ], ppath, sizeof( ppath ) );
 
 	// Call with quiet flag for initial search
 	if ( !modelloader->Map_IsValid( ppath, true ) )
@@ -778,11 +662,11 @@ void Host_Map_Helper( const CCommand &args, EMapFlags flags )
 
 	if (args.ArgC() == 10)
 	{
-		if (Q_stricmp(args[2], "setpos") == 0
-			&& Q_stricmp(args[6], "setang") == 0) 
+		if (V_stricmp(args[2], "setpos") == 0
+			&& V_stricmp(args[6], "setang") == 0) 
 		{
 			Vector newpos;
-			newpos.x = atof( args[3] );
+			newpos.x = std::atof( args[3] );
 			newpos.y = atof( args[4] );
 			newpos.z = atof( args[5] );
 
@@ -820,9 +704,7 @@ void Host_MapGroup_f( const CCommand &args )
 // Handle smap command to connect multiple splitscreen users at once
 void Host_SplitScreen_Map_f( const CCommand &args )
 {
-#ifndef _DEMO
 	Host_Map_Helper( args, EMAP_SPLITSCREEN );
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -831,7 +713,9 @@ void Host_SplitScreen_Map_f( const CCommand &args )
 // UNDONE: protect this from use if not in dev. mode
 //-----------------------------------------------------------------------------
 #ifndef DEDICATED
-CON_COMMAND( map_edit, "" )
+static void map_edit( const CCommand &args );
+static ConCommand map_edit_command( "map_edit", map_edit, "" );
+static void map_edit( const CCommand &args )
 {
 	Host_Map_Helper( args, EMAP_EDIT_MODE );
 }
@@ -852,7 +736,9 @@ void Host_Map_Background_f( const CCommand &args )
 //-----------------------------------------------------------------------------
 // Restarts the current server for a dead player
 //-----------------------------------------------------------------------------
-CON_COMMAND( restart, "Restart the game on the same level (add setpos to jump to current view position on restart)." )
+static void restart( const CCommand &args );
+static ConCommand restart_command( "restart", restart, "Restart the game on the same level (add setpos to jump to current view position on restart)." );
+static void restart( const CCommand &args )
 {
 	if ( 
 #if !defined(DEDICATED)
@@ -864,7 +750,7 @@ CON_COMMAND( restart, "Restart the game on the same level (add setpos to jump to
 	if ( sv.IsMultiplayer() )
 		return;
 
-	bool bRememberLocation = ( args.ArgC() == 2 && !Q_stricmp( args[1], "setpos" ) );
+	bool bRememberLocation = ( args.ArgC() == 2 && !V_stricmp( args[1], "setpos" ) );
 
 	bool bSplitScreenConnect = GET_NUM_SPLIT_SCREEN_PLAYERS() == 2 ;
 
@@ -907,7 +793,7 @@ void Host_Changelevel_f( const CCommand &args )
 	}
 
 	char mapname[MAX_PATH];
-	Q_StripExtension( args[ 1 ], mapname, sizeof( mapname ) );
+	V_StripExtension( args[ 1 ], mapname, sizeof( mapname ) );
 
 	bool bMapMustExist = true;
 
@@ -957,7 +843,7 @@ void Host_Changelevel2_f( const CCommand &args )
 
 	if ( !g_pVEngineServer->IsMapValid( args[1] ) )
 	{
-		if ( !CL_IsHL2Demo() || (CL_IsHL2Demo() && !(!Q_stricmp( args[1], "d1_trainstation_03" ) || !Q_stricmp( args[1], "d1_town_02a" ))) )	
+		if ( !CL_IsHL2Demo() || (CL_IsHL2Demo() && !(!V_stricmp( args[1], "d1_trainstation_03" ) || !V_stricmp( args[1], "d1_town_02a" ))) )	
 		{
 			Warning( "changelevel2 failed: %s not found\n", args[1] );
 			return;
@@ -966,7 +852,7 @@ void Host_Changelevel2_f( const CCommand &args )
 
 #if !defined(DEDICATED)
 	// needs to be before CL_HL2Demo_MapCheck() check as d1_trainstation_03 isn't a valid map
-	if ( CL_IsHL2Demo() && !sv.IsDedicated() && !Q_stricmp( args[1], "d1_trainstation_03" ) ) 
+	if ( CL_IsHL2Demo() && !sv.IsDedicated() && !V_stricmp( args[1], "d1_trainstation_03" ) ) 
 	{
 		void CL_DemoTransitionFromTrainstation();
 		CL_DemoTransitionFromTrainstation();
@@ -974,14 +860,14 @@ void Host_Changelevel2_f( const CCommand &args )
 	}
 
 	// needs to be before CL_HL2Demo_MapCheck() check as d1_trainstation_03 isn't a valid map
-	if ( CL_IsHL2Demo() && !sv.IsDedicated() && !Q_stricmp( args[1], "d1_town_02a" ) && !Q_stricmp( args[2], "d1_town_02_02a" )) 
+	if ( CL_IsHL2Demo() && !sv.IsDedicated() && !V_stricmp( args[1], "d1_town_02a" ) && !V_stricmp( args[2], "d1_town_02_02a" )) 
 	{
 		void CL_DemoTransitionFromRavenholm();
 		CL_DemoTransitionFromRavenholm();
 		return; 
 	}
 
-	if ( CL_IsPortalDemo() && !sv.IsDedicated() && !Q_stricmp( args[1], "testchmb_a_07" ) ) 
+	if ( CL_IsPortalDemo() && !sv.IsDedicated() && !V_stricmp( args[1], "testchmb_a_07" ) ) 
 	{
 		void CL_DemoTransitionFromTestChmb();
 		CL_DemoTransitionFromTestChmb();
@@ -1072,7 +958,9 @@ void Host_Disconnect( bool bShowMainMenu )
 //-----------------------------------------------------------------------------
 // Kill the client and any local server.
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( disconnect, "Disconnect game from server.", FCVAR_SERVER_CAN_EXECUTE )
+static void disconnect( const CCommand &args );
+static ConCommand disconnect_command( "disconnect", disconnect, "Disconnect game from server.", FCVAR_SERVER_CAN_EXECUTE );
+static void disconnect( const CCommand &args )
 {
 #ifndef DEDICATED
 	GetBaseLocalClient().demonum = -1;
@@ -1086,17 +974,21 @@ CON_COMMAND_F( disconnect, "Disconnect game from server.", FCVAR_SERVER_CAN_EXEC
 	Host_Disconnect(true);
 }
 
-CON_COMMAND( version, "Print version info string." )
+static void version( const CCommand &args );
+static ConCommand version_command( "version", version, "Print version info string." );
+static void version( const CCommand &args )
 {
 	ConMsg( "Protocol version %i [%i/%i]\nExe version %s (%s)\n", GetHostVersion(), GetServerVersion(), GetClientVersion(), Sys_GetVersionString(), Sys_GetProductString() );
-	ConMsg( "Exe build: " __TIME__ " " __DATE__ " (%i) (%i)\n", build_number(), GetSteamAppID() );
+	ConMsg( "Exe build: " __TIME__ " " __DATE__ " (%i)\n", build_number() );
 }
 
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( pause, "Toggle the server pause state." )
+static void pause( const CCommand &args );
+static ConCommand pause_command( "pause", pause, "Toggle the server pause state." );
+static void pause( const CCommand &args )
 {
 #if !defined( CLIENT_DLL )
 
@@ -1123,7 +1015,9 @@ CON_COMMAND( pause, "Toggle the server pause state." )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( setpause, "Set the pause state of the server." )
+static void setpause( const CCommand &args );
+static ConCommand setpause_command( "setpause", setpause, "Set the pause state of the server." );
+static void setpause( const CCommand &args )
 {
 #if !defined( CLIENT_DLL )
 
@@ -1153,7 +1047,9 @@ CON_COMMAND( setpause, "Set the pause state of the server." )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( unpause, "Unpause the game." )
+static void unpause( const CCommand &args );
+static ConCommand unpause_command( "unpause", unpause, "Unpause the game." );
+static void unpause( const CCommand &args )
 {
 #if !defined( CLIENT_DLL )
 
@@ -1182,13 +1078,15 @@ CON_COMMAND( unpause, "Unpause the game." )
 //-----------------------------------------------------------------------------
 // Kicks a user off of the server using their userid or uniqueid
 //-----------------------------------------------------------------------------
-CON_COMMAND( kickid_ex, "Kick a player by userid or uniqueid, provide a force-the-kick flag and also assign a message." )
+static void kickid_ex( const CCommand &args );
+static ConCommand kickid_ex_command( "kickid_ex", kickid_ex, "Kick a player by userid or uniqueid, provide a force-the-kick flag and also assign a message." );
+static void kickid_ex( const CCommand &args )
 {
 	const char	*pszArg1 = nullptr, *pszMessage = nullptr;
 	int			iSearchIndex = -1;
 	char		szSearchString[128];
 	int			argsStartNum = 1;
-	bool		bSteamID = false;
+	bool		bPlayerID = false;
 	bool		bForce = false;
 
 	if ( args.ArgC() <= 1 )
@@ -1205,29 +1103,29 @@ CON_COMMAND( kickid_ex, "Kick a player by userid or uniqueid, provide a force-th
 	if ( *pszArg1 < '0' || *pszArg1 > '9' )
 	{
 		// SteamID (need to reassemble it)
-		if ( StringHasPrefix( pszArg1, STEAM_PREFIX ) && Q_strstr( args[2], ":" ) )
+		if ( StringHasPrefix( pszArg1, PLAYERID_PREFIX ) && V_strstr( args[2], ":" ) )
 		{
-			Q_snprintf( szSearchString, sizeof( szSearchString ), "%s:%s:%s", pszArg1, args[3], args[5] );
+			V_snprintf( szSearchString, sizeof( szSearchString ), "%s:%s:%s", pszArg1, args[3], args[5] );
 			argsStartNum = 5;
-			bSteamID = true;
+			bPlayerID = true;
 		}
 		// some other ID (e.g. "UNKNOWN", "STEAM_ID_PENDING", "STEAM_ID_LAN")
 		// NOTE: assumed to be one argument
 		else
 		{
-			Q_snprintf( szSearchString, sizeof( szSearchString ), "%s", pszArg1 );
+			V_snprintf( szSearchString, sizeof( szSearchString ), "%s", pszArg1 );
 		}
 	}
 	// this is a userid
 	else
 	{
-		iSearchIndex = Q_atoi( pszArg1 );
+		iSearchIndex = V_atoi( pszArg1 );
 	}
 
 	// check for game type and game mode
 	if ( args.ArgC() > argsStartNum )
 	{
-		if ( atoi( args[ argsStartNum + 1 ] ) == 1 )
+		if ( std::atoi( args[ argsStartNum + 1 ] ) == 1 )
 		{
 			bForce = true;
 		}
@@ -1244,15 +1142,15 @@ CON_COMMAND( kickid_ex, "Kick a player by userid or uniqueid, provide a force-th
 		pszMessage = args.ArgS();
 		for ( j = 1; j <= argsStartNum; j++ )
 		{
-			dataLen += Q_strlen( args[j] ) + 1; // +1 for the space between args
+			dataLen += V_strlen( args[j] ) + 1; // +1 for the space between args
 		}
 
-		if ( bSteamID )
+		if ( bPlayerID )
 		{
 			dataLen -= 5; // SteamIDs don't have spaces between the args[) values
 		}
 
-		if ( dataLen > Q_strlen( pszMessage ) ) // saftey check
+		if ( dataLen > V_strlen( pszMessage ) ) // saftey check
 		{
 			pszMessage = nullptr;
 		}
@@ -1268,13 +1166,15 @@ CON_COMMAND( kickid_ex, "Kick a player by userid or uniqueid, provide a force-th
 //-----------------------------------------------------------------------------
 // Kicks a user off of the server using their userid or uniqueid
 //-----------------------------------------------------------------------------
-CON_COMMAND( kickid, "Kick a player by userid or uniqueid, with a message." )
+static void kickid( const CCommand &args );
+static ConCommand kickid_command( "kickid", kickid, "Kick a player by userid or uniqueid, with a message." );
+static void kickid( const CCommand &args )
 {
 	const char	*pszArg1 = nullptr, *pszMessage = nullptr;
 	int			iSearchIndex = -1;
 	char		szSearchString[128];
 	int			argsStartNum = 1;
-	bool		bSteamID = false;
+	bool		bPlayerID = false;
 
 	if ( args.ArgC() <= 1 )
 	{
@@ -1290,23 +1190,23 @@ CON_COMMAND( kickid, "Kick a player by userid or uniqueid, with a message." )
 	if ( *pszArg1 < '0' || *pszArg1 > '9' )
 	{
 		// SteamID (need to reassemble it)
-		if ( StringHasPrefix( pszArg1, STEAM_PREFIX ) && Q_strstr( args[2], ":" ) )
+		if ( StringHasPrefix( pszArg1, PLAYERID_PREFIX ) && V_strstr( args[2], ":" ) )
 		{
-			Q_snprintf( szSearchString, sizeof( szSearchString ), "%s:%s:%s", pszArg1, args[3], args[5] );
+			V_snprintf( szSearchString, sizeof( szSearchString ), "%s:%s:%s", pszArg1, args[3], args[5] );
 			argsStartNum = 5;
-			bSteamID = true;
+			bPlayerID = true;
 		}
 		// some other ID (e.g. "UNKNOWN", "STEAM_ID_PENDING", "STEAM_ID_LAN")
 		// NOTE: assumed to be one argument
 		else
 		{
-			Q_snprintf( szSearchString, sizeof( szSearchString ), "%s", pszArg1 );
+			V_snprintf( szSearchString, sizeof( szSearchString ), "%s", pszArg1 );
 		}
 	}
 	// this is a userid
 	else
 	{
-		iSearchIndex = Q_atoi( pszArg1 );
+		iSearchIndex = V_atoi( pszArg1 );
 	}
 
 	// check for a message
@@ -1318,15 +1218,15 @@ CON_COMMAND( kickid, "Kick a player by userid or uniqueid, with a message." )
 		pszMessage = args.ArgS();
 		for ( j = 1; j <= argsStartNum; j++ )
 		{
-			dataLen += Q_strlen( args[j] ) + 1; // +1 for the space between args
+			dataLen += V_strlen( args[j] ) + 1; // +1 for the space between args
 		}
 
-		if ( bSteamID )
+		if ( bPlayerID )
 		{
 			dataLen -= 5; // SteamIDs don't have spaces between the args[) values
 		}
 
-		if ( dataLen > Q_strlen( pszMessage ) ) // saftey check
+		if ( dataLen > V_strlen( pszMessage ) ) // saftey check
 		{
 			pszMessage = nullptr;
 		}
@@ -1367,7 +1267,7 @@ void PerformKick( cmd_source_t commandSource, int iSearchIndex, char* szSearchSt
 		// searching by UniqueID
 		else	
 		{
-			if ( Q_stricmp( client->GetNetworkIDString(), szSearchString ) == 0 ) 
+			if ( V_stricmp( client->GetNetworkIDString(), szSearchString ) == 0 ) 
 			{
 				// found!
 				break;
@@ -1426,7 +1326,9 @@ Host_Kick_f
 Kicks a user off of the server using their name
 ==================
 */
-CON_COMMAND( kick, "Kick a player by name." )
+static void kick( const CCommand &args );
+static ConCommand kick_command( "kick", kick, "Kick a player by name." );
+static void kick( const CCommand &args )
 {
 	const char	*who = "Console";
 	char		*pszName = nullptr;
@@ -1441,8 +1343,8 @@ CON_COMMAND( kick, "Kick a player by name." )
 	}
 
 	// copy the name to a local buffer
-	memset( name, 0, sizeof(name) );
-	Q_strncpy( name, args.ArgS(), sizeof(name) );
+	std::memset( name, 0, sizeof(name) );
+	V_strncpy( name, args.ArgS(), sizeof(name) );
 	pszName = name;
 
 	// safety check
@@ -1450,7 +1352,7 @@ CON_COMMAND( kick, "Kick a player by name." )
 	{
 		//HACK-HACK
 		// check for the name surrounded by quotes (comes in this way from rcon)
-		int len = Q_strlen( pszName ) - 1; // (minus one since we start at 0)
+		int len = V_strlen( pszName ) - 1; // (minus one since we start at 0)
 		if ( pszName[0] == '"' && pszName[len] == '"' )
 		{
 			// get rid of the quotes at the beginning and end
@@ -1466,7 +1368,7 @@ CON_COMMAND( kick, "Kick a player by name." )
 				continue;
 
 			// found!
-			if ( Q_strcasecmp( client->GetClientName(), pszName ) == 0 ) 
+			if ( V_strcasecmp( client->GetClientName(), pszName ) == 0 ) 
 				break;
 		}
 
@@ -1507,10 +1409,10 @@ DEBUGGING TOOLS
 void Host_PrintMemoryStatus( const char *mapname )
 {
 	const float MB = 1.0f / ( 1024*1024 );
-	Assert( mapname );
-	struct mallinfo memstats = mallinfo( );
-	Msg( "[MEMORYSTATUS] [%s] Operating system reports sbrk size: %.2f MB, Used: %.2f MB, #mallocs = %d\n",
-		mapname, MB*memstats.arena, MB*memstats.uordblks, memstats.hblks );
+	contract_assert( mapname );
+	const ks::platform::heap_info memstats = ks::platform::heap_usage();
+	Msg( "[MEMORYSTATUS] [%s] Operating system reports sbrk size: %.2f MB, Used: %.2f MB, #mallocs = %lu\n",
+		mapname, MB*memstats.arena, MB*memstats.in_use, memstats.mapped_blocks );
 
 	{
 		g_pMemAlloc->SetStatsExtraInfo( mapname, "" );
@@ -1536,7 +1438,9 @@ void Host_PrintMemoryStatus( const char *mapname )
 //-----------------------------------------------------------------------------
 // Dump memory stats
 //-----------------------------------------------------------------------------
-CON_COMMAND( memory, "Print memory stats." )
+static void memory( const CCommand &args );
+static ConCommand memory_command( "memory", memory, "Print memory stats." );
+static void memory( const CCommand &args )
 {
 	ConMsg( "Heap Used:\n" );
 	int nTotal = g_pMemAlloc->GetSize( 0 );
@@ -1549,7 +1453,6 @@ CON_COMMAND( memory, "Print memory stats." )
 		ConMsg( "%5.2f MB (%d bytes)\n", nTotal/(1024.0f*1024.0f), nTotal );
 	}
 
-#ifdef VPROF_ENABLED
 	ConMsg("\nVideo Memory Used:\n");
 	CVProfile *pProf = &g_VProfCurrentProfile;
 	int prefixLen = V_strlen( "TexGroup_Global_" );
@@ -1570,7 +1473,6 @@ CON_COMMAND( memory, "Print memory stats." )
 	}
 	ConMsg("------------------\n");
 	ConMsg( "%5.2f MB: total\n", total );
-#endif
 
 	ConMsg( "\nHunk Memory Used:\n" );
 	Hunk_Print();
@@ -1653,7 +1555,9 @@ void Host_PrintDemoList()
 //-----------------------------------------------------------------------------
 // Purpose: Specify list of demos for the "demos" command
 //-----------------------------------------------------------------------------
-CON_COMMAND( startdemos, "Play demos in demo sequence." )
+static void startdemos( const CCommand &args );
+static ConCommand startdemos_command( "startdemos", startdemos, "Play demos in demo sequence." );
+static void startdemos( const CCommand &args )
 {
 	int	c = args.ArgC() - 1;
 	if (c > MAX_DEMOS)
@@ -1665,7 +1569,7 @@ CON_COMMAND( startdemos, "Play demos in demo sequence." )
 
 	for ( int i=1 ; i<c+1 ; i++ )
 	{
-		Q_strncpy( GetBaseLocalClient().demos[i-1], args[i], sizeof(GetBaseLocalClient().demos[0]) );
+		V_strncpy( GetBaseLocalClient().demos[i-1], args[i], sizeof(GetBaseLocalClient().demos[0]) );
 	}
 
 	GetBaseLocalClient().demonum = 0;
@@ -1686,7 +1590,9 @@ CON_COMMAND( startdemos, "Play demos in demo sequence." )
 //-----------------------------------------------------------------------------
 // Purpose: Return to looping demos, optional resume demo index
 //-----------------------------------------------------------------------------
-CON_COMMAND( demos, "Demo demo file sequence." )
+static void demos( const CCommand &args );
+static ConCommand demos_command( "demos", demos, "Demo demo file sequence." );
+static void demos( const CCommand &args )
 {
 	CClientState &cl = GetBaseLocalClient();
 	int oldn = cl.demonum;
@@ -1702,7 +1608,7 @@ CON_COMMAND( demos, "Demo demo file sequence." )
 		int numdemos = Host_GetNumDemos();
 		if ( numdemos >= 1 )
 		{
-			cl.demonum = clamp( Q_atoi( args[1] ), 0, numdemos - 1 );
+			cl.demonum = clamp( V_atoi( args[1] ), 0, numdemos - 1 );
 			DevMsg( "Jumping to %s\n", cl.demos[ cl.demonum ] );
 		}
 	}
@@ -1715,7 +1621,9 @@ CON_COMMAND( demos, "Demo demo file sequence." )
 //-----------------------------------------------------------------------------
 // Purpose: Stop current demo
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( stopdemo, "Stop playing back a demo.", FCVAR_DONTRECORD )
+static void stopdemo( const CCommand &args );
+static ConCommand stopdemo_command( "stopdemo", stopdemo, "Stop playing back a demo.", FCVAR_DONTRECORD );
+static void stopdemo( const CCommand &args )
 {
 	if ( !demoplayer->IsPlayingBack() )
 		return;
@@ -1726,14 +1634,16 @@ CON_COMMAND_F( stopdemo, "Stop playing back a demo.", FCVAR_DONTRECORD )
 //-----------------------------------------------------------------------------
 // Purpose: Skip to next demo
 //-----------------------------------------------------------------------------
-CON_COMMAND( nextdemo, "Play next demo in sequence." )
+static void nextdemo( const CCommand &args );
+static ConCommand nextdemo_command( "nextdemo", nextdemo, "Play next demo in sequence." );
+static void nextdemo( const CCommand &args )
 {
 	if ( args.ArgC() == 2 )
 	{
 		int numdemos = Host_GetNumDemos();
 		if ( numdemos >= 1 )
 		{
-			GetBaseLocalClient().demonum = clamp( Q_atoi( args[1] ), 0, numdemos - 1 );
+			GetBaseLocalClient().demonum = clamp( V_atoi( args[1] ), 0, numdemos - 1 );
 			DevMsg( "Jumping to %s\n", GetBaseLocalClient().demos[ GetBaseLocalClient().demonum ] );
 		}
 	}
@@ -1743,7 +1653,9 @@ CON_COMMAND( nextdemo, "Play next demo in sequence." )
 //-----------------------------------------------------------------------------
 // Purpose: Print out the current demo play order
 //-----------------------------------------------------------------------------
-CON_COMMAND( demolist, "Print demo sequence list." )
+static void demolist( const CCommand &args );
+static ConCommand demolist_command( "demolist", demolist, "Print demo sequence list." );
+static void demolist( const CCommand &args )
 {
 	Host_PrintDemoList();
 }
@@ -1752,7 +1664,9 @@ CON_COMMAND( demolist, "Print demo sequence list." )
 //-----------------------------------------------------------------------------
 // Purpose: Host_Soundfade_f
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( soundfade, "Fade client volume.", FCVAR_SERVER_CAN_EXECUTE )
+static void soundfade( const CCommand &args );
+static ConCommand soundfade_command( "soundfade", soundfade, "Fade client volume.", FCVAR_SERVER_CAN_EXECUTE );
+static void soundfade( const CCommand &args )
 {
 	float percent;
 	float inTime, holdTime, outTime;
@@ -1763,7 +1677,7 @@ CON_COMMAND_F( soundfade, "Fade client volume.", FCVAR_SERVER_CAN_EXECUTE )
 		return;
 	}
 
-	percent = clamp( atof(args[1]), 0.0f, 100.0f );
+	percent = clamp( std::atof(args[1]), 0.0f, 100.0f );
 	
 	holdTime = std::max<std::common_type_t<float, double>>( 0.0f, atof(args[2]) );
 
@@ -1786,7 +1700,9 @@ CON_COMMAND_F( soundfade, "Fade client volume.", FCVAR_SERVER_CAN_EXECUTE )
 //-----------------------------------------------------------------------------
 // Shutdown the server
 //-----------------------------------------------------------------------------
-CON_COMMAND( killserver, "Shutdown the server." )
+static void killserver( const CCommand &args );
+static ConCommand killserver_command( "killserver", killserver, "Shutdown the server." );
+static void killserver( const CCommand &args )
 {
 	Host_Disconnect(true);
 	
@@ -1834,11 +1750,9 @@ void Host_VoiceRecordStart_f(void)
 		{
 			pInputFile = "voice_input.wav";
 		}
-#if !defined( NO_VOICE )
 		if (Voice_RecordStart(pUncompressedFile, pDecompressedFile, pInputFile))
 		{
 		}
-#endif
 	}
 #endif // #ifndef NO_ENGINE_VOICE
 }
@@ -1856,7 +1770,6 @@ void Host_VoiceRecordStop_f( const CCommand &args )
 	int iSsSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 	if ( GetLocalClient( iSsSlot ).IsActive() )
 	{
-#if !defined( NO_VOICE )
 		if (Voice_IsRecording())
 		{
 			CL_SendVoicePacket(true);
@@ -1872,7 +1785,6 @@ void Host_VoiceRecordStop_f( const CCommand &args )
 
 			voice_vox.SetValue( 0 );
 		}
-#endif
 	}
 #endif // #ifndef NO_ENGINE_VOICE
 }
@@ -1885,7 +1797,6 @@ void Host_VoiceToggle_f( const CCommand &args )
 	voice_ptt.SetValue( (float) ( voice_ptt.GetFloat() ? 0.0f : Plat_FloatTime() ) );
 #endif
 #if !defined( DEDICATED ) && !defined( NO_ENGINE_VOICE )
-#if !defined( NO_VOICE )
 	if ( GetBaseLocalClient().IsActive() )
 	{
 		bool bToggle = false;
@@ -1921,13 +1832,14 @@ void Host_VoiceToggle_f( const CCommand &args )
 		}
 	}
 #endif
-#endif
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Wrapper for modelloader->Print() function call
 //-----------------------------------------------------------------------------
-CON_COMMAND( listmodels, "List loaded models." )
+static void listmodels( const CCommand &args );
+static ConCommand listmodels_command( "listmodels", listmodels, "List loaded models." );
+static void listmodels( const CCommand &args )
 {
 	modelloader->Print();
 }
@@ -1937,7 +1849,9 @@ CON_COMMAND( listmodels, "List loaded models." )
 Host_IncrementCVar
 ==================
 */
-CON_COMMAND_F( incrementvar, "Increment specified convar value.", FCVAR_DONTRECORD )
+static void incrementvar( const CCommand &args );
+static ConCommand incrementvar_command( "incrementvar", incrementvar, "Increment specified convar value.", FCVAR_DONTRECORD );
+static void incrementvar( const CCommand &args )
 {
 	if( args.ArgC() != 5 )
 	{
@@ -1960,7 +1874,7 @@ CON_COMMAND_F( incrementvar, "Increment specified convar value.", FCVAR_DONTRECO
 	}
 
 	float currentValue = var->GetFloat();
-	float startValue = atof( args[ 2 ] );
+	float startValue = std::atof( args[ 2 ] );
 	float endValue = atof( args[ 3 ] );
 	float delta = atof( args[ 4 ] );
 	float newValue = currentValue + delta;
@@ -1983,7 +1897,9 @@ CON_COMMAND_F( incrementvar, "Increment specified convar value.", FCVAR_DONTRECO
 //-----------------------------------------------------------------------------
 // Host_MultiplyCVar_f
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( multvar, "Multiply specified convar value.", FCVAR_DONTRECORD )
+static void multvar( const CCommand &args );
+static ConCommand multvar_command( "multvar", multvar, "Multiply specified convar value.", FCVAR_DONTRECORD );
+static void multvar( const CCommand &args )
 {
 	if (( args.ArgC() != 5 ))
 	{
@@ -2006,7 +1922,7 @@ CON_COMMAND_F( multvar, "Multiply specified convar value.", FCVAR_DONTRECORD )
 	}
 
 	float currentValue = var->GetFloat();
-	float startValue = atof( args[ 2 ] );
+	float startValue = std::atof( args[ 2 ] );
 	float endValue = atof( args[ 3 ] );
 	float factor = atof( args[ 4 ] );
 	float newValue = currentValue * factor;
@@ -2029,7 +1945,9 @@ CON_COMMAND_F( multvar, "Multiply specified convar value.", FCVAR_DONTRECORD )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CON_COMMAND( dumpstringtables, "Print string tables to console." )
+static void dumpstringtables( const CCommand &args );
+static ConCommand dumpstringtables_command( "dumpstringtables", dumpstringtables, "Print string tables to console." );
+static void dumpstringtables( const CCommand &args )
 {
 	SV_PrintStringTables();
 #ifndef DEDICATED
@@ -2037,7 +1955,9 @@ CON_COMMAND( dumpstringtables, "Print string tables to console." )
 #endif
 }
 
-CON_COMMAND( stringtabledictionary, "Create dictionary for current strings." )
+static void stringtabledictionary( const CCommand &args );
+static ConCommand stringtabledictionary_command( "stringtabledictionary", stringtabledictionary, "Create dictionary for current strings." );
+static void stringtabledictionary( const CCommand &args )
 {
 	if ( !sv.IsActive() )
 	{
@@ -2049,7 +1969,9 @@ CON_COMMAND( stringtabledictionary, "Create dictionary for current strings." )
 }
 
 // Register shared commands
-CON_COMMAND_F( quit, "Exit the engine.", FCVAR_NONE )
+static void quit( const CCommand &args );
+static ConCommand quit_command( "quit", quit, "Exit the engine.", FCVAR_NONE );
+static void quit( const CCommand &args )
 { 
 	if ( args.ArgC() > 1 && V_strcmp( args[ 1 ], "prompt" ) == 0 )
 	{
@@ -2074,14 +1996,18 @@ static ConCommand togglevoicerecord("voicerecord_toggle", Host_VoiceToggle_f);
 //-----------------------------------------------------------------------------
 // Purpose: Force a null pointer crash. useful for testing minidumps
 //-----------------------------------------------------------------------------
-CON_COMMAND_F( crash, "Cause the engine to crash (Debug!!)", FCVAR_CHEAT )
+static void crash( const CCommand &args );
+static ConCommand crash_command( "crash", crash, "Cause the engine to crash (Debug!!)", FCVAR_CHEAT );
+static void crash( const CCommand &args )
 { 
 	Msg( "forcing crash\n" );
 	char *p = 0;
 	*p = 0;
 }
 
-CON_COMMAND_F( spincycle, "Cause the engine to spincycle (Debug!!)", FCVAR_CHEAT )
+static void spincycle( const CCommand &args );
+static ConCommand spincycle_command( "spincycle", spincycle, "Cause the engine to spincycle (Debug!!)", FCVAR_CHEAT );
+static void spincycle( const CCommand &args )
 { 
 	if ( args.ArgC() > 1 )
 	{
@@ -2098,7 +2024,7 @@ CON_COMMAND_F( spincycle, "Cause the engine to spincycle (Debug!!)", FCVAR_CHEAT
 		}
 	}
 
-	int numCycles = ( args.ArgC() > 1 ) ? Q_atoi( args.Arg(1) ) : 10;
+	int numCycles = ( args.ArgC() > 1 ) ? V_atoi( args.Arg(1) ) : 10;
 	Msg( "forcing spincycle for %d cycles\n", numCycles );
 	for( int k = 0; k < numCycles; ++ k )
 	{
@@ -2106,64 +2032,42 @@ CON_COMMAND_F( spincycle, "Cause the engine to spincycle (Debug!!)", FCVAR_CHEAT
 	}
 }
 
-CON_COMMAND_F( forktest, "Cause the engine to fork and wait for child PID, parameter can be passed for requested exit code (Debug!!)", FCVAR_CHEAT )
+static void forktest( const CCommand &args );
+static ConCommand forktest_command( "forktest", forktest, "Cause the engine to fork and wait for child PID, parameter can be passed for requested exit code (Debug!!)", FCVAR_CHEAT );
+static void forktest( const CCommand &args )
 {
 	EndWatchdogTimer();	// End the watchdog in case child takes too long
 
-	int nExitCodeRequested = ( args.ArgC() > 1 ) ? Q_atoi( args.Arg(1) ) : 0;
+	int nExitCodeRequested = ( args.ArgC() > 1 ) ? V_atoi( args.Arg(1) ) : 0;
 	
-	pid_t pID = fork();
+	long long pID = ks::platform::fork_process();
 	Msg( "forktest: Forked, pID = %d\n", (int) pID );
 	if ( pID == 0 )  // are we the forked child?
 	{
 		//
-		// Enumerate all open file descriptors that are not #0 (stdin), #1 (stdout), #2 (stderr)
-		// and close them all.
+		// Close every inherited descriptor that is not #0 (stdin), #1 (stdout), #2 (stderr)
 		// This will close all sockets and file handles that can result in process hanging
 		// when network events occur on the machine and make NFS handles go bad.
 		//
 		if ( !CommandLine()->FindParm( "-forkfdskeepall" ) )
 		{
-			FileFindHandle_t hFind = 0;
-			std::vector< int > arrHandlesToClose;
-			for ( char const *szFileName = g_pFullFileSystem->FindFirst( "/proc/self/fd/*", &hFind );
-				szFileName && *szFileName; szFileName = g_pFullFileSystem->FindNext( hFind ) )
-			{
-				int iFdHandle = Q_atoi( szFileName );
-				if ( ( iFdHandle > 2 ) && ( ks::find_index( arrHandlesToClose, iFdHandle ) == -1 ) )
-					arrHandlesToClose.push_back( iFdHandle );
-			}
-			g_pFullFileSystem->FindClose( hFind );
-			for ( int iHandleToClose : arrHandlesToClose )
-			{
-				::close( iHandleToClose );
-			}
-
-			if ( !CommandLine()->FindParm( "-forkfdskeepstd" ) )
-			{
-				// Explicitly close #0 (stdin), #1 (stdout), #2 (stderr) and reopen them to /dev/null to consume 0-1-2 FDs (Posix spec requires to return lowest FDs first)
-				::close( 0 );
-				::close( 1 );
-				::close( 2 );
-				::open("/dev/null", O_RDONLY);
-				::open("/dev/null", O_RDWR);
-				::open("/dev/null", O_RDWR);
-			}
+			ks::platform::detach_inherited_descriptors( !CommandLine()->FindParm( "-forkfdskeepstd" ) );
 		}
 
 		Msg( "Child finished successfully!\n" );
-		syscall( SYS_exit, nExitCodeRequested );		// don't do a normal c++ exit, don't want to call destructors, etc.
-		Warning( "Forked child just called SYS_exit.\n" );
+		ks::platform::exit_process_now( nExitCodeRequested );		// don't do a normal c++ exit, don't want to call destructors, etc.
 	}
 	else
 	{
-		int nRet = -1;
-		int nWait = waitpid( pID, &nRet, 0 );
-		Msg( "Parent finished wait: %d, ret: %d, exit: %d, code: %d\n", nWait, nRet, WIFEXITED( nRet ), WEXITSTATUS( nRet ) );
+		ks::platform::child_status status{};
+		bool bReaped = ks::platform::reap_child( pID, true, &status );
+		Msg( "Parent finished wait: %d, exit: %d, code: %d\n", bReaped ? (int)status.pid : -1, (int)status.exited, status.code );
 	}
 }
 
-CON_COMMAND_F( flush, "Flush unlocked cache memory.", FCVAR_CHEAT )
+static void flush( const CCommand &args );
+static ConCommand flush_command( "flush", flush, "Flush unlocked cache memory.", FCVAR_CHEAT );
+static void flush( const CCommand &args )
 {
 #if !defined( DEDICATED )
 	g_ClientDLL->InvalidateMdlCache();
@@ -2175,7 +2079,9 @@ CON_COMMAND_F( flush, "Flush unlocked cache memory.", FCVAR_CHEAT )
 #endif
 }
 
-CON_COMMAND_F( flush_locked, "Flush unlocked and locked cache memory.", FCVAR_CHEAT )
+static void flush_locked( const CCommand &args );
+static ConCommand flush_locked_command( "flush_locked", flush_locked, "Flush unlocked and locked cache memory.", FCVAR_CHEAT );
+static void flush_locked( const CCommand &args )
 {
 #if !defined( DEDICATED )
 	g_ClientDLL->InvalidateMdlCache();
@@ -2187,7 +2093,9 @@ CON_COMMAND_F( flush_locked, "Flush unlocked and locked cache memory.", FCVAR_CH
 #endif
 }
 
-CON_COMMAND( cache_print, "cache_print [section]\nPrint out contents of cache memory." )
+static void cache_print( const CCommand &args );
+static ConCommand cache_print_command( "cache_print", cache_print, "cache_print [section]\nPrint out contents of cache memory." );
+static void cache_print( const CCommand &args )
 {
 	const char *pszSection = nullptr;
 	if ( args.ArgC() == 2 )
@@ -2197,7 +2105,9 @@ CON_COMMAND( cache_print, "cache_print [section]\nPrint out contents of cache me
 	g_pDataCache->OutputReport( DC_DETAIL_REPORT, pszSection );
 }
 
-CON_COMMAND( cache_print_lru, "cache_print_lru [section]\nPrint out contents of cache memory." )
+static void cache_print_lru( const CCommand &args );
+static ConCommand cache_print_lru_command( "cache_print_lru", cache_print_lru, "cache_print_lru [section]\nPrint out contents of cache memory." );
+static void cache_print_lru( const CCommand &args )
 {
 	const char *pszSection = nullptr;
 	if ( args.ArgC() == 2 )
@@ -2207,7 +2117,9 @@ CON_COMMAND( cache_print_lru, "cache_print_lru [section]\nPrint out contents of 
 	g_pDataCache->OutputReport( DC_DETAIL_REPORT_LRU, pszSection );
 }
 
-CON_COMMAND( cache_print_summary, "cache_print_summary [section]\nPrint out a summary contents of cache memory." )
+static void cache_print_summary( const CCommand &args );
+static ConCommand cache_print_summary_command( "cache_print_summary", cache_print_summary, "cache_print_summary [section]\nPrint out a summary contents of cache memory." );
+static void cache_print_summary( const CCommand &args )
 {
 	const char *pszSection = nullptr;
 	if ( args.ArgC() == 2 )
@@ -2218,10 +2130,11 @@ CON_COMMAND( cache_print_summary, "cache_print_summary [section]\nPrint out a su
 }
 
 
-#ifndef _DEMO
 #ifndef DEDICATED
 // NOTE: As of shipping the 360 version of L4D, this command will not work correctly. See changelist 612757 (terror src) for why.
-CON_COMMAND_F( ss_connect, "If connected with available split screen slots, connects a split screen player to this machine.", FCVAR_DEVELOPMENTONLY )
+static void ss_connect( const CCommand &args );
+static ConCommand ss_connect_command( "ss_connect", ss_connect, "If connected with available split screen slots, connects a split screen player to this machine.", FCVAR_DEVELOPMENTONLY );
+static void ss_connect( const CCommand &args )
 {
 	if ( host_state.max_splitscreen_players == 1 )
 	{
@@ -2265,7 +2178,9 @@ CON_COMMAND_F( ss_connect, "If connected with available split screen slots, conn
 }
 
 
-CON_COMMAND_F( ss_disconnect, "If connected with available split screen slots, connects a split screen player to this machine.", FCVAR_DEVELOPMENTONLY )
+static void ss_disconnect( const CCommand &args );
+static ConCommand ss_disconnect_command( "ss_disconnect", ss_disconnect, "If connected with available split screen slots, connects a split screen player to this machine.", FCVAR_DEVELOPMENTONLY );
+static void ss_disconnect( const CCommand &args )
 {
 	if ( args.Source() == kCommandSrcNetClient )
 	{
@@ -2289,7 +2204,7 @@ CON_COMMAND_F( ss_disconnect, "If connected with available split screen slots, c
 
 	if ( args.ArgC() > 1 )
 	{
-		int cmdslot = Q_atoi( args.Arg( 1 ) );
+		int cmdslot = V_atoi( args.Arg( 1 ) );
 		if ( IS_VALID_SPLIT_SCREEN_SLOT( cmdslot ) )
 		{
 			nSlot = cmdslot;
@@ -2308,7 +2223,7 @@ CON_COMMAND_F( ss_disconnect, "If connected with available split screen slots, c
 	}
 
 	char buf[ 256 ];
-	Q_snprintf( buf, sizeof( buf ), "ss_disconnect %d\n", nSlot );
+	V_snprintf( buf, sizeof( buf ), "ss_disconnect %d\n", nSlot );
 
 	CCommand argsClient;
 	argsClient.Tokenize( buf, kCommandSrcCode );
@@ -2319,7 +2234,3 @@ CON_COMMAND_F( ss_disconnect, "If connected with available split screen slots, c
 }
 
 #endif
-#endif
-
-
-

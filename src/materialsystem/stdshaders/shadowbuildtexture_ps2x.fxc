@@ -1,5 +1,7 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//paired with "unlitgeneric_vs20"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+// Purpose: paired with "unlitgeneric_vs20"
 
 #include "common_ps_fxc.h"
 

@@ -1,32 +1,16 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "tier0/dbg.h"
-#include "mathlib/mathlib.h"
+import ks.tier1;
 #include "bone_setup.h"
 
-#include <string.h>
+import std;
 
 #include "collisionutils.h"
-#include "vstdlib/random.h"
-#include "tier0/vprof.h"
 #include "bone_accessor.h"
-#include "mathlib/ssequaternion.h"
-#include "datamanager.h"
-#include "convar.h"
-#include "tier0/tslist.h"
 #include "vphysics_interface.h"
-#include "datacache/idatacache.h"
-
-#include "tier0/miniprofiler.h"
 
 #include "bone_utils.h"
-
 
 class CIKSolver
 {
@@ -56,7 +40,7 @@ public:
    static float findD(float a, float b, float c) {
       return (c + (a*a-b*b)/c) / 2;
    }
-   static float findE(float a, float d) { return sqrt(a*a-d*d); } 
+   static float findE(float a, float d) { return std::sqrt(a*a-d*d); } 
 
 // This leads to a solution to the more general problem:
 //
@@ -117,7 +101,7 @@ public:
 
    static float dot(float const a[], float const b[]) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
 
-   static float length(float const v[]) { return sqrt( dot(v,v) ); }
+   static float length(float const v[]) { return std::sqrt( dot(v,v) ); }
 
    static void normalize(float v[]) {
       float norm = length(v);
@@ -156,7 +140,7 @@ bool Studio_SolveIK( mstudioikchain_t *pikchain, Vector &targetFoot, matrix3x4a_
 }
 
 
-#define KNEEMAX_EPSILON 0.9998 // (0.9998 is about 1 degree)
+constexpr auto KNEEMAX_EPSILON = 0.9998; // (0.9998 is about 1 degree)
 
 //-----------------------------------------------------------------------------
 // Purpose: Solve Knee position for a known hip and foot location, but no specific knee direction preference
@@ -164,7 +148,6 @@ bool Studio_SolveIK( mstudioikchain_t *pikchain, Vector &targetFoot, matrix3x4a_
 
 bool Studio_SolveIK( int iThigh, int iKnee, int iFoot, Vector &targetFoot, matrix3x4a_t *pBoneToWorld )
 {
-	BONE_PROFILE_FUNC();
 	Vector worldFoot, worldKnee, worldThigh;
 
 	MatrixPosition( pBoneToWorld[ iThigh ], worldThigh );
@@ -210,7 +193,6 @@ bool Studio_SolveIK( int iThigh, int iKnee, int iFoot, Vector &targetFoot, matri
 //-----------------------------------------------------------------------------
 void Studio_AlignIKMatrix( matrix3x4a_t &mMat, const Vector &vAlignTo )
 {
-	BONE_PROFILE_FUNC();
 	Vector tmp1, tmp2, tmp3;
 
 	// Column 0 (X) becomes the vector.
@@ -237,7 +219,6 @@ void Studio_AlignIKMatrix( matrix3x4a_t &mMat, const Vector &vAlignTo )
 
 bool Studio_SolveIK( int iThigh, int iKnee, int iFoot, Vector &targetFoot, Vector &targetKneePos, Vector &targetKneeDir, matrix3x4a_t *pBoneToWorld )
 {
-	BONE_PROFILE_FUNC();
 	Vector worldFoot, worldKnee, worldThigh;
 
 	MatrixPosition( pBoneToWorld[ iThigh ], worldThigh );
@@ -279,7 +260,7 @@ bool Studio_SolveIK( int iThigh, int iKnee, int iFoot, Vector &targetFoot, Vecto
 
 	// too close?
 	// limit distance to about an 80 degree knee bend
-	float minDist = std::max( fabs(l1 - l2) * 1.15, std::min( l1, l2 ) * 0.15 );
+	float minDist = std::max( std::fabs(l1 - l2) * 1.15, std::min( l1, l2 ) * 0.15 );
 	if (ikFoot.Length() < minDist)
 	{
 		// too close to get an accurate vector, just use original vector
@@ -461,8 +442,8 @@ bool Studio_IKAnimationError( const CStudioHdr *pStudioHdr, mstudioikrule_t *pRu
 		return false;
 
 	flWeight = Studio_IKRuleWeight( *pRule, panim, flCycle, iFrame, fraq );
-	Assert( fraq >= 0.0 && fraq < 1.0 );
-	Assert( flWeight >= 0.0f && flWeight <= 1.0f );
+	contract_assert( fraq >= 0.0 && fraq < 1.0 );
+	contract_assert( flWeight >= 0.0f && flWeight <= 1.0f );
 
 	// This shouldn't be necessary, but the Assert should help us catch whoever is screwing this up
 	flWeight = clamp( flWeight, 0.0f, 1.0f );
@@ -493,7 +474,7 @@ bool Studio_IKAnimationError( const CStudioHdr *pStudioHdr, mstudioikrule_t *pRu
 		return true;
 	}
 	// no data, disable IK rule
-	Assert( 0 );
+	contract_assert( 0 );
 	flWeight = 0.0f;
 	return false;
 }
@@ -506,10 +487,9 @@ bool Studio_IKAnimationError( const CStudioHdr *pStudioHdr, mstudioikrule_t *pRu
 
 bool Studio_IKSequenceError( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seqdesc, int iSequence, float flCycle, int iRule, const float poseParameter[], mstudioanimdesc_t *panim[4], float weight[4], ikcontextikrule_t &ikRule )
 {
-	BONE_PROFILE_FUNC();
 	int i;
 
-	memset( &ikRule, 0, sizeof(ikRule) );
+	std::memset( &ikRule, 0, sizeof(ikRule) );
 	ikRule.start = ikRule.peak = ikRule.tail = ikRule.end = 0;
 
 
@@ -522,7 +502,7 @@ bool Studio_IKSequenceError( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seq
 		{
 			if (iRule >= panim[i]->numikrules || panim[i]->numikrules != panim[0]->numikrules)
 			{
-				Assert( 0 );
+				contract_assert( 0 );
 				return false;
 			}
 
@@ -625,7 +605,7 @@ bool Studio_IKSequenceError( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seq
 		}
 	}
 
-	Assert( ikRule.flWeight > 0.0f );
+	contract_assert( ikRule.flWeight > 0.0f );
 
 	ikRule.pos.Init();
 	ikRule.q.Init();
@@ -749,8 +729,6 @@ CIKContext::CIKContext()
 
 void CIKContext::Init( const CStudioHdr *pStudioHdr, const QAngle &angles, const Vector &pos, float flTime, int iFramecounter, int boneMask )
 {
-	BONE_PROFILE_FUNC();
-	SNPROF_ANIM( "CIKContext::Init" );
 
 	m_pStudioHdr = pStudioHdr;
 	m_ikChainRule.clear(); // m_numikrules = 0;
@@ -762,7 +740,7 @@ void CIKContext::Init( const CStudioHdr *pStudioHdr, const QAngle &angles, const
 		if (std::ssize( m_target ) == 0)
 		{
 			m_target.assign( 12, {} );
-			memset( m_target.data(), 0, sizeof(m_target[0])*std::ssize( m_target ) );
+			std::memset( m_target.data(), 0, sizeof(m_target[0])*std::ssize( m_target ) );
 			ClearTargets();
 		}
 
@@ -779,8 +757,7 @@ void CIKContext::Init( const CStudioHdr *pStudioHdr, const QAngle &angles, const
 
 void CIKContext::AddDependencies( mstudioseqdesc_t &seqdesc, int iSequence, float flCycle, const float poseParameters[], float flWeight )
 {
-	BONE_PROFILE_FUNC(); // ex: x360: up to 1 ms
-	SNPROF_ANIM("CIKContext::AddDependencies");
+	 // ex: x360: up to 1 ms
 
 	int i;
 
@@ -792,7 +769,7 @@ void CIKContext::AddDependencies( mstudioseqdesc_t &seqdesc, int iSequence, floa
 
 	ikcontextikrule_t ikrule;
 
-	Assert( flWeight >= 0.0f && flWeight <= 1.0f );
+	contract_assert( flWeight >= 0.0f && flWeight <= 1.0f );
 	// This shouldn't be necessary, but the Assert should help us catch whoever is screwing this up
 	flWeight = clamp( flWeight, 0.0f, 1.0f );
 
@@ -840,7 +817,7 @@ void CIKContext::AddDependencies( mstudioseqdesc_t &seqdesc, int iSequence, floa
 		if (std::ssize( m_target ) == 0)
 		{
 			m_target.assign( 12, {} );
-			memset( m_target.data(), 0, sizeof(m_target[0])*std::ssize( m_target ) );
+			std::memset( m_target.data(), 0, sizeof(m_target[0])*std::ssize( m_target ) );
 			ClearTargets();
 		}
 
@@ -877,7 +854,6 @@ void CIKContext::AddDependencies( mstudioseqdesc_t &seqdesc, int iSequence, floa
 
 void CIKContext::AddAutoplayLocks( BoneVector pos[], BoneQuaternion q[] )
 {
-	BONE_PROFILE_FUNC();
 	// skip all array access if no autoplay locks.
 	if (m_pStudioHdr->GetNumIKAutoplayLocks() == 0)
 	{
@@ -888,7 +864,7 @@ void CIKContext::AddAutoplayLocks( BoneVector pos[], BoneQuaternion q[] )
 	CBoneBitList boneComputed;
 
 	int ikOffset = std::ssize( m_ikLock ); m_ikLock.resize( m_ikLock.size() + ( m_pStudioHdr->GetNumIKAutoplayLocks() ) );
-	memset( &m_ikLock[ikOffset], 0, sizeof(ikcontextikrule_t)*m_pStudioHdr->GetNumIKAutoplayLocks() );
+	std::memset( &m_ikLock[ikOffset], 0, sizeof(ikcontextikrule_t)*m_pStudioHdr->GetNumIKAutoplayLocks() );
 
 	for (int i = 0; i < m_pStudioHdr->GetNumIKAutoplayLocks(); i++)
 	{
@@ -933,8 +909,7 @@ void CIKContext::AddAutoplayLocks( BoneVector pos[], BoneQuaternion q[] )
 
 void CIKContext::AddSequenceLocks( mstudioseqdesc_t &seqdesc, BoneVector pos[], BoneQuaternion q[] )
 {
-	BONE_PROFILE_FUNC(); // ex: x360:up to 0.98 ms
-	SNPROF_ANIM("CIKContext::AddSequenceLocks");
+	 // ex: x360:up to 0.98 ms
 
 	if ( m_pStudioHdr->numikchains() == 0)
 	{
@@ -950,7 +925,7 @@ void CIKContext::AddSequenceLocks( mstudioseqdesc_t &seqdesc, BoneVector pos[], 
 	CBoneBitList boneComputed;
 
 	int ikOffset = std::ssize( m_ikLock ); m_ikLock.resize( m_ikLock.size() + seqdesc.numiklocks );
-	memset( &m_ikLock[ikOffset], 0, sizeof(ikcontextikrule_t) * seqdesc.numiklocks );
+	std::memset( &m_ikLock[ikOffset], 0, sizeof(ikcontextikrule_t) * seqdesc.numiklocks );
 
 	for (int i = 0; i < seqdesc.numiklocks; i++)
 	{
@@ -995,7 +970,7 @@ void CIKContext::BuildBoneChain(
 	matrix3x4a_t *pBoneToWorld,
 	CBoneBitList &boneComputed )
 {
-	Assert( m_pStudioHdr->boneFlags( iBone ) & m_boneMask );
+	contract_assert( m_pStudioHdr->boneFlags( iBone ) & m_boneMask );
 	::BuildBoneChain( m_pStudioHdr, m_rootxform, pos, q, iBone, pBoneToWorld, boneComputed );
 }
 
@@ -1143,7 +1118,7 @@ void CIKTarget::SetPosWithNormalOffset( const Vector &pos, const Vector &normal 
 	else if (normal.z > 0.707)
 	{
 		// tan == sin / cos
-		float tan = sqrt( 1 - normal.z * normal.z ) / normal.z;
+		float tan = std::sqrt( 1 - normal.z * normal.z ) / normal.z;
 		est.pos.z = est.pos.z - est.radius * tan;
 	}
 	else
@@ -1220,9 +1195,7 @@ void CIKContext::ClearTargets( void )
 
 void CIKContext::UpdateTargets( BoneVector pos[], BoneQuaternion q[], matrix3x4a_t boneToWorld[], CBoneBitList &boneComputed )
 {
-	BONE_PROFILE_FUNC();
 
-	SNPROF_ANIM( "CIKContext::UpdateTargets" );
 
 	int i, j;
 
@@ -1422,7 +1395,7 @@ void CIKContext::UpdateTargets( BoneVector pos[], BoneQuaternion q[], matrix3x4a
 				float d4 = (p3 + pTarget->latched.deltaPos - p1).Length();
 
 				// unstick feet when distance is too great
-				if ((d4 < fabs( d1 - d2 ) || d4 * 0.95 > d1 + d2) && pTarget->est.latched > 0.2)
+				if ((d4 < std::fabs( d1 - d2 ) || d4 * 0.95 > d1 + d2) && pTarget->est.latched > 0.2)
 				{
 					pTarget->error.flTime = m_flTime;
 				}
@@ -1430,7 +1403,7 @@ void CIKContext::UpdateTargets( BoneVector pos[], BoneQuaternion q[], matrix3x4a
 				// unstick feet when angle is too great
 				if (pTarget->est.latched > 0.2)
 				{
-					float d = fabs( pTarget->latched.deltaQ.w ) * 2.0f - 1.0f; // QuaternionDotProduct( pTarget->latched.q, pTarget->est.q );
+					float d = std::fabs( pTarget->latched.deltaQ.w ) * 2.0f - 1.0f; // QuaternionDotProduct( pTarget->latched.q, pTarget->est.q );
 
 					// FIXME: cos(45), make property of chain
 					if (d < 0.707)
@@ -1446,7 +1419,7 @@ void CIKContext::UpdateTargets( BoneVector pos[], BoneQuaternion q[], matrix3x4a
 			pTarget->trace.kneeToFoot = d2;
 			pTarget->trace.hip = p1;
 			pTarget->trace.knee = p2;
-			pTarget->trace.closest = p1 + dt * (fabs( d1 - d2 ) * 1.01);
+			pTarget->trace.closest = p1 + dt * (std::fabs( d1 - d2 ) * 1.01);
 			pTarget->trace.farthest = p1 + dt * (d1 + d2) * 0.99;
 			pTarget->trace.lowest = p1 + Vector( 0, 0, -1 ) * (d1 + d2) * 0.99;
 			// pTarget->trace.endpos = pTarget->est.pos;
@@ -1461,7 +1434,6 @@ void CIKContext::UpdateTargets( BoneVector pos[], BoneQuaternion q[], matrix3x4a
 
 void CIKContext::AutoIKRelease( void )
 {
-	BONE_PROFILE_FUNC();
 	int i;
 
 	for (i = 0; i < std::ssize( m_target ); i++)
@@ -1559,10 +1531,9 @@ void CIKContext::AutoIKRelease( void )
 
 void CIKContext::SolveDependencies( BoneVector pos[], BoneQuaternion q[], matrix3x4a_t boneToWorld[], CBoneBitList &boneComputed	)
 {
-	BONE_PROFILE_FUNC(); // ex: x360: up to 1.16ms
+	 // ex: x360: up to 1.16ms
 //	ASSERT_NO_REENTRY();
 	
-	SNPROF_ANIM( "CIKContext::SolveDependencies" );
 
 	matrix3x4a_t worldTarget;
 	int i, j;
@@ -1633,7 +1604,7 @@ void CIKContext::SolveDependencies( BoneVector pos[], BoneQuaternion q[], matrix
 				}
 				break;
 			case IK_WORLD:
-				Assert( 0 );
+				contract_assert( 0 );
 				break;
 
 			case IK_ATTACHMENT:
@@ -1763,7 +1734,7 @@ void CIKContext::SolveAutoplayLocks(
 	BoneQuaternion q[]
 	)
 {
-	BONE_PROFILE_FUNC(); // ex: x360: 2.44ms
+	 // ex: x360: 2.44ms
 	matrix3x4a_t *boneToWorld = g_MatrixPool.Alloc();
 	CBoneBitList boneComputed;
 	int i;
@@ -1788,8 +1759,6 @@ void CIKContext::SolveSequenceLocks(
 	BoneQuaternion q[]
 	)
 {
-	BONE_PROFILE_FUNC();
-	SNPROF_ANIM("CIKContext::SolveSequenceLocks");
 
 	matrix3x4a_t *boneToWorld = g_MatrixPool.Alloc();
 	CBoneBitList boneComputed;
@@ -1810,7 +1779,6 @@ void CIKContext::SolveSequenceLocks(
 
 void CIKContext::AddAllLocks( BoneVector pos[], BoneQuaternion q[] )
 {
-	BONE_PROFILE_FUNC();
 	// skip all array access if no autoplay locks.
 	if (m_pStudioHdr->GetNumIKChains() == 0)
 	{
@@ -1821,7 +1789,7 @@ void CIKContext::AddAllLocks( BoneVector pos[], BoneQuaternion q[] )
 	CBoneBitList boneComputed;
 
 	int ikOffset = std::ssize( m_ikLock ); m_ikLock.resize( m_ikLock.size() + ( m_pStudioHdr->GetNumIKChains() ) );
-	memset( &m_ikLock[ikOffset], 0, sizeof(ikcontextikrule_t)*m_pStudioHdr->GetNumIKChains() );
+	std::memset( &m_ikLock[ikOffset], 0, sizeof(ikcontextikrule_t)*m_pStudioHdr->GetNumIKChains() );
 
 	for (int i = 0; i < m_pStudioHdr->GetNumIKChains(); i++)
 	{
@@ -1869,7 +1837,6 @@ void CIKContext::SolveAllLocks(
 	BoneQuaternion q[]
 	)
 {
-	BONE_PROFILE_FUNC();
 	matrix3x4a_t *boneToWorld = g_MatrixPool.Alloc();
 	CBoneBitList boneComputed;
 	int i;
@@ -1903,7 +1870,7 @@ void CIKContext::SolveLock(
 	CBoneBitList &boneComputed
 	)
 {
-	BONE_PROFILE_FUNC(); // ex: x360:up to 1.18 ms
+	 // ex: x360:up to 1.18 ms
 	mstudioikchain_t *pchain = m_pStudioHdr->pIKChain( plock->chain );
 	int bone = pchain->pLink( 2 )->bone;
 

@@ -1,9 +1,8 @@
+#pragma once
 // NextBotManager.h
 // Author: Michael Booth, May 2006
 // Copyright (c) 2006 Turtle Rock Studios, Inc. - All Rights Reserved
 
-#ifndef _NEXT_BOT_MANAGER_H_
-#define _NEXT_BOT_MANAGER_H_
 
 #include "NextBotInterface.h"
 
@@ -75,7 +74,7 @@ public:
 	INextBot *GetClosestBot( const Vector &pos, Filter &filter )
 	{
 		INextBot *close = nullptr;
-		float closeRangeSq = FLT_MAX;
+		float closeRangeSq = std::numeric_limits<float>::max();
 
 		for( INextBot *bot : m_botList )
 		{
@@ -194,5 +193,4 @@ inline INextBot *NextBotManager::GetSelected( void ) const
 extern NextBotManager &TheNextBots( void );
 
 
-#endif // _NEXT_BOT_MANAGER_H_
 

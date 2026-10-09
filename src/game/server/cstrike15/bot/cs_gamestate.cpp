@@ -1,14 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Encapsulation of the current scenario/game state. Allows each bot imperfect knowledge.
-//
-// $NoKeywords: $
-//=============================================================================//
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "cbase.h"
-#include "keyvalues.h"
+import std;
+import ks.core;
 
 #include "cs_bot.h"
 #include "cs_gamestate.h"
@@ -771,4 +769,3 @@ void CSGameState::AllHostagesGone( void )
 	for( int i=0; i<m_hostageCount; ++i )
 		m_hostage[i].isValid = false;
 }
-

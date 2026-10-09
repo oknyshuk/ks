@@ -1,18 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef SV_SERVERPLUGIN_H
-#define SV_SERVERPLUGIN_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "eiface.h"
 #include "engine/iserverplugin.h"
-#include <memory>
+import std;
 
 //---------------------------------------------------------------------------------
 // Purpose: a single plugin
@@ -112,5 +104,3 @@ extern CServerPlugin *g_pServerPluginHandler;
 
 class IClient;
 QueryCvarCookie_t SendCvarValueQueryToClient( IClient *client, const char *pCvarName, bool bPluginQuery );
-
-#endif //SV_SERVERPLUGIN_H

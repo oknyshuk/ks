@@ -1,17 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Holds defintion for game ammo types
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef AI_AMMODEF_H
-#define AI_AMMODEF_H
+// Purpose: Holds defintion for game ammo types
 
+#include "shared_classnames.h"
 
 class ConVar;
+class CBaseCombatCharacter;
 
 struct Ammo_t 
 {
@@ -36,9 +32,9 @@ struct Ammo_t
 };
 
 // Used to tell AmmoDef to use the cvars, not the integers
-#define		USE_CVAR		-1
+inline constexpr auto USE_CVAR = -1;
 // Ammo is infinite
-#define		INFINITE_AMMO	-2
+inline constexpr auto INFINITE_AMMO = -2;
 
 enum AmmoTracer_t
 {
@@ -97,7 +93,3 @@ private:
 // Get the global ammodef object. This is usually implemented in each mod's game rules file somewhere,
 // so the mod can setup custom ammo types.
 CAmmoDef* GetAmmoDef();
-
-
-#endif // AI_AMMODEF_H
- 

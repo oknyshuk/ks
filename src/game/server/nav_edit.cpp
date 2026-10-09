@@ -1,31 +1,47 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_edit.cpp
 // Implementation of Navigation Mesh edit mode
 // Author: Michael Booth, 2003-2004
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "nav_mesh.h"
 #include "nav_pathfind.h"
 #include "nav_node.h"
 #include "nav_colors.h"
-#include "color.h"
-#include "tier0/vprof.h"
 #include "collisionutils.h"
 #include "world.h"
 #include "functorutils.h"
 #include "team.h"
-
-#ifdef DOTA_SERVER_DLL
-#include "dota_npc_base.h"
-#include "dota_player.h"
-#endif
-
 
 ConVar nav_show_area_info( "nav_show_area_info", "0.5", FCVAR_CHEAT, "Duration in seconds to show nav area ID and attributes while editing" );
 ConVar nav_snap_to_grid( "nav_snap_to_grid", "0", FCVAR_CHEAT, "Snap to the nav generation grid when creating new nav areas" );
@@ -180,24 +196,8 @@ void CNavMesh::GetEditVectors( Vector *pos, Vector *forward )
 	}
 
 	//DOTA places the edit cursor where the 2D cursor is located.
-#ifdef DOTA_SERVER_DLL
-	CDOTAPlayer *pDOTAPlayer = ToDOTAPlayer( player );
-
-	if ( pDOTAPlayer && pDOTAPlayer->GetMoveType() != MOVETYPE_NOCLIP )
-	{
-		Vector dir = pDOTAPlayer->GetCrosshairTracePos() - player->EyePosition();
-		VectorNormalize( dir );
-
-		*forward = dir;
-	}
-	else
-	{
-		AngleVectors( player->EyeAngles() + player->GetPunchAngle(), forward );
-	}
-#else
 	Vector dir;
 	AngleVectors( player->EyeAngles() + player->GetViewPunchAngle(), forward );
-#endif
 
 	*pos = player->EyePosition();
 
@@ -326,7 +326,7 @@ bool CNavMesh::FindNavAreaOrLadderAlongRay( const Vector &start, const Vector &e
  */
 bool CNavMesh::FindActiveNavArea( void )
 {
-	VPROF( "CNavMesh::FindActiveNavArea" );
+	CVProfScope _( "CNavMesh::FindActiveNavArea", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	m_splitAlongX = false;
 	m_splitEdge = 0.0f;
@@ -747,7 +747,7 @@ void CNavMesh::UpdateDragSelectionSet( void )
 ConVar nav_show_compass( "nav_show_compass", "0", FCVAR_CHEAT );
 void CNavMesh::DrawEditMode( void )
 {
-	VPROF( "CNavMesh::DrawEditMode" );
+	CVProfScope _( "CNavMesh::DrawEditMode", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	CBasePlayer *player = UTIL_GetListenServerHost();
 	if (player == nullptr)
@@ -977,9 +977,9 @@ void CNavMesh::DrawEditMode( void )
 				{
 					const char *name = TheNavMesh->PlaceToName( m_selectedArea->GetPlace() );
 					if (name)
-						strcpy( locName, name );
+						std::strcpy( locName, name );
 					else
-						strcpy( locName, "ERROR" );
+						std::strcpy( locName, "ERROR" );
 				}
 				else
 				{
@@ -994,35 +994,35 @@ void CNavMesh::DrawEditMode( void )
 				{
 					attrib[0] = 0;
 					int attributes = m_selectedArea->GetAttributes();
-					if ( attributes & NAV_MESH_CROUCH )		Q_strncat( attrib, "CROUCH ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_JUMP )		Q_strncat( attrib, "JUMP ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_PRECISE )	Q_strncat( attrib, "PRECISE ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_NO_JUMP )	Q_strncat( attrib, "NO_JUMP ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_STOP )		Q_strncat( attrib, "STOP ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_RUN )		Q_strncat( attrib, "RUN ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_WALK )		Q_strncat( attrib, "WALK ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_AVOID )		Q_strncat( attrib, "AVOID ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_TRANSIENT )	Q_strncat( attrib, "TRANSIENT ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_DONT_HIDE )	Q_strncat( attrib, "DONT_HIDE ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_STAND )		Q_strncat( attrib, "STAND ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_NO_HOSTAGES )Q_strncat( attrib, "NO HOSTAGES ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_STAIRS )		Q_strncat( attrib, "STAIRS ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_OBSTACLE_TOP ) Q_strncat( attrib, "OBSTACLE ", sizeof( attrib ), -1 );
-					if ( attributes & NAV_MESH_CLIFF )		Q_strncat( attrib, "CLIFF ", sizeof( attrib ), -1 );
-					if ( m_selectedArea->IsBlocked( TEAM_ANY ) ) Q_strncat( attrib, "BLOCKED ", sizeof( attrib ), -1 );
-					if ( m_selectedArea->HasAvoidanceObstacle() )	Q_strncat( attrib, "OBSTRUCTED ", sizeof( attrib ), -1 );
-					if ( m_selectedArea->IsDamaging() )		Q_strncat( attrib, "DAMAGING ", sizeof( attrib ), -1 );
-					if ( m_selectedArea->IsUnderwater() )	Q_strncat( attrib, "UNDERWATER ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_CROUCH )		V_strncat( attrib, "CROUCH ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_JUMP )		V_strncat( attrib, "JUMP ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_PRECISE )	V_strncat( attrib, "PRECISE ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_NO_JUMP )	V_strncat( attrib, "NO_JUMP ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_STOP )		V_strncat( attrib, "STOP ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_RUN )		V_strncat( attrib, "RUN ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_WALK )		V_strncat( attrib, "WALK ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_AVOID )		V_strncat( attrib, "AVOID ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_TRANSIENT )	V_strncat( attrib, "TRANSIENT ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_DONT_HIDE )	V_strncat( attrib, "DONT_HIDE ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_STAND )		V_strncat( attrib, "STAND ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_NO_HOSTAGES )V_strncat( attrib, "NO HOSTAGES ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_STAIRS )		V_strncat( attrib, "STAIRS ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_OBSTACLE_TOP ) V_strncat( attrib, "OBSTACLE ", sizeof( attrib ), -1 );
+					if ( attributes & NAV_MESH_CLIFF )		V_strncat( attrib, "CLIFF ", sizeof( attrib ), -1 );
+					if ( m_selectedArea->IsBlocked( TEAM_ANY ) ) V_strncat( attrib, "BLOCKED ", sizeof( attrib ), -1 );
+					if ( m_selectedArea->HasAvoidanceObstacle() )	V_strncat( attrib, "OBSTRUCTED ", sizeof( attrib ), -1 );
+					if ( m_selectedArea->IsDamaging() )		V_strncat( attrib, "DAMAGING ", sizeof( attrib ), -1 );
+					if ( m_selectedArea->IsUnderwater() )	V_strncat( attrib, "UNDERWATER ", sizeof( attrib ), -1 );
 
 					int connected = 0;
 					connected += m_selectedArea->GetAdjacentCount( NORTH );
 					connected += m_selectedArea->GetAdjacentCount( SOUTH );
 					connected += m_selectedArea->GetAdjacentCount( EAST );
 					connected += m_selectedArea->GetAdjacentCount( WEST );
-					Q_strncat( attrib, UTIL_VarArgs( "%d Connections ", connected ), sizeof( attrib ), -1 );
+					V_strncat( attrib, UTIL_VarArgs( "%d Connections ", connected ), sizeof( attrib ), -1 );
 				}
 
-				Q_snprintf( buffer, sizeof( buffer ), "Area #%d %s %s\n", m_selectedArea->GetID(), locName, attrib );
+				V_snprintf( buffer, sizeof( buffer ), "Area #%d %s %s\n", m_selectedArea->GetID(), locName, attrib );
 				NDebugOverlay::ScreenText( 0.5, 0.53, buffer, 255, 255, 0, 128, NDEBUG_PERSIST_TILL_NEXT_SERVER );
 
 				// do "place painting"
@@ -1468,7 +1468,7 @@ void CNavMesh::CommandNavAddToSelectedSetByID( const CCommand &args )
 	if ( !IsEditMode( NORMAL ) && !IsEditMode( PLACE_PAINTING ) || args.ArgC() < 2 )
 		return;
 
-	int id = atoi( args[1] );
+	int id = std::atoi( args[1] );
 	CNavArea *area = GetNavAreaByID( id );
 	if ( area )
 	{
@@ -1904,7 +1904,7 @@ void CNavMesh::CommandNavSelectHalfSpace( const CCommand &args )
 		halfSpace = MINUS_Z;
 	}
 
-	float value = atof( args[2] );
+	float value = std::atof( args[2] );
 	
 	Extent extent;
 	for ( CNavArea *area : TheNavAreas )
@@ -2071,7 +2071,9 @@ void CNavMesh::CommandNavEndShiftXY( void )
 
 
 //--------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_shift, "Shifts the selected areas by the specified amount", FCVAR_CHEAT )
+static void nav_shift( const CCommand &args );
+static ConCommand nav_shift_command( "nav_shift", nav_shift, "Shifts the selected areas by the specified amount", FCVAR_CHEAT );
+static void nav_shift( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -2085,7 +2087,7 @@ CON_COMMAND_F( nav_shift, "Shifts the selected areas by the specified amount", F
 	Vector shiftAmount( vec3_origin );
 	if ( args.ArgC() > 1 )
 	{
-		shiftAmount.x = atoi( args[1] );
+		shiftAmount.x = std::atoi( args[1] );
 
 		if ( args.ArgC() > 2 )
 		{
@@ -2564,7 +2566,7 @@ void CNavMesh::CommandNavMark( const CCommand &args )
 				const char *ladderIDNameToMark = args[2];
 				if ( ladderIDNameToMark )
 				{
-					unsigned int ladderIDToMark = atoi( ladderIDNameToMark );
+					unsigned int ladderIDToMark = std::atoi( ladderIDNameToMark );
 					if ( ladderIDToMark != 0 )
 					{
 						CNavLadder *ladder = TheNavMesh->GetLadderByID( ladderIDToMark );
@@ -2591,7 +2593,7 @@ void CNavMesh::CommandNavMark( const CCommand &args )
 			const char *areaIDNameToMark = args[1];
 			if( areaIDNameToMark != nullptr )
 			{
-				unsigned int areaIDToMark = atoi(areaIDNameToMark);
+				unsigned int areaIDToMark = std::atoi(areaIDNameToMark);
 				if( areaIDToMark != 0 )
 				{
 					CNavArea *areaToMark = nullptr;
@@ -3396,7 +3398,7 @@ void CNavMesh::CommandNavCornerRaise( const CCommand &args )
 	int amount = 1;
 	if ( args.ArgC() > 1 )
 	{
-		amount = atoi( args[1] );
+		amount = std::atoi( args[1] );
 	}
 
 	if (IsSelectedSetEmpty())
@@ -3445,7 +3447,7 @@ void CNavMesh::CommandNavCornerLower( const CCommand &args )
 	int amount = -1;
 	if ( args.ArgC() > 1 )
 	{
-		amount = -atoi( args[1] );
+		amount = -std::atoi( args[1] );
 	}
 
 	if (IsSelectedSetEmpty())
@@ -3494,7 +3496,7 @@ void CNavMesh::CommandNavCornerPlaceOnGround( const CCommand &args )
 	float inset = 0.0f;
 	if ( args.ArgC() == 2 )
 	{
-		inset = atof(args[1]);
+		inset = std::atof(args[1]);
 	}
 
 	if (IsSelectedSetEmpty())
@@ -3667,7 +3669,9 @@ public:
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( nav_select_radius, "Adds all areas in a radius to the selection set", FCVAR_CHEAT )
+static void nav_select_radius( const CCommand &args );
+static ConCommand nav_select_radius_command( "nav_select_radius", nav_select_radius, "Adds all areas in a radius to the selection set", FCVAR_CHEAT );
+static void nav_select_radius( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() || engine->IsDedicatedServer() )
 		return;
@@ -3678,7 +3682,7 @@ CON_COMMAND_F( nav_select_radius, "Adds all areas in a radius to the selection s
 		return;
 	}
 
-	float radius = atof( args[ 1 ] );
+	float radius = std::atof( args[ 1 ] );
 	CBasePlayer *host = UTIL_GetListenServerHost();
 	if ( !host )
 		return;
@@ -3858,7 +3862,3 @@ void CNavMesh::OnEditDestroyNotify( CNavArea *deadArea )
 void CNavMesh::OnEditDestroyNotify( CNavLadder *deadLadder )
 {
 }
-
-
-
-

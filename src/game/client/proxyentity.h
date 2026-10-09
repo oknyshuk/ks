@@ -1,22 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: A base class for all material proxies in the client dll
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef PROXY_ENTITY_H
-#define PROXY_ENTITY_H
+// Purpose: A base class for all material proxies in the client dll
 
 #include "materialsystem/imaterialproxy.h"
 
+class C_BaseEntity;
 
 class IMaterialVar;
 
 //-----------------------------------------------------------------------------
 // Base class all material proxies should inherit from
 //-----------------------------------------------------------------------------
-abstract_class CEntityMaterialProxy : public IMaterialProxy
+class CEntityMaterialProxy : public IMaterialProxy
 {
 public:
 	virtual void Release( void );
@@ -26,7 +23,3 @@ protected:
 	// base classes should implement these
 	virtual void OnBind( C_BaseEntity *pBaseEntity ) = 0;
 };
-
-
-#endif // PROXY_ENTITY_H
-

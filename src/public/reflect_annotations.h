@@ -1,3 +1,4 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
@@ -10,16 +11,12 @@
 // wire parameters. The semantic type goes in the member's *type* (see the As-annotated
 // types below), so it is checked at every use site rather than only inside a table.
 
-#ifndef KS_REFLECT_ANNOTATIONS_H
-#define KS_REFLECT_ANNOTATIONS_H
 
-#include "reflect_wirevar.h"   // WireVar; a leaf header so networkvar.h can reach it cheaply
+import ks.tier1;
 #include "datamap.h"
-#include <cstddef>
-#include <limits>
+import std;
 
 #include "dt_common.h"   // SPROP_* flags, which Net::flags carries
-#include "mathlib/vector.h"
 
 namespace ks::reflect
 {
@@ -226,7 +223,7 @@ template <name_t Name, auto Table, Net N = Net{}, auto Fn = nullptr> struct From
 // From<> for prediction, and the common case rather than the exception: prediction is declared on
 // base classes, so 8 of CBaseViewModel's 11 entries are inherited. The base's annotation cannot
 // just be inherited -- flags differ per class (m_flCycle is INSENDTABLE|NOERRORCHECK in
-// C_BaseAnimating, PRIVATE|OVERRIDE|NOERRORCHECK in CBaseViewModel). No position: prediction map
+// C_BaseAnimating, PRIVATE|override|NOERRORCHECK in CBaseViewModel). No position: prediction map
 // order is not observable, see reflect_predmap_verify.cpp.
 template <name_t Name, Pred P = Pred{}> struct PredFrom {};
 
@@ -269,4 +266,3 @@ struct [[= As{ FIELD_POSITION_VECTOR } ]] WorldPos : Vector
 
 } // namespace ks::reflect
 
-#endif // KS_REFLECT_ANNOTATIONS_H

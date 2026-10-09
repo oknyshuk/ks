@@ -1,11 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-#include "server_pch.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// main precompiled header for server files
+
+import std;
+import ks.tier1;
+
+#include "server.h"
+#include "proto_oob.h"
 #include "net.h"
 #include "sv_rcon.h"
 
@@ -20,7 +22,7 @@ void SV_RedirectFlush( void )
 {
 	static bool bInFlush = false; // recursion guard
 
-	Assert( bInFlush == false );
+	contract_assert( bInFlush == false );
 
 	bInFlush = true;
 	if ( sv_redirected == RD_PACKET )   // Print to remote address.
@@ -68,7 +70,7 @@ void SV_RedirectEnd (void)
 //-----------------------------------------------------------------------------
 void SV_RedirectCheckFlush( int len )
 {
-	if ( len + Q_strlen( sv_redirect_buffer ) > sizeof(sv_redirect_buffer) - 1)
+	if ( len + V_strlen( sv_redirect_buffer ) > sizeof(sv_redirect_buffer) - 1)
 	{
 		SV_RedirectFlush();
 	}
@@ -89,6 +91,6 @@ bool SV_RedirectActive( void )
 //-----------------------------------------------------------------------------
 void SV_RedirectAddText( const char *txt )
 {
-	SV_RedirectCheckFlush( strlen( txt ) );
-	Q_strncat( sv_redirect_buffer, (char *)txt, sizeof( sv_redirect_buffer ), COPY_ALL_CHARACTERS );
+	SV_RedirectCheckFlush( std::strlen( txt ) );
+	V_strncat( sv_redirect_buffer, (char *)txt, sizeof( sv_redirect_buffer ), COPY_ALL_CHARACTERS );
 }

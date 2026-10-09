@@ -1,14 +1,37 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "client_pch.h"
+// main precompiled header for client files
+
+import ks.tier1;
+import std;
+
+#include "common.h"
+#include "qlimits.h"
+
+#include "cmd.h"
+#include "render.h"
+
+
+
+#include "gl_shader.h"
+
+#include "cdll_engine_int.h"
+#include "client_class.h"
+#include "client.h"
+#include "cl_main.h"
+
+#include "demo.h"
+#include "host.h"
+#include "filesystem.h"
+#include "filesystem_engine.h"
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "cl_demoaction.h"
 #include "cl_demoactionmanager.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -113,8 +136,8 @@ void CDemoActionManager::Shutdown( void )
 void CDemoActionManager::ReloadFromDisk( void )
 {
 	char metafile[ 512 ];
-	Q_StripExtension( m_szCurrentFile, metafile, sizeof( metafile ) );
-	Q_DefaultExtension( metafile, ".vdm", sizeof( metafile ) );
+	V_StripExtension( m_szCurrentFile, metafile, sizeof( metafile ) );
+	V_DefaultExtension( metafile, ".vdm", sizeof( metafile ) );
 
 	ClearAll();
 
@@ -126,7 +149,7 @@ void CDemoActionManager::ReloadFromDisk( void )
 		m_lFileTime = g_pFileSystem->GetFileTime( metafile );
 
 		KeyValues *kv = new KeyValues( metafile );
-		Assert( kv );
+		contract_assert( kv );
 		if ( kv )
 		{
 			if ( kv->LoadFromFile( g_pFullFileSystem, metafile ) )
@@ -137,12 +160,12 @@ void CDemoActionManager::ReloadFromDisk( void )
 				{
 					char factorytouse[ 512 ];
 					
-					Q_strncpy( factorytouse, pIter->GetName(), sizeof( factorytouse ) );
+					V_strncpy( factorytouse, pIter->GetName(), sizeof( factorytouse ) );
 
 					// New format is to put numbers in here
-					if ( atoi( factorytouse ) > 0 )
+					if ( std::atoi( factorytouse ) > 0 )
 					{
-						Q_strncpy( factorytouse, pIter->GetString( "factory", "" ), sizeof( factorytouse ) );
+						V_strncpy( factorytouse, pIter->GetString( "factory", "" ), sizeof( factorytouse ) );
 					}
 
 					CBaseDemoAction *action = CBaseDemoAction::CreateDemoAction( CBaseDemoAction::TypeForName( factorytouse ) );
@@ -185,18 +208,18 @@ void CDemoActionManager::ReloadFromDisk( void )
 //-----------------------------------------------------------------------------
 void CDemoActionManager::StartPlaying( char const *demfilename )
 {
-	Assert( demfilename );
+	contract_assert( demfilename );
 
 	// Clear anything currently pending
 	StopPlaying();
 
-	bool changedfile = Q_strcasecmp( demfilename, m_szCurrentFile ) != 0 ? true : false;
+	bool changedfile = V_strcasecmp( demfilename, m_szCurrentFile ) != 0 ? true : false;
 
-	Q_strncpy( m_szCurrentFile, demfilename, sizeof( m_szCurrentFile ) );
+	V_strncpy( m_szCurrentFile, demfilename, sizeof( m_szCurrentFile ) );
 
 	char metafile[ 512 ];
-	Q_StripExtension( demfilename, metafile, sizeof( metafile ) );
-	Q_DefaultExtension( metafile, ".vdm", sizeof( metafile ) );
+	V_StripExtension( demfilename, metafile, sizeof( metafile ) );
+	V_DefaultExtension( metafile, ".vdm", sizeof( metafile ) );
 
 	long filetime = g_pFileSystem->GetFileTime( metafile );
 
@@ -271,7 +294,7 @@ void CDemoActionManager::Update(  bool newframe, int demotick, float demotime )
 	for ( i = 0; i < count; i++ )
 	{
 		CBaseDemoAction *action = m_ActionStack[ i ];
-		Assert( action );
+		contract_assert( action );
 		if ( !action )
 			continue;
 
@@ -296,7 +319,7 @@ void CDemoActionManager::SaveToBuffer( ks::text_writer& buf )
 	for ( i = 0; i < count; i++ )
 	{
 		CBaseDemoAction *action = m_ActionStack[ i ];
-		Assert( action );
+		contract_assert( action );
 		if ( !action )
 			continue;
 
@@ -321,8 +344,8 @@ void CDemoActionManager::SaveToFile( void )
 		return;
 
 	char metafile[ 512 ];
-	Q_StripExtension( m_szCurrentFile, metafile, sizeof( metafile ) );
-	Q_DefaultExtension( metafile, ".vdm", sizeof( metafile ) );
+	V_StripExtension( m_szCurrentFile, metafile, sizeof( metafile ) );
+	V_DefaultExtension( metafile, ".vdm", sizeof( metafile ) );
 
 	// Save data
 	ks::text_writer buf;
@@ -389,7 +412,7 @@ CBaseDemoAction *CDemoActionManager::GetAction( int index )
 void CDemoActionManager::AddAction( CBaseDemoAction *action )
 {
 	m_bDirty = true;
-	Assert( action );
+	contract_assert( action );
 	m_ActionStack.push_back( action );
 }
 
@@ -399,7 +422,7 @@ void CDemoActionManager::AddAction( CBaseDemoAction *action )
 //-----------------------------------------------------------------------------
 void CDemoActionManager::RemoveAction( CBaseDemoAction *action )
 {
-	Assert( action );
+	contract_assert( action );
 	m_bDirty = true;
 
 	ks::erase_first( m_ActionStack, action );
@@ -448,7 +471,7 @@ void CDemoActionManager::DispatchEvents()
 	for ( i = 0; i < c; i++ )
 	{
 		CBaseDemoAction *action = m_PendingFireActionStack[ i ];
-		Assert( action );
+		contract_assert( action );
 		action->FireAction();
 		action->SetActionFired( true );
 	}
@@ -461,6 +484,3 @@ bool CDemoActionManager::OverrideView( democmdinfo_t& info, int tick )
 	// override view
 	return false;
 }
-
-
-

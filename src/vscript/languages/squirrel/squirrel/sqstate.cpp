@@ -1,7 +1,14 @@
 /*
 	see copyright notice in squirrel.h
 */
-#include "sqpcheader.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+
+#include <squirrel.h>
+#include "sqobject.h"
+#include "sqstate.h"
 #include "sqopcodes.h"
 #include "sqvm.h"
 #include "sqfuncproto.h"
@@ -14,7 +21,8 @@
 
 #ifdef DEBUG_SQSTRING_LEAKS
 #include <vector>
-#include "tier1/map_ops.h"
+import std;
+import ks.tier1;
 #endif
 
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
@@ -211,7 +219,7 @@ SQSharedState::~SQSharedState()
 		}
 		t=nx;
 	}
-	Assert(_gc_chain==nullptr); //just to prove a theory
+	contract_assert( _gc_chain==nullptr ); //just to prove a theory
 	while(_gc_chain){
 		_gc_chain->_uiRef++;
 		SQ_VALIDATE_REF_COUNT( _gc_chain );
@@ -350,7 +358,7 @@ void SQSharedState::MarkObject(SQObjectPtr &o,SQCollectable **chain)
 
 SQInteger SQSharedState::CollectGarbage(SQVM *vm)
 {
-	Assert( _gc_disableDepth >=0 );
+	contract_assert( _gc_disableDepth >=0 );
 	if ( _gc_disableDepth > 0 )
 	{
 		return 0;
@@ -399,7 +407,7 @@ SQInteger SQSharedState::CollectGarbage(SQVM *vm)
 	}
 	_gc_chain = tchain;
 	SQInteger z = _table(_thread(_root_vm)->_roottable)->CountUsed();
-	Assert(z == x);
+	contract_assert( z == x );
 	return n;
 }
 #endif
@@ -505,7 +513,7 @@ SQBool RefTable::Release(SQObject &obj)
 		}
 	}
 	else {
-		Assert(0);
+		contract_assert( 0 );
 	}
 	return SQFalse;
 }
@@ -521,7 +529,7 @@ void RefTable::Resize(SQUnsignedInteger size)
 	for(SQUnsignedInteger n = 0; n < oldnumofslots; n++) {
 		if(type(t->obj) != OT_NULL) {
 			//add back;
-			Assert(t->refs != 0);
+			contract_assert( t->refs != 0 );
 			RefNode *nn = Add(::HashObj(t->obj)&(_numofslots-1),t->obj);
 			nn->refs = t->refs; 
 			t->obj = _null_;
@@ -529,7 +537,7 @@ void RefTable::Resize(SQUnsignedInteger size)
 		}
 		t++;
 	}
-	Assert(nfound == oldnumofslots);
+	contract_assert( nfound == oldnumofslots );
 	SQ_FREE(oldbucks,(oldnumofslots * sizeof(RefNode *)) + (oldnumofslots * sizeof(RefNode)));
 }
 
@@ -541,7 +549,7 @@ RefTable::RefNode *RefTable::Add(SQHash mainpos,SQObject &obj)
 	_buckets[mainpos] = newnode;
 	_freelist = _freelist->next;
 	newnode->next = t;
-	Assert(newnode->refs == 0);
+	contract_assert( newnode->refs == 0 );
 	_slotused++;
 	return newnode;
 }
@@ -559,7 +567,7 @@ RefTable::RefNode *RefTable::Get(SQObject &obj,SQHash &mainpos,RefNode **prev,bo
 	}
 	if(ref == nullptr && add) {
 		if(_numofslots == _slotused) {
-			Assert(_freelist == 0);
+			contract_assert( _freelist == 0 );
 			Resize(_numofslots*2);
 			mainpos = ::HashObj(obj)&(_numofslots-1);
 		}
@@ -714,5 +722,5 @@ void StringTable::Remove(SQString *bs)
 		prev = s;
 		s = s->_next;
 	}
-	Assert(0);//if this fail something is wrong
+	contract_assert( 0 );//if this fail something is wrong
 }

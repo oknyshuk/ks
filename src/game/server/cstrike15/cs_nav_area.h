@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // nav_area.h
 // Navigation areas
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
-
-#ifndef _CS_NAV_AREA_H_
-#define _CS_NAV_AREA_H_
 
 #include "nav_area.h"
 
@@ -48,14 +42,14 @@ public:
 	virtual void CustomAnalysis( bool isIncremental = false );		// for game-specific analysis
 
 	virtual float GetDangerDecayRate( void ) const;				// return danger decay rate per second
-	virtual float GetEarliestOccupyTime( int teamID ) const OVERRIDE;			// returns the minimum time for someone of the given team to reach this spot from their spawn
+	virtual float GetEarliestOccupyTime( int teamID ) const override;			// returns the minimum time for someone of the given team to reach this spot from their spawn
 
 	// Use nav blockers in coop mode. There is a bug with these functions causing bots to lose
 	// their path at the start of rounds that is undiagnosed at the time of this comment. Coop needs nav blockers
 	// and doesn't (seem) to have any issues with blocked nav so let's leave it on for them
-	virtual void UpdateBlocked( bool force = false, int teamID = TEAM_ANY ) OVERRIDE;
+	virtual void UpdateBlocked( bool force = false, int teamID = TEAM_ANY ) override;
 	// Updates the (un)blocked status of the nav area (throttled)
-	virtual bool IsBlocked( int teamID, bool ignoreNavBlockers = false ) const OVERRIDE;	
+	virtual bool IsBlocked( int teamID, bool ignoreNavBlockers = false ) const override;	
 
 
 	//- approach areas ----------------------------------------------------------------------------------
@@ -100,5 +94,3 @@ inline void CCSNavArea::ClearPlayerCount( void )
 		m_playerCount[ i ] = 0;
 	}
 }
-
-#endif // _CS_NAV_AREA_H_

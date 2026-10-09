@@ -1,16 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
-
-#ifndef AI_MOVEPROBE_H
-#define AI_MOVEPROBE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "ai_component.h"
 #include "ai_navtype.h"
 #include "ai_movetypes.h"
-
+#include "entitylist.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Set of basic tools for probing box movements through space.
@@ -160,5 +155,3 @@ inline bool CAI_MoveProbe::TestGroundMove( const Vector &vecActualStart, const V
 {
 	return TestGroundMove( vecActualStart, vecDesiredEnd, collisionMask, 100, flags, pMoveTrace ); // floor ignore flag will override 100%
 }
-
-#endif // AI_MOVEPROBE_H

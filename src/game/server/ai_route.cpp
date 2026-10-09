@@ -1,10 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "ai_link.h"
@@ -41,7 +67,6 @@ void CAI_Path::SetWaypoints(AI_Waypoint_t* route, bool fSetGoalFromLast)
 		}
 	}
 
-	AssertRouteValid( m_Waypoints.GetFirst() );
 }
 
 //-----------------------------------------------------------------------------
@@ -52,7 +77,6 @@ void CAI_Path::PrependWaypoints( AI_Waypoint_t *pWaypoints )
 	AI_Waypoint_t *pLast = m_Waypoints.GetLast();
 	pLast->flPathDistGoal = -1;
 
-	AssertRouteValid( m_Waypoints.GetFirst() );
 }
 
 //-----------------------------------------------------------------------------
@@ -63,7 +87,6 @@ void CAI_Path::PrependWaypoint( const Vector &newPoint, Navigation_t navType, un
 	AI_Waypoint_t *pLast = m_Waypoints.GetLast();
 	pLast->flPathDistGoal = -1;
 
-	AssertRouteValid( m_Waypoints.GetFirst() );
 }
 
 //-----------------------------------------------------------------------------
@@ -95,7 +118,7 @@ float CAI_Path::GetPathDistanceToGoal( const Vector &startPos )
 
 Activity CAI_Path::SetMovementActivity(Activity activity)
 { 
-	Assert( activity != ACT_RESET && activity != ACT_INVALID );
+	contract_assert( activity != ACT_RESET && activity != ACT_INVALID );
 	//Msg("Set movement to %s\n", ActivityList_NameForIndex(activity) );
 
 	m_sequence = ACT_INVALID;
@@ -285,7 +308,7 @@ const Vector &CAI_Path::CurWaypointPos() const
 { 
 	if ( GetCurWaypoint() )
 		return GetCurWaypoint()->GetPos(); 
-	AssertMsg(0, "Invalid call to CurWaypointPos()");
+	contract_assert( false && "Invalid call to CurWaypointPos()" );
 	return gm_InvalidWaypoint.GetPos();
 }
 
@@ -295,7 +318,7 @@ const Vector &CAI_Path::NextWaypointPos() const
 	if ( GetCurWaypoint() && GetCurWaypoint()->GetNext())
 		return GetCurWaypoint()->GetNext()->GetPos(); 
 	static Vector invalid( 0, 0, 0 );
-	AssertMsg(0, "Invalid call to NextWaypointPos()");
+	contract_assert( false && "Invalid call to NextWaypointPos()" );
 	return gm_InvalidWaypoint.GetPos();
 }
 
@@ -482,7 +505,6 @@ void CAI_Path::Advance( void )
 		GetCurWaypoint()->ModifyFlags( bits_WP_TO_GOAL, true );
 	}
 
-	AssertRouteValid( m_Waypoints.GetFirst() );
 }
 
 
@@ -502,7 +524,7 @@ void CAI_Path::Clear( void )
 	m_bGoalTypeSet		= false;				// Was goal position set
 	m_goalFlags			= false;
 	m_vecTargetOffset	= vec3_origin;
-	m_routeStartTime	= FLT_MAX;
+	m_routeStartTime	= std::numeric_limits<float>::max();
 
 	m_goalTolerance		= 0.0;					// How close do we need to get to the goal
 	// FIXME: split m_goalTolerance into m_buildTolerance and m_moveTolerance, let them be seperatly controllable.
@@ -642,7 +664,7 @@ CAI_Path::CAI_Path()
 	m_sequence			= ACT_INVALID;
 	m_target			= nullptr;
 	m_goalFlags			= 0;
-	m_routeStartTime	= FLT_MAX;
+	m_routeStartTime	= std::numeric_limits<float>::max();
 	m_arrivalActivity	= ACT_INVALID;
 	m_arrivalSequence	= ACT_INVALID;
 
@@ -656,5 +678,3 @@ CAI_Path::~CAI_Path()
 {
 	DeleteAll( GetCurWaypoint() );
 }
-
-

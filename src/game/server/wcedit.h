@@ -1,21 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:		Namespace for functions having to do with WC Edit mode
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef WCEDIT_H
-#define WCEDIT_H
-
-#include "reflect_annotations.h"
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: Namespace for functions having to do with WC Edit mode
+
+import ks.math;
+#include "reflect_annotations.h"
+import std;
+class CBasePlayer;
 
 class CBaseEntity;
 
@@ -34,5 +26,3 @@ namespace NWCEdit
 	void	RememberEntityPosition( CBaseEntity *pEntity );
 	void	UpdateEntityPosition( CBaseEntity *pEntity );
 };
-
-#endif // WCEDIT_H

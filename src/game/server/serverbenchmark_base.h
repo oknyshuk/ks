@@ -1,14 +1,11 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
-
-#ifndef SERVERBENCHMARK_BASE_H
-#define SERVERBENCHMARK_BASE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // The base server code calls into this.
+
+import std;
+class CBasePlayer;
 class IServerBenchmark
 {
 public:
@@ -55,6 +52,3 @@ private:
 	friend class CServerBenchmark;
 	static CServerBenchmarkHook *s_pBenchmarkHook; // There can be only one!!
 };
-
-
-#endif // SERVERBENCHMARK_BASE_H

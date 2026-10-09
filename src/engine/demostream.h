@@ -1,7 +1,6 @@
-//========= Copyright (c), Valve Corporation, All rights reserved. ============//
-
-#ifndef DEMO_STREAM_HDR
-#define DEMO_STREAM_HDR
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 class CDemoFile;
 
@@ -37,6 +36,3 @@ public:
 	virtual void OnDemoStreamStop() {}
 	virtual void OnDemoStreamDelta() {}
 };
-
-
-#endif // DEMO_STREAM_HDR

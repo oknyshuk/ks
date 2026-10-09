@@ -1,11 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef C_PHYSICSPROP_H
-#define C_PHYSICSPROP_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -49,5 +44,3 @@ protected:
 	Vector m_vecClientOrigin;
 	QAngle m_vecClientAngles;
 };
-
-#endif // C_PHYSICSPROP_H 

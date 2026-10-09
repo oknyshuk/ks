@@ -1,13 +1,16 @@
-//=== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ========//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
+#include "c_recipientfilter.h"
 #include "itempents.h"
 #include "effect_dispatch_data.h"
-#include "tier1/keyvalues.h"
 #include "iefx.h"
 #include "IEffects.h"
 #include "toolframework_client.h"

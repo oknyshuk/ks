@@ -1,8 +1,22 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+#include "rocketui/rmlui.h"
 #include "rkhud_chat.h"
 
 #include "rkhud_model.h"
 
-#include "cbase.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "debugoverlay_shared.h"
 #include "cs_gamerules.h"
 #include "hud_macros.h"
 #include "text_message.h"
@@ -10,6 +24,8 @@
 #include "localize/ilocalize.h"
 
 #include <rocketui/rmlui.h>
+import ks.tier1;
+import std;
 
 #include "rkpanel_popup.h"
 
@@ -21,7 +37,9 @@ ConVar rocket_hud_chat_idle_opacity( "rocket_hud_chat_idle_opacity", "0.2", FCVA
 ConVar rocket_hud_chat_active_opacity( "rocket_hud_chat_active_opacity", "0.7", FCVAR_ARCHIVE, "The Opacity of the Chat while typing/new message" );
 ConVar rocket_hud_chat_max_entries( "rocket_hud_chat_max_entries", "1000", FCVAR_ARCHIVE, "Chat History Length" );
 
-CON_COMMAND_F( rocket_hud_chat_clear, "Clears the Chat History", FCVAR_NONE )
+static void rocket_hud_chat_clear( const CCommand &args );
+static ConCommand rocket_hud_chat_clear_command( "rocket_hud_chat_clear", rocket_hud_chat_clear, "Clears the Chat History", FCVAR_NONE );
+static void rocket_hud_chat_clear( const CCommand &args )
 {
     RkHudChat* pChat = GET_HUDELEMENT( RkHudChat );
     if( !pChat )
@@ -176,7 +194,7 @@ static bool __MsgFunc_TextMsg( const ks::net::CCSUsrMsg_TextMsg &msg )
     len = strlen( szString );
     if ( len && szString[len-1] != '\n' && szString[len-1] != '\r' )
     {
-        Q_strncat( szString, "\n", sizeof( szString), 1 );
+        V_strncat( szString, "\n", sizeof( szString), 1 );
     }
 
     switch( dest )

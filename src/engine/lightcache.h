@@ -1,23 +1,19 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef LIGHTCACHE_H
-#define LIGHTCACHE_H
-
-#include "mathlib/vector.h"
+import std;
+import ks.math;
 #include "tier2/tier2.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
-
+#include "iclientrenderable.h"
 
 #define MAXLOCALLIGHTS 4
 
 class IHandleEntity;
 struct dworldlight_t;												   
-FORWARD_DECLARE_HANDLE( LightCacheHandle_t ); 
+struct LightCacheHandle_t__;
+using LightCacheHandle_t = LightCacheHandle_t__ *; 
 
 struct LightingState_t;
 
@@ -187,5 +183,3 @@ void InitDLightGlobals( int nMapVersion );
 
 // This is different for shipped HL2. . . 
 extern float g_flMinLightingValue;
-
-#endif // LIGHTCACHE_H

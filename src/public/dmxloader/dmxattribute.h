@@ -1,22 +1,11 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
-#ifndef DMXATTRIBUTE_H
-#define DMXATTRIBUTE_H
-
-
+import ks.tier1;
 #include "datamodel/dmattributetypes.h"
-#include "tier1/utlvector.h"
-#include "tier1/intern_pool.h"
-#include "tier1/byte_reader.h"
-#include "tier1/byte_writer.h"
-#include "tier1/text_reader.h"
-#include "tier1/text_writer.h"
+import std;
 #include "dmxloader/dmxloader.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations: 
@@ -98,7 +87,7 @@ public:
 	template< class T > void SetValue( const T& value );
 	void SetValue( const char *pString );
 	void SetValue( char *pString );
-	void SetValue( const void *pBuffer, size_t nLen );
+	void SetValue( const void *pBuffer, std::size_t nLen );
 	void SetValue( const CDmxAttribute *pAttribute );
 
 	// Method to set values in an array (just directly operate on the array)
@@ -111,7 +100,7 @@ public:
 
 	// Convert to and from string
 	void SetValueFromString( const char *pValue );
-	const char *GetValueAsString( char *pBuffer, size_t nBufLen ) const;
+	const char *GetValueAsString( char *pBuffer, std::size_t nBufLen ) const;
 
 	// Gets the size of an array, returns 0 if it's not an array type
 	int GetArrayCount() const;
@@ -252,5 +241,3 @@ inline std::vector< T >& CDmxAttribute::GetArrayForEdit( )
 	Construct( (std::vector< T >*)m_pData );
 	return *(std::vector< T > *)m_pData;
 }
-
-#endif // DMXATTRIBUTE_H

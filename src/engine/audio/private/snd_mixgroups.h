@@ -1,12 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef SND_MIXGROUP_MANAGER_H
-#define SND_MIXGROUP_MANAGER_H
+import ks.core;
+#include "snd_channels.h"
 
 enum MXRMixGroupFields_t
 {
@@ -61,7 +58,3 @@ void MXR_UpdateAllDuckerVolumes( void );
 
 int MXR_GetMixLayerIndexFromName( const char *szmixlayername );
 void S_SetMixGroupOfMixLayer( int nMixGroupIndex, int nMixLayerIndex, MXRMixGroupFields_t nMixGroupField, float flValue );
-
-
-
-#endif // SND_MIXGROUP_MANAGER_H

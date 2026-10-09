@@ -1,17 +1,15 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef FRICTION_H
-#define FRICTION_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // NOTE: This is an iterator for the contact points on an object
 // NOTE: This should only be used temporarily.  Holding one of these
 // NOTE: across collision callbacks or calls into simulation will cause errors!
 // NOTE: VPHYSICS may choose to make the data contained within this object invalid 
 // NOTE: any time simulation is run.
+import std;
+import ks.math;
+class IPhysicsObject;
 class IPhysicsFrictionSnapshot
 {
 public:
@@ -42,7 +40,3 @@ public:
 	virtual void NextFrictionData() = 0;
 	virtual float GetFrictionCoefficient() = 0;
 };
-
-
-
-#endif // FRICTION_H

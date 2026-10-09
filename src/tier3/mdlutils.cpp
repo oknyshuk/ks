@@ -1,22 +1,17 @@
-//===== Copyright (c) 2005-2013, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Utility methods for mdl files
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2005-2013 Valve Corporation
 
+// Purpose: Utility methods for mdl files
+
+import ks.core;
 #include "tier3/mdlutils.h"
-#include "tier0/dbg.h"
-#include "tier3/tier3.h"
 #include "studio.h"
 #include "istudiorender.h"
 #include "bone_setup.h"
 #include "bone_accessor.h"
 #include "materialsystem/imaterialvar.h"
-#include "vcollide_parse.h"
-#include "renderparm.h"
 #include "tier2/renderutils.h"
 #include "mathlib/camera.h"
-
 
 //-----------------------------------------------------------------------------
 // Returns the bounding box for the model
@@ -30,8 +25,8 @@ void GetMDLBoundingBox( Vector *pMins, Vector *pMaxs, MDLHandle_t h, int nSequen
 		return;
 	}
 
-	pMins->Init( FLT_MAX, FLT_MAX );
-	pMaxs->Init( -FLT_MAX, -FLT_MAX );
+	pMins->Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+	pMaxs->Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 
 	studiohdr_t *pStudioHdr = g_pMDLCache->GetStudioHdr( h );
 	if ( !VectorCompare( vec3_origin, pStudioHdr->view_bbmin ) || !VectorCompare( vec3_origin, pStudioHdr->view_bbmax ))
@@ -145,7 +140,7 @@ CMDL::CMDL()
 	m_flTime = 0.0f;
 	m_vecViewTarget.Init( 0, 0, 0 );
 	m_bWorldSpaceViewTarget = false;
-	memset( m_pFlexControls, 0, sizeof(m_pFlexControls) );
+	std::memset( m_pFlexControls, 0, sizeof(m_pFlexControls) );
 	m_pProxyData = nullptr;
 	m_bUseSequencePlaybackFPS = false;
 	m_flTimeBasisAdjustment = 0.0f;
@@ -494,7 +489,7 @@ void CMDL::SetUpBones( const matrix3x4_t& rootToWorld, int nMaxBoneCount, matrix
 
 		// WARNING: converting from matrix3x4_t to matrix3x4a_t is going to asplode on a console.
 		// Calculate helper bones!
-		AssertAligned( pBoneToWorld );
+		contract_assert( ( (uintp)( pBoneToWorld ) & 15 ) == 0 );
 		CBoneAccessor tempCBoneAccessor( ( matrix3x4a_t * )pBoneToWorld );
 		if ( CalcProceduralBone( &studioHdr, i,  tempCBoneAccessor ) )
 		{
@@ -840,6 +835,7 @@ void CMergedMDL::SetupBonesForAttachmentQueries( void )
 //-----------------------------------------------------------------------------
 void CMergedMDL::Draw()
 {
+	ks::ScratchArena<> scratch;
 	if ( !g_pMDLCache )
 		return;
 
@@ -889,8 +885,8 @@ void CMergedMDL::Draw()
 			// Make a copy of bone to world transforms in a separate stack buffer and repoint root transforms
 			// for future bonemerge into that buffer
 			if ( !pStackCopyOfRootMergeHdrModelToWorld )
-				pStackCopyOfRootMergeHdrModelToWorld = ( matrix3x4_t * ) stackalloc( sizeof( matMergeBoneToWorld ) );
-			Q_memcpy( pStackCopyOfRootMergeHdrModelToWorld, matMergeBoneToWorld, sizeof( matMergeBoneToWorld ) );
+				pStackCopyOfRootMergeHdrModelToWorld = ( matrix3x4_t * ) scratch.AllocBytes( sizeof( matMergeBoneToWorld ) );
+			V_memcpy( pStackCopyOfRootMergeHdrModelToWorld, matMergeBoneToWorld, sizeof( matMergeBoneToWorld ) );
 			pFollowBoneToWorld = pStackCopyOfRootMergeHdrModelToWorld;
 		}
 		else
@@ -926,7 +922,7 @@ void CMergedMDL::SetSequence( int nSequence, bool bUseSequencePlaybackFPS )
 //-----------------------------------------------------------------------------
 void CMergedMDL::AddSequenceFollowLoop( int nSequence, bool bUseSequencePlaybackFPS )
 {
-	Assert( bUseSequencePlaybackFPS == m_RootMDL.m_MDL.m_bUseSequencePlaybackFPS );
+	contract_assert( bUseSequencePlaybackFPS == m_RootMDL.m_MDL.m_bUseSequencePlaybackFPS );
 	m_RootMDL.m_MDL.m_arrSequenceFollowLoop.push_back( nSequence );
 }
 

@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef ISERVERVEHICLE_H
-#define ISERVERVEHICLE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "IVehicle.h"
 #include "vphysics/vehicles.h"
@@ -20,7 +13,7 @@ enum VehicleSeatQuery_e;
 
 // This is used by the player to access vehicles. It's an interface so the
 // vehicles are not restricted in what they can derive from.
-abstract_class IServerVehicle : public IVehicle
+class IServerVehicle : public IVehicle
 {
 public:
 	// Get the entity associated with the vehicle.
@@ -106,7 +99,7 @@ public:
 
 // This is an interface to derive from if your class contains an IServerVehicle 
 // handler (i.e. something derived CBaseServerVehicle.
-abstract_class IDrivableVehicle
+class IDrivableVehicle
 {
 public:
 	virtual CBaseEntity		*GetDriver( void ) = 0;
@@ -132,5 +125,3 @@ public:
 
 	virtual bool			PassengerShouldReceiveDamage( CTakeDamageInfo &info ) = 0;
 };
-
-#endif // IVEHICLE_H

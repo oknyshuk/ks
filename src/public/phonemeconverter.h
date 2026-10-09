@@ -1,12 +1,6 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef PHONEMECONVERTER_H
-#define PHONEMECONVERTER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 const char *ConvertPhoneme( int code );
 int TextToPhoneme( const char *text );
@@ -21,5 +15,3 @@ const char *DescForPhonemeByIndex( int index );
 bool IsStandardPhoneme( int index );
 unsigned char CodeToByteCode( int code );
 int ByteCodeToCode( unsigned char byteCode );
-
-#endif // PHONEMECONVERTER_H

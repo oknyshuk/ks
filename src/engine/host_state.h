@@ -1,14 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef HOST_STATE_H
-#define HOST_STATE_H
-
-#include "mathlib/vector.h"
+import std;
+import ks.math;
 
 void		HostState_Init();
 void		HostState_RunGameInit();
@@ -30,5 +25,3 @@ bool		HostState_GameHasShutDownAndFlushedMemory();
 void		HostState_Pre_LoadMapIntoMemory();
 void		HostState_Post_FlushMapFromMemory();
 const char	*HostState_GetNewLevel( void );
-
-#endif // HOST_STATE_H

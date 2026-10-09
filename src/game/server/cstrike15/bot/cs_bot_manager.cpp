@@ -1,22 +1,19 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "igameevents.h"
+#include "ndebugoverlay.h"
 
 #include "cs_bot.h"
 #include "nav_area.h"
 #include "cs_gamerules.h"
 #include "shared_util.h"
-#include "keyvalues.h"
-#include "tier0/icommandline.h"
-#include "fmtstr.h"
 
 
 CBotManager *TheBots = nullptr;
@@ -591,14 +588,16 @@ void BotArgumentsFromArgv( const CCommand &args, const char **name, CSWeaponType
 
 		if ( !found )
 		{
-			Q_strncpy( s_name, token, sizeof( s_name ) );
+			V_strncpy( s_name, token, sizeof( s_name ) );
 		}
 	}
 }
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_place, "bot_place - Places a bot from the map at where the local player is pointing.", FCVAR_GAMEDLL | FCVAR_CHEAT )
+static void bot_place( const CCommand &args );
+static ConCommand bot_place_command( "bot_place", bot_place, "bot_place - Places a bot from the map at where the local player is pointing.", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static void bot_place( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -620,7 +619,9 @@ CON_COMMAND_F( bot_place, "bot_place - Places a bot from the map at where the lo
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_add, "bot_add <t|ct> <type> <difficulty> <name> - Adds a bot matching the given criteria.", FCVAR_GAMEDLL )
+static void bot_add( const CCommand &args );
+static ConCommand bot_add_command( "bot_add", bot_add, "bot_add <t|ct> <type> <difficulty> <name> - Adds a bot matching the given criteria.", FCVAR_GAMEDLL );
+static void bot_add( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -635,7 +636,9 @@ CON_COMMAND_F( bot_add, "bot_add <t|ct> <type> <difficulty> <name> - Adds a bot 
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_add_t, "bot_add_t <type> <difficulty> <name> - Adds a terrorist bot matching the given criteria.", FCVAR_GAMEDLL )
+static void bot_add_t( const CCommand &args );
+static ConCommand bot_add_t_command( "bot_add_t", bot_add_t, "bot_add_t <type> <difficulty> <name> - Adds a terrorist bot matching the given criteria.", FCVAR_GAMEDLL );
+static void bot_add_t( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -649,7 +652,9 @@ CON_COMMAND_F( bot_add_t, "bot_add_t <type> <difficulty> <name> - Adds a terrori
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_add_ct, "bot_add_ct <type> <difficulty> <name> - Adds a Counter-Terrorist bot matching the given criteria.", FCVAR_GAMEDLL )
+static void bot_add_ct( const CCommand &args );
+static ConCommand bot_add_ct_command( "bot_add_ct", bot_add_ct, "bot_add_ct <type> <difficulty> <name> - Adds a Counter-Terrorist bot matching the given criteria.", FCVAR_GAMEDLL );
+static void bot_add_ct( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -755,7 +760,9 @@ private:
 };
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_kill, "bot_kill <all> <t|ct> <type> <difficulty> <name> - Kills a specific bot, or all bots, matching the given criteria.", FCVAR_GAMEDLL | FCVAR_CHEAT )
+static void bot_kill( const CCommand &args );
+static ConCommand bot_kill_command( "bot_kill", bot_kill, "bot_kill <all> <t|ct> <type> <difficulty> <name> - Kills a specific bot, or all bots, matching the given criteria.", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static void bot_kill( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -792,7 +799,9 @@ CON_COMMAND_F( bot_kill, "bot_kill <all> <t|ct> <type> <difficulty> <name> - Kil
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_kick, "bot_kick <all> <t|ct> <type> <difficulty> <name> - Kicks a specific bot, or all bots, matching the given criteria.", FCVAR_GAMEDLL )
+static void bot_kick( const CCommand &args );
+static ConCommand bot_kick_command( "bot_kick", bot_kick, "bot_kick <all> <t|ct> <type> <difficulty> <name> - Kicks a specific bot, or all bots, matching the given criteria.", FCVAR_GAMEDLL );
+static void bot_kick( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -839,7 +848,9 @@ CON_COMMAND_F( bot_kick, "bot_kick <all> <t|ct> <type> <difficulty> <name> - Kic
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_knives_only, "Restricts the bots to only using knives", FCVAR_GAMEDLL )
+static void bot_knives_only( const CCommand &args );
+static ConCommand bot_knives_only_command( "bot_knives_only", bot_knives_only, "Restricts the bots to only using knives", FCVAR_GAMEDLL );
+static void bot_knives_only( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -851,14 +862,13 @@ CON_COMMAND_F( bot_knives_only, "Restricts the bots to only using knives", FCVAR
 	cv_bot_allow_machine_guns.SetValue( 0 );
 	cv_bot_allow_grenades.SetValue( 0 );
 	cv_bot_allow_snipers.SetValue( 0 );
-#ifdef CS_SHIELD_ENABLED
-	cv_bot_allow_shield.SetValue( 0 );
-#endif // CS_SHIELD_ENABLED
 }
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_pistols_only, "Restricts the bots to only using pistols", FCVAR_GAMEDLL )
+static void bot_pistols_only( const CCommand &args );
+static ConCommand bot_pistols_only_command( "bot_pistols_only", bot_pistols_only, "Restricts the bots to only using pistols", FCVAR_GAMEDLL );
+static void bot_pistols_only( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -870,14 +880,13 @@ CON_COMMAND_F( bot_pistols_only, "Restricts the bots to only using pistols", FCV
 	cv_bot_allow_machine_guns.SetValue( 0 );
 	cv_bot_allow_grenades.SetValue( 0 );
 	cv_bot_allow_snipers.SetValue( 0 );
-#ifdef CS_SHIELD_ENABLED
-	cv_bot_allow_shield.SetValue( 0 );
-#endif // CS_SHIELD_ENABLED
 }
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_snipers_only, "Restricts the bots to only using sniper rifles", FCVAR_GAMEDLL )
+static void bot_snipers_only( const CCommand &args );
+static ConCommand bot_snipers_only_command( "bot_snipers_only", bot_snipers_only, "Restricts the bots to only using sniper rifles", FCVAR_GAMEDLL );
+static void bot_snipers_only( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -889,14 +898,13 @@ CON_COMMAND_F( bot_snipers_only, "Restricts the bots to only using sniper rifles
 	cv_bot_allow_machine_guns.SetValue( 0 );
 	cv_bot_allow_grenades.SetValue( 0 );
 	cv_bot_allow_snipers.SetValue( 1 );
-#ifdef CS_SHIELD_ENABLED
-	cv_bot_allow_shield.SetValue( 0 );
-#endif // CS_SHIELD_ENABLED
 }
 
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_all_weapons, "Allows the bots to use all weapons", FCVAR_GAMEDLL )
+static void bot_all_weapons( const CCommand &args );
+static ConCommand bot_all_weapons_command( "bot_all_weapons", bot_all_weapons, "Allows the bots to use all weapons", FCVAR_GAMEDLL );
+static void bot_all_weapons( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -908,9 +916,6 @@ CON_COMMAND_F( bot_all_weapons, "Allows the bots to use all weapons", FCVAR_GAME
 	cv_bot_allow_machine_guns.SetValue( 1 );
 	cv_bot_allow_grenades.SetValue( 1 );
 	cv_bot_allow_snipers.SetValue( 1 );
-#ifdef CS_SHIELD_ENABLED
-	cv_bot_allow_shield.SetValue( 1 );
-#endif // CS_SHIELD_ENABLED
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -941,7 +946,9 @@ static void BotGotoArea( CNavArea *pArea )
 }
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_goto_mark, "Sends a bot to the marked nav area (useful for testing navigation meshes)", FCVAR_GAMEDLL | FCVAR_CHEAT )
+static void bot_goto_mark( const CCommand &args );
+static ConCommand bot_goto_mark_command( "bot_goto_mark", bot_goto_mark, "Sends a bot to the marked nav area (useful for testing navigation meshes)", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static void bot_goto_mark( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -951,7 +958,9 @@ CON_COMMAND_F( bot_goto_mark, "Sends a bot to the marked nav area (useful for te
 }
 
 //--------------------------------------------------------------------------------------------------------------
-CON_COMMAND_F( bot_goto_selected, "Sends a bot to the selected nav area (useful for testing navigation meshes)", FCVAR_GAMEDLL | FCVAR_CHEAT )
+static void bot_goto_selected( const CCommand &args );
+static ConCommand bot_goto_selected_command( "bot_goto_selected", bot_goto_selected, "Sends a bot to the selected nav area (useful for testing navigation meshes)", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static void bot_goto_selected( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1069,12 +1078,6 @@ bool CCSBotManager::BotAddCommand( int team, bool isFromConsole, const char *pro
 				if ( CSGameRules()->IsPlayingCooperativeGametype() )
 				{
 					team = UTIL_HumansOnTeam( TEAM_CT ) > 0 ? TEAM_TERRORIST : TEAM_CT;
-#if defined ( DBGFLAG_ASSERT )
-					if ( UTIL_HumansOnTeam( team ) > 0 )
-					{
-						Assert( ( UTIL_HumansOnTeam( TEAM_TERRORIST ) ^ UTIL_HumansOnTeam( TEAM_CT ) ) ); // No humans on opposing teams in coop
-					}
-#endif
 				}
 				else
 				{
@@ -1827,7 +1830,7 @@ CNavArea *CCSBotManager::GetRandomAreaInZone( const Zone *zone ) const
 	int areaCount = zone->m_areaCount;
 	if( areaCount == 0 )
 	{
-		Assert( false && "CCSBotManager::GetRandomAreaInZone: No areas for this zone" );
+		contract_assert( false && "CCSBotManager::GetRandomAreaInZone: No areas for this zone" );
 		return nullptr;
 	}
 
@@ -1847,7 +1850,7 @@ CNavArea *CCSBotManager::GetRandomAreaInZone( const Zone *zone ) const
 
 	if( totalWeight == 0 )
 	{
-		Assert( false && "CCSBotManager::GetRandomAreaInZone: No real areas for this zone" );
+		contract_assert( false && "CCSBotManager::GetRandomAreaInZone: No real areas for this zone" );
 		return nullptr;
 	}
 
@@ -1887,9 +1890,6 @@ void CCSBotManager::OnServerShutdown( IGameEvent *event )
 			"bot_join_team",
 			"bot_defer_to_human_items",
 			"bot_defer_to_human_goals",
-#ifdef CS_SHIELD_ENABLED
-			"bot_allow_shield",
-#endif // CS_SHIELD_ENABLED
 			"bot_join_after_player",
 			"bot_allow_rogues",
 			"bot_allow_pistols",
@@ -1899,9 +1899,7 @@ void CCSBotManager::OnServerShutdown( IGameEvent *event )
 			"bot_allow_rifles",
 			"bot_allow_snipers",
 			"bot_allow_grenades"
-#if CS_CONTROLLABLE_BOTS_ENABLED
 			"bot_controllable",
-#endif	
 		};
 		
 		KeyValues *data = new KeyValues( "ServerConfig" );
@@ -2215,7 +2213,7 @@ void CCSBotManager::OnBreakBreakable( IGameEvent *event )
 {
 	CBaseEntity *pEntity = UTIL_EntityByIndex( event->GetInt( "entindex" ) );
 
-	AssertMsg( pEntity, "Bad Entity Index received" );
+	contract_assert( pEntity && "Bad Entity Index received" );
 
 	if ( pEntity )
 	{
@@ -2233,7 +2231,7 @@ void CCSBotManager::OnBreakProp( IGameEvent *event )
 {
 	CBaseEntity *pEntity = UTIL_EntityByIndex( event->GetInt( "entindex" ) );
 
-	AssertMsg( pEntity, "Bad Entity Index received" );
+	contract_assert( pEntity && "Bad Entity Index received" );
 
 	if ( pEntity )
 	{
@@ -2667,7 +2665,9 @@ static bool CheckAreaAgainstAllZoneAreas(CNavArea *queryArea)
 	return true;
 }
 
-CON_COMMAND_F( nav_check_connectivity, "Checks to be sure every (or just the marked) nav area can get to every goal area for the map (hostages or bomb site).", FCVAR_CHEAT )
+static void nav_check_connectivity( const CCommand &args );
+static ConCommand nav_check_connectivity_command( "nav_check_connectivity", nav_check_connectivity, "Checks to be sure every (or just the marked) nav area can get to every goal area for the map (hostages or bomb site).", FCVAR_CHEAT );
+static void nav_check_connectivity( const CCommand &args )
 {
 	//Nav command in here since very CS specific.
 
@@ -2697,7 +2697,3 @@ CON_COMMAND_F( nav_check_connectivity, "Checks to be sure every (or just the mar
 		Msg( "nav_check_connectivity took %2.2f ms\n", time );
 	}
 }
-
-
-
-

@@ -1,11 +1,39 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "entitylist.h"
+#include "physics.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "entitylist.h"
@@ -72,7 +100,7 @@ IMotionEvent::simresult_e CConstantForceController::Simulate( IPhysicsMotionCont
 // Purpose: This is a general entity that has a force/motion controller that 
 //			simply integrates a constant linear/angular acceleration
 //-----------------------------------------------------------------------------
-abstract_class CPhysForce : public CPointEntity
+class CPhysForce : public CPointEntity
 {
 public:
 	DECLARE_CLASS( CPhysForce, CPointEntity );
@@ -494,7 +522,7 @@ IMotionEvent::simresult_e CMotorController::Simulate( IPhysicsMotionController *
 
 	// BUGBUG: This heuristic is a little flaky
 	// UNDONE: Make a better heuristic for speed control
-	if ( fabsf(m_lastAcceleration) > 0 )
+	if ( std::fabsf(m_lastAcceleration) > 0 )
 	{
 		float deltaSpeed = currentSpeed - m_lastSpeed;
 		// make sure they are going the same way
@@ -542,11 +570,11 @@ IMotionEvent::simresult_e CMotorController::Simulate( IPhysicsMotionController *
 	return SIM_LOCAL_FORCE;
 }
 
-#define SF_MOTOR_START_ON		0x0001				// starts on by default
-#define SF_MOTOR_NOCOLLIDE		0x0002				// don't collide with world geometry
-#define SF_MOTOR_HINGE			0x0004				// motor also acts as a hinge constraining the object to this axis
+constexpr auto SF_MOTOR_START_ON = 0x0001; // starts on by default
+constexpr auto SF_MOTOR_NOCOLLIDE = 0x0002; // don't collide with world geometry
+constexpr auto SF_MOTOR_HINGE = 0x0004; // motor also acts as a hinge constraining the object to this axis
 // NOTE: THIS DOESN'T WORK YET
-#define SF_MOTOR_LOCAL			0x0008				// Maintain local relationship with the attached object
+constexpr auto SF_MOTOR_LOCAL = 0x0008; // Maintain local relationship with the attached object
 
 class CPhysMotor : public CLogicalEntity
 {
@@ -591,11 +619,11 @@ void CPhysMotor::CalculateAcceleration()
 {
 	if ( m_spinUp )
 	{
-		m_angularAcceleration = fabsf(m_flSpeed / m_spinUp);
+		m_angularAcceleration = std::fabsf(m_flSpeed / m_spinUp);
 	}
 	else
 	{
-		m_angularAcceleration = fabsf(m_flSpeed);
+		m_angularAcceleration = std::fabsf(m_flSpeed);
 	}
 }
 
@@ -777,7 +805,7 @@ void CPhysMotor::Think( void )
 {
 	// angular acceleration is always positive - it should be treated as a magnitude - the controller 
 	// will apply it in the proper direction
-	Assert(m_angularAcceleration>=0);
+	contract_assert( m_angularAcceleration>=0 );
 
 	m_motor.m_speed = UTIL_Approach( m_flSpeed, m_motor.m_speed, m_angularAcceleration*(gpGlobals->curtime-m_lastTime) );
 	m_lastTime = gpGlobals->curtime;
@@ -833,7 +861,7 @@ private:
 	bool						m_bDampAllRotation;
 };
 
-#define SF_KEEPUPRIGHT_START_INACTIVE		0x0001
+constexpr auto SF_KEEPUPRIGHT_START_INACTIVE = 0x0001;
 
 LINK_ENTITY_TO_CLASS( phys_keepupright, CKeepUpright );
 
@@ -977,7 +1005,7 @@ AngularImpulse ComputeRotSpeedToAlignAxes( const Vector &testAxis, const Vector 
 	// atan2() is well defined, so do a Dot & Cross instead of asin(Cross)
 	float cosine = DotProduct( testAxis, alignAxis );
 	float sine = VectorNormalize( rotationAxis );
-	float angle = atan2( sine, cosine );
+	float angle = std::atan2( sine, cosine );
 
 	angle = RAD2DEG(angle);
 	AngularImpulse angular = rotationAxis * scale * angle;
@@ -992,4 +1020,3 @@ AngularImpulse ComputeRotSpeedToAlignAxes( const Vector &testAxis, const Vector 
 
 	return angular * len;
 }
-

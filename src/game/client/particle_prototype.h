@@ -1,15 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // This defines things that allow particle effects to hook into the particle app.
-#ifndef PARTICLE_PROTOTYPE_H
-#define PARTICLE_PROTOTYPE_H
-
 
 class CParticleMgr;
 class RecvTable;
@@ -50,21 +43,3 @@ public:
 	const char				*m_pEffectName;
 	PrototypeEffectLink		*m_pNext;
 };
-
-
-#ifdef PARTICLEPROTOTYPE_APP
-	extern PrototypeEffectLink *g_pPrototypeEffects;	// The list of prototype effects..
-
-
-	// Expose your effect with this macro.
-	#define EXPOSE_PROTOTYPE_EFFECT(effectName, className)								\
-		static IPrototypeAppEffect* ___Create##effectName##() {return new className;}	\
-		static PrototypeEffectLink ___effectlink_##effectName##(___Create##effectName##, #effectName);
-#else
-	#define EXPOSE_PROTOTYPE_EFFECT(effectName, className)
-#endif
-
-
-#endif
-
-

@@ -1,23 +1,12 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef FILETRACKER_H
-#define FILETRACKER_H
-
-
+import ks.tier1;
 #include "ifilelist.h"
-#include "tier1/map_ops.h"
-#include "tier1/slot_pool.h"
-#include <deque>
-#include <set>
-#include <memory>
-#include <atomic>
-#include <mutex>
-#include <vector>
-
+import std;
+#include "filesystem.h"
+#include "vpklib/packedstore.h"
 
 class CBaseFileSystem;
 class CFileHandle;
@@ -27,22 +16,18 @@ enum EFileFlags
 {
 	k_eFileFlags_None					= 0x0000,
 
-	k_eFileFlagsLoadedFromSteam			= 0x0001,
-	
 	k_eFileFlagsHasCRC					= 0x0002,	// m_CRC represents the most recently-loaded version of the file. This might be 
 													// unset but m_CRC (and k_eFileFlagsGotCRCOnce) could be set, signifying that
 													// the file has been opened since last time we calculated the CRC but we didn't
 													// calculate a CRC for that file version.
-	
-	k_eFileFlagsForcedLoadFromSteam		= 0x0004,	// Set if k_eFileFlagsLoadedFromSteam is set AND we forced Steam to not check the disk for this file.
 	
 	k_eFileFlagsGotCRCOnce				= 0x0008,	// This is set if we EVER had k_eFileFlagsHasCRC set.. m_CRC will still be set in that case,
 													// but it'll be the last CRC we calculated and not necessarily 
 	
 	k_eFileFlagsFailedToLoadLastTime	= 0x0010	// This is used if we had a record of the file and the game tried to open it, but
 													// it couldn't be opened. This will happen if the file was loaded from disk, then
-													// sv_pure is turned on and the file is forced to come from Steam, but there is no
-													// Steam version. In that case, the game should be told to retry the file
+													// sv_pure is turned on and the file is forced to not come from disk, but there is no
+													// other version. In that case, the game should be told to retry the file
 													// next time sv_pure is changed because if sv_pure goes back to 0 it -would- load
 													// the file legitimately.
 };
@@ -89,7 +74,7 @@ public:
 
 //-----------------------------------------------------------------------------
 // This tracks the files that have been opened by the filesystem.
-// It remembers if they were loaded from Steam or off-disk.
+// It remembers that they were loaded off-disk.
 // If the filesystem is tracking CRCs, then it will calculate a CRC
 // for each file that came off disk.
 //
@@ -129,7 +114,6 @@ public:
 
 	// Note that we just opened this file and calculate a CRC for it.
 	void	NoteFileLoadedFromDisk( const char *pFilename, const char *pPathID, FileHandle_t fp );
-	void	NoteFileLoadedFromSteam( const char *pFilename, const char *pPathID, bool bForcedLoadFromSteam );
 	void	NoteFileFailedToLoad( const char *pFilename, const char *pPathID );
 	
 	// Get a file info from a specific path ID.
@@ -213,9 +197,9 @@ struct TrackedFile_t
 
 		CRC32_t crcFilename;
 		CRC32_Init( &crcFilename );
-		CRC32_ProcessBuffer( &crcFilename, pFilename, Q_strlen( pFilename ) );
+		CRC32_ProcessBuffer( &crcFilename, pFilename, V_strlen( pFilename ) );
 		if ( pPathID )
-			CRC32_ProcessBuffer( &crcFilename, pPathID, Q_strlen( pPathID ) );
+			CRC32_ProcessBuffer( &crcFilename, pPathID, V_strlen( pPathID ) );
 		CRC32_Final( &crcFilename );
 		m_crcIdentifier = crcFilename;
 	}
@@ -229,19 +213,19 @@ struct TrackedFile_t
 			return true;
 		if ( lhs.m_nFileFraction > rhs.m_nFileFraction )
 			return false;
-		int nCmp = Q_strcmp( lhs.m_filename.c_str(), rhs.m_filename.c_str() );
+		int nCmp = V_strcmp( lhs.m_filename.c_str(), rhs.m_filename.c_str() );
 		if ( nCmp < 0 )
 			return true;
 		if ( nCmp > 0 )
 			return false;
-		nCmp = Q_strcmp( lhs.m_path.c_str(), rhs.m_path.c_str() );
+		nCmp = V_strcmp( lhs.m_path.c_str(), rhs.m_path.c_str() );
 		if ( nCmp < 0 )
 			return true;
 		return false;
 	}
 	bool GetCRCValues( FileHash_t *pFileHash );
 
-	void ProcessFileRead( void *dest, size_t nBytesRead );
+	void ProcessFileRead( void *dest, std::size_t nBytesRead );
 
 
 };
@@ -337,9 +321,7 @@ public:
 };
 
 class CFileTracker2
-#ifdef SUPPORT_VPK
 	: IThreadedFileMD5Processor
-#endif
 {
 public:
 	CFileTracker2( CBaseFileSystem *pFileSystem );
@@ -351,7 +333,6 @@ public:
 	int	GetUnverifiedFileHashes( CUnverifiedFileHash *pFiles, int nMaxFiles );
 	EFileCRCStatus CheckCachedFileHash( const char *pPathID, const char *pRelativeFilename, int nFileFraction, FileHash_t *pFileHash );
 
-#ifdef SUPPORT_VPK
 	unsigned ThreadedProcessMD5Requests();
 	virtual int SubmitThreadedMD5Request( uint8 *pubBuffer, int cubBuffer, int PackFileID, int nPackFileNumber, int nPackFileFraction );
 	virtual bool			BlockUntilMD5RequestComplete( int iRequest, MD5Value_t *pMd5ValueOut );
@@ -361,12 +342,11 @@ public:
 	void NotePackFileAccess( const char *pFilename, const char *pPathID, CPackedStoreFileHandle &VPKHandle );
 	void NotePackFileRead( CPackedStoreFileHandle &VPKHandle, void *pBuffer, int nReadLength );
 	void AddFileHashForVPKFile( int nPackFileNumber, int nFileFraction, int cbFileLen, MD5Value_t &md5, CPackedStoreFileHandle &fhandle );
-#endif
 
-	void NoteFileLoadedFromDisk( const char *pFilename, const char *pPathID, FILE *fp, int64 nLength );
-	void RecordFileSeek( FILE *fp, int64 pos, int seekType );
-	void RecordFileClose( FILE *fp );
-	void RecordFileRead( void *dest, size_t nBytesRead, size_t nBytesRequested, FILE *fp );
+	void NoteFileLoadedFromDisk( const char *pFilename, const char *pPathID, std::FILE *fp, int64 nLength );
+	void RecordFileSeek( std::FILE *fp, int64 pos, int seekType );
+	void RecordFileClose( std::FILE *fp );
+	void RecordFileRead( void *dest, std::size_t nBytesRead, std::size_t nBytesRequested, std::FILE *fp );
 	int ListOpenedFiles( bool bListAll, const char *pchFilenameFind, bool bListRecentFiles );
 
 private:
@@ -402,7 +382,7 @@ private:
 	// Index + 1 is the VPK m_PackFileID that goes over the network; files are never removed.
 	std::deque< TrackedFile_t > m_AllOpenedFiles;
 	std::set< int, OpenedFileLess > m_OpenedFilesByName{ OpenedFileLess{ &m_AllOpenedFiles } };
-	std::map< FILE *, int > m_mapAllOpenFiles; // points into m_AllOpenedFiles
+	std::map< std::FILE *, int > m_mapAllOpenFiles; // points into m_AllOpenedFiles
 
 	std::set< FileInVPK_t, FileInVPK_t::Less > m_treeFileInVPK;
 
@@ -426,6 +406,3 @@ private:
 	// just stats
 	int m_cThreadBlocks;
 };
-
-
-#endif // FILETRACKER_H

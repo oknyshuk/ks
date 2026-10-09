@@ -1,21 +1,48 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ====
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Implements an entity that measures sound volume at a point in a map.
-//
 //			This entity listens as though it is an NPC, meaning it will only
 //			hear sounds that were emitted using the CSound::InsertSound function.
-//
 //			It does not hear danger sounds since they are not technically sounds.
-//
-//=============================================================================
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
-#include "mathlib/mathlib.h"
 #include "soundent.h"
 #include "envmicrophone.h"
 #include "soundflags.h"
@@ -149,7 +176,7 @@ void CEnvMicrophone::ActivateSpeaker( void )
 			if ( !iDSPPreset )
 			{
 				// Reset it to the default
-				iDSPPreset = atoi( dsp_speaker.GetDefault() );
+				iDSPPreset = std::atoi( dsp_speaker.GetDefault() );
 			}
 			DevMsg( 2, "Microphone %s set dsp_speaker to %d.\n", STRING(GetEntityName()), iDSPPreset);
 			dsp_speaker.SetValue( m_iSpeakerDSPPreset );
@@ -307,31 +334,12 @@ bool CEnvMicrophone::CanHearSound( int entindex, soundlevel_t soundlevel, float 
 	// Over our max range?
 	if ( m_flMaxRange && flDistance > m_flMaxRange )
 	{
-#ifdef DEBUG_MICROPHONE
-		Msg("OUT OF RANGE.\n" );
-#endif
 		return false;
 	}
-
-#ifdef DEBUG_MICROPHONE
-	Msg(" flVolume %f ", flVolume );
-#endif
 
 	// Reduce the volume by the amount it fell to get to the microphone
 	float gain = enginesound->GetDistGainFromSoundLevel( soundlevel, flDistance );
 	flVolume *= gain;
-
-#ifdef DEBUG_MICROPHONE
-	Msg("dist %2f, soundlevel %d: gain %f", flDistance, (int)soundlevel, gain );
-	if ( !flVolume )
-	{
-		Msg(" : REJECTED\n" );
-	}
-	else
-	{
-		Msg(" : SENT\n" );
-	}
-#endif
 
 	return ( flVolume > 0 );
 }
@@ -435,10 +443,6 @@ MicrophoneResult_t CEnvMicrophone::SoundPlayed( int entindex, const char *soundn
 	if ( iFlags & SND_SPEAKER )
 		return MicrophoneResult_Ok;
 
-#ifdef DEBUG_MICROPHONE
-	Msg("%s heard %s: ", STRING(GetEntityName()), soundname );
-#endif
-
 	if ( !CanHearSound( entindex, soundlevel, flVolume, pOrigin ) )
 		return MicrophoneResult_Ok;
 
@@ -483,7 +487,7 @@ MicrophoneResult_t CEnvMicrophone::SoundPlayed( int entindex, const char *soundn
 
 	CBaseEntity::EmitSound( filter, m_hSpeaker->entindex(), ep );
 
-	Q_strncpy( m_szLastSound, soundname, sizeof(m_szLastSound) );
+	V_strncpy( m_szLastSound, soundname, sizeof(m_szLastSound) );
 	m_OnRoutedSound.FireOutput( this, this, 0 );
 
 	m_bAvoidFeedback = false;

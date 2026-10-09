@@ -1,9 +1,23 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-//
-//===============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
- #include "audio_pch.h"
+import std;
+
+
+import ks.tier1;
+
+#include "sound.h"
+
+#include "snd_device.h"
+#include "sound_private.h"
+#include "snd_channels.h"
+#include "snd_audio_source.h"
+#include "snd_dev_xaudio.h"
+#include "snd_wave_source.h"
+#include "snd_wave_data.h"
+#include "snd_wave_mixer_private.h"
+
+#include "audio/private/posix_stubs.h"
 #include "tier2/interval.h"
 
 #include "sos_op.h"
@@ -11,10 +25,13 @@
 extern ConVar snd_sos_show_operator_init;
 extern ConVar snd_sos_show_operator_shutdown;
 
-BEGIN_DEFINE_LOGGING_CHANNEL( LOG_SND_OPERATORS, "SndOperators", LCF_CONSOLE_ONLY, LS_MESSAGE );
-ADD_LOGGING_CHANNEL_TAG( "SndOperators" );
-ADD_LOGGING_CHANNEL_TAG( "SND" );
-END_DEFINE_LOGGING_CHANNEL();
+static void Register_LOG_SND_OPERATORS_Tags();
+LoggingChannelID_t LOG_SND_OPERATORS = LoggingSystem_RegisterLoggingChannel( "SndOperators", Register_LOG_SND_OPERATORS_Tags, LCF_CONSOLE_ONLY, LS_MESSAGE );
+void Register_LOG_SND_OPERATORS_Tags()
+{
+LoggingSystem_AddTagToCurrentChannel( "SndOperators" );
+LoggingSystem_AddTagToCurrentChannel( "SND" );
+};
 
 
 Color OpNameColor( 185, 215, 255, 255 );
@@ -27,13 +44,13 @@ int foo;
 void S_GetFloatFromString( float *pFlVector, const char *pString, int nSize = 3 )
 {
 	char tempString[128];
-	Q_strncpy( tempString, pString, sizeof(tempString) );
+	V_strncpy( tempString, pString, sizeof(tempString) );
 
 	int i = 0;
-	char *token = strtok( tempString, "," );
+	char *token = std::strtok( tempString, "," );
 	while( token )
 	{
-		*pFlVector = atof( token );
+		*pFlVector = std::atof( token );
 		token = strtok( nullptr, "," );
 		i++;
 		if ( i >= nSize )
@@ -168,9 +185,9 @@ int CSosOperator::ParseValueRef( CSosOperatorStack *pStack, const char *pParamSt
 	{
 		pValueString++;	
 		char tempString[64];
-		Q_strncpy( tempString, pValueString, sizeof(tempString) );
+		V_strncpy( tempString, pValueString, sizeof(tempString) );
 
-		char *pOpname = strtok( tempString, "." );
+		char *pOpname = std::strtok( tempString, "." );
 		char *pOutputName = strtok( nullptr, "");
 		int nOutOffset = pStack->GetOperatorOutputOffset( pOpname, pOutputName );
 		if ( nOutOffset < 0 )
@@ -191,12 +208,12 @@ int CSosOperator::BaseParseHasArrayIndice( const char *pParamString ) const
 {
 	int nInputIndex = -1;
 	char tempString[64];
-	Q_strncpy( tempString, pParamString, sizeof(tempString) );
+	V_strncpy( tempString, pParamString, sizeof(tempString) );
 	//	char *pInputParamString = strtok( tempString, "[" );
-	char *pIndexString = strtok( nullptr, "]");
+	char *pIndexString = std::strtok( nullptr, "]");
 	if ( pIndexString && *pIndexString )
 	{
-		nInputIndex = Q_atoi( pIndexString );
+		nInputIndex = V_atoi( pIndexString );
 	}
 	return nInputIndex;
 
@@ -232,8 +249,8 @@ bool CSosOperator::BaseParseKV( CSosOperatorStack *pStack, CSosOperator_t *pStru
 
 		int nInputIndex = -1;
 		char tempString[64];
-		Q_strncpy( tempString, pParamString, sizeof(tempString) );
-		char *pInputParamString = strtok( tempString, "[" );
+		V_strncpy( tempString, pParamString, sizeof(tempString) );
+		char *pInputParamString = std::strtok( tempString, "[" );
 		char *pIndexString = strtok( nullptr, "]");
 		bool bFillInputArray = false;
 		if ( pIndexString && *pIndexString )
@@ -244,7 +261,7 @@ bool CSosOperator::BaseParseKV( CSosOperatorStack *pStack, CSosOperator_t *pStru
 			}
 			else
 			{
-				nInputIndex = Q_atoi( pIndexString );
+				nInputIndex = V_atoi( pIndexString );
 			}
 		}
 
@@ -350,7 +367,7 @@ int CSosOperator::GetOutputOffset( const char *pOutputName ) const
 
 void CSosOperator::ResolveInputValue( void *pInputDefault, int *pOffsetArray, short nDataCount, SODataType_t nDataType, void *pStackMem ) const
 {
-	size_t nDataSize = 0;
+	std::size_t nDataSize = 0;
 	switch( nDataType )
 	{
 	case SO_FLOAT:
@@ -369,7 +386,7 @@ void CSosOperator::ResolveInputValue( void *pInputDefault, int *pOffsetArray, sh
 
 			// 			pSrc = (float *)( (char *)pStackMem + nOffset );
 			pSrc = ( void *)( (char *)pStackMem + nOffset );
-			Q_memcpy( ( void *) ( (char *) pInputDefault + ( i * nDataSize ) ) , pSrc, nDataSize );
+			V_memcpy( ( void *) ( (char *) pInputDefault + ( i * nDataSize ) ) , pSrc, nDataSize );
 		}
 		// 		else
 		// 		{
@@ -378,7 +395,7 @@ void CSosOperator::ResolveInputValue( void *pInputDefault, int *pOffsetArray, sh
 		// 		}
 		// 
 		// 
-		// 		Q_memcpy( pInputDefault[i] , pSrc, nDataSize );
+		// 		V_memcpy( pInputDefault[i] , pSrc, nDataSize );
 		//	pInputDefault[i] = *pSrc;
 	}
 
@@ -391,7 +408,7 @@ void CSosOperator::ResolveInputValues( void *pStructMem, void *pStackMem ) const
 		SODataType_t nDataType = inputData.m_Type;
 		short nDataCount = inputData.m_nCount;
 
-		size_t nOffset = inputData.m_nValueOffset;
+		std::size_t nOffset = inputData.m_nValueOffset;
 		int nOffsetOffset = inputData.m_nOffsetOffset;
 		void *pInput = (void *)( (char *)pStructMem + nOffset );
 		int *pOffset = (int *)( (char *)pStructMem + nOffsetOffset );
@@ -401,7 +418,7 @@ void CSosOperator::ResolveInputValues( void *pStructMem, void *pStackMem ) const
 	}
 }
 
-void CSosOperator::OffsetConnections( void *pVoidMem, size_t nOffset ) const
+void CSosOperator::OffsetConnections( void *pVoidMem, std::size_t nOffset ) const
 {
 	// point offsets to a different memory segment
 	for ( const InputData_t &inputData : m_vInputs )

@@ -1,16 +1,10 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: particle system code
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
 
-#include "tier0/platform.h"
+// Purpose: particle system code
+
+import ks.core;
 #include "particles/particles.h"
-#include "filesystem.h"
-#include "tier2/tier2.h"
-#include "tier2/fileutils.h"
-#include "tier1/strtools.h"
-#include "mathlib/halton.h"
 #include "bspflags.h"
 #include "const.h"
 #include "particles_internal.h"
@@ -49,32 +43,14 @@ class C_OP_ConstrainDistance : public CParticleOperatorInstance
 
 };
 
-#ifdef NDEBUG
 #define CHECKSYSTEM( p ) 0
-#else
-static void CHECKSYSTEM( CParticleCollection *pParticles )
-{
-//	Assert( pParticles->m_nActiveParticles <= pParticles->m_pDef->m_nMaxParticles );
-	for ( int i = 0; i < pParticles->m_nActiveParticles; ++i )
-	{
-		const float *xyz = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_XYZ, i );
-		const float *xyz_prev = pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_PREV_XYZ, i );
-		Assert( IsFinite( xyz[0] ) );
-		Assert( IsFinite( xyz[4] ) );
-		Assert( IsFinite( xyz[8] ) );
-		Assert( IsFinite( xyz_prev[0] ) );
-		Assert( IsFinite( xyz_prev[4] ) );
-		Assert( IsFinite( xyz_prev[8] ) );
-	}
-}
-#endif
 
 bool C_OP_ConstrainDistance::EnforceConstraint( int nStartBlock,
 												int nNumBlocks,
 												CParticleCollection *pParticles,
 												void *pContext, int nNumValidParticlesInLastChunk ) const
 {
-	size_t nStride;
+	std::size_t nStride;
 	FourVectors *pXYZ=pParticles->Get4VAttributePtrForWrite( PARTICLE_ATTRIBUTE_XYZ,
 															 &nStride );
 	pXYZ += nStride * nStartBlock;
@@ -542,7 +518,7 @@ class C_OP_WorldCollideConstraint : public CParticleOperatorInstance
 		return 1ULL << 0; 
 	}
 
-	size_t GetRequiredContextBytes( ) const
+	std::size_t GetRequiredContextBytes( ) const
 	{
 		return sizeof( CWorldCollideContextData );
 	}
@@ -847,8 +823,8 @@ static void WorldIntersectT( FourVectors const *pStartPnt, FourVectors const *pE
 			{
 				Vector start=pStartPnt->Vec( i );
 				Vector end=pEndPnt->Vec( i );
-				Assert( start.IsValid() );
-				Assert( end.IsValid() );
+				contract_assert( start.IsValid() );
+				contract_assert( end.IsValid() );
 
 				CBaseTrace tr;
 				g_pParticleSystemMgr->Query()->TraceLine( start, end,
@@ -1137,7 +1113,7 @@ bool C_OP_BoxConstraint::EnforceConstraint( int nStartBlock,
 											CParticleCollection *pParticles,
 											void *pContext, int nNumValidParticlesInLastChunk ) const
 {
-	size_t nStride;
+	std::size_t nStride;
 	FourVectors *pXYZ=pParticles->Get4VAttributePtrForWrite( PARTICLE_ATTRIBUTE_XYZ,
 															 &nStride );
 	pXYZ += nStride * nStartBlock;
@@ -1181,5 +1157,3 @@ void AddBuiltInParticleConstraints( void )
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_CONSTRAINT, C_OP_ConstrainDistanceToPath );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_CONSTRAINT, C_OP_BoxConstraint );
 }
-
-

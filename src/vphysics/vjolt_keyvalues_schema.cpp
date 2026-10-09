@@ -2,12 +2,41 @@
 // Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
 
 
-#include "cbase.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/JobSystemWithBarrier.h>
+#include <Jolt/Core/FixedSizeFreeList.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/PhysicsScene.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollidePointResult.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Ragdoll/Ragdoll.h>
+#include <Jolt/Physics/Collision/CollisionDispatch.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
+#include <Jolt/Physics/Constraints/ConeConstraint.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+import std;
+import ks.tier1;
+#include "compat/branch_overrides.h"
+#include "vcollide_parse.h"
+#include "vphysics/collision_set.h"
+#include "vjolt_interface.h"
 
 #include "vjolt_surfaceprops.h"
 
 #include "vjolt_keyvalues_schema.h"
-#include "tier1/text_writer.h"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -175,7 +204,7 @@ void ParseJoltKVSchema( KeyValues *pKV, const JoltKVSchemaProp_t *pDescs, uint c
 
             if ( !V_stricmp( pName, desc.pszName ) )
             {
-                VJoltAssertMsg( desc.func.ptr_size == 0 || desc.size == desc.func.ptr_size, "Desc element size does not match function size");
+                contract_assert( ( desc.func.ptr_size == 0 || desc.size == desc.func.ptr_size ) && "Desc element size does not match function size" );
 
 				int *pArraySize = nullptr;
 				if ( desc.arrayOffset != static_cast<size_t>( ~0llu ) )

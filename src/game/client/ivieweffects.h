@@ -1,26 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( IVIEWEFFECTS_H )
-#define IVIEWEFFECTS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+import ks.tier1;
 
-class Vector;
-class QAngle;
-class bf_read;
+
+#include "shake.h"
+
 
 //-----------------------------------------------------------------------------
 // Purpose: Apply effects to view origin/angles, etc.  Screen fade and shake
 //-----------------------------------------------------------------------------
-abstract_class IViewEffects
+class IViewEffects
 {
 public:
 	// Initialize subsystem
@@ -50,5 +40,3 @@ public:
 };
 
 extern IViewEffects *GetViewEffects();
-
-#endif // IVIEWEFFECTS_H

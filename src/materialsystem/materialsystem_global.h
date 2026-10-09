@@ -1,20 +1,11 @@
-//========= Copyright  1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef MATERIALSYSTEM_GLOBAL_H
-#define MATERIALSYSTEM_GLOBAL_H
-
-
+import ks.core;
 #include "imaterialsysteminternal.h"
-#include "tier0/dbg.h"
+import std;
 #include "tier2/tier2.h"
-
 
 #include "rocketui/rocketui.h"
 
@@ -39,14 +30,14 @@ class IClientMaterialSystem;
 // Constants used by the system
 //-----------------------------------------------------------------------------
 
-#define MATERIAL_MAX_PATH 256
+inline constexpr auto MATERIAL_MAX_PATH = 256;
 
 // GR - limits for blured image (HDR stuff)
-#define MAX_BLUR_IMAGE_WIDTH  256
-#define MAX_BLUR_IMAGE_HEIGHT 192
+inline constexpr auto MAX_BLUR_IMAGE_WIDTH = 256;
+inline constexpr auto MAX_BLUR_IMAGE_HEIGHT = 192;
 
-#define CLAMP_BLUR_IMAGE_WIDTH( _w ) ( ( _w < MAX_BLUR_IMAGE_WIDTH ) ? _w : MAX_BLUR_IMAGE_WIDTH )
-#define CLAMP_BLUR_IMAGE_HEIGHT( _h ) ( ( _h < MAX_BLUR_IMAGE_HEIGHT ) ? _h : MAX_BLUR_IMAGE_HEIGHT )
+template <typename T1> [[gnu::always_inline]] inline auto CLAMP_BLUR_IMAGE_WIDTH( T1 _w ) { return ( ( _w < MAX_BLUR_IMAGE_WIDTH ) ? _w : MAX_BLUR_IMAGE_WIDTH ); }
+template <typename T1> [[gnu::always_inline]] inline auto CLAMP_BLUR_IMAGE_HEIGHT( T1 _h ) { return ( ( _h < MAX_BLUR_IMAGE_HEIGHT ) ? _h : MAX_BLUR_IMAGE_HEIGHT ); }
 
 //-----------------------------------------------------------------------------
 // Global structures
@@ -60,12 +51,10 @@ extern uint32 g_nDebugVarsSignature;
 extern int				g_FrameNum;
 
 
-#ifndef SHADERAPI_GLOBAL_H
 extern IShaderAPI*	g_pShaderAPI;
 extern IShaderDeviceMgr* g_pShaderDeviceMgr;
 extern IShaderDevice*	g_pShaderDevice;
 extern IShaderShadow* g_pShaderShadow;
-#endif
 extern IClientMaterialSystem *g_pClientMaterialSystem;
 
 extern IMaterialInternal *g_pErrorMaterial;
@@ -93,13 +82,11 @@ inline IMaterialSystemInternal* MaterialSystem()
 	return g_pInternalMaterialSystem;
 }
 
-#ifndef SHADERAPI_GLOBAL_H
 inline IShaderUtil* ShaderUtil()
 {
 	extern IShaderUtil *g_pShaderUtil;
 	return g_pShaderUtil;
 }
-#endif
 
 extern IColorCorrectionSystem *g_pColorCorrectionSystem;
 inline IColorCorrectionSystem *ColorCorrectionSystem()
@@ -112,6 +99,3 @@ inline IColorCorrectionSystem *ColorCorrectionSystem()
 // Global methods related to material vars
 //-----------------------------------------------------------------------------
 void EnableThreadedMaterialVarAccess( bool bEnable, IMaterialVar **ppParams, int nVarCount );
-
-
-#endif // MATERIALSYSTEM_GLOBAL_H

@@ -1,16 +1,10 @@
-//========= Copyright (c) 1996-2002, Valve LLC, All rights reserved. ============
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2002 Valve Corporation
 
 #include "worldvertextransition_dx8_helper.h"
 #include "BaseVSShader.h"
 
 #include "WorldVertexTransition.inc"
-
-
 
 void InitParamsWorldVertexTransitionEditor_DX8( IMaterialVar** params, WorldVertexTransitionEditor_DX8_Vars_t &info )
 {

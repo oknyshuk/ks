@@ -1,18 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#if !defined( FXFLECKS_H )
-#define FXFLECKS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "particles_simple.h"
 #include "particlemgr.h"
@@ -56,5 +44,3 @@ public:
 private:
 	CFleckParticles( const CFleckParticles & ); // not defined, not accessible
 };
-
-#endif	//FXFLECKS_H

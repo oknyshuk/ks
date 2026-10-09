@@ -1,22 +1,41 @@
-//====== Copyright (c) 1996-2004, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2004 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 #include "env_tonemap_controller.h"
 #include "baseentity.h"
 #include "entityoutput.h"
-#include "convar.h"
 #include "triggers.h"
 
-
 // Spawn Flags
-#define SF_TONEMAP_MASTER			0x0001
+constexpr auto SF_TONEMAP_MASTER = 0x0001;
 
 // 0 - eyes fully closed / fully black
 // 1 - nominal 
@@ -113,7 +132,7 @@ int CEnvTonemapController::UpdateTransmitState()
 void CEnvTonemapController::InputSetBloomScaleRange( inputdata_t &inputdata )
 {
 	float bloom_max=1, bloom_min=1;
-	int nargs=sscanf("%f %f",inputdata.value.String(), bloom_max, bloom_min );
+	int nargs=std::sscanf("%f %f",inputdata.value.String(), bloom_max, bloom_min );
 	if (nargs != 2)
 	{
 		Warning("%s (%s) received SetBloomScaleRange input without 2 arguments. Syntax: <max bloom> <min bloom>\n", GetClassname(), GetDebugName() );

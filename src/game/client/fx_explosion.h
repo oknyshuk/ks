@@ -1,19 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef FX_EXPLOSION_H
-#define FX_EXPLOSION_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "particle_collision.h"
 #include "glow_overlay.h"
 
 //JDW: For now we're clamping this value
-#define	EXPLOSION_FORCE_MAX	2
-#define	EXPLOSION_FORCE_MIN	2
+inline constexpr auto EXPLOSION_FORCE_MAX = 2;
+inline constexpr auto EXPLOSION_FORCE_MIN = 2;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -129,5 +123,3 @@ private:
 
 //Singleton accessor
 extern C_MegaBombExplosionEffect &MegaBombExplosionEffect( void );
-
-#endif // FX_EXPLOSION_H

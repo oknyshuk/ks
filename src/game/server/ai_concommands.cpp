@@ -1,10 +1,39 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Console commands for debugging and manipulating NPCs.
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+// Purpose: Console commands for debugging and manipulating NPCs.
+
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "basetempentity.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 #include "ai_basenpc.h"
 #include "player.h"
 #include "entitylist.h"
@@ -55,7 +84,9 @@ void CC_AI_Disable( void )
 static ConCommand ai_disable("ai_disable", CC_AI_Disable, "Bi-passes all AI logic routines and puts all NPCs into their idle animations.  Can be used to get NPCs out of your way and to test effect of AI logic routines on frame rate", FCVAR_CHEAT);
 
 
-CON_COMMAND_F( ai_setenabled, "Like ai_disable but you manually specify the state (with a 0 or 1) instead of toggling it.", FCVAR_CHEAT )
+static void ai_setenabled( const CCommand &args );
+static ConCommand ai_setenabled_command( "ai_setenabled", ai_setenabled, "Like ai_disable but you manually specify the state (with a 0 or 1) instead of toggling it.", FCVAR_CHEAT );
+static void ai_setenabled( const CCommand &args )
 {
 	if ( args.ArgC() < 2 )
 	{
@@ -80,7 +111,7 @@ void CC_AI_ShowHints( void )
 	// Eventually this will be done by name when mulitple
 	// networks are used, but for now have one big AINet
 	//static char entName[256];	
-	//Q_strncpy( entName, args[1],sizeof(entName) );
+	//V_strncpy( entName, args[1],sizeof(entName) );
 	if ( !g_pAINetworkManager )
 		return;
 
@@ -97,7 +128,7 @@ void CC_AI_ShowHull( const CCommand &args )
 	// Eventually this will be done by name when mulitple
 	// networks are used, but for now have one big AINet
 	//static char entName[256];	
-	//Q_strncpy( entName, args[1),sizeof(entName) );
+	//V_strncpy( entName, args[1),sizeof(entName) );
 
 	g_pAINetworkManager->GetEditOps()->SetDebugBits("BigNet",bits_debugOverlayHulls);
 	CBaseEntity::m_nDebugPlayer = UTIL_GetCommandClientIndex();
@@ -112,7 +143,7 @@ void CC_AI_ShowConnect( const CCommand &args )
 	// Eventually this will be done by name when mulitple
 	// networks are used, but for now have one big AINet
 	//static char entName[256];	
-	//Q_strncpy( entName, args[1],sizeof(entName) );
+	//V_strncpy( entName, args[1],sizeof(entName) );
 	if ( !g_pAINetworkManager )
 		return;
 
@@ -130,7 +161,7 @@ void CC_AI_ShowJumpConnect( const CCommand &args )
 	// Eventually this will be done by name when mulitple
 	// networks are used, but for now have one big AINet
 	//static char entName[256];	
-	//Q_strncpy( entName, args[1],sizeof(entName) );
+	//V_strncpy( entName, args[1],sizeof(entName) );
 	if ( !g_pAINetworkManager )
 		return;
 
@@ -149,7 +180,7 @@ void CC_AI_ShowFlyConnect( const CCommand &args )
 	// Eventually this will be done by name when mulitple
 	// networks are used, but for now have one big AINet
 	//static char entName[256];	
-	//Q_strncpy( entName, args[1],sizeof(entName) );
+	//V_strncpy( entName, args[1],sizeof(entName) );
 	if ( !g_pAINetworkManager )
 		return;
 
@@ -168,7 +199,7 @@ void CC_AI_ShowCrawlConnect( const CCommand &args )
 	// Eventually this will be done by name when mulitple
 	// networks are used, but for now have one big AINet
 	//static char entName[256];	
-	//Q_strncpy( entName, args[1],sizeof(entName) );
+	//V_strncpy( entName, args[1],sizeof(entName) );
 	if ( !g_pAINetworkManager )
 		return;
 
@@ -187,7 +218,7 @@ void CC_AI_ShowGrid( const CCommand &args )
 	// Eventually this will be done by name when mulitple
 	// networks are used, but for now have one big AINet
 	//static char entName[256];	
-	//Q_strncpy( entName, args[1],sizeof(entName) );
+	//V_strncpy( entName, args[1],sizeof(entName) );
 	if ( !g_pAINetworkManager )
 		return;
 
@@ -229,7 +260,7 @@ void CC_AI_NextHull( const CCommand &args )
 	// Eventually this will be done by name when mulitple
 	// networks are used, but for now have one big AINet
 	//static char entName[256];	
-	//Q_strncpy( entName, args[1],sizeof(entName) );
+	//V_strncpy( entName, args[1],sizeof(entName) );
 	if ( !g_pAINetworkManager )
 		return;
 
@@ -308,7 +339,7 @@ void CC_AI_Nodes( const CCommand &args )
 	// Eventually this will be done by name when mulitple
 	// networks are used, but for now have one big AINet
 	//	static char entName[256];	
-	//Q_strncpy( entName, args[1],sizeof(entName) );
+	//V_strncpy( entName, args[1],sizeof(entName) );
 	if ( !g_pAINetworkManager )
 		return;
 
@@ -318,11 +349,13 @@ void CC_AI_Nodes( const CCommand &args )
 static ConCommand ai_nodes("ai_nodes", CC_AI_Nodes, "Toggles node display.  First call displays the nodes for the given network as green objects.  Second call  displays the nodes and their IDs.  Nodes are color coded as follows:\n\tGreen		- ground node\n\tCyan		- air node\n\tMagenta	- climb node\n\tGrey		- node not available for selected hull size\n\tOrange 	- node currently locked", FCVAR_CHEAT);
 
 
-CON_COMMAND_F( ai_show_node, "Highlight the specified node", FCVAR_CHEAT )
+static void ai_show_node( const CCommand &args );
+static ConCommand ai_show_node_command( "ai_show_node", ai_show_node, "Highlight the specified node", FCVAR_CHEAT );
+static void ai_show_node( const CCommand &args )
 {
 	if ( args.ArgC() > 1 )
 	{
-		int node = atoi(args[1]);
+		int node = std::atoi(args[1]);
 		CAI_Node* pAINode = g_pBigAINet->GetNode( node, false );
 		if ( pAINode )
 		{
@@ -339,7 +372,7 @@ void CC_AI_ShowVisibility( const CCommand &args )
 	// Eventually this will be done by name when mulitple
 	// networks are used, but for now have one big AINet
 	// static char entName[256];	
-	//Q_strncpy( entName, args[1],sizeof(entName) );
+	//V_strncpy( entName, args[1],sizeof(entName) );
 	if ( !g_pAINetworkManager || !UTIL_GetCommandClient() )
 		return;
 
@@ -372,7 +405,7 @@ void CC_AI_GraphConnect( const CCommand &args )
 	// Eventually this will be done by name when mulitple
 	// networks are used, but for now have one big AINet
 	//static char entName[256];	
-	//Q_strncpy( entName, args[1],sizeof(entName) );
+	//V_strncpy( entName, args[1],sizeof(entName) );
 	g_pAINetworkManager->GetEditOps()->SetDebugBits("BigNet",bits_debugOverlayGraphConnect);
 	CAI_Node* pAINode = UTIL_GetCommandClient()->FindPickerAINode( NODE_ANY );
 	if (pAINode != nullptr)
@@ -517,7 +550,7 @@ void CC_NPC_Create( const CCommand &args )
 				pItem->Spawn();
 
 				// install the addon
-				assert_cast< CAI_AddOn *>( pItem )->Install( baseNPC );
+				static_cast< CAI_AddOn *>( pItem )->Install( baseNPC );
 			}
 		}
 	}
@@ -673,7 +706,7 @@ void CC_NPC_Set_Freeze( const CCommand &args )
 	// No NPC was specified, try to freeze selected NPCs.
 	//
 	bool bFound = false;
-	bool bFreeze = ( atoi( args[1] ) != 0 );
+	bool bFreeze = ( std::atoi( args[1] ) != 0 );
 	
 	CAI_BaseNPC *npc = gEntList.NextEntByClass( (CAI_BaseNPC *)nullptr );
 	while (npc)
@@ -719,7 +752,9 @@ void CC_NPC_Set_Freeze( const CCommand &args )
 static ConCommand npc_set_freeze("npc_set_freeze", CC_NPC_Set_Freeze, "Selected NPC(s) will freeze in place (or unfreeze). If there are no selected NPCs, uses the NPC under the crosshair.\n\tArguments:	-none-", FCVAR_CHEAT);
 
 
-CON_COMMAND( npc_freeze_unselected, "Freeze all NPCs not selected" )
+static void npc_freeze_unselected( const CCommand &args );
+static ConCommand npc_freeze_unselected_command( "npc_freeze_unselected", npc_freeze_unselected, "Freeze all NPCs not selected" );
+static void npc_freeze_unselected( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -736,7 +771,9 @@ CON_COMMAND( npc_freeze_unselected, "Freeze all NPCs not selected" )
 	}
 }
 
-CON_COMMAND( npc_set_freeze_unselected, "Freeze all NPCs not selected" )
+static void npc_set_freeze_unselected( const CCommand &args );
+static ConCommand npc_set_freeze_unselected_command( "npc_set_freeze_unselected", npc_set_freeze_unselected, "Freeze all NPCs not selected" );
+static void npc_set_freeze_unselected( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -747,7 +784,7 @@ CON_COMMAND( npc_set_freeze_unselected, "Freeze all NPCs not selected" )
 	{
 		if (!(pNPC->m_debugOverlays & OVERLAY_NPC_SELECTED_BIT))
 		{
-			if ( atoi( args[1] ) != 0 )
+			if ( std::atoi( args[1] ) != 0 )
 			{
 				pNPC->Freeze();
 			}
@@ -761,7 +798,9 @@ CON_COMMAND( npc_set_freeze_unselected, "Freeze all NPCs not selected" )
 }
 
 //------------------------------------------------------------------------------
-CON_COMMAND(npc_thinknow, "Trigger NPC to think")
+static void npc_thinknow( const CCommand &args );
+static ConCommand npc_thinknow_command( "npc_thinknow", npc_thinknow, "Trigger NPC to think" );
+static void npc_thinknow( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -966,7 +1005,9 @@ static ConCommand npc_steering_all("npc_steering_all", CC_NPC_ViewSteeringRegula
 
 //------------------------------------------------------------------------------
 
-CON_COMMAND( npc_heal, "Heals the target back to full health" )
+static void npc_heal( const CCommand &args );
+static ConCommand npc_heal_command( "npc_heal", npc_heal, "Heals the target back to full health" );
+static void npc_heal( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -982,7 +1023,9 @@ CON_COMMAND( npc_heal, "Heals the target back to full health" )
 	}
 }
 
-CON_COMMAND( npc_ammo_deplete, "Subtracts half of the target's ammo" )
+static void npc_ammo_deplete( const CCommand &args );
+static ConCommand npc_ammo_deplete_command( "npc_ammo_deplete", npc_ammo_deplete, "Subtracts half of the target's ammo" );
+static void npc_ammo_deplete( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -998,7 +1041,9 @@ CON_COMMAND( npc_ammo_deplete, "Subtracts half of the target's ammo" )
 	}
 }
 
-CON_COMMAND( ai_clear_bad_links, "Clears bits set on nav links indicating link is unusable " )
+static void ai_clear_bad_links( const CCommand &args );
+static ConCommand ai_clear_bad_links_command( "ai_clear_bad_links", ai_clear_bad_links, "Clears bits set on nav links indicating link is unusable " );
+static void ai_clear_bad_links( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1015,7 +1060,9 @@ CON_COMMAND( ai_clear_bad_links, "Clears bits set on nav links indicating link i
 	}
 }
 
-CON_COMMAND( ai_test_los, "Test AI LOS from the player's POV" )
+static void ai_test_los( const CCommand &args );
+static ConCommand ai_test_los_command( "ai_test_los", ai_test_los, "Test AI LOS from the player's POV" );
+static void ai_test_los( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
@@ -1028,16 +1075,16 @@ CON_COMMAND( ai_test_los, "Test AI LOS from the player's POV" )
 	NDebugOverlay::Cross3D( tr.endpos, 24, 255, 255, 255, true, 5 );
 }
 
-#ifdef VPROF_ENABLED
-
-CON_COMMAND(ainet_generate_report, "Generate a report to the console.")
+static void ainet_generate_report( const CCommand &args );
+static ConCommand ainet_generate_report_command( "ainet_generate_report", ainet_generate_report, "Generate a report to the console." );
+static void ainet_generate_report( const CCommand &args )
 {
 	g_VProfCurrentProfile.OutputReport( VPRT_FULL, "AINet" );
 }
 
-CON_COMMAND(ainet_generate_report_only, "Generate a report to the console.")
+static void ainet_generate_report_only( const CCommand &args );
+static ConCommand ainet_generate_report_only_command( "ainet_generate_report_only", ainet_generate_report_only, "Generate a report to the console." );
+static void ainet_generate_report_only( const CCommand &args )
 {
 	g_VProfCurrentProfile.OutputReport( VPRT_FULL, "AINet", g_VProfCurrentProfile.BudgetGroupNameToBudgetGroupID( "AINet" ) );
 }
-
-#endif

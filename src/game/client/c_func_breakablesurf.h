@@ -1,22 +1,21 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#ifndef C_FUNC_BREAKABLESURF_H
-#define C_FUNC_BREAKABLESURF_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
 #include "iviewrender.h"
 #include "proxyentity.h"
+#include "engine/ivdebugoverlay.h"
+#include "materialsystem/MaterialSystemUtil.h"
+#include "c_baseentity.h"
+#include "client_class.h"
+#include "iclientrenderable.h"
 
 #define MAX_NUM_PANELS 16
 
-#define NUM_EDGE_TYPES		4
-#define NUM_EDGE_STYLES		3
+inline constexpr auto NUM_EDGE_TYPES = 4;
+inline constexpr auto NUM_EDGE_STYLES = 3;
 
 extern IVDebugOverlay *debugoverlay;
 
@@ -37,7 +36,6 @@ enum WinEdge_t
 	EDGE_RIGHT,				// Edge is on right only	/##|
 };
 
-#define STYLE_HIGHLIGHT = -1;
 
 //-----------------------------------------------------------------------------
 // All the information associated with a particular handle
@@ -137,8 +135,8 @@ private:
 
 	inline void SetStyleType( int w, int h, int type )
 	{
-		Assert( type < NUM_EDGE_STYLES );
-		Assert( type >= 0 );
+		contract_assert( type < NUM_EDGE_STYLES );
+		contract_assert( type >= 0 );
 		// Clear old value
 		m_nPanelBits[ w ][ h ] &= ( ~0x03 << 2 );
 		// Insert new value
@@ -149,7 +147,7 @@ private:
 	{
 		int value = m_nPanelBits[ w ][ h ];
 		value = ( value >> 2 ) & 0x03;
-		Assert( value < NUM_EDGE_STYLES );
+		contract_assert( value < NUM_EDGE_STYLES );
 		return value;
 	}
 
@@ -178,6 +176,3 @@ class CBreakableSurfaceProxy : public CEntityMaterialProxy
 
 	IMaterialVar* m_BaseTextureVar;
 };
-
-
-#endif // C_FUNC_BREAKABLESURF_H

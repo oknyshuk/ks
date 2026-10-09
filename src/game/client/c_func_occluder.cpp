@@ -1,11 +1,15 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 
@@ -43,6 +47,6 @@ bool C_FuncOccluder::ShouldDraw()
 
 int C_FuncOccluder::DrawModel( int flags, const RenderableInstance_t &instance )
 {
-	Assert(0);
+	contract_assert( 0 );
 	return 0;
 }

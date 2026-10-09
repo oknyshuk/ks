@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // defined $PIXELFOGTYPE && defined $WRITEWATERFOGTODESTALPHA && ( $PIXELFOGTYPE != 1 ) && $WRITEWATERFOGTODESTALPHA
 // defined $LIGHTING_PREVIEW && defined $FASTPATHENVMAPTINT && $LIGHTING_PREVIEW && $FASTPATHENVMAPTINT
@@ -15,7 +16,7 @@ private:
 public:
 	void SetDEFERRED_SHADOWS( int i )
 	{
-		Assert( i >= 0 && i <= 0 );
+		contract_assert( i >= 0 && i <= 0 );
 		m_nDEFERRED_SHADOWS = i;
 #ifdef _DEBUG
 		m_bDEFERRED_SHADOWS = true;
@@ -23,7 +24,7 @@ public:
 	}
 	void SetDEFERRED_SHADOWS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 0 );
 		m_nDEFERRED_SHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDEFERRED_SHADOWS = true;
@@ -37,7 +38,7 @@ private:
 public:
 	void SetBLOBBY_SHADOWS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nBLOBBY_SHADOWS = i;
 #ifdef _DEBUG
 		m_bBLOBBY_SHADOWS = true;
@@ -45,7 +46,7 @@ public:
 	}
 	void SetBLOBBY_SHADOWS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nBLOBBY_SHADOWS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bBLOBBY_SHADOWS = true;
@@ -70,7 +71,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bDEFERRED_SHADOWS && m_bBLOBBY_SHADOWS;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 2 * m_nDEFERRED_SHADOWS ) + ( 2 * m_nBLOBBY_SHADOWS ) + 0;
 	}
@@ -86,7 +87,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -94,7 +95,7 @@ public:
 	}
 	void SetPIXELFOGTYPE( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nPIXELFOGTYPE = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -115,12 +116,12 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bPIXELFOGTYPE;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nPIXELFOGTYPE ) + 0;
 	}
 };
-#define shaderDynamicTest_shadow_ps20b 0
+inline constexpr int shaderDynamicTest_shadow_ps20b = 0;
 
 static const ShaderComboInformation_t s_DynamicComboArray_shadow_ps20b[1] = 
 {

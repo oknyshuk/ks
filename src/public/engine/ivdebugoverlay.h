@@ -1,10 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 //
 //  cdll_int.h
 //
@@ -12,30 +9,28 @@
 // JOHN:  client dll interface declarations
 //
 
-#ifndef IVDEBUGOVERLAY_H
-#define IVDEBUGOVERLAY_H
+import std;
+import ks.math;
 
 
-class Vector;
-
-#define VDEBUG_OVERLAY_INTERFACE_VERSION	"VDebugOverlay004"
+inline constexpr const char *VDEBUG_OVERLAY_INTERFACE_VERSION = "VDebugOverlay004";
 
 // When used as a duration by a server-side NDebugOverlay:: call, 
 // causes the overlay to persist until the next server update.
-#define NDEBUG_PERSIST_TILL_NEXT_SERVER (0.01023f)
+inline constexpr auto NDEBUG_PERSIST_TILL_NEXT_SERVER = (0.01023f);
 
 class OverlayText_t;
 
-abstract_class IVDebugOverlay
+class IVDebugOverlay
 {
 public:
-	virtual void AddEntityTextOverlay(int ent_index, int line_offset, float duration, int r, int g, int b, int a, PRINTF_FORMAT_STRING const char *format, ...) = 0;
+	virtual void AddEntityTextOverlay(int ent_index, int line_offset, float duration, int r, int g, int b, int a, const char *format, ...) = 0;
 	virtual void AddBoxOverlay(const Vector& origin, const Vector& mins, const Vector& max, QAngle const& orientation, int r, int g, int b, int a, float duration) = 0;
 	virtual void AddSphereOverlay(const Vector& vOrigin, float flRadius, int nTheta, int nPhi, int r, int g, int b, int a, float flDuration) = 0;
 	virtual void AddTriangleOverlay(const Vector& p1, const Vector& p2, const Vector& p3, int r, int g, int b, int a, bool noDepthTest, float duration) = 0;
 	virtual void AddLineOverlay(const Vector& origin, const Vector& dest, int r, int g, int b,bool noDepthTest, float duration) = 0;
-	virtual void AddTextOverlay(const Vector& origin, float duration, PRINTF_FORMAT_STRING const char *format, ...) FMTFUNCTION( 4, 5 ) = 0;
-	virtual void AddTextOverlay(const Vector& origin, int line_offset, float duration, PRINTF_FORMAT_STRING const char *format, ...) FMTFUNCTION( 5, 6 ) = 0;
+	[[gnu::format(printf, 4, 5)]] virtual void AddTextOverlay(const Vector& origin, float duration, const char *format, ...) = 0;
+	[[gnu::format(printf, 5, 6)]] virtual void AddTextOverlay(const Vector& origin, int line_offset, float duration, const char *format, ...) = 0;
 	virtual void AddScreenTextOverlay(float flXPos, float flYPos,float flDuration, int r, int g, int b, int a, const char *text) = 0;
 	virtual void AddSweptBoxOverlay(const Vector& start, const Vector& end, const Vector& mins, const Vector& max, const QAngle & angles, int r, int g, int b, int a, float flDuration) = 0;
 	virtual void AddGridOverlay(const Vector& origin) = 0;
@@ -49,8 +44,8 @@ public:
 	virtual void ClearDeadOverlays( void ) = 0;
 	virtual void ClearAllOverlays() = 0;
 
-	virtual void AddTextOverlayRGB(const Vector& origin, int line_offset, float duration, float r, float g, float b, float alpha, PRINTF_FORMAT_STRING const char *format, ...) FMTFUNCTION( 9, 10 ) = 0;
-	virtual void AddTextOverlayRGB(const Vector& origin, int line_offset, float duration, int r, int g, int b, int a, PRINTF_FORMAT_STRING const char *format, ...) FMTFUNCTION( 9, 10 ) = 0;
+	[[gnu::format(printf, 9, 10)]] virtual void AddTextOverlayRGB(const Vector& origin, int line_offset, float duration, float r, float g, float b, float alpha, const char *format, ...) = 0;
+	[[gnu::format(printf, 9, 10)]] virtual void AddTextOverlayRGB(const Vector& origin, int line_offset, float duration, int r, int g, int b, int a, const char *format, ...) = 0;
 
 	virtual void AddLineOverlayAlpha(const Vector& origin, const Vector& dest, int r, int g, int b, int a, bool noDepthTest, float duration) = 0;
 	virtual void AddBoxOverlay2( const Vector& origin, const Vector& mins, const Vector& max, QAngle const& orientation, const Color& faceColor, const Color& edgeColor, float duration ) = 0;
@@ -62,8 +57,5 @@ public:
 	virtual void AddCapsuleOverlay( const Vector &vStart, const Vector &vEnd, const float &flRadius, int r, int g, int b, int a, float flDuration ) = 0;
 
 private:
-	inline void AddTextOverlay(const Vector& origin, int line_offset, float duration, int r, int g, int b, int a, PRINTF_FORMAT_STRING const char *format, ...) {} /* catch improper use of bad interface. Needed because '0' duration can be resolved by compiler to NULL format string (i.e., compiles but calls wrong function) */
+	inline void AddTextOverlay(const Vector& origin, int line_offset, float duration, int r, int g, int b, int a, const char *format, ...) {} /* catch improper use of bad interface. Needed because '0' duration can be resolved by compiler to NULL format string (i.e., compiles but calls wrong function) */
 };
-
-
-#endif // IVDEBUGOVERLAY_H

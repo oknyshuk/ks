@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // filter.h
-#if !defined( FILTER_H )
-#define FILTER_H
 
 #include "userid.h"
 
@@ -26,7 +21,5 @@ typedef struct
 	float	banTime;
 } userfilter_t;
 
-#define	MAX_IPFILTERS	    32768
-#define	MAX_USERFILTERS	    32768
-
-#endif // FILTER_H
+inline constexpr int MAX_IPFILTERS = 32768;
+inline constexpr int MAX_USERFILTERS = 32768;

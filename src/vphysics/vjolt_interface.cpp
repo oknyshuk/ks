@@ -7,17 +7,51 @@
 //
 //=================================================================================================
 
-#include "cbase.h"
-#include "tier0/memalloc.h"
+#include <Jolt/Jolt.h>
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/JobSystemWithBarrier.h>
+#include <Jolt/Core/FixedSizeFreeList.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/PhysicsScene.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollidePointResult.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Ragdoll/Ragdoll.h>
+#include <Jolt/Physics/Collision/CollisionDispatch.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
+#include <Jolt/Physics/Constraints/ConeConstraint.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
+#include <Jolt/Physics/Constraints/FixedConstraint.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
+import std;
+import ks.vstdlib;
+#include "bspfile.h"
+#include "cmodel.h"
+#include "vcollide_parse.h"
+#include "vphysics/collision_set.h"
+#include "vphysics/constraints.h"
+#include "vphysics/object_hash.h"
+#include "vphysics/performance.h"
+#include "vjolt_interface.h"
+#include "vjolt_util.h"
 
 #include "vjolt_environment.h"
-#include "vjolt_collide.h"
-#include "vjolt_surfaceprops.h"
 #include "vjolt_objectpairhash.h"
 
 #include "vjolt_interface.h"
 
-#include "vstdlib/jobthread.h"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -26,11 +60,11 @@
 // I don't think we've tuned this value. It's just a big number that we probably won't ever hit.
 static constexpr uint kTempAllocSize = 64 * 1024 * 1024;
 
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_VJolt, "VJolt", 0, LS_MESSAGE, Color( 205, 142, 212, 255 ) );
-DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_JoltInternal, "Jolt" );
+LoggingChannelID_t LOG_VJolt = LoggingSystem_RegisterLoggingChannel( "VJolt", nullptr, 0, LS_MESSAGE, Color( 205, 142, 212, 255 ) );;
+LoggingChannelID_t LOG_JoltInternal = LoggingSystem_RegisterLoggingChannel( "Jolt", nullptr );;
 
 JoltPhysicsInterface JoltPhysicsInterface::s_PhysicsInterface;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( JoltPhysicsInterface, IPhysics, VPHYSICS_INTERFACE_VERSION, JoltPhysicsInterface::GetInstance() );
+static InterfaceReg s_Reg_JoltPhysicsInterface_IPhysics( []() -> void * { return static_cast<IPhysics *>( &JoltPhysicsInterface::GetInstance() ); }, VPHYSICS_INTERFACE_VERSION );;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -45,7 +79,7 @@ static void InstallJoltAllocator()
 	JPH::Allocate        = []( size_t size )                         { return MemAlloc_Alloc( size ); };
 	JPH::Reallocate      = []( void *block, size_t, size_t newSize ) { return g_pMemAlloc->Realloc( block, newSize ); };
 	JPH::Free            = []( void *block )                         { MemAlloc_Free( block ); };
-	JPH::AlignedAllocate = []( size_t size, size_t alignment )       { return MemAlloc_AllocAligned( size, alignment ); };
+	JPH::AlignedAllocate = []( size_t size, size_t alignment )       { return MemAlloc_AllocAlignedUnattributed( size, alignment ); };
 	JPH::AlignedFree     = []( void *block )                         { MemAlloc_FreeAligned( block ); };
 }
 
@@ -78,7 +112,7 @@ public:
 		{
 			// cMaxPhysicsJobs is a hard ceiling: running out means jobs leaked, not that the
 			// caller should cope.
-			VJoltAssertMsg( false, "Jolt: no jobs available" );
+			contract_assert( false && "Jolt: no jobs available" );
 			ThreadSleep( 0 );
 		}
 
@@ -220,7 +254,6 @@ void JoltPhysicsInterface::DestroyEnvironment( IPhysicsEnvironment *pEnvironment
 IPhysicsEnvironment *JoltPhysicsInterface::GetActiveEnvironmentByIndex( int index )
 {
 	// Josh: Nothing uses this... ever.
-	Log_Stub( LOG_VJolt );
 	return nullptr;
 }
 
@@ -271,9 +304,9 @@ void JoltPhysicsInterface::OnTrace( const char *fmt, ... )
 	va_list args;
 	char msg[MAX_LOGGING_MESSAGE_LENGTH];
 
-	va_start( args, fmt );
+	__builtin_va_start( args, fmt );
 	V_vsnprintf( msg, sizeof( msg ), fmt, args );
-	va_end( args );
+	__builtin_va_end( args );
 
 	Log_Msg( LOG_JoltInternal, "%s\n", msg );
 }
@@ -282,6 +315,6 @@ bool JoltPhysicsInterface::OnAssert( const char *inExpression, const char *inMes
 {
 	const char *message = inMessage ? inMessage : inExpression;
 	(void) message;
-	VJoltAssertMsg( false, message );
+	contract_assert( false );
 	return false;
 }

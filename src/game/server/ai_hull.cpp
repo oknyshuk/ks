@@ -1,8 +1,10 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.core;
+#include "edict.h"
+#include "ndebugoverlay.h"
 #include "ai_hull.h"
 
 struct ai_hull_t
@@ -182,6 +184,3 @@ Hull_t NAI_Hull::LookupId(const char *szName)
 	}
 	return HULL_HUMAN;
 }
-
-
-

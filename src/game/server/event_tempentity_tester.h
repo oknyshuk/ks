@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#if !defined( EVENT_TEMPENTITY_TESTER_H )
-#define EVENT_TEMPENTITY_TESTER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "baseentity.h"
 
 class CBaseTempEntity;
 
@@ -33,5 +28,3 @@ private:
 
 	char				m_szClass[ 64 ];
 };
-
-#endif // EVENT_TEMPENTITY_TESTER_H

@@ -1,12 +1,12 @@
-//======= Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
+
 // Purpose: Win32 Console API helpers
-//
-//=============================================================================
 
-#include "pch_tier0.h"
-#include "win32consoleio.h"
+import ks.core;
 
+// First include standard libraries
+import std;
 
 
 //-----------------------------------------------------------------------------

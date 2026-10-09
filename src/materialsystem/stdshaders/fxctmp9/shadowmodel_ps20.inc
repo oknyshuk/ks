@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 #include "shaderlib/cshader.h"
 class shadowmodel_ps20_Static_Index
@@ -16,7 +17,7 @@ public:
 		return 0;
 	}
 };
-#define shaderStaticTest_shadowmodel_ps20 0
+inline constexpr int shaderStaticTest_shadowmodel_ps20 = 0;
 class shadowmodel_ps20_Dynamic_Index
 {
 public:
@@ -33,10 +34,10 @@ public:
 		return 0;
 	}
 };
-#define shaderDynamicTest_shadowmodel_ps20 0
+inline constexpr int shaderDynamicTest_shadowmodel_ps20 = 0;
 static const ShaderComboSemantics_t shadowmodel_ps20_combos =
 {
-	"shadowmodel_ps20", NULL, 0, NULL, 0 
+	"shadowmodel_ps20", nullptr, 0, nullptr, 0 
 };
 
 class ConstructMe_shadowmodel_ps20

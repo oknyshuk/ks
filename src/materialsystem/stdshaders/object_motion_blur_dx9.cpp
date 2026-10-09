@@ -1,15 +1,14 @@
-//===================== Copyright (c) Valve Corporation. All Rights Reserved. ======================
-//
-// Object space motion blur shader c++ backing file
-//
-//==================================================================================================
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
+// Purpose: Object space motion blur shader c++ backing file
 
 #include "BaseVSShader.h"
 #include "object_motion_blur_vs20.inc"
 #include "object_motion_blur_ps20b.inc"
 
 BEGIN_VS_SHADER_FLAGS( ObjectMotionBlur, "Object Motion Blur", SHADER_NOT_EDITABLE )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( FB_TEXTURE, SHADER_PARAM_TYPE_TEXTURE, "_rt_FullFrameFB", "Full-screen framebuffer to sample from." )
 		SHADER_PARAM( VELOCITY_TEXTURE, SHADER_PARAM_TYPE_TEXTURE, "_rt_SmallHDR0", "Full-screen velocity buffer to sample from." )
 	END_SHADER_PARAMS
@@ -45,7 +44,7 @@ BEGIN_VS_SHADER_FLAGS( ObjectMotionBlur, "Object Motion Blur", SHADER_NOT_EDITAB
 			DECLARE_STATIC_VERTEX_SHADER( object_motion_blur_vs20 );
 			SET_STATIC_VERTEX_SHADER( object_motion_blur_vs20 );
 
-			Assert( g_pHardwareConfig->SupportsPixelShaders_2_b() );
+			contract_assert( g_pHardwareConfig->SupportsPixelShaders_2_b() );
 			
 			DECLARE_STATIC_PIXEL_SHADER( object_motion_blur_ps20b );
 			SET_STATIC_PIXEL_SHADER( object_motion_blur_ps20b );
@@ -64,7 +63,7 @@ BEGIN_VS_SHADER_FLAGS( ObjectMotionBlur, "Object Motion Blur", SHADER_NOT_EDITAB
 			DECLARE_DYNAMIC_VERTEX_SHADER( object_motion_blur_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER( object_motion_blur_vs20 );
 
-			Assert( g_pHardwareConfig->SupportsPixelShaders_2_b() );
+			contract_assert( g_pHardwareConfig->SupportsPixelShaders_2_b() );
 			DECLARE_DYNAMIC_PIXEL_SHADER( object_motion_blur_ps20b );
 			SET_DYNAMIC_PIXEL_SHADER( object_motion_blur_ps20b );
 		}

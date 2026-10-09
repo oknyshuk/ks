@@ -1,16 +1,64 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+import ks.vstdlib;
+#include "const.h"
+#include "string_t.h"
+#include "predictableid.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "itempents.h"
+#include "cdll_client_int.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#endif
 #include "decals.h"
 #include "igamesystem.h"
-#include "tier1/intern_pool.h"
-#include "tier1/map_ops.h"
-#include "keyvalues.h"
 #include "filesystem.h"
-#include <ctype.h>
 
 #ifdef CLIENT_DLL
 #include "iefx.h"
@@ -18,7 +66,7 @@
 
 #define DECAL_LIST_FILE "scripts/decals_subrect.txt"
 //#define DECAL_LIST_FILE "scripts/decals.txt"
-#define TRANSLATION_DATA_SECTION "TranslationData"
+inline constexpr const char *TRANSLATION_DATA_SECTION = "TranslationData";
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -112,7 +160,7 @@ int CDecalEmitterSystem::GetDecalIndexForName( char const *decalname )
 	if ( !e )
 		return -1;
 
-	Assert( e );
+	contract_assert( e );
 	int count = std::ssize( e->indices );
 	if ( count <= 0 )
 		return -1;
@@ -124,7 +172,7 @@ int CDecalEmitterSystem::GetDecalIndexForName( char const *decalname )
 	{
 		int idx = e->indices[ i ];
 		DecalListEntry *item = &m_AllDecals[ idx ];
-		Assert( item );
+		contract_assert( item );
 		
 		if ( !totalweight )
 		{
@@ -177,7 +225,7 @@ void CDecalEmitterSystem::LevelInitPreEntity()
 void CDecalEmitterSystem::LoadDecalsFromScript( char const *filename )
 {
 	KeyValues *kv = new KeyValues( filename );
-	Assert( kv );
+	contract_assert( kv );
 	if ( kv )
 	{
 		KeyValues *translation = nullptr;
@@ -190,7 +238,7 @@ void CDecalEmitterSystem::LoadDecalsFromScript( char const *filename )
 				{
 					char const *keyname = p->GetName();
 
-					if ( !Q_stricmp( keyname, TRANSLATION_DATA_SECTION ) )
+					if ( !V_stricmp( keyname, TRANSLATION_DATA_SECTION ) )
 					{
 						translation = p;
 					}
@@ -200,7 +248,6 @@ void CDecalEmitterSystem::LoadDecalsFromScript( char const *filename )
 
 						for ( KeyValues *sub = p->GetFirstSubKey(); sub != nullptr; sub = sub->GetNextKey() )
 						{
-							MEM_ALLOC_CREDIT();
 
 							DecalListEntry decal;
 							decal.precache_index = -1;
@@ -238,7 +285,7 @@ void CDecalEmitterSystem::LoadDecalsFromScript( char const *filename )
 			for ( KeyValues *sub = translation->GetFirstSubKey(); sub != nullptr; sub = sub->GetNextKey() )
 			{
 				// Don't add NULL string to list
-				if ( !Q_stricmp( sub->GetString(), "" ) )
+				if ( !V_stricmp( sub->GetString(), "" ) )
 					continue;
 
 				auto itDecal = m_Decals.find( sub->GetString() );
@@ -248,11 +295,11 @@ void CDecalEmitterSystem::LoadDecalsFromScript( char const *filename )
 					int gameMaterial;
 					if ( !V_isdigit( value[0]) )
 					{
-						gameMaterial = toupper( value[0] );
+						gameMaterial = std::toupper( value[0] );
 					}
 					else
 					{
-						gameMaterial = atoi( value );
+						gameMaterial = std::atoi( value );
 					}
 
 					char gm[ 2 ];
@@ -320,7 +367,7 @@ char const *CDecalEmitterSystem::TranslateDecalForGameMaterial( char const *deca
 	if ( gamematerial == CHAR_TEX_CONCRETE )
 		return decalName;
 
-	if ( !Q_stricmp( decalName, "Impact.Concrete" ) )
+	if ( !V_stricmp( decalName, "Impact.Concrete" ) )
 	{
 		if ( gamematerial == '-' )
 			return "";
@@ -334,5 +381,3 @@ char const *CDecalEmitterSystem::TranslateDecalForGameMaterial( char const *deca
 
 	return decalName;
 }
-
-

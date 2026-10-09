@@ -1,14 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef VOICE_WAVEFILE_H
-#define VOICE_WAVEFILE_H
 #pragma once
-
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 // Load in a wave file. This isn't very flexible and is only guaranteed to work with files
 // saved with WriteWaveFile.
@@ -29,6 +21,3 @@ bool WriteWaveFile(
 	int wBitsPerSample, 
 	int nChannels, 
 	int nSamplesPerSec);
-
-
-#endif // VOICE_WAVEFILE_H

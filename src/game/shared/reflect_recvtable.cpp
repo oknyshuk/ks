@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-#include "cbase.h"
+import std;
+import ks.core;
 #include "reflect_recvtable.h"
 
 namespace ks::reflect::recv
@@ -52,7 +53,7 @@ RecvProp make_prop( const PropDesc &d, std::span<const PropDesc> all )
 		// prop and the client died on a null dereference, so the gate crashed instead of
 		// reporting. Exit with the same code a table difference uses.
 		Warning( "reflect: recv make_prop reached an unhandled kind for %s\n", d.name );
-		exit( 70 );
+		std::exit( 70 );
 	}
 }
 

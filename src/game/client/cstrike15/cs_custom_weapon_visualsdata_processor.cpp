@@ -1,12 +1,12 @@
-//========= Copyright (c) 1996-2012, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: Stub - weapon skin visualization removed with econ
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2012 Valve Corporation
 
-#include "cbase.h"
-#include "serialization.h"
+// Purpose: Stub - weapon skin visualization removed with econ
+
+import std;
+import ks.tier1;
+#include "cdll_util.h"
+#include "cdll_client_int.h"
 #include "cs_custom_weapon_visualsdata_processor.h"
 
 void CCSWeaponVisualsDataCompare::SerializeToBuffer( ks::byte_writer &buf )
@@ -24,7 +24,7 @@ CCSWeaponVisualsDataProcessor::CCSWeaponVisualsDataProcessor( CCSWeaponVisualsDa
 {
 	m_compareObject = std::move( compareObject );
 	m_compareObject.FillCompareBlob();
-	memset( &m_visualsData, 0, sizeof( m_visualsData ) );
+	std::memset( &m_visualsData, 0, sizeof( m_visualsData ) );
 }
 
 CCSWeaponVisualsDataProcessor::~CCSWeaponVisualsDataProcessor()

@@ -1,9 +1,7 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
+import ks.math;
 #include "studiorender.h"
 #include "studio.h"
 #include "materialsystem/imesh.h"
@@ -13,24 +11,16 @@
 #include "materialsystem/itexture.h"
 #include "materialsystem/imaterial.h"
 #include "optimize.h"
-#include "mathlib/mathlib.h"
-#include "mathlib/vector.h"
-#include "mathlib/vmatrix.h"
+import std;
 #include "studiorendercontext.h"
-#include "tier2/tier2.h"
-#include "tier0/vprof.h"
-#include "filesystem.h"
-//#include "tier0/miniprofiler.h"
 
 //#define PROFILE_STUDIO VPROF
-#define PROFILE_STUDIO
 
 typedef void (*SoftwareProcessMeshFunc_t)( const mstudio_meshvertexdata_t *, matrix3x4_t *pPoseToWorld,
 	CCachedRenderData &vertexCache, CMeshBuilder& meshBuilder, int numVertices, unsigned short* pGroupToMesh, unsigned int nAlphaMask,
 											  IMaterial *pMaterial);
 
-#define VERTEX_FORMAT_STANDARD MATERIAL_VERTEX_FORMAT_MODEL
-#define VERTEX_FORMAT_SUBDQUAD ( VERTEX_POSITION | VERTEX_NORMAL | VERTEX_USERDATA_SIZE( 4 ) | VERTEX_FORMAT_USE_EXACT_FORMAT | VERTEX_FORMAT_PAD_POS_NORM )
+inline constexpr auto VERTEX_FORMAT_SUBDQUAD = ( VERTEX_POSITION | VERTEX_NORMAL | VERTEX_USERDATA_SIZE( 4 ) | VERTEX_FORMAT_USE_EXACT_FORMAT | VERTEX_FORMAT_PAD_POS_NORM );
 
 
 //-----------------------------------------------------------------------------
@@ -258,7 +248,8 @@ int CStudioRender::R_StudioRenderModel( IMatRenderContext *pRenderContext, int s
 	int body, int hitboxset, void /*IClientEntity*/ *pEntity,
 	IMaterial **ppMaterials, int *pMaterialFlags, int flags, int boneMask, int lod, ColorMeshInfo_t *pColorMeshes )
 {
-	VPROF("CStudioRender::R_StudioRenderModel");
+	ks::ScratchArena<> scratch;
+	CVProfScope _( "CStudioRender::R_StudioRenderModel", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	int nDrawGroup = flags & STUDIORENDER_DRAW_GROUP_MASK;
 
@@ -286,7 +277,7 @@ int CStudioRender::R_StudioRenderModel( IMatRenderContext *pRenderContext, int s
 	int numFacesRendered = 0, numPasses = 0;
 
 	// Build list of submodels
-	BodyPartInfo_t *pBodyPartInfo = (BodyPartInfo_t*)stackalloc( m_pStudioHdr->numbodyparts * sizeof(BodyPartInfo_t) );
+	BodyPartInfo_t *pBodyPartInfo = (BodyPartInfo_t*)scratch.AllocBytes( m_pStudioHdr->numbodyparts * sizeof(BodyPartInfo_t) );
 	for ( int i=0 ; i < m_pStudioHdr->numbodyparts; ++i ) 
 	{
 		pBodyPartInfo[i].m_nSubModelIndex = R_StudioSetupModel( i, body, &pBodyPartInfo[i].m_pSubModel, m_pStudioHdr );
@@ -332,6 +323,7 @@ int CStudioRender::R_StudioRenderModel( IMatRenderContext *pRenderContext, int s
 //-----------------------------------------------------------------------------
 void CStudioRender::GenerateMorphAccumulator( mstudiomodel_t *pSubModel )
 {
+	ks::ScratchArena<> scratch;
 	// Deal with all flexes
 	// FIXME: HW Morphing doesn't work with translucent models yet
 	if ( !m_pRC->m_Config.m_bEnableHWMorph || !m_pRC->m_Config.bFlex || m_bDrawTranslucentSubModels || 
@@ -346,7 +338,7 @@ void CStudioRender::GenerateMorphAccumulator( mstudiomodel_t *pSubModel )
 	{
 		mstudiomesh_t *pMesh = pSubModel->pMesh(i);
 		studiomeshdata_t *pMeshData = &m_pStudioMeshes[pMesh->meshid];
-		Assert( pMeshData );
+		contract_assert( pMeshData );
 
 		int nFlexCount = pMesh->numflexes;
 		if ( !nFlexCount )
@@ -360,7 +352,7 @@ void CStudioRender::GenerateMorphAccumulator( mstudiomodel_t *pSubModel )
 				continue;
 
 			ppMeshes[nActiveMeshCount++] = pMesh;
-			Assert( nActiveMeshCount < 512 );
+			contract_assert( nActiveMeshCount < 512 );
 			break;
 		}
 	}
@@ -380,7 +372,7 @@ void CStudioRender::GenerateMorphAccumulator( mstudiomodel_t *pSubModel )
 		studiomeshdata_t *pMeshData = &m_pStudioMeshes[pMesh->meshid];
 
 		int nFlexCount = pMesh->numflexes;
-		MorphWeight_t *pWeights = (MorphWeight_t*)stackalloc( nFlexCount * sizeof(MorphWeight_t) );
+		MorphWeight_t *pWeights = scratch.Alloc<MorphWeight_t>( nFlexCount );
 		ComputeFlexWeights( nFlexCount, pMesh->pFlex(0), pWeights );
 
 		for ( int j = 0; j < pMeshData->m_NumGroup; ++j )
@@ -421,7 +413,7 @@ int CStudioRender::R_StudioRenderFinal( IMatRenderContext *pRenderContext,
 	int skin, int nBodyPartCount, BodyPartInfo_t *pBodyPartInfo, void /*IClientEntity*/ *pClientEntity,
 	IMaterial **ppMaterials, int *pMaterialFlags, int boneMask, int lod, ColorMeshInfo_t *pColorMeshes )
 {
-	VPROF("CStudioRender::R_StudioRenderFinal");
+	CVProfScope _( "CStudioRender::R_StudioRenderFinal", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	int numFacesRendered = 0;
 
@@ -477,7 +469,7 @@ void CStudioRender::DrawShadows( const DrawModelInfo_t& info, int flags, int bon
 	if ( m_ShadowState.empty() )
 		return;
 
-	VPROF("CStudioRender::DrawShadows");
+	CVProfScope _( "CStudioRender::DrawShadows", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	IMaterial* pForcedMat = m_pRC->m_pForcedMaterial[ 0 ];
 	OverrideType_t nForcedType = m_pRC->m_nForcedMaterialType;
@@ -496,7 +488,7 @@ void CStudioRender::DrawShadows( const DrawModelInfo_t& info, int flags, int bon
 	{
 		if( !m_ShadowState[i].m_pMaterial )
 		{
-			Assert( m_ShadowState[i].m_pFlashlightState && m_ShadowState[i].m_pWorldToTexture );
+			contract_assert( m_ShadowState[i].m_pFlashlightState && m_ShadowState[i].m_pWorldToTexture );
 			if ( ( m_ShadowState[i].m_pFlashlightState && m_ShadowState[i].m_pWorldToTexture ) )
 			{
 				pRenderContext->SetFlashlightStateEx( *m_ShadowState[i].m_pFlashlightState, *m_ShadowState[i].m_pWorldToTexture, m_ShadowState[i].m_pFlashlightDepthTexture );
@@ -536,7 +528,7 @@ void CStudioRender::DrawShadows( const DrawModelInfo_t& info, int flags, int bon
 
 void CStudioRender::DrawStaticPropShadows( const DrawModelInfo_t &info, const StudioRenderContext_t &rc, const matrix3x4_t& rootToWorld, int flags )
 {
-	memcpy( &m_StaticPropRootToWorld, &rootToWorld, sizeof(matrix3x4_t) );
+	std::memcpy( &m_StaticPropRootToWorld, &rootToWorld, sizeof(matrix3x4_t) );
 	memcpy( &m_PoseToWorld[0], &rootToWorld, sizeof(matrix3x4_t) );
 
 	m_pRC = const_cast< StudioRenderContext_t* >( &rc );
@@ -566,7 +558,7 @@ void CStudioRender::DrawFlashlightDecals( const DrawModelInfo_t& info, int lod )
 		// This isn't clear.  This means that this is a flashlight if the material is NULL.  FLASHLIGHTFIXME
 		if( !m_ShadowState[i].m_pMaterial )
 		{
-			Assert( m_ShadowState[i].m_pFlashlightState && m_ShadowState[i].m_pWorldToTexture );
+			contract_assert( m_ShadowState[i].m_pFlashlightState && m_ShadowState[i].m_pWorldToTexture );
 			if ( m_ShadowState[i].m_pFlashlightState && m_ShadowState[i].m_pWorldToTexture )
 			{
 				pRenderContext->SetFlashlightStateEx( *m_ShadowState[i].m_pFlashlightState, *m_ShadowState[i].m_pWorldToTexture, m_ShadowState[i].m_pFlashlightDepthTexture );
@@ -642,12 +634,12 @@ matrix3x4_t *ComputeSkinMatrix( mstudioboneweight_t &boneweights, matrix3x4_t *p
 
 	case 4:
 		{
-			Assert( 0 ); // results undefined for numbones == 4, as MAX_NUM_BONES_PER_VERT is 3
+			contract_assert( 0 ); // results undefined for numbones == 4, as MAX_NUM_BONES_PER_VERT is 3
 		}
 		return &scratchMatrix;
 	}
 
-	Assert(0);
+	contract_assert( 0 );
 	return nullptr;
 }
 
@@ -659,7 +651,7 @@ static void ComputeSkinMatrixToMemory( mstudioboneweight_t &boneweights, matrix3
 	{
 	default:
 	case 1:
-		memcpy( &result, &pPoseToWorld[boneweights.bone[0]], sizeof(matrix3x4_t) );
+		std::memcpy( &result, &pPoseToWorld[boneweights.bone[0]], sizeof(matrix3x4_t) );
 		return;
 
 	case 2:
@@ -711,12 +703,12 @@ static void ComputeSkinMatrixToMemory( mstudioboneweight_t &boneweights, matrix3
 
 	case 4:
 		{
-			Assert( 0 ); // results undefined for numbones == 4, as MAX_NUM_BONES_PER_VERT is 3
+			contract_assert( 0 ); // results undefined for numbones == 4, as MAX_NUM_BONES_PER_VERT is 3
 		}
 		return;
 	}
 
-	Assert(0);
+	contract_assert( 0 );
 }
 
 void ComputeSkinMatrixToMemorySSE( mstudioboneweight_t &boneweights, matrix3x4_t *pPoseToWorld, matrix3x4_t &result )
@@ -731,7 +723,7 @@ matrix3x4_t *ComputeSkinMatrixSSE( mstudioboneweight_t &boneweights, matrix3x4_t
 
 return ComputeSkinMatrix( boneweights, pPoseToWorld, scratchMatrix );
 
-	Assert( 0 );
+	contract_assert( 0 );
 	return nullptr;
 }
 
@@ -758,111 +750,13 @@ inline void CStudioRender::R_ComputeLightAtPoint3( const Vector &pos, const Vect
 
 	// Calculate color given lightpos_t lightpos, a normal, and the ambient
 	// color from the ambient cube calculated above.
-	Assert(R_LightEffectsWorld3);
+	contract_assert( R_LightEffectsWorld3 );
 	R_LightEffectsWorld3( m_pRC->m_LocalLights, lightpos, normal, color );
 }
 
 
 // define SPECIAL_SSE_MESH_PROCESSOR to enable code which contains a special optimized SSE lighting loop, significantly
 // improving software vertex processing performace.
-
-#ifdef SPECIAL_SSE_MESH_PROCESSOR
-//#define VERIFY_SSE_LIGHTING
-
-// false: std::max(0,L*N) true: .5*(L.N)+.5. set based on material
-static bool SSELightingHalfLambert;							
-
-// These variables are used by the special SSE lighting path. The
-// lighting path calculates them everytime it processes a mesh so their
-// is no need to keep them in sync with changes to the other light variables
-static fltx4 OneOver_ThetaDot_Minus_PhiDot[MAXLOCALLIGHTS]; // 1/(theta-phi)
-
-void CStudioRender::R_MouthLighting( fltx4 fIllum, const FourVectors& normal, const FourVectors& forward, FourVectors &light )
-{
-	fltx4 dot = SubSIMD(Four_Zeros,normal*forward);
-	dot=MaxSIMD(Four_Zeros,dot);
-	dot=MulSIMD(fIllum,dot);
-	light *= dot;
-}
-
-inline void CStudioRender::R_ComputeLightAtPoints3( const FourVectors &pos, const FourVectors &normal, FourVectors &color )
-{
-	if ( m_pRC->m_Config.fullbright )
-	{
-		color.DuplicateVector( Vector( 1.0f, 1.0f, 1.0f ) );
-		return;
-	}
-
-	R_LightAmbient_4D( normal, m_pRC->m_LightBoxColors, color );
-	// now, add in contribution from all lights
-	for ( int i = 0; i < m_pRC->m_NumLocalLights; i++)
-	{
-		FourVectors delta;
-		LightDesc_t const *wl = m_pRC->m_LocalLights+i;
-		Assert((wl->m_Type==MATERIAL_LIGHT_POINT) || (wl->m_Type==MATERIAL_LIGHT_SPOT) || (wl->m_Type==MATERIAL_LIGHT_DIRECTIONAL));
-		switch (wl->m_Type)
-		{
-			case MATERIAL_LIGHT_POINT:
-			case MATERIAL_LIGHT_SPOT:
-				delta.DuplicateVector(wl->m_Position);
-				delta-=pos;
-				break;
-				
-			case MATERIAL_LIGHT_DIRECTIONAL:
-				delta.DuplicateVector(wl->m_Direction);
-				delta*=-1.0;
-				break;
-				
-		}
-		fltx4 falloff = R_WorldLightDistanceFalloff( wl, delta);
-		delta.VectorNormalizeFast();
-		fltx4 strength=delta*normal;
-		if (SSELightingHalfLambert)
-		{
-			strength=AddSIMD(MulSIMD(strength,Four_PointFives),Four_PointFives);
-		}
-		else
-			strength=MaxSIMD(Four_Zeros,delta*normal);
-		
-		switch(wl->m_Type)
-		{
-			case MATERIAL_LIGHT_POINT:
-				// half-lambert
-				break;
-				
- 			case MATERIAL_LIGHT_SPOT:
-			{
-				fltx4 dot2=SubSIMD(Four_Zeros,delta*wl->m_Direction); // dot position with spot light dir for cone falloff
-
-				fltx4 cone_falloff_scale=MulSIMD(OneOver_ThetaDot_Minus_PhiDot[i],
-													 SubSIMD(dot2,ReplicateX4(wl->m_PhiDot)));
-				cone_falloff_scale=MinSIMD(cone_falloff_scale,Four_Ones);
-				if ((wl->m_Falloff!=0.0) && (wl->m_Falloff!=1.0))
-				{
-					// !!speed!! could compute integer exponent needed by powsimd and store in light
-					cone_falloff_scale=PowSIMD(cone_falloff_scale,wl->m_Falloff);
-				}
-				strength=MulSIMD(cone_falloff_scale,strength);
-
-				// now, zero out lighting where dot2<phidot. This will mask out any invalid results
-				// from pow function, etc
- 				fltx4 OutsideMask=CmpGtSIMD(dot2,ReplicateX4(wl->m_PhiDot)); // outside light cone?
- 				strength=AndSIMD(OutsideMask,strength);
-			}
-			break;
-			
-			case MATERIAL_LIGHT_DIRECTIONAL:
-				break;
-
-		}
-		strength=MulSIMD(strength,falloff);
-		color.x=AddSIMD(color.x,MulSIMD(strength,ReplicateX4(wl->m_Color.x)));
-		color.y=AddSIMD(color.y,MulSIMD(strength,ReplicateX4(wl->m_Color.y)));
-		color.z=AddSIMD(color.z,MulSIMD(strength,ReplicateX4(wl->m_Color.z)));
-	}
-}
-
-#endif // SPECIAL_SSE_MESH_PROCESSOR
 
 //-----------------------------------------------------------------------------
 // Optimized for low-end hardware
@@ -909,22 +803,22 @@ public:
 		Vector *pSrcNorm;
 		Vector4D *pSrcTangentS = nullptr;
 
-		ALIGN16 ModelVertexDX8_t dstVertex;
+		ModelVertexDX8_t dstVertex;
 		dstVertex.m_vecUserData.Init( 1.0f, 0.0f, 0.0f, 1.0f );
 
-		ALIGN16 matrix3x4_t temp;
-		ALIGN16 matrix3x4_t *pSkinMat;
+		matrix3x4_t temp;
+		matrix3x4_t *pSkinMat;
 
 		int ntemp[PREFETCH_VERT_COUNT];
 
-		Assert( numVertices > 0 );
+		contract_assert( numVertices > 0 );
 
 		mstudiovertex_t *pVertices = vertData->Vertex( 0 );
 
 		if (nHasTangentSpace)
 		{
 			pStudioTangentS = vertData->TangentS( 0 );
-			Assert( pStudioTangentS->w == -1.0f || pStudioTangentS->w == 1.0f );
+			contract_assert( pStudioTangentS->w == -1.0f || pStudioTangentS->w == 1.0f );
 		}
 
 		// Mouth related stuff...
@@ -976,7 +870,7 @@ public:
 				if ( nHasTangentSpace )
 				{
 					pSrcTangentS = &pFlexedVertex->m_TangentS;
-					Assert( pSrcTangentS->w == -1.0f || pSrcTangentS->w == 1.0f );
+					contract_assert( pSrcTangentS->w == -1.0f || pSrcTangentS->w == 1.0f );
 				}
 			}
 			else
@@ -987,7 +881,7 @@ public:
 				if ( nHasTangentSpace )
 				{
 					pSrcTangentS = &pStudioTangentS[n];
-					Assert( pSrcTangentS->w == -1.0f || pSrcTangentS->w == 1.0f );
+					contract_assert( pSrcTangentS->w == -1.0f || pSrcTangentS->w == 1.0f );
 				}
 			}
 
@@ -998,93 +892,12 @@ public:
 
 			dstVertex.m_vecTexCoord = vert.m_vecTexCoord; 
 
-			Assert( dstVertex.m_vecUserData.w == -1.0f || dstVertex.m_vecUserData.w == 1.0f );
+			contract_assert( dstVertex.m_vecUserData.w == -1.0f || dstVertex.m_vecUserData.w == 1.0f );
 			meshBuilder.FastVertexSSE( dstVertex );
 		}
 		meshBuilder.FastAdvanceNVertices( numVertices );
 	}
 
-#ifdef SPECIAL_SSE_MESH_PROCESSOR
-
-#ifdef VERIFY_SSE_LIGHTING
-	static int NotCloseEnough( float a, float b )
-	{
-		// check if 2 linear lighting values are close enough between the sse and non see lighting model
-		// no point being more precise than 1% since it all maps to 8 bit anyway
-		float thresh=0.1f*fabs( a );
-		if ( thresh < 0.1f )
-			thresh = 0.1f;
-		return ( fabs( a-b ) > thresh );
-	}
-#endif
-
-	// this special version of the vertex processor does 4 vertices at once, so that they can be lit using SSE instructions. This provides
-	// a >2x speedup in the lit case
-	static void R_PerformVectorizedLightingSSE( const FourVectors &forward, fltx4 fIllum, ModelVertexDX8_t *dst, unsigned int nAlphaMask)
-	{
-		if ( nLighting == LIGHTING_SOFTWARE )
-		{
-#ifdef VERIFY_SSE_LIGHTING
-// 			if ( (g_StudioRender.m_NumLocalLights==1) &&
-// 				 ( (g_StudioRender.m_LocalLights[0].m_Type==MATERIAL_LIGHT_SPOT)))
-// 			{
-// 				// ihvtest doesn't use different exponents for its spots,
-// 				// so i mess with the exponents when testing
-// 				static int ctr=0;
-// 				static float exps[8]={0,1,2,3,4,4.5,5.25,2.5};
-// 				ctr=(ctr+1)&7;
-// 				g_StudioRender.m_LocalLights[0].m_Falloff=exps[ctr];
-// 			}
-#endif
-			FourVectors Position;
-			Position.LoadAndSwizzleAligned(dst[0].m_vecPosition,dst[1].m_vecPosition,dst[2].m_vecPosition,dst[3].m_vecPosition);
-			FourVectors Normal(dst[0].m_vecNormal,dst[1].m_vecNormal,dst[2].m_vecNormal,dst[3].m_vecNormal);
-			FourVectors Color;
-			g_StudioRender.R_ComputeLightAtPoints3( Position, Normal, Color);
-
-			for (int i=0; i<4; i++)
-			{
-				Vector color;
-#ifdef VERIFY_SSE_LIGHTING
-				// debug - check sse version against "real" version
-				g_StudioRender.R_ComputeLightAtPoint3( dst[i].m_vecPosition,dst[i].m_vecNormal, color );
-				if ( NotCloseEnough(color.x,Color.X(i)) ||
-					 NotCloseEnough(color.y,Color.Y(i)) ||
-					 NotCloseEnough(color.z,Color.Z(i)))
-				{
-					Assert(0);
-					// recompute so can step in debugger
-					g_StudioRender.R_ComputeLightAtPoints3( Position,Normal,Color);
-					g_StudioRender.R_ComputeLightAtPoint3( dst[i].m_vecPosition,dst[i].m_vecNormal, color );
-				}
-#endif
-				unsigned char r = LinearToLightmap( Color.X(i) );
-				unsigned char g = LinearToLightmap( Color.Y(i) );
-				unsigned char b = LinearToLightmap( Color.Z(i) );
-				
-				dst[i].m_nColor = b | (g << 8) | (r << 16) | nAlphaMask;
-			}
-		}
-		else if ( nLighting == LIGHTING_MOUTH )
-		{
-			FourVectors Position;
-			Position.LoadAndSwizzleAligned(dst[0].m_vecPosition,dst[1].m_vecPosition,dst[2].m_vecPosition,dst[3].m_vecPosition);
-			FourVectors Normal(dst[0].m_vecNormal,dst[1].m_vecNormal,dst[2].m_vecNormal,dst[3].m_vecNormal);
-			FourVectors Color;
-
-			g_StudioRender.R_ComputeLightAtPoints3( Position, Normal, Color);
-			g_StudioRender.R_MouthLighting( fIllum, Normal, forward, Color );
-			for (int i=0; i<4; i++)
-			{
-				unsigned char r = LinearToLightmap( Color.X(i) );
-				unsigned char g = LinearToLightmap( Color.Y(i) );
-				unsigned char b = LinearToLightmap( Color.Z(i) );
-				
-				dst[i].m_nColor = b | (g << 8) | (r << 16) | nAlphaMask;
-			}
-		}
-	}
-#endif // SPECIAL_SSE_MESH_PROCESSOR
 };
 
 
@@ -1131,7 +944,7 @@ inline const mstudio_meshvertexdata_t * GetFatVertexData( mstudiomesh_t * pMesh,
 		return nullptr;
 	}
 	const mstudio_meshvertexdata_t *pVertData = pMesh->GetVertexData( pStudioHdr );
-	Assert( pVertData );
+	contract_assert( pVertData );
 	if ( !pVertData )
 	{
 		static unsigned int warnCount = 0;
@@ -1233,8 +1046,8 @@ void CStudioRender::R_StudioSoftwareProcessMesh_Normals( mstudiomesh_t* pmesh, C
 		int numVertices, unsigned short* pGroupToMesh, StudioModelLighting_t lighting, bool doFlex, float r_blend,
 		bool bShowNormals, bool bShowTangentS, bool bShowTangentT )
 {
-	ALIGN16 matrix3x4_t temp;
-	ALIGN16 matrix3x4_t *pSkinMat;
+	matrix3x4_t temp;
+	matrix3x4_t *pSkinMat;
 
 	Vector *pSrcPos = nullptr;
 	Vector *pSrcNorm = nullptr;
@@ -1360,13 +1173,9 @@ void CStudioRender::R_StudioSoftwareProcessMesh_Normals( mstudiomesh_t* pmesh, C
 
 static int r_studioProcess_maxVerts = 100;
 
-//DLL_IMPORT CLinkedMiniProfiler *g_pOtherMiniProfilers;
-//CLinkedMiniProfiler g_mp_flexV("flexV", &g_pOtherMiniProfilers);
-//CLinkedMiniProfiler g_mp_flexW("flexW", &g_pOtherMiniProfilers);
-
 void CStudioRender::R_StudioProcessFlexedMesh_StreamOffset( mstudiomesh_t* pmesh, int lod )
 {
-	VPROF_BUDGET( "ProcessFlexedMesh_SO", _T("HW_Morphing") );
+	CVProfScope _( "ProcessFlexedMesh_SO", 0, "HW_Morphing", false, BUDGETFLAG_OTHER );
 
 	if ( m_VertexCache.IsFlexComputationDone() )
 		return;
@@ -1403,40 +1212,12 @@ void CStudioRender::R_StudioProcessFlexedMesh_StreamOffset( mstudiomesh_t* pmesh
 
 		if ( pflex[i].vertanimtype == STUDIO_VERT_ANIM_NORMAL )
 		{
-			//CMiniProfilerGuard mpguard(&g_mp_flexV,pflex[i].numverts);
 			// the most likely path
 			mstudiovertanim_t *pvanim = pflex[i].pVertanim( 0 );
-#if defined(TEST_DUMP_BIG_FLEXES)
-			if(pflex[i].numverts > r_studioProcess_maxVerts)
-			{
-				int numVerts = pflex[i].numverts;
-				r_studioProcess_maxVerts = numVerts; 
-				char szFileName[64];
-				sprintf(szFileName, "d:\\BigFlex%u.gl", r_studioProcess_maxVerts);
-				FileHandle_t fh = g_pFullFileSystem->Open(szFileName, "wt");
-				const mstudio_meshvertexdata_t * pVertData = pmesh->GetVertexData(m_pStudioHdr);
-				g_pFullFileSystem->FPrintf(fh, "// %d vertices, here goes:\n", numVerts);
-				for(int i = 0; i < numVerts; ++i)
-				{
-					int vertIndex = pvanim[i].index;
-					Vector pos = *pVertData->Position(vertIndex);
-
-					Vector flexPos = pos + pvanim[i].GetDeltaFloat() + *(pVertData->Normal(vertIndex)) * 0.1f;
-					g_pFullFileSystem->FPrintf(
-						fh,
-						"2\n%g %g %g 1 1 1\n%g %g %g 1 1 0\n",
-						pos.x,pos.y,pos.z,
-						flexPos.x, flexPos.y, flexPos.z
-					);
-				}
-				g_pFullFileSystem->Close(fh);
-			}
-#endif
 			m_VertexCache.ComputeFlexedVertex_StreamOffset_Optimized( m_pStudioHdr, &pflex[i], pvanim, vertCount, w1, w2, w3, w4 );
 		}
 		else
 		{
-			//CMiniProfilerGuard mpguard(&g_mp_flexW,pflex[i].numverts);
 			mstudiovertanim_wrinkle_t *pvanim = pflex[i].pVertanimWrinkle( 0 );
 			m_VertexCache.ComputeFlexedVertexWrinkle_StreamOffset_Optimized( m_pStudioHdr, &pflex[i], pvanim, vertCount, w1, w2, w3, w4 );
 		}
@@ -1454,7 +1235,7 @@ void CStudioRender::R_StudioProcessFlexedMesh_StreamOffset( mstudiomesh_t* pmesh
 //-----------------------------------------------------------------------------
 void CStudioRender::R_StudioFlexMeshGroup( studiomeshgroup_t *pGroup )
 {
-	VPROF_BUDGET( "R_StudioFlexMeshGroup", VPROF_BUDGETGROUP_MODEL_RENDERING );
+	CVProfScope _( "R_StudioFlexMeshGroup", 0, VPROF_BUDGETGROUP_MODEL_RENDERING, false, BUDGETFLAG_OTHER );
 
 	CMeshBuilder meshBuilder;
 	int nVertexOffsetInBytes = 0;
@@ -1493,7 +1274,7 @@ void CStudioRender::R_StudioFlexMeshGroup( studiomeshgroup_t *pGroup )
 void CStudioRender::R_StudioProcessFlexedMesh( mstudiomesh_t* pmesh, CMeshBuilder& meshBuilder, 
 											   int numVertices, unsigned short* pGroupToMesh )
 {
-	PROFILE_STUDIO("FlexMeshBuilder");
+	("FlexMeshBuilder");
 
 	Vector4D *pStudioTangentS;
 
@@ -1509,7 +1290,7 @@ void CStudioRender::R_StudioProcessFlexedMesh( mstudiomesh_t* pmesh, CMeshBuilde
 	if ( vertData->HasTangentData() )
 	{
 		pStudioTangentS = vertData->TangentS( 0 );
-		Assert( pStudioTangentS->w == -1.0f || pStudioTangentS->w == 1.0f );
+		contract_assert( pStudioTangentS->w == -1.0f || pStudioTangentS->w == 1.0f );
 
 		for ( int j=0; j < numVertices ; j++)
 		{
@@ -1534,7 +1315,7 @@ void CStudioRender::R_StudioProcessFlexedMesh( mstudiomesh_t* pmesh, CMeshBuilde
 				meshBuilder.BoneMatrix( 3, 0 );
 				meshBuilder.Normal3fv( pFlexedVertex->m_Normal.Base() );
 				meshBuilder.TexCoord2fv( 0, vert.m_vecTexCoord.Base() );
-				Assert( pFlexedVertex->m_TangentS.w == -1.0f || pFlexedVertex->m_TangentS.w == 1.0f );
+				contract_assert( pFlexedVertex->m_TangentS.w == -1.0f || pFlexedVertex->m_TangentS.w == 1.0f );
 				meshBuilder.UserData( pFlexedVertex->m_TangentS.Base() );
 			}
 			else
@@ -1550,7 +1331,7 @@ void CStudioRender::R_StudioProcessFlexedMesh( mstudiomesh_t* pmesh, CMeshBuilde
 				meshBuilder.BoneMatrix( 3, 0 );
 				meshBuilder.Normal3fv( vert.m_vecNormal.Base() );
 				meshBuilder.TexCoord2fv( 0, vert.m_vecTexCoord.Base() );
-				Assert( pStudioTangentS[n].w == -1.0f || pStudioTangentS[n].w == 1.0f );
+				contract_assert( pStudioTangentS[n].w == -1.0f || pStudioTangentS[n].w == 1.0f );
 				meshBuilder.UserData( pStudioTangentS[n].Base() );
 			}
 
@@ -1616,13 +1397,13 @@ template<VertexCompressionType_t T> void CStudioRender::R_StudioRestoreMesh( mst
 //-----------------------------------------------------------------------------
 int CStudioRender::R_StudioDrawGroupHWSkin( IMatRenderContext *pRenderContext, studiomeshgroup_t* pGroup, IMesh* pMesh, ColorMeshInfo_t * pColorMeshInfo )
 {
-	PROFILE_STUDIO("HwSkin");
+	("HwSkin");
 	int numFacesRendered = 0;
 
 #if PIX_ENABLE
 	char szPIXEventName[128];
 	sprintf( szPIXEventName, "R_StudioDrawGroupHWSkin (%s)", m_pStudioHdr->name );	// PIX
-	PIXEVENT( pRenderContext, szPIXEventName );
+	( pRenderContext, szPIXEventName );
 #endif
 
 	if ( m_pStudioHdr->numbones == 1 )
@@ -1732,8 +1513,7 @@ int CStudioRender::R_StudioDrawStaticMesh( IMatRenderContext *pRenderContext, ms
 				studiomeshgroup_t* pGroup, StudioModelLighting_t lighting, 
 				float r_blend, IMaterial* pMaterial, int lod, ColorMeshInfo_t *pColorMeshes  )
 {
-	MatSysQueueMark( g_pMaterialSystem, "R_StudioDrawStaticMesh\n" );
-	VPROF( "R_StudioDrawStaticMesh" );
+	CVProfScope _( "R_StudioDrawStaticMesh", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	int numFacesRendered = 0;
 
@@ -1754,9 +1534,9 @@ int CStudioRender::R_StudioDrawStaticMesh( IMatRenderContext *pRenderContext, ms
 		pRenderContext->LoadIdentity();
 
 		// Hardcode the vertex format to a well-known format to make sw skin code faster
-		VertexFormat_t fmt = VERTEX_FORMAT_STANDARD;
+		VertexFormat_t fmt = MATERIAL_VERTEX_FORMAT_MODEL;
 
-		Assert( ( pGroup->m_Flags & MESHGROUP_IS_DELTA_FLEXED ) == 0 );
+		contract_assert( ( pGroup->m_Flags & MESHGROUP_IS_DELTA_FLEXED ) == 0 );
 
 		CMeshBuilder meshBuilder;
 		IMesh* pMesh = pRenderContext->GetDynamicMeshEx( fmt, false, 0, pGroup->m_pMesh );
@@ -1769,7 +1549,6 @@ int CStudioRender::R_StudioDrawStaticMesh( IMatRenderContext *pRenderContext, ms
 		meshBuilder.End();
 
 		numFacesRendered = R_StudioDrawGroupSWSkin( pGroup, pMesh );
-		MatSysQueueMark( g_pMaterialSystem, "END R_StudioDrawStaticMesh\n" );
 		return numFacesRendered;
 	}
 
@@ -1780,7 +1559,7 @@ int CStudioRender::R_StudioDrawStaticMesh( IMatRenderContext *pRenderContext, ms
 	bool bUseSOFlex = g_pMaterialSystemHardwareConfig->SupportsStreamOffset() && !bUseHWFlex;
 	if ( (pGroup->m_Flags & MESHGROUP_IS_DELTA_FLEXED) && m_pRC->m_Config.bFlex )
 	{
-		PIXEVENT( pRenderContext, "Delta Flex Processing" );
+		( pRenderContext, "Delta Flex Processing" );
 		if ( bUseHWFlex )
 		{
 			pRenderContext->BindMorph( pGroup->m_pMorph );
@@ -1815,7 +1594,6 @@ int CStudioRender::R_StudioDrawStaticMesh( IMatRenderContext *pRenderContext, ms
 		}
 	}
 
-	MatSysQueueMark( g_pMaterialSystem, "END2 R_StudioDrawStaticMesh\n" );
 	return numFacesRendered;
 }
 
@@ -1827,7 +1605,7 @@ int CStudioRender::R_StudioDrawDynamicMesh( IMatRenderContext *pRenderContext, m
 				studiomeshgroup_t* pGroup, StudioModelLighting_t lighting, 
 				float r_blend, IMaterial* pMaterial, int lod )
 {
-	VPROF( "R_StudioDrawDynamicMesh" );
+	CVProfScope _( "R_StudioDrawDynamicMesh", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	bool bDoFlex = ((pGroup->m_Flags & MESHGROUP_IS_DELTA_FLEXED) != 0) && m_pRC->m_Config.bFlex;
 	bool bQuadList = ( pGroup->m_pStripData[0].flags & OptimizedModel::STRIP_IS_QUADLIST_EXTRA ) ||
@@ -1855,7 +1633,6 @@ int CStudioRender::R_StudioDrawDynamicMesh( IMatRenderContext *pRenderContext, m
 		return 0;	// not available
 	}
 
-	MatSysQueueMark( g_pMaterialSystem, "R_StudioDrawDynamicMesh\n" );
 
 	int numFacesRendered = 0;
 
@@ -1884,7 +1661,7 @@ int CStudioRender::R_StudioDrawDynamicMesh( IMatRenderContext *pRenderContext, m
 
 	IMesh* pMesh;
 	bool bTangentSpace = pMaterial ? pMaterial->NeedsTangentSpace() : false;
-	VertexFormat_t fmt = bQuadList ? VERTEX_FORMAT_SUBDQUAD : VERTEX_FORMAT_STANDARD;
+	VertexFormat_t fmt = bQuadList ? VERTEX_FORMAT_SUBDQUAD : MATERIAL_VERTEX_FORMAT_MODEL;
 
 	CMeshBuilder meshBuilder;
 	pMesh = pRenderContext->GetDynamicMeshEx( fmt, false, 0, pGroup->m_pMesh);
@@ -1935,7 +1712,6 @@ int CStudioRender::R_StudioDrawDynamicMesh( IMatRenderContext *pRenderContext, m
 	
 	pRenderContext->Bind( pMaterial );
 
-	MatSysQueueMark( g_pMaterialSystem, "END R_StudioDrawDynamicMesh\n" );
 
 	return numFacesRendered;
 }
@@ -2106,7 +1882,7 @@ int CStudioRender::R_StudioDrawEyeball( IMatRenderContext *pRenderContext, mstud
 	// Render the puppy
 	CMeshBuilder meshBuilder;
 	bool bTangentSpace = pMaterial ? pMaterial->NeedsTangentSpace() : false;
-	VertexFormat_t fmt = bQuadList ? VERTEX_FORMAT_SUBDQUAD : VERTEX_FORMAT_STANDARD;
+	VertexFormat_t fmt = bQuadList ? VERTEX_FORMAT_SUBDQUAD : MATERIAL_VERTEX_FORMAT_MODEL;
 
 	bool useHWLighting = m_pRC->m_Config.m_bSupportsVertexAndPixelShaders && !m_pRC->m_Config.bSoftwareLighting;
 	// Draw all the various mesh groups...
@@ -2151,17 +1927,17 @@ int CStudioRender::R_StudioDrawEyeball( IMatRenderContext *pRenderContext, mstud
 					CachedPosNormTan_t* pFlexVert = m_VertexCache.GetFlexVertex(n);
 					R_StudioTransform( pFlexVert->m_Position.AsVector3D(), &vert.m_BoneWeights, m_PoseToWorld, pWorldVert->m_Position.AsVector3D() );
 					R_StudioRotate( pFlexVert->m_Normal.AsVector3D(), &vert.m_BoneWeights, m_PoseToWorld, pWorldVert->m_Normal.AsVector3D() );
-					Assert( pWorldVert->m_Normal.x >= -1.05f && pWorldVert->m_Normal.x <= 1.05f );
-					Assert( pWorldVert->m_Normal.y >= -1.05f && pWorldVert->m_Normal.y <= 1.05f );
-					Assert( pWorldVert->m_Normal.z >= -1.05f && pWorldVert->m_Normal.z <= 1.05f );
+					contract_assert( pWorldVert->m_Normal.x >= -1.05f && pWorldVert->m_Normal.x <= 1.05f );
+					contract_assert( pWorldVert->m_Normal.y >= -1.05f && pWorldVert->m_Normal.y <= 1.05f );
+					contract_assert( pWorldVert->m_Normal.z >= -1.05f && pWorldVert->m_Normal.z <= 1.05f );
 				}
 				else
 				{
 					R_StudioTransform( vert.m_vecPosition, &vert.m_BoneWeights, m_PoseToWorld, pWorldVert->m_Position.AsVector3D() );
 					R_StudioRotate( vert.m_vecNormal, &vert.m_BoneWeights, m_PoseToWorld, pWorldVert->m_Normal.AsVector3D() );
-					Assert( pWorldVert->m_Normal.x >= -1.05f && pWorldVert->m_Normal.x <= 1.05f );
-					Assert( pWorldVert->m_Normal.y >= -1.05f && pWorldVert->m_Normal.y <= 1.05f );
-					Assert( pWorldVert->m_Normal.z >= -1.05f && pWorldVert->m_Normal.z <= 1.05f );
+					contract_assert( pWorldVert->m_Normal.x >= -1.05f && pWorldVert->m_Normal.x <= 1.05f );
+					contract_assert( pWorldVert->m_Normal.y >= -1.05f && pWorldVert->m_Normal.y <= 1.05f );
+					contract_assert( pWorldVert->m_Normal.z >= -1.05f && pWorldVert->m_Normal.z <= 1.05f );
 				}
 
 				// Don't bother to light in software when we've got vertex + pixel shaders.
@@ -2224,7 +2000,7 @@ int CStudioRender::R_StudioDrawMesh( IMatRenderContext *pRenderContext, mstudiom
 									 StudioModelLighting_t lighting, IMaterial *pMaterial, 
 									 ColorMeshInfo_t *pColorMeshes, int lod )
 {
-	VPROF( "R_StudioDrawMesh" );
+	CVProfScope _( "R_StudioDrawMesh", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	int numFacesRendered = 0;
 
@@ -2290,6 +2066,7 @@ void InsertRenderable( int mesh, T val, int count, int* pIndices, T* pValList )
 int CStudioRender::SortMeshes( int* pIndices, IMaterial **ppMaterials, 
 	short* pskinref, Vector const& vforward, Vector const& r_origin )
 {
+	ks::ScratchArena<> scratch;
 	int numMeshes = 0;
 	if (m_bDrawTranslucentSubModels)
 	{
@@ -2318,7 +2095,7 @@ int CStudioRender::SortMeshes( int* pIndices, IMaterial **ppMaterials,
 	}
 	else
 	{
-		IMaterial** ppMat = (IMaterial**)stackalloc( m_pSubModel->nummeshes * sizeof(IMaterial*) );
+		IMaterial** ppMat = (IMaterial**)scratch.AllocBytes( m_pSubModel->nummeshes * sizeof(IMaterial*) );
 
 		// Sort by material type
 		for (int i = 0; i < m_pSubModel->nummeshes; ++i)
@@ -2351,7 +2128,7 @@ int CStudioRender::SortMeshes( int* pIndices, IMaterial **ppMaterials,
 int CStudioRender::R_StudioDrawPoints( IMatRenderContext *pRenderContext, int skin, void /*IClientEntity*/ *pClientEntity, 
 	IMaterial **ppMaterials, int *pMaterialFlags, int boneMask, int lod, ColorMeshInfo_t *pColorMeshes )
 {
-	VPROF( "R_StudioDrawPoints" );
+	CVProfScope _( "R_StudioDrawPoints", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	int			i;
 	int numFacesRendered = 0;
 
@@ -2391,7 +2168,7 @@ int CStudioRender::R_StudioDrawPoints( IMatRenderContext *pRenderContext, int sk
 	{
 		mstudiomesh_t *pmesh = m_pSubModel->pMesh(i);
 		studiomeshdata_t *pMeshData = &m_pStudioMeshes[pmesh->meshid];
-		Assert( pMeshData );
+		contract_assert( pMeshData );
 
 		if ( !pMeshData->m_NumGroup )
 			continue;

@@ -1,4 +1,6 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ====
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
+
 /*
 Entity Data Descriptions
 
@@ -63,8 +65,37 @@ OUTPUTS:
 */
 //=============================================================================
 
-
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "predictableid.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "soundflags.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "entitylist.h"
@@ -74,12 +105,9 @@ OUTPUTS:
 #include "entitydefs.h"
 #include "entityinput.h"
 #include "entityoutput.h"
-#include "tier1/fixed_pool.h"
-#include "tier1/strtools.h"
 #include "datacache/imdlcache.h"
 #include "env_debughistory.h"
 
-#include "tier0/vprof.h"
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CEventAction )
 
@@ -108,7 +136,7 @@ CEventAction::CEventAction( const char *ActionData )
 	char szToken[256];
 	
 	char chDelim = VMF_IOPARAM_STRING_DELIMITER;
-	if (!strchr(ActionData, VMF_IOPARAM_STRING_DELIMITER))
+	if (!std::strchr(ActionData, VMF_IOPARAM_STRING_DELIMITER))
 	{
 		chDelim = ',';
 	}
@@ -150,7 +178,7 @@ CEventAction::CEventAction( const char *ActionData )
 	psz = nexttoken(szToken, psz, chDelim);
 	if (szToken[0] != '\0')
 	{
-		m_flDelay = atof(szToken);
+		m_flDelay = std::atof(szToken);
 	}
 
 	//
@@ -159,7 +187,7 @@ CEventAction::CEventAction( const char *ActionData )
 	nexttoken(szToken, psz, chDelim);
 	if (szToken[0] != '\0')
 	{
-		m_nTimesToFire = atoi(szToken);
+		m_nTimesToFire = std::atoi(szToken);
 		if (m_nTimesToFire == 0)
 		{
 			m_nTimesToFire = EVENT_FIRE_ALWAYS;
@@ -184,12 +212,12 @@ CEventAction::CEventAction( const CEventAction &p_EventAction )
 // can be used for other blocks; will error if to big a block is tried to be allocated
 ks::fixed_pool g_EntityListPool( std::max(sizeof(CEventAction),sizeof(CMultiInputVar::inputitem_t)), 512, ks::fixed_pool::grow::fast, "g_EntityListPool", std::max(alignof(CEventAction),alignof(CMultiInputVar::inputitem_t)) );
 
-void *CEventAction::operator new( size_t stAllocateBlock )
+void *CEventAction::operator new( std::size_t stAllocateBlock )
 {
 	return g_EntityListPool.alloc( stAllocateBlock );
 }
 
-void *CEventAction::operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
+void *CEventAction::operator new( std::size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
 {
 	return g_EntityListPool.alloc( stAllocateBlock );
 }
@@ -272,14 +300,14 @@ void CBaseEntityOutput::FireOutput(variant_t Value, CBaseEntity *pActivator, CBa
 			if ( ev->m_flDelay )
 			{
 				char szBuffer[256];
-				Q_snprintf( szBuffer, sizeof(szBuffer), "(%0.2f) output: (%s,%s) -> (%s,%s,%.1f)(%s)\n", gpGlobals->curtime, pCaller ? STRING(pCaller->m_iClassname) : "NULL", pCaller ? STRING(pCaller->GetEntityName()) : "NULL", STRING(ev->m_iTarget), STRING(ev->m_iTargetInput), ev->m_flDelay, STRING(ev->m_iParameter) );
+				V_snprintf( szBuffer, sizeof(szBuffer), "(%0.2f) output: (%s,%s) -> (%s,%s,%.1f)(%s)\n", gpGlobals->curtime, pCaller ? STRING(pCaller->m_iClassname) : "NULL", pCaller ? STRING(pCaller->GetEntityName()) : "NULL", STRING(ev->m_iTarget), STRING(ev->m_iTargetInput), ev->m_flDelay, STRING(ev->m_iParameter) );
 				DevMsg( 2, "%s", szBuffer );
 				ADD_DEBUG_HISTORY( HISTORY_ENTITY_IO, szBuffer );
 			}
 			else
 			{
 				char szBuffer[256];
-				Q_snprintf( szBuffer, sizeof(szBuffer), "(%0.2f) output: (%s,%s) -> (%s,%s)(%s)\n", gpGlobals->curtime, pCaller ? STRING(pCaller->m_iClassname) : "NULL", pCaller ? STRING(pCaller->GetEntityName()) : "NULL", STRING(ev->m_iTarget), STRING(ev->m_iTargetInput), STRING(ev->m_iParameter) );
+				V_snprintf( szBuffer, sizeof(szBuffer), "(%0.2f) output: (%s,%s) -> (%s,%s)(%s)\n", gpGlobals->curtime, pCaller ? STRING(pCaller->m_iClassname) : "NULL", pCaller ? STRING(pCaller->GetEntityName()) : "NULL", STRING(ev->m_iTarget), STRING(ev->m_iTargetInput), STRING(ev->m_iParameter) );
 				DevMsg( 2, "%s", szBuffer );
 				ADD_DEBUG_HISTORY( HISTORY_ENTITY_IO, szBuffer );
 			}
@@ -301,7 +329,7 @@ void CBaseEntityOutput::FireOutput(variant_t Value, CBaseEntity *pActivator, CBa
 			if (ev->m_nTimesToFire == 0)
 			{
 				char szBuffer[256];
-				Q_snprintf( szBuffer, sizeof(szBuffer), "Removing from action list: (%s,%s) -> (%s,%s)\n", pCaller ? STRING(pCaller->m_iClassname) : "NULL", pCaller ? STRING(pCaller->GetEntityName()) : "NULL", STRING(ev->m_iTarget), STRING(ev->m_iTargetInput));
+				V_snprintf( szBuffer, sizeof(szBuffer), "Removing from action list: (%s,%s) -> (%s,%s)\n", pCaller ? STRING(pCaller->m_iClassname) : "NULL", pCaller ? STRING(pCaller->GetEntityName()) : "NULL", STRING(ev->m_iTarget), STRING(ev->m_iTargetInput));
 				DevMsg( 2, "%s", szBuffer );
 				ADD_DEBUG_HISTORY( HISTORY_ENTITY_IO, szBuffer );
 				bRemove = true;
@@ -500,12 +528,12 @@ void CMultiInputVar::AddValue( variant_t newVal, int outputID )
 //-----------------------------------------------------------------------------
 // Purpose: allocates memory from the entitylist pool
 //-----------------------------------------------------------------------------
-void *CMultiInputVar::inputitem_t::operator new( size_t stAllocateBlock )
+void *CMultiInputVar::inputitem_t::operator new( std::size_t stAllocateBlock )
 {
 	return g_EntityListPool.alloc( stAllocateBlock );
 }
 
-void *CMultiInputVar::inputitem_t::operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
+void *CMultiInputVar::inputitem_t::operator new( std::size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
 {
 	return g_EntityListPool.alloc( stAllocateBlock );
 }
@@ -524,13 +552,13 @@ void CMultiInputVar::inputitem_t::operator delete( void *pMem )
 //
 // Purpose: holds and executes a global prioritized queue of entity actions
 //-----------------------------------------------------------------------------
-DEFINE_FIXEDSIZE_ALLOCATOR( EventQueuePrioritizedEvent_t, 128, ks::fixed_pool::grow::slow );
+ks::fixed_pool EventQueuePrioritizedEvent_t::s_Allocator( sizeof(EventQueuePrioritizedEvent_t), 128, ks::fixed_pool::grow::slow, "EventQueuePrioritizedEvent_t pool", alignof(EventQueuePrioritizedEvent_t) );
 
 CEventQueue g_EventQueue;
 
 CEventQueue::CEventQueue()
 {
-	m_Events.m_flFireTime = -FLT_MAX;
+	m_Events.m_flFireTime = -std::numeric_limits<float>::max();
 	m_Events.m_pNext = nullptr;
 
 	Init();
@@ -672,7 +700,7 @@ void CEventQueue::AddEvent( EventQueuePrioritizedEvent_t *newEvent )
 		}
 	}
 
-	Assert( pe );
+	contract_assert( pe );
 
 	// insert
 	newEvent->m_pNext = pe->m_pNext;
@@ -686,7 +714,7 @@ void CEventQueue::AddEvent( EventQueuePrioritizedEvent_t *newEvent )
 
 void CEventQueue::RemoveEvent( EventQueuePrioritizedEvent_t *pe )
 {
-	Assert( pe->m_pPrev );
+	contract_assert( pe->m_pPrev );
 	pe->m_pPrev->m_pNext = pe->m_pNext;
 	if ( pe->m_pNext )
 	{
@@ -769,7 +797,7 @@ void CEventQueue::ServiceEvents( void )
 			}
 			
 			char szBuffer[256];
-			Q_snprintf( szBuffer, sizeof(szBuffer), "unhandled input: (%s) -> (%s), from (%s,%s); target entity not found\n", STRING(pe->m_iTargetInput), STRING(pe->m_iTarget), pClass, pName );
+			V_snprintf( szBuffer, sizeof(szBuffer), "unhandled input: (%s) -> (%s), from (%s,%s); target entity not found\n", STRING(pe->m_iTargetInput), STRING(pe->m_iTarget), pClass, pName );
 			DevMsg( 2, "%s", szBuffer );
 			ADD_DEBUG_HISTORY( HISTORY_ENTITY_IO, szBuffer );
 		}
@@ -912,7 +940,7 @@ bool CEventQueue::HasEventPending( CBaseEntity *pTarget, const char *sInputName 
 
 void ServiceEventQueue( void )
 {
-	VPROF("ServiceEventQueue()");
+	CVProfScope _( "ServiceEventQueue()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	g_EventQueue.ServiceEvents();
 }
@@ -1077,7 +1105,7 @@ bool variant_t::Convert( fieldtype_t newType )
 				{
 					if (iszVal != NULL_STRING)
 					{
-						SetInt(atoi(STRING(iszVal)));
+						SetInt(std::atoi(STRING(iszVal)));
 					}
 					else
 					{
@@ -1090,7 +1118,7 @@ bool variant_t::Convert( fieldtype_t newType )
 				{
 					if (iszVal != NULL_STRING)
 					{
-						SetFloat(atof(STRING(iszVal)));
+						SetFloat(std::atof(STRING(iszVal)));
 					}
 					else
 					{
@@ -1103,7 +1131,7 @@ bool variant_t::Convert( fieldtype_t newType )
 				{
 					if (iszVal != NULL_STRING)
 					{
-						SetBool( atoi(STRING(iszVal)) != 0 );
+						SetBool( std::atoi(STRING(iszVal)) != 0 );
 					}
 					else
 					{
@@ -1115,7 +1143,7 @@ bool variant_t::Convert( fieldtype_t newType )
 				case FIELD_VECTOR:
 				{
 					Vector tmpVec = vec3_origin;
-					if (sscanf(STRING(iszVal), "[%f %f %f]", &tmpVec[0], &tmpVec[1], &tmpVec[2]) == 0)
+					if (std::sscanf(STRING(iszVal), "[%f %f %f]", &tmpVec[0], &tmpVec[1], &tmpVec[2]) == 0)
 					{
 						// Try sucking out 3 floats with no []s
 						sscanf(STRING(iszVal), "%f %f %f", &tmpVec[0], &tmpVec[1], &tmpVec[2]);
@@ -1131,7 +1159,7 @@ bool variant_t::Convert( fieldtype_t newType )
 					int nBlue = 0;
 					int nAlpha = 255;
 
-					sscanf(STRING(iszVal), "%d %d %d %d", &nRed, &nGreen, &nBlue, &nAlpha);
+					std::sscanf(STRING(iszVal), "%d %d %d %d", &nRed, &nGreen, &nBlue, &nAlpha);
 					SetColor32( nRed, nGreen, nBlue, nAlpha );
 					return true;
 				}
@@ -1200,36 +1228,36 @@ const char *variant_t::ToString( void ) const
 		{
 			if (bVal == 0)
 			{
-				Q_strncpy(szBuf, "false",sizeof(szBuf));
+				V_strncpy(szBuf, "false",sizeof(szBuf));
 			}
 			else
 			{
-				Q_strncpy(szBuf, "true",sizeof(szBuf));
+				V_strncpy(szBuf, "true",sizeof(szBuf));
 			}
 			return(szBuf);
 		}
 
 	case FIELD_INTEGER:
 		{
-			Q_snprintf( szBuf, sizeof( szBuf ), "%i", iVal );
+			V_snprintf( szBuf, sizeof( szBuf ), "%i", iVal );
 			return(szBuf);
 		}
 
 	case FIELD_FLOAT:
 		{
-			Q_snprintf(szBuf,sizeof(szBuf), "%g", flVal);
+			V_snprintf(szBuf,sizeof(szBuf), "%g", flVal);
 			return(szBuf);
 		}
 
 	case FIELD_COLOR32:
 		{
-			Q_snprintf(szBuf,sizeof(szBuf), "%d %d %d %d", (int)rgbaVal.r, (int)rgbaVal.g, (int)rgbaVal.b, (int)rgbaVal.a);
+			V_snprintf(szBuf,sizeof(szBuf), "%d %d %d %d", (int)rgbaVal.r, (int)rgbaVal.g, (int)rgbaVal.b, (int)rgbaVal.a);
 			return(szBuf);
 		}
 
 	case FIELD_VECTOR:
 		{
-			Q_snprintf(szBuf,sizeof(szBuf), "[%g %g %g]", (double)vecVal[0], (double)vecVal[1], (double)vecVal[2]);
+			V_snprintf(szBuf,sizeof(szBuf), "[%g %g %g]", (double)vecVal[0], (double)vecVal[1], (double)vecVal[2]);
 			return(szBuf);
 		}
 
@@ -1242,7 +1270,7 @@ const char *variant_t::ToString( void ) const
 	case FIELD_EHANDLE:
 		{
 			const char *pszName = (Entity()) ? STRING(Entity()->GetEntityName()) : "<<null entity>>";
-			Q_strncpy( szBuf, pszName, 512 );
+			V_strncpy( szBuf, pszName, 512 );
 			return (szBuf);
 		}
 	}
@@ -1254,12 +1282,12 @@ const char *variant_t::ToString( void ) const
 
 ks::fixed_pool g_EntListMemPool( sizeof(entitem_t), 256, ks::fixed_pool::grow::none, "g_EntListMemPool", alignof(entitem_t) );
 
-void *entitem_t::operator new( size_t stAllocateBlock )
+void *entitem_t::operator new( std::size_t stAllocateBlock )
 {
 	return g_EntListMemPool.alloc( stAllocateBlock );
 }
 
-void *entitem_t::operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
+void *entitem_t::operator new( std::size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
 {
 	return g_EntListMemPool.alloc( stAllocateBlock );
 }
@@ -1353,4 +1381,3 @@ void CEntityList::DeleteEntity( CBaseEntity *pEnt )
 		e = e->pNext;
 	}
 }
-

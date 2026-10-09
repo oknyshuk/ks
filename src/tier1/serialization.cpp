@@ -1,27 +1,11 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// $Header: $
-// $NoKeywords: $
-//
-// Serialization
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
 
+// Purpose: Serialization
 
-#include "tier1/serialization.h"
-#include "mathlib/vector.h"
-#include "mathlib/vector2d.h"
-#include "mathlib/vector4d.h"
-#include "mathlib/vmatrix.h"
-#include "color.h"
-#include <stdio.h>
-#include <stdarg.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <limits.h>
-#include "tier1/utlstring.h"
-#include "tier1/strtools.h"
-#include "tier1/characterset.h"
-
+import ks.tier1;
+import std;
 
 //-----------------------------------------------------------------------------
 // For serialization, set the delimiter rules
@@ -46,7 +30,7 @@ static void SerializeFloat( ks::text_writer &buf, float f )
 {
 	// FIXME: Print this in a way that we never lose precision
 	char pTemp[256];
-	int nLen = Q_snprintf( pTemp, sizeof(pTemp), "%.10f", f );
+	int nLen = V_snprintf( pTemp, sizeof(pTemp), "%.10f", f );
 	while ( nLen > 0 && pTemp[nLen-1] == '0' )
 	{
 		--nLen;
@@ -426,7 +410,7 @@ bool Serialize( ks::text_writer &buf, const std::vector< unsigned char > &src )
 static int CountBinaryBytes( ks::text_reader &buf, int *pEndGet )
 {
 	// This counts the number of bytes in the uuencoded text
-	size_t nStartGet = buf.tell();
+	std::size_t nStartGet = buf.tell();
 	buf.skip_whitespace();
 	*pEndGet = (int)buf.tell();
 	int nByteCount = 0;
@@ -471,7 +455,7 @@ bool Unserialize( ks::byte_reader &buf, std::vector< unsigned char > &dest )
 	int nLen = buf.read< int >();
 	if ( nLen < 0 )
 		return false;
-	if ( (size_t)nLen > buf.remaining() )
+	if ( (std::size_t)nLen > buf.remaining() )
 	{
 		buf.fail();
 		return false;

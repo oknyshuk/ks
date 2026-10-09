@@ -1,17 +1,9 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=====================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
+import std;
+import ks.core;
 #include "uigamedata.h"
-#include "engineinterface.h"
-#include "localize/ilocalize.h"
-#include "matchmaking/imatchframework.h"
-#include "filesystem.h"
-#include "fmtstr.h"
-#include "steam/steam_api.h"
-
 
 using namespace BaseModUI;
 
@@ -33,17 +25,3 @@ void CUIGameData::RunFrame_Storage()
 
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

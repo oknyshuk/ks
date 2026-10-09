@@ -1,10 +1,58 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "string_t.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "c_recipientfilter.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "npcevent.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "igameevents.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "player.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
+#endif
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
@@ -18,10 +66,8 @@
 #include "in_buttons.h"
 #include "engine/IEngineSound.h"
 #include "ammodef.h"
-#include "tier1/vector_ops.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "datacache/imdlcache.h"
-#include "tier0/vprof.h"
 #include "collisionutils.h"
 
 #if !defined( CLIENT_DLL )
@@ -29,7 +75,6 @@
 // Game DLL Headers
 #include "soundent.h"
 #include "eventqueue.h"
-#include "fmtstr.h"
 #include "gameweaponmanager.h"
 
 #else
@@ -44,9 +89,9 @@
 // this, then teh hud hint counter will be deremented so the hint will be shown again, as
 // if it had never been seen. The total display time for a hud hint is specified in client
 // script HudAnimations.txt (which I can't read here). 
-#define MIN_HUDHINT_DISPLAY_TIME 7.0f
+constexpr auto MIN_HUDHINT_DISPLAY_TIME = 7.0f;
 
-#define HIDEWEAPON_THINK_CONTEXT			"BaseCombatWeapon_HideThink"
+inline constexpr const char *HIDEWEAPON_THINK_CONTEXT = "BaseCombatWeapon_HideThink";
 
 extern bool UTIL_ItemCanBeTouchedByPlayer( CBaseEntity *pItem, CBasePlayer *pPlayer );
 
@@ -460,7 +505,7 @@ int CBaseWeaponWorldModel::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 	else 
 	{
 		// invalid situation
-		Assert( !"Base Weapon World Model has no weapon parent" );
+		contract_assert( !"Base Weapon World Model has no weapon parent" );
 		return FL_EDICT_ALWAYS;
 	}
 }
@@ -492,7 +537,7 @@ CBaseWeaponWorldModel* CBaseCombatWeapon::CreateWeaponWorldModel( void )
 	{
 		CBaseWeaponWorldModel *pWorldModel = dynamic_cast <CBaseWeaponWorldModel*> ( CreateEntityByName( "weaponworldmodel" ) );
 
-		Assert( pWorldModel );
+		contract_assert( pWorldModel );
 
 		pWorldModel->SetOwningWeapon( this );
 		m_hWeaponWorldModel.Set( pWorldModel );
@@ -728,11 +773,6 @@ const unsigned char *CBaseCombatWeapon::GetEncryptionKey( void )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::Precache( void )
 {
-#if defined( CLIENT_DLL )
-	Assert( Q_strlen( GetClassname() ) > 0 );
-	// Msg( "Client got %s\n", GetClassname() );
-#endif
-
 	m_iPrimaryAmmoType = m_iSecondaryAmmoType = -1;
 
 	// Add this weapon to the weapon registry, and get our index into it
@@ -1367,7 +1407,7 @@ void CBaseCombatWeapon::DisplayAltFireHudHint()
 void CBaseCombatWeapon::RescindAltFireHudHint()
 {
 #if !defined( CLIENT_DLL )
-	Assert(m_bAltFireHudHintDisplayed);
+	contract_assert( m_bAltFireHudHintDisplayed );
 	
 	UTIL_HudHintText( GetOwner(), "" );
 	--m_iAltFireHudHintCount;
@@ -1409,7 +1449,7 @@ void CBaseCombatWeapon::DisplayReloadHudHint()
 void CBaseCombatWeapon::RescindReloadHudHint()
 {
 #if !defined( CLIENT_DLL )
-	Assert(m_bReloadHudHintDisplayed);
+	contract_assert( m_bReloadHudHintDisplayed );
 
 	UTIL_HudHintText( GetOwner(), "" );
 	--m_iReloadHudHintCount;
@@ -1596,7 +1636,7 @@ void CBaseCombatWeapon::SetActivity( Activity act, float duration )
 			// FIXME: does this even make sense in non-shoot animations?
 			m_flPlaybackRate = SequenceDuration( sequence ) / duration;
 			m_flPlaybackRate = fpmin( m_flPlaybackRate, 12.0f);  // FIXME; magic number!, network encoding range
-			Assert( IsFinite( m_flPlaybackRate ) );
+			contract_assert( IsFinite( m_flPlaybackRate ) );
 		}
 		else
 		{
@@ -1634,7 +1674,7 @@ int CBaseCombatWeapon::UpdateClientData( CBasePlayer *pPlayer )
 //-----------------------------------------------------------------------------
 void CBaseCombatWeapon::SetViewModelIndex( int index )
 {
-	Assert( index >= 0 && index < MAX_VIEWMODELS );
+	contract_assert( index >= 0 && index < MAX_VIEWMODELS );
 	m_nViewModelIndex = index;
 }
 
@@ -1663,7 +1703,7 @@ void CBaseCombatWeapon::SendViewModelAnim( int nSequence )
 		return;
 
 	SetViewModel();
-	Assert( vm->ViewModelIndex() == m_nViewModelIndex );
+	contract_assert( vm->ViewModelIndex() == m_nViewModelIndex );
 	vm->SendViewModelMatchingSequence( nSequence );
 }
 
@@ -1672,19 +1712,19 @@ float CBaseCombatWeapon::GetViewModelSequenceDuration()
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
 	if ( pOwner == nullptr )
 	{
-		Assert( false );
+		contract_assert( false );
 		return 0;
 	}
 	
 	CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
 	if ( vm == nullptr )
 	{
-		Assert( false );
+		contract_assert( false );
 		return 0;
 	}
 
 	SetViewModel();
-	Assert( vm->ViewModelIndex() == m_nViewModelIndex );
+	contract_assert( vm->ViewModelIndex() == m_nViewModelIndex );
 	return vm->SequenceDuration();
 }
 
@@ -1697,14 +1737,14 @@ bool CBaseCombatWeapon::IsViewModelSequenceFinished( void )
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
 	if ( pOwner == nullptr )
 	{
-		Assert( false );
+		contract_assert( false );
 		return false;
 	}
 	
 	CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
 	if ( vm == nullptr )
 	{
-		Assert( false );
+		contract_assert( false );
 		return false;
 	}
 
@@ -1722,7 +1762,7 @@ void CBaseCombatWeapon::SetViewModel()
 	CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
 	if ( vm == nullptr )
 		return;
-	Assert( vm->ViewModelIndex() == m_nViewModelIndex );
+	contract_assert( vm->ViewModelIndex() == m_nViewModelIndex );
 	vm->SetWeaponModel( GetViewModel( m_nViewModelIndex ), this );
 //#ifndef CLIENT_DLL
 //	SetWeaponModules();
@@ -1894,7 +1934,7 @@ bool CBaseCombatWeapon::IsWeaponVisible( void )
 bool CBaseCombatWeapon::ReloadOrSwitchWeapons( void )
 {
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
-	Assert( pOwner );
+	contract_assert( pOwner );
 
 	m_bFireOnEmpty = false;
 
@@ -2299,7 +2339,7 @@ const WeaponProficiencyInfo_t *CBaseCombatWeapon::GetProficiencyValues()
 		{ 1.0, 1.0	},
 	};
 
-	COMPILE_TIME_ASSERT( ARRAYSIZE(defaultWeaponProficiencyTable) == WEAPON_PROFICIENCY_PERFECT + 1);
+	static_assert( std::size( defaultWeaponProficiencyTable ) == WEAPON_PROFICIENCY_PERFECT + 1 );
 	return defaultWeaponProficiencyTable;
 }
 
@@ -2705,7 +2745,7 @@ void CBaseCombatWeapon::PrimaryAttack( void )
 	if (!m_iClip1 && GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) <= 0 )
 	{
 		// HEV suit - indicate out of ammo condition
-		pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0); 
+		pPlayer->SetSuitUpdate("!HEV_AMO0", false, 0); 
 	}
 
 	//Add our view kick in
@@ -3068,25 +3108,14 @@ REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendNonLocalWeaponDataTable 
 
 #endif
 
-#if PREDICTION_ERROR_CHECK_LEVEL > 1
-#define SendPropTime SendPropFloat
-#define RecvPropTime RecvPropFloat
-#endif
-
 //-----------------------------------------------------------------------------
 // Purpose: Propagation data for weapons. Only sent when a player's holding it.
 //-----------------------------------------------------------------------------
 IMPLEMENT_REFLECT_TABLE_IN( CBaseCombatWeapon, DT_LocalActiveWeaponData );
-#if !defined( CLIENT_DLL )
-#else
-#endif
 //-----------------------------------------------------------------------------
 // Purpose: Propagation data for weapons. Only sent when a player's holding it.
 //-----------------------------------------------------------------------------
 IMPLEMENT_REFLECT_TABLE_IN( CBaseCombatWeapon, DT_LocalWeaponData );
-#if !defined( CLIENT_DLL )
-#else
-#endif
 #if defined( CLIENT_DLL )
 
 void RecvProxy_State( const CRecvProxyData *pData, void *pStruct, void *pOut )
@@ -3098,12 +3127,6 @@ void RecvProxy_State( const CRecvProxyData *pData, void *pStruct, void *pOut )
 #endif
 
 IMPLEMENT_REFLECT_TABLE( CBaseCombatWeapon, DT_BaseCombatWeapon );
-#if !defined( CLIENT_DLL )
-#else
-#endif
-#if defined( CLIENT_DLL )
-#else
-#endif
 
 
 // float CBaseCombatWeapon::GetAttributeFloat( const char* szAttribClassName ) const
@@ -3252,6 +3275,6 @@ int CBaseCombatWeapon::GetReserveAmmoMax( AmmoPosition_t nAmmoPosition ) const
 	{
 	case AMMO_POSITION_PRIMARY: return GetWpnData().GetPrimaryReserveAmmoMax( GetEconItemView() );
 	case AMMO_POSITION_SECONDARY: return GetWpnData().GetSecondaryReserveAmmoMax( GetEconItemView() );
-	default: Assert(0); return 0;
+	default: contract_assert( 0 ); return 0;
 	}
 }

@@ -1,17 +1,31 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
+#include "rocketui/rmlui.h"
 #include "rkconsole.h"
 
 #include "rkhud_model.h"
-#include "cbase.h"
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 
 #include "cdll_int.h"
 #include "inputsystem/ButtonCode.h"
 #include "inputsystem/iinputsystem.h"
-#include "tier1/convar.h"
 
 #include <rocketui/rmlui.h>
+import ks.tier1;
+import std;
 
 // hud_console.rml reports edits to the input here (data-event-change) so the
 // completion list can follow what is being typed.
@@ -30,19 +44,27 @@ RocketConsole &RkConsole() { return s_RocketConsole; }
 ConVar rocket_console_enabled("rocket_console_enabled", "1", FCVAR_ARCHIVE,
                               "Enable RocketUI console");
 
-CON_COMMAND(rocket_console_show, "Show the RocketUI console") {
+static void rocket_console_show( const CCommand &args );
+static ConCommand rocket_console_show_command( "rocket_console_show", rocket_console_show, "Show the RocketUI console" );
+static void rocket_console_show( const CCommand &args ) {
   RkConsole().Show();
 }
 
-CON_COMMAND(rocket_console_hide, "Hide the RocketUI console") {
+static void rocket_console_hide( const CCommand &args );
+static ConCommand rocket_console_hide_command( "rocket_console_hide", rocket_console_hide, "Hide the RocketUI console" );
+static void rocket_console_hide( const CCommand &args ) {
   RkConsole().Hide();
 }
 
-CON_COMMAND(rocket_console_toggle, "Toggle the RocketUI console") {
+static void rocket_console_toggle( const CCommand &args );
+static ConCommand rocket_console_toggle_command( "rocket_console_toggle", rocket_console_toggle, "Toggle the RocketUI console" );
+static void rocket_console_toggle( const CCommand &args ) {
   RkConsole().Toggle();
 }
 
-CON_COMMAND(rocket_console_clear, "Clear the RocketUI console") {
+static void rocket_console_clear( const CCommand &args );
+static ConCommand rocket_console_clear_command( "rocket_console_clear", rocket_console_clear, "Clear the RocketUI console" );
+static void rocket_console_clear( const CCommand &args ) {
   RkConsole().Clear();
 }
 

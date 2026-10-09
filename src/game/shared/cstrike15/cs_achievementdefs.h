@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
 // Purpose: Shared CS definitions.
-//
-//=============================================================================//
-
-#ifndef CS_ACHIEVEMENTDEFS_H
-#define CS_ACHIEVEMENTDEFS_H
-
-
 
 //=============================================================================
 // Achievement ID Definitions
@@ -269,6 +264,3 @@ typedef enum
 	CSSeason1_End               // Must be after last season 1 achievement
 
 } eCSAchievementType;
-
-
-#endif // CS_ACHIEVEMENTDEFS_H

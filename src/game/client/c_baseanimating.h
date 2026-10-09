@@ -1,20 +1,15 @@
-//===== Copyright  1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $NoKeywords: $
-//===========================================================================//
-#ifndef C_BASEANIMATING_H
-#define C_BASEANIMATING_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include <mutex>
+import std;
+import ks.tier1;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
-
+#include "c_baseentity.h"
+#include "client_class.h"
 
 #include "studio.h"
-#include "utlvector.h"
 #include "ragdoll.h"
 #include "mouthinfo.h"
 // Shared activities
@@ -24,13 +19,12 @@
 #include "bone_accessor.h"
 #include "bone_merge_cache.h"
 #include "ragdoll_shared.h"
-#include "tier0/threadtools.h"
 #include "datacache/idatacache.h"
 #include "toolframework/itoolframework.h"
 #include "materialsystem/custommaterialowner.h"
 
-#define LIPSYNC_POSEPARAM_NAME "mouth"
-#define NUM_HITBOX_FIRES	10
+inline constexpr const char *LIPSYNC_POSEPARAM_NAME = "mouth";
+inline constexpr auto NUM_HITBOX_FIRES = 10;
 
 class C_BaseEntity;
 
@@ -49,14 +43,14 @@ class ConVar;
 class C_RopeKeyframe;
 class CBoneBitList;
 class CBoneList;
-class KeyValues;
 class CJiggleBones;
 class IBoneSetup;
 class C_BaseAnimatingOverlay;
 
 
 
-FORWARD_DECLARE_HANDLE( memhandle_t );
+struct memhandle_t__;
+using memhandle_t = memhandle_t__ *;
 typedef unsigned short MDLHandle_t;
 
 extern ConVar vcollide_wireframe;
@@ -101,7 +95,7 @@ public:
 
 typedef unsigned int			ClientSideAnimationListHandle_t;
 
-#define		INVALID_CLIENTSIDEANIMATION_LIST_HANDLE	(ClientSideAnimationListHandle_t)~0
+inline constexpr auto INVALID_CLIENTSIDEANIMATION_LIST_HANDLE = (ClientSideAnimationListHandle_t)~0;
 
 namespace DT_ServerAnimationData { extern RecvTable g_RecvTable; }
 void RecvProxy_Sequence( const CRecvProxyData *pData, void *pStruct, void *pOut );
@@ -117,7 +111,6 @@ public:
 	DECLARE_CLASS( C_BaseAnimating, C_BaseEntity );
 	DECLARE_CLIENTCLASS();
 	DECLARE_PREDICTABLE();
-	DECLARE_INTERPOLATION();
 	DECLARE_ENT_SCRIPTDESC();
 
 	enum
@@ -196,7 +189,7 @@ public:
 	virtual CMouthInfo *GetMouth();
 	virtual void	ControlMouth( CStudioHdr *pStudioHdr );
 	
-	virtual void DoExtraBoneProcessing( CStudioHdr *pStudioHdr, BoneVector pos[], BoneQuaternion q[], matrix3x4a_t boneToWorld[], CBoneBitList &boneComputed, CIKContext *pIKContext ) { Assert(false); }
+	virtual void DoExtraBoneProcessing( CStudioHdr *pStudioHdr, BoneVector pos[], BoneQuaternion q[], matrix3x4a_t boneToWorld[], CBoneBitList &boneComputed, CIKContext *pIKContext ) { contract_assert( false ); }
 
 	// override in sub-classes
 	virtual void DoAnimationEvents( CStudioHdr *pStudio );
@@ -539,7 +532,7 @@ public:
 	bool							GetRootBone( matrix3x4_t &rootBone );
 	inline void						SetUseParentLightingOrigin( bool value ){ m_bUseParentLightingOrigin = value; }
 
-	virtual void					SetCustomMaterial( ICustomMaterial *pCustomMaterial, int nIndex = 0 ) OVERRIDE;
+	virtual void					SetCustomMaterial( ICustomMaterial *pCustomMaterial, int nIndex = 0 ) override;
 
 	virtual void					SetAllowFastPath( bool bAllow ) { m_bCanUseFastPath = bAllow; }
 
@@ -568,7 +561,7 @@ protected:
 
 private:
 	// This method should return true if the bones have changed + SetupBones needs to be called
-	virtual float					LastBoneChangedTime() { return FLT_MAX; }
+	virtual float					LastBoneChangedTime() { return std::numeric_limits<float>::max(); }
 
 	CBoneList*						RecordBones( CStudioHdr *hdr, matrix3x4_t *pBoneState );
 
@@ -788,11 +781,6 @@ private:
 	Vector							m_vecRenderOriginOverride;
 	bool							m_bUseParentLightingOrigin;
 
-#if defined( DBGFLAG_ASSERT )
-	Vector m_vBoneSetupCachedOrigin;
-	QAngle m_qBoneSetupCachedAngles;
-#endif
-
 
 	friend class C_BaseAnimatingOverlay;
 };
@@ -925,7 +913,7 @@ inline CStudioHdr *C_BaseAnimating::GetModelPtr() const
 #ifdef _DEBUG
 	// Consoles don't need to lock the modeldata cache since it never flushes
 	static IDataCacheSection *pModelCache = g_pDataCache->FindSection( "ModelData" );
-	AssertOnce( pModelCache->IsFrameLocking() );
+	contract_assert( pModelCache->IsFrameLocking() );
 #endif
 	// GetModelPtr() is often called before OnNewModel() so go ahead and set it up first chance.
 	if ( !m_pStudioHdr && GetModel() )
@@ -937,7 +925,7 @@ inline CStudioHdr *C_BaseAnimating::GetModelPtr() const
 
 inline bool C_BaseAnimating::IsModelScaleFractional() const   /// very fast way to ask if the model scale is < 1.0f
 {
-	COMPILE_TIME_ASSERT( sizeof( m_flModelScale ) == sizeof( int ) );
+	static_assert( sizeof( m_flModelScale ) == sizeof( int ) );
 	return *((const int *) &m_flModelScale) < 0x3f800000;
 }
 
@@ -976,8 +964,4 @@ void SetColumn( Vector &src, int column, matrix3x4_t& dest );
 EXTERN_RECV_TABLE(DT_BaseAnimating);
 
 
-extern void DevMsgRT( PRINTF_FORMAT_STRING char const* pMsg, ... );
-
-
-
-#endif // C_BASEANIMATING_H
+extern void DevMsgRT( char const* pMsg, ... );

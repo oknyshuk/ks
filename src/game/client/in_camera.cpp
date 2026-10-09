@@ -1,19 +1,24 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
 #include "hud.h"
 #include "kbutton.h"
 #include "input.h"
 
-
 #include "inputsystem/iinputsystem.h"
-#include "tier0/vprof.h"
 
 //-------------------------------------------------- Constants
 
@@ -62,14 +67,16 @@ extern const ConVar *sv_cheats;
 extern ConVar in_forceuser;
 extern ConVar sv_allow_thirdperson;
 
-CON_COMMAND_F( cam_command, "Tells camera to change modes", FCVAR_CHEAT )
+static void cam_command( const CCommand &args );
+static ConCommand cam_command_command( "cam_command", cam_command, "Tells camera to change modes", FCVAR_CHEAT );
+static void cam_command( const CCommand &args )
 {
 	if ( args.ArgC() < 2 )
 	{
 		Msg( "cam_command <0, 1, or 2>\n" );
 		return;
 	}
-	input->CAM_Command( Q_atoi( args.Arg( 1 ) ) );
+	input->CAM_Command( V_atoi( args.Arg( 1 ) ) );
 }
 
 // ==============================
@@ -288,7 +295,7 @@ void CInput::CAM_Command( int command )
 
 void CInput::CAM_Think( void )
 {
-	VPROF( "CAM_Think" );
+	CVProfScope _( "CAM_Think", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 	PerUserInput_t &user = GetPerUser();

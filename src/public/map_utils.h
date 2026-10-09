@@ -1,15 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef MAP_UTILS_H
-#define MAP_UTILS_H
-
-
-#include "mathlib/vector.h"
-
+import std;
+import ks.math;
 
 // angles comes from the "angles" property
 //
@@ -17,6 +11,3 @@
 // yaw comes from the (obsolete) "angle" property
 // pitch comes from the "pitch" property
 void SetupLightNormalFromProps( const QAngle &angles, float yaw, float pitch, Vector &output );
-
-
-#endif // MAP_UTILS_H

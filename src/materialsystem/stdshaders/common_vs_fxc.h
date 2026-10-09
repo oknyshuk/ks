@@ -1,15 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: This is where all common code for vertex shaders go.
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-
-
-#ifndef COMMON_VS_FXC_H_
-#define COMMON_VS_FXC_H_
 
 #include "common_fxc.h"
 
@@ -19,7 +12,6 @@
 // Ditch all fastpath attemps if we are doing LIGHTING_PREVIEW.
 //	SKIP: defined $LIGHTING_PREVIEW && defined $FASTPATH && $LIGHTING_PREVIEW && $FASTPATH
 // --------------------------------------------------------------------------------
-
 
 #ifndef COMPRESSED_VERTS
 // Default to no vertex compression
@@ -40,7 +32,6 @@
 #define COMPRESSED_NORMALS_COMBINEDTANGENTS_UBYTE4	1
 //#define COMPRESSED_NORMALS_TYPE						COMPRESSED_NORMALS_SEPARATETANGENTS_SHORT2
 #define COMPRESSED_NORMALS_TYPE					COMPRESSED_NORMALS_COMBINEDTANGENTS_UBYTE4
-
 
 #define FOGTYPE_RANGE				0
 #define FOGTYPE_HEIGHT				1
@@ -920,6 +911,3 @@ float3 ApplyDeformation( float3 worldpos, int deftype, float4 defparms0, float4 
 
 	return ret;
 }
-
-
-#endif //#ifndef COMMON_VS_FXC_H_

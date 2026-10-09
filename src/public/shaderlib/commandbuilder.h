@@ -1,28 +1,15 @@
-//===== Copyright (c) Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-// Utility class for building command buffers into memory
-//==================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef COMMANDBUILDER_H
-#define COMMANDBUILDER_H
+// Purpose: Utility class for building command buffers into memory
 
-
-
-
+import ks.tier1;
 #include "shaderapi/commandbuffer.h"
 #include "shaderapi/ishaderapi.h"
 #include "shaderlib/BaseShader.h"
-#include "tier1/convar.h"
-
-
-#ifdef DBGFLAG_ASSERT
-#define TRACK_STORAGE 1
-#else
-#define TRACK_STORAGE 0
-#endif
+import std;
+#include "shaderlib/cshader.h"
 
 //-----------------------------------------------------------------------------
 // Buffer for storing commands into
@@ -33,77 +20,57 @@ public:
 	uint8 m_Data[N];
 
 	uint8 *m_pDataOut;
-#if TRACK_STORAGE
-	size_t m_nNumBytesRemaining;
-#endif
 	
-	FORCEINLINE CFixedCommandStorageBuffer( void )
+	[[gnu::always_inline]] inline CFixedCommandStorageBuffer( void )
 	{
 		m_pDataOut = m_Data;
-#if TRACK_STORAGE
-		m_nNumBytesRemaining = N;
-#endif
 
     }
 
-	FORCEINLINE void EnsureCapacity( size_t sz )
+	[[gnu::always_inline]] inline void EnsureCapacity( std::size_t sz )
 	{
-#if TRACK_STORAGE
-		if ( m_nNumBytesRemaining < sz + 32 )
-			Error( "getting scary\n" );
-#endif
-		Assert( m_nNumBytesRemaining >= sz );
 	}
 
-	template<class T> FORCEINLINE void Put( T const &nValue )
+	template<class T> [[gnu::always_inline]] inline void Put( T const &nValue )
 	{
 		EnsureCapacity( sizeof( T ) );
 		*( reinterpret_cast<T *>( m_pDataOut ) ) = nValue;
 		m_pDataOut += sizeof( nValue );
-#if TRACK_STORAGE
-		m_nNumBytesRemaining -= sizeof( nValue );
-#endif
 	}
 
-	FORCEINLINE void PutInt( int nValue )
+	[[gnu::always_inline]] inline void PutInt( int nValue )
 	{
 		Put( nValue );
 	}
 
-	FORCEINLINE void PutFloat( float nValue )
+	[[gnu::always_inline]] inline void PutFloat( float nValue )
 	{
 		Put( nValue );
 	}
 
-	FORCEINLINE void PutPtr( void * pPtr )
+	[[gnu::always_inline]] inline void PutPtr( void * pPtr )
 	{
 		Put( pPtr );
 	}
 	
-	FORCEINLINE void PutMemory( const void *pMemory, size_t nBytes )
+	[[gnu::always_inline]] inline void PutMemory( const void *pMemory, std::size_t nBytes )
 	{
 		EnsureCapacity( nBytes );
-		memcpy( m_pDataOut, pMemory, nBytes );
+		std::memcpy( m_pDataOut, pMemory, nBytes );
 		m_pDataOut += nBytes;
-#if TRACK_STORAGE
-		m_nNumBytesRemaining -= nBytes;
-#endif
 	}
 
-	FORCEINLINE uint8 *Base( void )
+	[[gnu::always_inline]] inline uint8 *Base( void )
 	{
 		return m_Data;
 	}
 
-	FORCEINLINE void Reset( void )
+	[[gnu::always_inline]] inline void Reset( void )
 	{
 		m_pDataOut = m_Data;
-#if TRACK_STORAGE
-		m_nNumBytesRemaining = N;
-#endif
 	}
 
-	FORCEINLINE size_t Size( void ) const
+	[[gnu::always_inline]] inline std::size_t Size( void ) const
 	{
 		return m_pDataOut - m_Data;
 	}
@@ -119,32 +86,32 @@ template<class S> class CBaseCommandBufferBuilder
 public:
     S m_Storage;
 
-	FORCEINLINE void End( void )
+	[[gnu::always_inline]] inline void End( void )
 	{
 		m_Storage.PutInt( CBCMD_END );
 	}
 
-	FORCEINLINE IMaterialVar *Param( int nVar ) const
+	[[gnu::always_inline]] inline IMaterialVar *Param( int nVar ) const
 	{
 		return CBaseShader::s_ppParams[nVar];
 	}
 
-	FORCEINLINE void Reset( void )
+	[[gnu::always_inline]] inline void Reset( void )
 	{
 		m_Storage.Reset();
 	}
 
-	FORCEINLINE size_t Size( void ) const
+	[[gnu::always_inline]] inline std::size_t Size( void ) const
 	{
 		return m_Storage.Size();
 	}
 
-	FORCEINLINE uint8 *Base( void )
+	[[gnu::always_inline]] inline uint8 *Base( void )
 	{
 		return m_Storage.Base();
 	}
 
-	FORCEINLINE void OutputConstantData( float const *pSrcData )
+	[[gnu::always_inline]] inline void OutputConstantData( float const *pSrcData )
 	{
 		m_Storage.PutFloat( pSrcData[0] );
 		m_Storage.PutFloat( pSrcData[1] );
@@ -152,7 +119,7 @@ public:
 		m_Storage.PutFloat( pSrcData[3] );
 	}
 
-	FORCEINLINE void OutputConstantData4( float flVal0, float flVal1, float flVal2, float flVal3 )
+	[[gnu::always_inline]] inline void OutputConstantData4( float flVal0, float flVal1, float flVal2, float flVal3 )
 	{
 		m_Storage.PutFloat( flVal0 );
 		m_Storage.PutFloat( flVal1 );
@@ -192,20 +159,20 @@ template<class S> class CCommandBufferBuilder : public CBaseCommandBufferBuilder
 public:
 
 
-	FORCEINLINE void End( void )
+	[[gnu::always_inline]] inline void End( void )
 	{
 		this->m_Storage.PutInt( CBCMD_END );
 
 	}
 
-	FORCEINLINE void SetPixelShaderConstants( int nFirstConstant, int nConstants )
+	[[gnu::always_inline]] inline void SetPixelShaderConstants( int nFirstConstant, int nConstants )
 	{
 		this->m_Storage.PutInt( CBCMD_SET_PIXEL_SHADER_FLOAT_CONST );
 		this->m_Storage.PutInt( nFirstConstant );
 		this->m_Storage.PutInt( nConstants );
 	}
 
-	FORCEINLINE void OutputConstantData( float const *pSrcData )
+	[[gnu::always_inline]] inline void OutputConstantData( float const *pSrcData )
 	{
 		this->m_Storage.PutFloat( pSrcData[0] );
 		this->m_Storage.PutFloat( pSrcData[1] );
@@ -213,7 +180,7 @@ public:
 		this->m_Storage.PutFloat( pSrcData[3] );
 	}
 	
-	FORCEINLINE void OutputConstantData4( float flVal0, float flVal1, float flVal2, float flVal3 )
+	[[gnu::always_inline]] inline void OutputConstantData4( float flVal0, float flVal1, float flVal2, float flVal3 )
 	{
 		this->m_Storage.PutFloat( flVal0 );
 		this->m_Storage.PutFloat( flVal1 );
@@ -221,13 +188,13 @@ public:
 		this->m_Storage.PutFloat( flVal3 );
 	}
 
-	FORCEINLINE void SetPixelShaderConstant( int nFirstConstant, float const *pSrcData, int nNumConstantsToSet )
+	[[gnu::always_inline]] inline void SetPixelShaderConstant( int nFirstConstant, float const *pSrcData, int nNumConstantsToSet )
 	{
 		SetPixelShaderConstants( nFirstConstant, nNumConstantsToSet );
 		this->m_Storage.PutMemory( pSrcData, 4 * sizeof( float ) * nNumConstantsToSet );
 	}
 
-	FORCEINLINE void SetPixelShaderConstant( int nFirstConstant, int nVar )
+	[[gnu::always_inline]] inline void SetPixelShaderConstant( int nFirstConstant, int nVar )
 	{
 		SetPixelShaderConstant( nFirstConstant, this->Param( nVar )->GetVecValue() );
 	}
@@ -243,19 +210,19 @@ public:
 		SetPixelShaderConstant( pixelReg, val );
 	}
 
-	FORCEINLINE void SetPixelShaderConstant( int nFirstConstant, float const *pSrcData )
+	[[gnu::always_inline]] inline void SetPixelShaderConstant( int nFirstConstant, float const *pSrcData )
 	{
 		SetPixelShaderConstants( nFirstConstant, 1 );
 		OutputConstantData( pSrcData );
 	}
 
-	FORCEINLINE void SetPixelShaderConstant4( int nFirstConstant, float flVal0, float flVal1, float flVal2, float flVal3 )
+	[[gnu::always_inline]] inline void SetPixelShaderConstant4( int nFirstConstant, float flVal0, float flVal1, float flVal2, float flVal3 )
 	{
 		SetPixelShaderConstants( nFirstConstant, 1 );
 		OutputConstantData4( flVal0, flVal1, flVal2, flVal3 );
 	}
 
-	FORCEINLINE void SetPixelShaderConstant_W( int pixelReg, int constantVar, float fWValue )
+	[[gnu::always_inline]] inline void SetPixelShaderConstant_W( int pixelReg, int constantVar, float fWValue )
 	{
 		if ( constantVar != -1 )
 		{
@@ -283,7 +250,7 @@ public:
 		SetPixelShaderConstant( vertexReg, transformation[0].Base(), 2 ); 
 	}
 
-	FORCEINLINE void SetVertexShaderConstant( int nFirstConstant, float const *pSrcData )
+	[[gnu::always_inline]] inline void SetVertexShaderConstant( int nFirstConstant, float const *pSrcData )
 	{
 		this->m_Storage.PutInt( CBCMD_SET_VERTEX_SHADER_FLOAT_CONST );
 		this->m_Storage.PutInt( nFirstConstant );
@@ -291,7 +258,7 @@ public:
 		OutputConstantData( pSrcData );
 	}
 
-	FORCEINLINE void SetVertexShaderConstant( int nFirstConstant, float const *pSrcData, int nConsts )
+	[[gnu::always_inline]] inline void SetVertexShaderConstant( int nFirstConstant, float const *pSrcData, int nConsts )
 	{
 		this->m_Storage.PutInt( CBCMD_SET_VERTEX_SHADER_FLOAT_CONST );
 		this->m_Storage.PutInt( nFirstConstant );
@@ -300,7 +267,7 @@ public:
 	}
 
 
-	FORCEINLINE void SetVertexShaderConstant4( int nFirstConstant, float flVal0, float flVal1, float flVal2, float flVal3 )
+	[[gnu::always_inline]] inline void SetVertexShaderConstant4( int nFirstConstant, float flVal0, float flVal1, float flVal2, float flVal3 )
 	{
 		this->m_Storage.PutInt( CBCMD_SET_VERTEX_SHADER_FLOAT_CONST );
 		this->m_Storage.PutInt( nFirstConstant );
@@ -403,7 +370,7 @@ public:
 		SetVertexShaderConstant( vertexReg, transformation[0].Base(), 2 ); 
 	}
 
-	FORCEINLINE void SetEnvMapTintPixelShaderDynamicState( int pixelReg, int tintVar )
+	[[gnu::always_inline]] inline void SetEnvMapTintPixelShaderDynamicState( int pixelReg, int tintVar )
 	{
 		if( g_pConfig->bShowSpecular && g_pConfig->nFullbright != 2 )
 		{
@@ -415,7 +382,7 @@ public:
 		}
 	}
 
-	FORCEINLINE void SetEnvMapTintPixelShaderDynamicStateGammaToLinear( int pixelReg, int tintVar, float fAlphaVal = 1.0f )
+	[[gnu::always_inline]] inline void SetEnvMapTintPixelShaderDynamicStateGammaToLinear( int pixelReg, int tintVar, float fAlphaVal = 1.0f )
 	{
 		if( g_pConfig->bShowSpecular && g_pConfig->nFullbright != 2 )
 		{
@@ -438,39 +405,39 @@ public:
 		}
 	}
 
-	FORCEINLINE void StoreEyePosInPixelShaderConstant( int nConst, float wValue = 1.0f )
+	[[gnu::always_inline]] inline void StoreEyePosInPixelShaderConstant( int nConst, float wValue = 1.0f )
 	{
 		this->m_Storage.PutInt( CBCMD_STORE_EYE_POS_IN_PSCONST );
 		this->m_Storage.PutInt( nConst );
 		this->m_Storage.PutFloat( wValue );
 	}
 
-	FORCEINLINE void SetPixelShaderFogParams( int nReg )
+	[[gnu::always_inline]] inline void SetPixelShaderFogParams( int nReg )
 	{
 		this->m_Storage.PutInt( CBCMD_SETPIXELSHADERFOGPARAMS );
 		this->m_Storage.PutInt( nReg );
 	}
 
 
-	FORCEINLINE void BindStandardTexture( Sampler_t nSampler, TextureBindFlags_t nBindFlags, StandardTextureId_t nTextureId )
+	[[gnu::always_inline]] inline void BindStandardTexture( Sampler_t nSampler, TextureBindFlags_t nBindFlags, StandardTextureId_t nTextureId )
 	{
 		this->m_Storage.PutInt( CBCMD_BIND_STANDARD_TEXTURE );
 		this->m_Storage.PutInt( nSampler | nBindFlags );
 		this->m_Storage.PutInt( nTextureId );
 	}
 
-	FORCEINLINE void BindTexture( CBaseShader *pShader, Sampler_t nSampler, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame )
+	[[gnu::always_inline]] inline void BindTexture( CBaseShader *pShader, Sampler_t nSampler, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame )
 	{
 		ShaderAPITextureHandle_t hTexture = pShader->GetShaderAPITextureBindHandle( pTexture, nFrame );
-		Assert( hTexture != INVALID_SHADERAPI_TEXTURE_HANDLE );
+		contract_assert( hTexture != INVALID_SHADERAPI_TEXTURE_HANDLE );
 		this->m_Storage.PutInt( CBCMD_BIND_SHADERAPI_TEXTURE_HANDLE );
 		this->m_Storage.PutInt( nSampler | nBindFlags );
 		this->m_Storage.Put( hTexture );
 	}
 
-FORCEINLINE void BindTexture( Sampler_t nSampler, TextureBindFlags_t nBindFlags, ShaderAPITextureHandle_t hTexture )
+[[gnu::always_inline]] inline void BindTexture( Sampler_t nSampler, TextureBindFlags_t nBindFlags, ShaderAPITextureHandle_t hTexture )
 	{
-		Assert( hTexture != INVALID_SHADERAPI_TEXTURE_HANDLE );
+		contract_assert( hTexture != INVALID_SHADERAPI_TEXTURE_HANDLE );
 		this->m_Storage.PutInt( CBCMD_BIND_SHADERAPI_TEXTURE_HANDLE );
 		this->m_Storage.PutInt( nSampler | nBindFlags );
 		this->m_Storage.Put( hTexture );
@@ -478,7 +445,7 @@ FORCEINLINE void BindTexture( Sampler_t nSampler, TextureBindFlags_t nBindFlags,
 
 
 
-	FORCEINLINE void BindTexture( CBaseShader *pShader, Sampler_t nSampler, TextureBindFlags_t nBindFlags, int nTextureVar, int nFrameVar = -1 )
+	[[gnu::always_inline]] inline void BindTexture( CBaseShader *pShader, Sampler_t nSampler, TextureBindFlags_t nBindFlags, int nTextureVar, int nFrameVar = -1 )
 	{
 		ShaderAPITextureHandle_t hTexture = pShader->GetShaderAPITextureBindHandle( nTextureVar, nFrameVar );
 		BindTexture( nSampler, nBindFlags, hTexture );
@@ -486,10 +453,10 @@ FORCEINLINE void BindTexture( Sampler_t nSampler, TextureBindFlags_t nBindFlags,
 
 	// Same as BindTexture, except it checks to see if the texture handle is actually the "internal" env_cubemap. If so, it binds it as a standard texture so the proper texture bind flags are 
 	// recorded during instance rendering in CShaderAPIDX8.
-	FORCEINLINE void BindEnvCubemapTexture( CBaseShader *pShader, Sampler_t nSampler, TextureBindFlags_t nBindFlags, int nTextureVar, int nFrameVar = -1 )
+	[[gnu::always_inline]] inline void BindEnvCubemapTexture( CBaseShader *pShader, Sampler_t nSampler, TextureBindFlags_t nBindFlags, int nTextureVar, int nFrameVar = -1 )
 	{
-		Assert( nTextureVar != -1 );
-		Assert( CBaseShader::GetPPParams() );
+		contract_assert( nTextureVar != -1 );
+		contract_assert( CBaseShader::GetPPParams() );
 		if ( CBaseShader::GetPPParams()[nTextureVar]->IsTextureValueInternalEnvCubemap() )
 		{
 			BindStandardTexture( nSampler, nBindFlags, TEXTURE_LOCAL_ENV_CUBEMAP );
@@ -501,7 +468,7 @@ FORCEINLINE void BindTexture( Sampler_t nSampler, TextureBindFlags_t nBindFlags,
 		}
 	}
 
-	FORCEINLINE void BindMultiTexture( CBaseShader *pShader, Sampler_t nSampler1, Sampler_t nSampler2, TextureBindFlags_t nBindFlags, int nTextureVar, int nFrameVar )
+	[[gnu::always_inline]] inline void BindMultiTexture( CBaseShader *pShader, Sampler_t nSampler1, Sampler_t nSampler2, TextureBindFlags_t nBindFlags, int nTextureVar, int nFrameVar )
 	{
 		ShaderAPITextureHandle_t hTexture = pShader->GetShaderAPITextureBindHandle( nTextureVar, nFrameVar, 0 );
 		BindTexture( nSampler1, nBindFlags, hTexture );
@@ -509,32 +476,32 @@ FORCEINLINE void BindTexture( Sampler_t nSampler, TextureBindFlags_t nBindFlags,
 		BindTexture( nSampler2, nBindFlags, hTexture );
 	}
 
-	FORCEINLINE void SetPixelShaderIndex( int nIndex )
+	[[gnu::always_inline]] inline void SetPixelShaderIndex( int nIndex )
 	{
 		this->m_Storage.PutInt( CBCMD_SET_PSHINDEX );
 		this->m_Storage.PutInt( nIndex );
 	}
 
-	FORCEINLINE void SetVertexShaderIndex( int nIndex )
+	[[gnu::always_inline]] inline void SetVertexShaderIndex( int nIndex )
 	{
 		this->m_Storage.PutInt( CBCMD_SET_VSHINDEX );
 		this->m_Storage.PutInt( nIndex );
 	}
 
-	FORCEINLINE void SetDepthFeatheringShaderConstants( int iConstant, float fDepthBlendScale )
+	[[gnu::always_inline]] inline void SetDepthFeatheringShaderConstants( int iConstant, float fDepthBlendScale )
 	{
 		this->m_Storage.PutInt( CBCMD_SET_DEPTH_FEATHERING_CONST );
 		this->m_Storage.PutInt( iConstant );
 		this->m_Storage.PutFloat( fDepthBlendScale );
 	}
 
-	FORCEINLINE void SetVertexShaderFlashlightState( int iConstant )
+	[[gnu::always_inline]] inline void SetVertexShaderFlashlightState( int iConstant )
 	{
 		this->m_Storage.PutInt( CBCMD_SET_VERTEX_SHADER_FLASHLIGHT_STATE );
 		this->m_Storage.PutInt( iConstant );
 	}
 
-	FORCEINLINE void SetPixelShaderFlashlightState( const CBCmdSetPixelShaderFlashlightState_t &state )
+	[[gnu::always_inline]] inline void SetPixelShaderFlashlightState( const CBCmdSetPixelShaderFlashlightState_t &state )
 	{
 		this->m_Storage.PutInt( CBCMD_SET_PIXEL_SHADER_FLASHLIGHT_STATE );
 		this->m_Storage.PutInt( state.m_LightSampler );
@@ -550,7 +517,7 @@ FORCEINLINE void BindTexture( Sampler_t nSampler, TextureBindFlags_t nBindFlags,
 		this->m_Storage.PutInt( state.m_bSinglePassFlashlight );
 	}
 
-	FORCEINLINE void SetPixelShaderUberLightState( int iEdge0Const, int iEdge1Const, int iEdgeOOWConst, int iShearRoundConst, int iAABBConst, int iWorldToLightConst )
+	[[gnu::always_inline]] inline void SetPixelShaderUberLightState( int iEdge0Const, int iEdge1Const, int iEdgeOOWConst, int iShearRoundConst, int iAABBConst, int iWorldToLightConst )
 	{
 		this->m_Storage.PutInt( CBCMD_SET_PIXEL_SHADER_UBERLIGHT_STATE );
 		this->m_Storage.PutInt( iEdge0Const );
@@ -561,34 +528,34 @@ FORCEINLINE void BindTexture( Sampler_t nSampler, TextureBindFlags_t nBindFlags,
 		this->m_Storage.PutInt( iWorldToLightConst );
 	}
 
-	FORCEINLINE void Goto( uint8 *pCmdBuf )
+	[[gnu::always_inline]] inline void Goto( uint8 *pCmdBuf )
 	{
 		this->m_Storage.PutInt( CBCMD_JUMP );
 		this->m_Storage.PutPtr( pCmdBuf );
 	}
 
-	FORCEINLINE void Call( uint8 *pCmdBuf )
+	[[gnu::always_inline]] inline void Call( uint8 *pCmdBuf )
 	{
 		this->m_Storage.PutInt( CBCMD_JSR );
 		this->m_Storage.PutPtr( pCmdBuf );
 	}
 
-	FORCEINLINE void Reset( void )
+	[[gnu::always_inline]] inline void Reset( void )
 	{
 		this->m_Storage.Reset();
 	}
 
-	FORCEINLINE size_t Size( void ) const
+	[[gnu::always_inline]] inline std::size_t Size( void ) const
 	{
 		return this->m_Storage.Size();
 	}
 
-	FORCEINLINE uint8 *Base( void )
+	[[gnu::always_inline]] inline uint8 *Base( void )
 	{
 		return this->m_Storage.Base();
 	}
 
-	FORCEINLINE void SetVertexShaderNearAndFarZ( int iRegNum )
+	[[gnu::always_inline]] inline void SetVertexShaderNearAndFarZ( int iRegNum )
 	{
 		this->m_Storage.PutInt( CBCMD_SET_VERTEX_SHADER_NEARZFARZ_STATE );
 		this->m_Storage.PutInt( iRegNum );
@@ -604,51 +571,51 @@ template<class S> class CInstanceCommandBufferBuilder : public CBaseCommandBuffe
 	typedef CBaseCommandBufferBuilder< S > PARENT;
 
 public:
-	FORCEINLINE void End( void )
+	[[gnu::always_inline]] inline void End( void )
 	{
 		this->m_Storage.PutInt( CBICMD_END );
 	}
 
-	FORCEINLINE void SetPixelShaderLocalLighting( int nConst )
+	[[gnu::always_inline]] inline void SetPixelShaderLocalLighting( int nConst )
 	{
 		this->m_Storage.PutInt( CBICMD_SETPIXELSHADERLOCALLIGHTING );
 		this->m_Storage.PutInt( nConst );
 	}
 
-	FORCEINLINE void SetPixelShaderAmbientLightCube( int nConst )
+	[[gnu::always_inline]] inline void SetPixelShaderAmbientLightCube( int nConst )
 	{
 		this->m_Storage.PutInt( CBICMD_SETPIXELSHADERAMBIENTLIGHTCUBE );
 		this->m_Storage.PutInt( nConst );
 	}
 
-	FORCEINLINE void SetVertexShaderLocalLighting( )
+	[[gnu::always_inline]] inline void SetVertexShaderLocalLighting( )
 	{
 		this->m_Storage.PutInt( CBICMD_SETVERTEXSHADERLOCALLIGHTING );
 	}
 
-	FORCEINLINE void SetVertexShaderAmbientLightCube( void )
+	[[gnu::always_inline]] inline void SetVertexShaderAmbientLightCube( void )
 	{
 		this->m_Storage.PutInt( CBICMD_SETVERTEXSHADERAMBIENTLIGHTCUBE );
 	}
 
-	FORCEINLINE void SetSkinningMatrices( void )
+	[[gnu::always_inline]] inline void SetSkinningMatrices( void )
 	{
 		this->m_Storage.PutInt( CBICMD_SETSKINNINGMATRICES );
 	}
 
-	FORCEINLINE void SetPixelShaderAmbientLightCubeLuminance( int nConst )
+	[[gnu::always_inline]] inline void SetPixelShaderAmbientLightCubeLuminance( int nConst )
 	{
 		this->m_Storage.PutInt( CBICMD_SETPIXELSHADERAMBIENTLIGHTCUBELUMINANCE );
 		this->m_Storage.PutInt( nConst );
 	}
 
-	FORCEINLINE void SetPixelShaderGlintDamping( int nConst )
+	[[gnu::always_inline]] inline void SetPixelShaderGlintDamping( int nConst )
 	{
 		this->m_Storage.PutInt( CBICMD_SETPIXELSHADERGLINTDAMPING );
 		this->m_Storage.PutInt( nConst );
 	}
 
-	FORCEINLINE void SetModulationPixelShaderDynamicState_LinearColorSpace_LinearScale( int nConst, const Vector &vecGammaSpaceColor2Factor, float scale )
+	[[gnu::always_inline]] inline void SetModulationPixelShaderDynamicState_LinearColorSpace_LinearScale( int nConst, const Vector &vecGammaSpaceColor2Factor, float scale )
 	{
 		this->m_Storage.PutInt( CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_LINEARCOLORSPACE_LINEARSCALE );
 		this->m_Storage.PutInt( nConst );
@@ -657,7 +624,7 @@ public:
 		this->m_Storage.PutFloat( scale );
 	}
 
-	FORCEINLINE void SetModulationPixelShaderDynamicState_LinearScale( int nConst, const Vector &vecGammaSpaceColor2Factor, float scale )
+	[[gnu::always_inline]] inline void SetModulationPixelShaderDynamicState_LinearScale( int nConst, const Vector &vecGammaSpaceColor2Factor, float scale )
 	{
 		this->m_Storage.PutInt( CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_LINEARSCALE );
 		this->m_Storage.PutInt( nConst );
@@ -666,7 +633,7 @@ public:
 		this->m_Storage.PutFloat( scale );
 	}
 
-	FORCEINLINE void SetModulationPixelShaderDynamicState_LinearScale_ScaleInW( int nConst, const Vector &vecGammaSpaceColor2Factor, float scale )
+	[[gnu::always_inline]] inline void SetModulationPixelShaderDynamicState_LinearScale_ScaleInW( int nConst, const Vector &vecGammaSpaceColor2Factor, float scale )
 	{
 		this->m_Storage.PutInt( CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_LINEARSCALE_SCALEINW );
 		this->m_Storage.PutInt( nConst );
@@ -674,7 +641,7 @@ public:
 		this->m_Storage.PutFloat( scale );
 	}
 
-	FORCEINLINE void SetModulationPixelShaderDynamicState_LinearColorSpace( int nConst, const Vector &vecGammaSpaceColor2Factor )
+	[[gnu::always_inline]] inline void SetModulationPixelShaderDynamicState_LinearColorSpace( int nConst, const Vector &vecGammaSpaceColor2Factor )
 	{
 		this->m_Storage.PutInt( CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_LINEARCOLORSPACE );
 		this->m_Storage.PutInt( nConst );
@@ -682,27 +649,27 @@ public:
 		this->m_Storage.PutFloat( 1.0 );						// pad with a 1 for vector4d simd access. Important that this be a 1 because alpha is multipled by it.
 	}
 
-	FORCEINLINE void SetModulationPixelShaderDynamicState( int nConst, const Vector &vecGammaSpaceColor2Factor )
+	[[gnu::always_inline]] inline void SetModulationPixelShaderDynamicState( int nConst, const Vector &vecGammaSpaceColor2Factor )
 	{
 		this->m_Storage.PutInt( CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE );
 		this->m_Storage.PutInt( nConst );
 		this->m_Storage.Put( vecGammaSpaceColor2Factor );
 	}
 
-	FORCEINLINE void SetModulationPixelShaderDynamicState_Identity( int nConst )
+	[[gnu::always_inline]] inline void SetModulationPixelShaderDynamicState_Identity( int nConst )
 	{
 		this->m_Storage.PutInt( CBICMD_SETMODULATIONPIXELSHADERDYNAMICSTATE_IDENTITY );
 		this->m_Storage.PutInt( nConst );
 	}
 
-	FORCEINLINE void SetModulationVertexShaderDynamicState( int nConst, const Vector &vecGammaSpaceColor2Factor )
+	[[gnu::always_inline]] inline void SetModulationVertexShaderDynamicState( int nConst, const Vector &vecGammaSpaceColor2Factor )
 	{
 		this->m_Storage.PutInt( CBICMD_SETMODULATIONVERTEXSHADERDYNAMICSTATE );
 		this->m_Storage.PutInt( nConst );
 		this->m_Storage.Put( vecGammaSpaceColor2Factor );
 	}
 	
-	FORCEINLINE void SetModulationVertexShaderDynamicState_LinearScale( int nConst, const Vector &vecGammaSpaceColor2Factor, float flScale )
+	[[gnu::always_inline]] inline void SetModulationVertexShaderDynamicState_LinearScale( int nConst, const Vector &vecGammaSpaceColor2Factor, float flScale )
 	{
 		this->m_Storage.PutInt( CBICMD_SETMODULATIONVERTEXSHADERDYNAMICSTATE_LINEARSCALE );
 		this->m_Storage.PutInt( nConst );
@@ -710,6 +677,3 @@ public:
 		this->m_Storage.PutFloat( flScale );
 	}
 };
-
-
-#endif // commandbuilder_h

@@ -1,25 +1,16 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-//
-//-----------------------------------------------------------------------------
-// $Log: $
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "particles_simple.h"
 #include "particlemgr.h"
 #include "c_pixel_visibility.h"
 #include "fx_fleck.h"
 
-#define	bitsPARTICLE_TRAIL_VELOCITY_DAMPEN	0x00000001	//Dampen the velocity as the particles move
-#define	bitsPARTICLE_TRAIL_COLLIDE			0x00000002	//Do collision with simulation
-#define	bitsPARTICLE_TRAIL_FADE				0x00000004	//Fade away
-#define	bitsPARTICLE_TRAIL_FADE_IN			0x00000008	//Fade in
+inline constexpr auto bitsPARTICLE_TRAIL_VELOCITY_DAMPEN = 0x00000001; //Dampen the velocity as the particles move
+inline constexpr auto bitsPARTICLE_TRAIL_COLLIDE = 0x00000002; //Do collision with simulation
+inline constexpr auto bitsPARTICLE_TRAIL_FADE = 0x00000004; //Fade away
+inline constexpr auto bitsPARTICLE_TRAIL_FADE_IN = 0x00000008; //Fade in
 
 class TrailParticle : public Particle
 {

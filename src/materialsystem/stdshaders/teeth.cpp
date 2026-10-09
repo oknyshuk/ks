@@ -1,11 +1,7 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
-#include "cpp_shader_constant_register_map.h"
 
 #include "teeth_vs20.inc"
 #include "teeth_flashlight_vs20.inc"
@@ -27,7 +23,7 @@
 DEFINE_FALLBACK_SHADER( Teeth, Teeth_DX9 )
 
 BEGIN_VS_SHADER( Teeth_DX9, "Help for Teeth_DX9" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( ILLUMFACTOR, SHADER_PARAM_TYPE_FLOAT, "1", "Amount to darken or brighten the teeth" )
 		SHADER_PARAM( FORWARD, SHADER_PARAM_TYPE_VEC3, "[1 0 0]", "Forward direction vector for teeth lighting" )
 		SHADER_PARAM( BUMPMAP, SHADER_PARAM_TYPE_TEXTURE, "models/shadertest/shader1_normal", "bump map" )

@@ -1,14 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#if !defined( CVAR_H )
-#define CVAR_H
-
+import std;
+import ks.tier1;
 
 //-----------------------------------------------------------------------------
 // Forward declarations 
@@ -17,9 +12,6 @@ class ConVar;
 class ConCommandBase;
 class CCommand;
 namespace ks { class text_writer; }
-
-#define COMMAND_COMPLETION_MAXITEMS		64
-#define COMMAND_COMPLETION_ITEM_LENGTH	64
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -74,5 +66,3 @@ extern CCvarUtilities *ConVarUtilities;
 
 // reset basic game convars to defaults. what is reset is specific to l4d
 void ResetGameConVarsToDefaults( void );
-
-#endif // CVAR_H

@@ -1,8 +1,15 @@
 /*
 	see copyright notice in squirrel.h
 */
-#include "sqpcheader.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 #include <stdarg.h>
+
+#include <squirrel.h>
+#include "sqobject.h"
+#include "sqstate.h"
 #include "sqvm.h"
 #include "sqfuncproto.h"
 #include "sqclosure.h"

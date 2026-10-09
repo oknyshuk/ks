@@ -1,18 +1,14 @@
-//===== Copyright (c) 1996-2006, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 	ExprSimplifier builds a binary tree from an infix expression (in the
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2006 Valve Corporation
+
+// Purpose: ExprSimplifier builds a binary tree from an infix expression (in the
 //				form of a character array). Evaluates C style infix parenthetic logical
 //				expressions. Supports !, ||, &&, (). Symbols are resolved via callback.
 //				Syntax is $<name>. $0 evaluates to false. $<number> evaluates to true.
 //				e.g: ( $1 || ( $FOO || $WHATEVER ) && !$BAR )
-//===========================================================================//
 
-#include <ctype.h>
-#include <vstdlib/ikeyvaluessystem.h>
-#include "tier1/exprevaluator.h"
-#include "tier1/convar.h"
-#include "tier1/fmtstr.h"
-#include "tier0/dbg.h"
+import std;
+import ks.vstdlib;
 
 //-----------------------------------------------------------------------------
 // Default conditional symbol handler callback. Symbols are the form $<name>.
@@ -67,18 +63,11 @@ bool DefaultConditionalSymbolProc( const char *pKey )
 
 	if ( !V_stricmp( pKey, "DEMO" ) )
 	{
-#if defined( _DEMO )
-		return true;
-#else
 		return false;
-#endif
 	}
 
 	if ( !V_stricmp( pKey, "LOWVIOLENCE" ) )
 	{
-#if defined( _LOWVIOLENCE )
-		return true;
-#endif
 		// If it is not a LOWVIOLENCE binary build, then fall through
 		// and check if there was a run-time symbol installed for it
 	}
@@ -236,7 +225,7 @@ bool CExpressionEvaluator::MakeExprNode( ExprTree &tree, char token, Kind kind, 
 	case LITERAL:
 		if ( V_isdigit( m_Identifier[0] ) )
 		{
-			tree->data.value = ( atoi( m_Identifier ) != 0 );
+			tree->data.value = ( std::atoi( m_Identifier ) != 0 );
 		}
 		else
 		{
@@ -250,7 +239,7 @@ bool CExpressionEvaluator::MakeExprNode( ExprTree &tree, char token, Kind kind, 
 	default:
 		if ( m_pSyntaxErrorProc )
 		{
-			Assert( 0 );
+			contract_assert( 0 );
 			m_pSyntaxErrorProc( CFmtStr( "Logic Error in CExpressionEvaluator" ) );
 		}
 		return false;
@@ -452,7 +441,7 @@ bool CExpressionEvaluator::Evaluate( bool &bResult, const char *pInfixExpression
 
 		// SECURITY: Bail on input buffers that are too large, they're used for RCEs and we don't 
 		// need to support them.
-		if ( len + 1 > ARRAYSIZE( szCleanToken ) )
+		if ( len + 1 > std::size( szCleanToken ) )
 		{
 			return false;
 		}
@@ -487,11 +476,3 @@ bool CExpressionEvaluator::Evaluate( bool &bResult, const char *pInfixExpression
 
 	return bValid;
 }
-
-
-
-
-
-
-
-

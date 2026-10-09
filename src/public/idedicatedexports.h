@@ -1,18 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef IDEDICATEDEXPORTS_H
-#define IDEDICATEDEXPORTS_H
+import std;
+import ks.tier1;
 
-#include "interface.h"
-#include "appframework/iappsystem.h"
-
-
-abstract_class IDedicatedExports : public IAppSystem
+class IDedicatedExports : public IAppSystem
 {
 public:
 	virtual void Sys_Printf( const char *text ) = 0;
@@ -20,7 +13,4 @@ public:
 	virtual bool IsGuiDedicatedServer() = 0;
 };
 
-#define VENGINE_DEDICATEDEXPORTS_API_VERSION "VENGINE_DEDICATEDEXPORTS_API_VERSION003"
-
-
-#endif // IDEDICATEDEXPORTS_H
+inline constexpr const char *VENGINE_DEDICATEDEXPORTS_API_VERSION = "VENGINE_DEDICATEDEXPORTS_API_VERSION003";

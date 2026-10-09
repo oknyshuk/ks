@@ -1,6 +1,5 @@
-//========= Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ============//
-//
-//=======================================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 #include "BaseVSShader.h"
 #include "worldimposter_vs20.inc"
@@ -8,7 +7,7 @@
 #include "worldimposter_ps20b.inc"
 
 BEGIN_VS_SHADER( worldimposter, "Help for worldimposter" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM( BASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 		SHADER_PARAM( ALBEDO, SHADER_PARAM_TYPE_TEXTURE, "", "" )
 	END_SHADER_PARAMS
@@ -161,5 +160,3 @@ BEGIN_VS_SHADER( worldimposter, "Help for worldimposter" )
 	}
 
 END_SHADER
-
-

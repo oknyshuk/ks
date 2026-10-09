@@ -1,3 +1,4 @@
+#pragma once
 // ALL SKIP STATEMENTS THAT AFFECT THIS SHADER!!!
 // ( ( $DETAIL1 == 0 ) && ( $DETAIL2 != 0 ) )
 // ( $TANGENTTOPACITY && $TANGENTSOPACITY )
@@ -17,7 +18,7 @@ private:
 public:
 	void SetDETAIL1( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDETAIL1 = i;
 #ifdef _DEBUG
 		m_bDETAIL1 = true;
@@ -25,7 +26,7 @@ public:
 	}
 	void SetDETAIL1( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDETAIL1 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAIL1 = true;
@@ -39,7 +40,7 @@ private:
 public:
 	void SetDETAIL2( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDETAIL2 = i;
 #ifdef _DEBUG
 		m_bDETAIL2 = true;
@@ -47,7 +48,7 @@ public:
 	}
 	void SetDETAIL2( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDETAIL2 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDETAIL2 = true;
@@ -61,7 +62,7 @@ private:
 public:
 	void SetTANGENTTOPACITY( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nTANGENTTOPACITY = i;
 #ifdef _DEBUG
 		m_bTANGENTTOPACITY = true;
@@ -69,7 +70,7 @@ public:
 	}
 	void SetTANGENTTOPACITY( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTANGENTTOPACITY = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTANGENTTOPACITY = true;
@@ -83,7 +84,7 @@ private:
 public:
 	void SetTANGENTSOPACITY( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nTANGENTSOPACITY = i;
 #ifdef _DEBUG
 		m_bTANGENTSOPACITY = true;
@@ -91,7 +92,7 @@ public:
 	}
 	void SetTANGENTSOPACITY( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nTANGENTSOPACITY = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bTANGENTSOPACITY = true;
@@ -105,7 +106,7 @@ private:
 public:
 	void SetFRESNELOPACITY( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFRESNELOPACITY = i;
 #ifdef _DEBUG
 		m_bFRESNELOPACITY = true;
@@ -113,7 +114,7 @@ public:
 	}
 	void SetFRESNELOPACITY( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFRESNELOPACITY = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFRESNELOPACITY = true;
@@ -127,7 +128,7 @@ private:
 public:
 	void SetVERTEXCOLOR( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nVERTEXCOLOR = i;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -135,7 +136,7 @@ public:
 	}
 	void SetVERTEXCOLOR( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nVERTEXCOLOR = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVERTEXCOLOR = true;
@@ -149,7 +150,7 @@ private:
 public:
 	void SetFLOWMAP( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nFLOWMAP = i;
 #ifdef _DEBUG
 		m_bFLOWMAP = true;
@@ -157,7 +158,7 @@ public:
 	}
 	void SetFLOWMAP( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nFLOWMAP = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bFLOWMAP = true;
@@ -171,7 +172,7 @@ private:
 public:
 	void SetMODELFORMAT( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nMODELFORMAT = i;
 #ifdef _DEBUG
 		m_bMODELFORMAT = true;
@@ -179,7 +180,7 @@ public:
 	}
 	void SetMODELFORMAT( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nMODELFORMAT = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bMODELFORMAT = true;
@@ -193,7 +194,7 @@ private:
 public:
 	void SetDOPIXELFOG( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDOPIXELFOG = i;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -201,7 +202,7 @@ public:
 	}
 	void SetDOPIXELFOG( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOPIXELFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOPIXELFOG = true;
@@ -215,7 +216,7 @@ private:
 public:
 	void SetHARDWAREFOGBLEND( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nHARDWAREFOGBLEND = i;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -223,7 +224,7 @@ public:
 	}
 	void SetHARDWAREFOGBLEND( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nHARDWAREFOGBLEND = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bHARDWAREFOGBLEND = true;
@@ -280,7 +281,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllStaticVarsDefined = m_bDETAIL1 && m_bDETAIL2 && m_bTANGENTTOPACITY && m_bTANGENTSOPACITY && m_bFRESNELOPACITY && m_bVERTEXCOLOR && m_bFLOWMAP && m_bMODELFORMAT && m_bDOPIXELFOG && m_bHARDWAREFOGBLEND;
-		Assert( bAllStaticVarsDefined );
+		contract_assert( bAllStaticVarsDefined );
 #endif // _DEBUG
 		return ( 32 * m_nDETAIL1 ) + ( 64 * m_nDETAIL2 ) + ( 128 * m_nTANGENTTOPACITY ) + ( 256 * m_nTANGENTSOPACITY ) + ( 512 * m_nFRESNELOPACITY ) + ( 1024 * m_nVERTEXCOLOR ) + ( 2048 * m_nFLOWMAP ) + ( 4096 * m_nMODELFORMAT ) + ( 8192 * m_nDOPIXELFOG ) + ( 16384 * m_nHARDWAREFOGBLEND ) + 0;
 	}
@@ -296,7 +297,7 @@ private:
 public:
 	void SetCOMPRESSED_VERTS( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nCOMPRESSED_VERTS = i;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -304,7 +305,7 @@ public:
 	}
 	void SetCOMPRESSED_VERTS( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nCOMPRESSED_VERTS = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bCOMPRESSED_VERTS = true;
@@ -318,7 +319,7 @@ private:
 public:
 	void SetSKINNING( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nSKINNING = i;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -326,7 +327,7 @@ public:
 	}
 	void SetSKINNING( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nSKINNING = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bSKINNING = true;
@@ -340,7 +341,7 @@ private:
 public:
 	void SetVORTEX1( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nVORTEX1 = i;
 #ifdef _DEBUG
 		m_bVORTEX1 = true;
@@ -348,7 +349,7 @@ public:
 	}
 	void SetVORTEX1( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nVORTEX1 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVORTEX1 = true;
@@ -362,7 +363,7 @@ private:
 public:
 	void SetVORTEX2( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nVORTEX2 = i;
 #ifdef _DEBUG
 		m_bVORTEX2 = true;
@@ -370,7 +371,7 @@ public:
 	}
 	void SetVORTEX2( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nVORTEX2 = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bVORTEX2 = true;
@@ -384,7 +385,7 @@ private:
 public:
 	void SetDOWATERFOG( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		contract_assert( i >= 0 && i <= 1 );
 		m_nDOWATERFOG = i;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -392,7 +393,7 @@ public:
 	}
 	void SetDOWATERFOG( bool i )
 	{
-		Assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
+		contract_assert( ( i ? 1 : 0 ) >= 0 && ( i ? 1 : 0 ) <= 1 );
 		m_nDOWATERFOG = i ? 1 : 0;
 #ifdef _DEBUG
 		m_bDOWATERFOG = true;
@@ -429,7 +430,7 @@ public:
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
 		bool bAllDynamicVarsDefined = m_bCOMPRESSED_VERTS && m_bSKINNING && m_bVORTEX1 && m_bVORTEX2 && m_bDOWATERFOG;
-		Assert( bAllDynamicVarsDefined );
+		contract_assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
 		return ( 1 * m_nCOMPRESSED_VERTS ) + ( 2 * m_nSKINNING ) + ( 4 * m_nVORTEX1 ) + ( 8 * m_nVORTEX2 ) + ( 16 * m_nDOWATERFOG ) + 0;
 	}

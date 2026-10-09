@@ -1,14 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
-
-#ifndef RECORDING_H
-#define RECORDING_H
 #pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 //-----------------------------------------------------------------------------
 // Use this to put us into a 'recording' mode
@@ -22,7 +14,7 @@
 //-----------------------------------------------------------------------------
 
 //#define RECORD_KEYFRAMES 1
-#define KEYFRAME_INTERVAL 100	// number of actual frames between each keyframe
+inline constexpr auto KEYFRAME_INTERVAL = 100; // number of actual frames between each keyframe
  
 //-----------------------------------------------------------------------------
 // Use this to allow us to record crashes (write every command immediately)
@@ -34,7 +26,6 @@
 // Use this to record textures (checkboards are used for textures otherwise)
 //-----------------------------------------------------------------------------
 
-#define RECORD_TEXTURES
 
 //-----------------------------------------------------------------------------
 // Use this to record debug strings . .these are only useful if you are doing "playback -list"
@@ -131,79 +122,3 @@ enum RecordingCommands_t
 
 	DX8_NUM_RECORDING_COMMANDS
 };
-
-#ifdef RECORDING
-
-void RecordCommand( RecordingCommands_t cmd, int numargs );
-void RecordArgument( void const* pMemory, int size );
-void FinishRecording( void );
-
-inline void RecordInt( int i )
-{
-	RecordArgument( &i, sizeof(int) );
-}
-
-inline void RecordFloat( float f )
-{
-	RecordArgument( &f, sizeof(float) );
-}
-
-#	define RECORD_COMMAND( _cmd, _numargs )		RecordCommand( _cmd, _numargs )
-#	define RECORD_INT( _int )					RecordInt( _int )
-#	define RECORD_FLOAT( _float )				RecordFloat( _float )
-#	define RECORD_STRING( _string )				RecordArgument( _string, strlen(_string) + 1 )
-#	define RECORD_STRUCT( _struct, _size )		RecordArgument( _struct, _size )
-
-#	define RECORD_RENDER_STATE( _state, _val )		\
-		RECORD_COMMAND( DX8_SET_RENDER_STATE, 2 );	\
-		RECORD_INT( _state );						\
-		RECORD_INT( _val )
-
-#	define RECORD_TEXTURE_STAGE_STATE( _stage, _state, _val )	\
-		RECORD_COMMAND( DX8_SET_TEXTURE_STAGE_STATE, 3 );		\
-		RECORD_INT( _stage );									\
-		RECORD_INT( _state );									\
-		RECORD_INT( _val )
-
-#	define RECORD_SAMPLER_STATE( _stage, _state, _val )	\
-		RECORD_COMMAND( DX8_SET_SAMPLER_STATE, 3 );		\
-		RECORD_INT( _stage );									\
-		RECORD_INT( _state );									\
-		RECORD_INT( _val )
-
-#	define RECORD_SAMPLER_STATES( _sampler, _addressU, _addressV, _addressW, _minFilter, _magFilter, _mipFilter )	\
-	RECORD_COMMAND( DX8_SET_SAMPLER_STATE, 7 );					\
-	RECORD_INT( _sampler );										\
-	RECORD_INT( _addressU );									\
-	RECORD_INT( _addressV );									\
-	RECORD_INT( _addressW );									\
-	RECORD_INT( _minFilter );									\
-	RECORD_INT( _magFilter );									\
-	RECORD_INT( _mipFilter )
-
-#	ifdef RECORD_DEBUG_STRINGS
-#		define RECORD_DEBUG_STRING( _str )			\
-			RECORD_COMMAND( DX8_DEBUG_STRING, 1 );	\
-			RECORD_STRING( _str )
-#	else
-#		define RECORD_DEBUG_STRING( _str )			0
-#	endif
-
-#else // not RECORDING
-
-#	undef RECORD_TEXTURES
-
-#	define RECORD_COMMAND( _cmd, _numargs )		0
-#	define RECORD_INT( _int )					0
-#	define RECORD_FLOAT( _float )				0
-#	define RECORD_STRING( _string )				0
-#	define RECORD_STRUCT( _struct, _size )		0
-#	define RECORD_RENDER_STATE( _state, _val )	0
-#	define RECORD_TEXTURE_STAGE_STATE( _stage, _state, _val )	0
-#	define RECORD_SAMPLER_STATE( _stage, _state, _val )	0
-#	define RECORD_SAMPLER_STATES( _sampler, _addressU, _addressV, _addressW, _minFilter, _magFilter, _mipFilter )	0
-#	define RECORD_DEBUG_STRING( _str )			0
-
-#endif // RECORDING
-
-#endif // RECORDING_H

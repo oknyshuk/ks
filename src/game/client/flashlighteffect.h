@@ -1,11 +1,17 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef FLASHLIGHTEFFECT_H
-#define FLASHLIGHTEFFECT_H
+
+import std;
+import ks.math;
+#include "iclientrenderable.h"
+#include "materialsystem/MaterialSystemUtil.h"
+#include "util_shared.h"
+#include "cdll_client_int.h"
+#include "sharedInterface.h"
+
+class ITexture;
 
 struct dlight_t;
 
@@ -253,7 +259,7 @@ public:
 	void UpdateFlashlightOverride(	bool bFlashlightOn, const Vector &vecPos, const Vector &vecDir, const Vector &vecRight, const Vector &vecUp,
 									float flFov, bool castsShadows, ITexture *pFlashlightTexture, const Vector &vecBrightness )
 	{
-		Assert( m_bFlashlightOverride );
+		contract_assert( m_bFlashlightOverride );
 		if ( !m_bFlashlightOverride )
 		{
 			return;
@@ -277,5 +283,3 @@ public:
 };
 
 CFlashlightEffectManager & FlashlightEffectManager( int32 nSplitscreenPlayerOverride = -1 );
-
-#endif // FLASHLIGHTEFFECT_H

@@ -1,10 +1,5 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Header: $
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "shaderlib/cshader.h"
 
@@ -13,7 +8,7 @@
 #include "unlitgeneric_notexture_ps20b.inc"
 
 BEGIN_SHADER( DebugTangentSpace, "Help for DebugTangentSpace" )
-	BEGIN_SHADER_PARAMS
+	
 		SHADER_PARAM_OVERRIDE( BASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shadertest/basetexture", "unused", SHADER_PARAM_NOT_EDITABLE )
 		SHADER_PARAM_OVERRIDE( FRAME, SHADER_PARAM_TYPE_INTEGER, "0", "unused", SHADER_PARAM_NOT_EDITABLE )
 		SHADER_PARAM_OVERRIDE( BASETEXTURETRANSFORM, SHADER_PARAM_TYPE_MATRIX, "center .5 .5 scale 1 1 rotate 0 translate 0 0", "unused", SHADER_PARAM_NOT_EDITABLE )
@@ -75,4 +70,3 @@ BEGIN_SHADER( DebugTangentSpace, "Help for DebugTangentSpace" )
 		Draw();
 	}
 END_SHADER
-

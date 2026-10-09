@@ -1,24 +1,16 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) 2026 oknyshuk
+
 //-----------------------------------------------------------------------------
 // This is just a little redirection tool so I can get all the dlls in bin
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <dlfcn.h>
-#include <string.h>
-#include <limits.h>
-#include <errno.h>
-#include <unistd.h>
-#define MAX_PATH PATH_MAX
 
-#include "tier0/basetypes.h"
+
+import std;
+
+import ks.core;
 
 typedef int (*DedicatedMain_t)( int argc, char *argv[] );
 
@@ -30,22 +22,22 @@ typedef int (*DedicatedMain_t)( int argc, char *argv[] );
 
 static char *GetBaseDir( const char *pszBuffer )
 {
-	static char	basedir[ MAX_PATH ];
-	char szBuffer[ MAX_PATH ];
-	size_t j;
+	static char	basedir[ k_cMaxPath ];
+	char szBuffer[ k_cMaxPath ];
+	std::size_t j;
 	char *pBuffer = nullptr;
 
-	strcpy( szBuffer, pszBuffer );
+	std::strcpy( szBuffer, pszBuffer );
 
-	pBuffer = strrchr( szBuffer,'\\' );
+	pBuffer = std::strrchr( szBuffer,'\\' );
 	if ( pBuffer )
 	{
 		*(pBuffer+1) = '\0';
 	}
 
-	strcpy( basedir, szBuffer );
+	std::strcpy( basedir, szBuffer );
 
-	j = strlen( basedir );
+	j = std::strlen( basedir );
 	if (j > 0)
 	{
 		if ( ( basedir[ j-1 ] == '\\' ) || 
@@ -64,34 +56,34 @@ static char *GetBaseDir( const char *pszBuffer )
 int main( int argc, char *argv[] )
 {
 	// Must add 'bin' to the path....
-	char* pPath = getenv("LD_LIBRARY_PATH");
+	char* pPath = std::getenv("LD_LIBRARY_PATH");
 	char szBuffer[4096];
-	char cwd[ MAX_PATH ];
-	if ( !getcwd( cwd, sizeof(cwd)) )
+	char cwd[ k_cMaxPath ];
+	if ( !ks::platform::current_directory( cwd, sizeof(cwd) ) )
 	{
-		printf( "getcwd failed (%s)", strerror(errno));
+		std::printf( "getcwd failed" );
 	}
 	
-	snprintf( szBuffer, sizeof( szBuffer ) - 1, "LD_LIBRARY_PATH=%s/bin:%s", cwd, pPath );
-	printf( "%s\n", szBuffer );
-	int ret = putenv( szBuffer );
+	std::snprintf( szBuffer, sizeof( szBuffer ) - 1, "%s/bin:%s", cwd, pPath );
+	std::printf( "LD_LIBRARY_PATH=%s\n", szBuffer );
+	int ret = ks::platform::set_environment( "LD_LIBRARY_PATH", szBuffer, true ) ? 0 : -1;
 	if ( ret )	
 	{
-		printf( "%s\n", strerror(errno) );
+		std::printf( "failed to set LD_LIBRARY_PATH\n" );
 	}
 
-	const char *pBinaryName = "bin/libengine" DLL_EXT_STRING;
+	const char *pBinaryName = "bin/libengine.so";
 
-	void *dedicated = dlopen( pBinaryName, RTLD_NOW );
+	ks::platform::library *dedicated = ks::platform::load_library( pBinaryName, nullptr );
 	if ( !dedicated )
 	{
-		printf( "Failed to open %s (%s)\n", pBinaryName, dlerror());
+		std::printf( "Failed to open %s (%s)\n", pBinaryName, ks::platform::library_error());
 		return -1;
 	}
-	DedicatedMain_t main = (DedicatedMain_t)dlsym( dedicated, "DedicatedMain" );
+	DedicatedMain_t main = (DedicatedMain_t)ks::platform::library_symbol( dedicated, "DedicatedMain" );
 	if ( !main )
 	{
-		printf( "Failed to find dedicated server entry point (%s)\n", dlerror() );
+		std::printf( "Failed to find dedicated server entry point (%s)\n", ks::platform::library_error() );
 		return -1;
 	}
 

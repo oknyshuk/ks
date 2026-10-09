@@ -1,17 +1,11 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef DATATABLE_ENCODE_H
-#define DATATABLE_ENCODE_H
-
-
+import ks.tier1;
 #include "dt_send.h"
 #include "dt_recv.h"
-
+import std;
 
 class DecodeInfo : public CRecvProxyData
 {
@@ -86,5 +80,3 @@ extern PropTypeFns g_PropTypeFns[DPT_NUMSendPropTypes];
 // This is used for comparing packed buffers. Just extracts the raw bits for the 
 // data and returns the number of bits used to encode the data.
 int	DecodeBits( DecodeInfo *pInfo, unsigned char *pOut );
-
-#endif // DATATABLE_ENCODE_H

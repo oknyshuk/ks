@@ -1,12 +1,6 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
-
-#ifndef MM_SESSION_OFFLINE_CUSTOM_H
-#define MM_SESSION_OFFLINE_CUSTOM_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
 //
 // CMatchSessionOfflineCustom
@@ -16,6 +10,8 @@
 // game commences (like playing commentary mode
 // or playing single-player)
 //
+
+#include "mm_session.h"
 
 class CMatchSessionOfflineCustom : public IMatchSessionInternal
 {
@@ -79,5 +75,3 @@ protected:
 	State_t m_eState;
 	bool m_bExpectingServerReload;
 };
-
-#endif

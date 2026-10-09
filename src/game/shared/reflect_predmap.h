@@ -1,3 +1,4 @@
+#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
@@ -6,13 +7,11 @@
 // nothing here needs a name -- only the flags and tolerance, which are the two things that
 // genuinely cannot be derived.
 
-#ifndef KS_REFLECT_PREDMAP_H
-#define KS_REFLECT_PREDMAP_H
 
 #include "reflect.h"
 #include "reflect_fielddesc.h"
 
-#include <vector>
+import std;
 
 namespace ks::reflect::pred
 {
@@ -129,4 +128,3 @@ std::vector<typedescription_t> &fields()
 #define IMPLEMENT_REFLECT_PREDMAP_NO_BASE( className )                                            \
 	IMPLEMENT_REFLECT_PREDMAP_BASE( className, nullptr )
 
-#endif // KS_REFLECT_PREDMAP_H

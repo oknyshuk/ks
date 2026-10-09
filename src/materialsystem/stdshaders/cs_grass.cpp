@@ -1,16 +1,9 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "BaseVSShader.h"
-#include <string.h>
-#include "const.h"
+import std;
 
-#include "cpp_shader_constant_register_map.h"
 
 #include "cs_grass_vs20.inc"
 #include "cs_grass_ps20.inc"
@@ -21,7 +14,7 @@ ConVar cl_detail_scale( "cl_detail_scale", "2", FCVAR_MATERIAL_SYSTEM_THREAD | F
 
 BEGIN_VS_SHADER( Grass, "Help for Grass" )
 			  
-	BEGIN_SHADER_PARAMS
+	
 		//SHADER_PARAM( DUMMYPARAM, SHADER_PARAM_TYPE_VEC3, "[0 0 0]", "" )
 	END_SHADER_PARAMS
 

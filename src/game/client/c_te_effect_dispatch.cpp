@@ -1,22 +1,27 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.tier1;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "itempents.h"
+#include "vphysics_interface.h"
+#include "physics.h"
+#include "engine/ivmodelinfo.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 #include "networkstringtable_clientdll.h"
 #include "effect_dispatch_data.h"
 #include "c_te_effect_dispatch.h"
-#include "tier1/keyvalues.h"
-#include "tier1/map_ops.h"
 #include "toolframework_client.h"
-#include "tier0/vprof.h"
 #include "particles_new.h"
 
 //-----------------------------------------------------------------------------
@@ -27,8 +32,8 @@ CClientEffectRegistration *CClientEffectRegistration::s_pHead = nullptr;
 
 CClientEffectRegistration::CClientEffectRegistration( const char *pEffectName, ClientEffectCallback fn )
 {
-	AssertMsg1( pEffectName[0] != '\"', "Error: Effect %s. "
-		"Remove quotes around the effect name in DECLARE_CLIENT_EFFECT.\n", pEffectName );
+	contract_assert( ( pEffectName[0] != '\"' ) && "Error: Effect %s. "
+		"Remove quotes around the effect name in DECLARE_CLIENT_EFFECT.\n" );
 
 	m_pEffectName = pEffectName;
 	m_pFunction = fn;
@@ -126,7 +131,7 @@ static void RecordEffect( const char *pEffectName, const CEffectData &data )
 		const char *pSurfacePropName = physprops->GetPropName( data.m_nSurfaceProp );
 
 		char pName[1024];
-		Q_snprintf( pName, sizeof(pName), "TE_DispatchEffect %s %s", pEffectName, pSurfacePropName );
+		V_snprintf( pName, sizeof(pName), "TE_DispatchEffect %s %s", pEffectName, pSurfacePropName );
 
  		msg->SetInt( "te", TE_DISPATCH_EFFECT );
  		msg->SetString( "name", pName );
@@ -170,7 +175,7 @@ static void RecordEffect( const char *pEffectName, const CEffectData &data )
 //-----------------------------------------------------------------------------
 void C_TEEffectDispatch::PostDataUpdate( DataUpdateType_t updateType )
 {
-	VPROF( "C_TEEffectDispatch::PostDataUpdate" );
+	CVProfScope _( "C_TEEffectDispatch::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	// Find the effect name.
 	const char *pEffectName = g_StringTableEffectDispatch->GetString( m_EffectData.GetEffectNameIndex() );

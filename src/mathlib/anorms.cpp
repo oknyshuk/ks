@@ -1,12 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-
-#include "mathlib/vector.h"
-#include "mathlib/anorms.h"
+import std;
+import ks.math;
 
 Vector g_anorms[NUMVERTEXNORMALS] =
 {
@@ -173,4 +169,3 @@ Vector g_anorms[NUMVERTEXNORMALS] =
 	Vector(-0.587785, -0.425325, -0.688191), 
 	Vector(-0.688191, -0.587785, -0.425325)
 };
-

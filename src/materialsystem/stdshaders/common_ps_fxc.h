@@ -1,13 +1,8 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
-//
-// Purpose: Common pixel shader code
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
-#ifndef COMMON_PS_FXC_H_
-#define COMMON_PS_FXC_H_
+// Purpose: Common pixel shader code
 
 #include "common_fxc.h"
 
@@ -31,7 +26,6 @@
 #define float4_color_return_type float4
 
 // System defined pixel shader constants
-
 
 // NOTE: w == 1.0f / (Dest alpha compressed depth range).
 const float4 g_LinearFogColor : register( c29 );
@@ -840,6 +834,3 @@ float3 ScreenSpaceOrderedDither( float2 vScreenPos )
 		return vOutput;
 	}		
 }
-
-
-#endif //#ifndef COMMON_PS_FXC_H_

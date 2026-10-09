@@ -1,13 +1,8 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef MAPENTITIES_SHARED_H
-#define MAPENTITIES_SHARED_H
-
-#define MAPKEY_MAXLENGTH	2048
+inline constexpr auto MAPKEY_MAXLENGTH = 2048;
 
 
 //-----------------------------------------------------------------------------
@@ -42,6 +37,3 @@ public:
 const char *MapEntity_ParseToken( const char *data, char *newToken );
 const char *MapEntity_SkipToNextEntity( const char *pMapData, char *pWorkBuffer );
 bool MapEntity_ExtractValue( const char *pEntData, const char *keyName, char Value[MAPKEY_MAXLENGTH] );
-
-
-#endif // MAPENTITIES_SHARED_H

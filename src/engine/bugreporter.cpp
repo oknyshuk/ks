@@ -1,13 +1,24 @@
-//========= Copyright 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "client_pch.h"
+// main precompiled header for client files
+
+import std;
+import ks.tier1;
+
+
+
+
+
+
+
+
+#ifndef DEDICATED
+#include "engineui.h"
+#include "localize/ilocalize.h"
+#endif
 #include "enginebugreporter.h"
 #include "bugreporter/bugreporter.h"
-#include "tier1/interface.h"
 
 static ConVar bugreporter_username( "bugreporter_username", "", FCVAR_ARCHIVE, "Username to use for bugreporter" );
 
@@ -43,22 +54,22 @@ IEngineBugReporter *bugreporter = &g_BugReporter;
 unsigned long GetRam()
 {
 	unsigned long Ram = 0;
-	FILE *fh = fopen( "/proc/meminfo", "r" );
+	std::FILE *fh = std::fopen( "/proc/meminfo", "r" );
 	if( fh )
 	{
 		char buf[ 256 ];
 		const char szMemTotal[] = "MemTotal:";
 
-		while( fgets( buf, sizeof( buf ), fh ) )
+		while( std::fgets( buf, sizeof( buf ), fh ) )
 		{
-			if ( !Q_strnicmp( buf, szMemTotal, sizeof( szMemTotal ) - 1 ) )
+			if ( !V_strnicmp( buf, szMemTotal, sizeof( szMemTotal ) - 1 ) )
 			{
-				Ram = atoi( buf + sizeof( szMemTotal ) - 1 ) / 1024;
+				Ram = std::atoi( buf + sizeof( szMemTotal ) - 1 ) / 1024;
 				break;
 			}
 		}
 
-		fclose( fh );
+		std::fclose( fh );
 	}
 	return Ram;
 }
@@ -66,21 +77,21 @@ unsigned long GetRam()
 void DisplaySystemVersion( char *osversion, int maxlen )
 {
 	osversion[ 0 ] = 0;
-	FILE *fpKernelVer = fopen( "/proc/version_signature", "r" );
+	std::FILE *fpKernelVer = std::fopen( "/proc/version_signature", "r" );
 
 	if ( !fpKernelVer )
 	{
-		Q_strncat ( osversion, "Linux ", maxlen, COPY_ALL_CHARACTERS );
+		V_strncat ( osversion, "Linux ", maxlen, COPY_ALL_CHARACTERS );
 	}
 	else
 	{
-		fgets( osversion, maxlen, fpKernelVer );
+		std::fgets( osversion, maxlen, fpKernelVer );
 		osversion[ maxlen - 1 ] = 0;
 
-		char *szlf = Q_strrchr( osversion, '\n' );
+		char *szlf = V_strrchr( osversion, '\n' );
 		if( szlf )
 			*szlf = '\0';
 
-		fclose( fpKernelVer );
+		std::fclose( fpKernelVer );
 	}
 }

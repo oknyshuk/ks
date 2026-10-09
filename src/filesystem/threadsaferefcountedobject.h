@@ -1,14 +1,9 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef THREADSAFEREFCOUNTEDOBJECT_H
-#define THREADSAFEREFCOUNTEDOBJECT_H
-
-#include <atomic>
-
+import std;
+import ks.core;
 
 // This class can be used for fast access to an object from multiple threads,
 // and the main thread can wait until the threads are done using the object before it frees the object.
@@ -25,8 +20,8 @@ public:
 	
 	void Init( T pObj )
 	{
-		Assert( ThreadInMainThread() );
-		Assert( !m_pObject );
+		contract_assert( ThreadInMainThread() );
+		contract_assert( !m_pObject );
 		m_RefCount = 0;
 		m_pObject = pObj;
 		m_RefCount = 1;
@@ -50,21 +45,21 @@ public:
 	{
 		if ( --m_RefCount >= 1 )
 		{
-			Assert( m_pObject == pObj );
+			contract_assert( m_pObject == pObj );
 		}
 	}
 
 	// The main thread can use this to access the object, since only it can Init() and Free() the object.
 	T GetInMainThread()
 	{
-		Assert( ThreadInMainThread() );
+		contract_assert( ThreadInMainThread() );
 		return m_pObject;
 	}
 
 	// The main thread calls this after it has released its last reference to the object.
 	void ResetWhenNoRemainingReferences( T newValue )
 	{
-		Assert( ThreadInMainThread() );
+		contract_assert( ThreadInMainThread() );
 		
 		// Wait until we can free it.
 		while ( m_RefCount > 0 )
@@ -79,6 +74,3 @@ private:
 	std::atomic<long>	m_RefCount;
 	T						m_pObject;
 };
-
-
-#endif // THREADSAFEREFCOUNTEDOBJECT_H

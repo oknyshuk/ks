@@ -1,14 +1,10 @@
-//===== Copyright (c) 1996-2009, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2009 Valve Corporation
 
-#ifndef MM_VOICE_H
-#define MM_VOICE_H
-
+import ks.tier1;
 #include "mm_framework.h"
-#include "utlvector.h"
+import std;
 
 class CMatchVoice : public IMatchVoice
 {
@@ -33,9 +29,6 @@ public:
 	virtual void MuteTalker( XUID xuidTalker, bool bMute );
 
 protected:
-	// Remap XUID of a player to a valid LIVE-enabled XUID
-	XUID RemapTalkerXuid( XUID xuidTalker );
-
 	// Check player-player voice privileges for machine blocking purposes
 	bool IsTalkerMutedWithPrivileges( int iCtrlr, XUID xuidTalker );
 
@@ -52,5 +45,3 @@ protected:
 
 // Match events subscription singleton
 extern CMatchVoice *g_pMatchVoice;
-
-#endif // MM_VOICE_H

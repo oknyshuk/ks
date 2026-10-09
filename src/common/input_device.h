@@ -1,16 +1,9 @@
-//========= Copyright 2012, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2012 Valve Corporation
 
-#ifndef INPUT_DEVICES_H
-#define INPUT_DEVICES_H
-
-
-
+import std;
+import ks.core;
 
 // [dkorus]:  The values here are setup to be used as a bit-field.  
 //			for example: A PS3 with a KEYBOARD_MOUSE attached as well as a PLAYSTATION_MOVE would have a connected 
@@ -26,14 +19,13 @@ enum InputDevice_t
 	INPUT_DEVICE_HYDRA				= 1 << 3,		// (8) support on PC
 	INPUT_DEVICE_SHARPSHOOTER		= 1 << 4,		// (16) PS3 only
 	INPUT_DEVICE_MOVE_NAV_CONTROLLER = 1 << 5,		// (32) PS3 only
-	INPUT_DEVICE_STEAM_CONTROLLER 	= 1 << 6,		// (64) Steam controller
 
 	INPUT_DEVICE_MAX,
 	INPUT_DEVICE_INVALID = INPUT_DEVICE_MAX,
-	INPUT_DEVICE_FORCE_INT32		= INT32_MAX
+	INPUT_DEVICE_FORCE_INT32		= std::numeric_limits<std::int32_t>::max()
 };
 
-DEFINE_ENUM_BITWISE_OPERATORS( InputDevice_t )
+template <> struct EnableBitwiseOps<InputDevice_t> : std::true_type {};
 
 
 // [mpritchard]:  When we are talking about input devices, we also have an implicit, or explicit, platform
@@ -56,7 +48,7 @@ enum InputDevicePlatform_t
 	INPUT_DEVICE_PLATFORM_LINUX,
 
 	INPUT_DEVICE_PLATFORM_COUNT,		// list auto counter
-	INPUT_DEVICE_PLATFORM_FORCE_INT32	= INT32_MAX
+	INPUT_DEVICE_PLATFORM_FORCE_INT32	= std::numeric_limits<std::int32_t>::max()
 };
 
 // motion controller state
@@ -69,6 +61,3 @@ enum InputDeviceMCState
 	INPUT_DEVICE_MC_STATE_CONTROLLER_ERROR,
 	INPUT_DEVICE_MC_STATE_OK,
 };
-
-
-#endif //INPUT_DEVICES_H

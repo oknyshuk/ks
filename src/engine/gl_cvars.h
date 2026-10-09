@@ -1,16 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef GL_CVARS_H
-#define GL_CVARS_H
-
-
-#include "convar.h"
+import std;
+import ks.tier1;
 #include "cmd.h"
 
 // Stuff that's dealt with by the material system
@@ -54,5 +47,3 @@ static inline bool ShouldDrawInWireFrameMode( void )
 }
 
 extern	ConVar	r_drawbrushmodels;
-
-#endif	//GL_CVARS_H

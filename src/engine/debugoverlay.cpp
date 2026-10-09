@@ -1,25 +1,36 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose:	Debugging overlay functions
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "render_pch.h"
-#include <mutex>
+// Purpose: Debugging overlay functions
+
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "const.h"
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "r_local.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
+import std;
 #include "edict.h"
 #include "client.h"
 #include "debugoverlay.h"
 #include "cdll_int.h"
-#include "ivideomode.h"
 #include "materialsystem/imesh.h"
 #include "gl_matsysiface.h"
 #include "server.h"
 #include "client_class.h"
 #include "icliententitylist.h"
-#include "mathlib/vmatrix.h"
 #include "icliententity.h"
 #include "overlaytext.h"
 #include "engine/ivdebugoverlay.h"
@@ -376,7 +387,7 @@ void AddEntityTextOverlay(int ent_index, int line_offset, float duration, int r,
 	GetEntityOriginClientOrServer( ent_index, myPos );
 
 	VectorCopy(myPos,new_overlay->origin);
-	Q_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
+	V_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
 	new_overlay->bUseOrigin = true;
 	new_overlay->lineOffset	= line_offset;
 	new_overlay->SetEndTime( duration );
@@ -453,7 +464,7 @@ void AddTextOverlay(const Vector& textPos, float duration, const char *text)
 	OverlayText_t *new_overlay = new OverlayText_t;
 
 	VectorCopy(textPos,new_overlay->origin);
-	Q_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
+	V_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
 	new_overlay->bUseOrigin = true;
 	new_overlay->lineOffset	= 0;
 	new_overlay->SetEndTime( duration );
@@ -481,7 +492,7 @@ void AddTextOverlay(const Vector& textPos, float duration, float alpha, const ch
 	OverlayText_t *new_overlay = new OverlayText_t;
 
 	VectorCopy(textPos,new_overlay->origin);
-	Q_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
+	V_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
 	new_overlay->bUseOrigin = true;
 	new_overlay->lineOffset	= 0;
 	new_overlay->SetEndTime( duration );
@@ -508,7 +519,7 @@ void AddScreenTextOverlay(float flXPos, float flYPos, int line_offset, float dur
 	std::scoped_lock lock( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
 
-	Q_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
+	V_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
 	new_overlay->flXPos		= flXPos;
 	new_overlay->flYPos		= flYPos;
 	new_overlay->bUseOrigin = false;
@@ -545,7 +556,7 @@ void AddTextOverlay(const Vector& textPos, int line_offset, float duration, cons
 	OverlayText_t *new_overlay = new OverlayText_t;
 
 	VectorCopy(textPos,new_overlay->origin);
-	Q_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
+	V_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
 	new_overlay->bUseOrigin = true;
 	new_overlay->lineOffset	= line_offset;
 	new_overlay->SetEndTime( duration );
@@ -569,7 +580,7 @@ void AddTextOverlay(const Vector& textPos, int line_offset, float duration, floa
 	OverlayText_t *new_overlay = new OverlayText_t;
 
 	VectorCopy(textPos,new_overlay->origin);
-	Q_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
+	V_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
 	new_overlay->bUseOrigin = true;
 	new_overlay->lineOffset	= line_offset;
 	new_overlay->SetEndTime( duration );
@@ -593,7 +604,7 @@ void AddTextOverlay(const Vector& textPos, int line_offset, float duration, floa
 	OverlayText_t *new_overlay = new OverlayText_t;
 
 	VectorCopy(textPos,new_overlay->origin);
-	Q_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
+	V_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
 	new_overlay->bUseOrigin = true;
 	new_overlay->lineOffset	= line_offset;
 	new_overlay->SetEndTime( duration );
@@ -979,7 +990,7 @@ void DrawOverlay( OverlayBase_t *pOverlay )
 		break;
 
 	default:
-		Assert(0);
+		contract_assert( 0 );
 	}
 }
 
@@ -1039,7 +1050,7 @@ void DestroyOverlay( OverlayBase_t *pOverlay )
 		break;
 
 	default:
-		Assert(0);
+		contract_assert( 0 );
 	}
 }
 
@@ -1232,14 +1243,14 @@ class CIVDebugOverlay : public IVDebugOverlay, public IVPhysicsDebugOverlay
 {
 private:
 	char m_text[1024];
-	va_list	m_argptr;
+	std::va_list	m_argptr;
 
 public:
 	void AddEntityTextOverlay(int ent_index, int line_offset, float duration, int r, int g, int b, int a, const char *format, ...)
 	{
-		va_start( m_argptr, format );
-		Q_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
-		va_end( m_argptr );
+		__builtin_va_start( m_argptr, format );
+		V_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
+		__builtin_va_end( m_argptr );
 
 		CDebugOverlay::AddEntityTextOverlay(ent_index, line_offset, duration, r, g, b, a, m_text);
 	}
@@ -1281,36 +1292,36 @@ public:
 
 	void AddTextOverlay(const Vector& origin, float duration, const char *format, ...)
 	{
-		va_start( m_argptr, format );
-		Q_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
-		va_end( m_argptr );
+		__builtin_va_start( m_argptr, format );
+		V_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
+		__builtin_va_end( m_argptr );
 
 		CDebugOverlay::AddTextOverlay(origin, duration, m_text);
 	}
 
 	void AddTextOverlay(const Vector& origin, int line_offset, float duration, const char *format, ...)
 	{
-		va_start( m_argptr, format );
-		Q_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
-		va_end( m_argptr );
+		__builtin_va_start( m_argptr, format );
+		V_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
+		__builtin_va_end( m_argptr );
 
 		CDebugOverlay::AddTextOverlay(origin, line_offset, duration, m_text);
 	}
 
 	void AddTextOverlayRGB(const Vector& origin, int line_offset, float duration, float r, float g, float b, float alpha, const char *format, ...)
 	{
-		va_start( m_argptr, format );
-		Q_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
-		va_end( m_argptr );
+		__builtin_va_start( m_argptr, format );
+		V_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
+		__builtin_va_end( m_argptr );
 
 		CDebugOverlay::AddTextOverlay(origin, line_offset, duration, r, g, b, alpha, m_text);
 	}
 
 	void AddTextOverlayRGB(const Vector& origin, int line_offset, float flDuration, int r, int g, int b, int alpha, const char *format, ...)
 	{
-		va_start( m_argptr, format );
-		Q_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
-		va_end( m_argptr );
+		__builtin_va_start( m_argptr, format );
+		V_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
+		__builtin_va_end( m_argptr );
 
 		CDebugOverlay::AddTextOverlay( origin, line_offset, flDuration, r * 1.0f/255.0f, g * 1.0f/255.0f, b * 1.0f/255.0f, alpha * 1.0f/255.0f, m_text );
 	}
@@ -1383,6 +1394,5 @@ public:
 
 static CIVDebugOverlay g_DebugOverlay;
 
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CIVDebugOverlay, IVDebugOverlay, VDEBUG_OVERLAY_INTERFACE_VERSION, g_DebugOverlay );
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CIVDebugOverlay, IVPhysicsDebugOverlay, VPHYSICS_DEBUG_OVERLAY_INTERFACE_VERSION, g_DebugOverlay );
-
+static InterfaceReg s_Reg_CIVDebugOverlay_IVDebugOverlay( []() -> void * { return static_cast<IVDebugOverlay *>( &g_DebugOverlay ); }, VDEBUG_OVERLAY_INTERFACE_VERSION );;
+static InterfaceReg s_Reg_CIVDebugOverlay_IVPhysicsDebugOverlay( []() -> void * { return static_cast<IVPhysicsDebugOverlay *>( &g_DebugOverlay ); }, VPHYSICS_DEBUG_OVERLAY_INTERFACE_VERSION );;

@@ -1,10 +1,11 @@
-//========== Copyright (c) Valve Corporation, All rights reserved. ==========//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 // STATIC: "STAGE" "0..2"
 // STATIC: "USEONSTATICPROP" "0..1"
 // DYNAMIC: "COMPRESSED_VERTS"				"0..1"
-
 // Includes
+
 #include "common_vs_fxc.h"
 
 // Globals

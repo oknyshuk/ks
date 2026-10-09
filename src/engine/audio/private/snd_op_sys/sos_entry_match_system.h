@@ -1,16 +1,16 @@
-//============ Copyright (c) Valve Corporation, All rights reserved. ============
-//
-// 
-//
-//===============================================================================
-
-#ifndef SOS_ENTRY_MATCH_SYSTEM_H
-#define SOS_ENTRY_MATCH_SYSTEM_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
 
 //#include "snd_channels.h"
 
 // Externs the logging channel
-DECLARE_LOGGING_CHANNEL( LOG_SND_OPERATORS );
+import std;
+import ks.core;
+#include "soundservice.h"
+#include "sound.h"
+
+extern LoggingChannelID_t LOG_SND_OPERATORS;;
 
 extern Color StackColor;
 
@@ -115,7 +115,7 @@ public:
 
 
 
-#define SOS_BLOCKSYS_MAX_ENTRIES 32
+inline constexpr auto SOS_BLOCKSYS_MAX_ENTRIES = 32;
 
 class CSosEntryMatchList
 {
@@ -158,8 +158,3 @@ protected:
 	CSosManagedEntryMatch *m_vEntryMatchList[ SOS_BLOCKSYS_MAX_ENTRIES ];
 
 };
-
-
-
-
-#endif // SOS_ENTRY_MATCH_SYSTEM_H

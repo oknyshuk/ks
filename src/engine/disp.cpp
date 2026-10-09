@@ -1,35 +1,40 @@
-//===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "render_pch.h"
+// main precompiled header for client rendering code
+
+import ks.tier1;
+#include "materialsystem/imesh.h"
+#include "materialsystem/imaterial.h"
+#include "materialsystem/imaterialsystemhardwareconfig.h"
+#include "materialsystem/materialsystem_config.h"
+
+#include "gl_model.h"
+#include "r_local.h"
+#include "gl_shader.h"
+#include "cmodel_engine.h"
+#include "gl_model_private.h"
+#include "gl_cvars.h"
+#include "gl_lightmap.h"
+#include "gl_matsysiface.h"
+#include "gl_rsurf.h"
+#include "render.h"
 #include "gl_cvars.h"
 #include "gl_model_private.h"
 #include "gl_lightmap.h"
 #include "disp.h"
-#include "mathlib/mathlib.h"
+import std;
 #include "gl_rsurf.h"
 #include "gl_matsysiface.h"
-#include "zone.h"
 #include "materialsystem/imesh.h"
-#include "iscratchpad3d.h"
 #include "decal_private.h"
-#include "con_nprint.h"
 #include "dispcoll_common.h"
 #include "cmodel_private.h"
 #include "collisionutils.h"
-#include "tier0/dbg.h"
-#include "gl_rmain.h"
 #include "lightcache.h"
 #include "disp_tesselate.h"
 #include "shadowmgr.h"
 #include "debugoverlay.h"
-
 
 //-----------------------------------------------------------------------------
 // Globals.
@@ -117,8 +122,8 @@ void CDispInfo::UpdateNodeBoundingBoxes()
 	// init all nodes to an invalid AABB
 	for ( int i = 0; i < m_pPowerInfo->m_NodeCount; i++ )
 	{
-		m_pNodeInfo[i].m_mins.Init( FLT_MAX, FLT_MAX, FLT_MAX );
-		m_pNodeInfo[i].m_maxs.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
+		m_pNodeInfo[i].m_mins.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+		m_pNodeInfo[i].m_maxs.Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
 	}
 
 	UpdateNodeBoundingBoxes_R( m_pPowerInfo->m_RootNode, 0, 0 );
@@ -129,8 +134,8 @@ void CDispInfo::UpdateNodeBoundingBoxes_R( CVertIndex const &nodeIndex, int iNod
 {
 	int iNodeIndex = VertIndex( nodeIndex );
 	DispNodeInfo_t& nodeInfo = m_pNodeInfo[iNodeBitIndex];
-	nodeInfo.m_maxs.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
-	nodeInfo.m_mins.Init( FLT_MAX, FLT_MAX, FLT_MAX );
+	nodeInfo.m_maxs.Init( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() );
+	nodeInfo.m_mins.Init( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
 
 	if ( ( iLevel+1 < m_Power ) && ( nodeInfo.m_Flags & DispNodeInfo_t::CHILDREN_HAVE_TRIANGLES ) )
 	{
@@ -143,7 +148,7 @@ void CDispInfo::UpdateNodeBoundingBoxes_R( CVertIndex const &nodeIndex, int iNod
 
 			// expand box by child bounds
 			DispNodeInfo_t& childNodeInfo = m_pNodeInfo[iChildNodeBit];
-			if ( childNodeInfo.m_mins.x != FLT_MAX )
+			if ( childNodeInfo.m_mins.x != std::numeric_limits<float>::max() )
 			{
 				VectorMax( childNodeInfo.m_maxs, nodeInfo.m_maxs, nodeInfo.m_maxs );
 				VectorMin( childNodeInfo.m_mins, nodeInfo.m_mins, nodeInfo.m_mins );
@@ -315,7 +320,7 @@ void CDispInfo::TestAddDecalTri( int iIndexStart, unsigned short decalHandle, CD
 		return;
 
 	// Ok, clipping happened; lets create a decal fragment.
-	Assert( count <= CDispShadowFragment::MAX_VERTS );
+	contract_assert( count <= CDispShadowFragment::MAX_VERTS );
 
 	// Allocate a new fragment...
 	CDispShadowFragment* pFragment = AllocateShadowDecalFragment( decalHandle, count );
@@ -329,16 +334,16 @@ void CDispInfo::TestAddDecalTri( int iIndexStart, unsigned short decalHandle, CD
 		VectorCopy( ppClipVertex[i]->m_ShadowSpaceTexCoord, pFragment->m_ShadowVerts[i].m_ShadowSpaceTexCoord );
 
 		// Make sure it's been clipped
-		Assert( pFragment->m_ShadowVerts[i].m_ShadowSpaceTexCoord[0] >= -1e-3f );
-		Assert( pFragment->m_ShadowVerts[i].m_ShadowSpaceTexCoord[0] - 1.0f <= 1e-3f );
-		Assert( pFragment->m_ShadowVerts[i].m_ShadowSpaceTexCoord[1] >= -1e-3f );
-		Assert( pFragment->m_ShadowVerts[i].m_ShadowSpaceTexCoord[1] - 1.0f <= 1e-3f );
+		contract_assert( pFragment->m_ShadowVerts[i].m_ShadowSpaceTexCoord[0] >= -1e-3f );
+		contract_assert( pFragment->m_ShadowVerts[i].m_ShadowSpaceTexCoord[0] - 1.0f <= 1e-3f );
+		contract_assert( pFragment->m_ShadowVerts[i].m_ShadowSpaceTexCoord[1] >= -1e-3f );
+		contract_assert( pFragment->m_ShadowVerts[i].m_ShadowSpaceTexCoord[1] - 1.0f <= 1e-3f );
 	}
 
 	// Update the number of triangles in the decal
 	pDecal->m_nVerts += pFragment->m_nVerts;
 	pDecal->m_nTris += pFragment->m_nVerts - 2;
-	Assert( pDecal->m_nTris != 0 );
+	contract_assert( pDecal->m_nTris != 0 );
 #endif
 }
 
@@ -557,7 +562,7 @@ bool CDispInfo::Render( CGroupMesh *pGroup, bool bAllowDebugModes )
 #ifndef DEDICATED
 	if( !m_pMesh )
 	{
-		Assert( !"CDispInfo::Render: m_pMesh == NULL" );
+		contract_assert( !"CDispInfo::Render: m_pMesh == NULL" );
 		return false;
 	}
 
@@ -615,7 +620,7 @@ bool CDispInfo::Render( CGroupMesh *pGroup, bool bAllowDebugModes )
 
 			int nInt = ( mat_surfaceid.GetInt() != 2 ) ? size_cast< int >( (intp)m_ParentSurfID ) : (msurface2_t*)m_ParentSurfID - host_state.worldbrush->surfaces2;
 			char buf[32];
-			Q_snprintf( buf, sizeof( buf ), "%d", nInt );
+			V_snprintf( buf, sizeof( buf ), "%d", nInt );
 			CDebugOverlay::AddTextOverlay( vecCenter, 0, buf );
 		}
 
@@ -629,7 +634,7 @@ bool CDispInfo::Render( CGroupMesh *pGroup, bool bAllowDebugModes )
 			mtexinfo_t * pTexInfo = MSurf_TexInfo(m_ParentSurfID);
 
 			const char *pFullMaterialName = pTexInfo->material ? pTexInfo->material->GetName() : "no material";
-			const char *pSlash = strrchr( pFullMaterialName, '/' );
+			const char *pSlash = std::strrchr( pFullMaterialName, '/' );
 			const char *pMaterialName = strrchr( pFullMaterialName, '\\' );
 			if (pSlash > pMaterialName)
 				pMaterialName = pSlash;
@@ -658,7 +663,7 @@ bool CDispInfo::Render( CGroupMesh *pGroup, bool bAllowDebugModes )
 		}
 		else
 		{
-			Assert( !"Overflowed visible mesh list" );
+			contract_assert( !"Overflowed visible mesh list" );
 		}
 	}
 #endif
@@ -781,7 +786,7 @@ void IterateLightmapSamples( CDispInfo *pDisp, const ProcessLightmapSampleData_t
 
 	if ( !std::ssize( g_DispLightmapSamplePositions ) )
 	{
-		ExecuteNTimes( 20, Warning( "Cannot update displacement for dlight - set 'r_dlightsenable 1' and reload the map! (data may also have been culled by MakeGameData)\n" ) );
+		ExecuteNTimes( 20, [&]{ Warning( "Cannot update displacement for dlight - set 'r_dlightsenable 1' and reload the map! (data may also have been culled by MakeGameData)\n" ); } );
 		return;
 	}
 
@@ -1161,8 +1166,8 @@ bool CDispInfo::TestRay( Ray_t const& ray, float start, float end, float& dist,
 	output.dist = 1.0f;
 	if (pTree->AABBTree_Ray( shortenedRay, output ))
 	{
-		Assert( (output.u <= 1.0f) && (output.v <= 1.0f ));
-		Assert( (output.u >= 0.0f) && (output.v >= 0.0f ));
+		contract_assert( (output.u <= 1.0f) && (output.v <= 1.0f ) );
+		contract_assert( (output.u >= 0.0f) && (output.v >= 0.0f ) );
 
 		// Compute the actual distance along the ray
 		dist = start * (1.0f - output.dist) + end * output.dist;
@@ -1183,14 +1188,14 @@ const CPowerInfo* CDispInfo::GetPowerInfo() const
 
 CDispNeighbor* CDispInfo::GetEdgeNeighbor( int index )
 {
-	Assert( index >= 0 && index < ARRAYSIZE( m_EdgeNeighbors ) );
+	contract_assert( index >= 0 && index < std::size( m_EdgeNeighbors ) );
 	return &m_EdgeNeighbors[index];
 }
 
 
 CDispCornerNeighbors* CDispInfo::GetCornerNeighbors( int index )
 {
-	Assert( index >= 0 && index < ARRAYSIZE( m_CornerNeighbors ) );
+	contract_assert( index >= 0 && index < std::size( m_CornerNeighbors ) );
 	return &m_CornerNeighbors[index];
 }
 
@@ -1199,5 +1204,3 @@ CDispUtilsHelper* CDispInfo::GetDispUtilsByIndex( int index )
 {
 	return GetDispByIndex( index );	
 }
-
-

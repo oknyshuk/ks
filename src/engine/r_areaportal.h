@@ -1,19 +1,12 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef R_AREAPORTAL_H
-#define R_AREAPORTAL_H
-
-
-#include "utlvector.h"
+import std;
+import ks.tier1;
 #include "gl_model_private.h"
+#include "ivrenderview.h"
 
-
-class Frustum_t;
 
 
 // Used to clip area portals. The coordinates here are in normalized
@@ -95,5 +88,3 @@ inline unsigned char R_IsAreaVisible( int area )
 	extern unsigned char g_RenderAreaBits[32];
 	return g_RenderAreaBits[area>>3] & ( 1 << ( area & 7 ) );
 }
-
-#endif // R_AREAPORTAL_H

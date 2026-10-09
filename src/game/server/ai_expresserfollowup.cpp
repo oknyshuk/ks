@@ -1,11 +1,36 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose:
-//
-// $NoKeywords: $
-//=============================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+import std;
+import ks.tier1;
+#include "string_t.h"
+#include "vphysics_interface.h"
+#include "edict.h"
+#include "eiface.h"
+#include "iserverentity.h"
+#include "dt_send.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "networkvar.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "entitylist.h"
+#include "physics.h"
+#include "ndebugoverlay.h"
+#include "recipientfilter.h"
+#include "npcevent.h"
 
 #include "ai_speech.h"
 
@@ -18,16 +43,13 @@
 #include "scenefilecache/ISceneFileCache.h"
 /*
 #include "engine/IEngineSound.h"
-#include "keyvalues.h"
 #include "ai_criteria.h"
 #include "sceneentity.h"
 */
 
-
-
 static const char *GetResponseName( CBaseEntity *pEnt )
 {
-	Assert( pEnt );
+	contract_assert( pEnt );
 	if ( pEnt == nullptr )
 		return "";
 	return STRING( pEnt->GetEntityName() );
@@ -36,7 +58,7 @@ static const char *GetResponseName( CBaseEntity *pEnt )
 // This is a tiny helper function for below -- what I'd use a lambda for, usually
 static void DispatchComeback( CAI_ExpresserWithFollowup *pExpress, CBaseEntity *pSpeaker, CBaseEntity *pRespondent, AI_ResponseFollowup &followup )
 {
-	AssertMsg(pSpeaker != nullptr, "Response expressor somehow got called with a NULL Outer.\n");
+	contract_assert( ( pSpeaker != nullptr ) && "Response expressor somehow got called with a NULL Outer.\n" );
 	if ( !pRespondent )
 	{
 		return;
@@ -68,7 +90,7 @@ static void DispatchComeback( CAI_ExpresserWithFollowup *pExpress, CBaseEntity *
 	AI_CriteriaSet criteria;
 
 	// add in the FROM context so dispatchee knows was from me
-	const char * RESTRICT pszSpeakerName = GetResponseName( pSpeaker );
+	const char * __restrict__ pszSpeakerName = GetResponseName( pSpeaker );
 	criteria.AppendCriteria( "From", pszSpeakerName );
 	// if a SUBJECT criteria is missing, put it back in.
 	if ( criteria.FindCriterionIndex( "Subject" ) == -1 )
@@ -112,27 +134,27 @@ static CBaseEntity *AscertainSpeechSubjectFromContext( AI_Response *response, AI
 }
 
 // TODO: Currently uses awful stricmp. Use symbols! Once I know which ones we want, that is.
-static CResponseQueue::CFollowupTargetSpec_t ResolveFollowupTargetToEntity( AIConcept_t &conc, AI_CriteriaSet &criteria, const char * RESTRICT szTarget, AI_Response * RESTRICT response = nullptr )
+static CResponseQueue::CFollowupTargetSpec_t ResolveFollowupTargetToEntity( AIConcept_t &conc, AI_CriteriaSet &criteria, const char * __restrict__ szTarget, AI_Response * __restrict__ response = nullptr )
 {
 
 
-	if ( Q_stricmp(szTarget, "self") == 0 )
+	if ( V_stricmp(szTarget, "self") == 0 )
 	{
 		return CResponseQueue::CFollowupTargetSpec_t( kDRT_SPECIFIC, conc.GetSpeaker() );
 	}
-	else if ( Q_stricmp(szTarget, "subject") == 0 )
+	else if ( V_stricmp(szTarget, "subject") == 0 )
 	{
 		return CResponseQueue::CFollowupTargetSpec_t( AscertainSpeechSubjectFromContext( response, criteria, "Subject" ) );
 	}
-	else if ( Q_stricmp(szTarget, "from") == 0 )
+	else if ( V_stricmp(szTarget, "from") == 0 )
 	{
 		return CResponseQueue::CFollowupTargetSpec_t( AscertainSpeechSubjectFromContext( response, criteria, "From" ) );
 	}
-	else if ( Q_stricmp(szTarget, "any") == 0 )
+	else if ( V_stricmp(szTarget, "any") == 0 )
 	{
 		return CResponseQueue::CFollowupTargetSpec_t( kDRT_ANY, conc.GetSpeaker() );
 	}
-	else if ( Q_stricmp(szTarget, "all") == 0 )
+	else if ( V_stricmp(szTarget, "all") == 0 )
 	{
 		return CResponseQueue::CFollowupTargetSpec_t( kDRT_ALL );
 	}
@@ -148,9 +170,9 @@ static CResponseQueue::CFollowupTargetSpec_t ResolveFollowupTargetToEntity( AICo
 
 
 // TODO: Currently uses awful stricmp. Use symbols! Once I know which ones we want, that is.
-static CResponseQueue::CFollowupTargetSpec_t ResolveFollowupTargetToEntity( AIConcept_t &conc, AI_CriteriaSet &criteria, AI_Response * RESTRICT response, AI_ResponseFollowup * RESTRICT followup )
+static CResponseQueue::CFollowupTargetSpec_t ResolveFollowupTargetToEntity( AIConcept_t &conc, AI_CriteriaSet &criteria, AI_Response * __restrict__ response, AI_ResponseFollowup * __restrict__ followup )
 {
-	const char * RESTRICT szTarget = followup->followup_target;
+	const char * __restrict__ szTarget = followup->followup_target;
 	const CResponseQueue::CFollowupTargetSpec_t INVALID; // default: invalid result
 	if ( szTarget == nullptr )
 		return INVALID;
@@ -161,9 +183,9 @@ static CResponseQueue::CFollowupTargetSpec_t ResolveFollowupTargetToEntity( AICo
 
 ConVar chet_debug_idle( "chet_debug_idle", "0", FCVAR_ARCHIVE, "If set one, many debug prints to help track down the TLK_IDLE issue. Set two for super verbose info" );
 // extern ConVar chet_debug_idle;
-bool CAI_ExpresserWithFollowup::Speak( AIConcept_t &conc, const char *modifiers /*= NULL*/, char *pszOutResponseChosen /* = NULL*/, size_t bufsize /* = 0 */, IRecipientFilter *filter /* = NULL */ )
+bool CAI_ExpresserWithFollowup::Speak( AIConcept_t &conc, const char *modifiers /*= NULL*/, char *pszOutResponseChosen /* = NULL*/, std::size_t bufsize /* = 0 */, IRecipientFilter *filter /* = NULL */ )
 {
-	VPROF("CAI_Expresser::Speak");
+	CVProfScope _( "CAI_Expresser::Speak", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( IsSpeechGloballySuppressed() )
 	{
 		return false;
@@ -206,14 +228,14 @@ bool CAI_ExpresserWithFollowup::Speak( AIConcept_t &conc, const char *modifiers 
 }
 
 extern ISceneFileCache *scenefilecache;
-static float GetSpeechDurationForResponse( const AI_Response * RESTRICT response )
+static float GetSpeechDurationForResponse( const AI_Response * __restrict__ response )
 {
 	char sceneName[256];
 	response->GetResponse( sceneName, sizeof(sceneName) );
 	// look up the scene in the scene cache
 	SceneCachedData_t scenedata;
 	bool bHasData = scenefilecache->GetSceneCachedData( sceneName, &scenedata );
-	AssertMsg1( bHasData, "Couldn't find %s in scene cache.", sceneName );
+	contract_assert( bHasData && "Couldn't find %s in scene cache." );
 	if ( bHasData )
 	{
 		return scenedata.m_fLastSpeakSecs;
@@ -249,13 +271,13 @@ bool CAI_ExpresserWithFollowup::SpeakDispatchResponse( AIConcept_t &conc, AI_Res
 	}
 
 	// Record my followup details so that I may defer its use til end of the speech
-	AI_ResponseFollowup * RESTRICT followup = response->GetParams()->m_pFollowup;
+	AI_ResponseFollowup * __restrict__ followup = response->GetParams()->m_pFollowup;
 	if ( followup  )
 	{
 		if ( followup->followup_entityiotarget && followup->followup_entityioinput )
 		if ( criteria )
 		{
-			CBaseEntity * RESTRICT pTarget = gEntList.FindEntityByName( nullptr, followup->followup_entityiotarget );
+			CBaseEntity * __restrict__ pTarget = gEntList.FindEntityByName( nullptr, followup->followup_entityiotarget );
 			if ( pTarget )
 			{
 				g_EventQueue.AddEvent( pTarget, followup->followup_entityioinput, variant_t(), followup->followup_entityiodelay, GetOuter(), GetOuter() );
@@ -337,10 +359,10 @@ bool CAI_ExpresserWithFollowup::SpeakDispatchResponse( AIConcept_t &conc, AI_Res
 // of the line", eg to create a THEN rule when two characters talk over each other.
 // It's static to avoid accidental use of the postponed followup/target members.
 void CAI_ExpresserWithFollowup::DispatchFollowupThroughQueue( const AIConcept_t &conc,
-															  const char * RESTRICT criteriaStr,
+															  const char * __restrict__ criteriaStr,
 															  const CResponseQueue::CFollowupTargetSpec_t &target,
 															  float delay,
-															  CBaseEntity * RESTRICT pOuter
+															  CBaseEntity * __restrict__ pOuter
 															 )
 {
 	AI_CriteriaSet criteria;

@@ -1,14 +1,55 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#include "cbase.h"
+#if defined(CLIENT_DLL)
+#include "rocketui/rmlui.h"
+#elif defined(GAME_DLL)
+#endif
+import std;
+import ks.core;
+#if defined(CLIENT_DLL)
+import ks.tier1;
+#include "const.h"
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "precache_register.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "c_baseplayer.h"
+#include "vphysics_interface.h"
+#include "cdll_client_int.h"
+#include "engine/ivmodelinfo.h"
+#include "debugoverlay_shared.h"
+#elif defined(GAME_DLL)
+import ks.math;
+#include "vphysics_interface.h"
+#include "const.h"
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "ehandle.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "base_transmit_proxy.h"
+#include "networkvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "precache_register.h"
+#include "baseanimating.h"
+#include "basecombatweapon.h"
+#include "basecombatcharacter.h"
+#include "gamerules.h"
+#include "player.h"
+#include "ndebugoverlay.h"
+#endif
 #include "ammodef.h"
-
-#include "tier0/vprof.h"
 
 
 //-----------------------------------------------------------------------------
@@ -115,7 +156,7 @@ CBaseCombatWeapon *CBaseCombatCharacter::GetActiveWeapon() const
 //-----------------------------------------------------------------------------
 CBaseCombatWeapon *CBaseCombatCharacter::GetWeapon( int i ) const
 {
-	Assert( (i >= 0) && (i < MAX_WEAPONS) );
+	contract_assert( (i >= 0) && (i < MAX_WEAPONS) );
 	return m_hMyWeapons[i].Get();
 }
 
@@ -304,7 +345,7 @@ enum
 	VIS_CACHE_MAX_ENTRIES = 0xFFFF
 };
 
-#define VIS_CACHE_ENTRY_LIFE .090f
+constexpr auto VIS_CACHE_ENTRY_LIFE = .090f;
 
 class CCombatCharVisCache : public CAutoGameSystemPerFrame
 {
@@ -323,7 +364,7 @@ private:
 	{
 		bool operator()( const VisCacheKey_t &lhs, const VisCacheKey_t &rhs ) const
 		{
-			return ( memcmp( &lhs, &rhs, sizeof( VisCacheKey_t ) ) < 0 );
+			return ( std::memcmp( &lhs, &rhs, sizeof( VisCacheKey_t ) ) < 0 );
 		}
 	};
 
@@ -605,7 +646,7 @@ by our field of view
 bool CBaseCombatCharacter::IsInFieldOfView( CBaseEntity *entity ) const
 {
 	CBasePlayer *pPlayer = ToBasePlayer( const_cast< CBaseCombatCharacter* >( this ) );
-	float flTolerance = pPlayer ? cos( DEG2RAD( pPlayer->GetFOV() * 0.5f ) ) : BCC_DEFAULT_LOOK_TOWARDS_TOLERANCE;
+	float flTolerance = pPlayer ? std::cos( DEG2RAD( pPlayer->GetFOV() * 0.5f ) ) : BCC_DEFAULT_LOOK_TOWARDS_TOLERANCE;
 
 	Vector vecForward;
 	Vector vecEyePosition = EyePosition();
@@ -640,7 +681,7 @@ bool CBaseCombatCharacter::IsInFieldOfView( const Vector &pos ) const
 	CBasePlayer *pPlayer = ToBasePlayer( const_cast< CBaseCombatCharacter* >( this ) );
 
 	if ( pPlayer )
-		return IsLookingTowards( pos, cos( DEG2RAD( pPlayer->GetFOV() * 0.5f ) ) );
+		return IsLookingTowards( pos, std::cos( DEG2RAD( pPlayer->GetFOV() * 0.5f ) ) );
 
 	return IsLookingTowards( pos );
 }
@@ -675,16 +716,6 @@ static bool TraceFilterNoCombatCharacters( IHandleEntity *pServerEntity, int con
 
 bool CBaseCombatCharacter::IsLineOfSightClear( const Vector &pos, LineOfSightCheckType checkType, CBaseEntity *entityToIgnore ) const
 {
-#if defined(GAME_DLL) && defined(COUNT_BCC_LOS)
-	static int count, frame;
-	if ( frame != gpGlobals->framecount )
-	{
-		Msg( ">> %d\n", count );
-		frame = gpGlobals->framecount;
-		count = 0;
-	}
-	count++;
-#endif
 	if( checkType == IGNORE_ACTORS )
 	{
 

@@ -1,15 +1,15 @@
-//===== Copyright (c) 2013-2013, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: Class to help with rendering CMDLs & CMergedMDLs to textures.
-//
-//===========================================================================//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 2013 Valve Corporation
 
+// Purpose: Class to help with rendering CMDLs & CMergedMDLs to textures.
+
+import std;
+import ks.tier1;
 #include "render_to_rt_helper.h"
 #include "istudiorender.h"
 #include "tier2/renderutils.h"
 #include "materialsystem/MaterialSystemUtil.h"
 #include "renderparm.h"
-#include "tier1/vector_ops.h"
 
 // uncomment these to write out VTFs of the inventory icons with no lighting to be used for the "default icon images"
 //#define WRITE_OUT_VTF
@@ -19,7 +19,7 @@
 // Singleton
 //-----------------------------------------------------------------------------
 static CRenderToRTHelper s_RenderToRTHelper;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CRenderToRTHelper, IRenderToRTHelper, RENDER_TO_RT_HELPER_INTERFACE_VERSION, s_RenderToRTHelper );
+static InterfaceReg s_Reg_CRenderToRTHelper_IRenderToRTHelper( []() -> void * { return static_cast<IRenderToRTHelper *>( &s_RenderToRTHelper ); }, RENDER_TO_RT_HELPER_INTERFACE_VERSION );;
 
 CRenderToRTHelper::CRenderToRTHelper()
 	: m_pCurrentObjectToRender( nullptr )
@@ -42,14 +42,10 @@ bool CRenderToRTHelper::Init()
 	if ( !g_pMaterialSystem )
 		return false;
 
-	memset( &m_LightingState, 0, sizeof(MaterialLightingState_t) );
+	std::memset( &m_LightingState, 0, sizeof(MaterialLightingState_t) );
 	for ( int i = 0; i < 6; ++i )
 	{
-#ifdef WRITE_OUT_ICON_VTFS
-		m_LightingState.m_vecAmbientCube[i].Init( 0.f, 0.f, 0.f );
-#else
 		m_LightingState.m_vecAmbientCube[i].Init( 0.15f, 0.15f, 0.15f );
-#endif
 	}
 
 	//the default light is a blueish rim
@@ -57,7 +53,7 @@ bool CRenderToRTHelper::Init()
 	m_LightingState.m_nLocalLightCount = 1;
 
 	m_pRenderTarget = g_pMaterialSystem->FindTexture( "render_to_rt_helper", TEXTURE_GROUP_RENDER_TARGET );
-	Assert( m_pRenderTarget );
+	contract_assert( m_pRenderTarget );
 	m_pRenderTarget->AddRef();
 
 	g_pMaterialSystem->AddEndFramePriorToNextContextFunc( ::ProcessRenderToRTHelper );
@@ -91,9 +87,9 @@ void CRenderToRTHelper::LookAt( Camera_t& camera, const Vector &vecCenter, float
 	// d/f = r'/d' where d' is distance of camera to sphere
 	// d' = r' / tan( fov/2 ) * r' = r / ( cos (fov/2) * tan( fov/2 ) ) = r / sin( fov/2 )
 	float flFOVx = camera.m_flFOVX;
-	flFOVx *= M_PI / 360.0f;
+	flFOVx *= std::numbers::pi / 360.0f;
 	Vector vecCameraOffset( cameraOffset );
-	vecCameraOffset.x -= ( flRadius / sin( flFOVx ) );
+	vecCameraOffset.x -= ( flRadius / std::sin( flFOVx ) );
 
 	// now setup the camera's origin and angles
 	matrix3x4_t matCameraPivot;
@@ -164,11 +160,6 @@ void CRenderToRTHelper::StartRenderToRT( RenderToRTData_t *pRenderToRTData )
 		{
 			pRenderToRTData->m_Camera.InitViewParameters( pRenderToRTData->m_cameraOffset, pRenderToRTData->m_cameraAngles );
 		}
-
-#ifdef WRITE_OUT_ICON_VTFS
-		pRenderToRTData->m_LightingState.m_pLocalLightDesc[0].InitDirectional( Vector( 0.0f, 0.0f, 0.0f ), Vector( 0.0f, 0.0f, 0.0f ) );
-		pRenderToRTData->m_LightingState.m_nLocalLightCount = 1;
-#endif
 
 		pRenderToRTData->m_stage = RENDER_TO_RT_STAGE_STARTED;
 	}
@@ -266,22 +257,6 @@ bool CRenderToRTHelper::Process()
 
 			bDidWork = true;
 
-#ifdef WRITE_OUT_ICON_VTFS
-			static int s_nIconNumber = 0;
-			ks::byte_writer buf;
-			m_pCurrentObjectToRender->m_pResultVTF->Serialize(buf);
-
-			char szTextureName[MAX_PATH];
-			V_snprintf(szTextureName, MAX_PATH, "%s/inventory_icon_%s.vtf", ICON_VTF_BASE_PATH, m_pCurrentObjectToRender->m_pszIconNameSuffix );
-			
-			FileHandle_t f = g_pFullFileSystem->Open(szTextureName, "wb", nullptr);
-
-			if ( f != FILESYSTEM_INVALID_HANDLE )
-			{
-				g_pFullFileSystem->Write( buf.data(), buf.size(), f );
-				g_pFullFileSystem->Close(f);
-			}
-#endif
 			m_pCurrentObjectToRender = nullptr;
 		}
 	}

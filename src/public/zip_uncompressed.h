@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef ZIP_UNCOMPRESSED_H
-#define ZIP_UNCOMPRESSED_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "datamap.h"
 
@@ -75,10 +70,10 @@ struct ZIP_LocalFileHeader
 ///	by the map loading process.
 //=============================================================================//
 
-#define PRELOAD_SECTION_NAME	"__preload_section.pre"
-#define PRELOAD_HDR_VERSION		3
-#define XZIP_COMMENT_LENGTH		32
-#define INVALID_PRELOAD_ENTRY	( (unsigned short)-1 )
+inline constexpr const char *PRELOAD_SECTION_NAME = "__preload_section.pre";
+inline constexpr auto PRELOAD_HDR_VERSION = 3;
+inline constexpr auto XZIP_COMMENT_LENGTH = 32;
+inline constexpr auto INVALID_PRELOAD_ENTRY = ( (unsigned short)-1 );
 
 struct ZIP_PreloadHeader 
 {
@@ -100,5 +95,3 @@ struct ZIP_PreloadRemapTable
 };
 
 #pragma pack()
-
-#endif // ZIP_UNCOMPRESSED_H

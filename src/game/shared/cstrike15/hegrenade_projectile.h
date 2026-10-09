@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
-
-#ifndef HEGRENADE_PROJECTILE_H
-#define HEGRENADE_PROJECTILE_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -51,6 +46,3 @@ public:
 private:
 	float m_flDetonateTime;
 };
-
-
-#endif // HEGRENADE_PROJECTILE_H

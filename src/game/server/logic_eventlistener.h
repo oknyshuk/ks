@@ -1,14 +1,10 @@
-//========= Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ====
-//
-// Purpose:
-//
-//=============================================================================
-
-#ifndef LOGIC_EVENTLISTENER_H
-#define LOGIC_EVENTLISTENER_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #include "reflect_annotations.h"
-#pragma once
+#include "baseentity.h"
+#include "GameEventListener.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Used to relay outputs/inputs from the events to the world and vice versa
@@ -61,4 +57,3 @@ private:
 
 	[[= ks::reflect::Key{ .name = "OnEventFired" } ]] COutputEvent m_OnEventFired;
 };
-#endif	// LOGIC_EVENTLISTENER_H

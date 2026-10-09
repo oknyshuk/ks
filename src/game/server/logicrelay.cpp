@@ -1,18 +1,29 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ====
-//
-// A message forwarder. Fires an OnTrigger output when triggered, and can be
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+// Purpose: A message forwarder. Fires an OnTrigger output when triggered, and can be
 // disabled to prevent forwarding outputs.
-//
 // Useful as an intermediary between one entity and another for turning on or
 // off an I/O connection, or as a container for holding a set of outputs that
 // can be triggered from multiple places.
-//
-//=============================================================================
 
-#include "cbase.h"
+import std;
+import ks.math;
+#include "edict.h"
+#include "iserverentity.h"
+#include "shareddefs.h"
+#include "datamap.h"
+#include "util.h"
+#include "predictable_entity.h"
+#include "variant_t.h"
+#include "takedamageinfo.h"
+#include "touchlink.h"
+#include "groundlink.h"
+#include "sharedvar.h"
+#include "baseentity_shared.h"
+#include "basetoggle.h"
+#include "baseanimating.h"
 #include "reflect_datamap.h"
-#include "reflect_annotations.h"
-#include "entityinput.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
 #include "soundent.h"
@@ -150,4 +161,3 @@ void CLogicRelay::InputTrigger( inputdata_t &inputdata )
 		}
 	}
 }
-

@@ -1,13 +1,6 @@
-//===== Copyright (c) 1996-2008, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//
-//===========================================================================//
-
-#ifndef SHADERAPIDX8_H
-#define SHADERAPIDX8_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2008 Valve Corporation
 
 #include "shaderapibase.h"
 #include "shaderapi/ishadershadow.h"
@@ -32,11 +25,7 @@ class IMaterialInternal;
 struct MeshInstanceData_t;
 
 //#define _X360_GPU_OWN_RESOURCES
-#if defined( _X360_GPU_OWN_RESOURCES )
-#define IsGPUOwnSupported()		( true )
-#else
-#define IsGPUOwnSupported()		( false )
-#endif
+[[gnu::always_inline]] inline constexpr auto IsGPUOwnSupported() { return ( false ); }
 
 
 //-----------------------------------------------------------------------------
@@ -136,7 +125,7 @@ public:
 	// Alpha to coverage
 	virtual void ApplyAlphaToCoverage( bool bEnable ) = 0;
 
-	virtual void PrintfVA( char *fmt, va_list vargs ) = 0;
+	virtual void PrintfVA( char *fmt, std::va_list vargs ) = 0;
 	virtual void Printf( char *fmt, ... ) = 0;	
 	virtual float Knob( char *knobname, float *setvalue = nullptr ) = 0;
 
@@ -151,17 +140,9 @@ public:
 	virtual void SetVertexDecl( VertexFormat_t vertexFormat, bool bHasColorMesh, bool bUsingFlex, bool bUsingMorph, bool bUsingPreTessPatch, VertexStreamSpec_t *pStreamSpec ) = 0;
 
 	// Set Tessellation Enable
-#if ENABLE_TESSELLATION
-	virtual void SetTessellationMode( TessellationMode_t mode ) = 0;
-#else
 	void SetTessellationMode( TessellationMode_t mode ) {}
-#endif
 
 	virtual void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics ) = 0;
 
 	virtual float GetLightMapScaleFactor() const = 0;
 };
-
-
-
-#endif // SHADERAPIDX8_H

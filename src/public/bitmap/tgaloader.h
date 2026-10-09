@@ -1,19 +1,9 @@
-//===== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ======//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//===========================================================================//
-
-#ifndef TGALOADER_H
-#define TGALOADER_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "bitmap/imageformat.h"
-#include <vector>
-
+import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -38,5 +28,3 @@ bool LoadRGBA8888( const char *pFileName, std::vector<unsigned char> &outputData
 bool LoadRGBA8888( ks::byte_reader &buf, std::vector<unsigned char> &outputData, int &outWidth, int &outHeight );
 
 } // end namespace TGALoader
-
-#endif // TGALOADER_H

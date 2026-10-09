@@ -1,13 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-//=============================================================================//
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef FX_ENVELOPE_H
-#define FX_ENVELOPE_H
-
-#include "cbase.h"
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
 #include "fx.h"
 #include "view.h"
 #include "view_scene.h"
@@ -52,5 +52,3 @@ protected:
 	float					m_tMax;
 	Vector					m_worldPosition;
 };
-
-#endif // FX_ENVELOPE_H

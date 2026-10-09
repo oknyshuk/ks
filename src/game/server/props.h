@@ -1,11 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-#ifndef PROPS_H
-#define PROPS_H
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "reflect_annotations.h"
 
@@ -262,9 +257,9 @@ protected:
 };
 
 // Spawnflags
-#define SF_DYNAMICPROP_USEHITBOX_FOR_RENDERBOX		64
-#define SF_DYNAMICPROP_NO_VPHYSICS					128
-#define SF_DYNAMICPROP_DISABLE_COLLISION			256
+inline constexpr auto SF_DYNAMICPROP_USEHITBOX_FOR_RENDERBOX = 64;
+inline constexpr auto SF_DYNAMICPROP_NO_VPHYSICS = 128;
+inline constexpr auto SF_DYNAMICPROP_DISABLE_COLLISION = 256;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -494,7 +489,7 @@ enum parentCollisionInteraction_t
 };
 
 
-abstract_class IParentPropInteraction
+class IParentPropInteraction
 {
 public:
 	virtual void OnParentCollisionInteraction( parentCollisionInteraction_t eType, int index, gamevcollisionevent_t *pEvent ) = 0;
@@ -512,6 +507,3 @@ int PropBreakablePrecacheAll( string_t modelName );
 extern ConVar func_breakdmg_bullet;
 extern ConVar func_breakdmg_club;
 extern ConVar func_breakdmg_explosive;
-
-
-#endif // PROPS_H

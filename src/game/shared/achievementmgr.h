@@ -1,22 +1,16 @@
-//====== Copyright (c) 1996-2005, Valve Corporation, All rights reserved. =======
-//
-// Purpose: 
-//
-//=============================================================================
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
-#ifndef ACHIEVEMENTMGR_H
-#define ACHIEVEMENTMGR_H
 #include "matchmaking/imatchframework.h"
+#include "igamesystem.h"
 #include "baseachievement.h"
 #include "GameEventListener.h"
 #include "iachievementmgr.h"
-#include <map>
-#include <memory>
+import std;
 #include "usermessages.h"
 
-#include "steam/steam_api.h"
-
-#define THINK_CLEAR		-1
+inline constexpr auto THINK_CLEAR = -1;
 
 enum SyncAchievementValueDirection_t
 {
@@ -56,7 +50,6 @@ public:
 
 	CBaseAchievement *GetAchievementByName( const char *pchName, int nUserSlot );
 
-	void UploadUserData( int nUserSlot );
 	void UserConnected( int nUserSlot );
 	void UserDisconnected( int nUserSlot );
 	bool IsUserConnected( int nUserSlot ) { return m_bUserSlotActive[nUserSlot]; }
@@ -67,9 +60,6 @@ public:
 	bool HasAchieved( const char *pchName, int nUserSlot );
 	void AwardAchievement( int iAchievementID, int nUserSlot );
 	void UpdateAchievement( int iAchievementID, int nData, int nUserSlot );
-#if defined( CLIENT_DLL ) && !defined( NO_STEAM )
-	void UpdateStateFromSteam_Internal( int nUserSlot );
-#endif
 	void PreRestoreSavedGame();
 	void PostRestoreSavedGame();
 	void ResetAchievements();
@@ -90,16 +80,8 @@ public:
 	// IMatchEventsSink
 	virtual void OnEvent( KeyValues *pEvent );
 
-#if defined( CLIENT_DLL ) && !defined( NO_STEAM )
-	bool LoggedIntoSteam() { return ( steamapicontext->SteamUser() && steamapicontext->SteamUserStats() && steamapicontext->SteamUser()->BLoggedOn() ); }
-#else
-	bool LoggedIntoSteam() { return false; }
-#endif
-
-	float GetTimeLastUpload() { return m_flTimeLastUpload; }			// time we last uploaded to Steam
 	bool WereCheatsEverOn( void ) { return m_bCheatsEverOn; }
 
-	STEAM_CALLBACK( CAchievementMgr, Steam_OnUserStatsStored, UserStatsStored_t, m_CallbackUserStatsStored );
 	const std::vector< int >& GetAchievedDuringCurrentGame( int nPlayerSlot );
 	void ResetAchievedDuringCurrentGame( int nPlayerSlot );
 
@@ -153,13 +135,11 @@ private:
 	bool  m_bDirty[MAX_SPLITSCREEN_PLAYERS];					// do we have interesting state that needs to be saved
 	bool  m_bUserSlotActive[MAX_SPLITSCREEN_PLAYERS];
 	bool  m_bCheatsEverOn;				// have cheats ever been turned on in this level
-	float m_flTimeLastUpload;			// last time we uploaded to Steam
 
 	bool m_bCheckSigninState;
 	bool m_bReadingFromTitleData;
 
 
-	std::vector< int > m_AchievementsAwarded[MAX_SPLITSCREEN_PLAYERS];
 	std::vector< int > m_AchievementsAwardedDuringCurrentGame[MAX_SPLITSCREEN_PLAYERS];
 	void ClearAchievementData( int nUserSlot );
 };
@@ -196,8 +176,6 @@ protected:
 const char *GetModelName( CBaseEntity *pBaseEntity );
 
 #ifdef CLIENT_DLL
-bool CalcPlayersOnFriendsList( int iMinPlayers );
-bool CalcHasNumClanPlayers( int iClanTeammates );
 int	CalcPlayerCount();
 int	CalcTeammateCount();
 #endif // CLIENT
@@ -207,4 +185,3 @@ extern ConVar	cc_achievement_debug;
 #ifdef CLIENT_DLL
 bool MsgFunc_AchievementEvent( const ks::net::CCSUsrMsg_AchievementEvent &msg );
 #endif // CLIENT_DLL
-#endif // ACHIEVEMENTMGR_H

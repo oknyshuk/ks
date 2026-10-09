@@ -1,9 +1,19 @@
-//========= Copyright Valve Corporation, All rights reserved. ============//
-//
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+
 // Purpose: Game-specific impact effect hooks
-//
-//=============================================================================//
-#include "cbase.h"
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "cdll_util.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "c_basecombatweapon.h"
+#include "c_basecombatcharacter.h"
+#include "gamerules.h"
+#include "cdll_client_int.h"
 
 #include "c_te_effect_dispatch.h"
 #include "tempent.h"
@@ -131,7 +141,7 @@ void CS_HolidayLightCallback( const CEffectData &data )
 	g_CHolidayLightManager.AddHolidayLight( data );
 }
 
-#define XMAS_LIGHT_MODEL "models/props/holiday_light/holiday_light.mdl" 
+inline constexpr const char *XMAS_LIGHT_MODEL = "models/props/holiday_light/holiday_light.mdl";
 void CreateHolidayLight( const HolidayLightData_t &holidayLight )
 {
 	int nHolidayLightStyle = RopeManager()->GetHolidayLightStyle();
@@ -140,7 +150,7 @@ void CreateHolidayLight( const HolidayLightData_t &holidayLight )
 	if ( !pModel )
 		return;
 
-	Assert( pModel );
+	contract_assert( pModel );
 
 	C_LocalTempEntity *pTemp = tempents->FindTempEntByID( holidayLight.nID, holidayLight.nSubID );
 
@@ -187,7 +197,7 @@ void CreateHolidayLight( const HolidayLightData_t &holidayLight )
 		pTemp->SetProxyRandomValue( RandomFloat() );
 
 		// Next color in the pattern
-		g_nHolidayLightColor = ( g_nHolidayLightColor + 1 ) % ARRAYSIZE( rgbaHolidayLightColors );
+		g_nHolidayLightColor = ( g_nHolidayLightColor + 1 ) % std::size( rgbaHolidayLightColors );
 	}
 	else
 	{
@@ -199,8 +209,8 @@ void CreateHolidayLight( const HolidayLightData_t &holidayLight )
 		{
 			// Magic! Basically this makes the on/off cycle of each color different and offsets it by the segment index.
 			// That way it looks like a timed pattern but is also chaotic.
-			int nCycle = ( pTemp->hitSound + static_cast< int >( gpGlobals->curtime * 2.0f ) ) % ( pTemp->m_nHitboxSet + ARRAYSIZE( rgbaHolidayLightColors ) + 1 );
-			pTemp->SetRenderAlpha( nCycle < ARRAYSIZE( rgbaHolidayLightColors ) ? 255 : 64 );
+			int nCycle = ( pTemp->hitSound + static_cast< int >( gpGlobals->curtime * 2.0f ) ) % ( pTemp->m_nHitboxSet + std::size( rgbaHolidayLightColors ) + 1 );
+			pTemp->SetRenderAlpha( nCycle < std::size( rgbaHolidayLightColors ) ? 255 : 64 );
 		}
 
 		// Update the scale
@@ -224,7 +234,7 @@ void RopesHolidayLightColor( const CCommand &args )
 	int nLight = atoi( args[ 1 ] );
 
 	{
-		if ( nLight < 0 || nLight >= ARRAYSIZE( rgbaHolidayLightColors ) )
+		if ( nLight < 0 || nLight >= std::size( rgbaHolidayLightColors ) )
 			return;
 
 		rgbaHolidayLightColors[nLight]->SetColor( atoi( args[2] ), atoi( args[3] ), atoi( args[4] ) );

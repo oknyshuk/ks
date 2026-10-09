@@ -1,12 +1,13 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $Workfile:     $
-// $Date:         $
-// $NoKeywords: $
-//=============================================================================//
-#include "cbase.h"
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#include "rocketui/rmlui.h"
+import ks.core;
+import std;
+#include "predictable_entity.h"
+#include "util_shared.h"
+#include "baseentity_shared.h"
+#include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_te_basebeam.h"
@@ -74,4 +75,3 @@ void C_TEBeamEntPoint::PostDataUpdate( DataUpdateType_t updateType )
 }
 
 IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEBeamEntPoint, DT_TEBeamEntPoint, CTEBeamEntPoint )
-

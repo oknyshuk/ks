@@ -1,13 +1,6 @@
-//========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
-//
-// Purpose: 
-//
-// $NoKeywords: $
-//=============================================================================//
-
-#ifndef IVEHICLE_H
-#define IVEHICLE_H
-
+#pragma once
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
 
 #include "baseplayer_shared.h"
 
@@ -18,7 +11,7 @@ class CBaseCombatCharacter;
 
 // This is used by the player to access vehicles. It's an interface so the
 // vehicles are not restricted in what they can derive from.
-abstract_class IVehicle
+class IVehicle
 {
 public:
 	// Get and set the current driver. Use PassengerRole_t enum in shareddefs.h for adding passengers
@@ -39,6 +32,3 @@ public:
 	// Process input
 	virtual void			ItemPostFrame( CBasePlayer *pPlayer ) = 0;
 };
-
-
-#endif // IVEHICLE_H
